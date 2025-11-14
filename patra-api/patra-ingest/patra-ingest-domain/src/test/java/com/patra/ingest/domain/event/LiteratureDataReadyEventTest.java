@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.event;
 
+import com.patra.common.enums.ProvenanceCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ class LiteratureDataReadyEventTest {
 
     private static final Long TASK_ID = 1001L;
     private static final Long RUN_ID = 2001L;
-    private static final String PROVENANCE_CODE = "PUBMED";
+    private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
     private static final List<String> STORAGE_KEYS = List.of(
         "s3://bucket/literature/batch-1.json",
         "s3://bucket/literature/batch-2.json"
@@ -339,7 +340,7 @@ class LiteratureDataReadyEventTest {
             var event2 = LiteratureDataReadyEvent.builder()
                 .taskId(TASK_ID)
                 .runId(RUN_ID)
-                .provenanceCode("EPMC")  // 不同的 provenanceCode
+                .provenanceCode(ProvenanceCode.EPMC)  // 不同的 provenanceCode
                 .storageKeys(STORAGE_KEYS)
                 .totalLiteratureCount(TOTAL_LITERATURE_COUNT)
                 .successBatchCount(SUCCESS_BATCH_COUNT)
@@ -725,16 +726,24 @@ class LiteratureDataReadyEventTest {
         }
 
         @Test
-        @DisplayName("应该支持超长 provenanceCode")
-        void shouldSupportVeryLongProvenanceCode() {
-            // Given
-            var longProvenanceCode = "VERY_LONG_PROVENANCE_CODE_" + "X".repeat(1000);
-
-            // When
-            var event = LiteratureDataReadyEvent.builder()
+        @DisplayName("应该支持所有 ProvenanceCode 枚举值")
+        void shouldSupportAllProvenanceCodeEnumValues() {
+            // Given & When: 测试几个常见的 ProvenanceCode 枚举值
+            var pubmedEvent = LiteratureDataReadyEvent.builder()
                 .taskId(TASK_ID)
                 .runId(RUN_ID)
-                .provenanceCode(longProvenanceCode)
+                .provenanceCode(ProvenanceCode.PUBMED)
+                .storageKeys(STORAGE_KEYS)
+                .totalLiteratureCount(TOTAL_LITERATURE_COUNT)
+                .successBatchCount(SUCCESS_BATCH_COUNT)
+                .failedBatchCount(FAILED_BATCH_COUNT)
+                .timestamp(TIMESTAMP)
+                .build();
+
+            var epmcEvent = LiteratureDataReadyEvent.builder()
+                .taskId(TASK_ID)
+                .runId(RUN_ID)
+                .provenanceCode(ProvenanceCode.EPMC)
                 .storageKeys(STORAGE_KEYS)
                 .totalLiteratureCount(TOTAL_LITERATURE_COUNT)
                 .successBatchCount(SUCCESS_BATCH_COUNT)
@@ -743,9 +752,8 @@ class LiteratureDataReadyEventTest {
                 .build();
 
             // Then
-            assertThat(event.provenanceCode())
-                .hasSize(26 + 1000)
-                .startsWith("VERY_LONG_PROVENANCE_CODE_");
+            assertThat(pubmedEvent.provenanceCode()).isEqualTo(ProvenanceCode.PUBMED);
+            assertThat(epmcEvent.provenanceCode()).isEqualTo(ProvenanceCode.EPMC);
         }
 
         @Test
@@ -791,7 +799,7 @@ class LiteratureDataReadyEventTest {
             var event = LiteratureDataReadyEvent.builder()
                 .taskId(1001L)
                 .runId(2001L)
-                .provenanceCode("PUBMED")
+                .provenanceCode(ProvenanceCode.PUBMED)
                 .storageKeys(List.of(
                     "s3://patra-literature/pubmed/2024/batch-1.json",
                     "s3://patra-literature/pubmed/2024/batch-2.json",
@@ -816,7 +824,7 @@ class LiteratureDataReadyEventTest {
             var event = LiteratureDataReadyEvent.builder()
                 .taskId(1002L)
                 .runId(2002L)
-                .provenanceCode("EPMC")
+                .provenanceCode(ProvenanceCode.EPMC)
                 .storageKeys(List.of(
                     "s3://patra-literature/epmc/2024/batch-1.json",
                     "s3://patra-literature/epmc/2024/batch-3.json"
@@ -840,7 +848,7 @@ class LiteratureDataReadyEventTest {
             var event = LiteratureDataReadyEvent.builder()
                 .taskId(1003L)
                 .runId(2003L)
-                .provenanceCode("ARXIV")
+                .provenanceCode(ProvenanceCode.BIORXIV)
                 .storageKeys(List.of())  // 无成功批次
                 .totalLiteratureCount(0)
                 .successBatchCount(0)
@@ -862,7 +870,7 @@ class LiteratureDataReadyEventTest {
             var pubmedEvent = LiteratureDataReadyEvent.builder()
                 .taskId(1001L)
                 .runId(2001L)
-                .provenanceCode("PUBMED")
+                .provenanceCode(ProvenanceCode.PUBMED)
                 .storageKeys(List.of("s3://bucket/pubmed.json"))
                 .totalLiteratureCount(1000)
                 .successBatchCount(1)
@@ -873,7 +881,7 @@ class LiteratureDataReadyEventTest {
             var epmcEvent = LiteratureDataReadyEvent.builder()
                 .taskId(1002L)
                 .runId(2002L)
-                .provenanceCode("EPMC")
+                .provenanceCode(ProvenanceCode.EPMC)
                 .storageKeys(List.of("s3://bucket/epmc.json"))
                 .totalLiteratureCount(800)
                 .successBatchCount(1)
@@ -882,8 +890,8 @@ class LiteratureDataReadyEventTest {
                 .build();
 
             // Then
-            assertThat(pubmedEvent.provenanceCode()).isEqualTo("PUBMED");
-            assertThat(epmcEvent.provenanceCode()).isEqualTo("EPMC");
+            assertThat(pubmedEvent.provenanceCode()).isEqualTo(ProvenanceCode.PUBMED);
+            assertThat(epmcEvent.provenanceCode()).isEqualTo(ProvenanceCode.EPMC);
             assertThat(pubmedEvent).isNotEqualTo(epmcEvent);
         }
     }

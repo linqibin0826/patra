@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.model.entity;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.CursorDirection;
 import com.patra.ingest.domain.model.enums.CursorType;
 import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
@@ -33,7 +34,7 @@ public class CursorEvent {
   private final Long id;
 
   /** Provenance code. */
-  private final String provenanceCode;
+  private final ProvenanceCode provenanceCode;
 
   /** Operation code. */
   private final String operationCode;
@@ -91,7 +92,7 @@ public class CursorEvent {
 
   private CursorEvent(
       Long id,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       String cursorKey,
       String namespaceScopeCode,
@@ -157,7 +158,7 @@ public class CursorEvent {
    * @return new {@link CursorEvent} instance ready for persistence
    */
   public static CursorEvent create(
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       String cursorKey,
       String namespaceScopeCode,
@@ -227,7 +228,7 @@ public class CursorEvent {
    */
   public static CursorEvent restore(
       Long id,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       String cursorKey,
       String namespaceScopeCode,

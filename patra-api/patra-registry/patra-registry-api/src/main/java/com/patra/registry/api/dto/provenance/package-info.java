@@ -1,8 +1,7 @@
 /**
  * Provenance 配置 API 数据传输对象包 - REST API 契约层。
  *
- * <p>本包包含数据源配置相关的 REST API 响应 DTOs,定义了对外暴露的数据传输对象契约。
- * 这些 DTOs 隔离了内部领域模型与外部 API 表示,确保 API 的稳定性和向后兼容性。
+ * <p>本包包含数据源配置相关的 REST API 响应 DTOs,定义了对外暴露的数据传输对象契约。 这些 DTOs 隔离了内部领域模型与外部 API 表示,确保 API 的稳定性和向后兼容性。
  *
  * <h2>职责</h2>
  *
@@ -17,10 +16,10 @@
  * <h2>核心 DTOs</h2>
  *
  * <ul>
- *   <li>{@link com.patra.registry.api.dto.provenance.ProvenanceResp} - 数据源元数据响应,
- *       包含唯一标识、代码、名称、默认 URL 和时区等核心信息
- *   <li>{@link com.patra.registry.api.dto.provenance.ProvenanceConfigResp} - 配置聚合响应,
- *       包含数据源元数据和 7 个配置维度的完整视图
+ *   <li>{@link com.patra.registry.api.dto.provenance.ProvenanceResp} - 数据源元数据响应, 包含唯一标识、代码、名称、默认
+ *       URL 和时区等核心信息
+ *   <li>{@link com.patra.registry.api.dto.provenance.ProvenanceConfigResp} - 配置聚合响应, 包含数据源元数据和 7
+ *       个配置维度的完整视图
  *   <li>{@link com.patra.registry.api.dto.provenance.HttpConfigResp} - HTTP 客户端配置响应
  *   <li>{@link com.patra.registry.api.dto.provenance.RetryConfigResp} - 重试策略配置响应
  *   <li>{@link com.patra.registry.api.dto.provenance.PaginationConfigResp} - 分页策略配置响应
@@ -60,9 +59,12 @@
  * <p>DTOs 由适配器层({@code patra-registry-adapter})从领域模型转换:
  *
  * <ul>
- *   <li>{@link com.patra.registry.domain.model.vo.provenance.Provenance} → {@link com.patra.registry.api.dto.provenance.ProvenanceResp}
- *   <li>{@link com.patra.registry.domain.model.aggregate.ProvenanceConfiguration} → {@link com.patra.registry.api.dto.provenance.ProvenanceConfigResp}
- *   <li>{@link com.patra.registry.domain.model.vo.provenance.HttpConfig} → {@link com.patra.registry.api.dto.provenance.HttpConfigResp}
+ *   <li>{@link com.patra.registry.domain.model.vo.provenance.Provenance} → {@link
+ *       com.patra.registry.api.dto.provenance.ProvenanceResp}
+ *   <li>{@link com.patra.registry.domain.model.aggregate.ProvenanceConfiguration} → {@link
+ *       com.patra.registry.api.dto.provenance.ProvenanceConfigResp}
+ *   <li>{@link com.patra.registry.domain.model.vo.provenance.HttpConfig} → {@link
+ *       com.patra.registry.api.dto.provenance.HttpConfigResp}
  *   <li>其他配置值对象同理
  * </ul>
  *

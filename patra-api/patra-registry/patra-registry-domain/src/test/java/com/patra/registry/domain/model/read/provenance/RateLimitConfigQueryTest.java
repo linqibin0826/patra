@@ -1,14 +1,13 @@
 package com.patra.registry.domain.model.read.provenance;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.patra.registry.domain.exception.DomainValidationException;
+import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import java.time.Instant;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * {@link RateLimitConfigQuery} 的单元测试。
@@ -36,15 +35,15 @@ class RateLimitConfigQueryTest {
       Integer perCredentialQpsLimit = 5;
 
       // When: 构造对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          operationType,
-          effectiveFrom,
-          effectiveTo,
-          maxConcurrentRequests,
-          perCredentialQpsLimit
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(
+              id,
+              provenanceId,
+              operationType,
+              effectiveFrom,
+              effectiveTo,
+              maxConcurrentRequests,
+              perCredentialQpsLimit);
 
       // Then: 所有字段值应正确设置
       assertThat(query.id()).isEqualTo(id);
@@ -69,15 +68,15 @@ class RateLimitConfigQueryTest {
       Integer perCredentialQpsLimit = null; // 可选
 
       // When: 构造对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          operationType,
-          effectiveFrom,
-          effectiveTo,
-          maxConcurrentRequests,
-          perCredentialQpsLimit
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(
+              id,
+              provenanceId,
+              operationType,
+              effectiveFrom,
+              effectiveTo,
+              maxConcurrentRequests,
+              perCredentialQpsLimit);
 
       // Then: 必填字段应正确设置,可选字段为 null
       assertThat(query.id()).isEqualTo(id);
@@ -98,15 +97,8 @@ class RateLimitConfigQueryTest {
       Instant effectiveFrom = Instant.parse("2025-06-15T12:30:00Z");
 
       // When: 构造对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          null,
-          effectiveFrom,
-          null,
-          null,
-          null
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(id, provenanceId, null, effectiveFrom, null, null, null);
 
       // Then: 必填字段应正确设置
       assertThat(query.id()).isEqualTo(id);
@@ -127,15 +119,8 @@ class RateLimitConfigQueryTest {
       Instant effectiveFrom = Instant.parse("2025-01-01T00:00:00Z");
 
       // When: 构造对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          null,
-          effectiveFrom,
-          null,
-          null,
-          null
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(id, provenanceId, null, effectiveFrom, null, null, null);
 
       // Then: 应成功构造
       assertThat(query.id()).isEqualTo(Long.MAX_VALUE);
@@ -156,15 +141,9 @@ class RateLimitConfigQueryTest {
       Instant effectiveFrom = Instant.parse("2025-01-01T00:00:00Z");
 
       // When & Then: 应抛出 DomainValidationException
-      assertThatThrownBy(() -> new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          null,
-          effectiveFrom,
-          null,
-          null,
-          null
-      ))
+      assertThatThrownBy(
+              () ->
+                  new RateLimitConfigQuery(id, provenanceId, null, effectiveFrom, null, null, null))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("限流配置ID必须为正数");
     }
@@ -178,15 +157,9 @@ class RateLimitConfigQueryTest {
       Instant effectiveFrom = Instant.parse("2025-01-01T00:00:00Z");
 
       // When & Then: 应抛出 DomainValidationException
-      assertThatThrownBy(() -> new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          null,
-          effectiveFrom,
-          null,
-          null,
-          null
-      ))
+      assertThatThrownBy(
+              () ->
+                  new RateLimitConfigQuery(id, provenanceId, null, effectiveFrom, null, null, null))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("限流配置ID必须为正数");
     }
@@ -200,15 +173,9 @@ class RateLimitConfigQueryTest {
       Instant effectiveFrom = Instant.parse("2025-01-01T00:00:00Z");
 
       // When & Then: 应抛出 DomainValidationException
-      assertThatThrownBy(() -> new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          null,
-          effectiveFrom,
-          null,
-          null,
-          null
-      ))
+      assertThatThrownBy(
+              () ->
+                  new RateLimitConfigQuery(id, provenanceId, null, effectiveFrom, null, null, null))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("限流配置ID必须为正数");
     }
@@ -227,15 +194,9 @@ class RateLimitConfigQueryTest {
       Instant effectiveFrom = Instant.parse("2025-01-01T00:00:00Z");
 
       // When & Then: 应抛出 DomainValidationException
-      assertThatThrownBy(() -> new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          null,
-          effectiveFrom,
-          null,
-          null,
-          null
-      ))
+      assertThatThrownBy(
+              () ->
+                  new RateLimitConfigQuery(id, provenanceId, null, effectiveFrom, null, null, null))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("来源ID必须为正数");
     }
@@ -249,15 +210,9 @@ class RateLimitConfigQueryTest {
       Instant effectiveFrom = Instant.parse("2025-01-01T00:00:00Z");
 
       // When & Then: 应抛出 DomainValidationException
-      assertThatThrownBy(() -> new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          null,
-          effectiveFrom,
-          null,
-          null,
-          null
-      ))
+      assertThatThrownBy(
+              () ->
+                  new RateLimitConfigQuery(id, provenanceId, null, effectiveFrom, null, null, null))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("来源ID必须为正数");
     }
@@ -271,15 +226,9 @@ class RateLimitConfigQueryTest {
       Instant effectiveFrom = Instant.parse("2025-01-01T00:00:00Z");
 
       // When & Then: 应抛出 DomainValidationException
-      assertThatThrownBy(() -> new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          null,
-          effectiveFrom,
-          null,
-          null,
-          null
-      ))
+      assertThatThrownBy(
+              () ->
+                  new RateLimitConfigQuery(id, provenanceId, null, effectiveFrom, null, null, null))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("来源ID必须为正数");
     }
@@ -298,15 +247,9 @@ class RateLimitConfigQueryTest {
       Instant effectiveFrom = null;
 
       // When & Then: 应抛出 DomainValidationException
-      assertThatThrownBy(() -> new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          null,
-          effectiveFrom,
-          null,
-          null,
-          null
-      ))
+      assertThatThrownBy(
+              () ->
+                  new RateLimitConfigQuery(id, provenanceId, null, effectiveFrom, null, null, null))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("生效时间不能为null");
     }
@@ -326,15 +269,9 @@ class RateLimitConfigQueryTest {
       Instant effectiveFrom = Instant.parse("2025-01-01T00:00:00Z");
 
       // When: 构造对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          operationType,
-          effectiveFrom,
-          null,
-          null,
-          null
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(
+              id, provenanceId, operationType, effectiveFrom, null, null, null);
 
       // Then: operationType 应被 trim
       assertThat(query.operationType()).isEqualTo("FETCH");
@@ -350,15 +287,9 @@ class RateLimitConfigQueryTest {
       Instant effectiveFrom = Instant.parse("2025-01-01T00:00:00Z");
 
       // When: 构造对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          operationType,
-          effectiveFrom,
-          null,
-          null,
-          null
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(
+              id, provenanceId, operationType, effectiveFrom, null, null, null);
 
       // Then: operationType 应为空字符串
       assertThat(query.operationType()).isEmpty();
@@ -374,15 +305,9 @@ class RateLimitConfigQueryTest {
       Instant effectiveFrom = Instant.parse("2025-01-01T00:00:00Z");
 
       // When: 构造对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          operationType,
-          effectiveFrom,
-          null,
-          null,
-          null
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(
+              id, provenanceId, operationType, effectiveFrom, null, null, null);
 
       // Then: operationType 应为 null
       assertThat(query.operationType()).isNull();
@@ -398,15 +323,9 @@ class RateLimitConfigQueryTest {
       Instant effectiveFrom = Instant.parse("2025-01-01T00:00:00Z");
 
       // When: 构造对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          operationType,
-          effectiveFrom,
-          null,
-          null,
-          null
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(
+              id, provenanceId, operationType, effectiveFrom, null, null, null);
 
       // Then: 中间空格应保留
       assertThat(query.operationType()).isEqualTo("FETCH DATA");
@@ -429,25 +348,25 @@ class RateLimitConfigQueryTest {
       Integer maxConcurrentRequests = 10;
       Integer perCredentialQpsLimit = 5;
 
-      RateLimitConfigQuery query1 = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          operationType,
-          effectiveFrom,
-          effectiveTo,
-          maxConcurrentRequests,
-          perCredentialQpsLimit
-      );
+      RateLimitConfigQuery query1 =
+          new RateLimitConfigQuery(
+              id,
+              provenanceId,
+              operationType,
+              effectiveFrom,
+              effectiveTo,
+              maxConcurrentRequests,
+              perCredentialQpsLimit);
 
-      RateLimitConfigQuery query2 = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          operationType,
-          effectiveFrom,
-          effectiveTo,
-          maxConcurrentRequests,
-          perCredentialQpsLimit
-      );
+      RateLimitConfigQuery query2 =
+          new RateLimitConfigQuery(
+              id,
+              provenanceId,
+              operationType,
+              effectiveFrom,
+              effectiveTo,
+              maxConcurrentRequests,
+              perCredentialQpsLimit);
 
       // When & Then: 两个对象应相等
       assertThat(query1).isEqualTo(query2);
@@ -458,25 +377,19 @@ class RateLimitConfigQueryTest {
     @DisplayName("不同字段值的两个实例应不相等")
     void shouldNotBeEqualWhenFieldsAreDifferent() {
       // Given: 两个具有不同字段值的对象
-      RateLimitConfigQuery query1 = new RateLimitConfigQuery(
-          1L,
-          100L,
-          "FETCH",
-          Instant.parse("2025-01-01T00:00:00Z"),
-          null,
-          10,
-          5
-      );
+      RateLimitConfigQuery query1 =
+          new RateLimitConfigQuery(
+              1L, 100L, "FETCH", Instant.parse("2025-01-01T00:00:00Z"), null, 10, 5);
 
-      RateLimitConfigQuery query2 = new RateLimitConfigQuery(
-          2L, // 不同的 id
-          100L,
-          "FETCH",
-          Instant.parse("2025-01-01T00:00:00Z"),
-          null,
-          10,
-          5
-      );
+      RateLimitConfigQuery query2 =
+          new RateLimitConfigQuery(
+              2L, // 不同的 id
+              100L,
+              "FETCH",
+              Instant.parse("2025-01-01T00:00:00Z"),
+              null,
+              10,
+              5);
 
       // When & Then: 两个对象应不相等
       assertThat(query1).isNotEqualTo(query2);
@@ -486,15 +399,9 @@ class RateLimitConfigQueryTest {
     @DisplayName("与自身比较应相等")
     void shouldBeEqualToItself() {
       // Given: 一个对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          1L,
-          100L,
-          "FETCH",
-          Instant.parse("2025-01-01T00:00:00Z"),
-          null,
-          10,
-          5
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(
+              1L, 100L, "FETCH", Instant.parse("2025-01-01T00:00:00Z"), null, 10, 5);
 
       // When & Then: 对象应与自身相等
       assertThat(query).isEqualTo(query);
@@ -504,15 +411,9 @@ class RateLimitConfigQueryTest {
     @DisplayName("与 null 比较应不相等")
     void shouldNotBeEqualToNull() {
       // Given: 一个对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          1L,
-          100L,
-          "FETCH",
-          Instant.parse("2025-01-01T00:00:00Z"),
-          null,
-          10,
-          5
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(
+              1L, 100L, "FETCH", Instant.parse("2025-01-01T00:00:00Z"), null, 10, 5);
 
       // When & Then: 对象应与 null 不相等
       assertThat(query).isNotEqualTo(null);
@@ -522,15 +423,9 @@ class RateLimitConfigQueryTest {
     @DisplayName("与不同类型比较应不相等")
     void shouldNotBeEqualToDifferentType() {
       // Given: 一个对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          1L,
-          100L,
-          "FETCH",
-          Instant.parse("2025-01-01T00:00:00Z"),
-          null,
-          10,
-          5
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(
+              1L, 100L, "FETCH", Instant.parse("2025-01-01T00:00:00Z"), null, 10, 5);
 
       // When & Then: 对象应与不同类型不相等
       assertThat(query).isNotEqualTo("not a RateLimitConfigQuery");
@@ -548,25 +443,25 @@ class RateLimitConfigQueryTest {
       Integer maxConcurrentRequests = 10;
       Integer perCredentialQpsLimit = 5;
 
-      RateLimitConfigQuery query1 = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          operationType,
-          effectiveFrom,
-          effectiveTo,
-          maxConcurrentRequests,
-          perCredentialQpsLimit
-      );
+      RateLimitConfigQuery query1 =
+          new RateLimitConfigQuery(
+              id,
+              provenanceId,
+              operationType,
+              effectiveFrom,
+              effectiveTo,
+              maxConcurrentRequests,
+              perCredentialQpsLimit);
 
-      RateLimitConfigQuery query2 = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          operationType,
-          effectiveFrom,
-          effectiveTo,
-          maxConcurrentRequests,
-          perCredentialQpsLimit
-      );
+      RateLimitConfigQuery query2 =
+          new RateLimitConfigQuery(
+              id,
+              provenanceId,
+              operationType,
+              effectiveFrom,
+              effectiveTo,
+              maxConcurrentRequests,
+              perCredentialQpsLimit);
 
       // When & Then: 多次调用 hashCode 应返回相同值
       int hashCode1 = query1.hashCode();
@@ -581,15 +476,9 @@ class RateLimitConfigQueryTest {
     @DisplayName("toString 应返回非空字符串")
     void shouldReturnNonEmptyStringForToString() {
       // Given: 一个对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          1L,
-          100L,
-          "FETCH",
-          Instant.parse("2025-01-01T00:00:00Z"),
-          null,
-          10,
-          5
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(
+              1L, 100L, "FETCH", Instant.parse("2025-01-01T00:00:00Z"), null, 10, 5);
 
       // When: 调用 toString
       String result = query.toString();
@@ -619,15 +508,15 @@ class RateLimitConfigQueryTest {
       Integer maxConcurrentRequests = 10;
       Integer perCredentialQpsLimit = 5;
 
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          operationType,
-          effectiveFrom,
-          effectiveTo,
-          maxConcurrentRequests,
-          perCredentialQpsLimit
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(
+              id,
+              provenanceId,
+              operationType,
+              effectiveFrom,
+              effectiveTo,
+              maxConcurrentRequests,
+              perCredentialQpsLimit);
 
       // When & Then: 每个访问器应返回正确的值
       assertThat(query.id()).isEqualTo(id);
@@ -643,15 +532,9 @@ class RateLimitConfigQueryTest {
     @DisplayName("可选字段访问器应正确返回 null")
     void shouldReturnNullForOptionalFields() {
       // Given: 可选字段为 null 的对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          1L,
-          100L,
-          null,
-          Instant.parse("2025-01-01T00:00:00Z"),
-          null,
-          null,
-          null
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(
+              1L, 100L, null, Instant.parse("2025-01-01T00:00:00Z"), null, null, null);
 
       // When & Then: 可选字段访问器应返回 null
       assertThat(query.operationType()).isNull();
@@ -672,15 +555,8 @@ class RateLimitConfigQueryTest {
       Instant effectiveFrom = Instant.parse("2025-01-01T00:00:00Z");
       Instant effectiveTo = Instant.parse("2025-12-31T23:59:59Z");
 
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          1L,
-          100L,
-          "FETCH",
-          effectiveFrom,
-          effectiveTo,
-          10,
-          5
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(1L, 100L, "FETCH", effectiveFrom, effectiveTo, 10, 5);
 
       // When: 获取 Instant 引用
       Instant retrievedFrom = query.effectiveFrom();
@@ -710,15 +586,8 @@ class RateLimitConfigQueryTest {
       Instant effectiveFrom = Instant.parse("2025-01-01T00:00:00Z");
 
       // When: 构造对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          null,
-          effectiveFrom,
-          null,
-          null,
-          null
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(id, provenanceId, null, effectiveFrom, null, null, null);
 
       // Then: 应成功构造
       assertThat(query.id()).isEqualTo(1L);
@@ -735,15 +604,9 @@ class RateLimitConfigQueryTest {
       Integer maxConcurrentRequests = 0;
 
       // When: 构造对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          null,
-          effectiveFrom,
-          null,
-          maxConcurrentRequests,
-          null
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(
+              id, provenanceId, null, effectiveFrom, null, maxConcurrentRequests, null);
 
       // Then: 应成功构造 (业务验证在别处)
       assertThat(query.maxConcurrentRequests()).isEqualTo(0);
@@ -759,15 +622,9 @@ class RateLimitConfigQueryTest {
       Integer perCredentialQpsLimit = -1;
 
       // When: 构造对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          null,
-          effectiveFrom,
-          null,
-          null,
-          perCredentialQpsLimit
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(
+              id, provenanceId, null, effectiveFrom, null, null, perCredentialQpsLimit);
 
       // Then: 应成功构造 (业务验证在别处)
       assertThat(query.perCredentialQpsLimit()).isEqualTo(-1);
@@ -782,15 +639,8 @@ class RateLimitConfigQueryTest {
       Instant effectiveFrom = Instant.MIN;
 
       // When: 构造对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          null,
-          effectiveFrom,
-          null,
-          null,
-          null
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(id, provenanceId, null, effectiveFrom, null, null, null);
 
       // Then: 应成功构造
       assertThat(query.effectiveFrom()).isEqualTo(Instant.MIN);
@@ -805,15 +655,8 @@ class RateLimitConfigQueryTest {
       Instant effectiveFrom = Instant.MAX;
 
       // When: 构造对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          null,
-          effectiveFrom,
-          null,
-          null,
-          null
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(id, provenanceId, null, effectiveFrom, null, null, null);
 
       // Then: 应成功构造
       assertThat(query.effectiveFrom()).isEqualTo(Instant.MAX);
@@ -829,15 +672,8 @@ class RateLimitConfigQueryTest {
       Instant effectiveTo = Instant.parse("2025-01-01T00:00:00Z");
 
       // When: 构造对象
-      RateLimitConfigQuery query = new RateLimitConfigQuery(
-          id,
-          provenanceId,
-          null,
-          effectiveFrom,
-          effectiveTo,
-          null,
-          null
-      );
+      RateLimitConfigQuery query =
+          new RateLimitConfigQuery(id, provenanceId, null, effectiveFrom, effectiveTo, null, null);
 
       // Then: 应成功构造 (业务验证在别处)
       assertThat(query.effectiveFrom()).isEqualTo(effectiveFrom);

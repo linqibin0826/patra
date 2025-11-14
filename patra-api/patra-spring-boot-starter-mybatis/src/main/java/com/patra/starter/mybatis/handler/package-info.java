@@ -1,7 +1,8 @@
 /**
  * MyBatis 元数据自动填充处理器包。
  *
- * <p>本包提供 MyBatis-Plus 的 {@link com.baomidou.mybatisplus.core.handlers.MetaObjectHandler} 实现,用于在插入和更新操作时自动填充审计字段(如创建时间、更新时间、操作人等)。
+ * <p>本包提供 MyBatis-Plus 的 {@link com.baomidou.mybatisplus.core.handlers.MetaObjectHandler}
+ * 实现,用于在插入和更新操作时自动填充审计字段(如创建时间、更新时间、操作人等)。
  *
  * <h2>职责</h2>
  *
@@ -42,6 +43,7 @@
  * <h2>使用示例</h2>
  *
  * <p><b>实体类定义:</b>
+ *
  * <pre>{@code
  * @Data
  * @EqualsAndHashCode(callSuper = true)
@@ -53,6 +55,7 @@
  * }</pre>
  *
  * <p><b>测试场景(可控时间):</b>
+ *
  * <pre>{@code
  * @Configuration
  * public class TestConfig {

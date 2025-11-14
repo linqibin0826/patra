@@ -117,8 +117,7 @@ class RegistryErrorMappingContributorTest {
     @DisplayName("应该将 DataIntegrityViolationException 映射为 UNPROCESSABLE")
     void should_map_to_unprocessable_when_data_integrity_violation_exception() {
       // Given: 准备数据完整性违反异常
-      DataIntegrityViolationException exception =
-          new DataIntegrityViolationException("违反数据完整性约束");
+      DataIntegrityViolationException exception = new DataIntegrityViolationException("违反数据完整性约束");
 
       // When: 调用映射方法
       Optional<ErrorCodeLike> result = contributor.mapException(exception);
@@ -133,8 +132,7 @@ class RegistryErrorMappingContributorTest {
     @DisplayName("应该将 OptimisticLockingFailureException 映射为 CONFLICT")
     void should_map_to_conflict_when_optimistic_locking_failure_exception() {
       // Given: 准备乐观锁失败异常
-      OptimisticLockingFailureException exception =
-          new OptimisticLockingFailureException("乐观锁冲突");
+      OptimisticLockingFailureException exception = new OptimisticLockingFailureException("乐观锁冲突");
 
       // When: 调用映射方法
       Optional<ErrorCodeLike> result = contributor.mapException(exception);

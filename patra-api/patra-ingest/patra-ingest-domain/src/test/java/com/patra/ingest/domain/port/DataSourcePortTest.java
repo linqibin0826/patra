@@ -1,21 +1,35 @@
 package com.patra.ingest.domain.port;
 
 import com.patra.common.model.CanonicalLiterature;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.type.TypeReference;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.batch.Batch;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult.ErrorType;
+import com.patra.common.enums.ProvenanceCode;
 import org.junit.jupiter.api.DisplayName;
+import com.patra.common.enums.ProvenanceCode;
 import org.junit.jupiter.api.Nested;
+import com.patra.common.enums.ProvenanceCode;
 import org.junit.jupiter.api.Test;
+import com.patra.common.enums.ProvenanceCode;
 
 import java.util.List;
+import com.patra.common.enums.ProvenanceCode;
 import java.util.Map;
+import com.patra.common.enums.ProvenanceCode;
 import java.util.Set;
+import com.patra.common.enums.ProvenanceCode;
 
 import static org.assertj.core.api.Assertions.*;
+import com.patra.common.enums.ProvenanceCode;
 
 /**
  * DataSourcePort 接口测试
@@ -53,7 +67,7 @@ class DataSourcePortTest {
     @Override
     public com.patra.ingest.domain.model.vo.plan.BatchPlan preparePlan(ExecutionContext context, DataType dataType) {
       // Mock 实现：返回空的批次计划
-      return com.patra.ingest.domain.model.vo.plan.BatchPlan.empty(context.provenanceCode());
+      return com.patra.ingest.domain.model.vo.plan.BatchPlan.empty(context.provenanceCode().getCode());
     }
 
     @Override
@@ -89,7 +103,7 @@ class DataSourcePortTest {
     void should_fetch_literature_data_with_generic_method() {
       // Given: Mock 实现
       DataSourcePort port = new MockDataSourcePort();
-      ExecutionContext context = createTestContext("pubmed");
+      ExecutionContext context = createTestContext(ProvenanceCode.PUBMED);
       TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
       Batch batch = createTestBatch();
 
@@ -110,7 +124,7 @@ class DataSourcePortTest {
     void should_fetch_journal_data_with_different_type() {
       // Given: Mock 实现
       DataSourcePort port = new MockDataSourcePort();
-      ExecutionContext context = createTestContext("doaj");
+      ExecutionContext context = createTestContext(ProvenanceCode.DOAJ);
       TypeReference<DataType.Journal> typeRef = new TypeReference<>() {};
       Batch batch = createTestBatch();
 
@@ -130,7 +144,7 @@ class DataSourcePortTest {
     void should_fetch_drug_data_with_different_type() {
       // Given: Mock 实现
       DataSourcePort port = new MockDataSourcePort();
-      ExecutionContext context = createTestContext("drugbank");
+      ExecutionContext context = createTestContext(ProvenanceCode.OPENALEX);
       TypeReference<DataType.Drug> typeRef = new TypeReference<>() {};
       Batch batch = createTestBatch();
 
@@ -155,7 +169,7 @@ class DataSourcePortTest {
     void should_maintain_type_safety() {
       // Given: Mock 实现
       DataSourcePort port = new MockDataSourcePort();
-      ExecutionContext context = createTestContext("pubmed");
+      ExecutionContext context = createTestContext(ProvenanceCode.PUBMED);
       TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
       Batch batch = createTestBatch();
 
@@ -179,12 +193,12 @@ class DataSourcePortTest {
       // When: 获取文献数据
       TypeReference<CanonicalLiterature> litTypeRef = new TypeReference<>() {};
       DataFetchResult<CanonicalLiterature> litResult =
-          port.fetchData(createTestContext("pubmed"), DataType.LITERATURE, litTypeRef, batch);
+          port.fetchData(createTestContext(ProvenanceCode.PUBMED), DataType.LITERATURE, litTypeRef, batch);
 
       // When: 获取期刊数据
       TypeReference<DataType.Journal> journalTypeRef = new TypeReference<>() {};
       DataFetchResult<DataType.Journal> journalResult =
-          port.fetchData(createTestContext("doaj"), DataType.JOURNAL, journalTypeRef, batch);
+          port.fetchData(createTestContext(ProvenanceCode.DOAJ), DataType.JOURNAL, journalTypeRef, batch);
 
       // Then: 两种数据类型应该完全隔离
       assertThat(litResult.dataType()).isEqualTo(DataType.LITERATURE);
@@ -444,7 +458,7 @@ class DataSourcePortTest {
   /**
    * 创建测试用的执行上下文
    */
-  private static ExecutionContext createTestContext(String provenanceCode) {
+  private static ExecutionContext createTestContext(ProvenanceCode provenanceCode) {
     // 简化的 Mock 上下文（实际实现会更复杂）
     return new ExecutionContext(
         1L, // taskId

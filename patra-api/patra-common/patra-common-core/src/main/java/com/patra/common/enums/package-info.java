@@ -1,8 +1,7 @@
 /**
  * 共享枚举包 - 跨服务使用的通用枚举定义。
  *
- * <p>本包包含 Patra 平台所有微服务共享的枚举定义,提供类型安全的常量和业务语义。
- * 这些枚举用于标识数据源、优先级、配置作用域、日期类型等核心业务概念。
+ * <p>本包包含 Patra 平台所有微服务共享的枚举定义,提供类型安全的常量和业务语义。 这些枚举用于标识数据源、优先级、配置作用域、日期类型等核心业务概念。
  *
  * <h2>职责</h2>
  *
@@ -17,16 +16,13 @@
  * <h2>核心枚举</h2>
  *
  * <ul>
- *   <li>{@link com.patra.common.enums.ProvenanceCode} - 数据源枚举,
- *       标识文献的上游来源(PUBMED、PMC、EPMC、OPENALEX 等),支持别名解析
- *   <li>{@link com.patra.common.enums.Priority} - 优先级枚举,
- *       用于任务调度和消息队列(HIGH、MEDIUM、LOW)
+ *   <li>{@link com.patra.common.enums.ProvenanceCode} - 数据源枚举, 标识文献的上游来源(PUBMED、PMC、EPMC、OPENALEX
+ *       等),支持别名解析
+ *   <li>{@link com.patra.common.enums.Priority} - 优先级枚举, 用于任务调度和消息队列(HIGH、MEDIUM、LOW)
  *   <li>{@link com.patra.common.enums.RegistryConfigScope} - 配置作用域枚举,
  *       定义配置的适用范围(SOURCE、OPERATION、TASK),支持优先级规则
- *   <li>{@link com.patra.common.enums.IngestDateType} - 采集日期类型枚举,
- *       定义日期类型(PUBLICATION、ENTREZ、EPMC 等)
- *   <li>{@link com.patra.common.enums.SortDirection} - 排序方向枚举,
- *       定义排序方向(ASC、DESC)
+ *   <li>{@link com.patra.common.enums.IngestDateType} - 采集日期类型枚举, 定义日期类型(PUBLICATION、ENTREZ、EPMC 等)
+ *   <li>{@link com.patra.common.enums.SortDirection} - 排序方向枚举, 定义排序方向(ASC、DESC)
  * </ul>
  *
  * <h2>ProvenanceCode 核心特性</h2>

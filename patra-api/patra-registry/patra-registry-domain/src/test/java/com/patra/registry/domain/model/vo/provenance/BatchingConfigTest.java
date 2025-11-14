@@ -285,7 +285,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, provenanceId, "HARVEST", Instant.now(), null, null, null, null, null);
+          new BatchingConfig(
+              1001L, provenanceId, "HARVEST", Instant.now(), null, null, null, null, null);
 
       // Then: 验证成功创建
       assertThat(batchingConfig.provenanceId()).isEqualTo(1L);
@@ -371,7 +372,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, operationType, Instant.now(), null, null, null, null, null);
+          new BatchingConfig(
+              1001L, 2001L, operationType, Instant.now(), null, null, null, null, null);
 
       // Then: 验证 operationType 已被 trim
       assertThat(batchingConfig.operationType()).isEqualTo("HARVEST");
@@ -481,7 +483,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, operationType, Instant.now(), null, null, null, null, null);
+          new BatchingConfig(
+              1001L, 2001L, operationType, Instant.now(), null, null, null, null, null);
 
       // Then: 验证 operationType 为 null
       assertThat(batchingConfig.operationType()).isNull();
@@ -495,7 +498,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, "HARVEST", Instant.now(), effectiveTo, null, null, null, null);
+          new BatchingConfig(
+              1001L, 2001L, "HARVEST", Instant.now(), effectiveTo, null, null, null, null);
 
       // Then: 验证 effectiveTo 为 null
       assertThat(batchingConfig.effectiveTo()).isNull();
@@ -524,7 +528,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, "HARVEST", Instant.now(), null, null, idsParamName, null, null);
+          new BatchingConfig(
+              1001L, 2001L, "HARVEST", Instant.now(), null, null, idsParamName, null, null);
 
       // Then: 验证 idsParamName 为 null
       assertThat(batchingConfig.idsParamName()).isNull();
@@ -538,7 +543,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, "HARVEST", Instant.now(), null, null, null, idsJoinDelimiter, null);
+          new BatchingConfig(
+              1001L, 2001L, "HARVEST", Instant.now(), null, null, null, idsJoinDelimiter, null);
 
       // Then: 验证 idsJoinDelimiter 为 null
       assertThat(batchingConfig.idsJoinDelimiter()).isNull();
@@ -552,7 +558,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, "HARVEST", Instant.now(), null, null, null, null, maxIdsPerRequest);
+          new BatchingConfig(
+              1001L, 2001L, "HARVEST", Instant.now(), null, null, null, null, maxIdsPerRequest);
 
       // Then: 验证 maxIdsPerRequest 为 null
       assertThat(batchingConfig.maxIdsPerRequest()).isNull();
@@ -683,7 +690,8 @@ class BatchingConfigTest {
           new BatchingConfig(1001L, 2001L, "HARVEST", effectiveFrom, null, null, null, null, null);
 
       // When & Then: 对称性（a.equals(b) == b.equals(a)）
-      assertThat(batchingConfig1.equals(batchingConfig2)).isEqualTo(batchingConfig2.equals(batchingConfig1));
+      assertThat(batchingConfig1.equals(batchingConfig2))
+          .isEqualTo(batchingConfig2.equals(batchingConfig1));
       assertThat(batchingConfig1).isEqualTo(batchingConfig2);
       assertThat(batchingConfig2).isEqualTo(batchingConfig1);
     }
@@ -811,7 +819,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, operationType, Instant.now(), null, null, null, null, null);
+          new BatchingConfig(
+              1001L, 2001L, operationType, Instant.now(), null, null, null, null, null);
 
       // Then: 验证成功创建
       assertThat(batchingConfig.operationType()).isEqualTo("HARVEST");
@@ -825,7 +834,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, operationType, Instant.now(), null, null, null, null, null);
+          new BatchingConfig(
+              1001L, 2001L, operationType, Instant.now(), null, null, null, null, null);
 
       // Then: 验证成功创建
       assertThat(batchingConfig.operationType()).isEqualTo("UPDATE");
@@ -839,7 +849,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, operationType, Instant.now(), null, null, null, null, null);
+          new BatchingConfig(
+              1001L, 2001L, operationType, Instant.now(), null, null, null, null, null);
 
       // Then: 验证成功创建
       assertThat(batchingConfig.operationType()).isEqualTo("BACKFILL");
@@ -868,7 +879,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, "HARVEST", Instant.now(), null, null, idsParamName, null, null);
+          new BatchingConfig(
+              1001L, 2001L, "HARVEST", Instant.now(), null, null, idsParamName, null, null);
 
       // Then: 验证成功创建
       assertThat(batchingConfig.idsParamName()).isEqualTo("ids");
@@ -882,7 +894,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, "HARVEST", Instant.now(), null, null, null, idsJoinDelimiter, null);
+          new BatchingConfig(
+              1001L, 2001L, "HARVEST", Instant.now(), null, null, null, idsJoinDelimiter, null);
 
       // Then: 验证成功创建
       assertThat(batchingConfig.idsJoinDelimiter()).isEqualTo(",");
@@ -896,7 +909,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, "HARVEST", Instant.now(), null, null, null, idsJoinDelimiter, null);
+          new BatchingConfig(
+              1001L, 2001L, "HARVEST", Instant.now(), null, null, null, idsJoinDelimiter, null);
 
       // Then: 验证成功创建
       assertThat(batchingConfig.idsJoinDelimiter()).isEqualTo("+");
@@ -910,7 +924,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, "HARVEST", Instant.now(), null, null, null, null, maxIdsPerRequest);
+          new BatchingConfig(
+              1001L, 2001L, "HARVEST", Instant.now(), null, null, null, null, maxIdsPerRequest);
 
       // Then: 验证成功创建
       assertThat(batchingConfig.maxIdsPerRequest()).isEqualTo(500);
@@ -977,7 +992,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, operationType, Instant.now(), null, null, null, null, null);
+          new BatchingConfig(
+              1001L, 2001L, operationType, Instant.now(), null, null, null, null, null);
 
       // Then: 应该成功创建
       assertThat(batchingConfig.operationType()).isEqualTo("A");
@@ -1023,7 +1039,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, "HARVEST", Instant.now(), null, null, null, null, maxIdsPerRequest);
+          new BatchingConfig(
+              1001L, 2001L, "HARVEST", Instant.now(), null, null, null, null, maxIdsPerRequest);
 
       // Then: 应该成功创建
       assertThat(batchingConfig.maxIdsPerRequest()).isEqualTo(1);
@@ -1037,7 +1054,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, "HARVEST", Instant.now(), null, null, null, null, maxIdsPerRequest);
+          new BatchingConfig(
+              1001L, 2001L, "HARVEST", Instant.now(), null, null, null, null, maxIdsPerRequest);
 
       // Then: 应该成功创建
       assertThat(batchingConfig.maxIdsPerRequest()).isEqualTo(Integer.MAX_VALUE);
@@ -1051,7 +1069,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, "HARVEST", Instant.now(), null, null, idsParamName, null, null);
+          new BatchingConfig(
+              1001L, 2001L, "HARVEST", Instant.now(), null, null, idsParamName, null, null);
 
       // Then: 应该成功创建
       assertThat(batchingConfig.idsParamName()).isEqualTo("i");
@@ -1065,7 +1084,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, "HARVEST", Instant.now(), null, null, null, idsJoinDelimiter, null);
+          new BatchingConfig(
+              1001L, 2001L, "HARVEST", Instant.now(), null, null, null, idsJoinDelimiter, null);
 
       // Then: 应该成功创建
       assertThat(batchingConfig.idsJoinDelimiter()).isEqualTo("|");
@@ -1079,7 +1099,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, "HARVEST", Instant.now(), null, null, null, idsJoinDelimiter, null);
+          new BatchingConfig(
+              1001L, 2001L, "HARVEST", Instant.now(), null, null, null, idsJoinDelimiter, null);
 
       // Then: 应该成功创建
       assertThat(batchingConfig.idsJoinDelimiter()).isEqualTo("::");
@@ -1093,7 +1114,8 @@ class BatchingConfigTest {
 
       // When: 创建 BatchingConfig
       BatchingConfig batchingConfig =
-          new BatchingConfig(1001L, 2001L, "HARVEST", Instant.now(), null, null, idsParamName, null, null);
+          new BatchingConfig(
+              1001L, 2001L, "HARVEST", Instant.now(), null, null, idsParamName, null, null);
 
       // Then: 应该成功创建
       assertThat(batchingConfig.idsParamName()).isEqualTo("article_ids");

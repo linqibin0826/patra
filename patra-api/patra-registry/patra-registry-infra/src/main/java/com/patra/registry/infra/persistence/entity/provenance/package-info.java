@@ -1,7 +1,8 @@
 /**
  * 数据源实体包 - Provenance 相关数据库实体。
  *
- * <p>本包包含数据源(Provenance)及其运营配置的数据库实体对象,映射 {@code reg_prov_*} 系列表。所有配置实体支持时态特性,通过 {@code effective_from} 和 {@code effective_until} 字段实现配置的时间有效性管理。
+ * <p>本包包含数据源(Provenance)及其运营配置的数据库实体对象,映射 {@code reg_prov_*} 系列表。所有配置实体支持时态特性,通过 {@code
+ * effective_from} 和 {@code effective_until} 字段实现配置的时间有效性管理。
  *
  * <h2>职责</h2>
  *
@@ -17,46 +18,43 @@
  * <ul>
  *   <li>{@link com.patra.registry.infra.persistence.entity.provenance.RegProvenanceDO} - 数据源元数据
  *       <ul>
- *         <li>表: {@code reg_provenance}</li>
- *         <li>字段: {@code provenance_code}, {@code provenance_name}, {@code default_base_url}, {@code is_active}</li>
+ *         <li>表: {@code reg_provenance}
+ *         <li>字段: {@code provenance_code}, {@code provenance_name}, {@code default_base_url},
+ *             {@code is_active}
  *       </ul>
- *   </li>
- *   <li>{@link com.patra.registry.infra.persistence.entity.provenance.RegProvWindowOffsetCfgDO} - 时间窗口偏移配置
+ *   <li>{@link com.patra.registry.infra.persistence.entity.provenance.RegProvWindowOffsetCfgDO} -
+ *       时间窗口偏移配置
  *       <ul>
- *         <li>表: {@code reg_prov_window_offset_cfg}</li>
- *         <li>时态字段: {@code effective_from}, {@code effective_until}</li>
+ *         <li>表: {@code reg_prov_window_offset_cfg}
+ *         <li>时态字段: {@code effective_from}, {@code effective_until}
  *       </ul>
- *   </li>
- *   <li>{@link com.patra.registry.infra.persistence.entity.provenance.RegProvPaginationCfgDO} - 分页配置
+ *   <li>{@link com.patra.registry.infra.persistence.entity.provenance.RegProvPaginationCfgDO} -
+ *       分页配置
  *       <ul>
- *         <li>表: {@code reg_prov_pagination_cfg}</li>
- *         <li>策略: {@code cursor_based}, {@code page_based}</li>
+ *         <li>表: {@code reg_prov_pagination_cfg}
+ *         <li>策略: {@code cursor_based}, {@code page_based}
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.registry.infra.persistence.entity.provenance.RegProvHttpCfgDO} - HTTP 配置
  *       <ul>
- *         <li>表: {@code reg_prov_http_cfg}</li>
- *         <li>配置: 超时、自定义头、用户代理等</li>
+ *         <li>表: {@code reg_prov_http_cfg}
+ *         <li>配置: 超时、自定义头、用户代理等
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.registry.infra.persistence.entity.provenance.RegProvBatchingCfgDO} - 批处理配置
  *       <ul>
- *         <li>表: {@code reg_prov_batching_cfg}</li>
- *         <li>配置: 批大小、并发数、延迟等</li>
+ *         <li>表: {@code reg_prov_batching_cfg}
+ *         <li>配置: 批大小、并发数、延迟等
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.registry.infra.persistence.entity.provenance.RegProvRetryCfgDO} - 重试配置
  *       <ul>
- *         <li>表: {@code reg_prov_retry_cfg}</li>
- *         <li>策略: 最大重试次数、退避策略、可重试状态码</li>
+ *         <li>表: {@code reg_prov_retry_cfg}
+ *         <li>策略: 最大重试次数、退避策略、可重试状态码
  *       </ul>
- *   </li>
- *   <li>{@link com.patra.registry.infra.persistence.entity.provenance.RegProvRateLimitCfgDO} - 速率限制配置
+ *   <li>{@link com.patra.registry.infra.persistence.entity.provenance.RegProvRateLimitCfgDO} -
+ *       速率限制配置
  *       <ul>
- *         <li>表: {@code reg_prov_rate_limit_cfg}</li>
- *         <li>配置: 请求速率、时间窗口、并发限制</li>
+ *         <li>表: {@code reg_prov_rate_limit_cfg}
+ *         <li>配置: 请求速率、时间窗口、并发限制
  *       </ul>
- *   </li>
  * </ul>
  *
  * <h2>时态配置模型</h2>

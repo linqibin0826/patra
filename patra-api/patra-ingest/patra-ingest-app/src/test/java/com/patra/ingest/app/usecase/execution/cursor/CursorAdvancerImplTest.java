@@ -1,5 +1,6 @@
 package com.patra.ingest.app.usecase.execution.cursor;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -79,7 +80,7 @@ class CursorAdvancerImplTest {
         100L, // planId
         200L, // sliceId
         300L, // scheduleInstanceId
-        "pubmed",
+        ProvenanceCode.PUBMED,
         "HARVEST",
         DataType.LITERATURE, // dataType
         null, // configSnapshot
@@ -106,7 +107,7 @@ class CursorAdvancerImplTest {
 
       Cursor existingCursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "TIME",
               "GLOBAL",
@@ -116,7 +117,7 @@ class CursorAdvancerImplTest {
               "hash-001");
 
       when(cursorRepository.find(
-              eq("pubmed"),
+              eq(ProvenanceCode.PUBMED.getCode()),
               eq("HARVEST"),
               eq("TIME"),
               eq("GLOBAL"),
@@ -150,7 +151,7 @@ class CursorAdvancerImplTest {
 
       Cursor existingCursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "TIME",
               "GLOBAL",
@@ -186,7 +187,7 @@ class CursorAdvancerImplTest {
 
       Cursor existingCursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "TIME",
               "GLOBAL",
@@ -203,7 +204,7 @@ class CursorAdvancerImplTest {
       verify(cursorEventRepository).save(eventCaptor.capture());
       CursorEvent event = eventCaptor.getValue();
 
-      assertThat(event.getProvenanceCode()).isEqualTo("pubmed");
+      assertThat(event.getProvenanceCode()).isEqualTo(ProvenanceCode.PUBMED);
       assertThat(event.getOperationCode()).isEqualTo("HARVEST");
       assertThat(event.getCursorKey()).isEqualTo("TIME");
       assertThat(event.getExprHash()).isEqualTo("hash-003");
@@ -225,7 +226,7 @@ class CursorAdvancerImplTest {
 
       Cursor existingCursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "TIME",
               "GLOBAL",
@@ -260,7 +261,7 @@ class CursorAdvancerImplTest {
       testContext = createTestContext(windowSpec, "hash-new");
 
       when(cursorRepository.find(
-              eq("pubmed"),
+              eq(ProvenanceCode.PUBMED.getCode()),
               eq("HARVEST"),
               eq("TIME"),
               eq("GLOBAL"),
@@ -277,7 +278,7 @@ class CursorAdvancerImplTest {
       verify(cursorRepository).save(cursorCaptor.capture());
       Cursor savedCursor = cursorCaptor.getValue();
 
-      assertThat(savedCursor.getProvenanceCode()).isEqualTo("pubmed");
+      assertThat(savedCursor.getProvenanceCode()).isEqualTo(ProvenanceCode.PUBMED);
       assertThat(savedCursor.getOperationCode()).isEqualTo("HARVEST");
       assertThat(savedCursor.getCursorKey()).isEqualTo("TIME");
       assertThat(savedCursor.getCurrentWatermark()).isEqualTo(to);
@@ -328,7 +329,7 @@ class CursorAdvancerImplTest {
 
       Cursor existingCursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "TIME",
               "GLOBAL",
@@ -367,7 +368,7 @@ class CursorAdvancerImplTest {
 
       Cursor existingCursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "TIME",
               "GLOBAL",
@@ -402,7 +403,7 @@ class CursorAdvancerImplTest {
       // 旧游标有旧的哈希
       Cursor existingCursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "TIME",
               "GLOBAL",
@@ -448,7 +449,7 @@ class CursorAdvancerImplTest {
 
       Cursor existingCursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "TIME",
               "GLOBAL",
@@ -576,7 +577,7 @@ class CursorAdvancerImplTest {
 
       Cursor existingCursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "TIME",
               "GLOBAL",
@@ -640,7 +641,7 @@ class CursorAdvancerImplTest {
       cursorAdvancer.advance(testContext, testTaskId, testRunId, testBatchId);
 
       // Then: 验证查询时使用 "TIME" 键
-      verify(cursorRepository).find(eq("pubmed"), eq("HARVEST"), eq("TIME"), any(), any());
+      verify(cursorRepository).find(eq(ProvenanceCode.PUBMED.getCode()), eq("HARVEST"), eq("TIME"), any(), any());
     }
   }
 
@@ -664,7 +665,7 @@ class CursorAdvancerImplTest {
               100L,
               200L,
               300L,
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "BACKFILL", // BACKFILL 操作
               DataType.LITERATURE, // dataType
               null,
@@ -684,6 +685,7 @@ class CursorAdvancerImplTest {
       verify(cursorEventRepository).save(eventCaptor.capture());
       CursorEvent event = eventCaptor.getValue();
 
+      assertThat(event.getDirection()).isNotNull();
       assertThat(event.getDirection().toString()).isEqualTo("BACKFILL");
     }
 
@@ -707,6 +709,7 @@ class CursorAdvancerImplTest {
       verify(cursorEventRepository).save(eventCaptor.capture());
       CursorEvent event = eventCaptor.getValue();
 
+      assertThat(event.getDirection()).isNotNull();
       assertThat(event.getDirection().toString()).isEqualTo("FORWARD");
     }
   }
@@ -845,7 +848,7 @@ class CursorAdvancerImplTest {
               100L,
               200L,
               300L,
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               DataType.LITERATURE, // dataType
               null,

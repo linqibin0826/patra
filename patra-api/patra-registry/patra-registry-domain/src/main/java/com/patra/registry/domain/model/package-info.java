@@ -1,8 +1,7 @@
 /**
  * Registry 领域模型根包 - DDD 战术设计核心。
  *
- * <p>本包是 Registry 服务领域模型的根包,包含聚合根、值对象和读模型的组织结构。
- * 领域模型是业务逻辑的核心,封装了 Registry 服务的业务规则、不变性约束和领域概念。
+ * <p>本包是 Registry 服务领域模型的根包,包含聚合根、值对象和读模型的组织结构。 领域模型是业务逻辑的核心,封装了 Registry 服务的业务规则、不变性约束和领域概念。
  *
  * <h2>职责</h2>
  *
@@ -17,16 +16,13 @@
  * <h2>包结构</h2>
  *
  * <ul>
- *   <li>{@link com.patra.registry.domain.model.aggregate} - 聚合根包,
- *       定义一致性边界和业务不变性约束
- *   <li>{@link com.patra.registry.domain.model.vo} - 值对象根包,
- *       包含不可变的业务属性对象
+ *   <li>{@link com.patra.registry.domain.model.aggregate} - 聚合根包, 定义一致性边界和业务不变性约束
+ *   <li>{@link com.patra.registry.domain.model.vo} - 值对象根包, 包含不可变的业务属性对象
  *       <ul>
  *         <li>{@link com.patra.registry.domain.model.vo.provenance} - 数据源配置值对象
  *         <li>{@link com.patra.registry.domain.model.vo.expr} - 表达式值对象
  *       </ul>
- *   <li>{@code com.patra.registry.domain.model.read} - CQRS 读模型包,
- *       提供查询优化的只读对象
+ *   <li>{@code com.patra.registry.domain.model.read} - CQRS 读模型包, 提供查询优化的只读对象
  *       <ul>
  *         <li>{@code com.patra.registry.domain.model.read.provenance} - 数据源查询模型
  *         <li>{@code com.patra.registry.domain.model.read.expr} - 表达式查询模型
@@ -36,11 +32,10 @@
  * <h2>DDD 战术模式</h2>
  *
  * <ul>
- *   <li><strong>聚合根</strong>: {@link com.patra.registry.domain.model.aggregate.ProvenanceConfiguration},
- *       定义一致性边界,作为外部访问聚合的唯一入口
+ *   <li><strong>聚合根</strong>: {@link
+ *       com.patra.registry.domain.model.aggregate.ProvenanceConfiguration}, 定义一致性边界,作为外部访问聚合的唯一入口
  *   <li><strong>值对象</strong>: {@link com.patra.registry.domain.model.vo.provenance.Provenance}、
- *       {@link com.patra.registry.domain.model.vo.provenance.HttpConfig} 等,
- *       封装业务属性和验证逻辑
+ *       {@link com.patra.registry.domain.model.vo.provenance.HttpConfig} 等, 封装业务属性和验证逻辑
  *   <li><strong>仓储接口</strong>: {@link com.patra.registry.domain.port.ProvenanceConfigRepository},
  *       定义在领域层,实现在基础设施层
  * </ul>
@@ -50,10 +45,8 @@
  * <p>本模块采用 CQRS(命令查询职责分离)模式,区分写模型和读模型:
  *
  * <ul>
- *   <li><strong>写模型</strong>: 聚合根和值对象({@code aggregate}、{@code vo}),
- *       包含业务逻辑和验证规则,用于命令处理
- *   <li><strong>读模型</strong>: 查询对象({@code read}),
- *       简化查询结构,无业务逻辑,用于查询优化
+ *   <li><strong>写模型</strong>: 聚合根和值对象({@code aggregate}、{@code vo}), 包含业务逻辑和验证规则,用于命令处理
+ *   <li><strong>读模型</strong>: 查询对象({@code read}), 简化查询结构,无业务逻辑,用于查询优化
  * </ul>
  *
  * <h2>设计原则</h2>

@@ -1,17 +1,14 @@
 package com.patra.registry.domain.model.read.expr;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+
+import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.util.Collections;
-import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 /**
  * {@link ExprSnapshotQuery} 单元测试。
@@ -361,7 +358,10 @@ class ExprSnapshotQueryTest {
       List<ExprCapabilityQuery> capabilities = List.of(createExprCapabilityQuery());
       ExprSnapshotQuery snapshot =
           new ExprSnapshotQuery(
-              Collections.emptyList(), capabilities, Collections.emptyList(), Collections.emptyList());
+              Collections.emptyList(),
+              capabilities,
+              Collections.emptyList(),
+              Collections.emptyList());
 
       // When: 调用 capabilities()
       List<ExprCapabilityQuery> result = snapshot.capabilities();
@@ -377,7 +377,10 @@ class ExprSnapshotQueryTest {
       List<ExprRenderRuleQuery> renderRules = List.of(createExprRenderRuleQuery());
       ExprSnapshotQuery snapshot =
           new ExprSnapshotQuery(
-              Collections.emptyList(), Collections.emptyList(), renderRules, Collections.emptyList());
+              Collections.emptyList(),
+              Collections.emptyList(),
+              renderRules,
+              Collections.emptyList());
 
       // When: 调用 renderRules()
       List<ExprRenderRuleQuery> result = snapshot.renderRules();

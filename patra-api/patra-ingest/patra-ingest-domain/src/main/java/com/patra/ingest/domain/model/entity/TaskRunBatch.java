@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.model.entity;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.util.HashUtils;
 import com.patra.ingest.domain.model.enums.BatchStatus;
 import com.patra.ingest.domain.model.vo.batch.Batch;
@@ -40,7 +41,7 @@ public class TaskRunBatch {
   private final Long taskId;
   private final Long sliceId;
   private final Long planId;
-  private final String provenanceCode;
+  private final ProvenanceCode provenanceCode;
   private final String operationCode;
   private final int batchNo;
   private final Integer pageNo;
@@ -61,7 +62,7 @@ public class TaskRunBatch {
       Long taskId,
       Long sliceId,
       Long planId,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       int batchNo,
       Integer pageNo,
@@ -97,7 +98,7 @@ public class TaskRunBatch {
       Long taskId,
       Long sliceId,
       Long planId,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       int batchNo,
       Integer pageNo,
@@ -138,7 +139,7 @@ public class TaskRunBatch {
       Long taskId,
       Long sliceId,
       Long planId,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       int batchNo,
       Integer pageNo,

@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.model.vo.relay;
 
+import com.patra.common.enums.ProvenanceCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,7 @@ class LiteratureReadyMessageTest {
         // Given
         Long taskId = 123L;
         Long runId = 456L;
-        String provenanceCode = "PUBMED";
+        ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
         List<String> storageKeys = List.of("key1", "key2", "key3");
         Integer totalLiteratureCount = 100;
         Integer successBatchCount = 8;
@@ -81,7 +82,7 @@ class LiteratureReadyMessageTest {
         // Given & When
         LiteratureReadyMessage.Payload payload =
             new LiteratureReadyMessage.Payload(
-                1L, 2L, "TEST", List.of(), 0, 0, 0, 1699999999999L);
+                1L, 2L, ProvenanceCode.PUBMED, List.of(), 0, 0, 0, 1699999999999L);
 
         // Then
         assertThat(payload.storageKeys()).isEmpty();
@@ -98,10 +99,10 @@ class LiteratureReadyMessageTest {
         // Given
         LiteratureReadyMessage.Payload payload1 =
             new LiteratureReadyMessage.Payload(
-                123L, 456L, "PUBMED", List.of("key1"), 100, 8, 2, 1699999999999L);
+                123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
         LiteratureReadyMessage.Payload payload2 =
             new LiteratureReadyMessage.Payload(
-                123L, 456L, "PUBMED", List.of("key1"), 100, 8, 2, 1699999999999L);
+                123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
 
         // When & Then
         assertThat(payload1).isEqualTo(payload2);
@@ -114,10 +115,10 @@ class LiteratureReadyMessageTest {
         // Given
         LiteratureReadyMessage.Payload payload1 =
             new LiteratureReadyMessage.Payload(
-                123L, 456L, "PUBMED", List.of("key1"), 100, 8, 2, 1699999999999L);
+                123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
         LiteratureReadyMessage.Payload payload2 =
             new LiteratureReadyMessage.Payload(
-                999L, 456L, "PUBMED", List.of("key1"), 100, 8, 2, 1699999999999L);
+                999L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
 
         // When & Then
         assertThat(payload1).isNotEqualTo(payload2);
@@ -129,7 +130,7 @@ class LiteratureReadyMessageTest {
         // Given
         LiteratureReadyMessage.Payload payload =
             new LiteratureReadyMessage.Payload(
-                123L, 456L, "PUBMED", List.of("key1"), 100, 8, 2, 1699999999999L);
+                123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
 
         // When & Then
         assertThat(payload).isEqualTo(payload);
@@ -141,7 +142,7 @@ class LiteratureReadyMessageTest {
         // Given
         LiteratureReadyMessage.Payload payload =
             new LiteratureReadyMessage.Payload(
-                123L, 456L, "PUBMED", List.of("key1"), 100, 8, 2, 1699999999999L);
+                123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
 
         // When & Then
         assertThat(payload).isNotEqualTo(null);
@@ -172,7 +173,7 @@ class LiteratureReadyMessageTest {
         // Given
         LiteratureReadyMessage.Payload payload =
             new LiteratureReadyMessage.Payload(
-                123L, 456L, "PUBMED", List.of("key1", "key2"), 100, 8, 2, 1699999999999L);
+                123L, 456L, ProvenanceCode.PUBMED, List.of("key1", "key2"), 100, 8, 2, 1699999999999L);
 
         // When
         String result = payload.toString();
@@ -222,7 +223,7 @@ class LiteratureReadyMessageTest {
         // Given & When
         LiteratureReadyMessage.Payload payload =
             new LiteratureReadyMessage.Payload(
-                1L, 10L, "PUBMED", List.of("s3://key1", "s3://key2"), 200, 10, 0, 1699999999999L);
+                1L, 10L, ProvenanceCode.PUBMED, List.of("s3://key1", "s3://key2"), 200, 10, 0, 1699999999999L);
 
         // Then
         assertThat(payload.failedBatchCount()).isZero();
@@ -236,7 +237,7 @@ class LiteratureReadyMessageTest {
         // Given & When
         LiteratureReadyMessage.Payload payload =
             new LiteratureReadyMessage.Payload(
-                1L, 10L, "EPMC", List.of("s3://key1"), 100, 8, 2, 1699999999999L);
+                1L, 10L, ProvenanceCode.EPMC, List.of("s3://key1"), 100, 8, 2, 1699999999999L);
 
         // Then
         assertThat(payload.failedBatchCount()).isPositive();
@@ -250,7 +251,7 @@ class LiteratureReadyMessageTest {
         // Given & When
         LiteratureReadyMessage.Payload payload =
             new LiteratureReadyMessage.Payload(
-                1L, 10L, "ARXIV", List.of(), 0, 0, 10, 1699999999999L);
+                1L, 10L, ProvenanceCode.BIORXIV, List.of(), 0, 0, 10, 1699999999999L);
 
         // Then
         assertThat(payload.successBatchCount()).isZero();
@@ -272,7 +273,7 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该正确构造 Header 并访问所有字段")
       void shouldConstructHeaderAndAccessAllFields() {
         // Given
-        String provenanceCode = "PUBMED";
+        ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
         Long taskId = 123L;
         Long runId = 456L;
         Integer storageKeyCount = 10;
@@ -310,7 +311,7 @@ class LiteratureReadyMessageTest {
       void shouldSupportZeroStorageKeyCount() {
         // Given & When
         LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header("TEST", 1L, 2L, 0, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 1L, 2L, 0, 1699999999999L);
 
         // Then
         assertThat(header.storageKeyCount()).isZero();
@@ -326,9 +327,9 @@ class LiteratureReadyMessageTest {
       void shouldConsiderTwoHeadersWithSameValuesEqual() {
         // Given
         LiteratureReadyMessage.Header header1 =
-            new LiteratureReadyMessage.Header("PUBMED", 123L, 456L, 10, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 10, 1699999999999L);
         LiteratureReadyMessage.Header header2 =
-            new LiteratureReadyMessage.Header("PUBMED", 123L, 456L, 10, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 10, 1699999999999L);
 
         // When & Then
         assertThat(header1).isEqualTo(header2);
@@ -340,9 +341,9 @@ class LiteratureReadyMessageTest {
       void shouldConsiderTwoHeadersWithDifferentValuesNotEqual() {
         // Given
         LiteratureReadyMessage.Header header1 =
-            new LiteratureReadyMessage.Header("PUBMED", 123L, 456L, 10, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 10, 1699999999999L);
         LiteratureReadyMessage.Header header2 =
-            new LiteratureReadyMessage.Header("EPMC", 123L, 456L, 10, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.EPMC, 123L, 456L, 10, 1699999999999L);
 
         // When & Then
         assertThat(header1).isNotEqualTo(header2);
@@ -353,7 +354,7 @@ class LiteratureReadyMessageTest {
       void shouldConsiderHeaderEqualToItself() {
         // Given
         LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header("PUBMED", 123L, 456L, 10, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 10, 1699999999999L);
 
         // When & Then
         assertThat(header).isEqualTo(header);
@@ -364,7 +365,7 @@ class LiteratureReadyMessageTest {
       void shouldConsiderHeaderNotEqualToNull() {
         // Given
         LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header("PUBMED", 123L, 456L, 10, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 10, 1699999999999L);
 
         // When & Then
         assertThat(header).isNotEqualTo(null);
@@ -394,7 +395,7 @@ class LiteratureReadyMessageTest {
       void shouldReturnStringContainingAllFieldValues() {
         // Given
         LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header("PUBMED", 123L, 456L, 10, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 10, 1699999999999L);
 
         // When
         String result = header.toString();
@@ -443,9 +444,9 @@ class LiteratureReadyMessageTest {
         // Given
         LiteratureReadyMessage.Payload payload =
             new LiteratureReadyMessage.Payload(
-                123L, 456L, "PUBMED", List.of("key1"), 100, 8, 2, 1699999999999L);
+                123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
         LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header("PUBMED", 123L, 456L, 1, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
 
         // When
         LiteratureReadyMessage message = new LiteratureReadyMessage(payload, header);
@@ -477,9 +478,9 @@ class LiteratureReadyMessageTest {
         // Given
         LiteratureReadyMessage.Payload payload =
             new LiteratureReadyMessage.Payload(
-                123L, 456L, "PUBMED", List.of("key1"), 100, 8, 2, 1699999999999L);
+                123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
         LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header("PUBMED", 123L, 456L, 1, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
 
         LiteratureReadyMessage message1 = new LiteratureReadyMessage(payload, header);
         LiteratureReadyMessage message2 = new LiteratureReadyMessage(payload, header);
@@ -495,12 +496,12 @@ class LiteratureReadyMessageTest {
         // Given
         LiteratureReadyMessage.Payload payload1 =
             new LiteratureReadyMessage.Payload(
-                123L, 456L, "PUBMED", List.of("key1"), 100, 8, 2, 1699999999999L);
+                123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
         LiteratureReadyMessage.Payload payload2 =
             new LiteratureReadyMessage.Payload(
-                999L, 456L, "PUBMED", List.of("key1"), 100, 8, 2, 1699999999999L);
+                999L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
         LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header("PUBMED", 123L, 456L, 1, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
 
         LiteratureReadyMessage message1 = new LiteratureReadyMessage(payload1, header);
         LiteratureReadyMessage message2 = new LiteratureReadyMessage(payload2, header);
@@ -515,11 +516,11 @@ class LiteratureReadyMessageTest {
         // Given
         LiteratureReadyMessage.Payload payload =
             new LiteratureReadyMessage.Payload(
-                123L, 456L, "PUBMED", List.of("key1"), 100, 8, 2, 1699999999999L);
+                123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
         LiteratureReadyMessage.Header header1 =
-            new LiteratureReadyMessage.Header("PUBMED", 123L, 456L, 1, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
         LiteratureReadyMessage.Header header2 =
-            new LiteratureReadyMessage.Header("EPMC", 123L, 456L, 1, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.EPMC, 123L, 456L, 1, 1699999999999L);
 
         LiteratureReadyMessage message1 = new LiteratureReadyMessage(payload, header1);
         LiteratureReadyMessage message2 = new LiteratureReadyMessage(payload, header2);
@@ -534,9 +535,9 @@ class LiteratureReadyMessageTest {
         // Given
         LiteratureReadyMessage.Payload payload =
             new LiteratureReadyMessage.Payload(
-                123L, 456L, "PUBMED", List.of("key1"), 100, 8, 2, 1699999999999L);
+                123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
         LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header("PUBMED", 123L, 456L, 1, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
         LiteratureReadyMessage message = new LiteratureReadyMessage(payload, header);
 
         // When & Then
@@ -549,9 +550,9 @@ class LiteratureReadyMessageTest {
         // Given
         LiteratureReadyMessage.Payload payload =
             new LiteratureReadyMessage.Payload(
-                123L, 456L, "PUBMED", List.of("key1"), 100, 8, 2, 1699999999999L);
+                123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
         LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header("PUBMED", 123L, 456L, 1, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
         LiteratureReadyMessage message = new LiteratureReadyMessage(payload, header);
 
         // When & Then
@@ -569,9 +570,9 @@ class LiteratureReadyMessageTest {
         // Given
         LiteratureReadyMessage.Payload payload =
             new LiteratureReadyMessage.Payload(
-                123L, 456L, "PUBMED", List.of("key1"), 100, 8, 2, 1699999999999L);
+                123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
         LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header("PUBMED", 123L, 456L, 1, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
         LiteratureReadyMessage message = new LiteratureReadyMessage(payload, header);
 
         // When
@@ -606,9 +607,9 @@ class LiteratureReadyMessageTest {
         List<String> storageKeys = List.of("s3://bucket/run-123/batch-1.json", "s3://bucket/run-123/batch-2.json");
         LiteratureReadyMessage.Payload payload =
             new LiteratureReadyMessage.Payload(
-                100L, 123L, "PUBMED", storageKeys, 200, 10, 0, 1699999999999L);
+                100L, 123L, ProvenanceCode.PUBMED, storageKeys, 200, 10, 0, 1699999999999L);
         LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header("PUBMED", 100L, 123L, 2, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 100L, 123L, 2, 1699999999999L);
 
         // When
         LiteratureReadyMessage message = new LiteratureReadyMessage(payload, header);
@@ -630,9 +631,9 @@ class LiteratureReadyMessageTest {
         List<String> storageKeys = List.of("s3://bucket/run-456/batch-1.json");
         LiteratureReadyMessage.Payload payload =
             new LiteratureReadyMessage.Payload(
-                200L, 456L, "EPMC", storageKeys, 150, 8, 2, 1699999999999L);
+                200L, 456L, ProvenanceCode.EPMC, storageKeys, 150, 8, 2, 1699999999999L);
         LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header("EPMC", 200L, 456L, 1, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.EPMC, 200L, 456L, 1, 1699999999999L);
 
         // When
         LiteratureReadyMessage message = new LiteratureReadyMessage(payload, header);
@@ -649,9 +650,9 @@ class LiteratureReadyMessageTest {
         // Given
         LiteratureReadyMessage.Payload payload =
             new LiteratureReadyMessage.Payload(
-                300L, 789L, "ARXIV", List.of(), 0, 0, 10, 1699999999999L);
+                300L, 789L, ProvenanceCode.BIORXIV, List.of(), 0, 0, 10, 1699999999999L);
         LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header("ARXIV", 300L, 789L, 0, 1699999999999L);
+            new LiteratureReadyMessage.Header(ProvenanceCode.BIORXIV, 300L, 789L, 0, 1699999999999L);
 
         // When
         LiteratureReadyMessage message = new LiteratureReadyMessage(payload, header);

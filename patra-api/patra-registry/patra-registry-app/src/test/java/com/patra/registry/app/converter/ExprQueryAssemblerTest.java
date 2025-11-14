@@ -409,35 +409,19 @@ class ExprQueryAssemblerTest {
 
       ExprCapability capability =
           new ExprCapability(
-              21L,
-              2L,
-              null, // 可选
-              "title",
-              now,
+              21L, 2L, null, // 可选
+              "title", now, null, // 可选
               null, // 可选
               null, // 可选
-              null, // 可选
-              false,
-              null, // 可选
-              false,
-              false,
-              0,
-              0,
-              null, // 可选
-              0,
-              false,
-              "NONE",
-              false,
-              false,
-              false,
+              false, null, // 可选
+              false, false, 0, 0, null, // 可选
+              0, false, "NONE", false, false, false, null, // 可选
               null, // 可选
               null, // 可选
               null, // 可选
               null, // 可选
               null, // 可选
-              null, // 可选
-              false,
-              null, // 可选
+              false, null, // 可选
               null); // 可选
 
       // When: 执行转换
@@ -659,8 +643,8 @@ class ExprQueryAssemblerTest {
                   2L, 1L, null, "f2", "IN", null, null, null, "QUERY", "ANY", "ANY", "ANY", now,
                   null, "{{t}}", null, null, false, null, null),
               new ExprRenderRule(
-                  3L, 2L, null, "f3", "RANGE", null, null, null, "PARAMS", "ANY", "ANY", "ANY",
-                  now, null, "{{t}}", null, null, false, null, null));
+                  3L, 2L, null, "f3", "RANGE", null, null, null, "PARAMS", "ANY", "ANY", "ANY", now,
+                  null, "{{t}}", null, null, false, null, null));
 
       // When: 执行转换
       List<ExprRenderRuleQuery> result = assembler.toRenderRuleQueries(rules);
@@ -721,12 +705,9 @@ class ExprQueryAssemblerTest {
                   now, null, "{{t}}", null, null, false, null, null));
 
       List<ApiParamMapping> apiParamMappings =
-          List.of(
-              new ApiParamMapping(
-                  30L, 1L, "HARVEST", "ep", "k", "p", null, null, now, null));
+          List.of(new ApiParamMapping(30L, 1L, "HARVEST", "ep", "k", "p", null, null, now, null));
 
-      ExprSnapshot snapshot =
-          new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
+      ExprSnapshot snapshot = new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
 
       // When: 执行转换
       ExprSnapshotQuery result = assembler.toQuery(snapshot);

@@ -3,6 +3,7 @@ package com.patra.ingest.app.usecase.plan;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.plan.command.PlanIngestionCommand;
 import com.patra.ingest.domain.exception.PlanPersistenceException;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
@@ -52,6 +53,7 @@ public class PlanPersistenceCoordinator {
    * @throws PlanPersistenceException 存储失败时
    */
   public ScheduleInstanceAggregate persistScheduleInstance(PlanIngestionCommand request) {
+    ProvenanceCode provenanceCode = request.provenanceCode();
     ScheduleInstanceAggregate schedule =
         ScheduleInstanceAggregate.start(
             request.scheduler(),
@@ -60,7 +62,7 @@ public class PlanPersistenceCoordinator {
             request.triggerType(),
             request.triggeredAt(),
             request.triggerParams(),
-            request.provenanceCode().getCode());
+            provenanceCode);
     try {
       return scheduleInstanceRepository.saveOrUpdateInstance(schedule);
     } catch (RuntimeException ex) {

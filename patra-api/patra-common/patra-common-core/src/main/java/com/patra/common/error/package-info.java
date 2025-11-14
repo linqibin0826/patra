@@ -1,8 +1,8 @@
 /**
  * 异常处理框架包 - 领域异常和应用异常基类。
  *
- * <p>本包提供 Patra 平台统一的异常体系,包括领域异常基类、应用异常基类、错误特征枚举和错误码接口。
- * 异常体系支持六边形架构的异常映射,将领域异常转换为适配器层的 HTTP ProblemDetail 响应。
+ * <p>本包提供 Patra 平台统一的异常体系,包括领域异常基类、应用异常基类、错误特征枚举和错误码接口。 异常体系支持六边形架构的异常映射,将领域异常转换为适配器层的 HTTP
+ * ProblemDetail 响应。
  *
  * <h2>职责</h2>
  *
@@ -37,16 +37,13 @@
  * <h2>核心异常类</h2>
  *
  * <ul>
- *   <li>{@link com.patra.common.error.DomainException} - 领域层异常基类,
- *       表示业务规则违反和领域不变量破坏,保持框架无关性
- *   <li>{@link com.patra.common.error.ApplicationException} - 应用层异常基类,
- *       表示应用层错误和编排失败
+ *   <li>{@link com.patra.common.error.DomainException} - 领域层异常基类, 表示业务规则违反和领域不变量破坏,保持框架无关性
+ *   <li>{@link com.patra.common.error.ApplicationException} - 应用层异常基类, 表示应用层错误和编排失败
  * </ul>
  *
  * <h2>错误特征枚举</h2>
  *
- * <p>{@link com.patra.common.error.trait.ErrorTrait} 提供语义化错误分类,
- * 用于将异常映射到 HTTP 状态码:
+ * <p>{@link com.patra.common.error.trait.ErrorTrait} 提供语义化错误分类, 用于将异常映射到 HTTP 状态码:
  *
  * <ul>
  *   <li>{@code NOT_FOUND} → HTTP 404

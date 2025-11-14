@@ -13,6 +13,7 @@ import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.infra.persistence.converter.TaskConverter;
 import com.patra.ingest.infra.persistence.entity.TaskDO;
 import com.patra.ingest.infra.persistence.mapper.TaskMapper;
+import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

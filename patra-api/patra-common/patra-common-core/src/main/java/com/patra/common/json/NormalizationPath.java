@@ -9,6 +9,7 @@ import java.util.Deque;
  * <p>在递归遍历 JSON 树结构时，维护当前的路径信息（如 "user.address.city"），以便在发生错误时提供准确的上下文。
  *
  * <p><b>路径格式</b>:
+ *
  * <ul>
  *   <li>对象字段: {@code $.user.name}
  *   <li>数组元素: {@code $.items[]}

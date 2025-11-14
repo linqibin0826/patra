@@ -1,7 +1,8 @@
 /**
  * MyBatis 数据层异常映射贡献器包。
  *
- * <p>本包提供 {@link com.patra.starter.core.error.spi.ErrorMappingContributor} 实现,负责将 MyBatis-Plus 和底层 JDBC 驱动程序抛出的异常转换为标准化的平台错误码,确保 API 响应的一致性和可读性。
+ * <p>本包提供 {@link com.patra.starter.core.error.spi.ErrorMappingContributor} 实现,负责将 MyBatis-Plus 和底层
+ * JDBC 驱动程序抛出的异常转换为标准化的平台错误码,确保 API 响应的一致性和可读性。
  *
  * <h2>职责</h2>
  *
@@ -15,7 +16,8 @@
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link com.patra.starter.mybatis.error.contributor.DataLayerErrorMappingContributor} - 数据层异常映射贡献器
+ *   <li>{@link com.patra.starter.mybatis.error.contributor.DataLayerErrorMappingContributor} -
+ *       数据层异常映射贡献器
  * </ul>
  *
  * <h2>设计决策</h2>
@@ -58,6 +60,7 @@
  * <h2>使用示例</h2>
  *
  * <p><b>场景 1: 唯一键冲突</b>
+ *
  * <pre>{@code
  * // 数据库表定义: UNIQUE KEY `uk_name` (name)
  * ProvenanceDO provenance = ProvenanceDO.builder()
@@ -75,6 +78,7 @@
  * }</pre>
  *
  * <p><b>场景 2: 数据库连接失败</b>
+ *
  * <pre>{@code
  * // 数据库服务器宕机或网络故障
  * try {
@@ -88,6 +92,7 @@
  * }</pre>
  *
  * <p><b>场景 3: 外键约束违反</b>
+ *
  * <pre>{@code
  * // 尝试删除被引用的父记录
  * try {
@@ -103,6 +108,7 @@
  * <h2>集成方式</h2>
  *
  * <p><b>自动注册(推荐):</b>
+ *
  * <pre>{@code
  * // 通过 @Component 注解自动注册到 Spring 容器
  * @Component
@@ -132,6 +138,7 @@
  * <h2>扩展指南</h2>
  *
  * <p><b>添加新的数据库供应商支持:</b>
+ *
  * <pre>{@code
  * private Optional<ErrorCodeLike> mapPostgresqlErrors(SQLException sqlEx) {
  *     int errorCode = sqlEx.getErrorCode();

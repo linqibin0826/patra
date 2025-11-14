@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.model.vo.execution;
 
+import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 
 /**
@@ -17,7 +18,7 @@ public record TaskReadyMessage(Payload payload, Header header) {
       Long taskId,
       Long planId,
       Long sliceId,
-      String provenance,
+      ProvenanceCode provenance,
       String operation,
       String idempotentKey,
       Integer priority,
@@ -27,7 +28,11 @@ public record TaskReadyMessage(Payload payload, Header header) {
       Instant planWindowFrom,
       Instant planWindowTo,
       String planSliceStrategy,
-      PlanSliceParams planSliceParams) {}
+      PlanSliceParams planSliceParams) {
+
+    public Payload {
+    }
+  }
 
   /** 任务执行所需的特定参数。 */
   public record TaskParams(Integer sliceNo) {}

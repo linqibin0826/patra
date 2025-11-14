@@ -32,6 +32,7 @@
  * <h2>使用示例</h2>
  *
  * <h3>创建错误解析结果</h3>
+ *
  * <pre>{@code
  * // 通过引擎自动解析
  * ErrorResolution resolution = errorResolutionEngine.resolve(exception);
@@ -46,6 +47,7 @@
  * }</pre>
  *
  * <h3>使用错误解析结果</h3>
+ *
  * <pre>{@code
  * @RestControllerAdvice
  * public class GlobalExceptionHandler {
@@ -67,6 +69,7 @@
  * }</pre>
  *
  * <h3>创建简单错误码</h3>
+ *
  * <pre>{@code
  * // 在 ErrorMappingContributor 中使用
  * @Component

@@ -22,8 +22,7 @@
  *
  * <h2>约定优于配置</h2>
  *
- * <p>自动扫描 {@code com.patra} 包下的所有 {@code @FeignClient} 接口。按照约定，标准 RPC
- * 客户端应放置在：
+ * <p>自动扫描 {@code com.patra} 包下的所有 {@code @FeignClient} 接口。按照约定，标准 RPC 客户端应放置在：
  *
  * <pre>
  * com.patra.{module}.api.rpc.client

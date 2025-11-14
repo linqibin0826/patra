@@ -1,8 +1,8 @@
 /**
  * 错误处理管道内置拦截器包。
  *
- * <p>本包提供错误处理管道的核心拦截器实现,涵盖追踪传播、指标收集和熔断保护等关键能力。
- * 所有拦截器都实现 {@link com.patra.starter.core.error.pipeline.ResolutionInterceptor} 接口。
+ * <p>本包提供错误处理管道的核心拦截器实现,涵盖追踪传播、指标收集和熔断保护等关键能力。 所有拦截器都实现 {@link
+ * com.patra.starter.core.error.pipeline.ResolutionInterceptor} 接口。
  *
  * <h2>职责</h2>
  *
@@ -15,14 +15,18 @@
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link com.patra.starter.core.error.pipeline.interceptor.TracingInterceptor} - 追踪传播拦截器(@Order(10))
- *   <li>{@link com.patra.starter.core.error.pipeline.interceptor.MetricsInterceptor} - 指标收集拦截器(@Order(20))
- *   <li>{@link com.patra.starter.core.error.pipeline.interceptor.CircuitBreakerInterceptor} - 熔断器拦截器(@Order(30),可选)
+ *   <li>{@link com.patra.starter.core.error.pipeline.interceptor.TracingInterceptor} -
+ *       追踪传播拦截器(@Order(10))
+ *   <li>{@link com.patra.starter.core.error.pipeline.interceptor.MetricsInterceptor} -
+ *       指标收集拦截器(@Order(20))
+ *   <li>{@link com.patra.starter.core.error.pipeline.interceptor.CircuitBreakerInterceptor} -
+ *       熔断器拦截器(@Order(30),可选)
  * </ul>
  *
  * <h2>拦截器详解</h2>
  *
  * <h3>TracingInterceptor (@Order(10))</h3>
+ *
  * <ul>
  *   <li><strong>职责</strong>: 提取和传播分布式追踪上下文
  *   <li><strong>优先级</strong>: 最高(10),确保追踪 ID 在所有拦截器中可用
@@ -31,19 +35,23 @@
  * </ul>
  *
  * <h3>MetricsInterceptor (@Order(20))</h3>
+ *
  * <ul>
  *   <li><strong>职责</strong>: 记录错误解析指标和检测慢解析
  *   <li><strong>优先级</strong>: 中等(20),需要追踪 ID 已就绪
- *   <li><strong>依赖</strong>: {@link com.patra.starter.core.error.observation.ErrorObservationRecorder}
+ *   <li><strong>依赖</strong>: {@link
+ *       com.patra.starter.core.error.observation.ErrorObservationRecorder}
  *   <li><strong>行为</strong>: 记录解析耗时、错误类型分布,超阈值记录警告日志
  * </ul>
  *
  * <h3>CircuitBreakerInterceptor (@Order(30),可选)</h3>
+ *
  * <ul>
  *   <li><strong>职责</strong>: 保护错误解析管道,防止级联故障
  *   <li><strong>优先级</strong>: 较低(30),仅保护核心解析逻辑
  *   <li><strong>依赖</strong>: Resilience4j CircuitBreaker(可选依赖)
- *   <li><strong>激活条件</strong>: {@code resilience4j-circuitbreaker} 在 classpath 且 {@code patra.error.circuit-breaker.enabled=true}
+ *   <li><strong>激活条件</strong>: {@code resilience4j-circuitbreaker} 在 classpath 且 {@code
+ *       patra.error.circuit-breaker.enabled=true}
  *   <li><strong>行为</strong>: 熔断器打开时返回降级错误,避免雪崩
  * </ul>
  *
@@ -74,6 +82,7 @@
  * <h2>使用示例</h2>
  *
  * <h3>默认配置(自动激活)</h3>
+ *
  * <pre>{@code
  * patra:
  *   error:
@@ -88,6 +97,7 @@
  * }</pre>
  *
  * <h3>启用熔断器</h3>
+ *
  * <pre>{@code
  * patra:
  *   error:
@@ -99,6 +109,7 @@
  * }</pre>
  *
  * <h3>查看拦截器执行日志</h3>
+ *
  * <pre>
  * 2025-01-12 10:30:45.123 [traceId=abc123] DEBUG TracingInterceptor - 提取追踪 ID: abc123
  * 2025-01-12 10:30:45.125 [traceId=abc123] DEBUG MetricsInterceptor - 错误解析开始: PlanNotFoundException

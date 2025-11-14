@@ -13,19 +13,21 @@ import lombok.extern.jackson.Jacksonized;
  * <p>此不可变值对象作为采集、目录和溯源微服务间的共享内核模型，封装了学术文献的核心元数据。
  *
  * <p>设计基于以下国际标准：
+ *
  * <ul>
- *   <li><b>Dublin Core</b> - 核心元数据标准（title, creator, subject, identifier等）</li>
- *   <li><b>Schema.org</b> - ScholarlyArticle 规范（author, abstract, keywords等）</li>
- *   <li><b>Crossref</b> - 学术文献元数据标准（funder, relation等）</li>
+ *   <li><b>Dublin Core</b> - 核心元数据标准（title, creator, subject, identifier等）
+ *   <li><b>Schema.org</b> - ScholarlyArticle 规范（author, abstract, keywords等）
+ *   <li><b>Crossref</b> - 学术文献元数据标准（funder, relation等）
  * </ul>
  *
  * <p>设计原则：
+ *
  * <ul>
- *   <li>使用通用术语而非数据源特定术语</li>
- *   <li>不包含业务行为，保持共享模块无框架依赖</li>
- *   <li>支持多种数据源（PubMed, EPMC, Crossref, Scopus等）</li>
- *   <li>医学特有字段通用化但保留支持（通过 vocabulary/source 标注来源）</li>
- *   <li>可扩展至其他学科领域</li>
+ *   <li>使用通用术语而非数据源特定术语
+ *   <li>不包含业务行为，保持共享模块无框架依赖
+ *   <li>支持多种数据源（PubMed, EPMC, Crossref, Scopus等）
+ *   <li>医学特有字段通用化但保留支持（通过 vocabulary/source 标注来源）
+ *   <li>可扩展至其他学科领域
  * </ul>
  *
  * @since 0.1.0
@@ -57,12 +59,14 @@ public class CanonicalLiterature {
 
   /**
    * 出版状态。
+   *
    * <p>通用值：published（已出版）, preprint（预印本）, in-press（印刷中）, retracted（已撤稿）。
    */
   String publicationStatus;
 
   /**
    * 媒介类型（出版形式）。
+   *
    * <p>可能的值：print（纸质）, electronic（电子）, print-electronic（纸质+电子）。
    */
   String mediaType;
@@ -131,9 +135,7 @@ public class CanonicalLiterature {
 
   // ==================== 内嵌值对象 ====================
 
-  /**
-   * 标识符（支持多种类型）。
-   */
+  /** 标识符（支持多种类型）。 */
   @Value
   @Builder
   @Jacksonized
@@ -141,6 +143,7 @@ public class CanonicalLiterature {
 
     /**
      * 标识符类型。
+     *
      * <p>常见值：doi, pmid, pmc, pii, arxiv, isbn, issn, orcid, ror。
      */
     String type;
@@ -149,9 +152,7 @@ public class CanonicalLiterature {
     String value;
   }
 
-  /**
-   * 发表类型。
-   */
+  /** 发表类型。 */
   @Value
   @Builder
   @Jacksonized
@@ -167,9 +168,7 @@ public class CanonicalLiterature {
     String vocabularySource;
   }
 
-  /**
-   * 作者信息。
-   */
+  /** 作者信息。 */
   @Value
   @Builder
   @Jacksonized
@@ -200,9 +199,7 @@ public class CanonicalLiterature {
     List<Identifier> identifiers;
   }
 
-  /**
-   * 机构信息。
-   */
+  /** 机构信息。 */
   @Value
   @Builder
   @Jacksonized
@@ -215,9 +212,7 @@ public class CanonicalLiterature {
     List<Identifier> identifiers;
   }
 
-  /**
-   * 期刊/会议/图书信息（出版载体）。
-   */
+  /** 期刊/会议/图书信息（出版载体）。 */
   @Value
   @Builder
   @Jacksonized
@@ -248,9 +243,7 @@ public class CanonicalLiterature {
     String publisher;
   }
 
-  /**
-   * 摘要信息（支持结构化和非结构化摘要）。
-   */
+  /** 摘要信息（支持结构化和非结构化摘要）。 */
   @Value
   @Builder
   @Jacksonized
@@ -266,9 +259,7 @@ public class CanonicalLiterature {
     String copyright;
   }
 
-  /**
-   * 摘要段落（结构化摘要的组成部分）。
-   */
+  /** 摘要段落（结构化摘要的组成部分）。 */
   @Value
   @Builder
   @Jacksonized
@@ -284,9 +275,7 @@ public class CanonicalLiterature {
     String content;
   }
 
-  /**
-   * 其他语言或版本的摘要。
-   */
+  /** 其他语言或版本的摘要。 */
   @Value
   @Builder
   @Jacksonized
@@ -307,6 +296,7 @@ public class CanonicalLiterature {
 
   /**
    * 主题标引（支持多种受控词表）。
+   *
    * <p>可表示 MeSH 主题词、LCSH、自定义分类等。
    */
   @Value
@@ -328,6 +318,7 @@ public class CanonicalLiterature {
 
     /**
      * 受控词表来源。
+     *
      * <p>常见值：MeSH（医学主题词表）, LCSH（国会图书馆主题词表）, custom（自定义）。
      */
     String vocabulary;
@@ -336,9 +327,7 @@ public class CanonicalLiterature {
     List<SubjectQualifier> qualifiers;
   }
 
-  /**
-   * 主题词限定词（用于细化主题范围）。
-   */
+  /** 主题词限定词（用于细化主题范围）。 */
   @Value
   @Builder
   @Jacksonized
@@ -354,9 +343,7 @@ public class CanonicalLiterature {
     Boolean majorTopic;
   }
 
-  /**
-   * 关键词集合（支持多个来源）。
-   */
+  /** 关键词集合（支持多个来源）。 */
   @Value
   @Builder
   @Jacksonized
@@ -364,6 +351,7 @@ public class CanonicalLiterature {
 
     /**
      * 关键词来源。
+     *
      * <p>常见值：author（作者提供）, publisher（出版商）, editor（编辑）, indexer（索引机构）。
      */
     String source;
@@ -372,9 +360,7 @@ public class CanonicalLiterature {
     List<Keyword> keywords;
   }
 
-  /**
-   * 单个关键词。
-   */
+  /** 单个关键词。 */
   @Value
   @Builder
   @Jacksonized
@@ -389,6 +375,7 @@ public class CanonicalLiterature {
 
   /**
    * 物质信息（化学物质、生物制品、药物等）。
+   *
    * <p>主要用于医学、化学、生物学领域。
    */
   @Value
@@ -409,9 +396,7 @@ public class CanonicalLiterature {
     String vocabularySource;
   }
 
-  /**
-   * 多种日期信息。
-   */
+  /** 多种日期信息。 */
   @Value
   @Builder
   @Jacksonized
@@ -439,9 +424,7 @@ public class CanonicalLiterature {
     LocalDate accepted;
   }
 
-  /**
-   * 资助信息。
-   */
+  /** 资助信息。 */
   @Value
   @Builder
   @Jacksonized
@@ -460,9 +443,7 @@ public class CanonicalLiterature {
     String country;
   }
 
-  /**
-   * 外部关联数据（如基因库、临床试验、软件仓库等）。
-   */
+  /** 外部关联数据（如基因库、临床试验、软件仓库等）。 */
   @Value
   @Builder
   @Jacksonized
@@ -470,6 +451,7 @@ public class CanonicalLiterature {
 
     /**
      * 引用类型。
+     *
      * <p>常见值：database（数据库）, clinical-trial（临床试验）, software（软件）, dataset（数据集）。
      */
     String type;
@@ -481,9 +463,7 @@ public class CanonicalLiterature {
     List<String> identifiers;
   }
 
-  /**
-   * 相关项目（更正、撤稿、评论、转载等）。
-   */
+  /** 相关项目（更正、撤稿、评论、转载等）。 */
   @Value
   @Builder
   @Jacksonized
@@ -491,13 +471,15 @@ public class CanonicalLiterature {
 
     /**
      * 关系类型。
+     *
      * <p>常见值：
+     *
      * <ul>
-     *   <li>retraction-of（撤稿）</li>
-     *   <li>erratum-in（勘误）</li>
-     *   <li>comment-on（评论）</li>
-     *   <li>republished-from（转载）</li>
-     *   <li>correction-to（更正）</li>
+     *   <li>retraction-of（撤稿）
+     *   <li>erratum-in（勘误）
+     *   <li>comment-on（评论）
+     *   <li>republished-from（转载）
+     *   <li>correction-to（更正）
      * </ul>
      */
     String relationType;

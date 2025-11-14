@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.infra.persistence.entity.OutboxMessageDO;
+import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

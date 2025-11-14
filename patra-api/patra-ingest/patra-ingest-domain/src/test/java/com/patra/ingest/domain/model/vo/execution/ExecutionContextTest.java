@@ -3,6 +3,7 @@ package com.patra.ingest.domain.model.vo.execution;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
@@ -24,7 +25,7 @@ class ExecutionContextTest {
   private static final Long PLAN_ID = 3001L;
   private static final Long SLICE_ID = 4001L;
   private static final Long SCHEDULE_INSTANCE_ID = 5001L;
-  private static final String PROVENANCE_CODE = "pubmed";
+  private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final String OPERATION_CODE = "FETCH_CITATIONS";
   private static final String EXPR_HASH = "abc123def456";
   private static final String COMPILED_QUERY = "SELECT * FROM citations WHERE date > ?";
@@ -472,11 +473,11 @@ class ExecutionContextTest {
       // When
       ExecutionContext context =
           new ExecutionContext(
-              TASK_ID, RUN_ID, PLAN_ID, SLICE_ID, SCHEDULE_INSTANCE_ID, "", "", DataType.LITERATURE, null, "", "", null,
+              TASK_ID, RUN_ID, PLAN_ID, SLICE_ID, SCHEDULE_INSTANCE_ID, null, "", DataType.LITERATURE, null, "", "", null,
               "", null);
 
       // Then
-      assertThat(context.provenanceCode()).isEmpty();
+      assertThat(context.provenanceCode()).isNull();
       assertThat(context.operationCode()).isEmpty();
       assertThat(context.exprHash()).isEmpty();
       assertThat(context.compiledQuery()).isEmpty();
@@ -497,7 +498,7 @@ class ExecutionContextTest {
               PLAN_ID,
               SLICE_ID,
               SCHEDULE_INSTANCE_ID,
-              longString,
+              PROVENANCE_CODE,
               longString,
               DataType.LITERATURE,
               null,
@@ -508,7 +509,7 @@ class ExecutionContextTest {
               null);
 
       // Then
-      assertThat(context.provenanceCode()).hasSize(10000);
+      assertThat(context.provenanceCode()).isEqualTo(PROVENANCE_CODE);
       assertThat(context.operationCode()).hasSize(10000);
       assertThat(context.exprHash()).hasSize(10000);
       assertThat(context.compiledQuery()).hasSize(10000);

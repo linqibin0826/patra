@@ -1,9 +1,8 @@
 /**
  * Registry REST API 契约根包 - 对外接口定义层。
  *
- * <p>本包是 patra-registry 服务的外部契约模块根包,定义了供其他微服务调用的 REST API 接口、
- * 数据传输对象(DTO)、Feign 客户端和错误码。本模块遵循"契约优先"设计原则,
- * 确保 API 接口的稳定性和向后兼容性。
+ * <p>本包是 patra-registry 服务的外部契约模块根包,定义了供其他微服务调用的 REST API 接口、 数据传输对象(DTO)、Feign
+ * 客户端和错误码。本模块遵循"契约优先"设计原则, 确保 API 接口的稳定性和向后兼容性。
  *
  * <h2>职责</h2>
  *
@@ -107,7 +106,8 @@
  * <ul>
  *   <li><strong>契约稳定性</strong>: API 变更必须遵循语义化版本控制,避免破坏性变更
  *   <li><strong>纯契约模块</strong>: 仅包含接口、DTO 和注解,不包含业务逻辑
- *   <li><strong>依赖最小化</strong>: {@code spring-web} 和 {@code spring-cloud-openfeign-core} 使用 {@code provided} 作用域
+ *   <li><strong>依赖最小化</strong>: {@code spring-web} 和 {@code spring-cloud-openfeign-core} 使用 {@code
+ *       provided} 作用域
  *   <li><strong>DTO 不可变</strong>: 所有 DTOs 使用 {@code record} 实现,确保数据传输安全
  *   <li><strong>向后兼容</strong>: DTO 字段添加必须保持向后兼容,避免删除或重命名字段
  * </ul>
@@ -132,8 +132,8 @@
  *
  * <h2>错误处理</h2>
  *
- * <p>所有 API 错误都遵循 RFC 7807 ProblemDetail 格式,错误码定义在
- * {@link com.patra.registry.api.error.RegistryErrorCode}:
+ * <p>所有 API 错误都遵循 RFC 7807 ProblemDetail 格式,错误码定义在 {@link
+ * com.patra.registry.api.error.RegistryErrorCode}:
  *
  * <ul>
  *   <li>{@code REG-0xxx} - 通用 HTTP 对齐错误(通过 {@code HttpStdErrors} 生成)

@@ -1,8 +1,7 @@
 /**
  * Registry API 数据传输对象根包 - DTO 层组织结构。
  *
- * <p>本包是 Registry API 所有数据传输对象(DTO)的根包,按业务领域组织请求和响应对象。
- * DTOs 作为 API 契约的核心组成部分,隔离了内部领域模型与外部 API 表示,
+ * <p>本包是 Registry API 所有数据传输对象(DTO)的根包,按业务领域组织请求和响应对象。 DTOs 作为 API 契约的核心组成部分,隔离了内部领域模型与外部 API 表示,
  * 确保 API 的稳定性和向后兼容性。
  *
  * <h2>职责</h2>
@@ -18,12 +17,9 @@
  * <h2>子包结构</h2>
  *
  * <ul>
- *   <li>{@link com.patra.registry.api.dto.provenance} - 数据源配置 DTOs,
- *       包含数据源元数据和运营配置(HTTP、重试、分页等)的响应对象
- *   <li>{@link com.patra.registry.api.dto.expr} - 表达式 DTOs,
- *       包含表达式快照、字段定义、渲染规则、参数映射等响应对象
- *   <li>{@link com.patra.registry.api.dto.dict} - 字典 DTOs,
- *       包含字典类型、字典项等响应对象
+ *   <li>{@link com.patra.registry.api.dto.provenance} - 数据源配置 DTOs, 包含数据源元数据和运营配置(HTTP、重试、分页等)的响应对象
+ *   <li>{@link com.patra.registry.api.dto.expr} - 表达式 DTOs, 包含表达式快照、字段定义、渲染规则、参数映射等响应对象
+ *   <li>{@link com.patra.registry.api.dto.dict} - 字典 DTOs, 包含字典类型、字典项等响应对象
  * </ul>
  *
  * <h2>命名约定</h2>

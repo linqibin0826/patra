@@ -17,30 +17,27 @@
  * <ul>
  *   <li>{@code provenance} - 数据源相关实体
  *       <ul>
- *         <li>{@code RegProvenanceDO} - 数据源元数据</li>
- *         <li>{@code RegProvWindowOffsetCfgDO} - 时间窗口偏移配置</li>
- *         <li>{@code RegProvPaginationCfgDO} - 分页配置</li>
- *         <li>{@code RegProvHttpCfgDO} - HTTP 配置</li>
- *         <li>{@code RegProvBatchingCfgDO} - 批处理配置</li>
- *         <li>{@code RegProvRetryCfgDO} - 重试配置</li>
- *         <li>{@code RegProvRateLimitCfgDO} - 速率限制配置</li>
+ *         <li>{@code RegProvenanceDO} - 数据源元数据
+ *         <li>{@code RegProvWindowOffsetCfgDO} - 时间窗口偏移配置
+ *         <li>{@code RegProvPaginationCfgDO} - 分页配置
+ *         <li>{@code RegProvHttpCfgDO} - HTTP 配置
+ *         <li>{@code RegProvBatchingCfgDO} - 批处理配置
+ *         <li>{@code RegProvRetryCfgDO} - 重试配置
+ *         <li>{@code RegProvRateLimitCfgDO} - 速率限制配置
  *       </ul>
- *   </li>
  *   <li>{@code expr} - 表达式相关实体
  *       <ul>
- *         <li>{@code RegExprFieldDictDO} - 表达式字段定义</li>
- *         <li>{@code RegProvExprCapabilityDO} - 数据源能力定义</li>
- *         <li>{@code RegProvApiParamMapDO} - API 参数映射</li>
- *         <li>{@code RegProvExprRenderRuleDO} - 表达式渲染规则</li>
+ *         <li>{@code RegExprFieldDictDO} - 表达式字段定义
+ *         <li>{@code RegProvExprCapabilityDO} - 数据源能力定义
+ *         <li>{@code RegProvApiParamMapDO} - API 参数映射
+ *         <li>{@code RegProvExprRenderRuleDO} - 表达式渲染规则
  *       </ul>
- *   </li>
  *   <li>{@code dictionary} - 系统字典实体
  *       <ul>
- *         <li>{@code RegSysDictTypeDO} - 字典类型</li>
- *         <li>{@code RegSysDictItemDO} - 字典项</li>
- *         <li>{@code RegSysDictItemAliasDO} - 字典项别名</li>
+ *         <li>{@code RegSysDictTypeDO} - 字典类型
+ *         <li>{@code RegSysDictItemDO} - 字典项
+ *         <li>{@code RegSysDictItemAliasDO} - 字典项别名
  *       </ul>
- *   </li>
  * </ul>
  *
  * <h2>命名约定</h2>

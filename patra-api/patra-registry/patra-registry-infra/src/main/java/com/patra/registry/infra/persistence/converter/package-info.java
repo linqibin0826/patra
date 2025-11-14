@@ -17,16 +17,14 @@
  * <ul>
  *   <li>{@link com.patra.registry.infra.persistence.converter.ProvenanceEntityConverter} - 数据源实体转换器
  *       <ul>
- *         <li>转换 {@code RegProvenanceDO} ↔ {@code Provenance}</li>
- *         <li>转换各类配置 DO ↔ 配置 VO(HTTP、分页、重试等)</li>
+ *         <li>转换 {@code RegProvenanceDO} ↔ {@code Provenance}
+ *         <li>转换各类配置 DO ↔ 配置 VO(HTTP、分页、重试等)
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.registry.infra.persistence.converter.ExprEntityConverter} - 表达式实体转换器
  *       <ul>
- *         <li>转换 {@code RegExprFieldDictDO} ↔ {@code ExprField}</li>
- *         <li>转换表达式元数据 DO ↔ VO</li>
+ *         <li>转换 {@code RegExprFieldDictDO} ↔ {@code ExprField}
+ *         <li>转换表达式元数据 DO ↔ VO
  *       </ul>
- *   </li>
  * </ul>
  *
  * <h2>命名约定</h2>
@@ -50,21 +48,21 @@
  * <ul>
  *   <li><b>布尔字段映射</b>: MySQL {@code TINYINT(1)} → Java {@code Boolean}
  *       <pre>{@code
- *       @Mapping(target = "active",
- *                expression = "java(Boolean.TRUE.equals(entity.getIsActive()))")
- *       }</pre>
- *   </li>
+ * @Mapping(target = "active",
+ *          expression = "java(Boolean.TRUE.equals(entity.getIsActive()))")
+ *
+ * }</pre>
  *   <li><b>JSON 字段映射</b>: JSON 字符串 → Jackson {@code JsonNode}
  *       <pre>{@code
- *       @Mapping(target = "customHeaders",
- *                expression = "java(jsonHelper.parseJson(entity.getCustomHeaders()))")
- *       }</pre>
- *   </li>
+ * @Mapping(target = "customHeaders",
+ *          expression = "java(jsonHelper.parseJson(entity.getCustomHeaders()))")
+ *
+ * }</pre>
  *   <li><b>枚举代码映射</b>: 字符串代码 → 枚举值
  *       <pre>{@code
- *       @Mapping(target = "code", source = "provenanceCode")
- *       }</pre>
- *   </li>
+ * @Mapping(target = "code", source = "provenanceCode")
+ *
+ * }</pre>
  * </ul>
  *
  * <h2>使用示例</h2>

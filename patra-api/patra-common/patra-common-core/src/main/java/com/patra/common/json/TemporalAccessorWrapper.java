@@ -11,11 +11,11 @@ import java.time.temporal.TemporalAccessor;
 /**
  * TemporalAccessor 包装器，提供带回退逻辑的 Instant 转换功能。
  *
- * <p>Java 的 {@link java.time.temporal.TemporalAccessor} 是一个通用接口，可以表示各种日期时间类型
- * （如 Instant、LocalDateTime、LocalDate 等）。此类提供统一的方式将这些类型转换为 Instant，
- * 通过检测支持的字段并应用合适的转换策略。
+ * <p>Java 的 {@link java.time.temporal.TemporalAccessor} 是一个通用接口，可以表示各种日期时间类型 （如
+ * Instant、LocalDateTime、LocalDate 等）。此类提供统一的方式将这些类型转换为 Instant， 通过检测支持的字段并应用合适的转换策略。
  *
  * <p><b>转换策略优先级</b>:
+ *
  * <ol>
  *   <li>如果支持 INSTANT_SECONDS → 直接转换为 Instant
  *   <li>如果支持 OFFSET_SECONDS → 作为 OffsetDateTime 转换

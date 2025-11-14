@@ -1,8 +1,8 @@
 /**
  * 表达式值对象包 - Registry Domain 层。
  *
- * <p>本包包含表达式元数据的核心值对象,定义了动态表达式系统的配置和渲染规则。
- * 表达式系统用于动态生成 API 请求参数、字段映射和渲染逻辑,支持 patra-expr-kernel 的编译和执行。
+ * <p>本包包含表达式元数据的核心值对象,定义了动态表达式系统的配置和渲染规则。 表达式系统用于动态生成 API 请求参数、字段映射和渲染逻辑,支持 patra-expr-kernel
+ * 的编译和执行。
  *
  * <h2>职责</h2>
  *
@@ -19,12 +19,11 @@
  * <ul>
  *   <li>{@link com.patra.registry.domain.model.vo.expr.ExprSnapshot} - 表达式快照聚合,
  *       包含字段定义、渲染规则、参数映射和能力的完整视图
- *   <li>{@link com.patra.registry.domain.model.vo.expr.ExprField} - 表达式字段定义,
- *       描述字段名称、类型、路径和提取规则
+ *   <li>{@link com.patra.registry.domain.model.vo.expr.ExprField} - 表达式字段定义, 描述字段名称、类型、路径和提取规则
  *   <li>{@link com.patra.registry.domain.model.vo.expr.ExprRenderRule} - 表达式渲染规则,
  *       指定字段的输出格式、日期格式化、空值处理等
- *   <li>{@link com.patra.registry.domain.model.vo.expr.ApiParamMapping} - API 参数映射,
- *       描述 API 参数名到表达式变量的映射关系
+ *   <li>{@link com.patra.registry.domain.model.vo.expr.ApiParamMapping} - API 参数映射, 描述 API
+ *       参数名到表达式变量的映射关系
  *   <li>{@link com.patra.registry.domain.model.vo.expr.ExprCapability} - 表达式能力声明,
  *       定义表达式支持的功能特性(如分页、排序、过滤)
  * </ul>

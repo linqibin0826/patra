@@ -26,7 +26,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.context.request.ServletWebRequest;
 
@@ -55,7 +54,8 @@ class GlobalRestExceptionHandlerTest {
 
     ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
 
-    com.patra.common.error.codes.ErrorCodeLike errorCode = mock(com.patra.common.error.codes.ErrorCodeLike.class);
+    com.patra.common.error.codes.ErrorCodeLike errorCode =
+        mock(com.patra.common.error.codes.ErrorCodeLike.class);
     when(errorCode.code()).thenReturn("ERR_INTERNAL_ERROR");
 
     ErrorResolution errorResolution = mock(ErrorResolution.class);
@@ -97,7 +97,8 @@ class GlobalRestExceptionHandlerTest {
 
     ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
 
-    com.patra.common.error.codes.ErrorCodeLike errorCode = mock(com.patra.common.error.codes.ErrorCodeLike.class);
+    com.patra.common.error.codes.ErrorCodeLike errorCode =
+        mock(com.patra.common.error.codes.ErrorCodeLike.class);
     when(errorCode.code()).thenReturn("ERR_VALIDATION_FAILED");
 
     ErrorResolution errorResolution = mock(ErrorResolution.class);
@@ -115,8 +116,7 @@ class GlobalRestExceptionHandlerTest {
 
     // When: 处理验证异常
     ResponseEntity<Object> result =
-        handler.handleMethodArgumentNotValid(
-            exception, null, HttpStatus.BAD_REQUEST, webRequest);
+        handler.handleMethodArgumentNotValid(exception, null, HttpStatus.BAD_REQUEST, webRequest);
 
     // Then: 验证响应
     assertThat(result).isNotNull();
@@ -150,7 +150,8 @@ class GlobalRestExceptionHandlerTest {
 
     ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
 
-    com.patra.common.error.codes.ErrorCodeLike errorCode = mock(com.patra.common.error.codes.ErrorCodeLike.class);
+    com.patra.common.error.codes.ErrorCodeLike errorCode =
+        mock(com.patra.common.error.codes.ErrorCodeLike.class);
     when(errorCode.code()).thenReturn("ERR_VALIDATION_FAILED");
 
     ErrorResolution errorResolution = mock(ErrorResolution.class);
@@ -171,8 +172,7 @@ class GlobalRestExceptionHandlerTest {
 
     // When: 处理验证异常
     ResponseEntity<Object> result =
-        handler.handleMethodArgumentNotValid(
-            exception, null, HttpStatus.BAD_REQUEST, webRequest);
+        handler.handleMethodArgumentNotValid(exception, null, HttpStatus.BAD_REQUEST, webRequest);
 
     // Then: 验证仅返回前 100 个错误
     ProblemDetail resultBody = (ProblemDetail) result.getBody();
@@ -202,7 +202,8 @@ class GlobalRestExceptionHandlerTest {
 
     ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
 
-    com.patra.common.error.codes.ErrorCodeLike errorCode = mock(com.patra.common.error.codes.ErrorCodeLike.class);
+    com.patra.common.error.codes.ErrorCodeLike errorCode =
+        mock(com.patra.common.error.codes.ErrorCodeLike.class);
     when(errorCode.code()).thenReturn("ERR_VALIDATION_FAILED");
 
     ErrorResolution errorResolution = mock(ErrorResolution.class);
@@ -219,8 +220,7 @@ class GlobalRestExceptionHandlerTest {
 
     // When: 处理验证异常
     ResponseEntity<Object> result =
-        handler.handleMethodArgumentNotValid(
-            exception, null, HttpStatus.BAD_REQUEST, webRequest);
+        handler.handleMethodArgumentNotValid(exception, null, HttpStatus.BAD_REQUEST, webRequest);
 
     // Then: 验证响应
     assertThat(result).isNotNull();
@@ -237,7 +237,8 @@ class GlobalRestExceptionHandlerTest {
     ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
     problemDetail.setProperties(null); // 显式设置为 null
 
-    com.patra.common.error.codes.ErrorCodeLike errorCode = mock(com.patra.common.error.codes.ErrorCodeLike.class);
+    com.patra.common.error.codes.ErrorCodeLike errorCode =
+        mock(com.patra.common.error.codes.ErrorCodeLike.class);
     when(errorCode.code()).thenReturn("ERR_INTERNAL_ERROR");
 
     ErrorResolution errorResolution = mock(ErrorResolution.class);
@@ -265,7 +266,8 @@ class GlobalRestExceptionHandlerTest {
 
     ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
 
-    com.patra.common.error.codes.ErrorCodeLike errorCode = mock(com.patra.common.error.codes.ErrorCodeLike.class);
+    com.patra.common.error.codes.ErrorCodeLike errorCode =
+        mock(com.patra.common.error.codes.ErrorCodeLike.class);
     when(errorCode.code()).thenReturn("ERR_BAD_REQUEST");
 
     ErrorResolution errorResolution = mock(ErrorResolution.class);
@@ -280,8 +282,7 @@ class GlobalRestExceptionHandlerTest {
     ResponseEntity<ProblemDetail> result = handler.handleException(exception, request);
 
     // Then: 验证 Content-Type
-    assertThat(result.getHeaders().getContentType())
-        .isEqualTo(MediaType.APPLICATION_PROBLEM_JSON);
+    assertThat(result.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON);
   }
 
   @Test
@@ -293,7 +294,8 @@ class GlobalRestExceptionHandlerTest {
 
     ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
 
-    com.patra.common.error.codes.ErrorCodeLike errorCode = mock(com.patra.common.error.codes.ErrorCodeLike.class);
+    com.patra.common.error.codes.ErrorCodeLike errorCode =
+        mock(com.patra.common.error.codes.ErrorCodeLike.class);
     when(errorCode.code()).thenReturn("ERR_NOT_FOUND");
 
     ErrorResolution errorResolution = mock(ErrorResolution.class);

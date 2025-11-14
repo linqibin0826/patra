@@ -131,7 +131,8 @@ class ErrorResolutionPipelineTest {
                 return next.proceed(ex);
               });
 
-      ErrorResolutionPipeline pipeline = new ErrorResolutionPipeline(mockEngine, List.of(interceptor));
+      ErrorResolutionPipeline pipeline =
+          new ErrorResolutionPipeline(mockEngine, List.of(interceptor));
       RuntimeException exception = new RuntimeException("test");
 
       // When
@@ -158,7 +159,8 @@ class ErrorResolutionPipelineTest {
             return modifiedResolution; // 返回修改后的结果
           };
 
-      ErrorResolutionPipeline pipeline = new ErrorResolutionPipeline(mockEngine, List.of(interceptor));
+      ErrorResolutionPipeline pipeline =
+          new ErrorResolutionPipeline(mockEngine, List.of(interceptor));
       RuntimeException exception = new RuntimeException("test");
 
       // When
@@ -183,7 +185,8 @@ class ErrorResolutionPipelineTest {
             return result;
           };
 
-      ErrorResolutionPipeline pipeline = new ErrorResolutionPipeline(mockEngine, List.of(interceptor));
+      ErrorResolutionPipeline pipeline =
+          new ErrorResolutionPipeline(mockEngine, List.of(interceptor));
 
       // When
       pipeline.resolve(new RuntimeException("test"));
@@ -206,14 +209,27 @@ class ErrorResolutionPipelineTest {
       ResolutionInterceptor interceptor3 = mock(ResolutionInterceptor.class);
 
       when(interceptor1.intercept(any(), any()))
-          .thenAnswer(invocation -> invocation.<ResolutionInvocation>getArgument(1).proceed(invocation.getArgument(0)));
+          .thenAnswer(
+              invocation ->
+                  invocation
+                      .<ResolutionInvocation>getArgument(1)
+                      .proceed(invocation.getArgument(0)));
       when(interceptor2.intercept(any(), any()))
-          .thenAnswer(invocation -> invocation.<ResolutionInvocation>getArgument(1).proceed(invocation.getArgument(0)));
+          .thenAnswer(
+              invocation ->
+                  invocation
+                      .<ResolutionInvocation>getArgument(1)
+                      .proceed(invocation.getArgument(0)));
       when(interceptor3.intercept(any(), any()))
-          .thenAnswer(invocation -> invocation.<ResolutionInvocation>getArgument(1).proceed(invocation.getArgument(0)));
+          .thenAnswer(
+              invocation ->
+                  invocation
+                      .<ResolutionInvocation>getArgument(1)
+                      .proceed(invocation.getArgument(0)));
 
       ErrorResolutionPipeline pipeline =
-          new ErrorResolutionPipeline(mockEngine, List.of(interceptor1, interceptor2, interceptor3));
+          new ErrorResolutionPipeline(
+              mockEngine, List.of(interceptor1, interceptor2, interceptor3));
       RuntimeException exception = new RuntimeException("test");
 
       // When
@@ -258,7 +274,8 @@ class ErrorResolutionPipelineTest {
           };
 
       ErrorResolutionPipeline pipeline =
-          new ErrorResolutionPipeline(mockEngine, List.of(interceptor1, interceptor2, interceptor3));
+          new ErrorResolutionPipeline(
+              mockEngine, List.of(interceptor1, interceptor2, interceptor3));
 
       // When
       pipeline.resolve(new RuntimeException("test"));
@@ -399,7 +416,8 @@ class ErrorResolutionPipelineTest {
     void getInterceptorsShouldReturnUnmodifiableList() {
       // Given
       ResolutionInterceptor interceptor = mock(ResolutionInterceptor.class);
-      ErrorResolutionPipeline pipeline = new ErrorResolutionPipeline(mockEngine, List.of(interceptor));
+      ErrorResolutionPipeline pipeline =
+          new ErrorResolutionPipeline(mockEngine, List.of(interceptor));
 
       // When
       List<ResolutionInterceptor> interceptors = pipeline.getInterceptors();
@@ -559,10 +577,10 @@ class ErrorResolutionPipelineTest {
       RuntimeException engineException = new RuntimeException("engine failed");
       when(mockEngine.resolve(any())).thenThrow(engineException);
 
-      ResolutionInterceptor interceptor =
-          (ex, invocation) -> invocation.proceed(ex);
+      ResolutionInterceptor interceptor = (ex, invocation) -> invocation.proceed(ex);
 
-      ErrorResolutionPipeline pipeline = new ErrorResolutionPipeline(mockEngine, List.of(interceptor));
+      ErrorResolutionPipeline pipeline =
+          new ErrorResolutionPipeline(mockEngine, List.of(interceptor));
 
       // When & Then
       assertThatThrownBy(() -> pipeline.resolve(new RuntimeException("test")))
@@ -615,8 +633,7 @@ class ErrorResolutionPipelineTest {
       // Given
       List<ResolutionInterceptor> manyInterceptors = new ArrayList<>();
       for (int i = 0; i < 100; i++) {
-        ResolutionInterceptor interceptor =
-            (ex, invocation) -> invocation.proceed(ex);
+        ResolutionInterceptor interceptor = (ex, invocation) -> invocation.proceed(ex);
         manyInterceptors.add(interceptor);
       }
 
@@ -634,10 +651,10 @@ class ErrorResolutionPipelineTest {
     @DisplayName("应该处理 null 异常输入")
     void shouldHandleNullException() {
       // Given
-      ResolutionInterceptor interceptor =
-          (ex, invocation) -> invocation.proceed(ex);
+      ResolutionInterceptor interceptor = (ex, invocation) -> invocation.proceed(ex);
 
-      ErrorResolutionPipeline pipeline = new ErrorResolutionPipeline(mockEngine, List.of(interceptor));
+      ErrorResolutionPipeline pipeline =
+          new ErrorResolutionPipeline(mockEngine, List.of(interceptor));
 
       // When
       pipeline.resolve(null);

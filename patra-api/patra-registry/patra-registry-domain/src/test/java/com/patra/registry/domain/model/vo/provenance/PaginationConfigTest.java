@@ -358,7 +358,15 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, provenanceId, "HARVEST", Instant.now(), null, "PAGE_NUMBER", null, null, null,
+              1001L,
+              provenanceId,
+              "HARVEST",
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              null,
+              null,
+              null,
               null);
 
       // Then: 验证成功创建
@@ -533,7 +541,15 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, paginationModeCode, null, null, null,
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              paginationModeCode,
+              null,
+              null,
+              null,
               null);
 
       // Then: 验证 paginationModeCode 已被 trim
@@ -556,7 +572,15 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, operationType, Instant.now(), null, "PAGE_NUMBER", null, null, null,
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              null,
+              null,
+              null,
               null);
 
       // Then: 验证 operationType 已被 trim
@@ -625,8 +649,16 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, operationType, Instant.now(), null, paginationModeCode, null, null,
-              null, null);
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              paginationModeCode,
+              null,
+              null,
+              null,
+              null);
 
       // Then: 验证空白字符都被 trim
       assertThat(paginationConfig.operationType()).isEqualTo("BACKFILL");
@@ -673,7 +705,15 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, operationType, Instant.now(), null, "PAGE_NUMBER", null, null, null,
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              null,
+              null,
+              null,
               null);
 
       // Then: 验证 operationType 为 null
@@ -689,7 +729,15 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), effectiveTo, "PAGE_NUMBER", null, null, null,
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              effectiveTo,
+              "PAGE_NUMBER",
+              null,
+              null,
+              null,
               null);
 
       // Then: 验证 effectiveTo 为 null
@@ -705,8 +753,16 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, "PAGE_NUMBER", pageSizeValue, null,
-              null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              pageSizeValue,
+              null,
+              null,
+              null);
 
       // Then: 验证 pageSizeValue 为 null
       assertThat(paginationConfig.pageSizeValue()).isNull();
@@ -721,8 +777,16 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, "PAGE_NUMBER", null,
-              maxPagesPerExecution, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              null,
+              maxPagesPerExecution,
+              null,
+              null);
 
       // Then: 验证 maxPagesPerExecution 为 null
       assertThat(paginationConfig.maxPagesPerExecution()).isNull();
@@ -737,8 +801,16 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, "PAGE_NUMBER", null, null,
-              sortFieldParamName, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              null,
+              null,
+              sortFieldParamName,
+              null);
 
       // Then: 验证 sortFieldParamName 为 null
       assertThat(paginationConfig.sortFieldParamName()).isNull();
@@ -753,7 +825,15 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, "PAGE_NUMBER", null, null, null,
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              null,
+              null,
+              null,
               sortingDirection);
 
       // Then: 验证 sortingDirection 为 null
@@ -1060,7 +1140,15 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, operationType, Instant.now(), null, "PAGE_NUMBER", null, null, null,
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              null,
+              null,
+              null,
               null);
 
       // Then: 验证成功创建
@@ -1076,7 +1164,15 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, operationType, Instant.now(), null, "PAGE_NUMBER", null, null, null,
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              null,
+              null,
+              null,
               null);
 
       // Then: 验证成功创建
@@ -1092,7 +1188,15 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, operationType, Instant.now(), null, "PAGE_NUMBER", null, null, null,
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              null,
+              null,
+              null,
               null);
 
       // Then: 验证成功创建
@@ -1108,7 +1212,15 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, paginationModeCode, 50, null, null,
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              paginationModeCode,
+              50,
+              null,
+              null,
               null);
 
       // Then: 验证成功创建
@@ -1125,7 +1237,15 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, paginationModeCode, 100, null, null,
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              paginationModeCode,
+              100,
+              null,
+              null,
               null);
 
       // Then: 验证成功创建
@@ -1141,7 +1261,15 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, paginationModeCode, null, null, null,
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              paginationModeCode,
+              null,
+              null,
+              null,
               null);
 
       // Then: 验证成功创建
@@ -1157,7 +1285,15 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, paginationModeCode, 1000, null, null,
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              paginationModeCode,
+              1000,
+              null,
+              null,
               null);
 
       // Then: 验证成功创建
@@ -1221,8 +1357,16 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, "PAGE_NUMBER", pageSizeValue, null,
-              null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              pageSizeValue,
+              null,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(paginationConfig.pageSizeValue()).isEqualTo(10);
@@ -1237,8 +1381,16 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, "PAGE_NUMBER", pageSizeValue, null,
-              null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              pageSizeValue,
+              null,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(paginationConfig.pageSizeValue()).isEqualTo(50);
@@ -1253,8 +1405,16 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, "PAGE_NUMBER", pageSizeValue, null,
-              null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              pageSizeValue,
+              null,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(paginationConfig.pageSizeValue()).isEqualTo(100);
@@ -1269,7 +1429,15 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, "CURSOR", pageSizeValue, null, null,
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              "CURSOR",
+              pageSizeValue,
+              null,
+              null,
               null);
 
       // Then: 验证成功创建
@@ -1285,8 +1453,16 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, "PAGE_NUMBER", 100,
-              maxPagesPerExecution, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              100,
+              maxPagesPerExecution,
+              null,
+              null);
 
       // Then: 验证深度分页限制
       assertThat(paginationConfig.maxPagesPerExecution()).isEqualTo(5);
@@ -1349,7 +1525,15 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, operationType, Instant.now(), null, "PAGE_NUMBER", null, null, null,
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              null,
+              null,
+              null,
               null);
 
       // Then: 应该成功创建
@@ -1365,7 +1549,15 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, paginationModeCode, null, null, null,
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              paginationModeCode,
+              null,
+              null,
+              null,
               null);
 
       // Then: 应该成功创建
@@ -1408,8 +1600,16 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, "PAGE_NUMBER", pageSizeValue, null,
-              null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              pageSizeValue,
+              null,
+              null,
+              null);
 
       // Then: 应该成功创建
       assertThat(paginationConfig.pageSizeValue()).isEqualTo(1);
@@ -1424,8 +1624,16 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, "PAGE_NUMBER", pageSizeValue, null,
-              null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              pageSizeValue,
+              null,
+              null,
+              null);
 
       // Then: 应该成功创建
       assertThat(paginationConfig.pageSizeValue()).isEqualTo(Integer.MAX_VALUE);
@@ -1440,8 +1648,16 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, "PAGE_NUMBER", null,
-              maxPagesPerExecution, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              null,
+              maxPagesPerExecution,
+              null,
+              null);
 
       // Then: 应该成功创建
       assertThat(paginationConfig.maxPagesPerExecution()).isEqualTo(1);
@@ -1456,8 +1672,16 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, "PAGE_NUMBER", null,
-              maxPagesPerExecution, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              null,
+              maxPagesPerExecution,
+              null,
+              null);
 
       // Then: 应该成功创建
       assertThat(paginationConfig.maxPagesPerExecution()).isEqualTo(Integer.MAX_VALUE);
@@ -1568,8 +1792,16 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, "PAGE_NUMBER", pageSizeValue, null,
-              null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              pageSizeValue,
+              null,
+              null,
+              null);
 
       // Then: 应该成功创建
       assertThat(paginationConfig.pageSizeValue()).isEqualTo(0);
@@ -1584,8 +1816,16 @@ class PaginationConfigTest {
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, "PAGE_NUMBER", null,
-              maxPagesPerExecution, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              "PAGE_NUMBER",
+              null,
+              maxPagesPerExecution,
+              null,
+              null);
 
       // Then: 应该成功创建
       assertThat(paginationConfig.maxPagesPerExecution()).isEqualTo(0);

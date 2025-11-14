@@ -33,6 +33,7 @@
  * <h2>使用场景</h2>
  *
  * <h3>在适配器中使用</h3>
+ *
  * <pre>{@code
  * @Component
  * public class DefaultProblemDetailAdapter implements ProblemDetailAdapter {
@@ -53,6 +54,7 @@
  * }</pre>
  *
  * <h3>标准 HTTP 状态码</h3>
+ *
  * <pre>{@code
  * // 2xx Success
  * HttpStatusConverter.valueOf(200);  // OK
@@ -72,6 +74,7 @@
  * }</pre>
  *
  * <h3>自定义状态码</h3>
+ *
  * <pre>{@code
  * // 非标准状态码(Spring 支持自定义状态码)
  * HttpStatus custom = HttpStatusConverter.valueOf(599);

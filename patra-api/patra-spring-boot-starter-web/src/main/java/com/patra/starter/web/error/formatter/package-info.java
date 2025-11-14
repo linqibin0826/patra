@@ -1,8 +1,8 @@
 /**
  * 验证错误格式化器包。
  *
- * <p>本包提供 JSR-303 Bean Validation 验证错误的格式化和脱敏能力,
- * 将 Spring Validation 的 {@code BindingResult} 转换为统一的验证错误列表。
+ * <p>本包提供 JSR-303 Bean Validation 验证错误的格式化和脱敏能力, 将 Spring Validation 的 {@code BindingResult}
+ * 转换为统一的验证错误列表。
  *
  * <h2>职责</h2>
  *
@@ -21,6 +21,7 @@
  * <h2>使用示例</h2>
  *
  * <h3>自动格式化验证错误</h3>
+ *
  * <pre>{@code
  * // 请求模型
  * public record CreatePlanRequest(
@@ -70,6 +71,7 @@
  * }</pre>
  *
  * <h3>在异常处理器中使用</h3>
+ *
  * <pre>{@code
  * @RestControllerAdvice
  * public class GlobalRestExceptionHandler {

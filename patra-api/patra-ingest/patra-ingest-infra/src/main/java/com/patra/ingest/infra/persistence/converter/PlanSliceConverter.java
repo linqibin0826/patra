@@ -1,7 +1,10 @@
 package com.patra.ingest.infra.persistence.converter;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonNodeMappings;
+import com.patra.ingest.domain.exception.InfrastructureException;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
+import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.SliceStatus;
 import com.patra.ingest.infra.persistence.entity.PlanSliceDO;
 import org.mapstruct.Mapper;
@@ -37,7 +40,7 @@ public interface PlanSliceConverter {
     return PlanSliceAggregate.restore(
         entity.getId(),
         entity.getPlanId(),
-        entity.getProvenanceCode(),
+        ProvenanceCode.parse(entity.getProvenanceCode()),
         entity.getSliceNo() == null ? 0 : entity.getSliceNo(),
         entity.getSliceSignatureHash(),
         JsonNodeMappings.jsonNodeToString(entity.getWindowSpec()),
@@ -54,5 +57,37 @@ public interface PlanSliceConverter {
 
   static SliceStatus sliceStatusFromCode(String code) {
     return code == null ? SliceStatus.PENDING : SliceStatus.fromCode(code);
+  }
+
+  // ========== 枚举转换方法 ==========
+
+  default String map(ProvenanceCode code) {
+    return code == null ? null : code.getCode();
+  }
+
+  default ProvenanceCode mapProvenanceCode(String code) {
+    if (code == null || code.isBlank()) {
+      return null;
+    }
+    try {
+      return ProvenanceCode.parse(code);
+    } catch (IllegalArgumentException e) {
+      throw new InfrastructureException("数据库中存在无效的 provenance_code: " + code, e);
+    }
+  }
+
+  default String map(OperationCode code) {
+    return code == null ? null : code.getCode();
+  }
+
+  default OperationCode mapOperationCode(String code) {
+    if (code == null || code.isBlank()) {
+      return null;
+    }
+    try {
+      return OperationCode.fromCode(code);
+    } catch (IllegalArgumentException e) {
+      throw new InfrastructureException("数据库中存在无效的 operation_code: " + code, e);
+    }
   }
 }

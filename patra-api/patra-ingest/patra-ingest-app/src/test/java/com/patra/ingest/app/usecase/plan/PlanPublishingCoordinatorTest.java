@@ -16,6 +16,7 @@ import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.enums.PlanStatus;
+import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -515,6 +516,6 @@ class PlanPublishingCoordinatorTest {
   /** 创建 TaskQueuedEvent。 */
   private TaskQueuedEvent createTaskQueuedEvent(Long taskId) {
     return TaskQueuedEvent.of(
-        taskId, 100L, 10L, 1L, "PUBMED", "HARVEST", "task-key-" + taskId, "{}", 1, Instant.now());
+        taskId, 100L, 10L, 1L, ProvenanceCode.PUBMED, "HARVEST", "task-key-" + taskId, "{}", 1, Instant.now());
   }
 }

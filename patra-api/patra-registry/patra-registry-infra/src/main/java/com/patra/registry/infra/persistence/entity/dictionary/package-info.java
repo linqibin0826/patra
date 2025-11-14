@@ -17,25 +17,24 @@
  * <ul>
  *   <li>{@link com.patra.registry.infra.persistence.entity.dictionary.RegSysDictTypeDO} - 字典类型
  *       <ul>
- *         <li>表: {@code reg_sys_dict_type}</li>
- *         <li>字段: {@code type_code}, {@code type_name}, {@code description}</li>
- *         <li>用途: 定义字典分类(如 COUNTRY_CODE, LANGUAGE, STATUS)</li>
+ *         <li>表: {@code reg_sys_dict_type}
+ *         <li>字段: {@code type_code}, {@code type_name}, {@code description}
+ *         <li>用途: 定义字典分类(如 COUNTRY_CODE, LANGUAGE, STATUS)
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.registry.infra.persistence.entity.dictionary.RegSysDictItemDO} - 字典项
  *       <ul>
- *         <li>表: {@code reg_sys_dict_item}</li>
- *         <li>字段: {@code dict_type_code}, {@code item_code}, {@code item_value}, {@code parent_item_code}</li>
- *         <li>用途: 定义具体的字典值(如 COUNTRY_CODE → CN, US, GB)</li>
+ *         <li>表: {@code reg_sys_dict_item}
+ *         <li>字段: {@code dict_type_code}, {@code item_code}, {@code item_value}, {@code
+ *             parent_item_code}
+ *         <li>用途: 定义具体的字典值(如 COUNTRY_CODE → CN, US, GB)
  *       </ul>
- *   </li>
- *   <li>{@link com.patra.registry.infra.persistence.entity.dictionary.RegSysDictItemAliasDO} - 字典项别名
+ *   <li>{@link com.patra.registry.infra.persistence.entity.dictionary.RegSysDictItemAliasDO} -
+ *       字典项别名
  *       <ul>
- *         <li>表: {@code reg_sys_dict_item_alias}</li>
- *         <li>字段: {@code dict_item_id}, {@code alias_value}, {@code locale}</li>
- *         <li>用途: 支持同一字典项的多种表示和国际化(如 China/中国/Chine)</li>
+ *         <li>表: {@code reg_sys_dict_item_alias}
+ *         <li>字段: {@code dict_item_id}, {@code alias_value}, {@code locale}
+ *         <li>用途: 支持同一字典项的多种表示和国际化(如 China/中国/Chine)
  *       </ul>
- *   </li>
  * </ul>
  *
  * <h2>字典层级结构</h2>
@@ -93,10 +92,10 @@
  * <h2>使用场景</h2>
  *
  * <ul>
- *   <li><b>国家代码</b>: {@code COUNTRY_CODE} → CN, US, GB, FR...</li>
- *   <li><b>语言代码</b>: {@code LANGUAGE} → en, zh, fr, ja...</li>
- *   <li><b>状态枚举</b>: {@code STATUS} → ACTIVE, INACTIVE, PENDING...</li>
- *   <li><b>业务分类</b>: {@code CATEGORY} → TECH, HEALTH, FINANCE...</li>
+ *   <li><b>国家代码</b>: {@code COUNTRY_CODE} → CN, US, GB, FR...
+ *   <li><b>语言代码</b>: {@code LANGUAGE} → en, zh, fr, ja...
+ *   <li><b>状态枚举</b>: {@code STATUS} → ACTIVE, INACTIVE, PENDING...
+ *   <li><b>业务分类</b>: {@code CATEGORY} → TECH, HEALTH, FINANCE...
  * </ul>
  *
  * <h2>使用示例</h2>

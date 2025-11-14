@@ -16,19 +16,18 @@
  * <h2>核心仓储实现</h2>
  *
  * <ul>
- *   <li>{@link com.patra.registry.infra.persistence.repository.ProvenanceConfigRepositoryMpImpl} - 数据源配置仓储
+ *   <li>{@link com.patra.registry.infra.persistence.repository.ProvenanceConfigRepositoryMpImpl} -
+ *       数据源配置仓储
  *       <ul>
- *         <li>查询数据源元数据</li>
- *         <li>加载完整配置聚合(HTTP、分页、重试、速率限制等)</li>
- *         <li>支持时态切片和配置优先级</li>
+ *         <li>查询数据源元数据
+ *         <li>加载完整配置聚合(HTTP、分页、重试、速率限制等)
+ *         <li>支持时态切片和配置优先级
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.registry.infra.persistence.repository.ExprRepositoryMpImpl} - 表达式仓储
  *       <ul>
- *         <li>加载表达式快照(字段、能力、映射、规则)</li>
- *         <li>支持时态查询</li>
+ *         <li>加载表达式快照(字段、能力、映射、规则)
+ *         <li>支持时态查询
  *       </ul>
- *   </li>
  * </ul>
  *
  * <h2>命名约定</h2>

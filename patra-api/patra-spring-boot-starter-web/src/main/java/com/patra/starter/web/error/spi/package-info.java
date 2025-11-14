@@ -13,7 +13,8 @@
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link com.patra.starter.web.error.spi.WebProblemFieldContributor} - Web 特定的 ProblemDetail 字段扩展
+ *   <li>{@link com.patra.starter.web.error.spi.WebProblemFieldContributor} - Web 特定的 ProblemDetail
+ *       字段扩展
  *   <li>{@link com.patra.starter.web.error.spi.ValidationErrorsFormatter} - 验证错误格式化器接口
  * </ul>
  *
@@ -111,6 +112,7 @@
  * <h2>使用场景</h2>
  *
  * <h3>场景 1: 添加审计信息</h3>
+ *
  * <pre>{@code
  * @Component
  * public class AuditInfoContributor implements WebProblemFieldContributor {
@@ -135,6 +137,7 @@
  * }</pre>
  *
  * <h3>场景 2: 添加客户端信息</h3>
+ *
  * <pre>{@code
  * @Component
  * public class ClientInfoContributor implements WebProblemFieldContributor {
@@ -164,6 +167,7 @@
  * }</pre>
  *
  * <h3>场景 3: 自定义验证错误格式</h3>
+ *
  * <pre>{@code
  * @Component
  * public class I18nValidationErrorsFormatter implements ValidationErrorsFormatter {

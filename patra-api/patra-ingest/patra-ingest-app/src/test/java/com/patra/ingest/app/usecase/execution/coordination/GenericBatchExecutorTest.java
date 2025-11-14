@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalLiterature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -84,7 +85,7 @@ class GenericBatchExecutorTest {
             null, // planId
             null, // sliceId
             null, // scheduleInstanceId
-            "pubmed", // provenanceCode
+            ProvenanceCode.PUBMED, // provenanceCode
             "harvest", // operationCode
             DataType.LITERATURE, // dataType
             configSnapshot, // configSnapshot

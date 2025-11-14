@@ -302,8 +302,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              id, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null, null,
-              null, null, false, null, null);
+              id,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(retryConfig.id()).isEqualTo(1L);
@@ -318,8 +332,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              id, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null, null,
-              null, null, false, null, null);
+              id,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(retryConfig.id()).isEqualTo(Long.MAX_VALUE);
@@ -432,8 +460,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, provenanceId, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null,
-              null, null, null, false, null, null);
+              1001L,
+              provenanceId,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(retryConfig.provenanceId()).isEqualTo(1L);
@@ -486,8 +528,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, "FIXED", null, null, null, null,
-              null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(retryConfig.effectiveFrom()).isEqualTo(effectiveFrom);
@@ -502,8 +558,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, "FIXED", null, null, null, null,
-              null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(retryConfig.effectiveFrom()).isEqualTo(effectiveFrom);
@@ -518,8 +588,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, "FIXED", null, null, null, null,
-              null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(retryConfig.effectiveFrom()).isEqualTo(effectiveFrom);
@@ -634,8 +718,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, backoffPolicyTypeCode, null, null,
-              null, null, null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              backoffPolicyTypeCode,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证 backoffPolicyTypeCode 已被 trim
       assertThat(retryConfig.backoffPolicyTypeCode()).isEqualTo("EXPONENTIAL");
@@ -657,8 +755,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, operationType, Instant.now(), null, null, "FIXED", null, null, null,
-              null, null, null, false, null, null);
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证 operationType 已被 trim
       assertThat(retryConfig.operationType()).isEqualTo("HARVEST");
@@ -706,8 +818,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, operationType, Instant.now(), null, null, backoffPolicyTypeCode, null,
-              null, null, null, null, null, false, null, null);
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              null,
+              backoffPolicyTypeCode,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证空白字符都被 trim
       assertThat(retryConfig.operationType()).isEqualTo("BACKFILL");
@@ -730,8 +856,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, operationType, Instant.now(), null, null, "FIXED", null, null, null,
-              null, null, null, false, null, null);
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证 operationType 为 null
       assertThat(retryConfig.operationType()).isNull();
@@ -746,8 +886,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), effectiveTo, null, "FIXED", null, null, null,
-              null, null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              effectiveTo,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证 effectiveTo 为 null
       assertThat(retryConfig.effectiveTo()).isNull();
@@ -762,8 +916,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, maxRetryTimes, "FIXED", null, null,
-              null, null, null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              maxRetryTimes,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证 maxRetryTimes 为 null
       assertThat(retryConfig.maxRetryTimes()).isNull();
@@ -778,8 +946,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", initialDelayMillis, null,
-              null, null, null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              initialDelayMillis,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证 initialDelayMillis 为 null
       assertThat(retryConfig.initialDelayMillis()).isNull();
@@ -794,8 +976,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, maxDelayMillis,
-              null, null, null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              maxDelayMillis,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证 maxDelayMillis 为 null
       assertThat(retryConfig.maxDelayMillis()).isNull();
@@ -810,8 +1006,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null,
-              expMultiplierValue, null, null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              expMultiplierValue,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证 expMultiplierValue 为 null
       assertThat(retryConfig.expMultiplierValue()).isNull();
@@ -826,8 +1036,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null,
-              jitterFactorRatio, null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              jitterFactorRatio,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证 jitterFactorRatio 为 null
       assertThat(retryConfig.jitterFactorRatio()).isNull();
@@ -842,8 +1066,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null, null,
-              retryHttpStatusJson, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              retryHttpStatusJson,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证 retryHttpStatusJson 为 null
       assertThat(retryConfig.retryHttpStatusJson()).isNull();
@@ -858,8 +1096,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null, null,
-              null, giveupHttpStatusJson, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              giveupHttpStatusJson,
+              false,
+              null,
+              null);
 
       // Then: 验证 giveupHttpStatusJson 为 null
       assertThat(retryConfig.giveupHttpStatusJson()).isNull();
@@ -874,8 +1126,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null, null,
-              null, null, false, circuitBreakThreshold, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              circuitBreakThreshold,
+              null);
 
       // Then: 验证 circuitBreakThreshold 为 null
       assertThat(retryConfig.circuitBreakThreshold()).isNull();
@@ -890,8 +1156,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null, null,
-              null, null, false, null, circuitCooldownMillis);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              circuitCooldownMillis);
 
       // Then: 验证 circuitCooldownMillis 为 null
       assertThat(retryConfig.circuitCooldownMillis()).isNull();
@@ -903,8 +1183,22 @@ class RetryConfigTest {
       // Given: 所有可选字段为 null
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, null, Instant.now(), null, null, "FIXED", null, null, null, null, null,
-              null, false, null, null);
+              1001L,
+              2001L,
+              null,
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证可选字段都为 null
       assertThat(retryConfig.operationType()).isNull();
@@ -986,13 +1280,41 @@ class RetryConfigTest {
       // Given: 两个不同值的配置
       RetryConfig retryConfig1 =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, 3, "FIXED", null, null, null, null,
-              null, null, true, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              3,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              null);
 
       RetryConfig retryConfig2 =
           new RetryConfig(
-              1002L, 2002L, "UPDATE", Instant.now(), null, 5, "EXPONENTIAL", null, null, null, null,
-              null, null, false, null, null);
+              1002L,
+              2002L,
+              "UPDATE",
+              Instant.now(),
+              null,
+              5,
+              "EXPONENTIAL",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // When & Then: 不应该相等
       assertThat(retryConfig1).isNotEqualTo(retryConfig2);
@@ -1006,13 +1328,41 @@ class RetryConfigTest {
 
       RetryConfig retryConfig1 =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, "FIXED", null, null, null, null,
-              null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       RetryConfig retryConfig2 =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, "FIXED", null, null, null, null,
-              null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // When & Then: hashCode 应该相等
       assertThat(retryConfig1.hashCode()).isEqualTo(retryConfig2.hashCode());
@@ -1058,8 +1408,22 @@ class RetryConfigTest {
       // Given: 创建配置
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null, null,
-              null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // When & Then: 对象应该等于自身
       assertThat(retryConfig).isEqualTo(retryConfig);
@@ -1073,13 +1437,41 @@ class RetryConfigTest {
 
       RetryConfig retryConfig1 =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, "FIXED", null, null, null, null,
-              null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       RetryConfig retryConfig2 =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, "FIXED", null, null, null, null,
-              null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // When & Then: 对称性（a.equals(b) == b.equals(a)）
       assertThat(retryConfig1.equals(retryConfig2)).isEqualTo(retryConfig2.equals(retryConfig1));
@@ -1095,18 +1487,60 @@ class RetryConfigTest {
 
       RetryConfig retryConfig1 =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, "FIXED", null, null, null, null,
-              null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       RetryConfig retryConfig2 =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, "FIXED", null, null, null, null,
-              null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       RetryConfig retryConfig3 =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, "FIXED", null, null, null, null,
-              null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // When & Then: 传递性（a.equals(b) && b.equals(c) => a.equals(c)）
       assertThat(retryConfig1).isEqualTo(retryConfig2);
@@ -1120,8 +1554,22 @@ class RetryConfigTest {
       // Given: 创建配置
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null, null,
-              null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // When & Then: 与 null 比较应该返回 false
       assertThat(retryConfig).isNotEqualTo(null);
@@ -1133,8 +1581,22 @@ class RetryConfigTest {
       // Given: 创建配置
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null, null,
-              null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // When & Then: 与不同类型对象比较应该返回 false
       assertThat(retryConfig).isNotEqualTo("Not a RetryConfig");
@@ -1198,8 +1660,22 @@ class RetryConfigTest {
       // Given: 创建配置
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "EXPONENTIAL", null, null, null,
-              null, null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "EXPONENTIAL",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // When: 多次获取字段值
       String operationType1 = retryConfig.operationType();
@@ -1230,8 +1706,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, operationType, Instant.now(), null, null, "FIXED", null, null, null,
-              null, null, null, false, null, null);
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(retryConfig.operationType()).isEqualTo("HARVEST");
@@ -1246,8 +1736,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, operationType, Instant.now(), null, null, "FIXED", null, null, null,
-              null, null, null, false, null, null);
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(retryConfig.operationType()).isEqualTo("UPDATE");
@@ -1262,8 +1766,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, operationType, Instant.now(), null, null, "FIXED", null, null, null,
-              null, null, null, false, null, null);
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(retryConfig.operationType()).isEqualTo("BACKFILL");
@@ -1278,8 +1796,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, backoffPolicyTypeCode, 1000, null,
-              null, null, null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              backoffPolicyTypeCode,
+              1000,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(retryConfig.backoffPolicyTypeCode()).isEqualTo("FIXED");
@@ -1294,8 +1826,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, backoffPolicyTypeCode, 1000, null,
-              null, null, null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              backoffPolicyTypeCode,
+              1000,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(retryConfig.backoffPolicyTypeCode()).isEqualTo("LINEAR");
@@ -1341,8 +1887,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, maxRetryTimes, "FIXED", null, null,
-              null, null, null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              maxRetryTimes,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(retryConfig.maxRetryTimes()).isEqualTo(0);
@@ -1357,8 +1917,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, maxRetryTimes, "FIXED", null, null,
-              null, null, null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              maxRetryTimes,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(retryConfig.maxRetryTimes()).isEqualTo(5);
@@ -1373,8 +1947,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null, null,
-              null, null, retryOnNetworkError, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              retryOnNetworkError,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(retryConfig.retryOnNetworkError()).isTrue();
@@ -1389,8 +1977,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null, null,
-              null, null, retryOnNetworkError, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              retryOnNetworkError,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(retryConfig.retryOnNetworkError()).isFalse();
@@ -1437,8 +2039,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null, null,
-              null, null, false, circuitBreakThreshold, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              circuitBreakThreshold,
+              null);
 
       // Then: 验证熔断器禁用
       assertThat(retryConfig.circuitBreakThreshold()).isNull();
@@ -1526,8 +2142,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, operationType, Instant.now(), null, null, "FIXED", null, null, null,
-              null, null, null, false, null, null);
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 应该成功创建
       assertThat(retryConfig.operationType()).isEqualTo("A");
@@ -1542,8 +2172,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, backoffPolicyTypeCode, null, null,
-              null, null, null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              backoffPolicyTypeCode,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 应该成功创建
       assertThat(retryConfig.backoffPolicyTypeCode()).isEqualTo("X");
@@ -1557,8 +2201,22 @@ class RetryConfigTest {
 
       RetryConfig retryConfig1 =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, "FIXED", null, null, null, null,
-              null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       RetryConfig retryConfig2 =
           new RetryConfig(
@@ -1592,8 +2250,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", initialDelayMillis, null,
-              null, null, null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              initialDelayMillis,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 应该成功创建
       assertThat(retryConfig.initialDelayMillis()).isEqualTo(0);
@@ -1638,8 +2310,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null,
-              jitterFactorRatio, null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              jitterFactorRatio,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 应该成功创建
       assertThat(retryConfig.jitterFactorRatio()).isEqualTo(0.0);
@@ -1654,8 +2340,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null,
-              jitterFactorRatio, null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              jitterFactorRatio,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 应该成功创建
       assertThat(retryConfig.jitterFactorRatio()).isEqualTo(1.0);
@@ -1702,8 +2402,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null, null,
-              null, null, false, circuitBreakThreshold, 5000);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              circuitBreakThreshold,
+              5000);
 
       // Then: 应该成功创建
       assertThat(retryConfig.circuitBreakThreshold()).isEqualTo(1);
@@ -1718,8 +2432,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "FIXED", null, null, null, null,
-              null, null, false, 5, circuitCooldownMillis);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "FIXED",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              5,
+              circuitCooldownMillis);
 
       // Then: 应该成功创建
       assertThat(retryConfig.circuitCooldownMillis()).isEqualTo(0);
@@ -1734,8 +2462,22 @@ class RetryConfigTest {
       // When: 创建 RetryConfig
       RetryConfig retryConfig =
           new RetryConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, "EXPONENTIAL", 1000,
-              maxDelayMillis, 2.0, null, null, null, false, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              "EXPONENTIAL",
+              1000,
+              maxDelayMillis,
+              2.0,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 应该成功创建
       assertThat(retryConfig.maxDelayMillis()).isEqualTo(Integer.MAX_VALUE);

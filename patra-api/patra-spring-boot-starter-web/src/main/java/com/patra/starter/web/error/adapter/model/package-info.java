@@ -13,7 +13,8 @@
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link com.patra.starter.web.error.adapter.model.ProblemDetailResponse} - ProblemDetail 响应封装
+ *   <li>{@link com.patra.starter.web.error.adapter.model.ProblemDetailResponse} - ProblemDetail
+ *       响应封装
  * </ul>
  *
  * <h2>ProblemDetailResponse 结构</h2>
@@ -29,6 +30,7 @@
  * <h2>使用示例</h2>
  *
  * <h3>创建 ProblemDetailResponse</h3>
+ *
  * <pre>{@code
  * @Component
  * public class DefaultProblemDetailAdapter implements ProblemDetailAdapter {
@@ -54,6 +56,7 @@
  * }</pre>
  *
  * <h3>使用 ProblemDetailResponse</h3>
+ *
  * <pre>{@code
  * @RestControllerAdvice
  * public class GlobalRestExceptionHandler {
@@ -84,6 +87,7 @@
  * }</pre>
  *
  * <h3>完整示例</h3>
+ *
  * <pre>{@code
  * // 异常
  * Exception ex = new PlanNotFoundException(123L);

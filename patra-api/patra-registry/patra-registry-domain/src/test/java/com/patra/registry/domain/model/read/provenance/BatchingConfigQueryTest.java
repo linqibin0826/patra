@@ -13,12 +13,13 @@ import org.junit.jupiter.api.Test;
  * {@link BatchingConfigQuery} 的单元测试。
  *
  * <p>测试覆盖：
+ *
  * <ul>
- *   <li>成功构造（完整字段、部分可选字段、最小必填字段）</li>
- *   <li>验证失败（id、provenanceId、effectiveFrom 的各种无效值）</li>
- *   <li>Trim 逻辑（operationType、idsParamName、idsJoinDelimiter）</li>
- *   <li>Record 语义（equals、hashCode、toString、组件访问器）</li>
- *   <li>不可变性验证</li>
+ *   <li>成功构造（完整字段、部分可选字段、最小必填字段）
+ *   <li>验证失败（id、provenanceId、effectiveFrom 的各种无效值）
+ *   <li>Trim 逻辑（operationType、idsParamName、idsJoinDelimiter）
+ *   <li>Record 语义（equals、hashCode、toString、组件访问器）
+ *   <li>不可变性验证
  * </ul>
  *
  * @author linqibin
@@ -110,7 +111,14 @@ class BatchingConfigQueryTest {
       // Given & When
       var query =
           new BatchingConfigQuery(
-              VALID_ID, VALID_PROVENANCE_ID, null, VALID_EFFECTIVE_FROM, null, null, null, null,
+              VALID_ID,
+              VALID_PROVENANCE_ID,
+              null,
+              VALID_EFFECTIVE_FROM,
+              null,
+              null,
+              null,
+              null,
               null);
 
       // Then
@@ -310,7 +318,14 @@ class BatchingConfigQueryTest {
       // Given & When
       var query =
           new BatchingConfigQuery(
-              VALID_ID, VALID_PROVENANCE_ID, null, VALID_EFFECTIVE_FROM, null, null, null, null,
+              VALID_ID,
+              VALID_PROVENANCE_ID,
+              null,
+              VALID_EFFECTIVE_FROM,
+              null,
+              null,
+              null,
+              null,
               null);
 
       // Then
@@ -346,7 +361,14 @@ class BatchingConfigQueryTest {
       // Given & When
       var query =
           new BatchingConfigQuery(
-              VALID_ID, VALID_PROVENANCE_ID, null, VALID_EFFECTIVE_FROM, null, null, null, null,
+              VALID_ID,
+              VALID_PROVENANCE_ID,
+              null,
+              VALID_EFFECTIVE_FROM,
+              null,
+              null,
+              null,
+              null,
               null);
 
       // Then
@@ -382,7 +404,14 @@ class BatchingConfigQueryTest {
       // Given & When
       var query =
           new BatchingConfigQuery(
-              VALID_ID, VALID_PROVENANCE_ID, null, VALID_EFFECTIVE_FROM, null, null, null, null,
+              VALID_ID,
+              VALID_PROVENANCE_ID,
+              null,
+              VALID_EFFECTIVE_FROM,
+              null,
+              null,
+              null,
+              null,
               null);
 
       // Then
@@ -475,9 +504,11 @@ class BatchingConfigQueryTest {
     void shouldImplementEquals_whenDifferentProvenanceId() {
       // Given
       var query1 =
-          new BatchingConfigQuery(VALID_ID, 1L, null, VALID_EFFECTIVE_FROM, null, null, null, null, null);
+          new BatchingConfigQuery(
+              VALID_ID, 1L, null, VALID_EFFECTIVE_FROM, null, null, null, null, null);
       var query2 =
-          new BatchingConfigQuery(VALID_ID, 2L, null, VALID_EFFECTIVE_FROM, null, null, null, null, null);
+          new BatchingConfigQuery(
+              VALID_ID, 2L, null, VALID_EFFECTIVE_FROM, null, null, null, null, null);
 
       // When & Then
       assertThat(query1).isNotEqualTo(query2);

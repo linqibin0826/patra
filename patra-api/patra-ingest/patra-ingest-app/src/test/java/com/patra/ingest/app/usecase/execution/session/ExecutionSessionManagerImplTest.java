@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.execution.lease.HeartbeatRenewalService;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.entity.TaskRun;
@@ -59,7 +60,7 @@ class ExecutionSessionManagerImplTest {
   private static final Long RUN_ID = 100L;
   private static final String LEASE_OWNER = "node-1";
   private static final String CORRELATION_ID = "corr-123";
-  private static final String PROVENANCE_CODE = "pubmed";
+  private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final String OPERATION_CODE = "ingest";
 
   @BeforeEach

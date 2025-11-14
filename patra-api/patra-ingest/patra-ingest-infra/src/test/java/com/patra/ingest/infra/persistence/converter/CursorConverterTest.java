@@ -9,6 +9,7 @@ import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
 import com.patra.ingest.domain.model.vo.cursor.CursorValue;
 import com.patra.ingest.domain.model.vo.cursor.CursorWatermark;
 import com.patra.ingest.infra.persistence.entity.CursorDO;
+import com.patra.common.enums.ProvenanceCode;
 import java.math.BigDecimal;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
@@ -35,7 +36,7 @@ class CursorConverterTest {
 
   private final CursorConverter converter = new CursorConverterImpl();
 
-  private static final String PROVENANCE_CODE = "PUBMED";
+  private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final String OPERATION_CODE = "FETCH_METADATA";
   private static final String CURSOR_KEY = "updated_at";
   private static final String NAMESPACE_KEY = "pubmed:global";
@@ -75,7 +76,7 @@ class CursorConverterTest {
 
       // Then: 验证转换结果
       assertThat(result).isNotNull();
-      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE);
+      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE.getCode());
       assertThat(result.getOperationCode()).isEqualTo(OPERATION_CODE);
       assertThat(result.getCursorKey()).isEqualTo(CURSOR_KEY);
       assertThat(result.getCursorTypeCode()).isEqualTo("TIME");
@@ -214,7 +215,7 @@ class CursorConverterTest {
 
       CursorDO cursorDO = new CursorDO();
       cursorDO.setId(100L);
-      cursorDO.setProvenanceCode(PROVENANCE_CODE);
+      cursorDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       cursorDO.setOperationCode(OPERATION_CODE);
       cursorDO.setCursorKey(CURSOR_KEY);
       cursorDO.setCursorTypeCode("TIME");
@@ -276,7 +277,7 @@ class CursorConverterTest {
 
       CursorDO cursorDO = new CursorDO();
       cursorDO.setId(200L);
-      cursorDO.setProvenanceCode(PROVENANCE_CODE);
+      cursorDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       cursorDO.setOperationCode(OPERATION_CODE);
       cursorDO.setCursorKey("record_id");
       cursorDO.setCursorTypeCode("ID");
@@ -305,7 +306,7 @@ class CursorConverterTest {
       // Given: 创建 TOKEN 类型 DO
       CursorDO cursorDO = new CursorDO();
       cursorDO.setId(300L);
-      cursorDO.setProvenanceCode(PROVENANCE_CODE);
+      cursorDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       cursorDO.setOperationCode(OPERATION_CODE);
       cursorDO.setCursorKey("cursor_token");
       cursorDO.setCursorTypeCode("TOKEN");

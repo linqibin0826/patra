@@ -2,6 +2,7 @@ package com.patra.ingest.domain.model.entity;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.CursorType;
 import com.patra.ingest.domain.model.enums.NamespaceScope;
 import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
@@ -52,7 +53,7 @@ class CursorTest {
     @DisplayName("应该成功创建基于时间的游标")
     void shouldCreateTimeBasedCursor() {
       // Given
-      String provenanceCode = "pubmed";
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       String operationCode = "HARVEST";
       String cursorKey = "publication_date";
       String namespaceScope = "GLOBAL";
@@ -106,7 +107,7 @@ class CursorTest {
       // When
       Cursor cursor =
           Cursor.create(
-              "pubmed", "HARVEST", "publication_date", "GLOBAL", "global", watermark, lineage);
+              ProvenanceCode.PUBMED, "HARVEST", "publication_date", "GLOBAL", "global", watermark, lineage);
 
       // Then
       assertThat(cursor.getLineage()).isEqualTo(lineage);
@@ -128,7 +129,7 @@ class CursorTest {
       // When
       Cursor cursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               "GLOBAL",
@@ -149,7 +150,7 @@ class CursorTest {
 
       // When
       Cursor cursor =
-          Cursor.create("pubmed", "HARVEST", "publication_date", "GLOBAL", "global", watermark);
+          Cursor.create(ProvenanceCode.PUBMED, "HARVEST", "publication_date", "GLOBAL", "global", watermark);
 
       // Then
       assertThat(cursor.getValue()).isEqualTo(CursorValue.empty());
@@ -166,7 +167,7 @@ class CursorTest {
       // When
       Cursor cursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               "GLOBAL",
@@ -184,7 +185,7 @@ class CursorTest {
       // Given & When - 测试所有命名空间范围
       Cursor globalCursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               "GLOBAL",
@@ -193,7 +194,7 @@ class CursorTest {
 
       Cursor exprCursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               "EXPR",
@@ -202,7 +203,7 @@ class CursorTest {
 
       Cursor customCursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               "CUSTOM",
@@ -225,7 +226,7 @@ class CursorTest {
       assertThatThrownBy(
               () ->
                   Cursor.create(
-                      "pubmed",
+                      ProvenanceCode.PUBMED,
                       "HARVEST",
                       "publication_date",
                       invalidScope,
@@ -245,7 +246,7 @@ class CursorTest {
     void shouldRestoreCursorFromPersistentState() {
       // Given
       Long id = 100L;
-      String provenanceCode = "pubmed";
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       String operationCode = "HARVEST";
       String cursorKey = "publication_date";
       NamespaceScope namespaceScope = NamespaceScope.GLOBAL;
@@ -297,7 +298,7 @@ class CursorTest {
       Cursor cursor =
           Cursor.restore(
               100L,
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               NamespaceScope.GLOBAL,
@@ -322,7 +323,7 @@ class CursorTest {
       Cursor cursor =
           Cursor.restore(
               100L,
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               NamespaceScope.GLOBAL,
@@ -932,7 +933,7 @@ class CursorTest {
       // Given & When
       Cursor cursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               "GLOBAL",
@@ -950,7 +951,7 @@ class CursorTest {
       // Given & When
       Cursor cursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               "EXPR",
@@ -968,7 +969,7 @@ class CursorTest {
       // Given & When
       Cursor cursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               "CUSTOM",
@@ -986,7 +987,7 @@ class CursorTest {
       // Given & When - 使用小写
       Cursor cursor =
           Cursor.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               "global", // 小写
@@ -1012,7 +1013,7 @@ class CursorTest {
 
       // When
       Cursor cursor =
-          Cursor.create("pubmed", "HARVEST", "publication_date", "GLOBAL", "global", epoch);
+          Cursor.create(ProvenanceCode.PUBMED, "HARVEST", "publication_date", "GLOBAL", "global", epoch);
 
       // Then
       assertThat(cursor.getWatermark().normalizedInstant()).isEqualTo(epoch);
@@ -1026,7 +1027,7 @@ class CursorTest {
 
       // When
       Cursor cursor =
-          Cursor.create("pubmed", "HARVEST", "publication_date", "GLOBAL", "global", future);
+          Cursor.create(ProvenanceCode.PUBMED, "HARVEST", "publication_date", "GLOBAL", "global", future);
 
       // Then
       assertThat(cursor.getWatermark().normalizedInstant()).isEqualTo(future);
@@ -1036,14 +1037,15 @@ class CursorTest {
     @DisplayName("应该处理极长的字符串字段")
     void shouldHandleVeryLongStringFields() {
       // Given
-      String longProvenanceCode = "a".repeat(500);
+      // ProvenanceCode 是枚举，使用标准值
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       String longCursorKey = "b".repeat(500);
       String longNamespaceKey = "c".repeat(500);
 
       // When
       Cursor cursor =
           Cursor.create(
-              longProvenanceCode,
+              provenanceCode,
               "HARVEST",
               longCursorKey,
               "GLOBAL",
@@ -1051,7 +1053,7 @@ class CursorTest {
               Instant.parse("2024-01-01T00:00:00Z"));
 
       // Then
-      assertThat(cursor.getProvenanceCode()).hasSize(500);
+      assertThat(cursor.getProvenanceCode()).isEqualTo(provenanceCode);
       assertThat(cursor.getCursorKey()).hasSize(500);
       assertThat(cursor.getNamespaceKey()).hasSize(500);
     }
@@ -1085,7 +1087,7 @@ class CursorTest {
       // When
       Cursor cursor =
           Cursor.create(
-              "pubmed", "HARVEST", "publication_date", "GLOBAL", "global", preciseTime);
+              ProvenanceCode.PUBMED, "HARVEST", "publication_date", "GLOBAL", "global", preciseTime);
 
       // Then
       assertThat(cursor.getWatermark().normalizedInstant()).isEqualTo(preciseTime);
@@ -1102,7 +1104,7 @@ class CursorTest {
     @DisplayName("应该确保游标唯一性标识符的完整性")
     void shouldEnsureUniquenessIdentifierIntegrity() {
       // Given
-      String provenanceCode = "pubmed";
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       String operationCode = "HARVEST";
       String cursorKey = "publication_date";
       String namespaceScope = "GLOBAL";
@@ -1130,7 +1132,7 @@ class CursorTest {
     @DisplayName("应该在生命周期中保持不可变字段")
     void shouldPreserveImmutableFieldsThroughLifecycle() {
       // Given
-      String provenanceCode = "pubmed";
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       String operationCode = "HARVEST";
       String cursorKey = "publication_date";
 
@@ -1202,7 +1204,7 @@ class CursorTest {
    */
   static class CursorTestDataBuilder {
     private Long id = null;
-    private String provenanceCode = "pubmed";
+    private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
     private String operationCode = "HARVEST";
     private String cursorKey = "publication_date";
     private NamespaceScope namespaceScope = NamespaceScope.GLOBAL;
@@ -1224,8 +1226,13 @@ class CursorTest {
       return this;
     }
 
-    public CursorTestDataBuilder provenanceCode(String provenanceCode) {
+    public CursorTestDataBuilder provenanceCode(ProvenanceCode provenanceCode) {
       this.provenanceCode = provenanceCode;
+      return this;
+    }
+
+    public CursorTestDataBuilder provenanceCode(String provenanceCode) {
+      this.provenanceCode = ProvenanceCode.parse(provenanceCode);
       return this;
     }
 

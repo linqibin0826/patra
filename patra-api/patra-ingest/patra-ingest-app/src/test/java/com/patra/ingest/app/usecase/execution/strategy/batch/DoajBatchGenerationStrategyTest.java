@@ -2,6 +2,7 @@ package com.patra.ingest.app.usecase.execution.strategy.batch;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.batch.Batch;
@@ -346,7 +347,7 @@ class DoajBatchGenerationStrategyTest {
             1L,                     // planId
             1L,                     // sliceId
             1L,                     // scheduleInstanceId
-            "doaj",                 // provenanceCode
+            ProvenanceCode.DOAJ,    // provenanceCode
             "search",               // operationCode
             DataType.LITERATURE,    // dataType
             configSnapshot,         // configSnapshot

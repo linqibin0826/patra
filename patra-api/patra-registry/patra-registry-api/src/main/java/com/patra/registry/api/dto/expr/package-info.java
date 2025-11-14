@@ -1,8 +1,8 @@
 /**
  * 表达式 API 数据传输对象包 - REST API 契约层。
  *
- * <p>本包包含表达式服务相关的 REST API 响应 DTOs,定义了表达式快照、字段定义、渲染规则和参数映射的数据传输对象。
- * 表达式系统用于动态生成 API 请求参数、字段映射和渲染逻辑,支持 patra-expr-kernel 的编译和执行。
+ * <p>本包包含表达式服务相关的 REST API 响应 DTOs,定义了表达式快照、字段定义、渲染规则和参数映射的数据传输对象。 表达式系统用于动态生成 API
+ * 请求参数、字段映射和渲染逻辑,支持 patra-expr-kernel 的编译和执行。
  *
  * <h2>职责</h2>
  *
@@ -20,12 +20,9 @@
  * <ul>
  *   <li>{@link com.patra.registry.api.dto.expr.ExprSnapshotResp} - 表达式快照响应,
  *       聚合字段定义、渲染规则、参数映射和能力的完整视图
- *   <li>{@link com.patra.registry.api.dto.expr.ExprFieldResp} - 表达式字段响应,
- *       描述字段名称、类型、路径和提取规则
- *   <li>{@link com.patra.registry.api.dto.expr.ExprRenderRuleResp} - 渲染规则响应,
- *       指定字段的输出格式、日期格式化、空值处理等
- *   <li>{@link com.patra.registry.api.dto.expr.ApiParamMappingResp} - 参数映射响应,
- *       描述 API 参数名到表达式变量的映射关系
+ *   <li>{@link com.patra.registry.api.dto.expr.ExprFieldResp} - 表达式字段响应, 描述字段名称、类型、路径和提取规则
+ *   <li>{@link com.patra.registry.api.dto.expr.ExprRenderRuleResp} - 渲染规则响应, 指定字段的输出格式、日期格式化、空值处理等
+ *   <li>{@link com.patra.registry.api.dto.expr.ApiParamMappingResp} - 参数映射响应, 描述 API 参数名到表达式变量的映射关系
  *   <li>{@link com.patra.registry.api.dto.expr.ExprCapabilityResp} - 能力声明响应,
  *       定义表达式支持的功能特性(如分页、排序、过滤)
  * </ul>
@@ -46,11 +43,16 @@
  * <p>DTOs 由适配器层从领域模型转换:
  *
  * <ul>
- *   <li>{@link com.patra.registry.domain.model.vo.expr.ExprSnapshot} → {@link com.patra.registry.api.dto.expr.ExprSnapshotResp}
- *   <li>{@link com.patra.registry.domain.model.vo.expr.ExprField} → {@link com.patra.registry.api.dto.expr.ExprFieldResp}
- *   <li>{@link com.patra.registry.domain.model.vo.expr.ExprRenderRule} → {@link com.patra.registry.api.dto.expr.ExprRenderRuleResp}
- *   <li>{@link com.patra.registry.domain.model.vo.expr.ApiParamMapping} → {@link com.patra.registry.api.dto.expr.ApiParamMappingResp}
- *   <li>{@link com.patra.registry.domain.model.vo.expr.ExprCapability} → {@link com.patra.registry.api.dto.expr.ExprCapabilityResp}
+ *   <li>{@link com.patra.registry.domain.model.vo.expr.ExprSnapshot} → {@link
+ *       com.patra.registry.api.dto.expr.ExprSnapshotResp}
+ *   <li>{@link com.patra.registry.domain.model.vo.expr.ExprField} → {@link
+ *       com.patra.registry.api.dto.expr.ExprFieldResp}
+ *   <li>{@link com.patra.registry.domain.model.vo.expr.ExprRenderRule} → {@link
+ *       com.patra.registry.api.dto.expr.ExprRenderRuleResp}
+ *   <li>{@link com.patra.registry.domain.model.vo.expr.ApiParamMapping} → {@link
+ *       com.patra.registry.api.dto.expr.ApiParamMappingResp}
+ *   <li>{@link com.patra.registry.domain.model.vo.expr.ExprCapability} → {@link
+ *       com.patra.registry.api.dto.expr.ExprCapabilityResp}
  * </ul>
  *
  * <h2>使用场景</h2>

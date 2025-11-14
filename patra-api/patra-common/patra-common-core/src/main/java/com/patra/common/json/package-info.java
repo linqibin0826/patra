@@ -17,18 +17,15 @@
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link com.patra.common.json.JsonNormalizer} - JSON 规范化工具,
- *       将任意输入转换为确定性规范 JSON,支持键排序、数组处理、空值策略等
- *   <li>{@link com.patra.common.json.JsonMapperHolder} - 全局 ObjectMapper 持有者,
- *       提供非 Spring 环境下的共享 JSON 配置,支持 Spring 容器 mapper 桥接
- *   <li>{@link com.patra.common.json.JsonNormalizerConfig} - JSON 规范化配置,
- *       定义规范化行为(键排序、空值移除、类型强制转换等)
- *   <li>{@link com.patra.common.json.JsonNormalizerResult} - JSON 规范化结果,
- *       包含规范 JSON 字符串和哈希材料
- *   <li>{@link com.patra.common.json.JsonNodeMappings} - JsonNode 映射工具,
- *       提供 JsonNode 到 Java 对象的转换
- *   <li>{@link com.patra.common.json.TemporalCoercion} - 时间类型强制转换,
- *       支持多种时间格式解析(秒/毫秒 epoch、ISO-8601 等)
+ *   <li>{@link com.patra.common.json.JsonNormalizer} - JSON 规范化工具, 将任意输入转换为确定性规范
+ *       JSON,支持键排序、数组处理、空值策略等
+ *   <li>{@link com.patra.common.json.JsonMapperHolder} - 全局 ObjectMapper 持有者, 提供非 Spring 环境下的共享
+ *       JSON 配置,支持 Spring 容器 mapper 桥接
+ *   <li>{@link com.patra.common.json.JsonNormalizerConfig} - JSON 规范化配置, 定义规范化行为(键排序、空值移除、类型强制转换等)
+ *   <li>{@link com.patra.common.json.JsonNormalizerResult} - JSON 规范化结果, 包含规范 JSON 字符串和哈希材料
+ *   <li>{@link com.patra.common.json.JsonNodeMappings} - JsonNode 映射工具, 提供 JsonNode 到 Java 对象的转换
+ *   <li>{@link com.patra.common.json.TemporalCoercion} - 时间类型强制转换, 支持多种时间格式解析(秒/毫秒 epoch、ISO-8601
+ *       等)
  * </ul>
  *
  * <h2>JsonNormalizer 核心功能</h2>
@@ -46,12 +43,13 @@
  * <h2>使用场景</h2>
  *
  * <ul>
- *   <li><strong>内容签名</strong>: 使用 {@link com.patra.common.json.JsonNormalizer} 生成规范 JSON,
- *       然后使用 {@link com.patra.common.util.HashUtils} 计算签名
+ *   <li><strong>内容签名</strong>: 使用 {@link com.patra.common.json.JsonNormalizer} 生成规范 JSON, 然后使用
+ *       {@link com.patra.common.util.HashUtils} 计算签名
  *   <li><strong>去重键生成</strong>: 规范化文献内容,生成稳定的哈希值作为去重键
  *   <li><strong>缓存键标准化</strong>: 规范化请求参数,生成一致的缓存键
  *   <li><strong>多源数据规范化</strong>: 统一不同数据源的 JSON 格式
- *   <li><strong>ObjectMapper 共享</strong>: 在非 Spring 环境下使用 {@link com.patra.common.json.JsonMapperHolder}
+ *   <li><strong>ObjectMapper 共享</strong>: 在非 Spring 环境下使用 {@link
+ *       com.patra.common.json.JsonMapperHolder}
  * </ul>
  *
  * <h2>使用示例</h2>

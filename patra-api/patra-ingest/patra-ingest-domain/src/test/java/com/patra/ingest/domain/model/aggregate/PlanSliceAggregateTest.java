@@ -2,6 +2,7 @@ package com.patra.ingest.domain.model.aggregate;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.SliceStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -47,7 +48,7 @@ class PlanSliceAggregateTest {
     void shouldCreateNewSliceWithPendingStatus() {
       // Given: 切片创建参数
       Long planId = 1001L;
-      String provenanceCode = "pubmed";
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       int sliceNo = 1;
       String sliceSignatureHash = "hash-slice-001";
       String windowSpecJson = "{\"from\":\"2024-01-01\",\"to\":\"2024-01-31\"}";
@@ -114,7 +115,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该允许可选字段为 null")
     void shouldAllowOptionalFieldsToBeNull() {
       // Given: 可选字段为 null
-      String provenanceCode = null;
+      ProvenanceCode provenanceCode = null;
       String windowSpecJson = null;
       String exprHash = null;
       String exprSnapshotJson = null;
@@ -147,7 +148,7 @@ class PlanSliceAggregateTest {
       // Given: 持久化状态
       Long id = 100L;
       Long planId = 1001L;
-      String provenanceCode = "pubmed";
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       int sliceNo = 5;
       String sliceSignatureHash = "hash-slice-restored";
       String windowSpecJson = "{\"from\":\"2024-05-01\",\"to\":\"2024-05-31\"}";
@@ -196,7 +197,7 @@ class PlanSliceAggregateTest {
           PlanSliceAggregate.restore(
               100L,
               1001L,
-              "pubmed",
+              ProvenanceCode.PUBMED,
               1,
               "hash-slice-001",
               "{}",
@@ -419,7 +420,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该保证切片核心字段在生命周期中保持不可变")
     void shouldEnsureCoreFieldsRemainsImmutableThroughLifecycle() {
       // Given: 新创建的切片
-      String originalProvenanceCode = "pubmed";
+      ProvenanceCode originalProvenanceCode = ProvenanceCode.PUBMED;
       int originalSliceNo = 3;
       String originalSliceSignatureHash = "hash-original";
       String originalWindowSpecJson = "{\"from\":\"2024-03-01\",\"to\":\"2024-03-31\"}";
@@ -567,8 +568,8 @@ class PlanSliceAggregateTest {
     @Test
     @DisplayName("应该处理空字符串字段")
     void shouldHandleEmptyStringFields() {
-      // Given: 空字符串
-      String emptyProvenanceCode = "";
+      // Given: 空字符串（provenanceCode 改为 null，因为它是枚举类型）
+      ProvenanceCode emptyProvenanceCode = null;
       String emptyWindowSpecJson = "";
       String emptyExprHash = "";
       String emptyExprSnapshotJson = "";
@@ -583,7 +584,7 @@ class PlanSliceAggregateTest {
               .build();
 
       // Then: 应该成功创建（业务规则允许空字符串）
-      assertThat(slice.getProvenanceCode()).isEmpty();
+      assertThat(slice.getProvenanceCode()).isNull();
       assertThat(slice.getWindowSpecJson()).isEmpty();
       assertThat(slice.getExprHash()).isEmpty();
       assertThat(slice.getExprSnapshotJson()).isEmpty();
@@ -663,7 +664,7 @@ class PlanSliceAggregateTest {
   static class PlanSliceAggregateTestDataBuilder {
     private Long id = null; // 默认为 null（新创建的聚合根）
     private Long planId = 1001L;
-    private String provenanceCode = "pubmed";
+    private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
     private int sliceNo = 1;
     private String sliceSignatureHash = "hash-slice-default";
     private String windowSpecJson = "{\"from\":\"2024-01-01\",\"to\":\"2024-01-31\"}";
@@ -686,7 +687,7 @@ class PlanSliceAggregateTest {
       return this;
     }
 
-    public PlanSliceAggregateTestDataBuilder provenanceCode(String provenanceCode) {
+    public PlanSliceAggregateTestDataBuilder provenanceCode(ProvenanceCode provenanceCode) {
       this.provenanceCode = provenanceCode;
       return this;
     }

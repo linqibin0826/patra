@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.model.entity;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.TaskRunStatus;
 import com.patra.ingest.domain.model.vo.execution.RunContext;
 import com.patra.ingest.domain.model.vo.execution.RunStats;
@@ -37,7 +38,7 @@ public class TaskRun {
   private final Long id;
   private final Long taskId;
   private final int attemptNo;
-  private final String provenanceCode;
+  private final ProvenanceCode provenanceCode;
   private final String operationCode;
   private TaskRunStatus status;
   private RunStats stats;
@@ -49,7 +50,7 @@ public class TaskRun {
   private WindowSpec windowSpec;
   private RunContext runContext;
 
-  public TaskRun(Long id, Long taskId, int attemptNo, String provenanceCode, String operationCode) {
+  public TaskRun(Long id, Long taskId, int attemptNo, ProvenanceCode provenanceCode, String operationCode) {
     this(
         id,
         taskId,
@@ -71,7 +72,7 @@ public class TaskRun {
       Long id,
       Long taskId,
       int attemptNo,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       TaskRunStatus status,
       RunStats stats,
@@ -102,7 +103,7 @@ public class TaskRun {
       Long id,
       Long taskId,
       int attemptNo,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       TaskRunStatus status,
       RunStats stats,

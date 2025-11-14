@@ -2,8 +2,7 @@
  * Patra API 网关服务主包。
  *
  * <p>本包包含 Patra 医学文献数据平台的 API 网关服务,基于 Spring Cloud Gateway 实现。
- * 网关作为系统的统一入口,负责将外部请求路由到相应的后端微服务,并提供服务发现、负载均衡、
- * 分布式追踪等基础设施功能。
+ * 网关作为系统的统一入口,负责将外部请求路由到相应的后端微服务,并提供服务发现、负载均衡、 分布式追踪等基础设施功能。
  *
  * <h2>核心职责</h2>
  *
@@ -41,14 +40,11 @@
  * <h2>路由示例</h2>
  *
  * <ul>
- *   <li><strong>Registry 服务</strong>:
- *       {@code GET /patra-registry/provenance/pubmed} →
- *       {@code lb://patra-registry/provenance/pubmed}
- *   <li><strong>Ingest 服务</strong>:
- *       {@code GET /patra-ingest/plans} →
- *       {@code lb://patra-ingest/plans}
- *   <li><strong>Storage 服务</strong>:
- *       {@code POST /patra-storage/internal/storage/files/record} →
+ *   <li><strong>Registry 服务</strong>: {@code GET /patra-registry/provenance/pubmed} → {@code
+ *       lb://patra-registry/provenance/pubmed}
+ *   <li><strong>Ingest 服务</strong>: {@code GET /patra-ingest/plans} → {@code
+ *       lb://patra-ingest/plans}
+ *   <li><strong>Storage 服务</strong>: {@code POST /patra-storage/internal/storage/files/record} →
  *       {@code lb://patra-storage/internal/storage/files/record}
  * </ul>
  *
@@ -102,7 +98,8 @@
  *
  * <ul>
  *   <li>模块文档: {@code patra-gateway-boot/README.md}
- *   <li>Spring Cloud Gateway 官方文档: <a href="https://spring.io/projects/spring-cloud-gateway">spring.io/projects/spring-cloud-gateway</a>
+ *   <li>Spring Cloud Gateway 官方文档: <a
+ *       href="https://spring.io/projects/spring-cloud-gateway">spring.io/projects/spring-cloud-gateway</a>
  * </ul>
  *
  * @author linqibin

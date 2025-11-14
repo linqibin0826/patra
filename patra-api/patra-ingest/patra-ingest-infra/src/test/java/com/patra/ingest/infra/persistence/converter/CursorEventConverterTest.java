@@ -7,6 +7,7 @@ import com.patra.ingest.domain.model.enums.CursorDirection;
 import com.patra.ingest.domain.model.enums.CursorType;
 import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
 import com.patra.ingest.infra.persistence.entity.CursorEventDO;
+import com.patra.common.enums.ProvenanceCode;
 import java.math.BigDecimal;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
@@ -34,7 +35,7 @@ class CursorEventConverterTest {
   private final CursorEventConverter converter = new CursorEventConverterImpl();
 
   // 测试常量
-  private static final String PROVENANCE_CODE = "PUBMED";
+  private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final String OPERATION_CODE = "HARVEST";
   private static final String CURSOR_KEY = "search:cancer";
   private static final String NAMESPACE_SCOPE_CODE = "GLOBAL";
@@ -88,7 +89,7 @@ class CursorEventConverterTest {
 
       // Then: 验证转换结果
       assertThat(result).isNotNull();
-      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE);
+      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE.getCode());
       assertThat(result.getOperationCode()).isEqualTo(OPERATION_CODE);
       assertThat(result.getCursorKey()).isEqualTo(CURSOR_KEY);
       assertThat(result.getNamespaceScopeCode()).isEqualTo(NAMESPACE_SCOPE_CODE);
@@ -260,7 +261,7 @@ class CursorEventConverterTest {
       // Given: 创建 TIME 类型 FORWARD 方向的 DO
       CursorEventDO entity = new CursorEventDO();
       entity.setId(100L);
-      entity.setProvenanceCode(PROVENANCE_CODE);
+      entity.setProvenanceCode(PROVENANCE_CODE.getCode());
       entity.setOperationCode(OPERATION_CODE);
       entity.setCursorKey(CURSOR_KEY);
       entity.setNamespaceScopeCode(NAMESPACE_SCOPE_CODE);
@@ -321,7 +322,7 @@ class CursorEventConverterTest {
       // Given: 创建 ID 类型 BACKFILL 方向的 DO
       CursorEventDO entity = new CursorEventDO();
       entity.setId(200L);
-      entity.setProvenanceCode(PROVENANCE_CODE);
+      entity.setProvenanceCode(PROVENANCE_CODE.getCode());
       entity.setOperationCode(OPERATION_CODE);
       entity.setCursorKey(CURSOR_KEY);
       entity.setNamespaceScopeCode(NAMESPACE_SCOPE_CODE);
@@ -364,7 +365,7 @@ class CursorEventConverterTest {
       // Given: 创建 TOKEN 类型的 DO
       CursorEventDO entity = new CursorEventDO();
       entity.setId(300L);
-      entity.setProvenanceCode(PROVENANCE_CODE);
+      entity.setProvenanceCode(PROVENANCE_CODE.getCode());
       entity.setOperationCode(OPERATION_CODE);
       entity.setCursorKey(CURSOR_KEY);
       entity.setNamespaceScopeCode(NAMESPACE_SCOPE_CODE);
@@ -400,7 +401,7 @@ class CursorEventConverterTest {
       // Given: 创建 CursorLineage 字段全为 null 的 DO
       CursorEventDO entity = new CursorEventDO();
       entity.setId(100L);
-      entity.setProvenanceCode(PROVENANCE_CODE);
+      entity.setProvenanceCode(PROVENANCE_CODE.getCode());
       entity.setOperationCode(OPERATION_CODE);
       entity.setCursorKey(CURSOR_KEY);
       entity.setNamespaceScopeCode(NAMESPACE_SCOPE_CODE);
@@ -471,6 +472,8 @@ class CursorEventConverterTest {
       CursorEventDO entity = converter.toDO(original);
       // 模拟数据库返回(设置 id)
       entity.setId(100L);
+      // 转换为 DO 后，provenanceCode 被转为字符串，所以需要重新设置为枚举值
+      entity.setProvenanceCode(PROVENANCE_CODE.getCode());
       CursorEvent result = converter.toDomain(entity);
 
       // Then: 验证转换后的值与原始值一致

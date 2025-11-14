@@ -1,6 +1,7 @@
 package com.patra.ingest.domain.model.aggregate;
 
 import com.patra.common.domain.AggregateRoot;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.PlanStatus;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
@@ -56,7 +57,7 @@ public class PlanAggregate extends AggregateRoot<Long> {
   private final String planKey;
 
   /** 数据来源代码（如：pubmed、epmc）。 */
-  private final String provenanceCode;
+  private final ProvenanceCode provenanceCode;
 
   /** 操作类型（全量采集、增量采集、补偿采集等）。 */
   private final OperationCode operationCode;
@@ -89,7 +90,7 @@ public class PlanAggregate extends AggregateRoot<Long> {
       Long id,
       Long scheduleInstanceId,
       String planKey,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       OperationCode operationCode,
       String exprProtoHash,
       String exprProtoSnapshotJson,
@@ -134,7 +135,7 @@ public class PlanAggregate extends AggregateRoot<Long> {
   public static PlanAggregate create(
       Long scheduleInstanceId,
       String planKey,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       String exprProtoHash,
       String exprProtoSnapshotJson,
@@ -184,7 +185,7 @@ public class PlanAggregate extends AggregateRoot<Long> {
       Long id,
       Long scheduleInstanceId,
       String planKey,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       String exprProtoHash,
       String exprProtoSnapshotJson,
@@ -245,6 +246,15 @@ public class PlanAggregate extends AggregateRoot<Long> {
       throw new IllegalArgumentException("newStatus 不能为 null");
     }
     this.status = newStatus;
+  }
+
+  /**
+   * 获取数据来源代码字符串值。
+   *
+   * @return 数据来源代码字符串
+   */
+  public String getProvenanceCodeValue() {
+    return provenanceCode.getCode();
   }
 
   /**

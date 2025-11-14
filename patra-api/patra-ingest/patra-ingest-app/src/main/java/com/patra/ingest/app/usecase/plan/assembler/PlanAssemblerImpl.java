@@ -2,6 +2,7 @@ package com.patra.ingest.app.usecase.plan.assembler;
 
 import cn.hutool.core.text.CharSequenceUtil;
 import com.patra.common.enums.Priority;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonNormalizer;
 import com.patra.common.json.JsonNormalizerConfig;
 import com.patra.common.json.JsonNormalizerResult;
@@ -17,6 +18,7 @@ import com.patra.ingest.app.usecase.plan.slicer.model.SlicePlanningContext;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
+import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.SliceStrategy;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.plan.PlanTriggerNorm;
@@ -115,8 +117,8 @@ public class PlanAssemblerImpl implements PlanAssembler {
     plan.startSlicing();
     log.debug(
         "Created plan aggregate for provenance [{}] operation [{}]: planKey={}, strategy={}",
-        norm.provenanceCode(),
-        norm.operationCode(),
+        norm.provenanceCode() != null ? norm.provenanceCode().getCode() : null,
+        norm.operationCode() != null ? norm.operationCode().getCode() : null,
         plan.getPlanKey(),
         sliceStrategy.getCode());
 
@@ -130,8 +132,8 @@ public class PlanAssemblerImpl implements PlanAssembler {
         "Generated {} slices and {} tasks for provenance [{}] operation [{}]",
         slices.size(),
         tasks.size(),
-        norm.provenanceCode(),
-        norm.operationCode());
+        norm.provenanceCode() != null ? norm.provenanceCode().getCode() : null,
+        norm.operationCode() != null ? norm.operationCode().getCode() : null);
 
     if (slices.isEmpty() || tasks.isEmpty()) {
       // Note: After refactoring, Plan remains in SLICING status when assembly fails.
@@ -139,8 +141,8 @@ public class PlanAssemblerImpl implements PlanAssembler {
       log.warn(
           "Plan assembly failed for provenance [{}] operation [{}]: no slices or tasks generated. "
               + "Plan remains in SLICING status.",
-          norm.provenanceCode(),
-          norm.operationCode());
+          norm.provenanceCode() != null ? norm.provenanceCode().getCode() : null,
+          norm.operationCode() != null ? norm.operationCode().getCode() : null);
       return new PlanAssemblyResult(plan, slices, tasks, PlanAssemblyResult.AssemblyStatus.FAILED);
     }
 
@@ -167,11 +169,17 @@ public class PlanAssemblerImpl implements PlanAssembler {
 
     String sliceStrategyCode = sliceStrategy.getCode();
     WindowSpec windowSpec = WindowSpec.ofTime(window.from(), window.to());
+
+    ProvenanceCode pc = norm.provenanceCode();
+
+    OperationCode oc = norm.operationCode();
+    String operationCodeStr = oc != null ? oc.getCode() : null;
+
     return PlanAggregate.create(
         norm.scheduleInstanceId(),
         planKey,
-        norm.provenanceCode().getCode(),
-        norm.operationCode() == null ? null : norm.operationCode().getCode(),
+        pc,
+        operationCodeStr,
         planExpression.hash(),
         planExpression.jsonSnapshot(),
         configSnapshotJson,
@@ -267,12 +275,13 @@ public class PlanAssemblerImpl implements PlanAssembler {
   private List<PlanSliceAggregate> convertToSliceAggregates(
       PlanTriggerNorm norm, List<SlicePlan> drafts) {
     List<PlanSliceAggregate> slices = new ArrayList<>(drafts.size());
+    ProvenanceCode pc = norm.provenanceCode();
     for (SlicePlan draft : drafts) {
       ExprCanonicalSnapshot sliceSnapshot = ExprCanonicalizer.canonicalize(draft.sliceExpr());
       slices.add(
           PlanSliceAggregate.create(
               null,
-              norm.provenanceCode().getCode(),
+              pc,
               draft.sliceNo(),
               draft.sliceSignatureSeed(),
               draft.windowSpecJson(),
@@ -295,11 +304,18 @@ public class PlanAssemblerImpl implements PlanAssembler {
     List<TaskAggregate> tasks = new ArrayList<>(slices.size());
 
     Priority effectivePriority = norm.priority() == null ? Priority.NORMAL : norm.priority();
+
+    ProvenanceCode pc = norm.provenanceCode();
+    String pcStr = pc != null ? pc.getCode() : null;
+
+    OperationCode oc = norm.operationCode();
+    String ocStr = oc != null ? oc.getCode() : null;
+
     log.debug(
         "Creating {} tasks from slices for provenance [{}] operation [{}], priority={}",
         slices.size(),
-        norm.provenanceCode(),
-        norm.operationCode(),
+        pcStr,
+        ocStr,
         effectivePriority);
 
     for (int i = 0; i < slices.size(); i++) {
@@ -314,8 +330,8 @@ public class PlanAssemblerImpl implements PlanAssembler {
               norm.scheduleInstanceId(),
               null,
               (long) slice.getSliceNo(),
-              norm.provenanceCode().getCode(),
-              norm.operationCode().getCode(),
+              pc,
+              ocStr,
               buildTaskParamsJson(slice.getSliceNo()),
               idemKey,
               slice.getExprHash(),

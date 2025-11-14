@@ -1,7 +1,8 @@
 /**
  * MyBatis 自定义类型转换器包。
  *
- * <p>本包提供 MyBatis 的 {@link org.apache.ibatis.type.TypeHandler} 实现,用于在 Java 对象与数据库列类型之间进行自动转换,特别是处理复杂类型(如 JSON)的序列化和反序列化。
+ * <p>本包提供 MyBatis 的 {@link org.apache.ibatis.type.TypeHandler} 实现,用于在 Java
+ * 对象与数据库列类型之间进行自动转换,特别是处理复杂类型(如 JSON)的序列化和反序列化。
  *
  * <h2>职责</h2>
  *
@@ -15,8 +16,10 @@
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link com.patra.starter.mybatis.type.JsonToJsonNodeTypeHandler} - Jackson {@code JsonNode} 类型转换器
- *   <li>{@link com.patra.starter.mybatis.type.JsonToMapTypeHandler} - {@code Map<String, Object>} 类型转换器
+ *   <li>{@link com.patra.starter.mybatis.type.JsonToJsonNodeTypeHandler} - Jackson {@code JsonNode}
+ *       类型转换器
+ *   <li>{@link com.patra.starter.mybatis.type.JsonToMapTypeHandler} - {@code Map<String, Object>}
+ *       类型转换器
  * </ul>
  *
  * <h2>设计决策</h2>
@@ -42,6 +45,7 @@
  * <h2>使用示例</h2>
  *
  * <p><b>实体类定义(使用 JsonNode):</b>
+ *
  * <pre>{@code
  * @Data
  * @EqualsAndHashCode(callSuper = true)
@@ -53,6 +57,7 @@
  * }</pre>
  *
  * <p><b>实体类定义(使用 Map):</b>
+ *
  * <pre>{@code
  * @Data
  * @EqualsAndHashCode(callSuper = true)
@@ -64,6 +69,7 @@
  * }</pre>
  *
  * <p><b>插入操作(自动序列化):</b>
+ *
  * <pre>{@code
  * ObjectMapper mapper = new ObjectMapper();
  * JsonNode config = mapper.createObjectNode()
@@ -78,6 +84,7 @@
  * }</pre>
  *
  * <p><b>查询操作(自动反序列化):</b>
+ *
  * <pre>{@code
  * ProvenanceDO provenance = provenanceMapper.selectById(id);
  * JsonNode config = provenance.getConfig(); // 自动从 JSON 字符串反序列化
@@ -85,6 +92,7 @@
  * }</pre>
  *
  * <p><b>全局注册 TypeHandler:</b>
+ *
  * <pre>{@code
  * @Bean
  * public ConfigurationCustomizer typeHandlerCustomizer(ObjectMapper objectMapper) {

@@ -86,7 +86,8 @@ class ProvenanceEntityConverterTest {
       assertThat(result.id()).isEqualTo(1L);
       assertThat(result.code()).isEqualTo("PUBMED"); // provenanceCode → code
       assertThat(result.name()).isEqualTo("PubMed"); // provenanceName → name
-      assertThat(result.baseUrlDefault()).isEqualTo("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/");
+      assertThat(result.baseUrlDefault())
+          .isEqualTo("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/");
       assertThat(result.timezoneDefault()).isEqualTo("America/New_York");
       assertThat(result.docsUrl()).isEqualTo("https://www.ncbi.nlm.nih.gov/books/NBK25501/");
       assertThat(result.active()).isTrue();

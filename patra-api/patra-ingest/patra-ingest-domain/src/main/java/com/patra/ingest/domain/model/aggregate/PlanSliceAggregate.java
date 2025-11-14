@@ -1,6 +1,7 @@
 package com.patra.ingest.domain.model.aggregate;
 
 import com.patra.common.domain.AggregateRoot;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.SliceStatus;
 import java.util.Objects;
 import lombok.Getter;
@@ -45,7 +46,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
   private Long planId;
 
   /** 数据来源代码（如：pubmed）。 */
-  private final String provenanceCode;
+  private final ProvenanceCode provenanceCode;
 
   /** 切片序号。 */
   private final int sliceNo;
@@ -68,7 +69,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
   private PlanSliceAggregate(
       Long id,
       Long planId,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       int sliceNo,
       String sliceSignatureHash,
       String windowSpecJson,
@@ -88,7 +89,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
 
   public static PlanSliceAggregate create(
       Long planId,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       int sliceNo,
       String sliceSignatureHash,
       String windowSpecJson,
@@ -110,7 +111,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
   public static PlanSliceAggregate restore(
       Long id,
       Long planId,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       int sequence,
       String sliceSignatureHash,
       String windowSpecJson,

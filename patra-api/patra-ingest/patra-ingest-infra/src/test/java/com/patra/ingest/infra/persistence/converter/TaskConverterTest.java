@@ -3,8 +3,10 @@ package com.patra.ingest.infra.persistence.converter;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
+import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.vo.execution.ExecutionTimeline;
 import com.patra.ingest.domain.model.vo.plan.TaskSchedulerContext;
@@ -57,7 +59,7 @@ class TaskConverterTest {
             2001L,
             3001L,
             4001L,
-            "PUBMED",
+            ProvenanceCode.PUBMED,
             "HARVEST",
             paramsJson,
             "idem-key-001",
@@ -163,7 +165,7 @@ class TaskConverterTest {
     assertThat(aggregate.getScheduleInstanceId()).isEqualTo(2001L);
     assertThat(aggregate.getPlanId()).isEqualTo(3001L);
     assertThat(aggregate.getSliceId()).isEqualTo(4001L);
-    assertThat(aggregate.getProvenanceCode()).isEqualTo("PUBMED");
+    assertThat(aggregate.getProvenanceCode()).isEqualTo(ProvenanceCode.PUBMED);
     assertThat(aggregate.getOperationCode()).isEqualTo("HARVEST");
     assertThat(aggregate.getIdempotentKey()).isEqualTo("idem-key-001");
     assertThat(aggregate.getExprHash()).isEqualTo("expr-hash-001");
@@ -214,7 +216,7 @@ class TaskConverterTest {
             2L,
             3L,
             4L,
-            "PUBMED",
+            ProvenanceCode.PUBMED,
             "HARVEST",
             paramsJson,
             "idem-001",

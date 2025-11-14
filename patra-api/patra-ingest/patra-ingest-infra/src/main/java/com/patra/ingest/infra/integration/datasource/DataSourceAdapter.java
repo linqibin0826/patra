@@ -3,6 +3,7 @@ package com.patra.ingest.infra.integration.datasource;
 import cn.hutool.core.map.MapUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.model.DataType;
 import com.patra.common.type.TypeReference;
@@ -95,14 +96,14 @@ public class DataSourceAdapter implements DataSourcePort {
      */
     @Override
     public BatchPlan preparePlan(ExecutionContext context, DataType dataType) {
-        String provenanceCode = context.provenanceCode();
+        ProvenanceCode provenanceCode = context.provenanceCode();
 
         log.debug("DataSourceAdapter.preparePlan: provenance={}, dataType={}",
-            provenanceCode, dataType);
+            provenanceCode.getCode(), dataType);
 
         try {
             // 1. 查找Provider
-            DataSourceProvider provider = providerRegistry.getProvider(provenanceCode, dataType);
+            DataSourceProvider provider = providerRegistry.getProvider(provenanceCode.getCode(), dataType);
 
             // 2. 提取通用参数
             String query = context.compiledQuery();
@@ -113,7 +114,7 @@ public class DataSourceAdapter implements DataSourcePort {
             PlanMetadata planMetadata = provider.preparePlan(query, params, config);
 
             log.info("计划元数据已准备: provenance={}, dataType={}, totalCount={}",
-                provenanceCode, dataType, planMetadata.totalCount());
+                provenanceCode.getCode(), dataType, planMetadata.totalCount());
 
             // 4. 使用翻译器转换为领域模型
             BatchPlan batchPlan = planMetadataTranslator.translate(planMetadata);
@@ -124,14 +125,14 @@ public class DataSourceAdapter implements DataSourcePort {
             return batchPlan;
 
         } catch (ProviderNotFoundException ex) {
-            log.error("Provider未找到: provenance={}, dataType={}", provenanceCode, dataType, ex);
+            log.error("Provider未找到: provenance={}, dataType={}", provenanceCode.getCode(), dataType, ex);
             throw ex;
         } catch (ProvenanceClientException ex) {
-            log.error("调用数据源失败: provenance={}, dataType={}", provenanceCode, dataType, ex);
+            log.error("调用数据源失败: provenance={}, dataType={}", provenanceCode.getCode(), dataType, ex);
             throw new DataSourceException("准备计划元数据失败: " + ex.getMessage(), ex);
         } catch (Exception ex) {
             log.error("准备计划元数据时发生未知错误: provenance={}, dataType={}",
-                provenanceCode, dataType, ex);
+                provenanceCode.getCode(), dataType, ex);
             throw new DataSourceException("准备计划元数据失败: " + ex.getMessage(), ex);
         }
     }
@@ -326,17 +327,17 @@ public class DataSourceAdapter implements DataSourcePort {
             Batch batch) {
 
         long startTime = System.currentTimeMillis();
-        String provenanceCode = context.provenanceCode();
+        ProvenanceCode provenanceCode = context.provenanceCode();
 
         log.debug("DataSourceAdapter.fetchData: provenance={}, dataType={}, batch={}",
-            provenanceCode, dataType, batch.batchNo());
+            provenanceCode.getCode(), dataType, batch.batchNo());
 
         try {
             // 1. 验证类型一致性
             validateTypeConsistency(dataType, typeRef);
 
             // 2. 查找Provider
-            DataSourceProvider provider = providerRegistry.getProvider(provenanceCode, dataType);
+            DataSourceProvider provider = providerRegistry.getProvider(provenanceCode.getCode(), dataType);
 
             // 3. 构建ProviderRequest
             ProviderRequest request = buildProviderRequest(context, batch);
@@ -351,12 +352,12 @@ public class DataSourceAdapter implements DataSourcePort {
 
             long duration = System.currentTimeMillis() - startTime;
             log.info("数据获取完成: provenance={}, dataType={}, count={}, duration={}ms",
-                provenanceCode, dataType, result.fetchedCount(), duration);
+                provenanceCode.getCode(), dataType, result.fetchedCount(), duration);
 
             return result;
 
         } catch (ProviderNotFoundException ex) {
-            log.error("Provider未找到: provenance={}, dataType={}", provenanceCode, dataType, ex);
+            log.error("Provider未找到: provenance={}, dataType={}", provenanceCode.getCode(), dataType, ex);
             throw ex;
         } catch (TypeMismatchException ex) {
             log.error("类型不匹配: dataType={}, typeRef={}", dataType, typeRef, ex);
@@ -364,7 +365,7 @@ public class DataSourceAdapter implements DataSourcePort {
         } catch (Exception ex) {
             long duration = System.currentTimeMillis() - startTime;
             log.error("数据获取异常: provenance={}, dataType={}, duration={}ms",
-                provenanceCode, dataType, duration, ex);
+                provenanceCode.getCode(), dataType, duration, ex);
 
             return DataFetchResult.failure(
                 dataType,
@@ -485,7 +486,7 @@ public class DataSourceAdapter implements DataSourcePort {
         Map<String, Object> params = MapUtil.<String, Object>newHashMap();
 
         // 从Context添加参数
-        params.put("provenanceCode", context.provenanceCode());
+        params.put("provenanceCode", context.provenanceCode().getCode());
         params.put("operationCode", context.operationCode());
         params.put("runId", context.runId());
 

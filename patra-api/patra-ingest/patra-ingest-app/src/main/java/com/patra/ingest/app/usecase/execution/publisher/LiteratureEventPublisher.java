@@ -1,6 +1,7 @@
 package com.patra.ingest.app.usecase.execution.publisher;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.outbox.config.OutboxPublisherProperties;
 import com.patra.ingest.app.outbox.constants.OutboxAggregateTypes;
 import com.patra.ingest.app.outbox.constants.OutboxBusinessTags;
@@ -60,10 +61,12 @@ public class LiteratureEventPublisher
   @Override
   protected LiteratureReadyPayload buildPayload(
       LiteratureDataReadyEvent event, OutboxPublishContext ctx) {
+    ProvenanceCode pc = event.provenanceCode();
+    String provenanceCode = pc != null ? pc.getCode() : null;
     return new LiteratureReadyPayload(
         event.taskId(),
         event.runId(),
-        event.provenanceCode(),
+        provenanceCode,
         event.storageKeys(),
         event.totalLiteratureCount(),
         event.successBatchCount(),
@@ -75,14 +78,22 @@ public class LiteratureEventPublisher
   protected LiteratureReadyHeaders buildHeaders(
       LiteratureDataReadyEvent event, OutboxPublishContext ctx) {
     int storageKeyCount = event.storageKeys() != null ? event.storageKeys().size() : 0;
+    ProvenanceCode pc = event.provenanceCode();
+    String provenanceCode = pc != null ? pc.getCode() : null;
     return new LiteratureReadyHeaders(
-        event.provenanceCode(), event.taskId(), event.runId(), storageKeyCount, event.timestamp());
+        provenanceCode,
+        event.taskId(),
+        event.runId(),
+        storageKeyCount,
+        event.timestamp());
   }
 
   @Override
   protected String buildPartitionKey(LiteratureDataReadyEvent event, OutboxPublishContext ctx) {
-    if (event.provenanceCode() != null && !event.provenanceCode().isBlank()) {
-      return event.provenanceCode();
+    ProvenanceCode pc = event.provenanceCode();
+    String provenanceCode = pc != null ? pc.getCode() : null;
+    if (provenanceCode != null) {
+      return provenanceCode;
     }
     return "LITERATURE";
   }

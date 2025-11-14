@@ -2,6 +2,7 @@ package com.patra.ingest.domain.model.entity;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.TaskRunStatus;
 import com.patra.ingest.domain.model.vo.execution.RunContext;
 import com.patra.ingest.domain.model.vo.execution.RunStats;
@@ -56,7 +57,7 @@ class TaskRunTest {
       Long id = 1001L;
       Long taskId = 2001L;
       int attemptNo = 1;
-      String provenanceCode = "pubmed";
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       String operationCode = "HARVEST";
 
       // When: 创建新 TaskRun
@@ -103,7 +104,7 @@ class TaskRunTest {
       Long id = 1001L;
       Long taskId = 2001L;
       int attemptNo = 2;
-      String provenanceCode = "pubmed";
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       String operationCode = "HARVEST";
       TaskRunStatus status = TaskRunStatus.RUNNING;
       RunStats stats = new RunStats(100, 95, 5, 10);
@@ -856,7 +857,7 @@ class TaskRunTest {
           1001L,
           2001L,
           1,
-          "pubmed",
+          ProvenanceCode.PUBMED,
           "HARVEST",
           TaskRunStatus.SUCCEEDED,
           RunStats.empty(),
@@ -967,7 +968,7 @@ class TaskRunTest {
       Long id = 1001L;
       Long taskId = 2001L;
       int attemptNo = 1;
-      String provenanceCode = "pubmed";
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       String operationCode = "HARVEST";
 
       TaskRun taskRun = new TaskRun(id, taskId, attemptNo, provenanceCode, operationCode);
@@ -996,9 +997,9 @@ class TaskRunTest {
       Long taskId = 2001L;
 
       // When: 创建多个尝试
-      TaskRun attempt1 = new TaskRun(1001L, taskId, 1, "pubmed", "HARVEST");
-      TaskRun attempt2 = new TaskRun(1002L, taskId, 2, "pubmed", "HARVEST");
-      TaskRun attempt3 = new TaskRun(1003L, taskId, 3, "pubmed", "HARVEST");
+      TaskRun attempt1 = new TaskRun(1001L, taskId, 1, ProvenanceCode.PUBMED, "HARVEST");
+      TaskRun attempt2 = new TaskRun(1002L, taskId, 2, ProvenanceCode.PUBMED, "HARVEST");
+      TaskRun attempt3 = new TaskRun(1003L, taskId, 3, ProvenanceCode.PUBMED, "HARVEST");
 
       // Then: 应该是不同的实例
       assertThat(attempt1.getTaskId()).isEqualTo(taskId);
@@ -1075,7 +1076,7 @@ class TaskRunTest {
     private Long id = 1001L;
     private Long taskId = 2001L;
     private int attemptNo = 1;
-    private String provenanceCode = "pubmed";
+    private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
     private String operationCode = "HARVEST";
     private TaskRunStatus status = TaskRunStatus.PENDING;
     private RunStats stats = RunStats.empty();
@@ -1136,7 +1137,7 @@ class TaskRunTest {
       return this;
     }
 
-    public TaskRunTestDataBuilder provenanceCode(String provenanceCode) {
+    public TaskRunTestDataBuilder provenanceCode(ProvenanceCode provenanceCode) {
       this.provenanceCode = provenanceCode;
       return this;
     }

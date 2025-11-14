@@ -77,7 +77,8 @@ class DataLayerErrorMappingContributorTest {
   @DisplayName("MySQL 重复键错误(1062) 应映射为 CONFLICT")
   void mapException_mysqlDuplicateKeyError_shouldReturnConflict() {
     // Arrange
-    SQLException exception = new SQLException("Duplicate entry 'test' for key 'PRIMARY'", "23000", 1062);
+    SQLException exception =
+        new SQLException("Duplicate entry 'test' for key 'PRIMARY'", "23000", 1062);
 
     // Act
     Optional<ErrorCodeLike> result = contributor.mapException(exception);

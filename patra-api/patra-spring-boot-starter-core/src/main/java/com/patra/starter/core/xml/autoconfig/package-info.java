@@ -1,8 +1,8 @@
 /**
  * XML 序列化自动配置包。
  *
- * <p>本包提供基于 Jackson 的 XML 序列化器可选自动配置,用于处理 XML 格式的数据交换场景。
- * 仅在 {@code jackson-dataformat-xml} 依赖存在时自动激活。
+ * <p>本包提供基于 Jackson 的 XML 序列化器可选自动配置,用于处理 XML 格式的数据交换场景。 仅在 {@code jackson-dataformat-xml}
+ * 依赖存在时自动激活。
  *
  * <h2>职责</h2>
  *

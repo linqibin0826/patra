@@ -21,7 +21,8 @@ import org.junit.jupiter.api.Test;
  *   <li>验证构造函数接受 null Clock 参数
  * </ul>
  *
- * <p>注意：由于 MyBatis-Plus 的 strictInsertFill/strictUpdateFill 依赖运行时 TableInfo 元数据， 本测试重点验证时钟配置逻辑。完整的填充行为需要在集成测试中验证。
+ * <p>注意：由于 MyBatis-Plus 的 strictInsertFill/strictUpdateFill 依赖运行时 TableInfo 元数据，
+ * 本测试重点验证时钟配置逻辑。完整的填充行为需要在集成测试中验证。
  */
 @DisplayName("AuditMetaObjectHandler 单元测试")
 class AuditMetaObjectHandlerTest {
@@ -89,6 +90,7 @@ class AuditMetaObjectHandlerTest {
     AuditMetaObjectHandler handler = new AuditMetaObjectHandler(null);
 
     // Assert - 验证类实现了正确的接口
-    assertThat(handler).isInstanceOf(com.baomidou.mybatisplus.core.handlers.MetaObjectHandler.class);
+    assertThat(handler)
+        .isInstanceOf(com.baomidou.mybatisplus.core.handlers.MetaObjectHandler.class);
   }
 }

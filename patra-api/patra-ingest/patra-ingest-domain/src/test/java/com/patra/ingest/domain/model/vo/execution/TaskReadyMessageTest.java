@@ -1,12 +1,17 @@
 package com.patra.ingest.domain.model.vo.execution;
 
 import org.junit.jupiter.api.DisplayName;
+import com.patra.common.enums.ProvenanceCode;
 import org.junit.jupiter.api.Nested;
+import com.patra.common.enums.ProvenanceCode;
 import org.junit.jupiter.api.Test;
+import com.patra.common.enums.ProvenanceCode;
 
 import java.time.Instant;
+import com.patra.common.enums.ProvenanceCode;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.patra.common.enums.ProvenanceCode;
 
 @DisplayName("TaskReadyMessage 值对象单元测试")
 class TaskReadyMessageTest {
@@ -67,7 +72,7 @@ class TaskReadyMessageTest {
               1001L,
               3001L,
               4001L,
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "FETCH_CITATIONS",
               "idempotent-key-123",
               10,
@@ -83,7 +88,7 @@ class TaskReadyMessageTest {
       assertThat(payload.taskId()).isEqualTo(1001L);
       assertThat(payload.planId()).isEqualTo(3001L);
       assertThat(payload.sliceId()).isEqualTo(4001L);
-      assertThat(payload.provenance()).isEqualTo("pubmed");
+      assertThat(payload.provenance()).isEqualTo(ProvenanceCode.PUBMED);
       assertThat(payload.operation()).isEqualTo("FETCH_CITATIONS");
       assertThat(payload.idempotentKey()).isEqualTo("idempotent-key-123");
       assertThat(payload.priority()).isEqualTo(10);
@@ -130,7 +135,7 @@ class TaskReadyMessageTest {
               1001L,
               3001L,
               4001L,
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "FETCH_CITATIONS",
               null,
               null,
@@ -146,7 +151,7 @@ class TaskReadyMessageTest {
       assertThat(payload.taskId()).isEqualTo(1001L);
       assertThat(payload.planId()).isEqualTo(3001L);
       assertThat(payload.sliceId()).isEqualTo(4001L);
-      assertThat(payload.provenance()).isEqualTo("pubmed");
+      assertThat(payload.provenance()).isEqualTo(ProvenanceCode.PUBMED);
       assertThat(payload.operation()).isEqualTo("FETCH_CITATIONS");
       assertThat(payload.idempotentKey()).isNull();
       assertThat(payload.params()).isNull();
@@ -320,7 +325,7 @@ class TaskReadyMessageTest {
               1001L,
               3001L,
               4001L,
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "FETCH",
               "key",
               10,
@@ -337,7 +342,7 @@ class TaskReadyMessageTest {
               1001L,
               3001L,
               4001L,
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "FETCH",
               "key",
               10,
@@ -424,7 +429,7 @@ class TaskReadyMessageTest {
               1L,
               2L,
               3L,
-              "prov",
+              ProvenanceCode.PUBMED,
               "op",
               "key",
               Integer.MAX_VALUE,
@@ -446,7 +451,7 @@ class TaskReadyMessageTest {
       // When
       TaskReadyMessage.Payload payload =
           new TaskReadyMessage.Payload(
-              1L, 2L, 3L, "prov", "op", "key", -10, NOW, null, null, null, null, null, null);
+              1L, 2L, 3L, ProvenanceCode.PUBMED, "op", "key", -10, NOW, null, null, null, null, null, null);
 
       // Then
       assertThat(payload.priority()).isEqualTo(-10);
@@ -464,7 +469,7 @@ class TaskReadyMessageTest {
               1L,
               2L,
               3L,
-              longString,
+              ProvenanceCode.PUBMED,
               longString,
               longString,
               10,
@@ -477,7 +482,7 @@ class TaskReadyMessageTest {
               null);
 
       // Then
-      assertThat(payload.provenance()).hasSize(10000);
+      assertThat(payload.provenance()).isEqualTo(ProvenanceCode.PUBMED);
       assertThat(payload.operation()).hasSize(10000);
       assertThat(payload.idempotentKey()).hasSize(10000);
       assertThat(payload.planKey()).hasSize(10000);
@@ -493,7 +498,7 @@ class TaskReadyMessageTest {
               Long.MAX_VALUE,
               Long.MAX_VALUE,
               Long.MAX_VALUE,
-              "prov",
+              ProvenanceCode.PUBMED,
               "op",
               "key",
               10,
@@ -555,7 +560,7 @@ class TaskReadyMessageTest {
               1001L,
               3001L,
               4001L,
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "FETCH_CITATIONS",
               "pubmed:FETCH_CITATIONS:2025-01-05:slice-5",
               10,
@@ -585,7 +590,7 @@ class TaskReadyMessageTest {
 
       // Then
       assertThat(message.payload().taskId()).isEqualTo(1001L);
-      assertThat(message.payload().provenance()).isEqualTo("pubmed");
+      assertThat(message.payload().provenance()).isEqualTo(ProvenanceCode.PUBMED);
       assertThat(message.payload().operation()).isEqualTo("FETCH_CITATIONS");
       assertThat(message.payload().params().sliceNo()).isEqualTo(5);
       assertThat(message.header().scheduler()).isEqualTo("XXL-JOB");
@@ -604,7 +609,7 @@ class TaskReadyMessageTest {
               1001L,
               3001L,
               4001L,
-              "crossref",
+              ProvenanceCode.CROSSREF,
               "FETCH_WORKS",
               "crossref:FETCH_WORKS:2025-01-05",
               5,
@@ -643,7 +648,7 @@ class TaskReadyMessageTest {
 
   private TaskReadyMessage.Payload createMinimalPayload() {
     return new TaskReadyMessage.Payload(
-        1001L, 3001L, 4001L, "pubmed", "FETCH", "key", 10, NOW, null, null, null, null, null,
+        1001L, 3001L, 4001L, ProvenanceCode.PUBMED, "FETCH", "key", 10, NOW, null, null, null, null, null,
         null);
   }
 

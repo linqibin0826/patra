@@ -2,6 +2,7 @@ package com.patra.ingest.domain.model.aggregate;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.event.TaskCompletedEvent;
 import com.patra.ingest.domain.event.TaskQueuedEvent;
 import com.patra.ingest.domain.model.enums.TaskStatus;
@@ -48,7 +49,7 @@ class TaskAggregateTest {
               1001L, // scheduleInstanceId
               2001L, // planId
               3001L, // sliceId
-              "pubmed", // provenanceCode
+              ProvenanceCode.PUBMED, // provenanceCode
               "harvest", // operationCode
               "{\"batchSize\":100}", // paramsJson
               "idempotent-key-001", // idempotentKey
@@ -62,7 +63,7 @@ class TaskAggregateTest {
       assertThat(task.getScheduleInstanceId()).isEqualTo(1001L);
       assertThat(task.getPlanId()).isEqualTo(2001L);
       assertThat(task.getSliceId()).isEqualTo(3001L);
-      assertThat(task.getProvenanceCode()).isEqualTo("pubmed");
+      assertThat(task.getProvenanceCode()).isEqualTo(ProvenanceCode.PUBMED);
       assertThat(task.getOperationCode()).isEqualTo("harvest");
       assertThat(task.getParamsJson()).isEqualTo("{\"batchSize\":100}");
       assertThat(task.getIdempotentKey()).isEqualTo("idempotent-key-001");
@@ -100,7 +101,7 @@ class TaskAggregateTest {
               .scheduleInstanceId(1001L)
               .planId(2001L)
               .sliceId(3001L)
-              .provenanceCode("pubmed")
+              .provenanceCode(ProvenanceCode.PUBMED)
               .operationCode("harvest")
               .paramsJson("{\"test\":true}")
               .idempotentKey("restored-key-001")
@@ -125,7 +126,7 @@ class TaskAggregateTest {
       assertThat(task.getScheduleInstanceId()).isEqualTo(1001L);
       assertThat(task.getPlanId()).isEqualTo(2001L);
       assertThat(task.getSliceId()).isEqualTo(3001L);
-      assertThat(task.getProvenanceCode()).isEqualTo("pubmed");
+      assertThat(task.getProvenanceCode()).isEqualTo(ProvenanceCode.PUBMED);
       assertThat(task.getOperationCode()).isEqualTo("harvest");
       assertThat(task.getParamsJson()).isEqualTo("{\"test\":true}");
       assertThat(task.getIdempotentKey()).isEqualTo("restored-key-001");
@@ -758,7 +759,7 @@ class TaskAggregateTest {
       assertThat(event.planId()).isEqualTo(2001L);
       assertThat(event.sliceId()).isEqualTo(3001L);
       assertThat(event.scheduleInstanceId()).isEqualTo(4001L);
-      assertThat(event.provenanceCode()).isEqualTo("pubmed");
+      assertThat(event.provenanceCode()).isEqualTo(ProvenanceCode.PUBMED);
       assertThat(event.operationCode()).isEqualTo("harvest");
       assertThat(event.idempotentKey()).isEqualTo("idem-001");
       assertThat(event.paramsJson()).isEqualTo("{\"test\":true}");
@@ -873,7 +874,7 @@ class TaskAggregateTest {
       // Given: 创建任务
       TaskAggregate task =
           TaskAggregateTestDataBuilder.aQueuedTask()
-              .provenanceCode("pubmed")
+              .provenanceCode(ProvenanceCode.PUBMED)
               .operationCode("harvest")
               .paramsJson("{\"original\":true}")
               .idempotentKey("idem-original")
@@ -887,7 +888,7 @@ class TaskAggregateTest {
       task.acquireLease("worker-1", Instant.now().plusSeconds(300));
 
       // Then: 不可变字段应该保持不变
-      assertThat(task.getProvenanceCode()).isEqualTo("pubmed");
+      assertThat(task.getProvenanceCode()).isEqualTo(ProvenanceCode.PUBMED);
       assertThat(task.getOperationCode()).isEqualTo("harvest");
       assertThat(task.getParamsJson()).isEqualTo("{\"original\":true}");
       assertThat(task.getIdempotentKey()).isEqualTo("idem-original");

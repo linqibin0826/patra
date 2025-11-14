@@ -1,16 +1,15 @@
 package com.patra.registry.domain.model.read.expr;
 
+import static org.assertj.core.api.Assertions.*;
+
 import com.patra.registry.domain.exception.DomainValidationException;
+import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import java.time.Instant;
-
-import static org.assertj.core.api.Assertions.*;
 
 /**
  * ApiParamMappingQuery 查询视图测试。
@@ -39,17 +38,17 @@ class ApiParamMappingQueryTest {
     @DisplayName("应该使用所有有效字段创建查询视图")
     void shouldCreateWithAllValidFields() {
       // Act
-      ApiParamMappingQuery query = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              VALID_OPERATION_TYPE,
+              VALID_ENDPOINT_NAME,
+              VALID_STD_KEY,
+              VALID_PROVIDER_PARAM_NAME,
+              VALID_TRANSFORM_CODE,
+              VALID_NOTES_JSON,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
       // Assert
       assertThat(query.provenanceId()).isEqualTo(VALID_PROVENANCE_ID);
@@ -67,17 +66,18 @@ class ApiParamMappingQueryTest {
     @DisplayName("应该创建仅包含必填字段的查询视图")
     void shouldCreateWithOnlyRequiredFields() {
       // Act
-      ApiParamMappingQuery query = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          null, // operationType 可选
-          null, // endpointName 可选
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          null, // transformCode 可选
-          null, // notesJson 可选
-          VALID_EFFECTIVE_FROM,
-          null  // effectiveTo 可选
-      );
+      ApiParamMappingQuery query =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              null, // operationType 可选
+              null, // endpointName 可选
+              VALID_STD_KEY,
+              VALID_PROVIDER_PARAM_NAME,
+              null, // transformCode 可选
+              null, // notesJson 可选
+              VALID_EFFECTIVE_FROM,
+              null // effectiveTo 可选
+              );
 
       // Assert
       assertThat(query.provenanceId()).isEqualTo(VALID_PROVENANCE_ID);
@@ -100,17 +100,18 @@ class ApiParamMappingQueryTest {
     @DisplayName("应该拒绝 null 的 Provenance ID")
     void shouldRejectNullProvenanceId() {
       // Act & Assert
-      assertThatThrownBy(() -> new ApiParamMappingQuery(
-          null,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      ))
+      assertThatThrownBy(
+              () ->
+                  new ApiParamMappingQuery(
+                      null,
+                      VALID_OPERATION_TYPE,
+                      VALID_ENDPOINT_NAME,
+                      VALID_STD_KEY,
+                      VALID_PROVIDER_PARAM_NAME,
+                      VALID_TRANSFORM_CODE,
+                      VALID_NOTES_JSON,
+                      VALID_EFFECTIVE_FROM,
+                      VALID_EFFECTIVE_TO))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Provenance id")
           .hasMessageContaining("必须为正数");
@@ -121,17 +122,18 @@ class ApiParamMappingQueryTest {
     @ValueSource(longs = {0L, -1L, -100L})
     void shouldRejectNonPositiveProvenanceId(Long invalidId) {
       // Act & Assert
-      assertThatThrownBy(() -> new ApiParamMappingQuery(
-          invalidId,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      ))
+      assertThatThrownBy(
+              () ->
+                  new ApiParamMappingQuery(
+                      invalidId,
+                      VALID_OPERATION_TYPE,
+                      VALID_ENDPOINT_NAME,
+                      VALID_STD_KEY,
+                      VALID_PROVIDER_PARAM_NAME,
+                      VALID_TRANSFORM_CODE,
+                      VALID_NOTES_JSON,
+                      VALID_EFFECTIVE_FROM,
+                      VALID_EFFECTIVE_TO))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Provenance id")
           .hasMessageContaining("必须为正数");
@@ -148,17 +150,18 @@ class ApiParamMappingQueryTest {
     @ValueSource(strings = {"", " ", "  ", "\t", "\n"})
     void shouldRejectBlankStandardKey(String blankKey) {
       // Act & Assert
-      assertThatThrownBy(() -> new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          blankKey,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      ))
+      assertThatThrownBy(
+              () ->
+                  new ApiParamMappingQuery(
+                      VALID_PROVENANCE_ID,
+                      VALID_OPERATION_TYPE,
+                      VALID_ENDPOINT_NAME,
+                      blankKey,
+                      VALID_PROVIDER_PARAM_NAME,
+                      VALID_TRANSFORM_CODE,
+                      VALID_NOTES_JSON,
+                      VALID_EFFECTIVE_FROM,
+                      VALID_EFFECTIVE_TO))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Standard key")
           .hasMessageContaining("不能为空白");
@@ -169,17 +172,17 @@ class ApiParamMappingQueryTest {
     @ValueSource(strings = {" author", "author ", " author ", "\tauthor\n"})
     void shouldTrimStandardKey(String keyWithWhitespace) {
       // Act
-      ApiParamMappingQuery query = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          keyWithWhitespace,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              VALID_OPERATION_TYPE,
+              VALID_ENDPOINT_NAME,
+              keyWithWhitespace,
+              VALID_PROVIDER_PARAM_NAME,
+              VALID_TRANSFORM_CODE,
+              VALID_NOTES_JSON,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
       // Assert
       assertThat(query.stdKey()).isEqualTo("author");
@@ -196,17 +199,18 @@ class ApiParamMappingQueryTest {
     @ValueSource(strings = {"", " ", "  ", "\t", "\n"})
     void shouldRejectBlankProviderParamName(String blankName) {
       // Act & Assert
-      assertThatThrownBy(() -> new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          blankName,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      ))
+      assertThatThrownBy(
+              () ->
+                  new ApiParamMappingQuery(
+                      VALID_PROVENANCE_ID,
+                      VALID_OPERATION_TYPE,
+                      VALID_ENDPOINT_NAME,
+                      VALID_STD_KEY,
+                      blankName,
+                      VALID_TRANSFORM_CODE,
+                      VALID_NOTES_JSON,
+                      VALID_EFFECTIVE_FROM,
+                      VALID_EFFECTIVE_TO))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Provider param name")
           .hasMessageContaining("不能为空白");
@@ -217,17 +221,17 @@ class ApiParamMappingQueryTest {
     @ValueSource(strings = {" creator", "creator ", " creator ", "\tcreator\n"})
     void shouldTrimProviderParamName(String nameWithWhitespace) {
       // Act
-      ApiParamMappingQuery query = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          nameWithWhitespace,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              VALID_OPERATION_TYPE,
+              VALID_ENDPOINT_NAME,
+              VALID_STD_KEY,
+              nameWithWhitespace,
+              VALID_TRANSFORM_CODE,
+              VALID_NOTES_JSON,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
       // Assert
       assertThat(query.providerParamName()).isEqualTo("creator");
@@ -242,17 +246,18 @@ class ApiParamMappingQueryTest {
     @DisplayName("应该拒绝 null 的 Effective From")
     void shouldRejectNullEffectiveFrom() {
       // Act & Assert
-      assertThatThrownBy(() -> new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          null,
-          VALID_EFFECTIVE_TO
-      ))
+      assertThatThrownBy(
+              () ->
+                  new ApiParamMappingQuery(
+                      VALID_PROVENANCE_ID,
+                      VALID_OPERATION_TYPE,
+                      VALID_ENDPOINT_NAME,
+                      VALID_STD_KEY,
+                      VALID_PROVIDER_PARAM_NAME,
+                      VALID_TRANSFORM_CODE,
+                      VALID_NOTES_JSON,
+                      null,
+                      VALID_EFFECTIVE_TO))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Effective from")
           .hasMessageContaining("不能为 null");
@@ -268,17 +273,17 @@ class ApiParamMappingQueryTest {
     @ValueSource(strings = {" search", "search ", " search ", "\tsearch\n"})
     void shouldTrimOperationType(String valueWithWhitespace) {
       // Act
-      ApiParamMappingQuery query = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          valueWithWhitespace,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              valueWithWhitespace,
+              VALID_ENDPOINT_NAME,
+              VALID_STD_KEY,
+              VALID_PROVIDER_PARAM_NAME,
+              VALID_TRANSFORM_CODE,
+              VALID_NOTES_JSON,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
       // Assert
       assertThat(query.operationType()).isEqualTo("search");
@@ -289,17 +294,17 @@ class ApiParamMappingQueryTest {
     @ValueSource(strings = {" articles", "articles ", " articles ", "\tarticles\n"})
     void shouldTrimEndpointName(String valueWithWhitespace) {
       // Act
-      ApiParamMappingQuery query = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          VALID_OPERATION_TYPE,
-          valueWithWhitespace,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              VALID_OPERATION_TYPE,
+              valueWithWhitespace,
+              VALID_STD_KEY,
+              VALID_PROVIDER_PARAM_NAME,
+              VALID_TRANSFORM_CODE,
+              VALID_NOTES_JSON,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
       // Assert
       assertThat(query.endpointName()).isEqualTo("articles");
@@ -310,17 +315,17 @@ class ApiParamMappingQueryTest {
     @ValueSource(strings = {" uppercase", "uppercase ", " uppercase ", "\tuppercase\n"})
     void shouldTrimTransformCode(String valueWithWhitespace) {
       // Act
-      ApiParamMappingQuery query = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          valueWithWhitespace,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              VALID_OPERATION_TYPE,
+              VALID_ENDPOINT_NAME,
+              VALID_STD_KEY,
+              VALID_PROVIDER_PARAM_NAME,
+              valueWithWhitespace,
+              VALID_NOTES_JSON,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
       // Assert
       assertThat(query.transformCode()).isEqualTo("uppercase");
@@ -330,17 +335,17 @@ class ApiParamMappingQueryTest {
     @DisplayName("应该接受 null 的可选字段")
     void shouldAcceptNullOptionalFields() {
       // Act
-      ApiParamMappingQuery query = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          null,
-          null,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          null,
-          null,
-          VALID_EFFECTIVE_FROM,
-          null
-      );
+      ApiParamMappingQuery query =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              null,
+              null,
+              VALID_STD_KEY,
+              VALID_PROVIDER_PARAM_NAME,
+              null,
+              null,
+              VALID_EFFECTIVE_FROM,
+              null);
 
       // Assert
       assertThat(query.operationType()).isNull();
@@ -359,29 +364,29 @@ class ApiParamMappingQueryTest {
     @DisplayName("相同值的两个实例应该相等")
     void shouldBeEqualForSameValues() {
       // Arrange
-      ApiParamMappingQuery query1 = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query1 =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              VALID_OPERATION_TYPE,
+              VALID_ENDPOINT_NAME,
+              VALID_STD_KEY,
+              VALID_PROVIDER_PARAM_NAME,
+              VALID_TRANSFORM_CODE,
+              VALID_NOTES_JSON,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
-      ApiParamMappingQuery query2 = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query2 =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              VALID_OPERATION_TYPE,
+              VALID_ENDPOINT_NAME,
+              VALID_STD_KEY,
+              VALID_PROVIDER_PARAM_NAME,
+              VALID_TRANSFORM_CODE,
+              VALID_NOTES_JSON,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
       // Assert
       assertThat(query1).isEqualTo(query2);
@@ -392,29 +397,29 @@ class ApiParamMappingQueryTest {
     @DisplayName("不同 Provenance ID 的实例不应该相等")
     void shouldNotBeEqualForDifferentProvenanceId() {
       // Arrange
-      ApiParamMappingQuery query1 = new ApiParamMappingQuery(
-          1L,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query1 =
+          new ApiParamMappingQuery(
+              1L,
+              VALID_OPERATION_TYPE,
+              VALID_ENDPOINT_NAME,
+              VALID_STD_KEY,
+              VALID_PROVIDER_PARAM_NAME,
+              VALID_TRANSFORM_CODE,
+              VALID_NOTES_JSON,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
-      ApiParamMappingQuery query2 = new ApiParamMappingQuery(
-          2L,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query2 =
+          new ApiParamMappingQuery(
+              2L,
+              VALID_OPERATION_TYPE,
+              VALID_ENDPOINT_NAME,
+              VALID_STD_KEY,
+              VALID_PROVIDER_PARAM_NAME,
+              VALID_TRANSFORM_CODE,
+              VALID_NOTES_JSON,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
       // Assert
       assertThat(query1).isNotEqualTo(query2);
@@ -424,29 +429,29 @@ class ApiParamMappingQueryTest {
     @DisplayName("不同 Standard Key 的实例不应该相等")
     void shouldNotBeEqualForDifferentStdKey() {
       // Arrange
-      ApiParamMappingQuery query1 = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          "author",
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query1 =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              VALID_OPERATION_TYPE,
+              VALID_ENDPOINT_NAME,
+              "author",
+              VALID_PROVIDER_PARAM_NAME,
+              VALID_TRANSFORM_CODE,
+              VALID_NOTES_JSON,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
-      ApiParamMappingQuery query2 = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          "title",
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query2 =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              VALID_OPERATION_TYPE,
+              VALID_ENDPOINT_NAME,
+              "title",
+              VALID_PROVIDER_PARAM_NAME,
+              VALID_TRANSFORM_CODE,
+              VALID_NOTES_JSON,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
       // Assert
       assertThat(query1).isNotEqualTo(query2);
@@ -456,17 +461,17 @@ class ApiParamMappingQueryTest {
     @DisplayName("toString 应该包含所有字段信息")
     void shouldIncludeAllFieldsInToString() {
       // Arrange
-      ApiParamMappingQuery query = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              VALID_OPERATION_TYPE,
+              VALID_ENDPOINT_NAME,
+              VALID_STD_KEY,
+              VALID_PROVIDER_PARAM_NAME,
+              VALID_TRANSFORM_CODE,
+              VALID_NOTES_JSON,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
       // Act
       String toString = query.toString();
@@ -497,17 +502,17 @@ class ApiParamMappingQueryTest {
       String longString = "a".repeat(1000);
 
       // Act
-      ApiParamMappingQuery query = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          longString,
-          longString,
-          longString,
-          longString,
-          longString,
-          longString,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              longString,
+              longString,
+              longString,
+              longString,
+              longString,
+              longString,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
       // Assert
       assertThat(query.operationType()).hasSize(1000);
@@ -522,17 +527,17 @@ class ApiParamMappingQueryTest {
     @DisplayName("应该处理最小正数 Provenance ID")
     void shouldHandleMinimumPositiveProvenanceId() {
       // Act
-      ApiParamMappingQuery query = new ApiParamMappingQuery(
-          1L,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query =
+          new ApiParamMappingQuery(
+              1L,
+              VALID_OPERATION_TYPE,
+              VALID_ENDPOINT_NAME,
+              VALID_STD_KEY,
+              VALID_PROVIDER_PARAM_NAME,
+              VALID_TRANSFORM_CODE,
+              VALID_NOTES_JSON,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
       // Assert
       assertThat(query.provenanceId()).isEqualTo(1L);
@@ -542,17 +547,17 @@ class ApiParamMappingQueryTest {
     @DisplayName("应该处理最大 Long 值的 Provenance ID")
     void shouldHandleMaximumLongProvenanceId() {
       // Act
-      ApiParamMappingQuery query = new ApiParamMappingQuery(
-          Long.MAX_VALUE,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query =
+          new ApiParamMappingQuery(
+              Long.MAX_VALUE,
+              VALID_OPERATION_TYPE,
+              VALID_ENDPOINT_NAME,
+              VALID_STD_KEY,
+              VALID_PROVIDER_PARAM_NAME,
+              VALID_TRANSFORM_CODE,
+              VALID_NOTES_JSON,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
       // Assert
       assertThat(query.provenanceId()).isEqualTo(Long.MAX_VALUE);
@@ -565,17 +570,17 @@ class ApiParamMappingQueryTest {
       Instant sameInstant = Instant.parse("2024-06-15T12:00:00Z");
 
       // Act
-      ApiParamMappingQuery query = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          sameInstant,
-          sameInstant
-      );
+      ApiParamMappingQuery query =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              VALID_OPERATION_TYPE,
+              VALID_ENDPOINT_NAME,
+              VALID_STD_KEY,
+              VALID_PROVIDER_PARAM_NAME,
+              VALID_TRANSFORM_CODE,
+              VALID_NOTES_JSON,
+              sameInstant,
+              sameInstant);
 
       // Assert
       assertThat(query.effectiveFrom()).isEqualTo(sameInstant);
@@ -590,17 +595,17 @@ class ApiParamMappingQueryTest {
       Instant later = Instant.parse("2024-12-31T23:59:59Z");
 
       // Act - 注意：Query 视图不验证业务逻辑，只验证字段非空
-      ApiParamMappingQuery query = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          VALID_NOTES_JSON,
-          later,
-          earlier
-      );
+      ApiParamMappingQuery query =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              VALID_OPERATION_TYPE,
+              VALID_ENDPOINT_NAME,
+              VALID_STD_KEY,
+              VALID_PROVIDER_PARAM_NAME,
+              VALID_TRANSFORM_CODE,
+              VALID_NOTES_JSON,
+              later,
+              earlier);
 
       // Assert
       assertThat(query.effectiveFrom()).isEqualTo(later);
@@ -619,17 +624,17 @@ class ApiParamMappingQueryTest {
       String specialChars = "author@name!#$%";
 
       // Act
-      ApiParamMappingQuery query = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          specialChars,
-          specialChars,
-          specialChars,
-          specialChars,
-          specialChars,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              specialChars,
+              specialChars,
+              specialChars,
+              specialChars,
+              specialChars,
+              VALID_NOTES_JSON,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
       // Assert
       assertThat(query.operationType()).isEqualTo(specialChars);
@@ -646,17 +651,17 @@ class ApiParamMappingQueryTest {
       String unicode = "作者名称🔍";
 
       // Act
-      ApiParamMappingQuery query = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          unicode,
-          unicode,
-          unicode,
-          unicode,
-          unicode,
-          VALID_NOTES_JSON,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              unicode,
+              unicode,
+              unicode,
+              unicode,
+              unicode,
+              VALID_NOTES_JSON,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
       // Assert
       assertThat(query.operationType()).isEqualTo(unicode);
@@ -673,17 +678,17 @@ class ApiParamMappingQueryTest {
       String complexJson = "{\"note\":\"测试\",\"priority\":1,\"tags\":[\"important\",\"urgent\"]}";
 
       // Act
-      ApiParamMappingQuery query = new ApiParamMappingQuery(
-          VALID_PROVENANCE_ID,
-          VALID_OPERATION_TYPE,
-          VALID_ENDPOINT_NAME,
-          VALID_STD_KEY,
-          VALID_PROVIDER_PARAM_NAME,
-          VALID_TRANSFORM_CODE,
-          complexJson,
-          VALID_EFFECTIVE_FROM,
-          VALID_EFFECTIVE_TO
-      );
+      ApiParamMappingQuery query =
+          new ApiParamMappingQuery(
+              VALID_PROVENANCE_ID,
+              VALID_OPERATION_TYPE,
+              VALID_ENDPOINT_NAME,
+              VALID_STD_KEY,
+              VALID_PROVIDER_PARAM_NAME,
+              VALID_TRANSFORM_CODE,
+              complexJson,
+              VALID_EFFECTIVE_FROM,
+              VALID_EFFECTIVE_TO);
 
       // Assert
       assertThat(query.notesJson()).isEqualTo(complexJson);

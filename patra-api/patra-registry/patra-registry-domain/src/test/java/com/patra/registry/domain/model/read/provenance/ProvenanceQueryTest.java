@@ -47,7 +47,14 @@ class ProvenanceQueryTest {
       // When
       ProvenanceQuery query =
           new ProvenanceQuery(
-              id, code, name, baseUrlDefault, timezoneDefault, docsUrl, active, lifecycleStatusCode);
+              id,
+              code,
+              name,
+              baseUrlDefault,
+              timezoneDefault,
+              docsUrl,
+              active,
+              lifecycleStatusCode);
 
       // Then
       assertThat(query).isNotNull();
@@ -77,7 +84,14 @@ class ProvenanceQueryTest {
       // When
       ProvenanceQuery query =
           new ProvenanceQuery(
-              id, code, name, baseUrlDefault, timezoneDefault, docsUrl, active, lifecycleStatusCode);
+              id,
+              code,
+              name,
+              baseUrlDefault,
+              timezoneDefault,
+              docsUrl,
+              active,
+              lifecycleStatusCode);
 
       // Then
       assertThat(query.baseUrlDefault()).isNull();
@@ -99,7 +113,14 @@ class ProvenanceQueryTest {
       // When
       ProvenanceQuery query =
           new ProvenanceQuery(
-              id, code, name, baseUrlDefault, timezoneDefault, docsUrl, active, lifecycleStatusCode);
+              id,
+              code,
+              name,
+              baseUrlDefault,
+              timezoneDefault,
+              docsUrl,
+              active,
+              lifecycleStatusCode);
 
       // Then
       assertThat(query.docsUrl()).isNull();
@@ -122,7 +143,14 @@ class ProvenanceQueryTest {
       // When
       ProvenanceQuery query =
           new ProvenanceQuery(
-              id, code, name, baseUrlDefault, timezoneDefault, docsUrl, active, lifecycleStatusCode);
+              id,
+              code,
+              name,
+              baseUrlDefault,
+              timezoneDefault,
+              docsUrl,
+              active,
+              lifecycleStatusCode);
 
       // Then
       assertThat(query.baseUrlDefault()).isNull();
@@ -601,7 +629,14 @@ class ProvenanceQueryTest {
       // When
       ProvenanceQuery query =
           new ProvenanceQuery(
-              1L, "PUBMED", "PubMed", baseUrlWithSpaces, "UTC", "https://docs.pubmed.gov", true, "ACTIVE");
+              1L,
+              "PUBMED",
+              "PubMed",
+              baseUrlWithSpaces,
+              "UTC",
+              "https://docs.pubmed.gov",
+              true,
+              "ACTIVE");
 
       // Then
       assertThat(query.baseUrlDefault()).isEqualTo("https://pubmed.ncbi.nlm.nih.gov");
@@ -652,7 +687,14 @@ class ProvenanceQueryTest {
       // When
       ProvenanceQuery query =
           new ProvenanceQuery(
-              1L, "PUBMED", "PubMed", "https://pubmed.ncbi.nlm.nih.gov", "UTC", docsUrl, true, "ACTIVE");
+              1L,
+              "PUBMED",
+              "PubMed",
+              "https://pubmed.ncbi.nlm.nih.gov",
+              "UTC",
+              docsUrl,
+              true,
+              "ACTIVE");
 
       // Then
       assertThat(query.docsUrl()).isEqualTo("");

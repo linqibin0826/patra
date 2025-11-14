@@ -7,6 +7,7 @@ import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
 import com.patra.ingest.infra.persistence.entity.ScheduleInstanceDO;
+import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -39,7 +40,7 @@ class ScheduleInstanceConverterTest {
   private static final String SCHEDULER_JOB_ID = "job-12345";
   private static final String SCHEDULER_LOG_ID = "log-67890";
   private static final Instant TRIGGERED_AT = Instant.parse("2025-01-15T10:00:00Z");
-  private static final String PROVENANCE_CODE = "PUBMED";
+  private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final Map<String, Object> TRIGGER_PARAMS =
       Map.of("window", "2025-01", "mode", "incremental", "retryCount", 3);
 
@@ -75,7 +76,7 @@ class ScheduleInstanceConverterTest {
       assertThat(result.getSchedulerLogId()).isEqualTo(SCHEDULER_LOG_ID);
       assertThat(result.getTriggerTypeCode()).isEqualTo("SCHEDULE");
       assertThat(result.getTriggeredAt()).isEqualTo(TRIGGERED_AT);
-      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE);
+      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE.getCode());
 
       // 验证 triggerParams JSON 转换
       assertThat(result.getTriggerParams()).isNotNull();
@@ -271,7 +272,7 @@ class ScheduleInstanceConverterTest {
       instanceDO.setTriggerTypeCode("SCHEDULE");
       instanceDO.setTriggeredAt(TRIGGERED_AT);
       instanceDO.setTriggerParams(JsonNodeMappings.mapToJsonNode(TRIGGER_PARAMS));
-      instanceDO.setProvenanceCode(PROVENANCE_CODE);
+      instanceDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       instanceDO.setVersion(5L);
 
       // When: 转换为 Aggregate
@@ -285,7 +286,7 @@ class ScheduleInstanceConverterTest {
       assertThat(result.getSchedulerLogId()).isEqualTo(SCHEDULER_LOG_ID);
       assertThat(result.getTriggerType()).isEqualTo(TriggerType.SCHEDULE);
       assertThat(result.getTriggeredAt()).isEqualTo(TRIGGERED_AT);
-      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE);
+      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE.getCode());
       assertThat(result.getVersion()).isEqualTo(5L);
 
       // 验证 triggerParams 转换
@@ -307,7 +308,7 @@ class ScheduleInstanceConverterTest {
       instanceDO.setTriggerTypeCode("MANUAL");
       instanceDO.setTriggeredAt(TRIGGERED_AT);
       instanceDO.setTriggerParams(JsonNodeMappings.mapToJsonNode(TRIGGER_PARAMS));
-      instanceDO.setProvenanceCode(PROVENANCE_CODE);
+      instanceDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       instanceDO.setVersion(0L);
 
       // When: 转换为 Aggregate
@@ -330,7 +331,7 @@ class ScheduleInstanceConverterTest {
       instanceDO.setTriggerTypeCode("API");
       instanceDO.setTriggeredAt(TRIGGERED_AT);
       instanceDO.setTriggerParams(JsonNodeMappings.mapToJsonNode(TRIGGER_PARAMS));
-      instanceDO.setProvenanceCode(PROVENANCE_CODE);
+      instanceDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       instanceDO.setVersion(0L);
 
       // When: 转换为 Aggregate
@@ -363,7 +364,7 @@ class ScheduleInstanceConverterTest {
       instanceDO.setTriggerTypeCode("SCHEDULE");
       instanceDO.setTriggeredAt(TRIGGERED_AT);
       instanceDO.setTriggerParams(null); // null
-      instanceDO.setProvenanceCode(PROVENANCE_CODE);
+      instanceDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       instanceDO.setVersion(0L);
 
       // When: 转换为 Aggregate

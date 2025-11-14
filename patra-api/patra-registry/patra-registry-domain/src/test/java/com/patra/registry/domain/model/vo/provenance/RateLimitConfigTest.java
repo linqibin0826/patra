@@ -124,8 +124,7 @@ class RateLimitConfigTest {
 
       // When: 创建 RateLimitConfig
       RateLimitConfig rateLimitConfig =
-          new RateLimitConfig(
-              id, provenanceId, "HARVEST", effectiveFrom, effectiveTo, 10, 5);
+          new RateLimitConfig(id, provenanceId, "HARVEST", effectiveFrom, effectiveTo, 10, 5);
 
       // Then: 验证 effectiveTo 为 null
       assertThat(rateLimitConfig.effectiveTo()).isNull();
@@ -163,9 +162,7 @@ class RateLimitConfigTest {
 
       // When & Then: 创建配置应该失败
       assertThatThrownBy(
-              () ->
-                  new RateLimitConfig(
-                      id, 2001L, "HARVEST", Instant.now(), null, null, null))
+              () -> new RateLimitConfig(id, 2001L, "HARVEST", Instant.now(), null, null, null))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Rate limit config id")
           .hasMessageContaining("必须为正数");
@@ -179,9 +176,7 @@ class RateLimitConfigTest {
 
       // When & Then: 创建配置应该失败
       assertThatThrownBy(
-              () ->
-                  new RateLimitConfig(
-                      id, 2001L, "HARVEST", Instant.now(), null, null, null))
+              () -> new RateLimitConfig(id, 2001L, "HARVEST", Instant.now(), null, null, null))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Rate limit config id")
           .hasMessageContaining("必须为正数");
@@ -195,9 +190,7 @@ class RateLimitConfigTest {
 
       // When & Then: 创建配置应该失败
       assertThatThrownBy(
-              () ->
-                  new RateLimitConfig(
-                      id, 2001L, "HARVEST", Instant.now(), null, null, null))
+              () -> new RateLimitConfig(id, 2001L, "HARVEST", Instant.now(), null, null, null))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Rate limit config id")
           .hasMessageContaining("必须为正数");
@@ -313,8 +306,7 @@ class RateLimitConfigTest {
 
       // When & Then: 创建配置应该失败
       assertThatThrownBy(
-              () ->
-                  new RateLimitConfig(1001L, 2001L, "HARVEST", effectiveFrom, null, null, null))
+              () -> new RateLimitConfig(1001L, 2001L, "HARVEST", effectiveFrom, null, null, null))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Effective from")
           .hasMessageContaining("不能为 null");
@@ -853,10 +845,8 @@ class RateLimitConfigTest {
       assertThat(rateLimitConfig.id()).isEqualTo(1001L);
       assertThat(rateLimitConfig.provenanceId()).isEqualTo(2001L);
       assertThat(rateLimitConfig.operationType()).isEqualTo("HARVEST");
-      assertThat(rateLimitConfig.effectiveFrom())
-          .isEqualTo(Instant.parse("2025-01-01T00:00:00Z"));
-      assertThat(rateLimitConfig.effectiveTo())
-          .isEqualTo(Instant.parse("2025-12-31T23:59:59Z"));
+      assertThat(rateLimitConfig.effectiveFrom()).isEqualTo(Instant.parse("2025-01-01T00:00:00Z"));
+      assertThat(rateLimitConfig.effectiveTo()).isEqualTo(Instant.parse("2025-12-31T23:59:59Z"));
       assertThat(rateLimitConfig.maxConcurrentRequests()).isEqualTo(50);
       assertThat(rateLimitConfig.perCredentialQpsLimit()).isEqualTo(10);
     }

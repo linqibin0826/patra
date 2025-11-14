@@ -1,8 +1,7 @@
 /**
  * Registry 领域聚合根包 - DDD 聚合根模式实现。
  *
- * <p>本包包含 Registry 服务的聚合根对象,定义了一致性边界和业务不变性约束。
- * 聚合根是 DDD 战术设计的核心模式,确保领域对象的完整性和一致性。
+ * <p>本包包含 Registry 服务的聚合根对象,定义了一致性边界和业务不变性约束。 聚合根是 DDD 战术设计的核心模式,确保领域对象的完整性和一致性。
  *
  * <h2>职责</h2>
  *
@@ -24,8 +23,9 @@
  * <h2>设计模式</h2>
  *
  * <ul>
- *   <li><strong>只读聚合</strong>: {@link com.patra.registry.domain.model.aggregate.ProvenanceConfiguration}
- *       用于 CQRS 读端,通过仓储接口在特定时刻加载完整配置快照
+ *   <li><strong>只读聚合</strong>: {@link
+ *       com.patra.registry.domain.model.aggregate.ProvenanceConfiguration} 用于 CQRS
+ *       读端,通过仓储接口在特定时刻加载完整配置快照
  *   <li><strong>一致性边界</strong>: 聚合根确保数据源元数据是必需核心,各维度配置为可选项
  *   <li><strong>不变性保护</strong>: 使用 {@code record} 实现不可变性,通过规范构造器强制验证
  * </ul>
@@ -55,8 +55,7 @@
  *
  * <h2>生命周期</h2>
  *
- * <p>聚合根通过仓储接口({@link com.patra.registry.domain.port.ProvenanceConfigRepository})
- * 加载和持久化:
+ * <p>聚合根通过仓储接口({@link com.patra.registry.domain.port.ProvenanceConfigRepository}) 加载和持久化:
  *
  * <ul>
  *   <li><strong>加载</strong>: 通过 {@code loadConfiguration()} 方法在特定时刻加载完整配置快照

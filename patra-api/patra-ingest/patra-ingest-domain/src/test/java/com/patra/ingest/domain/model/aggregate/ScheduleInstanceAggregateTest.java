@@ -2,6 +2,7 @@ package com.patra.ingest.domain.model.aggregate;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
 import java.time.Instant;
@@ -58,7 +59,7 @@ class ScheduleInstanceAggregateTest {
       Map<String, Object> triggerParams = new HashMap<>();
       triggerParams.put("batchSize", 100);
       triggerParams.put("timeout", 300);
-      String provenanceCode = "pubmed";
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
 
       // When
       ScheduleInstanceAggregate instance =
@@ -113,7 +114,7 @@ class ScheduleInstanceAggregateTest {
       String schedulerJobId = null;
       String schedulerLogId = null;
       Map<String, Object> triggerParams = null;
-      String provenanceCode = null;
+      ProvenanceCode provenanceCode = null;
 
       // When
       ScheduleInstanceAggregate instance =
@@ -181,7 +182,7 @@ class ScheduleInstanceAggregateTest {
       Map<String, Object> triggerParams = new HashMap<>();
       triggerParams.put("userId", "admin");
       triggerParams.put("reason", "manual backfill");
-      String provenanceCode = "epmc";
+      ProvenanceCode provenanceCode = ProvenanceCode.EPMC;
       long version = 5L;
 
       // When
@@ -228,7 +229,7 @@ class ScheduleInstanceAggregateTest {
               TriggerType.SCHEDULE,
               triggeredAt,
               null,
-              "pubmed",
+              ProvenanceCode.PUBMED,
               1L);
 
       Instant afterRestore = Instant.now();
@@ -258,7 +259,7 @@ class ScheduleInstanceAggregateTest {
       Instant originalTriggeredAt = Instant.parse("2025-01-01T10:00:00Z");
       Map<String, Object> originalTriggerParams = new HashMap<>();
       originalTriggerParams.put("key", "value");
-      String originalProvenanceCode = "pubmed";
+      ProvenanceCode originalProvenanceCode = ProvenanceCode.PUBMED;
 
       ScheduleInstanceAggregate instance =
           ScheduleInstanceAggregateTestDataBuilder.builder()
@@ -431,32 +432,30 @@ class ScheduleInstanceAggregateTest {
     @Test
     @DisplayName("应该处理极长的字符串字段")
     void shouldHandleVeryLongStringFields() {
-      // Given - 极长的字符串
+      // Given - 极长的字符串（provenanceCode 是枚举类型，不适用）
       String longJobId = "job-" + "x".repeat(1000);
       String longLogId = "log-" + "y".repeat(1000);
-      String longProvenanceCode = "z".repeat(500);
 
       // When
       ScheduleInstanceAggregate instance =
           ScheduleInstanceAggregateTestDataBuilder.builder()
               .schedulerJobId(longJobId)
               .schedulerLogId(longLogId)
-              .provenanceCode(longProvenanceCode)
               .build();
 
       // Then
       assertThat(instance.getSchedulerJobId()).hasSize(1004);
       assertThat(instance.getSchedulerLogId()).hasSize(1004);
-      assertThat(instance.getProvenanceCode()).hasSize(500);
+      assertThat(instance.getProvenanceCode()).isNotNull();
     }
 
     @Test
     @DisplayName("应该处理空字符串字段")
     void shouldHandleEmptyStringFields() {
-      // Given - 空字符串
+      // Given - 空字符串（provenanceCode 改为 null，因为它是枚举类型）
       String emptyJobId = "";
       String emptyLogId = "";
-      String emptyProvenanceCode = "";
+      ProvenanceCode emptyProvenanceCode = null;
 
       // When
       ScheduleInstanceAggregate instance =
@@ -469,7 +468,7 @@ class ScheduleInstanceAggregateTest {
       // Then - 应该成功创建（业务规则允许空字符串）
       assertThat(instance.getSchedulerJobId()).isEmpty();
       assertThat(instance.getSchedulerLogId()).isEmpty();
-      assertThat(instance.getProvenanceCode()).isEmpty();
+      assertThat(instance.getProvenanceCode()).isNull();
     }
 
     @Test
@@ -716,7 +715,7 @@ class ScheduleInstanceAggregateTest {
       Instant triggeredAt = Instant.parse("2025-01-01T10:00:00Z");
       Map<String, Object> triggerParams = new HashMap<>();
       triggerParams.put("key1", "value1");
-      String provenanceCode = "pubmed";
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
 
       // When - 创建调度实例
       ScheduleInstanceAggregate instance =
@@ -773,7 +772,7 @@ class ScheduleInstanceAggregateTest {
     private TriggerType triggerType = TriggerType.SCHEDULE;
     private Instant triggeredAt = Instant.parse("2025-01-01T10:00:00Z");
     private Map<String, Object> triggerParams = new HashMap<>();
-    private String provenanceCode = "pubmed";
+    private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
     private long version = 0L;
 
     public static ScheduleInstanceAggregateTestDataBuilder builder() {
@@ -820,7 +819,7 @@ class ScheduleInstanceAggregateTest {
       return this;
     }
 
-    public ScheduleInstanceAggregateTestDataBuilder provenanceCode(String provenanceCode) {
+    public ScheduleInstanceAggregateTestDataBuilder provenanceCode(ProvenanceCode provenanceCode) {
       this.provenanceCode = provenanceCode;
       return this;
     }

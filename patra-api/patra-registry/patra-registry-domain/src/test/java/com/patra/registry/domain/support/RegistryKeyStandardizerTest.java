@@ -889,7 +889,8 @@ class RegistryKeyStandardizerTest {
       // Given: RegistryKeyStandardizer 类
 
       // When: 检查类修饰符
-      boolean isFinal = java.lang.reflect.Modifier.isFinal(RegistryKeyStandardizer.class.getModifiers());
+      boolean isFinal =
+          java.lang.reflect.Modifier.isFinal(RegistryKeyStandardizer.class.getModifiers());
 
       // Then: 应该是 final
       assertThat(isFinal).isTrue();
@@ -901,7 +902,8 @@ class RegistryKeyStandardizerTest {
       // Given: RegistryKeyStandardizer 类
 
       // When: 获取构造函数
-      java.lang.reflect.Constructor<?>[] constructors = RegistryKeyStandardizer.class.getDeclaredConstructors();
+      java.lang.reflect.Constructor<?>[] constructors =
+          RegistryKeyStandardizer.class.getDeclaredConstructors();
 
       // Then: 应该只有一个构造函数且为 private
       assertThat(constructors).hasSize(1);
@@ -1277,15 +1279,13 @@ class RegistryKeyStandardizerTest {
     @Test
     @DisplayName("应该正确处理特殊符号")
     void shouldHandleSpecialSymbols() {
-      assertThat(RegistryKeyStandardizer.toOperationKeyOrAll("harvest-v2"))
-          .isEqualTo("HARVEST-V2");
+      assertThat(RegistryKeyStandardizer.toOperationKeyOrAll("harvest-v2")).isEqualTo("HARVEST-V2");
       assertThat(RegistryKeyStandardizer.toOperationKeyOrAll("harvest_update"))
           .isEqualTo("HARVEST_UPDATE");
       assertThat(RegistryKeyStandardizer.toOperationKeyOrAll("harvest.sync"))
           .isEqualTo("HARVEST.SYNC");
       assertThat(RegistryKeyStandardizer.toUppercaseCode("status@123")).isEqualTo("STATUS@123");
-      assertThat(RegistryKeyStandardizer.toTrimmedFieldKey("field#name"))
-          .isEqualTo("field#name");
+      assertThat(RegistryKeyStandardizer.toTrimmedFieldKey("field#name")).isEqualTo("field#name");
     }
 
     @Test
@@ -1302,8 +1302,7 @@ class RegistryKeyStandardizerTest {
     void shouldHandleEmojiCharacters() {
       assertThat(RegistryKeyStandardizer.toTrimmedFieldKey("  field🔥name  "))
           .isEqualTo("field🔥name");
-      assertThat(RegistryKeyStandardizer.toOperationKeyOrAll("  harvest✅  "))
-          .isEqualTo("HARVEST✅");
+      assertThat(RegistryKeyStandardizer.toOperationKeyOrAll("  harvest✅  ")).isEqualTo("HARVEST✅");
     }
 
     @Test

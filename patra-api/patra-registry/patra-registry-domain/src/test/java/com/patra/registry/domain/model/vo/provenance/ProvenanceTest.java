@@ -63,7 +63,14 @@ class ProvenanceTest {
       // When: 创建 Provenance
       Provenance provenance =
           new Provenance(
-              id, code, name, baseUrlDefault, timezoneDefault, docsUrl, active, lifecycleStatusCode);
+              id,
+              code,
+              name,
+              baseUrlDefault,
+              timezoneDefault,
+              docsUrl,
+              active,
+              lifecycleStatusCode);
 
       // Then: 验证所有字段正确赋值
       assertThat(provenance).isNotNull();
@@ -93,7 +100,14 @@ class ProvenanceTest {
       // When: 创建 Provenance
       Provenance provenance =
           new Provenance(
-              id, code, name, baseUrlDefault, timezoneDefault, docsUrl, active, lifecycleStatusCode);
+              id,
+              code,
+              name,
+              baseUrlDefault,
+              timezoneDefault,
+              docsUrl,
+              active,
+              lifecycleStatusCode);
 
       // Then: 验证必需字段正确赋值，可选字段为 null
       assertThat(provenance).isNotNull();
@@ -123,7 +137,14 @@ class ProvenanceTest {
       // When: 创建 Provenance
       Provenance provenance =
           new Provenance(
-              id, code, name, baseUrlDefault, timezoneDefault, docsUrl, active, lifecycleStatusCode);
+              id,
+              code,
+              name,
+              baseUrlDefault,
+              timezoneDefault,
+              docsUrl,
+              active,
+              lifecycleStatusCode);
 
       // Then: 验证 active 为 false
       assertThat(provenance.active()).isFalse();
@@ -145,9 +166,7 @@ class ProvenanceTest {
 
       // When & Then: 创建数据源应该失败
       assertThatThrownBy(
-              () ->
-                  new Provenance(
-                      id, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE"))
+              () -> new Provenance(id, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE"))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Provenance id")
           .hasMessageContaining("必须为正数");
@@ -161,9 +180,7 @@ class ProvenanceTest {
 
       // When & Then: 创建数据源应该失败
       assertThatThrownBy(
-              () ->
-                  new Provenance(
-                      id, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE"))
+              () -> new Provenance(id, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE"))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Provenance id")
           .hasMessageContaining("必须为正数");
@@ -177,9 +194,7 @@ class ProvenanceTest {
 
       // When & Then: 创建数据源应该失败
       assertThatThrownBy(
-              () ->
-                  new Provenance(
-                      id, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE"))
+              () -> new Provenance(id, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE"))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Provenance id")
           .hasMessageContaining("必须为正数");
@@ -228,9 +243,7 @@ class ProvenanceTest {
 
       // When & Then: 创建数据源应该失败
       assertThatThrownBy(
-              () ->
-                  new Provenance(
-                      1001L, code, "PubMed", null, "UTC", null, true, "ACTIVE"))
+              () -> new Provenance(1001L, code, "PubMed", null, "UTC", null, true, "ACTIVE"))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Provenance code")
           .hasMessageContaining("不能为空白");
@@ -244,9 +257,7 @@ class ProvenanceTest {
 
       // When & Then: 创建数据源应该失败
       assertThatThrownBy(
-              () ->
-                  new Provenance(
-                      1001L, code, "PubMed", null, "UTC", null, true, "ACTIVE"))
+              () -> new Provenance(1001L, code, "PubMed", null, "UTC", null, true, "ACTIVE"))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Provenance code")
           .hasMessageContaining("不能为空白");
@@ -260,9 +271,7 @@ class ProvenanceTest {
 
       // When & Then: 创建数据源应该失败
       assertThatThrownBy(
-              () ->
-                  new Provenance(
-                      1001L, code, "PubMed", null, "UTC", null, true, "ACTIVE"))
+              () -> new Provenance(1001L, code, "PubMed", null, "UTC", null, true, "ACTIVE"))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Provenance code")
           .hasMessageContaining("不能为空白");
@@ -297,9 +306,7 @@ class ProvenanceTest {
 
       // When & Then: 创建数据源应该失败
       assertThatThrownBy(
-              () ->
-                  new Provenance(
-                      1001L, "pubmed", name, null, "UTC", null, true, "ACTIVE"))
+              () -> new Provenance(1001L, "pubmed", name, null, "UTC", null, true, "ACTIVE"))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Provenance name")
           .hasMessageContaining("不能为空白");
@@ -313,9 +320,7 @@ class ProvenanceTest {
 
       // When & Then: 创建数据源应该失败
       assertThatThrownBy(
-              () ->
-                  new Provenance(
-                      1001L, "pubmed", name, null, "UTC", null, true, "ACTIVE"))
+              () -> new Provenance(1001L, "pubmed", name, null, "UTC", null, true, "ACTIVE"))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Provenance name")
           .hasMessageContaining("不能为空白");
@@ -329,9 +334,7 @@ class ProvenanceTest {
 
       // When & Then: 创建数据源应该失败
       assertThatThrownBy(
-              () ->
-                  new Provenance(
-                      1001L, "pubmed", name, null, "UTC", null, true, "ACTIVE"))
+              () -> new Provenance(1001L, "pubmed", name, null, "UTC", null, true, "ACTIVE"))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Provenance name")
           .hasMessageContaining("不能为空白");
@@ -518,8 +521,7 @@ class ProvenanceTest {
 
       // When: 创建 Provenance
       Provenance provenance =
-          new Provenance(
-              1001L, "pubmed", "PubMed", baseUrlDefault, "UTC", null, true, "ACTIVE");
+          new Provenance(1001L, "pubmed", "PubMed", baseUrlDefault, "UTC", null, true, "ACTIVE");
 
       // Then: 验证 baseUrlDefault 为 null
       assertThat(provenance.baseUrlDefault()).isNull();
@@ -533,8 +535,7 @@ class ProvenanceTest {
 
       // When: 创建 Provenance
       Provenance provenance =
-          new Provenance(
-              1001L, "pubmed", "PubMed", baseUrlDefault, "UTC", null, true, "ACTIVE");
+          new Provenance(1001L, "pubmed", "PubMed", baseUrlDefault, "UTC", null, true, "ACTIVE");
 
       // Then: 验证 baseUrlDefault 已被 trim
       assertThat(provenance.baseUrlDefault()).isEqualTo("https://api.pubmed.org");
@@ -577,8 +578,7 @@ class ProvenanceTest {
 
       // When: 创建 Provenance
       Provenance provenance =
-          new Provenance(
-              1001L, "pubmed", "PubMed", baseUrlDefault, "UTC", docsUrl, true, "ACTIVE");
+          new Provenance(1001L, "pubmed", "PubMed", baseUrlDefault, "UTC", docsUrl, true, "ACTIVE");
 
       // Then: 验证可选字段都为 null
       assertThat(provenance.baseUrlDefault()).isNull();
@@ -597,8 +597,7 @@ class ProvenanceTest {
     void shouldReturnTrueWhenActiveIsTrue() {
       // Given: active 为 true 的数据源
       Provenance provenance =
-          new Provenance(
-              1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
+          new Provenance(1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
 
       // When & Then: isActive 应该返回 true
       assertThat(provenance.isActive()).isTrue();
@@ -609,8 +608,7 @@ class ProvenanceTest {
     void shouldReturnFalseWhenActiveIsFalse() {
       // Given: active 为 false 的数据源
       Provenance provenance =
-          new Provenance(
-              1002L, "crossref", "Crossref", null, "UTC", null, false, "DEPRECATED");
+          new Provenance(1002L, "crossref", "Crossref", null, "UTC", null, false, "DEPRECATED");
 
       // When & Then: isActive 应该返回 false
       assertThat(provenance.isActive()).isFalse();
@@ -621,12 +619,10 @@ class ProvenanceTest {
     void isActiveShouldReflectActiveField() {
       // Given: 两个不同激活状态的数据源
       Provenance activeProvenance =
-          new Provenance(
-              1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
+          new Provenance(1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
 
       Provenance inactiveProvenance =
-          new Provenance(
-              1002L, "crossref", "Crossref", null, "UTC", null, false, "DEPRECATED");
+          new Provenance(1002L, "crossref", "Crossref", null, "UTC", null, false, "DEPRECATED");
 
       // When & Then: isActive 应该与 active 字段一致
       assertThat(activeProvenance.isActive()).isEqualTo(activeProvenance.active());
@@ -676,12 +672,10 @@ class ProvenanceTest {
     void shouldImplementEqualsCorrectlyForDifferentObjects() {
       // Given: 两个不同值的数据源
       Provenance provenance1 =
-          new Provenance(
-              1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
+          new Provenance(1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
 
       Provenance provenance2 =
-          new Provenance(
-              1002L, "crossref", "Crossref", null, "UTC", null, false, "DEPRECATED");
+          new Provenance(1002L, "crossref", "Crossref", null, "UTC", null, false, "DEPRECATED");
 
       // When & Then: 不应该相等
       assertThat(provenance1).isNotEqualTo(provenance2);
@@ -692,12 +686,10 @@ class ProvenanceTest {
     void shouldImplementHashCodeCorrectly() {
       // Given: 两个相同值的数据源
       Provenance provenance1 =
-          new Provenance(
-              1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
+          new Provenance(1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
 
       Provenance provenance2 =
-          new Provenance(
-              1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
+          new Provenance(1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
 
       // When & Then: hashCode 应该相等
       assertThat(provenance1.hashCode()).isEqualTo(provenance2.hashCode());
@@ -738,8 +730,7 @@ class ProvenanceTest {
     void shouldSupportEqualsReflexivity() {
       // Given: 创建数据源
       Provenance provenance =
-          new Provenance(
-              1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
+          new Provenance(1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
 
       // When & Then: 对象应该等于自身
       assertThat(provenance).isEqualTo(provenance);
@@ -750,12 +741,10 @@ class ProvenanceTest {
     void shouldSupportEqualsSymmetry() {
       // Given: 两个相同值的数据源
       Provenance provenance1 =
-          new Provenance(
-              1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
+          new Provenance(1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
 
       Provenance provenance2 =
-          new Provenance(
-              1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
+          new Provenance(1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
 
       // When & Then: 对称性（a.equals(b) == b.equals(a)）
       assertThat(provenance1.equals(provenance2)).isEqualTo(provenance2.equals(provenance1));
@@ -768,16 +757,13 @@ class ProvenanceTest {
     void shouldSupportEqualsTransitivity() {
       // Given: 三个相同值的数据源
       Provenance provenance1 =
-          new Provenance(
-              1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
+          new Provenance(1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
 
       Provenance provenance2 =
-          new Provenance(
-              1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
+          new Provenance(1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
 
       Provenance provenance3 =
-          new Provenance(
-              1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
+          new Provenance(1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
 
       // When & Then: 传递性（a.equals(b) && b.equals(c) => a.equals(c)）
       assertThat(provenance1).isEqualTo(provenance2);
@@ -790,8 +776,7 @@ class ProvenanceTest {
     void shouldHandleNullComparison() {
       // Given: 创建数据源
       Provenance provenance =
-          new Provenance(
-              1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
+          new Provenance(1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
 
       // When & Then: 与 null 比较应该返回 false
       assertThat(provenance).isNotEqualTo(null);
@@ -802,8 +787,7 @@ class ProvenanceTest {
     void shouldHandleDifferentTypeComparison() {
       // Given: 创建数据源
       Provenance provenance =
-          new Provenance(
-              1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
+          new Provenance(1001L, "pubmed", "PubMed", null, "UTC", null, true, "ACTIVE");
 
       // When & Then: 与不同类型对象比较应该返回 false
       assertThat(provenance).isNotEqualTo("Not a Provenance");
@@ -1032,8 +1016,7 @@ class ProvenanceTest {
 
       // When: 创建 Provenance
       Provenance provenance =
-          new Provenance(
-              1001L, code, name, null, timezoneDefault, null, true, lifecycleStatusCode);
+          new Provenance(1001L, code, name, null, timezoneDefault, null, true, lifecycleStatusCode);
 
       // Then: 验证所有字段都已被 trim
       assertThat(provenance.code()).isEqualTo("pubmed");
@@ -1051,8 +1034,7 @@ class ProvenanceTest {
 
       // When: 创建 Provenance
       Provenance provenance =
-          new Provenance(
-              1001L, "pubmed", "PubMed", baseUrlDefault, "UTC", docsUrl, true, "ACTIVE");
+          new Provenance(1001L, "pubmed", "PubMed", baseUrlDefault, "UTC", docsUrl, true, "ACTIVE");
 
       // Then: 验证可选字段也被 trim
       assertThat(provenance.baseUrlDefault()).isEqualTo("https://api.pubmed.org");
@@ -1067,8 +1049,7 @@ class ProvenanceTest {
       String name = " \t PubMed \n ";
 
       // When: 创建 Provenance
-      Provenance provenance =
-          new Provenance(1001L, code, name, null, "UTC", null, true, "ACTIVE");
+      Provenance provenance = new Provenance(1001L, code, name, null, "UTC", null, true, "ACTIVE");
 
       // Then: 验证空白字符都被 trim
       assertThat(provenance.code()).isEqualTo("pubmed");
@@ -1083,8 +1064,7 @@ class ProvenanceTest {
       String name = "  Pub Med  ";
 
       // When: 创建 Provenance
-      Provenance provenance =
-          new Provenance(1001L, code, name, null, "UTC", null, true, "ACTIVE");
+      Provenance provenance = new Provenance(1001L, code, name, null, "UTC", null, true, "ACTIVE");
 
       // Then: 验证内部空白字符被保留
       assertThat(provenance.code()).isEqualTo("pub med");

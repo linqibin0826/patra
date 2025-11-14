@@ -1,9 +1,12 @@
 package com.patra.ingest.infra.persistence.converter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.json.JsonNodeMappings;
+import com.patra.ingest.domain.exception.InfrastructureException;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
+import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.PlanStatus;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import com.patra.ingest.infra.persistence.entity.PlanDO;
@@ -81,7 +84,7 @@ public interface PlanConverter {
         entity.getId(),
         entity.getScheduleInstanceId(),
         entity.getPlanKey(),
-        entity.getProvenanceCode(),
+        ProvenanceCode.parse(entity.getProvenanceCode()),
         entity.getOperationCode(),
         entity.getExprProtoHash(),
         JsonNodeMappings.jsonNodeToString(entity.getExprProtoSnapshot()),
@@ -120,5 +123,49 @@ public interface PlanConverter {
     @SuppressWarnings("unchecked")
     Map<String, Object> map = mapper.convertValue(json, Map.class);
     return WindowSpec.fromMap(map);
+  }
+
+  // ========== 枚举转换方法 ==========
+
+  /**
+   * ProvenanceCode 枚举 → String（用于 Domain → DO）
+   */
+  default String map(ProvenanceCode code) {
+    return code == null ? null : code.getCode();
+  }
+
+  /**
+   * String → ProvenanceCode 枚举（用于 DO → Domain）
+   */
+  default ProvenanceCode mapProvenanceCode(String code) {
+    if (code == null || code.isBlank()) {
+      return null;
+    }
+    try {
+      return ProvenanceCode.parse(code);
+    } catch (IllegalArgumentException e) {
+      throw new InfrastructureException("数据库中存在无效的 provenance_code: " + code, e);
+    }
+  }
+
+  /**
+   * OperationCode 枚举 → String
+   */
+  default String map(OperationCode code) {
+    return code == null ? null : code.getCode();
+  }
+
+  /**
+   * String → OperationCode 枚举
+   */
+  default OperationCode mapOperationCode(String code) {
+    if (code == null || code.isBlank()) {
+      return null;
+    }
+    try {
+      return OperationCode.fromCode(code);
+    } catch (IllegalArgumentException e) {
+      throw new InfrastructureException("数据库中存在无效的 operation_code: " + code, e);
+    }
   }
 }
