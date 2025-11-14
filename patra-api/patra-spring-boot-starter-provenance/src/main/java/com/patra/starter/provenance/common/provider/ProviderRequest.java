@@ -15,7 +15,6 @@ import lombok.extern.jackson.Jacksonized;
  *   <li>{@code config}: HTTP、重试、限流等运行时配置
  * </ul>
  *
- * @param operationCode 采集操作类型(如 HARVEST、UPDATE)
  * @param config 应用于本次执行的合并配置
  * @param executionParams 批次执行参数(查询 + 完整参数)
  * @param metadata 批次元数据(批次号、游标)
@@ -23,7 +22,6 @@ import lombok.extern.jackson.Jacksonized;
 @Builder
 @Jacksonized
 public record ProviderRequest(
-    String operationCode,
     ProvenanceConfig config,
     BatchExecutionParams executionParams,
     BatchMetadata metadata) {
@@ -31,15 +29,11 @@ public record ProviderRequest(
   /**
    * 创建记录时验证不变量
    *
-   * @param operationCode 采集操作代码
    * @param config 运行时配置
    * @param executionParams 批次执行参数
    * @param metadata 批次元数据
    */
   public ProviderRequest {
-    if (operationCode == null || operationCode.isBlank()) {
-      throw new IllegalArgumentException("必须提供 operationCode");
-    }
     if (executionParams == null) {
       throw new IllegalArgumentException("必须提供 executionParams");
     }

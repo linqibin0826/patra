@@ -92,18 +92,17 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
             ProviderContext context) {
         long start = System.currentTimeMillis();
         int batchNo = request.metadata().batchNo();
-        String operation = request.operationCode();
 
-        log.info("PubMed Literature Processor start: operation={} batchNo={}", operation, batchNo);
+        log.info("PubMed Literature Processor start: batchNo={}", batchNo);
 
         try {
             // 1. 准备处理上下文
-            ProcessingContext ctx = prepareProcessingContext(request, operation, batchNo);
+            ProcessingContext ctx = prepareProcessingContext(request, batchNo);
 
             // 2. 执行搜索并获取PMID列表
             SearchResult searchResult = executeSearch(ctx);
             if (searchResult.isEmpty()) {
-                return createEmptyResult(operation, batchNo, start, searchResult.cursor());
+                return createEmptyResult(batchNo, start, searchResult.cursor());
             }
 
             // 3. 获取文章数据
@@ -113,14 +112,14 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
             ConversionOutcome outcome = convertArticles(articles);
 
             // 5. 构建并返回结果
-            return buildProcessResult(outcome, searchResult.cursor(), operation, batchNo, start);
+            return buildProcessResult(outcome, searchResult.cursor(), batchNo, start);
 
         } catch (ProvenanceClientException ex) {
-            return handleClientException(ex, operation, batchNo);
+            return handleClientException(ex, batchNo);
         } catch (InterruptedException ex) {
-            return handleInterruptedException(ex, operation, batchNo);
+            return handleInterruptedException(ex, batchNo);
         } catch (Exception ex) {
-            return handleUnexpectedException(ex, operation, batchNo);
+            return handleUnexpectedException(ex, batchNo);
         }
     }
 
@@ -176,13 +175,12 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
      */
     private ProcessingContext prepareProcessingContext(
             ProviderRequest request,
-            String operation,
             int batchNo) {
         ProvenanceConfig config = properties.mergeWithRuntime(PROVENANCE_CODE, request.config());
         JsonNode searchParams = buildSearchParams(request);
         ESearchRequest searchRequest = ESEARCH_ASSEMBLER.buildList(searchParams);
 
-        return new ProcessingContext(config, searchRequest, operation, batchNo);
+        return new ProcessingContext(config, searchRequest, batchNo);
     }
 
     /**
@@ -191,7 +189,6 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
     private record ProcessingContext(
         ProvenanceConfig config,
         ESearchRequest searchRequest,
-        String operation,
         int batchNo
     ) {}
 
@@ -225,13 +222,12 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
      * 创建空结果（未找到数据时）
      */
     private ProcessResult<CanonicalLiterature> createEmptyResult(
-            String operation,
             int batchNo,
             long startTime,
             String cursor) {
         log.info(
-            "PubMed Literature Processor empty result: operation={} batchNo={} duration={}ms",
-            operation, batchNo, System.currentTimeMillis() - startTime);
+            "PubMed Literature Processor empty result: batchNo={} duration={}ms",
+            batchNo, System.currentTimeMillis() - startTime);
         return ProcessResult.success(List.of(), cursor);
     }
 
@@ -241,7 +237,6 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
     private ProcessResult<CanonicalLiterature> buildProcessResult(
             ConversionOutcome outcome,
             String nextCursor,
-            String operation,
             int batchNo,
             long startTime) {
 
@@ -253,8 +248,8 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
                 buildConversionWarning(outcome.failedPmids()));
 
         log.info(
-            "PubMed Literature Processor success: operation={} batchNo={} fetched={} attempted={} duration={}ms",
-            operation, batchNo, result.data().size(), outcome.attempted(),
+            "PubMed Literature Processor success: batchNo={} fetched={} attempted={} duration={}ms",
+            batchNo, result.data().size(), outcome.attempted(),
             System.currentTimeMillis() - startTime);
 
         return result;
@@ -265,11 +260,10 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
      */
     private ProcessResult<CanonicalLiterature> handleClientException(
             ProvenanceClientException ex,
-            String operation,
             int batchNo) {
         log.warn(
-            "PubMed Literature Processor client error: operation={} batchNo={} status={} message={}",
-            operation, batchNo, ex.getStatusCode(), ex.getMessage(), ex);
+            "PubMed Literature Processor client error: batchNo={} status={} message={}",
+            batchNo, ex.getStatusCode(), ex.getMessage(), ex);
         return ProcessResult.failure(formatErrorMessage(ex));
     }
 
@@ -278,12 +272,11 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
      */
     private ProcessResult<CanonicalLiterature> handleInterruptedException(
             InterruptedException ex,
-            String operation,
             int batchNo) {
         Thread.currentThread().interrupt();
         log.error(
-            "PubMed Literature Processor interrupted: operation={} batchNo={}",
-            operation, batchNo, ex);
+            "PubMed Literature Processor interrupted: batchNo={}",
+            batchNo, ex);
         return ProcessResult.failure("PubMed processor interrupted");
     }
 
@@ -292,11 +285,10 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
      */
     private ProcessResult<CanonicalLiterature> handleUnexpectedException(
             Exception ex,
-            String operation,
             int batchNo) {
         log.error(
-            "PubMed Literature Processor unexpected error: operation={} batchNo={}",
-            operation, batchNo, ex);
+            "PubMed Literature Processor unexpected error: batchNo={}",
+            batchNo, ex);
         return ProcessResult.failure("Unexpected PubMed error: " + ex.getMessage());
     }
 

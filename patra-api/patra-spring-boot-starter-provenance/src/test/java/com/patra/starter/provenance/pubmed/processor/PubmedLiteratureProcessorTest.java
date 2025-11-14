@@ -89,7 +89,6 @@ class PubmedLiteratureProcessorTest {
      */
     private ProviderRequest createTestRequest(String query, JsonNode params) {
         return ProviderRequest.builder()
-                .operationCode(OPERATION_CODE)
                 .config(createTestConfig())
                 .executionParams(new BatchExecutionParams(query, params))
                 .metadata(BatchMetadata.first())

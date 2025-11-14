@@ -76,7 +76,9 @@
  *     public <T> void ingest(String provenanceCode, DataType dataType, Class<T> targetClass) {
  *         DataSourceProvider provider = registry.getProvider(provenanceCode);
  *         ProviderRequest request = ProviderRequest.builder()
- *             .provenanceCode(provenanceCode)
+ *             .config(provenanceConfig)
+ *             .executionParams(executionParams)
+ *             .metadata(BatchMetadata.first())
  *             .build();
  *         ProviderResult<T> result = provider.fetchData(request, dataType, targetClass);
  *         // 类型安全地处理结果...

@@ -201,7 +201,7 @@ public class Cursor {
       String cursorKey,
       String namespaceScope,
       String namespaceKey,
-      java.time.Instant watermark,
+      Instant watermark,
       CursorLineage lineage,
       String exprHash) {
     NamespaceScope scope = NamespaceScope.fromCode(namespaceScope);
@@ -224,7 +224,7 @@ public class Cursor {
   }
 
   /** Advance the cursor to the supplied time watermark. */
-  public void advanceTo(java.time.Instant newWatermark) {
+  public void advanceTo(Instant newWatermark) {
     advanceTo(newWatermark, null);
   }
 
@@ -234,7 +234,7 @@ public class Cursor {
    * @param newWatermark new watermark timestamp
    * @param newLineage new lineage context (optional, keeps existing if null)
    */
-  public void advanceTo(java.time.Instant newWatermark, CursorLineage newLineage) {
+  public void advanceTo(Instant newWatermark, CursorLineage newLineage) {
     if (newWatermark == null) {
       throw new IllegalArgumentException("New watermark must not be null");
     }
@@ -266,7 +266,7 @@ public class Cursor {
    *     AdvancementResult#EXPRESSION_CHANGED} if expression hash changed
    */
   public AdvancementResult advanceTo(
-      java.time.Instant newWatermark, CursorLineage newLineage, String newExprHash) {
+      Instant newWatermark, CursorLineage newLineage, String newExprHash) {
     if (newWatermark == null) {
       throw new IllegalArgumentException("New watermark must not be null");
     }
@@ -309,7 +309,7 @@ public class Cursor {
   }
 
   /** Return the current time-based watermark. */
-  public java.time.Instant getCurrentWatermark() {
+  public Instant getCurrentWatermark() {
     return watermark.normalizedInstant();
   }
 }

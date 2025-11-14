@@ -373,12 +373,12 @@ public final class ExprJsonCodec {
       return new TokenValue(getText(node, "tokenType"), getText(node, "tokenValue"));
     }
 
-    private Atom.Value parseRange(JsonNode node, DeserializationContext ctxt) {
+    private Value parseRange(JsonNode node, DeserializationContext ctxt) {
       String rangeType = getText(node, "rangeType");
-      Atom.RangeValue.Boundary fromBoundary =
-          Atom.RangeValue.Boundary.valueOf(getText(node, "fromBoundary"));
-      Atom.RangeValue.Boundary toBoundary =
-          Atom.RangeValue.Boundary.valueOf(getText(node, "toBoundary"));
+      RangeValue.Boundary fromBoundary =
+          RangeValue.Boundary.valueOf(getText(node, "fromBoundary"));
+      RangeValue.Boundary toBoundary =
+          RangeValue.Boundary.valueOf(getText(node, "toBoundary"));
       JsonNode fromNode = node.get("from");
       JsonNode toNode = node.get("to");
 
@@ -390,34 +390,34 @@ public final class ExprJsonCodec {
       };
     }
 
-    private Atom.DateRange parseDateRange(
+    private DateRange parseDateRange(
         JsonNode fromNode,
         JsonNode toNode,
-        Atom.RangeValue.Boundary fromBoundary,
-        Atom.RangeValue.Boundary toBoundary) {
+        RangeValue.Boundary fromBoundary,
+        RangeValue.Boundary toBoundary) {
       LocalDate from = fromNode == null ? null : LocalDate.parse(fromNode.asText());
       LocalDate to = toNode == null ? null : LocalDate.parse(toNode.asText());
-      return new Atom.DateRange(from, to, fromBoundary, toBoundary);
+      return new DateRange(from, to, fromBoundary, toBoundary);
     }
 
-    private Atom.DateTimeRange parseDateTimeRange(
+    private DateTimeRange parseDateTimeRange(
         JsonNode fromNode,
         JsonNode toNode,
-        Atom.RangeValue.Boundary fromBoundary,
-        Atom.RangeValue.Boundary toBoundary) {
+        RangeValue.Boundary fromBoundary,
+        RangeValue.Boundary toBoundary) {
       Instant from = fromNode == null ? null : Instant.parse(fromNode.asText());
       Instant to = toNode == null ? null : Instant.parse(toNode.asText());
-      return new Atom.DateTimeRange(from, to, fromBoundary, toBoundary);
+      return new DateTimeRange(from, to, fromBoundary, toBoundary);
     }
 
-    private Atom.NumberRange parseNumberRange(
+    private NumberRange parseNumberRange(
         JsonNode fromNode,
         JsonNode toNode,
-        Atom.RangeValue.Boundary fromBoundary,
-        Atom.RangeValue.Boundary toBoundary) {
+        RangeValue.Boundary fromBoundary,
+        RangeValue.Boundary toBoundary) {
       BigDecimal from = fromNode == null ? null : new BigDecimal(fromNode.asText());
       BigDecimal to = toNode == null ? null : new BigDecimal(toNode.asText());
-      return new Atom.NumberRange(from, to, fromBoundary, toBoundary);
+      return new NumberRange(from, to, fromBoundary, toBoundary);
     }
 
     private String getText(JsonNode node, String field) {

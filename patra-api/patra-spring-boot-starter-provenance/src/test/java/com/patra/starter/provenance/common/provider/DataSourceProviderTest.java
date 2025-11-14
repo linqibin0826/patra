@@ -431,7 +431,6 @@ class DataSourceProviderTest {
      */
     private static ProviderRequest createMockRequest() {
         return ProviderRequest.builder()
-            .operationCode("HARVEST")
             .executionParams(new BatchExecutionParams("test", null))
             .metadata(BatchMetadata.first())
             .build();

@@ -22,7 +22,7 @@ public interface ScheduleInstanceConverter {
   @Mapping(
       target = "triggerParams",
       expression =
-          "java(JsonNodeMappings.mapToJsonNode(aggregate.getTriggerParams()))")
+          "java(com.patra.common.json.JsonNodeMappings.mapToJsonNode(aggregate.getTriggerParams()))")
   ScheduleInstanceDO toDO(ScheduleInstanceAggregate aggregate);
 
   default ScheduleInstanceAggregate toDomain(ScheduleInstanceDO entity) {
