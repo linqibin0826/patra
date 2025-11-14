@@ -16,11 +16,11 @@ public interface PlanSliceConverter {
   @Mapping(
       target = "windowSpec",
       expression =
-          "java(JsonNodeMappings.jsonStringToNode(aggregate.getWindowSpecJson()))")
+          "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getWindowSpecJson()))")
   @Mapping(
       target = "exprSnapshot",
       expression =
-          "java(JsonNodeMappings.jsonStringToNode(aggregate.getExprSnapshotJson()))")
+          "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getExprSnapshotJson()))")
   @Mapping(target = "statusCode", source = "status", qualifiedByName = "sliceStatusToCode")
   PlanSliceDO toEntity(PlanSliceAggregate aggregate);
 

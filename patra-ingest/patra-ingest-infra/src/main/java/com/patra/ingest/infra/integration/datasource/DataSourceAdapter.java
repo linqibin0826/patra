@@ -26,6 +26,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import com.patra.starter.provenance.common.config.BatchingConfig;
+import com.patra.starter.provenance.common.config.HttpConfig;
+import com.patra.starter.provenance.common.config.PaginationConfig;
+import com.patra.starter.provenance.common.config.RateLimitConfig;
+import com.patra.starter.provenance.common.config.RetryConfig;
+import com.patra.starter.provenance.common.config.WindowOffsetConfig;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
@@ -174,7 +180,7 @@ public class DataSourceAdapter implements DataSourcePort {
     /**
      * 转换HTTP配置
      */
-    private com.patra.starter.provenance.common.config.HttpConfig toHttpConfig(
+    private HttpConfig toHttpConfig(
             com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.HttpConfig httpInfo) {
         if (httpInfo == null) {
             return null;
@@ -183,7 +189,7 @@ public class DataSourceAdapter implements DataSourcePort {
         // 解析defaultHeadersJson为Map
         Map<String, String> headers = parseHeadersJson(httpInfo.defaultHeadersJson());
 
-        return new com.patra.starter.provenance.common.config.HttpConfig(
+        return new HttpConfig(
             headers,
             httpInfo.timeoutConnectMillis(),
             httpInfo.timeoutReadMillis(),
@@ -211,13 +217,13 @@ public class DataSourceAdapter implements DataSourcePort {
     /**
      * 转换分页配置
      */
-    private com.patra.starter.provenance.common.config.PaginationConfig toPaginationConfig(
+    private PaginationConfig toPaginationConfig(
             com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.PaginationConfig paginationInfo) {
         if (paginationInfo == null) {
             return null;
         }
 
-        return new com.patra.starter.provenance.common.config.PaginationConfig(
+        return new PaginationConfig(
             paginationInfo.pageSizeValue(),
             paginationInfo.maxPagesPerExecution()
         );
@@ -226,13 +232,13 @@ public class DataSourceAdapter implements DataSourcePort {
     /**
      * 转换窗口偏移配置
      */
-    private com.patra.starter.provenance.common.config.WindowOffsetConfig toWindowOffsetConfig(
+    private WindowOffsetConfig toWindowOffsetConfig(
             com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.WindowOffsetConfig windowOffsetInfo) {
         if (windowOffsetInfo == null) {
             return null;
         }
 
-        return new com.patra.starter.provenance.common.config.WindowOffsetConfig(
+        return new WindowOffsetConfig(
             windowOffsetInfo.windowModeCode(),
             windowOffsetInfo.windowSizeValue(),
             windowOffsetInfo.windowSizeUnitCode(),
@@ -248,13 +254,13 @@ public class DataSourceAdapter implements DataSourcePort {
     /**
      * 转换批处理配置
      */
-    private com.patra.starter.provenance.common.config.BatchingConfig toBatchingConfig(
+    private BatchingConfig toBatchingConfig(
             com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.BatchingConfig batchingInfo) {
         if (batchingInfo == null) {
             return null;
         }
 
-        return new com.patra.starter.provenance.common.config.BatchingConfig(
+        return new BatchingConfig(
             batchingInfo.detailFetchBatchSize(),
             batchingInfo.maxIdsPerRequest(),
             null  // epostThreshold字段在Snapshot中不存在,传null
@@ -264,13 +270,13 @@ public class DataSourceAdapter implements DataSourcePort {
     /**
      * 转换重试配置
      */
-    private com.patra.starter.provenance.common.config.RetryConfig toRetryConfig(
+    private RetryConfig toRetryConfig(
             com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.RetryConfig retryInfo) {
         if (retryInfo == null) {
             return null;
         }
 
-        return new com.patra.starter.provenance.common.config.RetryConfig(
+        return new RetryConfig(
             retryInfo.maxRetryTimes(),
             retryInfo.initialDelayMillis()
         );
@@ -279,13 +285,13 @@ public class DataSourceAdapter implements DataSourcePort {
     /**
      * 转换限流配置
      */
-    private com.patra.starter.provenance.common.config.RateLimitConfig toRateLimitConfig(
+    private RateLimitConfig toRateLimitConfig(
             com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.RateLimitConfig rateLimitInfo) {
         if (rateLimitInfo == null) {
             return null;
         }
 
-        return new com.patra.starter.provenance.common.config.RateLimitConfig(
+        return new RateLimitConfig(
             rateLimitInfo.maxConcurrentRequests(),
             rateLimitInfo.perCredentialQpsLimit()
         );
@@ -453,7 +459,6 @@ public class DataSourceAdapter implements DataSourcePort {
         BatchMetadata metadata = new BatchMetadata(batch.batchNo(), batch.cursorToken());
 
         return ProviderRequest.builder()
-            .operationCode(context.operationCode())
             // config 设置为 null 的设计理由：
             // 1. ProvenanceConfig 由 DataSourceProvider 内部从 ProvenanceProperties 获取
             // 2. ExecutionContext.configSnapshot 是 Domain 层的 ProvenanceConfigSnapshot 类型，

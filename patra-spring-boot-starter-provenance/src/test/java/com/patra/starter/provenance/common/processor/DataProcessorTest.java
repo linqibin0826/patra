@@ -34,7 +34,6 @@ class DataProcessorTest {
      */
     private ProviderRequest createTestRequest() {
         return ProviderRequest.builder()
-            .operationCode("HARVEST")
             .config(createTestConfig())
             .executionParams(createTestExecutionParams())
             .metadata(BatchMetadata.first())

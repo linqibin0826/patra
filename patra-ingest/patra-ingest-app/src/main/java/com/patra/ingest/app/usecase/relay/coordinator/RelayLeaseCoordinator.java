@@ -3,6 +3,7 @@ package com.patra.ingest.app.usecase.relay.coordinator;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.model.vo.relay.RelayPlan;
 import com.patra.ingest.domain.port.OutboxRelayRepository;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -104,7 +105,7 @@ public class RelayLeaseCoordinator {
    * @param plan 具有 triggeredAt 和 leaseDuration 的中继计划
    * @return 租约过期时刻
    */
-  public static java.time.Instant computeLeaseExpireAt(RelayPlan plan) {
+  public static Instant computeLeaseExpireAt(RelayPlan plan) {
     return plan.triggeredAt().plus(plan.leaseDuration());
   }
 }

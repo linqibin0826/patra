@@ -102,9 +102,8 @@ public class PubmedDataSourceProvider implements DataSourceProvider {
       Class<T> targetClass) {
     long start = System.currentTimeMillis();
     int batchNo = request.metadata().batchNo();
-    String operation = request.operationCode();
 
-    log.info("PubMed provider start: operation={} batchNo={} dataType={}", operation, batchNo, dataType);
+    log.info("PubMed provider start: batchNo={} dataType={}", batchNo, dataType);
 
     // 1. 验证类型一致性
     if (!dataType.getDataClass().isAssignableFrom(targetClass)) {
@@ -126,8 +125,7 @@ public class PubmedDataSourceProvider implements DataSourceProvider {
 
         long duration = System.currentTimeMillis() - start;
         log.info(
-            "PubMed provider completed: operation={} batchNo={} fetched={} duration={}ms",
-            operation,
+            "PubMed provider completed: batchNo={} fetched={} duration={}ms",
             batchNo,
             result.fetchedCount(),
             duration);
@@ -137,7 +135,7 @@ public class PubmedDataSourceProvider implements DataSourceProvider {
         return typedResult;
       } catch (Exception ex) {
         long duration = System.currentTimeMillis() - start;
-        log.error("PubMed provider error: operation={} batchNo={} duration={}ms", operation, batchNo, duration, ex);
+        log.error("PubMed provider error: batchNo={} duration={}ms", batchNo, duration, ex);
         return ProviderResult.nonRetriableFailure(
             dataType,
             "PubMed provider error: " + ex.getMessage());

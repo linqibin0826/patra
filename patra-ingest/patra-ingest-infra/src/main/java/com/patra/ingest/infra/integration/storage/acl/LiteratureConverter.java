@@ -4,7 +4,9 @@ import com.patra.catalog.api.dto.AuthorDTO;
 import com.patra.catalog.api.dto.JournalDTO;
 import com.patra.catalog.api.dto.LiteratureDTO;
 import com.patra.common.model.CanonicalLiterature;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -134,7 +136,7 @@ public interface LiteratureConverter {
    * @return 标识符 Map (如果为 null 或空则返回 null)
    */
   @Named("mapIdentifiers")
-  default java.util.Map<String, String> mapIdentifiers(
+  default Map<String, String> mapIdentifiers(
       List<CanonicalLiterature.Identifier> identifiers) {
     if (CollectionUtils.isEmpty(identifiers)) {
       return null;
@@ -154,7 +156,7 @@ public interface LiteratureConverter {
    * @return 主要出版日期 (如果为 null 则返回 null)
    */
   @Named("mapPublicationDate")
-  default java.time.LocalDate mapPublicationDate(CanonicalLiterature.PublicationDates dates) {
+  default LocalDate mapPublicationDate(CanonicalLiterature.PublicationDates dates) {
     if (dates == null) {
       return null;
     }

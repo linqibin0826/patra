@@ -1,6 +1,5 @@
 package com.patra.ingest.infra.persistence.converter;
 
-import com.patra.common.json.JsonNodeMappings;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.infra.persistence.entity.OutboxMessageDO;
 import org.mapstruct.Mapper;
@@ -14,11 +13,11 @@ public interface OutboxMessageConverter {
   @Mapping(
       target = "payloadJson",
       expression =
-          "java(JsonNodeMappings.jsonStringToNode(message.getPayloadJson()))")
+          "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(message.getPayloadJson()))")
   @Mapping(
       target = "headersJson",
       expression =
-          "java(JsonNodeMappings.jsonStringToNode(message.getHeadersJson()))")
+          "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(message.getHeadersJson()))")
   @Mapping(target = "pubLeaseOwner", source = "leaseOwner")
   @Mapping(target = "pubLeasedUntil", source = "leaseExpireAt")
   OutboxMessageDO toEntity(OutboxMessage message);
@@ -26,11 +25,11 @@ public interface OutboxMessageConverter {
   @Mapping(
       target = "payloadJson",
       expression =
-          "java(JsonNodeMappings.jsonNodeToString(entity.getPayloadJson()))")
+          "java(com.patra.common.json.JsonNodeMappings.jsonNodeToString(entity.getPayloadJson()))")
   @Mapping(
       target = "headersJson",
       expression =
-          "java(JsonNodeMappings.jsonNodeToString(entity.getHeadersJson()))")
+          "java(com.patra.common.json.JsonNodeMappings.jsonNodeToString(entity.getHeadersJson()))")
   @Mapping(target = "leaseOwner", source = "pubLeaseOwner")
   @Mapping(target = "leaseExpireAt", source = "pubLeasedUntil")
   OutboxMessage toDomain(OutboxMessageDO entity);
