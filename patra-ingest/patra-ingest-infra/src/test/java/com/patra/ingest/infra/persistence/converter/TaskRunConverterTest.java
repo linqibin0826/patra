@@ -136,7 +136,7 @@ class TaskRunConverterTest {
     assertThat(taskRun.getId()).isEqualTo(1001L);
     assertThat(taskRun.getTaskId()).isEqualTo(2001L);
     assertThat(taskRun.getAttemptNo()).isEqualTo(1);
-    assertThat(taskRun.getProvenanceCode()).isEqualTo("PUBMED");
+    assertThat(taskRun.getProvenanceCode()).isEqualTo(ProvenanceCode.PUBMED);
     assertThat(taskRun.getOperationCode()).isEqualTo("HARVEST");
     assertThat(taskRun.getStatus()).isEqualTo(TaskRunStatus.SUCCEEDED);
     assertThat(taskRun.getStartedAt()).isEqualTo(startedAt);

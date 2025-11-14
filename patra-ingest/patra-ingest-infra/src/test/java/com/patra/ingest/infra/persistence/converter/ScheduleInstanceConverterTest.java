@@ -286,7 +286,7 @@ class ScheduleInstanceConverterTest {
       assertThat(result.getSchedulerLogId()).isEqualTo(SCHEDULER_LOG_ID);
       assertThat(result.getTriggerType()).isEqualTo(TriggerType.SCHEDULE);
       assertThat(result.getTriggeredAt()).isEqualTo(TRIGGERED_AT);
-      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE.getCode());
+      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE);
       assertThat(result.getVersion()).isEqualTo(5L);
 
       // 验证 triggerParams 转换

@@ -304,7 +304,7 @@ class PlanConverterTest {
       assertThat(result.getId()).isEqualTo(100L);
       assertThat(result.getScheduleInstanceId()).isEqualTo(SCHEDULE_INSTANCE_ID);
       assertThat(result.getPlanKey()).isEqualTo(PLAN_KEY);
-      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE.getCode());
+      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE);
       assertThat(result.getOperationCode()).isEqualTo(OPERATION_CODE);
       assertThat(result.getExprProtoHash()).isEqualTo(EXPR_PROTO_HASH);
       assertThat(result.getExprProtoSnapshotJson()).isEqualTo(EXPR_PROTO_SNAPSHOT_JSON);
