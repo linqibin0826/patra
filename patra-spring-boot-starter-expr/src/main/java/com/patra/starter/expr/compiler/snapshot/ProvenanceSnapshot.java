@@ -1,5 +1,6 @@
 package com.patra.starter.expr.compiler.snapshot;
 
+import com.patra.expr.Atom;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -269,7 +270,7 @@ public record ProvenanceSnapshot(
       String fieldKey,
       String scopeCode,
       String operationTypeKey,
-      com.patra.expr.Atom.Operator operator,
+      Atom.Operator operator,
       String matchTypeCode,
       NegationQualifier negation,
       ValueType valueType,

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.Set;
 
@@ -77,7 +78,7 @@ class DataTypeTest {
         @Test
         @DisplayName("所有枚举常量的code唯一")
         void allEnumConstantsHaveUniqueCode() {
-            long uniqueCodeCount = java.util.Arrays.stream(DataType.values())
+            long uniqueCodeCount = Arrays.stream(DataType.values())
                 .map(DataType::getCode)
                 .distinct()
                 .count();
@@ -90,7 +91,7 @@ class DataTypeTest {
         @Test
         @DisplayName("所有枚举常量的dataClass唯一")
         void allEnumConstantsHaveUniqueDataClass() {
-            long uniqueClassCount = java.util.Arrays.stream(DataType.values())
+            long uniqueClassCount = Arrays.stream(DataType.values())
                 .map(DataType::getDataClass)
                 .distinct()
                 .count();

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import com.patra.ingest.infra.integration.datasource.acl.PlanMetadataTranslator;
 import com.patra.ingest.infra.registry.ProviderRegistry;
 import com.patra.starter.provenance.common.config.*;
 import java.lang.reflect.Method;
@@ -45,7 +46,10 @@ class DataSourceAdapterTest {
 
   @BeforeEach
   void setUp() {
-    adapter = new DataSourceAdapter(providerRegistry);
+    // 注意: 此测试类仅测试 convertToProvenanceConfig 私有方法(HTTP配置转换)
+    // 该方法不使用 PlanMetadataTranslator，因此传入真实实例即可
+    PlanMetadataTranslator translator = new PlanMetadataTranslator();
+    adapter = new DataSourceAdapter(providerRegistry, translator);
   }
 
   // ========== convertToProvenanceConfig() 完整转换测试 ==========

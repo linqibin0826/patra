@@ -1,6 +1,7 @@
 package com.patra.starter.objectstorage;
 
 import java.net.URI;
+import java.util.Map;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -115,7 +116,7 @@ public class S3StorageAutoConfiguration {
       ObjectStorageProperties properties, String providerKey) {
     return properties.getProviders().entrySet().stream()
         .filter(entry -> entry.getKey() != null && entry.getKey().equalsIgnoreCase(providerKey))
-        .map(java.util.Map.Entry::getValue)
+        .map(Map.Entry::getValue)
         .findFirst()
         .orElseThrow(() -> new IllegalStateException("缺少对象存储提供者配置: " + providerKey));
   }

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -95,7 +96,7 @@ public final class JsonNormalizer {
     this.canonicalWriter =
         objectMapper
             .writer()
-            .without(com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT)
+            .without(SerializationFeature.INDENT_OUTPUT)
             .withFeatures(JsonGenerator.Feature.WRITE_BIGDECIMAL_AS_PLAIN);
   }
 

@@ -168,8 +168,8 @@ public class PubMedClientImpl implements PubMedClient {
     String baseUrl = finalConfig.baseUrl();
     String path = "/epost.fcgi";
 
-    java.util.Map<String, String> queryParams = request.toQueryParams();
-    java.util.Map<String, String> headers = ProvenanceConfigConverter.extractHeaders(finalConfig);
+    Map<String, String> queryParams = request.toQueryParams();
+    Map<String, String> headers = ProvenanceConfigConverter.extractHeaders(finalConfig);
     HttpResilienceConfig rc = ProvenanceConfigConverter.toHttpResilienceConfig(finalConfig);
 
     String body = httpClient.postForm(baseUrl, path, queryParams, headers, rc);

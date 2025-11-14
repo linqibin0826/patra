@@ -3,6 +3,7 @@ package com.patra.starter.provenance.common.provider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
+import com.patra.starter.provenance.common.exception.ProvenanceClientException;
 import com.patra.starter.provenance.common.processor.DataProcessor;
 import com.patra.starter.provenance.internal.metadata.PlanMetadata;
 
@@ -135,7 +136,7 @@ public interface DataSourceProvider {
    * @param params 查询参数(JSON 格式,可包含分页、排序等)
    * @param config 数据源配置
    * @return 计划元数据(使用继承体系支持不同数据源)
-   * @throws com.patra.starter.provenance.common.exception.ProvenanceClientException 数据源访问失败时抛出
+   * @throws ProvenanceClientException 数据源访问失败时抛出
    */
   default PlanMetadata preparePlan(String query, JsonNode params, ProvenanceConfig config) {
     throw new UnsupportedOperationException(

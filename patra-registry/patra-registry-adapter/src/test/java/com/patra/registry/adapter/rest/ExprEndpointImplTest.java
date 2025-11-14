@@ -11,6 +11,10 @@ import static org.mockito.Mockito.when;
 import com.patra.registry.adapter.rest.converter.ExprApiConverter;
 import com.patra.registry.api.dto.expr.ExprSnapshotResp;
 import com.patra.registry.app.service.ExprQueryOrchestrator;
+import com.patra.registry.domain.exception.DomainValidationException;
+import com.patra.registry.domain.exception.RegistryConflict;
+import com.patra.registry.domain.exception.RegistryQuotaExceeded;
+import com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException;
 import com.patra.registry.domain.model.read.expr.ExprSnapshotQuery;
 import java.time.Instant;
 import java.util.Collections;
@@ -237,12 +241,12 @@ class ExprEndpointImplTest {
       String provenanceCode = "PUBMED";
       when(orchestrator.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(
-              new com.patra.registry.domain.exception.DomainValidationException(
+              new DomainValidationException(
                   "operationType 不能为空白"));
 
       // When & Then: 验证 DomainValidationException 被传播
       assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, "", null, null))
-          .isInstanceOf(com.patra.registry.domain.exception.DomainValidationException.class)
+          .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("operationType 不能为空白");
     }
 
@@ -254,12 +258,12 @@ class ExprEndpointImplTest {
       Instant futureTime = Instant.parse("2099-01-01T00:00:00Z");
       when(orchestrator.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(
-              new com.patra.registry.domain.exception.DomainValidationException(
+              new DomainValidationException(
                   "at 必须在过去或现在"));
 
       // When & Then: 验证异常传播
       assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, null, null, futureTime))
-          .isInstanceOf(com.patra.registry.domain.exception.DomainValidationException.class)
+          .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("at 必须在过去或现在");
     }
 
@@ -270,13 +274,13 @@ class ExprEndpointImplTest {
       String provenanceCode = "ARXIV";
       when(orchestrator.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(
-              new com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException(
+              new ProvenanceNotFoundException(
                   "数据源配置未找到: " + provenanceCode));
 
       // When & Then: 验证 RegistryNotFound 异常被传播
       assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, null, null, null))
           .isInstanceOf(
-              com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException.class)
+              ProvenanceNotFoundException.class)
           .hasMessageContaining("数据源配置未找到");
     }
 
@@ -288,14 +292,14 @@ class ExprEndpointImplTest {
       String operationType = "UNKNOWN_OPERATION";
       when(orchestrator.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(
-              new com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException(
+              new ProvenanceNotFoundException(
                   "未找到操作类型 " + operationType + " 的配置"));
 
       // When & Then: 验证异常传播
       assertThatThrownBy(
               () -> endpoint.getSnapshot(provenanceCode, operationType, null, null))
           .isInstanceOf(
-              com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException.class)
+              ProvenanceNotFoundException.class)
           .hasMessageContaining("未找到操作类型");
     }
 
@@ -308,14 +312,14 @@ class ExprEndpointImplTest {
       String endpointName = "unknown_endpoint";
       when(orchestrator.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(
-              new com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException(
+              new ProvenanceNotFoundException(
                   "未找到端点 " + endpointName + " 的配置"));
 
       // When & Then: 验证异常传播
       assertThatThrownBy(
               () -> endpoint.getSnapshot(provenanceCode, operationType, endpointName, null))
           .isInstanceOf(
-              com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException.class)
+              ProvenanceNotFoundException.class)
           .hasMessageContaining("未找到端点");
     }
 
@@ -327,14 +331,14 @@ class ExprEndpointImplTest {
       Instant historicalTime = Instant.parse("2000-01-01T00:00:00Z");
       when(orchestrator.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(
-              new com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException(
+              new ProvenanceNotFoundException(
                   "在时间点 " + historicalTime + " 未找到有效配置"));
 
       // When & Then: 验证异常传播
       assertThatThrownBy(
               () -> endpoint.getSnapshot(provenanceCode, null, null, historicalTime))
           .isInstanceOf(
-              com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException.class)
+              ProvenanceNotFoundException.class)
           .hasMessageContaining("未找到有效配置");
     }
 
@@ -346,7 +350,7 @@ class ExprEndpointImplTest {
 
       // 创建一个具体的 RegistryQuotaExceeded 子类实例
       class ConcurrentQueryQuotaExceeded
-          extends com.patra.registry.domain.exception.RegistryQuotaExceeded {
+          extends RegistryQuotaExceeded {
         public ConcurrentQueryQuotaExceeded(String message) {
           super(message);
         }
@@ -357,7 +361,7 @@ class ExprEndpointImplTest {
 
       // When & Then: 验证 RegistryQuotaExceeded 异常被传播
       assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, null, null, null))
-          .isInstanceOf(com.patra.registry.domain.exception.RegistryQuotaExceeded.class)
+          .isInstanceOf(RegistryQuotaExceeded.class)
           .hasMessageContaining("并发查询数超出配额限制");
     }
 
@@ -368,7 +372,7 @@ class ExprEndpointImplTest {
       String provenanceCode = "EPMC";
 
       class ResultSizeQuotaExceeded
-          extends com.patra.registry.domain.exception.RegistryQuotaExceeded {
+          extends RegistryQuotaExceeded {
         public ResultSizeQuotaExceeded(String message) {
           super(message);
         }
@@ -379,7 +383,7 @@ class ExprEndpointImplTest {
 
       // When & Then: 验证异常传播
       assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, null, null, null))
-          .isInstanceOf(com.patra.registry.domain.exception.RegistryQuotaExceeded.class)
+          .isInstanceOf(RegistryQuotaExceeded.class)
           .hasMessageContaining("查询结果大小超出限制");
     }
 
@@ -390,7 +394,7 @@ class ExprEndpointImplTest {
       String provenanceCode = "PUBMED";
 
       class VersionConflictException
-          extends com.patra.registry.domain.exception.RegistryConflict {
+          extends RegistryConflict {
         public VersionConflictException(String message) {
           super(message);
         }
@@ -401,7 +405,7 @@ class ExprEndpointImplTest {
 
       // When & Then: 验证 RegistryConflict 异常被传播
       assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, null, null, null))
-          .isInstanceOf(com.patra.registry.domain.exception.RegistryConflict.class)
+          .isInstanceOf(RegistryConflict.class)
           .hasMessageContaining("配置版本冲突");
     }
 
@@ -413,7 +417,7 @@ class ExprEndpointImplTest {
       Instant at = Instant.parse("2024-06-01T00:00:00Z");
 
       class TemporalSliceConflictException
-          extends com.patra.registry.domain.exception.RegistryConflict {
+          extends RegistryConflict {
         public TemporalSliceConflictException(String message) {
           super(message);
         }
@@ -424,7 +428,7 @@ class ExprEndpointImplTest {
 
       // When & Then: 验证异常传播
       assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, null, null, at))
-          .isInstanceOf(com.patra.registry.domain.exception.RegistryConflict.class)
+          .isInstanceOf(RegistryConflict.class)
           .hasMessageContaining("时态切片状态冲突");
     }
   }
