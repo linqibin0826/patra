@@ -69,7 +69,6 @@ public class CursorAdvancerImpl implements CursorAdvancer {
     // 1) 提取游标参数
     ProvenanceCode provenanceCode = context.provenanceCode();
     String operationCode = context.operationCode();
-    String provenanceCodeStr = provenanceCode != null ? provenanceCode.getCode() : null;
 
     WindowSpec windowSpec = context.windowSpec();
     if (windowSpec == null) {
@@ -103,7 +102,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
 
     log.debug(
         "推进游标 provenanceCode={} operationCode={} cursorKey={} newWatermark={} taskId={} runId={}",
-        provenanceCodeStr,
+        provenanceCode,
         operationCode,
         cursorKey,
         newWatermark,
@@ -140,7 +139,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
         if (log.isDebugEnabled()) {
           log.debug(
               "找到游标 provenanceCode={} endpointName={} currentWatermark={}",
-              provenanceCodeStr,
+              provenanceCode,
               operationCode,
               oldWatermark);
         }
@@ -176,7 +175,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
 
         log.info(
             "游标已推进 provenanceCode={} endpointName={} from={} to={} taskId={} runId={} planId={} sliceId={}",
-            provenanceCodeStr,
+            provenanceCode,
             operationCode,
             oldWatermark,
             newWatermark,
@@ -202,7 +201,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
 
         log.info(
             "游标已创建 provenanceCode={} endpointName={} watermark={} exprHash={} taskId={} runId={} planId={} sliceId={}",
-            provenanceCodeStr,
+            provenanceCode,
             operationCode,
             newWatermark,
             context.exprHash(),
@@ -218,7 +217,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
       // 7) 生成幂等键用于事件去重
       String idempotentKey =
           generateIdempotentKey(
-              provenanceCodeStr,
+              provenanceCode != null ? provenanceCode.getCode() : null,
               operationCode,
               cursorKey,
               namespaceScope,
@@ -268,7 +267,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
       // 乐观锁冲突(版本不匹配)
       log.warn(
           "游标推进冲突 provenanceCode={} endpointName={} taskId={} runId={}",
-          provenanceCodeStr,
+          provenanceCode,
           operationCode,
           taskId,
           runId);
@@ -277,7 +276,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
     } catch (Exception e) {
       log.error(
           "游标推进失败 provenanceCode={} endpointName={} taskId={} runId={}",
-          provenanceCodeStr,
+          provenanceCode,
           operationCode,
           taskId,
           runId,

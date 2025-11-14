@@ -167,7 +167,7 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
         "执行上下文已加载 taskId={} runId={} provenanceCode={} endpointName={}",
         taskId,
         runId,
-        provenanceCodeStr,
+        task.getProvenanceCode(),
         task.getOperationCode());
 
     // TODO: 后续需要从 Provenance 配置中获取实际的 DataType

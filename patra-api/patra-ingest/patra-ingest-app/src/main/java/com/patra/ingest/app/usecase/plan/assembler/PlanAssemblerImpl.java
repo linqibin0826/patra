@@ -117,8 +117,8 @@ public class PlanAssemblerImpl implements PlanAssembler {
     plan.startSlicing();
     log.debug(
         "Created plan aggregate for provenance [{}] operation [{}]: planKey={}, strategy={}",
-        norm.provenanceCode() != null ? norm.provenanceCode().getCode() : null,
-        norm.operationCode() != null ? norm.operationCode().getCode() : null,
+        norm.provenanceCode(),
+        norm.operationCode(),
         plan.getPlanKey(),
         sliceStrategy.getCode());
 
@@ -132,8 +132,8 @@ public class PlanAssemblerImpl implements PlanAssembler {
         "Generated {} slices and {} tasks for provenance [{}] operation [{}]",
         slices.size(),
         tasks.size(),
-        norm.provenanceCode() != null ? norm.provenanceCode().getCode() : null,
-        norm.operationCode() != null ? norm.operationCode().getCode() : null);
+        norm.provenanceCode(),
+        norm.operationCode());
 
     if (slices.isEmpty() || tasks.isEmpty()) {
       // Note: After refactoring, Plan remains in SLICING status when assembly fails.
@@ -141,8 +141,8 @@ public class PlanAssemblerImpl implements PlanAssembler {
       log.warn(
           "Plan assembly failed for provenance [{}] operation [{}]: no slices or tasks generated. "
               + "Plan remains in SLICING status.",
-          norm.provenanceCode() != null ? norm.provenanceCode().getCode() : null,
-          norm.operationCode() != null ? norm.operationCode().getCode() : null);
+          norm.provenanceCode(),
+          norm.operationCode());
       return new PlanAssemblyResult(plan, slices, tasks, PlanAssemblyResult.AssemblyStatus.FAILED);
     }
 
@@ -306,16 +306,13 @@ public class PlanAssemblerImpl implements PlanAssembler {
     Priority effectivePriority = norm.priority() == null ? Priority.NORMAL : norm.priority();
 
     ProvenanceCode pc = norm.provenanceCode();
-    String pcStr = pc != null ? pc.getCode() : null;
-
     OperationCode oc = norm.operationCode();
-    String ocStr = oc != null ? oc.getCode() : null;
 
     log.debug(
         "Creating {} tasks from slices for provenance [{}] operation [{}], priority={}",
         slices.size(),
-        pcStr,
-        ocStr,
+        pc,
+        oc,
         effectivePriority);
 
     for (int i = 0; i < slices.size(); i++) {
@@ -331,7 +328,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
               null,
               (long) slice.getSliceNo(),
               pc,
-              ocStr,
+              oc != null ? oc.getCode() : null,
               buildTaskParamsJson(slice.getSliceNo()),
               idemKey,
               slice.getExprHash(),
