@@ -77,12 +77,10 @@ class TaskCheckpointExceptionTest {
     @DisplayName("应该为不同类型创建异常")
     void shouldCreateExceptionForDifferentTypes() {
       // Given & When & Then
-      assertThat(
-              new TaskCheckpointException(Type.PARSE, "msg", new RuntimeException()).getType())
+      assertThat(new TaskCheckpointException(Type.PARSE, "msg", new RuntimeException()).getType())
           .isEqualTo(Type.PARSE);
       assertThat(
-              new TaskCheckpointException(Type.SERIALIZE, "msg", new RuntimeException())
-                  .getType())
+              new TaskCheckpointException(Type.SERIALIZE, "msg", new RuntimeException()).getType())
           .isEqualTo(Type.SERIALIZE);
     }
   }
@@ -129,8 +127,7 @@ class TaskCheckpointExceptionTest {
           new TaskCheckpointException(Type.PARSE, "解析失败", new RuntimeException());
 
       // When & Then
-      assertThat(exception)
-          .isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
+      assertThat(exception).isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
     }
   }
 }

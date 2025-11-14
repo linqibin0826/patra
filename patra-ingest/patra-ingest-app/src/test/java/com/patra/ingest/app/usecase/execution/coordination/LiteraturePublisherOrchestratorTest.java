@@ -13,7 +13,6 @@ import com.patra.common.model.CanonicalLiterature;
 import com.patra.ingest.domain.port.LiteratureStoragePort;
 import com.patra.ingest.domain.port.StorageMetadataPort;
 import com.patra.ingest.domain.port.TechnicalRetryPort;
-import com.patra.common.enums.ProvenanceCode;
 import feign.FeignException;
 import feign.Request;
 import feign.RetryableException;
@@ -159,10 +158,7 @@ class LiteraturePublisherOrchestratorTest {
     void shouldHandleNullLiteratureList() {
       // Arrange
       LiteratureStoragePort.StorageResult emptyResult =
-          LiteratureStoragePort.StorageResult.builder()
-              .storageKey(null)
-              .literatureCount(0)
-              .build();
+          LiteratureStoragePort.StorageResult.builder().storageKey(null).literatureCount(0).build();
       when(literatureStoragePort.store(any(), any())).thenReturn(emptyResult);
 
       // Act
@@ -322,7 +318,8 @@ class LiteraturePublisherOrchestratorTest {
 
       Request request = createDummyRequest();
       RetryableException retryableException =
-          new RetryableException(504, "Gateway Timeout", Request.HttpMethod.POST, (Long) null, request);
+          new RetryableException(
+              504, "Gateway Timeout", Request.HttpMethod.POST, (Long) null, request);
       when(storageMetadataPort.recordUpload(any())).thenThrow(retryableException);
 
       // Act
@@ -357,7 +354,8 @@ class LiteraturePublisherOrchestratorTest {
       FeignException feignException = createFeignException(500, "Internal Server Error");
       when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
       doThrow(new RuntimeException("Retry delegation failed"))
-          .when(technicalRetryPort).publishRetry(any());
+          .when(technicalRetryPort)
+          .publishRetry(any());
 
       // Act & Assert
       assertThatCode(() -> orchestrator.publish(literatures, publishContext))

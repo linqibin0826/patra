@@ -4,6 +4,7 @@
  * <p>本包提供 Outbox 中继的核心执行逻辑，协调租约、发布、日志等子流程。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>执行中继计划（RelayPlan）
  *   <li>协调租约获取、消息发布、日志记录
@@ -11,6 +12,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code OutboxRelayExecutor} - Outbox 中继执行器
  *       <ul>
@@ -19,6 +21,7 @@
  * </ul>
  *
  * <h2>执行流程</h2>
+ *
  * <pre>
  * 1. 获取租约（RelayLeaseCoordinator）
  * 2. 发布消息（RelayPublishCoordinator）
@@ -27,6 +30,7 @@
  * </pre>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

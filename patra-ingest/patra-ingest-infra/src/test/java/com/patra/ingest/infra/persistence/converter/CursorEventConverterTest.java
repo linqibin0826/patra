@@ -2,12 +2,12 @@ package com.patra.ingest.infra.persistence.converter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.entity.CursorEvent;
 import com.patra.ingest.domain.model.enums.CursorDirection;
 import com.patra.ingest.domain.model.enums.CursorType;
 import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
 import com.patra.ingest.infra.persistence.entity.CursorEventDO;
-import com.patra.common.enums.ProvenanceCode;
 import java.math.BigDecimal;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;

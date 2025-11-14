@@ -1,7 +1,6 @@
 package com.patra.ingest.domain.model.vo.batch;
 
 import com.fasterxml.jackson.databind.JsonNode;
-
 import java.util.Collections;
 import java.util.Map;
 
@@ -93,10 +92,10 @@ public record Batch(
       int pageSize,
       String webEnv,
       String queryKey) {
-    Map<String, String> sessionTokens = Map.of(
-        "webEnv", webEnv,
-        "queryKey", queryKey
-    );
+    Map<String, String> sessionTokens =
+        Map.of(
+            "webEnv", webEnv,
+            "queryKey", queryKey);
     return new Batch(batchNo, query, params, null, pageNo, pageSize, sessionTokens);
   }
 

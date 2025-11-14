@@ -79,10 +79,7 @@ class ObjectMetadataTest {
   void builder_withEmptyUserMetadata_shouldAcceptEmptyMap() {
     // Act
     ObjectMetadata metadata =
-        ObjectMetadata.builder()
-            .contentLength(1024L)
-            .userMetadata(Collections.emptyMap())
-            .build();
+        ObjectMetadata.builder().contentLength(1024L).userMetadata(Collections.emptyMap()).build();
 
     // Assert
     assertThat(metadata.getUserMetadata()).isEmpty();

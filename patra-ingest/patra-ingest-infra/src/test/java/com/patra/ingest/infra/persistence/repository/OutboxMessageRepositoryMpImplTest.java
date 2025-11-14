@@ -191,7 +191,8 @@ class OutboxMessageRepositoryMpImplTest {
       when(converter.toDomain(entity)).thenReturn(message);
 
       // When
-      Optional<OutboxMessage> result = repository.findByChannelAndDedup(TEST_CHANNEL, TEST_DEDUP_KEY);
+      Optional<OutboxMessage> result =
+          repository.findByChannelAndDedup(TEST_CHANNEL, TEST_DEDUP_KEY);
 
       // Then
       assertThat(result).isPresent().contains(message);
@@ -206,7 +207,8 @@ class OutboxMessageRepositoryMpImplTest {
       when(mapper.findByChannelAndDedup(TEST_CHANNEL, TEST_DEDUP_KEY)).thenReturn(null);
 
       // When
-      Optional<OutboxMessage> result = repository.findByChannelAndDedup(TEST_CHANNEL, TEST_DEDUP_KEY);
+      Optional<OutboxMessage> result =
+          repository.findByChannelAndDedup(TEST_CHANNEL, TEST_DEDUP_KEY);
 
       // Then
       assertThat(result).isEmpty();
@@ -286,7 +288,8 @@ class OutboxMessageRepositoryMpImplTest {
           .thenReturn(1);
 
       // When
-      boolean result = repository.acquireLease(TEST_MESSAGE_ID, TEST_VERSION, TEST_OWNER, leaseExpireAt);
+      boolean result =
+          repository.acquireLease(TEST_MESSAGE_ID, TEST_VERSION, TEST_OWNER, leaseExpireAt);
 
       // Then
       assertThat(result).isTrue();
@@ -302,7 +305,8 @@ class OutboxMessageRepositoryMpImplTest {
           .thenReturn(0);
 
       // When
-      boolean result = repository.acquireLease(TEST_MESSAGE_ID, TEST_VERSION, TEST_OWNER, leaseExpireAt);
+      boolean result =
+          repository.acquireLease(TEST_MESSAGE_ID, TEST_VERSION, TEST_OWNER, leaseExpireAt);
 
       // Then
       assertThat(result).isFalse();
@@ -346,14 +350,18 @@ class OutboxMessageRepositoryMpImplTest {
     void shouldMarkDeferredSuccessfully() {
       // Given
       Instant nextRetryAt = TEST_NOW.plusSeconds(60);
-      when(mapper.markDeferred(TEST_MESSAGE_ID, TEST_VERSION, 1, nextRetryAt, "NETWORK_ERROR", "Connection timeout"))
+      when(mapper.markDeferred(
+              TEST_MESSAGE_ID, TEST_VERSION, 1, nextRetryAt, "NETWORK_ERROR", "Connection timeout"))
           .thenReturn(1);
 
       // When
-      repository.markDeferred(TEST_MESSAGE_ID, TEST_VERSION, 1, nextRetryAt, "NETWORK_ERROR", "Connection timeout");
+      repository.markDeferred(
+          TEST_MESSAGE_ID, TEST_VERSION, 1, nextRetryAt, "NETWORK_ERROR", "Connection timeout");
 
       // Then
-      verify(mapper).markDeferred(TEST_MESSAGE_ID, TEST_VERSION, 1, nextRetryAt, "NETWORK_ERROR", "Connection timeout");
+      verify(mapper)
+          .markDeferred(
+              TEST_MESSAGE_ID, TEST_VERSION, 1, nextRetryAt, "NETWORK_ERROR", "Connection timeout");
     }
 
     @Test
@@ -361,44 +369,69 @@ class OutboxMessageRepositoryMpImplTest {
     void shouldThrowExceptionWhenMarkDeferredFailsDueToVersionConflict() {
       // Given
       Instant nextRetryAt = TEST_NOW.plusSeconds(60);
-      when(mapper.markDeferred(TEST_MESSAGE_ID, TEST_VERSION, 1, nextRetryAt, "NETWORK_ERROR", "Connection timeout"))
+      when(mapper.markDeferred(
+              TEST_MESSAGE_ID, TEST_VERSION, 1, nextRetryAt, "NETWORK_ERROR", "Connection timeout"))
           .thenReturn(0);
 
       // When & Then
-      assertThatThrownBy(() -> repository.markDeferred(TEST_MESSAGE_ID, TEST_VERSION, 1, nextRetryAt, "NETWORK_ERROR", "Connection timeout"))
+      assertThatThrownBy(
+              () ->
+                  repository.markDeferred(
+                      TEST_MESSAGE_ID,
+                      TEST_VERSION,
+                      1,
+                      nextRetryAt,
+                      "NETWORK_ERROR",
+                      "Connection timeout"))
           .isInstanceOf(OutboxPersistenceException.class)
           .hasMessageContaining("Failed to mark Outbox for retry");
 
-      verify(mapper).markDeferred(TEST_MESSAGE_ID, TEST_VERSION, 1, nextRetryAt, "NETWORK_ERROR", "Connection timeout");
+      verify(mapper)
+          .markDeferred(
+              TEST_MESSAGE_ID, TEST_VERSION, 1, nextRetryAt, "NETWORK_ERROR", "Connection timeout");
     }
 
     @Test
     @DisplayName("应成功标记消息为永久失败")
     void shouldMarkFailedSuccessfully() {
       // Given
-      when(mapper.markFailed(TEST_MESSAGE_ID, TEST_VERSION, 3, "MAX_RETRIES_EXCEEDED", "Exhausted all retries"))
+      when(mapper.markFailed(
+              TEST_MESSAGE_ID, TEST_VERSION, 3, "MAX_RETRIES_EXCEEDED", "Exhausted all retries"))
           .thenReturn(1);
 
       // When
-      repository.markFailed(TEST_MESSAGE_ID, TEST_VERSION, 3, "MAX_RETRIES_EXCEEDED", "Exhausted all retries");
+      repository.markFailed(
+          TEST_MESSAGE_ID, TEST_VERSION, 3, "MAX_RETRIES_EXCEEDED", "Exhausted all retries");
 
       // Then
-      verify(mapper).markFailed(TEST_MESSAGE_ID, TEST_VERSION, 3, "MAX_RETRIES_EXCEEDED", "Exhausted all retries");
+      verify(mapper)
+          .markFailed(
+              TEST_MESSAGE_ID, TEST_VERSION, 3, "MAX_RETRIES_EXCEEDED", "Exhausted all retries");
     }
 
     @Test
     @DisplayName("应在版本冲突时标记失败失败并抛出异常")
     void shouldThrowExceptionWhenMarkFailedFailsDueToVersionConflict() {
       // Given
-      when(mapper.markFailed(TEST_MESSAGE_ID, TEST_VERSION, 3, "MAX_RETRIES_EXCEEDED", "Exhausted all retries"))
+      when(mapper.markFailed(
+              TEST_MESSAGE_ID, TEST_VERSION, 3, "MAX_RETRIES_EXCEEDED", "Exhausted all retries"))
           .thenReturn(0);
 
       // When & Then
-      assertThatThrownBy(() -> repository.markFailed(TEST_MESSAGE_ID, TEST_VERSION, 3, "MAX_RETRIES_EXCEEDED", "Exhausted all retries"))
+      assertThatThrownBy(
+              () ->
+                  repository.markFailed(
+                      TEST_MESSAGE_ID,
+                      TEST_VERSION,
+                      3,
+                      "MAX_RETRIES_EXCEEDED",
+                      "Exhausted all retries"))
           .isInstanceOf(OutboxPersistenceException.class)
           .hasMessageContaining("Failed to mark Outbox as DEAD");
 
-      verify(mapper).markFailed(TEST_MESSAGE_ID, TEST_VERSION, 3, "MAX_RETRIES_EXCEEDED", "Exhausted all retries");
+      verify(mapper)
+          .markFailed(
+              TEST_MESSAGE_ID, TEST_VERSION, 3, "MAX_RETRIES_EXCEEDED", "Exhausted all retries");
     }
   }
 
@@ -434,7 +467,8 @@ class OutboxMessageRepositoryMpImplTest {
     @DisplayName("应在去重键列表为空时返回空列表")
     void shouldReturnEmptyListWhenDedupKeysIsEmpty() {
       // When
-      List<OutboxMessage> result = repository.findByChannelAndDedupIn(TEST_CHANNEL, Collections.emptyList());
+      List<OutboxMessage> result =
+          repository.findByChannelAndDedupIn(TEST_CHANNEL, Collections.emptyList());
 
       // Then
       assertThat(result).isEmpty();

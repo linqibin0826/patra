@@ -314,8 +314,7 @@ public class FileMetadataTestDataBuilder {
    * @return FileMetadata 实例
    */
   public FileMetadata build() {
-    FileMetadata metadata =
-        FileMetadata.create(storageKey, fileSize, checksum, context, provider);
+    FileMetadata metadata = FileMetadata.create(storageKey, fileSize, checksum, context, provider);
 
     // 配置可选字段（如果提供）
     if (contentType != null) {

@@ -50,7 +50,8 @@ class OutboxMessageFailedEventTest {
       String channel = "literature.parsed";
       int retryCount = 5;
       String errorCode = "PAYLOAD_INCOMPATIBLE";
-      String errorMessage = "Message payload format is permanently incompatible with schema version";
+      String errorMessage =
+          "Message payload format is permanently incompatible with schema version";
       Instant occurredAt = Instant.parse("2024-01-15T10:30:00Z");
 
       // When
@@ -772,7 +773,12 @@ class OutboxMessageFailedEventTest {
       // When
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", longErrorMessage, Instant.now());
+              1001L,
+              "literature.parsed",
+              5,
+              "PAYLOAD_INCOMPATIBLE",
+              longErrorMessage,
+              Instant.now());
 
       // Then
       assertThat(event.errorMessage()).contains("This is a very long error message");
@@ -900,7 +906,12 @@ class OutboxMessageFailedEventTest {
       // When
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", unicodeErrorMessage, Instant.now());
+              1001L,
+              "literature.parsed",
+              5,
+              "PAYLOAD_INCOMPATIBLE",
+              unicodeErrorMessage,
+              Instant.now());
 
       // Then
       assertThat(event.errorMessage()).isEqualTo(unicodeErrorMessage);
@@ -1003,9 +1014,7 @@ class OutboxMessageFailedEventTest {
       assertThat(event1.errorCode()).isEqualTo(commonErrorCode);
       assertThat(event2.errorCode()).isEqualTo(commonErrorCode);
       assertThat(event3.errorCode()).isEqualTo(commonErrorCode);
-      assertThat(event1.errorCode())
-          .isEqualTo(event2.errorCode())
-          .isEqualTo(event3.errorCode());
+      assertThat(event1.errorCode()).isEqualTo(event2.errorCode()).isEqualTo(event3.errorCode());
     }
 
     @Test
@@ -1018,30 +1027,15 @@ class OutboxMessageFailedEventTest {
       // When
       OutboxMessageFailedEvent highFailureEvent1 =
           new OutboxMessageFailedEvent(
-              1001L,
-              highFailureChannel,
-              5,
-              "PAYLOAD_INCOMPATIBLE",
-              "Error 1",
-              Instant.now());
+              1001L, highFailureChannel, 5, "PAYLOAD_INCOMPATIBLE", "Error 1", Instant.now());
 
       OutboxMessageFailedEvent highFailureEvent2 =
           new OutboxMessageFailedEvent(
-              1002L,
-              highFailureChannel,
-              5,
-              "NETWORK_TIMEOUT",
-              "Error 2",
-              Instant.now());
+              1002L, highFailureChannel, 5, "NETWORK_TIMEOUT", "Error 2", Instant.now());
 
       OutboxMessageFailedEvent lowFailureEvent =
           new OutboxMessageFailedEvent(
-              2001L,
-              lowFailureChannel,
-              5,
-              "NETWORK_TIMEOUT",
-              "Error 3",
-              Instant.now());
+              2001L, lowFailureChannel, 5, "NETWORK_TIMEOUT", "Error 3", Instant.now());
 
       // Then - 应该可以识别高失败率通道
       assertThat(highFailureEvent1.channel()).isEqualTo(highFailureChannel);
@@ -1125,12 +1119,7 @@ class OutboxMessageFailedEventTest {
       // 临时性错误 - 可能因网络抖动引起
       OutboxMessageFailedEvent transientError =
           new OutboxMessageFailedEvent(
-              1001L,
-              "literature.parsed",
-              5,
-              "NETWORK_TIMEOUT",
-              "Temporary network timeout",
-              now);
+              1001L, "literature.parsed", 5, "NETWORK_TIMEOUT", "Temporary network timeout", now);
 
       // 永久性错误 - 负载格式问题
       OutboxMessageFailedEvent permanentError =

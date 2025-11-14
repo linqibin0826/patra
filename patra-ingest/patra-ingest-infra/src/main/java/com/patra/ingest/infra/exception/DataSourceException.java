@@ -6,10 +6,11 @@ package com.patra.ingest.infra.exception;
  * <p>当Infrastructure层调用Framework层的DataSourceProvider失败时抛出此异常。
  *
  * <p>异常转换链:
+ *
  * <ul>
- *   <li>Framework层: ProvenanceClientException</li>
- *   <li>Infrastructure层: DataSourceException (本类)</li>
- *   <li>Domain层: 无异常定义,由上层决定如何处理</li>
+ *   <li>Framework层: ProvenanceClientException
+ *   <li>Infrastructure层: DataSourceException (本类)
+ *   <li>Domain层: 无异常定义,由上层决定如何处理
  * </ul>
  *
  * @author Patra Architecture Team
@@ -17,11 +18,11 @@ package com.patra.ingest.infra.exception;
  */
 public class DataSourceException extends RuntimeException {
 
-    public DataSourceException(String message) {
-        super(message);
-    }
+  public DataSourceException(String message) {
+    super(message);
+  }
 
-    public DataSourceException(String message, Throwable cause) {
-        super(message, cause);
-    }
+  public DataSourceException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }

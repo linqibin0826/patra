@@ -1,6 +1,5 @@
 package com.patra.ingest.app.eventhandler;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.lenient;
@@ -13,7 +12,6 @@ import com.patra.ingest.domain.model.enums.SliceStatus;
 import com.patra.ingest.domain.port.PlanRepository;
 import com.patra.ingest.domain.port.PlanSliceRepository;
 import com.patra.ingest.domain.service.PlanStatusCalculator;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;

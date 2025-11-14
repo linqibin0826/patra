@@ -1,13 +1,13 @@
 package com.patra.ingest.app.usecase.execution.cursor;
 
-import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.model.DataType;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import com.patra.common.enums.ProvenanceCode;
+import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.entity.Cursor;
 import com.patra.ingest.domain.model.entity.CursorEvent;
 import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
@@ -298,8 +298,7 @@ class CursorAdvancerImplTest {
       WindowSpec windowSpec = new WindowSpec.Time(from, to);
       testContext = createTestContext(windowSpec, "hash-first");
 
-      when(cursorRepository.find(any(), any(), any(), any(), any()))
-          .thenReturn(Optional.empty());
+      when(cursorRepository.find(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
 
       // When
       cursorAdvancer.advance(testContext, testTaskId, testRunId, testBatchId);
@@ -588,8 +587,7 @@ class CursorAdvancerImplTest {
           .thenReturn(Optional.of(existingCursor));
 
       // 模拟非乐观锁异常
-      when(cursorRepository.save(any(Cursor.class)))
-          .thenThrow(new RuntimeException("数据库连接失败"));
+      when(cursorRepository.save(any(Cursor.class))).thenThrow(new RuntimeException("数据库连接失败"));
 
       // When & Then
       assertThatThrownBy(
@@ -634,14 +632,14 @@ class CursorAdvancerImplTest {
       WindowSpec windowSpec = new WindowSpec.Time(from, to);
       testContext = createTestContext(windowSpec, "hash-key");
 
-      when(cursorRepository.find(any(), any(), any(), any(), any()))
-          .thenReturn(Optional.empty());
+      when(cursorRepository.find(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
 
       // When
       cursorAdvancer.advance(testContext, testTaskId, testRunId, testBatchId);
 
       // Then: 验证查询时使用 "TIME" 键
-      verify(cursorRepository).find(eq(ProvenanceCode.PUBMED.getCode()), eq("HARVEST"), eq("TIME"), any(), any());
+      verify(cursorRepository)
+          .find(eq(ProvenanceCode.PUBMED.getCode()), eq("HARVEST"), eq("TIME"), any(), any());
     }
   }
 
@@ -675,8 +673,7 @@ class CursorAdvancerImplTest {
               null,
               windowSpec);
 
-      when(cursorRepository.find(any(), any(), any(), any(), any()))
-          .thenReturn(Optional.empty());
+      when(cursorRepository.find(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
 
       // When
       cursorAdvancer.advance(backfillContext, testTaskId, testRunId, testBatchId);
@@ -699,8 +696,7 @@ class CursorAdvancerImplTest {
       WindowSpec windowSpec = new WindowSpec.Time(from, to);
       testContext = createTestContext(windowSpec, "hash-forward");
 
-      when(cursorRepository.find(any(), any(), any(), any(), any()))
-          .thenReturn(Optional.empty());
+      when(cursorRepository.find(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
 
       // When
       cursorAdvancer.advance(testContext, testTaskId, testRunId, testBatchId);
@@ -728,8 +724,7 @@ class CursorAdvancerImplTest {
       WindowSpec windowSpec = new WindowSpec.Time(from, to);
       testContext = createTestContext(windowSpec, "hash-idem");
 
-      when(cursorRepository.find(any(), any(), any(), any(), any()))
-          .thenReturn(Optional.empty());
+      when(cursorRepository.find(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
 
       // When: 执行两次相同的推进
       cursorAdvancer.advance(testContext, testTaskId, testRunId, testBatchId);
@@ -759,8 +754,7 @@ class CursorAdvancerImplTest {
       WindowSpec windowSpec = new WindowSpec.Time(from, to);
       testContext = createTestContext(windowSpec, "hash-diff");
 
-      when(cursorRepository.find(any(), any(), any(), any(), any()))
-          .thenReturn(Optional.empty());
+      when(cursorRepository.find(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
 
       // When: 使用不同的 runId
       cursorAdvancer.advance(testContext, testTaskId, testRunId, testBatchId);
@@ -795,8 +789,7 @@ class CursorAdvancerImplTest {
       WindowSpec windowSpec = new WindowSpec.Time(sameTime, sameTime);
       testContext = createTestContext(windowSpec, "hash-same");
 
-      when(cursorRepository.find(any(), any(), any(), any(), any()))
-          .thenReturn(Optional.empty());
+      when(cursorRepository.find(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
 
       // When
       boolean result = cursorAdvancer.advance(testContext, testTaskId, testRunId, testBatchId);
@@ -817,8 +810,7 @@ class CursorAdvancerImplTest {
       WindowSpec windowSpec = new WindowSpec.Time(from, to);
       testContext = createTestContext(windowSpec, null);
 
-      when(cursorRepository.find(any(), any(), any(), any(), any()))
-          .thenReturn(Optional.empty());
+      when(cursorRepository.find(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
 
       // When
       boolean result = cursorAdvancer.advance(testContext, testTaskId, testRunId, testBatchId);
@@ -858,8 +850,7 @@ class CursorAdvancerImplTest {
               null,
               windowSpec);
 
-      when(cursorRepository.find(any(), any(), any(), any(), any()))
-          .thenReturn(Optional.empty());
+      when(cursorRepository.find(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
 
       // When
       boolean result =

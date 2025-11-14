@@ -1,7 +1,6 @@
 package com.patra.ingest.domain.model.vo.relay;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.tuple;
 
 import com.patra.ingest.domain.event.OutboxLeaseMissedEvent;
 import com.patra.ingest.domain.event.OutboxMessageFailedEvent;
@@ -45,8 +44,7 @@ class RelayBatchResultTest {
       // When
       var result =
           new RelayBatchResult(
-              channel,
-              10, // fetched
+              channel, 10, // fetched
               8, // published
               1, // retried
               1, // failed
@@ -128,10 +126,7 @@ class RelayBatchResultTest {
       var result = new RelayBatchResult(channel, 3, 3, 0, 0, 0, events);
 
       // When & Then
-      assertThat(result.events())
-          .as("返回的 events 列表应该是不可修改的")
-          .isUnmodifiable()
-          .hasSize(3);
+      assertThat(result.events()).as("返回的 events 列表应该是不可修改的").isUnmodifiable().hasSize(3);
     }
   }
 
@@ -220,8 +215,7 @@ class RelayBatchResultTest {
     void eventsShouldReturnDomainEventsList() {
       // Given
       var events = createSampleEvents();
-      var result =
-          new RelayBatchResult(IngestPublishingChannels.TASK_READY, 3, 3, 0, 0, 0, events);
+      var result = new RelayBatchResult(IngestPublishingChannels.TASK_READY, 3, 3, 0, 0, 0, events);
 
       // When
       var actualEvents = result.events();
@@ -231,9 +225,7 @@ class RelayBatchResultTest {
           .hasSize(3)
           .extracting("class.simpleName")
           .containsExactly(
-              "OutboxMessagePublishedEvent",
-              "OutboxMessageFailedEvent",
-              "OutboxLeaseMissedEvent");
+              "OutboxMessagePublishedEvent", "OutboxMessageFailedEvent", "OutboxLeaseMissedEvent");
     }
 
     @Test
@@ -247,20 +239,16 @@ class RelayBatchResultTest {
               new OutboxMessagePublishedEvent(2L, "INGEST_TASK_READY", "key-2", now),
               new OutboxMessageFailedEvent(
                   3L, "INGEST_TASK_READY", 3, "PUBLISH_ERROR", "Failed to publish", now),
-              new OutboxLeaseMissedEvent(
-                  4L, "INGEST_TASK_READY", "relay-1", "relay-2", now));
+              new OutboxLeaseMissedEvent(4L, "INGEST_TASK_READY", "relay-1", "relay-2", now));
 
-      var result =
-          new RelayBatchResult(IngestPublishingChannels.TASK_READY, 4, 2, 0, 1, 1, events);
+      var result = new RelayBatchResult(IngestPublishingChannels.TASK_READY, 4, 2, 0, 1, 1, events);
 
       // When
       var actualEvents = result.events();
 
       // Then
       assertThat(actualEvents).hasSize(4);
-      assertThat(actualEvents)
-          .filteredOn(e -> e instanceof OutboxMessagePublishedEvent)
-          .hasSize(2);
+      assertThat(actualEvents).filteredOn(e -> e instanceof OutboxMessagePublishedEvent).hasSize(2);
       assertThat(actualEvents).filteredOn(e -> e instanceof OutboxMessageFailedEvent).hasSize(1);
       assertThat(actualEvents).filteredOn(e -> e instanceof OutboxLeaseMissedEvent).hasSize(1);
     }
@@ -502,12 +490,9 @@ class RelayBatchResultTest {
       var channel = IngestPublishingChannels.TASK_READY;
       var publishedEvents =
           List.<OutboxRelayDomainEvent>of(
-              new OutboxMessagePublishedEvent(
-                  1L, "INGEST_TASK_READY", "key-1", Instant.now()),
-              new OutboxMessagePublishedEvent(
-                  2L, "INGEST_TASK_READY", "key-2", Instant.now()),
-              new OutboxMessagePublishedEvent(
-                  3L, "INGEST_TASK_READY", "key-3", Instant.now()));
+              new OutboxMessagePublishedEvent(1L, "INGEST_TASK_READY", "key-1", Instant.now()),
+              new OutboxMessagePublishedEvent(2L, "INGEST_TASK_READY", "key-2", Instant.now()),
+              new OutboxMessagePublishedEvent(3L, "INGEST_TASK_READY", "key-3", Instant.now()));
 
       // When
       var result = new RelayBatchResult(channel, 3, 3, 0, 0, 0, publishedEvents);
@@ -518,7 +503,9 @@ class RelayBatchResultTest {
       assertThat(result.retried()).isZero();
       assertThat(result.failed()).isZero();
       assertThat(result.leaseMissed()).isZero();
-      assertThat(result.events()).hasSize(3).allMatch(e -> e instanceof OutboxMessagePublishedEvent);
+      assertThat(result.events())
+          .hasSize(3)
+          .allMatch(e -> e instanceof OutboxMessagePublishedEvent);
     }
 
     @Test
@@ -547,12 +534,8 @@ class RelayBatchResultTest {
       assertThat(result.events())
           .filteredOn(e -> e instanceof OutboxMessagePublishedEvent)
           .hasSize(2);
-      assertThat(result.events())
-          .filteredOn(e -> e instanceof OutboxMessageFailedEvent)
-          .hasSize(1);
-      assertThat(result.events())
-          .filteredOn(e -> e instanceof OutboxLeaseMissedEvent)
-          .hasSize(1);
+      assertThat(result.events()).filteredOn(e -> e instanceof OutboxMessageFailedEvent).hasSize(1);
+      assertThat(result.events()).filteredOn(e -> e instanceof OutboxLeaseMissedEvent).hasSize(1);
     }
 
     @Test
@@ -713,8 +696,7 @@ class RelayBatchResultTest {
     void shouldHandleSingleEventList() {
       // Given
       var channel = IngestPublishingChannels.TASK_READY;
-      var event =
-          new OutboxMessagePublishedEvent(1L, "INGEST_TASK_READY", "key-1", Instant.now());
+      var event = new OutboxMessagePublishedEvent(1L, "INGEST_TASK_READY", "key-1", Instant.now());
 
       // When
       var result = new RelayBatchResult(channel, 1, 1, 0, 0, 0, List.of(event));
@@ -730,8 +712,7 @@ class RelayBatchResultTest {
       var channel = IngestPublishingChannels.TASK_READY;
       var events =
           List.<OutboxRelayDomainEvent>of(
-              new OutboxMessagePublishedEvent(
-                  1L, "INGEST_TASK_READY", "key-1", Instant.now()));
+              new OutboxMessagePublishedEvent(1L, "INGEST_TASK_READY", "key-1", Instant.now()));
 
       // When - fetched 为 10 但 events 只有 1 个
       var result = new RelayBatchResult(channel, 10, 8, 1, 1, 2, events);

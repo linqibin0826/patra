@@ -88,11 +88,7 @@ class PlanPersistenceExceptionTest {
       // Then
       assertThat(stages)
           .containsExactlyInAnyOrder(
-              Stage.SCHEDULE_INSTANCE,
-              Stage.PLAN,
-              Stage.PLAN_SLICE,
-              Stage.TASK,
-              Stage.TASK_RETRY);
+              Stage.SCHEDULE_INSTANCE, Stage.PLAN, Stage.PLAN_SLICE, Stage.TASK, Stage.TASK_RETRY);
     }
 
     @Test
@@ -101,8 +97,7 @@ class PlanPersistenceExceptionTest {
       // Given & When & Then
       assertThat(new PlanPersistenceException(Stage.SCHEDULE_INSTANCE, "msg").getStage())
           .isEqualTo(Stage.SCHEDULE_INSTANCE);
-      assertThat(new PlanPersistenceException(Stage.PLAN, "msg").getStage())
-          .isEqualTo(Stage.PLAN);
+      assertThat(new PlanPersistenceException(Stage.PLAN, "msg").getStage()).isEqualTo(Stage.PLAN);
       assertThat(new PlanPersistenceException(Stage.PLAN_SLICE, "msg").getStage())
           .isEqualTo(Stage.PLAN_SLICE);
       assertThat(new PlanPersistenceException(Stage.TASK, "msg").getStage()).isEqualTo(Stage.TASK);
@@ -119,8 +114,7 @@ class PlanPersistenceExceptionTest {
     @DisplayName("应该包含 DEP_UNAVAILABLE 错误特征")
     void shouldContainDepUnavailableErrorTrait() {
       // Given
-      PlanPersistenceException exception =
-          new PlanPersistenceException(Stage.PLAN, "持久化失败");
+      PlanPersistenceException exception = new PlanPersistenceException(Stage.PLAN, "持久化失败");
 
       // When
       Set<ErrorTrait> traits = exception.getErrorTraits();
@@ -138,8 +132,7 @@ class PlanPersistenceExceptionTest {
     @DisplayName("应该继承自 IngestException")
     void shouldExtendIngestException() {
       // Given
-      PlanPersistenceException exception =
-          new PlanPersistenceException(Stage.PLAN, "持久化失败");
+      PlanPersistenceException exception = new PlanPersistenceException(Stage.PLAN, "持久化失败");
 
       // When & Then
       assertThat(exception).isInstanceOf(IngestException.class);
@@ -149,12 +142,10 @@ class PlanPersistenceExceptionTest {
     @DisplayName("应该实现 HasErrorTraits 接口")
     void shouldImplementHasErrorTraits() {
       // Given
-      PlanPersistenceException exception =
-          new PlanPersistenceException(Stage.PLAN, "持久化失败");
+      PlanPersistenceException exception = new PlanPersistenceException(Stage.PLAN, "持久化失败");
 
       // When & Then
-      assertThat(exception)
-          .isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
+      assertThat(exception).isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
     }
   }
 }

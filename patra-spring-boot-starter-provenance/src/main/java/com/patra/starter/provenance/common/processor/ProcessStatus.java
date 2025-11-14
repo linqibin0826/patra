@@ -10,23 +10,15 @@ package com.patra.starter.provenance.common.processor;
  */
 public enum ProcessStatus {
 
-    /**
-     * 成功 - 所有数据处理成功
-     */
-    SUCCESS,
+  /** 成功 - 所有数据处理成功 */
+  SUCCESS,
 
-    /**
-     * 部分成功 - 部分数据处理成功，部分失败
-     */
-    PARTIAL_SUCCESS,
+  /** 部分成功 - 部分数据处理成功，部分失败 */
+  PARTIAL_SUCCESS,
 
-    /**
-     * 失败 - 处理失败（如网络错误、API错误等）
-     */
-    FAILED,
+  /** 失败 - 处理失败（如网络错误、API错误等） */
+  FAILED,
 
-    /**
-     * 验证错误 - 数据验证失败
-     */
-    VALIDATION_ERROR
+  /** 验证错误 - 数据验证失败 */
+  VALIDATION_ERROR
 }

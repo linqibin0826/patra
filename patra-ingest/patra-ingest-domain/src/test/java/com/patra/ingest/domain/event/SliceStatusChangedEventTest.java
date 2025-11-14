@@ -82,10 +82,7 @@ class SliceStatusChangedEventTest {
 
       // Then
       Instant after = Instant.now();
-      assertThat(event.occurredAt())
-          .isNotNull()
-          .isAfterOrEqualTo(before)
-          .isBeforeOrEqualTo(after);
+      assertThat(event.occurredAt()).isNotNull().isAfterOrEqualTo(before).isBeforeOrEqualTo(after);
     }
 
     @Test
@@ -144,19 +141,18 @@ class SliceStatusChangedEventTest {
       assertThat(event.planId()).isEqualTo(planId);
       assertThat(event.oldStatus()).isEqualTo(oldStatus);
       assertThat(event.newStatus()).isEqualTo(newStatus);
-      assertThat(event.occurredAt())
-          .isNotNull()
-          .isAfterOrEqualTo(before)
-          .isBeforeOrEqualTo(after);
+      assertThat(event.occurredAt()).isNotNull().isAfterOrEqualTo(before).isBeforeOrEqualTo(after);
     }
 
     @Test
     @DisplayName("应该为不同事件生成不同的时间戳")
     void shouldGenerateDifferentTimestampsForDifferentEvents() throws InterruptedException {
       // Given & When
-      SliceStatusChangedEvent event1 = SliceStatusChangedEvent.of(1001L, 2001L, "PENDING", "EXECUTING");
+      SliceStatusChangedEvent event1 =
+          SliceStatusChangedEvent.of(1001L, 2001L, "PENDING", "EXECUTING");
       Thread.sleep(10); // 确保时间戳不同
-      SliceStatusChangedEvent event2 = SliceStatusChangedEvent.of(1002L, 2001L, "EXECUTING", "SUCCEEDED");
+      SliceStatusChangedEvent event2 =
+          SliceStatusChangedEvent.of(1002L, 2001L, "EXECUTING", "SUCCEEDED");
 
       // Then
       assertThat(event1.occurredAt()).isNotEqualTo(event2.occurredAt());
@@ -170,7 +166,8 @@ class SliceStatusChangedEventTest {
       String oldStatus = null;
 
       // When
-      SliceStatusChangedEvent event = SliceStatusChangedEvent.of(1001L, 2001L, oldStatus, "EXECUTING");
+      SliceStatusChangedEvent event =
+          SliceStatusChangedEvent.of(1001L, 2001L, oldStatus, "EXECUTING");
 
       // Then
       assertThat(event.oldStatus()).isNull();

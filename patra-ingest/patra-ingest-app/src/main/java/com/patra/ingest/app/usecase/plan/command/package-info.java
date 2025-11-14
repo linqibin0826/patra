@@ -4,6 +4,7 @@
  * <p>本包定义 Plan 摄入用例的输入命令对象。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>封装 Plan 摄入用例的输入参数
  *   <li>提供输入验证（使用 JSR-303 注解）
@@ -11,6 +12,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code PlanIngestionCommand} - Plan 摄入命令
  *       <ul>
@@ -24,6 +26,7 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * var command = PlanIngestionCommand.builder()
  *     .provenanceCode("pubmed")

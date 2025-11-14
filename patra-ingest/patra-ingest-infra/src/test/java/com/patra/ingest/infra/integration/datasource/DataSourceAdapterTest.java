@@ -4,16 +4,13 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.infra.integration.datasource.acl.PlanMetadataTranslator;
 import com.patra.ingest.infra.registry.ProviderRegistry;
 import com.patra.starter.provenance.common.config.*;
-import com.patra.common.enums.ProvenanceCode;
 import java.lang.reflect.Method;
 import java.time.Instant;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -144,8 +141,7 @@ class DataSourceAdapterTest {
               60000);
 
       ProvenanceConfigSnapshot.RateLimitConfig rateLimit =
-          new ProvenanceConfigSnapshot.RateLimitConfig(
-              60L, 1L, "FETCH_METADATA", now, null, 10, 3);
+          new ProvenanceConfigSnapshot.RateLimitConfig(60L, 1L, "FETCH_METADATA", now, null, 10, 3);
 
       ProvenanceConfigSnapshot snapshot =
           new ProvenanceConfigSnapshot(
@@ -202,14 +198,7 @@ class DataSourceAdapterTest {
       // Given: 创建只包含基础信息的快照
       ProvenanceConfigSnapshot.ProvenanceInfo provenanceInfo =
           new ProvenanceConfigSnapshot.ProvenanceInfo(
-              1L,
-              "CROSSREF",
-              "CrossRef",
-              "https://api.crossref.org",
-              "UTC",
-              null,
-              true,
-              "ACTIVE");
+              1L, "CROSSREF", "CrossRef", "https://api.crossref.org", "UTC", null, true, "ACTIVE");
 
       ProvenanceConfigSnapshot snapshot =
           new ProvenanceConfigSnapshot(provenanceInfo, null, null, null, null, null, null);
@@ -319,8 +308,21 @@ class DataSourceAdapterTest {
       // Given
       ProvenanceConfigSnapshot.HttpConfig http =
           new ProvenanceConfigSnapshot.HttpConfig(
-              1L, 1L, null, Instant.now(), null, null, 5000, 30000, 60000, true, null, "RESPECT",
-              300000, "Idempotency-Key", 3600);
+              1L,
+              1L,
+              null,
+              Instant.now(),
+              null,
+              null,
+              5000,
+              30000,
+              60000,
+              true,
+              null,
+              "RESPECT",
+              300000,
+              "Idempotency-Key",
+              3600);
 
       ProvenanceConfigSnapshot.ProvenanceInfo provenanceInfo =
           new ProvenanceConfigSnapshot.ProvenanceInfo(
@@ -346,8 +348,21 @@ class DataSourceAdapterTest {
       // Given
       ProvenanceConfigSnapshot.HttpConfig http =
           new ProvenanceConfigSnapshot.HttpConfig(
-              1L, 1L, null, Instant.now(), null, "  ", 5000, 30000, 60000, true, null, "RESPECT",
-              300000, "Idempotency-Key", 3600);
+              1L,
+              1L,
+              null,
+              Instant.now(),
+              null,
+              "  ",
+              5000,
+              30000,
+              60000,
+              true,
+              null,
+              "RESPECT",
+              300000,
+              "Idempotency-Key",
+              3600);
 
       ProvenanceConfigSnapshot.ProvenanceInfo provenanceInfo =
           new ProvenanceConfigSnapshot.ProvenanceInfo(
@@ -410,13 +425,12 @@ class DataSourceAdapterTest {
 
   // ========== 辅助方法 ==========
 
-  /**
-   * 使用反射调用私有方法 convertToProvenanceConfig
-   */
+  /** 使用反射调用私有方法 convertToProvenanceConfig */
   private ProvenanceConfig invokeConvertToProvenanceConfig(ExecutionContext context)
       throws Exception {
     Method method =
-        DataSourceAdapter.class.getDeclaredMethod("convertToProvenanceConfig", ExecutionContext.class);
+        DataSourceAdapter.class.getDeclaredMethod(
+            "convertToProvenanceConfig", ExecutionContext.class);
     method.setAccessible(true);
     return (ProvenanceConfig) method.invoke(adapter, context);
   }

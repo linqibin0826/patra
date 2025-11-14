@@ -158,7 +158,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
       verify(batchRepository, times(3)).save(any(TaskRunBatch.class));
 
       // 验证心跳更新 3 次
-      verify(taskRunRepository, times(3)).touchHeartbeat(eq(mockSession.runId()), any(Instant.class));
+      verify(taskRunRepository, times(3))
+          .touchHeartbeat(eq(mockSession.runId()), any(Instant.class));
     }
   }
 
@@ -179,10 +180,11 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(mockPlanner.plan(mockContext)).thenReturn(plan);
 
       // Mock 批次执行：第二个批次抛出异常
-      when(batchExecutor.execute(mockContext, batch1)).thenReturn(BatchResult.success(1, 50, null, null));
-      when(batchExecutor.execute(mockContext, batch2))
-          .thenThrow(new RuntimeException("API 超时"));
-      when(batchExecutor.execute(mockContext, batch3)).thenReturn(BatchResult.success(3, 70, null, null));
+      when(batchExecutor.execute(mockContext, batch1))
+          .thenReturn(BatchResult.success(1, 50, null, null));
+      when(batchExecutor.execute(mockContext, batch2)).thenThrow(new RuntimeException("API 超时"));
+      when(batchExecutor.execute(mockContext, batch3))
+          .thenReturn(BatchResult.success(3, 70, null, null));
 
       when(taskRunRepository.touchHeartbeat(anyLong(), any(Instant.class))).thenReturn(true);
 
@@ -245,8 +247,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(mockPlanner.plan(mockContext)).thenReturn(plan);
 
       // Mock 批次执行：第一个批次失败
-      when(batchExecutor.execute(mockContext, batch1))
-          .thenThrow(new RuntimeException("第一批次失败"));
+      when(batchExecutor.execute(mockContext, batch1)).thenThrow(new RuntimeException("第一批次失败"));
 
       when(taskRunRepository.touchHeartbeat(anyLong(), any(Instant.class))).thenReturn(true);
 
@@ -336,7 +337,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(mockSession.heartbeatHandle()).thenReturn(mockHeartbeatHandle);
 
       // Mock 批次执行器
-      when(batchExecutor.execute(mockContext, batch1)).thenReturn(BatchResult.success(1, 50, null, null));
+      when(batchExecutor.execute(mockContext, batch1))
+          .thenReturn(BatchResult.success(1, 50, null, null));
 
       when(taskRunRepository.touchHeartbeat(anyLong(), any(Instant.class))).thenReturn(true);
 
@@ -401,7 +403,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
       BatchPlan plan = createBatchPlan(List.of(batch1));
       when(mockPlanner.plan(mockContext)).thenReturn(plan);
 
-      when(batchExecutor.execute(mockContext, batch1)).thenReturn(BatchResult.success(1, 100, null, null));
+      when(batchExecutor.execute(mockContext, batch1))
+          .thenReturn(BatchResult.success(1, 100, null, null));
       when(taskRunRepository.touchHeartbeat(eq(mockSession.runId()), any(Instant.class)))
           .thenReturn(true);
 
@@ -426,7 +429,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
       BatchPlan plan = createBatchPlan(List.of(batch1));
       when(mockPlanner.plan(mockContext)).thenReturn(plan);
 
-      when(batchExecutor.execute(mockContext, batch1)).thenReturn(BatchResult.success(1, 100, null, null));
+      when(batchExecutor.execute(mockContext, batch1))
+          .thenReturn(BatchResult.success(1, 100, null, null));
       when(taskRunRepository.touchHeartbeat(anyLong(), any(Instant.class)))
           .thenThrow(new RuntimeException("数据库连接失败"));
 
@@ -488,9 +492,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
     void shouldSupportMixedSuccessAndFailure() {
       // Given: 创建 5 个批次，奇数成功，偶数失败
       List<Batch> batches =
-          java.util.stream.IntStream.rangeClosed(1, 5)
-              .mapToObj(i -> createBatch(i, 5))
-              .toList();
+          java.util.stream.IntStream.rangeClosed(1, 5).mapToObj(i -> createBatch(i, 5)).toList();
       BatchPlan plan = createBatchPlan(batches);
       when(mockPlanner.plan(mockContext)).thenReturn(plan);
 
@@ -539,7 +541,6 @@ class ExecuteTaskBatchesUseCaseImplTest {
     when(context.operationCode()).thenReturn("harvest");
     return context;
   }
-
 
   private Batch createBatch(int batchNo, int totalBatches) {
     Batch batch = mock(Batch.class, "batch" + batchNo);

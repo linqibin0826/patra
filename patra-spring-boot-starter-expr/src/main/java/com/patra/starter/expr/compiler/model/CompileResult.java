@@ -1,7 +1,6 @@
 package com.patra.starter.expr.compiler.model;
 
 import com.patra.expr.Expr;
-import com.patra.starter.expr.compiler.model.ValidationReport;
 import java.util.Map;
 import java.util.Objects;
 
@@ -29,8 +28,7 @@ public record CompileResult(
   public CompileResult {
     query = query == null ? "" : query;
     params = params == null ? Map.of() : Map.copyOf(params);
-    report =
-        report == null ? ValidationReport.empty() : report;
+    report = report == null ? ValidationReport.empty() : report;
     Objects.requireNonNull(snapshot, "snapshot");
   }
 }

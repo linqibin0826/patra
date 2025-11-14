@@ -1,23 +1,23 @@
 package com.patra.ingest.domain.event;
 
-import com.patra.common.domain.DomainEvent;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.common.domain.DomainEvent;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.time.Instant;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 /**
  * OutboxRelayDomainEvent 接口契约测试。
  *
  * <p>测试策略：
+ *
  * <ul>
  *   <li>接口继承关系验证（DomainEvent、Serializable）
  *   <li>使用真实实现类测试接口契约
@@ -64,9 +64,7 @@ class OutboxRelayDomainEventTest {
       Class<OutboxRelayDomainEvent> eventInterface = OutboxRelayDomainEvent.class;
 
       // When & Then
-      assertThat(eventInterface.isInterface())
-          .as("OutboxRelayDomainEvent 应该是接口")
-          .isTrue();
+      assertThat(eventInterface.isInterface()).as("OutboxRelayDomainEvent 应该是接口").isTrue();
     }
   }
 
@@ -84,9 +82,7 @@ class OutboxRelayDomainEventTest {
       var method = eventInterface.getMethod("occurredAt");
 
       // Then
-      assertThat(method)
-          .as("应该继承 occurredAt() 方法")
-          .isNotNull();
+      assertThat(method).as("应该继承 occurredAt() 方法").isNotNull();
       assertThat(method.getReturnType())
           .as("occurredAt() 返回类型应该是 Instant")
           .isEqualTo(Instant.class);
@@ -102,9 +98,7 @@ class OutboxRelayDomainEventTest {
       var method = eventInterface.getMethod("occurredAt");
 
       // Then
-      assertThat(method.getParameterCount())
-          .as("occurredAt() 方法不应有参数")
-          .isZero();
+      assertThat(method.getParameterCount()).as("occurredAt() 方法不应有参数").isZero();
     }
   }
 
@@ -116,12 +110,9 @@ class OutboxRelayDomainEventTest {
     @DisplayName("OutboxMessagePublishedEvent 应该实现 OutboxRelayDomainEvent 接口")
     void publishedEventShouldImplementInterface() {
       // Given
-      var event = new OutboxMessagePublishedEvent(
-          1L,
-          "literature.ingested",
-          "partition-key-1",
-          Instant.now()
-      );
+      var event =
+          new OutboxMessagePublishedEvent(
+              1L, "literature.ingested", "partition-key-1", Instant.now());
 
       // When & Then
       assertThat(event)
@@ -137,32 +128,24 @@ class OutboxRelayDomainEventTest {
     void shouldCorrectlyImplementOccurredAt() {
       // Given
       Instant expectedTime = Instant.parse("2025-01-15T10:30:00Z");
-      var event = new OutboxMessagePublishedEvent(
-          1L,
-          "literature.ingested",
-          "partition-key-1",
-          expectedTime
-      );
+      var event =
+          new OutboxMessagePublishedEvent(
+              1L, "literature.ingested", "partition-key-1", expectedTime);
 
       // When
       Instant actualTime = event.occurredAt();
 
       // Then
-      assertThat(actualTime)
-          .as("occurredAt() 应该返回构造时传入的时间戳")
-          .isEqualTo(expectedTime);
+      assertThat(actualTime).as("occurredAt() 应该返回构造时传入的时间戳").isEqualTo(expectedTime);
     }
 
     @Test
     @DisplayName("应该是不可变的 record 类型")
     void shouldBeImmutableRecord() {
       // Given
-      var event = new OutboxMessagePublishedEvent(
-          1L,
-          "literature.ingested",
-          "partition-key-1",
-          Instant.now()
-      );
+      var event =
+          new OutboxMessagePublishedEvent(
+              1L, "literature.ingested", "partition-key-1", Instant.now());
 
       // When & Then
       assertThat(event.getClass().isRecord())
@@ -175,26 +158,14 @@ class OutboxRelayDomainEventTest {
     void eventsWithSameContentShouldBeEqual() {
       // Given
       Instant occurredAt = Instant.parse("2025-01-15T10:30:00Z");
-      var event1 = new OutboxMessagePublishedEvent(
-          1L,
-          "literature.ingested",
-          "partition-key-1",
-          occurredAt
-      );
-      var event2 = new OutboxMessagePublishedEvent(
-          1L,
-          "literature.ingested",
-          "partition-key-1",
-          occurredAt
-      );
+      var event1 =
+          new OutboxMessagePublishedEvent(1L, "literature.ingested", "partition-key-1", occurredAt);
+      var event2 =
+          new OutboxMessagePublishedEvent(1L, "literature.ingested", "partition-key-1", occurredAt);
 
       // When & Then
-      assertThat(event1)
-          .as("相同内容的事件应该相等")
-          .isEqualTo(event2);
-      assertThat(event1.hashCode())
-          .as("相同内容的事件应该有相同的 hashCode")
-          .isEqualTo(event2.hashCode());
+      assertThat(event1).as("相同内容的事件应该相等").isEqualTo(event2);
+      assertThat(event1.hashCode()).as("相同内容的事件应该有相同的 hashCode").isEqualTo(event2.hashCode());
     }
   }
 
@@ -206,14 +177,14 @@ class OutboxRelayDomainEventTest {
     @DisplayName("OutboxMessageFailedEvent 应该实现 OutboxRelayDomainEvent 接口")
     void failedEventShouldImplementInterface() {
       // Given
-      var event = new OutboxMessageFailedEvent(
-          1L,
-          "literature.ingested",
-          3,
-          "DELIVERY_FAILED",
-          "Failed to deliver message after 3 retries",
-          Instant.now()
-      );
+      var event =
+          new OutboxMessageFailedEvent(
+              1L,
+              "literature.ingested",
+              3,
+              "DELIVERY_FAILED",
+              "Failed to deliver message after 3 retries",
+              Instant.now());
 
       // When & Then
       assertThat(event)
@@ -229,22 +200,20 @@ class OutboxRelayDomainEventTest {
     void shouldCorrectlyImplementOccurredAt() {
       // Given
       Instant expectedTime = Instant.parse("2025-01-15T10:35:00Z");
-      var event = new OutboxMessageFailedEvent(
-          1L,
-          "literature.ingested",
-          3,
-          "DELIVERY_FAILED",
-          "Failed to deliver message after 3 retries",
-          expectedTime
-      );
+      var event =
+          new OutboxMessageFailedEvent(
+              1L,
+              "literature.ingested",
+              3,
+              "DELIVERY_FAILED",
+              "Failed to deliver message after 3 retries",
+              expectedTime);
 
       // When
       Instant actualTime = event.occurredAt();
 
       // Then
-      assertThat(actualTime)
-          .as("occurredAt() 应该返回构造时传入的时间戳")
-          .isEqualTo(expectedTime);
+      assertThat(actualTime).as("occurredAt() 应该返回构造时传入的时间戳").isEqualTo(expectedTime);
     }
   }
 
@@ -256,13 +225,9 @@ class OutboxRelayDomainEventTest {
     @DisplayName("OutboxLeaseMissedEvent 应该实现 OutboxRelayDomainEvent 接口")
     void leaseMissedEventShouldImplementInterface() {
       // Given
-      var event = new OutboxLeaseMissedEvent(
-          1L,
-          "literature.ingested",
-          "relay-instance-1",
-          "relay-instance-2",
-          Instant.now()
-      );
+      var event =
+          new OutboxLeaseMissedEvent(
+              1L, "literature.ingested", "relay-instance-1", "relay-instance-2", Instant.now());
 
       // When & Then
       assertThat(event)
@@ -278,21 +243,15 @@ class OutboxRelayDomainEventTest {
     void shouldCorrectlyImplementOccurredAt() {
       // Given
       Instant expectedTime = Instant.parse("2025-01-15T10:40:00Z");
-      var event = new OutboxLeaseMissedEvent(
-          1L,
-          "literature.ingested",
-          "relay-instance-1",
-          "relay-instance-2",
-          expectedTime
-      );
+      var event =
+          new OutboxLeaseMissedEvent(
+              1L, "literature.ingested", "relay-instance-1", "relay-instance-2", expectedTime);
 
       // When
       Instant actualTime = event.occurredAt();
 
       // Then
-      assertThat(actualTime)
-          .as("occurredAt() 应该返回构造时传入的时间戳")
-          .isEqualTo(expectedTime);
+      assertThat(actualTime).as("occurredAt() 应该返回构造时传入的时间戳").isEqualTo(expectedTime);
     }
   }
 
@@ -305,15 +264,12 @@ class OutboxRelayDomainEventTest {
     void shouldSupportPolymorphismAsOutboxRelayDomainEvent() {
       // Given
       Instant occurredAt = Instant.parse("2025-01-15T11:00:00Z");
-      OutboxRelayDomainEvent event1 = new OutboxMessagePublishedEvent(
-          1L, "channel-1", "key-1", occurredAt
-      );
-      OutboxRelayDomainEvent event2 = new OutboxMessageFailedEvent(
-          2L, "channel-2", 3, "ERROR", "error msg", occurredAt
-      );
-      OutboxRelayDomainEvent event3 = new OutboxLeaseMissedEvent(
-          3L, "channel-3", "owner-1", "owner-2", occurredAt
-      );
+      OutboxRelayDomainEvent event1 =
+          new OutboxMessagePublishedEvent(1L, "channel-1", "key-1", occurredAt);
+      OutboxRelayDomainEvent event2 =
+          new OutboxMessageFailedEvent(2L, "channel-2", 3, "ERROR", "error msg", occurredAt);
+      OutboxRelayDomainEvent event3 =
+          new OutboxLeaseMissedEvent(3L, "channel-3", "owner-1", "owner-2", occurredAt);
 
       // When & Then
       assertThat(event1.occurredAt())
@@ -332,12 +288,9 @@ class OutboxRelayDomainEventTest {
     void shouldSupportPolymorphismAsDomainEvent() {
       // Given
       Instant occurredAt = Instant.parse("2025-01-15T11:05:00Z");
-      DomainEvent event1 = new OutboxMessagePublishedEvent(
-          1L, "channel-1", "key-1", occurredAt
-      );
-      DomainEvent event2 = new OutboxMessageFailedEvent(
-          2L, "channel-2", 3, "ERROR", "error msg", occurredAt
-      );
+      DomainEvent event1 = new OutboxMessagePublishedEvent(1L, "channel-1", "key-1", occurredAt);
+      DomainEvent event2 =
+          new OutboxMessageFailedEvent(2L, "channel-2", 3, "ERROR", "error msg", occurredAt);
 
       // When & Then
       assertThat(event1)
@@ -353,21 +306,17 @@ class OutboxRelayDomainEventTest {
     void shouldHandleDifferentImplementationsInCollection() {
       // Given
       Instant occurredAt = Instant.parse("2025-01-15T11:10:00Z");
-      var events = java.util.List.of(
-          new OutboxMessagePublishedEvent(1L, "channel-1", "key-1", occurredAt),
-          new OutboxMessageFailedEvent(2L, "channel-2", 3, "ERROR", "error msg", occurredAt),
-          new OutboxLeaseMissedEvent(3L, "channel-3", "owner-1", "owner-2", occurredAt)
-      );
+      var events =
+          java.util.List.of(
+              new OutboxMessagePublishedEvent(1L, "channel-1", "key-1", occurredAt),
+              new OutboxMessageFailedEvent(2L, "channel-2", 3, "ERROR", "error msg", occurredAt),
+              new OutboxLeaseMissedEvent(3L, "channel-3", "owner-1", "owner-2", occurredAt));
 
       // When
-      long eventCount = events.stream()
-          .filter(e -> e.occurredAt().equals(occurredAt))
-          .count();
+      long eventCount = events.stream().filter(e -> e.occurredAt().equals(occurredAt)).count();
 
       // Then
-      assertThat(eventCount)
-          .as("应该能统一处理不同类型的 OutboxRelayDomainEvent")
-          .isEqualTo(3);
+      assertThat(eventCount).as("应该能统一处理不同类型的 OutboxRelayDomainEvent").isEqualTo(3);
     }
   }
 
@@ -379,12 +328,9 @@ class OutboxRelayDomainEventTest {
     @DisplayName("OutboxMessagePublishedEvent 应该支持 Java 序列化")
     void publishedEventShouldSupportSerialization() throws Exception {
       // Given
-      var originalEvent = new OutboxMessagePublishedEvent(
-          1L,
-          "literature.ingested",
-          "partition-key-1",
-          Instant.parse("2025-01-15T12:00:00Z")
-      );
+      var originalEvent =
+          new OutboxMessagePublishedEvent(
+              1L, "literature.ingested", "partition-key-1", Instant.parse("2025-01-15T12:00:00Z"));
 
       // When - 序列化
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -400,9 +346,7 @@ class OutboxRelayDomainEventTest {
       }
 
       // Then
-      assertThat(deserializedEvent)
-          .as("反序列化后的对象应该与原对象相等")
-          .isEqualTo(originalEvent);
+      assertThat(deserializedEvent).as("反序列化后的对象应该与原对象相等").isEqualTo(originalEvent);
       assertThat(deserializedEvent.occurredAt())
           .as("反序列化后的时间戳应该保持一致")
           .isEqualTo(originalEvent.occurredAt());
@@ -412,14 +356,14 @@ class OutboxRelayDomainEventTest {
     @DisplayName("OutboxMessageFailedEvent 应该支持 Java 序列化")
     void failedEventShouldSupportSerialization() throws Exception {
       // Given
-      var originalEvent = new OutboxMessageFailedEvent(
-          1L,
-          "literature.ingested",
-          3,
-          "DELIVERY_FAILED",
-          "Failed to deliver message",
-          Instant.parse("2025-01-15T12:05:00Z")
-      );
+      var originalEvent =
+          new OutboxMessageFailedEvent(
+              1L,
+              "literature.ingested",
+              3,
+              "DELIVERY_FAILED",
+              "Failed to deliver message",
+              Instant.parse("2025-01-15T12:05:00Z"));
 
       // When - 序列化
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -435,9 +379,7 @@ class OutboxRelayDomainEventTest {
       }
 
       // Then
-      assertThat(deserializedEvent)
-          .as("反序列化后的对象应该与原对象相等")
-          .isEqualTo(originalEvent);
+      assertThat(deserializedEvent).as("反序列化后的对象应该与原对象相等").isEqualTo(originalEvent);
       assertThat(deserializedEvent.occurredAt())
           .as("反序列化后的时间戳应该保持一致")
           .isEqualTo(originalEvent.occurredAt());
@@ -447,13 +389,13 @@ class OutboxRelayDomainEventTest {
     @DisplayName("OutboxLeaseMissedEvent 应该支持 Java 序列化")
     void leaseMissedEventShouldSupportSerialization() throws Exception {
       // Given
-      var originalEvent = new OutboxLeaseMissedEvent(
-          1L,
-          "literature.ingested",
-          "relay-instance-1",
-          "relay-instance-2",
-          Instant.parse("2025-01-15T12:10:00Z")
-      );
+      var originalEvent =
+          new OutboxLeaseMissedEvent(
+              1L,
+              "literature.ingested",
+              "relay-instance-1",
+              "relay-instance-2",
+              Instant.parse("2025-01-15T12:10:00Z"));
 
       // When - 序列化
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -469,9 +411,7 @@ class OutboxRelayDomainEventTest {
       }
 
       // Then
-      assertThat(deserializedEvent)
-          .as("反序列化后的对象应该与原对象相等")
-          .isEqualTo(originalEvent);
+      assertThat(deserializedEvent).as("反序列化后的对象应该与原对象相等").isEqualTo(originalEvent);
       assertThat(deserializedEvent.occurredAt())
           .as("反序列化后的时间戳应该保持一致")
           .isEqualTo(originalEvent.occurredAt());
@@ -487,17 +427,10 @@ class OutboxRelayDomainEventTest {
     void shouldSupportMinMessageId() {
       // Given
       Long minMessageId = Long.MIN_VALUE;
-      var event = new OutboxMessagePublishedEvent(
-          minMessageId,
-          "channel",
-          "key",
-          Instant.now()
-      );
+      var event = new OutboxMessagePublishedEvent(minMessageId, "channel", "key", Instant.now());
 
       // When & Then
-      assertThat(event.messageId())
-          .as("应该支持 Long 最小值作为 messageId")
-          .isEqualTo(minMessageId);
+      assertThat(event.messageId()).as("应该支持 Long 最小值作为 messageId").isEqualTo(minMessageId);
     }
 
     @Test
@@ -505,17 +438,10 @@ class OutboxRelayDomainEventTest {
     void shouldSupportMaxMessageId() {
       // Given
       Long maxMessageId = Long.MAX_VALUE;
-      var event = new OutboxMessagePublishedEvent(
-          maxMessageId,
-          "channel",
-          "key",
-          Instant.now()
-      );
+      var event = new OutboxMessagePublishedEvent(maxMessageId, "channel", "key", Instant.now());
 
       // When & Then
-      assertThat(event.messageId())
-          .as("应该支持 Long 最大值作为 messageId")
-          .isEqualTo(maxMessageId);
+      assertThat(event.messageId()).as("应该支持 Long 最大值作为 messageId").isEqualTo(maxMessageId);
     }
 
     @Test
@@ -523,17 +449,10 @@ class OutboxRelayDomainEventTest {
     void shouldSupportMinInstant() {
       // Given
       Instant minInstant = Instant.MIN;
-      var event = new OutboxMessagePublishedEvent(
-          1L,
-          "channel",
-          "key",
-          minInstant
-      );
+      var event = new OutboxMessagePublishedEvent(1L, "channel", "key", minInstant);
 
       // When & Then
-      assertThat(event.occurredAt())
-          .as("应该支持 Instant.MIN 作为时间戳")
-          .isEqualTo(minInstant);
+      assertThat(event.occurredAt()).as("应该支持 Instant.MIN 作为时间戳").isEqualTo(minInstant);
     }
 
     @Test
@@ -541,53 +460,32 @@ class OutboxRelayDomainEventTest {
     void shouldSupportMaxInstant() {
       // Given
       Instant maxInstant = Instant.MAX;
-      var event = new OutboxMessagePublishedEvent(
-          1L,
-          "channel",
-          "key",
-          maxInstant
-      );
+      var event = new OutboxMessagePublishedEvent(1L, "channel", "key", maxInstant);
 
       // When & Then
-      assertThat(event.occurredAt())
-          .as("应该支持 Instant.MAX 作为时间戳")
-          .isEqualTo(maxInstant);
+      assertThat(event.occurredAt()).as("应该支持 Instant.MAX 作为时间戳").isEqualTo(maxInstant);
     }
 
     @Test
     @DisplayName("应该支持空字符串作为 channel")
     void shouldSupportEmptyChannel() {
       // Given
-      var event = new OutboxMessagePublishedEvent(
-          1L,
-          "",
-          "key",
-          Instant.now()
-      );
+      var event = new OutboxMessagePublishedEvent(1L, "", "key", Instant.now());
 
       // When & Then
-      assertThat(event.channel())
-          .as("应该支持空字符串作为 channel")
-          .isEmpty();
+      assertThat(event.channel()).as("应该支持空字符串作为 channel").isEmpty();
     }
 
     @Test
     @DisplayName("应该支持重试次数为 0")
     void shouldSupportZeroRetryCount() {
       // Given
-      var event = new OutboxMessageFailedEvent(
-          1L,
-          "channel",
-          0,
-          "ERROR",
-          "First attempt failed",
-          Instant.now()
-      );
+      var event =
+          new OutboxMessageFailedEvent(
+              1L, "channel", 0, "ERROR", "First attempt failed", Instant.now());
 
       // When & Then
-      assertThat(event.retryCount())
-          .as("应该支持重试次数为 0")
-          .isZero();
+      assertThat(event.retryCount()).as("应该支持重试次数为 0").isZero();
     }
 
     @Test
@@ -595,19 +493,12 @@ class OutboxRelayDomainEventTest {
     void shouldSupportMaxRetryCount() {
       // Given
       int maxRetryCount = Integer.MAX_VALUE;
-      var event = new OutboxMessageFailedEvent(
-          1L,
-          "channel",
-          maxRetryCount,
-          "ERROR",
-          "Max retries exceeded",
-          Instant.now()
-      );
+      var event =
+          new OutboxMessageFailedEvent(
+              1L, "channel", maxRetryCount, "ERROR", "Max retries exceeded", Instant.now());
 
       // When & Then
-      assertThat(event.retryCount())
-          .as("应该支持最大重试次数")
-          .isEqualTo(maxRetryCount);
+      assertThat(event.retryCount()).as("应该支持最大重试次数").isEqualTo(maxRetryCount);
     }
   }
 
@@ -619,12 +510,12 @@ class OutboxRelayDomainEventTest {
     @DisplayName("OutboxMessagePublishedEvent 的 toString() 应该包含所有字段")
     void publishedEventToStringShouldContainAllFields() {
       // Given
-      var event = new OutboxMessagePublishedEvent(
-          123L,
-          "literature.ingested",
-          "partition-key-1",
-          Instant.parse("2025-01-15T13:00:00Z")
-      );
+      var event =
+          new OutboxMessagePublishedEvent(
+              123L,
+              "literature.ingested",
+              "partition-key-1",
+              Instant.parse("2025-01-15T13:00:00Z"));
 
       // When
       String result = event.toString();
@@ -642,14 +533,14 @@ class OutboxRelayDomainEventTest {
     @DisplayName("OutboxMessageFailedEvent 的 toString() 应该包含所有字段")
     void failedEventToStringShouldContainAllFields() {
       // Given
-      var event = new OutboxMessageFailedEvent(
-          456L,
-          "literature.ingested",
-          3,
-          "DELIVERY_FAILED",
-          "Network timeout",
-          Instant.parse("2025-01-15T13:05:00Z")
-      );
+      var event =
+          new OutboxMessageFailedEvent(
+              456L,
+              "literature.ingested",
+              3,
+              "DELIVERY_FAILED",
+              "Network timeout",
+              Instant.parse("2025-01-15T13:05:00Z"));
 
       // When
       String result = event.toString();
@@ -669,13 +560,13 @@ class OutboxRelayDomainEventTest {
     @DisplayName("OutboxLeaseMissedEvent 的 toString() 应该包含所有字段")
     void leaseMissedEventToStringShouldContainAllFields() {
       // Given
-      var event = new OutboxLeaseMissedEvent(
-          789L,
-          "literature.ingested",
-          "relay-instance-1",
-          "relay-instance-2",
-          Instant.parse("2025-01-15T13:10:00Z")
-      );
+      var event =
+          new OutboxLeaseMissedEvent(
+              789L,
+              "literature.ingested",
+              "relay-instance-1",
+              "relay-instance-2",
+              Instant.parse("2025-01-15T13:10:00Z"));
 
       // When
       String result = event.toString();

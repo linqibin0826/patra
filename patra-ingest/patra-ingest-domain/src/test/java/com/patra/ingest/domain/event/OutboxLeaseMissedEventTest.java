@@ -181,11 +181,7 @@ class OutboxLeaseMissedEventTest {
       // Given
       OutboxLeaseMissedEvent event1 =
           new OutboxLeaseMissedEvent(
-              1001L,
-              "literature.parsed",
-              "relay-instance-01",
-              "relay-instance-02",
-              Instant.now());
+              1001L, "literature.parsed", "relay-instance-01", "relay-instance-02", Instant.now());
       OutboxLeaseMissedEvent event2 =
           new OutboxLeaseMissedEvent(
               1002L, // 不同的 messageId
@@ -297,18 +293,10 @@ class OutboxLeaseMissedEventTest {
       // Given
       OutboxLeaseMissedEvent event1 =
           new OutboxLeaseMissedEvent(
-              1001L,
-              "literature.parsed",
-              "relay-instance-01",
-              "relay-instance-02",
-              Instant.now());
+              1001L, "literature.parsed", "relay-instance-01", "relay-instance-02", Instant.now());
       OutboxLeaseMissedEvent event2 =
           new OutboxLeaseMissedEvent(
-              1002L,
-              "literature.ready",
-              "relay-instance-03",
-              "relay-instance-04",
-              Instant.now());
+              1002L, "literature.ready", "relay-instance-03", "relay-instance-04", Instant.now());
 
       // Then - 注意：不同的对象可能有相同的 hashCode（冲突），但通常应该不同
       assertThat(event1.hashCode()).isNotEqualTo(event2.hashCode());
@@ -342,8 +330,7 @@ class OutboxLeaseMissedEventTest {
     @DisplayName("应该正确实现 toString - 处理 null 字段")
     void shouldImplementToString_HandlesNullFields() {
       // Given
-      OutboxLeaseMissedEvent event =
-          new OutboxLeaseMissedEvent(null, null, null, null, null);
+      OutboxLeaseMissedEvent event = new OutboxLeaseMissedEvent(null, null, null, null, null);
 
       // When
       String toString = event.toString();
@@ -446,11 +433,7 @@ class OutboxLeaseMissedEventTest {
       // Given
       OutboxLeaseMissedEvent event =
           new OutboxLeaseMissedEvent(
-              1001L,
-              "literature.parsed",
-              "relay-instance-01",
-              "relay-instance-02",
-              Instant.now());
+              1001L, "literature.parsed", "relay-instance-01", "relay-instance-02", Instant.now());
 
       // When & Then
       assertThat(event).isInstanceOf(OutboxRelayDomainEvent.class);
@@ -462,11 +445,7 @@ class OutboxLeaseMissedEventTest {
       // Given
       OutboxLeaseMissedEvent event =
           new OutboxLeaseMissedEvent(
-              1001L,
-              "literature.parsed",
-              "relay-instance-01",
-              "relay-instance-02",
-              Instant.now());
+              1001L, "literature.parsed", "relay-instance-01", "relay-instance-02", Instant.now());
 
       // When & Then
       assertThat(event).isInstanceOf(com.patra.common.domain.DomainEvent.class);
@@ -498,11 +477,7 @@ class OutboxLeaseMissedEventTest {
       // Given
       OutboxLeaseMissedEvent event =
           new OutboxLeaseMissedEvent(
-              1001L,
-              "literature.parsed",
-              "relay-instance-01",
-              "relay-instance-02",
-              Instant.now());
+              1001L, "literature.parsed", "relay-instance-01", "relay-instance-02", Instant.now());
 
       // When & Then
       assertThat(event).isInstanceOf(java.io.Serializable.class);
@@ -868,27 +843,15 @@ class OutboxLeaseMissedEventTest {
       // When - 多次竞争失败，都是同一个实例持有租约
       OutboxLeaseMissedEvent event1 =
           new OutboxLeaseMissedEvent(
-              1001L,
-              "literature.parsed",
-              "relay-instance-01",
-              dominantOwner,
-              Instant.now());
+              1001L, "literature.parsed", "relay-instance-01", dominantOwner, Instant.now());
 
       OutboxLeaseMissedEvent event2 =
           new OutboxLeaseMissedEvent(
-              1002L,
-              "literature.parsed",
-              "relay-instance-03",
-              dominantOwner,
-              Instant.now());
+              1002L, "literature.parsed", "relay-instance-03", dominantOwner, Instant.now());
 
       OutboxLeaseMissedEvent event3 =
           new OutboxLeaseMissedEvent(
-              1003L,
-              "literature.parsed",
-              "relay-instance-04",
-              dominantOwner,
-              Instant.now());
+              1003L, "literature.parsed", "relay-instance-04", dominantOwner, Instant.now());
 
       // Then - 应该可以识别出支配性的租约持有者
       assertThat(event1.currentLeaseOwner()).isEqualTo(dominantOwner);
@@ -914,11 +877,7 @@ class OutboxLeaseMissedEventTest {
 
       OutboxLeaseMissedEvent lowContentionEvent =
           new OutboxLeaseMissedEvent(
-              2001L,
-              lowContentionChannel,
-              "relay-instance-03",
-              "relay-instance-04",
-              Instant.now());
+              2001L, lowContentionChannel, "relay-instance-03", "relay-instance-04", Instant.now());
 
       // Then - 应该可以按通道区分竞争水平
       assertThat(highContentionEvent.channel()).isEqualTo(highContentionChannel);

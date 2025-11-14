@@ -53,30 +53,21 @@ class MessageOperationsTest {
     @DisplayName("TASK_READY 应该是非空字符串")
     void taskReadyShouldNotBeEmpty() {
       // Then
-      assertThat(MessageOperations.TASK_READY)
-          .isNotNull()
-          .isNotEmpty()
-          .isNotBlank();
+      assertThat(MessageOperations.TASK_READY).isNotNull().isNotEmpty().isNotBlank();
     }
 
     @Test
     @DisplayName("TASK_COMPLETED 应该是非空字符串")
     void taskCompletedShouldNotBeEmpty() {
       // Then
-      assertThat(MessageOperations.TASK_COMPLETED)
-          .isNotNull()
-          .isNotEmpty()
-          .isNotBlank();
+      assertThat(MessageOperations.TASK_COMPLETED).isNotNull().isNotEmpty().isNotBlank();
     }
 
     @Test
     @DisplayName("LITERATURE_READY 应该是非空字符串")
     void literatureReadyShouldNotBeEmpty() {
       // Then
-      assertThat(MessageOperations.LITERATURE_READY)
-          .isNotNull()
-          .isNotEmpty()
-          .isNotBlank();
+      assertThat(MessageOperations.LITERATURE_READY).isNotNull().isNotEmpty().isNotBlank();
     }
 
     @Test
@@ -87,8 +78,7 @@ class MessageOperationsTest {
           .isNotEqualTo(MessageOperations.TASK_COMPLETED)
           .isNotEqualTo(MessageOperations.LITERATURE_READY);
 
-      assertThat(MessageOperations.TASK_COMPLETED)
-          .isNotEqualTo(MessageOperations.LITERATURE_READY);
+      assertThat(MessageOperations.TASK_COMPLETED).isNotEqualTo(MessageOperations.LITERATURE_READY);
     }
   }
 
@@ -130,17 +120,11 @@ class MessageOperationsTest {
     @DisplayName("常量名称应该表达业务操作意图")
     void constantsShouldExpressBusinessIntent() {
       // Then
-      assertThat(MessageOperations.TASK_READY)
-          .contains("TASK")
-          .contains("READY");
+      assertThat(MessageOperations.TASK_READY).contains("TASK").contains("READY");
 
-      assertThat(MessageOperations.TASK_COMPLETED)
-          .contains("TASK")
-          .contains("COMPLETED");
+      assertThat(MessageOperations.TASK_COMPLETED).contains("TASK").contains("COMPLETED");
 
-      assertThat(MessageOperations.LITERATURE_READY)
-          .contains("LITERATURE")
-          .contains("READY");
+      assertThat(MessageOperations.LITERATURE_READY).contains("LITERATURE").contains("READY");
     }
   }
 
@@ -152,12 +136,13 @@ class MessageOperationsTest {
     @DisplayName("应该禁止实例化常量类")
     void shouldPreventInstantiation() {
       // When & Then
-      assertThatThrownBy(() -> {
-        // 使用反射尝试调用私有构造器
-        var constructor = MessageOperations.class.getDeclaredConstructor();
-        constructor.setAccessible(true);
-        constructor.newInstance();
-      })
+      assertThatThrownBy(
+              () -> {
+                // 使用反射尝试调用私有构造器
+                var constructor = MessageOperations.class.getDeclaredConstructor();
+                constructor.setAccessible(true);
+                constructor.newInstance();
+              })
           .hasCauseInstanceOf(UnsupportedOperationException.class)
           .hasStackTraceContaining("常量类不允许实例化");
     }
@@ -174,9 +159,7 @@ class MessageOperationsTest {
       String operation = MessageOperations.TASK_READY;
 
       // Then
-      assertThat(operation)
-          .as("任务就绪操作应该明确表达任务已创建并等待执行的语义")
-          .isEqualTo("INGEST_TASK_READY");
+      assertThat(operation).as("任务就绪操作应该明确表达任务已创建并等待执行的语义").isEqualTo("INGEST_TASK_READY");
     }
 
     @Test
@@ -186,9 +169,7 @@ class MessageOperationsTest {
       String operation = MessageOperations.TASK_COMPLETED;
 
       // Then
-      assertThat(operation)
-          .as("任务完成操作应该明确表达任务已成功执行完毕的语义")
-          .isEqualTo("TASK_COMPLETED");
+      assertThat(operation).as("任务完成操作应该明确表达任务已成功执行完毕的语义").isEqualTo("TASK_COMPLETED");
     }
 
     @Test
@@ -198,9 +179,7 @@ class MessageOperationsTest {
       String operation = MessageOperations.LITERATURE_READY;
 
       // Then
-      assertThat(operation)
-          .as("文献就绪操作应该明确表达文献数据已准备就绪的语义")
-          .isEqualTo("INGEST_LITERATURE_READY");
+      assertThat(operation).as("文献就绪操作应该明确表达文献数据已准备就绪的语义").isEqualTo("INGEST_LITERATURE_READY");
     }
   }
 
@@ -285,8 +264,7 @@ class MessageOperationsTest {
     @DisplayName("TASK_READY 在 MessageOperations 和 MessageChannels 中应该保持一致")
     void taskReadyShouldBeConsistentAcrossClasses() {
       // Then
-      assertThat(MessageOperations.TASK_READY)
-          .isEqualTo(MessageChannels.INGEST_TASK_READY);
+      assertThat(MessageOperations.TASK_READY).isEqualTo(MessageChannels.INGEST_TASK_READY);
     }
 
     @Test

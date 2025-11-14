@@ -4,6 +4,7 @@
  * <p>本包实现任务执行的准备阶段，包括幂等性检查、租约获取、上下文加载。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>检查任务状态（如果已成功完成 → 抛出 {@code TaskAlreadySucceededException}）
  *   <li>获取任务租约（防止并发执行）
@@ -13,12 +14,14 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code PrepareTaskExecutionUseCase} - 准备执行用例接口
  *   <li>{@code PrepareTaskExecutionUseCaseImpl} - 准备执行用例实现
  * </ul>
  *
  * <h2>准备流程</h2>
+ *
  * <pre>
  * 1. 幂等性检查（IdempotencyChecker）
  *    ├─ 查询任务状态
@@ -41,6 +44,7 @@
  * </pre>
  *
  * <h2>异常处理</h2>
+ *
  * <ul>
  *   <li>{@code TaskAlreadySucceededException}: 任务已完成（幂等跳过，不需要重试）
  *   <li>{@code LeaseAcquisitionFailedException}: 租约获取失败（并发冲突，稍后重试）
@@ -48,6 +52,7 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

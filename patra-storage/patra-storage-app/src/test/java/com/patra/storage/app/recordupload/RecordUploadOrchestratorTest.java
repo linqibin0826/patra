@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import com.patra.storage.domain.model.aggregate.FileMetadata;
 import com.patra.storage.domain.model.aggregate.FileMetadataTestDataBuilder;

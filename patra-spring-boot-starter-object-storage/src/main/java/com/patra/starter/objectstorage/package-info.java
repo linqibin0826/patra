@@ -40,6 +40,7 @@
  * <h2>配置示例</h2>
  *
  * <p><b>MinIO 配置(默认):</b>
+ *
  * <pre>
  * patra:
  *   object-storage:
@@ -56,6 +57,7 @@
  * </pre>
  *
  * <p><b>AWS S3 配置:</b>
+ *
  * <pre>
  * patra:
  *   object-storage:
@@ -75,6 +77,7 @@
  * <h2>使用示例</h2>
  *
  * <p><b>基本上传操作:</b>
+ *
  * <pre>{@code
  * @Autowired
  * private ObjectStorageOperations objectStorageOps;
@@ -109,6 +112,7 @@
  * }</pre>
  *
  * <p><b>自定义对象键生成器:</b>
+ *
  * <pre>{@code
  * @Bean
  * public ObjectKeyGenerator customKeyGenerator() {
@@ -128,6 +132,7 @@
  * }</pre>
  *
  * <p><b>多提供商切换:</b>
+ *
  * <pre>{@code
  * // 开发环境使用 MinIO
  * // application-dev.yml
@@ -145,6 +150,7 @@
  * <h2>重试机制</h2>
  *
  * <p><b>可重试异常(瞬时故障):</b>
+ *
  * <ul>
  *   <li>{@code IOException} - 网络 I/O 错误
  *   <li>{@code SocketTimeoutException} - 读写超时
@@ -152,6 +158,7 @@
  * </ul>
  *
  * <p><b>不可重试异常(永久故障):</b>
+ *
  * <ul>
  *   <li>{@code InvalidUploadRequestException} - 参数验证失败
  *   <li>认证失败(access-key/secret-key 错误)
@@ -159,6 +166,7 @@
  * </ul>
  *
  * <p><b>重试策略:</b>
+ *
  * <pre>
  * 第 1 次重试: 等待 100ms
  * 第 2 次重试: 等待 200ms (100 * 2^1)
@@ -169,6 +177,7 @@
  * <h2>指标收集</h2>
  *
  * <p><b>上传成功指标:</b>
+ *
  * <pre>
  * 指标名称: object_storage_upload_success_total
  * 标签:
@@ -178,6 +187,7 @@
  * </pre>
  *
  * <p><b>上传失败指标:</b>
+ *
  * <pre>
  * 指标名称: object_storage_upload_failure_total
  * 标签:
@@ -188,6 +198,7 @@
  * </pre>
  *
  * <p><b>上传时长指标:</b>
+ *
  * <pre>
  * 指标名称: object_storage_upload_duration_seconds
  * 标签:
@@ -200,6 +211,7 @@
  * <h2>存储位置规范</h2>
  *
  * <p><b>路径生成规则:</b>
+ *
  * <pre>
  * 格式: {profile}/{service}/{module}/{generated-key}
  * 示例: prod/patra-ingest/literature/2025/01/15/abc123.pdf
@@ -212,6 +224,7 @@
  * </pre>
  *
  * <p><b>Bucket 命名规范:</b>
+ *
  * <pre>
  * 格式: patra-{environment}
  * 示例:
@@ -233,6 +246,7 @@
  * <h2>扩展指南</h2>
  *
  * <p><b>添加新的存储提供商:</b>
+ *
  * <pre>{@code
  * // 1. 实现 ObjectStorageProvider 接口
  * public class AliOssStorageProvider implements ObjectStorageProvider {

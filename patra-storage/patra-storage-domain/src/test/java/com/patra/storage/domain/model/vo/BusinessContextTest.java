@@ -1,25 +1,25 @@
 package com.patra.storage.domain.model.vo;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.*;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
-import static org.assertj.core.api.Assertions.*;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 /**
  * BusinessContext 单元测试
  *
  * <p>测试覆盖:
+ *
  * <ul>
- *   <li>成功构造测试 - 验证正常创建场景</li>
- *   <li>验证失败测试 - 验证参数校验逻辑</li>
- *   <li>Sanitize 逻辑测试 - 验证 correlationData 清理行为</li>
- *   <li>不可变性测试 - 验证 record 不可变特性</li>
- *   <li>Record 语义测试 - 验证 equals/hashCode/toString</li>
+ *   <li>成功构造测试 - 验证正常创建场景
+ *   <li>验证失败测试 - 验证参数校验逻辑
+ *   <li>Sanitize 逻辑测试 - 验证 correlationData 清理行为
+ *   <li>不可变性测试 - 验证 record 不可变特性
+ *   <li>Record 语义测试 - 验证 equals/hashCode/toString
  * </ul>
  */
 @DisplayName("BusinessContext 测试")
@@ -41,9 +41,8 @@ class BusinessContextTest {
       correlationData.put("source", "pubmed");
 
       // When
-      BusinessContext context = new BusinessContext(
-          serviceName, businessType, businessId, correlationData
-      );
+      BusinessContext context =
+          new BusinessContext(serviceName, businessType, businessId, correlationData);
 
       // Then
       assertThat(context).isNotNull();
@@ -64,9 +63,7 @@ class BusinessContextTest {
       String businessId = "batch-12345";
 
       // When
-      BusinessContext context = new BusinessContext(
-          serviceName, businessType, businessId, null
-      );
+      BusinessContext context = new BusinessContext(serviceName, businessType, businessId, null);
 
       // Then
       assertThat(context).isNotNull();
@@ -83,9 +80,8 @@ class BusinessContextTest {
       Map<String, Object> emptyMap = new HashMap<>();
 
       // When
-      BusinessContext context = new BusinessContext(
-          serviceName, businessType, businessId, emptyMap
-      );
+      BusinessContext context =
+          new BusinessContext(serviceName, businessType, businessId, emptyMap);
 
       // Then
       assertThat(context).isNotNull();
@@ -106,9 +102,8 @@ class BusinessContextTest {
       correlationData.put("tags", java.util.List.of("prod", "active"));
 
       // When
-      BusinessContext context = new BusinessContext(
-          serviceName, businessType, businessId, correlationData
-      );
+      BusinessContext context =
+          new BusinessContext(serviceName, businessType, businessId, correlationData);
 
       // Then
       assertThat(context.correlationData())
@@ -125,9 +120,7 @@ class BusinessContextTest {
       String businessId = "batch 12345";
 
       // When
-      BusinessContext context = new BusinessContext(
-          serviceName, businessType, businessId, null
-      );
+      BusinessContext context = new BusinessContext(serviceName, businessType, businessId, null);
 
       // Then
       assertThat(context.serviceName()).isEqualTo(serviceName);
@@ -148,9 +141,7 @@ class BusinessContextTest {
       @DisplayName("应该抛出异常 - serviceName 为 null")
       void shouldThrowException_whenServiceNameIsNull() {
         // When & Then
-        assertThatThrownBy(() ->
-            new BusinessContext(null, "literature_batch", "batch-123", null)
-        )
+        assertThatThrownBy(() -> new BusinessContext(null, "literature_batch", "batch-123", null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("服务名称不能为空");
       }
@@ -159,9 +150,7 @@ class BusinessContextTest {
       @DisplayName("应该抛出异常 - serviceName 为空字符串")
       void shouldThrowException_whenServiceNameIsEmpty() {
         // When & Then
-        assertThatThrownBy(() ->
-            new BusinessContext("", "literature_batch", "batch-123", null)
-        )
+        assertThatThrownBy(() -> new BusinessContext("", "literature_batch", "batch-123", null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("服务名称不能为空");
       }
@@ -170,9 +159,7 @@ class BusinessContextTest {
       @DisplayName("应该抛出异常 - serviceName 为空白字符串")
       void shouldThrowException_whenServiceNameIsBlank() {
         // When & Then
-        assertThatThrownBy(() ->
-            new BusinessContext("   ", "literature_batch", "batch-123", null)
-        )
+        assertThatThrownBy(() -> new BusinessContext("   ", "literature_batch", "batch-123", null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("服务名称不能为空");
       }
@@ -181,9 +168,7 @@ class BusinessContextTest {
       @DisplayName("应该抛出异常 - serviceName 为制表符")
       void shouldThrowException_whenServiceNameIsTab() {
         // When & Then
-        assertThatThrownBy(() ->
-            new BusinessContext("\t", "literature_batch", "batch-123", null)
-        )
+        assertThatThrownBy(() -> new BusinessContext("\t", "literature_batch", "batch-123", null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("服务名称不能为空");
       }
@@ -197,9 +182,7 @@ class BusinessContextTest {
       @DisplayName("应该抛出异常 - businessType 为 null")
       void shouldThrowException_whenBusinessTypeIsNull() {
         // When & Then
-        assertThatThrownBy(() ->
-            new BusinessContext("patra-ingest", null, "batch-123", null)
-        )
+        assertThatThrownBy(() -> new BusinessContext("patra-ingest", null, "batch-123", null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("业务类型不能为空");
       }
@@ -208,9 +191,7 @@ class BusinessContextTest {
       @DisplayName("应该抛出异常 - businessType 为空字符串")
       void shouldThrowException_whenBusinessTypeIsEmpty() {
         // When & Then
-        assertThatThrownBy(() ->
-            new BusinessContext("patra-ingest", "", "batch-123", null)
-        )
+        assertThatThrownBy(() -> new BusinessContext("patra-ingest", "", "batch-123", null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("业务类型不能为空");
       }
@@ -219,9 +200,7 @@ class BusinessContextTest {
       @DisplayName("应该抛出异常 - businessType 为空白字符串")
       void shouldThrowException_whenBusinessTypeIsBlank() {
         // When & Then
-        assertThatThrownBy(() ->
-            new BusinessContext("patra-ingest", "  \n  ", "batch-123", null)
-        )
+        assertThatThrownBy(() -> new BusinessContext("patra-ingest", "  \n  ", "batch-123", null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("业务类型不能为空");
       }
@@ -235,9 +214,8 @@ class BusinessContextTest {
       @DisplayName("应该抛出异常 - businessId 为 null")
       void shouldThrowException_whenBusinessIdIsNull() {
         // When & Then
-        assertThatThrownBy(() ->
-            new BusinessContext("patra-ingest", "literature_batch", null, null)
-        )
+        assertThatThrownBy(
+                () -> new BusinessContext("patra-ingest", "literature_batch", null, null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("业务ID不能为空");
       }
@@ -246,9 +224,7 @@ class BusinessContextTest {
       @DisplayName("应该抛出异常 - businessId 为空字符串")
       void shouldThrowException_whenBusinessIdIsEmpty() {
         // When & Then
-        assertThatThrownBy(() ->
-            new BusinessContext("patra-ingest", "literature_batch", "", null)
-        )
+        assertThatThrownBy(() -> new BusinessContext("patra-ingest", "literature_batch", "", null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("业务ID不能为空");
       }
@@ -257,9 +233,8 @@ class BusinessContextTest {
       @DisplayName("应该抛出异常 - businessId 为空白字符串")
       void shouldThrowException_whenBusinessIdIsBlank() {
         // When & Then
-        assertThatThrownBy(() ->
-            new BusinessContext("patra-ingest", "literature_batch", "\r\n", null)
-        )
+        assertThatThrownBy(
+                () -> new BusinessContext("patra-ingest", "literature_batch", "\r\n", null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("业务ID不能为空");
       }
@@ -277,9 +252,10 @@ class BusinessContextTest {
         correlationData.put(null, "value");
 
         // When & Then
-        assertThatThrownBy(() ->
-            new BusinessContext("patra-ingest", "literature_batch", "batch-123", correlationData)
-        )
+        assertThatThrownBy(
+                () ->
+                    new BusinessContext(
+                        "patra-ingest", "literature_batch", "batch-123", correlationData))
             .isInstanceOf(NullPointerException.class)
             .hasMessage("关联数据键不能为null");
       }
@@ -293,9 +269,8 @@ class BusinessContextTest {
         correlationData.put("key2", "value2");
 
         // When
-        BusinessContext context = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", correlationData
-        );
+        BusinessContext context =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", correlationData);
 
         // Then
         assertThat(context.correlationData())
@@ -313,14 +288,11 @@ class BusinessContextTest {
     @DisplayName("应该返回空 Map - correlationData 为 null")
     void shouldReturnEmptyMap_whenCorrelationDataIsNull() {
       // When
-      BusinessContext context = new BusinessContext(
-          "patra-ingest", "literature_batch", "batch-123", null
-      );
+      BusinessContext context =
+          new BusinessContext("patra-ingest", "literature_batch", "batch-123", null);
 
       // Then
-      assertThat(context.correlationData())
-          .isNotNull()
-          .isEqualTo(Map.of());
+      assertThat(context.correlationData()).isNotNull().isEqualTo(Map.of());
     }
 
     @Test
@@ -330,14 +302,11 @@ class BusinessContextTest {
       Map<String, Object> emptyMap = new HashMap<>();
 
       // When
-      BusinessContext context = new BusinessContext(
-          "patra-ingest", "literature_batch", "batch-123", emptyMap
-      );
+      BusinessContext context =
+          new BusinessContext("patra-ingest", "literature_batch", "batch-123", emptyMap);
 
       // Then
-      assertThat(context.correlationData())
-          .isNotNull()
-          .isEqualTo(Map.of());
+      assertThat(context.correlationData()).isNotNull().isEqualTo(Map.of());
     }
 
     @Test
@@ -349,9 +318,8 @@ class BusinessContextTest {
       originalMap.put("key2", 42);
 
       // When
-      BusinessContext context = new BusinessContext(
-          "patra-ingest", "literature_batch", "batch-123", originalMap
-      );
+      BusinessContext context =
+          new BusinessContext("patra-ingest", "literature_batch", "batch-123", originalMap);
 
       // Then
       assertThat(context.correlationData())
@@ -359,9 +327,8 @@ class BusinessContextTest {
           .containsEntry("key2", 42);
 
       // 验证是不可变的
-      assertThatThrownBy(() ->
-          context.correlationData().put("key3", "value3")
-      ).isInstanceOf(UnsupportedOperationException.class);
+      assertThatThrownBy(() -> context.correlationData().put("key3", "value3"))
+          .isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
@@ -374,9 +341,8 @@ class BusinessContextTest {
       mapWithNull.put("key3", "value3");
 
       // When
-      BusinessContext context = new BusinessContext(
-          "patra-ingest", "literature_batch", "batch-123", mapWithNull
-      );
+      BusinessContext context =
+          new BusinessContext("patra-ingest", "literature_batch", "batch-123", mapWithNull);
 
       // Then
       assertThat(context.correlationData())
@@ -395,13 +361,11 @@ class BusinessContextTest {
       orderedMap.put("third", 3);
 
       // When
-      BusinessContext context = new BusinessContext(
-          "patra-ingest", "literature_batch", "batch-123", orderedMap
-      );
+      BusinessContext context =
+          new BusinessContext("patra-ingest", "literature_batch", "batch-123", orderedMap);
 
       // Then
-      assertThat(context.correlationData().keySet())
-          .containsExactly("first", "second", "third");
+      assertThat(context.correlationData().keySet()).containsExactly("first", "second", "third");
     }
   }
 
@@ -415,14 +379,12 @@ class BusinessContextTest {
       // Given
       Map<String, Object> originalMap = new HashMap<>();
       originalMap.put("key1", "value1");
-      BusinessContext context = new BusinessContext(
-          "patra-ingest", "literature_batch", "batch-123", originalMap
-      );
+      BusinessContext context =
+          new BusinessContext("patra-ingest", "literature_batch", "batch-123", originalMap);
 
       // When & Then
-      assertThatThrownBy(() ->
-          context.correlationData().put("key2", "value2")
-      ).isInstanceOf(UnsupportedOperationException.class);
+      assertThatThrownBy(() -> context.correlationData().put("key2", "value2"))
+          .isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
@@ -431,14 +393,12 @@ class BusinessContextTest {
       // Given
       Map<String, Object> originalMap = new HashMap<>();
       originalMap.put("key1", "value1");
-      BusinessContext context = new BusinessContext(
-          "patra-ingest", "literature_batch", "batch-123", originalMap
-      );
+      BusinessContext context =
+          new BusinessContext("patra-ingest", "literature_batch", "batch-123", originalMap);
 
       // When & Then
-      assertThatThrownBy(() ->
-          context.correlationData().remove("key1")
-      ).isInstanceOf(UnsupportedOperationException.class);
+      assertThatThrownBy(() -> context.correlationData().remove("key1"))
+          .isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
@@ -447,14 +407,12 @@ class BusinessContextTest {
       // Given
       Map<String, Object> originalMap = new HashMap<>();
       originalMap.put("key1", "value1");
-      BusinessContext context = new BusinessContext(
-          "patra-ingest", "literature_batch", "batch-123", originalMap
-      );
+      BusinessContext context =
+          new BusinessContext("patra-ingest", "literature_batch", "batch-123", originalMap);
 
       // When & Then
-      assertThatThrownBy(() ->
-          context.correlationData().clear()
-      ).isInstanceOf(UnsupportedOperationException.class);
+      assertThatThrownBy(() -> context.correlationData().clear())
+          .isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
@@ -463,18 +421,15 @@ class BusinessContextTest {
       // Given
       Map<String, Object> originalMap = new HashMap<>();
       originalMap.put("key1", "value1");
-      BusinessContext context = new BusinessContext(
-          "patra-ingest", "literature_batch", "batch-123", originalMap
-      );
+      BusinessContext context =
+          new BusinessContext("patra-ingest", "literature_batch", "batch-123", originalMap);
 
       // When
       originalMap.put("key2", "value2");
       originalMap.remove("key1");
 
       // Then
-      assertThat(context.correlationData())
-          .containsOnlyKeys("key1")
-          .doesNotContainKey("key2");
+      assertThat(context.correlationData()).containsOnlyKeys("key1").doesNotContainKey("key2");
     }
 
     @Test
@@ -482,9 +437,8 @@ class BusinessContextTest {
     void recordShouldBeImmutable_sameReferences() {
       // Given
       Map<String, Object> correlationData = Map.of("key", "value");
-      BusinessContext context = new BusinessContext(
-          "patra-ingest", "literature_batch", "batch-123", correlationData
-      );
+      BusinessContext context =
+          new BusinessContext("patra-ingest", "literature_batch", "batch-123", correlationData);
 
       // When & Then
       assertThat(context.serviceName()).isSameAs(context.serviceName());
@@ -509,12 +463,10 @@ class BusinessContextTest {
         Map<String, Object> data1 = Map.of("key", "value");
         Map<String, Object> data2 = Map.of("key", "value");
 
-        BusinessContext context1 = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", data1
-        );
-        BusinessContext context2 = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", data2
-        );
+        BusinessContext context1 =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", data1);
+        BusinessContext context2 =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", data2);
 
         // When & Then
         assertThat(context1).isEqualTo(context2);
@@ -525,12 +477,10 @@ class BusinessContextTest {
       @DisplayName("应该相等 - correlationData 都为空")
       void shouldBeEqual_whenBothCorrelationDataAreEmpty() {
         // Given
-        BusinessContext context1 = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", null
-        );
-        BusinessContext context2 = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", Map.of()
-        );
+        BusinessContext context1 =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", null);
+        BusinessContext context2 =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", Map.of());
 
         // When & Then
         assertThat(context1).isEqualTo(context2);
@@ -540,12 +490,10 @@ class BusinessContextTest {
       @DisplayName("应该不相等 - serviceName 不同")
       void shouldNotBeEqual_whenServiceNameDiffers() {
         // Given
-        BusinessContext context1 = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", null
-        );
-        BusinessContext context2 = new BusinessContext(
-            "patra-registry", "literature_batch", "batch-123", null
-        );
+        BusinessContext context1 =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", null);
+        BusinessContext context2 =
+            new BusinessContext("patra-registry", "literature_batch", "batch-123", null);
 
         // When & Then
         assertThat(context1).isNotEqualTo(context2);
@@ -555,12 +503,10 @@ class BusinessContextTest {
       @DisplayName("应该不相等 - businessType 不同")
       void shouldNotBeEqual_whenBusinessTypeDiffers() {
         // Given
-        BusinessContext context1 = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", null
-        );
-        BusinessContext context2 = new BusinessContext(
-            "patra-ingest", "provenance_config", "batch-123", null
-        );
+        BusinessContext context1 =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", null);
+        BusinessContext context2 =
+            new BusinessContext("patra-ingest", "provenance_config", "batch-123", null);
 
         // When & Then
         assertThat(context1).isNotEqualTo(context2);
@@ -570,12 +516,10 @@ class BusinessContextTest {
       @DisplayName("应该不相等 - businessId 不同")
       void shouldNotBeEqual_whenBusinessIdDiffers() {
         // Given
-        BusinessContext context1 = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", null
-        );
-        BusinessContext context2 = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-456", null
-        );
+        BusinessContext context1 =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", null);
+        BusinessContext context2 =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-456", null);
 
         // When & Then
         assertThat(context1).isNotEqualTo(context2);
@@ -585,12 +529,12 @@ class BusinessContextTest {
       @DisplayName("应该不相等 - correlationData 不同")
       void shouldNotBeEqual_whenCorrelationDataDiffers() {
         // Given
-        BusinessContext context1 = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", Map.of("key", "value1")
-        );
-        BusinessContext context2 = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", Map.of("key", "value2")
-        );
+        BusinessContext context1 =
+            new BusinessContext(
+                "patra-ingest", "literature_batch", "batch-123", Map.of("key", "value1"));
+        BusinessContext context2 =
+            new BusinessContext(
+                "patra-ingest", "literature_batch", "batch-123", Map.of("key", "value2"));
 
         // When & Then
         assertThat(context1).isNotEqualTo(context2);
@@ -600,9 +544,8 @@ class BusinessContextTest {
       @DisplayName("应该不相等 - 与 null 比较")
       void shouldNotBeEqual_whenComparedToNull() {
         // Given
-        BusinessContext context = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", null
-        );
+        BusinessContext context =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", null);
 
         // When & Then
         assertThat(context).isNotEqualTo(null);
@@ -612,9 +555,8 @@ class BusinessContextTest {
       @DisplayName("应该不相等 - 与不同类型比较")
       void shouldNotBeEqual_whenComparedToDifferentType() {
         // Given
-        BusinessContext context = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", null
-        );
+        BusinessContext context =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", null);
 
         // When & Then
         assertThat(context).isNotEqualTo("not a BusinessContext");
@@ -624,9 +566,8 @@ class BusinessContextTest {
       @DisplayName("应该相等 - 与自身比较")
       void shouldBeEqual_whenComparedToSelf() {
         // Given
-        BusinessContext context = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", null
-        );
+        BusinessContext context =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", null);
 
         // When & Then
         assertThat(context).isEqualTo(context);
@@ -641,9 +582,9 @@ class BusinessContextTest {
       @DisplayName("hashCode 应该一致 - 相同对象多次调用")
       void hashCodeShouldBeConsistent_whenCalledMultipleTimes() {
         // Given
-        BusinessContext context = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", Map.of("key", "value")
-        );
+        BusinessContext context =
+            new BusinessContext(
+                "patra-ingest", "literature_batch", "batch-123", Map.of("key", "value"));
 
         // When
         int hashCode1 = context.hashCode();
@@ -657,12 +598,12 @@ class BusinessContextTest {
       @DisplayName("hashCode 应该相同 - equals 相等的对象")
       void hashCodeShouldBeEqual_whenObjectsAreEqual() {
         // Given
-        BusinessContext context1 = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", Map.of("key", "value")
-        );
-        BusinessContext context2 = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", Map.of("key", "value")
-        );
+        BusinessContext context1 =
+            new BusinessContext(
+                "patra-ingest", "literature_batch", "batch-123", Map.of("key", "value"));
+        BusinessContext context2 =
+            new BusinessContext(
+                "patra-ingest", "literature_batch", "batch-123", Map.of("key", "value"));
 
         // When & Then
         assertThat(context1).isEqualTo(context2);
@@ -673,12 +614,10 @@ class BusinessContextTest {
       @DisplayName("hashCode 可能不同 - equals 不相等的对象 (不保证但期望)")
       void hashCodeMayDiffer_whenObjectsAreNotEqual() {
         // Given
-        BusinessContext context1 = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", null
-        );
-        BusinessContext context2 = new BusinessContext(
-            "patra-registry", "provenance_config", "config-456", null
-        );
+        BusinessContext context1 =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", null);
+        BusinessContext context2 =
+            new BusinessContext("patra-registry", "provenance_config", "config-456", null);
 
         // When & Then
         assertThat(context1).isNotEqualTo(context2);
@@ -695,9 +634,8 @@ class BusinessContextTest {
       @DisplayName("toString 应该包含类名")
       void toStringShouldContainClassName() {
         // Given
-        BusinessContext context = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", null
-        );
+        BusinessContext context =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", null);
 
         // When
         String result = context.toString();
@@ -710,9 +648,9 @@ class BusinessContextTest {
       @DisplayName("toString 应该包含所有字段")
       void toStringShouldContainAllFields() {
         // Given
-        BusinessContext context = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", Map.of("key", "value")
-        );
+        BusinessContext context =
+            new BusinessContext(
+                "patra-ingest", "literature_batch", "batch-123", Map.of("key", "value"));
 
         // When
         String result = context.toString();
@@ -730,9 +668,8 @@ class BusinessContextTest {
       @DisplayName("toString 应该一致 - 相同对象多次调用")
       void toStringShouldBeConsistent() {
         // Given
-        BusinessContext context = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", null
-        );
+        BusinessContext context =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", null);
 
         // When
         String result1 = context.toString();
@@ -751,9 +688,8 @@ class BusinessContextTest {
       @DisplayName("serviceName() 应该返回正确的值")
       void serviceNameAccessorShouldReturnCorrectValue() {
         // Given
-        BusinessContext context = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", null
-        );
+        BusinessContext context =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", null);
 
         // When
         String result = context.serviceName();
@@ -766,9 +702,8 @@ class BusinessContextTest {
       @DisplayName("businessType() 应该返回正确的值")
       void businessTypeAccessorShouldReturnCorrectValue() {
         // Given
-        BusinessContext context = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", null
-        );
+        BusinessContext context =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", null);
 
         // When
         String result = context.businessType();
@@ -781,9 +716,8 @@ class BusinessContextTest {
       @DisplayName("businessId() 应该返回正确的值")
       void businessIdAccessorShouldReturnCorrectValue() {
         // Given
-        BusinessContext context = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", null
-        );
+        BusinessContext context =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", null);
 
         // When
         String result = context.businessId();
@@ -797,9 +731,8 @@ class BusinessContextTest {
       void correlationDataAccessorShouldReturnCorrectValue() {
         // Given
         Map<String, Object> expectedData = Map.of("key", "value");
-        BusinessContext context = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", expectedData
-        );
+        BusinessContext context =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", expectedData);
 
         // When
         Map<String, Object> result = context.correlationData();
@@ -812,9 +745,8 @@ class BusinessContextTest {
       @DisplayName("所有访问器应该返回非 null 值")
       void allAccessorsShouldReturnNonNullValues() {
         // Given
-        BusinessContext context = new BusinessContext(
-            "patra-ingest", "literature_batch", "batch-123", null
-        );
+        BusinessContext context =
+            new BusinessContext("patra-ingest", "literature_batch", "batch-123", null);
 
         // When & Then
         assertThat(context.serviceName()).isNotNull();

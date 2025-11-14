@@ -27,14 +27,16 @@ import lombok.Builder;
  * 层，由基础设施层(Infrastructure)实现，确保领域逻辑与数据源技术解耦。
  *
  * <p><strong>架构特性</strong>：
+ *
  * <ul>
- *   <li><strong>泛型方法</strong>：通过 {@link TypeReference} 保持运行时类型信息</li>
- *   <li><strong>类型安全</strong>：编译期类型检查，避免类型转换错误</li>
- *   <li><strong>数据类型标识</strong>：使用 {@link DataType} 枚举明确数据类型</li>
- *   <li><strong>能力查询</strong>：通过 {@link #supports} 和 {@link #getSupportedTypes} 判断数据源能力</li>
+ *   <li><strong>泛型方法</strong>：通过 {@link TypeReference} 保持运行时类型信息
+ *   <li><strong>类型安全</strong>：编译期类型检查，避免类型转换错误
+ *   <li><strong>数据类型标识</strong>：使用 {@link DataType} 枚举明确数据类型
+ *   <li><strong>能力查询</strong>：通过 {@link #supports} 和 {@link #getSupportedTypes} 判断数据源能力
  * </ul>
  *
  * <p><strong>使用示例</strong>：
+ *
  * <pre>{@code
  * // 示例 1: 获取文献数据
  * TypeReference<CanonicalLiterature> litTypeRef = new TypeReference<>() {};
@@ -74,20 +76,22 @@ public interface DataSourcePort {
    * <p><strong>业务含义</strong>: 调用外部数据源 API 获取批次规划所需的信息，包括总记录数和状态令牌。
    *
    * <p><strong>执行流程</strong>:
+   *
    * <ol>
-   *   <li>从执行上下文中提取查询条件和配置信息</li>
-   *   <li>调用数据源 API 获取计划信息</li>
-   *   <li>通过防腐层翻译为领域模型 {@link BatchPlan}</li>
+   *   <li>从执行上下文中提取查询条件和配置信息
+   *   <li>调用数据源 API 获取计划信息
+   *   <li>通过防腐层翻译为领域模型 {@link BatchPlan}
    * </ol>
    *
    * <p><strong>使用场景</strong>:
+   *
    * <ul>
-   *   <li>在批次规划阶段调用，获取总记录数以生成批次</li>
-   *   <li>获取状态令牌（如 PubMed 的 WebEnv）以在执行阶段重用</li>
+   *   <li>在批次规划阶段调用，获取总记录数以生成批次
+   *   <li>获取状态令牌（如 PubMed 的 WebEnv）以在执行阶段重用
    * </ul>
    *
-   * <p><strong>防腐层</strong>: 此方法返回的 {@link BatchPlan} 是 Ingest 领域模型，
-   * 屏蔽了外部数据源（Provenance Starter）的实现细节。基础设施层负责进行模型转换。
+   * <p><strong>防腐层</strong>: 此方法返回的 {@link BatchPlan} 是 Ingest 领域模型， 屏蔽了外部数据源（Provenance
+   * Starter）的实现细节。基础设施层负责进行模型转换。
    *
    * @param context 执行上下文，包含查询条件和配置信息
    * @param dataType 数据类型标识（如 LITERATURE、JOURNAL）
@@ -112,16 +116,18 @@ public interface DataSourcePort {
    * </ol>
    *
    * <p><strong>类型安全</strong>：
+   *
    * <ul>
-   *   <li>编译期类型检查：返回的 {@code List<T>} 保证类型安全</li>
-   *   <li>运行时类型验证：通过 {@link TypeReference} 保持泛型信息</li>
-   *   <li>类型一致性：{@code dataType} 必须与 {@code typeRef} 的类型匹配</li>
+   *   <li>编译期类型检查：返回的 {@code List<T>} 保证类型安全
+   *   <li>运行时类型验证：通过 {@link TypeReference} 保持泛型信息
+   *   <li>类型一致性：{@code dataType} 必须与 {@code typeRef} 的类型匹配
    * </ul>
    *
-   * <p><strong>错误处理</strong>: 实现应捕获所有异常，将其转换为 {@link DataFetchResult} 返回，
-   * 并正确设置 {@link DataFetchResult.ErrorType} 以指导上层的重试策略。
+   * <p><strong>错误处理</strong>: 实现应捕获所有异常，将其转换为 {@link DataFetchResult} 返回， 并正确设置 {@link
+   * DataFetchResult.ErrorType} 以指导上层的重试策略。
    *
    * <p><strong>使用示例</strong>：
+   *
    * <pre>{@code
    * // 获取文献数据
    * TypeReference<CanonicalLiterature> litRef = new TypeReference<>() {};
@@ -149,13 +155,15 @@ public interface DataSourcePort {
    * 判断是否支持指定的数据源和数据类型组合
    *
    * <p><strong>应用场景</strong>：
+   *
    * <ul>
-   *   <li>路由决策：根据数据源和数据类型选择合适的适配器</li>
-   *   <li>能力发现：在运行时查询数据源的支持能力</li>
-   *   <li>配置验证：校验数据源配置是否支持所需的数据类型</li>
+   *   <li>路由决策：根据数据源和数据类型选择合适的适配器
+   *   <li>能力发现：在运行时查询数据源的支持能力
+   *   <li>配置验证：校验数据源配置是否支持所需的数据类型
    * </ul>
    *
    * <p><strong>使用示例</strong>：
+   *
    * <pre>{@code
    * // 检查 PubMed 是否支持文献数据
    * if (dataSourcePort.supports("pubmed", DataType.LITERATURE)) {
@@ -178,19 +186,22 @@ public interface DataSourcePort {
    * 获取指定数据源支持的所有数据类型
    *
    * <p><strong>应用场景</strong>：
+   *
    * <ul>
-   *   <li>能力发现：查询数据源支持的所有数据类型</li>
-   *   <li>动态配置：根据数据源能力动态调整采集策略</li>
-   *   <li>监控展示：在管理界面展示数据源的支持能力</li>
+   *   <li>能力发现：查询数据源支持的所有数据类型
+   *   <li>动态配置：根据数据源能力动态调整采集策略
+   *   <li>监控展示：在管理界面展示数据源的支持能力
    * </ul>
    *
    * <p><strong>返回值约定</strong>：
+   *
    * <ul>
-   *   <li>如果数据源存在且支持多种类型，返回包含所有类型的不可变集合</li>
-   *   <li>如果数据源不存在或不支持任何类型，返回空的不可变集合（不返回 null）</li>
+   *   <li>如果数据源存在且支持多种类型，返回包含所有类型的不可变集合
+   *   <li>如果数据源不存在或不支持任何类型，返回空的不可变集合（不返回 null）
    * </ul>
    *
    * <p><strong>使用示例</strong>：
+   *
    * <pre>{@code
    * // 查询 PubMed 支持的数据类型
    * Set<DataType> pubmedTypes = dataSourcePort.getSupportedTypes("pubmed");
@@ -217,10 +228,11 @@ public interface DataSourcePort {
    * <p>封装数据源获取操作的执行结果，包括成功状态、数据载荷、数据类型标识、分页游标、错误信息和扩展元数据。
    *
    * <p><strong>核心特性</strong>：
+   *
    * <ul>
-   *   <li><strong>泛型化</strong>：{@code data} 字段改为 {@code List<T>}，支持任意数据类型</li>
-   *   <li><strong>数据类型标识</strong>：新增 {@code dataType} 字段，明确数据类型</li>
-   *   <li><strong>扩展元数据</strong>：新增 {@code metadata} 字段，支持传递额外信息</li>
+   *   <li><strong>泛型化</strong>：{@code data} 字段改为 {@code List<T>}，支持任意数据类型
+   *   <li><strong>数据类型标识</strong>：新增 {@code dataType} 字段，明确数据类型
+   *   <li><strong>扩展元数据</strong>：新增 {@code metadata} 字段，支持传递额外信息
    * </ul>
    *
    * <p><strong>使用场景</strong>：
@@ -229,10 +241,12 @@ public interface DataSourcePort {
    *   <li><strong>完全成功</strong>: {@code success=true, data 非空, errorType=NONE}
    *   <li><strong>部分成功</strong>: {@code success=true, errorType=PARTIAL_SUCCESS, errorMessage 包含警告}
    *   <li><strong>可重试失败</strong>: {@code success=false, errorType=RETRIABLE, errorMessage 包含错误详情}
-   *   <li><strong>不可重试失败</strong>: {@code success=false, errorType=NON_RETRIABLE, errorMessage 包含错误详情}
+   *   <li><strong>不可重试失败</strong>: {@code success=false, errorType=NON_RETRIABLE, errorMessage
+   *       包含错误详情}
    * </ul>
    *
    * <p><strong>使用示例</strong>：
+   *
    * <pre>{@code
    * // 成功结果
    * List<CanonicalLiterature> literatures = List.of(lit1, lit2);
@@ -302,6 +316,7 @@ public interface DataSourcePort {
      * <p><strong>适用场景</strong>：数据获取完全成功，无任何警告或错误
      *
      * <p><strong>使用示例</strong>：
+     *
      * <pre>{@code
      * List<CanonicalLiterature> literatures = List.of(lit1, lit2, lit3);
      * DataFetchResult<CanonicalLiterature> result =
@@ -332,6 +347,7 @@ public interface DataSourcePort {
      * <p><strong>适用场景</strong>：数据获取失败，需要明确错误类型和错误消息
      *
      * <p><strong>使用示例</strong>：
+     *
      * <pre>{@code
      * // 可重试错误（网络超时）
      * DataFetchResult<CanonicalLiterature> retriableFailure =
@@ -371,6 +387,7 @@ public interface DataSourcePort {
      * <p><strong>适用场景</strong>：某些数据获取成功，但部分记录处理失败或有警告
      *
      * <p><strong>使用示例</strong>：
+     *
      * <pre>{@code
      * // 100 条记录中有 95 条成功，5 条验证失败
      * List<CanonicalLiterature> successLiteratures = List.of(lit1, lit2, ...); // 95 条
@@ -408,11 +425,12 @@ public interface DataSourcePort {
      * <p>指导应用层的重试和失败处理策略。
      *
      * <p><strong>使用指南</strong>：
+     *
      * <ul>
-     *   <li><strong>NONE</strong>：操作完全成功，无错误</li>
-     *   <li><strong>RETRIABLE</strong>：瞬时错误，建议重试（如网络超时、限流）</li>
-     *   <li><strong>NON_RETRIABLE</strong>：终止性错误，不应重试（如认证失败、参数错误）</li>
-     *   <li><strong>PARTIAL_SUCCESS</strong>：部分成功，记录警告并继续（如部分记录失败）</li>
+     *   <li><strong>NONE</strong>：操作完全成功，无错误
+     *   <li><strong>RETRIABLE</strong>：瞬时错误，建议重试（如网络超时、限流）
+     *   <li><strong>NON_RETRIABLE</strong>：终止性错误，不应重试（如认证失败、参数错误）
+     *   <li><strong>PARTIAL_SUCCESS</strong>：部分成功，记录警告并继续（如部分记录失败）
      * </ul>
      */
     public enum ErrorType {

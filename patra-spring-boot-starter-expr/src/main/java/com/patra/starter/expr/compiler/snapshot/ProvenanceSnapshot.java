@@ -12,6 +12,7 @@ import java.util.Set;
  * 数据来源（Provenance）配置快照记录。
  *
  * <p>表示某个特定时间点捕获的完整 Provenance 配置，包括：
+ *
  * <ul>
  *   <li>身份信息（ID、代码、名称）
  *   <li>作用域信息（SOURCE/TASK 级别）
@@ -35,7 +36,6 @@ import java.util.Set;
  * @param capabilityMatrix 能力矩阵（字段键 → 字段能力）
  * @param apiParameterMap API 参数映射（标准键 → API 参数）
  * @param renderRules 渲染规则列表
- *
  * @author Patra Team
  * @since 0.1.0
  */

@@ -1,10 +1,10 @@
 package com.patra.ingest.domain.model.enums;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.*;
 
 /**
  * BatchStatus 枚举测试。
@@ -28,10 +28,7 @@ class BatchStatusTest {
       assertThat(values)
           .hasSize(4)
           .containsExactly(
-              BatchStatus.RUNNING,
-              BatchStatus.SUCCEEDED,
-              BatchStatus.FAILED,
-              BatchStatus.SKIPPED);
+              BatchStatus.RUNNING, BatchStatus.SUCCEEDED, BatchStatus.FAILED, BatchStatus.SKIPPED);
     }
 
     @Test

@@ -136,17 +136,17 @@ public interface LiteratureConverter {
    * @return 标识符 Map (如果为 null 或空则返回 null)
    */
   @Named("mapIdentifiers")
-  default Map<String, String> mapIdentifiers(
-      List<CanonicalLiterature.Identifier> identifiers) {
+  default Map<String, String> mapIdentifiers(List<CanonicalLiterature.Identifier> identifiers) {
     if (CollectionUtils.isEmpty(identifiers)) {
       return null;
     }
     return identifiers.stream()
         .filter(id -> StringUtils.hasText(id.getType()) && StringUtils.hasText(id.getValue()))
-        .collect(java.util.stream.Collectors.toMap(
-            CanonicalLiterature.Identifier::getType,
-            CanonicalLiterature.Identifier::getValue,
-            (v1, v2) -> v1)); // 如果有重复的 key，保留第一个
+        .collect(
+            java.util.stream.Collectors.toMap(
+                CanonicalLiterature.Identifier::getType,
+                CanonicalLiterature.Identifier::getValue,
+                (v1, v2) -> v1)); // 如果有重复的 key，保留第一个
   }
 
   /**

@@ -4,6 +4,7 @@
  * <p>本包提供 Outbox 发布器和中继任务的 Spring Boot 配置属性。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>定义 Outbox 发布器配置属性（批大小、超时、启用开关）
  *   <li>定义 Outbox 中继配置属性（轮询间隔、租约时长、重试策略）
@@ -11,6 +12,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code OutboxPublisherProperties} - Outbox 发布器属性
  *       <ul>
@@ -21,6 +23,7 @@
  * </ul>
  *
  * <h2>配置示例</h2>
+ *
  * <pre>
  * # application.yml
  * patra:
@@ -33,6 +36,7 @@
  * </pre>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * @Configuration
  * @EnableConfigurationProperties(OutboxPublisherProperties.class)

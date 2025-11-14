@@ -4,6 +4,7 @@
  * <p>本包定义 Plan 摄入用例的输出结果和中间传输对象。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>封装 Plan 摄入用例的输出结果
  *   <li>传递装配过程中的中间数据
@@ -11,6 +12,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code PlanIngestionResult} - Plan 摄入结果
  *       <ul>
@@ -28,6 +30,7 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * public PlanIngestionResult ingestPlan(PlanIngestionCommand command) {
  *     // 装配 Plan

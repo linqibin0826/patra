@@ -1,14 +1,14 @@
 /**
  * Storage 基础设施层数据对象包。
  *
- * <p>本包包含 patra-storage 服务的数据对象(Data Object, DO),作为六边形架构基础设施层的一部分。
- * 数据对象是数据库表的 Java 映射,与 MyBatis-Plus 框架配合实现 ORM 功能。
+ * <p>本包包含 patra-storage 服务的数据对象(Data Object, DO),作为六边形架构基础设施层的一部分。 数据对象是数据库表的 Java 映射,与
+ * MyBatis-Plus 框架配合实现 ORM 功能。
  *
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link com.patra.storage.infra.persistence.entity.FileMetadataDO} -
- *       文件元数据数据对象,映射 storage_file_metadata 表
+ *   <li>{@link com.patra.storage.infra.persistence.entity.FileMetadataDO} - 文件元数据数据对象,映射
+ *       storage_file_metadata 表
  * </ul>
  *
  * <h2>数据对象职责</h2>

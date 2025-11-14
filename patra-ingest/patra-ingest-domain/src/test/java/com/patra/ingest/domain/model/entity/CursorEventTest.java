@@ -558,9 +558,7 @@ class CursorEventTest {
     void shouldSupportForwardDirection() {
       // Given & When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
-              .direction(CursorDirection.FORWARD)
-              .build();
+          CursorEventTestDataBuilder.aTimeEvent().direction(CursorDirection.FORWARD).build();
 
       // Then
       assertThat(event.getDirection()).isEqualTo(CursorDirection.FORWARD);
@@ -571,9 +569,7 @@ class CursorEventTest {
     void shouldSupportBackfillDirection() {
       // Given & When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
-              .direction(CursorDirection.BACKFILL)
-              .build();
+          CursorEventTestDataBuilder.aTimeEvent().direction(CursorDirection.BACKFILL).build();
 
       // Then
       assertThat(event.getDirection()).isEqualTo(CursorDirection.BACKFILL);
@@ -595,10 +591,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
-              .windowFrom(windowFrom)
-              .windowTo(windowTo)
-              .build();
+          CursorEventTestDataBuilder.aTimeEvent().windowFrom(windowFrom).windowTo(windowTo).build();
 
       // Then
       assertThat(event.getWindowFrom()).isEqualTo(windowFrom);
@@ -634,10 +627,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
-              .windowFrom(windowFrom)
-              .windowTo(windowTo)
-              .build();
+          CursorEventTestDataBuilder.aTimeEvent().windowFrom(windowFrom).windowTo(windowTo).build();
 
       // Then
       assertThat(event.getWindowFrom()).isEqualTo(windowFrom);
@@ -653,10 +643,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
-              .windowFrom(windowFrom)
-              .windowTo(windowTo)
-              .build();
+          CursorEventTestDataBuilder.aTimeEvent().windowFrom(windowFrom).windowTo(windowTo).build();
 
       // Then
       assertThat(event.getWindowFrom()).isEqualTo(windowFrom);
@@ -703,14 +690,10 @@ class CursorEventTest {
     void shouldReturnCursorType() {
       // Given & When
       CursorEvent timeEvent =
-          CursorEventTestDataBuilder.aTimeEvent()
-              .cursorType(CursorType.TIME)
-              .build();
+          CursorEventTestDataBuilder.aTimeEvent().cursorType(CursorType.TIME).build();
 
       CursorEvent numericEvent =
-          CursorEventTestDataBuilder.aTimeEvent()
-              .cursorType(CursorType.ID)
-              .build();
+          CursorEventTestDataBuilder.aTimeEvent().cursorType(CursorType.ID).build();
 
       // Then
       assertThat(timeEvent.getCursorType()).isEqualTo(CursorType.TIME);
@@ -750,9 +733,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
-              .idempotentKey(idempotentKey)
-              .build();
+          CursorEventTestDataBuilder.aTimeEvent().idempotentKey(idempotentKey).build();
 
       // Then
       assertThat(event.getIdempotentKey()).isEqualTo(idempotentKey);
@@ -765,10 +746,7 @@ class CursorEventTest {
       String exprHash = "expr-hash-67890";
 
       // When
-      CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
-              .exprHash(exprHash)
-              .build();
+      CursorEvent event = CursorEventTestDataBuilder.aTimeEvent().exprHash(exprHash).build();
 
       // Then
       assertThat(event.getExprHash()).isEqualTo(exprHash);
@@ -797,10 +775,7 @@ class CursorEventTest {
       CursorLineage lineage = new CursorLineage(1001L, 2001L, 3001L, 4001L, 5001L, 6001L);
 
       // When
-      CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
-              .lineage(lineage)
-              .build();
+      CursorEvent event = CursorEventTestDataBuilder.aTimeEvent().lineage(lineage).build();
 
       // Then
       assertThat(event.getLineage()).isEqualTo(lineage);
@@ -961,10 +936,7 @@ class CursorEventTest {
     void shouldEnsureEventIsImmutable() {
       // Given
       CursorLineage lineage = new CursorLineage(1001L, 2001L, 3001L, 4001L, 5001L, 6001L);
-      CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
-              .lineage(lineage)
-              .build();
+      CursorEvent event = CursorEventTestDataBuilder.aTimeEvent().lineage(lineage).build();
 
       // When - 保存初始值
       ProvenanceCode initialProvenanceCode = event.getProvenanceCode();
@@ -1069,10 +1041,7 @@ class CursorEventTest {
       CursorLineage lineage = new CursorLineage(1001L, 2001L, 3001L, 4001L, 5001L, 6001L);
 
       // When
-      CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
-              .lineage(lineage)
-              .build();
+      CursorEvent event = CursorEventTestDataBuilder.aTimeEvent().lineage(lineage).build();
 
       // Then - 血缘应该完整记录用于追溯
       assertThat(event.getLineage().scheduleInstanceId()).isEqualTo(1001L);
@@ -1090,10 +1059,7 @@ class CursorEventTest {
       String exprHash = "expr-hash-strategy-v2";
 
       // When
-      CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
-              .exprHash(exprHash)
-              .build();
+      CursorEvent event = CursorEventTestDataBuilder.aTimeEvent().exprHash(exprHash).build();
 
       // Then - 表达式哈希应该被记录用于策略变更追踪
       assertThat(event.getExprHash()).isEqualTo(exprHash);
@@ -1108,10 +1074,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
-              .windowFrom(windowFrom)
-              .windowTo(windowTo)
-              .build();
+          CursorEventTestDataBuilder.aTimeEvent().windowFrom(windowFrom).windowTo(windowTo).build();
 
       // Then - 窗口时间应该被记录用于审计
       assertThat(event.getWindowFrom()).isEqualTo(windowFrom);

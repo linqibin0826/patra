@@ -1,14 +1,13 @@
 /**
  * Storage 基础设施层数据对象转换器包。
  *
- * <p>本包包含领域模型与数据模型之间的双向转换器,作为六边形架构基础设施层的一部分。
- * 转换器负责在聚合根和数据对象之间进行映射,隔离领域层和持久化层的实现细节。
+ * <p>本包包含领域模型与数据模型之间的双向转换器,作为六边形架构基础设施层的一部分。 转换器负责在聚合根和数据对象之间进行映射,隔离领域层和持久化层的实现细节。
  *
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link com.patra.storage.infra.persistence.converter.FileMetadataConverter} -
- *       文件元数据转换器,使用 MapStruct 实现领域模型和数据模型的双向转换
+ *   <li>{@link com.patra.storage.infra.persistence.converter.FileMetadataConverter} - 文件元数据转换器,使用
+ *       MapStruct 实现领域模型和数据模型的双向转换
  * </ul>
  *
  * <h2>转换器职责</h2>

@@ -1,35 +1,21 @@
 package com.patra.ingest.domain.port;
 
-import com.patra.common.model.CanonicalLiterature;
-import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.model.DataType;
-import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.type.TypeReference;
-import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.domain.model.vo.batch.Batch;
-import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult;
-import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult.ErrorType;
-import com.patra.common.enums.ProvenanceCode;
-import org.junit.jupiter.api.DisplayName;
-import com.patra.common.enums.ProvenanceCode;
-import org.junit.jupiter.api.Nested;
-import com.patra.common.enums.ProvenanceCode;
-import org.junit.jupiter.api.Test;
-import com.patra.common.enums.ProvenanceCode;
-
-import java.util.List;
-import com.patra.common.enums.ProvenanceCode;
-import java.util.Map;
-import com.patra.common.enums.ProvenanceCode;
-import java.util.Set;
-import com.patra.common.enums.ProvenanceCode;
-
 import static org.assertj.core.api.Assertions.*;
+
 import com.patra.common.enums.ProvenanceCode;
+import com.patra.common.model.CanonicalLiterature;
+import com.patra.common.model.DataType;
+import com.patra.common.type.TypeReference;
+import com.patra.ingest.domain.model.vo.batch.Batch;
+import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult;
+import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult.ErrorType;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 /**
  * DataSourcePort 接口测试
@@ -37,11 +23,12 @@ import com.patra.common.enums.ProvenanceCode;
  * <p>测试 v2.0 多数据类型架构的核心接口：泛型化数据获取端口
  *
  * <p><strong>测试策略</strong>：
+ *
  * <ul>
- *   <li>使用 Mock 实现进行接口契约测试</li>
- *   <li>验证泛型方法的类型安全性</li>
- *   <li>验证 DataFetchResult 工厂方法</li>
- *   <li>验证 supports 和 getSupportedTypes 方法</li>
+ *   <li>使用 Mock 实现进行接口契约测试
+ *   <li>验证泛型方法的类型安全性
+ *   <li>验证 DataFetchResult 工厂方法
+ *   <li>验证 supports 和 getSupportedTypes 方法
  * </ul>
  *
  * @since 0.1.0.0
@@ -51,9 +38,7 @@ class DataSourcePortTest {
 
   // ========== Mock 实现 ==========
 
-  /**
-   * Mock 数据源端口实现（用于接口契约测试）
-   */
+  /** Mock 数据源端口实现（用于接口契约测试） */
   static class MockDataSourcePort implements DataSourcePort {
     private final Map<String, Set<DataType>> supportedTypes =
         Map.of(
@@ -65,9 +50,11 @@ class DataSourcePortTest {
             Set.of(DataType.DRUG));
 
     @Override
-    public com.patra.ingest.domain.model.vo.plan.BatchPlan preparePlan(ExecutionContext context, DataType dataType) {
+    public com.patra.ingest.domain.model.vo.plan.BatchPlan preparePlan(
+        ExecutionContext context, DataType dataType) {
       // Mock 实现：返回空的批次计划
-      return com.patra.ingest.domain.model.vo.plan.BatchPlan.empty(context.provenanceCode().getCode());
+      return com.patra.ingest.domain.model.vo.plan.BatchPlan.empty(
+          context.provenanceCode().getCode());
     }
 
     @Override
@@ -193,12 +180,14 @@ class DataSourcePortTest {
       // When: 获取文献数据
       TypeReference<CanonicalLiterature> litTypeRef = new TypeReference<>() {};
       DataFetchResult<CanonicalLiterature> litResult =
-          port.fetchData(createTestContext(ProvenanceCode.PUBMED), DataType.LITERATURE, litTypeRef, batch);
+          port.fetchData(
+              createTestContext(ProvenanceCode.PUBMED), DataType.LITERATURE, litTypeRef, batch);
 
       // When: 获取期刊数据
       TypeReference<DataType.Journal> journalTypeRef = new TypeReference<>() {};
       DataFetchResult<DataType.Journal> journalResult =
-          port.fetchData(createTestContext(ProvenanceCode.DOAJ), DataType.JOURNAL, journalTypeRef, batch);
+          port.fetchData(
+              createTestContext(ProvenanceCode.DOAJ), DataType.JOURNAL, journalTypeRef, batch);
 
       // Then: 两种数据类型应该完全隔离
       assertThat(litResult.dataType()).isEqualTo(DataType.LITERATURE);
@@ -260,7 +249,10 @@ class DataSourcePortTest {
 
       // When & Then: PubMed 支持文献和引用
       Set<DataType> pubmedTypes = port.getSupportedTypes("pubmed");
-      assertThat(pubmedTypes).isNotNull().hasSize(2).contains(DataType.LITERATURE, DataType.CITATION);
+      assertThat(pubmedTypes)
+          .isNotNull()
+          .hasSize(2)
+          .contains(DataType.LITERATURE, DataType.CITATION);
 
       // When & Then: DOAJ 支持期刊
       Set<DataType> doajTypes = port.getSupportedTypes("doaj");
@@ -358,7 +350,8 @@ class DataSourcePortTest {
     void should_create_non_retriable_failure_result() {
       // When: 创建不可重试的失败结果
       DataFetchResult<CanonicalLiterature> result =
-          DataFetchResult.failure(DataType.LITERATURE, "Invalid credentials", ErrorType.NON_RETRIABLE);
+          DataFetchResult.failure(
+              DataType.LITERATURE, "Invalid credentials", ErrorType.NON_RETRIABLE);
 
       // Then: 验证结果
       assertThat(result.success()).isFalse();
@@ -372,7 +365,8 @@ class DataSourcePortTest {
       // When: 创建部分成功结果
       List<CanonicalLiterature> data = List.of(createMockLiterature());
       DataFetchResult<CanonicalLiterature> result =
-          DataFetchResult.partialSuccess(data, DataType.LITERATURE, "cursor456", "Some records failed");
+          DataFetchResult.partialSuccess(
+              data, DataType.LITERATURE, "cursor456", "Some records failed");
 
       // Then: 验证结果
       assertThat(result).isNotNull();
@@ -401,14 +395,19 @@ class DataSourcePortTest {
               .build();
 
       // Then: 验证元数据
-      assertThat(result.metadata()).isNotNull().hasSize(2).containsEntry("apiVersion", "v3").containsEntry("rateLimit", 1000);
+      assertThat(result.metadata())
+          .isNotNull()
+          .hasSize(2)
+          .containsEntry("apiVersion", "v3")
+          .containsEntry("rateLimit", 1000);
     }
 
     @Test
     @DisplayName("应该处理空数据情况")
     void should_handle_null_data() {
       // When: 创建空数据结果
-      DataFetchResult<CanonicalLiterature> result = DataFetchResult.success(null, DataType.LITERATURE, null);
+      DataFetchResult<CanonicalLiterature> result =
+          DataFetchResult.success(null, DataType.LITERATURE, null);
 
       // Then: data 应该是空列表，而不是 null
       assertThat(result.data()).isNotNull().isEmpty();
@@ -425,7 +424,11 @@ class DataSourcePortTest {
     void should_contain_all_error_type_constants() {
       // Then: 验证所有枚举常量存在
       assertThat(ErrorType.values())
-          .contains(ErrorType.NONE, ErrorType.RETRIABLE, ErrorType.NON_RETRIABLE, ErrorType.PARTIAL_SUCCESS);
+          .contains(
+              ErrorType.NONE,
+              ErrorType.RETRIABLE,
+              ErrorType.NON_RETRIABLE,
+              ErrorType.PARTIAL_SUCCESS);
     }
 
     @Test
@@ -455,9 +458,7 @@ class DataSourcePortTest {
 
   // ========== 测试辅助方法 ==========
 
-  /**
-   * 创建测试用的执行上下文
-   */
+  /** 创建测试用的执行上下文 */
   private static ExecutionContext createTestContext(ProvenanceCode provenanceCode) {
     // 简化的 Mock 上下文（实际实现会更复杂）
     return new ExecutionContext(
@@ -478,9 +479,7 @@ class DataSourcePortTest {
         );
   }
 
-  /**
-   * 创建测试用的批次定义
-   */
+  /** 创建测试用的批次定义 */
   private static Batch createTestBatch() {
     // 简化的 Mock 批次（实际实现会更复杂）
     return new Batch(
@@ -494,9 +493,7 @@ class DataSourcePortTest {
         );
   }
 
-  /**
-   * 创建 Mock 文献对象
-   */
+  /** 创建 Mock 文献对象 */
   private static CanonicalLiterature createMockLiterature() {
     // 简化的 Mock 文献（使用 builder）
     return CanonicalLiterature.builder().title("Test Literature").build();

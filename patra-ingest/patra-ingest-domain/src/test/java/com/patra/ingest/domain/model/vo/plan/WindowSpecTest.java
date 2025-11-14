@@ -168,8 +168,7 @@ class WindowSpecTest {
         Instant to = Instant.parse("2024-12-31T23:59:59Z");
         WindowSpec.Time window1 = new WindowSpec.Time(from, to);
         WindowSpec.Time window2 = new WindowSpec.Time(from, to);
-        WindowSpec.Time window3 =
-            new WindowSpec.Time(from, Instant.parse("2024-06-30T23:59:59Z"));
+        WindowSpec.Time window3 = new WindowSpec.Time(from, Instant.parse("2024-06-30T23:59:59Z"));
 
         // Then
         assertThat(window1).isEqualTo(window2);
@@ -201,7 +200,10 @@ class WindowSpecTest {
         String str = window.toString();
 
         // Then
-        assertThat(str).contains("Time").contains("2024-01-01T00:00:00Z").contains("2024-12-31T23:59:59Z");
+        assertThat(str)
+            .contains("Time")
+            .contains("2024-01-01T00:00:00Z")
+            .contains("2024-12-31T23:59:59Z");
       }
     }
   }
@@ -561,7 +563,10 @@ class WindowSpecTest {
         String str = window.toString();
 
         // Then
-        assertThat(str).contains("CursorLandmark").contains("cursor_token_1").contains("cursor_token_2");
+        assertThat(str)
+            .contains("CursorLandmark")
+            .contains("cursor_token_1")
+            .contains("cursor_token_2");
       }
     }
   }

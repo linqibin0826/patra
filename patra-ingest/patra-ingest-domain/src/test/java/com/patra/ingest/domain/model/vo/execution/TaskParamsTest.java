@@ -1,14 +1,13 @@
 package com.patra.ingest.domain.model.vo.execution;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 @DisplayName("TaskParams 值对象单元测试")
 class TaskParamsTest {
@@ -85,18 +84,19 @@ class TaskParamsTest {
     void shouldSupportVariousValueTypes() {
       // Given
       Map<String, Object> values =
-          Map.of(
-              "string", "text",
-              "integer", 42,
-              "long", 100L,
-              "boolean", true,
-              "double", 3.14);
+          Map.of("string", "text", "integer", 42, "long", 100L, "boolean", true, "double", 3.14);
 
       // When
       TaskParams params = new TaskParams(values);
 
       // Then
-      assertThat(params.values()).hasSize(5).containsEntry("string", "text").containsEntry("integer", 42).containsEntry("long", 100L).containsEntry("boolean", true).containsEntry("double", 3.14);
+      assertThat(params.values())
+          .hasSize(5)
+          .containsEntry("string", "text")
+          .containsEntry("integer", 42)
+          .containsEntry("long", 100L)
+          .containsEntry("boolean", true)
+          .containsEntry("double", 3.14);
     }
 
     @Test
@@ -112,7 +112,6 @@ class TaskParamsTest {
       // Then
       assertThat(params.values()).containsEntry("map", nestedMap).containsKey("list");
     }
-
   }
 
   @Nested
@@ -309,13 +308,24 @@ class TaskParamsTest {
     @DisplayName("应该处理特殊字符的键名")
     void shouldHandleKeysWithSpecialCharacters() {
       // Given
-      Map<String, Object> values = Map.of("key.with.dots", "value1", "key-with-dashes", "value2", "key_with_underscores", "value3");
+      Map<String, Object> values =
+          Map.of(
+              "key.with.dots",
+              "value1",
+              "key-with-dashes",
+              "value2",
+              "key_with_underscores",
+              "value3");
 
       // When
       TaskParams params = new TaskParams(values);
 
       // Then
-      assertThat(params.values()).hasSize(3).containsKey("key.with.dots").containsKey("key-with-dashes").containsKey("key_with_underscores");
+      assertThat(params.values())
+          .hasSize(3)
+          .containsKey("key.with.dots")
+          .containsKey("key-with-dashes")
+          .containsKey("key_with_underscores");
     }
 
     @Test
@@ -354,7 +364,11 @@ class TaskParamsTest {
       TaskParams params = new TaskParams(values);
 
       // Then
-      assertThat(params.values()).hasSize(3).containsEntry("键", "值").containsEntry("clé", "valeur").containsEntry("キー", "値");
+      assertThat(params.values())
+          .hasSize(3)
+          .containsEntry("键", "值")
+          .containsEntry("clé", "valeur")
+          .containsEntry("キー", "値");
     }
   }
 
@@ -382,16 +396,25 @@ class TaskParamsTest {
       // Given
       Map<String, Object> values =
           Map.of(
-              "batchSize", 100,
-              "timeout", 3000L,
-              "retryEnabled", true,
-              "endpoint", "https://api.example.com");
+              "batchSize",
+              100,
+              "timeout",
+              3000L,
+              "retryEnabled",
+              true,
+              "endpoint",
+              "https://api.example.com");
 
       // When
       TaskParams params = new TaskParams(values);
 
       // Then
-      assertThat(params.values()).hasSize(4).containsEntry("batchSize", 100).containsEntry("timeout", 3000L).containsEntry("retryEnabled", true).containsEntry("endpoint", "https://api.example.com");
+      assertThat(params.values())
+          .hasSize(4)
+          .containsEntry("batchSize", 100)
+          .containsEntry("timeout", 3000L)
+          .containsEntry("retryEnabled", true)
+          .containsEntry("endpoint", "https://api.example.com");
     }
 
     @Test
@@ -399,13 +422,23 @@ class TaskParamsTest {
     void shouldSupportFilterParameters() {
       // Given
       Map<String, Object> values =
-          Map.of("dateFrom", "2025-01-01", "dateTo", "2025-01-31", "tags", java.util.List.of("tag1", "tag2"));
+          Map.of(
+              "dateFrom",
+              "2025-01-01",
+              "dateTo",
+              "2025-01-31",
+              "tags",
+              java.util.List.of("tag1", "tag2"));
 
       // When
       TaskParams params = new TaskParams(values);
 
       // Then
-      assertThat(params.values()).hasSize(3).containsKey("dateFrom").containsKey("dateTo").containsKey("tags");
+      assertThat(params.values())
+          .hasSize(3)
+          .containsKey("dateFrom")
+          .containsKey("dateTo")
+          .containsKey("tags");
     }
 
     @Test
@@ -422,7 +455,11 @@ class TaskParamsTest {
       TaskParams params = new TaskParams(values);
 
       // Then
-      assertThat(params.values()).hasSize(3).containsEntry("retryCount", 3).containsKey("lastError").containsKey("nextRetryAt");
+      assertThat(params.values())
+          .hasSize(3)
+          .containsEntry("retryCount", 3)
+          .containsKey("lastError")
+          .containsKey("nextRetryAt");
     }
   }
 }

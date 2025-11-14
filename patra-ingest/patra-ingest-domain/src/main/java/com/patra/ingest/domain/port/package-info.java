@@ -11,17 +11,17 @@
  * <p>用于持久化聚合根和实体,由基础设施层的 MyBatis-Plus 实现:
  *
  * <ul>
- *   <li>{@link com.patra.ingest.domain.port.PlanRepository} - 计划聚合根仓储</li>
- *   <li>{@link com.patra.ingest.domain.port.PlanSliceRepository} - 计划切片聚合根仓储</li>
- *   <li>{@link com.patra.ingest.domain.port.TaskRepository} - 任务聚合根仓储</li>
- *   <li>{@link com.patra.ingest.domain.port.TaskRunRepository} - 任务执行记录仓储</li>
- *   <li>{@link com.patra.ingest.domain.port.TaskRunBatchRepository} - 任务批次仓储</li>
- *   <li>{@link com.patra.ingest.domain.port.ScheduleInstanceRepository} - 调度实例仓储</li>
- *   <li>{@link com.patra.ingest.domain.port.CursorRepository} - 游标仓储</li>
- *   <li>{@link com.patra.ingest.domain.port.CursorEventRepository} - 游标事件仓储</li>
- *   <li>{@link com.patra.ingest.domain.port.OutboxMessageRepository} - Outbox 消息仓储</li>
- *   <li>{@link com.patra.ingest.domain.port.OutboxRelayLogRepository} - Outbox 中继日志仓储</li>
- *   <li>{@link com.patra.ingest.domain.port.OutboxRelayRepository} - Outbox 中继存储(复合操作)</li>
+ *   <li>{@link com.patra.ingest.domain.port.PlanRepository} - 计划聚合根仓储
+ *   <li>{@link com.patra.ingest.domain.port.PlanSliceRepository} - 计划切片聚合根仓储
+ *   <li>{@link com.patra.ingest.domain.port.TaskRepository} - 任务聚合根仓储
+ *   <li>{@link com.patra.ingest.domain.port.TaskRunRepository} - 任务执行记录仓储
+ *   <li>{@link com.patra.ingest.domain.port.TaskRunBatchRepository} - 任务批次仓储
+ *   <li>{@link com.patra.ingest.domain.port.ScheduleInstanceRepository} - 调度实例仓储
+ *   <li>{@link com.patra.ingest.domain.port.CursorRepository} - 游标仓储
+ *   <li>{@link com.patra.ingest.domain.port.CursorEventRepository} - 游标事件仓储
+ *   <li>{@link com.patra.ingest.domain.port.OutboxMessageRepository} - Outbox 消息仓储
+ *   <li>{@link com.patra.ingest.domain.port.OutboxRelayLogRepository} - Outbox 中继日志仓储
+ *   <li>{@link com.patra.ingest.domain.port.OutboxRelayRepository} - Outbox 中继存储(复合操作)
  * </ul>
  *
  * <h3>2. 外部服务端口(External Service Ports) - 被驱动端口</h3>
@@ -31,40 +31,34 @@
  * <ul>
  *   <li>{@link com.patra.ingest.domain.port.DataSourcePort} - 数据源端口
  *       <ul>
- *         <li>从外部数据源获取标准化文献数据</li>
- *         <li>支持多种数据源(PubMed, EPMC 等)</li>
- *         <li>处理分页、游标和错误重试</li>
+ *         <li>从外部数据源获取标准化文献数据
+ *         <li>支持多种数据源(PubMed, EPMC 等)
+ *         <li>处理分页、游标和错误重试
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.ingest.domain.port.PatraRegistryPort} - Patra Registry 配置服务端口
  *       <ul>
- *         <li>获取 Provenance 配置快照</li>
- *         <li>查询数据字典和元数据</li>
+ *         <li>获取 Provenance 配置快照
+ *         <li>查询数据字典和元数据
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.ingest.domain.port.PubmedSearchPort} - PubMed 搜索 API 端口
  *       <ul>
- *         <li>执行全量和增量数据采集</li>
- *         <li>支持游标分页和批量查询</li>
+ *         <li>执行全量和增量数据采集
+ *         <li>支持游标分页和批量查询
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.ingest.domain.port.LiteratureStoragePort} - 文献存储服务端口
  *       <ul>
- *         <li>持久化采集到的文献数据</li>
- *         <li>支持批量写入和事务性提交</li>
+ *         <li>持久化采集到的文献数据
+ *         <li>支持批量写入和事务性提交
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.ingest.domain.port.StorageMetadataPort} - 存储元数据服务端口
  *       <ul>
- *         <li>查询和更新文献元数据</li>
+ *         <li>查询和更新文献元数据
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.ingest.domain.port.StoragePort} - 通用存储适配器端口
  *       <ul>
- *         <li>文件上传和下载</li>
- *         <li>支持多种存储后端(OSS, S3等)</li>
+ *         <li>文件上传和下载
+ *         <li>支持多种存储后端(OSS, S3等)
  *       </ul>
- *   </li>
  * </ul>
  *
  * <h3>3. 技术服务端口(Technical Service Ports) - 被驱动端口</h3>
@@ -74,22 +68,19 @@
  * <ul>
  *   <li>{@link com.patra.ingest.domain.port.ExpressionCompilerPort} - 表达式编译器端口
  *       <ul>
- *         <li>编译和验证 patra-expr 表达式</li>
- *         <li>用于计划窗口的动态表达式解析</li>
+ *         <li>编译和验证 patra-expr 表达式
+ *         <li>用于计划窗口的动态表达式解析
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.ingest.domain.port.OutboxPublisherPort} - Outbox 发布器端口
  *       <ul>
- *         <li>发布 Outbox 消息到 RocketMQ</li>
- *         <li>实现事务性消息发布模式</li>
+ *         <li>发布 Outbox 消息到 RocketMQ
+ *         <li>实现事务性消息发布模式
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.ingest.domain.port.TechnicalRetryPort} - 技术重试端口
  *       <ul>
- *         <li>执行技术层面的重试逻辑(网络故障等)</li>
- *         <li>区别于业务补偿</li>
+ *         <li>执行技术层面的重试逻辑(网络故障等)
+ *         <li>区别于业务补偿
  *       </ul>
- *   </li>
  * </ul>
  *
  * <h2>六边形架构依赖方向</h2>
@@ -124,19 +115,20 @@
  * </pre>
  *
  * <p><b>关键原则</b>:
+ *
  * <ul>
- *   <li>领域层定义端口接口,不依赖具体实现</li>
- *   <li>基础设施层实现端口,依赖领域层接口</li>
- *   <li>依赖箭头从外层指向内层(依赖倒置)</li>
+ *   <li>领域层定义端口接口,不依赖具体实现
+ *   <li>基础设施层实现端口,依赖领域层接口
+ *   <li>依赖箭头从外层指向内层(依赖倒置)
  * </ul>
  *
  * <h2>端口命名约定</h2>
  *
  * <ul>
- *   <li><b>Repository</b>: 仓储端口,用于聚合根持久化(如 {@code PlanRepository})</li>
- *   <li><b>Port</b>: 外部服务端口,用于调用外部系统(如 {@code PubmedSearchPort})</li>
- *   <li><b>Adapter</b>: 通用适配器端口(如 {@code StoragePort})</li>
- *   <li><b>Store</b>: 复合存储端口,组合多个仓储操作(如 {@code OutboxRelayRepository})</li>
+ *   <li><b>Repository</b>: 仓储端口,用于聚合根持久化(如 {@code PlanRepository})
+ *   <li><b>Port</b>: 外部服务端口,用于调用外部系统(如 {@code PubmedSearchPort})
+ *   <li><b>Adapter</b>: 通用适配器端口(如 {@code StoragePort})
+ *   <li><b>Store</b>: 复合存储端口,组合多个仓储操作(如 {@code OutboxRelayRepository})
  * </ul>
  *
  * <h2>端口方法设计规范</h2>
@@ -248,20 +240,20 @@
  * <h2>端口测试策略</h2>
  *
  * <ul>
- *   <li><b>契约测试</b>: 验证端口实现满足接口契约</li>
- *   <li><b>Mock 测试</b>: 使用 Mockito Mock 端口进行单元测试</li>
- *   <li><b>集成测试</b>: 使用真实实现进行端到端测试</li>
+ *   <li><b>契约测试</b>: 验证端口实现满足接口契约
+ *   <li><b>Mock 测试</b>: 使用 Mockito Mock 端口进行单元测试
+ *   <li><b>集成测试</b>: 使用真实实现进行端到端测试
  * </ul>
  *
  * <h2>最佳实践</h2>
  *
  * <ul>
- *   <li>端口接口应放在领域层,体现领域需求</li>
- *   <li>端口方法命名应符合领域语义,而非技术实现</li>
- *   <li>端口返回领域对象,不返回 DTO 或 DO</li>
- *   <li>端口方法应保持职责单一,避免上帝接口</li>
- *   <li>端口接口不应有默认实现(除非 Java 8 默认方法)</li>
- *   <li>端口应避免循环依赖,保持依赖单向性</li>
+ *   <li>端口接口应放在领域层,体现领域需求
+ *   <li>端口方法命名应符合领域语义,而非技术实现
+ *   <li>端口返回领域对象,不返回 DTO 或 DO
+ *   <li>端口方法应保持职责单一,避免上帝接口
+ *   <li>端口接口不应有默认实现(除非 Java 8 默认方法)
+ *   <li>端口应避免循环依赖,保持依赖单向性
  * </ul>
  *
  * @see com.patra.ingest.domain.model.aggregate 聚合根定义

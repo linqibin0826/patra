@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.infra.persistence.entity.OutboxMessageDO;
-import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -109,11 +108,9 @@ class OutboxMessageConverterTest {
     Instant pubLeasedUntil = now.plusSeconds(300);
 
     JsonNode payloadJson =
-        JsonMapperHolder.getObjectMapper()
-            .readTree("{\"taskId\":1001,\"priority\":5}");
+        JsonMapperHolder.getObjectMapper().readTree("{\"taskId\":1001,\"priority\":5}");
     JsonNode headersJson =
-        JsonMapperHolder.getObjectMapper()
-            .readTree("{\"correlationId\":\"corr-123\"}");
+        JsonMapperHolder.getObjectMapper().readTree("{\"correlationId\":\"corr-123\"}");
 
     OutboxMessageDO entity = new OutboxMessageDO();
     entity.setId(2001L);

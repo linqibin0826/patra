@@ -1,17 +1,12 @@
 package com.patra.ingest.domain.model.vo.execution;
 
-import org.junit.jupiter.api.DisplayName;
-import com.patra.common.enums.ProvenanceCode;
-import org.junit.jupiter.api.Nested;
-import com.patra.common.enums.ProvenanceCode;
-import org.junit.jupiter.api.Test;
-import com.patra.common.enums.ProvenanceCode;
-
-import java.time.Instant;
-import com.patra.common.enums.ProvenanceCode;
-
 import static org.assertj.core.api.Assertions.assertThat;
+
 import com.patra.common.enums.ProvenanceCode;
+import java.time.Instant;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 @DisplayName("TaskReadyMessage 值对象单元测试")
 class TaskReadyMessageTest {
@@ -197,8 +192,7 @@ class TaskReadyMessageTest {
     void shouldAllowCreatingHeaderWithAllNullFields() {
       // When
       TaskReadyMessage.Header header =
-          new TaskReadyMessage.Header(
-              null, null, null, null, null, null, null, null, null, null);
+          new TaskReadyMessage.Header(null, null, null, null, null, null, null, null, null, null);
 
       // Then
       assertThat(header.scheduleInstanceId()).isNull();
@@ -451,7 +445,20 @@ class TaskReadyMessageTest {
       // When
       TaskReadyMessage.Payload payload =
           new TaskReadyMessage.Payload(
-              1L, 2L, 3L, ProvenanceCode.PUBMED, "op", "key", -10, NOW, null, null, null, null, null, null);
+              1L,
+              2L,
+              3L,
+              ProvenanceCode.PUBMED,
+              "op",
+              "key",
+              -10,
+              NOW,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null);
 
       // Then
       assertThat(payload.priority()).isEqualTo(-10);
@@ -648,11 +655,24 @@ class TaskReadyMessageTest {
 
   private TaskReadyMessage.Payload createMinimalPayload() {
     return new TaskReadyMessage.Payload(
-        1001L, 3001L, 4001L, ProvenanceCode.PUBMED, "FETCH", "key", 10, NOW, null, null, null, null, null,
+        1001L,
+        3001L,
+        4001L,
+        ProvenanceCode.PUBMED,
+        "FETCH",
+        "key",
+        10,
+        NOW,
+        null,
+        null,
+        null,
+        null,
+        null,
         null);
   }
 
   private TaskReadyMessage.Header createMinimalHeader() {
-    return new TaskReadyMessage.Header(5001L, "XXL", 100L, 200L, "CRON", NOW, NOW, null, null, null);
+    return new TaskReadyMessage.Header(
+        5001L, "XXL", 100L, 200L, "CRON", NOW, NOW, null, null, null);
   }
 }

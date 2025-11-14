@@ -47,27 +47,26 @@ class PlanAggregateTest {
       String exprProtoSnapshotJson = "{\"expr\":\"test\"}";
       String provenanceConfigSnapshotJson = "{\"config\":\"test\"}";
       String provenanceConfigHash = "configHash123";
-      WindowSpec windowSpec = WindowSpec.ofTime(
-          Instant.parse("2024-01-01T00:00:00Z"),
-          Instant.parse("2024-12-31T23:59:59Z")
-      );
+      WindowSpec windowSpec =
+          WindowSpec.ofTime(
+              Instant.parse("2024-01-01T00:00:00Z"), Instant.parse("2024-12-31T23:59:59Z"));
       String sliceStrategyCode = "TIME";
       String sliceParamsJson = "{\"granularity\":\"MONTH\"}";
 
       // When
-      PlanAggregate plan = PlanAggregate.create(
-          scheduleInstanceId,
-          planKey,
-          provenanceCode,
-          operationCode,
-          exprProtoHash,
-          exprProtoSnapshotJson,
-          provenanceConfigSnapshotJson,
-          provenanceConfigHash,
-          windowSpec,
-          sliceStrategyCode,
-          sliceParamsJson
-      );
+      PlanAggregate plan =
+          PlanAggregate.create(
+              scheduleInstanceId,
+              planKey,
+              provenanceCode,
+              operationCode,
+              exprProtoHash,
+              exprProtoSnapshotJson,
+              provenanceConfigSnapshotJson,
+              provenanceConfigHash,
+              windowSpec,
+              sliceStrategyCode,
+              sliceParamsJson);
 
       // Then
       assertThat(plan).isNotNull();
@@ -95,9 +94,8 @@ class PlanAggregateTest {
       String operationCode = "harvest"; // 小写
 
       // When
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .operationCode(operationCode)
-          .build();
+      PlanAggregate plan =
+          PlanAggregateTestDataBuilder.builder().operationCode(operationCode).build();
 
       // Then - 应该规范化为枚举
       assertThat(plan.getOperation()).isEqualTo(OperationCode.HARVEST);
@@ -111,9 +109,8 @@ class PlanAggregateTest {
       String operationCode = null;
 
       // When
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .operationCode(operationCode)
-          .build();
+      PlanAggregate plan =
+          PlanAggregateTestDataBuilder.builder().operationCode(operationCode).build();
 
       // Then
       assertThat(plan.getOperation()).isNull();
@@ -127,9 +124,11 @@ class PlanAggregateTest {
       Long scheduleInstanceId = null;
 
       // When & Then
-      assertThatThrownBy(() -> PlanAggregateTestDataBuilder.builder()
-          .scheduleInstanceId(scheduleInstanceId)
-          .build())
+      assertThatThrownBy(
+              () ->
+                  PlanAggregateTestDataBuilder.builder()
+                      .scheduleInstanceId(scheduleInstanceId)
+                      .build())
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("scheduleInstanceId must not be null");
     }
@@ -141,9 +140,7 @@ class PlanAggregateTest {
       String planKey = null;
 
       // When & Then
-      assertThatThrownBy(() -> PlanAggregateTestDataBuilder.builder()
-          .planKey(planKey)
-          .build())
+      assertThatThrownBy(() -> PlanAggregateTestDataBuilder.builder().planKey(planKey).build())
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("planKey must not be null");
     }
@@ -155,9 +152,8 @@ class PlanAggregateTest {
       WindowSpec windowSpec = null;
 
       // When & Then
-      assertThatThrownBy(() -> PlanAggregateTestDataBuilder.builder()
-          .windowSpec(windowSpec)
-          .build())
+      assertThatThrownBy(
+              () -> PlanAggregateTestDataBuilder.builder().windowSpec(windowSpec).build())
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("windowSpec must not be null");
     }
@@ -169,9 +165,8 @@ class PlanAggregateTest {
       String operationCode = "INVALID_OPERATION";
 
       // When & Then
-      assertThatThrownBy(() -> PlanAggregateTestDataBuilder.builder()
-          .operationCode(operationCode)
-          .build())
+      assertThatThrownBy(
+              () -> PlanAggregateTestDataBuilder.builder().operationCode(operationCode).build())
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("未知的操作代码");
     }
@@ -194,32 +189,31 @@ class PlanAggregateTest {
       String exprProtoSnapshotJson = "{\"expr\":\"test\"}";
       String provenanceConfigSnapshotJson = "{\"config\":\"test\"}";
       String provenanceConfigHash = "configHash123";
-      WindowSpec windowSpec = WindowSpec.ofTime(
-          Instant.parse("2024-01-01T00:00:00Z"),
-          Instant.parse("2024-12-31T23:59:59Z")
-      );
+      WindowSpec windowSpec =
+          WindowSpec.ofTime(
+              Instant.parse("2024-01-01T00:00:00Z"), Instant.parse("2024-12-31T23:59:59Z"));
       String sliceStrategyCode = "TIME";
       String sliceParamsJson = "{\"granularity\":\"MONTH\"}";
       PlanStatus status = PlanStatus.READY;
       long version = 3L;
 
       // When
-      PlanAggregate plan = PlanAggregate.restore(
-          id,
-          scheduleInstanceId,
-          planKey,
-          provenanceCode,
-          operationCode,
-          exprProtoHash,
-          exprProtoSnapshotJson,
-          provenanceConfigSnapshotJson,
-          provenanceConfigHash,
-          windowSpec,
-          sliceStrategyCode,
-          sliceParamsJson,
-          status,
-          version
-      );
+      PlanAggregate plan =
+          PlanAggregate.restore(
+              id,
+              scheduleInstanceId,
+              planKey,
+              provenanceCode,
+              operationCode,
+              exprProtoHash,
+              exprProtoSnapshotJson,
+              provenanceConfigSnapshotJson,
+              provenanceConfigHash,
+              windowSpec,
+              sliceStrategyCode,
+              sliceParamsJson,
+              status,
+              version);
 
       // Then
       assertThat(plan).isNotNull();
@@ -241,22 +235,22 @@ class PlanAggregateTest {
       PlanStatus status = null;
 
       // When
-      PlanAggregate plan = PlanAggregate.restore(
-          100L,
-          1001L,
-          "planKey",
-          ProvenanceCode.PUBMED,
-          "HARVEST",
-          "hash",
-          "{}",
-          "{}",
-          "hash",
-          WindowSpec.ofSingle(),
-          "SINGLE",
-          "{}",
-          status,
-          1L
-      );
+      PlanAggregate plan =
+          PlanAggregate.restore(
+              100L,
+              1001L,
+              "planKey",
+              ProvenanceCode.PUBMED,
+              "HARVEST",
+              "hash",
+              "{}",
+              "{}",
+              "hash",
+              WindowSpec.ofSingle(),
+              "SINGLE",
+              "{}",
+              status,
+              1L);
 
       // Then
       assertThat(plan.getStatus()).isEqualTo(PlanStatus.DRAFT);
@@ -287,9 +281,8 @@ class PlanAggregateTest {
     @DisplayName("应该抛出异常当从非 DRAFT 状态调用 startSlicing()")
     void shouldThrowExceptionWhenStartSlicingFromNonDraftStatus() {
       // Given - 计划已经处于 SLICING 状态
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .status(PlanStatus.SLICING)
-          .buildRestored();
+      PlanAggregate plan =
+          PlanAggregateTestDataBuilder.builder().status(PlanStatus.SLICING).buildRestored();
 
       // When & Then
       assertThatThrownBy(() -> plan.startSlicing())
@@ -301,9 +294,8 @@ class PlanAggregateTest {
     @DisplayName("应该抛出异常当从 READY 状态调用 startSlicing()")
     void shouldThrowExceptionWhenStartSlicingFromReadyStatus() {
       // Given - 计划已经处于 READY 状态
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .status(PlanStatus.READY)
-          .buildRestored();
+      PlanAggregate plan =
+          PlanAggregateTestDataBuilder.builder().status(PlanStatus.READY).buildRestored();
 
       // When & Then
       assertThatThrownBy(() -> plan.startSlicing())
@@ -315,9 +307,8 @@ class PlanAggregateTest {
     @DisplayName("应该抛出异常当从 ARCHIVED 状态调用 startSlicing()")
     void shouldThrowExceptionWhenStartSlicingFromArchivedStatus() {
       // Given - 计划已经处于 ARCHIVED 状态
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .status(PlanStatus.ARCHIVED)
-          .buildRestored();
+      PlanAggregate plan =
+          PlanAggregateTestDataBuilder.builder().status(PlanStatus.ARCHIVED).buildRestored();
 
       // When & Then
       assertThatThrownBy(() -> plan.startSlicing())
@@ -329,9 +320,8 @@ class PlanAggregateTest {
     @DisplayName("应该允许将计划标记为 READY")
     void shouldAllowMarkingPlanAsReady() {
       // Given - 计划处于 SLICING 状态
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .status(PlanStatus.SLICING)
-          .buildRestored();
+      PlanAggregate plan =
+          PlanAggregateTestDataBuilder.builder().status(PlanStatus.SLICING).buildRestored();
 
       // When - 标记为就绪
       plan.markReady();
@@ -344,9 +334,8 @@ class PlanAggregateTest {
     @DisplayName("应该允许更新状态为任意值")
     void shouldAllowUpdatingStatusToAnyValue() {
       // Given - 计划处于 READY 状态
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .status(PlanStatus.READY)
-          .buildRestored();
+      PlanAggregate plan =
+          PlanAggregateTestDataBuilder.builder().status(PlanStatus.READY).buildRestored();
 
       // When - 更新状态为 ARCHIVED
       plan.updateStatus(PlanStatus.ARCHIVED);
@@ -414,17 +403,17 @@ class PlanAggregateTest {
       String originalPlanKey = "pubmed_harvest_2024-01-01_2024-12-31";
       ProvenanceCode originalProvenanceCode = ProvenanceCode.PUBMED;
       String originalExprProtoHash = "hash123";
-      WindowSpec originalWindowSpec = WindowSpec.ofTime(
-          Instant.parse("2024-01-01T00:00:00Z"),
-          Instant.parse("2024-12-31T23:59:59Z")
-      );
+      WindowSpec originalWindowSpec =
+          WindowSpec.ofTime(
+              Instant.parse("2024-01-01T00:00:00Z"), Instant.parse("2024-12-31T23:59:59Z"));
 
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .planKey(originalPlanKey)
-          .provenanceCode(originalProvenanceCode)
-          .exprProtoHash(originalExprProtoHash)
-          .windowSpec(originalWindowSpec)
-          .build();
+      PlanAggregate plan =
+          PlanAggregateTestDataBuilder.builder()
+              .planKey(originalPlanKey)
+              .provenanceCode(originalProvenanceCode)
+              .exprProtoHash(originalExprProtoHash)
+              .windowSpec(originalWindowSpec)
+              .build();
 
       // When - 状态转换
       plan.startSlicing();
@@ -453,9 +442,7 @@ class PlanAggregateTest {
       Instant to = Instant.parse("2024-12-31T23:59:59Z");
       WindowSpec windowSpec = WindowSpec.ofTime(from, to);
 
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .windowSpec(windowSpec)
-          .build();
+      PlanAggregate plan = PlanAggregateTestDataBuilder.builder().windowSpec(windowSpec).build();
 
       // When & Then
       assertThat(plan.getWindowFrom()).isEqualTo(from);
@@ -468,9 +455,7 @@ class PlanAggregateTest {
       // Given - 使用 SINGLE 策略的计划
       WindowSpec windowSpec = WindowSpec.ofSingle();
 
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .windowSpec(windowSpec)
-          .build();
+      PlanAggregate plan = PlanAggregateTestDataBuilder.builder().windowSpec(windowSpec).build();
 
       // When & Then
       assertThat(plan.getWindowFrom()).isNull();
@@ -483,9 +468,7 @@ class PlanAggregateTest {
       // Given - 使用 ID_RANGE 策略的计划
       WindowSpec windowSpec = WindowSpec.ofIdRange(1000L, 2000L);
 
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .windowSpec(windowSpec)
-          .build();
+      PlanAggregate plan = PlanAggregateTestDataBuilder.builder().windowSpec(windowSpec).build();
 
       // When & Then
       assertThat(plan.getWindowFrom()).isNull();
@@ -498,9 +481,7 @@ class PlanAggregateTest {
       // Given - 使用 CURSOR_LANDMARK 策略的计划
       WindowSpec windowSpec = WindowSpec.ofCursor("token1", "token2");
 
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .windowSpec(windowSpec)
-          .build();
+      PlanAggregate plan = PlanAggregateTestDataBuilder.builder().windowSpec(windowSpec).build();
 
       // When & Then
       assertThat(plan.getWindowFrom()).isNull();
@@ -513,9 +494,7 @@ class PlanAggregateTest {
       // Given - 使用 VOLUME_BUDGET 策略的计划
       WindowSpec windowSpec = WindowSpec.ofVolume(10000, "RECORDS");
 
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .windowSpec(windowSpec)
-          .build();
+      PlanAggregate plan = PlanAggregateTestDataBuilder.builder().windowSpec(windowSpec).build();
 
       // When & Then
       assertThat(plan.getWindowFrom()).isNull();
@@ -536,13 +515,9 @@ class PlanAggregateTest {
       String planKey = "pubmed_harvest_2024-01-01_2024-12-31_TIME";
 
       // When - 创建两个计划
-      PlanAggregate plan1 = PlanAggregateTestDataBuilder.builder()
-          .planKey(planKey)
-          .build();
+      PlanAggregate plan1 = PlanAggregateTestDataBuilder.builder().planKey(planKey).build();
 
-      PlanAggregate plan2 = PlanAggregateTestDataBuilder.builder()
-          .planKey(planKey)
-          .build();
+      PlanAggregate plan2 = PlanAggregateTestDataBuilder.builder().planKey(planKey).build();
 
       // Then - planKey 应该相同（用于去重）
       assertThat(plan1.getPlanKey()).isEqualTo(plan2.getPlanKey());
@@ -556,13 +531,9 @@ class PlanAggregateTest {
       String planKey2 = "epmc_backfill_2024-01-01_2024-12-31_DATE";
 
       // When - 创建两个计划
-      PlanAggregate plan1 = PlanAggregateTestDataBuilder.builder()
-          .planKey(planKey1)
-          .build();
+      PlanAggregate plan1 = PlanAggregateTestDataBuilder.builder().planKey(planKey1).build();
 
-      PlanAggregate plan2 = PlanAggregateTestDataBuilder.builder()
-          .planKey(planKey2)
-          .build();
+      PlanAggregate plan2 = PlanAggregateTestDataBuilder.builder().planKey(planKey2).build();
 
       // Then - planKey 应该不同
       assertThat(plan1.getPlanKey()).isNotEqualTo(plan2.getPlanKey());
@@ -589,16 +560,17 @@ class PlanAggregateTest {
       String sliceParamsJson = null;
 
       // When
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .provenanceCode(provenanceCode)
-          .operationCode(operationCode)
-          .exprProtoHash(exprProtoHash)
-          .exprProtoSnapshotJson(exprProtoSnapshotJson)
-          .provenanceConfigSnapshotJson(provenanceConfigSnapshotJson)
-          .provenanceConfigHash(provenanceConfigHash)
-          .sliceStrategyCode(sliceStrategyCode)
-          .sliceParamsJson(sliceParamsJson)
-          .build();
+      PlanAggregate plan =
+          PlanAggregateTestDataBuilder.builder()
+              .provenanceCode(provenanceCode)
+              .operationCode(operationCode)
+              .exprProtoHash(exprProtoHash)
+              .exprProtoSnapshotJson(exprProtoSnapshotJson)
+              .provenanceConfigSnapshotJson(provenanceConfigSnapshotJson)
+              .provenanceConfigHash(provenanceConfigHash)
+              .sliceStrategyCode(sliceStrategyCode)
+              .sliceParamsJson(sliceParamsJson)
+              .build();
 
       // Then - 应该成功创建
       assertThat(plan).isNotNull();
@@ -617,17 +589,13 @@ class PlanAggregateTest {
     void shouldHandleAllOperationCodeEnumValues() {
       // Given - 所有 OperationCode 枚举值
       OperationCode[] allOperations = {
-          OperationCode.HARVEST,
-          OperationCode.BACKFILL,
-          OperationCode.UPDATE,
-          OperationCode.METRICS
+        OperationCode.HARVEST, OperationCode.BACKFILL, OperationCode.UPDATE, OperationCode.METRICS
       };
 
       // When & Then - 每个操作都应该成功创建计划
       for (OperationCode operation : allOperations) {
-        PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-            .operationCode(operation.getCode())
-            .build();
+        PlanAggregate plan =
+            PlanAggregateTestDataBuilder.builder().operationCode(operation.getCode()).build();
 
         assertThat(plan.getOperation()).isEqualTo(operation);
         assertThat(plan.getOperationCode()).isEqualTo(operation.getCode());
@@ -651,9 +619,7 @@ class PlanAggregateTest {
       WindowSpec windowSpec = WindowSpec.ofTime(from, to);
 
       // When
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .windowSpec(windowSpec)
-          .build();
+      PlanAggregate plan = PlanAggregateTestDataBuilder.builder().windowSpec(windowSpec).build();
 
       // Then
       assertThat(plan.getWindowFrom()).isEqualTo(from);
@@ -670,9 +636,7 @@ class PlanAggregateTest {
       WindowSpec windowSpec = WindowSpec.ofIdRange(from, to);
 
       // When
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .windowSpec(windowSpec)
-          .build();
+      PlanAggregate plan = PlanAggregateTestDataBuilder.builder().windowSpec(windowSpec).build();
 
       // Then
       assertThat(plan.getWindowSpec()).isEqualTo(windowSpec);
@@ -686,10 +650,11 @@ class PlanAggregateTest {
       String longExprProtoSnapshotJson = "{\"expr\":\"" + "x".repeat(10000) + "\"}";
 
       // When
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .planKey(longPlanKey)
-          .exprProtoSnapshotJson(longExprProtoSnapshotJson)
-          .build();
+      PlanAggregate plan =
+          PlanAggregateTestDataBuilder.builder()
+              .planKey(longPlanKey)
+              .exprProtoSnapshotJson(longExprProtoSnapshotJson)
+              .build();
 
       // Then
       assertThat(plan.getPlanKey()).hasSize(1000);
@@ -703,10 +668,11 @@ class PlanAggregateTest {
       String emptyExprProtoHash = "";
 
       // When
-      PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .provenanceCode((ProvenanceCode) null)  // 测试 null provenanceCode
-          .exprProtoHash(emptyExprProtoHash)
-          .build();
+      PlanAggregate plan =
+          PlanAggregateTestDataBuilder.builder()
+              .provenanceCode((ProvenanceCode) null) // 测试 null provenanceCode
+              .exprProtoHash(emptyExprProtoHash)
+              .build();
 
       // Then - 应该成功创建（业务规则允许空字符串）
       assertThat(plan.getProvenanceCode()).isNull();
@@ -794,10 +760,9 @@ class PlanAggregateTest {
     private String exprProtoSnapshotJson = "{\"expr\":\"test\"}";
     private String provenanceConfigSnapshotJson = "{\"config\":\"test\"}";
     private String provenanceConfigHash = "configHash123";
-    private WindowSpec windowSpec = WindowSpec.ofTime(
-        Instant.parse("2024-01-01T00:00:00Z"),
-        Instant.parse("2024-12-31T23:59:59Z")
-    );
+    private WindowSpec windowSpec =
+        WindowSpec.ofTime(
+            Instant.parse("2024-01-01T00:00:00Z"), Instant.parse("2024-12-31T23:59:59Z"));
     private String sliceStrategyCode = "TIME";
     private String sliceParamsJson = "{\"granularity\":\"MONTH\"}";
     private PlanStatus status = PlanStatus.DRAFT;
@@ -883,9 +848,7 @@ class PlanAggregateTest {
       return this;
     }
 
-    /**
-     * 构建新创建的计划（使用 create() 工厂方法）。
-     */
+    /** 构建新创建的计划（使用 create() 工厂方法）。 */
     public PlanAggregate build() {
       return PlanAggregate.create(
           scheduleInstanceId,
@@ -898,13 +861,10 @@ class PlanAggregateTest {
           provenanceConfigHash,
           windowSpec,
           sliceStrategyCode,
-          sliceParamsJson
-      );
+          sliceParamsJson);
     }
 
-    /**
-     * 构建从持久化重建的计划（使用 restore() 工厂方法）。
-     */
+    /** 构建从持久化重建的计划（使用 restore() 工厂方法）。 */
     public PlanAggregate buildRestored() {
       Long restoredId = (id != null) ? id : 100L; // 默认 ID
       return PlanAggregate.restore(
@@ -921,8 +881,7 @@ class PlanAggregateTest {
           sliceStrategyCode,
           sliceParamsJson,
           status,
-          version
-      );
+          version);
     }
   }
 }

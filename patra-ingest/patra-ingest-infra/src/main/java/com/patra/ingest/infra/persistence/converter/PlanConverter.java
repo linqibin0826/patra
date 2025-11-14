@@ -127,16 +127,12 @@ public interface PlanConverter {
 
   // ========== 枚举转换方法 ==========
 
-  /**
-   * ProvenanceCode 枚举 → String（用于 Domain → DO）
-   */
+  /** ProvenanceCode 枚举 → String（用于 Domain → DO） */
   default String map(ProvenanceCode code) {
     return code == null ? null : code.getCode();
   }
 
-  /**
-   * String → ProvenanceCode 枚举（用于 DO → Domain）
-   */
+  /** String → ProvenanceCode 枚举（用于 DO → Domain） */
   default ProvenanceCode mapProvenanceCode(String code) {
     if (code == null || code.isBlank()) {
       return null;
@@ -148,16 +144,12 @@ public interface PlanConverter {
     }
   }
 
-  /**
-   * OperationCode 枚举 → String
-   */
+  /** OperationCode 枚举 → String */
   default String map(OperationCode code) {
     return code == null ? null : code.getCode();
   }
 
-  /**
-   * String → OperationCode 枚举
-   */
+  /** String → OperationCode 枚举 */
   default OperationCode mapOperationCode(String code) {
     if (code == null || code.isBlank()) {
       return null;

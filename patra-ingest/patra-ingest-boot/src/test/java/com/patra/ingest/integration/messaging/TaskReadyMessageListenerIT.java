@@ -22,16 +22,16 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /**
  * 任务就绪消息监听器集成测试。
  *
- * <p>使用 Testcontainers 启动真实 RocketMQ 环境（由 {@link RocketMQContainerInitializer} 提供），
- * 测试 {@code TaskReadyMessageListener} 的消息消费和解析功能。
+ * <p>使用 Testcontainers 启动真实 RocketMQ 环境（由 {@link RocketMQContainerInitializer} 提供）， 测试 {@code
+ * TaskReadyMessageListener} 的消息消费和解析功能。
  *
  * <h3>测试范围</h3>
  *
@@ -136,10 +136,12 @@ class TaskReadyMessageListenerIT {
     log.info("消息已发送, msgId={}", sendResult.getMsgId());
 
     // 断言：等待 TaskExecutionUseCase.execute() 被调用 (最多 10 秒)
-    ArgumentCaptor<TaskReadyCommand> commandCaptor = ArgumentCaptor.forClass(TaskReadyCommand.class);
+    ArgumentCaptor<TaskReadyCommand> commandCaptor =
+        ArgumentCaptor.forClass(TaskReadyCommand.class);
     await()
         .atMost(10, SECONDS)
-        .untilAsserted(() -> verify(taskExecutionUseCase, times(1)).execute(commandCaptor.capture()));
+        .untilAsserted(
+            () -> verify(taskExecutionUseCase, times(1)).execute(commandCaptor.capture()));
 
     // 验证：Command 对象的字段
     TaskReadyCommand capturedCommand = commandCaptor.getValue();
@@ -178,10 +180,12 @@ class TaskReadyMessageListenerIT {
     rocketMQTemplate.syncSend(destination, message);
 
     // 断言：等待用例被调用
-    ArgumentCaptor<TaskReadyCommand> commandCaptor = ArgumentCaptor.forClass(TaskReadyCommand.class);
+    ArgumentCaptor<TaskReadyCommand> commandCaptor =
+        ArgumentCaptor.forClass(TaskReadyCommand.class);
     await()
         .atMost(10, SECONDS)
-        .untilAsserted(() -> verify(taskExecutionUseCase, times(1)).execute(commandCaptor.capture()));
+        .untilAsserted(
+            () -> verify(taskExecutionUseCase, times(1)).execute(commandCaptor.capture()));
 
     // 验证：Command 中的 headers 包含所有元数据
     TaskReadyCommand capturedCommand = commandCaptor.getValue();
@@ -308,10 +312,12 @@ class TaskReadyMessageListenerIT {
     rocketMQTemplate.syncSend(destination, message);
 
     // 断言：等待用例被调用
-    ArgumentCaptor<TaskReadyCommand> commandCaptor = ArgumentCaptor.forClass(TaskReadyCommand.class);
+    ArgumentCaptor<TaskReadyCommand> commandCaptor =
+        ArgumentCaptor.forClass(TaskReadyCommand.class);
     await()
         .atMost(10, SECONDS)
-        .untilAsserted(() -> verify(taskExecutionUseCase, times(1)).execute(commandCaptor.capture()));
+        .untilAsserted(
+            () -> verify(taskExecutionUseCase, times(1)).execute(commandCaptor.capture()));
 
     // 验证：Command 对象包含所有字段
     TaskReadyCommand capturedCommand = commandCaptor.getValue();

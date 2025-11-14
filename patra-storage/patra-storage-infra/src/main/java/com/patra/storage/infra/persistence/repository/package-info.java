@@ -1,8 +1,7 @@
 /**
  * Storage 基础设施层仓储实现包。
  *
- * <p>本包包含 patra-storage 服务的仓储实现,作为六边形架构基础设施层的一部分。
- * 仓储实现类是被驱动适配器,负责实现领域层定义的仓储端口,提供聚合根的持久化功能。
+ * <p>本包包含 patra-storage 服务的仓储实现,作为六边形架构基础设施层的一部分。 仓储实现类是被驱动适配器,负责实现领域层定义的仓储端口,提供聚合根的持久化功能。
  *
  * <h2>核心组件</h2>
  *
@@ -14,7 +13,8 @@
  * <h2>仓储职责</h2>
  *
  * <ul>
- *   <li><strong>实现端口契约</strong>: 实现领域层定义的 {@link com.patra.storage.domain.port.FileMetadataRepository} 接口
+ *   <li><strong>实现端口契约</strong>: 实现领域层定义的 {@link
+ *       com.patra.storage.domain.port.FileMetadataRepository} 接口
  *   <li><strong>数据对象转换</strong>: 在领域模型(聚合根)和数据模型(DO)之间进行双向转换
  *   <li><strong>持久化操作</strong>: 执行数据库 CRUD 操作(通过 MyBatis Mapper)
  *   <li><strong>查询封装</strong>: 将数据库查询结果转换为领域对象

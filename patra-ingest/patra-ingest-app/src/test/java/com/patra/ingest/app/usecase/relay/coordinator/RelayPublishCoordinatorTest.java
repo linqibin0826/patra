@@ -294,7 +294,8 @@ class RelayPublishCoordinatorTest {
 
       // Then: 实际代码没有检查最大重试,所以仍然会调度重试 (这是业务逻辑的行为)
       verify(relayStore)
-          .markDeferred(eq(1L), eq(1L), eq(3), any(Instant.class), eq("RUNTIME_EXCEPTION"), anyString());
+          .markDeferred(
+              eq(1L), eq(1L), eq(3), any(Instant.class), eq("RUNTIME_EXCEPTION"), anyString());
 
       assertThat(result.isDeferred()).isTrue(); // 实际是 DEFERRED 而不是 FAILED
       assertThat(result.attemptNumber()).isEqualTo(3);
@@ -318,11 +319,7 @@ class RelayPublishCoordinatorTest {
       // Then: 错误代码应为 ILLEGAL_ARGUMENT_EXCEPTION
       verify(relayStore)
           .markFailed(
-              anyLong(),
-              anyLong(),
-              anyInt(),
-              errorCodeCaptor.capture(),
-              errorMsgCaptor.capture());
+              anyLong(), anyLong(), anyInt(), errorCodeCaptor.capture(), errorMsgCaptor.capture());
 
       assertThat(errorCodeCaptor.getValue()).isEqualTo("ILLEGAL_ARGUMENT_EXCEPTION");
       assertThat(errorMsgCaptor.getValue()).isEqualTo("Invalid arg");

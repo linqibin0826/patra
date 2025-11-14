@@ -13,10 +13,8 @@ import com.patra.starter.provenance.pubmed.model.response.PubmedLiterature.Pubme
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
@@ -77,37 +75,39 @@ public class PubmedLiteratureConverter {
       return null;
     }
 
-    List<CanonicalLiterature.AbstractSection> sections = article.abstractSections().stream()
-        .filter(section -> StringUtils.hasText(section.text()))
-        .map(section -> CanonicalLiterature.AbstractSection.builder()
-            .label(section.label())
-            .content(section.text())
-            .build())
-        .collect(Collectors.toList());
+    List<CanonicalLiterature.AbstractSection> sections =
+        article.abstractSections().stream()
+            .filter(section -> StringUtils.hasText(section.text()))
+            .map(
+                section ->
+                    CanonicalLiterature.AbstractSection.builder()
+                        .label(section.label())
+                        .content(section.text())
+                        .build())
+            .collect(Collectors.toList());
 
     if (sections.isEmpty()) {
       return null;
     }
 
     // 构建纯文本版本（向后兼容）
-    String text = article.abstractSections().stream()
-        .map(section -> {
-          String content = section.text();
-          if (!StringUtils.hasText(content)) {
-            return null;
-          }
-          if (StringUtils.hasText(section.label())) {
-            return section.label() + ": " + content;
-          }
-          return content;
-        })
-        .filter(StringUtils::hasText)
-        .collect(Collectors.joining("\n"));
+    String text =
+        article.abstractSections().stream()
+            .map(
+                section -> {
+                  String content = section.text();
+                  if (!StringUtils.hasText(content)) {
+                    return null;
+                  }
+                  if (StringUtils.hasText(section.label())) {
+                    return section.label() + ": " + content;
+                  }
+                  return content;
+                })
+            .filter(StringUtils::hasText)
+            .collect(Collectors.joining("\n"));
 
-    return CanonicalLiterature.Abstract.builder()
-        .text(text)
-        .sections(sections)
-        .build();
+    return CanonicalLiterature.Abstract.builder().text(text).sections(sections).build();
   }
 
   /**
@@ -127,12 +127,13 @@ public class PubmedLiteratureConverter {
       // 转换机构信息
       List<CanonicalLiterature.Affiliation> affiliations = null;
       if (!CollectionUtils.isEmpty(author.affiliations())) {
-        affiliations = author.affiliations().stream()
-            .filter(StringUtils::hasText)
-            .map(affiliationName -> CanonicalLiterature.Affiliation.builder()
-                .name(affiliationName)
-                .build())
-            .collect(Collectors.toList());
+        affiliations =
+            author.affiliations().stream()
+                .filter(StringUtils::hasText)
+                .map(
+                    affiliationName ->
+                        CanonicalLiterature.Affiliation.builder().name(affiliationName).build())
+                .collect(Collectors.toList());
         if (affiliations.isEmpty()) {
           affiliations = null;
         }
@@ -141,13 +142,16 @@ public class PubmedLiteratureConverter {
       // 转换作者标识符（ORCID、ResearcherID等）
       List<CanonicalLiterature.Identifier> authorIdentifiers = null;
       if (!CollectionUtils.isEmpty(author.identifiers())) {
-        authorIdentifiers = author.identifiers().stream()
-            .filter(id -> StringUtils.hasText(id.source()) && StringUtils.hasText(id.value()))
-            .map(id -> CanonicalLiterature.Identifier.builder()
-                .type(id.source().toLowerCase(Locale.ROOT))
-                .value(id.value())
-                .build())
-            .collect(Collectors.toList());
+        authorIdentifiers =
+            author.identifiers().stream()
+                .filter(id -> StringUtils.hasText(id.source()) && StringUtils.hasText(id.value()))
+                .map(
+                    id ->
+                        CanonicalLiterature.Identifier.builder()
+                            .type(id.source().toLowerCase(Locale.ROOT))
+                            .value(id.value())
+                            .build())
+                .collect(Collectors.toList());
         if (authorIdentifiers.isEmpty()) {
           authorIdentifiers = null;
         }
@@ -159,16 +163,17 @@ public class PubmedLiteratureConverter {
         equalContribution = "Y".equalsIgnoreCase(author.equalContrib());
       }
 
-      canonicalAuthors.add(CanonicalLiterature.Author.builder()
-          .lastName(author.lastName())
-          .foreName(author.foreName())
-          .initials(author.initials())
-          .suffix(author.suffix())
-          .organizationName(author.collectiveName())
-          .equalContribution(equalContribution)
-          .affiliations(affiliations)
-          .identifiers(authorIdentifiers)
-          .build());
+      canonicalAuthors.add(
+          CanonicalLiterature.Author.builder()
+              .lastName(author.lastName())
+              .foreName(author.foreName())
+              .initials(author.initials())
+              .suffix(author.suffix())
+              .organizationName(author.collectiveName())
+              .equalContribution(equalContribution)
+              .affiliations(affiliations)
+              .identifiers(authorIdentifiers)
+              .build());
     }
 
     return canonicalAuthors;
@@ -241,10 +246,8 @@ public class PubmedLiteratureConverter {
 
     // 添加 PMID
     if (StringUtils.hasText(article.pmid())) {
-      identifiers.add(CanonicalLiterature.Identifier.builder()
-          .type("pmid")
-          .value(article.pmid())
-          .build());
+      identifiers.add(
+          CanonicalLiterature.Identifier.builder().type("pmid").value(article.pmid()).build());
     }
 
     // 从 PubmedData.ArticleIdList 提取 DOI 和 PMC
@@ -254,14 +257,12 @@ public class PubmedLiteratureConverter {
       }
       String type = id.type().toLowerCase(Locale.ROOT);
       switch (type) {
-        case "doi" -> identifiers.add(CanonicalLiterature.Identifier.builder()
-            .type("doi")
-            .value(id.value())
-            .build());
-        case "pmc", "pmcid" -> identifiers.add(CanonicalLiterature.Identifier.builder()
-            .type("pmc")
-            .value(id.value())
-            .build());
+        case "doi" ->
+            identifiers.add(
+                CanonicalLiterature.Identifier.builder().type("doi").value(id.value()).build());
+        case "pmc", "pmcid" ->
+            identifiers.add(
+                CanonicalLiterature.Identifier.builder().type("pmc").value(id.value()).build());
         default -> {
           // Ignore other identifier types for now.
         }
@@ -277,10 +278,11 @@ public class PubmedLiteratureConverter {
         if (StringUtils.hasText(type) && StringUtils.hasText(value)) {
           // 只添加有效的标识符
           if ("Y".equals(eLocationId.validYN()) || eLocationId.validYN() == null) {
-            identifiers.add(CanonicalLiterature.Identifier.builder()
-                .type(type.toLowerCase(Locale.ROOT))
-                .value(value)
-                .build());
+            identifiers.add(
+                CanonicalLiterature.Identifier.builder()
+                    .type(type.toLowerCase(Locale.ROOT))
+                    .value(value)
+                    .build());
           }
         }
       }
@@ -291,10 +293,11 @@ public class PubmedLiteratureConverter {
       String source = otherId.source();
       String value = otherId.value();
       if (StringUtils.hasText(source) && StringUtils.hasText(value)) {
-        identifiers.add(CanonicalLiterature.Identifier.builder()
-            .type(source.toLowerCase(Locale.ROOT))
-            .value(value)
-            .build());
+        identifiers.add(
+            CanonicalLiterature.Identifier.builder()
+                .type(source.toLowerCase(Locale.ROOT))
+                .value(value)
+                .build());
       }
     }
 
@@ -322,8 +325,12 @@ public class PubmedLiteratureConverter {
     // 提取电子版发布日期
     LocalDate electronicDate = extractElectronicDate(article);
 
-    if (publishedDate == null && receivedDate == null && acceptedDate == null
-        && revisedDate == null && createdDate == null && completedDate == null
+    if (publishedDate == null
+        && receivedDate == null
+        && acceptedDate == null
+        && revisedDate == null
+        && createdDate == null
+        && completedDate == null
         && electronicDate == null) {
       return null;
     }
@@ -407,21 +414,21 @@ public class PubmedLiteratureConverter {
       return null;
     }
 
-    List<CanonicalLiterature.Keyword> keywordList = keywords.stream()
-        .filter(StringUtils::hasText)
-        .map(keyword -> CanonicalLiterature.Keyword.builder()
-            .term(keyword)
-            .build())
-        .collect(Collectors.toList());
+    List<CanonicalLiterature.Keyword> keywordList =
+        keywords.stream()
+            .filter(StringUtils::hasText)
+            .map(keyword -> CanonicalLiterature.Keyword.builder().term(keyword).build())
+            .collect(Collectors.toList());
 
     if (keywordList.isEmpty()) {
       return null;
     }
 
-    return List.of(CanonicalLiterature.KeywordSet.builder()
-        .source("publisher")  // PubMed 关键词通常来自出版商
-        .keywords(keywordList)
-        .build());
+    return List.of(
+        CanonicalLiterature.KeywordSet.builder()
+            .source("publisher") // PubMed 关键词通常来自出版商
+            .keywords(keywordList)
+            .build());
   }
 
   /**
@@ -492,8 +499,12 @@ public class PubmedLiteratureConverter {
       int dayValue = resolveDay(day);
       return LocalDate.of(yearValue, monthValue, dayValue);
     } catch (Exception ex) {
-      log.debug("Failed to parse date year={} month={} day={} due to {}",
-          year, month, day, ex.getMessage());
+      log.debug(
+          "Failed to parse date year={} month={} day={} due to {}",
+          year,
+          month,
+          day,
+          ex.getMessage());
       return null;
     }
   }
@@ -517,12 +528,13 @@ public class PubmedLiteratureConverter {
         continue;
       }
 
-      substances.add(CanonicalLiterature.Substance.builder()
-          .name(nameOfSubstance.value())
-          .registryNumber(chemical.registryNumber())
-          .vocabularyId(nameOfSubstance.ui())
-          .vocabularySource("MeSH")
-          .build());
+      substances.add(
+          CanonicalLiterature.Substance.builder()
+              .name(nameOfSubstance.value())
+              .registryNumber(chemical.registryNumber())
+              .vocabularyId(nameOfSubstance.ui())
+              .vocabularySource("MeSH")
+              .build());
     }
 
     return substances.isEmpty() ? null : substances;
@@ -550,28 +562,32 @@ public class PubmedLiteratureConverter {
       // 提取限定词
       List<CanonicalLiterature.SubjectQualifier> qualifiers = null;
       if (!CollectionUtils.isEmpty(meshHeading.qualifierNames())) {
-        qualifiers = meshHeading.qualifierNames().stream()
-            .filter(q -> StringUtils.hasText(q.value()))
-            .map(q -> CanonicalLiterature.SubjectQualifier.builder()
-                .id(q.ui())
-                .term(q.value())
-                .majorTopic("Y".equalsIgnoreCase(q.majorTopicYN()))
-                .build())
-            .collect(Collectors.toList());
+        qualifiers =
+            meshHeading.qualifierNames().stream()
+                .filter(q -> StringUtils.hasText(q.value()))
+                .map(
+                    q ->
+                        CanonicalLiterature.SubjectQualifier.builder()
+                            .id(q.ui())
+                            .term(q.value())
+                            .majorTopic("Y".equalsIgnoreCase(q.majorTopicYN()))
+                            .build())
+                .collect(Collectors.toList());
 
         if (qualifiers.isEmpty()) {
           qualifiers = null;
         }
       }
 
-      subjects.add(CanonicalLiterature.Subject.builder()
-          .id(descriptorName.ui())
-          .term(descriptorName.value())
-          .majorTopic("Y".equalsIgnoreCase(descriptorName.majorTopicYN()))
-          .type(descriptorName.type())
-          .vocabulary("MeSH")
-          .qualifiers(qualifiers)
-          .build());
+      subjects.add(
+          CanonicalLiterature.Subject.builder()
+              .id(descriptorName.ui())
+              .term(descriptorName.value())
+              .majorTopic("Y".equalsIgnoreCase(descriptorName.majorTopicYN()))
+              .type(descriptorName.type())
+              .vocabulary("MeSH")
+              .qualifiers(qualifiers)
+              .build());
     }
 
     return subjects.isEmpty() ? null : subjects;
@@ -600,12 +616,13 @@ public class PubmedLiteratureConverter {
         continue;
       }
 
-      fundingList.add(CanonicalLiterature.FundingInfo.builder()
-          .grantId(grant.grantId())
-          .funderName(grant.agency())
-          .funderIdentifier(grant.acronym())
-          .country(grant.country())
-          .build());
+      fundingList.add(
+          CanonicalLiterature.FundingInfo.builder()
+              .grantId(grant.grantId())
+              .funderName(grant.agency())
+              .funderIdentifier(grant.acronym())
+              .country(grant.country())
+              .build());
     }
 
     return fundingList.isEmpty() ? null : fundingList;
@@ -631,12 +648,13 @@ public class PubmedLiteratureConverter {
         continue;
       }
 
-      abstracts.add(CanonicalLiterature.AlternativeAbstract.builder()
-          .type(otherAbstract.type())
-          .language(otherAbstract.language())
-          .text(otherAbstract.abstractText())
-          .copyright(otherAbstract.copyrightInformation())
-          .build());
+      abstracts.add(
+          CanonicalLiterature.AlternativeAbstract.builder()
+              .type(otherAbstract.type())
+              .language(otherAbstract.language())
+              .text(otherAbstract.abstractText())
+              .copyright(otherAbstract.copyrightInformation())
+              .build());
     }
 
     return abstracts.isEmpty() ? null : abstracts;
@@ -705,13 +723,16 @@ public class PubmedLiteratureConverter {
       return null;
     }
 
-    List<CanonicalLiterature.PublicationType> types = publicationTypes.stream()
-        .filter(StringUtils::hasText)
-        .map(type -> CanonicalLiterature.PublicationType.builder()
-            .value(type)
-            .vocabularySource("PubMed")
-            .build())
-        .collect(Collectors.toList());
+    List<CanonicalLiterature.PublicationType> types =
+        publicationTypes.stream()
+            .filter(StringUtils::hasText)
+            .map(
+                type ->
+                    CanonicalLiterature.PublicationType.builder()
+                        .value(type)
+                        .vocabularySource("PubMed")
+                        .build())
+            .collect(Collectors.toList());
 
     return types.isEmpty() ? null : types;
   }

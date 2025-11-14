@@ -1,10 +1,10 @@
 /**
  * Task 执行用例协调包。
  *
- * <p>本包实现任务执行的完整生命周期管理，从准备、执行到完成。
- * 这是 patra-ingest 服务的核心用例之一，负责消费任务消息并执行数据采集。
+ * <p>本包实现任务执行的完整生命周期管理，从准备、执行到完成。 这是 patra-ingest 服务的核心用例之一，负责消费任务消息并执行数据采集。
  *
  * <h2>核心职责</h2>
+ *
  * <ul>
  *   <li>准备执行上下文（编译表达式、获取租约、启动心跳）
  *   <li>批次规划和执行（根据数据源策略分批处理）
@@ -14,6 +14,7 @@
  * </ul>
  *
  * <h2>模块结构</h2>
+ *
  * <ul>
  *   <li>{@code TaskExecutionUseCase} - 任务执行用例接口（供 Adapter 调用）
  *   <li>{@code TaskExecutionUseCaseImpl} - 顶层编排器（三阶段流程）
@@ -31,6 +32,7 @@
  * </ul>
  *
  * <h2>三阶段编排流程</h2>
+ *
  * <pre>
  * Phase 1: 准备阶段（PrepareTaskExecutionUseCase）
  *   ├─ 幂等性检查（如果任务已成功完成 → 跳过）
@@ -53,7 +55,9 @@
  * </pre>
  *
  * <h2>关键设计</h2>
+ *
  * <h3>租约机制</h3>
+ *
  * <ul>
  *   <li>每个任务执行前必须获取租约（存储在 Redis/DB）
  *   <li>租约有过期时间（如 5 分钟），防止执行节点宕机导致任务永久锁定
@@ -62,6 +66,7 @@
  * </ul>
  *
  * <h3>幂等性保证</h3>
+ *
  * <ul>
  *   <li>准备阶段检查任务状态，如果已成功完成 → 直接返回（幂等跳过）
  *   <li>使用唯一的 {@code idempotentKey}（如 planKey + taskSeq）防止重复消费
@@ -69,6 +74,7 @@
  * </ul>
  *
  * <h3>批次执行策略</h3>
+ *
  * <ul>
  *   <li><strong>PubMed</strong>: 按 retmax 参数分批（如每批 10000 条）
  *   <li><strong>EPMC</strong>: 按 pageSize 参数分批（如每批 1000 条）
@@ -76,6 +82,7 @@
  * </ul>
  *
  * <h3>游标推进</h3>
+ *
  * <ul>
  *   <li>每个批次执行成功后推进游标
  *   <li>游标记录最新的采集时间点（highWatermark）
@@ -83,7 +90,9 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <h3>从 MQ 消息触发执行</h3>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor
@@ -125,6 +134,7 @@
  * }</pre>
  *
  * <h3>手动触发任务执行</h3>
+ *
  * <pre>{@code
  * @RestController
  * @RequestMapping("/api/ingest/tasks")
@@ -149,6 +159,7 @@
  * }</pre>
  *
  * <h2>错误处理</h2>
+ *
  * <ul>
  *   <li>{@code TaskAlreadySucceededException}: 任务已成功完成（幂等跳过）
  *   <li>{@code LeaseAcquisitionFailedException}: 租约获取失败（并发冲突）
@@ -158,6 +169,7 @@
  * </ul>
  *
  * <h2>可观测性</h2>
+ *
  * <ul>
  *   <li><strong>日志</strong>: 关键阶段记录日志（准备、批次执行、完成）
  *   <li><strong>指标</strong>: 执行时长、批次数、采集数量、失败率

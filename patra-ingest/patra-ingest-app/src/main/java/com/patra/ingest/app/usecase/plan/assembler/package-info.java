@@ -4,6 +4,7 @@
  * <p>本包负责装配 Plan/Slice/Task 聚合根的完整对象图，协调切片规划器和表达式构建器。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>协调切片规划（SlicePlanner）生成 Slice 列表
  *   <li>为每个 Slice 生成对应的 Task
@@ -12,6 +13,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code PlanAssembler} - Plan 装配器接口
  *   <li>{@code PlanAssemblerImpl} - Plan 装配器实现
@@ -19,6 +21,7 @@
  * </ul>
  *
  * <h2>装配流程</h2>
+ *
  * <pre>
  * 1. 输入：PlanAssemblyRequest
  *    ├─ provenanceCode
@@ -46,6 +49,7 @@
  * </pre>
  *
  * <h2>关键设计</h2>
+ *
  * <ul>
  *   <li><strong>1:1 关系</strong>: 每个 Slice 对应一个 Task（简化设计）
  *   <li><strong>临时 ID</strong>: 装配时使用临时 ID（如 -1），持久化后替换为真实 ID
@@ -53,6 +57,7 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

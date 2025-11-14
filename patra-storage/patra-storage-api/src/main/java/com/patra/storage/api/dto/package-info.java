@@ -26,7 +26,8 @@
  * {@link com.patra.storage.api.dto.UploadRecordRequest} 包含以下验证规则:
  *
  * <ul>
- *   <li>{@code bucketName, objectKey, md5Hash, serviceName, businessType, businessId, providerType} - 不能为空
+ *   <li>{@code bucketName, objectKey, md5Hash, serviceName, businessType, businessId, providerType}
+ *       - 不能为空
  *   <li>{@code fileSize} - 必须 >= 0
  *   <li>{@code contentType} - 最大 128 字符
  *   <li>{@code recordRemarks} - 最大 512 字符

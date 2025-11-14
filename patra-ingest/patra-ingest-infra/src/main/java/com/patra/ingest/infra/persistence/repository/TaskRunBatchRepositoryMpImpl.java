@@ -42,11 +42,11 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
   public TaskRunBatch save(TaskRunBatch batch) {
     TaskRunBatchDO dto = converter.toDO(batch);
     if (dto.getId() == null) {
-      mapper.insert(dto);  // MyBatis-Plus 自动回填 dto.id
+      mapper.insert(dto); // MyBatis-Plus 自动回填 dto.id
     } else {
       mapper.updateById(dto);
     }
-    return converter.toDomain(dto);  // 返回带 ID 的领域实体
+    return converter.toDomain(dto); // 返回带 ID 的领域实体
   }
 
   /**

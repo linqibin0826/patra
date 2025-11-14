@@ -1,10 +1,10 @@
 /**
  * Plan 摄入用例编排包。
  *
- * <p>本包实现采集计划（Plan）的完整摄入流程编排，从配置加载到任务发布。
- * 这是 patra-ingest 服务的核心用例之一，负责将调度触发转化为可执行的任务队列。
+ * <p>本包实现采集计划（Plan）的完整摄入流程编排，从配置加载到任务发布。 这是 patra-ingest 服务的核心用例之一，负责将调度触发转化为可执行的任务队列。
  *
  * <h2>核心职责</h2>
+ *
  * <ul>
  *   <li>加载 Provenance 配置快照（从 patra-registry）
  *   <li>查询游标水位线（确定采集起点）
@@ -17,6 +17,7 @@
  * </ul>
  *
  * <h2>模块结构</h2>
+ *
  * <ul>
  *   <li>{@code PlanIngestionOrchestrator} - 主编排器（事务边界）
  *   <li>{@code PlanIngestionUseCase} - 用例接口（供 Adapter 调用）
@@ -34,6 +35,7 @@
  * </ul>
  *
  * <h2>编排流程</h2>
+ *
  * <pre>
  * Phase 1: 准备阶段
  *   ├─ 加载 Provenance 配置快照（PatraRegistryPort）
@@ -64,7 +66,9 @@
  * </pre>
  *
  * <h2>关键设计</h2>
+ *
  * <h3>幂等性保证</h3>
+ *
  * <ul>
  *   <li>使用 {@code planKey} 作为业务唯一键（provenanceCode + operationCode + windowHash）
  *   <li>相同 planKey 的重复请求会：
@@ -75,6 +79,7 @@
  * </ul>
  *
  * <h3>事务边界</h3>
+ *
  * <ul>
  *   <li>{@code PlanIngestionOrchestrator.ingestPlan()} 是一个完整的事务
  *   <li>确保 Plan/Slice/Task 持久化和 Outbox 发布的原子性
@@ -82,6 +87,7 @@
  * </ul>
  *
  * <h3>切片策略</h3>
+ *
  * <ul>
  *   <li><strong>TIME 策略</strong>: 按时间范围切片（如每小时一个 Slice）
  *   <li><strong>DATE 策略</strong>: 按日期切片（如每天一个 Slice）
@@ -89,7 +95,9 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <h3>从定时任务触发</h3>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor
@@ -116,6 +124,7 @@
  * }</pre>
  *
  * <h3>从 REST API 触发</h3>
+ *
  * <pre>{@code
  * @RestController
  * @RequestMapping("/api/ingest/plans")
@@ -144,6 +153,7 @@
  * }</pre>
  *
  * <h2>错误处理</h2>
+ *
  * <ul>
  *   <li>{@code PlanValidationException}: 窗口不合法、背压超限、容量不足
  *   <li>{@code PlanAssemblyException}: 装配失败（如切片规划错误）

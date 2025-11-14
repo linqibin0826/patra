@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -121,8 +120,7 @@ class PlanPersistenceCoordinatorTest {
       PlanIngestionCommand command = createValidCommand();
       RuntimeException cause = new RuntimeException("Database connection failed");
 
-      when(scheduleInstanceRepository.saveOrUpdateInstance(any()))
-          .thenThrow(cause);
+      when(scheduleInstanceRepository.saveOrUpdateInstance(any())).thenThrow(cause);
 
       // When & Then
       assertThatThrownBy(() -> coordinator.persistScheduleInstance(command))
@@ -141,8 +139,7 @@ class PlanPersistenceCoordinatorTest {
       // Given
       PlanIngestionCommand command = createValidCommand();
 
-      when(scheduleInstanceRepository.saveOrUpdateInstance(any()))
-          .thenReturn(schedule);
+      when(scheduleInstanceRepository.saveOrUpdateInstance(any())).thenReturn(schedule);
 
       // When
       coordinator.persistScheduleInstance(command);
@@ -575,8 +572,7 @@ class PlanPersistenceCoordinatorTest {
       when(taskRepository.saveAll(anyList())).thenReturn(largeTaskList);
 
       // When
-      List<TaskAggregate> result =
-          coordinator.persistTasks(plan, List.of(slice1), largeTaskList);
+      List<TaskAggregate> result = coordinator.persistTasks(plan, List.of(slice1), largeTaskList);
 
       // Then
       assertThat(result).hasSize(100);

@@ -237,8 +237,7 @@ class StorageKeyTest {
     @DisplayName("应该处理多层级路径的 objectKey")
     void shouldHandleMultiLevelPathObjectKey() {
       // Given
-      StorageKey storageKey =
-          new StorageKey("documents", "projects/2024/Q1/reports/summary.pdf");
+      StorageKey storageKey = new StorageKey("documents", "projects/2024/Q1/reports/summary.pdf");
 
       // When
       String fullKey = storageKey.fullKey();
@@ -691,8 +690,7 @@ class StorageKeyTest {
     @DisplayName("应该处理包含特殊字符的路径")
     void shouldHandleSpecialCharactersInPath() {
       // Given
-      StorageKey storageKey =
-          new StorageKey("my-bucket_123", "path/to/file (copy) [2024].pdf");
+      StorageKey storageKey = new StorageKey("my-bucket_123", "path/to/file (copy) [2024].pdf");
 
       // When & Then
       assertThat(storageKey.bucket()).isEqualTo("my-bucket_123");
@@ -753,15 +751,12 @@ class StorageKeyTest {
     @DisplayName("应该支持幂等性检查场景")
     void shouldSupportIdempotencyCheckScenario() {
       // Given - 用于幂等性检查的存储键
-      StorageKey storageKey1 =
-          new StorageKey("literature-files", "epmc/2024/01/article-001.pdf");
-      StorageKey storageKey2 =
-          new StorageKey("literature-files", "epmc/2024/01/article-001.pdf");
+      StorageKey storageKey1 = new StorageKey("literature-files", "epmc/2024/01/article-001.pdf");
+      StorageKey storageKey2 = new StorageKey("literature-files", "epmc/2024/01/article-001.pdf");
 
       // When - 检查是否为相同文件
       boolean isDuplicate = storageKey1.equals(storageKey2);
-      boolean keysMatch =
-          storageKey1.matches(storageKey2.bucket(), storageKey2.objectKey());
+      boolean keysMatch = storageKey1.matches(storageKey2.bucket(), storageKey2.objectKey());
 
       // Then - 应该识别为重复文件
       assertThat(isDuplicate).isTrue();

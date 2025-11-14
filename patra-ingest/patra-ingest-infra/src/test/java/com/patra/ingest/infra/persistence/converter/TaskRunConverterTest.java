@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.ingest.domain.exception.TaskCheckpointException;
 import com.patra.ingest.domain.model.entity.TaskRun;
@@ -13,7 +14,6 @@ import com.patra.ingest.domain.model.vo.execution.RunContext;
 import com.patra.ingest.domain.model.vo.execution.RunStats;
 import com.patra.ingest.domain.model.vo.execution.TaskRunCheckpoint;
 import com.patra.ingest.infra.persistence.entity.TaskRunDO;
-import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -171,8 +171,20 @@ class TaskRunConverterTest {
 
     TaskRun original =
         TaskRun.restore(
-            1L, 2L, 1, ProvenanceCode.PUBMED, "HARVEST", TaskRunStatus.RUNNING, stats, now, null, now, checkpoint, null,
-            context, null);
+            1L,
+            2L,
+            1,
+            ProvenanceCode.PUBMED,
+            "HARVEST",
+            TaskRunStatus.RUNNING,
+            stats,
+            now,
+            null,
+            now,
+            checkpoint,
+            null,
+            context,
+            null);
 
     // When: Domain → DO → Domain
     TaskRunDO entity = converter.toDO(original);
@@ -195,17 +207,20 @@ class TaskRunConverterTest {
     // Given & When & Then: 测试所有状态枚举
     assertThat(TaskRunConverter.taskRunStatusToCode(TaskRunStatus.PENDING)).isEqualTo("PENDING");
     assertThat(TaskRunConverter.taskRunStatusToCode(TaskRunStatus.RUNNING)).isEqualTo("RUNNING");
-    assertThat(TaskRunConverter.taskRunStatusToCode(TaskRunStatus.SUCCEEDED)).isEqualTo("SUCCEEDED");
+    assertThat(TaskRunConverter.taskRunStatusToCode(TaskRunStatus.SUCCEEDED))
+        .isEqualTo("SUCCEEDED");
     assertThat(TaskRunConverter.taskRunStatusToCode(TaskRunStatus.FAILED)).isEqualTo("FAILED");
     assertThat(TaskRunConverter.taskRunStatusToCode(TaskRunStatus.PARTIAL)).isEqualTo("PARTIAL");
     assertThat(TaskRunConverter.taskRunStatusToCode(null)).isNull();
 
     assertThat(TaskRunConverter.taskRunStatusFromCode("PENDING")).isEqualTo(TaskRunStatus.PENDING);
     assertThat(TaskRunConverter.taskRunStatusFromCode("RUNNING")).isEqualTo(TaskRunStatus.RUNNING);
-    assertThat(TaskRunConverter.taskRunStatusFromCode("SUCCEEDED")).isEqualTo(TaskRunStatus.SUCCEEDED);
+    assertThat(TaskRunConverter.taskRunStatusFromCode("SUCCEEDED"))
+        .isEqualTo(TaskRunStatus.SUCCEEDED);
     assertThat(TaskRunConverter.taskRunStatusFromCode("FAILED")).isEqualTo(TaskRunStatus.FAILED);
     assertThat(TaskRunConverter.taskRunStatusFromCode("PARTIAL")).isEqualTo(TaskRunStatus.PARTIAL);
-    assertThat(TaskRunConverter.taskRunStatusFromCode(null)).isEqualTo(TaskRunStatus.PENDING); // 默认值
+    assertThat(TaskRunConverter.taskRunStatusFromCode(null))
+        .isEqualTo(TaskRunStatus.PENDING); // 默认值
   }
 
   @Test
@@ -422,8 +437,20 @@ class TaskRunConverterTest {
     RunContext context = new RunContext("trace-correlation-id");
     TaskRun taskRun =
         TaskRun.restore(
-            1L, 2L, 1, ProvenanceCode.PUBMED, "HARVEST", TaskRunStatus.RUNNING, RunStats.empty(),
-            Instant.now(), null, Instant.now(), TaskRunCheckpoint.empty(), null, context, null);
+            1L,
+            2L,
+            1,
+            ProvenanceCode.PUBMED,
+            "HARVEST",
+            TaskRunStatus.RUNNING,
+            RunStats.empty(),
+            Instant.now(),
+            null,
+            Instant.now(),
+            TaskRunCheckpoint.empty(),
+            null,
+            context,
+            null);
 
     // When: 转换为DO
     TaskRunDO entity = converter.toDO(taskRun);

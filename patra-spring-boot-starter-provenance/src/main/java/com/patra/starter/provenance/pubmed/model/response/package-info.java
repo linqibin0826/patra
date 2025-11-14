@@ -22,11 +22,10 @@
  *         <li>{@link PubmedLiterature.MedlineJournalInfo} - Medline 期刊信息
  *         <li>{@link PubmedLiterature.PubmedData} - PubMed 元数据
  *       </ul>
- *   </li>
  * </ul>
  *
- * <p>注意：Article、Journal、Author、MedlineJournalInfo、PubmedData
- * 现在都是 PubmedLiterature 的内部类，作为聚合根的值对象存在。
+ * <p>注意：Article、Journal、Author、MedlineJournalInfo、PubmedData 现在都是 PubmedLiterature
+ * 的内部类，作为聚合根的值对象存在。
  *
  * <h2>XML 映射示例</h2>
  *

@@ -43,20 +43,14 @@ class MessageChannelsTest {
     @DisplayName("TASK_READY 应该是非空字符串")
     void taskReadyShouldNotBeEmpty() {
       // Then
-      assertThat(MessageChannels.INGEST_TASK_READY)
-          .isNotNull()
-          .isNotEmpty()
-          .isNotBlank();
+      assertThat(MessageChannels.INGEST_TASK_READY).isNotNull().isNotEmpty().isNotBlank();
     }
 
     @Test
     @DisplayName("LITERATURE_READY 应该是非空字符串")
     void literatureReadyShouldNotBeEmpty() {
       // Then
-      assertThat(MessageChannels.INGEST_LITERATURE_READY)
-          .isNotNull()
-          .isNotEmpty()
-          .isNotBlank();
+      assertThat(MessageChannels.INGEST_LITERATURE_READY).isNotNull().isNotEmpty().isNotBlank();
     }
 
     @Test
@@ -96,13 +90,9 @@ class MessageChannelsTest {
     @DisplayName("常量名称应该表达业务意图")
     void constantsShouldExpressBusinessIntent() {
       // Then
-      assertThat(MessageChannels.INGEST_TASK_READY)
-          .contains("TASK")
-          .contains("READY");
+      assertThat(MessageChannels.INGEST_TASK_READY).contains("TASK").contains("READY");
 
-      assertThat(MessageChannels.INGEST_LITERATURE_READY)
-          .contains("LITERATURE")
-          .contains("READY");
+      assertThat(MessageChannels.INGEST_LITERATURE_READY).contains("LITERATURE").contains("READY");
     }
   }
 
@@ -114,12 +104,13 @@ class MessageChannelsTest {
     @DisplayName("应该禁止实例化常量类")
     void shouldPreventInstantiation() {
       // When & Then
-      assertThatThrownBy(() -> {
-        // 使用反射尝试调用私有构造器
-        var constructor = MessageChannels.class.getDeclaredConstructor();
-        constructor.setAccessible(true);
-        constructor.newInstance();
-      })
+      assertThatThrownBy(
+              () -> {
+                // 使用反射尝试调用私有构造器
+                var constructor = MessageChannels.class.getDeclaredConstructor();
+                constructor.setAccessible(true);
+                constructor.newInstance();
+              })
           .hasCauseInstanceOf(UnsupportedOperationException.class)
           .hasStackTraceContaining("常量类不允许实例化");
     }
@@ -136,9 +127,7 @@ class MessageChannelsTest {
       String channelName = MessageChannels.INGEST_TASK_READY;
 
       // Then
-      assertThat(channelName)
-          .as("任务就绪通道应该明确表达任务已准备好执行的语义")
-          .isEqualTo("INGEST_TASK_READY");
+      assertThat(channelName).as("任务就绪通道应该明确表达任务已准备好执行的语义").isEqualTo("INGEST_TASK_READY");
     }
 
     @Test
@@ -148,9 +137,7 @@ class MessageChannelsTest {
       String channelName = MessageChannels.INGEST_LITERATURE_READY;
 
       // Then
-      assertThat(channelName)
-          .as("文献就绪通道应该明确表达文献数据已准备好的语义")
-          .isEqualTo("INGEST_LITERATURE_READY");
+      assertThat(channelName).as("文献就绪通道应该明确表达文献数据已准备好的语义").isEqualTo("INGEST_LITERATURE_READY");
     }
   }
 

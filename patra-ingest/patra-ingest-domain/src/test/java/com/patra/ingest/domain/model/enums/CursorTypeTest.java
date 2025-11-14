@@ -1,10 +1,10 @@
 package com.patra.ingest.domain.model.enums;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.*;
 
 /**
  * CursorType 枚举测试。
@@ -100,10 +100,7 @@ class CursorTypeTest {
     void allValuesShouldHaveNonEmptyDescription() {
       // Given & When & Then
       for (CursorType type : CursorType.values()) {
-        assertThat(type.getDescription())
-            .as("类型 %s 应该有描述", type.name())
-            .isNotNull()
-            .isNotBlank();
+        assertThat(type.getDescription()).as("类型 %s 应该有描述", type.name()).isNotNull().isNotBlank();
       }
     }
 

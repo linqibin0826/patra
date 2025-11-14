@@ -1,8 +1,8 @@
 /**
  * 表达式编译器包 - 动态表达式编译和渲染框架。
  *
- * <p>本包提供 Patra 动态表达式系统的核心编译器,将领域表达式编译为数据源特定的查询参数和请求。
- * 编译器基于 patra-expr-kernel 表达式内核,支持多数据源、多操作类型的动态查询生成。
+ * <p>本包提供 Patra 动态表达式系统的核心编译器,将领域表达式编译为数据源特定的查询参数和请求。 编译器基于 patra-expr-kernel
+ * 表达式内核,支持多数据源、多操作类型的动态查询生成。
  *
  * <h2>职责</h2>
  *
@@ -18,10 +18,9 @@
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link com.patra.starter.expr.compiler.ExprCompiler} - 表达式编译器接口,
- *       定义编译方法和便捷重载
- *   <li>{@link com.patra.starter.expr.compiler.DefaultExprCompiler} - 默认编译器实现,
- *       实现完整的编译流水线(规范化 → 验证 → 渲染 → 转换)
+ *   <li>{@link com.patra.starter.expr.compiler.ExprCompiler} - 表达式编译器接口, 定义编译方法和便捷重载
+ *   <li>{@link com.patra.starter.expr.compiler.DefaultExprCompiler} - 默认编译器实现, 实现完整的编译流水线(规范化 → 验证
+ *       → 渲染 → 转换)
  *   <li>{@code CompileRequest} - 编译请求对象,包含表达式、数据源、操作类型等信息
  *   <li>{@code CompileResult} - 编译结果对象,包含查询参数、验证报告、渲染跟踪等
  *   <li>{@code CompileRequestBuilder} - 编译请求构建器,提供流式 API

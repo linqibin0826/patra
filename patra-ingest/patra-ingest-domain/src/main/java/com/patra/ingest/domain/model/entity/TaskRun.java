@@ -50,7 +50,8 @@ public class TaskRun {
   private WindowSpec windowSpec;
   private RunContext runContext;
 
-  public TaskRun(Long id, Long taskId, int attemptNo, ProvenanceCode provenanceCode, String operationCode) {
+  public TaskRun(
+      Long id, Long taskId, int attemptNo, ProvenanceCode provenanceCode, String operationCode) {
     this(
         id,
         taskId,

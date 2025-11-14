@@ -164,9 +164,7 @@ class IngestPublishingChannelsTest {
       var result = IngestPublishingChannels.fromChannel(channel);
 
       // Then
-      assertThat(result)
-          .isPresent()
-          .contains(IngestPublishingChannels.TASK_READY);
+      assertThat(result).isPresent().contains(IngestPublishingChannels.TASK_READY);
     }
 
     @Test
@@ -179,9 +177,7 @@ class IngestPublishingChannelsTest {
       var result = IngestPublishingChannels.fromChannel(channel);
 
       // Then
-      assertThat(result)
-          .isPresent()
-          .contains(IngestPublishingChannels.LITERATURE_DATA_READY);
+      assertThat(result).isPresent().contains(IngestPublishingChannels.LITERATURE_DATA_READY);
     }
 
     @Test
@@ -194,9 +190,7 @@ class IngestPublishingChannelsTest {
       var result = IngestPublishingChannels.fromChannel(channel);
 
       // Then
-      assertThat(result)
-          .isPresent()
-          .contains(IngestPublishingChannels.TASK_READY);
+      assertThat(result).isPresent().contains(IngestPublishingChannels.TASK_READY);
     }
 
     @Test
@@ -209,9 +203,7 @@ class IngestPublishingChannelsTest {
       var result = IngestPublishingChannels.fromChannel(channel);
 
       // Then
-      assertThat(result)
-          .isPresent()
-          .contains(IngestPublishingChannels.TASK_READY);
+      assertThat(result).isPresent().contains(IngestPublishingChannels.TASK_READY);
     }
 
     @Test
@@ -224,9 +216,7 @@ class IngestPublishingChannelsTest {
       var result = IngestPublishingChannels.fromChannel(channel);
 
       // Then
-      assertThat(result)
-          .isPresent()
-          .contains(IngestPublishingChannels.TASK_READY);
+      assertThat(result).isPresent().contains(IngestPublishingChannels.TASK_READY);
     }
   }
 
@@ -399,8 +389,7 @@ class IngestPublishingChannelsTest {
       IngestPublishingChannels channel = IngestPublishingChannels.TASK_READY;
 
       // Then
-      assertThat(channel)
-          .isInstanceOf(com.patra.common.messaging.ChannelKey.class);
+      assertThat(channel).isInstanceOf(com.patra.common.messaging.ChannelKey.class);
     }
 
     @Test
@@ -432,9 +421,7 @@ class IngestPublishingChannelsTest {
       var result = IngestPublishingChannels.fromChannel(channel);
 
       // Then
-      assertThat(result)
-          .isPresent()
-          .contains(IngestPublishingChannels.TASK_READY);
+      assertThat(result).isPresent().contains(IngestPublishingChannels.TASK_READY);
     }
 
     @Test
@@ -447,9 +434,7 @@ class IngestPublishingChannelsTest {
       var result = IngestPublishingChannels.fromChannel(channel);
 
       // Then
-      assertThat(result)
-          .isPresent()
-          .contains(IngestPublishingChannels.LITERATURE_DATA_READY);
+      assertThat(result).isPresent().contains(IngestPublishingChannels.LITERATURE_DATA_READY);
     }
 
     @Test
@@ -459,9 +444,7 @@ class IngestPublishingChannelsTest {
       for (IngestPublishingChannels expected : IngestPublishingChannels.values()) {
         String channel = expected.channel();
         var actual = IngestPublishingChannels.fromChannel(channel);
-        assertThat(actual)
-            .isPresent()
-            .contains(expected);
+        assertThat(actual).isPresent().contains(expected);
       }
     }
   }

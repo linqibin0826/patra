@@ -1,10 +1,11 @@
 /**
  * Ingest 应用层 - 用例编排与应用服务协调。
  *
- * <p>本包是 <strong>patra-ingest</strong> 服务的应用层（Application Layer），在六边形架构中位于
- * <strong>Domain 层之上，Adapter 层之下</strong>，负责编排领域对象完成业务用例。
+ * <p>本包是 <strong>patra-ingest</strong> 服务的应用层（Application Layer），在六边形架构中位于 <strong>Domain
+ * 层之上，Adapter 层之下</strong>，负责编排领域对象完成业务用例。
  *
  * <h2>核心职责</h2>
+ *
  * <ul>
  *   <li><strong>用例编排</strong>: 协调领域聚合根、领域服务、仓储完成完整业务流程
  *   <li><strong>事务边界管理</strong>: 使用 {@code @Transactional} 确保业务操作的原子性
@@ -14,6 +15,7 @@
  * </ul>
  *
  * <h2>模块结构</h2>
+ *
  * <ul>
  *   <li>{@link com.patra.ingest.app.usecase.plan} - Plan 摄入用例编排
  *   <li>{@link com.patra.ingest.app.usecase.execution} - Task 执行用例协调
@@ -24,6 +26,7 @@
  * </ul>
  *
  * <h2>架构约束</h2>
+ *
  * <ul>
  *   <li><strong>依赖方向</strong>: App → Domain（应用层可以依赖领域层，但不能反向依赖）
  *   <li><strong>端口解耦</strong>: 通过端口接口（Port）与基础设施层解耦，不直接依赖 Infra 层实现
@@ -32,6 +35,7 @@
  * </ul>
  *
  * <h2>设计模式</h2>
+ *
  * <ul>
  *   <li><strong>编排器模式（Orchestrator）</strong>: 协调多个领域对象完成复杂流程
  *   <li><strong>命令模式（Command）</strong>: 使用命令对象封装用例输入参数
@@ -41,7 +45,9 @@
  * </ul>
  *
  * <h2>关键流程</h2>
+ *
  * <h3>Plan 摄入流程</h3>
+ *
  * <pre>
  * 1. PlanScheduler(Adapter) → PlanIngestionOrchestrator(App)
  * 2. 加载配置快照 + 查询游标水位
@@ -53,6 +59,7 @@
  * </pre>
  *
  * <h3>Task 执行流程</h3>
+ *
  * <pre>
  * 1. TaskReadyMessageListener(Adapter) → TaskExecutionUseCase(App)
  * 2. 准备执行上下文（编译表达式 + 获取租约 + 启动心跳）
@@ -62,7 +69,9 @@
  * </pre>
  *
  * <h2>使用示例</h2>
+ *
  * <h3>触发 Plan 摄入</h3>
+ *
  * <pre>{@code
  * @Service
  * @RequiredArgsConstructor
@@ -87,6 +96,7 @@
  * }</pre>
  *
  * <h3>消费任务消息并执行</h3>
+ *
  * <pre>{@code
  * @Component
  * @RocketMQMessageListener(topic = "task-ready", consumerGroup = "ingest-worker")

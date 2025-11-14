@@ -4,11 +4,10 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.model.CanonicalLiterature;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.patra.common.enums.ProvenanceCode;
+import com.patra.common.model.CanonicalLiterature;
 import com.patra.common.model.DataType;
 import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
@@ -17,7 +16,6 @@ import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.port.DataSourcePort;
 import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult;
 import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult.ErrorType;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,8 +23,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -72,7 +68,14 @@ class GenericBatchExecutorTest {
     // 准备基础测试数据
     com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.ProvenanceInfo provenanceInfo =
         new com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.ProvenanceInfo(
-            1L, "pubmed", "PubMed", "https://test.example.com", "UTC", "https://docs.example.com", true, "ACTIVE");
+            1L,
+            "pubmed",
+            "PubMed",
+            "https://test.example.com",
+            "UTC",
+            "https://docs.example.com",
+            true,
+            "ACTIVE");
 
     com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot configSnapshot =
         new com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot(
@@ -116,10 +119,10 @@ class GenericBatchExecutorTest {
           DataFetchResult.success(literatures, DataType.LITERATURE, "nextCursor123");
 
       when(dataSourcePort.fetchData(
-          any(ExecutionContext.class),
-          any(DataType.class),
-          any(TypeReference.class),
-          any(Batch.class)))
+              any(ExecutionContext.class),
+              any(DataType.class),
+              any(TypeReference.class),
+              any(Batch.class)))
           .thenReturn(fetchResult);
 
       // Mock 文献发布
@@ -142,11 +145,8 @@ class GenericBatchExecutorTest {
       assertThat(result.errorMessage()).isNull();
 
       // 验证调用链
-      verify(dataSourcePort).fetchData(
-          eq(context),
-          eq(DataType.LITERATURE),
-          any(TypeReference.class),
-          eq(batch));
+      verify(dataSourcePort)
+          .fetchData(eq(context), eq(DataType.LITERATURE), any(TypeReference.class), eq(batch));
       verify(literaturePublisherOrchestrator).publish(eq(literatures), any());
     }
 
@@ -157,10 +157,10 @@ class GenericBatchExecutorTest {
       DataFetchResult<CanonicalLiterature> fetchResult =
           DataFetchResult.success(List.of(), DataType.LITERATURE, null);
       when(dataSourcePort.fetchData(
-          any(ExecutionContext.class),
-          any(DataType.class),
-          any(TypeReference.class),
-          any(Batch.class)))
+              any(ExecutionContext.class),
+              any(DataType.class),
+              any(TypeReference.class),
+              any(Batch.class)))
           .thenReturn(fetchResult);
 
       // When: 执行批次
@@ -182,10 +182,10 @@ class GenericBatchExecutorTest {
       DataFetchResult<CanonicalLiterature> fetchResult =
           DataFetchResult.success(null, DataType.LITERATURE, null);
       when(dataSourcePort.fetchData(
-          any(ExecutionContext.class),
-          any(DataType.class),
-          any(TypeReference.class),
-          any(Batch.class)))
+              any(ExecutionContext.class),
+              any(DataType.class),
+              any(TypeReference.class),
+              any(Batch.class)))
           .thenReturn(fetchResult);
 
       // When: 执行批次
@@ -214,10 +214,10 @@ class GenericBatchExecutorTest {
           DataFetchResult.failure(DataType.LITERATURE, "网络超时", ErrorType.RETRIABLE);
 
       when(dataSourcePort.fetchData(
-          any(ExecutionContext.class),
-          any(DataType.class),
-          any(TypeReference.class),
-          any(Batch.class)))
+              any(ExecutionContext.class),
+              any(DataType.class),
+              any(TypeReference.class),
+              any(Batch.class)))
           .thenReturn(failureResult);
 
       // When: 执行批次
@@ -240,10 +240,10 @@ class GenericBatchExecutorTest {
           DataFetchResult.failure(DataType.LITERATURE, "API 密钥无效", ErrorType.NON_RETRIABLE);
 
       when(dataSourcePort.fetchData(
-          any(ExecutionContext.class),
-          any(DataType.class),
-          any(TypeReference.class),
-          any(Batch.class)))
+              any(ExecutionContext.class),
+              any(DataType.class),
+              any(TypeReference.class),
+              any(Batch.class)))
           .thenReturn(failureResult);
 
       // When: 执行批次
@@ -269,10 +269,10 @@ class GenericBatchExecutorTest {
     void shouldHandleDataSourcePortException() {
       // Given: 数据源端口抛出运行时异常
       when(dataSourcePort.fetchData(
-          any(ExecutionContext.class),
-          any(DataType.class),
-          any(TypeReference.class),
-          any(Batch.class)))
+              any(ExecutionContext.class),
+              any(DataType.class),
+              any(TypeReference.class),
+              any(Batch.class)))
           .thenThrow(new RuntimeException("数据源内部错误"));
 
       // When: 执行批次
@@ -301,10 +301,10 @@ class GenericBatchExecutorTest {
               literatures, DataType.LITERATURE, "nextCursor", "10 条记录中有 2 条解析失败");
 
       when(dataSourcePort.fetchData(
-          any(ExecutionContext.class),
-          any(DataType.class),
-          any(TypeReference.class),
-          any(Batch.class)))
+              any(ExecutionContext.class),
+              any(DataType.class),
+              any(TypeReference.class),
+              any(Batch.class)))
           .thenReturn(fetchResult);
       mockPublish(8, "s3://bucket/key");
 

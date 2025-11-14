@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.*;
 
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.registry.api.dto.provenance.*;
-import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -194,8 +193,7 @@ class ProvenanceConfigSnapshotConverterTest {
               1L, "CROSSREF", "CrossRef", "https://api.crossref.org", "UTC", null, true, "ACTIVE");
 
       ProvenanceConfigResp configResp =
-          new ProvenanceConfigResp(
-              provenanceResp, null, null, null, null, null, null);
+          new ProvenanceConfigResp(provenanceResp, null, null, null, null, null, null);
 
       // When: 转换为快照
       ProvenanceConfigSnapshot snapshot = converter.convert(configResp);
@@ -327,8 +325,7 @@ class ProvenanceConfigSnapshotConverterTest {
     @DisplayName("当 source 为 null 时应该返回 null")
     void shouldReturnNullWhenSourceIsNull() {
       // When
-      ProvenanceConfigSnapshot.WindowOffsetConfig config =
-          converter.mapWindowOffsetConfig(null);
+      ProvenanceConfigSnapshot.WindowOffsetConfig config = converter.mapWindowOffsetConfig(null);
 
       // Then
       assertThat(config).isNull();

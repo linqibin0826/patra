@@ -109,13 +109,15 @@ class PubmedLiteratureConverterTest {
     assertThat(result.getAuthors().get(0).getLastName()).isEqualTo("Smith");
     assertThat(result.getAuthors().get(0).getForeName()).isEqualTo("John");
     assertThat(result.getAuthors().get(0).getAffiliations()).hasSize(1);
-    assertThat(result.getAuthors().get(0).getAffiliations().get(0).getName()).isEqualTo("University A");
+    assertThat(result.getAuthors().get(0).getAffiliations().get(0).getName())
+        .isEqualTo("University A");
     assertThat(result.getAuthors().get(1).getLastName()).isEqualTo("Doe");
     assertThat(result.getJournal()).isNotNull();
     assertThat(result.getJournal().getTitle()).isEqualTo("Medical Journal");
     assertThat(result.getJournal().getIssn()).isEqualTo("1234-5678");
     assertThat(result.getIdentifiers()).hasSize(3);
-    assertThat(result.getIdentifiers()).extracting("type", "value")
+    assertThat(result.getIdentifiers())
+        .extracting("type", "value")
         .contains(
             tuple("pmid", "12345678"),
             tuple("doi", "10.1234/test.2023.001"),
@@ -353,11 +355,10 @@ class PubmedLiteratureConverterTest {
 
     // Assert
     assertThat(result.getIdentifiers()).hasSize(3);
-    assertThat(result.getIdentifiers()).extracting("type", "value")
+    assertThat(result.getIdentifiers())
+        .extracting("type", "value")
         .contains(
-            tuple("pmid", "66666666"),
-            tuple("doi", "10.9999/example"),
-            tuple("pmc", "PMC9999999"));
+            tuple("pmid", "66666666"), tuple("doi", "10.9999/example"), tuple("pmc", "PMC9999999"));
   }
 
   @Test
@@ -386,7 +387,8 @@ class PubmedLiteratureConverterTest {
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
 
     // Assert
-    assertThat(result.getIdentifiers()).extracting("type", "value")
+    assertThat(result.getIdentifiers())
+        .extracting("type", "value")
         .contains(tuple("pmc", "PMC7777777"));
   }
 
@@ -690,8 +692,10 @@ class PubmedLiteratureConverterTest {
     // Assert
     assertThat(result.getAuthors()).hasSize(1);
     assertThat(result.getAuthors().get(0).getAffiliations()).hasSize(2);
-    assertThat(result.getAuthors().get(0).getAffiliations().get(0).getName()).isEqualTo("First Affiliation");
-    assertThat(result.getAuthors().get(0).getAffiliations().get(1).getName()).isEqualTo("Second Affiliation");
+    assertThat(result.getAuthors().get(0).getAffiliations().get(0).getName())
+        .isEqualTo("First Affiliation");
+    assertThat(result.getAuthors().get(0).getAffiliations().get(1).getName())
+        .isEqualTo("Second Affiliation");
   }
 
   @Test

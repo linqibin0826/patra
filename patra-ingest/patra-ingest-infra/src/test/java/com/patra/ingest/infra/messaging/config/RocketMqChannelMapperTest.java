@@ -388,7 +388,9 @@ class RocketMqChannelMapperTest {
     @DisplayName("所有已配置的通道应有双向映射")
     void shouldHaveBidirectionalMappingForAllConfiguredChannels() {
       // Given: 所有已知通道
-      String[] channels = {MessageChannels.INGEST_TASK_READY, MessageChannels.INGEST_LITERATURE_READY};
+      String[] channels = {
+        MessageChannels.INGEST_TASK_READY, MessageChannels.INGEST_LITERATURE_READY
+      };
 
       // When & Then: 验证每个通道的双向映射
       for (String channel : channels) {
@@ -479,7 +481,9 @@ class RocketMqChannelMapperTest {
     @DisplayName("所有已配置通道的数量应为 2")
     void shouldHaveExactlyTwoConfiguredChannels() {
       // Given: MessageChannels 中定义的所有通道
-      String[] expectedChannels = {MessageChannels.INGEST_TASK_READY, MessageChannels.INGEST_LITERATURE_READY};
+      String[] expectedChannels = {
+        MessageChannels.INGEST_TASK_READY, MessageChannels.INGEST_LITERATURE_READY
+      };
 
       // When & Then: 验证每个通道都有映射
       for (String channel : expectedChannels) {

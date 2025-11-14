@@ -31,6 +31,7 @@
  * <h2>收集的指标</h2>
  *
  * <h3>上传成功计数</h3>
+ *
  * <pre>
  * 名称: object_storage_upload_success_total
  * 类型: Counter
@@ -41,6 +42,7 @@
  * </pre>
  *
  * <h3>上传失败计数</h3>
+ *
  * <pre>
  * 名称: object_storage_upload_failure_total
  * 类型: Counter
@@ -52,6 +54,7 @@
  * </pre>
  *
  * <h3>上传时长</h3>
+ *
  * <pre>
  * 名称: object_storage_upload_duration_seconds
  * 类型: Timer
@@ -63,6 +66,7 @@
  * </pre>
  *
  * <h3>上传文件大小</h3>
+ *
  * <pre>
  * 名称: object_storage_upload_size_bytes
  * 类型: Summary
@@ -73,6 +77,7 @@
  * </pre>
  *
  * <h3>重试次数</h3>
+ *
  * <pre>
  * 名称: object_storage_retry_total
  * 类型: Counter
@@ -95,6 +100,7 @@
  * <h2>Prometheus 查询示例</h2>
  *
  * <p><b>上传成功率(最近 5 分钟):</b>
+ *
  * <pre>
  * sum(rate(object_storage_upload_success_total[5m]))
  * /
@@ -105,16 +111,19 @@
  * </pre>
  *
  * <p><b>按提供商分组的上传失败率:</b>
+ *
  * <pre>
  * sum by (provider) (rate(object_storage_upload_failure_total[5m]))
  * </pre>
  *
  * <p><b>按错误类型分组的失败分布:</b>
+ *
  * <pre>
  * sum by (error_type) (rate(object_storage_upload_failure_total[5m]))
  * </pre>
  *
  * <p><b>上传操作 P95 延迟:</b>
+ *
  * <pre>
  * histogram_quantile(0.95,
  *   sum(rate(object_storage_upload_duration_seconds_bucket[5m])) by (le, provider, bucket)
@@ -122,6 +131,7 @@
  * </pre>
  *
  * <p><b>重试率(最近 5 分钟):</b>
+ *
  * <pre>
  * sum(rate(object_storage_retry_total[5m]))
  * /
@@ -134,6 +144,7 @@
  * <h2>Grafana 面板配置</h2>
  *
  * <p><b>上传成功率面板:</b>
+ *
  * <pre>
  * 面板类型: Graph
  * 单位: percent (0-100)
@@ -145,6 +156,7 @@
  * </pre>
  *
  * <p><b>上传延迟分位数面板:</b>
+ *
  * <pre>
  * 面板类型: Graph
  * 单位: seconds
@@ -156,6 +168,7 @@
  * </pre>
  *
  * <p><b>错误类型分布面板:</b>
+ *
  * <pre>
  * 面板类型: Pie Chart
  * 查询: sum by (error_type) (rate(object_storage_upload_failure_total[5m]))
@@ -165,6 +178,7 @@
  * <h2>使用示例</h2>
  *
  * <p><b>在模板中记录指标:</b>
+ *
  * <pre>{@code
  * @Autowired
  * private ObjectStorageMetrics metrics;
@@ -201,6 +215,7 @@
  * }</pre>
  *
  * <p><b>记录重试指标:</b>
+ *
  * <pre>{@code
  * retryTemplate.execute(context -> {
  *     try {
@@ -220,6 +235,7 @@
  * <h2>告警规则示例</h2>
  *
  * <p><b>上传成功率低于 95% 告警:</b>
+ *
  * <pre>
  * - alert: ObjectStorageUploadSuccessRateLow
  *   expr: |
@@ -240,6 +256,7 @@
  * </pre>
  *
  * <p><b>P95 延迟超过 5 秒告警:</b>
+ *
  * <pre>
  * - alert: ObjectStorageUploadLatencyHigh
  *   expr: |

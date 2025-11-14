@@ -4,6 +4,7 @@
  * <p>本包提供领域事件的订阅和处理逻辑，实现跨聚合的最终一致性协调。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>监听领域事件（使用 {@code @TransactionalEventListener}）
  *   <li>执行跨聚合状态同步（如 Task → Slice → Plan 状态传播）
@@ -12,6 +13,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code TaskCompletedEventHandler} - 任务完成事件处理器
  *       <ul>
@@ -28,6 +30,7 @@
  * </ul>
  *
  * <h2>设计原则</h2>
+ *
  * <ul>
  *   <li><strong>事务边界</strong>: 使用 {@code @TransactionalEventListener(phase = AFTER_COMMIT)}
  *       确保事件在事务提交后处理
@@ -37,6 +40,7 @@
  * </ul>
  *
  * <h2>事件流转链路</h2>
+ *
  * <pre>
  * TaskCompletedEvent
  *   ↓ TaskCompletedEventHandler
@@ -46,6 +50,7 @@
  * </pre>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

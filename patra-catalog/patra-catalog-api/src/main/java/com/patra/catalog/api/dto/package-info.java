@@ -1,8 +1,8 @@
 /**
  * Catalog 服务数据传输对象包。
  *
- * <p>本包定义了文献目录服务(patra-catalog)的公开 API 契约。所有 DTO 类都是六边形架构 API 层的一部分,
- * 作为服务间通信的"发布语言"(Published Language),确保跨服务集成的稳定性和一致性。
+ * <p>本包定义了文献目录服务(patra-catalog)的公开 API 契约。所有 DTO 类都是六边形架构 API 层的一部分, 作为服务间通信的"发布语言"(Published
+ * Language),确保跨服务集成的稳定性和一致性。
  *
  * <h2>核心 DTO</h2>
  *

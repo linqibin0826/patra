@@ -2,7 +2,6 @@ package com.patra.ingest.app.usecase.plan;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -73,10 +72,7 @@ class PlanIdempotencyCoordinatorTest {
   void setUp() {
     coordinator =
         new PlanIdempotencyCoordinator(
-            planSliceRepository,
-            taskRepository,
-            persistenceCoordinator,
-            publishingCoordinator);
+            planSliceRepository, taskRepository, persistenceCoordinator, publishingCoordinator);
   }
 
   @Nested
@@ -119,7 +115,8 @@ class PlanIdempotencyCoordinatorTest {
 
       // 验证重试事件发布
       verify(publishingCoordinator).collectQueuedEvents(List.of(failedTask));
-      verify(publishingCoordinator).publishRetryEvents(List.of(queuedEvent), existingPlan, schedule);
+      verify(publishingCoordinator)
+          .publishRetryEvents(List.of(queuedEvent), existingPlan, schedule);
     }
 
     @Test
@@ -201,7 +198,8 @@ class PlanIdempotencyCoordinatorTest {
       verify(successTask, never()).prepareForRetry();
 
       // 验证重试事件发布
-      verify(publishingCoordinator).publishRetryEvents(eventsCaptor.capture(), eq(existingPlan), eq(schedule));
+      verify(publishingCoordinator)
+          .publishRetryEvents(eventsCaptor.capture(), eq(existingPlan), eq(schedule));
       List<TaskQueuedEvent> publishedEvents = eventsCaptor.getValue();
       assertThat(publishedEvents).hasSize(2);
       assertThat(publishedEvents).containsExactly(event1, event2);
@@ -398,7 +396,16 @@ class PlanIdempotencyCoordinatorTest {
   /** 创建 TaskQueuedEvent。 */
   private TaskQueuedEvent createTaskQueuedEvent(Long taskId) {
     return TaskQueuedEvent.of(
-        taskId, 100L, 10L, 1L, ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode(), "task-key-" + taskId, "{}", 1, Instant.now());
+        taskId,
+        100L,
+        10L,
+        1L,
+        ProvenanceCode.PUBMED,
+        OperationCode.HARVEST.getCode(),
+        "task-key-" + taskId,
+        "{}",
+        1,
+        Instant.now());
   }
 
   /** 创建 PlanIngestionResult。 */

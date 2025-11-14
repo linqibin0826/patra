@@ -4,12 +4,14 @@
  * <p>本包定义切片规划器使用的数据模型。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>定义切片规划的输入上下文（{@code SlicePlanningContext}）
  *   <li>定义切片规划的输出结果（{@code SlicePlan}）
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code SlicePlanningContext} - 切片规划上下文
  *       <ul>
@@ -25,6 +27,7 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * // 1. 构建上下文
  * var context = SlicePlanningContext.builder()

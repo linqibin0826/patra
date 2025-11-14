@@ -10,7 +10,6 @@ import com.patra.ingest.domain.model.vo.relay.RelayPlan;
 import com.patra.ingest.domain.port.OutboxPublisherPort;
 import com.patra.ingest.infra.config.OutboxMqProperties;
 import com.patra.ingest.infra.messaging.config.RocketMqChannelMapper;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;

@@ -7,11 +7,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.entity.Cursor;
 import com.patra.ingest.infra.persistence.converter.CursorConverter;
 import com.patra.ingest.infra.persistence.entity.CursorDO;
 import com.patra.ingest.infra.persistence.mapper.CursorMapper;
-import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -78,10 +78,12 @@ class CursorRepositoryMpImplTest {
       Cursor persistedCursor = createTestCursor(TEST_CURSOR_ID);
 
       when(converter.toDO(cursor)).thenReturn(entity);
-      when(mapper.insert(entity)).thenAnswer(invocation -> {
-        entity.setId(TEST_CURSOR_ID); // 模拟数据库生成 ID
-        return 1;
-      });
+      when(mapper.insert(entity))
+          .thenAnswer(
+              invocation -> {
+                entity.setId(TEST_CURSOR_ID); // 模拟数据库生成 ID
+                return 1;
+              });
       when(mapper.selectById(TEST_CURSOR_ID)).thenReturn(persistedEntity);
       when(converter.toDomain(persistedEntity)).thenReturn(persistedCursor);
 
@@ -134,10 +136,12 @@ class CursorRepositoryMpImplTest {
       Cursor persistedCursor = createTestCursor(TEST_CURSOR_ID);
 
       when(converter.toDO(cursor)).thenReturn(entity);
-      when(mapper.insert(entity)).thenAnswer(invocation -> {
-        entity.setId(TEST_CURSOR_ID);
-        return 1;
-      });
+      when(mapper.insert(entity))
+          .thenAnswer(
+              invocation -> {
+                entity.setId(TEST_CURSOR_ID);
+                return 1;
+              });
       when(mapper.selectById(TEST_CURSOR_ID)).thenReturn(persistedEntity);
       when(converter.toDomain(persistedEntity)).thenReturn(persistedCursor);
 
@@ -236,7 +240,8 @@ class CursorRepositoryMpImplTest {
 
       // When
       Optional<Instant> result =
-          repository.findLatestGlobalTimeWatermark(TEST_PROVENANCE_CODE.getCode(), TEST_OPERATION_CODE);
+          repository.findLatestGlobalTimeWatermark(
+              TEST_PROVENANCE_CODE.getCode(), TEST_OPERATION_CODE);
 
       // Then
       assertThat(result).isPresent().contains(TEST_WATERMARK);
@@ -251,7 +256,8 @@ class CursorRepositoryMpImplTest {
 
       // When
       Optional<Instant> result =
-          repository.findLatestGlobalTimeWatermark(TEST_PROVENANCE_CODE.getCode(), TEST_OPERATION_CODE);
+          repository.findLatestGlobalTimeWatermark(
+              TEST_PROVENANCE_CODE.getCode(), TEST_OPERATION_CODE);
 
       // Then
       assertThat(result).isEmpty();

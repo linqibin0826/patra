@@ -33,6 +33,7 @@
  * <h2>领域对象说明</h2>
  *
  * <h3>ObjectMetadata</h3>
+ *
  * <p>上传操作的元数据,包含文件大小、内容类型等信息。
  *
  * <table border="1">
@@ -42,6 +43,7 @@
  * </table>
  *
  * <h3>UploadResult</h3>
+ *
  * <p>上传操作的返回结果,包含存储键、ETag 等信息。
  *
  * <table border="1">
@@ -56,9 +58,11 @@
  * <h2>异常分类</h2>
  *
  * <h3>InvalidUploadRequestException</h3>
+ *
  * <p>参数验证失败异常,属于客户端错误,不应重试。
  *
  * <p><b>触发场景:</b>
+ *
  * <ul>
  *   <li>bucket 名称为空或格式不正确
  *   <li>objectKey 为空或包含非法字符
@@ -68,9 +72,11 @@
  * </ul>
  *
  * <h3>UploadFailedException</h3>
+ *
  * <p>上传操作失败异常,可能是瞬时故障,支持重试。
  *
  * <p><b>触发场景:</b>
+ *
  * <ul>
  *   <li>网络 I/O 错误(可重试)
  *   <li>连接超时(可重试)
@@ -82,6 +88,7 @@
  * <h2>使用示例</h2>
  *
  * <p><b>构造元数据:</b>
+ *
  * <pre>{@code
  * ObjectMetadata metadata = ObjectMetadata.builder()
  *     .contentLength(1024L) // 1KB
@@ -90,6 +97,7 @@
  * }</pre>
  *
  * <p><b>处理上传结果:</b>
+ *
  * <pre>{@code
  * UploadResult result = objectStorageOps.upload(bucket, key, inputStream, metadata);
  *
@@ -104,6 +112,7 @@
  * }</pre>
  *
  * <p><b>异常处理:</b>
+ *
  * <pre>{@code
  * try {
  *     UploadResult result = objectStorageOps.upload(bucket, key, inputStream, metadata);
@@ -120,6 +129,7 @@
  * }</pre>
  *
  * <p><b>参数验证示例:</b>
+ *
  * <pre>{@code
  * public void validateUploadRequest(String bucket, String key, InputStream inputStream,
  *                                    ObjectMetadata metadata) {
@@ -145,6 +155,7 @@
  * <h2>扩展指南</h2>
  *
  * <p><b>添加新的元数据字段:</b>
+ *
  * <pre>{@code
  * @Getter
  * @Builder

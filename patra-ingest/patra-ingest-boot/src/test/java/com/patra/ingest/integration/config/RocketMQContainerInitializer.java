@@ -59,8 +59,8 @@ import org.springframework.context.ConfigurableApplicationContext;
  *
  * <h3>并发安全保证</h3>
  *
- * <p>在 Maven 并行测试模式（{@code -T 1C}）下，多个集成测试类可能同时加载此初始化器， 导致静态代码块并发执行。
- * 为避免 Docker Compose 端口冲突和资源竞争，采用 <strong>双重检查锁（Double-Checked Locking）</strong> 模式：
+ * <p>在 Maven 并行测试模式（{@code -T 1C}）下，多个集成测试类可能同时加载此初始化器， 导致静态代码块并发执行。 为避免 Docker Compose
+ * 端口冲突和资源竞争，采用 <strong>双重检查锁（Double-Checked Locking）</strong> 模式：
  *
  * <ul>
  *   <li><strong>volatile 变量</strong>: {@code initialized} 标志保证多线程可见性
@@ -70,8 +70,8 @@ import org.springframework.context.ConfigurableApplicationContext;
  * </ul>
  *
  * <p><strong>问题场景</strong>: 修复前，{@code RocketMqOutboxPublisherIT} 和 {@code
- * TaskReadyMessageListenerIT} 并发启动时，两个线程同时调用 {@code docker compose up -d}， 导致端口 9876
- * 冲突，容器启动失败，错误代码 1。
+ * TaskReadyMessageListenerIT} 并发启动时，两个线程同时调用 {@code docker compose up -d}， 导致端口 9876 冲突，容器启动失败，错误代码
+ * 1。
  *
  * <p><strong>修复效果</strong>: 修复后，第一个线程启动容器，其他线程等待并复用，避免并发冲突。
  *
@@ -80,6 +80,7 @@ import org.springframework.context.ConfigurableApplicationContext;
  * <p>采用 Docker Compose + ComposeContainer 方案，解决网络配置问题。
  *
  * <h4>核心技术突破</h4>
+ *
  * <ul>
  *   <li><strong>brokerIP1=127.0.0.1</strong>: Broker advertise 宿主机可访问的地址，解决容器内部 IP 无法访问的问题
  *   <li><strong>1:1 端口映射</strong>: 10911:10911，确保客户端连接端口与 Broker advertise 端口匹配
@@ -88,7 +89,9 @@ import org.springframework.context.ConfigurableApplicationContext;
  * </ul>
  *
  * <h4>为什么不使用 GenericContainer?</h4>
+ *
  * <p>GenericContainer 的动态端口映射和容器内部 IP 检测机制，在 RocketMQ 场景下会导致：
+ *
  * <ul>
  *   <li>Broker 自动检测到容器内部 IP (如 172.17.0.x)，宿主机无法访问
  *   <li>客户端从 NameServer 获取到错误的 Broker 地址
@@ -120,14 +123,10 @@ public class RocketMQContainerInitializer
    */
   private static volatile RocketMQTopicAdmin topicAdmin;
 
-  /**
-   * 初始化状态标志，使用 volatile 确保多线程可见性。
-   */
+  /** 初始化状态标志，使用 volatile 确保多线程可见性。 */
   private static volatile boolean initialized = false;
 
-  /**
-   * 同步锁对象，用于保护初始化过程的线程安全。
-   */
+  /** 同步锁对象，用于保护初始化过程的线程安全。 */
   private static final Object LOCK = new Object();
 
   // 静态初始化块：在类加载时触发容器初始化

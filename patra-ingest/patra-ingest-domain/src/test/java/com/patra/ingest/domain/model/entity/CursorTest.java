@@ -63,12 +63,7 @@ class CursorTest {
       // When
       Cursor cursor =
           Cursor.create(
-              provenanceCode,
-              operationCode,
-              cursorKey,
-              namespaceScope,
-              namespaceKey,
-              watermark);
+              provenanceCode, operationCode, cursorKey, namespaceScope, namespaceKey, watermark);
 
       // Then
       assertThat(cursor).isNotNull();
@@ -83,8 +78,7 @@ class CursorTest {
       assertThat(cursor.getValue().type()).isEqualTo(CursorType.TIME);
       assertThat(cursor.getValue().instant()).isEqualTo(watermark);
       assertThat(cursor.getWatermark().normalizedInstant()).isEqualTo(watermark);
-      assertThat(cursor.getWatermark().observedMaxValue())
-          .isEqualTo(watermark.toString());
+      assertThat(cursor.getWatermark().observedMaxValue()).isEqualTo(watermark.toString());
       assertThat(cursor.getLineage()).isEqualTo(CursorLineage.empty());
       assertThat(cursor.getExprHash()).isNull();
     }
@@ -107,7 +101,13 @@ class CursorTest {
       // When
       Cursor cursor =
           Cursor.create(
-              ProvenanceCode.PUBMED, "HARVEST", "publication_date", "GLOBAL", "global", watermark, lineage);
+              ProvenanceCode.PUBMED,
+              "HARVEST",
+              "publication_date",
+              "GLOBAL",
+              "global",
+              watermark,
+              lineage);
 
       // Then
       assertThat(cursor.getLineage()).isEqualTo(lineage);
@@ -150,7 +150,8 @@ class CursorTest {
 
       // When
       Cursor cursor =
-          Cursor.create(ProvenanceCode.PUBMED, "HARVEST", "publication_date", "GLOBAL", "global", watermark);
+          Cursor.create(
+              ProvenanceCode.PUBMED, "HARVEST", "publication_date", "GLOBAL", "global", watermark);
 
       // Then
       assertThat(cursor.getValue()).isEqualTo(CursorValue.empty());
@@ -368,7 +369,8 @@ class CursorTest {
       Cursor cursor = CursorTestDataBuilder.aTimeCursor().build();
       Instant newWatermark = Instant.parse("2024-02-01T00:00:00Z");
       CursorValue newValue = CursorValue.time(newWatermark);
-      CursorWatermark newWatermarkVO = new CursorWatermark(newWatermark.toString(), newWatermark, null);
+      CursorWatermark newWatermarkVO =
+          new CursorWatermark(newWatermark.toString(), newWatermark, null);
 
       // When
       cursor.advance(newValue, newWatermarkVO, null, null);
@@ -382,8 +384,7 @@ class CursorTest {
     void shouldKeepOriginalWatermarkWhenNewIsNull() {
       // Given
       Instant originalWatermark = Instant.parse("2024-01-01T00:00:00Z");
-      Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor().watermark(originalWatermark).build();
+      Cursor cursor = CursorTestDataBuilder.aTimeCursor().watermark(originalWatermark).build();
       CursorWatermark originalWatermarkVO = cursor.getWatermark();
 
       Instant newWatermark = Instant.parse("2024-02-01T00:00:00Z");
@@ -493,8 +494,7 @@ class CursorTest {
     void shouldAdvanceToNewTimeWatermark() {
       // Given
       Instant originalWatermark = Instant.parse("2024-01-01T00:00:00Z");
-      Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor().watermark(originalWatermark).build();
+      Cursor cursor = CursorTestDataBuilder.aTimeCursor().watermark(originalWatermark).build();
 
       // When
       Instant newWatermark = Instant.parse("2024-02-01T00:00:00Z");
@@ -502,8 +502,7 @@ class CursorTest {
 
       // Then
       assertThat(cursor.getWatermark().normalizedInstant()).isEqualTo(newWatermark);
-      assertThat(cursor.getWatermark().observedMaxValue())
-          .isEqualTo(newWatermark.toString());
+      assertThat(cursor.getWatermark().observedMaxValue()).isEqualTo(newWatermark.toString());
     }
 
     @Test
@@ -523,8 +522,7 @@ class CursorTest {
     void shouldThrowExceptionWhenMovingWatermarkBackwards() {
       // Given
       Instant currentWatermark = Instant.parse("2024-02-01T00:00:00Z");
-      Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor().watermark(currentWatermark).build();
+      Cursor cursor = CursorTestDataBuilder.aTimeCursor().watermark(currentWatermark).build();
 
       // When & Then - 尝试回退水位线应该失败
       Instant olderWatermark = Instant.parse("2024-01-01T00:00:00Z");
@@ -832,8 +830,7 @@ class CursorTest {
     @DisplayName("应该返回 false 当当前哈希不为 null 而比较哈希为 null")
     void shouldReturnFalseWhenCurrentHashIsNotNullAndComparedIsNull() {
       // Given
-      Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor().exprHash("some-hash").build();
+      Cursor cursor = CursorTestDataBuilder.aTimeCursor().exprHash("some-hash").build();
 
       // When & Then
       assertThat(cursor.matchesExpression(null)).isFalse();
@@ -851,8 +848,7 @@ class CursorTest {
     void shouldUpdateObservedMaxValue() {
       // Given
       Instant originalWatermark = Instant.parse("2024-01-01T00:00:00Z");
-      Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor().watermark(originalWatermark).build();
+      Cursor cursor = CursorTestDataBuilder.aTimeCursor().watermark(originalWatermark).build();
 
       // When
       String newObservedMax = "2024-01-15T12:30:45Z";
@@ -873,8 +869,7 @@ class CursorTest {
       BigDecimal normalizedNumeric = new BigDecimal("12345");
       Cursor cursor =
           CursorTestDataBuilder.aTimeCursor()
-              .watermark(
-                  new CursorWatermark("original", normalizedInstant, normalizedNumeric))
+              .watermark(new CursorWatermark("original", normalizedInstant, normalizedNumeric))
               .buildRestored();
 
       // When
@@ -1013,7 +1008,8 @@ class CursorTest {
 
       // When
       Cursor cursor =
-          Cursor.create(ProvenanceCode.PUBMED, "HARVEST", "publication_date", "GLOBAL", "global", epoch);
+          Cursor.create(
+              ProvenanceCode.PUBMED, "HARVEST", "publication_date", "GLOBAL", "global", epoch);
 
       // Then
       assertThat(cursor.getWatermark().normalizedInstant()).isEqualTo(epoch);
@@ -1027,7 +1023,8 @@ class CursorTest {
 
       // When
       Cursor cursor =
-          Cursor.create(ProvenanceCode.PUBMED, "HARVEST", "publication_date", "GLOBAL", "global", future);
+          Cursor.create(
+              ProvenanceCode.PUBMED, "HARVEST", "publication_date", "GLOBAL", "global", future);
 
       // Then
       assertThat(cursor.getWatermark().normalizedInstant()).isEqualTo(future);
@@ -1087,7 +1084,12 @@ class CursorTest {
       // When
       Cursor cursor =
           Cursor.create(
-              ProvenanceCode.PUBMED, "HARVEST", "publication_date", "GLOBAL", "global", preciseTime);
+              ProvenanceCode.PUBMED,
+              "HARVEST",
+              "publication_date",
+              "GLOBAL",
+              "global",
+              preciseTime);
 
       // Then
       assertThat(cursor.getWatermark().normalizedInstant()).isEqualTo(preciseTime);
@@ -1170,8 +1172,7 @@ class CursorTest {
 
       // When - 检测到表达式变更
       Cursor.AdvancementResult result =
-          cursor.advanceTo(
-              Instant.parse("2024-07-01T00:00:00Z"), null, "new-expr-hash");
+          cursor.advanceTo(Instant.parse("2024-07-01T00:00:00Z"), null, "new-expr-hash");
 
       // Then - 应该返回 EXPRESSION_CHANGED
       assertThat(result).isEqualTo(Cursor.AdvancementResult.EXPRESSION_CHANGED);
@@ -1212,8 +1213,7 @@ class CursorTest {
     private CursorType cursorType = CursorType.TIME;
     private CursorValue value = CursorValue.time(Instant.parse("2024-01-01T00:00:00Z"));
     private CursorWatermark watermark =
-        new CursorWatermark(
-            "2024-01-01T00:00:00Z", Instant.parse("2024-01-01T00:00:00Z"), null);
+        new CursorWatermark("2024-01-01T00:00:00Z", Instant.parse("2024-01-01T00:00:00Z"), null);
     private CursorLineage lineage = CursorLineage.empty();
     private String exprHash = null;
 

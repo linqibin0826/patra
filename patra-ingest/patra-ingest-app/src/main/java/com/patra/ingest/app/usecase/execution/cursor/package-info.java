@@ -4,6 +4,7 @@
  * <p>本包提供游标推进功能，记录采集进度并支持增量采集。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>推进游标水位线（highWatermark）
  *   <li>记录批次进度（batchSeq、offset）
@@ -11,12 +12,14 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code CursorAdvancer} - 游标推进器接口
  *   <li>{@code CursorAdvancerImpl} - 游标推进器实现
  * </ul>
  *
  * <h2>游标模型</h2>
+ *
  * <ul>
  *   <li>{@code provenanceCode}: 数据源代码
  *   <li>{@code operationCode}: 操作代码
@@ -28,7 +31,9 @@
  * </ul>
  *
  * <h2>推进策略</h2>
+ *
  * <h3>批次完成后推进</h3>
+ *
  * <pre>
  * 1. 批次执行成功 → 推进游标
  * 2. 更新 highWatermark（如 2025-01-01 12:30:00）
@@ -37,6 +42,7 @@
  * </pre>
  *
  * <h3>任务完成后推进</h3>
+ *
  * <pre>
  * 1. 所有批次执行成功 → 最终推进游标
  * 2. 更新 highWatermark 为窗口结束时间
@@ -44,6 +50,7 @@
  * </pre>
  *
  * <h2>断点续传</h2>
+ *
  * <ul>
  *   <li><strong>场景</strong>: 任务执行失败（如网络超时、节点宕机）
  *   <li><strong>恢复</strong>: 下次执行从游标位置继续
@@ -55,6 +62,7 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

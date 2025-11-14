@@ -1,10 +1,10 @@
 package com.patra.ingest.domain.model.enums;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.*;
 
 /**
  * RelayStatus 枚举测试。
@@ -226,9 +226,7 @@ class RelayStatusTest {
       // Given & When & Then
       for (RelayStatus status : RelayStatus.values()) {
         if (status.isTerminal()) {
-          assertThat(status.isRetryable())
-              .as("终态 %s 不应该可以重试", status.name())
-              .isFalse();
+          assertThat(status.isRetryable()).as("终态 %s 不应该可以重试", status.name()).isFalse();
         }
       }
     }
@@ -239,9 +237,7 @@ class RelayStatusTest {
       // Given & When & Then
       for (RelayStatus status : RelayStatus.values()) {
         if (status.isRetryable()) {
-          assertThat(status.isTerminal())
-              .as("可重试状态 %s 不应该是终态", status.name())
-              .isFalse();
+          assertThat(status.isTerminal()).as("可重试状态 %s 不应该是终态", status.name()).isFalse();
         }
       }
     }

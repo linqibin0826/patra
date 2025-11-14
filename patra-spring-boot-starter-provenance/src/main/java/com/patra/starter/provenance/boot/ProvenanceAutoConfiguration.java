@@ -4,11 +4,11 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.patra.starter.provenance.common.provider.ProviderRegistry;
-import com.patra.starter.provenance.common.provider.DataSourceProvider;
 import com.patra.starter.provenance.common.config.DefaultConfigProvider;
 import com.patra.starter.provenance.common.http.SimpleHttpClient;
 import com.patra.starter.provenance.common.metrics.ProvenanceMetrics;
+import com.patra.starter.provenance.common.provider.DataSourceProvider;
+import com.patra.starter.provenance.common.provider.ProviderRegistry;
 import com.patra.starter.provenance.epmc.EPMCClient;
 import com.patra.starter.provenance.epmc.EPMCClientImpl;
 import com.patra.starter.provenance.pubmed.PubMedClient;
@@ -88,7 +88,8 @@ public class ProvenanceAutoConfiguration {
    */
   @Bean
   @ConditionalOnMissingBean
-  public ProviderRegistry providerRegistry(ObjectProvider<List<DataSourceProvider>> providersProvider) {
+  public ProviderRegistry providerRegistry(
+      ObjectProvider<List<DataSourceProvider>> providersProvider) {
     List<DataSourceProvider> providers = providersProvider.getIfAvailable(List::of);
     return new ProviderRegistry(providers);
   }

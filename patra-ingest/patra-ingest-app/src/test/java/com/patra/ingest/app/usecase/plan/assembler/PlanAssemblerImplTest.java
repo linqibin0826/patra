@@ -86,7 +86,11 @@ class PlanAssemblerImplTest {
     when(mockPlanner.slice(any())).thenReturn(List.of(slicePlan1));
 
     PlanAssemblyRequest request =
-        new PlanAssemblyRequest(harvestTriggerNorm, plannerWindow, mock(ProvenanceConfigSnapshot.class), planExpression);
+        new PlanAssemblyRequest(
+            harvestTriggerNorm,
+            plannerWindow,
+            mock(ProvenanceConfigSnapshot.class),
+            planExpression);
 
     PlanAssemblyResult result = planAssembler.assemble(request);
 
@@ -102,7 +106,11 @@ class PlanAssemblerImplTest {
     when(slicePlannerRegistry.get(any(SliceStrategy.class))).thenReturn(null);
 
     PlanAssemblyRequest request =
-        new PlanAssemblyRequest(harvestTriggerNorm, plannerWindow, mock(ProvenanceConfigSnapshot.class), planExpression);
+        new PlanAssemblyRequest(
+            harvestTriggerNorm,
+            plannerWindow,
+            mock(ProvenanceConfigSnapshot.class),
+            planExpression);
 
     PlanAssemblyResult result = planAssembler.assemble(request);
 
@@ -119,7 +127,11 @@ class PlanAssemblerImplTest {
     when(mockPlanner.slice(any())).thenReturn(List.of());
 
     PlanAssemblyRequest request =
-        new PlanAssemblyRequest(harvestTriggerNorm, plannerWindow, mock(ProvenanceConfigSnapshot.class), planExpression);
+        new PlanAssemblyRequest(
+            harvestTriggerNorm,
+            plannerWindow,
+            mock(ProvenanceConfigSnapshot.class),
+            planExpression);
 
     PlanAssemblyResult result = planAssembler.assemble(request);
 

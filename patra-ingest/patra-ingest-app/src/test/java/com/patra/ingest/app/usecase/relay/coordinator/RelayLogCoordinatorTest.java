@@ -193,9 +193,9 @@ class RelayLogCoordinatorTest {
       OutboxRelayLog log2 = createMockRelayLog(RelayStatus.DEFERRED);
       OutboxRelayLog log3 = createMockRelayLog(RelayStatus.FAILED);
 
-      when(logFactory.createForPublished(any(), any(), anyString(), any(), any()))
-          .thenReturn(log1);
-      when(logFactory.createForDeferred(any(), any(), anyString(), any(), any(), any(), any(), any()))
+      when(logFactory.createForPublished(any(), any(), anyString(), any(), any())).thenReturn(log1);
+      when(logFactory.createForDeferred(
+              any(), any(), anyString(), any(), any(), any(), any(), any()))
           .thenReturn(log2);
       when(logFactory.createForFailed(any(), any(), anyString(), any(), any(), any(), any()))
           .thenReturn(log3);
@@ -203,8 +203,7 @@ class RelayLogCoordinatorTest {
       accumulator.recordPublished(testMessage, leaseOwner, startTime, Instant.now());
       accumulator.recordDeferred(
           testMessage, leaseOwner, startTime, Instant.now(), "TIMEOUT", "Timeout", "TRANSIENT");
-      accumulator.recordFailed(
-          testMessage, leaseOwner, startTime, "FATAL_ERROR", "Fatal", "FATAL");
+      accumulator.recordFailed(testMessage, leaseOwner, startTime, "FATAL_ERROR", "Fatal", "FATAL");
 
       // When
       coordinator.persistBatch(accumulator);
@@ -297,7 +296,8 @@ class RelayLogCoordinatorTest {
       String errorKind = "TRANSIENT";
 
       OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.DEFERRED);
-      when(logFactory.createForDeferred(any(), any(), anyString(), any(), any(), any(), any(), any()))
+      when(logFactory.createForDeferred(
+              any(), any(), anyString(), any(), any(), any(), any(), any()))
           .thenReturn(mockLog);
 
       // When
@@ -324,7 +324,8 @@ class RelayLogCoordinatorTest {
       // Given
       LogAccumulator accumulator = coordinator.createAccumulator(batchId);
       OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.DEFERRED);
-      when(logFactory.createForDeferred(any(), any(), anyString(), any(), any(), any(), any(), any()))
+      when(logFactory.createForDeferred(
+              any(), any(), anyString(), any(), any(), any(), any(), any()))
           .thenReturn(mockLog);
 
       // When: 错误消息为 null
@@ -450,7 +451,8 @@ class RelayLogCoordinatorTest {
 
       when(logFactory.createForPublished(any(), any(), anyString(), any(), any()))
           .thenReturn(publishedLog);
-      when(logFactory.createForDeferred(any(), any(), anyString(), any(), any(), any(), any(), any()))
+      when(logFactory.createForDeferred(
+              any(), any(), anyString(), any(), any(), any(), any(), any()))
           .thenReturn(deferredLog);
       when(logFactory.createForFailed(any(), any(), anyString(), any(), any(), any(), any()))
           .thenReturn(failedLog);

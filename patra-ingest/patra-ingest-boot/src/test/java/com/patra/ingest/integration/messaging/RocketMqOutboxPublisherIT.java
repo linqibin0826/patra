@@ -11,26 +11,25 @@ import com.patra.ingest.integration.config.MySQLContainerInitializer;
 import com.patra.ingest.integration.config.RocketMQContainerInitializer;
 import com.patra.ingest.testutil.OutboxMessageTestBuilder;
 import java.nio.charset.StandardCharsets;
-
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.stereotype.Component;
 import org.springframework.test.context.ContextConfiguration;
 
 /**
  * RocketMQ Outbox 发布器集成测试。
  *
- * <p>使用 Testcontainers 启动真实 RocketMQ 环境（由 {@link RocketMQContainerInitializer} 提供），
- * 测试 {@link RocketMqOutboxPublisher} 的消息发送功能。
+ * <p>使用 Testcontainers 启动真实 RocketMQ 环境（由 {@link RocketMQContainerInitializer} 提供）， 测试 {@link
+ * RocketMqOutboxPublisher} 的消息发送功能。
  *
  * <h3>测试范围</h3>
  *
@@ -66,15 +65,16 @@ import org.springframework.test.context.ContextConfiguration;
  * <h3>性能优化</h3>
  *
  * <ul>
- *   <li>容器单例: 由 {@link RocketMQContainerInitializer} 和 {@link MySQLContainerInitializer} 配置，所有集成测试共享容器
+ *   <li>容器单例: 由 {@link RocketMQContainerInitializer} 和 {@link MySQLContainerInitializer}
+ *       配置，所有集成测试共享容器
  *   <li>Spring Consumer: 自动管理生命周期，无需手动等待启动
  *   <li>并行测试: 测试方法可并发执行 (不同 Consumer Group)
  * </ul>
  *
  * <h3>容器依赖说明</h3>
  *
- * <p>虽然本测试主要测试 RocketMQ 消息发送，但由于 Spring 上下文中包含依赖数据库的组件（如 OutboxMessageRepository），
- * 因此也需要启动 MySQL 容器。这样可以确保完整的应用上下文正常启动。
+ * <p>虽然本测试主要测试 RocketMQ 消息发送，但由于 Spring 上下文中包含依赖数据库的组件（如 OutboxMessageRepository）， 因此也需要启动 MySQL
+ * 容器。这样可以确保完整的应用上下文正常启动。
  *
  * @author linqibin
  * @since 0.2.0
@@ -201,9 +201,7 @@ class RocketMqOutboxPublisherIT {
     await()
         .atMost(15, SECONDS)
         .untilAsserted(
-            () ->
-                assertThat(messageCollector.getMessageCount())
-                    .isGreaterThanOrEqualTo(batchSize));
+            () -> assertThat(messageCollector.getMessageCount()).isGreaterThanOrEqualTo(batchSize));
 
     // 验证每条消息都收到了
     for (int i = 0; i < batchSize; i++) {
@@ -233,7 +231,9 @@ class RocketMqOutboxPublisherIT {
     await()
         .atMost(15, SECONDS)
         .untilAsserted(
-            () -> assertThat(messageCollector.getMessageCount()).isGreaterThanOrEqualTo(messageCount));
+            () ->
+                assertThat(messageCollector.getMessageCount())
+                    .isGreaterThanOrEqualTo(messageCount));
 
     // 验证每条消息都收到了
     for (int i = 0; i < messageCount; i++) {
@@ -260,7 +260,8 @@ class RocketMqOutboxPublisherIT {
     // 断言: 等待消息被接收
     await()
         .atMost(10, SECONDS)
-        .untilAsserted(() -> assertThat(messageCollector.hasMessage("empty-payload-test")).isTrue());
+        .untilAsserted(
+            () -> assertThat(messageCollector.hasMessage("empty-payload-test")).isTrue());
 
     // 验证: 空 payload 被替换为占位符 "{}"
     MessageExt receivedMsg = messageCollector.getMessage("empty-payload-test");
@@ -310,7 +311,8 @@ class RocketMqOutboxPublisherIT {
     // 断言: 等待消息被接收
     await()
         .atMost(10, SECONDS)
-        .untilAsserted(() -> assertThat(messageCollector.hasMessage("empty-headers-test")).isTrue());
+        .untilAsserted(
+            () -> assertThat(messageCollector.hasMessage("empty-headers-test")).isTrue());
 
     // 验证: 消息成功发送（不应有自定义 UserProperties，除了默认的 channel）
     MessageExt receivedMsg = messageCollector.getMessage("empty-headers-test");

@@ -2,10 +2,6 @@ package com.patra.starter.provenance.common.http;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.io.IOException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -89,8 +85,7 @@ class SimpleHttpClientTest {
     assertThatCode(
             () -> {
               try {
-                httpClient.get(
-                    baseUrlWithSlash, path, Map.of(), Map.of(), defaultResilienceConfig);
+                httpClient.get(baseUrlWithSlash, path, Map.of(), Map.of(), defaultResilienceConfig);
               } catch (RuntimeException e) {
                 // 只关注非HTTP错误
                 if (!e.getMessage().contains("HTTP")) {
@@ -154,9 +149,7 @@ class SimpleHttpClientTest {
   void get_shouldThrowException_whenUrlIsNull() {
     // Act & Assert
     assertThatThrownBy(
-            () ->
-                httpClient.get(
-                    null, "/path", Map.of(), Map.of(), defaultResilienceConfig))
+            () -> httpClient.get(null, "/path", Map.of(), Map.of(), defaultResilienceConfig))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("URI with undefined scheme");
   }
@@ -170,8 +163,7 @@ class SimpleHttpClientTest {
     HttpResilienceConfig shortTimeout = new HttpResilienceConfig(1L, 0, 0L, null); // 1秒超时
 
     // Act & Assert - 预期超时异常
-    assertThatThrownBy(
-            () -> httpClient.get(baseUrl, path, Map.of(), Map.of(), shortTimeout))
+    assertThatThrownBy(() -> httpClient.get(baseUrl, path, Map.of(), Map.of(), shortTimeout))
         .isInstanceOf(RuntimeException.class)
         .hasMessageContaining("HTTP call failed");
   }
@@ -185,8 +177,7 @@ class SimpleHttpClientTest {
     HttpResilienceConfig withRetries = new HttpResilienceConfig(5L, 2, 0L, null); // 2次重试
 
     // Act & Assert - 验证重试配置不会导致程序崩溃
-    assertThatThrownBy(
-            () -> httpClient.get(baseUrl, path, Map.of(), Map.of(), withRetries))
+    assertThatThrownBy(() -> httpClient.get(baseUrl, path, Map.of(), Map.of(), withRetries))
         .isInstanceOf(RuntimeException.class);
 
     // Note: 移除了基于时间的断言，因为在不同环境（特别是CI）中网络超时行为不可预测

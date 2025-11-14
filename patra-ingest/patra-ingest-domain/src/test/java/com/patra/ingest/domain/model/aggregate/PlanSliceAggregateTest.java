@@ -103,8 +103,7 @@ class PlanSliceAggregateTest {
       Long planId = null;
 
       // When: 创建切片
-      PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder().planId(planId).build();
+      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().planId(planId).build();
 
       // Then: 应该成功创建
       assertThat(slice).isNotNull();
@@ -236,9 +235,7 @@ class PlanSliceAggregateTest {
     void shouldAllowTransitionFromAssignedToFinished() {
       // Given: 切片处于 ASSIGNED 状态
       PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder()
-              .status(SliceStatus.ASSIGNED)
-              .buildRestored();
+          PlanSliceAggregateTestDataBuilder.builder().status(SliceStatus.ASSIGNED).buildRestored();
 
       // When: 更新状态为 FINISHED（任务完成后）
       slice.updateStatus(SliceStatus.FINISHED);
@@ -252,9 +249,7 @@ class PlanSliceAggregateTest {
     void shouldAllowRepeatedMarkAssignedCalls() {
       // Given: 切片处于 ASSIGNED 状态
       PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder()
-              .status(SliceStatus.ASSIGNED)
-              .buildRestored();
+          PlanSliceAggregateTestDataBuilder.builder().status(SliceStatus.ASSIGNED).buildRestored();
 
       // When: 再次标记为已分配
       slice.markAssigned();
@@ -268,9 +263,7 @@ class PlanSliceAggregateTest {
     void shouldAllowArbitraryTransitionViaUpdateStatus() {
       // Given: 切片处于 FINISHED 状态
       PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder()
-              .status(SliceStatus.FINISHED)
-              .buildRestored();
+          PlanSliceAggregateTestDataBuilder.builder().status(SliceStatus.FINISHED).buildRestored();
 
       // When: 更新状态为 PENDING（虽然不是标准流程，但技术上允许）
       slice.updateStatus(SliceStatus.PENDING);
@@ -329,8 +322,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该成功绑定计划")
     void shouldBindPlanSuccessfully() {
       // Given: 未绑定计划的切片
-      PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder().planId(null).build();
+      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().planId(null).build();
       assertThat(slice.getPlanId()).isNull();
 
       // When: 绑定计划
@@ -345,8 +337,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该抛出异常当 bindPlan() 参数为 null")
     void shouldThrowExceptionWhenBindPlanWithNull() {
       // Given: 未绑定计划的切片
-      PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder().planId(null).build();
+      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().planId(null).build();
 
       // When & Then: 使用 null 绑定计划应该失败
       assertThatThrownBy(() -> slice.bindPlan(null))
@@ -358,8 +349,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该允许重新绑定计划（覆盖现有值）")
     void shouldAllowRebindingPlan() {
       // Given: 已绑定计划的切片
-      PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder().planId(1001L).build();
+      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().planId(1001L).build();
       assertThat(slice.getPlanId()).isEqualTo(1001L);
 
       // When: 重新绑定到新计划
@@ -470,8 +460,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该允许 planId 字段发生变化")
     void shouldAllowPlanIdFieldToChange() {
       // Given: 未绑定计划的切片
-      PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder().planId(null).build();
+      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().planId(null).build();
 
       // When: 绑定计划
       slice.bindPlan(3001L);
@@ -730,7 +719,12 @@ class PlanSliceAggregateTest {
     /** 构建新创建的切片（使用 create() 工厂方法）。 */
     public PlanSliceAggregate build() {
       return PlanSliceAggregate.create(
-          planId, provenanceCode, sliceNo, sliceSignatureHash, windowSpecJson, exprHash,
+          planId,
+          provenanceCode,
+          sliceNo,
+          sliceSignatureHash,
+          windowSpecJson,
+          exprHash,
           exprSnapshotJson);
     }
 

@@ -119,9 +119,7 @@ class PlanAssemblyExceptionTest {
       // Then
       assertThat(reasons)
           .containsExactlyInAnyOrder(
-              Reason.EMPTY_RESULT,
-              Reason.SLICE_GENERATION_FAILED,
-              Reason.TASK_GENERATION_FAILED);
+              Reason.EMPTY_RESULT, Reason.SLICE_GENERATION_FAILED, Reason.TASK_GENERATION_FAILED);
     }
 
     @Test
@@ -145,8 +143,7 @@ class PlanAssemblyExceptionTest {
     @DisplayName("应该包含 RULE_VIOLATION 错误特征")
     void shouldContainRuleViolationErrorTrait() {
       // Given
-      PlanAssemblyException exception =
-          new PlanAssemblyException("组装失败", Reason.EMPTY_RESULT);
+      PlanAssemblyException exception = new PlanAssemblyException("组装失败", Reason.EMPTY_RESULT);
 
       // When
       Set<ErrorTrait> traits = exception.getErrorTraits();
@@ -177,8 +174,7 @@ class PlanAssemblyExceptionTest {
       PlanAssemblyException exception = new PlanAssemblyException("组装失败");
 
       // When & Then
-      assertThat(exception)
-          .isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
+      assertThat(exception).isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
     }
   }
 }

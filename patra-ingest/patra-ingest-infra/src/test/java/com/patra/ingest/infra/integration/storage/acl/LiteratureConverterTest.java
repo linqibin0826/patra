@@ -8,7 +8,6 @@ import com.patra.catalog.api.dto.LiteratureDTO;
 import com.patra.common.model.CanonicalLiterature;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -50,20 +49,22 @@ class LiteratureConverterTest {
               .lastName("Smith")
               .foreName("John")
               .initials("JD")
-              .affiliations(List.of(
-                  CanonicalLiterature.Affiliation.builder()
-                      .name("Harvard Medical School")
-                      .build()))
+              .affiliations(
+                  List.of(
+                      CanonicalLiterature.Affiliation.builder()
+                          .name("Harvard Medical School")
+                          .build()))
               .build();
 
       CanonicalLiterature.Author author2 =
           CanonicalLiterature.Author.builder()
               .lastName("Johnson")
               .foreName("Mary")
-              .affiliations(List.of(
-                  CanonicalLiterature.Affiliation.builder()
-                      .name("Stanford University")
-                      .build()))
+              .affiliations(
+                  List.of(
+                      CanonicalLiterature.Affiliation.builder()
+                          .name("Stanford University")
+                          .build()))
               .build();
 
       CanonicalLiterature.Journal journal =
@@ -78,25 +79,39 @@ class LiteratureConverterTest {
       CanonicalLiterature literature =
           CanonicalLiterature.builder()
               .title("Novel Approaches to Cancer Treatment")
-              .abstractContent(CanonicalLiterature.Abstract.builder()
-                  .text("This study explores innovative methods for treating various types of cancer.")
-                  .build())
+              .abstractContent(
+                  CanonicalLiterature.Abstract.builder()
+                      .text(
+                          "This study explores innovative methods for treating various types of cancer.")
+                      .build())
               .authors(List.of(author1, author2))
               .journal(journal)
-              .identifiers(List.of(
-                  CanonicalLiterature.Identifier.builder().type("pmid").value("12345678").build(),
-                  CanonicalLiterature.Identifier.builder().type("doi").value("10.1038/nm.12345").build()))
-              .dates(CanonicalLiterature.PublicationDates.builder()
-                  .published(LocalDate.of(2025, 1, 15))
-                  .build())
-              .keywords(List.of(
-                  CanonicalLiterature.KeywordSet.builder()
-                      .source("author")
-                      .keywords(List.of(
-                          CanonicalLiterature.Keyword.builder().term("cancer").build(),
-                          CanonicalLiterature.Keyword.builder().term("treatment").build(),
-                          CanonicalLiterature.Keyword.builder().term("immunotherapy").build()))
-                      .build()))
+              .identifiers(
+                  List.of(
+                      CanonicalLiterature.Identifier.builder()
+                          .type("pmid")
+                          .value("12345678")
+                          .build(),
+                      CanonicalLiterature.Identifier.builder()
+                          .type("doi")
+                          .value("10.1038/nm.12345")
+                          .build()))
+              .dates(
+                  CanonicalLiterature.PublicationDates.builder()
+                      .published(LocalDate.of(2025, 1, 15))
+                      .build())
+              .keywords(
+                  List.of(
+                      CanonicalLiterature.KeywordSet.builder()
+                          .source("author")
+                          .keywords(
+                              List.of(
+                                  CanonicalLiterature.Keyword.builder().term("cancer").build(),
+                                  CanonicalLiterature.Keyword.builder().term("treatment").build(),
+                                  CanonicalLiterature.Keyword.builder()
+                                      .term("immunotherapy")
+                                      .build()))
+                          .build()))
               .build();
 
       // When: 转换为 DTO
@@ -106,7 +121,8 @@ class LiteratureConverterTest {
       assertThat(dto).isNotNull();
       assertThat(dto.title()).isEqualTo("Novel Approaches to Cancer Treatment");
       assertThat(dto.abstractText())
-          .isEqualTo("This study explores innovative methods for treating various types of cancer.");
+          .isEqualTo(
+              "This study explores innovative methods for treating various types of cancer.");
       assertThat(dto.publicationDate()).isEqualTo(LocalDate.of(2025, 1, 15));
       assertThat(dto.keywords()).containsExactly("cancer", "treatment", "immunotherapy");
       assertThat(dto.identifiers())
@@ -177,10 +193,7 @@ class LiteratureConverterTest {
     void shouldConvertLiteratureWithEmptyAuthors() {
       // Given
       CanonicalLiterature literature =
-          CanonicalLiterature.builder()
-              .title("Paper Without Authors")
-              .authors(List.of())
-              .build();
+          CanonicalLiterature.builder().title("Paper Without Authors").authors(List.of()).build();
 
       // When
       LiteratureDTO dto = converter.toDto(literature);
@@ -204,17 +217,19 @@ class LiteratureConverterTest {
       CanonicalLiterature lit1 =
           CanonicalLiterature.builder()
               .title("First Paper")
-              .dates(CanonicalLiterature.PublicationDates.builder()
-                  .published(LocalDate.of(2025, 1, 1))
-                  .build())
+              .dates(
+                  CanonicalLiterature.PublicationDates.builder()
+                      .published(LocalDate.of(2025, 1, 1))
+                      .build())
               .build();
 
       CanonicalLiterature lit2 =
           CanonicalLiterature.builder()
               .title("Second Paper")
-              .dates(CanonicalLiterature.PublicationDates.builder()
-                  .published(LocalDate.of(2025, 1, 2))
-                  .build())
+              .dates(
+                  CanonicalLiterature.PublicationDates.builder()
+                      .published(LocalDate.of(2025, 1, 2))
+                      .build())
               .build();
 
       List<CanonicalLiterature> literatures = List.of(lit1, lit2);
@@ -256,20 +271,15 @@ class LiteratureConverterTest {
           CanonicalLiterature.Author.builder()
               .lastName("Doe")
               .foreName("Jane")
-              .affiliations(List.of(
-                  CanonicalLiterature.Affiliation.builder()
-                      .name("MIT")
-                      .build()))
+              .affiliations(List.of(CanonicalLiterature.Affiliation.builder().name("MIT").build()))
               .build();
 
       CanonicalLiterature.Author author2 =
           CanonicalLiterature.Author.builder()
               .lastName("Lee")
               .foreName("David")
-              .affiliations(List.of(
-                  CanonicalLiterature.Affiliation.builder()
-                      .name("Caltech")
-                      .build()))
+              .affiliations(
+                  List.of(CanonicalLiterature.Affiliation.builder().name("Caltech").build()))
               .build();
 
       List<CanonicalLiterature.Author> authors = List.of(author1, author2);
@@ -325,10 +335,7 @@ class LiteratureConverterTest {
           CanonicalLiterature.Author.builder()
               .lastName("Chen")
               .foreName("Wei")
-              .affiliations(List.of(
-                  CanonicalLiterature.Affiliation.builder()
-                      .name("   ")
-                      .build()))
+              .affiliations(List.of(CanonicalLiterature.Affiliation.builder().name("   ").build()))
               .build();
 
       List<CanonicalLiterature.Author> authors = List.of(author);
@@ -399,11 +406,7 @@ class LiteratureConverterTest {
     void shouldMapJournalWithTitleOnly() {
       // Given
       CanonicalLiterature.Journal journal =
-          CanonicalLiterature.Journal.builder()
-              .title("Cell")
-              .issn(null)
-              .publisher(null)
-              .build();
+          CanonicalLiterature.Journal.builder().title("Cell").issn(null).publisher(null).build();
 
       // When
       JournalDTO journalDTO = converter.mapJournal(journal);
@@ -436,10 +439,11 @@ class LiteratureConverterTest {
     @DisplayName("应该将机构列表转换为名称列表")
     void shouldConvertAffiliationsToNameList() {
       // Given
-      List<CanonicalLiterature.Affiliation> affiliations = List.of(
-          CanonicalLiterature.Affiliation.builder()
-              .name("University of California, Berkeley")
-              .build());
+      List<CanonicalLiterature.Affiliation> affiliations =
+          List.of(
+              CanonicalLiterature.Affiliation.builder()
+                  .name("University of California, Berkeley")
+                  .build());
 
       // When
       List<String> names = converter.resolveAffiliations(affiliations);
@@ -472,10 +476,11 @@ class LiteratureConverterTest {
     @DisplayName("应该过滤空白机构名称")
     void shouldFilterBlankAffiliationNames() {
       // Given
-      List<CanonicalLiterature.Affiliation> affiliations = List.of(
-          CanonicalLiterature.Affiliation.builder().name("Valid Name").build(),
-          CanonicalLiterature.Affiliation.builder().name("   ").build(),
-          CanonicalLiterature.Affiliation.builder().name("").build());
+      List<CanonicalLiterature.Affiliation> affiliations =
+          List.of(
+              CanonicalLiterature.Affiliation.builder().name("Valid Name").build(),
+              CanonicalLiterature.Affiliation.builder().name("   ").build(),
+              CanonicalLiterature.Affiliation.builder().name("").build());
 
       // When
       List<String> names = converter.resolveAffiliations(affiliations);
@@ -498,14 +503,16 @@ class LiteratureConverterTest {
       CanonicalLiterature literature =
           CanonicalLiterature.builder()
               .title("Study on α-β proteins & γ-rays: a \"novel\" approach")
-              .abstractContent(CanonicalLiterature.Abstract.builder()
-                  .text("Testing special chars: <tag>, {brace}, [bracket], @symbol")
-                  .build())
-              .identifiers(List.of(
-                  CanonicalLiterature.Identifier.builder()
-                      .type("doi")
-                      .value("10.1000/xyz<>123")
-                      .build()))
+              .abstractContent(
+                  CanonicalLiterature.Abstract.builder()
+                      .text("Testing special chars: <tag>, {brace}, [bracket], @symbol")
+                      .build())
+              .identifiers(
+                  List.of(
+                      CanonicalLiterature.Identifier.builder()
+                          .type("doi")
+                          .value("10.1000/xyz<>123")
+                          .build()))
               .build();
 
       // When
@@ -527,17 +534,11 @@ class LiteratureConverterTest {
           CanonicalLiterature.Author.builder()
               .lastName("李")
               .foreName("明")
-              .affiliations(List.of(
-                  CanonicalLiterature.Affiliation.builder()
-                      .name("北京大学")
-                      .build()))
+              .affiliations(List.of(CanonicalLiterature.Affiliation.builder().name("北京大学").build()))
               .build();
 
       CanonicalLiterature literature =
-          CanonicalLiterature.builder()
-              .title("Research Paper")
-              .authors(List.of(author))
-              .build();
+          CanonicalLiterature.builder().title("Research Paper").authors(List.of(author)).build();
 
       // When
       LiteratureDTO dto = converter.toDto(literature);
@@ -556,11 +557,24 @@ class LiteratureConverterTest {
       CanonicalLiterature literature =
           CanonicalLiterature.builder()
               .title("Multi-Identifier Paper")
-              .identifiers(List.of(
-                  CanonicalLiterature.Identifier.builder().type("pmid").value("12345678").build(),
-                  CanonicalLiterature.Identifier.builder().type("doi").value("10.1038/nature12345").build(),
-                  CanonicalLiterature.Identifier.builder().type("pmc").value("PMC9876543").build(),
-                  CanonicalLiterature.Identifier.builder().type("arxiv").value("2101.12345").build()))
+              .identifiers(
+                  List.of(
+                      CanonicalLiterature.Identifier.builder()
+                          .type("pmid")
+                          .value("12345678")
+                          .build(),
+                      CanonicalLiterature.Identifier.builder()
+                          .type("doi")
+                          .value("10.1038/nature12345")
+                          .build(),
+                      CanonicalLiterature.Identifier.builder()
+                          .type("pmc")
+                          .value("PMC9876543")
+                          .build(),
+                      CanonicalLiterature.Identifier.builder()
+                          .type("arxiv")
+                          .value("2101.12345")
+                          .build()))
               .build();
 
       // When
@@ -582,16 +596,28 @@ class LiteratureConverterTest {
       CanonicalLiterature literature =
           CanonicalLiterature.builder()
               .title("Keyword-Rich Paper")
-              .keywords(List.of(
-                  CanonicalLiterature.KeywordSet.builder()
-                      .source("author")
-                      .keywords(List.of(
-                          CanonicalLiterature.Keyword.builder().term("machine learning").build(),
-                          CanonicalLiterature.Keyword.builder().term("deep learning").build(),
-                          CanonicalLiterature.Keyword.builder().term("neural networks").build(),
-                          CanonicalLiterature.Keyword.builder().term("artificial intelligence").build(),
-                          CanonicalLiterature.Keyword.builder().term("computer vision").build()))
-                      .build()))
+              .keywords(
+                  List.of(
+                      CanonicalLiterature.KeywordSet.builder()
+                          .source("author")
+                          .keywords(
+                              List.of(
+                                  CanonicalLiterature.Keyword.builder()
+                                      .term("machine learning")
+                                      .build(),
+                                  CanonicalLiterature.Keyword.builder()
+                                      .term("deep learning")
+                                      .build(),
+                                  CanonicalLiterature.Keyword.builder()
+                                      .term("neural networks")
+                                      .build(),
+                                  CanonicalLiterature.Keyword.builder()
+                                      .term("artificial intelligence")
+                                      .build(),
+                                  CanonicalLiterature.Keyword.builder()
+                                      .term("computer vision")
+                                      .build()))
+                          .build()))
               .build();
 
       // When

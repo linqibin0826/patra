@@ -79,7 +79,8 @@ class ExprCompilationRequestTest {
       String rawExpression = "{\"filter\": \"year:2023\"}";
 
       // When
-      ExprCompilationRequest request = new ExprCompilationRequest(provenanceCode.getCode(), rawExpression);
+      ExprCompilationRequest request =
+          new ExprCompilationRequest(provenanceCode.getCode(), rawExpression);
 
       // Then
       assertThat(request.provenanceCode()).isEqualTo(provenanceCode.getCode());
@@ -95,7 +96,8 @@ class ExprCompilationRequestTest {
       String rawExpression = "{\"terms\": [\"diabetes\"]}";
 
       // When
-      ExprCompilationRequest request1 = new ExprCompilationRequest(provenanceCode.getCode(), rawExpression);
+      ExprCompilationRequest request1 =
+          new ExprCompilationRequest(provenanceCode.getCode(), rawExpression);
       ExprCompilationRequest request2 =
           new ExprCompilationRequest(provenanceCode.getCode(), null, rawExpression);
 
@@ -114,9 +116,11 @@ class ExprCompilationRequestTest {
     void shouldImplementEqualsCorrectly() {
       // Given
       ExprCompilationRequest request1 =
-          new ExprCompilationRequest(ProvenanceCode.PUBMED.getCode(), "DETAIL", "{\"id\": \"12345\"}");
+          new ExprCompilationRequest(
+              ProvenanceCode.PUBMED.getCode(), "DETAIL", "{\"id\": \"12345\"}");
       ExprCompilationRequest request2 =
-          new ExprCompilationRequest(ProvenanceCode.PUBMED.getCode(), "DETAIL", "{\"id\": \"12345\"}");
+          new ExprCompilationRequest(
+              ProvenanceCode.PUBMED.getCode(), "DETAIL", "{\"id\": \"12345\"}");
 
       // When & Then
       assertThat(request1).isEqualTo(request2);
@@ -127,7 +131,8 @@ class ExprCompilationRequestTest {
     void shouldNotEqualWhenContentDiffers() {
       // Given
       ExprCompilationRequest request1 =
-          new ExprCompilationRequest(ProvenanceCode.PUBMED.getCode(), "SEARCH", "{\"query\": \"A\"}");
+          new ExprCompilationRequest(
+              ProvenanceCode.PUBMED.getCode(), "SEARCH", "{\"query\": \"A\"}");
       ExprCompilationRequest request2 =
           new ExprCompilationRequest(ProvenanceCode.EPMC.getCode(), "SEARCH", "{\"query\": \"A\"}");
 
@@ -140,9 +145,11 @@ class ExprCompilationRequestTest {
     void shouldImplementHashCodeCorrectly() {
       // Given
       ExprCompilationRequest request1 =
-          new ExprCompilationRequest(ProvenanceCode.OPENALEX.getCode(), "FETCH", "{\"doi\": \"10.1000/xyz\"}");
+          new ExprCompilationRequest(
+              ProvenanceCode.OPENALEX.getCode(), "FETCH", "{\"doi\": \"10.1000/xyz\"}");
       ExprCompilationRequest request2 =
-          new ExprCompilationRequest(ProvenanceCode.OPENALEX.getCode(), "FETCH", "{\"doi\": \"10.1000/xyz\"}");
+          new ExprCompilationRequest(
+              ProvenanceCode.OPENALEX.getCode(), "FETCH", "{\"doi\": \"10.1000/xyz\"}");
 
       // When & Then
       assertThat(request1.hashCode()).isEqualTo(request2.hashCode());
@@ -153,7 +160,8 @@ class ExprCompilationRequestTest {
     void shouldGenerateToStringWithAllFields() {
       // Given
       ExprCompilationRequest request =
-          new ExprCompilationRequest(ProvenanceCode.DATACITE.getCode(), "EXPORT", "{\"format\": \"bibtex\"}");
+          new ExprCompilationRequest(
+              ProvenanceCode.DATACITE.getCode(), "EXPORT", "{\"format\": \"bibtex\"}");
 
       // When
       String toString = request.toString();

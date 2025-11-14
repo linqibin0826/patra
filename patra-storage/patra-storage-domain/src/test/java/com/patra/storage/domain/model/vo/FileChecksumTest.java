@@ -173,8 +173,7 @@ class FileChecksumTest {
     void shouldCreateSuccessfullyWhenOnlySha256Provided() {
       // Given
       String md5Hash = null;
-      String sha256Hash =
-          "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae";
+      String sha256Hash = "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae";
 
       // When
       FileChecksum checksum = new FileChecksum(md5Hash, sha256Hash);
@@ -191,8 +190,7 @@ class FileChecksumTest {
     void shouldCreateSuccessfullyWhenBothHashesProvided() {
       // Given
       String md5Hash = "5d41402abc4b2a76b9719d911017c592";
-      String sha256Hash =
-          "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae";
+      String sha256Hash = "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae";
 
       // When
       FileChecksum checksum = new FileChecksum(md5Hash, sha256Hash);
@@ -228,8 +226,7 @@ class FileChecksumTest {
     @DisplayName("应该将 SHA-256 大写字母转换为小写")
     void shouldConvertSha256UpperCaseToLowerCase() {
       // Given
-      String sha256Hash =
-          "2C26B46B68FFC68FF99B453C1D30413413422D706483BFA0F98A5E886266E7AE";
+      String sha256Hash = "2C26B46B68FFC68FF99B453C1D30413413422D706483BFA0F98A5E886266E7AE";
 
       // When
       FileChecksum checksum = new FileChecksum(null, sha256Hash);
@@ -256,8 +253,7 @@ class FileChecksumTest {
     @DisplayName("应该将 SHA-256 混合大小写转换为小写")
     void shouldConvertSha256MixedCaseToLowerCase() {
       // Given
-      String sha256Hash =
-          "2C26B46b68FfC68fF99B453C1d30413413422D706483BFA0f98A5E886266E7AE";
+      String sha256Hash = "2C26B46b68FfC68fF99B453C1d30413413422D706483BFA0f98A5E886266E7AE";
 
       // When
       FileChecksum checksum = new FileChecksum(null, sha256Hash);
@@ -284,8 +280,7 @@ class FileChecksumTest {
     @DisplayName("应该保持 SHA-256 小写字母不变")
     void shouldKeepSha256LowerCaseUnchanged() {
       // Given
-      String sha256Hash =
-          "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae";
+      String sha256Hash = "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae";
 
       // When
       FileChecksum checksum = new FileChecksum(null, sha256Hash);
@@ -300,8 +295,7 @@ class FileChecksumTest {
     void shouldConvertBothHashesToLowerCase() {
       // Given
       String md5Hash = "5D41402ABC4B2A76B9719D911017C592";
-      String sha256Hash =
-          "2C26B46B68FFC68FF99B453C1D30413413422D706483BFA0F98A5E886266E7AE";
+      String sha256Hash = "2C26B46B68FFC68FF99B453C1D30413413422D706483BFA0F98A5E886266E7AE";
 
       // When
       FileChecksum checksum = new FileChecksum(md5Hash, sha256Hash);
@@ -362,8 +356,7 @@ class FileChecksumTest {
     @DisplayName("应该 trim SHA-256 的前导空格")
     void shouldTrimSha256LeadingWhitespace() {
       // Given
-      String sha256Hash =
-          "   2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae";
+      String sha256Hash = "   2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae";
 
       // When
       FileChecksum checksum = new FileChecksum(null, sha256Hash);
@@ -377,8 +370,7 @@ class FileChecksumTest {
     @DisplayName("应该 trim SHA-256 的尾随空格")
     void shouldTrimSha256TrailingWhitespace() {
       // Given
-      String sha256Hash =
-          "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae   ";
+      String sha256Hash = "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae   ";
 
       // When
       FileChecksum checksum = new FileChecksum(null, sha256Hash);
@@ -392,8 +384,7 @@ class FileChecksumTest {
     @DisplayName("应该 trim SHA-256 的前导和尾随空格")
     void shouldTrimSha256BothSidesWhitespace() {
       // Given
-      String sha256Hash =
-          "   2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae   ";
+      String sha256Hash = "   2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae   ";
 
       // When
       FileChecksum checksum = new FileChecksum(null, sha256Hash);
@@ -455,8 +446,7 @@ class FileChecksumTest {
     @DisplayName("应该同时 trim 和 toLowerCase SHA-256")
     void shouldTrimAndLowerCaseSha256() {
       // Given
-      String sha256Hash =
-          "   2C26B46B68FFC68FF99B453C1D30413413422D706483BFA0F98A5E886266E7AE   ";
+      String sha256Hash = "   2C26B46B68FFC68FF99B453C1D30413413422D706483BFA0F98A5E886266E7AE   ";
 
       // When
       FileChecksum checksum = new FileChecksum(null, sha256Hash);
@@ -471,8 +461,7 @@ class FileChecksumTest {
     void shouldTrimAndLowerCaseBothHashes() {
       // Given
       String md5Hash = "\t5D41402ABC4B2A76B9719D911017C592\n";
-      String sha256Hash =
-          " 2C26B46B68FFC68FF99B453C1D30413413422D706483BFA0F98A5E886266E7AE ";
+      String sha256Hash = " 2C26B46B68FFC68FF99B453C1D30413413422D706483BFA0F98A5E886266E7AE ";
 
       // When
       FileChecksum checksum = new FileChecksum(md5Hash, sha256Hash);
@@ -495,8 +484,7 @@ class FileChecksumTest {
     void shouldKeepMd5NullWhenSha256HasValue() {
       // Given
       String md5Hash = null;
-      String sha256Hash =
-          "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae";
+      String sha256Hash = "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae";
 
       // When
       FileChecksum checksum = new FileChecksum(md5Hash, sha256Hash);
@@ -729,8 +717,7 @@ class FileChecksumTest {
     @DisplayName("应该保证 SHA-256 哈希不可变")
     void shouldEnsureSha256HashIsImmutable() {
       // Given
-      String originalSha256 =
-          "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae";
+      String originalSha256 = "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae";
       FileChecksum checksum = new FileChecksum(null, originalSha256);
 
       // When - 获取哈希值
@@ -784,8 +771,7 @@ class FileChecksumTest {
     @DisplayName("应该处理标准 SHA-256 长度（64 字符）")
     void shouldHandleStandardSha256Length() {
       // Given - SHA-256 应该是 64 字符的十六进制字符串
-      String sha256Hash =
-          "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae";
+      String sha256Hash = "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae";
 
       // When
       FileChecksum checksum = new FileChecksum(null, sha256Hash);
@@ -812,8 +798,7 @@ class FileChecksumTest {
     @DisplayName("应该处理只含字母的 SHA-256")
     void shouldHandleSha256WithOnlyLetters() {
       // Given
-      String sha256Hash =
-          "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd";
+      String sha256Hash = "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd";
 
       // When
       FileChecksum checksum = new FileChecksum(null, sha256Hash);
@@ -840,8 +825,7 @@ class FileChecksumTest {
     @DisplayName("应该处理数字和字母混合的 SHA-256")
     void shouldHandleSha256WithMixedDigitsAndLetters() {
       // Given
-      String sha256Hash =
-          "a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890";
+      String sha256Hash = "a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890";
 
       // When
       FileChecksum checksum = new FileChecksum(null, sha256Hash);
@@ -863,8 +847,7 @@ class FileChecksumTest {
     void shouldHandlePdfFileChecksumScenario() {
       // Given - 真实的 PDF 文件校验和
       String md5Hash = "d8e8fca2dc0f896fd7cb4cb0031ba249";
-      String sha256Hash =
-          "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
+      String sha256Hash = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
 
       // When
       FileChecksum checksum = new FileChecksum(md5Hash, sha256Hash);
@@ -893,8 +876,7 @@ class FileChecksumTest {
     @DisplayName("应该正确处理只有 SHA-256 的场景（现代系统）")
     void shouldHandleModernSystemWithOnlySha256() {
       // Given - 现代系统推荐使用 SHA-256
-      String sha256Hash =
-          "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+      String sha256Hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
       // When
       FileChecksum checksum = new FileChecksum(null, sha256Hash);
@@ -930,8 +912,7 @@ class FileChecksumTest {
     void shouldSupportChecksumFromExternalSystem() {
       // Given - 外部系统返回的可能包含空格和大写的校验和
       String rawMd5 = "  5D41402ABC4B2A76B9719D911017C592  ";
-      String rawSha256 =
-          "\t2C26B46B68FFC68FF99B453C1D30413413422D706483BFA0F98A5E886266E7AE\n";
+      String rawSha256 = "\t2C26B46B68FFC68FF99B453C1D30413413422D706483BFA0F98A5E886266E7AE\n";
 
       // When
       FileChecksum checksum = new FileChecksum(rawMd5, rawSha256);
@@ -947,8 +928,7 @@ class FileChecksumTest {
     void shouldSupportMedicalLiteraturePdfChecksumScenario() {
       // Given - 医学文献 PDF 文件（来自 PubMed Central）
       String md5Hash = "a1234567890abcdef1234567890abcde";
-      String sha256Hash =
-          "f1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+      String sha256Hash = "f1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
 
       // When
       FileChecksum checksum = new FileChecksum(md5Hash, sha256Hash);

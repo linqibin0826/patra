@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -109,8 +108,7 @@ class ExprCompilationResultTest {
     @DisplayName("应该返回 false 当 errors 包含非空白内容")
     void shouldReturnFalseWhenErrorsNonBlank() {
       // Given
-      ExprCompilationResult result =
-          new ExprCompilationResult(null, null, null, "  error  ", null);
+      ExprCompilationResult result = new ExprCompilationResult(null, null, null, "  error  ", null);
 
       // When & Then
       assertThat(result.isValid()).isFalse();
@@ -125,7 +123,8 @@ class ExprCompilationResultTest {
     @DisplayName("应该返回 null 当 errors 和 warnings 都为 null")
     void shouldReturnNullWhenBothNull() {
       // Given
-      ExprCompilationResult result = new ExprCompilationResult("query", null, "normalized", null, null);
+      ExprCompilationResult result =
+          new ExprCompilationResult("query", null, "normalized", null, null);
 
       // When
       String message = result.validationMessage();
@@ -167,8 +166,7 @@ class ExprCompilationResultTest {
       // Given
       String errors = "Syntax error at line 5";
       String warnings = "Deprecated field 'old_param' used";
-      ExprCompilationResult result =
-          new ExprCompilationResult(null, null, null, errors, warnings);
+      ExprCompilationResult result = new ExprCompilationResult(null, null, null, errors, warnings);
 
       // When
       String message = result.validationMessage();
@@ -185,7 +183,8 @@ class ExprCompilationResultTest {
     void shouldReturnWarningsOnlyWhenErrorsEmpty() {
       // Given
       String warnings = "Optional field 'retmax' not set, using default";
-      ExprCompilationResult result = new ExprCompilationResult("query", null, "normalized", null, warnings);
+      ExprCompilationResult result =
+          new ExprCompilationResult("query", null, "normalized", null, warnings);
 
       // When
       String message = result.validationMessage();
@@ -198,7 +197,8 @@ class ExprCompilationResultTest {
     @DisplayName("应该返回 null 当 warnings 为空白字符串")
     void shouldReturnNullWhenWarningsBlank() {
       // Given
-      ExprCompilationResult result = new ExprCompilationResult("query", null, "normalized", null, "  ");
+      ExprCompilationResult result =
+          new ExprCompilationResult("query", null, "normalized", null, "  ");
 
       // When
       String message = result.validationMessage();

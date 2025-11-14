@@ -51,8 +51,7 @@ class BatchResultTest {
     @DisplayName("应该成功创建失败批次 - 包含错误信息")
     void shouldCreateFailureBatchResultWithErrorMessage() {
       // When: 创建失败批次结果
-      BatchResult result =
-          new BatchResult(2, false, 0, null, "API rate limit exceeded", null);
+      BatchResult result = new BatchResult(2, false, 0, null, "API rate limit exceeded", null);
 
       // Then: 应该成功创建
       assertThat(result.batchNo()).isEqualTo(2);
@@ -573,7 +572,8 @@ class BatchResultTest {
       // Given: 两种批次结果
       BatchResult resultWithNext =
           BatchResult.success(1, 1000, "cursor-next", "oss://bucket/key/batch1.json");
-      BatchResult resultLastBatch = BatchResult.success(2, 500, null, "oss://bucket/key/batch2.json");
+      BatchResult resultLastBatch =
+          BatchResult.success(2, 500, null, "oss://bucket/key/batch2.json");
 
       // When & Then: hasNextCursor() 应该区分是否有下一批次
       assertThat(resultWithNext.hasNextCursor()).isTrue(); // 有下一批次
@@ -992,8 +992,7 @@ class BatchResultTest {
     @DisplayName("应该接受极大的 batchNo")
     void shouldAcceptVeryLargeBatchNo() {
       // When: batchNo = Integer.MAX_VALUE
-      BatchResult result =
-          BatchResult.success(Integer.MAX_VALUE, 100, "cursor", "oss://key.json");
+      BatchResult result = BatchResult.success(Integer.MAX_VALUE, 100, "cursor", "oss://key.json");
 
       // Then: 应该成功创建
       assertThat(result.batchNo()).isEqualTo(Integer.MAX_VALUE);
@@ -1013,8 +1012,7 @@ class BatchResultTest {
     @DisplayName("应该接受极大的 fetchedCount")
     void shouldAcceptVeryLargeFetchedCount() {
       // When: fetchedCount = Integer.MAX_VALUE
-      BatchResult result =
-          BatchResult.success(1, Integer.MAX_VALUE, "cursor", "oss://key.json");
+      BatchResult result = BatchResult.success(1, Integer.MAX_VALUE, "cursor", "oss://key.json");
 
       // Then: 应该成功创建
       assertThat(result.fetchedCount()).isEqualTo(Integer.MAX_VALUE);

@@ -4,6 +4,7 @@
  * <p>本包实现任务执行的完成阶段，包括状态更新、租约释放、事件发布。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>更新任务状态（SUCCEEDED/FAILED）
  *   <li>停止心跳续约
@@ -12,12 +13,14 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code CompleteTaskExecutionUseCase} - 完成执行用例接口
  *   <li>{@code CompleteTaskExecutionUseCaseImpl} - 完成执行用例实现
  * </ul>
  *
  * <h2>完成流程</h2>
+ *
  * <pre>
  * 1. 停止心跳（HeartbeatRenewalService）
  *    └─ 停止后台心跳续约线程
@@ -35,6 +38,7 @@
  * </pre>
  *
  * <h2>成功完成 vs 失败完成</h2>
+ *
  * <ul>
  *   <li><strong>成功完成</strong>:
  *       <ul>
@@ -52,6 +56,7 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

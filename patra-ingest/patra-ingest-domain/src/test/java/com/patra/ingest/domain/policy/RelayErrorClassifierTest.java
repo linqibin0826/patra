@@ -354,7 +354,8 @@ class RelayErrorClassifierTest {
     @DisplayName("应该正确分类配置错误场景（FATAL）")
     void shouldClassifyConfigurationErrorAsFatal() {
       // Given - 模拟配置错误
-      Throwable cause = new IllegalArgumentException("Invalid configuration: provenance code is null");
+      Throwable cause =
+          new IllegalArgumentException("Invalid configuration: provenance code is null");
 
       // When
       RelayErrorKind kind = classifier.classify(cause);
@@ -403,7 +404,9 @@ class RelayErrorClassifierTest {
       // 1. 优先检查 OutboxPublishException
       Throwable publish = findPublishException(cause);
       if (publish instanceof OutboxPublishException publishException) {
-        return publishException.getReason().isFatal() ? RelayErrorKind.FATAL : RelayErrorKind.TRANSIENT;
+        return publishException.getReason().isFatal()
+            ? RelayErrorKind.FATAL
+            : RelayErrorKind.TRANSIENT;
       }
 
       // 2. 获取根本原因
@@ -420,9 +423,7 @@ class RelayErrorClassifierTest {
       return RelayErrorKind.TRANSIENT;
     }
 
-    /**
-     * 查找异常链中的 OutboxPublishException
-     */
+    /** 查找异常链中的 OutboxPublishException */
     private Throwable findPublishException(Throwable cause) {
       Throwable current = cause;
       int depth = 0;
@@ -440,9 +441,7 @@ class RelayErrorClassifierTest {
       return null;
     }
 
-    /**
-     * 获取异常链的根本原因
-     */
+    /** 获取异常链的根本原因 */
     private Throwable getRootCause(Throwable cause) {
       Throwable current = cause;
       Throwable root = cause;

@@ -4,6 +4,7 @@
  * <p>本包提供中继计划的构建逻辑，查询待发布消息并生成中继计划。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>查询待发布的 Outbox 消息（状态=PENDING，notBefore<=now）
  *   <li>限制批次大小（如 100 条）
@@ -12,11 +13,13 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code RelayPlanBuilder} - 中继计划构建器
  * </ul>
  *
  * <h2>查询条件</h2>
+ *
  * <pre>
  * SELECT * FROM outbox_message
  * WHERE status = 'PENDING'
@@ -27,6 +30,7 @@
  * </pre>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

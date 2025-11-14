@@ -4,6 +4,7 @@
  * <p>本包提供 Outbox 中继的监控指标收集，集成 Micrometer。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>记录中继批次的成功/失败统计
  *   <li>记录消息发布延迟（从创建到发布的时间）
@@ -12,11 +13,13 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code OutboxRelayMetrics} - Outbox 中继指标收集器
  * </ul>
  *
  * <h2>指标清单</h2>
+ *
  * <table border="1">
  *   <tr>
  *     <th>指标名称</th>
@@ -57,6 +60,7 @@
  * </table>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor
@@ -88,7 +92,9 @@
  * }</pre>
  *
  * <h2>监控示例</h2>
+ *
  * <h3>Prometheus 查询</h3>
+ *
  * <pre>
  * # 中继吞吐量（每秒发布消息数）
  * rate(outbox_relay_published_total[5m])

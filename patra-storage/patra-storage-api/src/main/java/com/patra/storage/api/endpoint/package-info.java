@@ -1,13 +1,14 @@
 /**
  * Storage 服务内部 API 端点契约包。
  *
- * <p>本包定义了 patra-storage 服务对内暴露的 REST API 端点契约。所有接口都是六边形架构 API 层的一部分,
- * 作为 Feign 客户端的远程调用契约,确保微服务间通信的类型安全和契约一致性。
+ * <p>本包定义了 patra-storage 服务对内暴露的 REST API 端点契约。所有接口都是六边形架构 API 层的一部分, 作为 Feign
+ * 客户端的远程调用契约,确保微服务间通信的类型安全和契约一致性。
  *
  * <h2>核心契约</h2>
  *
  * <ul>
- *   <li>{@link com.patra.storage.api.endpoint.StorageEndpoint} - 存储元数据记录的内部 API 契约,定义 recordUpload 端点
+ *   <li>{@link com.patra.storage.api.endpoint.StorageEndpoint} - 存储元数据记录的内部 API 契约,定义 recordUpload
+ *       端点
  * </ul>
  *
  * <h2>设计原则</h2>
