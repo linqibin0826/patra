@@ -31,14 +31,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * UnifiedBatchPlanner 单元测试
+ * UnifiedBatchScheduleBuilder 单元测试
  *
  * <p>测试重点：
  *
  * <ul>
  *   <li>策略自动注册（通过 Spring 注入）
- *   <li>策略选择逻辑（根据 PlanMetadata 类型）
- *   <li>PubMed 数据源的规划流程
+ *   <li>策略选择逻辑（根据 FetchMetadata 类型）
+ *   <li>PubMed 数据源的调度构建流程
  *   <li>未知数据类型的异常处理
  *   <li>DataSourcePort.prepareFetchMetadata() 的调用
  * </ul>
@@ -47,7 +47,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * @since 0.2.0
  */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("UnifiedBatchPlanner 单元测试")
+@DisplayName("UnifiedBatchScheduleBuilder 单元测试")
 class UnifiedBatchScheduleBuilderTest {
 
   @Mock private DataSourcePort dataSourcePort;

@@ -14,9 +14,9 @@
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@code BatchPlanner} - 批次构建器接口
- *   <li>{@code BatchPlannerRegistry} - 批次构建器注册表
- *   <li>{@code UnifiedBatchPlanner} - 统一批次构建器（支持多数据源）
+ *   <li>{@code BatchScheduleBuilder} - 批次调度构建器接口
+ *   <li>{@code BatchScheduleBuilderRegistry} - 批次调度构建器注册表
+ *   <li>{@code UnifiedBatchScheduleBuilder} - 统一批次调度构建器（支持多数据源）
  *       <ul>
  *         <li>使用策略模式委派批次生成逻辑
  *         <li>通过 BatchGenerationStrategy 自动注入所有策略
@@ -34,19 +34,19 @@
  *   </tr>
  *   <tr>
  *     <td>PubMed</td>
- *     <td>UnifiedBatchPlanner + PubmedBatchGenerationStrategy</td>
+ *     <td>UnifiedBatchScheduleBuilder + PubmedBatchGenerationStrategy</td>
  *     <td>Offset-based</td>
  *     <td>10000（retmax 参数）</td>
  *   </tr>
  *   <tr>
  *     <td>EPMC</td>
- *     <td>EpmcBatchPlanner</td>
+ *     <td>UnifiedBatchScheduleBuilder + EpmcBatchGenerationStrategy</td>
  *     <td>Cursor-based</td>
  *     <td>1000（pageSize 参数）</td>
  *   </tr>
  *   <tr>
  *     <td>Crossref</td>
- *     <td>CrossrefBatchPlanner</td>
+ *     <td>UnifiedBatchScheduleBuilder + CrossrefBatchGenerationStrategy</td>
  *     <td>Offset-based</td>
  *     <td>5000（rows 参数）</td>
  *   </tr>
@@ -94,11 +94,11 @@
  *     }
  * }
  *
- * // 2. UnifiedBatchPlanner 自动注入所有策略
+ * // 2. UnifiedBatchScheduleBuilder 自动注入所有策略
  * @Component
- * public class UnifiedBatchPlanner implements BatchPlanner {
+ * public class UnifiedBatchScheduleBuilder implements BatchScheduleBuilder {
  *
- *     public UnifiedBatchPlanner(
+ *     public UnifiedBatchScheduleBuilder(
  *             DataSourcePort dataSourcePort,
  *             List<BatchGenerationStrategy> strategies) {
  *         this.dataSourcePort = dataSourcePort;
@@ -107,17 +107,17 @@
  *
  *     @Override
  *     public BatchSchedule build(ExecutionContext ctx) {
- *         // 1. 准备计划元数据
- *         PlanMetadata planMetadata = dataSourcePort.prepareFetchMetadata(ctx, DataType.LITERATURE);
+ *         // 1. 准备抓取元数据
+ *         FetchMetadata fetchMetadata = dataSourcePort.prepareFetchMetadata(ctx, DataType.LITERATURE);
  *
- *         // 2. 根据 PlanMetadata 类型选择对应策略
- *         BatchGenerationStrategy strategy = strategyMap.get(planMetadata.getClass());
+ *         // 2. 根据 FetchMetadata 类型选择对应策略
+ *         BatchGenerationStrategy strategy = strategyMap.get(fetchMetadata.getClass());
  *
  *         // 3. 使用策略生成批次
- *         List<Batch> batches = strategy.generateBatches(planMetadata, ctx);
+ *         List<Batch> batches = strategy.generateBatches(fetchMetadata, ctx);
  *
- *         // 4. 将 planMetadata 附加到 context，供执行阶段使用
- *         ExecutionContext enrichedContext = ctx.withPlanMetadata(planMetadata);
+ *         // 4. 将 fetchMetadata 附加到 context，供执行阶段使用
+ *         ExecutionContext enrichedContext = ctx.withFetchMetadata(fetchMetadata);
  *
  *         return new BatchSchedule(batches, enrichedContext);
  *     }

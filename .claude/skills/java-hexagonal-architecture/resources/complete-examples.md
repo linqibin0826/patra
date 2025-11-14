@@ -213,25 +213,25 @@ public class PlanAggregate extends AggregateRoot<Long> {
 
 ---
 
-#### Value Object: BatchPlan
+#### Value Object: BatchSchedule
 
-**文件**: `patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/vo/batch/BatchPlan.java`
+**文件**: `patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/vo/batch/BatchSchedule.java`
 
 ```java
 /**
- * 表示批处理规划结果的值对象。
+ * 表示批次调度结果的值对象。
  *
  * 不变量:
  * - batches 不能为 null (但可以为空)
  * - totalBatches 必须 >= 0
  */
-public record BatchPlan(
+public record BatchSchedule(
     List<Batch> batches,
     int totalBatches,
     boolean exceedsLimit) {
 
   // 紧凑构造函数用于验证
-  public BatchPlan {
+  public BatchSchedule {
     if (batches == null) {
       throw new IllegalArgumentException("batches 不能为 null");
     }
