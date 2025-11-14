@@ -9,10 +9,10 @@ import com.patra.common.model.DataType;
 import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.ingest.domain.model.vo.plan.BatchPlan;
+import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
 import com.patra.ingest.domain.port.DataSourcePort;
 import com.patra.ingest.infra.exception.DataSourceException;
-import com.patra.ingest.infra.integration.datasource.acl.PlanMetadataTranslator;
+import com.patra.ingest.infra.integration.datasource.acl.FetchMetadataTranslator;
 import com.patra.ingest.infra.registry.ProviderNotFoundException;
 import com.patra.ingest.infra.registry.ProviderRegistry;
 import com.patra.starter.provenance.common.config.BatchingConfig;
@@ -74,7 +74,7 @@ import org.springframework.stereotype.Component;
 public class DataSourceAdapter implements DataSourcePort {
 
   private final ProviderRegistry providerRegistry;
-  private final PlanMetadataTranslator planMetadataTranslator;
+  private final FetchMetadataTranslator fetchMetadataTranslator;
 
   /**
    * 准备采集计划元数据
@@ -96,7 +96,7 @@ public class DataSourceAdapter implements DataSourcePort {
    * @throws DataSourceException 如果调用数据源失败
    */
   @Override
-  public BatchPlan preparePlan(ExecutionContext context, DataType dataType) {
+  public FetchMetadata preparePlan(ExecutionContext context, DataType dataType) {
     ProvenanceCode provenanceCode = context.provenanceCode();
 
     log.debug(
@@ -123,15 +123,15 @@ public class DataSourceAdapter implements DataSourcePort {
           planMetadata.totalCount());
 
       // 4. 使用翻译器转换为领域模型
-      BatchPlan batchPlan = planMetadataTranslator.translate(planMetadata);
+      FetchMetadata fetchMetadata = fetchMetadataTranslator.translate(planMetadata);
 
       log.debug(
           "计划元数据已翻译为领域模型: dataSourceCode={}, totalRecords={}, hasStateToken={}",
-          batchPlan.dataSourceCode(),
-          batchPlan.totalRecords(),
-          batchPlan.hasStateToken());
+          fetchMetadata.dataSourceCode(),
+          fetchMetadata.totalRecords(),
+          fetchMetadata.hasStateToken());
 
-      return batchPlan;
+      return fetchMetadata;
 
     } catch (ProviderNotFoundException ex) {
       log.error("Provider未找到: provenance={}, dataType={}", provenanceCode.getCode(), dataType, ex);

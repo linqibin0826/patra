@@ -1,12 +1,12 @@
 /**
- * 批次规划器包。
+ * 批次构建器包。
  *
- * <p>本包提供不同数据源的批次规划策略，根据数据源特性生成批次执行计划。
+ * <p>本包提供不同数据源的批次构建策略，根据数据源特性生成批次执行调度表。
  *
  * <h2>职责</h2>
  *
  * <ul>
- *   <li>根据数据源策略规划批次（如 PubMed、EPMC、Crossref）
+ *   <li>根据数据源策略构建批次（如 PubMed、EPMC、Crossref）
  *   <li>计算批次大小和偏移量
  *   <li>处理分页参数（offset-based 或 cursor-based）
  * </ul>
@@ -14,16 +14,16 @@
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@code BatchPlanner} - 批次规划器接口
- *   <li>{@code BatchPlannerRegistry} - 批次规划器注册表
- *   <li>{@code UnifiedBatchPlanner} - 统一批次规划器（支持多数据源）
+ *   <li>{@code BatchPlanner} - 批次构建器接口
+ *   <li>{@code BatchPlannerRegistry} - 批次构建器注册表
+ *   <li>{@code UnifiedBatchPlanner} - 统一批次构建器（支持多数据源）
  *       <ul>
  *         <li>使用策略模式委派批次生成逻辑
  *         <li>通过 BatchGenerationStrategy 自动注入所有策略
  *       </ul>
  * </ul>
  *
- * <h2>批次规划策略</h2>
+ * <h2>批次构建策略</h2>
  *
  * <table border="1">
  *   <tr>
@@ -72,7 +72,7 @@
  *
  * <h2>使用示例</h2>
  *
- * <h3>统一批次规划器（策略模式）</h3>
+ * <h3>统一批次构建器（策略模式）</h3>
  *
  * <pre>{@code
  * // 1. 定义批次生成策略
@@ -106,7 +106,7 @@
  *     }
  *
  *     @Override
- *     public BatchPlan plan(ExecutionContext ctx) {
+ *     public BatchSchedule build(ExecutionContext ctx) {
  *         // 1. 准备计划元数据
  *         PlanMetadata planMetadata = dataSourcePort.preparePlan(ctx, DataType.LITERATURE);
  *
@@ -119,7 +119,7 @@
  *         // 4. 将 planMetadata 附加到 context，供执行阶段使用
  *         ExecutionContext enrichedContext = ctx.withPlanMetadata(planMetadata);
  *
- *         return new BatchPlan(batches, enrichedContext);
+ *         return new BatchSchedule(batches, enrichedContext);
  *     }
  * }
  * }</pre>

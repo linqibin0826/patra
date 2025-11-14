@@ -5,7 +5,7 @@
  *
  * <ul>
  *   <li>{@link com.patra.ingest.domain.model.vo.batch.Batch} - 带查询和参数的批次定义
- *   <li>{@link com.patra.ingest.domain.model.vo.batch.BatchPlan} - 批次执行计划
+ *   <li>{@link com.patra.ingest.domain.model.vo.batch.BatchSchedule} - 批次执行调度表
  *   <li>{@link com.patra.ingest.domain.model.vo.batch.BatchResult} - 批次执行结果
  *   <li>{@link com.patra.ingest.domain.model.vo.batch.BatchStats} - 批次统计信息
  * </ul>

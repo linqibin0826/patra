@@ -1,6 +1,6 @@
 package com.patra.ingest.infra.integration.datasource.acl;
 
-import com.patra.ingest.domain.model.vo.plan.BatchPlan;
+import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
 import com.patra.starter.provenance.internal.metadata.DoajPlanMetadata;
 import com.patra.starter.provenance.internal.metadata.EpmcPlanMetadata;
 import com.patra.starter.provenance.internal.metadata.PlanMetadata;
@@ -10,9 +10,9 @@ import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 /**
- * PlanMetadata 翻译器（防腐层）
+ * 抓取元数据翻译器（防腐层）
  *
- * <p>将 Provenance Starter 的 {@link PlanMetadata} 翻译为 Ingest 领域的 {@link BatchPlan}。
+ * <p>将 Provenance Starter 的 {@link PlanMetadata} 翻译为 Ingest 领域的 {@link FetchMetadata}。
  *
  * <p><strong>翻译策略</strong>：
  *
@@ -26,19 +26,19 @@ import org.springframework.stereotype.Component;
  * @since 0.3.0
  */
 @Component
-public class PlanMetadataTranslator {
+public class FetchMetadataTranslator {
 
   /**
-   * 翻译 PlanMetadata 为 BatchPlan
+   * 翻译 PlanMetadata 为 FetchMetadata
    *
    * @param planMetadata Provenance 的计划元数据
-   * @return Ingest 的批次计划
+   * @return Ingest 的抓取元数据
    * @throws IllegalArgumentException 如果遇到未知的 PlanMetadata 类型
    */
-  public BatchPlan translate(PlanMetadata planMetadata) {
+  public FetchMetadata translate(PlanMetadata planMetadata) {
     // 空计划处理
     if (planMetadata.totalCount() == 0) {
-      return BatchPlan.empty(planMetadata.dataSourceType());
+      return FetchMetadata.empty(planMetadata.dataSourceType());
     }
 
     // 根据具体类型翻译（使用模式匹配）
@@ -53,8 +53,8 @@ public class PlanMetadataTranslator {
   }
 
   /** 翻译 PubMed 计划元数据 */
-  private BatchPlan translatePubmed(PubmedPlanMetadata pubmed) {
-    return new SimpleBatchPlan(
+  private FetchMetadata translatePubmed(PubmedPlanMetadata pubmed) {
+    return new SimpleFetchMetadata(
         pubmed.totalCount(), pubmed.dataSourceType(), extractPubmedStateToken(pubmed));
   }
 
@@ -70,8 +70,8 @@ public class PlanMetadataTranslator {
   }
 
   /** 翻译 DOAJ 计划元数据 */
-  private BatchPlan translateDoaj(DoajPlanMetadata doaj) {
-    return new SimpleBatchPlan(
+  private FetchMetadata translateDoaj(DoajPlanMetadata doaj) {
+    return new SimpleFetchMetadata(
         doaj.totalCount(), doaj.dataSourceType(), extractDoajStateToken(doaj));
   }
 
@@ -84,8 +84,8 @@ public class PlanMetadataTranslator {
   }
 
   /** 翻译 EPMC 计划元数据 */
-  private BatchPlan translateEpmc(EpmcPlanMetadata epmc) {
-    return new SimpleBatchPlan(
+  private FetchMetadata translateEpmc(EpmcPlanMetadata epmc) {
+    return new SimpleFetchMetadata(
         epmc.totalCount(), epmc.dataSourceType(), extractEpmcStateToken(epmc));
   }
 
@@ -98,10 +98,10 @@ public class PlanMetadataTranslator {
   }
 }
 
-/** 简单的 BatchPlan 实现（包级私有） */
-record SimpleBatchPlan(
+/** 简单的 FetchMetadata 实现（包级私有） */
+record SimpleFetchMetadata(
     int totalRecords, String dataSourceCode, Optional<Map<String, String>> stateToken)
-    implements BatchPlan {
+    implements FetchMetadata {
 
   @Override
   public boolean hasStateToken() {

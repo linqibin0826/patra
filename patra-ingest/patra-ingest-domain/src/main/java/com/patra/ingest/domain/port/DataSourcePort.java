@@ -5,7 +5,7 @@ import com.patra.common.model.DataType;
 import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.ingest.domain.model.vo.plan.BatchPlan;
+import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -98,7 +98,7 @@ public interface DataSourcePort {
    * @param dataType 数据类型标识（如 LITERATURE、JOURNAL）
    * @return 批次计划（领域模型，不包含外部实现细节）
    */
-  BatchPlan preparePlan(ExecutionContext context, DataType dataType);
+  FetchMetadata preparePlan(ExecutionContext context, DataType dataType);
 
   /**
    * 从数据源获取指定类型的数据

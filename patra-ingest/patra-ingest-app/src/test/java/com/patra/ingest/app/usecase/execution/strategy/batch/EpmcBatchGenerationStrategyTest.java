@@ -11,7 +11,7 @@ import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.ingest.domain.model.vo.plan.BatchPlan;
+import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import java.util.List;
 import java.util.Map;
@@ -74,7 +74,7 @@ class EpmcBatchGenerationStrategyTest {
       // given
       int totalRecords = 1000;
       int pageSize = 100;
-      BatchPlan plan = createBatchPlan(totalRecords, "epmc", null);
+      BatchSchedule plan = createBatchSchedule(totalRecords, "epmc", null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -92,7 +92,7 @@ class EpmcBatchGenerationStrategyTest {
       // given
       int totalRecords = 250;
       int pageSize = 100;
-      BatchPlan plan = createBatchPlan(totalRecords, "epmc", null);
+      BatchSchedule plan = createBatchSchedule(totalRecords, "epmc", null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -114,7 +114,7 @@ class EpmcBatchGenerationStrategyTest {
       String query = "cancer";
       JsonNode params = objectMapper.createObjectNode().put("format", "json");
 
-      BatchPlan plan = createBatchPlan(totalRecords, "epmc", null);
+      BatchSchedule plan = createBatchSchedule(totalRecords, "epmc", null);
       ExecutionContext ctx = createContext(pageSize, query, params);
 
       // when
@@ -137,7 +137,7 @@ class EpmcBatchGenerationStrategyTest {
       int pageSize = 100;
       String cursorMark = "*";
       Map<String, String> stateToken = Map.of("cursorMark", cursorMark);
-      BatchPlan plan = createBatchPlan(totalRecords, "epmc", stateToken);
+      BatchSchedule plan = createBatchSchedule(totalRecords, "epmc", stateToken);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -163,7 +163,7 @@ class EpmcBatchGenerationStrategyTest {
       // given
       int totalRecords = 500;
       int pageSize = 100;
-      BatchPlan plan = createBatchPlan(totalRecords, "epmc", null);
+      BatchSchedule plan = createBatchSchedule(totalRecords, "epmc", null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -186,7 +186,7 @@ class EpmcBatchGenerationStrategyTest {
       int pageSize = 100;
       String cursorMark = "*";
       Map<String, String> stateToken = Map.of("cursorMark", cursorMark);
-      BatchPlan plan = createBatchPlan(totalRecords, "epmc", stateToken);
+      BatchSchedule plan = createBatchSchedule(totalRecords, "epmc", stateToken);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -208,7 +208,7 @@ class EpmcBatchGenerationStrategyTest {
     @DisplayName("当 totalRecords 为 0 时应该返回空批次列表")
     void should_return_empty_list_when_total_records_is_zero() {
       // given
-      BatchPlan plan = createBatchPlan(0, "epmc", null);
+      BatchSchedule plan = createBatchSchedule(0, "epmc", null);
       ExecutionContext ctx = createContext(100);
 
       // when
@@ -224,7 +224,7 @@ class EpmcBatchGenerationStrategyTest {
       // given
       int totalRecords = 50;
       int pageSize = 100;
-      BatchPlan plan = createBatchPlan(totalRecords, "epmc", null);
+      BatchSchedule plan = createBatchSchedule(totalRecords, "epmc", null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -242,7 +242,7 @@ class EpmcBatchGenerationStrategyTest {
       // given
       int totalRecords = 500;
       int pageSize = 100;
-      BatchPlan plan = createBatchPlan(totalRecords, "epmc", null);
+      BatchSchedule plan = createBatchSchedule(totalRecords, "epmc", null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -259,7 +259,7 @@ class EpmcBatchGenerationStrategyTest {
       // given
       int totalRecords = 10000;
       int pageSize = 100;
-      BatchPlan plan = createBatchPlan(totalRecords, "epmc", null);
+      BatchSchedule plan = createBatchSchedule(totalRecords, "epmc", null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -275,16 +275,16 @@ class EpmcBatchGenerationStrategyTest {
   // === 辅助方法 ===
 
   /**
-   * 创建测试用的 BatchPlan
+   * 创建测试用的 BatchSchedule
    *
    * @param totalRecords 总记录数
    * @param dataSourceCode 数据源代码
    * @param stateToken 状态令牌（可为 null）
-   * @return BatchPlan 实例
+   * @return BatchSchedule 实例
    */
-  private BatchPlan createBatchPlan(
+  private BatchSchedule createBatchSchedule(
       int totalRecords, String dataSourceCode, Map<String, String> stateToken) {
-    return new BatchPlan() {
+    return new BatchSchedule() {
       @Override
       public int totalRecords() {
         return totalRecords;

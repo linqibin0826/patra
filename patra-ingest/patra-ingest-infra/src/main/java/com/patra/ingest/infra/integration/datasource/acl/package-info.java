@@ -7,7 +7,7 @@
  *
  * <ul>
  *   <li>{@link com.patra.ingest.infra.integration.datasource.acl.PlanMetadataTranslator} - 翻译
- *       Provenance 的 PlanMetadata 为 BatchPlan
+ *       Provenance 的 PlanMetadata 为 BatchSchedule
  * </ul>
  *
  * <p><strong>设计原则</strong>：
