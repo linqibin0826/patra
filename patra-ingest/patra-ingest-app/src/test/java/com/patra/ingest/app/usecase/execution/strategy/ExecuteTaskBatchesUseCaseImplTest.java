@@ -55,7 +55,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ExecuteTaskBatchesUseCaseImplTest {
 
-  @Mock private BatchPlannerRegistry plannerRegistry;
+  @Mock private BatchScheduleBuilderRegistry builderRegistry;
   @Mock private GenericBatchExecutor batchExecutor;
   @Mock private TaskRunBatchRepository batchRepository;
   @Mock private TaskRunRepository taskRunRepository;
@@ -64,21 +64,21 @@ class ExecuteTaskBatchesUseCaseImplTest {
 
   private ExecutionSession mockSession;
   private ExecutionContext mockContext;
-  private BatchPlanner mockPlanner;
+  private BatchScheduleBuilder mockBuilder;
   private ExecutionSession.HeartbeatHandle mockHeartbeatHandle;
 
   @BeforeEach
   void setUp() {
     mockSession = createMockSession();
     mockContext = createMockContext();
-    mockPlanner = mock(BatchPlanner.class);
+    mockBuilder = mock(BatchScheduleBuilder.class);
     mockHeartbeatHandle = mock(ExecutionSession.HeartbeatHandle.class);
 
     // 默认配置：非快速失败模式
     ReflectionTestUtils.setField(executeUseCase, "failFast", false);
 
-    // 默认行为：BatchPlannerRegistry 返回 planner
-    when(builderRegistry.get(mockContext.provenanceCode())).thenReturn(mockPlanner);
+    // 默认行为：BatchScheduleBuilderRegistry 返回 planner
+    when(builderRegistry.get(mockContext.provenanceCode())).thenReturn(mockBuilder);
   }
 
   // ========== 正常流程测试 ==========
@@ -93,7 +93,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
       // Given: 创建单批次计划
       Batch batch1 = createBatch(1, 1);
       BatchSchedule plan = createBatchSchedule(List.of(batch1));
-      when(mockPlanner.build(mockContext)).thenReturn(plan);
+      when(mockBuilder.build(mockContext)).thenReturn(plan);
 
       // Mock 批次执行器返回成功结果
       BatchResult result1 = BatchResult.success(1, 100, null, null);
@@ -130,7 +130,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
       Batch batch2 = createBatch(2, 3);
       Batch batch3 = createBatch(3, 3);
       BatchSchedule plan = createBatchSchedule(List.of(batch1, batch2, batch3));
-      when(mockPlanner.build(mockContext)).thenReturn(plan);
+      when(mockBuilder.build(mockContext)).thenReturn(plan);
 
       // Mock 批次执行器返回成功结果
       when(batchExecutor.execute(eq(mockContext), any(Batch.class)))
@@ -177,7 +177,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
       Batch batch2 = createBatch(2, 3);
       Batch batch3 = createBatch(3, 3);
       BatchSchedule plan = createBatchSchedule(List.of(batch1, batch2, batch3));
-      when(mockPlanner.build(mockContext)).thenReturn(plan);
+      when(mockBuilder.build(mockContext)).thenReturn(plan);
 
       // Mock 批次执行：第二个批次抛出异常
       when(batchExecutor.execute(mockContext, batch1))
@@ -213,7 +213,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
       Batch batch1 = createBatch(1, 2);
       Batch batch2 = createBatch(2, 2);
       BatchSchedule plan = createBatchSchedule(List.of(batch1, batch2));
-      when(mockPlanner.build(mockContext)).thenReturn(plan);
+      when(mockBuilder.build(mockContext)).thenReturn(plan);
 
       // Mock 批次执行：都抛出异常
       when(batchExecutor.execute(eq(mockContext), any(Batch.class)))
@@ -244,7 +244,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
       Batch batch2 = createBatch(2, 3);
       Batch batch3 = createBatch(3, 3);
       BatchSchedule plan = createBatchSchedule(List.of(batch1, batch2, batch3));
-      when(mockPlanner.build(mockContext)).thenReturn(plan);
+      when(mockBuilder.build(mockContext)).thenReturn(plan);
 
       // Mock 批次执行：第一个批次失败
       when(batchExecutor.execute(mockContext, batch1)).thenThrow(new RuntimeException("第一批次失败"));
@@ -279,7 +279,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
     void shouldReturnZeroStatsWhenNoBatches() {
       // Given: 创建空批次计划
       BatchSchedule plan = createBatchSchedule(List.of());
-      when(mockPlanner.build(mockContext)).thenReturn(plan);
+      when(mockBuilder.build(mockContext)).thenReturn(plan);
 
       // When: 执行批次
       ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
@@ -302,7 +302,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
       BatchSchedule plan = mock(BatchSchedule.class);
       when(plan.exceedsLimit()).thenReturn(true);
       when(plan.totalBatches()).thenReturn(10000);
-      when(mockPlanner.build(mockContext)).thenReturn(plan);
+      when(mockBuilder.build(mockContext)).thenReturn(plan);
 
       // When & Then: 执行批次应该抛出异常
       assertThatThrownBy(() -> executeUseCase.execute(mockSession, mockContext))
@@ -330,7 +330,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
       Batch batch2 = createBatch(2, 3);
       Batch batch3 = createBatch(3, 3);
       BatchSchedule plan = createBatchSchedule(List.of(batch1, batch2, batch3));
-      when(mockPlanner.build(mockContext)).thenReturn(plan);
+      when(mockBuilder.build(mockContext)).thenReturn(plan);
 
       // Mock 租约在第二个批次前被撤销
       when(mockHeartbeatHandle.isLeaseRevoked()).thenReturn(false).thenReturn(true);
@@ -368,7 +368,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
       Batch batch1 = createBatch(1, 2);
       Batch batch2 = createBatch(2, 2);
       BatchSchedule plan = createBatchSchedule(List.of(batch1, batch2));
-      when(mockPlanner.build(mockContext)).thenReturn(plan);
+      when(mockBuilder.build(mockContext)).thenReturn(plan);
 
       when(batchExecutor.execute(eq(mockContext), any(Batch.class)))
           .thenReturn(BatchResult.success(1, 50, null, null))
@@ -401,7 +401,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
       // Given: 创建单批次计划
       Batch batch1 = createBatch(1, 1);
       BatchSchedule plan = createBatchSchedule(List.of(batch1));
-      when(mockPlanner.build(mockContext)).thenReturn(plan);
+      when(mockBuilder.build(mockContext)).thenReturn(plan);
 
       when(batchExecutor.execute(mockContext, batch1))
           .thenReturn(BatchResult.success(1, 100, null, null));
@@ -427,7 +427,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
       // Given: 创建单批次计划
       Batch batch1 = createBatch(1, 1);
       BatchSchedule plan = createBatchSchedule(List.of(batch1));
-      when(mockPlanner.build(mockContext)).thenReturn(plan);
+      when(mockBuilder.build(mockContext)).thenReturn(plan);
 
       when(batchExecutor.execute(mockContext, batch1))
           .thenReturn(BatchResult.success(1, 100, null, null));
@@ -462,7 +462,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
               .mapToObj(i -> createBatch(i, 100))
               .toList();
       BatchSchedule plan = createBatchSchedule(batches);
-      when(mockPlanner.build(mockContext)).thenReturn(plan);
+      when(mockBuilder.build(mockContext)).thenReturn(plan);
 
       // Mock 批次执行器返回成功结果
       when(batchExecutor.execute(eq(mockContext), any(Batch.class)))
@@ -494,7 +494,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
       List<Batch> batches =
           java.util.stream.IntStream.rangeClosed(1, 5).mapToObj(i -> createBatch(i, 5)).toList();
       BatchSchedule plan = createBatchSchedule(batches);
-      when(mockPlanner.build(mockContext)).thenReturn(plan);
+      when(mockBuilder.build(mockContext)).thenReturn(plan);
 
       // Mock 批次执行器：奇数成功，偶数失败
       when(batchExecutor.execute(eq(mockContext), any(Batch.class)))

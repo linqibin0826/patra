@@ -45,8 +45,8 @@ class DataSourceAdapterTest {
   @BeforeEach
   void setUp() {
     // 注意: 此测试类仅测试 convertToProvenanceConfig 私有方法(HTTP配置转换)
-    // 该方法不使用 PlanMetadataTranslator，因此传入真实实例即可
-    PlanMetadataTranslator translator = new PlanMetadataTranslator();
+    // 该方法不使用 FetchMetadataTranslator，因此传入真实实例即可
+    FetchMetadataTranslator translator = new FetchMetadataTranslator();
     adapter = new DataSourceAdapter(providerRegistry, translator);
   }
 

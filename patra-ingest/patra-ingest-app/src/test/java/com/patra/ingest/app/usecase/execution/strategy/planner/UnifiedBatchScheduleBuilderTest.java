@@ -15,7 +15,7 @@ import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 // Note: 使用完整类名来区分两个不同的 BatchSchedule:
-// - com.patra.ingest.domain.model.vo.batch.BatchPlan: 规划结果（包含批次列表）
+// - com.patra.ingest.domain.model.vo.batch.BatchSchedule: 规划结果（包含批次列表）
 // - com.patra.ingest.domain.model.vo.fetch.FetchMetadata: 计划元数据（用于生成批次）
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import com.patra.ingest.domain.port.DataSourcePort;
@@ -56,7 +56,7 @@ class UnifiedBatchScheduleBuilderTest {
 
   @Mock private BatchGenerationStrategy mockStrategy2;
 
-  private UnifiedBatchPlanner planner;
+  private UnifiedBatchScheduleBuilder builder;
   private ObjectMapper objectMapper;
 
   @BeforeEach
@@ -69,7 +69,7 @@ class UnifiedBatchScheduleBuilderTest {
 
     // 创建 planner 并自动注册策略
     List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, mockStrategy2);
-    planner = new UnifiedBatchPlanner(dataSourcePort, strategies);
+    builder = new UnifiedBatchScheduleBuilder(dataSourcePort, strategies);
   }
 
   @Test
@@ -84,7 +84,7 @@ class UnifiedBatchScheduleBuilderTest {
     when(mockStrategy1.generateBatches(any(), any())).thenReturn(List.of());
 
     // when
-    planner.build(ctx);
+    builder.build(ctx);
 
     // then
     verify(mockStrategy1).generateBatches(pubmedPlan, ctx);
@@ -94,7 +94,7 @@ class UnifiedBatchScheduleBuilderTest {
   @DisplayName("getProvenanceCode 应该返回 null（支持所有数据源）")
   void should_return_null_for_provenance_code() {
     // when
-    ProvenanceCode provenanceCode = planner.getProvenanceCode();
+    ProvenanceCode provenanceCode = builder.getProvenanceCode();
 
     // then
     assertThat(provenanceCode).isNull();
@@ -115,7 +115,7 @@ class UnifiedBatchScheduleBuilderTest {
     when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenReturn(mockBatches);
 
     // when
-    com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.build(ctx);
+    com.patra.ingest.domain.model.vo.batch.BatchSchedule result = builder.build(ctx);
 
     // then
     assertThat(result.batches()).hasSize(3);
@@ -141,7 +141,7 @@ class UnifiedBatchScheduleBuilderTest {
     when(mockStrategy2.generateBatches(epmcPlan, ctx)).thenReturn(mockBatches);
 
     // when
-    com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.build(ctx);
+    com.patra.ingest.domain.model.vo.batch.BatchSchedule result = builder.build(ctx);
 
     // then
     assertThat(result.batches()).hasSize(2);
@@ -161,7 +161,7 @@ class UnifiedBatchScheduleBuilderTest {
     when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(emptyPlan);
 
     // when
-    com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.build(ctx);
+    com.patra.ingest.domain.model.vo.batch.BatchSchedule result = builder.build(ctx);
 
     // then
     assertThat(result.totalBatches()).isZero();
@@ -184,9 +184,9 @@ class UnifiedBatchScheduleBuilderTest {
     when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(unknownPlan);
 
     // when & then
-    assertThatThrownBy(() -> planner.build(ctx))
+    assertThatThrownBy(() -> builder.build(ctx))
         .isInstanceOf(BatchSchedulingException.class)
-        .hasMessageContaining("批次规划失败")
+        .hasMessageContaining("批次调度")
         .hasCauseInstanceOf(IllegalStateException.class);
 
     verify(dataSourcePort).preparePlan(ctx, DataType.LITERATURE);
@@ -202,9 +202,9 @@ class UnifiedBatchScheduleBuilderTest {
     when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenThrow(sourceException);
 
     // when & then
-    assertThatThrownBy(() -> planner.build(ctx))
+    assertThatThrownBy(() -> builder.build(ctx))
         .isInstanceOf(BatchSchedulingException.class)
-        .hasMessageContaining("批次规划失败")
+        .hasMessageContaining("批次调度")
         .hasCause(sourceException);
 
     verify(dataSourcePort).preparePlan(ctx, DataType.LITERATURE);
@@ -222,9 +222,9 @@ class UnifiedBatchScheduleBuilderTest {
     when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenThrow(strategyException);
 
     // when & then
-    assertThatThrownBy(() -> planner.build(ctx))
+    assertThatThrownBy(() -> builder.build(ctx))
         .isInstanceOf(BatchSchedulingException.class)
-        .hasMessageContaining("批次规划失败")
+        .hasMessageContaining("批次调度")
         .hasCause(strategyException);
 
     verify(dataSourcePort).preparePlan(ctx, DataType.LITERATURE);
@@ -242,7 +242,7 @@ class UnifiedBatchScheduleBuilderTest {
     when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenReturn(List.of());
 
     // when
-    com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.build(ctx);
+    com.patra.ingest.domain.model.vo.batch.BatchSchedule result = builder.build(ctx);
 
     // then
     assertThat(result.batches()).isEmpty();
@@ -260,7 +260,7 @@ class UnifiedBatchScheduleBuilderTest {
     List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, invalidStrategy);
 
     // when
-    UnifiedBatchPlanner planner = new UnifiedBatchPlanner(dataSourcePort, strategies);
+    UnifiedBatchScheduleBuilder builder = new UnifiedBatchScheduleBuilder(dataSourcePort, strategies);
 
     // then
     // 验证：planner 应该跳过 null 策略，只注册有效策略
@@ -270,7 +270,7 @@ class UnifiedBatchScheduleBuilderTest {
     when(dataSourcePort.preparePlan(any(), eq(DataType.LITERATURE))).thenReturn(pubmedPlan);
     when(mockStrategy1.generateBatches(any(), any())).thenReturn(List.of());
 
-    planner.build(ctx);
+    builder.build(ctx);
 
     verify(mockStrategy1).generateBatches(any(), any());
     verify(invalidStrategy, never()).generateBatches(any(), any());
@@ -287,7 +287,7 @@ class UnifiedBatchScheduleBuilderTest {
     List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, duplicateStrategy);
 
     // when & then
-    assertThatThrownBy(() -> new UnifiedBatchPlanner(dataSourcePort, strategies))
+    assertThatThrownBy(() -> new UnifiedBatchScheduleBuilder(dataSourcePort, strategies))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("重复的批次生成策略");
   }

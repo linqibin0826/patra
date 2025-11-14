@@ -64,11 +64,11 @@ class PubmedBatchGenerationStrategyTest {
     // given
     int totalRecords = 1000;
     int pageSize = 100;
-    BatchSchedule plan = createBatchSchedule(totalRecords, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", null);
     ExecutionContext ctx = createContext(pageSize);
 
     // when
-    List<Batch> batches = strategy.generateBatches(plan, ctx);
+    List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
     // then
     int expectedBatchCount = (int) Math.ceil((double) totalRecords / pageSize);
@@ -82,11 +82,11 @@ class PubmedBatchGenerationStrategyTest {
     // given
     int totalRecords = 250;
     int pageSize = 100;
-    BatchSchedule plan = createBatchSchedule(totalRecords, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", null);
     ExecutionContext ctx = createContext(pageSize);
 
     // when
-    List<Batch> batches = strategy.generateBatches(plan, ctx);
+    List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
     // then
     assertThat(batches).hasSize(3);
@@ -101,11 +101,11 @@ class PubmedBatchGenerationStrategyTest {
     // given
     int totalRecords = 250;
     int pageSize = 100;
-    BatchSchedule plan = createBatchSchedule(totalRecords, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", null);
     ExecutionContext ctx = createContext(pageSize);
 
     // when
-    List<Batch> batches = strategy.generateBatches(plan, ctx);
+    List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
     // then
     assertThat(batches).hasSize(3);
@@ -132,11 +132,11 @@ class PubmedBatchGenerationStrategyTest {
     String query = "cancer[Title]";
     JsonNode params = objectMapper.createObjectNode().put("db", "pubmed");
 
-    BatchSchedule plan = createBatchSchedule(totalRecords, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", null);
     ExecutionContext ctx = createContext(pageSize, query, params);
 
     // when
-    List<Batch> batches = strategy.generateBatches(plan, ctx);
+    List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
     // then
     assertThat(batches).hasSize(2);
@@ -151,11 +151,11 @@ class PubmedBatchGenerationStrategyTest {
   @DisplayName("当 totalRecords 为 0 时应该返回空批次列表")
   void should_return_empty_list_when_total_records_is_zero() {
     // given
-    BatchSchedule plan = createBatchSchedule(0, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(0, "pubmed", null);
     ExecutionContext ctx = createContext(100);
 
     // when
-    List<Batch> batches = strategy.generateBatches(plan, ctx);
+    List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
     // then
     assertThat(batches).isEmpty();
@@ -167,11 +167,11 @@ class PubmedBatchGenerationStrategyTest {
     // given
     int totalRecords = 50;
     int pageSize = 100;
-    BatchSchedule plan = createBatchSchedule(totalRecords, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", null);
     ExecutionContext ctx = createContext(pageSize);
 
     // when
-    List<Batch> batches = strategy.generateBatches(plan, ctx);
+    List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
     // then
     assertThat(batches).hasSize(1);
@@ -186,11 +186,11 @@ class PubmedBatchGenerationStrategyTest {
     // given
     int totalRecords = 500;
     int pageSize = 100;
-    BatchSchedule plan = createBatchSchedule(totalRecords, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", null);
     ExecutionContext ctx = createContext(pageSize);
 
     // when
-    List<Batch> batches = strategy.generateBatches(plan, ctx);
+    List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
     // then
     assertThat(batches).hasSize(5);
@@ -207,15 +207,15 @@ class PubmedBatchGenerationStrategyTest {
     String webEnv = "MCID_674c8b5a5e8a9b1234567890";
     String queryKey = "1";
     Map<String, String> stateToken = Map.of("webEnv", webEnv, "queryKey", queryKey);
-    BatchSchedule plan = createBatchSchedule(totalRecords, "pubmed", stateToken);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", stateToken);
     ExecutionContext ctx = createContext(pageSize);
 
     // when
-    List<Batch> batches = strategy.generateBatches(plan, ctx);
+    List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
     // then
     assertThat(batches).hasSize(10);
-    assertThat(plan.hasStateToken()).isTrue();
+    assertThat(metadata.hasStateToken()).isTrue();
 
     // 验证所有批次都包含 session tokens
     assertThat(batches)
@@ -235,15 +235,15 @@ class PubmedBatchGenerationStrategyTest {
     // given
     int totalRecords = 500;
     int pageSize = 100;
-    BatchSchedule plan = createBatchSchedule(totalRecords, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", null);
     ExecutionContext ctx = createContext(pageSize);
 
     // when
-    List<Batch> batches = strategy.generateBatches(plan, ctx);
+    List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
     // then
     assertThat(batches).hasSize(5);
-    assertThat(plan.hasStateToken()).isFalse();
+    assertThat(metadata.hasStateToken()).isFalse();
 
     // 验证所有批次都不包含 session tokens（应该是空 Map）
     assertThat(batches)
@@ -256,11 +256,11 @@ class PubmedBatchGenerationStrategyTest {
     // given
     int totalRecords = 10000;
     int pageSize = 100;
-    BatchSchedule plan = createBatchSchedule(totalRecords, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", null);
     ExecutionContext ctx = createContext(pageSize);
 
     // when
-    List<Batch> batches = strategy.generateBatches(plan, ctx);
+    List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
     // then
     assertThat(batches).hasSize(100);
@@ -271,16 +271,16 @@ class PubmedBatchGenerationStrategyTest {
   // === 辅助方法 ===
 
   /**
-   * 创建测试用的 BatchSchedule
+   * 创建测试用的 FetchMetadata
    *
    * @param totalRecords 总记录数
    * @param dataSourceCode 数据源代码
    * @param stateToken 状态令牌（可为 null）
-   * @return BatchSchedule 实例
+   * @return FetchMetadata 实例
    */
-  private BatchSchedule createBatchSchedule(
+  private FetchMetadata createFetchMetadata(
       int totalRecords, String dataSourceCode, Map<String, String> stateToken) {
-    return new BatchSchedule() {
+    return new FetchMetadata() {
       @Override
       public int totalRecords() {
         return totalRecords;
