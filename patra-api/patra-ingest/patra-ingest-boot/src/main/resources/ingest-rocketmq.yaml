@@ -30,10 +30,10 @@ patra:
     outbox:
       # 严格通道白名单模式 (生产环境建议启用)
       strict-channel-whitelist: ${OUTBOX_STRICT_CHANNEL_WHITELIST:false}
-      # 允许的消息通道白名单 (对应 Domain 层的 MessageChannels)
+      # 允许的消息通道白名单（粗粒度 Channel）
       allowed-channels:
-        - TASK_READY
-        - LITERATURE_READY
+        - INGEST_TASK
+        - INGEST_LITERATURE
 
       # 发送消息超时时间（毫秒），默认 3000ms
       send-timeout: 3000
@@ -47,17 +47,20 @@ patra:
 
       # 业务通道到 RocketMQ Topic 的映射（可选）
       # 如果未配置，则使用 RocketMqChannelMapper 中的默认映射
+      # 重构后使用粗粒度 Channel（操作类型通过 RocketMQ Tags 区分）
       channel-mapping:
-        TASK_READY: INGEST_TASK_READY
-        LITERATURE_READY: INGEST_LITERATURE_READY
+        INGEST_TASK: INGEST_TASK
+        INGEST_LITERATURE: INGEST_LITERATURE
 
       # Topic 前缀（用于多环境隔离）
-      # 示例: "dev-" 会生成 "dev-INGEST_TASK_READY"
+      # 示例: "dev-" 会生成 "dev-INGEST_TASK"
       topic-prefix: ${TOPIC_PREFIX:}
 
     # RocketMQ 消费者配置（用于 TaskReadyMessageListener）
     mq:
       topics:
-        task-ready: ${TOPIC_PREFIX:}INGEST_TASK_READY
+        task: ${TOPIC_PREFIX:}INGEST_TASK           # 粗粒度 Topic
+        literature: ${TOPIC_PREFIX:}INGEST_LITERATURE  # 粗粒度 Topic
       consumer-groups:
-        task-ready: ${CONSUMER_GROUP_PREFIX:}ingest-task-ready-consumer-group
+        task: ${CONSUMER_GROUP_PREFIX:}ingest-task-consumer-group
+        literature: ${CONSUMER_GROUP_PREFIX:}ingest-literature-consumer-group

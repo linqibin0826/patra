@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 /**
  * RocketMQ 任务就绪消息监听器。
  *
- * <p>使用 RocketMQ 官方 Spring Boot Starter 订阅 INGEST_TASK_READY 主题并启动任务执行工作流。
+ * <p>使用 RocketMQ 官方 Spring Boot Starter 订阅 INGEST_TASK 主题（READY 标签）并启动任务执行工作流。
  *
  * <p><strong>架构特性</strong>:
  *
@@ -31,7 +31,7 @@ import org.springframework.stereotype.Component;
  * <p><strong>职责</strong>:
  *
  * <ul>
- *   <li>订阅 INGEST_TASK_READY 主题(任务就绪事件)
+ *   <li>订阅 INGEST_TASK 主题的 READY 标签(任务就绪事件)
  *   <li>从 {@link MessageExt} 提取完整元数据(KEYS, TAGS, messageId, UserProperties)
  *   <li>解析 JSON 消息体为 {@link TaskReadyPayload} DTO
  *   <li>验证必填字段(taskId, idempotentKey)
@@ -64,9 +64,9 @@ import org.springframework.stereotype.Component;
     )
 @RequiredArgsConstructor
 @RocketMQMessageListener(
-    topic = "${patra.ingest.mq.topics.task-ready}", // 从配置读取 Topic 名称
-    consumerGroup = "${patra.ingest.mq.consumer-groups.task-ready}", // 从配置读取消费者组
-    selectorExpression = "*" // 订阅所有 TAGS
+    topic = "${patra.ingest.mq.topics.task}", // INGEST_TASK
+    consumerGroup = "${patra.ingest.mq.consumer-groups.task}", // 从配置读取消费者组
+    selectorExpression = "READY" // 只订阅 READY 标签
     )
 public class TaskReadyMessageListener implements RocketMQListener<MessageExt> {
 

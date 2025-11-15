@@ -1,6 +1,5 @@
 package com.patra.ingest.infra.messaging.config;
 
-import com.patra.ingest.domain.messaging.MessageChannels;
 import com.patra.ingest.infra.config.OutboxMqProperties;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,7 +14,7 @@ import org.springframework.util.StringUtils;
  * <p><strong>设计理念</strong>:
  *
  * <ul>
- *   <li>Domain 层使用业务语言定义通道({@link MessageChannels})
+ *   <li>Domain 层使用两段式 Channel（domain + resource）
  *   <li>Infra 层负责技术实现细节(RocketMQ Topic 命名)
  *   <li>映射关系集中管理,便于维护和调整
  *   <li>支持不同环境的 Topic 隔离(通过配置前缀)
@@ -25,8 +24,9 @@ import org.springframework.util.StringUtils;
  * <p><strong>映射规则</strong>:
  *
  * <ul>
- *   <li>{@code TASK_READY} → {@code INGEST_TASK_READY}
- *   <li>{@code LITERATURE_READY} → {@code INGEST_LITERATURE_READY}
+ *   <li>{@code INGEST_TASK} → {@code INGEST_TASK} (粗粒度 Topic)
+ *   <li>{@code INGEST_LITERATURE} → {@code INGEST_LITERATURE} (粗粒度 Topic)
+ *   <li>操作类型（READY、FAILED 等）通过 RocketMQ Tags 区分
  *   <li>支持通过 {@code patra.ingest.outbox.channel-mapping} 覆盖
  *   <li>支持通过 {@code patra.ingest.outbox.topic-prefix} 添加环境前缀
  * </ul>
@@ -40,12 +40,17 @@ public class RocketMqChannelMapper {
   /**
    * 默认业务通道到 RocketMQ Topic 的映射表。
    *
-   * <p>注意: LITERATURE_READY 映射到跨服务的 Topic,遵循 INGEST_{ENTITY}_READY 命名约定,符合 RocketMQ 规范(仅大写字母+下划线)。
+   * <p>重构后使用粗粒度 Channel 模式：
+   * <ul>
+   *   <li>INGEST_TASK → INGEST_TASK (资源级别 Topic)
+   *   <li>INGEST_LITERATURE → INGEST_LITERATURE (资源级别 Topic)
+   *   <li>操作类型（READY、FAILED 等）通过 RocketMQ Tags 区分
+   * </ul>
    */
   private static final Map<String, String> DEFAULT_CHANNEL_TO_TOPIC =
       Map.of(
-          MessageChannels.INGEST_TASK_READY, "INGEST_TASK_READY",
-          MessageChannels.INGEST_LITERATURE_READY, "INGEST_LITERATURE_READY");
+          "INGEST_TASK", "INGEST_TASK",
+          "INGEST_LITERATURE", "INGEST_LITERATURE");
 
   private final Map<String, String> channelToTopic;
   private final String topicPrefix;

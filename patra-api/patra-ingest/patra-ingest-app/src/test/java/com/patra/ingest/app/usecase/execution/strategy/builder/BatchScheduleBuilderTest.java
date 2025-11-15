@@ -176,9 +176,9 @@ class BatchScheduleBuilderTest {
 
     // when & then
     assertThatThrownBy(() -> builder.build(ctx))
-        .isInstanceOf(BatchSchedulingException.class)
-        .hasMessageContaining("批次调度")
-        .hasCauseInstanceOf(IllegalStateException.class);
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("未找到对应的批次生成策略")
+        .hasMessageContaining("CROSSREF");
 
     verify(provenanceDataPort).prepareFetchMetadata(ctx, DataType.LITERATURE);
   }
@@ -196,7 +196,7 @@ class BatchScheduleBuilderTest {
     // when & then
     assertThatThrownBy(() -> builder.build(ctx))
         .isInstanceOf(BatchSchedulingException.class)
-        .hasMessageContaining("批次调度")
+        .hasMessageContaining("准备抓取元数据失败")
         .hasCause(sourceException);
 
     verify(provenanceDataPort).prepareFetchMetadata(ctx, DataType.LITERATURE);
@@ -216,7 +216,7 @@ class BatchScheduleBuilderTest {
     // when & then
     assertThatThrownBy(() -> builder.build(ctx))
         .isInstanceOf(BatchSchedulingException.class)
-        .hasMessageContaining("批次调度")
+        .hasMessageContaining("批次生成失败")
         .hasCause(strategyException);
 
     verify(provenanceDataPort).prepareFetchMetadata(ctx, DataType.LITERATURE);

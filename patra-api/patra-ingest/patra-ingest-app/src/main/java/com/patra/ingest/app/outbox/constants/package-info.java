@@ -1,38 +1,30 @@
 /**
  * Outbox 常量定义包。
  *
- * <p>本包定义 Outbox 模式使用的枚举常量，确保通道、聚合类型、业务标签的一致性。
+ * <p>本包定义 Outbox 模式使用的枚举常量，确保聚合类型的一致性。
+ *
+ * <p><b>注意</b>：自 v0.2.0 起，Channel 和 OpType 已迁移至新架构：
+ * <ul>
+ *   <li><b>Channel</b>：使用 {@link com.patra.ingest.domain.messaging.IngestPublishingChannels}（粗粒度资源级别）
+ *   <li><b>OpType</b>：使用 {@link com.patra.ingest.app.outbox.operations} 包下的枚举（如 TaskOperations、LiteratureOperations）
+ * </ul>
  *
  * <h2>职责</h2>
  *
  * <ul>
- *   <li>定义 Outbox 消息通道（RocketMQ Topic）
  *   <li>定义聚合类型（区分不同领域对象的事件）
- *   <li>定义业务标签（用于消息过滤和分类）
  *   <li>提供常量的集中管理和文档
  * </ul>
  *
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@code OutboxChannels} - Outbox 消息通道枚举
- *       <ul>
- *         <li>{@code INGEST_TASK_READY}: 任务准备就绪通道
- *         <li>{@code INGEST_LITERATURE_READY}: 文献数据就绪通道
- *         <li>{@code METADATA_RECORD_RETRY}: 元数据重试通道
- *       </ul>
  *   <li>{@code OutboxAggregateTypes} - 聚合类型枚举
  *       <ul>
  *         <li>{@code PLAN}: Plan 聚合
  *         <li>{@code SLICE}: Slice 聚合
  *         <li>{@code TASK}: Task 聚合
  *         <li>{@code METADATA_RECORD}: 元数据记录聚合
- *       </ul>
- *   <li>{@code OutboxBusinessTags} - 业务标签枚举
- *       <ul>
- *         <li>{@code TASK_QUEUED}: 任务入队操作
- *         <li>{@code LITERATURE_PUBLISHED}: 文献发布操作
- *         <li>{@code METADATA_RETRY}: 元数据重试操作
  *       </ul>
  * </ul>
  *
@@ -54,8 +46,8 @@
  * public class TaskOutboxPublisher extends AbstractOutboxPublisher<...> {
  *
  *     @Override
- *     protected OutboxChannels getChannel() {
- *         return OutboxChannels.INGEST_TASK_READY;
+ *     protected IngestPublishingChannels getChannel() {
+ *         return IngestPublishingChannels.TASK;  // 粗粒度 Channel
  *     }
  *
  *     @Override
@@ -64,32 +56,8 @@
  *     }
  *
  *     @Override
- *     protected OutboxBusinessTags getOperationType() {
- *         return OutboxBusinessTags.TASK_QUEUED;
- *     }
- * }
- * }</pre>
- *
- * <h3>在中继日志中使用</h3>
- *
- * <pre>{@code
- * @Service
- * public class OutboxRelayOrchestrator {
- *
- *     public RelayReport relay(OutboxRelayCommand command) {
- *         // 查询待发布消息
- *         var messages = outboxRepository.findPendingMessages(
- *             OutboxChannels.INGEST_TASK_READY.name(),
- *             batchSize
- *         );
- *
- *         // 发布到 MQ
- *         messages.forEach(msg -> {
- *             rocketMQTemplate.send(
- *                 OutboxChannels.INGEST_TASK_READY.getTopic(),
- *                 msg.getPayload()
- *             );
- *         });
+ *     protected OperationType getOperationType(TaskQueuedEvent event) {
+ *         return TaskOperations.READY;  // 细粒度 OpType
  *     }
  * }
  * }</pre>
@@ -97,17 +65,9 @@
  * <h2>常量命名规范</h2>
  *
  * <ul>
- *   <li><strong>通道命名</strong>: {SERVICE}_{ENTITY}_{ACTION}
- *       <ul>
- *         <li>示例: {@code INGEST_TASK_READY}, {@code INGEST_LITERATURE_READY}
- *       </ul>
  *   <li><strong>聚合类型</strong>: 使用领域模型名称
  *       <ul>
  *         <li>示例: {@code PLAN}, {@code TASK}, {@code SLICE}
- *       </ul>
- *   <li><strong>业务标签</strong>: {ENTITY}_{OPERATION}
- *       <ul>
- *         <li>示例: {@code TASK_QUEUED}, {@code LITERATURE_PUBLISHED}
  *       </ul>
  * </ul>
  *

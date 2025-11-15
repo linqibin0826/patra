@@ -1,6 +1,5 @@
 package com.patra.ingest.testutil;
 
-import com.patra.ingest.domain.messaging.MessageChannels;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import java.time.Instant;
 import java.util.UUID;
@@ -44,7 +43,7 @@ public final class OutboxMessageTestBuilder {
   private Long version;
   private String aggregateType = "TASK";
   private Long aggregateId = 1001L;
-  private String channel = MessageChannels.INGEST_TASK_READY;
+  private String channel = "INGEST_TASK";
   private String opType = "CREATE";
   private String partitionKey = "partition-1";
   private String dedupKey = "dedup-" + UUID.randomUUID();
@@ -142,7 +141,7 @@ public final class OutboxMessageTestBuilder {
    */
   public static OutboxMessageTestBuilder aLiteratureReadyMessage() {
     return new OutboxMessageTestBuilder()
-        .channel(MessageChannels.INGEST_LITERATURE_READY)
+        .channel("INGEST_LITERATURE")
         .aggregateType("LITERATURE")
         .opType("INGEST")
         .payloadJson("{\"literatureId\":9001,\"source\":\"PUBMED\"}");
