@@ -31,7 +31,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * UnifiedBatchScheduleBuilder 单元测试
+ * BatchScheduleBuilder 单元测试
  *
  * <p>测试重点：
  *
@@ -47,8 +47,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * @since 0.2.0
  */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("UnifiedBatchScheduleBuilder 单元测试")
-class UnifiedBatchScheduleBuilderTest {
+@DisplayName("BatchScheduleBuilder 单元测试")
+class BatchScheduleBuilderTest {
 
   @Mock private ProvenanceDataPort provenanceDataPort;
 
@@ -56,7 +56,7 @@ class UnifiedBatchScheduleBuilderTest {
 
   @Mock private BatchGenerationStrategy mockStrategy2;
 
-  private UnifiedBatchScheduleBuilder builder;
+  private BatchScheduleBuilder builder;
   private ObjectMapper objectMapper;
 
   @BeforeEach
@@ -69,7 +69,7 @@ class UnifiedBatchScheduleBuilderTest {
 
     // 创建 planner 并自动注册策略
     List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, mockStrategy2);
-    builder = new UnifiedBatchScheduleBuilder(provenanceDataPort, strategies);
+    builder = new BatchScheduleBuilder(provenanceDataPort, strategies);
   }
 
   @Test
@@ -89,16 +89,6 @@ class UnifiedBatchScheduleBuilderTest {
 
     // then
     verify(mockStrategy1).generateBatches(pubmedPlan, ctx);
-  }
-
-  @Test
-  @DisplayName("getProvenanceCode 应该返回 null（支持所有数据源）")
-  void should_return_null_for_provenance_code() {
-    // when
-    ProvenanceCode provenanceCode = builder.getProvenanceCode();
-
-    // then
-    assertThat(provenanceCode).isNull();
   }
 
   @Test
@@ -262,8 +252,8 @@ class UnifiedBatchScheduleBuilderTest {
     List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, invalidStrategy);
 
     // when
-    UnifiedBatchScheduleBuilder builder =
-        new UnifiedBatchScheduleBuilder(provenanceDataPort, strategies);
+    BatchScheduleBuilder builder =
+        new BatchScheduleBuilder(provenanceDataPort, strategies);
 
     // then
     // 验证：planner 应该跳过 null 策略，只注册有效策略
@@ -290,7 +280,7 @@ class UnifiedBatchScheduleBuilderTest {
     List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, duplicateStrategy);
 
     // when & then
-    assertThatThrownBy(() -> new UnifiedBatchScheduleBuilder(provenanceDataPort, strategies))
+    assertThatThrownBy(() -> new BatchScheduleBuilder(provenanceDataPort, strategies))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("重复的批次生成策略");
   }

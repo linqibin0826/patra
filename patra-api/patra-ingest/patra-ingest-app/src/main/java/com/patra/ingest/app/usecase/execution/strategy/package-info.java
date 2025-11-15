@@ -17,25 +17,39 @@
  * <ul>
  *   <li>{@code ExecuteTaskBatchesUseCase} - 批次执行用例接口
  *   <li>{@code ExecuteTaskBatchesUseCaseImpl} - 批次执行用例实现
- *   <li>{@link com.patra.ingest.app.usecase.execution.strategy.builder} - 批次构建器
+ *       <ul>
+ *         <li>使用 {@code BatchScheduleBuilder} 构建批次调度
+ *         <li>循环执行批次（调用 GenericBatchExecutor）
+ *         <li>持久化批次结果（TaskRunBatchRepository）
+ *         <li>更新心跳时间戳（TaskRunRepository）
+ *       </ul>
+ *   <li>{@link com.patra.ingest.app.usecase.execution.strategy.builder} - 批次构建器包
+ *       <ul>
+ *         <li>{@code BatchScheduleBuilder} - 批次调度构建器（策略模式）
+ *         <li>{@code BatchGenerationStrategy} - 批次生成策略接口（domain 层）
+ *       </ul>
  * </ul>
  *
  * <h2>批次执行流程</h2>
  *
  * <pre>
  * 1. 批次调度构建（BatchScheduleBuilder）
- *    └─ 根据数据源策略生成批次列表
+ *    ├─ 准备抓取元数据（ProvenanceDataPort）
+ *    ├─ 根据 ProvenanceCode 选择对应策略
+ *    └─ 生成批次列表
  *
  * 2. 循环执行批次
+ *    ├─ 检查租约状态（LeaseHandle）
  *    ├─ 调用 GenericBatchExecutor
  *    ├─ 调用 Provider API（如 PubMed ESearch）
  *    ├─ 解析响应数据
- *    ├─ 推进游标（CursorAdvancer）
+ *    ├─ 持久化批次结果（TaskRunBatchRepository）
+ *    ├─ 更新心跳时间戳（TaskRunRepository）
  *    └─ 发布文献数据（LiteraturePublisherOrchestrator）
  *
  * 3. 检查是否有更多批次
  *    ├─ 如果有 → 继续执行
- *    └─ 如果没有 → 完成
+ *    └─ 如果没有 → 返回执行结果
  * </pre>
  *
  * <h2>批次构建示例</h2>
@@ -70,38 +84,63 @@
  * <h2>使用示例</h2>
  *
  * <pre>{@code
- * @Component
+ * @Service
  * @RequiredArgsConstructor
  * public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase {
- *     private final BatchScheduleBuilderRegistry builderRegistry;
+ *     private final BatchScheduleBuilder batchScheduleBuilder;
  *     private final GenericBatchExecutor batchExecutor;
- *     private final CursorAdvancer cursorAdvancer;
- *     private final LiteraturePublisherOrchestrator literaturePublisher;
+ *     private final TaskRunBatchRepository batchRepository;
+ *     private final TaskRunRepository taskRunRepository;
  *
  *     @Override
- *     public void execute(ExecutionSession session) {
- *         var context = session.getContext();
+ *     public ExecuteResult execute(ExecutionSession session, ExecutionContext context) {
+ *         Long taskId = session.taskId();
+ *         Long runId = session.runId();
  *
- *         // 1. 获取批次调度构建器
- *         var builder = builderRegistry.getBuilder(context.getProvenanceCode());
+ *         // 1. 构建批次调度
+ *         BatchSchedule schedule = batchScheduleBuilder.build(context);
  *
- *         // 2. 构建批次调度
- *         var batchSchedule = builder.build(context);
+ *         // 2. 验证批次数量
+ *         if (schedule.exceedsLimit()) {
+ *             throw new BatchLimitExceededException("批次数量超过限制");
+ *         }
  *
  *         // 3. 循环执行批次
- *         for (var batch : batchSchedule.getBatches()) {
- *             // 3.1 执行批次
- *             var batchResult = batchExecutor.execute(batch, context);
+ *         int succeededCount = 0;
+ *         int failedCount = 0;
  *
- *             // 3.2 推进游标
- *             cursorAdvancer.advance(context.getTaskId(), batchResult.getCursorPosition());
+ *         for (Batch batch : schedule.batches()) {
+ *             // 3.1 检查租约状态
+ *             if (session.heartbeatHandle() != null &&
+ *                 session.heartbeatHandle().isLeaseRevoked()) {
+ *                 log.warn("租约已撤销,中止批次执行");
+ *                 break;
+ *             }
  *
- *             // 3.3 发布文献数据
- *             literaturePublisher.publish(batchResult.getLiteratures(), context);
+ *             // 3.2 执行批次
+ *             BatchResult result;
+ *             try {
+ *                 result = batchExecutor.execute(context, batch);
+ *             } catch (Exception e) {
+ *                 result = BatchResult.failure(batch.batchNo(), e.getMessage());
+ *             }
  *
- *             log.info("Batch completed: taskId={}, batchSeq={}, recordCount={}",
- *                 context.getTaskId(), batch.getSeq(), batchResult.getRecordCount());
+ *             // 3.3 持久化批次结果
+ *             TaskRunBatch batchEntity = TaskRunBatch.create(context, batch, result);
+ *             batchRepository.save(batchEntity);
+ *
+ *             // 3.4 更新心跳时间戳
+ *             taskRunRepository.touchHeartbeat(runId, Instant.now());
+ *
+ *             // 3.5 更新统计
+ *             if (result.success()) {
+ *                 succeededCount++;
+ *             } else {
+ *                 failedCount++;
+ *             }
  *         }
+ *
+ *         return new ExecuteResult(schedule.totalBatches(), succeededCount, failedCount);
  *     }
  * }
  * }</pre>
