@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
  * <p>测试重点：
  *
  * <ul>
- *   <li>getSupportedDataSourceCode() 返回 "doaj"
+ *   <li>getSupportedProvenanceCode() 返回 ProvenanceCode.DOAJ
  *   <li>批次生成逻辑：根据 totalRecords 和 pageSize 分页
  *   <li>批次对象属性正确：batchNo, query, params, scrollId, pageSize
  *   <li>边界情况：totalRecords = 0, totalRecords < pageSize
@@ -55,12 +55,12 @@ class DoajBatchGenerationStrategyTest {
 
     @Test
     @DisplayName("应该返回 'doaj' 数据源代码")
-    void should_return_doaj_data_source_code() {
+    void should_return_doaj_provenance_code() {
       // when
-      String supportedCode = strategy.getSupportedDataSourceCode();
+      ProvenanceCode supportedCode = strategy.getSupportedProvenanceCode();
 
       // then
-      assertThat(supportedCode).isEqualTo("doaj");
+      assertThat(supportedCode).isEqualTo(ProvenanceCode.DOAJ);
     }
   }
 
@@ -74,7 +74,7 @@ class DoajBatchGenerationStrategyTest {
       // given
       int totalRecords = 1000;
       int pageSize = 100;
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.DOAJ, null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -92,7 +92,7 @@ class DoajBatchGenerationStrategyTest {
       // given
       int totalRecords = 500;
       int pageSize = 50;
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.DOAJ, null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -109,7 +109,7 @@ class DoajBatchGenerationStrategyTest {
       // given
       int totalRecords = 250;
       int pageSize = 100;
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.DOAJ, null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -131,7 +131,7 @@ class DoajBatchGenerationStrategyTest {
       String query = "bibjson.journal.title:cancer";
       JsonNode params = objectMapper.createObjectNode().put("pageSize", pageSize);
 
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.DOAJ, null);
       ExecutionContext ctx = createContext(pageSize, query, params);
 
       // when
@@ -154,7 +154,7 @@ class DoajBatchGenerationStrategyTest {
       int pageSize = 100;
       String scrollId = "scroll-123456";
       Map<String, String> stateToken = Map.of("cursorMark", scrollId);
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", stateToken);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.DOAJ, stateToken);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -180,7 +180,7 @@ class DoajBatchGenerationStrategyTest {
       // given
       int totalRecords = 500;
       int pageSize = 100;
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.DOAJ, null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -203,7 +203,7 @@ class DoajBatchGenerationStrategyTest {
       int pageSize = 100;
       String scrollId = "scroll-789";
       Map<String, String> stateToken = Map.of("cursorMark", scrollId);
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", stateToken);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.DOAJ, stateToken);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -225,7 +225,7 @@ class DoajBatchGenerationStrategyTest {
     @DisplayName("当 totalRecords 为 0 时应该返回空批次列表")
     void should_return_empty_list_when_total_records_is_zero() {
       // given
-      FetchMetadata metadata = createFetchMetadata(0, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(0, ProvenanceCode.DOAJ, null);
       ExecutionContext ctx = createContext(100);
 
       // when
@@ -241,7 +241,7 @@ class DoajBatchGenerationStrategyTest {
       // given
       int totalRecords = 50;
       int pageSize = 100;
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.DOAJ, null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -259,7 +259,7 @@ class DoajBatchGenerationStrategyTest {
       // given
       int totalRecords = 500;
       int pageSize = 100;
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.DOAJ, null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -276,7 +276,7 @@ class DoajBatchGenerationStrategyTest {
       // given
       int totalRecords = 10000;
       int pageSize = 100;
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.DOAJ, null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -295,12 +295,12 @@ class DoajBatchGenerationStrategyTest {
    * 创建测试用的 FetchMetadata
    *
    * @param totalRecords 总记录数
-   * @param dataSourceCode 数据源代码
+   * @param provenanceCode Provenance 代码枚举
    * @param stateToken 状态令牌（可为 null）
    * @return FetchMetadata 实例
    */
   private FetchMetadata createFetchMetadata(
-      int totalRecords, String dataSourceCode, Map<String, String> stateToken) {
+      int totalRecords, ProvenanceCode provenanceCode, Map<String, String> stateToken) {
     return new FetchMetadata() {
       @Override
       public int totalRecords() {
@@ -308,8 +308,8 @@ class DoajBatchGenerationStrategyTest {
       }
 
       @Override
-      public String dataSourceCode() {
-        return dataSourceCode;
+      public ProvenanceCode provenanceCode() {
+        return provenanceCode;
       }
 
       @Override

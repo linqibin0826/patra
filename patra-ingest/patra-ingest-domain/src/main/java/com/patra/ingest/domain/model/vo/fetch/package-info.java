@@ -21,7 +21,7 @@
  * <h3>使用流程</h3>
  *
  * <pre>
- * DataSourcePort.prepareFetchMetadata()
+ * ProvenanceDataPort.prepareFetchMetadata()
  *   ↓ 调用 Provenance Starter
  * FetchMetadataTranslator.translate()
  *   ↓ 翻译为领域模型

@@ -49,7 +49,7 @@
  *   <li><strong>职责清晰</strong>：
  *       <ul>
  *         <li>Framework 层（starter-provenance）：负责创建 PlanMetadata
- *         <li>Infrastructure 层（DataSourceAdapter）：负责协议转换
+ *         <li>Infrastructure 层（ProvenanceDataAdapter）：负责协议转换
  *         <li>Application 层（BatchPlanner）：负责基于 PlanMetadata 生成批次
  *       </ul>
  * </ul>
@@ -57,7 +57,7 @@
  * <h2>使用场景：</h2>
  *
  * <ul>
- *   <li><strong>批次规划阶段</strong>：{@code DataSourcePort.preparePlan()} 返回 PlanMetadata
+ *   <li><strong>批次规划阶段</strong>：{@code ProvenanceDataPort.preparePlan()} 返回 PlanMetadata
  *   <li><strong>批次生成</strong>：{@code UnifiedBatchPlanner} 根据 PlanMetadata 类型生成批次
  *   <li><strong>执行优化</strong>：批次执行器利用会话令牌（如 WebEnv）优化请求
  * </ul>
@@ -92,7 +92,7 @@
  *   <li>创建新的 PlanMetadata 子类（如 {@code CrossrefPlanMetadata}）
  *   <li>在子类中定义数据源特定的字段和约束
  *   <li>实现 {@code hasSessionToken()} 方法
- *   <li>在 Framework 层的 DataSourceProvider 实现中返回新子类
+ *   <li>在 Framework 层的 ProvenanceDataProvider 实现中返回新子类
  *   <li>在 Application 层的 BatchGenerationStrategy 中处理新类型
  * </ol>
  *
@@ -102,7 +102,7 @@
  *   <li><strong>上游依赖</strong>：无（纯 Java 模型，无框架依赖）
  *   <li><strong>下游消费者</strong>：
  *       <ul>
- *         <li>patra-ingest-domain（DataSourcePort 返回类型）
+ *         <li>patra-ingest-domain（ProvenanceDataPort 返回类型）
  *         <li>patra-ingest-app（批次规划器使用）
  *         <li>patra-spring-boot-starter-provenance（Provider 实现）
  *       </ul>

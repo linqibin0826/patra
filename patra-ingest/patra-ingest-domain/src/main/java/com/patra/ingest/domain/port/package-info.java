@@ -29,21 +29,18 @@
  * <p>用于调用外部系统,由基础设施层的 HTTP 客户端或 SDK 实现:
  *
  * <ul>
- *   <li>{@link com.patra.ingest.domain.port.DataSourcePort} - 数据源端口
+ *   <li>{@link com.patra.ingest.domain.port.ProvenanceDataPort} - 数据源端口
  *       <ul>
- *         <li>从外部数据源获取标准化文献数据
- *         <li>支持多种数据源(PubMed, EPMC 等)
+ *         <li>从外部数据源获取标准化数据（文献、期刊、药品等）
+ *         <li>支持多种数据源(PubMed, EPMC 等)和多种数据类型
  *         <li>处理分页、游标和错误重试
+ *         <li>通过 {@code ProvenanceDataAdapter} (Infrastructure) 调用
+ *             {@code ProvenanceDataProvider} (Framework)
  *       </ul>
  *   <li>{@link com.patra.ingest.domain.port.PatraRegistryPort} - Patra Registry 配置服务端口
  *       <ul>
  *         <li>获取 Provenance 配置快照
  *         <li>查询数据字典和元数据
- *       </ul>
- *   <li>{@link com.patra.ingest.domain.port.PubmedSearchPort} - PubMed 搜索 API 端口
- *       <ul>
- *         <li>执行全量和增量数据采集
- *         <li>支持游标分页和批量查询
  *       </ul>
  *   <li>{@link com.patra.ingest.domain.port.LiteratureStoragePort} - 文献存储服务端口
  *       <ul>
@@ -126,7 +123,7 @@
  *
  * <ul>
  *   <li><b>Repository</b>: 仓储端口,用于聚合根持久化(如 {@code PlanRepository})
- *   <li><b>Port</b>: 外部服务端口,用于调用外部系统(如 {@code PubmedSearchPort})
+ *   <li><b>Port</b>: 外部服务端口,用于调用外部系统(如 {@code ProvenanceDataPort})
  *   <li><b>Adapter</b>: 通用适配器端口(如 {@code StoragePort})
  *   <li><b>Store</b>: 复合存储端口,组合多个仓储操作(如 {@code OutboxRelayRepository})
  * </ul>
@@ -158,23 +155,21 @@
  * <h3>2. 外部服务端口方法</h3>
  *
  * <pre>{@code
- * public interface PubmedSearchPort {
+ * public interface ProvenanceDataPort {
  *     // 领域语义方法名
- *     List<LiteratureMetadata> harvest(
- *         ProvenanceConfig config,
- *         TaskParams params
+ *     PlanMetadata prepareFetchMetadata(ExecutionContext context, DataType dataType);
+ *
+ *     // 泛型支持多种数据类型（文献、期刊、药品等）
+ *     <T> DataFetchResult<T> fetchData(
+ *         ExecutionContext context,
+ *         DataType dataType,
+ *         TypeReference<T> typeRef,
+ *         Batch batch
  *     );
  *
- *     // 明确返回类型(避免泛型擦除)
- *     SearchResult<Literature> search(
- *         String query,
- *         CursorWatermark cursor,
- *         int batchSize
- *     );
- *
- *     // 异常语义明确(不吞异常)
- *     Optional<CursorWatermark> getLatestCursor()
- *         throws PubmedApiException;
+ *     // 能力查询
+ *     boolean supports(String provenanceCode, DataType dataType);
+ *     Set<DataType> getSupportedTypes(String provenanceCode);
  * }
  * }</pre>
  *

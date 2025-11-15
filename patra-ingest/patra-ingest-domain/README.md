@@ -9,7 +9,7 @@
 - **值对象(Value Objects)**: WindowSpec、CursorWatermark、ExecutionContext 等
 - **领域事件(Domain Events)**: TaskQueuedEvent、TaskCompletedEvent 等
 - **仓储端口(Repository Ports)**: 供外层实现的接口契约
-- **外部服务端口(Service Ports)**: PatraRegistryPort、ExpressionCompilerPort、DataSourcePort 等
+- **外部服务端口(Service Ports)**: PatraRegistryPort、ExpressionCompilerPort、ProvenanceDataPort 等
 - **策略接口(Strategy Interfaces)**: BatchGenerationStrategy 等
 
 **架构约束**: 通过 `maven-enforcer-plugin` 强制执行领域层纯净性,禁止依赖 Spring、MyBatis、JPA 等框架。
@@ -62,6 +62,9 @@ patra-ingest-domain/
    │  │  │  ├─ Batch.java                     # 批次定义
    │  │  │  ├─ BatchSchedule.java             # 批次调度
    │  │  │  └─ BatchResult.java               # 批次结果
+   │  │  ├─ fetch/                        # 数据获取相关值对象
+   │  │  │  ├─ FetchMetadata.java             # 获取元数据
+   │  │  │  └─ DataFetchResult.java           # 数据获取结果
    │  │  ├─ shared/                       # 共享值对象
    │  │  │  ├─ IdempotentKey.java             # 幂等键
    │  │  │  ├─ LeaseInfo.java                 # 租约信息
@@ -97,7 +100,7 @@ patra-ingest-domain/
    │  ├─ OutboxMessageRepository.java     # Outbox 仓储
    │  ├─ PatraRegistryPort.java           # Registry 外部端口
    │  ├─ ExpressionCompilerPort.java      # 表达式编译器端口
-   │  └─ DataSourcePort.java              # 数据源端口(统一数据源访问)
+   │  └─ ProvenanceDataPort.java          # 数据源端口(统一数据源访问)
    ├─ strategy/                       # 策略接口
    │  └─ BatchGenerationStrategy.java     # 批次生成策略接口
    ├─ service/                        # 领域服务
@@ -346,7 +349,7 @@ public interface ExpressionCompilerPort {
 
 **文件**: `port/ExpressionCompilerPort.java`
 
-#### DataSourcePort (数据源端口)
+#### ProvenanceDataPort (数据源端口)
 
 **职责**: 定义从外部数据源获取数据的统一契约,支持多数据源和多数据类型。
 
@@ -358,7 +361,7 @@ public interface ExpressionCompilerPort {
 
 **核心方法**:
 ```java
-public interface DataSourcePort {
+public interface ProvenanceDataPort {
     // 准备计划元数据（获取总数、会话令牌等）
     PlanMetadata prepareFetchMetadata(ExecutionContext context, DataType dataType);
 
@@ -379,22 +382,22 @@ public interface DataSourcePort {
 **使用示例**:
 ```java
 // 准备计划
-PlanMetadata planMetadata = dataSourcePort.prepareFetchMetadata(context, DataType.LITERATURE);
+PlanMetadata planMetadata = provenanceDataPort.prepareFetchMetadata(context, DataType.LITERATURE);
 
 // 获取文献数据
 TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
 DataFetchResult<CanonicalLiterature> result =
-    dataSourcePort.fetchData(context, DataType.LITERATURE, typeRef, batch);
+    provenanceDataPort.fetchData(context, DataType.LITERATURE, typeRef, batch);
 ```
 
 **架构对齐**:
 - 在六边形架构中位于 **Domain 层**，定义业务契约
-- 由 **Infrastructure 层**的 `DataSourceAdapter` 实现
-- 通过 `DataSourceAdapter` 调用框架层的 `DataSourceProvider`（来自 patra-starter-provenance）
+- 由 **Infrastructure 层**的 `ProvenanceDataAdapter` 实现
+- 通过 `ProvenanceDataAdapter` 调用框架层的 `ProvenanceDataProvider`（来自 patra-starter-provenance）
 
-**文件**: `port/DataSourcePort.java`
+**文件**: `port/ProvenanceDataPort.java`
 
-**⚠️ 已废弃**: `PubmedSearchPort` 已被 `DataSourcePort` 取代,后者提供更通用和可扩展的设计。
+**⚠️ 已废弃**: `PubmedSearchPort` 已被 `ProvenanceDataPort` 取代,后者提供更通用和可扩展的设计。
 
 ### 策略接口
 
@@ -421,7 +424,7 @@ public interface BatchGenerationStrategy {
 **使用场景**:
 - 在 `UnifiedBatchPlanner` 中根据 `PlanMetadata` 类型自动选择对应策略
 - 通过 Spring 自动注入所有策略实现
-- 使用 Map 进行策略路由（类似 DataSourceAdapter）
+- 使用 Map 进行策略路由（类似 ProvenanceDataAdapter）
 
 **扩展指南**:
 ```java

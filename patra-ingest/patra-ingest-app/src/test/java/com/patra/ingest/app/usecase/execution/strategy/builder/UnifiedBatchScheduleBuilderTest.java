@@ -18,7 +18,7 @@ import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 // - com.patra.ingest.domain.model.vo.batch.BatchSchedule: 规划结果（包含批次列表）
 // - com.patra.ingest.domain.model.vo.fetch.FetchMetadata: 计划元数据（用于生成批次）
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
-import com.patra.ingest.domain.port.DataSourcePort;
+import com.patra.ingest.domain.port.ProvenanceDataPort;
 import com.patra.ingest.domain.strategy.BatchGenerationStrategy;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +40,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
  *   <li>策略选择逻辑（根据 FetchMetadata 类型）
  *   <li>PubMed 数据源的调度构建流程
  *   <li>未知数据类型的异常处理
- *   <li>DataSourcePort.prepareFetchMetadata() 的调用
+ *   <li>ProvenanceDataPort.prepareFetchMetadata() 的调用
  * </ul>
  *
  * @author Patra Architecture Team
@@ -50,7 +50,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @DisplayName("UnifiedBatchScheduleBuilder 单元测试")
 class UnifiedBatchScheduleBuilderTest {
 
-  @Mock private DataSourcePort dataSourcePort;
+  @Mock private ProvenanceDataPort provenanceDataPort;
 
   @Mock private BatchGenerationStrategy mockStrategy1;
 
@@ -63,13 +63,13 @@ class UnifiedBatchScheduleBuilderTest {
   void setUp() {
     objectMapper = new ObjectMapper();
 
-    // 配置 mock 策略支持的数据源代码
-    when(mockStrategy1.getSupportedDataSourceCode()).thenReturn(ProvenanceCode.PUBMED.getCode());
-    when(mockStrategy2.getSupportedDataSourceCode()).thenReturn(ProvenanceCode.EPMC.getCode());
+    // 配置 mock 策略支持的 Provenance 代码
+    when(mockStrategy1.getSupportedProvenanceCode()).thenReturn(ProvenanceCode.PUBMED);
+    when(mockStrategy2.getSupportedProvenanceCode()).thenReturn(ProvenanceCode.EPMC);
 
     // 创建 planner 并自动注册策略
     List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, mockStrategy2);
-    builder = new UnifiedBatchScheduleBuilder(dataSourcePort, strategies);
+    builder = new UnifiedBatchScheduleBuilder(provenanceDataPort, strategies);
   }
 
   @Test
@@ -80,7 +80,8 @@ class UnifiedBatchScheduleBuilderTest {
     com.patra.ingest.domain.model.vo.fetch.FetchMetadata pubmedPlan = createPubmedPlan(1000, false);
     ExecutionContext ctx = createContext("pubmed");
 
-    when(dataSourcePort.prepareFetchMetadata(any(), eq(DataType.LITERATURE))).thenReturn(pubmedPlan);
+    when(provenanceDataPort.prepareFetchMetadata(any(), eq(DataType.LITERATURE)))
+        .thenReturn(pubmedPlan);
     when(mockStrategy1.generateBatches(any(), any())).thenReturn(List.of());
 
     // when
@@ -111,7 +112,7 @@ class UnifiedBatchScheduleBuilderTest {
 
     List<Batch> mockBatches = List.of(createBatch(1), createBatch(2), createBatch(3));
 
-    when(dataSourcePort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(pubmedPlan);
+    when(provenanceDataPort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(pubmedPlan);
     when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenReturn(mockBatches);
 
     // when
@@ -122,7 +123,7 @@ class UnifiedBatchScheduleBuilderTest {
     assertThat(result.totalBatches()).isEqualTo(3);
     assertThat(result.hasBatches()).isTrue();
 
-    verify(dataSourcePort).prepareFetchMetadata(ctx, DataType.LITERATURE);
+    verify(provenanceDataPort).prepareFetchMetadata(ctx, DataType.LITERATURE);
     verify(mockStrategy1).generateBatches(pubmedPlan, ctx);
   }
 
@@ -137,7 +138,7 @@ class UnifiedBatchScheduleBuilderTest {
 
     List<Batch> mockBatches = List.of(createBatch(1), createBatch(2));
 
-    when(dataSourcePort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(epmcPlan);
+    when(provenanceDataPort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(epmcPlan);
     when(mockStrategy2.generateBatches(epmcPlan, ctx)).thenReturn(mockBatches);
 
     // when
@@ -147,7 +148,7 @@ class UnifiedBatchScheduleBuilderTest {
     assertThat(result.batches()).hasSize(2);
     assertThat(result.totalBatches()).isEqualTo(2);
 
-    verify(dataSourcePort).prepareFetchMetadata(ctx, DataType.LITERATURE);
+    verify(provenanceDataPort).prepareFetchMetadata(ctx, DataType.LITERATURE);
     verify(mockStrategy2).generateBatches(epmcPlan, ctx);
   }
 
@@ -158,7 +159,7 @@ class UnifiedBatchScheduleBuilderTest {
     com.patra.ingest.domain.model.vo.fetch.FetchMetadata emptyPlan = createPubmedPlan(0, false);
     ExecutionContext ctx = createContext("pubmed");
 
-    when(dataSourcePort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(emptyPlan);
+    when(provenanceDataPort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(emptyPlan);
 
     // when
     com.patra.ingest.domain.model.vo.batch.BatchSchedule result = builder.build(ctx);
@@ -168,7 +169,7 @@ class UnifiedBatchScheduleBuilderTest {
     assertThat(result.batches()).isEmpty();
     assertThat(result.hasBatches()).isFalse();
 
-    verify(dataSourcePort).prepareFetchMetadata(ctx, DataType.LITERATURE);
+    verify(provenanceDataPort).prepareFetchMetadata(ctx, DataType.LITERATURE);
     verify(mockStrategy1, never()).generateBatches(any(), any());
   }
 
@@ -181,7 +182,7 @@ class UnifiedBatchScheduleBuilderTest {
     com.patra.ingest.domain.model.vo.fetch.FetchMetadata unknownPlan = createUnknownPlan(100);
     ExecutionContext ctx = createContext("pubmed"); // 使用合法的 ProvenanceCode
 
-    when(dataSourcePort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(unknownPlan);
+    when(provenanceDataPort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(unknownPlan);
 
     // when & then
     assertThatThrownBy(() -> builder.build(ctx))
@@ -189,17 +190,18 @@ class UnifiedBatchScheduleBuilderTest {
         .hasMessageContaining("批次调度")
         .hasCauseInstanceOf(IllegalStateException.class);
 
-    verify(dataSourcePort).prepareFetchMetadata(ctx, DataType.LITERATURE);
+    verify(provenanceDataPort).prepareFetchMetadata(ctx, DataType.LITERATURE);
   }
 
   @Test
-  @DisplayName("当 DataSourcePort 抛出异常时应该包装为 BatchSchedulingException")
+  @DisplayName("当 ProvenanceDataPort 抛出异常时应该包装为 BatchSchedulingException")
   void should_wrap_data_source_exception_as_batch_planning_exception() {
     // given
     ExecutionContext ctx = createContext("pubmed");
     RuntimeException sourceException = new RuntimeException("数据源错误");
 
-    when(dataSourcePort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenThrow(sourceException);
+    when(provenanceDataPort.prepareFetchMetadata(ctx, DataType.LITERATURE))
+        .thenThrow(sourceException);
 
     // when & then
     assertThatThrownBy(() -> builder.build(ctx))
@@ -207,7 +209,7 @@ class UnifiedBatchScheduleBuilderTest {
         .hasMessageContaining("批次调度")
         .hasCause(sourceException);
 
-    verify(dataSourcePort).prepareFetchMetadata(ctx, DataType.LITERATURE);
+    verify(provenanceDataPort).prepareFetchMetadata(ctx, DataType.LITERATURE);
   }
 
   @Test
@@ -218,7 +220,7 @@ class UnifiedBatchScheduleBuilderTest {
     ExecutionContext ctx = createContext("pubmed");
     RuntimeException strategyException = new RuntimeException("批次生成错误");
 
-    when(dataSourcePort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(pubmedPlan);
+    when(provenanceDataPort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(pubmedPlan);
     when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenThrow(strategyException);
 
     // when & then
@@ -227,7 +229,7 @@ class UnifiedBatchScheduleBuilderTest {
         .hasMessageContaining("批次调度")
         .hasCause(strategyException);
 
-    verify(dataSourcePort).prepareFetchMetadata(ctx, DataType.LITERATURE);
+    verify(provenanceDataPort).prepareFetchMetadata(ctx, DataType.LITERATURE);
     verify(mockStrategy1).generateBatches(pubmedPlan, ctx);
   }
 
@@ -238,7 +240,7 @@ class UnifiedBatchScheduleBuilderTest {
     com.patra.ingest.domain.model.vo.fetch.FetchMetadata pubmedPlan = createPubmedPlan(1000, false);
     ExecutionContext ctx = createContext("pubmed");
 
-    when(dataSourcePort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(pubmedPlan);
+    when(provenanceDataPort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(pubmedPlan);
     when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenReturn(List.of());
 
     // when
@@ -251,24 +253,25 @@ class UnifiedBatchScheduleBuilderTest {
   }
 
   @Test
-  @DisplayName("构造函数应该拒绝返回 null supportedDataSourceCode 的策略")
-  void should_warn_about_strategy_with_null_supported_data_source_code() {
+  @DisplayName("构造函数应该拒绝返回 null supportedProvenanceCode 的策略")
+  void should_warn_about_strategy_with_null_supported_provenance_code() {
     // given
     BatchGenerationStrategy invalidStrategy = mock(BatchGenerationStrategy.class);
-    when(invalidStrategy.getSupportedDataSourceCode()).thenReturn(null);
+    when(invalidStrategy.getSupportedProvenanceCode()).thenReturn(null);
 
     List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, invalidStrategy);
 
     // when
     UnifiedBatchScheduleBuilder builder =
-        new UnifiedBatchScheduleBuilder(dataSourcePort, strategies);
+        new UnifiedBatchScheduleBuilder(provenanceDataPort, strategies);
 
     // then
     // 验证：planner 应该跳过 null 策略，只注册有效策略
     com.patra.ingest.domain.model.vo.fetch.FetchMetadata pubmedPlan = createPubmedPlan(1000, false);
     ExecutionContext ctx = createContext("pubmed");
 
-    when(dataSourcePort.prepareFetchMetadata(any(), eq(DataType.LITERATURE))).thenReturn(pubmedPlan);
+    when(provenanceDataPort.prepareFetchMetadata(any(), eq(DataType.LITERATURE)))
+        .thenReturn(pubmedPlan);
     when(mockStrategy1.generateBatches(any(), any())).thenReturn(List.of());
 
     builder.build(ctx);
@@ -282,13 +285,12 @@ class UnifiedBatchScheduleBuilderTest {
   void should_throw_exception_when_duplicate_strategy_types() {
     // given
     BatchGenerationStrategy duplicateStrategy = mock(BatchGenerationStrategy.class);
-    when(duplicateStrategy.getSupportedDataSourceCode())
-        .thenReturn(ProvenanceCode.PUBMED.getCode());
+    when(duplicateStrategy.getSupportedProvenanceCode()).thenReturn(ProvenanceCode.PUBMED);
 
     List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, duplicateStrategy);
 
     // when & then
-    assertThatThrownBy(() -> new UnifiedBatchScheduleBuilder(dataSourcePort, strategies))
+    assertThatThrownBy(() -> new UnifiedBatchScheduleBuilder(provenanceDataPort, strategies))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("重复的批次生成策略");
   }
@@ -336,8 +338,8 @@ class UnifiedBatchScheduleBuilderTest {
       }
 
       @Override
-      public String dataSourceCode() {
-        return ProvenanceCode.PUBMED.getCode();
+      public ProvenanceCode provenanceCode() {
+        return ProvenanceCode.PUBMED;
       }
 
       @Override
@@ -364,8 +366,8 @@ class UnifiedBatchScheduleBuilderTest {
       }
 
       @Override
-      public String dataSourceCode() {
-        return ProvenanceCode.EPMC.getCode();
+      public ProvenanceCode provenanceCode() {
+        return ProvenanceCode.EPMC;
       }
 
       @Override
@@ -391,8 +393,9 @@ class UnifiedBatchScheduleBuilderTest {
       }
 
       @Override
-      public String dataSourceCode() {
-        return "unknown-source";
+      public ProvenanceCode provenanceCode() {
+        // 使用未注册策略的 ProvenanceCode（测试中只注册了 PUBMED 和 EPMC）
+        return ProvenanceCode.CROSSREF;
       }
 
       @Override

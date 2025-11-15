@@ -13,7 +13,7 @@ import java.util.Set;
 /**
  * 数据源提供者统一契约接口
  *
- * <p>DataSourceProvider是Framework层的核心抽象，每个外部数据源（PubMed、DOAJ、Crossref等） 都有对应的Provider实现类。
+ * <p>ProvenanceDataProvider是Framework层的核心抽象，每个外部数据源（PubMed、DOAJ、Crossref等） 都有对应的Provider实现类。
  *
  * <p><strong>核心特性</strong>：
  *
@@ -28,7 +28,7 @@ import java.util.Set;
  *
  * <ul>
  *   <li>位于Framework层（patra-spring-boot-starter-provenance）
- *   <li>被DataSourceAdapter（Infrastructure层）调用
+ *   <li>被ProvenanceDataAdapter（Infrastructure层）调用
  *   <li>委托给DataProcessor（Framework层）处理
  * </ul>
  *
@@ -45,7 +45,7 @@ import java.util.Set;
  * <pre>{@code
  * // 实现Provider（支持多种数据类型）
  * @Component
- * public class PubmedDataSourceProvider implements DataSourceProvider {
+ * public class PubmedDataProvider implements ProvenanceDataProvider {
  *     private static final Set<DataType> SUPPORTED_TYPES = Set.of(
  *         DataType.LITERATURE,
  *         DataType.CITATION,
@@ -80,7 +80,7 @@ import java.util.Set;
  * @author Patra Architecture Team
  * @since 0.1.0
  */
-public interface DataSourceProvider {
+public interface ProvenanceDataProvider {
 
   /**
    * 返回此提供者服务的数据源代码（唯一标识）

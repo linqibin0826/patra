@@ -8,8 +8,8 @@ import com.patra.common.model.DataType;
 import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult;
-import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult.ErrorType;
+import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult;
+import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult.ErrorType;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /**
- * DataSourcePort 接口测试
+ * ProvenanceDataPort 接口测试
  *
  * <p>测试 v2.0 多数据类型架构的核心接口：泛型化数据获取端口
  *
@@ -33,13 +33,13 @@ import org.junit.jupiter.api.Test;
  *
  * @since 0.1.0.0
  */
-@DisplayName("DataSourcePort v2.0 接口测试")
-class DataSourcePortTest {
+@DisplayName("ProvenanceDataPort v2.0 接口测试")
+class ProvenanceDataPortTest {
 
   // ========== Mock 实现 ==========
 
   /** Mock 数据源端口实现（用于接口契约测试） */
-  static class MockDataSourcePort implements DataSourcePort {
+  static class MockProvenanceDataPort implements ProvenanceDataPort {
     private final Map<String, Set<DataType>> supportedTypes =
         Map.of(
             ProvenanceCode.PUBMED.getCode(),
@@ -53,8 +53,7 @@ class DataSourcePortTest {
     public com.patra.ingest.domain.model.vo.fetch.FetchMetadata prepareFetchMetadata(
         ExecutionContext context, DataType dataType) {
       // Mock 实现：返回空的抓取元数据
-      return com.patra.ingest.domain.model.vo.fetch.FetchMetadata.empty(
-          context.provenanceCode().getCode());
+      return com.patra.ingest.domain.model.vo.fetch.FetchMetadata.empty(context.provenanceCode());
     }
 
     @Override
@@ -92,7 +91,7 @@ class DataSourcePortTest {
     @DisplayName("应该使用泛型方法获取文献数据")
     void should_fetch_literature_data_with_generic_method() {
       // Given: Mock 实现
-      DataSourcePort port = new MockDataSourcePort();
+      ProvenanceDataPort port = new MockProvenanceDataPort();
       ExecutionContext context = createTestContext(ProvenanceCode.PUBMED);
       TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
       Batch batch = createTestBatch();
@@ -113,7 +112,7 @@ class DataSourcePortTest {
     @DisplayName("应该使用泛型方法获取期刊数据")
     void should_fetch_journal_data_with_different_type() {
       // Given: Mock 实现
-      DataSourcePort port = new MockDataSourcePort();
+      ProvenanceDataPort port = new MockProvenanceDataPort();
       ExecutionContext context = createTestContext(ProvenanceCode.DOAJ);
       TypeReference<DataType.Journal> typeRef = new TypeReference<>() {};
       Batch batch = createTestBatch();
@@ -133,7 +132,7 @@ class DataSourcePortTest {
     @DisplayName("应该使用泛型方法获取药品数据")
     void should_fetch_drug_data_with_different_type() {
       // Given: Mock 实现
-      DataSourcePort port = new MockDataSourcePort();
+      ProvenanceDataPort port = new MockProvenanceDataPort();
       ExecutionContext context = createTestContext(ProvenanceCode.OPENALEX);
       TypeReference<DataType.Drug> typeRef = new TypeReference<>() {};
       Batch batch = createTestBatch();
@@ -158,7 +157,7 @@ class DataSourcePortTest {
     @DisplayName("应该保持编译期类型安全")
     void should_maintain_type_safety() {
       // Given: Mock 实现
-      DataSourcePort port = new MockDataSourcePort();
+      ProvenanceDataPort port = new MockProvenanceDataPort();
       ExecutionContext context = createTestContext(ProvenanceCode.PUBMED);
       TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
       Batch batch = createTestBatch();
@@ -177,7 +176,7 @@ class DataSourcePortTest {
     @DisplayName("应该在不同数据类型间保持类型隔离")
     void should_maintain_type_isolation_between_data_types() {
       // Given: Mock 实现
-      DataSourcePort port = new MockDataSourcePort();
+      ProvenanceDataPort port = new MockProvenanceDataPort();
       Batch batch = createTestBatch();
 
       // When: 获取文献数据
@@ -207,7 +206,7 @@ class DataSourcePortTest {
     @DisplayName("应该正确判断支持的数据源和数据类型组合")
     void should_check_support_for_provenance_and_data_type() {
       // Given: Mock 实现
-      DataSourcePort port = new MockDataSourcePort();
+      ProvenanceDataPort port = new MockProvenanceDataPort();
 
       // Then: PubMed 支持文献和引用
       assertThat(port.supports(ProvenanceCode.PUBMED, DataType.LITERATURE)).isTrue();
@@ -230,7 +229,7 @@ class DataSourcePortTest {
     @DisplayName("应该处理空值情况")
     void should_handle_null_cases() {
       // Given: Mock 实现
-      DataSourcePort port = new MockDataSourcePort();
+      ProvenanceDataPort port = new MockProvenanceDataPort();
 
       // Then: 空数据源代码应该返回 false
       assertThat(port.supports(null, DataType.LITERATURE)).isFalse();
@@ -248,7 +247,7 @@ class DataSourcePortTest {
     @DisplayName("应该返回指定数据源支持的所有数据类型")
     void should_return_supported_types_for_provenance() {
       // Given: Mock 实现
-      DataSourcePort port = new MockDataSourcePort();
+      ProvenanceDataPort port = new MockProvenanceDataPort();
 
       // When & Then: PubMed 支持文献和引用
       Set<DataType> pubmedTypes = port.getSupportedTypes(ProvenanceCode.PUBMED);
@@ -270,7 +269,7 @@ class DataSourcePortTest {
     @DisplayName("应该为未知数据源返回空集合")
     void should_return_empty_set_for_unknown_provenance() {
       // Given: Mock 实现
-      DataSourcePort port = new MockDataSourcePort();
+      ProvenanceDataPort port = new MockProvenanceDataPort();
 
       // When: 查询未知数据源
       Set<DataType> unknownTypes = port.getSupportedTypes(null);
@@ -283,7 +282,7 @@ class DataSourcePortTest {
     @DisplayName("应该返回不可变集合")
     void should_return_immutable_set() {
       // Given: Mock 实现
-      DataSourcePort port = new MockDataSourcePort();
+      ProvenanceDataPort port = new MockProvenanceDataPort();
 
       // When: 获取支持的类型
       Set<DataType> types = port.getSupportedTypes(ProvenanceCode.PUBMED);

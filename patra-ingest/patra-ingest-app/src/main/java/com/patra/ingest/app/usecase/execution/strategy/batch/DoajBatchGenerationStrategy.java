@@ -1,5 +1,6 @@
 package com.patra.ingest.app.usecase.execution.strategy.batch;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
@@ -38,8 +39,8 @@ import org.springframework.stereotype.Component;
 public class DoajBatchGenerationStrategy implements BatchGenerationStrategy {
 
   @Override
-  public String getSupportedDataSourceCode() {
-    return "doaj";
+  public ProvenanceCode getSupportedProvenanceCode() {
+    return ProvenanceCode.DOAJ;
   }
 
   @Override

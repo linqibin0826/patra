@@ -1,5 +1,6 @@
 package com.patra.ingest.infra.integration.datasource.acl;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
 import com.patra.starter.provenance.internal.metadata.DoajPlanMetadata;
 import com.patra.starter.provenance.internal.metadata.EpmcPlanMetadata;
@@ -38,7 +39,7 @@ public class FetchMetadataTranslator {
   public FetchMetadata translate(PlanMetadata planMetadata) {
     // 空计划处理
     if (planMetadata.totalCount() == 0) {
-      return FetchMetadata.empty(planMetadata.dataSourceType());
+      return FetchMetadata.empty(ProvenanceCode.parse(planMetadata.dataSourceType()));
     }
 
     // 根据具体类型翻译（使用模式匹配）
@@ -55,7 +56,9 @@ public class FetchMetadataTranslator {
   /** 翻译 PubMed 计划元数据 */
   private FetchMetadata translatePubmed(PubmedPlanMetadata pubmed) {
     return new SimpleFetchMetadata(
-        pubmed.totalCount(), pubmed.dataSourceType(), extractPubmedStateToken(pubmed));
+        pubmed.totalCount(),
+        ProvenanceCode.parse(pubmed.dataSourceType()),
+        extractPubmedStateToken(pubmed));
   }
 
   /** 提取 PubMed 状态令牌 */
@@ -72,7 +75,9 @@ public class FetchMetadataTranslator {
   /** 翻译 DOAJ 计划元数据 */
   private FetchMetadata translateDoaj(DoajPlanMetadata doaj) {
     return new SimpleFetchMetadata(
-        doaj.totalCount(), doaj.dataSourceType(), extractDoajStateToken(doaj));
+        doaj.totalCount(),
+        ProvenanceCode.parse(doaj.dataSourceType()),
+        extractDoajStateToken(doaj));
   }
 
   /** 提取 DOAJ 状态令牌（DOAJ 使用 scrollId） */
@@ -86,7 +91,9 @@ public class FetchMetadataTranslator {
   /** 翻译 EPMC 计划元数据 */
   private FetchMetadata translateEpmc(EpmcPlanMetadata epmc) {
     return new SimpleFetchMetadata(
-        epmc.totalCount(), epmc.dataSourceType(), extractEpmcStateToken(epmc));
+        epmc.totalCount(),
+        ProvenanceCode.parse(epmc.dataSourceType()),
+        extractEpmcStateToken(epmc));
   }
 
   /** 提取 EPMC 状态令牌（EPMC 使用 cursorMark） */
@@ -100,7 +107,7 @@ public class FetchMetadataTranslator {
 
 /** 简单的 FetchMetadata 实现（包级私有） */
 record SimpleFetchMetadata(
-    int totalRecords, String dataSourceCode, Optional<Map<String, String>> stateToken)
+    int totalRecords, ProvenanceCode provenanceCode, Optional<Map<String, String>> stateToken)
     implements FetchMetadata {
 
   @Override

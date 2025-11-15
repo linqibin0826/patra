@@ -90,9 +90,9 @@ public class CursorAdvancerImpl implements CursorAdvancer {
     // 提取窗口边界(仅用于 TIME/DATE 策略)
     Instant windowFrom = null;
     Instant windowTo = null;
-    if (windowSpec instanceof WindowSpec.Time timeSpec) {
-      windowFrom = timeSpec.from();
-      windowTo = timeSpec.to();
+    if (windowSpec instanceof WindowSpec.Time(Instant from, Instant v)) {
+      windowFrom = from;
+      windowTo = v;
     }
 
     // 3) 确定游标键和命名空间

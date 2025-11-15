@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
  * <p>测试重点：
  *
  * <ul>
- *   <li>getSupportedDataSourceCode() 返回 "epmc"
+ *   <li>getSupportedProvenanceCode() 返回 ProvenanceCode.EPMC
  *   <li>批次生成逻辑：根据 totalRecords 和 pageSize 分页
  *   <li>批次对象属性正确：batchNo, query, params, cursorToken, pageSize
  *   <li>边界情况：totalRecords = 0, totalRecords < pageSize
@@ -50,17 +50,17 @@ class EpmcBatchGenerationStrategyTest {
   }
 
   @Nested
-  @DisplayName("getSupportedDataSourceCode() 方法测试")
+  @DisplayName("getSupportedProvenanceCode() 方法测试")
   class GetSupportedDataSourceCodeTests {
 
     @Test
     @DisplayName("应该返回 'epmc' 数据源代码")
     void should_return_epmc_data_source_code() {
       // when
-      String supportedCode = strategy.getSupportedDataSourceCode();
+      ProvenanceCode supportedCode = strategy.getSupportedProvenanceCode();
 
       // then
-      assertThat(supportedCode).isEqualTo("epmc");
+      assertThat(supportedCode).isEqualTo(ProvenanceCode.EPMC);
     }
   }
 
@@ -74,7 +74,7 @@ class EpmcBatchGenerationStrategyTest {
       // given
       int totalRecords = 1000;
       int pageSize = 100;
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "epmc", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.EPMC, null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -92,7 +92,7 @@ class EpmcBatchGenerationStrategyTest {
       // given
       int totalRecords = 250;
       int pageSize = 100;
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "epmc", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.EPMC, null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -114,7 +114,7 @@ class EpmcBatchGenerationStrategyTest {
       String query = "cancer";
       JsonNode params = objectMapper.createObjectNode().put("format", "json");
 
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "epmc", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.EPMC, null);
       ExecutionContext ctx = createContext(pageSize, query, params);
 
       // when
@@ -137,7 +137,7 @@ class EpmcBatchGenerationStrategyTest {
       int pageSize = 100;
       String cursorMark = "*";
       Map<String, String> stateToken = Map.of("cursorMark", cursorMark);
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "epmc", stateToken);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.EPMC, stateToken);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -163,7 +163,7 @@ class EpmcBatchGenerationStrategyTest {
       // given
       int totalRecords = 500;
       int pageSize = 100;
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "epmc", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.EPMC, null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -186,7 +186,7 @@ class EpmcBatchGenerationStrategyTest {
       int pageSize = 100;
       String cursorMark = "*";
       Map<String, String> stateToken = Map.of("cursorMark", cursorMark);
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "epmc", stateToken);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.EPMC, stateToken);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -208,7 +208,7 @@ class EpmcBatchGenerationStrategyTest {
     @DisplayName("当 totalRecords 为 0 时应该返回空批次列表")
     void should_return_empty_list_when_total_records_is_zero() {
       // given
-      FetchMetadata metadata = createFetchMetadata(0, "epmc", null);
+      FetchMetadata metadata = createFetchMetadata(0, ProvenanceCode.EPMC, null);
       ExecutionContext ctx = createContext(100);
 
       // when
@@ -224,7 +224,7 @@ class EpmcBatchGenerationStrategyTest {
       // given
       int totalRecords = 50;
       int pageSize = 100;
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "epmc", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.EPMC, null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -242,7 +242,7 @@ class EpmcBatchGenerationStrategyTest {
       // given
       int totalRecords = 500;
       int pageSize = 100;
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "epmc", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.EPMC, null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -259,7 +259,7 @@ class EpmcBatchGenerationStrategyTest {
       // given
       int totalRecords = 10000;
       int pageSize = 100;
-      FetchMetadata metadata = createFetchMetadata(totalRecords, "epmc", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.EPMC, null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
@@ -278,12 +278,12 @@ class EpmcBatchGenerationStrategyTest {
    * 创建测试用的 FetchMetadata
    *
    * @param totalRecords 总记录数
-   * @param dataSourceCode 数据源代码
+   * @param provenanceCode Provenance 代码枚举
    * @param stateToken 状态令牌（可为 null）
    * @return FetchMetadata 实例
    */
   private FetchMetadata createFetchMetadata(
-      int totalRecords, String dataSourceCode, Map<String, String> stateToken) {
+      int totalRecords, ProvenanceCode provenanceCode, Map<String, String> stateToken) {
     return new FetchMetadata() {
       @Override
       public int totalRecords() {
@@ -291,8 +291,8 @@ class EpmcBatchGenerationStrategyTest {
       }
 
       @Override
-      public String dataSourceCode() {
-        return dataSourceCode;
+      public ProvenanceCode provenanceCode() {
+        return provenanceCode;
       }
 
       @Override

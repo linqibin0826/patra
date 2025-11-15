@@ -6,7 +6,7 @@
 
 本模块在六边形架构中位于**外围层**,主要职责包括:
 - **数据持久化**: 基于 MyBatis-Plus 实现仓储接口
-- **外部服务集成**: 通过 Feign 调用 patra-registry、PubMed 等外部服务
+- **外部服务集成**: 通过 Feign 调用 patra-registry、Provenance 数据源等外部服务
 - **消息发布**: 通过 RocketMQ 发布领域事件
 - **对象存储**: 集成 MinIO/S3 存储文献数据
 - **DO ↔ Domain 转换**: 使用 MapStruct 进行对象转换
@@ -81,9 +81,11 @@ patra-ingest-infra/
    │  │  └─ converter/
    │  │     └─ ProvenanceConfigSnapshotConverter.java # 配置快照转换器
    │  ├─ datasource/                   # 数据源集成
-   │  │  └─ DataSourceAdapter.java         # 数据源适配器(统一数据源访问)
-   │  ├─ pubmed/                       # PubMed 集成(已废弃)
-   │  │  └─ PubmedSearchAdapter.java       # PubMed 搜索适配器(⚠️ 已废弃,使用 DataSourceAdapter)
+   │  │  ├─ ProvenanceDataAdapter.java     # 数据源适配器(统一数据源访问)
+   │  │  ├─ ProvenanceDataException.java   # 数据源异常
+   │  │  ├─ TypeMismatchException.java     # 类型不匹配异常
+   │  │  └─ acl/
+   │  │     └─ FetchMetadataTranslator.java # 获取元数据转换器
    │  └─ storage/                      # 对象存储集成
    │     ├─ LiteratureStorageAdapter.java   # 文献存储适配器
    │     ├─ StorageMetadataAdapter.java     # 存储元数据适配器
@@ -216,63 +218,127 @@ public class PatraRegistryAdapter implements PatraRegistryPort {
 
 **文件**: `integration/registry/PatraRegistryAdapter.java`
 
-#### DataSourceAdapter (数据源适配器)
+#### ProvenanceDataAdapter (数据源适配器)
 
-**职责**: 实现 `DataSourcePort` 端口接口,提供统一的数据源访问能力。通过 Framework 层的 `DataSourceProvider` 调用外部数据源 API。
+**职责**: 实现 `ProvenanceDataPort` 端口接口,提供统一的数据源访问能力。通过 Framework 层的 `ProvenanceDataProvider` 调用外部数据源 API。
 
 **核心特性**:
-- **统一端口**: 同时支持计划准备(`preparePlan`)和数据获取(`fetchData`)
-- **参数转换**: 将 Ingest 特定的 `ExecutionContext` 转换为通用参数(`query`, `params`, `config`)
-- **多数据源支持**: 通过 `ProviderRegistry` 自动选择对应的 `DataSourceProvider`
+- **统一端口**: 同时支持计划准备(`prepareFetchMetadata`)和数据获取(`fetchData`)
+- **参数转换**: 将 Ingest 特定的 `ExecutionContext` 转换为通用的 `ProviderRequest`
+- **多数据源支持**: 通过 `ProviderRegistry` 自动选择对应的 `ProvenanceDataProvider`
+- **类型安全**: 使用 `TypeReference` 确保类型安全的泛型数据获取
 
 **核心方法**:
 ```java
 @Component
 @RequiredArgsConstructor
-public class DataSourceAdapter implements DataSourcePort {
+public class ProvenanceDataAdapter implements ProvenanceDataPort {
 
     private final ProviderRegistry providerRegistry;
+    private final FetchMetadataTranslator fetchMetadataTranslator;
 
     @Override
     public PlanMetadata prepareFetchMetadata(ExecutionContext context, DataType dataType) {
         // 1. 获取对应的 Provider
-        DataSourceProvider provider = providerRegistry.getProvider(
+        ProvenanceDataProvider provider = providerRegistry.getProvider(
             context.provenanceCode(),
             dataType
         );
 
-        // 2. 提取通用参数
-        String query = context.compiledQuery();
-        JsonNode params = context.compiledParams();
-        ProvenanceConfig config = null; // Provider 从 ProvenanceProperties 获取
+        // 2. 构建提供者请求
+        ProviderRequest request = buildProviderRequest(context);
 
         // 3. 调用 Provider 准备计划
-        return provider.prepareFetchMetadata(query, params, config);
+        FetchMetadata fetchMetadata = provider.prepareFetchMetadata(request);
+
+        // 4. 转换为领域模型
+        return fetchMetadataTranslator.toPlanMetadata(fetchMetadata, context.provenanceCode());
     }
 
     @Override
-    public DataFetchResult fetchData(ExecutionContext context, DataType dataType) {
-        // 类似的参数转换和调用逻辑
-        // ...
+    public <T> DataFetchResult<T> fetchData(
+        ExecutionContext context,
+        DataType dataType,
+        TypeReference<T> typeRef,
+        Batch batch
+    ) {
+        // 1. 获取对应的 Provider
+        ProvenanceDataProvider provider = providerRegistry.getProvider(
+            context.provenanceCode(),
+            dataType
+        );
+
+        // 2. 构建提供者请求（包含批次信息）
+        ProviderRequest request = buildProviderRequest(context, batch);
+
+        // 3. 调用 Provider 获取数据（类型安全）
+        ProviderResult<T> result = provider.fetchData(request, dataType, typeRef);
+
+        // 4. 转换为领域结果
+        return convertToDataFetchResult(result);
+    }
+
+    @Override
+    public boolean supports(String provenanceCode, DataType dataType) {
+        return providerRegistry.supports(provenanceCode, dataType);
+    }
+
+    @Override
+    public Set<DataType> getSupportedTypes(String provenanceCode) {
+        return providerRegistry.getSupportedTypes(provenanceCode);
+    }
+
+    /**
+     * 构建提供者请求
+     */
+    private ProviderRequest buildProviderRequest(ExecutionContext context) {
+        return ProviderRequest.builder()
+            .query(context.compiledQuery())
+            .params(context.compiledParams())
+            .configSnapshot(context.configSnapshot())
+            .build();
+    }
+
+    /**
+     * 构建包含批次信息的提供者请求
+     */
+    private ProviderRequest buildProviderRequest(ExecutionContext context, Batch batch) {
+        return ProviderRequest.builder()
+            .query(context.compiledQuery())
+            .params(context.compiledParams())
+            .configSnapshot(context.configSnapshot())
+            .batchParams(batch.toExecutionParams())
+            .build();
+    }
+
+    /**
+     * 转换为领域数据获取结果
+     */
+    private <T> DataFetchResult<T> convertToDataFetchResult(ProviderResult<T> result) {
+        return DataFetchResult.<T>builder()
+            .data(result.data())
+            .dataType(result.dataType())
+            .recordCount(result.data().size())
+            .nextCursor(result.nextCursor())
+            .hasMore(result.hasMore())
+            .build();
     }
 }
 ```
 
 **参数转换逻辑**:
-- `ExecutionContext` (Ingest 层) → `(query, params, config)` (Framework 层)
+- `ExecutionContext` (Ingest 层) → `ProviderRequest` (Framework 层)
 - 提取编译后的查询字符串: `context.compiledQuery()`
 - 提取编译后的参数: `context.compiledParams()`
-- 配置由 Framework 层的 Provider 从 `ProvenanceProperties` 获取
+- 提取配置快照: `context.configSnapshot()`
+- 批次参数通过 `Batch.toExecutionParams()` 转换
 
-**文件**: `integration/datasource/DataSourceAdapter.java`
+**文件**: `integration/datasource/ProvenanceDataAdapter.java`
 
-#### ⚠️ PubmedSearchAdapter (已废弃)
-
-**状态**: **已废弃**,由 `DataSourceAdapter` 替代。
-
-**迁移说明**: `PubmedSearchPort` 已被统一为 `DataSourcePort`,提供更通用和可扩展的设计。所有数据源(PubMed、EPMC、DOAJ 等)现在通过 `DataSourceAdapter` 和 `DataSourceProvider` 体系统一访问。
-
-**文件**: ~~`integration/pubmed/PubmedSearchAdapter.java`~~ (已删除)
+**⚠️ 架构说明**: 本适配器是六边形架构中的关键桥梁:
+- 实现 **Domain 层**的 `ProvenanceDataPort` 接口
+- 调用 **Framework 层**的 `ProvenanceDataProvider` 实现
+- 负责 Domain 模型与 Framework 模型之间的转换（ACL - 防腐层）
 
 ### 数据转换器
 
@@ -409,7 +475,7 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
 - `patra-storage-api`: 存储 API
 - `patra-spring-boot-starter-mybatis`: MyBatis Starter
 - `patra-spring-boot-starter-expr`: 表达式编译 Starter
-- `patra-spring-boot-starter-provenance`: Provenance Starter(PubMed/EPMC 客户端)
+- `patra-spring-boot-starter-provenance`: Provenance Starter(提供 ProvenanceDataProvider)
 - `patra-spring-boot-starter-object-storage`: 对象存储 Starter
 - `spring-cloud-starter-stream-rocketmq`: RocketMQ Starter
 
@@ -551,7 +617,39 @@ public class ConfigLoader {
 }
 ```
 
-### 示例 3: 发布 Outbox 消息
+### 示例 3: 使用 ProvenanceDataAdapter 获取数据
+
+```java
+@Service
+@RequiredArgsConstructor
+public class DataFetchService {
+
+    private final ProvenanceDataPort provenanceDataPort;
+
+    public void fetchLiteratureData(ExecutionContext context, Batch batch) {
+        // 准备计划元数据
+        PlanMetadata planMetadata = provenanceDataPort.prepareFetchMetadata(
+            context,
+            DataType.LITERATURE
+        );
+        log.info("Total count: {}", planMetadata.totalCount());
+
+        // 获取文献数据（类型安全）
+        TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
+        DataFetchResult<CanonicalLiterature> result = provenanceDataPort.fetchData(
+            context,
+            DataType.LITERATURE,
+            typeRef,
+            batch
+        );
+
+        log.info("Fetched {} records, hasMore: {}",
+            result.recordCount(), result.hasMore());
+    }
+}
+```
+
+### 示例 4: 发布 Outbox 消息
 
 ```java
 @Service

@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.strategy;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
@@ -29,8 +30,8 @@ import java.util.List;
  * <p><strong>设计要点</strong>：
  *
  * <ul>
- *   <li>{@link #getSupportedDataSourceCode()} 方法消除硬编码类型列表
- *   <li>策略类自己声明支持的数据源代码，完全符合开闭原则
+ *   <li>{@link #getSupportedProvenanceCode()} 方法消除硬编码类型列表
+ *   <li>策略类自己声明支持的 Provenance 代码，完全符合开闭原则
  *   <li>新增数据源时无需修改任何现有代码
  *   <li>解耦外部实现：不依赖 Provenance Starter 的具体类型
  * </ul>
@@ -41,31 +42,32 @@ import java.util.List;
 public interface BatchGenerationStrategy {
 
   /**
-   * 获取策略支持的数据源代码
+   * 获取策略支持的 Provenance 代码
    *
-   * <p>此方法允许策略类自己声明支持的数据源，避免了在 UnifiedBatchScheduleBuilder 中硬编码。
+   * <p>此方法允许策略类自己声明支持的 Provenance，避免了在 UnifiedBatchScheduleBuilder 中硬编码。
    *
    * <p><strong>设计理由</strong>：
    *
    * <ul>
    *   <li>消除硬编码：无需在 UnifiedBatchScheduleBuilder 中维护已知类型列表
    *   <li>完全符合 OCP：新增数据源零修改
-   *   <li>解耦实现：不依赖外部框架的具体类型
+   *   <li>类型安全：使用枚举而非字符串，编译期检查
    *   <li>自动发现：Spring 启动时自动构建策略 Map
    * </ul>
    *
-   * @return 支持的数据源代码（如 "pubmed", "doaj", "epmc"）
+   * @return 支持的 Provenance 代码枚举（如 PUBMED, DOAJ, EPMC）
+   *
    * @example
    *     <pre>{@code
    * @Override
-   * public String getSupportedDataSourceCode() {
-   *     return "pubmed";
+   * public ProvenanceCode getSupportedProvenanceCode() {
+   *     return ProvenanceCode.PUBMED;
    * }
    * }</pre>
    *
    * @since 0.3.0
    */
-  String getSupportedDataSourceCode();
+  ProvenanceCode getSupportedProvenanceCode();
 
   /**
    * 根据抓取元数据生成批次列表

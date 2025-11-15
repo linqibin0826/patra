@@ -8,7 +8,7 @@ import java.util.Objects;
 /**
  * 数据源提供者执行结果包装器
  *
- * <p>由 {@link DataSourceProvider} 实现返回的统一结果封装。该结果捕获成功状态、数据载荷、游标提示和错误分类, 使采集引擎能够实施细致的重试和失败策略。
+ * <p>由 {@link ProvenanceDataProvider} 实现返回的统一结果封装。该结果捕获成功状态、数据载荷、游标提示和错误分类, 使采集引擎能够实施细致的重试和失败策略。
  *
  * <p><strong>核心特性</strong>：
  *

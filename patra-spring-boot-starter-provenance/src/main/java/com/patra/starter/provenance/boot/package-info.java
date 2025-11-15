@@ -8,7 +8,7 @@
  *
  * <ul>
  *   <li>自动配置 PubMed 和 EPMC 客户端
- *   <li>注册 {@link com.patra.starter.provenance.common.adapter.DataSourceAdapter} 到 {@link
+ *   <li>注册 {@link com.patra.starter.provenance.common.adapter.ProvenanceDataAdapter} 到 {@link
  *       com.patra.starter.provenance.common.adapter.AdapterRegistry}
  *   <li>加载并验证 {@code patra.provenance.*} 配置属性
  *   <li>按需集成 Micrometer 指标监控
@@ -50,7 +50,7 @@
  * <h2>扩展点</h2>
  *
  * <ul>
- *   <li>实现 {@link com.patra.starter.provenance.common.adapter.DataSourceAdapter} 添加新数据源
+ *   <li>实现 {@link com.patra.starter.provenance.common.adapter.ProvenanceDataAdapter} 添加新数据源
  *   <li>自定义 {@link com.patra.starter.provenance.common.metrics.ProvenanceMetrics} 替换指标记录器
  *   <li>使用 {@code patra.provenance.enabled=false} 禁用自动配置
  * </ul>

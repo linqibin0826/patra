@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.extern.jackson.Jacksonized;
 
 /**
- * 传递给 {@link DataSourceProvider} 实现的不可变请求对象
+ * 传递给 {@link ProvenanceDataProvider} 实现的不可变请求对象
  *
  * <p><strong>设计理念:</strong>
  *

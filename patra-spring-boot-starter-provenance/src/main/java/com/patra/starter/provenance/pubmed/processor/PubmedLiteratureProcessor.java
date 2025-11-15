@@ -54,7 +54,7 @@ import org.springframework.lang.Nullable;
  * <p><strong>架构位置</strong>：
  *
  * <pre>
- * DataSourceProvider (PubmedDataSourceProvider)
+ * ProvenanceDataProvider (PubmedDataProvider)
  *     ↓ 委托
  * DataProcessor (PubmedLiteratureProcessor) ← [本类]
  *     ↓ 调用
