@@ -20,19 +20,23 @@ import java.util.List;
  * <p><b>支持的响应格式:</b>
  *
  * <ul>
- *   <li><b>XML文章详情</b>: 包含完整的 PubmedLiterature 对象列表
+ *   <li><b>XML文章详情</b>: 包含完整的 PubmedLiterature 对象列表，根元素为 &lt;PubmedArticleSet&gt;
  *   <li><b>纯文本UID列表</b>: 仅包含标识符列表,用于轻量级批量处理
  * </ul>
+ *
+ * <p><b>重要说明</b>: PubMed E-utilities API 返回的XML根元素是 {@code <PubmedArticleSet>}，
+ * 每个文献记录标签为 {@code <PubmedArticle>}。参见:
+ * https://www.ncbi.nlm.nih.gov/books/NBK25499/
  *
  * @author linqibin
  * @since 0.1.0
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JacksonXmlRootElement(localName = "PubmedLiteratureSet")
+@JacksonXmlRootElement(localName = "PubmedArticleSet")
 public final class EFetchResponse {
 
   @JacksonXmlElementWrapper(useWrapping = false)
-  @JacksonXmlProperty(localName = "PubmedLiterature")
+  @JacksonXmlProperty(localName = "PubmedArticle")
   private List<PubmedLiterature> articles;
 
   @JsonIgnore private List<String> uids;
