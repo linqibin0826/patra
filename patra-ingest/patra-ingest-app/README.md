@@ -122,9 +122,10 @@ patra-ingest-app/
    │  │  ├─ OutboxPublishContext.java           # 发布上下文
    │  │  └─ OutboxPublishResult.java            # 发布结果
    │  ├─ constants/
-   │  │  ├─ OutboxAggregateTypes.java           # 聚合类型常量
-   │  │  ├─ OutboxChannels.java                 # 通道常量
-   │  │  └─ OutboxBusinessTags.java             # 业务标签常量
+   │  │  └─ OutboxAggregateTypes.java           # 聚合类型常量
+   │  ├─ operations/                             # 操作类型枚举（v0.2.0）
+   │  │  ├─ TaskOperations.java                 # 任务操作类型（READY、FAILED、COMPLETED）
+   │  │  └─ LiteratureOperations.java           # 文献操作类型（DATA_READY）
    │  ├─ metrics/
    │  │  └─ OutboxMetrics.java                  # Outbox 指标
    │  └─ config/
@@ -372,6 +373,38 @@ public class BatchScheduleBuilder {
 5. 如果所有切片完成 → 更新计划状态为 COMPLETED
 
 **文件**: `eventhandler/TaskCompletedEventHandler.java`
+
+### Outbox 操作类型
+
+#### 操作类型枚举 (v0.2.0 新增)
+
+**设计理念**: Channel + OpType 模式
+- **粗粒度 Channel**: 一个资源一个 Topic（在 Domain 层定义，如 `INGEST_TASK`）
+- **细粒度 OpType**: 用 RocketMQ Tags 区分操作（在 App 层定义，如 `READY`、`FAILED`）
+
+**核心枚举**:
+- `TaskOperations`: 任务操作类型
+  - `READY`: 任务就绪，调度器已创建任务并排队等待执行
+  - （可扩展：`FAILED`、`COMPLETED` 等）
+- `LiteratureOperations`: 文献操作类型
+  - `DATA_READY`: 文献数据就绪，采集批次已提交到对象存储
+  - （可扩展：`VALIDATED`、`INDEXED` 等）
+
+**使用示例**:
+```java
+// 在 TaskOutboxPublisher 中指定操作类型
+@Override
+protected OperationType getOperationType(TaskQueuedEvent event) {
+  return TaskOperations.READY;
+}
+
+// 最终 RocketMQ 消息
+// Topic: INGEST_TASK (来自 IngestPublishingChannels.TASK)
+// Tags: READY (来自 TaskOperations.READY)
+// Destination: "INGEST_TASK:READY"
+```
+
+**文件**: `outbox/operations/TaskOperations.java`, `outbox/operations/LiteratureOperations.java`
 
 ---
 

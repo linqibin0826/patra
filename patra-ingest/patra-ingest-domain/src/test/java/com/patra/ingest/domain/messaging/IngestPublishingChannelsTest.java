@@ -8,7 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-@DisplayName("IngestPublishingChannels 枚举测试")
+@DisplayName("IngestPublishingChannels 枚举测试（重构为两段式 Channel）")
 class IngestPublishingChannelsTest {
 
   @Nested
@@ -16,17 +16,17 @@ class IngestPublishingChannelsTest {
   class EnumConstantExistence {
 
     @Test
-    @DisplayName("应该包含 TASK_READY 枚举值")
-    void shouldContainTaskReadyConstant() {
+    @DisplayName("应该包含 TASK 枚举值")
+    void shouldContainTaskConstant() {
       // When & Then
-      assertThat(IngestPublishingChannels.TASK_READY).isNotNull();
+      assertThat(IngestPublishingChannels.TASK).isNotNull();
     }
 
     @Test
-    @DisplayName("应该包含 LITERATURE_DATA_READY 枚举值")
-    void shouldContainLiteratureDataReadyConstant() {
+    @DisplayName("应该包含 LITERATURE 枚举值")
+    void shouldContainLiteratureConstant() {
       // When & Then
-      assertThat(IngestPublishingChannels.LITERATURE_DATA_READY).isNotNull();
+      assertThat(IngestPublishingChannels.LITERATURE).isNotNull();
     }
 
     @Test
@@ -41,14 +41,14 @@ class IngestPublishingChannelsTest {
   }
 
   @Nested
-  @DisplayName("TASK_READY 枚举值测试")
-  class TaskReadyConstant {
+  @DisplayName("TASK 枚举值测试")
+  class TaskConstant {
 
     @Test
     @DisplayName("domain() 应该返回 'INGEST'")
     void domainShouldReturnIngest() {
       // When
-      String domain = IngestPublishingChannels.TASK_READY.domain();
+      String domain = IngestPublishingChannels.TASK.domain();
 
       // Then
       assertThat(domain).isEqualTo("INGEST");
@@ -58,37 +58,27 @@ class IngestPublishingChannelsTest {
     @DisplayName("resource() 应该返回 'TASK'")
     void resourceShouldReturnTask() {
       // When
-      String resource = IngestPublishingChannels.TASK_READY.resource();
+      String resource = IngestPublishingChannels.TASK.resource();
 
       // Then
       assertThat(resource).isEqualTo("TASK");
     }
 
     @Test
-    @DisplayName("event() 应该返回 'READY'")
-    void eventShouldReturnReady() {
-      // When
-      String event = IngestPublishingChannels.TASK_READY.event();
-
-      // Then
-      assertThat(event).isEqualTo("READY");
-    }
-
-    @Test
-    @DisplayName("channel() 应该返回 'INGEST_TASK_READY'")
+    @DisplayName("channel() 应该返回 'INGEST_TASK'")
     void channelShouldReturnFormattedName() {
       // When
-      String channel = IngestPublishingChannels.TASK_READY.channel();
+      String channel = IngestPublishingChannels.TASK.channel();
 
       // Then
-      assertThat(channel).isEqualTo("INGEST_TASK_READY");
+      assertThat(channel).isEqualTo("INGEST_TASK");
     }
 
     @Test
     @DisplayName("payloadType() 应该返回 TaskReadyMessage.class")
     void payloadTypeShouldReturnTaskReadyMessage() {
       // When
-      Class<?> payloadType = IngestPublishingChannels.TASK_READY.payloadType();
+      Class<?> payloadType = IngestPublishingChannels.TASK.payloadType();
 
       // Then
       assertThat(payloadType).isEqualTo(TaskReadyMessage.class);
@@ -96,14 +86,14 @@ class IngestPublishingChannelsTest {
   }
 
   @Nested
-  @DisplayName("LITERATURE_DATA_READY 枚举值测试")
-  class LiteratureDataReadyConstant {
+  @DisplayName("LITERATURE 枚举值测试")
+  class LiteratureConstant {
 
     @Test
     @DisplayName("domain() 应该返回 'INGEST'")
     void domainShouldReturnIngest() {
       // When
-      String domain = IngestPublishingChannels.LITERATURE_DATA_READY.domain();
+      String domain = IngestPublishingChannels.LITERATURE.domain();
 
       // Then
       assertThat(domain).isEqualTo("INGEST");
@@ -113,37 +103,27 @@ class IngestPublishingChannelsTest {
     @DisplayName("resource() 应该返回 'LITERATURE'")
     void resourceShouldReturnLiterature() {
       // When
-      String resource = IngestPublishingChannels.LITERATURE_DATA_READY.resource();
+      String resource = IngestPublishingChannels.LITERATURE.resource();
 
       // Then
       assertThat(resource).isEqualTo("LITERATURE");
     }
 
     @Test
-    @DisplayName("event() 应该返回 'DATA_READY'")
-    void eventShouldReturnDataReady() {
-      // When
-      String event = IngestPublishingChannels.LITERATURE_DATA_READY.event();
-
-      // Then
-      assertThat(event).isEqualTo("DATA_READY");
-    }
-
-    @Test
-    @DisplayName("channel() 应该返回 'INGEST_LITERATURE_DATA_READY'")
+    @DisplayName("channel() 应该返回 'INGEST_LITERATURE'")
     void channelShouldReturnFormattedName() {
       // When
-      String channel = IngestPublishingChannels.LITERATURE_DATA_READY.channel();
+      String channel = IngestPublishingChannels.LITERATURE.channel();
 
       // Then
-      assertThat(channel).isEqualTo("INGEST_LITERATURE_DATA_READY");
+      assertThat(channel).isEqualTo("INGEST_LITERATURE");
     }
 
     @Test
     @DisplayName("payloadType() 应该返回 LiteratureReadyMessage.class")
     void payloadTypeShouldReturnLiteratureReadyMessage() {
       // When
-      Class<?> payloadType = IngestPublishingChannels.LITERATURE_DATA_READY.payloadType();
+      Class<?> payloadType = IngestPublishingChannels.LITERATURE.payloadType();
 
       // Then
       assertThat(payloadType).isEqualTo(LiteratureReadyMessage.class);
@@ -155,68 +135,68 @@ class IngestPublishingChannelsTest {
   class FromChannelMethodSuccessCase {
 
     @Test
-    @DisplayName("应该解析 'INGEST_TASK_READY' 为 TASK_READY")
-    void shouldParseIngestTaskReady() {
+    @DisplayName("应该解析 'INGEST_TASK' 为 TASK")
+    void shouldParseIngestTask() {
       // Given
-      String channel = "INGEST_TASK_READY";
+      String channel = "INGEST_TASK";
 
       // When
       var result = IngestPublishingChannels.fromChannel(channel);
 
       // Then
-      assertThat(result).isPresent().contains(IngestPublishingChannels.TASK_READY);
+      assertThat(result).isPresent().contains(IngestPublishingChannels.TASK);
     }
 
     @Test
-    @DisplayName("应该解析 'INGEST_LITERATURE_DATA_READY' 为 LITERATURE_DATA_READY")
-    void shouldParseIngestLiteratureDataReady() {
+    @DisplayName("应该解析 'INGEST_LITERATURE' 为 LITERATURE")
+    void shouldParseIngestLiterature() {
       // Given
-      String channel = "INGEST_LITERATURE_DATA_READY";
+      String channel = "INGEST_LITERATURE";
 
       // When
       var result = IngestPublishingChannels.fromChannel(channel);
 
       // Then
-      assertThat(result).isPresent().contains(IngestPublishingChannels.LITERATURE_DATA_READY);
+      assertThat(result).isPresent().contains(IngestPublishingChannels.LITERATURE);
     }
 
     @Test
     @DisplayName("应该解析小写的通道名称")
     void shouldParseLowercaseChannelName() {
       // Given
-      String channel = "ingest_task_ready";
+      String channel = "ingest_task";
 
       // When
       var result = IngestPublishingChannels.fromChannel(channel);
 
       // Then
-      assertThat(result).isPresent().contains(IngestPublishingChannels.TASK_READY);
+      assertThat(result).isPresent().contains(IngestPublishingChannels.TASK);
     }
 
     @Test
     @DisplayName("应该解析混合大小写的通道名称")
     void shouldParseMixedCaseChannelName() {
       // Given
-      String channel = "InGeSt_TaSk_ReAdY";
+      String channel = "InGeSt_TaSk";
 
       // When
       var result = IngestPublishingChannels.fromChannel(channel);
 
       // Then
-      assertThat(result).isPresent().contains(IngestPublishingChannels.TASK_READY);
+      assertThat(result).isPresent().contains(IngestPublishingChannels.TASK);
     }
 
     @Test
     @DisplayName("应该修剪前导和尾随空白")
     void shouldTrimWhitespace() {
       // Given
-      String channel = "  INGEST_TASK_READY  ";
+      String channel = "  INGEST_TASK  ";
 
       // When
       var result = IngestPublishingChannels.fromChannel(channel);
 
       // Then
-      assertThat(result).isPresent().contains(IngestPublishingChannels.TASK_READY);
+      assertThat(result).isPresent().contains(IngestPublishingChannels.TASK);
     }
   }
 
@@ -277,16 +257,16 @@ class IngestPublishingChannelsTest {
     }
 
     @Test
-    @DisplayName("当通道名称部分匹配时应该返回 empty")
-    void shouldReturnEmptyForPartialMatch() {
+    @DisplayName("旧的三段式通道名称不再支持")
+    void shouldReturnEmptyForOldThreePartChannelName() {
       // Given
-      String channel = "INGEST_TASK";
+      String channel = "INGEST_TASK_READY";
 
       // When
       var result = IngestPublishingChannels.fromChannel(channel);
 
       // Then
-      assertThat(result).isEmpty();
+      assertThat(result).isEmpty(); // 不再支持三段式
     }
   }
 
@@ -298,38 +278,38 @@ class IngestPublishingChannelsTest {
     @DisplayName("valueOf 应该正确解析枚举名称")
     void valueOfShouldParseEnumName() {
       // When
-      IngestPublishingChannels result = IngestPublishingChannels.valueOf("TASK_READY");
+      IngestPublishingChannels result = IngestPublishingChannels.valueOf("TASK");
 
       // Then
-      assertThat(result).isEqualTo(IngestPublishingChannels.TASK_READY);
+      assertThat(result).isEqualTo(IngestPublishingChannels.TASK);
     }
 
     @Test
     @DisplayName("name() 应该返回枚举常量名称")
     void nameShouldReturnConstantName() {
       // When
-      String name = IngestPublishingChannels.TASK_READY.name();
+      String name = IngestPublishingChannels.TASK.name();
 
       // Then
-      assertThat(name).isEqualTo("TASK_READY");
+      assertThat(name).isEqualTo("TASK");
     }
 
     @Test
     @DisplayName("ordinal() 应该返回正确的索引")
     void ordinalShouldReturnCorrectIndex() {
       // Then
-      assertThat(IngestPublishingChannels.TASK_READY.ordinal()).isZero();
-      assertThat(IngestPublishingChannels.LITERATURE_DATA_READY.ordinal()).isEqualTo(1);
+      assertThat(IngestPublishingChannels.TASK.ordinal()).isZero();
+      assertThat(IngestPublishingChannels.LITERATURE.ordinal()).isEqualTo(1);
     }
 
     @Test
     @DisplayName("toString() 应该返回枚举常量名称")
     void toStringShouldReturnConstantName() {
       // When
-      String str = IngestPublishingChannels.TASK_READY.toString();
+      String str = IngestPublishingChannels.TASK.toString();
 
       // Then
-      assertThat(str).isEqualTo("TASK_READY");
+      assertThat(str).isEqualTo("TASK");
     }
   }
 
@@ -356,15 +336,12 @@ class IngestPublishingChannelsTest {
     }
 
     @Test
-    @DisplayName("所有枚举值的 channel() 应该包含 domain、resource 和 event")
+    @DisplayName("所有枚举值的 channel() 应该包含 domain 和 resource")
     void allChannelsShouldContainAllParts() {
       // When & Then
       for (IngestPublishingChannels channel : IngestPublishingChannels.values()) {
         String channelName = channel.channel();
-        assertThat(channelName)
-            .contains(channel.domain())
-            .contains(channel.resource())
-            .contains(channel.event());
+        assertThat(channelName).contains(channel.domain()).contains(channel.resource());
       }
     }
 
@@ -386,20 +363,20 @@ class IngestPublishingChannelsTest {
     @DisplayName("应该正确实现 ChannelKey 接口")
     void shouldImplementChannelKeyInterface() {
       // Given
-      IngestPublishingChannels channel = IngestPublishingChannels.TASK_READY;
+      IngestPublishingChannels channel = IngestPublishingChannels.TASK;
 
       // Then
       assertThat(channel).isInstanceOf(com.patra.common.messaging.ChannelKey.class);
     }
 
     @Test
-    @DisplayName("channel() 方法应该按 DOMAIN_RESOURCE_EVENT 格式生成通道名")
+    @DisplayName("channel() 方法应该按 DOMAIN_RESOURCE 格式生成通道名")
     void channelMethodShouldFollowNamingPattern() {
       // Given
-      IngestPublishingChannels channel = IngestPublishingChannels.TASK_READY;
+      IngestPublishingChannels channel = IngestPublishingChannels.TASK;
 
       // When
-      String expected = channel.domain() + "_" + channel.resource() + "_" + channel.event();
+      String expected = channel.domain() + "_" + channel.resource();
       String actual = channel.channel();
 
       // Then
@@ -412,29 +389,29 @@ class IngestPublishingChannelsTest {
   class BidirectionalMappingConsistency {
 
     @Test
-    @DisplayName("TASK_READY.channel() 应该能被 fromChannel() 解析回来")
-    void taskReadyChannelShouldBeParsableBack() {
+    @DisplayName("TASK.channel() 应该能被 fromChannel() 解析回来")
+    void taskChannelShouldBeParsableBack() {
       // Given
-      String channel = IngestPublishingChannels.TASK_READY.channel();
+      String channel = IngestPublishingChannels.TASK.channel();
 
       // When
       var result = IngestPublishingChannels.fromChannel(channel);
 
       // Then
-      assertThat(result).isPresent().contains(IngestPublishingChannels.TASK_READY);
+      assertThat(result).isPresent().contains(IngestPublishingChannels.TASK);
     }
 
     @Test
-    @DisplayName("LITERATURE_DATA_READY.channel() 应该能被 fromChannel() 解析回来")
-    void literatureDataReadyChannelShouldBeParsableBack() {
+    @DisplayName("LITERATURE.channel() 应该能被 fromChannel() 解析回来")
+    void literatureChannelShouldBeParsableBack() {
       // Given
-      String channel = IngestPublishingChannels.LITERATURE_DATA_READY.channel();
+      String channel = IngestPublishingChannels.LITERATURE.channel();
 
       // When
       var result = IngestPublishingChannels.fromChannel(channel);
 
       // Then
-      assertThat(result).isPresent().contains(IngestPublishingChannels.LITERATURE_DATA_READY);
+      assertThat(result).isPresent().contains(IngestPublishingChannels.LITERATURE);
     }
 
     @Test

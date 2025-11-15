@@ -176,15 +176,18 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
    * 构建 RocketMQ destination 字符串。
    *
    * <p>格式: "topic:tags"
+   * <p>注意：opType 是 NOT NULL，所以始终会添加 tags
    *
-   * @param topic Topic 名称
-   * @param tags Tags (opType)
-   * @return destination 字符串
+   * @param topic Topic 名称（粗粒度 Channel，如 INGEST_TASK）
+   * @param tags Tags（操作类型，如 READY、FAILED）
+   * @return destination 字符串（如 "INGEST_TASK:READY"）
    */
   private String buildDestination(String topic, String tags) {
+    // opType 是 NOT NULL，理论上始终有 tags
     if (StringUtils.hasText(tags)) {
       return topic + ":" + tags;
     }
+    // 防御性代码：如果 tags 为空（不应该发生）
     return topic;
   }
 

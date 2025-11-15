@@ -5,11 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.outbox.config.OutboxPublisherProperties;
 import com.patra.ingest.app.outbox.constants.OutboxAggregateTypes;
-import com.patra.ingest.app.outbox.constants.OutboxBusinessTags;
-import com.patra.ingest.app.outbox.constants.OutboxChannels;
 import com.patra.ingest.app.outbox.core.AbstractOutboxPublisher;
 import com.patra.ingest.app.outbox.core.OutboxPublishContext;
 import com.patra.ingest.app.outbox.metrics.OutboxMetrics;
+import com.patra.ingest.app.outbox.operations.TaskOperations;
+import com.patra.ingest.domain.messaging.IngestPublishingChannels;
+import com.patra.ingest.domain.messaging.OperationType;
 import com.patra.ingest.domain.event.TaskQueuedEvent;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
@@ -136,8 +137,8 @@ public class TaskOutboxPublisher
   }
 
   @Override
-  protected OutboxChannels getChannel() {
-    return OutboxChannels.INGEST_TASK_READY;
+  protected IngestPublishingChannels getChannel() {
+    return IngestPublishingChannels.TASK;
   }
 
   @Override
@@ -185,8 +186,8 @@ public class TaskOutboxPublisher
   }
 
   @Override
-  protected OutboxBusinessTags getOperationType(TaskQueuedEvent event) {
-    return OutboxBusinessTags.TASK_READY;
+  protected OperationType getOperationType(TaskQueuedEvent event) {
+    return TaskOperations.READY;
   }
 
   @Override

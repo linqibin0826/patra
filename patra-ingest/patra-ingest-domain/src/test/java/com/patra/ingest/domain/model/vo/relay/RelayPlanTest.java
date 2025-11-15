@@ -20,7 +20,7 @@ class RelayPlanTest {
     @DisplayName("应该成功创建有效的 RelayPlan")
     void shouldCreateValidRelayPlan() {
       // Given: 准备有效的参数
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       Instant triggeredAt = Instant.parse("2025-01-01T10:00:00Z");
       int batchSize = 100;
       Duration leaseDuration = Duration.ofMinutes(5);
@@ -90,7 +90,7 @@ class RelayPlanTest {
     @DisplayName("应该拒绝 triggeredAt 为 null")
     void shouldRejectNullTriggeredAt() {
       // Given: triggeredAt 为 null
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       Instant triggeredAt = null;
 
       // When & Then: 应抛出 NullPointerException
@@ -114,7 +114,7 @@ class RelayPlanTest {
     @DisplayName("应该拒绝 leaseDuration 为 null")
     void shouldRejectNullLeaseDuration() {
       // Given: leaseDuration 为 null
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       Duration leaseDuration = null;
 
       // When & Then: 应抛出 NullPointerException
@@ -138,7 +138,7 @@ class RelayPlanTest {
     @DisplayName("应该拒绝 initialBackoff 为 null")
     void shouldRejectNullInitialBackoff() {
       // Given: initialBackoff 为 null
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       Duration initialBackoff = null;
 
       // When & Then: 应抛出 NullPointerException
@@ -162,7 +162,7 @@ class RelayPlanTest {
     @DisplayName("应该拒绝 maxBackoff 为 null")
     void shouldRejectNullMaxBackoff() {
       // Given: maxBackoff 为 null
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       Duration maxBackoff = null;
 
       // When & Then: 应抛出 NullPointerException
@@ -186,7 +186,7 @@ class RelayPlanTest {
     @DisplayName("应该拒绝 leaseOwner 为 null")
     void shouldRejectNullLeaseOwner() {
       // Given: leaseOwner 为 null
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       String leaseOwner = null;
 
       // When & Then: 应抛出 NullPointerException
@@ -210,7 +210,7 @@ class RelayPlanTest {
     @DisplayName("应该拒绝非正数的 batchSize（零）")
     void shouldRejectZeroBatchSize() {
       // Given: batchSize 为 0
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       int batchSize = 0;
 
       // When & Then: 应抛出 IllegalArgumentException
@@ -234,7 +234,7 @@ class RelayPlanTest {
     @DisplayName("应该拒绝非正数的 batchSize（负数）")
     void shouldRejectNegativeBatchSize() {
       // Given: batchSize 为负数
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       int batchSize = -10;
 
       // When & Then: 应抛出 IllegalArgumentException
@@ -258,7 +258,7 @@ class RelayPlanTest {
     @DisplayName("应该拒绝非正数的 maxAttempts（零）")
     void shouldRejectZeroMaxAttempts() {
       // Given: maxAttempts 为 0
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       int maxAttempts = 0;
 
       // When & Then: 应抛出 IllegalArgumentException
@@ -282,7 +282,7 @@ class RelayPlanTest {
     @DisplayName("应该拒绝非正数的 maxAttempts（负数）")
     void shouldRejectNegativeMaxAttempts() {
       // Given: maxAttempts 为负数
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       int maxAttempts = -5;
 
       // When & Then: 应抛出 IllegalArgumentException
@@ -306,7 +306,7 @@ class RelayPlanTest {
     @DisplayName("应该拒绝小于 1.0 的 backoffMultiplier")
     void shouldRejectBackoffMultiplierLessThanOne() {
       // Given: backoffMultiplier 小于 1.0
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       double backoffMultiplier = 0.5;
 
       // When & Then: 应抛出 IllegalArgumentException
@@ -330,7 +330,7 @@ class RelayPlanTest {
     @DisplayName("应该接受 backoffMultiplier 等于 1.0")
     void shouldAcceptBackoffMultiplierEqualsOne() {
       // Given: backoffMultiplier 等于 1.0
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       double backoffMultiplier = 1.0;
 
       // When: 创建 RelayPlan
@@ -354,7 +354,7 @@ class RelayPlanTest {
     @DisplayName("应该接受 batchSize 为 1（最小有效值）")
     void shouldAcceptMinimalBatchSize() {
       // Given: batchSize 为 1
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       int batchSize = 1;
 
       // When: 创建 RelayPlan
@@ -378,7 +378,7 @@ class RelayPlanTest {
     @DisplayName("应该接受 maxAttempts 为 1（最小有效值）")
     void shouldAcceptMinimalMaxAttempts() {
       // Given: maxAttempts 为 1
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       int maxAttempts = 1;
 
       // When: 创建 RelayPlan
@@ -407,7 +407,7 @@ class RelayPlanTest {
     @DisplayName("channel() 应该返回正确的通道键")
     void channelAccessorShouldReturnCorrectValue() {
       // Given: 创建带有特定 channel 的 RelayPlan
-      ChannelKey channel = createTestChannelKey("registry", "schema", "updated");
+      ChannelKey channel = createTestChannelKey("registry", "schema");
       RelayPlan plan = createValidRelayPlan(channel);
 
       // When: 访问 channel
@@ -417,7 +417,7 @@ class RelayPlanTest {
       assertThat(result).isEqualTo(channel);
       assertThat(result.domain()).isEqualTo("registry");
       assertThat(result.resource()).isEqualTo("schema");
-      assertThat(result.event()).isEqualTo("updated");
+      assertThat(result.channel()).isEqualTo("REGISTRY_SCHEMA");
     }
 
     @Test
@@ -438,7 +438,7 @@ class RelayPlanTest {
     void triggeredAtAccessorShouldReturnCorrectValue() {
       // Given: 创建带有特定 triggeredAt 的 RelayPlan
       Instant triggeredAt = Instant.parse("2025-06-15T14:30:00Z");
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       RelayPlan plan =
           new RelayPlan(
               channel,
@@ -463,7 +463,7 @@ class RelayPlanTest {
     void batchSizeAccessorShouldReturnCorrectValue() {
       // Given: 创建带有特定 batchSize 的 RelayPlan
       int batchSize = 500;
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       RelayPlan plan =
           new RelayPlan(
               channel,
@@ -488,7 +488,7 @@ class RelayPlanTest {
     void leaseDurationAccessorShouldReturnCorrectValue() {
       // Given: 创建带有特定 leaseDuration 的 RelayPlan
       Duration leaseDuration = Duration.ofMinutes(15);
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       RelayPlan plan =
           new RelayPlan(
               channel,
@@ -513,7 +513,7 @@ class RelayPlanTest {
     void maxAttemptsAccessorShouldReturnCorrectValue() {
       // Given: 创建带有特定 maxAttempts 的 RelayPlan
       int maxAttempts = 10;
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       RelayPlan plan =
           new RelayPlan(
               channel,
@@ -538,7 +538,7 @@ class RelayPlanTest {
     void initialBackoffAccessorShouldReturnCorrectValue() {
       // Given: 创建带有特定 initialBackoff 的 RelayPlan
       Duration initialBackoff = Duration.ofSeconds(5);
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       RelayPlan plan =
           new RelayPlan(
               channel,
@@ -563,7 +563,7 @@ class RelayPlanTest {
     void backoffMultiplierAccessorShouldReturnCorrectValue() {
       // Given: 创建带有特定 backoffMultiplier 的 RelayPlan
       double backoffMultiplier = 3.5;
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       RelayPlan plan =
           new RelayPlan(
               channel,
@@ -588,7 +588,7 @@ class RelayPlanTest {
     void maxBackoffAccessorShouldReturnCorrectValue() {
       // Given: 创建带有特定 maxBackoff 的 RelayPlan
       Duration maxBackoff = Duration.ofHours(1);
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       RelayPlan plan =
           new RelayPlan(
               channel,
@@ -613,7 +613,7 @@ class RelayPlanTest {
     void leaseOwnerAccessorShouldReturnCorrectValue() {
       // Given: 创建带有特定 leaseOwner 的 RelayPlan
       String leaseOwner = "worker-production-42";
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       RelayPlan plan =
           new RelayPlan(
               channel,
@@ -644,7 +644,7 @@ class RelayPlanTest {
       // Given: 创建 RelayPlan，触发时间为 10:00，租期为 5 分钟
       Instant triggeredAt = Instant.parse("2025-01-01T10:00:00Z");
       Duration leaseDuration = Duration.ofMinutes(5);
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       RelayPlan plan =
           new RelayPlan(
               channel,
@@ -670,7 +670,7 @@ class RelayPlanTest {
       // Given: 创建 RelayPlan，触发时间为 10:00:00，租期为 30 秒
       Instant triggeredAt = Instant.parse("2025-01-01T10:00:00Z");
       Duration leaseDuration = Duration.ofSeconds(30);
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       RelayPlan plan =
           new RelayPlan(
               channel,
@@ -696,7 +696,7 @@ class RelayPlanTest {
       // Given: 创建 RelayPlan，触发时间为 10:00，租期为 2 小时
       Instant triggeredAt = Instant.parse("2025-01-01T10:00:00Z");
       Duration leaseDuration = Duration.ofHours(2);
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       RelayPlan plan =
           new RelayPlan(
               channel,
@@ -722,7 +722,7 @@ class RelayPlanTest {
       // Given: 创建 RelayPlan，触发时间为 23:30，租期为 1 小时
       Instant triggeredAt = Instant.parse("2025-01-01T23:30:00Z");
       Duration leaseDuration = Duration.ofHours(1);
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       RelayPlan plan =
           new RelayPlan(
               channel,
@@ -748,7 +748,7 @@ class RelayPlanTest {
       // Given: 创建 RelayPlan，租期为零（虽然业务上不太可能）
       Instant triggeredAt = Instant.parse("2025-01-01T10:00:00Z");
       Duration leaseDuration = Duration.ZERO;
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       RelayPlan plan =
           new RelayPlan(
               channel,
@@ -777,7 +777,7 @@ class RelayPlanTest {
     @DisplayName("equals() 应该在所有字段相同时返回 true")
     void equalsShouldReturnTrueWhenAllFieldsAreEqual() {
       // Given: 创建两个字段完全相同的 RelayPlan
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       Instant triggeredAt = Instant.parse("2025-01-01T10:00:00Z");
       RelayPlan plan1 =
           new RelayPlan(
@@ -811,8 +811,8 @@ class RelayPlanTest {
     @DisplayName("equals() 应该在 channel 不同时返回 false")
     void equalsShouldReturnFalseWhenChannelDiffers() {
       // Given: 创建两个 channel 不同的 RelayPlan
-      ChannelKey channel1 = createTestChannelKey("ingest", "task", "ready");
-      ChannelKey channel2 = createTestChannelKey("registry", "schema", "updated");
+      ChannelKey channel1 = createTestChannelKey("ingest", "task");
+      ChannelKey channel2 = createTestChannelKey("registry", "schema");
       Instant triggeredAt = Instant.parse("2025-01-01T10:00:00Z");
       RelayPlan plan1 =
           new RelayPlan(
@@ -845,7 +845,7 @@ class RelayPlanTest {
     @DisplayName("equals() 应该在 channel 为 null 与非 null 时返回 false")
     void equalsShouldReturnFalseWhenChannelIsNullVsNonNull() {
       // Given: 创建一个 channel 为 null，另一个不为 null 的 RelayPlan
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       Instant triggeredAt = Instant.parse("2025-01-01T10:00:00Z");
       RelayPlan plan1 =
           new RelayPlan(
@@ -910,7 +910,7 @@ class RelayPlanTest {
     @DisplayName("equals() 应该在 triggeredAt 不同时返回 false")
     void equalsShouldReturnFalseWhenTriggeredAtDiffers() {
       // Given: 创建两个 triggeredAt 不同的 RelayPlan
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       Instant triggeredAt1 = Instant.parse("2025-01-01T10:00:00Z");
       Instant triggeredAt2 = Instant.parse("2025-01-01T11:00:00Z");
       RelayPlan plan1 =
@@ -944,7 +944,7 @@ class RelayPlanTest {
     @DisplayName("equals() 应该在 batchSize 不同时返回 false")
     void equalsShouldReturnFalseWhenBatchSizeDiffers() {
       // Given: 创建两个 batchSize 不同的 RelayPlan
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       Instant triggeredAt = Instant.parse("2025-01-01T10:00:00Z");
       RelayPlan plan1 =
           new RelayPlan(
@@ -977,7 +977,7 @@ class RelayPlanTest {
     @DisplayName("equals() 应该在 leaseOwner 不同时返回 false")
     void equalsShouldReturnFalseWhenLeaseOwnerDiffers() {
       // Given: 创建两个 leaseOwner 不同的 RelayPlan
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       Instant triggeredAt = Instant.parse("2025-01-01T10:00:00Z");
       RelayPlan plan1 =
           new RelayPlan(
@@ -1010,7 +1010,7 @@ class RelayPlanTest {
     @DisplayName("equals() 应该在比较自身时返回 true")
     void equalsShouldReturnTrueWhenComparingSameInstance() {
       // Given: 创建一个 RelayPlan
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       RelayPlan plan = createValidRelayPlan(channel);
 
       // When & Then: 与自身比较应该相等
@@ -1021,7 +1021,7 @@ class RelayPlanTest {
     @DisplayName("equals() 应该在比较 null 时返回 false")
     void equalsShouldReturnFalseWhenComparingWithNull() {
       // Given: 创建一个 RelayPlan
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       RelayPlan plan = createValidRelayPlan(channel);
 
       // When & Then: 与 null 比较应该不相等
@@ -1032,7 +1032,7 @@ class RelayPlanTest {
     @DisplayName("equals() 应该在比较不同类型对象时返回 false")
     void equalsShouldReturnFalseWhenComparingWithDifferentType() {
       // Given: 创建一个 RelayPlan 和一个字符串
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       RelayPlan plan = createValidRelayPlan(channel);
       String notAPlan = "not a RelayPlan";
 
@@ -1044,7 +1044,7 @@ class RelayPlanTest {
     @DisplayName("hashCode() 应该在相等的对象中返回相同的值")
     void hashCodeShouldBeEqualForEqualObjects() {
       // Given: 创建两个字段完全相同的 RelayPlan
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       Instant triggeredAt = Instant.parse("2025-01-01T10:00:00Z");
       RelayPlan plan1 =
           new RelayPlan(
@@ -1077,7 +1077,7 @@ class RelayPlanTest {
     @DisplayName("hashCode() 应该在不同对象中返回不同的值（通常情况）")
     void hashCodeShouldBeDifferentForDifferentObjects() {
       // Given: 创建两个字段不同的 RelayPlan
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       RelayPlan plan1 =
           new RelayPlan(
               channel,
@@ -1109,7 +1109,7 @@ class RelayPlanTest {
     @DisplayName("toString() 应该包含所有字段信息")
     void toStringShouldContainAllFields() {
       // Given: 创建一个 RelayPlan
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       Instant triggeredAt = Instant.parse("2025-01-01T10:00:00Z");
       RelayPlan plan =
           new RelayPlan(
@@ -1172,7 +1172,7 @@ class RelayPlanTest {
     @DisplayName("应该接受极大的 batchSize")
     void shouldAcceptVeryLargeBatchSize() {
       // Given: 创建一个 batchSize 为 Integer.MAX_VALUE 的 RelayPlan
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       int batchSize = Integer.MAX_VALUE;
       RelayPlan plan =
           new RelayPlan(
@@ -1194,7 +1194,7 @@ class RelayPlanTest {
     @DisplayName("应该接受极大的 maxAttempts")
     void shouldAcceptVeryLargeMaxAttempts() {
       // Given: 创建一个 maxAttempts 为 Integer.MAX_VALUE 的 RelayPlan
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       int maxAttempts = Integer.MAX_VALUE;
       RelayPlan plan =
           new RelayPlan(
@@ -1216,7 +1216,7 @@ class RelayPlanTest {
     @DisplayName("应该接受极大的 backoffMultiplier")
     void shouldAcceptVeryLargeBackoffMultiplier() {
       // Given: 创建一个 backoffMultiplier 为 Double.MAX_VALUE 的 RelayPlan
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       double backoffMultiplier = Double.MAX_VALUE;
       RelayPlan plan =
           new RelayPlan(
@@ -1238,7 +1238,7 @@ class RelayPlanTest {
     @DisplayName("应该接受空字符串作为 leaseOwner")
     void shouldAcceptEmptyStringAsLeaseOwner() {
       // Given: 创建一个 leaseOwner 为空字符串的 RelayPlan
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       String leaseOwner = "";
       RelayPlan plan =
           new RelayPlan(
@@ -1260,7 +1260,7 @@ class RelayPlanTest {
     @DisplayName("应该接受极小的 Instant（EPOCH）")
     void shouldAcceptEpochInstant() {
       // Given: 创建一个 triggeredAt 为 EPOCH 的 RelayPlan
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       Instant triggeredAt = Instant.EPOCH;
       RelayPlan plan =
           new RelayPlan(
@@ -1282,7 +1282,7 @@ class RelayPlanTest {
     @DisplayName("应该接受极大的 Duration")
     void shouldAcceptVeryLargeDuration() {
       // Given: 创建一个 leaseDuration 为 365 天的 RelayPlan
-      ChannelKey channel = createTestChannelKey("ingest", "task", "ready");
+      ChannelKey channel = createTestChannelKey("ingest", "task");
       Duration leaseDuration = Duration.ofDays(365);
       RelayPlan plan =
           new RelayPlan(
@@ -1302,7 +1302,7 @@ class RelayPlanTest {
   }
 
   // 辅助方法：创建测试用的 ChannelKey
-  private static ChannelKey createTestChannelKey(String domain, String resource, String event) {
+  private static ChannelKey createTestChannelKey(String domain, String resource) {
     return new ChannelKey() {
       @Override
       public String domain() {
@@ -1312,11 +1312,6 @@ class RelayPlanTest {
       @Override
       public String resource() {
         return resource;
-      }
-
-      @Override
-      public String event() {
-        return event;
       }
     };
   }

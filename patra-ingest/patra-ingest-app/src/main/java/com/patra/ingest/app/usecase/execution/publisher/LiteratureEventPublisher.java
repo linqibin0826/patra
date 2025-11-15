@@ -4,11 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.outbox.config.OutboxPublisherProperties;
 import com.patra.ingest.app.outbox.constants.OutboxAggregateTypes;
-import com.patra.ingest.app.outbox.constants.OutboxBusinessTags;
-import com.patra.ingest.app.outbox.constants.OutboxChannels;
 import com.patra.ingest.app.outbox.core.AbstractOutboxPublisher;
 import com.patra.ingest.app.outbox.core.OutboxPublishContext;
 import com.patra.ingest.app.outbox.metrics.OutboxMetrics;
+import com.patra.ingest.app.outbox.operations.LiteratureOperations;
+import com.patra.ingest.domain.messaging.IngestPublishingChannels;
+import com.patra.ingest.domain.messaging.OperationType;
 import com.patra.ingest.domain.event.LiteratureDataReadyEvent;
 import com.patra.ingest.domain.port.OutboxMessageRepository;
 import java.util.List;
@@ -54,8 +55,8 @@ public class LiteratureEventPublisher
   }
 
   @Override
-  protected OutboxChannels getChannel() {
-    return OutboxChannels.LITERATURE_DATA_READY;
+  protected IngestPublishingChannels getChannel() {
+    return IngestPublishingChannels.LITERATURE;
   }
 
   @Override
@@ -100,8 +101,8 @@ public class LiteratureEventPublisher
   }
 
   @Override
-  protected OutboxBusinessTags getOperationType(LiteratureDataReadyEvent event) {
-    return OutboxBusinessTags.LITERATURE_DATA_READY;
+  protected OperationType getOperationType(LiteratureDataReadyEvent event) {
+    return LiteratureOperations.DATA_READY;
   }
 
   @Override

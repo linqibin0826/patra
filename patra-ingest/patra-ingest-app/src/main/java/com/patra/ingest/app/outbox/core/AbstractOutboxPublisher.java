@@ -3,9 +3,9 @@ package com.patra.ingest.app.outbox.core;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.app.outbox.config.OutboxPublisherProperties;
 import com.patra.ingest.app.outbox.constants.OutboxAggregateTypes;
-import com.patra.ingest.app.outbox.constants.OutboxBusinessTags;
-import com.patra.ingest.app.outbox.constants.OutboxChannels;
 import com.patra.ingest.app.outbox.metrics.OutboxMetrics;
+import com.patra.ingest.domain.messaging.IngestPublishingChannels;
+import com.patra.ingest.domain.messaging.OperationType;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.outbox.OutboxHeaders;
 import com.patra.ingest.domain.outbox.OutboxPayload;
@@ -56,13 +56,13 @@ import org.springframework.transaction.annotation.Transactional;
  *     }
  *
  *     @Override
- *     protected OutboxChannels getChannel() {
- *         return OutboxChannels.INGEST_TASK_READY;
+ *     protected IngestPublishingChannels getChannel() {
+ *         return IngestPublishingChannels.TASK;
  *     }
  *
  *     @Override
- *     protected OutboxBusinessTags getOperationType(TaskQueuedEvent event) {
- *         return OutboxBusinessTags.TASK_READY;
+ *     protected OperationType getOperationType(TaskQueuedEvent event) {
+ *         return TaskOperations.READY;
  *     }
  *
  *     @Override
@@ -168,9 +168,9 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
    *
    * <p>用于路由和去重作用域(唯一约束: channel + dedupKey)。
    *
-   * @return 来自 {@link OutboxChannels} 的通道
+   * @return 来自 {@link IngestPublishingChannels} 的通道
    */
-  protected abstract OutboxChannels getChannel();
+  protected abstract IngestPublishingChannels getChannel();
 
   /**
    * 从事件构建消息负载。
@@ -217,14 +217,14 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
   protected abstract String buildDedupKey(E event, OutboxPublishContext ctx);
 
   /**
-   * 返回事件的业务语义标签。
+   * 返回事件的操作类型。
    *
-   * <p>从业务角度表示"发生了什么"(例如 TASK_READY、PLAN_CREATED),而不是通用的 CRUD 操作。
+   * <p>从业务角度表示"发生了什么"(例如 TASK_READY、LITERATURE_DATA_READY),而不是通用的 CRUD 操作。
    *
    * @param event 领域事件
-   * @return 来自 {@link OutboxBusinessTags} 的业务标签
+   * @return 操作类型枚举（如 TaskOperations.READY、LiteratureOperations.DATA_READY）
    */
-  protected abstract OutboxBusinessTags getOperationType(E event);
+  protected abstract OperationType getOperationType(E event);
 
   /**
    * 从事件中提取聚合 ID。
@@ -380,7 +380,7 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
       return OutboxMessage.builder()
           .aggregateType(getAggregateType().getCode())
           .aggregateId(getAggregateId(event))
-          .channel(getChannel().getCode())
+          .channel(getChannel().channel())
           .opType(getOperationType(event).getCode())
           .partitionKey(partitionKey)
           .dedupKey(dedupKey)

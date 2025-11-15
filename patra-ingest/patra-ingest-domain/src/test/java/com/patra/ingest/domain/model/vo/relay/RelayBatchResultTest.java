@@ -38,7 +38,7 @@ class RelayBatchResultTest {
     @DisplayName("应该成功创建包含所有字段的 RelayBatchResult")
     void shouldCreateRelayBatchResultWithAllFields() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
       var events = createSampleEvents();
 
       // When
@@ -65,7 +65,7 @@ class RelayBatchResultTest {
     @DisplayName("应该创建零计数的 RelayBatchResult")
     void shouldCreateRelayBatchResultWithZeroCounts() {
       // Given
-      var channel = IngestPublishingChannels.LITERATURE_DATA_READY;
+      var channel = IngestPublishingChannels.LITERATURE;
 
       // When
       var result = new RelayBatchResult(channel, 0, 0, 0, 0, 0, Collections.emptyList());
@@ -84,7 +84,7 @@ class RelayBatchResultTest {
     @DisplayName("应该接受 null events 并转换为空列表")
     void shouldHandleNullEventsAsEmptyList() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
 
       // When
       var result = new RelayBatchResult(channel, 5, 5, 0, 0, 0, null);
@@ -97,7 +97,7 @@ class RelayBatchResultTest {
     @DisplayName("应该对 events 列表进行防御性复制")
     void shouldPerformDefensiveCopyOfEventsList() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
       var mutableEvents = new ArrayList<OutboxRelayDomainEvent>();
       mutableEvents.add(
           new OutboxMessagePublishedEvent(1L, "INGEST_TASK_READY", "partition-1", Instant.now()));
@@ -121,7 +121,7 @@ class RelayBatchResultTest {
     @DisplayName("应该返回不可修改的 events 列表")
     void shouldReturnUnmodifiableEventsList() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
       var events = createSampleEvents();
       var result = new RelayBatchResult(channel, 3, 3, 0, 0, 0, events);
 
@@ -138,7 +138,7 @@ class RelayBatchResultTest {
     @DisplayName("channel() 应该返回正确的通道键")
     void channelShouldReturnCorrectChannelKey() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
       var result = new RelayBatchResult(channel, 0, 0, 0, 0, 0, List.of());
 
       // When
@@ -151,7 +151,7 @@ class RelayBatchResultTest {
               ch -> {
                 assertThat(ch.domain()).isEqualTo("INGEST");
                 assertThat(ch.resource()).isEqualTo("TASK");
-                assertThat(ch.event()).isEqualTo("READY");
+                assertThat(ch.channel()).isEqualTo("INGEST_TASK");
               });
     }
 
@@ -160,7 +160,7 @@ class RelayBatchResultTest {
     void fetchedShouldReturnFetchedCount() {
       // Given
       var result =
-          new RelayBatchResult(IngestPublishingChannels.TASK_READY, 100, 95, 3, 2, 5, List.of());
+          new RelayBatchResult(IngestPublishingChannels.TASK, 100, 95, 3, 2, 5, List.of());
 
       // When & Then
       assertThat(result.fetched()).isEqualTo(100);
@@ -171,7 +171,7 @@ class RelayBatchResultTest {
     void publishedShouldReturnPublishedCount() {
       // Given
       var result =
-          new RelayBatchResult(IngestPublishingChannels.TASK_READY, 100, 95, 3, 2, 5, List.of());
+          new RelayBatchResult(IngestPublishingChannels.TASK, 100, 95, 3, 2, 5, List.of());
 
       // When & Then
       assertThat(result.published()).isEqualTo(95);
@@ -182,7 +182,7 @@ class RelayBatchResultTest {
     void retriedShouldReturnRetriedCount() {
       // Given
       var result =
-          new RelayBatchResult(IngestPublishingChannels.TASK_READY, 100, 95, 3, 2, 5, List.of());
+          new RelayBatchResult(IngestPublishingChannels.TASK, 100, 95, 3, 2, 5, List.of());
 
       // When & Then
       assertThat(result.retried()).isEqualTo(3);
@@ -193,7 +193,7 @@ class RelayBatchResultTest {
     void failedShouldReturnFailedCount() {
       // Given
       var result =
-          new RelayBatchResult(IngestPublishingChannels.TASK_READY, 100, 95, 3, 2, 5, List.of());
+          new RelayBatchResult(IngestPublishingChannels.TASK, 100, 95, 3, 2, 5, List.of());
 
       // When & Then
       assertThat(result.failed()).isEqualTo(2);
@@ -204,7 +204,7 @@ class RelayBatchResultTest {
     void leaseMissedShouldReturnLeaseMissedCount() {
       // Given
       var result =
-          new RelayBatchResult(IngestPublishingChannels.TASK_READY, 100, 95, 3, 2, 5, List.of());
+          new RelayBatchResult(IngestPublishingChannels.TASK, 100, 95, 3, 2, 5, List.of());
 
       // When & Then
       assertThat(result.leaseMissed()).isEqualTo(5);
@@ -215,7 +215,7 @@ class RelayBatchResultTest {
     void eventsShouldReturnDomainEventsList() {
       // Given
       var events = createSampleEvents();
-      var result = new RelayBatchResult(IngestPublishingChannels.TASK_READY, 3, 3, 0, 0, 0, events);
+      var result = new RelayBatchResult(IngestPublishingChannels.TASK, 3, 3, 0, 0, 0, events);
 
       // When
       var actualEvents = result.events();
@@ -241,7 +241,7 @@ class RelayBatchResultTest {
                   3L, "INGEST_TASK_READY", 3, "PUBLISH_ERROR", "Failed to publish", now),
               new OutboxLeaseMissedEvent(4L, "INGEST_TASK_READY", "relay-1", "relay-2", now));
 
-      var result = new RelayBatchResult(IngestPublishingChannels.TASK_READY, 4, 2, 0, 1, 1, events);
+      var result = new RelayBatchResult(IngestPublishingChannels.TASK, 4, 2, 0, 1, 1, events);
 
       // When
       var actualEvents = result.events();
@@ -262,7 +262,7 @@ class RelayBatchResultTest {
     @DisplayName("empty() 应该创建所有计数为零的空结果")
     void emptyShouldCreateResultWithZeroCounts() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
 
       // When
       var result = RelayBatchResult.empty(channel);
@@ -281,8 +281,8 @@ class RelayBatchResultTest {
     @DisplayName("empty() 应该为不同通道创建独立的空结果")
     void emptyShouldCreateIndependentResultsForDifferentChannels() {
       // Given
-      var channel1 = IngestPublishingChannels.TASK_READY;
-      var channel2 = IngestPublishingChannels.LITERATURE_DATA_READY;
+      var channel1 = IngestPublishingChannels.TASK;
+      var channel2 = IngestPublishingChannels.LITERATURE;
 
       // When
       var result1 = RelayBatchResult.empty(channel1);
@@ -298,7 +298,7 @@ class RelayBatchResultTest {
     @DisplayName("empty() 应该返回不可修改的空事件列表")
     void emptyShouldReturnUnmodifiableEmptyEventsList() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
 
       // When
       var result = RelayBatchResult.empty(channel);
@@ -316,7 +316,7 @@ class RelayBatchResultTest {
     @DisplayName("equals() 应该在所有字段相同时返回 true")
     void equalsShouldReturnTrueWhenAllFieldsMatch() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
       var events = createSampleEvents();
 
       var result1 = new RelayBatchResult(channel, 10, 8, 1, 1, 2, events);
@@ -334,10 +334,10 @@ class RelayBatchResultTest {
       var events = List.<OutboxRelayDomainEvent>of();
 
       var result1 =
-          new RelayBatchResult(IngestPublishingChannels.TASK_READY, 10, 8, 1, 1, 2, events);
+          new RelayBatchResult(IngestPublishingChannels.TASK, 10, 8, 1, 1, 2, events);
       var result2 =
           new RelayBatchResult(
-              IngestPublishingChannels.LITERATURE_DATA_READY, 10, 8, 1, 1, 2, events);
+              IngestPublishingChannels.LITERATURE, 10, 8, 1, 1, 2, events);
 
       // When & Then
       assertThat(result1).isNotEqualTo(result2);
@@ -347,7 +347,7 @@ class RelayBatchResultTest {
     @DisplayName("equals() 应该在计数字段不同时返回 false")
     void equalsShouldReturnFalseWhenCountsDiffer() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
       var events = List.<OutboxRelayDomainEvent>of();
 
       var result1 = new RelayBatchResult(channel, 10, 8, 1, 1, 2, events);
@@ -361,7 +361,7 @@ class RelayBatchResultTest {
     @DisplayName("equals() 应该在 events 不同时返回 false")
     void equalsShouldReturnFalseWhenEventsDiffer() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
       var events1 = createSampleEvents();
       var events2 = List.<OutboxRelayDomainEvent>of();
 
@@ -378,7 +378,7 @@ class RelayBatchResultTest {
       // Given
       var result =
           new RelayBatchResult(
-              IngestPublishingChannels.TASK_READY, 10, 8, 1, 1, 2, createSampleEvents());
+              IngestPublishingChannels.TASK, 10, 8, 1, 1, 2, createSampleEvents());
 
       // When & Then
       assertThat(result).isEqualTo(result);
@@ -390,7 +390,7 @@ class RelayBatchResultTest {
       // Given
       var result =
           new RelayBatchResult(
-              IngestPublishingChannels.TASK_READY, 10, 8, 1, 1, 2, createSampleEvents());
+              IngestPublishingChannels.TASK, 10, 8, 1, 1, 2, createSampleEvents());
 
       // When & Then
       assertThat(result).isNotEqualTo(null);
@@ -402,7 +402,7 @@ class RelayBatchResultTest {
       // Given
       var result =
           new RelayBatchResult(
-              IngestPublishingChannels.TASK_READY, 10, 8, 1, 1, 2, createSampleEvents());
+              IngestPublishingChannels.TASK, 10, 8, 1, 1, 2, createSampleEvents());
 
       // When & Then
       assertThat(result).isNotEqualTo("not a RelayBatchResult");
@@ -412,7 +412,7 @@ class RelayBatchResultTest {
     @DisplayName("hashCode() 应该对相同的对象返回相同的值")
     void hashCodeShouldReturnSameValueForEqualObjects() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
       var events = createSampleEvents();
 
       var result1 = new RelayBatchResult(channel, 10, 8, 1, 1, 2, events);
@@ -426,7 +426,7 @@ class RelayBatchResultTest {
     @DisplayName("hashCode() 应该对不同的对象返回不同的值（高概率）")
     void hashCodeShouldReturnDifferentValueForDifferentObjects() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
       var events = createSampleEvents();
 
       var result1 = new RelayBatchResult(channel, 10, 8, 1, 1, 2, events);
@@ -440,7 +440,7 @@ class RelayBatchResultTest {
     @DisplayName("toString() 应该包含所有字段信息")
     void toStringShouldContainAllFieldInformation() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
       var result = new RelayBatchResult(channel, 10, 8, 1, 1, 2, List.of());
 
       // When
@@ -462,7 +462,7 @@ class RelayBatchResultTest {
     @DisplayName("toString() 应该对空结果返回有效字符串")
     void toStringShouldReturnValidStringForEmptyResult() {
       // Given
-      var result = RelayBatchResult.empty(IngestPublishingChannels.TASK_READY);
+      var result = RelayBatchResult.empty(IngestPublishingChannels.TASK);
 
       // When
       var toString = result.toString();
@@ -487,7 +487,7 @@ class RelayBatchResultTest {
     @DisplayName("应该正确表示全部成功的批次")
     void shouldRepresentFullySuccessfulBatch() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
       var publishedEvents =
           List.<OutboxRelayDomainEvent>of(
               new OutboxMessagePublishedEvent(1L, "INGEST_TASK_READY", "key-1", Instant.now()),
@@ -512,7 +512,7 @@ class RelayBatchResultTest {
     @DisplayName("应该正确表示部分失败的批次")
     void shouldRepresentPartiallyFailedBatch() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
       var now = Instant.now();
       var mixedEvents =
           List.<OutboxRelayDomainEvent>of(
@@ -542,7 +542,7 @@ class RelayBatchResultTest {
     @DisplayName("应该正确表示高租约竞争场景")
     void shouldRepresentHighLeaseContentionScenario() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
       var now = Instant.now();
       var leaseMissedEvents =
           List.<OutboxRelayDomainEvent>of(
@@ -564,7 +564,7 @@ class RelayBatchResultTest {
     @DisplayName("应该正确表示空批次（无消息可处理）")
     void shouldRepresentEmptyBatch() {
       // Given
-      var channel = IngestPublishingChannels.LITERATURE_DATA_READY;
+      var channel = IngestPublishingChannels.LITERATURE;
 
       // When
       var result = RelayBatchResult.empty(channel);
@@ -582,7 +582,7 @@ class RelayBatchResultTest {
     @DisplayName("应该正确表示重试场景")
     void shouldRepresentRetryScenario() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
       var now = Instant.now();
       var events =
           List.<OutboxRelayDomainEvent>of(
@@ -609,7 +609,7 @@ class RelayBatchResultTest {
     @DisplayName("应该处理最大整数计数值")
     void shouldHandleMaximumIntegerCounts() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
 
       // When
       var result =
@@ -634,7 +634,7 @@ class RelayBatchResultTest {
     @DisplayName("应该处理负数计数值（虽然在业务上不合理）")
     void shouldHandleNegativeCounts() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
 
       // When - Record 构造器允许负数,但业务层应该验证
       var result = new RelayBatchResult(channel, -1, -1, -1, -1, -1, List.of());
@@ -651,7 +651,7 @@ class RelayBatchResultTest {
     @DisplayName("应该处理大量事件")
     void shouldHandleLargeNumberOfEvents() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
       var now = Instant.now();
       var largeEventList = new ArrayList<OutboxRelayDomainEvent>();
       for (long i = 1; i <= 1000; i++) {
@@ -672,7 +672,7 @@ class RelayBatchResultTest {
     @DisplayName("应该处理空事件列表的多种形式")
     void shouldHandleVariousFormsOfEmptyEventsList() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
 
       // When & Then - null
       var result1 = new RelayBatchResult(channel, 0, 0, 0, 0, 0, null);
@@ -695,7 +695,7 @@ class RelayBatchResultTest {
     @DisplayName("应该处理单个事件的列表")
     void shouldHandleSingleEventList() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
       var event = new OutboxMessagePublishedEvent(1L, "INGEST_TASK_READY", "key-1", Instant.now());
 
       // When
@@ -709,7 +709,7 @@ class RelayBatchResultTest {
     @DisplayName("应该正确处理计数不一致的场景（业务上可能不合理但技术上允许）")
     void shouldHandleInconsistentCounts() {
       // Given
-      var channel = IngestPublishingChannels.TASK_READY;
+      var channel = IngestPublishingChannels.TASK;
       var events =
           List.<OutboxRelayDomainEvent>of(
               new OutboxMessagePublishedEvent(1L, "INGEST_TASK_READY", "key-1", Instant.now()));

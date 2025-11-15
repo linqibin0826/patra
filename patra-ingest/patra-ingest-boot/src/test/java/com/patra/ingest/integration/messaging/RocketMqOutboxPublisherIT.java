@@ -4,7 +4,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.*;
 import static org.awaitility.Awaitility.await;
 
-import com.patra.ingest.domain.messaging.MessageChannels;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.infra.messaging.RocketMqOutboxPublisher;
 import com.patra.ingest.integration.config.MySQLContainerInitializer;
@@ -124,7 +123,7 @@ class RocketMqOutboxPublisherIT {
     // 准备
     OutboxMessage outboxMsg =
         OutboxMessageTestBuilder.aValidPendingMessage()
-            .channel(MessageChannels.INGEST_TASK_READY)
+            .channel("INGEST_TASK")
             .dedupKey("test-001")
             .opType("CREATE")
             .payloadJson("{\"taskId\":1001,\"status\":\"READY\"}")
