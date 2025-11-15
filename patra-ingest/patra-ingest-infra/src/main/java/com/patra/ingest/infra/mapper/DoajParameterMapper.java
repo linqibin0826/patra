@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.ingest.domain.model.vo.batch.Batch;
-import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
+import com.patra.ingest.domain.model.vo.query.QuerySession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -44,7 +44,7 @@ public class DoajParameterMapper implements ProviderParameterMapper {
   }
 
   @Override
-  public JsonNode mapParameters(Batch batch, JsonNode baseParams, FetchMetadata metadata) {
+  public JsonNode mapParameters(Batch batch, JsonNode baseParams, QuerySession session) {
     ObjectMapper mapper = JsonMapperHolder.getObjectMapper();
 
     // 1. 复制基础参数或创建新的 ObjectNode

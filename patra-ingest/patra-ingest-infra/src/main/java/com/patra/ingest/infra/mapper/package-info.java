@@ -37,7 +37,7 @@
  * <pre>{@code
  * public interface ProviderParameterMapper {
  *     ProvenanceCode getSupportedProvenance();
- *     JsonNode mapParameters(Batch batch, JsonNode baseParams, FetchMetadata metadata);
+ *     JsonNode mapParameters(Batch batch, JsonNode baseParams, QuerySession metadata);
  * }
  * }</pre>
  *
@@ -120,7 +120,7 @@
  *     }
  *
  *     @Override
- *     public JsonNode mapParameters(Batch batch, JsonNode baseParams, FetchMetadata metadata) {
+ *     public JsonNode mapParameters(Batch batch, JsonNode baseParams, QuerySession metadata) {
  *         ObjectMapper mapper = JsonMapperHolder.getObjectMapper();
  *         ObjectNode params = baseParams != null && baseParams.isObject()
  *             ? ((ObjectNode) baseParams).deepCopy()

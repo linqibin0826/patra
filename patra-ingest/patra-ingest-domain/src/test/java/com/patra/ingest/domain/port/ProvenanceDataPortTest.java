@@ -8,6 +8,7 @@ import com.patra.common.model.DataType;
 import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import com.patra.ingest.domain.model.vo.query.QuerySession;
 import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult;
 import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult.ErrorType;
 import java.util.List;
@@ -50,10 +51,9 @@ class ProvenanceDataPortTest {
             Set.of(DataType.DRUG));
 
     @Override
-    public com.patra.ingest.domain.model.vo.fetch.FetchMetadata prepareFetchMetadata(
-        ExecutionContext context, DataType dataType) {
-      // Mock 实现：返回空的抓取元数据
-      return com.patra.ingest.domain.model.vo.fetch.FetchMetadata.empty(context.provenanceCode());
+    public QuerySession prepareQuerySession(ExecutionContext context, DataType dataType) {
+      // Mock 实现：返回空的查询会话
+      return QuerySession.empty(context.provenanceCode());
     }
 
     @Override
@@ -62,7 +62,7 @@ class ProvenanceDataPortTest {
         DataType dataType,
         TypeReference<T> typeRef,
         Batch batch,
-        com.patra.ingest.domain.model.vo.fetch.FetchMetadata fetchMetadata) {
+        QuerySession querySession) {
       // Mock 实现：返回空数据成功结果
       return DataFetchResult.success(List.of(), dataType, null);
     }
@@ -107,7 +107,7 @@ class ProvenanceDataPortTest {
               DataType.LITERATURE,
               typeRef,
               batch,
-              createTestMetadata(ProvenanceCode.PUBMED));
+              createTestSession(ProvenanceCode.PUBMED));
 
       // Then: 验证结果
       assertThat(result).isNotNull();
@@ -129,7 +129,7 @@ class ProvenanceDataPortTest {
       // When: 调用泛型方法
       DataFetchResult<DataType.Journal> result =
           port.fetchData(
-              context, DataType.JOURNAL, typeRef, batch, createTestMetadata(ProvenanceCode.DOAJ));
+              context, DataType.JOURNAL, typeRef, batch, createTestSession(ProvenanceCode.DOAJ));
 
       // Then: 验证结果
       assertThat(result).isNotNull();
@@ -150,7 +150,7 @@ class ProvenanceDataPortTest {
       // When: 调用泛型方法
       DataFetchResult<DataType.Drug> result =
           port.fetchData(
-              context, DataType.DRUG, typeRef, batch, createTestMetadata(ProvenanceCode.OPENALEX));
+              context, DataType.DRUG, typeRef, batch, createTestSession(ProvenanceCode.OPENALEX));
 
       // Then: 验证结果
       assertThat(result).isNotNull();
@@ -180,7 +180,7 @@ class ProvenanceDataPortTest {
               DataType.LITERATURE,
               typeRef,
               batch,
-              createTestMetadata(ProvenanceCode.PUBMED));
+              createTestSession(ProvenanceCode.PUBMED));
 
       // Then: 返回的 data 应该是 List<CanonicalLiterature>，而不是 List<Object>
       List<CanonicalLiterature> literatures = result.data();
@@ -203,7 +203,7 @@ class ProvenanceDataPortTest {
               DataType.LITERATURE,
               litTypeRef,
               batch,
-              createTestMetadata(ProvenanceCode.PUBMED));
+              createTestSession(ProvenanceCode.PUBMED));
 
       // When: 获取期刊数据
       TypeReference<DataType.Journal> journalTypeRef = new TypeReference<>() {};
@@ -213,7 +213,7 @@ class ProvenanceDataPortTest {
               DataType.JOURNAL,
               journalTypeRef,
               batch,
-              createTestMetadata(ProvenanceCode.DOAJ));
+              createTestSession(ProvenanceCode.DOAJ));
 
       // Then: 两种数据类型应该完全隔离
       assertThat(litResult.dataType()).isEqualTo(DataType.LITERATURE);
@@ -516,10 +516,9 @@ class ProvenanceDataPortTest {
         );
   }
 
-  /** 创建测试用的抓取元数据 */
-  private static com.patra.ingest.domain.model.vo.fetch.FetchMetadata createTestMetadata(
-      ProvenanceCode provenanceCode) {
-    return com.patra.ingest.domain.model.vo.fetch.FetchMetadata.empty(provenanceCode);
+  /** 创建测试用的查询会话 */
+  private static QuerySession createTestSession(ProvenanceCode provenanceCode) {
+    return QuerySession.empty(provenanceCode);
   }
 
   /** 创建 Mock 文献对象 */

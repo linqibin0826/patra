@@ -34,7 +34,7 @@
  *
  * <pre>
  * 1. 批次调度构建（BatchScheduleBuilder）
- *    ├─ 准备抓取元数据（ProvenanceDataPort）
+ *    ├─ 准备查询会话（ProvenanceDataPort）
  *    ├─ 根据 ProvenanceCode 选择对应策略
  *    └─ 生成批次列表
  *

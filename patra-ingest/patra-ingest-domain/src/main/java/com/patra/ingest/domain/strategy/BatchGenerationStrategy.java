@@ -3,13 +3,13 @@ package com.patra.ingest.domain.strategy;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
+import com.patra.ingest.domain.model.vo.query.QuerySession;
 import java.util.List;
 
 /**
  * 批次生成策略接口
  *
- * <p>职责：定义如何根据抓取元数据生成批次列表
+ * <p>职责：定义如何根据查询会话生成批次列表
  *
  * <p>设计原则：
  *
@@ -69,7 +69,7 @@ public interface BatchGenerationStrategy {
   ProvenanceCode getSupportedProvenanceCode();
 
   /**
-   * 根据抓取元数据生成批次列表
+   * 根据查询会话生成批次列表
    *
    * <p>批次生成规则由具体策略实现，可能包括：
    *
@@ -79,9 +79,9 @@ public interface BatchGenerationStrategy {
    *   <li>附加状态令牌（opaque，不解析其内容）
    * </ul>
    *
-   * @param metadata 抓取元数据（领域模型）
+   * @param session 查询会话（领域模型）
    * @param ctx 执行上下文（包含配置信息）
    * @return 批次列表
    */
-  List<Batch> generateBatches(FetchMetadata metadata, ExecutionContext ctx);
+  List<Batch> generateBatches(QuerySession session, ExecutionContext ctx);
 }

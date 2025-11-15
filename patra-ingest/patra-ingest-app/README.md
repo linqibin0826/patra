@@ -308,7 +308,7 @@ public ExecutionContext loadContext(Long taskId, Long runId) {
 - **开闭原则**: 新增数据源只需实现 BatchGenerationStrategy，零修改
 
 **构建流程**:
-1. 准备抓取元数据（调用 ProvenanceDataPort）
+1. 准备查询会话（调用 ProvenanceDataPort）
 2. 根据 ProvenanceCode 选择对应策略
 3. 使用策略生成批次列表
 4. 构建并返回 BatchSchedule
@@ -328,15 +328,15 @@ public class BatchScheduleBuilder {
     }
 
     public BatchSchedule build(ExecutionContext ctx) {
-        // 1. 准备抓取元数据
-        FetchMetadata metadata = provenanceDataPort.prepareFetchMetadata(ctx, ctx.dataType());
+        // 1. 准备查询会话
+        QuerySession session = provenanceDataPort.prepareQuerySession(ctx, ctx.dataType());
 
         // 2. 选择对应策略
-        ProvenanceCode code = metadata.provenanceCode();
+        ProvenanceCode code = session.provenanceCode();
         BatchGenerationStrategy strategy = strategyMap.get(code);
 
         // 3. 使用策略生成批次
-        List<Batch> batches = strategy.generateBatches(metadata, ctx);
+        List<Batch> batches = strategy.generateBatches(session, ctx);
 
         // 4. 构建并返回 BatchSchedule
         return new BatchSchedule(batches, ctx);

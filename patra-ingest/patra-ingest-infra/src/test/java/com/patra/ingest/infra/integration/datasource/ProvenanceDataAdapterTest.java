@@ -6,7 +6,7 @@ import static org.mockito.Mockito.*;
 
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.ingest.infra.integration.datasource.acl.FetchMetadataTranslator;
+import com.patra.ingest.infra.integration.datasource.acl.QuerySessionTranslator;
 import com.patra.ingest.infra.mapper.ProviderParameterMapperRegistry;
 import com.patra.starter.provenance.common.config.*;
 import com.patra.starter.provenance.common.provider.ProviderRegistry;
@@ -47,8 +47,8 @@ class ProvenanceDataAdapterTest {
   @BeforeEach
   void setUp() {
     // 注意: 此测试类仅测试 convertToProvenanceConfig 私有方法(HTTP配置转换)
-    // 该方法不使用 FetchMetadataTranslator 和 ProviderParameterMapperRegistry，因此传入真实实例和 Mock 即可
-    FetchMetadataTranslator translator = new FetchMetadataTranslator();
+    // 该方法不使用 QuerySessionTranslator 和 ProviderParameterMapperRegistry，因此传入真实实例和 Mock 即可
+    QuerySessionTranslator translator = new QuerySessionTranslator();
     adapter = new ProvenanceDataAdapter(providerRegistry, translator, mapperRegistry);
   }
 
@@ -78,7 +78,7 @@ class ProvenanceDataAdapterTest {
           new ProvenanceConfigSnapshot.WindowOffsetConfig(
               10L,
               1L,
-              "FETCH_METADATA",
+              "QUERY_SESSION",
               now,
               null,
               "SLIDING",
@@ -99,13 +99,13 @@ class ProvenanceDataAdapterTest {
 
       ProvenanceConfigSnapshot.PaginationConfig pagination =
           new ProvenanceConfigSnapshot.PaginationConfig(
-              20L, 1L, "FETCH_METADATA", now, null, "PAGE_NUMBER", 100, 10, "sort", 1);
+              20L, 1L, "QUERY_SESSION", now, null, "PAGE_NUMBER", 100, 10, "sort", 1);
 
       ProvenanceConfigSnapshot.HttpConfig http =
           new ProvenanceConfigSnapshot.HttpConfig(
               30L,
               1L,
-              "FETCH_METADATA",
+              "QUERY_SESSION",
               now,
               null,
               "{\"Accept\":\"application/json\"}",
@@ -121,13 +121,13 @@ class ProvenanceDataAdapterTest {
 
       ProvenanceConfigSnapshot.BatchingConfig batching =
           new ProvenanceConfigSnapshot.BatchingConfig(
-              40L, 1L, "FETCH_METADATA", now, null, 50, "ids", ",", 200);
+              40L, 1L, "QUERY_SESSION", now, null, 50, "ids", ",", 200);
 
       ProvenanceConfigSnapshot.RetryConfig retry =
           new ProvenanceConfigSnapshot.RetryConfig(
               50L,
               1L,
-              "FETCH_METADATA",
+              "QUERY_SESSION",
               now,
               null,
               3,
@@ -143,7 +143,7 @@ class ProvenanceDataAdapterTest {
               60000);
 
       ProvenanceConfigSnapshot.RateLimitConfig rateLimit =
-          new ProvenanceConfigSnapshot.RateLimitConfig(60L, 1L, "FETCH_METADATA", now, null, 10, 3);
+          new ProvenanceConfigSnapshot.RateLimitConfig(60L, 1L, "QUERY_SESSION", now, null, 10, 3);
 
       ProvenanceConfigSnapshot snapshot =
           new ProvenanceConfigSnapshot(

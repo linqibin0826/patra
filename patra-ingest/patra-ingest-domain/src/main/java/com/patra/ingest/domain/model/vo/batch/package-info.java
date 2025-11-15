@@ -22,7 +22,7 @@
  *     JsonNode params,        // ❌ 数据源特定参数（如 retstart/retmax）
  *     int offset,
  *     int limit,
- *     FetchMetadata metadata, // ❌ 技术元数据
+ *     QuerySession metadata,  // ❌ 技术元数据
  *     ExecutionContext context // ❌ 执行上下文
  * ) { }
  * }</pre>
@@ -98,7 +98,7 @@
  * JsonNode pubmedParams = pubmedMapper.mapParameters(
  *     batch,              // 纯领域模型
  *     baseParams,         // 基础参数
- *     fetchMetadata       // 会话令牌
+ *     querySession        // 会话令牌
  * );
  * // 结果: {"retstart": 0, "retmax": 500, "WebEnv": "...", "query_key": "..."}
  *

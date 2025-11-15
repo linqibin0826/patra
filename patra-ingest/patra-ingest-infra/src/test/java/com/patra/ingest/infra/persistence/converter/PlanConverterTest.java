@@ -39,7 +39,7 @@ class PlanConverterTest {
   private final PlanConverter converter = new PlanConverterImpl();
 
   private static final Long SCHEDULE_INSTANCE_ID = 1001L;
-  private static final String PLAN_KEY = "PUBMED:FETCH_METADATA:2025-01-01:2025-01-31";
+  private static final String PLAN_KEY = "PUBMED:QUERY_SESSION:2025-01-01:2025-01-31";
   private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final String OPERATION_CODE = "HARVEST";
   private static final String EXPR_PROTO_HASH = "proto-hash-123";

@@ -37,7 +37,7 @@ class CursorConverterTest {
   private final CursorConverter converter = new CursorConverterImpl();
 
   private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
-  private static final String OPERATION_CODE = "FETCH_METADATA";
+  private static final String OPERATION_CODE = "QUERY_SESSION";
   private static final String CURSOR_KEY = "updated_at";
   private static final String NAMESPACE_KEY = "pubmed:global";
   private static final String EXPR_HASH = "test-expr-hash";

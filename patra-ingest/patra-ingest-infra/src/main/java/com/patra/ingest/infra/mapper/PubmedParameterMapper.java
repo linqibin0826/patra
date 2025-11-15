@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.ingest.domain.model.vo.batch.Batch;
-import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
+import com.patra.ingest.domain.model.vo.query.QuerySession;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -29,8 +29,8 @@ import org.springframework.stereotype.Component;
  * <pre>{@code
  * batch.offset()  → retstart
  * batch.limit()   → retmax
- * metadata.stateToken("webEnv")    → WebEnv
- * metadata.stateToken("queryKey")  → query_key
+ * session.stateToken("webEnv")    → WebEnv
+ * session.stateToken("queryKey")  → query_key
  * }</pre>
  *
  * @author Patra Architecture Team
@@ -46,7 +46,7 @@ public class PubmedParameterMapper implements ProviderParameterMapper {
   }
 
   @Override
-  public JsonNode mapParameters(Batch batch, JsonNode baseParams, FetchMetadata metadata) {
+  public JsonNode mapParameters(Batch batch, JsonNode baseParams, QuerySession session) {
     ObjectMapper mapper = JsonMapperHolder.getObjectMapper();
 
     // 1. 复制基础参数或创建新的 ObjectNode
@@ -60,8 +60,8 @@ public class PubmedParameterMapper implements ProviderParameterMapper {
     params.put("retmax", batch.limit());
 
     // 3. 添加 History Server 会话令牌（如果有）
-    if (metadata.hasStateToken()) {
-      Map<String, String> stateToken = metadata.stateToken().orElseThrow();
+    if (session.hasStateToken()) {
+      Map<String, String> stateToken = session.stateToken().orElseThrow();
 
       String webEnv = stateToken.get("webEnv");
       String queryKey = stateToken.get("queryKey");
@@ -86,7 +86,7 @@ public class PubmedParameterMapper implements ProviderParameterMapper {
         batch.batchNo(),
         batch.offset(),
         batch.limit(),
-        metadata.hasStateToken());
+        session.hasStateToken());
 
     return params;
   }

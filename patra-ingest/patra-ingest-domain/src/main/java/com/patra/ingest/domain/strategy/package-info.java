@@ -22,11 +22,11 @@
  *
  * <h2>使用场景</h2>
  *
- * <p>UnifiedBatchScheduleBuilder 根据 FetchMetadata 类型选择对应策略：
+ * <p>UnifiedBatchScheduleBuilder 根据 QuerySession 类型选择对应策略：
  *
  * <ol>
- *   <li>调用 ProvenanceDataPort.prepareFetchMetadata() 获取抓取元数据
- *   <li>根据元数据类型（如 PubmedFetchMetadata）查找对应策略
+ *   <li>调用 ProvenanceDataPort.prepareQuerySession() 获取查询会话
+ *   <li>根据会话类型（如 PubmedQuerySession）查找对应策略
  *   <li>委托策略生成批次列表
  *   <li>返回 BatchSchedule 供执行阶段使用
  * </ol>

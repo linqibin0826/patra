@@ -143,7 +143,7 @@ public class ProvenanceDataAdapterImpl implements ProvenanceDataPort {
     private final ProviderRegistry providerRegistry;
 
     @Override
-    public PlanMetadata prepareFetchMetadata(ExecutionContext context, DataType dataType) {
+    public QuerySession prepareQuerySession(ExecutionContext context, DataType dataType) {
         // 1. 从注册表获取提供者
         ProvenanceDataProvider provider = providerRegistry.getProvider(
             context.provenanceCode(),
@@ -153,8 +153,8 @@ public class ProvenanceDataAdapterImpl implements ProvenanceDataPort {
         // 2. 构建提供者请求
         ProviderRequest request = buildProviderRequest(context);
 
-        // 3. 调用提供者准备计划
-        return provider.prepareFetchMetadata(request);
+        // 3. 调用提供者准备查询会话
+        return provider.prepareQuerySession(request);
     }
 
     @Override
@@ -342,10 +342,10 @@ public class CustomProvenanceDataProvider implements ProvenanceDataProvider {
     }
 
     @Override
-    public PlanMetadata prepareFetchMetadata(ProviderRequest request) {
-        // 实现计划准备逻辑
+    public QuerySession prepareQuerySession(ProviderRequest request) {
+        // 实现查询会话准备逻辑
         // ...
-        return new PlanMetadata(totalCount, sessionToken);
+        return new QuerySession(totalCount, sessionToken);
     }
 }
 ```

@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.ingest.domain.model.vo.batch.Batch;
-import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
+import com.patra.ingest.domain.model.vo.query.QuerySession;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -32,7 +32,7 @@ import org.springframework.stereotype.Component;
  *
  * <pre>{@code
  * batch.limit()  → pageSize
- * metadata.stateToken("cursorMark") → cursorMark（如果有）
+ * session.stateToken("cursorMark") → cursorMark（如果有）
  * }</pre>
  *
  * <p><strong>注意</strong>：EPMC 使用游标分页，不使用 offset。每次请求返回 nextCursorMark 用于下次请求。
@@ -52,7 +52,7 @@ public class EpmcParameterMapper implements ProviderParameterMapper {
   }
 
   @Override
-  public JsonNode mapParameters(Batch batch, JsonNode baseParams, FetchMetadata metadata) {
+  public JsonNode mapParameters(Batch batch, JsonNode baseParams, QuerySession session) {
     ObjectMapper mapper = JsonMapperHolder.getObjectMapper();
 
     // 1. 复制基础参数或创建新的 ObjectNode
@@ -67,8 +67,8 @@ public class EpmcParameterMapper implements ProviderParameterMapper {
     // 3. 添加游标令牌
     String cursorMark = DEFAULT_CURSOR; // 默认使用 "*"
 
-    if (metadata.hasStateToken()) {
-      Map<String, String> stateToken = metadata.stateToken().orElseThrow();
+    if (session.hasStateToken()) {
+      Map<String, String> stateToken = session.stateToken().orElseThrow();
       String storedCursor = stateToken.get("cursorMark");
 
       if (storedCursor != null && !storedCursor.isBlank()) {

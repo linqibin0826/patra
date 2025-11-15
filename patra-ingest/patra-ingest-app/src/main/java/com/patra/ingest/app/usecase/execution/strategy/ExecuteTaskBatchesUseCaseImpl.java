@@ -9,6 +9,7 @@ import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.batch.BatchResult;
 import com.patra.ingest.domain.model.vo.batch.BatchSchedule;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import com.patra.ingest.domain.model.vo.query.QuerySession;
 import com.patra.ingest.domain.port.TaskRunBatchRepository;
 import com.patra.ingest.domain.port.TaskRunRepository;
 import java.time.Instant;
@@ -116,8 +117,8 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
     int succeededCount = 0;
     int failedCount = 0;
 
-    // 从 BatchSchedule 中获取 fetchMetadata，用于传递给 BatchExecutor
-    com.patra.ingest.domain.model.vo.fetch.FetchMetadata fetchMetadata = schedule.fetchMetadata();
+    // 从 BatchSchedule 中获取 querySession，用于传递给 BatchExecutor
+    QuerySession querySession = schedule.querySession();
 
     for (Batch batch : schedule.batches()) {
       // 步骤4.1: 检查租约撤销状态
@@ -146,7 +147,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
 
       BatchResult result;
       try {
-        result = batchExecutor.execute(context, batch, fetchMetadata);
+        result = batchExecutor.execute(context, batch, querySession);
       } catch (Exception e) {
         log.error("批次执行失败 taskId={} runId={} batchNo={}", taskId, runId, batch.batchNo(), e);
         // 异常时创建失败结果

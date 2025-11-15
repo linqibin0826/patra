@@ -5,7 +5,7 @@ import com.patra.ingest.domain.exception.BatchSchedulingException;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.batch.BatchSchedule;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
+import com.patra.ingest.domain.model.vo.query.QuerySession;
 import com.patra.ingest.domain.port.ProvenanceDataPort;
 import com.patra.ingest.domain.strategy.BatchGenerationStrategy;
 import java.util.HashMap;
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
  * <p>职责：
  *
  * <ul>
- *   <li>准备抓取元数据（通过 ProvenanceDataPort）
+ *   <li>准备查询会话（通过 ProvenanceDataPort）
  *   <li>路由到对应的批次生成策略
  *   <li>构建完整的 BatchSchedule
  * </ul>
@@ -121,7 +121,7 @@ public class BatchScheduleBuilder {
    * <p>流程：
    *
    * <ol>
-   *   <li>准备抓取元数据（调用 ProvenanceDataPort）
+   *   <li>准备查询会话（调用 ProvenanceDataPort）
    *   <li>路由到对应的批次生成策略
    *   <li>生成批次列表
    *   <li>构建并返回 BatchSchedule
@@ -132,29 +132,29 @@ public class BatchScheduleBuilder {
    * @throws BatchSchedulingException 构建失败时抛出
    */
   public BatchSchedule build(ExecutionContext ctx) {
-    // 1. 使用统一端口准备抓取元数据（已通过防腐层翻译为领域模型）
-    FetchMetadata fetchMetadata;
+    // 1. 使用统一端口准备查询会话（已通过防腐层翻译为领域模型）
+    QuerySession querySession;
     try {
-      fetchMetadata = provenanceDataPort.prepareFetchMetadata(ctx, ctx.dataType());
+      querySession = provenanceDataPort.prepareQuerySession(ctx, ctx.dataType());
     } catch (RuntimeException ex) {
-      log.error("准备抓取元数据失败: provenance={}", ctx.provenanceCode(), ex);
-      throw new BatchSchedulingException("准备抓取元数据失败: " + ex.getMessage(), ex);
+      log.error("准备查询会话失败: provenance={}", ctx.provenanceCode(), ex);
+      throw new BatchSchedulingException("准备查询会话失败: " + ex.getMessage(), ex);
     }
 
-    if (fetchMetadata.totalRecords() == 0) {
-      log.info("抓取元数据为空: provenance={}", ctx.provenanceCode());
-      return BatchSchedule.empty(ctx, fetchMetadata);
+    if (querySession.totalRecords() == 0) {
+      log.info("查询会话为空: provenance={}", ctx.provenanceCode());
+      return BatchSchedule.empty(ctx, querySession);
     }
 
     log.info(
-        "抓取元数据已准备: provenance={}, dataType={}, totalRecords={}, hasStateToken={}",
+        "查询会话已准备: provenance={}, dataType={}, totalRecords={}, hasStateToken={}",
         ctx.provenanceCode(),
         ctx.dataType(),
-        fetchMetadata.totalRecords(),
-        fetchMetadata.hasStateToken());
+        querySession.totalRecords(),
+        querySession.hasStateToken());
 
     // 2. 根据 Provenance 代码选择对应策略
-    ProvenanceCode provenanceCode = fetchMetadata.provenanceCode();
+    ProvenanceCode provenanceCode = querySession.provenanceCode();
     BatchGenerationStrategy strategy = strategyMap.get(provenanceCode);
     if (strategy == null) {
       // 配置错误：直接抛出 IllegalStateException，不包装
@@ -164,7 +164,7 @@ public class BatchScheduleBuilder {
     // 3. 使用策略生成批次
     List<Batch> batches;
     try {
-      batches = strategy.generateBatches(fetchMetadata, ctx);
+      batches = strategy.generateBatches(querySession, ctx);
     } catch (RuntimeException ex) {
       log.error("批次生成失败: provenance={}", ctx.provenanceCode(), ex);
       throw new BatchSchedulingException("批次生成失败: " + ex.getMessage(), ex);
@@ -176,7 +176,7 @@ public class BatchScheduleBuilder {
         batches.size(),
         strategy.getClass().getSimpleName());
 
-    return new BatchSchedule(batches, ctx, fetchMetadata);
+    return new BatchSchedule(batches, ctx, querySession);
   }
 
   /**
