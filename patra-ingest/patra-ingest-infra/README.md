@@ -88,9 +88,7 @@ patra-ingest-infra/
    │  │     └─ QuerySessionTranslator.java # 查询会话转换器
    │  └─ storage/                      # 对象存储集成
    │     ├─ LiteratureStorageAdapter.java   # 文献存储适配器
-   │     ├─ StorageMetadataAdapter.java     # 存储元数据适配器
-   │     └─ acl/
-   │        └─ LiteratureConverter.java      # 文献数据转换器
+   │     └─ StorageMetadataAdapter.java     # 存储元数据适配器
    ├─ compiler/                       # 表达式编译器集成
    │  └─ ExpressionCompilerPortImpl.java    # 表达式编译器端口实现
    ├─ messaging/                      # 消息发布
@@ -419,7 +417,12 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
 
 #### LiteratureStorageAdapter (文献存储适配器)
 
-**职责**: 实现 `LiteratureStoragePort` 端口接口,上传文献数据到 MinIO/S3。
+**职责**: 实现 `LiteratureStoragePort` 端口接口,直接存储 `CanonicalLiterature` 到 MinIO/S3。
+
+**架构决策（2025-01-16）**：
+- ✅ 直接存储共享内核模型 `CanonicalLiterature`
+- ✅ 移除 ACL 转换层（无需 DTO 转换）
+- ✅ 保证存储数据与业务模型完全一致
 
 **核心方法**:
 ```java
@@ -427,39 +430,38 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
 @RequiredArgsConstructor
 public class LiteratureStorageAdapter implements LiteratureStoragePort {
 
-    private final MinioTemplate minioTemplate;
-    private final StorageProperties storageProperties;
+    private final ObjectMapper objectMapper;
+    private final ObjectStorageTemplate objectStorageTemplate;
+    private final StorageLocationResolver storageLocationResolver;
 
     @Override
-    public StorageUploadResult upload(StorageUploadRequest request) {
-        String bucket = storageProperties.getBucket();
-        String objectKey = buildObjectKey(request);
+    public StorageResult store(List<CanonicalLiterature> literature, StorageContext context) {
+        // 步骤 1: 序列化为 JSON（直接存储 CanonicalLiterature,保证数据完整性）
+        byte[] serialized = serializePayload(literature, context);
 
-        // 上传文件
-        minioTemplate.putObject(
-            bucket,
-            objectKey,
-            new ByteArrayInputStream(request.getContent()),
-            request.getContentType()
-        );
+        // 步骤 2: 计算校验和
+        Checksums checksums = calculateChecksums(serialized);
 
-        // 返回结果
-        return new StorageUploadResult(
-            bucket,
-            objectKey,
-            minioTemplate.getObjectUrl(bucket, objectKey)
-        );
-    }
+        // 步骤 3: 解析存储位置
+        StorageLocation location = resolveStorageLocation(context);
 
-    private String buildObjectKey(StorageUploadRequest request) {
-        return String.format("literature/%s/%s/%s.json",
-            request.getProvenanceCode(),
-            request.getOperationCode(),
-            request.getIdentifier()
-        );
+        // 步骤 4: 上传到对象存储
+        UploadResult uploadResult = uploadPayload(location, serialized, literature.size(), context);
+
+        return StorageResult.builder()
+            .storageKey(uploadResult.getStorageKey())
+            .bucketName(uploadResult.getBucketName())
+            .objectKey(uploadResult.getObjectKey())
+            .fileSize(uploadResult.getFileSize())
+            .md5(checksums.md5())
+            .sha256(checksums.sha256())
+            .literatureCount(literature.size())
+            .build();
     }
 }
 ```
+
+**存储格式**: 直接序列化 `List<CanonicalLiterature>` 为 JSON,无需转换。
 
 **文件**: `integration/storage/LiteratureStorageAdapter.java`
 
@@ -469,10 +471,8 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
 
 ### 上游依赖
 - `patra-ingest-domain`: 领域模型和端口接口
-- `patra-common-model`: 通用模型
-- `patra-catalog-api`: 目录 API
+- `patra-common-model`: 通用模型（包含 CanonicalLiterature）
 - `patra-registry-api`: Registry API(Feign 客户端)
-- `patra-storage-api`: 存储 API
 - `patra-spring-boot-starter-mybatis`: MyBatis Starter
 - `patra-spring-boot-starter-expr`: 表达式编译 Starter
 - `patra-spring-boot-starter-provenance`: Provenance Starter(提供 ProvenanceDataProvider)
