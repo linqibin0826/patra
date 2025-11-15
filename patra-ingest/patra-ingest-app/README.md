@@ -78,12 +78,9 @@ patra-ingest-app/
    │  │  │  └─ HeartbeatRenewalService.java     # 心跳续约服务
    │  │  ├─ strategy/
    │  │  │  ├─ ExecuteTaskBatchesUseCase.java   # 批次执行用例
-   │  │  │  ├─ planner/
-   │  │  │  │  ├─ BatchPlanner.java             # 批次调度器接口
-   │  │  │  │  ├─ BatchPlannerRegistry.java     # 规划器注册表
-   │  │  │  │  └─ UnifiedBatchPlanner.java      # 统一批次调度器(策略模式)
-   │  │  │  └─ batch/
-   │  │  │     └─ PubmedBatchGenerationStrategy.java  # PubMed 批次生成策略
+   │  │  │  └─ builder/                         # 批次构建器（策略模式）
+   │  │  │     ├─ BatchScheduleBuilder.java     # 批次调度构建器
+   │  │  │     └─ package-info.java             # 包文档
    │  │  ├─ cursor/
    │  │  │  └─ CursorAdvancer.java              # 游标推进器
    │  │  ├─ coordination/
@@ -298,6 +295,56 @@ public ExecutionContext loadContext(Long taskId, Long runId) {
 
 **文件**: `usecase/execution/session/ExecutionContextLoaderImpl.java`
 
+### 批次构建器
+
+#### BatchScheduleBuilder (批次调度构建器)
+
+**职责**: 使用策略模式管理多个 BatchGenerationStrategy，根据 ProvenanceCode 构建批次调度。
+
+**设计原则**:
+- **策略管理**: 通过 Map 管理所有 BatchGenerationStrategy 实现
+- **自动注册**: Spring 构造器注入自动收集所有策略
+- **开闭原则**: 新增数据源只需实现 BatchGenerationStrategy，零修改
+
+**构建流程**:
+1. 准备抓取元数据（调用 ProvenanceDataPort）
+2. 根据 ProvenanceCode 选择对应策略
+3. 使用策略生成批次列表
+4. 构建并返回 BatchSchedule
+
+**关键代码**:
+```java
+@Component
+public class BatchScheduleBuilder {
+    private final ProvenanceDataPort provenanceDataPort;
+    private final Map<ProvenanceCode, BatchGenerationStrategy> strategyMap;
+
+    public BatchScheduleBuilder(
+            ProvenanceDataPort provenanceDataPort,
+            List<BatchGenerationStrategy> strategies) {
+        this.provenanceDataPort = provenanceDataPort;
+        this.strategyMap = buildStrategyMap(strategies);  // 自动发现策略
+    }
+
+    public BatchSchedule build(ExecutionContext ctx) {
+        // 1. 准备抓取元数据
+        FetchMetadata metadata = provenanceDataPort.prepareFetchMetadata(ctx, ctx.dataType());
+
+        // 2. 选择对应策略
+        ProvenanceCode code = metadata.provenanceCode();
+        BatchGenerationStrategy strategy = strategyMap.get(code);
+
+        // 3. 使用策略生成批次
+        List<Batch> batches = strategy.generateBatches(metadata, ctx);
+
+        // 4. 构建并返回 BatchSchedule
+        return new BatchSchedule(batches, ctx);
+    }
+}
+```
+
+**文件**: `usecase/execution/strategy/builder/BatchScheduleBuilder.java`
+
 ### 切片规划器
 
 #### SlicePlanner (切片规划器接口)
@@ -363,7 +410,8 @@ public ExecutionContext loadContext(Long taskId, Long runId) {
 
 使用策略接口支持多种实现:
 - `SlicePlanner`: 切片策略(TIME/DATE/SINGLE)
-- `BatchPlanner`: 批次调度策略(PubMed/EPMC/Crossref)
+- `BatchGenerationStrategy`: 批次生成策略(PubMed/EPMC/Crossref)
+- `BatchScheduleBuilder`: 管理所有批次生成策略
 
 ### 4. 模板方法模式 (Template Method Pattern)
 
@@ -433,7 +481,7 @@ public abstract class AbstractOutboxPublisher {
    - HeartbeatRenewalService 开始心跳
    ↓
 4. ExecuteTaskBatchesUseCase 执行批次
-   - BatchPlanner 规划批次
+   - BatchScheduleBuilder 构建批次调度
    - GenericBatchExecutor 执行批次
    - CursorAdvancer 推进游标
    ↓

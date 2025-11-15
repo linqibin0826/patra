@@ -4,7 +4,6 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.execution.coordination.GenericBatchExecutor;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import com.patra.ingest.app.usecase.execution.strategy.builder.BatchScheduleBuilder;
-import com.patra.ingest.app.usecase.execution.strategy.builder.BatchScheduleBuilderRegistry;
 import com.patra.ingest.domain.model.entity.TaskRunBatch;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.batch.BatchResult;
@@ -26,7 +25,7 @@ import org.springframework.stereotype.Service;
  * <p>设计要点:
  *
  * <ul>
- *   <li>通过 BatchScheduleBuilderRegistry 进行批次调度构建,构建批次列表
+ *   <li>通过 BatchScheduleBuilder 进行批次调度构建,构建批次列表
  *   <li>强制执行批次限制,超出时抛出异常
  *   <li>批次执行委托给 GenericBatchExecutor,由适配器注册表支持
  *   <li>通过 TaskRunBatchRepository 立即持久化每个批次结果
@@ -55,7 +54,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase {
 
-  private final BatchScheduleBuilderRegistry builderRegistry;
+  private final BatchScheduleBuilder batchScheduleBuilder;
   private final GenericBatchExecutor batchExecutor;
   private final TaskRunBatchRepository batchRepository;
   private final TaskRunRepository taskRunRepository;
@@ -97,8 +96,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
 
     // 步骤1: 构建批次调度表
     log.debug("构建批次调度中 taskId={} runId={} provenanceCode={}", taskId, runId, provenanceCode);
-    BatchScheduleBuilder builder = builderRegistry.get(provenanceCode);
-    BatchSchedule schedule = builder.build(context);
+    BatchSchedule schedule = batchScheduleBuilder.build(context);
 
     // 步骤2: 验证批次数量不超过限制
     if (schedule.exceedsLimit()) {
@@ -128,7 +126,9 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
           runId);
 
       // 如果租约被撤销,立即中止后续批次执行
-      if (session.heartbeatHandle() != null && session.heartbeatHandle().isLeaseRevoked()) {
+      // 注意: 提取到局部变量避免重复调用和潜在的线程安全问题
+      ExecutionSession.HeartbeatHandle heartbeatHandle = session.heartbeatHandle();
+      if (heartbeatHandle != null && heartbeatHandle.isLeaseRevoked()) {
         log.warn("租约已撤销,中止批次执行 taskId={} runId={} batchNo={}", taskId, runId, batch.batchNo());
         break;
       }
@@ -209,8 +209,15 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
     return new ExecuteResult(schedule.totalBatches(), succeededCount, failedCount);
   }
 
-  /** 批次数量超过限制异常。 */
+  /**
+   * 批次数量超过限制异常。
+   *
+   * <p>当生成的批次数量超过系统配置的最大限制时抛出此异常。
+   */
   public static class BatchLimitExceededException extends RuntimeException {
+
+    private static final long serialVersionUID = 1L;
+
     public BatchLimitExceededException(String message) {
       super(message);
     }
