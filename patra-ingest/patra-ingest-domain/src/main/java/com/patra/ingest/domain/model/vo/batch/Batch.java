@@ -17,7 +17,7 @@ package com.patra.ingest.domain.model.vo.batch;
  *
  * <ul>
  *   <li>{@code batchNo} >= 1
- *   <li>{@code query} 不能为空
+ *   <li>{@code query} 可以为 null 或空（某些数据源如 PubMed 允许仅使用日期过滤器而无搜索词）
  *   <li>{@code offset} >= 0
  *   <li>{@code limit} > 0
  * </ul>
@@ -46,9 +46,7 @@ public record Batch(int batchNo, String query, int offset, int limit) {
     if (batchNo < 1) {
       throw new IllegalArgumentException("batchNo must be >= 1, got: " + batchNo);
     }
-    if (query == null || query.isBlank()) {
-      throw new IllegalArgumentException("query must not be blank");
-    }
+    // query 可以为 null 或空：某些数据源（如 PubMed）允许仅使用日期过滤器而无搜索词
     if (offset < 0) {
       throw new IllegalArgumentException("offset must be >= 0, got: " + offset);
     }
