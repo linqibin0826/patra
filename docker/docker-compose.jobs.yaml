@@ -66,17 +66,96 @@ services:
 
         # 如果没有设置 BROKER_IP1 环境变量，则自动获取宿主机 IP
         if [ -z "$$BROKER_IP1" ]; then
-          # 方法 1: 尝试解析 host.docker.internal (适用于 Docker Desktop)
+          echo "开始自动检测宿主机 IP..."
+
+          # 方法 1: 通过 host.docker.internal 解析（Docker Desktop）
           BROKER_IP1=$$(getent hosts host.docker.internal 2>/dev/null | awk '{print $$1}')
 
-          # 方法 2: 如果方法 1 失败，尝试通过网关获取 (适用于 bridge 网络)
-          if [ -z "$$BROKER_IP1" ]; then
-            BROKER_IP1=$$(route -n | grep '^0.0.0.0' | awk '{print $$2}')
+          # 验证是否为有效的局域网 IP（192.168.x.x, 10.x.x.x, 172.16-31.x.x）
+          if [ -n "$$BROKER_IP1" ]; then
+            if echo "$$BROKER_IP1" | grep -qE '^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)'; then
+              echo "方法1成功: host.docker.internal -> $$BROKER_IP1"
+            else
+              echo "方法1失败: $$BROKER_IP1 不是有效的局域网 IP，忽略"
+              BROKER_IP1=""
+            fi
           fi
 
-          echo "Auto-detected host IP: $$BROKER_IP1"
+          # 方法 2: 通过 /proc/net/route 获取网关（兼容性更好）
+          if [ -z "$$BROKER_IP1" ] && [ -f "/proc/net/route" ]; then
+            # 从路由表获取默认网关
+            GATEWAY=$$(awk '$$2 == "00000000" {gateway = "0x" $$3; cmd="printf \"%d.%d.%d.%d\" " \
+              substr(gateway,7,2) " " substr(gateway,5,2) " " substr(gateway,3,2) " " substr(gateway,1,2); \
+              cmd | getline result; close(cmd); print result; exit}' /proc/net/route)
+
+            if [ -n "$$GATEWAY" ]; then
+              echo "检测到网关: $$GATEWAY"
+
+              # 如果网关是 172.17.0.1，说明是 Docker 默认 bridge，宿主机不在同一网段
+              if [ "$$GATEWAY" = "172.17.0.1" ]; then
+                echo "方法2跳过: 使用 Docker 默认 bridge 网络"
+              else
+                BROKER_IP1="$$GATEWAY"
+                echo "方法2成功: 使用网关 IP -> $$BROKER_IP1"
+              fi
+            fi
+          fi
+
+          # 方法 3: 检测容器自身 IP 并推断宿主机 IP（尝试网关地址 .1）
+          if [ -z "$$BROKER_IP1" ]; then
+            CONTAINER_IP=$$(hostname -i | awk '{print $$1}')
+            SUBNET=$$(echo $$CONTAINER_IP | cut -d'.' -f1-3)
+
+            echo "容器 IP: $$CONTAINER_IP, 子网: $$SUBNET.0/24"
+
+            # 尝试网关地址（通常是 .1）
+            GATEWAY_IP="$$SUBNET.1"
+            echo "尝试连接网关: $$GATEWAY_IP"
+
+            # 使用 timeout + cat 模拟端口检测（更通用）
+            if timeout 1 sh -c "cat < /dev/null > /dev/tcp/$$GATEWAY_IP/22" 2>/dev/null || \
+               timeout 1 sh -c "cat < /dev/null > /dev/tcp/$$GATEWAY_IP/80" 2>/dev/null; then
+              BROKER_IP1="$$GATEWAY_IP"
+              echo "方法3成功: 网关可访问 -> $$BROKER_IP1"
+            else
+              echo "方法3失败: 网关 $$GATEWAY_IP 不可访问"
+            fi
+          fi
+
+          # 方法 4: 使用 /proc/net/arp 查找网关 MAC 地址（Linux 特定）
+          if [ -z "$$BROKER_IP1" ] && [ -f "/proc/net/arp" ]; then
+            BROKER_IP1=$$(awk 'NR>1 && $$4!="00:00:00:00:00:00" {print $$1; exit}' /proc/net/arp)
+            if [ -n "$$BROKER_IP1" ]; then
+              echo "方法4成功: 从 ARP 表获取 -> $$BROKER_IP1"
+            fi
+          fi
+
+          # 如果所有方法都失败，或检测到的 IP 不合理，需要用户手动配置
+          if [ -z "$$BROKER_IP1" ]; then
+            echo ""
+            echo "❌ 无法自动检测宿主机 IP"
+            echo "================================================"
+            echo "容器网络和宿主机可能不在同一网段，请手动配置:"
+            echo ""
+            echo "1. 找到宿主机的局域网 IP:"
+            echo "   - macOS: ifconfig en0 | grep 'inet '"
+            echo "   - Linux: ip addr show | grep 'inet '"
+            echo "   - Windows: ipconfig"
+            echo ""
+            echo "2. 创建 docker/.env 文件并设置:"
+            echo "   BROKER_IP1=你的宿主机IP"
+            echo ""
+            echo "3. 重启 Broker:"
+            echo "   docker compose -p patra -f docker/docker-compose.jobs.yaml restart rocketmq-broker"
+            echo "================================================"
+            echo ""
+            BROKER_IP1="127.0.0.1"
+            echo "使用临时默认值: $$BROKER_IP1 (仅用于容器内部测试)"
+          else
+            echo "✅ 自动检测完成: $$BROKER_IP1"
+          fi
         else
-          echo "Using provided BROKER_IP1: $$BROKER_IP1"
+          echo "使用环境变量提供的 BROKER_IP1: $$BROKER_IP1"
         fi
 
         # 追加 brokerIP1 配置
