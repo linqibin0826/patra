@@ -7,7 +7,6 @@ import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
 import com.patra.ingest.domain.strategy.BatchGenerationStrategy;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -43,40 +42,19 @@ public class PubmedBatchGenerationStrategy implements BatchGenerationStrategy {
     String query = ctx.compiledQuery();
 
     log.debug(
-        "生成 PubMed 批次: totalRecords={}, batchSize={}, pageCount={}, hasStateToken={}",
+        "生成 PubMed 批次: totalRecords={}, batchSize={}, pageCount={}",
         totalRecords,
         batchSize,
-        pageCount,
-        metadata.hasStateToken());
+        pageCount);
 
-    // 检查是否有 History Server session token
-    if (metadata.hasStateToken()) {
-      // 使用 History Server 模式
-      Map<String, String> stateToken = metadata.stateToken().orElseThrow();
-      String webEnv = stateToken.get("webEnv");
-      String queryKey = stateToken.get("queryKey");
-
-      for (int i = 0; i < pageCount; i++) {
-        int pageNo = i + 1;
-        int startOffset = i * batchSize;
-
-        batches.add(
-            Batch.withPageAndSession(
-                pageNo, query, ctx.compiledParams(), startOffset, batchSize, webEnv, queryKey));
-      }
-
-      log.info("已生成 {} 个 PubMed 批次（使用 History Server: webEnv={}）", batches.size(), webEnv);
-    } else {
-      // 常规模式（无 session token）
-      for (int i = 0; i < pageCount; i++) {
-        int pageNo = i + 1;
-        int startOffset = i * batchSize;
-
-        batches.add(Batch.withPage(pageNo, query, ctx.compiledParams(), startOffset, batchSize));
-      }
-
-      log.info("已生成 {} 个 PubMed 批次（常规模式，无 History Server）", batches.size());
+    // 使用统一的批次计算逻辑（只包含 offset/limit，不包含数据源特定参数）
+    for (int i = 0; i < pageCount; i++) {
+      int batchNo = i + 1;
+      int offset = i * batchSize;
+      batches.add(new Batch(batchNo, query, offset, batchSize));
     }
+
+    log.info("已生成 {} 个 PubMed 批次", batches.size());
 
     return batches;
   }

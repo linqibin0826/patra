@@ -55,8 +55,7 @@ package com.patra.ingest.domain.messaging;
  * <ul>
  *   <li>Channel（如 {@code INGEST_TASK}）：资源级别，决定消息路由到哪个 Topic
  *   <li>OperationType（如 {@code READY}）：操作级别，描述对资源的具体操作
- *   <li>组合示例：{@code channel=INGEST_TASK, opType=READY} → RocketMQ: {@code
- *       INGEST_TASK:READY}
+ *   <li>组合示例：{@code channel=INGEST_TASK, opType=READY} → RocketMQ: {@code INGEST_TASK:READY}
  * </ul>
  *
  * @author linqibin

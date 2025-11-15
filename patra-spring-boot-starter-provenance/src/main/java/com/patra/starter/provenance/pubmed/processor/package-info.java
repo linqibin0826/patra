@@ -137,7 +137,9 @@
  * <h2>错误处理</h2>
  *
  * <ul>
- *   <li><b>客户端异常</b> - 捕获 {@link com.patra.starter.provenance.common.exception.ProvenanceClientException}，返回 ProcessResult.failure()
+ *   <li><b>客户端异常</b> - 捕获 {@link
+ *       com.patra.starter.provenance.common.exception.ProvenanceClientException}，返回
+ *       ProcessResult.failure()
  *   <li><b>转换失败</b> - 记录失败的 PMID，返回 ProcessResult.partialSuccess()
  *   <li><b>验证失败</b> - 过滤无效数据，记录警告日志
  *   <li><b>中断异常</b> - 处理 InterruptedException，恢复线程中断状态

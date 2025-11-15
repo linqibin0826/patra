@@ -563,10 +563,7 @@ class DataProcessorTest {
       // Given: 准备特定类型的客户端
       String mockClient = "PubMedClient";
       ProviderContext context =
-          ProviderContext.builder()
-              .config(createTestConfig())
-              .client(mockClient)
-              .build();
+          ProviderContext.builder().config(createTestConfig()).client(mockClient).build();
 
       // When: 获取客户端
       String client = context.getClient(String.class);
@@ -580,10 +577,7 @@ class DataProcessorTest {
     void shouldThrowExceptionOnTypeMismatch() {
       // Given: 准备客户端
       ProviderContext context =
-          ProviderContext.builder()
-              .config(createTestConfig())
-              .client("StringClient")
-              .build();
+          ProviderContext.builder().config(createTestConfig()).client("StringClient").build();
 
       // When & Then: 类型不匹配时抛出异常
       assertThatThrownBy(() -> context.getClient(Integer.class))

@@ -34,8 +34,8 @@
  *         <li>从外部数据源获取标准化数据（文献、期刊、药品等）
  *         <li>支持多种数据源(PubMed, EPMC 等)和多种数据类型
  *         <li>处理分页、游标和错误重试
- *         <li>通过 {@code ProvenanceDataAdapter} (Infrastructure) 调用
- *             {@code ProvenanceDataProvider} (Framework)
+ *         <li>通过 {@code ProvenanceDataAdapter} (Infrastructure) 调用 {@code ProvenanceDataProvider}
+ *             (Framework)
  *       </ul>
  *   <li>{@link com.patra.ingest.domain.port.PatraRegistryPort} - Patra Registry 配置服务端口
  *       <ul>

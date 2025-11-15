@@ -55,9 +55,13 @@ public class GenericBatchExecutor {
    *
    * @param context 执行上下文
    * @param batch 批次定义
+   * @param fetchMetadata 抓取元数据
    * @return 批次执行结果
    */
-  public BatchResult execute(ExecutionContext context, Batch batch) {
+  public BatchResult execute(
+      ExecutionContext context,
+      Batch batch,
+      com.patra.ingest.domain.model.vo.fetch.FetchMetadata fetchMetadata) {
     Objects.requireNonNull(context, "执行上下文不能为空");
     Objects.requireNonNull(batch, "批次定义不能为空");
 
@@ -79,7 +83,7 @@ public class GenericBatchExecutor {
       DataType dataType = DataType.LITERATURE;
       TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
       DataFetchResult<CanonicalLiterature> fetchResult =
-          provenanceDataPort.fetchData(context, dataType, typeRef, batch);
+          provenanceDataPort.fetchData(context, dataType, typeRef, batch, fetchMetadata);
 
       if (!fetchResult.success()) {
         return handleFailure(context, batch, fetchResult, System.currentTimeMillis() - startAt);

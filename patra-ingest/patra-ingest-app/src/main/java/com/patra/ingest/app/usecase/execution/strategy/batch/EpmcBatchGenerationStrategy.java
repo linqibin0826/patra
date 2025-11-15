@@ -7,22 +7,15 @@ import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
 import com.patra.ingest.domain.strategy.BatchGenerationStrategy;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
  * EPMC 批次生成策略
  *
- * <p>根据抓取元数据生成批次列表，支持使用 cursorMark 游标令牌进行游标分页。
+ * <p>根据抓取元数据生成批次列表。
  *
- * <p>EPMC 使用 Solr 风格的 cursorMark 分页机制：
- *
- * <ul>
- *   <li>首次请求：cursorMark="*"
- *   <li>后续请求：使用上次返回的 nextCursorMark
- *   <li>分页结束：nextCursorMark 等于当前 cursorMark
- * </ul>
+ * <p>EPMC 使用 Solr 风格的 cursorMark 分页机制，具体参数映射由 Infrastructure 层的 EpmcParameterMapper 处理。
  *
  * @author Patra Architecture Team
  * @since 0.2.0
@@ -51,52 +44,19 @@ public class EpmcBatchGenerationStrategy implements BatchGenerationStrategy {
     String query = ctx.compiledQuery();
 
     log.debug(
-        "生成 EPMC 批次: totalRecords={}, batchSize={}, pageCount={}, hasStateToken={}",
+        "生成 EPMC 批次: totalRecords={}, batchSize={}, pageCount={}",
         totalRecords,
         batchSize,
-        pageCount,
-        metadata.hasStateToken());
+        pageCount);
 
-    // 检查是否有 state token（包含 cursorMark）
-    if (metadata.hasStateToken()) {
-      // 使用游标模式：state token 中包含 cursorMark
-      Map<String, String> stateToken = metadata.stateToken().orElseThrow();
-
-      for (int i = 0; i < pageCount; i++) {
-        int batchNo = i + 1;
-
-        batches.add(
-            new Batch(
-                batchNo,
-                query,
-                ctx.compiledParams(),
-                null, // cursorToken 通过 sessionTokens 传递
-                null, // pageNo (EPMC 不使用页码分页)
-                batchSize,
-                stateToken));
-      }
-
-      log.info(
-          "已生成 {} 个 EPMC 批次（使用游标模式，cursorMark={}）", batches.size(), stateToken.get("cursorMark"));
-    } else {
-      // 常规模式（无游标）
-      for (int i = 0; i < pageCount; i++) {
-        int batchNo = i + 1;
-
-        batches.add(
-            new Batch(
-                batchNo,
-                query,
-                ctx.compiledParams(),
-                null, // 无游标令牌
-                null, // 无页码
-                batchSize,
-                null // 无会话令牌
-                ));
-      }
-
-      log.info("已生成 {} 个 EPMC 批次（常规模式，无游标）", batches.size());
+    // 使用统一的批次计算逻辑（只包含 offset/limit，不包含数据源特定参数）
+    for (int i = 0; i < pageCount; i++) {
+      int batchNo = i + 1;
+      int offset = i * batchSize;
+      batches.add(new Batch(batchNo, query, offset, batchSize));
     }
+
+    log.info("已生成 {} 个 EPMC 批次", batches.size());
 
     return batches;
   }

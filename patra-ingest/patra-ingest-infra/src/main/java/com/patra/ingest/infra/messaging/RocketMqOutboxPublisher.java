@@ -176,6 +176,7 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
    * 构建 RocketMQ destination 字符串。
    *
    * <p>格式: "topic:tags"
+   *
    * <p>注意：opType 是 NOT NULL，所以始终会添加 tags
    *
    * @param topic Topic 名称（粗粒度 Channel，如 INGEST_TASK）

@@ -4,9 +4,12 @@
  * <p>本包定义 Outbox 模式使用的枚举常量，确保聚合类型的一致性。
  *
  * <p><b>注意</b>：自 v0.2.0 起，Channel 和 OpType 已迁移至新架构：
+ *
  * <ul>
- *   <li><b>Channel</b>：使用 {@link com.patra.ingest.domain.messaging.IngestPublishingChannels}（粗粒度资源级别）
- *   <li><b>OpType</b>：使用 {@link com.patra.ingest.app.outbox.operations} 包下的枚举（如 TaskOperations、LiteratureOperations）
+ *   <li><b>Channel</b>：使用 {@link
+ *       com.patra.ingest.domain.messaging.IngestPublishingChannels}（粗粒度资源级别）
+ *   <li><b>OpType</b>：使用 {@link com.patra.ingest.app.outbox.operations} 包下的枚举（如
+ *       TaskOperations、LiteratureOperations）
  * </ul>
  *
  * <h2>职责</h2>

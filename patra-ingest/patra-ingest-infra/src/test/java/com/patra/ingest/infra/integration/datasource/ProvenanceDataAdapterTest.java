@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.infra.integration.datasource.acl.FetchMetadataTranslator;
+import com.patra.ingest.infra.mapper.ProviderParameterMapperRegistry;
 import com.patra.starter.provenance.common.config.*;
 import com.patra.starter.provenance.common.provider.ProviderRegistry;
 import java.lang.reflect.Method;
@@ -39,15 +40,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ProvenanceDataAdapterTest {
 
   @Mock private ProviderRegistry providerRegistry;
+  @Mock private ProviderParameterMapperRegistry mapperRegistry;
 
   private ProvenanceDataAdapter adapter;
 
   @BeforeEach
   void setUp() {
     // 注意: 此测试类仅测试 convertToProvenanceConfig 私有方法(HTTP配置转换)
-    // 该方法不使用 FetchMetadataTranslator，因此传入真实实例即可
+    // 该方法不使用 FetchMetadataTranslator 和 ProviderParameterMapperRegistry，因此传入真实实例和 Mock 即可
     FetchMetadataTranslator translator = new FetchMetadataTranslator();
-    adapter = new ProvenanceDataAdapter(providerRegistry, translator);
+    adapter = new ProvenanceDataAdapter(providerRegistry, translator, mapperRegistry);
   }
 
   // ========== convertToProvenanceConfig() 完整转换测试 ==========

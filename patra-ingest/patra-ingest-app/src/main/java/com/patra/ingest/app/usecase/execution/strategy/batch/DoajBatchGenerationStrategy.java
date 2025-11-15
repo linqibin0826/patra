@@ -7,29 +7,15 @@ import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
 import com.patra.ingest.domain.strategy.BatchGenerationStrategy;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
  * DOAJ 批次生成策略
  *
- * <p>根据抓取元数据生成批次列表，支持使用 cursorMark 进行 Elasticsearch Scroll API 分页。
+ * <p>根据抓取元数据生成批次列表。
  *
- * <p>DOAJ 使用 Elasticsearch Scroll API 分页机制：
- *
- * <ul>
- *   <li>首次请求：不带 cursorMark，创建 Scroll Context
- *   <li>后续请求：使用上次返回的 cursorMark
- *   <li>分页结束：返回空结果集
- * </ul>
- *
- * <p><strong>关键设计</strong>：
- *
- * <ul>
- *   <li>使用 {@link ExecutionContext} 的 pageSize（配置快照中的分页大小）
- *   <li>cursorMark 通过 {@link Batch#sessionTokens()} 传递（opaque 令牌）
- * </ul>
+ * <p>DOAJ 使用 Elasticsearch Scroll API 分页机制，具体参数映射由 Infrastructure 层的 DoajParameterMapper 处理。
  *
  * @author Patra Architecture Team
  * @since 0.2.0
@@ -58,54 +44,19 @@ public class DoajBatchGenerationStrategy implements BatchGenerationStrategy {
     String query = ctx.compiledQuery();
 
     log.debug(
-        "生成 DOAJ 批次: totalRecords={}, batchSize={}, pageCount={}, hasStateToken={}",
+        "生成 DOAJ 批次: totalRecords={}, batchSize={}, pageCount={}",
         totalRecords,
         batchSize,
-        pageCount,
-        metadata.hasStateToken());
+        pageCount);
 
-    // 检查是否有 state token（包含 cursorMark）
-    if (metadata.hasStateToken()) {
-      // 使用 Scroll API 模式：state token 中包含 cursorMark
-      Map<String, String> stateToken = metadata.stateToken().orElseThrow();
-
-      for (int i = 0; i < pageCount; i++) {
-        int batchNo = i + 1;
-
-        batches.add(
-            new Batch(
-                batchNo,
-                query,
-                ctx.compiledParams(),
-                null, // cursorMark 通过 sessionTokens 传递
-                null, // pageNo (DOAJ 不使用页码分页)
-                batchSize,
-                stateToken));
-      }
-
-      log.info(
-          "已生成 {} 个 DOAJ 批次（使用 Scroll API，cursorMark={}）",
-          batches.size(),
-          stateToken.get("cursorMark"));
-    } else {
-      // 常规模式（无 state token）
-      for (int i = 0; i < pageCount; i++) {
-        int batchNo = i + 1;
-
-        batches.add(
-            new Batch(
-                batchNo,
-                query,
-                ctx.compiledParams(),
-                null, // 无游标令牌
-                null, // 无页码
-                batchSize,
-                null // 无会话令牌
-                ));
-      }
-
-      log.info("已生成 {} 个 DOAJ 批次（常规模式，无 Scroll API）", batches.size());
+    // 使用统一的批次计算逻辑（只包含 offset/limit，不包含数据源特定参数）
+    for (int i = 0; i < pageCount; i++) {
+      int batchNo = i + 1;
+      int offset = i * batchSize;
+      batches.add(new Batch(batchNo, query, offset, batchSize));
     }
+
+    log.info("已生成 {} 个 DOAJ 批次", batches.size());
 
     return batches;
   }

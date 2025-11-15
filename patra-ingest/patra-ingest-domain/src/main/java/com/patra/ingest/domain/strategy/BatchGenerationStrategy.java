@@ -56,7 +56,6 @@ public interface BatchGenerationStrategy {
    * </ul>
    *
    * @return 支持的 Provenance 代码枚举（如 PUBMED, DOAJ, EPMC）
-   *
    * @example
    *     <pre>{@code
    * @Override

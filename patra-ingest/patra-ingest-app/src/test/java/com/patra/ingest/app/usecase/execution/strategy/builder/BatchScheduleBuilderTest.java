@@ -252,8 +252,7 @@ class BatchScheduleBuilderTest {
     List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, invalidStrategy);
 
     // when
-    BatchScheduleBuilder builder =
-        new BatchScheduleBuilder(provenanceDataPort, strategies);
+    BatchScheduleBuilder builder = new BatchScheduleBuilder(provenanceDataPort, strategies);
 
     // then
     // 验证：planner 应该跳过 null 策略，只注册有效策略
@@ -315,7 +314,10 @@ class BatchScheduleBuilderTest {
 
   /** 创建测试用的 Batch */
   private Batch createBatch(int batchNo) {
-    return Batch.first("test-query", objectMapper.createObjectNode());
+    // 使用新的 Batch 构造器：batchNo, query, offset, limit
+    int offset = (batchNo - 1) * 500; // 假设每批 500 条
+    int limit = 500;
+    return new Batch(batchNo, "test-query", offset, limit);
   }
 
   /** 创建测试用的 BatchSchedule (PubMed) - 计划元数据 */

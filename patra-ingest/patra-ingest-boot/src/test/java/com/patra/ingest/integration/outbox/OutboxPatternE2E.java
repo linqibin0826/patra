@@ -193,9 +193,7 @@ class OutboxPatternE2E {
 
       // 验证: Outbox 消息已持久化为 PENDING 状态
       var savedMsg =
-          outboxRepository
-              .findByChannelAndDedup("INGEST_TASK", "e2e-workflow-001")
-              .orElseThrow();
+          outboxRepository.findByChannelAndDedup("INGEST_TASK", "e2e-workflow-001").orElseThrow();
       assertThat(savedMsg.getStatusCode()).isEqualTo("PENDING");
       assertThat(savedMsg.getRetryCount()).isEqualTo(0);
 
@@ -209,9 +207,7 @@ class OutboxPatternE2E {
 
       // 验证: Outbox 消息状态已更新为 PUBLISHED
       var publishedMsg =
-          outboxRepository
-              .findByChannelAndDedup("INGEST_TASK", "e2e-workflow-001")
-              .orElseThrow();
+          outboxRepository.findByChannelAndDedup("INGEST_TASK", "e2e-workflow-001").orElseThrow();
       assertThat(publishedMsg.getStatusCode()).isEqualTo("PUBLISHED");
 
       // 步骤 6: Consumer 接收消息
@@ -277,9 +273,7 @@ class OutboxPatternE2E {
 
       // 验证: 消息已标记为 PUBLISHED
       var publishedMsg =
-          outboxRepository
-              .findByChannelAndDedup("INGEST_TASK", "e2e-idempotent-001")
-              .orElseThrow();
+          outboxRepository.findByChannelAndDedup("INGEST_TASK", "e2e-idempotent-001").orElseThrow();
       assertThat(publishedMsg.getStatusCode()).isEqualTo("PUBLISHED");
 
       // 第二次 Relay (模拟重复扫描)
@@ -316,9 +310,7 @@ class OutboxPatternE2E {
 
       // 查询第一条消息获取其 ID
       var savedMsg =
-          outboxRepository
-              .findByChannelAndDedup("INGEST_TASK", "duplicate-key-e2e")
-              .orElseThrow();
+          outboxRepository.findByChannelAndDedup("INGEST_TASK", "duplicate-key-e2e").orElseThrow();
 
       // 尝试写入相同 dedupKey 的第二条消息 (使用 saveOrUpdate 会更新而非插入)
       OutboxMessage msg2 =
@@ -353,8 +345,7 @@ class OutboxPatternE2E {
       String dedupKey = "e2e-rollback-unique-" + System.currentTimeMillis();
 
       // 验证: 执行前 Outbox 消息不存在
-      var msgBefore =
-          outboxRepository.findByChannelAndDedup("INGEST_TASK", dedupKey);
+      var msgBefore = outboxRepository.findByChannelAndDedup("INGEST_TASK", dedupKey);
       assertThat(msgBefore).isEmpty();
 
       // 模拟: 在事务中执行业务操作失败,应导致回滚
@@ -375,8 +366,7 @@ class OutboxPatternE2E {
       // 验证: 由于在非事务环境下执行,消息实际已被保存
       // 如果在真实的 @Transactional 方法中,异常会导致回滚
       // 此测试主要验证概念,实际回滚需要在 Service 层的集成测试中验证
-      var msgAfter =
-          outboxRepository.findByChannelAndDedup("INGEST_TASK", dedupKey);
+      var msgAfter = outboxRepository.findByChannelAndDedup("INGEST_TASK", dedupKey);
       // 根据实际执行环境调整断言
       // 如果使用 Spring 事务管理,应该为 empty
       // 这里注释掉原有的断言,因为测试环境可能不支持自动回滚
@@ -405,9 +395,7 @@ class OutboxPatternE2E {
       outboxRepository.saveOrUpdate(msg);
 
       var savedMsg =
-          outboxRepository
-              .findByChannelAndDedup("INGEST_TASK", msg.getDedupKey())
-              .orElseThrow();
+          outboxRepository.findByChannelAndDedup("INGEST_TASK", msg.getDedupKey()).orElseThrow();
 
       // 步骤 1: 获取租约 (PENDING → PUBLISHING)
       boolean leaseAcquired =
@@ -420,9 +408,7 @@ class OutboxPatternE2E {
 
       // 步骤 2: 查询更新后的消息获取新的 version
       var publishingMsg =
-          outboxRepository
-              .findByChannelAndDedup("INGEST_TASK", msg.getDedupKey())
-              .orElseThrow();
+          outboxRepository.findByChannelAndDedup("INGEST_TASK", msg.getDedupKey()).orElseThrow();
       assertThat(publishingMsg.getStatusCode()).isEqualTo("PUBLISHING");
 
       // 步骤 3: 模拟发送失败,标记为 DEFERRED (PUBLISHING → FAILED)
@@ -437,9 +423,7 @@ class OutboxPatternE2E {
 
       // 验证: 消息状态为 FAILED,重试次数为 1,nextRetryAt 已设置
       var deferredMsg =
-          outboxRepository
-              .findByChannelAndDedup("INGEST_TASK", msg.getDedupKey())
-              .orElseThrow();
+          outboxRepository.findByChannelAndDedup("INGEST_TASK", msg.getDedupKey()).orElseThrow();
       assertThat(deferredMsg.getStatusCode()).isEqualTo("FAILED");
       assertThat(deferredMsg.getRetryCount()).isEqualTo(1);
       assertThat(deferredMsg.getErrorCode()).isEqualTo("SEND_FAILED");
@@ -466,9 +450,7 @@ class OutboxPatternE2E {
       outboxRepository.saveOrUpdate(msg);
 
       var savedMsg =
-          outboxRepository
-              .findByChannelAndDedup("INGEST_TASK", msg.getDedupKey())
-              .orElseThrow();
+          outboxRepository.findByChannelAndDedup("INGEST_TASK", msg.getDedupKey()).orElseThrow();
 
       // 步骤 1: 获取租约 (PENDING → PUBLISHING)
       boolean leaseAcquired =
@@ -481,9 +463,7 @@ class OutboxPatternE2E {
 
       // 步骤 2: 查询更新后的消息获取新的 version
       var publishingMsg =
-          outboxRepository
-              .findByChannelAndDedup("INGEST_TASK", msg.getDedupKey())
-              .orElseThrow();
+          outboxRepository.findByChannelAndDedup("INGEST_TASK", msg.getDedupKey()).orElseThrow();
       assertThat(publishingMsg.getStatusCode()).isEqualTo("PUBLISHING");
 
       // 步骤 3: 模拟达到最大重试次数,标记为 FAILED
@@ -496,9 +476,7 @@ class OutboxPatternE2E {
 
       // 验证: 消息状态为 DEAD (死信状态)
       var failedMsg =
-          outboxRepository
-              .findByChannelAndDedup("INGEST_TASK", msg.getDedupKey())
-              .orElseThrow();
+          outboxRepository.findByChannelAndDedup("INGEST_TASK", msg.getDedupKey()).orElseThrow();
       assertThat(failedMsg.getStatusCode()).isEqualTo("DEAD");
       assertThat(failedMsg.getRetryCount()).isEqualTo(3);
       assertThat(failedMsg.getErrorCode()).isEqualTo("MAX_RETRIES_EXCEEDED");
@@ -519,9 +497,7 @@ class OutboxPatternE2E {
       outboxRepository.saveOrUpdate(msg);
 
       var savedMsg =
-          outboxRepository
-              .findByChannelAndDedup("INGEST_TASK", "e2e-lease-001")
-              .orElseThrow();
+          outboxRepository.findByChannelAndDedup("INGEST_TASK", "e2e-lease-001").orElseThrow();
 
       // 执行: 获取租约
       String leaseOwner = "relay-instance-1";
@@ -535,9 +511,7 @@ class OutboxPatternE2E {
 
       // 验证: 消息状态为 PUBLISHING,租约信息已记录
       var leasedMsg =
-          outboxRepository
-              .findByChannelAndDedup("INGEST_TASK", "e2e-lease-001")
-              .orElseThrow();
+          outboxRepository.findByChannelAndDedup("INGEST_TASK", "e2e-lease-001").orElseThrow();
       assertThat(leasedMsg.getStatusCode()).isEqualTo("PUBLISHING");
       assertThat(leasedMsg.getLeaseOwner()).isEqualTo(leaseOwner);
       assertThat(leasedMsg.getLeaseExpireAt()).isNotNull();

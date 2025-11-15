@@ -159,8 +159,7 @@ class RelayBatchResultTest {
     @DisplayName("fetched() 应该返回获取的消息数")
     void fetchedShouldReturnFetchedCount() {
       // Given
-      var result =
-          new RelayBatchResult(IngestPublishingChannels.TASK, 100, 95, 3, 2, 5, List.of());
+      var result = new RelayBatchResult(IngestPublishingChannels.TASK, 100, 95, 3, 2, 5, List.of());
 
       // When & Then
       assertThat(result.fetched()).isEqualTo(100);
@@ -170,8 +169,7 @@ class RelayBatchResultTest {
     @DisplayName("published() 应该返回发布成功的消息数")
     void publishedShouldReturnPublishedCount() {
       // Given
-      var result =
-          new RelayBatchResult(IngestPublishingChannels.TASK, 100, 95, 3, 2, 5, List.of());
+      var result = new RelayBatchResult(IngestPublishingChannels.TASK, 100, 95, 3, 2, 5, List.of());
 
       // When & Then
       assertThat(result.published()).isEqualTo(95);
@@ -181,8 +179,7 @@ class RelayBatchResultTest {
     @DisplayName("retried() 应该返回重试的消息数")
     void retriedShouldReturnRetriedCount() {
       // Given
-      var result =
-          new RelayBatchResult(IngestPublishingChannels.TASK, 100, 95, 3, 2, 5, List.of());
+      var result = new RelayBatchResult(IngestPublishingChannels.TASK, 100, 95, 3, 2, 5, List.of());
 
       // When & Then
       assertThat(result.retried()).isEqualTo(3);
@@ -192,8 +189,7 @@ class RelayBatchResultTest {
     @DisplayName("failed() 应该返回失败的消息数")
     void failedShouldReturnFailedCount() {
       // Given
-      var result =
-          new RelayBatchResult(IngestPublishingChannels.TASK, 100, 95, 3, 2, 5, List.of());
+      var result = new RelayBatchResult(IngestPublishingChannels.TASK, 100, 95, 3, 2, 5, List.of());
 
       // When & Then
       assertThat(result.failed()).isEqualTo(2);
@@ -203,8 +199,7 @@ class RelayBatchResultTest {
     @DisplayName("leaseMissed() 应该返回租约丢失的消息数")
     void leaseMissedShouldReturnLeaseMissedCount() {
       // Given
-      var result =
-          new RelayBatchResult(IngestPublishingChannels.TASK, 100, 95, 3, 2, 5, List.of());
+      var result = new RelayBatchResult(IngestPublishingChannels.TASK, 100, 95, 3, 2, 5, List.of());
 
       // When & Then
       assertThat(result.leaseMissed()).isEqualTo(5);
@@ -333,11 +328,9 @@ class RelayBatchResultTest {
       // Given
       var events = List.<OutboxRelayDomainEvent>of();
 
-      var result1 =
-          new RelayBatchResult(IngestPublishingChannels.TASK, 10, 8, 1, 1, 2, events);
+      var result1 = new RelayBatchResult(IngestPublishingChannels.TASK, 10, 8, 1, 1, 2, events);
       var result2 =
-          new RelayBatchResult(
-              IngestPublishingChannels.LITERATURE, 10, 8, 1, 1, 2, events);
+          new RelayBatchResult(IngestPublishingChannels.LITERATURE, 10, 8, 1, 1, 2, events);
 
       // When & Then
       assertThat(result1).isNotEqualTo(result2);
@@ -377,8 +370,7 @@ class RelayBatchResultTest {
     void equalsShouldReturnTrueWhenComparingWithItself() {
       // Given
       var result =
-          new RelayBatchResult(
-              IngestPublishingChannels.TASK, 10, 8, 1, 1, 2, createSampleEvents());
+          new RelayBatchResult(IngestPublishingChannels.TASK, 10, 8, 1, 1, 2, createSampleEvents());
 
       // When & Then
       assertThat(result).isEqualTo(result);
@@ -389,8 +381,7 @@ class RelayBatchResultTest {
     void equalsShouldReturnFalseWhenComparingWithNull() {
       // Given
       var result =
-          new RelayBatchResult(
-              IngestPublishingChannels.TASK, 10, 8, 1, 1, 2, createSampleEvents());
+          new RelayBatchResult(IngestPublishingChannels.TASK, 10, 8, 1, 1, 2, createSampleEvents());
 
       // When & Then
       assertThat(result).isNotEqualTo(null);
@@ -401,8 +392,7 @@ class RelayBatchResultTest {
     void equalsShouldReturnFalseWhenComparingWithDifferentType() {
       // Given
       var result =
-          new RelayBatchResult(
-              IngestPublishingChannels.TASK, 10, 8, 1, 1, 2, createSampleEvents());
+          new RelayBatchResult(IngestPublishingChannels.TASK, 10, 8, 1, 1, 2, createSampleEvents());
 
       // When & Then
       assertThat(result).isNotEqualTo("not a RelayBatchResult");

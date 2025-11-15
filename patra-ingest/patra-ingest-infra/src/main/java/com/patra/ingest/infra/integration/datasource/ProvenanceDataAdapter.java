@@ -1,6 +1,5 @@
 package com.patra.ingest.infra.integration.datasource;
 
-import cn.hutool.core.map.MapUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
@@ -13,6 +12,8 @@ import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
 import com.patra.ingest.domain.port.ProvenanceDataPort;
 import com.patra.ingest.infra.exception.ProvenanceDataException;
 import com.patra.ingest.infra.integration.datasource.acl.FetchMetadataTranslator;
+import com.patra.ingest.infra.mapper.ProviderParameterMapper;
+import com.patra.ingest.infra.mapper.ProviderParameterMapperRegistry;
 import com.patra.starter.provenance.common.config.BatchingConfig;
 import com.patra.starter.provenance.common.config.HttpConfig;
 import com.patra.starter.provenance.common.config.PaginationConfig;
@@ -75,6 +76,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
 
   private final ProviderRegistry providerRegistry;
   private final FetchMetadataTranslator fetchMetadataTranslator;
+  private final ProviderParameterMapperRegistry parameterMapperRegistry;
 
   /**
    * 准备采集计划元数据
@@ -305,13 +307,18 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
    * @param dataType 数据类型标识
    * @param typeRef 类型引用
    * @param batch 批次定义
+   * @param fetchMetadata 抓取元数据（包含总记录数、会话令牌等）
    * @return 数据获取结果
    * @throws TypeMismatchException 如果DataType与TypeReference不一致
    * @throws ProviderNotFoundException 如果Provider不存在
    */
   @Override
   public <T> DataFetchResult<T> fetchData(
-      ExecutionContext context, DataType dataType, TypeReference<T> typeRef, Batch batch) {
+      ExecutionContext context,
+      DataType dataType,
+      TypeReference<T> typeRef,
+      Batch batch,
+      FetchMetadata fetchMetadata) {
 
     long startTime = System.currentTimeMillis();
     ProvenanceCode provenanceCode = context.provenanceCode();
@@ -329,8 +336,8 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
       // 2. 查找Provider
       ProvenanceDataProvider provider = providerRegistry.getProvider(provenanceCode, dataType);
 
-      // 3. 构建ProviderRequest
-      ProviderRequest request = buildProviderRequest(context, batch);
+      // 3. 构建ProviderRequest（使用 ParameterMapper 进行参数映射）
+      ProviderRequest request = buildProviderRequest(context, batch, fetchMetadata);
 
       // 4. 调用Provider
       @SuppressWarnings("unchecked")
@@ -443,62 +450,25 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
    *
    * @param context 执行上下文
    * @param batch 批次定义
+   * @param fetchMetadata 抓取元数据
    * @return Provider请求参数
    */
-  private ProviderRequest buildProviderRequest(ExecutionContext context, Batch batch) {
+  private ProviderRequest buildProviderRequest(
+      ExecutionContext context, Batch batch, FetchMetadata fetchMetadata) {
     // 构建BatchExecutionParams
     String query = context.compiledQuery();
-    JsonNode params = buildParametersAsJson(context, batch);
-    BatchExecutionParams executionParams = new BatchExecutionParams(query, params);
+
+    // 使用 ParameterMapper 进行参数映射
+    ProvenanceCode provenanceCode = context.provenanceCode();
+    ProviderParameterMapper mapper = parameterMapperRegistry.getMapper(provenanceCode);
+    JsonNode mappedParams = mapper.mapParameters(batch, context.compiledParams(), fetchMetadata);
+
+    BatchExecutionParams executionParams = new BatchExecutionParams(query, mappedParams);
 
     // 从 ExecutionContext 转换配置快照为 ProvenanceConfig
     ProvenanceConfig config = convertToProvenanceConfig(context);
 
-    return ProviderRequest.builder()
-        .config(config)
-        .executionParams(executionParams)
-        .build();
-  }
-
-  /**
-   * 构建参数JsonNode
-   *
-   * <p>只包含技术层需要的查询和分页参数，不包含业务追踪信息。
-   *
-   * @param context 执行上下文
-   * @param batch 批次定义
-   * @return 参数JsonNode
-   */
-  private JsonNode buildParametersAsJson(ExecutionContext context, Batch batch) {
-    // 如果 Batch.params 已包含所有技术参数，直接使用
-    if (batch.params() != null) {
-      return batch.params();
-    }
-
-    // 否则手动构建技术参数
-    Map<String, Object> params = MapUtil.<String, Object>newHashMap();
-
-    // 添加分页参数
-    if (batch.pageSize() != null) {
-      params.put("pageSize", batch.pageSize());
-    }
-    if (batch.pageNo() != null) {
-      params.put("pageNo", batch.pageNo());
-    }
-
-    // 添加游标令牌
-    if (batch.cursorToken() != null) {
-      params.put("cursorToken", batch.cursorToken());
-    }
-
-    // 添加会话令牌 (例如 PubMed 的 webEnv/queryKey)
-    if (batch.hasSessionTokens()) {
-      params.putAll(batch.sessionTokens());
-    }
-
-    // 转换为JsonNode
-    ObjectMapper mapper = JsonMapperHolder.getObjectMapper();
-    return mapper.valueToTree(params);
+    return ProviderRequest.builder().config(config).executionParams(executionParams).build();
   }
 
   /**
