@@ -2,11 +2,9 @@ package com.patra.ingest.infra.integration.storage;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.patra.catalog.api.dto.LiteratureDTO;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalLiterature;
 import com.patra.ingest.domain.port.LiteratureStoragePort;
-import com.patra.ingest.infra.integration.storage.acl.LiteratureConverter;
 import com.patra.starter.objectstorage.ObjectStorageTemplate;
 import com.patra.starter.objectstorage.StorageLocation;
 import com.patra.starter.objectstorage.StorageLocationResolver;
@@ -32,11 +30,12 @@ import org.springframework.util.StringUtils;
  * <p>此适配器专注于技术性存储操作:
  *
  * <ul>
- *   <li>ACL 映射: CanonicalLiterature → LiteratureDTO (外部 API 格式)
- *   <li>序列化: 将负载转换为 JSON 字节
+ *   <li>序列化: 将 {@link CanonicalLiterature} 转换为 JSON 字节
  *   <li>校验和计算: MD5 和 SHA-256 用于完整性验证
  *   <li>存储上传: 通过 {@link ObjectStorageTemplate} 上传到 S3/MinIO
  * </ul>
+ *
+ * <p>存储格式: 直接使用共享内核模型 {@link CanonicalLiterature}，保证数据完整性。
  *
  * <p>跨服务集成(元数据记录)在应用层单独处理。
  */
@@ -53,31 +52,27 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
   private final ObjectMapper objectMapper;
   private final ObjectStorageTemplate objectStorageTemplate;
   private final StorageLocationResolver storageLocationResolver;
-  private final LiteratureConverter literatureConverter;
 
   @Override
   public StorageResult store(List<CanonicalLiterature> literature, StorageContext context) {
-    // 步骤 1: ACL 映射 (领域 → 外部 DTO)
-    List<LiteratureDTO> payload = literatureConverter.toDto(literature);
+    // 步骤 1: 序列化为 JSON (直接存储 CanonicalLiterature,保证数据完整性)
+    byte[] serialized = serializePayload(literature, context);
 
-    // 步骤 2: 序列化为 JSON
-    byte[] serialized = serializePayload(payload, context);
-
-    // 步骤 3: 计算校验和
+    // 步骤 2: 计算校验和
     Checksums checksums = calculateChecksums(serialized);
 
-    // 步骤 4: 解析存储位置
+    // 步骤 3: 解析存储位置
     StorageLocation location = resolveStorageLocation(context);
 
-    // 步骤 5: 上传到对象存储
-    UploadResult uploadResult = uploadPayload(location, serialized, payload.size(), context);
+    // 步骤 4: 上传到对象存储
+    UploadResult uploadResult = uploadPayload(location, serialized, literature.size(), context);
 
     log.info(
         "文献已存储 bucket={} key={} size={} bytes count={}",
         uploadResult.getBucketName(),
         uploadResult.getObjectKey(),
         uploadResult.getFileSize(),
-        payload.size());
+        literature.size());
 
     return StorageResult.builder()
         .storageKey(uploadResult.getStorageKey())
@@ -86,12 +81,12 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
         .fileSize(uploadResult.getFileSize())
         .md5(checksums.md5())
         .sha256(checksums.sha256())
-        .literatureCount(payload.size())
+        .literatureCount(literature.size())
         .build();
   }
 
   private byte[] serializePayload(
-      List<LiteratureDTO> payload, LiteratureStoragePort.StorageContext context) {
+      List<CanonicalLiterature> payload, LiteratureStoragePort.StorageContext context) {
     try {
       byte[] serialized = objectMapper.writeValueAsBytes(payload);
       log.info(

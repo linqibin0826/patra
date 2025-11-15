@@ -43,7 +43,10 @@ public interface LiteratureConverter {
   @Mapping(target = "publicationDate", source = "dates", qualifiedByName = "mapPublicationDate")
   @Mapping(target = "keywords", source = "keywords", qualifiedByName = "mapKeywords")
   @Mapping(target = "language", source = "language")
-  @Mapping(target = "publicationTypes", expression = "java(java.util.List.of())")
+  @Mapping(
+      target = "publicationTypes",
+      source = "publicationTypes",
+      qualifiedByName = "mapPublicationTypes")
   LiteratureDTO toDto(CanonicalLiterature source);
 
   /**
@@ -67,15 +70,50 @@ public interface LiteratureConverter {
     }
     return authors.stream()
         .map(
-            author ->
-                AuthorDTO.builder()
-                    .lastName(author.getLastName())
-                    .foreName(author.getForeName())
-                    .initials(author.getInitials())
-                    .affiliations(resolveAffiliations(author.getAffiliations()))
-                    .identifier(null)
-                    .identifierSource(null)
-                    .build())
+            author -> {
+              // 提取第一个标识符(优先 ORCID)
+              String identifier = null;
+              String identifierSource = null;
+              if (!CollectionUtils.isEmpty(author.getIdentifiers())) {
+                // 优先选择 ORCID
+                CanonicalLiterature.Identifier orcid =
+                    author.getIdentifiers().stream()
+                        .filter(
+                            id ->
+                                "orcid".equalsIgnoreCase(id.getType())
+                                    && StringUtils.hasText(id.getValue()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (orcid != null) {
+                  identifier = orcid.getValue();
+                  identifierSource = orcid.getType();
+                } else {
+                  // 如果没有 ORCID，使用第一个可用的标识符
+                  CanonicalLiterature.Identifier firstId =
+                      author.getIdentifiers().stream()
+                          .filter(
+                              id ->
+                                  StringUtils.hasText(id.getType())
+                                      && StringUtils.hasText(id.getValue()))
+                          .findFirst()
+                          .orElse(null);
+                  if (firstId != null) {
+                    identifier = firstId.getValue();
+                    identifierSource = firstId.getType();
+                  }
+                }
+              }
+
+              return AuthorDTO.builder()
+                  .lastName(author.getLastName())
+                  .foreName(author.getForeName())
+                  .initials(author.getInitials())
+                  .affiliations(resolveAffiliations(author.getAffiliations()))
+                  .identifier(identifier)
+                  .identifierSource(identifierSource)
+                  .build();
+            })
         .toList();
   }
 
@@ -178,6 +216,24 @@ public interface LiteratureConverter {
         .filter(keywordSet -> !CollectionUtils.isEmpty(keywordSet.getKeywords()))
         .flatMap(keywordSet -> keywordSet.getKeywords().stream())
         .map(CanonicalLiterature.Keyword::getTerm)
+        .filter(StringUtils::hasText)
+        .toList();
+  }
+
+  /**
+   * 将发表类型列表转换为字符串列表。
+   *
+   * @param publicationTypes 发表类型列表
+   * @return 发表类型字符串列表 (如果为 null 或空则返回空列表)
+   */
+  @Named("mapPublicationTypes")
+  default List<String> mapPublicationTypes(
+      List<CanonicalLiterature.PublicationType> publicationTypes) {
+    if (CollectionUtils.isEmpty(publicationTypes)) {
+      return List.of();
+    }
+    return publicationTypes.stream()
+        .map(CanonicalLiterature.PublicationType::getValue)
         .filter(StringUtils::hasText)
         .toList();
   }
