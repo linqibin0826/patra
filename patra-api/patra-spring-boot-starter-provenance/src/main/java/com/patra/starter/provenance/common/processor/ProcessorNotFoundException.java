@@ -9,7 +9,7 @@ package com.patra.starter.provenance.common.processor;
  *
  * <ul>
  *   <li>ProcessorRegistry.getProcessor()找不到对应的Processor
- *   <li>DataSourceProvider查找Processor失败
+ *   <li>ProvenanceDataProvider查找Processor失败
  * </ul>
  *
  * <p><strong>设计理念</strong>：

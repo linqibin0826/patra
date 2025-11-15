@@ -7,13 +7,13 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.patra.starter.provenance.common.config.DefaultConfigProvider;
 import com.patra.starter.provenance.common.http.SimpleHttpClient;
 import com.patra.starter.provenance.common.metrics.ProvenanceMetrics;
-import com.patra.starter.provenance.common.provider.DataSourceProvider;
+import com.patra.starter.provenance.common.provider.ProvenanceDataProvider;
 import com.patra.starter.provenance.common.provider.ProviderRegistry;
 import com.patra.starter.provenance.epmc.EPMCClient;
 import com.patra.starter.provenance.epmc.EPMCClientImpl;
 import com.patra.starter.provenance.pubmed.PubMedClient;
 import com.patra.starter.provenance.pubmed.PubMedClientImpl;
-import com.patra.starter.provenance.pubmed.PubmedDataSourceProvider;
+import com.patra.starter.provenance.pubmed.PubmedDataProvider;
 import com.patra.starter.provenance.pubmed.converter.PubmedLiteratureConverter;
 import com.patra.starter.provenance.pubmed.processor.PubmedLiteratureProcessor;
 import com.patra.starter.provenance.pubmed.request.PubMedESearchRequestAssembler;
@@ -91,8 +91,8 @@ public class ProvenanceAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   public ProviderRegistry providerRegistry(
-      ObjectProvider<List<DataSourceProvider>> providersProvider) {
-    List<DataSourceProvider> providers = providersProvider.getIfAvailable(List::of);
+      ObjectProvider<List<ProvenanceDataProvider>> providersProvider) {
+    List<ProvenanceDataProvider> providers = providersProvider.getIfAvailable(List::of);
     return new ProviderRegistry(providers);
   }
 
@@ -196,8 +196,7 @@ public class ProvenanceAutoConfiguration {
       ProvenanceProperties properties,
       Optional<ProvenanceMetrics> metrics) {
     log.debug("初始化 PubMed 文献处理器");
-    return new PubmedLiteratureProcessor(
-        pubMedClient, converter, properties, metrics.orElse(null));
+    return new PubmedLiteratureProcessor(pubMedClient, converter, properties, metrics.orElse(null));
   }
 
   /**
@@ -210,11 +209,11 @@ public class ProvenanceAutoConfiguration {
    */
   @Bean
   @ConditionalOnMissingBean
-  public PubmedDataSourceProvider pubmedDataSourceProvider(
+  public PubmedDataProvider pubmedProvenanceDataProvider(
       PubmedLiteratureProcessor literatureProcessor,
       PubMedClient pubMedClient,
       PubMedESearchRequestAssembler requestAssembler) {
     log.info("自动配置 PubMed 数据源提供者，将注册到 ProviderRegistry");
-    return new PubmedDataSourceProvider(literatureProcessor, pubMedClient, requestAssembler);
+    return new PubmedDataProvider(literatureProcessor, pubMedClient, requestAssembler);
   }
 }

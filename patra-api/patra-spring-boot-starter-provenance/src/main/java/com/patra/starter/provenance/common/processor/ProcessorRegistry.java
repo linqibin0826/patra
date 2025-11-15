@@ -34,10 +34,10 @@ import org.springframework.stereotype.Component;
  * <pre>{@code
  * // Spring自动注入
  * @Component
- * public class PubmedDataSourceProvider implements DataSourceProvider {
+ * public class PubmedDataProvider implements ProvenanceDataProvider {
  *     private final ProcessorRegistry processorRegistry;
  *
- *     public PubmedDataSourceProvider(ProcessorRegistry processorRegistry) {
+ *     public PubmedDataProvider(ProcessorRegistry processorRegistry) {
  *         this.processorRegistry = processorRegistry;
  *     }
  *
@@ -55,7 +55,7 @@ import org.springframework.stereotype.Component;
  * <p><strong>架构位置</strong>：
  *
  * <pre>
- * DataSourceProvider (提供者)
+ * ProvenanceDataProvider (提供者)
  *     └─ 查找 → ProcessorRegistry (注册表)
  *                   └─ 返回 → DataProcessor<T> (处理器)
  * </pre>

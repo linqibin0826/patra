@@ -25,7 +25,7 @@
  * <p>UnifiedBatchScheduleBuilder 根据 FetchMetadata 类型选择对应策略：
  *
  * <ol>
- *   <li>调用 DataSourcePort.prepareFetchMetadata() 获取抓取元数据
+ *   <li>调用 ProvenanceDataPort.prepareFetchMetadata() 获取抓取元数据
  *   <li>根据元数据类型（如 PubmedFetchMetadata）查找对应策略
  *   <li>委托策略生成批次列表
  *   <li>返回 BatchSchedule 供执行阶段使用
@@ -68,7 +68,7 @@
  *   <li>消除硬编码：无需在 UnifiedBatchScheduleBuilder 中维护类型列表
  *   <li>完全符合 OCP：新增数据源零修改现有代码
  *   <li>类型安全：编译时检查类型匹配
- *   <li>策略路由：与 DataSourceAdapter 设计一致
+ *   <li>策略路由：与 ProvenanceDataAdapter 设计一致
  * </ul>
  *
  * @author linqibin

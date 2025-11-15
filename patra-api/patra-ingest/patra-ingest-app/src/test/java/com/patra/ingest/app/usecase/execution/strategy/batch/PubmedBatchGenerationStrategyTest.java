@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
  * <p>测试重点：
  *
  * <ul>
- *   <li>getSupportedDataSourceCode() 返回 "pubmed"
+ *   <li>getSupportedProvenanceCode() 返回 ProvenanceCode.PUBMED
  *   <li>批次生成逻辑：根据 totalRecords 和 pageSize 分页
  *   <li>批次对象属性正确：batchNo, query, params, pageNo, pageSize
  *   <li>边界情况：totalRecords = 0, totalRecords < pageSize
@@ -49,13 +49,13 @@ class PubmedBatchGenerationStrategyTest {
   }
 
   @Test
-  @DisplayName("getSupportedDataSourceCode 应该返回 'pubmed'")
-  void should_return_pubmed_data_source_code() {
+  @DisplayName("getSupportedProvenanceCode 应该返回 ProvenanceCode.PUBMED")
+  void should_return_pubmed_provenance_code() {
     // when
-    String supportedCode = strategy.getSupportedDataSourceCode();
+    ProvenanceCode supportedCode = strategy.getSupportedProvenanceCode();
 
     // then
-    assertThat(supportedCode).isEqualTo("pubmed");
+    assertThat(supportedCode).isEqualTo(ProvenanceCode.PUBMED);
   }
 
   @Test
@@ -64,7 +64,7 @@ class PubmedBatchGenerationStrategyTest {
     // given
     int totalRecords = 1000;
     int pageSize = 100;
-    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.PUBMED, null);
     ExecutionContext ctx = createContext(pageSize);
 
     // when
@@ -82,7 +82,7 @@ class PubmedBatchGenerationStrategyTest {
     // given
     int totalRecords = 250;
     int pageSize = 100;
-    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.PUBMED, null);
     ExecutionContext ctx = createContext(pageSize);
 
     // when
@@ -101,7 +101,7 @@ class PubmedBatchGenerationStrategyTest {
     // given
     int totalRecords = 250;
     int pageSize = 100;
-    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.PUBMED, null);
     ExecutionContext ctx = createContext(pageSize);
 
     // when
@@ -132,7 +132,7 @@ class PubmedBatchGenerationStrategyTest {
     String query = "cancer[Title]";
     JsonNode params = objectMapper.createObjectNode().put("db", "pubmed");
 
-    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.PUBMED, null);
     ExecutionContext ctx = createContext(pageSize, query, params);
 
     // when
@@ -151,7 +151,7 @@ class PubmedBatchGenerationStrategyTest {
   @DisplayName("当 totalRecords 为 0 时应该返回空批次列表")
   void should_return_empty_list_when_total_records_is_zero() {
     // given
-    FetchMetadata metadata = createFetchMetadata(0, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(0, ProvenanceCode.PUBMED, null);
     ExecutionContext ctx = createContext(100);
 
     // when
@@ -167,7 +167,7 @@ class PubmedBatchGenerationStrategyTest {
     // given
     int totalRecords = 50;
     int pageSize = 100;
-    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.PUBMED, null);
     ExecutionContext ctx = createContext(pageSize);
 
     // when
@@ -186,7 +186,7 @@ class PubmedBatchGenerationStrategyTest {
     // given
     int totalRecords = 500;
     int pageSize = 100;
-    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.PUBMED, null);
     ExecutionContext ctx = createContext(pageSize);
 
     // when
@@ -207,7 +207,7 @@ class PubmedBatchGenerationStrategyTest {
     String webEnv = "MCID_674c8b5a5e8a9b1234567890";
     String queryKey = "1";
     Map<String, String> stateToken = Map.of("webEnv", webEnv, "queryKey", queryKey);
-    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", stateToken);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.PUBMED, stateToken);
     ExecutionContext ctx = createContext(pageSize);
 
     // when
@@ -235,7 +235,7 @@ class PubmedBatchGenerationStrategyTest {
     // given
     int totalRecords = 500;
     int pageSize = 100;
-    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.PUBMED, null);
     ExecutionContext ctx = createContext(pageSize);
 
     // when
@@ -256,7 +256,7 @@ class PubmedBatchGenerationStrategyTest {
     // given
     int totalRecords = 10000;
     int pageSize = 100;
-    FetchMetadata metadata = createFetchMetadata(totalRecords, "pubmed", null);
+    FetchMetadata metadata = createFetchMetadata(totalRecords, ProvenanceCode.PUBMED, null);
     ExecutionContext ctx = createContext(pageSize);
 
     // when
@@ -274,12 +274,12 @@ class PubmedBatchGenerationStrategyTest {
    * 创建测试用的 FetchMetadata
    *
    * @param totalRecords 总记录数
-   * @param dataSourceCode 数据源代码
+   * @param provenanceCode Provenance 代码枚举
    * @param stateToken 状态令牌（可为 null）
    * @return FetchMetadata 实例
    */
   private FetchMetadata createFetchMetadata(
-      int totalRecords, String dataSourceCode, Map<String, String> stateToken) {
+      int totalRecords, ProvenanceCode provenanceCode, Map<String, String> stateToken) {
     return new FetchMetadata() {
       @Override
       public int totalRecords() {
@@ -287,8 +287,8 @@ class PubmedBatchGenerationStrategyTest {
       }
 
       @Override
-      public String dataSourceCode() {
-        return dataSourceCode;
+      public ProvenanceCode provenanceCode() {
+        return provenanceCode;
       }
 
       @Override

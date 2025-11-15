@@ -12,7 +12,7 @@ import com.patra.starter.provenance.common.provider.ProviderRequest;
  *
  * <ul>
  *   <li>位于Framework层（patra-spring-boot-starter-provenance）
- *   <li>被DataSourceProvider委托调用
+ *   <li>被ProvenanceDataProvider委托调用
  *   <li>通过ProcessorRegistry自动注册和查找
  * </ul>
  *
@@ -48,7 +48,7 @@ import com.patra.starter.provenance.common.provider.ProviderRequest;
  * }
  *
  * // Provider委托Processor
- * public class PubmedDataSourceProvider implements DataSourceProvider {
+ * public class PubmedDataProvider implements ProvenanceDataProvider {
  *     private final DataProcessor<CanonicalLiterature> literatureProcessor;
  *
  *     public <T> ProviderResult<T> fetchData(...) {

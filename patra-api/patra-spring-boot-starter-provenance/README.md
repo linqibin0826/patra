@@ -29,7 +29,7 @@
 | `pubmedArticleConverter` | `PubmedArticleConverter` | PubMed 文章转换器 |
 | `defaultConfigProvider` | `DefaultConfigProvider` | 配置提供器 |
 | `providerRegistry` | `ProviderRegistry` | 数据源提供者注册表 |
-| `pubmedDataSourceProvider` | `PubmedDataSourceProvider` | PubMed 数据源提供者实现 |
+| `pubmedDataProvider` | `PubmedDataProvider` | PubMed 数据提供者实现 |
 | `provenanceMetrics` | `ProvenanceMetrics` | 指标记录器(需要 MeterRegistry) |
 
 ### 启用条件
@@ -63,7 +63,7 @@
 ### ProviderRegistry
 
 统一的数据源提供者注册表,支持:
-- 自动发现所有 `DataSourceProvider` 实现
+- 自动发现所有 `ProvenanceDataProvider` 实现
 - 按数据源代码查找提供者
 - 为 Ingest 服务提供统一的数据源访问接口
 
@@ -133,17 +133,58 @@ patra:
 
 ### 代码示例
 
-#### PubMed 搜索
+#### 使用 ProvenanceDataProvider（推荐）
 
 ```java
 @Component
 @RequiredArgsConstructor
-public class PubmedSearchPortImpl implements PubmedSearchPort {
+public class ProvenanceDataAdapterImpl implements ProvenanceDataPort {
+
+    private final ProviderRegistry providerRegistry;
+
+    @Override
+    public PlanMetadata prepareFetchMetadata(ExecutionContext context, DataType dataType) {
+        // 1. 从注册表获取提供者
+        ProvenanceDataProvider provider = providerRegistry.getProvider(
+            context.provenanceCode(),
+            dataType
+        );
+
+        // 2. 构建提供者请求
+        ProviderRequest request = buildProviderRequest(context);
+
+        // 3. 调用提供者准备计划
+        return provider.prepareFetchMetadata(request);
+    }
+
+    @Override
+    public <T> DataFetchResult<T> fetchData(
+        ExecutionContext context,
+        DataType dataType,
+        TypeReference<T> typeRef,
+        Batch batch
+    ) {
+        ProvenanceDataProvider provider = providerRegistry.getProvider(
+            context.provenanceCode(),
+            dataType
+        );
+
+        ProviderRequest request = buildProviderRequest(context, batch);
+        return provider.fetchData(request, dataType, typeRef);
+    }
+}
+```
+
+#### 直接使用 PubMedClient（低级 API）
+
+```java
+@Component
+@RequiredArgsConstructor
+public class PubmedSearchService {
 
     private final PubMedClient pubMedClient;
     private static final PubMedESearchRequestAssembler ASSEMBLER = new PubMedESearchRequestAssembler();
 
-    @Override
     public PlanMetadata preparePlanMetadata(String query, JsonNode params) {
         // 从已渲染的参数构建请求
         ESearchRequest request = ASSEMBLER.buildList(params);
@@ -182,46 +223,54 @@ try {
 
 ```
 Domain Layer (patra-ingest-domain)
-  - DataSourcePort (业务端口接口)
+  - ProvenanceDataPort (业务端口接口)
     ↑ implements
 Infrastructure Layer (patra-ingest-infra)
-  - DataSourceAdapter (桥接适配器)
+  - ProvenanceDataAdapter (桥接适配器)
     ↓ uses
 Framework Layer (patra-starter-provenance) ← 本 Starter
-  - DataSourceProvider (技术提供者接口)
+  - ProvenanceDataProvider (技术提供者接口)
   - ProviderRegistry (提供者注册表)
     ↑ implements
-Infrastructure Layer (patra-ingest-infra)
-  - PubmedDataSourceProvider (具体实现)
-  - EpmcDataSourceProvider (具体实现)
+Provider Implementations (各数据源实现层)
+  - PubmedProvenanceDataProvider (具体实现)
+  - EpmcProvenanceDataProvider (具体实现)
 ```
 
 ### 命名语义说明
 
-- **DataSourceProvider**（本 Starter）：框架层的技术提供者接口，定义"如何提供数据获取能力"
-- **DataSourceAdapter**（Infrastructure 层）：桥接适配器，连接领域端口和框架提供者
-- **DataSourcePort**（Domain 层）：业务端口接口，定义"需要什么数据获取能力"
+- **ProvenanceDataProvider**（本 Starter）：框架层的技术提供者接口，定义"如何提供数据获取能力"
+- **ProvenanceDataAdapter**（Infrastructure 层）：桥接适配器，连接领域端口和框架提供者
+- **ProvenanceDataPort**（Domain 层）：业务端口接口，定义"需要什么数据获取能力"
 
 ### 使用场景
 
-Infrastructure 层的 `DataSourceAdapter` 使用本 Starter：
+Infrastructure 层的 `ProvenanceDataAdapter` 使用本 Starter：
 
 ```java
 @Component
 @RequiredArgsConstructor
-public class DataSourceAdapter implements DataSourcePort {
+public class ProvenanceDataAdapter implements ProvenanceDataPort {
     private final ProviderRegistry providerRegistry; // 来自本 Starter
 
     @Override
-    public DataFetchResult fetchData(ExecutionContext context, Batch batch) {
+    public <T> DataFetchResult<T> fetchData(
+        ExecutionContext context,
+        DataType dataType,
+        TypeReference<T> typeRef,
+        Batch batch
+    ) {
         // 1. 从注册表获取提供者
-        DataSourceProvider provider = providerRegistry.getProvider(context.provenanceCode());
+        ProvenanceDataProvider provider = providerRegistry.getProvider(
+            context.provenanceCode(),
+            dataType
+        );
 
         // 2. 构建提供者请求
         ProviderRequest request = buildProviderRequest(context, batch);
 
-        // 3. 调用提供者
-        ProviderResult result = provider.fetchData(request);
+        // 3. 调用提供者（类型安全）
+        ProviderResult<T> result = provider.fetchData(request, dataType, typeRef);
 
         // 4. 转换为领域结果
         return convertToDataFetchResult(result);
@@ -269,30 +318,34 @@ public class CustomProvenanceConfig {
 
 ```java
 @Component
-public class CustomDataSourceProvider implements DataSourceProvider<CanonicalLiterature> {
+public class CustomProvenanceDataProvider implements ProvenanceDataProvider {
 
     @Override
-    public String getProvenanceCode() {
-        return "custom-source";
+    public ProvenanceCode getProvenanceCode() {
+        return ProvenanceCode.of("custom-source");
     }
 
     @Override
-    public ProviderResult<CanonicalLiterature> fetchData(ProviderRequest request) {
+    public Set<DataType> getSupportedDataTypes() {
+        return Set.of(DataType.LITERATURE);
+    }
+
+    @Override
+    public <T> ProviderResult<T> fetchData(
+        ProviderRequest request,
+        DataType dataType,
+        TypeReference<T> typeRef
+    ) {
         // 实现数据获取逻辑
-        return ProviderResult.success(data, nextCursor);
+        // ...
+        return ProviderResult.success(data, dataType, nextCursor);
     }
 
     @Override
-    public ProviderCapability getCapabilities() {
-        return ProviderCapability.builder()
-            .dataSource("Custom Source")
-            .supportedDataTypes(Set.of(DataType.LITERATURE))
-            .build();
-    }
-
-    @Override
-    public Class<CanonicalLiterature> getDataTypeClass() {
-        return CanonicalLiterature.class;
+    public PlanMetadata prepareFetchMetadata(ProviderRequest request) {
+        // 实现计划准备逻辑
+        // ...
+        return new PlanMetadata(totalCount, sessionToken);
     }
 }
 ```

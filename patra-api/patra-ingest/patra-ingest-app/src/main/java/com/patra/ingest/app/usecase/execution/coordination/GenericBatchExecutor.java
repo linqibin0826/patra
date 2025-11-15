@@ -7,9 +7,9 @@ import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.batch.BatchResult;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.ingest.domain.port.DataSourcePort;
-import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult;
-import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult.ErrorType;
+import com.patra.ingest.domain.port.ProvenanceDataPort;
+import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult;
+import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult.ErrorType;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ import org.springframework.util.StringUtils;
  * <p>主要职责:
  *
  * <ul>
- *   <li>通过{@link DataSourcePort}获取文献数据
+ *   <li>通过{@link ProvenanceDataPort}获取文献数据
  *   <li>通过{@link LiteraturePublisherOrchestrator}发布标准化文献
  *   <li>将数据获取结果转换为领域层{@link BatchResult}实例
  *   <li>处理失败情况和异常
@@ -38,7 +38,7 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class GenericBatchExecutor {
 
-  private final DataSourcePort dataSourcePort;
+  private final ProvenanceDataPort provenanceDataPort;
   private final LiteraturePublisherOrchestrator literaturePublisherOrchestrator;
 
   /**
@@ -79,7 +79,7 @@ public class GenericBatchExecutor {
       DataType dataType = DataType.LITERATURE;
       TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
       DataFetchResult<CanonicalLiterature> fetchResult =
-          dataSourcePort.fetchData(context, dataType, typeRef, batch);
+          provenanceDataPort.fetchData(context, dataType, typeRef, batch);
 
       if (!fetchResult.success()) {
         return handleFailure(context, batch, fetchResult, System.currentTimeMillis() - startAt);

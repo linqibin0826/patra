@@ -9,7 +9,7 @@
  *   <li>调用 PubMed E-utilities API（ESearch、EFetch、EPost）
  *   <li>解析 PubMed XML/JSON 响应
  *   <li>转换为 CanonicalLiterature 标准模型
- *   <li>提供 {@link com.patra.starter.provenance.common.adapter.DataSourceAdapter} 端口实现
+ *   <li>提供 {@link com.patra.starter.provenance.common.adapter.ProvenanceDataAdapter} 端口实现
  * </ul>
  *
  * <h2>核心组件</h2>
@@ -17,7 +17,7 @@
  * <ul>
  *   <li>{@link PubMedClient} - PubMed 客户端接口
  *   <li>{@link PubMedClientImpl} - PubMed 客户端实现
- *   <li>{@link PubmedDataSourceAdapter} - PubMed 数据源端口实现
+ *   <li>{@link PubmedProvenanceDataAdapter} - PubMed 数据源端口实现
  * </ul>
  *
  * <h2>支持的 E-utilities</h2>

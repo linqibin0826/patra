@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.model.vo.fetch;
 
+import com.patra.common.enums.ProvenanceCode;
 import java.util.Map;
 import java.util.Optional;
 
@@ -27,7 +28,7 @@ import java.util.Optional;
  * <p><strong>使用场景</strong>：
  *
  * <ul>
- *   <li>DataSourcePort.prepareFetchMetadata() 返回此接口
+ *   <li>ProvenanceDataPort.prepareFetchMetadata() 返回此接口
  *   <li>BatchGenerationStrategy.generateBatches() 接收此接口作为输入
  *   <li>FetchMetadataTranslator 将外部元数据翻译为此接口
  * </ul>
@@ -47,13 +48,13 @@ public interface FetchMetadata {
   int totalRecords();
 
   /**
-   * 获取数据源代码
+   * 获取 Provenance 代码
    *
    * <p>用于批次生成策略的路由选择
    *
-   * @return 数据源代码（如 "pubmed", "doaj", "epmc"）
+   * @return Provenance 代码枚举（如 PUBMED, DOAJ, EPMC）
    */
-  String dataSourceCode();
+  ProvenanceCode provenanceCode();
 
   /**
    * 检查是否包含状态令牌
@@ -76,16 +77,16 @@ public interface FetchMetadata {
   /**
    * 创建空的抓取元数据（表示无可用数据）
    *
-   * @param dataSourceCode 数据源代码
+   * @param provenanceCode Provenance 代码枚举
    * @return 空抓取元数据
    */
-  static FetchMetadata empty(String dataSourceCode) {
-    return new EmptyFetchMetadata(dataSourceCode);
+  static FetchMetadata empty(ProvenanceCode provenanceCode) {
+    return new EmptyFetchMetadata(provenanceCode);
   }
 }
 
 /** 空抓取元数据实现（包级私有） */
-record EmptyFetchMetadata(String dataSourceCode) implements FetchMetadata {
+record EmptyFetchMetadata(ProvenanceCode provenanceCode) implements FetchMetadata {
 
   @Override
   public int totalRecords() {

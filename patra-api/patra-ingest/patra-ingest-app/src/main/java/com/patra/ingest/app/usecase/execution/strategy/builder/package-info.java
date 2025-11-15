@@ -99,7 +99,7 @@
  * public class UnifiedBatchScheduleBuilder implements BatchScheduleBuilder {
  *
  *     public UnifiedBatchScheduleBuilder(
- *             DataSourcePort dataSourcePort,
+ *             ProvenanceDataPort dataSourcePort,
  *             List<BatchGenerationStrategy> strategies) {
  *         this.dataSourcePort = dataSourcePort;
  *         this.strategyMap = buildStrategyMap(strategies);  // 自动发现策略

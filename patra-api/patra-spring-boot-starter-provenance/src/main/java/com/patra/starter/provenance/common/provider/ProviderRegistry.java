@@ -5,13 +5,12 @@ import com.patra.common.model.DataType;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * DataSourceProvider注册表（二维索引）
+ * ProvenanceDataProvider注册表（二维索引）
  *
- * <p>ProviderRegistry负责管理所有DataSourceProvider实例的注册和查找。
+ * <p>ProviderRegistry负责管理所有ProvenanceDataProvider实例的注册和查找。
  *
  * <p><strong>核心功能</strong>：
  *
@@ -26,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
  * <p><strong>索引结构</strong>：
  *
  * <pre>
- * 主索引：Map<ProviderKey, DataSourceProvider>
+ * 主索引：Map<ProviderKey, ProvenanceDataProvider>
  *   ProviderKey = (provenanceCode, dataType)
  *   示例：("pubmed", LITERATURE) → PubmedProvider
  *        ("pubmed", CITATION) → PubmedProvider
@@ -36,7 +35,7 @@ import lombok.extern.slf4j.Slf4j;
  *   provenanceCode → 支持的DataType集合
  *   示例："pubmed" → {LITERATURE, CITATION, AUTHOR}
  *
- * 辅助索引2：Map<DataType, List<DataSourceProvider>>
+ * 辅助索引2：Map<DataType, List<ProvenanceDataProvider>>
  *   dataType → 支持该类型的所有Provider
  *   示例：LITERATURE → [PubmedProvider, CrossrefProvider]
  * </pre>
@@ -46,16 +45,16 @@ import lombok.extern.slf4j.Slf4j;
  * <pre>{@code
  * // Spring自动注入
  * @Component
- * public class DataSourceAdapter implements DataSourcePort {
+ * public class ProvenanceDataAdapter implements ProvenanceDataPort {
  *     private final ProviderRegistry providerRegistry;
  *
- *     public DataSourceAdapter(ProviderRegistry providerRegistry) {
+ *     public ProvenanceDataAdapter(ProviderRegistry providerRegistry) {
  *         this.providerRegistry = providerRegistry;
  *     }
  *
  *     public <T> DataFetchResult<T> fetchData(...) {
  *         // 二维查找
- *         DataSourceProvider provider =
+ *         ProvenanceDataProvider provider =
  *             providerRegistry.getProvider(provenanceCode, dataType);
  *
  *         // 委托Provider处理
@@ -71,20 +70,20 @@ import lombok.extern.slf4j.Slf4j;
 public class ProviderRegistry {
 
   /** 主索引：(provenanceCode, dataType) → Provider */
-  private final Map<ProviderKey, DataSourceProvider> providersByType;
+  private final Map<ProviderKey, ProvenanceDataProvider> providersByType;
 
   /** 辅助索引1：provenanceCode → Set<DataType> */
   private final Map<ProvenanceCode, Set<DataType>> typesByProvenance;
 
   /** 辅助索引2：dataType → List<Provider> */
-  private final Map<DataType, List<DataSourceProvider>> providersByDataType;
+  private final Map<DataType, List<ProvenanceDataProvider>> providersByDataType;
 
   /**
-   * 构造函数（Spring自动注入所有DataSourceProvider实现）
+   * 构造函数（Spring自动注入所有ProvenanceDataProvider实现）
    *
    * @param discoveredProviders Spring发现的所有Provider实例
    */
-  public ProviderRegistry(List<DataSourceProvider> discoveredProviders) {
+  public ProviderRegistry(List<ProvenanceDataProvider> discoveredProviders) {
     this.providersByType = new ConcurrentHashMap<>();
     this.typesByProvenance = new ConcurrentHashMap<>();
     this.providersByDataType = new ConcurrentHashMap<>();
@@ -93,7 +92,7 @@ public class ProviderRegistry {
       discoveredProviders.forEach(this::register);
       logRegistrationSummary();
     } else {
-      log.warn("未发现任何DataSourceProvider实现");
+      log.warn("未发现任何ProvenanceDataProvider实现");
     }
   }
 
@@ -104,7 +103,7 @@ public class ProviderRegistry {
    *
    * @param provider Provider实例
    */
-  private void register(DataSourceProvider provider) {
+  private void register(ProvenanceDataProvider provider) {
     ProvenanceCode provenanceCode = provider.getProvenanceCode();
     Set<DataType> supportedTypes = provider.getSupportedDataTypes();
 
@@ -150,10 +149,10 @@ public class ProviderRegistry {
    * @return Provider实例
    * @throws ProviderNotFoundException 如果Provider不存在
    */
-  public DataSourceProvider getProvider(ProvenanceCode provenanceCode, DataType dataType) {
+  public ProvenanceDataProvider getProvider(ProvenanceCode provenanceCode, DataType dataType) {
     ProviderKey key = new ProviderKey(provenanceCode, dataType);
 
-    DataSourceProvider provider = providersByType.get(key);
+    ProvenanceDataProvider provider = providersByType.get(key);
 
     if (provider == null) {
       throw new ProviderNotFoundException(
@@ -170,7 +169,7 @@ public class ProviderRegistry {
    * @param dataType 数据类型
    * @return Provider实例（如果存在）
    */
-  public Optional<DataSourceProvider> findProvider(
+  public Optional<ProvenanceDataProvider> findProvider(
       ProvenanceCode provenanceCode, DataType dataType) {
     ProviderKey key = new ProviderKey(provenanceCode, dataType);
     return Optional.ofNullable(providersByType.get(key));
@@ -205,8 +204,8 @@ public class ProviderRegistry {
    * @param dataType 数据类型
    * @return Provider列表（不可变，如果没有则返回空列表）
    */
-  public List<DataSourceProvider> getProvidersByDataType(DataType dataType) {
-    List<DataSourceProvider> providers = providersByDataType.get(dataType);
+  public List<ProvenanceDataProvider> getProvidersByDataType(DataType dataType) {
+    List<ProvenanceDataProvider> providers = providersByDataType.get(dataType);
     return providers != null ? List.copyOf(providers) : List.of();
   }
 
@@ -215,7 +214,7 @@ public class ProviderRegistry {
    *
    * @return Provider列表（不可变，去重后）
    */
-  public List<DataSourceProvider> getAllProviders() {
+  public List<ProvenanceDataProvider> getAllProviders() {
     return providersByType.values().stream().distinct().toList();
   }
 

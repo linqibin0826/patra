@@ -59,8 +59,8 @@ import lombok.Builder;
  * // 返回 [JOURNAL]
  * }</pre>
  *
- * <p><strong>与框架层的关系</strong>: {@code patra-starter-provenance} 提供的 {@code DataSourceAdapter}
- * 是框架层的技术支撑，而本接口是领域层的业务契约。基础设施层的适配器实现本接口，可以内部使用框架提供的 {@code DataSourceAdapter} 作为技术实现手段。
+ * <p><strong>与框架层的关系</strong>: {@code patra-starter-provenance} 提供的 {@code ProvenanceDataAdapter}
+ * 是框架层的技术支撑，而本接口是领域层的业务契约。基础设施层的适配器实现本接口，可以内部使用框架提供的 {@code ProvenanceDataAdapter} 作为技术实现手段。
  *
  * @see com.patra.ingest.domain.model.vo.batch.Batch 批次定义
  * @see com.patra.ingest.domain.model.vo.execution.ExecutionContext 执行上下文
@@ -69,7 +69,7 @@ import lombok.Builder;
  * @author linqibin
  * @since 0.1.0
  */
-public interface DataSourcePort {
+public interface ProvenanceDataPort {
 
   /**
    * 准备抓取元数据

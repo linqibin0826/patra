@@ -8,7 +8,7 @@ import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
 import com.patra.starter.provenance.common.processor.ProcessResult;
 import com.patra.starter.provenance.common.processor.ProviderContext;
-import com.patra.starter.provenance.common.provider.DataSourceProvider;
+import com.patra.starter.provenance.common.provider.ProvenanceDataProvider;
 import com.patra.starter.provenance.common.provider.ProviderRequest;
 import com.patra.starter.provenance.common.provider.ProviderResult;
 import com.patra.starter.provenance.internal.metadata.PlanMetadata;
@@ -40,7 +40,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @RequiredArgsConstructor
-public class PubmedDataSourceProvider implements DataSourceProvider {
+public class PubmedDataProvider implements ProvenanceDataProvider {
 
   private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final Set<DataType> SUPPORTED_TYPES = Set.of(DataType.LITERATURE);

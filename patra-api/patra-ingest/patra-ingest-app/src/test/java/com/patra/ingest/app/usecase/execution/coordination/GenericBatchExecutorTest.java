@@ -13,9 +13,9 @@ import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.batch.BatchResult;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.ingest.domain.port.DataSourcePort;
-import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult;
-import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult.ErrorType;
+import com.patra.ingest.domain.port.ProvenanceDataPort;
+import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult;
+import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult.ErrorType;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,7 +44,7 @@ import org.mockito.quality.Strictness;
  *   <li>✅ 部分成功：处理部分成功场景
  * </ul>
  *
- * <p>注意：重试逻辑、配置转换等已在 DataSourcePortAdapter 中处理，本测试聚焦于应用层编排逻辑。
+ * <p>注意：重试逻辑、配置转换等已在 ProvenanceDataPortAdapter 中处理，本测试聚焦于应用层编排逻辑。
  *
  * @author linqibin
  * @since 0.1.0
@@ -54,7 +54,7 @@ import org.mockito.quality.Strictness;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class GenericBatchExecutorTest {
 
-  @Mock private DataSourcePort dataSourcePort;
+  @Mock private ProvenanceDataPort provenanceDataPort;
   @Mock private LiteraturePublisherOrchestrator literaturePublisherOrchestrator;
 
   @InjectMocks private GenericBatchExecutor executor;
@@ -118,7 +118,7 @@ class GenericBatchExecutorTest {
       DataFetchResult<CanonicalLiterature> fetchResult =
           DataFetchResult.success(literatures, DataType.LITERATURE, "nextCursor123");
 
-      when(dataSourcePort.fetchData(
+      when(provenanceDataPort.fetchData(
               any(ExecutionContext.class),
               any(DataType.class),
               any(TypeReference.class),
@@ -145,7 +145,7 @@ class GenericBatchExecutorTest {
       assertThat(result.errorMessage()).isNull();
 
       // 验证调用链
-      verify(dataSourcePort)
+      verify(provenanceDataPort)
           .fetchData(eq(context), eq(DataType.LITERATURE), any(TypeReference.class), eq(batch));
       verify(literaturePublisherOrchestrator).publish(eq(literatures), any());
     }
@@ -156,7 +156,7 @@ class GenericBatchExecutorTest {
       // Given: 数据源端口返回空文献列表
       DataFetchResult<CanonicalLiterature> fetchResult =
           DataFetchResult.success(List.of(), DataType.LITERATURE, null);
-      when(dataSourcePort.fetchData(
+      when(provenanceDataPort.fetchData(
               any(ExecutionContext.class),
               any(DataType.class),
               any(TypeReference.class),
@@ -181,7 +181,7 @@ class GenericBatchExecutorTest {
       // Given: 数据源端口返回 null 文献列表
       DataFetchResult<CanonicalLiterature> fetchResult =
           DataFetchResult.success(null, DataType.LITERATURE, null);
-      when(dataSourcePort.fetchData(
+      when(provenanceDataPort.fetchData(
               any(ExecutionContext.class),
               any(DataType.class),
               any(TypeReference.class),
@@ -213,7 +213,7 @@ class GenericBatchExecutorTest {
       DataFetchResult<CanonicalLiterature> failureResult =
           DataFetchResult.failure(DataType.LITERATURE, "网络超时", ErrorType.RETRIABLE);
 
-      when(dataSourcePort.fetchData(
+      when(provenanceDataPort.fetchData(
               any(ExecutionContext.class),
               any(DataType.class),
               any(TypeReference.class),
@@ -239,7 +239,7 @@ class GenericBatchExecutorTest {
       DataFetchResult<CanonicalLiterature> failureResult =
           DataFetchResult.failure(DataType.LITERATURE, "API 密钥无效", ErrorType.NON_RETRIABLE);
 
-      when(dataSourcePort.fetchData(
+      when(provenanceDataPort.fetchData(
               any(ExecutionContext.class),
               any(DataType.class),
               any(TypeReference.class),
@@ -266,9 +266,9 @@ class GenericBatchExecutorTest {
 
     @Test
     @DisplayName("数据源端口抛出异常应该返回失败结果")
-    void shouldHandleDataSourcePortException() {
+    void shouldHandleProvenanceDataPortException() {
       // Given: 数据源端口抛出运行时异常
-      when(dataSourcePort.fetchData(
+      when(provenanceDataPort.fetchData(
               any(ExecutionContext.class),
               any(DataType.class),
               any(TypeReference.class),
@@ -300,7 +300,7 @@ class GenericBatchExecutorTest {
           DataFetchResult.partialSuccess(
               literatures, DataType.LITERATURE, "nextCursor", "10 条记录中有 2 条解析失败");
 
-      when(dataSourcePort.fetchData(
+      when(provenanceDataPort.fetchData(
               any(ExecutionContext.class),
               any(DataType.class),
               any(TypeReference.class),

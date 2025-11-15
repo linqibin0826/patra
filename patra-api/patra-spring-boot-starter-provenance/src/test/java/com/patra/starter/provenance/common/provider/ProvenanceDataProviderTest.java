@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /**
- * DataSourceProvider接口测试
+ * ProvenanceDataProvider接口测试
  *
  * <p>测试v2.0多数据类型架构的核心提供者接口。
  *
@@ -33,8 +33,8 @@ import org.junit.jupiter.api.Test;
  * @author Patra Architecture Team
  * @since 0.1.0
  */
-@DisplayName("DataSourceProvider接口测试")
-class DataSourceProviderTest {
+@DisplayName("ProvenanceDataProvider接口测试")
+class ProvenanceDataProviderTest {
 
   // ==================== 1. 基本接口契约测试 ====================
 
@@ -46,7 +46,7 @@ class DataSourceProviderTest {
     @DisplayName("应该返回数据源代码")
     void should_return_provenance_code() {
       // Given: 创建Mock Provider
-      DataSourceProvider provider = new MockPubmedProvider();
+      ProvenanceDataProvider provider = new MockPubmedProvider();
 
       // When: 获取数据源代码
       ProvenanceCode provenanceCode = provider.getProvenanceCode();
@@ -59,7 +59,7 @@ class DataSourceProviderTest {
     @DisplayName("应该返回支持的数据类型集合")
     void should_return_supported_data_types() {
       // Given: 创建Mock Provider
-      DataSourceProvider provider = new MockPubmedProvider();
+      ProvenanceDataProvider provider = new MockPubmedProvider();
 
       // When: 获取支持的数据类型
       Set<DataType> supportedTypes = provider.getSupportedDataTypes();
@@ -75,7 +75,7 @@ class DataSourceProviderTest {
     @DisplayName("支持的数据类型集合应该是不可变的")
     void supported_data_types_should_be_immutable() {
       // Given: 创建Mock Provider
-      DataSourceProvider provider = new MockPubmedProvider();
+      ProvenanceDataProvider provider = new MockPubmedProvider();
 
       // When: 获取支持的数据类型
       Set<DataType> supportedTypes = provider.getSupportedDataTypes();
@@ -96,7 +96,7 @@ class DataSourceProviderTest {
     @DisplayName("应该正确判断支持的数据类型")
     void should_support_registered_data_types() {
       // Given: 创建Mock Provider
-      DataSourceProvider provider = new MockPubmedProvider();
+      ProvenanceDataProvider provider = new MockPubmedProvider();
 
       // When & Then: 支持的类型应该返回true
       assertThat(provider.supports(DataType.LITERATURE)).isTrue();
@@ -107,7 +107,7 @@ class DataSourceProviderTest {
     @DisplayName("应该拒绝不支持的数据类型")
     void should_not_support_unregistered_data_types() {
       // Given: 创建Mock Provider
-      DataSourceProvider provider = new MockPubmedProvider();
+      ProvenanceDataProvider provider = new MockPubmedProvider();
 
       // When & Then: 不支持的类型应该返回false
       assertThat(provider.supports(DataType.DRUG)).isFalse();
@@ -125,7 +125,7 @@ class DataSourceProviderTest {
     @DisplayName("应该成功获取LITERATURE数据")
     void should_fetch_literature_data() {
       // Given: 创建Mock Provider和请求
-      DataSourceProvider provider = new MockPubmedProvider();
+      ProvenanceDataProvider provider = new MockPubmedProvider();
       ProviderRequest request = createMockRequest();
 
       // When: 获取LITERATURE数据
@@ -143,7 +143,7 @@ class DataSourceProviderTest {
     @DisplayName("应该成功获取CITATION数据")
     void should_fetch_citation_data() {
       // Given: 创建Mock Provider和请求
-      DataSourceProvider provider = new MockPubmedProvider();
+      ProvenanceDataProvider provider = new MockPubmedProvider();
       ProviderRequest request = createMockRequest();
 
       // When: 获取CITATION数据
@@ -160,7 +160,7 @@ class DataSourceProviderTest {
     @DisplayName("应该拒绝不支持的数据类型")
     void should_reject_unsupported_data_type() {
       // Given: 创建Mock Provider和请求
-      DataSourceProvider provider = new MockPubmedProvider();
+      ProvenanceDataProvider provider = new MockPubmedProvider();
       ProviderRequest request = createMockRequest();
 
       // When: 尝试获取不支持的数据类型
@@ -178,7 +178,7 @@ class DataSourceProviderTest {
     @DisplayName("应该在fetchedCount中反映实际获取的数据量")
     void should_reflect_fetched_count() {
       // Given: 创建Mock Provider和请求
-      DataSourceProvider provider = new MockPubmedProvider();
+      ProvenanceDataProvider provider = new MockPubmedProvider();
       ProviderRequest request = createMockRequest();
 
       // When: 获取数据
@@ -200,7 +200,7 @@ class DataSourceProviderTest {
     @DisplayName("应该为支持的类型返回Processor")
     void should_return_processor_for_supported_type() {
       // Given: 创建Mock Provider
-      DataSourceProvider provider = new MockPubmedProvider();
+      ProvenanceDataProvider provider = new MockPubmedProvider();
 
       // When: 获取LITERATURE的Processor
       Optional<DataProcessor<?>> processor = provider.getProcessor(DataType.LITERATURE);
@@ -213,7 +213,7 @@ class DataSourceProviderTest {
     @DisplayName("应该为不支持的类型返回空Optional")
     void should_return_empty_for_unsupported_type() {
       // Given: 创建Mock Provider
-      DataSourceProvider provider = new MockPubmedProvider();
+      ProvenanceDataProvider provider = new MockPubmedProvider();
 
       // When: 获取DRUG的Processor
       Optional<DataProcessor<?>> processor = provider.getProcessor(DataType.DRUG);
@@ -298,7 +298,7 @@ class DataSourceProviderTest {
   // ==================== Mock实现类 ====================
 
   /** Mock PubMed Provider实现（用于测试） */
-  private static class MockPubmedProvider implements DataSourceProvider {
+  private static class MockPubmedProvider implements ProvenanceDataProvider {
 
     private static final Set<DataType> SUPPORTED_TYPES =
         Set.of(DataType.LITERATURE, DataType.CITATION);

@@ -10,11 +10,9 @@ import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
-import com.patra.ingest.domain.port.DataSourcePort;
-import com.patra.ingest.infra.exception.DataSourceException;
+import com.patra.ingest.domain.port.ProvenanceDataPort;
+import com.patra.ingest.infra.exception.ProvenanceDataException;
 import com.patra.ingest.infra.integration.datasource.acl.FetchMetadataTranslator;
-import com.patra.starter.provenance.common.provider.ProviderNotFoundException;
-import com.patra.starter.provenance.common.provider.ProviderRegistry;
 import com.patra.starter.provenance.common.config.BatchingConfig;
 import com.patra.starter.provenance.common.config.HttpConfig;
 import com.patra.starter.provenance.common.config.PaginationConfig;
@@ -25,7 +23,9 @@ import com.patra.starter.provenance.common.config.WindowOffsetConfig;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
 import com.patra.starter.provenance.common.provider.BatchExecutionParams;
 import com.patra.starter.provenance.common.provider.BatchMetadata;
-import com.patra.starter.provenance.common.provider.DataSourceProvider;
+import com.patra.starter.provenance.common.provider.ProvenanceDataProvider;
+import com.patra.starter.provenance.common.provider.ProviderNotFoundException;
+import com.patra.starter.provenance.common.provider.ProviderRegistry;
 import com.patra.starter.provenance.common.provider.ProviderRequest;
 import com.patra.starter.provenance.common.provider.ProviderResult;
 import com.patra.starter.provenance.internal.metadata.PlanMetadata;
@@ -41,12 +41,13 @@ import org.springframework.stereotype.Component;
 /**
  * 数据源适配器
  *
- * <p>DataSourceAdapter是Infrastructure层的核心组件，实现Domain层的DataSourcePort接口， 桥接Domain层和Framework层。
+ * <p>ProvenanceDataAdapter是Infrastructure层的核心组件，实现Domain层的ProvenanceDataPort接口，
+ * 桥接Domain层和Framework层。
  *
  * <p><strong>主要职责</strong>：
  *
  * <ul>
- *   <li>实现DataSourcePort接口（Domain层契约）
+ *   <li>实现ProvenanceDataPort接口（Domain层契约）
  *   <li>使用ProviderRegistry查找Provider（二维索引）
  *   <li>验证类型一致性（DataType vs TypeReference）
  *   <li>转换参数（ExecutionContext + Batch → ProviderRequest）
@@ -58,11 +59,11 @@ import org.springframework.stereotype.Component;
  * <pre>
  * Application Layer (GenericBatchExecutor)
  *     ↓ 调用
- * Domain Layer (DataSourcePort接口)
+ * Domain Layer (ProvenanceDataPort接口)
  *     ↑ 实现
- * Infrastructure Layer (DataSourceAdapter) ← [本类]
+ * Infrastructure Layer (ProvenanceDataAdapter) ← [本类]
  *     ↓ 使用
- * ProviderRegistry → DataSourceProvider → DataProcessor
+ * ProviderRegistry → ProvenanceDataProvider → DataProcessor
  * </pre>
  *
  * @author Patra Architecture Team
@@ -71,7 +72,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class DataSourceAdapter implements DataSourcePort {
+public class ProvenanceDataAdapter implements ProvenanceDataPort {
 
   private final ProviderRegistry providerRegistry;
   private final FetchMetadataTranslator fetchMetadataTranslator;
@@ -93,20 +94,20 @@ public class DataSourceAdapter implements DataSourcePort {
    * @param dataType 数据类型标识
    * @return 批次调度（领域模型）
    * @throws ProviderNotFoundException 如果Provider不存在
-   * @throws DataSourceException 如果调用数据源失败
+   * @throws ProvenanceDataException 如果调用数据源失败
    */
   @Override
   public FetchMetadata prepareFetchMetadata(ExecutionContext context, DataType dataType) {
     ProvenanceCode provenanceCode = context.provenanceCode();
 
     log.debug(
-        "DataSourceAdapter.prepareFetchMetadata: provenance={}, dataType={}",
+        "ProvenanceDataAdapter.prepareFetchMetadata: provenance={}, dataType={}",
         provenanceCode.getCode(),
         dataType);
 
     try {
       // 1. 查找Provider
-      DataSourceProvider provider = providerRegistry.getProvider(provenanceCode, dataType);
+      ProvenanceDataProvider provider = providerRegistry.getProvider(provenanceCode, dataType);
 
       // 2. 提取通用参数
       String query = context.compiledQuery();
@@ -126,8 +127,8 @@ public class DataSourceAdapter implements DataSourcePort {
       FetchMetadata fetchMetadata = fetchMetadataTranslator.translate(planMetadata);
 
       log.debug(
-          "计划元数据已翻译为领域模型: dataSourceCode={}, totalRecords={}, hasStateToken={}",
-          fetchMetadata.dataSourceCode(),
+          "计划元数据已翻译为领域模型: provenanceCode={}, totalRecords={}, hasStateToken={}",
+          fetchMetadata.provenanceCode(),
           fetchMetadata.totalRecords(),
           fetchMetadata.hasStateToken());
 
@@ -138,11 +139,11 @@ public class DataSourceAdapter implements DataSourcePort {
       throw ex;
     } catch (ProvenanceClientException ex) {
       log.error("调用数据源失败: provenance={}, dataType={}", provenanceCode.getCode(), dataType, ex);
-      throw new DataSourceException("准备计划元数据失败: " + ex.getMessage(), ex);
+      throw new ProvenanceDataException("准备计划元数据失败: " + ex.getMessage(), ex);
     } catch (Exception ex) {
       log.error(
           "准备计划元数据时发生未知错误: provenance={}, dataType={}", provenanceCode.getCode(), dataType, ex);
-      throw new DataSourceException("准备计划元数据失败: " + ex.getMessage(), ex);
+      throw new ProvenanceDataException("准备计划元数据失败: " + ex.getMessage(), ex);
     }
   }
 
@@ -317,7 +318,7 @@ public class DataSourceAdapter implements DataSourcePort {
     ProvenanceCode provenanceCode = context.provenanceCode();
 
     log.debug(
-        "DataSourceAdapter.fetchData: provenance={}, dataType={}, batch={}",
+        "ProvenanceDataAdapter.fetchData: provenance={}, dataType={}, batch={}",
         provenanceCode.getCode(),
         dataType,
         batch.batchNo());
@@ -327,7 +328,7 @@ public class DataSourceAdapter implements DataSourcePort {
       validateTypeConsistency(dataType, typeRef);
 
       // 2. 查找Provider
-      DataSourceProvider provider = providerRegistry.getProvider(provenanceCode, dataType);
+      ProvenanceDataProvider provider = providerRegistry.getProvider(provenanceCode, dataType);
 
       // 3. 构建ProviderRequest
       ProviderRequest request = buildProviderRequest(context, batch);
@@ -418,7 +419,7 @@ public class DataSourceAdapter implements DataSourcePort {
         if (args.length > 0 && args[0] instanceof Class<?> innerClass) {
           log.warn(
               "检测到TypeReference<List<{}>>，应该使用TypeReference<{}>。"
-                  + "DataSourcePort.fetchData返回的DataFetchResult<T>中data字段已经是List<T>类型。",
+                  + "ProvenanceDataPort.fetchData返回的DataFetchResult<T>中data字段已经是List<T>类型。",
               innerClass.getSimpleName(),
               dataType.getDataClass().getSimpleName());
           actualClass = innerClass;
@@ -454,14 +455,12 @@ public class DataSourceAdapter implements DataSourcePort {
     // 构建BatchMetadata
     BatchMetadata metadata = new BatchMetadata(batch.batchNo(), batch.cursorToken());
 
+    // 从 ExecutionContext 转换配置快照为 ProvenanceConfig
+    // 与 prepareFetchMetadata 方法保持一致的配置传递策略
+    ProvenanceConfig config = convertToProvenanceConfig(context);
+
     return ProviderRequest.builder()
-        // config 设置为 null 的设计理由：
-        // 1. ProvenanceConfig 由 DataSourceProvider 内部从 ProvenanceProperties 获取
-        // 2. ExecutionContext.configSnapshot 是 Domain 层的 ProvenanceConfigSnapshot 类型，
-        //    主要用于执行审计和任务回放，而非运行时配置传递
-        // 3. 避免跨层类型转换（Domain → Starter），保持架构分层清晰
-        // 4. 当前设计已验证可行：Provider 内部通过 properties.mergeWithRuntime() 获取完整配置
-        .config(null)
+        .config(config)
         .executionParams(executionParams)
         .metadata(metadata)
         .build();
@@ -533,7 +532,7 @@ public class DataSourceAdapter implements DataSourcePort {
    * 转换错误类型
    *
    * @param providerErrorType Provider错误类型
-   * @return DataSourcePort错误类型
+   * @return ProvenanceDataPort错误类型
    */
   private DataFetchResult.ErrorType convertErrorType(ProviderResult.ErrorType providerErrorType) {
     return switch (providerErrorType) {

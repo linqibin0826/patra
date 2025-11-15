@@ -6,7 +6,7 @@
  * <h2>职责</h2>
  *
  * <ul>
- *   <li>定义数据源提供者的统一契约 {@link DataSourceProvider}
+ *   <li>定义数据源提供者的统一契约 {@link ProvenanceDataProvider}
  *   <li>提供提供者注册和发现机制 {@link ProviderRegistry}
  *   <li>规范提供者请求和响应模型
  *   <li>支持批量执行和元数据传递
@@ -15,7 +15,7 @@
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link DataSourceProvider} - 提供者契约接口
+ *   <li>{@link ProvenanceDataProvider} - 提供者契约接口
  *   <li>{@link ProviderRegistry} - 提供者注册表
  *   <li>{@link ProviderRequest} - 提供者请求载荷
  *   <li>{@link ProviderResult} - 提供者响应结果
@@ -27,7 +27,7 @@
  *
  * <ul>
  *   <li><b>单一职责</b> - 提供者实现仅负责数据检索，不处理业务规则
- *   <li><b>开闭原则</b> - 通过实现 {@link DataSourceProvider} 扩展新数据源，无需修改现有代码
+ *   <li><b>开闭原则</b> - 通过实现 {@link ProvenanceDataProvider} 扩展新数据源，无需修改现有代码
  *   <li><b>依赖倒置</b> - Ingest 引擎依赖抽象接口，不依赖具体实现
  * </ul>
  *
@@ -35,11 +35,11 @@
  *
  * <pre>{@code
  * @Component
- * public class CustomDataSourceProvider implements DataSourceProvider {
+ * public class CustomProvenanceDataProvider implements ProvenanceDataProvider {
  *
  *     @Override
- *     public String getProvenanceCode() {
- *         return "custom";
+ *     public ProvenanceCode getProvenanceCode() {
+ *         return ProvenanceCode.of("custom");
  *     }
  *
  *     @Override
@@ -51,7 +51,7 @@
  *     public <T> ProviderResult<T> fetchData(
  *             ProviderRequest request,
  *             DataType dataType,
- *             Class<T> targetClass) {
+ *             TypeReference<T> typeRef) {
  *         // 1. 检查数据类型支持
  *         if (!supports(dataType)) {
  *             return ProviderResult.failure(dataType, "不支持的数据类型", ErrorType.NON_RETRIABLE);
@@ -72,14 +72,14 @@
  * public class IngestOrchestrator {
  *     private final ProviderRegistry registry;
  *
- *     public <T> void ingest(String provenanceCode, DataType dataType, Class<T> targetClass) {
- *         DataSourceProvider provider = registry.getProvider(provenanceCode);
+ *     public <T> void ingest(String provenanceCode, DataType dataType, TypeReference<T> typeRef) {
+ *         ProvenanceDataProvider provider = registry.getProvider(provenanceCode, dataType);
  *         ProviderRequest request = ProviderRequest.builder()
- *             .config(provenanceConfig)
- *             .executionParams(executionParams)
- *             .metadata(BatchMetadata.first())
+ *             .query(query)
+ *             .params(params)
+ *             .configSnapshot(configSnapshot)
  *             .build();
- *         ProviderResult<T> result = provider.fetchData(request, dataType, targetClass);
+ *         ProviderResult<T> result = provider.fetchData(request, dataType, typeRef);
  *         // 类型安全地处理结果...
  *         if (result.success()) {
  *             List<T> data = result.data();

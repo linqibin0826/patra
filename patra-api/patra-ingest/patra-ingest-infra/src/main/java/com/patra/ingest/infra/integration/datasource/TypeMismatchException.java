@@ -8,7 +8,7 @@ package com.patra.ingest.infra.integration.datasource;
  * <p><strong>使用场景</strong>：
  *
  * <ul>
- *   <li>DataSourceAdapter验证类型一致性失败
+ *   <li>ProvenanceDataAdapter验证类型一致性失败
  *   <li>调用者传入的DataType与TypeReference不匹配
  * </ul>
  *

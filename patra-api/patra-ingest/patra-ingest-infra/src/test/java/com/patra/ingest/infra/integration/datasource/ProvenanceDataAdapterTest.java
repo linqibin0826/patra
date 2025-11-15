@@ -7,8 +7,8 @@ import static org.mockito.Mockito.*;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.infra.integration.datasource.acl.FetchMetadataTranslator;
-import com.patra.starter.provenance.common.provider.ProviderRegistry;
 import com.patra.starter.provenance.common.config.*;
+import com.patra.starter.provenance.common.provider.ProviderRegistry;
 import java.lang.reflect.Method;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,7 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * DataSourceAdapter 单元测试。
+ * ProvenanceDataAdapter 单元测试。
  *
  * <p>测试策略：
  *
@@ -34,20 +34,20 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * @author linqibin
  * @since 0.1.0
  */
-@DisplayName("DataSourceAdapter 单元测试")
+@DisplayName("ProvenanceDataAdapter 单元测试")
 @ExtendWith(MockitoExtension.class)
-class DataSourceAdapterTest {
+class ProvenanceDataAdapterTest {
 
   @Mock private ProviderRegistry providerRegistry;
 
-  private DataSourceAdapter adapter;
+  private ProvenanceDataAdapter adapter;
 
   @BeforeEach
   void setUp() {
     // 注意: 此测试类仅测试 convertToProvenanceConfig 私有方法(HTTP配置转换)
     // 该方法不使用 FetchMetadataTranslator，因此传入真实实例即可
     FetchMetadataTranslator translator = new FetchMetadataTranslator();
-    adapter = new DataSourceAdapter(providerRegistry, translator);
+    adapter = new ProvenanceDataAdapter(providerRegistry, translator);
   }
 
   // ========== convertToProvenanceConfig() 完整转换测试 ==========
@@ -429,7 +429,7 @@ class DataSourceAdapterTest {
   private ProvenanceConfig invokeConvertToProvenanceConfig(ExecutionContext context)
       throws Exception {
     Method method =
-        DataSourceAdapter.class.getDeclaredMethod(
+        ProvenanceDataAdapter.class.getDeclaredMethod(
             "convertToProvenanceConfig", ExecutionContext.class);
     method.setAccessible(true);
     return (ProvenanceConfig) method.invoke(adapter, context);

@@ -33,7 +33,8 @@ import java.util.Objects;
  *
  * <ul>
  *   <li>多数据类型架构中的类型安全保障
- *   <li>DataSourcePort 接口的泛型方法调用
+ *   <li>ProvenanceDataPort 接口的泛型方法调用（fetchData 方法）
+ *   <li>ProvenanceDataProvider 接口的泛型返回类型（ProviderResult&lt;T&gt;）
  *   <li>运行时类型验证和转换
  * </ul>
  *
