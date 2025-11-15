@@ -6,7 +6,8 @@
  * <ul>
  *   <li>定义各业务领域的操作类型枚举（实现 {@link com.patra.ingest.domain.messaging.OperationType}）
  *   <li>提供业务语义标签，描述对资源的具体操作（如 READY、FAILED、COMPLETED）
- *   <li>配合 {@link com.patra.ingest.domain.messaging.IngestPublishingChannels} 实现 Channel + OpType 模式
+ *   <li>配合 {@link com.patra.ingest.domain.messaging.IngestPublishingChannels} 实现 Channel + OpType
+ *       模式
  * </ul>
  *
  * <p><b>设计理念</b>：
@@ -20,7 +21,8 @@
  * <p><b>包含的枚举</b>：
  *
  * <ul>
- *   <li>{@link com.patra.ingest.app.outbox.operations.TaskOperations} - 任务操作类型（READY、FAILED、COMPLETED）
+ *   <li>{@link com.patra.ingest.app.outbox.operations.TaskOperations} -
+ *       任务操作类型（READY、FAILED、COMPLETED）
  *   <li>{@link com.patra.ingest.app.outbox.operations.LiteratureOperations} - 文献操作类型（DATA_READY）
  * </ul>
  *

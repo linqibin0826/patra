@@ -146,11 +146,16 @@ public interface ProvenanceDataPort {
    * @param dataType 数据类型标识（如 LITERATURE、JOURNAL、DRUG）
    * @param typeRef 类型引用（用于保持运行时泛型信息）
    * @param batch 批次定义，包含批次编号、分页参数和游标令牌
+   * @param fetchMetadata 抓取元数据（包含总记录数、会话令牌等）
    * @return 数据获取结果，包含指定类型的数据列表、游标和错误信息
    * @throws IllegalArgumentException 如果 dataType 与 typeRef 不一致
    */
   <T> DataFetchResult<T> fetchData(
-      ExecutionContext context, DataType dataType, TypeReference<T> typeRef, Batch batch);
+      ExecutionContext context,
+      DataType dataType,
+      TypeReference<T> typeRef,
+      Batch batch,
+      FetchMetadata fetchMetadata);
 
   /**
    * 判断是否支持指定的数据源和数据类型组合

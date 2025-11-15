@@ -203,15 +203,8 @@ public class TaskRunBatch {
     BatchStats stats = BatchStats.of(result.fetchedCount());
     Instant now = Instant.now();
 
-    // Generate idempotent key: prefer cursor token for idempotency; fallback to batch number.
-    String beforeToken = batch.cursorToken();
-    String idempotentSeed =
-        context.runId()
-            + "|"
-            + (beforeToken != null && !beforeToken.isBlank()
-                ? beforeToken
-                : "batch:" + batch.batchNo());
-    String idempotentMaterial = idempotentSeed;
+    // Generate idempotent key based on batch number
+    String idempotentMaterial = context.runId() + "|batch:" + batch.batchNo();
     IdempotentKey idempotentKey = new IdempotentKey(HashUtils.sha256Hex(idempotentMaterial));
 
     return new TaskRunBatch(
@@ -223,10 +216,10 @@ public class TaskRunBatch {
         context.provenanceCode(),
         context.operationCode(),
         batch.batchNo(),
-        batch.pageNo(), // pageNo - from Batch VO (page-based pagination)
-        batch.pageSize(), // pageSize - from Batch VO
-        beforeToken, // beforeToken - cursorToken for token-based, null for page-based
-        result.nextCursorToken(), // afterToken
+        null, // pageNo - 已废弃，统一使用 offset/limit
+        batch.limit(), // pageSize - 使用 Batch.limit()
+        null, // beforeToken - 游标令牌已移至 FetchMetadata
+        result.nextCursorToken(), // afterToken - 保留用于下次批次
         context.exprHash(),
         idempotentKey,
         status,

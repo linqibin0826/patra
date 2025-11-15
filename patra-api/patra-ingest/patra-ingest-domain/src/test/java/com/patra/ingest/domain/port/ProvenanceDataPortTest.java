@@ -58,7 +58,11 @@ class ProvenanceDataPortTest {
 
     @Override
     public <T> DataFetchResult<T> fetchData(
-        ExecutionContext context, DataType dataType, TypeReference<T> typeRef, Batch batch) {
+        ExecutionContext context,
+        DataType dataType,
+        TypeReference<T> typeRef,
+        Batch batch,
+        com.patra.ingest.domain.model.vo.fetch.FetchMetadata fetchMetadata) {
       // Mock 实现：返回空数据成功结果
       return DataFetchResult.success(List.of(), dataType, null);
     }
@@ -98,7 +102,12 @@ class ProvenanceDataPortTest {
 
       // When: 调用泛型方法
       DataFetchResult<CanonicalLiterature> result =
-          port.fetchData(context, DataType.LITERATURE, typeRef, batch);
+          port.fetchData(
+              context,
+              DataType.LITERATURE,
+              typeRef,
+              batch,
+              createTestMetadata(ProvenanceCode.PUBMED));
 
       // Then: 验证结果
       assertThat(result).isNotNull();
@@ -119,7 +128,8 @@ class ProvenanceDataPortTest {
 
       // When: 调用泛型方法
       DataFetchResult<DataType.Journal> result =
-          port.fetchData(context, DataType.JOURNAL, typeRef, batch);
+          port.fetchData(
+              context, DataType.JOURNAL, typeRef, batch, createTestMetadata(ProvenanceCode.DOAJ));
 
       // Then: 验证结果
       assertThat(result).isNotNull();
@@ -139,7 +149,8 @@ class ProvenanceDataPortTest {
 
       // When: 调用泛型方法
       DataFetchResult<DataType.Drug> result =
-          port.fetchData(context, DataType.DRUG, typeRef, batch);
+          port.fetchData(
+              context, DataType.DRUG, typeRef, batch, createTestMetadata(ProvenanceCode.OPENALEX));
 
       // Then: 验证结果
       assertThat(result).isNotNull();
@@ -164,7 +175,12 @@ class ProvenanceDataPortTest {
 
       // When: 调用泛型方法
       DataFetchResult<CanonicalLiterature> result =
-          port.fetchData(context, DataType.LITERATURE, typeRef, batch);
+          port.fetchData(
+              context,
+              DataType.LITERATURE,
+              typeRef,
+              batch,
+              createTestMetadata(ProvenanceCode.PUBMED));
 
       // Then: 返回的 data 应该是 List<CanonicalLiterature>，而不是 List<Object>
       List<CanonicalLiterature> literatures = result.data();
@@ -183,13 +199,21 @@ class ProvenanceDataPortTest {
       TypeReference<CanonicalLiterature> litTypeRef = new TypeReference<>() {};
       DataFetchResult<CanonicalLiterature> litResult =
           port.fetchData(
-              createTestContext(ProvenanceCode.PUBMED), DataType.LITERATURE, litTypeRef, batch);
+              createTestContext(ProvenanceCode.PUBMED),
+              DataType.LITERATURE,
+              litTypeRef,
+              batch,
+              createTestMetadata(ProvenanceCode.PUBMED));
 
       // When: 获取期刊数据
       TypeReference<DataType.Journal> journalTypeRef = new TypeReference<>() {};
       DataFetchResult<DataType.Journal> journalResult =
           port.fetchData(
-              createTestContext(ProvenanceCode.DOAJ), DataType.JOURNAL, journalTypeRef, batch);
+              createTestContext(ProvenanceCode.DOAJ),
+              DataType.JOURNAL,
+              journalTypeRef,
+              batch,
+              createTestMetadata(ProvenanceCode.DOAJ));
 
       // Then: 两种数据类型应该完全隔离
       assertThat(litResult.dataType()).isEqualTo(DataType.LITERATURE);
@@ -483,16 +507,19 @@ class ProvenanceDataPortTest {
 
   /** 创建测试用的批次定义 */
   private static Batch createTestBatch() {
-    // 简化的 Mock 批次（实际实现会更复杂）
+    // 简化的 Mock 批次（使用新的构造方法）
     return new Batch(
         1, // batchNo
         "test-query", // query
-        null, // params
-        null, // cursorToken
-        1, // pageNo
-        100, // pageSize
-        null // sessionTokens
+        0, // offset
+        100 // limit
         );
+  }
+
+  /** 创建测试用的抓取元数据 */
+  private static com.patra.ingest.domain.model.vo.fetch.FetchMetadata createTestMetadata(
+      ProvenanceCode provenanceCode) {
+    return com.patra.ingest.domain.model.vo.fetch.FetchMetadata.empty(provenanceCode);
   }
 
   /** 创建 Mock 文献对象 */

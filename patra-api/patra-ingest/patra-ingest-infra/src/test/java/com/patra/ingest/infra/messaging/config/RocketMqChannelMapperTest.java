@@ -159,8 +159,7 @@ class RocketMqChannelMapperTest {
     @DisplayName("自定义映射应覆盖默认映射")
     void shouldOverrideDefaultMappingWithCustomMapping() {
       // Given: 自定义映射覆盖 TASK_READY
-      when(properties.getChannelMapping())
-          .thenReturn(Map.of("INGEST_TASK", "CUSTOM_TASK_TOPIC"));
+      when(properties.getChannelMapping()).thenReturn(Map.of("INGEST_TASK", "CUSTOM_TASK_TOPIC"));
       RocketMqChannelMapper customMapper = new RocketMqChannelMapper(properties);
 
       // When
@@ -174,8 +173,7 @@ class RocketMqChannelMapperTest {
     @DisplayName("自定义映射和默认映射应合并")
     void shouldMergeCustomAndDefaultMappings() {
       // Given: 只覆盖 TASK_READY，保留 LITERATURE_READY 的默认映射
-      when(properties.getChannelMapping())
-          .thenReturn(Map.of("INGEST_TASK", "CUSTOM_TASK_TOPIC"));
+      when(properties.getChannelMapping()).thenReturn(Map.of("INGEST_TASK", "CUSTOM_TASK_TOPIC"));
       RocketMqChannelMapper customMapper = new RocketMqChannelMapper(properties);
 
       // When
@@ -191,8 +189,7 @@ class RocketMqChannelMapperTest {
     @DisplayName("自定义映射与前缀组合使用")
     void shouldCombineCustomMappingWithPrefix() {
       // Given: 自定义映射 + 前缀
-      when(properties.getChannelMapping())
-          .thenReturn(Map.of("INGEST_TASK", "CUSTOM_TOPIC"));
+      when(properties.getChannelMapping()).thenReturn(Map.of("INGEST_TASK", "CUSTOM_TOPIC"));
       when(properties.getTopicPrefix()).thenReturn("dev-");
       RocketMqChannelMapper mapper = new RocketMqChannelMapper(properties);
 
@@ -387,9 +384,7 @@ class RocketMqChannelMapperTest {
     @DisplayName("所有已配置的通道应有双向映射")
     void shouldHaveBidirectionalMappingForAllConfiguredChannels() {
       // Given: 所有已知通道
-      String[] channels = {
-        "INGEST_TASK", "INGEST_LITERATURE"
-      };
+      String[] channels = {"INGEST_TASK", "INGEST_LITERATURE"};
 
       // When & Then: 验证每个通道的双向映射
       for (String channel : channels) {
@@ -480,9 +475,7 @@ class RocketMqChannelMapperTest {
     @DisplayName("所有已配置通道的数量应为 2")
     void shouldHaveExactlyTwoConfiguredChannels() {
       // Given: MessageChannels 中定义的所有通道
-      String[] expectedChannels = {
-        "INGEST_TASK", "INGEST_LITERATURE"
-      };
+      String[] expectedChannels = {"INGEST_TASK", "INGEST_LITERATURE"};
 
       // When & Then: 验证每个通道都有映射
       for (String channel : expectedChannels) {

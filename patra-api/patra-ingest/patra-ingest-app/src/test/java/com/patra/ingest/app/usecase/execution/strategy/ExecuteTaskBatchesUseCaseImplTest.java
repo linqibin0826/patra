@@ -64,12 +64,14 @@ class ExecuteTaskBatchesUseCaseImplTest {
   private ExecutionSession mockSession;
   private ExecutionContext mockContext;
   private ExecutionSession.HeartbeatHandle mockHeartbeatHandle;
+  private com.patra.ingest.domain.model.vo.fetch.FetchMetadata mockFetchMetadata;
 
   @BeforeEach
   void setUp() {
     mockSession = createMockSession();
     mockContext = createMockContext();
     mockHeartbeatHandle = mock(ExecutionSession.HeartbeatHandle.class);
+    mockFetchMetadata = mock(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class);
 
     // 默认配置：非快速失败模式
     ReflectionTestUtils.setField(executeUseCase, "failFast", false);
@@ -91,7 +93,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
 
       // Mock 批次执行器返回成功结果
       BatchResult result1 = BatchResult.success(1, 100, null, null);
-      when(batchExecutor.execute(mockContext, batch1)).thenReturn(result1);
+      when(batchExecutor.execute(mockContext, batch1, mockFetchMetadata)).thenReturn(result1);
 
       // Mock 心跳更新成功
       when(taskRunRepository.touchHeartbeat(eq(mockSession.runId()), any(Instant.class)))
@@ -107,7 +109,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
       assertThat(executeResult.failedBatches()).isEqualTo(0);
 
       // 验证批次执行器被调用
-      verify(batchExecutor).execute(mockContext, batch1);
+      verify(batchExecutor).execute(mockContext, batch1, mockFetchMetadata);
 
       // 验证批次结果被持久化
       verify(batchRepository).save(any(TaskRunBatch.class));
@@ -127,7 +129,10 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(batchScheduleBuilder.build(mockContext)).thenReturn(plan);
 
       // Mock 批次执行器返回成功结果
-      when(batchExecutor.execute(eq(mockContext), any(Batch.class)))
+      when(batchExecutor.execute(
+              eq(mockContext),
+              any(Batch.class),
+              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class)))
           .thenReturn(BatchResult.success(1, 50, null, null))
           .thenReturn(BatchResult.success(2, 60, null, null))
           .thenReturn(BatchResult.success(3, 70, null, null));
@@ -144,9 +149,9 @@ class ExecuteTaskBatchesUseCaseImplTest {
       assertThat(executeResult.failedBatches()).isEqualTo(0);
 
       // 验证批次执行器按顺序调用
-      verify(batchExecutor).execute(mockContext, batch1);
-      verify(batchExecutor).execute(mockContext, batch2);
-      verify(batchExecutor).execute(mockContext, batch3);
+      verify(batchExecutor).execute(mockContext, batch1, mockFetchMetadata);
+      verify(batchExecutor).execute(mockContext, batch2, mockFetchMetadata);
+      verify(batchExecutor).execute(mockContext, batch3, mockFetchMetadata);
 
       // 验证持久化 3 次
       verify(batchRepository, times(3)).save(any(TaskRunBatch.class));
@@ -174,10 +179,11 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(batchScheduleBuilder.build(mockContext)).thenReturn(plan);
 
       // Mock 批次执行：第二个批次抛出异常
-      when(batchExecutor.execute(mockContext, batch1))
+      when(batchExecutor.execute(mockContext, batch1, mockFetchMetadata))
           .thenReturn(BatchResult.success(1, 50, null, null));
-      when(batchExecutor.execute(mockContext, batch2)).thenThrow(new RuntimeException("API 超时"));
-      when(batchExecutor.execute(mockContext, batch3))
+      when(batchExecutor.execute(mockContext, batch2, mockFetchMetadata))
+          .thenThrow(new RuntimeException("API 超时"));
+      when(batchExecutor.execute(mockContext, batch3, mockFetchMetadata))
           .thenReturn(BatchResult.success(3, 70, null, null));
 
       when(taskRunRepository.touchHeartbeat(anyLong(), any(Instant.class))).thenReturn(true);
@@ -192,9 +198,9 @@ class ExecuteTaskBatchesUseCaseImplTest {
       assertThat(executeResult.failedBatches()).isEqualTo(1);
 
       // 验证所有批次都尝试执行
-      verify(batchExecutor).execute(mockContext, batch1);
-      verify(batchExecutor).execute(mockContext, batch2);
-      verify(batchExecutor).execute(mockContext, batch3);
+      verify(batchExecutor).execute(mockContext, batch1, mockFetchMetadata);
+      verify(batchExecutor).execute(mockContext, batch2, mockFetchMetadata);
+      verify(batchExecutor).execute(mockContext, batch3, mockFetchMetadata);
 
       // 验证持久化 3 次（包括失败的批次）
       verify(batchRepository, times(3)).save(any(TaskRunBatch.class));
@@ -210,7 +216,10 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(batchScheduleBuilder.build(mockContext)).thenReturn(plan);
 
       // Mock 批次执行：都抛出异常
-      when(batchExecutor.execute(eq(mockContext), any(Batch.class)))
+      when(batchExecutor.execute(
+              eq(mockContext),
+              any(Batch.class),
+              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class)))
           .thenThrow(new RuntimeException("网络错误"));
 
       when(taskRunRepository.touchHeartbeat(anyLong(), any(Instant.class))).thenReturn(true);
@@ -241,7 +250,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(batchScheduleBuilder.build(mockContext)).thenReturn(plan);
 
       // Mock 批次执行：第一个批次失败
-      when(batchExecutor.execute(mockContext, batch1)).thenThrow(new RuntimeException("第一批次失败"));
+      when(batchExecutor.execute(mockContext, batch1, mockFetchMetadata))
+          .thenThrow(new RuntimeException("第一批次失败"));
 
       when(taskRunRepository.touchHeartbeat(anyLong(), any(Instant.class))).thenReturn(true);
 
@@ -255,10 +265,22 @@ class ExecuteTaskBatchesUseCaseImplTest {
       assertThat(executeResult.failedBatches()).isEqualTo(1);
 
       // 验证只调用了第一个批次
-      verify(batchExecutor, times(1)).execute(eq(mockContext), any(Batch.class));
-      verify(batchExecutor).execute(mockContext, batch1);
-      verify(batchExecutor, never()).execute(mockContext, batch2);
-      verify(batchExecutor, never()).execute(mockContext, batch3);
+      verify(batchExecutor, times(1))
+          .execute(
+              eq(mockContext),
+              any(Batch.class),
+              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class));
+      verify(batchExecutor).execute(mockContext, batch1, mockFetchMetadata);
+      verify(batchExecutor, never())
+          .execute(
+              eq(mockContext),
+              eq(batch2),
+              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class));
+      verify(batchExecutor, never())
+          .execute(
+              eq(mockContext),
+              eq(batch3),
+              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class));
     }
   }
 
@@ -331,7 +353,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(mockSession.heartbeatHandle()).thenReturn(mockHeartbeatHandle);
 
       // Mock 批次执行器
-      when(batchExecutor.execute(mockContext, batch1))
+      when(batchExecutor.execute(mockContext, batch1, mockFetchMetadata))
           .thenReturn(BatchResult.success(1, 50, null, null));
 
       when(taskRunRepository.touchHeartbeat(anyLong(), any(Instant.class))).thenReturn(true);
@@ -346,10 +368,22 @@ class ExecuteTaskBatchesUseCaseImplTest {
       assertThat(executeResult.failedBatches()).isEqualTo(0);
 
       // 验证只执行了第一个批次
-      verify(batchExecutor, times(1)).execute(eq(mockContext), any(Batch.class));
-      verify(batchExecutor).execute(mockContext, batch1);
-      verify(batchExecutor, never()).execute(mockContext, batch2);
-      verify(batchExecutor, never()).execute(mockContext, batch3);
+      verify(batchExecutor, times(1))
+          .execute(
+              eq(mockContext),
+              any(Batch.class),
+              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class));
+      verify(batchExecutor).execute(mockContext, batch1, mockFetchMetadata);
+      verify(batchExecutor, never())
+          .execute(
+              eq(mockContext),
+              eq(batch2),
+              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class));
+      verify(batchExecutor, never())
+          .execute(
+              eq(mockContext),
+              eq(batch3),
+              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class));
     }
 
     @Test
@@ -364,7 +398,10 @@ class ExecuteTaskBatchesUseCaseImplTest {
       BatchSchedule plan = createBatchSchedule(List.of(batch1, batch2));
       when(batchScheduleBuilder.build(mockContext)).thenReturn(plan);
 
-      when(batchExecutor.execute(eq(mockContext), any(Batch.class)))
+      when(batchExecutor.execute(
+              eq(mockContext),
+              any(Batch.class),
+              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class)))
           .thenReturn(BatchResult.success(1, 50, null, null))
           .thenReturn(BatchResult.success(2, 60, null, null));
 
@@ -379,7 +416,11 @@ class ExecuteTaskBatchesUseCaseImplTest {
       assertThat(executeResult.succeededBatches()).isEqualTo(2);
       assertThat(executeResult.failedBatches()).isEqualTo(0);
 
-      verify(batchExecutor, times(2)).execute(eq(mockContext), any(Batch.class));
+      verify(batchExecutor, times(2))
+          .execute(
+              eq(mockContext),
+              any(Batch.class),
+              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class));
     }
   }
 
@@ -397,7 +438,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
       BatchSchedule plan = createBatchSchedule(List.of(batch1));
       when(batchScheduleBuilder.build(mockContext)).thenReturn(plan);
 
-      when(batchExecutor.execute(mockContext, batch1))
+      when(batchExecutor.execute(mockContext, batch1, mockFetchMetadata))
           .thenReturn(BatchResult.success(1, 100, null, null));
       when(taskRunRepository.touchHeartbeat(eq(mockSession.runId()), any(Instant.class)))
           .thenReturn(true);
@@ -423,7 +464,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
       BatchSchedule plan = createBatchSchedule(List.of(batch1));
       when(batchScheduleBuilder.build(mockContext)).thenReturn(plan);
 
-      when(batchExecutor.execute(mockContext, batch1))
+      when(batchExecutor.execute(mockContext, batch1, mockFetchMetadata))
           .thenReturn(BatchResult.success(1, 100, null, null));
       when(taskRunRepository.touchHeartbeat(anyLong(), any(Instant.class)))
           .thenThrow(new RuntimeException("数据库连接失败"));
@@ -459,7 +500,10 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(batchScheduleBuilder.build(mockContext)).thenReturn(plan);
 
       // Mock 批次执行器返回成功结果
-      when(batchExecutor.execute(eq(mockContext), any(Batch.class)))
+      when(batchExecutor.execute(
+              eq(mockContext),
+              any(Batch.class),
+              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class)))
           .thenAnswer(
               invocation -> {
                 Batch batch = invocation.getArgument(1);
@@ -491,7 +535,10 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(batchScheduleBuilder.build(mockContext)).thenReturn(plan);
 
       // Mock 批次执行器：奇数成功，偶数失败
-      when(batchExecutor.execute(eq(mockContext), any(Batch.class)))
+      when(batchExecutor.execute(
+              eq(mockContext),
+              any(Batch.class),
+              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class)))
           .thenAnswer(
               invocation -> {
                 Batch batch = invocation.getArgument(1);
@@ -548,6 +595,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
     when(plan.totalBatches()).thenReturn(batches.size());
     when(plan.hasBatches()).thenReturn(!batches.isEmpty());
     when(plan.exceedsLimit()).thenReturn(false);
+    when(plan.fetchMetadata()).thenReturn(mockFetchMetadata);
     return plan;
   }
 }

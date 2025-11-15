@@ -119,9 +119,7 @@ public class PubmedDataProvider implements ProvenanceDataProvider {
 
         long duration = System.currentTimeMillis() - start;
         log.info(
-            "PubMed provider completed: fetched={} duration={}ms",
-            result.fetchedCount(),
-            duration);
+            "PubMed provider completed: fetched={} duration={}ms", result.fetchedCount(), duration);
 
         @SuppressWarnings("unchecked")
         ProviderResult<T> typedResult = (ProviderResult<T>) result;

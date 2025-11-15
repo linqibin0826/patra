@@ -1,111 +1,78 @@
 package com.patra.ingest.domain.model.vo.batch;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import java.util.Collections;
-import java.util.Map;
-
 /**
- * 单次执行批次值对象。
+ * 单次执行批次值对象（纯领域模型）。
  *
- * <p>封装已编译的查询、参数和分页元数据。
+ * <p>封装批次的核心业务概念：批次编号、查询和分页范围。
+ *
+ * <p><strong>设计原则</strong>：
+ *
+ * <ul>
+ *   <li>只包含业务概念，不包含技术细节
+ *   <li>使用通用的分页抽象（offset/limit），而非数据源特定参数
+ *   <li>数据源特定的参数映射由 Infrastructure 层的 ParameterMapper 处理
+ * </ul>
  *
  * <p>不变式:
  *
  * <ul>
  *   <li>{@code batchNo} >= 1
  *   <li>{@code query} 不能为空
+ *   <li>{@code offset} >= 0
+ *   <li>{@code limit} > 0
  * </ul>
  *
- * <p>分页模式:
+ * <p><strong>示例</strong>：
  *
- * <ul>
- *   <li><b>基于页码</b>: 使用 {@code pageNo} 和 {@code pageSize} (例如 PubMed 的 retstart/retmax)
- *   <li><b>基于游标</b>: 使用 {@code cursorToken} 和可选的 {@code pageSize} (例如 EPMC 的 cursorMark)
- *   <li><b>基于会话令牌</b>: 使用 {@code sessionTokens} 存储数据源特定的会话令牌 (例如 PubMed 的 webEnv/queryKey)
- * </ul>
+ * <pre>{@code
+ * // 第1批：获取前500条 (offset=0, limit=500)
+ * Batch batch1 = new Batch(1, "cancer AND 2024", 0, 500);
+ *
+ * // 第2批：获取第501-1000条 (offset=500, limit=500)
+ * Batch batch2 = new Batch(2, "cancer AND 2024", 500, 500);
+ * }</pre>
  *
  * @param batchNo 批次序号 (从 1 开始)
- * @param query 已编译的查询字符串
- * @param params 查询参数(JSON 格式)
- * @param cursorToken 用于游标分页的游标令牌 (可为空)
- * @param pageNo 用于页码分页的页码 (从 1 开始, 游标分页时为空)
- * @param pageSize 页大小或预期获取数量 (可为空)
- * @param sessionTokens 数据源特定的会话令牌 (可为空, 例如 PubMed History Server 的 webEnv/queryKey)
+ * @param query 查询字符串
+ * @param offset 起始偏移量 (从 0 开始)
+ * @param limit 获取数量 (必须 > 0)
  * @author linqibin
- * @since 0.1.0
+ * @since 0.3.0
  */
-public record Batch(
-    int batchNo,
-    String query,
-    JsonNode params,
-    String cursorToken,
-    Integer pageNo,
-    Integer pageSize,
-    Map<String, String> sessionTokens) {
+public record Batch(int batchNo, String query, int offset, int limit) {
+
+  /** 紧凑构造器：验证不变式。 */
   public Batch {
     if (batchNo < 1) {
-      throw new IllegalArgumentException("batchNo must be >= 1");
+      throw new IllegalArgumentException("batchNo must be >= 1, got: " + batchNo);
     }
-    // 确保 sessionTokens 不为 null，使用不可变空 Map
-    if (sessionTokens == null) {
-      sessionTokens = Collections.emptyMap();
-    } else {
-      // 创建不可变副本以保证 record 的不变性
-      sessionTokens = Collections.unmodifiableMap(sessionTokens);
+    if (query == null || query.isBlank()) {
+      throw new IllegalArgumentException("query must not be blank");
     }
-  }
-
-  /** 创建第一个批次,不包含分页元数据(遗留方法)。 */
-  public static Batch first(String query, JsonNode params) {
-    return new Batch(1, query, params, null, null, null, null);
-  }
-
-  /** 创建基于页码的批次(例如 PubMed 的 retstart/retmax)。 */
-  public static Batch withPage(
-      int batchNo, String query, JsonNode params, int pageNo, int pageSize) {
-    return new Batch(batchNo, query, params, null, pageNo, pageSize, null);
-  }
-
-  /** 创建基于游标的批次(例如 EPMC 的 cursorMark)。 */
-  public static Batch withToken(
-      int batchNo, String query, JsonNode params, String cursorToken, Integer pageSize) {
-    return new Batch(batchNo, query, params, cursorToken, null, pageSize, null);
+    if (offset < 0) {
+      throw new IllegalArgumentException("offset must be >= 0, got: " + offset);
+    }
+    if (limit <= 0) {
+      throw new IllegalArgumentException("limit must be > 0, got: " + limit);
+    }
   }
 
   /**
-   * 创建带会话令牌的批次（用于 PubMed History Server）。
+   * 计算批次的结束位置（不包含）。
    *
-   * @param batchNo 批次序号
-   * @param query 查询字符串
-   * @param params 查询参数
-   * @param pageNo 页码（offset）
-   * @param pageSize 页大小
-   * @param webEnv PubMed History Server 会话令牌
-   * @param queryKey PubMed History Server 查询键
-   * @return 包含会话令牌的批次
+   * @return offset + limit
    */
-  public static Batch withPageAndSession(
-      int batchNo,
-      String query,
-      JsonNode params,
-      int pageNo,
-      int pageSize,
-      String webEnv,
-      String queryKey) {
-    Map<String, String> sessionTokens =
-        Map.of(
-            "webEnv", webEnv,
-            "queryKey", queryKey);
-    return new Batch(batchNo, query, params, null, pageNo, pageSize, sessionTokens);
+  public int endOffset() {
+    return offset + limit;
   }
 
-  /** 指示是否存在游标令牌。 */
-  public boolean hasCursor() {
-    return cursorToken != null && !cursorToken.isBlank();
-  }
-
-  /** 指示是否存在会话令牌。 */
-  public boolean hasSessionTokens() {
-    return sessionTokens != null && !sessionTokens.isEmpty();
+  /**
+   * 判断批次是否包含指定的记录位置。
+   *
+   * @param recordPosition 记录位置（从0开始）
+   * @return 如果在范围内返回 true
+   */
+  public boolean contains(int recordPosition) {
+    return recordPosition >= offset && recordPosition < endOffset();
   }
 }

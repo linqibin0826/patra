@@ -39,7 +39,9 @@ import org.springframework.stereotype.Component;
  *   <li>具体类而非接口（简化设计）
  *   <li>提供单一 build() 方法
  *   <li>封装复杂的构建逻辑
- * </ul>π
+ * </ul>
+ *
+ * π
  *
  * @author Patra Architecture Team
  * @since 0.2.0
@@ -141,7 +143,7 @@ public class BatchScheduleBuilder {
 
     if (fetchMetadata.totalRecords() == 0) {
       log.info("抓取元数据为空: provenance={}", ctx.provenanceCode());
-      return BatchSchedule.empty(ctx);
+      return BatchSchedule.empty(ctx, fetchMetadata);
     }
 
     log.info(
@@ -174,7 +176,7 @@ public class BatchScheduleBuilder {
         batches.size(),
         strategy.getClass().getSimpleName());
 
-    return new BatchSchedule(batches, ctx);
+    return new BatchSchedule(batches, ctx, fetchMetadata);
   }
 
   /**

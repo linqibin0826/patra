@@ -116,6 +116,9 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
     int succeededCount = 0;
     int failedCount = 0;
 
+    // 从 BatchSchedule 中获取 fetchMetadata，用于传递给 BatchExecutor
+    com.patra.ingest.domain.model.vo.fetch.FetchMetadata fetchMetadata = schedule.fetchMetadata();
+
     for (Batch batch : schedule.batches()) {
       // 步骤4.1: 检查租约撤销状态
       log.debug(
@@ -143,7 +146,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
 
       BatchResult result;
       try {
-        result = batchExecutor.execute(context, batch);
+        result = batchExecutor.execute(context, batch, fetchMetadata);
       } catch (Exception e) {
         log.error("批次执行失败 taskId={} runId={} batchNo={}", taskId, runId, batch.batchNo(), e);
         // 异常时创建失败结果
