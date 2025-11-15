@@ -81,22 +81,28 @@ class BatchTest {
     }
 
     @Test
-    @DisplayName("应该拒绝 null 或空白的 query")
-    void shouldRejectNullOrBlankQuery() {
-      // When & Then: query = null 应抛出 IllegalArgumentException
-      assertThatThrownBy(() -> new Batch(1, null, 0, 500))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("query must not be blank");
+    @DisplayName("应该允许 null 或空白的 query（PubMed 等数据源允许仅使用日期过滤器）")
+    void shouldAllowNullOrBlankQuery() {
+      // When: query = null
+      Batch batchWithNull = new Batch(1, null, 0, 500);
 
-      // When & Then: query = "" 应抛出 IllegalArgumentException
-      assertThatThrownBy(() -> new Batch(1, "", 0, 500))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("query must not be blank");
+      // Then: 应该成功创建
+      assertThat(batchWithNull).isNotNull();
+      assertThat(batchWithNull.query()).isNull();
 
-      // When & Then: query = "   " 应抛出 IllegalArgumentException
-      assertThatThrownBy(() -> new Batch(1, "   ", 0, 500))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("query must not be blank");
+      // When: query = ""
+      Batch batchWithEmpty = new Batch(1, "", 0, 500);
+
+      // Then: 应该成功创建
+      assertThat(batchWithEmpty).isNotNull();
+      assertThat(batchWithEmpty.query()).isEmpty();
+
+      // When: query = "   "
+      Batch batchWithBlank = new Batch(1, "   ", 0, 500);
+
+      // Then: 应该成功创建
+      assertThat(batchWithBlank).isNotNull();
+      assertThat(batchWithBlank.query()).isEqualTo("   ");
     }
 
     @Test

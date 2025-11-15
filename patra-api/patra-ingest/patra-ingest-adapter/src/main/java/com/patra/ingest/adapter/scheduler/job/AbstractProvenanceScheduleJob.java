@@ -224,7 +224,7 @@ public abstract class AbstractProvenanceScheduleJob {
   private void handleJobSuccess(PlanIngestionResult result, long startTime) {
     long duration = System.currentTimeMillis() - startTime;
     log.info(
-        "已完成来源 [{}] 的采集计划 [{}],调度了 {} 个任务,耗时 {}ms",
+        "已完成来源 [{}] 的采集计划 [{}] 的制定,调度了 {} 个任务,耗时 {}ms",
         getProvenanceCode().getCode(),
         result.planId(),
         result.taskCount(),
