@@ -8,10 +8,10 @@ import com.patra.common.model.DataType;
 import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
+import com.patra.ingest.domain.model.vo.query.QuerySession;
 import com.patra.ingest.domain.port.ProvenanceDataPort;
 import com.patra.ingest.infra.exception.ProvenanceDataException;
-import com.patra.ingest.infra.integration.datasource.acl.FetchMetadataTranslator;
+import com.patra.ingest.infra.integration.datasource.acl.QuerySessionTranslator;
 import com.patra.ingest.infra.mapper.ProviderParameterMapper;
 import com.patra.ingest.infra.mapper.ProviderParameterMapperRegistry;
 import com.patra.starter.provenance.common.config.BatchingConfig;
@@ -75,34 +75,34 @@ import org.springframework.stereotype.Component;
 public class ProvenanceDataAdapter implements ProvenanceDataPort {
 
   private final ProviderRegistry providerRegistry;
-  private final FetchMetadataTranslator fetchMetadataTranslator;
+  private final QuerySessionTranslator querySessionTranslator;
   private final ProviderParameterMapperRegistry parameterMapperRegistry;
 
   /**
-   * 准备采集计划元数据
+   * 准备查询会话
    *
    * <p><strong>实现流程</strong>:
    *
    * <ol>
    *   <li>从ExecutionContext提取通用参数(query, params, config)
    *   <li>使用ProviderRegistry查找Provider
-   *   <li>调用Provider.prepareFetchMetadata()获取元数据
-   *   <li>使用PlanMetadataTranslator翻译为领域模型
+   *   <li>调用Provider.preparePlan()获取计划元数据
+   *   <li>使用QuerySessionTranslator翻译为领域模型
    *   <li>处理异常转换
    * </ol>
    *
    * @param context 执行上下文
    * @param dataType 数据类型标识
-   * @return 批次调度（领域模型）
+   * @return 查询会话（领域模型）
    * @throws ProviderNotFoundException 如果Provider不存在
    * @throws ProvenanceDataException 如果调用数据源失败
    */
   @Override
-  public FetchMetadata prepareFetchMetadata(ExecutionContext context, DataType dataType) {
+  public QuerySession prepareQuerySession(ExecutionContext context, DataType dataType) {
     ProvenanceCode provenanceCode = context.provenanceCode();
 
     log.debug(
-        "ProvenanceDataAdapter.prepareFetchMetadata: provenance={}, dataType={}",
+        "ProvenanceDataAdapter.prepareQuerySession: provenance={}, dataType={}",
         provenanceCode.getCode(),
         dataType);
 
@@ -125,15 +125,15 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
           planMetadata.totalCount());
 
       // 4. 使用翻译器转换为领域模型
-      FetchMetadata fetchMetadata = fetchMetadataTranslator.translate(planMetadata);
+      QuerySession querySession = querySessionTranslator.translate(planMetadata);
 
       log.debug(
           "计划元数据已翻译为领域模型: provenanceCode={}, totalRecords={}, hasStateToken={}",
-          fetchMetadata.provenanceCode(),
-          fetchMetadata.totalRecords(),
-          fetchMetadata.hasStateToken());
+          querySession.provenanceCode(),
+          querySession.totalRecords(),
+          querySession.hasStateToken());
 
-      return fetchMetadata;
+      return querySession;
 
     } catch (ProviderNotFoundException ex) {
       log.error("Provider未找到: provenance={}, dataType={}", provenanceCode.getCode(), dataType, ex);
@@ -307,7 +307,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
    * @param dataType 数据类型标识
    * @param typeRef 类型引用
    * @param batch 批次定义
-   * @param fetchMetadata 抓取元数据（包含总记录数、会话令牌等）
+   * @param querySession 查询会话（包含总记录数、会话令牌等）
    * @return 数据获取结果
    * @throws TypeMismatchException 如果DataType与TypeReference不一致
    * @throws ProviderNotFoundException 如果Provider不存在
@@ -318,7 +318,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
       DataType dataType,
       TypeReference<T> typeRef,
       Batch batch,
-      FetchMetadata fetchMetadata) {
+      QuerySession querySession) {
 
     long startTime = System.currentTimeMillis();
     ProvenanceCode provenanceCode = context.provenanceCode();
@@ -337,7 +337,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
       ProvenanceDataProvider provider = providerRegistry.getProvider(provenanceCode, dataType);
 
       // 3. 构建ProviderRequest（使用 ParameterMapper 进行参数映射）
-      ProviderRequest request = buildProviderRequest(context, batch, fetchMetadata);
+      ProviderRequest request = buildProviderRequest(context, batch, querySession);
 
       // 4. 调用Provider
       @SuppressWarnings("unchecked")
@@ -450,18 +450,18 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
    *
    * @param context 执行上下文
    * @param batch 批次定义
-   * @param fetchMetadata 抓取元数据
+   * @param querySession 查询会话
    * @return Provider请求参数
    */
   private ProviderRequest buildProviderRequest(
-      ExecutionContext context, Batch batch, FetchMetadata fetchMetadata) {
+      ExecutionContext context, Batch batch, QuerySession querySession) {
     // 构建BatchExecutionParams
     String query = context.compiledQuery();
 
     // 使用 ParameterMapper 进行参数映射
     ProvenanceCode provenanceCode = context.provenanceCode();
     ProviderParameterMapper mapper = parameterMapperRegistry.getMapper(provenanceCode);
-    JsonNode mappedParams = mapper.mapParameters(batch, context.compiledParams(), fetchMetadata);
+    JsonNode mappedParams = mapper.mapParameters(batch, context.compiledParams(), querySession);
 
     BatchExecutionParams executionParams = new BatchExecutionParams(query, mappedParams);
 

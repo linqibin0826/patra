@@ -41,7 +41,7 @@
  * <pre>{@code
  * // 新设计：Strategy 只生成纯领域 Batch（不包含数据源特定参数）
  * public class PubmedBatchGenerationStrategy implements BatchGenerationStrategy {
- *     public List<Batch> generateBatches(FetchMetadata metadata, ExecutionContext ctx) {
+ *     public List<Batch> generateBatches(QuerySession session, ExecutionContext ctx) {
  *         for (int i = 0; i < pageCount; i++) {
  *             int offset = i * batchSize;
  *             batches.add(new Batch(i + 1, query, offset, batchSize));  // ✅ 纯业务概念
@@ -93,17 +93,17 @@
  * <h2>完整的批次处理流程</h2>
  *
  * <pre>{@code
- * // 1. Application 层：BatchScheduleBuilder 准备抓取元数据
- * FetchMetadata metadata = provenanceDataPort.prepareFetchMetadata(ctx, DataType.LITERATURE);
+ * // 1. Application 层：BatchScheduleBuilder 准备查询会话
+ * QuerySession session = provenanceDataPort.prepareQuerySession(ctx, DataType.LITERATURE);
  * // 结果: totalRecords=10000, stateToken={webEnv: "...", queryKey: "..."}
  *
  * // 2. Application 层：BatchGenerationStrategy 生成批次列表（纯领域模型）
- * List<Batch> batches = pubmedStrategy.generateBatches(metadata, ctx);
+ * List<Batch> batches = pubmedStrategy.generateBatches(session, ctx);
  * // 结果: [Batch(1, "cancer", 0, 500), Batch(2, "cancer", 500, 500), ...]
  *
  * // 3. Infrastructure 层：ProviderParameterMapper 映射为数据源特定参数
  * for (Batch batch : batches) {
- *     JsonNode params = pubmedMapper.mapParameters(batch, baseParams, metadata);
+ *     JsonNode params = pubmedMapper.mapParameters(batch, baseParams, session);
  *     // 结果: {"retstart": 0, "retmax": 500, "WebEnv": "...", "query_key": "..."}
  *
  *     // 4. Infrastructure 层：ProvenanceDataAdapter 调用数据源 API
@@ -125,10 +125,10 @@
  *     }
  *
  *     @Override
- *     public List<Batch> generateBatches(FetchMetadata metadata, ExecutionContext ctx) {
+ *     public List<Batch> generateBatches(QuerySession session, ExecutionContext ctx) {
  *         List<Batch> batches = new ArrayList<>();
  *         int batchSize = ctx.configSnapshot().pagination().pageSizeValue();
- *         int totalRecords = metadata.totalRecords();
+ *         int totalRecords = session.totalRecords();
  *         String query = ctx.compiledQuery();
  *
  *         // 只需计算批次数和 offset/limit（不包含数据源特定参数）
@@ -154,7 +154,7 @@
  *     }
  *
  *     @Override
- *     public JsonNode mapParameters(Batch batch, JsonNode baseParams, FetchMetadata metadata) {
+ *     public JsonNode mapParameters(Batch batch, JsonNode baseParams, QuerySession session) {
  *         ObjectNode params = ...;
  *         params.put("offset", batch.offset());   // Crossref 使用 offset 参数
  *         params.put("rows", batch.limit());      // Crossref 使用 rows 参数
@@ -172,7 +172,7 @@
  * <pre>{@code
  * public interface BatchGenerationStrategy {
  *     ProvenanceCode getSupportedProvenanceCode();
- *     List<Batch> generateBatches(FetchMetadata metadata, ExecutionContext ctx);
+ *     List<Batch> generateBatches(QuerySession session, ExecutionContext ctx);
  * }
  * }</pre>
  *
@@ -190,10 +190,10 @@
  *     }
  *
  *     public BatchSchedule build(ExecutionContext ctx) {
- *         ProvenanceCode code = metadata.provenanceCode();
+ *         ProvenanceCode code = session.provenanceCode();
  *         BatchGenerationStrategy strategy = strategyMap.get(code);  // 路由
- *         List<Batch> batches = strategy.generateBatches(metadata, ctx);
- *         return new BatchSchedule(batches, ctx, metadata);
+ *         List<Batch> batches = strategy.generateBatches(session, ctx);
+ *         return new BatchSchedule(batches, ctx, session);
  *     }
  * }
  * }</pre>

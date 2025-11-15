@@ -218,7 +218,7 @@ public class TaskRunBatch {
         batch.batchNo(),
         null, // pageNo - 已废弃，统一使用 offset/limit
         batch.limit(), // pageSize - 使用 Batch.limit()
-        null, // beforeToken - 游标令牌已移至 FetchMetadata
+        null, // beforeToken
         result.nextCursorToken(), // afterToken - 保留用于下次批次
         context.exprHash(),
         idempotentKey,

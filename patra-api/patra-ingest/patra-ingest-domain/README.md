@@ -62,8 +62,8 @@ patra-ingest-domain/
    │  │  │  ├─ Batch.java                     # 批次定义
    │  │  │  ├─ BatchSchedule.java             # 批次调度
    │  │  │  └─ BatchResult.java               # 批次结果
-   │  │  ├─ fetch/                        # 数据获取相关值对象
-   │  │  │  ├─ FetchMetadata.java             # 获取元数据
+   │  │  ├─ query/                        # 查询会话相关值对象
+   │  │  │  ├─ QuerySession.java              # 查询会话
    │  │  │  └─ DataFetchResult.java           # 数据获取结果
    │  │  ├─ shared/                       # 共享值对象
    │  │  │  ├─ IdempotentKey.java             # 幂等键
@@ -357,13 +357,13 @@ public interface ExpressionCompilerPort {
 - **统一接口**: 取代特定数据源端口(如已废弃的 PubmedSearchPort),提供统一的数据源访问契约
 - **泛型化**: 支持任意数据类型(文献、期刊、药品等)
 - **策略模式**: 通过 DataType 标识和 TypeReference 实现类型安全的数据获取
-- **双阶段设计**: 计划准备(`preparePlan`)和数据获取(`fetchData`)分离
+- **双阶段设计**: 计划准备(`prepareQuerySession`)和数据获取(`fetchData`)分离
 
 **核心方法**:
 ```java
 public interface ProvenanceDataPort {
-    // 准备计划元数据（获取总数、会话令牌等）
-    PlanMetadata prepareFetchMetadata(ExecutionContext context, DataType dataType);
+    // 准备查询会话（获取总数、会话令牌等）
+    QuerySession prepareQuerySession(ExecutionContext context, DataType dataType);
 
     // 获取指定类型的数据
     <T> DataFetchResult<T> fetchData(
@@ -381,8 +381,8 @@ public interface ProvenanceDataPort {
 
 **使用示例**:
 ```java
-// 准备计划
-PlanMetadata planMetadata = provenanceDataPort.prepareFetchMetadata(context, DataType.LITERATURE);
+// 准备查询会话
+QuerySession querySession = provenanceDataPort.prepareQuerySession(context, DataType.LITERATURE);
 
 // 获取文献数据
 TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
@@ -403,7 +403,7 @@ DataFetchResult<CanonicalLiterature> result =
 
 #### BatchGenerationStrategy (批次生成策略接口)
 
-**职责**: 定义如何根据计划元数据生成批次列表。
+**职责**: 定义如何根据查询会话生成批次列表。
 
 **设计原则**:
 - **策略模式**: 每个数据源对应一个策略实现
@@ -413,16 +413,16 @@ DataFetchResult<CanonicalLiterature> result =
 **核心方法**:
 ```java
 public interface BatchGenerationStrategy {
-    // 获取策略支持的计划元数据类型
-    Class<? extends PlanMetadata> getSupportedType();
+    // 获取策略支持的查询会话类型
+    Class<? extends QuerySession> getSupportedType();
 
-    // 根据计划元数据生成批次列表
-    List<Batch> generateBatches(PlanMetadata plan, ExecutionContext ctx);
+    // 根据查询会话生成批次列表
+    List<Batch> generateBatches(QuerySession session, ExecutionContext ctx);
 }
 ```
 
 **使用场景**:
-- 在 `UnifiedBatchPlanner` 中根据 `PlanMetadata` 类型自动选择对应策略
+- 在 `UnifiedBatchPlanner` 中根据 `QuerySession` 类型自动选择对应策略
 - 通过 Spring 自动注入所有策略实现
 - 使用 Map 进行策略路由（类似 ProvenanceDataAdapter）
 
@@ -432,12 +432,12 @@ public interface BatchGenerationStrategy {
 @Component
 public class EpmcBatchGenerationStrategy implements BatchGenerationStrategy {
     @Override
-    public Class<? extends PlanMetadata> getSupportedType() {
-        return EpmcPlanMetadata.class;  // 声明支持的类型
+    public Class<? extends QuerySession> getSupportedType() {
+        return EpmcQuerySession.class;  // 声明支持的类型
     }
 
     @Override
-    public List<Batch> generateBatches(PlanMetadata plan, ExecutionContext ctx) {
+    public List<Batch> generateBatches(QuerySession session, ExecutionContext ctx) {
         // 实现 EPMC 特定的批次生成逻辑
     }
 }
@@ -451,7 +451,7 @@ public class EpmcBatchGenerationStrategy implements BatchGenerationStrategy {
 
 ### 上游依赖
 - `patra-common-core`: 通用工具类和枚举(ProvenanceCode, OperationCode)
-- `patra-common-model`: 通用领域模型基类(PlanMetadata, DataType 等)
+- `patra-common-model`: 通用领域模型基类(QuerySession, DataType 等)
 
 ### 下游消费者
 - `patra-ingest-app`: 应用层(用例编排器、策略实现)
@@ -609,15 +609,15 @@ TaskQueuedEvent event = new TaskQueuedEvent(task.getId(), task.getIdempotentKey(
 public class PubmedBatchGenerationStrategy implements BatchGenerationStrategy {
 
     @Override
-    public Class<? extends PlanMetadata> getSupportedType() {
-        return PubmedPlanMetadata.class;
+    public Class<? extends QuerySession> getSupportedType() {
+        return PubmedQuerySession.class;
     }
 
     @Override
-    public List<Batch> generateBatches(PlanMetadata plan, ExecutionContext ctx) {
-        PubmedPlanMetadata pubmedPlan = (PubmedPlanMetadata) plan;
+    public List<Batch> generateBatches(QuerySession session, ExecutionContext ctx) {
+        PubmedQuerySession pubmedSession = (PubmedQuerySession) session;
         int batchSize = ctx.configSnapshot().pagination().pageSizeValue();
-        int totalCount = pubmedPlan.totalCount();
+        int totalCount = pubmedSession.totalCount();
         int pageCount = (int) Math.ceil((double) totalCount / batchSize);
 
         List<Batch> batches = new ArrayList<>();

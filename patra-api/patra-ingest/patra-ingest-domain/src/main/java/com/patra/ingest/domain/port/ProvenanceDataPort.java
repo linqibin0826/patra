@@ -5,7 +5,7 @@ import com.patra.common.model.DataType;
 import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
+import com.patra.ingest.domain.model.vo.query.QuerySession;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,16 +72,16 @@ import lombok.Builder;
 public interface ProvenanceDataPort {
 
   /**
-   * 准备抓取元数据
+   * 准备查询会话
    *
-   * <p><strong>业务含义</strong>: 调用外部数据源 API 获取批次调度所需的元数据，包括总记录数和状态令牌。
+   * <p><strong>业务含义</strong>: 调用外部数据源 API 获取批次调度所需的查询会话信息，包括总记录数和状态令牌。
    *
    * <p><strong>执行流程</strong>:
    *
    * <ol>
    *   <li>从执行上下文中提取查询条件和配置信息
-   *   <li>调用数据源 API 获取抓取元数据
-   *   <li>通过防腐层翻译为领域模型 {@link FetchMetadata}
+   *   <li>调用数据源 API 获取查询会话信息
+   *   <li>通过防腐层翻译为领域模型 {@link QuerySession}
    * </ol>
    *
    * <p><strong>使用场景</strong>:
@@ -91,14 +91,14 @@ public interface ProvenanceDataPort {
    *   <li>获取状态令牌（如 PubMed 的 WebEnv）以在执行阶段重用
    * </ul>
    *
-   * <p><strong>防腐层</strong>: 此方法返回的 {@link FetchMetadata} 是 Ingest 领域模型， 屏蔽了外部数据源（Provenance
+   * <p><strong>防腐层</strong>: 此方法返回的 {@link QuerySession} 是 Ingest 领域模型， 屏蔽了外部数据源（Provenance
    * Starter）的实现细节。基础设施层负责进行模型转换。
    *
    * @param context 执行上下文，包含查询条件和配置信息
    * @param dataType 数据类型标识（如 LITERATURE、JOURNAL）
-   * @return 抓取元数据（领域模型，不包含外部实现细节）
+   * @return 查询会话（领域模型，不包含外部实现细节）
    */
-  FetchMetadata prepareFetchMetadata(ExecutionContext context, DataType dataType);
+  QuerySession prepareQuerySession(ExecutionContext context, DataType dataType);
 
   /**
    * 从数据源获取指定类型的数据
@@ -146,7 +146,7 @@ public interface ProvenanceDataPort {
    * @param dataType 数据类型标识（如 LITERATURE、JOURNAL、DRUG）
    * @param typeRef 类型引用（用于保持运行时泛型信息）
    * @param batch 批次定义，包含批次编号、分页参数和游标令牌
-   * @param fetchMetadata 抓取元数据（包含总记录数、会话令牌等）
+   * @param querySession 查询会话（包含总记录数、会话令牌等）
    * @return 数据获取结果，包含指定类型的数据列表、游标和错误信息
    * @throws IllegalArgumentException 如果 dataType 与 typeRef 不一致
    */
@@ -155,7 +155,7 @@ public interface ProvenanceDataPort {
       DataType dataType,
       TypeReference<T> typeRef,
       Batch batch,
-      FetchMetadata fetchMetadata);
+      QuerySession querySession);
 
   /**
    * 判断是否支持指定的数据源和数据类型组合

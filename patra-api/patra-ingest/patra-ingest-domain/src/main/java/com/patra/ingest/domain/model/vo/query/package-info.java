@@ -1,13 +1,13 @@
 /**
- * 数据源抓取元数据包
+ * 查询会话包
  *
- * <p>包含从外部数据源获取的元数据信息，用于批次生成规划。
+ * <p>包含从外部数据源获取的查询会话信息，用于批次生成规划。
  *
  * <h3>核心概念</h3>
  *
  * <ul>
- *   <li>{@link com.patra.ingest.domain.model.vo.fetch.FetchMetadata} - 数据源抓取元数据接口
- *   <li>{@link com.patra.ingest.domain.model.vo.fetch.EmptyFetchMetadata} - 空元数据实现
+ *   <li>{@link com.patra.ingest.domain.model.vo.query.QuerySession} - 查询会话接口
+ *   <li>{@link com.patra.ingest.domain.model.vo.query.EmptyQuerySession} - 空会话实现
  * </ul>
  *
  * <h3>设计原则</h3>
@@ -21,11 +21,11 @@
  * <h3>使用流程</h3>
  *
  * <pre>
- * ProvenanceDataPort.prepareFetchMetadata()
+ * ProvenanceDataPort.prepareQuerySession()
  *   ↓ 调用 Provenance Starter
- * FetchMetadataTranslator.translate()
+ * QuerySessionTranslator.translate()
  *   ↓ 翻译为领域模型
- * FetchMetadata
+ * QuerySession
  *   ↓ 输入到
  * BatchGenerationStrategy.generateBatches()
  * </pre>
@@ -33,4 +33,4 @@
  * @since 0.3.0
  * @author Patra Architecture Team
  */
-package com.patra.ingest.domain.model.vo.fetch;
+package com.patra.ingest.domain.model.vo.query;

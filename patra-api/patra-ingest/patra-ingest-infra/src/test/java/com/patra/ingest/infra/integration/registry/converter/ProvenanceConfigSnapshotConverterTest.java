@@ -56,7 +56,7 @@ class ProvenanceConfigSnapshotConverterTest {
           new WindowOffsetResp(
               10L,
               1L,
-              "FETCH_METADATA",
+              "QUERY_SESSION",
               now,
               null,
               "SLIDING",
@@ -77,13 +77,13 @@ class ProvenanceConfigSnapshotConverterTest {
 
       PaginationConfigResp paginationResp =
           new PaginationConfigResp(
-              20L, 1L, "FETCH_METADATA", now, null, "PAGE_NUMBER", 100, 10, "sort", 1);
+              20L, 1L, "QUERY_SESSION", now, null, "PAGE_NUMBER", 100, 10, "sort", 1);
 
       HttpConfigResp httpResp =
           new HttpConfigResp(
               30L,
               1L,
-              "FETCH_METADATA",
+              "QUERY_SESSION",
               now,
               null,
               "{\"Accept\":\"application/json\"}",
@@ -98,13 +98,13 @@ class ProvenanceConfigSnapshotConverterTest {
               3600);
 
       BatchingConfigResp batchingResp =
-          new BatchingConfigResp(40L, 1L, "FETCH_METADATA", now, null, 50, "ids", ",", 200);
+          new BatchingConfigResp(40L, 1L, "QUERY_SESSION", now, null, 50, "ids", ",", 200);
 
       RetryConfigResp retryResp =
           new RetryConfigResp(
               50L,
               1L,
-              "FETCH_METADATA",
+              "QUERY_SESSION",
               now,
               null,
               3,
@@ -120,7 +120,7 @@ class ProvenanceConfigSnapshotConverterTest {
               60000);
 
       RateLimitConfigResp rateLimitResp =
-          new RateLimitConfigResp(60L, 1L, "FETCH_METADATA", now, null, 10, 3);
+          new RateLimitConfigResp(60L, 1L, "QUERY_SESSION", now, null, 10, 3);
 
       ProvenanceConfigResp configResp =
           new ProvenanceConfigResp(

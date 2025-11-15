@@ -7,6 +7,7 @@ import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.batch.BatchResult;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import com.patra.ingest.domain.model.vo.query.QuerySession;
 import com.patra.ingest.domain.port.ProvenanceDataPort;
 import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult;
 import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult.ErrorType;
@@ -55,13 +56,13 @@ public class GenericBatchExecutor {
    *
    * @param context 执行上下文
    * @param batch 批次定义
-   * @param fetchMetadata 抓取元数据
+   * @param querySession 查询会话
    * @return 批次执行结果
    */
   public BatchResult execute(
       ExecutionContext context,
       Batch batch,
-      com.patra.ingest.domain.model.vo.fetch.FetchMetadata fetchMetadata) {
+      QuerySession querySession) {
     Objects.requireNonNull(context, "执行上下文不能为空");
     Objects.requireNonNull(batch, "批次定义不能为空");
 
@@ -83,7 +84,7 @@ public class GenericBatchExecutor {
       DataType dataType = DataType.LITERATURE;
       TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
       DataFetchResult<CanonicalLiterature> fetchResult =
-          provenanceDataPort.fetchData(context, dataType, typeRef, batch, fetchMetadata);
+          provenanceDataPort.fetchData(context, dataType, typeRef, batch, querySession);
 
       if (!fetchResult.success()) {
         return handleFailure(context, batch, fetchResult, System.currentTimeMillis() - startAt);

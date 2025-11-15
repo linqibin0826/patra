@@ -12,6 +12,7 @@ import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.batch.BatchResult;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import com.patra.ingest.domain.model.vo.query.QuerySession;
 import com.patra.ingest.domain.port.ProvenanceDataPort;
 import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult;
 import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult.ErrorType;
@@ -61,7 +62,7 @@ class GenericBatchExecutorTest {
   private ExecutionContext context;
   private Batch batch;
   private ObjectMapper objectMapper = new ObjectMapper();
-  private com.patra.ingest.domain.model.vo.fetch.FetchMetadata fetchMetadata;
+  private QuerySession querySession;
 
   @BeforeEach
   void setUp() {
@@ -101,9 +102,8 @@ class GenericBatchExecutorTest {
 
     batch = new Batch(1, "cancer AND 2024", 0, 500);
 
-    // Mock FetchMetadata
-    fetchMetadata =
-        com.patra.ingest.domain.model.vo.fetch.FetchMetadata.empty(ProvenanceCode.PUBMED);
+    // Mock QuerySession
+    querySession = QuerySession.empty(ProvenanceCode.PUBMED);
   }
 
   // ==================== 正常执行场景 ====================
@@ -125,7 +125,7 @@ class GenericBatchExecutorTest {
               any(DataType.class),
               any(TypeReference.class),
               any(Batch.class),
-              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class)))
+              any(com.patra.ingest.domain.model.vo.query.QuerySession.class)))
           .thenReturn(fetchResult);
 
       // Mock 文献发布
@@ -137,7 +137,7 @@ class GenericBatchExecutorTest {
       when(literaturePublisherOrchestrator.publish(any(), any())).thenReturn(publishResult);
 
       // When: 执行批次
-      BatchResult result = executor.execute(context, batch, fetchMetadata);
+      BatchResult result = executor.execute(context, batch, querySession);
 
       // Then: 验证返回成功结果
       assertThat(result.success()).isTrue();
@@ -154,7 +154,7 @@ class GenericBatchExecutorTest {
               eq(DataType.LITERATURE),
               any(TypeReference.class),
               eq(batch),
-              eq(fetchMetadata));
+              eq(querySession));
       verify(literaturePublisherOrchestrator).publish(eq(literatures), any());
     }
 
@@ -169,11 +169,11 @@ class GenericBatchExecutorTest {
               any(DataType.class),
               any(TypeReference.class),
               any(Batch.class),
-              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class)))
+              any(com.patra.ingest.domain.model.vo.query.QuerySession.class)))
           .thenReturn(fetchResult);
 
       // When: 执行批次
-      BatchResult result = executor.execute(context, batch, fetchMetadata);
+      BatchResult result = executor.execute(context, batch, querySession);
 
       // Then: 返回成功但 fetchedCount 为 0
       assertThat(result.success()).isTrue();
@@ -195,11 +195,11 @@ class GenericBatchExecutorTest {
               any(DataType.class),
               any(TypeReference.class),
               any(Batch.class),
-              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class)))
+              any(com.patra.ingest.domain.model.vo.query.QuerySession.class)))
           .thenReturn(fetchResult);
 
       // When: 执行批次
-      BatchResult result = executor.execute(context, batch, fetchMetadata);
+      BatchResult result = executor.execute(context, batch, querySession);
 
       // Then: 返回成功
       assertThat(result.success()).isTrue();
@@ -228,11 +228,11 @@ class GenericBatchExecutorTest {
               any(DataType.class),
               any(TypeReference.class),
               any(Batch.class),
-              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class)))
+              any(com.patra.ingest.domain.model.vo.query.QuerySession.class)))
           .thenReturn(failureResult);
 
       // When: 执行批次
-      BatchResult result = executor.execute(context, batch, fetchMetadata);
+      BatchResult result = executor.execute(context, batch, querySession);
 
       // Then: 返回失败
       assertThat(result.success()).isFalse();
@@ -255,11 +255,11 @@ class GenericBatchExecutorTest {
               any(DataType.class),
               any(TypeReference.class),
               any(Batch.class),
-              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class)))
+              any(com.patra.ingest.domain.model.vo.query.QuerySession.class)))
           .thenReturn(failureResult);
 
       // When: 执行批次
-      BatchResult result = executor.execute(context, batch, fetchMetadata);
+      BatchResult result = executor.execute(context, batch, querySession);
 
       // Then: 返回失败
       assertThat(result.success()).isFalse();
@@ -285,11 +285,11 @@ class GenericBatchExecutorTest {
               any(DataType.class),
               any(TypeReference.class),
               any(Batch.class),
-              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class)))
+              any(com.patra.ingest.domain.model.vo.query.QuerySession.class)))
           .thenThrow(new RuntimeException("数据源内部错误"));
 
       // When: 执行批次
-      BatchResult result = executor.execute(context, batch, fetchMetadata);
+      BatchResult result = executor.execute(context, batch, querySession);
 
       // Then: 返回失败
       assertThat(result.success()).isFalse();
@@ -318,12 +318,12 @@ class GenericBatchExecutorTest {
               any(DataType.class),
               any(TypeReference.class),
               any(Batch.class),
-              any(com.patra.ingest.domain.model.vo.fetch.FetchMetadata.class)))
+              any(com.patra.ingest.domain.model.vo.query.QuerySession.class)))
           .thenReturn(fetchResult);
       mockPublish(8, "s3://bucket/key");
 
       // When: 执行批次
-      BatchResult result = executor.execute(context, batch, fetchMetadata);
+      BatchResult result = executor.execute(context, batch, querySession);
 
       // Then: 返回成功
       assertThat(result.success()).isTrue();
@@ -343,7 +343,7 @@ class GenericBatchExecutorTest {
     @DisplayName("null ExecutionContext 应该抛出 NullPointerException")
     void shouldThrowExceptionWhenContextIsNull() {
       // When & Then
-      assertThatThrownBy(() -> executor.execute(null, batch, fetchMetadata))
+      assertThatThrownBy(() -> executor.execute(null, batch, querySession))
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("执行上下文不能为空");
     }
@@ -352,7 +352,7 @@ class GenericBatchExecutorTest {
     @DisplayName("null Batch 应该抛出 NullPointerException")
     void shouldThrowExceptionWhenBatchIsNull() {
       // When & Then
-      assertThatThrownBy(() -> executor.execute(context, null, fetchMetadata))
+      assertThatThrownBy(() -> executor.execute(context, null, querySession))
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("批次定义不能为空");
     }

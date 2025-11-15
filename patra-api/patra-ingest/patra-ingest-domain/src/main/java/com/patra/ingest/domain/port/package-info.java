@@ -157,7 +157,7 @@
  * <pre>{@code
  * public interface ProvenanceDataPort {
  *     // 领域语义方法名
- *     PlanMetadata prepareFetchMetadata(ExecutionContext context, DataType dataType);
+ *     PlanMetadata prepareQuerySession(ExecutionContext context, DataType dataType);
  *
  *     // 泛型支持多种数据类型（文献、期刊、药品等）
  *     <T> DataFetchResult<T> fetchData(

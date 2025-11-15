@@ -1,7 +1,7 @@
 package com.patra.ingest.infra.integration.datasource.acl;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
+import com.patra.ingest.domain.model.vo.query.QuerySession;
 import com.patra.starter.provenance.internal.metadata.DoajPlanMetadata;
 import com.patra.starter.provenance.internal.metadata.EpmcPlanMetadata;
 import com.patra.starter.provenance.internal.metadata.PlanMetadata;
@@ -11,9 +11,9 @@ import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 /**
- * 抓取元数据翻译器（防腐层）
+ * 查询会话翻译器（防腐层）
  *
- * <p>将 Provenance Starter 的 {@link PlanMetadata} 翻译为 Ingest 领域的 {@link FetchMetadata}。
+ * <p>将 Provenance Starter 的 {@link PlanMetadata} 翻译为 Ingest 领域的 {@link QuerySession}。
  *
  * <p><strong>翻译策略</strong>：
  *
@@ -27,19 +27,19 @@ import org.springframework.stereotype.Component;
  * @since 0.3.0
  */
 @Component
-public class FetchMetadataTranslator {
+public class QuerySessionTranslator {
 
   /**
-   * 翻译 PlanMetadata 为 FetchMetadata
+   * 翻译 PlanMetadata 为 QuerySession
    *
    * @param planMetadata Provenance 的计划元数据
-   * @return Ingest 的抓取元数据
+   * @return Ingest 的查询会话
    * @throws IllegalArgumentException 如果遇到未知的 PlanMetadata 类型
    */
-  public FetchMetadata translate(PlanMetadata planMetadata) {
+  public QuerySession translate(PlanMetadata planMetadata) {
     // 空计划处理
     if (planMetadata.totalCount() == 0) {
-      return FetchMetadata.empty(ProvenanceCode.parse(planMetadata.dataSourceType()));
+      return QuerySession.empty(ProvenanceCode.parse(planMetadata.dataSourceType()));
     }
 
     // 根据具体类型翻译（使用模式匹配）
@@ -54,8 +54,8 @@ public class FetchMetadataTranslator {
   }
 
   /** 翻译 PubMed 计划元数据 */
-  private FetchMetadata translatePubmed(PubmedPlanMetadata pubmed) {
-    return new SimpleFetchMetadata(
+  private QuerySession translatePubmed(PubmedPlanMetadata pubmed) {
+    return new SimpleQuerySession(
         pubmed.totalCount(),
         ProvenanceCode.parse(pubmed.dataSourceType()),
         extractPubmedStateToken(pubmed));
@@ -73,8 +73,8 @@ public class FetchMetadataTranslator {
   }
 
   /** 翻译 DOAJ 计划元数据 */
-  private FetchMetadata translateDoaj(DoajPlanMetadata doaj) {
-    return new SimpleFetchMetadata(
+  private QuerySession translateDoaj(DoajPlanMetadata doaj) {
+    return new SimpleQuerySession(
         doaj.totalCount(),
         ProvenanceCode.parse(doaj.dataSourceType()),
         extractDoajStateToken(doaj));
@@ -89,8 +89,8 @@ public class FetchMetadataTranslator {
   }
 
   /** 翻译 EPMC 计划元数据 */
-  private FetchMetadata translateEpmc(EpmcPlanMetadata epmc) {
-    return new SimpleFetchMetadata(
+  private QuerySession translateEpmc(EpmcPlanMetadata epmc) {
+    return new SimpleQuerySession(
         epmc.totalCount(),
         ProvenanceCode.parse(epmc.dataSourceType()),
         extractEpmcStateToken(epmc));
@@ -105,10 +105,10 @@ public class FetchMetadataTranslator {
   }
 }
 
-/** 简单的 FetchMetadata 实现（包级私有） */
-record SimpleFetchMetadata(
+/** 简单的 QuerySession 实现（包级私有） */
+record SimpleQuerySession(
     int totalRecords, ProvenanceCode provenanceCode, Optional<Map<String, String>> stateToken)
-    implements FetchMetadata {
+    implements QuerySession {
 
   @Override
   public boolean hasStateToken() {

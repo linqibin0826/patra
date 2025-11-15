@@ -3,7 +3,7 @@ package com.patra.ingest.app.usecase.execution.strategy.batch;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
+import com.patra.ingest.domain.model.vo.query.QuerySession;
 import com.patra.ingest.domain.strategy.BatchGenerationStrategy;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 /**
  * EPMC 批次生成策略
  *
- * <p>根据抓取元数据生成批次列表。
+ * <p>根据查询会话生成批次列表。
  *
  * <p>EPMC 使用 Solr 风格的 cursorMark 分页机制，具体参数映射由 Infrastructure 层的 EpmcParameterMapper 处理。
  *
@@ -30,10 +30,10 @@ public class EpmcBatchGenerationStrategy implements BatchGenerationStrategy {
   }
 
   @Override
-  public List<Batch> generateBatches(FetchMetadata metadata, ExecutionContext ctx) {
+  public List<Batch> generateBatches(QuerySession session, ExecutionContext ctx) {
     List<Batch> batches = new ArrayList<>();
     int batchSize = ctx.configSnapshot().pagination().pageSizeValue();
-    int totalRecords = metadata.totalRecords();
+    int totalRecords = session.totalRecords();
 
     if (totalRecords <= 0) {
       log.info("EPMC 查询结果为空（totalRecords=0），返回空批次列表");

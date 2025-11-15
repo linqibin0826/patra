@@ -1,13 +1,13 @@
-package com.patra.ingest.domain.model.vo.fetch;
+package com.patra.ingest.domain.model.vo.query;
 
 import com.patra.common.enums.ProvenanceCode;
 import java.util.Map;
 import java.util.Optional;
 
 /**
- * 数据源抓取元数据 - Ingest 领域模型
+ * 查询会话 - Ingest 领域模型
  *
- * <p>封装从外部数据源获取的元数据信息，用于批次生成规划。
+ * <p>封装从外部数据源获取的查询会话信息，用于批次生成规划。
  *
  * <p><strong>职责</strong>：
  *
@@ -28,15 +28,15 @@ import java.util.Optional;
  * <p><strong>使用场景</strong>：
  *
  * <ul>
- *   <li>ProvenanceDataPort.prepareFetchMetadata() 返回此接口
+ *   <li>ProvenanceDataPort.prepareQuerySession() 返回此接口
  *   <li>BatchGenerationStrategy.generateBatches() 接收此接口作为输入
- *   <li>FetchMetadataTranslator 将外部元数据翻译为此接口
+ *   <li>QuerySessionTranslator 将外部元数据翻译为此接口
  * </ul>
  *
  * @author Patra Architecture Team
  * @since 0.3.0
  */
-public interface FetchMetadata {
+public interface QuerySession {
 
   /**
    * 获取总记录数
@@ -75,18 +75,18 @@ public interface FetchMetadata {
   Optional<Map<String, String>> stateToken();
 
   /**
-   * 创建空的抓取元数据（表示无可用数据）
+   * 创建空的查询会话（表示无可用数据）
    *
    * @param provenanceCode Provenance 代码枚举
-   * @return 空抓取元数据
+   * @return 空查询会话
    */
-  static FetchMetadata empty(ProvenanceCode provenanceCode) {
-    return new EmptyFetchMetadata(provenanceCode);
+  static QuerySession empty(ProvenanceCode provenanceCode) {
+    return new EmptyQuerySession(provenanceCode);
   }
 }
 
-/** 空抓取元数据实现（包级私有） */
-record EmptyFetchMetadata(ProvenanceCode provenanceCode) implements FetchMetadata {
+/** 空查询会话实现（包级私有） */
+record EmptyQuerySession(ProvenanceCode provenanceCode) implements QuerySession {
 
   @Override
   public int totalRecords() {

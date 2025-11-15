@@ -6,7 +6,7 @@
  * <h2>职责</h2>
  *
  * <ul>
- *   <li>准备抓取元数据（通过 ProvenanceDataPort）
+ *   <li>准备查询会话（通过 ProvenanceDataPort）
  *   <li>路由到对应的批次生成策略
  *   <li>构建完整的批次调度表
  * </ul>
@@ -19,7 +19,7 @@
  *         <li>使用策略模式管理多个 BatchGenerationStrategy
  *         <li>自动注册所有策略实现（通过 Spring 构造器注入）
  *         <li>根据 ProvenanceCode 路由到对应策略
- *         <li>封装通用的构建逻辑（准备元数据、生成批次、包装结果）
+ *         <li>封装通用的构建逻辑（准备查询会话、生成批次、包装结果）
  *       </ul>
  *   <li>{@code BatchGenerationStrategy} - 批次生成策略接口（domain 层）
  *       <ul>
@@ -100,9 +100,9 @@
  *     }
  *
  *     @Override
- *     public List<Batch> generateBatches(FetchMetadata metadata, ExecutionContext ctx) {
+ *     public List<Batch> generateBatches(QuerySession session, ExecutionContext ctx) {
  *         int batchSize = ctx.configSnapshot().pagination().pageSizeValue();
- *         int totalRecords = metadata.totalRecords();
+ *         int totalRecords = session.totalRecords();
  *         // 生成批次逻辑...
  *         return batches;
  *     }
@@ -123,15 +123,15 @@
  *     }
  *
  *     public BatchSchedule build(ExecutionContext ctx) {
- *         // 1. 准备抓取元数据
- *         FetchMetadata metadata = provenanceDataPort.prepareFetchMetadata(ctx, ctx.dataType());
+ *         // 1. 准备查询会话
+ *         QuerySession session = provenanceDataPort.prepareQuerySession(ctx, ctx.dataType());
  *
  *         // 2. 根据 ProvenanceCode 选择对应策略
- *         ProvenanceCode code = metadata.provenanceCode();
+ *         ProvenanceCode code = session.provenanceCode();
  *         BatchGenerationStrategy strategy = strategyMap.get(code);
  *
  *         // 3. 使用策略生成批次
- *         List<Batch> batches = strategy.generateBatches(metadata, ctx);
+ *         List<Batch> batches = strategy.generateBatches(session, ctx);
  *
  *         // 4. 构建并返回 BatchSchedule
  *         return new BatchSchedule(batches, ctx);

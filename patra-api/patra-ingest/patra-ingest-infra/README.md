@@ -85,7 +85,7 @@ patra-ingest-infra/
    │  │  ├─ ProvenanceDataException.java   # 数据源异常
    │  │  ├─ TypeMismatchException.java     # 类型不匹配异常
    │  │  └─ acl/
-   │  │     └─ FetchMetadataTranslator.java # 获取元数据转换器
+   │  │     └─ QuerySessionTranslator.java # 查询会话转换器
    │  └─ storage/                      # 对象存储集成
    │     ├─ LiteratureStorageAdapter.java   # 文献存储适配器
    │     ├─ StorageMetadataAdapter.java     # 存储元数据适配器
@@ -223,7 +223,7 @@ public class PatraRegistryAdapter implements PatraRegistryPort {
 **职责**: 实现 `ProvenanceDataPort` 端口接口,提供统一的数据源访问能力。通过 Framework 层的 `ProvenanceDataProvider` 调用外部数据源 API。
 
 **核心特性**:
-- **统一端口**: 同时支持计划准备(`prepareFetchMetadata`)和数据获取(`fetchData`)
+- **统一端口**: 同时支持查询会话准备(`prepareQuerySession`)和数据获取(`fetchData`)
 - **参数转换**: 将 Ingest 特定的 `ExecutionContext` 转换为通用的 `ProviderRequest`
 - **多数据源支持**: 通过 `ProviderRegistry` 自动选择对应的 `ProvenanceDataProvider`
 - **类型安全**: 使用 `TypeReference` 确保类型安全的泛型数据获取
@@ -235,10 +235,10 @@ public class PatraRegistryAdapter implements PatraRegistryPort {
 public class ProvenanceDataAdapter implements ProvenanceDataPort {
 
     private final ProviderRegistry providerRegistry;
-    private final FetchMetadataTranslator fetchMetadataTranslator;
+    private final QuerySessionTranslator querySessionTranslator;
 
     @Override
-    public PlanMetadata prepareFetchMetadata(ExecutionContext context, DataType dataType) {
+    public QuerySession prepareQuerySession(ExecutionContext context, DataType dataType) {
         // 1. 获取对应的 Provider
         ProvenanceDataProvider provider = providerRegistry.getProvider(
             context.provenanceCode(),
@@ -249,10 +249,10 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
         ProviderRequest request = buildProviderRequest(context);
 
         // 3. 调用 Provider 准备计划
-        FetchMetadata fetchMetadata = provider.prepareFetchMetadata(request);
+        PlanMetadata planMetadata = provider.preparePlanMetadata(request);
 
         // 4. 转换为领域模型
-        return fetchMetadataTranslator.toPlanMetadata(fetchMetadata, context.provenanceCode());
+        return querySessionTranslator.translate(planMetadata);
     }
 
     @Override
@@ -627,12 +627,12 @@ public class DataFetchService {
     private final ProvenanceDataPort provenanceDataPort;
 
     public void fetchLiteratureData(ExecutionContext context, Batch batch) {
-        // 准备计划元数据
-        PlanMetadata planMetadata = provenanceDataPort.prepareFetchMetadata(
+        // 准备查询会话
+        QuerySession querySession = provenanceDataPort.prepareQuerySession(
             context,
             DataType.LITERATURE
         );
-        log.info("Total count: {}", planMetadata.totalCount());
+        log.info("Total count: {}", querySession.totalRecords());
 
         // 获取文献数据（类型安全）
         TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};

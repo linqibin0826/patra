@@ -3,7 +3,7 @@ package com.patra.ingest.infra.mapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.batch.Batch;
-import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
+import com.patra.ingest.domain.model.vo.query.QuerySession;
 
 /**
  * 数据源参数映射器接口。
@@ -37,7 +37,7 @@ import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
  *     }
  *
  *     @Override
- *     public JsonNode mapParameters(Batch batch, JsonNode baseParams, FetchMetadata metadata) {
+ *     public JsonNode mapParameters(Batch batch, JsonNode baseParams, QuerySession session) {
  *         ObjectNode params = ...;
  *         params.put("retstart", batch.offset());
  *         params.put("retmax", batch.limit());
@@ -69,7 +69,7 @@ public interface ProviderParameterMapper {
    * <ol>
    *   <li>复制或创建基础参数 JsonNode
    *   <li>添加分页参数（将 batch.offset()/batch.limit() 映射为数据源特定的参数名）
-   *   <li>如果 metadata.hasStateToken()，添加会话令牌（如 PubMed 的 webEnv/queryKey）
+   *   <li>如果 session.hasStateToken()，添加会话令牌（如 PubMed 的 webEnv/queryKey）
    *   <li>返回完整的参数 JsonNode
    * </ol>
    *
@@ -78,15 +78,15 @@ public interface ProviderParameterMapper {
    * <ul>
    *   <li>{@code batch}: 纯领域模型，包含 batchNo、query、offset、limit
    *   <li>{@code baseParams}: 基础查询参数（来自 ExecutionContext.compiledParams()），如 datetype、sort 等
-   *   <li>{@code metadata}: 抓取元数据，包含总记录数、会话令牌等
+   *   <li>{@code session}: 查询会话，包含总记录数、会话令牌等
    * </ul>
    *
    * <p><strong>返回值</strong>：完整的请求参数 JsonNode，包含基础参数 + 分页参数 + 会话令牌（如有）
    *
    * @param batch 批次（纯领域模型）
    * @param baseParams 基础查询参数（可能为 null）
-   * @param metadata 抓取元数据
+   * @param session 查询会话
    * @return 完整的请求参数
    */
-  JsonNode mapParameters(Batch batch, JsonNode baseParams, FetchMetadata metadata);
+  JsonNode mapParameters(Batch batch, JsonNode baseParams, QuerySession session);
 }

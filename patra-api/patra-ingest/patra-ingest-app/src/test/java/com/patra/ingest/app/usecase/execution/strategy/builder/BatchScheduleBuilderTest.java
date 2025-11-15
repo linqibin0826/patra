@@ -14,10 +14,8 @@ import com.patra.ingest.domain.exception.BatchSchedulingException;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-// Note: 使用完整类名来区分两个不同的 BatchSchedule:
-// - com.patra.ingest.domain.model.vo.batch.BatchSchedule: 规划结果（包含批次列表）
-// - com.patra.ingest.domain.model.vo.fetch.FetchMetadata: 计划元数据（用于生成批次）
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
+import com.patra.ingest.domain.model.vo.query.QuerySession;
 import com.patra.ingest.domain.port.ProvenanceDataPort;
 import com.patra.ingest.domain.strategy.BatchGenerationStrategy;
 import java.util.List;
@@ -37,10 +35,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
  *
  * <ul>
  *   <li>策略自动注册（通过 Spring 注入）
- *   <li>策略选择逻辑（根据 FetchMetadata 类型）
+ *   <li>策略选择逻辑（根据 QuerySession 类型）
  *   <li>PubMed 数据源的调度构建流程
  *   <li>未知数据类型的异常处理
- *   <li>ProvenanceDataPort.prepareFetchMetadata() 的调用
+ *   <li>ProvenanceDataPort.prepareQuerySession() 的调用
  * </ul>
  *
  * @author Patra Architecture Team
@@ -77,18 +75,18 @@ class BatchScheduleBuilderTest {
   void should_register_all_strategies_in_constructor() {
     // 验证：通过日志或后续调用验证策略已注册
     // 这里通过实际使用策略来验证
-    com.patra.ingest.domain.model.vo.fetch.FetchMetadata pubmedPlan = createPubmedPlan(1000, false);
+    QuerySession pubmedSession = createPubmedSession(1000, false);
     ExecutionContext ctx = createContext("pubmed");
 
-    when(provenanceDataPort.prepareFetchMetadata(any(), eq(DataType.LITERATURE)))
-        .thenReturn(pubmedPlan);
+    when(provenanceDataPort.prepareQuerySession(any(), eq(DataType.LITERATURE)))
+        .thenReturn(pubmedSession);
     when(mockStrategy1.generateBatches(any(), any())).thenReturn(List.of());
 
     // when
     builder.build(ctx);
 
     // then
-    verify(mockStrategy1).generateBatches(pubmedPlan, ctx);
+    verify(mockStrategy1).generateBatches(pubmedSession, ctx);
   }
 
   @Test
@@ -96,14 +94,13 @@ class BatchScheduleBuilderTest {
   void should_plan_pubmed_data_source_successfully() {
     // given
     int totalCount = 1000;
-    com.patra.ingest.domain.model.vo.fetch.FetchMetadata pubmedPlan =
-        createPubmedPlan(totalCount, false);
+    QuerySession pubmedSession = createPubmedSession(totalCount, false);
     ExecutionContext ctx = createContext("pubmed");
 
     List<Batch> mockBatches = List.of(createBatch(1), createBatch(2), createBatch(3));
 
-    when(provenanceDataPort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(pubmedPlan);
-    when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenReturn(mockBatches);
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.LITERATURE)).thenReturn(pubmedSession);
+    when(mockStrategy1.generateBatches(pubmedSession, ctx)).thenReturn(mockBatches);
 
     // when
     com.patra.ingest.domain.model.vo.batch.BatchSchedule result = builder.build(ctx);
@@ -113,8 +110,8 @@ class BatchScheduleBuilderTest {
     assertThat(result.totalBatches()).isEqualTo(3);
     assertThat(result.hasBatches()).isTrue();
 
-    verify(provenanceDataPort).prepareFetchMetadata(ctx, DataType.LITERATURE);
-    verify(mockStrategy1).generateBatches(pubmedPlan, ctx);
+    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.LITERATURE);
+    verify(mockStrategy1).generateBatches(pubmedSession, ctx);
   }
 
   @Test
@@ -122,14 +119,13 @@ class BatchScheduleBuilderTest {
   void should_plan_epmc_data_source_successfully() {
     // given
     int totalCount = 2000;
-    com.patra.ingest.domain.model.vo.fetch.FetchMetadata epmcPlan =
-        createEpmcPlan(totalCount, "cursor-123");
+    QuerySession epmcSession = createEpmcSession(totalCount, "cursor-123");
     ExecutionContext ctx = createContext("epmc");
 
     List<Batch> mockBatches = List.of(createBatch(1), createBatch(2));
 
-    when(provenanceDataPort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(epmcPlan);
-    when(mockStrategy2.generateBatches(epmcPlan, ctx)).thenReturn(mockBatches);
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.LITERATURE)).thenReturn(epmcSession);
+    when(mockStrategy2.generateBatches(epmcSession, ctx)).thenReturn(mockBatches);
 
     // when
     com.patra.ingest.domain.model.vo.batch.BatchSchedule result = builder.build(ctx);
@@ -138,18 +134,18 @@ class BatchScheduleBuilderTest {
     assertThat(result.batches()).hasSize(2);
     assertThat(result.totalBatches()).isEqualTo(2);
 
-    verify(provenanceDataPort).prepareFetchMetadata(ctx, DataType.LITERATURE);
-    verify(mockStrategy2).generateBatches(epmcPlan, ctx);
+    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.LITERATURE);
+    verify(mockStrategy2).generateBatches(epmcSession, ctx);
   }
 
   @Test
   @DisplayName("当 totalCount 为 0 时应该返回空计划")
   void should_return_empty_plan_when_total_count_is_zero() {
     // given
-    com.patra.ingest.domain.model.vo.fetch.FetchMetadata emptyPlan = createPubmedPlan(0, false);
+    QuerySession emptySession = createPubmedSession(0, false);
     ExecutionContext ctx = createContext("pubmed");
 
-    when(provenanceDataPort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(emptyPlan);
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.LITERATURE)).thenReturn(emptySession);
 
     // when
     com.patra.ingest.domain.model.vo.batch.BatchSchedule result = builder.build(ctx);
@@ -159,7 +155,7 @@ class BatchScheduleBuilderTest {
     assertThat(result.batches()).isEmpty();
     assertThat(result.hasBatches()).isFalse();
 
-    verify(provenanceDataPort).prepareFetchMetadata(ctx, DataType.LITERATURE);
+    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.LITERATURE);
     verify(mockStrategy1, never()).generateBatches(any(), any());
   }
 
@@ -167,12 +163,12 @@ class BatchScheduleBuilderTest {
   @DisplayName("当未找到对应策略时应该抛出异常")
   void should_throw_exception_when_strategy_not_found() {
     // given
-    // 创建一个未注册策略的 BatchSchedule（使用匿名子类）
-    // 注意: ExecutionContext 使用 PUBMED 是合法的,但 BatchSchedule 返回的 dataSourceCode 是未注册的
-    com.patra.ingest.domain.model.vo.fetch.FetchMetadata unknownPlan = createUnknownPlan(100);
+    // 创建一个未注册策略的 QuerySession（使用匿名子类）
+    // 注意: ExecutionContext 使用 PUBMED 是合法的,但 QuerySession 返回的 dataSourceCode 是未注册的
+    QuerySession unknownSession = createUnknownSession(100);
     ExecutionContext ctx = createContext("pubmed"); // 使用合法的 ProvenanceCode
 
-    when(provenanceDataPort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(unknownPlan);
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.LITERATURE)).thenReturn(unknownSession);
 
     // when & then
     assertThatThrownBy(() -> builder.build(ctx))
@@ -180,7 +176,7 @@ class BatchScheduleBuilderTest {
         .hasMessageContaining("未找到对应的批次生成策略")
         .hasMessageContaining("CROSSREF");
 
-    verify(provenanceDataPort).prepareFetchMetadata(ctx, DataType.LITERATURE);
+    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.LITERATURE);
   }
 
   @Test
@@ -190,28 +186,28 @@ class BatchScheduleBuilderTest {
     ExecutionContext ctx = createContext("pubmed");
     RuntimeException sourceException = new RuntimeException("数据源错误");
 
-    when(provenanceDataPort.prepareFetchMetadata(ctx, DataType.LITERATURE))
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.LITERATURE))
         .thenThrow(sourceException);
 
     // when & then
     assertThatThrownBy(() -> builder.build(ctx))
         .isInstanceOf(BatchSchedulingException.class)
-        .hasMessageContaining("准备抓取元数据失败")
+        .hasMessageContaining("准备查询会话失败")
         .hasCause(sourceException);
 
-    verify(provenanceDataPort).prepareFetchMetadata(ctx, DataType.LITERATURE);
+    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.LITERATURE);
   }
 
   @Test
   @DisplayName("当策略生成批次失败时应该包装为 BatchSchedulingException")
   void should_wrap_strategy_exception_as_batch_planning_exception() {
     // given
-    com.patra.ingest.domain.model.vo.fetch.FetchMetadata pubmedPlan = createPubmedPlan(1000, false);
+    QuerySession pubmedSession = createPubmedSession(1000, false);
     ExecutionContext ctx = createContext("pubmed");
     RuntimeException strategyException = new RuntimeException("批次生成错误");
 
-    when(provenanceDataPort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(pubmedPlan);
-    when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenThrow(strategyException);
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.LITERATURE)).thenReturn(pubmedSession);
+    when(mockStrategy1.generateBatches(pubmedSession, ctx)).thenThrow(strategyException);
 
     // when & then
     assertThatThrownBy(() -> builder.build(ctx))
@@ -219,19 +215,19 @@ class BatchScheduleBuilderTest {
         .hasMessageContaining("批次生成失败")
         .hasCause(strategyException);
 
-    verify(provenanceDataPort).prepareFetchMetadata(ctx, DataType.LITERATURE);
-    verify(mockStrategy1).generateBatches(pubmedPlan, ctx);
+    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.LITERATURE);
+    verify(mockStrategy1).generateBatches(pubmedSession, ctx);
   }
 
   @Test
   @DisplayName("应该正确处理策略返回空列表的情况")
   void should_handle_empty_batch_list_from_strategy() {
     // given
-    com.patra.ingest.domain.model.vo.fetch.FetchMetadata pubmedPlan = createPubmedPlan(1000, false);
+    QuerySession pubmedSession = createPubmedSession(1000, false);
     ExecutionContext ctx = createContext("pubmed");
 
-    when(provenanceDataPort.prepareFetchMetadata(ctx, DataType.LITERATURE)).thenReturn(pubmedPlan);
-    when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenReturn(List.of());
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.LITERATURE)).thenReturn(pubmedSession);
+    when(mockStrategy1.generateBatches(pubmedSession, ctx)).thenReturn(List.of());
 
     // when
     com.patra.ingest.domain.model.vo.batch.BatchSchedule result = builder.build(ctx);
@@ -256,11 +252,11 @@ class BatchScheduleBuilderTest {
 
     // then
     // 验证：planner 应该跳过 null 策略，只注册有效策略
-    com.patra.ingest.domain.model.vo.fetch.FetchMetadata pubmedPlan = createPubmedPlan(1000, false);
+    QuerySession pubmedSession = createPubmedSession(1000, false);
     ExecutionContext ctx = createContext("pubmed");
 
-    when(provenanceDataPort.prepareFetchMetadata(any(), eq(DataType.LITERATURE)))
-        .thenReturn(pubmedPlan);
+    when(provenanceDataPort.prepareQuerySession(any(), eq(DataType.LITERATURE)))
+        .thenReturn(pubmedSession);
     when(mockStrategy1.generateBatches(any(), any())).thenReturn(List.of());
 
     builder.build(ctx);
@@ -320,10 +316,9 @@ class BatchScheduleBuilderTest {
     return new Batch(batchNo, "test-query", offset, limit);
   }
 
-  /** 创建测试用的 BatchSchedule (PubMed) - 计划元数据 */
-  private com.patra.ingest.domain.model.vo.fetch.FetchMetadata createPubmedPlan(
-      int totalRecords, boolean hasToken) {
-    return new com.patra.ingest.domain.model.vo.fetch.FetchMetadata() {
+  /** 创建测试用的 QuerySession (PubMed) - 查询会话 */
+  private QuerySession createPubmedSession(int totalRecords, boolean hasToken) {
+    return new QuerySession() {
       @Override
       public int totalRecords() {
         return totalRecords;
@@ -348,10 +343,9 @@ class BatchScheduleBuilderTest {
     };
   }
 
-  /** 创建测试用的 BatchSchedule (EPMC) - 计划元数据 */
-  private com.patra.ingest.domain.model.vo.fetch.FetchMetadata createEpmcPlan(
-      int totalRecords, String cursorMark) {
-    return new com.patra.ingest.domain.model.vo.fetch.FetchMetadata() {
+  /** 创建测试用的 QuerySession (EPMC) - 查询会话 */
+  private QuerySession createEpmcSession(int totalRecords, String cursorMark) {
+    return new QuerySession() {
       @Override
       public int totalRecords() {
         return totalRecords;
@@ -376,9 +370,9 @@ class BatchScheduleBuilderTest {
     };
   }
 
-  /** 创建测试用的 BatchSchedule (未知数据源) - 计划元数据 */
-  private com.patra.ingest.domain.model.vo.fetch.FetchMetadata createUnknownPlan(int totalRecords) {
-    return new com.patra.ingest.domain.model.vo.fetch.FetchMetadata() {
+  /** 创建测试用的 QuerySession (未知数据源) - 查询会话 */
+  private QuerySession createUnknownSession(int totalRecords) {
+    return new QuerySession() {
       @Override
       public int totalRecords() {
         return totalRecords;
