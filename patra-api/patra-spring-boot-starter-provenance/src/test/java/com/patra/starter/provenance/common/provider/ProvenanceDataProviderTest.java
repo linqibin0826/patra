@@ -377,7 +377,6 @@ class ProvenanceDataProviderTest {
   private static ProviderRequest createMockRequest() {
     return ProviderRequest.builder()
         .executionParams(new BatchExecutionParams("test", null))
-        .metadata(BatchMetadata.first())
         .build();
   }
 

@@ -6,7 +6,6 @@ import com.patra.common.model.CanonicalLiterature;
 import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import com.patra.starter.provenance.common.provider.BatchExecutionParams;
-import com.patra.starter.provenance.common.provider.BatchMetadata;
 import com.patra.starter.provenance.common.provider.ProviderRequest;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +32,6 @@ class DataProcessorTest {
     return ProviderRequest.builder()
         .config(createTestConfig())
         .executionParams(createTestExecutionParams())
-        .metadata(BatchMetadata.first())
         .build();
   }
 
@@ -52,7 +50,6 @@ class DataProcessorTest {
     return ProviderContext.builder()
         .config(createTestConfig())
         .client(new Object())
-        .batchMetadata(BatchMetadata.first())
         .attributes(new HashMap<>())
         .build();
   }
@@ -569,7 +566,6 @@ class DataProcessorTest {
           ProviderContext.builder()
               .config(createTestConfig())
               .client(mockClient)
-              .batchMetadata(BatchMetadata.first())
               .build();
 
       // When: 获取客户端
@@ -587,7 +583,6 @@ class DataProcessorTest {
           ProviderContext.builder()
               .config(createTestConfig())
               .client("StringClient")
-              .batchMetadata(BatchMetadata.first())
               .build();
 
       // When & Then: 类型不匹配时抛出异常
@@ -608,7 +603,6 @@ class DataProcessorTest {
           ProviderContext.builder()
               .config(createTestConfig())
               .client(new Object())
-              .batchMetadata(BatchMetadata.first())
               .attributes(attributes)
               .build();
 

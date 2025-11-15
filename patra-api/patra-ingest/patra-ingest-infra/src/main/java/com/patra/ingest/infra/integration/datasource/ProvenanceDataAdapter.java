@@ -22,7 +22,6 @@ import com.patra.starter.provenance.common.config.RetryConfig;
 import com.patra.starter.provenance.common.config.WindowOffsetConfig;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
 import com.patra.starter.provenance.common.provider.BatchExecutionParams;
-import com.patra.starter.provenance.common.provider.BatchMetadata;
 import com.patra.starter.provenance.common.provider.ProvenanceDataProvider;
 import com.patra.starter.provenance.common.provider.ProviderNotFoundException;
 import com.patra.starter.provenance.common.provider.ProviderRegistry;
@@ -440,7 +439,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
   /**
    * 构建ProviderRequest
    *
-   * <p>合并ExecutionContext和Batch中的参数。
+   * <p>将业务层的查询和分页参数转换为技术层的请求参数。
    *
    * @param context 执行上下文
    * @param batch 批次定义
@@ -452,45 +451,49 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
     JsonNode params = buildParametersAsJson(context, batch);
     BatchExecutionParams executionParams = new BatchExecutionParams(query, params);
 
-    // 构建BatchMetadata
-    BatchMetadata metadata = new BatchMetadata(batch.batchNo(), batch.cursorToken());
-
     // 从 ExecutionContext 转换配置快照为 ProvenanceConfig
-    // 与 prepareFetchMetadata 方法保持一致的配置传递策略
     ProvenanceConfig config = convertToProvenanceConfig(context);
 
     return ProviderRequest.builder()
         .config(config)
         .executionParams(executionParams)
-        .metadata(metadata)
         .build();
   }
 
   /**
    * 构建参数JsonNode
    *
-   * <p>合并ExecutionContext和Batch中的参数，Batch参数优先级更高。
+   * <p>只包含技术层需要的查询和分页参数，不包含业务追踪信息。
    *
    * @param context 执行上下文
    * @param batch 批次定义
    * @return 参数JsonNode
    */
   private JsonNode buildParametersAsJson(ExecutionContext context, Batch batch) {
-    // 使用MapUtil构建Map
+    // 如果 Batch.params 已包含所有技术参数，直接使用
+    if (batch.params() != null) {
+      return batch.params();
+    }
+
+    // 否则手动构建技术参数
     Map<String, Object> params = MapUtil.<String, Object>newHashMap();
 
-    // 从Context添加参数
-    params.put("provenanceCode", context.provenanceCode().getCode());
-    params.put("operationCode", context.operationCode());
-    params.put("runId", context.runId());
+    // 添加分页参数
+    if (batch.pageSize() != null) {
+      params.put("pageSize", batch.pageSize());
+    }
+    if (batch.pageNo() != null) {
+      params.put("pageNo", batch.pageNo());
+    }
 
-    // 从Batch添加参数（优先级更高）
-    params.put("batchNo", batch.batchNo());
-    params.put("pageSize", batch.pageSize());
-
-    // 条件添加cursorToken
+    // 添加游标令牌
     if (batch.cursorToken() != null) {
       params.put("cursorToken", batch.cursorToken());
+    }
+
+    // 添加会话令牌 (例如 PubMed 的 webEnv/queryKey)
+    if (batch.hasSessionTokens()) {
+      params.putAll(batch.sessionTokens());
     }
 
     // 转换为JsonNode

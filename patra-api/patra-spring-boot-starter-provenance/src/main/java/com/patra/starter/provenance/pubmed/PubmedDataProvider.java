@@ -95,9 +95,8 @@ public class PubmedDataProvider implements ProvenanceDataProvider {
   public <T> ProviderResult<T> fetchData(
       ProviderRequest request, DataType dataType, Class<T> targetClass) {
     long start = System.currentTimeMillis();
-    int batchNo = request.metadata().batchNo();
 
-    log.info("PubMed provider start: batchNo={} dataType={}", batchNo, dataType);
+    log.info("PubMed provider start: dataType={}", dataType);
 
     // 1. 验证类型一致性
     if (!dataType.getDataClass().isAssignableFrom(targetClass)) {
@@ -120,8 +119,7 @@ public class PubmedDataProvider implements ProvenanceDataProvider {
 
         long duration = System.currentTimeMillis() - start;
         log.info(
-            "PubMed provider completed: batchNo={} fetched={} duration={}ms",
-            batchNo,
+            "PubMed provider completed: fetched={} duration={}ms",
             result.fetchedCount(),
             duration);
 
@@ -130,7 +128,7 @@ public class PubmedDataProvider implements ProvenanceDataProvider {
         return typedResult;
       } catch (Exception ex) {
         long duration = System.currentTimeMillis() - start;
-        log.error("PubMed provider error: batchNo={} duration={}ms", batchNo, duration, ex);
+        log.error("PubMed provider error: duration={}ms", duration, ex);
         return ProviderResult.nonRetriableFailure(
             dataType, "PubMed provider error: " + ex.getMessage());
       }

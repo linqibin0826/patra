@@ -19,7 +19,6 @@ import com.patra.starter.provenance.common.processor.ProcessResult;
 import com.patra.starter.provenance.common.processor.ProviderContext;
 import com.patra.starter.provenance.common.processor.ValidationResult;
 import com.patra.starter.provenance.common.provider.BatchExecutionParams;
-import com.patra.starter.provenance.common.provider.BatchMetadata;
 import com.patra.starter.provenance.common.provider.ProviderRequest;
 import com.patra.starter.provenance.pubmed.PubMedClient;
 import com.patra.starter.provenance.pubmed.converter.PubmedLiteratureConverter;
@@ -86,7 +85,6 @@ class PubmedLiteratureProcessorTest {
     return ProviderRequest.builder()
         .config(createTestConfig())
         .executionParams(new BatchExecutionParams(query, params))
-        .metadata(BatchMetadata.first())
         .build();
   }
 
@@ -114,7 +112,6 @@ class PubmedLiteratureProcessorTest {
     return ProviderContext.builder()
         .config(createTestConfig())
         .client(pubMedClient)
-        .batchMetadata(BatchMetadata.first())
         .attributes(new HashMap<>())
         .build();
   }
