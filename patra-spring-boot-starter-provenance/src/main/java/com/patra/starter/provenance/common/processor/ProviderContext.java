@@ -1,7 +1,6 @@
 package com.patra.starter.provenance.common.processor;
 
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
-import com.patra.starter.provenance.common.provider.BatchMetadata;
 import java.util.Map;
 import lombok.Builder;
 import lombok.Value;
@@ -16,7 +15,6 @@ import lombok.Value;
  * <ul>
  *   <li>配置信息（超时、重试、限流等）
  *   <li>客户端实例（如PubMedClient、DoajClient）
- *   <li>批次元数据（批次号、游标）
  *   <li>扩展属性（自定义上下文信息）
  * </ul>
  *
@@ -32,9 +30,6 @@ public class ProviderContext {
 
   /** 客户端实例（如PubMedClient、DoajClient） */
   Object client;
-
-  /** 批次元数据 */
-  BatchMetadata batchMetadata;
 
   /** 扩展属性 */
   Map<String, Object> attributes;
