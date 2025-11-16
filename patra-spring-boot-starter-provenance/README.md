@@ -6,6 +6,8 @@
 
 本 Starter 自动配置医学文献 API 客户端,支持 ESearch、EFetch、EPost 等常用操作,内置请求组装、超时控制、简单重试和本地限流机制。
 
+**HTTP 客户端**: 基于 **Spring RestClient**（使用底层 JDK 21 HttpClient），提供类型安全的 HTTP 调用和自动配置支持。
+
 ## 核心功能
 
 - **PubMed 客户端**: 支持 ESearch、EFetch、EPost 操作
@@ -23,10 +25,12 @@
 
 | Bean 名称 | 类型 | 描述 |
 |-----------|------|------|
+| `pubMedRestClient` | `RestClient` | PubMed 专用 RestClient（含超时和默认 Headers） |
+| `epmcRestClient` | `RestClient` | EPMC 专用 RestClient（含超时和默认 Headers） |
 | `pubMedClient` | `PubMedClient` | PubMed E-utilities 客户端 |
 | `epmcClient` | `EPMCClient` | Europe PMC 搜索客户端 |
 | `provenanceXmlMapper` | `XmlMapper` | PubMed XML 响应映射器 |
-| `pubmedArticleConverter` | `PubmedArticleConverter` | PubMed 文章转换器 |
+| `pubmedArticleConverter` | `PubmedLiteratureConverter` | PubMed 文章转换器 |
 | `defaultConfigProvider` | `DefaultConfigProvider` | 配置提供器 |
 | `providerRegistry` | `ProviderRegistry` | 数据源提供者注册表 |
 | `pubmedDataProvider` | `PubmedDataProvider` | PubMed 数据提供者实现 |
@@ -38,6 +42,15 @@
 - 指标 Bean 需要 `MeterRegistry` 存在
 
 ## 主要组件
+
+### RestClient（Spring 管理）
+
+提供类型安全的 HTTP 调用能力:
+
+- **PubMed RestClient**: 自动配置 baseUrl、超时、默认 Headers
+- **EPMC RestClient**: 自动配置 baseUrl、超时、默认 Headers
+- **底层实现**: JDK 21 HttpClient（通过 JdkClientHttpRequestFactory）
+- **配置来源**: 从 `ProvenanceConfig.http()` 提取
 
 ### PubMedClient
 
@@ -117,6 +130,8 @@ patra:
     <artifactId>patra-spring-boot-starter-provenance</artifactId>
 </dependency>
 ```
+
+注意：`spring-web` 已作为核心依赖自动引入，提供 RestClient 支持。
 
 ### 配置示例
 
@@ -231,6 +246,7 @@ Infrastructure Layer (patra-ingest-infra)
 Framework Layer (patra-starter-provenance) ← 本 Starter
   - ProvenanceDataProvider (技术提供者接口)
   - ProviderRegistry (提供者注册表)
+  - RestClient (Spring 管理的 HTTP 客户端)
     ↑ implements
 Provider Implementations (各数据源实现层)
   - PubmedProvenanceDataProvider (具体实现)
@@ -295,12 +311,24 @@ patra:
 public class CustomProvenanceConfig {
 
     @Bean
-    public PubMedClient customPubMedClient(ObjectMapper objectMapper) {
+    public RestClient customPubMedRestClient() {
+        return RestClient.builder()
+            .baseUrl("https://custom-url")
+            .defaultHeader("Custom-Header", "value")
+            .build();
+    }
+
+    @Bean
+    public PubMedClient customPubMedClient(
+        RestClient customPubMedRestClient,
+        ObjectMapper objectMapper,
+        XmlMapper xmlMapper
+    ) {
         return new PubMedClientImpl(
-            new SimpleHttpClient(),
+            customPubMedRestClient,
             customConfigProvider(),
             objectMapper,
-            xmlMapper(),
+            xmlMapper,
             null
         );
     }
@@ -355,8 +383,70 @@ public class CustomProvenanceDataProvider implements ProvenanceDataProvider {
 ## 技术栈
 
 - Spring Boot 3.5.7
+- **Spring Web** (RestClient)
 - Jackson (JSON/XML)
 - Micrometer (可选)
 - Hutool
 - patra-common-core
 - patra-common-model
+
+## 迁移说明
+
+### 从 SimpleHttpClient 到 RestClient
+
+**背景**: v0.1.0 版本将 HTTP 调用从自定义的 `SimpleHttpClient` 迁移到 Spring 管理的 `RestClient`。
+
+**主要变更**:
+
+1. **依赖变更**:
+   - 新增: `spring-web` 依赖（提供 RestClient）
+   - 移除: 自定义 `SimpleHttpClient`、`HttpResilienceConfig`
+
+2. **自动配置变更**:
+   - 新增: `pubMedRestClient` 和 `epmcRestClient` Bean
+   - 修改: `PubMedClientImpl` 和 `EPMCClientImpl` 构造函数接受 `RestClient`
+
+3. **配置保持不变**:
+   - `patra.provenance.defaults.http.*` 配置继续有效
+   - 超时和默认 Headers 从配置中自动提取
+
+**影响范围**:
+- **对用户透明**: 如果使用 `PubMedClient` 或 `EPMCClient` 接口，无需修改代码
+- **自定义配置**: 如果手动创建了 `PubMedClientImpl`，需要传入 `RestClient` 而非 `SimpleHttpClient`
+
+**示例**:
+
+```java
+// 旧版本（已废弃）
+PubMedClient client = new PubMedClientImpl(
+    new SimpleHttpClient(),  // ❌ 已移除
+    configProvider,
+    objectMapper,
+    xmlMapper,
+    null
+);
+
+// 新版本（推荐）
+// 1. 使用自动配置（推荐）
+@Autowired
+private PubMedClient pubMedClient;  // ✅ 直接注入
+
+// 2. 手动配置（高级用法）
+RestClient restClient = RestClient.builder()
+    .baseUrl("https://eutils.ncbi.nlm.nih.gov/entrez/eutils")
+    .build();
+
+PubMedClient client = new PubMedClientImpl(
+    restClient,  // ✅ 使用 RestClient
+    configProvider,
+    objectMapper,
+    xmlMapper,
+    null
+);
+```
+
+**优势**:
+- ✅ 与 Spring 生态深度集成
+- ✅ 统一的超时、重试、拦截器配置
+- ✅ 更好的测试支持（MockRestServiceServer）
+- ✅ 减少自定义代码维护成本

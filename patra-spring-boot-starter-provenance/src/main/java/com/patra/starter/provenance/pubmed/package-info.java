@@ -1,7 +1,8 @@
 /**
  * PubMed 数据源集成包。
  *
- * <p>提供 PubMed E-utilities API 客户端和数据源端口实现，支持文献搜索、详情获取和批量检索。
+ * <p>提供 PubMed E-utilities API 客户端和数据源提供者实现，支持文献搜索、详情获取和批量检索。
+ * 使用 Spring RestClient 进行 HTTP 调用。
  *
  * <h2>职责</h2>
  *
@@ -9,15 +10,16 @@
  *   <li>调用 PubMed E-utilities API（ESearch、EFetch、EPost）
  *   <li>解析 PubMed XML/JSON 响应
  *   <li>转换为 CanonicalLiterature 标准模型
- *   <li>提供 {@link com.patra.starter.provenance.common.adapter.ProvenanceDataAdapter} 端口实现
+ *   <li>提供 {@link com.patra.starter.provenance.common.provider.ProvenanceDataProvider} 接口实现
  * </ul>
  *
  * <h2>核心组件</h2>
  *
  * <ul>
  *   <li>{@link PubMedClient} - PubMed 客户端接口
- *   <li>{@link PubMedClientImpl} - PubMed 客户端实现
- *   <li>{@link PubmedProvenanceDataAdapter} - PubMed 数据源端口实现
+ *   <li>{@link PubMedClientImpl} - PubMed 客户端实现（基于 RestClient）
+ *   <li>{@link PubmedDataProvider} - PubMed 数据源提供者实现
+ *   <li>{@link com.patra.starter.provenance.pubmed.converter.PubmedLiteratureConverter} - PubMed 文献转换器
  * </ul>
  *
  * <h2>支持的 E-utilities</h2>
@@ -52,6 +54,16 @@
  *     }
  * }
  * }</pre>
+ *
+ * <h2>HTTP 客户端实现</h2>
+ *
+ * <p>本包使用 Spring RestClient 进行 HTTP 调用：
+ *
+ * <ul>
+ *   <li>RestClient 在 {@link com.patra.starter.provenance.boot.ProvenanceAutoConfiguration} 中自动配置
+ *   <li>baseUrl、超时、默认 Headers 从配置中提取
+ *   <li>底层使用 JDK 21 HttpClient
+ * </ul>
  *
  * <h2>PubMed API 最佳实践</h2>
  *

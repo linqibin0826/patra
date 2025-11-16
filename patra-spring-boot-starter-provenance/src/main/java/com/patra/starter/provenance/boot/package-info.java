@@ -2,14 +2,15 @@
  * Provenance Starter 启动配置包。
  *
  * <p>本包提供 Spring Boot 自动配置支持，用于快速集成 Provenance 数据源客户端。自动注册 PubMed 和 Europe PMC
- * 端口实现，并支持通过属性文件进行声明式配置。
+ * 客户端实现，并支持通过属性文件进行声明式配置。
  *
  * <h2>职责</h2>
  *
  * <ul>
- *   <li>自动配置 PubMed 和 EPMC 客户端
- *   <li>注册 {@link com.patra.starter.provenance.common.adapter.ProvenanceDataAdapter} 到 {@link
- *       com.patra.starter.provenance.common.adapter.AdapterRegistry}
+ *   <li>自动配置 PubMed 和 EPMC 客户端（基于 Spring RestClient）
+ *   <li>创建专用 RestClient Bean（含超时和默认 Headers）
+ *   <li>注册 {@link com.patra.starter.provenance.common.provider.ProvenanceDataProvider} 到 {@link
+ *       com.patra.starter.provenance.common.provider.ProviderRegistry}
  *   <li>加载并验证 {@code patra.provenance.*} 配置属性
  *   <li>按需集成 Micrometer 指标监控
  * </ul>
@@ -20,6 +21,18 @@
  *   <li>{@link com.patra.starter.provenance.boot.ProvenanceAutoConfiguration} - 主自动配置类
  *   <li>{@link com.patra.starter.provenance.boot.ProvenanceProperties} - 绑定 {@code
  *       patra.provenance.*} 属性
+ * </ul>
+ *
+ * <h2>HTTP 客户端实现</h2>
+ *
+ * <p>自动配置创建以下 RestClient Bean:
+ *
+ * <ul>
+ *   <li>{@code pubMedRestClient} - PubMed 专用 RestClient（配置从 {@code
+ *       patra.provenance.sources.pubmed} 提取）
+ *   <li>{@code epmcRestClient} - EPMC 专用 RestClient（配置从 {@code patra.provenance.sources.epmc}
+ *       提取）
+ *   <li>底层使用 JDK 21 HttpClient（通过 JdkClientHttpRequestFactory）
  * </ul>
  *
  * <h2>使用方式</h2>
@@ -40,19 +53,25 @@
  * patra:
  *   provenance:
  *     enabled: true
- *     pubmed:
- *       base-url: https://eutils.ncbi.nlm.nih.gov/entrez/eutils
- *       api-key: your-api-key
- *     epmc:
- *       base-url: https://www.ebi.ac.uk/europepmc/webservices/rest
+ *     defaults:
+ *       http:
+ *         timeout-connect-millis: 10000
+ *         timeout-read-millis: 30000
+ *     sources:
+ *       pubmed:
+ *         base-url: https://eutils.ncbi.nlm.nih.gov/entrez/eutils
+ *         api-key: your-api-key
+ *       epmc:
+ *         base-url: https://www.ebi.ac.uk/europepmc/webservices/rest
  * }</pre>
  *
  * <h2>扩展点</h2>
  *
  * <ul>
- *   <li>实现 {@link com.patra.starter.provenance.common.adapter.ProvenanceDataAdapter} 添加新数据源
+ *   <li>实现 {@link com.patra.starter.provenance.common.provider.ProvenanceDataProvider} 添加新数据源
  *   <li>自定义 {@link com.patra.starter.provenance.common.metrics.ProvenanceMetrics} 替换指标记录器
  *   <li>使用 {@code patra.provenance.enabled=false} 禁用自动配置
+ *   <li>手动创建 RestClient Bean 以完全控制 HTTP 配置
  * </ul>
  *
  * @since 0.1.0

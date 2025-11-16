@@ -5,10 +5,7 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.starter.provenance.common.config.DefaultConfigProvider;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
-import com.patra.starter.provenance.common.converter.ProvenanceConfigConverter;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
-import com.patra.starter.provenance.common.http.HttpResilienceConfig;
-import com.patra.starter.provenance.common.http.SimpleHttpClient;
 import com.patra.starter.provenance.common.metrics.ProvenanceMetrics;
 import com.patra.starter.provenance.pubmed.model.request.EFetchRequest;
 import com.patra.starter.provenance.pubmed.model.request.EPostRequest;
@@ -19,9 +16,13 @@ import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
 import java.io.IOException;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestClient;
 
 /**
- * PubMed 客户端实现
+ * PubMed 客户端实现（使用 Spring RestClient）
  *
  * <p>直接通过HTTP调用PubMed E-utilities API。PubMed是美国国家医学图书馆的生物医学文献数据库， 提供超过3400万条引文和摘要。
  *
@@ -44,19 +45,19 @@ public class PubMedClientImpl implements PubMedClient {
 
   private static final ProvenanceCode PROVENANCE = ProvenanceCode.PUBMED;
 
-  private final SimpleHttpClient httpClient;
+  private final RestClient restClient;
   private final DefaultConfigProvider configProvider;
   private final ObjectMapper objectMapper;
   private final XmlMapper xmlMapper;
   private final ProvenanceMetrics metrics;
 
   public PubMedClientImpl(
-      SimpleHttpClient httpClient,
+      RestClient restClient,
       DefaultConfigProvider configProvider,
       ObjectMapper objectMapper,
       XmlMapper xmlMapper,
       ProvenanceMetrics metrics) {
-    this.httpClient = httpClient;
+    this.restClient = restClient;
     this.configProvider = configProvider;
     this.objectMapper = objectMapper;
     this.xmlMapper = xmlMapper;
@@ -80,17 +81,21 @@ public class PubMedClientImpl implements PubMedClient {
   }
 
   private ESearchResponse executeESearch(ESearchRequest request, ProvenanceConfig config) {
-    ProvenanceConfig finalConfig =
-        config != null ? config : configProvider.getPubMedDefaultConfig();
-
-    String baseUrl = finalConfig.baseUrl();
     String path = "/esearch.fcgi";
-
     Map<String, String> queryParams = request.toQueryParams();
-    Map<String, String> headers = ProvenanceConfigConverter.extractHeaders(finalConfig);
-    HttpResilienceConfig rc = ProvenanceConfigConverter.toHttpResilienceConfig(finalConfig);
 
-    String body = httpClient.get(baseUrl, path, queryParams, headers, rc);
+    String body =
+        restClient
+            .get()
+            .uri(
+                uriBuilder -> {
+                  uriBuilder.path(path);
+                  queryParams.forEach(uriBuilder::queryParam);
+                  return uriBuilder.build();
+                })
+            .retrieve()
+            .body(String.class);
+
     try {
       return objectMapper.readValue(body, ESearchResponse.class);
     } catch (Exception ex) {
@@ -119,14 +124,21 @@ public class PubMedClientImpl implements PubMedClient {
     ProvenanceConfig finalConfig =
         config != null ? config : configProvider.getPubMedDefaultConfig();
 
-    String baseUrl = finalConfig.baseUrl();
     String path = "/efetch.fcgi";
-
     Map<String, String> queryParams = request.toQueryParams();
-    Map<String, String> headers = ProvenanceConfigConverter.extractHeaders(finalConfig);
-    HttpResilienceConfig rc = ProvenanceConfigConverter.toHttpResilienceConfig(finalConfig);
 
-    String body = httpClient.get(baseUrl, path, queryParams, headers, rc);
+    String body =
+        restClient
+            .get()
+            .uri(
+                uriBuilder -> {
+                  uriBuilder.path(path);
+                  queryParams.forEach(uriBuilder::queryParam);
+                  return uriBuilder.build();
+                })
+            .retrieve()
+            .body(String.class);
+
     try {
       String retmode = request.retmode();
       if (retmode == null || retmode.equalsIgnoreCase("xml")) {
@@ -164,14 +176,22 @@ public class PubMedClientImpl implements PubMedClient {
     ProvenanceConfig finalConfig =
         config != null ? config : configProvider.getPubMedDefaultConfig();
 
-    String baseUrl = finalConfig.baseUrl();
     String path = "/epost.fcgi";
+    Map<String, String> formParams = request.toQueryParams();
 
-    Map<String, String> queryParams = request.toQueryParams();
-    Map<String, String> headers = ProvenanceConfigConverter.extractHeaders(finalConfig);
-    HttpResilienceConfig rc = ProvenanceConfigConverter.toHttpResilienceConfig(finalConfig);
+    // 转换为 MultiValueMap 用于表单提交
+    MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+    formParams.forEach(formData::add);
 
-    String body = httpClient.postForm(baseUrl, path, queryParams, headers, rc);
+    String body =
+        restClient
+            .post()
+            .uri(path)
+            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+            .body(formData)
+            .retrieve()
+            .body(String.class);
+
     try {
       EPostResponse response = xmlMapper.readValue(body, EPostResponse.class);
       if (!response.isValid()) {
