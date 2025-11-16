@@ -243,7 +243,7 @@
  * <ul>
  *   <li>{@link com.patra.ingest.domain.model.vo.batch} - Domain 层批次值对象
  *   <li>{@link com.patra.ingest.app.usecase.execution.strategy.batch} - Application 层批次生成策略
- *   <li>{@link com.patra.ingest.infra.integration.datasource.ProvenanceDataAdapter} - 数据源适配器
+ *   <li>{@link com.patra.ingest.infra.integration.provenance.ProvenanceDataAdapter} - 数据源适配器
  * </ul>
  *
  * @author linqibin

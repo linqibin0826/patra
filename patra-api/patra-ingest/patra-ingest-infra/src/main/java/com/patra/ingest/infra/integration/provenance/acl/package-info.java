@@ -6,7 +6,7 @@
  * <p><strong>核心组件</strong>：
  *
  * <ul>
- *   <li>{@link com.patra.ingest.infra.integration.datasource.acl.PlanMetadataTranslator} - 翻译
+ *   <li>{@link com.patra.ingest.infra.integration.provenance.acl.PlanMetadataTranslator} - 翻译
  *       Provenance 的 PlanMetadata 为 BatchSchedule
  * </ul>
  *
@@ -22,4 +22,4 @@
  * @author Patra Architecture Team
  * @since 0.3.0
  */
-package com.patra.ingest.infra.integration.datasource.acl;
+package com.patra.ingest.infra.integration.provenance.acl;

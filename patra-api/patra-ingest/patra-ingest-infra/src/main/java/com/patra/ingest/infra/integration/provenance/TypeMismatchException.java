@@ -1,4 +1,4 @@
-package com.patra.ingest.infra.integration.datasource;
+package com.patra.ingest.infra.integration.provenance;
 
 /**
  * 类型不匹配异常

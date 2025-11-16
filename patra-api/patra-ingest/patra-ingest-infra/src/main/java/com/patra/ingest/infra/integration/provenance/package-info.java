@@ -52,4 +52,4 @@
  * @since 0.1.0
  * @author linqibin
  */
-package com.patra.ingest.infra.integration.datasource;
+package com.patra.ingest.infra.integration.provenance;
