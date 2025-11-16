@@ -66,12 +66,12 @@ class DataTypeTest {
     }
 
     @Test
-    @DisplayName("LITERATURE的属性值正确")
-    void literatureHasCorrectProperties() {
-      DataType literature = DataType.LITERATURE;
-      assertThat(literature.getCode()).isEqualTo("literature");
-      assertThat(literature.getDescription()).isEqualTo("文献数据");
-      assertThat(literature.getDataClass()).isEqualTo(CanonicalLiterature.class);
+    @DisplayName("PUBLICATION的属性值正确")
+    void publicationHasCorrectProperties() {
+      DataType publication = DataType.PUBLICATION;
+      assertThat(publication.getCode()).isEqualTo("publication");
+      assertThat(publication.getDescription()).isEqualTo("出版物数据");
+      assertThat(publication.getDataClass()).isEqualTo(CanonicalPublication.class);
     }
 
     @Test
@@ -108,16 +108,16 @@ class DataTypeTest {
       @Test
       @DisplayName("通过有效code查找成功")
       void shouldFindByValidCode() {
-        DataType result = DataType.fromCode("literature");
-        assertThat(result).isEqualTo(DataType.LITERATURE);
+        DataType result = DataType.fromCode("publication");
+        assertThat(result).isEqualTo(DataType.PUBLICATION);
       }
 
       @Test
       @DisplayName("code不区分大小写")
       void shouldBeCaseInsensitive() {
-        assertThat(DataType.fromCode("LITERATURE")).isEqualTo(DataType.LITERATURE);
-        assertThat(DataType.fromCode("Literature")).isEqualTo(DataType.LITERATURE);
-        assertThat(DataType.fromCode("literature")).isEqualTo(DataType.LITERATURE);
+        assertThat(DataType.fromCode("PUBLICATION")).isEqualTo(DataType.PUBLICATION);
+        assertThat(DataType.fromCode("Publication")).isEqualTo(DataType.PUBLICATION);
+        assertThat(DataType.fromCode("publication")).isEqualTo(DataType.PUBLICATION);
       }
 
       @Test
@@ -149,8 +149,8 @@ class DataTypeTest {
       @Test
       @DisplayName("通过有效code查找返回Optional.of")
       void shouldReturnOptionalOfWhenCodeExists() {
-        Optional<DataType> result = DataType.findByCode("literature");
-        assertThat(result).isPresent().contains(DataType.LITERATURE);
+        Optional<DataType> result = DataType.findByCode("publication");
+        assertThat(result).isPresent().contains(DataType.PUBLICATION);
       }
 
       @Test
@@ -163,8 +163,8 @@ class DataTypeTest {
       @Test
       @DisplayName("code不区分大小写")
       void shouldBeCaseInsensitive() {
-        assertThat(DataType.findByCode("LITERATURE")).contains(DataType.LITERATURE);
-        assertThat(DataType.findByCode("Literature")).contains(DataType.LITERATURE);
+        assertThat(DataType.findByCode("PUBLICATION")).contains(DataType.PUBLICATION);
+        assertThat(DataType.findByCode("Publication")).contains(DataType.PUBLICATION);
       }
 
       @Test
@@ -182,8 +182,8 @@ class DataTypeTest {
       @Test
       @DisplayName("通过有效Class查找成功")
       void shouldFindByValidClass() {
-        DataType result = DataType.fromClass(CanonicalLiterature.class);
-        assertThat(result).isEqualTo(DataType.LITERATURE);
+        DataType result = DataType.fromClass(CanonicalPublication.class);
+        assertThat(result).isEqualTo(DataType.PUBLICATION);
       }
 
       @Test
@@ -208,8 +208,8 @@ class DataTypeTest {
       @Test
       @DisplayName("通过有效Class查找返回Optional.of")
       void shouldReturnOptionalOfWhenClassExists() {
-        Optional<DataType> result = DataType.findByClass(CanonicalLiterature.class);
-        assertThat(result).isPresent().contains(DataType.LITERATURE);
+        Optional<DataType> result = DataType.findByClass(CanonicalPublication.class);
+        assertThat(result).isPresent().contains(DataType.PUBLICATION);
       }
 
       @Test
@@ -257,15 +257,15 @@ class DataTypeTest {
       }
 
       @Test
-      @DisplayName("LITERATURE_FULLTEXT是关系型数据")
-      void literatureFulltextIsRelational() {
-        assertThat(DataType.LITERATURE_FULLTEXT.isRelational()).isTrue();
+      @DisplayName("PUBLICATION_FULLTEXT是关系型数据")
+      void publicationFulltextIsRelational() {
+        assertThat(DataType.PUBLICATION_FULLTEXT.isRelational()).isTrue();
       }
 
       @Test
-      @DisplayName("LITERATURE不是关系型数据")
-      void literatureIsNotRelational() {
-        assertThat(DataType.LITERATURE.isRelational()).isFalse();
+      @DisplayName("PUBLICATION不是关系型数据")
+      void publicationIsNotRelational() {
+        assertThat(DataType.PUBLICATION.isRelational()).isFalse();
       }
 
       @Test
@@ -286,9 +286,9 @@ class DataTypeTest {
     class IsCoreEntityTest {
 
       @Test
-      @DisplayName("LITERATURE是核心实体")
-      void literatureIsCoreEntity() {
-        assertThat(DataType.LITERATURE.isCoreEntity()).isTrue();
+      @DisplayName("PUBLICATION是核心实体")
+      void publicationIsCoreEntity() {
+        assertThat(DataType.PUBLICATION.isCoreEntity()).isTrue();
       }
 
       @Test
@@ -322,9 +322,9 @@ class DataTypeTest {
       }
 
       @Test
-      @DisplayName("LITERATURE_FULLTEXT不是核心实体")
-      void literatureFulltextIsNotCoreEntity() {
-        assertThat(DataType.LITERATURE_FULLTEXT.isCoreEntity()).isFalse();
+      @DisplayName("PUBLICATION_FULLTEXT不是核心实体")
+      void publicationFulltextIsNotCoreEntity() {
+        assertThat(DataType.PUBLICATION_FULLTEXT.isCoreEntity()).isFalse();
       }
     }
 
@@ -335,19 +335,19 @@ class DataTypeTest {
       @Test
       @DisplayName("相同Class可赋值")
       void shouldBeAssignableFromSameClass() {
-        assertThat(DataType.LITERATURE.isAssignableFrom(CanonicalLiterature.class)).isTrue();
+        assertThat(DataType.PUBLICATION.isAssignableFrom(CanonicalPublication.class)).isTrue();
       }
 
       @Test
       @DisplayName("不同Class不可赋值")
       void shouldNotBeAssignableFromDifferentClass() {
-        assertThat(DataType.LITERATURE.isAssignableFrom(String.class)).isFalse();
+        assertThat(DataType.PUBLICATION.isAssignableFrom(String.class)).isFalse();
       }
 
       @Test
       @DisplayName("null参数返回false")
       void shouldReturnFalseForNullClass() {
-        assertThat(DataType.LITERATURE.isAssignableFrom(null)).isFalse();
+        assertThat(DataType.PUBLICATION.isAssignableFrom(null)).isFalse();
       }
     }
   }
@@ -359,13 +359,13 @@ class DataTypeTest {
   class GroupingMethodsTest {
 
     @Test
-    @DisplayName("literatureTypes()返回所有文献相关类型")
-    void literatureTypesShouldReturnAllLiteratureTypes() {
-      Set<DataType> literatureTypes = DataType.literatureTypes();
+    @DisplayName("publicationTypes()返回所有出版物相关类型")
+    void publicationTypesShouldReturnAllLiteratureTypes() {
+      Set<DataType> publicationTypes = DataType.publicationTypes();
 
-      assertThat(literatureTypes)
+      assertThat(publicationTypes)
           .hasSize(3)
-          .contains(DataType.LITERATURE, DataType.LITERATURE_FULLTEXT, DataType.REFERENCE);
+          .contains(DataType.PUBLICATION, DataType.PUBLICATION_FULLTEXT, DataType.REFERENCE);
     }
 
     @Test
@@ -387,9 +387,9 @@ class DataTypeTest {
     @Test
     @DisplayName("分组方法返回的Set不可变")
     void groupingMethodsShouldReturnImmutableSets() {
-      Set<DataType> literatureTypes = DataType.literatureTypes();
+      Set<DataType> publicationTypes = DataType.publicationTypes();
 
-      assertThatThrownBy(() -> literatureTypes.add(DataType.JOURNAL))
+      assertThatThrownBy(() -> publicationTypes.add(DataType.JOURNAL))
           .isInstanceOf(UnsupportedOperationException.class);
     }
   }
@@ -409,7 +409,7 @@ class DataTypeTest {
     @Test
     @DisplayName("valueOf()能正确返回枚举常量")
     void valueOfShouldWork() {
-      assertThat(DataType.valueOf("LITERATURE")).isEqualTo(DataType.LITERATURE);
+      assertThat(DataType.valueOf("PUBLICATION")).isEqualTo(DataType.PUBLICATION);
       assertThat(DataType.valueOf("JOURNAL")).isEqualTo(DataType.JOURNAL);
       assertThat(DataType.valueOf("DRUG")).isEqualTo(DataType.DRUG);
     }
@@ -424,7 +424,7 @@ class DataTypeTest {
     @Test
     @DisplayName("toString()返回枚举常量名称")
     void toStringShouldReturnEnumName() {
-      assertThat(DataType.LITERATURE.toString()).isEqualTo("LITERATURE");
+      assertThat(DataType.PUBLICATION.toString()).isEqualTo("PUBLICATION");
     }
   }
 
@@ -440,8 +440,8 @@ class DataTypeTest {
       assertThat(DataType.values())
           .extracting(DataType::getCode)
           .containsExactlyInAnyOrder(
-              "literature",
-              "literature_fulltext",
+              "publication",
+              "publication_fulltext",
               "journal",
               "journal_metrics",
               "citation",

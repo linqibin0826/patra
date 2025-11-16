@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /**
  * Patra 采集服务 Spring Boot 启动类。
  *
- * <p>Patra 医学文献数据平台的数据采集微服务,负责从 PubMed、EMBASE 等外部数据源采集医学文献数据。
+ * <p>Patra 医学出版物数据平台的数据采集微服务,负责从 PubMed、EMBASE 等外部数据源采集医学出版物数据。
  *
  * <p>核心功能:
  *

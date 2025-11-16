@@ -88,7 +88,7 @@
  * // 解析存储位置
  * StorageContext context = StorageContext.builder()
  *     .module("ingest")
- *     .category("literature")
+ *     .category("publication")
  *     .originalFilename("paper.pdf")
  *     .build();
  * StorageLocation location = locationResolver.resolve(context);

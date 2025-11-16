@@ -64,7 +64,7 @@
  *     public void recordUpload(String bucket, String key, long size, String md5) {
  *         UploadRecordRequest request = new UploadRecordRequest(
  *             bucket, key, size, "application/pdf", md5, null,
- *             "patra-ingest", "literature_batch", "batch-001",
+ *             "patra-ingest", "publication_batch", "batch-001",
  *             Map.of(), "MINIO", null, null
  *         );
  *

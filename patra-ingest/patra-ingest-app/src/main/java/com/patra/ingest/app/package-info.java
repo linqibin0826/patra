@@ -64,7 +64,7 @@
  * 1. TaskReadyMessageListener(Adapter) → TaskExecutionUseCase(App)
  * 2. 准备执行上下文（编译表达式 + 获取租约 + 启动心跳）
  * 3. 批次调度 → 批次执行 → 游标推进
- * 4. 发布文献数据到下游
+ * 4. 发布出版物数据到下游
  * 5. 完成任务（释放租约 + 发布 TaskCompletedEvent）
  * </pre>
  *

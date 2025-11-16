@@ -34,7 +34,7 @@ import java.util.Locale;
  * <pre>{@code
  * public enum IngestPublishingChannels implements ChannelKey {
  *   TASK("INGEST", "TASK"),           // channel = "INGEST_TASK"
- *   LITERATURE("INGEST", "LITERATURE"); // channel = "INGEST_LITERATURE"
+ *   PUBLICATION("INGEST", "PUBLICATION"); // channel = "INGEST_PUBLICATION"
  *
  *   private final String domain;
  *   private final String resource;
@@ -67,7 +67,7 @@ public interface ChannelKey {
   String domain();
 
   /**
-   * 资源或聚合段（例如 {@code TASK}、{@code LITERATURE}、{@code PLAN}）。
+   * 资源或聚合段（例如 {@code TASK}、{@code PUBLICATION}、{@code PLAN}）。
    *
    * <p>优先使用与核心聚合或业务对象关联的大写名称。
    *
@@ -76,7 +76,7 @@ public interface ChannelKey {
   String resource();
 
   /**
-   * 使用下划线构建规范化的大写通道键（例如 {@code INGEST_TASK}、{@code INGEST_LITERATURE}）。
+   * 使用下划线构建规范化的大写通道键（例如 {@code INGEST_TASK}、{@code INGEST_PUBLICATION}）。
    *
    * <p><b>命名规则</b>：{@code <DOMAIN>_<RESOURCE>}
    *

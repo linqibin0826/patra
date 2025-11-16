@@ -13,7 +13,7 @@ import java.util.Objects;
  * <p><strong>核心特性</strong>：
  *
  * <ul>
- *   <li>泛型化：支持任意数据类型（CanonicalLiterature、Journal、Drug等）
+ *   <li>泛型化：支持任意数据类型（CanonicalPublication、Journal、Drug等）
  *   <li>数据类型标识：dataType字段标识结果的数据类型
  *   <li>扩展元数据：metadata字段支持自定义元数据
  *   <li>类型安全：工厂方法确保类型一致性
@@ -29,7 +29,7 @@ import java.util.Objects;
  *   <li>提供获取数量统计用于监控指标
  * </ul>
  *
- * @param <T> 数据类型（如CanonicalLiterature、Journal、Drug）
+ * @param <T> 数据类型（如CanonicalPublication、Journal、Drug）
  * @param success 提供者是否无终止性错误地完成执行
  * @param data 标准化数据记录的不可变列表
  * @param dataType 数据类型标识

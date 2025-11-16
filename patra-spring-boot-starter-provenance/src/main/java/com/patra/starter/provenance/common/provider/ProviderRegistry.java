@@ -27,17 +27,17 @@ import lombok.extern.slf4j.Slf4j;
  * <pre>
  * 主索引：Map<ProviderKey, ProvenanceDataProvider>
  *   ProviderKey = (provenanceCode, dataType)
- *   示例：("pubmed", LITERATURE) → PubmedProvider
+ *   示例：("pubmed", PUBLICATION) → PubmedProvider
  *        ("pubmed", CITATION) → PubmedProvider
  *        ("doaj", JOURNAL) → DoajProvider
  *
  * 辅助索引1：Map<String, Set<DataType>>
  *   provenanceCode → 支持的DataType集合
- *   示例："pubmed" → {LITERATURE, CITATION, AUTHOR}
+ *   示例："pubmed" → {PUBLICATION, CITATION, AUTHOR}
  *
  * 辅助索引2：Map<DataType, List<ProvenanceDataProvider>>
  *   dataType → 支持该类型的所有Provider
- *   示例：LITERATURE → [PubmedProvider, CrossrefProvider]
+ *   示例：PUBLICATION → [PubmedProvider, CrossrefProvider]
  * </pre>
  *
  * <p><strong>使用示例</strong>：

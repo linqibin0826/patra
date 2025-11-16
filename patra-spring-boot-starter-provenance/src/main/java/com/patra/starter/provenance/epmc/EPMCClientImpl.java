@@ -17,7 +17,7 @@ import org.springframework.web.client.RestClient;
 /**
  * Europe PMC 客户端实现（使用 Spring RestClient）
  *
- * <p>直接通过HTTP调用Europe PMC API。Europe PMC是欧洲的生物医学文献数据库， 提供PubMed数据以及欧洲特色的开放获取文献。
+ * <p>直接通过HTTP调用Europe PMC API。Europe PMC是欧洲的生物医学出版物数据库， 提供PubMed数据以及欧洲特色的开放获取文献。
  *
  * <p>主要功能：
  *

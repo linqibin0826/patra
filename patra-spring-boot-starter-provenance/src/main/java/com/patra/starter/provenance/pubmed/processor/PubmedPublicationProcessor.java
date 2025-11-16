@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
-import com.patra.common.model.CanonicalLiterature;
+import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
 import com.patra.common.provenance.api.constants.PubMedOperation;
 import com.patra.common.provenance.api.params.PubMedParamKeys;
@@ -24,14 +24,14 @@ import com.patra.starter.provenance.common.processor.ValidationResult;
 import com.patra.starter.provenance.common.provider.BatchExecutionParams;
 import com.patra.starter.provenance.common.provider.ProviderRequest;
 import com.patra.starter.provenance.pubmed.PubMedClient;
-import com.patra.starter.provenance.pubmed.converter.PubmedLiteratureConverter;
+import com.patra.starter.provenance.pubmed.converter.PubmedPublicationConverter;
 import com.patra.starter.provenance.pubmed.model.request.EFetchRequest;
 import com.patra.starter.provenance.pubmed.model.request.EPostRequest;
 import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
 import com.patra.starter.provenance.pubmed.model.response.EFetchResponse;
 import com.patra.starter.provenance.pubmed.model.response.EPostResponse;
 import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
-import com.patra.starter.provenance.pubmed.model.response.PubmedLiterature;
+import com.patra.starter.provenance.pubmed.model.response.PubmedPublication;
 import com.patra.starter.provenance.pubmed.request.PubMedESearchRequestAssembler;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,9 +41,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 
 /**
- * PubMed 文献数据处理器
+ * PubMed 出版物数据处理器
  *
- * <p>实现DataProcessor<CanonicalLiterature>接口，负责从PubMed获取和处理文献数据。
+ * <p>实现DataProcessor<CanonicalPublication>接口，负责从PubMed获取和处理出版物数据。
  *
  * <p><strong>核心职责</strong>：
  *
@@ -51,8 +51,8 @@ import org.springframework.lang.Nullable;
  *   <li>ESearch：执行搜索获取PMID列表
  *   <li>EPost（可选）：当ID数量超过阈值时，上传ID列表获取WebEnv
  *   <li>EFetch：批量获取文章详细元数据
- *   <li>转换：将PubMed XML响应转换为CanonicalLiterature
- *   <li>验证：验证转换后的文献数据
+ *   <li>转换：将PubMed XML响应转换为CanonicalPublication
+ *   <li>验证：验证转换后的出版物数据
  * </ul>
  *
  * <p><strong>架构位置</strong>：
@@ -60,7 +60,7 @@ import org.springframework.lang.Nullable;
  * <pre>
  * ProvenanceDataProvider (PubmedDataProvider)
  *     ↓ 委托
- * DataProcessor (PubmedLiteratureProcessor) ← [本类]
+ * DataProcessor (PubmedPublicationProcessor) ← [本类]
  *     ↓ 调用
  * PubMedClient → NCBI E-utilities API
  * </pre>
@@ -73,7 +73,7 @@ import org.springframework.lang.Nullable;
  */
 @Slf4j
 @RequiredArgsConstructor
-public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterature> {
+public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublication> {
 
   private static final int DEFAULT_EPOST_THRESHOLD = 200;
   private static final int WARNING_ID_SAMPLE_LIMIT = 5;
@@ -82,21 +82,21 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
       new PubMedESearchRequestAssembler();
 
   private final PubMedClient pubMedClient;
-  private final PubmedLiteratureConverter converter;
+  private final PubmedPublicationConverter converter;
   private final ProvenanceProperties properties;
   @Nullable private final ProvenanceMetrics metrics;
 
   @Override
   public DataType getDataType() {
-    return DataType.LITERATURE;
+    return DataType.PUBLICATION;
   }
 
   @Override
-  public ProcessResult<CanonicalLiterature> process(
+  public ProcessResult<CanonicalPublication> process(
       ProviderRequest request, ProviderContext context) {
     long start = System.currentTimeMillis();
 
-    log.debug("PubMed Literature Processor start");
+    log.debug("PubMed Publication Processor start");
 
     try {
       // 1. 准备处理上下文
@@ -109,7 +109,7 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
       }
 
       // 3. 获取文章数据
-      List<PubmedLiterature> articles = fetchArticles(searchResult.pmids(), ctx.config());
+      List<PubmedPublication> articles = fetchArticles(searchResult.pmids(), ctx.config());
 
       // 4. 转换为规范格式
       ConversionOutcome outcome = convertArticles(articles);
@@ -127,9 +127,9 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
   }
 
   @Override
-  public ValidationResult validate(CanonicalLiterature data) {
+  public ValidationResult validate(CanonicalPublication data) {
     if (data == null) {
-      return ValidationResult.failure("文献数据不能为null");
+      return ValidationResult.failure("出版物数据不能为null");
     }
 
     List<String> errors = new ArrayList<>();
@@ -159,18 +159,18 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
   }
 
   @Override
-  public CanonicalLiterature transform(Object rawData) {
+  public CanonicalPublication transform(Object rawData) {
     if (rawData == null) {
       throw new IllegalArgumentException("原始数据不能为null");
     }
 
-    if (!(rawData instanceof PubmedLiterature)) {
+    if (!(rawData instanceof PubmedPublication)) {
       throw new IllegalArgumentException(
-          "不支持的数据类型: " + rawData.getClass().getName() + ", 期望: PubmedLiterature");
+          "不支持的数据类型: " + rawData.getClass().getName() + ", 期望: PubmedPublication");
     }
 
-    PubmedLiterature article = (PubmedLiterature) rawData;
-    return converter.toCanonicalLiterature(article);
+    PubmedPublication article = (PubmedPublication) rawData;
+    return converter.toCanonicalPublication(article);
   }
 
   // ========== 私有辅助方法 ==========
@@ -211,25 +211,25 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
   }
 
   /** 创建空结果（未找到数据时） */
-  private ProcessResult<CanonicalLiterature> createEmptyResult(long startTime, String cursor) {
+  private ProcessResult<CanonicalPublication> createEmptyResult(long startTime, String cursor) {
     log.info(
-        "PubMed Literature Processor empty result: duration={}ms",
+        "PubMed Publication Processor empty result: duration={}ms",
         System.currentTimeMillis() - startTime);
     return ProcessResult.success(List.of(), cursor);
   }
 
   /** 构建处理结果 */
-  private ProcessResult<CanonicalLiterature> buildProcessResult(
+  private ProcessResult<CanonicalPublication> buildProcessResult(
       ConversionOutcome outcome, String nextCursor, long startTime) {
 
-    ProcessResult<CanonicalLiterature> result =
+    ProcessResult<CanonicalPublication> result =
         outcome.failedPmids().isEmpty()
             ? ProcessResult.success(outcome.literatures(), nextCursor)
             : ProcessResult.partialSuccess(
                 outcome.literatures(), nextCursor, buildConversionWarning(outcome.failedPmids()));
 
     log.info(
-        "PubMed Literature Processor success: fetched={} attempted={} duration={}ms",
+        "PubMed Publication Processor success: fetched={} attempted={} duration={}ms",
         result.data().size(),
         outcome.attempted(),
         System.currentTimeMillis() - startTime);
@@ -238,9 +238,9 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
   }
 
   /** 处理客户端异常（HTTP错误、超时等） */
-  private ProcessResult<CanonicalLiterature> handleClientException(ProvenanceClientException ex) {
+  private ProcessResult<CanonicalPublication> handleClientException(ProvenanceClientException ex) {
     log.warn(
-        "PubMed Literature Processor client error: status={} message={}",
+        "PubMed Publication Processor client error: status={} message={}",
         ex.getStatusCode(),
         ex.getMessage(),
         ex);
@@ -248,15 +248,15 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
   }
 
   /** 处理中断异常（任务取消或超时） */
-  private ProcessResult<CanonicalLiterature> handleInterruptedException(InterruptedException ex) {
+  private ProcessResult<CanonicalPublication> handleInterruptedException(InterruptedException ex) {
     Thread.currentThread().interrupt();
-    log.error("PubMed Literature Processor interrupted", ex);
+    log.error("PubMed Publication Processor interrupted", ex);
     return ProcessResult.failure("PubMed processor interrupted");
   }
 
   /** 处理未预期的异常（代码Bug或系统错误） */
-  private ProcessResult<CanonicalLiterature> handleUnexpectedException(Exception ex) {
-    log.error("PubMed Literature Processor unexpected error", ex);
+  private ProcessResult<CanonicalPublication> handleUnexpectedException(Exception ex) {
+    log.error("PubMed Publication Processor unexpected error", ex);
     return ProcessResult.failure("Unexpected PubMed error: " + ex.getMessage());
   }
 
@@ -298,7 +298,7 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
   }
 
   /** 获取文章数据（根据数量选择直接EFetch或通过EPost） */
-  private List<PubmedLiterature> fetchArticles(List<String> pmids, ProvenanceConfig config)
+  private List<PubmedPublication> fetchArticles(List<String> pmids, ProvenanceConfig config)
       throws InterruptedException {
     int threshold = resolveEpostThreshold(config);
     if (pmids.size() <= threshold) {
@@ -322,20 +322,20 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
   }
 
   /** 直接通过EFetch获取文章 */
-  private List<PubmedLiterature> fetchArticlesDirectly(
+  private List<PubmedPublication> fetchArticlesDirectly(
       List<String> pmids, ProvenanceConfig config) {
     String idParam = StrUtil.join(",", pmids);
     log.debug("PubMed direct EFetch start: count={}", pmids.size());
     EFetchRequest request = new EFetchRequest(ProvenanceCode.PUBMED.lowerCaseCode(), idParam);
     EFetchResponse response = pubMedClient.efetch(request, config);
-    List<PubmedLiterature> articles =
+    List<PubmedPublication> articles =
         response != null ? response.articles() : CollUtil.newArrayList();
     log.debug("PubMed direct EFetch completed: returned={}", articles.size());
     return articles;
   }
 
   /** 通过EPost获取文章 */
-  private List<PubmedLiterature> fetchArticlesViaEPost(List<String> pmids, ProvenanceConfig config)
+  private List<PubmedPublication> fetchArticlesViaEPost(List<String> pmids, ProvenanceConfig config)
       throws InterruptedException {
     log.info("PubMed EPost strategy triggered: count={}", pmids.size());
 
@@ -376,29 +376,29 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
     // Gentle delay per NCBI recommendation
     TimeUnit.MILLISECONDS.sleep(600L);
 
-    List<PubmedLiterature> articles =
+    List<PubmedPublication> articles =
         response != null ? response.articles() : CollUtil.newArrayList();
     log.debug("PubMed EPost EFetch completed: returned={}", articles.size());
     return articles;
   }
 
   /** 转换文章列表为标准格式 */
-  private ConversionOutcome convertArticles(List<PubmedLiterature> articles) {
+  private ConversionOutcome convertArticles(List<PubmedPublication> articles) {
     if (CollUtil.isEmpty(articles)) {
       return new ConversionOutcome(CollUtil.newArrayList(), 0, CollUtil.newArrayList());
     }
 
-    List<CanonicalLiterature> literatures = new ArrayList<>();
+    List<CanonicalPublication> literatures = new ArrayList<>();
     List<String> failures = new ArrayList<>();
     int attempted = 0;
 
-    for (PubmedLiterature article : articles) {
+    for (PubmedPublication article : articles) {
       if (article == null) {
         continue;
       }
       attempted++;
       try {
-        CanonicalLiterature converted = converter.toCanonicalLiterature(article);
+        CanonicalPublication converted = converter.toCanonicalPublication(article);
         if (converted != null) {
           literatures.add(converted);
         }
@@ -475,5 +475,5 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
 
   /** 转换结果记录 */
   private record ConversionOutcome(
-      List<CanonicalLiterature> literatures, int attempted, List<String> failedPmids) {}
+      List<CanonicalPublication> literatures, int attempted, List<String> failedPmids) {}
 }

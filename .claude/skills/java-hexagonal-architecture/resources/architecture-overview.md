@@ -162,7 +162,7 @@ public class ProvenanceRepositoryImpl implements ProvenanceRepository {
 **关键战术模式**:
 - **聚合 (Aggregate)**: 一致性边界,包含根实体
 - **实体 (Entity)**: 基于身份的对象 (例如 `BatchPlan`)
-- **值对象 (Value Object)**: 不可变,按值相等 (例如使用 `record` 的 `LiteratureId`)
+- **值对象 (Value Object)**: 不可变,按值相等 (例如使用 `record` 的 `PublicationId`)
 - **领域事件 (Domain Event)**: 捕获业务事实 (例如 `PlanCompletedEvent`)
 - **仓储 (Repository)**: 类集合接口用于持久化
 - **工厂 (Factory)**: 复杂对象创建
@@ -287,10 +287,10 @@ public class BatchPlan {
 **值对象示例**:
 
 ```java
-public record LiteratureId(String value) {
-    public LiteratureId {
+public record PublicationId(String value) {
+    public PublicationId {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("LiteratureId cannot be null");
+            throw new IllegalArgumentException("PublicationId cannot be null");
         }
     }
 }

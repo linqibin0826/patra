@@ -45,7 +45,7 @@
  * <ul>
  *   <li><strong>内容签名</strong>: 使用 {@link com.patra.common.json.JsonNormalizer} 生成规范 JSON, 然后使用
  *       {@link com.patra.common.util.HashUtils} 计算签名
- *   <li><strong>去重键生成</strong>: 规范化文献内容,生成稳定的哈希值作为去重键
+ *   <li><strong>去重键生成</strong>: 规范化出版物内容,生成稳定的哈希值作为去重键
  *   <li><strong>缓存键标准化</strong>: 规范化请求参数,生成一致的缓存键
  *   <li><strong>多源数据规范化</strong>: 统一不同数据源的 JSON 格式
  *   <li><strong>ObjectMapper 共享</strong>: 在非 Spring 环境下使用 {@link
@@ -71,7 +71,7 @@
  * JsonNormalizerResult result2 = normalizer.normalize(complexPayload);
  *
  * // 3. 用于内容去重
- * JsonNormalizerResult result3 = JsonNormalizer.normalizeDefault(literatureData);
+ * JsonNormalizerResult result3 = JsonNormalizer.normalizeDefault(publicationData);
  * String contentHash = HashUtils.sha256(result3.getHashMaterial());
  * // 使用 contentHash 作为去重键
  *

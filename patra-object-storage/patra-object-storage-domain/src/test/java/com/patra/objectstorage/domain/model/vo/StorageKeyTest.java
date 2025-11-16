@@ -45,7 +45,7 @@ class StorageKeyTest {
     @DisplayName("应该成功创建 StorageKey 当 bucket 和 objectKey 都有效")
     void shouldCreateStorageKeyWhenBothParametersAreValid() {
       // Given
-      String bucket = "literature-files";
+      String bucket = "publication-files";
       String objectKey = "2024/01/article.pdf";
 
       // When
@@ -126,7 +126,7 @@ class StorageKeyTest {
     @DisplayName("应该抛出异常当 objectKey 为 null")
     void shouldThrowExceptionWhenObjectKeyIsNull() {
       // Given
-      String bucket = "literature-files";
+      String bucket = "publication-files";
       String objectKey = null;
 
       // When & Then
@@ -139,7 +139,7 @@ class StorageKeyTest {
     @DisplayName("应该抛出异常当 objectKey 为空字符串")
     void shouldThrowExceptionWhenObjectKeyIsEmpty() {
       // Given
-      String bucket = "literature-files";
+      String bucket = "publication-files";
       String objectKey = "";
 
       // When & Then
@@ -152,7 +152,7 @@ class StorageKeyTest {
     @DisplayName("应该抛出异常当 objectKey 只包含空格")
     void shouldThrowExceptionWhenObjectKeyIsOnlyWhitespace() {
       // Given
-      String bucket = "literature-files";
+      String bucket = "publication-files";
       String objectKey = "   ";
 
       // When & Then
@@ -165,7 +165,7 @@ class StorageKeyTest {
     @DisplayName("应该抛出异常当 objectKey 包含制表符")
     void shouldThrowExceptionWhenObjectKeyContainsOnlyTabs() {
       // Given
-      String bucket = "literature-files";
+      String bucket = "publication-files";
       String objectKey = "\t\t";
 
       // When & Then
@@ -178,7 +178,7 @@ class StorageKeyTest {
     @DisplayName("应该抛出异常当 objectKey 包含换行符")
     void shouldThrowExceptionWhenObjectKeyContainsOnlyNewlines() {
       // Given
-      String bucket = "literature-files";
+      String bucket = "publication-files";
       String objectKey = "\n\n";
 
       // When & Then
@@ -211,13 +211,13 @@ class StorageKeyTest {
     @DisplayName("应该返回正确的 bucket/objectKey 组合格式")
     void shouldReturnCorrectBucketSlashObjectKeyFormat() {
       // Given
-      StorageKey storageKey = new StorageKey("literature-files", "2024/01/article.pdf");
+      StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
 
       // When
       String fullKey = storageKey.fullKey();
 
       // Then
-      assertThat(fullKey).isEqualTo("literature-files/2024/01/article.pdf");
+      assertThat(fullKey).isEqualTo("publication-files/2024/01/article.pdf");
     }
 
     @Test
@@ -297,8 +297,8 @@ class StorageKeyTest {
     @DisplayName("应该返回 true 当 bucket 和 objectKey 都匹配")
     void shouldReturnTrueWhenBothBucketAndObjectKeyMatch() {
       // Given
-      StorageKey storageKey = new StorageKey("literature-files", "2024/01/article.pdf");
-      String otherBucket = "literature-files";
+      StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
+      String otherBucket = "publication-files";
       String otherKey = "2024/01/article.pdf";
 
       // When
@@ -312,7 +312,7 @@ class StorageKeyTest {
     @DisplayName("应该返回 false 当 bucket 不匹配")
     void shouldReturnFalseWhenBucketDoesNotMatch() {
       // Given
-      StorageKey storageKey = new StorageKey("literature-files", "2024/01/article.pdf");
+      StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
       String otherBucket = "other-bucket";
       String otherKey = "2024/01/article.pdf";
 
@@ -327,8 +327,8 @@ class StorageKeyTest {
     @DisplayName("应该返回 false 当 objectKey 不匹配")
     void shouldReturnFalseWhenObjectKeyDoesNotMatch() {
       // Given
-      StorageKey storageKey = new StorageKey("literature-files", "2024/01/article.pdf");
-      String otherBucket = "literature-files";
+      StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
+      String otherBucket = "publication-files";
       String otherKey = "2024/02/different.pdf";
 
       // When
@@ -342,7 +342,7 @@ class StorageKeyTest {
     @DisplayName("应该返回 false 当 bucket 和 objectKey 都不匹配")
     void shouldReturnFalseWhenBothBucketAndObjectKeyDoNotMatch() {
       // Given
-      StorageKey storageKey = new StorageKey("literature-files", "2024/01/article.pdf");
+      StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
       String otherBucket = "other-bucket";
       String otherKey = "2024/02/different.pdf";
 
@@ -357,7 +357,7 @@ class StorageKeyTest {
     @DisplayName("应该返回 false 当 otherBucket 为 null")
     void shouldReturnFalseWhenOtherBucketIsNull() {
       // Given
-      StorageKey storageKey = new StorageKey("literature-files", "2024/01/article.pdf");
+      StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
       String otherBucket = null;
       String otherKey = "2024/01/article.pdf";
 
@@ -372,8 +372,8 @@ class StorageKeyTest {
     @DisplayName("应该返回 false 当 otherKey 为 null")
     void shouldReturnFalseWhenOtherKeyIsNull() {
       // Given
-      StorageKey storageKey = new StorageKey("literature-files", "2024/01/article.pdf");
-      String otherBucket = "literature-files";
+      StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
+      String otherBucket = "publication-files";
       String otherKey = null;
 
       // When
@@ -387,7 +387,7 @@ class StorageKeyTest {
     @DisplayName("应该返回 false 当两个参数都为 null")
     void shouldReturnFalseWhenBothParametersAreNull() {
       // Given
-      StorageKey storageKey = new StorageKey("literature-files", "2024/01/article.pdf");
+      StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
       String otherBucket = null;
       String otherKey = null;
 
@@ -402,8 +402,8 @@ class StorageKeyTest {
     @DisplayName("应该区分大小写比较")
     void shouldBeCaseSensitive() {
       // Given
-      StorageKey storageKey = new StorageKey("Literature-Files", "2024/01/Article.pdf");
-      String otherBucket = "literature-files";
+      StorageKey storageKey = new StorageKey("Publication-Files", "2024/01/Article.pdf");
+      String otherBucket = "publication-files";
       String otherKey = "2024/01/article.pdf";
 
       // When
@@ -424,8 +424,8 @@ class StorageKeyTest {
     @DisplayName("应该正确实现 equals - 相同的 bucket 和 objectKey")
     void shouldImplementEqualsCorrectlyForSameValues() {
       // Given
-      StorageKey storageKey1 = new StorageKey("literature-files", "2024/01/article.pdf");
-      StorageKey storageKey2 = new StorageKey("literature-files", "2024/01/article.pdf");
+      StorageKey storageKey1 = new StorageKey("publication-files", "2024/01/article.pdf");
+      StorageKey storageKey2 = new StorageKey("publication-files", "2024/01/article.pdf");
 
       // When & Then
       assertThat(storageKey1).isEqualTo(storageKey2);
@@ -447,8 +447,8 @@ class StorageKeyTest {
     @DisplayName("应该正确实现 equals - 不同的 objectKey")
     void shouldImplementEqualsCorrectlyForDifferentObjectKey() {
       // Given
-      StorageKey storageKey1 = new StorageKey("literature-files", "2024/01/article.pdf");
-      StorageKey storageKey2 = new StorageKey("literature-files", "2024/02/another.pdf");
+      StorageKey storageKey1 = new StorageKey("publication-files", "2024/01/article.pdf");
+      StorageKey storageKey2 = new StorageKey("publication-files", "2024/02/another.pdf");
 
       // When & Then
       assertThat(storageKey1).isNotEqualTo(storageKey2);
@@ -458,7 +458,7 @@ class StorageKeyTest {
     @DisplayName("应该正确实现 equals - 自反性")
     void shouldImplementEqualsReflexivity() {
       // Given
-      StorageKey storageKey = new StorageKey("literature-files", "2024/01/article.pdf");
+      StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
 
       // When & Then
       assertThat(storageKey).isEqualTo(storageKey);
@@ -482,7 +482,7 @@ class StorageKeyTest {
     @DisplayName("应该正确实现 equals - 与 null 比较")
     void shouldImplementEqualsWithNull() {
       // Given
-      StorageKey storageKey = new StorageKey("literature-files", "2024/01/article.pdf");
+      StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
 
       // When & Then
       assertThat(storageKey).isNotEqualTo(null);
@@ -492,8 +492,8 @@ class StorageKeyTest {
     @DisplayName("应该正确实现 equals - 与不同类型比较")
     void shouldImplementEqualsWithDifferentType() {
       // Given
-      StorageKey storageKey = new StorageKey("literature-files", "2024/01/article.pdf");
-      Object other = "literature-files/2024/01/article.pdf";
+      StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
+      Object other = "publication-files/2024/01/article.pdf";
 
       // When & Then
       assertThat(storageKey).isNotEqualTo(other);
@@ -503,8 +503,8 @@ class StorageKeyTest {
     @DisplayName("应该正确实现 hashCode - 相同的对象产生相同的 hashCode")
     void shouldImplementHashCodeConsistentlyForEqualObjects() {
       // Given
-      StorageKey storageKey1 = new StorageKey("literature-files", "2024/01/article.pdf");
-      StorageKey storageKey2 = new StorageKey("literature-files", "2024/01/article.pdf");
+      StorageKey storageKey1 = new StorageKey("publication-files", "2024/01/article.pdf");
+      StorageKey storageKey2 = new StorageKey("publication-files", "2024/01/article.pdf");
 
       // When & Then - 相等的对象必须有相同的 hashCode
       assertThat(storageKey1.hashCode()).isEqualTo(storageKey2.hashCode());
@@ -514,7 +514,7 @@ class StorageKeyTest {
     @DisplayName("应该正确实现 hashCode - 多次调用返回相同值")
     void shouldImplementHashCodeConsistentlyAcrossMultipleCalls() {
       // Given
-      StorageKey storageKey = new StorageKey("literature-files", "2024/01/article.pdf");
+      StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
 
       // When
       int hashCode1 = storageKey.hashCode();
@@ -528,7 +528,7 @@ class StorageKeyTest {
     @DisplayName("应该正确实现 toString - 包含 bucket 和 objectKey")
     void shouldImplementToStringWithBucketAndObjectKey() {
       // Given
-      StorageKey storageKey = new StorageKey("literature-files", "2024/01/article.pdf");
+      StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
 
       // When
       String toString = storageKey.toString();
@@ -536,7 +536,7 @@ class StorageKeyTest {
       // Then
       assertThat(toString)
           .contains("StorageKey")
-          .contains("literature-files")
+          .contains("publication-files")
           .contains("2024/01/article.pdf");
     }
 
@@ -568,14 +568,14 @@ class StorageKeyTest {
     @DisplayName("应该保证 bucket 不可变")
     void shouldEnsureBucketIsImmutable() {
       // Given
-      String originalBucket = "literature-files";
+      String originalBucket = "publication-files";
       StorageKey storageKey = new StorageKey(originalBucket, "2024/01/article.pdf");
 
       // When - 尝试修改原始字符串（实际上字符串本身不可变）
       String modifiedBucket = originalBucket.toUpperCase();
 
       // Then - storageKey 中的 bucket 应该保持不变
-      assertThat(storageKey.bucket()).isEqualTo("literature-files");
+      assertThat(storageKey.bucket()).isEqualTo("publication-files");
       assertThat(storageKey.bucket()).isNotEqualTo(modifiedBucket);
     }
 
@@ -584,7 +584,7 @@ class StorageKeyTest {
     void shouldEnsureObjectKeyIsImmutable() {
       // Given
       String originalKey = "2024/01/article.pdf";
-      StorageKey storageKey = new StorageKey("literature-files", originalKey);
+      StorageKey storageKey = new StorageKey("publication-files", originalKey);
 
       // When - 尝试修改原始字符串
       String modifiedKey = originalKey.replace("article", "document");
@@ -598,7 +598,7 @@ class StorageKeyTest {
     @DisplayName("应该保证 StorageKey 完全不可变")
     void shouldEnsureStorageKeyIsCompletelyImmutable() {
       // Given
-      StorageKey storageKey = new StorageKey("literature-files", "2024/01/article.pdf");
+      StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
       String originalFullKey = storageKey.fullKey();
 
       // When - 获取所有字段
@@ -706,18 +706,18 @@ class StorageKeyTest {
   class RealWorldScenarioTests {
 
     @Test
-    @DisplayName("应该正确处理文献文件存储场景")
+    @DisplayName("应该正确处理出版物文件存储场景")
     void shouldHandleLiteratureFileStorageScenario() {
-      // Given - 文献文件存储场景
+      // Given - 出版物文件存储场景
       StorageKey storageKey =
-          new StorageKey("patra-literature-files", "pubmed/2024/01/PMC12345678.pdf");
+          new StorageKey("patra-publication-files", "pubmed/2024/01/PMC12345678.pdf");
 
       // When & Then
-      assertThat(storageKey.bucket()).isEqualTo("patra-literature-files");
+      assertThat(storageKey.bucket()).isEqualTo("patra-publication-files");
       assertThat(storageKey.objectKey()).isEqualTo("pubmed/2024/01/PMC12345678.pdf");
       assertThat(storageKey.fullKey())
-          .isEqualTo("patra-literature-files/pubmed/2024/01/PMC12345678.pdf");
-      assertThat(storageKey.matches("patra-literature-files", "pubmed/2024/01/PMC12345678.pdf"))
+          .isEqualTo("patra-publication-files/pubmed/2024/01/PMC12345678.pdf");
+      assertThat(storageKey.matches("patra-publication-files", "pubmed/2024/01/PMC12345678.pdf"))
           .isTrue();
     }
 
@@ -751,8 +751,8 @@ class StorageKeyTest {
     @DisplayName("应该支持幂等性检查场景")
     void shouldSupportIdempotencyCheckScenario() {
       // Given - 用于幂等性检查的存储键
-      StorageKey storageKey1 = new StorageKey("literature-files", "epmc/2024/01/article-001.pdf");
-      StorageKey storageKey2 = new StorageKey("literature-files", "epmc/2024/01/article-001.pdf");
+      StorageKey storageKey1 = new StorageKey("publication-files", "epmc/2024/01/article-001.pdf");
+      StorageKey storageKey2 = new StorageKey("publication-files", "epmc/2024/01/article-001.pdf");
 
       // When - 检查是否为相同文件
       boolean isDuplicate = storageKey1.equals(storageKey2);

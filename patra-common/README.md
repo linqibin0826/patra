@@ -39,7 +39,7 @@ patra-common/                         (聚合 POM - 无代码)
 ├── patra-common-storage/            (存储键生成 - 按需依赖)
 │   └── storage/                     (对象存储键生成策略)
 └── patra-common-model/              (共享模型 - 按需依赖)
-    └── model/                       (CanonicalLiterature 等)
+    └── model/                       (CanonicalPublication 等)
 ```
 
 ---
@@ -93,7 +93,7 @@ patra-common/                         (聚合 POM - 无代码)
 **定位**: 跨服务共享的标准化数据模型(Shared Kernel)。
 
 **主要内容**:
-- `CanonicalLiterature`: 标准化文献数据结构
+- `CanonicalPublication`: 标准化出版物数据结构
 - `AuthorInfo`: 作者快照
 - `JournalInfo`: 期刊快照
 
@@ -113,7 +113,7 @@ patra-common/                         (聚合 POM - 无代码)
 **下游消费者**:
 - **core**: 所有微服务的所有层
 - **storage**: 需要对象存储的服务
-- **model**: 需要标准化文献模型的服务
+- **model**: 需要标准化出版物模型的服务
 
 ---
 
@@ -147,9 +147,9 @@ patra-common/                         (聚合 POM - 无代码)
 import com.patra.common.storage.ObjectKeyTemplate;
 
 String key = ObjectKeyTemplate.generateDailyKey(
-    "ingest", "literature-batch", "pubmed-123-batch-001", "json"
+    "ingest", "publication-batch", "pubmed-123-batch-001", "json"
 );
-// 结果: ingest/literature-batch/2025/11/03/pubmed-123-batch-001.json
+// 结果: ingest/publication-batch/2025/11/03/pubmed-123-batch-001.json
 ```
 
 ### 使用 JSON 标准化工具

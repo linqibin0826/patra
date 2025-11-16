@@ -1,21 +1,21 @@
 /**
  * PubMed 数据处理器包。
  *
- * <p>提供 PubMed 特定的数据处理器实现，负责从 PubMed E-utilities API 获取、转换和验证文献数据。
+ * <p>提供 PubMed 特定的数据处理器实现，负责从 PubMed E-utilities API 获取、转换和验证出版物数据。
  *
  * <h2>职责</h2>
  *
  * <ul>
  *   <li>实现 {@link com.patra.starter.provenance.common.processor.DataProcessor} 接口
  *   <li>处理 PubMed ESearch、EPost、EFetch 的完整流程
- *   <li>将 PubMed XML 响应转换为 {@link com.patra.common.model.CanonicalLiterature}
- *   <li>验证文献数据完整性（PMID、标题等必填字段）
+ *   <li>将 PubMed XML 响应转换为 {@link com.patra.common.model.CanonicalPublication}
+ *   <li>验证出版物数据完整性（PMID、标题等必填字段）
  * </ul>
  *
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link PubmedLiteratureProcessor} - PubMed 文献数据处理器
+ *   <li>{@link PubmedPublicationProcessor} - PubMed 出版物数据处理器
  * </ul>
  *
  * <h2>架构位置</h2>
@@ -23,11 +23,11 @@
  * <pre>
  * PubmedDataProvider (数据源提供者)
  *     ↓ 委托
- * PubmedLiteratureProcessor (数据处理器) ← [本类]
+ * PubmedPublicationProcessor (数据处理器) ← [本类]
  *     ↓ 调用
  * PubMedClient (HTTP 客户端) → NCBI E-utilities API
  *     ↓ 使用
- * PubmedLiteratureConverter (转换器) → CanonicalLiterature
+ * PubmedPublicationConverter (转换器) → CanonicalPublication
  * </pre>
  *
  * <h2>核心流程</h2>
@@ -71,14 +71,14 @@
  * EFetchResponse fetchResponse = pubMedClient.efetch(fetchRequest, config);
  *
  * // 获取文章列表
- * List<PubmedLiterature> articles = fetchResponse.articles();
+ * List<PubmedPublication> articles = fetchResponse.articles();
  * }</pre>
  *
  * <p><strong>4. 转换与验证</strong>:
  *
  * <pre>{@code
- * List<CanonicalLiterature> literatures = articles.stream()
- *     .map(converter::toCanonicalLiterature)
+ * List<CanonicalPublication> literatures = articles.stream()
+ *     .map(converter::toCanonicalPublication)
  *     .filter(lit -> {
  *         ValidationResult validation = processor.validate(lit);
  *         if (!validation.isValid()) {
@@ -97,7 +97,7 @@
  * @RequiredArgsConstructor
  * public class PubmedDataProvider implements ProvenanceDataProvider {
  *
- *     private final PubmedLiteratureProcessor literatureProcessor;
+ *     private final PubmedPublicationProcessor publicationProcessor;
  *
  *     @Override
  *     public <T> ProviderResult<T> fetchData(
@@ -105,15 +105,15 @@
  *             DataType dataType,
  *             Class<T> targetClass) {
  *
- *         if (dataType == DataType.LITERATURE) {
+ *         if (dataType == DataType.PUBLICATION) {
  *             // 准备上下文
  *             ProviderContext context = ProviderContext.builder()
  *                 .config(request.config())
  *                 .build();
  *
  *             // 委托给处理器
- *             ProcessResult<CanonicalLiterature> processResult =
- *                 literatureProcessor.process(request, context);
+ *             ProcessResult<CanonicalPublication> processResult =
+ *                 publicationProcessor.process(request, context);
  *
  *             // 转换为 ProviderResult
  *             return convertToProviderResult(processResult, dataType);

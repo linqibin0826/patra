@@ -31,7 +31,7 @@ public record StorageKey(String bucket, String objectKey) {
    *
    * <p>将存储桶和对象键组合成统一的字符串表示形式,格式为 "bucket/objectKey", 用作数据库唯一约束字段,确保同一文件不会重复记录。
    *
-   * @return 组合的存储键形式(例如 "literature-files/2024/01/article.pdf")
+   * @return 组合的存储键形式(例如 "publication-files/2024/01/article.pdf")
    */
   public String fullKey() {
     return bucket + '/' + objectKey;

@@ -46,14 +46,14 @@
  *
  * <pre>{@code
  * // 1. 定义聚合根
- * public class Literature extends AggregateRoot<LiteratureId> {
+ * public class Publication extends AggregateRoot<PublicationId> {
  *     private String title;
  *     private PublicationStatus status;
  *
  *     // 业务方法触发状态变更和领域事件
  *     public void publish() {
  *         this.status = PublicationStatus.PUBLISHED;
- *         addDomainEvent(new LiteraturePublishedEvent(getId(), Instant.now()));
+ *         addDomainEvent(new PublicationPublishedEvent(getId(), Instant.now()));
  *         assertInvariants();  // 验证业务规则
  *     }
  *
@@ -61,24 +61,24 @@
  *     @Override
  *     protected void assertInvariants() {
  *         if (status == PublicationStatus.PUBLISHED && title == null) {
- *             throw new IllegalStateException("已发布文献必须有标题");
+ *             throw new IllegalStateException("已发布出版物必须有标题");
  *         }
  *     }
  * }
  *
  * // 2. 定义领域事件
- * public record LiteraturePublishedEvent(LiteratureId id, Instant publishedAt)
+ * public record PublicationPublishedEvent(PublicationId id, Instant publishedAt)
  *     implements DomainEvent {}
  *
  * // 3. 应用层收集和发布事件
- * public class LiteratureApplicationService {
- *     public void publishLiterature(LiteratureId id) {
- *         Literature literature = repository.findById(id);
- *         literature.publish();  // 触发状态变更和事件收集
- *         repository.save(literature);  // 持久化
+ * public class PublicationApplicationService {
+ *     public void publishPublication(PublicationId id) {
+ *         Publication publication = repository.findById(id);
+ *         publication.publish();  // 触发状态变更和事件收集
+ *         repository.save(publication);  // 持久化
  *
  *         // 提取事件并发布(Outbox 模式)
- *         List<DomainEvent> events = literature.pullDomainEvents();
+ *         List<DomainEvent> events = publication.pullDomainEvents();
  *         eventPublisher.publish(events);
  *     }
  * }

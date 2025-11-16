@@ -23,7 +23,7 @@
  * <ul>
  *   <li>{@link com.patra.ingest.app.outbox.operations.TaskOperations} -
  *       任务操作类型（READY、FAILED、COMPLETED）
- *   <li>{@link com.patra.ingest.app.outbox.operations.LiteratureOperations} - 文献操作类型（DATA_READY）
+ *   <li>{@link com.patra.ingest.app.outbox.operations.PublicationOperations} - 出版物操作类型（DATA_READY）
  * </ul>
  *
  * <p><b>使用示例</b>：

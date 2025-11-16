@@ -139,7 +139,7 @@
  *     ProvenanceConfig config = plan.getSnapshot().toConfig();
  *
  *     // 使用快照配置执行采集
- *     List<Literature> data = pubmedPort.harvest(
+ *     List<Publication> data = pubmedPort.harvest(
  *         config.getEndpoint(),
  *         config.getApiKey(),
  *         task.getParams()

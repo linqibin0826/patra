@@ -8,7 +8,7 @@
 - **用例编排**: PlanIngestionOrchestrator、OutboxRelayOrchestrator、TaskExecutionUseCase
 - **事务边界管理**: 通过 `@Transactional` 确保业务操作的原子性
 - **领域事件处理**: TaskCompletedEventHandler、SliceStatusChangedEventHandler
-- **Outbox 发布**: TaskOutboxPublisher、LiteratureEventPublisher
+- **Outbox 发布**: TaskOutboxPublisher、PublicationEventPublisher
 - **表达式编译集成**: 调用 patra-expr-kernel 编译表达式
 
 **架构约束**: 应用层依赖 Domain 层,但不直接依赖 Infra 层(通过端口接口解耦)。
@@ -85,9 +85,9 @@ patra-ingest-app/
    │  │  │  └─ CursorAdvancer.java              # 游标推进器
    │  │  ├─ coordination/
    │  │  │  ├─ GenericBatchExecutor.java        # 通用批次执行器
-   │  │  │  └─ LiteraturePublisherOrchestrator.java # 文献发布编排器
+   │  │  │  └─ PublicationPublisherOrchestrator.java # 出版物发布编排器
    │  │  └─ publisher/
-   │  │     └─ LiteratureEventPublisher.java    # 文献事件发布器
+   │  │     └─ PublicationEventPublisher.java    # 出版物事件发布器
    │  └─ relay/                          # Outbox 中继用例
    │     ├─ OutboxRelayOrchestrator.java        # Outbox 中继编排器
    │     ├─ OutboxRelayUseCase.java             # 中继用例接口
@@ -125,7 +125,7 @@ patra-ingest-app/
    │  │  └─ OutboxAggregateTypes.java           # 聚合类型常量
    │  ├─ operations/                             # 操作类型枚举（v0.2.0）
    │  │  ├─ TaskOperations.java                 # 任务操作类型（READY、FAILED、COMPLETED）
-   │  │  └─ LiteratureOperations.java           # 文献操作类型（DATA_READY）
+   │  │  └─ PublicationOperations.java           # 出版物操作类型（DATA_READY）
    │  ├─ metrics/
    │  │  └─ OutboxMetrics.java                  # Outbox 指标
    │  └─ config/
@@ -386,8 +386,8 @@ public class BatchScheduleBuilder {
 - `TaskOperations`: 任务操作类型
   - `READY`: 任务就绪，调度器已创建任务并排队等待执行
   - （可扩展：`FAILED`、`COMPLETED` 等）
-- `LiteratureOperations`: 文献操作类型
-  - `DATA_READY`: 文献数据就绪，采集批次已提交到对象存储
+- `PublicationOperations`: 出版物操作类型
+  - `DATA_READY`: 出版物数据就绪，采集批次已提交到对象存储
   - （可扩展：`VALIDATED`、`INDEXED` 等）
 
 **使用示例**:
@@ -404,7 +404,7 @@ protected OperationType getOperationType(TaskQueuedEvent event) {
 // Destination: "INGEST_TASK:READY"
 ```
 
-**文件**: `outbox/operations/TaskOperations.java`, `outbox/operations/LiteratureOperations.java`
+**文件**: `outbox/operations/TaskOperations.java`, `outbox/operations/PublicationOperations.java`
 
 ---
 
@@ -518,7 +518,7 @@ public abstract class AbstractOutboxPublisher {
    - GenericBatchExecutor 执行批次
    - CursorAdvancer 推进游标
    ↓
-5. LiteraturePublisherOrchestrator 发布文献数据
+5. PublicationPublisherOrchestrator 发布出版物数据
    ↓
 6. CompleteTaskExecutionUseCase 完成任务
    - 标记任务状态

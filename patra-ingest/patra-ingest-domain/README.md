@@ -382,12 +382,12 @@ public interface ProvenanceDataPort {
 **使用示例**:
 ```java
 // 准备查询会话
-QuerySession querySession = provenanceDataPort.prepareQuerySession(context, DataType.LITERATURE);
+QuerySession querySession = provenanceDataPort.prepareQuerySession(context, DataType.PUBLICATION);
 
-// 获取文献数据
-TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
-DataFetchResult<CanonicalLiterature> result =
-    provenanceDataPort.fetchData(context, DataType.LITERATURE, typeRef, batch);
+// 获取出版物数据
+TypeReference<CanonicalPublication> typeRef = new TypeReference<>() {};
+DataFetchResult<CanonicalPublication> result =
+    provenanceDataPort.fetchData(context, DataType.PUBLICATION, typeRef, batch);
 ```
 
 **架构对齐**:

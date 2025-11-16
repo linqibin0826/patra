@@ -56,7 +56,7 @@ public class OutboxMqProperties {
    *     outbox:
    *       channel-mapping:
    *         TASK_READY: INGEST_TASK_READY
-   *         LITERATURE_READY: INGEST_LITERATURE_READY
+   *         PUBLICATION_READY: INGEST_PUBLICATION_READY
    * </pre>
    *
    * <p>如果未配置，则使用 RocketMqChannelMapper 中的默认映射。

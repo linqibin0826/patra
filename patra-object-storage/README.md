@@ -166,14 +166,14 @@ public interface StorageClient extends StorageEndpoint {}
 **请求体** (`UploadRecordRequest`):
 ```json
 {
-  "bucketName": "literature-files",
+  "bucketName": "publication-files",
   "objectKey": "2024/01/pubmed/articles/PMC12345678.pdf",
   "fileSize": 1024000,
   "contentType": "application/pdf",
   "md5Hash": "5d41402abc4b2a76b9719d911017c592",
   "sha256Hash": "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
   "serviceName": "patra-ingest",
-  "businessType": "literature_batch",
+  "businessType": "publication_batch",
   "businessId": "batch-2024-01-15-001",
   "correlationData": {
     "sourceId": "pubmed",
@@ -182,7 +182,7 @@ public interface StorageClient extends StorageEndpoint {}
   },
   "providerType": "MINIO",
   "expiresAt": "2025-12-31T23:59:59Z",
-  "recordRemarks": "Initial literature batch upload"
+  "recordRemarks": "Initial publication batch upload"
 }
 ```
 

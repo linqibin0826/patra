@@ -16,7 +16,7 @@ import java.util.List;
  * @author Patra
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public final class PubmedLiterature {
+public final class PubmedPublication {
 
   private static final PubmedData EMPTY_PUBMED_DATA = new PubmedData();
 
@@ -28,7 +28,7 @@ public final class PubmedLiterature {
   @JacksonXmlProperty(localName = "PubmedData")
   private PubmedData pubmedData;
 
-  public PubmedLiterature() {}
+  public PubmedPublication() {}
 
   /** 返回PubMed标识符(PMID) */
   public String pmid() {
@@ -122,7 +122,7 @@ public final class PubmedLiterature {
   /**
    * 返回 MeSH 标引列表。
    *
-   * <p>MeSH (Medical Subject Headings) 是美国国家医学图书馆创建的受控词表, 用于标引医学文献的主题和内容。每个 MeSH 标引项包含一个主题词和可选的限定词。
+   * <p>MeSH (Medical Subject Headings) 是美国国家医学图书馆创建的受控词表, 用于标引医学出版物的主题和内容。每个 MeSH 标引项包含一个主题词和可选的限定词。
    *
    * @return MeSH 标引列表,如果没有则返回空列表
    */

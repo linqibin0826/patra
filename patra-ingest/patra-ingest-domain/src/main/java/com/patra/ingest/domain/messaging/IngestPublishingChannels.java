@@ -2,7 +2,7 @@ package com.patra.ingest.domain.messaging;
 
 import com.patra.common.messaging.ChannelKey;
 import com.patra.ingest.domain.model.vo.execution.TaskReadyMessage;
-import com.patra.ingest.domain.model.vo.relay.LiteratureReadyMessage;
+import com.patra.ingest.domain.model.vo.relay.PublicationReadyMessage;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
@@ -13,7 +13,7 @@ import java.util.Optional;
  * <p><b>设计理念</b>：
  *
  * <ul>
- *   <li><b>资源级别路由</b>：每个枚举值代表一个业务资源（如 TASK、LITERATURE）
+ *   <li><b>资源级别路由</b>：每个枚举值代表一个业务资源（如 TASK、PUBLICATION）
  *   <li><b>粗粒度 Topic</b>：一个资源对应一个 RocketMQ Topic
  *   <li><b>操作类型分离</b>：具体的操作类型（READY、FAILED 等）由 {@code OperationType} 定义
  * </ul>
@@ -34,7 +34,7 @@ import java.util.Optional;
  *   <li><b>操作类型</b>：组合使用 {@code TaskOperations.READY} 等枚举
  * </ul>
  *
- * <p><b>通道命名规范</b>：{@code DOMAIN_RESOURCE}（如 {@code INGEST_TASK}、{@code INGEST_LITERATURE}）
+ * <p><b>通道命名规范</b>：{@code DOMAIN_RESOURCE}（如 {@code INGEST_TASK}、{@code INGEST_PUBLICATION}）
  *
  * <p><b>示例</b>：
  *
@@ -56,8 +56,8 @@ public enum IngestPublishingChannels implements ChannelKey {
   /** 任务相关消息通道（支持 READY、FAILED、COMPLETED 等操作）。 */
   TASK("INGEST", "TASK", TaskReadyMessage.class),
 
-  /** 文献相关消息通道（支持 DATA_READY、VALIDATED、INDEXED 等操作）。 */
-  LITERATURE("INGEST", "LITERATURE", LiteratureReadyMessage.class);
+  /** 出版物相关消息通道（支持 DATA_READY、VALIDATED、INDEXED 等操作）。 */
+  PUBLICATION("INGEST", "PUBLICATION", PublicationReadyMessage.class);
 
   private final String domain;
   private final String resource;

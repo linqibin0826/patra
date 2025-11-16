@@ -1,14 +1,14 @@
 /**
- * PubMed 医学文献转换器包。
+ * PubMed 医学出版物转换器包。
  *
- * <p>负责将 PubMed XML/JSON 响应对象转换为 {@link com.patra.common.model.CanonicalLiterature} 规范化医学文献模型。
+ * <p>负责将 PubMed XML/JSON 响应对象转换为 {@link com.patra.common.model.CanonicalPublication} 规范化医学出版物模型。
  *
  * <h2>职责</h2>
  *
  * <ul>
  *   <li>解析 PubMed XML/JSON 响应（通过 Jackson）
- *   <li>提取完整的医学文献元数据（P0 核心字段 + P1 医学领域字段）
- *   <li>转换为 {@link com.patra.common.model.CanonicalLiterature} 标准模型
+ *   <li>提取完整的医学出版物元数据（P0 核心字段 + P1 医学领域字段）
+ *   <li>转换为 {@link com.patra.common.model.CanonicalPublication} 标准模型
  *   <li>处理不完整或缺失的字段（可选字段安全处理）
  *   <li>支持医学领域特有字段（MeSH、研究者、参考文献等）
  * </ul>
@@ -16,7 +16,7 @@
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link com.patra.starter.provenance.pubmed.converter.PubmedLiteratureConverter} - PubMed 医学文献转换器（主类）
+ *   <li>{@link com.patra.starter.provenance.pubmed.converter.PubmedPublicationConverter} - PubMed 医学出版物转换器（主类）
  * </ul>
  *
  * <h2>转换方法清单</h2>
@@ -62,8 +62,8 @@
  * <h2>转换逻辑示意图</h2>
  *
  * <pre>
- * PubmedLiterature (PubMed XML/JSON 响应模型)
- * ├── pmid → CanonicalLiterature.identifiers (type=pmid)
+ * PubmedPublication (PubMed XML/JSON 响应模型)
+ * ├── pmid → CanonicalPublication.identifiers (type=pmid)
  * ├── article
  * │   ├── title → title
  * │   ├── vernacularTitle → originalTitle
@@ -122,21 +122,21 @@
  * @RequiredArgsConstructor
  * public class PubmedDataAdapter {
  *
- *     private final PubmedLiteratureConverter converter;
+ *     private final PubmedPublicationConverter converter;
  *
- *     public CanonicalLiterature fetchLiterature(String pmid) {
+ *     public CanonicalPublication fetchLiterature(String pmid) {
  *         // 1. 从 PubMed 获取原始 XML 响应
- *         PubmedLiterature rawArticle = pubMedClient.efetch(...);
+ *         PubmedPublication rawArticle = pubMedClient.efetch(...);
  *
- *         // 2. 转换为规范化医学文献模型
- *         CanonicalLiterature literature = converter.toCanonicalLiterature(rawArticle);
+ *         // 2. 转换为规范化医学出版物模型
+ *         CanonicalPublication publication = converter.toCanonicalPublication(rawArticle);
  *
  *         return literature;
  *     }
  * }
  *
  * // 示例 2: 访问 P0 核心字段
- * CanonicalLiterature literature = converter.toCanonicalLiterature(rawArticle);
+ * CanonicalPublication publication = converter.toCanonicalPublication(rawArticle);
  *
  * // 标识符
  * List<Identifier> identifiers = literature.getIdentifiers();
@@ -261,7 +261,7 @@
  *
  * // 示例 4: 访问元数据和出版历史
  * // 文献元数据
- * LiteratureMetadata metadata = literature.getMetadata();
+ * PublicationMetadata metadata = literature.getMetadata();
  * if (metadata != null) {
  *     String indexingMethod = metadata.getIndexingMethod();  // Automated, Manual
  *     String owner = metadata.getOwner();  // NLM, NASA 等
@@ -288,7 +288,7 @@
  *
  * <h2>v0.1.0 重大变更</h2>
  *
- * <h3>模型重构：从通用学术文献到医学领域专用</h3>
+ * <h3>模型重构：从通用学术出版物到医学领域专用</h3>
  *
  * <ul>
  *   <li><b>移除</b>: {@code convertSubjects()} → 替换为 {@code convertMeshHeadings()}
@@ -341,7 +341,7 @@
  *
  * <ul>
  *   <li><b>MeSH</b> - 美国国家医学图书馆医学主题词表（Medical Subject Headings）
- *   <li><b>MEDLINE</b> - 医学文献元数据标准（主要数据源）
+ *   <li><b>MEDLINE</b> - 医学出版物元数据标准（主要数据源）
  *   <li><b>PubMed</b> - PubMed/MEDLINE 数据模型和 XML DTD
  *   <li><b>CAS</b> - 化学文摘社注册号（Chemical Abstracts Service Registry Number）
  * </ul>
@@ -349,7 +349,7 @@
  * <h2>技术依赖</h2>
  *
  * <ul>
- *   <li>{@code patra-common-model} - CanonicalLiterature 规范化模型
+ *   <li>{@code patra-common-model} - CanonicalPublication 规范化模型
  *   <li>{@code com.patra.starter.provenance.pubmed.model.response} - PubMed 响应模型（XML/JSON 映射）
  *   <li>{@code Jackson} - JSON/XML 序列化/反序列化
  *   <li>{@code Spring Utils} - 字符串和集合工具类
@@ -357,8 +357,8 @@
  *
  * @since 0.1.0
  * @author linqibin
- * @see com.patra.common.model.CanonicalLiterature
- * @see com.patra.starter.provenance.pubmed.converter.PubmedLiteratureConverter
+ * @see com.patra.common.model.CanonicalPublication
+ * @see com.patra.starter.provenance.pubmed.converter.PubmedPublicationConverter
  * @see <a href="https://www.nlm.nih.gov/mesh/">MeSH - Medical Subject Headings</a>
  * @see <a href="https://www.nlm.nih.gov/bsd/mms/medlineelements.html">MEDLINE Data Elements</a>
  * @see <a href="https://www.ncbi.nlm.nih.gov/books/NBK3827/">PubMed XML DTD</a>

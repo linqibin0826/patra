@@ -112,7 +112,7 @@ class OutboxRelayDomainEventTest {
       // Given
       var event =
           new OutboxMessagePublishedEvent(
-              1L, "literature.ingested", "partition-key-1", Instant.now());
+              1L, "publication.ingested", "partition-key-1", Instant.now());
 
       // When & Then
       assertThat(event)
@@ -130,7 +130,7 @@ class OutboxRelayDomainEventTest {
       Instant expectedTime = Instant.parse("2025-01-15T10:30:00Z");
       var event =
           new OutboxMessagePublishedEvent(
-              1L, "literature.ingested", "partition-key-1", expectedTime);
+              1L, "publication.ingested", "partition-key-1", expectedTime);
 
       // When
       Instant actualTime = event.occurredAt();
@@ -145,7 +145,7 @@ class OutboxRelayDomainEventTest {
       // Given
       var event =
           new OutboxMessagePublishedEvent(
-              1L, "literature.ingested", "partition-key-1", Instant.now());
+              1L, "publication.ingested", "partition-key-1", Instant.now());
 
       // When & Then
       assertThat(event.getClass().isRecord())
@@ -159,9 +159,9 @@ class OutboxRelayDomainEventTest {
       // Given
       Instant occurredAt = Instant.parse("2025-01-15T10:30:00Z");
       var event1 =
-          new OutboxMessagePublishedEvent(1L, "literature.ingested", "partition-key-1", occurredAt);
+          new OutboxMessagePublishedEvent(1L, "publication.ingested", "partition-key-1", occurredAt);
       var event2 =
-          new OutboxMessagePublishedEvent(1L, "literature.ingested", "partition-key-1", occurredAt);
+          new OutboxMessagePublishedEvent(1L, "publication.ingested", "partition-key-1", occurredAt);
 
       // When & Then
       assertThat(event1).as("相同内容的事件应该相等").isEqualTo(event2);
@@ -180,7 +180,7 @@ class OutboxRelayDomainEventTest {
       var event =
           new OutboxMessageFailedEvent(
               1L,
-              "literature.ingested",
+              "publication.ingested",
               3,
               "DELIVERY_FAILED",
               "Failed to deliver message after 3 retries",
@@ -203,7 +203,7 @@ class OutboxRelayDomainEventTest {
       var event =
           new OutboxMessageFailedEvent(
               1L,
-              "literature.ingested",
+              "publication.ingested",
               3,
               "DELIVERY_FAILED",
               "Failed to deliver message after 3 retries",
@@ -227,7 +227,7 @@ class OutboxRelayDomainEventTest {
       // Given
       var event =
           new OutboxLeaseMissedEvent(
-              1L, "literature.ingested", "relay-instance-1", "relay-instance-2", Instant.now());
+              1L, "publication.ingested", "relay-instance-1", "relay-instance-2", Instant.now());
 
       // When & Then
       assertThat(event)
@@ -245,7 +245,7 @@ class OutboxRelayDomainEventTest {
       Instant expectedTime = Instant.parse("2025-01-15T10:40:00Z");
       var event =
           new OutboxLeaseMissedEvent(
-              1L, "literature.ingested", "relay-instance-1", "relay-instance-2", expectedTime);
+              1L, "publication.ingested", "relay-instance-1", "relay-instance-2", expectedTime);
 
       // When
       Instant actualTime = event.occurredAt();
@@ -330,7 +330,7 @@ class OutboxRelayDomainEventTest {
       // Given
       var originalEvent =
           new OutboxMessagePublishedEvent(
-              1L, "literature.ingested", "partition-key-1", Instant.parse("2025-01-15T12:00:00Z"));
+              1L, "publication.ingested", "partition-key-1", Instant.parse("2025-01-15T12:00:00Z"));
 
       // When - 序列化
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -359,7 +359,7 @@ class OutboxRelayDomainEventTest {
       var originalEvent =
           new OutboxMessageFailedEvent(
               1L,
-              "literature.ingested",
+              "publication.ingested",
               3,
               "DELIVERY_FAILED",
               "Failed to deliver message",
@@ -392,7 +392,7 @@ class OutboxRelayDomainEventTest {
       var originalEvent =
           new OutboxLeaseMissedEvent(
               1L,
-              "literature.ingested",
+              "publication.ingested",
               "relay-instance-1",
               "relay-instance-2",
               Instant.parse("2025-01-15T12:10:00Z"));
@@ -513,7 +513,7 @@ class OutboxRelayDomainEventTest {
       var event =
           new OutboxMessagePublishedEvent(
               123L,
-              "literature.ingested",
+              "publication.ingested",
               "partition-key-1",
               Instant.parse("2025-01-15T13:00:00Z"));
 
@@ -524,7 +524,7 @@ class OutboxRelayDomainEventTest {
       assertThat(result)
           .as("toString() 应该包含 messageId")
           .contains("123")
-          .contains("literature.ingested")
+          .contains("publication.ingested")
           .contains("partition-key-1")
           .contains("2025-01-15T13:00:00Z");
     }
@@ -536,7 +536,7 @@ class OutboxRelayDomainEventTest {
       var event =
           new OutboxMessageFailedEvent(
               456L,
-              "literature.ingested",
+              "publication.ingested",
               3,
               "DELIVERY_FAILED",
               "Network timeout",
@@ -549,7 +549,7 @@ class OutboxRelayDomainEventTest {
       assertThat(result)
           .as("toString() 应该包含所有关键字段")
           .contains("456")
-          .contains("literature.ingested")
+          .contains("publication.ingested")
           .contains("3")
           .contains("DELIVERY_FAILED")
           .contains("Network timeout")
@@ -563,7 +563,7 @@ class OutboxRelayDomainEventTest {
       var event =
           new OutboxLeaseMissedEvent(
               789L,
-              "literature.ingested",
+              "publication.ingested",
               "relay-instance-1",
               "relay-instance-2",
               Instant.parse("2025-01-15T13:10:00Z"));
@@ -575,7 +575,7 @@ class OutboxRelayDomainEventTest {
       assertThat(result)
           .as("toString() 应该包含所有关键字段")
           .contains("789")
-          .contains("literature.ingested")
+          .contains("publication.ingested")
           .contains("relay-instance-1")
           .contains("relay-instance-2")
           .contains("2025-01-15T13:10:00Z");

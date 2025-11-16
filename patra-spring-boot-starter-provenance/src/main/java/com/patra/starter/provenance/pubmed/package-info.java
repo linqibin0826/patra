@@ -9,7 +9,7 @@
  * <ul>
  *   <li>调用 PubMed E-utilities API（ESearch、EFetch、EPost）
  *   <li>解析 PubMed XML/JSON 响应
- *   <li>转换为 CanonicalLiterature 标准模型
+ *   <li>转换为 CanonicalPublication 标准模型
  *   <li>提供 {@link com.patra.starter.provenance.common.provider.ProvenanceDataProvider} 接口实现
  * </ul>
  *
@@ -19,7 +19,7 @@
  *   <li>{@link PubMedClient} - PubMed 客户端接口
  *   <li>{@link PubMedClientImpl} - PubMed 客户端实现（基于 RestClient）
  *   <li>{@link PubmedDataProvider} - PubMed 数据源提供者实现
- *   <li>{@link com.patra.starter.provenance.pubmed.converter.PubmedLiteratureConverter} - PubMed 文献转换器
+ *   <li>{@link com.patra.starter.provenance.pubmed.converter.PubmedPublicationConverter} - PubMed 出版物转换器
  * </ul>
  *
  * <h2>支持的 E-utilities</h2>
@@ -38,7 +38,7 @@
  * public class PubMedService {
  *     private final PubMedClient client;
  *
- *     public List<String> searchLiterature(String query) {
+ *     public List<String> searchPublication(String query) {
  *         // 1. 搜索获取 PMID 列表
  *         ESearchRequest searchRequest = new ESearchRequest();
  *         searchRequest.setTerm(query);

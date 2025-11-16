@@ -33,7 +33,7 @@ patra:
       # 允许的消息通道白名单（粗粒度 Channel）
       allowed-channels:
         - INGEST_TASK
-        - INGEST_LITERATURE
+        - INGEST_PUBLICATION
 
       # 发送消息超时时间（毫秒），默认 3000ms
       send-timeout: 3000
@@ -50,7 +50,7 @@ patra:
       # 重构后使用粗粒度 Channel（操作类型通过 RocketMQ Tags 区分）
       channel-mapping:
         INGEST_TASK: INGEST_TASK
-        INGEST_LITERATURE: INGEST_LITERATURE
+        INGEST_PUBLICATION: INGEST_PUBLICATION
 
       # Topic 前缀（用于多环境隔离）
       # 示例: "dev-" 会生成 "dev-INGEST_TASK"
@@ -60,7 +60,7 @@ patra:
     mq:
       topics:
         task: ${TOPIC_PREFIX:}INGEST_TASK           # 粗粒度 Topic
-        literature: ${TOPIC_PREFIX:}INGEST_LITERATURE  # 粗粒度 Topic
+        publication: ${TOPIC_PREFIX:}INGEST_PUBLICATION  # 粗粒度 Topic
       consumer-groups:
         task: ${CONSUMER_GROUP_PREFIX:}ingest-task-consumer-group
-        literature: ${CONSUMER_GROUP_PREFIX:}ingest-literature-consumer-group
+        publication: ${CONSUMER_GROUP_PREFIX:}ingest-publication-consumer-group

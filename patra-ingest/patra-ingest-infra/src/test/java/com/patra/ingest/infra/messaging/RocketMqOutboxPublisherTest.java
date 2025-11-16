@@ -197,8 +197,8 @@ class RocketMqOutboxPublisherTest {
     @DisplayName("应使用 syncSendOrderly 发送顺序消息并使用 partitionKey 作为 hashKey")
     void shouldSendOrderedMessageWithPartitionKey() throws JsonProcessingException {
       // Given
-      String channel = "LITERATURE_READY";
-      String topic = "INGEST_LITERATURE_READY";
+      String channel = "PUBLICATION_READY";
+      String topic = "INGEST_PUBLICATION_READY";
       String partitionKey = "pmid-12345";
       String dedupKey = "lit-12345";
 
@@ -206,7 +206,7 @@ class RocketMqOutboxPublisherTest {
           createBaseOutboxMessageBuilder()
               .id(2L)
               .channel(channel)
-              .opType("LITERATURE_READY")
+              .opType("PUBLICATION_READY")
               .dedupKey(dedupKey)
               .partitionKey(partitionKey) // 有 partitionKey
               .payloadJson("{\"pmid\":\"12345\"}")
@@ -232,7 +232,7 @@ class RocketMqOutboxPublisherTest {
               topicCaptor.capture(), messageCaptor.capture(), hashKeyCaptor.capture(), eq(3000L));
       verify(rocketMQTemplate, never()).syncSend(anyString(), any(Message.class), eq(3000L));
 
-      assertThat(topicCaptor.getValue()).isEqualTo(topic + ":" + "LITERATURE_READY");
+      assertThat(topicCaptor.getValue()).isEqualTo(topic + ":" + "PUBLICATION_READY");
       assertThat(hashKeyCaptor.getValue()).isEqualTo(partitionKey); // partitionKey 作为 hashKey
 
       // 验证 Spring Message 的消息元数据
@@ -495,19 +495,19 @@ class RocketMqOutboxPublisherTest {
       OutboxMessage message =
           createBaseOutboxMessageBuilder()
               .id(10L)
-              .channel("LITERATURE_READY")
-              .opType("LITERATURE_READY")
+              .channel("PUBLICATION_READY")
+              .opType("PUBLICATION_READY")
               .dedupKey(dedupKey)
               .partitionKey(partitionKey)
               .payloadJson("{}")
               .headersJson("{}")
               .build();
 
-      when(properties.isChannelAllowed("LITERATURE_READY")).thenReturn(true);
-      when(channelMapper.toTopic("LITERATURE_READY")).thenReturn("INGEST_LITERATURE_READY");
+      when(properties.isChannelAllowed("PUBLICATION_READY")).thenReturn(true);
+      when(channelMapper.toTopic("PUBLICATION_READY")).thenReturn("INGEST_PUBLICATION_READY");
       when(objectMapper.readValue(anyString(), any(TypeReference.class))).thenReturn(Map.of());
 
-      SendResult sendResult = createSuccessSendResult("INGEST_LITERATURE_READY", "msg-007", 1);
+      SendResult sendResult = createSuccessSendResult("INGEST_PUBLICATION_READY", "msg-007", 1);
       when(rocketMQTemplate.syncSendOrderly(
               anyString(), any(Message.class), anyString(), eq(3000L)))
           .thenReturn(sendResult);

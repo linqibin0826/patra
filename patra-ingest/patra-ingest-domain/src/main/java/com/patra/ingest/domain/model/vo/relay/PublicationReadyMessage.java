@@ -4,12 +4,12 @@ import com.patra.common.enums.ProvenanceCode;
 import java.util.List;
 
 /**
- * [待翻译] * Message payload for the {@code INGEST_LITERATURE_DATA_READY} channel.
+ * [待翻译] * Message payload for the {@code INGEST_PUBLICATION_DATA_READY} channel.
  *
  * @param payload business payload
  * @param header message header metadata
  */
-public record LiteratureReadyMessage(Payload payload, Header header) {
+public record PublicationReadyMessage(Payload payload, Header header) {
 
   /** Business payload delivered to downstream services. */
   public record Payload(
@@ -17,7 +17,7 @@ public record LiteratureReadyMessage(Payload payload, Header header) {
       Long runId,
       ProvenanceCode provenanceCode,
       List<String> storageKeys,
-      Integer totalLiteratureCount,
+      Integer totalPublicationCount,
       Integer successBatchCount,
       Integer failedBatchCount,
       Long timestamp) {}

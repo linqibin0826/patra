@@ -26,7 +26,7 @@
         Patra Common - Multi-module project providing shared utilities:
         - patra-common-core: Core domain/error/json/util classes (required by all services)
         - patra-common-storage: Object storage key generation strategies (optional)
-        - patra-common-model: Shared data models like CanonicalLiterature (optional)
+        - patra-common-model: Shared data models like CanonicalPublication (optional)
         - patra-common-provenance-api: Provenance API constants and enums (optional)
     </description>
 

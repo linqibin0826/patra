@@ -70,7 +70,7 @@
  *
  * <pre>{@code
  * // 1. 创建聚合根
- * public class LiteratureBatch extends AggregateRoot<LiteratureBatchId> {
+ * public class PublicationBatch extends AggregateRoot<PublicationBatchId> {
  *     private String batchId;
  *     private BatchStatus status;
  *
@@ -94,7 +94,7 @@
  * }
  *
  * // 4. JSON 规范化用于去重
- * JsonNormalizerResult result = JsonNormalizer.normalizeDefault(literatureData);
+ * JsonNormalizerResult result = JsonNormalizer.normalizeDefault(publicationData);
  * String contentHash = HashUtils.sha256(result.getHashMaterial());
  * // 使用 contentHash 作为去重键
  *

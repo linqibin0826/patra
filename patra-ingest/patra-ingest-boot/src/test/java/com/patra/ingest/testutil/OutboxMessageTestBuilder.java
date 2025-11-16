@@ -25,7 +25,7 @@ import java.util.UUID;
  *
  * // 2. 自定义部分字段
  * OutboxMessage msg = OutboxMessageTestBuilder.aValidPendingMessage()
- *     .channel(MessageChannels.LITERATURE_READY)
+ *     .channel(MessageChannels.PUBLICATION_READY)
  *     .aggregateId(123L)
  *     .build();
  *
@@ -133,16 +133,16 @@ public final class OutboxMessageTestBuilder {
   }
 
   /**
-   * 创建一个文献数据就绪消息构建器。
+   * 创建一个出版物数据就绪消息构建器。
    *
-   * <p>用于测试文献数据采集完成场景。
+   * <p>用于测试出版物数据采集完成场景。
    *
-   * @return 配置为文献就绪通道的构建器
+   * @return 配置为出版物就绪通道的构建器
    */
-  public static OutboxMessageTestBuilder aLiteratureReadyMessage() {
+  public static OutboxMessageTestBuilder aPublicationReadyMessage() {
     return new OutboxMessageTestBuilder()
-        .channel("INGEST_LITERATURE")
-        .aggregateType("LITERATURE")
+        .channel("INGEST_PUBLICATION")
+        .aggregateType("PUBLICATION")
         .opType("INGEST")
         .payloadJson("{\"literatureId\":9001,\"source\":\"PUBMED\"}");
   }

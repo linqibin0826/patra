@@ -21,25 +21,25 @@ import java.time.LocalDate;
  * // Generate key with today's date
  * String key = ObjectKeyTemplate.generateDailyKey(
  *     "ingest",
- *     "literature-batch",
+ *     "publication-batch",
  *     "pubmed-123-batch-001",
  *     "json"
  * );
- * // Result: ingest/literature-batch/2025/10/26/pubmed-123-batch-001.json
+ * // Result: ingest/publication-batch/2025/10/26/pubmed-123-batch-001.json
  *
  * // Generate key with specific date
  * String historicalKey = ObjectKeyTemplate.generateDailyKey(
  *     "ingest",
- *     "literature-batch",
+ *     "publication-batch",
  *     "pubmed-456-batch-002",
  *     LocalDate.of(2025, 10, 20),
  *     "json.gz"
  * );
- * // Result: ingest/literature-batch/2025/10/20/pubmed-456-batch-002.json.gz
+ * // Result: ingest/publication-batch/2025/10/20/pubmed-456-batch-002.json.gz
  *
  * // Use builder for complex scenarios
  * String customKey = ObjectKeyTemplate.builder()
- *     .serviceName("literature")
+ *     .serviceName("publication")
  *     .businessType("index_snapshot")
  *     .businessId("snapshot-20251026-001")
  *     .partitionDate(LocalDate.now())
@@ -75,7 +75,7 @@ public final class ObjectKeyTemplate {
    * extension)}
    *
    * @param serviceName microservice name (e.g., "ingest", "storage")
-   * @param businessType business category (e.g., "literature-batch")
+   * @param businessType business category (e.g., "publication-batch")
    * @param businessId unique business identifier (e.g., "pubmed-123-batch-001")
    * @param extension file extension (e.g., "json", "json.gz")
    * @return generated object key using today's date
@@ -100,7 +100,7 @@ public final class ObjectKeyTemplate {
    * <p>Pattern: {@code {service}/{business-type}/{yyyy}/{MM}/{dd}/{business-id}.{extension}}
    *
    * @param serviceName microservice name (e.g., "ingest", "storage")
-   * @param businessType business category (e.g., "literature-batch")
+   * @param businessType business category (e.g., "publication-batch")
    * @param businessId unique business identifier (e.g., "pubmed-123-batch-001")
    * @param partitionDate date for time-based partitioning
    * @param extension file extension (e.g., "json", "json.gz")

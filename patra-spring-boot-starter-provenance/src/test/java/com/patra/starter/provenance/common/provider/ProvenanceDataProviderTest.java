@@ -3,7 +3,7 @@ package com.patra.starter.provenance.common.provider;
 import static org.assertj.core.api.Assertions.*;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.model.CanonicalLiterature;
+import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.processor.DataProcessor;
 import com.patra.starter.provenance.common.processor.ProcessResult;
@@ -68,7 +68,7 @@ class ProvenanceDataProviderTest {
       assertThat(supportedTypes)
           .isNotNull()
           .isNotEmpty()
-          .contains(DataType.LITERATURE, DataType.CITATION);
+          .contains(DataType.PUBLICATION, DataType.CITATION);
     }
 
     @Test
@@ -99,7 +99,7 @@ class ProvenanceDataProviderTest {
       ProvenanceDataProvider provider = new MockPubmedProvider();
 
       // When & Then: 支持的类型应该返回true
-      assertThat(provider.supports(DataType.LITERATURE)).isTrue();
+      assertThat(provider.supports(DataType.PUBLICATION)).isTrue();
       assertThat(provider.supports(DataType.CITATION)).isTrue();
     }
 
@@ -122,20 +122,20 @@ class ProvenanceDataProviderTest {
   class FetchDataTests {
 
     @Test
-    @DisplayName("应该成功获取LITERATURE数据")
+    @DisplayName("应该成功获取PUBLICATION数据")
     void should_fetch_literature_data() {
       // Given: 创建Mock Provider和请求
       ProvenanceDataProvider provider = new MockPubmedProvider();
       ProviderRequest request = createMockRequest();
 
-      // When: 获取LITERATURE数据
-      ProviderResult<CanonicalLiterature> result =
-          provider.fetchData(request, DataType.LITERATURE, CanonicalLiterature.class);
+      // When: 获取PUBLICATION数据
+      ProviderResult<CanonicalPublication> result =
+          provider.fetchData(request, DataType.PUBLICATION, CanonicalPublication.class);
 
       // Then: 应该返回成功结果
       assertThat(result).isNotNull();
       assertThat(result.success()).isTrue();
-      assertThat(result.dataType()).isEqualTo(DataType.LITERATURE);
+      assertThat(result.dataType()).isEqualTo(DataType.PUBLICATION);
       assertThat(result.data()).isNotNull();
     }
 
@@ -182,8 +182,8 @@ class ProvenanceDataProviderTest {
       ProviderRequest request = createMockRequest();
 
       // When: 获取数据
-      ProviderResult<CanonicalLiterature> result =
-          provider.fetchData(request, DataType.LITERATURE, CanonicalLiterature.class);
+      ProviderResult<CanonicalPublication> result =
+          provider.fetchData(request, DataType.PUBLICATION, CanonicalPublication.class);
 
       // Then: fetchedCount应该等于data.size()
       assertThat(result.fetchedCount()).isEqualTo(result.data().size());
@@ -202,8 +202,8 @@ class ProvenanceDataProviderTest {
       // Given: 创建Mock Provider
       ProvenanceDataProvider provider = new MockPubmedProvider();
 
-      // When: 获取LITERATURE的Processor
-      Optional<DataProcessor<?>> processor = provider.getProcessor(DataType.LITERATURE);
+      // When: 获取PUBLICATION的Processor
+      Optional<DataProcessor<?>> processor = provider.getProcessor(DataType.PUBLICATION);
 
       // Then: 应该返回非空的Optional
       assertThat(processor).isPresent();
@@ -233,15 +233,15 @@ class ProvenanceDataProviderTest {
     @DisplayName("应该创建泛型成功结果")
     void should_create_generic_success_result() {
       // Given: 创建Mock数据
-      List<CanonicalLiterature> literatures = List.of(createMockLiterature("PMID001"));
+      List<CanonicalPublication> literatures = List.of(createMockLiterature("PMID001"));
 
       // When: 创建成功结果
-      ProviderResult<CanonicalLiterature> result =
-          ProviderResult.success(literatures, DataType.LITERATURE, "cursor123");
+      ProviderResult<CanonicalPublication> result =
+          ProviderResult.success(literatures, DataType.PUBLICATION, "cursor123");
 
       // Then: 应该包含正确的信息
       assertThat(result.success()).isTrue();
-      assertThat(result.dataType()).isEqualTo(DataType.LITERATURE);
+      assertThat(result.dataType()).isEqualTo(DataType.PUBLICATION);
       assertThat(result.data()).hasSize(1);
       assertThat(result.nextCursorToken()).isEqualTo("cursor123");
       assertThat(result.fetchedCount()).isEqualTo(1);
@@ -252,12 +252,12 @@ class ProvenanceDataProviderTest {
     @DisplayName("应该创建泛型失败结果")
     void should_create_generic_failure_result() {
       // When: 创建失败结果
-      ProviderResult<CanonicalLiterature> result =
-          ProviderResult.failure(DataType.LITERATURE, "网络错误", ProviderResult.ErrorType.RETRIABLE);
+      ProviderResult<CanonicalPublication> result =
+          ProviderResult.failure(DataType.PUBLICATION, "网络错误", ProviderResult.ErrorType.RETRIABLE);
 
       // Then: 应该包含错误信息
       assertThat(result.success()).isFalse();
-      assertThat(result.dataType()).isEqualTo(DataType.LITERATURE);
+      assertThat(result.dataType()).isEqualTo(DataType.PUBLICATION);
       assertThat(result.data()).isEmpty();
       assertThat(result.errorMessage()).isEqualTo("网络错误");
       assertThat(result.errorType()).isEqualTo(ProviderResult.ErrorType.RETRIABLE);
@@ -267,15 +267,15 @@ class ProvenanceDataProviderTest {
     @DisplayName("应该创建泛型部分成功结果")
     void should_create_generic_partial_success_result() {
       // Given: 创建Mock数据
-      List<CanonicalLiterature> literatures = List.of(createMockLiterature("PMID001"));
+      List<CanonicalPublication> literatures = List.of(createMockLiterature("PMID001"));
 
       // When: 创建部分成功结果
-      ProviderResult<CanonicalLiterature> result =
-          ProviderResult.partialSuccess(literatures, DataType.LITERATURE, "cursor456", "部分数据转换失败");
+      ProviderResult<CanonicalPublication> result =
+          ProviderResult.partialSuccess(literatures, DataType.PUBLICATION, "cursor456", "部分数据转换失败");
 
       // Then: 应该包含警告信息
       assertThat(result.success()).isTrue();
-      assertThat(result.dataType()).isEqualTo(DataType.LITERATURE);
+      assertThat(result.dataType()).isEqualTo(DataType.PUBLICATION);
       assertThat(result.data()).hasSize(1);
       assertThat(result.errorMessage()).isEqualTo("部分数据转换失败");
       assertThat(result.errorType()).isEqualTo(ProviderResult.ErrorType.PARTIAL_SUCCESS);
@@ -285,9 +285,9 @@ class ProvenanceDataProviderTest {
     @DisplayName("数据列表应该是不可变的")
     void data_list_should_be_immutable() {
       // Given: 创建成功结果
-      List<CanonicalLiterature> literatures = List.of(createMockLiterature("PMID001"));
-      ProviderResult<CanonicalLiterature> result =
-          ProviderResult.success(literatures, DataType.LITERATURE, null);
+      List<CanonicalPublication> literatures = List.of(createMockLiterature("PMID001"));
+      ProviderResult<CanonicalPublication> result =
+          ProviderResult.success(literatures, DataType.PUBLICATION, null);
 
       // When & Then: 尝试修改数据列表应该抛出异常
       assertThatThrownBy(() -> result.data().add(createMockLiterature("PMID002")))
@@ -301,7 +301,7 @@ class ProvenanceDataProviderTest {
   private static class MockPubmedProvider implements ProvenanceDataProvider {
 
     private static final Set<DataType> SUPPORTED_TYPES =
-        Set.of(DataType.LITERATURE, DataType.CITATION);
+        Set.of(DataType.PUBLICATION, DataType.CITATION);
 
     @Override
     public ProvenanceCode getProvenanceCode() {
@@ -326,8 +326,8 @@ class ProvenanceDataProviderTest {
       }
 
       // Mock实现：返回空数据
-      if (dataType == DataType.LITERATURE) {
-        return (ProviderResult<T>) ProviderResult.success(List.of(), DataType.LITERATURE, null);
+      if (dataType == DataType.PUBLICATION) {
+        return (ProviderResult<T>) ProviderResult.success(List.of(), DataType.PUBLICATION, null);
       } else if (dataType == DataType.CITATION) {
         return (ProviderResult<T>) ProviderResult.success(List.of(), DataType.CITATION, null);
       }
@@ -339,34 +339,34 @@ class ProvenanceDataProviderTest {
     @Override
     public Optional<DataProcessor<?>> getProcessor(DataType dataType) {
       if (supports(dataType)) {
-        return Optional.of(new MockLiteratureProcessor());
+        return Optional.of(new MockPublicationProcessor());
       }
       return Optional.empty();
     }
   }
 
-  /** Mock Literature Processor（用于测试） */
-  private static class MockLiteratureProcessor implements DataProcessor<CanonicalLiterature> {
+  /** Mock Publication Processor（用于测试） */
+  private static class MockPublicationProcessor implements DataProcessor<CanonicalPublication> {
 
     @Override
     public DataType getDataType() {
-      return DataType.LITERATURE;
+      return DataType.PUBLICATION;
     }
 
     @Override
-    public ProcessResult<CanonicalLiterature> process(
+    public ProcessResult<CanonicalPublication> process(
         ProviderRequest request, ProviderContext context) {
       return ProcessResult.success(List.of(), null);
     }
 
     @Override
     public com.patra.starter.provenance.common.processor.ValidationResult validate(
-        CanonicalLiterature data) {
+        CanonicalPublication data) {
       return com.patra.starter.provenance.common.processor.ValidationResult.success();
     }
 
     @Override
-    public CanonicalLiterature transform(Object rawData) {
+    public CanonicalPublication transform(Object rawData) {
       return null;
     }
   }
@@ -381,16 +381,16 @@ class ProvenanceDataProviderTest {
   }
 
   /** 创建Mock文献 */
-  private static CanonicalLiterature createMockLiterature(String identifier) {
-    // CanonicalLiterature使用Builder模式
-    return CanonicalLiterature.builder()
-        .title("Test Literature")
-        .abstractContent(CanonicalLiterature.Abstract.builder().text("Test Abstract").build())
+  private static CanonicalPublication createMockLiterature(String identifier) {
+    // CanonicalPublication使用Builder模式
+    return CanonicalPublication.builder()
+        .title("Test Publication")
+        .abstractContent(CanonicalPublication.Abstract.builder().text("Test Abstract").build())
         .authors(List.of())
         .journal(null)
         .identifiers(
             List.of(
-                CanonicalLiterature.Identifier.builder().type("PMID").value(identifier).build()))
+                CanonicalPublication.Identifier.builder().type("PMID").value(identifier).build()))
         .dates(null)
         .keywords(List.of())
         .build();

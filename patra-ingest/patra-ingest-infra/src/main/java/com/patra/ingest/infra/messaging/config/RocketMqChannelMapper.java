@@ -25,7 +25,7 @@ import org.springframework.util.StringUtils;
  *
  * <ul>
  *   <li>{@code INGEST_TASK} → {@code INGEST_TASK} (粗粒度 Topic)
- *   <li>{@code INGEST_LITERATURE} → {@code INGEST_LITERATURE} (粗粒度 Topic)
+ *   <li>{@code INGEST_PUBLICATION} → {@code INGEST_PUBLICATION} (粗粒度 Topic)
  *   <li>操作类型（READY、FAILED 等）通过 RocketMQ Tags 区分
  *   <li>支持通过 {@code patra.ingest.outbox.channel-mapping} 覆盖
  *   <li>支持通过 {@code patra.ingest.outbox.topic-prefix} 添加环境前缀
@@ -44,14 +44,14 @@ public class RocketMqChannelMapper {
    *
    * <ul>
    *   <li>INGEST_TASK → INGEST_TASK (资源级别 Topic)
-   *   <li>INGEST_LITERATURE → INGEST_LITERATURE (资源级别 Topic)
+   *   <li>INGEST_PUBLICATION → INGEST_PUBLICATION (资源级别 Topic)
    *   <li>操作类型（READY、FAILED 等）通过 RocketMQ Tags 区分
    * </ul>
    */
   private static final Map<String, String> DEFAULT_CHANNEL_TO_TOPIC =
       Map.of(
           "INGEST_TASK", "INGEST_TASK",
-          "INGEST_LITERATURE", "INGEST_LITERATURE");
+          "INGEST_PUBLICATION", "INGEST_PUBLICATION");
 
   private final Map<String, String> channelToTopic;
   private final String topicPrefix;

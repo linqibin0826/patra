@@ -3,7 +3,7 @@ package com.patra.ingest.domain.port;
 import static org.assertj.core.api.Assertions.*;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.model.CanonicalLiterature;
+import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
 import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
@@ -44,7 +44,7 @@ class ProvenanceDataPortTest {
     private final Map<String, Set<DataType>> supportedTypes =
         Map.of(
             ProvenanceCode.PUBMED.getCode(),
-            Set.of(DataType.LITERATURE, DataType.CITATION),
+            Set.of(DataType.PUBLICATION, DataType.CITATION),
             ProvenanceCode.DOAJ.getCode(),
             Set.of(DataType.JOURNAL),
             ProvenanceCode.EPMC.getCode(),
@@ -92,19 +92,19 @@ class ProvenanceDataPortTest {
   class GenericMethodTests {
 
     @Test
-    @DisplayName("应该使用泛型方法获取文献数据")
+    @DisplayName("应该使用泛型方法获取出版物数据")
     void should_fetch_literature_data_with_generic_method() {
       // Given: Mock 实现
       ProvenanceDataPort port = new MockProvenanceDataPort();
       ExecutionContext context = createTestContext(ProvenanceCode.PUBMED);
-      TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
+      TypeReference<CanonicalPublication> typeRef = new TypeReference<>() {};
       Batch batch = createTestBatch();
 
       // When: 调用泛型方法
-      DataFetchResult<CanonicalLiterature> result =
+      DataFetchResult<CanonicalPublication> result =
           port.fetchData(
               context,
-              DataType.LITERATURE,
+              DataType.PUBLICATION,
               typeRef,
               batch,
               createTestSession(ProvenanceCode.PUBMED));
@@ -112,7 +112,7 @@ class ProvenanceDataPortTest {
       // Then: 验证结果
       assertThat(result).isNotNull();
       assertThat(result.success()).isTrue();
-      assertThat(result.dataType()).isEqualTo(DataType.LITERATURE);
+      assertThat(result.dataType()).isEqualTo(DataType.PUBLICATION);
       assertThat(result.data()).isNotNull().isEmpty();
       assertThat(result.errorType()).isEqualTo(ErrorType.NONE);
     }
@@ -170,22 +170,22 @@ class ProvenanceDataPortTest {
       // Given: Mock 实现
       ProvenanceDataPort port = new MockProvenanceDataPort();
       ExecutionContext context = createTestContext(ProvenanceCode.PUBMED);
-      TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
+      TypeReference<CanonicalPublication> typeRef = new TypeReference<>() {};
       Batch batch = createTestBatch();
 
       // When: 调用泛型方法
-      DataFetchResult<CanonicalLiterature> result =
+      DataFetchResult<CanonicalPublication> result =
           port.fetchData(
               context,
-              DataType.LITERATURE,
+              DataType.PUBLICATION,
               typeRef,
               batch,
               createTestSession(ProvenanceCode.PUBMED));
 
-      // Then: 返回的 data 应该是 List<CanonicalLiterature>，而不是 List<Object>
-      List<CanonicalLiterature> literatures = result.data();
+      // Then: 返回的 data 应该是 List<CanonicalPublication>，而不是 List<Object>
+      List<CanonicalPublication> publications = result.data();
       assertThat(literatures).isNotNull();
-      // 编译期类型检查通过：literatures 是 List<CanonicalLiterature> 类型
+      // 编译期类型检查通过：literatures 是 List<CanonicalPublication> 类型
     }
 
     @Test
@@ -195,12 +195,12 @@ class ProvenanceDataPortTest {
       ProvenanceDataPort port = new MockProvenanceDataPort();
       Batch batch = createTestBatch();
 
-      // When: 获取文献数据
-      TypeReference<CanonicalLiterature> litTypeRef = new TypeReference<>() {};
-      DataFetchResult<CanonicalLiterature> litResult =
+      // When: 获取出版物数据
+      TypeReference<CanonicalPublication> litTypeRef = new TypeReference<>() {};
+      DataFetchResult<CanonicalPublication> litResult =
           port.fetchData(
               createTestContext(ProvenanceCode.PUBMED),
-              DataType.LITERATURE,
+              DataType.PUBLICATION,
               litTypeRef,
               batch,
               createTestSession(ProvenanceCode.PUBMED));
@@ -216,7 +216,7 @@ class ProvenanceDataPortTest {
               createTestSession(ProvenanceCode.DOAJ));
 
       // Then: 两种数据类型应该完全隔离
-      assertThat(litResult.dataType()).isEqualTo(DataType.LITERATURE);
+      assertThat(litResult.dataType()).isEqualTo(DataType.PUBLICATION);
       assertThat(journalResult.dataType()).isEqualTo(DataType.JOURNAL);
       assertThat(litResult.dataType()).isNotEqualTo(journalResult.dataType());
     }
@@ -232,8 +232,8 @@ class ProvenanceDataPortTest {
       // Given: Mock 实现
       ProvenanceDataPort port = new MockProvenanceDataPort();
 
-      // Then: PubMed 支持文献和引用
-      assertThat(port.supports(ProvenanceCode.PUBMED, DataType.LITERATURE)).isTrue();
+      // Then: PubMed 支持出版物和引用
+      assertThat(port.supports(ProvenanceCode.PUBMED, DataType.PUBLICATION)).isTrue();
       assertThat(port.supports(ProvenanceCode.PUBMED, DataType.CITATION)).isTrue();
 
       // Then: PubMed 不支持药品
@@ -242,11 +242,11 @@ class ProvenanceDataPortTest {
       // Then: DOAJ 支持期刊
       assertThat(port.supports(ProvenanceCode.DOAJ, DataType.JOURNAL)).isTrue();
 
-      // Then: DOAJ 不支持文献
-      assertThat(port.supports(ProvenanceCode.DOAJ, DataType.LITERATURE)).isFalse();
+      // Then: DOAJ 不支持出版物
+      assertThat(port.supports(ProvenanceCode.DOAJ, DataType.PUBLICATION)).isFalse();
 
       // Then: 未知数据源不支持任何类型
-      assertThat(port.supports(null, DataType.LITERATURE)).isFalse();
+      assertThat(port.supports(null, DataType.PUBLICATION)).isFalse();
     }
 
     @Test
@@ -256,7 +256,7 @@ class ProvenanceDataPortTest {
       ProvenanceDataPort port = new MockProvenanceDataPort();
 
       // Then: 空数据源代码应该返回 false
-      assertThat(port.supports(null, DataType.LITERATURE)).isFalse();
+      assertThat(port.supports(null, DataType.PUBLICATION)).isFalse();
 
       // Then: 空数据类型应该返回 false
       assertThat(port.supports(ProvenanceCode.PUBMED, null)).isFalse();
@@ -273,12 +273,12 @@ class ProvenanceDataPortTest {
       // Given: Mock 实现
       ProvenanceDataPort port = new MockProvenanceDataPort();
 
-      // When & Then: PubMed 支持文献和引用
+      // When & Then: PubMed 支持出版物和引用
       Set<DataType> pubmedTypes = port.getSupportedTypes(ProvenanceCode.PUBMED);
       assertThat(pubmedTypes)
           .isNotNull()
           .hasSize(2)
-          .contains(DataType.LITERATURE, DataType.CITATION);
+          .contains(DataType.PUBLICATION, DataType.CITATION);
 
       // When & Then: DOAJ 支持期刊
       Set<DataType> doajTypes = port.getSupportedTypes(ProvenanceCode.DOAJ);
@@ -324,15 +324,15 @@ class ProvenanceDataPortTest {
     @Test
     @DisplayName("应该创建泛型化的成功结果")
     void should_create_generic_success_result() {
-      // When: 创建成功结果（文献类型）
-      List<CanonicalLiterature> data = List.of(createMockLiterature());
-      DataFetchResult<CanonicalLiterature> result =
-          DataFetchResult.success(data, DataType.LITERATURE, "cursor123");
+      // When: 创建成功结果（出版物类型）
+      List<CanonicalPublication> data = List.of(createMockLiterature());
+      DataFetchResult<CanonicalPublication> result =
+          DataFetchResult.success(data, DataType.PUBLICATION, "cursor123");
 
       // Then: 验证结果
       assertThat(result).isNotNull();
       assertThat(result.success()).isTrue();
-      assertThat(result.dataType()).isEqualTo(DataType.LITERATURE);
+      assertThat(result.dataType()).isEqualTo(DataType.PUBLICATION);
       assertThat(result.data()).hasSize(1);
       assertThat(result.nextCursorToken()).isEqualTo("cursor123");
       assertThat(result.fetchedCount()).isEqualTo(1);
@@ -357,13 +357,13 @@ class ProvenanceDataPortTest {
     @DisplayName("应该创建失败结果")
     void should_create_failure_result() {
       // When: 创建失败结果
-      DataFetchResult<CanonicalLiterature> result =
-          DataFetchResult.failure(DataType.LITERATURE, "Network timeout", ErrorType.RETRIABLE);
+      DataFetchResult<CanonicalPublication> result =
+          DataFetchResult.failure(DataType.PUBLICATION, "Network timeout", ErrorType.RETRIABLE);
 
       // Then: 验证结果
       assertThat(result).isNotNull();
       assertThat(result.success()).isFalse();
-      assertThat(result.dataType()).isEqualTo(DataType.LITERATURE);
+      assertThat(result.dataType()).isEqualTo(DataType.PUBLICATION);
       assertThat(result.errorMessage()).isEqualTo("Network timeout");
       assertThat(result.errorType()).isEqualTo(ErrorType.RETRIABLE);
       assertThat(result.data()).isEmpty();
@@ -375,9 +375,9 @@ class ProvenanceDataPortTest {
     @DisplayName("应该创建不可重试的失败结果")
     void should_create_non_retriable_failure_result() {
       // When: 创建不可重试的失败结果
-      DataFetchResult<CanonicalLiterature> result =
+      DataFetchResult<CanonicalPublication> result =
           DataFetchResult.failure(
-              DataType.LITERATURE, "Invalid credentials", ErrorType.NON_RETRIABLE);
+              DataType.PUBLICATION, "Invalid credentials", ErrorType.NON_RETRIABLE);
 
       // Then: 验证结果
       assertThat(result.success()).isFalse();
@@ -389,15 +389,15 @@ class ProvenanceDataPortTest {
     @DisplayName("应该创建部分成功结果")
     void should_create_partial_success_result() {
       // When: 创建部分成功结果
-      List<CanonicalLiterature> data = List.of(createMockLiterature());
-      DataFetchResult<CanonicalLiterature> result =
+      List<CanonicalPublication> data = List.of(createMockLiterature());
+      DataFetchResult<CanonicalPublication> result =
           DataFetchResult.partialSuccess(
-              data, DataType.LITERATURE, "cursor456", "Some records failed");
+              data, DataType.PUBLICATION, "cursor456", "Some records failed");
 
       // Then: 验证结果
       assertThat(result).isNotNull();
       assertThat(result.success()).isTrue();
-      assertThat(result.dataType()).isEqualTo(DataType.LITERATURE);
+      assertThat(result.dataType()).isEqualTo(DataType.PUBLICATION);
       assertThat(result.data()).hasSize(1);
       assertThat(result.nextCursorToken()).isEqualTo("cursor456");
       assertThat(result.errorMessage()).isEqualTo("Some records failed");
@@ -410,11 +410,11 @@ class ProvenanceDataPortTest {
     void should_support_metadata() {
       // When: 创建带元数据的结果
       Map<String, Object> metadata = Map.of("apiVersion", "v3", "rateLimit", 1000);
-      DataFetchResult<CanonicalLiterature> result =
-          DataFetchResult.<CanonicalLiterature>builder()
+      DataFetchResult<CanonicalPublication> result =
+          DataFetchResult.<CanonicalPublication>builder()
               .success(true)
               .data(List.of())
-              .dataType(DataType.LITERATURE)
+              .dataType(DataType.PUBLICATION)
               .metadata(metadata)
               .errorType(ErrorType.NONE)
               .fetchedCount(0)
@@ -432,8 +432,8 @@ class ProvenanceDataPortTest {
     @DisplayName("应该处理空数据情况")
     void should_handle_null_data() {
       // When: 创建空数据结果
-      DataFetchResult<CanonicalLiterature> result =
-          DataFetchResult.success(null, DataType.LITERATURE, null);
+      DataFetchResult<CanonicalPublication> result =
+          DataFetchResult.success(null, DataType.PUBLICATION, null);
 
       // Then: data 应该是空列表，而不是 null
       assertThat(result.data()).isNotNull().isEmpty();
@@ -461,8 +461,8 @@ class ProvenanceDataPortTest {
     @DisplayName("应该正确判断可重试错误")
     void should_identify_retriable_errors() {
       // Given: 可重试错误结果
-      DataFetchResult<CanonicalLiterature> retriableResult =
-          DataFetchResult.failure(DataType.LITERATURE, "Timeout", ErrorType.RETRIABLE);
+      DataFetchResult<CanonicalPublication> retriableResult =
+          DataFetchResult.failure(DataType.PUBLICATION, "Timeout", ErrorType.RETRIABLE);
 
       // Then: 应该标记为可重试
       assertThat(retriableResult.errorType()).isEqualTo(ErrorType.RETRIABLE);
@@ -473,8 +473,8 @@ class ProvenanceDataPortTest {
     @DisplayName("应该正确判断不可重试错误")
     void should_identify_non_retriable_errors() {
       // Given: 不可重试错误结果
-      DataFetchResult<CanonicalLiterature> nonRetriableResult =
-          DataFetchResult.failure(DataType.LITERATURE, "Auth failed", ErrorType.NON_RETRIABLE);
+      DataFetchResult<CanonicalPublication> nonRetriableResult =
+          DataFetchResult.failure(DataType.PUBLICATION, "Auth failed", ErrorType.NON_RETRIABLE);
 
       // Then: 应该标记为不可重试
       assertThat(nonRetriableResult.errorType()).isEqualTo(ErrorType.NON_RETRIABLE);
@@ -495,7 +495,7 @@ class ProvenanceDataPortTest {
         1L, // scheduleInstanceId
         provenanceCode, // provenanceCode
         "test-op", // operationCode
-        DataType.LITERATURE, // dataType
+        DataType.PUBLICATION, // dataType
         null, // configSnapshot
         null, // exprHash
         null, // compiledQuery
@@ -521,9 +521,9 @@ class ProvenanceDataPortTest {
     return QuerySession.empty(provenanceCode);
   }
 
-  /** 创建 Mock 文献对象 */
-  private static CanonicalLiterature createMockLiterature() {
-    // 简化的 Mock 文献（使用 builder）
-    return CanonicalLiterature.builder().title("Test Literature").build();
+  /** 创建 Mock 出版物对象 */
+  private static CanonicalPublication createMockLiterature() {
+    // 简化的 Mock 出版物（使用 builder）
+    return CanonicalPublication.builder().title("Test Publication").build();
   }
 }

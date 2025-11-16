@@ -1,15 +1,15 @@
 package com.patra.starter.provenance.pubmed.converter;
 
-import com.patra.common.model.CanonicalLiterature;
-import com.patra.starter.provenance.pubmed.model.response.PubmedLiterature;
-import com.patra.starter.provenance.pubmed.model.response.PubmedLiterature.Article;
-import com.patra.starter.provenance.pubmed.model.response.PubmedLiterature.Author;
-import com.patra.starter.provenance.pubmed.model.response.PubmedLiterature.Journal;
-import com.patra.starter.provenance.pubmed.model.response.PubmedLiterature.Journal.JournalIssue;
-import com.patra.starter.provenance.pubmed.model.response.PubmedLiterature.Journal.PubDate;
-import com.patra.starter.provenance.pubmed.model.response.PubmedLiterature.MedlineJournalInfo;
-import com.patra.starter.provenance.pubmed.model.response.PubmedLiterature.PubmedData;
-import com.patra.starter.provenance.pubmed.model.response.PubmedLiterature.PubmedData.ArticleId;
+import com.patra.common.model.CanonicalPublication;
+import com.patra.starter.provenance.pubmed.model.response.PubmedPublication;
+import com.patra.starter.provenance.pubmed.model.response.PubmedPublication.Article;
+import com.patra.starter.provenance.pubmed.model.response.PubmedPublication.Author;
+import com.patra.starter.provenance.pubmed.model.response.PubmedPublication.Journal;
+import com.patra.starter.provenance.pubmed.model.response.PubmedPublication.Journal.JournalIssue;
+import com.patra.starter.provenance.pubmed.model.response.PubmedPublication.Journal.PubDate;
+import com.patra.starter.provenance.pubmed.model.response.PubmedPublication.MedlineJournalInfo;
+import com.patra.starter.provenance.pubmed.model.response.PubmedPublication.PubmedData;
+import com.patra.starter.provenance.pubmed.model.response.PubmedPublication.PubmedData.ArticleId;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.ArrayList;
@@ -23,30 +23,30 @@ import org.springframework.util.StringUtils;
 /**
  * PubMed文章转换器
  *
- * <p>将 {@link PubmedLiterature} 响应映射为 {@link CanonicalLiterature} 标准文献模型。
+ * <p>将 {@link PubmedPublication} 响应映射为 {@link CanonicalPublication} 标准出版物模型。
  * 集中所有字段提取逻辑，使下游组件能够操作稳定的共享内核模型。
  *
  * @author linqibin
  * @since 0.1.0
  */
 @Slf4j
-public class PubmedLiteratureConverter {
+public class PubmedPublicationConverter {
 
   /**
-   * 将PubMed文章转换为标准化文献模型
+   * 将PubMed文章转换为标准化出版物模型
    *
    * @param article PubMed文章响应
    * @return 标准化的文献表示
    */
-  public CanonicalLiterature toCanonicalLiterature(PubmedLiterature article) {
+  public CanonicalPublication toCanonicalPublication(PubmedPublication article) {
     if (article == null) {
       return null;
     }
     if (log.isDebugEnabled()) {
-      log.debug("Converting PubMed article to CanonicalLiterature pmid={}", article.pmid());
+      log.debug("Converting PubMed article to CanonicalPublication pmid={}", article.pmid());
     }
     Article citation = article.article();
-    return CanonicalLiterature.builder()
+    return CanonicalPublication.builder()
         .title(citation != null ? citation.title() : null)
         .originalTitle(citation != null ? citation.vernacularTitle() : null)
         .language(citation != null ? citation.language() : null)
@@ -81,17 +81,17 @@ public class PubmedLiteratureConverter {
         .build();
   }
 
-  private CanonicalLiterature.Abstract extractAbstract(Article article) {
+  private CanonicalPublication.Abstract extractAbstract(Article article) {
     if (article == null || CollectionUtils.isEmpty(article.abstractSections())) {
       return null;
     }
 
-    List<CanonicalLiterature.AbstractSection> sections =
+    List<CanonicalPublication.AbstractSection> sections =
         article.abstractSections().stream()
             .filter(section -> StringUtils.hasText(section.text()))
             .map(
                 section ->
-                    CanonicalLiterature.AbstractSection.builder()
+                    CanonicalPublication.AbstractSection.builder()
                         .label(section.label())
                         .category(section.nlmCategory())
                         .content(section.text())
@@ -119,7 +119,7 @@ public class PubmedLiteratureConverter {
             .filter(StringUtils::hasText)
             .collect(Collectors.joining("\n"));
 
-    return CanonicalLiterature.Abstract.builder()
+    return CanonicalPublication.Abstract.builder()
         .text(text)
         .sections(sections)
         .copyright(article.copyrightInformation())
@@ -132,23 +132,23 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 标准化的作者列表，如果没有作者则返回空列表
    */
-  private List<CanonicalLiterature.Author> convertAuthors(PubmedLiterature article) {
+  private List<CanonicalPublication.Author> convertAuthors(PubmedPublication article) {
     Article citationArticle = article.article();
     if (citationArticle == null || CollectionUtils.isEmpty(citationArticle.authors())) {
       return List.of();
     }
 
-    List<CanonicalLiterature.Author> canonicalAuthors = new ArrayList<>();
+    List<CanonicalPublication.Author> canonicalAuthors = new ArrayList<>();
     for (Author author : citationArticle.authors()) {
       // 转换机构信息
-      List<CanonicalLiterature.Affiliation> affiliations = null;
+      List<CanonicalPublication.Affiliation> affiliations = null;
       if (!CollectionUtils.isEmpty(author.affiliations())) {
         affiliations =
             author.affiliations().stream()
                 .filter(StringUtils::hasText)
                 .map(
                     affiliationName ->
-                        CanonicalLiterature.Affiliation.builder().name(affiliationName).build())
+                        CanonicalPublication.Affiliation.builder().name(affiliationName).build())
                 .collect(Collectors.toList());
         if (affiliations.isEmpty()) {
           affiliations = null;
@@ -156,14 +156,14 @@ public class PubmedLiteratureConverter {
       }
 
       // 转换作者标识符（ORCID、ResearcherID等）
-      List<CanonicalLiterature.Identifier> authorIdentifiers = null;
+      List<CanonicalPublication.Identifier> authorIdentifiers = null;
       if (!CollectionUtils.isEmpty(author.identifiers())) {
         authorIdentifiers =
             author.identifiers().stream()
                 .filter(id -> StringUtils.hasText(id.source()) && StringUtils.hasText(id.value()))
                 .map(
                     id ->
-                        CanonicalLiterature.Identifier.builder()
+                        CanonicalPublication.Identifier.builder()
                             .type(id.source().toLowerCase(Locale.ROOT))
                             .value(id.value())
                             .build())
@@ -186,7 +186,7 @@ public class PubmedLiteratureConverter {
       }
 
       canonicalAuthors.add(
-          CanonicalLiterature.Author.builder()
+          CanonicalPublication.Author.builder()
               .lastName(author.lastName())
               .foreName(author.foreName())
               .initials(author.initials())
@@ -208,7 +208,7 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 标准化的期刊信息，如果没有期刊信息则返回null
    */
-  private CanonicalLiterature.Journal convertJournal(PubmedLiterature article) {
+  private CanonicalPublication.Journal convertJournal(PubmedPublication article) {
     Article citation = article.article();
     Journal journal = citation != null ? citation.journal() : null;
     MedlineJournalInfo medline = article.journalInfo();
@@ -261,7 +261,7 @@ public class PubmedLiteratureConverter {
       issue = journal.journalIssue().issue();
     }
 
-    return CanonicalLiterature.Journal.builder()
+    return CanonicalPublication.Journal.builder()
         .title(title)
         .isoAbbreviation(isoAbbreviation)
         .medlineAbbreviation(medlineAbbreviation)
@@ -283,13 +283,13 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 标识符列表，如果没有标识符则返回null
    */
-  private List<CanonicalLiterature.Identifier> buildIdentifiers(PubmedLiterature article) {
-    List<CanonicalLiterature.Identifier> identifiers = new ArrayList<>();
+  private List<CanonicalPublication.Identifier> buildIdentifiers(PubmedPublication article) {
+    List<CanonicalPublication.Identifier> identifiers = new ArrayList<>();
 
     // 添加 PMID
     if (StringUtils.hasText(article.pmid())) {
       identifiers.add(
-          CanonicalLiterature.Identifier.builder().type("pmid").value(article.pmid()).build());
+          CanonicalPublication.Identifier.builder().type("pmid").value(article.pmid()).build());
     }
 
     // 从 PubmedData.ArticleIdList 提取 DOI 和 PMC
@@ -301,10 +301,10 @@ public class PubmedLiteratureConverter {
       switch (type) {
         case "doi" ->
             identifiers.add(
-                CanonicalLiterature.Identifier.builder().type("doi").value(id.value()).build());
+                CanonicalPublication.Identifier.builder().type("doi").value(id.value()).build());
         case "pmc", "pmcid" ->
             identifiers.add(
-                CanonicalLiterature.Identifier.builder().type("pmc").value(id.value()).build());
+                CanonicalPublication.Identifier.builder().type("pmc").value(id.value()).build());
         default -> {
           // Ignore other identifier types for now.
         }
@@ -321,7 +321,7 @@ public class PubmedLiteratureConverter {
           // 只添加有效的标识符
           if ("Y".equals(eLocationId.validYN()) || eLocationId.validYN() == null) {
             identifiers.add(
-                CanonicalLiterature.Identifier.builder()
+                CanonicalPublication.Identifier.builder()
                     .type(type.toLowerCase(Locale.ROOT))
                     .value(value)
                     .build());
@@ -331,12 +331,12 @@ public class PubmedLiteratureConverter {
     }
 
     // 从 MedlineCitation.OtherID 提取其他标识符
-    for (PubmedLiterature.OtherId otherId : article.otherIds()) {
+    for (PubmedPublication.OtherId otherId : article.otherIds()) {
       String source = otherId.source();
       String value = otherId.value();
       if (StringUtils.hasText(source) && StringUtils.hasText(value)) {
         identifiers.add(
-            CanonicalLiterature.Identifier.builder()
+            CanonicalPublication.Identifier.builder()
                 .type(source.toLowerCase(Locale.ROOT))
                 .value(value)
                 .build());
@@ -352,7 +352,7 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 出版日期信息，如果没有任何日期则返回null
    */
-  private CanonicalLiterature.PublicationDates extractPublicationDates(PubmedLiterature article) {
+  private CanonicalPublication.PublicationDates extractPublicationDates(PubmedPublication article) {
     LocalDate publishedDate = extractPublicationDate(article);
 
     // 从 History 提取 received、accepted 日期
@@ -379,7 +379,7 @@ public class PubmedLiteratureConverter {
       return null;
     }
 
-    return CanonicalLiterature.PublicationDates.builder()
+    return CanonicalPublication.PublicationDates.builder()
         .published(publishedDate)
         .electronic(electronicDate)
         .received(receivedDate)
@@ -391,7 +391,7 @@ public class PubmedLiteratureConverter {
         .build();
   }
 
-  private LocalDate extractPublicationDate(PubmedLiterature article) {
+  private LocalDate extractPublicationDate(PubmedPublication article) {
     Article citation = article.article();
     if (citation == null) {
       return null;
@@ -459,20 +459,20 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 关键字集合列表，如果没有则返回null
    */
-  private List<CanonicalLiterature.KeywordSet> extractKeywords(PubmedLiterature article) {
-    List<PubmedLiterature.KeywordList> keywordLists = article.keywordLists();
+  private List<CanonicalPublication.KeywordSet> extractKeywords(PubmedPublication article) {
+    List<PubmedPublication.KeywordList> keywordLists = article.keywordLists();
     if (CollectionUtils.isEmpty(keywordLists)) {
       return null;
     }
 
-    List<CanonicalLiterature.KeywordSet> keywordSets = new ArrayList<>();
-    for (PubmedLiterature.KeywordList keywordList : keywordLists) {
-      List<PubmedLiterature.Keyword> keywords = keywordList.keywords();
+    List<CanonicalPublication.KeywordSet> keywordSets = new ArrayList<>();
+    for (PubmedPublication.KeywordList keywordList : keywordLists) {
+      List<PubmedPublication.Keyword> keywords = keywordList.keywords();
       if (CollectionUtils.isEmpty(keywords)) {
         continue;
       }
 
-      List<CanonicalLiterature.Keyword> canonicalKeywords =
+      List<CanonicalPublication.Keyword> canonicalKeywords =
           keywords.stream()
               .filter(keyword -> StringUtils.hasText(keyword.value()))
               .map(
@@ -481,7 +481,7 @@ public class PubmedLiteratureConverter {
                     if (StringUtils.hasText(keyword.majorTopicYN())) {
                       majorTopic = "Y".equalsIgnoreCase(keyword.majorTopicYN());
                     }
-                    return CanonicalLiterature.Keyword.builder()
+                    return CanonicalPublication.Keyword.builder()
                         .term(keyword.value())
                         .majorTopic(majorTopic)
                         .build();
@@ -501,7 +501,7 @@ public class PubmedLiteratureConverter {
         }
 
         keywordSets.add(
-            CanonicalLiterature.KeywordSet.builder()
+            CanonicalPublication.KeywordSet.builder()
                 .source(source)
                 .keywords(canonicalKeywords)
                 .build());
@@ -518,7 +518,7 @@ public class PubmedLiteratureConverter {
    * @param pubStatus 发布状态（如received、accepted、revised）
    * @return 日期，如果不存在则返回null
    */
-  private LocalDate extractHistoryDate(PubmedLiterature article, String pubStatus) {
+  private LocalDate extractHistoryDate(PubmedPublication article, String pubStatus) {
     for (PubmedData.HistoryEvent event : article.pubmedData().history()) {
       if (pubStatus.equalsIgnoreCase(event.status())) {
         return parseDate(event.year(), event.month(), event.day());
@@ -533,7 +533,7 @@ public class PubmedLiteratureConverter {
    * @param dateInfo 日期信息
    * @return 日期，如果为null则返回null
    */
-  private LocalDate extractDateInfo(PubmedLiterature.DateInfo dateInfo) {
+  private LocalDate extractDateInfo(PubmedPublication.DateInfo dateInfo) {
     if (dateInfo == null) {
       return null;
     }
@@ -546,7 +546,7 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 电子版发布日期，如果不存在则返回null
    */
-  private LocalDate extractElectronicDate(PubmedLiterature article) {
+  private LocalDate extractElectronicDate(PubmedPublication article) {
     Article citation = article.article();
     if (citation == null) {
       return null;
@@ -595,21 +595,21 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 化学物质列表，如果没有则返回null
    */
-  private List<CanonicalLiterature.Substance> convertSubstances(PubmedLiterature article) {
-    List<PubmedLiterature.Chemical> chemicals = article.chemicals();
+  private List<CanonicalPublication.Substance> convertSubstances(PubmedPublication article) {
+    List<PubmedPublication.Chemical> chemicals = article.chemicals();
     if (CollectionUtils.isEmpty(chemicals)) {
       return null;
     }
 
-    List<CanonicalLiterature.Substance> substances = new ArrayList<>(chemicals.size());
-    for (PubmedLiterature.Chemical chemical : chemicals) {
-      PubmedLiterature.NameOfSubstance nameOfSubstance = chemical.nameOfSubstance();
+    List<CanonicalPublication.Substance> substances = new ArrayList<>(chemicals.size());
+    for (PubmedPublication.Chemical chemical : chemicals) {
+      PubmedPublication.NameOfSubstance nameOfSubstance = chemical.nameOfSubstance();
       if (nameOfSubstance == null || !StringUtils.hasText(nameOfSubstance.value())) {
         continue;
       }
 
       substances.add(
-          CanonicalLiterature.Substance.builder()
+          CanonicalPublication.Substance.builder()
               .name(nameOfSubstance.value())
               .registryNumber(chemical.registryNumber())
               .vocabularyId(nameOfSubstance.ui())
@@ -626,16 +626,16 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return MeSH主题标引列表，如果没有则返回null
    */
-  private List<CanonicalLiterature.MeshHeading> convertMeshHeadings(PubmedLiterature article) {
-    List<PubmedLiterature.MeshHeading> meshHeadings = article.meshHeadings();
+  private List<CanonicalPublication.MeshHeading> convertMeshHeadings(PubmedPublication article) {
+    List<PubmedPublication.MeshHeading> meshHeadings = article.meshHeadings();
     if (CollectionUtils.isEmpty(meshHeadings)) {
       return null;
     }
 
-    List<CanonicalLiterature.MeshHeading> canonicalMeshHeadings =
+    List<CanonicalPublication.MeshHeading> canonicalMeshHeadings =
         new ArrayList<>(meshHeadings.size());
-    for (PubmedLiterature.MeshHeading meshHeading : meshHeadings) {
-      PubmedLiterature.DescriptorName descriptorName = meshHeading.descriptorName();
+    for (PubmedPublication.MeshHeading meshHeading : meshHeadings) {
+      PubmedPublication.DescriptorName descriptorName = meshHeading.descriptorName();
       if (descriptorName == null || !StringUtils.hasText(descriptorName.value())) {
         continue;
       }
@@ -646,8 +646,8 @@ public class PubmedLiteratureConverter {
         majorTopic = "Y".equalsIgnoreCase(descriptorName.majorTopicYN());
       }
 
-      CanonicalLiterature.DescriptorName canonicalDescriptor =
-          CanonicalLiterature.DescriptorName.builder()
+      CanonicalPublication.DescriptorName canonicalDescriptor =
+          CanonicalPublication.DescriptorName.builder()
               .ui(descriptorName.ui())
               .term(descriptorName.value())
               .majorTopic(majorTopic)
@@ -655,7 +655,7 @@ public class PubmedLiteratureConverter {
               .build();
 
       // 转换MeSH限定词
-      List<CanonicalLiterature.QualifierName> qualifiers = null;
+      List<CanonicalPublication.QualifierName> qualifiers = null;
       if (!CollectionUtils.isEmpty(meshHeading.qualifierNames())) {
         qualifiers =
             meshHeading.qualifierNames().stream()
@@ -666,7 +666,7 @@ public class PubmedLiteratureConverter {
                       if (StringUtils.hasText(q.majorTopicYN())) {
                         qMajorTopic = "Y".equalsIgnoreCase(q.majorTopicYN());
                       }
-                      return CanonicalLiterature.QualifierName.builder()
+                      return CanonicalPublication.QualifierName.builder()
                           .ui(q.ui())
                           .term(q.value())
                           .majorTopic(qMajorTopic)
@@ -680,7 +680,7 @@ public class PubmedLiteratureConverter {
       }
 
       canonicalMeshHeadings.add(
-          CanonicalLiterature.MeshHeading.builder()
+          CanonicalPublication.MeshHeading.builder()
               .descriptorName(canonicalDescriptor)
               .qualifierNames(qualifiers)
               .build());
@@ -695,7 +695,7 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 资助信息列表，如果没有则返回null
    */
-  private List<CanonicalLiterature.FundingInfo> convertFunding(PubmedLiterature article) {
+  private List<CanonicalPublication.FundingInfo> convertFunding(PubmedPublication article) {
     Article citationArticle = article.article();
     if (citationArticle == null) {
       return null;
@@ -706,14 +706,14 @@ public class PubmedLiteratureConverter {
       return null;
     }
 
-    List<CanonicalLiterature.FundingInfo> fundingList = new ArrayList<>(grants.size());
+    List<CanonicalPublication.FundingInfo> fundingList = new ArrayList<>(grants.size());
     for (Article.Grant grant : grants) {
       if (!StringUtils.hasText(grant.agency())) {
         continue;
       }
 
       fundingList.add(
-          CanonicalLiterature.FundingInfo.builder()
+          CanonicalPublication.FundingInfo.builder()
               .grantId(grant.grantId())
               .funderName(grant.agency())
               .funderAcronym(grant.acronym())
@@ -730,22 +730,22 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 其他语言摘要列表，如果没有则返回null
    */
-  private List<CanonicalLiterature.AlternativeAbstract> convertAlternativeAbstracts(
-      PubmedLiterature article) {
-    List<PubmedLiterature.OtherAbstract> otherAbstracts = article.otherAbstracts();
+  private List<CanonicalPublication.AlternativeAbstract> convertAlternativeAbstracts(
+      PubmedPublication article) {
+    List<PubmedPublication.OtherAbstract> otherAbstracts = article.otherAbstracts();
     if (CollectionUtils.isEmpty(otherAbstracts)) {
       return null;
     }
 
-    List<CanonicalLiterature.AlternativeAbstract> abstracts =
+    List<CanonicalPublication.AlternativeAbstract> abstracts =
         new ArrayList<>(otherAbstracts.size());
-    for (PubmedLiterature.OtherAbstract otherAbstract : otherAbstracts) {
+    for (PubmedPublication.OtherAbstract otherAbstract : otherAbstracts) {
       if (!StringUtils.hasText(otherAbstract.abstractText())) {
         continue;
       }
 
       abstracts.add(
-          CanonicalLiterature.AlternativeAbstract.builder()
+          CanonicalPublication.AlternativeAbstract.builder()
               .type(otherAbstract.type())
               .language(otherAbstract.language())
               .text(otherAbstract.abstractText())
@@ -762,7 +762,7 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 基因符号列表，如果没有则返回null
    */
-  private List<String> convertGenes(PubmedLiterature article) {
+  private List<String> convertGenes(PubmedPublication article) {
     List<String> geneSymbols = article.geneSymbols();
     return CollectionUtils.isEmpty(geneSymbols) ? null : geneSymbols;
   }
@@ -773,7 +773,7 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 页码信息对象，如果没有则返回null
    */
-  private CanonicalLiterature.Pagination convertPagination(PubmedLiterature article) {
+  private CanonicalPublication.Pagination convertPagination(PubmedPublication article) {
     Article citationArticle = article.article();
     if (citationArticle == null) {
       return null;
@@ -796,7 +796,7 @@ public class PubmedLiteratureConverter {
       return null;
     }
 
-    return CanonicalLiterature.Pagination.builder()
+    return CanonicalPublication.Pagination.builder()
         .startPage(startPage)
         .endPage(endPage)
         .medlinePgn(medlinePgn)
@@ -809,25 +809,25 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 出版类型列表，如果没有则返回null
    */
-  private List<CanonicalLiterature.PublicationType> extractPublicationTypes(
-      PubmedLiterature article) {
+  private List<CanonicalPublication.PublicationType> extractPublicationTypes(
+      PubmedPublication article) {
     Article citationArticle = article.article();
     if (citationArticle == null) {
       return null;
     }
 
-    List<PubmedLiterature.Article.PublicationType> publicationTypes =
+    List<PubmedPublication.Article.PublicationType> publicationTypes =
         citationArticle.publicationTypes();
     if (CollectionUtils.isEmpty(publicationTypes)) {
       return null;
     }
 
-    List<CanonicalLiterature.PublicationType> types =
+    List<CanonicalPublication.PublicationType> types =
         publicationTypes.stream()
             .filter(type -> StringUtils.hasText(type.value()))
             .map(
                 type ->
-                    CanonicalLiterature.PublicationType.builder()
+                    CanonicalPublication.PublicationType.builder()
                         .value(type.value())
                         .id(type.ui())
                         .vocabularySource("MeSH")
@@ -860,19 +860,19 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 发布历史事件列表，如果没有则返回null
    */
-  private List<CanonicalLiterature.PublicationHistoryEvent> extractPublicationHistory(
-      PubmedLiterature article) {
+  private List<CanonicalPublication.PublicationHistoryEvent> extractPublicationHistory(
+      PubmedPublication article) {
     List<PubmedData.HistoryEvent> historyEvents = article.pubmedData().history();
     if (CollectionUtils.isEmpty(historyEvents)) {
       return null;
     }
 
-    List<CanonicalLiterature.PublicationHistoryEvent> events =
+    List<CanonicalPublication.PublicationHistoryEvent> events =
         historyEvents.stream()
             .filter(event -> StringUtils.hasText(event.status()))
             .map(
                 event ->
-                    CanonicalLiterature.PublicationHistoryEvent.builder()
+                    CanonicalPublication.PublicationHistoryEvent.builder()
                         .status(event.status())
                         .year(event.year())
                         .month(event.month())
@@ -891,7 +891,7 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 文献元数据，如果所有字段都为空则返回null
    */
-  private CanonicalLiterature.LiteratureMetadata extractMetadata(PubmedLiterature article) {
+  private CanonicalPublication.PublicationMetadata extractMetadata(PubmedPublication article) {
     String indexingMethod = article.indexingMethod();
     String owner = article.owner();
     String status = article.status();
@@ -905,7 +905,7 @@ public class PubmedLiteratureConverter {
       return null;
     }
 
-    return CanonicalLiterature.LiteratureMetadata.builder()
+    return CanonicalPublication.PublicationMetadata.builder()
         .indexingMethod(indexingMethod)
         .owner(owner)
         .status(status)
@@ -919,19 +919,19 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 补充MeSH概念列表，如果没有则返回null
    */
-  private List<CanonicalLiterature.SupplMeshName> convertSupplMeshNames(
-      PubmedLiterature article) {
-    List<PubmedLiterature.SupplMeshName> supplMeshNames = article.supplMeshNames();
+  private List<CanonicalPublication.SupplMeshName> convertSupplMeshNames(
+      PubmedPublication article) {
+    List<PubmedPublication.SupplMeshName> supplMeshNames = article.supplMeshNames();
     if (CollectionUtils.isEmpty(supplMeshNames)) {
       return null;
     }
 
-    List<CanonicalLiterature.SupplMeshName> canonicalSupplMeshNames =
+    List<CanonicalPublication.SupplMeshName> canonicalSupplMeshNames =
         supplMeshNames.stream()
             .filter(s -> StringUtils.hasText(s.value()))
             .map(
                 s ->
-                    CanonicalLiterature.SupplMeshName.builder()
+                    CanonicalPublication.SupplMeshName.builder()
                         .ui(s.ui())
                         .name(s.value())
                         .type(s.type())
@@ -947,22 +947,22 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 研究者列表，如果没有则返回null
    */
-  private List<CanonicalLiterature.Investigator> convertInvestigators(PubmedLiterature article) {
-    List<PubmedLiterature.Investigator> investigators = article.investigators();
+  private List<CanonicalPublication.Investigator> convertInvestigators(PubmedPublication article) {
+    List<PubmedPublication.Investigator> investigators = article.investigators();
     if (CollectionUtils.isEmpty(investigators)) {
       return null;
     }
 
-    List<CanonicalLiterature.Investigator> canonicalInvestigators =
+    List<CanonicalPublication.Investigator> canonicalInvestigators =
         new ArrayList<>(investigators.size());
-    for (PubmedLiterature.Investigator investigator : investigators) {
+    for (PubmedPublication.Investigator investigator : investigators) {
       // 转换机构信息
-      List<CanonicalLiterature.Affiliation> affiliations = null;
+      List<CanonicalPublication.Affiliation> affiliations = null;
       if (!CollectionUtils.isEmpty(investigator.affiliationInfo())) {
         affiliations =
             investigator.affiliationInfo().stream()
                 .filter(info -> StringUtils.hasText(info.value()))
-                .map(info -> CanonicalLiterature.Affiliation.builder().name(info.value()).build())
+                .map(info -> CanonicalPublication.Affiliation.builder().name(info.value()).build())
                 .collect(Collectors.toList());
         if (affiliations.isEmpty()) {
           affiliations = null;
@@ -970,14 +970,14 @@ public class PubmedLiteratureConverter {
       }
 
       // 转换标识符
-      List<CanonicalLiterature.Identifier> identifiers = null;
+      List<CanonicalPublication.Identifier> identifiers = null;
       if (!CollectionUtils.isEmpty(investigator.identifiers())) {
         identifiers =
             investigator.identifiers().stream()
                 .filter(id -> StringUtils.hasText(id.source()) && StringUtils.hasText(id.value()))
                 .map(
                     id ->
-                        CanonicalLiterature.Identifier.builder()
+                        CanonicalPublication.Identifier.builder()
                             .type(id.source().toLowerCase(Locale.ROOT))
                             .value(id.value())
                             .build())
@@ -994,7 +994,7 @@ public class PubmedLiteratureConverter {
       }
 
       canonicalInvestigators.add(
-          CanonicalLiterature.Investigator.builder()
+          CanonicalPublication.Investigator.builder()
               .lastName(investigator.lastName())
               .foreName(investigator.foreName())
               .initials(investigator.initials())
@@ -1014,20 +1014,20 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 人物主题列表，如果没有则返回null
    */
-  private List<CanonicalLiterature.PersonalNameSubject> convertPersonalNameSubjects(
-      PubmedLiterature article) {
-    List<PubmedLiterature.PersonalNameSubject> personalNameSubjects =
+  private List<CanonicalPublication.PersonalNameSubject> convertPersonalNameSubjects(
+      PubmedPublication article) {
+    List<PubmedPublication.PersonalNameSubject> personalNameSubjects =
         article.personalNameSubjects();
     if (CollectionUtils.isEmpty(personalNameSubjects)) {
       return null;
     }
 
-    List<CanonicalLiterature.PersonalNameSubject> canonicalPersonalNameSubjects =
+    List<CanonicalPublication.PersonalNameSubject> canonicalPersonalNameSubjects =
         personalNameSubjects.stream()
             .filter(p -> StringUtils.hasText(p.lastName()) || StringUtils.hasText(p.foreName()))
             .map(
                 p ->
-                    CanonicalLiterature.PersonalNameSubject.builder()
+                    CanonicalPublication.PersonalNameSubject.builder()
                         .lastName(p.lastName())
                         .foreName(p.foreName())
                         .initials(p.initials())
@@ -1044,8 +1044,8 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 外部引用列表，如果没有则返回null
    */
-  private List<CanonicalLiterature.ExternalReference> convertExternalReferences(
-      PubmedLiterature article) {
+  private List<CanonicalPublication.ExternalReference> convertExternalReferences(
+      PubmedPublication article) {
     Article citationArticle = article.article();
     if (citationArticle == null) {
       return null;
@@ -1056,7 +1056,7 @@ public class PubmedLiteratureConverter {
       return null;
     }
 
-    List<CanonicalLiterature.ExternalReference> externalReferences =
+    List<CanonicalPublication.ExternalReference> externalReferences =
         new ArrayList<>(dataBanks.size());
     for (Article.DataBank dataBank : dataBanks) {
       if (!StringUtils.hasText(dataBank.dataBankName())) {
@@ -1064,7 +1064,7 @@ public class PubmedLiteratureConverter {
       }
 
       externalReferences.add(
-          CanonicalLiterature.ExternalReference.builder()
+          CanonicalPublication.ExternalReference.builder()
               .type("database")
               .name(dataBank.dataBankName())
               .identifiers(dataBank.accessionNumbers())
@@ -1080,14 +1080,14 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 补充对象列表，如果没有则返回null
    */
-  private List<CanonicalLiterature.SupplementalObject> convertSupplementalObjects(
-      PubmedLiterature article) {
+  private List<CanonicalPublication.SupplementalObject> convertSupplementalObjects(
+      PubmedPublication article) {
     List<PubmedData.ObjectInfo> objects = article.pubmedData().objects();
     if (CollectionUtils.isEmpty(objects)) {
       return null;
     }
 
-    List<CanonicalLiterature.SupplementalObject> supplementalObjects =
+    List<CanonicalPublication.SupplementalObject> supplementalObjects =
         new ArrayList<>(objects.size());
     for (PubmedData.ObjectInfo object : objects) {
       if (!StringUtils.hasText(object.type())) {
@@ -1095,14 +1095,14 @@ public class PubmedLiteratureConverter {
       }
 
       // 转换参数列表
-      List<CanonicalLiterature.ObjectParam> params = null;
+      List<CanonicalPublication.ObjectParam> params = null;
       if (!CollectionUtils.isEmpty(object.params())) {
         params =
             object.params().stream()
                 .filter(p -> StringUtils.hasText(p.name()))
                 .map(
                     p ->
-                        CanonicalLiterature.ObjectParam.builder()
+                        CanonicalPublication.ObjectParam.builder()
                             .name(p.name())
                             .value(p.value())
                             .build())
@@ -1113,7 +1113,7 @@ public class PubmedLiteratureConverter {
       }
 
       supplementalObjects.add(
-          CanonicalLiterature.SupplementalObject.builder().type(object.type()).params(params).build());
+          CanonicalPublication.SupplementalObject.builder().type(object.type()).params(params).build());
     }
 
     return supplementalObjects.isEmpty() ? null : supplementalObjects;
@@ -1125,23 +1125,23 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 参考文献列表，如果没有则返回null
    */
-  private List<CanonicalLiterature.Reference> convertReferences(PubmedLiterature article) {
+  private List<CanonicalPublication.Reference> convertReferences(PubmedPublication article) {
     List<PubmedData.Reference> references = article.pubmedData().references();
     if (CollectionUtils.isEmpty(references)) {
       return null;
     }
 
-    List<CanonicalLiterature.Reference> canonicalReferences = new ArrayList<>(references.size());
+    List<CanonicalPublication.Reference> canonicalReferences = new ArrayList<>(references.size());
     for (PubmedData.Reference reference : references) {
       // 转换标识符
-      List<CanonicalLiterature.Identifier> identifiers = null;
+      List<CanonicalPublication.Identifier> identifiers = null;
       if (!CollectionUtils.isEmpty(reference.articleIds())) {
         identifiers =
             reference.articleIds().stream()
                 .filter(id -> StringUtils.hasText(id.type()) && StringUtils.hasText(id.value()))
                 .map(
                     id ->
-                        CanonicalLiterature.Identifier.builder()
+                        CanonicalPublication.Identifier.builder()
                             .type(id.type().toLowerCase(Locale.ROOT))
                             .value(id.value())
                             .build())
@@ -1152,7 +1152,7 @@ public class PubmedLiteratureConverter {
       }
 
       canonicalReferences.add(
-          CanonicalLiterature.Reference.builder()
+          CanonicalPublication.Reference.builder()
               .citation(reference.citation())
               .identifiers(identifiers)
               .build());
@@ -1167,19 +1167,19 @@ public class PubmedLiteratureConverter {
    * @param article PubMed文章
    * @return 相关项目列表，如果没有则返回null
    */
-  private List<CanonicalLiterature.RelatedItem> convertRelatedItems(PubmedLiterature article) {
-    List<PubmedLiterature.CommentsCorrections> commentsCorrections =
+  private List<CanonicalPublication.RelatedItem> convertRelatedItems(PubmedPublication article) {
+    List<PubmedPublication.CommentsCorrections> commentsCorrections =
         article.commentsCorrections();
     if (CollectionUtils.isEmpty(commentsCorrections)) {
       return null;
     }
 
-    List<CanonicalLiterature.RelatedItem> relatedItems =
+    List<CanonicalPublication.RelatedItem> relatedItems =
         commentsCorrections.stream()
             .filter(cc -> StringUtils.hasText(cc.refType()))
             .map(
                 cc ->
-                    CanonicalLiterature.RelatedItem.builder()
+                    CanonicalPublication.RelatedItem.builder()
                         .relationType(cc.refType())
                         .citation(cc.refSource())
                         .identifier(cc.pmid())

@@ -54,7 +54,7 @@ public class OutboxMetrics {
    *   <li>patra.outbox.publish.duration (计时器): 记录操作耗时
    * </ul>
    *
-   * @param aggregateType 聚合类型 (例如 "Task", "LiteratureData"),必须在允许列表中
+   * @param aggregateType 聚合类型 (例如 "Task", "PublicationData"),必须在允许列表中
    * @param opType 操作类型 (例如 "batch", "retry", "CREATED")
    * @param isSuccess 操作是否成功,成功为 true,否则为 false
    * @param duration 操作耗时 (不能为 null)

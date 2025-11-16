@@ -26,7 +26,7 @@
  * <pre>
  * ProvenanceDataProvider (如 PubmedDataProvider)
  *     ↓ 委托
- * DataProcessor (如 PubmedLiteratureProcessor) ← [本包]
+ * DataProcessor (如 PubmedPublicationProcessor) ← [本包]
  *     ↓ 调用
  * 外部 API 客户端 (如 PubMedClient)
  * </pre>
@@ -49,36 +49,36 @@
  *     .build();
  *
  * // 2. 处理数据
- * ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+ * ProcessResult<CanonicalPublication> result = processor.process(request, context);
  *
  * // 3. 验证数据
- * for (CanonicalLiterature literature : result.data()) {
- *     ValidationResult validation = processor.validate(literature);
+ * for (CanonicalPublication publication : result.data()) {
+ *     ValidationResult validation = processor.validate(publication);
  *     if (!validation.isValid()) {
  *         log.warn("验证失败: {}", validation.errors());
  *     }
  * }
  *
  * // 4. 转换数据（如果需要）
- * CanonicalLiterature transformed = processor.transform(rawData);
+ * CanonicalPublication transformed = processor.transform(rawData);
  * }</pre>
  *
  * <h2>实现 DataProcessor 示例</h2>
  *
  * <pre>{@code
  * @RequiredArgsConstructor
- * public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterature> {
+ * public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublication> {
  *
  *     private final PubMedClient pubMedClient;
- *     private final PubmedLiteratureConverter converter;
+ *     private final PubmedPublicationConverter converter;
  *
  *     @Override
  *     public DataType getDataType() {
- *         return DataType.LITERATURE;
+ *         return DataType.PUBLICATION;
  *     }
  *
  *     @Override
- *     public ProcessResult<CanonicalLiterature> process(
+ *     public ProcessResult<CanonicalPublication> process(
  *             ProviderRequest request,
  *             ProviderContext context) {
  *         // 1. 提取参数
@@ -93,8 +93,8 @@
  *         EFetchResponse fetchResponse = pubMedClient.efetch(buildFetchRequest(pmids), config);
  *
  *         // 4. 转换为标准格式
- *         List<CanonicalLiterature> literatures = fetchResponse.articles().stream()
- *             .map(converter::toCanonicalLiterature)
+ *         List<CanonicalPublication> literatures = fetchResponse.articles().stream()
+ *             .map(converter::toCanonicalPublication)
  *             .collect(Collectors.toList());
  *
  *         // 5. 返回结果
@@ -102,7 +102,7 @@
  *     }
  *
  *     @Override
- *     public ValidationResult validate(CanonicalLiterature data) {
+ *     public ValidationResult validate(CanonicalPublication data) {
  *         List<String> errors = new ArrayList<>();
  *         if (data.getTitle() == null || data.getTitle().isBlank()) {
  *             errors.add("标题不能为空");
@@ -114,11 +114,11 @@
  *     }
  *
  *     @Override
- *     public CanonicalLiterature transform(Object rawData) {
- *         if (!(rawData instanceof PubmedLiterature)) {
+ *     public CanonicalPublication transform(Object rawData) {
+ *         if (!(rawData instanceof PubmedPublication)) {
  *             throw new IllegalArgumentException("不支持的数据类型");
  *         }
- *         return converter.toCanonicalLiterature((PubmedLiterature) rawData);
+ *         return converter.toCanonicalPublication((PubmedPublication) rawData);
  *     }
  * }
  * }</pre>

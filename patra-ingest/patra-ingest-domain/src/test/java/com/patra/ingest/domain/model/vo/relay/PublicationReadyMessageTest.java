@@ -8,8 +8,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-@DisplayName("LiteratureReadyMessage 单元测试")
-class LiteratureReadyMessageTest {
+@DisplayName("PublicationReadyMessage 单元测试")
+class PublicationReadyMessageTest {
 
   @Nested
   @DisplayName("Payload Record 测试")
@@ -27,19 +27,19 @@ class LiteratureReadyMessageTest {
         Long runId = 456L;
         ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
         List<String> storageKeys = List.of("key1", "key2", "key3");
-        Integer totalLiteratureCount = 100;
+        Integer totalPublicationCount = 100;
         Integer successBatchCount = 8;
         Integer failedBatchCount = 2;
         Long timestamp = 1699999999999L;
 
         // When
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(
                 taskId,
                 runId,
                 provenanceCode,
                 storageKeys,
-                totalLiteratureCount,
+                totalPublicationCount,
                 successBatchCount,
                 failedBatchCount,
                 timestamp);
@@ -49,7 +49,7 @@ class LiteratureReadyMessageTest {
         assertThat(payload.runId()).isEqualTo(runId);
         assertThat(payload.provenanceCode()).isEqualTo(provenanceCode);
         assertThat(payload.storageKeys()).containsExactly("key1", "key2", "key3").hasSize(3);
-        assertThat(payload.totalLiteratureCount()).isEqualTo(totalLiteratureCount);
+        assertThat(payload.totalPublicationCount()).isEqualTo(totalPublicationCount);
         assertThat(payload.successBatchCount()).isEqualTo(successBatchCount);
         assertThat(payload.failedBatchCount()).isEqualTo(failedBatchCount);
         assertThat(payload.timestamp()).isEqualTo(timestamp);
@@ -59,15 +59,15 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该支持 null 值字段")
       void shouldSupportNullFields() {
         // Given & When
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(null, null, null, null, null, null, null, null);
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(null, null, null, null, null, null, null, null);
 
         // Then
         assertThat(payload.taskId()).isNull();
         assertThat(payload.runId()).isNull();
         assertThat(payload.provenanceCode()).isNull();
         assertThat(payload.storageKeys()).isNull();
-        assertThat(payload.totalLiteratureCount()).isNull();
+        assertThat(payload.totalPublicationCount()).isNull();
         assertThat(payload.successBatchCount()).isNull();
         assertThat(payload.failedBatchCount()).isNull();
         assertThat(payload.timestamp()).isNull();
@@ -77,8 +77,8 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该支持空集合作为 storageKeys")
       void shouldSupportEmptyStorageKeys() {
         // Given & When
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(
                 1L, 2L, ProvenanceCode.PUBMED, List.of(), 0, 0, 0, 1699999999999L);
 
         // Then
@@ -94,11 +94,11 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该认为相同值的两个 Payload 实例相等")
       void shouldConsiderTwoPayloadsWithSameValuesEqual() {
         // Given
-        LiteratureReadyMessage.Payload payload1 =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload1 =
+            new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
-        LiteratureReadyMessage.Payload payload2 =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload2 =
+            new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
 
         // When & Then
@@ -110,11 +110,11 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该认为不同值的两个 Payload 实例不相等")
       void shouldConsiderTwoPayloadsWithDifferentValuesNotEqual() {
         // Given
-        LiteratureReadyMessage.Payload payload1 =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload1 =
+            new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
-        LiteratureReadyMessage.Payload payload2 =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload2 =
+            new PublicationReadyMessage.Payload(
                 999L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
 
         // When & Then
@@ -125,8 +125,8 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该认为 Payload 与自身相等（自反性）")
       void shouldConsiderPayloadEqualToItself() {
         // Given
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
 
         // When & Then
@@ -137,8 +137,8 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该认为 Payload 与 null 不相等")
       void shouldConsiderPayloadNotEqualToNull() {
         // Given
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
 
         // When & Then
@@ -149,10 +149,10 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该认为包含 null 字段的两个 Payload 相等")
       void shouldConsiderTwoPayloadsWithNullFieldsEqual() {
         // Given
-        LiteratureReadyMessage.Payload payload1 =
-            new LiteratureReadyMessage.Payload(null, null, null, null, null, null, null, null);
-        LiteratureReadyMessage.Payload payload2 =
-            new LiteratureReadyMessage.Payload(null, null, null, null, null, null, null, null);
+        PublicationReadyMessage.Payload payload1 =
+            new PublicationReadyMessage.Payload(null, null, null, null, null, null, null, null);
+        PublicationReadyMessage.Payload payload2 =
+            new PublicationReadyMessage.Payload(null, null, null, null, null, null, null, null);
 
         // When & Then
         assertThat(payload1).isEqualTo(payload2);
@@ -168,8 +168,8 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该返回包含所有字段值的字符串")
       void shouldReturnStringContainingAllFieldValues() {
         // Given
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(
                 123L,
                 456L,
                 ProvenanceCode.PUBMED,
@@ -188,7 +188,7 @@ class LiteratureReadyMessageTest {
             .contains("runId=456")
             .contains("provenanceCode=PUBMED")
             .contains("storageKeys=[key1, key2]")
-            .contains("totalLiteratureCount=100")
+            .contains("totalPublicationCount=100")
             .contains("successBatchCount=8")
             .contains("failedBatchCount=2")
             .contains("timestamp=1699999999999");
@@ -198,8 +198,8 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该处理 null 字段的 toString")
       void shouldHandleNullFieldsInToString() {
         // Given
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(null, null, null, null, null, null, null, null);
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(null, null, null, null, null, null, null, null);
 
         // When
         String result = payload.toString();
@@ -210,7 +210,7 @@ class LiteratureReadyMessageTest {
             .contains("runId=null")
             .contains("provenanceCode=null")
             .contains("storageKeys=null")
-            .contains("totalLiteratureCount=null")
+            .contains("totalPublicationCount=null")
             .contains("successBatchCount=null")
             .contains("failedBatchCount=null")
             .contains("timestamp=null");
@@ -225,8 +225,8 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该表示成功采集场景（无失败批次）")
       void shouldRepresentSuccessfulHarvestScenario() {
         // Given & When
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(
                 1L,
                 10L,
                 ProvenanceCode.PUBMED,
@@ -246,8 +246,8 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该表示部分失败场景（有失败批次）")
       void shouldRepresentPartialFailureScenario() {
         // Given & When
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(
                 1L, 10L, ProvenanceCode.EPMC, List.of("s3://key1"), 100, 8, 2, 1699999999999L);
 
         // Then
@@ -260,8 +260,8 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该表示完全失败场景（无成功批次）")
       void shouldRepresentCompleteFailureScenario() {
         // Given & When
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(
                 1L, 10L, ProvenanceCode.BIORXIV, List.of(), 0, 0, 10, 1699999999999L);
 
         // Then
@@ -291,8 +291,8 @@ class LiteratureReadyMessageTest {
         Long occurredAt = 1699999999999L;
 
         // When
-        LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header(
+        PublicationReadyMessage.Header header =
+            new PublicationReadyMessage.Header(
                 provenanceCode, taskId, runId, storageKeyCount, occurredAt);
 
         // Then
@@ -307,8 +307,8 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该支持 null 值字段")
       void shouldSupportNullFields() {
         // Given & When
-        LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header(null, null, null, null, null);
+        PublicationReadyMessage.Header header =
+            new PublicationReadyMessage.Header(null, null, null, null, null);
 
         // Then
         assertThat(header.provenanceCode()).isNull();
@@ -322,8 +322,8 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该支持零值的 storageKeyCount")
       void shouldSupportZeroStorageKeyCount() {
         // Given & When
-        LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 1L, 2L, 0, 1699999999999L);
+        PublicationReadyMessage.Header header =
+            new PublicationReadyMessage.Header(ProvenanceCode.PUBMED, 1L, 2L, 0, 1699999999999L);
 
         // Then
         assertThat(header.storageKeyCount()).isZero();
@@ -338,11 +338,11 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该认为相同值的两个 Header 实例相等")
       void shouldConsiderTwoHeadersWithSameValuesEqual() {
         // Given
-        LiteratureReadyMessage.Header header1 =
-            new LiteratureReadyMessage.Header(
+        PublicationReadyMessage.Header header1 =
+            new PublicationReadyMessage.Header(
                 ProvenanceCode.PUBMED, 123L, 456L, 10, 1699999999999L);
-        LiteratureReadyMessage.Header header2 =
-            new LiteratureReadyMessage.Header(
+        PublicationReadyMessage.Header header2 =
+            new PublicationReadyMessage.Header(
                 ProvenanceCode.PUBMED, 123L, 456L, 10, 1699999999999L);
 
         // When & Then
@@ -354,11 +354,11 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该认为不同值的两个 Header 实例不相等")
       void shouldConsiderTwoHeadersWithDifferentValuesNotEqual() {
         // Given
-        LiteratureReadyMessage.Header header1 =
-            new LiteratureReadyMessage.Header(
+        PublicationReadyMessage.Header header1 =
+            new PublicationReadyMessage.Header(
                 ProvenanceCode.PUBMED, 123L, 456L, 10, 1699999999999L);
-        LiteratureReadyMessage.Header header2 =
-            new LiteratureReadyMessage.Header(ProvenanceCode.EPMC, 123L, 456L, 10, 1699999999999L);
+        PublicationReadyMessage.Header header2 =
+            new PublicationReadyMessage.Header(ProvenanceCode.EPMC, 123L, 456L, 10, 1699999999999L);
 
         // When & Then
         assertThat(header1).isNotEqualTo(header2);
@@ -368,8 +368,8 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该认为 Header 与自身相等（自反性）")
       void shouldConsiderHeaderEqualToItself() {
         // Given
-        LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header(
+        PublicationReadyMessage.Header header =
+            new PublicationReadyMessage.Header(
                 ProvenanceCode.PUBMED, 123L, 456L, 10, 1699999999999L);
 
         // When & Then
@@ -380,8 +380,8 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该认为 Header 与 null 不相等")
       void shouldConsiderHeaderNotEqualToNull() {
         // Given
-        LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header(
+        PublicationReadyMessage.Header header =
+            new PublicationReadyMessage.Header(
                 ProvenanceCode.PUBMED, 123L, 456L, 10, 1699999999999L);
 
         // When & Then
@@ -392,10 +392,10 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该认为包含 null 字段的两个 Header 相等")
       void shouldConsiderTwoHeadersWithNullFieldsEqual() {
         // Given
-        LiteratureReadyMessage.Header header1 =
-            new LiteratureReadyMessage.Header(null, null, null, null, null);
-        LiteratureReadyMessage.Header header2 =
-            new LiteratureReadyMessage.Header(null, null, null, null, null);
+        PublicationReadyMessage.Header header1 =
+            new PublicationReadyMessage.Header(null, null, null, null, null);
+        PublicationReadyMessage.Header header2 =
+            new PublicationReadyMessage.Header(null, null, null, null, null);
 
         // When & Then
         assertThat(header1).isEqualTo(header2);
@@ -411,8 +411,8 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该返回包含所有字段值的字符串")
       void shouldReturnStringContainingAllFieldValues() {
         // Given
-        LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header(
+        PublicationReadyMessage.Header header =
+            new PublicationReadyMessage.Header(
                 ProvenanceCode.PUBMED, 123L, 456L, 10, 1699999999999L);
 
         // When
@@ -431,8 +431,8 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该处理 null 字段的 toString")
       void shouldHandleNullFieldsInToString() {
         // Given
-        LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header(null, null, null, null, null);
+        PublicationReadyMessage.Header header =
+            new PublicationReadyMessage.Header(null, null, null, null, null);
 
         // When
         String result = header.toString();
@@ -449,7 +449,7 @@ class LiteratureReadyMessageTest {
   }
 
   @Nested
-  @DisplayName("LiteratureReadyMessage 外层 Record 测试")
+  @DisplayName("PublicationReadyMessage 外层 Record 测试")
   class MessageTest {
 
     @Nested
@@ -457,17 +457,17 @@ class LiteratureReadyMessageTest {
     class ConstructorAndAccessorTest {
 
       @Test
-      @DisplayName("应该正确构造 LiteratureReadyMessage 并访问 payload 和 header")
+      @DisplayName("应该正确构造 PublicationReadyMessage 并访问 payload 和 header")
       void shouldConstructMessageAndAccessPayloadAndHeader() {
         // Given
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
-        LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
+        PublicationReadyMessage.Header header =
+            new PublicationReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
 
         // When
-        LiteratureReadyMessage message = new LiteratureReadyMessage(payload, header);
+        PublicationReadyMessage message = new PublicationReadyMessage(payload, header);
 
         // Then
         assertThat(message.payload()).isEqualTo(payload);
@@ -478,7 +478,7 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该支持 null 的 payload 和 header")
       void shouldSupportNullPayloadAndHeader() {
         // Given & When
-        LiteratureReadyMessage message = new LiteratureReadyMessage(null, null);
+        PublicationReadyMessage message = new PublicationReadyMessage(null, null);
 
         // Then
         assertThat(message.payload()).isNull();
@@ -494,14 +494,14 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该认为相同值的两个 Message 实例相等")
       void shouldConsiderTwoMessagesWithSameValuesEqual() {
         // Given
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
-        LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
+        PublicationReadyMessage.Header header =
+            new PublicationReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
 
-        LiteratureReadyMessage message1 = new LiteratureReadyMessage(payload, header);
-        LiteratureReadyMessage message2 = new LiteratureReadyMessage(payload, header);
+        PublicationReadyMessage message1 = new PublicationReadyMessage(payload, header);
+        PublicationReadyMessage message2 = new PublicationReadyMessage(payload, header);
 
         // When & Then
         assertThat(message1).isEqualTo(message2);
@@ -512,17 +512,17 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该认为不同 payload 的两个 Message 实例不相等")
       void shouldConsiderTwoMessagesWithDifferentPayloadsNotEqual() {
         // Given
-        LiteratureReadyMessage.Payload payload1 =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload1 =
+            new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
-        LiteratureReadyMessage.Payload payload2 =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload2 =
+            new PublicationReadyMessage.Payload(
                 999L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
-        LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
+        PublicationReadyMessage.Header header =
+            new PublicationReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
 
-        LiteratureReadyMessage message1 = new LiteratureReadyMessage(payload1, header);
-        LiteratureReadyMessage message2 = new LiteratureReadyMessage(payload2, header);
+        PublicationReadyMessage message1 = new PublicationReadyMessage(payload1, header);
+        PublicationReadyMessage message2 = new PublicationReadyMessage(payload2, header);
 
         // When & Then
         assertThat(message1).isNotEqualTo(message2);
@@ -532,16 +532,16 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该认为不同 header 的两个 Message 实例不相等")
       void shouldConsiderTwoMessagesWithDifferentHeadersNotEqual() {
         // Given
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
-        LiteratureReadyMessage.Header header1 =
-            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
-        LiteratureReadyMessage.Header header2 =
-            new LiteratureReadyMessage.Header(ProvenanceCode.EPMC, 123L, 456L, 1, 1699999999999L);
+        PublicationReadyMessage.Header header1 =
+            new PublicationReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
+        PublicationReadyMessage.Header header2 =
+            new PublicationReadyMessage.Header(ProvenanceCode.EPMC, 123L, 456L, 1, 1699999999999L);
 
-        LiteratureReadyMessage message1 = new LiteratureReadyMessage(payload, header1);
-        LiteratureReadyMessage message2 = new LiteratureReadyMessage(payload, header2);
+        PublicationReadyMessage message1 = new PublicationReadyMessage(payload, header1);
+        PublicationReadyMessage message2 = new PublicationReadyMessage(payload, header2);
 
         // When & Then
         assertThat(message1).isNotEqualTo(message2);
@@ -551,12 +551,12 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该认为 Message 与自身相等（自反性）")
       void shouldConsiderMessageEqualToItself() {
         // Given
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
-        LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
-        LiteratureReadyMessage message = new LiteratureReadyMessage(payload, header);
+        PublicationReadyMessage.Header header =
+            new PublicationReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
+        PublicationReadyMessage message = new PublicationReadyMessage(payload, header);
 
         // When & Then
         assertThat(message).isEqualTo(message);
@@ -566,12 +566,12 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该认为 Message 与 null 不相等")
       void shouldConsiderMessageNotEqualToNull() {
         // Given
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
-        LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
-        LiteratureReadyMessage message = new LiteratureReadyMessage(payload, header);
+        PublicationReadyMessage.Header header =
+            new PublicationReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
+        PublicationReadyMessage message = new PublicationReadyMessage(payload, header);
 
         // When & Then
         assertThat(message).isNotEqualTo(null);
@@ -586,12 +586,12 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该返回包含 payload 和 header 的字符串")
       void shouldReturnStringContainingPayloadAndHeader() {
         // Given
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
-        LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
-        LiteratureReadyMessage message = new LiteratureReadyMessage(payload, header);
+        PublicationReadyMessage.Header header =
+            new PublicationReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
+        PublicationReadyMessage message = new PublicationReadyMessage(payload, header);
 
         // When
         String result = message.toString();
@@ -604,7 +604,7 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该处理 null payload 和 header 的 toString")
       void shouldHandleNullPayloadAndHeaderInToString() {
         // Given
-        LiteratureReadyMessage message = new LiteratureReadyMessage(null, null);
+        PublicationReadyMessage message = new PublicationReadyMessage(null, null);
 
         // When
         String result = message.toString();
@@ -624,14 +624,14 @@ class LiteratureReadyMessageTest {
         // Given
         List<String> storageKeys =
             List.of("s3://bucket/run-123/batch-1.json", "s3://bucket/run-123/batch-2.json");
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(
                 100L, 123L, ProvenanceCode.PUBMED, storageKeys, 200, 10, 0, 1699999999999L);
-        LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header(ProvenanceCode.PUBMED, 100L, 123L, 2, 1699999999999L);
+        PublicationReadyMessage.Header header =
+            new PublicationReadyMessage.Header(ProvenanceCode.PUBMED, 100L, 123L, 2, 1699999999999L);
 
         // When
-        LiteratureReadyMessage message = new LiteratureReadyMessage(payload, header);
+        PublicationReadyMessage message = new PublicationReadyMessage(payload, header);
 
         // Then
         assertThat(message.payload().provenanceCode()).isEqualTo(message.header().provenanceCode());
@@ -647,14 +647,14 @@ class LiteratureReadyMessageTest {
       void shouldRepresentPartialFailureMessageScenario() {
         // Given
         List<String> storageKeys = List.of("s3://bucket/run-456/batch-1.json");
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(
                 200L, 456L, ProvenanceCode.EPMC, storageKeys, 150, 8, 2, 1699999999999L);
-        LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header(ProvenanceCode.EPMC, 200L, 456L, 1, 1699999999999L);
+        PublicationReadyMessage.Header header =
+            new PublicationReadyMessage.Header(ProvenanceCode.EPMC, 200L, 456L, 1, 1699999999999L);
 
         // When
-        LiteratureReadyMessage message = new LiteratureReadyMessage(payload, header);
+        PublicationReadyMessage message = new PublicationReadyMessage(payload, header);
 
         // Then
         assertThat(message.payload().failedBatchCount()).isPositive();
@@ -666,15 +666,15 @@ class LiteratureReadyMessageTest {
       @DisplayName("应该表示完全失败消息场景（无存储键）")
       void shouldRepresentCompleteFailureMessageScenario() {
         // Given
-        LiteratureReadyMessage.Payload payload =
-            new LiteratureReadyMessage.Payload(
+        PublicationReadyMessage.Payload payload =
+            new PublicationReadyMessage.Payload(
                 300L, 789L, ProvenanceCode.BIORXIV, List.of(), 0, 0, 10, 1699999999999L);
-        LiteratureReadyMessage.Header header =
-            new LiteratureReadyMessage.Header(
+        PublicationReadyMessage.Header header =
+            new PublicationReadyMessage.Header(
                 ProvenanceCode.BIORXIV, 300L, 789L, 0, 1699999999999L);
 
         // When
-        LiteratureReadyMessage message = new LiteratureReadyMessage(payload, header);
+        PublicationReadyMessage message = new PublicationReadyMessage(payload, header);
 
         // Then
         assertThat(message.payload().successBatchCount()).isZero();

@@ -8,7 +8,7 @@ import com.patra.starter.provenance.epmc.model.response.SearchResponse;
 /**
  * Europe PMC (EPMC) 客户端接口
  *
- * <p>提供调用 Europe PMC API 的方法,用于欧洲生命科学文献检索。
+ * <p>提供调用 Europe PMC API 的方法,用于欧洲生命科学出版物检索。
  *
  * <p><b>主要功能:</b>
  *

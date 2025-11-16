@@ -38,16 +38,16 @@
  *
  * <pre>{@code
  * // 创建存储键
- * StorageKey key = new StorageKey("literature-files", "2024/01/article.pdf");
+ * StorageKey key = new StorageKey("publication-files", "2024/01/article.pdf");
  *
  * // 获取完整键(用于数据库唯一约束)
- * String fullKey = key.fullKey();  // "literature-files/2024/01/article.pdf"
+ * String fullKey = key.fullKey();  // "publication-files/2024/01/article.pdf"
  *
  * // 匹配检查
- * boolean matches = key.matches("literature-files", "2024/01/article.pdf");  // true
+ * boolean matches = key.matches("publication-files", "2024/01/article.pdf");  // true
  *
  * // 值对象相等性
- * StorageKey key2 = new StorageKey("literature-files", "2024/01/article.pdf");
+ * StorageKey key2 = new StorageKey("publication-files", "2024/01/article.pdf");
  * assert key.equals(key2);  // true,基于属性值相等
  * }</pre>
  *
@@ -84,7 +84,7 @@
  * // 创建业务上下文
  * BusinessContext context = new BusinessContext(
  *     "patra-ingest",                          // serviceName
- *     "literature_batch",                      // businessType
+ *     "publication_batch",                      // businessType
  *     "batch-2024-01-15-001",                  // businessId
  *     Map.of(                                  // correlationData
  *         "sourceId", "pubmed",
@@ -94,7 +94,7 @@
  *
  * // 获取上下文信息
  * String service = context.serviceName();       // "patra-ingest"
- * String type = context.businessType();         // "literature_batch"
+ * String type = context.businessType();         // "publication_batch"
  * String id = context.businessId();             // "batch-2024-01-15-001"
  * Map<String, Object> data = context.correlationData();  // 防御性拷贝,不可变
  * }</pre>

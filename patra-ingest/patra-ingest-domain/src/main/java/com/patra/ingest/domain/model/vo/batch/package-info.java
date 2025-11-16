@@ -108,7 +108,7 @@
  *     .params(pubmedParams)  // 使用映射后的参数
  *     .build();
  *
- * DataFetchResult<Literature> result = provider.fetchData(request, typeRef);
+ * DataFetchResult<Publication> result = provider.fetchData(request, typeRef);
  * }</pre>
  *
  * <h2>设计原则</h2>

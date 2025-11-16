@@ -69,11 +69,11 @@
  *
  * <pre>{@code
  * // 1. 定义领域异常
- * public class LiteratureNotFoundException extends DomainException
+ * public class PublicationNotFoundException extends DomainException
  *     implements HasErrorTraits {
  *
- *     public LiteratureNotFoundException(String literatureId) {
- *         super("文献不存在: " + literatureId);
+ *     public PublicationNotFoundException(String publicationId) {
+ *         super("出版物不存在: " + publicationId);
  *     }
  *
  *     @Override
@@ -99,8 +99,8 @@
  * // 3. 适配器层映射为 HTTP 响应
  * @RestControllerAdvice
  * public class GlobalExceptionHandler {
- *     @ExceptionHandler(LiteratureNotFoundException.class)
- *     public ProblemDetail handleNotFound(LiteratureNotFoundException ex) {
+ *     @ExceptionHandler(PublicationNotFoundException.class)
+ *     public ProblemDetail handleNotFound(PublicationNotFoundException ex) {
  *         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
  *             HttpStatus.NOT_FOUND,
  *             ex.getMessage()
@@ -116,7 +116,7 @@
  * <pre>
  * RuntimeException
  *   ├── DomainException (领域层异常基类)
- *   │     ├── LiteratureNotFoundException
+ *   │     ├── PublicationNotFoundException
  *   │     ├── RegistryException
  *   │     └── ... (各服务的领域异常)
  *   │

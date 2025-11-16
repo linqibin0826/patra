@@ -9,7 +9,7 @@
  *   <li><b>Channel</b>：使用 {@link
  *       com.patra.ingest.domain.messaging.IngestPublishingChannels}（粗粒度资源级别）
  *   <li><b>OpType</b>：使用 {@link com.patra.ingest.app.outbox.operations} 包下的枚举（如
- *       TaskOperations、LiteratureOperations）
+ *       TaskOperations、PublicationOperations）
  * </ul>
  *
  * <h2>职责</h2>

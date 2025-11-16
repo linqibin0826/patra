@@ -305,7 +305,7 @@ public class HarvestOrchestrator {
 
     // 事务 2: 保存结果
     @Transactional
-    public void saveLiterature(SearchResult results) {
+    public void savePublication(SearchResult results) {
         literatureStoragePort.save(results);
     }
 }
@@ -649,8 +649,8 @@ GET /api/v1/provenances/UNKNOWN
 @Transactional
 public void processHarvest(HarvestCommand command) {
     BatchPlan plan = createPlan(command);
-    List<Literature> results = fetchFromApi(command);  // 慢!
-    saveLiterature(results);
+    List<Publication> results = fetchFromApi(command);  // 慢!
+    savePublication(results);
 }
 
 // ✅ 正确: 拆分短事务
@@ -659,12 +659,12 @@ public BatchPlan createPlan(CreatePlanCommand command) {
     return planRepository.save(assemblePlan(command));
 }
 
-public List<Literature> fetchFromApi(HarvestCommand command) {
+public List<Publication> fetchFromApi(HarvestCommand command) {
     return apiClient.search(command.query());  // 无事务
 }
 
 @Transactional
-public void saveLiterature(List<Literature> results) {
+public void savePublication(List<Publication> results) {
     literatureRepository.saveAll(results);
 }
 ```

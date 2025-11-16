@@ -18,7 +18,7 @@ import com.patra.ingest.domain.model.vo.plan.WindowSpec;
  * @param scheduleInstanceId 调度实例标识符(来自 TaskAggregate)
  * @param provenanceCode 来源代码
  * @param operationCode 操作代码
- * @param dataType 数据类型(LITERATURE, JOURNAL, DRUG等)
+ * @param dataType 数据类型(PUBLICATION, JOURNAL, DRUG等)
  * @param configSnapshot 配置快照
  * @param exprHash 表达式哈希
  * @param compiledQuery 已编译的查询

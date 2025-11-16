@@ -13,10 +13,10 @@ import java.util.Objects;
  *
  * <p><b>标准对象键模式</b>: {@code {service}/{business-type}/{yyyy}/{MM}/{dd}/{business-id}.{extension}}
  *
- * <p><b>示例</b>: {@code ingest/literature-batch/2025/10/26/pubmed-123-batch-001.json}
+ * <p><b>示例</b>: {@code ingest/publication-batch/2025/10/26/pubmed-123-batch-001.json}
  *
- * @param serviceName 微服务名称(短格式,例如 "ingest"、"storage"、"literature")
- * @param businessType 业务类别,使用 kebab-case(例如 "literature-batch"、"metadata-snapshot")
+ * @param serviceName 微服务名称(短格式,例如 "ingest"、"storage"、"publication")
+ * @param businessType 业务类别,使用 kebab-case(例如 "publication-batch"、"metadata-snapshot")
  * @param businessId 此特定业务实体的唯一标识符(例如 "pubmed-123-batch-001")
  * @param partitionDate 用于时间分区的日期(yyyy/MM/dd 结构)
  * @param extension 不带前导点的文件扩展名(例如 "json"、"json.gz"、"xml")

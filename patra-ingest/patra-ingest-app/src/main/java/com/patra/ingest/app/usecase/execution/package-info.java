@@ -9,7 +9,7 @@
  *   <li>准备执行上下文（编译表达式、获取租约、启动心跳）
  *   <li>批次构建和执行（根据数据源策略分批处理）
  *   <li>游标推进（记录采集进度）
- *   <li>文献发布（将采集结果发布到下游）
+ *   <li>出版物发布（将采集结果发布到下游）
  *   <li>任务完成（更新状态、释放租约、发布完成事件）
  * </ul>
  *
@@ -25,7 +25,7 @@
  *   <li>{@link com.patra.ingest.app.usecase.execution.lease} - 租约管理
  *   <li>{@link com.patra.ingest.app.usecase.execution.cursor} - 游标推进
  *   <li>{@link com.patra.ingest.app.usecase.execution.coordination} - 批次协调器
- *   <li>{@link com.patra.ingest.app.usecase.execution.publisher} - 文献发布器
+ *   <li>{@link com.patra.ingest.app.usecase.execution.publisher} - 出版物发布器
  *   <li>{@link com.patra.ingest.app.usecase.execution.idempotency} - 幂等性检查
  *   <li>{@link com.patra.ingest.app.usecase.execution.command} - 输入命令
  *   <li>{@link com.patra.ingest.app.usecase.execution.converter} - 数据转换器
@@ -45,7 +45,7 @@
  *   ├─ 批次构建（BatchPlanner：根据数据源策略分批）
  *   ├─ 批次执行（GenericBatchExecutor：调用 Provider API）
  *   ├─ 游标推进（CursorAdvancer：记录进度）
- *   └─ 文献发布（LiteraturePublisherOrchestrator：发布到 Outbox）
+ *   └─ 出版物发布（PublicationPublisherOrchestrator：发布到 Outbox）
  *
  * Phase 3: 完成阶段（CompleteTaskExecutionUseCase）
  *   ├─ 更新任务状态（SUCCEEDED/FAILED）

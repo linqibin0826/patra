@@ -42,8 +42,8 @@ patra-common-storage/
 封装对象键生成所需的所有参数,确保参数验证和不可变性。
 
 **核心字段**:
-- `serviceName`: 微服务名称(短形式,如 "ingest"、"storage"、"literature")
-- `businessType`: 业务类型(kebab-case,如 "literature-batch"、"metadata-snapshot")
+- `serviceName`: 微服务名称(短形式,如 "ingest"、"storage"、"publication")
+- `businessType`: 业务类型(kebab-case,如 "publication-batch"、"metadata-snapshot")
 - `businessId`: 唯一业务标识符(如 "pubmed-123-batch-001")
 - `partitionDate`: 分区日期(用于时间分区 yyyy/MM/dd)
 - `extension`: 文件扩展名(不含前导点,如 "json"、"json.gz"、"xml")
@@ -54,7 +54,7 @@ patra-common-storage/
 // 简单构造
 ObjectKeyContext context = ObjectKeyContext.of(
     "ingest",
-    "literature-batch",
+    "publication-batch",
     "pubmed-123-batch-001",
     LocalDate.now(),
     "json"
@@ -62,7 +62,7 @@ ObjectKeyContext context = ObjectKeyContext.of(
 
 // Builder 模式(复杂场景)
 ObjectKeyContext context = ObjectKeyContext.builder()
-    .serviceName("literature")
+    .serviceName("publication")
     .businessType("index-snapshot")
     .businessId("snapshot-20251103-001")
     .partitionDate(LocalDate.of(2025, 11, 3))
@@ -106,14 +106,14 @@ public interface ObjectKeyGenerator {
 
 **示例输出**:
 ```
-ingest/literature-batch/2025/11/03/pubmed-123-batch-001.json
+ingest/publication-batch/2025/11/03/pubmed-123-batch-001.json
 storage/metadata-snapshot/2025/11/02/snapshot-20251102-001.json.gz
-literature/index/2025/11/03/index-pmid-12345.xml
+publication/index/2025/11/03/index-pmid-12345.xml
 ```
 
 **规范化规则**:
 - **服务名**: 转小写(`Ingest` → `ingest`)
-- **业务类型**: 转小写并将下划线替换为连字符(`literature_batch` → `literature-batch`)
+- **业务类型**: 转小写并将下划线替换为连字符(`publication_batch` → `publication-batch`)
 - **扩展名**: 移除前导点(`.json` → `json`)
 - **日期分区**: 三级层次结构(`2025/11/03`)
 
@@ -122,10 +122,10 @@ literature/index/2025/11/03/index-pmid-12345.xml
 **使用示例**:
 ```java
 ObjectKeyContext context = ObjectKeyContext.of(
-    "ingest", "literature-batch", "pubmed-123", LocalDate.now(), "json"
+    "ingest", "publication-batch", "pubmed-123", LocalDate.now(), "json"
 );
 String key = DatePartitionedKeyGenerator.INSTANCE.generate(context);
-// 结果: ingest/literature-batch/2025/11/03/pubmed-123.json
+// 结果: ingest/publication-batch/2025/11/03/pubmed-123.json
 ```
 
 ---
@@ -141,9 +141,9 @@ String key = DatePartitionedKeyGenerator.INSTANCE.generate(context);
 
 ```java
 String key = ObjectKeyTemplate.generateDailyKey(
-    "ingest", "literature-batch", "pubmed-123-batch-001", "json"
+    "ingest", "publication-batch", "pubmed-123-batch-001", "json"
 );
-// 结果: ingest/literature-batch/2025/11/03/pubmed-123-batch-001.json
+// 结果: ingest/publication-batch/2025/11/03/pubmed-123-batch-001.json
 ```
 
 #### generateDailyKey(service, businessType, businessId, partitionDate, extension)
@@ -152,12 +152,12 @@ String key = ObjectKeyTemplate.generateDailyKey(
 ```java
 String key = ObjectKeyTemplate.generateDailyKey(
     "ingest",
-    "literature-batch",
+    "publication-batch",
     "pubmed-456-batch-002",
     LocalDate.of(2025, 10, 20),
     "json.gz"
 );
-// 结果: ingest/literature-batch/2025/10/20/pubmed-456-batch-002.json.gz
+// 结果: ingest/publication-batch/2025/10/20/pubmed-456-batch-002.json.gz
 ```
 
 #### builder()
@@ -165,7 +165,7 @@ String key = ObjectKeyTemplate.generateDailyKey(
 
 ```java
 String key = ObjectKeyTemplate.builder()
-    .serviceName("literature")
+    .serviceName("publication")
     .businessType("index_snapshot")
     .businessId("snapshot-20251103-001")
     .partitionDate(LocalDate.now())
@@ -211,17 +211,17 @@ String key = ObjectKeyTemplate.builder()
 ```java
 import com.patra.common.storage.ObjectKeyTemplate;
 
-public class LiteratureBatchRepository {
+public class PublicationBatchRepository {
     public String generateBatchKey(String batchId) {
         return ObjectKeyTemplate.generateDailyKey(
             "ingest",
-            "literature-batch",
+            "publication-batch",
             batchId,
             "json"
         );
     }
 }
-// 输出: ingest/literature-batch/2025/11/03/batch-001.json
+// 输出: ingest/publication-batch/2025/11/03/batch-001.json
 ```
 
 #### 场景 2: 历史数据回填(指定日期)
@@ -252,14 +252,14 @@ package com.patra.ingest.domain.batch;
 import com.patra.common.storage.ObjectKeyTemplate;
 import java.time.LocalDate;
 
-public class LiteratureBatch {
+public class PublicationBatch {
     private final String batchId;
     private final LocalDate creationDate;
 
     public String generateStorageKey() {
         return ObjectKeyTemplate.generateDailyKey(
             "ingest",
-            "literature-batch",
+            "publication-batch",
             batchId,
             creationDate,
             "json"

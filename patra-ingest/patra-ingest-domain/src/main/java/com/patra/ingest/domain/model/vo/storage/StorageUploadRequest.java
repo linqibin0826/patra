@@ -14,7 +14,7 @@ package com.patra.ingest.domain.model.vo.storage;
  *   <li>contentType - MIME 类型(如 {@code application/gzip})
  * </ul>
  *
- * <p><b>常见用途:</b> 上传采集的文献数据到对象存储,通常使用 gzip 压缩。
+ * <p><b>常见用途:</b> 上传采集的出版物数据到对象存储,通常使用 gzip 压缩。
  *
  * @param bucket 存储桶名称
  * @param objectPath 对象键(不含桶名)

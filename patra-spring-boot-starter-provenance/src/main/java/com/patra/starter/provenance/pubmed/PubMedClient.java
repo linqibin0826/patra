@@ -51,7 +51,7 @@ public interface PubMedClient {
   /**
    * 调用 PubMed EFetch API 根据标识符检索文献详情
    *
-   * <p>默认使用 XML 格式以获取详细的文献数据。
+   * <p>默认使用 XML 格式以获取详细的出版物数据。
    *
    * @param request efetch 请求参数
    * @return efetch 响应

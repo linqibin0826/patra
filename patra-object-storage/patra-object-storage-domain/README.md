@@ -75,7 +75,7 @@ FileMetadata metadata = FileMetadata.create(
     new StorageKey("bucket", "key"),
     new FileSize(1024000),
     new FileChecksum("md5hash", "sha256hash"),
-    new BusinessContext("patra-ingest", "literature_batch", "batch-001", Map.of()),
+    new BusinessContext("patra-ingest", "publication_batch", "batch-001", Map.of()),
     StorageProvider.MINIO
 );
 ```
@@ -208,7 +208,7 @@ public record BusinessContext(
 
 **字段说明**:
 - `serviceName`: 调用服务名称(如 "patra-ingest")
-- `businessType`: 业务分类(如 "literature_batch")
+- `businessType`: 业务分类(如 "publication_batch")
 - `businessId`: 业务唯一标识(如 "batch-2024-01-15-001")
 - `correlationData`: 关联元数据 JSON(如 `{"sourceId": "pubmed", "pmcId": "PMC12345678"}`)
 
@@ -336,12 +336,12 @@ public interface FileMetadataRepository {
 ```java
 // 创建新的文件元数据
 FileMetadata metadata = FileMetadata.create(
-    new StorageKey("literature-files", "2024/01/pubmed/PMC12345678.pdf"),
+    new StorageKey("publication-files", "2024/01/pubmed/PMC12345678.pdf"),
     new FileSize(1024000),
     new FileChecksum("5d41402abc4b2a76b9719d911017c592", null),
     new BusinessContext(
         "patra-ingest",
-        "literature_batch",
+        "publication_batch",
         "batch-2024-01-15-001",
         Map.of("sourceId", "pubmed", "pmcId", "PMC12345678")
     ),
@@ -349,7 +349,7 @@ FileMetadata metadata = FileMetadata.create(
 )
 .withContentType("application/pdf")
 .withExpiresAt(Instant.parse("2025-12-31T23:59:59Z"))
-.withRecordRemarks("Initial literature batch upload");
+.withRecordRemarks("Initial publication batch upload");
 
 // 保存到仓储(由基础设施层实现)
 FileMetadata saved = repository.save(metadata);
@@ -359,7 +359,7 @@ FileMetadata saved = repository.save(metadata);
 
 ```java
 // 通过存储键查询
-StorageKey key = new StorageKey("literature-files", "2024/01/pubmed/PMC12345678.pdf");
+StorageKey key = new StorageKey("publication-files", "2024/01/pubmed/PMC12345678.pdf");
 Optional<FileMetadata> existing = repository.findByStorageKey(key);
 
 // 软删除

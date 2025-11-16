@@ -15,8 +15,8 @@ package com.patra.ingest.infra.integration.provenance;
  * <p><strong>示例</strong>：
  *
  * <pre>{@code
- * // 错误用法：DataType.JOURNAL 期望 Journal，但传入 CanonicalLiterature
- * TypeReference<CanonicalLiterature> ref = new TypeReference<>() {};
+ * // 错误用法：DataType.JOURNAL 期望 Journal，但传入 CanonicalPublication
+ * TypeReference<CanonicalPublication> ref = new TypeReference<>() {};
  * adapter.fetchData(context, DataType.JOURNAL, ref, batch);
  * // 抛出 TypeMismatchException
  * }</pre>

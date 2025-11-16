@@ -1,5 +1,5 @@
 /**
- * Patra 平台共享数据模型包（医学文献领域）。
+ * Patra 平台共享数据模型包（医学出版物领域）。
  *
  * <p>提供跨服务共享的标准化数据结构，采用 DDD 的 <b>Shared Kernel</b> 模式，
  * 定义服务间的契约，确保数据交换的一致性和兼容性。
@@ -8,7 +8,7 @@
  *
  * <ul>
  *   <li><b>Shared Kernel</b> - 多个限界上下文共享的核心领域模型
- *   <li><b>医学文献专用</b> - 基于 PubMed/MEDLINE 标准设计
+ *   <li><b>医学出版物专用</b> - 基于 PubMed/MEDLINE 标准设计
  *   <li><b>框架无关</b> - 仅依赖 Jackson，保持可移植性
  *   <li><b>不可变模型</b> - 使用 {@code @Value} 和 {@code @Builder} 确保不可变性
  * </ul>
@@ -16,15 +16,15 @@
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link com.patra.common.model.CanonicalLiterature} - 规范化医学文献模型（主模型）
- *   <li>{@link com.patra.common.model.CanonicalLiterature.MeshHeading} - MeSH 主题标引（医学索引核心）
- *   <li>{@link com.patra.common.model.CanonicalLiterature.SupplMeshName} - 补充 MeSH 概念
- *   <li>{@link com.patra.common.model.CanonicalLiterature.Investigator} - 研究者信息（临床试验）
- *   <li>{@link com.patra.common.model.CanonicalLiterature.Reference} - 参考文献
- *   <li>{@link com.patra.common.model.CanonicalLiterature.Author} - 作者信息
- *   <li>{@link com.patra.common.model.CanonicalLiterature.Journal} - 期刊信息
- *   <li>{@link com.patra.common.model.CanonicalLiterature.Abstract} - 摘要（支持结构化）
- *   <li>{@link com.patra.common.model.CanonicalLiterature.Pagination} - 页码信息（结构化）
+ *   <li>{@link com.patra.common.model.CanonicalPublication} - 规范化医学出版物模型（主模型）
+ *   <li>{@link com.patra.common.model.CanonicalPublication.MeshHeading} - MeSH 主题标引（医学索引核心）
+ *   <li>{@link com.patra.common.model.CanonicalPublication.SupplMeshName} - 补充 MeSH 概念
+ *   <li>{@link com.patra.common.model.CanonicalPublication.Investigator} - 研究者信息（临床试验）
+ *   <li>{@link com.patra.common.model.CanonicalPublication.Reference} - 参考文献
+ *   <li>{@link com.patra.common.model.CanonicalPublication.Author} - 作者信息
+ *   <li>{@link com.patra.common.model.CanonicalPublication.Journal} - 期刊信息
+ *   <li>{@link com.patra.common.model.CanonicalPublication.Abstract} - 摘要（支持结构化）
+ *   <li>{@link com.patra.common.model.CanonicalPublication.Pagination} - 页码信息（结构化）
  * </ul>
  *
  * <h2>医学领域特性</h2>
@@ -41,7 +41,7 @@
  * <h2>国际标准对齐</h2>
  *
  * <ul>
- *   <li><b>PubMed/MEDLINE</b> - 医学文献元数据标准（主要数据源）
+ *   <li><b>PubMed/MEDLINE</b> - 医学出版物元数据标准（主要数据源）
  *   <li><b>MeSH</b> - 美国国家医学图书馆医学主题词表
  *   <li><b>Dublin Core</b> - 核心元数据标准（title, creator, identifier 等）
  *   <li><b>Schema.org</b> - ScholarlyArticle 规范（author, abstract, keywords 等）
@@ -69,8 +69,8 @@
  * <h2>使用示例</h2>
  *
  * <pre>{@code
- * // 示例 1: 创建规范化医学文献
- * CanonicalLiterature literature = CanonicalLiterature.builder()
+ * // 示例 1: 创建规范化医学出版物
+ * CanonicalPublication publication = CanonicalPublication.builder()
  *     .title("Deep Learning in Medical Image Analysis")
  *     .abstractContent(Abstract.builder()
  *         .text("This study presents...")
@@ -159,7 +159,7 @@
  *
  * <ul>
  *   <li><b>解耦服务间依赖</b> - 服务不直接依赖彼此的内部模型
- *   <li><b>统一数据理解</b> - 所有服务对"医学文献"概念有一致理解
+ *   <li><b>统一数据理解</b> - 所有服务对"医学出版物"概念有一致理解
  *   <li><b>医学语义清晰</b> - 使用医学标准术语，避免歧义
  *   <li><b>易于扩展</b> - 新增服务可直接使用现有模型
  *   <li><b>测试友好</b> - 不可变对象易于断言和构造测试数据
@@ -167,7 +167,7 @@
  *
  * @since 0.1.0
  * @author linqibin
- * @see com.patra.common.model.CanonicalLiterature
+ * @see com.patra.common.model.CanonicalPublication
  * @see <a href="https://www.nlm.nih.gov/mesh/">MeSH - Medical Subject Headings</a>
  * @see <a href="https://www.nlm.nih.gov/bsd/mms/medlineelements.html">MEDLINE Data Elements</a>
  */

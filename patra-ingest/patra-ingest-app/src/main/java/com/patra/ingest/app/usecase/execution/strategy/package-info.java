@@ -9,7 +9,7 @@
  *   <li>根据数据源构建批次（如 PubMed 每批 10000 条）
  *   <li>循环执行批次（调用 Provider API）
  *   <li>推进游标（记录采集进度）
- *   <li>发布文献数据到下游
+ *   <li>发布出版物数据到下游
  * </ul>
  *
  * <h2>核心组件</h2>
@@ -45,7 +45,7 @@
  *    ├─ 解析响应数据
  *    ├─ 持久化批次结果（TaskRunBatchRepository）
  *    ├─ 更新心跳时间戳（TaskRunRepository）
- *    └─ 发布文献数据（LiteraturePublisherOrchestrator）
+ *    └─ 发布出版物数据（PublicationPublisherOrchestrator）
  *
  * 3. 检查是否有更多批次
  *    ├─ 如果有 → 继续执行

@@ -59,13 +59,13 @@ class RocketMqChannelMapperTest {
     }
 
     @Test
-    @DisplayName("LITERATURE_READY 应映射到 INGEST_LITERATURE")
+    @DisplayName("PUBLICATION_READY 应映射到 INGEST_PUBLICATION")
     void shouldMapLiteratureReadyChannelToTopic() {
       // When
-      String topic = channelMapper.toTopic("INGEST_LITERATURE");
+      String topic = channelMapper.toTopic("INGEST_PUBLICATION");
 
       // Then
-      assertThat(topic).isEqualTo("INGEST_LITERATURE");
+      assertThat(topic).isEqualTo("INGEST_PUBLICATION");
     }
 
     @Test
@@ -172,17 +172,17 @@ class RocketMqChannelMapperTest {
     @Test
     @DisplayName("自定义映射和默认映射应合并")
     void shouldMergeCustomAndDefaultMappings() {
-      // Given: 只覆盖 TASK_READY，保留 LITERATURE_READY 的默认映射
+      // Given: 只覆盖 TASK_READY，保留 PUBLICATION_READY 的默认映射
       when(properties.getChannelMapping()).thenReturn(Map.of("INGEST_TASK", "CUSTOM_TASK_TOPIC"));
       RocketMqChannelMapper customMapper = new RocketMqChannelMapper(properties);
 
       // When
       String customTopic = customMapper.toTopic("INGEST_TASK");
-      String defaultTopic = customMapper.toTopic("INGEST_LITERATURE");
+      String defaultTopic = customMapper.toTopic("INGEST_PUBLICATION");
 
       // Then
       assertThat(customTopic).isEqualTo("CUSTOM_TASK_TOPIC"); // 自定义映射
-      assertThat(defaultTopic).isEqualTo("INGEST_LITERATURE"); // 默认映射
+      assertThat(defaultTopic).isEqualTo("INGEST_PUBLICATION"); // 默认映射
     }
 
     @Test
@@ -216,13 +216,13 @@ class RocketMqChannelMapperTest {
     }
 
     @Test
-    @DisplayName("INGEST_LITERATURE 应反向映射到 LITERATURE_READY")
+    @DisplayName("INGEST_PUBLICATION 应反向映射到 PUBLICATION_READY")
     void shouldReverseMapLiteratureReadyTopicToChannel() {
       // When
-      String channel = channelMapper.toChannel("INGEST_LITERATURE");
+      String channel = channelMapper.toChannel("INGEST_PUBLICATION");
 
       // Then
-      assertThat(channel).isEqualTo("INGEST_LITERATURE");
+      assertThat(channel).isEqualTo("INGEST_PUBLICATION");
     }
 
     @Test
@@ -288,10 +288,10 @@ class RocketMqChannelMapperTest {
     }
 
     @Test
-    @DisplayName("LITERATURE_READY 应有映射")
+    @DisplayName("PUBLICATION_READY 应有映射")
     void shouldHaveMappingForLiteratureReady() {
       // When
-      boolean hasMapping = channelMapper.hasMapping("INGEST_LITERATURE");
+      boolean hasMapping = channelMapper.hasMapping("INGEST_PUBLICATION");
 
       // Then
       assertThat(hasMapping).isTrue();
@@ -350,10 +350,10 @@ class RocketMqChannelMapperTest {
     }
 
     @Test
-    @DisplayName("LITERATURE_READY 通道应与 Topic 双向映射一致")
+    @DisplayName("PUBLICATION_READY 通道应与 Topic 双向映射一致")
     void shouldHaveConsistentBidirectionalMappingForLiteratureReady() {
       // Given
-      String channel = "INGEST_LITERATURE";
+      String channel = "INGEST_PUBLICATION";
 
       // When: 通道 → Topic → 通道
       String topic = channelMapper.toTopic(channel);
@@ -384,7 +384,7 @@ class RocketMqChannelMapperTest {
     @DisplayName("所有已配置的通道应有双向映射")
     void shouldHaveBidirectionalMappingForAllConfiguredChannels() {
       // Given: 所有已知通道
-      String[] channels = {"INGEST_TASK", "INGEST_LITERATURE"};
+      String[] channels = {"INGEST_TASK", "INGEST_PUBLICATION"};
 
       // When & Then: 验证每个通道的双向映射
       for (String channel : channels) {
@@ -458,15 +458,15 @@ class RocketMqChannelMapperTest {
     @Test
     @DisplayName("跨服务通道应映射到 INGEST_{ENTITY}_READY 格式 Topic")
     void shouldMapCrossServiceChannelToUnderscoreSeparatedTopic() {
-      // Given: 跨服务通道 LITERATURE_READY
-      String crossServiceChannel = "INGEST_LITERATURE";
+      // Given: 跨服务通道 PUBLICATION_READY
+      String crossServiceChannel = "INGEST_PUBLICATION";
 
       // When
       String topic = channelMapper.toTopic(crossServiceChannel);
 
       // Then: 应遵循 INGEST_{ENTITY}_READY 约定,符合 RocketMQ 规范(仅大写字母+下划线)
       assertThat(topic)
-          .isEqualTo("INGEST_LITERATURE")
+          .isEqualTo("INGEST_PUBLICATION")
           .startsWith("INGEST_")
           .matches("[A-Z_]+"); // 全大写 + 下划线
     }
@@ -475,7 +475,7 @@ class RocketMqChannelMapperTest {
     @DisplayName("所有已配置通道的数量应为 2")
     void shouldHaveExactlyTwoConfiguredChannels() {
       // Given: MessageChannels 中定义的所有通道
-      String[] expectedChannels = {"INGEST_TASK", "INGEST_LITERATURE"};
+      String[] expectedChannels = {"INGEST_TASK", "INGEST_PUBLICATION"};
 
       // When & Then: 验证每个通道都有映射
       for (String channel : expectedChannels) {

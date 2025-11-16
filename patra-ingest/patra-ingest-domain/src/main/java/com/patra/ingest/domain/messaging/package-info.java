@@ -13,7 +13,7 @@
  * <p><strong>设计理念</strong>:
  *
  * <ul>
- *   <li><b>资源级别 Channel</b>：一个资源一个 Topic（如 INGEST_TASK、INGEST_LITERATURE）
+ *   <li><b>资源级别 Channel</b>：一个资源一个 Topic（如 INGEST_TASK、INGEST_PUBLICATION）
  *   <li><b>操作级别 OperationType</b>：用 RocketMQ Tags 区分操作（如 READY、FAILED、DATA_READY）
  *   <li><b>关注点分离</b>：Channel 负责路由，OperationType 负责业务语义
  * </ul>

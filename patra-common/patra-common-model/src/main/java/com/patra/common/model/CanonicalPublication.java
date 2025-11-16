@@ -8,14 +8,14 @@ import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
 /**
- * Patra 平台规范化医学文献模型（基于 PubMed/MEDLINE 标准设计）。
+ * Patra 平台规范化医学出版物模型（基于 PubMed/MEDLINE 标准设计）。
  *
- * <p>此不可变值对象作为采集、目录和溯源微服务间的共享内核模型，封装了医学文献的核心元数据。
+ * <p>此不可变值对象作为采集、目录和溯源微服务间的共享内核模型，封装了医学出版物的核心元数据。
  *
  * <p>设计基于以下国际标准：
  *
  * <ul>
- *   <li><b>PubMed/MEDLINE</b> - 医学文献元数据标准（主要数据源）
+ *   <li><b>PubMed/MEDLINE</b> - 医学出版物元数据标准（主要数据源）
  *   <li><b>MeSH</b> - 美国国家医学图书馆医学主题词表
  *   <li><b>Dublin Core</b> - 核心元数据标准（title, creator, identifier等）
  *   <li><b>Schema.org</b> - ScholarlyArticle 规范（author, abstract, keywords等）
@@ -28,7 +28,7 @@ import lombok.extern.jackson.Jacksonized;
  *   <li>不包含业务行为，保持共享模块无框架依赖
  *   <li>主要支持医学数据源（PubMed, EMBASE, MEDLINE）
  *   <li>保留医学领域特有字段（MeSH 标引、研究者、物质等）
- *   <li>优化医学文献处理性能和语义清晰度
+ *   <li>优化医学出版物处理性能和语义清晰度
  * </ul>
  *
  * @since 0.1.0
@@ -37,22 +37,22 @@ import lombok.extern.jackson.Jacksonized;
 @Builder
 @Jacksonized
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class CanonicalLiterature {
+public class CanonicalPublication {
 
   // ==================== 标识符组 ====================
 
-  /** 文献的多种标识符（PMID, DOI, PMC, PII, arXiv 等）。 */
+  /** 出版物的多种标识符（PMID, DOI, PMC, PII, arXiv 等）。 */
   List<Identifier> identifiers;
 
   // ==================== 基础元数据组 ====================
 
-  /** 文献标题（主标题）。 */
+  /** 出版物标题（主标题）。 */
   String title;
 
   /** 原始语言标题（针对翻译作品或多语言出版物）。 */
   String originalTitle;
 
-  /** 文献语言（ISO 639-1 代码，如 "en", "zh", "ja"）。 */
+  /** 出版物语言（ISO 639-1 代码，如 "en", "zh", "ja"）。 */
   String language;
 
   /** 发表类型列表（如 "Journal Article", "Review", "Conference Paper"）。 */
@@ -83,7 +83,7 @@ public class CanonicalLiterature {
   /** 研究者列表（参与研究但非文章作者，常见于临床试验等）。 */
   List<Investigator> investigators;
 
-  /** 作为主题的人物列表（用于传记、医学史等文献）。 */
+  /** 作为主题的人物列表（用于传记、医学史等出版物）。 */
   List<PersonalNameSubject> personalNameSubjects;
 
   // ==================== 出版载体组 ====================
@@ -141,10 +141,10 @@ public class CanonicalLiterature {
   /** 被引次数。 */
   Integer citationCount;
 
-  /** 参考文献数量。 */
+  /** 参考出版物数量。 */
   Integer numberOfReferences;
 
-  /** 参考文献列表。 */
+  /** 参考出版物列表。 */
   List<Reference> references;
 
   // ==================== 质量与合规组 ====================
@@ -155,8 +155,8 @@ public class CanonicalLiterature {
   /** 相关项目列表（更正、撤稿、评论、转载等）。 */
   List<RelatedItem> relatedItems;
 
-  /** 文献元数据（索引方法、所有者、状态等）。 */
-  LiteratureMetadata metadata;
+  /** 出版物元数据（索引方法、所有者、状态等）。 */
+  PublicationMetadata metadata;
 
   // ==================== 内嵌值对象 ====================
 
@@ -422,7 +422,7 @@ public class CanonicalLiterature {
     /** 记录创建日期。 */
     LocalDate created;
 
-    /** 文献完成日期（PubMed 索引流程完成）。 */
+    /** 出版物完成日期（PubMed 索引流程完成）。 */
     LocalDate completed;
 
     /** 最后修订日期。 */
@@ -501,10 +501,10 @@ public class CanonicalLiterature {
      */
     String relationType;
 
-    /** 引用信息（如原文献的引用格式）。 */
+    /** 引用信息（如原出版物的引用格式）。 */
     String citation;
 
-    /** 关联文献的标识符。 */
+    /** 关联出版物的标识符。 */
     String identifier;
 
     /** 标识符类型（如 "pmid", "doi"）。 */
@@ -517,7 +517,7 @@ public class CanonicalLiterature {
   /**
    * 发布历史事件。
    *
-   * <p>记录文献在发布过程中的关键时间节点，如收稿、接受、电子发布、PubMed 收录等。
+   * <p>记录出版物在发布过程中的关键时间节点，如收稿、接受、电子发布、PubMed 收录等。
    */
   @Value
   @Builder
@@ -559,14 +559,14 @@ public class CanonicalLiterature {
   }
 
   /**
-   * 文献元数据。
+   * 出版物元数据。
    *
-   * <p>包含文献记录的处理信息和质量标注。
+   * <p>包含出版物记录的处理信息和质量标注。
    */
   @Value
   @Builder
   @Jacksonized
-  public static class LiteratureMetadata {
+  public static class PublicationMetadata {
 
     /** 索引方法（如 "Automated", "Manual"）。 */
     String indexingMethod;
@@ -574,7 +574,7 @@ public class CanonicalLiterature {
     /** 数据记录的所有者或来源（如 "NLM", "NASA"）。 */
     String owner;
 
-    /** 文献记录的处理状态（如 "MEDLINE", "PubMed", "In-Process"）。 */
+    /** 出版物记录的处理状态（如 "MEDLINE", "PubMed", "In-Process"）。 */
     String status;
 
     /** 引文子集标识（如 "IM" 表示 Index Medicus）。 */
@@ -582,9 +582,9 @@ public class CanonicalLiterature {
   }
 
   /**
-   * 参考文献。
+   * 参考出版物。
    *
-   * <p>表示文章引用的其他文献。
+   * <p>表示文章引用的其他出版物。
    */
   @Value
   @Builder
@@ -594,7 +594,7 @@ public class CanonicalLiterature {
     /** 引文文本（格式化的引用字符串）。 */
     String citation;
 
-    /** 参考文献的标识符列表（如 PMID, DOI）。 */
+    /** 参考出版物的标识符列表（如 PMID, DOI）。 */
     List<Identifier> identifiers;
   }
 
@@ -633,7 +633,7 @@ public class CanonicalLiterature {
   /**
    * 作为主题的人物。
    *
-   * <p>用于传记、医学史、案例报告等以特定人物为主题的文献。
+   * <p>用于传记、医学史、案例报告等以特定人物为主题的出版物。
    */
   @Value
   @Builder
@@ -656,7 +656,7 @@ public class CanonicalLiterature {
   /**
    * 补充对象。
    *
-   * <p>表示文献的附加材料，如图表、数据集、关键词列表、多媒体文件等。
+   * <p>表示出版物的附加材料，如图表、数据集、关键词列表、多媒体文件等。
    */
   @Value
   @Builder
@@ -691,7 +691,7 @@ public class CanonicalLiterature {
    * MeSH 主题标引。
    *
    * <p>Medical Subject Headings (MeSH) 是美国国家医学图书馆（NLM）创建的受控词表，
-   * 用于标引医学文献的主题和内容。每个 MeSH 标引项包含一个主题词（Descriptor）
+   * 用于标引医学出版物的主题和内容。每个 MeSH 标引项包含一个主题词（Descriptor）
    * 和可选的限定词（Qualifiers）列表。
    *
    * <p>例如："Humans" [主题词] + "genetics" [限定词] 表示"人类遗传学"主题。

@@ -21,7 +21,7 @@ import lombok.Builder;
  *   <li>处理 API 认证、限流、重试
  *   <li>将外部数据模型转换为标准化数据类型
  *   <li>处理分页和游标管理
- *   <li>支持多种数据类型（文献、期刊、药品、引用等）
+ *   <li>支持多种数据类型（出版物、期刊、药品、引用等）
  * </ul>
  *
  * <p><strong>端口语义</strong>: 此接口是六边形架构中的 <strong>输出端口(Output Port)</strong>，定义在 Domain
@@ -39,10 +39,10 @@ import lombok.Builder;
  * <p><strong>使用示例</strong>：
  *
  * <pre>{@code
- * // 示例 1: 获取文献数据
- * TypeReference<CanonicalLiterature> litTypeRef = new TypeReference<>() {};
- * DataFetchResult<CanonicalLiterature> result =
- *     dataSourcePort.fetchData(context, DataType.LITERATURE, litTypeRef, batch);
+ * // 示例 1: 获取出版物数据
+ * TypeReference<CanonicalPublication> litTypeRef = new TypeReference<>() {};
+ * DataFetchResult<CanonicalPublication> result =
+ *     dataSourcePort.fetchData(context, DataType.PUBLICATION, litTypeRef, batch);
  *
  * // 示例 2: 获取期刊数据
  * TypeReference<Journal> journalTypeRef = new TypeReference<>() {};
@@ -50,8 +50,8 @@ import lombok.Builder;
  *     dataSourcePort.fetchData(context, DataType.JOURNAL, journalTypeRef, batch);
  *
  * // 示例 3: 检查数据源能力
- * if (dataSourcePort.supports("pubmed", DataType.LITERATURE)) {
- *     // PubMed 支持文献数据
+ * if (dataSourcePort.supports("pubmed", DataType.PUBLICATION)) {
+ *     // PubMed 支持出版物数据
  * }
  *
  * // 示例 4: 查询支持的数据类型
@@ -95,7 +95,7 @@ public interface ProvenanceDataPort {
    * Starter）的实现细节。基础设施层负责进行模型转换。
    *
    * @param context 执行上下文，包含查询条件和配置信息
-   * @param dataType 数据类型标识（如 LITERATURE、JOURNAL）
+   * @param dataType 数据类型标识（如 PUBLICATION、JOURNAL）
    * @return 查询会话（领域模型，不包含外部实现细节）
    */
   QuerySession prepareQuerySession(ExecutionContext context, DataType dataType);
@@ -130,10 +130,10 @@ public interface ProvenanceDataPort {
    * <p><strong>使用示例</strong>：
    *
    * <pre>{@code
-   * // 获取文献数据
-   * TypeReference<CanonicalLiterature> litRef = new TypeReference<>() {};
-   * DataFetchResult<CanonicalLiterature> result =
-   *     dataSourcePort.fetchData(context, DataType.LITERATURE, litRef, batch);
+   * // 获取出版物数据
+   * TypeReference<CanonicalPublication> litRef = new TypeReference<>() {};
+   * DataFetchResult<CanonicalPublication> result =
+   *     dataSourcePort.fetchData(context, DataType.PUBLICATION, litRef, batch);
    *
    * // 获取期刊数据
    * TypeReference<Journal> journalRef = new TypeReference<>() {};
@@ -143,7 +143,7 @@ public interface ProvenanceDataPort {
    *
    * @param <T> 数据类型（通过 TypeReference 保持运行时泛型信息）
    * @param context 执行上下文，包含配置快照、查询条件和编译参数
-   * @param dataType 数据类型标识（如 LITERATURE、JOURNAL、DRUG）
+   * @param dataType 数据类型标识（如 PUBLICATION、JOURNAL、DRUG）
    * @param typeRef 类型引用（用于保持运行时泛型信息）
    * @param batch 批次定义，包含批次编号、分页参数和游标令牌
    * @param querySession 查询会话（包含总记录数、会话令牌等）
@@ -171,9 +171,9 @@ public interface ProvenanceDataPort {
    * <p><strong>使用示例</strong>：
    *
    * <pre>{@code
-   * // 检查 PubMed 是否支持文献数据
-   * if (dataSourcePort.supports("pubmed", DataType.LITERATURE)) {
-   *     // 支持，可以获取文献数据
+   * // 检查 PubMed 是否支持出版物数据
+   * if (dataSourcePort.supports("pubmed", DataType.PUBLICATION)) {
+   *     // 支持，可以获取出版物数据
    * }
    *
    * // 检查 DOAJ 是否支持药品数据
@@ -211,7 +211,7 @@ public interface ProvenanceDataPort {
    * <pre>{@code
    * // 查询 PubMed 支持的数据类型
    * Set<DataType> pubmedTypes = dataSourcePort.getSupportedTypes("pubmed");
-   * // 返回：[LITERATURE, CITATION]
+   * // 返回：[PUBLICATION, CITATION]
    *
    * // 查询未知数据源
    * Set<DataType> unknownTypes = dataSourcePort.getSupportedTypes("unknown");
@@ -255,24 +255,24 @@ public interface ProvenanceDataPort {
    *
    * <pre>{@code
    * // 成功结果
-   * List<CanonicalLiterature> literatures = List.of(lit1, lit2);
-   * DataFetchResult<CanonicalLiterature> successResult =
-   *     DataFetchResult.success(literatures, DataType.LITERATURE, "cursor123");
+   * List<CanonicalPublication> publications = List.of(lit1, lit2);
+   * DataFetchResult<CanonicalPublication> successResult =
+   *     DataFetchResult.success(literatures, DataType.PUBLICATION, "cursor123");
    *
    * // 失败结果
-   * DataFetchResult<CanonicalLiterature> failureResult =
-   *     DataFetchResult.failure(DataType.LITERATURE, "Network timeout", ErrorType.RETRIABLE);
+   * DataFetchResult<CanonicalPublication> failureResult =
+   *     DataFetchResult.failure(DataType.PUBLICATION, "Network timeout", ErrorType.RETRIABLE);
    *
    * // 部分成功结果
-   * DataFetchResult<CanonicalLiterature> partialResult =
+   * DataFetchResult<CanonicalPublication> partialResult =
    *     DataFetchResult.partialSuccess(
-   *         literatures, DataType.LITERATURE, "cursor456", "5 records failed validation");
+   *         literatures, DataType.PUBLICATION, "cursor456", "5 records failed validation");
    * }</pre>
    *
    * @param <T> 数据类型
    * @param success 是否成功获取数据(无终止性错误)
    * @param data 数据列表（泛型化，支持任意类型），不可变
-   * @param dataType 数据类型标识（如 LITERATURE、JOURNAL）
+   * @param dataType 数据类型标识（如 PUBLICATION、JOURNAL）
    * @param nextCursorToken 下一页游标令牌(用于基于游标的分页，可为空)
    * @param errorMessage 错误或警告消息(失败时必填，部分成功时可选)
    * @param fetchedCount 实际获取或尝试的记录数(用于监控指标)
@@ -324,9 +324,9 @@ public interface ProvenanceDataPort {
      * <p><strong>使用示例</strong>：
      *
      * <pre>{@code
-     * List<CanonicalLiterature> literatures = List.of(lit1, lit2, lit3);
-     * DataFetchResult<CanonicalLiterature> result =
-     *     DataFetchResult.success(literatures, DataType.LITERATURE, "cursor123");
+     * List<CanonicalPublication> publications = List.of(lit1, lit2, lit3);
+     * DataFetchResult<CanonicalPublication> result =
+     *     DataFetchResult.success(literatures, DataType.PUBLICATION, "cursor123");
      * }</pre>
      *
      * @param <T> 数据类型
@@ -356,16 +356,16 @@ public interface ProvenanceDataPort {
      *
      * <pre>{@code
      * // 可重试错误（网络超时）
-     * DataFetchResult<CanonicalLiterature> retriableFailure =
+     * DataFetchResult<CanonicalPublication> retriableFailure =
      *     DataFetchResult.failure(
-     *         DataType.LITERATURE,
+     *         DataType.PUBLICATION,
      *         "Network timeout after 30s",
      *         ErrorType.RETRIABLE);
      *
      * // 不可重试错误（认证失败）
-     * DataFetchResult<CanonicalLiterature> nonRetriableFailure =
+     * DataFetchResult<CanonicalPublication> nonRetriableFailure =
      *     DataFetchResult.failure(
-     *         DataType.LITERATURE,
+     *         DataType.PUBLICATION,
      *         "Invalid API key",
      *         ErrorType.NON_RETRIABLE);
      * }</pre>
@@ -396,11 +396,11 @@ public interface ProvenanceDataPort {
      *
      * <pre>{@code
      * // 100 条记录中有 95 条成功，5 条验证失败
-     * List<CanonicalLiterature> successLiteratures = List.of(lit1, lit2, ...); // 95 条
-     * DataFetchResult<CanonicalLiterature> partialResult =
+     * List<CanonicalPublication> successLiteratures = List.of(lit1, lit2, ...); // 95 条
+     * DataFetchResult<CanonicalPublication> partialResult =
      *     DataFetchResult.partialSuccess(
      *         successLiteratures,
-     *         DataType.LITERATURE,
+     *         DataType.PUBLICATION,
      *         "cursor456",
      *         "5 records failed validation: missing required fields");
      * }</pre>

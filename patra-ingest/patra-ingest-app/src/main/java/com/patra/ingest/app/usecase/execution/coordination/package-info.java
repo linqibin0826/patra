@@ -1,14 +1,14 @@
 /**
  * 批次协调器包。
  *
- * <p>本包提供批次执行的协调逻辑，调用 Provider API 并发布文献数据。
+ * <p>本包提供批次执行的协调逻辑，调用 Provider API 并发布出版物数据。
  *
  * <h2>职责</h2>
  *
  * <ul>
  *   <li>调用 Provider API（如 PubMed ESearch + EFetch）
  *   <li>解析 API 响应数据
- *   <li>将文献数据发布到下游（通过 Outbox）
+ *   <li>将出版物数据发布到下游（通过 Outbox）
  *   <li>处理 API 调用失败和重试
  * </ul>
  *
@@ -20,10 +20,10 @@
  *         <li>调用 ProviderPort 执行批次
  *         <li>返回批次执行结果
  *       </ul>
- *   <li>{@code LiteraturePublisherOrchestrator} - 文献发布编排器
+ *   <li>{@code PublicationPublisherOrchestrator} - 出版物发布编排器
  *       <ul>
- *         <li>将采集的文献数据发布到 Outbox
- *         <li>发布到 {@code INGEST_LITERATURE_READY} 通道
+ *         <li>将采集的出版物数据发布到 Outbox
+ *         <li>发布到 {@code INGEST_PUBLICATION_READY} 通道
  *       </ul>
  * </ul>
  *
@@ -35,16 +35,16 @@
  *    ├─ 发送 HTTP 请求
  *    └─ 解析响应数据
  *
- * 2. 提取文献数据
- *    └─ 解析 JSON/XML 响应为文献实体
+ * 2. 提取出版物数据
+ *    └─ 解析 JSON/XML 响应为出版物实体
  *
- * 3. 发布文献数据
- *    └─ 发布到 Outbox（LiteratureEventPublisher）
+ * 3. 发布出版物数据
+ *    └─ 发布到 Outbox（PublicationEventPublisher）
  *
  * 4. 返回批次结果
  *    ├─ recordCount: 采集数量
  *    ├─ cursorPosition: 新的游标位置
- *    └─ literatures: 文献数据列表
+ *    └─ literatures: 出版物数据列表
  * </pre>
  *
  * <h2>Provider API 调用示例</h2>
@@ -90,7 +90,7 @@
  *         // 2. 调用 Provider API
  *         var response = providerPort.execute(request);
  *
- *         // 3. 解析文献数据
+ *         // 3. 解析出版物数据
  *         var literatures = response.getLiteratures();
  *
  *         // 4. 返回结果
@@ -108,18 +108,18 @@
  * }
  * }</pre>
  *
- * <h3>文献发布编排器</h3>
+ * <h3>出版物发布编排器</h3>
  *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor
- * public class LiteraturePublisherOrchestrator {
- *     private final LiteratureEventPublisher eventPublisher;
+ * public class PublicationPublisherOrchestrator {
+ *     private final PublicationEventPublisher eventPublisher;
  *
- *     public void publish(List<Literature> literatures, ExecutionContext context) {
+ *     public void publish(List<Publication> literatures, ExecutionContext context) {
  *         // 1. 构建事件
  *         var events = literatures.stream()
- *             .map(lit -> new LiteratureReadyEvent(
+ *             .map(lit -> new PublicationReadyEvent(
  *                 lit.getExternalId(),
  *                 context.getProvenanceCode(),
  *                 context.getTaskId(),

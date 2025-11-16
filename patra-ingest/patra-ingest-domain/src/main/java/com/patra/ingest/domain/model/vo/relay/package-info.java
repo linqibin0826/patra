@@ -4,7 +4,7 @@
  * <p>包含用于发件箱模式消息中继和发布的值对象:
  *
  * <ul>
- *   <li>{@link com.patra.ingest.domain.model.vo.relay.LiteratureReadyMessage} - 用于下游处理的文献数据就绪消息
+ *   <li>{@link com.patra.ingest.domain.model.vo.relay.PublicationReadyMessage} - 用于下游处理的出版物数据就绪消息
  *   <li>{@link com.patra.ingest.domain.model.vo.relay.RelayBatchResult} - 中继批次执行结果
  *   <li>{@link com.patra.ingest.domain.model.vo.relay.RelayPlan} - 中继执行计划
  * </ul>

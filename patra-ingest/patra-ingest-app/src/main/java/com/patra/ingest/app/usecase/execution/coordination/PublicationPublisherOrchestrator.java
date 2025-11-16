@@ -1,8 +1,8 @@
 package com.patra.ingest.app.usecase.execution.coordination;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.model.CanonicalLiterature;
-import com.patra.ingest.domain.port.LiteratureStoragePort;
+import com.patra.common.model.CanonicalPublication;
+import com.patra.ingest.domain.port.PublicationStoragePort;
 import com.patra.ingest.domain.port.StorageMetadataPort;
 import com.patra.ingest.domain.port.TechnicalRetryPort;
 import feign.FeignException;
@@ -19,14 +19,14 @@ import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
 /**
- * 文献发布编排器
+ * 出版物发布编排器
  *
- * <p>在六边形架构+DDD中的角色:应用层编排器,负责协调文献发布工作流。
+ * <p>在六边形架构+DDD中的角色:应用层编排器,负责协调出版物发布工作流。
  *
  * <p>设计理念:通过在应用层显式编排两个不同的操作,使跨服务集成变得清晰:
  *
  * <ul>
- *   <li>通过{@link LiteratureStoragePort}上传到对象存储(技术基础设施)
+ *   <li>通过{@link PublicationStoragePort}上传到对象存储(技术基础设施)
  *   <li>通过{@link StorageMetadataPort}记录元数据(与patra-object-storage服务的业务集成)
  * </ul>
  *
@@ -44,44 +44,44 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class LiteraturePublisherOrchestrator {
+public class PublicationPublisherOrchestrator {
 
-  private static final String BUSINESS_TYPE = "literature-batch";
+  private static final String BUSINESS_TYPE = "publication-batch";
 
-  private final LiteratureStoragePort literatureStoragePort;
+  private final PublicationStoragePort literatureStoragePort;
   private final StorageMetadataPort storageMetadataPort;
   private final TechnicalRetryPort technicalRetryPort;
 
   /**
-   * 发布标准化文献
+   * 发布标准化出版物
    *
    * <p>业务流程:
    *
    * <ol>
-   *   <li>上传文献到对象存储
+   *   <li>上传出版物到对象存储
    *   <li>记录元数据到patra-object-storage服务
    *   <li>处理元数据记录失败(委托给重试机制)
    * </ol>
    *
-   * @param literature 领域标准化的文献列表
+   * @param literature 领域标准化的出版物列表
    * @param context 发布上下文(包含执行元数据)
    * @return 发布结果(包含存储位置)
    */
-  public PublishResult publish(List<CanonicalLiterature> literature, PublishContext context) {
-    List<CanonicalLiterature> safeLiterature =
-        literature == null ? Collections.emptyList() : literature;
+  public PublishResult publish(List<CanonicalPublication> publication, PublishContext context) {
+    List<CanonicalPublication> safeLiterature =
+        publication == null ? Collections.emptyList() : publication;
 
     // 步骤1: 存储到对象存储
-    LiteratureStoragePort.StorageContext storageContext = toStorageContext(context);
-    LiteratureStoragePort.StorageResult storageResult =
+    PublicationStoragePort.StorageContext storageContext = toStorageContext(context);
+    PublicationStoragePort.StorageResult storageResult =
         literatureStoragePort.store(safeLiterature, storageContext);
 
     log.info(
-        "文献已存储 bucket={} key={} size={} bytes count={}",
+        "出版物已存储 bucket={} key={} size={} bytes count={}",
         storageResult.bucketName(),
         storageResult.objectKey(),
         storageResult.fileSize(),
-        storageResult.literatureCount());
+        storageResult.publicationCount());
 
     // 步骤2: 记录元数据到patra-object-storage服务(带错误处理)
     try {
@@ -110,12 +110,12 @@ public class LiteraturePublisherOrchestrator {
 
     return PublishResult.builder()
         .storageKey(storageResult.storageKey())
-        .publishedCount(storageResult.literatureCount())
+        .publishedCount(storageResult.publicationCount())
         .build();
   }
 
-  private LiteratureStoragePort.StorageContext toStorageContext(PublishContext context) {
-    return LiteratureStoragePort.StorageContext.builder()
+  private PublicationStoragePort.StorageContext toStorageContext(PublishContext context) {
+    return PublicationStoragePort.StorageContext.builder()
         .runId(context.runId())
         .batchNo(context.batchNo())
         .provenanceCode(context.provenanceCode())
@@ -123,7 +123,7 @@ public class LiteraturePublisherOrchestrator {
   }
 
   private StorageMetadataPort.MetadataRequest buildMetadataRequest(
-      LiteratureStoragePort.StorageResult storageResult, PublishContext context) {
+      PublicationStoragePort.StorageResult storageResult, PublishContext context) {
     Map<String, Object> correlation = buildCorrelationData(storageResult, context);
 
     return StorageMetadataPort.MetadataRequest.builder()
@@ -143,7 +143,7 @@ public class LiteraturePublisherOrchestrator {
   }
 
   private Map<String, Object> buildCorrelationData(
-      LiteratureStoragePort.StorageResult storageResult, PublishContext context) {
+      PublicationStoragePort.StorageResult storageResult, PublishContext context) {
     Map<String, Object> correlation = new LinkedHashMap<>();
     correlation.put("batchNo", context.batchNo());
     correlation.put("provenanceCode", safeProvenance(context.provenanceCode()));
@@ -169,7 +169,7 @@ public class LiteraturePublisherOrchestrator {
    */
   private void handleMetadataRecordFailure(
       FeignException exception,
-      LiteratureStoragePort.StorageResult storageResult,
+      PublicationStoragePort.StorageResult storageResult,
       PublishContext context) {
     int status = exception.status();
     if (status >= 500 || status == 503 || status == -1) {
@@ -202,7 +202,7 @@ public class LiteraturePublisherOrchestrator {
    * @param error 导致失败的异常
    */
   private void delegateToRetry(
-      LiteratureStoragePort.StorageResult storageResult, PublishContext context, Exception error) {
+      PublicationStoragePort.StorageResult storageResult, PublishContext context, Exception error) {
     try {
       // 重构元数据请求用于重试
       StorageMetadataPort.MetadataRequest metadataRequest =
@@ -248,7 +248,7 @@ public class LiteraturePublisherOrchestrator {
    * <p>包含存储位置信息。
    *
    * @param storageKey 完整的存储标识符
-   * @param publishedCount 已发布的文献数量
+   * @param publishedCount 已发布的出版物数量
    */
   @Builder
   public record PublishResult(String storageKey, int publishedCount) {}

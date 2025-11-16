@@ -47,7 +47,7 @@ class OutboxMessageFailedEventTest {
     void shouldCreateMessageFailedEvent() {
       // Given
       Long messageId = 1001L;
-      String channel = "literature.parsed";
+      String channel = "publication.parsed";
       int retryCount = 5;
       String errorCode = "PAYLOAD_INCOMPATIBLE";
       String errorMessage =
@@ -79,7 +79,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               messageId,
-              "literature.parsed",
+              "publication.parsed",
               5,
               "PAYLOAD_INCOMPATIBLE",
               "Error message",
@@ -114,7 +114,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               retryCount,
               "PAYLOAD_INCOMPATIBLE",
               "Error message",
@@ -134,7 +134,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               retryCount,
               "PAYLOAD_INCOMPATIBLE",
               "Error message",
@@ -153,7 +153,7 @@ class OutboxMessageFailedEventTest {
       // When
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, errorCode, "Error message", Instant.now());
+              1001L, "publication.parsed", 5, errorCode, "Error message", Instant.now());
 
       // Then
       assertThat(event.errorCode()).isNull();
@@ -168,7 +168,7 @@ class OutboxMessageFailedEventTest {
       // When
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", errorMessage, Instant.now());
+              1001L, "publication.parsed", 5, "PAYLOAD_INCOMPATIBLE", errorMessage, Instant.now());
 
       // Then
       assertThat(event.errorMessage()).isNull();
@@ -183,7 +183,7 @@ class OutboxMessageFailedEventTest {
       // When
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", occurredAt);
+              1001L, "publication.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", occurredAt);
 
       // Then
       assertThat(event.occurredAt()).isNull();
@@ -201,7 +201,7 @@ class OutboxMessageFailedEventTest {
     void shouldImplementEquals_SameFieldValues() {
       // Given
       Long messageId = 1001L;
-      String channel = "literature.parsed";
+      String channel = "publication.parsed";
       int retryCount = 5;
       String errorCode = "PAYLOAD_INCOMPATIBLE";
       String errorMessage = "Permanent error";
@@ -227,11 +227,11 @@ class OutboxMessageFailedEventTest {
       Instant now = Instant.now();
       OutboxMessageFailedEvent event1 =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", now);
+              1001L, "publication.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", now);
       OutboxMessageFailedEvent event2 =
           new OutboxMessageFailedEvent(
               1002L, // 不同的 messageId
-              "literature.parsed",
+              "publication.parsed",
               5,
               "PAYLOAD_INCOMPATIBLE",
               "Error message",
@@ -248,10 +248,10 @@ class OutboxMessageFailedEventTest {
       Instant now = Instant.now();
       OutboxMessageFailedEvent event1 =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", now);
+              1001L, "publication.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", now);
       OutboxMessageFailedEvent event2 =
           new OutboxMessageFailedEvent(
-              1001L, "literature.ready", 5, "PAYLOAD_INCOMPATIBLE", "Error message", now);
+              1001L, "publication.ready", 5, "PAYLOAD_INCOMPATIBLE", "Error message", now);
 
       // Then
       assertThat(event1).isNotEqualTo(event2);
@@ -264,10 +264,10 @@ class OutboxMessageFailedEventTest {
       Instant now = Instant.now();
       OutboxMessageFailedEvent event1 =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", now);
+              1001L, "publication.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", now);
       OutboxMessageFailedEvent event2 =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 10, "PAYLOAD_INCOMPATIBLE", "Error message", now);
+              1001L, "publication.parsed", 10, "PAYLOAD_INCOMPATIBLE", "Error message", now);
 
       // Then
       assertThat(event1).isNotEqualTo(event2);
@@ -280,10 +280,10 @@ class OutboxMessageFailedEventTest {
       Instant now = Instant.now();
       OutboxMessageFailedEvent event1 =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", now);
+              1001L, "publication.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", now);
       OutboxMessageFailedEvent event2 =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "NETWORK_TIMEOUT", "Error message", now);
+              1001L, "publication.parsed", 5, "NETWORK_TIMEOUT", "Error message", now);
 
       // Then
       assertThat(event1).isNotEqualTo(event2);
@@ -296,10 +296,10 @@ class OutboxMessageFailedEventTest {
       Instant now = Instant.now();
       OutboxMessageFailedEvent event1 =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message 1", now);
+              1001L, "publication.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message 1", now);
       OutboxMessageFailedEvent event2 =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message 2", now);
+              1001L, "publication.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message 2", now);
 
       // Then
       assertThat(event1).isNotEqualTo(event2);
@@ -312,7 +312,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event1 =
           new OutboxMessageFailedEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               5,
               "PAYLOAD_INCOMPATIBLE",
               "Error message",
@@ -320,7 +320,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event2 =
           new OutboxMessageFailedEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               5,
               "PAYLOAD_INCOMPATIBLE",
               "Error message",
@@ -335,7 +335,7 @@ class OutboxMessageFailedEventTest {
     void shouldImplementHashCode_SameFieldValues() {
       // Given
       Long messageId = 1001L;
-      String channel = "literature.parsed";
+      String channel = "publication.parsed";
       int retryCount = 5;
       String errorCode = "PAYLOAD_INCOMPATIBLE";
       String errorMessage = "Permanent error";
@@ -359,10 +359,10 @@ class OutboxMessageFailedEventTest {
       // Given
       OutboxMessageFailedEvent event1 =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error 1", Instant.now());
+              1001L, "publication.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error 1", Instant.now());
       OutboxMessageFailedEvent event2 =
           new OutboxMessageFailedEvent(
-              1002L, "literature.ready", 10, "NETWORK_TIMEOUT", "Error 2", Instant.now());
+              1002L, "publication.ready", 10, "NETWORK_TIMEOUT", "Error 2", Instant.now());
 
       // Then - 注意：不同的对象可能有相同的 hashCode（冲突），但通常应该不同
       assertThat(event1.hashCode()).isNotEqualTo(event2.hashCode());
@@ -375,7 +375,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               5,
               "PAYLOAD_INCOMPATIBLE",
               "Permanent error",
@@ -429,7 +429,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               messageId,
-              "literature.parsed",
+              "publication.parsed",
               5,
               "PAYLOAD_INCOMPATIBLE",
               "Error message",
@@ -443,7 +443,7 @@ class OutboxMessageFailedEventTest {
     @DisplayName("应该正确返回 channel")
     void shouldReturnChannel() {
       // Given
-      String channel = "literature.parsed";
+      String channel = "publication.parsed";
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               1001L, channel, 5, "PAYLOAD_INCOMPATIBLE", "Error message", Instant.now());
@@ -460,7 +460,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               retryCount,
               "PAYLOAD_INCOMPATIBLE",
               "Error message",
@@ -477,7 +477,7 @@ class OutboxMessageFailedEventTest {
       String errorCode = "PAYLOAD_INCOMPATIBLE";
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, errorCode, "Error message", Instant.now());
+              1001L, "publication.parsed", 5, errorCode, "Error message", Instant.now());
 
       // When & Then
       assertThat(event.errorCode()).isEqualTo(errorCode);
@@ -490,7 +490,7 @@ class OutboxMessageFailedEventTest {
       String errorMessage = "Permanent error message";
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", errorMessage, Instant.now());
+              1001L, "publication.parsed", 5, "PAYLOAD_INCOMPATIBLE", errorMessage, Instant.now());
 
       // When & Then
       assertThat(event.errorMessage()).isEqualTo(errorMessage);
@@ -503,7 +503,7 @@ class OutboxMessageFailedEventTest {
       Instant occurredAt = Instant.parse("2024-01-15T10:30:00Z");
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", occurredAt);
+              1001L, "publication.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", occurredAt);
 
       // When & Then
       assertThat(event.occurredAt()).isEqualTo(occurredAt);
@@ -523,7 +523,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               5,
               "PAYLOAD_INCOMPATIBLE",
               "Error message",
@@ -540,7 +540,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               5,
               "PAYLOAD_INCOMPATIBLE",
               "Error message",
@@ -558,7 +558,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               5,
               "PAYLOAD_INCOMPATIBLE",
               "Error message",
@@ -578,7 +578,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               5,
               "PAYLOAD_INCOMPATIBLE",
               "Error message",
@@ -600,7 +600,7 @@ class OutboxMessageFailedEventTest {
     void shouldEnsureEventIsImmutable() {
       // Given
       Long messageId = 1001L;
-      String channel = "literature.parsed";
+      String channel = "publication.parsed";
       int retryCount = 5;
       String errorCode = "PAYLOAD_INCOMPATIBLE";
       String errorMessage = "Permanent error";
@@ -634,7 +634,7 @@ class OutboxMessageFailedEventTest {
       Instant occurredAt = Instant.parse("2024-01-15T10:30:00Z");
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", occurredAt);
+              1001L, "publication.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", occurredAt);
 
       // When - Instant 是不可变的，任何修改都会返回新实例
       Instant modifiedInstant = event.occurredAt().plusSeconds(3600);
@@ -661,7 +661,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               largeMessageId,
-              "literature.parsed",
+              "publication.parsed",
               5,
               "PAYLOAD_INCOMPATIBLE",
               "Error message",
@@ -681,7 +681,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               negativeMessageId,
-              "literature.parsed",
+              "publication.parsed",
               5,
               "PAYLOAD_INCOMPATIBLE",
               "Error message",
@@ -701,7 +701,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               largeRetryCount,
               "PAYLOAD_INCOMPATIBLE",
               "Error message",
@@ -721,7 +721,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               negativeRetryCount,
               "PAYLOAD_INCOMPATIBLE",
               "Error message",
@@ -756,7 +756,7 @@ class OutboxMessageFailedEventTest {
       // When
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, longErrorCode, "Error message", Instant.now());
+              1001L, "publication.parsed", 5, longErrorCode, "Error message", Instant.now());
 
       // Then
       assertThat(event.errorCode()).contains("ERROR_CODE_");
@@ -774,7 +774,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               5,
               "PAYLOAD_INCOMPATIBLE",
               longErrorMessage,
@@ -794,7 +794,7 @@ class OutboxMessageFailedEventTest {
       // When
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", epoch);
+              1001L, "publication.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", epoch);
 
       // Then
       assertThat(event.occurredAt()).isEqualTo(epoch);
@@ -809,7 +809,7 @@ class OutboxMessageFailedEventTest {
       // When
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", future);
+              1001L, "publication.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", future);
 
       // Then
       assertThat(event.occurredAt()).isEqualTo(future);
@@ -824,7 +824,7 @@ class OutboxMessageFailedEventTest {
       // When
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", preciseTime);
+              1001L, "publication.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error message", preciseTime);
 
       // Then
       assertThat(event.occurredAt()).isEqualTo(preciseTime);
@@ -854,7 +854,7 @@ class OutboxMessageFailedEventTest {
     @DisplayName("应该处理包含特殊字符的字段")
     void shouldHandleSpecialCharactersInFields() {
       // Given
-      String channelWithSpecialChars = "literature.parsed:v1.0-beta@2024";
+      String channelWithSpecialChars = "publication.parsed:v1.0-beta@2024";
       String errorCodeWithSpecialChars = "PAYLOAD_ERROR_#123!@$%";
       String errorMessageWithSpecialChars =
           "Failed to parse JSON: unexpected token '}' at line 42, column 15";
@@ -885,7 +885,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               5,
               "PAYLOAD_INCOMPATIBLE",
               multilineErrorMessage,
@@ -901,13 +901,13 @@ class OutboxMessageFailedEventTest {
     @DisplayName("应该处理包含 Unicode 字符的 errorMessage")
     void shouldHandleUnicodeCharactersInErrorMessage() {
       // Given
-      String unicodeErrorMessage = "解析失败：文献数据格式不兼容 💀";
+      String unicodeErrorMessage = "解析失败：出版物数据格式不兼容 💀";
 
       // When
       OutboxMessageFailedEvent event =
           new OutboxMessageFailedEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               5,
               "PAYLOAD_INCOMPATIBLE",
               unicodeErrorMessage,
@@ -931,7 +931,7 @@ class OutboxMessageFailedEventTest {
     void shouldRecordDeadLetterScenarioAfterRetryLimit() {
       // Given - 消息重试 5 次后仍失败
       Long messageId = 1001L;
-      String channel = "literature.parsed";
+      String channel = "publication.parsed";
       int maxRetries = 5;
       String errorCode = "NETWORK_TIMEOUT";
       String errorMessage = "Failed to publish message after 5 retries: network timeout";
@@ -956,7 +956,7 @@ class OutboxMessageFailedEventTest {
     void shouldRecordIrrecoverableErrorScenario() {
       // Given - 负载格式永久不兼容，不需要重试
       Long messageId = 2001L;
-      String channel = "literature.ready";
+      String channel = "publication.ready";
       int retryCount = 0; // 直接失败，不重试
       String errorCode = "PAYLOAD_INCOMPATIBLE";
       String errorMessage =
@@ -986,7 +986,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event1 =
           new OutboxMessageFailedEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               5,
               commonErrorCode,
               "Schema validation failed for message 1001",
@@ -995,7 +995,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event2 =
           new OutboxMessageFailedEvent(
               1002L,
-              "literature.parsed",
+              "publication.parsed",
               5,
               commonErrorCode,
               "Schema validation failed for message 1002",
@@ -1004,7 +1004,7 @@ class OutboxMessageFailedEventTest {
       OutboxMessageFailedEvent event3 =
           new OutboxMessageFailedEvent(
               1003L,
-              "literature.parsed",
+              "publication.parsed",
               5,
               commonErrorCode,
               "Schema validation failed for message 1003",
@@ -1021,7 +1021,7 @@ class OutboxMessageFailedEventTest {
     @DisplayName("应该支持按通道分析失败热点场景")
     void shouldSupportChannelBasedFailureHotspotAnalysisScenario() {
       // Given - 分析不同通道的失败率
-      String highFailureChannel = "literature.parsed";
+      String highFailureChannel = "publication.parsed";
       String lowFailureChannel = "provenance.changed";
 
       // When
@@ -1048,7 +1048,7 @@ class OutboxMessageFailedEventTest {
     @DisplayName("应该支持告警驱动场景")
     void shouldSupportAlertingScenario() {
       // Given - 短时间内多次失败应该触发告警
-      String channel = "literature.parsed";
+      String channel = "publication.parsed";
       String criticalErrorCode = "PAYLOAD_INCOMPATIBLE";
       Instant alertTime = Instant.parse("2024-01-15T10:00:00Z");
 
@@ -1090,7 +1090,7 @@ class OutboxMessageFailedEventTest {
     void shouldSupportCompensationReplayScenario() {
       // Given - 记录死信消息，供手动或离线重放工具使用
       Long deadLetterMessageId = 9999L;
-      String channel = "literature.parsed";
+      String channel = "publication.parsed";
       int retryCount = 5;
       String errorCode = "DOWNSTREAM_SERVICE_UNAVAILABLE";
       String errorMessage = "Downstream service unavailable after 5 retries, marked as dead letter";
@@ -1119,13 +1119,13 @@ class OutboxMessageFailedEventTest {
       // 临时性错误 - 可能因网络抖动引起
       OutboxMessageFailedEvent transientError =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "NETWORK_TIMEOUT", "Temporary network timeout", now);
+              1001L, "publication.parsed", 5, "NETWORK_TIMEOUT", "Temporary network timeout", now);
 
       // 永久性错误 - 负载格式问题
       OutboxMessageFailedEvent permanentError =
           new OutboxMessageFailedEvent(
               1002L,
-              "literature.parsed",
+              "publication.parsed",
               0,
               "PAYLOAD_INCOMPATIBLE",
               "Permanent schema incompatibility",
@@ -1150,15 +1150,15 @@ class OutboxMessageFailedEventTest {
       // When
       OutboxMessageFailedEvent event1 =
           new OutboxMessageFailedEvent(
-              1001L, "literature.parsed", 5, "NETWORK_TIMEOUT", "Error at 10:00", t1);
+              1001L, "publication.parsed", 5, "NETWORK_TIMEOUT", "Error at 10:00", t1);
 
       OutboxMessageFailedEvent event2 =
           new OutboxMessageFailedEvent(
-              1002L, "literature.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error at 11:00", t2);
+              1002L, "publication.parsed", 5, "PAYLOAD_INCOMPATIBLE", "Error at 11:00", t2);
 
       OutboxMessageFailedEvent event3 =
           new OutboxMessageFailedEvent(
-              1003L, "literature.parsed", 5, "NETWORK_TIMEOUT", "Error at 12:00", t3);
+              1003L, "publication.parsed", 5, "NETWORK_TIMEOUT", "Error at 12:00", t3);
 
       // Then - 应该可以按时间排序分析失败趋势
       assertThat(event1.occurredAt()).isBefore(event2.occurredAt());
@@ -1173,7 +1173,7 @@ class OutboxMessageFailedEventTest {
     void shouldSupportZeroRetryFastFailScenario() {
       // Given - 某些错误应该立即失败，不重试
       Long messageId = 3001L;
-      String channel = "literature.parsed";
+      String channel = "publication.parsed";
       int retryCount = 0; // 快速失败
       String errorCode = "INVALID_MESSAGE_FORMAT";
       String errorMessage = "Message format is invalid, retry will not help";
@@ -1195,7 +1195,7 @@ class OutboxMessageFailedEventTest {
     void shouldSupportHighRetryCountScenario() {
       // Given - 某些消息经过多次重试仍失败
       Long messageId = 4001L;
-      String channel = "literature.parsed";
+      String channel = "publication.parsed";
       int retryCount = 100; // 非常高的重试次数
       String errorCode = "INTERMITTENT_FAILURE";
       String errorMessage = "Message failed after 100 retries due to intermittent errors";

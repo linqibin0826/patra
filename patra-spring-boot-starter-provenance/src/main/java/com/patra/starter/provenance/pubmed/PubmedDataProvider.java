@@ -2,7 +2,7 @@ package com.patra.starter.provenance.pubmed;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.model.CanonicalLiterature;
+import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
@@ -15,7 +15,7 @@ import com.patra.starter.provenance.internal.metadata.PlanMetadata;
 import com.patra.starter.provenance.internal.metadata.PubmedPlanMetadata;
 import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
 import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
-import com.patra.starter.provenance.pubmed.processor.PubmedLiteratureProcessor;
+import com.patra.starter.provenance.pubmed.processor.PubmedPublicationProcessor;
 import com.patra.starter.provenance.pubmed.request.PubMedESearchRequestAssembler;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -43,9 +43,9 @@ import lombok.extern.slf4j.Slf4j;
 public class PubmedDataProvider implements ProvenanceDataProvider {
 
   private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
-  private static final Set<DataType> SUPPORTED_TYPES = Set.of(DataType.LITERATURE);
+  private static final Set<DataType> SUPPORTED_TYPES = Set.of(DataType.PUBLICATION);
 
-  private final PubmedLiteratureProcessor literatureProcessor;
+  private final PubmedPublicationProcessor publicationProcessor;
   private final PubMedClient pubMedClient;
   private final PubMedESearchRequestAssembler requestAssembler;
 
@@ -112,12 +112,12 @@ public class PubmedDataProvider implements ProvenanceDataProvider {
     }
 
     // 2. 根据dataType分派到对应的Processor
-    if (dataType == DataType.LITERATURE) {
+    if (dataType == DataType.PUBLICATION) {
       try {
         ProviderContext context = ProviderContext.builder().build();
-        ProcessResult<CanonicalLiterature> processResult =
-            literatureProcessor.process(request, context);
-        ProviderResult<CanonicalLiterature> result =
+        ProcessResult<CanonicalPublication> processResult =
+            publicationProcessor.process(request, context);
+        ProviderResult<CanonicalPublication> result =
             convertToProviderResult(processResult, dataType);
 
         long duration = System.currentTimeMillis() - start;
@@ -144,8 +144,8 @@ public class PubmedDataProvider implements ProvenanceDataProvider {
   }
 
   /** 转换 ProcessResult 为 ProviderResult */
-  private ProviderResult<CanonicalLiterature> convertToProviderResult(
-      ProcessResult<CanonicalLiterature> processResult, DataType dataType) {
+  private ProviderResult<CanonicalPublication> convertToProviderResult(
+      ProcessResult<CanonicalPublication> processResult, DataType dataType) {
     if (processResult.success()) {
       return processResult.errorMessage() != null
           ? ProviderResult.partialSuccess(

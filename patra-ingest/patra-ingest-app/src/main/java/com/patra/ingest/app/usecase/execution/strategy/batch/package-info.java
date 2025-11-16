@@ -94,7 +94,7 @@
  *
  * <pre>{@code
  * // 1. Application 层：BatchScheduleBuilder 准备查询会话
- * QuerySession session = provenanceDataPort.prepareQuerySession(ctx, DataType.LITERATURE);
+ * QuerySession session = provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION);
  * // 结果: totalRecords=10000, stateToken={webEnv: "...", queryKey: "..."}
  *
  * // 2. Application 层：BatchGenerationStrategy 生成批次列表（纯领域模型）
@@ -107,7 +107,7 @@
  *     // 结果: {"retstart": 0, "retmax": 500, "WebEnv": "...", "query_key": "..."}
  *
  *     // 4. Infrastructure 层：ProvenanceDataAdapter 调用数据源 API
- *     DataFetchResult<Literature> result = adapter.fetchData(ctx, DataType.LITERATURE, typeRef, batch);
+ *     DataFetchResult<Publication> result = adapter.fetchData(ctx, DataType.PUBLICATION, typeRef, batch);
  * }
  * }</pre>
  *

@@ -24,7 +24,7 @@ class OutboxMessagePublishedEventTest {
     void shouldConstructEventAndExposeAllFields() {
       // Given: 准备测试数据
       Long messageId = 12345L;
-      String channel = "literature.pubmed";
+      String channel = "publication.pubmed";
       String partitionKey = "partition-001";
       Instant occurredAt = Instant.parse("2025-01-05T10:15:30Z");
 
@@ -87,7 +87,7 @@ class OutboxMessagePublishedEventTest {
     void twoEventsWithSameValuesShouldBeEqual() {
       // Given: 创建两个值相同的事件
       Long messageId = 999L;
-      String channel = "literature.epmc";
+      String channel = "publication.epmc";
       String partitionKey = "pk-123";
       Instant occurredAt = Instant.parse("2025-01-05T12:00:00Z");
 
@@ -294,11 +294,11 @@ class OutboxMessagePublishedEventTest {
   class BusinessScenarioTests {
 
     @Test
-    @DisplayName("应该正确表示 PubMed 文献发布事件")
-    void shouldCorrectlyRepresentPubMedLiteraturePublishedEvent() {
-      // Given: PubMed 文献发布场景
+    @DisplayName("应该正确表示 PubMed 出版物发布事件")
+    void shouldCorrectlyRepresentPubMedPublicationPublishedEvent() {
+      // Given: PubMed 出版物发布场景
       Long messageId = 10001L;
-      String channel = "literature.pubmed";
+      String channel = "publication.pubmed";
       String partitionKey = "PMID_38572234";
       Instant occurredAt = Instant.now();
 
@@ -314,11 +314,11 @@ class OutboxMessagePublishedEventTest {
     }
 
     @Test
-    @DisplayName("应该正确表示 EPMC 文献发布事件")
-    void shouldCorrectlyRepresentEpmcLiteraturePublishedEvent() {
-      // Given: EPMC 文献发布场景
+    @DisplayName("应该正确表示 EPMC 出版物发布事件")
+    void shouldCorrectlyRepresentEpmcPublicationPublishedEvent() {
+      // Given: EPMC 出版物发布场景
       Long messageId = 20001L;
-      String channel = "literature.epmc";
+      String channel = "publication.epmc";
       String partitionKey = "PMC_10925847";
       Instant occurredAt = Instant.now();
 
@@ -362,11 +362,11 @@ class OutboxMessagePublishedEventTest {
       // Given: 创建多个不同 channel 的事件
       Instant now = Instant.now();
       OutboxMessagePublishedEvent pubmedEvent =
-          new OutboxMessagePublishedEvent(1L, "literature.pubmed", "key1", now);
+          new OutboxMessagePublishedEvent(1L, "publication.pubmed", "key1", now);
       OutboxMessagePublishedEvent epmcEvent =
-          new OutboxMessagePublishedEvent(2L, "literature.epmc", "key2", now);
+          new OutboxMessagePublishedEvent(2L, "publication.epmc", "key2", now);
       OutboxMessagePublishedEvent crossrefEvent =
-          new OutboxMessagePublishedEvent(3L, "literature.crossref", "key3", now);
+          new OutboxMessagePublishedEvent(3L, "publication.crossref", "key3", now);
 
       // When: 按 channel 分组
       String pubmedChannel = pubmedEvent.channel();
@@ -374,9 +374,9 @@ class OutboxMessagePublishedEventTest {
       String crossrefChannel = crossrefEvent.channel();
 
       // Then: 验证可以区分不同 channel
-      assertThat(pubmedChannel).isEqualTo("literature.pubmed");
-      assertThat(epmcChannel).isEqualTo("literature.epmc");
-      assertThat(crossrefChannel).isEqualTo("literature.crossref");
+      assertThat(pubmedChannel).isEqualTo("publication.pubmed");
+      assertThat(epmcChannel).isEqualTo("publication.epmc");
+      assertThat(crossrefChannel).isEqualTo("publication.crossref");
     }
 
     @Test
@@ -384,7 +384,7 @@ class OutboxMessagePublishedEventTest {
     void shouldSupportPartitionDistributionAnalysisByPartitionKey() {
       // Given: 创建多个相同 channel 但不同 partitionKey 的事件
       Instant now = Instant.now();
-      String channel = "literature.pubmed";
+      String channel = "publication.pubmed";
       OutboxMessagePublishedEvent event1 =
           new OutboxMessagePublishedEvent(1L, channel, "partition-0", now);
       OutboxMessagePublishedEvent event2 =
@@ -467,7 +467,7 @@ class OutboxMessagePublishedEventTest {
       // Given: 创建一个事件
       OutboxMessagePublishedEvent originalEvent =
           new OutboxMessagePublishedEvent(
-              12345L, "literature.pubmed", "PMID_38572234", Instant.parse("2025-01-05T10:15:30Z"));
+              12345L, "publication.pubmed", "PMID_38572234", Instant.parse("2025-01-05T10:15:30Z"));
 
       // When: 序列化
       byte[] serialized;
