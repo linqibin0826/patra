@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.patra</groupId>
+        <artifactId>patra-catalog</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>patra-catalog-infra</artifactId>
+    <name>Patra Catalog Infrastructure</name>
+    <description>Catalog infrastructure module - data persistence and external integrations</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-catalog-domain</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-common-model</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-mybatis</artifactId>
+        </dependency>
+
+        <!-- RocketMQ 原生 Starter (消息消费) -->
+        <dependency>
+            <groupId>org.apache.rocketmq</groupId>
+            <artifactId>rocketmq-spring-boot-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

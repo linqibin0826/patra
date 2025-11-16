@@ -1,0 +1,24 @@
+# 开发环境配置
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/patra_catalog?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+rocketmq:
+  name-server: ${ROCKETMQ_NAME_SERVER:localhost:9876}
+  producer:
+    group: patra-catalog-producer-group
+    send-message-timeout: 3000
+  consumer:
+    group: patra-catalog-consumer-group
+
+logging:
+  level:
+    com.patra.catalog: DEBUG
+    org.springframework: INFO

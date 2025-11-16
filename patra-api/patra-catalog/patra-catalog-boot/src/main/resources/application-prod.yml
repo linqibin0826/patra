@@ -1,0 +1,24 @@
+# 生产环境配置
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+rocketmq:
+  name-server: ${ROCKETMQ_NAME_SERVER}
+  producer:
+    group: patra-catalog-producer-group
+    send-message-timeout: 3000
+  consumer:
+    group: patra-catalog-consumer-group
+
+logging:
+  level:
+    com.patra.catalog: INFO
+    org.springframework: WARN
