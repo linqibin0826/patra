@@ -57,7 +57,7 @@
 
         <dependency>
             <groupId>com.patra</groupId>
-            <artifactId>patra-storage-api</artifactId>
+            <artifactId>patra-object-storage-api</artifactId>
         </dependency>
 
         <!-- RocketMQ (运行时依赖，用于消息监听器) -->

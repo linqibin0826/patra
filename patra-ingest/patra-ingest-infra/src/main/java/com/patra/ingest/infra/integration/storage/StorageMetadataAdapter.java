@@ -2,9 +2,9 @@ package com.patra.ingest.infra.integration.storage;
 
 import com.patra.ingest.domain.port.StorageMetadataPort;
 import com.patra.starter.objectstorage.ObjectStorageProperties;
-import com.patra.storage.api.client.StorageClient;
-import com.patra.storage.api.dto.RecordUploadResponse;
-import com.patra.storage.api.dto.UploadRecordRequest;
+import com.patra.objectstorage.api.client.StorageClient;
+import com.patra.objectstorage.api.dto.RecordUploadResponse;
+import com.patra.objectstorage.api.dto.UploadRecordRequest;
 import feign.FeignException;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
@@ -14,15 +14,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
- * 基础设施适配器,实现元数据记录到 patra-storage 服务的功能。
+ * 基础设施适配器,实现元数据记录到 patra-object-storage 服务的功能。
  *
- * <p>此适配器为 patra-storage 限界上下文提供轻量级 RPC 集成层。它委托给 {@link StorageClient} Feign 客户端进行实际的服务通信。
+ * <p>此适配器为 patra-object-storage 限界上下文提供轻量级 RPC 集成层。它委托给 {@link StorageClient} Feign 客户端进行实际的服务通信。
  *
  * <p>职责:
  *
  * <ul>
  *   <li>将领域元数据请求转换为 RPC DTO
- *   <li>通过 Feign 客户端调用 patra-storage 服务
+ *   <li>通过 Feign 客户端调用 patra-object-storage 服务
  *   <li>将服务响应转换为领域结果
  *   <li>将 Feign 异常转换为领域异常
  * </ul>
@@ -54,7 +54,7 @@ public class StorageMetadataAdapter implements StorageMetadataPort {
 
     } catch (FeignException e) {
       // 将 Feign 错误转换为领域异常供应用层处理
-      throw new StorageMetadataException("记录元数据到 patra-storage 失败: " + e.getMessage(), e);
+      throw new StorageMetadataException("记录元数据到 patra-object-storage 失败: " + e.getMessage(), e);
     }
   }
 
@@ -85,7 +85,7 @@ public class StorageMetadataAdapter implements StorageMetadataPort {
         request.remarks());
   }
 
-  /** 元数据记录异常,指示 patra-storage 服务通信失败。 */
+  /** 元数据记录异常,指示 patra-object-storage 服务通信失败。 */
   public static class StorageMetadataException extends RuntimeException {
     public StorageMetadataException(String message, Throwable cause) {
       super(message, cause);

@@ -17,7 +17,7 @@
  * <ul>
  *   <li><strong>pubmed/</strong> - PubMed E-Utilities API 集成
  *   <li><strong>registry/</strong> - patra-registry 服务集成,用于配置
- *   <li><strong>storage/</strong> - patra-storage 服务和对象存储(S3/MinIO)集成
+ *   <li><strong>storage/</strong> - patra-object-storage 服务和对象存储(S3/MinIO)集成
  * </ul>
  *
  * <p>命名约定:

@@ -66,7 +66,7 @@
 
         <dependency>
             <groupId>com.patra</groupId>
-            <artifactId>patra-storage-api</artifactId>
+            <artifactId>patra-object-storage-api</artifactId>
         </dependency>
 
         <!-- RocketMQ 原生 Starter (替换 Spring Cloud Stream) -->

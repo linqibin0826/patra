@@ -72,7 +72,7 @@ jobs:
           MODULE_MAP["patra-gateway-boot"]="patra-gateway-boot"
           MODULE_MAP["patra-registry"]="patra-registry"
           MODULE_MAP["patra-ingest"]="patra-ingest"
-          MODULE_MAP["patra-storage"]="patra-storage"
+          MODULE_MAP["patra-object-storage"]="patra-object-storage"
           MODULE_MAP["patra-spring-boot-starter-core"]="patra-spring-boot-starter-core"
           MODULE_MAP["patra-spring-boot-starter-web"]="patra-spring-boot-starter-web"
           MODULE_MAP["patra-spring-boot-starter-mybatis"]="patra-spring-boot-starter-mybatis"

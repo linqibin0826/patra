@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: ${STORAGE_DB_URL:jdbc:mysql://localhost:13306/patra_storage?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC}
+    username: ${STORAGE_DB_USERNAME:root}
+    password: ${STORAGE_DB_PASSWORD:123456}
+
+logging:
+  file:
+    path: ${PATRA_LOG_DIR:./logs}/patra-object-storage
+  level:
+    com.patra.objectstorage: INFO

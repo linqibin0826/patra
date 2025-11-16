@@ -349,7 +349,7 @@
 
             <dependency>
                 <groupId>com.patra</groupId>
-                <artifactId>patra-storage-api</artifactId>
+                <artifactId>patra-object-storage-api</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
