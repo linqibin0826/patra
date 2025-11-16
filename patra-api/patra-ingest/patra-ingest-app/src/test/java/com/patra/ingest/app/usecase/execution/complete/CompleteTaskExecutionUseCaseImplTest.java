@@ -6,10 +6,10 @@ import static org.mockito.Mockito.*;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.execution.cursor.CursorAdvancer;
 import com.patra.ingest.app.usecase.execution.lease.LeaseManagementService;
-import com.patra.ingest.app.usecase.execution.publisher.LiteratureEventPublisher;
+import com.patra.ingest.app.usecase.execution.publisher.PublicationEventPublisher;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import com.patra.ingest.app.usecase.execution.strategy.ExecuteTaskBatchesUseCase;
-import com.patra.ingest.domain.event.LiteratureDataReadyEvent;
+import com.patra.ingest.domain.event.PublicationDataReadyEvent;
 import com.patra.ingest.domain.event.TaskCompletedEvent;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.entity.TaskRun;
@@ -53,7 +53,7 @@ import org.springframework.dao.OptimisticLockingFailureException;
  *   <li>✅ 全部失败场景: Task: FAILED, TaskRun: FAILED
  *   <li>✅ 乐观锁冲突: 游标推进失败时的处理
  *   <li>✅ 资源清理: 心跳停止、租约释放
- *   <li>✅ 事件发布: TaskCompletedEvent、LiteratureDataReadyEvent
+ *   <li>✅ 事件发布: TaskCompletedEvent、PublicationDataReadyEvent
  * </ul>
  *
  * @author linqibin
@@ -69,7 +69,7 @@ class CompleteTaskExecutionUseCaseImplTest {
   @Mock private TaskRunBatchRepository taskRunBatchRepository;
   @Mock private CursorAdvancer cursorAdvancer;
   @Mock private LeaseManagementService leaseManagementService;
-  @Mock private LiteratureEventPublisher literatureEventPublisher;
+  @Mock private PublicationEventPublisher publicationEventPublisher;
   @Mock private ApplicationEventPublisher applicationEventPublisher;
   @Mock private Clock clock;
 
@@ -232,8 +232,8 @@ class CompleteTaskExecutionUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("部分成功时应该发布文献数据就绪事件")
-    void shouldPublishLiteratureEventWhenPartialSuccess() {
+    @DisplayName("部分成功时应该发布出版物数据就绪事件")
+    void shouldPublishPublicationEventWhenPartialSuccess() {
       // Given: 部分批次成功，有成功的批次
       ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
           new ExecuteTaskBatchesUseCase.ExecuteResult(5, 3, 2);
@@ -244,12 +244,12 @@ class CompleteTaskExecutionUseCaseImplTest {
       // When: 完成任务
       completeUseCase.complete(mockSession, mockContext, executeResult);
 
-      // Then: 应该发布文献数据就绪事件
-      ArgumentCaptor<LiteratureDataReadyEvent> eventCaptor =
-          ArgumentCaptor.forClass(LiteratureDataReadyEvent.class);
-      verify(literatureEventPublisher).publish(eventCaptor.capture());
+      // Then: 应该发布出版物数据就绪事件
+      ArgumentCaptor<PublicationDataReadyEvent> eventCaptor =
+          ArgumentCaptor.forClass(PublicationDataReadyEvent.class);
+      verify(publicationEventPublisher).publish(eventCaptor.capture());
 
-      LiteratureDataReadyEvent event = eventCaptor.getValue();
+      PublicationDataReadyEvent event = eventCaptor.getValue();
       assertThat(event.taskId()).isEqualTo(mockSession.taskId());
       assertThat(event.runId()).isEqualTo(mockSession.runId());
       assertThat(event.successBatchCount()).isEqualTo(3);
@@ -316,8 +316,8 @@ class CompleteTaskExecutionUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("全部失败时不应该发布文献数据就绪事件")
-    void shouldNotPublishLiteratureEventWhenAllBatchesFail() {
+    @DisplayName("全部失败时不应该发布出版物数据就绪事件")
+    void shouldNotPublishPublicationEventWhenAllBatchesFail() {
       // Given: 全部批次失败
       ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
           new ExecuteTaskBatchesUseCase.ExecuteResult(5, 0, 5);
@@ -327,8 +327,8 @@ class CompleteTaskExecutionUseCaseImplTest {
       // When: 完成任务
       completeUseCase.complete(mockSession, mockContext, executeResult);
 
-      // Then: 不应该发布文献数据就绪事件
-      verifyNoInteractions(literatureEventPublisher);
+      // Then: 不应该发布出版物数据就绪事件
+      verifyNoInteractions(publicationEventPublisher);
     }
   }
 
@@ -449,8 +449,8 @@ class CompleteTaskExecutionUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("有成功批次时应该发布 LiteratureDataReadyEvent")
-    void shouldPublishLiteratureDataReadyEventWhenBatchesSucceed() {
+    @DisplayName("有成功批次时应该发布 PublicationDataReadyEvent")
+    void shouldPublishPublicationDataReadyEventWhenBatchesSucceed() {
       // Given: 有成功批次
       ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
           new ExecuteTaskBatchesUseCase.ExecuteResult(10, 10, 0);
@@ -465,13 +465,13 @@ class CompleteTaskExecutionUseCaseImplTest {
       // When: 完成任务
       completeUseCase.complete(mockSession, mockContext, executeResult);
 
-      // Then: 应该发布文献数据就绪事件
-      verify(literatureEventPublisher).publish(any(LiteratureDataReadyEvent.class));
+      // Then: 应该发布出版物数据就绪事件
+      verify(publicationEventPublisher).publish(any(PublicationDataReadyEvent.class));
     }
 
     @Test
-    @DisplayName("LiteratureDataReadyEvent 应该包含正确的统计信息")
-    void shouldIncludeCorrectStatsInLiteratureDataReadyEvent() {
+    @DisplayName("PublicationDataReadyEvent 应该包含正确的统计信息")
+    void shouldIncludeCorrectStatsInPublicationDataReadyEvent() {
       // Given: 成功场景
       ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
           new ExecuteTaskBatchesUseCase.ExecuteResult(10, 10, 0);
@@ -487,17 +487,17 @@ class CompleteTaskExecutionUseCaseImplTest {
       completeUseCase.complete(mockSession, mockContext, executeResult);
 
       // Then: 验证事件内容
-      ArgumentCaptor<LiteratureDataReadyEvent> eventCaptor =
-          ArgumentCaptor.forClass(LiteratureDataReadyEvent.class);
-      verify(literatureEventPublisher).publish(eventCaptor.capture());
+      ArgumentCaptor<PublicationDataReadyEvent> eventCaptor =
+          ArgumentCaptor.forClass(PublicationDataReadyEvent.class);
+      verify(publicationEventPublisher).publish(eventCaptor.capture());
 
-      LiteratureDataReadyEvent event = eventCaptor.getValue();
+      PublicationDataReadyEvent event = eventCaptor.getValue();
       assertThat(event.taskId()).isEqualTo(mockSession.taskId());
       assertThat(event.runId()).isEqualTo(mockSession.runId());
       assertThat(event.provenanceCode()).isEqualTo(mockContext.provenanceCode());
       assertThat(event.successBatchCount()).isEqualTo(10);
       assertThat(event.failedBatchCount()).isEqualTo(0);
-      assertThat(event.totalLiteratureCount()).isEqualTo(1000); // 10 batches * 100 records
+      assertThat(event.totalPublicationCount()).isEqualTo(1000); // 10 batches * 100 records
     }
   }
 

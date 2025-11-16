@@ -49,7 +49,7 @@ class OutboxMessageDeferredEventTest {
     void shouldCreateMessageDeferredEvent() {
       // Given
       Long messageId = 1001L;
-      String channel = "literature.parsed";
+      String channel = "publication.parsed";
       int nextRetryCount = 3;
       Instant nextRetryAt = Instant.parse("2024-01-15T10:35:00Z");
       String errorCode = "NETWORK_TIMEOUT";
@@ -82,7 +82,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               messageId,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -124,7 +124,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               nextRetryCount,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -145,7 +145,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               nextRetryCount,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -166,7 +166,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               nextRetryAt,
               "NETWORK_TIMEOUT",
@@ -187,7 +187,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               errorCode,
@@ -208,7 +208,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -229,7 +229,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -252,7 +252,7 @@ class OutboxMessageDeferredEventTest {
     void shouldImplementEquals_SameFieldValues() {
       // Given
       Long messageId = 1001L;
-      String channel = "literature.parsed";
+      String channel = "publication.parsed";
       int nextRetryCount = 3;
       Instant nextRetryAt = Instant.parse("2024-01-15T10:35:00Z");
       String errorCode = "NETWORK_TIMEOUT";
@@ -280,11 +280,11 @@ class OutboxMessageDeferredEventTest {
       Instant futureTime = now.plusSeconds(300);
       OutboxMessageDeferredEvent event1 =
           new OutboxMessageDeferredEvent(
-              1001L, "literature.parsed", 3, futureTime, "NETWORK_TIMEOUT", "Error message", now);
+              1001L, "publication.parsed", 3, futureTime, "NETWORK_TIMEOUT", "Error message", now);
       OutboxMessageDeferredEvent event2 =
           new OutboxMessageDeferredEvent(
               1002L, // 不同的 messageId
-              "literature.parsed",
+              "publication.parsed",
               3,
               futureTime,
               "NETWORK_TIMEOUT",
@@ -303,10 +303,10 @@ class OutboxMessageDeferredEventTest {
       Instant futureTime = now.plusSeconds(300);
       OutboxMessageDeferredEvent event1 =
           new OutboxMessageDeferredEvent(
-              1001L, "literature.parsed", 3, futureTime, "NETWORK_TIMEOUT", "Error message", now);
+              1001L, "publication.parsed", 3, futureTime, "NETWORK_TIMEOUT", "Error message", now);
       OutboxMessageDeferredEvent event2 =
           new OutboxMessageDeferredEvent(
-              1001L, "literature.ready", 3, futureTime, "NETWORK_TIMEOUT", "Error message", now);
+              1001L, "publication.ready", 3, futureTime, "NETWORK_TIMEOUT", "Error message", now);
 
       // Then
       assertThat(event1).isNotEqualTo(event2);
@@ -320,10 +320,10 @@ class OutboxMessageDeferredEventTest {
       Instant futureTime = now.plusSeconds(300);
       OutboxMessageDeferredEvent event1 =
           new OutboxMessageDeferredEvent(
-              1001L, "literature.parsed", 3, futureTime, "NETWORK_TIMEOUT", "Error message", now);
+              1001L, "publication.parsed", 3, futureTime, "NETWORK_TIMEOUT", "Error message", now);
       OutboxMessageDeferredEvent event2 =
           new OutboxMessageDeferredEvent(
-              1001L, "literature.parsed", 5, futureTime, "NETWORK_TIMEOUT", "Error message", now);
+              1001L, "publication.parsed", 5, futureTime, "NETWORK_TIMEOUT", "Error message", now);
 
       // Then
       assertThat(event1).isNotEqualTo(event2);
@@ -338,10 +338,10 @@ class OutboxMessageDeferredEventTest {
       Instant futureTime2 = now.plusSeconds(600);
       OutboxMessageDeferredEvent event1 =
           new OutboxMessageDeferredEvent(
-              1001L, "literature.parsed", 3, futureTime1, "NETWORK_TIMEOUT", "Error message", now);
+              1001L, "publication.parsed", 3, futureTime1, "NETWORK_TIMEOUT", "Error message", now);
       OutboxMessageDeferredEvent event2 =
           new OutboxMessageDeferredEvent(
-              1001L, "literature.parsed", 3, futureTime2, "NETWORK_TIMEOUT", "Error message", now);
+              1001L, "publication.parsed", 3, futureTime2, "NETWORK_TIMEOUT", "Error message", now);
 
       // Then
       assertThat(event1).isNotEqualTo(event2);
@@ -355,11 +355,11 @@ class OutboxMessageDeferredEventTest {
       Instant futureTime = now.plusSeconds(300);
       OutboxMessageDeferredEvent event1 =
           new OutboxMessageDeferredEvent(
-              1001L, "literature.parsed", 3, futureTime, "NETWORK_TIMEOUT", "Error message", now);
+              1001L, "publication.parsed", 3, futureTime, "NETWORK_TIMEOUT", "Error message", now);
       OutboxMessageDeferredEvent event2 =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               futureTime,
               "DOWNSTREAM_SERVICE_UNAVAILABLE",
@@ -378,10 +378,10 @@ class OutboxMessageDeferredEventTest {
       Instant futureTime = now.plusSeconds(300);
       OutboxMessageDeferredEvent event1 =
           new OutboxMessageDeferredEvent(
-              1001L, "literature.parsed", 3, futureTime, "NETWORK_TIMEOUT", "Error message 1", now);
+              1001L, "publication.parsed", 3, futureTime, "NETWORK_TIMEOUT", "Error message 1", now);
       OutboxMessageDeferredEvent event2 =
           new OutboxMessageDeferredEvent(
-              1001L, "literature.parsed", 3, futureTime, "NETWORK_TIMEOUT", "Error message 2", now);
+              1001L, "publication.parsed", 3, futureTime, "NETWORK_TIMEOUT", "Error message 2", now);
 
       // Then
       assertThat(event1).isNotEqualTo(event2);
@@ -395,7 +395,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event1 =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               futureTime,
               "NETWORK_TIMEOUT",
@@ -404,7 +404,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event2 =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               futureTime,
               "NETWORK_TIMEOUT",
@@ -420,7 +420,7 @@ class OutboxMessageDeferredEventTest {
     void shouldImplementHashCode_SameFieldValues() {
       // Given
       Long messageId = 1001L;
-      String channel = "literature.parsed";
+      String channel = "publication.parsed";
       int nextRetryCount = 3;
       Instant nextRetryAt = Instant.parse("2024-01-15T10:35:00Z");
       String errorCode = "NETWORK_TIMEOUT";
@@ -447,7 +447,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event1 =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               now.plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -456,7 +456,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event2 =
           new OutboxMessageDeferredEvent(
               1002L,
-              "literature.ready",
+              "publication.ready",
               5,
               now.plusSeconds(600),
               "DOWNSTREAM_SERVICE_UNAVAILABLE",
@@ -474,7 +474,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.parse("2024-01-15T10:35:00Z"),
               "NETWORK_TIMEOUT",
@@ -531,7 +531,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               messageId,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -546,7 +546,7 @@ class OutboxMessageDeferredEventTest {
     @DisplayName("应该正确返回 channel")
     void shouldReturnChannel() {
       // Given
-      String channel = "literature.parsed";
+      String channel = "publication.parsed";
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
@@ -569,7 +569,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               nextRetryCount,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -588,7 +588,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               nextRetryAt,
               "NETWORK_TIMEOUT",
@@ -607,7 +607,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               errorCode,
@@ -626,7 +626,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -645,7 +645,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -670,7 +670,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -688,7 +688,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -707,7 +707,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -728,7 +728,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -751,7 +751,7 @@ class OutboxMessageDeferredEventTest {
     void shouldEnsureEventIsImmutable() {
       // Given
       Long messageId = 1001L;
-      String channel = "literature.parsed";
+      String channel = "publication.parsed";
       int nextRetryCount = 3;
       Instant nextRetryAt = Instant.parse("2024-01-15T10:35:00Z");
       String errorCode = "NETWORK_TIMEOUT";
@@ -790,7 +790,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               nextRetryAt,
               "NETWORK_TIMEOUT",
@@ -825,7 +825,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               largeMessageId,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -846,7 +846,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               negativeMessageId,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -867,7 +867,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               largeNextRetryCount,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -888,7 +888,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               negativeNextRetryCount,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -931,7 +931,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               longErrorCode,
@@ -954,7 +954,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -975,7 +975,7 @@ class OutboxMessageDeferredEventTest {
       // When
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
-              1001L, "literature.parsed", 3, epoch, "NETWORK_TIMEOUT", "Error message", epoch);
+              1001L, "publication.parsed", 3, epoch, "NETWORK_TIMEOUT", "Error message", epoch);
 
       // Then
       assertThat(event.nextRetryAt()).isEqualTo(epoch);
@@ -991,7 +991,7 @@ class OutboxMessageDeferredEventTest {
       // When
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
-              1001L, "literature.parsed", 3, future, "NETWORK_TIMEOUT", "Error message", future);
+              1001L, "publication.parsed", 3, future, "NETWORK_TIMEOUT", "Error message", future);
 
       // Then
       assertThat(event.nextRetryAt()).isEqualTo(future);
@@ -1009,7 +1009,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               preciseNextRetryTime,
               "NETWORK_TIMEOUT",
@@ -1052,7 +1052,7 @@ class OutboxMessageDeferredEventTest {
     @DisplayName("应该处理包含特殊字符的字段")
     void shouldHandleSpecialCharactersInFields() {
       // Given
-      String channelWithSpecialChars = "literature.parsed:v1.0-beta@2024";
+      String channelWithSpecialChars = "publication.parsed:v1.0-beta@2024";
       String errorCodeWithSpecialChars = "NETWORK_TIMEOUT_#123!@$%";
       String errorMessageWithSpecialChars =
           "Failed to connect: unexpected network error at line 42, column 15";
@@ -1084,7 +1084,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -1107,7 +1107,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -1138,7 +1138,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               expectedNextRetryCount,
               Instant.now().plusSeconds(300),
               "NETWORK_TIMEOUT",
@@ -1162,7 +1162,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               nextRetryCount,
               nextRetryAt,
               "NETWORK_TIMEOUT",
@@ -1187,7 +1187,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               2,
               nextRetryAt,
               "NETWORK_TIMEOUT",
@@ -1208,7 +1208,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               1,
               sameTime,
               "NETWORK_TIMEOUT",
@@ -1230,7 +1230,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               2,
               nextRetryAt,
               "NETWORK_TIMEOUT",
@@ -1253,7 +1253,7 @@ class OutboxMessageDeferredEventTest {
     void shouldRecordDeferredRetryForTransientNetworkError() {
       // Given - 临时性网络超时错误
       Long messageId = 1001L;
-      String channel = "literature.parsed";
+      String channel = "publication.parsed";
       int nextRetryCount = 2;
       Instant occurredAt = Instant.parse("2024-01-15T10:00:00Z");
       Instant nextRetryAt = occurredAt.plusSeconds(60); // 使用指数退避，1 分钟后重试
@@ -1284,7 +1284,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent retry1 =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               1,
               baseTime.plusSeconds(60),
               "NETWORK_TIMEOUT",
@@ -1295,7 +1295,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent retry2 =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               2,
               baseTime.plusSeconds(60 + 120),
               "NETWORK_TIMEOUT",
@@ -1306,7 +1306,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent retry3 =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               baseTime.plusSeconds(60 + 120 + 240),
               "NETWORK_TIMEOUT",
@@ -1336,7 +1336,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent retry1 =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               1,
               baseTime.plusSeconds(fixedDelaySeconds),
               "DOWNSTREAM_SERVICE_UNAVAILABLE",
@@ -1346,7 +1346,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent retry2 =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               2,
               baseTime.plusSeconds(fixedDelaySeconds * 2),
               "DOWNSTREAM_SERVICE_UNAVAILABLE",
@@ -1356,7 +1356,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent retry3 =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               baseTime.plusSeconds(fixedDelaySeconds * 3),
               "DOWNSTREAM_SERVICE_UNAVAILABLE",
@@ -1383,7 +1383,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event1 =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               1,
               baseTime.plusSeconds(60),
               "NETWORK_TIMEOUT",
@@ -1393,7 +1393,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event2 =
           new OutboxMessageDeferredEvent(
               1002L,
-              "literature.parsed",
+              "publication.parsed",
               1,
               baseTime.plusSeconds(60),
               "NETWORK_TIMEOUT",
@@ -1403,7 +1403,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event3 =
           new OutboxMessageDeferredEvent(
               1003L,
-              "literature.parsed",
+              "publication.parsed",
               1,
               baseTime.plusSeconds(60),
               "NETWORK_TIMEOUT",
@@ -1413,7 +1413,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event4 =
           new OutboxMessageDeferredEvent(
               1004L,
-              "literature.parsed",
+              "publication.parsed",
               1,
               baseTime.plusSeconds(60),
               "NETWORK_TIMEOUT",
@@ -1423,7 +1423,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event5 =
           new OutboxMessageDeferredEvent(
               1005L,
-              "literature.parsed",
+              "publication.parsed",
               1,
               baseTime.plusSeconds(60),
               "NETWORK_TIMEOUT",
@@ -1450,7 +1450,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent networkError1 =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               2,
               now.plusSeconds(60),
               "NETWORK_TIMEOUT",
@@ -1460,7 +1460,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent networkError2 =
           new OutboxMessageDeferredEvent(
               1002L,
-              "literature.parsed",
+              "publication.parsed",
               2,
               now.plusSeconds(60),
               "NETWORK_TIMEOUT",
@@ -1471,7 +1471,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent downstreamError1 =
           new OutboxMessageDeferredEvent(
               2001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               now.plusSeconds(300),
               "DOWNSTREAM_SERVICE_UNAVAILABLE",
@@ -1481,7 +1481,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent downstreamError2 =
           new OutboxMessageDeferredEvent(
               2002L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               now.plusSeconds(300),
               "DOWNSTREAM_SERVICE_UNAVAILABLE",
@@ -1491,7 +1491,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent downstreamError3 =
           new OutboxMessageDeferredEvent(
               2003L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               now.plusSeconds(300),
               "DOWNSTREAM_SERVICE_UNAVAILABLE",
@@ -1516,7 +1516,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent highRetryChannel1 =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               5,
               now.plusSeconds(600),
               "NETWORK_TIMEOUT",
@@ -1526,7 +1526,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent highRetryChannel2 =
           new OutboxMessageDeferredEvent(
               1002L,
-              "literature.parsed",
+              "publication.parsed",
               5,
               now.plusSeconds(600),
               "NETWORK_TIMEOUT",
@@ -1545,8 +1545,8 @@ class OutboxMessageDeferredEventTest {
               now);
 
       // Then - 应该可以识别高重试热点通道
-      assertThat(highRetryChannel1.channel()).isEqualTo("literature.parsed");
-      assertThat(highRetryChannel2.channel()).isEqualTo("literature.parsed");
+      assertThat(highRetryChannel1.channel()).isEqualTo("publication.parsed");
+      assertThat(highRetryChannel2.channel()).isEqualTo("publication.parsed");
       assertThat(highRetryChannel1.nextRetryCount()).isEqualTo(5);
       assertThat(highRetryChannel2.nextRetryCount()).isEqualTo(5);
       assertThat(lowRetryChannel.channel()).isEqualTo("provenance.changed");
@@ -1565,7 +1565,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent approachingLimit =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               warningThreshold,
               now.plusSeconds(480),
               "NETWORK_TIMEOUT",
@@ -1587,7 +1587,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent networkTimeout =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               2,
               now.plusSeconds(60),
               "NETWORK_TIMEOUT",
@@ -1598,7 +1598,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent downstreamUnavailable =
           new OutboxMessageDeferredEvent(
               1002L,
-              "literature.parsed",
+              "publication.parsed",
               2,
               now.plusSeconds(300),
               "DOWNSTREAM_SERVICE_UNAVAILABLE",
@@ -1609,7 +1609,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent rateLimitExceeded =
           new OutboxMessageDeferredEvent(
               1003L,
-              "literature.parsed",
+              "publication.parsed",
               2,
               now.plusSeconds(900),
               "RATE_LIMIT_EXCEEDED",
@@ -1646,7 +1646,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event1 =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               2,
               t1.plusSeconds(60),
               "NETWORK_TIMEOUT",
@@ -1656,7 +1656,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event2 =
           new OutboxMessageDeferredEvent(
               1002L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               t2.plusSeconds(120),
               "NETWORK_TIMEOUT",
@@ -1666,7 +1666,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event3 =
           new OutboxMessageDeferredEvent(
               1003L,
-              "literature.parsed",
+              "publication.parsed",
               4,
               t3.plusSeconds(240),
               "NETWORK_TIMEOUT",
@@ -1693,7 +1693,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               1,
               nextRetryAt,
               "TRANSIENT_ERROR",
@@ -1718,7 +1718,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               5,
               nextRetryAt,
               "RATE_LIMIT_EXCEEDED",
@@ -1742,7 +1742,7 @@ class OutboxMessageDeferredEventTest {
       OutboxMessageDeferredEvent channel1Event =
           new OutboxMessageDeferredEvent(
               1001L,
-              "literature.parsed",
+              "publication.parsed",
               3,
               now.plusSeconds(60),
               "NETWORK_TIMEOUT",
@@ -1761,7 +1761,7 @@ class OutboxMessageDeferredEventTest {
               now);
 
       // Then - 应该可以对比分析
-      assertThat(channel1Event.channel()).isEqualTo("literature.parsed");
+      assertThat(channel1Event.channel()).isEqualTo("publication.parsed");
       assertThat(channel1Event.nextRetryCount()).isGreaterThan(channel2Event.nextRetryCount());
 
       long channel1Delay =

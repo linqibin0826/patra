@@ -21,11 +21,11 @@
  *         <li>发布到 {@code INGEST_TASK_READY} 通道
  *         <li>用于触发任务执行流程
  *       </ul>
- *   <li>{@code LiteratureEventPublisher} - 文献事件发布器
+ *   <li>{@code PublicationEventPublisher} - 出版物事件发布器
  *       <ul>
- *         <li>处理 {@code LiteratureDataReadyEvent}
- *         <li>发布到 {@code LITERATURE_DATA_READY} 通道
- *         <li>用于通知文献数据已就绪
+ *         <li>处理 {@code PublicationDataReadyEvent}
+ *         <li>发布到 {@code PUBLICATION_DATA_READY} 通道
+ *         <li>用于通知出版物数据已就绪
  *       </ul>
  *   <li>{@code RelayEventPublisher} - 中继事件发布器
  *       <ul>
@@ -50,10 +50,10 @@
  *     <td>TaskReadyMessageListener</td>
  *   </tr>
  *   <tr>
- *     <td>LiteratureEventPublisher</td>
- *     <td>LiteratureDataReadyEvent</td>
- *     <td>LITERATURE_DATA_READY</td>
- *     <td>LiteratureReadyMessageListener</td>
+ *     <td>PublicationEventPublisher</td>
+ *     <td>PublicationDataReadyEvent</td>
+ *     <td>PUBLICATION_DATA_READY</td>
+ *     <td>PublicationReadyMessageListener</td>
  *   </tr>
  *   <tr>
  *     <td>RelayEventPublisher</td>
@@ -70,8 +70,8 @@
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor
- * public class LiteratureEventPublisher
- *     extends AbstractOutboxPublisher<LiteratureDataReadyEvent, LiteratureReadyPayload, LiteratureReadyHeaders> {
+ * public class PublicationEventPublisher
+ *     extends AbstractOutboxPublisher<PublicationDataReadyEvent, PublicationReadyPayload, PublicationReadyHeaders> {
  *
  *     private final ObjectMapper objectMapper;
  *
@@ -82,12 +82,12 @@
  *
  *     @Override
  *     protected OutboxChannels getChannel() {
- *         return OutboxChannels.LITERATURE_DATA_READY;
+ *         return OutboxChannels.PUBLICATION_DATA_READY;
  *     }
  *
  *     @Override
- *     protected LiteratureReadyPayload buildPayload(LiteratureDataReadyEvent event) {
- *         return LiteratureReadyPayload.builder()
+ *     protected PublicationReadyPayload buildPayload(PublicationDataReadyEvent event) {
+ *         return PublicationReadyPayload.builder()
  *             .taskId(event.getTaskId())
  *             .runId(event.getRunId())
  *             .storageKeys(event.getStorageKeys())
@@ -96,15 +96,15 @@
  *     }
  *
  *     @Override
- *     protected String buildPartitionKey(LiteratureDataReadyEvent event) {
+ *     protected String buildPartitionKey(PublicationDataReadyEvent event) {
  *         // 按 provenanceCode 分区，确保同一数据源的消息顺序消费
  *         return event.getProvenanceCode();
  *     }
  *
  *     @Override
- *     protected String buildDedupKey(LiteratureDataReadyEvent event) {
+ *     protected String buildDedupKey(PublicationDataReadyEvent event) {
  *         // taskId + runId 保证幂等性
- *         return String.format("task:%d:run:%d:literature", event.getTaskId(), event.getRunId());
+ *         return String.format("task:%d:run:%d:publication", event.getTaskId(), event.getRunId());
  *     }
  * }
  * }</pre>
@@ -115,12 +115,12 @@
  * @Service
  * @RequiredArgsConstructor
  * @Transactional
- * public class LiteraturePublisherOrchestrator {
- *     private final LiteratureEventPublisher literaturePublisher;
+ * public class PublicationPublisherOrchestrator {
+ *     private final PublicationEventPublisher literaturePublisher;
  *
- *     public void publishLiteratureData(Long taskId, Long runId, List<String> storageKeys) {
+ *     public void publishPublicationData(Long taskId, Long runId, List<String> storageKeys) {
  *         // 1. 构建领域事件
- *         var event = new LiteratureDataReadyEvent(
+ *         var event = new PublicationDataReadyEvent(
  *             taskId,
  *             runId,
  *             "pubmed",

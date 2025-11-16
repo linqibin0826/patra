@@ -82,20 +82,20 @@ patra-common-core/
 
 **使用示例**:
 ```java
-public class Literature extends AggregateRoot<LiteratureId> {
+public class Publication extends AggregateRoot<PublicationId> {
     private String title;
     private PublicationStatus status;
 
     public void publish() {
         this.status = PublicationStatus.PUBLISHED;
-        addDomainEvent(new LiteraturePublishedEvent(getId(), Instant.now()));
+        addDomainEvent(new PublicationPublishedEvent(getId(), Instant.now()));
         assertInvariants();
     }
 
     @Override
     protected void assertInvariants() {
         if (status == PublicationStatus.PUBLISHED && title == null) {
-            throw new IllegalStateException("已发布文献必须有标题");
+            throw new IllegalStateException("已发布出版物必须有标题");
         }
     }
 }
@@ -117,9 +117,9 @@ public class Literature extends AggregateRoot<LiteratureId> {
 
 **使用示例**:
 ```java
-public class LiteratureNotFoundException extends DomainException {
-    public LiteratureNotFoundException(String literatureId) {
-        super("文献不存在: " + literatureId);
+public class PublicationNotFoundException extends DomainException {
+    public PublicationNotFoundException(String publicationId) {
+        super("出版物不存在: " + publicationId);
     }
 }
 ```
@@ -152,7 +152,7 @@ public class QuotaExceededException extends ApplicationException implements HasE
 ### 3. enums — 共享枚举
 
 #### ProvenanceCode
-数据源枚举,标识文献的上游来源(PubMed、PMC、EPMC、OpenAlex 等)。
+数据源枚举,标识出版物的上游来源(PubMed、PMC、EPMC、OpenAlex 等)。
 
 **特性**:
 - 支持字符串解析和别名识别
@@ -242,14 +242,14 @@ JsonNormalizerResult result2 = normalizer.normalize(complexPayload);
 
 **使用示例**:
 ```java
-public static final ChannelKey LITERATURE_INGEST =
-    ChannelKey.of("literature.ingest");
+public static final ChannelKey PUBLICATION_INGEST =
+    ChannelKey.of("publication.ingest");
 
 // 发布事件
-eventBus.publish(LITERATURE_INGEST, event);
+eventBus.publish(PUBLICATION_INGEST, event);
 
 // 订阅事件
-eventBus.subscribe(LITERATURE_INGEST, handler);
+eventBus.subscribe(PUBLICATION_INGEST, handler);
 ```
 
 ---
@@ -301,13 +301,13 @@ String md5 = HashUtils.md5(data);
 #### 场景 1: 创建聚合根
 
 ```java
-package com.patra.ingest.domain.literature;
+package com.patra.ingest.domain.publication;
 
 import com.patra.common.domain.AggregateRoot;
 import com.patra.common.domain.DomainEvent;
 import java.time.Instant;
 
-public class LiteratureBatch extends AggregateRoot<LiteratureBatchId> {
+public class PublicationBatch extends AggregateRoot<PublicationBatchId> {
     private String batchId;
     private BatchStatus status;
     private int totalCount;
@@ -350,7 +350,7 @@ if (source == ProvenanceCode.PUBMED) {
 import com.patra.common.json.JsonNormalizer;
 import com.patra.common.util.HashUtils;
 
-JsonNormalizerResult result = JsonNormalizer.normalizeDefault(literatureData);
+JsonNormalizerResult result = JsonNormalizer.normalizeDefault(publicationData);
 String contentHash = HashUtils.sha256(result.getHashMaterial());
 // 使用 contentHash 作为去重键
 ```

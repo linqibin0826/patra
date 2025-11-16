@@ -53,11 +53,11 @@ class FileMetadataTest {
     @DisplayName("应该成功创建新文件元数据并初始化为 ACTIVE 状态")
     void shouldCreateNewFileMetadataWithActiveStatus() {
       // Given
-      StorageKey storageKey = new StorageKey("literature-files", "2024/01/article.pdf");
+      StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
       FileSize fileSize = new FileSize(1024 * 1024); // 1 MB
       FileChecksum checksum = new FileChecksum("d41d8cd98f00b204e9800998ecf8427e", null);
       BusinessContext context =
-          new BusinessContext("patra-ingest", "literature_batch", "batch-001", null);
+          new BusinessContext("patra-ingest", "publication_batch", "batch-001", null);
       StorageProvider provider = StorageProvider.MINIO;
 
       // When
@@ -187,7 +187,7 @@ class FileMetadataTest {
     void shouldRestoreFileMetadataFromPersistentState() {
       // Given
       Long id = 100L;
-      StorageKey storageKey = new StorageKey("literature-files", "2024/01/article.pdf");
+      StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
       FileSize fileSize = new FileSize(2 * 1024 * 1024); // 2 MB
       String contentType = "application/pdf";
       FileChecksum checksum =
@@ -197,7 +197,7 @@ class FileMetadataTest {
       BusinessContext context =
           new BusinessContext(
               "patra-ingest",
-              "literature_batch",
+              "publication_batch",
               "batch-001",
               Map.of("source", "pubmed", "year", 2024));
       StorageProvider provider = StorageProvider.S3;
@@ -767,7 +767,7 @@ class FileMetadataTest {
     @DisplayName("应该正确使用 StorageKey 的 fullKey() 方法")
     void shouldCorrectlyUseStorageKeyFullKeyMethod() {
       // Given
-      StorageKey storageKey = new StorageKey("literature-files", "2024/01/article.pdf");
+      StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
       FileMetadata metadata =
           FileMetadataTestDataBuilder.anActiveFile().storageKey(storageKey).build();
 
@@ -775,7 +775,7 @@ class FileMetadataTest {
       String fullKey = metadata.getStorageKey().fullKey();
 
       // Then
-      assertThat(fullKey).isEqualTo("literature-files/2024/01/article.pdf");
+      assertThat(fullKey).isEqualTo("publication-files/2024/01/article.pdf");
     }
 
     @Test
@@ -815,7 +815,7 @@ class FileMetadataTest {
       Map<String, Object> correlationData =
           Map.of("source", "pubmed", "year", 2024, "importBatchId", "batch-001");
       BusinessContext context =
-          new BusinessContext("patra-ingest", "literature_batch", "id-001", correlationData);
+          new BusinessContext("patra-ingest", "publication_batch", "id-001", correlationData);
       FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().context(context).build();
 
       // When & Then

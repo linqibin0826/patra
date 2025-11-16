@@ -30,8 +30,8 @@
 ```
 patra-common-model/
 └── model/
-    ├── CanonicalLiterature           (标准化文献模型)
-    │   ├── CanonicalLiterature       (主模型)
+    ├── CanonicalPublication           (标准化出版物模型)
+    │   ├── CanonicalPublication       (主模型)
     │   ├── AuthorInfo                (作者快照)
     │   └── JournalInfo               (期刊快照)
     └── plan/                         (计划元数据模型)
@@ -45,9 +45,9 @@ patra-common-model/
 
 ## 主要组件
 
-### CanonicalLiterature — 标准化文献模型
+### CanonicalPublication — 标准化出版物模型
 
-跨服务共享的规范化文献数据结构,作为采集、存储、检索服务之间的数据交换契约。
+跨服务共享的规范化出版物数据结构,作为采集、存储、检索服务之间的数据交换契约。
 
 **设计定位**: Shared Kernel — 多个服务共享的核心领域模型
 
@@ -169,14 +169,14 @@ patra-common-model/
 ### 示例 1: 创建标准化文献
 
 ```java
-import com.patra.common.model.CanonicalLiterature;
-import com.patra.common.model.CanonicalLiterature.AuthorInfo;
-import com.patra.common.model.CanonicalLiterature.JournalInfo;
+import com.patra.common.model.CanonicalPublication;
+import com.patra.common.model.CanonicalPublication.AuthorInfo;
+import com.patra.common.model.CanonicalPublication.JournalInfo;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
-CanonicalLiterature literature = CanonicalLiterature.builder()
+CanonicalPublication publication = CanonicalPublication.builder()
     .title("Deep Learning in Medical Image Analysis")
     .abstractText("This study presents a comprehensive review...")
     .authors(List.of(
@@ -281,7 +281,7 @@ public class UnifiedBatchPlanner {
 
     public BatchPlan plan(ExecutionContext ctx) {
         // 1. 获取计划元数据
-        PlanMetadata planMetadata = dataSourcePort.preparePlan(ctx, DataType.LITERATURE);
+        PlanMetadata planMetadata = dataSourcePort.preparePlan(ctx, DataType.PUBLICATION);
 
         // 2. 根据类型生成批次
         List<Batch> batches = generateBatches(planMetadata, ctx);
@@ -384,7 +384,7 @@ if (plan instanceof PubmedPlanMetadata pubmedPlan) {
 
 ### 扩展建议
 - **添加新字段**: 使用可选类型,提供默认值
-- **修改现有字段**: 创建新版本模型(`CanonicalLiteratureV2`)
+- **修改现有字段**: 创建新版本模型(`CanonicalPublicationV2`)
 - **删除字段**: 必须确保无消费者依赖
 - **新增数据源**: 创建新的 PlanMetadata 子类(如 `CrossrefPlanMetadata`)
 
@@ -394,7 +394,7 @@ if (plan instanceof PubmedPlanMetadata pubmedPlan) {
 @Value
 @Builder
 @Jacksonized
-public class CanonicalLiterature {
+public class CanonicalPublication {
     String title;
     String abstractText;
     // ... 现有字段

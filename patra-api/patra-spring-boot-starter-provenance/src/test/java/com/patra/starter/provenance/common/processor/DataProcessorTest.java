@@ -2,7 +2,7 @@ package com.patra.starter.provenance.common.processor;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.patra.common.model.CanonicalLiterature;
+import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import com.patra.starter.provenance.common.provider.BatchExecutionParams;
@@ -54,41 +54,41 @@ class DataProcessorTest {
         .build();
   }
 
-  /** 创建测试用的CanonicalLiterature */
-  private CanonicalLiterature createValidLiterature() {
-    return CanonicalLiterature.builder()
+  /** 创建测试用的CanonicalPublication */
+  private CanonicalPublication createValidPublication() {
+    return CanonicalPublication.builder()
         .title("Test Article")
-        .abstractContent(CanonicalLiterature.Abstract.builder().text("Test abstract").build())
+        .abstractContent(CanonicalPublication.Abstract.builder().text("Test abstract").build())
         .identifiers(
-            List.of(CanonicalLiterature.Identifier.builder().type("PMID").value("12345").build()))
+            List.of(CanonicalPublication.Identifier.builder().type("PMID").value("12345").build()))
         .build();
   }
 
-  /** 创建测试用的无效CanonicalLiterature（缺少必填字段） */
-  private CanonicalLiterature createInvalidLiterature() {
-    return CanonicalLiterature.builder()
+  /** 创建测试用的无效CanonicalPublication（缺少必填字段） */
+  private CanonicalPublication createInvalidLiterature() {
+    return CanonicalPublication.builder()
         .abstractContent(
-            CanonicalLiterature.Abstract.builder().text("Test abstract without title").build())
+            CanonicalPublication.Abstract.builder().text("Test abstract without title").build())
         .build();
   }
 
   // ==================== Mock实现 ====================
 
   /** Mock实现：用于测试接口契约 */
-  static class MockLiteratureProcessor implements DataProcessor<CanonicalLiterature> {
+  static class MockPublicationProcessor implements DataProcessor<CanonicalPublication> {
 
-    private final ProcessResult<CanonicalLiterature> mockResult;
+    private final ProcessResult<CanonicalPublication> mockResult;
     private final ValidationResult mockValidationResult;
-    private final CanonicalLiterature mockTransformResult;
+    private final CanonicalPublication mockTransformResult;
 
-    public MockLiteratureProcessor() {
+    public MockPublicationProcessor() {
       this(ProcessResult.success(List.of(), null), ValidationResult.success(), null);
     }
 
-    public MockLiteratureProcessor(
-        ProcessResult<CanonicalLiterature> mockResult,
+    public MockPublicationProcessor(
+        ProcessResult<CanonicalPublication> mockResult,
         ValidationResult mockValidationResult,
-        CanonicalLiterature mockTransformResult) {
+        CanonicalPublication mockTransformResult) {
       this.mockResult = mockResult;
       this.mockValidationResult = mockValidationResult;
       this.mockTransformResult = mockTransformResult;
@@ -96,22 +96,22 @@ class DataProcessorTest {
 
     @Override
     public DataType getDataType() {
-      return DataType.LITERATURE;
+      return DataType.PUBLICATION;
     }
 
     @Override
-    public ProcessResult<CanonicalLiterature> process(
+    public ProcessResult<CanonicalPublication> process(
         ProviderRequest request, ProviderContext context) {
       return mockResult;
     }
 
     @Override
-    public ValidationResult validate(CanonicalLiterature data) {
+    public ValidationResult validate(CanonicalPublication data) {
       return mockValidationResult;
     }
 
     @Override
-    public CanonicalLiterature transform(Object rawData) throws TransformationException {
+    public CanonicalPublication transform(Object rawData) throws TransformationException {
       if (mockTransformResult == null) {
         throw new TransformationException("Mock transformation failed");
       }
@@ -129,23 +129,23 @@ class DataProcessorTest {
     @DisplayName("should_return_correct_data_type")
     void shouldReturnCorrectDataType() {
       // Given: 创建Processor
-      DataProcessor<CanonicalLiterature> processor = new MockLiteratureProcessor();
+      DataProcessor<CanonicalPublication> processor = new MockPublicationProcessor();
 
       // When: 获取数据类型
       DataType dataType = processor.getDataType();
 
       // Then: 返回正确的数据类型
-      assertThat(dataType).isEqualTo(DataType.LITERATURE);
+      assertThat(dataType).isEqualTo(DataType.PUBLICATION);
     }
 
     @Test
     @DisplayName("should_support_correct_data_type")
     void shouldSupportCorrectDataType() {
       // Given: 创建Processor
-      DataProcessor<CanonicalLiterature> processor = new MockLiteratureProcessor();
+      DataProcessor<CanonicalPublication> processor = new MockPublicationProcessor();
 
       // When & Then: 支持对应的数据类型
-      assertThat(processor.supports(DataType.LITERATURE)).isTrue();
+      assertThat(processor.supports(DataType.PUBLICATION)).isTrue();
       assertThat(processor.supports(DataType.JOURNAL)).isFalse();
       assertThat(processor.supports(DataType.DRUG)).isFalse();
     }
@@ -161,23 +161,23 @@ class DataProcessorTest {
     @DisplayName("should_process_data_successfully")
     void shouldProcessDataSuccessfully() {
       // Given: 准备成功的处理结果
-      CanonicalLiterature literature = createValidLiterature();
-      ProcessResult<CanonicalLiterature> successResult =
-          ProcessResult.success(List.of(literature), "cursor123");
+      CanonicalPublication publication = createValidPublication();
+      ProcessResult<CanonicalPublication> successResult =
+          ProcessResult.success(List.of(publication), "cursor123");
 
-      DataProcessor<CanonicalLiterature> processor =
-          new MockLiteratureProcessor(successResult, ValidationResult.success(), null);
+      DataProcessor<CanonicalPublication> processor =
+          new MockPublicationProcessor(successResult, ValidationResult.success(), null);
 
       ProviderRequest request = createTestRequest();
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 返回成功结果
       assertThat(result.success()).isTrue();
       assertThat(result.data()).hasSize(1);
-      assertThat(result.data().get(0)).isEqualTo(literature);
+      assertThat(result.data().get(0)).isEqualTo(publication);
       assertThat(result.nextCursor()).isEqualTo("cursor123");
       assertThat(result.status()).isEqualTo(ProcessStatus.SUCCESS);
       assertThat(result.errorMessage()).isNull();
@@ -187,16 +187,16 @@ class DataProcessorTest {
     @DisplayName("should_handle_process_failure")
     void shouldHandleProcessFailure() {
       // Given: 准备失败的处理结果
-      ProcessResult<CanonicalLiterature> failureResult = ProcessResult.failure("Network timeout");
+      ProcessResult<CanonicalPublication> failureResult = ProcessResult.failure("Network timeout");
 
-      DataProcessor<CanonicalLiterature> processor =
-          new MockLiteratureProcessor(failureResult, ValidationResult.success(), null);
+      DataProcessor<CanonicalPublication> processor =
+          new MockPublicationProcessor(failureResult, ValidationResult.success(), null);
 
       ProviderRequest request = createTestRequest();
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 返回失败结果
       assertThat(result.success()).isFalse();
@@ -210,19 +210,19 @@ class DataProcessorTest {
     @DisplayName("should_handle_partial_success")
     void shouldHandlePartialSuccess() {
       // Given: 准备部分成功的处理结果
-      CanonicalLiterature literature = createValidLiterature();
-      ProcessResult<CanonicalLiterature> partialResult =
+      CanonicalPublication publication = createValidPublication();
+      ProcessResult<CanonicalPublication> partialResult =
           ProcessResult.partialSuccess(
-              List.of(literature), "cursor456", "2 out of 10 records failed to transform");
+              List.of(publication), "cursor456", "2 out of 10 records failed to transform");
 
-      DataProcessor<CanonicalLiterature> processor =
-          new MockLiteratureProcessor(partialResult, ValidationResult.success(), null);
+      DataProcessor<CanonicalPublication> processor =
+          new MockPublicationProcessor(partialResult, ValidationResult.success(), null);
 
       ProviderRequest request = createTestRequest();
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 返回部分成功结果
       assertThat(result.success()).isTrue();
@@ -236,17 +236,17 @@ class DataProcessorTest {
     @DisplayName("should_handle_validation_error")
     void shouldHandleValidationError() {
       // Given: 准备验证错误的处理结果
-      ProcessResult<CanonicalLiterature> validationErrorResult =
+      ProcessResult<CanonicalPublication> validationErrorResult =
           ProcessResult.validationError("Title is required");
 
-      DataProcessor<CanonicalLiterature> processor =
-          new MockLiteratureProcessor(validationErrorResult, ValidationResult.success(), null);
+      DataProcessor<CanonicalPublication> processor =
+          new MockPublicationProcessor(validationErrorResult, ValidationResult.success(), null);
 
       ProviderRequest request = createTestRequest();
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 返回验证错误结果
       assertThat(result.success()).isFalse();
@@ -265,15 +265,15 @@ class DataProcessorTest {
     @DisplayName("should_transform_raw_data_to_target_type")
     void shouldTransformRawDataToTargetType() throws TransformationException {
       // Given: 准备转换结果
-      CanonicalLiterature expectedResult = createValidLiterature();
-      DataProcessor<CanonicalLiterature> processor =
-          new MockLiteratureProcessor(
+      CanonicalPublication expectedResult = createValidPublication();
+      DataProcessor<CanonicalPublication> processor =
+          new MockPublicationProcessor(
               ProcessResult.success(List.of(), null), ValidationResult.success(), expectedResult);
 
       Object rawData = new Object(); // 模拟原始数据
 
       // When: 转换数据
-      CanonicalLiterature result = processor.transform(rawData);
+      CanonicalPublication result = processor.transform(rawData);
 
       // Then: 返回转换后的数据
       assertThat(result).isEqualTo(expectedResult);
@@ -283,8 +283,8 @@ class DataProcessorTest {
     @DisplayName("should_throw_exception_on_invalid_transform")
     void shouldThrowExceptionOnInvalidTransform() {
       // Given: 准备会抛出异常的Processor
-      DataProcessor<CanonicalLiterature> processor =
-          new MockLiteratureProcessor(
+      DataProcessor<CanonicalPublication> processor =
+          new MockPublicationProcessor(
               ProcessResult.success(List.of(), null), ValidationResult.success(), null // 会导致抛出异常
               );
 
@@ -319,11 +319,11 @@ class DataProcessorTest {
     @DisplayName("should_validate_data_successfully")
     void shouldValidateDataSuccessfully() {
       // Given: 准备成功的验证结果
-      DataProcessor<CanonicalLiterature> processor =
-          new MockLiteratureProcessor(
+      DataProcessor<CanonicalPublication> processor =
+          new MockPublicationProcessor(
               ProcessResult.success(List.of(), null), ValidationResult.success(), null);
 
-      CanonicalLiterature data = createValidLiterature();
+      CanonicalPublication data = createValidPublication();
 
       // When: 验证数据
       ValidationResult result = processor.validate(data);
@@ -340,10 +340,10 @@ class DataProcessorTest {
       List<String> expectedErrors = List.of("Title is required", "PMID is required");
       ValidationResult failureResult = ValidationResult.failure(expectedErrors);
 
-      DataProcessor<CanonicalLiterature> processor =
-          new MockLiteratureProcessor(ProcessResult.success(List.of(), null), failureResult, null);
+      DataProcessor<CanonicalPublication> processor =
+          new MockPublicationProcessor(ProcessResult.success(List.of(), null), failureResult, null);
 
-      CanonicalLiterature data = createInvalidLiterature();
+      CanonicalPublication data = createInvalidLiterature();
 
       // When: 验证数据
       ValidationResult result = processor.validate(data);
@@ -365,11 +365,11 @@ class DataProcessorTest {
     @DisplayName("should_create_success_result")
     void shouldCreateSuccessResult() {
       // Given: 准备数据
-      List<CanonicalLiterature> data = List.of(createValidLiterature());
+      List<CanonicalPublication> data = List.of(createValidPublication());
       String cursor = "cursor123";
 
       // When: 创建成功结果
-      ProcessResult<CanonicalLiterature> result = ProcessResult.success(data, cursor);
+      ProcessResult<CanonicalPublication> result = ProcessResult.success(data, cursor);
 
       // Then: 验证结果
       assertThat(result.success()).isTrue();
@@ -383,10 +383,10 @@ class DataProcessorTest {
     @DisplayName("should_create_success_result_with_null_cursor")
     void shouldCreateSuccessResultWithNullCursor() {
       // Given: 准备数据（最后一页，无下一页游标）
-      List<CanonicalLiterature> data = List.of(createValidLiterature());
+      List<CanonicalPublication> data = List.of(createValidPublication());
 
       // When: 创建成功结果
-      ProcessResult<CanonicalLiterature> result = ProcessResult.success(data, null);
+      ProcessResult<CanonicalPublication> result = ProcessResult.success(data, null);
 
       // Then: 验证结果
       assertThat(result.success()).isTrue();
@@ -400,7 +400,7 @@ class DataProcessorTest {
       String errorMessage = "Network timeout occurred";
 
       // When: 创建失败结果
-      ProcessResult<CanonicalLiterature> result = ProcessResult.failure(errorMessage);
+      ProcessResult<CanonicalPublication> result = ProcessResult.failure(errorMessage);
 
       // Then: 验证结果
       assertThat(result.success()).isFalse();
@@ -414,12 +414,12 @@ class DataProcessorTest {
     @DisplayName("should_create_partial_success_result")
     void shouldCreatePartialSuccessResult() {
       // Given: 准备数据
-      List<CanonicalLiterature> data = List.of(createValidLiterature());
+      List<CanonicalPublication> data = List.of(createValidPublication());
       String cursor = "cursor456";
       String warningMessage = "2 records failed";
 
       // When: 创建部分成功结果
-      ProcessResult<CanonicalLiterature> result =
+      ProcessResult<CanonicalPublication> result =
           ProcessResult.partialSuccess(data, cursor, warningMessage);
 
       // Then: 验证结果
@@ -437,7 +437,7 @@ class DataProcessorTest {
       String errorMessage = "Title is required";
 
       // When: 创建验证错误结果
-      ProcessResult<CanonicalLiterature> result = ProcessResult.validationError(errorMessage);
+      ProcessResult<CanonicalPublication> result = ProcessResult.validationError(errorMessage);
 
       // Then: 验证结果
       assertThat(result.success()).isFalse();
@@ -452,10 +452,10 @@ class DataProcessorTest {
       Map<String, Object> metadata = Map.of("recordCount", 100, "processingTime", 1250L);
 
       // When: 创建带元数据的结果
-      ProcessResult<CanonicalLiterature> result =
-          ProcessResult.<CanonicalLiterature>builder()
+      ProcessResult<CanonicalPublication> result =
+          ProcessResult.<CanonicalPublication>builder()
               .success(true)
-              .data(List.of(createValidLiterature()))
+              .data(List.of(createValidPublication()))
               .status(ProcessStatus.SUCCESS)
               .metadata(metadata)
               .build();

@@ -46,7 +46,7 @@ public class FileMetadataTestDataBuilder {
   private String contentType;
   private FileChecksum checksum = new FileChecksum("d41d8cd98f00b204e9800998ecf8427e", null);
   private BusinessContext context =
-      new BusinessContext("patra-ingest", "literature_batch", "batch-001", null);
+      new BusinessContext("patra-ingest", "publication_batch", "batch-001", null);
   private StorageProvider provider = StorageProvider.MINIO;
   private FileStatus status = FileStatus.ACTIVE;
 

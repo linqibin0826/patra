@@ -3,8 +3,8 @@ package com.patra.ingest.infra.integration.storage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.model.CanonicalLiterature;
-import com.patra.ingest.domain.port.LiteratureStoragePort;
+import com.patra.common.model.CanonicalPublication;
+import com.patra.ingest.domain.port.PublicationStoragePort;
 import com.patra.starter.objectstorage.ObjectStorageTemplate;
 import com.patra.starter.objectstorage.StorageLocation;
 import com.patra.starter.objectstorage.StorageLocationResolver;
@@ -25,26 +25,26 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
- * 基础设施适配器,实现文献存储到对象存储的功能。
+ * 基础设施适配器,实现出版物存储到对象存储的功能。
  *
  * <p>此适配器专注于技术性存储操作:
  *
  * <ul>
- *   <li>序列化: 将 {@link CanonicalLiterature} 转换为 JSON 字节
+ *   <li>序列化: 将 {@link CanonicalPublication} 转换为 JSON 字节
  *   <li>校验和计算: MD5 和 SHA-256 用于完整性验证
  *   <li>存储上传: 通过 {@link ObjectStorageTemplate} 上传到 S3/MinIO
  * </ul>
  *
- * <p>存储格式: 直接使用共享内核模型 {@link CanonicalLiterature}，保证数据完整性。
+ * <p>存储格式: 直接使用共享内核模型 {@link CanonicalPublication}，保证数据完整性。
  *
  * <p>跨服务集成(元数据记录)在应用层单独处理。
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class LiteratureStorageAdapter implements LiteratureStoragePort {
+public class PublicationStorageAdapter implements PublicationStoragePort {
 
-  private static final String BUSINESS_TYPE = "literature-batch";
+  private static final String BUSINESS_TYPE = "publication-batch";
   private static final HexFormat HEX_FORMAT = HexFormat.of();
   private static final DateTimeFormatter FILENAME_TIMESTAMP_FORMAT =
       DateTimeFormatter.ofPattern("HHmmssSSS");
@@ -54,8 +54,8 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
   private final StorageLocationResolver storageLocationResolver;
 
   @Override
-  public StorageResult store(List<CanonicalLiterature> literature, StorageContext context) {
-    // 步骤 1: 序列化为 JSON (直接存储 CanonicalLiterature,保证数据完整性)
+  public StorageResult store(List<CanonicalPublication> publication, StorageContext context) {
+    // 步骤 1: 序列化为 JSON (直接存储 CanonicalPublication,保证数据完整性)
     byte[] serialized = serializePayload(literature, context);
 
     // 步骤 2: 计算校验和
@@ -68,7 +68,7 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
     UploadResult uploadResult = uploadPayload(location, serialized, literature.size(), context);
 
     log.info(
-        "文献已存储 bucket={} key={} size={} bytes count={}",
+        "出版物已存储 bucket={} key={} size={} bytes count={}",
         uploadResult.getBucketName(),
         uploadResult.getObjectKey(),
         uploadResult.getFileSize(),
@@ -86,11 +86,11 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
   }
 
   private byte[] serializePayload(
-      List<CanonicalLiterature> payload, LiteratureStoragePort.StorageContext context) {
+      List<CanonicalPublication> payload, PublicationStoragePort.StorageContext context) {
     try {
       byte[] serialized = objectMapper.writeValueAsBytes(payload);
       log.info(
-          "文献负载已准备 runId={} batchNo={} provenance={} size={} bytes entries={}",
+          "出版物负载已准备 runId={} batchNo={} provenance={} size={} bytes entries={}",
           context.runId(),
           context.batchNo(),
           context.provenanceCode(),
@@ -98,7 +98,7 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
           payload.size());
       return serialized;
     } catch (JsonProcessingException ex) {
-      throw new LiteratureStorageException("序列化文献负载失败", ex);
+      throw new PublicationStorageException("序列化出版物负载失败", ex);
     }
   }
 
@@ -115,7 +115,7 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
     }
   }
 
-  private StorageLocation resolveStorageLocation(LiteratureStoragePort.StorageContext context) {
+  private StorageLocation resolveStorageLocation(PublicationStoragePort.StorageContext context) {
     com.patra.starter.objectstorage.StorageContext storageContext =
         com.patra.starter.objectstorage.StorageContext.builder()
             .businessType(BUSINESS_TYPE)
@@ -133,7 +133,7 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
       StorageLocation location,
       byte[] payload,
       int entryCount,
-      LiteratureStoragePort.StorageContext context) {
+      PublicationStoragePort.StorageContext context) {
     ObjectMetadata metadata =
         ObjectMetadata.builder()
             .contentLength(payload.length)
@@ -151,17 +151,17 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
           objectStorageTemplate.upload(
               location.bucket(), location.objectKey(), inputStream, metadata);
       log.info(
-          "文献负载已上传 bucket={} key={} size={} bytes",
+          "出版物负载已上传 bucket={} key={} size={} bytes",
           result.getBucketName(),
           result.getObjectKey(),
           result.getFileSize());
       return result;
     } catch (Exception ex) {
-      throw new LiteratureStorageException("上传文献负载失败", ex);
+      throw new PublicationStorageException("上传出版物负载失败", ex);
     }
   }
 
-  private String generateFilename(LiteratureStoragePort.StorageContext context) {
+  private String generateFilename(PublicationStoragePort.StorageContext context) {
     String provenance = safeProvenance(context.provenanceCode());
     String runSegment = context.runId() == null ? "na" : Long.toUnsignedString(context.runId(), 36);
     String timestamp = LocalDateTime.now().format(FILENAME_TIMESTAMP_FORMAT);
@@ -169,7 +169,7 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
         "%s-batch-%03d-%s-%s.json", provenance, context.batchNo(), runSegment, timestamp);
   }
 
-  private String buildBusinessId(LiteratureStoragePort.StorageContext context) {
+  private String buildBusinessId(PublicationStoragePort.StorageContext context) {
     String provenance = safeProvenance(context.provenanceCode());
     String runIdSegment = context.runId() != null ? String.valueOf(context.runId()) : "na";
     return provenance + "-" + context.batchNo() + "-" + runIdSegment;
@@ -184,8 +184,8 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
   }
 
   /** 存储异常,指示序列化或上传失败。 */
-  public static class LiteratureStorageException extends RuntimeException {
-    public LiteratureStorageException(String message, Throwable cause) {
+  public static class PublicationStorageException extends RuntimeException {
+    public PublicationStorageException(String message, Throwable cause) {
       super(message, cause);
     }
   }

@@ -10,8 +10,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.model.CanonicalLiterature;
-import com.patra.ingest.domain.port.LiteratureStoragePort;
+import com.patra.common.model.CanonicalPublication;
+import com.patra.ingest.domain.port.PublicationStoragePort;
 import com.patra.ingest.domain.port.StorageMetadataPort;
 import com.patra.ingest.domain.port.TechnicalRetryPort;
 import feign.FeignException;
@@ -33,61 +33,61 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * 文献发布编排器单元测试
+ * 出版物发布编排器单元测试
  *
  * <p>测试策略：
  *
  * <ul>
- *   <li>Mock LiteratureStoragePort、StorageMetadataPort、TechnicalRetryPort
+ *   <li>Mock PublicationStoragePort、StorageMetadataPort、TechnicalRetryPort
  *   <li>验证存储和元数据记录编排
  *   <li>测试元数据记录失败场景和重试委托
  *   <li>覆盖 Feign 异常处理
  * </ul>
  */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("文献发布编排器测试")
-class LiteraturePublisherOrchestratorTest {
+@DisplayName("出版物发布编排器测试")
+class PublicationPublisherOrchestratorTest {
 
-  @Mock private LiteratureStoragePort literatureStoragePort;
+  @Mock private PublicationStoragePort publicationStoragePort;
 
   @Mock private StorageMetadataPort storageMetadataPort;
 
   @Mock private TechnicalRetryPort technicalRetryPort;
 
-  @InjectMocks private LiteraturePublisherOrchestrator orchestrator;
+  @InjectMocks private PublicationPublisherOrchestrator orchestrator;
 
   private static final Long RUN_ID = 100L;
   private static final int BATCH_NO = 1;
   private static final String PROVENANCE_CODE = "pubmed";
   private static final String STORAGE_KEY = "pubmed/2025/01/batch-1-100.json";
-  private static final String BUCKET_NAME = "literature-bucket";
+  private static final String BUCKET_NAME = "publication-bucket";
   private static final String OBJECT_KEY = "pubmed/2025/01/batch-1-100.json";
   private static final long FILE_SIZE = 1024L;
   private static final String MD5 = "abc123";
   private static final String SHA256 = "def456";
 
-  private LiteraturePublisherOrchestrator.PublishContext publishContext;
-  private List<CanonicalLiterature> literatures;
-  private LiteratureStoragePort.StorageResult storageResult;
+  private PublicationPublisherOrchestrator.PublishContext publishContext;
+  private List<CanonicalPublication> publications;
+  private PublicationStoragePort.StorageResult storageResult;
 
   @BeforeEach
   void setUp() {
     publishContext =
-        LiteraturePublisherOrchestrator.PublishContext.builder()
+        PublicationPublisherOrchestrator.PublishContext.builder()
             .runId(RUN_ID)
             .batchNo(BATCH_NO)
             .provenanceCode(ProvenanceCode.PUBMED)
             .build();
 
-    literatures = createLiteratureList(5);
+    literatures = createPublicationList(5);
 
     storageResult =
-        LiteratureStoragePort.StorageResult.builder()
+        PublicationStoragePort.StorageResult.builder()
             .storageKey(STORAGE_KEY)
             .bucketName(BUCKET_NAME)
             .objectKey(OBJECT_KEY)
             .fileSize(FILE_SIZE)
-            .literatureCount(5)
+            .publicationCount(5)
             .md5(MD5)
             .sha256(SHA256)
             .build();
@@ -98,17 +98,17 @@ class LiteraturePublisherOrchestratorTest {
   class SuccessfulPublishTests {
 
     @Test
-    @DisplayName("成功发布文献，存储和元数据记录都成功")
-    void shouldPublishLiteratureSuccessfully() {
+    @DisplayName("成功发布出版物，存储和元数据记录都成功")
+    void shouldPublishPublicationSuccessfully() {
       // Arrange
-      when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);
+      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
       StorageMetadataPort.MetadataResult metadataResult =
           new StorageMetadataPort.MetadataResult(123L, java.time.Instant.now());
       when(storageMetadataPort.recordUpload(any())).thenReturn(metadataResult);
 
       // Act
-      LiteraturePublisherOrchestrator.PublishResult result =
+      PublicationPublisherOrchestrator.PublishResult result =
           orchestrator.publish(literatures, publishContext);
 
       // Assert
@@ -116,33 +116,33 @@ class LiteraturePublisherOrchestratorTest {
       assertThat(result.storageKey()).isEqualTo(STORAGE_KEY);
       assertThat(result.publishedCount()).isEqualTo(5);
 
-      verify(literatureStoragePort).store(eq(literatures), any());
+      verify(publicationStoragePort).store(eq(literatures), any());
       verify(storageMetadataPort).recordUpload(any());
       verify(technicalRetryPort, never()).publishRetry(any());
     }
 
     @Test
-    @DisplayName("空文献列表，不调用存储")
-    void shouldHandleEmptyLiteratureList() {
+    @DisplayName("空出版物列表，不调用存储")
+    void shouldHandleEmptyPublicationList() {
       // Arrange
-      List<CanonicalLiterature> emptyList = Collections.emptyList();
+      List<CanonicalPublication> emptyList = Collections.emptyList();
 
-      LiteratureStoragePort.StorageResult emptyResult =
-          LiteratureStoragePort.StorageResult.builder()
+      PublicationStoragePort.StorageResult emptyResult =
+          PublicationStoragePort.StorageResult.builder()
               .storageKey(null)
               .bucketName(BUCKET_NAME)
               .objectKey(OBJECT_KEY)
               .fileSize(0)
-              .literatureCount(0)
+              .publicationCount(0)
               .build();
-      when(literatureStoragePort.store(any(), any())).thenReturn(emptyResult);
+      when(publicationStoragePort.store(any(), any())).thenReturn(emptyResult);
 
       StorageMetadataPort.MetadataResult metadataResult =
           new StorageMetadataPort.MetadataResult(123L, java.time.Instant.now());
       when(storageMetadataPort.recordUpload(any())).thenReturn(metadataResult);
 
       // Act
-      LiteraturePublisherOrchestrator.PublishResult result =
+      PublicationPublisherOrchestrator.PublishResult result =
           orchestrator.publish(emptyList, publishContext);
 
       // Assert
@@ -155,23 +155,23 @@ class LiteraturePublisherOrchestratorTest {
     }
 
     @Test
-    @DisplayName("null 文献列表，作为空列表处理")
-    void shouldHandleNullLiteratureList() {
+    @DisplayName("null 出版物列表，作为空列表处理")
+    void shouldHandleNullPublicationList() {
       // Arrange
-      LiteratureStoragePort.StorageResult emptyResult =
-          LiteratureStoragePort.StorageResult.builder().storageKey(null).literatureCount(0).build();
-      when(literatureStoragePort.store(any(), any())).thenReturn(emptyResult);
+      PublicationStoragePort.StorageResult emptyResult =
+          PublicationStoragePort.StorageResult.builder().storageKey(null).publicationCount(0).build();
+      when(publicationStoragePort.store(any(), any())).thenReturn(emptyResult);
 
       // Act
-      LiteraturePublisherOrchestrator.PublishResult result =
+      PublicationPublisherOrchestrator.PublishResult result =
           orchestrator.publish(null, publishContext);
 
       // Assert
       assertThat(result).isNotNull();
       assertThat(result.publishedCount()).isEqualTo(0);
 
-      ArgumentCaptor<List<CanonicalLiterature>> captor = ArgumentCaptor.forClass(List.class);
-      verify(literatureStoragePort).store(captor.capture(), any());
+      ArgumentCaptor<List<CanonicalPublication>> captor = ArgumentCaptor.forClass(List.class);
+      verify(publicationStoragePort).store(captor.capture(), any());
       assertThat(captor.getValue()).isEmpty();
     }
 
@@ -179,7 +179,7 @@ class LiteraturePublisherOrchestratorTest {
     @DisplayName("验证存储上下文正确转换")
     void shouldConvertPublishContextToStorageContext() {
       // Arrange
-      when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);
+      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
       StorageMetadataPort.MetadataResult metadataResult =
           new StorageMetadataPort.MetadataResult(123L, java.time.Instant.now());
@@ -189,11 +189,11 @@ class LiteraturePublisherOrchestratorTest {
       orchestrator.publish(literatures, publishContext);
 
       // Assert
-      ArgumentCaptor<LiteratureStoragePort.StorageContext> contextCaptor =
-          ArgumentCaptor.forClass(LiteratureStoragePort.StorageContext.class);
-      verify(literatureStoragePort).store(any(), contextCaptor.capture());
+      ArgumentCaptor<PublicationStoragePort.StorageContext> contextCaptor =
+          ArgumentCaptor.forClass(PublicationStoragePort.StorageContext.class);
+      verify(publicationStoragePort).store(any(), contextCaptor.capture());
 
-      LiteratureStoragePort.StorageContext captured = contextCaptor.getValue();
+      PublicationStoragePort.StorageContext captured = contextCaptor.getValue();
       assertThat(captured.runId()).isEqualTo(RUN_ID);
       assertThat(captured.batchNo()).isEqualTo(BATCH_NO);
       assertThat(captured.provenanceCode()).isEqualTo(ProvenanceCode.PUBMED);
@@ -203,7 +203,7 @@ class LiteraturePublisherOrchestratorTest {
     @DisplayName("验证元数据请求正确构建")
     void shouldBuildMetadataRequestCorrectly() {
       // Arrange
-      when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);
+      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
       StorageMetadataPort.MetadataResult metadataResult =
           new StorageMetadataPort.MetadataResult(123L, java.time.Instant.now());
@@ -225,7 +225,7 @@ class LiteraturePublisherOrchestratorTest {
       assertThat(captured.contentType()).isEqualTo("application/json");
       assertThat(captured.md5()).isEqualTo(MD5);
       assertThat(captured.sha256()).isEqualTo(SHA256);
-      assertThat(captured.businessType()).isEqualTo("literature-batch");
+      assertThat(captured.businessType()).isEqualTo("publication-batch");
       assertThat(captured.businessId()).isEqualTo("pubmed-1-100");
 
       Map<String, Object> correlation = captured.correlation();
@@ -244,13 +244,13 @@ class LiteraturePublisherOrchestratorTest {
     @DisplayName("5xx 错误，委托给重试机制")
     void shouldDelegateToRetryOn5xxError() {
       // Arrange
-      when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);
+      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
       FeignException feignException = createFeignException(500, "Internal Server Error");
       when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
 
       // Act
-      LiteraturePublisherOrchestrator.PublishResult result =
+      PublicationPublisherOrchestrator.PublishResult result =
           orchestrator.publish(literatures, publishContext);
 
       // Assert
@@ -265,7 +265,7 @@ class LiteraturePublisherOrchestratorTest {
     @DisplayName("503 Service Unavailable，委托给重试机制")
     void shouldDelegateToRetryOn503Error() {
       // Arrange
-      when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);
+      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
       FeignException feignException = createFeignException(503, "Service Unavailable");
       when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
@@ -281,13 +281,13 @@ class LiteraturePublisherOrchestratorTest {
     @DisplayName("4xx 错误，不委托给重试机制")
     void shouldNotDelegateToRetryOn4xxError() {
       // Arrange
-      when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);
+      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
       FeignException feignException = createFeignException(400, "Bad Request");
       when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
 
       // Act
-      LiteraturePublisherOrchestrator.PublishResult result =
+      PublicationPublisherOrchestrator.PublishResult result =
           orchestrator.publish(literatures, publishContext);
 
       // Assert
@@ -299,7 +299,7 @@ class LiteraturePublisherOrchestratorTest {
     @DisplayName("404 错误，不委托给重试机制")
     void shouldNotDelegateToRetryOn404Error() {
       // Arrange
-      when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);
+      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
       FeignException feignException = createFeignException(404, "Not Found");
       when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
@@ -315,7 +315,7 @@ class LiteraturePublisherOrchestratorTest {
     @DisplayName("RetryableException，委托给重试机制")
     void shouldDelegateToRetryOnRetryableException() {
       // Arrange
-      when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);
+      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
       Request request = createDummyRequest();
       RetryableException retryableException =
@@ -334,7 +334,7 @@ class LiteraturePublisherOrchestratorTest {
     @DisplayName("一般异常，委托给重试机制")
     void shouldDelegateToRetryOnGeneralException() {
       // Arrange
-      when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);
+      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
       when(storageMetadataPort.recordUpload(any()))
           .thenThrow(new RuntimeException("Unexpected error"));
@@ -350,7 +350,7 @@ class LiteraturePublisherOrchestratorTest {
     @DisplayName("重试委托失败不应抛出异常")
     void shouldNotThrowWhenRetryDelegationFails() {
       // Arrange
-      when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);
+      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
       FeignException feignException = createFeignException(500, "Internal Server Error");
       when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
@@ -372,7 +372,7 @@ class LiteraturePublisherOrchestratorTest {
     @DisplayName("验证重试上下文正确构建")
     void shouldBuildRetryContextCorrectly() {
       // Arrange
-      when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);
+      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
       FeignException feignException = createFeignException(500, "Internal Server Error");
       when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
@@ -401,14 +401,14 @@ class LiteraturePublisherOrchestratorTest {
     @DisplayName("runId 为 null 时使用默认值 0")
     void shouldUseDefaultAggregateIdWhenRunIdIsNull() {
       // Arrange
-      LiteraturePublisherOrchestrator.PublishContext contextWithoutRunId =
-          LiteraturePublisherOrchestrator.PublishContext.builder()
+      PublicationPublisherOrchestrator.PublishContext contextWithoutRunId =
+          PublicationPublisherOrchestrator.PublishContext.builder()
               .runId(null)
               .batchNo(BATCH_NO)
               .provenanceCode(ProvenanceCode.PUBMED)
               .build();
 
-      when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);
+      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
       FeignException feignException = createFeignException(500, "Internal Server Error");
       when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
@@ -433,14 +433,14 @@ class LiteraturePublisherOrchestratorTest {
     @DisplayName("provenanceCode 为 null 时使用 'unknown'")
     void shouldUseUnknownForNullProvenanceCode() {
       // Arrange
-      LiteraturePublisherOrchestrator.PublishContext contextWithNullProvenance =
-          LiteraturePublisherOrchestrator.PublishContext.builder()
+      PublicationPublisherOrchestrator.PublishContext contextWithNullProvenance =
+          PublicationPublisherOrchestrator.PublishContext.builder()
               .runId(RUN_ID)
               .batchNo(BATCH_NO)
               .provenanceCode(null)
               .build();
 
-      when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);
+      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
       StorageMetadataPort.MetadataResult metadataResult =
           new StorageMetadataPort.MetadataResult(123L, java.time.Instant.now());
@@ -462,14 +462,14 @@ class LiteraturePublisherOrchestratorTest {
     @DisplayName("provenanceCode 为空字符串时使用 'unknown'")
     void shouldUseUnknownForEmptyProvenanceCode() {
       // Arrange
-      LiteraturePublisherOrchestrator.PublishContext contextWithEmptyProvenance =
-          LiteraturePublisherOrchestrator.PublishContext.builder()
+      PublicationPublisherOrchestrator.PublishContext contextWithEmptyProvenance =
+          PublicationPublisherOrchestrator.PublishContext.builder()
               .runId(RUN_ID)
               .batchNo(BATCH_NO)
               .provenanceCode(null) // 注意：空字符串测试需要调整为 null，因为 ProvenanceCode 是枚举类型
               .build();
 
-      when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);
+      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
       StorageMetadataPort.MetadataResult metadataResult =
           new StorageMetadataPort.MetadataResult(123L, java.time.Instant.now());
@@ -491,14 +491,14 @@ class LiteraturePublisherOrchestratorTest {
     @DisplayName("provenanceCode 转换为小写")
     void shouldConvertProvenanceCodeToLowerCase() {
       // Arrange
-      LiteraturePublisherOrchestrator.PublishContext contextWithUpperCase =
-          LiteraturePublisherOrchestrator.PublishContext.builder()
+      PublicationPublisherOrchestrator.PublishContext contextWithUpperCase =
+          PublicationPublisherOrchestrator.PublishContext.builder()
               .runId(RUN_ID)
               .batchNo(BATCH_NO)
               .provenanceCode(ProvenanceCode.PUBMED) // 注意：枚举已经定义为 PUBMED，无需测试大小写转换
               .build();
 
-      when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);
+      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
       StorageMetadataPort.MetadataResult metadataResult =
           new StorageMetadataPort.MetadataResult(123L, java.time.Instant.now());
@@ -519,12 +519,12 @@ class LiteraturePublisherOrchestratorTest {
 
   // ========== 辅助方法 ==========
 
-  private List<CanonicalLiterature> createLiteratureList(int count) {
-    List<CanonicalLiterature> list = new ArrayList<>();
+  private List<CanonicalPublication> createPublicationList(int count) {
+    List<CanonicalPublication> list = new ArrayList<>();
     for (int i = 0; i < count; i++) {
-      CanonicalLiterature literature =
-          CanonicalLiterature.builder().title("Literature " + i).build();
-      list.add(literature);
+      CanonicalPublication publication =
+          CanonicalPublication.builder().title("Publication " + i).build();
+      list.add(publication);
     }
     return list;
   }

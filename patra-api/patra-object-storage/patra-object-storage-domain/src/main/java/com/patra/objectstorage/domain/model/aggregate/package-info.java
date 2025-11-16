@@ -47,10 +47,10 @@
  *
  * <pre>{@code
  * FileMetadata metadata = FileMetadata.create(
- *     new StorageKey("literature-files", "2024/01/article.pdf"),
+ *     new StorageKey("publication-files", "2024/01/article.pdf"),
  *     new FileSize(1024000L),
  *     new FileChecksum("5d41402abc4b2a76b9719d911017c592", null),
- *     new BusinessContext("patra-ingest", "literature_batch", "batch-001", Map.of()),
+ *     new BusinessContext("patra-ingest", "publication_batch", "batch-001", Map.of()),
  *     StorageProvider.MINIO
  * )
  * .withContentType("application/pdf")

@@ -28,6 +28,6 @@ public final class MessageOperations {
   /** 任务完成操作 - 表示任务已成功执行完毕。 */
   public static final String TASK_COMPLETED = "TASK_COMPLETED";
 
-  /** 文献就绪操作 - 表示文献数据已准备就绪。 */
-  public static final String LITERATURE_READY = "INGEST_LITERATURE_READY";
+  /** 出版物就绪操作 - 表示出版物数据已准备就绪。 */
+  public static final String PUBLICATION_READY = "INGEST_PUBLICATION_READY";
 }

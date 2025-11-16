@@ -47,7 +47,7 @@ import java.util.Set;
  * @Component
  * public class PubmedDataProvider implements ProvenanceDataProvider {
  *     private static final Set<DataType> SUPPORTED_TYPES = Set.of(
- *         DataType.LITERATURE,
+ *         DataType.PUBLICATION,
  *         DataType.CITATION,
  *         DataType.AUTHOR
  *     );
@@ -103,7 +103,7 @@ public interface ProvenanceDataProvider {
    * <p>核心特性：一个Provider可以支持多个DataType。例如：
    *
    * <ul>
-   *   <li>PubMed支持：LITERATURE、CITATION、AUTHOR
+   *   <li>PubMed支持：PUBLICATION、CITATION、AUTHOR
    *   <li>DOAJ支持：JOURNAL
    *   <li>DrugBank支持：DRUG、DRUG_INTERACTION
    * </ul>

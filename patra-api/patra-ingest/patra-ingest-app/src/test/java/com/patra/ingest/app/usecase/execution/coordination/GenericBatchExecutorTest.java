@@ -6,7 +6,7 @@ import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.model.CanonicalLiterature;
+import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
 import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
@@ -38,8 +38,8 @@ import org.mockito.quality.Strictness;
  *   <li>✅ 正常执行：调用数据源端口成功
  *   <li>✅ 执行失败：数据源端口返回失败结果
  *   <li>✅ 结果映射：验证返回的 BatchResult
- *   <li>✅ 文献发布：成功发布文献到下游
- *   <li>✅ 空文献列表：处理空的文献列表
+ *   <li>✅ 出版物发布：成功发布出版物到下游
+ *   <li>✅ 空出版物列表：处理空的出版物列表
  *   <li>✅ 边界条件：null 参数、空批次号等
  *   <li>✅ 部分成功：处理部分成功场景
  * </ul>
@@ -55,7 +55,7 @@ import org.mockito.quality.Strictness;
 class GenericBatchExecutorTest {
 
   @Mock private ProvenanceDataPort provenanceDataPort;
-  @Mock private LiteraturePublisherOrchestrator literaturePublisherOrchestrator;
+  @Mock private PublicationPublisherOrchestrator literaturePublisherOrchestrator;
 
   @InjectMocks private GenericBatchExecutor executor;
 
@@ -91,7 +91,7 @@ class GenericBatchExecutorTest {
             null, // scheduleInstanceId
             ProvenanceCode.PUBMED, // provenanceCode
             "harvest", // operationCode
-            DataType.LITERATURE, // dataType
+            DataType.PUBLICATION, // dataType
             configSnapshot, // configSnapshot
             null, // exprHash
             null, // compiledQuery
@@ -116,9 +116,9 @@ class GenericBatchExecutorTest {
     @DisplayName("应该成功执行批次并返回成功结果")
     void shouldExecuteBatchSuccessfully() {
       // Given: Mock 数据源端口返回成功结果
-      List<CanonicalLiterature> literatures = createTestLiteratures(5);
-      DataFetchResult<CanonicalLiterature> fetchResult =
-          DataFetchResult.success(literatures, DataType.LITERATURE, "nextCursor123");
+      List<CanonicalPublication> publications = createTestLiteratures(5);
+      DataFetchResult<CanonicalPublication> fetchResult =
+          DataFetchResult.success(literatures, DataType.PUBLICATION, "nextCursor123");
 
       when(provenanceDataPort.fetchData(
               any(ExecutionContext.class),
@@ -128,9 +128,9 @@ class GenericBatchExecutorTest {
               any(com.patra.ingest.domain.model.vo.query.QuerySession.class)))
           .thenReturn(fetchResult);
 
-      // Mock 文献发布
-      LiteraturePublisherOrchestrator.PublishResult publishResult =
-          LiteraturePublisherOrchestrator.PublishResult.builder()
+      // Mock 出版物发布
+      PublicationPublisherOrchestrator.PublishResult publishResult =
+          PublicationPublisherOrchestrator.PublishResult.builder()
               .publishedCount(5)
               .storageKey("s3://bucket/pubmed/run-1/batch-1.json")
               .build();
@@ -151,7 +151,7 @@ class GenericBatchExecutorTest {
       verify(provenanceDataPort)
           .fetchData(
               eq(context),
-              eq(DataType.LITERATURE),
+              eq(DataType.PUBLICATION),
               any(TypeReference.class),
               eq(batch),
               eq(querySession));
@@ -159,11 +159,11 @@ class GenericBatchExecutorTest {
     }
 
     @Test
-    @DisplayName("应该正确处理空文献列表")
-    void shouldHandleEmptyLiteratureList() {
-      // Given: 数据源端口返回空文献列表
-      DataFetchResult<CanonicalLiterature> fetchResult =
-          DataFetchResult.success(List.of(), DataType.LITERATURE, null);
+    @DisplayName("应该正确处理空出版物列表")
+    void shouldHandleEmptyPublicationList() {
+      // Given: 数据源端口返回空出版物列表
+      DataFetchResult<CanonicalPublication> fetchResult =
+          DataFetchResult.success(List.of(), DataType.PUBLICATION, null);
       when(provenanceDataPort.fetchData(
               any(ExecutionContext.class),
               any(DataType.class),
@@ -180,16 +180,16 @@ class GenericBatchExecutorTest {
       assertThat(result.fetchedCount()).isZero();
       assertThat(result.storageKey()).isNull();
 
-      // 验证不调用发布器（因为文献列表为空）
+      // 验证不调用发布器（因为出版物列表为空）
       verifyNoInteractions(literaturePublisherOrchestrator);
     }
 
     @Test
-    @DisplayName("应该正确处理 null 文献列表")
-    void shouldHandleNullLiteratureList() {
-      // Given: 数据源端口返回 null 文献列表
-      DataFetchResult<CanonicalLiterature> fetchResult =
-          DataFetchResult.success(null, DataType.LITERATURE, null);
+    @DisplayName("应该正确处理 null 出版物列表")
+    void shouldHandleNullPublicationList() {
+      // Given: 数据源端口返回 null 出版物列表
+      DataFetchResult<CanonicalPublication> fetchResult =
+          DataFetchResult.success(null, DataType.PUBLICATION, null);
       when(provenanceDataPort.fetchData(
               any(ExecutionContext.class),
               any(DataType.class),
@@ -220,8 +220,8 @@ class GenericBatchExecutorTest {
     @DisplayName("可重试错误应该返回失败结果")
     void shouldHandleRetriableError() {
       // Given: 数据源端口返回可重试错误（重试已在 infra 层处理）
-      DataFetchResult<CanonicalLiterature> failureResult =
-          DataFetchResult.failure(DataType.LITERATURE, "网络超时", ErrorType.RETRIABLE);
+      DataFetchResult<CanonicalPublication> failureResult =
+          DataFetchResult.failure(DataType.PUBLICATION, "网络超时", ErrorType.RETRIABLE);
 
       when(provenanceDataPort.fetchData(
               any(ExecutionContext.class),
@@ -239,7 +239,7 @@ class GenericBatchExecutorTest {
       assertThat(result.batchNo()).isEqualTo(1);
       assertThat(result.errorMessage()).contains("RETRIABLE").contains("网络超时");
 
-      // 验证没有发布文献
+      // 验证没有发布出版物
       verifyNoInteractions(literaturePublisherOrchestrator);
     }
 
@@ -247,8 +247,8 @@ class GenericBatchExecutorTest {
     @DisplayName("非重试错误应该返回失败结果")
     void shouldHandleNonRetriableError() {
       // Given: 非重试错误
-      DataFetchResult<CanonicalLiterature> failureResult =
-          DataFetchResult.failure(DataType.LITERATURE, "API 密钥无效", ErrorType.NON_RETRIABLE);
+      DataFetchResult<CanonicalPublication> failureResult =
+          DataFetchResult.failure(DataType.PUBLICATION, "API 密钥无效", ErrorType.NON_RETRIABLE);
 
       when(provenanceDataPort.fetchData(
               any(ExecutionContext.class),
@@ -265,7 +265,7 @@ class GenericBatchExecutorTest {
       assertThat(result.success()).isFalse();
       assertThat(result.errorMessage()).contains("API 密钥无效");
 
-      // 验证没有发布文献
+      // 验证没有发布出版物
       verifyNoInteractions(literaturePublisherOrchestrator);
     }
   }
@@ -308,10 +308,10 @@ class GenericBatchExecutorTest {
     @DisplayName("数据源端口返回部分成功应该记录警告并返回成功结果")
     void shouldHandlePartialSuccessWithWarning() {
       // Given: 数据源端口返回部分成功
-      List<CanonicalLiterature> literatures = createTestLiteratures(8);
-      DataFetchResult<CanonicalLiterature> fetchResult =
+      List<CanonicalPublication> publications = createTestLiteratures(8);
+      DataFetchResult<CanonicalPublication> fetchResult =
           DataFetchResult.partialSuccess(
-              literatures, DataType.LITERATURE, "nextCursor", "10 条记录中有 2 条解析失败");
+              literatures, DataType.PUBLICATION, "nextCursor", "10 条记录中有 2 条解析失败");
 
       when(provenanceDataPort.fetchData(
               any(ExecutionContext.class),
@@ -377,15 +377,15 @@ class GenericBatchExecutorTest {
     return new Batch(batchNo, query, offset, limit);
   }
 
-  private List<CanonicalLiterature> createTestLiteratures(int count) {
+  private List<CanonicalPublication> createTestLiteratures(int count) {
     return java.util.stream.IntStream.range(0, count)
         .mapToObj(
             i ->
-                CanonicalLiterature.builder()
+                CanonicalPublication.builder()
                     .title("Test Literature " + i)
                     .identifiers(
                         List.of(
-                            CanonicalLiterature.Identifier.builder()
+                            CanonicalPublication.Identifier.builder()
                                 .type("pmid")
                                 .value("PMID-" + (1000 + i))
                                 .build()))
@@ -394,8 +394,8 @@ class GenericBatchExecutorTest {
   }
 
   private void mockPublish(int count, String storageKey) {
-    LiteraturePublisherOrchestrator.PublishResult publishResult =
-        LiteraturePublisherOrchestrator.PublishResult.builder()
+    PublicationPublisherOrchestrator.PublishResult publishResult =
+        PublicationPublisherOrchestrator.PublishResult.builder()
             .publishedCount(count)
             .storageKey(storageKey)
             .build();

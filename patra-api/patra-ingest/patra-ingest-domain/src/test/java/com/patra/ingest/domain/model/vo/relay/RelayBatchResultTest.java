@@ -65,7 +65,7 @@ class RelayBatchResultTest {
     @DisplayName("应该创建零计数的 RelayBatchResult")
     void shouldCreateRelayBatchResultWithZeroCounts() {
       // Given
-      var channel = IngestPublishingChannels.LITERATURE;
+      var channel = IngestPublishingChannels.PUBLICATION;
 
       // When
       var result = new RelayBatchResult(channel, 0, 0, 0, 0, 0, Collections.emptyList());
@@ -277,7 +277,7 @@ class RelayBatchResultTest {
     void emptyShouldCreateIndependentResultsForDifferentChannels() {
       // Given
       var channel1 = IngestPublishingChannels.TASK;
-      var channel2 = IngestPublishingChannels.LITERATURE;
+      var channel2 = IngestPublishingChannels.PUBLICATION;
 
       // When
       var result1 = RelayBatchResult.empty(channel1);
@@ -330,7 +330,7 @@ class RelayBatchResultTest {
 
       var result1 = new RelayBatchResult(IngestPublishingChannels.TASK, 10, 8, 1, 1, 2, events);
       var result2 =
-          new RelayBatchResult(IngestPublishingChannels.LITERATURE, 10, 8, 1, 1, 2, events);
+          new RelayBatchResult(IngestPublishingChannels.PUBLICATION, 10, 8, 1, 1, 2, events);
 
       // When & Then
       assertThat(result1).isNotEqualTo(result2);
@@ -554,7 +554,7 @@ class RelayBatchResultTest {
     @DisplayName("应该正确表示空批次（无消息可处理）")
     void shouldRepresentEmptyBatch() {
       // Given
-      var channel = IngestPublishingChannels.LITERATURE;
+      var channel = IngestPublishingChannels.PUBLICATION;
 
       // When
       var result = RelayBatchResult.empty(channel);

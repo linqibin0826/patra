@@ -70,7 +70,7 @@ patra:
       strict-channel-whitelist: false
       channel-mapping:
         TASK_READY: INGEST_TASK_READY
-        LITERATURE_READY: INGEST_LITERATURE_READY
+        LITERATURE_READY: INGEST_PUBLICATION_READY
     # MQ 消费者配置（Topic 名称）
     mq:
       topics:

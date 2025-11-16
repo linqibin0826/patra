@@ -8,7 +8,7 @@
 - **数据持久化**: 基于 MyBatis-Plus 实现仓储接口
 - **外部服务集成**: 通过 Feign 调用 patra-registry、Provenance 数据源等外部服务
 - **消息发布**: 通过 RocketMQ 发布领域事件
-- **对象存储**: 集成 MinIO/S3 存储文献数据
+- **对象存储**: 集成 MinIO/S3 存储出版物数据
 - **DO ↔ Domain 转换**: 使用 MapStruct 进行对象转换
 
 **架构约束**: Infra 层实现 Domain 层的端口接口,但不直接被 Domain 层依赖(依赖倒置)。
@@ -21,7 +21,7 @@
 - **外部端口适配**: 实现 PatraRegistryPort、ExpressionCompilerPort 等外部服务端口
 - **数据转换**: DO(Data Object) ↔ Domain Model 双向转换
 - **MQ 消息发布**: 将 Outbox 消息发布到 RocketMQ
-- **对象存储集成**: 上传文献数据到 MinIO/S3
+- **对象存储集成**: 上传出版物数据到 MinIO/S3
 
 ---
 
@@ -87,7 +87,7 @@ patra-ingest-infra/
    │  │  └─ acl/
    │  │     └─ QuerySessionTranslator.java # 查询会话转换器
    │  └─ storage/                      # 对象存储集成
-   │     ├─ LiteratureStorageAdapter.java   # 文献存储适配器
+   │     ├─ PublicationStorageAdapter.java   # 出版物存储适配器
    │     └─ StorageMetadataAdapter.java     # 存储元数据适配器
    ├─ compiler/                       # 表达式编译器集成
    │  └─ ExpressionCompilerPortImpl.java    # 表达式编译器端口实现
@@ -415,12 +415,12 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
 
 ### 对象存储集成
 
-#### LiteratureStorageAdapter (文献存储适配器)
+#### PublicationStorageAdapter (出版物存储适配器)
 
-**职责**: 实现 `LiteratureStoragePort` 端口接口,直接存储 `CanonicalLiterature` 到 MinIO/S3。
+**职责**: 实现 `PublicationStoragePort` 端口接口,直接存储 `CanonicalPublication` 到 MinIO/S3。
 
 **架构决策（2025-01-16）**：
-- ✅ 直接存储共享内核模型 `CanonicalLiterature`
+- ✅ 直接存储共享内核模型 `CanonicalPublication`
 - ✅ 移除 ACL 转换层（无需 DTO 转换）
 - ✅ 保证存储数据与业务模型完全一致
 
@@ -428,16 +428,16 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
 ```java
 @Component
 @RequiredArgsConstructor
-public class LiteratureStorageAdapter implements LiteratureStoragePort {
+public class PublicationStorageAdapter implements PublicationStoragePort {
 
     private final ObjectMapper objectMapper;
     private final ObjectStorageTemplate objectStorageTemplate;
     private final StorageLocationResolver storageLocationResolver;
 
     @Override
-    public StorageResult store(List<CanonicalLiterature> literature, StorageContext context) {
-        // 步骤 1: 序列化为 JSON（直接存储 CanonicalLiterature,保证数据完整性）
-        byte[] serialized = serializePayload(literature, context);
+    public StorageResult store(List<CanonicalPublication> publication, StorageContext context) {
+        // 步骤 1: 序列化为 JSON（直接存储 CanonicalPublication,保证数据完整性）
+        byte[] serialized = serializePayload(publication, context);
 
         // 步骤 2: 计算校验和
         Checksums checksums = calculateChecksums(serialized);
@@ -446,7 +446,7 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
         StorageLocation location = resolveStorageLocation(context);
 
         // 步骤 4: 上传到对象存储
-        UploadResult uploadResult = uploadPayload(location, serialized, literature.size(), context);
+        UploadResult uploadResult = uploadPayload(location, serialized, publication.size(), context);
 
         return StorageResult.builder()
             .storageKey(uploadResult.getStorageKey())
@@ -455,15 +455,15 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
             .fileSize(uploadResult.getFileSize())
             .md5(checksums.md5())
             .sha256(checksums.sha256())
-            .literatureCount(literature.size())
+            .publicationCount(publication.size())
             .build();
     }
 }
 ```
 
-**存储格式**: 直接序列化 `List<CanonicalLiterature>` 为 JSON,无需转换。
+**存储格式**: 直接序列化 `List<CanonicalPublication>` 为 JSON,无需转换。
 
-**文件**: `integration/storage/LiteratureStorageAdapter.java`
+**文件**: `integration/storage/PublicationStorageAdapter.java`
 
 ---
 
@@ -471,7 +471,7 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
 
 ### 上游依赖
 - `patra-ingest-domain`: 领域模型和端口接口
-- `patra-common-model`: 通用模型（包含 CanonicalLiterature）
+- `patra-common-model`: 通用模型（包含 CanonicalPublication）
 - `patra-registry-api`: Registry API(Feign 客户端)
 - `patra-spring-boot-starter-mybatis`: MyBatis Starter
 - `patra-spring-boot-starter-expr`: 表达式编译 Starter
@@ -564,7 +564,7 @@ patra:
       endpoint: http://localhost:9000
       access-key: minioadmin
       secret-key: minioadmin
-      bucket: patra-literature
+      bucket: patra-publication
 ```
 
 ---
@@ -626,19 +626,19 @@ public class DataFetchService {
 
     private final ProvenanceDataPort provenanceDataPort;
 
-    public void fetchLiteratureData(ExecutionContext context, Batch batch) {
+    public void fetchPublicationData(ExecutionContext context, Batch batch) {
         // 准备查询会话
         QuerySession querySession = provenanceDataPort.prepareQuerySession(
             context,
-            DataType.LITERATURE
+            DataType.PUBLICATION
         );
         log.info("Total count: {}", querySession.totalRecords());
 
-        // 获取文献数据（类型安全）
-        TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
-        DataFetchResult<CanonicalLiterature> result = provenanceDataPort.fetchData(
+        // 获取出版物数据（类型安全）
+        TypeReference<CanonicalPublication> typeRef = new TypeReference<>() {};
+        DataFetchResult<CanonicalPublication> result = provenanceDataPort.fetchData(
             context,
-            DataType.LITERATURE,
+            DataType.PUBLICATION,
             typeRef,
             batch
         );

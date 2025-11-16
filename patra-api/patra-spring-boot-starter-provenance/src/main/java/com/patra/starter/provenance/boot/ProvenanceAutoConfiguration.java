@@ -15,8 +15,8 @@ import com.patra.starter.provenance.epmc.EPMCClientImpl;
 import com.patra.starter.provenance.pubmed.PubMedClient;
 import com.patra.starter.provenance.pubmed.PubMedClientImpl;
 import com.patra.starter.provenance.pubmed.PubmedDataProvider;
-import com.patra.starter.provenance.pubmed.converter.PubmedLiteratureConverter;
-import com.patra.starter.provenance.pubmed.processor.PubmedLiteratureProcessor;
+import com.patra.starter.provenance.pubmed.converter.PubmedPublicationConverter;
+import com.patra.starter.provenance.pubmed.processor.PubmedPublicationProcessor;
 import com.patra.starter.provenance.pubmed.request.PubMedESearchRequestAssembler;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
@@ -208,14 +208,14 @@ public class ProvenanceAutoConfiguration {
   }
 
   /**
-   * 创建 PubMed 文章转换器,用于将 PubMed 响应转换为 CanonicalLiterature
+   * 创建 PubMed 文章转换器,用于将 PubMed 响应转换为 CanonicalPublication
    *
    * @return PubMed 文章转换器实例
    */
   @Bean
   @ConditionalOnMissingBean
-  public PubmedLiteratureConverter pubmedArticleConverter() {
-    return new PubmedLiteratureConverter();
+  public PubmedPublicationConverter pubmedArticleConverter() {
+    return new PubmedPublicationConverter();
   }
 
   /**
@@ -274,29 +274,29 @@ public class ProvenanceAutoConfiguration {
   }
 
   /**
-   * 创建 PubMed 文献处理器
+   * 创建 PubMed 出版物处理器
    *
    * @param pubMedClient PubMed 客户端
-   * @param converter PubMed 文献转换器
+   * @param converter PubMed 出版物转换器
    * @param properties Provenance 配置属性
    * @param metrics 可选的指标记录器
-   * @return PubMed 文献处理器实例
+   * @return PubMed 出版物处理器实例
    */
   @Bean
   @ConditionalOnMissingBean
-  public PubmedLiteratureProcessor pubmedLiteratureProcessor(
+  public PubmedPublicationProcessor pubmedPublicationProcessor(
       PubMedClient pubMedClient,
-      PubmedLiteratureConverter converter,
+      PubmedPublicationConverter converter,
       ProvenanceProperties properties,
       Optional<ProvenanceMetrics> metrics) {
-    log.debug("初始化 PubMed 文献处理器");
-    return new PubmedLiteratureProcessor(pubMedClient, converter, properties, metrics.orElse(null));
+    log.debug("初始化 PubMed 出版物处理器");
+    return new PubmedPublicationProcessor(pubMedClient, converter, properties, metrics.orElse(null));
   }
 
   /**
    * 创建 PubMed 数据源提供者
    *
-   * @param literatureProcessor PubMed 文献处理器
+   * @param publicationProcessor PubMed 出版物处理器
    * @param pubMedClient PubMed 客户端
    * @param requestAssembler 请求组装器
    * @return PubMed 数据源提供者实例
@@ -304,10 +304,10 @@ public class ProvenanceAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   public PubmedDataProvider pubmedProvenanceDataProvider(
-      PubmedLiteratureProcessor literatureProcessor,
+      PubmedPublicationProcessor publicationProcessor,
       PubMedClient pubMedClient,
       PubMedESearchRequestAssembler requestAssembler) {
     log.info("自动配置 PubMed 数据源提供者，将注册到 ProviderRegistry");
-    return new PubmedDataProvider(literatureProcessor, pubMedClient, requestAssembler);
+    return new PubmedDataProvider(publicationProcessor, pubMedClient, requestAssembler);
   }
 }

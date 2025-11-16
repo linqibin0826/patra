@@ -47,7 +47,7 @@
  * public enum IngestChannels implements ChannelKey {
  *     TASK_READY("ingest", "task", "ready"),
  *     TASK_COMPLETED("ingest", "task", "completed"),
- *     LITERATURE_INGESTED("ingest", "literature", "ingested");
+ *     PUBLICATION_INGESTED("ingest", "publication", "ingested");
  *
  *     private final String domain;
  *     private final String resource;
@@ -76,7 +76,7 @@
  * // 3. 订阅事件
  * @RocketMQMessageListener(
  *     topic = "INGEST_TASK_READY",
- *     consumerGroup = "literature-processor-group"
+ *     consumerGroup = "publication-processor-group"
  * )
  * public class TaskReadyListener implements RocketMQListener<TaskReadyEvent> {
  *     @Override

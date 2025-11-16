@@ -39,7 +39,7 @@ public interface ObjectKeyGenerator {
    * </ul>
    *
    * @param context 包含所有键生成参数的不可变上下文
-   * @return 生成的对象键路径(例如,{@code ingest/literature-batch/2025/10/26/pubmed-123.json})
+   * @return 生成的对象键路径(例如,{@code ingest/publication-batch/2025/10/26/pubmed-123.json})
    * @throws IllegalArgumentException 如果上下文包含无效数据
    */
   String generate(ObjectKeyContext context);

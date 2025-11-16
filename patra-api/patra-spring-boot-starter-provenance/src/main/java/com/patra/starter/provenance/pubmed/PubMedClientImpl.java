@@ -27,7 +27,7 @@ import org.springframework.web.client.RestClient;
 /**
  * PubMed 客户端实现（使用 Spring RestClient）
  *
- * <p>直接通过HTTP调用PubMed E-utilities API。PubMed是美国国家医学图书馆的生物医学文献数据库， 提供超过3400万条引文和摘要。
+ * <p>直接通过HTTP调用PubMed E-utilities API。PubMed是美国国家医学图书馆的生物医学出版物数据库， 提供超过3400万条引文和摘要。
  *
  * <p>主要功能：
  *

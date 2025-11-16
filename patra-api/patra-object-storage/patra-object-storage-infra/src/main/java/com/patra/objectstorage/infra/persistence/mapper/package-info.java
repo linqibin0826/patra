@@ -143,7 +143,7 @@
  *
  * // 2. 使用 Wrapper 构建动态查询
  * LambdaQueryWrapper<FileMetadataDO> wrapper = new LambdaQueryWrapper<>();
- * wrapper.eq(FileMetadataDO::getBucketName, "literature-files")
+ * wrapper.eq(FileMetadataDO::getBucketName, "publication-files")
  *        .ge(FileMetadataDO::getUploadedAt, startTime)
  *        .le(FileMetadataDO::getUploadedAt, endTime)
  *        .orderByDesc(FileMetadataDO::getUploadedAt);

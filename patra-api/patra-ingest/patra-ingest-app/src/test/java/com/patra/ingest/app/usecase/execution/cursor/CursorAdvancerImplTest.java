@@ -82,7 +82,7 @@ class CursorAdvancerImplTest {
         300L, // scheduleInstanceId
         ProvenanceCode.PUBMED,
         "HARVEST",
-        DataType.LITERATURE, // dataType
+        DataType.PUBLICATION, // dataType
         null, // configSnapshot
         exprHash,
         null, // compiledQuery
@@ -665,7 +665,7 @@ class CursorAdvancerImplTest {
               300L,
               ProvenanceCode.PUBMED,
               "BACKFILL", // BACKFILL 操作
-              DataType.LITERATURE, // dataType
+              DataType.PUBLICATION, // dataType
               null,
               "hash-backfill",
               null,
@@ -842,7 +842,7 @@ class CursorAdvancerImplTest {
               300L,
               ProvenanceCode.PUBMED,
               "HARVEST",
-              DataType.LITERATURE, // dataType
+              DataType.PUBLICATION, // dataType
               null,
               "hash-null-task",
               null,

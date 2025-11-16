@@ -89,7 +89,7 @@ public class ProcessorRegistry {
    * <pre>{@code
    * // Spring会找到所有实现了DataProcessor接口的@Component
    * @Component
-   * public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterature> {
+   * public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublication> {
    *     // ... 实现代码
    * }
    *
@@ -257,8 +257,8 @@ public class ProcessorRegistry {
    * <p><strong>日志输出示例</strong>：
    *
    * <pre>
-   * INFO  Processor注册完成: 共注册2个Processor [LITERATURE, JOURNAL]
-   * DEBUG   - LITERATURE: com.patra.starter.provenance.processor.LiteratureProcessor
+   * INFO  Processor注册完成: 共注册2个Processor [PUBLICATION, JOURNAL]
+   * DEBUG   - PUBLICATION: com.patra.starter.provenance.processor.PublicationProcessor
    * DEBUG   - JOURNAL: com.patra.starter.provenance.processor.JournalProcessor
    * </pre>
    */

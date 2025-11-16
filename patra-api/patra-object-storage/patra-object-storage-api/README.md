@@ -140,7 +140,7 @@ public record RecordUploadResponse(
 ### 下游消费者
 
 以下服务依赖本模块进行 Feign 调用:
-- **patra-ingest**: 文献采集服务,上传文件后记录元数据
+- **patra-ingest**: 出版物采集服务,上传文件后记录元数据
 - **patra-registry**: 注册中心服务,管理数据源配置文件上传
 - **其他需要对象存储的服务**: 任何需要记录文件上传的微服务
 
@@ -185,7 +185,7 @@ public class DocumentUploadService {
             md5,
             null,  // sha256Hash
             "patra-ingest",
-            "literature_batch",
+            "publication_batch",
             "batch-2024-01-15-001",
             Map.of("sourceId", "pubmed", "pmcId", "PMC12345678"),
             "MINIO",

@@ -3,12 +3,12 @@ package com.patra.common.provenance.api.endpoints;
 /**
  * Crossref API 端点路径常量
  *
- * <p>Crossref 提供 RESTful API 访问学术文献元数据。
+ * <p>Crossref 提供 RESTful API 访问学术出版物元数据。
  *
  * <h3>端点说明</h3>
  *
  * <ul>
- *   <li><b>WORKS</b> - Works 端点，用于查询文献作品
+ *   <li><b>WORKS</b> - Works 端点，用于查询出版物作品
  * </ul>
  *
  * <h3>基础 URL</h3>
@@ -31,7 +31,7 @@ public final class CrossrefEndpoints {
    * <p>用于：
    *
    * <ul>
-   *   <li>查询文献元数据
+   *   <li>查询出版物元数据
    *   <li>支持高级过滤器
    *   <li>支持游标分页
    *   <li>支持字段选择

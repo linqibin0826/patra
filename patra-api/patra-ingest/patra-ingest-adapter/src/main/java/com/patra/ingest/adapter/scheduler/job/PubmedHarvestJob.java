@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 /**
  * PubMed 数据采集定时任务。
  *
- * <p>绑定 PUBMED 数据来源与 HARVEST(采集)操作,实现 PubMed 医学文献数据的定期采集调度。将参数解析和计划编排委托给抽象基类 {@link
+ * <p>绑定 PUBMED 数据来源与 HARVEST(采集)操作,实现 PubMed 医学出版物数据的定期采集调度。将参数解析和计划编排委托给抽象基类 {@link
  * AbstractProvenanceScheduleJob}。
  *
  * <p>职责:

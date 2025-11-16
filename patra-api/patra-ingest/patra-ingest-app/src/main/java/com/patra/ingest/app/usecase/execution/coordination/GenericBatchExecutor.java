@@ -1,7 +1,7 @@
 package com.patra.ingest.app.usecase.execution.coordination;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.model.CanonicalLiterature;
+import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
 import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
@@ -26,8 +26,8 @@ import org.springframework.util.StringUtils;
  * <p>主要职责:
  *
  * <ul>
- *   <li>通过{@link ProvenanceDataPort}获取文献数据
- *   <li>通过{@link LiteraturePublisherOrchestrator}发布标准化文献
+ *   <li>通过{@link ProvenanceDataPort}获取出版物数据
+ *   <li>通过{@link PublicationPublisherOrchestrator}发布标准化出版物
  *   <li>将数据获取结果转换为领域层{@link BatchResult}实例
  *   <li>处理失败情况和异常
  * </ul>
@@ -40,7 +40,7 @@ import org.springframework.util.StringUtils;
 public class GenericBatchExecutor {
 
   private final ProvenanceDataPort provenanceDataPort;
-  private final LiteraturePublisherOrchestrator literaturePublisherOrchestrator;
+  private final PublicationPublisherOrchestrator literaturePublisherOrchestrator;
 
   /**
    * 执行单个批次
@@ -48,9 +48,9 @@ public class GenericBatchExecutor {
    * <p>业务流程:
    *
    * <ol>
-   *   <li>调用数据源端口获取文献数据
+   *   <li>调用数据源端口获取出版物数据
    *   <li>处理获取失败的情况
-   *   <li>发布标准化文献
+   *   <li>发布标准化出版物
    *   <li>返回批次执行结果
    * </ol>
    *
@@ -79,18 +79,18 @@ public class GenericBatchExecutor {
         context.runId());
 
     try {
-      // 调用数据源端口获取数据（默认获取LITERATURE类型）
+      // 调用数据源端口获取数据（默认获取PUBLICATION类型）
       // TODO: 未来从ExecutionContext或Batch中获取dataType(短期内不做，保持简单. To AGENTS)
-      DataType dataType = DataType.LITERATURE;
-      TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
-      DataFetchResult<CanonicalLiterature> fetchResult =
+      DataType dataType = DataType.PUBLICATION;
+      TypeReference<CanonicalPublication> typeRef = new TypeReference<>() {};
+      DataFetchResult<CanonicalPublication> fetchResult =
           provenanceDataPort.fetchData(context, dataType, typeRef, batch, querySession);
 
       if (!fetchResult.success()) {
         return handleFailure(context, batch, fetchResult, System.currentTimeMillis() - startAt);
       }
 
-      LiteraturePublisherOrchestrator.PublishResult publishResult =
+      PublicationPublisherOrchestrator.PublishResult publishResult =
           publishLiterature(context, batchNo, fetchResult.data());
       logDataFetchWarnings(fetchResult, provenanceCode, batchNo);
 
@@ -164,25 +164,25 @@ public class GenericBatchExecutor {
   }
 
   /**
-   * 发布文献到下游
+   * 发布出版物到下游
    *
    * @param context 执行上下文
    * @param batchNo 批次编号
-   * @param literatures 文献列表
+   * @param literatures 出版物列表
    * @return 发布结果
    */
-  private LiteraturePublisherOrchestrator.PublishResult publishLiterature(
-      ExecutionContext context, int batchNo, List<CanonicalLiterature> literatures) {
-    List<CanonicalLiterature> payload = literatures == null ? List.of() : List.copyOf(literatures);
+  private PublicationPublisherOrchestrator.PublishResult publishLiterature(
+      ExecutionContext context, int batchNo, List<CanonicalPublication> publications) {
+    List<CanonicalPublication> payload = literatures == null ? List.of() : List.copyOf(literatures);
     if (payload.isEmpty()) {
-      return LiteraturePublisherOrchestrator.PublishResult.builder()
+      return PublicationPublisherOrchestrator.PublishResult.builder()
           .publishedCount(0)
           .storageKey(null)
           .build();
     }
     ProvenanceCode provenanceCode = context.provenanceCode();
-    LiteraturePublisherOrchestrator.PublishContext publishContext =
-        LiteraturePublisherOrchestrator.PublishContext.builder()
+    PublicationPublisherOrchestrator.PublishContext publishContext =
+        PublicationPublisherOrchestrator.PublishContext.builder()
             .runId(context.runId())
             .batchNo(batchNo)
             .provenanceCode(provenanceCode)

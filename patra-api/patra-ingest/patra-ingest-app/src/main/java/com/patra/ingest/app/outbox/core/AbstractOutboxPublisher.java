@@ -219,10 +219,10 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
   /**
    * 返回事件的操作类型。
    *
-   * <p>从业务角度表示"发生了什么"(例如 TASK_READY、LITERATURE_DATA_READY),而不是通用的 CRUD 操作。
+   * <p>从业务角度表示"发生了什么"(例如 TASK_READY、PUBLICATION_DATA_READY),而不是通用的 CRUD 操作。
    *
    * @param event 领域事件
-   * @return 操作类型枚举（如 TaskOperations.READY、LiteratureOperations.DATA_READY）
+   * @return 操作类型枚举（如 TaskOperations.READY、PublicationOperations.DATA_READY）
    */
   protected abstract OperationType getOperationType(E event);
 

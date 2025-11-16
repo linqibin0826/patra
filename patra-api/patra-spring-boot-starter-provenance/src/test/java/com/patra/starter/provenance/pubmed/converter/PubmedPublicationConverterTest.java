@@ -3,47 +3,47 @@ package com.patra.starter.provenance.pubmed.converter;
 import static org.assertj.core.api.Assertions.*;
 
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.patra.common.model.CanonicalLiterature;
-import com.patra.starter.provenance.pubmed.model.response.PubmedLiterature;
+import com.patra.common.model.CanonicalPublication;
+import com.patra.starter.provenance.pubmed.model.response.PubmedPublication;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * PubmedLiteratureConverter 单元测试
+ * PubmedPublicationConverter 单元测试
  *
  * @author linqibin
  */
-@DisplayName("PubmedLiteratureConverter 测试")
-class PubmedLiteratureConverterTest {
+@DisplayName("PubmedPublicationConverter 测试")
+class PubmedPublicationConverterTest {
 
-  private PubmedLiteratureConverter converter;
+  private PubmedPublicationConverter converter;
   private XmlMapper xmlMapper;
 
   @BeforeEach
   void setUp() {
-    converter = new PubmedLiteratureConverter();
+    converter = new PubmedPublicationConverter();
     xmlMapper = new XmlMapper();
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - null文章返回null")
-  void toCanonicalLiterature_shouldReturnNull_whenArticleIsNull() {
+  @DisplayName("toCanonicalPublication - null文章返回null")
+  void toCanonicalPublication_shouldReturnNull_whenArticleIsNull() {
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(null);
+    CanonicalPublication result = converter.toCanonicalPublication(null);
 
     // Assert
     assertThat(result).isNull();
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 完整文章转换成功")
-  void toCanonicalLiterature_shouldConvertCompleteArticle() throws Exception {
+  @DisplayName("toCanonicalPublication - 完整文章转换成功")
+  void toCanonicalPublication_shouldConvertCompleteArticle() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>12345678</PMID>
             <Article>
@@ -91,12 +91,12 @@ class PubmedLiteratureConverterTest {
               <ArticleId IdType="pmc">PMC1234567</ArticleId>
             </ArticleIdList>
           </PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result).isNotNull();
@@ -131,12 +131,12 @@ class PubmedLiteratureConverterTest {
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 仅包含标题的最小文章")
-  void toCanonicalLiterature_shouldConvertMinimalArticle_withOnlyTitle() throws Exception {
+  @DisplayName("toCanonicalPublication - 仅包含标题的最小文章")
+  void toCanonicalPublication_shouldConvertMinimalArticle_withOnlyTitle() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>99999999</PMID>
             <Article>
@@ -145,12 +145,12 @@ class PubmedLiteratureConverterTest {
           </MedlineCitation>
           <PubmedData>
           </PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result).isNotNull();
@@ -166,12 +166,12 @@ class PubmedLiteratureConverterTest {
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 无标签的摘要正确提取")
-  void toCanonicalLiterature_shouldExtractAbstract_withoutLabels() throws Exception {
+  @DisplayName("toCanonicalPublication - 无标签的摘要正确提取")
+  void toCanonicalPublication_shouldExtractAbstract_withoutLabels() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>11111111</PMID>
             <Article>
@@ -182,12 +182,12 @@ class PubmedLiteratureConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result.getAbstractContent()).isNotNull();
@@ -195,12 +195,12 @@ class PubmedLiteratureConverterTest {
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 空摘要返回null")
-  void toCanonicalLiterature_shouldReturnNullAbstract_whenAbstractIsEmpty() throws Exception {
+  @DisplayName("toCanonicalPublication - 空摘要返回null")
+  void toCanonicalPublication_shouldReturnNullAbstract_whenAbstractIsEmpty() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>22222222</PMID>
             <Article>
@@ -210,24 +210,24 @@ class PubmedLiteratureConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result.getAbstractContent()).isNull();
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 作者无机构信息")
-  void toCanonicalLiterature_shouldConvertAuthors_withoutAffiliation() throws Exception {
+  @DisplayName("toCanonicalPublication - 作者无机构信息")
+  void toCanonicalPublication_shouldConvertAuthors_withoutAffiliation() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>33333333</PMID>
             <Article>
@@ -241,12 +241,12 @@ class PubmedLiteratureConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result.getAuthors()).hasSize(1);
@@ -256,12 +256,12 @@ class PubmedLiteratureConverterTest {
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 期刊信息从MedlineJournalInfo提取")
-  void toCanonicalLiterature_shouldExtractJournal_fromMedlineJournalInfo() throws Exception {
+  @DisplayName("toCanonicalPublication - 期刊信息从MedlineJournalInfo提取")
+  void toCanonicalPublication_shouldExtractJournal_fromMedlineJournalInfo() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>44444444</PMID>
             <Article>
@@ -273,12 +273,12 @@ class PubmedLiteratureConverterTest {
             </MedlineJournalInfo>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result.getJournal()).isNotNull();
@@ -287,12 +287,12 @@ class PubmedLiteratureConverterTest {
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 期刊信息优先从Journal提取")
-  void toCanonicalLiterature_shouldPreferJournal_overMedlineJournalInfo() throws Exception {
+  @DisplayName("toCanonicalPublication - 期刊信息优先从Journal提取")
+  void toCanonicalPublication_shouldPreferJournal_overMedlineJournalInfo() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>55555555</PMID>
             <Article>
@@ -313,12 +313,12 @@ class PubmedLiteratureConverterTest {
             </MedlineJournalInfo>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result.getJournal()).isNotNull();
@@ -327,12 +327,12 @@ class PubmedLiteratureConverterTest {
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 标识符包含PMID、DOI、PMC")
-  void toCanonicalLiterature_shouldBuildIdentifiers_withPmidDoiPmc() throws Exception {
+  @DisplayName("toCanonicalPublication - 标识符包含PMID、DOI、PMC")
+  void toCanonicalPublication_shouldBuildIdentifiers_withPmidDoiPmc() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>66666666</PMID>
             <Article>
@@ -346,12 +346,12 @@ class PubmedLiteratureConverterTest {
               <ArticleId IdType="pubmed">66666666</ArticleId>
             </ArticleIdList>
           </PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result.getIdentifiers()).hasSize(3);
@@ -362,12 +362,12 @@ class PubmedLiteratureConverterTest {
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - PMC类型同时支持pmc和pmcid")
-  void toCanonicalLiterature_shouldSupportBothPmcAndPmcid() throws Exception {
+  @DisplayName("toCanonicalPublication - PMC类型同时支持pmc和pmcid")
+  void toCanonicalPublication_shouldSupportBothPmcAndPmcid() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>77777777</PMID>
             <Article>
@@ -379,12 +379,12 @@ class PubmedLiteratureConverterTest {
               <ArticleId IdType="pmc">PMC7777777</ArticleId>
             </ArticleIdList>
           </PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result.getIdentifiers())
@@ -393,12 +393,12 @@ class PubmedLiteratureConverterTest {
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 发表日期仅年份")
-  void toCanonicalLiterature_shouldParsePublicationDate_withYearOnly() throws Exception {
+  @DisplayName("toCanonicalPublication - 发表日期仅年份")
+  void toCanonicalPublication_shouldParsePublicationDate_withYearOnly() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>88888888</PMID>
             <Article>
@@ -413,12 +413,12 @@ class PubmedLiteratureConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result.getDates()).isNotNull();
@@ -426,12 +426,12 @@ class PubmedLiteratureConverterTest {
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 发表日期包含年月（完整月份名称）")
-  void toCanonicalLiterature_shouldParsePublicationDate_withYearAndMonth() throws Exception {
+  @DisplayName("toCanonicalPublication - 发表日期包含年月（完整月份名称）")
+  void toCanonicalPublication_shouldParsePublicationDate_withYearAndMonth() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>99999990</PMID>
             <Article>
@@ -447,12 +447,12 @@ class PubmedLiteratureConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result.getDates()).isNotNull();
@@ -460,12 +460,12 @@ class PubmedLiteratureConverterTest {
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 发表日期月份为数字")
-  void toCanonicalLiterature_shouldParsePublicationDate_withNumericMonth() throws Exception {
+  @DisplayName("toCanonicalPublication - 发表日期月份为数字")
+  void toCanonicalPublication_shouldParsePublicationDate_withNumericMonth() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>99999991</PMID>
             <Article>
@@ -482,12 +482,12 @@ class PubmedLiteratureConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result.getDates()).isNotNull();
@@ -495,12 +495,12 @@ class PubmedLiteratureConverterTest {
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 发表日期无效时返回null")
-  void toCanonicalLiterature_shouldReturnNullPublicationDate_whenDateIsInvalid() throws Exception {
+  @DisplayName("toCanonicalPublication - 发表日期无效时返回null")
+  void toCanonicalPublication_shouldReturnNullPublicationDate_whenDateIsInvalid() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>99999992</PMID>
             <Article>
@@ -515,24 +515,24 @@ class PubmedLiteratureConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result.getDates()).isNull();
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 月份超出范围时限制为1-12")
-  void toCanonicalLiterature_shouldClampMonth_whenOutOfRange() throws Exception {
+  @DisplayName("toCanonicalPublication - 月份超出范围时限制为1-12")
+  void toCanonicalPublication_shouldClampMonth_whenOutOfRange() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>99999993</PMID>
             <Article>
@@ -548,12 +548,12 @@ class PubmedLiteratureConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result.getDates()).isNotNull();
@@ -561,12 +561,12 @@ class PubmedLiteratureConverterTest {
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 日期超出范围时限制为1-28")
-  void toCanonicalLiterature_shouldClampDay_whenOutOfRange() throws Exception {
+  @DisplayName("toCanonicalPublication - 日期超出范围时限制为1-28")
+  void toCanonicalPublication_shouldClampDay_whenOutOfRange() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>99999994</PMID>
             <Article>
@@ -583,12 +583,12 @@ class PubmedLiteratureConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result.getDates()).isNotNull();
@@ -596,12 +596,12 @@ class PubmedLiteratureConverterTest {
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 关键词过滤空白值")
-  void toCanonicalLiterature_shouldFilterBlankKeywords() throws Exception {
+  @DisplayName("toCanonicalPublication - 关键词过滤空白值")
+  void toCanonicalPublication_shouldFilterBlankKeywords() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>99999995</PMID>
             <Article>
@@ -614,12 +614,12 @@ class PubmedLiteratureConverterTest {
             </KeywordList>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result.getKeywords()).hasSize(1);
@@ -629,12 +629,12 @@ class PubmedLiteratureConverterTest {
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 空关键词列表返回空集合")
-  void toCanonicalLiterature_shouldReturnEmptyKeywords_whenKeywordListIsEmpty() throws Exception {
+  @DisplayName("toCanonicalPublication - 空关键词列表返回空集合")
+  void toCanonicalPublication_shouldReturnEmptyKeywords_whenKeywordListIsEmpty() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>99999996</PMID>
             <Article>
@@ -644,25 +644,25 @@ class PubmedLiteratureConverterTest {
             </KeywordList>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result.getKeywords()).isNull();
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 作者有多个机构时仅取第一个")
-  void toCanonicalLiterature_shouldUseFirstAffiliation_whenMultipleAffiliationsExist()
+  @DisplayName("toCanonicalPublication - 作者有多个机构时仅取第一个")
+  void toCanonicalPublication_shouldUseFirstAffiliation_whenMultipleAffiliationsExist()
       throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>99999997</PMID>
             <Article>
@@ -682,12 +682,12 @@ class PubmedLiteratureConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result.getAuthors()).hasSize(1);
@@ -699,12 +699,12 @@ class PubmedLiteratureConverterTest {
   }
 
   @Test
-  @DisplayName("toCanonicalLiterature - 无效月份名称时默认为1月")
-  void toCanonicalLiterature_shouldDefaultToJanuary_whenMonthNameIsInvalid() throws Exception {
+  @DisplayName("toCanonicalPublication - 无效月份名称时默认为1月")
+  void toCanonicalPublication_shouldDefaultToJanuary_whenMonthNameIsInvalid() throws Exception {
     // Arrange
     String xml =
         """
-        <PubmedLiterature>
+        <PubmedPublication>
           <MedlineCitation>
             <PMID>99999998</PMID>
             <Article>
@@ -720,12 +720,12 @@ class PubmedLiteratureConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedLiterature>
+        </PubmedPublication>
         """;
-    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
 
     // Act
-    CanonicalLiterature result = converter.toCanonicalLiterature(article);
+    CanonicalPublication result = converter.toCanonicalPublication(article);
 
     // Assert
     assertThat(result.getDates()).isNotNull();

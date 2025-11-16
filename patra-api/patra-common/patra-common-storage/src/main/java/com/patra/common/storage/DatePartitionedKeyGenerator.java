@@ -22,7 +22,7 @@ import java.util.Locale;
  * <p><b>输出示例</b>:
  *
  * <pre>{@code
- * ingest/literature-batch/2025/10/26/pubmed-123-batch-001.json
+ * ingest/publication-batch/2025/10/26/pubmed-123-batch-001.json
  * storage/metadata-snapshot/2025/10/25/snapshot-20251025-001.json.gz
  * literature/index/2025/10/26/index-pmid-12345.xml
  * }</pre>
@@ -102,8 +102,8 @@ public final class DatePartitionedKeyGenerator implements ObjectKeyGenerator {
    * <p>Examples:
    *
    * <ul>
-   *   <li>"literature_batch" → "literature-batch"
-   *   <li>"LiteratureBatch" → "literaturebatch"
+   *   <li>"publication_batch" → "publication-batch"
+   *   <li>"PublicationBatch" → "literaturebatch"
    *   <li>"metadata-snapshot" → "metadata-snapshot"
    * </ul>
    */

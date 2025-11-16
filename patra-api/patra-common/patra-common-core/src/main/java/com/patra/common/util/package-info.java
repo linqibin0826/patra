@@ -53,7 +53,7 @@
  * String md5 = HashUtils.md5(text);
  *
  * // 4. 用于内容去重
- * JsonNormalizerResult result = JsonNormalizer.normalizeDefault(literatureData);
+ * JsonNormalizerResult result = JsonNormalizer.normalizeDefault(publicationData);
  * String contentHash = HashUtils.sha256(result.getHashMaterial());
  * // 使用 contentHash 作为去重键
  * }</pre>

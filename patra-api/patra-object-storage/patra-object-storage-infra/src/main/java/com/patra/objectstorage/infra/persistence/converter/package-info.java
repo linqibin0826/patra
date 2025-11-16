@@ -113,7 +113,7 @@
  * // 领域层:Map<String, Object>
  * BusinessContext context = new BusinessContext(
  *     "patra-ingest",
- *     "literature_batch",
+ *     "publication_batch",
  *     "batch-001",
  *     Map.of("pmcId", "PMC12345678", "sourceId", "pubmed")
  * );

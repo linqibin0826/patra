@@ -8,7 +8,7 @@ import static org.mockito.Mockito.withSettings;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.patra.common.model.CanonicalLiterature;
+import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
 import com.patra.starter.provenance.boot.ProvenanceProperties;
 import com.patra.starter.provenance.common.config.BatchingConfig;
@@ -21,14 +21,14 @@ import com.patra.starter.provenance.common.processor.ValidationResult;
 import com.patra.starter.provenance.common.provider.BatchExecutionParams;
 import com.patra.starter.provenance.common.provider.ProviderRequest;
 import com.patra.starter.provenance.pubmed.PubMedClient;
-import com.patra.starter.provenance.pubmed.converter.PubmedLiteratureConverter;
+import com.patra.starter.provenance.pubmed.converter.PubmedPublicationConverter;
 import com.patra.starter.provenance.pubmed.model.request.EFetchRequest;
 import com.patra.starter.provenance.pubmed.model.request.EPostRequest;
 import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
 import com.patra.starter.provenance.pubmed.model.response.EFetchResponse;
 import com.patra.starter.provenance.pubmed.model.response.EPostResponse;
 import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
-import com.patra.starter.provenance.pubmed.model.response.PubmedLiterature;
+import com.patra.starter.provenance.pubmed.model.response.PubmedPublication;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,23 +41,23 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * PubmedLiteratureProcessor 单元测试
+ * PubmedPublicationProcessor 单元测试
  *
  * <p>测试策略：使用Mock对象进行单元测试，验证处理器的核心逻辑和异常处理。
  *
  * @author Patra Architecture Team
  * @since 0.1.0
  */
-@DisplayName("PubmedLiteratureProcessor 单元测试")
+@DisplayName("PubmedPublicationProcessor 单元测试")
 @ExtendWith(MockitoExtension.class)
-class PubmedLiteratureProcessorTest {
+class PubmedPublicationProcessorTest {
 
   @Mock private PubMedClient pubMedClient;
-  @Mock private PubmedLiteratureConverter converter;
+  @Mock private PubmedPublicationConverter converter;
   @Mock private ProvenanceProperties properties;
   @Mock private ProvenanceMetrics metrics;
 
-  private PubmedLiteratureProcessor processor;
+  private PubmedPublicationProcessor processor;
 
   // 测试数据常量
   private static final String OPERATION_CODE = "HARVEST";
@@ -70,7 +70,7 @@ class PubmedLiteratureProcessorTest {
 
   @BeforeEach
   void setUp() {
-    processor = new PubmedLiteratureProcessor(pubMedClient, converter, properties, metrics);
+    processor = new PubmedPublicationProcessor(pubMedClient, converter, properties, metrics);
   }
 
   // ==================== 测试辅助方法 ====================
@@ -142,7 +142,7 @@ class PubmedLiteratureProcessorTest {
   }
 
   /** 创建测试用的EFetchResponse */
-  private EFetchResponse createEFetchResponse(List<PubmedLiterature> articles) {
+  private EFetchResponse createEFetchResponse(List<PubmedPublication> articles) {
     // 使用反射或工厂方法创建EFetchResponse
     // 由于EFetchResponse的构造逻辑，这里直接返回mock
     EFetchResponse response = mock(EFetchResponse.class);
@@ -150,29 +150,29 @@ class PubmedLiteratureProcessorTest {
     return response;
   }
 
-  /** 创建测试用的PubmedLiterature */
-  private PubmedLiterature createMockArticle(String pmid) {
-    PubmedLiterature article = mock(PubmedLiterature.class, withSettings().lenient());
+  /** 创建测试用的PubmedPublication */
+  private PubmedPublication createMockArticle(String pmid) {
+    PubmedPublication article = mock(PubmedPublication.class, withSettings().lenient());
     when(article.pmid()).thenReturn(pmid);
     return article;
   }
 
-  /** 创建测试用的CanonicalLiterature */
-  private CanonicalLiterature createValidLiterature(String pmid) {
-    return CanonicalLiterature.builder()
+  /** 创建测试用的CanonicalPublication */
+  private CanonicalPublication createValidPublication(String pmid) {
+    return CanonicalPublication.builder()
         .title("Test Article " + pmid)
         .abstractContent(
-            CanonicalLiterature.Abstract.builder().text("Test abstract for " + pmid).build())
+            CanonicalPublication.Abstract.builder().text("Test abstract for " + pmid).build())
         .identifiers(
-            List.of(CanonicalLiterature.Identifier.builder().type("pmid").value(pmid).build()))
+            List.of(CanonicalPublication.Identifier.builder().type("pmid").value(pmid).build()))
         .build();
   }
 
-  /** 创建测试用的无效CanonicalLiterature（缺少必填字段） */
-  private CanonicalLiterature createInvalidLiterature() {
-    return CanonicalLiterature.builder()
+  /** 创建测试用的无效CanonicalPublication（缺少必填字段） */
+  private CanonicalPublication createInvalidLiterature() {
+    return CanonicalPublication.builder()
         .abstractContent(
-            CanonicalLiterature.Abstract.builder()
+            CanonicalPublication.Abstract.builder()
                 .text("Test abstract without title and pmid")
                 .build())
         .build();
@@ -200,15 +200,15 @@ class PubmedLiteratureProcessorTest {
       // When: 获取数据类型
       DataType dataType = processor.getDataType();
 
-      // Then: 返回LITERATURE类型
-      assertThat(dataType).isEqualTo(DataType.LITERATURE);
+      // Then: 返回PUBLICATION类型
+      assertThat(dataType).isEqualTo(DataType.PUBLICATION);
     }
 
     @Test
     @DisplayName("should_support_literature_data_type")
-    void shouldSupportLiteratureDataType() {
-      // When & Then: 支持LITERATURE数据类型
-      assertThat(processor.supports(DataType.LITERATURE)).isTrue();
+    void shouldSupportPublicationDataType() {
+      // When & Then: 支持PUBLICATION数据类型
+      assertThat(processor.supports(DataType.PUBLICATION)).isTrue();
       assertThat(processor.supports(DataType.JOURNAL)).isFalse();
       assertThat(processor.supports(DataType.DRUG)).isFalse();
     }
@@ -227,24 +227,24 @@ class PubmedLiteratureProcessorTest {
       List<String> pmids = List.of(TEST_PMID_1, TEST_PMID_2);
       ESearchResponse searchResponse = createESearchResponse(pmids, TEST_WEB_ENV);
 
-      PubmedLiterature article1 = createMockArticle(TEST_PMID_1);
-      PubmedLiterature article2 = createMockArticle(TEST_PMID_2);
+      PubmedPublication article1 = createMockArticle(TEST_PMID_1);
+      PubmedPublication article2 = createMockArticle(TEST_PMID_2);
       EFetchResponse fetchResponse = createEFetchResponse(List.of(article1, article2));
 
-      CanonicalLiterature lit1 = createValidLiterature(TEST_PMID_1);
-      CanonicalLiterature lit2 = createValidLiterature(TEST_PMID_2);
+      CanonicalPublication lit1 = createValidPublication(TEST_PMID_1);
+      CanonicalPublication lit2 = createValidPublication(TEST_PMID_2);
 
       when(properties.mergeWithRuntime(eq(PROVENANCE_CODE), any())).thenReturn(createTestConfig());
       when(pubMedClient.esearch(any(ESearchRequest.class), any())).thenReturn(searchResponse);
       when(pubMedClient.efetch(any(EFetchRequest.class), any())).thenReturn(fetchResponse);
-      when(converter.toCanonicalLiterature(article1)).thenReturn(lit1);
-      when(converter.toCanonicalLiterature(article2)).thenReturn(lit2);
+      when(converter.toCanonicalPublication(article1)).thenReturn(lit1);
+      when(converter.toCanonicalPublication(article2)).thenReturn(lit2);
 
       ProviderRequest request = createTestRequest();
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 返回成功结果
       assertThat(result.success()).isTrue();
@@ -255,7 +255,7 @@ class PubmedLiteratureProcessorTest {
       // 验证调用链
       verify(pubMedClient).esearch(any(ESearchRequest.class), any());
       verify(pubMedClient).efetch(any(EFetchRequest.class), any());
-      verify(converter, times(2)).toCanonicalLiterature(any());
+      verify(converter, times(2)).toCanonicalPublication(any());
       verify(pubMedClient, never()).epost(any(), any());
     }
 
@@ -270,14 +270,14 @@ class PubmedLiteratureProcessorTest {
       ESearchResponse searchResponse = createESearchResponse(pmids, null);
       EPostResponse postResponse = createEPostResponse();
 
-      List<PubmedLiterature> articles = new ArrayList<>();
-      List<CanonicalLiterature> literatures = new ArrayList<>();
+      List<PubmedPublication> articles = new ArrayList<>();
+      List<CanonicalPublication> literatures = new ArrayList<>();
       for (int i = 0; i < 250; i++) {
-        PubmedLiterature article = createMockArticle(pmids.get(i));
+        PubmedPublication article = createMockArticle(pmids.get(i));
         articles.add(article);
-        CanonicalLiterature lit = createValidLiterature(pmids.get(i));
+        CanonicalPublication lit = createValidPublication(pmids.get(i));
         literatures.add(lit);
-        when(converter.toCanonicalLiterature(article)).thenReturn(lit);
+        when(converter.toCanonicalPublication(article)).thenReturn(lit);
       }
       EFetchResponse fetchResponse = createEFetchResponse(articles);
 
@@ -291,7 +291,7 @@ class PubmedLiteratureProcessorTest {
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 返回成功结果
       assertThat(result.success()).isTrue();
@@ -316,7 +316,7 @@ class PubmedLiteratureProcessorTest {
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 返回空的成功结果
       assertThat(result.success()).isTrue();
@@ -336,21 +336,21 @@ class PubmedLiteratureProcessorTest {
       List<String> pmids = List.of(TEST_PMID_1);
       ESearchResponse searchResponse = createESearchResponse(pmids, TEST_WEB_ENV);
 
-      PubmedLiterature article = createMockArticle(TEST_PMID_1);
+      PubmedPublication article = createMockArticle(TEST_PMID_1);
       EFetchResponse fetchResponse = createEFetchResponse(List.of(article));
 
-      CanonicalLiterature lit = createValidLiterature(TEST_PMID_1);
+      CanonicalPublication lit = createValidPublication(TEST_PMID_1);
 
       when(properties.mergeWithRuntime(eq(PROVENANCE_CODE), any())).thenReturn(createTestConfig());
       when(pubMedClient.esearch(any(ESearchRequest.class), any())).thenReturn(searchResponse);
       when(pubMedClient.efetch(any(EFetchRequest.class), any())).thenReturn(fetchResponse);
-      when(converter.toCanonicalLiterature(article)).thenReturn(lit);
+      when(converter.toCanonicalPublication(article)).thenReturn(lit);
 
       ProviderRequest request = createTestRequest();
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: nextCursor应该为WebEnv
       assertThat(result.nextCursor()).isEqualTo(TEST_WEB_ENV);
@@ -370,24 +370,24 @@ class PubmedLiteratureProcessorTest {
       List<String> pmids = List.of(TEST_PMID_1, TEST_PMID_2);
       ESearchResponse searchResponse = createESearchResponse(pmids, null);
 
-      PubmedLiterature article1 = createMockArticle(TEST_PMID_1);
-      PubmedLiterature article2 = createMockArticle(TEST_PMID_2);
+      PubmedPublication article1 = createMockArticle(TEST_PMID_1);
+      PubmedPublication article2 = createMockArticle(TEST_PMID_2);
       EFetchResponse fetchResponse = createEFetchResponse(List.of(article1, article2));
 
-      CanonicalLiterature lit1 = createValidLiterature(TEST_PMID_1);
+      CanonicalPublication lit1 = createValidPublication(TEST_PMID_1);
 
       when(properties.mergeWithRuntime(eq(PROVENANCE_CODE), any())).thenReturn(createTestConfig());
       when(pubMedClient.esearch(any(ESearchRequest.class), any())).thenReturn(searchResponse);
       when(pubMedClient.efetch(any(EFetchRequest.class), any())).thenReturn(fetchResponse);
-      when(converter.toCanonicalLiterature(article1)).thenReturn(lit1);
-      when(converter.toCanonicalLiterature(article2))
+      when(converter.toCanonicalPublication(article1)).thenReturn(lit1);
+      when(converter.toCanonicalPublication(article2))
           .thenThrow(new RuntimeException("Conversion failed"));
 
       ProviderRequest request = createTestRequest();
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 返回部分成功结果
       assertThat(result.success()).isTrue();
@@ -402,13 +402,13 @@ class PubmedLiteratureProcessorTest {
     void shouldFormatConversionWarningMessageCorrectly() {
       // Given: 多个文章转换失败（超过5个）
       List<String> pmids = new ArrayList<>();
-      List<PubmedLiterature> articles = new ArrayList<>();
+      List<PubmedPublication> articles = new ArrayList<>();
       for (int i = 1; i <= 10; i++) {
         String pmid = String.valueOf(10000000 + i);
         pmids.add(pmid);
-        PubmedLiterature article = createMockArticle(pmid);
+        PubmedPublication article = createMockArticle(pmid);
         articles.add(article);
-        when(converter.toCanonicalLiterature(article))
+        when(converter.toCanonicalPublication(article))
             .thenThrow(new RuntimeException("Conversion failed"));
       }
 
@@ -423,7 +423,7 @@ class PubmedLiteratureProcessorTest {
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 验证警告消息格式
       assertThat(result.errorMessage()).contains("Conversion failed for pmid(s):");
@@ -452,7 +452,7 @@ class PubmedLiteratureProcessorTest {
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 返回失败结果（服务不可用）
       assertThat(result.success()).isFalse();
@@ -475,7 +475,7 @@ class PubmedLiteratureProcessorTest {
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 返回失败结果（服务不可用）
       assertThat(result.success()).isFalse();
@@ -498,7 +498,7 @@ class PubmedLiteratureProcessorTest {
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 返回失败结果（认证失败）
       assertThat(result.success()).isFalse();
@@ -521,7 +521,7 @@ class PubmedLiteratureProcessorTest {
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 返回失败结果（认证失败）
       assertThat(result.success()).isFalse();
@@ -544,7 +544,7 @@ class PubmedLiteratureProcessorTest {
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 返回失败结果（请求被拒绝）
       assertThat(result.success()).isFalse();
@@ -567,7 +567,7 @@ class PubmedLiteratureProcessorTest {
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 返回失败结果（服务不可用）
       assertThat(result.success()).isFalse();
@@ -589,7 +589,7 @@ class PubmedLiteratureProcessorTest {
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 返回失败结果（通用客户端错误）
       assertThat(result.success()).isFalse();
@@ -624,7 +624,7 @@ class PubmedLiteratureProcessorTest {
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 返回失败结果（中断）
       assertThat(result.success()).isFalse();
@@ -645,7 +645,7 @@ class PubmedLiteratureProcessorTest {
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 返回失败结果（通用错误）
       assertThat(result.success()).isFalse();
@@ -663,11 +663,11 @@ class PubmedLiteratureProcessorTest {
     @Test
     @DisplayName("should_validate_successfully_with_valid_data")
     void shouldValidateSuccessfullyWithValidData() {
-      // Given: 有效的CanonicalLiterature
-      CanonicalLiterature literature = createValidLiterature(TEST_PMID_1);
+      // Given: 有效的CanonicalPublication
+      CanonicalPublication publication = createValidPublication(TEST_PMID_1);
 
       // When: 验证数据
-      ValidationResult result = processor.validate(literature);
+      ValidationResult result = processor.validate(publication);
 
       // Then: 验证成功
       assertThat(result.isValid()).isTrue();
@@ -690,11 +690,11 @@ class PubmedLiteratureProcessorTest {
     @DisplayName("should_fail_validation_when_pmid_is_missing")
     void shouldFailValidationWhenPmidIsMissing() {
       // Given: 缺少PMID
-      CanonicalLiterature literature =
-          CanonicalLiterature.builder().title("Test Article").identifiers(List.of()).build();
+      CanonicalPublication publication =
+          CanonicalPublication.builder().title("Test Article").identifiers(List.of()).build();
 
       // When: 验证数据
-      ValidationResult result = processor.validate(literature);
+      ValidationResult result = processor.validate(publication);
 
       // Then: 验证失败
       assertThat(result.isValid()).isFalse();
@@ -705,18 +705,18 @@ class PubmedLiteratureProcessorTest {
     @DisplayName("should_fail_validation_when_title_is_missing")
     void shouldFailValidationWhenTitleIsMissing() {
       // Given: 缺少标题
-      CanonicalLiterature literature =
-          CanonicalLiterature.builder()
+      CanonicalPublication publication =
+          CanonicalPublication.builder()
               .identifiers(
                   List.of(
-                      CanonicalLiterature.Identifier.builder()
+                      CanonicalPublication.Identifier.builder()
                           .type("pmid")
                           .value(TEST_PMID_1)
                           .build()))
               .build();
 
       // When: 验证数据
-      ValidationResult result = processor.validate(literature);
+      ValidationResult result = processor.validate(publication);
 
       // Then: 验证失败
       assertThat(result.isValid()).isFalse();
@@ -727,10 +727,10 @@ class PubmedLiteratureProcessorTest {
     @DisplayName("should_fail_validation_when_multiple_fields_are_missing")
     void shouldFailValidationWhenMultipleFieldsAreMissing() {
       // Given: 缺少多个字段
-      CanonicalLiterature literature = createInvalidLiterature();
+      CanonicalPublication publication = createInvalidLiterature();
 
       // When: 验证数据
-      ValidationResult result = processor.validate(literature);
+      ValidationResult result = processor.validate(publication);
 
       // Then: 验证失败，包含多个错误
       assertThat(result.isValid()).isFalse();
@@ -747,19 +747,19 @@ class PubmedLiteratureProcessorTest {
 
     @Test
     @DisplayName("should_transform_pubmed_article_to_canonical_literature")
-    void shouldTransformPubmedLiteratureToCanonicalLiterature() {
-      // Given: PubmedLiterature和预期的转换结果
-      PubmedLiterature article = createMockArticle(TEST_PMID_1);
-      CanonicalLiterature expectedLiterature = createValidLiterature(TEST_PMID_1);
+    void shouldTransformPubmedPublicationToCanonicalPublication() {
+      // Given: PubmedPublication和预期的转换结果
+      PubmedPublication article = createMockArticle(TEST_PMID_1);
+      CanonicalPublication expectedLiterature = createValidPublication(TEST_PMID_1);
 
-      when(converter.toCanonicalLiterature(article)).thenReturn(expectedLiterature);
+      when(converter.toCanonicalPublication(article)).thenReturn(expectedLiterature);
 
       // When: 转换数据
-      CanonicalLiterature result = processor.transform(article);
+      CanonicalPublication result = processor.transform(article);
 
       // Then: 返回转换后的文献
       assertThat(result).isEqualTo(expectedLiterature);
-      verify(converter).toCanonicalLiterature(article);
+      verify(converter).toCanonicalPublication(article);
     }
 
     @Test
@@ -775,14 +775,14 @@ class PubmedLiteratureProcessorTest {
     @DisplayName("should_throw_exception_when_raw_data_is_wrong_type")
     void shouldThrowExceptionWhenRawDataIsWrongType() {
       // Given: 错误类型的原始数据
-      Object wrongTypeData = "This is a string, not a PubmedLiterature";
+      Object wrongTypeData = "This is a string, not a PubmedPublication";
 
       // When & Then: 类型错误时抛出异常
       assertThatThrownBy(() -> processor.transform(wrongTypeData))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("不支持的数据类型")
           .hasMessageContaining("String")
-          .hasMessageContaining("PubmedLiterature");
+          .hasMessageContaining("PubmedPublication");
     }
   }
 
@@ -804,19 +804,19 @@ class PubmedLiteratureProcessorTest {
 
       List<String> pmids = List.of(TEST_PMID_1);
       ESearchResponse searchResponse = createESearchResponse(pmids, null);
-      PubmedLiterature article = createMockArticle(TEST_PMID_1);
+      PubmedPublication article = createMockArticle(TEST_PMID_1);
       EFetchResponse fetchResponse = createEFetchResponse(List.of(article));
-      CanonicalLiterature lit = createValidLiterature(TEST_PMID_1);
+      CanonicalPublication lit = createValidPublication(TEST_PMID_1);
 
       when(properties.mergeWithRuntime(eq(PROVENANCE_CODE), any())).thenReturn(createTestConfig());
       when(pubMedClient.esearch(any(ESearchRequest.class), any())).thenReturn(searchResponse);
       when(pubMedClient.efetch(any(EFetchRequest.class), any())).thenReturn(fetchResponse);
-      when(converter.toCanonicalLiterature(article)).thenReturn(lit);
+      when(converter.toCanonicalPublication(article)).thenReturn(lit);
 
       ProviderContext context = createTestContext();
 
       // When: 处理数据
-      ProcessResult<CanonicalLiterature> result = processor.process(request, context);
+      ProcessResult<CanonicalPublication> result = processor.process(request, context);
 
       // Then: 成功处理（间接验证参数合并逻辑正确）
       assertThat(result.success()).isTrue();
@@ -833,7 +833,7 @@ class PubmedLiteratureProcessorTest {
       ESearchResponse searchResponse = createESearchResponse(pmids, null);
       EPostResponse postResponse = createEPostResponse();
 
-      List<PubmedLiterature> articles = new ArrayList<>();
+      List<PubmedPublication> articles = new ArrayList<>();
       for (int i = 0; i < 160; i++) {
         articles.add(createMockArticle(pmids.get(i)));
       }
@@ -866,7 +866,7 @@ class PubmedLiteratureProcessorTest {
       ESearchResponse searchResponse = createESearchResponse(pmids, null);
       EPostResponse postResponse = createEPostResponse();
 
-      List<PubmedLiterature> articles = new ArrayList<>();
+      List<PubmedPublication> articles = new ArrayList<>();
       for (int i = 0; i < 110; i++) {
         articles.add(createMockArticle(pmids.get(i)));
       }
@@ -910,7 +910,7 @@ class PubmedLiteratureProcessorTest {
       ESearchResponse searchResponse = createESearchResponse(pmids, null);
       EPostResponse postResponse = createEPostResponse();
 
-      List<PubmedLiterature> articles = new ArrayList<>();
+      List<PubmedPublication> articles = new ArrayList<>();
       for (int i = 0; i < 210; i++) {
         articles.add(createMockArticle(pmids.get(i)));
       }

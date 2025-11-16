@@ -924,9 +924,9 @@ class FileChecksumTest {
     }
 
     @Test
-    @DisplayName("应该支持医学文献 PDF 校验和场景")
+    @DisplayName("应该支持医学出版物 PDF 校验和场景")
     void shouldSupportMedicalLiteraturePdfChecksumScenario() {
-      // Given - 医学文献 PDF 文件（来自 PubMed Central）
+      // Given - 医学出版物 PDF 文件（来自 PubMed Central）
       String md5Hash = "a1234567890abcdef1234567890abcde";
       String sha256Hash = "f1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
 

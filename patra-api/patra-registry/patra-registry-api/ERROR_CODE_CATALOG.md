@@ -44,7 +44,7 @@
   "type": "https://errors.example.com/reg-1001",
   "title": "REG-1001",
   "status": 409,
-  "detail": "Namespace already exists: medical-literature",
+  "detail": "Namespace already exists: medical-publication",
   "code": "REG-1001",
   "traceId": "abc123def456",
   "path": "/api/registry/namespaces",

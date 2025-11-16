@@ -19,7 +19,7 @@ import lombok.Getter;
  *
  * <ul>
  *   <li>ADR-0004: 不包含 tableName 字段（移除数据库耦合）
- *   <li>预定义 10 种数据类型，覆盖文献、期刊、药品等领域
+ *   <li>预定义 10 种数据类型，覆盖出版物、期刊、药品等领域
  *   <li>提供类型安全的查找和分类方法
  * </ul>
  *
@@ -28,21 +28,21 @@ import lombok.Getter;
 @Getter
 public enum DataType {
 
-  // ========== 文献相关 ==========
+  // ========== 出版物相关 ==========
 
   /**
-   * 文献数据（标准化）
+   * 出版物数据（标准化）
    *
    * <p>来源：PubMed, EPMC, Crossref
    */
-  LITERATURE("literature", "文献数据", CanonicalLiterature.class),
+  PUBLICATION("publication", "出版物数据", CanonicalPublication.class),
 
   /**
-   * 文献全文
+   * 出版物全文
    *
    * <p>来源：EPMC, PMC
    */
-  LITERATURE_FULLTEXT("literature_fulltext", "文献全文", LiteratureFulltext.class),
+  PUBLICATION_FULLTEXT("publication_fulltext", "出版物全文", PublicationFulltext.class),
 
   // ========== 期刊相关 ==========
 
@@ -172,7 +172,7 @@ public enum DataType {
    *   <li>CITATION - 引用关系
    *   <li>REFERENCE - 参考文献
    *   <li>DRUG_INTERACTION - 药品相互作用
-   *   <li>LITERATURE_FULLTEXT - 文献全文（关联文献实体）
+   *   <li>PUBLICATION_FULLTEXT - 文献全文（关联文献实体）
    * </ul>
    *
    * @return 如果是关系型数据类型返回 true，否则返回 false
@@ -181,7 +181,7 @@ public enum DataType {
     return this == CITATION
         || this == REFERENCE
         || this == DRUG_INTERACTION
-        || this == LITERATURE_FULLTEXT;
+        || this == PUBLICATION_FULLTEXT;
   }
 
   /**
@@ -190,7 +190,7 @@ public enum DataType {
    * <p>核心实体类型包括：
    *
    * <ul>
-   *   <li>LITERATURE - 文献数据
+   *   <li>PUBLICATION - 文献数据
    *   <li>JOURNAL - 期刊数据
    *   <li>DRUG - 药品数据
    *   <li>AUTHOR - 作者信息
@@ -199,7 +199,7 @@ public enum DataType {
    * @return 如果是核心实体类型返回 true，否则返回 false
    */
   public boolean isCoreEntity() {
-    return this == LITERATURE || this == JOURNAL || this == DRUG || this == AUTHOR;
+    return this == PUBLICATION || this == JOURNAL || this == DRUG || this == AUTHOR;
   }
 
   // ========== 查找方法 ==========
@@ -290,12 +290,12 @@ public enum DataType {
   // ========== 分组方法 ==========
 
   /**
-   * 获取所有文献相关类型
+   * 获取所有出版物相关类型
    *
-   * @return 文献相关类型的不可变集合
+   * @return 出版物相关类型的不可变集合
    */
-  public static Set<DataType> literatureTypes() {
-    return Set.of(LITERATURE, LITERATURE_FULLTEXT, REFERENCE);
+  public static Set<DataType> publicationTypes() {
+    return Set.of(PUBLICATION, PUBLICATION_FULLTEXT, REFERENCE);
   }
 
   /**
@@ -321,10 +321,10 @@ public enum DataType {
   /**
    * 文献全文占位符类
    *
-   * <p>TODO: 后续由实际的 LiteratureFulltext 领域模型替换
+   * <p>TODO: 后续由实际的 PublicationFulltext 领域模型替换
    */
-  public static class LiteratureFulltext {
-    private LiteratureFulltext() {
+  public static class PublicationFulltext {
+    private PublicationFulltext() {
       throw new AssertionError("占位符类，不应实例化");
     }
   }

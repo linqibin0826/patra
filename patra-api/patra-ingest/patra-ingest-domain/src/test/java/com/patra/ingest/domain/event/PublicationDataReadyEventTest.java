@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /**
- * {@link LiteratureDataReadyEvent} 的单元测试。
+ * {@link PublicationDataReadyEvent} 的单元测试。
  *
  * <p>测试范围:
  *
@@ -21,8 +21,8 @@ import org.junit.jupiter.api.Test;
  *   <li>边界条件 - 空集合、null 值、边界数值
  * </ul>
  */
-@DisplayName("LiteratureDataReadyEvent 单元测试")
-class LiteratureDataReadyEventTest {
+@DisplayName("PublicationDataReadyEvent 单元测试")
+class PublicationDataReadyEventTest {
 
   // ==================== 测试数据常量 ====================
 
@@ -30,8 +30,8 @@ class LiteratureDataReadyEventTest {
   private static final Long RUN_ID = 2001L;
   private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final List<String> STORAGE_KEYS =
-      List.of("s3://bucket/literature/batch-1.json", "s3://bucket/literature/batch-2.json");
-  private static final Integer TOTAL_LITERATURE_COUNT = 500;
+      List.of("s3://bucket/publication/batch-1.json", "s3://bucket/publication/batch-2.json");
+  private static final Integer TOTAL_PUBLICATION_COUNT = 500;
   private static final Integer SUCCESS_BATCH_COUNT = 2;
   private static final Integer FAILED_BATCH_COUNT = 0;
   private static final Long TIMESTAMP = System.currentTimeMillis();
@@ -39,13 +39,13 @@ class LiteratureDataReadyEventTest {
   // ==================== 辅助方法 ====================
 
   /** 创建默认的测试事件。 */
-  private LiteratureDataReadyEvent createDefaultEvent() {
-    return LiteratureDataReadyEvent.builder()
+  private PublicationDataReadyEvent createDefaultEvent() {
+    return PublicationDataReadyEvent.builder()
         .taskId(TASK_ID)
         .runId(RUN_ID)
         .provenanceCode(PROVENANCE_CODE)
         .storageKeys(STORAGE_KEYS)
-        .totalLiteratureCount(TOTAL_LITERATURE_COUNT)
+        .totalPublicationCount(TOTAL_PUBLICATION_COUNT)
         .successBatchCount(SUCCESS_BATCH_COUNT)
         .failedBatchCount(FAILED_BATCH_COUNT)
         .timestamp(TIMESTAMP)
@@ -111,20 +111,20 @@ class LiteratureDataReadyEventTest {
           .isNotNull()
           .hasSize(2)
           .containsExactly(
-              "s3://bucket/literature/batch-1.json", "s3://bucket/literature/batch-2.json");
+              "s3://bucket/publication/batch-1.json", "s3://bucket/publication/batch-2.json");
     }
 
     @Test
-    @DisplayName("应该正确返回 totalLiteratureCount")
+    @DisplayName("应该正确返回 totalPublicationCount")
     void shouldReturnTotalLiteratureCount() {
       // Given
       var event = createDefaultEvent();
 
       // When
-      var result = event.totalLiteratureCount();
+      var result = event.totalPublicationCount();
 
       // Then
-      assertThat(result).isEqualTo(TOTAL_LITERATURE_COUNT);
+      assertThat(result).isEqualTo(TOTAL_PUBLICATION_COUNT);
     }
 
     @Test
@@ -178,12 +178,12 @@ class LiteratureDataReadyEventTest {
     void shouldBuildCompleteEventWithBuilder() {
       // When
       var event =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(RUN_ID)
               .provenanceCode(PROVENANCE_CODE)
               .storageKeys(STORAGE_KEYS)
-              .totalLiteratureCount(TOTAL_LITERATURE_COUNT)
+              .totalPublicationCount(TOTAL_PUBLICATION_COUNT)
               .successBatchCount(SUCCESS_BATCH_COUNT)
               .failedBatchCount(FAILED_BATCH_COUNT)
               .timestamp(TIMESTAMP)
@@ -195,7 +195,7 @@ class LiteratureDataReadyEventTest {
       assertThat(event.runId()).isEqualTo(RUN_ID);
       assertThat(event.provenanceCode()).isEqualTo(PROVENANCE_CODE);
       assertThat(event.storageKeys()).isEqualTo(STORAGE_KEYS);
-      assertThat(event.totalLiteratureCount()).isEqualTo(TOTAL_LITERATURE_COUNT);
+      assertThat(event.totalPublicationCount()).isEqualTo(TOTAL_PUBLICATION_COUNT);
       assertThat(event.successBatchCount()).isEqualTo(SUCCESS_BATCH_COUNT);
       assertThat(event.failedBatchCount()).isEqualTo(FAILED_BATCH_COUNT);
       assertThat(event.timestamp()).isEqualTo(TIMESTAMP);
@@ -206,12 +206,12 @@ class LiteratureDataReadyEventTest {
     void shouldSupportNullFields() {
       // When
       var event =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(RUN_ID)
               .provenanceCode(null) // null 值
               .storageKeys(null) // null 值
-              .totalLiteratureCount(null)
+              .totalPublicationCount(null)
               .successBatchCount(null)
               .failedBatchCount(null)
               .timestamp(TIMESTAMP)
@@ -221,7 +221,7 @@ class LiteratureDataReadyEventTest {
       assertThat(event).isNotNull();
       assertThat(event.provenanceCode()).isNull();
       assertThat(event.storageKeys()).isNull();
-      assertThat(event.totalLiteratureCount()).isNull();
+      assertThat(event.totalPublicationCount()).isNull();
       assertThat(event.successBatchCount()).isNull();
       assertThat(event.failedBatchCount()).isNull();
     }
@@ -231,12 +231,12 @@ class LiteratureDataReadyEventTest {
     void shouldSupportEmptyStorageKeys() {
       // When
       var event =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(RUN_ID)
               .provenanceCode(PROVENANCE_CODE)
               .storageKeys(List.of()) // 空列表
-              .totalLiteratureCount(0)
+              .totalPublicationCount(0)
               .successBatchCount(0)
               .failedBatchCount(0)
               .timestamp(TIMESTAMP)
@@ -244,7 +244,7 @@ class LiteratureDataReadyEventTest {
 
       // Then
       assertThat(event.storageKeys()).isNotNull().isEmpty();
-      assertThat(event.totalLiteratureCount()).isZero();
+      assertThat(event.totalPublicationCount()).isZero();
       assertThat(event.successBatchCount()).isZero();
       assertThat(event.failedBatchCount()).isZero();
     }
@@ -262,12 +262,12 @@ class LiteratureDataReadyEventTest {
       // Given
       var event1 = createDefaultEvent();
       var event2 =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(RUN_ID)
               .provenanceCode(PROVENANCE_CODE)
               .storageKeys(STORAGE_KEYS)
-              .totalLiteratureCount(TOTAL_LITERATURE_COUNT)
+              .totalPublicationCount(TOTAL_PUBLICATION_COUNT)
               .successBatchCount(SUCCESS_BATCH_COUNT)
               .failedBatchCount(FAILED_BATCH_COUNT)
               .timestamp(TIMESTAMP)
@@ -294,12 +294,12 @@ class LiteratureDataReadyEventTest {
       // Given
       var event1 = createDefaultEvent();
       var event2 =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(9999L) // 不同的 taskId
               .runId(RUN_ID)
               .provenanceCode(PROVENANCE_CODE)
               .storageKeys(STORAGE_KEYS)
-              .totalLiteratureCount(TOTAL_LITERATURE_COUNT)
+              .totalPublicationCount(TOTAL_PUBLICATION_COUNT)
               .successBatchCount(SUCCESS_BATCH_COUNT)
               .failedBatchCount(FAILED_BATCH_COUNT)
               .timestamp(TIMESTAMP)
@@ -315,12 +315,12 @@ class LiteratureDataReadyEventTest {
       // Given
       var event1 = createDefaultEvent();
       var event2 =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(9999L) // 不同的 runId
               .provenanceCode(PROVENANCE_CODE)
               .storageKeys(STORAGE_KEYS)
-              .totalLiteratureCount(TOTAL_LITERATURE_COUNT)
+              .totalPublicationCount(TOTAL_PUBLICATION_COUNT)
               .successBatchCount(SUCCESS_BATCH_COUNT)
               .failedBatchCount(FAILED_BATCH_COUNT)
               .timestamp(TIMESTAMP)
@@ -336,12 +336,12 @@ class LiteratureDataReadyEventTest {
       // Given
       var event1 = createDefaultEvent();
       var event2 =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(RUN_ID)
               .provenanceCode(ProvenanceCode.EPMC) // 不同的 provenanceCode
               .storageKeys(STORAGE_KEYS)
-              .totalLiteratureCount(TOTAL_LITERATURE_COUNT)
+              .totalPublicationCount(TOTAL_PUBLICATION_COUNT)
               .successBatchCount(SUCCESS_BATCH_COUNT)
               .failedBatchCount(FAILED_BATCH_COUNT)
               .timestamp(TIMESTAMP)
@@ -357,12 +357,12 @@ class LiteratureDataReadyEventTest {
       // Given
       var event1 = createDefaultEvent();
       var event2 =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(RUN_ID)
               .provenanceCode(PROVENANCE_CODE)
               .storageKeys(List.of("s3://different/path.json")) // 不同的 storageKeys
-              .totalLiteratureCount(TOTAL_LITERATURE_COUNT)
+              .totalPublicationCount(TOTAL_PUBLICATION_COUNT)
               .successBatchCount(SUCCESS_BATCH_COUNT)
               .failedBatchCount(FAILED_BATCH_COUNT)
               .timestamp(TIMESTAMP)
@@ -378,12 +378,12 @@ class LiteratureDataReadyEventTest {
       // Given
       var event1 = createDefaultEvent();
       var event2 =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(RUN_ID)
               .provenanceCode(PROVENANCE_CODE)
               .storageKeys(STORAGE_KEYS)
-              .totalLiteratureCount(999) // 不同的计数
+              .totalPublicationCount(999) // 不同的计数
               .successBatchCount(SUCCESS_BATCH_COUNT)
               .failedBatchCount(FAILED_BATCH_COUNT)
               .timestamp(TIMESTAMP)
@@ -399,12 +399,12 @@ class LiteratureDataReadyEventTest {
       // Given
       var event1 = createDefaultEvent();
       var event2 =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(RUN_ID)
               .provenanceCode(PROVENANCE_CODE)
               .storageKeys(STORAGE_KEYS)
-              .totalLiteratureCount(TOTAL_LITERATURE_COUNT)
+              .totalPublicationCount(TOTAL_PUBLICATION_COUNT)
               .successBatchCount(SUCCESS_BATCH_COUNT)
               .failedBatchCount(FAILED_BATCH_COUNT)
               .timestamp(System.currentTimeMillis() + 1000) // 不同的 timestamp
@@ -448,12 +448,12 @@ class LiteratureDataReadyEventTest {
       // Given
       var event1 = createDefaultEvent();
       var event2 =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(RUN_ID)
               .provenanceCode(PROVENANCE_CODE)
               .storageKeys(STORAGE_KEYS)
-              .totalLiteratureCount(TOTAL_LITERATURE_COUNT)
+              .totalPublicationCount(TOTAL_PUBLICATION_COUNT)
               .successBatchCount(SUCCESS_BATCH_COUNT)
               .failedBatchCount(FAILED_BATCH_COUNT)
               .timestamp(TIMESTAMP)
@@ -483,12 +483,12 @@ class LiteratureDataReadyEventTest {
       // Given
       var event1 = createDefaultEvent();
       var event2 =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(9999L) // 不同的 taskId
               .runId(RUN_ID)
               .provenanceCode(PROVENANCE_CODE)
               .storageKeys(STORAGE_KEYS)
-              .totalLiteratureCount(TOTAL_LITERATURE_COUNT)
+              .totalPublicationCount(TOTAL_PUBLICATION_COUNT)
               .successBatchCount(SUCCESS_BATCH_COUNT)
               .failedBatchCount(FAILED_BATCH_COUNT)
               .timestamp(TIMESTAMP)
@@ -516,7 +516,7 @@ class LiteratureDataReadyEventTest {
       var result = event.toString();
 
       // Then
-      assertThat(result).contains("LiteratureDataReadyEvent");
+      assertThat(result).contains("PublicationDataReadyEvent");
     }
 
     @Test
@@ -534,7 +534,7 @@ class LiteratureDataReadyEventTest {
           .contains("runId=" + RUN_ID)
           .contains("provenanceCode=" + PROVENANCE_CODE)
           .contains("storageKeys=")
-          .contains("totalLiteratureCount=" + TOTAL_LITERATURE_COUNT)
+          .contains("totalPublicationCount=" + TOTAL_PUBLICATION_COUNT)
           .contains("successBatchCount=" + SUCCESS_BATCH_COUNT)
           .contains("failedBatchCount=" + FAILED_BATCH_COUNT)
           .contains("timestamp=" + TIMESTAMP);
@@ -545,12 +545,12 @@ class LiteratureDataReadyEventTest {
     void shouldHandleNullFields() {
       // Given
       var event =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(RUN_ID)
               .provenanceCode(null)
               .storageKeys(null)
-              .totalLiteratureCount(null)
+              .totalPublicationCount(null)
               .successBatchCount(null)
               .failedBatchCount(null)
               .timestamp(TIMESTAMP)
@@ -563,7 +563,7 @@ class LiteratureDataReadyEventTest {
       assertThat(result)
           .contains("provenanceCode=null")
           .contains("storageKeys=null")
-          .contains("totalLiteratureCount=null");
+          .contains("totalPublicationCount=null");
     }
 
     @Test
@@ -571,12 +571,12 @@ class LiteratureDataReadyEventTest {
     void shouldHandleEmptyStorageKeys() {
       // Given
       var event =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(RUN_ID)
               .provenanceCode(PROVENANCE_CODE)
               .storageKeys(List.of())
-              .totalLiteratureCount(0)
+              .totalPublicationCount(0)
               .successBatchCount(0)
               .failedBatchCount(0)
               .timestamp(TIMESTAMP)
@@ -586,7 +586,7 @@ class LiteratureDataReadyEventTest {
       var result = event.toString();
 
       // Then
-      assertThat(result).contains("storageKeys=[]").contains("totalLiteratureCount=0");
+      assertThat(result).contains("storageKeys=[]").contains("totalPublicationCount=0");
     }
   }
 
@@ -622,19 +622,19 @@ class LiteratureDataReadyEventTest {
     void shouldSupportZeroCounts() {
       // When
       var event =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(RUN_ID)
               .provenanceCode(PROVENANCE_CODE)
               .storageKeys(List.of())
-              .totalLiteratureCount(0)
+              .totalPublicationCount(0)
               .successBatchCount(0)
               .failedBatchCount(0)
               .timestamp(TIMESTAMP)
               .build();
 
       // Then
-      assertThat(event.totalLiteratureCount()).isZero();
+      assertThat(event.totalPublicationCount()).isZero();
       assertThat(event.successBatchCount()).isZero();
       assertThat(event.failedBatchCount()).isZero();
     }
@@ -645,17 +645,17 @@ class LiteratureDataReadyEventTest {
       // Given
       var largeKeyList =
           java.util.stream.IntStream.range(0, 1000)
-              .mapToObj(i -> "s3://bucket/literature/batch-" + i + ".json")
+              .mapToObj(i -> "s3://bucket/publication/batch-" + i + ".json")
               .toList();
 
       // When
       var event =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(RUN_ID)
               .provenanceCode(PROVENANCE_CODE)
               .storageKeys(largeKeyList)
-              .totalLiteratureCount(100000)
+              .totalPublicationCount(100000)
               .successBatchCount(1000)
               .failedBatchCount(0)
               .timestamp(TIMESTAMP)
@@ -663,7 +663,7 @@ class LiteratureDataReadyEventTest {
 
       // Then
       assertThat(event.storageKeys()).hasSize(1000);
-      assertThat(event.totalLiteratureCount()).isEqualTo(100000);
+      assertThat(event.totalPublicationCount()).isEqualTo(100000);
     }
 
     @Test
@@ -671,12 +671,12 @@ class LiteratureDataReadyEventTest {
     void shouldSupportMoreFailedThanSuccessfulBatches() {
       // When
       var event =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(RUN_ID)
               .provenanceCode(PROVENANCE_CODE)
               .storageKeys(List.of("s3://bucket/partial.json"))
-              .totalLiteratureCount(100)
+              .totalPublicationCount(100)
               .successBatchCount(1)
               .failedBatchCount(9)
               .timestamp(TIMESTAMP)
@@ -692,12 +692,12 @@ class LiteratureDataReadyEventTest {
     void shouldSupportMaxLongValues() {
       // When
       var event =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(Long.MAX_VALUE)
               .runId(Long.MAX_VALUE)
               .provenanceCode(PROVENANCE_CODE)
               .storageKeys(STORAGE_KEYS)
-              .totalLiteratureCount(Integer.MAX_VALUE)
+              .totalPublicationCount(Integer.MAX_VALUE)
               .successBatchCount(Integer.MAX_VALUE)
               .failedBatchCount(Integer.MAX_VALUE)
               .timestamp(Long.MAX_VALUE)
@@ -707,7 +707,7 @@ class LiteratureDataReadyEventTest {
       assertThat(event.taskId()).isEqualTo(Long.MAX_VALUE);
       assertThat(event.runId()).isEqualTo(Long.MAX_VALUE);
       assertThat(event.timestamp()).isEqualTo(Long.MAX_VALUE);
-      assertThat(event.totalLiteratureCount()).isEqualTo(Integer.MAX_VALUE);
+      assertThat(event.totalPublicationCount()).isEqualTo(Integer.MAX_VALUE);
     }
 
     @Test
@@ -715,12 +715,12 @@ class LiteratureDataReadyEventTest {
     void shouldSupportMinLongValues() {
       // When
       var event =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(Long.MIN_VALUE)
               .runId(Long.MIN_VALUE)
               .provenanceCode(PROVENANCE_CODE)
               .storageKeys(STORAGE_KEYS)
-              .totalLiteratureCount(0)
+              .totalPublicationCount(0)
               .successBatchCount(0)
               .failedBatchCount(0)
               .timestamp(Long.MIN_VALUE)
@@ -737,24 +737,24 @@ class LiteratureDataReadyEventTest {
     void shouldSupportAllProvenanceCodeEnumValues() {
       // Given & When: 测试几个常见的 ProvenanceCode 枚举值
       var pubmedEvent =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(RUN_ID)
               .provenanceCode(ProvenanceCode.PUBMED)
               .storageKeys(STORAGE_KEYS)
-              .totalLiteratureCount(TOTAL_LITERATURE_COUNT)
+              .totalPublicationCount(TOTAL_PUBLICATION_COUNT)
               .successBatchCount(SUCCESS_BATCH_COUNT)
               .failedBatchCount(FAILED_BATCH_COUNT)
               .timestamp(TIMESTAMP)
               .build();
 
       var epmcEvent =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(RUN_ID)
               .provenanceCode(ProvenanceCode.EPMC)
               .storageKeys(STORAGE_KEYS)
-              .totalLiteratureCount(TOTAL_LITERATURE_COUNT)
+              .totalPublicationCount(TOTAL_PUBLICATION_COUNT)
               .successBatchCount(SUCCESS_BATCH_COUNT)
               .failedBatchCount(FAILED_BATCH_COUNT)
               .timestamp(TIMESTAMP)
@@ -771,20 +771,20 @@ class LiteratureDataReadyEventTest {
       // Given
       var specialKeys =
           List.of(
-              "s3://bucket/文献/batch-1.json", // 中文
-              "s3://bucket/literature/batch%201.json", // URL 编码
-              "s3://bucket/literature/batch-1 (copy).json", // 括号和空格
-              "s3://bucket/literature/batch-1~!@#$%^&*.json" // 特殊符号
+              "s3://bucket/出版物/batch-1.json", // 中文
+              "s3://bucket/publication/batch%201.json", // URL 编码
+              "s3://bucket/publication/batch-1 (copy).json", // 括号和空格
+              "s3://bucket/publication/batch-1~!@#$%^&*.json" // 特殊符号
               );
 
       // When
       var event =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(TASK_ID)
               .runId(RUN_ID)
               .provenanceCode(PROVENANCE_CODE)
               .storageKeys(specialKeys)
-              .totalLiteratureCount(4)
+              .totalPublicationCount(4)
               .successBatchCount(4)
               .failedBatchCount(0)
               .timestamp(TIMESTAMP)
@@ -806,16 +806,16 @@ class LiteratureDataReadyEventTest {
     void shouldRepresentFullySuccessfulTask() {
       // When
       var event =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(1001L)
               .runId(2001L)
               .provenanceCode(ProvenanceCode.PUBMED)
               .storageKeys(
                   List.of(
-                      "s3://patra-literature/pubmed/2024/batch-1.json",
-                      "s3://patra-literature/pubmed/2024/batch-2.json",
-                      "s3://patra-literature/pubmed/2024/batch-3.json"))
-              .totalLiteratureCount(1500)
+                      "s3://patra-publication/pubmed/2024/batch-1.json",
+                      "s3://patra-publication/pubmed/2024/batch-2.json",
+                      "s3://patra-publication/pubmed/2024/batch-3.json"))
+              .totalPublicationCount(1500)
               .successBatchCount(3)
               .failedBatchCount(0)
               .timestamp(System.currentTimeMillis())
@@ -832,15 +832,15 @@ class LiteratureDataReadyEventTest {
     void shouldRepresentPartiallyFailedTask() {
       // When
       var event =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(1002L)
               .runId(2002L)
               .provenanceCode(ProvenanceCode.EPMC)
               .storageKeys(
                   List.of(
-                      "s3://patra-literature/epmc/2024/batch-1.json",
-                      "s3://patra-literature/epmc/2024/batch-3.json"))
-              .totalLiteratureCount(800)
+                      "s3://patra-publication/epmc/2024/batch-1.json",
+                      "s3://patra-publication/epmc/2024/batch-3.json"))
+              .totalPublicationCount(800)
               .successBatchCount(2)
               .failedBatchCount(1)
               .timestamp(System.currentTimeMillis())
@@ -857,12 +857,12 @@ class LiteratureDataReadyEventTest {
     void shouldRepresentCompletelyFailedTask() {
       // When
       var event =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(1003L)
               .runId(2003L)
               .provenanceCode(ProvenanceCode.BIORXIV)
               .storageKeys(List.of()) // 无成功批次
-              .totalLiteratureCount(0)
+              .totalPublicationCount(0)
               .successBatchCount(0)
               .failedBatchCount(5)
               .timestamp(System.currentTimeMillis())
@@ -872,7 +872,7 @@ class LiteratureDataReadyEventTest {
       assertThat(event.successBatchCount()).isZero();
       assertThat(event.failedBatchCount()).isEqualTo(5);
       assertThat(event.storageKeys()).isEmpty();
-      assertThat(event.totalLiteratureCount()).isZero();
+      assertThat(event.totalPublicationCount()).isZero();
     }
 
     @Test
@@ -880,24 +880,24 @@ class LiteratureDataReadyEventTest {
     void shouldDistinguishBetweenDifferentProvenances() {
       // Given
       var pubmedEvent =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(1001L)
               .runId(2001L)
               .provenanceCode(ProvenanceCode.PUBMED)
               .storageKeys(List.of("s3://bucket/pubmed.json"))
-              .totalLiteratureCount(1000)
+              .totalPublicationCount(1000)
               .successBatchCount(1)
               .failedBatchCount(0)
               .timestamp(TIMESTAMP)
               .build();
 
       var epmcEvent =
-          LiteratureDataReadyEvent.builder()
+          PublicationDataReadyEvent.builder()
               .taskId(1002L)
               .runId(2002L)
               .provenanceCode(ProvenanceCode.EPMC)
               .storageKeys(List.of("s3://bucket/epmc.json"))
-              .totalLiteratureCount(800)
+              .totalPublicationCount(800)
               .successBatchCount(1)
               .failedBatchCount(0)
               .timestamp(TIMESTAMP)

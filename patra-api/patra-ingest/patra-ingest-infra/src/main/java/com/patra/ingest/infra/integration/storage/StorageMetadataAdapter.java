@@ -81,7 +81,7 @@ public class StorageMetadataAdapter implements StorageMetadataPort {
         request.businessId(),
         request.correlation(),
         actualProviderType,
-        null, // expiresAt - 文献存储不使用
+        null, // expiresAt - 出版物存储不使用
         request.remarks());
   }
 

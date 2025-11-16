@@ -22,10 +22,10 @@ import java.util.Objects;
  *
  * <pre>{@code
  * // 创建类型引用
- * TypeReference<List<CanonicalLiterature>> typeRef = new TypeReference<>() {};
+ * TypeReference<List<CanonicalPublication>> typeRef = new TypeReference<>() {};
  *
  * // 获取完整类型信息
- * Type type = typeRef.getType();  // ParameterizedType: List<CanonicalLiterature>
+ * Type type = typeRef.getType();  // ParameterizedType: List<CanonicalPublication>
  * Class<?> rawType = typeRef.getRawType();  // List.class
  * }</pre>
  *
@@ -52,7 +52,7 @@ import java.util.Objects;
  * <ul>
  *   <li>必须使用匿名内部类创建实例：{@code new TypeReference<T>() {}}
  *   <li>不能直接实例化：{@code new TypeReference<T>()} 会抛异常
- *   <li>支持嵌套泛型：{@code Map<String, List<CanonicalLiterature>>}
+ *   <li>支持嵌套泛型：{@code Map<String, List<CanonicalPublication>>}
  * </ul>
  *
  * <p><strong>类似设计参考</strong>：
@@ -126,17 +126,17 @@ public abstract class TypeReference<T> {
    * <p><strong>返回值类型</strong>：
    *
    * <ul>
-   *   <li>简单类型：{@code Class} 实例（例如：{@code CanonicalLiterature.class}）
-   *   <li>参数化类型：{@code ParameterizedType} 实例（例如：{@code List<CanonicalLiterature>}）
+   *   <li>简单类型：{@code Class} 实例（例如：{@code CanonicalPublication.class}）
+   *   <li>参数化类型：{@code ParameterizedType} 实例（例如：{@code List<CanonicalPublication>}）
    * </ul>
    *
    * <p><strong>示例</strong>：
    *
    * <pre>{@code
-   * TypeReference<List<CanonicalLiterature>> ref = new TypeReference<>() {};
+   * TypeReference<List<CanonicalPublication>> ref = new TypeReference<>() {};
    * Type type = ref.getType();
    * // type instanceof ParameterizedType
-   * // type.toString() = "java.util.List<com.patra.common.model.CanonicalLiterature>"
+   * // type.toString() = "java.util.List<com.patra.common.model.CanonicalPublication>"
    * }</pre>
    *
    * @return 完整的类型信息
@@ -158,7 +158,7 @@ public abstract class TypeReference<T> {
    * <p><strong>示例</strong>：
    *
    * <pre>{@code
-   * TypeReference<List<CanonicalLiterature>> ref = new TypeReference<>() {};
+   * TypeReference<List<CanonicalPublication>> ref = new TypeReference<>() {};
    * Class<?> rawType = ref.getRawType();
    * // rawType = List.class
    * }</pre>
@@ -186,10 +186,10 @@ public abstract class TypeReference<T> {
    */
   private Class<?> extractRawType(Type type) {
     if (type instanceof Class) {
-      // 简单类型：如 CanonicalLiterature.class
+      // 简单类型：如 CanonicalPublication.class
       return (Class<?>) type;
     } else if (type instanceof ParameterizedType) {
-      // 参数化类型：如 List<CanonicalLiterature>
+      // 参数化类型：如 List<CanonicalPublication>
       ParameterizedType parameterizedType = (ParameterizedType) type;
       return (Class<?>) parameterizedType.getRawType();
     } else {
@@ -212,9 +212,9 @@ public abstract class TypeReference<T> {
    * <p><strong>示例</strong>：
    *
    * <pre>{@code
-   * TypeReference<CanonicalLiterature> ref = new TypeReference<>() {};
-   * ref.isAssignableFrom(CanonicalLiterature.class);  // true
-   * ref.isAssignableFrom(SubLiterature.class);        // true（如果 SubLiterature 继承 CanonicalLiterature）
+   * TypeReference<CanonicalPublication> ref = new TypeReference<>() {};
+   * ref.isAssignableFrom(CanonicalPublication.class);  // true
+   * ref.isAssignableFrom(SubLiterature.class);        // true（如果 SubLiterature 继承 CanonicalPublication）
    * ref.isAssignableFrom(Journal.class);              // false
    * }</pre>
    *

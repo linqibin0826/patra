@@ -2,7 +2,7 @@
 
 ## 概述
 
-**patra-gateway-boot** 是 Patra 医学文献数据平台的 API 网关服务,基于 Spring Cloud Gateway 构建。作为系统的统一入口,负责接收所有外部请求并将其路由到相应的后端微服务。
+**patra-gateway-boot** 是 Patra 医学出版物数据平台的 API 网关服务,基于 Spring Cloud Gateway 构建。作为系统的统一入口,负责接收所有外部请求并将其路由到相应的后端微服务。
 
 本网关提供服务发现、负载均衡、请求转发等核心功能,确保客户端可以通过单一入口访问整个 Patra 微服务生态系统。
 

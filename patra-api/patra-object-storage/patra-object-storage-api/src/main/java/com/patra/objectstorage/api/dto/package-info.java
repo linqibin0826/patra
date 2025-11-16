@@ -53,14 +53,14 @@
  *
  *     public void recordUpload(String bucket, String key, long size, String md5) {
  *         UploadRecordRequest request = new UploadRecordRequest(
- *             bucket,                          // bucketName: "literature-files"
+ *             bucket,                          // bucketName: "publication-files"
  *             key,                             // objectKey: "2024/01/article.pdf"
  *             size,                            // fileSize: 1024000
  *             "application/pdf",               // contentType
  *             md5,                             // md5Hash: "5d41402abc4b2a76b9719d911017c592"
  *             null,                            // sha256Hash(可选)
  *             "patra-ingest",                  // serviceName
- *             "literature_batch",              // businessType
+ *             "publication_batch",              // businessType
  *             "batch-2024-01-15-001",          // businessId
  *             Map.of("pmcId", "PMC12345678"),  // correlationData
  *             "MINIO",                         // providerType

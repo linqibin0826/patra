@@ -63,7 +63,7 @@
  *
  *     @Override
  *     public Set<DataType> getSupportedDataTypes() {
- *         return Set.of(DataType.LITERATURE, DataType.CITATION);
+ *         return Set.of(DataType.PUBLICATION, DataType.CITATION);
  *     }
  *
  *     @Override

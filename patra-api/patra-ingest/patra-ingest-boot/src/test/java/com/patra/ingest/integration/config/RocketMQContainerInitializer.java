@@ -18,7 +18,7 @@ import org.springframework.context.ConfigurableApplicationContext;
  *   <li><strong>单例容器</strong>: 所有测试共享同一个 RocketMQ 容器实例 (NameServer + Broker)
  *   <li><strong>线程安全初始化</strong>: 使用双重检查锁模式，确保并发场景下容器只启动一次
  *   <li><strong>自动启动</strong>: 在类加载时启动容器（静态块）
- *   <li><strong>Topic 创建</strong>: 自动创建测试所需的 Topics (INGEST_TASK_READY, INGEST_LITERATURE_READY)
+ *   <li><strong>Topic 创建</strong>: 自动创建测试所需的 Topics (INGEST_TASK_READY, INGEST_PUBLICATION_READY)
  *   <li><strong>动态配置</strong>: 自动注入 NameServer 地址到 Spring 测试上下文
  *   <li><strong>路由验证</strong>: 使用 Awaitility 确保 Topic 路由信息同步完成
  * </ul>
@@ -47,7 +47,7 @@ import org.springframework.context.ConfigurableApplicationContext;
  *   <li><strong>镜像版本</strong>: apache/rocketmq:5.3.1
  *   <li><strong>组件</strong>: NameServer + Broker (使用 Docker Compose 编排)
  *   <li><strong>自动创建 Topic</strong>: 启用 (仅测试环境)
- *   <li><strong>预创建 Topics</strong>: INGEST_TASK_READY, INGEST_LITERATURE_READY
+ *   <li><strong>预创建 Topics</strong>: INGEST_TASK_READY, INGEST_PUBLICATION_READY
  * </ul>
  *
  * <h3>性能表现</h3>
@@ -173,7 +173,7 @@ public class RocketMQContainerInitializer
             topicAdmin = new RocketMQTopicAdmin(rocketmqSupport.getComposeContainer());
 
             // 创建测试所需的 Topics
-            String[] topics = {"INGEST_TASK_READY", "INGEST_LITERATURE_READY"};
+            String[] topics = {"INGEST_TASK_READY", "INGEST_PUBLICATION_READY"};
             for (String topic : topics) {
               log.info("创建测试 Topic: {}", topic);
               topicAdmin.createTopic(topic);

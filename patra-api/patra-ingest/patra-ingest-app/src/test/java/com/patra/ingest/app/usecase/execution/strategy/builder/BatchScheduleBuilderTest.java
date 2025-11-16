@@ -78,7 +78,7 @@ class BatchScheduleBuilderTest {
     QuerySession pubmedSession = createPubmedSession(1000, false);
     ExecutionContext ctx = createContext("pubmed");
 
-    when(provenanceDataPort.prepareQuerySession(any(), eq(DataType.LITERATURE)))
+    when(provenanceDataPort.prepareQuerySession(any(), eq(DataType.PUBLICATION)))
         .thenReturn(pubmedSession);
     when(mockStrategy1.generateBatches(any(), any())).thenReturn(List.of());
 
@@ -99,7 +99,7 @@ class BatchScheduleBuilderTest {
 
     List<Batch> mockBatches = List.of(createBatch(1), createBatch(2), createBatch(3));
 
-    when(provenanceDataPort.prepareQuerySession(ctx, DataType.LITERATURE)).thenReturn(pubmedSession);
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION)).thenReturn(pubmedSession);
     when(mockStrategy1.generateBatches(pubmedSession, ctx)).thenReturn(mockBatches);
 
     // when
@@ -110,7 +110,7 @@ class BatchScheduleBuilderTest {
     assertThat(result.totalBatches()).isEqualTo(3);
     assertThat(result.hasBatches()).isTrue();
 
-    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.LITERATURE);
+    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.PUBLICATION);
     verify(mockStrategy1).generateBatches(pubmedSession, ctx);
   }
 
@@ -124,7 +124,7 @@ class BatchScheduleBuilderTest {
 
     List<Batch> mockBatches = List.of(createBatch(1), createBatch(2));
 
-    when(provenanceDataPort.prepareQuerySession(ctx, DataType.LITERATURE)).thenReturn(epmcSession);
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION)).thenReturn(epmcSession);
     when(mockStrategy2.generateBatches(epmcSession, ctx)).thenReturn(mockBatches);
 
     // when
@@ -134,7 +134,7 @@ class BatchScheduleBuilderTest {
     assertThat(result.batches()).hasSize(2);
     assertThat(result.totalBatches()).isEqualTo(2);
 
-    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.LITERATURE);
+    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.PUBLICATION);
     verify(mockStrategy2).generateBatches(epmcSession, ctx);
   }
 
@@ -145,7 +145,7 @@ class BatchScheduleBuilderTest {
     QuerySession emptySession = createPubmedSession(0, false);
     ExecutionContext ctx = createContext("pubmed");
 
-    when(provenanceDataPort.prepareQuerySession(ctx, DataType.LITERATURE)).thenReturn(emptySession);
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION)).thenReturn(emptySession);
 
     // when
     com.patra.ingest.domain.model.vo.batch.BatchSchedule result = builder.build(ctx);
@@ -155,7 +155,7 @@ class BatchScheduleBuilderTest {
     assertThat(result.batches()).isEmpty();
     assertThat(result.hasBatches()).isFalse();
 
-    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.LITERATURE);
+    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.PUBLICATION);
     verify(mockStrategy1, never()).generateBatches(any(), any());
   }
 
@@ -168,7 +168,7 @@ class BatchScheduleBuilderTest {
     QuerySession unknownSession = createUnknownSession(100);
     ExecutionContext ctx = createContext("pubmed"); // 使用合法的 ProvenanceCode
 
-    when(provenanceDataPort.prepareQuerySession(ctx, DataType.LITERATURE)).thenReturn(unknownSession);
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION)).thenReturn(unknownSession);
 
     // when & then
     assertThatThrownBy(() -> builder.build(ctx))
@@ -176,7 +176,7 @@ class BatchScheduleBuilderTest {
         .hasMessageContaining("未找到对应的批次生成策略")
         .hasMessageContaining("CROSSREF");
 
-    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.LITERATURE);
+    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.PUBLICATION);
   }
 
   @Test
@@ -186,7 +186,7 @@ class BatchScheduleBuilderTest {
     ExecutionContext ctx = createContext("pubmed");
     RuntimeException sourceException = new RuntimeException("数据源错误");
 
-    when(provenanceDataPort.prepareQuerySession(ctx, DataType.LITERATURE))
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION))
         .thenThrow(sourceException);
 
     // when & then
@@ -195,7 +195,7 @@ class BatchScheduleBuilderTest {
         .hasMessageContaining("准备查询会话失败")
         .hasCause(sourceException);
 
-    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.LITERATURE);
+    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.PUBLICATION);
   }
 
   @Test
@@ -206,7 +206,7 @@ class BatchScheduleBuilderTest {
     ExecutionContext ctx = createContext("pubmed");
     RuntimeException strategyException = new RuntimeException("批次生成错误");
 
-    when(provenanceDataPort.prepareQuerySession(ctx, DataType.LITERATURE)).thenReturn(pubmedSession);
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION)).thenReturn(pubmedSession);
     when(mockStrategy1.generateBatches(pubmedSession, ctx)).thenThrow(strategyException);
 
     // when & then
@@ -215,7 +215,7 @@ class BatchScheduleBuilderTest {
         .hasMessageContaining("批次生成失败")
         .hasCause(strategyException);
 
-    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.LITERATURE);
+    verify(provenanceDataPort).prepareQuerySession(ctx, DataType.PUBLICATION);
     verify(mockStrategy1).generateBatches(pubmedSession, ctx);
   }
 
@@ -226,7 +226,7 @@ class BatchScheduleBuilderTest {
     QuerySession pubmedSession = createPubmedSession(1000, false);
     ExecutionContext ctx = createContext("pubmed");
 
-    when(provenanceDataPort.prepareQuerySession(ctx, DataType.LITERATURE)).thenReturn(pubmedSession);
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION)).thenReturn(pubmedSession);
     when(mockStrategy1.generateBatches(pubmedSession, ctx)).thenReturn(List.of());
 
     // when
@@ -255,7 +255,7 @@ class BatchScheduleBuilderTest {
     QuerySession pubmedSession = createPubmedSession(1000, false);
     ExecutionContext ctx = createContext("pubmed");
 
-    when(provenanceDataPort.prepareQuerySession(any(), eq(DataType.LITERATURE)))
+    when(provenanceDataPort.prepareQuerySession(any(), eq(DataType.PUBLICATION)))
         .thenReturn(pubmedSession);
     when(mockStrategy1.generateBatches(any(), any())).thenReturn(List.of());
 
@@ -298,7 +298,7 @@ class BatchScheduleBuilderTest {
         1L, // scheduleInstanceId
         code, // provenanceCode
         "search", // operationCode
-        DataType.LITERATURE, // dataType
+        DataType.PUBLICATION, // dataType
         configSnapshot, // configSnapshot
         "expr-hash", // exprHash
         "test-query", // compiledQuery

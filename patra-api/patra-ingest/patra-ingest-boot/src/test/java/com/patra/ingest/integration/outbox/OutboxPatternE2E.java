@@ -148,7 +148,7 @@ class OutboxPatternE2E {
     testConsumer.setNamesrvAddr(namesrvAddr);
     // RocketMQ 不支持通配符订阅，需要显式订阅每个 Topic
     testConsumer.subscribe("INGEST_TASK_READY", "*");
-    testConsumer.subscribe("INGEST_LITERATURE_READY", "*");
+    testConsumer.subscribe("INGEST_PUBLICATION_READY", "*");
 
     testConsumer.registerMessageListener(
         (MessageListenerConcurrently)
@@ -572,7 +572,7 @@ class OutboxPatternE2E {
       outboxRepository.saveOrUpdate(taskMsg);
 
       OutboxMessage literatureMsg =
-          OutboxMessageTestBuilder.aLiteratureReadyMessage()
+          OutboxMessageTestBuilder.aPublicationReadyMessage()
               .dedupKey("e2e-channel-lit-001")
               .build();
       outboxRepository.saveOrUpdate(literatureMsg);

@@ -171,8 +171,8 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
         task.getOperationCode());
 
     // TODO: 后续需要从 Provenance 配置中获取实际的 DataType
-    // 目前所有 Provenance 都默认使用 LITERATURE 类型，待注册中心添加 dataType 字段后再修改
-    DataType dataType = DataType.LITERATURE;
+    // 目前所有 Provenance 都默认使用 PUBLICATION 类型，待注册中心添加 dataType 字段后再修改
+    DataType dataType = DataType.PUBLICATION;
 
     return new ExecutionContext(
         taskId,

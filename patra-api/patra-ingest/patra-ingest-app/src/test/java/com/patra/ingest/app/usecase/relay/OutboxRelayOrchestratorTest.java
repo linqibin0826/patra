@@ -206,7 +206,7 @@ class OutboxRelayOrchestratorTest {
     void shouldHandleSingleChannelMode() {
       // Given: 单通道模式
       ChannelKey channel = mock(ChannelKey.class);
-      when(channel.channel()).thenReturn("LITERATURE_READY");
+      when(channel.channel()).thenReturn("PUBLICATION_READY");
       OutboxRelayCommand command =
           new OutboxRelayCommand(channel, null, null, null, null, null, null);
 

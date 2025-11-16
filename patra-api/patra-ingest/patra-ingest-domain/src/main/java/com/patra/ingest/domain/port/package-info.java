@@ -31,7 +31,7 @@
  * <ul>
  *   <li>{@link com.patra.ingest.domain.port.ProvenanceDataPort} - 数据源端口
  *       <ul>
- *         <li>从外部数据源获取标准化数据（文献、期刊、药品等）
+ *         <li>从外部数据源获取标准化数据（出版物、期刊、药品等）
  *         <li>支持多种数据源(PubMed, EPMC 等)和多种数据类型
  *         <li>处理分页、游标和错误重试
  *         <li>通过 {@code ProvenanceDataAdapter} (Infrastructure) 调用 {@code ProvenanceDataProvider}
@@ -42,14 +42,14 @@
  *         <li>获取 Provenance 配置快照
  *         <li>查询数据字典和元数据
  *       </ul>
- *   <li>{@link com.patra.ingest.domain.port.LiteratureStoragePort} - 文献存储服务端口
+ *   <li>{@link com.patra.ingest.domain.port.PublicationStoragePort} - 出版物存储服务端口
  *       <ul>
- *         <li>持久化采集到的文献数据
+ *         <li>持久化采集到的出版物数据
  *         <li>支持批量写入和事务性提交
  *       </ul>
  *   <li>{@link com.patra.ingest.domain.port.StorageMetadataPort} - 存储元数据服务端口
  *       <ul>
- *         <li>查询和更新文献元数据
+ *         <li>查询和更新出版物元数据
  *       </ul>
  *   <li>{@link com.patra.ingest.domain.port.StoragePort} - 通用存储适配器端口
  *       <ul>
@@ -159,7 +159,7 @@
  *     // 领域语义方法名
  *     PlanMetadata prepareQuerySession(ExecutionContext context, DataType dataType);
  *
- *     // 泛型支持多种数据类型（文献、期刊、药品等）
+ *     // 泛型支持多种数据类型（出版物、期刊、药品等）
  *     <T> DataFetchResult<T> fetchData(
  *         ExecutionContext context,
  *         DataType dataType,

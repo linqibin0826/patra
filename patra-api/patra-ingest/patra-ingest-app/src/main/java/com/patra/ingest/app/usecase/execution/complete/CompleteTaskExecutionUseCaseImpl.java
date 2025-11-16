@@ -2,10 +2,10 @@ package com.patra.ingest.app.usecase.execution.complete;
 
 import com.patra.ingest.app.usecase.execution.cursor.CursorAdvancer;
 import com.patra.ingest.app.usecase.execution.lease.LeaseManagementService;
-import com.patra.ingest.app.usecase.execution.publisher.LiteratureEventPublisher;
+import com.patra.ingest.app.usecase.execution.publisher.PublicationEventPublisher;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import com.patra.ingest.app.usecase.execution.strategy.ExecuteTaskBatchesUseCase;
-import com.patra.ingest.domain.event.LiteratureDataReadyEvent;
+import com.patra.ingest.domain.event.PublicationDataReadyEvent;
 import com.patra.ingest.domain.event.TaskCompletedEvent;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.entity.TaskRun;
@@ -70,7 +70,7 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
   private final TaskRunBatchRepository taskRunBatchRepository;
   private final CursorAdvancer cursorAdvancer;
   private final LeaseManagementService leaseManagementService;
-  private final LiteratureEventPublisher literatureEventPublisher;
+  private final PublicationEventPublisher publicationEventPublisher;
   private final ApplicationEventPublisher applicationEventPublisher;
   private final Clock clock;
 
@@ -221,8 +221,8 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
               });
 
       if (executeResult.succeededBatches() > 0) {
-        log.debug("publishing literature ready event taskId={} runId={}", taskId, runId);
-        publishLiteratureReadyEvent(taskId, runId, context);
+        log.debug("publishing publication ready event taskId={} runId={}", taskId, runId);
+        publishPublicationReadyEvent(taskId, runId, context);
       }
 
       log.info(
@@ -237,7 +237,7 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
     }
   }
 
-  private void publishLiteratureReadyEvent(Long taskId, Long runId, ExecutionContext context) {
+  private void publishPublicationReadyEvent(Long taskId, Long runId, ExecutionContext context) {
     List<TaskRunBatch> batches = taskRunBatchRepository.findByRunId(runId);
     if (batches == null || batches.isEmpty()) {
       return;
@@ -264,7 +264,7 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
       return;
     }
 
-    int totalLiteratureCount =
+    int totalPublicationCount =
         succeededBatches.stream()
             .map(TaskRunBatch::getStats)
             .filter(Objects::nonNull)
@@ -274,26 +274,26 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
     int failedBatchCount =
         (int) batches.stream().filter(batch -> batch.getStatus() == BatchStatus.FAILED).count();
 
-    LiteratureDataReadyEvent event =
-        LiteratureDataReadyEvent.builder()
+    PublicationDataReadyEvent event =
+        PublicationDataReadyEvent.builder()
             .taskId(taskId)
             .runId(runId)
             .provenanceCode(context.provenanceCode())
             .storageKeys(List.copyOf(storageKeys))
-            .totalLiteratureCount(totalLiteratureCount)
+            .totalPublicationCount(totalPublicationCount)
             .successBatchCount(succeededBatches.size())
             .failedBatchCount(failedBatchCount)
             .timestamp(clock.instant().toEpochMilli())
             .build();
 
-    literatureEventPublisher.publish(event);
+    publicationEventPublisher.publish(event);
 
     log.info(
-        "literature data ready event queued taskId={} runId={} storageKeyCount={} totalCount={}",
+        "publication data ready event queued taskId={} runId={} storageKeyCount={} totalCount={}",
         taskId,
         runId,
         storageKeys.size(),
-        totalLiteratureCount);
+        totalPublicationCount);
   }
 
   /** Cleanup resources (stop heartbeat, release lease). */

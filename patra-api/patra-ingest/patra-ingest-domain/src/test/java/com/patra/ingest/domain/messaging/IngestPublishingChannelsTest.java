@@ -3,7 +3,7 @@ package com.patra.ingest.domain.messaging;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.ingest.domain.model.vo.execution.TaskReadyMessage;
-import com.patra.ingest.domain.model.vo.relay.LiteratureReadyMessage;
+import com.patra.ingest.domain.model.vo.relay.PublicationReadyMessage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -23,10 +23,10 @@ class IngestPublishingChannelsTest {
     }
 
     @Test
-    @DisplayName("应该包含 LITERATURE 枚举值")
-    void shouldContainLiteratureConstant() {
+    @DisplayName("应该包含 PUBLICATION 枚举值")
+    void shouldContainPublicationConstant() {
       // When & Then
-      assertThat(IngestPublishingChannels.LITERATURE).isNotNull();
+      assertThat(IngestPublishingChannels.PUBLICATION).isNotNull();
     }
 
     @Test
@@ -86,47 +86,47 @@ class IngestPublishingChannelsTest {
   }
 
   @Nested
-  @DisplayName("LITERATURE 枚举值测试")
-  class LiteratureConstant {
+  @DisplayName("PUBLICATION 枚举值测试")
+  class PublicationConstant {
 
     @Test
     @DisplayName("domain() 应该返回 'INGEST'")
     void domainShouldReturnIngest() {
       // When
-      String domain = IngestPublishingChannels.LITERATURE.domain();
+      String domain = IngestPublishingChannels.PUBLICATION.domain();
 
       // Then
       assertThat(domain).isEqualTo("INGEST");
     }
 
     @Test
-    @DisplayName("resource() 应该返回 'LITERATURE'")
+    @DisplayName("resource() 应该返回 'PUBLICATION'")
     void resourceShouldReturnLiterature() {
       // When
-      String resource = IngestPublishingChannels.LITERATURE.resource();
+      String resource = IngestPublishingChannels.PUBLICATION.resource();
 
       // Then
-      assertThat(resource).isEqualTo("LITERATURE");
+      assertThat(resource).isEqualTo("PUBLICATION");
     }
 
     @Test
-    @DisplayName("channel() 应该返回 'INGEST_LITERATURE'")
+    @DisplayName("channel() 应该返回 'INGEST_PUBLICATION'")
     void channelShouldReturnFormattedName() {
       // When
-      String channel = IngestPublishingChannels.LITERATURE.channel();
+      String channel = IngestPublishingChannels.PUBLICATION.channel();
 
       // Then
-      assertThat(channel).isEqualTo("INGEST_LITERATURE");
+      assertThat(channel).isEqualTo("INGEST_PUBLICATION");
     }
 
     @Test
-    @DisplayName("payloadType() 应该返回 LiteratureReadyMessage.class")
-    void payloadTypeShouldReturnLiteratureReadyMessage() {
+    @DisplayName("payloadType() 应该返回 PublicationReadyMessage.class")
+    void payloadTypeShouldReturnPublicationReadyMessage() {
       // When
-      Class<?> payloadType = IngestPublishingChannels.LITERATURE.payloadType();
+      Class<?> payloadType = IngestPublishingChannels.PUBLICATION.payloadType();
 
       // Then
-      assertThat(payloadType).isEqualTo(LiteratureReadyMessage.class);
+      assertThat(payloadType).isEqualTo(PublicationReadyMessage.class);
     }
   }
 
@@ -148,16 +148,16 @@ class IngestPublishingChannelsTest {
     }
 
     @Test
-    @DisplayName("应该解析 'INGEST_LITERATURE' 为 LITERATURE")
+    @DisplayName("应该解析 'INGEST_PUBLICATION' 为 PUBLICATION")
     void shouldParseIngestLiterature() {
       // Given
-      String channel = "INGEST_LITERATURE";
+      String channel = "INGEST_PUBLICATION";
 
       // When
       var result = IngestPublishingChannels.fromChannel(channel);
 
       // Then
-      assertThat(result).isPresent().contains(IngestPublishingChannels.LITERATURE);
+      assertThat(result).isPresent().contains(IngestPublishingChannels.PUBLICATION);
     }
 
     @Test
@@ -299,7 +299,7 @@ class IngestPublishingChannelsTest {
     void ordinalShouldReturnCorrectIndex() {
       // Then
       assertThat(IngestPublishingChannels.TASK.ordinal()).isZero();
-      assertThat(IngestPublishingChannels.LITERATURE.ordinal()).isEqualTo(1);
+      assertThat(IngestPublishingChannels.PUBLICATION.ordinal()).isEqualTo(1);
     }
 
     @Test
@@ -402,16 +402,16 @@ class IngestPublishingChannelsTest {
     }
 
     @Test
-    @DisplayName("LITERATURE.channel() 应该能被 fromChannel() 解析回来")
+    @DisplayName("PUBLICATION.channel() 应该能被 fromChannel() 解析回来")
     void literatureChannelShouldBeParsableBack() {
       // Given
-      String channel = IngestPublishingChannels.LITERATURE.channel();
+      String channel = IngestPublishingChannels.PUBLICATION.channel();
 
       // When
       var result = IngestPublishingChannels.fromChannel(channel);
 
       // Then
-      assertThat(result).isPresent().contains(IngestPublishingChannels.LITERATURE);
+      assertThat(result).isPresent().contains(IngestPublishingChannels.PUBLICATION);
     }
 
     @Test

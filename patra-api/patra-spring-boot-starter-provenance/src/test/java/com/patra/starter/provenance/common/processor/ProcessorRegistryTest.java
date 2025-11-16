@@ -2,7 +2,7 @@ package com.patra.starter.provenance.common.processor;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.patra.common.model.CanonicalLiterature;
+import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.provider.ProviderRequest;
 import java.util.List;
@@ -36,13 +36,13 @@ class ProcessorRegistryTest {
   void should_auto_register_processors_from_spring() {
     // Given: 创建多个Processor
     List<DataProcessor<?>> processors =
-        List.of(new MockLiteratureProcessor(), new MockJournalProcessor());
+        List.of(new MockPublicationProcessor(), new MockJournalProcessor());
 
     // When: 自动注册
     ProcessorRegistry registry = new ProcessorRegistry(processors);
 
     // Then: 验证注册成功
-    assertThat(registry.supports(DataType.LITERATURE)).isTrue();
+    assertThat(registry.supports(DataType.PUBLICATION)).isTrue();
     assertThat(registry.supports(DataType.JOURNAL)).isTrue();
     assertThat(registry.getSupportedTypes()).hasSize(2);
   }
@@ -56,11 +56,11 @@ class ProcessorRegistryTest {
     ProcessorRegistry registry = createTestRegistry();
 
     // When
-    DataProcessor<CanonicalLiterature> processor = registry.getProcessor(DataType.LITERATURE);
+    DataProcessor<CanonicalPublication> processor = registry.getProcessor(DataType.PUBLICATION);
 
     // Then
     assertThat(processor).isNotNull();
-    assertThat(processor.getDataType()).isEqualTo(DataType.LITERATURE);
+    assertThat(processor.getDataType()).isEqualTo(DataType.PUBLICATION);
   }
 
   @Test
@@ -85,11 +85,11 @@ class ProcessorRegistryTest {
     ProcessorRegistry registry = createTestRegistry();
 
     // When
-    Optional<DataProcessor<?>> processor = registry.findProcessor(DataType.LITERATURE);
+    Optional<DataProcessor<?>> processor = registry.findProcessor(DataType.PUBLICATION);
 
     // Then
     assertThat(processor).isPresent();
-    assertThat(processor.get().getDataType()).isEqualTo(DataType.LITERATURE);
+    assertThat(processor.get().getDataType()).isEqualTo(DataType.PUBLICATION);
   }
 
   @Test
@@ -114,7 +114,7 @@ class ProcessorRegistryTest {
     ProcessorRegistry registry = createTestRegistry();
 
     // When & Then: 支持的类型
-    assertThat(registry.supports(DataType.LITERATURE)).isTrue();
+    assertThat(registry.supports(DataType.PUBLICATION)).isTrue();
     assertThat(registry.supports(DataType.JOURNAL)).isTrue();
 
     // When & Then: 不支持的类型
@@ -134,7 +134,7 @@ class ProcessorRegistryTest {
     Set<DataType> types = registry.getSupportedTypes();
 
     // Then
-    assertThat(types).hasSize(2).contains(DataType.LITERATURE, DataType.JOURNAL);
+    assertThat(types).hasSize(2).contains(DataType.PUBLICATION, DataType.JOURNAL);
   }
 
   @Test
@@ -158,16 +158,16 @@ class ProcessorRegistryTest {
   void should_detect_duplicate_registration() {
     // Given: 两个相同类型的Processor
     List<DataProcessor<?>> processors =
-        List.of(new MockLiteratureProcessor(), new AnotherLiteratureProcessor());
+        List.of(new MockPublicationProcessor(), new AnotherPublicationProcessor());
 
     // When: 自动注册
     ProcessorRegistry registry = new ProcessorRegistry(processors);
 
     // Then: 验证只保留第一个注册的Processor
-    DataProcessor<?> processor = registry.getProcessor(DataType.LITERATURE);
+    DataProcessor<?> processor = registry.getProcessor(DataType.PUBLICATION);
     assertThat(processor)
-        .isInstanceOf(MockLiteratureProcessor.class)
-        .isNotInstanceOf(AnotherLiteratureProcessor.class);
+        .isInstanceOf(MockPublicationProcessor.class)
+        .isNotInstanceOf(AnotherPublicationProcessor.class);
   }
 
   // ==================== 空Processor列表测试 ====================
@@ -183,7 +183,7 @@ class ProcessorRegistryTest {
 
     // Then
     assertThat(types).isEmpty();
-    assertThat(registry.supports(DataType.LITERATURE)).isFalse();
+    assertThat(registry.supports(DataType.PUBLICATION)).isFalse();
   }
 
   @Test
@@ -197,7 +197,7 @@ class ProcessorRegistryTest {
 
     // Then
     assertThat(types).isEmpty();
-    assertThat(registry.supports(DataType.LITERATURE)).isFalse();
+    assertThat(registry.supports(DataType.PUBLICATION)).isFalse();
   }
 
   // ==================== 边界条件测试 ====================
@@ -206,14 +206,14 @@ class ProcessorRegistryTest {
   @DisplayName("应该处理单个Processor注册")
   void should_handle_single_processor_registration() {
     // Given
-    List<DataProcessor<?>> processors = List.of(new MockLiteratureProcessor());
+    List<DataProcessor<?>> processors = List.of(new MockPublicationProcessor());
 
     // When
     ProcessorRegistry registry = new ProcessorRegistry(processors);
 
     // Then
     assertThat(registry.getSupportedTypes()).hasSize(1);
-    assertThat(registry.supports(DataType.LITERATURE)).isTrue();
+    assertThat(registry.supports(DataType.PUBLICATION)).isTrue();
     assertThat(registry.supports(DataType.JOURNAL)).isFalse();
   }
 
@@ -223,14 +223,14 @@ class ProcessorRegistryTest {
     // Given: 创建多种类型的Processor
     List<DataProcessor<?>> processors =
         List.of(
-            new MockLiteratureProcessor(), new MockJournalProcessor(), new MockCitationProcessor());
+            new MockPublicationProcessor(), new MockJournalProcessor(), new MockCitationProcessor());
 
     // When
     ProcessorRegistry registry = new ProcessorRegistry(processors);
 
     // Then
     assertThat(registry.getSupportedTypes()).hasSize(3);
-    assertThat(registry.supports(DataType.LITERATURE)).isTrue();
+    assertThat(registry.supports(DataType.PUBLICATION)).isTrue();
     assertThat(registry.supports(DataType.JOURNAL)).isTrue();
     assertThat(registry.supports(DataType.CITATION)).isTrue();
   }
@@ -240,32 +240,32 @@ class ProcessorRegistryTest {
   /** 创建测试用的ProcessorRegistry */
   private ProcessorRegistry createTestRegistry() {
     List<DataProcessor<?>> processors =
-        List.of(new MockLiteratureProcessor(), new MockJournalProcessor());
+        List.of(new MockPublicationProcessor(), new MockJournalProcessor());
     return new ProcessorRegistry(processors);
   }
 
   // ==================== Mock实现类 ====================
 
   /** Mock文献Processor */
-  static class MockLiteratureProcessor implements DataProcessor<CanonicalLiterature> {
+  static class MockPublicationProcessor implements DataProcessor<CanonicalPublication> {
     @Override
     public DataType getDataType() {
-      return DataType.LITERATURE;
+      return DataType.PUBLICATION;
     }
 
     @Override
-    public ProcessResult<CanonicalLiterature> process(
+    public ProcessResult<CanonicalPublication> process(
         ProviderRequest request, ProviderContext context) {
       return ProcessResult.success(List.of(), null);
     }
 
     @Override
-    public ValidationResult validate(CanonicalLiterature data) {
+    public ValidationResult validate(CanonicalPublication data) {
       return ValidationResult.success();
     }
 
     @Override
-    public CanonicalLiterature transform(Object rawData) throws TransformationException {
+    public CanonicalPublication transform(Object rawData) throws TransformationException {
       return null;
     }
   }
@@ -317,25 +317,25 @@ class ProcessorRegistryTest {
   }
 
   /** 另一个文献Processor（用于测试重复注册） */
-  static class AnotherLiteratureProcessor implements DataProcessor<CanonicalLiterature> {
+  static class AnotherPublicationProcessor implements DataProcessor<CanonicalPublication> {
     @Override
     public DataType getDataType() {
-      return DataType.LITERATURE;
+      return DataType.PUBLICATION;
     }
 
     @Override
-    public ProcessResult<CanonicalLiterature> process(
+    public ProcessResult<CanonicalPublication> process(
         ProviderRequest request, ProviderContext context) {
       return ProcessResult.success(List.of(), null);
     }
 
     @Override
-    public ValidationResult validate(CanonicalLiterature data) {
+    public ValidationResult validate(CanonicalPublication data) {
       return ValidationResult.success();
     }
 
     @Override
-    public CanonicalLiterature transform(Object rawData) throws TransformationException {
+    public CanonicalPublication transform(Object rawData) throws TransformationException {
       return null;
     }
   }

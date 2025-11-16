@@ -101,7 +101,7 @@ public class ProvenanceMetrics {
   }
 
   /**
-   * 记录标准化文献转换的度量
+   * 记录标准化出版物转换的度量
    *
    * @param code provenance 数据源
    * @param successCount 成功转换的记录数

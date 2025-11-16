@@ -128,7 +128,7 @@ class RecordUploadOrchestratorTest {
               "md5hash",
               "sha256hash",
               "patra-ingest",
-              "literature_batch",
+              "publication_batch",
               "batch-001",
               Map.of("pmcId", "PMC123456"),
               "MINIO",
@@ -151,7 +151,7 @@ class RecordUploadOrchestratorTest {
       assertThat(captured.getChecksum().md5Hash()).isEqualTo("md5hash");
       assertThat(captured.getChecksum().sha256Hash()).isEqualTo("sha256hash");
       assertThat(captured.getContext().serviceName()).isEqualTo("patra-ingest");
-      assertThat(captured.getContext().businessType()).isEqualTo("literature_batch");
+      assertThat(captured.getContext().businessType()).isEqualTo("publication_batch");
       assertThat(captured.getContext().businessId()).isEqualTo("batch-001");
       assertThat(captured.getContext().correlationData()).containsEntry("pmcId", "PMC123456");
       assertThat(captured.getProvider()).isEqualTo(StorageProvider.MINIO);
@@ -298,7 +298,7 @@ class RecordUploadOrchestratorTest {
               "md5",
               null,
               "patra-ingest",
-              "literature_batch",
+              "publication_batch",
               "batch-001",
               correlationData,
               "MINIO",
@@ -503,14 +503,14 @@ class RecordUploadOrchestratorTest {
       Instant expiryDate = Instant.now().plus(90, ChronoUnit.DAYS);
       RecordUploadCommand command =
           new RecordUploadCommand(
-              "patra-literature",
+              "patra-publication",
               "batches/batch-20240101/PMC123456.pdf",
               5242880L, // 5 MB
               "application/pdf",
               "e4d909c290d0fb1ca068ffaddf22cbd0",
               "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
               "patra-ingest",
-              "literature_batch",
+              "publication_batch",
               "batch-20240101",
               Map.of(
                   "pmcId", "PMC123456",
@@ -535,7 +535,7 @@ class RecordUploadOrchestratorTest {
       verify(repository).save(captor.capture());
 
       FileMetadata captured = captor.getValue();
-      assertThat(captured.getStorageKey().bucket()).isEqualTo("patra-literature");
+      assertThat(captured.getStorageKey().bucket()).isEqualTo("patra-publication");
       assertThat(captured.getStorageKey().objectKey())
           .isEqualTo("batches/batch-20240101/PMC123456.pdf");
       assertThat(captured.getFileSize().bytes()).isEqualTo(5242880L);
@@ -544,7 +544,7 @@ class RecordUploadOrchestratorTest {
       assertThat(captured.getChecksum().sha256Hash())
           .isEqualTo("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08");
       assertThat(captured.getContext().serviceName()).isEqualTo("patra-ingest");
-      assertThat(captured.getContext().businessType()).isEqualTo("literature_batch");
+      assertThat(captured.getContext().businessType()).isEqualTo("publication_batch");
       assertThat(captured.getContext().businessId()).isEqualTo("batch-20240101");
       assertThat(captured.getContext().correlationData()).hasSize(4);
       assertThat(captured.getProvider()).isEqualTo(StorageProvider.MINIO);
@@ -623,7 +623,7 @@ class RecordUploadOrchestratorTest {
         "md5hash",
         "sha256hash",
         "patra-ingest",
-        "literature_batch",
+        "publication_batch",
         "batch-001",
         Map.of("pmcId", "PMC123456"),
         "MINIO",

@@ -98,7 +98,7 @@ class BatchScheduleTest {
         1L, // scheduleInstanceId
         ProvenanceCode.PUBMED, // provenanceCode
         "FETCH", // operationCode
-        DataType.LITERATURE, // dataType
+        DataType.PUBLICATION, // dataType
         createTestConfigSnapshot(), // configSnapshot (使用真实的 ProvenanceConfigSnapshot)
         "test-hash", // exprHash
         "test query", // compiledQuery
@@ -469,7 +469,7 @@ class BatchScheduleTest {
               1L,
               ProvenanceCode.PUBMED,
               "FETCH",
-              DataType.LITERATURE,
+              DataType.PUBLICATION,
               null,
               "test-hash",
               "test query",
@@ -550,7 +550,7 @@ class BatchScheduleTest {
               1L,
               ProvenanceCode.EPMC,
               "FETCH",
-              DataType.LITERATURE,
+              DataType.PUBLICATION,
               null,
               "test-hash",
               "test query",

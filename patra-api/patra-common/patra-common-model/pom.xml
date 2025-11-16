@@ -14,7 +14,7 @@
     <name>Patra Common Model</name>
     <description>
         Shared data models used across multiple services:
-        - CanonicalLiterature: Common literature data structure
+        - CanonicalPublication: Common literature data structure
 
         Use this module when services need to share standardized data models
         for inter-service communication or data exchange.
