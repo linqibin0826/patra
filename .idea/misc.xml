@@ -10,6 +10,7 @@
         <option value="$PROJECT_DIR$/pom.xml" />
         <option value="$PROJECT_DIR$/patra-parent/pom.xml" />
         <option value="$PROJECT_DIR$/patra-ingest/pom.xml" />
+        <option value="$PROJECT_DIR$/patra-catalog/pom.xml" />
       </list>
     </option>
   </component>

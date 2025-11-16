@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.patra</groupId>
+        <artifactId>patra-catalog</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>patra-catalog-domain</artifactId>
+    <name>Patra Catalog Domain</name>
+    <description>Catalog domain module - core business logic and domain model</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-common-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-common-model</artifactId>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <!-- Version and executions inherited from parent pluginManagement -->
+            </plugin>
+
+            <!-- Enforce domain layer purity (Hexagonal Architecture) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <!-- Version inherited from parent pluginManagement -->
+                <executions>
+                    <execution>
+                        <id>enforce-domain-layer-purity</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <phase>validate</phase>
+                        <configuration>
+                            <rules>
+                                <bannedDependencies>
+                                    <excludes>
+                                        <!-- Ban Spring Framework -->
+                                        <exclude>org.springframework:*</exclude>
+                                        <exclude>org.springframework.boot:*</exclude>
+                                        <exclude>org.springframework.cloud:*</exclude>
+                                        <exclude>org.springframework.data:*</exclude>
+
+                                        <!-- Ban Jakarta EE / JPA -->
+                                        <exclude>jakarta.persistence:*</exclude>
+                                        <exclude>jakarta.validation:*</exclude>
+                                        <exclude>jakarta.annotation:*</exclude>
+                                        <exclude>jakarta.servlet:*</exclude>
+
+                                        <!-- Ban persistence frameworks -->
+                                        <exclude>com.baomidou:*</exclude>
+                                        <exclude>org.mybatis:*</exclude>
+                                        <exclude>org.hibernate:*</exclude>
+
+                                        <!-- Ban web/servlet -->
+                                        <exclude>org.apache.tomcat:*</exclude>
+                                        <exclude>io.netty:*</exclude>
+                                    </excludes>
+                                    <searchTransitive>true</searchTransitive>
+                                    <message>
+❌ Domain layer MUST be framework-free (Hexagonal Architecture)!
+   Only allowed: patra-common, Lombok, Hutool, Jackson
+
+   Violated by this dependency. Domain layer should contain pure business logic.
+                                    </message>
+                                </bannedDependencies>
+                            </rules>
+                            <fail>true</fail>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
