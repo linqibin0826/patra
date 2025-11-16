@@ -106,7 +106,6 @@ mvn clean install -DskipTests -T 1C  # 完整构建
 - patra-registry
 - patra-ingest
 - patra-storage
-- patra-catalog
 - 所有 patra-spring-boot-starter-* 模块
 - patra-spring-cloud-starter-feign
 

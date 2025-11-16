@@ -42,7 +42,7 @@ patra-common-storage/
 封装对象键生成所需的所有参数,确保参数验证和不可变性。
 
 **核心字段**:
-- `serviceName`: 微服务名称(短形式,如 "ingest"、"storage"、"catalog")
+- `serviceName`: 微服务名称(短形式,如 "ingest"、"storage"、"literature")
 - `businessType`: 业务类型(kebab-case,如 "literature-batch"、"metadata-snapshot")
 - `businessId`: 唯一业务标识符(如 "pubmed-123-batch-001")
 - `partitionDate`: 分区日期(用于时间分区 yyyy/MM/dd)
@@ -62,7 +62,7 @@ ObjectKeyContext context = ObjectKeyContext.of(
 
 // Builder 模式(复杂场景)
 ObjectKeyContext context = ObjectKeyContext.builder()
-    .serviceName("catalog")
+    .serviceName("literature")
     .businessType("index-snapshot")
     .businessId("snapshot-20251103-001")
     .partitionDate(LocalDate.of(2025, 11, 3))
@@ -108,7 +108,7 @@ public interface ObjectKeyGenerator {
 ```
 ingest/literature-batch/2025/11/03/pubmed-123-batch-001.json
 storage/metadata-snapshot/2025/11/02/snapshot-20251102-001.json.gz
-catalog/literature-index/2025/11/03/index-pmid-12345.xml
+literature/index/2025/11/03/index-pmid-12345.xml
 ```
 
 **规范化规则**:
@@ -165,7 +165,7 @@ String key = ObjectKeyTemplate.generateDailyKey(
 
 ```java
 String key = ObjectKeyTemplate.builder()
-    .serviceName("catalog")
+    .serviceName("literature")
     .businessType("index_snapshot")
     .businessId("snapshot-20251103-001")
     .partitionDate(LocalDate.now())

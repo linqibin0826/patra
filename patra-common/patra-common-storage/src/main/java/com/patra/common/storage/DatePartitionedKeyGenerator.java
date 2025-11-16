@@ -24,7 +24,7 @@ import java.util.Locale;
  * <pre>{@code
  * ingest/literature-batch/2025/10/26/pubmed-123-batch-001.json
  * storage/metadata-snapshot/2025/10/25/snapshot-20251025-001.json.gz
- * catalog/literature-index/2025/10/26/index-pmid-12345.xml
+ * literature/index/2025/10/26/index-pmid-12345.xml
  * }</pre>
  *
  * <p><b>规范化规则</b>:
@@ -87,7 +87,7 @@ public final class DatePartitionedKeyGenerator implements ObjectKeyGenerator {
    * <ul>
    *   <li>"Ingest" → "ingest"
    *   <li>"STORAGE" → "storage"
-   *   <li>"patra-catalog" → "patra-catalog"
+   *   <li>"patra-registry" → "patra-registry"
    * </ul>
    */
   private String normalizeServiceName(String serviceName) {

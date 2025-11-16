@@ -15,7 +15,7 @@ import java.util.Objects;
  *
  * <p><b>示例</b>: {@code ingest/literature-batch/2025/10/26/pubmed-123-batch-001.json}
  *
- * @param serviceName 微服务名称(短格式,例如 "ingest"、"storage"、"catalog")
+ * @param serviceName 微服务名称(短格式,例如 "ingest"、"storage"、"literature")
  * @param businessType 业务类别,使用 kebab-case(例如 "literature-batch"、"metadata-snapshot")
  * @param businessId 此特定业务实体的唯一标识符(例如 "pubmed-123-batch-001")
  * @param partitionDate 用于时间分区的日期(yyyy/MM/dd 结构)

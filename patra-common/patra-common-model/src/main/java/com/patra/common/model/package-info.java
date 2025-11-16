@@ -143,7 +143,7 @@
  *   <li><b>patra-ingest-app</b> - 应用服务编排（批次规划器使用）
  *   <li><b>patra-ingest-infra</b> - 基础设施层（适配器实现）
  *   <li><b>patra-spring-boot-starter-provenance</b> - Provenance 适配器实现（PubMed、EPMC 等）
- *   <li>未来: {@code patra-catalog}、{@code patra-search} 等下游服务
+ *   <li>未来: {@code patra-search} 等下游服务
  * </ul>
  *
  * <h2>变更策略</h2>

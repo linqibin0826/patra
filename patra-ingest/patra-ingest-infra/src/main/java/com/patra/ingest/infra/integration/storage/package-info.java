@@ -20,11 +20,11 @@
  *
  * <h2>架构决策（2025-01-16）</h2>
  *
- * <p><strong>移除 ACL 转换层</strong>:
+ * <p><strong>使用共享内核模型</strong>:
  *
  * <ul>
  *   <li>✅ 直接存储共享内核模型 {@link com.patra.common.model.CanonicalLiterature}
- *   <li>✅ 移除 patra-catalog-api DTO 依赖（LiteratureDTO, AuthorDTO, JournalDTO）
+ *   <li>✅ 避免引入额外的 DTO 转换层
  *   <li>✅ 简化存储逻辑，保证数据与业务模型完全一致
  * </ul>
  *
