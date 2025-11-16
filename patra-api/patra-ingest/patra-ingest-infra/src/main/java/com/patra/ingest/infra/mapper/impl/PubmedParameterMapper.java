@@ -1,13 +1,17 @@
-package com.patra.ingest.infra.mapper;
+package com.patra.ingest.infra.mapper.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
+import com.patra.common.provenance.api.params.PubMedParamKeys;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.query.QuerySession;
 import java.util.Map;
+
+import com.patra.ingest.infra.mapper.ProviderParameterMapper;
+import com.patra.ingest.infra.mapper.StateTokenKeys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -56,24 +60,24 @@ public class PubmedParameterMapper implements ProviderParameterMapper {
             : mapper.createObjectNode();
 
     // 2. 添加 PubMed 分页参数
-    params.put("retstart", batch.offset());
-    params.put("retmax", batch.limit());
+    params.put(PubMedParamKeys.RETSTART, batch.offset());
+    params.put(PubMedParamKeys.RETMAX, batch.limit());
 
     // 3. 添加 History Server 会话令牌（如果有）
     if (session.hasStateToken()) {
       Map<String, String> stateToken = session.stateToken().orElseThrow();
 
-      String webEnv = stateToken.get("webEnv");
-      String queryKey = stateToken.get("queryKey");
+      String webEnv = stateToken.get(StateTokenKeys.PUBMED_WEBENV);
+      String queryKey = stateToken.get(StateTokenKeys.PUBMED_QUERY_KEY);
 
       if (webEnv != null) {
-        params.put("WebEnv", webEnv);
+        params.put(PubMedParamKeys.WEBENV, webEnv);
         log.debug(
             "添加 PubMed History Server webEnv: batchNo={}, webEnv={}", batch.batchNo(), webEnv);
       }
 
       if (queryKey != null) {
-        params.put("query_key", queryKey);
+        params.put(PubMedParamKeys.QUERY_KEY, queryKey);
         log.debug(
             "添加 PubMed History Server query_key: batchNo={}, queryKey={}",
             batch.batchNo(),

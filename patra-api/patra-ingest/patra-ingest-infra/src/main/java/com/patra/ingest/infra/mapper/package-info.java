@@ -20,11 +20,11 @@
  * <ul>
  *   <li>{@link com.patra.ingest.infra.mapper.ProviderParameterMapper} - 参数映射器接口（策略模式）
  *   <li>{@link com.patra.ingest.infra.mapper.ProviderParameterMapperRegistry} - 映射器注册表（自动发现和路由）
- *   <li>{@link com.patra.ingest.infra.mapper.PubmedParameterMapper} - PubMed 参数映射实现（retstart/retmax
+ *   <li>{@link com.patra.ingest.infra.mapper.impl.PubmedParameterMapper} - PubMed 参数映射实现（retstart/retmax
  *       + History Server）
- *   <li>{@link com.patra.ingest.infra.mapper.EpmcParameterMapper} - EPMC 参数映射实现（pageSize/page +
+ *   <li>{@link com.patra.ingest.infra.mapper.impl.EpmcParameterMapper} - EPMC 参数映射实现（pageSize/page +
  *       cursorMark）
- *   <li>{@link com.patra.ingest.infra.mapper.DoajParameterMapper} - DOAJ 参数映射实现（pageSize/page +
+ *   <li>{@link com.patra.ingest.infra.mapper.impl.DoajParameterMapper} - DOAJ 参数映射实现（pageSize/page +
  *       Scroll API）
  * </ul>
  *

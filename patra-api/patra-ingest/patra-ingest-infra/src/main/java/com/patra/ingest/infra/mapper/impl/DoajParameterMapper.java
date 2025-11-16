@@ -1,12 +1,14 @@
-package com.patra.ingest.infra.mapper;
+package com.patra.ingest.infra.mapper.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
+import com.patra.common.provenance.api.params.DoajParamKeys;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.query.QuerySession;
+import com.patra.ingest.infra.mapper.ProviderParameterMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -58,8 +60,8 @@ public class DoajParameterMapper implements ProviderParameterMapper {
     int page = (batch.offset() / batch.limit()) + 1;
 
     // 3. 添加 DOAJ 分页参数
-    params.put("page", page);
-    params.put("pageSize", batch.limit());
+    params.put(DoajParamKeys.PAGE, page);
+    params.put(DoajParamKeys.PAGE_SIZE, batch.limit());
 
     log.debug(
         "DOAJ 参数映射完成: batchNo={}, offset={} → page={}, limit={} → pageSize={}",
