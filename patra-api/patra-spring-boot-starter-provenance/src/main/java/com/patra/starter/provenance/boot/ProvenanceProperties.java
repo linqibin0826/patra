@@ -1,5 +1,6 @@
 package com.patra.starter.provenance.boot;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.starter.provenance.common.config.BatchingConfig;
 import com.patra.starter.provenance.common.config.HttpConfig;
 import com.patra.starter.provenance.common.config.PaginationConfig;
@@ -31,9 +32,6 @@ import org.springframework.util.StringUtils;
 @Data
 @ConfigurationProperties(prefix = "patra.provenance")
 public class ProvenanceProperties {
-
-  private static final String PUBMED = "pubmed";
-  private static final String EPMC = "epmc";
 
   /** 是否启用 Provenance 客户端(默认为 true) */
   private boolean enabled = true;
@@ -130,9 +128,11 @@ public class ProvenanceProperties {
 
   private void initializeDefaults() {
     sources.putIfAbsent(
-        PUBMED, SourceProperties.withBaseUrl("https://eutils.ncbi.nlm.nih.gov/entrez/eutils"));
+        ProvenanceCode.PUBMED.lowerCaseCode(),
+        SourceProperties.withBaseUrl("https://eutils.ncbi.nlm.nih.gov/entrez/eutils"));
     sources.putIfAbsent(
-        EPMC, SourceProperties.withBaseUrl("https://www.ebi.ac.uk/europepmc/webservices/rest"));
+        ProvenanceCode.EPMC.lowerCaseCode(),
+        SourceProperties.withBaseUrl("https://www.ebi.ac.uk/europepmc/webservices/rest"));
   }
 
   private SourceProperties merge(SourceProperties lower, SourceProperties higher) {

@@ -3,6 +3,7 @@ package com.patra.starter.provenance.epmc;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
+import com.patra.common.provenance.api.constants.EpmcOperation;
 import com.patra.starter.provenance.common.config.DefaultConfigProvider;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
@@ -61,7 +62,7 @@ public class EPMCClientImpl implements EPMCClient {
   public SearchResponse search(SearchRequest request, ProvenanceConfig config) {
     if (metrics != null) {
       // 当Micrometer存在时，包装调用以捕获时长和成功/失败计数器
-      return metrics.recordApiCall(PROVENANCE, "search", () -> executeSearch(request, config));
+      return metrics.recordApiCall(PROVENANCE, EpmcOperation.SEARCH.getOperationName(), () -> executeSearch(request, config));
     }
     return executeSearch(request, config);
   }
@@ -69,7 +70,6 @@ public class EPMCClientImpl implements EPMCClient {
   private SearchResponse executeSearch(SearchRequest request, ProvenanceConfig config) {
     ProvenanceConfig finalConfig = config != null ? config : configProvider.getEPMCDefaultConfig();
 
-    String path = "/search";
     Map<String, String> queryParams = request.toQueryParams();
 
     String body =
@@ -77,7 +77,7 @@ public class EPMCClientImpl implements EPMCClient {
             .get()
             .uri(
                 uriBuilder -> {
-                  uriBuilder.path(path);
+                  uriBuilder.path(EpmcOperation.SEARCH.getEndpoint());
                   queryParams.forEach(uriBuilder::queryParam);
                   return uriBuilder.build();
                 })
@@ -89,7 +89,7 @@ public class EPMCClientImpl implements EPMCClient {
       return SearchResponse.from(root);
     } catch (Exception ex) {
       throw new ProvenanceClientException(
-          PROVENANCE.getCode(), "search", null, null, body, "解析JSON响应失败", ex);
+          PROVENANCE.getCode(), EpmcOperation.SEARCH.getOperationName(), null, null, body, "解析JSON响应失败", ex);
     }
   }
 }

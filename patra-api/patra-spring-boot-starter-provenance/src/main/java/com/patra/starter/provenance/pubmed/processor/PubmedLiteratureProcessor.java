@@ -8,6 +8,10 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.model.CanonicalLiterature;
 import com.patra.common.model.DataType;
+import com.patra.common.provenance.api.constants.PubMedOperation;
+import com.patra.common.provenance.api.params.PubMedParamKeys;
+import com.patra.common.provenance.api.values.pubmed.RetMode;
+import com.patra.common.provenance.api.values.pubmed.RetType;
 import com.patra.starter.provenance.boot.ProvenanceProperties;
 import com.patra.starter.provenance.common.config.BatchingConfig;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
@@ -71,7 +75,6 @@ import org.springframework.lang.Nullable;
 @RequiredArgsConstructor
 public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterature> {
 
-  private static final String PROVENANCE_CODE = "pubmed";
   private static final int DEFAULT_EPOST_THRESHOLD = 200;
   private static final int WARNING_ID_SAMPLE_LIMIT = 5;
 
@@ -174,7 +177,8 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
 
   /** 准备处理上下文 */
   private ProcessingContext prepareProcessingContext(ProviderRequest request) {
-    ProvenanceConfig config = properties.mergeWithRuntime(PROVENANCE_CODE, request.config());
+    ProvenanceConfig config =
+        properties.mergeWithRuntime(ProvenanceCode.PUBMED.lowerCaseCode(), request.config());
     JsonNode searchParams = buildSearchParams(request);
     ESearchRequest searchRequest = ESEARCH_ASSEMBLER.buildList(searchParams);
 
@@ -272,7 +276,7 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
     } else {
       node = JsonMapperHolder.getObjectMapper().createObjectNode();
     }
-    node.put("term", query);
+    node.put(PubMedParamKeys.TERM, query);
     return node;
   }
 
@@ -291,7 +295,7 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
       return null;
     }
     return response.result().webEnv();
-  }
+  }π
 
   /** 获取文章数据（根据数量选择直接EFetch或通过EPost） */
   private List<PubmedLiterature> fetchArticles(List<String> pmids, ProvenanceConfig config)
@@ -322,7 +326,7 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
       List<String> pmids, ProvenanceConfig config) {
     String idParam = StrUtil.join(",", pmids);
     log.debug("PubMed direct EFetch start: count={}", pmids.size());
-    EFetchRequest request = new EFetchRequest(PROVENANCE_CODE, idParam);
+    EFetchRequest request = new EFetchRequest(ProvenanceCode.PUBMED.lowerCaseCode(), idParam);
     EFetchResponse response = pubMedClient.efetch(request, config);
     List<PubmedLiterature> articles =
         response != null ? response.articles() : CollUtil.newArrayList();
@@ -337,13 +341,14 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
 
     // 1. EPost: 上传ID列表
     String idParam = StrUtil.join(",", pmids);
-    EPostRequest postRequest = new EPostRequest(PROVENANCE_CODE, idParam, null, null, null);
+    EPostRequest postRequest =
+        new EPostRequest(ProvenanceCode.PUBMED.lowerCaseCode(), idParam, null, null, null);
     EPostResponse postResponse = pubMedClient.epost(postRequest, config);
 
     if (postResponse == null || !postResponse.isValid()) {
       throw new ProvenanceClientException(
-          PROVENANCE_CODE,
-          "epost",
+          ProvenanceCode.PUBMED.lowerCaseCode(),
+          PubMedOperation.EPOST.getOperationName(),
           "EPost returned invalid WebEnv or QueryKey for " + pmids.size() + " PMIDs");
     }
 
@@ -355,10 +360,10 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
     // 2. EFetch: 使用WebEnv获取数据
     EFetchRequest fetchRequest =
         new EFetchRequest(
-            PROVENANCE_CODE,
+            ProvenanceCode.PUBMED.lowerCaseCode(),
             "",
-            "xml",
-            "abstract",
+            RetMode.XML.value(),
+            RetType.ABSTRACT.value(),
             0,
             pmids.size(),
             postResponse.webEnv(),

@@ -190,6 +190,12 @@
 
             <dependency>
                 <groupId>com.patra</groupId>
+                <artifactId>patra-common-provenance-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.patra</groupId>
                 <artifactId>patra-spring-boot-starter-core</artifactId>
                 <version>${project.version}</version>
             </dependency>

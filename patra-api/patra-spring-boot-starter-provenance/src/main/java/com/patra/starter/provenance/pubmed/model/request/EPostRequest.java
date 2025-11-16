@@ -1,5 +1,6 @@
 package com.patra.starter.provenance.pubmed.model.request;
 
+import com.patra.common.provenance.api.params.PubMedParamKeys;
 import com.patra.starter.provenance.common.gateway.ApiRequest;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -70,13 +71,13 @@ public record EPostRequest(
   @Override
   public Map<String, String> toQueryParams() {
     Map<String, String> params = new LinkedHashMap<>();
-    params.put("db", db);
-    params.put("id", id);
+    params.put(PubMedParamKeys.DB, db);
+    params.put(PubMedParamKeys.ID, id);
 
     // Authentication and identification
-    if (apiKey != null) params.put("api_key", apiKey);
-    if (tool != null) params.put("tool", tool);
-    if (email != null) params.put("email", email);
+    if (apiKey != null) params.put(PubMedParamKeys.API_KEY, apiKey);
+    if (tool != null) params.put(PubMedParamKeys.TOOL, tool);
+    if (email != null) params.put(PubMedParamKeys.EMAIL, email);
 
     return params;
   }

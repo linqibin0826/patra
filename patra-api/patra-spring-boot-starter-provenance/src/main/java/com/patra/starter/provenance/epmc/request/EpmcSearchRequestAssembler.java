@@ -2,6 +2,7 @@ package com.patra.starter.provenance.epmc.request;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
+import com.patra.common.provenance.api.params.EpmcParamKeys;
 import com.patra.starter.provenance.epmc.model.request.SearchRequest;
 
 /**

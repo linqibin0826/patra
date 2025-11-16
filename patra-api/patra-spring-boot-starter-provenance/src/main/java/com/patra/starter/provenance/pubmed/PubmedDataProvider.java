@@ -87,7 +87,10 @@ public class PubmedDataProvider implements ProvenanceDataProvider {
     } catch (Exception ex) {
       log.error("准备 PubMed 计划元数据时发生未知错误: query={}", query, ex);
       throw new ProvenanceClientException(
-          "pubmed", "preparePlan", "准备 PubMed 计划元数据失败: " + ex.getMessage(), ex);
+          ProvenanceCode.PUBMED.lowerCaseCode(),
+          "preparePlan",
+          "准备 PubMed 计划元数据失败: " + ex.getMessage(),
+          ex);
     }
   }
 

@@ -1,5 +1,7 @@
 package com.patra.starter.provenance.internal.metadata;
 
+import com.patra.common.enums.ProvenanceCode;
+
 /**
  * PubMed 特定的计划元数据
  *
@@ -25,7 +27,7 @@ public class PubmedPlanMetadata extends PlanMetadata {
   private final String queryKey;
 
   public PubmedPlanMetadata(int totalCount, String webEnv, String queryKey) {
-    super("pubmed", totalCount);
+    super(ProvenanceCode.PUBMED.lowerCaseCode(), totalCount);
 
     boolean hasWebEnv = webEnv != null && !webEnv.isBlank();
     boolean hasQueryKey = queryKey != null && !queryKey.isBlank();

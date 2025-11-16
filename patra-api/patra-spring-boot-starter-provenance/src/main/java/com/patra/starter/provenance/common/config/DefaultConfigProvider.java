@@ -1,5 +1,6 @@
 package com.patra.starter.provenance.common.config;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.starter.provenance.boot.ProvenanceProperties;
 import com.patra.starter.provenance.boot.ProvenanceProperties.SourceProperties;
 import java.util.Objects;
@@ -24,7 +25,7 @@ public class DefaultConfigProvider {
    * @return PubMed 的不可变配置对象
    */
   public ProvenanceConfig getPubMedDefaultConfig() {
-    return getDefaultConfig("pubmed");
+    return getDefaultConfig(ProvenanceCode.PUBMED.lowerCaseCode());
   }
 
   /**
@@ -33,7 +34,7 @@ public class DefaultConfigProvider {
    * @return Europe PMC 的不可变配置对象
    */
   public ProvenanceConfig getEPMCDefaultConfig() {
-    return getDefaultConfig("epmc");
+    return getDefaultConfig(ProvenanceCode.EPMC.lowerCaseCode());
   }
 
   /**

@@ -19,6 +19,7 @@
         <module>patra-common-core</module>
         <module>patra-common-storage</module>
         <module>patra-common-model</module>
+        <module>patra-common-provenance-api</module>
     </modules>
 
     <description>
@@ -26,6 +27,7 @@
         - patra-common-core: Core domain/error/json/util classes (required by all services)
         - patra-common-storage: Object storage key generation strategies (optional)
         - patra-common-model: Shared data models like CanonicalLiterature (optional)
+        - patra-common-provenance-api: Provenance API constants and enums (optional)
     </description>
 
 

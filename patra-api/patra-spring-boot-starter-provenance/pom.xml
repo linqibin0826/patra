@@ -29,6 +29,11 @@
             <artifactId>patra-common-model</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-common-provenance-api</artifactId>
+        </dependency>
+
 
         <!-- ==================== Spring Boot ==================== -->
 
