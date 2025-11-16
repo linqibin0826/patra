@@ -295,7 +295,7 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
       return null;
     }
     return response.result().webEnv();
-  }π
+  }
 
   /** 获取文章数据（根据数量选择直接EFetch或通过EPost） */
   private List<PubmedLiterature> fetchArticles(List<String> pmids, ProvenanceConfig config)
