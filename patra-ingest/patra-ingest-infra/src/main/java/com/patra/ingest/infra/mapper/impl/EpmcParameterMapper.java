@@ -1,13 +1,17 @@
-package com.patra.ingest.infra.mapper;
+package com.patra.ingest.infra.mapper.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
+import com.patra.common.provenance.api.params.EpmcParamKeys;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.query.QuerySession;
 import java.util.Map;
+
+import com.patra.ingest.infra.mapper.ProviderParameterMapper;
+import com.patra.ingest.infra.mapper.StateTokenKeys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -62,14 +66,14 @@ public class EpmcParameterMapper implements ProviderParameterMapper {
             : mapper.createObjectNode();
 
     // 2. 添加 EPMC 分页参数（只使用 pageSize，不使用 offset）
-    params.put("pageSize", batch.limit());
+    params.put(EpmcParamKeys.PAGE_SIZE, batch.limit());
 
     // 3. 添加游标令牌
     String cursorMark = DEFAULT_CURSOR; // 默认使用 "*"
 
     if (session.hasStateToken()) {
       Map<String, String> stateToken = session.stateToken().orElseThrow();
-      String storedCursor = stateToken.get("cursorMark");
+      String storedCursor = stateToken.get(StateTokenKeys.EPMC_CURSOR_MARK);
 
       if (storedCursor != null && !storedCursor.isBlank()) {
         cursorMark = storedCursor;
@@ -77,7 +81,7 @@ public class EpmcParameterMapper implements ProviderParameterMapper {
       }
     }
 
-    params.put("cursorMark", cursorMark);
+    params.put(EpmcParamKeys.CURSOR_MARK, cursorMark);
 
     log.debug(
         "EPMC 参数映射完成: batchNo={}, pageSize={}, cursorMark={}",

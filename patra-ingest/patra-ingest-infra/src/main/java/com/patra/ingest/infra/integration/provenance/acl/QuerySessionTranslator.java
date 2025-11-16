@@ -2,6 +2,7 @@ package com.patra.ingest.infra.integration.provenance.acl;
 
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.query.QuerySession;
+import com.patra.ingest.infra.mapper.StateTokenKeys;
 import com.patra.starter.provenance.internal.metadata.DoajPlanMetadata;
 import com.patra.starter.provenance.internal.metadata.EpmcPlanMetadata;
 import com.patra.starter.provenance.internal.metadata.PlanMetadata;
@@ -68,8 +69,8 @@ public class QuerySessionTranslator {
     }
     return Optional.of(
         Map.of(
-            "webEnv", pubmed.webEnv(),
-            "queryKey", pubmed.queryKey()));
+            StateTokenKeys.PUBMED_WEBENV, pubmed.webEnv(),
+            StateTokenKeys.PUBMED_QUERY_KEY, pubmed.queryKey()));
   }
 
   /** 翻译 DOAJ 计划元数据 */
@@ -85,7 +86,7 @@ public class QuerySessionTranslator {
     if (!doaj.hasSessionToken()) {
       return Optional.empty();
     }
-    return Optional.of(Map.of("cursorMark", doaj.scrollId()));
+    return Optional.of(Map.of(StateTokenKeys.DOAJ_CURSOR_MARK, doaj.scrollId()));
   }
 
   /** 翻译 EPMC 计划元数据 */
@@ -101,7 +102,7 @@ public class QuerySessionTranslator {
     if (!epmc.hasSessionToken()) {
       return Optional.empty();
     }
-    return Optional.of(Map.of("cursorMark", epmc.cursorMark()));
+    return Optional.of(Map.of(StateTokenKeys.EPMC_CURSOR_MARK, epmc.cursorMark()));
   }
 }
 

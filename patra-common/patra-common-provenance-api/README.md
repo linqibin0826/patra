@@ -6,7 +6,7 @@
 
 ## 概述
 
-`patra-common-provenance-api` 是 Patra 平台的 Provenance API 常量模块,集中管理所有数据源（PubMed、EPMC、Crossref 等）的 API 常量,包括端点路径、参数键名和参数值枚举。本模块作为跨模块共享的单一事实来源,确保 API 常量的一致性和类型安全。
+`patra-common-provenance-api` 是 Patra 平台的 Provenance API 常量模块,集中管理所有数据源（PubMed、EPMC、Crossref、DOAJ 等）的 API 常量,包括端点路径、参数键名和参数值枚举。本模块作为跨模块共享的单一事实来源,确保 API 常量的一致性和类型安全。
 
 **设计目标**:
 - **类型安全**: 使用枚举替代魔法字符串,提供编译时检查
@@ -37,7 +37,8 @@ patra-common-provenance-api/
 ├── params/                          (参数键名常量)
 │   ├── PubMedParamKeys             (PubMed 参数键)
 │   ├── EpmcParamKeys               (EPMC 参数键)
-│   └── CrossrefParamKeys           (Crossref 参数键)
+│   ├── CrossrefParamKeys           (Crossref 参数键)
+│   └── DoajParamKeys               (DOAJ 参数键) ⭐ 新增
 │
 └── values/                          (参数值枚举 - 类型安全)
     ├── pubmed/
@@ -108,6 +109,21 @@ public static final String TOOL = "tool";
 public static final String EMAIL = "email";
 ```
 
+#### DoajParamKeys（新增）⭐
+```java
+/** 查询字符串 */
+public static final String QUERY = "query";
+
+/** 页码（从 1 开始） */
+public static final String PAGE = "page";
+
+/** 每页大小 */
+public static final String PAGE_SIZE = "pageSize";
+
+/** 排序方式 */
+public static final String SORT = "sort";
+```
+
 ---
 
 ### 3. values — 参数值枚举（类型安全）⭐
@@ -175,7 +191,7 @@ public enum Format {
 
 **下游消费者**:
 - **patra-spring-boot-starter-provenance**: 主要使用者
-- **patra-ingest**: 数据采集服务
+- **patra-ingest**: 数据采集服务（参数映射器使用）⭐
 - **测试模块**: 集成测试、E2E 测试
 - **监控模块**: 健康检查、端点验证
 - **CLI 工具**: 命令行管理工具
@@ -205,18 +221,18 @@ String url = baseUrl + "/esearch.fcgi";
 String url = baseUrl + PubMedEndpoints.ESEARCH;
 ```
 
-### 示例 2: 使用参数键
+### 示例 2: 使用参数键（DOAJ）⭐
 
 ```java
-import com.patra.common.provenance.api.params.PubMedParamKeys;
+import com.patra.common.provenance.api.params.DoajParamKeys;
 
 // ❌ Before: 魔法字符串
-params.put("retmode", "json");
-params.put("term", "cancer");
+params.put("page", "1");
+params.put("pageSize", "100");
 
 // ✅ After: 使用常量
-params.put(PubMedParamKeys.RETMODE, "json");
-params.put(PubMedParamKeys.TERM, "cancer");
+params.put(DoajParamKeys.PAGE, "1");
+params.put(DoajParamKeys.PAGE_SIZE, "100");
 ```
 
 ### 示例 3: 使用枚举（类型安全）⭐
@@ -426,6 +442,7 @@ public enum SortOrder {
 
 ### 4. 跨模块共享
 - starter-provenance 使用
+- ingest 模块参数映射使用（DoajParamKeys）⭐
 - 测试模块验证端点
 - 监控模块健康检查
 - CLI 工具管理配置
@@ -466,6 +483,7 @@ params.put(PubMedParamKeys.RETMODE, RetMode.JSON.value());
 - [patra-common-core/README.md](../patra-common-core/README.md) — 核心基础设施
 - [patra-common-model/README.md](../patra-common-model/README.md) — 共享数据模型
 - [patra-spring-boot-starter-provenance/README.md](../../patra-spring-boot-starter-provenance/README.md) — Provenance Starter
+- [patra-ingest-infra/mapper/package-info.java](../../patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/mapper/package-info.java) — 参数映射器包
 
 ---
 
