@@ -26,7 +26,7 @@ $PROJECT_ROOT/logs/
 ├── patra-gateway.log          # API 网关日志
 ├── patra-registry.log         # 注册中心日志
 ├── patra-ingest.log          # 数据摄入服务日志
-├── patra-storage.log         # 存储服务日志
+├── patra-object-storage.log         # 存储服务日志
 └── patra-ingest/             # 历史日志
     ├── patra-ingest.2024-11-01.log
     └── patra-ingest.2024-10-31.log

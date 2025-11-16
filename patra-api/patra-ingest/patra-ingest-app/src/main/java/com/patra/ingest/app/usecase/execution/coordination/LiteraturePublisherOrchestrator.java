@@ -27,7 +27,7 @@ import org.springframework.stereotype.Service;
  *
  * <ul>
  *   <li>通过{@link LiteratureStoragePort}上传到对象存储(技术基础设施)
- *   <li>通过{@link StorageMetadataPort}记录元数据(与patra-storage服务的业务集成)
+ *   <li>通过{@link StorageMetadataPort}记录元数据(与patra-object-storage服务的业务集成)
  * </ul>
  *
  * <p>主要职责:
@@ -59,7 +59,7 @@ public class LiteraturePublisherOrchestrator {
    *
    * <ol>
    *   <li>上传文献到对象存储
-   *   <li>记录元数据到patra-storage服务
+   *   <li>记录元数据到patra-object-storage服务
    *   <li>处理元数据记录失败(委托给重试机制)
    * </ol>
    *
@@ -83,7 +83,7 @@ public class LiteraturePublisherOrchestrator {
         storageResult.fileSize(),
         storageResult.literatureCount());
 
-    // 步骤2: 记录元数据到patra-storage服务(带错误处理)
+    // 步骤2: 记录元数据到patra-object-storage服务(带错误处理)
     try {
       StorageMetadataPort.MetadataRequest metadataRequest =
           buildMetadataRequest(storageResult, context);
@@ -174,7 +174,7 @@ public class LiteraturePublisherOrchestrator {
     int status = exception.status();
     if (status >= 500 || status == 503 || status == -1) {
       log.warn(
-          "patra-storage服务不可用 (HTTP {}),委托给重试机制 storageKey={}", status, storageResult.storageKey());
+          "patra-object-storage服务不可用 (HTTP {}),委托给重试机制 storageKey={}", status, storageResult.storageKey());
       delegateToRetry(storageResult, context, exception);
       return;
     }

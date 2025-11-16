@@ -199,7 +199,7 @@ logging:
     </dependency>
     <dependency>
         <groupId>com.patra</groupId>
-        <artifactId>patra-storage-api</artifactId>
+        <artifactId>patra-object-storage-api</artifactId>
     </dependency>
 
     <!-- ArchUnit (架构验证测试) -->

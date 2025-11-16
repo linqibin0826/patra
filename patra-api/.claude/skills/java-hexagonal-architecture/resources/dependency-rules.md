@@ -267,7 +267,7 @@ static final ArchRule orchestratorsAreNamedCorrectly =
 - `PlanIngestionOrchestrator` (patra-ingest-app)
 - `ProvenanceConfigOrchestrator` (patra-registry-app)
 - `ExprQueryOrchestrator` (patra-registry-app)
-- `RecordUploadOrchestrator` (patra-storage-app)
+- `RecordUploadOrchestrator` (patra-object-storage-app)
 
 ---
 

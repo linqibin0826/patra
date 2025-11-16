@@ -7,7 +7,7 @@
  * <h2>核心职责</h2>
  *
  * <ul>
- *   <li><strong>请求路由</strong>: 根据 URL 路径将请求转发到正确的微服务(patra-registry、patra-ingest、patra-storage 等)
+ *   <li><strong>请求路由</strong>: 根据 URL 路径将请求转发到正确的微服务(patra-registry、patra-ingest、patra-object-storage 等)
  *   <li><strong>服务发现</strong>: 通过 Nacos 自动发现后端服务实例并维护路由表
  *   <li><strong>负载均衡</strong>: 使用 Spring Cloud LoadBalancer 在多个服务实例间分配请求
  *   <li><strong>统一入口</strong>: 为所有 Patra API 提供单一访问点,简化客户端配置
@@ -44,8 +44,8 @@
  *       lb://patra-registry/provenance/pubmed}
  *   <li><strong>Ingest 服务</strong>: {@code GET /patra-ingest/plans} → {@code
  *       lb://patra-ingest/plans}
- *   <li><strong>Storage 服务</strong>: {@code POST /patra-storage/internal/storage/files/record} →
- *       {@code lb://patra-storage/internal/storage/files/record}
+ *   <li><strong>Storage 服务</strong>: {@code POST /patra-object-storage/internal/storage/files/record} →
+ *       {@code lb://patra-object-storage/internal/storage/files/record}
  * </ul>
  *
  * <h2>服务发现</h2>
