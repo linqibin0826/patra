@@ -56,6 +56,7 @@ public class PubmedLiteratureConverter {
         .abstractContent(extractAbstract(citation))
         .alternativeAbstracts(convertAlternativeAbstracts(article))
         .authors(convertAuthors(article))
+        .authorsComplete(extractAuthorsComplete(citation))
         .journal(convertJournal(article))
         .identifiers(buildIdentifiers(article))
         .subjects(convertSubjects(article))
@@ -64,9 +65,11 @@ public class PubmedLiteratureConverter {
         .genes(convertGenes(article))
         .pagination(convertPagination(article))
         .dates(extractPublicationDates(article))
+        .publicationHistory(extractPublicationHistory(article))
         .funding(convertFunding(article))
         .citationCount(article.pubmedData().pmcRefCount())
         .conflictOfInterestStatement(article.coiStatement())
+        .metadata(extractMetadata(article))
         .build();
   }
 
@@ -82,6 +85,7 @@ public class PubmedLiteratureConverter {
                 section ->
                     CanonicalLiterature.AbstractSection.builder()
                         .label(section.label())
+                        .category(section.nlmCategory())
                         .content(section.text())
                         .build())
             .collect(Collectors.toList());
@@ -212,8 +216,23 @@ public class PubmedLiteratureConverter {
     // 提取ISO缩写
     String isoAbbreviation = journal != null ? journal.isoAbbreviation() : null;
 
+    // 提取Medline缩写
+    String medlineAbbreviation = medline != null ? medline.medlineTa() : null;
+
     // 提取期刊国家
     String country = medline != null ? medline.country() : null;
+
+    // 提取NLM唯一标识
+    String nlmUniqueId = medline != null ? medline.nlmUniqueId() : null;
+
+    // 提取ISSN-L（Linking ISSN）
+    String issnLinking = medline != null ? medline.issnLinking() : null;
+
+    // 提取引用媒介（来自JournalIssue）
+    String citedMedium = null;
+    if (journal != null && journal.journalIssue() != null) {
+      citedMedium = journal.journalIssue().citedMedium();
+    }
 
     // 提取卷号和期号
     String volume = null;
@@ -226,8 +245,12 @@ public class PubmedLiteratureConverter {
     return CanonicalLiterature.Journal.builder()
         .title(title)
         .isoAbbreviation(isoAbbreviation)
+        .medlineAbbreviation(medlineAbbreviation)
         .issn(issn)
         .issnType(issnType)
+        .issnLinking(issnLinking)
+        .nlmUniqueId(nlmUniqueId)
+        .citedMedium(citedMedium)
         .volume(volume)
         .issue(issue)
         .country(country)
@@ -313,10 +336,12 @@ public class PubmedLiteratureConverter {
   private CanonicalLiterature.PublicationDates extractPublicationDates(PubmedLiterature article) {
     LocalDate publishedDate = extractPublicationDate(article);
 
-    // 从 History 提取 received、accepted、revised 日期
+    // 从 History 提取 received、accepted 日期
     LocalDate receivedDate = extractHistoryDate(article, "received");
     LocalDate acceptedDate = extractHistoryDate(article, "accepted");
-    LocalDate revisedDate = extractHistoryDate(article, "revised");
+
+    // ✅ 修正：从 MedlineCitation.DateRevised 提取修订日期（而非 History）
+    LocalDate revisedDate = extractDateInfo(article.dateRevised());
 
     // 从 MedlineCitation 提取 dateCreated、dateCompleted
     LocalDate createdDate = extractDateInfo(article.dateCreated());
@@ -718,22 +743,98 @@ public class PubmedLiteratureConverter {
       return null;
     }
 
-    List<String> publicationTypes = citationArticle.publicationTypes();
+    List<PubmedLiterature.Article.PublicationType> publicationTypes =
+        citationArticle.publicationTypes();
     if (CollectionUtils.isEmpty(publicationTypes)) {
       return null;
     }
 
     List<CanonicalLiterature.PublicationType> types =
         publicationTypes.stream()
-            .filter(StringUtils::hasText)
+            .filter(type -> StringUtils.hasText(type.value()))
             .map(
                 type ->
                     CanonicalLiterature.PublicationType.builder()
-                        .value(type)
-                        .vocabularySource("PubMed")
+                        .value(type.value())
+                        .id(type.ui())
+                        .vocabularySource("MeSH")
                         .build())
             .collect(Collectors.toList());
 
     return types.isEmpty() ? null : types;
+  }
+
+  /**
+   * 提取作者列表完整性标志
+   *
+   * @param article 文章信息
+   * @return 作者列表是否完整，如果未指定则返回null
+   */
+  private Boolean extractAuthorsComplete(Article article) {
+    if (article == null) {
+      return null;
+    }
+    String completeYN = article.authorsCompleteYN();
+    if (!StringUtils.hasText(completeYN)) {
+      return null;
+    }
+    return "Y".equalsIgnoreCase(completeYN);
+  }
+
+  /**
+   * 提取发布历史时间线
+   *
+   * @param article PubMed文章
+   * @return 发布历史事件列表，如果没有则返回null
+   */
+  private List<CanonicalLiterature.PublicationHistoryEvent> extractPublicationHistory(
+      PubmedLiterature article) {
+    List<PubmedData.HistoryEvent> historyEvents = article.pubmedData().history();
+    if (CollectionUtils.isEmpty(historyEvents)) {
+      return null;
+    }
+
+    List<CanonicalLiterature.PublicationHistoryEvent> events =
+        historyEvents.stream()
+            .filter(event -> StringUtils.hasText(event.status()))
+            .map(
+                event ->
+                    CanonicalLiterature.PublicationHistoryEvent.builder()
+                        .status(event.status())
+                        .year(event.year())
+                        .month(event.month())
+                        .day(event.day())
+                        .build())
+            .collect(Collectors.toList());
+
+    return events.isEmpty() ? null : events;
+  }
+
+  /**
+   * 提取文献元数据
+   *
+   * @param article PubMed文章
+   * @return 文献元数据，如果所有字段都为空则返回null
+   */
+  private CanonicalLiterature.LiteratureMetadata extractMetadata(PubmedLiterature article) {
+    String indexingMethod = article.indexingMethod();
+    String owner = article.owner();
+    String status = article.status();
+    String citationSubset = article.citationSubset();
+
+    // 如果所有字段都为空，返回null
+    if (!StringUtils.hasText(indexingMethod)
+        && !StringUtils.hasText(owner)
+        && !StringUtils.hasText(status)
+        && !StringUtils.hasText(citationSubset)) {
+      return null;
+    }
+
+    return CanonicalLiterature.LiteratureMetadata.builder()
+        .indexingMethod(indexingMethod)
+        .owner(owner)
+        .status(status)
+        .citationSubset(citationSubset)
+        .build();
   }
 }

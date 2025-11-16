@@ -114,6 +114,9 @@ public class CanonicalLiterature {
   /** 多种日期信息（出版、修订、接收、接受等）。 */
   PublicationDates dates;
 
+  /** 发布历史时间线（详细的发布事件记录）。 */
+  List<PublicationHistoryEvent> publicationHistory;
+
   // ==================== 关联数据组 ====================
 
   /** 资助信息列表。 */
@@ -132,6 +135,9 @@ public class CanonicalLiterature {
 
   /** 相关项目列表（更正、撤稿、评论、转载等）。 */
   List<RelatedItem> relatedItems;
+
+  /** 文献元数据（索引方法、所有者、状态等）。 */
+  LiteratureMetadata metadata;
 
   // ==================== 内嵌值对象 ====================
 
@@ -224,11 +230,23 @@ public class CanonicalLiterature {
     /** ISO 标准缩写。 */
     String isoAbbreviation;
 
+    /** Medline 标准缩写（来自 MedlineTA）。 */
+    String medlineAbbreviation;
+
     /** ISSN 号（国际标准期刊号）。 */
     String issn;
 
     /** ISSN 类型（print=纸质, electronic=电子）。 */
     String issnType;
+
+    /** ISSN-L（Linking ISSN，用于关联同一期刊的不同版本）。 */
+    String issnLinking;
+
+    /** NLM 唯一标识符。 */
+    String nlmUniqueId;
+
+    /** 引用媒介（Print, Internet）。 */
+    String citedMedium;
 
     /** 卷号。 */
     String volume;
@@ -495,5 +513,72 @@ public class CanonicalLiterature {
 
     /** 说明信息。 */
     String description;
+  }
+
+  /**
+   * 发布历史事件。
+   *
+   * <p>记录文献在发布过程中的关键时间节点，如收稿、接受、电子发布、PubMed 收录等。
+   */
+  @Value
+  @Builder
+  @Jacksonized
+  public static class PublicationHistoryEvent {
+
+    /**
+     * 发布状态。
+     *
+     * <p>常见值：
+     *
+     * <ul>
+     *   <li>received - 收稿日期
+     *   <li>accepted - 接受日期
+     *   <li>revised - 修订日期
+     *   <li>epublish - 电子发布
+     *   <li>ppublish - 纸质发布
+     *   <li>pubmed - PubMed 收录
+     *   <li>medline - MEDLINE 索引
+     *   <li>entrez - Entrez 数据库收录
+     * </ul>
+     */
+    String status;
+
+    /** 事件发生的年份。 */
+    String year;
+
+    /** 事件发生的月份。 */
+    String month;
+
+    /** 事件发生的日期。 */
+    String day;
+
+    /** 事件发生的小时。 */
+    String hour;
+
+    /** 事件发生的分钟。 */
+    String minute;
+  }
+
+  /**
+   * 文献元数据。
+   *
+   * <p>包含文献记录的处理信息和质量标注。
+   */
+  @Value
+  @Builder
+  @Jacksonized
+  public static class LiteratureMetadata {
+
+    /** 索引方法（如 "Automated", "Manual"）。 */
+    String indexingMethod;
+
+    /** 数据记录的所有者或来源（如 "NLM", "NASA"）。 */
+    String owner;
+
+    /** 文献记录的处理状态（如 "MEDLINE", "PubMed", "In-Process"）。 */
+    String status;
+
+    /** 引文子集标识（如 "IM" 表示 Index Medicus）。 */
+    String citationSubset;
   }
 }
