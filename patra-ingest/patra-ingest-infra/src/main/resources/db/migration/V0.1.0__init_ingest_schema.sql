@@ -1,40 +1,40 @@
--- B. Ingest Module —— ing_*
--- - Unified audit fields: record_remarks / created_at/created_by/created_by_name / updated_at/updated_by/updated_by_name / version / ip_address / deleted.
--- - No physical foreign keys (integrity guaranteed at application layer across/within modules, secondary indexes created where necessary).
+-- B. Ingest 模块 —— ing_*
+-- - 统一审计字段: record_remarks / created_at/created_by/created_by_name / updated_at/updated_by/updated_by_name / version / ip_address / deleted.
+-- - 无物理外键 (跨/内模块完整性由应用层保证, 必要时创建辅助索引).
 -- - MySQL 8.0 · InnoDB · utf8mb4_0900_ai_ci
 -- ======================================================================
--- 1) Schedule Instance: An external trigger event
+-- 1) 调度实例: 外部触发事件
 -- ======================================================================
 /* ====================================================================
- * Table: ing_schedule_instance —— Schedule Instance
- * Semantics: Records the "root" of an external schedule trigger event, persisting the trigger parameters at that time.
- * Key Points:
- *  - provenance_code aligns with reg_provenance.provenance_code (logical association, no FK);
- *  - Config snapshots and expression prototypes are saved at ing_plan level.
- * Indexes: idx_sched_src(scheduler_code, scheduler_job_id, scheduler_log_id).
+ * 表: ing_schedule_instance —— 调度实例
+ * 语义: 记录外部调度触发事件的"根", 持久化当时的触发参数。
+ * 要点:
+ *  - provenance_code 与 reg_provenance.provenance_code 对齐 (逻辑关联, 无 FK);
+ *  - 配置快照和表达式原型保存在 ing_plan 层级。
+ * 索引: idx_sched_src(scheduler_code, scheduler_job_id, scheduler_log_id).
  * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_schedule_instance`
 (
-    `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK · Schedule Instance ID',
-    `scheduler_code`    VARCHAR(32)     NOT NULL DEFAULT 'XXL' COMMENT 'DICT CODE(type=ing_scheduler): Scheduler source',
-    `scheduler_job_id`  VARCHAR(64)     NULL COMMENT 'External JobID (e.g. XXL jobId)',
-    `scheduler_log_id`  VARCHAR(64)     NULL COMMENT 'External run/log ID (e.g. XXL logId)',
-    `trigger_type_code` VARCHAR(32)     NOT NULL DEFAULT 'SCHEDULE' COMMENT 'DICT CODE(type=ing_trigger_type): Trigger type',
-    `triggered_at`      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Trigger time (UTC)',
-    `trigger_params`    JSON            NULL COMMENT 'Trigger parameters (normalized)',
-    `provenance_code`   VARCHAR(64)     NOT NULL COMMENT 'Provenance code: Aligns with reg_provenance.provenance_code, e.g. pubmed/epmc/crossref',
+    `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键 · 调度实例ID',
+    `scheduler_code`    VARCHAR(32)     NOT NULL DEFAULT 'XXL' COMMENT 'DICT CODE(type=ing_scheduler): 调度器来源',
+    `scheduler_job_id`  VARCHAR(64)     NULL COMMENT '外部 JobID (例如 XXL jobId)',
+    `scheduler_log_id`  VARCHAR(64)     NULL COMMENT '外部运行/日志 ID (例如 XXL logId)',
+    `trigger_type_code` VARCHAR(32)     NOT NULL DEFAULT 'SCHEDULE' COMMENT 'DICT CODE(type=ing_trigger_type): 触发类型',
+    `triggered_at`      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '触发时间 (UTC)',
+    `trigger_params`    JSON            NULL COMMENT '触发参数 (归一化)',
+    `provenance_code`   VARCHAR(64)     NOT NULL COMMENT 'Provenance 编码: 与 reg_provenance.provenance_code 对齐, 例如 pubmed/epmc/crossref',
 
-    -- Audit fields
-    `record_remarks`    JSON            NULL COMMENT 'JSON array, remarks/change log [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
-    `version`           BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version number',
-    `ip_address`        VARBINARY(16)   NULL COMMENT 'Requester IP (binary, supports IPv4/IPv6)',
-    `created_at`        TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Creation time (UTC)',
-    `created_by`        BIGINT UNSIGNED NULL COMMENT 'Creator ID',
-    `created_by_name`   VARCHAR(100)    NULL COMMENT 'Creator name',
-    `updated_at`        TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Update time (UTC)',
-    `updated_by`        BIGINT UNSIGNED NULL COMMENT 'Updater ID',
-    `updated_by_name`   VARCHAR(100)    NULL COMMENT 'Updater name',
-    `deleted`           TINYINT(1)      NOT NULL DEFAULT 0 COMMENT 'Soft delete: 0=active, 1=deleted',
+    -- 审计字段
+    `record_remarks`    JSON            NULL COMMENT 'JSON 数组, 备注/变更日志 [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
+    `version`           BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`        VARBINARY(16)   NULL COMMENT '请求者IP (二进制, 支持 IPv4/IPv6)',
+    `created_at`        TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
+    `created_by`        BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`   VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`        TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
+    `updated_by`        BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`   VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `deleted`           TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
 
     PRIMARY KEY (`id`),
     KEY `idx_sched_src` (`scheduler_code`, `scheduler_job_id`, `scheduler_log_id`),
@@ -44,55 +44,55 @@ CREATE TABLE IF NOT EXISTS `ing_schedule_instance`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='Schedule Instance: An external trigger event (serves as root for this orchestration); no physical foreign keys';
+    COMMENT ='调度实例: 外部触发事件 (作为此编排的根); 无物理外键';
 
 
 -- ======================================================================
--- 2) Plan Blueprint: Defines overall window and slicing strategy (expression prototype, no localized conditions)
+-- 2) 计划蓝图: 定义总体窗口和分片策略 (表达式原型, 无本地化条件)
 -- ======================================================================
 /* ====================================================================
- * Table: ing_plan —— Plan Blueprint
- * Semantics: Blueprint for a collection batch, defining overall window and slicing strategy; not executed.
- * Key Points:
- *  - Logically associated with ing_schedule_instance (no FK);
- *  - Uses *_code (dict) to store operations/strategies/statuses;
- *  - plan_key serves as external idempotency/readable key (unique).
- * Indexes: uk_plan_key / idx_plan_sched / idx_plan_status / idx_plan_expr.
+ * 表: ing_plan —— 计划蓝图
+ * 语义: 采集批次的蓝图, 定义总体窗口和分片策略; 不执行。
+ * 要点:
+ *  - 与 ing_schedule_instance 逻辑关联 (无 FK);
+ *  - 使用 *_code (字典) 存储操作/策略/状态;
+ *  - plan_key 作为外部幂等/可读键 (唯一)。
+ * 索引: uk_plan_key / idx_plan_sched / idx_plan_status / idx_plan_expr.
  * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_plan`
 (
-    `id`                         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK · PlanID',
-    `schedule_instance_id`       BIGINT UNSIGNED NOT NULL COMMENT 'Associated schedule instance',
-    `plan_key`                   VARCHAR(128)    NOT NULL COMMENT 'Human-readable/external idempotency key (unique)',
+    `id`                         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键 · 计划ID',
+    `schedule_instance_id`       BIGINT UNSIGNED NOT NULL COMMENT '关联的调度实例',
+    `plan_key`                   VARCHAR(128)    NOT NULL COMMENT '人类可读/外部幂等键 (唯一)',
 
-    `provenance_code`            VARCHAR(64)     NULL COMMENT 'Redundant: Provenance code, aligns with reg_provenance.provenance_code (facilitates aggregation by source)',
-    `operation_code`             VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=ing_operation): Collection type HARVEST/BACKFILL/UPDATE/METRICS',
+    `provenance_code`            VARCHAR(64)     NULL COMMENT '冗余: Provenance 编码, 与 reg_provenance.provenance_code 对齐 (便于按来源聚合)',
+    `operation_code`             VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=ing_operation): 采集类型 HARVEST/BACKFILL/UPDATE/METRICS',
 
-    `expr_proto_hash`            CHAR(64)        NOT NULL COMMENT 'Expression prototype hash: Fingerprint calculated from "normalized prototype AST"; used for idempotency/fast comparison; one-to-one with expr_proto_snapshot',
-    `expr_proto_snapshot`        JSON            NULL COMMENT 'Expression prototype snapshot (AST, JSON): "Global expression tree" without any slice/localized conditions; used for replay and audit (derives multiple slices from this prototype)',
-    `provenance_config_snapshot` JSON            NULL COMMENT 'Provenance config snapshot (neutral model, JSON): Compiles reg_prov_* auth/pagination/time window/rate limiting/retry/batch processing configs into execution-immutable snapshot',
-    `provenance_config_hash`     CHAR(64)        NULL COMMENT 'Provenance config snapshot hash: Fingerprint calculated from normalized provenance_config_snapshot; used for reuse determination and change detection',
-    `slice_strategy_code`        VARCHAR(32)     NOT NULL COMMENT 'Slicing strategy: TIME/DATE/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/HYBRID/SINGLE etc; determines how to generate multiple slices from prototype',
-    `slice_params`               JSON            NULL COMMENT 'Slicing parameters: Details matching the slicing strategy (e.g. step size, time zone, landmark, budget limit etc); only used to generate slices, not directly in execution',
+    `expr_proto_hash`            CHAR(64)        NOT NULL COMMENT '表达式原型哈希: 从"归一化原型 AST"计算的指纹; 用于幂等/快速比较; 与 expr_proto_snapshot 一对一',
+    `expr_proto_snapshot`        JSON            NULL COMMENT '表达式原型快照 (AST, JSON): "全局表达式树"无任何分片/本地化条件; 用于重放和审计 (从此原型派生多个分片)',
+    `provenance_config_snapshot` JSON            NULL COMMENT 'Provenance 配置快照 (中性模型, JSON): 将 reg_prov_* 认证/分页/时间窗口/限速/重试/批处理配置编译为执行不可变快照',
+    `provenance_config_hash`     CHAR(64)        NULL COMMENT 'Provenance 配置快照哈希: 从归一化 provenance_config_snapshot 计算的指纹; 用于复用判断和变更检测',
+    `slice_strategy_code`        VARCHAR(32)     NOT NULL COMMENT '分片策略: TIME/DATE/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/HYBRID/SINGLE 等; 决定如何从原型生成多个分片',
+    `slice_params`               JSON            NULL COMMENT '分片参数: 与分片策略匹配的详细信息 (例如步长、时区、地标、预算限制等); 仅用于生成分片, 不直接参与执行',
 
-    `window_spec`                JSON            NOT NULL COMMENT 'Window boundary spec (nested JSON). TIME/DATE: {"strategy":"TIME|DATE","window":{"from":"2024-01-01T00:00:00Z","to":"2024-12-31T23:59:59Z"}}; ID_RANGE: {"strategy":"ID_RANGE","window":{"from":1000000,"to":2000000}}; CURSOR_LANDMARK: {"strategy":"CURSOR_LANDMARK","window":{"from":"token1","to":"token2"}}; VOLUME_BUDGET: {"strategy":"VOLUME_BUDGET","limit":100000,"unit":"RECORDS"}; SINGLE: {"strategy":"SINGLE"}',
-    -- Denormalized fields for TIME/DATE strategy query optimization (application-maintained)
-    `window_from_ts`             TIMESTAMP(6)    NULL COMMENT 'Denormalized: TIME/DATE strategy window start (inclusive, UTC). Populated by application layer when slice_strategy_code=TIME or DATE for efficient time-range queries. NULL for non-time-based strategies.',
-    `window_to_ts`               TIMESTAMP(6)    NULL COMMENT 'Denormalized: TIME/DATE strategy window end (exclusive, UTC). Populated by application layer when slice_strategy_code=TIME or DATE for efficient time-range queries. NULL for non-time-based strategies.',
+    `window_spec`                JSON            NOT NULL COMMENT '窗口边界规范 (嵌套 JSON). TIME/DATE: {"strategy":"TIME|DATE","window":{"from":"2024-01-01T00:00:00Z","to":"2024-12-31T23:59:59Z"}}; ID_RANGE: {"strategy":"ID_RANGE","window":{"from":1000000,"to":2000000}}; CURSOR_LANDMARK: {"strategy":"CURSOR_LANDMARK","window":{"from":"token1","to":"token2"}}; VOLUME_BUDGET: {"strategy":"VOLUME_BUDGET","limit":100000,"unit":"RECORDS"}; SINGLE: {"strategy":"SINGLE"}',
+    -- TIME/DATE 策略查询优化的反规范化字段 (应用层维护)
+    `window_from_ts`             TIMESTAMP(6)    NULL COMMENT '反规范化: TIME/DATE 策略窗口起始 (包含, UTC). 当 slice_strategy_code=TIME 或 DATE 时由应用层填充, 用于高效时间范围查询. 非时间策略为 NULL.',
+    `window_to_ts`               TIMESTAMP(6)    NULL COMMENT '反规范化: TIME/DATE 策略窗口结束 (不包含, UTC). 当 slice_strategy_code=TIME 或 DATE 时由应用层填充, 用于高效时间范围查询. 非时间策略为 NULL.',
 
     `status_code`                VARCHAR(32)     NOT NULL DEFAULT 'DRAFT' COMMENT 'DICT CODE(type=ing_plan_status): DRAFT/SLICING/READY/ARCHIVED',
 
-    -- Audit fields
-    `record_remarks`             JSON            NULL COMMENT 'JSON array, remarks/change log [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
-    `version`                    BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version number',
-    `ip_address`                 VARBINARY(16)   NULL COMMENT 'Requester IP (binary, supports IPv4/IPv6)',
-    `created_at`                 TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Creation time (UTC)',
-    `created_by`                 BIGINT UNSIGNED NULL COMMENT 'Creator ID',
-    `created_by_name`            VARCHAR(100)    NULL COMMENT 'Creator name',
-    `updated_at`                 TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Update time (UTC)',
-    `updated_by`                 BIGINT UNSIGNED NULL COMMENT 'Updater ID',
-    `updated_by_name`            VARCHAR(100)    NULL COMMENT 'Updater name',
-    `deleted`                    TINYINT(1)      NOT NULL DEFAULT 0 COMMENT 'Soft delete: 0=active, 1=deleted',
+    -- 审计字段
+    `record_remarks`             JSON            NULL COMMENT 'JSON 数组, 备注/变更日志 [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
+    `version`                    BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`                 VARBINARY(16)   NULL COMMENT '请求者IP (二进制, 支持 IPv4/IPv6)',
+    `created_at`                 TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
+    `created_by`                 BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`            VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`                 TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
+    `updated_by`                 BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`            VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `deleted`                    TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_plan_key` (`plan_key`),
@@ -108,43 +108,43 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='Plan Blueprint: Defines overall window and slicing strategy (expression prototype, no localized conditions); includes provenance config hash; no physical foreign keys';
+    COMMENT ='计划蓝图: 定义总体窗口和分片策略 (表达式原型, 无本地化条件); 包含 provenance 配置哈希; 无物理外键';
 
 -- ======================================================================
--- 3) Plan Slice: Generic sharding (time/ID/token/budget), parallelism and idempotency boundary
+-- 3) 计划分片: 通用分片 (时间/ID/令牌/预算), 并行和幂等边界
 -- ======================================================================
 /* ====================================================================
- * Table: ing_plan_slice —— Plan Slice
- * Semantics: Slices cut from plan's overall window and strategy; minimum unit for parallelism and idempotency; expr_* is localized expression (with boundaries).
- * Key Points: Within same plan, both (slice_no) and (slice_signature_hash) are unique; no FK.
- * Indexes: uk_slice_unique / uk_slice_sig / idx_slice_status / idx_slice_expr.
+ * 表: ing_plan_slice —— 计划分片
+ * 语义: 从计划的总体窗口和策略切割的分片; 并行和幂等的最小单元; expr_* 是本地化表达式 (带边界)。
+ * 要点: 在同一计划内, (slice_no) 和 (slice_signature_hash) 均唯一; 无 FK。
+ * 索引: uk_slice_unique / uk_slice_sig / idx_slice_status / idx_slice_expr.
  * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_plan_slice`
 (
-    `id`                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK · SliceID',
-    `plan_id`              BIGINT UNSIGNED NOT NULL COMMENT 'Associated Plan',
+    `id`                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键 · 分片ID',
+    `plan_id`              BIGINT UNSIGNED NOT NULL COMMENT '关联的计划',
 
-    `provenance_code`      VARCHAR(64)     NULL COMMENT 'Redundant: Provenance code, aligns with reg_provenance.provenance_code (accelerates filtering by source)',
+    `provenance_code`      VARCHAR(64)     NULL COMMENT '冗余: Provenance 编码, 与 reg_provenance.provenance_code 对齐 (加速按来源过滤)',
 
-    `slice_no`             INT             NOT NULL COMMENT 'Slice sequence number (0..N)',
-    `slice_signature_hash` CHAR(64)        NOT NULL COMMENT 'Slice signature hash: computed only after normalization of window_spec (boundary JSON); used for weighting/de-weighting (same boundary not generated repeatedly under same plan)',
-    `window_spec`          JSON            NOT NULL COMMENT 'Window boundary spec for this slice (narrowed from plan.window_spec). TIME/DATE: {"strategy":"TIME|DATE","window":{"from":"...","to":"..."}}; ID_RANGE: {"strategy":"ID_RANGE","window":{"from":N,"to":M}}; others similar to plan table',
-    `expr_hash`            CHAR(64)        NOT NULL COMMENT 'Localized expression hash: Fingerprint calculated from "normalized localized AST"; typically changes together with slice_signature_hash',
+    `slice_no`             INT             NOT NULL COMMENT '分片序号 (0..N)',
+    `slice_signature_hash` CHAR(64)        NOT NULL COMMENT '分片签名哈希: 仅在 window_spec (边界 JSON) 归一化后计算; 用于加权/去权 (同一计划下相同边界不重复生成)',
+    `window_spec`          JSON            NOT NULL COMMENT '此分片的窗口边界规范 (从 plan.window_spec 缩小). TIME/DATE: {"strategy":"TIME|DATE","window":{"from":"...","to":"..."}}; ID_RANGE: {"strategy":"ID_RANGE","window":{"from":N,"to":M}}; 其他类似 plan 表',
+    `expr_hash`            CHAR(64)        NOT NULL COMMENT '本地化表达式哈希: 从"归一化本地化 AST"计算的指纹; 通常与 slice_signature_hash 一起变化',
 
-    `expr_snapshot`        JSON            NULL COMMENT 'Localized expression snapshot (AST, JSON): "Directly executable expression tree" after injecting this slice boundary conditions into plan prototype; slice carries replay semantics',
+    `expr_snapshot`        JSON            NULL COMMENT '本地化表达式快照 (AST, JSON): "可直接执行的表达式树",将此分片边界条件注入计划原型后得到; 分片携带重放语义',
     `status_code`          VARCHAR(32)     NOT NULL DEFAULT 'PENDING' COMMENT 'DICT CODE(type=ing_slice_status): PENDING/ASSIGNED/FINISHED',
 
-    -- Audit fields
-    `record_remarks`       JSON            NULL COMMENT 'JSON array, remarks/change log [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
-    `version`              BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version number',
-    `ip_address`           VARBINARY(16)   NULL COMMENT 'Requester IP (binary, supports IPv4/IPv6)',
-    `created_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Creation time (UTC)',
-    `created_by`           BIGINT UNSIGNED NULL COMMENT 'Creator ID',
-    `created_by_name`      VARCHAR(100)    NULL COMMENT 'Creator name',
-    `updated_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Update time (UTC)',
-    `updated_by`           BIGINT UNSIGNED NULL COMMENT 'Updater ID',
-    `updated_by_name`      VARCHAR(100)    NULL COMMENT 'Updater name',
-    `deleted`              TINYINT(1)      NOT NULL DEFAULT 0 COMMENT 'Soft delete: 0=active, 1=deleted',
+    -- 审计字段
+    `record_remarks`       JSON            NULL COMMENT 'JSON 数组, 备注/变更日志 [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
+    `version`              BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`           VARBINARY(16)   NULL COMMENT '请求者IP (二进制, 支持 IPv4/IPv6)',
+    `created_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
+    `created_by`           BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`      VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
+    `updated_by`           BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`      VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `deleted`              TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_slice_unique` (`plan_id`, `slice_no`),
@@ -158,111 +158,111 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='Plan Slice: Generic sharding (time/ID/token/budget), is the boundary for parallelism and idempotency; no physical foreign keys';
+    COMMENT ='计划分片: 通用分片 (时间/ID/令牌/预算), 是并行和幂等的边界; 无物理外键';
 
 
 -- ======================================================================
--- 4) Task: Each slice generates ONE task (1:1 relationship); supports strong idempotency and scheduling/execution status
+-- 4) 任务: 每个分片生成一个任务 (1:1 关系); 支持强幂等性和调度/执行状态
 -- ======================================================================
 /* ====================================================================
- * Table: ing_task —— Derived Task
- * Semantics: Each slice derives EXACTLY ONE schedulable task (1:1 relationship enforced by uk_task_slice); binds source, operation, credentials and execution parameters.
- * Key Points:
- *  - Logically associated with schedule_instance/plan/slice (no FK);
- *  - Idempotent key idempotent_key is unique, ensures "same slice+operation+params+trigger context" creates only one task;
- *  - 1:1 Slice-Task relationship enforced by UNIQUE KEY uk_task_slice on slice_id.
- * Indexes: uk_task_idem / uk_task_slice / idx_task_slice_status / idx_task_src_op / idx_task_sched_at / idx_task_queue.
+ * 表: ing_task —— 派生任务
+ * 语义: 每个分片派生精确一个可调度任务 (1:1 关系通过 uk_task_slice 强制); 绑定来源、操作、凭证和执行参数。
+ * 要点:
+ *  - 与 schedule_instance/plan/slice 逻辑关联 (无 FK);
+ *  - 幂等键 idempotent_key 唯一, 确保"相同分片+操作+参数+触发上下文"仅创建一个任务;
+ *  - 1:1 分片-任务关系通过 slice_id 上的唯一键 uk_task_slice 强制。
+ * 索引: uk_task_idem / uk_task_slice / idx_task_slice_status / idx_task_src_op / idx_task_sched_at / idx_task_queue.
  * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_task`
 (
-    `id`                   BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT COMMENT 'PK · TaskID',
+    `id`                   BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT COMMENT '主键 · 任务ID',
 
-    `schedule_instance_id` BIGINT UNSIGNED  NOT NULL COMMENT 'Redundant schedule instance, facilitates aggregation',
+    `schedule_instance_id` BIGINT UNSIGNED  NOT NULL COMMENT '冗余调度实例, 便于聚合',
     `plan_id`              BIGINT UNSIGNED  NOT NULL,
     `slice_id`             BIGINT UNSIGNED  NOT NULL,
 
-    `provenance_code`      VARCHAR(64)      NOT NULL COMMENT 'Provenance code: Aligns with reg_provenance.provenance_code',
-    `operation_code`       VARCHAR(32)      NOT NULL COMMENT 'DICT CODE(type=ing_operation): Operation type HARVEST/BACKFILL/UPDATE/METRICS',
+    `provenance_code`      VARCHAR(64)      NOT NULL COMMENT 'Provenance 编码: 与 reg_provenance.provenance_code 对齐',
+    `operation_code`       VARCHAR(32)      NOT NULL COMMENT 'DICT CODE(type=ing_operation): 操作类型 HARVEST/BACKFILL/UPDATE/METRICS',
 
-    `params`               JSON             NULL COMMENT 'Task parameters (normalized)',
+    `params`               JSON             NULL COMMENT '任务参数 (归一化)',
     `idempotent_key`       CHAR(64)         NOT NULL COMMENT 'SHA256(slice_signature + expr_hash + operation + trigger + normalized(params))',
-    `expr_hash`            CHAR(64)         NOT NULL COMMENT 'Redundant: Execution expression hash',
+    `expr_hash`            CHAR(64)         NOT NULL COMMENT '冗余: 执行表达式哈希',
 
-    `priority`             TINYINT UNSIGNED NOT NULL DEFAULT 5 COMMENT '1=high→9=low',
+    `priority`             TINYINT UNSIGNED NOT NULL DEFAULT 5 COMMENT '1=高→9=低',
 
-    -- Task lease (renewal/reclaim)
-    `lease_owner`          VARCHAR(128)     NULL COMMENT 'Lease holder during execution (instance#thread)',
-    `leased_until`         TIMESTAMP(6)     NULL COMMENT 'Lease expiration time (UTC), expired considered re-claimable',
-    `lease_count`          INT UNSIGNED     NOT NULL DEFAULT 0 COMMENT 'Cumulative claim/renewal count (for monitoring/circuit breaker)',
-    `last_heartbeat_at`    TIMESTAMP(6)     NULL COMMENT 'Execution heartbeat time',
-    `retry_count`          INT UNSIGNED     NOT NULL DEFAULT 0 COMMENT 'Retry count',
-    `last_error_code`      VARCHAR(64)      NULL COMMENT 'Latest error code',
-    `last_error_msg`       VARCHAR(512)     NULL COMMENT 'Latest error message',
+    -- 任务租约 (续租/回收)
+    `lease_owner`          VARCHAR(128)     NULL COMMENT '执行期间的租约持有者 (instance#thread)',
+    `leased_until`         TIMESTAMP(6)     NULL COMMENT '租约过期时间 (UTC), 过期视为可回收',
+    `lease_count`          INT UNSIGNED     NOT NULL DEFAULT 0 COMMENT '累计声明/续租次数 (用于监控/熔断)',
+    `last_heartbeat_at`    TIMESTAMP(6)     NULL COMMENT '执行心跳时间',
+    `retry_count`          INT UNSIGNED     NOT NULL DEFAULT 0 COMMENT '重试次数',
+    `last_error_code`      VARCHAR(64)      NULL COMMENT '最新错误代码',
+    `last_error_msg`       VARCHAR(512)     NULL COMMENT '最新错误消息',
 
     `status_code`          VARCHAR(32)      NOT NULL DEFAULT 'PENDING' COMMENT 'DICT CODE(type=ing_task_status): PENDING/QUEUED/RUNNING/SUCCEEDED/FAILED',
-    `scheduled_at`         TIMESTAMP(6)     NULL COMMENT 'Planned start time',
-    `started_at`           TIMESTAMP(6)     NULL COMMENT 'Actual start time',
-    `finished_at`          TIMESTAMP(6)     NULL COMMENT 'Finish time',
+    `scheduled_at`         TIMESTAMP(6)     NULL COMMENT '计划开始时间',
+    `started_at`           TIMESTAMP(6)     NULL COMMENT '实际开始时间',
+    `finished_at`          TIMESTAMP(6)     NULL COMMENT '完成时间',
 
-    `correlation_id`       VARCHAR(64)      NULL COMMENT 'Trace/CID',
+    `correlation_id`       VARCHAR(64)      NULL COMMENT '追踪/CID',
 
-    -- Audit fields
-    `record_remarks`       JSON             NULL COMMENT 'JSON array, remarks/change log [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
-    `version`              BIGINT UNSIGNED  NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version number',
-    `ip_address`           VARBINARY(16)    NULL COMMENT 'Requester IP (binary, supports IPv4/IPv6)',
-    `created_at`           TIMESTAMP(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Creation time (UTC)',
-    `created_by`           BIGINT UNSIGNED  NULL COMMENT 'Creator ID',
-    `created_by_name`      VARCHAR(100)     NULL COMMENT 'Creator name',
-    `updated_at`           TIMESTAMP(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Update time (UTC)',
-    `updated_by`           BIGINT UNSIGNED  NULL COMMENT 'Updater ID',
-    `updated_by_name`      VARCHAR(100)     NULL COMMENT 'Updater name',
-    `deleted`              TINYINT(1)       NOT NULL DEFAULT 0 COMMENT 'Soft delete: 0=active, 1=deleted',
+    -- 审计字段
+    `record_remarks`       JSON             NULL COMMENT 'JSON 数组, 备注/变更日志 [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
+    `version`              BIGINT UNSIGNED  NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`           VARBINARY(16)    NULL COMMENT '请求者IP (二进制, 支持 IPv4/IPv6)',
+    `created_at`           TIMESTAMP(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
+    `created_by`           BIGINT UNSIGNED  NULL COMMENT '创建人ID',
+    `created_by_name`      VARCHAR(100)     NULL COMMENT '创建人姓名',
+    `updated_at`           TIMESTAMP(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
+    `updated_by`           BIGINT UNSIGNED  NULL COMMENT '更新人ID',
+    `updated_by_name`      VARCHAR(100)     NULL COMMENT '更新人姓名',
+    `deleted`              TINYINT(1)       NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
 
     PRIMARY KEY (`id`),
 
-    -- Idempotency and common retrieval indexes
+    -- 幂等性和常用检索索引
     UNIQUE KEY `uk_task_idem` (`idempotent_key`),
     UNIQUE KEY `uk_task_slice` (`slice_id`),
     KEY `idx_task_slice_status` (`slice_id`, `status_code`),
     KEY `idx_task_src_op` (`provenance_code`, `operation_code`, `status_code`),
     KEY `idx_task_sched_at` (`status_code`, `scheduled_at`),
 
-    -- Queue retrieval index: For batch pulling pending tasks
-    -- Suggested query: WHERE status_code='QUEUED' AND (leased_until IS NULL OR leased_until < NOW(6))
-    -- Fair dequeue: priority ASC (smaller value first) → scheduled_at ASC → id ASC
+    -- 队列检索索引: 用于批量拉取待处理任务
+    -- 建议查询: WHERE status_code='QUEUED' AND (leased_until IS NULL OR leased_until < NOW(6))
+    -- 公平出队: priority ASC (数值越小优先) → scheduled_at ASC → id ASC
     KEY `idx_task_queue` (`status_code`, `leased_until`, `priority`, `scheduled_at`, `id`),
 
-    -- Audit auxiliary indexes
+    -- 审计辅助索引
     KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
     KEY `idx_audit_created_by` (`created_by`),
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='Task: Each slice generates EXACTLY ONE task (1:1 relationship enforced by uk_task_slice); supports strong idempotency and scheduling/execution status; no physical foreign keys';
+    COMMENT ='任务: 每个分片精确生成一个任务 (1:1 关系通过 uk_task_slice 强制); 支持强幂等性和调度/执行状态; 无物理外键';
 
 -- ======================================================================
--- 5) Task Run (attempt): One specific attempt; failed retries/replays each add new record
+-- 5) 任务运行 (尝试): 一次具体的尝试; 失败的重试/重放各添加新记录
 -- ======================================================================
 /* ====================================================================
- * Table: ing_task_run —— Task Run (attempt)
- * Semantics: One specific attempt (first/retry/replay); failure does not overwrite task, only recorded in run.
- * Key Points: Within same task, (attempt_no) is unique; no FK.
- * Indexes: uk_run_attempt / idx_run_task_status.
+ * 表: ing_task_run —— 任务运行 (尝试)
+ * 语义: 一次具体的尝试 (首次/重试/重放); 失败不覆盖任务, 仅记录在运行中。
+ * 要点: 在同一任务内, (attempt_no) 唯一; 无 FK。
+ * 索引: uk_run_attempt / idx_run_task_status.
  * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_task_run`
 (
-    `id`               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK · RunID',
-    `task_id`          BIGINT UNSIGNED NOT NULL COMMENT 'Associated task',
-    `attempt_no`       INT UNSIGNED    NOT NULL DEFAULT 1 COMMENT 'Attempt sequence number (starts from 1)',
+    `id`               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键 · 运行ID',
+    `task_id`          BIGINT UNSIGNED NOT NULL COMMENT '关联的任务',
+    `attempt_no`       INT UNSIGNED    NOT NULL DEFAULT 1 COMMENT '尝试序号 (从 1 开始)',
 
-    `provenance_code`  VARCHAR(64)     NULL COMMENT 'Redundant: Provenance code, aligns with reg_provenance.provenance_code (for tracing and aggregation)',
-    `operation_code`   VARCHAR(32)     NULL COMMENT 'Redundant: Operation type (already in task), facilitates direct (source,op,status) statistics',
+    `provenance_code`  VARCHAR(64)     NULL COMMENT '冗余: Provenance 编码, 与 reg_provenance.provenance_code 对齐 (用于追踪和聚合)',
+    `operation_code`   VARCHAR(32)     NULL COMMENT '冗余: 操作类型 (已在 task 中), 便于直接 (source,op,status) 统计',
 
     `status_code`      VARCHAR(32)     NOT NULL DEFAULT 'PENDING' COMMENT 'DICT CODE(type=ing_task_run_status): PENDING/RUNNING/PARTIAL/SUCCEEDED/FAILED',
-    `checkpoint`       JSON            NULL COMMENT 'Run-level checkpoint (e.g. nextHint / resumeToken etc)',
-    `stats`            JSON            NULL COMMENT 'Statistics: fetched/upserted/failed/pages etc',
-    `error`            TEXT            NULL COMMENT 'Failure reason',
+    `checkpoint`       JSON            NULL COMMENT '运行级检查点 (例如 nextHint / resumeToken 等)',
+    `stats`            JSON            NULL COMMENT '统计信息: fetched/upserted/failed/pages 等',
+    `error`            TEXT            NULL COMMENT '失败原因',
 
     `started_at`       TIMESTAMP(6)    NULL,
     `finished_at`      TIMESTAMP(6)    NULL,
@@ -270,17 +270,17 @@ CREATE TABLE IF NOT EXISTS `ing_task_run`
 
     `correlation_id`   VARCHAR(64)     NULL,
 
-    -- Audit fields
-    `record_remarks`   JSON            NULL COMMENT 'JSON array, remarks/change log [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
-    `version`          BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version number',
-    `ip_address`       VARBINARY(16)   NULL COMMENT 'Requester IP (binary, supports IPv4/IPv6)',
-    `created_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Creation time (UTC)',
-    `created_by`       BIGINT UNSIGNED NULL COMMENT 'Creator ID',
-    `created_by_name`  VARCHAR(100)    NULL COMMENT 'Creator name',
-    `updated_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Update time (UTC)',
-    `updated_by`       BIGINT UNSIGNED NULL COMMENT 'Updater ID',
-    `updated_by_name`  VARCHAR(100)    NULL COMMENT 'Updater name',
-    `deleted`          TINYINT(1)      NOT NULL DEFAULT 0 COMMENT 'Soft delete: 0=active, 1=deleted',
+    -- 审计字段
+    `record_remarks`   JSON            NULL COMMENT 'JSON 数组, 备注/变更日志 [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
+    `version`          BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`       VARBINARY(16)   NULL COMMENT '请求者IP (二进制, 支持 IPv4/IPv6)',
+    `created_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
+    `created_by`       BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`  VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
+    `updated_by`       BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`  VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `deleted`          TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_run_attempt` (`task_id`, `attempt_no`),
@@ -292,58 +292,58 @@ CREATE TABLE IF NOT EXISTS `ing_task_run`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='Task Run (attempt): One specific attempt; failed retries/replays each add new record; no physical foreign keys';
+    COMMENT ='任务运行 (尝试): 一次具体的尝试; 失败的重试/重放各添加新记录; 无物理外键';
 
 -- ======================================================================
--- 6) Run Batch: Minimum accounting for page/token stepping; carries checkpoint resume and deduplication
+-- 6) 运行批次: 页/令牌步进的最小核算; 携带检查点恢复和去重
 -- ======================================================================
 /* ====================================================================
- * Table: ing_task_run_batch —— Run Batch
- * Semantics: Pagination/token stepping accounting during run execution, minimum granularity for checkpoint resume and deduplication.
- * Key Points:
- *  - Only logically associated with run/task/slice/plan (no FK);
- *  - Idempotent key idempotent_key is non-null and unique; both (run_id,batch_no) and (run_id,before_token) are unique.
- * Indexes: uk_run_batch_no / uk_run_before_tok / uk_batch_idem and status-time indexes.
+ * 表: ing_task_run_batch —— 运行批次
+ * 语义: 运行执行期间的分页/令牌步进核算, 检查点恢复和去重的最小粒度。
+ * 要点:
+ *  - 仅与 run/task/slice/plan 逻辑关联 (无 FK);
+ *  - 幂等键 idempotent_key 非空且唯一; (run_id,batch_no) 和 (run_id,before_token) 均唯一。
+ * 索引: uk_run_batch_no / uk_run_before_tok / uk_batch_idem 以及状态-时间索引。
  * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_task_run_batch`
 (
-    `id`              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK · BatchID',
-    `run_id`          BIGINT UNSIGNED NOT NULL COMMENT 'Associated Run',
+    `id`              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键 · 批次ID',
+    `run_id`          BIGINT UNSIGNED NOT NULL COMMENT '关联的运行',
 
-    `task_id`         BIGINT UNSIGNED NULL COMMENT 'Redundant · Task',
-    `slice_id`        BIGINT UNSIGNED NULL COMMENT 'Redundant · Slice',
-    `plan_id`         BIGINT UNSIGNED NULL COMMENT 'Redundant · Plan',
-    `expr_hash`       CHAR(64)        NULL COMMENT 'Redundant · Execution expression hash',
+    `task_id`         BIGINT UNSIGNED NULL COMMENT '冗余 · 任务',
+    `slice_id`        BIGINT UNSIGNED NULL COMMENT '冗余 · 分片',
+    `plan_id`         BIGINT UNSIGNED NULL COMMENT '冗余 · 计划',
+    `expr_hash`       CHAR(64)        NULL COMMENT '冗余 · 执行表达式哈希',
 
-    `provenance_code` VARCHAR(64)     NULL COMMENT 'Redundant: Provenance code (from task/run chain)',
-    `operation_code`  VARCHAR(32)     NULL COMMENT 'Redundant: Operation type (from task)',
+    `provenance_code` VARCHAR(64)     NULL COMMENT '冗余: Provenance 编码 (来自 task/run 链)',
+    `operation_code`  VARCHAR(32)     NULL COMMENT '冗余: 操作类型 (来自 task)',
 
-    `batch_no`        INT UNSIGNED    NOT NULL DEFAULT 1 COMMENT 'Batch sequence number (starts from 1, consecutive)',
-    `page_no`         INT UNSIGNED    NULL COMMENT 'Page number (offset/limit; null for token pagination)',
-    `page_size`       INT UNSIGNED    NULL COMMENT 'Page size',
+    `batch_no`        INT UNSIGNED    NOT NULL DEFAULT 1 COMMENT '批次序号 (从 1 开始, 连续)',
+    `page_no`         INT UNSIGNED    NULL COMMENT '页码 (offset/limit; token 分页时为 null)',
+    `page_size`       INT UNSIGNED    NULL COMMENT '页大小',
 
-    `before_token`    VARCHAR(512)    NULL COMMENT 'Batch start token/position (retstart/cursorMark etc)',
-    `after_token`     VARCHAR(512)    NULL COMMENT 'Batch end token/next position',
+    `before_token`    VARCHAR(512)    NULL COMMENT '批次起始令牌/位置 (retstart/cursorMark 等)',
+    `after_token`     VARCHAR(512)    NULL COMMENT '批次结束令牌/下一个位置',
 
     `idempotent_key`  CHAR(64)        NOT NULL COMMENT 'SHA256(run_id + before_token | page_no)',
     `record_count`    INT UNSIGNED    NOT NULL DEFAULT 0,
     `status_code`     VARCHAR(32)     NOT NULL DEFAULT 'RUNNING' COMMENT 'DICT CODE(type=ing_batch_status): RUNNING/SUCCEEDED/FAILED/SKIPPED',
     `committed_at`    TIMESTAMP(6)    NULL,
     `error`           TEXT            NULL,
-    `storage_key`     VARCHAR(512)    NULL COMMENT 'Object storage reference for batch payload',
+    `storage_key`     VARCHAR(512)    NULL COMMENT '批次负载的对象存储引用',
     `stats`           JSON            NULL,
 
-    -- Audit fields
-    `record_remarks`  JSON            NULL COMMENT 'JSON array, remarks/change log [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
-    `version`         BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version number',
-    `ip_address`      VARBINARY(16)   NULL COMMENT 'Requester IP (binary, supports IPv4/IPv6)',
-    `created_at`      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Creation time (UTC)',
-    `created_by`      BIGINT UNSIGNED NULL COMMENT 'Creator ID',
-    `created_by_name` VARCHAR(100)    NULL COMMENT 'Creator name',
-    `updated_at`      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Update time (UTC)',
-    `updated_by`      BIGINT UNSIGNED NULL COMMENT 'Updater ID',
-    `updated_by_name` VARCHAR(100)    NULL COMMENT 'Updater name',
-    `deleted`         TINYINT(1)      NOT NULL DEFAULT 0 COMMENT 'Soft delete: 0=active, 1=deleted',
+    -- 审计字段
+    `record_remarks`  JSON            NULL COMMENT 'JSON 数组, 备注/变更日志 [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
+    `version`         BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`      VARBINARY(16)   NULL COMMENT '请求者IP (二进制, 支持 IPv4/IPv6)',
+    `created_at`      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
+    `created_by`      BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name` VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
+    `updated_by`      BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name` VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `deleted`         TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
 
     PRIMARY KEY (`id`),
 
@@ -364,58 +364,58 @@ CREATE TABLE IF NOT EXISTS `ing_task_run_batch`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='Run Batch: Minimum accounting for page/token stepping; carries checkpoint resume and deduplication; no physical foreign keys';
+    COMMENT ='运行批次: 页/令牌步进的最小核算; 携带检查点恢复和去重; 无物理外键';
 
 -- ======================================================================
--- 7) Generic Cursor (current value): (source_code + operation + cursor_key + namespace) unique
+-- 7) 通用游标 (当前值): (source_code + operation + cursor_key + namespace) 唯一
 -- ======================================================================
 /* ====================================================================
- * Table: ing_cursor —— Current Cursor
- * Semantics: Current advancement value for a source + operation + cursor key + namespace; compatible with TIME/ID/TOKEN types.
- * Key Points:
- *  - Unique: (provenance_code, operation_code, cursor_key, namespace_scope_code, namespace_key);
- *  - Normalized values: normalized_instant / normalized_numeric facilitate sorting and range queries;
- *  - Lineage: Most recent advancement's schedule/plan/slice/task/run/batch (logical association, no FK).
- * Indexes: uk_cursor_ns / idx_cursor_src_key / idx_cursor_sort_time / idx_cursor_sort_id / idx_cursor_lineage.
+ * 表: ing_cursor —— 当前游标
+ * 语义: 来源 + 操作 + 游标键 + 命名空间的当前推进值; 兼容 TIME/ID/TOKEN 类型。
+ * 要点:
+ *  - 唯一: (provenance_code, operation_code, cursor_key, namespace_scope_code, namespace_key);
+ *  - 归一化值: normalized_instant / normalized_numeric 便于排序和范围查询;
+ *  - 血缘: 最近推进的 schedule/plan/slice/task/run/batch (逻辑关联, 无 FK)。
+ * 索引: uk_cursor_ns / idx_cursor_src_key / idx_cursor_sort_time / idx_cursor_sort_id / idx_cursor_lineage.
  * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_cursor`
 (
-    `id`                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK',
+    `id`                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
 
-    `provenance_code`      VARCHAR(64)     NOT NULL COMMENT 'Provenance code: Aligns with reg_provenance.provenance_code',
+    `provenance_code`      VARCHAR(64)     NOT NULL COMMENT 'Provenance 编码: 与 reg_provenance.provenance_code 对齐',
     `operation_code`       VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=ing_operation): HARVEST/BACKFILL/UPDATE/METRICS',
-    `cursor_key`           VARCHAR(64)     NOT NULL COMMENT 'Cursor key: updated_at/published_at/seq_id/cursor_token etc',
+    `cursor_key`           VARCHAR(64)     NOT NULL COMMENT '游标键: updated_at/published_at/seq_id/cursor_token 等',
     `namespace_scope_code` VARCHAR(32)     NOT NULL DEFAULT 'GLOBAL' COMMENT 'DICT CODE(type=ing_namespace_scope): GLOBAL/EXPR/CUSTOM',
     `namespace_key`        CHAR(64)        NOT NULL DEFAULT '0000000000000000000000000000000000000000000000000000000000000000'
-        COMMENT 'Namespace key: expr_hash or custom hash; global=all zeros',
+        COMMENT '命名空间键: expr_hash 或自定义哈希; global=全零',
 
     `cursor_type_code`     VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=ing_cursor_type): TIME/ID/TOKEN',
-    `cursor_value`         VARCHAR(1024)   NOT NULL COMMENT 'Current effective cursor value (UTC ISO-8601 / decimal string / opaque string)',
-    `observed_max_value`   VARCHAR(1024)   NULL COMMENT 'Observed maximum boundary',
+    `cursor_value`         VARCHAR(1024)   NOT NULL COMMENT '当前有效游标值 (UTC ISO-8601 / 十进制字符串 / 不透明字符串)',
+    `observed_max_value`   VARCHAR(1024)   NULL COMMENT '观察到的最大边界',
 
-    `normalized_instant`   TIMESTAMP(6)    NULL COMMENT 'Populated when cursor_type=time (UTC)',
-    `normalized_numeric`   DECIMAL(38, 0)  NULL COMMENT 'Populated when cursor_type=id',
+    `normalized_instant`   TIMESTAMP(6)    NULL COMMENT '当 cursor_type=time 时填充 (UTC)',
+    `normalized_numeric`   DECIMAL(38, 0)  NULL COMMENT '当 cursor_type=id 时填充',
 
-    `schedule_instance_id` BIGINT UNSIGNED NULL COMMENT 'Most recent advancement schedule instance',
-    `plan_id`              BIGINT UNSIGNED NULL COMMENT 'Most recent advancement associated Plan',
-    `slice_id`             BIGINT UNSIGNED NULL COMMENT 'Most recent advancement associated Slice',
-    `task_id`              BIGINT UNSIGNED NULL COMMENT 'Most recent advancement associated Task',
-    `last_run_id`          BIGINT UNSIGNED NULL COMMENT 'Most recent advancement Run',
-    `last_batch_id`        BIGINT UNSIGNED NULL COMMENT 'Most recent advancement Batch',
-    `expr_hash`            CHAR(64)        NULL COMMENT 'Expression hash used in most recent advancement',
+    `schedule_instance_id` BIGINT UNSIGNED NULL COMMENT '最近推进的调度实例',
+    `plan_id`              BIGINT UNSIGNED NULL COMMENT '最近推进关联的计划',
+    `slice_id`             BIGINT UNSIGNED NULL COMMENT '最近推进关联的分片',
+    `task_id`              BIGINT UNSIGNED NULL COMMENT '最近推进关联的任务',
+    `last_run_id`          BIGINT UNSIGNED NULL COMMENT '最近推进的运行',
+    `last_batch_id`        BIGINT UNSIGNED NULL COMMENT '最近推进的批次',
+    `expr_hash`            CHAR(64)        NULL COMMENT '最近推进使用的表达式哈希',
 
-    `version`              BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version number (only forward advancement allowed)',
+    `version`              BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号 (仅允许向前推进)',
 
-    -- Audit fields (uniformly applied to this "current value" table as well)
-    `record_remarks`       JSON            NULL COMMENT 'JSON array, remarks/change log [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
-    `ip_address`           VARBINARY(16)   NULL COMMENT 'Requester IP (binary, supports IPv4/IPv6)',
-    `created_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Creation time (UTC)',
-    `created_by`           BIGINT UNSIGNED NULL COMMENT 'Creator ID',
-    `created_by_name`      VARCHAR(100)    NULL COMMENT 'Creator name',
-    `updated_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Update time (UTC)',
-    `updated_by`           BIGINT UNSIGNED NULL COMMENT 'Updater ID',
-    `updated_by_name`      VARCHAR(100)    NULL COMMENT 'Updater name',
-    `deleted`              TINYINT(1)      NOT NULL DEFAULT 0 COMMENT 'Soft delete: 0=active, 1=deleted',
+    -- 审计字段 (统一应用于此"当前值"表)
+    `record_remarks`       JSON            NULL COMMENT 'JSON 数组, 备注/变更日志 [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
+    `ip_address`           VARBINARY(16)   NULL COMMENT '请求者IP (二进制, 支持 IPv4/IPv6)',
+    `created_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
+    `created_by`           BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`      VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
+    `updated_by`           BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`      VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `deleted`              TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
 
     PRIMARY KEY (`id`),
 
@@ -431,29 +431,29 @@ CREATE TABLE IF NOT EXISTS `ing_cursor`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='Generic Cursor·Current Value: (source_code + operation + cursor_key + namespace) unique; compatible with time/id/token; no physical foreign keys';
+    COMMENT ='通用游标·当前值: (source_code + operation + cursor_key + namespace) 唯一; 兼容 time/id/token; 无物理外键';
 
 -- ======================================================================
--- 8) Cursor Advancement Event (immutable): One event record per successful advancement; supports replay and full-chain tracing
+-- 8) 游标推进事件 (不可变): 每次成功推进一条事件记录; 支持重放和全链路追踪
 -- ======================================================================
 /* ====================================================================
- * Table: ing_cursor_event —— Cursor Advancement Event
- * Semantics: Append-only audit event; one record per successful advancement, supports replay and full-chain tracing.
- * Key Points:
- *  - Idempotent: idempotent_key is unique;
- *  - Lineage: schedule/plan/slice/task/run/batch logically associated (no FK).
- * Indexes: uk_cur_evt_idem / idx_cur_evt_timeline / idx_cur_evt_window / idx_cur_evt_instant / idx_cur_evt_numeric / idx_cur_evt_lineage.
+ * 表: ing_cursor_event —— 游标推进事件
+ * 语义: 仅追加审计事件; 每次成功推进一条记录, 支持重放和全链路追踪。
+ * 要点:
+ *  - 幂等: idempotent_key 唯一;
+ *  - 血缘: schedule/plan/slice/task/run/batch 逻辑关联 (无 FK)。
+ * 索引: uk_cur_evt_idem / idx_cur_evt_timeline / idx_cur_evt_window / idx_cur_evt_instant / idx_cur_evt_numeric / idx_cur_evt_lineage.
  * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_cursor_event`
 (
-    `id`                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK',
+    `id`                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
 
     `provenance_code`      VARCHAR(64)     NOT NULL,
     `operation_code`       VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=ing_operation): HARVEST/BACKFILL/UPDATE/METRICS',
     `cursor_key`           VARCHAR(64)     NOT NULL,
     `namespace_scope_code` VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=ing_namespace_scope): GLOBAL/EXPR/CUSTOM',
     `namespace_key`        CHAR(64)        NOT NULL DEFAULT '0000000000000000000000000000000000000000000000000000000000000000'
-        COMMENT 'Namespace key: expr_hash or custom hash; global=all zeros',
+        COMMENT '命名空间键: expr_hash 或自定义哈希; global=全零',
 
     `cursor_type_code`     VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=ing_cursor_type): TIME/ID/TOKEN',
     `prev_value`           VARCHAR(1024)   NULL,
@@ -464,12 +464,12 @@ CREATE TABLE IF NOT EXISTS `ing_cursor_event`
     `new_instant`          TIMESTAMP(6)    NULL,
     `prev_numeric`         DECIMAL(38, 0)  NULL,
     `new_numeric`          DECIMAL(38, 0)  NULL,
-    `window_from`          TIMESTAMP(6)    NULL COMMENT 'Covered window start (UTC, inclusive)',
-    `window_to`            TIMESTAMP(6)    NULL COMMENT 'Covered window end (UTC, exclusive)',
+    `window_from`          TIMESTAMP(6)    NULL COMMENT '覆盖窗口起始 (UTC, 包含)',
+    `window_to`            TIMESTAMP(6)    NULL COMMENT '覆盖窗口结束 (UTC, 不包含)',
 
     `direction_code`       VARCHAR(16)     NULL COMMENT 'DICT CODE(type=ing_cursor_direction): FORWARD/BACKFILL',
 
-    `idempotent_key`       CHAR(64)        NOT NULL COMMENT 'Event idempotency key: SHA256(source,op,key,ns_scope,ns_key,prev->new,ingestWindow,run_id,...)',
+    `idempotent_key`       CHAR(64)        NOT NULL COMMENT '事件幂等键: SHA256(source,op,key,ns_scope,ns_key,prev->new,ingestWindow,run_id,...)',
 
     `schedule_instance_id` BIGINT UNSIGNED NULL,
     `plan_id`              BIGINT UNSIGNED NULL,
@@ -479,17 +479,17 @@ CREATE TABLE IF NOT EXISTS `ing_cursor_event`
     `batch_id`             BIGINT UNSIGNED NULL,
     `expr_hash`            CHAR(64)        NULL,
 
-    -- Audit fields (event tables typically immutable; retain fields below if unified governance needed)
-    `record_remarks`       JSON            NULL COMMENT 'JSON array, remarks/change log [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
-    `version`              BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version number',
-    `ip_address`           VARBINARY(16)   NULL COMMENT 'Requester IP (binary, supports IPv4/IPv6)',
-    `created_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Creation time (UTC)',
-    `created_by`           BIGINT UNSIGNED NULL COMMENT 'Creator ID',
-    `created_by_name`      VARCHAR(100)    NULL COMMENT 'Creator name',
-    `updated_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Update time (UTC)',
-    `updated_by`           BIGINT UNSIGNED NULL COMMENT 'Updater ID',
-    `updated_by_name`      VARCHAR(100)    NULL COMMENT 'Updater name',
-    `deleted`              TINYINT(1)      NOT NULL DEFAULT 0 COMMENT 'Soft delete: 0=active, 1=deleted',
+    -- 审计字段 (事件表通常不可变; 如需统一治理保留下列字段)
+    `record_remarks`       JSON            NULL COMMENT 'JSON 数组, 备注/变更日志 [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
+    `version`              BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`           VARBINARY(16)   NULL COMMENT '请求者IP (二进制, 支持 IPv4/IPv6)',
+    `created_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
+    `created_by`           BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`      VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
+    `updated_by`           BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`      VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `deleted`              TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
 
     PRIMARY KEY (`id`),
 
@@ -506,148 +506,148 @@ CREATE TABLE IF NOT EXISTS `ing_cursor_event`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='Cursor Advancement Event (immutable): One event record per successful advancement; supports replay and full-chain tracing; no physical foreign keys';
+    COMMENT ='游标推进事件 (不可变): 每次成功推进一条事件记录; 支持重放和全链路追踪; 无物理外键';
 
 -- ======================================================================
--- Table: ing_outbox_message —— Generic Outbox (task dispatch/integration events etc)
--- Semantics: Persisted in same transaction as business write; scanned and delivered to MQ (e.g. RocketMQ) by Relay.
--- Design Points:
---  - (channel, dedup_key) unique, ensures source-side idempotency;
---  - Only scan this table for publishing, not business hot tables;
---  - partition_key recommended to use "provenance:operation" (extensible as needed, but not as independent field).
+-- 表: ing_outbox_message —— 通用发件箱 (任务调度/集成事件等)
+-- 语义: 与业务写入在同一事务中持久化; 由 Relay 扫描并投递到 MQ (例如 RocketMQ)。
+-- 设计要点:
+--  - (channel, dedup_key) 唯一, 确保源端幂等;
+--  - 仅扫描此表进行发布, 非业务热表;
+--  - partition_key 推荐使用 "provenance:operation" (按需扩展, 但不作为独立字段)。
 -- ======================================================================
 CREATE TABLE IF NOT EXISTS `ing_outbox_message`
 (
-    `id`               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK · OutboxID',
-    `aggregate_type`   VARCHAR(32)     NOT NULL COMMENT 'Aggregate type: e.g. TASK/PLAN/...; for audit and replay location',
-    `aggregate_id`     BIGINT UNSIGNED NOT NULL COMMENT 'Aggregate root ID; for task scenario=ing_task.id',
-    `channel`          VARCHAR(64)     NOT NULL COMMENT 'Logical channel=target Topic, e.g. ingest.task',
-    `op_type`          VARCHAR(32)     NOT NULL COMMENT 'Business semantic label: e.g. TASK_READY / EVENT_PUBLISHED',
-    `partition_key`    VARCHAR(128)    NOT NULL COMMENT 'Partitioning/ordering routing key; recommend "provenance:operation"; for ordered delivery or partition rate limiting e.g. PUBMED:HARVEST',
-    `dedup_key`        VARCHAR(128)    NOT NULL COMMENT 'Idempotency key; for task=ing_task.idempotent_key; (channel, dedup_key) unique',
-    `payload_json`     JSON            NOT NULL COMMENT 'Minimal necessary payload (JSON): taskId/sliceKey/planKey/provenance/operation/endpoint/priority/notBefore etc; large fields not enqueued',
-    `headers_json`     JSON            NULL COMMENT 'Extension headers (JSON): correlationId etc',
-    `not_before`       TIMESTAMP(6)    NULL COMMENT 'Earliest publishable time (UTC): NULL=publishable anytime; for scheduled/delayed publishing',
-    `published_at`     TIMESTAMP(6)    NULL COMMENT 'Successful publish timestamp (UTC), set when status transitions to PUBLISHED',
+    `id`               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键 · OutboxID',
+    `aggregate_type`   VARCHAR(32)     NOT NULL COMMENT '聚合类型: 例如 TASK/PLAN/...; 用于审计和重放定位',
+    `aggregate_id`     BIGINT UNSIGNED NOT NULL COMMENT '聚合根ID; 任务场景=ing_task.id',
+    `channel`          VARCHAR(64)     NOT NULL COMMENT '逻辑通道=目标 Topic, 例如 ingest.task',
+    `op_type`          VARCHAR(32)     NOT NULL COMMENT '业务语义标签: 例如 TASK_READY / EVENT_PUBLISHED',
+    `partition_key`    VARCHAR(128)    NOT NULL COMMENT '分区/排序路由键; 推荐 "provenance:operation"; 用于有序投递或分区限速, 例如 PUBMED:HARVEST',
+    `dedup_key`        VARCHAR(128)    NOT NULL COMMENT '幂等键; 任务=ing_task.idempotent_key; (channel, dedup_key) 唯一',
+    `payload_json`     JSON            NOT NULL COMMENT '最小必要负载 (JSON): taskId/sliceKey/planKey/provenance/operation/endpoint/priority/notBefore 等; 大字段不入队',
+    `headers_json`     JSON            NULL COMMENT '扩展头 (JSON): correlationId 等',
+    `not_before`       TIMESTAMP(6)    NULL COMMENT '最早可发布时间 (UTC): NULL=任何时候可发布; 用于计划/延迟发布',
+    `published_at`     TIMESTAMP(6)    NULL COMMENT '成功发布时间戳 (UTC), 当状态转换为 PUBLISHED 时设置',
 
-    `status_code`      VARCHAR(16)     NOT NULL DEFAULT 'PENDING' COMMENT 'Publishing status: PENDING/PUBLISHING/PUBLISHED/FAILED/DEAD',
-    `retry_count`      INT UNSIGNED    NOT NULL DEFAULT 0 COMMENT 'Publishing retry count (incremented on failure)',
-    `next_retry_at`    TIMESTAMP(6)    NULL COMMENT 'Next publishing attempt time (UTC), used with backoff curve',
-    `error_code`       VARCHAR(64)     NULL COMMENT 'Latest publishing error code',
-    `error_msg`        VARCHAR(512)    NULL COMMENT 'Latest publishing error details',
+    `status_code`      VARCHAR(16)     NOT NULL DEFAULT 'PENDING' COMMENT '发布状态: PENDING/PUBLISHING/PUBLISHED/FAILED/DEAD',
+    `retry_count`      INT UNSIGNED    NOT NULL DEFAULT 0 COMMENT '发布重试次数 (失败时递增)',
+    `next_retry_at`    TIMESTAMP(6)    NULL COMMENT '下次发布尝试时间 (UTC), 配合退避曲线使用',
+    `error_code`       VARCHAR(64)     NULL COMMENT '最新发布错误代码',
+    `error_msg`        VARCHAR(512)    NULL COMMENT '最新发布错误详情',
 
-    `pub_lease_owner`  VARCHAR(128)    NULL COMMENT 'Publisher lease holder (instance ID or workerId), prevents concurrent publishing on same row',
-    `pub_leased_until` TIMESTAMP(6)    NULL COMMENT 'Publisher lease expiration (UTC), expired can be taken over by other publishers',
+    `pub_lease_owner`  VARCHAR(128)    NULL COMMENT '发布者租约持有者 (实例ID或workerId), 防止同行并发发布',
+    `pub_leased_until` TIMESTAMP(6)    NULL COMMENT '发布者租约过期时间 (UTC), 过期可被其他发布者接管',
 
-    -- Audit fields
-    `record_remarks`   JSON            NULL COMMENT 'JSON array, remarks/change log [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
-    `version`          BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version number',
-    `ip_address`       VARBINARY(16)   NULL COMMENT 'Requester IP (binary, supports IPv4/IPv6)',
-    `created_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Creation time (UTC)',
-    `created_by`       BIGINT UNSIGNED NULL COMMENT 'Creator ID',
-    `created_by_name`  VARCHAR(100)    NULL COMMENT 'Creator name',
-    `updated_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Update time (UTC)',
-    `updated_by`       BIGINT UNSIGNED NULL COMMENT 'Updater ID',
-    `updated_by_name`  VARCHAR(100)    NULL COMMENT 'Updater name',
-    `deleted`          TINYINT(1)      NOT NULL DEFAULT 0 COMMENT 'Soft delete: 0=active, 1=deleted',
+    -- 审计字段
+    `record_remarks`   JSON            NULL COMMENT 'JSON 数组, 备注/变更日志 [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
+    `version`          BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`       VARBINARY(16)   NULL COMMENT '请求者IP (二进制, 支持 IPv4/IPv6)',
+    `created_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
+    `created_by`       BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`  VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
+    `updated_by`       BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`  VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `deleted`          TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
 
     PRIMARY KEY (`id`),
 
-    -- Source-side deduplication: dedup_key must be unique within same channel
+    -- 源端去重: dedup_key 在同一通道内必须唯一
     UNIQUE KEY `uk_outbox_channel_dedup` (`channel`, `dedup_key`),
-    -- Lightweight scan index: Batch publishing by status+time cursor
+    -- 轻量扫描索引: 按状态+时间游标批量发布
     KEY `idx_outbox_status_time` (`status_code`, `not_before`, `id`),
-    -- Ordered/partitioned publishing and replay (controls concurrency or ordering by channel + partition_key)
+    -- 有序/分区发布和重放 (通过 channel + partition_key 控制并发或排序)
     KEY `idx_outbox_partition` (`channel`, `partition_key`, `status_code`),
-    -- Publisher lease reclaim (for reclaiming expired leases when multiple Relays run in parallel)
+    -- 发布者租约回收 (用于多个 Relay 并行运行时回收过期租约)
     KEY `idx_outbox_lease` (`status_code`, `pub_leased_until`),
-    -- Optimized indexes for UNION ALL query pattern (V2.0 enhancement)
-    KEY `idx_pending_relay` (`channel`, `status_code`, `not_before`, `id`) COMMENT 'Optimized for PENDING message relay query (UNION ALL first subquery)',
-    KEY `idx_publishing_lease` (`channel`, `status_code`, `pub_leased_until`, `id`) COMMENT 'Optimized for PUBLISHING message with expired lease query (UNION ALL second subquery)',
-    -- Archive/reconciliation convenience
+    -- UNION ALL 查询模式优化索引 (V2.0 增强)
+    KEY `idx_pending_relay` (`channel`, `status_code`, `not_before`, `id`) COMMENT '优化 PENDING 消息中继查询 (UNION ALL 第一子查询)',
+    KEY `idx_publishing_lease` (`channel`, `status_code`, `pub_leased_until`, `id`) COMMENT '优化 PUBLISHING 过期租约消息查询 (UNION ALL 第二子查询)',
+    -- 归档/对账便利
     KEY `idx_outbox_created` (`created_at`),
     KEY `idx_outbox_deleted_upd` (`deleted`, `updated_at`)
 )
-    ENGINE = InnoDB COMMENT ='Outbox: Generic outbound message table (unified management of task dispatch/integration events; same transaction as business write; scanned and delivered to MQ by Relay)';
+    ENGINE = InnoDB COMMENT ='发件箱: 通用出站消息表 (统一管理任务调度/集成事件; 与业务写入同一事务; 由 Relay 扫描并投递到 MQ)';
 
 -- ======================================================================
--- Table: ing_outbox_relay_log —— Outbox Relay Execution Logs
--- Semantics: Immutable audit trail for every relay attempt; tracks publish success/failure, timing, errors, and retry scheduling.
--- Design Points:
---  - One record per relay attempt (multiple attempts for same message if retries occur);
---  - Denormalizes channel, partition_key from ing_outbox_message for query efficiency;
---  - Supports troubleshooting ("show all attempts for this message"), batch-level statistics, and monitoring/alerting.
+-- 表: ing_outbox_relay_log —— Outbox 中继执行日志
+-- 语义: 每次中继尝试的不可变审计跟踪; 追踪发布成功/失败、时序、错误和重试调度。
+-- 设计要点:
+--  - 每次中继尝试一条记录 (如果发生重试, 同一消息有多次尝试);
+--  - 从 ing_outbox_message 反规范化 channel, partition_key 以提高查询效率;
+--  - 支持故障排除 ("显示此消息的所有尝试")、批次级统计和监控/告警。
 -- ======================================================================
 CREATE TABLE IF NOT EXISTS `ing_outbox_relay_log`
 (
-    `id`               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK · Relay log ID',
+    `id`               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键 · 中继日志ID',
 
-    -- Core references
-    `message_id`       BIGINT UNSIGNED NOT NULL COMMENT 'Reference to ing_outbox_message.id (FK-like, application-enforced)',
-    `relay_batch_id`   VARCHAR(50)     NOT NULL COMMENT 'Relay batch identifier (format: yyyyMMddHHmmss-xxxxxxxx), groups logs from same job execution',
+    -- 核心引用
+    `message_id`       BIGINT UNSIGNED NOT NULL COMMENT '引用 ing_outbox_message.id (类FK, 应用层强制)',
+    `relay_batch_id`   VARCHAR(50)     NOT NULL COMMENT '中继批次标识符 (格式: yyyyMMddHHmmss-xxxxxxxx), 将来自同一作业执行的日志分组',
 
-    -- Relay context (denormalized for query efficiency)
-    `channel`          VARCHAR(64)     NOT NULL COMMENT 'Message channel (denormalized from ing_outbox_message for query efficiency)',
-    `partition_key`    VARCHAR(128)    NULL COMMENT 'Partition key (denormalized from ing_outbox_message for analysis)',
-    `lease_owner`      VARCHAR(128)    NULL COMMENT 'Lease owner identifier (host-jobId-threadId-uuid format)',
-    `attempt_number`   INT UNSIGNED    NOT NULL COMMENT 'Attempt number for this message (1-based, increments on retry)',
+    -- 中继上下文 (为查询效率反规范化)
+    `channel`          VARCHAR(64)     NOT NULL COMMENT '消息通道 (从 ing_outbox_message 反规范化以提高查询效率)',
+    `partition_key`    VARCHAR(128)    NULL COMMENT '分区键 (从 ing_outbox_message 反规范化用于分析)',
+    `lease_owner`      VARCHAR(128)    NULL COMMENT '租约持有者标识符 (格式: host-jobId-threadId-uuid)',
+    `attempt_number`   INT UNSIGNED    NOT NULL COMMENT '此消息的尝试编号 (从1开始, 重试时递增)',
 
-    -- Relay result
-    `relay_status`     VARCHAR(16)     NOT NULL COMMENT 'Relay execution status: PUBLISHED (success) / DEFERRED (retry) / FAILED (permanent) / LEASE_MISSED (conflict)',
+    -- 中继结果
+    `relay_status`     VARCHAR(16)     NOT NULL COMMENT '中继执行状态: PUBLISHED (成功) / DEFERRED (重试) / FAILED (永久失败) / LEASE_MISSED (冲突)',
 
-    -- Error details (NULL for success)
-    `error_code`       VARCHAR(50)     NULL COMMENT 'Error code if relay failed (e.g., NETWORK_TIMEOUT, BROKER_UNAVAILABLE), NULL for success',
-    `error_message`    TEXT            NULL COMMENT 'Error details if relay failed (truncated to 512 chars), NULL for success',
-    `error_kind`       VARCHAR(16)     NULL COMMENT 'Error classification: FATAL (non-retryable) or TRANSIENT (retryable), NULL for success',
+    -- 错误详情 (成功时为 NULL)
+    `error_code`       VARCHAR(50)     NULL COMMENT '中继失败时的错误代码 (例如, NETWORK_TIMEOUT, BROKER_UNAVAILABLE), 成功时为 NULL',
+    `error_message`    TEXT            NULL COMMENT '中继失败时的错误详情 (截断为 512 字符), 成功时为 NULL',
+    `error_kind`       VARCHAR(16)     NULL COMMENT '错误分类: FATAL (不可重试) 或 TRANSIENT (可重试), 成功时为 NULL',
 
-    -- Timing fields
-    `started_at`       TIMESTAMP(6)    NOT NULL COMMENT 'Relay start timestamp (UTC)',
-    `completed_at`     TIMESTAMP(6)    NOT NULL COMMENT 'Relay completion timestamp (UTC)',
-    `duration_ms`      INT UNSIGNED    NOT NULL COMMENT 'Relay execution duration in milliseconds (completedAt - startedAt)',
+    -- 时序字段
+    `started_at`       TIMESTAMP(6)    NOT NULL COMMENT '中继开始时间戳 (UTC)',
+    `completed_at`     TIMESTAMP(6)    NOT NULL COMMENT '中继完成时间戳 (UTC)',
+    `duration_ms`      INT UNSIGNED    NOT NULL COMMENT '中继执行持续时间(毫秒) (completedAt - startedAt)',
 
-    -- Next retry scheduling (only for DEFERRED status)
-    `next_retry_at`    TIMESTAMP(6)    NULL COMMENT 'Next retry timestamp (UTC), only present for DEFERRED status',
+    -- 下次重试调度 (仅用于 DEFERRED 状态)
+    `next_retry_at`    TIMESTAMP(6)    NULL COMMENT '下次重试时间戳 (UTC), 仅在 DEFERRED 状态时存在',
 
-    -- Standard audit fields
-    `record_remarks`   JSON            NULL COMMENT 'JSON array, remarks/change log',
-    `version`          BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version number',
-    `ip_address`       VARBINARY(16)   NULL COMMENT 'Requester IP (binary, supports IPv4/IPv6)',
-    `created_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Creation time (UTC)',
-    `created_by`       BIGINT UNSIGNED NULL COMMENT 'Creator ID',
-    `created_by_name`  VARCHAR(100)    NULL COMMENT 'Creator name',
-    `updated_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Update time (UTC)',
-    `updated_by`       BIGINT UNSIGNED NULL COMMENT 'Updater ID',
-    `updated_by_name`  VARCHAR(100)    NULL COMMENT 'Updater name',
-    `deleted`          TINYINT(1)      NOT NULL DEFAULT 0 COMMENT 'Soft delete: 0=active, 1=deleted',
+    -- 标准审计字段
+    `record_remarks`   JSON            NULL COMMENT 'JSON 数组, 备注/变更日志',
+    `version`          BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`       VARBINARY(16)   NULL COMMENT '请求者IP (二进制, 支持 IPv4/IPv6)',
+    `created_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
+    `created_by`       BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`  VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
+    `updated_by`       BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`  VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `deleted`          TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
 
     PRIMARY KEY (`id`),
 
-    -- Query by message ID (for troubleshooting: "show all attempts for this message")
+    -- 按消息ID查询 (用于故障排除: "显示此消息的所有尝试")
     INDEX `idx_message_id` (`message_id`, `started_at` DESC)
-        COMMENT 'Query logs by message (newest first)',
+        COMMENT '按消息查询日志 (最新优先)',
 
-    -- Query by batch ID (for batch-level statistics)
+    -- 按批次ID查询 (用于批次级统计)
     INDEX `idx_batch_id` (`relay_batch_id`)
-        COMMENT 'Query logs by relay batch',
+        COMMENT '按中继批次查询日志',
 
-    -- Query by channel and time range (for monitoring dashboards)
+    -- 按通道和时间范围查询 (用于监控仪表板)
     INDEX `idx_channel_time` (`channel`, `started_at`)
-        COMMENT 'Query logs by channel and time range',
+        COMMENT '按通道和时间范围查询日志',
 
-    -- Query by status (for alerting: "show recent failures")
+    -- 按状态查询 (用于告警: "显示最近失败")
     INDEX `idx_status` (`relay_status`, `started_at`)
-        COMMENT 'Query logs by status',
+        COMMENT '按状态查询日志',
 
-    -- Archive/cleanup convenience
+    -- 归档/清理便利
     INDEX `idx_created_at` (`created_at`)
-        COMMENT 'Archive old logs by creation time',
+        COMMENT '按创建时间归档旧日志',
 
     INDEX `idx_deleted_upd` (`deleted`, `updated_at`)
-        COMMENT 'Soft delete support'
+        COMMENT '软删除支持'
 
-    -- Note: Foreign key constraint intentionally omitted for performance
-    -- Referential integrity enforced at application layer
+    -- 注意: 故意省略外键约束以提高性能
+    -- 引用完整性在应用层强制
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='Outbox relay execution logs - immutable audit trail for every relay attempt';
+    COMMENT ='Outbox 中继执行日志 - 每次中继尝试的不可变审计跟踪';

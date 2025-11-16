@@ -1,35 +1,35 @@
 /* ====================================================================
- * Migration: V1.1.0 - Complete Seed Data for Registry
+ * 迁移: V1.1.0 - Registry 完整种子数据
  * ====================================================================
- * Purpose: Consolidated initialization data for all supported provenances
- *          (PubMed, EPMC, CrossRef) and their expression configurations.
+ * 目的: 为所有支持的数据源 (PubMed, EPMC, CrossRef) 及其表达式配置
+ *       提供统一的初始化数据
  *
- * Consolidation History:
- *   - Merged from: V1.1.0~V1.1.3 (original seed scripts)
- *   - Applied fixes from: V1.1.4 (entrez_date DATE type)
- *   - Integrated additions from: V1.1.5 (publication_date support)
- *   - Integrated additions from: V1.1.6 (pagination configuration)
+ * 合并历史:
+ *   - 合并自: V1.1.0~V1.1.3 (原始种子脚本)
+ *   - 应用修复自: V1.1.4 (entrez_date DATE 类型)
+ *   - 集成新增自: V1.1.5 (publication_date 支持)
+ *   - 集成新增自: V1.1.6 (分页配置)
  *
- * Structure:
- *   Part 1: Provenance base data (reg_provenance, window, pagination configs)
- *   Part 2: Unified field dictionary (reg_expr_field_dict)
- *   Part 3: PubMed expression configuration
- *   Part 4: EPMC expression configuration
- *   Part 5: CrossRef expression configuration
+ * 结构:
+ *   第1部分: Provenance 基础数据 (reg_provenance, 窗口, 分页配置)
+ *   第2部分: 统一字段字典 (reg_expr_field_dict)
+ *   第3部分: PubMed 表达式配置
+ *   第4部分: EPMC 表达式配置
+ *   第5部分: CrossRef 表达式配置
  *
- * Key Assumptions:
- *   - Operation scope = ALL
- *   - Global scope = endpoint_name IS NULL
- *   - Effective from = 2025-09-01 / 2025-10-14 (UTC)
+ * 关键假设:
+ *   - 操作范围 = ALL
+ *   - 全局范围 = endpoint_name IS NULL
+ *   - 生效时间 = 2025-09-01 / 2025-10-14 (UTC)
  *   - lifecycle_status_code = 'ACTIVE'
  * ==================================================================== */
 
 
 /* ====================================================================
- * Part 1: Provenance Base Data
+ * 第1部分: Provenance 基础数据
  * ==================================================================== */
 
--- 1.1) Register three provenances: PubMed, EPMC, CrossRef
+-- 1.1) 注册三个数据源: PubMed, EPMC, CrossRef
 INSERT INTO patra_registry.`reg_provenance`
 (provenance_code, provenance_name, base_url_default, timezone_default,
  docs_url, is_active, lifecycle_status_code, record_remarks,
@@ -52,7 +52,7 @@ VALUES
      NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0, INET6_ATON('192.168.1.10'), 0);
 
 
--- 1.2) PubMed window & offset configuration
+-- 1.2) PubMed 窗口与偏移配置
 INSERT INTO patra_registry.reg_prov_window_offset_cfg
 (id, provenance_id, operation_type, effective_from, effective_to,
  window_mode_code, window_size_value, window_size_unit_code, calendar_align_to,
@@ -72,7 +72,7 @@ VALUES
      NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0, INET6_ATON('192.168.1.20'), 0);
 
 
--- 1.3) PubMed pagination configuration (merged from V1.1.6)
+-- 1.3) PubMed 分页配置 (合并自 V1.1.6)
 INSERT INTO patra_registry.reg_prov_pagination_cfg
 (provenance_id, operation_type, effective_from, effective_to,
  pagination_mode_code, page_size_value, max_pages_per_execution,
@@ -89,10 +89,10 @@ VALUES
 
 
 /* ====================================================================
- * Part 2: Unified Field Dictionary (Source-Agnostic)
+ * 第2部分: 统一字段字典 (数据源无关)
  * ==================================================================== */
 
--- 2.1) PubMed-specific fields
+-- 2.1) PubMed 特定字段
 INSERT INTO patra_registry.reg_expr_field_dict
 (id, field_key, display_name, description, data_type_code, cardinality_code,
  exposable, is_date, record_remarks, version, ip_address,
@@ -113,7 +113,7 @@ VALUES
      NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0);
 
 
--- 2.2) Shared fields (EPMC & CrossRef & PubMed)
+-- 2.2) 共享字段 (EPMC & CrossRef & PubMed)
 INSERT INTO patra_registry.reg_expr_field_dict
 (id, field_key, display_name, description, data_type_code, cardinality_code,
  exposable, is_date, record_remarks, version, ip_address,
@@ -135,10 +135,10 @@ VALUES
 
 
 /* ====================================================================
- * Part 3: PubMed Expression Configuration
+ * 第3部分: PubMed 表达式配置
  * ==================================================================== */
 
--- 3.1) Field capabilities for PubMed
+-- 3.1) PubMed 字段能力
 INSERT INTO patra_registry.reg_prov_expr_capability
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, effective_from, effective_to,
@@ -194,7 +194,7 @@ VALUES
      NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0);
 
 
--- 3.2) Render rules for PubMed
+-- 3.2) PubMed 渲染规则
 INSERT INTO patra_registry.reg_prov_expr_render_rule
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, op_code, match_type_code, negated, value_type_code, emit_type_code,
@@ -260,7 +260,7 @@ VALUES
      NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0);
 
 
--- 3.3) Global API parameter mappings for PubMed
+-- 3.3) PubMed 全局 API 参数映射
 INSERT INTO patra_registry.reg_prov_api_param_map
 (id, provenance_id, operation_type, lifecycle_status_code,
  endpoint_name, std_key, provider_param_name, transform_code, notes,
@@ -319,10 +319,10 @@ VALUES
 
 
 /* ====================================================================
- * Part 4: EPMC Expression Configuration
+ * 第4部分: EPMC 表达式配置
  * ==================================================================== */
 
--- 4.1) Field capabilities for EPMC
+-- 4.1) EPMC 字段能力
 INSERT INTO patra_registry.reg_prov_expr_capability
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, effective_from, effective_to,
@@ -362,7 +362,7 @@ VALUES
      NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0);
 
 
--- 4.2) Render rules for EPMC
+-- 4.2) EPMC 渲染规则
 INSERT INTO patra_registry.reg_prov_expr_render_rule
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, op_code, match_type_code, negated, value_type_code, emit_type_code,
@@ -413,7 +413,7 @@ VALUES
      NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0);
 
 
--- 4.3) Global API parameter mappings for EPMC
+-- 4.3) EPMC 全局 API 参数映射
 INSERT INTO patra_registry.reg_prov_api_param_map
 (id, provenance_id, operation_type, lifecycle_status_code,
  endpoint_name, std_key, provider_param_name, transform_code, notes,
@@ -439,10 +439,10 @@ VALUES
 
 
 /* ====================================================================
- * Part 5: CrossRef Expression Configuration
+ * 第5部分: CrossRef 表达式配置
  * ==================================================================== */
 
--- 5.1) Field capabilities for CrossRef
+-- 5.1) CrossRef 字段能力
 INSERT INTO patra_registry.reg_prov_expr_capability
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, effective_from, effective_to,
@@ -482,7 +482,7 @@ VALUES
      NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0);
 
 
--- 5.2) Render rules for CrossRef
+-- 5.2) CrossRef 渲染规则
 INSERT INTO patra_registry.reg_prov_expr_render_rule
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, op_code, match_type_code, negated, value_type_code, emit_type_code,
@@ -533,7 +533,7 @@ VALUES
      NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0);
 
 
--- 5.3) Global API parameter mappings for CrossRef
+-- 5.3) CrossRef 全局 API 参数映射
 INSERT INTO patra_registry.reg_prov_api_param_map
 (id, provenance_id, operation_type, lifecycle_status_code,
  endpoint_name, std_key, provider_param_name, transform_code, notes,
@@ -575,5 +575,5 @@ VALUES
 
 
 /* ====================================================================
- * End of V1.1.0 Consolidated Seed Data
+ * V1.1.0 合并种子数据结束
  * ==================================================================== */
