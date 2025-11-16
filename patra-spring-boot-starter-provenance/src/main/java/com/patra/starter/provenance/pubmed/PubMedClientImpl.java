@@ -3,6 +3,9 @@ package com.patra.starter.provenance.pubmed;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.patra.common.enums.ProvenanceCode;
+import com.patra.common.provenance.api.constants.PubMedOperation;
+import com.patra.common.provenance.api.values.pubmed.RetMode;
+import com.patra.common.provenance.api.values.pubmed.RetType;
 import com.patra.starter.provenance.common.config.DefaultConfigProvider;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
@@ -75,13 +78,12 @@ public class PubMedClientImpl implements PubMedClient {
   public ESearchResponse esearch(ESearchRequest request, ProvenanceConfig config) {
     if (metrics != null) {
       // 当Micrometer工具可用时捕获延迟和成功指标
-      return metrics.recordApiCall(PROVENANCE, "esearch", () -> executeESearch(request, config));
+      return metrics.recordApiCall(PROVENANCE, PubMedOperation.ESEARCH.getOperationName(), () -> executeESearch(request, config));
     }
     return executeESearch(request, config);
   }
 
   private ESearchResponse executeESearch(ESearchRequest request, ProvenanceConfig config) {
-    String path = "/esearch.fcgi";
     Map<String, String> queryParams = request.toQueryParams();
 
     String body =
@@ -89,7 +91,7 @@ public class PubMedClientImpl implements PubMedClient {
             .get()
             .uri(
                 uriBuilder -> {
-                  uriBuilder.path(path);
+                  uriBuilder.path(PubMedOperation.ESEARCH.getEndpoint());
                   queryParams.forEach(uriBuilder::queryParam);
                   return uriBuilder.build();
                 })
@@ -100,7 +102,7 @@ public class PubMedClientImpl implements PubMedClient {
       return objectMapper.readValue(body, ESearchResponse.class);
     } catch (Exception ex) {
       throw new ProvenanceClientException(
-          PROVENANCE.getCode(), "esearch", null, null, body, "解析JSON响应失败", ex);
+          PROVENANCE.getCode(), PubMedOperation.ESEARCH.getOperationName(), null, null, body, "解析JSON响应失败", ex);
     }
   }
 
@@ -115,7 +117,7 @@ public class PubMedClientImpl implements PubMedClient {
   public EFetchResponse efetch(EFetchRequest request, ProvenanceConfig config) {
     if (metrics != null) {
       // Capture latency and success metrics whenever Micrometer instrumentation is available.
-      return metrics.recordApiCall(PROVENANCE, "efetch", () -> executeEFetch(request, config));
+      return metrics.recordApiCall(PROVENANCE, PubMedOperation.EFETCH.getOperationName(), () -> executeEFetch(request, config));
     }
     return executeEFetch(request, config);
   }
@@ -124,7 +126,6 @@ public class PubMedClientImpl implements PubMedClient {
     ProvenanceConfig finalConfig =
         config != null ? config : configProvider.getPubMedDefaultConfig();
 
-    String path = "/efetch.fcgi";
     Map<String, String> queryParams = request.toQueryParams();
 
     String body =
@@ -132,7 +133,7 @@ public class PubMedClientImpl implements PubMedClient {
             .get()
             .uri(
                 uriBuilder -> {
-                  uriBuilder.path(path);
+                  uriBuilder.path(PubMedOperation.EFETCH.getEndpoint());
                   queryParams.forEach(uriBuilder::queryParam);
                   return uriBuilder.build();
                 })
@@ -141,18 +142,26 @@ public class PubMedClientImpl implements PubMedClient {
 
     try {
       String retmode = request.retmode();
-      if (retmode == null || retmode.equalsIgnoreCase("xml")) {
+      // 解析 retmode（如果有提供）
+      RetMode mode = retmode != null ? RetMode.fromStringOrDefault(retmode, RetMode.XML) : RetMode.XML;
+
+      if (mode == RetMode.XML) {
         return EFetchResponse.fromXml(xmlMapper, body);
       }
-      if ("uilist".equalsIgnoreCase(request.rettype()) && retmode.equalsIgnoreCase("text")) {
+
+      // 处理 TEXT 格式的 uilist
+      String rettype = request.rettype();
+      RetType type = rettype != null ? RetType.fromStringOrDefault(rettype, null) : null;
+      if (type == RetType.UILIST && mode == RetMode.TEXT) {
         return EFetchResponse.fromUidListText(body);
       }
+
       throw new IllegalArgumentException(
           "Unsupported EFetch combination: rettype=%s, retmode=%s"
               .formatted(request.rettype(), retmode));
     } catch (IOException | IllegalArgumentException ex) {
       throw new ProvenanceClientException(
-          PROVENANCE.getCode(), "efetch", null, null, body, "解析EFetch响应失败", ex);
+          PROVENANCE.getCode(), PubMedOperation.EFETCH.getOperationName(), null, null, body, "解析EFetch响应失败", ex);
     }
   }
 
@@ -167,7 +176,7 @@ public class PubMedClientImpl implements PubMedClient {
   public EPostResponse epost(EPostRequest request, ProvenanceConfig config) {
     if (metrics != null) {
       // Capture latency and success metrics whenever Micrometer instrumentation is available.
-      return metrics.recordApiCall(PROVENANCE, "epost", () -> executeEPost(request, config));
+      return metrics.recordApiCall(PROVENANCE, PubMedOperation.EPOST.getOperationName(), () -> executeEPost(request, config));
     }
     return executeEPost(request, config);
   }
@@ -176,7 +185,6 @@ public class PubMedClientImpl implements PubMedClient {
     ProvenanceConfig finalConfig =
         config != null ? config : configProvider.getPubMedDefaultConfig();
 
-    String path = "/epost.fcgi";
     Map<String, String> formParams = request.toQueryParams();
 
     // 转换为 MultiValueMap 用于表单提交
@@ -186,7 +194,7 @@ public class PubMedClientImpl implements PubMedClient {
     String body =
         restClient
             .post()
-            .uri(path)
+            .uri(PubMedOperation.EPOST.getEndpoint())
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .body(formData)
             .retrieve()
@@ -207,7 +215,7 @@ public class PubMedClientImpl implements PubMedClient {
       return response;
     } catch (IOException | IllegalArgumentException ex) {
       throw new ProvenanceClientException(
-          PROVENANCE.getCode(), "epost", null, null, body, "解析EPost响应失败", ex);
+          PROVENANCE.getCode(), PubMedOperation.EPOST.getOperationName(), null, null, body, "解析EPost响应失败", ex);
     }
   }
 }

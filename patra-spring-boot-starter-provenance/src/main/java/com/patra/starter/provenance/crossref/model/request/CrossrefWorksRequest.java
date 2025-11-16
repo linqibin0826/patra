@@ -1,5 +1,6 @@
 package com.patra.starter.provenance.crossref.model.request;
 
+import com.patra.common.provenance.api.params.CrossrefParamKeys;
 import com.patra.starter.provenance.common.gateway.ApiRequest;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -58,31 +59,31 @@ public record CrossrefWorksRequest(
   public Map<String, String> toQueryParams() {
     Map<String, String> params = new LinkedHashMap<>();
     if (query != null && !query.isBlank()) {
-      params.put("query", query);
+      params.put(CrossrefParamKeys.QUERY, query);
     }
     if (filter != null && !filter.isBlank()) {
-      params.put("filter", filter);
+      params.put(CrossrefParamKeys.FILTER, filter);
     }
     if (rows != null) {
-      params.put("rows", rows.toString());
+      params.put(CrossrefParamKeys.ROWS, rows.toString());
     }
     if (offset != null) {
-      params.put("offset", offset.toString());
+      params.put(CrossrefParamKeys.OFFSET, offset.toString());
     }
     if (sort != null && !sort.isBlank()) {
-      params.put("sort", sort);
+      params.put(CrossrefParamKeys.SORT, sort);
     }
     if (order != null && !order.isBlank()) {
-      params.put("order", order);
+      params.put(CrossrefParamKeys.ORDER, order);
     }
     if (cursor != null && !cursor.isBlank()) {
-      params.put("cursor", cursor);
+      params.put(CrossrefParamKeys.CURSOR, cursor);
     }
     if (select != null && !select.isBlank()) {
-      params.put("select", select);
+      params.put(CrossrefParamKeys.SELECT, select);
     }
     if (mailto != null && !mailto.isBlank()) {
-      params.put("mailto", mailto);
+      params.put(CrossrefParamKeys.MAILTO, mailto);
     }
     return params;
   }

@@ -1,5 +1,7 @@
 package com.patra.starter.provenance.pubmed.model.request;
 
+import com.patra.common.provenance.api.params.PubMedParamKeys;
+import com.patra.common.provenance.api.values.pubmed.RetMode;
 import com.patra.starter.provenance.common.gateway.ApiRequest;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -72,7 +74,7 @@ public record ESearchRequest(
    */
   public ESearchRequest(String db, String term) {
     this(
-        db, term, null, null, "json", null, null, null, null, null, null, null, null, null, null,
+        db, term, null, null, RetMode.JSON.value(), null, null, null, null, null, null, null, null, null, null,
         null, null, null);
   }
 
@@ -84,7 +86,7 @@ public record ESearchRequest(
     // Note: term is optional when date filters (mindate/maxdate/datetype) are provided
     // Default to JSON format
     if (retmode == null || retmode.isBlank()) {
-      retmode = "json";
+      retmode = RetMode.JSON.value();
     }
   }
 
@@ -96,35 +98,35 @@ public record ESearchRequest(
   @Override
   public Map<String, String> toQueryParams() {
     Map<String, String> params = new LinkedHashMap<>();
-    params.put("db", db);
+    params.put(PubMedParamKeys.DB, db);
     // term is optional - only add when present (date filters can be used instead)
     if (term != null && !term.isBlank()) {
-      params.put("term", term);
+      params.put(PubMedParamKeys.TERM, term);
     }
 
     // Basic control
-    if (retstart != null) params.put("retstart", retstart.toString());
-    if (retmax != null) params.put("retmax", retmax.toString());
-    params.put("retmode", retmode != null ? retmode : "json");
-    if (rettype != null) params.put("rettype", rettype);
+    if (retstart != null) params.put(PubMedParamKeys.RETSTART, retstart.toString());
+    if (retmax != null) params.put(PubMedParamKeys.RETMAX, retmax.toString());
+    params.put(PubMedParamKeys.RETMODE, retmode != null ? retmode : RetMode.JSON.value());
+    if (rettype != null) params.put(PubMedParamKeys.RETTYPE, rettype);
 
     // Sorting and filtering
-    if (sort != null) params.put("sort", sort);
-    if (datetype != null) params.put("datetype", datetype);
-    if (mindate != null) params.put("mindate", mindate);
-    if (maxdate != null) params.put("maxdate", maxdate);
-    if (field != null) params.put("field", field);
-    if (reldate != null) params.put("reldate", reldate);
+    if (sort != null) params.put(PubMedParamKeys.SORT, sort);
+    if (datetype != null) params.put(PubMedParamKeys.DATETYPE, datetype);
+    if (mindate != null) params.put(PubMedParamKeys.MINDATE, mindate);
+    if (maxdate != null) params.put(PubMedParamKeys.MAXDATE, maxdate);
+    if (field != null) params.put(PubMedParamKeys.FIELD, field);
+    if (reldate != null) params.put(PubMedParamKeys.RELDATE, reldate);
 
     // History and session
-    if (usehistory != null) params.put("usehistory", usehistory);
-    if (webenv != null) params.put("WebEnv", webenv);
-    if (queryKey != null) params.put("query_key", queryKey);
+    if (usehistory != null) params.put(PubMedParamKeys.USEHISTORY, usehistory);
+    if (webenv != null) params.put(PubMedParamKeys.WEBENV, webenv);
+    if (queryKey != null) params.put(PubMedParamKeys.QUERY_KEY, queryKey);
 
     // Authentication and identification
-    if (apiKey != null) params.put("api_key", apiKey);
-    if (tool != null) params.put("tool", tool);
-    if (email != null) params.put("email", email);
+    if (apiKey != null) params.put(PubMedParamKeys.API_KEY, apiKey);
+    if (tool != null) params.put(PubMedParamKeys.TOOL, tool);
+    if (email != null) params.put(PubMedParamKeys.EMAIL, email);
 
     return params;
   }

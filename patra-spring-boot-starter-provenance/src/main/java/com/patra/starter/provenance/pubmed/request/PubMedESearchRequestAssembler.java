@@ -1,6 +1,10 @@
 package com.patra.starter.provenance.pubmed.request;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.patra.common.enums.ProvenanceCode;
+import com.patra.common.provenance.api.params.PubMedParamKeys;
+import com.patra.common.provenance.api.values.pubmed.RetMode;
+import com.patra.common.provenance.api.values.pubmed.RetType;
 import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
 
 /**
@@ -22,12 +26,12 @@ public class PubMedESearchRequestAssembler {
   public ESearchRequest buildCount(JsonNode params) {
     Values v = extract(params);
     return new ESearchRequest(
-        "pubmed",
+        ProvenanceCode.PUBMED.lowerCaseCode(),
         v.term, // term is optional, date filters can be used instead
         null, // retstart ignored for count
         null, // retmax ignored for count
-        v.retmode != null ? v.retmode : "json",
-        "count",
+        v.retmode != null ? v.retmode : RetMode.JSON.value(),
+        RetType.COUNT.value(),
         v.sort,
         v.datetype,
         v.mindate,
@@ -50,11 +54,11 @@ public class PubMedESearchRequestAssembler {
   public ESearchRequest buildList(JsonNode params) {
     Values v = extract(params);
     return new ESearchRequest(
-        "pubmed",
+        ProvenanceCode.PUBMED.lowerCaseCode(),
         v.term, // term is optional, date filters can be used instead
         v.retstart,
         v.retmax,
-        v.retmode != null ? v.retmode : "json",
+        v.retmode != null ? v.retmode : RetMode.JSON.value(),
         v.rettype, // null -> default uilist
         v.sort,
         v.datetype,

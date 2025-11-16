@@ -1,5 +1,7 @@
 package com.patra.starter.provenance.epmc.model.request;
 
+import com.patra.common.provenance.api.params.EpmcParamKeys;
+import com.patra.common.provenance.api.values.epmc.Format;
 import com.patra.starter.provenance.common.gateway.ApiRequest;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -41,7 +43,7 @@ public record SearchRequest(
    * @param query Lucene风格的搜索查询
    */
   public SearchRequest(String query) {
-    this(query, "json", null, null, null, null, null, null, null);
+    this(query, Format.JSON.value(), null, null, null, null, null, null, null);
   }
 
   public SearchRequest {
@@ -49,7 +51,7 @@ public record SearchRequest(
       throw new IllegalArgumentException("query 参数不能为null或空白");
     }
     if (format == null || format.isBlank()) {
-      format = "json";
+      format = Format.JSON.value();
     }
   }
 
@@ -61,28 +63,28 @@ public record SearchRequest(
   @Override
   public Map<String, String> toQueryParams() {
     Map<String, String> params = new LinkedHashMap<>();
-    params.put("query", query);
-    params.put("format", format);
+    params.put(EpmcParamKeys.QUERY, query);
+    params.put(EpmcParamKeys.FORMAT, format);
     if (pageSize != null) {
-      params.put("pageSize", pageSize.toString());
+      params.put(EpmcParamKeys.PAGE_SIZE, pageSize.toString());
     }
     if (cursorMark != null && !cursorMark.isBlank()) {
-      params.put("cursorMark", cursorMark);
+      params.put(EpmcParamKeys.CURSOR_MARK, cursorMark);
     }
     if (sort != null && !sort.isBlank()) {
-      params.put("sort", sort);
+      params.put(EpmcParamKeys.SORT, sort);
     }
     if (resultType != null && !resultType.isBlank()) {
-      params.put("resultType", resultType);
+      params.put(EpmcParamKeys.RESULT_TYPE, resultType);
     }
     if (synonym != null) {
-      params.put("synonym", synonym.toString());
+      params.put(EpmcParamKeys.SYNONYM, synonym.toString());
     }
     if (fromSearchPost != null) {
-      params.put("fromSearchPost", fromSearchPost.toString());
+      params.put(EpmcParamKeys.FROM_SEARCH_POST, fromSearchPost.toString());
     }
     if (searchType != null && !searchType.isBlank()) {
-      params.put("searchType", searchType);
+      params.put(EpmcParamKeys.SEARCH_TYPE, searchType);
     }
     return params;
   }

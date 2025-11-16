@@ -1,5 +1,8 @@
 package com.patra.starter.provenance.pubmed.model.request;
 
+import com.patra.common.provenance.api.params.PubMedParamKeys;
+import com.patra.common.provenance.api.values.pubmed.RetMode;
+import com.patra.common.provenance.api.values.pubmed.RetType;
 import com.patra.starter.provenance.common.gateway.ApiRequest;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -66,7 +69,7 @@ public record EFetchRequest(
    * @param id 逗号分隔的 PubMed 标识符列表 (每次最多200个)
    */
   public EFetchRequest(String db, String id) {
-    this(db, id, "xml", "abstract", null, null, null, null, null, null, null);
+    this(db, id, RetMode.XML.value(), RetType.ABSTRACT.value(), null, null, null, null, null, null, null);
   }
 
   /**
@@ -77,7 +80,7 @@ public record EFetchRequest(
    * @return 配置为返回 uilist 纯文本负载的请求
    */
   public static EFetchRequest forUiList(String db, String id) {
-    return new EFetchRequest(db, id, "text", "uilist", null, null, null, null, null, null, null);
+    return new EFetchRequest(db, id, RetMode.TEXT.value(), RetType.UILIST.value(), null, null, null, null, null, null, null);
   }
 
   // Compact constructor: validate required parameters
@@ -102,11 +105,11 @@ public record EFetchRequest(
     // Default to XML format (since most rettype only support XML)
     retmode = retmode != null ? retmode.trim() : null;
     if (!StringUtils.hasText(retmode)) {
-      retmode = "xml";
+      retmode = RetMode.XML.value();
     }
     rettype = rettype != null ? rettype.trim() : null;
     if (!StringUtils.hasText(rettype)) {
-      rettype = "abstract";
+      rettype = RetType.ABSTRACT.value();
     }
   }
 
@@ -118,25 +121,25 @@ public record EFetchRequest(
   @Override
   public Map<String, String> toQueryParams() {
     Map<String, String> params = new LinkedHashMap<>();
-    params.put("db", db);
+    params.put(PubMedParamKeys.DB, db);
     if (StringUtils.hasText(id)) {
-      params.put("id", id);
+      params.put(PubMedParamKeys.ID, id);
     }
 
     // Basic control
-    params.put("retmode", retmode != null ? retmode : "xml");
-    params.put("rettype", rettype != null ? rettype : "abstract");
-    if (retstart != null) params.put("retstart", retstart.toString());
-    if (retmax != null) params.put("retmax", retmax.toString());
+    params.put(PubMedParamKeys.RETMODE, retmode != null ? retmode : RetMode.XML.value());
+    params.put(PubMedParamKeys.RETTYPE, rettype != null ? rettype : RetType.ABSTRACT.value());
+    if (retstart != null) params.put(PubMedParamKeys.RETSTART, retstart.toString());
+    if (retmax != null) params.put(PubMedParamKeys.RETMAX, retmax.toString());
 
     // History and session
-    if (webenv != null) params.put("WebEnv", webenv);
-    if (queryKey != null) params.put("query_key", queryKey);
+    if (webenv != null) params.put(PubMedParamKeys.WEBENV, webenv);
+    if (queryKey != null) params.put(PubMedParamKeys.QUERY_KEY, queryKey);
 
     // Authentication and identification
-    if (apiKey != null) params.put("api_key", apiKey);
-    if (tool != null) params.put("tool", tool);
-    if (email != null) params.put("email", email);
+    if (apiKey != null) params.put(PubMedParamKeys.API_KEY, apiKey);
+    if (tool != null) params.put(PubMedParamKeys.TOOL, tool);
+    if (email != null) params.put(PubMedParamKeys.EMAIL, email);
 
     return params;
   }

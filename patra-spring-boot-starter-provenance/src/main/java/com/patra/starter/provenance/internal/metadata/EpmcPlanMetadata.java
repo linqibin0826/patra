@@ -1,5 +1,7 @@
 package com.patra.starter.provenance.internal.metadata;
 
+import com.patra.common.enums.ProvenanceCode;
+
 /**
  * EPMC 特定的计划元数据
  *
@@ -17,7 +19,7 @@ public class EpmcPlanMetadata extends PlanMetadata {
   private final String cursorMark;
 
   public EpmcPlanMetadata(int totalCount, String cursorMark) {
-    super("epmc", totalCount);
+    super(ProvenanceCode.EPMC.lowerCaseCode(), totalCount);
     this.cursorMark = cursorMark;
   }
 

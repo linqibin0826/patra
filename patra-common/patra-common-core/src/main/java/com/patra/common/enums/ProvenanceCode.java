@@ -36,9 +36,13 @@ public enum ProvenanceCode {
   /** 数据源的人类可读描述。 */
   private final String description;
 
+  /** 缓存的小写代码，避免重复调用 toLowerCase() */
+  private final String lowerCaseCode;
+
   ProvenanceCode(String code, String display) {
     this.code = code;
     this.description = display;
+    this.lowerCaseCode = code.toLowerCase();
   }
 
   /**
@@ -95,6 +99,20 @@ public enum ProvenanceCode {
   @JsonValue
   public String toJson() {
     return this.code;
+  }
+
+  /**
+   * 返回小写的数据源代码
+   *
+   * <p>用于配置文件键、API参数、内部标识符等需要小写的场景。
+   * 例如：{@code patra.provenance.sources.pubmed}
+   *
+   * <p>注意：此方法返回构造时缓存的小写值，避免重复调用 {@code toLowerCase()}。
+   *
+   * @return 小写的数据源代码（如 "pubmed", "epmc"）
+   */
+  public String lowerCaseCode() {
+    return this.lowerCaseCode;
   }
 
   /**

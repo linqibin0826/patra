@@ -71,7 +71,13 @@
 - `PubMedESearchRequestAssembler`: 组装 ESearch 请求
 - `EpmcSearchRequestAssembler`: 组装 EPMC 搜索请求
 
-参数常量统一维护在 `PubMedParamKeys` 和 `EpmcParamKeys` 类中。
+**API 常量来源**: 所有参数键、端点路径和参数值枚举统一维护在 **`patra-common-provenance-api`** 模块：
+- 参数键常量: `PubMedParamKeys`、`EpmcParamKeys`、`CrossrefParamKeys`
+- 端点路径常量: `PubMedEndpoints`（已废弃，推荐使用 `PubMedOperation`）、`EpmcEndpoints`、`CrossrefEndpoints`
+- 参数值枚举: `RetMode`、`RetType`、`UseHistory`、`DateType`、`Format`、`ResultType` 等
+- 操作枚举: `PubMedOperation`、`EpmcOperation`（推荐使用，封装操作名称+端点+描述）
+
+参考 [patra-common-provenance-api/README.md](../patra-common/patra-common-provenance-api/README.md) 了解完整的 API 常量使用指南。
 
 ### ProviderRegistry
 
@@ -131,7 +137,9 @@ patra:
 </dependency>
 ```
 
-注意：`spring-web` 已作为核心依赖自动引入，提供 RestClient 支持。
+注意：
+- `spring-web` 已作为核心依赖自动引入，提供 RestClient 支持
+- `patra-common-provenance-api` 已自动引入，提供 API 常量和枚举
 
 ### 配置示例
 
@@ -214,6 +222,32 @@ public class PubmedSearchService {
         var result = response.result();
         return new PlanMetadata(result.count(), result.webEnv(), result.queryKey());
     }
+}
+```
+
+#### 使用 API 常量和枚举（推荐）
+
+```java
+import com.patra.common.provenance.api.params.PubMedParamKeys;
+import com.patra.common.provenance.api.values.pubmed.*;
+import com.patra.common.provenance.api.constants.PubMedOperation;
+
+// 构建请求参数（类型安全）
+Map<String, String> params = new HashMap<>();
+params.put(PubMedParamKeys.TERM, "cancer");
+params.put(PubMedParamKeys.RETMODE, RetMode.JSON.value());  // 使用枚举
+params.put(PubMedParamKeys.RETTYPE, RetType.UILIST.value());
+params.put(PubMedParamKeys.DATETYPE, DateType.PUBLICATION_DATE.value());
+params.put(PubMedParamKeys.USEHISTORY, UseHistory.YES.value());
+
+// 使用操作枚举（推荐，包含操作名称+端点+描述）
+PubMedOperation op = PubMedOperation.ESEARCH;
+String endpoint = op.getEndpoint();  // "/esearch.fcgi"
+String operationName = op.getOperationName();  // "esearch"
+
+// 类型安全的枚举比较
+if (request.retmode() == RetMode.XML) {
+    // 处理 XML 格式
 }
 ```
 
@@ -389,10 +423,11 @@ public class CustomProvenanceDataProvider implements ProvenanceDataProvider {
 - Hutool
 - patra-common-core
 - patra-common-model
+- **patra-common-provenance-api** (API 常量和枚举)
 
 ## 迁移说明
 
-### 从 SimpleHttpClient 到 RestClient
+### v0.1.0: 从 SimpleHttpClient 到 RestClient
 
 **背景**: v0.1.0 版本将 HTTP 调用从自定义的 `SimpleHttpClient` 迁移到 Spring 管理的 `RestClient`。
 
@@ -450,3 +485,48 @@ PubMedClient client = new PubMedClientImpl(
 - ✅ 统一的超时、重试、拦截器配置
 - ✅ 更好的测试支持（MockRestServiceServer）
 - ✅ 减少自定义代码维护成本
+
+### v0.1.0: API 常量迁移到 patra-common-provenance-api
+
+**背景**: v0.1.0 版本将 API 常量从 `patra-spring-boot-starter-provenance` 迁移到独立的 `patra-common-provenance-api` 模块。
+
+**主要变更**:
+
+1. **包路径变更**:
+   - 旧位置: `com.patra.starter.provenance.pubmed.request.PubMedParamKeys`
+   - 新位置: `com.patra.common.provenance.api.params.PubMedParamKeys`
+
+   - 旧位置: `com.patra.starter.provenance.epmc.request.EpmcParamKeys`
+   - 新位置: `com.patra.common.provenance.api.params.EpmcParamKeys`
+
+2. **新增功能**:
+   - 端点路径常量: `PubMedEndpoints`、`EpmcEndpoints`、`CrossrefEndpoints`（已废弃）
+   - 操作枚举: `PubMedOperation`、`EpmcOperation`（推荐使用，封装操作名称+端点+描述）
+   - 参数值枚举: `RetMode`、`RetType`、`UseHistory`、`DateType`、`Format`、`ResultType`
+
+3. **兼容性**:
+   - ✅ `patra-spring-boot-starter-provenance` 自动依赖 `patra-common-provenance-api`
+   - ✅ 旧代码无需修改，但建议更新导入语句
+
+**迁移指南**:
+
+```java
+// 旧导入（已废弃，但仍兼容）
+import com.patra.starter.provenance.pubmed.request.PubMedParamKeys;
+
+// 新导入（推荐）
+import com.patra.common.provenance.api.params.PubMedParamKeys;
+import com.patra.common.provenance.api.values.pubmed.RetMode;
+import com.patra.common.provenance.api.constants.PubMedOperation;
+
+// 使用类型安全的枚举（推荐）
+params.put(PubMedParamKeys.RETMODE, RetMode.JSON.value());
+```
+
+**优势**:
+- ✅ 单一事实来源（SSOT），避免重复定义
+- ✅ 类型安全的枚举，避免魔法字符串
+- ✅ 跨模块共享，支持测试、监控、CLI 等场景
+- ✅ IDE 友好，自动补全和重构安全
+
+参考 [patra-common-provenance-api/README.md](../patra-common/patra-common-provenance-api/README.md) 了解完整的 API 常量使用指南。
