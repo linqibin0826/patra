@@ -2,17 +2,27 @@
 
 ## 概述
 
-用于 PubMed 和 Europe PMC 数据源的 HTTP 客户端集成 Starter,提供直连模式的数据采集能力,无需独立的出站网关服务。
+用于 PubMed 和 Europe PMC 数据源的 HTTP 客户端集成 Starter，提供直连模式的数据采集能力，无需独立的出站网关服务。
 
-本 Starter 自动配置医学文献 API 客户端,支持 ESearch、EFetch、EPost 等常用操作,内置请求组装、超时控制、简单重试和本地限流机制。
+本 Starter 自动配置医学文献 API 客户端，支持 ESearch、EFetch、EPost 等常用操作，内置请求组装、超时控制、简单重试和本地限流机制。
 
 **HTTP 客户端**: 基于 **Spring RestClient**（使用底层 JDK 21 HttpClient），提供类型安全的 HTTP 调用和自动配置支持。
+
+### 🩺 医学文献数据源专用
+
+本模块专为医学文献数据源（PubMed/MEDLINE）设计，核心组件包括：
+
+- **CanonicalLiterature** 规范化模型：采用医学领域标准术语（MeSH、Investigator、Substance 等）
+- **PubmedLiteratureConverter**：精确映射 PubMed XML 响应到规范化医学文献模型
+- **MeSH 术语支持**：完整支持 MeSH 主题标引、限定词、补充概念
+- **医学领域特性**：研究者信息、临床试验数据、外部数据库引用、参考文献等
 
 ## 核心功能
 
 - **PubMed 客户端**: 支持 ESearch、EFetch、EPost 操作
 - **Europe PMC 客户端**: 支持文献搜索
-- **请求组装器**: 标准化参数构建,避免硬编码
+- **医学文献转换器**: 将 PubMed 响应转换为规范化医学文献模型（CanonicalLiterature）
+- **请求组装器**: 标准化参数构建，避免硬编码
 - **配置合并**: 支持全局默认值和数据源级覆盖
 - **指标集成**: 可选的 Micrometer 指标采集
 - **提供者注册**: 统一的数据源提供者发现机制
@@ -30,15 +40,15 @@
 | `pubMedClient` | `PubMedClient` | PubMed E-utilities 客户端 |
 | `epmcClient` | `EPMCClient` | Europe PMC 搜索客户端 |
 | `provenanceXmlMapper` | `XmlMapper` | PubMed XML 响应映射器 |
-| `pubmedArticleConverter` | `PubmedLiteratureConverter` | PubMed 文章转换器 |
+| `pubmedArticleConverter` | `PubmedLiteratureConverter` | **PubMed 医学文献转换器（核心组件）** |
 | `defaultConfigProvider` | `DefaultConfigProvider` | 配置提供器 |
 | `providerRegistry` | `ProviderRegistry` | 数据源提供者注册表 |
 | `pubmedDataProvider` | `PubmedDataProvider` | PubMed 数据提供者实现 |
-| `provenanceMetrics` | `ProvenanceMetrics` | 指标记录器(需要 MeterRegistry) |
+| `provenanceMetrics` | `ProvenanceMetrics` | 指标记录器（需要 MeterRegistry） |
 
 ### 启用条件
 
-- 配置属性 `patra.provenance.enabled=true` (默认启用)
+- 配置属性 `patra.provenance.enabled=true`（默认启用）
 - 指标 Bean 需要 `MeterRegistry` 存在
 
 ## 主要组件
@@ -58,13 +68,87 @@
 
 - `esearch()`: 搜索文献 ID
 - `efetch()`: 获取文献详情
-- `epost()`: 上传 ID 列表到 History Server(推荐用于 >200 个 ID)
+- `epost()`: 上传 ID 列表到 History Server（推荐用于 >200 个 ID）
 
 ### EPMCClient
 
 提供 Europe PMC API 访问能力:
 
 - `search()`: 文献搜索
+
+### 🔬 PubmedLiteratureConverter（医学文献转换器）
+
+将 PubMed XML 响应转换为规范化医学文献模型（CanonicalLiterature），支持完整的医学领域字段映射。
+
+#### 核心转换方法（v0.1.0 重大更新）
+
+##### MeSH 相关转换（医学领域核心）
+
+| 方法 | 描述 | 映射字段 |
+|------|------|----------|
+| `convertMeshHeadings()` | 转换 MeSH 主题标引 | `meshHeadings` |
+| `convertSupplMeshNames()` | 转换补充 MeSH 概念 | `supplMeshNames` |
+
+##### P0 核心字段转换（新增/增强）
+
+| 方法 | 描述 | 映射字段 | v0.1.0 变更 |
+|------|------|----------|------------|
+| `convertPagination()` | 转换页码信息 | `pagination` | ✅ **重构为结构化对象**（startPage, endPage, medlinePgn） |
+| `convertAuthors()` | 转换作者信息 | `authors` | ✅ **新增 valid 字段** |
+| `convertFunding()` | 转换资助信息 | `funding` | ✅ **重命名 funderIdentifier → funderAcronym** |
+| `extractPublicationDates()` | 提取出版日期 | `dates` | ✅ **新增 completed 日期** |
+| `convertReferences()` | 转换参考文献列表 | `references` | ✅ **新增** |
+| `convertReferences()` | 转换参考文献数量 | `numberOfReferences` | ✅ **新增** |
+
+##### P1 医学领域字段转换（全新）
+
+| 方法 | 描述 | 映射字段 | 用途场景 |
+|------|------|----------|----------|
+| `convertInvestigators()` | 转换研究者信息 | `investigators` | 临床试验、多中心研究 |
+| `convertPersonalNameSubjects()` | 转换人物主题 | `personalNameSubjects` | 传记、医学史、案例报告 |
+| `convertExternalReferences()` | 转换外部数据库引用 | `externalReferences` | GenBank、ClinicalTrials.gov 等 |
+| `convertSupplementalObjects()` | 转换补充对象 | `supplementalObjects` | 图表、数据集、多媒体 |
+| `convertRelatedItems()` | 转换相关项目 | `relatedItems` | 更正、撤稿、评论、转载 |
+
+##### 其他转换方法
+
+| 方法 | 描述 | 映射字段 |
+|------|------|----------|
+| `buildIdentifiers()` | 构建标识符列表 | `identifiers` |
+| `extractAbstract()` | 提取摘要信息 | `abstractContent` |
+| `convertAlternativeAbstracts()` | 转换其他语言摘要 | `alternativeAbstracts` |
+| `convertJournal()` | 转换期刊信息 | `journal` |
+| `convertSubstances()` | 转换化学物质列表 | `substances` |
+| `convertGenes()` | 转换基因符号列表 | `genes` |
+| `extractKeywords()` | 提取关键词集合 | `keywords` |
+| `extractPublicationHistory()` | 提取发布历史时间线 | `publicationHistory` |
+| `extractMetadata()` | 提取文献元数据 | `metadata` |
+
+#### 使用示例
+
+```java
+@Component
+@RequiredArgsConstructor
+public class PubmedDataAdapter {
+
+    private final PubmedLiteratureConverter converter;
+
+    public CanonicalLiterature fetchLiterature(String pmid) {
+        // 1. 从 PubMed 获取原始 XML 响应
+        PubmedLiterature rawArticle = pubMedClient.efetch(...);
+
+        // 2. 转换为规范化医学文献模型
+        CanonicalLiterature literature = converter.toCanonicalLiterature(rawArticle);
+
+        // 3. 访问医学领域特定字段
+        List<MeshHeading> meshHeadings = literature.getMeshHeadings();
+        List<Investigator> investigators = literature.getInvestigators();
+        List<Reference> references = literature.getReferences();
+
+        return literature;
+    }
+}
+```
 
 ### 请求组装器
 
@@ -81,7 +165,7 @@
 
 ### ProviderRegistry
 
-统一的数据源提供者注册表,支持:
+统一的数据源提供者注册表，支持:
 - 自动发现所有 `ProvenanceDataProvider` 实现
 - 按数据源代码查找提供者
 - 为 Ingest 服务提供统一的数据源访问接口
@@ -95,21 +179,21 @@
 ```yaml
 patra:
   provenance:
-    enabled: true  # 启用自动配置(默认 true)
+    enabled: true  # 启用自动配置（默认 true）
     defaults:
       http:
-        timeout-connect-millis: 10000  # 连接超时(默认 10s)
-        timeout-read-millis: 30000     # 读取超时(默认 30s)
+        timeout-connect-millis: 10000  # 连接超时（默认 10s）
+        timeout-read-millis: 30000     # 读取超时（默认 30s）
       pagination:
-        page-size-value: 100           # 分页大小(默认 100)
+        page-size-value: 100           # 分页大小（默认 100）
       batching:
-        epost-threshold: 200           # EPost 阈值(默认 200)
+        epost-threshold: 200           # EPost 阈值（默认 200）
       retry:
-        max-retry-times: 3             # 最大重试次数(默认 3)
-        initial-delay-millis: 1000     # 初始重试延迟(默认 1s)
+        max-retry-times: 3             # 最大重试次数（默认 3）
+        initial-delay-millis: 1000     # 初始重试延迟（默认 1s）
       rate-limit:
-        max-concurrent-requests: 10    # 最大并发请求(默认 10)
-        per-credential-qps-limit: 5    # 每凭证 QPS 限制(默认 5)
+        max-concurrent-requests: 10    # 最大并发请求（默认 10）
+        per-credential-qps-limit: 5    # 每凭证 QPS 限制（默认 5）
 ```
 
 ### 数据源级覆盖
@@ -140,6 +224,7 @@ patra:
 注意：
 - `spring-web` 已作为核心依赖自动引入，提供 RestClient 支持
 - `patra-common-provenance-api` 已自动引入，提供 API 常量和枚举
+- `patra-common-model` 已自动引入，提供 CanonicalLiterature 模型
 
 ### 配置示例
 
@@ -225,6 +310,69 @@ public class PubmedSearchService {
 }
 ```
 
+#### 使用 PubmedLiteratureConverter（医学文献转换）
+
+```java
+@Component
+@RequiredArgsConstructor
+public class PubmedDataProvider implements ProvenanceDataProvider {
+
+    private final PubMedClient pubMedClient;
+    private final PubmedLiteratureConverter converter;
+
+    @Override
+    public ProviderResult<CanonicalLiterature> fetchData(
+        ProviderRequest request,
+        DataType dataType,
+        TypeReference<CanonicalLiterature> typeRef
+    ) {
+        // 1. 调用 PubMed API 获取原始数据
+        EFetchResponse response = pubMedClient.efetch(...);
+
+        // 2. 转换为规范化医学文献模型
+        List<CanonicalLiterature> literatures = response.articles().stream()
+            .map(converter::toCanonicalLiterature)
+            .collect(Collectors.toList());
+
+        // 3. 访问医学领域特定字段
+        for (CanonicalLiterature lit : literatures) {
+            // MeSH 主题标引（医学索引核心）
+            List<MeshHeading> meshHeadings = lit.getMeshHeadings();
+
+            // 补充 MeSH 概念（疾病、药物试验等）
+            List<SupplMeshName> supplMeshNames = lit.getSupplMeshNames();
+
+            // 研究者信息（临床试验常见）
+            List<Investigator> investigators = lit.getInvestigators();
+
+            // 人物主题（传记、医学史）
+            List<PersonalNameSubject> personalNameSubjects = lit.getPersonalNameSubjects();
+
+            // 外部数据库引用（GenBank、ClinicalTrials.gov）
+            List<ExternalReference> externalRefs = lit.getExternalReferences();
+
+            // 补充对象（图表、数据集）
+            List<SupplementalObject> supplements = lit.getSupplementalObjects();
+
+            // 参考文献（完整列表和数量）
+            List<Reference> references = lit.getReferences();
+            Integer refCount = lit.getNumberOfReferences();
+
+            // 相关项目（更正、撤稿、评论）
+            List<RelatedItem> relatedItems = lit.getRelatedItems();
+
+            // 结构化页码信息
+            Pagination pagination = lit.getPagination();
+            String startPage = pagination.getStartPage();
+            String endPage = pagination.getEndPage();
+            String medlinePgn = pagination.getMedlinePgn();
+        }
+
+        return ProviderResult.success(literatures, dataType, null);
+    }
+}
+```
+
 #### 使用 API 常量和枚举（推荐）
 
 ```java
@@ -264,6 +412,155 @@ try {
 }
 ```
 
+## 医学文献数据映射说明
+
+### CanonicalLiterature 模型设计原则
+
+CanonicalLiterature 是 Patra 平台的规范化医学文献模型，基于以下国际标准设计：
+
+- **PubMed/MEDLINE** - 医学文献元数据标准（主要数据源）
+- **MeSH** - 美国国家医学图书馆医学主题词表
+- **Dublin Core** - 核心元数据标准（title, creator, identifier 等）
+- **Schema.org** - ScholarlyArticle 规范（author, abstract, keywords 等）
+
+### 医学领域特性支持
+
+#### MeSH 术语支持
+
+MeSH（Medical Subject Headings）是美国国家医学图书馆（NLM）创建的受控词表，用于标引医学文献的主题和内容。
+
+**主要字段**：
+- `meshHeadings`: MeSH 主题标引列表，包含主题词（Descriptor）和限定词（Qualifiers）
+- `supplMeshNames`: 补充 MeSH 概念列表，用于描述疾病、药物试验、化学物质等特定主题
+
+**使用示例**：
+```java
+// MeSH 主题标引
+List<MeshHeading> meshHeadings = literature.getMeshHeadings();
+for (MeshHeading heading : meshHeadings) {
+    DescriptorName descriptor = heading.getDescriptorName();
+    System.out.println("主题词: " + descriptor.getTerm());
+    System.out.println("是否主要主题: " + descriptor.getMajorTopic());
+
+    // 限定词（进一步细化主题）
+    List<QualifierName> qualifiers = heading.getQualifierNames();
+    for (QualifierName qualifier : qualifiers) {
+        System.out.println("  限定词: " + qualifier.getTerm());
+    }
+}
+
+// 补充 MeSH 概念
+List<SupplMeshName> supplMeshNames = literature.getSupplMeshNames();
+for (SupplMeshName supplMesh : supplMeshNames) {
+    System.out.println("补充概念: " + supplMesh.getName());
+    System.out.println("概念类型: " + supplMesh.getType());  // Protocol, Disease 等
+}
+```
+
+#### 研究者信息（Investigators）
+
+研究者是参与研究但未列为文章作者的研究人员，常见于大型临床试验、多中心研究等。
+
+**字段结构**：
+```java
+List<Investigator> investigators = literature.getInvestigators();
+for (Investigator investigator : investigators) {
+    String name = investigator.getLastName() + ", " + investigator.getForeName();
+    List<Affiliation> affiliations = investigator.getAffiliations();
+    Boolean valid = investigator.getValid();  // 信息有效性
+}
+```
+
+#### 人物主题（PersonalNameSubjects）
+
+用于传记、医学史、案例报告等以特定人物为主题的文献。
+
+**使用场景**：
+- 医学史研究（如弗莱明与青霉素的发现）
+- 传记文献
+- 案例报告中的患者（匿名化）
+
+#### 外部数据库引用（ExternalReferences）
+
+关联到外部数据库的引用，如基因库、临床试验、软件仓库等。
+
+**常见数据库**：
+- **GenBank**: 基因序列数据库
+- **ClinicalTrials.gov**: 临床试验注册库
+- **PDB**: 蛋白质数据库
+- **GEO**: 基因表达数据库
+
+**使用示例**：
+```java
+List<ExternalReference> externalRefs = literature.getExternalReferences();
+for (ExternalReference ref : externalRefs) {
+    String type = ref.getType();  // database, clinical-trial, software, dataset
+    String name = ref.getName();  // GenBank, ClinicalTrials.gov 等
+    List<String> identifiers = ref.getIdentifiers();  // 登记号列表
+}
+```
+
+#### 补充对象（SupplementalObjects）
+
+文献的附加材料，如图表、数据集、关键词列表、多媒体文件等。
+
+**对象类型**：
+- `keyword`: 关键词列表
+- `figure`: 图表
+- `dataset`: 数据集
+- `video`: 视频
+- 其他多媒体内容
+
+#### 参考文献（References）
+
+完整的参考文献列表及数量统计。
+
+**使用示例**：
+```java
+Integer totalReferences = literature.getNumberOfReferences();
+List<Reference> references = literature.getReferences();
+for (Reference ref : references) {
+    String citation = ref.getCitation();  // 格式化的引用字符串
+    List<Identifier> ids = ref.getIdentifiers();  // PMID, DOI 等
+}
+```
+
+#### 相关项目（RelatedItems）
+
+文献的相关项目，如更正、撤稿、评论、转载等。
+
+**关系类型**：
+- `retraction-of`: 撤稿
+- `erratum-in`: 勘误
+- `comment-on`: 评论
+- `republished-from`: 转载
+- `correction-to`: 更正
+
+**使用场景**：
+- 识别已撤稿文献
+- 跟踪文献更正记录
+- 发现相关评论和讨论
+
+### P0/P1 字段优先级
+
+**P0 核心字段**（必须支持）：
+- 标识符（pmid, doi, pmc）
+- 标题和摘要
+- 作者和机构
+- 期刊信息
+- 出版日期
+- **MeSH 主题标引**（医学索引核心）
+- **页码信息**（结构化对象）
+- **参考文献数量和列表**
+
+**P1 医学领域字段**（增强功能）：
+- **补充 MeSH 概念**
+- **研究者信息**
+- **人物主题**
+- **外部数据库引用**
+- **补充对象**
+- **相关项目**
+
 ## 架构集成
 
 ### 六边形架构中的位置
@@ -281,6 +578,7 @@ Framework Layer (patra-starter-provenance) ← 本 Starter
   - ProvenanceDataProvider (技术提供者接口)
   - ProviderRegistry (提供者注册表)
   - RestClient (Spring 管理的 HTTP 客户端)
+  - PubmedLiteratureConverter (医学文献转换器)
     ↑ implements
 Provider Implementations (各数据源实现层)
   - PubmedProvenanceDataProvider (具体实现)
@@ -332,7 +630,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
 
 ### 自定义配置提供器
 
-如需完全自定义配置逻辑,可禁用自动配置并手动创建 Bean:
+如需完全自定义配置逻辑，可禁用自动配置并手动创建 Bean:
 
 ```yaml
 patra:
@@ -419,13 +717,100 @@ public class CustomProvenanceDataProvider implements ProvenanceDataProvider {
 - Spring Boot 3.5.7
 - **Spring Web** (RestClient)
 - Jackson (JSON/XML)
-- Micrometer (可选)
+- Micrometer（可选）
 - Hutool
 - patra-common-core
-- patra-common-model
-- **patra-common-provenance-api** (API 常量和枚举)
+- **patra-common-model**（CanonicalLiterature 模型）
+- **patra-common-provenance-api**（API 常量和枚举）
 
-## 迁移说明
+## 重大变更记录
+
+### v0.1.0: CanonicalLiterature 医学领域化重构
+
+**背景**: 将 CanonicalLiterature 模型从通用学术文献模型重构为医学领域专用模型，并相应更新 PubmedLiteratureConverter。
+
+#### 模型变更
+
+**移除的通用抽象**：
+- `List<Subject> subjects` → 替换为 MeSH 特定字段（`meshHeadings`, `supplMeshNames`）
+- `Subject` 和 `SubjectQualifier` 类 → 删除
+
+**新增的 MeSH 特定字段**：
+- `List<MeshHeading> meshHeadings` - MeSH 主题标引列表
+- `List<SupplMeshName> supplMeshNames` - 补充 MeSH 概念
+
+**新增的 P0 核心字段**：
+- `Integer numberOfReferences` - 参考文献数量
+- `List<Reference> references` - 参考文献列表
+- `PublicationDates.completed` - 文献完成日期
+- `FundingInfo.funderAcronym` - 资助机构缩写
+- `Author.valid` - 作者信息有效性标识
+- `Pagination` 对象（从 String 重构为结构化对象）
+  - `startPage` - 起始页码
+  - `endPage` - 结束页码
+  - `medlinePgn` - MEDLINE 格式页码
+
+**新增的 P1 医学领域字段**：
+- `List<Investigator> investigators` - 研究者列表
+- `List<PersonalNameSubject> personalNameSubjects` - 作为主题的人物
+- `List<SupplementalObject> supplementalObjects` - 补充对象
+
+#### 转换器变更
+
+**重构的方法**：
+- `convertSubjects()` → `convertMeshHeadings()` - 使用 MeSH 特定类型
+- `convertPagination()` - 返回结构化对象而非 String
+- `convertAuthors()` - 添加 valid 字段映射
+- `convertFunding()` - funderIdentifier → funderAcronym
+
+**新增的转换方法**（7 个）：
+1. `convertSupplMeshNames()` - 补充 MeSH 概念
+2. `convertInvestigators()` - 研究者信息
+3. `convertPersonalNameSubjects()` - 人物主题
+4. `convertExternalReferences()` - 外部数据库引用
+5. `convertSupplementalObjects()` - 补充材料
+6. `convertReferences()` - 参考文献列表
+7. `convertRelatedItems()` - 相关条目
+
+**影响范围**：
+- ✅ 使用 `PubmedLiteratureConverter.toCanonicalLiterature()` 的代码无需修改
+- ⚠️ 访问 `literature.getSubjects()` 的代码需要更新为 `literature.getMeshHeadings()`
+- ⚠️ 访问 `literature.getPagination()` 的代码需要更新为访问结构化对象字段
+- ✅ 新增字段向后兼容（可选字段，返回 null 时不影响现有逻辑）
+
+**迁移指南**：
+
+```java
+// 旧代码（已废弃）
+List<Subject> subjects = literature.getSubjects();
+String pagination = literature.getPagination();
+
+// 新代码（推荐）
+// 1. 使用 MeSH 特定字段
+List<MeshHeading> meshHeadings = literature.getMeshHeadings();
+List<SupplMeshName> supplMeshNames = literature.getSupplMeshNames();
+
+// 2. 使用结构化页码对象
+Pagination pagination = literature.getPagination();
+if (pagination != null) {
+    String startPage = pagination.getStartPage();
+    String endPage = pagination.getEndPage();
+    String medlinePgn = pagination.getMedlinePgn();
+}
+
+// 3. 使用新增的医学领域字段
+List<Investigator> investigators = literature.getInvestigators();
+List<PersonalNameSubject> personalNameSubjects = literature.getPersonalNameSubjects();
+List<Reference> references = literature.getReferences();
+Integer refCount = literature.getNumberOfReferences();
+```
+
+**优势**：
+- ✅ 使用医学领域标准术语，语义更清晰
+- ✅ 完整支持 MeSH 主题标引和限定词
+- ✅ 支持临床试验、医学史等医学领域特有场景
+- ✅ 提供结构化的参考文献和外部数据库引用
+- ✅ 优化医学文献处理性能
 
 ### v0.1.0: 从 SimpleHttpClient 到 RestClient
 

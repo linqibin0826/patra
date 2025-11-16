@@ -8,26 +8,27 @@ import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
 /**
- * Patra 平台规范化文献模型（基于学术元数据标准设计）。
+ * Patra 平台规范化医学文献模型（基于 PubMed/MEDLINE 标准设计）。
  *
- * <p>此不可变值对象作为采集、目录和溯源微服务间的共享内核模型，封装了学术文献的核心元数据。
+ * <p>此不可变值对象作为采集、目录和溯源微服务间的共享内核模型，封装了医学文献的核心元数据。
  *
  * <p>设计基于以下国际标准：
  *
  * <ul>
- *   <li><b>Dublin Core</b> - 核心元数据标准（title, creator, subject, identifier等）
+ *   <li><b>PubMed/MEDLINE</b> - 医学文献元数据标准（主要数据源）
+ *   <li><b>MeSH</b> - 美国国家医学图书馆医学主题词表
+ *   <li><b>Dublin Core</b> - 核心元数据标准（title, creator, identifier等）
  *   <li><b>Schema.org</b> - ScholarlyArticle 规范（author, abstract, keywords等）
- *   <li><b>Crossref</b> - 学术文献元数据标准（funder, relation等）
  * </ul>
  *
  * <p>设计原则：
  *
  * <ul>
- *   <li>使用通用术语而非数据源特定术语
+ *   <li>使用医学领域标准术语（MeSH, Investigator, Substance 等）
  *   <li>不包含业务行为，保持共享模块无框架依赖
- *   <li>支持多种数据源（PubMed, EPMC, Crossref, Scopus等）
- *   <li>医学特有字段通用化但保留支持（通过 vocabulary/source 标注来源）
- *   <li>可扩展至其他学科领域
+ *   <li>主要支持医学数据源（PubMed, EMBASE, MEDLINE）
+ *   <li>保留医学领域特有字段（MeSH 标引、研究者、物质等）
+ *   <li>优化医学文献处理性能和语义清晰度
  * </ul>
  *
  * @since 0.1.0
@@ -79,6 +80,12 @@ public class CanonicalLiterature {
   /** 作者列表是否完整（true=完整, false=部分作者）。 */
   Boolean authorsComplete;
 
+  /** 研究者列表（参与研究但非文章作者，常见于临床试验等）。 */
+  List<Investigator> investigators;
+
+  /** 作为主题的人物列表（用于传记、医学史等文献）。 */
+  List<PersonalNameSubject> personalNameSubjects;
+
   // ==================== 出版载体组 ====================
 
   /** 期刊/会议/图书信息（出版载体）。 */
@@ -94,8 +101,11 @@ public class CanonicalLiterature {
 
   // ==================== 索引与分类组 ====================
 
-  /** 主题标引列表（支持多种受控词表，如 MeSH, LCSH, 自定义分类等）。 */
-  List<Subject> subjects;
+  /** MeSH 主题标引列表（医学主题词表）。 */
+  List<MeshHeading> meshHeadings;
+
+  /** 补充 MeSH 概念列表（疾病、药物试验等特定主题）。 */
+  List<SupplMeshName> supplMeshNames;
 
   /** 关键词集合列表（支持多个来源的关键词）。 */
   List<KeywordSet> keywords;
@@ -108,8 +118,8 @@ public class CanonicalLiterature {
 
   // ==================== 出版信息组 ====================
 
-  /** 页码信息（如 "123-145" 或 "e12345"）。 */
-  String pagination;
+  /** 页码信息（包含起始页、结束页和 MEDLINE 格式页码）。 */
+  Pagination pagination;
 
   /** 多种日期信息（出版、修订、接收、接受等）。 */
   PublicationDates dates;
@@ -125,8 +135,17 @@ public class CanonicalLiterature {
   /** 外部关联数据列表（如基因库、临床试验、软件仓库等）。 */
   List<ExternalReference> externalReferences;
 
+  /** 补充对象列表（图表、数据集、关键词等附加材料）。 */
+  List<SupplementalObject> supplementalObjects;
+
   /** 被引次数。 */
   Integer citationCount;
+
+  /** 参考文献数量。 */
+  Integer numberOfReferences;
+
+  /** 参考文献列表。 */
+  List<Reference> references;
 
   // ==================== 质量与合规组 ====================
 
@@ -198,6 +217,9 @@ public class CanonicalLiterature {
     /** 是否为同等贡献作者。 */
     Boolean equalContribution;
 
+    /** 作者信息是否有效（用于标识经过验证的作者信息）。 */
+    Boolean valid;
+
     /** 作者机构列表（一个作者可能隶属多个机构）。 */
     List<Affiliation> affiliations;
 
@@ -261,6 +283,26 @@ public class CanonicalLiterature {
     String publisher;
   }
 
+  /**
+   * 页码信息。
+   *
+   * <p>支持传统的起止页码以及 MEDLINE 标准格式页码（可能包含电子文章编号）。
+   */
+  @Value
+  @Builder
+  @Jacksonized
+  public static class Pagination {
+
+    /** 起始页码。 */
+    String startPage;
+
+    /** 结束页码。 */
+    String endPage;
+
+    /** MEDLINE 标准格式页码（如 "123-145" 或 "e12345"）。 */
+    String medlinePgn;
+  }
+
   /** 摘要信息（支持结构化和非结构化摘要）。 */
   @Value
   @Builder
@@ -310,55 +352,6 @@ public class CanonicalLiterature {
 
     /** 版权信息。 */
     String copyright;
-  }
-
-  /**
-   * 主题标引（支持多种受控词表）。
-   *
-   * <p>可表示 MeSH 主题词、LCSH、自定义分类等。
-   */
-  @Value
-  @Builder
-  @Jacksonized
-  public static class Subject {
-
-    /** 主题词唯一标识符。 */
-    String id;
-
-    /** 主题词名称。 */
-    String term;
-
-    /** 是否为文章的主要主题。 */
-    Boolean majorTopic;
-
-    /** 主题词类型（如 "geographic" 表示地理名称，可选）。 */
-    String type;
-
-    /**
-     * 受控词表来源。
-     *
-     * <p>常见值：MeSH（医学主题词表）, LCSH（国会图书馆主题词表）, custom（自定义）。
-     */
-    String vocabulary;
-
-    /** 限定词列表（用于进一步限定主题词的范围，可选）。 */
-    List<SubjectQualifier> qualifiers;
-  }
-
-  /** 主题词限定词（用于细化主题范围）。 */
-  @Value
-  @Builder
-  @Jacksonized
-  public static class SubjectQualifier {
-
-    /** 限定词唯一标识符。 */
-    String id;
-
-    /** 限定词名称。 */
-    String term;
-
-    /** 是否为文章的主要主题。 */
-    Boolean majorTopic;
   }
 
   /** 关键词集合（支持多个来源）。 */
@@ -429,6 +422,9 @@ public class CanonicalLiterature {
     /** 记录创建日期。 */
     LocalDate created;
 
+    /** 文献完成日期（PubMed 索引流程完成）。 */
+    LocalDate completed;
+
     /** 最后修订日期。 */
     LocalDate revised;
 
@@ -453,6 +449,9 @@ public class CanonicalLiterature {
 
     /** 资助机构名称。 */
     String funderName;
+
+    /** 资助机构缩写（如 NIH, NSF, NSFC）。 */
+    String funderAcronym;
 
     /** 资助机构标识符（如 Crossref Funder ID, ROR）。 */
     String funderIdentifier;
@@ -580,5 +579,210 @@ public class CanonicalLiterature {
 
     /** 引文子集标识（如 "IM" 表示 Index Medicus）。 */
     String citationSubset;
+  }
+
+  /**
+   * 参考文献。
+   *
+   * <p>表示文章引用的其他文献。
+   */
+  @Value
+  @Builder
+  @Jacksonized
+  public static class Reference {
+
+    /** 引文文本（格式化的引用字符串）。 */
+    String citation;
+
+    /** 参考文献的标识符列表（如 PMID, DOI）。 */
+    List<Identifier> identifiers;
+  }
+
+  /**
+   * 研究者（非作者）。
+   *
+   * <p>参与研究但未列为文章作者的研究人员，常见于大型临床试验、多中心研究等。
+   */
+  @Value
+  @Builder
+  @Jacksonized
+  public static class Investigator {
+
+    /** 姓氏。 */
+    String lastName;
+
+    /** 名字。 */
+    String foreName;
+
+    /** 姓名缩写（如 "JD"）。 */
+    String initials;
+
+    /** 后缀（如 "Jr", "III"）。 */
+    String suffix;
+
+    /** 研究者信息是否有效。 */
+    Boolean valid;
+
+    /** 机构列表。 */
+    List<Affiliation> affiliations;
+
+    /** 标识符列表（如 ORCID）。 */
+    List<Identifier> identifiers;
+  }
+
+  /**
+   * 作为主题的人物。
+   *
+   * <p>用于传记、医学史、案例报告等以特定人物为主题的文献。
+   */
+  @Value
+  @Builder
+  @Jacksonized
+  public static class PersonalNameSubject {
+
+    /** 姓氏。 */
+    String lastName;
+
+    /** 名字。 */
+    String foreName;
+
+    /** 姓名缩写。 */
+    String initials;
+
+    /** 后缀。 */
+    String suffix;
+  }
+
+  /**
+   * 补充对象。
+   *
+   * <p>表示文献的附加材料，如图表、数据集、关键词列表、多媒体文件等。
+   */
+  @Value
+  @Builder
+  @Jacksonized
+  public static class SupplementalObject {
+
+    /** 对象类型（如 "keyword", "figure", "dataset", "video"）。 */
+    String type;
+
+    /** 对象参数列表（键值对形式的属性）。 */
+    List<ObjectParam> params;
+  }
+
+  /**
+   * 对象参数。
+   *
+   * <p>表示补充对象的属性键值对。
+   */
+  @Value
+  @Builder
+  @Jacksonized
+  public static class ObjectParam {
+
+    /** 参数名称。 */
+    String name;
+
+    /** 参数值。 */
+    String value;
+  }
+
+  /**
+   * MeSH 主题标引。
+   *
+   * <p>Medical Subject Headings (MeSH) 是美国国家医学图书馆（NLM）创建的受控词表，
+   * 用于标引医学文献的主题和内容。每个 MeSH 标引项包含一个主题词（Descriptor）
+   * 和可选的限定词（Qualifiers）列表。
+   *
+   * <p>例如："Humans" [主题词] + "genetics" [限定词] 表示"人类遗传学"主题。
+   */
+  @Value
+  @Builder
+  @Jacksonized
+  public static class MeshHeading {
+
+    /** MeSH 主题词（Descriptor）。 */
+    DescriptorName descriptorName;
+
+    /** MeSH 限定词列表（Qualifiers），用于进一步细化主题范围。 */
+    List<QualifierName> qualifierNames;
+  }
+
+  /**
+   * MeSH 主题词（Descriptor）。
+   *
+   * <p>主题词是 MeSH 术语的主要部分，描述文章的核心主题。
+   */
+  @Value
+  @Builder
+  @Jacksonized
+  public static class DescriptorName {
+
+    /** MeSH 唯一标识符（UI）。 */
+    String ui;
+
+    /** 主题词文本（如 "Humans", "Antibodies", "COVID-19"）。 */
+    String term;
+
+    /** 是否为文章的主要主题。 */
+    Boolean majorTopic;
+
+    /**
+     * 主题词类型（可选）。
+     *
+     * <p>如 "Geographic" 表示地理名称。
+     */
+    String type;
+  }
+
+  /**
+   * MeSH 限定词（Qualifier）。
+   *
+   * <p>限定词用于进一步细化主题词的含义。
+   *
+   * <p>例如：
+   * <ul>
+   *   <li>"Humans" [主题词] + "genetics" [限定词] = "人类遗传学"
+   *   <li>"Diabetes Mellitus" [主题词] + "drug therapy" [限定词] = "糖尿病药物治疗"
+   * </ul>
+   */
+  @Value
+  @Builder
+  @Jacksonized
+  public static class QualifierName {
+
+    /** MeSH 唯一标识符（UI）。 */
+    String ui;
+
+    /** 限定词文本（如 "genetics", "drug therapy", "diagnosis"）。 */
+    String term;
+
+    /** 是否为文章的主要主题。 */
+    Boolean majorTopic;
+  }
+
+  /**
+   * 补充 MeSH 概念。
+   *
+   * <p>补充 MeSH 概念用于描述疾病、药物试验、化学物质等特定主题，
+   * 是对标准 MeSH 主题词的补充。
+   */
+  @Value
+  @Builder
+  @Jacksonized
+  public static class SupplMeshName {
+
+    /** MeSH 唯一标识符（UI）。 */
+    String ui;
+
+    /** 补充概念名称。 */
+    String name;
+
+    /**
+     * 补充概念类型。
+     *
+     * <p>常见值：Protocol（研究方案）, Disease（疾病）。
+     */
+    String type;
   }
 }

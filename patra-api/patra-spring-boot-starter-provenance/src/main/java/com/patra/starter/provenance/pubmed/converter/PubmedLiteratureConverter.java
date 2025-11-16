@@ -57,9 +57,12 @@ public class PubmedLiteratureConverter {
         .alternativeAbstracts(convertAlternativeAbstracts(article))
         .authors(convertAuthors(article))
         .authorsComplete(extractAuthorsComplete(citation))
+        .investigators(convertInvestigators(article))
+        .personalNameSubjects(convertPersonalNameSubjects(article))
         .journal(convertJournal(article))
         .identifiers(buildIdentifiers(article))
-        .subjects(convertSubjects(article))
+        .meshHeadings(convertMeshHeadings(article))
+        .supplMeshNames(convertSupplMeshNames(article))
         .keywords(extractKeywords(article))
         .substances(convertSubstances(article))
         .genes(convertGenes(article))
@@ -67,8 +70,13 @@ public class PubmedLiteratureConverter {
         .dates(extractPublicationDates(article))
         .publicationHistory(extractPublicationHistory(article))
         .funding(convertFunding(article))
+        .externalReferences(convertExternalReferences(article))
+        .supplementalObjects(convertSupplementalObjects(article))
         .citationCount(article.pubmedData().pmcRefCount())
+        .numberOfReferences(article.numberOfReferences())
+        .references(convertReferences(article))
         .conflictOfInterestStatement(article.coiStatement())
+        .relatedItems(convertRelatedItems(article))
         .metadata(extractMetadata(article))
         .build();
   }
@@ -171,6 +179,12 @@ public class PubmedLiteratureConverter {
         equalContribution = "Y".equalsIgnoreCase(author.equalContrib());
       }
 
+      // 处理作者信息有效性
+      Boolean valid = null;
+      if (StringUtils.hasText(author.validYN())) {
+        valid = "Y".equalsIgnoreCase(author.validYN());
+      }
+
       canonicalAuthors.add(
           CanonicalLiterature.Author.builder()
               .lastName(author.lastName())
@@ -179,6 +193,7 @@ public class PubmedLiteratureConverter {
               .suffix(author.suffix())
               .organizationName(author.collectiveName())
               .equalContribution(equalContribution)
+              .valid(valid)
               .affiliations(affiliations)
               .identifiers(authorIdentifiers)
               .build());
@@ -371,6 +386,7 @@ public class PubmedLiteratureConverter {
         .accepted(acceptedDate)
         .revised(revisedDate)
         .created(createdDate)
+        .completed(completedDate)
         .indexed(completedDate)
         .build();
   }
@@ -605,37 +621,57 @@ public class PubmedLiteratureConverter {
   }
 
   /**
-   * 转换MeSH主题词列表
+   * 转换MeSH主题标引列表
    *
    * @param article PubMed文章
-   * @return MeSH主题词列表，如果没有则返回null
+   * @return MeSH主题标引列表，如果没有则返回null
    */
-  private List<CanonicalLiterature.Subject> convertSubjects(PubmedLiterature article) {
+  private List<CanonicalLiterature.MeshHeading> convertMeshHeadings(PubmedLiterature article) {
     List<PubmedLiterature.MeshHeading> meshHeadings = article.meshHeadings();
     if (CollectionUtils.isEmpty(meshHeadings)) {
       return null;
     }
 
-    List<CanonicalLiterature.Subject> subjects = new ArrayList<>(meshHeadings.size());
+    List<CanonicalLiterature.MeshHeading> canonicalMeshHeadings =
+        new ArrayList<>(meshHeadings.size());
     for (PubmedLiterature.MeshHeading meshHeading : meshHeadings) {
       PubmedLiterature.DescriptorName descriptorName = meshHeading.descriptorName();
       if (descriptorName == null || !StringUtils.hasText(descriptorName.value())) {
         continue;
       }
 
-      // 提取限定词
-      List<CanonicalLiterature.SubjectQualifier> qualifiers = null;
+      // 转换MeSH主题词
+      Boolean majorTopic = null;
+      if (StringUtils.hasText(descriptorName.majorTopicYN())) {
+        majorTopic = "Y".equalsIgnoreCase(descriptorName.majorTopicYN());
+      }
+
+      CanonicalLiterature.DescriptorName canonicalDescriptor =
+          CanonicalLiterature.DescriptorName.builder()
+              .ui(descriptorName.ui())
+              .term(descriptorName.value())
+              .majorTopic(majorTopic)
+              .type(descriptorName.type())
+              .build();
+
+      // 转换MeSH限定词
+      List<CanonicalLiterature.QualifierName> qualifiers = null;
       if (!CollectionUtils.isEmpty(meshHeading.qualifierNames())) {
         qualifiers =
             meshHeading.qualifierNames().stream()
                 .filter(q -> StringUtils.hasText(q.value()))
                 .map(
-                    q ->
-                        CanonicalLiterature.SubjectQualifier.builder()
-                            .id(q.ui())
-                            .term(q.value())
-                            .majorTopic("Y".equalsIgnoreCase(q.majorTopicYN()))
-                            .build())
+                    q -> {
+                      Boolean qMajorTopic = null;
+                      if (StringUtils.hasText(q.majorTopicYN())) {
+                        qMajorTopic = "Y".equalsIgnoreCase(q.majorTopicYN());
+                      }
+                      return CanonicalLiterature.QualifierName.builder()
+                          .ui(q.ui())
+                          .term(q.value())
+                          .majorTopic(qMajorTopic)
+                          .build();
+                    })
                 .collect(Collectors.toList());
 
         if (qualifiers.isEmpty()) {
@@ -643,18 +679,14 @@ public class PubmedLiteratureConverter {
         }
       }
 
-      subjects.add(
-          CanonicalLiterature.Subject.builder()
-              .id(descriptorName.ui())
-              .term(descriptorName.value())
-              .majorTopic("Y".equalsIgnoreCase(descriptorName.majorTopicYN()))
-              .type(descriptorName.type())
-              .vocabulary("MeSH")
-              .qualifiers(qualifiers)
+      canonicalMeshHeadings.add(
+          CanonicalLiterature.MeshHeading.builder()
+              .descriptorName(canonicalDescriptor)
+              .qualifierNames(qualifiers)
               .build());
     }
 
-    return subjects.isEmpty() ? null : subjects;
+    return canonicalMeshHeadings.isEmpty() ? null : canonicalMeshHeadings;
   }
 
   /**
@@ -684,7 +716,7 @@ public class PubmedLiteratureConverter {
           CanonicalLiterature.FundingInfo.builder()
               .grantId(grant.grantId())
               .funderName(grant.agency())
-              .funderIdentifier(grant.acronym())
+              .funderAcronym(grant.acronym())
               .country(grant.country())
               .build());
     }
@@ -739,9 +771,9 @@ public class PubmedLiteratureConverter {
    * 转换页码信息
    *
    * @param article PubMed文章
-   * @return 页码信息，如果没有则返回null
+   * @return 页码信息对象，如果没有则返回null
    */
-  private String convertPagination(PubmedLiterature article) {
+  private CanonicalLiterature.Pagination convertPagination(PubmedLiterature article) {
     Article citationArticle = article.article();
     if (citationArticle == null) {
       return null;
@@ -752,21 +784,23 @@ public class PubmedLiteratureConverter {
       return null;
     }
 
-    // 优先使用 MedlinePgn
-    if (StringUtils.hasText(pagination.medlinePgn())) {
-      return pagination.medlinePgn();
-    }
-
-    // 否则构造页码范围
+    // 提取页码字段
     String startPage = pagination.startPage();
     String endPage = pagination.endPage();
-    if (StringUtils.hasText(startPage) && StringUtils.hasText(endPage)) {
-      return startPage + "-" + endPage;
-    } else if (StringUtils.hasText(startPage)) {
-      return startPage;
+    String medlinePgn = pagination.medlinePgn();
+
+    // 如果所有字段都为空，返回null
+    if (!StringUtils.hasText(startPage)
+        && !StringUtils.hasText(endPage)
+        && !StringUtils.hasText(medlinePgn)) {
+      return null;
     }
 
-    return null;
+    return CanonicalLiterature.Pagination.builder()
+        .startPage(startPage)
+        .endPage(endPage)
+        .medlinePgn(medlinePgn)
+        .build();
   }
 
   /**
@@ -877,5 +911,283 @@ public class PubmedLiteratureConverter {
         .status(status)
         .citationSubset(citationSubset)
         .build();
+  }
+
+  /**
+   * 转换补充MeSH概念列表
+   *
+   * @param article PubMed文章
+   * @return 补充MeSH概念列表，如果没有则返回null
+   */
+  private List<CanonicalLiterature.SupplMeshName> convertSupplMeshNames(
+      PubmedLiterature article) {
+    List<PubmedLiterature.SupplMeshName> supplMeshNames = article.supplMeshNames();
+    if (CollectionUtils.isEmpty(supplMeshNames)) {
+      return null;
+    }
+
+    List<CanonicalLiterature.SupplMeshName> canonicalSupplMeshNames =
+        supplMeshNames.stream()
+            .filter(s -> StringUtils.hasText(s.value()))
+            .map(
+                s ->
+                    CanonicalLiterature.SupplMeshName.builder()
+                        .ui(s.ui())
+                        .name(s.value())
+                        .type(s.type())
+                        .build())
+            .collect(Collectors.toList());
+
+    return canonicalSupplMeshNames.isEmpty() ? null : canonicalSupplMeshNames;
+  }
+
+  /**
+   * 转换研究者列表
+   *
+   * @param article PubMed文章
+   * @return 研究者列表，如果没有则返回null
+   */
+  private List<CanonicalLiterature.Investigator> convertInvestigators(PubmedLiterature article) {
+    List<PubmedLiterature.Investigator> investigators = article.investigators();
+    if (CollectionUtils.isEmpty(investigators)) {
+      return null;
+    }
+
+    List<CanonicalLiterature.Investigator> canonicalInvestigators =
+        new ArrayList<>(investigators.size());
+    for (PubmedLiterature.Investigator investigator : investigators) {
+      // 转换机构信息
+      List<CanonicalLiterature.Affiliation> affiliations = null;
+      if (!CollectionUtils.isEmpty(investigator.affiliationInfo())) {
+        affiliations =
+            investigator.affiliationInfo().stream()
+                .filter(info -> StringUtils.hasText(info.value()))
+                .map(info -> CanonicalLiterature.Affiliation.builder().name(info.value()).build())
+                .collect(Collectors.toList());
+        if (affiliations.isEmpty()) {
+          affiliations = null;
+        }
+      }
+
+      // 转换标识符
+      List<CanonicalLiterature.Identifier> identifiers = null;
+      if (!CollectionUtils.isEmpty(investigator.identifiers())) {
+        identifiers =
+            investigator.identifiers().stream()
+                .filter(id -> StringUtils.hasText(id.source()) && StringUtils.hasText(id.value()))
+                .map(
+                    id ->
+                        CanonicalLiterature.Identifier.builder()
+                            .type(id.source().toLowerCase(Locale.ROOT))
+                            .value(id.value())
+                            .build())
+                .collect(Collectors.toList());
+        if (identifiers.isEmpty()) {
+          identifiers = null;
+        }
+      }
+
+      // 处理有效性标志
+      Boolean valid = null;
+      if (StringUtils.hasText(investigator.validYN())) {
+        valid = "Y".equalsIgnoreCase(investigator.validYN());
+      }
+
+      canonicalInvestigators.add(
+          CanonicalLiterature.Investigator.builder()
+              .lastName(investigator.lastName())
+              .foreName(investigator.foreName())
+              .initials(investigator.initials())
+              .suffix(investigator.suffix())
+              .valid(valid)
+              .affiliations(affiliations)
+              .identifiers(identifiers)
+              .build());
+    }
+
+    return canonicalInvestigators.isEmpty() ? null : canonicalInvestigators;
+  }
+
+  /**
+   * 转换作为主题的人物列表
+   *
+   * @param article PubMed文章
+   * @return 人物主题列表，如果没有则返回null
+   */
+  private List<CanonicalLiterature.PersonalNameSubject> convertPersonalNameSubjects(
+      PubmedLiterature article) {
+    List<PubmedLiterature.PersonalNameSubject> personalNameSubjects =
+        article.personalNameSubjects();
+    if (CollectionUtils.isEmpty(personalNameSubjects)) {
+      return null;
+    }
+
+    List<CanonicalLiterature.PersonalNameSubject> canonicalPersonalNameSubjects =
+        personalNameSubjects.stream()
+            .filter(p -> StringUtils.hasText(p.lastName()) || StringUtils.hasText(p.foreName()))
+            .map(
+                p ->
+                    CanonicalLiterature.PersonalNameSubject.builder()
+                        .lastName(p.lastName())
+                        .foreName(p.foreName())
+                        .initials(p.initials())
+                        .suffix(p.suffix())
+                        .build())
+            .collect(Collectors.toList());
+
+    return canonicalPersonalNameSubjects.isEmpty() ? null : canonicalPersonalNameSubjects;
+  }
+
+  /**
+   * 转换外部引用列表
+   *
+   * @param article PubMed文章
+   * @return 外部引用列表，如果没有则返回null
+   */
+  private List<CanonicalLiterature.ExternalReference> convertExternalReferences(
+      PubmedLiterature article) {
+    Article citationArticle = article.article();
+    if (citationArticle == null) {
+      return null;
+    }
+
+    List<Article.DataBank> dataBanks = citationArticle.dataBanks();
+    if (CollectionUtils.isEmpty(dataBanks)) {
+      return null;
+    }
+
+    List<CanonicalLiterature.ExternalReference> externalReferences =
+        new ArrayList<>(dataBanks.size());
+    for (Article.DataBank dataBank : dataBanks) {
+      if (!StringUtils.hasText(dataBank.dataBankName())) {
+        continue;
+      }
+
+      externalReferences.add(
+          CanonicalLiterature.ExternalReference.builder()
+              .type("database")
+              .name(dataBank.dataBankName())
+              .identifiers(dataBank.accessionNumbers())
+              .build());
+    }
+
+    return externalReferences.isEmpty() ? null : externalReferences;
+  }
+
+  /**
+   * 转换补充对象列表
+   *
+   * @param article PubMed文章
+   * @return 补充对象列表，如果没有则返回null
+   */
+  private List<CanonicalLiterature.SupplementalObject> convertSupplementalObjects(
+      PubmedLiterature article) {
+    List<PubmedData.ObjectInfo> objects = article.pubmedData().objects();
+    if (CollectionUtils.isEmpty(objects)) {
+      return null;
+    }
+
+    List<CanonicalLiterature.SupplementalObject> supplementalObjects =
+        new ArrayList<>(objects.size());
+    for (PubmedData.ObjectInfo object : objects) {
+      if (!StringUtils.hasText(object.type())) {
+        continue;
+      }
+
+      // 转换参数列表
+      List<CanonicalLiterature.ObjectParam> params = null;
+      if (!CollectionUtils.isEmpty(object.params())) {
+        params =
+            object.params().stream()
+                .filter(p -> StringUtils.hasText(p.name()))
+                .map(
+                    p ->
+                        CanonicalLiterature.ObjectParam.builder()
+                            .name(p.name())
+                            .value(p.value())
+                            .build())
+                .collect(Collectors.toList());
+        if (params.isEmpty()) {
+          params = null;
+        }
+      }
+
+      supplementalObjects.add(
+          CanonicalLiterature.SupplementalObject.builder().type(object.type()).params(params).build());
+    }
+
+    return supplementalObjects.isEmpty() ? null : supplementalObjects;
+  }
+
+  /**
+   * 转换参考文献列表
+   *
+   * @param article PubMed文章
+   * @return 参考文献列表，如果没有则返回null
+   */
+  private List<CanonicalLiterature.Reference> convertReferences(PubmedLiterature article) {
+    List<PubmedData.Reference> references = article.pubmedData().references();
+    if (CollectionUtils.isEmpty(references)) {
+      return null;
+    }
+
+    List<CanonicalLiterature.Reference> canonicalReferences = new ArrayList<>(references.size());
+    for (PubmedData.Reference reference : references) {
+      // 转换标识符
+      List<CanonicalLiterature.Identifier> identifiers = null;
+      if (!CollectionUtils.isEmpty(reference.articleIds())) {
+        identifiers =
+            reference.articleIds().stream()
+                .filter(id -> StringUtils.hasText(id.type()) && StringUtils.hasText(id.value()))
+                .map(
+                    id ->
+                        CanonicalLiterature.Identifier.builder()
+                            .type(id.type().toLowerCase(Locale.ROOT))
+                            .value(id.value())
+                            .build())
+                .collect(Collectors.toList());
+        if (identifiers.isEmpty()) {
+          identifiers = null;
+        }
+      }
+
+      canonicalReferences.add(
+          CanonicalLiterature.Reference.builder()
+              .citation(reference.citation())
+              .identifiers(identifiers)
+              .build());
+    }
+
+    return canonicalReferences.isEmpty() ? null : canonicalReferences;
+  }
+
+  /**
+   * 转换相关项目列表（评论、更正、撤稿等）
+   *
+   * @param article PubMed文章
+   * @return 相关项目列表，如果没有则返回null
+   */
+  private List<CanonicalLiterature.RelatedItem> convertRelatedItems(PubmedLiterature article) {
+    List<PubmedLiterature.CommentsCorrections> commentsCorrections =
+        article.commentsCorrections();
+    if (CollectionUtils.isEmpty(commentsCorrections)) {
+      return null;
+    }
+
+    List<CanonicalLiterature.RelatedItem> relatedItems =
+        commentsCorrections.stream()
+            .filter(cc -> StringUtils.hasText(cc.refType()))
+            .map(
+                cc ->
+                    CanonicalLiterature.RelatedItem.builder()
+                        .relationType(cc.refType())
+                        .citation(cc.refSource())
+                        .identifier(cc.pmid())
+                        .identifierType(StringUtils.hasText(cc.pmid()) ? "pmid" : null)
+                        .description(cc.note())
+                        .build())
+            .collect(Collectors.toList());
+
+    return relatedItems.isEmpty() ? null : relatedItems;
   }
 }
