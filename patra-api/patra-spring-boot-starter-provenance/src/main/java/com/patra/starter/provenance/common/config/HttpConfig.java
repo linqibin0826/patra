@@ -5,8 +5,8 @@ import java.util.Map;
 /**
  * HTTP 客户端配置记录
  *
- * <p>定义访问 Provenance 数据源 API 时的 HTTP 客户端行为,包括默认请求头和各类超时设置。 该配置会被应用到底层的 HTTP 客户端(如 {@link
- * com.patra.starter.provenance.common.http.SimpleHttpClient})。
+ * <p>定义访问 Provenance 数据源 API 时的 HTTP 客户端行为,包括默认请求头和各类超时设置。
+ * 该配置会被应用到 Spring RestClient。
  *
  * @param defaultHeaders 不可变的 HTTP 请求头映射,会附加到每个请求中
  * @param timeoutConnectMillis 连接建立超时时间(毫秒)

@@ -5,18 +5,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.starter.provenance.common.config.DefaultConfigProvider;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
-import com.patra.starter.provenance.common.converter.ProvenanceConfigConverter;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
-import com.patra.starter.provenance.common.http.HttpResilienceConfig;
-import com.patra.starter.provenance.common.http.SimpleHttpClient;
 import com.patra.starter.provenance.common.metrics.ProvenanceMetrics;
 import com.patra.starter.provenance.epmc.model.request.SearchRequest;
 import com.patra.starter.provenance.epmc.model.response.SearchResponse;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.client.RestClient;
 
 /**
- * Europe PMC 客户端实现
+ * Europe PMC 客户端实现（使用 Spring RestClient）
  *
  * <p>直接通过HTTP调用Europe PMC API。Europe PMC是欧洲的生物医学文献数据库， 提供PubMed数据以及欧洲特色的开放获取文献。
  *
@@ -36,17 +34,17 @@ public class EPMCClientImpl implements EPMCClient {
 
   private static final ProvenanceCode PROVENANCE = ProvenanceCode.EPMC;
 
-  private final SimpleHttpClient httpClient;
+  private final RestClient restClient;
   private final DefaultConfigProvider configProvider;
   private final ObjectMapper objectMapper;
   private final ProvenanceMetrics metrics;
 
   public EPMCClientImpl(
-      SimpleHttpClient httpClient,
+      RestClient restClient,
       DefaultConfigProvider configProvider,
       ObjectMapper objectMapper,
       ProvenanceMetrics metrics) {
-    this.httpClient = httpClient;
+    this.restClient = restClient;
     this.configProvider = configProvider;
     this.objectMapper = objectMapper;
     this.metrics = metrics;
@@ -71,13 +69,21 @@ public class EPMCClientImpl implements EPMCClient {
   private SearchResponse executeSearch(SearchRequest request, ProvenanceConfig config) {
     ProvenanceConfig finalConfig = config != null ? config : configProvider.getEPMCDefaultConfig();
 
-    String baseUrl = finalConfig.baseUrl();
     String path = "/search";
     Map<String, String> queryParams = request.toQueryParams();
-    Map<String, String> headers = ProvenanceConfigConverter.extractHeaders(finalConfig);
-    HttpResilienceConfig rc = ProvenanceConfigConverter.toHttpResilienceConfig(finalConfig);
 
-    String body = httpClient.get(baseUrl, path, queryParams, headers, rc);
+    String body =
+        restClient
+            .get()
+            .uri(
+                uriBuilder -> {
+                  uriBuilder.path(path);
+                  queryParams.forEach(uriBuilder::queryParam);
+                  return uriBuilder.build();
+                })
+            .retrieve()
+            .body(String.class);
+
     try {
       JsonNode root = objectMapper.readTree(body);
       return SearchResponse.from(root);
