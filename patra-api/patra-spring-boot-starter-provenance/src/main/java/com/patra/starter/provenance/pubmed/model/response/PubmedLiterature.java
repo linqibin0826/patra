@@ -466,7 +466,21 @@ public final class PubmedLiterature {
     /** 关键字文本内容 */
     @JacksonXmlText private String value;
 
+    /** 是否为主要主题 (Y/N) */
+    @JacksonXmlProperty(isAttribute = true, localName = "MajorTopicYN")
+    private String majorTopicYN;
+
     private Keyword() {}
+
+    /** 返回关键字文本 */
+    String value() {
+      return value;
+    }
+
+    /** 返回是否为主要主题 */
+    String majorTopicYN() {
+      return majorTopicYN;
+    }
   }
 
   /** PMID标识符的内部表示 */
@@ -476,7 +490,21 @@ public final class PubmedLiterature {
     /** PMID数值 */
     @JacksonXmlText private String value;
 
+    /** PMID版本号 */
+    @JacksonXmlProperty(isAttribute = true, localName = "Version")
+    private String version;
+
     private Pmid() {}
+
+    /** 返回PMID值 */
+    String value() {
+      return value;
+    }
+
+    /** 返回PMID版本 */
+    String version() {
+      return version;
+    }
   }
 
   /** 日期信息的内部表示 */
@@ -1137,9 +1165,8 @@ public final class PubmedLiterature {
     @JacksonXmlProperty(localName = "Language")
     private List<String> languages;
 
-    @JacksonXmlElementWrapper(localName = "AuthorList")
-    @JacksonXmlProperty(localName = "Author")
-    private List<Author> authors;
+    @JacksonXmlProperty(localName = "AuthorList")
+    private AuthorListWrapper authorList;
 
     @JacksonXmlProperty(localName = "DataBankList")
     private DataBankList dataBankList;
@@ -1149,7 +1176,7 @@ public final class PubmedLiterature {
 
     @JacksonXmlElementWrapper(localName = "PublicationTypeList")
     @JacksonXmlProperty(localName = "PublicationType")
-    private List<String> publicationTypes;
+    private List<PublicationType> publicationTypes;
 
     @JacksonXmlProperty(localName = "VernacularTitle")
     private String vernacularTitle;
@@ -1200,10 +1227,12 @@ public final class PubmedLiterature {
 
     /** 已解析的作者列表。 */
     public List<Author> authors() {
-      if (authors == null || authors.isEmpty()) {
-        return List.of();
-      }
-      return List.copyOf(authors);
+      return authorList != null ? authorList.authors() : List.of();
+    }
+
+    /** 作者列表是否完整 (Y = 完整, N = 不完整)。 */
+    public String authorsCompleteYN() {
+      return authorList != null ? authorList.completeYN() : null;
     }
 
     /** 关联的数据库列表 (如 GENBANK)。 */
@@ -1217,7 +1246,7 @@ public final class PubmedLiterature {
     }
 
     /** PubMed 分配的发表类型标识符。 */
-    public List<String> publicationTypes() {
+    public List<PublicationType> publicationTypes() {
       if (publicationTypes == null || publicationTypes.isEmpty()) {
         return List.of();
       }
@@ -1251,7 +1280,7 @@ public final class PubmedLiterature {
         for (AbstractText section : sections) {
           String text = section.value;
           if (text != null && !text.isBlank()) {
-            result.add(new AbstractSection(section.label, text));
+            result.add(new AbstractSection(section.label, section.nlmCategory, text));
           }
         }
         return List.copyOf(result);
@@ -1266,11 +1295,32 @@ public final class PubmedLiterature {
       @JacksonXmlProperty(isAttribute = true, localName = "Label")
       private String label;
 
+      @JacksonXmlProperty(isAttribute = true, localName = "NlmCategory")
+      private String nlmCategory;
+
       private AbstractText() {}
+
+      String value() {
+        return value;
+      }
+
+      String label() {
+        return label;
+      }
+
+      String nlmCategory() {
+        return nlmCategory;
+      }
     }
 
-    /** 从引文中提取的摘要分段,带可选标签。 */
-    public record AbstractSection(String label, String text) {}
+    /**
+     * 从引文中提取的摘要分段,带可选标签和类别。
+     *
+     * @param label 段落标签（如 BACKGROUND, METHODS, RESULTS）
+     * @param nlmCategory NLM 类别（如 BACKGROUND, METHODS, RESULTS, CONCLUSIONS）
+     * @param text 段落文本
+     */
+    public record AbstractSection(String label, String nlmCategory, String text) {}
 
     /**
      * 页码信息。
@@ -1422,6 +1472,32 @@ public final class PubmedLiterature {
     }
 
     /**
+     * 作者列表容器。
+     *
+     * <p>包含作者列表及其完整性标志。
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private static final class AuthorListWrapper {
+
+      @JacksonXmlProperty(isAttribute = true, localName = "CompleteYN")
+      private String completeYN;
+
+      @JacksonXmlElementWrapper(useWrapping = false)
+      @JacksonXmlProperty(localName = "Author")
+      private List<Author> authors;
+
+      private AuthorListWrapper() {}
+
+      String completeYN() {
+        return completeYN;
+      }
+
+      List<Author> authors() {
+        return authors != null ? List.copyOf(authors) : List.of();
+      }
+    }
+
+    /**
      * 资助信息。
      *
      * <p>包含研究项目的资助编号、机构和国家等信息。
@@ -1504,6 +1580,34 @@ public final class PubmedLiterature {
       /** 日。 */
       public String day() {
         return day;
+      }
+    }
+
+    /**
+     * 发表类型。
+     *
+     * <p>包含发表类型的文本值和 MeSH UI 标识符。
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static final class PublicationType {
+
+      /** 发表类型文本 */
+      @JacksonXmlText private String value;
+
+      /** MeSH UI 标识符 */
+      @JacksonXmlProperty(isAttribute = true, localName = "UI")
+      private String ui;
+
+      private PublicationType() {}
+
+      /** 返回发表类型文本 */
+      public String value() {
+        return value;
+      }
+
+      /** 返回 MeSH UI 标识符 */
+      public String ui() {
+        return ui;
       }
     }
   }
