@@ -111,7 +111,11 @@ public class PubmedLiteratureConverter {
             .filter(StringUtils::hasText)
             .collect(Collectors.joining("\n"));
 
-    return CanonicalLiterature.Abstract.builder().text(text).sections(sections).build();
+    return CanonicalLiterature.Abstract.builder()
+        .text(text)
+        .sections(sections)
+        .copyright(article.copyrightInformation())
+        .build();
   }
 
   /**
@@ -433,27 +437,62 @@ public class PubmedLiteratureConverter {
     return 1;
   }
 
+  /**
+   * 提取关键字集合
+   *
+   * @param article PubMed文章
+   * @return 关键字集合列表，如果没有则返回null
+   */
   private List<CanonicalLiterature.KeywordSet> extractKeywords(PubmedLiterature article) {
-    List<String> keywords = article.keywords();
-    if (CollectionUtils.isEmpty(keywords)) {
+    List<PubmedLiterature.KeywordList> keywordLists = article.keywordLists();
+    if (CollectionUtils.isEmpty(keywordLists)) {
       return null;
     }
 
-    List<CanonicalLiterature.Keyword> keywordList =
-        keywords.stream()
-            .filter(StringUtils::hasText)
-            .map(keyword -> CanonicalLiterature.Keyword.builder().term(keyword).build())
-            .collect(Collectors.toList());
+    List<CanonicalLiterature.KeywordSet> keywordSets = new ArrayList<>();
+    for (PubmedLiterature.KeywordList keywordList : keywordLists) {
+      List<PubmedLiterature.Keyword> keywords = keywordList.keywords();
+      if (CollectionUtils.isEmpty(keywords)) {
+        continue;
+      }
 
-    if (keywordList.isEmpty()) {
-      return null;
+      List<CanonicalLiterature.Keyword> canonicalKeywords =
+          keywords.stream()
+              .filter(keyword -> StringUtils.hasText(keyword.value()))
+              .map(
+                  keyword -> {
+                    Boolean majorTopic = null;
+                    if (StringUtils.hasText(keyword.majorTopicYN())) {
+                      majorTopic = "Y".equalsIgnoreCase(keyword.majorTopicYN());
+                    }
+                    return CanonicalLiterature.Keyword.builder()
+                        .term(keyword.value())
+                        .majorTopic(majorTopic)
+                        .build();
+                  })
+              .collect(Collectors.toList());
+
+      if (!canonicalKeywords.isEmpty()) {
+        // 映射来源：NOTNLM -> author, NLM -> indexer
+        String source = "publisher"; // 默认值
+        if (StringUtils.hasText(keywordList.owner())) {
+          source =
+              switch (keywordList.owner().toUpperCase(Locale.ROOT)) {
+                case "NOTNLM" -> "author";
+                case "NLM" -> "indexer";
+                default -> "publisher";
+              };
+        }
+
+        keywordSets.add(
+            CanonicalLiterature.KeywordSet.builder()
+                .source(source)
+                .keywords(canonicalKeywords)
+                .build());
+      }
     }
 
-    return List.of(
-        CanonicalLiterature.KeywordSet.builder()
-            .source("publisher") // PubMed 关键词通常来自出版商
-            .keywords(keywordList)
-            .build());
+    return keywordSets.isEmpty() ? null : keywordSets;
   }
 
   /**
@@ -804,6 +843,8 @@ public class PubmedLiteratureConverter {
                         .year(event.year())
                         .month(event.month())
                         .day(event.day())
+                        .hour(event.hour())
+                        .minute(event.minute())
                         .build())
             .collect(Collectors.toList());
 

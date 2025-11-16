@@ -55,6 +55,15 @@ public final class PubmedLiterature {
     return medlineCitation != null ? medlineCitation.keywords() : List.of();
   }
 
+  /**
+   * 返回关键字列表集合（包含来源和主题标志）。
+   *
+   * @return 关键字列表集合，如果没有则返回空列表
+   */
+  public List<KeywordList> keywordLists() {
+    return medlineCitation != null ? medlineCitation.keywordLists() : List.of();
+  }
+
   /** 返回文章标识符列表的便捷访问器(例如DOI、PMC) */
   public List<PubmedData.ArticleId> articleIds() {
     return pubmedData != null ? pubmedData.articleIds() : List.of();
@@ -351,6 +360,10 @@ public final class PubmedLiterature {
       return List.copyOf(values);
     }
 
+    private List<KeywordList> keywordLists() {
+      return keywordLists != null ? List.copyOf(keywordLists) : List.of();
+    }
+
     private DateInfo dateCreated() {
       return dateCreated;
     }
@@ -434,9 +447,17 @@ public final class PubmedLiterature {
     }
   }
 
-  /** 关键字列表的内部表示 */
+  /**
+   * 关键字列表。
+   *
+   * <p>包含关键字来源和关键字集合。
+   */
   @JsonIgnoreProperties(ignoreUnknown = true)
-  private static final class KeywordList {
+  public static final class KeywordList {
+
+    /** 关键字来源（如 NOTNLM, NLM）。 */
+    @JacksonXmlProperty(isAttribute = true, localName = "Owner")
+    private String owner;
 
     /** 关键字集合 */
     @JacksonXmlElementWrapper(useWrapping = false)
@@ -444,6 +465,16 @@ public final class PubmedLiterature {
     private List<Keyword> keywords;
 
     private KeywordList() {}
+
+    /** 返回关键字来源。 */
+    public String owner() {
+      return owner;
+    }
+
+    /** 返回关键字列表。 */
+    public List<Keyword> keywords() {
+      return keywords != null ? List.copyOf(keywords) : List.of();
+    }
 
     private List<String> values() {
       if (keywords == null || keywords.isEmpty()) {
@@ -459,9 +490,13 @@ public final class PubmedLiterature {
     }
   }
 
-  /** 单个关键字的内部表示 */
+  /**
+   * 单个关键字。
+   *
+   * <p>包含关键字文本和主要主题标志。
+   */
   @JsonIgnoreProperties(ignoreUnknown = true)
-  private static final class Keyword {
+  public static final class Keyword {
 
     /** 关键字文本内容 */
     @JacksonXmlText private String value;
@@ -472,13 +507,13 @@ public final class PubmedLiterature {
 
     private Keyword() {}
 
-    /** 返回关键字文本 */
-    String value() {
+    /** 返回关键字文本。 */
+    public String value() {
       return value;
     }
 
-    /** 返回是否为主要主题 */
-    String majorTopicYN() {
+    /** 返回是否为主要主题 (Y/N)。 */
+    public String majorTopicYN() {
       return majorTopicYN;
     }
   }
@@ -1225,6 +1260,11 @@ public final class PubmedLiterature {
       return abstractContent != null ? abstractContent.sections() : List.of();
     }
 
+    /** 摘要的版权信息。 */
+    public String copyrightInformation() {
+      return abstractContent != null ? abstractContent.copyrightInformation() : null;
+    }
+
     /** 已解析的作者列表。 */
     public List<Author> authors() {
       return authorList != null ? authorList.authors() : List.of();
@@ -1238,6 +1278,11 @@ public final class PubmedLiterature {
     /** 关联的数据库列表 (如 GENBANK)。 */
     public List<DataBank> dataBanks() {
       return dataBankList != null ? dataBankList.dataBanks() : List.of();
+    }
+
+    /** 数据库列表是否完整 (Y = 完整, N = 不完整)。 */
+    public String dataBanksCompleteYN() {
+      return dataBankList != null ? dataBankList.completeYN() : null;
     }
 
     /** 资助信息列表。 */
@@ -1270,6 +1315,9 @@ public final class PubmedLiterature {
       @JacksonXmlProperty(localName = "AbstractText")
       private List<AbstractText> sections;
 
+      @JacksonXmlProperty(localName = "CopyrightInformation")
+      private String copyrightInformation;
+
       private AbstractContent() {}
 
       private List<AbstractSection> sections() {
@@ -1284,6 +1332,10 @@ public final class PubmedLiterature {
           }
         }
         return List.copyOf(result);
+      }
+
+      private String copyrightInformation() {
+        return copyrightInformation;
       }
     }
 
@@ -2111,10 +2163,18 @@ public final class PubmedLiterature {
       @JacksonXmlProperty(localName = "Day")
       private String day;
 
+      /** 小时 */
+      @JacksonXmlProperty(localName = "Hour")
+      private String hour;
+
+      /** 分钟 */
+      @JacksonXmlProperty(localName = "Minute")
+      private String minute;
+
       private PubDate() {}
 
       private HistoryEvent toHistoryEvent() {
-        return new HistoryEvent(status, year, month, day);
+        return new HistoryEvent(status, year, month, day, hour, minute);
       }
     }
 
@@ -2277,7 +2337,10 @@ public final class PubmedLiterature {
      * @param year 年份
      * @param month 月份
      * @param day 日期
+     * @param hour 小时
+     * @param minute 分钟
      */
-    public record HistoryEvent(String status, String year, String month, String day) {}
+    public record HistoryEvent(
+        String status, String year, String month, String day, String hour, String minute) {}
   }
 }
