@@ -70,7 +70,7 @@
 - **patra-expr-kernel**: 表达式引擎
 - **patra-spring-boot-starter-\***: Spring Boot 集成 starter
 - **patra-spring-cloud-starter-\***: Spring Cloud 集成 starter
-- **patra-registry-api / patra-storage-api / patra-catalog-api**: 微服务 API 模块
+- **patra-registry-api / patra-storage-api**: 微服务 API 模块
 
 ### 测试框架
 

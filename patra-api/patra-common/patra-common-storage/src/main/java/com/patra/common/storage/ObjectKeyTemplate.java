@@ -39,7 +39,7 @@ import java.time.LocalDate;
  *
  * // Use builder for complex scenarios
  * String customKey = ObjectKeyTemplate.builder()
- *     .serviceName("catalog")
+ *     .serviceName("literature")
  *     .businessType("index_snapshot")
  *     .businessId("snapshot-20251026-001")
  *     .partitionDate(LocalDate.now())

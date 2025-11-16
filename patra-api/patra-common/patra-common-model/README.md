@@ -63,13 +63,13 @@ patra-common-model/
 **嵌套模型**:
 
 #### AuthorInfo
-作者快照,与 Catalog 契约需求对齐:
+作者快照,与下游服务契约需求对齐:
 - `lastName`: 姓氏
 - `foreName`: 名字
 - `affiliation`: 所属机构
 
 #### JournalInfo
-期刊快照,与 Catalog 契约需求对齐:
+期刊快照,与下游服务契约需求对齐:
 - `title`: 期刊名称
 - `issn`: 国际标准期刊号
 - `publisher`: 出版商
@@ -151,7 +151,7 @@ patra-common-model/
 - **patra-ingest-app**: 应用服务编排(批次规划器使用)
 - **patra-ingest-infra**: 基础设施层(适配器实现)
 - **patra-spring-boot-starter-provenance**: Provenance 适配器实现(PubMed、EPMC 等)
-- 未来: `patra-catalog`、`patra-search` 等下游服务
+- 未来: `patra-search` 等下游服务
 
 ---
 

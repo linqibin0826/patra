@@ -11,7 +11,7 @@ import java.util.List;
  */
 public record LiteratureReadyMessage(Payload payload, Header header) {
 
-  /** Business payload delivered to catalog service. */
+  /** Business payload delivered to downstream services. */
   public record Payload(
       Long taskId,
       Long runId,
