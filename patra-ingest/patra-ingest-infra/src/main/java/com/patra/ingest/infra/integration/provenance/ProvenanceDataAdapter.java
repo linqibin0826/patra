@@ -1,4 +1,4 @@
-package com.patra.ingest.infra.integration.datasource;
+package com.patra.ingest.infra.integration.provenance;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,7 +11,7 @@ import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.model.vo.query.QuerySession;
 import com.patra.ingest.domain.port.ProvenanceDataPort;
 import com.patra.ingest.infra.exception.ProvenanceDataException;
-import com.patra.ingest.infra.integration.datasource.acl.QuerySessionTranslator;
+import com.patra.ingest.infra.integration.provenance.acl.QuerySessionTranslator;
 import com.patra.ingest.infra.mapper.ProviderParameterMapper;
 import com.patra.ingest.infra.mapper.ProviderParameterMapperRegistry;
 import com.patra.starter.provenance.common.config.BatchingConfig;

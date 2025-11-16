@@ -1,4 +1,4 @@
-package com.patra.ingest.infra.integration.datasource.acl;
+package com.patra.ingest.infra.integration.provenance.acl;
 
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.query.QuerySession;

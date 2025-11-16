@@ -1,12 +1,11 @@
-package com.patra.ingest.infra.integration.datasource;
+package com.patra.ingest.infra.integration.provenance;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.ingest.infra.integration.datasource.acl.QuerySessionTranslator;
+import com.patra.ingest.infra.integration.provenance.acl.QuerySessionTranslator;
 import com.patra.ingest.infra.mapper.ProviderParameterMapperRegistry;
 import com.patra.starter.provenance.common.config.*;
 import com.patra.starter.provenance.common.provider.ProviderRegistry;
