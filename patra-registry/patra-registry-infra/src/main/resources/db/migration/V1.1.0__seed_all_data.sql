@@ -81,7 +81,7 @@ INSERT INTO patra_registry.reg_prov_pagination_cfg
  updated_at, updated_by, updated_by_name, version, ip_address, deleted)
 VALUES
     (1, 'ALL', '2025-09-01 00:00:00.000000', NULL,
-     'PAGE_NUMBER', 500, 1000,
+     'PAGE_NUMBER', 100, 1000,
      NULL, 1, 'ACTIVE',
      JSON_ARRAY(JSON_OBJECT('time', '2025-10-19 11:30:00', 'by', '系统管理员',
                             'note', 'PubMed 分页配置初始化 - 默认每页500条记录，最大支持10000条（API限制）')),
