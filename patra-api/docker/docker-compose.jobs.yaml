@@ -69,16 +69,17 @@ services:
           echo "开始自动检测宿主机 IP..."
 
           # 方法 1: 通过 host.docker.internal 解析（Docker Desktop）
-          BROKER_IP1=$$(getent hosts host.docker.internal 2>/dev/null | awk '{print $$1}')
-
-          # 验证是否为有效的局域网 IP（192.168.x.x, 10.x.x.x, 172.16-31.x.x）
-          if [ -n "$$BROKER_IP1" ]; then
-            if echo "$$BROKER_IP1" | grep -qE '^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)'; then
+          # 获取所有解析结果，选择第一个有效的局域网 IP
+          for ip in $$(getent ahosts host.docker.internal 2>/dev/null | awk '{print $$1}' | sort -u); do
+            if echo "$$ip" | grep -qE '^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)'; then
+              BROKER_IP1="$$ip"
               echo "方法1成功: host.docker.internal -> $$BROKER_IP1"
-            else
-              echo "方法1失败: $$BROKER_IP1 不是有效的局域网 IP，忽略"
-              BROKER_IP1=""
+              break
             fi
+          done
+
+          if [ -z "$$BROKER_IP1" ]; then
+            echo "方法1失败: host.docker.internal 未解析到有效的局域网 IP"
           fi
 
           # 方法 2: 通过 /proc/net/route 获取网关（兼容性更好）
@@ -91,12 +92,29 @@ services:
             if [ -n "$$GATEWAY" ]; then
               echo "检测到网关: $$GATEWAY"
 
-              # 如果网关是 172.17.0.1，说明是 Docker 默认 bridge，宿主机不在同一网段
+              # 验证网关 IP 是否有效
               if [ "$$GATEWAY" = "172.17.0.1" ]; then
                 echo "方法2跳过: 使用 Docker 默认 bridge 网络"
-              else
+              elif echo "$$GATEWAY" | grep -qE '^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)'; then
                 BROKER_IP1="$$GATEWAY"
                 echo "方法2成功: 使用网关 IP -> $$BROKER_IP1"
+              else
+                echo "方法2失败: $$GATEWAY 不是有效的局域网 IP，忽略"
+              fi
+            fi
+          fi
+
+          # 方法 2.5: 使用 ip route 命令（更现代的方式）
+          if [ -z "$$BROKER_IP1" ] && command -v ip >/dev/null 2>&1; then
+            # 尝试获取到外部网络（如 8.8.8.8）的路由，提取网关
+            GATEWAY=$$(ip route get 8.8.8.8 2>/dev/null | grep -oP 'via \K[0-9.]+' | head -1)
+            if [ -n "$$GATEWAY" ]; then
+              echo "检测到网关（ip route）: $$GATEWAY"
+              if echo "$$GATEWAY" | grep -qE '^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)'; then
+                BROKER_IP1="$$GATEWAY"
+                echo "方法2.5成功: 使用网关 IP -> $$BROKER_IP1"
+              else
+                echo "方法2.5失败: $$GATEWAY 不是有效的局域网 IP"
               fi
             fi
           fi

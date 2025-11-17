@@ -15,6 +15,7 @@
         <module>patra-gateway-boot</module>
         <module>patra-registry</module>
         <module>patra-ingest</module>
+        <module>patra-data</module>
         <module>patra-object-storage</module>
 
         <module>patra-expr-kernel</module>
