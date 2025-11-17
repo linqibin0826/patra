@@ -89,6 +89,33 @@ docker/
 
 **何时使用**: 处理定时任务、批处理作业或事件驱动功能时启动。同步 API 开发不需要。
 
+#### 🚀 RocketMQ 智能启动（推荐）
+
+对于**需要在不同网络环境（工作/家庭/咖啡厅）间切换**的场景，推荐使用智能启动脚本：
+
+```bash
+# 自动检测当前局域网 IP 并启动 RocketMQ
+./docker/start-rocketmq.sh
+```
+
+**优势**：
+- ✅ 自动检测宿主机局域网 IP（无需手动配置）
+- ✅ 支持多网卡环境（自动选择合适的 IP）
+- ✅ 切换网络后重新运行即可自动适配
+- ✅ 避免 macOS Docker Desktop 的网络检测问题
+
+**手动配置**（可选）：
+如果需要手动指定 IP，可以编辑 `.env` 文件：
+```bash
+# docker/.env
+BROKER_IP1=192.168.1.100  # 替换为你的宿主机 IP
+```
+
+然后使用标准的 Docker Compose 命令：
+```bash
+docker compose -p patra -f docker/docker-compose.jobs.yaml up -d rocketmq-broker
+```
+
 ---
 
 ## 首次设置
