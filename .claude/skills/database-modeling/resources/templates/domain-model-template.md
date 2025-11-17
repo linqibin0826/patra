@@ -49,7 +49,7 @@ patra-{{module}}/
             ├── converter/                      # 转换器
             │   └── {{EntityName}}Converter.java
             └── repository/                     # 仓储实现
-                └── {{EntityName}}RepositoryImpl.java
+                └── {{EntityName}}RepositoryMpImpl.java
 ```
 
 ---
@@ -716,7 +716,7 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 @RequiredArgsConstructor
-public class {{EntityName}}RepositoryImpl implements {{EntityName}}Repository {
+public class {{EntityName}}RepositoryMpImpl implements {{EntityName}}Repository {
 
   private final {{EntityName}}Mapper mapper;
   private final {{EntityName}}Converter converter;
@@ -818,7 +818,7 @@ public void {{behavior_example_name}}(Long id, {{behavior_params}}) {
 | 枚举 | 大驼峰 | `FileStatus` |
 | 数据对象 | 大驼峰 + DO 后缀 | `FileMetadataDO` |
 | 仓储接口 | 大驼峰 + Repository 后缀 | `FileMetadataRepository` |
-| 仓储实现 | 大驼峰 + RepositoryImpl 后缀 | `FileMetadataRepositoryImpl` |
+| 仓储实现 | 大驼峰 + RepositoryMpImpl 后缀 | `FileMetadataRepositoryMpImpl` |
 
 ### 2. 包结构约定
 

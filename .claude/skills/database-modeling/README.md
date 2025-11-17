@@ -56,6 +56,7 @@ database-modeling/
             ├── 1-er-design.md          # 阶段 1：ER 图设计
             ├── 2-table-details.md      # 阶段 2：详细表设计
             ├── 3-sql-ddl.md            # 阶段 3：SQL DDL
+            ├── 4-domain-model.md       # 阶段 4：领域模型
             └── 5-decisions.md          # 阶段 5：设计决策记录
 ```
 
@@ -195,11 +196,12 @@ Claude：[分析聚合边界 → 生成代码]
 
 ### Patra 项目
 - [Patra 出版物管理完整案例](resources/examples/patra-publication/)
-  - [阶段 0：需求分析](resources/examples/0-requirements.md)
-  - [阶段 1：ER 图设计](resources/examples/1-er-design.md)
-  - [阶段 2：详细表设计](resources/examples/2-table-details.md)
-  - [阶段 3：SQL DDL](resources/examples/3-sql-ddl.md)
-  - [阶段 5：设计决策记录](resources/examples/5-decisions.md)
+  - [阶段 0：需求分析](resources/examples/patra-publication/0-requirements.md)
+  - [阶段 1：ER 图设计](resources/examples/patra-publication/1-er-design.md)
+  - [阶段 2：详细表设计](resources/examples/patra-publication/2-table-details.md)
+  - [阶段 3：SQL DDL](resources/examples/patra-publication/3-sql-ddl.md)
+  - [阶段 4：领域模型](resources/examples/patra-publication/4-domain-model.md)
+  - [阶段 5：设计决策记录](resources/examples/patra-publication/5-decisions.md)
 - [标准审计字段规范](resources/guides/standard-audit-fields.sql)
 - [索引优化指南](resources/guides/index-optimization-guide.md)
 
@@ -213,6 +215,11 @@ Claude：[分析聚合边界 → 生成代码]
 5. 提供更多 MyBatis-Plus 最佳实践
 
 ## 📝 更新日志
+
+### v2.3.0 (2025-01-17)
+- ✨ 补充阶段 4 示例：新增 4-domain-model.md，展示完整的领域模型生成
+- 🔧 修复文件顺序：现在示例文件按 0→1→2→3→4→5 完整顺序排列
+- 📝 更新 README.md：添加阶段 4 的链接和文件结构说明
 
 ### v2.2.0 (2025-01-17)
 - ✨ 拆分示例文件：将单一 stage-3-sql-ddl-example.md 拆分为 5 个独立的阶段示例
