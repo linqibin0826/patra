@@ -360,7 +360,7 @@ class DataTypeTest {
 
     @Test
     @DisplayName("publicationTypes()返回所有出版物相关类型")
-    void publicationTypesShouldReturnAllLiteratureTypes() {
+    void publicationTypesShouldReturnAllPublicationTypes() {
       Set<DataType> publicationTypes = DataType.publicationTypes();
 
       assertThat(publicationTypes)

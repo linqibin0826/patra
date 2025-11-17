@@ -11,7 +11,7 @@ import java.util.Objects;
  * <p>业务上下文封装了文件上传的来源服务、业务类型和业务标识等关键信息,以及可选的关联元数据。 这些信息用于建立存储文件与业务实体之间的关联,支持数据追溯和查询。
  *
  * @param serviceName 生产者服务名称(例如 patra-ingest)
- * @param businessType 逻辑业务分类(例如 literature_batch)
+ * @param businessType 逻辑业务分类(例如 publication_batch)
  * @param businessId 调用方提供的唯一标识符
  * @param correlationData 可选的结构化元数据,用于下游搜索
  */

@@ -101,7 +101,7 @@ class IngestPublishingChannelsTest {
 
     @Test
     @DisplayName("resource() 应该返回 'PUBLICATION'")
-    void resourceShouldReturnLiterature() {
+    void resourceShouldReturnPublication() {
       // When
       String resource = IngestPublishingChannels.PUBLICATION.resource();
 
@@ -149,7 +149,7 @@ class IngestPublishingChannelsTest {
 
     @Test
     @DisplayName("应该解析 'INGEST_PUBLICATION' 为 PUBLICATION")
-    void shouldParseIngestLiterature() {
+    void shouldParseIngestPublication() {
       // Given
       String channel = "INGEST_PUBLICATION";
 
@@ -403,7 +403,7 @@ class IngestPublishingChannelsTest {
 
     @Test
     @DisplayName("PUBLICATION.channel() 应该能被 fromChannel() 解析回来")
-    void literatureChannelShouldBeParsableBack() {
+    void publicationChannelShouldBeParsableBack() {
       // Given
       String channel = IngestPublishingChannels.PUBLICATION.channel();
 

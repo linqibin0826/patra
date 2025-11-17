@@ -487,7 +487,7 @@ class OutboxMessageDeferredEventTest {
       // Then
       assertThat(toString).contains("OutboxMessageDeferredEvent");
       assertThat(toString).contains("messageId=1001");
-      assertThat(toString).contains("channel=literature.parsed");
+      assertThat(toString).contains("channel=publication.parsed");
       assertThat(toString).contains("nextRetryCount=3");
       assertThat(toString).contains("nextRetryAt=2024-01-15T10:35:00Z");
       assertThat(toString).contains("errorCode=NETWORK_TIMEOUT");

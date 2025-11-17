@@ -224,9 +224,9 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
 
     ProcessResult<CanonicalPublication> result =
         outcome.failedPmids().isEmpty()
-            ? ProcessResult.success(outcome.literatures(), nextCursor)
+            ? ProcessResult.success(outcome.publications(), nextCursor)
             : ProcessResult.partialSuccess(
-                outcome.literatures(), nextCursor, buildConversionWarning(outcome.failedPmids()));
+                outcome.publications(), nextCursor, buildConversionWarning(outcome.failedPmids()));
 
     log.info(
         "PubMed Publication Processor success: fetched={} attempted={} duration={}ms",
@@ -388,7 +388,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
       return new ConversionOutcome(CollUtil.newArrayList(), 0, CollUtil.newArrayList());
     }
 
-    List<CanonicalPublication> literatures = new ArrayList<>();
+    List<CanonicalPublication> publications = new ArrayList<>();
     List<String> failures = new ArrayList<>();
     int attempted = 0;
 
@@ -400,7 +400,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
       try {
         CanonicalPublication converted = converter.toCanonicalPublication(article);
         if (converted != null) {
-          literatures.add(converted);
+          publications.add(converted);
         }
       } catch (Exception ex) {
         failures.add(article.pmid());
@@ -412,7 +412,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
       }
     }
 
-    int successCount = literatures.size();
+    int successCount = publications.size();
     int failureCount = failures.size();
     if (attempted > 0) {
       log.info(
@@ -423,7 +423,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     }
 
     recordConversionMetrics(successCount, failureCount);
-    return new ConversionOutcome(List.copyOf(literatures), attempted, List.copyOf(failures));
+    return new ConversionOutcome(List.copyOf(publications), attempted, List.copyOf(failures));
   }
 
   /** 构建转换警告消息 */
@@ -475,5 +475,5 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
 
   /** 转换结果记录 */
   private record ConversionOutcome(
-      List<CanonicalPublication> literatures, int attempted, List<String> failedPmids) {}
+      List<CanonicalPublication> publications, int attempted, List<String> failedPmids) {}
 }

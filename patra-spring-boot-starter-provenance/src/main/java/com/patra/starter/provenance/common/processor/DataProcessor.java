@@ -43,7 +43,7 @@ import com.patra.starter.provenance.common.provider.ProviderRequest;
  *         // 2. EFetch
  *         // 3. Convert
  *         // 4. Validate
- *         return ProcessResult.success(literatures, nextCursor);
+ *         return ProcessResult.success(publications, nextCursor);
  *     }
  * }
  *

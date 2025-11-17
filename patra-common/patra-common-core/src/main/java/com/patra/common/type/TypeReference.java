@@ -214,7 +214,7 @@ public abstract class TypeReference<T> {
    * <pre>{@code
    * TypeReference<CanonicalPublication> ref = new TypeReference<>() {};
    * ref.isAssignableFrom(CanonicalPublication.class);  // true
-   * ref.isAssignableFrom(SubLiterature.class);        // true（如果 SubLiterature 继承 CanonicalPublication）
+   * ref.isAssignableFrom(SubPublication.class);        // true（如果 SubPublication 继承 CanonicalPublication）
    * ref.isAssignableFrom(Journal.class);              // false
    * }</pre>
    *

@@ -271,7 +271,7 @@ public void harvestData(HarvestCommand command) {
     SearchResult results = pubmedSearchPort.search(query);  // ❌ 危险!
     // 如果 PubMed API 耗时 10 秒,数据库事务持续 10+ 秒
 
-    literatureStoragePort.saveAll(results);  // 事务仍然打开
+    publicationStoragePort.saveAll(results);  // 事务仍然打开
 }
 ```
 
@@ -288,7 +288,7 @@ public class HarvestOrchestrator {
 
     private final PlanRepository planRepository;
     private final PubmedSearchPort pubmedSearchPort;
-    private final LiteratureStoragePort literatureStoragePort;
+    private final PublicationStoragePort publicationStoragePort;
 
     // 事务 1: 创建计划
     @Transactional
@@ -306,7 +306,7 @@ public class HarvestOrchestrator {
     // 事务 2: 保存结果
     @Transactional
     public void savePublication(SearchResult results) {
-        literatureStoragePort.save(results);
+        publicationStoragePort.save(results);
     }
 }
 ```
@@ -665,7 +665,7 @@ public List<Publication> fetchFromApi(HarvestCommand command) {
 
 @Transactional
 public void savePublication(List<Publication> results) {
-    literatureRepository.saveAll(results);
+    publicationRepository.saveAll(results);
 }
 ```
 

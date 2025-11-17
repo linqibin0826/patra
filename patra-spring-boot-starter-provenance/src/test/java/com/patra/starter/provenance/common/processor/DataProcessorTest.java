@@ -65,7 +65,7 @@ class DataProcessorTest {
   }
 
   /** 创建测试用的无效CanonicalPublication（缺少必填字段） */
-  private CanonicalPublication createInvalidLiterature() {
+  private CanonicalPublication createInvalidPublication() {
     return CanonicalPublication.builder()
         .abstractContent(
             CanonicalPublication.Abstract.builder().text("Test abstract without title").build())
@@ -343,7 +343,7 @@ class DataProcessorTest {
       DataProcessor<CanonicalPublication> processor =
           new MockPublicationProcessor(ProcessResult.success(List.of(), null), failureResult, null);
 
-      CanonicalPublication data = createInvalidLiterature();
+      CanonicalPublication data = createInvalidPublication();
 
       // When: 验证数据
       ValidationResult result = processor.validate(data);

@@ -257,7 +257,7 @@ public interface ProvenanceDataPort {
    * // 成功结果
    * List<CanonicalPublication> publications = List.of(lit1, lit2);
    * DataFetchResult<CanonicalPublication> successResult =
-   *     DataFetchResult.success(literatures, DataType.PUBLICATION, "cursor123");
+   *     DataFetchResult.success(publications, DataType.PUBLICATION, "cursor123");
    *
    * // 失败结果
    * DataFetchResult<CanonicalPublication> failureResult =
@@ -266,7 +266,7 @@ public interface ProvenanceDataPort {
    * // 部分成功结果
    * DataFetchResult<CanonicalPublication> partialResult =
    *     DataFetchResult.partialSuccess(
-   *         literatures, DataType.PUBLICATION, "cursor456", "5 records failed validation");
+   *         publications, DataType.PUBLICATION, "cursor456", "5 records failed validation");
    * }</pre>
    *
    * @param <T> 数据类型
@@ -326,7 +326,7 @@ public interface ProvenanceDataPort {
      * <pre>{@code
      * List<CanonicalPublication> publications = List.of(lit1, lit2, lit3);
      * DataFetchResult<CanonicalPublication> result =
-     *     DataFetchResult.success(literatures, DataType.PUBLICATION, "cursor123");
+     *     DataFetchResult.success(publications, DataType.PUBLICATION, "cursor123");
      * }</pre>
      *
      * @param <T> 数据类型
@@ -396,10 +396,10 @@ public interface ProvenanceDataPort {
      *
      * <pre>{@code
      * // 100 条记录中有 95 条成功，5 条验证失败
-     * List<CanonicalPublication> successLiteratures = List.of(lit1, lit2, ...); // 95 条
+     * List<CanonicalPublication> successPublications = List.of(pub1, pub2, ...); // 95 条
      * DataFetchResult<CanonicalPublication> partialResult =
      *     DataFetchResult.partialSuccess(
-     *         successLiteratures,
+     *         successPublications,
      *         DataType.PUBLICATION,
      *         "cursor456",
      *         "5 records failed validation: missing required fields");

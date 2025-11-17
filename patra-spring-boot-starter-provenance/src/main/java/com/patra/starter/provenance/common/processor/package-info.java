@@ -89,16 +89,16 @@
  *         ESearchResponse searchResponse = pubMedClient.esearch(buildSearchRequest(exec), config);
  *         List<String> pmids = extractPmids(searchResponse);
  *
- *         // 3. 获取文献详情
+ *         // 3. 获取出版物详情
  *         EFetchResponse fetchResponse = pubMedClient.efetch(buildFetchRequest(pmids), config);
  *
  *         // 4. 转换为标准格式
- *         List<CanonicalPublication> literatures = fetchResponse.articles().stream()
+ *         List<CanonicalPublication> publications = fetchResponse.articles().stream()
  *             .map(converter::toCanonicalPublication)
  *             .collect(Collectors.toList());
  *
  *         // 5. 返回结果
- *         return ProcessResult.success(literatures, extractNextCursor(searchResponse));
+ *         return ProcessResult.success(publications, extractNextCursor(searchResponse));
  *     }
  *
  *     @Override

@@ -22,7 +22,7 @@ import com.patra.ingest.domain.messaging.OperationType;
  * <p><b>示例</b>：
  *
  * <pre>{@code
- * // 在 LiteratureOutboxPublisher 中
+ * // 在 PublicationOutboxPublisher 中
  * @Override
  * protected OperationType getOperationType(PublicationDataReadyEvent event) {
  *   return PublicationOperations.DATA_READY;

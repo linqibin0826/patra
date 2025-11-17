@@ -44,7 +44,7 @@
  * 4. 返回批次结果
  *    ├─ recordCount: 采集数量
  *    ├─ cursorPosition: 新的游标位置
- *    └─ literatures: 出版物数据列表
+ *    └─ publications: 出版物数据列表
  * </pre>
  *
  * <h2>Provider API 调用示例</h2>
@@ -91,18 +91,18 @@
  *         var response = providerPort.execute(request);
  *
  *         // 3. 解析出版物数据
- *         var literatures = response.getLiteratures();
+ *         var publications = response.getPublications();
  *
  *         // 4. 返回结果
  *         return BatchExecutionResult.builder()
  *             .batchSeq(batch.getSeq())
- *             .recordCount(literatures.size())
+ *             .recordCount(publications.size())
  *             .cursorPosition(CursorPosition.builder()
  *                 .highWatermark(response.getMaxPublishDate())
  *                 .batchSeq(batch.getSeq())
- *                 .offset(batch.getOffset() + literatures.size())
+ *                 .offset(batch.getOffset() + publications.size())
  *                 .build())
- *             .literatures(literatures)
+ *             .publications(publications)
  *             .build();
  *     }
  * }
@@ -116,9 +116,9 @@
  * public class PublicationPublisherOrchestrator {
  *     private final PublicationEventPublisher eventPublisher;
  *
- *     public void publish(List<Publication> literatures, ExecutionContext context) {
+ *     public void publish(List<Publication> publications, ExecutionContext context) {
  *         // 1. 构建事件
- *         var events = literatures.stream()
+ *         var events = publications.stream()
  *             .map(lit -> new PublicationReadyEvent(
  *                 lit.getExternalId(),
  *                 context.getProvenanceCode(),
@@ -130,7 +130,7 @@
  *         // 2. 批量发布到 Outbox
  *         var publishResult = eventPublisher.publish(events);
  *
- *         log.info("Literature published: taskId={}, count={}, batchSeq={}",
+ *         log.info("Publication published: taskId={}, count={}, batchSeq={}",
  *             context.getTaskId(), events.size(), context.getBatchSeq());
  *     }
  * }

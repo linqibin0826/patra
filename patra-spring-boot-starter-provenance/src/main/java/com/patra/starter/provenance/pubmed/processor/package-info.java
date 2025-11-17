@@ -63,10 +63,10 @@
  * }
  * }</pre>
  *
- * <p><strong>3. EFetch 阶段（获取文献详情）</strong>:
+ * <p><strong>3. EFetch 阶段（获取出版物详情）</strong>:
  *
  * <pre>{@code
- * // 使用 PMID 列表或 WebEnv 获取文献
+ * // 使用 PMID 列表或 WebEnv 获取出版物
  * EFetchRequest fetchRequest = new EFetchRequest("pubmed", String.join(",", pmids), ...);
  * EFetchResponse fetchResponse = pubMedClient.efetch(fetchRequest, config);
  *
@@ -77,7 +77,7 @@
  * <p><strong>4. 转换与验证</strong>:
  *
  * <pre>{@code
- * List<CanonicalPublication> literatures = articles.stream()
+ * List<CanonicalPublication> publications = articles.stream()
  *     .map(converter::toCanonicalPublication)
  *     .filter(lit -> {
  *         ValidationResult validation = processor.validate(lit);

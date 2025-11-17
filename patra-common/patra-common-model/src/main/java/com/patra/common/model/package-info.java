@@ -106,7 +106,7 @@
  *     .build();
  *
  * // 示例 2: 访问医学领域特定字段
- * List<MeshHeading> meshHeadings = literature.getMeshHeadings();
+ * List<MeshHeading> meshHeadings = publication.getMeshHeadings();
  * for (MeshHeading heading : meshHeadings) {
  *     DescriptorName descriptor = heading.getDescriptorName();
  *     System.out.println("MeSH 主题词: " + descriptor.getTerm());
@@ -119,7 +119,7 @@
  * }
  *
  * // 示例 3: 访问研究者信息（临床试验常见）
- * List<Investigator> investigators = literature.getInvestigators();
+ * List<Investigator> investigators = publication.getInvestigators();
  * for (Investigator investigator : investigators) {
  *     String name = investigator.getLastName() + ", " + investigator.getForeName();
  *     List<Affiliation> affiliations = investigator.getAffiliations();
@@ -127,8 +127,8 @@
  * }
  *
  * // 示例 4: 访问参考文献
- * Integer refCount = literature.getNumberOfReferences();
- * List<Reference> references = literature.getReferences();
+ * Integer refCount = publication.getNumberOfReferences();
+ * List<Reference> references = publication.getReferences();
  * for (Reference ref : references) {
  *     String citation = ref.getCitation();
  *     List<Identifier> ids = ref.getIdentifiers();

@@ -91,7 +91,7 @@
  *             .taskId(event.getTaskId())
  *             .runId(event.getRunId())
  *             .storageKeys(event.getStorageKeys())
- *             .totalCount(event.getTotalLiteratureCount())
+ *             .totalCount(event.getTotalPublicationCount())
  *             .build();
  *     }
  *
@@ -116,7 +116,7 @@
  * @RequiredArgsConstructor
  * @Transactional
  * public class PublicationPublisherOrchestrator {
- *     private final PublicationEventPublisher literaturePublisher;
+ *     private final PublicationEventPublisher publicationPublisher;
  *
  *     public void publishPublicationData(Long taskId, Long runId, List<String> storageKeys) {
  *         // 1. 构建领域事件
@@ -130,7 +130,7 @@
  *         );
  *
  *         // 2. 发布到 Outbox（同一事务内）
- *         literaturePublisher.publish(event);
+ *         publicationPublisher.publish(event);
  *
  *         // 3. 事务提交后，Outbox 中继会自动发布到 MQ
  *     }

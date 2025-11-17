@@ -387,7 +387,7 @@ class OutboxMessageFailedEventTest {
       // Then
       assertThat(toString).contains("OutboxMessageFailedEvent");
       assertThat(toString).contains("messageId=1001");
-      assertThat(toString).contains("channel=literature.parsed");
+      assertThat(toString).contains("channel=publication.parsed");
       assertThat(toString).contains("retryCount=5");
       assertThat(toString).contains("errorCode=PAYLOAD_INCOMPATIBLE");
       assertThat(toString).contains("errorMessage=Permanent error");

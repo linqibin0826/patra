@@ -26,7 +26,7 @@
  *
  * <ul>
  *   <li><b>ESearch</b> - 搜索 PubMed 数据库，返回 PMID 列表
- *   <li><b>EFetch</b> - 根据 PMID 获取文献详细信息
+ *   <li><b>EFetch</b> - 根据 PMID 获取出版物详细信息
  *   <li><b>EPost</b> - 上传大量 ID 到 History Server，获取 WebEnv 令牌
  * </ul>
  *
@@ -45,7 +45,7 @@
  *         searchRequest.setRetMax(100);
  *         ESearchResponse searchResponse = client.esearch(searchRequest);
  *
- *         // 2. 获取文献详情
+ *         // 2. 获取出版物详情
  *         EFetchRequest fetchRequest = new EFetchRequest();
  *         fetchRequest.setId(searchResponse.getIdList());
  *         EFetchResponse fetchResponse = client.efetch(fetchRequest);

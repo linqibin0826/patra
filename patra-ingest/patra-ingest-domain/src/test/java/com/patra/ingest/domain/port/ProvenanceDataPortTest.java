@@ -93,7 +93,7 @@ class ProvenanceDataPortTest {
 
     @Test
     @DisplayName("应该使用泛型方法获取出版物数据")
-    void should_fetch_literature_data_with_generic_method() {
+    void should_fetch_publication_data_with_generic_method() {
       // Given: Mock 实现
       ProvenanceDataPort port = new MockProvenanceDataPort();
       ExecutionContext context = createTestContext(ProvenanceCode.PUBMED);
@@ -184,8 +184,8 @@ class ProvenanceDataPortTest {
 
       // Then: 返回的 data 应该是 List<CanonicalPublication>，而不是 List<Object>
       List<CanonicalPublication> publications = result.data();
-      assertThat(literatures).isNotNull();
-      // 编译期类型检查通过：literatures 是 List<CanonicalPublication> 类型
+      assertThat(publications).isNotNull();
+      // 编译期类型检查通过：publications 是 List<CanonicalPublication> 类型
     }
 
     @Test
@@ -325,7 +325,7 @@ class ProvenanceDataPortTest {
     @DisplayName("应该创建泛型化的成功结果")
     void should_create_generic_success_result() {
       // When: 创建成功结果（出版物类型）
-      List<CanonicalPublication> data = List.of(createMockLiterature());
+      List<CanonicalPublication> data = List.of(createMockPublication());
       DataFetchResult<CanonicalPublication> result =
           DataFetchResult.success(data, DataType.PUBLICATION, "cursor123");
 
@@ -389,7 +389,7 @@ class ProvenanceDataPortTest {
     @DisplayName("应该创建部分成功结果")
     void should_create_partial_success_result() {
       // When: 创建部分成功结果
-      List<CanonicalPublication> data = List.of(createMockLiterature());
+      List<CanonicalPublication> data = List.of(createMockPublication());
       DataFetchResult<CanonicalPublication> result =
           DataFetchResult.partialSuccess(
               data, DataType.PUBLICATION, "cursor456", "Some records failed");
@@ -522,7 +522,7 @@ class ProvenanceDataPortTest {
   }
 
   /** 创建 Mock 出版物对象 */
-  private static CanonicalPublication createMockLiterature() {
+  private static CanonicalPublication createMockPublication() {
     // 简化的 Mock 出版物（使用 builder）
     return CanonicalPublication.builder().title("Test Publication").build();
   }
