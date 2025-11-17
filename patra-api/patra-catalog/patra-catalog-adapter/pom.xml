@@ -6,23 +6,23 @@
 
     <parent>
         <groupId>com.patra</groupId>
-        <artifactId>patra-data</artifactId>
+        <artifactId>patra-catalog</artifactId>
         <version>0.1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>patra-data-adapter</artifactId>
-    <name>Patra Data Adapter</name>
+    <artifactId>patra-catalog-adapter</artifactId>
+    <name>Patra Catalog Adapter</name>
     <description>Data persistence adapter module - REST API, message consumers, scheduled jobs</description>
 
     <dependencies>
         <dependency>
             <groupId>com.patra</groupId>
-            <artifactId>patra-data-app</artifactId>
+            <artifactId>patra-catalog-app</artifactId>
         </dependency>
         <dependency>
             <groupId>com.patra</groupId>
-            <artifactId>patra-data-api</artifactId>
+            <artifactId>patra-catalog-api</artifactId>
         </dependency>
         <dependency>
             <groupId>com.patra</groupId>

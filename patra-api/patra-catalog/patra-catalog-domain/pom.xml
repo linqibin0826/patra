@@ -6,13 +6,13 @@
 
     <parent>
         <groupId>com.patra</groupId>
-        <artifactId>patra-data</artifactId>
+        <artifactId>patra-catalog</artifactId>
         <version>0.1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>patra-data-domain</artifactId>
-    <name>Patra Data Domain</name>
+    <artifactId>patra-catalog-domain</artifactId>
+    <name>Patra Catalog Domain</name>
     <description>Data persistence domain module - core business logic and domain model</description>
 
     <dependencies>

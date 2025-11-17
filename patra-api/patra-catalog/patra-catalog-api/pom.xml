@@ -6,13 +6,13 @@
 
     <parent>
         <groupId>com.patra</groupId>
-        <artifactId>patra-data</artifactId>
+        <artifactId>patra-catalog</artifactId>
         <version>0.1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>patra-data-api</artifactId>
-    <name>Patra Data API</name>
+    <artifactId>patra-catalog-api</artifactId>
+    <name>Patra Catalog API</name>
     <description>Data persistence API module - public events and interface definitions</description>
 
     <dependencies>

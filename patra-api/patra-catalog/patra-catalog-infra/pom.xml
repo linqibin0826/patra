@@ -6,18 +6,18 @@
 
     <parent>
         <groupId>com.patra</groupId>
-        <artifactId>patra-data</artifactId>
+        <artifactId>patra-catalog</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>patra-data-infra</artifactId>
-    <name>Patra Data Infrastructure</name>
+    <artifactId>patra-catalog-infra</artifactId>
+    <name>Patra Catalog Infrastructure</name>
     <description>Data persistence infrastructure module - MySQL and Elasticsearch persistence</description>
 
     <dependencies>
         <dependency>
             <groupId>com.patra</groupId>
-            <artifactId>patra-data-domain</artifactId>
+            <artifactId>patra-catalog-domain</artifactId>
         </dependency>
 
         <dependency>
