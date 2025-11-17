@@ -239,17 +239,6 @@ KEY `idx_username_deleted` (`username`, `deleted`)
 KEY `idx_created_at_deleted` (`created_at`, `deleted`)
 ```
 
-**MyBatis-Plus 逻辑删除配置：**
-
-```java
-@TableLogic
-@TableField("deleted")
-private Boolean deleted;
-
-// MyBatis-Plus 会自动在 SQL 中添加 deleted = 0 条件
-// SELECT * FROM user WHERE id = 1 AND deleted = 0
-```
-
 ---
 
 ### 3.2 状态字段 `status`

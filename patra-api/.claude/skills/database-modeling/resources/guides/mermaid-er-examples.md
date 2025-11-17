@@ -496,37 +496,6 @@ erDiagram
 
 ---
 
-## 8. GitHub 和 VS Code 中的渲染
-
-### VS Code 预览
-
-安装插件：
-```bash
-code --install-extension bierner.markdown-mermaid
-```
-
-在 Markdown 中使用：
-````markdown
-```mermaid
-erDiagram
-    USER {
-        bigint id PK
-        string username UK
-    }
-```
-````
-
-### GitHub 自动渲染
-
-GitHub 原生支持 Mermaid，无需额外配置，推送后自动渲染。
-
-### 在线编辑器
-
-- **Mermaid Live Editor**: https://mermaid.live/
-- 实时预览 + 导出 PNG/SVG
-
----
-
 ## 总结
 
 1. **实体命名**：使用大写单数形式（USER, ORDER）
