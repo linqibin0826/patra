@@ -140,8 +140,8 @@ public class Publication {
     private PublicationIdentifier identifier;  // 值对象
     private List<Author> authors;              // 实体关联
     private Long version;                      // 乐观锁
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Instant createdAt;
+    private Instant updatedAt;
     private Boolean deleted;
 
     // 领域行为
@@ -171,7 +171,7 @@ public class Publication {
 
 ### 完整案例（参考学习）
 
-- **[Patra 完整示例](resources/examples/patra-complete-example.md)** - 真实项目案例
+- **[Patra 出版物管理完整案例](resources/examples/patra-publication/)** - 真实项目案例，包含 5 个独立阶段的完整示例
 
 ---
 
@@ -181,7 +181,7 @@ public class Publication {
 
 重要设计决策都应记录：
 
-**[设计决策记录指南](resources/stages/stage-4-decisions.md)** 包含：
+**[设计决策记录指南](resources/stages/stage-5-decisions.md)** 包含：
 - ADR 模板
 - 常见决策示例
 - 决策评估框架
