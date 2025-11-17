@@ -60,7 +60,7 @@ class RocketMqChannelMapperTest {
 
     @Test
     @DisplayName("PUBLICATION_READY 应映射到 INGEST_PUBLICATION")
-    void shouldMapLiteratureReadyChannelToTopic() {
+    void shouldMapPublicationReadyChannelToTopic() {
       // When
       String topic = channelMapper.toTopic("INGEST_PUBLICATION");
 
@@ -217,7 +217,7 @@ class RocketMqChannelMapperTest {
 
     @Test
     @DisplayName("INGEST_PUBLICATION 应反向映射到 PUBLICATION_READY")
-    void shouldReverseMapLiteratureReadyTopicToChannel() {
+    void shouldReverseMapPublicationReadyTopicToChannel() {
       // When
       String channel = channelMapper.toChannel("INGEST_PUBLICATION");
 
@@ -289,7 +289,7 @@ class RocketMqChannelMapperTest {
 
     @Test
     @DisplayName("PUBLICATION_READY 应有映射")
-    void shouldHaveMappingForLiteratureReady() {
+    void shouldHaveMappingForPublicationReady() {
       // When
       boolean hasMapping = channelMapper.hasMapping("INGEST_PUBLICATION");
 
@@ -351,7 +351,7 @@ class RocketMqChannelMapperTest {
 
     @Test
     @DisplayName("PUBLICATION_READY 通道应与 Topic 双向映射一致")
-    void shouldHaveConsistentBidirectionalMappingForLiteratureReady() {
+    void shouldHaveConsistentBidirectionalMappingForPublicationReady() {
       // Given
       String channel = "INGEST_PUBLICATION";
 

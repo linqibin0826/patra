@@ -65,7 +65,7 @@
  *         return PublicationReadyPayload.builder()
  *             .externalId(event.getExternalId())
  *             .provenanceCode(event.getProvenanceCode())
- *             .metadata(event.getLiterature().toJson())
+ *             .metadata(event.getPublication().toJson())
  *             .build();
  *     }
  *
@@ -74,7 +74,7 @@
  *         return PublicationReadyHeaders.builder()
  *             .taskId(event.getTaskId())
  *             .batchSeq(event.getBatchSeq())
- *             .publishDate(event.getLiterature().getPublishDate())
+ *             .publishDate(event.getPublication().getPublishDate())
  *             .build();
  *     }
  *

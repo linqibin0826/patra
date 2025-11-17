@@ -84,7 +84,7 @@ public class FileMetadataTestDataBuilder {
    *   <li>对象键: test/file.pdf
    *   <li>文件大小: 1 MB
    *   <li>存储提供商: MINIO
-   *   <li>业务上下文: patra-ingest/literature_batch/batch-001
+   *   <li>业务上下文: patra-ingest/publication_batch/batch-001
    *   <li>校验和: MD5 (示例哈希)
    * </ul>
    *

@@ -37,7 +37,7 @@
  * <pre>
  * // 自动扫描所有模块的 Mapper 接口
  * // com.patra.registry.infra.persistence.mapper.ProvenanceMapper ✓
- * // com.patra.ingest.infra.persistence.mapper.LiteratureMapper ✓
+ * // com.patra.ingest.infra.persistence.mapper.PublicationMapper ✓
  * </pre>
  *
  * <p><b>扩展 Mapper 扫描路径:</b>

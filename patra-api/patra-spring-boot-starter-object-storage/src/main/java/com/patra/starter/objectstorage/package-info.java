@@ -214,12 +214,12 @@
  *
  * <pre>
  * 格式: {profile}/{service}/{module}/{generated-key}
- * 示例: prod/patra-ingest/literature/2025/01/15/abc123.pdf
+ * 示例: prod/patra-ingest/publication/2025/01/15/abc123.pdf
  *
  * 组成部分:
  *   - profile: 环境标识(dev/test/prod)
  *   - service: 服务名称(从 spring.application.name 读取)
- *   - module: 业务模块(如 literature、user-profile)
+ *   - module: 业务模块(如 publication、user-profile)
  *   - generated-key: 生成的唯一键(默认使用日期 + UUID)
  * </pre>
  *

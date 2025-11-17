@@ -169,7 +169,7 @@ class PubmedPublicationProcessorTest {
   }
 
   /** 创建测试用的无效CanonicalPublication（缺少必填字段） */
-  private CanonicalPublication createInvalidLiterature() {
+  private CanonicalPublication createInvalidPublication() {
     return CanonicalPublication.builder()
         .abstractContent(
             CanonicalPublication.Abstract.builder()
@@ -205,7 +205,7 @@ class PubmedPublicationProcessorTest {
     }
 
     @Test
-    @DisplayName("should_support_literature_data_type")
+    @DisplayName("should_support_publication_data_type")
     void shouldSupportPublicationDataType() {
       // When & Then: 支持PUBLICATION数据类型
       assertThat(processor.supports(DataType.PUBLICATION)).isTrue();
@@ -271,12 +271,12 @@ class PubmedPublicationProcessorTest {
       EPostResponse postResponse = createEPostResponse();
 
       List<PubmedPublication> articles = new ArrayList<>();
-      List<CanonicalPublication> literatures = new ArrayList<>();
+      List<CanonicalPublication> publications = new ArrayList<>();
       for (int i = 0; i < 250; i++) {
         PubmedPublication article = createMockArticle(pmids.get(i));
         articles.add(article);
         CanonicalPublication lit = createValidPublication(pmids.get(i));
-        literatures.add(lit);
+        publications.add(lit);
         when(converter.toCanonicalPublication(article)).thenReturn(lit);
       }
       EFetchResponse fetchResponse = createEFetchResponse(articles);
@@ -727,7 +727,7 @@ class PubmedPublicationProcessorTest {
     @DisplayName("should_fail_validation_when_multiple_fields_are_missing")
     void shouldFailValidationWhenMultipleFieldsAreMissing() {
       // Given: 缺少多个字段
-      CanonicalPublication publication = createInvalidLiterature();
+      CanonicalPublication publication = createInvalidPublication();
 
       // When: 验证数据
       ValidationResult result = processor.validate(publication);
@@ -746,19 +746,19 @@ class PubmedPublicationProcessorTest {
   class TransformMethodTest {
 
     @Test
-    @DisplayName("should_transform_pubmed_article_to_canonical_literature")
+    @DisplayName("should_transform_pubmed_article_to_canonical_publication")
     void shouldTransformPubmedPublicationToCanonicalPublication() {
       // Given: PubmedPublication和预期的转换结果
       PubmedPublication article = createMockArticle(TEST_PMID_1);
-      CanonicalPublication expectedLiterature = createValidPublication(TEST_PMID_1);
+      CanonicalPublication expectedPublication = createValidPublication(TEST_PMID_1);
 
-      when(converter.toCanonicalPublication(article)).thenReturn(expectedLiterature);
+      when(converter.toCanonicalPublication(article)).thenReturn(expectedPublication);
 
       // When: 转换数据
       CanonicalPublication result = processor.transform(article);
 
       // Then: 返回转换后的文献
-      assertThat(result).isEqualTo(expectedLiterature);
+      assertThat(result).isEqualTo(expectedPublication);
       verify(converter).toCanonicalPublication(article);
     }
 

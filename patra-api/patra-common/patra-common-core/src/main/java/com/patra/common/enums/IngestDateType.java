@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 文献数据源使用的通用采集日期类型枚举。
+ * 出版物数据源使用的通用采集日期类型枚举。
  *
  * <p>用于标识文献记录中不同类型的日期字段(例如 PubMed 的 PDAT/EDAT/MHDA 字段)。
  *

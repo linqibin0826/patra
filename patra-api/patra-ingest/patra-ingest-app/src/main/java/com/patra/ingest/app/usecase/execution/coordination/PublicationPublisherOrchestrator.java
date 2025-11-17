@@ -48,7 +48,7 @@ public class PublicationPublisherOrchestrator {
 
   private static final String BUSINESS_TYPE = "publication-batch";
 
-  private final PublicationStoragePort literatureStoragePort;
+  private final PublicationStoragePort publicationStoragePort;
   private final StorageMetadataPort storageMetadataPort;
   private final TechnicalRetryPort technicalRetryPort;
 
@@ -63,18 +63,18 @@ public class PublicationPublisherOrchestrator {
    *   <li>处理元数据记录失败(委托给重试机制)
    * </ol>
    *
-   * @param literature 领域标准化的出版物列表
+   * @param publication 领域标准化的出版物列表
    * @param context 发布上下文(包含执行元数据)
    * @return 发布结果(包含存储位置)
    */
   public PublishResult publish(List<CanonicalPublication> publication, PublishContext context) {
-    List<CanonicalPublication> safeLiterature =
+    List<CanonicalPublication> safePublication =
         publication == null ? Collections.emptyList() : publication;
 
     // 步骤1: 存储到对象存储
     PublicationStoragePort.StorageContext storageContext = toStorageContext(context);
     PublicationStoragePort.StorageResult storageResult =
-        literatureStoragePort.store(safeLiterature, storageContext);
+        publicationStoragePort.store(safePublication, storageContext);
 
     log.info(
         "出版物已存储 bucket={} key={} size={} bytes count={}",

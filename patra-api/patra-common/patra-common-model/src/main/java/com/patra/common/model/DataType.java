@@ -190,7 +190,7 @@ public enum DataType {
    * <p>核心实体类型包括：
    *
    * <ul>
-   *   <li>PUBLICATION - 文献数据
+   *   <li>PUBLICATION - 出版物数据
    *   <li>JOURNAL - 期刊数据
    *   <li>DRUG - 药品数据
    *   <li>AUTHOR - 作者信息

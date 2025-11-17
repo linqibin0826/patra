@@ -79,7 +79,7 @@ class PublicationPublisherOrchestratorTest {
             .provenanceCode(ProvenanceCode.PUBMED)
             .build();
 
-    literatures = createPublicationList(5);
+    publications = createPublicationList(5);
 
     storageResult =
         PublicationStoragePort.StorageResult.builder()
@@ -109,14 +109,14 @@ class PublicationPublisherOrchestratorTest {
 
       // Act
       PublicationPublisherOrchestrator.PublishResult result =
-          orchestrator.publish(literatures, publishContext);
+          orchestrator.publish(publications, publishContext);
 
       // Assert
       assertThat(result).isNotNull();
       assertThat(result.storageKey()).isEqualTo(STORAGE_KEY);
       assertThat(result.publishedCount()).isEqualTo(5);
 
-      verify(publicationStoragePort).store(eq(literatures), any());
+      verify(publicationStoragePort).store(eq(publications), any());
       verify(storageMetadataPort).recordUpload(any());
       verify(technicalRetryPort, never()).publishRetry(any());
     }
@@ -186,7 +186,7 @@ class PublicationPublisherOrchestratorTest {
       when(storageMetadataPort.recordUpload(any())).thenReturn(metadataResult);
 
       // Act
-      orchestrator.publish(literatures, publishContext);
+      orchestrator.publish(publications, publishContext);
 
       // Assert
       ArgumentCaptor<PublicationStoragePort.StorageContext> contextCaptor =
@@ -210,7 +210,7 @@ class PublicationPublisherOrchestratorTest {
       when(storageMetadataPort.recordUpload(any())).thenReturn(metadataResult);
 
       // Act
-      orchestrator.publish(literatures, publishContext);
+      orchestrator.publish(publications, publishContext);
 
       // Assert
       ArgumentCaptor<StorageMetadataPort.MetadataRequest> requestCaptor =
@@ -251,7 +251,7 @@ class PublicationPublisherOrchestratorTest {
 
       // Act
       PublicationPublisherOrchestrator.PublishResult result =
-          orchestrator.publish(literatures, publishContext);
+          orchestrator.publish(publications, publishContext);
 
       // Assert
       assertThat(result).isNotNull();
@@ -271,7 +271,7 @@ class PublicationPublisherOrchestratorTest {
       when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
 
       // Act
-      orchestrator.publish(literatures, publishContext);
+      orchestrator.publish(publications, publishContext);
 
       // Assert
       verify(technicalRetryPort).publishRetry(any());
@@ -288,7 +288,7 @@ class PublicationPublisherOrchestratorTest {
 
       // Act
       PublicationPublisherOrchestrator.PublishResult result =
-          orchestrator.publish(literatures, publishContext);
+          orchestrator.publish(publications, publishContext);
 
       // Assert
       assertThat(result).isNotNull();
@@ -305,7 +305,7 @@ class PublicationPublisherOrchestratorTest {
       when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
 
       // Act
-      orchestrator.publish(literatures, publishContext);
+      orchestrator.publish(publications, publishContext);
 
       // Assert
       verify(technicalRetryPort, never()).publishRetry(any());
@@ -324,7 +324,7 @@ class PublicationPublisherOrchestratorTest {
       when(storageMetadataPort.recordUpload(any())).thenThrow(retryableException);
 
       // Act
-      orchestrator.publish(literatures, publishContext);
+      orchestrator.publish(publications, publishContext);
 
       // Assert
       verify(technicalRetryPort).publishRetry(any());
@@ -340,7 +340,7 @@ class PublicationPublisherOrchestratorTest {
           .thenThrow(new RuntimeException("Unexpected error"));
 
       // Act
-      orchestrator.publish(literatures, publishContext);
+      orchestrator.publish(publications, publishContext);
 
       // Assert
       verify(technicalRetryPort).publishRetry(any());
@@ -359,7 +359,7 @@ class PublicationPublisherOrchestratorTest {
           .publishRetry(any());
 
       // Act & Assert
-      assertThatCode(() -> orchestrator.publish(literatures, publishContext))
+      assertThatCode(() -> orchestrator.publish(publications, publishContext))
           .doesNotThrowAnyException();
     }
   }
@@ -378,7 +378,7 @@ class PublicationPublisherOrchestratorTest {
       when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
 
       // Act
-      orchestrator.publish(literatures, publishContext);
+      orchestrator.publish(publications, publishContext);
 
       // Assert
       ArgumentCaptor<TechnicalRetryPort.RetryContext> contextCaptor =
@@ -414,7 +414,7 @@ class PublicationPublisherOrchestratorTest {
       when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
 
       // Act
-      orchestrator.publish(literatures, contextWithoutRunId);
+      orchestrator.publish(publications, contextWithoutRunId);
 
       // Assert
       ArgumentCaptor<TechnicalRetryPort.RetryContext> contextCaptor =
@@ -447,7 +447,7 @@ class PublicationPublisherOrchestratorTest {
       when(storageMetadataPort.recordUpload(any())).thenReturn(metadataResult);
 
       // Act
-      orchestrator.publish(literatures, contextWithNullProvenance);
+      orchestrator.publish(publications, contextWithNullProvenance);
 
       // Assert
       ArgumentCaptor<StorageMetadataPort.MetadataRequest> requestCaptor =
@@ -476,7 +476,7 @@ class PublicationPublisherOrchestratorTest {
       when(storageMetadataPort.recordUpload(any())).thenReturn(metadataResult);
 
       // Act
-      orchestrator.publish(literatures, contextWithEmptyProvenance);
+      orchestrator.publish(publications, contextWithEmptyProvenance);
 
       // Assert
       ArgumentCaptor<StorageMetadataPort.MetadataRequest> requestCaptor =
@@ -505,7 +505,7 @@ class PublicationPublisherOrchestratorTest {
       when(storageMetadataPort.recordUpload(any())).thenReturn(metadataResult);
 
       // Act
-      orchestrator.publish(literatures, contextWithUpperCase);
+      orchestrator.publish(publications, contextWithUpperCase);
 
       // Assert
       ArgumentCaptor<StorageMetadataPort.MetadataRequest> requestCaptor =

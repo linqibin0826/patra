@@ -707,7 +707,7 @@ class StorageKeyTest {
 
     @Test
     @DisplayName("应该正确处理出版物文件存储场景")
-    void shouldHandleLiteratureFileStorageScenario() {
+    void shouldHandlePublicationFileStorageScenario() {
       // Given - 出版物文件存储场景
       StorageKey storageKey =
           new StorageKey("patra-publication-files", "pubmed/2024/01/PMC12345678.pdf");

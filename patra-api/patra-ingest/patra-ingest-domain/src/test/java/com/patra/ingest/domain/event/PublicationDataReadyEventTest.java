@@ -116,7 +116,7 @@ class PublicationDataReadyEventTest {
 
     @Test
     @DisplayName("应该正确返回 totalPublicationCount")
-    void shouldReturnTotalLiteratureCount() {
+    void shouldReturnTotalPublicationCount() {
       // Given
       var event = createDefaultEvent();
 

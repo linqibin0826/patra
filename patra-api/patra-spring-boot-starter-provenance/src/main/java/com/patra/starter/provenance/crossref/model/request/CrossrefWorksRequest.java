@@ -8,7 +8,7 @@ import java.util.Map;
 /**
  * Crossref Works API 请求
  *
- * <p>Crossref是学术出版物引用数据库，提供DOI解析和文献检索服务。 支持布尔查询（query参数）和过滤器组合（filter参数）。
+ * <p>Crossref是学术出版物引用数据库，提供DOI解析和出版物检索服务。 支持布尔查询（query参数）和过滤器组合（filter参数）。
  *
  * <p>主要特性：
  *

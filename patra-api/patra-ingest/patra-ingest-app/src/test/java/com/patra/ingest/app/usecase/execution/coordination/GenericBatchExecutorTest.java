@@ -55,7 +55,7 @@ import org.mockito.quality.Strictness;
 class GenericBatchExecutorTest {
 
   @Mock private ProvenanceDataPort provenanceDataPort;
-  @Mock private PublicationPublisherOrchestrator literaturePublisherOrchestrator;
+  @Mock private PublicationPublisherOrchestrator publicationPublisherOrchestrator;
 
   @InjectMocks private GenericBatchExecutor executor;
 
@@ -116,9 +116,9 @@ class GenericBatchExecutorTest {
     @DisplayName("应该成功执行批次并返回成功结果")
     void shouldExecuteBatchSuccessfully() {
       // Given: Mock 数据源端口返回成功结果
-      List<CanonicalPublication> publications = createTestLiteratures(5);
+      List<CanonicalPublication> publications = createTestPublications(5);
       DataFetchResult<CanonicalPublication> fetchResult =
-          DataFetchResult.success(literatures, DataType.PUBLICATION, "nextCursor123");
+          DataFetchResult.success(publications, DataType.PUBLICATION, "nextCursor123");
 
       when(provenanceDataPort.fetchData(
               any(ExecutionContext.class),
@@ -134,7 +134,7 @@ class GenericBatchExecutorTest {
               .publishedCount(5)
               .storageKey("s3://bucket/pubmed/run-1/batch-1.json")
               .build();
-      when(literaturePublisherOrchestrator.publish(any(), any())).thenReturn(publishResult);
+      when(publicationPublisherOrchestrator.publish(any(), any())).thenReturn(publishResult);
 
       // When: 执行批次
       BatchResult result = executor.execute(context, batch, querySession);
@@ -155,7 +155,7 @@ class GenericBatchExecutorTest {
               any(TypeReference.class),
               eq(batch),
               eq(querySession));
-      verify(literaturePublisherOrchestrator).publish(eq(literatures), any());
+      verify(publicationPublisherOrchestrator).publish(eq(publications), any());
     }
 
     @Test
@@ -181,7 +181,7 @@ class GenericBatchExecutorTest {
       assertThat(result.storageKey()).isNull();
 
       // 验证不调用发布器（因为出版物列表为空）
-      verifyNoInteractions(literaturePublisherOrchestrator);
+      verifyNoInteractions(publicationPublisherOrchestrator);
     }
 
     @Test
@@ -206,7 +206,7 @@ class GenericBatchExecutorTest {
       assertThat(result.fetchedCount()).isZero();
 
       // 验证不调用发布器
-      verifyNoInteractions(literaturePublisherOrchestrator);
+      verifyNoInteractions(publicationPublisherOrchestrator);
     }
   }
 
@@ -240,7 +240,7 @@ class GenericBatchExecutorTest {
       assertThat(result.errorMessage()).contains("RETRIABLE").contains("网络超时");
 
       // 验证没有发布出版物
-      verifyNoInteractions(literaturePublisherOrchestrator);
+      verifyNoInteractions(publicationPublisherOrchestrator);
     }
 
     @Test
@@ -266,7 +266,7 @@ class GenericBatchExecutorTest {
       assertThat(result.errorMessage()).contains("API 密钥无效");
 
       // 验证没有发布出版物
-      verifyNoInteractions(literaturePublisherOrchestrator);
+      verifyNoInteractions(publicationPublisherOrchestrator);
     }
   }
 
@@ -308,10 +308,10 @@ class GenericBatchExecutorTest {
     @DisplayName("数据源端口返回部分成功应该记录警告并返回成功结果")
     void shouldHandlePartialSuccessWithWarning() {
       // Given: 数据源端口返回部分成功
-      List<CanonicalPublication> publications = createTestLiteratures(8);
+      List<CanonicalPublication> publications = createTestPublications(8);
       DataFetchResult<CanonicalPublication> fetchResult =
           DataFetchResult.partialSuccess(
-              literatures, DataType.PUBLICATION, "nextCursor", "10 条记录中有 2 条解析失败");
+              publications, DataType.PUBLICATION, "nextCursor", "10 条记录中有 2 条解析失败");
 
       when(provenanceDataPort.fetchData(
               any(ExecutionContext.class),
@@ -377,12 +377,12 @@ class GenericBatchExecutorTest {
     return new Batch(batchNo, query, offset, limit);
   }
 
-  private List<CanonicalPublication> createTestLiteratures(int count) {
+  private List<CanonicalPublication> createTestPublications(int count) {
     return java.util.stream.IntStream.range(0, count)
         .mapToObj(
             i ->
                 CanonicalPublication.builder()
-                    .title("Test Literature " + i)
+                    .title("Test Publication " + i)
                     .identifiers(
                         List.of(
                             CanonicalPublication.Identifier.builder()
@@ -399,6 +399,6 @@ class GenericBatchExecutorTest {
             .publishedCount(count)
             .storageKey(storageKey)
             .build();
-    when(literaturePublisherOrchestrator.publish(any(), any())).thenReturn(publishResult);
+    when(publicationPublisherOrchestrator.publish(any(), any())).thenReturn(publishResult);
   }
 }

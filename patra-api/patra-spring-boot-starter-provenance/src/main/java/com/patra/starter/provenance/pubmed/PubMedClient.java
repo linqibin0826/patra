@@ -18,7 +18,7 @@ import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
  *
  * <ul>
  *   <li>ESearch - 搜索PubMed数据库,返回PMID列表
- *   <li>EFetch - 根据PMID获取文献详细信息
+ *   <li>EFetch - 根据PMID获取出版物详细信息
  *   <li>EPost - 上传大量ID到History Server,获取WebEnv令牌
  * </ul>
  *

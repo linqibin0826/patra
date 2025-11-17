@@ -144,7 +144,7 @@ public final class OutboxMessageTestBuilder {
         .channel("INGEST_PUBLICATION")
         .aggregateType("PUBLICATION")
         .opType("INGEST")
-        .payloadJson("{\"literatureId\":9001,\"source\":\"PUBMED\"}");
+        .payloadJson("{\"publicationId\":9001,\"source\":\"PUBMED\"}");
   }
 
   // ========== Fluent Setters ==========

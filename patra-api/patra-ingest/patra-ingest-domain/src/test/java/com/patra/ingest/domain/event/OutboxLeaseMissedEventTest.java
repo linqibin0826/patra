@@ -320,7 +320,7 @@ class OutboxLeaseMissedEventTest {
       // Then
       assertThat(toString).contains("OutboxLeaseMissedEvent");
       assertThat(toString).contains("messageId=1001");
-      assertThat(toString).contains("channel=literature.parsed");
+      assertThat(toString).contains("channel=publication.parsed");
       assertThat(toString).contains("requestedLeaseOwner=relay-instance-01");
       assertThat(toString).contains("currentLeaseOwner=relay-instance-02");
       assertThat(toString).contains("occurredAt=2024-01-15T10:30:00Z");

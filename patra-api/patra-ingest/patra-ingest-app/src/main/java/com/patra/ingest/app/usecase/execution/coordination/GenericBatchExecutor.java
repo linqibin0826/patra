@@ -40,7 +40,7 @@ import org.springframework.util.StringUtils;
 public class GenericBatchExecutor {
 
   private final ProvenanceDataPort provenanceDataPort;
-  private final PublicationPublisherOrchestrator literaturePublisherOrchestrator;
+  private final PublicationPublisherOrchestrator publicationPublisherOrchestrator;
 
   /**
    * 执行单个批次
@@ -91,7 +91,7 @@ public class GenericBatchExecutor {
       }
 
       PublicationPublisherOrchestrator.PublishResult publishResult =
-          publishLiterature(context, batchNo, fetchResult.data());
+          publishPublication(context, batchNo, fetchResult.data());
       logDataFetchWarnings(fetchResult, provenanceCode, batchNo);
 
       long duration = System.currentTimeMillis() - startAt;
@@ -168,12 +168,12 @@ public class GenericBatchExecutor {
    *
    * @param context 执行上下文
    * @param batchNo 批次编号
-   * @param literatures 出版物列表
+   * @param publications 出版物列表
    * @return 发布结果
    */
-  private PublicationPublisherOrchestrator.PublishResult publishLiterature(
+  private PublicationPublisherOrchestrator.PublishResult publishPublication(
       ExecutionContext context, int batchNo, List<CanonicalPublication> publications) {
-    List<CanonicalPublication> payload = literatures == null ? List.of() : List.copyOf(literatures);
+    List<CanonicalPublication> payload = publications == null ? List.of() : List.copyOf(publications);
     if (payload.isEmpty()) {
       return PublicationPublisherOrchestrator.PublishResult.builder()
           .publishedCount(0)
@@ -187,7 +187,7 @@ public class GenericBatchExecutor {
             .batchNo(batchNo)
             .provenanceCode(provenanceCode)
             .build();
-    return literaturePublisherOrchestrator.publish(payload, publishContext);
+    return publicationPublisherOrchestrator.publish(payload, publishContext);
   }
 
   /**

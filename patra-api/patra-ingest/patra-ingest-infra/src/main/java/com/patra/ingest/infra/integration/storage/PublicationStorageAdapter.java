@@ -56,7 +56,7 @@ public class PublicationStorageAdapter implements PublicationStoragePort {
   @Override
   public StorageResult store(List<CanonicalPublication> publication, StorageContext context) {
     // 步骤 1: 序列化为 JSON (直接存储 CanonicalPublication,保证数据完整性)
-    byte[] serialized = serializePayload(literature, context);
+    byte[] serialized = serializePayload(publication, context);
 
     // 步骤 2: 计算校验和
     Checksums checksums = calculateChecksums(serialized);
@@ -65,14 +65,14 @@ public class PublicationStorageAdapter implements PublicationStoragePort {
     StorageLocation location = resolveStorageLocation(context);
 
     // 步骤 4: 上传到对象存储
-    UploadResult uploadResult = uploadPayload(location, serialized, literature.size(), context);
+    UploadResult uploadResult = uploadPayload(location, serialized, publication.size(), context);
 
     log.info(
         "出版物已存储 bucket={} key={} size={} bytes count={}",
         uploadResult.getBucketName(),
         uploadResult.getObjectKey(),
         uploadResult.getFileSize(),
-        literature.size());
+        publication.size());
 
     return StorageResult.builder()
         .storageKey(uploadResult.getStorageKey())
@@ -81,7 +81,7 @@ public class PublicationStorageAdapter implements PublicationStoragePort {
         .fileSize(uploadResult.getFileSize())
         .md5(checksums.md5())
         .sha256(checksums.sha256())
-        .literatureCount(literature.size())
+        .publicationCount(publication.size())
         .build();
   }
 

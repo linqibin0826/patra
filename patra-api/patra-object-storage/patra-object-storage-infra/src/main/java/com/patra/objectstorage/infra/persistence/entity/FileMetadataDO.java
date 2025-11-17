@@ -54,7 +54,7 @@ public class FileMetadataDO extends BaseDO {
   @TableField("service_name")
   private String serviceName;
 
-  /** 业务上下文类型(例如 literature_batch) */
+  /** 业务上下文类型(例如 publication_batch) */
   @TableField("business_type")
   private String businessType;
 

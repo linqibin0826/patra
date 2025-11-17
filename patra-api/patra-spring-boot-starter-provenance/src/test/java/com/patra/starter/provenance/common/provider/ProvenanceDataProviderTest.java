@@ -123,7 +123,7 @@ class ProvenanceDataProviderTest {
 
     @Test
     @DisplayName("应该成功获取PUBLICATION数据")
-    void should_fetch_literature_data() {
+    void should_fetch_publication_data() {
       // Given: 创建Mock Provider和请求
       ProvenanceDataProvider provider = new MockPubmedProvider();
       ProviderRequest request = createMockRequest();
@@ -233,11 +233,11 @@ class ProvenanceDataProviderTest {
     @DisplayName("应该创建泛型成功结果")
     void should_create_generic_success_result() {
       // Given: 创建Mock数据
-      List<CanonicalPublication> literatures = List.of(createMockLiterature("PMID001"));
+      List<CanonicalPublication> publications = List.of(createMockPublication("PMID001"));
 
       // When: 创建成功结果
       ProviderResult<CanonicalPublication> result =
-          ProviderResult.success(literatures, DataType.PUBLICATION, "cursor123");
+          ProviderResult.success(publications, DataType.PUBLICATION, "cursor123");
 
       // Then: 应该包含正确的信息
       assertThat(result.success()).isTrue();
@@ -267,11 +267,11 @@ class ProvenanceDataProviderTest {
     @DisplayName("应该创建泛型部分成功结果")
     void should_create_generic_partial_success_result() {
       // Given: 创建Mock数据
-      List<CanonicalPublication> literatures = List.of(createMockLiterature("PMID001"));
+      List<CanonicalPublication> publications = List.of(createMockPublication("PMID001"));
 
       // When: 创建部分成功结果
       ProviderResult<CanonicalPublication> result =
-          ProviderResult.partialSuccess(literatures, DataType.PUBLICATION, "cursor456", "部分数据转换失败");
+          ProviderResult.partialSuccess(publications, DataType.PUBLICATION, "cursor456", "部分数据转换失败");
 
       // Then: 应该包含警告信息
       assertThat(result.success()).isTrue();
@@ -285,12 +285,12 @@ class ProvenanceDataProviderTest {
     @DisplayName("数据列表应该是不可变的")
     void data_list_should_be_immutable() {
       // Given: 创建成功结果
-      List<CanonicalPublication> literatures = List.of(createMockLiterature("PMID001"));
+      List<CanonicalPublication> publications = List.of(createMockPublication("PMID001"));
       ProviderResult<CanonicalPublication> result =
-          ProviderResult.success(literatures, DataType.PUBLICATION, null);
+          ProviderResult.success(publications, DataType.PUBLICATION, null);
 
       // When & Then: 尝试修改数据列表应该抛出异常
-      assertThatThrownBy(() -> result.data().add(createMockLiterature("PMID002")))
+      assertThatThrownBy(() -> result.data().add(createMockPublication("PMID002")))
           .isInstanceOf(UnsupportedOperationException.class);
     }
   }
@@ -381,7 +381,7 @@ class ProvenanceDataProviderTest {
   }
 
   /** 创建Mock文献 */
-  private static CanonicalPublication createMockLiterature(String identifier) {
+  private static CanonicalPublication createMockPublication(String identifier) {
     // CanonicalPublication使用Builder模式
     return CanonicalPublication.builder()
         .title("Test Publication")

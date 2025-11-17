@@ -201,7 +201,7 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
    *
    * @param event 领域事件
    * @param ctx 发布上下文
-   * @return 分区键字符串(例如 taskId、literatureId)
+   * @return 分区键字符串(例如 taskId、publicationId)
    */
   protected abstract String buildPartitionKey(E event, OutboxPublishContext ctx);
 

@@ -571,11 +571,11 @@ class OutboxPatternE2E {
               .build();
       outboxRepository.saveOrUpdate(taskMsg);
 
-      OutboxMessage literatureMsg =
+      OutboxMessage publicationMsg =
           OutboxMessageTestBuilder.aPublicationReadyMessage()
               .dedupKey("e2e-channel-lit-001")
               .build();
-      outboxRepository.saveOrUpdate(literatureMsg);
+      outboxRepository.saveOrUpdate(publicationMsg);
 
       // 执行: 仅处理 TASK_READY 通道
       // 注意: 需要构建带 channel 过滤的 RelayCommand

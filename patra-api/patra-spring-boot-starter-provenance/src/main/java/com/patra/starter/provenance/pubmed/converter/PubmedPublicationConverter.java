@@ -886,10 +886,10 @@ public class PubmedPublicationConverter {
   }
 
   /**
-   * 提取文献元数据
+   * 提取出版物元数据
    *
    * @param article PubMed文章
-   * @return 文献元数据，如果所有字段都为空则返回null
+   * @return 出版物元数据，如果所有字段都为空则返回null
    */
   private CanonicalPublication.PublicationMetadata extractMetadata(PubmedPublication article) {
     String indexingMethod = article.indexingMethod();

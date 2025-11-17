@@ -808,7 +808,7 @@ class FileSizeTest {
 
     @Test
     @DisplayName("应该正确处理医学出版物 PDF 场景 (5 MB)")
-    void shouldHandleMedicalLiteraturePDFScenario() {
+    void shouldHandleMedicalPublicationPDFScenario() {
       // Given - 医学出版物 PDF (约 5 MB)
       FileSize fileSize = new FileSize(5L * 1024 * 1024);
 
