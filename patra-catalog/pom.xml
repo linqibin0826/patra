@@ -11,51 +11,51 @@
         <relativePath>../patra-parent/pom.xml</relativePath>
     </parent>
 
-    <artifactId>patra-data</artifactId>
+    <artifactId>patra-catalog</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>Patra Data</name>
-    <description>Data persistence module aggregate: api/domain/infra/app/adapter</description>
+    <name>Patra Catalog</name>
+    <description>Catalog persistence module aggregate: api/domain/infra/app/adapter</description>
 
     <dependencyManagement>
         <dependencies>
             <!-- Centralise data submodule versions so internal dependencies can omit explicit version tags -->
             <dependency>
                 <groupId>com.patra</groupId>
-                <artifactId>patra-data-api</artifactId>
+                <artifactId>patra-catalog-api</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.patra</groupId>
-                <artifactId>patra-data-domain</artifactId>
+                <artifactId>patra-catalog-domain</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.patra</groupId>
-                <artifactId>patra-data-app</artifactId>
+                <artifactId>patra-catalog-app</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.patra</groupId>
-                <artifactId>patra-data-infra</artifactId>
+                <artifactId>patra-catalog-infra</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.patra</groupId>
-                <artifactId>patra-data-adapter</artifactId>
+                <artifactId>patra-catalog-adapter</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
 
     <modules>
-        <module>patra-data-boot</module>
-        <module>patra-data-api</module>
-        <module>patra-data-domain</module>
-        <module>patra-data-app</module>
-        <module>patra-data-infra</module>
-        <module>patra-data-adapter</module>
+        <module>patra-catalog-boot</module>
+        <module>patra-catalog-api</module>
+        <module>patra-catalog-domain</module>
+        <module>patra-catalog-app</module>
+        <module>patra-catalog-infra</module>
+        <module>patra-catalog-adapter</module>
     </modules>
 
 </project>

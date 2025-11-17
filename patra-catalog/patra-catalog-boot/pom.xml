@@ -6,12 +6,12 @@
 
     <parent>
         <groupId>com.patra</groupId>
-        <artifactId>patra-data</artifactId>
+        <artifactId>patra-catalog</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>patra-data-boot</artifactId>
-    <name>Patra Data Boot</name>
+    <artifactId>patra-catalog-boot</artifactId>
+    <name>Patra Catalog Boot</name>
     <description>Data persistence launcher module - Spring Boot entry point</description>
 
     <dependencies>
@@ -43,11 +43,11 @@
 
         <dependency>
             <groupId>com.patra</groupId>
-            <artifactId>patra-data-adapter</artifactId>
+            <artifactId>patra-catalog-adapter</artifactId>
         </dependency>
         <dependency>
             <groupId>com.patra</groupId>
-            <artifactId>patra-data-infra</artifactId>
+            <artifactId>patra-catalog-infra</artifactId>
         </dependency>
 
         <dependency>
@@ -101,7 +101,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring-boot.version}</version>
                 <configuration>
-                    <mainClass>com.patra.data.PatraDataApplication</mainClass>
+                    <mainClass>com.patra.catalog.PatraCatalogApplication</mainClass>
                 </configuration>
                 <executions>
                     <execution>

@@ -6,13 +6,13 @@
 
     <parent>
         <groupId>com.patra</groupId>
-        <artifactId>patra-data</artifactId>
+        <artifactId>patra-catalog</artifactId>
         <version>0.1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>patra-data-app</artifactId>
-    <name>Patra Data Application</name>
+    <artifactId>patra-catalog-app</artifactId>
+    <name>Patra Catalog Application</name>
     <description>Data persistence application module - application services and use case orchestration</description>
 
     <dependencies>
@@ -24,12 +24,12 @@
 
         <dependency>
             <groupId>com.patra</groupId>
-            <artifactId>patra-data-domain</artifactId>
+            <artifactId>patra-catalog-domain</artifactId>
         </dependency>
 
         <dependency>
             <groupId>com.patra</groupId>
-            <artifactId>patra-data-api</artifactId>
+            <artifactId>patra-catalog-api</artifactId>
         </dependency>
 
         <dependency>
