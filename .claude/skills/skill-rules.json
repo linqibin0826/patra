@@ -267,6 +267,104 @@
           "**/*.puml"
         ]
       }
+    },
+    "database-modeling": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "high",
+      "description": "MySQL database design expert with progressive disclosure approach. Supports ER diagram, table design, SQL DDL generation, domain model mapping, and design decision records. Specialized for MySQL 8.0 + MyBatis-Plus + Hexagonal Architecture + DDD.",
+      "promptTriggers": {
+        "keywords": [
+          "database design",
+          "table design",
+          "table structure",
+          "ER diagram",
+          "Mermaid ER",
+          "SQL DDL",
+          "CREATE TABLE",
+          "ALTER TABLE",
+          "index",
+          "索引",
+          "audit fields",
+          "database modeling",
+          "normalization",
+          "foreign key",
+          "unique constraint",
+          "optimistic lock",
+          "soft delete",
+          "TIMESTAMP",
+          "BIGINT",
+          "VARCHAR",
+          "MySQL",
+          "database optimization",
+          "index selectivity",
+          "ADR",
+          "数据库设计",
+          "表设计",
+          "表结构",
+          "ER图",
+          "实体关系图",
+          "建表",
+          "索引优化",
+          "审计字段",
+          "数据库建模",
+          "范式",
+          "外键",
+          "唯一约束",
+          "乐观锁",
+          "软删除",
+          "数据库优化",
+          "索引选择性",
+          "领域模型映射",
+          "DO mapping",
+          "MyBatis-Plus",
+          "field design",
+          "字段设计",
+          "column design",
+          "列设计"
+        ],
+        "intentPatterns": [
+          "(design|create|build).*?(database|table|schema)",
+          "(draw|create|generate).*?(ER diagram|entity relationship)",
+          "(generate|create|write).*?(SQL|DDL|CREATE TABLE)",
+          "(design|optimize).*?(index|索引)",
+          "(map|generate).*?(domain model|DO|entity)",
+          "(设计|创建|构建).*(数据库|表|模式)",
+          "(绘制|创建|生成).*(ER图|实体关系图)",
+          "(生成|创建|编写).*(SQL|DDL|建表语句)",
+          "(设计|优化).*(索引)",
+          "(映射|生成).*(领域模型|DO|实体)",
+          "(需求分析|表设计|字段设计|索引设计)",
+          "如何.*?(设计|优化).*(数据库|表|索引)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "**/*.sql",
+          "**/migration/**/*.sql",
+          "**/db/**/*.sql",
+          "**/schema/**/*.sql",
+          "**/ddl/**/*.sql",
+          "**/database/**/*.md",
+          "**/db-design/**/*.md",
+          "**/*DO.java",
+          "**/entity/*DO.java",
+          "**/persistence/entity/**/*.java"
+        ],
+        "contentPatterns": [
+          "CREATE TABLE",
+          "ALTER TABLE",
+          "DROP TABLE",
+          "ADD INDEX",
+          "ADD CONSTRAINT",
+          "@TableName",
+          "@TableId",
+          "@TableField",
+          "@TableLogic",
+          "extends BaseDO",
+          "erDiagram"
+        ]
+      }
     }
   }
 }
