@@ -1,8 +1,9 @@
 # patra_catalog 数据库设计文档
 
-> 版本：v2.0
+> 版本：v2.1
 > 更新日期：2025-01-18
 > 状态：ER 图设计阶段完成 ✅
+> 最新修订：更正表数量统计（实际完成36张表）
 
 ## 📋 文档导航
 
@@ -10,18 +11,19 @@
 
 | 文档 | 说明 | 状态 |
 |------|------|------|
-| [01-requirements-analysis.md](./01-requirements/01-requirements-analysis.md) | 业务需求、数据模型分析、设计决策 | ✅ v1.4 |
+| [01-requirements-analysis.md](./01-requirements/01-requirements-analysis.md) | 业务需求、数据模型分析、设计决策 | ✅ v1.5 |
 
 ### 02. ER 图设计阶段
 
 | 序号 | 文档 | 表数量 | 说明 | 状态 |
 |------|------|--------|------|------|
+| 00 | [complete-er-diagram.md](./02-er-diagrams/00-complete-er-diagram.md) | 36张 | 完整数据库架构总览 | ✅ v1.0 |
 | 01 | [core-entities.md](./02-er-diagrams/01-core-entities.md) | 6张 | 核心实体表（publication、venue、author等） | ✅ v1.5 |
-| 02 | [classification-index.md](./02-er-diagrams/02-classification-index.md) | 13张 | 分类与索引表（MeSH、关键词、物质等） | ✅ v1.0 |
+| 02 | [classification-index.md](./02-er-diagrams/02-classification-index.md) | 12张 | 分类与索引表（MeSH、关键词、物质等） | ✅ v1.1 |
 | 03 | [personnel-organization.md](./02-er-diagrams/03-personnel-organization.md) | 6张 | 人员与机构表（作者、机构、研究者等） | ✅ v1.0 |
 | 04 | [related-information.md](./02-er-diagrams/04-related-information.md) | 7张 | 关联信息表（资助、引用、补充材料等） | ✅ v1.0 |
 | 05 | [auxiliary-management.md](./02-er-diagrams/05-auxiliary-management.md) | 5张 | 辅助管理表（日期、元数据、OA位置等） | ✅ v1.0 |
-| **总计** | | **42张** | | **100% 完成** |
+| **总计** | | **36张** | | **100% 完成** |
 
 ### 变更记录
 
@@ -32,9 +34,9 @@
 ### 数据库架构
 
 ```
-patra_catalog（42 张表）
+patra_catalog（36 张表）
 ├── 核心实体（6张）        - 文献、载体、作者、摘要等
-├── 分类索引（13张）       - MeSH、关键词、出版类型、物质
+├── 分类索引（12张）       - MeSH、关键词、出版类型、物质
 ├── 人员机构（6张）        - 作者、机构、研究者关联
 ├── 关联信息（7张）        - 资助、引用、补充材料、历史
 └── 辅助管理（5张）        - 日期、元数据、语言、OA

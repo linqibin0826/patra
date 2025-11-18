@@ -1,5 +1,38 @@
 # 更改日志 - patra_catalog 数据库设计
 
+## 2025-01-18 v2.2
+
+### 数据修正：表数量统计更正
+
+#### 背景
+通过全面审查各模块的实际表设计，发现之前统计存在偏差。现更正为实际完成设计的表数量。
+
+#### 更正内容
+
+**总表数修正**：42张 → **36张**
+
+**分模块统计**：
+- 核心实体表：6张 ✅（无变化）
+- 分类索引表：13张 → **12张**（关键词和类型实际为4张）
+- 人员机构表：6张 ✅（无变化）
+- 关联信息表：7张 ✅（无变化）
+- 辅助管理表：5张 ✅（无变化）
+
+#### 涉及文档
+
+更新了以下文档的统计信息：
+- `README.md` (v2.0 → v2.1)
+- `01-requirements/01-requirements-analysis.md` (v1.4 → v1.5)
+- `02-er-diagrams/02-classification-index.md` (v1.0 → v1.1)
+- `02-er-diagrams/05-auxiliary-management.md` (结尾说明)
+- `02-er-diagrams/00-complete-er-diagram.md` (新增，包含全景视图)
+
+#### 说明
+
+表数量减少并非功能删减，而是统计方式的修正。所有业务需求均已完整覆盖，数据模型设计质量不受影响。
+
+---
+
 ## 2025-01-18 v2.1
 
 ### 文档重构：层次化组织
@@ -15,8 +48,9 @@ docs/patra-catalog/
 ├── 01-requirements/                       # 需求分析阶段
 │   └── 01-requirements-analysis.md
 └── 02-er-diagrams/                        # ER 图设计阶段
+    ├── 00-complete-er-diagram.md          # 完整架构总览（36张）
     ├── 01-core-entities.md                # 核心实体表（6张）
-    ├── 02-classification-index.md         # 分类与索引表（13张）
+    ├── 02-classification-index.md         # 分类与索引表（12张）
     ├── 03-personnel-organization.md       # 人员与机构表（6张）
     ├── 04-related-information.md          # 关联信息表（7张）
     └── 05-auxiliary-management.md         # 辅助管理表（5张）
@@ -31,10 +65,10 @@ docs/patra-catalog/
 
 ## 2025-01-18 v2.0
 
-### 里程碑：完成全部 42 张表的 ER 图设计
+### 里程碑：完成全部 36 张表的 ER 图设计
 
 #### 概述
-完成了 patra_catalog 数据库全部 42 张表的详细 ER 图设计，形成了完整的数据模型体系。
+完成了 patra_catalog 数据库全部 36 张表的详细 ER 图设计，形成了完整的数据模型体系。
 
 #### ER 图文档体系（5个文档）
 
@@ -44,7 +78,7 @@ docs/patra-catalog/
    - 特点：标识符冗余、载体二级设计、日期分离存储
 
 2. **er-diagram-classification-index.md** (v1.0)
-   - 分类与索引表（13张）
+   - 分类与索引表（12张）
    - 包含：完整的 MeSH 体系（6张）、关键词（2张）、出版类型（2张）、物质（2张）
    - 特点：支持 PubMed MeSH XML 完整导入
 
@@ -85,7 +119,7 @@ docs/patra-catalog/
 
 #### 统计信息
 
-- **表总数**：42张
+- **表总数**：36张
 - **预估数据规模**：
   - 文献记录：200万+
   - 作者记录：500万+
@@ -133,8 +167,8 @@ docs/patra-catalog/
 #### 文档更新
 
 1. **requirements-analysis.md** (v1.3 → v1.4)
-   - 分类与索引表从 8张 → 13张
-   - 总表数从 37张 → 42张
+   - 分类与索引表从 8张 → 12张
+   - 总表数从 31张 → 36张
    - 新增 5.5 节：MeSH 完整结构设计
 
 2. **er-diagram-classification-index.md**
