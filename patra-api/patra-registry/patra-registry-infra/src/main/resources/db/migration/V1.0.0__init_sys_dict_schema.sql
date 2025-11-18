@@ -3,7 +3,7 @@
 -- 说明:
 -- - 仅包含数据库对象和索引;无触发器,无物理外键
 -- - 包含通用审计字段 (BaseDO)
--- - 字符集: utf8mb4; 排序规则: utf8mb4_0900_ai_ci; 引擎: InnoDB
+-- - 字符集: utf8mb4; 排序规则: utf8mb4_unicode_ci; 引擎: InnoDB
 -- - 表: sys_dict_type / sys_dict_item / sys_dict_item_alias
 -- =====================================================================
 
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS sys_dict_type
     CONSTRAINT chk_sys_dict_type__code_format CHECK (REGEXP_LIKE(type_code, '^[a-z0-9_]{1,64}$'))
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_0900_ai_ci COMMENT ='系统字典 - 类型';
+  COLLATE = utf8mb4_unicode_ci COMMENT ='系统字典 - 类型';
 
 
 /* ====================================================================
@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS sys_dict_item
     CONSTRAINT chk_sys_dict_item__code_format CHECK (REGEXP_LIKE(item_code, '^[A-Z0-9_]{1,64}$'))
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_0900_ai_ci COMMENT ='系统字典 - 条目';
+  COLLATE = utf8mb4_unicode_ci COMMENT ='系统字典 - 条目';
 
 
 /* ====================================================================
@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS sys_dict_item_alias
     CONSTRAINT chk_dict_alias__src_format CHECK (REGEXP_LIKE(source_system, '^[a-z0-9_\-]{1,64}$'))
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_0900_ai_ci COMMENT ='系统字典 - 外部映射';
+  COLLATE = utf8mb4_unicode_ci COMMENT ='系统字典 - 外部映射';
 
 -- =====================================================================
 -- 结束
