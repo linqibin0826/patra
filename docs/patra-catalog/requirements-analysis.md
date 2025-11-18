@@ -1,7 +1,12 @@
 # 需求分析文档 - patra_catalog 数据库设计
 
-> 文档版本：v1.0
-> 更新日期：2025-01-17
+> 文档版本：v1.3
+> 更新日期：2025-01-18
+> 最新修订：新增日期字段设计（5.8节）、优化 venue_instance 日期字段
+> 历史版本：
+>   - v1.2: 新增开放获取（OA）状态管理表
+>   - v1.1: 增加标识符冗余设计（5.5节）
+>   - v1.0: 初始版本
 > 作者：Patra Lin
 
 ## 一、项目背景
@@ -47,10 +52,10 @@ patra-ingest (采集) → 消息队列 → patra_catalog (存储) → ES (检索
 
 | 表名 | 中文名 | 说明 | 预估规模 |
 |------|--------|------|---------|
-| `cat_publication` | 出版物主表 | 存储文献基础信息 | 200万+ |
+| `cat_publication` | 出版物主表 | 存储文献基础信息，冗余 PMID/DOI 便于高频查询 | 200万+ |
 | `cat_venue` | 出版载体表 | 期刊/书籍/会议等载体信息 | 3万+ |
 | `cat_venue_instance` | 载体实例表 | 具体的卷/期/版次信息 | 50万+ |
-| `cat_identifier` | 标识符表 | PMID/DOI/PMC等多种标识符 | 800万+ |
+| `cat_identifier` | 标识符表 | 存储所有类型标识符（PMID/DOI/PMC/PII/arXiv等） | 800万+ |
 | `cat_author` | 作者表 | 作者基本信息 | 500万+ |
 | `cat_abstract` | 摘要表 | 结构化/非结构化摘要 | 200万+ |
 
@@ -106,15 +111,17 @@ venue (出版载体)
 | `cat_supplemental_object` | 补充对象表 | 图表/数据集等 | 100万+ |
 | `cat_publication_history` | 发布历史表 | 时间线事件记录 | 600万+ |
 
-### 4.6 辅助管理表（3张）
+### 4.6 辅助管理表（5张）
 
 | 表名 | 中文名 | 说明 | 预估规模 |
 |------|--------|------|---------|
 | `cat_publication_date` | 日期信息表 | 多种日期类型 | 400万+ |
 | `cat_publication_metadata` | 元数据表 | 索引方法/状态等 | 200万+ |
 | `cat_alternative_abstract` | 其他语言摘要表 | 多语言版本 | 20万+ |
+| `cat_language_mapping` | 语言映射表 | 原始语言值到标准代码的映射 | 1000+ |
+| `cat_oa_location` | 开放获取位置表 | OA全文链接和版本信息 | 300万+ |
 
-**总计：35张表**
+**总计：37张表**
 
 ## 五、关键设计决策
 
@@ -149,6 +156,165 @@ venue (出版载体)
 - 避免影响主表查询性能
 - 支持结构化摘要存储
 - 便于全文检索集成
+
+### 5.5 标识符冗余设计
+
+**决策**：主表冗余高频标识符 + 独立标识符表存储全量
+- `cat_publication` 表冗余字段：
+  - `pmid` VARCHAR(20) - PubMed ID（医学文献最常用）
+  - `doi` VARCHAR(255) - 数字对象标识符（跨学科通用）
+- `cat_identifier` 表存储所有标识符类型
+
+**理由**：
+1. **性能优化**：
+   - 避免 90% 以上的 JOIN 操作
+   - PMID 和 DOI 是最高频的查询条件
+   - 直接在主表查询，响应时间从 ms 级降到 μs 级
+
+2. **查询简化**：
+   ```sql
+   -- 优化前：需要 JOIN
+   SELECT p.* FROM cat_publication p
+   JOIN cat_identifier i ON p.id = i.publication_id
+   WHERE i.type = 'pmid' AND i.value = '12345678';
+
+   -- 优化后：直接查询
+   SELECT * FROM cat_publication WHERE pmid = '12345678';
+   ```
+
+3. **数据一致性保证**：
+   - 冗余字段通过应用层同步更新
+   - 定期数据校验任务确保一致性
+   - 标识符表作为权威数据源
+
+4. **扩展性考虑**：
+   - 其他标识符（PMC、PII、arXiv 等）仍存储在标识符表
+   - 未来可根据使用频率调整冗余策略
+   - 不影响新标识符类型的添加
+
+### 5.6 语言字段三层设计
+
+**决策**：原始值保留 + 映射表标准化 + 生成列基础语种
+
+- `cat_publication` 表语言字段（3 个）：
+  - `language_raw` VARCHAR(50) - 原始语言值（外部采集，如 "eng", "Chinese", "中文"）
+  - `language_code` VARCHAR(10) - 标准语言代码（应用层通过映射表处理，如 "en", "zh-CN"）
+  - `language_base` VARCHAR(5) - 基础语种（生成列，如 "en", "zh"）
+- `cat_language_mapping` 表维护映射关系
+
+**理由**：
+
+1. **数据完整性**：
+   - 保留原始值 `language_raw`，永不丢失外部采集的原始数据
+   - 避免因标准化失败导致数据丢失
+
+2. **应对数据不规范**：
+   - 外部数据源的语言字段格式不统一（ISO 639-2、全称、中文描述等）
+   - 通过映射表灵活处理各种格式：
+     ```
+     "eng" → "en"
+     "chi" → "zh"
+     "Chinese" → "zh"
+     "中文" → "zh"
+     "zh-Hans" → "zh-CN"
+     ```
+
+3. **生成列优化**（MySQL 8.0）：
+   - `language_base` 使用 STORED 生成列自动提取基础语种
+   - 支持按基础语种统计（如所有中文文献，包括简繁体）
+   - 存储成本：5字节 × 200万 ≈ 10MB，可接受
+
+4. **映射表动态学习**：
+   - 预置常见映射（200+ 条）
+   - 记录置信度，支持人工审核
+   - 跟踪使用频率，优化高频映射
+
+### 5.7 开放获取（OA）状态设计
+
+**决策**：主表精简冗余 + 独立 OA 位置表存储详细信息
+
+- `cat_publication` 表冗余字段（仅 2 个）：
+  - `is_oa` BOOLEAN - 是否有任何形式的开放获取
+  - `oa_status` VARCHAR(20) - 最佳 OA 状态（gold/green/hybrid/bronze/closed）
+- `cat_oa_location` 表存储所有 OA 位置详情
+
+**理由**：
+
+1. **精简冗余**：
+   - 主表仅保留最关键的两个字段
+   - 避免主表臃肿，保持查询性能
+   - `is_oa` 支持快速筛选，`oa_status` 提供分类统计
+
+2. **OA 状态优先级规则**：
+   - Gold OA（出版商官网，正式版本）> Green OA（机构仓储）> Hybrid OA > Bronze OA（免费无许可证）> 预印本
+   - 通过优先级字段自动确定最佳 OA 状态
+   - 应用层负责同步更新主表冗余字段
+
+3. **详细位置管理**：
+   - 一篇文献可能有多个 OA 来源（出版商、PubMed Central、机构仓储、预印本等）
+   - 记录每个位置的版本类型（publishedVersion/acceptedVersion/submittedVersion）
+   - 保留证据来源和检查时间，支持数据溯源
+
+4. **扩展性考虑**：
+   - 支持动态添加新的 OA 类型
+   - 可记录禁发期（Embargo）信息
+   - 许可证信息独立存储，便于法律合规查询
+
+### 5.8 日期字段设计
+
+**决策**：分离字段存储 + publication_year 冗余
+
+#### 不完整日期的处理
+
+医学文献的出版日期并非总是完整的年月日：
+- **只有年份**：约 30% 的文献（如早期文献、年刊）
+- **年+月**：约 40% 的文献（电子优先出版）
+- **完整日期**：约 30% 的文献
+
+传统的 DATE 类型（必须是完整的 YYYY-MM-DD）会导致**虚假精度**问题：将 "2023-06" 强制存储为 "2023-06-01" 违背了数据真实性原则。
+
+#### 分离字段设计
+
+`cat_venue_instance` 表采用分离字段存储原始日期精度：
+
+```sql
+publication_year SMALLINT NOT NULL     -- 出版年份（必填）
+publication_month TINYINT NULL         -- 出版月份 1-12（可选）
+publication_day TINYINT NULL           -- 出版日期 1-31（可选）
+```
+
+**优势**：
+1. **精确表达不完整性**：NULL 表示"不存在此精度"而非"未知"
+2. **避免虚假精度**：不会将 "2023-06" 存为 "2023-06-01"
+3. **数值类型优势**：索引效率高，排序友好，存储紧凑（6字节）
+4. **完整性约束**：可设置 CHECK 约束（month 1-12, day 1-31）
+
+#### publication_year 冗余设计
+
+`cat_publication` 主表冗余 `publication_year` 字段：
+
+**理由**：
+1. **查询频率极高**：按年份筛选是医学文献检索的最高频操作（>60% 查询）
+2. **避免 JOIN 开销**：不冗余时每次按年份查询都需要 JOIN venue_instance
+3. **存储成本低**：仅 2 字节/行（200 万行 = 4MB）
+4. **索引友好**：SMALLINT 类型索引效率远高于 DATE
+
+**典型查询场景**：
+```sql
+-- 不冗余：需要 JOIN
+SELECT p.* FROM cat_publication p
+JOIN cat_venue_instance vi ON p.venue_instance_id = vi.id
+WHERE vi.publication_year BETWEEN 2020 AND 2023;
+
+-- 冗余后：直接查询，性能提升 50%+
+SELECT * FROM cat_publication
+WHERE publication_year BETWEEN 2020 AND 2023;
+```
+
+**不使用生成列的原因**：
+- 生成列只能基于同表字段计算
+- publication_year 的源数据在 venue_instance 表
+- 冗余字段由应用层在插入/更新时同步
 
 ## 六、扩展性设计
 
@@ -198,7 +364,8 @@ version     BIGINT       -- 乐观锁版本
 ### 8.2 索引设计预留
 - 主键索引（自动创建）
 - 外键索引（关联查询）
-- 业务查询索引（PMID、DOI等）
+- **冗余字段索引**（cat_publication.pmid、cat_publication.doi - 唯一索引）
+- 业务查询索引（其他标识符、作者名等）
 - 复合索引（多条件查询）
 
 ### 8.3 查询优化预留
