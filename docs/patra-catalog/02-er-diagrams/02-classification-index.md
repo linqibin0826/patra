@@ -324,22 +324,22 @@ CREATE INDEX idx_pub_substance ON cat_publication_substance(publication_id);
 #### MeSH 相关表
 | 表名 | 预估记录数 | 说明 |
 |------|-----------|------|
-| cat_mesh_descriptor | 3万 | NLM MeSH 主题词规模 |
+| cat_mesh_descriptor | 3.5万 | NLM MeSH 主题词规模 |
 | cat_mesh_qualifier | 100 | 限定词数量固定 |
-| cat_mesh_tree_number | 7万 | 每个主题词平均2.3个位置 |
-| cat_mesh_entry_term | 30万 | 每个主题词平均10个同义词 |
-| cat_mesh_concept | 9万 | 每个主题词平均3个概念 |
-| cat_publication_mesh | 2000万 | 每篇10个MeSH标引 |
+| cat_mesh_tree_number | 8万 | 每个主题词平均2.3个位置 |
+| cat_mesh_entry_term | 35万 | 每个主题词平均10个同义词 |
+| cat_mesh_concept | 10万 | 每个主题词平均3个概念 |
+| cat_publication_mesh | 1亿 | 每篇10个MeSH标引 |
 
 #### 其他分类索引表
 | 表名 | 预估记录数 | 说明 |
 |------|-----------|------|
-| cat_keyword | 100万 | 去重后的关键词 |
-| cat_publication_keyword | 500万 | 每篇2-3个关键词 |
-| cat_publication_type | 100 | 类型数量有限 |
-| cat_publication_type_mapping | 300万 | 每篇1-2个类型 |
-| cat_substance | 5万 | 医学相关物质 |
-| cat_publication_substance | 300万 | 部分文献涉及 |
+| cat_keyword | 300万 | 去重后的关键词 |
+| cat_publication_keyword | 2500万 | 每篇2-3个关键词 |
+| cat_publication_type | 150 | 类型数量有限 |
+| cat_publication_type_mapping | 1500万 | 每篇1-2个类型 |
+| cat_substance | 8万 | 医学相关物质 |
+| cat_publication_substance | 1500万 | 部分文献涉及 |
 
 ### 6.2 查询优化考虑
 

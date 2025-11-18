@@ -26,7 +26,7 @@ patra-ingest (采集) → 消息队列 → patra_catalog (存储) → ES (检索
 
 ### 2.2 核心需求
 - **数据来源**：从消息队列接收 CanonicalPublication 模型数据
-- **数据规模**：初始 200万条文献记录，持续增长
+- **数据规模**：初始 1000万条文献记录，持续增长
 - **更新策略**：定期更新补充 MeSH 词表和文献数据
 - **版本管理**：不保留历史版本，始终存储最新数据
 - **审核流程**：无需审核，数据直接入库
@@ -54,12 +54,12 @@ patra-ingest (采集) → 消息队列 → patra_catalog (存储) → ES (检索
 
 | 表名 | 中文名 | 说明 | 预估规模 |
 |------|--------|------|---------|
-| `cat_publication` | 出版物主表 | 存储文献基础信息，冗余 PMID/DOI 便于高频查询 | 200万+ |
-| `cat_venue` | 出版载体表 | 期刊/书籍/会议等载体信息 | 3万+ |
-| `cat_venue_instance` | 载体实例表 | 具体的卷/期/版次信息 | 50万+ |
-| `cat_identifier` | 标识符表 | 存储所有类型标识符（PMID/DOI/PMC/PII/arXiv等） | 800万+ |
-| `cat_author` | 作者表 | 作者基本信息 | 500万+ |
-| `cat_abstract` | 摘要表 | 结构化/非结构化摘要 | 200万+ |
+| `cat_publication` | 出版物主表 | 存储文献基础信息，冗余 PMID/DOI 便于高频查询 | 1000万+ |
+| `cat_venue` | 出版载体表 | 期刊/书籍/会议等载体信息 | 5万+ |
+| `cat_venue_instance` | 载体实例表 | 具体的卷/期/版次信息 | 120万+ |
+| `cat_identifier` | 标识符表 | 存储所有类型标识符（PMID/DOI/PMC/PII/arXiv等） | 4000万+ |
+| `cat_author` | 作者表 | 作者基本信息 | 1500万+ |
+| `cat_abstract` | 摘要表 | 结构化/非结构化摘要 | 900万+ |
 
 ### 4.2 出版载体设计（重点）
 
@@ -82,59 +82,59 @@ venue (出版载体)
 #### MeSH 相关表（6张）
 | 表名 | 中文名 | 说明 | 预估规模 |
 |------|--------|------|---------|
-| `cat_mesh_descriptor` | MeSH主题词表 | 医学主题词标准词表 | 3万+ |
+| `cat_mesh_descriptor` | MeSH主题词表 | 医学主题词标准词表 | 3.5万+ |
 | `cat_mesh_qualifier` | MeSH限定词表 | 主题词的限定修饰 | 100+ |
-| `cat_mesh_tree_number` | MeSH树形编号表 | 主题词的层次位置 | 7万+ |
-| `cat_mesh_entry_term` | MeSH入口术语表 | 同义词和入口术语 | 30万+ |
-| `cat_mesh_concept` | MeSH概念表 | 概念层级结构 | 9万+ |
-| `cat_publication_mesh` | 文献-MeSH关联表 | 多对多关联 | 2000万+ |
+| `cat_mesh_tree_number` | MeSH树形编号表 | 主题词的层次位置 | 8万+ |
+| `cat_mesh_entry_term` | MeSH入口术语表 | 同义词和入口术语 | 35万+ |
+| `cat_mesh_concept` | MeSH概念表 | 概念层级结构 | 10万+ |
+| `cat_publication_mesh` | 文献-MeSH关联表 | 多对多关联 | 1亿+ |
 
 #### 关键词和类型表（4张）
 | 表名 | 中文名 | 说明 | 预估规模 |
 |------|--------|------|---------|
-| `cat_keyword` | 关键词表 | 多来源关键词 | 100万+ |
-| `cat_publication_keyword` | 文献-关键词关联表 | 多对多关联 | 500万+ |
-| `cat_publication_type` | 出版类型表 | 受控词表 | 100+ |
-| `cat_publication_type_mapping` | 文献-类型关联表 | 多对多关联 | 300万+ |
+| `cat_keyword` | 关键词表 | 多来源关键词 | 300万+ |
+| `cat_publication_keyword` | 文献-关键词关联表 | 多对多关联 | 2500万+ |
+| `cat_publication_type` | 出版类型表 | 受控词表 | 150+ |
+| `cat_publication_type_mapping` | 文献-类型关联表 | 多对多关联 | 1500万+ |
 
 #### 物质相关表（2张）
 | 表名 | 中文名 | 说明 | 预估规模 |
 |------|--------|------|---------|
-| `cat_substance` | 物质表 | 化学物质/药物/生物制品 | 5万+ |
-| `cat_publication_substance` | 文献-物质关联表 | 多对多关联 | 300万+ |
+| `cat_substance` | 物质表 | 化学物质/药物/生物制品 | 8万+ |
+| `cat_publication_substance` | 文献-物质关联表 | 多对多关联 | 1500万+ |
 
 ### 4.4 人员与机构表（6张）
 
 | 表名 | 中文名 | 说明 | 预估规模 |
 |------|--------|------|---------|
-| `cat_publication_author` | 文献-作者关联表 | 包含作者顺序 | 1000万+ |
-| `cat_affiliation` | 机构表 | 研究机构信息 | 10万+ |
-| `cat_author_affiliation` | 作者-机构关联表 | 多对多关联 | 1200万+ |
-| `cat_investigator` | 研究者表 | 非作者研究人员 | 20万+ |
-| `cat_publication_investigator` | 文献-研究者关联表 | 多对多关联 | 30万+ |
-| `cat_personal_name_subject` | 人物主题表 | 传记等文献的主题人物 | 1万+ |
+| `cat_publication_author` | 文献-作者关联表 | 包含作者顺序 | 5000万+ |
+| `cat_affiliation` | 机构表 | 研究机构信息 | 25万+ |
+| `cat_author_affiliation` | 作者-机构关联表 | 多对多关联 | 6000万+ |
+| `cat_investigator` | 研究者表 | 非作者研究人员 | 50万+ |
+| `cat_publication_investigator` | 文献-研究者关联表 | 多对多关联 | 150万+ |
+| `cat_personal_name_subject` | 人物主题表 | 传记等文献的主题人物 | 5万+ |
 
 ### 4.5 关联信息表（7张）
 
 | 表名 | 中文名 | 说明 | 预估规模 |
 |------|--------|------|---------|
-| `cat_funding` | 资助信息表 | 基金/项目资助 | 100万+ |
-| `cat_publication_funding` | 文献-资助关联表 | 多对多关联 | 150万+ |
-| `cat_reference` | 参考文献表 | 引用的其他文献 | 4000万+ |
-| `cat_external_reference` | 外部引用表 | 基因库/临床试验等 | 50万+ |
-| `cat_related_item` | 相关项目表 | 撤稿/勘误/评论 | 10万+ |
-| `cat_supplemental_object` | 补充对象表 | 图表/数据集等 | 100万+ |
-| `cat_publication_history` | 发布历史表 | 时间线事件记录 | 600万+ |
+| `cat_funding` | 资助信息表 | 基金/项目资助 | 300万+ |
+| `cat_publication_funding` | 文献-资助关联表 | 多对多关联 | 750万+ |
+| `cat_reference` | 参考文献表 | 引用的其他文献 | 2亿+ |
+| `cat_external_reference` | 外部引用表 | 基因库/临床试验等 | 250万+ |
+| `cat_related_item` | 相关项目表 | 撤稿/勘误/评论 | 50万+ |
+| `cat_supplemental_object` | 补充对象表 | 图表/数据集等 | 500万+ |
+| `cat_publication_history` | 发布历史表 | 时间线事件记录 | 3000万+ |
 
 ### 4.6 辅助管理表（5张）
 
 | 表名 | 中文名 | 说明 | 预估规模 |
 |------|--------|------|---------|
-| `cat_publication_date` | 日期信息表 | 多种日期类型 | 400万+ |
-| `cat_publication_metadata` | 元数据表 | 索引方法/状态等 | 200万+ |
-| `cat_alternative_abstract` | 其他语言摘要表 | 多语言版本 | 20万+ |
-| `cat_language_mapping` | 语言映射表 | 原始语言值到标准代码的映射 | 1000+ |
-| `cat_oa_location` | 开放获取位置表 | OA全文链接和版本信息 | 300万+ |
+| `cat_publication_date` | 日期信息表 | 多种日期类型 | 2000万+ |
+| `cat_publication_metadata` | 元数据表 | 索引方法/状态等 | 1000万+ |
+| `cat_alternative_abstract` | 其他语言摘要表 | 多语言版本 | 100万+ |
+| `cat_language_mapping` | 语言映射表 | 原始语言值到标准代码的映射 | 1500+ |
+| `cat_oa_location` | 开放获取位置表 | OA全文链接和版本信息 | 1500万+ |
 
 **总计：36张表**（核心实体6张 + 分类索引12张 + 人员机构6张 + 关联信息7张 + 辅助管理5张）
 
