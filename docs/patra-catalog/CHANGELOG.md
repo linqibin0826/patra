@@ -1,5 +1,70 @@
 # 更改日志 - patra_catalog 数据库设计
 
+## 2025-01-18 v2.0
+
+### 里程碑：完成全部 42 张表的 ER 图设计
+
+#### 概述
+完成了 patra_catalog 数据库全部 42 张表的详细 ER 图设计，形成了完整的数据模型体系。
+
+#### ER 图文档体系（5个文档）
+
+1. **er-diagram-core-entities.md** (v1.5)
+   - 核心实体表（6张）
+   - 包含：publication、venue、venue_instance、identifier、author、abstract
+   - 特点：标识符冗余、载体二级设计、日期分离存储
+
+2. **er-diagram-classification-index.md** (v1.0)
+   - 分类与索引表（13张）
+   - 包含：完整的 MeSH 体系（6张）、关键词（2张）、出版类型（2张）、物质（2张）
+   - 特点：支持 PubMed MeSH XML 完整导入
+
+3. **er-diagram-personnel-organization.md** (v1.0) [新增]
+   - 人员与机构表（6张）
+   - 包含：publication_author、affiliation、author_affiliation、investigator、publication_investigator、personal_name_subject
+   - 特点：多级机构层次、时间维度关联、研究者独立管理
+
+4. **er-diagram-related-information.md** (v1.0) [新增]
+   - 关联信息表（7张）
+   - 包含：funding、publication_funding、reference、external_reference、related_item、supplemental_object、publication_history
+   - 特点：双重引用机制、撤稿追踪、补充材料管理
+
+5. **er-diagram-auxiliary-management.md** (v1.0) [新增]
+   - 辅助管理表（5张）
+   - 包含：publication_date、publication_metadata、alternative_abstract、language_mapping、oa_location
+   - 特点：灵活日期处理、语言标准化、OA多位置管理
+
+#### 设计亮点
+
+**数据模型创新**：
+- 三层人员管理架构（作者、研究者、人物主题）
+- 双轨引用系统（库内关联 + 外部引用）
+- 动态语言映射学习机制
+- 灵活的日期精度处理
+
+**性能优化设计**：
+- 策略性字段冗余（pmid、doi、venue_id、publication_year）
+- 预设计索引策略（每张表的关键索引）
+- 分区建议（大表的分区策略）
+- 缓存策略建议
+
+**数据质量保障**：
+- 完整性约束设计
+- 业务规则定义
+- 去重策略（作者、机构、资助）
+- 数据验证机制
+
+#### 统计信息
+
+- **表总数**：42张
+- **预估数据规模**：
+  - 文献记录：200万+
+  - 作者记录：500万+
+  - MeSH关联：2000万+
+  - 参考文献：4000万+
+- **关系类型**：1:1、1:N、M:N 完整覆盖
+- **设计文档**：5个 Mermaid ER 图文档
+
 ## 2025-01-18 v1.4
 
 ### 重大更新：MeSH 表结构完善
