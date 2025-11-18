@@ -319,11 +319,19 @@ CREATE INDEX idx_pub_substance ON cat_publication_substance(publication_id);
 
 ### 6.1 数据量预估
 
+#### MeSH 相关表
 | 表名 | 预估记录数 | 说明 |
 |------|-----------|------|
-| cat_mesh_descriptor | 3万 | NLM MeSH 词表规模 |
+| cat_mesh_descriptor | 3万 | NLM MeSH 主题词规模 |
 | cat_mesh_qualifier | 100 | 限定词数量固定 |
+| cat_mesh_tree_number | 7万 | 每个主题词平均2.3个位置 |
+| cat_mesh_entry_term | 30万 | 每个主题词平均10个同义词 |
+| cat_mesh_concept | 9万 | 每个主题词平均3个概念 |
 | cat_publication_mesh | 2000万 | 每篇10个MeSH标引 |
+
+#### 其他分类索引表
+| 表名 | 预估记录数 | 说明 |
+|------|-----------|------|
 | cat_keyword | 100万 | 去重后的关键词 |
 | cat_publication_keyword | 500万 | 每篇2-3个关键词 |
 | cat_publication_type | 100 | 类型数量有限 |
