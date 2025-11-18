@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS `reg_expr_field_dict`
 ) ENGINE = InnoDB
   ROW_FORMAT = DYNAMIC
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_0900_ai_ci
+  COLLATE = utf8mb4_unicode_ci
     COMMENT ='(Registry - Expr) 统一内部字段字典 (数据源无关; 字段语义的单一事实来源)';
 
 
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS `reg_prov_api_param_map`
 ) ENGINE = InnoDB
   ROW_FORMAT = DYNAMIC
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_0900_ai_ci
+  COLLATE = utf8mb4_unicode_ci
     COMMENT ='(Registry - Expr) API参数映射: std_key -> provider parameter (键名级别; 时间维度)';
 
 
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS `reg_prov_expr_capability`
 ) ENGINE = InnoDB
   ROW_FORMAT = DYNAMIC
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_0900_ai_ci
+  COLLATE = utf8mb4_unicode_ci
     COMMENT ='(Registry - Expr) 字段能力 (数据源相关): 用于验证/渲染的允许操作和约束';
 
 
@@ -209,5 +209,5 @@ CREATE TABLE IF NOT EXISTS `reg_prov_expr_render_rule`
 ) ENGINE = InnoDB
   ROW_FORMAT = DYNAMIC
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_0900_ai_ci
+  COLLATE = utf8mb4_unicode_ci
     COMMENT ='(Registry - Expr) 渲染规则 (数据源相关): Expr.Atom -> query fragment or params; 与参数命名解耦; 时间维度'
