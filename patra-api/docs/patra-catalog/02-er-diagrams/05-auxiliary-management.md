@@ -101,7 +101,7 @@ erDiagram
         varchar(100) language_name_en "英文名称"
         varchar(100) language_name_native "本地名称"
         varchar(50) mapping_source "映射来源"
-        decimal(5,2) confidence_score "置信度（0-100）"
+        decimal confidence_score "置信度（0-100）decimal(5,2)"
         integer usage_count "使用次数"
         boolean is_verified "是否已验证"
         date last_used "最后使用时间"
