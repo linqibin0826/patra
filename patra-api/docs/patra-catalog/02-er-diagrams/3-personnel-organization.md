@@ -2,7 +2,6 @@
 
 > **设计目标**: 为 Patra 医学文献管理系统设计人员与机构管理体系,支持作者关联、机构归属、研究者管理和人物主题
 >
-> **文档版本**: v2.0 (按模板重构)
 > **创建日期**: 2025-01-18
 > **设计范围**: patra_catalog 人员与机构管理体系(不包含核心 author 表)
 > **作者**: Patra Lin
@@ -40,7 +39,6 @@ erDiagram
     cat_publication {
         bigint id PK "主键,雪花ID"
         varchar title "文献标题"
-        "其他字段..."
     }
 
     cat_author {
@@ -49,7 +47,6 @@ erDiagram
         varchar fore_name "名"
         varchar orcid "ORCID标识符"
         varchar dedup_key "复合去重键"
-        "其他字段..."
     }
 
     %% 人员与机构表

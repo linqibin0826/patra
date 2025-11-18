@@ -1,9 +1,7 @@
 # patra_catalog 数据库设计文档
 
-> 版本：v2.1
-> 更新日期：2025-01-18
-> 状态：ER 图设计阶段完成 ✅
-> 最新修订：更正表数量统计（实际完成36张表）
+> 创建日期：2025-01-18
+> 状态：ER 图设计完成 ✅
 
 ## 📋 文档导航
 
@@ -11,23 +9,20 @@
 
 | 文档 | 说明 | 状态 |
 |------|------|------|
-| [01-requirements-analysis.md](./01-requirements/01-requirements-analysis.md) | 业务需求、数据模型分析、设计决策 | ✅ v1.5 |
+| [01-requirements-analysis.md](./01-requirements/01-requirements-analysis.md) | 业务需求、数据模型分析、设计决策 | ✅ 完成 |
 
 ### 02. ER 图设计阶段
 
 | 序号 | 文档 | 表数量 | 说明 | 状态 |
 |------|------|--------|------|------|
-| 00 | [complete-er-diagram.md](./02-er-diagrams/00-complete-er-diagram.md) | 36张 | 完整数据库架构总览 | ✅ v1.0 |
-| 01 | [core-entities.md](./02-er-diagrams/01-core-entities.md) | 6张 | 核心实体表（publication、venue、author等） | ✅ v1.5 |
-| 02 | [classification-index.md](./02-er-diagrams/02-classification-index.md) | 12张 | 分类与索引表（MeSH、关键词、物质等） | ✅ v1.1 |
-| 03 | [personnel-organization.md](./02-er-diagrams/03-personnel-organization.md) | 6张 | 人员与机构表（作者、机构、研究者等） | ✅ v1.0 |
-| 04 | [related-information.md](./02-er-diagrams/04-related-information.md) | 7张 | 关联信息表（资助、引用、补充材料等） | ✅ v1.0 |
-| 05 | [auxiliary-management.md](./02-er-diagrams/05-auxiliary-management.md) | 5张 | 辅助管理表（日期、元数据、OA位置等） | ✅ v1.0 |
+| 0 | [0-overview.md](./02-er-diagrams/0-overview.md) | 36张 | 完整数据库架构总览 | ✅ 完成 |
+| 1 | [1-core-entities.md](./02-er-diagrams/1-core-entities.md) | 6张 | 核心实体表（publication、venue、author等） | ✅ 完成 |
+| 2 | [2-classification-index.md](./02-er-diagrams/2-classification-index.md) | 12张 | 分类与索引表（MeSH、关键词、物质等） | ✅ 完成 |
+| 3 | [3-personnel-organization.md](./02-er-diagrams/3-personnel-organization.md) | 6张 | 人员与机构表（作者、机构、研究者等） | ✅ 完成 |
+| 4 | [4-related-information.md](./02-er-diagrams/4-related-information.md) | 7张 | 关联信息表（资助、引用、补充材料等） | ✅ 完成 |
+| 5 | [5-auxiliary-management.md](./02-er-diagrams/5-auxiliary-management.md) | 5张 | 辅助管理表（日期、元数据、OA位置等） | ✅ 完成 |
 | **总计** | | **36张** | | **100% 完成** |
 
-### 变更记录
-
-- [CHANGELOG.md](./CHANGELOG.md) - 设计变更和版本历史
 
 ## 🎯 设计概览
 
@@ -79,9 +74,10 @@ patra_catalog（36 张表）
 ## 📖 快速开始
 
 1. **了解业务需求**：从 [需求分析](./01-requirements/01-requirements-analysis.md) 开始
-2. **查看核心表设计**：阅读 [核心实体表](./02-er-diagrams/01-core-entities.md)
-3. **理解表关系**：查看各 ER 图的 Mermaid 图表
-4. **查看设计决策**：参考每个文档的"设计要点"章节
+2. **查看完整架构**：阅读 [架构总览](./02-er-diagrams/0-overview.md)
+3. **查看核心表设计**：阅读 [核心实体表](./02-er-diagrams/1-core-entities.md)
+4. **理解表关系**：查看各 ER 图的 Mermaid 图表
+5. **查看设计决策**：参考每个文档的"关键设计决策"章节
 
 ## 📞 联系方式
 

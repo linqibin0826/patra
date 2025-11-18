@@ -2,7 +2,6 @@
 
 > **设计目标**: 为 Patra 医学文献管理系统设计辅助管理表的 ER 图,提供核心业务的支撑功能
 >
-> **文档版本**: v2.0 (按模板重构)
 > **创建日期**: 2025-01-18
 > **设计范围**: patra_catalog 辅助管理表(日期、元数据、多语言、OA)
 > **作者**: Patra Lin
@@ -123,7 +122,7 @@ erDiagram
         varchar(100) language_name_en "英文名称"
         varchar(100) language_name_native "本地名称"
         varchar(50) mapping_source "映射来源"
-        decimal(5,2) confidence_score "置信度(0-100)"
+        decimal confidence_score "置信度(0-100) decimal(5,2)"
         integer usage_count "使用次数"
         boolean is_verified "是否已验证"
         date last_used "最后使用时间"
