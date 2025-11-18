@@ -1,5 +1,34 @@
 # 更改日志 - patra_catalog 数据库设计
 
+## 2025-01-18 v2.1
+
+### 文档重构：层次化组织
+
+#### 目录结构优化
+
+重新组织文档结构，按工作阶段分层，使用序号排序：
+
+```
+docs/patra-catalog/
+├── README.md                              # 总索引（新增）
+├── CHANGELOG.md                           # 变更记录
+├── 01-requirements/                       # 需求分析阶段
+│   └── 01-requirements-analysis.md
+└── 02-er-diagrams/                        # ER 图设计阶段
+    ├── 01-core-entities.md                # 核心实体表（6张）
+    ├── 02-classification-index.md         # 分类与索引表（13张）
+    ├── 03-personnel-organization.md       # 人员与机构表（6张）
+    ├── 04-related-information.md          # 关联信息表（7张）
+    └── 05-auxiliary-management.md         # 辅助管理表（5张）
+```
+
+#### 改进点
+
+1. **阶段分层**：按需求→设计阶段组织，清晰的工作流程
+2. **序号排序**：所有文件使用两位数序号前缀，便于排序和导航
+3. **总索引**：新增 README.md 提供快速导航和概览
+4. **简化命名**：移除冗余的 `er-diagram-` 前缀，保持简洁
+
 ## 2025-01-18 v2.0
 
 ### 里程碑：完成全部 42 张表的 ER 图设计
