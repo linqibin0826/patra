@@ -249,49 +249,11 @@ public class PlanAggregate extends AggregateRoot<Long> {
   }
 
   /**
-   * 获取数据来源代码字符串值。
-   *
-   * @return 数据来源代码字符串
-   */
-  public String getProvenanceCodeValue() {
-    return provenanceCode.getCode();
-  }
-
-  /**
    * 获取操作代码字符串（如果存在）。
    *
    * @return 操作代码或 {@code null}
    */
   public String getOperationCode() {
     return operationCode == null ? null : operationCode.getCode();
-  }
-
-  // ========== 原生枚举访问器，用于内部领域使用 ==========
-  public OperationCode getOperation() {
-    return operationCode;
-  }
-
-  /**
-   * 便捷访问器，当使用 TIME 策略时返回窗口起始时间。 对于不包含时间窗口的策略返回 {@code null}。
-   *
-   * @return 窗口起始时间或 {@code null}
-   */
-  public Instant getWindowFrom() {
-    if (windowSpec instanceof WindowSpec.Time timeSpec) {
-      return timeSpec.from();
-    }
-    return null;
-  }
-
-  /**
-   * 便捷访问器，当使用 TIME 策略时返回窗口结束时间。 对于不暴露时间窗口的策略返回 {@code null}。
-   *
-   * @return 窗口结束时间或 {@code null}
-   */
-  public Instant getWindowTo() {
-    if (windowSpec instanceof WindowSpec.Time timeSpec) {
-      return timeSpec.to();
-    }
-    return null;
   }
 }

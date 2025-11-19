@@ -67,17 +67,25 @@ CREATE TABLE `cat_language_mapping` (
     `usage_count` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '使用次数(每次应用层查询自增)',
     `is_verified` BOOLEAN NOT NULL DEFAULT 0 COMMENT '是否已验证(0=未验证,1=已验证)',
     `last_used` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '最后使用时间(UTC,微秒精度)',
-    `created_by` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建者(如"system","admin","ml_model")',
-    `verified_date` DATE NULL DEFAULT NULL COMMENT '验证日期',
-    `verified_by` VARCHAR(100) NULL DEFAULT NULL COMMENT '验证者姓名',
     `variant_forms` JSON NULL DEFAULT NULL COMMENT '变体形式(JSON数组)',
     `metadata` JSON NULL DEFAULT NULL COMMENT '映射元数据(灵活扩展)',
 
     -- ========================================
-    -- 审计字段（简化版）
     -- ========================================
+    -- 审计字段（完整版）
+    -- ========================================
+    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
+    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
+    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
     `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
+    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
+    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
+    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
+    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
+    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志(0=正常,1=已删除)',
+
+
 
     -- ========================================
     -- 主键和索引
@@ -136,9 +144,21 @@ CREATE TABLE `cat_publication_date` (
     `metadata` JSON NULL DEFAULT NULL COMMENT '日期元数据(灵活扩展)',
 
     -- ========================================
-    -- 审计字段（简化版）
     -- ========================================
+    -- 审计字段（完整版）
+    -- ========================================
+    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
+    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
+    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
     `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
+    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
+    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
+    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
+    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
+    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
+    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志(0=正常,1=已删除)',
+
+
 
     -- ========================================
     -- 主键和索引
@@ -210,6 +230,8 @@ CREATE TABLE `cat_publication_metadata` (
     -- ========================================
     -- 审计字段（完整版）
     -- ========================================
+    -- 审计字段（完整版）
+    -- ========================================
     `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
     `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
     `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
@@ -220,6 +242,8 @@ CREATE TABLE `cat_publication_metadata` (
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
     `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志(0=正常,1=已删除)',
+
+
 
     -- ========================================
     -- 主键和索引
@@ -289,9 +313,21 @@ CREATE TABLE `cat_alternative_abstract` (
     `metadata` JSON NULL DEFAULT NULL COMMENT '翻译元数据(灵活扩展)',
 
     -- ========================================
-    -- 审计字段（简化版）
     -- ========================================
+    -- 审计字段（完整版）
+    -- ========================================
+    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
+    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
+    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
     `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
+    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
+    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
+    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
+    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
+    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
+    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志(0=正常,1=已删除)',
+
+
 
     -- ========================================
     -- 主键和索引
@@ -359,9 +395,21 @@ CREATE TABLE `cat_oa_location` (
     `metadata` JSON NULL DEFAULT NULL COMMENT '位置元数据(灵活扩展)',
 
     -- ========================================
-    -- 审计字段（简化版）
     -- ========================================
+    -- 审计字段（完整版）
+    -- ========================================
+    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
+    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
+    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
     `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
+    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
+    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
+    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
+    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
+    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
+    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志(0=正常,1=已删除)',
+
+
 
     -- ========================================
     -- 主键和索引
