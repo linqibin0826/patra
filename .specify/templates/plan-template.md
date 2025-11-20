@@ -11,36 +11,27 @@
 
 ## 技术上下文
 
-<!--
-  Patra 项目技术栈：基于实际使用的框架和工具填充
-  如有特殊需求，可以在下方调整具体版本或增加额外依赖
--->
-
 **语言/版本**: Java 25
 **主要框架**: Spring Boot 3.5.7, Spring Cloud 2025.0.0
-**持久化**: MyBatis-Plus 3.x
+**持久化**: MyBatis-Plus 3.5.12
 **对象映射**: MapStruct
 **服务发现**: Nacos
 **测试**: JUnit 5 + Mockito（单元测试），TestContainers（IT 集成测试）
 **目标平台**: Linux 服务器 / Docker 容器
 **架构模式**: 六边形架构（Hexagonal Architecture）+ DDD
-**性能目标**: [根据具体功能确定，如：API 响应时间 < 200ms P95]
-**约束条件**: [根据具体功能确定，如：支持 1000 并发请求]
-**规模/范围**: [根据具体功能确定，如：日处理 100 万条数据]
 
 ### 技术栈说明
 
 - **依赖管理**: Maven（继承 `patra-parent`）
-- **配置管理**: Nacos Config（从 `patra-registry` 获取配置）
+- **配置管理**: Nacos Config
 - **日志**: SLF4J + Logback
 - **API 文档**: Swagger/OpenAPI 3.0
-- **代码生成**: MyBatis-Plus Generator + MapStruct Processor
 
 ### 可重用组件
 
 - **Starters**: `patra-spring-boot-starter-*`（根据需要选择）
-- **Common**: `patra-common-util`（工具类）、`patra-common-model`（通用模型）
-- **Registry**: `patra-registry-api`（获取配置和字典）
+- **Common**: `patra-common-core`（所有模块公用）、`patra-common-model`（通用模型）
+- **Registry**: `patra-registry-api`（获取字典）
 
 ## 宪章检查
 
@@ -54,7 +45,7 @@
   - **状态**: [PASS / FAIL / N/A]
   - **说明**: [如果 FAIL，说明偏差和理由]
 
-- [ ] **CHK-ARCH-002**: Domain 层 `pom.xml` 无任何框架依赖（仅 JDK + patra-common-util + Lombok + Validation API）
+- [ ] **CHK-ARCH-002**: Domain 层 `pom.xml` 无任何框架依赖（仅 JDK + patra-common-core + Lombok + Hutool + Jackson）
   - **状态**: [PASS / FAIL / N/A]
   - **说明**: [列出 domain 层的依赖清单]
 
@@ -66,7 +57,7 @@
 
 - [ ] **CHK-DDD-001**: 识别出明确的聚合根（Aggregate Root）
   - **状态**: [PASS / FAIL / N/A]
-  - **聚合根列表**: [列出识别的聚合根，如：`Article`、`Provenance`]
+  - **聚合根列表**: [列出识别的聚合根，如：`PublicationAggregate`]
 
 - [ ] **CHK-DDD-002**: 聚合边界清晰（不跨聚合直接访问实体）
   - **状态**: [PASS / FAIL / N/A]
@@ -74,25 +65,11 @@
 
 - [ ] **CHK-DDD-003**: 值对象设计为不可变（immutable）
   - **状态**: [PASS / FAIL / N/A]
-  - **值对象列表**: [列出值对象，如：`ArticleId`、`Email`]
+  - **值对象列表**: [列出值对象，如：`PublicationId`、`Email`]
 
 - [ ] **CHK-DDD-004**: 领域事件使用过去时命名
   - **状态**: [PASS / FAIL / N/A]
-  - **事件列表**: [列出领域事件，如：`ArticleCreated`、`ArticlePublished`]
-
-### SSOT 验证
-
-- [ ] **CHK-SSOT-001**: Provenance 配置从 `patra-registry` 获取（无硬编码）
-  - **状态**: [PASS / FAIL / N/A]
-  - **说明**: [如果需要 Provenance 配置，说明如何获取]
-
-- [ ] **CHK-SSOT-002**: 数据字典从 `patra-registry` 获取
-  - **状态**: [PASS / FAIL / N/A]
-  - **字典类型**: [列出需要的字典，如：`ArticleType`、`PublicationStatus`]
-
-- [ ] **CHK-SSOT-003**: 元数据和映射规则从 `patra-registry` 获取
-  - **状态**: [PASS / FAIL / N/A]
-  - **说明**: [如果需要元数据映射，说明用途]
+  - **事件列表**: [列出领域事件，如：`PublicationCreated`、`PublicationPublished`]
 
 ### 测试验证（将在 Phase 2 实施）
 
@@ -104,7 +81,7 @@
   - **状态**: [计划在 Phase 2 实施]
   - **测试位置**: `patra-{service}-app/src/test/java/`
 
-- [ ] **CHK-TEST-003**: Infrastructure 层有单元测试和集成测试
+- [ ] **CHK-TEST-003**: Infrastructure 层有单元测试和集成测试(轻量, MybatisTest等)
   - **状态**: [计划在 Phase 2 实施]
   - **测试位置**: `patra-{service}-infra/src/test/java/`
   - **集成测试类型**: Repository (@MybatisTest), Feign Client (WireMock), MQ Publisher (TestContainers)
@@ -233,24 +210,27 @@
 **参考**: `java-hexagonal-architecture` skill
 
 **决策流程**：
-1. **确定微服务归属**: 本功能属于 `patra-[SERVICE_NAME]` 微服务
+
+1. **查看代码**: 阅读 `specs/[###-feature-name]/spec.md` 理解功能需求,找到并阅读需求相关的类和文档。
+
+2. **确定微服务归属**: 本功能属于 `patra-[SERVICE_NAME]` 微服务
    - 理由: [说明为什么选择这个服务]
 
-2. **确定触发来源** → 选择适配器类型:
+3. **确定触发来源** → 选择适配器类型:
    - REST API → Controller
    - 定时任务 → XXL-Job
    - 消息队列 → MessageListener
 
-3. **设计聚合边界**:
+4. **设计聚合边界**:
    - 识别聚合根（从 spec.md 的"领域模型"提取）
    - 定义聚合内实体和值对象
    - 确定聚合间的通信方式（领域事件 vs 直接调用）
 
-4. **定义 Port 接口**:
+5. **定义 Port 接口**:
    - Repository 接口（数据访问）
-   - Gateway 接口（外部服务调用）
-   - EventPublisher 接口（事件发布）
 
+6. 其他模块代码 infra、application、api 等
+    
 ### 2. 文档骨架生成
 
 <!-- AI 执行指令：
@@ -352,90 +332,8 @@ specs/[###-feature]/
 
 ### 源代码（代码仓库结构）
 
-本功能将在以下微服务中实施：**`patra-[SERVICE_NAME]`**
+查看 整个项目 的目录接口，重点关注 `patra-[SERVICE_NAME]` 模块结构
 
-```text
-patra-[SERVICE_NAME]/
-│
-├── patra-[SERVICE_NAME]-boot/              # 🚀 启动模块
-│   ├── src/main/java/
-│   │   └── com/patra/[service]/
-│   │       └── Application.java            # Spring Boot 启动类
-│   └── src/main/resources/
-│       ├── application.yml                 # 应用配置
-│       └── bootstrap.yml                   # Nacos 配置
-│
-├── patra-[SERVICE_NAME]-api/               # 📋 契约层（对外接口定义）
-│   └── src/main/java/
-│       └── com/patra/[service]/api/
-│           ├── dto/                        # 请求/响应 DTO
-│           │   ├── [Entity]Request.java
-│           │   └── [Entity]Response.java
-│           └── facade/                     # 服务接口（Dubbo/OpenFeign）
-│               └── [Service]Facade.java
-│
-├── patra-[SERVICE_NAME]-domain/            # 🏛️ 领域层（纯 Java，无框架依赖）
-│   ├── src/main/java/
-│   │   └── com/patra/[service]/domain/
-│   │       ├── model/                      # 聚合根、实体、值对象
-│   │       │   ├── [AggregateRoot].java    # 聚合根
-│   │       │   ├── [Entity].java           # 实体
-│   │       │   └── [ValueObject].java      # 值对象
-│   │       ├── event/                      # 领域事件
-│   │       │   ├── [Event]Created.java
-│   │       │   └── [Event]Updated.java
-│   │       ├── service/                    # 领域服务（跨聚合的业务逻辑）
-│   │       │   └── [Domain]Service.java
-│   │       └── repository/                 # 仓储接口（实现在 infra 层）
-│   │           └── [Aggregate]Repository.java
-│   └── src/test/java/                      # 单元测试（覆盖率 ≥ 80%）
-│       └── com/patra/[service]/domain/
-│           └── model/[AggregateRoot]Test.java
-│
-├── patra-[SERVICE_NAME]-app/               # 🎯 应用层（用例编排）
-│   ├── src/main/java/
-│   │   └── com/patra/[service]/app/
-│   │       ├── orchestrator/               # 复杂用例编排器（多聚合协作）
-│   │       │   └── [UseCase]Orchestrator.java
-│   │       ├── coordinator/                # 简单协调器（单聚合操作）
-│   │       │   └── [UseCase]Coordinator.java
-│   │       └── assembler/                  # DTO 组装器
-│   │           └── [Entity]Assembler.java
-│   └── src/test/java/                      # 单元测试（覆盖率 ≥ 70%）
-│       └── com/patra/[service]/app/
-│           └── orchestrator/[UseCase]OrchestratorTest.java
-│
-├── patra-[SERVICE_NAME]-infra/             # 🔧 基础设施层（技术实现）
-│   ├── src/main/java/
-│   │   └── com/patra/[service]/infra/
-│   │       ├── repository/                 # 仓储实现（MyBatis-Plus）
-│   │       │   ├── [Aggregate]RepositoryImpl.java
-│   │       │   └── mapper/
-│   │       │       └── [Entity]Mapper.java # MyBatis-Plus Mapper
-│   │       ├── converter/                  # 对象转换器（MapStruct）
-│   │       │   └── [Entity]Converter.java
-│   │       ├── config/                     # 配置类
-│   │       │   ├── MyBatisPlusConfig.java
-│   │       │   └── DataSourceConfig.java
-│   │       └── gateway/                    # 外部服务网关（调用其他服务）
-│   │           └── [External]Gateway.java
-│   └── src/test/java/                      # IT 集成测试（TestContainers）
-│       └── com/patra/[service]/infra/
-│           └── repository/[Aggregate]RepositoryIT.java
-│
-└── patra-[SERVICE_NAME]-adapter/           # 🔌 适配器层（外部交互）
-    ├── src/main/java/
-    │   └── com/patra/[service]/adapter/
-    │       ├── controller/                 # REST API 控制器
-    │       │   └── [Entity]Controller.java
-    │       ├── listener/                   # 事件监听器（Kafka/RocketMQ）
-    │       │   └── [Event]Listener.java
-    │       └── job/                        # 定时任务（XXL-Job）
-    │           └── [Task]Job.java
-    └── src/test/java/                      # E2E 测试（MockMvc）
-        └── com/patra/[service]/adapter/
-            └── controller/[Entity]ControllerIT.java
-```
 
 ### 层次职责说明
 
@@ -462,5 +360,4 @@ patra-[SERVICE_NAME]/
 
 | 违规项 | 为何需要 | 为何拒绝更简单的替代方案 |
 |--------|----------|-------------------------|
-| [例如：第 4 个项目] | [当前需求] | [为何 3 个项目不够] |
 | [例如：Repository 模式] | [具体问题] | [为何直接数据库访问不够] |

@@ -115,41 +115,6 @@
 **安全要求**:
 - **NFR-003**: [安全约束，例如："所有敏感数据必须加密存储"]
 
-### 领域模型 *(如果功能涉及数据则包含)* 🏛️
-
-<!--
-  基于 DDD（领域驱动设计）原则定义领域模型。
-  识别聚合根、实体、值对象和领域事件。
-
-  Patra 项目使用六边形架构 + DDD，领域模型定义在 patra-{service}-domain 模块中。
-
-  示例（PubMed 数据采集）：
-  - 聚合根：Article（文章）
-  - 值对象：ArticleId（文章ID）、DOI（数字对象标识符）
-  - 领域事件：ArticleFetched（文章已获取）
-  - 仓储接口：ArticleRepository（在 domain 层定义，infra 层实现）
--->
-
-**聚合根 (Aggregate Root)**:
-- **[聚合根名称]**: [它代表什么业务概念，关键属性和职责，不涉及技术实现]
-  - **聚合边界**: [此聚合包含哪些实体/值对象]
-  - **不变性约束**: [必须始终维护的业务规则，例如："订单总额 = ∑订单项金额"]
-  - **唯一标识**: [使用什么作为 ID，例如：ArticleId、UserId]
-
-**值对象 (Value Object)**:
-- **[值对象名称]**: [它代表什么概念，为什么是值对象（不可变、无标识）]
-  - **示例**: Email（邮箱地址）、Money（金额+币种）、DateRange（日期范围）
-
-**领域事件 (Domain Event)**:
-- **[事件名称]Happened**: [什么业务事实发生了，**必须使用过去时命名**]
-  - **示例**: ArticleCreated（文章已创建）、PaymentCompleted（支付已完成）
-  - **携带数据**: [事件包含哪些关键信息]
-
-**仓储接口 (Repository Interface)**:
-- **[聚合根]Repository**: [在 patra-{service}-domain 层定义接口，patra-{service}-infra 层实现]
-  - **关键方法**: save()、findById()、findByXxx()
-  - **注意**: 不要在 spec.md 中定义具体方法签名，这是技术实现细节
-
 **SSOT 提示** ⚠️:
 如果此功能涉及以下内容，**必须**从 patra-registry 获取：
 - [ ] Provenance 配置（数据源配置，如 PubMed API 地址、超时时间）
