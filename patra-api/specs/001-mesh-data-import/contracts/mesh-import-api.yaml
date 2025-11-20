@@ -183,7 +183,7 @@ components:
           type: string
           description: 任务名称
         status:
-          $ref: '#/components/schemas/ImportStatus'
+          $ref: '#/components/schemas/MeshImportTaskStatus'
         startTime:
           type: string
           format: date-time
@@ -199,7 +199,7 @@ components:
           type: string
           description: 任务 ID
         status:
-          $ref: '#/components/schemas/ImportStatus'
+          $ref: '#/components/schemas/MeshImportTaskStatus'
         overallProgress:
           type: object
           properties:
@@ -271,9 +271,7 @@ components:
           description: 进度百分比
           example: 42.86
         status:
-          type: string
-          enum: [NOT_STARTED, IN_PROGRESS, COMPLETED, FAILED]
-          description: 表状态
+          $ref: '#/components/schemas/MeshTableImportStatus'
 
     FailedBatch:
       type: object
@@ -316,7 +314,7 @@ components:
         taskName:
           type: string
         status:
-          $ref: '#/components/schemas/ImportStatus'
+          $ref: '#/components/schemas/MeshImportTaskStatus'
         totalRecords:
           type: integer
         processedRecords:
@@ -331,7 +329,7 @@ components:
           type: string
           format: date-time
 
-    ImportStatus:
+    MeshImportTaskStatus:
       type: string
       enum:
         - PENDING
@@ -339,7 +337,25 @@ components:
         - SUCCESS
         - FAILED
         - CANCELLED
-      description: 导入任务状态
+      description: MeSH 导入任务状态
+
+    MeshTableImportStatus:
+      type: string
+      enum:
+        - NOT_STARTED
+        - IN_PROGRESS
+        - COMPLETED
+        - FAILED
+      description: MeSH 表导入状态
+
+    MeshBatchStatus:
+      type: string
+      enum:
+        - PENDING
+        - PROCESSING
+        - SUCCESS
+        - FAILED
+      description: MeSH 批次处理状态
 
     OperationResponse:
       type: object
