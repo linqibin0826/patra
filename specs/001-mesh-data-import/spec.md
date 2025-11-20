@@ -5,6 +5,17 @@
 **状态**: 草稿
 **输入**: 用户描述: "MeSH 数据首次导入需求"
 
+## 澄清
+
+### 会话 2025-11-20
+
+- 问：6 张表的导入应该如何编排？ → 答：按依赖顺序串行导入：Descriptor → Qualifier → TreeNumber/EntryTerm/Concept → publication_mesh
+- 问：MeshImportAggregate 的聚合边界应该如何设计？ → 答：MeshImportAggregate 作为聚合根，包含任务状态、总体进度和失败批次摘要；每张表的详细进度作为值对象（TableProgress）；批次详情存储在 Infrastructure 层
+- 问：是否为聚合根和实体使用强类型 ID？ → 答：使用强类型 ID：MeshImportId、DescriptorId、QualifierId 等
+- 问：导入任务是否需要发布领域事件？ → 答：发布关键状态变更事件：MeshImportCompleted、MeshImportFailed（仅在任务完成或失败时发布）
+- 问：导入任务的可观察性策略如何设计？ → 答：详细追踪：每个批次处理记录 INFO 日志，SkyWalking 追踪所有批次操作，使用 Micrometer + Spring Boot Actuator 暴露监控指标（任务级别、表级别、批次级别统计）
+- 问：聚合根命名规范是什么？ → 答：遵循 Patra 项目约定，使用 MeshImportAggregate（领域概念 + Aggregate 后缀），参考 patra-ingest 模块的 TaskAggregate、PlanAggregate 命名模式
+
 ## 用户场景与测试 *(必填)*
 
 ### 用户故事 1 - 管理员发起 MeSH 数据首次导入 (优先级: P1)
@@ -87,7 +98,7 @@
 
 - **FR-002**: 系统必须能够解析 MeSH XML 文件并提取 6 类数据：主题词（Descriptor）、限定词（Qualifier）、树形编号（TreeNumber）、入口术语（EntryTerm）、概念（Concept）及其关联关系
 
-- **FR-003**: 系统必须将解析后的数据分批导入到 patra-catalog 数据库的 6 张表中（cat_mesh_descriptor、cat_mesh_qualifier、cat_mesh_tree_number、cat_mesh_entry_term、cat_mesh_concept、cat_publication_mesh），每批次大小为 1000-2000 条记录
+- **FR-003**: 系统必须将解析后的数据分批导入到 patra-catalog 数据库的 6 张表中，按以下依赖顺序串行执行：(1) cat_mesh_descriptor（主题词）、(2) cat_mesh_qualifier（限定词）、(3) cat_mesh_tree_number（树形编号）/ cat_mesh_entry_term（入口术语）/ cat_mesh_concept（概念）、(4) cat_publication_mesh（文献关联）。每批次大小为 1000-2000 条记录
 
 - **FR-004**: 系统必须在每批次数据导入后独立提交事务，避免大事务导致数据库锁定或回滚成本过高
 
@@ -118,6 +129,13 @@
 **架构约束**:
 - **六边形架构层次**: 此功能主要涉及 Application 层（导入任务编排）、Infrastructure 层（XML 解析、数据库批量插入、HTTP 下载）、Adapter 层（管理接口 REST API）。Domain 层包含 MeSH 领域实体（Descriptor、Qualifier 等）及其验证逻辑。
 - **依赖方向**: 遵守 Adapter → Application → Domain ← Infrastructure。Domain 层不依赖任何框架（如 MyBatis、Spring），仅包含纯 Java 实体和业务规则。Infrastructure 层实现 Domain 层定义的 Repository 接口。
+- **领域模型设计**（DDD）:
+  - **聚合根**: MeshImportAggregate 作为 MeSH 导入聚合根，封装导入任务的完整生命周期和状态机流转，保护任务状态一致性（待处理 → 处理中 → 成功/失败）
+  - **值对象**: TableProgress 表示每张表的导入进度（表名、已处理数/总数、当前状态），作为 MeshImportAggregate 的一部分
+  - **实体边界**: 批次详细信息（BatchDetail）存储在 Infrastructure 层，不属于聚合根，通过 Repository 按需查询
+  - **不变量**: MeshImportAggregate 确保任务状态转换的合法性（例如，不允许从"成功"转到"处理中"），保证导入顺序的一致性（Descriptor 必须在 TreeNumber 之前完成）
+  - **身份标识**: 使用强类型 ID（MeshImportId、DescriptorId、QualifierId、TreeNumberId、EntryTermId、ConceptId），提供编译期类型安全，防止 ID 混淆
+  - **领域事件**: 发布关键状态变更事件 MeshImportCompleted（包含 MeshImportId、导入统计、耗时）和 MeshImportFailed（包含 MeshImportId、失败原因），用于触发后续流程（如索引构建、管理员通知）
 - **配置管理**: MeSH 数据导入任务的所有配置（如批次大小、超时时间、NLM 数据源 URL）通过 Nacos 配置中心管理，不应硬编码在代码中。
 
 **性能要求**:
@@ -128,6 +146,13 @@
 **安全要求**:
 - **NFR-004**: 所有管理接口必须验证管理员权限，禁止未授权访问
 - **NFR-005**: 导入任务的错误日志不应泄露敏感信息（如数据库连接字符串）
+
+**可观察性要求**:
+- **NFR-006**: 每个批次处理必须记录 INFO 级别日志，包含批次编号、处理记录数、耗时、成功/失败状态
+- **NFR-007**: 关键操作（任务启动、表切换、任务完成/失败）必须记录详细日志，包含上下文信息（任务 ID、表名、时间戳）
+- **NFR-008**: 必须集成 SkyWalking 追踪所有批次操作，生成分布式追踪链路，包含 Span 信息（操作名称、开始/结束时间、标签）
+- **NFR-009**: 必须使用 Micrometer 暴露监控指标，通过 Spring Boot Actuator 端点（`/actuator/metrics`）提供，包含：任务级别统计（总耗时、总记录数、成功率）、表级别统计（每张表的处理进度、耗时）、批次级别统计（批次处理速度、失败批次数）
+- **NFR-010**: 失败批次必须记录完整的错误堆栈和上下文信息（XML 行号、记录内容摘要），便于故障排查
 
 **配置管理说明** ⚠️:
 - 所有导入任务配置（NLM 数据源 URL、批次大小、超时时间、重试策略等）通过 Nacos 配置中心管理
