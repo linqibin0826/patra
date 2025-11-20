@@ -164,8 +164,6 @@ public class ResourceRepositoryImpl implements ResourcePort {
 @Mapper(componentModel = "spring", imports = {LocalDateTime.class})
 public interface ResourceConverter {
 
-    @Mapping(target = "createTime", expression = "java(LocalDateTime.now())")
-    @Mapping(target = "updateTime", expression = "java(LocalDateTime.now())")
     ResourceDO toDO(Resource domain);
 
     Resource toDomain(ResourceDO dataObject);

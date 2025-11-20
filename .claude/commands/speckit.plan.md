@@ -14,9 +14,9 @@ $ARGUMENTS
 
 1. **设置**：从仓库根目录运行 `.specify/scripts/bash/setup-plan.sh --json` 并解析 JSON 以获取 FEATURE_SPEC、IMPL_PLAN、SPECS_DIR、BRANCH。对于包含单引号的参数，如 "I'm Groot"，使用转义语法：例如 'I'\''m Groot'（或者如果可能使用双引号："I'm Groot"）。
 
-2. **加载上下文**：读取 FEATURE_SPEC 和 `.specify/memory/constitution.md`。加载 IMPL_PLAN 模板（已复制）。
+2. **加载上下文**：读取 FEATURE_SPEC 和 `.specify/memory/constitution.md`。加载 IMPL_PLAN 模板。
 
-3. **🔧 架构设计集成**（新增）：
+3. **🔧 架构设计集成**：
    - **调用 java-hexagonal-architecture Skill**：用于架构决策和设计指导
    - **参考 Constitution CHK-* 验证项**：确保设计符合架构规范
    - **使用 Skills 中的代码模式**：聚合设计、Port-Adapter 模式
@@ -65,35 +65,80 @@ $ARGUMENTS
 
 ### 阶段 0：大纲与研究
 
-1. **从上述技术上下文中提取未知项**：
-   - 每个需要澄清 → 研究任务
-   - 每个依赖项 → 最佳实践任务
-   - 每个集成 → 模式任务
+1. **从技术上下文中提取潜在未知项**：
+   - 标记需要澄清的技术点 → 潜在研究任务
+   - 标记依赖项和集成方式 → 潜在最佳实践查找
+   - 标记技术选型决策 → 潜在模式研究
 
-2. **🔍 架构设计研究**（新增）：
+2. **🔍 阅读项目中已有的相关代码和文档**（优先于外部研究）：
+
+   **目标**：确认项目中是否已有类似实现或技术选型
+
+   - **查找类似功能模块**：
+     - 使用 Explore/Grep 搜索类似的领域对象、API 端点、定时任务
+     - 示例：如果要实现"期刊管理",先搜索现有的"机构管理"、"作者管理"等类似模块
+
+   - **阅读相关文档**：
+     - 阅读目标微服务模块的 README.md（如 `patra-catalog/README.md`）
+     - 阅读相关包的 package-info.java（了解包职责和设计决策）
+     - 查看 `.specify/memory/constitution.md` 中的架构约束
+
+   - **识别已有技术方案**：
+     - 数据访问：项目中已用的 MyBatis-Plus 配置、Mapper 模式
+     - 对象转换：项目中已用的 MapStruct Converter 模式
+     - 事务管理：项目中已有的 @Transactional 使用方式
+     - 事件发布：项目中已有的 EventPublisher 实现
+     - 定时任务：项目中已有的 XXL-Job 配置
+
+   - **记录现有模式**：
+     - 在 research.md 中记录"项目现有方案"章节
+     - 格式：`[技术点] → 现有实现：[文件路径:行号] - [简要说明]`
+     - 示例：`MyBatis-Plus 分页 → 现有实现：patra-catalog-infra/repository/JournalRepositoryImpl.java:45 - 使用 IPage<T> 分页查询`
+
+3. **🔍 架构设计研究**（基于项目现有架构）：
    - 如果涉及复杂的聚合设计，调用 java-hexagonal-architecture 分析
    - 如果涉及事件驱动架构，参考 [event-driven-architecture.md](../../.claude/skills/java-hexagonal-architecture/resources/event-driven-architecture.md)
    - 如果涉及 Outbox 模式，参考 [outbox-pattern.md](../../.claude/skills/java-hexagonal-architecture/resources/outbox-pattern.md)
 
-3. **生成并派遣研究代理**：
+4. **生成并派遣研究代理**（仅针对真正的未知项）：
+
+   **过滤条件**：排除步骤 2 中已找到项目现有方案的技术点
 
    ```text
-   对于技术上下文中的每个未知项：
+   对于技术上下文中仍未解决的未知项：
      任务："为 {特性上下文} 研究 {未知项}"
-   对于每个技术选择：
+   对于项目中未使用过的技术选择：
      任务："在 {领域} 中查找 {技术} 的最佳实践"
    ```
 
-4. **在 `research.md` 中整合发现**，使用格式：
-   - 决策：[选择了什么]
-   - 理由：[为什么选择]
-   - 考虑的替代方案：[还评估了什么]
+   **优先级**：
+   - 高优先级：涉及架构设计决策的研究（使用 java-hexagonal-architecture）
+   - 中优先级：技术栈最佳实践研究（使用 context7 或 web-research-specialist）
+   - 低优先级：实现细节研究（可在 Phase 2 实施时再查）
+
+5. **在 `research.md` 中整合发现**，使用格式：
+
+   ```markdown
+   ## 项目现有方案
+
+   | 技术点 | 现有实现 | 文件路径 | 是否复用 |
+   |--------|---------|---------|---------|
+   | [技术点] | [简要说明] | [路径:行号] | ✅/❌ [理由] |
+
+   ## 新研究决策
+
+   ### [技术点名称]
+   - **决策**：[选择了什么]
+   - **理由**：[为什么选择]
+   - **项目中是否已有**：[是/否，如果是则说明为何不复用]
+   - **考虑的替代方案**：[还评估了什么]
+   ```
 
 **输出**：research.md，其中所有需要澄清的问题已解决
 
 ### 阶段 1：设计与契约
 
-**前置条件**：`research.md` 完成
+**前置条件**：`research.md` 完成、阅读相关代码与文档完成。
 
 1. **从特性规格中提取实体** → `data-model.md`：
    - 实体名称、字段、关系
@@ -103,8 +148,8 @@ $ARGUMENTS
 
 2. **从功能需求生成 API 契约**：
    - 对于每个用户操作 → 端点
-   - 使用标准 REST/GraphQL 模式
-   - 输出 OpenAPI/GraphQL schema 到 `/contracts/`
+   - 使用标准 REST 模式
+   - 输出 OpenAPI schema 到 `/contracts/`
    - **🔧 参考 Controller 开发模式**：[adapter-layer-patterns.md](../../.claude/skills/java-spring-development/resources/adapter-layer-patterns.md)
 
 3. **项目结构设计**：
