@@ -19,13 +19,20 @@
 
 - **决策**：使用 StAX（Streaming API for XML）流式解析
 - **理由**：
-  - MeSH XML 文件很大（~35万条记录），避免一次性加载到内存
+  - MeSH XML 文件很大（~500MB，35万条记录），必须流式处理
   - StAX 支持边读边处理，内存占用可控（<2GB）
-  - 项目中虽然有 JAXB，但 JAXB 适合小文件，大文件会导致 OOM
+  - **与 Jackson XML 的区别**：
+    - Jackson XML 适合小文件（如 PubMed EFetch 几十条记录）
+    - Jackson XML 会一次性加载整个 XML 到内存，然后映射到对象
+    - StAX 是低层流式 API，可以逐元素读取，处理后立即释放内存
+- **项目中是否已有**：
+  - 是，项目在 patra-spring-boot-starter-provenance 中使用 Jackson XML 解析 PubMed 小文件
+  - 但 MeSH 数据量大 100 倍，不适合用 Jackson XML
 - **考虑的替代方案**：
-  - JAXB（已否决：内存占用过大）
+  - Jackson XML（已否决：会一次性加载 500MB 到内存，导致 OOM）
+  - JAXB（已否决：同样全量加载，内存占用过大）
   - DOM（已否决：同样存在内存问题）
-  - SAX（可行但 StAX API 更友好）
+  - SAX（可行但 StAX API 更友好，支持双向导航）
 
 ### 2. 断点续传实现方案
 
@@ -41,14 +48,15 @@
 
 ### 3. 并发控制策略
 
-- **决策**：单任务执行 + 分布式锁（基于数据库）
+- **决策**：单任务执行 + Redisson 分布式锁
 - **理由**：
   - 避免并发导入造成数据混乱
-  - 使用数据库行锁（SELECT FOR UPDATE）实现简单可靠
-  - XXL-Job 本身支持单机执行模式
-- **项目中是否已有**：是，patra-ingest 有类似的任务并发控制
+  - 项目已集成 Redis，可直接使用 Redisson 分布式锁
+  - Redisson 提供了开箱即用的分布式锁实现，支持锁续期和看门狗机制
+  - 比数据库行锁性能更好，避免长时间锁表
+- **项目中是否已有**：是，项目已集成 Redis，仅需添加 Redisson 依赖
 - **考虑的替代方案**：
-  - Redisson 分布式锁（已否决：增加 Redis 依赖）
+  - 数据库行锁（已否决：性能较差，长时间锁表影响其他操作）
   - ZooKeeper 锁（已否决：过于重量级）
 
 ### 4. 错误恢复机制
@@ -77,14 +85,16 @@
 
 ### 6. NLM 数据下载方案
 
-- **决策**：使用 Apache HttpClient 5 + 断点续传
+- **决策**：使用 Spring RestClient（底层 JDK 21 HttpClient）
 - **理由**：
-  - 支持 HTTP Range 请求，可断点续传
-  - 连接池管理，性能可靠
-  - 项目中已有 HttpClient 依赖
-- **项目中是否已有**：是，Spring 内置 RestTemplate，但需要更精细控制
+  - 项目已在 patra-spring-boot-starter-provenance 中使用 RestClient
+  - 底层使用 JDK 21 HttpClient，支持 HTTP/2、连接池、超时控制
+  - 流式 API 简洁易用，支持响应流处理
+  - 无需引入额外依赖，保持技术栈一致性
+- **项目中是否已有**：是，已有完整的 RestClient 配置模板（参考 EPMCClientImpl）
 - **考虑的替代方案**：
-  - OkHttp（可行但增加新依赖）
+  - Apache HttpClient 5（已否决：引入新依赖，项目未使用）
+  - OkHttp（已否决：同样引入新依赖）
   - 原生 URLConnection（已否决：功能有限）
 
 ### 7. 监控指标设计
@@ -125,24 +135,33 @@
 ## 依赖清单
 
 ### 需要新增的依赖
-```xml
-<!-- StAX API（JDK 自带，无需额外依赖） -->
 
-<!-- Apache HttpClient 5（用于下载） -->
+**在 patra-catalog-infra 模块的 pom.xml 中添加：**
+
+```xml
+<!-- Spring Web（仅用于 RestClient，不引入 Web 容器） -->
 <dependency>
-    <groupId>org.apache.httpcomponents.client5</groupId>
-    <artifactId>httpclient5</artifactId>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-web</artifactId>
+    <!-- 版本由 spring-boot-dependencies 管理 -->
+</dependency>
+
+<!-- Redisson（分布式锁，在 boot 模块添加） -->
+<dependency>
+    <groupId>org.redisson</groupId>
+    <artifactId>redisson-spring-boot-starter</artifactId>
     <!-- 版本由 patra-parent 管理 -->
 </dependency>
 ```
 
 ### 已存在可复用的依赖
-- Spring Boot Starter Web
-- MyBatis-Plus
-- XXL-Job
-- Micrometer
+- **JDK 21 HttpClient**（RestClient 底层实现，JDK 内置）
+- MyBatis-Plus（Infrastructure 层数据访问）
+- XXL-Job（Adapter 层定时任务）
+- Micrometer（监控指标）
 - Hutool（工具类）
 - Jackson（JSON 处理）
+- Redis（已集成，用于缓存和分布式锁）
 
 ## 参考资源
 
@@ -157,15 +176,30 @@
    - GitHub：https://github.com/xuxueli/xxl-job
 
 4. **项目内部参考**
-   - patra-ingest 模块的任务管理模式
-   - patra-spring-boot-starter-provenance 的 XML 处理
+   - patra-ingest 模块的任务管理模式（TaskAggregate、任务编排）
+   - patra-spring-boot-starter-provenance 的 RestClient 使用模式（EPMCClientImpl）
+   - patra-spring-boot-starter-provenance 的 XML 处理模式（PubMed JAXB）
 
 ## 结论
 
 基于以上研究，技术方案已基本明确：
-1. 复用项目现有的基础设施（XXL-Job、MyBatis-Plus、Micrometer）
-2. 采用流式 XML 解析避免内存问题
-3. 设计清晰的聚合根边界管理任务生命周期
-4. 实现批次级别的断点续传和错误恢复
+1. **复用项目现有的基础设施**
+   - XXL-Job（任务调度）
+   - Spring RestClient（HTTP 客户端，参考 patra-spring-boot-starter-provenance）
+   - Redisson（分布式锁，Redis 已集成）
+   - MyBatis-Plus（批量插入）
+   - Micrometer（监控指标）
+
+2. **核心技术选型**
+   - StAX 流式 XML 解析（避免内存溢出）
+   - MeshImportAggregate 聚合根（管理任务生命周期）
+   - 批次级别的断点续传和错误恢复
+   - Redisson 分布式锁（保证单任务执行）
+
+3. **技术栈一致性与最小依赖原则**
+   - 所有技术选择与项目现有实践保持一致
+   - Infrastructure 层仅引入 `spring-web`，不引入 `spring-boot-starter-web`（避免 Web 容器）
+   - Boot 层引入 `redisson-spring-boot-starter`（分布式锁，Redis 已有）
+   - 参考 patra-ingest 和 patra-spring-boot-starter-provenance 的成熟模式
 
 **所有需要澄清的问题已解决，可以进入 Phase 1 设计阶段。**

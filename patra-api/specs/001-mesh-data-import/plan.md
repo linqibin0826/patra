@@ -27,8 +27,9 @@
 - **日志**: SLF4J + Logback
 - **API 文档**: Swagger/OpenAPI 3.0
 - **XML 解析**: StAX（JDK 内置流式解析）
-- **HTTP 客户端**: Apache HttpClient 5（断点续传下载）
+- **HTTP 客户端**: Spring RestClient（底层 JDK 21 HttpClient）
 - **定时任务**: XXL-Job（分布式任务调度）
+- **分布式锁**: Redisson（基于 Redis）
 
 ### 可重用组件
 
@@ -240,12 +241,12 @@
    - MeshImportPort：任务管理仓储接口
    - MeshDescriptorPort：MeSH 数据持久化接口（已存在）
    - XmlParserPort：XML 解析接口
-   - FileDownloadPort：文件下载接口
+   - MeshFileDownloadPort：MeSH 文件下载接口（基于 RestClient）
 
 6. **模块代码结构**:
    - domain：聚合根、值对象、领域事件、Port 接口定义
    - application：MeshImportOrchestrator（任务编排）
-   - infrastructure：Repository 实现、XML 解析实现、HTTP 下载实现
+   - infrastructure：Repository 实现、StAX XML 解析实现、RestClient 文件下载实现
    - adapter：REST Controller、XXL-Job 任务处理器
    - api：DTO 定义、Facade 接口
     
@@ -383,7 +384,7 @@ patra-catalog/
 │       ├── MeshImportPort.java
 │       ├── MeshDescriptorPort.java
 │       ├── XmlParserPort.java
-│       └── FileDownloadPort.java
+│       └── MeshFileDownloadPort.java
 └── patra-catalog-infra/         # 基础设施层
     ├── persistence/
     │   ├── repository/
@@ -397,8 +398,8 @@ patra-catalog/
     │       └── MeshTableProgressDO.java
     ├── parser/
     │   └── StaxXmlParserImpl.java
-    └── http/
-        └── HttpFileDownloadImpl.java
+    └── download/
+        └── RestClientMeshFileDownloadImpl.java
 ```
 
 
@@ -419,12 +420,24 @@ patra-catalog/
 
 **模块创建**: 在现有的 patra-catalog 微服务各层模块中添加代码，无需创建新的微服务。需要创建 patra-catalog/README.md 文档。
 
-**依赖管理**: 继承 `patra-parent` 的依赖管理，新增 Apache HttpClient 5 用于文件下载（版本由 parent 管理）。
+**依赖管理**: 继承 `patra-parent` 的依赖管理，新增以下依赖：
+
+**patra-catalog-infra 模块**：
+- `spring-web`（仅引入 RestClient，不引入 Web 容器）
+
+**patra-catalog-boot 模块**：
+- `redisson-spring-boot-starter`（分布式锁，Redis 已集成）
+
+复用现有依赖：
+- JDK 21 HttpClient（RestClient 底层实现，JDK 内置）
+- MyBatis-Plus、XXL-Job、Micrometer（项目已有）
 
 **技术选型理由**:
 - **StAX 而非 JAXB**：35 万条记录的 XML 文件需要流式处理，避免 OOM
+- **spring-web 而非 spring-boot-starter-web**：遵循最小依赖原则，Infrastructure 层只需要 RestClient，不引入 Web 容器（Tomcat）和 Spring MVC
+- **RestClient 而非 Apache HttpClient 5**：保持技术栈一致性，项目已在 patra-spring-boot-starter-provenance 中使用 RestClient
 - **XXL-Job 而非 @Scheduled**：支持分布式任务调度，任务状态可视化管理
-- **数据库锁而非 Redis 锁**：简化架构，减少外部依赖
+- **Redisson 分布式锁而非数据库锁**：项目已集成 Redis，Redisson 提供可靠的分布式锁实现，性能优于数据库行锁
 - **批次重试而非全量重试**：提高效率，减少重复处理
 
 ## 复杂度跟踪
