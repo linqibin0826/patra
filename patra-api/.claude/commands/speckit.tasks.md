@@ -22,12 +22,44 @@ $ARGUMENTS
    - 注意：并非所有项目都有所有文档。基于可用内容生成任务。
 
 3. **执行任务生成工作流**：
+
+   **步骤 1：阅读项目中已有的相关代码和文档**（优先于任务拆分）
+
+   **目标**：理解项目现有实现模式，确保任务拆分符合项目规范
+
+   - **查找类似功能模块**：
+     - 使用 Explore/Grep 搜索类似的实现（聚合根、Orchestrator、Repository、Controller）
+     - 示例：如果要实现"期刊采集"，先搜索现有的"机构采集"、"作者采集"等类似模块
+
+   - **阅读相关文档**：
+     - 阅读目标微服务模块的 README.md（如 `patra-catalog/README.md`）
+     - 阅读相关包的 package-info.java（了解包职责和设计决策）
+     - 查看 `.specify/memory/constitution.md` 中的架构约束
+
+   - **识别已有实现模式**：
+     - **Domain 层模式**：现有的聚合根、值对象、领域事件实现方式
+     - **Application 层模式**：现有的 Orchestrator、Coordinator 实现方式
+     - **Infrastructure 层模式**：现有的 Repository、Mapper、Converter 实现方式
+     - **Adapter 层模式**：现有的 Controller、Job、MessageListener 实现方式
+     - **测试模式**：现有的单元测试、集成测试、E2E 测试组织方式
+
+   - **记录现有模式**：
+     - 在任务生成时引用现有实现作为参考
+     - 格式：`参考现有实现：[文件路径:行号]`
+     - 示例：`参考 patra-catalog-domain/model/Journal.java:12 的聚合根设计`
+
+   **步骤 2：加载设计文档并提取信息**
+
    - 加载 plan.md 并提取技术栈、库、项目结构
    - 加载 spec.md 并提取用户故事及其优先级（P1、P2、P3 等）
    - 如果 data-model.md 存在：提取实体并映射到用户故事
    - 如果 contracts/ 存在：将端点映射到用户故事
    - 如果 research.md 存在：提取设置任务的决策
+
+   **步骤 3：生成任务清单**（基于现有模式和设计文档）
+
    - 生成按用户故事组织的任务（见下文任务生成规则）
+   - **任务描述中包含现有实现参考**（如果有类似实现）
    - 生成显示用户故事完成顺序的依赖图
    - 为每个用户故事创建并行执行示例
    - 验证任务完整性（每个用户故事都有所有需要的任务，可独立测试）
@@ -92,14 +124,19 @@ tasks.md 应该可立即执行 - 每个任务必须足够具体，以便 LLM 可
 **示例（Patra 六边形架构）**：
 
 - ✅ 正确：`- [ ] T001 按实现计划创建项目结构`
-- ✅ 正确：`- [ ] T005 [P] [Domain] [US1] 在 patra-ingest-domain/.../Article.java 中创建 Article 聚合根`
-- ✅ 正确：`- [ ] T012 [P] [App] [US1] 在 patra-ingest-app/.../IngestOrchestrator.java 中实现编排器`
-- ✅ 正确：`- [ ] T014 [Infra] [US1] 在 patra-ingest-infra/.../ArticleRepositoryImpl.java 中实现仓储`
-- ✅ 正确：`- [ ] T018 [Adapter] [US1] 在 patra-ingest-adapter/.../IngestController.java 中实现 REST 端点`
+- ✅ 正确（带现有实现参考）：`- [ ] T005 [P] [Domain] [US1] 在 patra-ingest-domain/.../Article.java 中创建 Article 聚合根（参考 patra-catalog-domain/model/Journal.java:12）`
+- ✅ 正确：`- [ ] T012 [P] [App] [US1] 在 patra-ingest-app/.../IngestOrchestrator.java 中实现编排器（参考 patra-catalog-app/orchestrator/JournalOrchestrator.java:25）`
+- ✅ 正确：`- [ ] T014 [Infra] [US1] 在 patra-ingest-infra/.../ArticleRepositoryImpl.java 中实现仓储（参考 patra-catalog-infra/repository/JournalRepositoryImpl.java:18）`
+- ✅ 正确：`- [ ] T018 [Adapter] [US1] 在 patra-ingest-adapter/.../IngestController.java 中实现 REST 端点（参考 patra-catalog-adapter/controller/JournalController.java:30）`
 - ❌ 错误：`- [ ] 创建 Article 聚合根`（缺少 ID、层标签和故事标签）
 - ❌ 错误：`T001 [US1] 创建聚合根`（缺少复选框）
 - ❌ 错误：`- [ ] [US1] 创建 Article 聚合根`（缺少任务 ID）
 - ❌ 错误：`- [ ] T001 [US1] 创建聚合根`（缺少层标签和文件路径）
+
+**说明**：
+- 如果项目中有类似实现，在任务描述末尾添加 `（参考 [文件路径]:[行号]）`
+- 这帮助实施者快速找到可复用的代码模式
+- 如果没有类似实现，省略参考部分
 
 ### 任务组织
 
