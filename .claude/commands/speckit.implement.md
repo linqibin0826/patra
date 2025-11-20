@@ -26,9 +26,9 @@ $ARGUMENTS
      ```text
      | 检查清单 | 总计 | 已完成 | 未完成 | 状态 |
      |---------|------|--------|--------|------|
-     | ux.md     | 12   | 12     | 0      | ✓ 通过 |
-     | test.md   | 8    | 5      | 3      | ✗ 失败 |
-     | security.md | 6  | 6      | 0      | ✓ 通过 |
+     | architecture.md  | 12   | 12     | 0      | ✓ 通过 |
+     | domain-model.md  | 8    | 5      | 3      | ✗ 失败 |
+     | api.md           | 6    | 6      | 0      | ✓ 通过 |
      ```
 
    - 计算整体状态：
@@ -47,6 +47,8 @@ $ARGUMENTS
      - 自动进入步骤 3
 
 3. 加载并分析实现上下文：
+
+   **步骤 A：加载设计文档**
    - **必需**：读取 tasks.md 以获取完整的任务列表和执行计划
    - **必需**：读取 plan.md 以获取技术栈、架构和文件结构
    - **必需**：读取 `.specify/memory/constitution.md` 以获取架构规范
@@ -55,6 +57,26 @@ $ARGUMENTS
    - **如果存在**：读取 contracts/ 以获取 API 规格说明和测试要求
    - **如果存在**：读取 research.md 以获取技术决策和约束
    - **如果存在**：读取 quickstart.md 以获取集成场景
+
+   **步骤 B：查看项目中已有的相关代码**（实施前必须执行）
+
+   **目标**：理解项目现有实现模式，确保新代码符合项目规范
+
+   - **参考 tasks.md 中的代码引用**：
+     - 任务描述中如果包含 `（参考 [文件路径]:[行号]）`，先阅读这些参考文件
+     - 理解现有实现的设计模式和代码风格
+
+   - **识别可复用的代码模式**：
+     - **Domain 层**：聚合根、值对象、领域事件的实现方式
+     - **Application 层**：Orchestrator、Coordinator 的编排模式
+     - **Infrastructure 层**：Repository、Mapper、Converter 的实现方式
+     - **Adapter 层**：Controller、Job、MessageListener 的实现方式
+     - **测试层**：单元测试、集成测试、E2E 测试的组织方式
+
+   - **记录实施注意事项**：
+     - 需要保持一致的命名规范
+     - 需要遵循的代码组织方式
+     - 需要复用的工具类或基础类
 
 4. **初始化实施变更日志**（🆕 仅在需要时）：
 
@@ -95,29 +117,25 @@ $ARGUMENTS
    - 读取现有内容
    - 继续追加新的变更记录
 
-5. **项目设置验证**：
-   - **必需**：基于实际项目设置创建/验证忽略文件：
+5. **项目设置验证**（Patra 后端项目）：
+   - **必需**：基于实际项目设置创建/验证忽略文件
 
    **检测与创建逻辑**：
-   - 检查以下命令是否成功以确定仓库是否为 git 仓库（如果是则创建/验证 .gitignore）：
+   - 检查是否为 git 仓库（如果是则创建/验证 .gitignore）：
 
      ```sh
      git rev-parse --git-dir 2>/dev/null
      ```
 
-   - 检查 Dockerfile* 是否存在或 plan.md 中有 Docker → 创建/验证 .dockerignore
-   - 检查 .eslintrc* 或 eslint.config.* 是否存在 → 创建/验证 .eslintignore
-   - 检查 .prettierrc* 是否存在 → 创建/验证 .prettierignore
-   - 检查 .npmrc 或 package.json 是否存在 → 创建/验证 .npmignore（如果发布）
-   - 检查 terraform 文件 (*.tf) 是否存在 → 创建/验证 .terraformignore
-   - 检查是否需要 .helmignore（存在 helm charts）→ 创建/验证 .helmignore
-
    **如果忽略文件已存在**：验证它包含基本模式，仅追加缺失的关键模式
    **如果忽略文件缺失**：为检测到的技术创建完整的模式集
 
-   **按技术划分的常见模式**（来自 plan.md 技术栈）：
-   - **Java**：`target/`、`*.class`、`*.jar`、`.gradle/`、`build/`
-   - **通用**：`.DS_Store`、`Thumbs.db`、`*.tmp`、`*.swp`、`.vscode/`、`.idea/`
+   **Java 项目必需模式**：
+   - **Maven 构建产物**：`target/`、`*.class`、`*.jar`、`*.war`
+   - **IDE 配置**：`.idea/`、`*.iml`、`.vscode/`、`.settings/`、`.project`、`.classpath`
+   - **日志文件**：`*.log`、`logs/`
+   - **操作系统**：`.DS_Store`、`Thumbs.db`
+   - **临时文件**：`*.tmp`、`*.swp`、`*~`
 
 6. 解析 tasks.md 结构并提取：
    - **任务阶段**：设置、测试、核心、集成、润色
@@ -132,12 +150,17 @@ $ARGUMENTS
    - **基于文件的协调**：影响相同文件的任务必须顺序运行
    - **验证检查点**：在继续之前验证每个阶段的完成
 
-8. 实现执行规则：
-   - **设置优先**：初始化项目结构、依赖、配置
-   - **测试驱动开发（TDD 默认启用）**：所有 Domain/Application/Infrastructure/Adapter 层代码都应先编写测试（测试是强制的，不是可选的）
-   - **核心开发**：实现模型、服务、CLI 命令、端点
-   - **集成工作**：数据库连接、中间件、日志记录、外部服务
-   - **润色和验证**：单元测试、性能优化、文档
+8. 实现执行规则（六边形架构 + TDD）：
+   - **阶段 1 - 设置优先**：初始化项目结构、Maven 依赖、配置文件（application.yml、bootstrap.yml）
+   - **阶段 2 - 基础层开发**：共享组件、基础工具类
+   - **阶段 3+ - 用户故事开发**（每个故事遵循六边形架构层次）：
+     1. **测试驱动开发（TDD 强制）**：所有层代码都必须先编写测试
+     2. **Domain 层**：聚合根、值对象、领域事件、Port 接口（纯 Java）
+     3. **Application 层**：Orchestrator、Coordinator（业务流程编排）
+     4. **Infrastructure 层**：Repository 实现、MyBatis Mapper、外部服务适配器
+     5. **Adapter 层**：Controller（REST API）、MessageListener、XXL-Job
+     6. **集成测试**：IT 测试、E2E 测试（在 boot 模块）
+   - **最后阶段 - 润色**：性能优化、文档生成
 
 9. **🔍 阶段性代码审查**：
 
