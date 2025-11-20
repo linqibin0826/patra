@@ -85,7 +85,7 @@ patra-{service}/
 ### 聚合设计模式
 ```java
 // Aggregate Root
-public class Order {
+public class OrderAggregate extends AggregateRoot {
     private OrderId id;
     private List<OrderItem> items;  // 聚合内实体
     private OrderStatus status;
@@ -103,14 +103,14 @@ public class Order {
 ### Port-Adapter 模式
 ```java
 // Domain Port (领域层)
-public interface OrderPort {
+public interface OrderRepository {
     void save(Order order);
     Optional<Order> findById(OrderId id);
 }
 
 // Infrastructure Adapter (基础设施层)
 @Repository
-public class OrderRepositoryImpl implements OrderPort {
+public class OrderRepositoryImpl implements OrderRepository {
     // MyBatis-Plus 实现
 }
 ```
