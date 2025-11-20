@@ -33,10 +33,10 @@
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class MeshImportAggregate extends AggregateRoot<Long> {
+public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
 
-    /** 身份标识（雪花 ID） */
-    private Long id;
+    /** 身份标识（强类型 ID） */
+    private MeshImportId id;
 
     /** 任务名称 */
     private String taskName;
@@ -280,7 +280,73 @@ public class TableProgress {
 }
 ```
 
-### 5. 枚举：状态定义
+### 5. 强类型 ID（Domain 层）
+
+**职责**：为聚合根和实体提供类型安全的身份标识
+
+```java
+/**
+ * MeSH 导入任务强类型 ID。
+ *
+ * <p>包装 Long 类型的雪花 ID，提供编译期类型安全。
+ * <p>不可变值对象。
+ *
+ * @author linqibin
+ * @since 0.2.0
+ */
+@Value
+public class MeshImportId {
+
+    /** 雪花 ID 值 */
+    private final Long value;
+
+    /**
+     * 从 Long 创建强类型 ID。
+     *
+     * @param value 雪花 ID
+     * @return MeshImportId 实例
+     */
+    public static MeshImportId of(Long value) {
+        return new MeshImportId(value);
+    }
+}
+
+/**
+ * MeSH 主题词强类型 ID。
+ *
+ * @author linqibin
+ * @since 0.2.0
+ */
+@Value
+public class DescriptorId {
+
+    /** 雪花 ID 值 */
+    private final Long value;
+
+    public static DescriptorId of(Long value) {
+        return new DescriptorId(value);
+    }
+}
+
+/**
+ * MeSH 限定词强类型 ID。
+ *
+ * @author linqibin
+ * @since 0.2.0
+ */
+@Value
+public class QualifierId {
+
+    /** 雪花 ID 值 */
+    private final Long value;
+
+    public static QualifierId of(Long value) {
+        return new QualifierId(value);
+    }
+}
+```
+
+### 6. 枚举：状态定义
 
 ```java
 /**
@@ -396,8 +462,8 @@ public enum MeshBatchStatus {
 @Value
 public class MeshImportStarted extends DomainEvent {
 
-    /** 任务 ID（雪花 ID） */
-    private final Long importId;
+    /** 任务 ID（强类型 ID） */
+    private final MeshImportId importId;
 
     /** 数据源 URL */
     private final String sourceUrl;
@@ -417,8 +483,8 @@ public class MeshImportStarted extends DomainEvent {
 @Value
 public class MeshImportCompleted extends DomainEvent {
 
-    /** 任务 ID */
-    private final Long importId;
+    /** 任务 ID（强类型 ID） */
+    private final MeshImportId importId;
 
     /** 总记录数 */
     private final Integer totalRecords;
@@ -441,8 +507,8 @@ public class MeshImportCompleted extends DomainEvent {
 @Value
 public class MeshImportFailed extends DomainEvent {
 
-    /** 任务 ID */
-    private final Long importId;
+    /** 任务 ID（强类型 ID） */
+    private final MeshImportId importId;
 
     /** 失败原因 */
     private final String failureReason;
@@ -475,8 +541,8 @@ public class MeshImportFailed extends DomainEvent {
 @AllArgsConstructor
 public class MeshDescriptor {
 
-    /** 主键 ID（雪花 ID） */
-    private Long id;
+    /** 主键 ID（强类型 ID） */
+    private DescriptorId id;
 
     /** MeSH 唯一标识符（格式：D000001-D999999） */
     private String ui;
@@ -532,8 +598,8 @@ public class MeshDescriptor {
 @AllArgsConstructor
 public class MeshQualifier {
 
-    /** 主键 ID（雪花 ID） */
-    private Long id;
+    /** 主键 ID（强类型 ID） */
+    private QualifierId id;
 
     /** MeSH 唯一标识符（格式：Q000001-Q999999） */
     private String ui;

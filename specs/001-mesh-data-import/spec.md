@@ -11,7 +11,7 @@
 
 - 问：6 张表的导入应该如何编排？ → 答：按依赖顺序串行导入：Descriptor → Qualifier → TreeNumber/EntryTerm/Concept → publication_mesh
 - 问：MeshImportAggregate 的聚合边界应该如何设计？ → 答：MeshImportAggregate 作为聚合根，包含任务状态、总体进度和失败批次摘要；每张表的详细进度作为值对象（TableProgress）；批次详情存储在 Infrastructure 层
-- 问：是否为聚合根和实体使用强类型 ID？ → 答：使用强类型 ID：MeshImportId、DescriptorId、QualifierId 等
+- 问：是否为聚合根和实体使用强类型 ID？ → 答：是，Domain 层使用强类型 ID（MeshImportId、DescriptorId、QualifierId），Infrastructure 层使用 Long 雪花 ID（MyBatis-Plus ASSIGN_ID）
 - 问：导入任务是否需要发布领域事件？ → 答：发布关键状态变更事件：MeshImportCompleted、MeshImportFailed（仅在任务完成或失败时发布）
 - 问：导入任务的可观察性策略如何设计？ → 答：详细追踪：每个批次处理记录 INFO 日志，SkyWalking 追踪所有批次操作，使用 Micrometer + Spring Boot Actuator 暴露监控指标（任务级别、表级别、批次级别统计）
 - 问：聚合根命名规范是什么？ → 答：遵循 Patra 项目约定，使用 MeshImportAggregate（领域概念 + Aggregate 后缀），参考 patra-ingest 模块的 TaskAggregate、PlanAggregate 命名模式

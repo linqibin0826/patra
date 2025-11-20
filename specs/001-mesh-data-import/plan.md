@@ -70,6 +70,7 @@
 - [x] **CHK-DDD-003**: 值对象设计为不可变（immutable）
   - **状态**: PASS
   - **值对象列表**: `MeshImportId`、`DescriptorId`、`QualifierId`、`TableProgress`、`TreeNumber`、`EntryTerm`、`Concept`
+  - **说明**: Domain 层使用强类型 ID 提供类型安全，Infrastructure 层 DO 使用 Long 雪花 ID（MyBatis-Plus 自动生成）
 
 - [x] **CHK-DDD-004**: 领域事件使用过去时命名
   - **状态**: PASS
