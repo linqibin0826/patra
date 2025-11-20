@@ -56,7 +56,18 @@
 ### 配置管理任务
 
 - [ ] T002 [P] [Config] 创建 MeSH 导入配置类 in patra-catalog/patra-catalog-boot/src/main/java/com/patra/catalog/config/MeshImportConfig.java
-  - 配置项：sourceUrl（NLM URL）、batchSize（批次大小）、downloadTimeout（下载超时）、retryMaxAttempts（重试次数）
+  - 配置项：
+    * sourceUrl（NLM URL）
+    * defaultBatchSize（默认批次大小：1000）
+    * batchSizeMap（表级别批次大小配置）：
+      - descriptor: 1000
+      - qualifier: 100（数据量小）
+      - treeNumber: 1500
+      - entryTerm: 2000（数据量大）
+      - concept: 2000（数据量大）
+    * downloadTimeout（下载超时）
+    * retryMaxAttempts（重试次数）
+  - 方法：getBatchSizeForTable(String tableName) - 返回特定表的批次大小
   - 使用 @ConfigurationProperties + Nacos Config
 
 - [ ] T003 [Infra] 添加 Redisson 分布式锁依赖 in patra-catalog/patra-catalog-boot/pom.xml
@@ -206,8 +217,12 @@
 - [ ] T031 [Infra] [US1] 实现 StaxXmlParserImpl in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/parser/StaxXmlParserImpl.java
   - 实现：XmlParserPort
   - 使用 JDK 内置 StAX（javax.xml.stream.XMLStreamReader）
-  - 流式处理：返回 Stream<MeshDescriptor>
-  - 参考：research.md 第 23-35 行（StAX 流式解析方案）
+  - 批次处理：
+    * 注入 MeshImportConfig
+    * 使用 config.getBatchSizeForTable(tableName) 获取动态批次大小
+    * 返回 Stream 实现流式处理，避免内存溢出
+  - 参考：research.md 第 23-35 行（StAX 流式解析方案）、data-model.md 第 530-790 行（XML 映射结构）
+  - 依赖：T002（使用动态批次配置）
 
 - [ ] T032 [Infra] [US1] 实现 RestClientMeshFileDownloadImpl in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/download/RestClientMeshFileDownloadImpl.java
   - 实现：MeshFileDownloadPort
@@ -237,10 +252,35 @@
 
 - [ ] T036 [App] [US1] 实现 MeshImportOrchestrator in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/orchestrator/MeshImportOrchestrator.java
   - 参考：patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanIngestionOrchestrator.java:1-100（Orchestrator 编排模式）
-  - 职责：下载 XML → 解析 → 分批导入 → 更新进度 → 发布事件
-  - @Transactional（事务边界在 Application 层）
-  - 依赖：MeshImportPort, XmlParserPort, MeshFileDownloadPort, MeshDescriptorPort
-  - 依赖：T014, T018-T020, T032-T034（Orchestrator 依赖 Domain 层和 Infra 层）
+  - 方法：startImport(StartImportCommand)、retryFailedTask(MeshImportId)、clearAndRestart()
+  - 编排流程：
+    1. 调用 MeshFileDownloadPort.download(sourceUrl) 下载 XML 文件
+    2. 验证文件校验和 validateChecksum()
+    3. 使用 XmlParserPort 流式解析各类数据
+    4. 按依赖顺序批量导入（Descriptor → Qualifier → TreeNumber/EntryTerm/Concept）
+    5. 调用 MeshDataValidator.validateDataCounts() 验证数据量（差异>5%生成警告）
+    6. 更新任务状态，发布完成/失败事件
+  - 事务管理：每批次独立事务（@Transactional(propagation = REQUIRES_NEW)）
+  - @Transactional（主事务边界在 Application 层）
+  - 依赖：MeshImportPort, XmlParserPort, MeshFileDownloadPort, MeshDescriptorPort, MeshDataValidator
+  - 依赖：T014, T018-T020, T032-T035, T036a（Orchestrator 依赖 Domain 层、Infra 层和验证器）
+
+- [ ] T036a [App] [US1] 实现 MeshDataValidator 数据量验证器 in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/validator/MeshDataValidator.java
+  - 方法：validateDataCounts(Map<String, Integer> actualCounts) : ValidationResult
+  - 预期数量配置（从 MeshImportConfig 读取）：
+    * Descriptor: ~35000（允许误差 5%）
+    * Qualifier: ~100（允许误差 5%）
+    * TreeNumber: ~80000（允许误差 5%）
+    * EntryTerm: ~250000（允许误差 5%）
+    * Concept: ~180000（允许误差 5%）
+  - 验证规则：
+    * 计算实际数量与预期数量的差异百分比
+    * 差异超过 5% 生成警告信息
+    * 返回 ValidationResult（包含 isValid、warnings 列表）
+  - 日志记录：
+    * 每张表的验证结果记录 INFO 日志
+    * 有警告时记录 WARN 日志
+  - 依赖：T002（从 MeshImportConfig 读取预期数量配置）
 
 ### 第 4 步：Adapter 层 - 外部接口（TDD）
 

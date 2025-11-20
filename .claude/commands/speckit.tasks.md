@@ -96,7 +96,6 @@ tasks.md 应该可立即执行 - 每个任务必须足够具体，以便 LLM 可
 **测试默认启用（TDD）**：默认生成测试任务，遵循测试驱动开发（TDD）方法。
 - 参考 patra-tdd-development Skill 确定测试类型和位置
 - 单元测试（*Test.java）：与被测试类在同一模块，测试 Domain 和 Application 层逻辑
-- 集成测试（*IT.java）：**必须在 patra-{service}-boot 模块**，测试跨层集成和数据库交互
 - E2E 测试（*E2E.java）：**必须在 patra-{service}-boot 模块**，测试完整用户场景
 - 测试优先：在实施代码之前编写测试（先失败，后通过）
 

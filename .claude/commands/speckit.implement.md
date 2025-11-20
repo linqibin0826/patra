@@ -258,7 +258,6 @@ $ARGUMENTS
   - Adapter 层：使用 MockMvc，测试 HTTP 接口
 
 **关键规范（测试位置）**：
-- ⚠️ **IT 测试（*IT.java）必须在 patra-{service}-boot 模块**
 - ⚠️ **E2E 测试（*E2E.java）必须在 patra-{service}-boot 模块**
 - ⚠️ **单元测试（*Test.java）与被测试类在同一模块**
 
