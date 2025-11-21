@@ -154,7 +154,7 @@ Skill("java-spring-development")  # Spring Boot 技术实现模式
 
 #### Infrastructure 层实现类型 1：Repository（数据持久化）
 
-**测试框架**: @MybatisTest + TestContainers (MySQL 8)
+**测试框架**: @MybatisPlusTest + TestContainers (MySQL 8)
 
 **我关注：**
 - ✅ 数据持久化正确
@@ -276,7 +276,7 @@ Skill("java-spring-development")  # Spring Boot 技术实现模式
 - Domain 层：不 Mock（纯业务逻辑）
 - Application 层：Mock 所有 Ports（Repository、EventPublisher 等接口）
 - Infrastructure 层：根据类型选择
-  - Repository：使用 @MybatisTest + TestContainers（真实数据库）
+  - Repository：使用 @MybatisPlusTest + TestContainers（真实数据库）
   - Feign Client：单元测试 Mock + WireMock 集成测试
   - MQ Publisher：单元测试 Mock + TestContainers 集成测试
   - Converter：纯单元测试，不 Mock

@@ -39,7 +39,7 @@ description: "特性实施的任务列表模板"
   - **Application 层单元测试** (`*Test.java`): `patra-{service}-app/src/test/java/`
     - Mock 所有 Port 接口，JUnit 5 + Mockito + AssertJ
   - **Infrastructure 层测试** (`*Test.java` / `*IT.java`): `patra-{service}-infra/src/test/java/`
-    - Repository: @MybatisTest + TestContainers (MySQL)
+    - Repository: @MybatisPlusTest + TestContainers (MySQL)
     - Feign Client: 单元测试 + WireMock
     - MQ Publisher: 单元测试 + TestContainers (RocketMQ)
     - Converter: 单元测试

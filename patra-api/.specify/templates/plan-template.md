@@ -84,7 +84,7 @@
 - [ ] **CHK-TEST-003**: Infrastructure 层有单元测试和集成测试(轻量, MybatisTest等)
   - **状态**: [计划在 Phase 2 实施]
   - **测试位置**: `patra-{service}-infra/src/test/java/`
-  - **集成测试类型**: Repository (@MybatisTest), Feign Client (WireMock), MQ Publisher (TestContainers)
+  - **集成测试类型**: Repository (@MybatisPlusTest), Feign Client (WireMock), MQ Publisher (TestContainers)
 
 - [ ] **CHK-TEST-004**: Adapter 层有单元测试和切片测试
   - **状态**: [计划在 Phase 2 实施]
@@ -158,7 +158,7 @@
   - 参考: [patra-tdd-development/SKILL.md#Infrastructure层TDD](../../.claude/skills/patra-tdd-development/SKILL.md)
   - 技术实现: [java-spring-development/SKILL.md#MyBatis-Plus数据访问](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
   - 测试位置：`patra-{service}-infra/src/test/java/`
-  - **Repository**：@MybatisTest + TestContainers（MySQL）
+  - **Repository**：@MybatisPlusTest + TestContainers（MySQL）
   - **Feign Client**：单元测试 + WireMock
   - **MQ Publisher**：单元测试 + TestContainers（RocketMQ）
   - **ES Client**：@DataElasticsearchTest + TestContainers（ES）

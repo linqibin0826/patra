@@ -158,7 +158,7 @@
 
 - [x] T019 [P] [Infra] [US1] 为 MeshImportRepositoryImpl 编写集成测试 in patra-catalog/patra-catalog-infra/src/test/java/com/patra/catalog/infra/persistence/repository/MeshImportRepositoryImplIT.java
   - 测试场景：save()、findById()、findRunningTask()、existsRunningTask()
-  - 测试框架：@MybatisTest + TestContainers（MySQL）
+  - 测试框架：@MybatisPlusTest + TestContainers（MySQL）
   - 参考：patra-ingest-infra 的 Repository 集成测试模式
 
 - [x] T020 [P] [Infra] [US1] 为 StaxXmlParserImpl 编写单元测试 in patra-catalog/patra-catalog-infra/src/test/java/com/patra/catalog/infra/parser/StaxXmlParserImplTest.java
@@ -365,7 +365,7 @@
 
 - [x] T044 [Infra] [US2] 为 MeshBatchDetailRepositoryImpl 编写集成测试 in patra-catalog/patra-catalog-infra/src/test/java/com/patra/catalog/infra/persistence/repository/MeshBatchDetailRepositoryImplIT.java
   - 测试场景：findFailedBatches()、countByStatus()
-  - 测试框架：@MybatisTest + TestContainers
+  - 测试框架：@MybatisPlusTest + TestContainers
 
 #### 实施（Green 阶段）🟢
 

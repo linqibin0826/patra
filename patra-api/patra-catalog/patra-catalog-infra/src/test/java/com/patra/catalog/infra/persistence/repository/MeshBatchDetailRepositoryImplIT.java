@@ -1,14 +1,15 @@
 package com.patra.catalog.infra.persistence.repository;
 
+import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.patra.catalog.domain.model.enums.MeshBatchStatus;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import com.patra.catalog.infra.persistence.entity.MeshBatchDetailDO;
 import com.patra.catalog.infra.persistence.mapper.MeshBatchDetailMapper;
+import com.patra.starter.mybatis.autoconfig.MybatisPluginAutoConfig;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
@@ -23,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * MeSH 批次详情仓储实现集成测试。
  *
- * <p>使用 @MybatisTest + TestContainers（MySQL 8）测试批次查询操作。
+ * <p>使用 @MybatisPlusTest + TestContainers（MySQL 8）测试批次查询操作。
  *
  * <p><b>测试策略</b>：
  *
@@ -45,10 +46,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author linqibin
  * @since 0.2.0
  */
-@MybatisTest
+@MybatisPlusTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({MeshBatchDetailRepositoryImpl.class})
+@Import({MeshBatchDetailRepositoryImpl.class, MybatisPluginAutoConfig.class})
 @DisplayName("MeshBatchDetailRepositoryImpl 集成测试")
 class MeshBatchDetailRepositoryImplIT {
 
