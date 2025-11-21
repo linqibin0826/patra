@@ -9,8 +9,10 @@ import com.patra.catalog.infra.persistence.entity.MeshTableProgressDO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.patra.catalog.infra.persistence.mapper.MeshImportTaskMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshTableProgressMapper;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -101,21 +103,52 @@ public class MeshImportRepositoryImpl implements MeshImportPort {
       log.info("更新 MeSH 导入任务成功，任务ID: {}", taskDO.getId());
     }
 
-    // 3. 删除旧的表进度记录（如果存在）
-    if (taskDO.getId() != null) {
-      LambdaQueryWrapper<MeshTableProgressDO> wrapper = new LambdaQueryWrapper<>();
-      wrapper.eq(MeshTableProgressDO::getImportId, taskDO.getId());
-      progressMapper.delete(wrapper);
-      log.debug("删除旧的表进度记录，任务ID: {}", taskDO.getId());
-    }
-
-    // 4. 保存新的表进度记录
+    // 3. UPSERT 表进度记录（更新或插入）
     List<MeshTableProgressDO> progressDOList = converter.toProgressDOList(aggregate);
+    Set<String> currentTableNames = new HashSet<>();
+
     for (MeshTableProgressDO progressDO : progressDOList) {
       progressDO.setImportId(taskDO.getId()); // 设置外键
-      progressMapper.insert(progressDO);
+      currentTableNames.add(progressDO.getTableName());
+
+      // 查询是否已存在该表的进度记录
+      LambdaQueryWrapper<MeshTableProgressDO> queryWrapper = new LambdaQueryWrapper<>();
+      queryWrapper
+          .eq(MeshTableProgressDO::getImportId, taskDO.getId())
+          .eq(MeshTableProgressDO::getTableName, progressDO.getTableName());
+      MeshTableProgressDO existing = progressMapper.selectOne(queryWrapper);
+
+      if (existing != null) {
+        // 存在 → 更新（保留 ID 和 version 以支持乐观锁）
+        progressDO.setId(existing.getId());
+        progressDO.setVersion(existing.getVersion());
+        int updated = progressMapper.updateById(progressDO);
+        if (updated == 0) {
+          log.warn("更新表进度失败（乐观锁冲突），表名: {}", progressDO.getTableName());
+          throw new IllegalStateException("表进度更新失败，可能已被其他进程修改");
+        }
+        log.debug("更新表进度记录: {} (ID: {})", progressDO.getTableName(), progressDO.getId());
+      } else {
+        // 不存在 → 插入
+        progressMapper.insert(progressDO);
+        log.debug("新增表进度记录: {} (ID: {})", progressDO.getTableName(), progressDO.getId());
+      }
     }
-    log.debug("保存表进度记录成功，记录数: {}", progressDOList.size());
+
+    // 4. 删除数据库中存在但聚合中不存在的表进度记录（逻辑删除）
+    // 这种情况发生在：表列表从 [A, B, C] 变成 [A, B] 时，需要删除 C
+    if (taskDO.getId() != null && !currentTableNames.isEmpty()) {
+      LambdaQueryWrapper<MeshTableProgressDO> deleteWrapper = new LambdaQueryWrapper<>();
+      deleteWrapper
+          .eq(MeshTableProgressDO::getImportId, taskDO.getId())
+          .notIn(MeshTableProgressDO::getTableName, currentTableNames);
+      int deleted = progressMapper.delete(deleteWrapper);
+      if (deleted > 0) {
+        log.debug("逻辑删除多余的表进度记录，数量: {}", deleted);
+      }
+    }
+
+    log.debug("UPSERT 表进度记录成功，处理数: {}", progressDOList.size());
 
     // 5. 重新查询并返回（获取最新的 version 和审计字段）
     return findById(MeshImportId.of(taskDO.getId()))

@@ -6,6 +6,7 @@ import com.patra.catalog.domain.model.enums.MeshImportTaskStatus;
 import com.patra.catalog.domain.model.enums.MeshTableImportStatus;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import com.patra.catalog.domain.model.valueobject.TableProgress;
+import com.patra.catalog.infra.persistence.converter.MeshImportConverterImpl;
 import com.patra.catalog.infra.persistence.mapper.MeshBatchDetailMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshImportTaskMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshTableProgressMapper;
@@ -17,7 +18,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -56,8 +56,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @MybatisPlusTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({MeshImportRepositoryImpl.class, MybatisPluginAutoConfig.class})
-@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.converter")
+@Import({MeshImportRepositoryImpl.class, MeshImportConverterImpl.class, MybatisPluginAutoConfig.class})
 @DisplayName("MeshImportRepositoryImpl 集成测试")
 class MeshImportRepositoryImplIT {
 
@@ -76,12 +75,6 @@ class MeshImportRepositoryImplIT {
   }
 
   @Autowired private MeshImportRepositoryImpl meshImportRepository;
-
-  @Autowired private MeshImportTaskMapper taskMapper;
-
-  @Autowired private MeshTableProgressMapper progressMapper;
-
-  @Autowired private MeshBatchDetailMapper batchDetailMapper;
 
   @Test
   @DisplayName("save() 新增场景 - ID为null时应该执行INSERT并分配雪花ID")
