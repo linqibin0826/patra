@@ -5,4 +5,4 @@
  *
  * @since 0.2.0
  */
-package com.patra.ingest.adapter.dto;
+package com.patra.ingest.adapter.rocketmq.dto;

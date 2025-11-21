@@ -1,4 +1,4 @@
-package com.patra.ingest.adapter.dto;
+package com.patra.ingest.adapter.rocketmq.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;

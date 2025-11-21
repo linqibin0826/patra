@@ -5,7 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.patra.ingest.adapter.dto.TaskReadyPayload;
+import com.patra.ingest.adapter.rocketmq.dto.TaskReadyPayload;
 import com.patra.ingest.app.usecase.execution.TaskExecutionUseCase;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
 import java.nio.charset.StandardCharsets;
