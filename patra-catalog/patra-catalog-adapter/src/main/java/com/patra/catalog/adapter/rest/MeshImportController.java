@@ -1,4 +1,4 @@
-package com.patra.catalog.adapter.controller;
+package com.patra.catalog.adapter.rest;
 
 import com.patra.catalog.api.command.StartImportCommand;
 import com.patra.catalog.api.dto.MeshImportResultDTO;
@@ -29,16 +29,19 @@ import org.springframework.web.bind.annotation.*;
  * <ul>
  *   <li>接收 HTTP 请求并转换为 Command
  *   <li>调用 {@link MeshImportOrchestrator} 执行业务逻辑
- *   <li>处理异常并转换为合适的 HTTP 响应
+ *   <li>异常由全局 {@link com.patra.starter.web.error.handler.GlobalRestExceptionHandler} 处理
  * </ul>
  *
- * <p><b>异常处理</b>：
+ * <p><b>异常处理</b>（由 {@link com.patra.catalog.app.error.MeshImportErrorMappingContributor} 映射）：
  *
  * <ul>
- *   <li>{@link IllegalStateException} → 409 Conflict
- *   <li>{@link IllegalArgumentException} → 404 Not Found
- *   <li>参数校验失败 → 400 Bad Request
+ *   <li>{@link IllegalStateException} → 409 Conflict（业务状态冲突，如已有任务运行）
+ *   <li>{@link IllegalArgumentException}（任务不存在） → 404 Not Found
+ *   <li>{@link IllegalArgumentException}（参数错误） → 400 Bad Request
+ *   <li>参数校验失败（{@link jakarta.validation.ConstraintViolationException}） → 400 Bad Request
  * </ul>
+ *
+ * <p><b>响应格式</b>：符合 RFC 7807 ProblemDetail 标准（由 patra-spring-boot-starter-web 自动处理）
  *
  * @author linqibin
  * @since 0.2.0
@@ -57,16 +60,18 @@ public class MeshImportController {
    *
    * <p>接口定义：POST /api/v1/mesh/import/start
    *
-   * @param command 启动命令（可选参数）
+   * @param command 启动命令（可选参数，空请求体时使用默认配置）
    * @return 导入任务结果
-   * @throws IllegalStateException 如果已有任务正在运行（返回 409）
+   * @throws IllegalStateException 如果已有任务正在运行（返回 409 Conflict）
    */
   @PostMapping("/start")
-  public ResponseEntity<MeshImportResultDTO> startImport(@Valid @RequestBody(required = false) StartImportCommand command) {
+  public ResponseEntity<MeshImportResultDTO> startImport(
+      @Valid @RequestBody(required = false) StartImportCommand command) {
     log.info("收到 MeSH 导入请求，命令：{}", command);
 
     // 如果请求体为空，使用默认命令
-    StartImportCommand actualCommand = (command != null) ? command : new StartImportCommand(null, null);
+    StartImportCommand actualCommand =
+        (command != null) ? command : new StartImportCommand(null, null);
 
     MeshImportResultDTO result = meshImportOrchestrator.startImport(actualCommand);
 
@@ -82,11 +87,12 @@ public class MeshImportController {
    *
    * @param taskId 任务 ID
    * @return 导入任务结果
-   * @throws IllegalArgumentException 如果任务不存在（返回 404）
-   * @throws IllegalStateException 如果任务状态不允许重试（返回 400）
+   * @throws IllegalArgumentException 如果任务不存在（返回 404 Not Found）
+   * @throws IllegalStateException 如果任务状态不允许重试（返回 409 Conflict）
    */
   @PostMapping("/retry/{taskId}")
-  public ResponseEntity<MeshImportResultDTO> retryFailedTask(@PathVariable @NotNull String taskId) {
+  public ResponseEntity<MeshImportResultDTO> retryFailedTask(
+      @PathVariable @NotNull String taskId) {
     log.info("收到重试失败任务请求，任务 ID：{}", taskId);
 
     MeshImportId importId = new MeshImportId(Long.parseLong(taskId));
@@ -104,10 +110,12 @@ public class MeshImportController {
    *
    * @param request 清除请求（必须确认清除）
    * @return 操作结果
-   * @throws IllegalStateException 如果有任务正在运行（返回 409）
+   * @throws IllegalStateException 如果有任务正在运行（返回 409 Conflict）
+   * @throws IllegalArgumentException 如果未确认清除（返回 400 Bad Request）
    */
   @PostMapping("/clear")
-  public ResponseEntity<Map<String, Object>> clearAndRestart(@Valid @RequestBody ClearImportRequest request) {
+  public ResponseEntity<Map<String, Object>> clearAndRestart(
+      @Valid @RequestBody ClearImportRequest request) {
     log.info("收到清除进度请求，确认清除：{}", request.confirmClear());
 
     // 验证确认标志
@@ -130,57 +138,6 @@ public class MeshImportController {
    *
    * @param confirmClear 确认清除标志（必须为 true）
    */
-  public record ClearImportRequest(@NotNull(message = "confirmClear 字段不能为空") Boolean confirmClear) {}
-
-  // ========== 异常处理 ==========
-
-  /**
-   * 处理 IllegalStateException（业务状态冲突）。
-   *
-   * @param ex 异常
-   * @return 409 Conflict 响应
-   */
-  @ExceptionHandler(IllegalStateException.class)
-  public ResponseEntity<Map<String, String>> handleIllegalStateException(IllegalStateException ex) {
-    log.warn("业务状态冲突：{}", ex.getMessage());
-
-    String code =
-        ex.getMessage().contains("已有正在运行")
-            ? "TASK_ALREADY_RUNNING"
-            : ex.getMessage().contains("正在运行，无法清除") ? "TASK_RUNNING" : "INVALID_TASK_STATE";
-
-    return ResponseEntity.status(409)
-        .body(
-            Map.of(
-                "code", code,
-                "message", ex.getMessage()));
-  }
-
-  /**
-   * 处理 IllegalArgumentException（参数错误或资源不存在）。
-   *
-   * @param ex 异常
-   * @return 404 Not Found 或 400 Bad Request 响应
-   */
-  @ExceptionHandler(IllegalArgumentException.class)
-  public ResponseEntity<Map<String, String>> handleIllegalArgumentException(
-      IllegalArgumentException ex) {
-    log.warn("参数错误或资源不存在：{}", ex.getMessage());
-
-    boolean isNotFound = ex.getMessage().contains("任务不存在");
-
-    if (isNotFound) {
-      return ResponseEntity.status(404)
-          .body(
-              Map.of(
-                  "code", "TASK_NOT_FOUND",
-                  "message", ex.getMessage()));
-    } else {
-      return ResponseEntity.badRequest()
-          .body(
-              Map.of(
-                  "code", "INVALID_PARAMETER",
-                  "message", ex.getMessage()));
-    }
-  }
+  public record ClearImportRequest(
+      @NotNull(message = "confirmClear 字段不能为空") Boolean confirmClear) {}
 }
