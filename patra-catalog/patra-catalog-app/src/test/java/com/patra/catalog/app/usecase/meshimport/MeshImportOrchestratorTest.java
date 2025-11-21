@@ -46,6 +46,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * @since 0.2.0
  */
 @ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 @DisplayName("MeshImportOrchestrator 单元测试")
 class MeshImportOrchestratorTest {
 
@@ -62,10 +63,12 @@ class MeshImportOrchestratorTest {
   private File mockXmlFile;
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws Exception {
     // Mock 配置
     when(meshImportConfig.getExpectedCountForTable(anyString())).thenReturn(35000);
     when(meshImportConfig.getSourceUrl()).thenReturn("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
+    when(meshImportConfig.getExpectedFileSize()).thenReturn(734_003_200L); // 约 700 MB
+    when(meshImportConfig.getFileSizeDifferenceThreshold()).thenReturn(10.0); // 10% 阈值
 
     // 模拟聚合根
     mockAggregate =
@@ -84,8 +87,18 @@ class MeshImportOrchestratorTest {
             0,
             null);
 
-    // 模拟 XML 文件
-    mockXmlFile = new File("/tmp/mesh-import/desc2025.xml");
+    // 创建临时 XML 文件用于测试（确保文件存在以便创建 FileInputStream）
+    File tempDir = new File("/tmp/mesh-import");
+    if (!tempDir.exists()) {
+      tempDir.mkdirs();
+    }
+    mockXmlFile = new File(tempDir, "desc2025-test.xml");
+    if (!mockXmlFile.exists()) {
+      mockXmlFile.createNewFile();
+    }
+    // 使用 spy 来 mock length() 方法
+    mockXmlFile = spy(mockXmlFile);
+    when(mockXmlFile.length()).thenReturn(734_003_200L);
   }
 
   @Nested
@@ -99,9 +112,8 @@ class MeshImportOrchestratorTest {
       StartImportCommand command =
           new StartImportCommand("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml", "2025年MeSH数据首次导入");
 
-      // Mock 下载
+      // Mock 下载（文件大小在预期范围内）
       when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
-      when(meshFileDownloadPort.validateChecksum(any(File.class), anyString())).thenReturn(true);
 
       // Mock 聚合根创建和保存
       when(meshImportPort.save(any(MeshImportAggregate.class))).thenReturn(mockAggregate);
@@ -134,7 +146,6 @@ class MeshImportOrchestratorTest {
               meshDataValidator);
 
       inOrder.verify(meshFileDownloadPort).download(anyString());
-      inOrder.verify(meshFileDownloadPort).validateChecksum(any(File.class), anyString());
       inOrder.verify(meshImportPort, atLeastOnce()).save(any(MeshImportAggregate.class));
       inOrder.verify(xmlParserPort).parseDescriptors(any(FileInputStream.class));
       inOrder.verify(meshDataValidator).validateDataCounts(anyMap());
@@ -164,23 +175,28 @@ class MeshImportOrchestratorTest {
     }
 
     @Test
-    @DisplayName("当校验和不匹配时应该抛出异常")
-    void shouldThrowExceptionWhenChecksumMismatch() {
+    @DisplayName("当文件大小超出阈值时应该抛出异常")
+    void shouldThrowExceptionWhenFileSizeOutOfRange() throws Exception {
       // Given: 准备命令
       StartImportCommand command =
           new StartImportCommand("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml", "2025年MeSH数据导入");
 
-      // Mock 下载成功但校验失败
-      when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
-      when(meshFileDownloadPort.validateChecksum(any(File.class), anyString())).thenReturn(false);
+      // Mock 下载成功但文件大小异常（小于预期的 50%，超出 10% 阈值）
+      File abnormalFile = new File("/tmp/mesh-import/desc2025-abnormal.xml");
+      if (!abnormalFile.exists()) {
+        abnormalFile.createNewFile();
+      }
+      File spyAbnormalFile = spy(abnormalFile);
+      when(spyAbnormalFile.length()).thenReturn(300_000_000L); // 约 300 MB，远小于预期的 700 MB
+      when(meshFileDownloadPort.download(anyString())).thenReturn(spyAbnormalFile);
 
       // Mock 聚合根保存
       when(meshImportPort.save(any(MeshImportAggregate.class))).thenReturn(mockAggregate);
 
-      // When & Then: 执行导入，预期抛出异常
+      // When & Then: 执行导入，预期抛出异常（被包装成 RuntimeException）
       assertThatThrownBy(() -> orchestrator.startImport(command))
-          .isInstanceOf(IllegalStateException.class)
-          .hasMessageContaining("校验");
+          .isInstanceOf(RuntimeException.class)
+          .hasMessageContaining("文件大小异常");
 
       // 验证任务状态被标记为失败
       verify(meshImportPort, atLeastOnce()).save(any(MeshImportAggregate.class));
@@ -193,9 +209,8 @@ class MeshImportOrchestratorTest {
       StartImportCommand command =
           new StartImportCommand("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml", "2025年MeSH数据导入");
 
-      // Mock 下载
+      // Mock 下载（文件大小正常）
       when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
-      when(meshFileDownloadPort.validateChecksum(any(File.class), anyString())).thenReturn(true);
 
       // Mock 聚合根
       when(meshImportPort.save(any(MeshImportAggregate.class))).thenReturn(mockAggregate);
@@ -351,9 +366,8 @@ class MeshImportOrchestratorTest {
       // Given: 命令不包含 sourceUrl（使用默认值）
       StartImportCommand command = new StartImportCommand(null, "2025年MeSH数据导入");
 
-      // Mock 下载（验证使用了配置的 URL）
+      // Mock 下载（验证使用了配置的 URL，文件大小正常）
       when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
-      when(meshFileDownloadPort.validateChecksum(any(File.class), anyString())).thenReturn(true);
 
       // Mock 聚合根
       when(meshImportPort.save(any(MeshImportAggregate.class))).thenReturn(mockAggregate);

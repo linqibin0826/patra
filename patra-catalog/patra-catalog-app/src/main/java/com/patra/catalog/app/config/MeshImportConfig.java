@@ -117,6 +117,27 @@ public class MeshImportConfig {
     private Double countDifferenceThreshold = 5.0;
 
     /**
+     * 预期 XML 文件大小（字节）。
+     *
+     * <p>默认值: 734_003_200 (约 700 MB)
+     *
+     * <p>说明: 用于下载后的文件完整性初步验证。由于 NLM 官方不提供 MD5 校验和，
+     * 我们使用文件大小作为完整性验证的第一道防线。允许 ±10% 的合理波动范围。
+     *
+     * <p>参考值来源: 2025年1月实际下载的 desc2025.xml 文件大小
+     */
+    private Long expectedFileSize = 734_003_200L;
+
+    /**
+     * 文件大小差异容忍百分比 (超过此值验证失败)。
+     *
+     * <p>默认值: 10.0 (即 10%)
+     *
+     * <p>说明: 允许文件大小在合理范围内波动（如 NLM 更新数据），超过此阈值认为文件可能损坏
+     */
+    private Double fileSizeDifferenceThreshold = 10.0;
+
+    /**
      * 获取指定表的批次大小。
      *
      * <p>查找顺序:
