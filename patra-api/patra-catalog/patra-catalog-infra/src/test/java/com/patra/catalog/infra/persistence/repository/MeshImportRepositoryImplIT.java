@@ -5,6 +5,7 @@ import com.patra.catalog.domain.model.enums.MeshImportTaskStatus;
 import com.patra.catalog.domain.model.enums.MeshTableImportStatus;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import com.patra.catalog.domain.model.valueobject.TableProgress;
+import com.patra.catalog.infra.AbstractRepositoryIT;
 import com.patra.catalog.infra.persistence.mapper.MeshBatchDetailMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshImportTaskMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshTableProgressMapper;
@@ -13,23 +14,16 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * MeSH 导入仓储实现集成测试。
  *
- * <p>使用 @MybatisTest + TestContainers（MySQL 8）测试完整的 CRUD 操作。
+ * <p>使用 Testcontainers + MySQL 8 测试完整的 CRUD 操作。
  *
  * <p><b>测试策略</b>：
  *
@@ -52,29 +46,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author linqibin
  * @since 0.2.0
  */
-@MybatisTest
-@Testcontainers
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({
-  MeshImportRepositoryImpl.class
-})
-@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.converter")
+@Import({MeshImportRepositoryImpl.class})
+@org.springframework.context.annotation.ComponentScan(
+    basePackages = "com.patra.catalog.infra.persistence.converter"
+)
 @DisplayName("MeshImportRepositoryImpl 集成测试")
-class MeshImportRepositoryImplIT {
-
-  @Container
-  static MySQLContainer<?> mysql =
-      new MySQLContainer<>("mysql:8.0.35")
-          .withDatabaseName("patra_catalog_test")
-          .withUsername("test")
-          .withPassword("test");
-
-  @DynamicPropertySource
-  static void configureProperties(DynamicPropertyRegistry registry) {
-    registry.add("spring.datasource.url", mysql::getJdbcUrl);
-    registry.add("spring.datasource.username", mysql::getUsername);
-    registry.add("spring.datasource.password", mysql::getPassword);
-  }
+class MeshImportRepositoryImplIT extends AbstractRepositoryIT {
 
   @Autowired private MeshImportRepositoryImpl meshImportRepository;
 
