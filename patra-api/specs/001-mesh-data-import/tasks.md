@@ -55,7 +55,7 @@
 
 ### 配置管理任务
 
-- [x] T002 [P] [Config] 创建 MeSH 导入配置类 in patra-catalog/patra-catalog-boot/src/main/java/com/patra/catalog/config/MeshImportConfig.java
+- [x] T002 [P] [Config] 创建 MeSH 导入配置类 in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/config/MeshImportConfig.java
   - 配置项：
     * sourceUrl（NLM URL）
     * defaultBatchSize（默认批次大小：1000）
@@ -104,7 +104,7 @@
 #### 实施（Green 阶段）🟢
 
 - [x] T007 [P] [Domain] [US1] 定义 MeshImportId 强类型 ID in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/model/valueobject/MeshImportId.java
-  - 参考：patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/model/valueobject/DescriptorId.java（已存在强类型 ID）
+  - 参考：patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/model/vo/affiliation/RorId.java（已存在强类型 ID 示例）
   - 属性：Long value
   - 方法：of(Long value)
 
