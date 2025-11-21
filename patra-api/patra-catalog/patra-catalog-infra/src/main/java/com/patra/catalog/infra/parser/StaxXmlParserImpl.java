@@ -4,6 +4,9 @@ import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
+import com.patra.catalog.domain.model.enums.DescriptorClass;
+import com.patra.catalog.domain.model.enums.LexicalTag;
+import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.domain.port.XmlParserPort;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -213,22 +216,36 @@ public class StaxXmlParserImpl implements XmlParserPort {
         return null;
       }
 
-      // 构建聚合根（简化版本，实际应使用工厂方法）
-      // TODO: 使用 Domain 层的工厂方法创建聚合根
-      return null; // 占位符，需要实际实现
+      // 创建聚合根（使用 Domain 层的工厂方法）
+      MeshDescriptorAggregate aggregate = MeshDescriptorAggregate.create(
+          MeshUI.of(descriptorUI),
+          descriptorName,
+          DescriptorClass.TOPICAL, // 默认为主题词类型，可从 XML 中解析 DescriptorClass
+          "2025" // 默认版本号，可从 XML 中解析
+      );
+
+      // 添加树形编号
+      if (!treeNumbers.isEmpty()) {
+        aggregate.addTreeNumbers(treeNumbers);
+      }
+
+      return aggregate;
     }
 
     /** 解析 TreeNumberList。 */
     private List<MeshTreeNumber> parseTreeNumberList(XMLStreamReader reader, String descriptorUI)
         throws XMLStreamException {
       List<MeshTreeNumber> treeNumbers = new ArrayList<>();
+      int index = 0;
       while (reader.hasNext()) {
         int event = reader.next();
         if (event == XMLStreamConstants.START_ELEMENT
             && "TreeNumber".equals(reader.getLocalName())) {
           String treeNumber = reader.getElementText();
-          // TODO: 创建 MeshTreeNumber 实体
-          // treeNumbers.add(new MeshTreeNumber(...));
+          // 第一个树形编号标记为主要位置
+          boolean isPrimary = (index == 0);
+          treeNumbers.add(MeshTreeNumber.create(treeNumber, isPrimary));
+          index++;
         } else if (event == XMLStreamConstants.END_ELEMENT
             && "TreeNumberList".equals(reader.getLocalName())) {
           break;
@@ -243,6 +260,7 @@ public class StaxXmlParserImpl implements XmlParserPort {
 
     private final XMLStreamReader reader;
     private boolean hasNext = true;
+    private int index = 0;
 
     public TreeNumberSpliterator(XMLStreamReader reader) {
       this.reader = reader;
@@ -260,8 +278,11 @@ public class StaxXmlParserImpl implements XmlParserPort {
           if (event == XMLStreamConstants.START_ELEMENT
               && "TreeNumber".equals(reader.getLocalName())) {
             String treeNumber = reader.getElementText();
-            // TODO: 创建 MeshTreeNumber 实体
-            // action.accept(new MeshTreeNumber(...));
+            // 第一个树形编号标记为主要位置
+            boolean isPrimary = (index == 0);
+            MeshTreeNumber entity = MeshTreeNumber.create(treeNumber, isPrimary);
+            action.accept(entity);
+            index++;
             return true;
           }
         }
@@ -309,8 +330,11 @@ public class StaxXmlParserImpl implements XmlParserPort {
         while (reader.hasNext()) {
           int event = reader.next();
           if (event == XMLStreamConstants.START_ELEMENT && "Term".equals(reader.getLocalName())) {
-            // TODO: 解析 Term 元素并创建 MeshEntryTerm 实体
-            // action.accept(new MeshEntryTerm(...));
+            // 解析 Term 元素
+            MeshEntryTerm entryTerm = parseTermElement(reader);
+            if (entryTerm != null) {
+              action.accept(entryTerm);
+            }
             return true;
           }
         }
@@ -320,6 +344,56 @@ public class StaxXmlParserImpl implements XmlParserPort {
         log.error("解析 EntryTerm 失败", e);
         throw new RuntimeException("XML 解析失败", e);
       }
+    }
+
+    /** 解析 Term 元素。 */
+    private MeshEntryTerm parseTermElement(XMLStreamReader reader) throws XMLStreamException {
+      String term = null;
+      String lexicalTagCode = "NON"; // 默认值
+      boolean isRecordPreferred = false;
+      boolean isPrintFlag = true; // 默认打印
+
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT) {
+          String localName = reader.getLocalName();
+          switch (localName) {
+            case "String":
+              term = reader.getElementText();
+              break;
+            case "LexicalTag":
+              lexicalTagCode = reader.getElementText();
+              break;
+            case "RecordPreferredTerm":
+              String preferredValue = reader.getElementText();
+              isRecordPreferred = "Y".equalsIgnoreCase(preferredValue);
+              break;
+            case "PrintFlagYN":
+              String printFlag = reader.getElementText();
+              isPrintFlag = "Y".equalsIgnoreCase(printFlag);
+              break;
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT && "Term".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+
+      // 验证必填字段
+      if (term == null) {
+        log.warn("跳过无效 EntryTerm（缺少术语文本）");
+        return null;
+      }
+
+      // 创建实体
+      LexicalTag lexicalTag;
+      try {
+        lexicalTag = LexicalTag.fromCode(lexicalTagCode);
+      } catch (IllegalArgumentException e) {
+        log.warn("未知的词法标记：{}，使用默认值 NON", lexicalTagCode);
+        lexicalTag = LexicalTag.NON;
+      }
+
+      return MeshEntryTerm.create(term, lexicalTag, isRecordPreferred, isPrintFlag);
     }
 
     @Override
@@ -359,8 +433,11 @@ public class StaxXmlParserImpl implements XmlParserPort {
           int event = reader.next();
           if (event == XMLStreamConstants.START_ELEMENT
               && "Concept".equals(reader.getLocalName())) {
-            // TODO: 解析 Concept 元素并创建 MeshConcept 实体
-            // action.accept(new MeshConcept(...));
+            // 解析 Concept 元素
+            MeshConcept concept = parseConceptElement(reader);
+            if (concept != null) {
+              action.accept(concept);
+            }
             return true;
           }
         }
@@ -370,6 +447,88 @@ public class StaxXmlParserImpl implements XmlParserPort {
         log.error("解析 Concept 失败", e);
         throw new RuntimeException("XML 解析失败", e);
       }
+    }
+
+    /** 解析 Concept 元素。 */
+    private MeshConcept parseConceptElement(XMLStreamReader reader) throws XMLStreamException {
+      String conceptUi = null;
+      String conceptName = null;
+      boolean isPreferred = false;
+      String registryNumber = null;
+      String scopeNote = null;
+      String casn1Name = null;
+      String conceptStatus = null;
+
+      // 解析 PreferredConceptYN 属性
+      String preferredAttr = reader.getAttributeValue(null, "PreferredConceptYN");
+      if (preferredAttr != null) {
+        isPreferred = "Y".equalsIgnoreCase(preferredAttr);
+      }
+
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT) {
+          String localName = reader.getLocalName();
+          switch (localName) {
+            case "ConceptUI":
+              conceptUi = reader.getElementText();
+              break;
+            case "ConceptName":
+              // ConceptName 包含一个 <String> 子元素
+              while (reader.hasNext()) {
+                event = reader.next();
+                if (event == XMLStreamConstants.START_ELEMENT && "String".equals(reader.getLocalName())) {
+                  conceptName = reader.getElementText();
+                  break;
+                }
+              }
+              break;
+            case "RegistryNumber":
+              registryNumber = reader.getElementText();
+              break;
+            case "ScopeNote":
+              scopeNote = reader.getElementText();
+              break;
+            case "CASN1Name":
+              casn1Name = reader.getElementText();
+              break;
+            case "ConceptStatus":
+              conceptStatus = reader.getElementText();
+              break;
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT && "Concept".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+
+      // 验证必填字段
+      if (conceptUi == null || conceptName == null) {
+        log.warn("跳过无效 Concept（缺少必填字段）: UI={}, Name={}", conceptUi, conceptName);
+        return null;
+      }
+
+      // 创建实体
+      MeshConcept concept = MeshConcept.create(
+          MeshUI.of(conceptUi),
+          conceptName,
+          isPreferred
+      );
+
+      // 设置可选字段
+      if (registryNumber != null) {
+        concept.withRegistryNumber(registryNumber);
+      }
+      if (scopeNote != null) {
+        concept.withScopeNote(scopeNote);
+      }
+      if (casn1Name != null) {
+        concept.withCasn1Name(casn1Name);
+      }
+      if (conceptStatus != null) {
+        concept.withConceptStatus(conceptStatus);
+      }
+
+      return concept;
     }
 
     @Override

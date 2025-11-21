@@ -294,27 +294,49 @@ public class MeshImportOrchestrator {
   }
 
   /**
-   * 下载 XML 文件并验证校验和。
+   * 下载 XML 文件并验证文件完整性。
+   *
+   * <p>验证策略（增强验证方案）：
+   *
+   * <ul>
+   *   <li>第一道防线：文件大小验证（允许 ±10% 波动）
+   *   <li>第二道防线：XML 结构解析验证（在后续 importAllData 中执行）
+   *   <li>第三道防线：数据量阈值检查（在 MeshDataValidator 中执行）
+   * </ul>
+   *
+   * <p><b>设计说明</b>：由于 NLM 官方不提供 desc2025.xml 的 MD5 校验和，我们采用多重验证策略来确保文件完整性。
+   * 这种方案比单一 MD5 验证更全面，能够检测文件损坏、下载不完整等问题。
    *
    * @param sourceUrl 数据源 URL
    * @param aggregate 任务聚合根
    * @return 下载后的文件
-   * @throws IllegalStateException 如果校验和不匹配
+   * @throws IllegalStateException 如果文件大小验证失败
    */
   private File downloadXmlFile(String sourceUrl, MeshImportAggregate aggregate) {
     log.info("开始下载 MeSH XML 文件，URL：{}", sourceUrl);
 
     // 下载文件
     File xmlFile = meshFileDownloadPort.download(sourceUrl);
-    log.info("XML 文件下载完成，大小：{} 字节，路径：{}", xmlFile.length(), xmlFile.getAbsolutePath());
+    long actualSize = xmlFile.length();
+    log.info("XML 文件下载完成，大小：{} 字节 ({} MB)，路径：{}",
+        actualSize, actualSize / (1024 * 1024), xmlFile.getAbsolutePath());
 
-    // 验证校验和（TODO: 从 NLM 获取官方 MD5，这里暂时跳过）
-    // String expectedHash = "TODO";
-    // boolean valid = meshFileDownloadPort.validateChecksum(xmlFile, expectedHash);
-    // if (!valid) {
-    //   throw new IllegalStateException("XML 文件校验和不匹配，可能文件已损坏");
-    // }
+    // 验证文件大小（第一道防线）
+    long expectedSize = meshImportConfig.getExpectedFileSize();
+    double threshold = meshImportConfig.getFileSizeDifferenceThreshold();
+    double difference = Math.abs(actualSize - expectedSize) * 100.0 / expectedSize;
 
+    if (difference > threshold) {
+      String message = String.format(
+          "XML 文件大小异常，预期：%d 字节 (%d MB)，实际：%d 字节 (%d MB)，差异：%.2f%% (阈值：%.1f%%)",
+          expectedSize, expectedSize / (1024 * 1024),
+          actualSize, actualSize / (1024 * 1024),
+          difference, threshold);
+      log.error(message);
+      throw new IllegalStateException(message);
+    }
+
+    log.info("文件大小验证通过，差异：{:.2f}% (阈值：{:.1f}%)", difference, threshold);
     return xmlFile;
   }
 
