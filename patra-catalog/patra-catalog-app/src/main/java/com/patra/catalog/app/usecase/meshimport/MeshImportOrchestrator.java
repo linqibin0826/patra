@@ -1,8 +1,8 @@
-package com.patra.catalog.app.orchestrator;
+package com.patra.catalog.app.usecase.meshimport;
 
 import com.patra.catalog.api.command.StartImportCommand;
 import com.patra.catalog.api.dto.MeshImportResultDTO;
-import com.patra.catalog.app.validator.MeshDataValidator;
+import com.patra.catalog.app.usecase.meshimport.validator.MeshDataValidator;
 import com.patra.catalog.app.config.MeshImportConfig;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;

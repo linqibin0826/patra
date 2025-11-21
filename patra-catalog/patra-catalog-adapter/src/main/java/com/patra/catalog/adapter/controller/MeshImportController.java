@@ -2,7 +2,7 @@ package com.patra.catalog.adapter.controller;
 
 import com.patra.catalog.api.command.StartImportCommand;
 import com.patra.catalog.api.dto.MeshImportResultDTO;
-import com.patra.catalog.app.orchestrator.MeshImportOrchestrator;
+import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;

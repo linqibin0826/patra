@@ -133,8 +133,12 @@ public class MeshImportRepositoryImpl implements MeshImportPort {
       return Optional.empty();
     }
 
-    // 2. 查询表进度记录
-    List<MeshTableProgressDO> progressDOList = progressMapper.findByImportId(importId.value());
+    // 2. 查询表进度记录（使用 LambdaQueryWrapper）
+    LambdaQueryWrapper<MeshTableProgressDO> progressWrapper = new LambdaQueryWrapper<>();
+    progressWrapper
+        .eq(MeshTableProgressDO::getImportId, importId.value())
+        .orderByAsc(MeshTableProgressDO::getTableName);
+    List<MeshTableProgressDO> progressDOList = progressMapper.selectList(progressWrapper);
     log.debug("查询到表进度记录数: {}", progressDOList.size());
 
     // 3. 转换为聚合根
@@ -147,18 +151,27 @@ public class MeshImportRepositoryImpl implements MeshImportPort {
   public Optional<MeshImportAggregate> findRunningTask() {
     log.debug("查询当前正在运行的任务");
 
-    // 1. 查询任务主表
-    Optional<MeshImportTaskDO> taskDOOpt = taskMapper.findRunningTask();
-    if (taskDOOpt.isEmpty()) {
+    // 1. 查询任务主表（使用 LambdaQueryWrapper）
+    LambdaQueryWrapper<MeshImportTaskDO> taskWrapper = new LambdaQueryWrapper<>();
+    taskWrapper
+        .eq(MeshImportTaskDO::getStatus, "PROCESSING")
+        .orderByAsc(MeshImportTaskDO::getStartTime)
+        .last("LIMIT 1");
+    MeshImportTaskDO taskDO = taskMapper.selectOne(taskWrapper);
+
+    if (taskDO == null) {
       log.debug("不存在正在运行的任务");
       return Optional.empty();
     }
 
-    MeshImportTaskDO taskDO = taskDOOpt.get();
     log.info("查询到正在运行的任务，任务ID: {}", taskDO.getId());
 
-    // 2. 查询表进度记录
-    List<MeshTableProgressDO> progressDOList = progressMapper.findByImportId(taskDO.getId());
+    // 2. 查询表进度记录（使用 LambdaQueryWrapper）
+    LambdaQueryWrapper<MeshTableProgressDO> progressWrapper = new LambdaQueryWrapper<>();
+    progressWrapper
+        .eq(MeshTableProgressDO::getImportId, taskDO.getId())
+        .orderByAsc(MeshTableProgressDO::getTableName);
+    List<MeshTableProgressDO> progressDOList = progressMapper.selectList(progressWrapper);
 
     // 3. 转换为聚合根
     MeshImportAggregate aggregate = converter.toDomain(taskDO, progressDOList);
@@ -170,8 +183,10 @@ public class MeshImportRepositoryImpl implements MeshImportPort {
   public boolean existsRunningTask() {
     log.debug("判断是否存在正在运行的任务");
 
-    // 使用 COUNT 查询优化性能
-    int count = taskMapper.countRunningTasks();
+    // 使用 COUNT 查询优化性能（使用 LambdaQueryWrapper）
+    LambdaQueryWrapper<MeshImportTaskDO> wrapper = new LambdaQueryWrapper<>();
+    wrapper.eq(MeshImportTaskDO::getStatus, "PROCESSING");
+    Long count = taskMapper.selectCount(wrapper);
     boolean exists = count > 0;
 
     log.debug("正在运行的任务数: {}", count);

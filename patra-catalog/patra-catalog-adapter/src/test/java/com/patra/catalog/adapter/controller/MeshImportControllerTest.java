@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.patra.catalog.api.dto.MeshImportResultDTO;
-import com.patra.catalog.app.orchestrator.MeshImportOrchestrator;
+import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
