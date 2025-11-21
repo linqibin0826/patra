@@ -2,12 +2,15 @@ package com.patra.catalog.adapter.rest;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
+import com.patra.catalog.api.dto.MeshProgressDTO;
 import com.patra.catalog.app.error.MeshImportErrorMappingContributor;
 import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
+import com.patra.catalog.app.usecase.meshimport.MeshProgressQueryOrchestrator;
+import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
@@ -50,6 +53,8 @@ class MeshImportControllerTest {
   @Autowired private MockMvc mockMvc;
 
   @MockBean private MeshImportOrchestrator meshImportOrchestrator;
+
+  @MockBean private MeshProgressQueryOrchestrator meshProgressQueryOrchestrator;
 
   @Nested
   @DisplayName("POST /api/v1/mesh/import/start - 开始导入任务")
@@ -354,6 +359,69 @@ class MeshImportControllerTest {
           .andExpect(jsonPath("$.type").exists())
           .andExpect(jsonPath("$.status").value(409))
           .andExpect(jsonPath("$.detail").value("有任务正在运行，无法清除进度"));
+    }
+  }
+
+  @Nested
+  @DisplayName("GET /api/v1/mesh/import/progress/{taskId} - 查询导入进度")
+  class GetProgressTest {
+
+    @Test
+    @DisplayName("应该成功查询任务进度并返回 200")
+    void shouldReturn200WhenQueryProgressSuccessfully() throws Exception {
+      // given
+      String taskId = "1234567890";
+
+      var progressDTO =
+          MeshProgressDTO.builder()
+              .taskId(taskId)
+              .taskName("2025年MeSH数据导入")
+              .status("processing")
+              .totalRecords(30000)
+              .processedRecords(15000)
+              .overallProgress(50.0)
+              .processSpeed(500.0)
+              .estimatedRemainingSeconds(300L)
+              .startTime(Instant.parse("2025-01-20T10:00:00Z"))
+              .endTime(null)
+              .elapsedSeconds(300L)
+              .tableProgress(java.util.List.of())
+              .failedBatches(java.util.List.of())
+              .build();
+
+      when(meshProgressQueryOrchestrator.queryProgress(any(MeshImportId.class)))
+          .thenReturn(progressDTO);
+
+      // when & then
+      mockMvc
+          .perform(get("/api/v1/mesh/import/progress/{taskId}", taskId))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.taskId").value(taskId))
+          .andExpect(jsonPath("$.status").value("processing"))
+          .andExpect(jsonPath("$.totalRecords").value(30000))
+          .andExpect(jsonPath("$.processedRecords").value(15000))
+          .andExpect(jsonPath("$.overallProgress").value(50.0))
+          .andExpect(jsonPath("$.processSpeed").value(500.0))
+          .andExpect(jsonPath("$.estimatedRemainingSeconds").value(300));
+    }
+
+    @Test
+    @DisplayName("应该在任务不存在时返回 404 (RFC 7807 ProblemDetail)")
+    void shouldReturn404WhenTaskNotFound() throws Exception {
+      // given
+      String taskId = "9999999999";
+
+      when(meshProgressQueryOrchestrator.queryProgress(any(MeshImportId.class)))
+          .thenThrow(new IllegalArgumentException("任务不存在: " + taskId));
+
+      // when & then - MeshImportErrorMappingContributor 映射到 404
+      mockMvc
+          .perform(get("/api/v1/mesh/import/progress/{taskId}", taskId))
+          .andExpect(status().isNotFound())
+          .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+          .andExpect(jsonPath("$.type").exists())
+          .andExpect(jsonPath("$.status").value(404))
+          .andExpect(jsonPath("$.detail").value("任务不存在: " + taskId));
     }
   }
 }

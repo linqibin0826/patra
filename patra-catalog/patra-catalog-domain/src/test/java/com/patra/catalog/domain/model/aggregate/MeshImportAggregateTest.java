@@ -343,6 +343,204 @@ class MeshImportAggregateTest {
     }
   }
 
+  // ========== 进度计算测试 (T042 - 用户故事 2) ==========
+
+  @Nested
+  @DisplayName("进度计算")
+  class ProgressCalculationTests {
+
+    @Test
+    @DisplayName("应该正确计算处理速度（记录数/秒）")
+    void shouldCalculateProcessSpeed() {
+      // Given: PROCESSING 状态的任务，已运行一段时间
+      MeshImportAggregate aggregate = createProcessingAggregate();
+      // 模拟开始时间为 1 分钟前
+      Instant startTime = Instant.now().minusSeconds(60);
+      aggregate =
+          new MeshImportAggregate(
+              aggregate.getId(),
+              aggregate.getTaskName(),
+              MeshImportTaskStatus.PROCESSING,
+              startTime,
+              null,
+              aggregate.getSourceUrl(),
+              aggregate.getXmlFileHash(),
+              aggregate.getXmlFileSize(),
+              aggregate.getTableProgressList(),
+              aggregate.getTotalRecords(),
+              6000, // 已处理 6000 条
+              0,
+              null);
+
+      // When: 计算处理速度
+      Double speed = aggregate.calculateProcessSpeed();
+
+      // Then: 速度应该约为 100 记录/秒（6000/60）
+      assertThat(speed).isNotNull().isGreaterThan(99.0).isLessThan(101.0);
+    }
+
+    @Test
+    @DisplayName("当任务未开始时应该返回 null")
+    void shouldReturnNullSpeedWhenNotStarted() {
+      // Given: PENDING 状态的任务（未开始）
+      MeshImportAggregate aggregate = createPendingAggregate();
+
+      // When: 计算处理速度
+      Double speed = aggregate.calculateProcessSpeed();
+
+      // Then: 速度应该为 null
+      assertThat(speed).isNull();
+    }
+
+    @Test
+    @DisplayName("当处理记录数为 0 时应该返回 0.0")
+    void shouldReturnZeroSpeedWhenNoRecordsProcessed() {
+      // Given: PROCESSING 状态但未处理任何记录的任务
+      MeshImportAggregate aggregate = createProcessingAggregate();
+
+      // When: 计算处理速度
+      Double speed = aggregate.calculateProcessSpeed();
+
+      // Then: 速度应该为 0.0
+      assertThat(speed).isNotNull().isEqualTo(0.0);
+    }
+
+    @Test
+    @DisplayName("应该正确估算剩余时间（秒）")
+    void shouldEstimateRemainingTime() {
+      // Given: PROCESSING 状态的任务，已处理一部分数据
+      Instant startTime = Instant.now().minusSeconds(100);
+      MeshImportAggregate aggregate =
+          new MeshImportAggregate(
+              MeshImportId.of(1001L),
+              "MeSH 2025 首次导入",
+              MeshImportTaskStatus.PROCESSING,
+              startTime,
+              null,
+              "https://nlm.nih.gov/mesh/desc2025.xml",
+              null,
+              null,
+              createInitialTableProgressList(),
+              10000, // 总共 10000 条
+              5000, // 已处理 5000 条（50%）
+              0,
+              null);
+
+      // When: 估算剩余时间
+      Long remainingSeconds = aggregate.estimateRemainingTime();
+
+      // Then: 剩余时间应该约为 100 秒（已用时 100s 完成 50%，剩余 50% 预计 100s）
+      assertThat(remainingSeconds).isNotNull().isGreaterThan(90L).isLessThan(110L);
+    }
+
+    @Test
+    @DisplayName("当任务未开始时剩余时间应该返回 null")
+    void shouldReturnNullRemainingTimeWhenNotStarted() {
+      // Given: PENDING 状态的任务
+      MeshImportAggregate aggregate = createPendingAggregate();
+
+      // When: 估算剩余时间
+      Long remainingSeconds = aggregate.estimateRemainingTime();
+
+      // Then: 剩余时间应该为 null
+      assertThat(remainingSeconds).isNull();
+    }
+
+    @Test
+    @DisplayName("当处理记录数为 0 时剩余时间应该返回 null")
+    void shouldReturnNullRemainingTimeWhenNoProgress() {
+      // Given: PROCESSING 状态但未处理任何记录的任务
+      MeshImportAggregate aggregate = createProcessingAggregate();
+
+      // When: 估算剩余时间
+      Long remainingSeconds = aggregate.estimateRemainingTime();
+
+      // Then: 剩余时间应该为 null（无法估算）
+      assertThat(remainingSeconds).isNull();
+    }
+
+    @Test
+    @DisplayName("当所有记录已处理完时剩余时间应该返回 0")
+    void shouldReturnZeroRemainingTimeWhenCompleted() {
+      // Given: 所有记录已处理的任务
+      MeshImportAggregate aggregate =
+          new MeshImportAggregate(
+              MeshImportId.of(1001L),
+              "MeSH 2025 首次导入",
+              MeshImportTaskStatus.PROCESSING,
+              Instant.now().minusSeconds(100),
+              null,
+              "https://nlm.nih.gov/mesh/desc2025.xml",
+              null,
+              null,
+              createInitialTableProgressList(),
+              10000, // 总共 10000 条
+              10000, // 已处理 10000 条（100%）
+              0,
+              null);
+
+      // When: 估算剩余时间
+      Long remainingSeconds = aggregate.estimateRemainingTime();
+
+      // Then: 剩余时间应该为 0
+      assertThat(remainingSeconds).isNotNull().isEqualTo(0L);
+    }
+
+    @Test
+    @DisplayName("应该正确计算整体进度百分比")
+    void shouldCalculateOverallProgress() {
+      // Given: 部分完成的任务
+      MeshImportAggregate aggregate =
+          new MeshImportAggregate(
+              MeshImportId.of(1001L),
+              "MeSH 2025 首次导入",
+              MeshImportTaskStatus.PROCESSING,
+              Instant.now().minusSeconds(100),
+              null,
+              "https://nlm.nih.gov/mesh/desc2025.xml",
+              null,
+              null,
+              createInitialTableProgressList(),
+              10000, // 总共 10000 条
+              7500, // 已处理 7500 条（75%）
+              0,
+              null);
+
+      // When: 计算整体进度
+      Double overallProgress = aggregate.getOverallProgress();
+
+      // Then: 进度应该为 75%
+      assertThat(overallProgress).isNotNull().isEqualTo(75.0);
+    }
+
+    @Test
+    @DisplayName("当总记录数为 0 时进度应该返回 0.0")
+    void shouldReturnZeroProgressWhenNoTotalRecords() {
+      // Given: 总记录数为 0 的任务
+      MeshImportAggregate aggregate =
+          new MeshImportAggregate(
+              MeshImportId.of(1001L),
+              "MeSH 2025 首次导入",
+              MeshImportTaskStatus.PROCESSING,
+              Instant.now(),
+              null,
+              "https://nlm.nih.gov/mesh/desc2025.xml",
+              null,
+              null,
+              createInitialTableProgressList(),
+              0, // 总共 0 条
+              0, // 已处理 0 条
+              0,
+              null);
+
+      // When: 计算整体进度
+      Double overallProgress = aggregate.getOverallProgress();
+
+      // Then: 进度应该为 0.0
+      assertThat(overallProgress).isNotNull().isEqualTo(0.0);
+    }
+  }
+
   // ========== 状态转换测试 ==========
 
   @Nested
