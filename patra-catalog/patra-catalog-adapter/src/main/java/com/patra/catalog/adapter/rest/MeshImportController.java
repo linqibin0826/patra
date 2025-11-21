@@ -1,11 +1,15 @@
 package com.patra.catalog.adapter.rest;
 
-import com.patra.catalog.api.command.StartImportCommand;
-import com.patra.catalog.api.dto.MeshImportResultDTO;
+import cn.hutool.core.text.CharSequenceUtil;
+import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
+import com.patra.catalog.adapter.rest.request.StartImportRequest;
+import com.patra.catalog.app.config.MeshImportConfig;
 import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
+import com.patra.catalog.app.usecase.meshimport.command.StartImportCommand;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import java.time.Year;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,30 +58,84 @@ import org.springframework.web.bind.annotation.*;
 public class MeshImportController {
 
   private final MeshImportOrchestrator meshImportOrchestrator;
+  private final MeshImportConfig meshImportConfig;
 
   /**
    * 开始导入任务。
    *
    * <p>接口定义：POST /api/v1/mesh/import/start
    *
-   * @param command 启动命令（可选参数，空请求体时使用默认配置）
+   * <p>Adapter 层职责：将 HTTP 请求参数（{@link StartImportRequest}）转换为应用层命令（{@link
+   * StartImportCommand}），应用默认值和验证逻辑。
+   *
+   * @param request 启动请求（可选参数，空请求体时使用默认配置）
    * @return 导入任务结果
    * @throws IllegalStateException 如果已有任务正在运行（返回 409 Conflict）
    */
   @PostMapping("/start")
   public ResponseEntity<MeshImportResultDTO> startImport(
-      @Valid @RequestBody(required = false) StartImportCommand command) {
-    log.info("收到 MeSH 导入请求，命令：{}", command);
+      @Valid @RequestBody(required = false) StartImportRequest request) {
+    log.info("收到 MeSH 导入请求，参数：{}", request);
 
-    // 如果请求体为空，使用默认命令
-    StartImportCommand actualCommand =
-        (command != null) ? command : new StartImportCommand(null, null);
+    // 转换 Request → Command（应用默认值）
+    StartImportCommand command = buildStartImportCommand(request);
 
-    MeshImportResultDTO result = meshImportOrchestrator.startImport(actualCommand);
+    log.debug("已构建启动命令：taskName={}, sourceUrl={}", command.taskName(), command.sourceUrl());
+
+    MeshImportResultDTO result = meshImportOrchestrator.startImport(command);
 
     log.info("MeSH 导入任务已创建，任务 ID：{}", result.getTaskId());
 
     return ResponseEntity.ok(result);
+  }
+
+  /**
+   * 构建启动导入命令（Request → Command 转换逻辑）。
+   *
+   * <p>职责：
+   *
+   * <ul>
+   *   <li>解析 HTTP 请求参数
+   *   <li>应用默认值（从配置文件读取）
+   *   <li>生成任务名称（如果未提供）
+   * </ul>
+   *
+   * @param request HTTP 请求参数
+   * @return 应用层命令
+   */
+  private StartImportCommand buildStartImportCommand(StartImportRequest request) {
+    // 如果请求为空，使用完全默认配置
+    if (request == null) {
+      String defaultTaskName = generateDefaultTaskName();
+      String defaultSourceUrl = meshImportConfig.getSourceUrl();
+      return new StartImportCommand(defaultTaskName, defaultSourceUrl);
+    }
+
+    // 解析 sourceUrl（优先使用请求参数，否则使用配置）
+    String sourceUrl =
+        CharSequenceUtil.isNotBlank(request.getSourceUrl())
+            ? CharSequenceUtil.trim(request.getSourceUrl())
+            : meshImportConfig.getSourceUrl();
+
+    // 解析 taskName（优先使用请求参数，否则生成默认名称）
+    String taskName =
+        CharSequenceUtil.isNotBlank(request.getTaskName())
+            ? CharSequenceUtil.trim(request.getTaskName())
+            : generateDefaultTaskName();
+
+    return new StartImportCommand(taskName, sourceUrl);
+  }
+
+  /**
+   * 生成默认任务名称。
+   *
+   * <p>格式："{year}年MeSH数据导入"
+   *
+   * @return 默认任务名称
+   */
+  private String generateDefaultTaskName() {
+    int currentYear = Year.now().getValue();
+    return currentYear + "年MeSH数据导入";
   }
 
   /**

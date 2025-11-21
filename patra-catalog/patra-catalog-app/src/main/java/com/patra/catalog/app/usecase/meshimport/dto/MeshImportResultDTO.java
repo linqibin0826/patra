@@ -1,4 +1,4 @@
-package com.patra.catalog.api.dto;
+package com.patra.catalog.app.usecase.meshimport.dto;
 
 import java.time.Instant;
 import lombok.AllArgsConstructor;

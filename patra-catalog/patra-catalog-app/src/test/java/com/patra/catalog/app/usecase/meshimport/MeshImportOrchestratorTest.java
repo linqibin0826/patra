@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.patra.catalog.api.command.StartImportCommand;
-import com.patra.catalog.api.dto.MeshImportResultDTO;
+import com.patra.catalog.app.usecase.meshimport.command.StartImportCommand;
+import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import com.patra.catalog.app.usecase.meshimport.validator.MeshDataValidator;
 import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;
 import com.patra.catalog.domain.model.enums.MeshImportTaskStatus;

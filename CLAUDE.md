@@ -412,7 +412,7 @@
 ## 代码库结构
 
 **仓库**: `patra-parent`, `patra-common`, `patra-expr-kernel`, `patra-gateway-boot`, `patra-registry`, `patra-ingest`, `patra-spring-boot-starter-*`, `docker/`
-**微服务模块**: `patra-{service}-boot` (入口), `-api` (契约), `-domain` (纯 Java), `-app` (编排器), `-infra` (仓储), `-adapter` (控制器/定时任务)
+**微服务模块**: `patra-{service}-boot` (入口), `-api` (对其他模块的契约和接口), `-domain` (纯 Java), `-app` (编排器), `-infra` (仓储), `-adapter` (控制器/定时任务)
 
 ## 资源
 
@@ -436,6 +436,9 @@
 - ❌ 什么都自己干
 
 **你的价值 = 正确的决策 × 高效的资源协调**
+
+**📋 项目关键点**
 - 整个项目数据库没有外键关联、id字段使用雪花ID。
 - 所有DO 对象都必须集成 BaseDO, BaseDO 中定义了表ID(雪花ID), 10个基础审计字段。
 - 使用Mybatis时，不要在 *Mapper.java 中编写SQL，简单的SQL应该使用 LambdaQueryWrapper 等，复杂的SQL使用 xml 文件。
+- patra-{service}-api 模块中定义的接口和DTO 是其他模块调用该服务的唯一契约(暴露给其他服务使用，controller的内容不定义在此模块)。

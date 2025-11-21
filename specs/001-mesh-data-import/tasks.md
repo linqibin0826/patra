@@ -243,11 +243,11 @@
 
 #### 实施（Green 阶段）🟢
 
-- [x] T034 [API] [US1] 定义 StartImportCommand 命令对象 in patra-catalog/patra-catalog-api/src/main/java/com/patra/catalog/api/command/StartImportCommand.java
+- [x] T034 [API] [US1] 定义 StartImportCommand 命令对象 in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/usecase/meshimport/command/StartImportCommand.java
   - 属性：String sourceUrl（可选）, String taskName（可选）
   - 参数校验：@Valid
 
-- [x] T035 [API] [US1] 定义 MeshImportResultDTO 响应对象 in patra-catalog/patra-catalog-api/src/main/java/com/patra/catalog/api/dto/MeshImportResultDTO.java
+- [x] T035 [API] [US1] 定义 MeshImportResultDTO 响应对象 in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/usecase/meshimport/dto/MeshImportResultDTO.java
   - 属性：String taskId, String taskName, String status, Instant startTime, String message
 
 - [x] T036 [App] [US1] 实现 MeshImportOrchestrator in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/usecase/meshimport/MeshImportOrchestrator.java
