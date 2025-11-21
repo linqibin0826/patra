@@ -2,7 +2,9 @@ package com.patra.catalog.adapter.rest;
 
 import com.patra.catalog.adapter.rest.assembler.StartImportAssembler;
 import com.patra.catalog.adapter.rest.request.StartImportRequest;
+import com.patra.catalog.api.dto.MeshProgressDTO;
 import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
+import com.patra.catalog.app.usecase.meshimport.MeshProgressQueryOrchestrator;
 import com.patra.catalog.app.usecase.meshimport.command.StartImportCommand;
 import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
  *   <li>POST /api/v1/mesh/import/start - 开始导入任务
  *   <li>POST /api/v1/mesh/import/retry/{taskId} - 重试失败任务
  *   <li>POST /api/v1/mesh/import/clear - 清除进度重新开始
+ *   <li>GET /api/v1/mesh/import/progress/{taskId} - 查询导入进度（User Story 2）
  * </ul>
  *
  * <p><b>职责</b>：
@@ -57,6 +60,7 @@ import org.springframework.web.bind.annotation.*;
 public class MeshImportController {
 
   private final MeshImportOrchestrator meshImportOrchestrator;
+  private final MeshProgressQueryOrchestrator meshProgressQueryOrchestrator;
   private final StartImportAssembler startImportAssembler;
 
   /**
@@ -138,6 +142,42 @@ public class MeshImportController {
         Map.of(
             "success", true,
             "message", "进度已清除，可以重新开始导入"));
+  }
+
+  /**
+   * 查询导入进度（User Story 2 - 实时监控导入进度）。
+   *
+   * <p>接口定义：GET /api/v1/mesh/import/progress/{taskId}
+   *
+   * <p>返回详细的导入进度信息，包括：
+   *
+   * <ul>
+   *   <li>整体进度百分比（overallProgress）
+   *   <li>各表进度详情（tableProgress）
+   *   <li>失败批次列表（failedBatches）
+   *   <li>处理速度（processSpeed - 记录/秒）
+   *   <li>预计剩余时间（estimatedRemainingSeconds）
+   * </ul>
+   *
+   * @param taskId 任务 ID
+   * @return 进度详情 DTO
+   * @throws IllegalArgumentException 如果任务不存在（返回 404 Not Found）
+   * @since 0.2.0 (User Story 2)
+   */
+  @GetMapping("/progress/{taskId}")
+  public ResponseEntity<MeshProgressDTO> getProgress(@PathVariable @NotNull String taskId) {
+    log.info("收到查询导入进度请求，任务 ID：{}", taskId);
+
+    MeshImportId importId = MeshImportId.of(Long.parseLong(taskId));
+    MeshProgressDTO progress = meshProgressQueryOrchestrator.queryProgress(importId);
+
+    log.debug(
+        "查询进度成功，任务 ID：{}，整体进度：{}%，处理速度：{} 记录/秒",
+        taskId,
+        progress.overallProgress(),
+        progress.processSpeed());
+
+    return ResponseEntity.ok(progress);
   }
 
   /**

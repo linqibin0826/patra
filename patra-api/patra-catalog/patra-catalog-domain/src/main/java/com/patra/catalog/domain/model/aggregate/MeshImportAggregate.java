@@ -287,6 +287,96 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   }
 
   /**
+   * 计算处理速度（记录数/秒）。
+   *
+   * <p>用于实时监控导入性能和估算剩余时间。
+   *
+   * <p>计算逻辑：
+   * <ul>
+   *   <li>已处理记录数 ÷ 已用时间（秒）= 处理速度（记录/秒）
+   *   <li>如果任务未开始（startTime 为 null），返回 null
+   *   <li>如果未处理任何记录，返回 0.0
+   * </ul>
+   *
+   * @return 处理速度（记录/秒），如果任务未开始返回 null
+   * @since 0.2.0 (User Story 2 - 实时监控导入进度)
+   */
+  public Double calculateProcessSpeed() {
+    if (this.startTime == null) {
+      return null; // 任务未开始
+    }
+
+    long elapsedSeconds = Duration.between(this.startTime, Instant.now()).getSeconds();
+    if (elapsedSeconds == 0) {
+      return 0.0; // 刚开始，避免除以 0
+    }
+
+    if (this.processedRecords == null || this.processedRecords == 0) {
+      return 0.0; // 未处理任何记录
+    }
+
+    return (double) this.processedRecords / elapsedSeconds;
+  }
+
+  /**
+   * 估算剩余时间（秒）。
+   *
+   * <p>基于当前处理速度和剩余记录数估算完成时间。
+   *
+   * <p>计算逻辑：
+   * <ul>
+   *   <li>剩余记录数 = totalRecords - processedRecords
+   *   <li>预计剩余时间 = 剩余记录数 ÷ 处理速度
+   *   <li>如果任务未开始或无进度，返回 null
+   *   <li>如果所有记录已处理，返回 0
+   * </ul>
+   *
+   * @return 剩余时间（秒），如果无法估算返回 null
+   * @since 0.2.0 (User Story 2 - 实时监控导入进度)
+   */
+  public Long estimateRemainingTime() {
+    if (this.startTime == null || this.processedRecords == null || this.processedRecords == 0) {
+      return null; // 无法估算（任务未开始或无进度）
+    }
+
+    int remaining = this.totalRecords - this.processedRecords;
+    if (remaining <= 0) {
+      return 0L; // 所有记录已处理
+    }
+
+    Double speed = calculateProcessSpeed();
+    if (speed == null || speed == 0.0) {
+      return null; // 无法计算速度
+    }
+
+    return (long) Math.ceil(remaining / speed);
+  }
+
+  /**
+   * 获取整体进度百分比（0.0 - 100.0）。
+   *
+   * <p>计算逻辑：
+   * <ul>
+   *   <li>进度百分比 = (已处理记录数 ÷ 总记录数) × 100
+   *   <li>如果总记录数为 0，返回 0.0
+   * </ul>
+   *
+   * @return 整体进度百分比（0.0 - 100.0）
+   * @since 0.2.0 (User Story 2 - 实时监控导入进度)
+   */
+  public Double getOverallProgress() {
+    if (this.totalRecords == null || this.totalRecords == 0) {
+      return 0.0;
+    }
+
+    if (this.processedRecords == null) {
+      return 0.0;
+    }
+
+    return ((double) this.processedRecords / this.totalRecords) * 100.0;
+  }
+
+  /**
    * 清空领域事件（用于测试）。
    */
   public void clearDomainEvents() {
