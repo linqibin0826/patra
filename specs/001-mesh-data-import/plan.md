@@ -379,10 +379,12 @@ patra-catalog/
 ├── patra-catalog-app/            # 应用层
 │   ├── error/
 │   │   └── MeshImportErrorMappingContributor.java
-│   ├── orchestrator/
-│   │   └── MeshImportOrchestrator.java
-│   └── validator/
-│       └── MeshDataValidator.java
+│   └── usecase/
+│       └── meshimport/
+│           ├── MeshImportOrchestrator.java
+│           ├── MeshProgressQueryOrchestrator.java
+│           └── validator/
+│               └── MeshDataValidator.java
 ├── patra-catalog-domain/        # 领域层（纯 Java）
 │   ├── model/
 │   │   ├── aggregate/

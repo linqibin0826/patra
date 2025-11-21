@@ -234,7 +234,7 @@
 
 #### 测试先行（Red 阶段）🔴
 
-- [ ] T033 [App] [US1] 为 MeshImportOrchestrator 编写单元测试 in patra-catalog/patra-catalog-app/src/test/java/com/patra/catalog/app/orchestrator/MeshImportOrchestratorTest.java
+- [ ] T033 [App] [US1] 为 MeshImportOrchestrator 编写单元测试 in patra-catalog/patra-catalog-app/src/test/java/com/patra/catalog/app/usecase/meshimport/MeshImportOrchestratorTest.java
   - 测试场景：startImport()、retryFailedTask()、clearAndRestart()
   - 测试编排逻辑：调用顺序、事务边界
   - Mock 所有 Port 接口（MeshImportPort、XmlParserPort、MeshFileDownloadPort、MeshDescriptorPort）
@@ -250,7 +250,7 @@
 - [ ] T035 [API] [US1] 定义 MeshImportResultDTO 响应对象 in patra-catalog/patra-catalog-api/src/main/java/com/patra/catalog/api/dto/MeshImportResultDTO.java
   - 属性：String taskId, String taskName, String status, Instant startTime, String message
 
-- [ ] T036 [App] [US1] 实现 MeshImportOrchestrator in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/orchestrator/MeshImportOrchestrator.java
+- [ ] T036 [App] [US1] 实现 MeshImportOrchestrator in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/usecase/meshimport/MeshImportOrchestrator.java
   - 参考：patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanIngestionOrchestrator.java:1-100（Orchestrator 编排模式）
   - 方法：startImport(StartImportCommand)、retryFailedTask(MeshImportId)、clearAndRestart()
   - 编排流程：
@@ -380,7 +380,7 @@
 
 #### 测试先行（Red 阶段）🔴
 
-- [ ] T047 [App] [US2] 为 MeshProgressQueryOrchestrator 编写单元测试 in patra-catalog/patra-catalog-app/src/test/java/com/patra/catalog/app/orchestrator/MeshProgressQueryOrchestratorTest.java
+- [ ] T047 [App] [US2] 为 MeshProgressQueryOrchestrator 编写单元测试 in patra-catalog/patra-catalog-app/src/test/java/com/patra/catalog/app/usecase/meshimport/MeshProgressQueryOrchestratorTest.java
   - 测试场景：queryProgress()
   - Mock 所有 Port 接口
   - 测试框架：JUnit 5 + Mockito
@@ -391,7 +391,7 @@
   - 参考：contracts/mesh-import-api.yaml 第 195-243 行
   - 属性：taskId, status, overallProgress, tableProgress, failedBatches, startTime, endTime, elapsedTime
 
-- [ ] T049 [App] [US2] 实现 MeshProgressQueryOrchestrator in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/orchestrator/MeshProgressQueryOrchestrator.java
+- [ ] T049 [App] [US2] 实现 MeshProgressQueryOrchestrator in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/usecase/meshimport/MeshProgressQueryOrchestrator.java
   - 职责：查询任务 → 计算进度 → 查询失败批次 → 组装响应
   - 依赖：MeshImportPort, MeshBatchDetailPort
 
@@ -432,14 +432,14 @@
 
 #### 测试先行（Red 阶段）🔴
 
-- [ ] T053 [App] [US3] 为 MeshImportOrchestrator 添加重试测试 in patra-catalog/patra-catalog-app/src/test/java/com/patra/catalog/app/orchestrator/MeshImportOrchestratorTest.java
+- [ ] T053 [App] [US3] 为 MeshImportOrchestrator 添加重试测试 in patra-catalog/patra-catalog-app/src/test/java/com/patra/catalog/app/usecase/meshimport/MeshImportOrchestratorTest.java
   - 测试场景：retryFailedTask()、clearAndRestart()
   - 验证：仅重新处理失败批次、清除数据完整性
   - Mock 所有 Port 接口
 
 #### 实施（Green 阶段）🟢
 
-- [ ] T054 [App] [US3] 扩展 MeshImportOrchestrator 添加重试方法 in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/orchestrator/MeshImportOrchestrator.java
+- [ ] T054 [App] [US3] 扩展 MeshImportOrchestrator 添加重试方法 in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/usecase/meshimport/MeshImportOrchestrator.java
   - 新方法：retryFailedTask(MeshImportId), clearAndRestart()
   - 重试逻辑：仅重新处理状态为 FAILED 的批次
 
@@ -479,7 +479,7 @@
   - 指标：任务耗时、批次处理速度、失败率、表级别进度
   - 参考：spec.md 第 151-155 行（可观察性要求）
 
-- [ ] T059 [P] [App] 添加详细日志和 SkyWalking 追踪 in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/orchestrator/MeshImportOrchestrator.java
+- [ ] T059 [P] [App] 添加详细日志和 SkyWalking 追踪 in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/usecase/meshimport/MeshImportOrchestrator.java
   - 日志级别：INFO（批次处理）、ERROR（失败详情）
   - SkyWalking Span：每个批次操作
 
@@ -509,7 +509,9 @@
 
 - [ ] T065 [P] [Doc] 生成 package-info.java for com.patra.catalog.app in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/package-info.java
   - 描述：Catalog 应用层用例编排包
-  - 主要组件：MeshImportOrchestrator、MeshProgressQueryOrchestrator、MeshImportErrorMappingContributor、MeshDataValidator
+  - 主要子包：
+    * app.usecase.meshimport - MeSH 数据导入用例（MeshImportOrchestrator、MeshDataValidator）
+    * app.error - 异常映射贡献者（MeshImportErrorMappingContributor）
 
 - [ ] T066 [P] [Doc] 生成 package-info.java for com.patra.catalog.infra in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/package-info.java
   - 描述：Catalog 基础设施层技术实现包
