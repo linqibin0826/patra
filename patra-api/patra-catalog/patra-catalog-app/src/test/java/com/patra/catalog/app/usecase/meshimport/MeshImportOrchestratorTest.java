@@ -65,7 +65,7 @@ class MeshImportOrchestratorTest {
   void setUp() {
     // Mock 配置
     when(meshImportConfig.getExpectedCountForTable(anyString())).thenReturn(35000);
-    when(meshImportConfig.getSourceUrl()).thenReturn("https://nlm.nih.gov/mesh/desc2025.xml");
+    when(meshImportConfig.getSourceUrl()).thenReturn("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
 
     // 模拟聚合根
     mockAggregate =
@@ -75,7 +75,7 @@ class MeshImportOrchestratorTest {
             MeshImportTaskStatus.PENDING,
             null,
             null,
-            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
             null,
             null,
             List.of(),
@@ -97,7 +97,7 @@ class MeshImportOrchestratorTest {
     void shouldSuccessfullyCompleteImportFlow() throws Exception {
       // Given: 准备命令
       StartImportCommand command =
-          new StartImportCommand("https://nlm.nih.gov/mesh/desc2025.xml", "2025年MeSH数据首次导入");
+          new StartImportCommand("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml", "2025年MeSH数据首次导入");
 
       // Mock 下载
       when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
@@ -145,7 +145,7 @@ class MeshImportOrchestratorTest {
     void shouldMarkTaskAsFailedWhenDownloadFails() {
       // Given: 准备命令
       StartImportCommand command =
-          new StartImportCommand("https://nlm.nih.gov/mesh/desc2025.xml", "2025年MeSH数据导入");
+          new StartImportCommand("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml", "2025年MeSH数据导入");
 
       // Mock 下载失败
       when(meshFileDownloadPort.download(anyString()))
@@ -168,7 +168,7 @@ class MeshImportOrchestratorTest {
     void shouldThrowExceptionWhenChecksumMismatch() {
       // Given: 准备命令
       StartImportCommand command =
-          new StartImportCommand("https://nlm.nih.gov/mesh/desc2025.xml", "2025年MeSH数据导入");
+          new StartImportCommand("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml", "2025年MeSH数据导入");
 
       // Mock 下载成功但校验失败
       when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
@@ -191,7 +191,7 @@ class MeshImportOrchestratorTest {
     void shouldGenerateWarningsWhenDataValidationFails() throws Exception {
       // Given: 准备命令
       StartImportCommand command =
-          new StartImportCommand("https://nlm.nih.gov/mesh/desc2025.xml", "2025年MeSH数据导入");
+          new StartImportCommand("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml", "2025年MeSH数据导入");
 
       // Mock 下载
       when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
@@ -240,7 +240,7 @@ class MeshImportOrchestratorTest {
               MeshImportTaskStatus.FAILED,
               Instant.now(),
               Instant.now(),
-              "https://nlm.nih.gov/mesh/desc2025.xml",
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
               null,
               null,
               List.of(),
@@ -288,7 +288,7 @@ class MeshImportOrchestratorTest {
               MeshImportTaskStatus.SUCCESS,
               Instant.now(),
               Instant.now(),
-              "https://nlm.nih.gov/mesh/desc2025.xml",
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
               null,
               null,
               List.of(),
@@ -384,7 +384,7 @@ class MeshImportOrchestratorTest {
       when(meshImportPort.existsRunningTask()).thenReturn(true);
 
       StartImportCommand command =
-          new StartImportCommand("https://nlm.nih.gov/mesh/desc2025.xml", "2025年MeSH数据导入");
+          new StartImportCommand("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml", "2025年MeSH数据导入");
 
       // When & Then: 执行导入，预期抛出异常
       assertThatThrownBy(() -> orchestrator.startImport(command))

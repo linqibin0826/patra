@@ -265,7 +265,7 @@
   - 依赖：MeshImportPort, XmlParserPort, MeshFileDownloadPort, MeshDescriptorPort, MeshDataValidator
   - 依赖：T014, T018-T020, T032-T035, T036a（Orchestrator 依赖 Domain 层、Infra 层和验证器）
 
-- [x] T036a [App] [US1] 实现 MeshDataValidator 数据量验证器 in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/validator/MeshDataValidator.java
+- [x] T036a [App] [US1] 实现 MeshDataValidator 数据量验证器 in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/usecase/meshimport/validator/MeshDataValidator.java
   - 方法：validateDataCounts(Map<String, Integer> actualCounts) : ValidationResult
   - 预期数量配置（从 MeshImportConfig 读取）：
     * Descriptor: ~35000（允许误差 5%）

@@ -38,7 +38,7 @@ mesh:
   import:
     # NLM 数据源配置
     source:
-      url: https://nlm.nih.gov/mesh/MESH_FILES/xmlmesh/desc2025.xml
+      url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml
       connect-timeout: 30000
       read-timeout: 60000
 

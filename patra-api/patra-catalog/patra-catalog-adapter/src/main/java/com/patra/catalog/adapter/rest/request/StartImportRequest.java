@@ -38,7 +38,7 @@ import lombok.NoArgsConstructor;
  * POST /api/v1/mesh/import/start
  * Content-Type: application/json
  * {
- *   "sourceUrl": "https://nlm.nih.gov/mesh/desc2025.xml",
+ *   "sourceUrl": "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
  *   "taskName": "2025年MeSH数据首次导入"
  * }
  * }</pre>

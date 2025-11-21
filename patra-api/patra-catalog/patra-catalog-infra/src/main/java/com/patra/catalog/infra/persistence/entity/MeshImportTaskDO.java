@@ -49,7 +49,7 @@ public class MeshImportTaskDO extends BaseDO {
   @TableField("status")
   private String status;
 
-  /** 数据源 URL（如 https://nlm.nih.gov/mesh/desc2025.xml） */
+  /** 数据源 URL（如 https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml） */
   @TableField("source_url")
   private String sourceUrl;
 

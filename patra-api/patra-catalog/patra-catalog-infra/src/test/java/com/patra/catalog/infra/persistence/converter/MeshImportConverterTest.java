@@ -44,7 +44,7 @@ class MeshImportConverterTest {
     taskDO.setId(123456789L);
     taskDO.setTaskName("MeSH 2025 导入");
     taskDO.setStatus("PENDING");
-    taskDO.setSourceUrl("https://nlm.nih.gov/mesh/desc2025.xml");
+    taskDO.setSourceUrl("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
     taskDO.setXmlFileHash("a1b2c3d4e5f6");
     taskDO.setXmlFileSize(700_000_000L);
     taskDO.setTotalRecords(350000);
@@ -74,7 +74,7 @@ class MeshImportConverterTest {
     assertThat(aggregate.getId()).isEqualTo(MeshImportId.of(123456789L));
     assertThat(aggregate.getTaskName()).isEqualTo("MeSH 2025 导入");
     assertThat(aggregate.getStatus()).isEqualTo(MeshImportTaskStatus.PENDING);
-    assertThat(aggregate.getSourceUrl()).isEqualTo("https://nlm.nih.gov/mesh/desc2025.xml");
+    assertThat(aggregate.getSourceUrl()).isEqualTo("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
     assertThat(aggregate.getXmlFileHash()).isEqualTo("a1b2c3d4e5f6");
     assertThat(aggregate.getXmlFileSize()).isEqualTo(700_000_000L);
     assertThat(aggregate.getTotalRecords()).isEqualTo(350000);
@@ -100,7 +100,7 @@ class MeshImportConverterTest {
             MeshImportTaskStatus.PROCESSING,
             Instant.now(),
             null,
-            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
             "a1b2c3d4e5f6",
             700_000_000L,
             List.of(),
@@ -117,7 +117,7 @@ class MeshImportConverterTest {
     assertThat(taskDO.getId()).isEqualTo(123456789L);
     assertThat(taskDO.getTaskName()).isEqualTo("MeSH 2025 导入");
     assertThat(taskDO.getStatus()).isEqualTo("PROCESSING");
-    assertThat(taskDO.getSourceUrl()).isEqualTo("https://nlm.nih.gov/mesh/desc2025.xml");
+    assertThat(taskDO.getSourceUrl()).isEqualTo("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
     assertThat(taskDO.getXmlFileHash()).isEqualTo("a1b2c3d4e5f6");
     assertThat(taskDO.getTotalRecords()).isEqualTo(350000);
     assertThat(taskDO.getProcessedRecords()).isEqualTo(5000);
@@ -157,7 +157,7 @@ class MeshImportConverterTest {
             MeshImportTaskStatus.PROCESSING,
             Instant.now(),
             null,
-            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
             "a1b2c3d4e5f6",
             700_000_000L,
             List.of(progress1, progress2),
@@ -246,7 +246,7 @@ class MeshImportConverterTest {
     taskDO.setId(123456789L);
     taskDO.setTaskName("MeSH 2025 导入");
     taskDO.setStatus("PENDING");
-    taskDO.setSourceUrl("https://nlm.nih.gov/mesh/desc2025.xml");
+    taskDO.setSourceUrl("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
     taskDO.setXmlFileHash(null); // null field
     taskDO.setXmlFileSize(null); // null field
     taskDO.setTotalRecords(350000);
@@ -276,7 +276,7 @@ class MeshImportConverterTest {
             MeshImportTaskStatus.PENDING,
             null,
             null,
-            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
             "a1b2c3d4e5f6",
             700_000_000L,
             List.of(), // 空列表

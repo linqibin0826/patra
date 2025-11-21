@@ -76,7 +76,7 @@ class MeshProgressQueryE2ETest {
     // Given: 启动一个导入任务
     StartImportCommand command =
         new StartImportCommand(
-            "https://nlm.nih.gov/mesh/desc2025.xml", // sourceUrl（实际测试可用mock数据）
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml", // sourceUrl（实际测试可用mock数据）
             "E2E 测试导入任务" // taskName
             );
 
@@ -153,7 +153,7 @@ class MeshProgressQueryE2ETest {
     // Given: 启动一个导入任务并等待部分完成
     StartImportCommand command =
         new StartImportCommand(
-            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
             "多表进度测试任务"
         );
 
@@ -204,7 +204,7 @@ class MeshProgressQueryE2ETest {
     // Given: 启动一个可能有失败批次的导入任务（实际测试中可模拟失败）
     StartImportCommand command =
         new StartImportCommand(
-            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
             "失败批次测试任务"
         );
 

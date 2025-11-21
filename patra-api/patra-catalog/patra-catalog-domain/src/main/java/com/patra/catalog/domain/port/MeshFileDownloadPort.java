@@ -29,7 +29,7 @@ import java.io.File;
  *
  * <pre>{@code
  * // 1. 下载 XML 文件
- * File xmlFile = meshFileDownloadPort.download("https://nlm.nih.gov/mesh/desc2025.xml");
+ * File xmlFile = meshFileDownloadPort.download("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
  *
  * // 2. 验证文件完整性
  * boolean valid = meshFileDownloadPort.validateChecksum(xmlFile, "a1b2c3d4e5f6...");
@@ -57,7 +57,7 @@ public interface MeshFileDownloadPort {
    *   <li>记录下载进度日志
    * </ul>
    *
-   * @param sourceUrl 数据源 URL（如 https://nlm.nih.gov/mesh/desc2025.xml）
+   * @param sourceUrl 数据源 URL（如 https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml）
    * @return 下载后的本地文件
    * @throws IllegalArgumentException 如果 URL 无效
    * @throws RuntimeException 如果下载失败（网络异常、IO 异常等）
