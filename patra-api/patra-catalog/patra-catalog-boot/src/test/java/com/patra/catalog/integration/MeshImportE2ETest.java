@@ -6,7 +6,7 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import com.patra.catalog.app.orchestrator.MeshImportOrchestrator;
+import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
 import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;
 import com.patra.catalog.domain.model.enums.MeshImportTaskStatus;
 import com.patra.catalog.domain.port.MeshImportPort;

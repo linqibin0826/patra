@@ -7,7 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.patra.catalog.api.dto.MeshImportResultDTO;
-import com.patra.catalog.app.orchestrator.MeshImportOrchestrator;
+import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
 import com.xxl.job.core.context.XxlJobHelper;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;

@@ -2,7 +2,7 @@ package com.patra.catalog.adapter.scheduler.job;
 
 import com.patra.catalog.api.command.StartImportCommand;
 import com.patra.catalog.api.dto.MeshImportResultDTO;
-import com.patra.catalog.app.orchestrator.MeshImportOrchestrator;
+import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import java.util.concurrent.TimeUnit;

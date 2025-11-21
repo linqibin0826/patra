@@ -77,22 +77,21 @@ public class RestClientMeshFileDownloadImpl implements MeshFileDownloadPort {
 
     // 4. 下载文件（流式写入）
     try (FileOutputStream outputStream = new FileOutputStream(tempFile)) {
-      // 使用 RestClient 获取输入流
-      InputStream inputStream = restClient
+      // 使用 RestClient 获取响应体（byte[]）
+      byte[] responseBody = restClient
           .get()
           .uri(sourceUrl)
           .retrieve()
-          .body(InputStream.class);
+          .toEntity(byte[].class)
+          .getBody();
 
-      if (inputStream != null) {
-        copyStream(inputStream, outputStream);
-        inputStream.close();
+      if (responseBody != null) {
+        outputStream.write(responseBody);
+        log.info("文件下载成功，文件大小: {} bytes", tempFile.length());
+        return tempFile;
       } else {
-        throw new RuntimeException("下载失败: 无法获取输入流");
+        throw new RuntimeException("下载失败: 响应体为空");
       }
-
-      log.info("文件下载成功，文件大小: {} bytes", tempFile.length());
-      return tempFile;
     } catch (IOException e) {
       log.error("下载文件失败: {}", sourceUrl, e);
       throw new RuntimeException("下载失败: " + e.getMessage(), e);

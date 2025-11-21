@@ -1,4 +1,4 @@
-package com.patra.catalog.app.validator;
+package com.patra.catalog.app.usecase.meshimport.validator;
 
 import com.patra.catalog.app.config.MeshImportConfig;
 import java.util.ArrayList;
