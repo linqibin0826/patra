@@ -229,8 +229,9 @@
    - 理由: MeSH 是医学主题词目录数据，属于 catalog（目录）服务的核心数据，且已有相关 Repository 框架
 
 3. **确定触发来源** → 选择适配器类型:
-   - REST API → MeshImportController（管理接口）
+   - REST API → MeshImportController（管理接口，位于 adapter/rest 包）
    - 定时任务 → MeshImportJob（XXL-Job 执行器）
+   - 消息监听 → TaskReadyMessageListener（RocketMQ 消费者，位于 adapter/rocketmq 包）
 
 4. **设计聚合边界**:
    - 聚合根：MeshImportAggregate（管理导入任务生命周期）
@@ -246,10 +247,13 @@
 
 6. **模块代码结构**:
    - domain：聚合根、值对象、领域事件、Port 接口定义
-   - application：MeshImportOrchestrator（任务编排）
+   - application：MeshImportOrchestrator（任务编排）、MeshImportErrorMappingContributor（异常映射）、MeshDataValidator（数据验证）
    - infrastructure：Repository 实现、StAX XML 解析实现、RestClient 文件下载实现
-   - adapter：REST Controller、XXL-Job 任务处理器
-   - api：DTO 定义、Facade 接口
+   - adapter：
+     * rest：REST Controller（管理接口）
+     * rocketmq：消息监听器和 DTO
+     * scheduler：XXL-Job 任务处理器
+   - api：Command 对象、DTO 定义
     
 ### 2. 文档骨架生成
 
@@ -358,17 +362,27 @@ specs/001-mesh-data-import/
 patra-catalog/
 ├── patra-catalog-boot/          # Spring Boot 启动入口
 ├── patra-catalog-api/           # 对外接口定义
+│   ├── command/
+│   │   └── StartImportCommand.java
 │   └── dto/
-│       ├── MeshImportTaskDTO.java
+│       ├── MeshImportResultDTO.java
 │       └── MeshProgressDTO.java
 ├── patra-catalog-adapter/       # 适配器层
-│   ├── controller/
+│   ├── rest/
 │   │   └── MeshImportController.java
+│   ├── rocketmq/
+│   │   ├── TaskReadyMessageListener.java
+│   │   └── dto/
+│   │       └── TaskReadyPayload.java
 │   └── scheduler/
 │       └── MeshImportJob.java
 ├── patra-catalog-app/            # 应用层
-│   └── orchestrator/
-│       └── MeshImportOrchestrator.java
+│   ├── error/
+│   │   └── MeshImportErrorMappingContributor.java
+│   ├── orchestrator/
+│   │   └── MeshImportOrchestrator.java
+│   └── validator/
+│       └── MeshDataValidator.java
 ├── patra-catalog-domain/        # 领域层（纯 Java）
 │   ├── model/
 │   │   ├── aggregate/

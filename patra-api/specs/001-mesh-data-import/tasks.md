@@ -286,11 +286,12 @@
 
 #### 测试先行（Red 阶段）🔴
 
-- [ ] T037 [P] [Adapter] [US1] 为 MeshImportController 编写切片测试 in patra-catalog/patra-catalog-adapter/src/test/java/com/patra/catalog/adapter/controller/MeshImportControllerTest.java
+- [ ] T037 [P] [Adapter] [US1] 为 MeshImportController 编写切片测试 in patra-catalog/patra-catalog-adapter/src/test/java/com/patra/catalog/adapter/rest/MeshImportControllerTest.java
   - 测试场景：POST /api/v1/mesh/import/start、POST /api/v1/mesh/import/retry/{taskId}、POST /api/v1/mesh/import/clear
   - 测试框架：@WebMvcTest + MockMvc
   - Mock 业务层依赖：MeshImportOrchestrator
-  - 验证：HTTP 状态码、请求响应格式、参数校验、异常转换
+  - 验证：HTTP 状态码、请求响应格式、参数校验
+  - 注意：异常映射由 MeshImportErrorMappingContributor（SPI）处理，无需在 Controller 测试中验证
 
 - [ ] T038 [Adapter] [US1] 为 MeshImportJob 编写单元测试 in patra-catalog/patra-catalog-adapter/src/test/java/com/patra/catalog/adapter/scheduler/job/MeshImportJobTest.java
   - 测试场景：run()、分布式锁获取失败
@@ -299,12 +300,24 @@
 
 #### 实施（Green 阶段）🟢
 
-- [ ] T039 [Adapter] [US1] 实现 MeshImportController in patra-catalog/patra-catalog-adapter/src/main/java/com/patra/catalog/adapter/controller/MeshImportController.java
+- [ ] T036b [App] [US1] 实现 MeshImportErrorMappingContributor in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/error/MeshImportErrorMappingContributor.java
+  - 职责：将标准异常类型映射到特定的业务错误码和 HTTP 状态码
+  - 实现：ErrorMappingContributor（patra-spring-boot-starter-core 的 SPI）
+  - 映射规则：
+    * IllegalStateException → 409 Conflict（业务状态冲突）
+    * IllegalArgumentException（"任务不存在"）→ 404 Not Found
+    * IllegalArgumentException（其他）→ 400 Bad Request
+  - 错误码格式：CATALOG-{httpStatusCode}（如 CATALOG-0409）
+  - 设计理念：复用 JDK 标准异常，通过消息内容区分业务语义，集中管理异常映射
+  - 依赖：patra-common-core（ErrorCodeLike）、patra-starter-core（ErrorMappingContributor SPI）
+
+- [ ] T039 [Adapter] [US1] 实现 MeshImportController in patra-catalog/patra-catalog-adapter/src/main/java/com/patra/catalog/adapter/rest/MeshImportController.java
   - 参考：contracts/mesh-import-api.yaml
   - 端点：POST /api/v1/mesh/import/start、POST /api/v1/mesh/import/retry/{taskId}、POST /api/v1/mesh/import/clear
   - 依赖：MeshImportOrchestrator（通过构造器注入）
+  - 异常处理：委托给全局异常处理器（GlobalRestExceptionHandler），异常映射由 MeshImportErrorMappingContributor 处理
   - @RestController + @RequestMapping("/api/v1/mesh/import")
-  - 依赖：T038（Controller 依赖 Orchestrator）
+  - 依赖：T038, T036b（Controller 依赖 Orchestrator 和 ErrorMappingContributor）
 
 - [ ] T040 [Adapter] [US1] 实现 MeshImportJob in patra-catalog/patra-catalog-adapter/src/main/java/com/patra/catalog/adapter/scheduler/job/MeshImportJob.java
   - 参考：patra-ingest/patra-ingest-adapter/src/main/java/com/patra/ingest/adapter/scheduler/job/PubmedHarvestJob.java:1-50（XXL-Job 任务模式）
@@ -386,13 +399,13 @@
 
 #### 测试先行（Red 阶段）🔴
 
-- [ ] T050 [Adapter] [US2] 为 MeshImportController 添加进度查询测试 in patra-catalog/patra-catalog-adapter/src/test/java/com/patra/catalog/adapter/controller/MeshImportControllerTest.java
+- [ ] T050 [Adapter] [US2] 为 MeshImportController 添加进度查询测试 in patra-catalog/patra-catalog-adapter/src/test/java/com/patra/catalog/adapter/rest/MeshImportControllerTest.java
   - 测试场景：GET /api/v1/mesh/import/progress/{taskId}、GET /api/v1/mesh/import/tasks
   - 测试框架：@WebMvcTest + MockMvc
 
 #### 实施（Green 阶段）🟢
 
-- [ ] T051 [Adapter] [US2] 扩展 MeshImportController 添加进度查询端点 in patra-catalog/patra-catalog-adapter/src/main/java/com/patra/catalog/adapter/controller/MeshImportController.java
+- [ ] T051 [Adapter] [US2] 扩展 MeshImportController 添加进度查询端点 in patra-catalog/patra-catalog-adapter/src/main/java/com/patra/catalog/adapter/rest/MeshImportController.java
   - 参考：contracts/mesh-import-api.yaml 第 91-149 行
   - 端点：GET /api/v1/mesh/import/progress/{taskId}、GET /api/v1/mesh/import/tasks
   - 依赖：MeshProgressQueryOrchestrator
@@ -434,13 +447,13 @@
 
 #### 测试先行（Red 阶段）🔴
 
-- [ ] T055 [Adapter] [US3] 为 MeshImportController 添加重试测试 in patra-catalog/patra-catalog-adapter/src/test/java/com/patra/catalog/adapter/controller/MeshImportControllerTest.java
+- [ ] T055 [Adapter] [US3] 为 MeshImportController 添加重试测试 in patra-catalog/patra-catalog-adapter/src/test/java/com/patra/catalog/adapter/rest/MeshImportControllerTest.java
   - 测试场景：POST /api/v1/mesh/import/retry/{taskId}、POST /api/v1/mesh/import/clear
   - 验证：状态码、错误处理（任务不存在、状态不允许重试）
 
 #### 实施（Green 阶段）🟢
 
-- [ ] T056 [Adapter] [US3] 扩展 MeshImportController 添加重试端点 in patra-catalog/patra-catalog-adapter/src/main/java/com/patra/catalog/adapter/controller/MeshImportController.java
+- [ ] T056 [Adapter] [US3] 扩展 MeshImportController 添加重试端点 in patra-catalog/patra-catalog-adapter/src/main/java/com/patra/catalog/adapter/rest/MeshImportController.java
   - 参考：contracts/mesh-import-api.yaml 第 42-89 行
   - 端点：POST /api/v1/mesh/import/retry/{taskId}、POST /api/v1/mesh/import/clear
 
@@ -496,7 +509,7 @@
 
 - [ ] T065 [P] [Doc] 生成 package-info.java for com.patra.catalog.app in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/package-info.java
   - 描述：Catalog 应用层用例编排包
-  - 主要组件：MeshImportOrchestrator、MeshProgressQueryOrchestrator
+  - 主要组件：MeshImportOrchestrator、MeshProgressQueryOrchestrator、MeshImportErrorMappingContributor、MeshDataValidator
 
 - [ ] T066 [P] [Doc] 生成 package-info.java for com.patra.catalog.infra in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/package-info.java
   - 描述：Catalog 基础设施层技术实现包
@@ -504,7 +517,10 @@
 
 - [ ] T067 [P] [Doc] 生成 package-info.java for com.patra.catalog.adapter in patra-catalog/patra-catalog-adapter/src/main/java/com/patra/catalog/adapter/package-info.java
   - 描述：Catalog 适配器层外部交互包
-  - 主要组件：MeshImportController、MeshImportJob
+  - 子包：
+    * adapter.rest - REST API 控制器（MeshImportController）
+    * adapter.rocketmq - 消息监听器（TaskReadyMessageListener）
+    * adapter.scheduler - 定时任务（MeshImportJob）
 
 #### 模块文档更新
 
@@ -591,12 +607,12 @@
 
 ### 总任务数
 
-- **总计**: 73 个任务（原75个，3个数据库表DDL合并为1个迁移文件后减少2个）
+- **总计**: 74 个任务（原75个，3个数据库表DDL合并为1个后减少2个，新增1个ErrorMappingContributor任务）
 
 ### 各用户故事任务数
 
 - **阶段 1（设置与基础）**: 4 个任务（原6个，3个数据库表DDL合并为1个）
-- **阶段 2（US1 - 导入核心功能）**: 37 个任务（测试 7 + 实施 30）
+- **阶段 2（US1 - 导入核心功能）**: 38 个任务（测试 7 + 实施 31，含 ErrorMappingContributor）
 - **阶段 3（US2 - 进度监控）**: 11 个任务（测试 4 + 实施 7）
 - **阶段 4（US3 - 重试与清除）**: 5 个任务（测试 3 + 实施 2）
 - **阶段 5（润色与文档）**: 16 个任务（监控 2 + 文档 11 + 其他 3）
@@ -611,8 +627,8 @@
 ### MVP 范围建议
 
 **最小可行产品（MVP）= 阶段 1 + 阶段 2（US1）**
-- 任务数：41 个任务（原43个，合并DDL后减少2个）
-- 交付价值：完整的 MeSH 数据导入流程（下载 → 解析 → 导入 → 断点续传）
+- 任务数：42 个任务（原43个，合并DDL后减少2个，新增ErrorMappingContributor后增加1个）
+- 交付价值：完整的 MeSH 数据导入流程（下载 → 解析 → 导入 → 断点续传 + 统一异常处理）
 - 独立测试：可以通过 E2E 测试验证完整业务流程
 
 **增量交付路径**:
