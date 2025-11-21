@@ -1,7 +1,7 @@
 package com.patra.catalog.app.usecase.meshimport;
 
-import com.patra.catalog.api.command.StartImportCommand;
-import com.patra.catalog.api.dto.MeshImportResultDTO;
+import com.patra.catalog.app.usecase.meshimport.command.StartImportCommand;
+import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import com.patra.catalog.app.usecase.meshimport.validator.MeshDataValidator;
 import com.patra.catalog.app.config.MeshImportConfig;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
@@ -101,8 +101,8 @@ public class MeshImportOrchestrator {
     checkNoRunningTask();
 
     // 2. 解析命令参数
-    String sourceUrl = resolveSourceUrl(command.getSourceUrl());
-    String taskName = resolveTaskName(command.getTaskName());
+    String sourceUrl = resolveSourceUrl(command.sourceUrl());
+    String taskName = resolveTaskName(command.taskName());
 
     // 3. 创建任务聚合根（PENDING 状态）
     MeshImportAggregate aggregate = createPendingTask(taskName, sourceUrl);

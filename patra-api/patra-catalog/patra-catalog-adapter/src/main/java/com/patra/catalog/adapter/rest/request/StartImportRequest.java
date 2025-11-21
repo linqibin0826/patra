@@ -1,4 +1,4 @@
-package com.patra.catalog.api.command;
+package com.patra.catalog.adapter.rest.request;
 
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -7,9 +7,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 开始 MeSH 导入任务命令。
+ * 开始 MeSH 导入任务 HTTP 请求参数。
  *
- * <p>封装开始导入任务的请求参数。
+ * <p>接收前端传入的原始 HTTP 请求参数，在 Controller 中转换为 {@link
+ * com.patra.catalog.app.usecase.meshimport.command.StartImportCommand} 后传递给应用层。
  *
  * <p><b>参数说明</b>：
  *
@@ -29,13 +30,17 @@ import lombok.NoArgsConstructor;
  *
  * <pre>{@code
  * // 使用默认配置
- * StartImportCommand command = new StartImportCommand(null, null);
+ * POST /api/v1/mesh/import/start
+ * Content-Type: application/json
+ * {}
  *
  * // 指定自定义 URL
- * StartImportCommand command = new StartImportCommand(
- *     "https://nlm.nih.gov/mesh/desc2025.xml",
- *     "2025年MeSH数据首次导入"
- * );
+ * POST /api/v1/mesh/import/start
+ * Content-Type: application/json
+ * {
+ *   "sourceUrl": "https://nlm.nih.gov/mesh/desc2025.xml",
+ *   "taskName": "2025年MeSH数据首次导入"
+ * }
  * }</pre>
  *
  * @author linqibin
@@ -44,7 +49,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class StartImportCommand {
+public class StartImportRequest {
 
   /**
    * 数据源 URL（可选）。

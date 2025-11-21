@@ -5,7 +5,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.patra.catalog.api.dto.MeshImportResultDTO;
+import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import com.patra.catalog.app.error.MeshImportErrorMappingContributor;
 import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
