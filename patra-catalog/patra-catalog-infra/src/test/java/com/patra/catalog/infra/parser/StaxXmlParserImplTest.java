@@ -78,15 +78,15 @@ class StaxXmlParserImplTest {
 
       // 验证第一个Descriptor
       MeshDescriptorAggregate first = descriptors.get(0);
-      assertThat(first.getDescriptorUI()).isEqualTo("D000001");
-      assertThat(first.getDescriptorName()).isEqualTo("Calcimycin");
+      assertThat(first.getUi().ui()).isEqualTo("D000001");
+      assertThat(first.getName()).isEqualTo("Calcimycin");
       assertThat(first.getTreeNumbers()).hasSize(2);
-      assertThat(first.getTreeNumbers().get(0).getTreeNumberValue()).isEqualTo("D03.438.221");
+      assertThat(first.getTreeNumbers().get(0).getTreeNumber()).isEqualTo("D03.438.221");
 
       // 验证第二个Descriptor
       MeshDescriptorAggregate second = descriptors.get(1);
-      assertThat(second.getDescriptorUI()).isEqualTo("D000002");
-      assertThat(second.getDescriptorName()).isEqualTo("Temefos");
+      assertThat(second.getUi().ui()).isEqualTo("D000002");
+      assertThat(second.getName()).isEqualTo("Temefos");
       assertThat(second.getTreeNumbers()).hasSize(1);
     }
   }
@@ -117,8 +117,8 @@ class StaxXmlParserImplTest {
 
       // Then: 应该解析出2个TreeNumber
       assertThat(treeNumbers).hasSize(2);
-      assertThat(treeNumbers.get(0).getTreeNumberValue()).isEqualTo("D03.438.221");
-      assertThat(treeNumbers.get(1).getTreeNumberValue()).isEqualTo("D23.767.249");
+      assertThat(treeNumbers.get(0).getTreeNumber()).isEqualTo("D03.438.221");
+      assertThat(treeNumbers.get(1).getTreeNumber()).isEqualTo("D23.767.249");
     }
   }
 
@@ -159,8 +159,8 @@ class StaxXmlParserImplTest {
 
       // Then: 应该解析出2个EntryTerm
       assertThat(entryTerms).hasSize(2);
-      assertThat(entryTerms.get(0).getTermString()).isEqualTo("Calcimycin");
-      assertThat(entryTerms.get(1).getTermString()).isEqualTo("A-23187");
+      assertThat(entryTerms.get(0).getTerm()).isEqualTo("Calcimycin");
+      assertThat(entryTerms.get(1).getTerm()).isEqualTo("A-23187");
     }
   }
 
@@ -200,8 +200,8 @@ class StaxXmlParserImplTest {
 
       // Then: 应该解析出2个Concept
       assertThat(concepts).hasSize(2);
-      assertThat(concepts.get(0).getConceptUI()).isEqualTo("M0000001");
-      assertThat(concepts.get(1).getConceptUI()).isEqualTo("M0000002");
+      assertThat(concepts.get(0).getConceptUi().ui()).isEqualTo("M0000001");
+      assertThat(concepts.get(1).getConceptUi().ui()).isEqualTo("M0000002");
     }
   }
 
@@ -274,7 +274,7 @@ class StaxXmlParserImplTest {
 
       // Then: 应该只解析出有效记录
       assertThat(descriptors).hasSize(1);
-      assertThat(descriptors.get(0).getDescriptorUI()).isEqualTo("D000002");
+      assertThat(descriptors.get(0).getUi().ui()).isEqualTo("D000002");
     }
   }
 }
