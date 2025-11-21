@@ -1,6 +1,6 @@
 ---
 name: java-hexagonal-architecture
-description: 六边形架构和DDD专家。设计领域模型、评审架构方案、技术选型决策。用于架构设计、领域建模、方案评审、技术选型、依赖管理、模块划分、数据库设计。关键词：六边形架构、DDD、Clean Architecture、技术方案、架构决策、微服务架构。
+description: 六边形架构和DDD专家。设计领域模型、评审架构方案、技术选型决策、Patra Starter 使用规范。用于架构设计、领域建模、方案评审、技术选型、依赖管理、模块划分、数据库设计、Maven 依赖配置。关键词：六边形架构、DDD、Clean Architecture、技术方案、架构决策、微服务架构、Patra Starter、模块依赖、pom.xml、架构铁律、层次边界。
 allowed-tools: Read, Grep, Glob, Skill, mcp__sequential-thinking__sequentialthinking, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, WebSearch
 ---
 
@@ -47,6 +47,24 @@ allowed-tools: Read, Grep, Glob, Skill, mcp__sequential-thinking__sequentialthin
 2. **【CHK-ARCH-002】依赖方向必须向内** - Adapter → App → Domain ← Infra
 3. **【CHK-ARCH-003】事务边界在 Orchestrator** - @Transactional 仅在应用层
 4. **【CHK-ARCH-004】永不暴露 DO** - DO 实体不能离开基础设施层
+5. **【CHK-ARCH-006】必须使用 Patra 自定义 Starter** - 禁止直接引入原始 Spring/MyBatis 依赖
+
+## Patra 自定义 Starter 强制规范
+
+**核心原则**：所有模块必须使用 Patra 自定义 Starter，禁止直接引入原始依赖。
+
+| 模块层 | 强制使用的 Starter | 说明 |
+|-------|------------------|------|
+| **adapter** | `patra-spring-boot-starter-web` | REST API、参数校验、异常处理 |
+| **infra（数据库）** | `patra-spring-boot-starter-mybatis` | MyBatis-Plus、BaseDO、审计字段 |
+| **infra（Feign）** | `patra-spring-cloud-starter-feign` | Feign 客户端、负载均衡、熔断 |
+| **infra（对象存储）** | `patra-spring-boot-starter-object-storage` | OSS、MinIO 统一接口 |
+| **所有层（除 domain）** | `patra-spring-boot-starter-core` | 公共工具、BaseDO、ID 生成器 |
+
+**❌ 常见错误**：
+- 在 adapter 层直接引入 `spring-boot-starter-web`
+- 在 infra 层直接引入 `mybatis-plus-boot-starter`
+- 在 domain 层引入任何 Spring Boot Starter（包括 core）
 
 ## 模块结构规范
 
