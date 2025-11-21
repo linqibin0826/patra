@@ -31,6 +31,42 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__sequential-thinking__se
 4. **重构信心** - 有测试保护，放心重构
 5. **YAGNI 原则** - 只写让测试通过的代码
 
+### 🚨 Patra Starter 与测试的关系
+
+**重要说明**：测试代码位于各模块的 `src/test/java` 目录下，**直接使用模块的正常依赖**。
+
+**Patra Starter 依赖配置**（在各模块的 pom.xml 中，**compile scope**）：
+
+```xml
+<!-- patra-xxx-adapter/pom.xml -->
+<dependency>
+    <groupId>com.patra</groupId>
+    <artifactId>patra-spring-boot-starter-web</artifactId>
+    <!-- 默认 compile scope，测试代码会自动使用 -->
+</dependency>
+
+<!-- patra-xxx-infra/pom.xml（数据库）-->
+<dependency>
+    <groupId>com.patra</groupId>
+    <artifactId>patra-spring-boot-starter-mybatis</artifactId>
+    <!-- 默认 compile scope，测试代码会自动使用 -->
+</dependency>
+
+<!-- patra-xxx-infra/pom.xml（Feign）-->
+<dependency>
+    <groupId>com.patra</groupId>
+    <artifactId>patra-spring-cloud-starter-feign</artifactId>
+    <!-- 默认 compile scope，测试代码会自动使用 -->
+</dependency>
+
+<!-- patra-xxx-app/pom.xml, patra-xxx-adapter/pom.xml, patra-xxx-infra/pom.xml -->
+<dependency>
+    <groupId>com.patra</groupId>
+    <artifactId>patra-spring-boot-starter-core</artifactId>
+    <!-- 默认 compile scope，测试代码会自动使用 -->
+</dependency>
+```
+
 ### TDD 与六边形架构的结合
 
 ```
