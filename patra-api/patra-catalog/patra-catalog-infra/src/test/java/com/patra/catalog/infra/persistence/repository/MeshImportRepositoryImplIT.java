@@ -1,0 +1,330 @@
+package com.patra.catalog.infra.persistence.repository;
+
+import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;
+import com.patra.catalog.domain.model.enums.MeshImportTaskStatus;
+import com.patra.catalog.domain.model.enums.MeshTableImportStatus;
+import com.patra.catalog.domain.model.valueobject.MeshImportId;
+import com.patra.catalog.domain.model.valueobject.TableProgress;
+import com.patra.catalog.infra.persistence.converter.MeshImportConverter;
+import com.patra.catalog.infra.persistence.mapper.MeshBatchDetailMapper;
+import com.patra.catalog.infra.persistence.mapper.MeshImportTaskMapper;
+import com.patra.catalog.infra.persistence.mapper.MeshTableProgressMapper;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * MeSH 导入仓储实现集成测试。
+ *
+ * <p>使用 @MybatisTest + TestContainers（MySQL 8）测试完整的 CRUD 操作。
+ *
+ * <p><b>测试策略</b>：
+ *
+ * <ul>
+ *   <li>集成测试：使用真实 MySQL 数据库
+ *   <li>测试隔离：每个测试方法独立，使用 @Transactional 自动回滚
+ *   <li>TestContainers：自动启动和停止 MySQL 容器
+ *   <li>测试覆盖：save()、findById()、findRunningTask()、existsRunningTask()
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.2.0
+ */
+@MybatisTest
+@Testcontainers
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import({
+  MeshImportRepositoryImpl.class,
+  MeshImportConverterImpl.class
+})
+@DisplayName("MeshImportRepositoryImpl 集成测试")
+class MeshImportRepositoryImplIT {
+
+  @Container
+  static MySQLContainer<?> mysql =
+      new MySQLContainer<>("mysql:8.0.35")
+          .withDatabaseName("patra_catalog_test")
+          .withUsername("test")
+          .withPassword("test");
+
+  @DynamicPropertySource
+  static void configureProperties(DynamicPropertyRegistry registry) {
+    registry.add("spring.datasource.url", mysql::getJdbcUrl);
+    registry.add("spring.datasource.username", mysql::getUsername);
+    registry.add("spring.datasource.password", mysql::getPassword);
+  }
+
+  @Autowired private MeshImportRepositoryImpl meshImportRepository;
+
+  @Autowired private MeshImportTaskMapper taskMapper;
+
+  @Autowired private MeshTableProgressMapper progressMapper;
+
+  @Autowired private MeshBatchDetailMapper batchDetailMapper;
+
+  @Test
+  @DisplayName("保存新任务 - 应该分配雪花ID并保存关联的表进度")
+  void save_newTask_shouldAssignIdAndSaveWithProgress() {
+    // Given: 创建新任务（ID为null）
+    MeshImportAggregate aggregate =
+        new MeshImportAggregate(
+            null, // ID为null，表示新任务
+            "MeSH 2025 导入",
+            MeshImportTaskStatus.PENDING,
+            null,
+            null,
+            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "a1b2c3d4e5f6",
+            700_000_000L,
+            List.of(
+                TableProgress.builder()
+                    .tableName("cat_mesh_descriptor")
+                    .totalCount(35000)
+                    .processedCount(0)
+                    .failedCount(0)
+                    .status(MeshTableImportStatus.NOT_STARTED)
+                    .lastBatchNum(0)
+                    .lastUpdateTime(Instant.now())
+                    .build()),
+            350000,
+            0,
+            0,
+            null);
+
+    // When: 保存任务
+    MeshImportAggregate saved = meshImportRepository.save(aggregate);
+
+    // Then: 应该分配ID
+    assertThat(saved.getId()).isNotNull();
+    assertThat(saved.getId().value()).isPositive();
+
+    // Then: 可以通过ID查询
+    Optional<MeshImportAggregate> found = meshImportRepository.findById(saved.getId());
+    assertThat(found).isPresent();
+    assertThat(found.get().getTaskName()).isEqualTo("MeSH 2025 导入");
+    assertThat(found.get().getTableProgressList()).hasSize(1);
+    assertThat(found.get().getTableProgressList().get(0).getTableName())
+        .isEqualTo("cat_mesh_descriptor");
+  }
+
+  @Test
+  @DisplayName("更新任务 - 应该更新任务状态和表进度")
+  void save_existingTask_shouldUpdateStatusAndProgress() {
+    // Given: 先保存一个任务
+    MeshImportAggregate aggregate =
+        new MeshImportAggregate(
+            null,
+            "MeSH 2025 导入",
+            MeshImportTaskStatus.PENDING,
+            null,
+            null,
+            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "a1b2c3d4e5f6",
+            700_000_000L,
+            List.of(
+                TableProgress.builder()
+                    .tableName("cat_mesh_descriptor")
+                    .totalCount(35000)
+                    .processedCount(0)
+                    .failedCount(0)
+                    .status(MeshTableImportStatus.NOT_STARTED)
+                    .lastBatchNum(0)
+                    .lastUpdateTime(Instant.now())
+                    .build()),
+            350000,
+            0,
+            0,
+            null);
+    MeshImportAggregate saved = meshImportRepository.save(aggregate);
+
+    // Given: 修改任务状态和进度
+    MeshImportAggregate updated =
+        new MeshImportAggregate(
+            saved.getId(),
+            saved.getTaskName(),
+            MeshImportTaskStatus.PROCESSING, // 修改状态
+            Instant.now(),
+            null,
+            saved.getSourceUrl(),
+            saved.getXmlFileHash(),
+            saved.getXmlFileSize(),
+            List.of(
+                TableProgress.builder()
+                    .tableName("cat_mesh_descriptor")
+                    .totalCount(35000)
+                    .processedCount(5000) // 更新进度
+                    .failedCount(10)
+                    .status(MeshTableImportStatus.IN_PROGRESS)
+                    .lastBatchNum(5)
+                    .lastUpdateTime(Instant.now())
+                    .build()),
+            350000,
+            5000,
+            0,
+            null);
+
+    // When: 更新任务
+    MeshImportAggregate result = meshImportRepository.save(updated);
+
+    // Then: 应该更新状态和进度
+    assertThat(result.getStatus()).isEqualTo(MeshImportTaskStatus.PROCESSING);
+    assertThat(result.getProcessedRecords()).isEqualTo(5000);
+    assertThat(result.getTableProgressList().get(0).getProcessedCount()).isEqualTo(5000);
+  }
+
+  @Test
+  @DisplayName("查询正在运行的任务 - 应该返回状态为PROCESSING的任务")
+  void findRunningTask_shouldReturnProcessingTask() {
+    // Given: 保存一个PENDING任务
+    MeshImportAggregate pendingTask =
+        new MeshImportAggregate(
+            null,
+            "MeSH 2025 导入 - PENDING",
+            MeshImportTaskStatus.PENDING,
+            null,
+            null,
+            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "a1b2c3d4e5f6",
+            700_000_000L,
+            List.of(),
+            350000,
+            0,
+            0,
+            null);
+    meshImportRepository.save(pendingTask);
+
+    // Given: 保存一个PROCESSING任务
+    MeshImportAggregate processingTask =
+        new MeshImportAggregate(
+            null,
+            "MeSH 2025 导入 - PROCESSING",
+            MeshImportTaskStatus.PROCESSING,
+            Instant.now(),
+            null,
+            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "a1b2c3d4e5f6",
+            700_000_000L,
+            List.of(),
+            350000,
+            1000,
+            0,
+            null);
+    MeshImportAggregate saved = meshImportRepository.save(processingTask);
+
+    // When: 查询正在运行的任务
+    Optional<MeshImportAggregate> found = meshImportRepository.findRunningTask();
+
+    // Then: 应该返回PROCESSING任务
+    assertThat(found).isPresent();
+    assertThat(found.get().getId()).isEqualTo(saved.getId());
+    assertThat(found.get().getStatus()).isEqualTo(MeshImportTaskStatus.PROCESSING);
+  }
+
+  @Test
+  @DisplayName("查询正在运行的任务 - 没有PROCESSING任务时应该返回空")
+  void findRunningTask_noProcessingTask_shouldReturnEmpty() {
+    // Given: 只有PENDING任务
+    MeshImportAggregate pendingTask =
+        new MeshImportAggregate(
+            null,
+            "MeSH 2025 导入",
+            MeshImportTaskStatus.PENDING,
+            null,
+            null,
+            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "a1b2c3d4e5f6",
+            700_000_000L,
+            List.of(),
+            350000,
+            0,
+            0,
+            null);
+    meshImportRepository.save(pendingTask);
+
+    // When: 查询正在运行的任务
+    Optional<MeshImportAggregate> found = meshImportRepository.findRunningTask();
+
+    // Then: 应该返回空
+    assertThat(found).isEmpty();
+  }
+
+  @Test
+  @DisplayName("判断是否存在正在运行的任务 - 应该返回true")
+  void existsRunningTask_hasProcessingTask_shouldReturnTrue() {
+    // Given: 保存一个PROCESSING任务
+    MeshImportAggregate processingTask =
+        new MeshImportAggregate(
+            null,
+            "MeSH 2025 导入",
+            MeshImportTaskStatus.PROCESSING,
+            Instant.now(),
+            null,
+            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "a1b2c3d4e5f6",
+            700_000_000L,
+            List.of(),
+            350000,
+            1000,
+            0,
+            null);
+    meshImportRepository.save(processingTask);
+
+    // When: 判断是否存在正在运行的任务
+    boolean exists = meshImportRepository.existsRunningTask();
+
+    // Then: 应该返回true
+    assertThat(exists).isTrue();
+  }
+
+  @Test
+  @DisplayName("判断是否存在正在运行的任务 - 没有PROCESSING任务时应该返回false")
+  void existsRunningTask_noProcessingTask_shouldReturnFalse() {
+    // Given: 只有PENDING任务
+    MeshImportAggregate pendingTask =
+        new MeshImportAggregate(
+            null,
+            "MeSH 2025 导入",
+            MeshImportTaskStatus.PENDING,
+            null,
+            null,
+            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "a1b2c3d4e5f6",
+            700_000_000L,
+            List.of(),
+            350000,
+            0,
+            0,
+            null);
+    meshImportRepository.save(pendingTask);
+
+    // When: 判断是否存在正在运行的任务
+    boolean exists = meshImportRepository.existsRunningTask();
+
+    // Then: 应该返回false
+    assertThat(exists).isFalse();
+  }
+
+  @Test
+  @DisplayName("根据ID查询任务 - 任务不存在时应该返回空")
+  void findById_taskNotExists_shouldReturnEmpty() {
+    // When: 查询不存在的任务
+    Optional<MeshImportAggregate> found =
+        meshImportRepository.findById(MeshImportId.of(999999L));
+
+    // Then: 应该返回空
+    assertThat(found).isEmpty();
+  }
+}
