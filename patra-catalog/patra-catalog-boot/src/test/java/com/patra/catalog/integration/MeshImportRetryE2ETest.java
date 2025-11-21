@@ -79,7 +79,7 @@ class MeshImportRetryE2ETest {
     // Given: 创建一个导入任务（实际测试中可模拟失败）
     StartImportCommand command =
         new StartImportCommand(
-            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
             "E2E 重试测试任务"
         );
 
@@ -144,7 +144,7 @@ class MeshImportRetryE2ETest {
     // Given: 创建一个正在运行的任务
     StartImportCommand command =
         new StartImportCommand(
-            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
             "E2E 状态冲突测试任务"
         );
 
@@ -169,7 +169,7 @@ class MeshImportRetryE2ETest {
     // Given: 创建一个导入任务
     StartImportCommand command =
         new StartImportCommand(
-            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
             "E2E 清除测试任务"
         );
 
@@ -215,7 +215,7 @@ class MeshImportRetryE2ETest {
     // And: 验证可以重新开始导入
     MeshImportResultDTO restartResult = meshImportOrchestrator.startImport(
         new StartImportCommand(
-            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
             "E2E 重新导入测试任务"
         )
     );
@@ -252,7 +252,7 @@ class MeshImportRetryE2ETest {
     // Given: 创建一个导入任务并假设部分批次失败
     StartImportCommand command =
         new StartImportCommand(
-            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
             "E2E 幂等性测试任务"
         );
 
@@ -307,7 +307,7 @@ class MeshImportRetryE2ETest {
     // Given: 启动一个导入任务
     StartImportCommand command =
         new StartImportCommand(
-            "https://nlm.nih.gov/mesh/desc2025.xml",
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
             "E2E 清除冲突测试任务"
         );
 

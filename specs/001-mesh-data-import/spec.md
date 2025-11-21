@@ -94,7 +94,7 @@
 
 ### 功能需求
 
-- **FR-001**: 系统必须能够从 NLM 官方网站（https://nlm.nih.gov/mesh/filelist.html）下载最新的 MeSH XML 数据文件
+- **FR-001**: 系统必须能够从 NLM 官方网站（https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/）下载最新的 MeSH XML 数据文件
 
 - **FR-002**: 系统必须能够解析 MeSH XML 文件并提取 6 类数据：主题词（Descriptor）、限定词（Qualifier）、树形编号（TreeNumber）、入口术语（EntryTerm）、概念（Concept）及其关联关系
 

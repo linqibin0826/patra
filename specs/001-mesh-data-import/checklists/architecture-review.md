@@ -14,7 +14,7 @@
 ### FR - 核心导入流程需求
 
 - [x] **CHK001** - 是否为 MeSH XML 文件的下载来源（NLM 官方 URL）定义了明确的需求？[完整性, Spec §FR-001]
-  - ✅ spec.md FR-001: "从 NLM 官方网站（https://nlm.nih.gov/mesh/filelist.html）下载"
+  - ✅ spec.md FR-001: "从 NLM 官方网站（https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/）下载"
 - [x] **CHK002** - 是否为 XML 文件的解析策略（流式解析 vs 全量加载）定义了明确的需求？[完整性, research.md + NFR-003]
   - ✅ spec.md NFR-003: "不应占用超过 2GB 内存（避免一次性加载整个 XML 文件到内存）"
   - ✅ research.md: "使用 StAX 流式解析"

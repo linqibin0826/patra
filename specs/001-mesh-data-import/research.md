@@ -167,7 +167,7 @@
 
 1. **NLM MeSH 官方文档**
    - XML 格式说明：https://www.nlm.nih.gov/mesh/xmlmesh.html
-   - 下载地址：https://nlm.nih.gov/mesh/filelist.html
+   - 下载地址：https://nlmpubs.nlm.nih.gov/projects/mesh/
 
 2. **StAX 教程**
    - Oracle 官方文档：https://docs.oracle.com/javase/tutorial/jaxp/stax/

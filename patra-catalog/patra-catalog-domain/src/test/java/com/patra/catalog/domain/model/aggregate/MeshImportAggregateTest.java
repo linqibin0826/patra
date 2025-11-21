@@ -57,7 +57,7 @@ class MeshImportAggregateTest {
       // Given: 任务基本信息
       MeshImportId id = MeshImportId.of(1001L);
       String taskName = "MeSH 2025 首次导入";
-      String sourceUrl = "https://nlm.nih.gov/mesh/desc2025.xml";
+      String sourceUrl = "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml";
       List<TableProgress> tableProgressList = createInitialTableProgressList();
 
       // When: 创建聚合根
@@ -417,7 +417,7 @@ class MeshImportAggregateTest {
               MeshImportTaskStatus.PROCESSING,
               startTime,
               null,
-              "https://nlm.nih.gov/mesh/desc2025.xml",
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
               null,
               null,
               createInitialTableProgressList(),
@@ -470,7 +470,7 @@ class MeshImportAggregateTest {
               MeshImportTaskStatus.PROCESSING,
               Instant.now().minusSeconds(100),
               null,
-              "https://nlm.nih.gov/mesh/desc2025.xml",
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
               null,
               null,
               createInitialTableProgressList(),
@@ -497,7 +497,7 @@ class MeshImportAggregateTest {
               MeshImportTaskStatus.PROCESSING,
               Instant.now().minusSeconds(100),
               null,
-              "https://nlm.nih.gov/mesh/desc2025.xml",
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
               null,
               null,
               createInitialTableProgressList(),
@@ -524,7 +524,7 @@ class MeshImportAggregateTest {
               MeshImportTaskStatus.PROCESSING,
               Instant.now(),
               null,
-              "https://nlm.nih.gov/mesh/desc2025.xml",
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
               null,
               null,
               createInitialTableProgressList(),
@@ -661,7 +661,7 @@ class MeshImportAggregateTest {
         MeshImportTaskStatus.PENDING,
         null,
         null,
-        "https://nlm.nih.gov/mesh/desc2025.xml",
+        "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
         null,
         null,
         createInitialTableProgressList(),
