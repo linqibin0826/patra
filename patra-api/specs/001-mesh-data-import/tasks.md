@@ -34,7 +34,7 @@
 
 ### 数据库设计任务
 
-- [ ] T001 [Infra] 创建 MeSH 导入相关表 DDL in patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V0.6.0__create_mesh_import_tables.sql
+- [x] T001 [Infra] 创建 MeSH 导入相关表 DDL in patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V0.6.0__create_mesh_import_tables.sql
   - 参考：patra-catalog/patra-catalog-infra/src/main/resources/db/migration/V0.1.0__create_core_entities.sql（多表迁移文件模式）
   - 说明：V0.2.0 已被占用，使用 V0.6.0（下一个可用版本）
   - 表1：cat_mesh_import_task（MeSH 导入任务表）
@@ -55,7 +55,7 @@
 
 ### 配置管理任务
 
-- [ ] T002 [P] [Config] 创建 MeSH 导入配置类 in patra-catalog/patra-catalog-boot/src/main/java/com/patra/catalog/config/MeshImportConfig.java
+- [x] T002 [P] [Config] 创建 MeSH 导入配置类 in patra-catalog/patra-catalog-boot/src/main/java/com/patra/catalog/config/MeshImportConfig.java
   - 配置项：
     * sourceUrl（NLM URL）
     * defaultBatchSize（默认批次大小：1000）
@@ -70,10 +70,10 @@
   - 方法：getBatchSizeForTable(String tableName) - 返回特定表的批次大小
   - 使用 @ConfigurationProperties + Nacos Config
 
-- [ ] T003 [Infra] 添加 Redisson 分布式锁依赖 in patra-catalog/patra-catalog-boot/pom.xml
+- [x] T003 [Infra] 添加 Redisson 分布式锁依赖 in patra-catalog/patra-catalog-boot/pom.xml
   - 依赖：redisson-spring-boot-starter（版本由 patra-parent 管理）
 
-- [ ] T004 [P] [Infra] 添加 spring-web 依赖（RestClient）in patra-catalog/patra-catalog-infra/pom.xml
+- [x] T004 [P] [Infra] 添加 spring-web 依赖（RestClient）in patra-catalog/patra-catalog-infra/pom.xml
   - 依赖：org.springframework:spring-web（仅用于 RestClient，不引入 Web 容器）
 
 **检查点**: 基础设施就绪 - 现在可以开始并行实施用户故事
@@ -90,131 +90,131 @@
 
 #### 测试先行（Red 阶段）🔴
 
-- [ ] T005 [P] [Domain] [US1] 为 MeshImportAggregate 编写单元测试 in patra-catalog/patra-catalog-domain/src/test/java/com/patra/catalog/domain/model/aggregate/MeshImportAggregateTest.java
+- [x] T005 [P] [Domain] [US1] 为 MeshImportAggregate 编写单元测试 in patra-catalog/patra-catalog-domain/src/test/java/com/patra/catalog/domain/model/aggregate/MeshImportAggregateTest.java
   - 测试场景：startImport()、updateTableProgress()、markAsCompleted()、markAsFailed()、retry()
   - 测试状态转换：PENDING → PROCESSING → SUCCESS/FAILED
   - 测试不变量：不允许从 SUCCESS 转到 PROCESSING
   - 测试框架：JUnit 5 + AssertJ（纯 Java，无框架依赖）
 
-- [ ] T006 [P] [Domain] [US1] 为 TableProgress 编写单元测试 in patra-catalog/patra-catalog-domain/src/test/java/com/patra/catalog/domain/model/valueobject/TableProgressTest.java
+- [x] T006 [P] [Domain] [US1] 为 TableProgress 编写单元测试 in patra-catalog/patra-catalog-domain/src/test/java/com/patra/catalog/domain/model/valueobject/TableProgressTest.java
   - 测试场景：updateProgress()、incrementFailedCount()、getProgressPercentage()
   - 测试不可变性：修改返回新实例
   - 测试框架：JUnit 5 + AssertJ
 
 #### 实施（Green 阶段）🟢
 
-- [ ] T007 [P] [Domain] [US1] 定义 MeshImportId 强类型 ID in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/model/valueobject/MeshImportId.java
+- [x] T007 [P] [Domain] [US1] 定义 MeshImportId 强类型 ID in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/model/valueobject/MeshImportId.java
   - 参考：patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/model/valueobject/DescriptorId.java（已存在强类型 ID）
   - 属性：Long value
   - 方法：of(Long value)
 
-- [ ] T008 [P] [Domain] [US1] 定义 MeshImportTaskStatus 枚举 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/model/enums/MeshImportTaskStatus.java
+- [x] T008 [P] [Domain] [US1] 定义 MeshImportTaskStatus 枚举 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/model/enums/MeshImportTaskStatus.java
   - 枚举值：PENDING, PROCESSING, SUCCESS, FAILED, CANCELLED
   - 属性：displayName（中文）, code（API 编码）
 
-- [ ] T009 [P] [Domain] [US1] 定义 MeshTableImportStatus 枚举 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/model/enums/MeshTableImportStatus.java
+- [x] T009 [P] [Domain] [US1] 定义 MeshTableImportStatus 枚举 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/model/enums/MeshTableImportStatus.java
   - 枚举值：NOT_STARTED, IN_PROGRESS, COMPLETED, FAILED
 
-- [ ] T010 [P] [Domain] [US1] 定义 MeshBatchStatus 枚举 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/model/enums/MeshBatchStatus.java
+- [x] T010 [P] [Domain] [US1] 定义 MeshBatchStatus 枚举 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/model/enums/MeshBatchStatus.java
   - 枚举值：PENDING, PROCESSING, SUCCESS, FAILED
 
-- [ ] T011 [P] [Domain] [US1] 定义 TableProgress 值对象 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/model/valueobject/TableProgress.java
+- [x] T011 [P] [Domain] [US1] 定义 TableProgress 值对象 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/model/valueobject/TableProgress.java
   - 参考：data-model.md 第 185-280 行
   - 属性：tableName, totalCount, processedCount, failedCount, status, lastBatchNum, lastUpdateTime
   - 方法：getProgressPercentage(), updateProgress(), incrementFailedCount()
   - 不可变对象（使用 @Value）
 
-- [ ] T012 [Domain] [US1] 定义 MeshImportAggregate 聚合根 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/model/aggregate/MeshImportAggregate.java
+- [x] T012 [Domain] [US1] 定义 MeshImportAggregate 聚合根 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/model/aggregate/MeshImportAggregate.java
   - 参考：data-model.md 第 36-180 行
   - 属性：MeshImportId id, taskName, status, startTime, endTime, sourceUrl, xmlFileHash, xmlFileSize, List<TableProgress> tableProgressList, totalRecords, processedRecords, failedBatchCount, lastErrorMessage
   - 领域行为：startImport(), updateTableProgress(), markAsCompleted(), markAsFailed(), retry()
   - 依赖：T009-T013（聚合根依赖值对象和枚举）
 
-- [ ] T013 [P] [Domain] [US1] 定义 MeshImportStarted 领域事件 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/event/MeshImportStarted.java
+- [x] T013 [P] [Domain] [US1] 定义 MeshImportStarted 领域事件 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/event/MeshImportStarted.java
   - 参考：data-model.md 第 463-473 行
   - 属性：MeshImportId importId, String sourceUrl, Instant startTime
 
-- [ ] T014 [P] [Domain] [US1] 定义 MeshImportCompleted 领域事件 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/event/MeshImportCompleted.java
+- [x] T014 [P] [Domain] [US1] 定义 MeshImportCompleted 领域事件 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/event/MeshImportCompleted.java
   - 参考：data-model.md 第 483-497 行
   - 属性：MeshImportId importId, Integer totalRecords, Long elapsedSeconds, Instant completedTime
 
-- [ ] T015 [P] [Domain] [US1] 定义 MeshImportFailed 领域事件 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/event/MeshImportFailed.java
+- [x] T015 [P] [Domain] [US1] 定义 MeshImportFailed 领域事件 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/event/MeshImportFailed.java
   - 参考：data-model.md 第 507-522 行
   - 属性：MeshImportId importId, String failureReason, Integer processedRecords, Instant failedTime
 
-- [ ] T016 [P] [Domain] [US1] 定义 MeshImportPort 仓储接口 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/port/MeshImportPort.java
+- [x] T016 [P] [Domain] [US1] 定义 MeshImportPort 仓储接口 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/port/MeshImportPort.java
   - 方法：save(MeshImportAggregate), findById(MeshImportId), findRunningTask(), existsRunningTask()
 
-- [ ] T017 [P] [Domain] [US1] 定义 XmlParserPort 解析接口 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/port/XmlParserPort.java
+- [x] T017 [P] [Domain] [US1] 定义 XmlParserPort 解析接口 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/port/XmlParserPort.java
   - 方法：parseDescriptors(InputStream), parseQualifiers(InputStream), parseTreeNumbers(InputStream), parseEntryTerms(InputStream), parseConcepts(InputStream)
   - 返回类型：Stream<MeshDescriptor>（流式处理）
 
-- [ ] T018 [P] [Domain] [US1] 定义 MeshFileDownloadPort 下载接口 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/port/MeshFileDownloadPort.java
+- [x] T018 [P] [Domain] [US1] 定义 MeshFileDownloadPort 下载接口 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/port/MeshFileDownloadPort.java
   - 方法：download(String sourceUrl), validateChecksum(File xmlFile, String expectedHash)
 
 ### 第 2 步：Infrastructure 层 - 技术实现（TDD）
 
 #### 测试先行（Red 阶段）🔴
 
-- [ ] T019 [P] [Infra] [US1] 为 MeshImportRepositoryImpl 编写集成测试 in patra-catalog/patra-catalog-infra/src/test/java/com/patra/catalog/infra/persistence/repository/MeshImportRepositoryImplIT.java
+- [x] T019 [P] [Infra] [US1] 为 MeshImportRepositoryImpl 编写集成测试 in patra-catalog/patra-catalog-infra/src/test/java/com/patra/catalog/infra/persistence/repository/MeshImportRepositoryImplIT.java
   - 测试场景：save()、findById()、findRunningTask()、existsRunningTask()
   - 测试框架：@MybatisTest + TestContainers（MySQL）
   - 参考：patra-ingest-infra 的 Repository 集成测试模式
 
-- [ ] T020 [P] [Infra] [US1] 为 StaxXmlParserImpl 编写单元测试 in patra-catalog/patra-catalog-infra/src/test/java/com/patra/catalog/infra/parser/StaxXmlParserImplTest.java
+- [x] T020 [P] [Infra] [US1] 为 StaxXmlParserImpl 编写单元测试 in patra-catalog/patra-catalog-infra/src/test/java/com/patra/catalog/infra/parser/StaxXmlParserImplTest.java
   - 测试场景：parseDescriptors()、parseQualifiers()、边界情况（空文件、格式错误）
   - 测试框架：JUnit 5 + Mockito
   - 使用测试 XML 文件：src/test/resources/mesh-sample.xml
 
-- [ ] T021 [P] [Infra] [US1] 为 RestClientMeshFileDownloadImpl 编写单元测试 in patra-catalog/patra-catalog-infra/src/test/java/com/patra/catalog/infra/download/RestClientMeshFileDownloadImplTest.java
+- [x] T021 [P] [Infra] [US1] 为 RestClientMeshFileDownloadImpl 编写单元测试 in patra-catalog/patra-catalog-infra/src/test/java/com/patra/catalog/infra/download/RestClientMeshFileDownloadImplTest.java
   - 测试场景：download()、validateChecksum()、超时处理
   - 测试框架：JUnit 5 + WireMock（模拟 HTTP 响应）
 
-- [ ] T022 [P] [Infra] [US1] 为 MeshImportConverter 编写单元测试 in patra-catalog/patra-catalog-infra/src/test/java/com/patra/catalog/infra/persistence/converter/MeshImportConverterTest.java
+- [x] T022 [P] [Infra] [US1] 为 MeshImportConverter 编写单元测试 in patra-catalog/patra-catalog-infra/src/test/java/com/patra/catalog/infra/persistence/converter/MeshImportConverterTest.java
   - 测试场景：toDomain()、toTaskDO()、toProgressDOList()
   - 测试框架：JUnit 5 + MapStruct 生成器
 
 #### 实施（Green 阶段）🟢
 
-- [ ] T023 [P] [Infra] [US1] 创建 MeshImportTaskDO 数据库实体 in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/entity/MeshImportTaskDO.java
+- [x] T023 [P] [Infra] [US1] 创建 MeshImportTaskDO 数据库实体 in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/entity/MeshImportTaskDO.java
   - 参考：data-model.md 第 822-870 行
   - 继承：BaseDO
   - 映射表：cat_mesh_import_task
 
-- [ ] T024 [P] [Infra] [US1] 创建 MeshTableProgressDO 数据库实体 in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/entity/MeshTableProgressDO.java
+- [x] T024 [P] [Infra] [US1] 创建 MeshTableProgressDO 数据库实体 in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/entity/MeshTableProgressDO.java
   - 参考：data-model.md 第 887-919 行
   - 继承：BaseDO
   - 映射表：cat_mesh_table_progress
 
-- [ ] T025 [P] [Infra] [US1] 创建 MeshBatchDetailDO 数据库实体 in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/entity/MeshBatchDetailDO.java
+- [x] T025 [P] [Infra] [US1] 创建 MeshBatchDetailDO 数据库实体 in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/entity/MeshBatchDetailDO.java
   - 参考：data-model.md 第 937-978 行
   - 继承：BaseDO
   - 映射表：cat_mesh_batch_detail
 
-- [ ] T026 [P] [Infra] [US1] 创建 MeshImportTaskMapper MyBatis 接口 in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/mapper/MeshImportTaskMapper.java
+- [x] T026 [P] [Infra] [US1] 创建 MeshImportTaskMapper MyBatis 接口 in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/mapper/MeshImportTaskMapper.java
   - 继承：BaseMapper<MeshImportTaskDO>
   - 自定义方法：findRunningTask(), countRunningTasks()
 
-- [ ] T027 [P] [Infra] [US1] 创建 MeshTableProgressMapper MyBatis 接口 in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/mapper/MeshTableProgressMapper.java
+- [x] T027 [P] [Infra] [US1] 创建 MeshTableProgressMapper MyBatis 接口 in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/mapper/MeshTableProgressMapper.java
   - 继承：BaseMapper<MeshTableProgressDO>
   - 自定义方法：findByImportId(Long importId)
 
-- [ ] T028 [P] [Infra] [US1] 创建 MeshBatchDetailMapper MyBatis 接口 in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/mapper/MeshBatchDetailMapper.java
+- [x] T028 [P] [Infra] [US1] 创建 MeshBatchDetailMapper MyBatis 接口 in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/mapper/MeshBatchDetailMapper.java
   - 继承：BaseMapper<MeshBatchDetailDO>
   - 自定义方法：findFailedBatches(Long importId)
 
-- [ ] T029 [Infra] [US1] 创建 MeshImportConverter MapStruct 转换器 in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/converter/MeshImportConverter.java
+- [x] T029 [Infra] [US1] 创建 MeshImportConverter MapStruct 转换器 in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/converter/MeshImportConverter.java
   - 参考：data-model.md 第 985-1006 行
   - 方法：toDomain(), toTaskDO(), toProgressDOList(), toTableProgress(), toProgressDO()
   - 依赖：T025-T027（转换器依赖 DO 对象）
 
-- [ ] T030 [Infra] [US1] 实现 MeshImportRepositoryImpl in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/repository/MeshImportRepositoryImpl.java
+- [x] T030 [Infra] [US1] 实现 MeshImportRepositoryImpl in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/repository/MeshImportRepositoryImpl.java
   - 参考：patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/repository/MeshDescriptorRepositoryImpl.java:1-40
   - 实现：MeshImportPort
   - 依赖：MeshImportTaskMapper, MeshTableProgressMapper, MeshImportConverter
   - 依赖：T028-T031（Repository 依赖 Mapper 和 Converter）
 
-- [ ] T031 [Infra] [US1] 实现 StaxXmlParserImpl in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/parser/StaxXmlParserImpl.java
+- [x] T031 [Infra] [US1] 实现 StaxXmlParserImpl in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/parser/StaxXmlParserImpl.java
   - 实现：XmlParserPort
   - 使用 JDK 内置 StAX（javax.xml.stream.XMLStreamReader）
   - 批次处理：
@@ -224,7 +224,7 @@
   - 参考：research.md 第 23-35 行（StAX 流式解析方案）、data-model.md 第 530-790 行（XML 映射结构）
   - 依赖：T002（使用动态批次配置）
 
-- [ ] T032 [Infra] [US1] 实现 RestClientMeshFileDownloadImpl in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/download/RestClientMeshFileDownloadImpl.java
+- [x] T032 [Infra] [US1] 实现 RestClientMeshFileDownloadImpl in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/download/RestClientMeshFileDownloadImpl.java
   - 实现：MeshFileDownloadPort
   - 使用 Spring RestClient（底层 JDK 21 HttpClient）
   - 参考：patra-spring-boot-starter-provenance 的 RestClient 使用模式（EPMCClientImpl）
@@ -234,7 +234,7 @@
 
 #### 测试先行（Red 阶段）🔴
 
-- [ ] T033 [App] [US1] 为 MeshImportOrchestrator 编写单元测试 in patra-catalog/patra-catalog-app/src/test/java/com/patra/catalog/app/usecase/meshimport/MeshImportOrchestratorTest.java
+- [x] T033 [App] [US1] 为 MeshImportOrchestrator 编写单元测试 in patra-catalog/patra-catalog-app/src/test/java/com/patra/catalog/app/usecase/meshimport/MeshImportOrchestratorTest.java
   - 测试场景：startImport()、retryFailedTask()、clearAndRestart()
   - 测试编排逻辑：调用顺序、事务边界
   - Mock 所有 Port 接口（MeshImportPort、XmlParserPort、MeshFileDownloadPort、MeshDescriptorPort）
@@ -243,14 +243,14 @@
 
 #### 实施（Green 阶段）🟢
 
-- [ ] T034 [API] [US1] 定义 StartImportCommand 命令对象 in patra-catalog/patra-catalog-api/src/main/java/com/patra/catalog/api/command/StartImportCommand.java
+- [x] T034 [API] [US1] 定义 StartImportCommand 命令对象 in patra-catalog/patra-catalog-api/src/main/java/com/patra/catalog/api/command/StartImportCommand.java
   - 属性：String sourceUrl（可选）, String taskName（可选）
   - 参数校验：@Valid
 
-- [ ] T035 [API] [US1] 定义 MeshImportResultDTO 响应对象 in patra-catalog/patra-catalog-api/src/main/java/com/patra/catalog/api/dto/MeshImportResultDTO.java
+- [x] T035 [API] [US1] 定义 MeshImportResultDTO 响应对象 in patra-catalog/patra-catalog-api/src/main/java/com/patra/catalog/api/dto/MeshImportResultDTO.java
   - 属性：String taskId, String taskName, String status, Instant startTime, String message
 
-- [ ] T036 [App] [US1] 实现 MeshImportOrchestrator in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/usecase/meshimport/MeshImportOrchestrator.java
+- [x] T036 [App] [US1] 实现 MeshImportOrchestrator in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/usecase/meshimport/MeshImportOrchestrator.java
   - 参考：patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanIngestionOrchestrator.java:1-100（Orchestrator 编排模式）
   - 方法：startImport(StartImportCommand)、retryFailedTask(MeshImportId)、clearAndRestart()
   - 编排流程：
@@ -265,7 +265,7 @@
   - 依赖：MeshImportPort, XmlParserPort, MeshFileDownloadPort, MeshDescriptorPort, MeshDataValidator
   - 依赖：T014, T018-T020, T032-T035, T036a（Orchestrator 依赖 Domain 层、Infra 层和验证器）
 
-- [ ] T036a [App] [US1] 实现 MeshDataValidator 数据量验证器 in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/validator/MeshDataValidator.java
+- [x] T036a [App] [US1] 实现 MeshDataValidator 数据量验证器 in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/validator/MeshDataValidator.java
   - 方法：validateDataCounts(Map<String, Integer> actualCounts) : ValidationResult
   - 预期数量配置（从 MeshImportConfig 读取）：
     * Descriptor: ~35000（允许误差 5%）
@@ -286,21 +286,21 @@
 
 #### 测试先行（Red 阶段）🔴
 
-- [ ] T037 [P] [Adapter] [US1] 为 MeshImportController 编写切片测试 in patra-catalog/patra-catalog-adapter/src/test/java/com/patra/catalog/adapter/rest/MeshImportControllerTest.java
+- [x] T037 [P] [Adapter] [US1] 为 MeshImportController 编写切片测试 in patra-catalog/patra-catalog-adapter/src/test/java/com/patra/catalog/adapter/rest/MeshImportControllerTest.java
   - 测试场景：POST /api/v1/mesh/import/start、POST /api/v1/mesh/import/retry/{taskId}、POST /api/v1/mesh/import/clear
   - 测试框架：@WebMvcTest + MockMvc
   - Mock 业务层依赖：MeshImportOrchestrator
   - 验证：HTTP 状态码、请求响应格式、参数校验
   - 注意：异常映射由 MeshImportErrorMappingContributor（SPI）处理，无需在 Controller 测试中验证
 
-- [ ] T038 [Adapter] [US1] 为 MeshImportJob 编写单元测试 in patra-catalog/patra-catalog-adapter/src/test/java/com/patra/catalog/adapter/scheduler/job/MeshImportJobTest.java
+- [x] T038 [Adapter] [US1] 为 MeshImportJob 编写单元测试 in patra-catalog/patra-catalog-adapter/src/test/java/com/patra/catalog/adapter/scheduler/job/MeshImportJobTest.java
   - 测试场景：run()、分布式锁获取失败
   - Mock 业务层依赖：MeshImportOrchestrator
   - 测试框架：JUnit 5 + Mockito
 
 #### 实施（Green 阶段）🟢
 
-- [ ] T036b [App] [US1] 实现 MeshImportErrorMappingContributor in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/error/MeshImportErrorMappingContributor.java
+- [x] T036b [App] [US1] 实现 MeshImportErrorMappingContributor in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/error/MeshImportErrorMappingContributor.java
   - 职责：将标准异常类型映射到特定的业务错误码和 HTTP 状态码
   - 实现：ErrorMappingContributor（patra-spring-boot-starter-core 的 SPI）
   - 映射规则：
@@ -311,7 +311,7 @@
   - 设计理念：复用 JDK 标准异常，通过消息内容区分业务语义，集中管理异常映射
   - 依赖：patra-common-core（ErrorCodeLike）、patra-starter-core（ErrorMappingContributor SPI）
 
-- [ ] T039 [Adapter] [US1] 实现 MeshImportController in patra-catalog/patra-catalog-adapter/src/main/java/com/patra/catalog/adapter/rest/MeshImportController.java
+- [x] T039 [Adapter] [US1] 实现 MeshImportController in patra-catalog/patra-catalog-adapter/src/main/java/com/patra/catalog/adapter/rest/MeshImportController.java
   - 参考：contracts/mesh-import-api.yaml
   - 端点：POST /api/v1/mesh/import/start、POST /api/v1/mesh/import/retry/{taskId}、POST /api/v1/mesh/import/clear
   - 依赖：MeshImportOrchestrator（通过构造器注入）
@@ -319,7 +319,7 @@
   - @RestController + @RequestMapping("/api/v1/mesh/import")
   - 依赖：T038, T036b（Controller 依赖 Orchestrator 和 ErrorMappingContributor）
 
-- [ ] T040 [Adapter] [US1] 实现 MeshImportJob in patra-catalog/patra-catalog-adapter/src/main/java/com/patra/catalog/adapter/scheduler/job/MeshImportJob.java
+- [x] T040 [Adapter] [US1] 实现 MeshImportJob in patra-catalog/patra-catalog-adapter/src/main/java/com/patra/catalog/adapter/scheduler/job/MeshImportJob.java
   - 参考：patra-ingest/patra-ingest-adapter/src/main/java/com/patra/ingest/adapter/scheduler/job/PubmedHarvestJob.java:1-50（XXL-Job 任务模式）
   - @XxlJob("meshImport")
   - 使用 Redisson 分布式锁（避免并发导入）
@@ -330,7 +330,7 @@
 
 #### 测试先行（Red 阶段）🔴
 
-- [ ] T041 [Boot] [US1] 为 MeSH 导入编写 E2E 测试 in patra-catalog/patra-catalog-boot/src/test/java/com/patra/catalog/integration/MeshImportE2ETest.java
+- [x] T041 [Boot] [US1] 为 MeSH 导入编写 E2E 测试 in patra-catalog/patra-catalog-boot/src/test/java/com/patra/catalog/integration/MeshImportE2ETest.java
   - 测试场景：完整业务流程（HTTP → 业务 → DB → 事件发布）
   - 测试框架：@SpringBootTest + TestContainers（MySQL + Redis）+ Awaitility
   - 验证：任务创建、状态转换、数据持久化、领域事件发布
