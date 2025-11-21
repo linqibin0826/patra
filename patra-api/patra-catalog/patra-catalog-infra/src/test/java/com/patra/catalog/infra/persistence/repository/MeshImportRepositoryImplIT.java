@@ -5,7 +5,6 @@ import com.patra.catalog.domain.model.enums.MeshImportTaskStatus;
 import com.patra.catalog.domain.model.enums.MeshTableImportStatus;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import com.patra.catalog.domain.model.valueobject.TableProgress;
-import com.patra.catalog.infra.persistence.converter.MeshImportConverter;
 import com.patra.catalog.infra.persistence.mapper.MeshBatchDetailMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshImportTaskMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshTableProgressMapper;
@@ -17,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -40,6 +40,15 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>测试覆盖：save()、findById()、findRunningTask()、existsRunningTask()
  * </ul>
  *
+ * <p><b>重点测试场景</b>：
+ *
+ * <ul>
+ *   <li>save() 新增场景：验证 ID 为 null 时执行 INSERT（自动分配雪花 ID）
+ *   <li>save() 更新场景：验证 ID 不为 null 时执行 UPDATE（使用乐观锁）
+ *   <li>关联数据处理：验证 TableProgress 的"删除+重新插入"策略
+ *   <li>并发控制：验证乐观锁机制（version 字段）
+ * </ul>
+ *
  * @author linqibin
  * @since 0.2.0
  */
@@ -47,9 +56,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
-  MeshImportRepositoryImpl.class,
-  MeshImportConverterImpl.class
+  MeshImportRepositoryImpl.class
 })
+@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.converter")
 @DisplayName("MeshImportRepositoryImpl 集成测试")
 class MeshImportRepositoryImplIT {
 
@@ -76,9 +85,9 @@ class MeshImportRepositoryImplIT {
   @Autowired private MeshBatchDetailMapper batchDetailMapper;
 
   @Test
-  @DisplayName("保存新任务 - 应该分配雪花ID并保存关联的表进度")
-  void save_newTask_shouldAssignIdAndSaveWithProgress() {
-    // Given: 创建新任务（ID为null）
+  @DisplayName("save() 新增场景 - ID为null时应该执行INSERT并分配雪花ID")
+  void save_whenIdIsNull_shouldInsertAndAssignSnowflakeId() {
+    // Given: 创建新任务（ID为null → 触发INSERT逻辑）
     MeshImportAggregate aggregate =
         new MeshImportAggregate(
             null, // ID为null，表示新任务
@@ -121,9 +130,9 @@ class MeshImportRepositoryImplIT {
   }
 
   @Test
-  @DisplayName("更新任务 - 应该更新任务状态和表进度")
-  void save_existingTask_shouldUpdateStatusAndProgress() {
-    // Given: 先保存一个任务
+  @DisplayName("save() 更新场景 - ID不为null时应该执行UPDATE（使用乐观锁）")
+  void save_whenIdExists_shouldUpdateWithOptimisticLock() {
+    // Given: 先保存一个任务（获得已分配的ID）
     MeshImportAggregate aggregate =
         new MeshImportAggregate(
             null,
@@ -150,10 +159,10 @@ class MeshImportRepositoryImplIT {
             null);
     MeshImportAggregate saved = meshImportRepository.save(aggregate);
 
-    // Given: 修改任务状态和进度
+    // Given: 修改任务状态和进度（ID不为null → 触发UPDATE逻辑）
     MeshImportAggregate updated =
         new MeshImportAggregate(
-            saved.getId(),
+            saved.getId(), // ID不为null，表示已存在的任务
             saved.getTaskName(),
             MeshImportTaskStatus.PROCESSING, // 修改状态
             Instant.now(),
