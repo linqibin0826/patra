@@ -28,155 +28,223 @@
  * @author linqibin
  * @since 0.2.0
  */
-@Data
-@EqualsAndHashCode(callSuper = true)
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Getter
 public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
 
-    /** 身份标识（强类型 ID） */
-    private MeshImportId id;
+  @Serial private static final long serialVersionUID = 1L;
 
-    /** 任务名称 */
-    private String taskName;
+  // ========== 基本信息 ==========
 
-    /** 任务状态（PENDING/PROCESSING/SUCCESS/FAILED/CANCELLED） */
-    private MeshImportTaskStatus status;
+  /** 任务名称 */
+  private String taskName;
 
-    /** 开始时间 */
-    private Instant startTime;
+  /** 任务状态（PENDING/PROCESSING/SUCCESS/FAILED/CANCELLED） */
+  private MeshImportTaskStatus status;
 
-    /** 结束时间 */
-    private Instant endTime;
+  /** 开始时间 */
+  private Instant startTime;
 
-    /** NLM 数据源 URL */
-    private String sourceUrl;
+  /** 结束时间 */
+  private Instant endTime;
 
-    /** XML 文件 MD5 哈希（验证完整性） */
-    private String xmlFileHash;
+  // ========== 数据源信息 ==========
 
-    /** XML 文件大小（字节） */
-    private Long xmlFileSize;
+  /** NLM 数据源 URL */
+  private String sourceUrl;
 
-    /** 各表导入进度（值对象列表） */
-    private List<TableProgress> tableProgressList;
+  /** XML 文件 MD5 哈希（验证完整性） */
+  private String xmlFileHash;
 
-    /** 总记录数（约 350,000） */
-    private Integer totalRecords;
+  /** XML 文件大小（字节） */
+  private Long xmlFileSize;
 
-    /** 已处理记录数 */
-    private Integer processedRecords;
+  // ========== 进度信息 ==========
 
-    /** 失败批次数 */
-    private Integer failedBatchCount;
+  /** 各表导入进度（值对象列表） */
+  private List<TableProgress> tableProgressList;
 
-    /** 最后错误信息 */
-    private String lastErrorMessage;
+  /** 总记录数（约 350,000） */
+  private Integer totalRecords;
 
-    // =============== 领域行为 ===============
+  /** 已处理记录数 */
+  private Integer processedRecords;
 
-    /**
-     * 开始导入任务。
-     *
-     * <p>前置条件：任务状态为 PENDING
-     * <p>后置条件：任务状态变为 PROCESSING，发布 MeshImportStarted 事件
-     *
-     * @throws IllegalStateException 如果任务不是 PENDING 状态
-     */
-    public void startImport() {
-        if (this.status != MeshImportTaskStatus.PENDING) {
-            throw new IllegalStateException("只有 PENDING 状态的任务可以开始导入");
-        }
-        this.status = MeshImportTaskStatus.PROCESSING;
-        this.startTime = Instant.now();
-        // 发布领域事件
-        registerEvent(new MeshImportStarted(this.id, this.sourceUrl, this.startTime));
+  /** 失败批次数 */
+  private Integer failedBatchCount;
+
+  /** 最后错误信息 */
+  private String lastErrorMessage;
+
+  /**
+   * 全参数构造函数（用于测试和完整初始化）。
+   *
+   * <p>注意：实际使用中通常使用 {@link #create(String, String)} 创建新任务。
+   */
+  public MeshImportAggregate(
+      MeshImportId id,
+      String taskName,
+      MeshImportTaskStatus status,
+      Instant startTime,
+      Instant endTime,
+      String sourceUrl,
+      String xmlFileHash,
+      Long xmlFileSize,
+      List<TableProgress> tableProgressList,
+      Integer totalRecords,
+      Integer processedRecords,
+      Integer failedBatchCount,
+      String lastErrorMessage) {
+    super(id);
+    this.taskName = taskName;
+    this.status = status;
+    this.startTime = startTime;
+    this.endTime = endTime;
+    this.sourceUrl = sourceUrl;
+    this.xmlFileHash = xmlFileHash;
+    this.xmlFileSize = xmlFileSize;
+    this.tableProgressList = new ArrayList<>(tableProgressList != null ? tableProgressList : Collections.emptyList());
+    this.totalRecords = totalRecords;
+    this.processedRecords = processedRecords;
+    this.failedBatchCount = failedBatchCount;
+    this.lastErrorMessage = lastErrorMessage;
+  }
+
+  /**
+   * 创建新的导入任务（工厂方法）。
+   *
+   * <p>初始状态为 PENDING，所有计数器为 0。
+   *
+   * @param taskName 任务名称
+   * @param sourceUrl 数据源 URL
+   * @return 新创建的任务实例
+   */
+  public static MeshImportAggregate create(String taskName, String sourceUrl) {
+    Assert.notBlank(taskName, "任务名称不能为空");
+    Assert.notBlank(sourceUrl, "数据源 URL 不能为空");
+
+    return new MeshImportAggregate(
+        null, // ID 由基础设施层生成
+        taskName,
+        MeshImportTaskStatus.PENDING,
+        null, // 启动时才设置开始时间
+        null,
+        sourceUrl,
+        null,
+        null,
+        new ArrayList<>(),
+        0,
+        0,
+        0,
+        null);
+  }
+
+  // =============== 领域行为 ===============
+
+  /**
+   * 开始导入任务。
+   *
+   * <p>前置条件：任务状态为 PENDING
+   *
+   * <p>后置条件：任务状态变为 PROCESSING，发布 MeshImportStarted 事件
+   *
+   * @throws IllegalStateException 如果任务不是 PENDING 状态
+   */
+  public void startImport() {
+    if (this.status != MeshImportTaskStatus.PENDING) {
+      throw new IllegalStateException("只有 PENDING 状态的任务可以开始导入");
     }
+    this.status = MeshImportTaskStatus.PROCESSING;
+    this.startTime = Instant.now();
+    // 发布领域事件
+    registerEvent(new MeshImportStarted(getId(), this.sourceUrl, this.startTime));
+  }
 
-    /**
-     * 更新指定表的进度。
-     *
-     * <p>用于断点续传，记录每张表的最后处理批次号
-     *
-     * @param tableName 表名
-     * @param processedCount 已处理数
-     * @param lastBatchNum 最后批次号
-     */
-    public void updateTableProgress(String tableName, Integer processedCount, Integer lastBatchNum) {
-        TableProgress progress = findTableProgress(tableName);
-        TableProgress updated = progress.updateProgress(processedCount, lastBatchNum);
-        replaceTableProgress(tableName, updated);
-        recalculateOverallProgress();
+  /**
+   * 更新指定表的进度。
+   *
+   * <p>用于断点续传，记录每张表的最后处理批次号
+   *
+   * @param tableName 表名
+   * @param processedCount 已处理数
+   * @param lastBatchNum 最后批次号
+   */
+  public void updateTableProgress(
+      String tableName, Integer processedCount, Integer lastBatchNum) {
+    TableProgress progress = findTableProgress(tableName);
+    TableProgress updated = progress.updateProgress(processedCount, lastBatchNum);
+    replaceTableProgress(tableName, updated);
+    recalculateOverallProgress();
+  }
+
+  /**
+   * 标记任务完成。
+   *
+   * <p>前置条件：所有表的状态为 COMPLETED
+   *
+   * <p>后置条件：任务状态变为 SUCCESS，发布 MeshImportCompleted 事件
+   */
+  public void markAsCompleted() {
+    if (!allTablesCompleted()) {
+      throw new IllegalStateException("所有表必须完成才能标记任务完成");
     }
+    this.status = MeshImportTaskStatus.SUCCESS;
+    this.endTime = Instant.now();
+    long elapsedSeconds = Duration.between(startTime, endTime).getSeconds();
+    registerEvent(new MeshImportCompleted(getId(), this.totalRecords, elapsedSeconds, this.endTime));
+  }
 
-    /**
-     * 标记任务完成。
-     *
-     * <p>前置条件：所有表的状态为 COMPLETED
-     * <p>后置条件：任务状态变为 SUCCESS，发布 MeshImportCompleted 事件
-     */
-    public void markAsCompleted() {
-        if (!allTablesCompleted()) {
-            throw new IllegalStateException("所有表必须完成才能标记任务完成");
-        }
-        this.status = MeshImportTaskStatus.SUCCESS;
-        this.endTime = Instant.now();
-        long elapsedSeconds = Duration.between(startTime, endTime).getSeconds();
-        registerEvent(new MeshImportCompleted(this.id, this.totalRecords, elapsedSeconds, this.endTime));
+  /**
+   * 标记任务失败。
+   *
+   * @param errorMessage 失败原因
+   */
+  public void markAsFailed(String errorMessage) {
+    this.status = MeshImportTaskStatus.FAILED;
+    this.lastErrorMessage = errorMessage;
+    this.endTime = Instant.now();
+    registerEvent(
+        new MeshImportFailed(getId(), errorMessage, this.processedRecords, this.endTime));
+  }
+
+  /**
+   * 重试失败任务。
+   *
+   * <p>前置条件：任务状态为 FAILED
+   *
+   * <p>后置条件：任务状态变为 PROCESSING，重置失败批次计数
+   */
+  public void retry() {
+    if (this.status != MeshImportTaskStatus.FAILED) {
+      throw new IllegalStateException("只有 FAILED 状态的任务可以重试");
     }
+    this.status = MeshImportTaskStatus.PROCESSING;
+    this.failedBatchCount = 0;
+    this.lastErrorMessage = null;
+  }
 
-    /**
-     * 标记任务失败。
-     *
-     * @param errorMessage 失败原因
-     */
-    public void markAsFailed(String errorMessage) {
-        this.status = MeshImportTaskStatus.FAILED;
-        this.lastErrorMessage = errorMessage;
-        this.endTime = Instant.now();
-        registerEvent(new MeshImportFailed(this.id, errorMessage, this.processedRecords, this.endTime));
-    }
+  // =============== 私有辅助方法 ===============
 
-    /**
-     * 重试失败任务。
-     *
-     * <p>前置条件：任务状态为 FAILED
-     * <p>后置条件：任务状态变为 PROCESSING，重置失败批次计数
-     */
-    public void retry() {
-        if (this.status != MeshImportTaskStatus.FAILED) {
-            throw new IllegalStateException("只有 FAILED 状态的任务可以重试");
-        }
-        this.status = MeshImportTaskStatus.PROCESSING;
-        this.failedBatchCount = 0;
-        this.lastErrorMessage = null;
-    }
+  private TableProgress findTableProgress(String tableName) {
+    return tableProgressList.stream()
+        .filter(p -> p.getTableName().equals(tableName))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("表不存在: " + tableName));
+  }
 
-    // =============== 私有辅助方法 ===============
+  private void replaceTableProgress(String tableName, TableProgress updated) {
+    tableProgressList.removeIf(p -> p.getTableName().equals(tableName));
+    tableProgressList.add(updated);
+  }
 
-    private TableProgress findTableProgress(String tableName) {
-        return tableProgressList.stream()
-            .filter(p -> p.getTableName().equals(tableName))
-            .findFirst()
-            .orElseThrow(() -> new IllegalArgumentException("表不存在: " + tableName));
-    }
+  private void recalculateOverallProgress() {
+    this.processedRecords =
+        tableProgressList.stream().mapToInt(TableProgress::getProcessedCount).sum();
+  }
 
-    private void replaceTableProgress(String tableName, TableProgress updated) {
-        tableProgressList.removeIf(p -> p.getTableName().equals(tableName));
-        tableProgressList.add(updated);
-    }
-
-    private void recalculateOverallProgress() {
-        this.processedRecords = tableProgressList.stream()
-            .mapToInt(TableProgress::getProcessedCount)
-            .sum();
-    }
-
-    private boolean allTablesCompleted() {
-        return tableProgressList.stream()
-            .allMatch(p -> p.getStatus() == MeshTableImportStatus.COMPLETED);
-    }
+  private boolean allTablesCompleted() {
+    return tableProgressList.stream()
+        .allMatch(p -> p.getStatus() == MeshTableImportStatus.COMPLETED);
+  }
 }
 ```
 
@@ -195,88 +263,103 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
  * @since 0.2.0
  */
 @Value
+@Builder
 public class TableProgress {
 
-    /** 表名（如 "cat_mesh_descriptor"） */
-    private final String tableName;
+  /** 表名（如 "descriptor"、"qualifier"） */
+  String tableName;
 
-    /** 总记录数 */
-    private final Integer totalCount;
+  /** 总记录数 */
+  Integer totalCount;
 
-    /** 已处理数 */
-    private final Integer processedCount;
+  /** 已处理数 */
+  Integer processedCount;
 
-    /** 失败数 */
-    private final Integer failedCount;
+  /** 失败数 */
+  Integer failedCount;
 
-    /** 表状态（NOT_STARTED/IN_PROGRESS/COMPLETED/FAILED） */
-    private final MeshTableImportStatus status;
+  /** 表状态（NOT_STARTED/IN_PROGRESS/COMPLETED/FAILED） */
+  MeshTableImportStatus status;
 
-    /** 最后处理批次号（用于断点续传） */
-    private final Integer lastBatchNum;
+  /** 最后处理批次号（用于断点续传） */
+  Integer lastBatchNum;
 
-    /** 最后更新时间 */
-    private final Instant lastUpdateTime;
+  /** 最后更新时间 */
+  Instant lastUpdateTime;
 
-    /**
-     * 计算进度百分比。
-     *
-     * @return 进度百分比（0.0 ~ 100.0）
-     */
-    public Double getProgressPercentage() {
-        if (totalCount == null || totalCount == 0) {
-            return 0.0;
-        }
-        return (processedCount * 100.0) / totalCount;
+  /**
+   * 计算进度百分比。
+   *
+   * @return 进度百分比（0.0 ~ 100.0）
+   */
+  public Double getProgressPercentage() {
+    if (totalCount == null || totalCount == 0) {
+      return 0.0;
     }
+    return (processedCount * 100.0) / totalCount;
+  }
 
-    /**
-     * 更新进度（返回新实例）。
-     *
-     * @param newProcessedCount 新的已处理数
-     * @param newLastBatchNum 新的最后批次号
-     * @return 更新后的新实例
-     */
-    public TableProgress updateProgress(Integer newProcessedCount, Integer newLastBatchNum) {
-        MeshTableImportStatus newStatus = calculateStatus(newProcessedCount);
-        return new TableProgress(
-            this.tableName,
-            this.totalCount,
-            newProcessedCount,
-            this.failedCount,
-            newStatus,
-            newLastBatchNum,
-            Instant.now()
-        );
-    }
+  /**
+   * 更新进度（返回新实例）。
+   *
+   * <p>状态会根据已处理数自动计算：
+   *
+   * <ul>
+   *   <li>processedCount == 0 → NOT_STARTED
+   *   <li>processedCount == totalCount → COMPLETED
+   *   <li>0 < processedCount < totalCount → IN_PROGRESS
+   * </ul>
+   *
+   * @param newProcessedCount 新的已处理数
+   * @param newLastBatchNum 新的最后批次号
+   * @return 更新后的新实例
+   */
+  public TableProgress updateProgress(Integer newProcessedCount, Integer newLastBatchNum) {
+    MeshTableImportStatus newStatus = calculateStatus(newProcessedCount);
+    return TableProgress.builder()
+        .tableName(this.tableName)
+        .totalCount(this.totalCount)
+        .processedCount(newProcessedCount)
+        .failedCount(this.failedCount)
+        .status(newStatus)
+        .lastBatchNum(newLastBatchNum)
+        .lastUpdateTime(Instant.now())
+        .build();
+  }
 
-    /**
-     * 增加失败数（返回新实例）。
-     *
-     * @param increment 增量
-     * @return 更新后的新实例
-     */
-    public TableProgress incrementFailedCount(Integer increment) {
-        return new TableProgress(
-            this.tableName,
-            this.totalCount,
-            this.processedCount,
-            this.failedCount + increment,
-            this.status,
-            this.lastBatchNum,
-            Instant.now()
-        );
-    }
+  /**
+   * 增加失败数（返回新实例）。
+   *
+   * @param increment 增量
+   * @return 更新后的新实例
+   */
+  public TableProgress incrementFailedCount(Integer increment) {
+    return TableProgress.builder()
+        .tableName(this.tableName)
+        .totalCount(this.totalCount)
+        .processedCount(this.processedCount)
+        .failedCount(this.failedCount + increment)
+        .status(this.status)
+        .lastBatchNum(this.lastBatchNum)
+        .lastUpdateTime(Instant.now())
+        .build();
+  }
 
-    private MeshTableImportStatus calculateStatus(Integer processedCount) {
-        if (processedCount == 0) {
-            return MeshTableImportStatus.NOT_STARTED;
-        } else if (processedCount.equals(totalCount)) {
-            return MeshTableImportStatus.COMPLETED;
-        } else {
-            return MeshTableImportStatus.IN_PROGRESS;
-        }
+  /**
+   * 根据已处理数自动计算状态。
+   *
+   * @param processedCount 已处理数
+   * @return 计算后的状态
+   */
+  private MeshTableImportStatus calculateStatus(Integer processedCount) {
+    if (processedCount == 0) {
+      return MeshTableImportStatus.NOT_STARTED;
+    } else if (processedCount.equals(totalCount)) {
+      return MeshTableImportStatus.COMPLETED;
+    } else {
+      return MeshTableImportStatus.IN_PROGRESS;
     }
+  }
 }
 ```
 

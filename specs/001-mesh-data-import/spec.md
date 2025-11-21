@@ -127,8 +127,13 @@
 ### 非功能需求
 
 **架构约束**:
-- **六边形架构层次**: 此功能主要涉及 Application 层（导入任务编排）、Infrastructure 层（XML 解析、数据库批量插入、HTTP 下载）、Adapter 层（管理接口 REST API）。Domain 层包含 MeSH 领域实体（Descriptor、Qualifier 等）及其验证逻辑。
+- **六边形架构层次**: 此功能主要涉及 Application 层（导入任务编排、异常映射）、Infrastructure 层（XML 解析、数据库批量插入、HTTP 下载）、Adapter 层（管理接口 REST API）。Domain 层包含 MeSH 领域实体（Descriptor、Qualifier 等）及其验证逻辑。
 - **依赖方向**: 遵守 Adapter → Application → Domain ← Infrastructure。Domain 层不依赖任何框架（如 MyBatis、Spring），仅包含纯 Java 实体和业务规则。Infrastructure 层实现 Domain 层定义的 Repository 接口。
+- **异常处理策略**:
+  - Controller 层不处理异常，委托给全局异常处理器（GlobalRestExceptionHandler）
+  - Application 层通过 ErrorMappingContributor SPI 集中管理异常到 HTTP 状态码的映射
+  - 复用 JDK 标准异常（IllegalStateException、IllegalArgumentException），通过异常消息内容区分业务语义
+  - 异常映射规则：IllegalStateException → 409 Conflict（业务状态冲突）、IllegalArgumentException（"任务不存在"）→ 404 Not Found、IllegalArgumentException（其他）→ 400 Bad Request
 - **领域模型设计**（DDD）:
   - **聚合根**: MeshImportAggregate 作为 MeSH 导入聚合根，封装导入任务的完整生命周期和状态机流转，保护任务状态一致性（待处理 → 处理中 → 成功/失败）
   - **值对象**: TableProgress 表示每张表的导入进度（表名、已处理数/总数、当前状态），作为 MeshImportAggregate 的一部分
