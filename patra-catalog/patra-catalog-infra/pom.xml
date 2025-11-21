@@ -102,15 +102,17 @@
         <!-- ================================ -->
         <!-- 测试依赖 -->
         <!-- ================================ -->
-        <!-- MyBatis 测试支持（@MybatisTest）
+        <!-- MyBatis-Plus 测试支持（@MybatisPlusTest）
              会传递引入 spring-boot-starter-test，包含：
              - JUnit 5 (junit-jupiter)
              - AssertJ (assertj-core)
              - Mockito (mockito-core)
-             - Spring Test (spring-boot-test) -->
+             - Spring Test (spring-boot-test)
+             - MyBatis-Plus Test Auto-Configuration -->
         <dependency>
-            <groupId>org.mybatis.spring.boot</groupId>
-            <artifactId>mybatis-spring-boot-starter-test</artifactId>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter-test</artifactId>
+            <version>3.5.12</version>
             <scope>test</scope>
         </dependency>
 

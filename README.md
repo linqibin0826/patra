@@ -213,7 +213,7 @@ Patra 项目遵循**测试金字塔**，各层使用不同的测试策略：
 
 # 3. Infrastructure 层：单元测试 + 集成测试
 ./mvnw test -pl patra-{service}-infra           # 单元测试（Converter、Feign Client Mock）
-./mvnw verify -pl patra-{service}-infra         # 集成测试（@MybatisTest + TestContainers）
+./mvnw verify -pl patra-{service}-infra         # 集成测试（@MybatisPlusTest + TestContainers）
 
 # 4. Adapter 层：单元测试 + 切片测试
 ./mvnw test -pl patra-{service}-adapter         # 单元测试（Listener、Job）+ @WebMvcTest（Controller）

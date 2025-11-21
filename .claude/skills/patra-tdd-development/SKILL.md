@@ -371,13 +371,13 @@ public ArticleResult createArticle(CreateArticleCommand command) {
 **特点**：单元测试 + 集成测试（根据实现类型选择）
 **测试位置**：`patra-{service}-infra/src/test/java/`
 
-#### 类型 1：Repository - 使用 @MybatisTest + TestContainers
+#### 类型 1：Repository - 使用 @MybatisPlusTest + TestContainers
 
 **示例：开发 ArticleRepositoryImpl**
 
 ```java
 // 🔴 Red: 先写测试（集成测试）
-@MybatisTest
+@MybatisPlusTest
 @Testcontainers
 @Import({ArticleRepositoryImpl.class, ArticleConverter.class})
 class ArticleRepositoryImplIT {

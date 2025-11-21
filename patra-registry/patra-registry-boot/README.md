@@ -265,7 +265,7 @@ Patra Registry 遵循**六边形架构的分层测试策略**。
 |---------|------|------|--------|
 | **Domain 单元测试** | patra-registry-domain/src/test/ | JUnit 5 + AssertJ | ≥ 80% |
 | **Application 单元测试** | patra-registry-app/src/test/ | JUnit 5 + Mockito | ≥ 70% |
-| **Infrastructure 测试** | patra-registry-infra/src/test/ | @MybatisTest + TestContainers | 有 |
+| **Infrastructure 测试** | patra-registry-infra/src/test/ | @MybatisPlusTest + TestContainers | 有 |
 | **Adapter 测试** | patra-registry-adapter/src/test/ | @WebMvcTest + Mockito | 有 |
 | **Boot E2E 测试** | patra-registry-boot/src/test/ | @SpringBootTest + TestContainers | 有 |
 

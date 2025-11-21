@@ -296,7 +296,7 @@
   - ✅ plan.md CHK-TEST-002: "Application 层单元测试覆盖率 ≥ 70%"
 - [x] **CHK080** - 是否为 Infrastructure 层定义了单元测试和集成测试的需求？[完整性, plan.md CHK-TEST-003, tasks.md]
   - ✅ plan.md CHK-TEST-003: "Infrastructure 层有单元测试和集成测试(轻量, MybatisTest等)"
-  - ✅ tasks.md: Repository 使用 @MybatisTest + TestContainers
+  - ✅ tasks.md: Repository 使用 @MybatisPlusTest + TestContainers
 - [x] **CHK081** - 是否为 Adapter 层定义了单元测试和切片测试的需求？[完整性, plan.md CHK-TEST-004, tasks.md]
   - ✅ plan.md CHK-TEST-004: "Adapter 层有单元测试和切片测试"
   - ✅ tasks.md T037: Controller 使用 @WebMvcTest + MockMvc
@@ -308,7 +308,7 @@
   - ✅ tasks.md T041: "E2E 测试位置: patra-catalog-boot/src/test/java/"
   - ✅ plan.md: "测试模块位置：IT 和 E2E 测试必须在 boot 模块（CHK-TEST-006）"
 - [x] **CHK083** - 是否定义了使用 TestContainers 进行集成测试的需求？[完整性, tasks.md]
-  - ✅ tasks.md T019: "@MybatisTest + TestContainers（MySQL）"
+  - ✅ tasks.md T019: "@MybatisPlusTest + TestContainers（MySQL）"
   - ✅ tasks.md T041: "E2E 测试框架：@SpringBootTest + TestContainers（MySQL + Redis）"
 - [x] **CHK084** - 是否禁止 Domain 层测试依赖 Spring 框架？[完整性, plan.md, tasks.md T005]
   - ✅ plan.md: "Domain 层 - 纯单元测试，无框架依赖，纯 Java 测试"

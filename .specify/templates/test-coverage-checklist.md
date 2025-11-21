@@ -119,7 +119,7 @@
 
 - [ ] **CHK-INFRA-001**: 所有 Repository 实现有集成测试
   - Repository 列表: [列出所有 Repository]
-  - [ ] 使用 `@MybatisTest` 切片测试
+  - [ ] 使用 `@MybatisPlusTest` 切片测试
   - [ ] 使用 TestContainers 启动真实数据库（MySQL）
   - [ ] 测试文件命名: `*RepositoryIT.java`
   - [ ] 测试位置: `patra-{service}-infra/src/test/java/`
@@ -346,7 +346,7 @@
   - [ ] 自动配置 MockMvc
   - [ ] 只加载 Web 层组件
 
-- [ ] **CHK-TOOL-006**: 正确使用 @MybatisTest
+- [ ] **CHK-TOOL-006**: 正确使用 @MybatisPlusTest
   - [ ] 用于 Repository 层集成测试
   - [ ] 结合 TestContainers 使用
   - [ ] 只加载 MyBatis 相关组件

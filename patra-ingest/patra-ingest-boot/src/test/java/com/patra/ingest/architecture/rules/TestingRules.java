@@ -293,7 +293,7 @@ public final class TestingRules {
    *
    * <ol>
    *   <li>集成测试应该在被测试组件所在的模块（CHK-TEST-003）
-   *   <li>便于管理依赖（TestContainers、@MybatisTest 等）
+   *   <li>便于管理依赖（TestContainers、@MybatisPlusTest 等）
    *   <li>遵循模块化测试策略
    * </ol>
    *
