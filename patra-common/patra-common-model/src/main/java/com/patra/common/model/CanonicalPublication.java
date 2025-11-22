@@ -653,7 +653,7 @@ public class CanonicalPublication {
   /// 用于标引医学出版物的主题和内容。每个 MeSH 标引项包含一个主题词（Descriptor）
   /// 和可选的限定词（Qualifiers）列表。
   ///
-  /// 例如："Humans" [主题词] + "genetics" [限定词] 表示"人类遗传学"主题。
+  /// 例如：{@code "Humans" [主题词]} + {@code "genetics" [限定词]} 表示"人类遗传学"主题。
   @Value
   @Builder
   @Jacksonized
@@ -695,8 +695,8 @@ public class CanonicalPublication {
   ///
   /// 例如：
   ///
-  /// - "Humans" [主题词] + "genetics" [限定词] = "人类遗传学"
-  ///   - "Diabetes Mellitus" [主题词] + "drug therapy" [限定词] = "糖尿病药物治疗"
+  /// - {@code "Humans" [主题词]} + {@code "genetics" [限定词]} = "人类遗传学"
+  ///   - {@code "Diabetes Mellitus" [主题词]} + {@code "drug therapy" [限定词]} = "糖尿病药物治疗"
   ///
   @Value
   @Builder

@@ -624,7 +624,7 @@ public final class PubmedPublication {
   ///
   /// 包含主题词(DescriptorName)和可选的限定词列表(QualifierName)。
   ///
-  /// 例如: "Humans" [DescriptorName] + "genetics" [QualifierName] 表示"人类遗传学"主题。
+  /// 例如: {@code "Humans" [DescriptorName]} + {@code "genetics" [QualifierName]} 表示"人类遗传学"主题。
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class MeshHeading {
 
@@ -704,8 +704,8 @@ public final class PubmedPublication {
   ///
   /// 限定词用于进一步细化主题词的含义,例如:
   ///
-  /// - "Humans" [主题词] + "genetics" [限定词] = "人类遗传学"
-  ///   - "Diabetes Mellitus" [主题词] + "drug therapy" [限定词] = "糖尿病药物治疗"
+  /// - {@code "Humans" [主题词]} + {@code "genetics" [限定词]} = "人类遗传学"
+  ///   - {@code "Diabetes Mellitus" [主题词]} + {@code "drug therapy" [限定词]} = "糖尿病药物治疗"
   ///
   /// 包含:
   ///
