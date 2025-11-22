@@ -121,7 +121,7 @@ class MeshImportJobTest {
       // then
       verify(lock).unlock();
       xxlJobHelperMock.verify(
-          () -> XxlJobHelper.log(anyString()));
+          () -> XxlJobHelper.log(anyString()), atLeastOnce());
     }
   }
 
@@ -319,7 +319,7 @@ class MeshImportJobTest {
 
       // then
       verify(meshImportOrchestrator).startImport(any());
-      xxlJobHelperMock.verify(() -> XxlJobHelper.log(anyString()));
+      xxlJobHelperMock.verify(() -> XxlJobHelper.log(anyString()), atLeastOnce());
     }
   }
 }

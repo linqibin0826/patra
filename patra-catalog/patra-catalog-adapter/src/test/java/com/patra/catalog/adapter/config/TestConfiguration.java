@@ -13,13 +13,15 @@ import org.springframework.context.annotation.ComponentScan;
 /// 职责：
 ///
 /// - 提供 @SpringBootConfiguration，使 @WebMvcTest 能够加载 Spring 上下文
-///   - 提供测试所需的 Mock Bean（如 MeshImportConfig）
+///   - 提供测试所需的 Bean（如 MeshImportConfig）
+///   - 限制组件扫描范围，避免加载不必要的依赖（如 Job、Listener 等）
+///   - 通过 @EnableAutoConfiguration 自动加载 patra-starter-web 的异常处理器
 ///
 /// @author linqibin
 /// @since 0.1.0
 @SpringBootConfiguration
-@EnableAutoConfiguration
-@ComponentScan(basePackages = "com.patra.catalog.adapter")
+@EnableAutoConfiguration // 自动加载 patra-starter-web 和 patra-starter-core 的配置
+@ComponentScan(basePackages = "com.patra.catalog.adapter.rest") // 只扫描 REST 相关组件
 public class TestConfiguration {
 
   /// MeSH 导入配置 Bean（测试用）。
