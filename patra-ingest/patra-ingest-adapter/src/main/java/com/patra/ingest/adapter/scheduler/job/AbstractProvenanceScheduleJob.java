@@ -22,29 +22,29 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /// 数据来源调度任务抽象基类。
-/// 
+///
 /// 为所有 "Provenance + OperationCode" 组合的调度任务提供统一的模板方法实现,执行流程为: 参数解析 → 用例编排 → 结果报告 / 错误处理。
-/// 
+///
 /// 职责:
-/// 
+///
 /// - 从 XXL-Job JSON 参数解析调度配置(时间窗口、优先级、步长等)
 ///   - 构建 PlanIngestionCommand 并委托给应用层用例
 ///   - 处理参数验证和默认值回退逻辑
 ///   - 统一记录任务执行日志和性能指标
 ///   - 向 XXL-Job 调度中心报告任务执行结果
-/// 
+///
 /// 子类实现: 子类只需定义两个方法:
-/// 
+///
 /// - {@link #getProvenanceCode()} - 指定数据来源(如 PUBMED、EMBASE)
 ///   - {@link #getOperationCode()} - 指定操作类型(如 HARVEST、PARSE)
-/// 
+///
 /// 默认值和约束:
-/// 
+///
 /// - 参数为空时回退到默认配置(step=P1D,即1天切片)
 ///   - windowFrom/windowTo 解析为 ISO-8601 Instant,非法值抛出异常
 ///   - 非法优先级值被忽略(记录警告但不阻断任务执行)
 ///   - 任务失败时抛出原始异常,由 XXL-Job 根据重试策略决定是否重试
-/// 
+///
 /// 设计模式: 模板方法模式 - 基类定义算法骨架,子类填充具体步骤。
 @Slf4j
 public abstract class AbstractProvenanceScheduleJob {
@@ -59,25 +59,25 @@ public abstract class AbstractProvenanceScheduleJob {
   @Autowired private ObjectMapper objectMapper;
 
   /// 返回此任务的来源代码(每个子类固定)。
-/// 
-/// @return 来源代码
+  ///
+  /// @return 来源代码
   protected abstract ProvenanceCode getProvenanceCode();
 
   /// 返回此任务的操作代码(每个子类固定)。
-/// 
-/// @return 操作代码
+  ///
+  /// @return 操作代码
   protected abstract OperationCode getOperationCode();
 
   /// 将 XXL-Job JSON 参数解析为应用请求对象。
-/// 
-/// 支持的字段: windowFrom, windowTo, priority, step, schedulerLogId, triggeredAt 以及任何额外字段(作为
-/// triggerParams 传递)。
-/// 
-/// 失败策略: 如果结构无效或 JSON 解析失败,抛出 {@link IngestScheduleParameterException},该异常会被任务入口点捕获并标记为失败。
-/// 
-/// @param paramStr 原始 XXL-Job 参数(JSON 字符串;可能为空)
-/// @return PlanIngestionCommand 请求
-/// @throws IngestScheduleParameterException 当参数无效时
+  ///
+  /// 支持的字段: windowFrom, windowTo, priority, step, schedulerLogId, triggeredAt 以及任何额外字段(作为
+  /// triggerParams 传递)。
+  ///
+  /// 失败策略: 如果结构无效或 JSON 解析失败,抛出 {@link IngestScheduleParameterException},该异常会被任务入口点捕获并标记为失败。
+  ///
+  /// @param paramStr 原始 XXL-Job 参数(JSON 字符串;可能为空)
+  /// @return PlanIngestionCommand 请求
+  /// @throws IngestScheduleParameterException 当参数无效时
   protected PlanIngestionCommand parseJobParam(String paramStr) {
     if (CharSequenceUtil.isBlank(paramStr)) {
       log.debug("使用默认任务配置,步长为 [{}]", DEFAULT_STEP);
@@ -177,10 +177,10 @@ public abstract class AbstractProvenanceScheduleJob {
   }
 
   /// 执行主调度流程: 日志记录(开始/结束/错误) + 参数解析 + 编排调用 + 结果报告。
-/// 
-/// 执行时间会被记录用于 SLA 监控;失败时,XxlJobHelper 标记任务失败并重新抛出异常。
-/// 
-/// @param paramStr XXL-Job JSON 参数字符串(可能为空)
+  ///
+  /// 执行时间会被记录用于 SLA 监控;失败时,XxlJobHelper 标记任务失败并重新抛出异常。
+  ///
+  /// @param paramStr XXL-Job JSON 参数字符串(可能为空)
   protected void executeScheduleJob(String paramStr) {
     long startTime = System.currentTimeMillis();
     logJobStart(paramStr);

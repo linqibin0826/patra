@@ -6,20 +6,20 @@ import lombok.Builder;
 import lombok.Value;
 
 /// 发件箱中继日志实体。记录每次发件箱消息的中继尝试。
-/// 
+///
 /// 业务价值：
-/// 
+///
 /// - 历史追溯：查询消息的完整发布历史
 ///   - 性能分析：分析执行时长并识别瓶颈
 ///   - 错误分析：识别错误模式和重试有效性
 ///   - 审计合规：不可变的数据发布审计轨迹
-/// 
+///
 /// 设计原则：
-/// 
+///
 /// - 不可变：日志创建后从不修改
 ///   - 完整性：捕获故障排查所需的所有信息
 ///   - 高效性：针对仅追加写入和时间范围查询优化
-/// 
+///
 /// @author Patra Team
 /// @since 0.1.0
 @Value
@@ -72,50 +72,50 @@ public class OutboxRelayLog {
   Instant nextRetryAt;
 
   /// Checks if this relay attempt succeeded.
-/// 
-/// @return true if relay status is PUBLISHED
+  ///
+  /// @return true if relay status is PUBLISHED
   public boolean isPublished() {
     return relayStatus == RelayStatus.PUBLISHED;
   }
 
   /// Checks if this relay attempt failed permanently.
-/// 
-/// @return true if relay status is FAILED
+  ///
+  /// @return true if relay status is FAILED
   public boolean isFailed() {
     return relayStatus == RelayStatus.FAILED;
   }
 
   /// Checks if this relay attempt was deferred for retry.
-/// 
-/// @return true if relay status is DEFERRED
+  ///
+  /// @return true if relay status is DEFERRED
   public boolean isDeferred() {
     return relayStatus == RelayStatus.DEFERRED;
   }
 
   /// Checks if this relay attempt lost lease competition.
-/// 
-/// @return true if relay status is LEASE_MISSED
+  ///
+  /// @return true if relay status is LEASE_MISSED
   public boolean isLeaseMissed() {
     return relayStatus == RelayStatus.LEASE_MISSED;
   }
 
   /// Checks if this relay status represents a terminal state (no further processing needed).
-/// 
-/// @return true if status is terminal (PUBLISHED or FAILED)
+  ///
+  /// @return true if status is terminal (PUBLISHED or FAILED)
   public boolean isTerminal() {
     return relayStatus != null && relayStatus.isTerminal();
   }
 
   /// Checks if this relay status indicates a retryable failure.
-/// 
-/// @return true if status is retryable (DEFERRED or LEASE_MISSED)
+  ///
+  /// @return true if status is retryable (DEFERRED or LEASE_MISSED)
   public boolean isRetryable() {
     return relayStatus != null && relayStatus.isRetryable();
   }
 
   /// Validates that this relay log has all required fields.
-/// 
-/// @throws IllegalStateException if any required field is null
+  ///
+  /// @throws IllegalStateException if any required field is null
   public void validate() {
     if (outboxMessageId == null) {
       throw new IllegalStateException("outboxMessageId must not be null");

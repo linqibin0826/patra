@@ -15,25 +15,25 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// FileMetadata 聚合根单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 使用 TestDataBuilder 模式构建测试数据
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
-/// 
+///
 /// 测试范围：
-/// 
+///
 /// - ✅ 工厂方法（创建和恢复）
 ///   - ✅ 必填字段验证
 ///   - ✅ 状态转换逻辑（ACTIVE → DELETED）
 ///   - ✅ 业务规则（软删除、过期检查、审计更新）
 ///   - ✅ 不变性保证
 ///   - ✅ 边界条件处理
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @DisplayName("FileMetadata 单元测试")
 class FileMetadataTest {
 

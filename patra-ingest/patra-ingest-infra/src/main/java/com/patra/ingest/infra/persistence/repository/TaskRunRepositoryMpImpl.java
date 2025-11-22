@@ -16,21 +16,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 /// 任务执行记录（TaskRun）仓储实现,基于 MyBatis-Plus。
-/// 
+///
 /// 职责:
-/// 
+///
 /// - 插入和更新任务执行记录,包括统计数据和检查点 JSON 字段
 ///   - 查询任务的最新执行尝试(按 attempt_no DESC 排序, limit 1)
 ///   - 查询所有执行尝试,用于审计和故障排查
 ///   - 获取最新 attemptNo 用于生成下一次尝试编号
-/// 
+///
 /// 设计:
-/// 
+///
 /// - ID 为 null 时插入,否则更新
 ///   - 保存后再次 selectById 以获取数据库生成的字段(如后续添加的乐观锁 version)
-/// 
+///
 /// 日志策略: DEBUG 级别记录 insert/update 及关键字段;查询操作不记录日志。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Repository
@@ -42,9 +42,9 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
   private final TaskRunConverter converter;
 
   /// Saves a task run record.
-/// 
-/// @param run task run entity
-/// @return persisted task run with database-generated fields
+  ///
+  /// @param run task run entity
+  /// @return persisted task run with database-generated fields
   @Override
   public TaskRun save(TaskRun run) {
     TaskRunDO dto = converter.toDO(run);
@@ -59,9 +59,9 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
   }
 
   /// Finds the latest task run attempt by task ID.
-/// 
-/// @param taskId task ID
-/// @return Optional containing latest run, empty if task has not been run yet
+  ///
+  /// @param taskId task ID
+  /// @return Optional containing latest run, empty if task has not been run yet
   @Override
   public Optional<TaskRun> findLatest(Long taskId) {
     TaskRunDO one =
@@ -80,9 +80,9 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
   }
 
   /// Finds all task run attempts ordered by attemptNo ascending.
-/// 
-/// @param taskId task ID
-/// @return list of all attempts, may be empty
+  ///
+  /// @param taskId task ID
+  /// @return list of all attempts, may be empty
   @Override
   public List<TaskRun> findAll(Long taskId) {
     List<TaskRunDO> entities =
@@ -97,9 +97,9 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
   }
 
   /// Retrieves the latest attemptNo for a task to generate next attempt number.
-/// 
-/// @param taskId task ID
-/// @return maximum attemptNo, or 0 if no run records exist
+  ///
+  /// @param taskId task ID
+  /// @return maximum attemptNo, or 0 if no run records exist
   @Override
   public int getLatestAttemptNo(Long taskId) {
     return mapper.selectLatestAttemptNo(taskId);

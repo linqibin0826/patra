@@ -1,26 +1,25 @@
 package com.patra.catalog.infra.persistence.entity;
 
-import java.time.Instant;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// 出版载体数据库实体,映射到表 `cat_venue`。
-/// 
+///
 /// 表结构: 管理期刊、书籍、会议等出版载体的基本信息(不包含具体卷期)。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `venue_type` 载体类型,支持 JOURNAL/BOOK/CONFERENCE/OTHER
 ///   - `issn` 期刊专用,唯一索引 idx_issn
 ///   - `isbn` 书籍专用,唯一索引 idx_isbn
 ///   - `issn_type` ISSN 类型,print/electronic
 ///   - `venue_specific_data` JSON 扩展数据字段
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -75,5 +74,4 @@ public class VenueDO extends BaseDO {
   /// 类型特定数据(JSON 格式,灵活扩展)
   @TableField(value = "venue_specific_data", typeHandler = JacksonTypeHandler.class)
   private JsonNode venueSpecificData;
-
 }

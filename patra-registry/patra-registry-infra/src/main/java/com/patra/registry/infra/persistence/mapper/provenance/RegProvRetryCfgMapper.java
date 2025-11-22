@@ -6,8 +6,9 @@ import java.time.Instant;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
-/// 只读 Mapper,用于表 `reg_prov_retry_cfg`. SQL statements are defined in `resources/mapper/RegProvRetryCfgMapper.xml`.
-/// 
+/// 只读 Mapper,用于表 `reg_prov_retry_cfg`. SQL statements are defined in
+// `resources/mapper/RegProvRetryCfgMapper.xml`.
+///
 /// @author linqibin
 /// @since 0.1.0
 public interface RegProvRetryCfgMapper extends BaseMapper<RegProvRetryCfgDO> {

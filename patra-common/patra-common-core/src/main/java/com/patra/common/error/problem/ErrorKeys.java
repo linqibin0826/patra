@@ -1,9 +1,9 @@
 package com.patra.common.error.problem;
 
 /// 错误处理系统中使用的标准 ProblemDetail 扩展字段键常量。
-/// 
+///
 /// 这些键确保 RFC 7807 ProblemDetail 响应中的字段命名一致性。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public final class ErrorKeys {

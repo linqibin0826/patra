@@ -4,9 +4,9 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /// 重试配置查询视图。
-/// 
+///
 /// 用于查询重试策略配置的读优化投影。包含最大重试次数、退避策略、延迟参数、熔断阈值等重试相关配置。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public record RetryConfigQuery(

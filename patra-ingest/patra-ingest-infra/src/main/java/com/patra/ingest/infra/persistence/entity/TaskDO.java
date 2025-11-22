@@ -10,15 +10,15 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// 采集任务数据库实体,映射到表 `ing_task`。
-/// 
+///
 /// 表结构: 表示从计划切片派生的可执行任务,绑定到数据源、操作、幂等键和租约。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `idempotent_key` 全局唯一(唯一约束: uk_task_idem),防止重复任务
 ///   - `params` 存储规范化的任务参数;通过 {@link JacksonTypeHandler} 持久化
 ///   - 租约字段(`lease_owner`/`leased_until`/`lease_count`) 支持抢占/续约模型
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

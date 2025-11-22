@@ -12,9 +12,9 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /// 数据库实体,映射到表 `reg_prov_expr_render_rule`.
-/// 
+///
 /// Defines how expression atoms are rendered into provider queries or parameters.
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

@@ -11,15 +11,15 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /// 数据库实体,映射到表 `sys_dict_type`.
-/// 
+///
 /// Exposes dictionary type metadata to the query side of the CQRS stack.
-/// 
+///
 /// Important invariants enforced at the database layer:
-/// 
+///
 /// - `type_code` is unique across all types and acts as the business key.
 ///   - System types (`is_system = 1`) are managed by the platform and typically immutable.
 ///   - Types flagged with `allow_custom_items = 1` may be extended by business users.
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -31,7 +31,7 @@ import lombok.experimental.SuperBuilder;
 public class RegSysDictTypeDO extends BaseDO {
 
   /// Stable business key for the dictionary type (e.g., `http_method`). Expected format is
-/// lower-case snake case.
+  /// lower-case snake case.
   @TableField("type_code")
   private String typeCode;
 
@@ -48,7 +48,7 @@ public class RegSysDictTypeDO extends BaseDO {
   private Boolean allowCustomItems;
 
   /// Flag marking whether this dictionary type is managed by the platform (`true`) or business
-/// (`false`).
+  /// (`false`).
   @TableField("is_system")
   private Boolean isSystem;
 

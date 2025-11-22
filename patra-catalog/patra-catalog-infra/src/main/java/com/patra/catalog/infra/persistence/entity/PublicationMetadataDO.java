@@ -1,27 +1,27 @@
 package com.patra.catalog.infra.persistence.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.baomidou.mybatisplus.annotation.TableName;
 import com.patra.starter.mybatis.entity.BaseDO;
 import java.time.Instant;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// 元数据数据库实体,映射到表 `cat_publication_metadata`。
-/// 
+///
 /// 表结构: 独立管理文献的元数据信息(索引状态、质量评分、数据溯源),与 cat_publication 一对一关系
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `publication_id` 出版物ID(外键:cat_publication.id,一对一关系),唯一约束 uk_pub_metadata
 ///   - `indexing_status` 索引状态(Pending/Indexed/MEDLINE等)
 ///   - `data_source` 数据来源(PubMed/EPMC/Crossref等)
 ///   - `quality_score` 质量评分(A/B/C/D/F)
 ///   - `validation_errors` 验证错误(JSON数组)
 ///   - `ext_metadata` 扩展元数据(灵活扩展)
-/// 
+///
 /// @author linqibin
 /// @since 0.5.0
 @Data

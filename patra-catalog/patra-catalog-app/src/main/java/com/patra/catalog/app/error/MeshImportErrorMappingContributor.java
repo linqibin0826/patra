@@ -5,35 +5,34 @@ import com.patra.starter.core.error.model.SimpleErrorCode;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 /// MeSH 导入业务异常映射贡献者。
-/// 
+///
 /// 将标准异常类型映射到特定的业务错误码和 HTTP 状态码：
-/// 
+///
 /// - {@link IllegalStateException} → 409 Conflict（业务状态冲突，如已有任务运行）
 ///   - {@link IllegalArgumentException}（消息包含"任务不存在"） → 404 Not Found
 ///   - {@link IllegalArgumentException}（其他） → 400 Bad Request（参数错误）
-/// 
+///
 /// **设计理念**：
-/// 
+///
 /// - 不创建自定义异常类，复用 JDK 标准异常（简单性原则）
 ///   - 通过异常消息内容区分业务语义（实用主义）
 ///   - 集中管理异常到 HTTP 状态码的映射（DRY 原则）
-/// 
+///
 /// **优先级**： 高于框架默认的类名启发式（IllegalXxxException → 422），确保业务语义正确映射。
-/// 
+///
 /// **错误码格式**： CATALOG-{httpStatusCode}，例如：
-/// 
+///
 /// - CATALOG-0409（业务状态冲突）
 ///   - CATALOG-0404（资源不存在）
 ///   - CATALOG-0400（参数错误）
-/// 
+///
 /// **错误消息**：从异常 {@link Throwable#getMessage()} 中自动提取，无需在 ErrorCode 中重复定义。
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Slf4j
 @Component
 public class MeshImportErrorMappingContributor implements ErrorMappingContributor {

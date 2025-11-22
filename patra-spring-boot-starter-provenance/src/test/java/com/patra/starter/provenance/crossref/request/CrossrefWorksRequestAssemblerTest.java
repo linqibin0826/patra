@@ -10,7 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /// CrossrefWorksRequestAssembler 单元测试
-/// 
+///
 /// @author linqibin
 @DisplayName("CrossrefWorksRequestAssembler 测试")
 class CrossrefWorksRequestAssemblerTest {

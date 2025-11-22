@@ -1,9 +1,9 @@
 package com.patra.registry.api.dto.provenance;
 
 /// 核心数据源元数据响应 DTO,暴露给下游服务。
-/// 
+///
 /// 字段说明:
-/// 
+///
 /// @param id 内部标识符
 /// @param code 业务代码
 /// @param name 数据源名称

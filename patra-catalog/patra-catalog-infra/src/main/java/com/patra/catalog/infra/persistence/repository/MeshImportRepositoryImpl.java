@@ -1,12 +1,12 @@
 package com.patra.catalog.infra.persistence.repository;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import com.patra.catalog.domain.port.MeshImportPort;
 import com.patra.catalog.infra.persistence.converter.MeshImportConverter;
 import com.patra.catalog.infra.persistence.entity.MeshImportTaskDO;
 import com.patra.catalog.infra.persistence.entity.MeshTableProgressDO;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.patra.catalog.infra.persistence.mapper.MeshImportTaskMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshTableProgressMapper;
 import java.util.HashSet;
@@ -18,23 +18,23 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 /// MeSH 导入任务仓储实现。
-/// 
+///
 /// **职责**：
-/// 
+///
 /// - 管理 MeSH 导入任务聚合根的持久化
 ///   - 协调任务主表和表进度的存储
 ///   - 使用 MapStruct 进行 Domain 对象与 DO 对象转换
 ///   - 保证 DO 对象不泄露到 Infrastructure 层外
-/// 
+///
 /// **设计原则**：
-/// 
+///
 /// - 六边形架构：实现 Domain 层定义的 {@link MeshImportPort} 接口
 ///   - 依赖注入：使用构造器注入 Mapper 和 Converter
 ///   - 事务管理：由 Application 层管理事务边界
 ///   - 乐观锁：使用 MyBatis-Plus 的 version 字段防止并发修改
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Slf4j
 @Repository
 @RequiredArgsConstructor
@@ -45,28 +45,28 @@ public class MeshImportRepositoryImpl implements MeshImportPort {
   private final MeshImportConverter converter;
 
   /// 保存导入任务（新增或更新）。
-/// 
-/// **设计原则**：
-/// 
-/// - Repository 模式：save() 表示持久化聚合根，而非 SQL 操作
-///   - 调用者无需关心是新增还是更新，由 Repository 自动判断
-///   - 符合 DDD "告诉，别问" 原则
-/// 
-/// **实现逻辑**：
-/// 
-/// - 如果 aggregate.getId() 为 null → INSERT（自动分配雪花 ID）
-///   - 如果 aggregate.getId() 不为 null → UPDATE（使用乐观锁）
-///   - 关联数据采用"删除+重新插入"策略（简化并发控制）
-/// 
-/// **标准参考**：
-/// 
-/// - Spring Data JPA: save() → upsert 语义
-///   - Hibernate: save() / persist() → upsert 语义
-///   - Evans DDD 书籍：Repository 应隐藏持久化细节
-/// 
-/// @param aggregate 导入任务聚合根
-/// @return 保存后的聚合根（包含生成的 ID 和更新后的 version）
-/// @throws IllegalStateException 如果更新时发生乐观锁冲突
+  ///
+  /// **设计原则**：
+  ///
+  /// - Repository 模式：save() 表示持久化聚合根，而非 SQL 操作
+  ///   - 调用者无需关心是新增还是更新，由 Repository 自动判断
+  ///   - 符合 DDD "告诉，别问" 原则
+  ///
+  /// **实现逻辑**：
+  ///
+  /// - 如果 aggregate.getId() 为 null → INSERT（自动分配雪花 ID）
+  ///   - 如果 aggregate.getId() 不为 null → UPDATE（使用乐观锁）
+  ///   - 关联数据采用"删除+重新插入"策略（简化并发控制）
+  ///
+  /// **标准参考**：
+  ///
+  /// - Spring Data JPA: save() → upsert 语义
+  ///   - Hibernate: save() / persist() → upsert 语义
+  ///   - Evans DDD 书籍：Repository 应隐藏持久化细节
+  ///
+  /// @param aggregate 导入任务聚合根
+  /// @return 保存后的聚合根（包含生成的 ID 和更新后的 version）
+  /// @throws IllegalStateException 如果更新时发生乐观锁冲突
   @Override
   public MeshImportAggregate save(MeshImportAggregate aggregate) {
     log.debug("保存 MeSH 导入任务: {}", aggregate);

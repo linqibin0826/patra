@@ -5,9 +5,9 @@ import com.patra.registry.domain.support.TemporalEntity;
 import java.time.Instant;
 
 /// API 参数映射领域值对象,对应表 `reg_prov_api_param_map`。
-/// 
+///
 /// 在 SOURCE/TASK 范围内将统一的标准键映射到提供者特定的参数名称。仅负责键名映射; 值级别的转换仅通过 transform_code 声明。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public record ApiParamMapping(
@@ -33,18 +33,18 @@ public record ApiParamMapping(
     Instant effectiveTo)
     implements TemporalEntity {
   /// 带验证的规范构造函数。
-/// 
-/// @param id 唯一映射标识符,必须为正数
-/// @param provenanceId 来源标识符,必须为正数
-/// @param operationType 操作类型区分器,可为 null
-/// @param endpointName 此映射应用的端点名称,可为 null(null 表示所有端点)
-/// @param stdKey 标准键,不能为空白
-/// @param providerParamName 提供者参数名称,不能为空白
-/// @param transformCode 来自字典的转换代码,可为 null
-/// @param notesJson 作为 JSON 的附加说明,可为 null
-/// @param effectiveFrom 生效开始时间戳,不能为 null
-/// @param effectiveTo 生效结束时间戳,可为 null(开放式)
-/// @throws DomainValidationException 如果验证失败
+  ///
+  /// @param id 唯一映射标识符,必须为正数
+  /// @param provenanceId 来源标识符,必须为正数
+  /// @param operationType 操作类型区分器,可为 null
+  /// @param endpointName 此映射应用的端点名称,可为 null(null 表示所有端点)
+  /// @param stdKey 标准键,不能为空白
+  /// @param providerParamName 提供者参数名称,不能为空白
+  /// @param transformCode 来自字典的转换代码,可为 null
+  /// @param notesJson 作为 JSON 的附加说明,可为 null
+  /// @param effectiveFrom 生效开始时间戳,不能为 null
+  /// @param effectiveTo 生效结束时间戳,可为 null(开放式)
+  /// @throws DomainValidationException 如果验证失败
   public ApiParamMapping(
       Long id,
       Long provenanceId,

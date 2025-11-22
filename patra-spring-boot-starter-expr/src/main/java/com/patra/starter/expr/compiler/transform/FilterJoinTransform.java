@@ -8,24 +8,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /// 过滤器连接变换:将多个 filter key:value 对用逗号分隔符连接,用于 MULTI std_keys。
-/// 
+///
 /// 用于像 Crossref 这样接受在单个参数中传递多个过滤器的提供者。
-/// 
+///
 /// 该变换期望接收一个特殊分隔符分隔的值字符串(来自渲染器的内部格式),并将其转换为适合提供者使用的逗号分隔过滤器列表。
-/// 
+///
 /// 示例:
-/// 
+///
 /// ```
-/// 
+///
 /// 内部格式: "from-pub-date:2022-01-01||until-pub-date:2022-12-31"
 /// 输出:     "from-pub-date:2022-01-01,until-pub-date:2022-12-31"
-/// 
+///
 /// ```
-/// 
+///
 /// 参见: docs/expr/03-compiler-bridge-internals.md §3.8 (MULTI Join Strategy),
 /// docs/expr/06-provider-crossref.md §6.7, docs/expr/99-appendix-sample-expressions.md §B.4
-/// 
-/// @since 1.0.0
+///
+/// @since 0.1.0
 public class FilterJoinTransform implements ValueTransform {
 
   private static final Logger log = LoggerFactory.getLogger(FilterJoinTransform.class);

@@ -5,26 +5,26 @@ import java.util.List;
 import lombok.Builder;
 
 /// MeSH 导入进度 DTO（数据传输对象）。
-/// 
+///
 /// 用于实时监控导入进度，符合 API 契约定义 (mesh-import-api.yaml#ImportProgressResponse)。
-/// 
+///
 /// **设计原则**：
-/// 
+///
 /// - API 契约优先：严格遵循 OpenAPI 规范
 ///   - 不可变对象：使用 Record 类型保证线程安全
 ///   - 跨模块共享：放在 api 模块，供其他服务调用
 ///   - 扁平化设计：避免过度嵌套，便于前端使用
-/// 
+///
 /// **核心字段**：
-/// 
+///
 /// - overallProgress - 整体进度百分比（0.0 ~ 100.0）
 ///   - processSpeed - 处理速度（记录/秒）
 ///   - estimatedRemainingSeconds - 预计剩余时间（秒）
 ///   - tableProgress - 各表进度列表
 ///   - failedBatches - 失败批次列表（用于错误追踪）
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0 (User Story 2 - 实时监控导入进度)
+/// @since 0.1.0 (User Story 2 - 实时监控导入进度)
 @Builder
 public record MeshProgressDTO(
     // ========== 任务基本信息 ==========
@@ -72,8 +72,8 @@ public record MeshProgressDTO(
     List<FailedBatchDTO> failedBatches) {
 
   /// 表进度 DTO（嵌套对象）。
-/// 
-/// 表示单张表的导入进度。
+  ///
+  /// 表示单张表的导入进度。
   @Builder
   public record TableProgressDTO(
       /// 表名（如 "descriptor"）
@@ -98,8 +98,8 @@ public record MeshProgressDTO(
       String status) {}
 
   /// 失败批次 DTO（嵌套对象）。
-/// 
-/// 表示导入失败的批次详情，用于错误分析和重试。
+  ///
+  /// 表示导入失败的批次详情，用于错误分析和重试。
   @Builder
   public record FailedBatchDTO(
       /// 批次 ID

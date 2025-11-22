@@ -42,9 +42,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
 
 /// CompleteTaskExecutionUseCaseImpl 单元测试
-/// 
+///
 /// 测试范围:
-/// 
+///
 /// - ✅ 全部成功场景: 游标推进成功 → Task/TaskRun: SUCCEEDED
 ///   - ✅ 全部成功但游标失败: Task: FAILED, TaskRun: PARTIAL
 ///   - ✅ 部分成功场景: Task: FAILED, TaskRun: PARTIAL
@@ -52,7 +52,7 @@ import org.springframework.dao.OptimisticLockingFailureException;
 ///   - ✅ 乐观锁冲突: 游标推进失败时的处理
 ///   - ✅ 资源清理: 心跳停止、租约释放
 ///   - ✅ 事件发布: TaskCompletedEvent、PublicationDataReadyEvent
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("CompleteTaskExecutionUseCaseImpl 单元测试")

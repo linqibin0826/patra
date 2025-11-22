@@ -12,25 +12,25 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /// 执行会话管理器实现
-/// 
+///
 /// 职责: 创建 TaskRun、启动心跳续期、封装会话清理逻辑。
-/// 
+///
 /// ### 设计要点
-/// 
+///
 /// - 获取最新 attemptNo,然后创建新的 TaskRun (attemptNo + 1)
 ///   - 持久化 TaskRun 以获取 runId
 ///   - 通过 {@link HeartbeatRenewalService} 启动心跳续期
 ///   - 返回包含 taskId/runId/leaseOwner/heartbeatHandle 的 {@link ExecutionSession}
-/// 
+///
 /// ### 配置项
-/// 
+///
 /// - **task.execution.lease.duration**: 租约持续时间(秒,默认 60)
 ///   - **task.execution.lease.renewal-interval**: 续期间隔(秒,默认 20)
-/// 
+///
 /// ### 日志
-/// 
+///
 /// 会话创建时记录 INFO 级别日志(taskId/runId/attemptNo)。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Service

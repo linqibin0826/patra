@@ -7,9 +7,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /// 表达式能力领域值对象,对应表 `reg_prov_expr_capability`。
-/// 
+///
 /// 声明每个字段/键和范围允许的表达式操作符及约束。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public record ExprCapability(
@@ -140,12 +140,12 @@ public record ExprCapability(
   }
 
   /// 验证能力配置的必需字段。
-/// 
-/// @param id 能力标识符
-/// @param provenanceId 来源标识符
-/// @param fieldKey 字段键
-/// @param rangeKindCode 范围类型代码
-/// @param effectiveFrom 生效开始时间戳
+  ///
+  /// @param id 能力标识符
+  /// @param provenanceId 来源标识符
+  /// @param fieldKey 字段键
+  /// @param rangeKindCode 范围类型代码
+  /// @param effectiveFrom 生效开始时间戳
   private static void validateRequiredFields(
       Long id, Long provenanceId, String fieldKey, String rangeKindCode, Instant effectiveFrom) {
     DomainValidationException.positive(id, "Capability id");

@@ -19,16 +19,16 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /// 通用批次执行器
-/// 
+///
 /// 在六边形架构+DDD中的角色:应用层编排器,负责协调批次执行流程。
-/// 
+///
 /// 主要职责:
-/// 
+///
 /// - 通过{@link ProvenanceDataPort}获取出版物数据
 ///   - 通过{@link PublicationPublisherOrchestrator}发布标准化出版物
 ///   - 将数据获取结果转换为领域层{@link BatchResult}实例
 ///   - 处理失败情况和异常
-/// 
+///
 /// 注意:重试逻辑、配置转换等技术细节已在基础设施层处理,本执行器聚焦于业务流程编排。
 @Component
 @RequiredArgsConstructor
@@ -39,17 +39,14 @@ public class GenericBatchExecutor {
   private final PublicationPublisherOrchestrator publicationPublisherOrchestrator;
 
   /// 执行单个批次
-/// 
-/// 业务流程:
-/// 
-/// @param context 执行上下文
-/// @param batch 批次定义
-/// @param querySession 查询会话
-/// @return 批次执行结果
-  public BatchResult execute(
-      ExecutionContext context,
-      Batch batch,
-      QuerySession querySession) {
+  ///
+  /// 业务流程:
+  ///
+  /// @param context 执行上下文
+  /// @param batch 批次定义
+  /// @param querySession 查询会话
+  /// @return 批次执行结果
+  public BatchResult execute(ExecutionContext context, Batch batch, QuerySession querySession) {
     Objects.requireNonNull(context, "执行上下文不能为空");
     Objects.requireNonNull(batch, "批次定义不能为空");
 
@@ -107,12 +104,12 @@ public class GenericBatchExecutor {
   }
 
   /// 处理批次执行失败
-/// 
-/// @param context 执行上下文
-/// @param batch 批次定义
-/// @param result 数据获取结果
-/// @param durationMillis 执行耗时(毫秒)
-/// @return 失败的批次结果
+  ///
+  /// @param context 执行上下文
+  /// @param batch 批次定义
+  /// @param result 数据获取结果
+  /// @param durationMillis 执行耗时(毫秒)
+  /// @return 失败的批次结果
   private BatchResult handleFailure(
       ExecutionContext context, Batch batch, DataFetchResult result, long durationMillis) {
     ProvenanceCode provenanceCode = context.provenanceCode();
@@ -130,10 +127,10 @@ public class GenericBatchExecutor {
   }
 
   /// 记录数据获取警告信息
-/// 
-/// @param fetchResult 数据获取结果
-/// @param provenanceCode Provenance代码
-/// @param batchNo 批次编号
+  ///
+  /// @param fetchResult 数据获取结果
+  /// @param provenanceCode Provenance代码
+  /// @param batchNo 批次编号
   private void logDataFetchWarnings(
       DataFetchResult fetchResult, ProvenanceCode provenanceCode, int batchNo) {
     if (fetchResult.errorMessage() != null
@@ -147,14 +144,15 @@ public class GenericBatchExecutor {
   }
 
   /// 发布出版物到下游
-/// 
-/// @param context 执行上下文
-/// @param batchNo 批次编号
-/// @param publications 出版物列表
-/// @return 发布结果
+  ///
+  /// @param context 执行上下文
+  /// @param batchNo 批次编号
+  /// @param publications 出版物列表
+  /// @return 发布结果
   private PublicationPublisherOrchestrator.PublishResult publishPublication(
       ExecutionContext context, int batchNo, List<CanonicalPublication> publications) {
-    List<CanonicalPublication> payload = publications == null ? List.of() : List.copyOf(publications);
+    List<CanonicalPublication> payload =
+        publications == null ? List.of() : List.copyOf(publications);
     if (payload.isEmpty()) {
       return PublicationPublisherOrchestrator.PublishResult.builder()
           .publishedCount(0)
@@ -172,10 +170,10 @@ public class GenericBatchExecutor {
   }
 
   /// 构建失败消息
-/// 
-/// @param type 错误类型
-/// @param reason 错误原因
-/// @return 格式化的失败消息
+  ///
+  /// @param type 错误类型
+  /// @param reason 错误原因
+  /// @return 格式化的失败消息
   private String buildFailureMessage(ErrorType type, String reason) {
     if (type == null || type == ErrorType.NONE) {
       return reason;
@@ -184,9 +182,9 @@ public class GenericBatchExecutor {
   }
 
   /// 获取安全的错误消息
-/// 
-/// @param message 原始消息
-/// @return 非空的错误消息
+  ///
+  /// @param message 原始消息
+  /// @return 非空的错误消息
   private String safeMessage(String message) {
     return StringUtils.hasText(message) ? message : "未知失败";
   }

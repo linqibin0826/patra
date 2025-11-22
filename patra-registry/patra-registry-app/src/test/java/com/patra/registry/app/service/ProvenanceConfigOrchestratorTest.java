@@ -26,9 +26,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /// ProvenanceConfigOrchestrator 单元测试。
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - ✅ listProvenances() - 正常场景，返回多个数据源
 ///   - ✅ listProvenances() - 空列表场景
 ///   - ✅ listProvenances() - Repository 抛出异常
@@ -39,7 +39,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///   - ✅ loadConfiguration() - 使用 null 时间点 (默认当前时间)
 ///   - ✅ loadConfiguration() - 数据源不存在，返回 Optional.empty
 ///   - ✅ loadConfiguration() - 配置不存在，返回 Optional.empty
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)

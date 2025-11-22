@@ -12,15 +12,15 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// OutboxRelayLogConverter 单元测试。
-/// 
+///
 /// 测试 Domain 实体与 DO 之间的双向转换,包括:
-/// 
+///
 /// - 字段映射正确性(outboxMessageId ↔ messageId)
 ///   - 枚举转换(RelayStatus ↔ String)
 ///   - 所有 RelayStatus 枚举值的转换
 ///   - 批量转换功能
 ///   - Null 值处理
-/// 
+///
 /// @author Patra Team
 /// @since 0.1.0
 @DisplayName("OutboxRelayLogConverter 单元测试")

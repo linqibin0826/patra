@@ -14,9 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /// {@link RelayPlan} 构建器: 合并调度指令与默认配置,生成领域层使用的不可变计划
-/// 
+///
 /// 规则优先级: 指令字段优先;空白或无效值回退到 {@link OutboxRelayProperties} 默认值
-/// 
+///
 /// `channel == null` 表示应处理所有通道
 @Slf4j
 @Component
@@ -31,11 +31,11 @@ public class RelayPlanBuilder {
   }
 
   /// 构建中继计划
-/// 
-/// 如果 `instruction.channel()` 为 `null` 且未配置默认通道, 则计划保持通道为 `null` 以表示广播处理
-/// 
-/// @param instruction 指令负载 (字段可能为空)
-/// @return 不可变的计划实例
+  ///
+  /// 如果 `instruction.channel()` 为 `null` 且未配置默认通道, 则计划保持通道为 `null` 以表示广播处理
+  ///
+  /// @param instruction 指令负载 (字段可能为空)
+  /// @return 不可变的计划实例
   public RelayPlan build(OutboxRelayCommand instruction) {
     // 通道可能为 null 表示所有通道
     ChannelKey channelKey = resolveChannelKey(instruction);

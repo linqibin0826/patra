@@ -10,9 +10,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// {@link PaginationConfigQuery} 的单元测试。
-/// 
+///
 /// 测试策略: 纯 Java Record 单元测试,验证 compact constructor 的校验逻辑、trim 行为和 record 语义。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("PaginationConfigQuery 单元测试")

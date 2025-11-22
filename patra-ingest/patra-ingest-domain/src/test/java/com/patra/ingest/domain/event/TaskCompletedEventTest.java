@@ -13,9 +13,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// TaskCompletedEvent 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 不使用 Mockito，使用真实对象
 ///   - 遵循 Given-When-Then 结构
@@ -23,9 +23,9 @@ import org.junit.jupiter.api.Test;
 ///   - 测试 Record 语义（构造器、访问器、equals/hashCode/toString）
 ///   - 测试 DomainEvent 接口实现
 ///   - 测试工厂方法（of() 和 ofFailure()）
-/// 
+///
 /// 测试范围：
-/// 
+///
 /// - ✅ Record 构造器测试（紧凑构造器逻辑）
 ///   - ✅ 工厂方法测试（of(), ofFailure()）
 ///   - ✅ 访问器方法测试（所有字段）
@@ -37,9 +37,9 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ 边界情况测试
 ///   - ✅ 不可变性测试
 ///   - ✅ 序列化测试
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @DisplayName("TaskCompletedEvent 单元测试")
 class TaskCompletedEventTest {
 

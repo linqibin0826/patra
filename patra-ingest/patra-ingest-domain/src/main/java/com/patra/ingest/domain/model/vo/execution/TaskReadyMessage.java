@@ -4,7 +4,7 @@ import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 
 /// `TASK_READY` 通道的任务就绪消息值对象。
-/// 
+///
 /// @param payload 消息负载
 /// @param header 消息头
 /// @author linqibin

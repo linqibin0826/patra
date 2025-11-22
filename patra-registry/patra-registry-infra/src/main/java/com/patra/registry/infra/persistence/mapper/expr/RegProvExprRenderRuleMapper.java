@@ -9,23 +9,23 @@ import org.apache.ibatis.annotations.Param;
 
 /// 只读 Mapper,用于表 `reg_prov_expr_render_rule`. Supplies helpers to locate the active render
 /// rule for expression atoms.
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public interface RegProvExprRenderRuleMapper extends BaseMapper<RegProvExprRenderRuleDO> {
 
   /// Retrieves the most specific active render rule matching the supplied dimension.
-/// 
-/// @param provenanceId provenance identifier
-/// @param operationType normalized operation type (ALL fallback supported)
-/// @param fieldKey canonical field key
-/// @param opCode expression operator code
-/// @param matchTypeKey normalized match type key
-/// @param negatedKey normalized negation key
-/// @param valueTypeKey normalized value type key
-/// @param emitTypeCode emission type (QUERY/PARAMS)
-/// @param now evaluation timestamp
-/// @return optional render rule effective at `now`
+  ///
+  /// @param provenanceId provenance identifier
+  /// @param operationType normalized operation type (ALL fallback supported)
+  /// @param fieldKey canonical field key
+  /// @param opCode expression operator code
+  /// @param matchTypeKey normalized match type key
+  /// @param negatedKey normalized negation key
+  /// @param valueTypeKey normalized value type key
+  /// @param emitTypeCode emission type (QUERY/PARAMS)
+  /// @param now evaluation timestamp
+  /// @return optional render rule effective at `now`
   Optional<RegProvExprRenderRuleDO> selectActive(
       @Param("provenanceId") Long provenanceId,
       @Param("operationType") String operationType,
@@ -38,12 +38,12 @@ public interface RegProvExprRenderRuleMapper extends BaseMapper<RegProvExprRende
       @Param("now") Instant now);
 
   /// Lists active render rules for the provided provenance/operation scope, collapsing source-level
-/// fallbacks per rule signature.
-/// 
-/// @param provenanceId provenance identifier
-/// @param operationType normalized operation type
-/// @param now evaluation timestamp
-/// @return list of render rules, one per unique rule signature
+  /// fallbacks per rule signature.
+  ///
+  /// @param provenanceId provenance identifier
+  /// @param operationType normalized operation type
+  /// @param now evaluation timestamp
+  /// @return list of render rules, one per unique rule signature
   List<RegProvExprRenderRuleDO> selectActiveByTask(
       @Param("provenanceId") Long provenanceId,
       @Param("operationType") String operationType,

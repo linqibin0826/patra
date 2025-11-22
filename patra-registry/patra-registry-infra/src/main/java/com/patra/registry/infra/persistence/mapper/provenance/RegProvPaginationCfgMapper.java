@@ -6,8 +6,9 @@ import java.time.Instant;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
-/// 只读 Mapper,用于表 `reg_prov_pagination_cfg`. Corresponding SQL lives in `resources/mapper/RegProvPaginationCfgMapper.xml`.
-/// 
+/// 只读 Mapper,用于表 `reg_prov_pagination_cfg`. Corresponding SQL lives in
+// `resources/mapper/RegProvPaginationCfgMapper.xml`.
+///
 /// @author linqibin
 /// @since 0.1.0
 public interface RegProvPaginationCfgMapper extends BaseMapper<RegProvPaginationCfgDO> {

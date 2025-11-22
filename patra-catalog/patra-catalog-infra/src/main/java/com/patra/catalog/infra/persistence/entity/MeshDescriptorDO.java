@@ -1,20 +1,19 @@
 package com.patra.catalog.infra.persistence.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
-import lombok.EqualsAndHashCode;
-import com.patra.starter.mybatis.entity.BaseDO;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.baomidou.mybatisplus.annotation.TableName;
-import java.time.Instant;
+import com.patra.starter.mybatis.entity.BaseDO;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /// MeSH 主题词表数据库实体，映射到表 `cat_mesh_descriptor`。
-/// 
+///
 /// 表结构：存储 NLM MeSH 主题词核心信息，医学文献标引权威词表。
-/// 
+///
 /// 关键字段说明：
-/// 
+///
 /// - `ui` - MeSH 唯一标识符（格式：D000001-D999999），唯一约束 uk_mesh_ui
 ///   - `name` - 主题词名称（首选术语，英文）
 ///   - `descriptor_class` - 主题词类型（枚举：1-Topical/2-PublicationType/3-Geographicals/4-CheckTag）
@@ -22,15 +21,15 @@ import lombok.Data;
 ///   - `metadata` - 其他元数据（扩展字段），JSON 类型
 ///   - `active_status` - 是否有效（0=已废弃，1=有效）
 ///   - `mesh_version` - MeSH 版本年份（如 "2025"）
-/// 
+///
 /// 索引说明：
-/// 
+///
 /// - uk_mesh_ui - MeSH UI 唯一索引，支持高频精确查询（&lt;5ms）
 ///   - idx_name - 主题词名称索引，支持按名称查询
 ///   - idx_active_version - 有效状态+版本复合索引，筛选某版本的有效主题词
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_mesh_descriptor", autoResultMap = true)
@@ -90,5 +89,4 @@ public class MeshDescriptorDO extends BaseDO {
   /// 其他元数据（扩展字段，JSON 格式）
   @TableField(value = "metadata", typeHandler = JacksonTypeHandler.class)
   private JsonNode metadata;
-
 }

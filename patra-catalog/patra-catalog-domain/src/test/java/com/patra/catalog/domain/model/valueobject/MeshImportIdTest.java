@@ -6,25 +6,25 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /// MeshImportId 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 测试正常创建：使用有效的正数 ID
 ///   - 测试验证逻辑：null 值、非正数
 ///   - 测试 Record 特性：equals、hashCode、toString
 ///   - 测试不可变性：Record 自动保证
-/// 
+///
 /// 测试场景：
-/// 
+///
 /// - ✅ 使用有效 Long 值创建 → 成功
 ///   - ✅ ID 值相同的实例 → equals 返回 true
 ///   - ✅ toString() → 返回 ID 字符串
 ///   - ✅ null 值 → 抛出 IllegalArgumentException
 ///   - ✅ 零值 → 抛出 IllegalArgumentException
 ///   - ✅ 负数 → 抛出 IllegalArgumentException
-/// 
+///
 /// @author Patra Team
-/// @since 0.2.0
+/// @since 0.1.0
 @DisplayName("MeshImportId 单元测试")
 class MeshImportIdTest {
 

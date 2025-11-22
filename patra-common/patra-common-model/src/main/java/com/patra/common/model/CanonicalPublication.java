@@ -8,24 +8,24 @@ import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
 /// Patra 平台规范化医学出版物模型（基于 PubMed/MEDLINE 标准设计）。
-/// 
+///
 /// 此不可变值对象作为采集、目录和溯源微服务间的共享内核模型，封装了医学出版物的核心元数据。
-/// 
+///
 /// 设计基于以下国际标准：
-/// 
+///
 /// - **PubMed/MEDLINE** - 医学出版物元数据标准（主要数据源）
 ///   - **MeSH** - 美国国家医学图书馆医学主题词表
 ///   - **Dublin Core** - 核心元数据标准（title, creator, identifier等）
 ///   - **Schema.org** - ScholarlyArticle 规范（author, abstract, keywords等）
-/// 
+///
 /// 设计原则：
-/// 
+///
 /// - 使用医学领域标准术语（MeSH, Investigator, Substance 等）
 ///   - 不包含业务行为，保持共享模块无框架依赖
 ///   - 主要支持医学数据源（PubMed, EMBASE, MEDLINE）
 ///   - 保留医学领域特有字段（MeSH 标引、研究者、物质等）
 ///   - 优化医学出版物处理性能和语义清晰度
-/// 
+///
 /// @since 0.1.0
 @Value
 @Builder
@@ -53,13 +53,13 @@ public class CanonicalPublication {
   List<PublicationType> publicationTypes;
 
   /// 出版状态。
-/// 
-/// 通用值：published（已出版）, preprint（预印本）, in-press（印刷中）, retracted（已撤稿）。
+  ///
+  /// 通用值：published（已出版）, preprint（预印本）, in-press（印刷中）, retracted（已撤稿）。
   String publicationStatus;
 
   /// 媒介类型（出版形式）。
-/// 
-/// 可能的值：print（纸质）, electronic（电子）, print-electronic（纸质+电子）。
+  ///
+  /// 可能的值：print（纸质）, electronic（电子）, print-electronic（纸质+电子）。
   String mediaType;
 
   // ==================== 作者组 ====================
@@ -157,8 +157,8 @@ public class CanonicalPublication {
   public static class Identifier {
 
     /// 标识符类型。
-/// 
-/// 常见值：doi, pmid, pmc, pii, arxiv, isbn, issn, orcid, ror。
+    ///
+    /// 常见值：doi, pmid, pmc, pii, arxiv, isbn, issn, orcid, ror。
     String type;
 
     /// 标识符的实际值。
@@ -272,8 +272,8 @@ public class CanonicalPublication {
   }
 
   /// 页码信息。
-/// 
-/// 支持传统的起止页码以及 MEDLINE 标准格式页码（可能包含电子文章编号）。
+  ///
+  /// 支持传统的起止页码以及 MEDLINE 标准格式页码（可能包含电子文章编号）。
   @Value
   @Builder
   @Jacksonized
@@ -347,8 +347,8 @@ public class CanonicalPublication {
   public static class KeywordSet {
 
     /// 关键词来源。
-/// 
-/// 常见值：author（作者提供）, publisher（出版商）, editor（编辑）, indexer（索引机构）。
+    ///
+    /// 常见值：author（作者提供）, publisher（出版商）, editor（编辑）, indexer（索引机构）。
     String source;
 
     /// 关键词列表。
@@ -369,8 +369,8 @@ public class CanonicalPublication {
   }
 
   /// 物质信息（化学物质、生物制品、药物等）。
-/// 
-/// 主要用于医学、化学、生物学领域。
+  ///
+  /// 主要用于医学、化学、生物学领域。
   @Value
   @Builder
   @Jacksonized
@@ -449,8 +449,8 @@ public class CanonicalPublication {
   public static class ExternalReference {
 
     /// 引用类型。
-/// 
-/// 常见值：database（数据库）, clinical-trial（临床试验）, software（软件）, dataset（数据集）。
+    ///
+    /// 常见值：database（数据库）, clinical-trial（临床试验）, software（软件）, dataset（数据集）。
     String type;
 
     /// 数据库或资源名称（如 "GenBank", "ClinicalTrials.gov"）。
@@ -467,15 +467,15 @@ public class CanonicalPublication {
   public static class RelatedItem {
 
     /// 关系类型。
-/// 
-/// 常见值：
-/// 
-/// - retraction-of（撤稿）
-///   - erratum-in（勘误）
-///   - comment-on（评论）
-///   - republished-from（转载）
-///   - correction-to（更正）
-/// 
+    ///
+    /// 常见值：
+    ///
+    /// - retraction-of（撤稿）
+    ///   - erratum-in（勘误）
+    ///   - comment-on（评论）
+    ///   - republished-from（转载）
+    ///   - correction-to（更正）
+    ///
     String relationType;
 
     /// 引用信息（如原出版物的引用格式）。
@@ -492,26 +492,26 @@ public class CanonicalPublication {
   }
 
   /// 发布历史事件。
-/// 
-/// 记录出版物在发布过程中的关键时间节点，如收稿、接受、电子发布、PubMed 收录等。
+  ///
+  /// 记录出版物在发布过程中的关键时间节点，如收稿、接受、电子发布、PubMed 收录等。
   @Value
   @Builder
   @Jacksonized
   public static class PublicationHistoryEvent {
 
     /// 发布状态。
-/// 
-/// 常见值：
-/// 
-/// - received - 收稿日期
-///   - accepted - 接受日期
-///   - revised - 修订日期
-///   - epublish - 电子发布
-///   - ppublish - 纸质发布
-///   - pubmed - PubMed 收录
-///   - medline - MEDLINE 索引
-///   - entrez - Entrez 数据库收录
-/// 
+    ///
+    /// 常见值：
+    ///
+    /// - received - 收稿日期
+    ///   - accepted - 接受日期
+    ///   - revised - 修订日期
+    ///   - epublish - 电子发布
+    ///   - ppublish - 纸质发布
+    ///   - pubmed - PubMed 收录
+    ///   - medline - MEDLINE 索引
+    ///   - entrez - Entrez 数据库收录
+    ///
     String status;
 
     /// 事件发生的年份。
@@ -531,8 +531,8 @@ public class CanonicalPublication {
   }
 
   /// 出版物元数据。
-/// 
-/// 包含出版物记录的处理信息和质量标注。
+  ///
+  /// 包含出版物记录的处理信息和质量标注。
   @Value
   @Builder
   @Jacksonized
@@ -552,8 +552,8 @@ public class CanonicalPublication {
   }
 
   /// 参考出版物。
-/// 
-/// 表示文章引用的其他出版物。
+  ///
+  /// 表示文章引用的其他出版物。
   @Value
   @Builder
   @Jacksonized
@@ -567,8 +567,8 @@ public class CanonicalPublication {
   }
 
   /// 研究者（非作者）。
-/// 
-/// 参与研究但未列为文章作者的研究人员，常见于大型临床试验、多中心研究等。
+  ///
+  /// 参与研究但未列为文章作者的研究人员，常见于大型临床试验、多中心研究等。
   @Value
   @Builder
   @Jacksonized
@@ -597,8 +597,8 @@ public class CanonicalPublication {
   }
 
   /// 作为主题的人物。
-/// 
-/// 用于传记、医学史、案例报告等以特定人物为主题的出版物。
+  ///
+  /// 用于传记、医学史、案例报告等以特定人物为主题的出版物。
   @Value
   @Builder
   @Jacksonized
@@ -618,8 +618,8 @@ public class CanonicalPublication {
   }
 
   /// 补充对象。
-/// 
-/// 表示出版物的附加材料，如图表、数据集、关键词列表、多媒体文件等。
+  ///
+  /// 表示出版物的附加材料，如图表、数据集、关键词列表、多媒体文件等。
   @Value
   @Builder
   @Jacksonized
@@ -633,8 +633,8 @@ public class CanonicalPublication {
   }
 
   /// 对象参数。
-/// 
-/// 表示补充对象的属性键值对。
+  ///
+  /// 表示补充对象的属性键值对。
   @Value
   @Builder
   @Jacksonized
@@ -648,12 +648,12 @@ public class CanonicalPublication {
   }
 
   /// MeSH 主题标引。
-/// 
-/// Medical Subject Headings (MeSH) 是美国国家医学图书馆（NLM）创建的受控词表，
-/// 用于标引医学出版物的主题和内容。每个 MeSH 标引项包含一个主题词（Descriptor）
-/// 和可选的限定词（Qualifiers）列表。
-/// 
-/// 例如："Humans" [主题词] + "genetics" [限定词] 表示"人类遗传学"主题。
+  ///
+  /// Medical Subject Headings (MeSH) 是美国国家医学图书馆（NLM）创建的受控词表，
+  /// 用于标引医学出版物的主题和内容。每个 MeSH 标引项包含一个主题词（Descriptor）
+  /// 和可选的限定词（Qualifiers）列表。
+  ///
+  /// 例如："Humans" [主题词] + "genetics" [限定词] 表示"人类遗传学"主题。
   @Value
   @Builder
   @Jacksonized
@@ -667,8 +667,8 @@ public class CanonicalPublication {
   }
 
   /// MeSH 主题词（Descriptor）。
-/// 
-/// 主题词是 MeSH 术语的主要部分，描述文章的核心主题。
+  ///
+  /// 主题词是 MeSH 术语的主要部分，描述文章的核心主题。
   @Value
   @Builder
   @Jacksonized
@@ -684,20 +684,20 @@ public class CanonicalPublication {
     Boolean majorTopic;
 
     /// 主题词类型（可选）。
-/// 
-/// 如 "Geographic" 表示地理名称。
+    ///
+    /// 如 "Geographic" 表示地理名称。
     String type;
   }
 
   /// MeSH 限定词（Qualifier）。
-/// 
-/// 限定词用于进一步细化主题词的含义。
-/// 
-/// 例如：
-/// 
-/// - "Humans" [主题词] + "genetics" [限定词] = "人类遗传学"
-///   - "Diabetes Mellitus" [主题词] + "drug therapy" [限定词] = "糖尿病药物治疗"
-/// 
+  ///
+  /// 限定词用于进一步细化主题词的含义。
+  ///
+  /// 例如：
+  ///
+  /// - "Humans" [主题词] + "genetics" [限定词] = "人类遗传学"
+  ///   - "Diabetes Mellitus" [主题词] + "drug therapy" [限定词] = "糖尿病药物治疗"
+  ///
   @Value
   @Builder
   @Jacksonized
@@ -714,9 +714,9 @@ public class CanonicalPublication {
   }
 
   /// 补充 MeSH 概念。
-/// 
-/// 补充 MeSH 概念用于描述疾病、药物试验、化学物质等特定主题，
-/// 是对标准 MeSH 主题词的补充。
+  ///
+  /// 补充 MeSH 概念用于描述疾病、药物试验、化学物质等特定主题，
+  /// 是对标准 MeSH 主题词的补充。
   @Value
   @Builder
   @Jacksonized
@@ -729,8 +729,8 @@ public class CanonicalPublication {
     String name;
 
     /// 补充概念类型。
-/// 
-/// 常见值：Protocol（研究方案）, Disease（疾病）。
+    ///
+    /// 常见值：Protocol（研究方案）, Disease（疾病）。
     String type;
   }
 }

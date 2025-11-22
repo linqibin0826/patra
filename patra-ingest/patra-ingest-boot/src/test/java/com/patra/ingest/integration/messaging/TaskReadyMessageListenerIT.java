@@ -28,40 +28,41 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /// 任务就绪消息监听器集成测试。
-/// 
-/// 使用 Testcontainers 启动真实 RocketMQ 环境（由 {@link RocketMQContainerInitializer} 提供）， 测试 `TaskReadyMessageListener` 的消息消费和解析功能。
-/// 
+///
+/// 使用 Testcontainers 启动真实 RocketMQ 环境（由 {@link RocketMQContainerInitializer} 提供）， 测试
+// `TaskReadyMessageListener` 的消息消费和解析功能。
+///
 /// ### 测试范围
-/// 
+///
 /// - ✅ 正常消息消费和用例调用
 ///   - ✅ 消息元数据提取 (KEYS, TAGS, UserProperties)
 ///   - ✅ 无效消息处理 (缺少必填字段)
 ///   - ✅ 用例执行失败处理 (异常传播)
-/// 
+///
 /// ### 测试策略
-/// 
+///
 /// 遵循 testing-guide.md §7 集成测试模式：
-/// 
+///
 /// - **真实依赖**: 使用 RocketMQ Testcontainers (由 RocketMQContainerInitializer 提供)
 ///   - **Mock 业务用例**: 使用 @MockitoBean Mock {@link TaskExecutionUseCase}，避免执行真实业务逻辑
 ///   - **异步断言**: 使用 Awaitility 等待消息消费完成
 ///   - **参数捕获**: 使用 Mockito ArgumentCaptor 验证传递给用例的 Command 对象
-/// 
+///
 /// ### 环境要求
-/// 
+///
 /// - Docker Desktop 运行中
 ///   - 至少 4GB 可用内存
 ///   - 首次启动需要 ~30-40 秒 (拉取镜像 + 启动容器)
-/// 
+///
 /// ### 容器依赖说明
-/// 
+///
 /// 本测试需要启动 RocketMQ 和 MySQL 容器：
-/// 
+///
 /// - RocketMQ: 用于测试消息监听器
 ///   - MySQL: 应用上下文依赖数据库组件（如 Repository）
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 /// @see RocketMQContainerInitializer
 /// @see MySQLContainerInitializer
 /// @see TaskExecutionUseCase

@@ -1,21 +1,19 @@
 package com.patra.catalog.infra.persistence.entity;
 
-import com.baomidou.mybatisplus.annotation.FieldStrategy;
-import lombok.EqualsAndHashCode;
-import com.patra.starter.mybatis.entity.BaseDO;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.time.Instant;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.patra.starter.mybatis.entity.BaseDO;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /// 参考文献数据库实体,映射到表 `cat_reference`。
-/// 
+///
 /// 表结构: 管理文献引用关系,支持库内外引用双重关联。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `publication_id` 引用文献 ID(本文)(外键:cat_publication.id)
 ///   - `cited_publication_id` 被引文献 ID(如果在库中)(外键:cat_publication.id)
 ///   - `cited_pmid` 被引文献 PMID(库外引用)
@@ -23,15 +21,15 @@ import lombok.Data;
 ///   - `reference_number` 引用编号(本文中的序号)
 ///   - `is_retracted` 是否已撤稿(0=否,1=是)
 ///   - `metadata` JSON 扩展数据字段
-/// 
+///
 /// 双重关联设计:
-/// 
+///
 /// - 库内引用(~30%): 使用 `cited_publication_id` 关联
 ///   - 库外引用(~70%): 使用 `cited_pmid`/`cited_doi` 保留完整信息
 ///   - 自动升级: 新文献入库时将库外引用升级为库内引用
-/// 
+///
 /// 唯一约束: uk_reference_num(publication_id, reference_number),保证引用编号在同一文献内唯一。
-/// 
+///
 /// @author linqibin
 /// @since 0.4.0
 @Data
@@ -87,9 +85,9 @@ public class ReferenceDO extends BaseDO {
   private String authors;
 
   /// 引用类型。
-/// 
-/// CHECK 约束确保值在枚举范围内: Journal Article/Book/Book Chapter/Conference Paper/Thesis/Report/
-/// Preprint/Web Page/Other。
+  ///
+  /// CHECK 约束确保值在枚举范围内: Journal Article/Book/Book Chapter/Conference Paper/Thesis/Report/
+  /// Preprint/Web Page/Other。
   @TableField("reference_type")
   private String referenceType;
 

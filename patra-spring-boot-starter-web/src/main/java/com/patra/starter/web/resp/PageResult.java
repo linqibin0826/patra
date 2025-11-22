@@ -5,7 +5,7 @@ import java.util.List;
 import lombok.Data;
 
 /// REST 接口共享的通用分页载荷。
-/// 
+///
 /// @param <T> 页面中包含的元素类型
 @Data
 public class PageResult<T> {
@@ -26,13 +26,13 @@ public class PageResult<T> {
   private List<T> records = Collections.emptyList();
 
   /// 用提供的元数据和记录构建 {@link PageResult} 实例。
-/// 
-/// @param total 记录总数
-/// @param current 当前页面索引（1-based）
-/// @param size 请求的页面大小
-/// @param records 页面记录（可为 null）
-/// @param <T> 元素类型
-/// @return 填充的 {@link PageResult}
+  ///
+  /// @param total 记录总数
+  /// @param current 当前页面索引（1-based）
+  /// @param size 请求的页面大小
+  /// @param records 页面记录（可为 null）
+  /// @param <T> 元素类型
+  /// @return 填充的 {@link PageResult}
   public static <T> PageResult<T> of(long total, long current, long size, List<T> records) {
     PageResult<T> r = new PageResult<>();
     r.total = total;

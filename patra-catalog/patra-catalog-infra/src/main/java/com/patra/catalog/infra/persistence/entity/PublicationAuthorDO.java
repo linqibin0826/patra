@@ -1,26 +1,25 @@
 package com.patra.catalog.infra.persistence.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
-import lombok.EqualsAndHashCode;
-import com.patra.starter.mybatis.entity.BaseDO;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.baomidou.mybatisplus.annotation.TableName;
-import java.time.Instant;
+import com.patra.starter.mybatis.entity.BaseDO;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /// 文献-作者关联数据库实体,映射到表 `cat_publication_author`。
-/// 
+///
 /// 表结构: 管理文献与作者的多对多关系,记录作者顺序、角色和贡献类型。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `publication_id` 出版物ID,外键 cat_publication.id
 ///   - `author_id` 作者ID,外键 cat_author.id
 ///   - `author_order` 作者顺序,唯一约束 uk_author_order
 ///   - `is_first_author` 是否第一作者,CHECK 约束 chk_first_author_consistency
 ///   - `author_metadata` JSON 扩展数据字段
-/// 
+///
 /// @author linqibin
 /// @since 0.3.0
 @Data
@@ -62,5 +61,4 @@ public class PublicationAuthorDO extends BaseDO {
   /// 作者元数据（JSON 格式）
   @TableField(value = "author_metadata", typeHandler = JacksonTypeHandler.class)
   private JsonNode authorMetadata;
-
 }

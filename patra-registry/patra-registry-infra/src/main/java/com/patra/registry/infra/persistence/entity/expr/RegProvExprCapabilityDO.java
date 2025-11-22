@@ -14,9 +14,9 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /// 数据库实体,映射到表 `reg_prov_expr_capability`.
-/// 
+///
 /// Describes expression capabilities and constraints for a provenance field.
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

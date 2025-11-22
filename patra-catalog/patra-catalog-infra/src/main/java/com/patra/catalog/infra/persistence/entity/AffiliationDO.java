@@ -1,6 +1,5 @@
 package com.patra.catalog.infra.persistence.entity;
 
-import java.time.Instant;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
@@ -10,16 +9,16 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// 机构数据库实体,映射到表 `cat_affiliation`。
-/// 
+///
 /// 表结构: 存储机构信息,支持多种国际标识符,实现机构标准化和去重。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `ror_id` ROR 标识符,唯一约束 uk_ror
 ///   - `grid_id` GRID 标识符,唯一约束 uk_grid
 ///   - `dedup_key` 复合去重键,应用层计算 MD5 哈希
 ///   - `metadata` JSON 扩展数据字段
-/// 
+///
 /// @author linqibin
 /// @since 0.3.0
 @Data
@@ -94,5 +93,4 @@ public class AffiliationDO extends BaseDO {
   /// 机构元数据（JSON 格式）
   @TableField(value = "metadata", typeHandler = JacksonTypeHandler.class)
   private JsonNode metadata;
-
 }

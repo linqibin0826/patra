@@ -10,15 +10,15 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// 任务执行记录数据库实体,映射到表 `ing_task_run`。
-/// 
+///
 /// 表结构: 表示任务的单次执行尝试,包含重试信息和运行快照。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `attempt_no` 每任务唯一(唯一约束: uk_task_run_attempt),追踪尝试序列
 ///   - `checkpoint`/`stats` 是 JSON 快照,用于恢复点和指标
 ///   - 时间字段追踪开始/结束,支持心跳超时检查
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

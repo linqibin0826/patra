@@ -16,14 +16,14 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// {@link PlanTriggerNorm} 的单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 验证构造器的非空约束
 ///   - 验证 record 语义（equals/hashCode/toString）
 ///   - 验证业务方法（isHarvest/isBackfill/isUpdate）
 ///   - 测试边界条件和各种参数组合
-/// 
+///
 @DisplayName("PlanTriggerNorm 值对象测试")
 class PlanTriggerNormTest {
 

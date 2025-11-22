@@ -26,19 +26,19 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /// TaskReadyMessageListener 增强测试套件。
-/// 
+///
 /// 补充原有测试中缺失的边界条件、重试机制、幂等性验证等高级测试场景。
-/// 
+///
 /// 测试覆盖：
-/// 
+///
 /// - 边界条件：空消息、超大消息、编码异常、格式错误
 ///   - 并发消费：多消息并发处理
 ///   - 重试机制：消费失败后的异常抛出
 ///   - 幂等性：重复消息处理验证 (通过 idempotentKey)
 ///   - 元数据验证：UserProperties 各种组合
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TaskReadyMessageListener 增强测试")
 class TaskReadyMessageListenerEnhancedTest {

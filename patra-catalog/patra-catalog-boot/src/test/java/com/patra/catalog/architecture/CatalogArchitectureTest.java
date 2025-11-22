@@ -15,30 +15,30 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// patra-catalog 架构测试套件
-/// 
+///
 /// 验证六边形架构 + DDD 的所有核心约束：
-/// 
+///
 /// - 层依赖方向（Adapter → App → Domain ← Infra）
 ///   - Domain 层纯净性（零 Spring 依赖）
 ///   - 命名约定（Port/DO/Aggregate/Orchestrator）
 ///   - 封装规则（DO 不泄露、Port 可见性）
 ///   - 事务边界（@Transactional 仅在 App 层）
 ///   - 测试规范（命名规范、测试独立性、分层测试策略）
-/// 
+///
 /// **运行方式：**
-/// 
+///
 /// ```
-/// 
+///
 /// # 单独运行架构测试
 /// mvn test -Dtest=CatalogArchitectureTest
-/// 
+///
 /// # 运行所有测试
 /// mvn test
-/// 
+///
 /// ```
-/// 
+///
 /// **冻结模式：** 首次运行会记录现有违规到 `src/test/resources/archunit/` 目录， 后续运行会禁止新增违规，并要求逐步减少现有违规。
-/// 
+///
 /// @author linqibin
 /// @since 2025-01-10
 @DisplayName("patra-catalog 架构测试")

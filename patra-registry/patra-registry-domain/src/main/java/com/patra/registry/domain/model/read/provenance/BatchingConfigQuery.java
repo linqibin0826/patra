@@ -4,9 +4,9 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /// 批处理配置查询视图。
-/// 
+///
 /// 用于查询批处理策略配置的读优化投影。定义了详情获取时的批量处理参数和限制。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public record BatchingConfigQuery(

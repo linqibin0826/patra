@@ -8,22 +8,22 @@ import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 
 /// 基于 Micrometer 的 Feign 错误观察记录器实现
-/// 
+///
 /// 使用 Micrometer 指标系统记录 Feign 错误解码过程中的各类可观测性数据。
-/// 
+///
 /// ### 记录的指标
-/// 
+///
 /// - **patra.feign.error.parsing** - ProblemDetail 解析性能 (Timer)
 ///   - **patra.feign.error.decoding** - 错误解码结果统计 (Counter)
 ///   - **patra.feign.error.body.read** - 响应体读取性能 (Timer)
 ///   - **patra.feign.error.traceid** - 跟踪标识符提取统计 (Counter)
-/// 
+///
 /// ### 性能监控
-/// 
+///
 /// - 当解析耗时超过阈值时记录警告日志
 ///   - 当响应体读取缓慢时记录警告日志
 ///   - 容错模式使用情况可选记录
-/// 
+///
 /// @see FeignErrorObservationRecorder
 @Slf4j
 public class MicrometerFeignErrorObservationRecorder implements FeignErrorObservationRecorder {

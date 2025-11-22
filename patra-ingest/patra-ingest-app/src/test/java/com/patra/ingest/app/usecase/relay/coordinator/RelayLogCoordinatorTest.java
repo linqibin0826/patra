@@ -30,15 +30,15 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 /// RelayLogCoordinator 单元测试
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - ✅ 日志累加器创建和使用
 ///   - ✅ 批量持久化场景
 ///   - ✅ 空累加器处理
 ///   - ✅ 各种中继结果记录 (PUBLISHED, DEFERRED, FAILED, LEASE_MISSED)
 ///   - ✅ 指标记录验证
-/// 
+///
 /// @author Patra Team
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
@@ -560,9 +560,9 @@ class RelayLogCoordinatorTest {
   // ==================== 辅助方法 ====================
 
   /// 创建 Mock RelayLog,模拟不同状态
-/// 
-/// @param status 中继状态
-/// @return Mock OutboxRelayLog
+  ///
+  /// @param status 中继状态
+  /// @return Mock OutboxRelayLog
   private OutboxRelayLog createMockRelayLog(RelayStatus status) {
     OutboxRelayLog mockLog = mock(OutboxRelayLog.class);
     when(mockLog.getChannel()).thenReturn("TASK_READY");

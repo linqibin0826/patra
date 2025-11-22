@@ -1,20 +1,20 @@
 package com.patra.catalog.infra.persistence.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
-import lombok.EqualsAndHashCode;
-import com.patra.starter.mybatis.entity.BaseDO;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.patra.starter.mybatis.entity.BaseDO;
 import java.time.Instant;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /// 开放获取位置数据库实体,映射到表 `cat_oa_location`。
-/// 
+///
 /// 表结构: 详细记录文献的开放获取位置,支持多位置管理和最佳位置选择
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `publication_id` 出版物ID(外键:cat_publication.id)
 ///   - `oa_status` OA状态(gold/green/hybrid/bronze/closed)
 ///   - `url` 访问URL,唯一约束 uk_oa_url (publication_id + url)
@@ -23,7 +23,7 @@ import lombok.Data;
 ///   - `available_date` 可用日期
 ///   - `access_metrics` 访问指标(下载次数等)
 ///   - `metadata` 位置元数据(灵活扩展)
-/// 
+///
 /// @author linqibin
 /// @since 0.5.0
 @Data
@@ -57,6 +57,7 @@ public class OaLocationDO extends BaseDO {
   /// 仓库标识符(如"PMC1234567")
   @TableField("repository_id")
   private String repositoryId;
+
   /// 许可证(如"CC-BY-4.0","CC-BY-NC")
   @TableField("license")
   private String license;
@@ -100,5 +101,4 @@ public class OaLocationDO extends BaseDO {
   /// 位置元数据(灵活扩展)
   @TableField(value = "metadata", typeHandler = JacksonTypeHandler.class)
   private JsonNode metadata;
-
 }

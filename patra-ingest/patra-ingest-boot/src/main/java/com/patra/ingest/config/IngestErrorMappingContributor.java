@@ -18,21 +18,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /// 采集服务错误码映射贡献器。
-/// 
+///
 /// 实现 {@link ErrorMappingContributor} SPI,注册采集服务特定的领域异常到标准错误码的映射关系,使平台错误解析引擎能够将领域异常转换为一致的 API
 /// 错误响应。
-/// 
+///
 /// 职责:
-/// 
+///
 /// - 映射配置相关异常(IngestConfigurationException)到相应错误码
 ///   - 映射调度参数异常(IngestScheduleParameterException、OutboxRelayExecutionException)
 ///   - 映射检查点异常(TaskCheckpointException)根据类型区分解析/序列化错误
 ///   - 映射计划相关异常(PlanAssemblyException、PlanPersistenceException)
 ///   - 映射 Outbox 持久化异常(OutboxPersistenceException)根据阶段区分错误类型
 ///   - 处理远程调用异常(RemoteCallException)根据 HTTP 状态码细分错误
-/// 
+///
 /// 错误码体系: 所有错误码定义在 {@link IngestErrorCode} 枚举中,遵循 ING_xxxx 命名约定(如 ING_1201、ING_1401)。
-/// 
+///
 /// 设计模式: SPI 贡献者模式 - 通过 Spring 组件扫描自动注册到平台错误处理框架。
 @Slf4j
 @Component
@@ -57,9 +57,9 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
   }
 
   /// 将配置相关异常映射到错误码。
-/// 
-/// @param exception 尝试映射的可抛出对象
-/// @return 如果异常类型匹配则返回可选的错误码
+  ///
+  /// @param exception 尝试映射的可抛出对象
+  /// @return 如果异常类型匹配则返回可选的错误码
   private Optional<ErrorCodeLike> tryMapConfigurationException(Throwable exception) {
     if (exception instanceof IngestConfigurationException configurationException) {
       return Optional.of(resolveConfigurationError(configurationException));
@@ -68,9 +68,9 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
   }
 
   /// 将调度参数异常映射到错误码。
-/// 
-/// @param exception 尝试映射的可抛出对象
-/// @return 如果异常类型匹配则返回可选的错误码
+  ///
+  /// @param exception 尝试映射的可抛出对象
+  /// @return 如果异常类型匹配则返回可选的错误码
   private Optional<ErrorCodeLike> tryMapScheduleException(Throwable exception) {
     if (exception instanceof IngestScheduleParameterException) {
       return Optional.of(IngestErrorCode.ING_1401);
@@ -85,9 +85,9 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
   }
 
   /// 将检查点相关异常映射到错误码。
-/// 
-/// @param exception 尝试映射的可抛出对象
-/// @return 如果异常类型匹配则返回可选的错误码
+  ///
+  /// @param exception 尝试映射的可抛出对象
+  /// @return 如果异常类型匹配则返回可选的错误码
   private Optional<ErrorCodeLike> tryMapCheckpointException(Throwable exception) {
     if (exception instanceof TaskCheckpointException checkpointException) {
       if (checkpointException.getType() == TaskCheckpointException.Type.PARSE) {
@@ -101,9 +101,9 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
   }
 
   /// 将计划相关异常映射到错误码。
-/// 
-/// @param exception 尝试映射的可抛出对象
-/// @return 如果异常类型匹配则返回可选的错误码
+  ///
+  /// @param exception 尝试映射的可抛出对象
+  /// @return 如果异常类型匹配则返回可选的错误码
   private Optional<ErrorCodeLike> tryMapPlanException(Throwable exception) {
     if (exception instanceof PlanAssemblyException) {
       return Optional.of(IngestErrorCode.ING_1601);
@@ -115,9 +115,9 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
   }
 
   /// 将 outbox 相关异常映射到错误码。
-/// 
-/// @param exception 尝试映射的可抛出对象
-/// @return 如果异常类型匹配则返回可选的错误码
+  ///
+  /// @param exception 尝试映射的可抛出对象
+  /// @return 如果异常类型匹配则返回可选的错误码
   private Optional<ErrorCodeLike> tryMapOutboxException(Throwable exception) {
     if (exception instanceof OutboxPersistenceException persistenceException) {
       return Optional.of(resolveOutboxPersistence(persistenceException));
@@ -126,9 +126,9 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
   }
 
   /// 基于远程调用异常详细信息解析配置错误。
-/// 
-/// @param exception 要分析的配置异常
-/// @return 基于远程失败类型的适当错误码
+  ///
+  /// @param exception 要分析的配置异常
+  /// @return 基于远程失败类型的适当错误码
   private ErrorCodeLike resolveConfigurationError(IngestConfigurationException exception) {
     Throwable cause = exception.getCause();
     if (cause instanceof RemoteCallException remote) {
@@ -146,9 +146,9 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
   }
 
   /// 基于操作阶段解析 outbox 持久化错误。
-/// 
-/// @param exception 包含阶段信息的 outbox 持久化异常
-/// @return 基于失败的持久化阶段的适当错误码
+  ///
+  /// @param exception 包含阶段信息的 outbox 持久化异常
+  /// @return 基于失败的持久化阶段的适当错误码
   private ErrorCodeLike resolveOutboxPersistence(OutboxPersistenceException exception) {
     return switch (exception.getStage()) {
       case MARK_PUBLISHED -> IngestErrorCode.ING_1302;
@@ -158,9 +158,9 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
   }
 
   /// 基于操作阶段解析计划持久化错误。
-/// 
-/// @param exception 包含阶段信息的计划持久化异常
-/// @return 基于失败的持久化阶段的适当错误码
+  ///
+  /// @param exception 包含阶段信息的计划持久化异常
+  /// @return 基于失败的持久化阶段的适当错误码
   private ErrorCodeLike resolvePlanPersistence(PlanPersistenceException exception) {
     return switch (exception.getStage()) {
       case SCHEDULE_INSTANCE, PLAN, PLAN_SLICE, TASK, TASK_RETRY -> IngestErrorCode.ING_1503;

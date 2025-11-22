@@ -17,9 +17,9 @@ import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
 /// TaskRunBatchConverter 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 测试 TaskRunBatch → TaskRunBatchDO 的转换
 ///   - 测试 TaskRunBatchDO → TaskRunBatch 的转换
 ///   - 测试双向转换的一致性
@@ -27,7 +27,7 @@ import org.mapstruct.factory.Mappers;
 ///   - 测试 BatchStats 与 recordCount + JSON 的转换
 ///   - 测试状态枚举转换
 ///   - 测试空值和边界情况
-/// 
+///
 /// 注意：MapStruct 转换器通过 Mappers.getMapper() 直接实例化，无需 Spring 容器。
 class TaskRunBatchConverterTest {
 

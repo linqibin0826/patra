@@ -1,6 +1,5 @@
 package com.patra.catalog.infra.persistence.entity;
 
-import java.time.Instant;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
@@ -10,18 +9,18 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// 作者数据库实体,映射到表 `cat_author`。
-/// 
+///
 /// 表结构: 存储作者信息,支持复合去重策略(ORCID + 姓名 + 机构 + 邮箱)。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `last_name` 姓(Last Name/Family Name)
 ///   - `fore_name` 名(First Name/Given Name)
 ///   - `orcid` ORCID 标识符,唯一索引 uk_orcid
 ///   - `email` 邮箱地址,索引 idx_email
 ///   - `dedup_key` 复合去重键,应用层计算 MD5 哈希,索引 idx_dedup_key
 ///   - `author_metadata` JSON 扩展数据字段
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -80,5 +79,4 @@ public class AuthorDO extends BaseDO {
   /// 作者元数据(JSON 格式,灵活扩展)
   @TableField(value = "author_metadata", typeHandler = JacksonTypeHandler.class)
   private JsonNode authorMetadata;
-
 }

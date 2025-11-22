@@ -6,8 +6,9 @@ import java.time.Instant;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
-/// 只读 Mapper,用于表 `reg_prov_batching_cfg`. Backed by SQL statements in `resources/mapper/RegProvBatchingCfgMapper.xml`.
-/// 
+/// 只读 Mapper,用于表 `reg_prov_batching_cfg`. Backed by SQL statements in
+// `resources/mapper/RegProvBatchingCfgMapper.xml`.
+///
 /// @author linqibin
 /// @since 0.1.0
 public interface RegProvBatchingCfgMapper extends BaseMapper<RegProvBatchingCfgDO> {

@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// {@link BatchSchedulingException} 的单元测试。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("BatchSchedulingException 单元测试")

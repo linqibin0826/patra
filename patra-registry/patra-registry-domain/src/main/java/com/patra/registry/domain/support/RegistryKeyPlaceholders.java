@@ -1,11 +1,11 @@
 package com.patra.registry.domain.support;
 
 /// 注册中心维度/条件键占位符常量。
-/// 
+///
 /// 用于快照或配置合并的 SOURCE/TASK 作用域统一保留字,避免跨层重复定义。
-/// 
+///
 /// 参考: docs/patra-registry/expr/Registry-expr-schema-design.md
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public final class RegistryKeyPlaceholders {

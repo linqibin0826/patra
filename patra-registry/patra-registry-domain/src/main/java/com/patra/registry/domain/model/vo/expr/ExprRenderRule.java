@@ -5,9 +5,9 @@ import com.patra.registry.domain.support.TemporalEntity;
 import java.time.Instant;
 
 /// 表达式渲染规则领域值对象,对应表 `reg_prov_expr_render_rule`。
-/// 
+///
 /// 定义如何将表达式原子(字段/操作/匹配/否定/值类型)渲染为查询片段或标准参数。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public record ExprRenderRule(
@@ -99,13 +99,13 @@ public record ExprRenderRule(
   }
 
   /// 验证渲染规则的基本必需字段。
-/// 
-/// @param id 规则标识符
-/// @param provenanceId 来源标识符
-/// @param fieldKey 字段键
-/// @param opCode 操作代码
-/// @param emitTypeCode 发射类型代码
-/// @param effectiveFrom 生效开始时间戳
+  ///
+  /// @param id 规则标识符
+  /// @param provenanceId 来源标识符
+  /// @param fieldKey 字段键
+  /// @param opCode 操作代码
+  /// @param emitTypeCode 发射类型代码
+  /// @param effectiveFrom 生效开始时间戳
   private static void validateBasicFields(
       Long id,
       Long provenanceId,
@@ -122,10 +122,10 @@ public record ExprRenderRule(
   }
 
   /// 验证归一化的维度键。
-/// 
-/// @param matchTypeKey 归一化的匹配类型键
-/// @param negatedKey 归一化的否定键
-/// @param valueTypeKey 归一化的值类型键
+  ///
+  /// @param matchTypeKey 归一化的匹配类型键
+  /// @param negatedKey 归一化的否定键
+  /// @param valueTypeKey 归一化的值类型键
   private static void validateNormalizedKeys(
       String matchTypeKey, String negatedKey, String valueTypeKey) {
     DomainValidationException.notBlank(matchTypeKey, "Match type key");

@@ -19,18 +19,18 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// {@link BatchSchedule} 的单元测试。
-/// 
+///
 /// 测试覆盖：
-/// 
+///
 /// - 成功构造场景（有效字段、空列表、多批次）
 ///   - 验证失败场景（null batches、null context、null querySession）
 ///   - 工厂方法（empty、single）
 ///   - 业务方法（hasBatches、totalBatches、exceedsLimit）
 ///   - Record 语义（equals、hashCode、toString、访问器）
 ///   - 不可变性验证
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @DisplayName("BatchSchedule 批次调度结果值对象测试")
 class BatchScheduleTest {
 

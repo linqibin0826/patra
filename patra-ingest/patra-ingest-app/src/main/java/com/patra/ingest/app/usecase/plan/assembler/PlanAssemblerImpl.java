@@ -33,28 +33,28 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /// Plan 组装器实现类
-/// 
+///
 /// 将 {@link PlanAssemblyRequest} 转换为 {@link PlanAssemblyResult} 聚合根:
-/// 
+///
 /// #### 幂等性
-/// 
+///
 /// PlanKey 在 createPlanAggregate 中从 (provenance, operation, endpoint?, windowFrom-windowTo?) 生成。
 /// Task 幂等键使用 (provenance | operation | sliceSignatureHash)。 本类不进行重复检查,由上层通过持久化和唯一索引强制执行。
-/// 
+///
 /// #### 失败条件
-/// 
+///
 /// - 没有切片策略实现 (注册表返回 null) → FAILED (空集合)
 ///   - 切片策略返回空列表 → FAILED
 ///   - 切片存在但派生任务为空 (不应发生) → FAILED
-/// 
+///
 /// #### 复杂度
-/// 
+///
 /// O(n), n = 切片数量; 规范化和哈希计算是线性的。
-/// 
+///
 /// #### 线程安全
-/// 
+///
 /// 无共享可变状态; 注册表查找是只读的且单例安全。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
@@ -79,8 +79,8 @@ public class PlanAssemblerImpl implements PlanAssembler {
   }
 
   /// Assembly entrypoint.
-/// 
-/// Side-effect free (apart from Instant.now and canonicalization); no persistence here.
+  ///
+  /// Side-effect free (apart from Instant.now and canonicalization); no persistence here.
   @Override
   public PlanAssemblyResult assemble(PlanAssemblyRequest request) {
     PlanTriggerNorm norm = request.triggerNorm();
@@ -136,9 +136,9 @@ public class PlanAssemblerImpl implements PlanAssembler {
   }
 
   /// Creates plan aggregate root.
-/// 
-/// Contains: expression hash, expression JSON snapshot, config canonical JSON + hash, window,
-/// slice strategy, slice params JSON.
+  ///
+  /// Contains: expression hash, expression JSON snapshot, config canonical JSON + hash, window,
+  /// slice strategy, slice params JSON.
   private PlanAggregate createPlanAggregate(
       PlanTriggerNorm norm,
       PlannerWindow window,
@@ -173,16 +173,16 @@ public class PlanAssemblerImpl implements PlanAssembler {
   }
 
   /// Generates slices by invoking strategy and converting to aggregates.
-/// 
-/// Flow: invoke planner strategy → SlicePlan list → canonical expr snapshot → PlanSlice
-/// aggregates
-/// 
-/// @param norm plan trigger norm
-/// @param window planner window
-/// @param planExpression plan expression descriptor
-/// @param configSnapshot provenance config snapshot
-/// @param sliceStrategy slice strategy
-/// @return slice generation result
+  ///
+  /// Flow: invoke planner strategy → SlicePlan list → canonical expr snapshot → PlanSlice
+  /// aggregates
+  ///
+  /// @param norm plan trigger norm
+  /// @param window planner window
+  /// @param planExpression plan expression descriptor
+  /// @param configSnapshot provenance config snapshot
+  /// @param sliceStrategy slice strategy
+  /// @return slice generation result
   private SliceGenerationResult createSlices(
       PlanTriggerNorm norm,
       PlannerWindow window,
@@ -228,13 +228,13 @@ public class PlanAssemblerImpl implements PlanAssembler {
   }
 
   /// Generates slice plans using planner strategy.
-/// 
-/// @param planner slice planner
-/// @param norm plan trigger norm
-/// @param window planner window
-/// @param planExpression plan expression descriptor
-/// @param configSnapshot provenance config snapshot
-/// @return list of slice plans
+  ///
+  /// @param planner slice planner
+  /// @param norm plan trigger norm
+  /// @param window planner window
+  /// @param planExpression plan expression descriptor
+  /// @param configSnapshot provenance config snapshot
+  /// @return list of slice plans
   private List<SlicePlan> generateSlicePlans(
       SlicePlanner planner,
       PlanTriggerNorm norm,
@@ -245,10 +245,10 @@ public class PlanAssemblerImpl implements PlanAssembler {
   }
 
   /// Converts slice plans to slice aggregates.
-/// 
-/// @param norm plan trigger norm
-/// @param drafts slice plan drafts
-/// @return list of slice aggregates
+  ///
+  /// @param norm plan trigger norm
+  /// @param drafts slice plan drafts
+  /// @return list of slice aggregates
   private List<PlanSliceAggregate> convertToSliceAggregates(
       PlanTriggerNorm norm, List<SlicePlan> drafts) {
     List<PlanSliceAggregate> slices = new ArrayList<>(drafts.size());
@@ -269,9 +269,9 @@ public class PlanAssemblerImpl implements PlanAssembler {
   }
 
   /// Generates tasks: one task per slice.
-/// 
-/// Task idempotent key material = provenance | operation | sliceSignatureHash → sha256 →
-/// Base64Url.
+  ///
+  /// Task idempotent key material = provenance | operation | sliceSignatureHash → sha256 →
+  /// Base64Url.
   private List<TaskAggregate> createTasks(
       PlanTriggerNorm norm, PlannerWindow window, SliceGenerationResult sliceResult) {
     List<PlanSliceAggregate> slices = sliceResult.aggregates();
@@ -315,7 +315,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
   }
 
   /// Compute task scheduled time: prefer slice windowFrom (parsed), else overall window.from, else
-/// now.
+  /// now.
   private Instant determineScheduledAt(SlicePlan draft, PlannerWindow window) {
     // Try to extract windowFrom from windowSpecJson
     Instant windowFrom = extractWindowFrom(draft.windowSpecJson());
@@ -364,19 +364,19 @@ public class PlanAssemblerImpl implements PlanAssembler {
   }
 
   /// Selects slice strategy based on operation type and data source configuration.
-/// 
-/// Strategy selection logic:
-/// 
-/// - UPDATE operations → SINGLE (no partitioning)
-///   - DATE-only data sources (e.g., PubMed) → DATE (day-level granularity)
-///   - Other sources → DATE (default, safer and more compatible)
-/// 
-/// Date-only detection: checks `offsetDateFormat` for date-only patterns (yyyyMMdd,
-/// yyyy-MM-dd) vs timestamp patterns (ISO_INSTANT, epochMillis).
-/// 
-/// @param norm plan trigger norm containing operation type
-/// @param configSnapshot provenance configuration snapshot (nullable)
-/// @return selected slice strategy
+  ///
+  /// Strategy selection logic:
+  ///
+  /// - UPDATE operations → SINGLE (no partitioning)
+  ///   - DATE-only data sources (e.g., PubMed) → DATE (day-level granularity)
+  ///   - Other sources → DATE (default, safer and more compatible)
+  ///
+  /// Date-only detection: checks `offsetDateFormat` for date-only patterns (yyyyMMdd,
+  /// yyyy-MM-dd) vs timestamp patterns (ISO_INSTANT, epochMillis).
+  ///
+  /// @param norm plan trigger norm containing operation type
+  /// @param configSnapshot provenance configuration snapshot (nullable)
+  /// @return selected slice strategy
   private SliceStrategy determineSliceStrategy(
       PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
     if (norm.isUpdate()) {
@@ -401,15 +401,15 @@ public class PlanAssemblerImpl implements PlanAssembler {
   }
 
   /// Determines if the data source only supports date-level queries (no time component).
-/// 
-/// Detection heuristic:
-/// 
-/// - If offsetDateFormat is blank/null → default to DATE-only (safer)
-///   - If contains timestamp indicators (INSTANT, MILLIS, HH, SS) → supports TIME
-///   - If contains only date patterns (YYYY, MM, DD) → DATE-only
-/// 
-/// @param offsetDateFormat date format string from configuration
-/// @return true if only date-level queries are supported, false if time precision is supported
+  ///
+  /// Detection heuristic:
+  ///
+  /// - If offsetDateFormat is blank/null → default to DATE-only (safer)
+  ///   - If contains timestamp indicators (INSTANT, MILLIS, HH, SS) → supports TIME
+  ///   - If contains only date patterns (YYYY, MM, DD) → DATE-only
+  ///
+  /// @param offsetDateFormat date format string from configuration
+  /// @return true if only date-level queries are supported, false if time precision is supported
   private boolean supportsDateOnly(String offsetDateFormat) {
     if (offsetDateFormat == null || offsetDateFormat.isBlank()) {
       return true; // Default to DATE-only for safety
@@ -452,7 +452,8 @@ public class PlanAssemblerImpl implements PlanAssembler {
     return DEFAULT_NORMALIZER.normalize(snapshot);
   }
 
-  /// Builds task idempotent key: sha256(provenance|operation|sliceHash) → Base64Url without padding.
+  /// Builds task idempotent key: sha256(provenance|operation|sliceHash) → Base64Url without
+  // padding.
   private String computeSignature(PlanTriggerNorm norm, String payload) {
     String material =
         CharSequenceUtil.join(

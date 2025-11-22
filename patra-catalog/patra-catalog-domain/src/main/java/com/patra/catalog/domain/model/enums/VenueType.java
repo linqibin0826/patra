@@ -4,29 +4,29 @@ import cn.hutool.core.lang.Assert;
 import lombok.Getter;
 
 /// 出版载体类型枚举。
-/// 
+///
 /// 字段映射：cat_venue.venue_type → JOURNAL/BOOK/CONFERENCE/OTHER
-/// 
+///
 /// 业务规则：
-/// 
+///
 /// - **JOURNAL**：期刊类型，必须有 ISSN，支持 ISO/MEDLINE 缩写
 ///   - **BOOK**：书籍类型，必须有 ISBN，支持版次（edition）
 ///   - **CONFERENCE**：会议类型，必须有会议名称、地点、日期
 ///   - **OTHER**：其他类型（预印本、技术报告等）
-/// 
+///
 /// 设计约束：
-/// 
+///
 /// - 载体类型一旦确定，不应随意变更（影响关联的文献分类）
 ///   - 不同类型有不同的必填字段验证规则
-/// 
+///
 /// 使用示例：
-/// 
+///
 /// ```java
 /// VenueType type = VenueType.fromCode("JOURNAL");
 /// if (type.isJournal()) {
 ///     // 验证ISSN是否存在
 /// ```
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
@@ -56,10 +56,10 @@ public enum VenueType {
   }
 
   /// 从代码值解析枚举（不区分大小写）。
-/// 
-/// @param value 代码值（如 "JOURNAL", "book", "Conference"）
-/// @return 对应的枚举值
-/// @throws IllegalArgumentException 如果代码值无效
+  ///
+  /// @param value 代码值（如 "JOURNAL", "book", "Conference"）
+  /// @return 对应的枚举值
+  /// @throws IllegalArgumentException 如果代码值无效
   public static VenueType fromCode(String value) {
     Assert.notBlank(value, "载体类型代码不能为空");
     String normalized = value.trim().toUpperCase();
@@ -72,43 +72,43 @@ public enum VenueType {
   }
 
   /// 判断是否为期刊。
-/// 
-/// @return true 如果为期刊类型
+  ///
+  /// @return true 如果为期刊类型
   public boolean isJournal() {
     return this == JOURNAL;
   }
 
   /// 判断是否为书籍。
-/// 
-/// @return true 如果为书籍类型
+  ///
+  /// @return true 如果为书籍类型
   public boolean isBook() {
     return this == BOOK;
   }
 
   /// 判断是否为会议。
-/// 
-/// @return true 如果为会议类型
+  ///
+  /// @return true 如果为会议类型
   public boolean isConference() {
     return this == CONFERENCE;
   }
 
   /// 判断是否需要 ISSN。
-/// 
-/// @return true 如果是期刊类型
+  ///
+  /// @return true 如果是期刊类型
   public boolean requiresIssn() {
     return this == JOURNAL;
   }
 
   /// 判断是否需要 ISBN。
-/// 
-/// @return true 如果是书籍类型
+  ///
+  /// @return true 如果是书籍类型
   public boolean requiresIsbn() {
     return this == BOOK;
   }
 
   /// 判断是否需要会议信息。
-/// 
-/// @return true 如果是会议类型
+  ///
+  /// @return true 如果是会议类型
   public boolean requiresConferenceInfo() {
     return this == CONFERENCE;
   }

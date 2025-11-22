@@ -19,10 +19,10 @@ import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
 /// 采集计划对象转换器,负责领域对象与数据库实体转换。
-/// 
+///
 /// 转换规则: 计划聚合 {@link PlanAggregate} ↔ 数据对象 {@link PlanDO} 双向转换,处理 JSON
 /// 快照字段、枚举类型代码映射、窗口规格序列化/反序列化。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
@@ -45,13 +45,13 @@ public interface PlanConverter {
   PlanDO toEntity(PlanAggregate aggregate);
 
   /// Post-mapping hook to populate denormalized timestamp fields for TIME strategy.
-/// 
-/// This method extracts `from` and `to` timestamps from {@link WindowSpec.Time} and
-/// populates the `windowFromTs` and `windowToTs` fields for query optimization. For
-/// non-TIME strategies, these fields are set to `null`.
-/// 
-/// @param aggregate source aggregate
-/// @param entity target DO (will be mutated)
+  ///
+  /// This method extracts `from` and `to` timestamps from {@link WindowSpec.Time} and
+  /// populates the `windowFromTs` and `windowToTs` fields for query optimization. For
+  /// non-TIME strategies, these fields are set to `null`.
+  ///
+  /// @param aggregate source aggregate
+  /// @param entity target DO (will be mutated)
   @AfterMapping
   default void populateDenormalizedTimestamps(
       PlanAggregate aggregate, @MappingTarget PlanDO entity) {

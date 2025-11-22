@@ -6,15 +6,15 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /// 出版物数据源使用的通用采集日期类型枚举。
-/// 
+///
 /// 用于标识文献记录中不同类型的日期字段(例如 PubMed 的 PDAT/EDAT/MHDA 字段)。
-/// 
+///
 /// 示例:
-/// 
+///
 /// - **PDAT** – 发布日期,文献的官方发布日期,常用于过滤检索。
 ///   - **EDAT** – Entrez 日期,记录被采集入库的日期。
 ///   - **MHDA** – MeSH 日期,MeSH 主题词被分配的日期。
-/// 
+///
 /// 参考: PubMed 帮助文档。
 @Getter
 @RequiredArgsConstructor
@@ -33,10 +33,10 @@ public enum IngestDateType {
   private final String description;
 
   /// 用于 Jackson 从代码创建枚举的工厂方法。
-/// 
-/// @param code 日期类型代码
-/// @return 匹配的日期类型枚举
-/// @throws IllegalArgumentException 如果代码未知
+  ///
+  /// @param code 日期类型代码
+  /// @return 匹配的日期类型枚举
+  /// @throws IllegalArgumentException 如果代码未知
   @JsonCreator
   public static IngestDateType fromCode(String code) {
     for (IngestDateType type : IngestDateType.values()) {
@@ -48,8 +48,8 @@ public enum IngestDateType {
   }
 
   /// 将枚举序列化为其代码以输出 JSON。
-/// 
-/// @return 日期类型代码
+  ///
+  /// @return 日期类型代码
   @JsonValue
   public String toCode() {
     return this.code;

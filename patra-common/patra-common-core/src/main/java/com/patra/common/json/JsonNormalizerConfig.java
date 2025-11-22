@@ -11,9 +11,9 @@ import java.util.Objects;
 import java.util.Set;
 
 /// 管理 JSON 规范化行为的配置。
-/// 
+///
 /// 提供可调选项,包括空值移除、类型强制策略、默认时区、序列字段保留、数组去重、字符串清理、键排序以及安全防护(深度、字符串字节长度、禁止键)。
-/// 
+///
 /// 使用 {@link #builder()} 构造具有自定义设置的实例。
 public final class JsonNormalizerConfig {
   final boolean removeEmpty;
@@ -86,8 +86,8 @@ public final class JsonNormalizerConfig {
   }
 
   /// {@link JsonNormalizerConfig} 的构建器。
-/// 
-/// 默认值倾向于稳定但宽松的规范化并减少噪声;根据需要覆盖选项以实现更严格或更宽松的行为。
+  ///
+  /// 默认值倾向于稳定但宽松的规范化并减少噪声;根据需要覆盖选项以实现更严格或更宽松的行为。
   public static final class Builder {
     private boolean removeEmpty = true;
     private final Set<String> keepEmptyWhitelist = new LinkedHashSet<>();

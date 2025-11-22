@@ -14,17 +14,17 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// MeshImportAggregate 聚合根单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 测试领域行为和状态转换
 ///   - 验证业务不变性约束
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
-/// 
+///
 /// 覆盖范围：
-/// 
+///
 /// - ✅ startImport() - 开始导入任务
 ///   - ✅ updateTableProgress() - 更新表进度
 ///   - ✅ markAsCompleted() - 标记任务完成
@@ -33,7 +33,7 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ 状态转换验证
 ///   - ✅ 不变性约束验证
 ///   - ✅ 领域事件验证
-/// 
+///
 /// @author Patra Team
 /// @since 2.0
 @DisplayName("MeshImportAggregate 单元测试")
@@ -51,7 +51,8 @@ class MeshImportAggregateTest {
       // Given: 任务基本信息
       MeshImportId id = MeshImportId.of(1001L);
       String taskName = "MeSH 2025 首次导入";
-      String sourceUrl = "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml";
+      String sourceUrl =
+          "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml";
       List<TableProgress> tableProgressList = createInitialTableProgressList();
 
       // When: 创建聚合根
@@ -587,8 +588,7 @@ class MeshImportAggregateTest {
       MeshImportAggregate aggregate = createCompletedAggregate();
 
       // When & Then: 所有状态转换都应该失败
-      assertThatThrownBy(() -> aggregate.startImport())
-          .isInstanceOf(IllegalStateException.class);
+      assertThatThrownBy(() -> aggregate.startImport()).isInstanceOf(IllegalStateException.class);
 
       assertThatThrownBy(() -> aggregate.retry()).isInstanceOf(IllegalStateException.class);
     }
@@ -705,8 +705,8 @@ class MeshImportAggregateTest {
       // 使用 updateTableProgress 方法更新进度，它会自动计算状态为 COMPLETED
       aggregate.updateTableProgress(
           progress.getTableName(),
-          progress.getTotalCount(),  // processedCount = totalCount（完成）
-          progress.getTotalCount() / 1000);  // lastBatchNum
+          progress.getTotalCount(), // processedCount = totalCount（完成）
+          progress.getTotalCount() / 1000); // lastBatchNum
     }
   }
 }

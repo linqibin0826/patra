@@ -10,15 +10,15 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// 任务执行批次数据库实体,映射到表 `ing_task_run_batch`。
-/// 
+///
 /// 表结构: 表示任务执行期间的批次核算(页面/令牌步骤);恢复/去重的最小单元。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `idempotent_key` 唯一(唯一约束: uk_batch_idem),避免重试时重复批次
 ///   - `before_token`/`after_token` 捕获分页游标以支持回溯
 ///   - `stats` 以 JSON 存储批次级指标(fetched/upserted 等)
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

@@ -16,14 +16,14 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// {@link OutboxRelayLogFactory} 单元测试。
-/// 
+///
 /// 测试策略:
-/// 
+///
 /// - 纯 Java 单元测试(Domain 层无框架依赖)
 ///   - 使用固定 Clock 确保时间戳的确定性
 ///   - 验证工厂正确委托给 OutboxMessage.computeNextAttempt()
 ///   - 验证日志创建的一致性和完整性
-/// 
+///
 /// @author Patra Team
 /// @since 0.1.0
 @DisplayName("OutboxRelayLogFactory 单元测试")

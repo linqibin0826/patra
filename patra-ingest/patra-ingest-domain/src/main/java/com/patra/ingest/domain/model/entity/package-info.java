@@ -1,46 +1,46 @@
 /// Ingest 领域模型 - 实体包。
-/// 
+///
 /// 本包包含领域实体(Entities),它们拥有唯一标识和生命周期,但不是聚合根。实体通常作为聚合根的一部分存在, 由聚合根管理其一致性边界。
-/// 
+///
 /// ## 核心实体
-/// 
+///
 /// - {@link com.patra.ingest.domain.model.entity.OutboxMessage} - Outbox 消息实体
-///       
+///
 /// - 实现事务性消息发布模式(Transactional Outbox Pattern)
 ///         - 保证业务操作与消息发送的原子性
 ///         - 状态: PENDING → PUBLISHED/FAILED/DEFERRED
 ///         - 支持租约机制防止并发发布
-/// 
+///
 ///   - {@link com.patra.ingest.domain.model.entity.OutboxRelayLog} - Outbox 中继日志实体
-///       
+///
 /// - 记录消息中继(Relay)的执行历史
 ///         - 用于补偿机制和监控
 ///         - 关联批次 ID、执行结果和重试次数
-/// 
+///
 ///   - {@link com.patra.ingest.domain.model.entity.Cursor} - 游标实体
-///       
+///
 /// - 增量采集的断点续传游标
 ///         - 追踪数据源的消费位置(水位线)
 ///         - 支持前向和后向游标
-/// 
+///
 ///   - {@link com.patra.ingest.domain.model.entity.CursorEvent} - 游标事件实体
-///       
+///
 /// - 记录游标变更的审计日志
 ///         - 支持游标血缘追踪和回溯
-/// 
+///
 ///   - {@link com.patra.ingest.domain.model.entity.TaskRun} - 任务执行记录实体
-///       
+///
 /// - 任务的单次执行实例
 ///         - 包含执行上下文、统计数据和时间线
 ///         - 支持断点续传和批次追踪
-/// 
+///
 ///   - {@link com.patra.ingest.domain.model.entity.TaskRunBatch} - 任务批次实体
-///       
+///
 /// - 任务执行的批次记录
 ///         - 追踪批次范围、处理结果和性能指标
-/// 
+///
 /// ## 实体与聚合根的区别
-/// 
+///
 /// <table border="1">
 ///   <tr>
 ///     <th>特征</th>
@@ -68,18 +68,18 @@
 ///     <td>通过聚合根发布</td>
 ///   </tr>
 /// </table>
-/// 
+///
 /// ## 实体特征
-/// 
+///
 /// - **唯一标识**: 通过 ID 区分,即使属性相同
 ///   - **可变性**: 实体状态可变,通过业务方法修改
 ///   - **相等性**: 基于 ID 判断,不是值相等
 ///   - **生命周期**: 创建、修改、销毁的完整生命周期
-/// 
+///
 /// ## Outbox Pattern 设计
-/// 
+///
 /// OutboxMessage 实现了事务性消息发布模式,保证业务操作与消息发送的原子性:
-/// 
+///
 /// ```java
 /// // 在同一事务中
 /// @Transactional
@@ -88,7 +88,7 @@
 ///     TaskAggregate task = taskRepository.findById(taskId);
 ///     task.markCompleted();
 ///     taskRepository.save(task);
-/// 
+///
 ///     // 2. 保存 Outbox 消息
 ///     OutboxMessage message = OutboxMessage.create(
 ///         "TASK_COMPLETED",
@@ -96,7 +96,7 @@
 ///         headers
 ///     );
 ///     outboxRepository.save(message);
-/// 
+///
 /// // 后台异步发布
 /// @Scheduled
 /// public void relayOutboxMessages() {
@@ -106,11 +106,11 @@
 ///             publisher.publish(msg);
 ///             msg.markPublished();
 /// ```
-/// 
+///
 /// ## 游标管理设计
-/// 
+///
 /// Cursor 实体支持增量采集的断点续传:
-/// 
+///
 /// ```java
 /// // 初始化游标
 /// Cursor cursor = Cursor.create(
@@ -118,38 +118,38 @@
 ///     CursorType.FORWARD,
 ///     initialValue
 /// );
-/// 
+///
 /// // 推进游标
 /// cursor.advance(newValue, watermark);
 /// cursorRepository.save(cursor);
-/// 
+///
 /// // 记录游标事件
 /// CursorEvent event = CursorEvent.of(cursor, operation);
 /// cursorEventRepository.save(event);
 /// ```
-/// 
+///
 /// ## 使用示例
-/// 
+///
 /// ```java
 /// // TaskRun 实体生命周期
 /// TaskRun run = TaskRun.create(taskId, executionContext);
 /// run.start(Instant.now());
 /// run.processBatch(batch);
 /// run.complete(stats, checkpoint);
-/// 
+///
 /// // OutboxMessage 发布流程
 /// OutboxMessage msg = OutboxMessage.create(channel, payload, headers);
 /// if (msg.tryAcquireLease(workerId)) {
 ///     publisher.send(msg);
 ///     msg.markPublished();
 /// ```
-/// 
+///
 /// ## 命名约定
-/// 
+///
 /// - 实体类名使用名词,清晰表达领域概念
 ///   - 状态字段使用枚举类型,避免魔法字符串
 ///   - 行为方法使用动词,表达业务操作
-/// 
+///
 /// @see com.patra.ingest.domain.model.aggregate 聚合根定义
 /// @see com.patra.ingest.domain.model.vo 值对象定义
 /// @author linqibin

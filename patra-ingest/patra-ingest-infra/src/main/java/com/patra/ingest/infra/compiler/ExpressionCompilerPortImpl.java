@@ -19,20 +19,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /// 表达式编译器端口实现。
-/// 
+///
 /// 职责:
-/// 
+///
 /// - 将领域层的 ExprCompilationRequest 转换为 starter 的 CompileRequest
 ///   - 将 JSON 表达式快照反序列化为 Expr 对象
 ///   - 调用 patra-spring-boot-starter-expr 中的 ExprCompiler
 ///   - 将 CompileResult 转换回领域层的 ExprCompilationResult
-/// 
+///
 /// 设计原则:
-/// 
+///
 /// - 在基础设施层隔离 JSON 到 Expr 的转换
 ///   - 保持领域层与表达式实现细节的独立性
 ///   - 使用 patra-expr-kernel 的 ExprJsonCodec 进行稳定的序列化
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Component
@@ -44,9 +44,9 @@ public class ExpressionCompilerPortImpl implements ExpressionCompilerPort {
   private final ObjectMapper objectMapper;
 
   /// 从领域请求编译表达式。
-/// 
-/// @param request 领域编译请求
-/// @return 领域编译结果
+  ///
+  /// @param request 领域编译请求
+  /// @return 领域编译结果
   @Override
   public ExprCompilationResult compile(ExprCompilationRequest request) {
     if (log.isDebugEnabled()) {
@@ -94,9 +94,9 @@ public class ExpressionCompilerPortImpl implements ExpressionCompilerPort {
   }
 
   /// 将 CompileResult 转换为 ExprCompilationResult。
-/// 
-/// @param result starter 的编译结果
-/// @return 领域编译结果
+  ///
+  /// @param result starter 的编译结果
+  /// @return 领域编译结果
   private ExprCompilationResult convertToExprCompilationResult(CompileResult result) {
     ValidationReport report = result.report();
 

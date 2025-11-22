@@ -13,25 +13,25 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// ScheduleInstanceAggregate 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 使用 TestDataBuilder 模式构建测试数据
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
-/// 
+///
 /// 测试范围：
-/// 
+///
 /// - ✅ 工厂方法验证（start(), restore()）
 ///   - ✅ 必填字段验证（scheduler, triggerType）
 ///   - ✅ 初始化状态验证
 ///   - ✅ 不可变性验证
 ///   - ✅ 边界条件测试
 ///   - ✅ 聚合根基类行为
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @DisplayName("ScheduleInstanceAggregate 单元测试")
 class ScheduleInstanceAggregateTest {
 
@@ -744,8 +744,8 @@ class ScheduleInstanceAggregateTest {
   // ========== TestDataBuilder (辅助类) ==========
 
   /// ScheduleInstanceAggregate 测试数据构建器。
-/// 
-/// 遵循 Builder 模式，提供默认值以简化测试数据构建。
+  ///
+  /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
   static class ScheduleInstanceAggregateTestDataBuilder {
     private Long id = null; // 默认为 null（新创建的聚合根）
     private Scheduler scheduler = Scheduler.XXL;

@@ -11,7 +11,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 
 /// 默认的 {@link ValidationErrorsFormatter}，用于掩盖敏感值并限制返回给客户端的验证错误数量。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 /// @see com.patra.starter.web.error.model.ValidationError
@@ -57,9 +57,9 @@ public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatt
   }
 
   /// 将 Spring 的 {@link ObjectError} 映射到 {@link ValidationError} 并掩盖敏感值。
-/// 
-/// @param error Spring 验证报告的绑定错误
-/// @return 清理后的验证错误
+  ///
+  /// @param error Spring 验证报告的绑定错误
+  /// @return 清理后的验证错误
   private ValidationError mapToValidationError(ObjectError error) {
     if (error instanceof FieldError fieldError) {
       String fieldName = fieldError.getField();
@@ -74,10 +74,10 @@ public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatt
   }
 
   /// 基于配置的名称模式掩盖敏感的字段值。
-/// 
-/// @param fieldName 逻辑字段名
-/// @param value 客户端提供的被拒绝值
-/// @return 当被认为是敏感时的掩盖值；否则为原始值
+  ///
+  /// @param fieldName 逻辑字段名
+  /// @param value 客户端提供的被拒绝值
+  /// @return 当被认为是敏感时的掩盖值；否则为原始值
   private Object maskSensitiveValue(String fieldName, Object value) {
     if (fieldName == null || value == null) {
       return value;

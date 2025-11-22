@@ -8,18 +8,18 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// SliceStatusChangedEvent 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 不使用 Mockito，使用真实对象
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
 ///   - 测试 Record 语义（构造器、访问器、equals/hashCode/toString）
 ///   - 测试 DomainEvent 接口实现
-/// 
+///
 /// 测试范围：
-/// 
+///
 /// - ✅ Record 构造器测试（紧凑构造器逻辑）
 ///   - ✅ 工厂方法测试（of()）
 ///   - ✅ 访问器方法测试（sliceId, planId, oldStatus, newStatus, occurredAt）
@@ -30,9 +30,9 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ 状态转换场景测试
 ///   - ✅ 边界情况测试
 ///   - ✅ 不可变性测试
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @DisplayName("SliceStatusChangedEvent 单元测试")
 class SliceStatusChangedEventTest {
 

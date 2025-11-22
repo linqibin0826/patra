@@ -3,7 +3,7 @@ package com.patra.expr;
 import java.util.Objects;
 
 /// 逻辑非表达式。
-/// 
+///
 /// 表示对一个子表达式的否定。
 public record Not(Expr child) implements Expr {
 

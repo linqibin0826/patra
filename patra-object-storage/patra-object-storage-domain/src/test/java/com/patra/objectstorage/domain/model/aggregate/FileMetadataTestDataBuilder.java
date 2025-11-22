@@ -10,20 +10,20 @@ import java.time.Instant;
 import java.util.Map;
 
 /// FileMetadata 测试数据构建器。
-/// 
+///
 /// 使用 Builder 模式简化测试用例中的聚合根构建。
-/// 
+///
 /// ### 使用示例
-/// 
+///
 /// ```java
 /// // 创建活跃状态的文件元数据
 /// FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().build();
-/// 
+///
 /// // 创建已删除的文件元数据
 /// FileMetadata metadata = FileMetadataTestDataBuilder.aDeletedFile()
 ///     .deletedAt(Instant.now())
 ///     .buildRestored();
-/// 
+///
 /// // 创建完全自定义的文件元数据
 /// FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile()
 ///     .id(1001L)
@@ -32,9 +32,9 @@ import java.util.Map;
 ///     .provider(StorageProvider.S3)
 ///     .buildRestored();
 /// ```
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 public class FileMetadataTestDataBuilder {
 
   // ========== 核心字段 ==========
@@ -72,32 +72,32 @@ public class FileMetadataTestDataBuilder {
   // ========== 静态工厂方法 ==========
 
   /// 创建默认的活跃状态文件构建器。
-/// 
-/// 包含以下默认配置：
-/// 
-/// - 状态: ACTIVE
-///   - 存储桶: test-bucket
-///   - 对象键: test/file.pdf
-///   - 文件大小: 1 MB
-///   - 存储提供商: MINIO
-///   - 业务上下文: patra-ingest/publication_batch/batch-001
-///   - 校验和: MD5 (示例哈希)
-/// 
-/// @return 文件元数据构建器
+  ///
+  /// 包含以下默认配置：
+  ///
+  /// - 状态: ACTIVE
+  ///   - 存储桶: test-bucket
+  ///   - 对象键: test/file.pdf
+  ///   - 文件大小: 1 MB
+  ///   - 存储提供商: MINIO
+  ///   - 业务上下文: patra-ingest/publication_batch/batch-001
+  ///   - 校验和: MD5 (示例哈希)
+  ///
+  /// @return 文件元数据构建器
   public static FileMetadataTestDataBuilder anActiveFile() {
     return new FileMetadataTestDataBuilder().status(FileStatus.ACTIVE).deleted(Boolean.FALSE);
   }
 
   /// 创建默认的已删除文件构建器。
-/// 
-/// 包含以下默认配置：
-/// 
-/// - 状态: DELETED
-///   - 软删除标志: true
-///   - 删除时间: 当前时间
-///   - 其他字段同 {@link #anActiveFile()}
-/// 
-/// @return 文件元数据构建器
+  ///
+  /// 包含以下默认配置：
+  ///
+  /// - 状态: DELETED
+  ///   - 软删除标志: true
+  ///   - 删除时间: 当前时间
+  ///   - 其他字段同 {@link #anActiveFile()}
+  ///
+  /// @return 文件元数据构建器
   public static FileMetadataTestDataBuilder aDeletedFile() {
     return new FileMetadataTestDataBuilder()
         .status(FileStatus.DELETED)
@@ -106,14 +106,14 @@ public class FileMetadataTestDataBuilder {
   }
 
   /// 创建默认的已过期文件构建器。
-/// 
-/// 包含以下默认配置：
-/// 
-/// - 状态: EXPIRED
-///   - 过期时间: 1 小时前
-///   - 其他字段同 {@link #anActiveFile()}
-/// 
-/// @return 文件元数据构建器
+  ///
+  /// 包含以下默认配置：
+  ///
+  /// - 状态: EXPIRED
+  ///   - 过期时间: 1 小时前
+  ///   - 其他字段同 {@link #anActiveFile()}
+  ///
+  /// @return 文件元数据构建器
   public static FileMetadataTestDataBuilder anExpiredFile() {
     return new FileMetadataTestDataBuilder()
         .status(FileStatus.EXPIRED)
@@ -230,12 +230,12 @@ public class FileMetadataTestDataBuilder {
   // ========== 便捷配置方法 ==========
 
   /// 配置完整的业务上下文，包含关联数据。
-/// 
-/// @param serviceName 服务名称
-/// @param businessType 业务类型
-/// @param businessId 业务 ID
-/// @param correlationData 关联数据
-/// @return 当前构建器
+  ///
+  /// @param serviceName 服务名称
+  /// @param businessType 业务类型
+  /// @param businessId 业务 ID
+  /// @param correlationData 关联数据
+  /// @return 当前构建器
   public FileMetadataTestDataBuilder withBusinessContext(
       String serviceName,
       String businessType,
@@ -246,29 +246,29 @@ public class FileMetadataTestDataBuilder {
   }
 
   /// 配置 MD5 和 SHA-256 校验和。
-/// 
-/// @param md5Hash MD5 哈希值
-/// @param sha256Hash SHA-256 哈希值
-/// @return 当前构建器
+  ///
+  /// @param md5Hash MD5 哈希值
+  /// @param sha256Hash SHA-256 哈希值
+  /// @return 当前构建器
   public FileMetadataTestDataBuilder withChecksum(String md5Hash, String sha256Hash) {
     this.checksum = new FileChecksum(md5Hash, sha256Hash);
     return this;
   }
 
   /// 配置存储桶和对象键。
-/// 
-/// @param bucket 存储桶名称
-/// @param objectKey 对象键
-/// @return 当前构建器
+  ///
+  /// @param bucket 存储桶名称
+  /// @param objectKey 对象键
+  /// @return 当前构建器
   public FileMetadataTestDataBuilder withStorageKey(String bucket, String objectKey) {
     this.storageKey = new StorageKey(bucket, objectKey);
     return this;
   }
 
   /// 配置文件大小（字节）。
-/// 
-/// @param bytes 文件字节数
-/// @return 当前构建器
+  ///
+  /// @param bytes 文件字节数
+  /// @return 当前构建器
   public FileMetadataTestDataBuilder withFileSize(long bytes) {
     this.fileSize = new FileSize(bytes);
     return this;
@@ -277,16 +277,16 @@ public class FileMetadataTestDataBuilder {
   // ========== Build 方法 ==========
 
   /// 构建新创建的 FileMetadata 实例（使用 create() 工厂方法）。
-/// 
-/// 新创建的聚合根：
-/// 
-/// - ID 为 null
-///   - 状态自动设置为 ACTIVE
-///   - 上传时间、创建时间、更新时间自动设置为当前时间
-///   - 版本号为 0
-///   - deleted 标志为 false
-/// 
-/// @return FileMetadata 实例
+  ///
+  /// 新创建的聚合根：
+  ///
+  /// - ID 为 null
+  ///   - 状态自动设置为 ACTIVE
+  ///   - 上传时间、创建时间、更新时间自动设置为当前时间
+  ///   - 版本号为 0
+  ///   - deleted 标志为 false
+  ///
+  /// @return FileMetadata 实例
   public FileMetadata build() {
     FileMetadata metadata = FileMetadata.create(storageKey, fileSize, checksum, context, provider);
 
@@ -308,14 +308,14 @@ public class FileMetadataTestDataBuilder {
   }
 
   /// 构建从持久化恢复的 FileMetadata 实例（使用 restore() 工厂方法）。
-/// 
-/// 从持久化恢复的聚合根：
-/// 
-/// - ID 不为 null（如果未设置，默认为 100L）
-///   - 所有字段都使用构建器中设置的值
-///   - 完全控制所有字段的状态
-/// 
-/// @return FileMetadata 实例
+  ///
+  /// 从持久化恢复的聚合根：
+  ///
+  /// - ID 不为 null（如果未设置，默认为 100L）
+  ///   - 所有字段都使用构建器中设置的值
+  ///   - 完全控制所有字段的状态
+  ///
+  /// @return FileMetadata 实例
   public FileMetadata buildRestored() {
     Long restoredId = (id != null) ? id : 100L; // 默认 ID
     return FileMetadata.restore(

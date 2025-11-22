@@ -9,13 +9,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 /// 出版载体聚合根仓储实现。
-/// 
+///
 /// **职责**：
-/// 
+///
 /// - 管理 Venue（载体）和 VenueInstance（卷期）的持久化
 ///   - 处理 ISSN/ISBN 唯一性检查
 ///   - 支持卷期查询和管理
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j

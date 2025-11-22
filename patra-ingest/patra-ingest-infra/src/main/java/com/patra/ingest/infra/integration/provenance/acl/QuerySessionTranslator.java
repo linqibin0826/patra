@@ -12,25 +12,25 @@ import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 /// 查询会话翻译器（防腐层）
-/// 
+///
 /// 将 Provenance Starter 的 {@link PlanMetadata} 翻译为 Ingest 领域的 {@link QuerySession}。
-/// 
+///
 /// **翻译策略**：
-/// 
+///
 /// - 提取批次生成所需的核心信息（总记录数、数据源代码）
 ///   - 将数据源特定的状态令牌转换为通用的 Map 结构
 ///   - 屏蔽 Provenance 的实现细节（如 plannedAt、extensionMetadata）
-/// 
+///
 /// @author Patra Architecture Team
 /// @since 0.3.0
 @Component
 public class QuerySessionTranslator {
 
   /// 翻译 PlanMetadata 为 QuerySession
-/// 
-/// @param planMetadata Provenance 的计划元数据
-/// @return Ingest 的查询会话
-/// @throws IllegalArgumentException 如果遇到未知的 PlanMetadata 类型
+  ///
+  /// @param planMetadata Provenance 的计划元数据
+  /// @return Ingest 的查询会话
+  /// @throws IllegalArgumentException 如果遇到未知的 PlanMetadata 类型
   public QuerySession translate(PlanMetadata planMetadata) {
     // 空计划处理
     if (planMetadata.totalCount() == 0) {

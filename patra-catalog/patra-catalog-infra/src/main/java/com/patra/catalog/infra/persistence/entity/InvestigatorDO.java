@@ -1,24 +1,23 @@
 package com.patra.catalog.infra.persistence.entity;
 
-import java.time.Instant;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// 研究者数据库实体,映射到表 `cat_investigator`。
-/// 
+///
 /// 表结构: 存储研究者信息（非作者的研究人员,如临床试验 PI）,支持去重。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `orcid` ORCID 标识符,普通索引 idx_orcid
 ///   - `dedup_key` 复合去重键,应用层计算 MD5 哈希
 ///   - `metadata` JSON 扩展数据字段
-/// 
+///
 /// @author linqibin
 /// @since 0.3.0
 @Data
@@ -69,5 +68,4 @@ public class InvestigatorDO extends BaseDO {
   /// 研究者元数据（JSON 格式）
   @TableField(value = "metadata", typeHandler = JacksonTypeHandler.class)
   private JsonNode metadata;
-
 }

@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.http.ProblemDetail;
 
 /// 控制 Web 层错误响应的配置属性（例如 {@link ProblemDetail}）。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

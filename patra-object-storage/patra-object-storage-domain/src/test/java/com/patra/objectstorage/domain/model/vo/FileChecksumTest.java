@@ -7,25 +7,25 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// FileChecksum 值对象单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
 ///   - 使用 @Nested 分组组织测试
-/// 
+///
 /// 测试范围：
-/// 
+///
 /// - ✅ record 构造函数验证（紧凑构造器）
 ///   - ✅ 至少一个哈希值规则（MD5 或 SHA-256）
 ///   - ✅ 标准化逻辑（trim + toLowerCase）
 ///   - ✅ null 处理（保持 null 当一个哈希有值时）
 ///   - ✅ record 自动生成的 equals/hashCode/toString 测试
 ///   - ✅ 边界条件（哈希长度、特殊字符、混合大小写）
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @DisplayName("FileChecksum 值对象单元测试")
 class FileChecksumTest {
 

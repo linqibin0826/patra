@@ -12,16 +12,16 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// PlanAggregate 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 使用 TestDataBuilder 模式构建测试数据
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @DisplayName("PlanAggregate 单元测试")
 class PlanAggregateTest {
 
@@ -746,8 +746,8 @@ class PlanAggregateTest {
   // ========== TestDataBuilder (辅助类) ==========
 
   /// PlanAggregate 测试数据构建器。
-/// 
-/// 遵循 Builder 模式，提供默认值以简化测试数据构建。
+  ///
+  /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
   static class PlanAggregateTestDataBuilder {
     private Long id = null; // 默认为 null（新创建的聚合根）
     private Long scheduleInstanceId = 1001L;

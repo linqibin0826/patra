@@ -1,18 +1,18 @@
 package com.patra.common.provenance.api.params;
 
 /// PubMed E-utilities 参数键常量
-/// 
+///
 /// 集中定义所有 PubMed API 参数名称，供请求组装器和参数映射使用。
-/// 
+///
 /// ### 参数分类
-/// 
+///
 /// - **基础参数** - DB, ID
 ///   - **分页参数** - RETSTART, RETMAX
 ///   - **格式参数** - RETMODE, RETTYPE
 ///   - **查询参数** - TERM, SORT, DATETYPE, MINDATE, MAXDATE, FIELD, RELDATE
 ///   - **历史参数** - USEHISTORY, WEBENV, QUERY_KEY
 ///   - **身份参数** - API_KEY, TOOL, EMAIL
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public final class PubMedParamKeys {

@@ -6,16 +6,16 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import org.springframework.util.StringUtils;
 
 /// PubMed EPost API 响应的结构化视图 (仅支持 XML 格式)。
-/// 
+///
 /// EPost 将 UID 列表上传到 Entrez 历史服务器,并返回 WebEnv 令牌和 query_key, 这些令牌可在后续 API 调用中使用。这避免了处理大型 ID 列表时的
 /// URL 长度限制。
-/// 
+///
 /// **典型响应字段:**
-/// 
+///
 /// - **WebEnv**: 历史服务器会话令牌 (有效期约24小时)
 ///   - **QueryKey**: 标识上传的 UID 列表的查询键
 ///   - **Count**: 成功上传的标识符数量
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @JsonIgnoreProperties(ignoreUnknown = true)

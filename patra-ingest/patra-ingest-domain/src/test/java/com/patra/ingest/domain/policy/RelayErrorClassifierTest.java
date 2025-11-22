@@ -15,16 +15,16 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// RelayErrorClassifier 单元测试
-/// 
+///
 /// 测试重点：
-/// 
+///
 /// - 错误分类正确性（TRANSIENT vs FATAL）
 ///   - 异常链处理（根本原因分析）
 ///   - 边界条件（null、嵌套异常）
 ///   - 典型错误场景覆盖
-/// 
+///
 /// 注意：由于 RelayErrorClassifier 是接口，此测试使用模拟实现来验证分类逻辑
-/// 
+///
 /// @author linqibin
 @DisplayName("RelayErrorClassifier 单元测试")
 class RelayErrorClassifierTest {
@@ -389,8 +389,8 @@ class RelayErrorClassifierTest {
   }
 
   /// 测试用的 RelayErrorClassifier 实现
-/// 
-/// 模拟真实实现的分类逻辑（参考 RelayErrorClassifierImpl）
+  ///
+  /// 模拟真实实现的分类逻辑（参考 RelayErrorClassifierImpl）
   private static class TestRelayErrorClassifier implements RelayErrorClassifier {
 
     @Override

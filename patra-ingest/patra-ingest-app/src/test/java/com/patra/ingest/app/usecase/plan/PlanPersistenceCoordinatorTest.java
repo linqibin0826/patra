@@ -41,9 +41,9 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 /// PlanPersistenceCoordinator 单元测试。
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - ✅ persistScheduleInstance() - 正常持久化调度实例
 ///   - ✅ persistScheduleInstance() - 持久化失败异常包装
 ///   - ✅ savePlan() - 正常持久化计划
@@ -55,7 +55,7 @@ import org.mockito.quality.Strictness;
 ///   - ✅ persistTasks() - 空任务列表处理
 ///   - ✅ persistTasks() - 任务绑定计划和切片 ID 验证
 ///   - ✅ saveTask() - 正常持久化单个任务
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)

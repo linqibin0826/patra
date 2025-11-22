@@ -14,27 +14,27 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /// 心跳续约服务实现。
-/// 
+///
 /// 职责:使用 ScheduledExecutorService 定期续约租约。达到连续失败阈值后,验证租约以检测撤销。
-/// 
+///
 /// 设计要点:
-/// 
+///
 /// - 使用小型 ScheduledExecutorService 执行定期续约任务
 ///   - 每次续约调用 LeaseManagementService.renewLease()
 ///   - 连续失败 N 次(默认3次)后,调用 validateLease() 确认撤销
 ///   - 如果被撤销,设置 leaseRevoked 标志以便执行器中止
 ///   - 返回 HeartbeatHandle 用于停止心跳和查询租约状态
-/// 
+///
 /// 配置:
-/// 
+///
 /// - task.execution.heartbeat.failure-threshold: 连续失败阈值(默认 3)
-/// 
+///
 /// 日志记录:
-/// 
+///
 /// - DEBUG: 每次续约
 ///   - WARN: 续约失败、租约被撤销
 ///   - INFO: 心跳启动/停止
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Service

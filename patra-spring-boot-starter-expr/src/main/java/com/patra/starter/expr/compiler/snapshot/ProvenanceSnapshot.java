@@ -9,9 +9,9 @@ import java.util.Objects;
 import java.util.Set;
 
 /// 数据来源（Provenance）配置快照记录。
-/// 
+///
 /// 表示某个特定时间点捕获的完整 Provenance 配置，包括：
-/// 
+///
 /// - 身份信息（ID、代码、名称）
 ///   - 作用域信息（SOURCE/TASK 级别）
 ///   - 操作类型（HARVEST/UPDATE 等）
@@ -19,11 +19,11 @@ import java.util.Set;
 ///   - 字段能力矩阵（支持的操作符、约束等）
 ///   - API 参数映射
 ///   - 渲染规则列表
-/// 
+///
 /// **不可变性**：此 Record 的所有集合字段在构造时会复制为不可变副本，确保快照的一致性。
-/// 
+///
 /// **版本控制**：通过 `version` 和 `capturedAt` 字段追踪快照的版本和捕获时间。
-/// 
+///
 /// @param identity 身份信息
 /// @param scope 作用域信息
 /// @param operation 操作类型信息
@@ -62,10 +62,10 @@ public record ProvenanceSnapshot(
   }
 
   /// Provenance 身份信息记录。
-/// 
-/// @param provenanceId 数据来源 ID
-/// @param code 数据来源代码（如 "PUBMED", "EPMC"）
-/// @param name 数据来源名称
+  ///
+  /// @param provenanceId 数据来源 ID
+  /// @param code 数据来源代码（如 "PUBMED", "EPMC"）
+  /// @param name 数据来源名称
   public record Identity(Long provenanceId, String code, String name) {
     public Identity {
       Objects.requireNonNull(code, "code");
@@ -73,9 +73,9 @@ public record ProvenanceSnapshot(
   }
 
   /// 作用域信息记录，定义配置的应用范围。
-/// 
-/// @param scopeCode 作用域代码（如 "SOURCE", "TASK"）
-/// @param operationTypeKey 操作类型键（可选，用于 TASK 级作用域）
+  ///
+  /// @param scopeCode 作用域代码（如 "SOURCE", "TASK"）
+  /// @param operationTypeKey 操作类型键（可选，用于 TASK 级作用域）
   public record Scope(String scopeCode, String operationTypeKey) {
     /// 创建 SOURCE 级作用域（全局作用域）
     public static Scope sourceScope() {
@@ -84,9 +84,9 @@ public record ProvenanceSnapshot(
   }
 
   /// 操作类型信息记录。
-/// 
-/// @param code 操作代码（如 "SEARCH", "DETAIL"）
-/// @param defaultTimezone 默认时区（用于日期时间处理）
+  ///
+  /// @param code 操作代码（如 "SEARCH", "DETAIL"）
+  /// @param defaultTimezone 默认时区（用于日期时间处理）
   public record Operation(String code, String defaultTimezone) {
     public Operation {
       Objects.requireNonNull(code, "code");
@@ -94,14 +94,14 @@ public record ProvenanceSnapshot(
   }
 
   /// 字段定义记录，描述字段的元数据和特性。
-/// 
-/// @param fieldKey 字段键（唯一标识符）
-/// @param displayName 显示名称
-/// @param description 字段描述
-/// @param dataType 数据类型
-/// @param cardinality 基数（单值/多值）
-/// @param exposable 是否可暴露给外部
-/// @param dateField 是否为日期字段
+  ///
+  /// @param fieldKey 字段键（唯一标识符）
+  /// @param displayName 显示名称
+  /// @param description 字段描述
+  /// @param dataType 数据类型
+  /// @param cardinality 基数（单值/多值）
+  /// @param exposable 是否可暴露给外部
+  /// @param dateField 是否为日期字段
   public record FieldDefinition(
       String fieldKey,
       String displayName,
@@ -144,31 +144,31 @@ public record ProvenanceSnapshot(
   }
 
   /// 字段能力记录，定义字段支持的操作和约束。
-/// 
-/// @param ops 支持的操作符集合
-/// @param negatableOps 可取反的操作符集合
-/// @param supportsNot 是否支持 NOT 操作
-/// @param termMatches 支持的匹配类型
-/// @param termCaseSensitiveAllowed 是否允许大小写敏感
-/// @param termAllowBlank 是否允许空白值
-/// @param termMinLength 最小长度
-/// @param termMaxLength 最大长度
-/// @param termPattern 匹配模式
-/// @param inMaxSize IN 操作的最大元素数
-/// @param inCaseSensitiveAllowed IN 操作是否允许大小写敏感
-/// @param rangeKind 范围类型
-/// @param rangeAllowOpenStart 是否允许开放起点
-/// @param rangeAllowOpenEnd 是否允许开放终点
-/// @param rangeAllowClosedAtInfinity 是否允许无限边界
-/// @param dateMin 日期最小值
-/// @param dateMax 日期最大值
-/// @param datetimeMin 日期时间最小值
-/// @param datetimeMax 日期时间最大值
-/// @param numberMin 数值最小值
-/// @param numberMax 数值最大值
-/// @param existsSupported 是否支持存在性检查
-/// @param tokenKinds 支持的 token 类型
-/// @param tokenValuePattern token 值模式
+  ///
+  /// @param ops 支持的操作符集合
+  /// @param negatableOps 可取反的操作符集合
+  /// @param supportsNot 是否支持 NOT 操作
+  /// @param termMatches 支持的匹配类型
+  /// @param termCaseSensitiveAllowed 是否允许大小写敏感
+  /// @param termAllowBlank 是否允许空白值
+  /// @param termMinLength 最小长度
+  /// @param termMaxLength 最大长度
+  /// @param termPattern 匹配模式
+  /// @param inMaxSize IN 操作的最大元素数
+  /// @param inCaseSensitiveAllowed IN 操作是否允许大小写敏感
+  /// @param rangeKind 范围类型
+  /// @param rangeAllowOpenStart 是否允许开放起点
+  /// @param rangeAllowOpenEnd 是否允许开放终点
+  /// @param rangeAllowClosedAtInfinity 是否允许无限边界
+  /// @param dateMin 日期最小值
+  /// @param dateMax 日期最大值
+  /// @param datetimeMin 日期时间最小值
+  /// @param datetimeMax 日期时间最大值
+  /// @param numberMin 数值最小值
+  /// @param numberMax 数值最大值
+  /// @param existsSupported 是否支持存在性检查
+  /// @param tokenKinds 支持的 token 类型
+  /// @param tokenValuePattern token 值模式
   public record Capability(
       Set<String> ops,
       Set<String> negatableOps,
@@ -217,11 +217,11 @@ public record ProvenanceSnapshot(
   }
 
   /// API 参数映射记录，定义标准参数到提供商参数的映射。
-/// 
-/// @param stdKey 标准参数键
-/// @param providerParamName 提供商参数名称
-/// @param transformCode 转换代码（可选）
-/// @param notesJson 备注信息（JSON 格式）
+  ///
+  /// @param stdKey 标准参数键
+  /// @param providerParamName 提供商参数名称
+  /// @param transformCode 转换代码（可选）
+  /// @param notesJson 备注信息（JSON 格式）
   public record ApiParameter(
       String stdKey, String providerParamName, String transformCode, String notesJson) {
     public ApiParameter {
@@ -230,24 +230,24 @@ public record ProvenanceSnapshot(
   }
 
   /// 渲染规则记录，定义如何将表达式节点渲染为查询字符串或参数。
-/// 
-/// @param fieldKey 字段键
-/// @param scopeCode 作用域代码
-/// @param operationTypeKey 操作类型键
-/// @param operator 操作符
-/// @param matchTypeCode 匹配类型代码
-/// @param negation 取反限定符
-/// @param valueType 值类型
-/// @param emitType 输出类型（查询字符串/参数）
-/// @param template 模板字符串
-/// @param itemTemplate 元素模板（用于多值）
-/// @param joiner 连接符（用于多值）
-/// @param wrapGroup 是否包装为分组
-/// @param params 附加参数
-/// @param functionCode 函数代码（可选）
-/// @param effectiveFrom 生效开始时间
-/// @param effectiveTo 生效结束时间
-/// @param priority 优先级
+  ///
+  /// @param fieldKey 字段键
+  /// @param scopeCode 作用域代码
+  /// @param operationTypeKey 操作类型键
+  /// @param operator 操作符
+  /// @param matchTypeCode 匹配类型代码
+  /// @param negation 取反限定符
+  /// @param valueType 值类型
+  /// @param emitType 输出类型（查询字符串/参数）
+  /// @param template 模板字符串
+  /// @param itemTemplate 元素模板（用于多值）
+  /// @param joiner 连接符（用于多值）
+  /// @param wrapGroup 是否包装为分组
+  /// @param params 附加参数
+  /// @param functionCode 函数代码（可选）
+  /// @param effectiveFrom 生效开始时间
+  /// @param effectiveTo 生效结束时间
+  /// @param priority 优先级
   public record RenderRule(
       String fieldKey,
       String scopeCode,

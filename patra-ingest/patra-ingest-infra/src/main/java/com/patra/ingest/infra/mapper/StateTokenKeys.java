@@ -1,14 +1,14 @@
 package com.patra.ingest.infra.mapper;
 
 /// StateToken 内部键常量
-/// 
+///
 /// 定义 {@link com.patra.ingest.domain.model.vo.query.QuerySession#stateToken()} Map 中使用的键名称。
-/// 
+///
 /// **用途**：在 {@link QuerySessionTranslator} 构建 stateToken 和 {@link ProviderParameterMapper}
 /// 读取 stateToken 之间传递会话状态。
-/// 
+///
 /// **注意**：这些是系统内部使用的键，不是外部 API 的参数名。外部 API 参数名定义在 `patra-common-provenance-api` 模块中。
-/// 
+///
 /// @author Patra Architecture Team
 /// @since 0.3.0
 public final class StateTokenKeys {

@@ -3,21 +3,21 @@ package com.patra.ingest.domain.model.enums;
 import lombok.Getter;
 
 /// 采集操作类型 (字典: ing_operation)。
-/// 
+///
 /// **持久化映射**
-/// 
+///
 /// - ing_plan.operation_code → HARVEST/BACKFILL/UPDATE/METRICS
 ///   - ing_task.operation_code → HARVEST/BACKFILL/UPDATE/METRICS
 ///   - ing_cursor.operation_code → HARVEST/BACKFILL/UPDATE/METRICS
 ///   - ing_cursor_event.operation_code → HARVEST/BACKFILL/UPDATE/METRICS
-/// 
+///
 /// **解析/输出契约**
-/// 
+///
 /// - 始终通过 {@link #getCode()} 输出大写值。
 ///   - 使用 {@link #fromCode(String)} 解析,该方法会去空格并转大写;未知值抛出 {@link IllegalArgumentException}。
-/// 
+///
 /// **扩展策略:** 添加新操作类型时更新上游配置和字典表以保持向后兼容性。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
@@ -40,10 +40,10 @@ public enum OperationCode {
   }
 
   /// 将提供的代码解析为枚举值。
-/// 
-/// @param value 字符串代码(例如,`"harvest"` 或 `" UPDATE "`)
-/// @return 匹配的枚举值
-/// @throws IllegalArgumentException 当值为 null 或未知时
+  ///
+  /// @param value 字符串代码(例如,`"harvest"` 或 `" UPDATE "`)
+  /// @return 匹配的枚举值
+  /// @throws IllegalArgumentException 当值为 null 或未知时
   public static OperationCode fromCode(String value) {
     if (value == null) {
       throw new IllegalArgumentException("操作代码不能为 null");

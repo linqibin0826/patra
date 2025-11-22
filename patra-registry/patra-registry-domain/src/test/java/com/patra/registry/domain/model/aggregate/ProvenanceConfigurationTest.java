@@ -15,23 +15,23 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// ProvenanceConfiguration 聚合根单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 使用 TestDataBuilder 模式构建测试数据
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
-/// 
+///
 /// 覆盖范围：
-/// 
+///
 /// - ✅ 聚合根创建与验证
 ///   - ✅ 配置可用性检测（hasXxx 方法）
 ///   - ✅ 完整性判断逻辑（isComplete）
 ///   - ✅ 不变性保证
 ///   - ✅ 业务规则验证
 ///   - ✅ 边界条件处理
-/// 
+///
 /// @author Patra Team
 /// @since 2.0
 @DisplayName("ProvenanceConfiguration 单元测试")
@@ -746,8 +746,8 @@ class ProvenanceConfigurationTest {
   // ========== TestDataBuilder (辅助类) ==========
 
   /// ProvenanceConfiguration 测试数据构建器。
-/// 
-/// 遵循 Builder 模式，提供默认值以简化测试数据构建。
+  ///
+  /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
   static class ProvenanceConfigurationTestDataBuilder {
     private Provenance provenance = buildActiveProvenance();
     private WindowOffsetConfig windowOffset = null;

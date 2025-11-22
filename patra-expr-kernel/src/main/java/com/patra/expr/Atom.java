@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.Objects;
 
 /// 描述字段级约束的叶子表达式。
-/// 
+///
 /// 原子表示查询的基本构建块，将字段名、运算符和值组合在一起。运算符决定允许哪种值类型。
-/// 
+///
 /// @param fieldKey 要查询的字段名
 /// @param operator 要执行的运算
 /// @param value 要匹配的值
@@ -31,8 +31,8 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   }
 
   /// 支持的字段运算符。
-/// 
-/// 每个运算符都关联一个特定的值类型。
+  ///
+  /// 每个运算符都关联一个特定的值类型。
   public enum Operator {
     /// 基于文本的词语匹配。
     TERM(TermValue.class),
@@ -66,15 +66,15 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   }
 
   /// 所有值变体的标记接口。
-/// 
-/// 密封以确保类型安全和穷举模式匹配。
+  ///
+  /// 密封以确保类型安全和穷举模式匹配。
   public sealed interface Value permits TermValue, InValues, RangeValue, ExistsFlag, TokenValue {}
 
   /// 用于 TERM 操作的基于文本的值。
-/// 
-/// @param text 要匹配的文本
-/// @param match 匹配策略
-/// @param caseSensitivity 大小写敏感度行为
+  ///
+  /// @param text 要匹配的文本
+  /// @param match 匹配策略
+  /// @param caseSensitivity 大小写敏感度行为
   public record TermValue(String text, TextMatch match, CaseSensitivity caseSensitivity)
       implements Value {
     public TermValue {
@@ -88,9 +88,9 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   }
 
   /// 用于 IN 操作的离散字符串值的集合。
-/// 
-/// @param values 非空的要匹配的值列表
-/// @param caseSensitivity 大小写敏感度行为
+  ///
+  /// @param values 非空的要匹配的值列表
+  /// @param caseSensitivity 大小写敏感度行为
   public record InValues(List<String> values, CaseSensitivity caseSensitivity) implements Value {
     public InValues {
       Objects.requireNonNull(values, "values");
@@ -110,8 +110,8 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   }
 
   /// 基于范围值的公共约定。
-/// 
-/// 支持日期、日期时间和数字范围，具有可配置的边界包含。
+  ///
+  /// 支持日期、日期时间和数字范围，具有可配置的边界包含。
   public sealed interface RangeValue extends Value permits DateRange, DateTimeRange, NumberRange {
     /// 返回下边界包含类型。
     Boundary fromBoundary();
@@ -130,11 +130,11 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   }
 
   /// 日期范围值。
-/// 
-/// @param from 下边界日期
-/// @param to 上边界日期
-/// @param fromBoundary 下边界包含类型
-/// @param toBoundary 上边界包含类型
+  ///
+  /// @param from 下边界日期
+  /// @param to 上边界日期
+  /// @param fromBoundary 下边界包含类型
+  /// @param toBoundary 上边界包含类型
   public record DateRange(LocalDate from, LocalDate to, Boundary fromBoundary, Boundary toBoundary)
       implements RangeValue {
     public DateRange {
@@ -148,11 +148,11 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   }
 
   /// 日期时间范围值。
-/// 
-/// @param from 下边界时刻
-/// @param to 上边界时刻
-/// @param fromBoundary 下边界包含类型
-/// @param toBoundary 上边界包含类型
+  ///
+  /// @param from 下边界时刻
+  /// @param to 上边界时刻
+  /// @param fromBoundary 下边界包含类型
+  /// @param toBoundary 上边界包含类型
   public record DateTimeRange(Instant from, Instant to, Boundary fromBoundary, Boundary toBoundary)
       implements RangeValue {
     public DateTimeRange {
@@ -166,11 +166,11 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   }
 
   /// 数字范围值。
-/// 
-/// @param from 下边界数字
-/// @param to 上边界数字
-/// @param fromBoundary 下边界包含类型
-/// @param toBoundary 上边界包含类型
+  ///
+  /// @param from 下边界数字
+  /// @param to 上边界数字
+  /// @param fromBoundary 下边界包含类型
+  /// @param toBoundary 上边界包含类型
   public record NumberRange(
       BigDecimal from, BigDecimal to, Boundary fromBoundary, Boundary toBoundary)
       implements RangeValue {
@@ -185,14 +185,14 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   }
 
   /// EXISTS 操作值，表示字段的存在或不存在。
-/// 
-/// @param shouldExist true 检查字段存在，false 检查字段不存在
+  ///
+  /// @param shouldExist true 检查字段存在，false 检查字段不存在
   public record ExistsFlag(boolean shouldExist) implements Value {}
 
   /// TOKEN 操作值，用于平台特定的令牌语义。
-/// 
-/// @param tokenType 令牌的类型（例如 "MeSH"、"GeneSymbol"）
-/// @param tokenValue 令牌标识符值
+  ///
+  /// @param tokenType 令牌的类型（例如 "MeSH"、"GeneSymbol"）
+  /// @param tokenValue 令牌标识符值
   public record TokenValue(String tokenType, String tokenValue) implements Value {
     public TokenValue {
       Objects.requireNonNull(tokenType, "tokenType");

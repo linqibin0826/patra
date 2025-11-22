@@ -30,13 +30,13 @@ import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /// 执行会话管理器单元测试
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - Mock TaskRepository、TaskRunRepository、HeartbeatRenewalService
 ///   - 验证 TaskRun 创建和心跳启动
 ///   - 测试不同的 attemptNo 计算
-/// 
+///
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("执行会话管理器测试")

@@ -1,9 +1,9 @@
 package com.patra.starter.provenance.common.config;
 
 /// 时间窗口偏移配置记录
-/// 
+///
 /// 定义增量数据采集时使用的滑动时间窗口策略,包括窗口大小、回溯时间、窗口重叠等参数。 用于支持定期调度场景下的增量数据抓取,避免遗漏或重复采集数据。
-/// 
+///
 /// @param windowModeCode 滑动窗口选择策略标识符
 /// @param windowSizeValue 增量运行时使用的窗口大小数值
 /// @param windowSizeUnitCode 窗口大小的时间单位(如 DAY、WEEK)

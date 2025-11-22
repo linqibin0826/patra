@@ -8,14 +8,14 @@ import lombok.Getter;
 import lombok.Singular;
 
 /// 解析存储位置时由调用方提供的不可变上下文。
-/// 
+///
 /// 作为解析器的单一事实来源,包含:
-/// 
+///
 /// - 路径相关输入(业务类型和文件名)
 ///   - 写入元数据存储的业务标识符
 ///   - 用于下游分析的可选关联数据
 ///   - 分区日期
-/// 
+///
 @Getter
 @Builder(toBuilder = true)
 public final class StorageContext {
@@ -40,8 +40,8 @@ public final class StorageContext {
   }
 
   /// 验证必填字段并防范路径遍历输入。
-/// 
-/// @throws IllegalArgumentException 如果验证失败
+  ///
+  /// @throws IllegalArgumentException 如果验证失败
   public void validate() {
     require("businessType", businessType);
     require("filename", filename);

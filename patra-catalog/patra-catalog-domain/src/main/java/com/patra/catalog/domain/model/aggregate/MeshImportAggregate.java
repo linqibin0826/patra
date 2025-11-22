@@ -18,28 +18,28 @@ import java.util.List;
 import lombok.Getter;
 
 /// MeSH 导入任务聚合根。
-/// 
+///
 /// 管理整个 MeSH 数据导入任务的生命周期，包括：
-/// 
+///
 /// - 任务状态转换（PENDING → PROCESSING → SUCCESS/FAILED）
 ///   - 进度追踪（各表的处理进度）
 ///   - 错误恢复（失败批次管理和重试）
 ///   - 数据完整性验证（文件 MD5 校验）
-/// 
+///
 /// **领域事件**：
-/// 
+///
 /// - {@link MeshImportStarted} - 任务启动时发布
 ///   - {@link MeshImportCompleted} - 任务成功完成时发布
 ///   - {@link MeshImportFailed} - 任务失败时发布
-/// 
+///
 /// **一致性边界**：
-/// 
+///
 /// - 任务状态转换必须符合状态机规则
 ///   - 只有所有表完成才能标记任务成功
 ///   - 失败任务必须是 FAILED 状态才能重试
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Getter
 public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
 
@@ -88,20 +88,20 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   private String lastErrorMessage;
 
   /// 全参数构造函数（用于测试和完整初始化）。
-/// 
-/// @param id 任务 ID
-/// @param taskName 任务名称
-/// @param status 任务状态
-/// @param startTime 开始时间
-/// @param endTime 结束时间
-/// @param sourceUrl 数据源 URL
-/// @param xmlFileHash XML 文件哈希
-/// @param xmlFileSize XML 文件大小
-/// @param tableProgressList 表进度列表
-/// @param totalRecords 总记录数
-/// @param processedRecords 已处理记录数
-/// @param failedBatchCount 失败批次数
-/// @param lastErrorMessage 最后错误信息
+  ///
+  /// @param id 任务 ID
+  /// @param taskName 任务名称
+  /// @param status 任务状态
+  /// @param startTime 开始时间
+  /// @param endTime 结束时间
+  /// @param sourceUrl 数据源 URL
+  /// @param xmlFileHash XML 文件哈希
+  /// @param xmlFileSize XML 文件大小
+  /// @param tableProgressList 表进度列表
+  /// @param totalRecords 总记录数
+  /// @param processedRecords 已处理记录数
+  /// @param failedBatchCount 失败批次数
+  /// @param lastErrorMessage 最后错误信息
   public MeshImportAggregate(
       MeshImportId id,
       String taskName,
@@ -124,7 +124,8 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
     this.sourceUrl = sourceUrl;
     this.xmlFileHash = xmlFileHash;
     this.xmlFileSize = xmlFileSize;
-    this.tableProgressList = tableProgressList != null ? new ArrayList<>(tableProgressList) : new ArrayList<>();
+    this.tableProgressList =
+        tableProgressList != null ? new ArrayList<>(tableProgressList) : new ArrayList<>();
     this.totalRecords = totalRecords;
     this.processedRecords = processedRecords;
     this.failedBatchCount = failedBatchCount;
@@ -134,12 +135,12 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   // ========== 领域行为 ==========
 
   /// 开始导入任务。
-/// 
-/// 前置条件：任务状态为 PENDING
-/// 
-/// 后置条件：任务状态变为 PROCESSING，发布 MeshImportStarted 事件
-/// 
-/// @throws IllegalStateException 如果任务不是 PENDING 状态
+  ///
+  /// 前置条件：任务状态为 PENDING
+  ///
+  /// 后置条件：任务状态变为 PROCESSING，发布 MeshImportStarted 事件
+  ///
+  /// @throws IllegalStateException 如果任务不是 PENDING 状态
   public void startImport() {
     if (this.status != MeshImportTaskStatus.PENDING) {
       throw new IllegalStateException("只有 PENDING 状态的任务可以开始导入");
@@ -151,13 +152,13 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   }
 
   /// 更新指定表的进度。
-/// 
-/// 用于断点续传，记录每张表的最后处理批次号
-/// 
-/// @param tableName 表名
-/// @param processedCount 已处理数
-/// @param lastBatchNum 最后批次号
-/// @throws IllegalArgumentException 如果表不存在
+  ///
+  /// 用于断点续传，记录每张表的最后处理批次号
+  ///
+  /// @param tableName 表名
+  /// @param processedCount 已处理数
+  /// @param lastBatchNum 最后批次号
+  /// @throws IllegalArgumentException 如果表不存在
   public void updateTableProgress(String tableName, Integer processedCount, Integer lastBatchNum) {
     TableProgress progress = findTableProgress(tableName);
     TableProgress updated = progress.updateProgress(processedCount, lastBatchNum);
@@ -166,12 +167,12 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   }
 
   /// 标记任务完成。
-/// 
-/// 前置条件：所有表的状态为 COMPLETED
-/// 
-/// 后置条件：任务状态变为 SUCCESS，发布 MeshImportCompleted 事件
-/// 
-/// @throws IllegalStateException 如果有表未完成
+  ///
+  /// 前置条件：所有表的状态为 COMPLETED
+  ///
+  /// 后置条件：任务状态变为 SUCCESS，发布 MeshImportCompleted 事件
+  ///
+  /// @throws IllegalStateException 如果有表未完成
   public void markAsCompleted() {
     if (!allTablesCompleted()) {
       throw new IllegalStateException("所有表必须完成才能标记任务完成");
@@ -184,8 +185,8 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   }
 
   /// 标记任务失败。
-/// 
-/// @param errorMessage 失败原因
+  ///
+  /// @param errorMessage 失败原因
   public void markAsFailed(String errorMessage) {
     this.status = MeshImportTaskStatus.FAILED;
     this.lastErrorMessage = errorMessage;
@@ -195,12 +196,12 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   }
 
   /// 重试失败任务。
-/// 
-/// 前置条件：任务状态为 FAILED
-/// 
-/// 后置条件：任务状态变为 PROCESSING，重置失败批次计数
-/// 
-/// @throws IllegalStateException 如果任务不是 FAILED 状态
+  ///
+  /// 前置条件：任务状态为 FAILED
+  ///
+  /// 后置条件：任务状态变为 PROCESSING，重置失败批次计数
+  ///
+  /// @throws IllegalStateException 如果任务不是 FAILED 状态
   public void retry() {
     if (this.status != MeshImportTaskStatus.FAILED) {
       throw new IllegalStateException("只有 FAILED 状态的任务可以重试");
@@ -213,10 +214,10 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   // ========== 私有辅助方法 ==========
 
   /// 查找指定表的进度。
-/// 
-/// @param tableName 表名
-/// @return 表进度
-/// @throws IllegalArgumentException 如果表不存在
+  ///
+  /// @param tableName 表名
+  /// @return 表进度
+  /// @throws IllegalArgumentException 如果表不存在
   private TableProgress findTableProgress(String tableName) {
     return tableProgressList.stream()
         .filter(p -> p.getTableName().equals(tableName))
@@ -225,9 +226,9 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   }
 
   /// 替换指定表的进度。
-/// 
-/// @param tableName 表名
-/// @param updated 更新后的进度
+  ///
+  /// @param tableName 表名
+  /// @param updated 更新后的进度
   private void replaceTableProgress(String tableName, TableProgress updated) {
     tableProgressList.removeIf(p -> p.getTableName().equals(tableName));
     tableProgressList.add(updated);
@@ -240,8 +241,8 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   }
 
   /// 判断所有表是否已完成。
-/// 
-/// @return true 如果所有表都完成
+  ///
+  /// @return true 如果所有表都完成
   private boolean allTablesCompleted() {
     return tableProgressList.stream()
         .allMatch(p -> p.getStatus() == MeshTableImportStatus.COMPLETED);
@@ -250,24 +251,24 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   // ========== 公共查询方法 ==========
 
   /// 获取表进度列表（不可变视图）。
-/// 
-/// @return 表进度列表
+  ///
+  /// @return 表进度列表
   public List<TableProgress> getTableProgressList() {
     return Collections.unmodifiableList(tableProgressList);
   }
 
   /// 计算处理速度（记录数/秒）。
-/// 
-/// 用于实时监控导入性能和估算剩余时间。
-/// 
-/// 计算逻辑：
-/// 
-/// - 已处理记录数 ÷ 已用时间（秒）= 处理速度（记录/秒）
-///   - 如果任务未开始（startTime 为 null），返回 null
-///   - 如果未处理任何记录，返回 0.0
-/// 
-/// @return 处理速度（记录/秒），如果任务未开始返回 null
-/// @since 0.2.0 (User Story 2 - 实时监控导入进度)
+  ///
+  /// 用于实时监控导入性能和估算剩余时间。
+  ///
+  /// 计算逻辑：
+  ///
+  /// - 已处理记录数 ÷ 已用时间（秒）= 处理速度（记录/秒）
+  ///   - 如果任务未开始（startTime 为 null），返回 null
+  ///   - 如果未处理任何记录，返回 0.0
+  ///
+  /// @return 处理速度（记录/秒），如果任务未开始返回 null
+  /// @since 0.1.0 (User Story 2 - 实时监控导入进度)
   public Double calculateProcessSpeed() {
     if (this.startTime == null) {
       return null; // 任务未开始
@@ -286,18 +287,18 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   }
 
   /// 估算剩余时间（秒）。
-/// 
-/// 基于当前处理速度和剩余记录数估算完成时间。
-/// 
-/// 计算逻辑：
-/// 
-/// - 剩余记录数 = totalRecords - processedRecords
-///   - 预计剩余时间 = 剩余记录数 ÷ 处理速度
-///   - 如果任务未开始或无进度，返回 null
-///   - 如果所有记录已处理，返回 0
-/// 
-/// @return 剩余时间（秒），如果无法估算返回 null
-/// @since 0.2.0 (User Story 2 - 实时监控导入进度)
+  ///
+  /// 基于当前处理速度和剩余记录数估算完成时间。
+  ///
+  /// 计算逻辑：
+  ///
+  /// - 剩余记录数 = totalRecords - processedRecords
+  ///   - 预计剩余时间 = 剩余记录数 ÷ 处理速度
+  ///   - 如果任务未开始或无进度，返回 null
+  ///   - 如果所有记录已处理，返回 0
+  ///
+  /// @return 剩余时间（秒），如果无法估算返回 null
+  /// @since 0.1.0 (User Story 2 - 实时监控导入进度)
   public Long estimateRemainingTime() {
     if (this.startTime == null || this.processedRecords == null || this.processedRecords == 0) {
       return null; // 无法估算（任务未开始或无进度）
@@ -317,14 +318,14 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   }
 
   /// 获取整体进度百分比（0.0 - 100.0）。
-/// 
-/// 计算逻辑：
-/// 
-/// - 进度百分比 = (已处理记录数 ÷ 总记录数) × 100
-///   - 如果总记录数为 0，返回 0.0
-/// 
-/// @return 整体进度百分比（0.0 - 100.0）
-/// @since 0.2.0 (User Story 2 - 实时监控导入进度)
+  ///
+  /// 计算逻辑：
+  ///
+  /// - 进度百分比 = (已处理记录数 ÷ 总记录数) × 100
+  ///   - 如果总记录数为 0，返回 0.0
+  ///
+  /// @return 整体进度百分比（0.0 - 100.0）
+  /// @since 0.1.0 (User Story 2 - 实时监控导入进度)
   public Double getOverallProgress() {
     if (this.totalRecords == null || this.totalRecords == 0) {
       return 0.0;
@@ -343,8 +344,8 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   }
 
   /// 获取领域事件列表（用于测试）。
-/// 
-/// @return 领域事件列表
+  ///
+  /// @return 领域事件列表
   public List<com.patra.common.domain.DomainEvent> getDomainEvents() {
     return peekDomainEvents();
   }

@@ -9,19 +9,19 @@ import java.time.Instant;
 import lombok.Getter;
 
 /// 游标前进事件实体（仅追加）。捕获游标在命名空间内的前进或回退动作。
-/// 
+///
 /// 业务价值：
-/// 
+///
 /// - 审计：追溯每次窗口前进的来源和值变更
 ///   - 重建：重放事件以恢复游标状态
 ///   - 监控：分析前进速度、回退比例和延迟
-/// 
+///
 /// 设计原则：
-/// 
+///
 /// - 不可变：历史记录从不变更
 ///   - 多表示：字段覆盖字符串/时间/数值表示以避免精度丢失
 ///   - 完整性：包含血缘和表达式哈希用于追溯和变更检测
-/// 
+///
 @SuppressWarnings("unused")
 @Getter
 public class CursorEvent {
@@ -129,27 +129,27 @@ public class CursorEvent {
   }
 
   /// Create a new cursor advancement event for TIME-based cursors.
-/// 
-/// This factory method is used when recording a cursor advancement operation. It creates an
-/// immutable audit event capturing the transition from previous to new watermark.
-/// 
-/// @param provenanceCode provenance code
-/// @param operationCode operation code
-/// @param cursorKey cursor key
-/// @param namespaceScopeCode namespace scope code (GLOBAL/TASK/PLAN)
-/// @param namespaceKey namespace key
-/// @param cursorType cursor type
-/// @param prevValue previous value (string; null for first advancement)
-/// @param newValue new value (string; must not be null)
-/// @param prevInstant previous instant (null for first advancement)
-/// @param newInstant new instant (must not be null)
-/// @param direction advancement direction (FORWARD/BACKFILL)
-/// @param idempotentKey idempotency key (SHA256 hash of advancement context)
-/// @param lineage lineage metadata (task/run/plan/slice/batch identifiers)
-/// @param exprHash expression hash (nullable; for strategy change tracking)
-/// @param windowFrom covered window start (UTC, inclusive; null for non-TIME strategies)
-/// @param windowTo covered window end (UTC, exclusive; null for non-TIME strategies)
-/// @return new {@link CursorEvent} instance ready for persistence
+  ///
+  /// This factory method is used when recording a cursor advancement operation. It creates an
+  /// immutable audit event capturing the transition from previous to new watermark.
+  ///
+  /// @param provenanceCode provenance code
+  /// @param operationCode operation code
+  /// @param cursorKey cursor key
+  /// @param namespaceScopeCode namespace scope code (GLOBAL/TASK/PLAN)
+  /// @param namespaceKey namespace key
+  /// @param cursorType cursor type
+  /// @param prevValue previous value (string; null for first advancement)
+  /// @param newValue new value (string; must not be null)
+  /// @param prevInstant previous instant (null for first advancement)
+  /// @param newInstant new instant (must not be null)
+  /// @param direction advancement direction (FORWARD/BACKFILL)
+  /// @param idempotentKey idempotency key (SHA256 hash of advancement context)
+  /// @param lineage lineage metadata (task/run/plan/slice/batch identifiers)
+  /// @param exprHash expression hash (nullable; for strategy change tracking)
+  /// @param windowFrom covered window start (UTC, inclusive; null for non-TIME strategies)
+  /// @param windowTo covered window end (UTC, exclusive; null for non-TIME strategies)
+  /// @return new {@link CursorEvent} instance ready for persistence
   public static CursorEvent create(
       ProvenanceCode provenanceCode,
       String operationCode,
@@ -195,28 +195,28 @@ public class CursorEvent {
   }
 
   /// Restore (deserialize) a cursor event from persisted fields.
-/// 
-/// @param id primary key
-/// @param provenanceCode provenance code
-/// @param operationCode operation code
-/// @param cursorKey cursor key
-/// @param namespaceScopeCode namespace scope code
-/// @param namespaceKey namespace key
-/// @param cursorType cursor type
-/// @param prevValue previous value (string)
-/// @param newValue new value (string)
-/// @param direction advancement direction
-/// @param idempotentKey idempotency key
-/// @param observedMaxValue observed maximum value
-/// @param prevInstant previous instant
-/// @param newInstant new instant
-/// @param prevNumeric previous numeric value
-/// @param newNumeric new numeric value
-/// @param lineage lineage metadata
-/// @param exprHash expression hash
-/// @param windowFrom covered window start
-/// @param windowTo covered window end
-/// @return {@link CursorEvent} instance
+  ///
+  /// @param id primary key
+  /// @param provenanceCode provenance code
+  /// @param operationCode operation code
+  /// @param cursorKey cursor key
+  /// @param namespaceScopeCode namespace scope code
+  /// @param namespaceKey namespace key
+  /// @param cursorType cursor type
+  /// @param prevValue previous value (string)
+  /// @param newValue new value (string)
+  /// @param direction advancement direction
+  /// @param idempotentKey idempotency key
+  /// @param observedMaxValue observed maximum value
+  /// @param prevInstant previous instant
+  /// @param newInstant new instant
+  /// @param prevNumeric previous numeric value
+  /// @param newNumeric new numeric value
+  /// @param lineage lineage metadata
+  /// @param exprHash expression hash
+  /// @param windowFrom covered window start
+  /// @param windowTo covered window end
+  /// @return {@link CursorEvent} instance
   public static CursorEvent restore(
       Long id,
       ProvenanceCode provenanceCode,

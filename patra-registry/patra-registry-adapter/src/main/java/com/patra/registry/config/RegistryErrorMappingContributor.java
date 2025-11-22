@@ -13,17 +13,17 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 
 /// Registry 异常映射贡献者,提供领域异常到错误码的精细化映射。
-/// 
+///
 /// 为 Registry 领域异常和数据层异常提供显式映射规则。从 boot 模块迁移到 adapter,避免 boot 直接依赖 domain/api。
-/// 
+///
 /// 映射规则:
-/// 
+///
 /// - {@link DomainValidationException} → `BAD_REQUEST`
 ///   - {@link RegistryQuotaExceeded} → `CONFLICT`
 ///   - {@link DuplicateKeyException} → `CONFLICT`
 ///   - {@link DataIntegrityViolationException} → `UNPROCESSABLE`
 ///   - {@link OptimisticLockingFailureException} → `CONFLICT`
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
@@ -37,9 +37,9 @@ public class RegistryErrorMappingContributor implements ErrorMappingContributor 
   }
 
   /// 将异常映射为错误码。
-/// 
-/// @param exception 待映射的异常
-/// @return 如果存在映射则返回错误码,否则返回空
+  ///
+  /// @param exception 待映射的异常
+  /// @return 如果存在映射则返回错误码,否则返回空
   @Override
   public Optional<ErrorCodeLike> mapException(Throwable exception) {
     String exceptionType = exception.getClass().getSimpleName();

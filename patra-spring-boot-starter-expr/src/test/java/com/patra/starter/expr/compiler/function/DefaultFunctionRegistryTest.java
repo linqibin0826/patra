@@ -12,10 +12,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /// {@link DefaultFunctionRegistry} 单元测试。
-/// 
+///
 /// 测试策略：纯单元测试，Mock 所有 RenderFunction 依赖。
-/// 
-/// @since 1.0.0
+///
+/// @since 0.1.0
 @DisplayName("DefaultFunctionRegistry 单元测试")
 class DefaultFunctionRegistryTest {
 

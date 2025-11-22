@@ -22,24 +22,24 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /// StAX XML 解析器实现。
-/// 
+///
 /// 使用 JDK 内置的 StAX（Streaming API for XML）实现流式解析，支持大文件处理。
-/// 
+///
 /// **设计原则**：
-/// 
+///
 /// - 流式处理：使用 {@link XMLStreamReader} 逐元素读取，内存占用可控（<2GB）
 ///   - 惰性求值：返回 {@link Stream}，由调用方控制处理速度
 ///   - 资源管理：使用 Spliterator 封装，确保流关闭时释放资源
 ///   - 错误处理：格式错误时跳过记录并记录日志，不中断整个流
-/// 
+///
 /// **性能特征**：
-/// 
+///
 /// - 内存占用：<2GB（流式处理，不一次性加载整个 XML）
 ///   - 处理速度：约 1000 条/秒（取决于硬件和批次大小）
 ///   - 文件大小：支持 700MB+ 的 XML 文件
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -211,12 +211,13 @@ public class StaxXmlParserImpl implements XmlParserPort {
       }
 
       // 创建聚合根（使用 Domain 层的工厂方法）
-      MeshDescriptorAggregate aggregate = MeshDescriptorAggregate.create(
-          MeshUI.of(descriptorUI),
-          descriptorName,
-          DescriptorClass.TOPICAL, // 默认为主题词类型，可从 XML 中解析 DescriptorClass
-          "2025" // 默认版本号，可从 XML 中解析
-      );
+      MeshDescriptorAggregate aggregate =
+          MeshDescriptorAggregate.create(
+              MeshUI.of(descriptorUI),
+              descriptorName,
+              DescriptorClass.TOPICAL, // 默认为主题词类型，可从 XML 中解析 DescriptorClass
+              "2025" // 默认版本号，可从 XML 中解析
+              );
 
       // 添加树形编号
       if (!treeNumbers.isEmpty()) {
@@ -367,7 +368,8 @@ public class StaxXmlParserImpl implements XmlParserPort {
               isPrintFlag = "Y".equalsIgnoreCase(printFlag);
               break;
           }
-        } else if (event == XMLStreamConstants.END_ELEMENT && "Term".equals(reader.getLocalName())) {
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "Term".equals(reader.getLocalName())) {
           break;
         }
       }
@@ -471,7 +473,8 @@ public class StaxXmlParserImpl implements XmlParserPort {
               // ConceptName 包含一个 <String> 子元素
               while (reader.hasNext()) {
                 event = reader.next();
-                if (event == XMLStreamConstants.START_ELEMENT && "String".equals(reader.getLocalName())) {
+                if (event == XMLStreamConstants.START_ELEMENT
+                    && "String".equals(reader.getLocalName())) {
                   conceptName = reader.getElementText();
                   break;
                 }
@@ -490,7 +493,8 @@ public class StaxXmlParserImpl implements XmlParserPort {
               conceptStatus = reader.getElementText();
               break;
           }
-        } else if (event == XMLStreamConstants.END_ELEMENT && "Concept".equals(reader.getLocalName())) {
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "Concept".equals(reader.getLocalName())) {
           break;
         }
       }
@@ -502,11 +506,7 @@ public class StaxXmlParserImpl implements XmlParserPort {
       }
 
       // 创建实体
-      MeshConcept concept = MeshConcept.create(
-          MeshUI.of(conceptUi),
-          conceptName,
-          isPreferred
-      );
+      MeshConcept concept = MeshConcept.create(MeshUI.of(conceptUi), conceptName, isPreferred);
 
       // 设置可选字段
       if (registryNumber != null) {

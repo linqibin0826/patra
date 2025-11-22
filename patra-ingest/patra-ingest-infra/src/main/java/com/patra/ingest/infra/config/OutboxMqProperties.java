@@ -16,7 +16,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 /// 发件箱 MQ 发布属性配置。
-/// 
+///
 /// 约束发布器实现的装配,并在启动时执行快速失败验证。
 @ConfigurationProperties(prefix = "patra.ingest.outbox")
 @Validated
@@ -44,35 +44,35 @@ public class OutboxMqProperties {
   private boolean enableOrderly = false;
 
   /// 业务通道到 RocketMQ Topic 的映射表。
-/// 
-/// 示例配置:
-/// 
-/// ```
-/// 
-/// patra:
-///   ingest:
-///     outbox:
-///       channel-mapping:
-///         TASK_READY: INGEST_TASK_READY
-///         PUBLICATION_READY: INGEST_PUBLICATION_READY
-/// 
-/// ```
-/// 
-/// 如果未配置，则使用 RocketMqChannelMapper 中的默认映射。
+  ///
+  /// 示例配置:
+  ///
+  /// ```
+  ///
+  /// patra:
+  ///   ingest:
+  ///     outbox:
+  ///       channel-mapping:
+  ///         TASK_READY: INGEST_TASK_READY
+  ///         PUBLICATION_READY: INGEST_PUBLICATION_READY
+  ///
+  /// ```
+  ///
+  /// 如果未配置，则使用 RocketMqChannelMapper 中的默认映射。
   private Map<String, String> channelMapping = new LinkedHashMap<>();
 
   /// Topic 前缀（用于多环境隔离）。
-/// 
-/// 示例:
-/// 
-/// ```
-/// 
-/// patra:
-///   ingest:
-///     outbox:
-///       topic-prefix: dev-   # 生成的 Topic: dev-INGEST_TASK_READY
-/// 
-/// ```
+  ///
+  /// 示例:
+  ///
+  /// ```
+  ///
+  /// patra:
+  ///   ingest:
+  ///     outbox:
+  ///       topic-prefix: dev-   # 生成的 Topic: dev-INGEST_TASK_READY
+  ///
+  /// ```
   private String topicPrefix = "";
 
   @PostConstruct

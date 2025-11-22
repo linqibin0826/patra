@@ -11,9 +11,9 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /// 数据库实体,映射到表 `reg_prov_window_offset_cfg`。
-/// 
+///
 /// 定义如何为给定数据源和操作类型计算增量窗口和偏移。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

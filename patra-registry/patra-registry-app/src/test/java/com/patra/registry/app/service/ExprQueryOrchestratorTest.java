@@ -23,9 +23,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /// ExprQueryOrchestrator 单元测试。
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - ✅ 正常场景 - 加载表达式快照成功
 ///   - ✅ 正常场景 - 使用所有过滤参数
 ///   - ✅ 正常场景 - 使用默认时间点 (null)
@@ -34,7 +34,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///   - ✅ 边界场景 - null operationType
 ///   - ✅ 边界场景 - null endpointName
 ///   - ✅ 验证调用 - Repository 和 Assembler 调用正确
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)

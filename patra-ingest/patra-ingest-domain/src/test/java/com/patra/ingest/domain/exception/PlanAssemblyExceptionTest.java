@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// {@link PlanAssemblyException} 的单元测试。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("PlanAssemblyException 单元测试")

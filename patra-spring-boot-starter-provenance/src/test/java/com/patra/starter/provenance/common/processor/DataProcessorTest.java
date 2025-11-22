@@ -15,9 +15,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// DataProcessor 接口契约测试
-/// 
+///
 /// 测试策略：使用Mock实现进行接口契约测试，验证接口设计的正确性。
-/// 
+///
 /// @author Patra Architecture Team
 /// @since 0.1.0
 @DisplayName("DataProcessor 策略接口测试")

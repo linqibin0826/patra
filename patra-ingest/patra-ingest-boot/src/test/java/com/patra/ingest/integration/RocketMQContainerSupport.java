@@ -8,37 +8,37 @@ import org.testcontainers.containers.ComposeContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
 /// RocketMQ TestContainers 容器管理类。
-/// 
+///
 /// 使用 Docker Compose + ComposeContainer 管理 RocketMQ 容器，解决网络配置问题。
-/// 
+///
 /// ### 职责范围
-/// 
+///
 /// - **容器生命周期管理**: 启动、停止 RocketMQ 容器（NameServer + Broker）
 ///   - **网络配置**: 确保宿主机可访问容器内的 RocketMQ 服务
-/// 
+///
 /// ### 核心技术突破
-/// 
+///
 /// - **brokerIP1=127.0.0.1**: Broker advertise 宿主机可访问的地址
 ///   - **1:1 端口映射**: 10911:10911，确保客户端连接端口匹配
 ///   - **Here-Document 格式**: 使用 <<EOF 格式化配置文件
 ///   - **Docker Compose**: 声明式配置，易于维护
-/// 
+///
 /// ### 为什么不使用 GenericContainer?
-/// 
+///
 /// GenericContainer 的动态端口映射和容器内部 IP 检测机制，在 RocketMQ 场景下会导致：
-/// 
+///
 /// - Broker 自动检测到容器内部 IP (如 172.17.0.x)
 ///   - 客户端从 NameServer 获取到错误的 Broker 地址
 ///   - 宿主机无法连接到 Broker
-/// 
+///
 /// ### 设计原则
-/// 
+///
 /// - **单一职责**: 只管理容器生命周期，不管理 Topic（Topic 管理由 {@link
 ///       com.patra.ingest.integration.config.RocketMQTopicAdmin} 负责）
 ///   - **关注点分离**: 容器管理与业务配置分离
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 /// @see ComposeContainer
 /// @see com.patra.ingest.integration.config.RocketMQTopicAdmin
 public class RocketMQContainerSupport {
@@ -109,17 +109,17 @@ public class RocketMQContainerSupport {
   }
 
   /// 获取 NameServer 地址（供客户端连接）
-/// 
-/// 由于使用 1:1 端口映射，直接使用 localhost:9876
-/// 
-/// @return NameServer 地址，格式: localhost:9876
+  ///
+  /// 由于使用 1:1 端口映射，直接使用 localhost:9876
+  ///
+  /// @return NameServer 地址，格式: localhost:9876
   public String getNameserverAddress() {
     return "localhost:" + NAMESRV_PORT;
   }
 
   /// 获取 ComposeContainer 实例
-/// 
-/// @return ComposeContainer 实例
+  ///
+  /// @return ComposeContainer 实例
   public ComposeContainer getComposeContainer() {
     return composeContainer;
   }

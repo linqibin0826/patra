@@ -1,9 +1,9 @@
 package com.patra.common.error.trait;
 
 /// 异常的语义分类特征,用于在不同异常类型间实现一致的错误处理。
-/// 
+///
 /// 这些特征被错误解析算法用于将异常映射到适当的 HTTP 状态码和错误响应。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public enum ErrorTrait {

@@ -27,7 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /// TimeSlicePlanner 单元测试
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)

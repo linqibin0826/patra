@@ -4,24 +4,24 @@ import java.time.Instant;
 import java.util.Objects;
 
 /// 发件箱消息实体。封装 Outbox 模式的核心消息数据。
-/// 
+///
 /// 标识：由聚合类型 + 聚合ID + 去重键唯一标识。
-/// 
+///
 /// 生命周期：
-/// 
+///
 /// - 创建时处于 `PENDING` 状态，等待中继器发布
 ///   - 中继器获取租约后转换为 `PUBLISHING` 状态
 ///   - 发布成功后转换为 `PUBLISHED` 状态
 ///   - 发布失败后根据重试策略转换为 `PENDING` 或 `FAILED` 状态
-/// 
+///
 /// 业务约束：
-/// 
+///
 /// - 支持租约机制，确保消息不被并发发布
 ///   - 支持延迟发布（notBefore 字段）
 ///   - 支持重试机制（retryCount + nextRetryAt）
 ///   - 分区键用于保证消息的有序投递
 ///   - 去重键用于消费端幂等性保证
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public final class OutboxMessage {
@@ -202,12 +202,12 @@ public final class OutboxMessage {
   }
 
   /// Create a refreshed message for retry scenario.
-/// 
-/// Resets status to PENDING, clears retry count and error info, updates payload/headers.
-/// 
-/// @param newPayloadJson Updated payload JSON
-/// @param newHeadersJson Updated headers JSON
-/// @return Refreshed OutboxMessage instance
+  ///
+  /// Resets status to PENDING, clears retry count and error info, updates payload/headers.
+  ///
+  /// @param newPayloadJson Updated payload JSON
+  /// @param newHeadersJson Updated headers JSON
+  /// @return Refreshed OutboxMessage instance
   public OutboxMessage refreshForRetry(String newPayloadJson, String newHeadersJson) {
     return toBuilder()
         .payloadJson(newPayloadJson)
@@ -223,71 +223,71 @@ public final class OutboxMessage {
   // ========== Outbox Pattern Enhancement - Behavior Methods ==========
 
   /// Computes the next attempt number for this message.
-/// 
-/// Handles null retryCount (first attempt case) gracefully.
-/// 
-/// @return next attempt number (1-based, starts from 1)
+  ///
+  /// Handles null retryCount (first attempt case) gracefully.
+  ///
+  /// @return next attempt number (1-based, starts from 1)
   public int computeNextAttempt() {
     return (retryCount == null ? 0 : retryCount) + 1;
   }
 
   /// Checks if this message can be retried based on maximum attempts limit.
-/// 
-/// Compares next attempt number against maxAttempts threshold.
-/// 
-/// @param maxAttempts maximum allowed relay attempts (from retry policy)
-/// @return true if next attempt <= maxAttempts, false otherwise
+  ///
+  /// Compares next attempt number against maxAttempts threshold.
+  ///
+  /// @param maxAttempts maximum allowed relay attempts (from retry policy)
+  /// @return true if next attempt <= maxAttempts, false otherwise
   public boolean canRetry(int maxAttempts) {
     return computeNextAttempt() <= maxAttempts;
   }
 
   /// Checks if this message currently holds an active (non-expired) lease.
-/// 
-/// A lease is active if:
-/// 
-/// - leaseOwner is not null
-///   - leaseExpireAt is not null
-///   - leaseExpireAt is after the given timestamp
-/// 
-/// @param now current timestamp for lease expiry check
-/// @return true if lease is active, false otherwise
+  ///
+  /// A lease is active if:
+  ///
+  /// - leaseOwner is not null
+  ///   - leaseExpireAt is not null
+  ///   - leaseExpireAt is after the given timestamp
+  ///
+  /// @param now current timestamp for lease expiry check
+  /// @return true if lease is active, false otherwise
   public boolean hasActiveLease(Instant now) {
     return leaseOwner != null && leaseExpireAt != null && leaseExpireAt.isAfter(now);
   }
 
   /// Checks if this message is in PENDING state.
-/// 
-/// @return true if status is PENDING
+  ///
+  /// @return true if status is PENDING
   public boolean isPending() {
     return "PENDING".equals(statusCode);
   }
 
   /// Checks if this message is in PUBLISHING state.
-/// 
-/// @return true if status is PUBLISHING
+  ///
+  /// @return true if status is PUBLISHING
   public boolean isPublishing() {
     return "PUBLISHING".equals(statusCode);
   }
 
   /// Checks if this message is in a terminal state (PUBLISHED or FAILED).
-/// 
-/// Terminal states indicate no further relay processing is needed.
-/// 
-/// @return true if status is PUBLISHED or FAILED
+  ///
+  /// Terminal states indicate no further relay processing is needed.
+  ///
+  /// @return true if status is PUBLISHED or FAILED
   public boolean isTerminal() {
     return "PUBLISHED".equals(statusCode) || "FAILED".equals(statusCode);
   }
 
   /// Checks if this message is ready to be relayed at the given timestamp.
-/// 
-/// A message is ready if:
-/// 
-/// - Status is PENDING (awaiting relay)
-///   - notBefore time has passed (if set)
-///   - nextRetryAt time has passed (if set, for retries)
-/// 
-/// @param now current timestamp for readiness check
-/// @return true if message is ready to relay
+  ///
+  /// A message is ready if:
+  ///
+  /// - Status is PENDING (awaiting relay)
+  ///   - notBefore time has passed (if set)
+  ///   - nextRetryAt time has passed (if set, for retries)
+  ///
+  /// @param now current timestamp for readiness check
+  /// @return true if message is ready to relay
   public boolean isReadyToRelay(Instant now) {
     if (!isPending()) {
       return false;
@@ -302,14 +302,14 @@ public final class OutboxMessage {
   }
 
   /// Checks if the lease for this message has expired at the given timestamp.
-/// 
-/// Returns true if:
-/// 
-/// - Message has no lease (leaseExpireAt is null), OR
-///   - Lease expiration time has passed
-/// 
-/// @param now current timestamp for expiry check
-/// @return true if lease is expired or absent
+  ///
+  /// Returns true if:
+  ///
+  /// - Message has no lease (leaseExpireAt is null), OR
+  ///   - Lease expiration time has passed
+  ///
+  /// @param now current timestamp for expiry check
+  /// @return true if lease is expired or absent
   public boolean isLeaseExpired(Instant now) {
     return leaseExpireAt == null || leaseExpireAt.isBefore(now);
   }

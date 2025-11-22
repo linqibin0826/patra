@@ -3,16 +3,16 @@ package com.patra.common.provenance.api.values.epmc;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /// EPMC Format 参数值枚举
-/// 
+///
 /// 控制 API 返回格式和详细程度
-/// 
+///
 /// ### 格式说明
-/// 
+///
 /// - **JSON** - JSON 格式（默认，推荐）
 ///   - **XML** - XML 格式
 ///   - **LITE** - 轻量级格式，仅返回核心字段
 ///   - **CORE** - 核心格式，返回常用字段
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public enum Format {

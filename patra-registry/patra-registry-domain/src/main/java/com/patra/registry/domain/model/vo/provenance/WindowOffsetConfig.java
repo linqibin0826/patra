@@ -4,25 +4,25 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /// 时间窗口偏移配置值对象,定义任务如何分段时间窗口和推进增量偏移量。
-/// 
+///
 /// **不可变性**:此对象一旦创建不可修改,通过值语义比较相等性。
-/// 
+///
 /// **业务约束**:
-/// 
+///
 /// - 配置ID和数据源ID必须为正整数
 ///   - 生效时间(effectiveFrom)不可为空,失效时间(effectiveTo)为null表示永久有效
 ///   - 窗口模式(windowModeCode)、窗口大小单位(windowSizeUnitCode)、偏移量类型(offsetTypeCode)不可为空白
 ///   - 对于DATE或COMPOSITE类型的偏移量,必须至少提供offsetFieldKey或windowDateFieldKey之一
 ///   - 操作类型(operationType)为null时表示适用于所有操作(HARVEST/UPDATE/BACKFILL)
-/// 
+///
 /// **业务语义**:
-/// 
+///
 /// - 支持SLIDING(滑动)和CALENDAR(日历对齐)两种窗口模式
 ///   - 支持DATE(日期)、ID(标识符)、COMPOSITE(复合)三种偏移量跟踪机制
 ///   - lookback(回溯)用于补偿延迟到达的数据
 ///   - overlap(重叠)确保相邻窗口之间的数据不丢失
 ///   - watermark(水位线)定义容忍乱序数据的最大延迟
-/// 
+///
 /// @param id 配置主键,唯一标识此窗口偏移配置,必须为正整数
 /// @param provenanceId 数据源ID外键,引用`reg_provenance.id`,必须为正整数
 /// @param operationType 操作类型,取值为`HARVEST/UPDATE/BACKFILL`,null表示适用于所有操作
@@ -67,16 +67,16 @@ public record WindowOffsetConfig(
     Integer maxIdsPerWindow,
     Integer maxWindowSpanSeconds) {
   /// 规范构造器,强制执行时间窗口偏移配置的业务约束。
-/// 
-/// 验证规则:
-/// 
-/// - 配置ID和数据源ID必须为正整数
-///   - 生效时间不可为空
-///   - 窗口模式、窗口大小单位、偏移量类型不可为空白
-///   - DATE/COMPOSITE偏移量类型必须至少提供offsetFieldKey或windowDateFieldKey之一
-///   - 所有字符串字段自动trim去除首尾空白
-/// 
-/// @throws DomainValidationException 如果验证失败
+  ///
+  /// 验证规则:
+  ///
+  /// - 配置ID和数据源ID必须为正整数
+  ///   - 生效时间不可为空
+  ///   - 窗口模式、窗口大小单位、偏移量类型不可为空白
+  ///   - DATE/COMPOSITE偏移量类型必须至少提供offsetFieldKey或windowDateFieldKey之一
+  ///   - 所有字符串字段自动trim去除首尾空白
+  ///
+  /// @throws DomainValidationException 如果验证失败
   public WindowOffsetConfig(
       Long id,
       Long provenanceId,
@@ -134,11 +134,11 @@ public record WindowOffsetConfig(
   }
 
   /// 验证配置的必需字段。
-/// 
-/// @param id 配置ID
-/// @param provenanceId 数据源ID
-/// @param effectiveFrom 生效时间
-/// @throws DomainValidationException 如果验证失败
+  ///
+  /// @param id 配置ID
+  /// @param provenanceId 数据源ID
+  /// @param effectiveFrom 生效时间
+  /// @throws DomainValidationException 如果验证失败
   private static void validateRequiredFields(Long id, Long provenanceId, Instant effectiveFrom) {
     DomainValidationException.positive(id, "Window offset config id");
     DomainValidationException.positive(provenanceId, "Provenance id");
@@ -146,13 +146,13 @@ public record WindowOffsetConfig(
   }
 
   /// 验证DATE/COMPOSITE偏移量类型必须提供所需的字段键。
-/// 
-/// 业务规则:对于基于日期的偏移量跟踪,必须至少指定offsetFieldKey或windowDateFieldKey之一。
-/// 
-/// @param offsetTypeCode 偏移量类型代码
-/// @param offsetFieldKey 标准化后的偏移量字段键
-/// @param windowDateFieldKey 标准化后的窗口日期字段键
-/// @throws DomainValidationException 如果DATE/COMPOSITE类型未提供必需字段键
+  ///
+  /// 业务规则:对于基于日期的偏移量跟踪,必须至少指定offsetFieldKey或windowDateFieldKey之一。
+  ///
+  /// @param offsetTypeCode 偏移量类型代码
+  /// @param offsetFieldKey 标准化后的偏移量字段键
+  /// @param windowDateFieldKey 标准化后的窗口日期字段键
+  /// @throws DomainValidationException 如果DATE/COMPOSITE类型未提供必需字段键
   private static void validateDateOffsetKeys(
       String offsetTypeCode, String offsetFieldKey, String windowDateFieldKey) {
     boolean requiresDateKey =
@@ -164,9 +164,9 @@ public record WindowOffsetConfig(
   }
 
   /// 标准化字符串为null(如果trim后为空)。
-/// 
-/// @param value 待标准化的字符串
-/// @return trim后的字符串,如果为空则返回null
+  ///
+  /// @param value 待标准化的字符串
+  /// @return trim后的字符串,如果为空则返回null
   private static String normalizeToNullIfEmpty(String value) {
     if (value == null) {
       return null;

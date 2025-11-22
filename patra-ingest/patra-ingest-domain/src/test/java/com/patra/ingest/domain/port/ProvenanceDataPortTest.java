@@ -19,16 +19,16 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// ProvenanceDataPort 接口测试
-/// 
+///
 /// 测试 v2.0 多数据类型架构的核心接口：泛型化数据获取端口
-/// 
+///
 /// **测试策略**：
-/// 
+///
 /// - 使用 Mock 实现进行接口契约测试
 ///   - 验证泛型方法的类型安全性
 ///   - 验证 DataFetchResult 工厂方法
 ///   - 验证 supports 和 getSupportedTypes 方法
-/// 
+///
 /// @since 0.1.0.0
 @DisplayName("ProvenanceDataPort v2.0 接口测试")
 class ProvenanceDataPortTest {

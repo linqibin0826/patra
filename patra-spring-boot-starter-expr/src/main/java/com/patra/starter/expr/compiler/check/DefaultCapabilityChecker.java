@@ -18,20 +18,20 @@ import java.util.Objects;
 import java.util.Set;
 
 /// {@link CapabilityChecker} 的默认实现，遍历表达式树并根据 Provenance 快照中的能力定义验证每个原子条件。
-/// 
+///
 /// 核心验证逻辑：
-/// 
+///
 /// - 字段是否在 Provenance 中注册
 ///   - 操作符是否被字段支持
 ///   - 否定是否被允许（整体和特定操作符）
 ///   - 操作符特定的值约束（长度、模式、范围边界等）
-/// 
+///
 /// 严格模式影响：
-/// 
+///
 /// - `strictMode=false`: 仅检查结构性约束
 ///   - `strictMode=true`: 额外检查语义约束（如 TOKEN 空白值）
-/// 
-/// @since 1.0.0
+///
+/// @since 0.1.0
 public class DefaultCapabilityChecker implements CapabilityChecker {
 
   @Override
@@ -44,12 +44,12 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
   }
 
   /// 递归访问表达式树节点。
-/// 
-/// @param node 当前节点
-/// @param underNot 当前节点是否在 NOT 操作符下
-/// @param snapshot Provenance 快照
-/// @param strictMode 是否启用严格模式
-/// @param out 收集的问题列表
+  ///
+  /// @param node 当前节点
+  /// @param underNot 当前节点是否在 NOT 操作符下
+  /// @param snapshot Provenance 快照
+  /// @param strictMode 是否启用严格模式
+  /// @param out 收集的问题列表
   private void visit(
       Expr node,
       boolean underNot,
@@ -79,12 +79,12 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
   }
 
   /// 验证原子条件的完整性和可行性。
-/// 
-/// @param atom 原子条件
-/// @param underNot 是否在 NOT 操作符下
-/// @param snapshot Provenance 快照
-/// @param strictMode 是否启用严格模式
-/// @param out 收集的问题列表
+  ///
+  /// @param atom 原子条件
+  /// @param underNot 是否在 NOT 操作符下
+  /// @param snapshot Provenance 快照
+  /// @param strictMode 是否启用严格模式
+  /// @param out 收集的问题列表
   private void validateAtom(
       Atom atom,
       boolean underNot,
@@ -135,15 +135,15 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
   }
 
   /// 验证 TERM 操作符的值约束。
-/// 
-/// 检查项：
-/// 
-/// - 空白值限制
-///   - 最小/最大长度
-///   - 正则表达式模式
-///   - 大小写敏感性
-///   - 匹配策略支持（PHRASE、WILDCARD 等）
-/// 
+  ///
+  /// 检查项：
+  ///
+  /// - 空白值限制
+  ///   - 最小/最大长度
+  ///   - 正则表达式模式
+  ///   - 大小写敏感性
+  ///   - 匹配策略支持（PHRASE、WILDCARD 等）
+  ///
   private void validateTerm(Atom atom, ProvenanceSnapshot.Capability capability, List<Issue> out) {
     Atom.TermValue value = (Atom.TermValue) atom.value();
     String text = value.text();

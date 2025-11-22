@@ -14,16 +14,16 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// TaskRun 实体单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 使用 TestDataBuilder 模式构建测试数据
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
-/// 
+///
 /// 测试范围：
-/// 
+///
 /// - ✅ 构造函数测试（标准构造函数、restore 工厂方法）
 ///   - ✅ 状态转换测试（PENDING → RUNNING → SUCCEEDED/FAILED/PARTIAL）
 ///   - ✅ 心跳机制测试（heartbeat）
@@ -32,9 +32,9 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ 窗口分配测试（assignWindow）
 ///   - ✅ 运行上下文测试（bindRunContext）
 ///   - ✅ 边界条件和异常情况
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @DisplayName("TaskRun 实体单元测试")
 class TaskRunTest {
 
@@ -1046,8 +1046,8 @@ class TaskRunTest {
   // ========== TestDataBuilder (辅助类) ==========
 
   /// TaskRun 测试数据构建器。
-/// 
-/// 遵循 Builder 模式，提供默认值以简化测试数据构建。
+  ///
+  /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
   static class TaskRunTestDataBuilder {
     private Long id = 1001L;
     private Long taskId = 2001L;

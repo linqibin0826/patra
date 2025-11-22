@@ -11,9 +11,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// {@link ExprSnapshotQuery} 单元测试。
-/// 
+///
 /// 测试聚合表达式快照查询视图的构造、验证和 record 语义。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("ExprSnapshotQuery 单元测试")
@@ -410,16 +410,16 @@ class ExprSnapshotQueryTest {
   // ==================== 测试数据工厂方法 ====================
 
   /// 创建测试用的 ExprFieldQuery 实例。
-/// 
-/// @param fieldKey 字段键
-/// @return ExprFieldQuery 实例
+  ///
+  /// @param fieldKey 字段键
+  /// @return ExprFieldQuery 实例
   private static ExprFieldQuery createExprFieldQuery(String fieldKey) {
     return new ExprFieldQuery(fieldKey, "显示名称", "描述", "STRING", "SINGLE", true, false);
   }
 
   /// 创建测试用的 ExprCapabilityQuery 实例。
-/// 
-/// @return ExprCapabilityQuery 实例
+  ///
+  /// @return ExprCapabilityQuery 实例
   private static ExprCapabilityQuery createExprCapabilityQuery() {
     return new ExprCapabilityQuery(
         1L, // provenanceId
@@ -455,8 +455,8 @@ class ExprSnapshotQueryTest {
   }
 
   /// 创建测试用的 ExprRenderRuleQuery 实例。
-/// 
-/// @return ExprRenderRuleQuery 实例
+  ///
+  /// @return ExprRenderRuleQuery 实例
   private static ExprRenderRuleQuery createExprRenderRuleQuery() {
     return new ExprRenderRuleQuery(
         1L, // provenanceId
@@ -479,8 +479,8 @@ class ExprSnapshotQueryTest {
   }
 
   /// 创建测试用的 ApiParamMappingQuery 实例。
-/// 
-/// @return ApiParamMappingQuery 实例
+  ///
+  /// @return ApiParamMappingQuery 实例
   private static ApiParamMappingQuery createApiParamMappingQuery() {
     return new ApiParamMappingQuery(
         1L, // provenanceId

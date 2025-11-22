@@ -11,9 +11,9 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /// 数据库实体,映射到表 `reg_prov_rate_limit_cfg`。
-/// 
+///
 /// 捕获数据源/操作组合的并发和凭据级节流限制。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

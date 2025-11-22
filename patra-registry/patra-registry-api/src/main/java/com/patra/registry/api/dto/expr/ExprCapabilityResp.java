@@ -5,9 +5,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /// 表达式字段的能力元数据。
-/// 
+///
 /// 字段说明:
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public record ExprCapabilityResp(

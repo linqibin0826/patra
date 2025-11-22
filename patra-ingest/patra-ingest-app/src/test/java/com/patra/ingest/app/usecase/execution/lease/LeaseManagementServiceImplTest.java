@@ -26,9 +26,9 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 /// LeaseManagementServiceImpl 单元测试
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - ✅ 获取租约：成功获取、并发竞争失败、任务不存在
 ///   - ✅ 释放租约：正常释放、任务不存在
 ///   - ✅ 续约：成功续约、续约失败
@@ -36,7 +36,7 @@ import org.mockito.quality.Strictness;
 ///   - ✅ 时间处理：使用 Clock 生成时间戳
 ///   - ✅ TTL 计算：Duration 转秒
 ///   - ✅ 边界条件：null taskId、负数 Duration
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("LeaseManagementServiceImpl 单元测试")

@@ -31,9 +31,9 @@ import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /// ExecuteTaskBatchesUseCaseImpl 单元测试
-/// 
+///
 /// 测试范围:
-/// 
+///
 /// - ✅ 正常流程: 批次调度 → 批次执行 → 持久化结果
 ///   - ✅ 多批次执行: 顺序执行多个批次
 ///   - ✅ 批次执行失败: 某个批次失败，记录错误继续
@@ -43,7 +43,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 ///   - ✅ 租约撤销检查: 租约撤销时中止执行
 ///   - ✅ 快速失败模式: fail-fast 配置测试
 ///   - ✅ 心跳更新: 批次执行后更新心跳
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("ExecuteTaskBatchesUseCaseImpl 单元测试")
@@ -259,10 +259,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
       verify(batchExecutor, times(1))
           .execute(eq(mockContext), any(Batch.class), any(QuerySession.class));
       verify(batchExecutor).execute(mockContext, batch1, mockQuerySession);
-      verify(batchExecutor, never())
-          .execute(eq(mockContext), eq(batch2), any(QuerySession.class));
-      verify(batchExecutor, never())
-          .execute(eq(mockContext), eq(batch3), any(QuerySession.class));
+      verify(batchExecutor, never()).execute(eq(mockContext), eq(batch2), any(QuerySession.class));
+      verify(batchExecutor, never()).execute(eq(mockContext), eq(batch3), any(QuerySession.class));
     }
   }
 
@@ -353,10 +351,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
       verify(batchExecutor, times(1))
           .execute(eq(mockContext), any(Batch.class), any(QuerySession.class));
       verify(batchExecutor).execute(mockContext, batch1, mockQuerySession);
-      verify(batchExecutor, never())
-          .execute(eq(mockContext), eq(batch2), any(QuerySession.class));
-      verify(batchExecutor, never())
-          .execute(eq(mockContext), eq(batch3), any(QuerySession.class));
+      verify(batchExecutor, never()).execute(eq(mockContext), eq(batch2), any(QuerySession.class));
+      verify(batchExecutor, never()).execute(eq(mockContext), eq(batch3), any(QuerySession.class));
     }
 
     @Test

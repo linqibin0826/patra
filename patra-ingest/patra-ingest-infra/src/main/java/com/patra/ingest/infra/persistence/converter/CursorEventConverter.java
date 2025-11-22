@@ -14,9 +14,9 @@ import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
 /// 游标事件对象转换器,负责领域对象与数据库实体转换。
-/// 
+///
 /// 转换规则: 游标事件聚合 ↔ DO 双向转换,处理枚举类型(CursorType/CursorDirection)代码映射、血缘信息展开/聚合。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)

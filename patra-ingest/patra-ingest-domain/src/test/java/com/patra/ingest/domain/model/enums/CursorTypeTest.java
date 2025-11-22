@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// CursorType 枚举测试。
-/// 
+///
 /// @author Patra Team
 @DisplayName("CursorType 枚举测试")
 class CursorTypeTest {

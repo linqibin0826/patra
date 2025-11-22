@@ -10,14 +10,14 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /// 数据库实体,映射到表 `sys_dict_item_alias`.
-/// 
+///
 /// Provides external aliases so that partner systems can reference internal dictionary items.
-/// 
+///
 /// Database rules:
-/// 
+///
 /// - `(source_system, external_code)` is globally unique.
 ///   - Aliases are soft-deletable and may coexist with disabled dictionary items.
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

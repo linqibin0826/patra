@@ -9,9 +9,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// WindowOffsetConfig 值对象单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 测试 record 的业务约束验证（正整数 ID、非空白字符串、必需字段等）
 ///   - 验证字符串字段自动 trim 处理
@@ -19,9 +19,9 @@ import org.junit.jupiter.api.Test;
 ///   - 验证 DATE/COMPOSITE 偏移量类型的特殊业务规则
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
-/// 
+///
 /// 覆盖范围：
-/// 
+///
 /// - ✅ record 构造函数验证测试
 ///   - ✅ 正整数 ID 验证（id, provenanceId）
 ///   - ✅ 非空白字符串验证（windowModeCode, windowSizeUnitCode, offsetTypeCode）
@@ -33,7 +33,7 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ 不变性保证
 ///   - ✅ 业务场景测试（不同窗口模式、偏移量类型等）
 ///   - ✅ 边界条件处理
-/// 
+///
 /// @author Patra Team
 /// @since 2.0
 @DisplayName("WindowOffsetConfig 单元测试")

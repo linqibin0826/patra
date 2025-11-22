@@ -4,9 +4,9 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /// 分页配置查询视图。
-/// 
+///
 /// 用于查询分页策略配置的读优化投影。定义了分页模式、页大小、排序参数等分页相关配置。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public record PaginationConfigQuery(

@@ -1,14 +1,14 @@
 package com.patra.starter.provenance.internal.metadata;
 
 /// DOAJ 特定的计划元数据
-/// 
+///
 /// 包含 DOAJ API 返回的特定信息:
-/// 
+///
 /// - scrollId - Elasticsearch Scroll ID
 ///   - pageSize - 每页大小
-/// 
+///
 /// @author Patra Architecture Team
-/// @since 0.2.0
+/// @since 0.1.0
 public class DoajPlanMetadata extends PlanMetadata {
 
   private final String scrollId;

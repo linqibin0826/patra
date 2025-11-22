@@ -1,5 +1,7 @@
 package com.patra.catalog.infra.persistence.repository;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.patra.catalog.domain.model.enums.MeshBatchStatus;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
@@ -7,7 +9,6 @@ import com.patra.catalog.infra.persistence.entity.MeshBatchDetailDO;
 import com.patra.catalog.infra.persistence.mapper.MeshBatchDetailMapper;
 import com.patra.starter.mybatis.autoconfig.MybatisPluginAutoConfig;
 import java.time.Instant;
-import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,27 +20,25 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 /// MeSH 批次详情仓储实现集成测试。
-/// 
+///
 /// 使用 @MybatisPlusTest + TestContainers（MySQL 8）测试批次查询操作。
-/// 
+///
 /// **测试策略**：
-/// 
+///
 /// - 集成测试：使用真实 MySQL 数据库
 ///   - 测试隔离：每个测试方法独立，使用 @Transactional 自动回滚
 ///   - TestContainers：自动启动和停止 MySQL 容器
 ///   - 测试覆盖：findFailedBatches()、countByStatus()
-/// 
+///
 /// **重点测试场景**：
-/// 
+///
 /// - 查询失败批次：验证返回所有状态为 FAILED 的批次
 ///   - 按状态计数：验证按状态统计批次数量
 ///   - 边界情况：无失败批次时返回空列表
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @MybatisPlusTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -73,11 +72,14 @@ class MeshBatchDetailRepositoryImplIT {
     MeshImportId meshImportId = new MeshImportId(importId);
 
     // Given: 插入多个批次（包含成功和失败）
-    MeshBatchDetailDO successBatch1 = createBatchDetail(importId, "cat_mesh_descriptor", 1, "SUCCESS");
-    MeshBatchDetailDO failedBatch1 = createBatchDetail(importId, "cat_mesh_descriptor", 2, "FAILED");
+    MeshBatchDetailDO successBatch1 =
+        createBatchDetail(importId, "cat_mesh_descriptor", 1, "SUCCESS");
+    MeshBatchDetailDO failedBatch1 =
+        createBatchDetail(importId, "cat_mesh_descriptor", 2, "FAILED");
     failedBatch1.setErrorMessage("数据库连接超时");
     failedBatch1.setRetryCount(1);
-    MeshBatchDetailDO successBatch2 = createBatchDetail(importId, "cat_mesh_qualifier", 1, "SUCCESS");
+    MeshBatchDetailDO successBatch2 =
+        createBatchDetail(importId, "cat_mesh_qualifier", 1, "SUCCESS");
     MeshBatchDetailDO failedBatch2 = createBatchDetail(importId, "cat_mesh_qualifier", 2, "FAILED");
     failedBatch2.setErrorMessage("数据格式错误");
     failedBatch2.setRetryCount(2);
@@ -110,7 +112,8 @@ class MeshBatchDetailRepositoryImplIT {
     MeshImportId meshImportId = new MeshImportId(importId);
 
     // Given: 只插入成功批次
-    MeshBatchDetailDO successBatch = createBatchDetail(importId, "cat_mesh_descriptor", 1, "SUCCESS");
+    MeshBatchDetailDO successBatch =
+        createBatchDetail(importId, "cat_mesh_descriptor", 1, "SUCCESS");
     batchDetailMapper.insert(successBatch);
 
     // When: 查询失败批次
@@ -174,12 +177,12 @@ class MeshBatchDetailRepositoryImplIT {
   }
 
   /// 创建批次详情测试数据。
-/// 
-/// @param importId 任务ID
-/// @param tableName 表名
-/// @param batchNum 批次号
-/// @param status 状态
-/// @return 批次详情DO
+  ///
+  /// @param importId 任务ID
+  /// @param tableName 表名
+  /// @param batchNum 批次号
+  /// @param status 状态
+  /// @return 批次详情DO
   private MeshBatchDetailDO createBatchDetail(
       Long importId, String tableName, Integer batchNum, String status) {
     MeshBatchDetailDO batchDetail = new MeshBatchDetailDO();

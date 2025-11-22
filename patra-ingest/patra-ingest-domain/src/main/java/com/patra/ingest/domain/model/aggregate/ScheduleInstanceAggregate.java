@@ -11,24 +11,24 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// 调度实例聚合根。表示一次调度触发及其初始快照。
-/// 
+///
 /// 一致性边界：
-/// 
+///
 /// - 调度实例记录单次调度触发的完整上下文
 ///   - 触发参数在整个生命周期中保持不可变
-/// 
+///
 /// 业务规则：
-/// 
+///
 /// - 每次调度器触发时创建一个调度实例
 ///   - 调度实例与计划聚合根是 1:N 关系（一次触发可产生多个计划）
 ///   - 触发时间戳用于审计和追溯
-/// 
+///
 /// 生命周期：
-/// 
+///
 /// - 调度器触发时创建
 ///   - 计划生成时绑定
 ///   - 全程只读，不参与业务状态流转
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @EqualsAndHashCode(callSuper = true)
@@ -121,7 +121,7 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
   }
 
   /// 为此调度实例记录额外快照。
-/// 
-/// 为未来快照记录需求预留的占位符。
+  ///
+  /// 为未来快照记录需求预留的占位符。
   public void recordSnapshots() {}
 }

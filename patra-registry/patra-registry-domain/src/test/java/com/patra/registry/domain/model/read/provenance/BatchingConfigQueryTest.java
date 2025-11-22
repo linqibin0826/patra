@@ -10,15 +10,15 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// {@link BatchingConfigQuery} 的单元测试。
-/// 
+///
 /// 测试覆盖：
-/// 
+///
 /// - 成功构造（完整字段、部分可选字段、最小必填字段）
 ///   - 验证失败（id、provenanceId、effectiveFrom 的各种无效值）
 ///   - Trim 逻辑（operationType、idsParamName、idsJoinDelimiter）
 ///   - Record 语义（equals、hashCode、toString、组件访问器）
 ///   - 不可变性验证
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("BatchingConfigQuery 单元测试")

@@ -9,12 +9,12 @@ import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 
 /// XML 到 JSON 转换器
-/// 
+///
 /// 仅用于缺乏原生 JSON 支持的 API(如 PubMed EFetch)。先将 XML 载荷转换为 {@link JsonNode}, 然后通过共享的 {@link
 /// ObjectMapper} 映射到目标响应类型。
-/// 
+///
 /// **转换流程:**
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
@@ -37,11 +37,11 @@ public class XmlToJsonConverter {
   }
 
   /// 将 XML 字符串转换为类型化 JSON 对象
-/// 
-/// @param xml XML 载荷(必填)
-/// @param responseClass 目标响应类型
-/// @param <T> 响应类型
-/// @return 映射后的响应实例
+  ///
+  /// @param xml XML 载荷(必填)
+  /// @param responseClass 目标响应类型
+  /// @param <T> 响应类型
+  /// @return 映射后的响应实例
   public <T> T convert(String xml, Class<T> responseClass) {
     Objects.requireNonNull(responseClass, "responseClass cannot be null");
     if (xml == null || xml.isBlank()) {

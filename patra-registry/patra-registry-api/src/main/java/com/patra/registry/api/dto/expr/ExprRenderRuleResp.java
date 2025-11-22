@@ -3,9 +3,9 @@ package com.patra.registry.api.dto.expr;
 import java.time.Instant;
 
 /// 表达式输出模板的渲染规则。
-/// 
+///
 /// 字段说明:
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public record ExprRenderRuleResp(

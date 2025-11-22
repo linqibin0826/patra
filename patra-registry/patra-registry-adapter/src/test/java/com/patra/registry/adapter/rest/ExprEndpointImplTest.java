@@ -27,15 +27,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /// ExprEndpointImpl 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 使用 Mockito Mock Orchestrator 和 Converter
 ///   - 验证 Controller 正确调用 Orchestrator
 ///   - 验证 Controller 正确使用 Converter 转换响应
 ///   - 验证参数正确传递
 ///   - 验证异常正确传播
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)

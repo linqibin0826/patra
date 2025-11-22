@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// BatchStatus 枚举测试。
-/// 
+///
 /// @author Patra Team
 @DisplayName("BatchStatus 枚举测试")
 class BatchStatusTest {

@@ -1,7 +1,7 @@
 package com.patra.starter.expr.compiler.model;
 
 /// 问题严重性级别。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public enum IssueSeverity {

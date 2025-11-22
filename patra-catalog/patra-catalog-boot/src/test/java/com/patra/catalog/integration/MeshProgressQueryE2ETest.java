@@ -22,25 +22,25 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /// MeSH 导入进度查询 E2E 测试（User Story 2）。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 使用 {@link SpringBootTest} 加载完整应用上下文
 ///   - 使用 {@link Testcontainers} 启动真实的 MySQL 数据库
 ///   - 使用 {@link TestRestTemplate} 发送真实的 HTTP 请求
 ///   - 使用 {@link org.awaitility.Awaitility} 等待异步任务完成
-/// 
+///
 /// 测试场景：
-/// 
+///
 /// - ✅ 查询导入进度并验证进度递增
 ///   - ✅ 验证处理速度计算正确
 ///   - ✅ 验证预计剩余时间递减
 ///   - ✅ 验证各表进度详情
-/// 
+///
 /// **注意**：此测试依赖完整的导入流程，执行时间较长（约 1-2 分钟）
-/// 
+///
 /// @author Patra Team
-/// @since 0.2.0 (User Story 2)
+/// @since 0.1.0 (User Story 2)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @DisplayName("MeSH 导入进度查询 E2E 测试")
@@ -86,9 +86,7 @@ class MeshProgressQueryE2ETest {
               // 发送 GET 请求查询进度
               ResponseEntity<MeshProgressDTO> response =
                   restTemplate.getForEntity(
-                      "/api/v1/mesh/import/progress/{taskId}",
-                      MeshProgressDTO.class,
-                      taskId);
+                      "/api/v1/mesh/import/progress/{taskId}", MeshProgressDTO.class, taskId);
 
               // 验证响应状态
               assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -102,11 +100,14 @@ class MeshProgressQueryE2ETest {
               assertThat(progress.status()).isIn("PROCESSING", "SUCCESS");
 
               // 验证进度计算
-              assertThat(progress.overallProgress()).isGreaterThanOrEqualTo(0.0).isLessThanOrEqualTo(100.0);
+              assertThat(progress.overallProgress())
+                  .isGreaterThanOrEqualTo(0.0)
+                  .isLessThanOrEqualTo(100.0);
 
               // 验证表进度列表
               assertThat(progress.tableProgress()).isNotEmpty();
-              assertThat(progress.tableProgress()).hasSize(5); // descriptor, qualifier, treeNumber, entryTerm, concept
+              assertThat(progress.tableProgress())
+                  .hasSize(5); // descriptor, qualifier, treeNumber, entryTerm, concept
 
               // 验证时间字段
               assertThat(progress.startTime()).isNotNull();
@@ -133,9 +134,7 @@ class MeshProgressQueryE2ETest {
     // When: 查询不存在的任务
     ResponseEntity<String> response =
         restTemplate.getForEntity(
-            "/api/v1/mesh/import/progress/{taskId}",
-            String.class,
-            nonExistentTaskId);
+            "/api/v1/mesh/import/progress/{taskId}", String.class, nonExistentTaskId);
 
     // Then: 应该返回 404 Not Found
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -148,8 +147,7 @@ class MeshProgressQueryE2ETest {
     StartImportCommand command =
         new StartImportCommand(
             "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-            "多表进度测试任务"
-        );
+            "多表进度测试任务");
 
     MeshImportResultDTO startResult = meshImportOrchestrator.startImport(command);
     String taskId = startResult.getTaskId();
@@ -162,33 +160,35 @@ class MeshProgressQueryE2ETest {
             () -> {
               ResponseEntity<MeshProgressDTO> response =
                   restTemplate.getForEntity(
-                      "/api/v1/mesh/import/progress/{taskId}",
-                      MeshProgressDTO.class,
-                      taskId);
+                      "/api/v1/mesh/import/progress/{taskId}", MeshProgressDTO.class, taskId);
 
               MeshProgressDTO progress = response.getBody();
               assertThat(progress).isNotNull();
 
               // Then: 验证每张表的进度详情
-              progress.tableProgress().forEach(tableProgress -> {
-                // 验证表名
-                assertThat(tableProgress.tableName())
-                    .isIn("descriptor", "qualifier", "treeNumber", "entryTerm", "concept");
+              progress
+                  .tableProgress()
+                  .forEach(
+                      tableProgress -> {
+                        // 验证表名
+                        assertThat(tableProgress.tableName())
+                            .isIn("descriptor", "qualifier", "treeNumber", "entryTerm", "concept");
 
-                // 验证进度百分比
-                assertThat(tableProgress.progressPercentage())
-                    .isGreaterThanOrEqualTo(0.0)
-                    .isLessThanOrEqualTo(100.0);
+                        // 验证进度百分比
+                        assertThat(tableProgress.progressPercentage())
+                            .isGreaterThanOrEqualTo(0.0)
+                            .isLessThanOrEqualTo(100.0);
 
-                // 验证计数字段
-                assertThat(tableProgress.processedCount()).isGreaterThanOrEqualTo(0);
-                assertThat(tableProgress.totalCount()).isGreaterThan(0);
-                assertThat(tableProgress.processedCount()).isLessThanOrEqualTo(tableProgress.totalCount());
+                        // 验证计数字段
+                        assertThat(tableProgress.processedCount()).isGreaterThanOrEqualTo(0);
+                        assertThat(tableProgress.totalCount()).isGreaterThan(0);
+                        assertThat(tableProgress.processedCount())
+                            .isLessThanOrEqualTo(tableProgress.totalCount());
 
-                // 验证状态
-                assertThat(tableProgress.status())
-                    .isIn("NOT_STARTED", "IN_PROGRESS", "COMPLETED", "FAILED");
-              });
+                        // 验证状态
+                        assertThat(tableProgress.status())
+                            .isIn("NOT_STARTED", "IN_PROGRESS", "COMPLETED", "FAILED");
+                      });
             });
   }
 
@@ -199,8 +199,7 @@ class MeshProgressQueryE2ETest {
     StartImportCommand command =
         new StartImportCommand(
             "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-            "失败批次测试任务"
-        );
+            "失败批次测试任务");
 
     MeshImportResultDTO startResult = meshImportOrchestrator.startImport(command);
     String taskId = startResult.getTaskId();
@@ -208,9 +207,7 @@ class MeshProgressQueryE2ETest {
     // When: 查询进度
     ResponseEntity<MeshProgressDTO> response =
         restTemplate.getForEntity(
-            "/api/v1/mesh/import/progress/{taskId}",
-            MeshProgressDTO.class,
-            taskId);
+            "/api/v1/mesh/import/progress/{taskId}", MeshProgressDTO.class, taskId);
 
     // Then: 验证失败批次列表结构
     MeshProgressDTO progress = response.getBody();
@@ -219,12 +216,15 @@ class MeshProgressQueryE2ETest {
 
     // 如果有失败批次,验证其结构
     if (!progress.failedBatches().isEmpty()) {
-      progress.failedBatches().forEach(failedBatch -> {
-        assertThat(failedBatch.tableName()).isNotBlank();
-        assertThat(failedBatch.batchNum()).isGreaterThan(0);
-        assertThat(failedBatch.failureReason()).isNotBlank();
-        assertThat(failedBatch.retryCount()).isGreaterThanOrEqualTo(0);
-      });
+      progress
+          .failedBatches()
+          .forEach(
+              failedBatch -> {
+                assertThat(failedBatch.tableName()).isNotBlank();
+                assertThat(failedBatch.batchNum()).isGreaterThan(0);
+                assertThat(failedBatch.failureReason()).isNotBlank();
+                assertThat(failedBatch.retryCount()).isGreaterThanOrEqualTo(0);
+              });
     }
   }
 }

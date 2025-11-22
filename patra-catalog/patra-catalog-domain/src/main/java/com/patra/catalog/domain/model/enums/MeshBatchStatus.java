@@ -4,26 +4,26 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /// MeSH 批次处理状态枚举。
-/// 
+///
 /// 定义单个批次的处理状态。
-/// 
+///
 /// **状态转换规则**：
-/// 
+///
 /// ```
-/// 
+///
 /// 正常流程：PENDING → PROCESSING → SUCCESS
 /// 失败流程：PENDING → PROCESSING → FAILED
 /// 重试流程：FAILED → PROCESSING → SUCCESS/FAILED
-/// 
+///
 /// ```
-/// 
+///
 /// **设计说明**：
-/// 
+///
 /// - `displayName` - 中文显示名称，用于日志和界面展示
 ///   - `code` - 英文编码，用于数据库存储和 API 交互
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Getter
 @AllArgsConstructor
 public enum MeshBatchStatus {
@@ -47,10 +47,10 @@ public enum MeshBatchStatus {
   private final String code;
 
   /// 根据编码获取枚举。
-/// 
-/// @param code 状态编码
-/// @return 对应的枚举值
-/// @throws IllegalArgumentException 如果编码无效
+  ///
+  /// @param code 状态编码
+  /// @return 对应的枚举值
+  /// @throws IllegalArgumentException 如果编码无效
   public static MeshBatchStatus fromCode(String code) {
     for (MeshBatchStatus status : values()) {
       if (status.code.equals(code)) {
@@ -61,15 +61,15 @@ public enum MeshBatchStatus {
   }
 
   /// 判断批次是否为终态（成功或失败）。
-/// 
-/// @return true 如果批次已结束
+  ///
+  /// @return true 如果批次已结束
   public boolean isTerminal() {
     return this == SUCCESS || this == FAILED;
   }
 
   /// 判断批次是否可以重试。
-/// 
-/// @return true 如果批次可以重试（仅 FAILED 状态）
+  ///
+  /// @return true 如果批次可以重试（仅 FAILED 状态）
   public boolean canRetry() {
     return this == FAILED;
   }

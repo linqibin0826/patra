@@ -12,9 +12,9 @@ import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /// RegistryKeyStandardizer 工具类单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 测试所有静态方法的各种输入场景
 ///   - 验证 null、空白字符串、有效字符串的处理逻辑
@@ -22,9 +22,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 ///   - 验证占位符常量（ALL、ANY、T、F）的正确使用
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
-/// 
+///
 /// 覆盖范围：
-/// 
+///
 /// - ✅ toOperationKeyOrAll 测试（null、空白、有效字符串、trim、大小写保留）
 ///   - ✅ toUppercaseCode 测试（null 异常、小写转大写、大写保持、混合大小写、trim）
 ///   - ✅ toTrimmedFieldKey 测试（null 异常、trim、大小写保留）
@@ -33,7 +33,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 ///   - ✅ toValueTypeKeyOrAny 测试（null、空白、有效字符串、trim、转大写）
 ///   - ✅ 工具类语义测试（final class、private constructor、static methods）
 ///   - ✅ 边界条件和特殊场景测试
-/// 
+///
 /// @author Patra Team
 /// @since 0.1.0
 @DisplayName("RegistryKeyStandardizer 单元测试")

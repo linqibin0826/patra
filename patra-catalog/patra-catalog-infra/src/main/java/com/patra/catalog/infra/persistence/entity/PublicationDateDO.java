@@ -1,20 +1,20 @@
 package com.patra.catalog.infra.persistence.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
-import lombok.EqualsAndHashCode;
-import com.patra.starter.mybatis.entity.BaseDO;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.patra.starter.mybatis.entity.BaseDO;
 import java.time.Instant;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /// 日期信息数据库实体,映射到表 `cat_publication_date`。
-/// 
+///
 /// 表结构: 精确记录文献生命周期的各类日期,支持不完整日期表达
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `publication_id` 出版物ID(外键:cat_publication.id)
 ///   - `date_type` 日期类型(Received/Accepted/Published等)
 ///   - `date_value` 日期值(仅完整日期时填充),映射为 Instant（UTC午夜）
@@ -23,7 +23,7 @@ import lombok.Data;
 ///   - `day` 日期(1-31,可能为空)
 ///   - `date_precision` 精度:year/month/day
 ///   - `metadata` 日期元数据(灵活扩展)
-/// 
+///
 /// @author linqibin
 /// @since 0.5.0
 @Data
@@ -77,5 +77,4 @@ public class PublicationDateDO extends BaseDO {
   /// 日期元数据(灵活扩展)
   @TableField(value = "metadata", typeHandler = JacksonTypeHandler.class)
   private JsonNode metadata;
-
 }

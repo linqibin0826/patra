@@ -21,21 +21,21 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 
 /// Web 层错误处理组件的自动配置。
-/// 
+///
 /// 此配置类负责:
-/// 
+///
 /// - 创建验证错误格式化器 {@link ValidationErrorsFormatter},用于掩码敏感字段
 ///   - 创建问题详情构建器 {@link ProblemDetailBuilder},将异常转换为 RFC 7807 ProblemDetail
 ///   - 创建问题详情适配器 {@link ProblemDetailAdapter},集成错误解析管道
 ///   - 创建全局异常处理器 {@link GlobalRestExceptionHandler},统一处理 REST API 异常
-/// 
+///
 /// **激活条件:**
-/// 
+///
 /// - Servlet Web 应用环境
 ///   - `patra.web.problem.enabled=true`(默认启用)
-/// 
+///
 /// **配置示例:**
-/// 
+///
 /// ```java
 /// patra:
 ///   web:
@@ -55,8 +55,8 @@ import org.springframework.context.annotation.Bean;
 public class WebErrorAutoConfiguration {
 
   /// 创建默认的验证错误格式化器,负责掩码敏感字段(如密码、令牌)。
-/// 
-/// @return 验证错误格式化器
+  ///
+  /// @return 验证错误格式化器
   @Bean
   @ConditionalOnMissingBean
   public ValidationErrorsFormatter defaultValidationErrorsFormatter() {
@@ -65,15 +65,15 @@ public class WebErrorAutoConfiguration {
   }
 
   /// 创建问题详情构建器,将异常转换为符合 RFC 7807 标准的 ProblemDetail。
-/// 
-/// 集成核心字段贡献者和 Web 字段贡献者,动态添加元数据字段。
-/// 
-/// @param errorProperties 错误配置属性
-/// @param webProperties Web 错误配置属性
-/// @param traceProvider 追踪信息提供者
-/// @param coreFieldContributors 核心字段贡献者列表
-/// @param webFieldContributors Web 字段贡献者列表
-/// @return 问题详情构建器
+  ///
+  /// 集成核心字段贡献者和 Web 字段贡献者,动态添加元数据字段。
+  ///
+  /// @param errorProperties 错误配置属性
+  /// @param webProperties Web 错误配置属性
+  /// @param traceProvider 追踪信息提供者
+  /// @param coreFieldContributors 核心字段贡献者列表
+  /// @param webFieldContributors Web 字段贡献者列表
+  /// @return 问题详情构建器
   @Bean
   @ConditionalOnMissingBean
   public ProblemDetailBuilder problemDetailBuilder(
@@ -91,10 +91,10 @@ public class WebErrorAutoConfiguration {
   }
 
   /// 创建问题详情适配器,连接错误解析管道和问题详情构建器。
-/// 
-/// @param pipeline 错误解析管道
-/// @param problemDetailBuilder 问题详情构建器
-/// @return 问题详情适配器
+  ///
+  /// @param pipeline 错误解析管道
+  /// @param problemDetailBuilder 问题详情构建器
+  /// @return 问题详情适配器
   @Bean
   @ConditionalOnMissingBean
   public ProblemDetailAdapter problemDetailAdapter(
@@ -104,12 +104,12 @@ public class WebErrorAutoConfiguration {
   }
 
   /// 创建全局 REST 异常处理器,统一处理所有 REST API 异常。
-/// 
-/// 使用 `@RestControllerAdvice` 拦截异常并返回 RFC 7807 ProblemDetail 响应。
-/// 
-/// @param problemDetailAdapter 问题详情适配器
-/// @param validationErrorsFormatter 验证错误格式化器
-/// @return 全局异常处理器
+  ///
+  /// 使用 `@RestControllerAdvice` 拦截异常并返回 RFC 7807 ProblemDetail 响应。
+  ///
+  /// @param problemDetailAdapter 问题详情适配器
+  /// @param validationErrorsFormatter 验证错误格式化器
+  /// @return 全局异常处理器
   @Bean
   @ConditionalOnMissingBean
   public GlobalRestExceptionHandler globalRestExceptionHandler(

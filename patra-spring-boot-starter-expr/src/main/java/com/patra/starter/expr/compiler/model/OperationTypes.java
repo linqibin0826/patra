@@ -1,12 +1,12 @@
 package com.patra.starter.expr.compiler.model;
 
 /// Common operation type constants that help callers avoid hardcoded strings.
-/// 
+///
 /// Operation types differentiate configuration slices for the same provenance in different
 /// business scenarios.
-/// 
+///
 /// **Usage example:**
-/// 
+///
 /// ```java
 /// CompileRequest request = CompileRequestBuilder.of(expr, ProvenanceCode.PUBMED)
 ///     .forOperationType(OperationTypes.UPDATE)
@@ -21,20 +21,20 @@ public final class OperationTypes {
   public static final String BACKFILL = "BACKFILL";
 
   /// Incremental updates used for regularly syncing new or changed data.
-/// 
-/// This is the most common operation type and often uses aggressive parameters to capture fresh
-/// content.
+  ///
+  /// This is the most common operation type and often uses aggressive parameters to capture fresh
+  /// content.
   public static final String UPDATE = "UPDATE";
 
   /// Full synchronization covering the complete dataset.
-/// 
-/// Often used for initialization or periodic refreshes that require special handling for large
-/// data volumes.
+  ///
+  /// Often used for initialization or periodic refreshes that require special handling for large
+  /// data volumes.
   public static final String FULL = "FULL";
 
   /// Interactive search scenarios.
-/// 
-/// Usually optimized for latency and may rely on different timeout or retry policies.
+  ///
+  /// Usually optimized for latency and may rely on different timeout or retry policies.
   public static final String SEARCH = "SEARCH";
 
   /// Metric or analytical aggregations.

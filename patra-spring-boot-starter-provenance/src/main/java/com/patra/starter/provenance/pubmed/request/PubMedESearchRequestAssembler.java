@@ -8,17 +8,17 @@ import com.patra.common.provenance.api.values.pubmed.RetType;
 import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
 
 /// PubMed ESearch 请求组装器
-/// 
+///
 /// 从数据源参数组装PubMed ESearch请求。上游渲染已生成PubMed兼容的键（mindate/maxdate/retmax等）， 此组装器只需读取这些键并绑定到 {@link
 /// ESearchRequest}。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public class PubMedESearchRequestAssembler {
 
   /// 构建仅计数的ESearch请求 (rettype=count)
-/// 
-/// 注意：当提供日期过滤器（mindate/maxdate/datetype）时，term参数是可选的。
+  ///
+  /// 注意：当提供日期过滤器（mindate/maxdate/datetype）时，term参数是可选的。
   public ESearchRequest buildCount(JsonNode params) {
     Values v = extract(params);
     return new ESearchRequest(
@@ -43,8 +43,8 @@ public class PubMedESearchRequestAssembler {
   }
 
   /// Build a list request (uilist) honoring pagination.
-/// 
-/// Note: term is optional when date filters (mindate/maxdate/datetype) are provided.
+  ///
+  /// Note: term is optional when date filters (mindate/maxdate/datetype) are provided.
   public ESearchRequest buildList(JsonNode params) {
     Values v = extract(params);
     return new ESearchRequest(

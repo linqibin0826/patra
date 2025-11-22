@@ -12,9 +12,9 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /// 数据库实体,映射到表 `reg_prov_http_cfg`。
-/// 
+///
 /// 保存数据源/操作组合的 HTTP 策略覆盖,如默认头和超时定义。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

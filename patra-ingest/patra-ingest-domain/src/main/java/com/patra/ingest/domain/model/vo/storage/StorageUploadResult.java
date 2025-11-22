@@ -1,16 +1,16 @@
 package com.patra.ingest.domain.model.vo.storage;
 
 /// 对象存储上传结果 Value Object。
-/// 
+///
 /// 描述文件上传到对象存储的执行结果。
-/// 
+///
 /// **业务语义:**
-/// 
+///
 /// - 成功上传包含对象路径和文件大小
 ///   - 失败上传包含错误信息,文件大小为 0
-/// 
+///
 /// **不变性约束:** 当 `success` 为 `false` 时,`errorMessage` 应提供。
-/// 
+///
 /// @param success 上传是否成功
 /// @param objectPath 对象存储路径
 /// @param fileSizeBytes 文件大小(字节)
