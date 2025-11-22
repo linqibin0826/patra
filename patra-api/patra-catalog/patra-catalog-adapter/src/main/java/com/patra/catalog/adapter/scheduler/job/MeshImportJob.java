@@ -90,7 +90,7 @@ public class MeshImportJob {
       XxlJobHelper.log("成功获取分布式锁，开始执行 MeSH 导入任务");
 
       // 调用 Orchestrator 执行导入
-      StartImportCommand command = new StartImportCommand(null, null); // 使用默认配置
+      StartImportCommand command = new StartImportCommand("定时任务-MeSH数据导入", null); // 使用默认配置
       MeshImportResultDTO result = meshImportOrchestrator.startImport(command);
 
       log.info(

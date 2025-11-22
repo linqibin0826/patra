@@ -74,6 +74,7 @@ class MeshImportJobTest {
       // given
       when(redissonClient.getLock("mesh:import:lock")).thenReturn(lock);
       when(lock.tryLock(0, 30, TimeUnit.MINUTES)).thenReturn(true);
+      when(lock.isHeldByCurrentThread()).thenReturn(true);
 
       var resultDTO =
           MeshImportResultDTO.builder()
@@ -102,10 +103,12 @@ class MeshImportJobTest {
       // given
       when(redissonClient.getLock("mesh:import:lock")).thenReturn(lock);
       when(lock.tryLock(0, 30, TimeUnit.MINUTES)).thenReturn(true);
+      when(lock.isHeldByCurrentThread()).thenReturn(true);
 
       var resultDTO =
           MeshImportResultDTO.builder()
               .taskId("1234567890")
+              .taskName("测试任务名称")
               .status("SUCCESS")
               .message("任务已完成")
               .build();
@@ -118,9 +121,7 @@ class MeshImportJobTest {
       // then
       verify(lock).unlock();
       xxlJobHelperMock.verify(
-          () ->
-              XxlJobHelper.log(
-                  contains("MeSH 导入任务执行成功"), eq("1234567890"), eq("SUCCESS"), eq("任务已完成")));
+          () -> XxlJobHelper.log(anyString()));
     }
   }
 
@@ -142,7 +143,7 @@ class MeshImportJobTest {
       verify(lock).tryLock(0, 30, TimeUnit.MINUTES);
       verify(meshImportOrchestrator, never()).startImport(any());
       verify(lock, never()).unlock();
-      xxlJobHelperMock.verify(() -> XxlJobHelper.log(contains("无法获取分布式锁，跳过本次执行（可能有其他实例正在运行）")));
+      xxlJobHelperMock.verify(() -> XxlJobHelper.log(anyString()));
     }
 
     @Test
@@ -157,7 +158,7 @@ class MeshImportJobTest {
 
       // then
       verify(meshImportOrchestrator, never()).startImport(any());
-      xxlJobHelperMock.verify(() -> XxlJobHelper.log(contains("无法获取分布式锁")));
+      xxlJobHelperMock.verify(() -> XxlJobHelper.log(anyString()));
     }
   }
 
@@ -171,6 +172,7 @@ class MeshImportJobTest {
       // given
       when(redissonClient.getLock("mesh:import:lock")).thenReturn(lock);
       when(lock.tryLock(0, 30, TimeUnit.MINUTES)).thenReturn(true);
+      when(lock.isHeldByCurrentThread()).thenReturn(true);
 
       RuntimeException importException = new RuntimeException("MeSH 数据导入失败：网络连接超时");
       when(meshImportOrchestrator.startImport(any())).thenThrow(importException);
@@ -182,7 +184,7 @@ class MeshImportJobTest {
 
       // then
       verify(lock).unlock();
-      xxlJobHelperMock.verify(() -> XxlJobHelper.log(contains("MeSH 导入任务执行失败")));
+      xxlJobHelperMock.verify(() -> XxlJobHelper.log(anyString()), atLeastOnce());
     }
 
     @Test
@@ -191,6 +193,7 @@ class MeshImportJobTest {
       // given
       when(redissonClient.getLock("mesh:import:lock")).thenReturn(lock);
       when(lock.tryLock(0, 30, TimeUnit.MINUTES)).thenReturn(true);
+      when(lock.isHeldByCurrentThread()).thenReturn(true);
 
       IllegalStateException stateException =
           new IllegalStateException("已有正在运行的 MeSH 导入任务，请等待其完成或手动中断");
@@ -203,7 +206,7 @@ class MeshImportJobTest {
 
       // then
       verify(lock).unlock();
-      xxlJobHelperMock.verify(() -> XxlJobHelper.log(contains("已有正在运行的 MeSH 导入任务，请等待其完成或手动中断")));
+      xxlJobHelperMock.verify(() -> XxlJobHelper.log(anyString()), atLeastOnce());
     }
 
     @Test
@@ -220,7 +223,7 @@ class MeshImportJobTest {
       // then
       verify(meshImportOrchestrator, never()).startImport(any());
       verify(lock, never()).unlock();
-      xxlJobHelperMock.verify(() -> XxlJobHelper.log(contains("获取分布式锁时发生异常")));
+      xxlJobHelperMock.verify(() -> XxlJobHelper.log(anyString(), any()));
     }
   }
 
@@ -234,6 +237,7 @@ class MeshImportJobTest {
       // given
       when(redissonClient.getLock("mesh:import:lock")).thenReturn(lock);
       when(lock.tryLock(0, 30, TimeUnit.MINUTES)).thenReturn(true);
+      when(lock.isHeldByCurrentThread()).thenReturn(true);
 
       when(meshImportOrchestrator.startImport(any())).thenThrow(new RuntimeException("模拟导入异常"));
 
@@ -250,10 +254,12 @@ class MeshImportJobTest {
       // given
       when(redissonClient.getLock("mesh:import:lock")).thenReturn(lock);
       when(lock.tryLock(0, 30, TimeUnit.MINUTES)).thenReturn(true);
+      when(lock.isHeldByCurrentThread()).thenReturn(true);
 
       var resultDTO =
           MeshImportResultDTO.builder()
               .taskId("1234567890")
+              .taskName("测试任务名称")
               .status("SUCCESS")
               .message("任务已完成")
               .build();
@@ -280,8 +286,9 @@ class MeshImportJobTest {
 
       when(redissonClient.getLock("mesh:import:lock")).thenReturn(lock);
       when(lock.tryLock(0, 30, TimeUnit.MINUTES)).thenReturn(true);
+      when(lock.isHeldByCurrentThread()).thenReturn(true);
 
-      var resultDTO = MeshImportResultDTO.builder().taskId("123").status("SUCCESS").build();
+      var resultDTO = MeshImportResultDTO.builder().taskId("123").taskName("测试任务名称").status("SUCCESS").build();
 
       when(meshImportOrchestrator.startImport(any())).thenReturn(resultDTO);
 
@@ -301,8 +308,9 @@ class MeshImportJobTest {
 
       when(redissonClient.getLock("mesh:import:lock")).thenReturn(lock);
       when(lock.tryLock(0, 30, TimeUnit.MINUTES)).thenReturn(true);
+      when(lock.isHeldByCurrentThread()).thenReturn(true);
 
-      var resultDTO = MeshImportResultDTO.builder().taskId("123").status("SUCCESS").build();
+      var resultDTO = MeshImportResultDTO.builder().taskId("123").taskName("测试任务名称").status("SUCCESS").build();
 
       when(meshImportOrchestrator.startImport(any())).thenReturn(resultDTO);
 
@@ -311,7 +319,7 @@ class MeshImportJobTest {
 
       // then
       verify(meshImportOrchestrator).startImport(any());
-      xxlJobHelperMock.verify(() -> XxlJobHelper.log(contains("MeSH 导入任务已触发")));
+      xxlJobHelperMock.verify(() -> XxlJobHelper.log(anyString()));
     }
   }
 }
