@@ -88,6 +88,182 @@ class StaxXmlParserImplTest {
   }
 
   @Test
+  @DisplayName("解析Descriptor - 完整字段解析验证（日期、限定词、药理作用等）")
+  void parseDescriptors_completeXml_shouldParseAllFields() {
+    // Given: 包含所有新字段的完整测试 XML
+    String xml =
+        """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <DescriptorRecordSet>
+          <DescriptorRecord DescriptorClass="1">
+            <DescriptorUI>D000001</DescriptorUI>
+            <DescriptorName>
+              <String>Calcimycin</String>
+            </DescriptorName>
+            <DateCreated>
+              <Year>1974</Year>
+              <Month>11</Month>
+              <Day>11</Day>
+            </DateCreated>
+            <DateRevised>
+              <Year>2023</Year>
+              <Month>05</Month>
+              <Day>24</Day>
+            </DateRevised>
+            <DateEstablished>
+              <Year>1975</Year>
+              <Month>01</Month>
+              <Day>01</Day>
+            </DateEstablished>
+            <HistoryNote>75; was A 23187 1974</HistoryNote>
+            <OnlineNote>use CALCIMYCIN to search A 23187 1975-90</OnlineNote>
+            <NLMClassificationNumber>QU 90</NLMClassificationNumber>
+            <AllowableQualifiersList>
+              <AllowableQualifier>
+                <QualifierReferredTo>
+                  <QualifierUI>Q000008</QualifierUI>
+                  <QualifierName>
+                    <String>administration &amp; dosage</String>
+                  </QualifierName>
+                </QualifierReferredTo>
+                <Abbreviation>AD</Abbreviation>
+              </AllowableQualifier>
+              <AllowableQualifier>
+                <QualifierReferredTo>
+                  <QualifierUI>Q000494</QualifierUI>
+                  <QualifierName>
+                    <String>pharmacology</String>
+                  </QualifierName>
+                </QualifierReferredTo>
+                <Abbreviation>PD</Abbreviation>
+              </AllowableQualifier>
+            </AllowableQualifiersList>
+            <PharmacologicalActionList>
+              <PharmacologicalAction>
+                <DescriptorUI>D000900</DescriptorUI>
+                <DescriptorName>
+                  <String>Anti-Bacterial Agents</String>
+                </DescriptorName>
+              </PharmacologicalAction>
+            </PharmacologicalActionList>
+            <PreviousIndexingList>
+              <PreviousIndexing>Antibiotics (1966-1974)</PreviousIndexing>
+              <PreviousIndexing>Carboxylic Acids (1973-1974)</PreviousIndexing>
+            </PreviousIndexingList>
+            <SeeRelatedList>
+              <SeeRelatedDescriptor>
+                <DescriptorUI>D015764</DescriptorUI>
+                <DescriptorName>
+                  <String>Cell Adhesion Molecules</String>
+                </DescriptorName>
+              </SeeRelatedDescriptor>
+            </SeeRelatedList>
+            <TreeNumberList>
+              <TreeNumber>D03.438.221</TreeNumber>
+            </TreeNumberList>
+            <ConceptList>
+              <Concept PreferredConceptYN="Y">
+                <ConceptUI>M0000001</ConceptUI>
+                <ConceptName>
+                  <String>Calcimycin</String>
+                </ConceptName>
+                <RegistryNumber>52665-69-7</RegistryNumber>
+                <RelatedRegistryNumberList>
+                  <RelatedRegistryNumber>37H9VM9WZL (Calcimycin)</RelatedRegistryNumber>
+                </RelatedRegistryNumberList>
+                <ConceptRelationList>
+                  <ConceptRelation RelationName="BRD">
+                    <Concept1UI>M0000001</Concept1UI>
+                    <Concept2UI>M0000002</Concept2UI>
+                  </ConceptRelation>
+                </ConceptRelationList>
+                <TermList>
+                  <Term LexicalTag="PEF" RecordPreferredTermYN="Y" ConceptPreferredTermYN="Y" IsPermutedTermYN="N">
+                    <TermUI>T000001</TermUI>
+                    <String>Calcimycin</String>
+                    <DateCreated>
+                      <Year>1999</Year>
+                      <Month>01</Month>
+                      <Day>01</Day>
+                    </DateCreated>
+                    <ThesaurusIDlist>
+                      <ThesaurusID>FDA SRS (2014)</ThesaurusID>
+                      <ThesaurusID>NLM (1975)</ThesaurusID>
+                    </ThesaurusIDlist>
+                  </Term>
+                  <Term LexicalTag="ABB" RecordPreferredTermYN="N" ConceptPreferredTermYN="N" IsPermutedTermYN="N">
+                    <TermUI>T000002</TermUI>
+                    <String>A-23187</String>
+                  </Term>
+                </TermList>
+              </Concept>
+            </ConceptList>
+          </DescriptorRecord>
+        </DescriptorRecordSet>
+        """;
+
+    InputStream inputStream = new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8));
+
+    // When: 解析 XML
+    try (Stream<MeshDescriptorAggregate> stream = xmlParser.parseDescriptors(inputStream)) {
+      List<MeshDescriptorAggregate> descriptors = stream.toList();
+
+      // Then: 应该解析出1个Descriptor
+      assertThat(descriptors).hasSize(1);
+      MeshDescriptorAggregate descriptor = descriptors.get(0);
+
+      // 验证基本字段
+      assertThat(descriptor.getUi().ui()).isEqualTo("D000001");
+      assertThat(descriptor.getName()).isEqualTo("Calcimycin");
+      assertThat(descriptor.getDescriptorClass().getCode()).isEqualTo("1");
+
+      // 验证日期字段
+      assertThat(descriptor.getDateCreated()).isEqualTo("19741111");
+      assertThat(descriptor.getDateRevised()).isEqualTo("20230524");
+      assertThat(descriptor.getDateEstablished()).isEqualTo("19750101");
+
+      // 验证文本字段
+      assertThat(descriptor.getHistoryNote()).isEqualTo("75; was A 23187 1974");
+      assertThat(descriptor.getOnlineNote()).isEqualTo("use CALCIMYCIN to search A 23187 1975-90");
+      assertThat(descriptor.getNlmClassificationNumber()).isEqualTo("QU 90");
+
+      // 验证限定词列表
+      assertThat(descriptor.getAllowableQualifiers()).hasSize(2);
+      assertThat(descriptor.getAllowableQualifiers().get(0).qualifierUi().ui())
+          .isEqualTo("Q000008");
+      assertThat(descriptor.getAllowableQualifiers().get(0).qualifierName())
+          .isEqualTo("administration & dosage");
+      assertThat(descriptor.getAllowableQualifiers().get(1).qualifierUi().ui())
+          .isEqualTo("Q000494");
+
+      // 验证药理作用列表
+      assertThat(descriptor.getPharmacologicalActions()).hasSize(1);
+      assertThat(descriptor.getPharmacologicalActions().get(0).descriptorUi().ui())
+          .isEqualTo("D000900");
+      assertThat(descriptor.getPharmacologicalActions().get(0).descriptorName())
+          .isEqualTo("Anti-Bacterial Agents");
+
+      // 验证之前索引列表
+      assertThat(descriptor.getPreviousIndexings()).hasSize(2);
+      assertThat(descriptor.getPreviousIndexings()).contains("Antibiotics (1966-1974)");
+      assertThat(descriptor.getPreviousIndexings()).contains("Carboxylic Acids (1973-1974)");
+
+      // 验证相关主题词列表
+      assertThat(descriptor.getSeeRelatedDescriptors()).hasSize(1);
+      assertThat(descriptor.getSeeRelatedDescriptors().get(0).descriptorUi().ui())
+          .isEqualTo("D015764");
+      assertThat(descriptor.getSeeRelatedDescriptors().get(0).descriptorName())
+          .isEqualTo("Cell Adhesion Molecules");
+
+      // 注意：Concepts 和 EntryTerms 在 parseDescriptors() 中不解析
+      // 它们通过 parseConcepts() 和 parseEntryTerms() 单独解析
+      // 这是为了支持流式处理大文件，避免一次性加载所有数据到内存
+      assertThat(descriptor.getConcepts()).isEmpty();
+      assertThat(descriptor.getEntryTerms()).isEmpty();
+    }
+  }
+
+  @Test
   @DisplayName("解析TreeNumber - 应该返回所有树形编号")
   void parseTreeNumbers_validXml_shouldReturnTreeNumbers() {
     // Given: 测试 XML

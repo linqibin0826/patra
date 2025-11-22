@@ -6,7 +6,11 @@ import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
 import com.patra.catalog.domain.model.enums.DescriptorClass;
+import com.patra.catalog.domain.model.vo.mesh.AllowableQualifier;
+import com.patra.catalog.domain.model.vo.mesh.ConceptRelation;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
+import com.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
+import com.patra.catalog.domain.model.vo.mesh.SeeRelatedDescriptor;
 import com.patra.common.domain.AggregateRoot;
 import java.io.Serial;
 import java.util.ArrayList;
@@ -81,6 +85,15 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
   /// 另请参考(相关主题词建议)
   private String considerAlso;
 
+  /// 历史记录(变更历史和使用指南)
+  private String historyNote;
+
+  /// 在线检索说明(如何在PubMed中使用此主题词)
+  private String onlineNote;
+
+  /// NLM分类号(用于图书馆分类)
+  private String nlmClassificationNumber;
+
   // ========== 日期信息 ==========
 
   /// 创建日期(格式：YYYYMMDD)
@@ -102,6 +115,18 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
 
   /// 概念列表(平均 5-6 个,必须有一个首选概念)
   private final List<MeshConcept> concepts;
+
+  /// 允许的限定词列表(平均 23 个)
+  private final List<AllowableQualifier> allowableQualifiers;
+
+  /// 药理作用列表(较少,约 0.2 个/主题词)
+  private final List<PharmacologicalAction> pharmacologicalActions;
+
+  /// 之前索引列表(历史数据,约 0.2 个/主题词)
+  private final List<String> previousIndexings;
+
+  /// 相关主题词列表(See Related,约 0.2 个/主题词)
+  private final List<SeeRelatedDescriptor> seeRelatedDescriptors;
 
   // ========== 扩展字段 ==========
 
@@ -147,6 +172,10 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
     this.treeNumbers = new ArrayList<>();
     this.entryTerms = new ArrayList<>();
     this.concepts = new ArrayList<>();
+    this.allowableQualifiers = new ArrayList<>();
+    this.pharmacologicalActions = new ArrayList<>();
+    this.previousIndexings = new ArrayList<>();
+    this.seeRelatedDescriptors = new ArrayList<>();
   }
 
   // ========== 工厂方法 ==========
@@ -215,6 +244,10 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
     aggregate.dateCreated = dateCreated;
     aggregate.dateRevised = dateRevised;
     aggregate.dateEstablished = dateEstablished;
+
+    // 注意：新增的字段（historyNote, onlineNote, nlmClassificationNumber）
+    // 以及新增的集合（allowableQualifiers, pharmacologicalActions, etc.）
+    // 在 restore 后通过 setter 方法设置
 
     aggregate.assignVersion(version);
     return aggregate;
@@ -409,6 +442,27 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
     this.meshVersion = newVersion;
   }
 
+  /// 设置创建日期。
+  ///
+  /// @param dateCreated 创建日期(格式：YYYYMMDD)
+  public void setDateCreated(String dateCreated) {
+    this.dateCreated = dateCreated;
+  }
+
+  /// 设置修订日期。
+  ///
+  /// @param dateRevised 修订日期(格式：YYYYMMDD)
+  public void setDateRevised(String dateRevised) {
+    this.dateRevised = dateRevised;
+  }
+
+  /// 设置建立日期。
+  ///
+  /// @param dateEstablished 建立日期(格式：YYYYMMDD)
+  public void setDateEstablished(String dateEstablished) {
+    this.dateEstablished = dateEstablished;
+  }
+
   /// 设置范围说明。
   ///
   /// @param scopeNote 范围说明
@@ -428,6 +482,178 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
   /// @param json 元数据JSON
   public void setMetadataJson(String json) {
     this.metadataJson = json;
+  }
+
+  /// 设置历史记录。
+  ///
+  /// @param historyNote 历史记录
+  public void setHistoryNote(String historyNote) {
+    this.historyNote = historyNote;
+  }
+
+  /// 设置在线检索说明。
+  ///
+  /// @param onlineNote 在线检索说明
+  public void setOnlineNote(String onlineNote) {
+    this.onlineNote = onlineNote;
+  }
+
+  /// 设置NLM分类号。
+  ///
+  /// @param nlmClassificationNumber NLM分类号
+  public void setNlmClassificationNumber(String nlmClassificationNumber) {
+    this.nlmClassificationNumber = nlmClassificationNumber;
+  }
+
+  // ========== 允许的限定词管理 ==========
+
+  /// 添加允许的限定词。
+  ///
+  /// @param qualifier 允许的限定词
+  /// @return 当前聚合根(支持链式调用)
+  public MeshDescriptorAggregate addAllowableQualifier(AllowableQualifier qualifier) {
+    Assert.notNull(qualifier, "允许的限定词不能为空");
+
+    // 检查是否已存在相同的限定词
+    boolean exists =
+        allowableQualifiers.stream()
+            .anyMatch(q -> q.qualifierUi().equals(qualifier.qualifierUi()));
+
+    if (!exists) {
+      allowableQualifiers.add(qualifier);
+    }
+
+    return this;
+  }
+
+  /// 批量添加允许的限定词。
+  ///
+  /// @param qualifierList 允许的限定词列表
+  /// @return 当前聚合根(支持链式调用)
+  public MeshDescriptorAggregate addAllowableQualifiers(List<AllowableQualifier> qualifierList) {
+    if (qualifierList != null && !qualifierList.isEmpty()) {
+      qualifierList.forEach(this::addAllowableQualifier);
+    }
+    return this;
+  }
+
+  /// 获取允许的限定词列表(不可变视图)。
+  ///
+  /// @return 允许的限定词列表
+  public List<AllowableQualifier> getAllowableQualifiers() {
+    return Collections.unmodifiableList(allowableQualifiers);
+  }
+
+  // ========== 药理作用管理 ==========
+
+  /// 添加药理作用。
+  ///
+  /// @param action 药理作用
+  /// @return 当前聚合根(支持链式调用)
+  public MeshDescriptorAggregate addPharmacologicalAction(PharmacologicalAction action) {
+    Assert.notNull(action, "药理作用不能为空");
+
+    // 检查是否已存在相同的药理作用
+    boolean exists =
+        pharmacologicalActions.stream()
+            .anyMatch(pa -> pa.descriptorUi().equals(action.descriptorUi()));
+
+    if (!exists) {
+      pharmacologicalActions.add(action);
+    }
+
+    return this;
+  }
+
+  /// 批量添加药理作用。
+  ///
+  /// @param actionList 药理作用列表
+  /// @return 当前聚合根(支持链式调用)
+  public MeshDescriptorAggregate addPharmacologicalActions(List<PharmacologicalAction> actionList) {
+    if (actionList != null && !actionList.isEmpty()) {
+      actionList.forEach(this::addPharmacologicalAction);
+    }
+    return this;
+  }
+
+  /// 获取药理作用列表(不可变视图)。
+  ///
+  /// @return 药理作用列表
+  public List<PharmacologicalAction> getPharmacologicalActions() {
+    return Collections.unmodifiableList(pharmacologicalActions);
+  }
+
+  // ========== 之前索引管理 ==========
+
+  /// 添加之前索引。
+  ///
+  /// @param previousIndexing 之前索引
+  /// @return 当前聚合根(支持链式调用)
+  public MeshDescriptorAggregate addPreviousIndexing(String previousIndexing) {
+    Assert.notBlank(previousIndexing, "之前索引不能为空");
+
+    if (!previousIndexings.contains(previousIndexing)) {
+      previousIndexings.add(previousIndexing);
+    }
+
+    return this;
+  }
+
+  /// 批量添加之前索引。
+  ///
+  /// @param indexingList 之前索引列表
+  /// @return 当前聚合根(支持链式调用)
+  public MeshDescriptorAggregate addPreviousIndexings(List<String> indexingList) {
+    if (indexingList != null && !indexingList.isEmpty()) {
+      indexingList.forEach(this::addPreviousIndexing);
+    }
+    return this;
+  }
+
+  /// 获取之前索引列表(不可变视图)。
+  ///
+  /// @return 之前索引列表
+  public List<String> getPreviousIndexings() {
+    return Collections.unmodifiableList(previousIndexings);
+  }
+
+  // ========== 相关主题词管理 ==========
+
+  /// 添加相关主题词。
+  ///
+  /// @param descriptor 相关主题词
+  /// @return 当前聚合根(支持链式调用)
+  public MeshDescriptorAggregate addSeeRelatedDescriptor(SeeRelatedDescriptor descriptor) {
+    Assert.notNull(descriptor, "相关主题词不能为空");
+
+    // 检查是否已存在相同的相关主题词
+    boolean exists =
+        seeRelatedDescriptors.stream()
+            .anyMatch(srd -> srd.descriptorUi().equals(descriptor.descriptorUi()));
+
+    if (!exists) {
+      seeRelatedDescriptors.add(descriptor);
+    }
+
+    return this;
+  }
+
+  /// 批量添加相关主题词。
+  ///
+  /// @param descriptorList 相关主题词列表
+  /// @return 当前聚合根(支持链式调用)
+  public MeshDescriptorAggregate addSeeRelatedDescriptors(List<SeeRelatedDescriptor> descriptorList) {
+    if (descriptorList != null && !descriptorList.isEmpty()) {
+      descriptorList.forEach(this::addSeeRelatedDescriptor);
+    }
+    return this;
+  }
+
+  /// 获取相关主题词列表(不可变视图)。
+  ///
+  /// @return 相关主题词列表
+  public List<SeeRelatedDescriptor> getSeeRelatedDescriptors() {
+    return Collections.unmodifiableList(seeRelatedDescriptors);
   }
 
   // ========== 便捷判断方法 ==========

@@ -2,9 +2,13 @@ package com.patra.catalog.domain.model.entity;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
+import com.patra.catalog.domain.model.vo.mesh.ConceptRelation;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import lombok.Getter;
 
 /// MeSH 概念实体(Aggregate内实体,不是聚合根)。
@@ -79,6 +83,12 @@ public class MeshConcept implements Serializable {
   /// 概念状态
   private String conceptStatus;
 
+  /// 相关注册号列表(如 "52665-69-7 (Calcimycin)")
+  private final List<String> relatedRegistryNumbers;
+
+  /// 概念关系列表(概念间的语义关系)
+  private final List<ConceptRelation> conceptRelations;
+
   /// 私有构造函数。
   ///
   /// @param id 主键ID(新建时为null)
@@ -104,6 +114,10 @@ public class MeshConcept implements Serializable {
     this.conceptUi = conceptUi;
     this.conceptName = conceptName;
     this.isPreferred = isPreferred;
+
+    // 初始化集合
+    this.relatedRegistryNumbers = new ArrayList<>();
+    this.conceptRelations = new ArrayList<>();
   }
 
   // ========== 工厂方法 ==========
@@ -220,6 +234,77 @@ public class MeshConcept implements Serializable {
   /// @return true 如果有范围说明
   public boolean hasScopeNote() {
     return StrUtil.isNotBlank(scopeNote);
+  }
+
+  /// 添加相关注册号。
+  ///
+  /// @param relatedRegistryNumber 相关注册号
+  /// @return 当前对象(支持链式调用)
+  public MeshConcept addRelatedRegistryNumber(String relatedRegistryNumber) {
+    if (StrUtil.isNotBlank(relatedRegistryNumber)
+        && !relatedRegistryNumbers.contains(relatedRegistryNumber)) {
+      relatedRegistryNumbers.add(relatedRegistryNumber);
+    }
+    return this;
+  }
+
+  /// 批量添加相关注册号。
+  ///
+  /// @param registryNumbers 相关注册号列表
+  /// @return 当前对象(支持链式调用)
+  public MeshConcept addRelatedRegistryNumbers(List<String> registryNumbers) {
+    if (registryNumbers != null && !registryNumbers.isEmpty()) {
+      registryNumbers.forEach(this::addRelatedRegistryNumber);
+    }
+    return this;
+  }
+
+  /// 获取相关注册号列表(不可变视图)。
+  ///
+  /// @return 相关注册号列表
+  public List<String> getRelatedRegistryNumbers() {
+    return Collections.unmodifiableList(relatedRegistryNumbers);
+  }
+
+  /// 添加概念关系。
+  ///
+  /// @param relation 概念关系
+  /// @return 当前对象(支持链式调用)
+  public MeshConcept addConceptRelation(ConceptRelation relation) {
+    Assert.notNull(relation, "概念关系不能为空");
+
+    // 检查是否已存在相同的概念关系
+    boolean exists =
+        conceptRelations.stream()
+            .anyMatch(
+                cr ->
+                    cr.relationName().equals(relation.relationName())
+                        && cr.concept1Ui().equals(relation.concept1Ui())
+                        && cr.concept2Ui().equals(relation.concept2Ui()));
+
+    if (!exists) {
+      conceptRelations.add(relation);
+    }
+
+    return this;
+  }
+
+  /// 批量添加概念关系。
+  ///
+  /// @param relations 概念关系列表
+  /// @return 当前对象(支持链式调用)
+  public MeshConcept addConceptRelations(List<ConceptRelation> relations) {
+    if (relations != null && !relations.isEmpty()) {
+      relations.forEach(this::addConceptRelation);
+    }
+    return this;
+  }
+
+  /// 获取概念关系列表(不可变视图)。
+  ///
+  /// @return 概念关系列表
+  public List<ConceptRelation> getConceptRelations() {
+    return Collections.unmodifiableList(conceptRelations);
   }
 
   @Override
