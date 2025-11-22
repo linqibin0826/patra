@@ -503,6 +503,16 @@
                         </execution>
                     </executions>
                 </plugin>
+
+                <!-- Spring Boot Maven Plugin - centralized JVM arguments -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot.version}</version>
+                    <configuration>
+                        <jvmArguments>-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8</jvmArguments>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
 
@@ -574,7 +584,7 @@
                     <reuseForks>true</reuseForks>  <!-- 复用JVM进程，减少启动开销 -->
 
                     <!-- @{argLine} is populated by JaCoCo, must be preserved -->
-                    <argLine>@{argLine} -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED</argLine>
+                    <argLine>@{argLine} -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED -XX:+EnableDynamicAgentLoading</argLine>
                     <!-- 强制使用 UTF-8 编码输出测试报告和控制台日志 -->
                     <encoding>UTF-8</encoding>
                     <reportNameSuffix>utf8</reportNameSuffix>

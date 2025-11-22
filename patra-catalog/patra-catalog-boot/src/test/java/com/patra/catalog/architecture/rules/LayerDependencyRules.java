@@ -141,7 +141,7 @@ public final class LayerDependencyRules {
   ///   - 只有 Boot 层可以依赖其他所有层
   ///   - 反向依赖会导致循环依赖
   ///
-  /// **注意：**使用精确的包名（..catalog.boot..）避免匹配 Spring Boot 框架包。
+  /// **注意**:使用精确的包名（..catalog.boot..）避免匹配 Spring Boot 框架包。
   public static final ArchRule adapter_should_not_depend_on_boot =
       noClasses()
           .that()
