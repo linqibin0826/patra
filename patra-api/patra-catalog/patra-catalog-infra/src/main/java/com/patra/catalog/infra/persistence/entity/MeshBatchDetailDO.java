@@ -8,11 +8,11 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// MeSH 批次详情数据库实体，映射到表 `cat_mesh_batch_detail`。
-/// 
+///
 /// 表结构：记录每个批次的处理详情，用于错误追踪和重试管理
-/// 
+///
 /// 关键字段说明：
-/// 
+///
 /// - `import_id` - 关联任务 ID（外键：cat_mesh_import_task.id）
 ///   - `table_name` - 表名
 ///   - `batch_num` - 批次序号（从 1 开始）
@@ -20,23 +20,23 @@ import lombok.EqualsAndHashCode;
 ///   - `status` - 批次状态（PENDING/PROCESSING/SUCCESS/FAILED）
 ///   - `retry_count` - 重试次数（最多 3 次）
 ///   - `error_message` - 错误信息（失败时记录）
-/// 
+///
 /// **设计原则**：
-/// 
+///
 /// - 继承 {@link BaseDO}：获得10个审计字段
 ///   - 细粒度追踪：每个批次单独记录，便于定位问题
 ///   - 重试机制：记录重试次数，防止无限重试
 ///   - 性能监控：记录批次开始和结束时间，便于性能分析
-/// 
+///
 /// **使用场景**：
-/// 
+///
 /// - 失败重试：查询 status = 'FAILED' 且 retry_count < 3 的批次
 ///   - 错误分析：通过 error_message 分析失败原因
 ///   - 性能分析：计算批次处理时间（end_time - start_time）
 ///   - 进度恢复：查询最大 batch_num，从下一批次继续
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_mesh_batch_detail")

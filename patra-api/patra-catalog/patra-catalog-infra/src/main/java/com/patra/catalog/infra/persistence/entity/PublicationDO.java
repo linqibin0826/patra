@@ -1,28 +1,28 @@
 package com.patra.catalog.infra.persistence.entity;
 
-import java.time.Instant;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO;
+import java.time.Instant;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// 文献出版物数据库实体,映射到表 `cat_publication`。
-/// 
+///
 /// 表结构: 文献出版物核心实体,包含标识符、标题、语言、出版信息、OA 状态、作者和引用信息。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `pmid` PubMed ID,唯一约束 uk_pmid
 ///   - `doi` 数字对象标识符,唯一约束 uk_doi
 ///   - `venue_id` 和 `venue_instance_id` 关联载体信息(冗余优化)
 ///   - `language_base` 生成列,基于 `language_code` 自动计算
 ///   - `is_oa` 和 `oa_status` OA 开放获取信息(冗余)
 ///   - `ext_data` JSON 扩展数据字段
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -67,8 +67,8 @@ public class PublicationDO extends BaseDO {
   private String languageCode;
 
   /// 基础语种(生成列)。
-/// 
-/// 此字段由数据库自动维护,不应在应用层插入或更新。
+  ///
+  /// 此字段由数据库自动维护,不应在应用层插入或更新。
   @TableField(
       value = "language_base",
       insertStrategy = FieldStrategy.NEVER,
@@ -118,5 +118,4 @@ public class PublicationDO extends BaseDO {
   /// 最后同步时间
   @TableField("last_synced_at")
   private Instant lastSyncedAt;
-
 }

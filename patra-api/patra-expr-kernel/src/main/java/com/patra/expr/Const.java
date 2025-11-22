@@ -1,7 +1,7 @@
 package com.patra.expr;
 
 /// 布尔常量表达式。
-/// 
+///
 /// 表示始终为真或始终为假的表达式。
 public enum Const implements Expr {
   /// 真常量。

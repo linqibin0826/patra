@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// TaskStatus 枚举测试。
-/// 
+///
 /// @author Patra Team
 @DisplayName("TaskStatus 枚举测试")
 class TaskStatusTest {

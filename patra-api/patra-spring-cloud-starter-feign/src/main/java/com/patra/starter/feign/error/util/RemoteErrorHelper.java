@@ -3,16 +3,16 @@ package com.patra.starter.feign.error.util;
 import com.patra.starter.feign.error.exception.RemoteCallException;
 
 /// 用于处理 {@link com.patra.starter.feign.error.exception.RemoteCallException} 的辅助工具类
-/// 
+///
 /// 提供常见 HTTP / 业务错误模式的语义检查,使适配器代码保持简洁和表达力。
-/// 
+///
 /// **支持的错误检查:**
-/// 
+///
 /// - HTTP 状态码检查(404, 409, 401, 403, 422, 429等)
 ///   - 业务错误码匹配(支持约定的后缀如 -0404)
 ///   - 可重试性判断(5xx, 429, 408, 503, 504)
 ///   - 客户端错误(4xx)和服务器错误(5xx)分类
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public final class RemoteErrorHelper {
@@ -56,15 +56,15 @@ public final class RemoteErrorHelper {
   }
 
   /// 判断下游调用是否导致 4xx 状态码
-/// 
-/// @return 如果是客户端错误则返回 `true`
+  ///
+  /// @return 如果是客户端错误则返回 `true`
   public static boolean isClientError(RemoteCallException ex) {
     return ex.getHttpStatus() >= 400 && ex.getHttpStatus() < 500;
   }
 
   /// 判断下游调用是否导致 5xx 状态码
-/// 
-/// @return 如果是服务器错误则返回 `true`
+  ///
+  /// @return 如果是服务器错误则返回 `true`
   public static boolean isServerError(RemoteCallException ex) {
     return ex.getHttpStatus() >= 500 && ex.getHttpStatus() < 600;
   }
@@ -75,15 +75,15 @@ public final class RemoteErrorHelper {
   }
 
   /// 检查是否存在下游业务错误码
-/// 
-/// @return 如果存在业务错误码则返回 `true`
+  ///
+  /// @return 如果存在业务错误码则返回 `true`
   public static boolean hasErrorCode(RemoteCallException ex) {
     return ex.hasErrorCode();
   }
 
   /// 检查是否存在下游跟踪标识符
-/// 
-/// @return 如果存在跟踪标识符则返回 `true`
+  ///
+  /// @return 如果存在跟踪标识符则返回 `true`
   public static boolean hasTraceId(RemoteCallException ex) {
     return ex.hasTraceId();
   }
@@ -108,8 +108,8 @@ public final class RemoteErrorHelper {
   }
 
   /// 判断错误是否代表可能可重试的瞬时故障(如 5xx, 429, 408, 503, 504)
-/// 
-/// @return 如果错误可重试则返回 `true`
+  ///
+  /// @return 如果错误可重试则返回 `true`
   public static boolean isRetryable(RemoteCallException ex) {
     int status = ex.getHttpStatus();
     return isServerError(ex)

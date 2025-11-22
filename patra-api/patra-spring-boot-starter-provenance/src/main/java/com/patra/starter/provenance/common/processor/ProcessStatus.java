@@ -1,9 +1,9 @@
 package com.patra.starter.provenance.common.processor;
 
 /// 处理状态枚举
-/// 
+///
 /// 定义Processor处理数据时的所有可能状态。
-/// 
+///
 /// @author Patra Architecture Team
 /// @since 0.1.0
 public enum ProcessStatus {

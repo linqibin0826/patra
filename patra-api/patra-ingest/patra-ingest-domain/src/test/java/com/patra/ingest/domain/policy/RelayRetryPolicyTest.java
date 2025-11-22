@@ -9,14 +9,14 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// RelayRetryPolicy 单元测试
-/// 
+///
 /// 测试重点：
-/// 
+///
 /// - 参数验证（边界条件）
 ///   - 指数退避算法正确性
 ///   - 最大延迟限制（clamp）
 ///   - 边缘情况（溢出、极端值）
-/// 
+///
 /// @author linqibin
 @DisplayName("RelayRetryPolicy 单元测试")
 class RelayRetryPolicyTest {

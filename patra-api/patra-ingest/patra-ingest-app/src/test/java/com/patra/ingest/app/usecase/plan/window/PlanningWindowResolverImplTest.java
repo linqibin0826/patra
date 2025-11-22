@@ -16,9 +16,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /// PlanningWindowResolverImpl 单元测试
-/// 
+///
 /// 测试策略: 纯单元测试,验证窗口解析逻辑
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("PlanningWindowResolverImpl 单元测试")

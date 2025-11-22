@@ -36,21 +36,21 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /// ExprRepositoryMpImpl 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 使用 Mockito Mock 所有依赖 (Mapper, Converter)
 ///   - 不启动 Spring 容器，纯单元测试
 ///   - 验证方法调用、参数传递和返回值转换
-/// 
+///
 /// 覆盖场景：
-/// 
+///
 /// - 正常加载表达式快照 (loadSnapshot)
 ///   - 处理 null 参数 (endpointName, at)
 ///   - 数据源代码未找到异常
 ///   - 操作类型键规范化 (operationType → operationKey)
 ///   - 端点名称规范化 (endpointName → normalizedEndpoint)
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)

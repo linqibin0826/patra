@@ -1,23 +1,21 @@
 package com.patra.catalog.infra.persistence.entity;
 
-import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.math.BigDecimal;
-import java.time.Instant;
-
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO;
+import java.math.BigDecimal;
+import java.time.Instant;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// 资助信息数据库实体,映射到表 `cat_funding`。
-/// 
+///
 /// 表结构: 管理研究资金来源和项目信息,通过去重策略避免重复存储。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `dedup_key` 去重键(MD5 哈希,基于 agency_name + grant_id),唯一约束 uk_dedup_key
 ///   - `funder_id` Crossref Funder Registry ID,支持标准化查询
 ///   - `ror_id` ROR(Research Organization Registry)标识符
@@ -25,7 +23,7 @@ import lombok.EqualsAndHashCode;
 ///   - `start_date` 和 `end_date` 开始/结束日期(DATE),映射为 Instant（UTC午夜）
 ///   - `funding_type` 资助类型,CHECK 约束 6 个枚举值
 ///   - `metadata` JSON 扩展数据字段
-/// 
+///
 /// @author linqibin
 /// @since 0.4.0
 @Data
@@ -57,8 +55,8 @@ public class FundingDO extends BaseDO {
   private String grantName;
 
   /// 资助类型(Government/Foundation/Corporate/University/Non-profit/Other)。
-/// 
-/// CHECK 约束确保值在枚举范围内。
+  ///
+  /// CHECK 约束确保值在枚举范围内。
   @TableField("funding_type")
   private String fundingType;
 

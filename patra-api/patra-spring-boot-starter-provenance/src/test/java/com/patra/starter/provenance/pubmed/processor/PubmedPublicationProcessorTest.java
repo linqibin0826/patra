@@ -41,9 +41,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /// PubmedPublicationProcessor 单元测试
-/// 
+///
 /// 测试策略：使用Mock对象进行单元测试，验证处理器的核心逻辑和异常处理。
-/// 
+///
 /// @author Patra Architecture Team
 /// @since 0.1.0
 @DisplayName("PubmedPublicationProcessor 单元测试")

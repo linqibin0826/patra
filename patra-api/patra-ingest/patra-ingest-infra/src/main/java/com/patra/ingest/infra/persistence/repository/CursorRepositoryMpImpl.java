@@ -14,17 +14,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 /// 游标（Cursor）仓储实现,基于 MyBatis-Plus。
-/// 
+///
 /// 职责:
-/// 
+///
 /// - 插入和更新增量游标,包含规范化的 instant/numeric 值
 ///   - 按复合键(数据源、操作、键、作用域、命名空间)查找游标
 ///   - 查询特定数据源/操作的最新全局时间游标水位(用于监控和重放起点)
-/// 
+///
 /// 设计: 更新后立即执行 selectById 获取数据库衍生字段(如 normalizedInstant)。
-/// 
+///
 /// 日志策略: DEBUG 级别记录 insert/update 及关键标识符;查询操作不记录日志。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Repository
@@ -36,9 +36,9 @@ public class CursorRepositoryMpImpl implements CursorRepository {
   private final CursorConverter converter;
 
   /// 保存游标。
-/// 
-/// @param cursor 游标实体
-/// @return 持久化后的游标,包含数据库生成的字段
+  ///
+  /// @param cursor 游标实体
+  /// @return 持久化后的游标,包含数据库生成的字段
   @Override
   public Cursor save(Cursor cursor) {
     CursorDO dto = converter.toDO(cursor);
@@ -70,13 +70,13 @@ public class CursorRepositoryMpImpl implements CursorRepository {
   }
 
   /// 按复合键查找游标。
-/// 
-/// @param provenanceCode 数据源代码
-/// @param operationCode 操作代码
-/// @param cursorKey 游标键
-/// @param namespaceScopeCode 命名空间作用域代码
-/// @param namespaceKey 命名空间键
-/// @return 游标实体(可选)
+  ///
+  /// @param provenanceCode 数据源代码
+  /// @param operationCode 操作代码
+  /// @param cursorKey 游标键
+  /// @param namespaceScopeCode 命名空间作用域代码
+  /// @param namespaceKey 命名空间键
+  /// @return 游标实体(可选)
   @Override
   public Optional<Cursor> find(
       ProvenanceCode provenanceCode,
@@ -107,10 +107,10 @@ public class CursorRepositoryMpImpl implements CursorRepository {
   }
 
   /// 查找数据源/操作的最新全局时间游标水位(规范化时间戳)。
-/// 
-/// @param provenanceCode 数据源代码
-/// @param operationCode 操作代码(可为 null)
-/// @return 最新水位时间戳(可选)
+  ///
+  /// @param provenanceCode 数据源代码
+  /// @param operationCode 操作代码(可为 null)
+  /// @return 最新水位时间戳(可选)
   @Override
   public Optional<Instant> findLatestGlobalTimeWatermark(
       ProvenanceCode provenanceCode, String operationCode) {

@@ -16,10 +16,10 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /// PubmedHarvestJob 单元测试。
-/// 
+///
 /// 测试策略: - Mock 基类的 executeScheduleJob 方法以隔离测试 - 验证 ProvenanceCode 和 OperationCode 返回正确值 - 测试
 /// XXL-Job 入口方法正确调用基类模板方法
-/// 
+///
 /// 不使用 @SpringBootTest - 纯单元测试,不依赖 Spring 容器
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PubmedHarvestJob 单元测试")

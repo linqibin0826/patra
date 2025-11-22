@@ -8,25 +8,25 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// OutboxLeaseMissedEvent 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 不使用 Mockito - 使用真实对象
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
-/// 
+///
 /// 测试范围：
-/// 
+///
 /// - ✅ Record 语义测试（equals/hashCode/toString）
 ///   - ✅ 字段访问器测试
 ///   - ✅ 领域事件特性测试（occurredAt）
 ///   - ✅ 不可变性测试
 ///   - ✅ 边界情况测试
 ///   - ✅ 业务场景测试（租约冲突）
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @DisplayName("OutboxLeaseMissedEvent 单元测试")
 class OutboxLeaseMissedEventTest {
 

@@ -11,9 +11,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// ExprCapability 值对象单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 测试 record 的业务约束验证（正整数 ID、非空白字符串、必需字段等）
 ///   - 验证字符串字段自动 trim 处理和 trimOrNull 处理
@@ -21,9 +21,9 @@ import org.junit.jupiter.api.Test;
 ///   - 验证表达式能力的各种配置场景
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
-/// 
+///
 /// 覆盖范围：
-/// 
+///
 /// - ✅ record 构造函数验证测试
 ///   - ✅ 正整数 ID 验证（id, provenanceId）
 ///   - ✅ 非空白字符串验证（fieldKey, rangeKindCode）
@@ -35,7 +35,7 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ 不变性保证
 ///   - ✅ 业务场景测试（TERM/IN/RANGE/TOKEN 配置）
 ///   - ✅ 边界条件处理
-/// 
+///
 /// @author Patra Team
 /// @since 2.0
 @DisplayName("ExprCapability 单元测试")

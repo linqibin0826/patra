@@ -10,15 +10,15 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// DataType 枚举测试
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 枚举基本属性测试 - 验证所有字段非空且正确
 ///   - 查找方法测试 - 验证通过code和class查找的正确性
 ///   - 分类方法测试 - 验证类型分类逻辑
 ///   - 分组方法测试 - 验证类型分组功能
 ///   - 边界情况测试 - null、空字符串、大小写等
-/// 
+///
 /// @since 2.0.0
 @DisplayName("DataType 枚举测试")
 class DataTypeTest {

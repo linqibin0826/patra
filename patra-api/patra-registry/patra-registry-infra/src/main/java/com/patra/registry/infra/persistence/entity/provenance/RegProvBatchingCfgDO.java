@@ -11,9 +11,9 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /// 数据库实体,映射到表 `reg_prov_batching_cfg`。
-/// 
+///
 /// 表示每个数据源的批处理设置,控制如何将 ID 分组到特定操作类型的下游请求中。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

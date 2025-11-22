@@ -10,17 +10,17 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// 采集计划数据库实体,映射到表 `ing_plan`。
-/// 
+///
 /// 表结构: 表示单个采集批次蓝图,捕获数据源配置、表达式原型和切片策略。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `plan_key` 是可读的幂等键(唯一约束: uk_plan_key)
 ///   - `expr_proto_snapshot` 和 `provenance_config_snapshot` 以 JSON 快照形式存储,用于重放和比较
 ///   - `slice_strategy_code` + `slice_params` 决定如何派生子切片
 ///   - `window_spec` 以 JSON
 ///       存储窗口边界;支持多种策略(TIME/DATE/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/SINGLE)
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -73,14 +73,14 @@ public class PlanDO extends BaseDO {
   private JsonNode windowSpec;
 
   /// TIME 策略的反规范化窗口起始时间戳(应用层维护)。
-/// 
-/// 当 `slice_strategy_code = "TIME"` 时由应用层填充,以支持高效的时间范围查询。非 TIME 策略应设为 `null`。
+  ///
+  /// 当 `slice_strategy_code = "TIME"` 时由应用层填充,以支持高效的时间范围查询。非 TIME 策略应设为 `null`。
   @TableField("window_from_ts")
   private Instant windowFromTs;
 
   /// TIME 策略的反规范化窗口结束时间戳(应用层维护)。
-/// 
-/// 当 `slice_strategy_code = "TIME"` 时由应用层填充,以支持高效的时间范围查询。非 TIME 策略应设为 `null`。
+  ///
+  /// 当 `slice_strategy_code = "TIME"` 时由应用层填充,以支持高效的时间范围查询。非 TIME 策略应设为 `null`。
   @TableField("window_to_ts")
   private Instant windowToTs;
 

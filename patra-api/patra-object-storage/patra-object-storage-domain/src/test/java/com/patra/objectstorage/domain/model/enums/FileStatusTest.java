@@ -7,16 +7,16 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// FileStatus 枚举单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
 ///   - 使用 @Nested 分组组织测试
-/// 
+///
 /// 测试范围：
-/// 
+///
 /// - ✅ 枚举值存在性测试（ACTIVE, EXPIRED, DELETED）
 ///   - ✅ values() 方法测试（数量、包含关系、顺序）
 ///   - ✅ valueOf() 方法测试（有效字符串、无效字符串、null）
@@ -24,9 +24,9 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ ordinal() 方法测试（枚举序号验证）
 ///   - ✅ equals() 和 == 比较测试
 ///   - ✅ 枚举单例不变性测试
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @DisplayName("FileStatus 枚举单元测试")
 class FileStatusTest {
 

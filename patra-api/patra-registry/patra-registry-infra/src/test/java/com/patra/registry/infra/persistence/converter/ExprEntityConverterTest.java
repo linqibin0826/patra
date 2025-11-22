@@ -24,16 +24,16 @@ import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
 /// ExprEntityConverter 单元测试。
-/// 
+///
 /// 测试策略: 使用 MapStruct 生成的实现类进行纯 Java 单元测试, 无需 Spring 容器。
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - 字段映射验证 - 所有字段正确映射
 ///   - 布尔类型转换 - TINYINT(1) → Boolean 正确处理
 ///   - JSON 序列化 - JsonNode → String 正确转换
 ///   - Null 值处理 - 输入/可选字段为 null 的场景
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("ExprEntityConverter 单元测试")

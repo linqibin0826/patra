@@ -12,18 +12,18 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// RocketMqChannelMapper 单元测试。
-/// 
+///
 /// 测试覆盖：
-/// 
+///
 /// - 业务通道到 RocketMQ Topic 的映射
 ///   - RocketMQ Topic 到业务通道的反向映射
 ///   - 映射存在性检查
 ///   - 未配置通道的异常处理
 ///   - Topic 前缀支持
 ///   - 自定义映射覆盖默认映射
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @DisplayName("RocketMqChannelMapper 单元测试")
 class RocketMqChannelMapperTest {
 

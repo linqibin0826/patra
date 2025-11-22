@@ -29,18 +29,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /// {@link ExprRenderer} 的默认实现，支持完整的 OR/NOT 操作、函数代码执行和仅 std_key 发出。
-/// 
+///
 /// 主要特性：
-/// 
+///
 /// - 带有适当括号的 OR/NOT 布尔运算符
 ///   - PARAMS 规则的函数代码执行
 ///   - 仅发出 std_keys（不发出提供者参数名称）
 ///   - SINGLE/MULTI std_key 合并策略
 ///   - 全面的日志和警告
-/// 
+///
 /// 参见：docs/expr/02-architecture.md §2.7、docs/expr/03-compiler-bridge-internals.md §3.2.1
-/// 
-/// @since 1.0.0
+///
+/// @since 0.1.0
 public class DefaultExprRenderer implements ExprRenderer {
 
   private static final Logger log = LoggerFactory.getLogger(DefaultExprRenderer.class);
@@ -586,11 +586,11 @@ public class DefaultExprRenderer implements ExprRenderer {
   }
 
   /// 用于 std_key 发出并具有 SINGLE/MULTI 合并策略的累加器。
-/// 
-/// SINGLE: 根据 (priority DESC, fieldKey ASC, opCode ASC, ruleId ASC) 确定性的最后写入获胜 MULTI:
-/// 使用内部分隔符累积所有值
-/// 
-/// 参见: docs/expr/03-compiler-bridge-internals.md §3.8
+  ///
+  /// SINGLE: 根据 (priority DESC, fieldKey ASC, opCode ASC, ruleId ASC) 确定性的最后写入获胜 MULTI:
+  /// 使用内部分隔符累积所有值
+  ///
+  /// 参见: docs/expr/03-compiler-bridge-internals.md §3.8
   private static class StdKeyAccumulator {
     private final Map<String, StdKeyEntry> entries = new LinkedHashMap<>();
 

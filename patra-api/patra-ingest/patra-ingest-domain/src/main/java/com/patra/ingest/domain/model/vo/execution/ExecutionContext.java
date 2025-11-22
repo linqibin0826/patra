@@ -7,9 +7,9 @@ import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 
 /// 任务运行的执行上下文值对象。
-/// 
+///
 /// 捕获配置快照和已编译表达式,确保任务执行的可重放性和一致性。
-/// 
+///
 /// @param taskId 任务标识符
 /// @param runId 运行标识符
 /// @param planId 所属计划标识符

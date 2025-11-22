@@ -10,10 +10,10 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// 文件元数据数据对象。
-/// 
+///
 /// 表示 `storage_file_metadata` 表的数据对象(DO),用于MyBatis-Plus的ORM映射。 继承自 {@link
 /// BaseDO},包含标准的审计字段(id、version、创建人、更新人、软删除标志等)。
-/// 
+///
 /// 数据对象是持久化层的一部分,负责数据库表结构与Java对象之间的映射, 通过转换器(`FileMetadataConverter`)与领域聚合根进行转换。
 @Data
 @EqualsAndHashCode(callSuper = true)

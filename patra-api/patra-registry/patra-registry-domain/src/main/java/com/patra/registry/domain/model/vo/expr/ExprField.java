@@ -4,9 +4,9 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.util.Objects;
 
 /// 统一表达式字段字典领域值对象,对应表 `reg_expr_field_dict`。
-/// 
+///
 /// 描述用于表达式建模、能力声明和渲染规则选择的规范原子字段和核心属性。与来源无关; 仅描述字段数据类型/基数/可暴露性。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public record ExprField(
@@ -27,16 +27,16 @@ public record ExprField(
     /* 冗余标志,指示字段是否应被视为日期类型(通常与 DATE/DATETIME 类型一致) */
     boolean dateField) {
   /// 带验证的规范构造函数。
-/// 
-/// @param id 唯一字段标识符,必须为正数
-/// @param fieldKey 规范字段键,不能为空白
-/// @param displayName 显示名称,可为 null
-/// @param description 字段描述,可为 null
-/// @param dataTypeCode 来自字典的数据类型代码,不能为空白
-/// @param cardinalityCode 来自字典的基数代码,不能为空白
-/// @param exposable 字段是否可暴露
-/// @param dateField 字段是否为日期类型
-/// @throws DomainValidationException 如果验证失败
+  ///
+  /// @param id 唯一字段标识符,必须为正数
+  /// @param fieldKey 规范字段键,不能为空白
+  /// @param displayName 显示名称,可为 null
+  /// @param description 字段描述,可为 null
+  /// @param dataTypeCode 来自字典的数据类型代码,不能为空白
+  /// @param cardinalityCode 来自字典的基数代码,不能为空白
+  /// @param exposable 字段是否可暴露
+  /// @param dateField 字段是否为日期类型
+  /// @throws DomainValidationException 如果验证失败
   public ExprField(
       Long id,
       String fieldKey,
@@ -64,23 +64,23 @@ public record ExprField(
   }
 
   /// 检查字段是否可暴露给客户端。
-/// 
-/// @return 如果字段可以暴露给客户端则返回 true
+  ///
+  /// @return 如果字段可以暴露给客户端则返回 true
   public boolean isExposable() {
     return exposable;
   }
 
   /// 检查字段是否应被视为日期类型以用于渲染/验证分支。
-/// 
-/// @return 如果字段为日期类型则返回 true
+  ///
+  /// @return 如果字段为日期类型则返回 true
   public boolean isDateField() {
     return dateField;
   }
 
   /// 相等性仅基于 fieldKey(稳定的业务键)。
-/// 
-/// @param o 要比较的对象
-/// @return 如果另一个对象是具有相同 fieldKey 的 ExprField 则返回 true
+  ///
+  /// @param o 要比较的对象
+  /// @return 如果另一个对象是具有相同 fieldKey 的 ExprField 则返回 true
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -93,8 +93,8 @@ public record ExprField(
   }
 
   /// 仅基于 fieldKey 的哈希码。
-/// 
-/// @return fieldKey 的哈希码
+  ///
+  /// @return fieldKey 的哈希码
   @Override
   public int hashCode() {
     return Objects.hash(fieldKey);

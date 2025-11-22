@@ -5,15 +5,15 @@ import java.util.Map;
 import lombok.Builder;
 
 /// 数据处理结果
-/// 
+///
 /// 封装Processor处理数据后的结果，包括成功、失败、部分成功和验证错误等状态。
-/// 
+///
 /// **设计理念**：
-/// 
+///
 /// - 使用Record保证不可变性
 ///   - 提供工厂方法简化创建
 ///   - 支持元数据扩展
-/// 
+///
 /// @param <T> 数据类型
 /// @param success 是否成功（SUCCESS或PARTIAL_SUCCESS时为true）
 /// @param data 处理后的数据列表
@@ -33,11 +33,11 @@ public record ProcessResult<T>(
     Map<String, Object> metadata) {
 
   /// 创建成功结果
-/// 
-/// @param data 处理后的数据列表
-/// @param nextCursor 下一页游标令牌（最后一页时为null）
-/// @param <T> 数据类型
-/// @return 成功的处理结果
+  ///
+  /// @param data 处理后的数据列表
+  /// @param nextCursor 下一页游标令牌（最后一页时为null）
+  /// @param <T> 数据类型
+  /// @return 成功的处理结果
   public static <T> ProcessResult<T> success(List<T> data, String nextCursor) {
     return ProcessResult.<T>builder()
         .success(true)
@@ -48,10 +48,10 @@ public record ProcessResult<T>(
   }
 
   /// 创建失败结果
-/// 
-/// @param errorMessage 错误消息
-/// @param <T> 数据类型
-/// @return 失败的处理结果
+  ///
+  /// @param errorMessage 错误消息
+  /// @param <T> 数据类型
+  /// @return 失败的处理结果
   public static <T> ProcessResult<T> failure(String errorMessage) {
     return ProcessResult.<T>builder()
         .success(false)
@@ -61,14 +61,14 @@ public record ProcessResult<T>(
   }
 
   /// 创建部分成功结果
-/// 
-/// 当部分数据处理成功，部分失败时使用此方法。
-/// 
-/// @param data 成功处理的数据列表
-/// @param nextCursor 下一页游标令牌
-/// @param warningMessage 警告消息（描述失败的部分）
-/// @param <T> 数据类型
-/// @return 部分成功的处理结果
+  ///
+  /// 当部分数据处理成功，部分失败时使用此方法。
+  ///
+  /// @param data 成功处理的数据列表
+  /// @param nextCursor 下一页游标令牌
+  /// @param warningMessage 警告消息（描述失败的部分）
+  /// @param <T> 数据类型
+  /// @return 部分成功的处理结果
   public static <T> ProcessResult<T> partialSuccess(
       List<T> data, String nextCursor, String warningMessage) {
     return ProcessResult.<T>builder()
@@ -81,10 +81,10 @@ public record ProcessResult<T>(
   }
 
   /// 创建验证错误结果
-/// 
-/// @param errorMessage 验证错误消息
-/// @param <T> 数据类型
-/// @return 验证错误的处理结果
+  ///
+  /// @param errorMessage 验证错误消息
+  /// @param <T> 数据类型
+  /// @return 验证错误的处理结果
   public static <T> ProcessResult<T> validationError(String errorMessage) {
     return ProcessResult.<T>builder()
         .success(false)

@@ -15,9 +15,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// ScheduleInstanceConverter 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 测试 toDO() 转换的正确性（Aggregate → DO）
 ///   - 测试 toDomain() 转换的正确性（DO → Aggregate）
 ///   - 测试所有 Scheduler 枚举值的转换
@@ -25,9 +25,9 @@ import org.junit.jupiter.api.Test;
 ///   - 测试 triggerParams Map → JsonNode 的转换
 ///   - 测试双向转换一致性
 ///   - 测试 null 安全性
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @DisplayName("ScheduleInstanceConverter 单元测试")
 class ScheduleInstanceConverterTest {
 

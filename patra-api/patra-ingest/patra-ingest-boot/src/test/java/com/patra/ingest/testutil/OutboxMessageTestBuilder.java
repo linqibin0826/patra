@@ -5,34 +5,34 @@ import java.time.Instant;
 import java.util.UUID;
 
 /// Outbox 消息测试数据构建器。
-/// 
+///
 /// 提供流式 API 构建测试用的 {@link OutboxMessage} 实例,简化测试数据准备。
-/// 
+///
 /// ### 设计原则
-/// 
+///
 /// - **合理默认值**: 所有必填字段都有预设值,可直接构建
 ///   - **流式 API**: 支持链式调用,提高可读性
 ///   - **场景预设**: 提供常见测试场景的工厂方法
-/// 
+///
 /// ### 使用示例
-/// 
+///
 /// ```java
 /// // 1. 使用默认值快速构建
 /// OutboxMessage msg = OutboxMessageTestBuilder.aValidPendingMessage().build();
-/// 
+///
 /// // 2. 自定义部分字段
 /// OutboxMessage msg = OutboxMessageTestBuilder.aValidPendingMessage()
 ///     .channel(MessageChannels.PUBLICATION_READY)
 ///     .aggregateId(123L)
 ///     .build();
-/// 
+///
 /// // 3. 构建特定场景
 /// OutboxMessage published = OutboxMessageTestBuilder.aPublishedMessage().build();
 /// OutboxMessage failed = OutboxMessageTestBuilder.aFailedMessage().build();
 /// ```
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 public final class OutboxMessageTestBuilder {
 
   private Long id;
@@ -57,34 +57,34 @@ public final class OutboxMessageTestBuilder {
   private OutboxMessageTestBuilder() {}
 
   /// 创建一个有效的 PENDING 状态消息构建器 (推荐使用)。
-/// 
-/// **预设值**:
-/// 
-/// - aggregateType: TASK
-///   - channel: TASK_READY
-///   - statusCode: PENDING
-///   - retryCount: 0
-///   - dedupKey: 自动生成 UUID
-/// 
-/// @return 新的构建器实例
+  ///
+  /// **预设值**:
+  ///
+  /// - aggregateType: TASK
+  ///   - channel: TASK_READY
+  ///   - statusCode: PENDING
+  ///   - retryCount: 0
+  ///   - dedupKey: 自动生成 UUID
+  ///
+  /// @return 新的构建器实例
   public static OutboxMessageTestBuilder aValidPendingMessage() {
     return new OutboxMessageTestBuilder();
   }
 
   /// 创建一个已发布状态的消息构建器。
-/// 
-/// 用于测试已完成发布的场景。
-/// 
-/// @return 配置为 PUBLISHED 状态的构建器
+  ///
+  /// 用于测试已完成发布的场景。
+  ///
+  /// @return 配置为 PUBLISHED 状态的构建器
   public static OutboxMessageTestBuilder aPublishedMessage() {
     return new OutboxMessageTestBuilder().statusCode("PUBLISHED");
   }
 
   /// 创建一个发布中状态的消息构建器。
-/// 
-/// 用于测试正在发布中的场景 (已获取租约)。
-/// 
-/// @return 配置为 PUBLISHING 状态的构建器
+  ///
+  /// 用于测试正在发布中的场景 (已获取租约)。
+  ///
+  /// @return 配置为 PUBLISHING 状态的构建器
   public static OutboxMessageTestBuilder aPublishingMessage() {
     return new OutboxMessageTestBuilder()
         .statusCode("PUBLISHING")
@@ -93,10 +93,10 @@ public final class OutboxMessageTestBuilder {
   }
 
   /// 创建一个发布失败状态的消息构建器。
-/// 
-/// 用于测试失败重试场景。
-/// 
-/// @return 配置为 FAILED 状态的构建器
+  ///
+  /// 用于测试失败重试场景。
+  ///
+  /// @return 配置为 FAILED 状态的构建器
   public static OutboxMessageTestBuilder aFailedMessage() {
     return new OutboxMessageTestBuilder()
         .statusCode("FAILED")
@@ -106,10 +106,10 @@ public final class OutboxMessageTestBuilder {
   }
 
   /// 创建一个带租约的消息构建器。
-/// 
-/// 用于测试租约机制相关场景。
-/// 
-/// @return 配置了租约信息的构建器
+  ///
+  /// 用于测试租约机制相关场景。
+  ///
+  /// @return 配置了租约信息的构建器
   public static OutboxMessageTestBuilder aMessageWithLease() {
     return new OutboxMessageTestBuilder()
         .leaseOwner("relay-instance-1")
@@ -117,10 +117,10 @@ public final class OutboxMessageTestBuilder {
   }
 
   /// 创建一个出版物数据就绪消息构建器。
-/// 
-/// 用于测试出版物数据采集完成场景。
-/// 
-/// @return 配置为出版物就绪通道的构建器
+  ///
+  /// 用于测试出版物数据采集完成场景。
+  ///
+  /// @return 配置为出版物就绪通道的构建器
   public static OutboxMessageTestBuilder aPublicationReadyMessage() {
     return new OutboxMessageTestBuilder()
         .channel("INGEST_PUBLICATION")
@@ -222,8 +222,8 @@ public final class OutboxMessageTestBuilder {
   }
 
   /// 构建 OutboxMessage 实例。
-/// 
-/// @return 不可变的 OutboxMessage 实例
+  ///
+  /// @return 不可变的 OutboxMessage 实例
   public OutboxMessage build() {
     return OutboxMessage.builder()
         .id(id)

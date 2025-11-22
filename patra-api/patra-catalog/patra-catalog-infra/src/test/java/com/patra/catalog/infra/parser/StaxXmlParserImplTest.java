@@ -1,5 +1,8 @@
 package com.patra.catalog.infra.parser;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.model.entity.MeshEntryTerm;
@@ -12,22 +15,19 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 /// StAX XML 解析器单元测试。
-/// 
+///
 /// 使用测试 XML 文件验证流式解析功能。
-/// 
+///
 /// **测试策略**：
-/// 
+///
 /// - 单元测试：不依赖真实 XML 文件
 ///   - 测试数据：使用内存中的 XML 字符串
 ///   - 测试覆盖：parseDescriptors()、parseTreeNumbers()、parseEntryTerms()、parseConcepts()
 ///   - 边界情况：空文件、格式错误、缺少必填字段
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @DisplayName("StaxXmlParserImpl 单元测试")
 class StaxXmlParserImplTest {
 
@@ -232,11 +232,13 @@ class StaxXmlParserImplTest {
     InputStream inputStream = new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8));
 
     // When & Then: 应该抛出异常
-    assertThatThrownBy(() -> {
-          try (Stream<MeshDescriptorAggregate> stream = xmlParser.parseDescriptors(inputStream)) {
-            stream.toList(); // 触发解析
-          }
-        })
+    assertThatThrownBy(
+            () -> {
+              try (Stream<MeshDescriptorAggregate> stream =
+                  xmlParser.parseDescriptors(inputStream)) {
+                stream.toList(); // 触发解析
+              }
+            })
         .isInstanceOf(RuntimeException.class);
   }
 

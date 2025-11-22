@@ -7,11 +7,11 @@ import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
 /// 只读 Mapper,用于表 `sys_dict_item`.
-/// 
+///
 /// Offers query helpers for dictionary items and their defaults.
-/// 
+///
 /// SQL statements reside in `resources/mapper/RegSysDictItemMapper.xml`.
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public interface RegSysDictItemMapper extends BaseMapper<RegSysDictItemDO> {

@@ -6,8 +6,8 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
+import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import com.xxl.job.core.context.XxlJobHelper;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
@@ -25,18 +25,18 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 
 /// MeSH 导入定时任务单元测试。
-/// 
+///
 /// 测试策略：单元测试，Mock 业务层依赖和 Redisson 分布式锁
-/// 
+///
 /// 测试覆盖：
-/// 
+///
 /// - ✅ 获取分布式锁成功，调用 Orchestrator
 ///   - ✅ 获取分布式锁失败，记录日志并退出
 ///   - ✅ 执行过程中异常处理
 ///   - ✅ 正确释放分布式锁
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MeSH 导入定时任务测试")
 class MeshImportJobTest {
@@ -120,10 +120,7 @@ class MeshImportJobTest {
       xxlJobHelperMock.verify(
           () ->
               XxlJobHelper.log(
-                  contains("MeSH 导入任务执行成功"),
-                  eq("1234567890"),
-                  eq("SUCCESS"),
-                  eq("任务已完成")));
+                  contains("MeSH 导入任务执行成功"), eq("1234567890"), eq("SUCCESS"), eq("任务已完成")));
     }
   }
 
@@ -145,8 +142,7 @@ class MeshImportJobTest {
       verify(lock).tryLock(0, 30, TimeUnit.MINUTES);
       verify(meshImportOrchestrator, never()).startImport(any());
       verify(lock, never()).unlock();
-      xxlJobHelperMock.verify(
-          () -> XxlJobHelper.log(contains("无法获取分布式锁，跳过本次执行（可能有其他实例正在运行）")));
+      xxlJobHelperMock.verify(() -> XxlJobHelper.log(contains("无法获取分布式锁，跳过本次执行（可能有其他实例正在运行）")));
     }
 
     @Test
@@ -207,8 +203,7 @@ class MeshImportJobTest {
 
       // then
       verify(lock).unlock();
-      xxlJobHelperMock.verify(
-          () -> XxlJobHelper.log(contains("已有正在运行的 MeSH 导入任务，请等待其完成或手动中断")));
+      xxlJobHelperMock.verify(() -> XxlJobHelper.log(contains("已有正在运行的 MeSH 导入任务，请等待其完成或手动中断")));
     }
 
     @Test
@@ -240,8 +235,7 @@ class MeshImportJobTest {
       when(redissonClient.getLock("mesh:import:lock")).thenReturn(lock);
       when(lock.tryLock(0, 30, TimeUnit.MINUTES)).thenReturn(true);
 
-      when(meshImportOrchestrator.startImport(any()))
-          .thenThrow(new RuntimeException("模拟导入异常"));
+      when(meshImportOrchestrator.startImport(any())).thenThrow(new RuntimeException("模拟导入异常"));
 
       // when
       assertThatThrownBy(() -> meshImportJob.execute()).isInstanceOf(RuntimeException.class);

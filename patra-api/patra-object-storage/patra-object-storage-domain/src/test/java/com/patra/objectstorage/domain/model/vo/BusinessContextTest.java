@@ -10,15 +10,15 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// BusinessContext 单元测试
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - 成功构造测试 - 验证正常创建场景
 ///   - 验证失败测试 - 验证参数校验逻辑
 ///   - Sanitize 逻辑测试 - 验证 correlationData 清理行为
 ///   - 不可变性测试 - 验证 record 不可变特性
 ///   - Record 语义测试 - 验证 equals/hashCode/toString
-/// 
+///
 @DisplayName("BusinessContext 测试")
 class BusinessContextTest {
 

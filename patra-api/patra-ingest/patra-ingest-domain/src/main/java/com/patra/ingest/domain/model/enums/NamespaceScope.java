@@ -3,15 +3,15 @@ package com.patra.ingest.domain.model.enums;
 import lombok.Getter;
 
 /// 命名空间范围 (字典: ing_namespace_scope)。
-/// 
+///
 /// 区分游标命名空间: GLOBAL/EXPR/CUSTOM; 映射到 `namespace_scope_code`。
-/// 
+///
 /// 范围语义:
-/// 
+///
 /// - GLOBAL → 全局命名空间,所有数据源共享
 ///   - EXPR → 表达式哈希命名空间,基于表达式签名隔离
 ///   - CUSTOM → 自定义命名空间,用户自定义隔离范围
-/// 
+///
 @Getter
 public enum NamespaceScope {
   /// 全局;所有数据源共享的命名空间。

@@ -23,7 +23,7 @@
 ///   - `MeshImportFailed` - 任务失败时发布
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Getter
 public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
 
@@ -242,7 +242,7 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
 /// 不可变对象，任何修改都会返回新实例。
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Value
 @Builder
 public class TableProgress {
@@ -346,7 +346,7 @@ public class TableProgress {
 /// 不可变值对象。
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Value
 public class MeshImportId {
 
@@ -365,7 +365,7 @@ public class MeshImportId {
 /// MeSH 主题词强类型 ID。
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Value
 public class DescriptorId {
 
@@ -380,7 +380,7 @@ public class DescriptorId {
 /// MeSH 限定词强类型 ID。
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Value
 public class QualifierId {
 
@@ -401,7 +401,7 @@ public class QualifierId {
 /// 定义导入任务的生命周期状态。
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Getter
 @AllArgsConstructor
 public enum MeshImportTaskStatus {
@@ -433,7 +433,7 @@ public enum MeshImportTaskStatus {
 /// 定义单张表的导入状态。
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Getter
 @AllArgsConstructor
 public enum MeshTableImportStatus {
@@ -462,7 +462,7 @@ public enum MeshTableImportStatus {
 /// 定义单个批次的处理状态。
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Getter
 @AllArgsConstructor
 public enum MeshBatchStatus {
@@ -497,7 +497,7 @@ public enum MeshBatchStatus {
 /// 当任务从 PENDING 转换为 PROCESSING 状态时发布。
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Value
 public class MeshImportStarted extends DomainEvent {
 
@@ -516,7 +516,7 @@ public class MeshImportStarted extends DomainEvent {
 /// 当所有表导入成功完成时发布。
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Value
 public class MeshImportCompleted extends DomainEvent {
 
@@ -538,7 +538,7 @@ public class MeshImportCompleted extends DomainEvent {
 /// 当任务遇到不可恢复错误时发布。
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Value
 public class MeshImportFailed extends DomainEvent {
 
@@ -568,7 +568,7 @@ public class MeshImportFailed extends DomainEvent {
 /// 纯领域对象，不包含持久化逻辑。
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Data
 @Builder
 @NoArgsConstructor
@@ -623,7 +623,7 @@ public class MeshDescriptor {
 /// 代表 MeSH 限定词（Qualifier），用于细化主题词的含义。
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Data
 @Builder
 @NoArgsConstructor
@@ -665,7 +665,7 @@ public class MeshQualifier {
 /// 不可变对象。
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Value
 public class TreeNumber {
 
@@ -697,7 +697,7 @@ public class TreeNumber {
 /// 不可变对象。
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Value
 public class EntryTerm {
 
@@ -718,7 +718,7 @@ public class EntryTerm {
 /// 不可变对象。
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Value
 public class Concept {
 
@@ -840,7 +840,7 @@ public class Concept {
 ///   - `processed_records` - 已处理记录数（用于进度计算）
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_mesh_import_task")
@@ -902,7 +902,7 @@ public class MeshImportTaskDO extends BaseDO {
 ///   - `last_batch_num` - 最后处理批次号（断点续传关键字段）
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_mesh_table_progress")
@@ -949,7 +949,7 @@ public class MeshTableProgressDO extends BaseDO {
 ///   - `retry_count` - 重试次数（最多 3 次）
 /// 
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_mesh_batch_detail")

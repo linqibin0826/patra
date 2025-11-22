@@ -20,15 +20,15 @@ public class ObjectStorageProperties {
   private RetryConfig retry = new RetryConfig();
 
   /// 上传的最大文件大小(字节),默认: 100MB。
-/// 
-/// 此限制可防止上传过大文件导致的内存不足错误。 超过此大小的上传将失败并抛出 {@link
-/// com.patra.starter.objectstorage.domain.InvalidUploadRequestException}。
+  ///
+  /// 此限制可防止上传过大文件导致的内存不足错误。 超过此大小的上传将失败并抛出 {@link
+  /// com.patra.starter.objectstorage.domain.InvalidUploadRequestException}。
   private long maxFileSize = 104857600L; // 100MB
 
   /// 获取指定提供商的配置。
-/// 
-/// @param providerId 提供商 ID
-/// @return 提供商配置,如果不存在则返回 null
+  ///
+  /// @param providerId 提供商 ID
+  /// @return 提供商配置,如果不存在则返回 null
   public ProviderConfig getProviderConfig(String providerId) {
     if (providerId == null) {
       return null;

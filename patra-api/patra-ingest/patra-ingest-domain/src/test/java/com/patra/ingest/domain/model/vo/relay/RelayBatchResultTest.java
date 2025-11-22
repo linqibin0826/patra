@@ -16,14 +16,14 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// {@link RelayBatchResult} 的单元测试。
-/// 
+///
 /// 测试策略:
-/// 
+///
 /// - Record 语义: equals/hashCode/toString
 ///   - 字段访问器: 所有字段的 getter
 ///   - 构造验证: 防御性复制和 null 处理
 ///   - 工厂方法: empty() 方法
-/// 
+///
 @DisplayName("RelayBatchResult 测试")
 class RelayBatchResultTest {
 

@@ -12,9 +12,9 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /// 数据库实体,映射到表 `reg_prov_retry_cfg`。
-/// 
+///
 /// 包含与指定操作类型的数据源交互时应用的重试和退避规则。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// SliceStatus 枚举测试。
-/// 
+///
 /// @author Patra Team
 @DisplayName("SliceStatus 枚举测试")
 class SliceStatusTest {

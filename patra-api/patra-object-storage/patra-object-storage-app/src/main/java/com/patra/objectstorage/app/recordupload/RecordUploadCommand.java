@@ -4,11 +4,11 @@ import java.time.Instant;
 import java.util.Map;
 
 /// 记录上传命令。
-/// 
+///
 /// 命令对象,描述需要记录的成功上传操作。封装了文件的存储位置、大小、校验和、 业务上下文等所有必需信息,用于在应用层创建文件元数据记录。
-/// 
+///
 /// 命令对象是不可变的,通过紧凑构造函数确保可变输入(如Map和数组)被防御性复制。
-/// 
+///
 /// @param bucketName 存储桶名称
 /// @param objectKey 对象键
 /// @param fileSize 文件大小(字节)

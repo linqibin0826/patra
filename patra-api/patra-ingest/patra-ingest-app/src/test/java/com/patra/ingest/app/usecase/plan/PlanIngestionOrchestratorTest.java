@@ -60,9 +60,9 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 /// PlanIngestionOrchestrator 单元测试。
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - ✅ ingestPlan() - 正常流程，创建新计划
 ///   - ✅ ingestPlan() - 幂等性场景，复用现有计划
 ///   - ✅ ingestPlan() - 游标水位查询失败
@@ -71,7 +71,7 @@ import org.mockito.quality.Strictness;
 ///   - ✅ ingestPlan() - 组装失败
 ///   - ✅ ingestPlan() - 持久化失败
 ///   - ✅ 调用顺序验证
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)

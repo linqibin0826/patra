@@ -21,14 +21,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /// 计划持久化协调器。
-/// 
+///
 /// 职责：
-/// 
+///
 /// - 安全地持久化计划聚合根、切片、任务和调度实例
 ///   - 提供适当的异常处理和日志记录
-/// 
+///
 /// 注意：该协调器不使用 `@Transactional`，依赖主编排器的外部事务边界来确保与事件发布的原子性。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
@@ -42,10 +42,10 @@ public class PlanPersistenceCoordinator {
   private final ScheduleInstanceRepository scheduleInstanceRepository;
 
   /// 保存或更新调度实例（幂等）。
-/// 
-/// @param request 调度请求
-/// @return 已持久化的调度实例
-/// @throws PlanPersistenceException 存储失败时
+  ///
+  /// @param request 调度请求
+  /// @return 已持久化的调度实例
+  /// @throws PlanPersistenceException 存储失败时
   public ScheduleInstanceAggregate persistScheduleInstance(PlanIngestionCommand request) {
     ProvenanceCode provenanceCode = request.provenanceCode();
     ScheduleInstanceAggregate schedule =
@@ -66,10 +66,10 @@ public class PlanPersistenceCoordinator {
   }
 
   /// 持久化计划聚合根并包装底层异常。
-/// 
-/// @param draftPlan 草稿计划聚合根
-/// @return 已持久化的计划聚合根
-/// @throws PlanPersistenceException 持久化失败时
+  ///
+  /// @param draftPlan 草稿计划聚合根
+  /// @return 已持久化的计划聚合根
+  /// @throws PlanPersistenceException 持久化失败时
   public PlanAggregate savePlan(PlanAggregate draftPlan) {
     try {
       return planRepository.save(draftPlan);
@@ -79,11 +79,11 @@ public class PlanPersistenceCoordinator {
   }
 
   /// 批量持久化计划切片聚合根。
-/// 
-/// @param plan 计划聚合根（已持久化）
-/// @param slices 切片集合
-/// @return 已持久化的切片集合
-/// @throws PlanPersistenceException 持久化失败时
+  ///
+  /// @param plan 计划聚合根（已持久化）
+  /// @param slices 切片集合
+  /// @return 已持久化的切片集合
+  /// @throws PlanPersistenceException 持久化失败时
   public List<PlanSliceAggregate> persistSlices(
       PlanAggregate plan, List<PlanSliceAggregate> slices) {
     if (CollUtil.isEmpty(slices)) {
@@ -99,12 +99,12 @@ public class PlanPersistenceCoordinator {
   }
 
   /// 批量持久化任务聚合根并绑定计划和切片 ID。
-/// 
-/// @param plan 计划聚合根
-/// @param persistedSlices 已持久化的切片
-/// @param tasks 任务集合
-/// @return 已持久化的任务集合
-/// @throws PlanPersistenceException 持久化失败时
+  ///
+  /// @param plan 计划聚合根
+  /// @param persistedSlices 已持久化的切片
+  /// @param tasks 任务集合
+  /// @return 已持久化的任务集合
+  /// @throws PlanPersistenceException 持久化失败时
   public List<TaskAggregate> persistTasks(
       PlanAggregate plan, List<PlanSliceAggregate> persistedSlices, List<TaskAggregate> tasks) {
     if (CollUtil.isEmpty(tasks)) {
@@ -130,9 +130,9 @@ public class PlanPersistenceCoordinator {
   }
 
   /// 持久化任务重试状态。
-/// 
-/// @param task 任务聚合根
-/// @throws PlanPersistenceException 持久化失败时
+  ///
+  /// @param task 任务聚合根
+  /// @throws PlanPersistenceException 持久化失败时
   public void saveTask(TaskAggregate task) {
     try {
       taskRepository.save(task);

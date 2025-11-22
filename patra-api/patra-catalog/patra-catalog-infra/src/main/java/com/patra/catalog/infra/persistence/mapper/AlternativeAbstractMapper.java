@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.catalog.infra.persistence.entity.AlternativeAbstractDO;
 
 /// 其他语言摘要 Mapper 接口 — 对其他语言摘要表的数据访问操作。
-/// 
+///
 /// @author linqibin
 /// @since 0.5.0
 public interface AlternativeAbstractMapper extends BaseMapper<AlternativeAbstractDO> {}

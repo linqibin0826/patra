@@ -14,24 +14,24 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 /// RestClient 文件下载器实现。
-/// 
+///
 /// 使用 Spring RestClient（底层 JDK 21 HttpClient）实现 MeSH 文件下载和校验。
-/// 
+///
 /// **设计原则**：
-/// 
+///
 /// - 流式下载：支持大文件（700MB+），不一次性加载到内存
 ///   - 断点续传：支持 HTTP Range 请求（TODO: 后续实现）
 ///   - 超时控制：通过 RestClient 配置超时时间
 ///   - 校验完整性：使用 MD5 哈希验证文件完整性
-/// 
+///
 /// **性能特征**：
-/// 
+///
 /// - 下载速度：取决于网络带宽（约 10-50 MB/s）
 ///   - 内存占用：流式写入，内存占用可控（<100MB）
 ///   - 文件大小：支持 700MB+ 的 XML 文件
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -144,18 +144,18 @@ public class RestClientMeshFileDownloadImpl implements MeshFileDownloadPort {
   }
 
   /// 复制输入流到输出流（流式处理，含性能监控）。
-/// 
-/// 使用固定大小缓冲区（8KB）流式复制数据，避免大文件导致 OOM。
-/// 
-/// 性能特征：
-/// 
-/// - 内存占用：稳定在 8KB（缓冲区大小）
-///   - 下载速度：取决于网络带宽和磁盘 IO
-///   - 日志频率：每 10MB 或每 5 秒记录一次进度
-/// 
-/// @param inputStream 输入流
-/// @param outputStream 输出流
-/// @throws IOException IO 异常
+  ///
+  /// 使用固定大小缓冲区（8KB）流式复制数据，避免大文件导致 OOM。
+  ///
+  /// 性能特征：
+  ///
+  /// - 内存占用：稳定在 8KB（缓冲区大小）
+  ///   - 下载速度：取决于网络带宽和磁盘 IO
+  ///   - 日志频率：每 10MB 或每 5 秒记录一次进度
+  ///
+  /// @param inputStream 输入流
+  /// @param outputStream 输出流
+  /// @throws IOException IO 异常
   private void copyStream(InputStream inputStream, FileOutputStream outputStream)
       throws IOException {
     byte[] buffer = new byte[8192]; // 8KB 缓冲区
@@ -176,10 +176,7 @@ public class RestClientMeshFileDownloadImpl implements MeshFileDownloadPort {
             elapsedSeconds > 0 ? (totalBytes / (1024.0 * 1024.0)) / elapsedSeconds : 0;
 
         if (log.isInfoEnabled()) {
-          log.info(
-              "下载进度: {} MB（速度: {:.2f} MB/s）",
-              totalBytes / (1024 * 1024),
-              speedMBps);
+          log.info("下载进度: {} MB（速度: {:.2f} MB/s）", totalBytes / (1024 * 1024), speedMBps);
         }
         lastLogTime = currentTime;
       }

@@ -9,14 +9,14 @@ import java.util.Map;
 import org.springframework.util.StringUtils;
 
 /// PubMed EFetch API 请求参数,遵循 E-utilities 官方规范。
-/// 
+///
 /// EFetch 用于根据 PubMed ID 列表检索文章详细信息。支持两种使用模式:
-/// 
+///
 /// - **直接ID模式**: 提供逗号分隔的 PMID 列表 (最多200个)
 ///   - **历史服务器模式**: 使用 ESearch/EPost 返回的 WebEnv + query_key
-/// 
+///
 /// 字段说明:
-/// 
+///
 /// @param db 数据库标识符 (本 starter 固定为 "pubmed")
 /// @param id 逗号分隔的文章标识符列表 (直接ID模式必填,最多200个)
 /// @param retmode 响应格式 (xml 或 text,默认 xml)
@@ -28,13 +28,13 @@ import org.springframework.util.StringUtils;
 /// @param apiKey API 密钥 (可提升请求配额: 3次/秒 → 10次/秒)
 /// @param tool 工具标识符 (向 NCBI 注册的应用名称,如 "patra")
 /// @param email 维护者邮箱 (用于 NCBI 运营联系)
-///     
+///
 /// **使用建议:**
-///     
+///
 /// - 使用 XML 默认格式获取详细文章结构
 ///       - 使用 {@link #forUiList(String, String)} 获取轻量级标识符列表
 ///       - 超过200个ID时,应先使用 EPost 上传到历史服务器
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public record EFetchRequest(
@@ -59,20 +59,42 @@ public record EFetchRequest(
     ) implements ApiRequest {
 
   /// 创建用于通过 XML 检索摘要的请求。
-/// 
-/// @param db 数据库标识符,通常为 "pubmed"
-/// @param id 逗号分隔的 PubMed 标识符列表 (每次最多200个)
+  ///
+  /// @param db 数据库标识符,通常为 "pubmed"
+  /// @param id 逗号分隔的 PubMed 标识符列表 (每次最多200个)
   public EFetchRequest(String db, String id) {
-    this(db, id, RetMode.XML.value(), RetType.ABSTRACT.value(), null, null, null, null, null, null, null);
+    this(
+        db,
+        id,
+        RetMode.XML.value(),
+        RetType.ABSTRACT.value(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null);
   }
 
   /// 创建用于以纯文本格式检索标识符列表的请求。
-/// 
-/// @param db 数据库标识符,通常为 "pubmed"
-/// @param id 逗号分隔的 PubMed 标识符列表 (每次最多200个)
-/// @return 配置为返回 uilist 纯文本负载的请求
+  ///
+  /// @param db 数据库标识符,通常为 "pubmed"
+  /// @param id 逗号分隔的 PubMed 标识符列表 (每次最多200个)
+  /// @return 配置为返回 uilist 纯文本负载的请求
   public static EFetchRequest forUiList(String db, String id) {
-    return new EFetchRequest(db, id, RetMode.TEXT.value(), RetType.UILIST.value(), null, null, null, null, null, null, null);
+    return new EFetchRequest(
+        db,
+        id,
+        RetMode.TEXT.value(),
+        RetType.UILIST.value(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null);
   }
 
   // Compact constructor: validate required parameters
@@ -106,8 +128,8 @@ public record EFetchRequest(
   }
 
   /// 组装 EFetch 端点可识别的出站查询参数映射。
-/// 
-/// @return 准备好提交给网关的参数映射
+  ///
+  /// @return 准备好提交给网关的参数映射
   @Override
   public Map<String, String> toQueryParams() {
     Map<String, String> params = new LinkedHashMap<>();

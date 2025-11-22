@@ -3,7 +3,7 @@ package com.patra.starter.web.req;
 import java.util.Set;
 
 /// 排序契约。实现声明用于验证和文档化的白名单。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public interface Sortable {

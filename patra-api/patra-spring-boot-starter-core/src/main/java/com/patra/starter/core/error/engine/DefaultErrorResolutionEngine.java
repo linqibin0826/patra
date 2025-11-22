@@ -15,10 +15,10 @@ import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 
 /// {@link ErrorResolutionEngine} 的默认实现，将异常映射到统一的错误码和 HTTP 状态。
-/// 
+///
 /// 错误解析顺序：
-/// 
-/// 
+///
+///
 @Slf4j
 public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
 
@@ -190,9 +190,9 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   }
 
   /// 从 HTTP 状态码后缀创建错误解析。
-/// 
-/// @param suffix HTTP 状态码（例如，"0404"、"0500"）
-/// @return 应用了上下文前缀的错误解析
+  ///
+  /// @param suffix HTTP 状态码（例如，"0404"、"0500"）
+  /// @return 应用了上下文前缀的错误解析
   private ErrorResolution createResolution(String suffix) {
     ErrorCodeLike code = SimpleErrorCode.create(contextPrefix, suffix);
     return new ErrorResolution(code, code.httpStatus());

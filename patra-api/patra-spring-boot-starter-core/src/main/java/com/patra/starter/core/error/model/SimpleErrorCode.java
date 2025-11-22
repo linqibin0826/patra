@@ -3,14 +3,14 @@ package com.patra.starter.core.error.model;
 import com.patra.common.error.codes.ErrorCodeLike;
 
 /// {@link ErrorCodeLike} 的简单不可变实现。
-/// 
+///
 /// 此类提供可复用的错误码表示,避免在代码库中重复创建匿名 ErrorCodeLike 实例。
-/// 
+///
 /// 错误码格式: `{contextPrefix`-{httpStatus}},例如:
-/// 
+///
 /// - REG-0404 (注册服务,资源未找到)
 ///   - INGEST-0500 (采集服务,内部服务器错误)
-/// 
+///
 /// @author Patra Team
 /// @since 2.0
 public final class SimpleErrorCode implements ErrorCodeLike {
@@ -24,12 +24,12 @@ public final class SimpleErrorCode implements ErrorCodeLike {
   }
 
   /// 从上下文前缀和 HTTP 状态码后缀创建错误码。
-/// 
-/// 生成的错误码格式: `{contextPrefix`-{suffix}}
-/// 
-/// @param contextPrefix 上下文前缀(例如 "REG"、"INGEST"),如果为空则使用 "UNKNOWN"
-/// @param suffix HTTP 状态码后缀(例如 "0404"、"0500")
-/// @return 新创建的错误码实例
+  ///
+  /// 生成的错误码格式: `{contextPrefix`-{suffix}}
+  ///
+  /// @param contextPrefix 上下文前缀(例如 "REG"、"INGEST"),如果为空则使用 "UNKNOWN"
+  /// @param suffix HTTP 状态码后缀(例如 "0404"、"0500")
+  /// @return 新创建的错误码实例
   public static SimpleErrorCode create(String contextPrefix, String suffix) {
     String prefix = (contextPrefix == null || contextPrefix.isBlank()) ? "UNKNOWN" : contextPrefix;
     String fullCode = prefix + "-" + suffix;
@@ -38,9 +38,9 @@ public final class SimpleErrorCode implements ErrorCodeLike {
   }
 
   /// 从后缀解析 HTTP 状态码,如果无效则默认为 500。
-/// 
-/// @param suffix 状态码后缀
-/// @return HTTP 状态码(范围 100-599),如果无效则返回 500
+  ///
+  /// @param suffix 状态码后缀
+  /// @return HTTP 状态码(范围 100-599),如果无效则返回 500
   private static int parseHttpStatus(String suffix) {
     try {
       int status = Integer.parseInt(suffix);

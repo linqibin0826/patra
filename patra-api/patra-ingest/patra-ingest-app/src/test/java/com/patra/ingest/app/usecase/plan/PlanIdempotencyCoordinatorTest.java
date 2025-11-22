@@ -35,15 +35,15 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 /// PlanIdempotencyCoordinator 单元测试。
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - ✅ handleIdempotentPlanReuse() - 存在失败任务，需要重试
 ///   - ✅ handleIdempotentPlanReuse() - 无失败任务，直接返回现有状态
 ///   - ✅ handleIdempotentPlanReuse() - 多个失败任务批量重试
 ///   - ✅ 任务重试状态重置验证
 ///   - ✅ 重试事件发布验证
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)

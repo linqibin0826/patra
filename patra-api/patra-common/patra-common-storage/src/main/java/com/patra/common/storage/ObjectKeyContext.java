@@ -7,13 +7,13 @@ import java.util.Map;
 import java.util.Objects;
 
 /// 包含生成对象存储键所需的所有信息的不可变上下文。
-/// 
+///
 /// 此记录封装了所有 Patra 微服务中用于对象键生成的标准段, 确保一致的命名约定和结构。
-/// 
+///
 /// **标准对象键模式**: `{service`/{business-type}/{yyyy}/{MM}/{dd}/{business-id}.{extension}}
-/// 
+///
 /// **示例**: `ingest/publication-batch/2025/10/26/pubmed-123-batch-001.json`
-/// 
+///
 /// @param serviceName 微服务名称(短格式,例如 "ingest"、"storage"、"publication")
 /// @param businessType 业务类别,使用 kebab-case(例如 "publication-batch"、"metadata-snapshot")
 /// @param businessId 此特定业务实体的唯一标识符(例如 "pubmed-123-batch-001")
@@ -31,8 +31,8 @@ public record ObjectKeyContext(
     Map<String, String> customSegments) {
 
   /// 带验证和防御性复制的紧凑构造函数。
-/// 
-/// @throws IllegalArgumentException 如果任何必需字段为空或 null
+  ///
+  /// @throws IllegalArgumentException 如果任何必需字段为空或 null
   public ObjectKeyContext {
     validateNonBlank(serviceName, "serviceName");
     validateNonBlank(businessType, "businessType");
@@ -45,13 +45,13 @@ public record ObjectKeyContext(
   }
 
   /// 创建仅包含必需字段的上下文(无自定义段)。
-/// 
-/// @param serviceName 微服务名称(短格式)
-/// @param businessType 业务类别(kebab-case)
-/// @param businessId 唯一业务标识符
-/// @param partitionDate 分区日期
-/// @param extension 文件扩展名
-/// @return 初始化的上下文
+  ///
+  /// @param serviceName 微服务名称(短格式)
+  /// @param businessType 业务类别(kebab-case)
+  /// @param businessId 唯一业务标识符
+  /// @param partitionDate 分区日期
+  /// @param extension 文件扩展名
+  /// @return 初始化的上下文
   public static ObjectKeyContext of(
       String serviceName,
       String businessType,
@@ -63,8 +63,8 @@ public record ObjectKeyContext(
   }
 
   /// 创建用于流式构建的构建器,支持可选的自定义段。
-/// 
-/// @return 新的构建器实例
+  ///
+  /// @return 新的构建器实例
   public static Builder builder() {
     return new Builder();
   }
@@ -127,19 +127,19 @@ public record ObjectKeyContext(
     }
 
     /// 添加自定义段键值对。
-/// 
-/// @param key 段名称
-/// @param value 段值
-/// @return 此构建器
+    ///
+    /// @param key 段名称
+    /// @param value 段值
+    /// @return 此构建器
     public Builder customSegment(String key, String value) {
       this.customSegments.put(key, value);
       return this;
     }
 
     /// 构建不可变的上下文实例。
-/// 
-/// @return 初始化的 {@link ObjectKeyContext}
-/// @throws IllegalArgumentException 如果任何必需字段缺失或无效
+    ///
+    /// @return 初始化的 {@link ObjectKeyContext}
+    /// @throws IllegalArgumentException 如果任何必需字段缺失或无效
     public ObjectKeyContext build() {
       return new ObjectKeyContext(
           serviceName, businessType, businessId, partitionDate, extension, customSegments);

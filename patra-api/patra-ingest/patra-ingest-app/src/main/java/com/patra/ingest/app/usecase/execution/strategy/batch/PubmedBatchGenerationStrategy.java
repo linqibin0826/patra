@@ -11,11 +11,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /// PubMed 批次生成策略
-/// 
+///
 /// 根据查询会话生成批次列表，支持使用 WebEnv 会话令牌优化批次请求。
-/// 
+///
 /// @author Patra Architecture Team
-/// @since 0.2.0
+/// @since 0.1.0
 @Component
 @Slf4j
 public class PubmedBatchGenerationStrategy implements BatchGenerationStrategy {

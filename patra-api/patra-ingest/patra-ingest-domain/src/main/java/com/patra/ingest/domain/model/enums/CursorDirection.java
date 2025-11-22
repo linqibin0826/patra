@@ -3,14 +3,14 @@ package com.patra.ingest.domain.model.enums;
 import lombok.Getter;
 
 /// 游标推进方向 (字典: ing_cursor_direction)。
-/// 
+///
 /// 字段映射: `ing_cursor_event.direction_code → FORWARD/BACKFILL`。
-/// 
+///
 /// 方向语义:
-/// 
+///
 /// - FORWARD → 向前推进,用于增量数据采集
 ///   - BACKFILL → 向后回填,用于历史数据补全
-/// 
+///
 @Getter
 public enum CursorDirection {
   /// 向前;增量推进方向。

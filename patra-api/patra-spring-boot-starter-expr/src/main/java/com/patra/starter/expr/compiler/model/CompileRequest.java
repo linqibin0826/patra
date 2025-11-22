@@ -6,9 +6,9 @@ import java.util.Locale;
 import java.util.Objects;
 
 /// 表达式编译请求。
-/// 
+///
 /// 包含表达式、溯源代码、操作类型、端点名称和编译选项。
-/// 
+///
 /// @param expression 待编译的表达式
 /// @param provenance 溯源代码
 /// @param operationType 操作类型(如 SEARCH、HARVEST、UPDATE)

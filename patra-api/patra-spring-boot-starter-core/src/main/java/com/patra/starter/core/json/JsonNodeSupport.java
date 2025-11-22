@@ -15,9 +15,9 @@ public interface JsonNodeSupport {
   }
 
   /// 将 JSON 字符串转换为 {@link JsonNode}。
-/// 
-/// @param json 源 JSON 字符串
-/// @return 解析后的节点，如果为空则返回 `null`
+  ///
+  /// @param json 源 JSON 字符串
+  /// @return 解析后的节点，如果为空则返回 `null`
   default JsonNode readJsonNode(String json) {
     if (!StringUtils.hasText(json)) {
       return null;
@@ -30,9 +30,9 @@ public interface JsonNodeSupport {
   }
 
   /// 将 {@link JsonNode} 转换为其 JSON 字符串表示形式。
-/// 
-/// @param node 要序列化的节点
-/// @return JSON 字符串，如果节点为 `null` 则返回 `null`
+  ///
+  /// @param node 要序列化的节点
+  /// @return JSON 字符串，如果节点为 `null` 则返回 `null`
   default String writeJsonString(JsonNode node) {
     if (node == null || node.isNull()) {
       return null;

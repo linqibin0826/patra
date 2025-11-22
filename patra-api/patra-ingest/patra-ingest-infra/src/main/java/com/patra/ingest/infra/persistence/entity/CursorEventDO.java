@@ -9,16 +9,16 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// 游标推进事件数据库实体,映射到表 `ing_cursor_event`。
-/// 
+///
 /// 表结构: 仅追加审计日志,记录从旧游标值到新游标值的每次推进,支持重放和端到端追踪。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `idempotent_key` 具有唯一约束(UK: uk_cur_evt_idem)以防止重复写入
 ///   - 同时持久化时间/数值规范化值(prev/new + observed),用于跨类型排序和统计
 ///   - 冗余血缘字段链(schedule → plan → slice → task → run → batch)用于故障排查
 ///   - `direction_code` 标记回填(BACKFILL)与前向(FORWARD)推进
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

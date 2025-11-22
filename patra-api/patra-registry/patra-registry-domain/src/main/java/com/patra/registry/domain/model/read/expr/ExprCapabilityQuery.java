@@ -6,9 +6,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /// 表达式能力查询视图。
-/// 
+///
 /// 用于查询字段操作能力和约束的读优化投影。包含字段支持的操作类型、数据范围限制、验证规则等元数据。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public record ExprCapabilityQuery(

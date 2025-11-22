@@ -12,9 +12,9 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /// 数据库实体,映射到表 `reg_prov_api_param_map`.
-/// 
+///
 /// Tracks provider-specific parameter names for standardized query keys.
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

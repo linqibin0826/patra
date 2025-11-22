@@ -29,29 +29,29 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 /// 完成阶段用例实现
-/// 
+///
 /// 在六边形架构+DDD中的角色:应用层用例实现,负责任务执行完成阶段的完整流程。
-/// 
+///
 /// 主要职责:游标推进 → 状态决策 → Task/TaskRun更新 → 资源清理(心跳/租约)
-/// 
+///
 /// 设计要点:
-/// 
+///
 /// - 状态决策逻辑:
-///       
+///
 /// - 全部成功 + 游标推进成功 → Task: SUCCEEDED, TaskRun: SUCCEEDED
 ///         - 全部成功 + 游标推进失败 → Task: FAILED, TaskRun: PARTIAL (可重试检查点)
 ///         - 部分成功 (failed > 0 且 succeeded > 0) → Task: FAILED, TaskRun: PARTIAL
 ///         - 全部失败 (succeeded == 0) → Task: FAILED, TaskRun: FAILED
-/// 
+///
 ///   - 仅当所有批次成功时才推进游标;失败时记录原因
 ///   - 乐观锁冲突或游标失败时,将TaskRun标记为PARTIAL(可重试)
 ///   - 清理:无论结果如何都停止心跳并释放租约
-/// 
+///
 /// 日志策略:
-/// 
+///
 /// - INFO: 游标推进、任务完成(SUCCEEDED状态)
 ///   - WARN: 游标失败、部分成功或全部失败状态
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Service

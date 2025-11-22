@@ -3,16 +3,16 @@ package com.patra.ingest.domain.model.enums;
 import lombok.Getter;
 
 /// 批次执行状态 (字典: ing_batch_status)。
-/// 
+///
 /// 字段映射: `ing_task_run_batch.status_code → RUNNING/SUCCEEDED/FAILED/SKIPPED`
-/// 
+///
 /// 状态机语义:
-/// 
+///
 /// - RUNNING → 批次正在执行
 ///   - SUCCEEDED → 批次成功完成
 ///   - FAILED → 批次执行失败
 ///   - SKIPPED → 批次被跳过(例如,由于依赖条件不满足)
-/// 
+///
 @Getter
 public enum BatchStatus {
   /// 运行中;批次正在执行。

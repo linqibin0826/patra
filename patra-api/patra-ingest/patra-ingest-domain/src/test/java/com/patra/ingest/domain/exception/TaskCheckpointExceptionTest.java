@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// {@link TaskCheckpointException} 的单元测试。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("TaskCheckpointException 单元测试")

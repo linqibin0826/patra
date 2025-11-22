@@ -11,16 +11,16 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// TypeReference 单元测试
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 泛型类型捕获测试（简单类型、参数化类型、嵌套泛型）
 ///   - 类型提取测试（getRawType、getType）
 ///   - 类型兼容性检查测试
 ///   - equals 和 hashCode 测试
 ///   - 错误处理测试（未使用匿名内部类）
 ///   - 边界条件测试
-/// 
+///
 /// @since 0.1.0
 @DisplayName("TypeReference 单元测试")
 class TypeReferenceTest {

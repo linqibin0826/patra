@@ -7,15 +7,15 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// {@link TaskSchedulerContext} 单元测试
-/// 
+///
 /// 验证任务调度器上下文值对象的行为：
-/// 
+///
 /// - 构造器验证
 ///   - 工厂方法
 ///   - 派生方法
 ///   - Record 语义（equals/hashCode/toString）
 ///   - 边界条件
-/// 
+///
 @DisplayName("TaskSchedulerContext 单元测试")
 class TaskSchedulerContextTest {
 

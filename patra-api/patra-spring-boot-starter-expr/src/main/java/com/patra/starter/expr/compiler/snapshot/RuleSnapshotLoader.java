@@ -6,10 +6,10 @@ import com.patra.common.enums.ProvenanceCode;
 public interface RuleSnapshotLoader {
 
   /// 加载指定 Provenance 的规则快照。
-/// 
-/// @param provenanceCode Provenance 代码
-/// @param operationType 操作类型（例如 HARVEST、UPDATE）
-/// @param endpointName 端点名称（例如 SEARCH、DETAIL）
-/// @return Provenance 快照
+  ///
+  /// @param provenanceCode Provenance 代码
+  /// @param operationType 操作类型（例如 HARVEST、UPDATE）
+  /// @param endpointName 端点名称（例如 SEARCH、DETAIL）
+  /// @return Provenance 快照
   ProvenanceSnapshot load(ProvenanceCode provenanceCode, String operationType, String endpointName);
 }

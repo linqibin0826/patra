@@ -16,11 +16,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /// 出站适配器,调用 patra-registry 获取溯源配置。
-/// 
+///
 /// 遵循六边形架构:基础设施组件实现应用端口。从注册服务检索完整的溯源配置快照,具有健壮的错误处理。
-/// 
+///
 /// 亮点: - 全面的错误处理和日志记录 - 使用 MapStruct 进行类型安全转换 - 通过返回最小可用快照实现优雅降级
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j

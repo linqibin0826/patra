@@ -1,7 +1,7 @@
 package com.patra.common.enums;
 
 /// 任务优先级级别枚举,包含用于调度的关联队列值。
-/// 
+///
 /// 队列值越小表示优先级越高。用于任务调度和队列系统确定执行顺序。
 public enum Priority {
   /// 最高优先级,队列值 10。
@@ -32,8 +32,8 @@ public enum Priority {
   }
 
   /// 返回用于基于优先级调度的队列值。
-/// 
-/// @return 队列值,数字越小表示优先级越高
+  ///
+  /// @return 队列值,数字越小表示优先级越高
   public int queueValue() {
     return queueValue;
   }

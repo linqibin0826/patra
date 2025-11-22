@@ -17,16 +17,16 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// CursorConverter 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 测试 toDO() 转换的正确性
 ///   - 测试 toDomain() 转换的正确性
 ///   - 测试静态辅助方法
 ///   - 测试 null 安全性
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @DisplayName("CursorConverter 单元测试")
 class CursorConverterTest {
 

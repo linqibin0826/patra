@@ -4,18 +4,18 @@ import cn.hutool.core.lang.Assert;
 import lombok.Getter;
 
 /// 文献出版状态枚举。
-/// 
+///
 /// 字段映射：cat_publication.publication_status
-/// 
+///
 /// 状态说明：
-/// 
+///
 /// - **PPUBLISH** - 纸质出版（Print Published）
 ///   - **EPUBLISH** - 电子出版（Electronic Published）
 ///   - **AHEADOFPRINT** - 预印版（Ahead of Print）
 ///   - **PUBMED** - 已收录到 PubMed
 ///   - **PUBMEDNOTMEDLINE** - 收录到 PubMed 但未收录到 MEDLINE
 ///   - **PREMEDLINE** - MEDLINE 预处理状态
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Getter

@@ -8,16 +8,16 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// {@link NamespaceKey} 单元测试。
-/// 
+///
 /// 测试策略: Record 值对象 - 纯单元测试,无 Mock。
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - ✅ Record 语义 (equals, hashCode, toString)
 ///   - ✅ 不变性约束
 ///   - ✅ 工厂方法 (global)
 ///   - ✅ 边界条件
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("NamespaceKey 值对象单元测试")

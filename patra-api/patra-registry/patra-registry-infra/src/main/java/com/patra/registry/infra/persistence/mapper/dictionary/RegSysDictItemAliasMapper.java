@@ -8,11 +8,11 @@ import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
 /// 只读 Mapper,用于表 `sys_dict_item_alias`.
-/// 
+///
 /// Provides query utilities for linking external alias codes to internal dictionary items.
-/// 
+///
 /// SQL definitions live in `resources/mapper/RegSysDictItemAliasMapper.xml`.
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public interface RegSysDictItemAliasMapper extends BaseMapper<RegSysDictItemAliasDO> {

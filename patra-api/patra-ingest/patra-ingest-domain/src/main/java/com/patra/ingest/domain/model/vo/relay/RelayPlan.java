@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 /// [待翻译] * Execution plan for the outbox relay.
-/// 
+///
 /// A `null` channel indicates that all channels should be processed.
 public record RelayPlan(
     ChannelKey channel,

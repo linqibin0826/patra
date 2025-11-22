@@ -4,7 +4,7 @@ import com.patra.common.enums.ProvenanceCode;
 import java.util.List;
 
 /// [待翻译] * Message payload for the `INGEST_PUBLICATION_DATA_READY` channel.
-/// 
+///
 /// @param payload business payload
 /// @param header message header metadata
 public record PublicationReadyMessage(Payload payload, Header header) {

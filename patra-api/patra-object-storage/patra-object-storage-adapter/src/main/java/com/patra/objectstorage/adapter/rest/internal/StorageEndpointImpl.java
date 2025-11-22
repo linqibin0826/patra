@@ -19,18 +19,18 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 /// 存储端点实现。
-/// 
+///
 /// 实现内部存储元数据端点的REST控制器,作为适配器层的入站适配器, 接收来自其他微服务的Feign客户端请求,并将其转换为应用层的用例调用。
-/// 
+///
 /// 职责:
-/// 
+///
 /// - 实现API契约({@link StorageEndpoint})
 ///   - 验证请求DTO
 ///   - 提取HTTP上下文信息(如客户端IP)
 ///   - 构建应用层命令对象
 ///   - 委托给编排器执行用例
 ///   - 转换结果为响应DTO
-/// 
+///
 @Slf4j
 @Validated
 @RestController
@@ -40,11 +40,11 @@ public class StorageEndpointImpl implements StorageEndpoint {
   private final RecordUploadOrchestrator orchestrator;
 
   /// 持久化描述成功上传对象的元数据。
-/// 
-/// 接收来自其他微服务的文件上传记录请求,提取HTTP请求上下文, 构建命令对象并委托给编排器执行持久化操作。
-/// 
-/// @param request 已验证的上传载荷
-/// @return 201 Created,包含元数据ID
+  ///
+  /// 接收来自其他微服务的文件上传记录请求,提取HTTP请求上下文, 构建命令对象并委托给编排器执行持久化操作。
+  ///
+  /// @param request 已验证的上传载荷
+  /// @return 201 Created,包含元数据ID
   @Override
   public RecordUploadResponse recordUpload(@RequestBody @Valid UploadRecordRequest request) {
     HttpServletRequest httpRequest = getCurrentRequest();

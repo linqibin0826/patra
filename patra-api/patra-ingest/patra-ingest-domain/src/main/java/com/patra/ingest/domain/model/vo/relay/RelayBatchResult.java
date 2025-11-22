@@ -6,20 +6,20 @@ import java.util.Collections;
 import java.util.List;
 
 /// 中继批次执行结果汇总 Value Object。
-/// 
+///
 /// 记录单次中继批次执行的统计信息和生成的领域事件。
-/// 
+///
 /// **业务语义:**
-/// 
+///
 /// - fetched - 从 Outbox 表获取的消息数
 ///   - published - 成功发布到 MQ 的消息数
 ///   - retried - 触发重试的消息数
 ///   - failed - 失败的消息数
 ///   - leaseMissed - 租约丢失的消息数
 ///   - events - 批次执行过程中产生的领域事件(不可变列表)
-/// 
+///
 /// **不变性:** events 列表在构造时进行防御性复制,保证 Immutable。
-/// 
+///
 /// @param channel 通道键(标识消息通道)
 /// @param fetched 获取的消息数
 /// @param published 发布成功的消息数

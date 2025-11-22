@@ -9,16 +9,16 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// 游标数据库实体,映射到表 `ing_cursor`。
-/// 
+///
 /// 表结构: 维护数据源 + 操作 + 命名空间的当前水位,支持三种游标类型: time / numeric / token。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `namespace_scope_code` + `namespace_key` 区分命名空间(GLOBAL / EXPR / CUSTOM)
 ///   - `normalized_instant`/`normalized_numeric` 规范化值以支持排序和范围查询
 ///   - 冗余血缘字段(schedule/plan/slice/task/run/batch) 支持快速回溯
 ///   - 推荐唯一键: (provenance_code, operation_code, cursor_key, namespace_scope_code, namespace_key)
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

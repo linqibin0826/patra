@@ -10,17 +10,17 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// 调度实例数据库实体,映射到表 `ing_schedule_instance`。
-/// 
+///
 /// 表结构: 捕获外部调度触发的根上下文,支持运行时参数重放。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `scheduler_code`/`scheduler_job_id`/`scheduler_log_id` 追踪调度器来源和运行日志
 ///   - `trigger_params` 存储规范化的输入快照(JSON),用于跨语言重放;空映射不持久化
 ///   - `provenance_code` 匹配注册表;无物理外键,仅逻辑校验
-/// 
+///
 /// 审计字段来自 {@link BaseDO}。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

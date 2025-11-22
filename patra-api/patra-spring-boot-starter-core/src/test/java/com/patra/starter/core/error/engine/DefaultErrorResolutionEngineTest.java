@@ -24,11 +24,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /// {@link DefaultErrorResolutionEngine} 单元测试。
-/// 
+///
 /// 测试策略: 应用层服务 - Mock 测试，验证错误解析逻辑。
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - ✅ ApplicationException 映射
 ///   - ✅ ErrorMappingContributor 映射
 ///   - ✅ ErrorTrait 映射
@@ -37,7 +37,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///   - ✅ 回退策略
 ///   - ✅ null 异常处理
 ///   - ✅ 配置开关控制
-/// 
+///
 /// @author Patra Team
 /// @since 2.0
 @DisplayName("DefaultErrorResolutionEngine 单元测试")

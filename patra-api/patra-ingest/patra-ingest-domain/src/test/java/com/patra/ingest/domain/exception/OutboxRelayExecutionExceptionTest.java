@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// {@link OutboxRelayExecutionException} 的单元测试。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("OutboxRelayExecutionException 单元测试")

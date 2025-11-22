@@ -3,9 +3,9 @@ package com.patra.registry.api.dto.expr;
 import java.util.List;
 
 /// 聚合表达式快照响应 DTO,组合字段元数据和映射。
-/// 
+///
 /// 字段说明:
-/// 
+///
 /// @param fields 字段定义列表
 /// @param capabilities 能力定义列表
 /// @param renderRules 渲染规则列表

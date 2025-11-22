@@ -1,14 +1,14 @@
 package com.patra.ingest.domain.model.enums;
 
 /// 中继执行结果枚举,表示 Outbox 消息中继尝试的结果。
-/// 
+///
 /// 状态转换及含义:
-/// 
+///
 /// - **PUBLISHED**: 消息成功发布到下游 broker(终态)
 ///   - **DEFERRED**: 中继因可重试错误失败,稍后将重试(瞬态)
 ///   - **FAILED**: 中继永久失败(达到最大重试次数或致命错误)
 ///   - **LEASE_MISSED**: 由于并发竞争未能获取租约(瞬态)
-/// 
+///
 /// @author Patra Team
 /// @since 0.1.0
 public enum RelayStatus {
@@ -38,42 +38,42 @@ public enum RelayStatus {
   }
 
   /// 获取状态代码(与数据库枚举值匹配)。
-/// 
-/// @return 状态代码字符串
+  ///
+  /// @return 状态代码字符串
   public String getCode() {
     return code;
   }
 
   /// 获取人类可读的描述(中文)。
-/// 
-/// @return 描述字符串
+  ///
+  /// @return 描述字符串
   public String getDescription() {
     return description;
   }
 
   /// 检查是否为终态(无需进一步处理)。
-/// 
-/// 终态: PUBLISHED, FAILED
-/// 
-/// @return 如果此状态表示最终状态,则返回 true
+  ///
+  /// 终态: PUBLISHED, FAILED
+  ///
+  /// @return 如果此状态表示最终状态,则返回 true
   public boolean isTerminal() {
     return terminal;
   }
 
   /// 检查此状态是否表示可重试的失败。
-/// 
-/// 可重试状态: DEFERRED, LEASE_MISSED
-/// 
-/// @return 如果此状态允许重试,则返回 true
+  ///
+  /// 可重试状态: DEFERRED, LEASE_MISSED
+  ///
+  /// @return 如果此状态允许重试,则返回 true
   public boolean isRetryable() {
     return retryable;
   }
 
   /// 将状态代码字符串解析为 RelayStatus 枚举。
-/// 
-/// @param code 状态代码字符串(例如,"PUBLISHED")
-/// @return 对应的 RelayStatus 枚举
-/// @throws IllegalArgumentException 如果代码无效
+  ///
+  /// @param code 状态代码字符串(例如,"PUBLISHED")
+  /// @return 对应的 RelayStatus 枚举
+  /// @throws IllegalArgumentException 如果代码无效
   public static RelayStatus fromCode(String code) {
     if (code == null || code.isBlank()) {
       throw new IllegalArgumentException("RelayStatus 代码不能为 null 或空白");

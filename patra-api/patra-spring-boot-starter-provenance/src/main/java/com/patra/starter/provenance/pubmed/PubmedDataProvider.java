@@ -22,16 +22,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /// PubMed 数据源提供者实现
-/// 
+///
 /// 封装PubMed的搜索、获取和转换逻辑,遵循配置优先级:运行时快照 > 数据源覆盖 > 共享默认值。
-/// 
+///
 /// 核心流程:
-/// 
+///
 /// - ESearch:执行搜索获取PMID列表(最多10000个)
 ///   - EPost(可选):当ID数量超过阈值时,上传ID列表到服务器获取WebEnv
 ///   - EFetch:批量获取文章详细元数据
 ///   - 转换:将PubMed XML响应转换为标准文献格式
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j

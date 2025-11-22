@@ -4,14 +4,14 @@ import com.patra.ingest.domain.outbox.OutboxHeaders;
 import java.time.Instant;
 
 /// Task Outbox 消息头
-/// 
+///
 /// 包含用于追踪、关联和性能监控的元数据。
-/// 
+///
 /// ### 头部类别
-/// 
+///
 /// - **调度追踪**: scheduleInstanceId、scheduler、schedulerJobId
 ///   - **时间追踪**: triggeredAt、occurredAt(用于延迟分析)
-/// 
+///
 /// @param scheduleInstanceId 调度实例标识符,用于关联
 /// @param scheduler 调度器类型(例如 MANUAL、XXL_JOB)
 /// @param schedulerJobId 调度器作业标识符(如不适用则为 null)
@@ -28,12 +28,12 @@ public record TaskHeaders(
     implements OutboxHeaders {
 
   /// 创建包含所有字段的 TaskHeaders
-/// 
-/// @param scheduleInstanceId 调度实例 ID(必需)
-/// @param scheduler 调度器名称(必需)
-/// @param schedulerJobId 调度器作业 ID(可空)
-/// @param triggeredAt 触发时间戳(必需)
-/// @param occurredAt 发生时间戳(必需)
+  ///
+  /// @param scheduleInstanceId 调度实例 ID(必需)
+  /// @param scheduler 调度器名称(必需)
+  /// @param schedulerJobId 调度器作业 ID(可空)
+  /// @param triggeredAt 触发时间戳(必需)
+  /// @param occurredAt 发生时间戳(必需)
   public TaskHeaders {
     // 紧凑构造函数 - 如需要可在此添加验证
   }

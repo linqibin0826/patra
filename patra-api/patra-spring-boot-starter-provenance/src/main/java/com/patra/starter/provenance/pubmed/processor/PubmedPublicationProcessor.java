@@ -41,32 +41,32 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 
 /// PubMed 出版物数据处理器
-/// 
+///
 /// 实现DataProcessor<CanonicalPublication>接口，负责从PubMed获取和处理出版物数据。
-/// 
+///
 /// **核心职责**：
-/// 
+///
 /// - ESearch：执行搜索获取PMID列表
 ///   - EPost（可选）：当ID数量超过阈值时，上传ID列表获取WebEnv
 ///   - EFetch：批量获取文章详细元数据
 ///   - 转换：将PubMed XML响应转换为CanonicalPublication
 ///   - 验证：验证转换后的出版物数据
-/// 
+///
 /// **架构位置**：
-/// 
+///
 /// ```
-/// 
+///
 /// ProvenanceDataProvider (PubmedDataProvider)
 ///     ↓ 委托
 /// DataProcessor (PubmedPublicationProcessor) ← [本类]
 ///     ↓ 调用
 /// PubMedClient → NCBI E-utilities API
-/// 
+///
 /// ```
-/// 
+///
 /// **注意**：此类通过 {@link com.patra.starter.provenance.boot.ProvenanceAutoConfiguration}
 /// 自动配置注册为 Spring Bean，不使用 `@Component` 注解。
-/// 
+///
 /// @author Patra Architecture Team
 /// @since 0.1.0
 @Slf4j
@@ -439,11 +439,11 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
   }
 
   /// 格式化客户端异常消息
-/// 
-/// 根据HTTP状态码将异常转换为用户友好的错误消息。
-/// 
-/// @param ex 客户端异常
-/// @return 格式化的错误消息
+  ///
+  /// 根据HTTP状态码将异常转换为用户友好的错误消息。
+  ///
+  /// @param ex 客户端异常
+  /// @return 格式化的错误消息
   private String formatErrorMessage(ProvenanceClientException ex) {
     Integer status = ex.getStatusCode();
     if (status == null) {

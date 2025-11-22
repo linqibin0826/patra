@@ -20,14 +20,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /// ProvenanceDataAdapter 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 测试 ProvenanceConfigSnapshot 到 ProvenanceConfig 的转换逻辑
 ///   - 测试各个子配置的映射方法
 ///   - 测试 null 安全性
 ///   - 验证字段映射的正确性
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("ProvenanceDataAdapter 单元测试")

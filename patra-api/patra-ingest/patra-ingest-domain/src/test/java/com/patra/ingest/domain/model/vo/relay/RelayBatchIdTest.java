@@ -12,15 +12,15 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// {@link RelayBatchId} 的单元测试。
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - 工厂方法 (generate, of)
 ///   - 格式验证
 ///   - 业务方法 (getValue, getTimestampPart, getUuidPart)
 ///   - Value Object 语义 (equals, hashCode, toString)
 ///   - 不变性保证
-/// 
+///
 /// @author Patra Team
 @DisplayName("RelayBatchId 单元测试")
 class RelayBatchIdTest {

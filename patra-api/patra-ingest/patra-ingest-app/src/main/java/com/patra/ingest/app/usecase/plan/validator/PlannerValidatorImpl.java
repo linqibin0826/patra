@@ -10,18 +10,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /// {@link PlannerValidator} 的默认实现 - 执行基线检查,包括窗口合理性、队列背压和数据源能力验证
-/// 
+///
 /// ### 阈值策略
-/// 
+///
 /// - **DEFAULT_QUEUE_THRESHOLD = 50**: 待处理任务超过此值时应用背压
 ///   - **MAX_REASONABLE_WINDOW = 30 天**: 防止过大窗口导致任务量暴增
 ///   - **MIN_REASONABLE_WINDOW = 1 分钟**: 避免极小切片浪费资源
-/// 
+///
 /// ### 窗口要求
-/// 
+///
 /// - **UPDATE 操作**: 可省略窗口
 ///   - **HARVEST 操作**: 必须提供显式窗口或增量能力配置
-/// 
+///
 @Slf4j
 @Component
 public class PlannerValidatorImpl implements PlannerValidator {

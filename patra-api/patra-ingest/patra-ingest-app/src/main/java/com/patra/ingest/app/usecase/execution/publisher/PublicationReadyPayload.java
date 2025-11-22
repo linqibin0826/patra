@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Objects;
 
 /// 出版物就绪事件的Outbox载荷
-/// 
+///
 /// @param taskId 任务标识符
 /// @param runId 执行运行标识符
 /// @param provenanceCode Provenance代码 (PUBMED/EPMC等)

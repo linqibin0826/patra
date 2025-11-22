@@ -8,16 +8,16 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// PlannerWindow 值对象单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
 ///   - 使用 @Nested 分组组织测试
-/// 
+///
 /// 测试范围：
-/// 
+///
 /// - ✅ record 构造函数验证（紧凑构造器）
 ///   - ✅ from < to 验证规则（from 必须早于 to）
 ///   - ✅ null 值语义（无界窗口）
@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ isFull() 查询方法测试
 ///   - ✅ record 自动生成的 equals/hashCode/toString 测试
 ///   - ✅ 边界值和时间精度测试
-/// 
+///
 /// @author Patra Team
 /// @since 0.1.0
 @DisplayName("PlannerWindow 值对象单元测试")

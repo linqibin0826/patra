@@ -4,16 +4,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import lombok.Getter;
 
 /// 计划状态 (字典: ing_plan_status)。
-/// 
+///
 /// 字段映射: `ing_plan.status_code → DRAFT/SLICING/READY/ARCHIVED`
-/// 
+///
 /// 状态机语义:
-/// 
+///
 /// - DRAFT → 新创建,尚未开始切片
 ///   - SLICING → 正在生成切片/任务
 ///   - READY → 切片和任务创建成功
 ///   - ARCHIVED → 生命周期已关闭,所有任务已完成(以前称为 COMPLETED)
-/// 
+///
 /// **注意:** 计划状态仅反映其自身的生命周期。执行结果(部分完成/失败)应通过聚合任务状态来查询。
 @Getter
 public enum PlanStatus {

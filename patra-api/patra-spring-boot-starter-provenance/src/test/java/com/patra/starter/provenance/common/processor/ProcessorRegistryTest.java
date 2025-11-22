@@ -12,14 +12,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /// ProcessorRegistry单元测试
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 自动注册功能测试
 ///   - Processor查找测试（getProcessor、findProcessor）
 ///   - 类型支持检查测试（supports、getSupportedTypes）
 ///   - 异常情况测试（重复注册、Processor不存在、空列表）
-/// 
+///
 /// @author Patra Architecture Team
 /// @since 0.1.0
 @DisplayName("ProcessorRegistry注册表测试")
@@ -219,7 +219,9 @@ class ProcessorRegistryTest {
     // Given: 创建多种类型的Processor
     List<DataProcessor<?>> processors =
         List.of(
-            new MockPublicationProcessor(), new MockJournalProcessor(), new MockCitationProcessor());
+            new MockPublicationProcessor(),
+            new MockJournalProcessor(),
+            new MockCitationProcessor());
 
     // When
     ProcessorRegistry registry = new ProcessorRegistry(processors);

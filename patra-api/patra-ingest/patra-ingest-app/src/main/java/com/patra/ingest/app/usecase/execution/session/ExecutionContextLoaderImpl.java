@@ -21,26 +21,26 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /// 执行上下文加载器实现。
-/// 
+///
 /// 核心职责: 恢复配置和表达式快照(Task → Slice → Plan),验证哈希值,并编译表达式。
-/// 
+///
 /// 设计要点:
-/// 
+///
 /// - 读取 Task: 获取 sliceId、exprHash、paramsJson、provenanceCode、endpointName
 ///   - 读取 Slice: 获取 planId 和执行窗口信息
 ///   - 读取 Plan: 获取 provenanceConfigSnapshotJson
 ///   - 通过 ExpressionCompilerPort 编译表达式 → query/params/normalizedExpression
 ///   - 验证 exprHash 以确保配置完整性
 ///   - 返回包含所有必要执行信息的 ExecutionContext
-/// 
+///
 /// 错误处理:
-/// 
+///
 /// - Task/Slice/Plan 缺失 → IllegalArgumentException
 ///   - 表达式编译失败 → IllegalStateException
 ///   - exprHash 不匹配 → IllegalStateException(完整性违规)
-/// 
+///
 /// 日志策略: 成功加载上下文时记录 INFO;哈希验证失败时记录 WARN。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Service
@@ -55,11 +55,11 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
   private final ObjectMapper objectMapper;
 
   /// 加载执行上下文(配置恢复 + 表达式编译)。
-/// 
-/// @param taskId 任务 ID
-/// @param runId 运行 ID
-/// @return 执行上下文
-/// @throws IllegalArgumentException 如果任务未找到
+  ///
+  /// @param taskId 任务 ID
+  /// @param runId 运行 ID
+  /// @return 执行上下文
+  /// @throws IllegalArgumentException 如果任务未找到
   @Override
   public ExecutionContext loadContext(Long taskId, Long runId) {
     // 查询任务并委托给重载方法
@@ -72,14 +72,14 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
   }
 
   /// 加载执行上下文(配置恢复 + 表达式编译) — 优化版本,避免重新加载 Task。
-/// 
-/// 加载流程:
-/// 
-/// @param task 任务聚合根
-/// @param runId 运行 ID
-/// @return 执行上下文
-/// @throws IllegalArgumentException 如果 Slice 或 Plan 未找到
-/// @throws IllegalStateException 如果表达式编译失败或哈希不匹配
+  ///
+  /// 加载流程:
+  ///
+  /// @param task 任务聚合根
+  /// @param runId 运行 ID
+  /// @return 执行上下文
+  /// @throws IllegalArgumentException 如果 Slice 或 Plan 未找到
+  /// @throws IllegalStateException 如果表达式编译失败或哈希不匹配
   @Override
   public ExecutionContext loadContext(TaskAggregate task, Long runId) {
     Long taskId = task.getId();
@@ -171,18 +171,18 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
   }
 
   /// 从切片窗口规格 JSON 解析 WindowSpec。
-/// 
-/// 该方法使用多态的 WindowSpec 值对象处理不同的窗口类型:
-/// 
-/// - TIME - 时间窗口
-///   - ID_RANGE - ID 范围窗口
-///   - CURSOR_LANDMARK - 游标地标窗口
-///   - VOLUME_BUDGET - 容量预算窗口
-///   - SINGLE - 单次窗口
-/// 
-/// @param windowSpecJson 窗口规格 JSON 字符串
-/// @return WindowSpec 实例,如果 JSON 为空则返回 null
-/// @throws IllegalStateException 如果 WindowSpec 解析失败
+  ///
+  /// 该方法使用多态的 WindowSpec 值对象处理不同的窗口类型:
+  ///
+  /// - TIME - 时间窗口
+  ///   - ID_RANGE - ID 范围窗口
+  ///   - CURSOR_LANDMARK - 游标地标窗口
+  ///   - VOLUME_BUDGET - 容量预算窗口
+  ///   - SINGLE - 单次窗口
+  ///
+  /// @param windowSpecJson 窗口规格 JSON 字符串
+  /// @return WindowSpec 实例,如果 JSON 为空则返回 null
+  /// @throws IllegalStateException 如果 WindowSpec 解析失败
   private WindowSpec parseWindowSpec(String windowSpecJson) {
     if (windowSpecJson == null || windowSpecJson.isBlank()) {
       return null;
@@ -199,10 +199,10 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
   }
 
   /// 将 JSON 字符串解析为 JsonNode。
-/// 
-/// @param json JSON 字符串
-/// @return JsonNode 实例,如果 JSON 为空则返回空对象节点
-/// @throws IllegalStateException 如果 JSON 解析失败
+  ///
+  /// @param json JSON 字符串
+  /// @return JsonNode 实例,如果 JSON 为空则返回空对象节点
+  /// @throws IllegalStateException 如果 JSON 解析失败
   private JsonNode parseJson(String json) {
     if (json == null || json.isBlank()) {
       return objectMapper.createObjectNode();
@@ -216,10 +216,10 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
   }
 
   /// 将 JSON 字符串解析为 ProvenanceConfigSnapshot。
-/// 
-/// @param json JSON 字符串
-/// @return ProvenanceConfigSnapshot 实例
-/// @throws IllegalStateException 如果 JSON 为空或解析失败
+  ///
+  /// @param json JSON 字符串
+  /// @return ProvenanceConfigSnapshot 实例
+  /// @throws IllegalStateException 如果 JSON 为空或解析失败
   private ProvenanceConfigSnapshot parseConfigSnapshot(String json) {
     if (json == null || json.isBlank()) {
       throw new IllegalStateException("配置快照 JSON 不能为空");

@@ -6,15 +6,16 @@ import java.time.Instant;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
-/// 只读 Mapper,用于表 `reg_prov_window_offset_cfg`. SQL implementation located in `resources/mapper/RegProvWindowOffsetCfgMapper.xml`.
-/// 
+/// 只读 Mapper,用于表 `reg_prov_window_offset_cfg`. SQL implementation located in
+// `resources/mapper/RegProvWindowOffsetCfgMapper.xml`.
+///
 /// @author linqibin
 /// @since 0.1.0
 public interface RegProvWindowOffsetCfgMapper extends BaseMapper<RegProvWindowOffsetCfgDO> {
 
   /// Selects the active window-offset configuration, preferring the specific operation key and
-/// falling back to `ALL`. Ordering is handled within the SQL to guarantee deterministic
-/// results even during overlapping slices.
+  /// falling back to `ALL`. Ordering is handled within the SQL to guarantee deterministic
+  /// results even during overlapping slices.
   Optional<RegProvWindowOffsetCfgDO> selectActiveMerged(
       @Param("provenanceId") Long provenanceId,
       @Param("operationType") String operationType,

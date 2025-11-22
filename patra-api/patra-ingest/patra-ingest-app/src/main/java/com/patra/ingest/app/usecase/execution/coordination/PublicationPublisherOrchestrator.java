@@ -19,21 +19,21 @@ import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
 /// 出版物发布编排器
-/// 
+///
 /// 在六边形架构+DDD中的角色:应用层编排器,负责协调出版物发布工作流。
-/// 
+///
 /// 设计理念:通过在应用层显式编排两个不同的操作,使跨服务集成变得清晰:
-/// 
+///
 /// - 通过{@link PublicationStoragePort}上传到对象存储(技术基础设施)
 ///   - 通过{@link StorageMetadataPort}记录元数据(与patra-object-storage服务的业务集成)
-/// 
+///
 /// 主要职责:
-/// 
+///
 /// - 编排存储和元数据记录的顺序
 ///   - 处理跨服务集成失败
 ///   - 将失败的元数据记录委托给重试机制
 ///   - 为应用层调用者提供统一的发布结果
-/// 
+///
 /// 这种设计遵循六边形架构原则,在应用层显式编排,而不是隐藏在基础设施适配器中。
 @Service
 @RequiredArgsConstructor
@@ -47,12 +47,12 @@ public class PublicationPublisherOrchestrator {
   private final TechnicalRetryPort technicalRetryPort;
 
   /// 发布标准化出版物
-/// 
-/// 业务流程:
-/// 
-/// @param publication 领域标准化的出版物列表
-/// @param context 发布上下文(包含执行元数据)
-/// @return 发布结果(包含存储位置)
+  ///
+  /// 业务流程:
+  ///
+  /// @param publication 领域标准化的出版物列表
+  /// @param context 发布上下文(包含执行元数据)
+  /// @return 发布结果(包含存储位置)
   public PublishResult publish(List<CanonicalPublication> publication, PublishContext context) {
     List<CanonicalPublication> safePublication =
         publication == null ? Collections.emptyList() : publication;
@@ -147,10 +147,10 @@ public class PublicationPublisherOrchestrator {
   }
 
   /// 处理元数据记录失败
-/// 
-/// @param exception Feign异常
-/// @param storageResult 存储结果
-/// @param context 发布上下文
+  ///
+  /// @param exception Feign异常
+  /// @param storageResult 存储结果
+  /// @param context 发布上下文
   private void handleMetadataRecordFailure(
       FeignException exception,
       PublicationStoragePort.StorageResult storageResult,
@@ -158,7 +158,9 @@ public class PublicationPublisherOrchestrator {
     int status = exception.status();
     if (status >= 500 || status == 503 || status == -1) {
       log.warn(
-          "patra-object-storage服务不可用 (HTTP {}),委托给重试机制 storageKey={}", status, storageResult.storageKey());
+          "patra-object-storage服务不可用 (HTTP {}),委托给重试机制 storageKey={}",
+          status,
+          storageResult.storageKey());
       delegateToRetry(storageResult, context, exception);
       return;
     }
@@ -177,12 +179,12 @@ public class PublicationPublisherOrchestrator {
   }
 
   /// 将失败的元数据记录委托给技术重试机制
-/// 
-/// 使用{@link TechnicalRetryPort}通过outbox发布者框架确保一致的重试处理。
-/// 
-/// @param storageResult 成功上传的存储结果
-/// @param context 发布上下文(用于可追溯性)
-/// @param error 导致失败的异常
+  ///
+  /// 使用{@link TechnicalRetryPort}通过outbox发布者框架确保一致的重试处理。
+  ///
+  /// @param storageResult 成功上传的存储结果
+  /// @param context 发布上下文(用于可追溯性)
+  /// @param error 导致失败的异常
   private void delegateToRetry(
       PublicationStoragePort.StorageResult storageResult, PublishContext context, Exception error) {
     try {
@@ -225,21 +227,21 @@ public class PublicationPublisherOrchestrator {
   }
 
   /// 发布结果
-/// 
-/// 包含存储位置信息。
-/// 
-/// @param storageKey 完整的存储标识符
-/// @param publishedCount 已发布的出版物数量
+  ///
+  /// 包含存储位置信息。
+  ///
+  /// @param storageKey 完整的存储标识符
+  /// @param publishedCount 已发布的出版物数量
   @Builder
   public record PublishResult(String storageKey, int publishedCount) {}
 
   /// 发布上下文
-/// 
-/// 包含执行元数据。
-/// 
-/// @param runId 任务运行标识符
-/// @param batchNo 执行批次编号
-/// @param provenanceCode 标准化的数据源标识符
+  ///
+  /// 包含执行元数据。
+  ///
+  /// @param runId 任务运行标识符
+  /// @param batchNo 执行批次编号
+  /// @param provenanceCode 标准化的数据源标识符
   @Builder
   public record PublishContext(Long runId, int batchNo, ProvenanceCode provenanceCode) {}
 }

@@ -30,11 +30,11 @@ import org.springframework.cloud.openfeign.FeignAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 
 /// 表达式编译器自动配置
-/// 
+///
 /// 配置并装配表达式编译器核心组件,包括规则快照加载、能力检查、标准化、渲染和编译等。
-/// 
+///
 /// ### 配置的 Bean
-/// 
+///
 /// - {@link SnapshotAssembler} - 快照组装器,将 Registry API 数据转换为编译器内部快照
 ///   - {@link RuleSnapshotLoader} - 规则快照加载器,从 patra-registry 加载 Provenance 和表达式规则
 ///   - {@link CapabilityChecker} - 能力检查器,验证表达式编译请求的有效性
@@ -42,18 +42,18 @@ import org.springframework.context.annotation.Bean;
 ///   - {@link ExprMetrics} - 表达式编译指标,记录编译性能和结果
 ///   - {@link ExprRenderer} - 表达式渲染器,将内部表达式渲染为目标格式
 ///   - {@link ExprCompiler} - 表达式编译器主入口
-/// 
+///
 /// ### 条件装配
-/// 
+///
 /// - 依赖 {@link FeignAutoConfiguration} 和 {@link ExprFunctionAutoConfiguration} 先完成
 ///   - Registry API 集成可通过 `patra.expr.compiler.registry-api.enabled=false` 禁用
 ///   - 编译器整体可通过 `patra.expr.compiler.enabled=false` 禁用
-/// 
+///
 /// ### 配置属性
-/// 
+///
 /// - {@link CompilerProperties} - 编译器行为配置(查询长度限制、参数数量限制等)
 ///   - {@link ExprModeProperties} - 各 Provenance 的表达式编译模式配置
-/// 
+///
 /// @see CompilerProperties
 /// @see ExprModeProperties
 /// @see ExprCompiler

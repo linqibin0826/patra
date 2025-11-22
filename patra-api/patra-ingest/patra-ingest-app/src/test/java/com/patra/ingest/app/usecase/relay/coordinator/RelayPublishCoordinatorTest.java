@@ -27,9 +27,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /// RelayPublishCoordinator 单元测试
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - ✅ 发布成功场景
 ///   - ✅ 暂时性错误重试场景
 ///   - ✅ 致命错误失败场景
@@ -37,7 +37,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///   - ✅ 错误分类逻辑
 ///   - ✅ 重试延迟计算
 ///   - ✅ 状态转换验证 (PUBLISHING → PUBLISHED/FAILED/DEAD)
-/// 
+///
 /// @author Patra Team
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)

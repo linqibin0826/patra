@@ -3,15 +3,15 @@ package com.patra.ingest.domain.model.vo.expression;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /// 表达式编译结果值对象。
-/// 
+///
 /// 与 patra-spring-boot-starter-expr 的 CompileResult 对齐,但适配于领域层:
-/// 
+///
 /// - query - 已编译的查询字符串 (例如 PubMed term)
 ///   - params - 已编译的参数(JSON 格式,例如 retmax, sort)
 ///   - normalizedExpression - 归一化表达式 JSON
 ///   - errors - 验证错误消息 (有效时为空)
 ///   - warnings - 验证警告消息
-/// 
+///
 /// @param query 已编译的查询字符串
 /// @param params 已编译的参数(JSON 格式)
 /// @param normalizedExpression 归一化表达式 JSON

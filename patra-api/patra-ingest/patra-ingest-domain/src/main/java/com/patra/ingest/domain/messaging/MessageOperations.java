@@ -1,17 +1,17 @@
 package com.patra.ingest.domain.messaging;
 
 /// 业务消息操作类型常量定义。
-/// 
+///
 /// 定义采集服务中不同业务操作的标识,用于消息分类和过滤。
-/// 
+///
 /// **设计原则**:
-/// 
+///
 /// - 操作类型反映业务动作,与技术实现无关
 ///   - 用于消息的业务分类,便于消费端按需过滤
 ///   - 与具体 MQ 的 Tags 映射由基础设施层负责
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 public final class MessageOperations {
 
   private MessageOperations() {

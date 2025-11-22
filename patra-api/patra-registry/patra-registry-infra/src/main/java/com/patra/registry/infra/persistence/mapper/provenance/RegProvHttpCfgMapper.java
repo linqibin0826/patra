@@ -6,8 +6,9 @@ import java.time.Instant;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
-/// 只读 Mapper,用于表 `reg_prov_http_cfg`. Backed by XML queries located at `resources/mapper/RegProvHttpCfgMapper.xml`.
-/// 
+/// 只读 Mapper,用于表 `reg_prov_http_cfg`. Backed by XML queries located at
+// `resources/mapper/RegProvHttpCfgMapper.xml`.
+///
 /// @author linqibin
 /// @since 0.1.0
 public interface RegProvHttpCfgMapper extends BaseMapper<RegProvHttpCfgDO> {

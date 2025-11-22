@@ -10,7 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /// PubMedESearchRequestAssembler 单元测试
-/// 
+///
 /// @author linqibin
 @DisplayName("PubMedESearchRequestAssembler 测试")
 class PubMedESearchRequestAssemblerTest {

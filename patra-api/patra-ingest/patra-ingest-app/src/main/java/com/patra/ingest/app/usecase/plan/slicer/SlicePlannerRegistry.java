@@ -7,18 +7,18 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 
 /// 切片策略注册表(应用层·注册表)
-/// 
+///
 /// 职责:按 {@link SliceStrategy} 收集和索引 {@link SlicePlanner} 实现。在规划期间提供 O(1) 查找,避免 if-else/switch 爆炸。
-/// 
+///
 /// 设计与约束:
-/// 
+///
 /// - 通过构造函数批量注册所有 Spring 注入的 {@link SlicePlanner} Bean;之后只读。
 ///   - 忽略 null;冲突时后注册覆盖先注册(支持灰度替换)。
 ///   - 使用 {@link EnumMap} 实现常数时间访问和低内存占用。
 ///   - 线程安全:运行时无并发写入;仅读取。
 ///   - 可扩展:通过添加 Spring Bean 实现来添加策略。
 ///   - 失败模式:策略未找到时返回 null(调用方决定回退/错误)。
-/// 
+///
 @Component
 public class SlicePlannerRegistry {
 

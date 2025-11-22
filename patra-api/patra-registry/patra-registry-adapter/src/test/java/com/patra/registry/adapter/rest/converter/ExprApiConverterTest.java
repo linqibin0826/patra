@@ -23,17 +23,17 @@ import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
 /// ExprApiConverter 单元测试。
-/// 
+///
 /// 测试策略: 使用 MapStruct 生成的实现类进行纯 Java 单元测试, 无需 Spring 容器。
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - 字段映射验证 - Query → Resp 所有字段正确映射
 ///   - List 转换 - 集合转换保持迭代顺序
 ///   - Null 值处理 - 输入为 null 或可选字段为 null 的场景
 ///   - 布尔字段转换 - boolean 类型正确映射
 ///   - 时间类型转换 - Instant/LocalDate 正确转换
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("ExprApiConverter 单元测试")

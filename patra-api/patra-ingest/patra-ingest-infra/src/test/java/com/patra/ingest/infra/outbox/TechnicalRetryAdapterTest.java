@@ -19,14 +19,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /// TechnicalRetryAdapter 单元测试
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 验证 RetryContext 到 OutboxMessage 的转换逻辑
 ///   - 验证去重键（dedupKey）生成正确（SHA-256 哈希）
 ///   - 验证分区键（partitionKey）提取逻辑
 ///   - 验证无效输入的处理
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)

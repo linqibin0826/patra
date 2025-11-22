@@ -7,24 +7,24 @@ import com.patra.ingest.domain.model.vo.plan.PlannerWindow;
 import java.util.Objects;
 
 /// Plan 组装输入(应用层 → 组装器)
-/// 
+///
 /// 打包窗口解析、表达式构建、触发器标准化和配置快照提取的结果,供组装器生成:
-/// 
+///
 /// #### 不变式
-/// 
+///
 /// - `triggerNorm != null`
 ///   - `window != null`
 ///   - `configSnapshot != null`
 ///   - `planExpression != null`
-/// 
+///
 /// #### 线程安全
-/// 
+///
 /// Record 不可变,可安全重用。
-/// 
+///
 /// #### 扩展性
-/// 
+///
 /// 可包含:租约信息 / 限流配置 / 特性覆盖;必须保持向后兼容。
-/// 
+///
 /// @param triggerNorm 触发器标准化(模式、优先级、用户窗口等)
 /// @param window Plan 窗口(UTC 半开区间)
 /// @param configSnapshot 配置快照(用于规范化/哈希)

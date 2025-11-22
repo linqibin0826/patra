@@ -16,9 +16,9 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 /// 出版物事件发布器
-/// 
+///
 /// 在六边形架构+DDD中的角色:应用层事件发布器,负责在任务执行完成后发布出版物就绪事件。
-/// 
+///
 /// 主要职责:将领域事件持久化到Outbox表,由中继组件投递到MQ。
 @Component
 public class PublicationEventPublisher
@@ -34,10 +34,10 @@ public class PublicationEventPublisher
   }
 
   /// 发布出版物就绪事件
-/// 
-/// 将事件持久化到outbox表,由relay组件投递到MQ。
-/// 
-/// @param event 出版物就绪领域事件
+  ///
+  /// 将事件持久化到outbox表,由relay组件投递到MQ。
+  ///
+  /// @param event 出版物就绪领域事件
   public void publish(PublicationDataReadyEvent event) {
     if (!validateEvent(event)) {
       return;

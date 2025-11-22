@@ -14,23 +14,23 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 /// 技术重试适配器（Infrastructure 层实现）
-/// 
+///
 /// 职责：
-/// 
+///
 /// - 实现 {@link TechnicalRetryPort} 端口
 ///   - 将 {@link RetryContext} 转换为 {@link OutboxMessage}
 ///   - 计算 SHA-256 去重键
 ///   - 序列化 metadata 为 JSON
 ///   - 持久化到 Outbox 表
-/// 
+///
 /// ### 架构说明
-/// 
+///
 /// 此实现位于 Infrastructure 层，符合六边形架构原则：
-/// 
+///
 /// - 不依赖 Application 层的 `AbstractOutboxPublisher`（避免反向依赖）
 ///   - 直接实现 Domain 层的 `TechnicalRetryPort` 接口
 ///   - 使用 Domain 层的 `OutboxMessageRepository` 进行持久化
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Component
@@ -68,17 +68,17 @@ public class TechnicalRetryAdapter implements TechnicalRetryPort {
   }
 
   /// 验证重试上下文是否有效
-/// 
-/// @param context 重试上下文
-/// @return true 如果有效，false 否则
+  ///
+  /// @param context 重试上下文
+  /// @return true 如果有效，false 否则
   private boolean validateContext(RetryContext context) {
     return context != null && context.payload() != null && context.aggregateId() != null;
   }
 
   /// 从 RetryContext 构建 OutboxMessage
-/// 
-/// @param context 重试上下文
-/// @return Outbox 消息实体
+  ///
+  /// @param context 重试上下文
+  /// @return Outbox 消息实体
   private OutboxMessage buildOutboxMessage(RetryContext context) {
     String dedupKey = computeDedupKey(context);
     String partitionKey = extractPartitionKey(context);
@@ -99,11 +99,11 @@ public class TechnicalRetryAdapter implements TechnicalRetryPort {
   }
 
   /// 计算去重键（使用 SHA-256 哈希）
-/// 
-/// 去重键格式：SHA-256(storageKey + ":" + fileSize)
-/// 
-/// @param context 重试上下文
-/// @return 十六进制编码的 SHA-256 哈希值
+  ///
+  /// 去重键格式：SHA-256(storageKey + ":" + fileSize)
+  ///
+  /// @param context 重试上下文
+  /// @return 十六进制编码的 SHA-256 哈希值
   private String computeDedupKey(RetryContext context) {
     try {
       MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
@@ -121,20 +121,20 @@ public class TechnicalRetryAdapter implements TechnicalRetryPort {
   }
 
   /// 提取分区键（用于消息顺序投递）
-/// 
-/// 分区键策略：使用 provenanceCode，缺失时使用 "UNKNOWN"
-/// 
-/// @param context 重试上下文
-/// @return 分区键字符串
+  ///
+  /// 分区键策略：使用 provenanceCode，缺失时使用 "UNKNOWN"
+  ///
+  /// @param context 重试上下文
+  /// @return 分区键字符串
   private String extractPartitionKey(RetryContext context) {
     Object provenance = context.metadata().get("provenanceCode");
     return provenance != null ? provenance.toString() : "UNKNOWN";
   }
 
   /// 序列化 metadata 为 JSON 字符串
-/// 
-/// @param context 重试上下文
-/// @return JSON 字符串
+  ///
+  /// @param context 重试上下文
+  /// @return JSON 字符串
   private String serializeHeaders(RetryContext context) {
     try {
       return objectMapper.writeValueAsString(context.metadata());

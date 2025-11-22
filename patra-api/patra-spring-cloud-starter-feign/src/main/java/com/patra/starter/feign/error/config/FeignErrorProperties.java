@@ -4,9 +4,9 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /// Feign 错误解码行为、宽容模式和可观测性的配置属性
-/// 
+///
 /// 通过 `patra.feign.problem` 前缀配置 Feign 错误处理行为。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

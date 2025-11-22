@@ -11,15 +11,15 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /// 数据库实体,映射到表 `sys_dict_item`.
-/// 
+///
 /// Represents individual dictionary items that belong to a dictionary type.
-/// 
+///
 /// Database level highlights:
-/// 
+///
 /// - Each type can have at most one default item (enforced via `default_key`).
 ///   - `item_code` must be unique within the boundaries of `type_id`.
 ///   - `item_code` is expected to use upper snake case (e.g., `GET`, `PAGE_NUMBER`).
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

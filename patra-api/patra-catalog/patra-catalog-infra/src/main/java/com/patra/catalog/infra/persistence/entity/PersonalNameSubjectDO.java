@@ -1,25 +1,24 @@
 package com.patra.catalog.infra.persistence.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
-import lombok.EqualsAndHashCode;
-import com.patra.starter.mybatis.entity.BaseDO;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.baomidou.mybatisplus.annotation.TableName;
-import java.time.Instant;
+import com.patra.starter.mybatis.entity.BaseDO;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /// 人物主题数据库实体,映射到表 `cat_personal_name_subject`。
-/// 
+///
 /// 表结构: 存储文献的主题人物信息（传记类、历史类、纪念类文献）。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `publication_id` 出版物ID,外键 cat_publication.id
 ///   - `subject_type` 主题类型（如"biography","history","memorial"）
 ///   - `identifier` 人物标识符（如 VIAF ID, Wikidata ID）
 ///   - `metadata` JSON 扩展数据字段
-/// 
+///
 /// @author linqibin
 /// @since 0.3.0
 @Data
@@ -69,5 +68,4 @@ public class PersonalNameSubjectDO extends BaseDO {
   /// 人物元数据（JSON 格式）
   @TableField(value = "metadata", typeHandler = JacksonTypeHandler.class)
   private JsonNode metadata;
-
 }

@@ -3,14 +3,14 @@ package com.patra.registry.api.error;
 import com.patra.common.error.codes.ErrorCodeLike;
 
 /// Registry 服务错误码目录。
-/// 
+///
 /// 错误码遵循 `REG-NNNN` 格式(前缀 + 数字代码),以追加方式添加以保持 API 兼容性。
-/// 
+///
 /// 系列划分:
-/// 
+///
 /// - 0xxx - 通用 HTTP 错误(委托给 `HttpStdErrors`)
 ///   - 1xxx - 领域或业务特定错误
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public enum RegistryErrorCode implements ErrorCodeLike {
@@ -59,33 +59,33 @@ public enum RegistryErrorCode implements ErrorCodeLike {
   private final int httpStatus;
 
   /// 构造带有 HTTP 状态映射的错误码。
-/// 
-/// @param code `REG-NNNN` 格式的错误码
-/// @param httpStatus 关联的 HTTP 状态码
+  ///
+  /// @param code `REG-NNNN` 格式的错误码
+  /// @param httpStatus 关联的 HTTP 状态码
   RegistryErrorCode(String code, int httpStatus) {
     this.code = code;
     this.httpStatus = httpStatus;
   }
 
   /// 返回错误码字符串。
-/// 
-/// @return `REG-NNNN` 格式的错误码
+  ///
+  /// @return `REG-NNNN` 格式的错误码
   @Override
   public String code() {
     return code;
   }
 
   /// 返回关联的 HTTP 状态码。
-/// 
-/// @return HTTP 状态码
+  ///
+  /// @return HTTP 状态码
   @Override
   public int httpStatus() {
     return httpStatus;
   }
 
   /// 返回错误码的字符串表示。
-/// 
-/// @return 错误码字符串
+  ///
+  /// @return 错误码字符串
   @Override
   public String toString() {
     return code;

@@ -5,9 +5,9 @@ import java.util.Map;
 import java.util.Objects;
 
 /// 表达式编译结果。
-/// 
+///
 /// 包含渲染的查询文本、参数映射、规范化表达式、验证报告、快照引用和渲染跟踪。
-/// 
+///
 /// @param query 渲染的查询文本
 /// @param params 参数映射(提供商参数名 -> 值)
 /// @param normalized 规范化后的表达式

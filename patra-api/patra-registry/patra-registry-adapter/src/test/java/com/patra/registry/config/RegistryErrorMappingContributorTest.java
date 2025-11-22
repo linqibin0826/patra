@@ -18,14 +18,14 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.OptimisticLockingFailureException;
 
 /// RegistryErrorMappingContributor 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 验证所有异常类型正确映射到对应的 HTTP 错误码
 ///   - 验证未知异常返回 Optional.empty()
 ///   - 使用 Mock HttpStdErrors.Group 验证错误码调用
 ///   - 覆盖领域异常、数据层异常和边界场景
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("RegistryErrorMappingContributor 单元测试")
@@ -236,10 +236,10 @@ class RegistryErrorMappingContributorTest {
   // ========== 测试辅助类 ==========
 
   /// Mock ErrorCodeLike 对象。
-/// 
-/// @param code 错误码字符串
-/// @param httpStatus HTTP 状态码
-/// @return ErrorCodeLike 实例
+  ///
+  /// @param code 错误码字符串
+  /// @param httpStatus HTTP 状态码
+  /// @return ErrorCodeLike 实例
   private ErrorCodeLike mockErrorCode(String code, int httpStatus) {
     return new ErrorCodeLike() {
       @Override
@@ -260,8 +260,8 @@ class RegistryErrorMappingContributorTest {
   }
 
   /// 测试用 RegistryQuotaExceeded 具体实现。
-/// 
-/// 由于 RegistryQuotaExceeded 是抽象类，需要具体子类用于测试。
+  ///
+  /// 由于 RegistryQuotaExceeded 是抽象类，需要具体子类用于测试。
   private static class TestRegistryQuotaExceeded extends RegistryQuotaExceeded {
     public TestRegistryQuotaExceeded(String message) {
       super(message);

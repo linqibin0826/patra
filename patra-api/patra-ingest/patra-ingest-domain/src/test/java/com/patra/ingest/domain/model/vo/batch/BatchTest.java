@@ -9,14 +9,14 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// {@link Batch} 的单元测试。
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - 构造方法验证 (batchNo >= 1, query not blank, offset >= 0, limit > 0)
 ///   - 业务方法 (endOffset, contains)
 ///   - Record 语义 (equals, hashCode, toString, 组件访问器)
 ///   - 不变性保证
-/// 
+///
 /// @author Patra Team
 @DisplayName("Batch 单元测试")
 class BatchTest {

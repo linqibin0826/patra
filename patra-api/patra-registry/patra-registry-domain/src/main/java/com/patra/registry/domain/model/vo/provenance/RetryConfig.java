@@ -4,26 +4,26 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /// 重试配置值对象,定义重试尝试次数、退避策略、熔断器阈值和错误分类规则。
-/// 
+///
 /// **不可变性**:此对象一旦创建不可修改,通过值语义比较相等性。
-/// 
+///
 /// **业务约束**:
-/// 
+///
 /// - 配置ID和数据源ID必须为正整数
 ///   - 生效时间(effectiveFrom)不可为空,失效时间(effectiveTo)为null表示永久有效
 ///   - 退避策略类型(backoffPolicyTypeCode)不可为空白,支持FIXED/LINEAR/EXPONENTIAL
 ///   - 操作类型(operationType)为null时表示适用于所有操作(HARVEST/UPDATE/BACKFILL)
 ///   - 与HTTP配置的Retry-After策略配合工作,共同控制429/5xx/网络/客户端错误
-/// 
+///
 /// **业务语义**:
-/// 
+///
 /// - 重试次数控制:maxRetryTimes为0表示不重试,null表示使用默认值
 ///   - 退避策略:FIXED(固定延迟)、LINEAR(线性递增)、EXPONENTIAL(指数退避)
 ///   - 抖动机制:jitterFactorRatio添加随机性,防止雷鸣般的重试风暴
 ///   - HTTP状态码分类:retryHttpStatusJson定义可重试状态码,giveupHttpStatusJson定义立即放弃的状态码
 ///   - 网络错误处理:retryOnNetworkError控制连接超时/重置等网络级错误是否重试
 ///   - 熔断器保护:连续失败N次后打开熔断器,冷却期后半开尝试
-/// 
+///
 /// @param id 配置主键,唯一标识此重试配置,必须为正整数
 /// @param provenanceId 数据源ID外键,引用`reg_provenance.id`,必须为正整数
 /// @param operationType 操作类型,取值为`HARVEST/UPDATE/BACKFILL`,null表示适用于所有操作
@@ -60,15 +60,15 @@ public record RetryConfig(
     Integer circuitBreakThreshold,
     Integer circuitCooldownMillis) {
   /// 规范构造器,强制执行重试配置的业务约束。
-/// 
-/// 验证规则:
-/// 
-/// - 配置ID和数据源ID必须为正整数
-///   - 生效时间不可为空
-///   - 退避策略类型不可为空白
-///   - 所有字符串字段自动trim去除首尾空白
-/// 
-/// @throws DomainValidationException 如果验证失败
+  ///
+  /// 验证规则:
+  ///
+  /// - 配置ID和数据源ID必须为正整数
+  ///   - 生效时间不可为空
+  ///   - 退避策略类型不可为空白
+  ///   - 所有字符串字段自动trim去除首尾空白
+  ///
+  /// @throws DomainValidationException 如果验证失败
   public RetryConfig(
       Long id,
       Long provenanceId,

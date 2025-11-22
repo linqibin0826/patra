@@ -15,25 +15,25 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// Cursor 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 使用 TestDataBuilder 模式构建测试数据
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
-/// 
+///
 /// 测试范围：
-/// 
+///
 /// - ✅ 工厂方法测试（create, restore）
 ///   - ✅ 游标前进测试（advance, advanceTo）
 ///   - ✅ 水位线单调性测试（不允许回退）
 ///   - ✅ 表达式哈希检测测试（matchesExpression, AdvancementResult）
 ///   - ✅ 命名空间范围测试（GLOBAL/EXPR/CUSTOM）
 ///   - ✅ 边界条件和异常情况
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @DisplayName("Cursor 单元测试")
 class CursorTest {
 
@@ -1193,8 +1193,8 @@ class CursorTest {
   // ========== TestDataBuilder (辅助类) ==========
 
   /// Cursor 测试数据构建器。
-/// 
-/// 遵循 Builder 模式，提供默认值以简化测试数据构建。
+  ///
+  /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
   static class CursorTestDataBuilder {
     private Long id = null;
     private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;

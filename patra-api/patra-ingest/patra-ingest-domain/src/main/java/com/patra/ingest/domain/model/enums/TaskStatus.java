@@ -3,18 +3,18 @@ package com.patra.ingest.domain.model.enums;
 import lombok.Getter;
 
 /// 任务状态 (字典: ing_task_status)。
-/// 
+///
 /// 字段映射: `ing_task.status_code → PENDING/QUEUED/RUNNING/SUCCEEDED/FAILED`
-/// 
+///
 /// 状态机语义:
-/// 
+///
 /// - PENDING → 初始状态,等待调度器拾取
 ///   - QUEUED → 已加入执行队列
 ///   - RUNNING → 任务运行进行中
 ///   - RUNNING ⇄ QUEUED → 失败时重试(创建新的 TaskRun)
 ///   - SUCCEEDED → 最终成功状态(至少一个 TaskRun 成功)
 ///   - FAILED → 最终失败状态(所有 TaskRun 失败,达到最大重试次数)
-/// 
+///
 /// **注意:** PARTIAL 状态已移至 TaskRun 层以进行可恢复执行追踪。
 @Getter
 public enum TaskStatus {

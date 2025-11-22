@@ -99,7 +99,8 @@ class BatchScheduleBuilderTest {
 
     List<Batch> mockBatches = List.of(createBatch(1), createBatch(2), createBatch(3));
 
-    when(provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION)).thenReturn(pubmedSession);
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION))
+        .thenReturn(pubmedSession);
     when(mockStrategy1.generateBatches(pubmedSession, ctx)).thenReturn(mockBatches);
 
     // when
@@ -145,7 +146,8 @@ class BatchScheduleBuilderTest {
     QuerySession emptySession = createPubmedSession(0, false);
     ExecutionContext ctx = createContext("pubmed");
 
-    when(provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION)).thenReturn(emptySession);
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION))
+        .thenReturn(emptySession);
 
     // when
     com.patra.ingest.domain.model.vo.batch.BatchSchedule result = builder.build(ctx);
@@ -168,7 +170,8 @@ class BatchScheduleBuilderTest {
     QuerySession unknownSession = createUnknownSession(100);
     ExecutionContext ctx = createContext("pubmed"); // 使用合法的 ProvenanceCode
 
-    when(provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION)).thenReturn(unknownSession);
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION))
+        .thenReturn(unknownSession);
 
     // when & then
     assertThatThrownBy(() -> builder.build(ctx))
@@ -206,7 +209,8 @@ class BatchScheduleBuilderTest {
     ExecutionContext ctx = createContext("pubmed");
     RuntimeException strategyException = new RuntimeException("批次生成错误");
 
-    when(provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION)).thenReturn(pubmedSession);
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION))
+        .thenReturn(pubmedSession);
     when(mockStrategy1.generateBatches(pubmedSession, ctx)).thenThrow(strategyException);
 
     // when & then
@@ -226,7 +230,8 @@ class BatchScheduleBuilderTest {
     QuerySession pubmedSession = createPubmedSession(1000, false);
     ExecutionContext ctx = createContext("pubmed");
 
-    when(provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION)).thenReturn(pubmedSession);
+    when(provenanceDataPort.prepareQuerySession(ctx, DataType.PUBLICATION))
+        .thenReturn(pubmedSession);
     when(mockStrategy1.generateBatches(pubmedSession, ctx)).thenReturn(List.of());
 
     // when

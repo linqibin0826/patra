@@ -22,11 +22,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.annotation.Order;
 
 /// {@link ErrorResolutionPipeline} 单元测试。
-/// 
+///
 /// 测试策略: 应用层服务 - Mock 测试，验证拦截器链执行逻辑。
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - ✅ 拦截器链执行顺序
 ///   - ✅ 空拦截器列表处理
 ///   - ✅ 单个拦截器执行
@@ -34,7 +34,7 @@ import org.springframework.core.annotation.Order;
 ///   - ✅ @Order 注解排序
 ///   - ✅ 拦截器前置和后置处理
 ///   - ✅ 异常传播
-/// 
+///
 /// @author Patra Team
 /// @since 2.0
 @DisplayName("ErrorResolutionPipeline 单元测试")

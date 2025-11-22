@@ -7,11 +7,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /// PubMed ESearch API 请求参数
-/// 
+///
 /// 与官方E-utilities文档对齐的参数定义。ESearch用于搜索PubMed数据库并返回匹配的PMID列表。
-/// 
+///
 /// 字段说明：
-/// 
+///
 /// @param db 目标数据库标识符（如"pubmed"）
 /// @param term 布尔查询字符串（当使用日期过滤器时可选）
 /// @param retstart 分页的从零开始的偏移量
@@ -65,13 +65,29 @@ public record ESearchRequest(
     ) implements ApiRequest {
 
   /// Create a request that targets the PubMed database using JSON output.
-/// 
-/// @param db database identifier, typically "pubmed"
-/// @param term Boolean query string that drives the search
+  ///
+  /// @param db database identifier, typically "pubmed"
+  /// @param term Boolean query string that drives the search
   public ESearchRequest(String db, String term) {
     this(
-        db, term, null, null, RetMode.JSON.value(), null, null, null, null, null, null, null, null, null, null,
-        null, null, null);
+        db,
+        term,
+        null,
+        null,
+        RetMode.JSON.value(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null);
   }
 
   // Compact constructor: validate required parameters
@@ -87,8 +103,8 @@ public record ESearchRequest(
   }
 
   /// Compose the outbound query parameter map understood by the ESearch endpoint.
-/// 
-/// @return parameter map ready for gateway submission
+  ///
+  /// @return parameter map ready for gateway submission
   @Override
   public Map<String, String> toQueryParams() {
     Map<String, String> params = new LinkedHashMap<>();

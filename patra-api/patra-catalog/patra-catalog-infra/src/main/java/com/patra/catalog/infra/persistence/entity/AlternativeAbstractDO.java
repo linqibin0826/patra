@@ -2,20 +2,19 @@ package com.patra.catalog.infra.persistence.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.time.Instant;
-
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO;
+import java.time.Instant;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// 其他语言摘要数据库实体,映射到表 `cat_alternative_abstract`。
-/// 
+///
 /// 表结构: 管理文献摘要的多语言版本(官方翻译、专业翻译、机器翻译)
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `publication_id` 出版物ID(外键:cat_publication.id)
 ///   - `abstract_id` 主摘要ID(外键:cat_abstract.id,关联原摘要)
 ///   - `language_code` 语言代码(ISO 639-1),唯一约束 uk_abstract_lang
@@ -23,7 +22,7 @@ import lombok.EqualsAndHashCode;
 ///   - `structured_sections` 结构化摘要段落(JSON对象)
 ///   - `is_official` 是否官方翻译
 ///   - `metadata` 翻译元数据(灵活扩展)
-/// 
+///
 /// @author linqibin
 /// @since 0.5.0
 @Data

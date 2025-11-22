@@ -1,9 +1,9 @@
 package com.patra.common.provenance.api.params;
 
 /// DOAJ 搜索端点参数键常量
-/// 
+///
 /// 定义 DOAJ (Directory of Open Access Journals) 数据源的所有查询参数名称，供请求组装器和参数映射使用。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public final class DoajParamKeys {

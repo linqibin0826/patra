@@ -20,9 +20,9 @@ import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /// HeartbeatRenewalServiceImpl 单元测试
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - ✅ 启动心跳：创建心跳任务，定期续约
 ///   - ✅ 停止心跳：取消心跳任务
 ///   - ✅ 心跳续约：成功续约、续约失败处理
@@ -30,7 +30,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 ///   - ✅ 租约撤销标志：检测到撤销后设置标志
 ///   - ✅ 异常处理：续约过程中的异常
 ///   - ✅ 边界条件：重复启动、重复停止、心跳间隔
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("HeartbeatRenewalServiceImpl 单元测试")

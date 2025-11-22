@@ -8,16 +8,16 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// OutboxMessage 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 使用 TestDataBuilder 模式构建测试数据
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
-/// 
+///
 /// 测试覆盖范围:
-/// 
+///
 /// - ✅ Builder 模式创建和字段验证
 ///   - ✅ 必填字段校验
 ///   - ✅ 默认值设置
@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ refreshForRetry 方法
 ///   - ✅ 不变性测试
 ///   - ✅ 边界条件测试
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("OutboxMessage 单元测试")
@@ -1094,8 +1094,8 @@ class OutboxMessageTest {
   // ========== TestDataBuilder (辅助类) ==========
 
   /// OutboxMessage 测试数据构建器。
-/// 
-/// 遵循 Builder 模式，提供默认值以简化测试数据构建。
+  ///
+  /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
   static class OutboxMessageTestDataBuilder {
     private Long id = null;
     private Long version = 0L;

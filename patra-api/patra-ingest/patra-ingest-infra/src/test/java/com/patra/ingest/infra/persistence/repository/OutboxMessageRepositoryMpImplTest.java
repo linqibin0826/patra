@@ -29,16 +29,16 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 /// OutboxMessageRepositoryMpImpl 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 使用 Mockito Mock 所有依赖（Mapper, Converter）
 ///   - 不启动 Spring 容器，纯单元测试
 ///   - 验证方法调用、参数传递和返回值转换
 ///   - 覆盖发件箱模式的租约和状态转换语义
-/// 
+///
 /// 覆盖场景：
-/// 
+///
 /// - 批量保存消息
 ///   - 单个保存或更新消息
 ///   - 按通道和去重键查找
@@ -46,7 +46,7 @@ import org.mockito.quality.Strictness;
 ///   - 租约操作（获取/释放）
 ///   - 状态转换（标记为已发布/延迟/失败）
 ///   - 批量操作（查询/更新/upsert）
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)

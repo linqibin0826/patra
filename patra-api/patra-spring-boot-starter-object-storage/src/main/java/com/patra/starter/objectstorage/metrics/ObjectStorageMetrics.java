@@ -8,15 +8,15 @@ import io.micrometer.core.instrument.Timer;
 import java.util.concurrent.TimeUnit;
 
 /// 对象存储指标收集器,记录上传/下载操作的性能和成功率。
-/// 
+///
 /// **收集的指标:**
-/// 
+///
 /// - `patra.object_storage.upload.total` - 上传总数(成功/失败)
 ///   - `patra.object_storage.upload.duration` - 上传时长分布
 ///   - `patra.object_storage.upload.size` - 上传文件大小分布
 ///   - `patra.object_storage.download.total` - 下载总数
 ///   - `patra.object_storage.retry.count` - 重试次数
-/// 
+///
 /// **指标标签:**
 /// provider(minio/s3)、bucket、status(success/failure)、error_type(validation/network/auth/unknown)
 public class ObjectStorageMetrics {
@@ -48,10 +48,10 @@ public class ObjectStorageMetrics {
   }
 
   /// 记录上传失败并分类错误类型。
-/// 
-/// @param providerType 存储提供者类型
-/// @param bucket 存储桶名称
-/// @param errorType 错误分类(例如 "validation"、"network"、"auth"、"unknown")
+  ///
+  /// @param providerType 存储提供者类型
+  /// @param bucket 存储桶名称
+  /// @param errorType 错误分类(例如 "validation"、"network"、"auth"、"unknown")
   public void recordUploadFailure(ProviderType providerType, String bucket, String errorType) {
     if (meterRegistry == null) {
       return;

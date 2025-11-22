@@ -1,29 +1,27 @@
 package com.patra.catalog.infra.persistence.entity;
 
-import com.baomidou.mybatisplus.annotation.FieldStrategy;
-import lombok.EqualsAndHashCode;
-import com.patra.starter.mybatis.entity.BaseDO;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.time.Instant;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.patra.starter.mybatis.entity.BaseDO;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /// 文献-资助关联数据库实体,映射到表 `cat_publication_funding`。
-/// 
+///
 /// 表结构: 管理文献与资助的多对多关系,支持主要资助标记和顺序。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `publication_id` 出版物 ID(外键:cat_publication.id)
 ///   - `funding_id` 资助 ID(外键:cat_funding.id)
 ///   - `is_primary` 是否主要资助(0=否,1=是)
 ///   - `order_num` 顺序号(用于排序显示)
 ///   - `metadata` JSON 扩展数据字段
-/// 
+///
 /// 唯一约束: uk_pub_funding(publication_id, funding_id),防止重复关联。
-/// 
+///
 /// @author linqibin
 /// @since 0.4.0
 @Data

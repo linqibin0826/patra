@@ -17,9 +17,9 @@ import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
 /// TaskConverter 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 测试聚合根 → DO 的转换
 ///   - 测试 DO → 聚合根的转换
 ///   - 测试双向转换的一致性
@@ -27,7 +27,7 @@ import org.mapstruct.factory.Mappers;
 ///   - 测试状态枚举转换
 ///   - 测试 JSON 字段转换
 ///   - 测试值对象的分解和组装
-/// 
+///
 /// 注意：MapStruct 转换器通过 Mappers.getMapper() 直接实例化，无需 Spring 容器。
 class TaskConverterTest {
 

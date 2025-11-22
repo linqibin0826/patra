@@ -1,18 +1,18 @@
 package com.patra.ingest.domain.model.vo.storage;
 
 /// 对象存储上传请求 Value Object。
-/// 
+///
 /// 封装上传文件到对象存储(如 OSS/S3)所需的完整信息。
-/// 
+///
 /// **业务语义:**
-/// 
+///
 /// - bucket - 存储桶名称
 ///   - objectPath - 对象键(不含桶名)
 ///   - content - 文件内容(字节数组)
 ///   - contentType - MIME 类型(如 `application/gzip`)
-/// 
+///
 /// **常见用途:** 上传采集的出版物数据到对象存储,通常使用 gzip 压缩。
-/// 
+///
 /// @param bucket 存储桶名称
 /// @param objectPath 对象键(不含桶名)
 /// @param content 文件内容

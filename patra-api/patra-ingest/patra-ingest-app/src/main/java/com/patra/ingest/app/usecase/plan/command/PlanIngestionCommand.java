@@ -10,11 +10,11 @@ import java.util.Map;
 import java.util.Objects;
 
 /// 计划编排命令（Adapter → Application）。
-/// 
+///
 /// 由调度作业或外部调用方构建；经 Adapter 解析/默认值处理后，传递到应用层以：
-/// 
+///
 /// #### Field semantics & constraints
-/// 
+///
 /// - **provenanceCode / operationCode**: define the business pair; required.
 ///   - **step**: ISO-8601 Duration (e.g., `PT1H`, `P1D`); optional and
 ///       strategy-dependent.
@@ -27,25 +27,25 @@ import java.util.Objects;
 ///       be null.
 ///   - **triggerParams**: optional user params; must be Jackson-serializable; empty map equals
 ///       null.
-/// 
+///
 /// #### Invariants
-/// 
+///
 /// - `provenanceCode != null`
 ///   - `operationCode != null`
 ///   - `triggerType != null`
 ///   - `scheduler != null`
 ///   - `priority != null` (coerced in constructor)
-/// 
+///
 /// #### Validation
-/// 
+///
 /// - Step syntax is validated by downstream strategy when applicable.
 ///   - Window ordering is validated by the window resolver/validators.
-/// 
+///
 /// #### Thread-safety
-/// 
+///
 /// Record is immutable (no exposed mutable collection references) and safe to share across
 /// threads.
-/// 
+///
 /// @param provenanceCode provenance code (required)
 /// @param operationCode operation code (required)
 /// @param step slice step (ISO-8601 duration; optional)

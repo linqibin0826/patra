@@ -16,11 +16,11 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// ProvenanceDataProvider接口测试
-/// 
+///
 /// 测试v2.0多数据类型架构的核心提供者接口。
-/// 
+///
 /// **TDD测试策略**：
-/// 
+///
 /// @author Patra Architecture Team
 /// @since 0.1.0
 @DisplayName("ProvenanceDataProvider接口测试")
@@ -261,7 +261,8 @@ class ProvenanceDataProviderTest {
 
       // When: 创建部分成功结果
       ProviderResult<CanonicalPublication> result =
-          ProviderResult.partialSuccess(publications, DataType.PUBLICATION, "cursor456", "部分数据转换失败");
+          ProviderResult.partialSuccess(
+              publications, DataType.PUBLICATION, "cursor456", "部分数据转换失败");
 
       // Then: 应该包含警告信息
       assertThat(result.success()).isTrue();

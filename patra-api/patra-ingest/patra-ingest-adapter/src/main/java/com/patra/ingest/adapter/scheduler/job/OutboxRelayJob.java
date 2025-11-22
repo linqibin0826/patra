@@ -23,21 +23,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /// Outbox 消息中继定时任务。
-/// 
+///
 /// 定期扫描 Outbox 表以获取待投递的消息并尝试发布到 RocketMQ。实现事务性发件箱模式(Transactional Outbox Pattern),确保消息最终一致性投递。
-/// 
+///
 /// 执行流程:
-/// 
+///
 /// - 1. 解析 XXL-Job 参数(通道、批量大小、租约时长、重试策略等)
 ///   - 2. 构建租约所有者标识符(host + jobId + threadId + uuid)
 ///   - 3. 构建 OutboxRelayCommand 并委托给应用层用例
 ///   - 4. 用例执行: 获取租约 → 发布消息 → 更新状态 → 释放租约
 ///   - 5. 报告执行结果(获取/发布/重试/失败统计)
-/// 
+///
 /// 幂等性保证: 租约所有者标识符包含 hostname + jobId + threadId + uuid,确保并发实例之间不会冲突,同一条消息同一时间只能被一个执行器处理。
-/// 
+///
 /// 失败处理: 业务层失败会被包装为 {@link OutboxRelayExecutionException} 并重新抛出,由 XXL-Job 根据重试策略决定是否重试任务。
-/// 
+///
 /// 设计模式: 事务性发件箱模式 + 租约机制 - 保证消息最终一致性投递和分布式环境下的并发安全。
 @Slf4j
 @Component
@@ -50,8 +50,8 @@ public class OutboxRelayJob {
   private final Clock clock;
 
   /// XXL-Job 入口点。解析参数、执行转发并将统计信息写入调度器日志。
-/// 
-/// 支持特定通道或在参数为空时支持所有通道。
+  ///
+  /// 支持特定通道或在参数为空时支持所有通道。
   @XxlJob("ingestOutboxRelayJob")
   public void execute() {
     String rawParam = XxlJobHelper.getJobParam();
@@ -112,10 +112,10 @@ public class OutboxRelayJob {
   }
 
   /// 构建 relay 命令: 目标通道、时间基准、批量大小、租约配置和重试策略。
-/// 
-/// @param param 任务参数(字段可能为 null)
-/// @param now 当前时间(从注入的 Clock 获取以支持可测试性)
-/// @return relay 命令
+  ///
+  /// @param param 任务参数(字段可能为 null)
+  /// @param now 当前时间(从注入的 Clock 获取以支持可测试性)
+  /// @return relay 命令
   private OutboxRelayCommand buildInstruction(OutboxRelayJobParam param, Instant now) {
     return new OutboxRelayCommand(
         resolveChannel(param.channel()),
@@ -145,10 +145,10 @@ public class OutboxRelayJob {
   }
 
   /// 解析持续时间字符串: 支持 ISO-8601 格式(以 PT 开头)或纯数字秒数字符串。
-/// 
-/// @param value 持续时间字符串
-/// @return Duration 或空白时为 null
-/// @throws IngestScheduleParameterException 当格式非法时
+  ///
+  /// @param value 持续时间字符串
+  /// @return Duration 或空白时为 null
+  /// @throws IngestScheduleParameterException 当格式非法时
   private Duration parseDuration(String value) {
     if (CharSequenceUtil.isBlank(value)) {
       return null;

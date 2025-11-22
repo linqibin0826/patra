@@ -6,7 +6,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Param;
 
 /// 采集计划 Mapper 接口 — 对计划表的数据访问操作。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public interface PlanMapper extends BaseMapper<PlanDO> {

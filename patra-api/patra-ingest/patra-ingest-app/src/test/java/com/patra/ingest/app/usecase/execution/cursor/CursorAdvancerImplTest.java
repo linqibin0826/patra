@@ -30,9 +30,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.OptimisticLockingFailureException;
 
 /// CursorAdvancerImpl 单元测试
-/// 
+///
 /// 测试覆盖:
-/// 
+///
 /// - ✅ TIME 策略游标推进成功场景
 ///   - ✅ 首次推进创建新游标场景
 ///   - ✅ 乐观锁冲突场景
@@ -40,7 +40,7 @@ import org.springframework.dao.OptimisticLockingFailureException;
 ///   - ✅ 跳过推进场景 (无窗口规范/非 TIME 策略)
 ///   - ✅ 其他窗口策略场景
 ///   - ✅ 异常处理场景
-/// 
+///
 /// @author Patra Team
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)

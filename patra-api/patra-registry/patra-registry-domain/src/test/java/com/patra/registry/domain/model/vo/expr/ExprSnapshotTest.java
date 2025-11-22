@@ -9,24 +9,24 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// ExprSnapshot 值对象单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
 ///   - 测试 record 的非空验证（所有字段永不为 null）
 ///   - 验证空列表是合法的（不为 null 但可以为空）
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
-/// 
+///
 /// 覆盖范围：
-/// 
+///
 /// - ✅ record 构造函数创建与验证
 ///   - ✅ 非空验证测试（fields, capabilities, renderRules, apiParamMappings）
 ///   - ✅ 所有参数为 null 时抛出 NullPointerException
 ///   - ✅ 空列表是合法的（List.of()）
 ///   - ✅ record 的 equals/hashCode/toString 测试
 ///   - ✅ 不变性保证
-/// 
+///
 /// @author Patra Team
 /// @since 2.0
 @DisplayName("ExprSnapshot 单元测试")
@@ -512,8 +512,8 @@ class ExprSnapshotTest {
   // ========== TestDataBuilder (辅助类) ==========
 
   /// ExprSnapshot 测试数据构建器。
-/// 
-/// 提供便捷的测试数据构建方法以简化测试用例编写。
+  ///
+  /// 提供便捷的测试数据构建方法以简化测试用例编写。
   static class ExprSnapshotTestDataBuilder {
 
     /// 构建默认的 ExprField

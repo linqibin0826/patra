@@ -20,17 +20,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 /// 全局 REST 异常处理器,使用共享平台错误解析管道呈现 RFC 7807 {@link ProblemDetail} 文档。
-/// 
+///
 /// 此处理器负责:
-/// 
+///
 /// - 捕获所有未处理的异常(`@ExceptionHandler(Exception.class)`)
 ///   - 使用 {@link ProblemDetailAdapter} 将异常转换为 {@link ProblemDetail}
 ///   - 处理验证异常({@link MethodArgumentNotValidException}),附加验证错误列表
 ///   - 掩码敏感字段(通过 {@link ValidationErrorsFormatter})
 ///   - 返回符合 RFC 7807 标准的 JSON 响应(Content-Type: application/problem+json)
-/// 
+///
 /// **响应格式示例:**
-/// 
+///
 /// ```java
 /// {
 ///   "type": "about:blank",
@@ -44,9 +44,9 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 ///     { "field": "email", "code": "Email", "message": "must be a valid email"
 ///   ]
 /// ```
-/// 
+///
 /// **优先级:** {@link Ordered#HIGHEST_PRECEDENCE},确保在其他异常处理器之前执行。
-/// 
+///
 /// @see ProblemDetailAdapter
 /// @see ValidationErrorsFormatter
 @Slf4j
@@ -101,9 +101,9 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   /// 从 Spring 的 WebRequest 包装器中提取 HttpServletRequest。
-/// 
-/// @param request web 请求包装器
-/// @return servlet 请求或 null（如果不可用）
+  ///
+  /// @param request web 请求包装器
+  /// @return servlet 请求或 null（如果不可用）
   private HttpServletRequest extractServletRequest(
       org.springframework.web.context.request.WebRequest request) {
     if (request
@@ -114,9 +114,9 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   /// 格式化验证错误并进行掩码，截断到允许的最大计数。
-/// 
-/// @param ex 包含绑定结果的验证异常
-/// @return 格式化和截断的验证错误列表
+  ///
+  /// @param ex 包含绑定结果的验证异常
+  /// @return 格式化和截断的验证错误列表
   private List<ValidationError> formatAndTruncateValidationErrors(
       MethodArgumentNotValidException ex) {
     List<ValidationError> errors =
@@ -131,9 +131,9 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   /// 记录通用异常处理，包括错误代码、状态、请求路径和完整堆栈跟踪。
-/// 
-/// @param response 包含错误元数据的问题详情响应
-/// @param ex 被处理的异常
+  ///
+  /// @param response 包含错误元数据的问题详情响应
+  /// @param ex 被处理的异常
   private void logExceptionHandled(ProblemDetailResponse response, Exception ex) {
     Object path = extractPathFromProblemDetail(response.problemDetail());
     log.error(
@@ -146,10 +146,10 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   /// 记录验证异常处理，包括验证错误计数、元数据和堆栈跟踪。
-/// 
-/// @param response 问题详情响应
-/// @param errors 响应中包含的验证错误
-/// @param ex 被处理的验证异常
+  ///
+  /// @param response 问题详情响应
+  /// @param errors 响应中包含的验证错误
+  /// @param ex 被处理的验证异常
   private void logValidationExceptionHandled(
       ProblemDetailResponse response, List<ValidationError> errors, Exception ex) {
     Object path = extractPathFromProblemDetail(response.problemDetail());
@@ -164,9 +164,9 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   /// 安全地从问题详情中提取路径属性。
-/// 
-/// @param problemDetail 问题详情实例
-/// @return 路径值，不存在时返回 null
+  ///
+  /// @param problemDetail 问题详情实例
+  /// @return 路径值，不存在时返回 null
   private Object extractPathFromProblemDetail(ProblemDetail problemDetail) {
     return problemDetail.getProperties() == null
         ? null

@@ -1,25 +1,24 @@
 package com.patra.catalog.infra.persistence.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
-import lombok.EqualsAndHashCode;
-import com.patra.starter.mybatis.entity.BaseDO;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.baomidou.mybatisplus.annotation.TableName;
-import java.time.Instant;
+import com.patra.starter.mybatis.entity.BaseDO;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /// 文献-研究者关联数据库实体,映射到表 `cat_publication_investigator`。
-/// 
+///
 /// 表结构: 管理文献与研究者的多对多关系,记录研究者角色和职责。
-/// 
+///
 /// 关键字段说明:
-/// 
+///
 /// - `publication_id` 出版物ID,外键 cat_publication.id
 ///   - `investigator_id` 研究者ID,外键 cat_investigator.id
 ///   - `role` 角色（如"principal","co-investigator","coordinator"）
 ///   - `metadata` JSON 扩展数据字段
-/// 
+///
 /// @author linqibin
 /// @since 0.3.0
 @Data

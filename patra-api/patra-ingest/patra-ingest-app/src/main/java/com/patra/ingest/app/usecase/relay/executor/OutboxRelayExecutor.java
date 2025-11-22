@@ -23,27 +23,27 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /// Outbox 中继执行器 - 通过专门的协调器编排中继批次执行
-/// 
+///
 /// ### 职责
-/// 
+///
 /// - 从持久化存储获取待处理消息
 ///   - 将租约获取委托给 {@link RelayLeaseCoordinator}
 ///   - 将发布和状态转换委托给 {@link RelayPublishCoordinator}
 ///   - 将中继日志记录委托给 {@link RelayLogCoordinator}
 ///   - 累积批次统计信息和领域事件
-/// 
+///
 /// ### 架构: 编排器 + 协调器模式
-/// 
+///
 /// 该执行器是一个精简的编排器 (~250 行),将所有关注点委托给专门的协调器:
-/// 
+///
 /// - **RelayLeaseCoordinator**: 使用乐观锁的分布式租约获取
 ///   - **RelayPublishCoordinator**: 消息发布、错误分类、重试调度
 ///   - **RelayLogCoordinator**: 完整审计跟踪创建和批量持久化
-/// 
+///
 /// ### 执行流程
-/// 
+///
 /// ```
-/// 
+///
 /// 1. 获取待处理消息 (遵守通道过滤和批大小)
 /// 2. 创建中继批次 ID 和日志累加器
 /// 3. 对于每条消息:
@@ -52,18 +52,18 @@ import org.springframework.stereotype.Component;
 ///    c. 记录中继日志用于审计跟踪
 /// 4. 批量持久化所有中继日志 (单条 INSERT 语句)
 /// 5. 返回包含统计信息和领域事件的批次结果
-/// 
+///
 /// ```
-/// 
+///
 /// ### 领域事件
-/// 
+///
 /// 发出以下事件:
-/// 
+///
 /// - {@link OutboxLeaseMissedEvent}: 租约获取失败
 ///   - {@link OutboxMessagePublishedEvent}: 消息成功发布
 ///   - {@link OutboxMessageDeferredEvent}: 暂时性错误,已调度重试
 ///   - {@link OutboxMessageFailedEvent}: 达到最大重试次数后永久失败
-/// 
+///
 /// @author Patra Team
 /// @since 0.1.0
 @Slf4j
@@ -77,11 +77,11 @@ public class OutboxRelayExecutor {
   private final RelayLogCoordinator logCoordinator;
 
   /// 根据计划执行单批次中继
-/// 
-/// 获取待处理消息,通过中继管道处理每条消息 (租约 → 发布 → 日志),并返回批次级别的统计信息
-/// 
-/// @param plan 中继计划,指定通道、批大小、重试策略和租约参数
-/// @return 包含计数和领域事件的批次结果
+  ///
+  /// 获取待处理消息,通过中继管道处理每条消息 (租约 → 发布 → 日志),并返回批次级别的统计信息
+  ///
+  /// @param plan 中继计划,指定通道、批大小、重试策略和租约参数
+  /// @return 包含计数和领域事件的批次结果
   public RelayBatchResult execute(RelayPlan plan) {
     // 获取待处理消息 (null 通道表示所有通道)
     String channel = plan.channel() != null ? plan.channel().channel() : null;
@@ -119,10 +119,10 @@ public class OutboxRelayExecutor {
   }
 
   /// 通过中继管道处理单条消息: 租约 → 发布 → 日志
-/// 
-/// @param message 要中继的 Outbox 消息
-/// @param context 用于统计信息和事件的批次上下文
-/// @param logAcc 用于审计跟踪的日志累加器
+  ///
+  /// @param message 要中继的 Outbox 消息
+  /// @param context 用于统计信息和事件的批次上下文
+  /// @param logAcc 用于审计跟踪的日志累加器
   private void processMessage(OutboxMessage message, RelayContext context, LogAccumulator logAcc) {
     Instant startTime = Instant.now();
 
@@ -166,8 +166,8 @@ public class OutboxRelayExecutor {
   }
 
   /// 用于在中继执行期间累积统计信息和领域事件的批次上下文
-/// 
-/// 线程安全性: 非线程安全,在单线程中继作业执行中使用
+  ///
+  /// 线程安全性: 非线程安全,在单线程中继作业执行中使用
   private static final class RelayContext {
     private final RelayPlan plan;
     private final List<OutboxRelayDomainEvent> events = new ArrayList<>();

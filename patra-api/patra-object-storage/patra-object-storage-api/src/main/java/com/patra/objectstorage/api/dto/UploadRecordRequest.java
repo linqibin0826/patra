@@ -7,16 +7,16 @@ import java.time.Instant;
 import java.util.Map;
 
 /// 上传记录请求。
-/// 
+///
 /// 调用方用于持久化上传元数据的请求体。包含文件的存储位置、大小、校验和、 业务上下文等所有必需信息,用于在存储服务中创建元数据记录。
-/// 
+///
 /// 验证约束:
-/// 
+///
 /// - bucketName、objectKey、md5Hash、serviceName、businessType、businessId、providerType 不能为空
 ///   - fileSize 必须 >= 0
 ///   - contentType 最大128字符
 ///   - recordRemarks 最大512字符
-/// 
+///
 /// @param bucketName 存储桶名称
 /// @param objectKey 对象键
 /// @param fileSize 文件大小(字节)

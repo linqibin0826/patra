@@ -5,11 +5,11 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /// 平台级错误处理的配置属性。
-/// 
+///
 /// 配置前缀: `patra.error`
-/// 
+///
 /// 控制错误码上下文、错误解析行为、观测和断路器设置。
-/// 
+///
 /// @author Patra Team
 /// @since 2.0
 @Data

@@ -7,9 +7,9 @@ import java.util.Map;
 import java.util.StringJoiner;
 
 /// 网关请求构建器
-/// 
+///
 /// 用于在烟雾测试/集成测试中构建完整的请求URL，无需依赖网关DTO对象。 主要提供URL拼接、查询参数编码等基础功能。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 public class GatewayRequestBuilder {

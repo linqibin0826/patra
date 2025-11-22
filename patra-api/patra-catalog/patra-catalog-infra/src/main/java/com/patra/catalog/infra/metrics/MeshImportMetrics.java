@@ -10,38 +10,38 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /// MeSH 导入自定义监控指标。
-/// 
+///
 /// 使用 Micrometer 提供以下监控指标：
-/// 
+///
 /// - 任务耗时 (Timer) - mesh.import.task.duration
 ///   - 批次处理速度 (Gauge) - mesh.import.batch.speed
 ///   - 失败率 (Counter) - mesh.import.task.failed.count
 ///   - 表级别进度 (Gauge) - mesh.import.table.progress
 ///   - 成功任务数 (Counter) - mesh.import.task.success.count
 ///   - 总处理记录数 (Counter) - mesh.import.records.processed
-/// 
+///
 /// **使用方式**：
-/// 
+///
 /// ```java
 /// // 记录任务开始
 /// Timer.Sample sample = meshImportMetrics.startTaskTimer();
-/// 
+///
 /// // 记录批次处理速度
 /// meshImportMetrics.recordBatchSpeed("descriptor", 1000.0);
-/// 
+///
 /// // 记录任务完成
 /// meshImportMetrics.stopTaskTimer(sample, "SUCCESS");
 /// ```
-/// 
+///
 /// **Grafana 监控面板**：
-/// 
+///
 /// - 任务成功率：(mesh.import.task.success.count / (mesh.import.task.success.count +
 ///       mesh.import.task.failed.count)) * 100
 ///   - 平均批次处理速度：avg(mesh.import.batch.speed)
 ///   - 各表进度：mesh.import.table.progress{table="descriptor"}
-/// 
+///
 /// @author Patra Team
-/// @since 0.2.0
+/// @since 0.1.0
 @Slf4j
 @Component
 public class MeshImportMetrics {
@@ -61,8 +61,8 @@ public class MeshImportMetrics {
   }
 
   /// 注册 Gauge 指标。
-/// 
-/// Gauge 指标用于监控动态变化的值（如进度、速度）
+  ///
+  /// Gauge 指标用于监控动态变化的值（如进度、速度）
   private void registerGauges() {
     // 为5张MeSH表注册进度指标
     String[] tables = {"descriptor", "qualifier", "treeNumber", "entryTerm", "concept"};
@@ -70,9 +70,7 @@ public class MeshImportMetrics {
       tableProgressMap.put(table, new AtomicInteger(0));
 
       Gauge.builder(
-              "mesh.import.table.progress",
-              tableProgressMap.get(table),
-              AtomicInteger::doubleValue)
+              "mesh.import.table.progress", tableProgressMap.get(table), AtomicInteger::doubleValue)
           .description("MeSH 表级别进度百分比")
           .tag("table", table)
           .register(meterRegistry);
@@ -90,16 +88,16 @@ public class MeshImportMetrics {
   }
 
   /// 开始任务计时。
-/// 
-/// @return Timer Sample
+  ///
+  /// @return Timer Sample
   public Timer.Sample startTaskTimer() {
     return Timer.start(meterRegistry);
   }
 
   /// 停止任务计时并记录。
-/// 
-/// @param sample Timer Sample
-/// @param status 任务状态（SUCCESS/FAILED/CANCELLED）
+  ///
+  /// @param sample Timer Sample
+  /// @param status 任务状态（SUCCESS/FAILED/CANCELLED）
   public void stopTaskTimer(Timer.Sample sample, String status) {
     sample.stop(
         Timer.builder("mesh.import.task.duration")
@@ -121,8 +119,8 @@ public class MeshImportMetrics {
   }
 
   /// 记录任务失败。
-/// 
-/// @param errorType 错误类型（DOWNLOAD_ERROR/PARSE_ERROR/DB_ERROR等）
+  ///
+  /// @param errorType 错误类型（DOWNLOAD_ERROR/PARSE_ERROR/DB_ERROR等）
   public void recordTaskFailure(String errorType) {
     Counter.builder("mesh.import.task.failed.count")
         .description("MeSH 导入失败任务数")
@@ -134,9 +132,9 @@ public class MeshImportMetrics {
   }
 
   /// 更新表级别进度。
-/// 
-/// @param tableName 表名
-/// @param progressPercentage 进度百分比（0-100）
+  ///
+  /// @param tableName 表名
+  /// @param progressPercentage 进度百分比（0-100）
   public void updateTableProgress(String tableName, double progressPercentage) {
     AtomicInteger progress = tableProgressMap.get(tableName);
     if (progress != null) {
@@ -148,18 +146,18 @@ public class MeshImportMetrics {
   }
 
   /// 记录批次处理速度。
-/// 
-/// @param tableName 表名
-/// @param speed 处理速度（记录/秒）
+  ///
+  /// @param tableName 表名
+  /// @param speed 处理速度（记录/秒）
   public void recordBatchSpeed(String tableName, double speed) {
     batchSpeedMap.put(tableName, speed);
     log.trace("记录表 {} 批次处理速度：{} 记录/秒", tableName, speed);
   }
 
   /// 记录处理的记录数。
-/// 
-/// @param tableName 表名
-/// @param count 记录数
+  ///
+  /// @param tableName 表名
+  /// @param count 记录数
   public void recordProcessedRecords(String tableName, long count) {
     Counter.builder("mesh.import.records.processed")
         .description("MeSH 导入已处理记录总数")
@@ -171,9 +169,9 @@ public class MeshImportMetrics {
   }
 
   /// 记录批次失败。
-/// 
-/// @param tableName 表名
-/// @param batchNum 批次号
+  ///
+  /// @param tableName 表名
+  /// @param batchNum 批次号
   public void recordBatchFailure(String tableName, int batchNum) {
     Counter.builder("mesh.import.batch.failed.count")
         .description("MeSH 导入失败批次数")
@@ -185,8 +183,8 @@ public class MeshImportMetrics {
   }
 
   /// 重置所有表的进度指标。
-/// 
-/// 用于清除任务重新开始时重置监控指标
+  ///
+  /// 用于清除任务重新开始时重置监控指标
   public void resetTableProgress() {
     tableProgressMap.values().forEach(progress -> progress.set(0));
     batchSpeedMap.replaceAll((k, v) -> 0.0);

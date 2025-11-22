@@ -14,15 +14,15 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /// OutboxRelayDomainEvent 接口契约测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - 接口继承关系验证（DomainEvent、Serializable）
 ///   - 使用真实实现类测试接口契约
 ///   - 验证 occurredAt() 方法契约
 ///   - 验证序列化能力
 ///   - 测试多态性
-/// 
+///
 @DisplayName("OutboxRelayDomainEvent 接口契约测试")
 class OutboxRelayDomainEventTest {
 
@@ -156,9 +156,11 @@ class OutboxRelayDomainEventTest {
       // Given
       Instant occurredAt = Instant.parse("2025-01-15T10:30:00Z");
       var event1 =
-          new OutboxMessagePublishedEvent(1L, "publication.ingested", "partition-key-1", occurredAt);
+          new OutboxMessagePublishedEvent(
+              1L, "publication.ingested", "partition-key-1", occurredAt);
       var event2 =
-          new OutboxMessagePublishedEvent(1L, "publication.ingested", "partition-key-1", occurredAt);
+          new OutboxMessagePublishedEvent(
+              1L, "publication.ingested", "partition-key-1", occurredAt);
 
       // When & Then
       assertThat(event1).as("相同内容的事件应该相等").isEqualTo(event2);

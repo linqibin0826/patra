@@ -1,10 +1,10 @@
 package com.patra.ingest.infra.integration.storage;
 
 import com.patra.ingest.domain.port.StorageMetadataPort;
-import com.patra.starter.objectstorage.ObjectStorageProperties;
 import com.patra.objectstorage.api.client.StorageClient;
 import com.patra.objectstorage.api.dto.RecordUploadResponse;
 import com.patra.objectstorage.api.dto.UploadRecordRequest;
+import com.patra.starter.objectstorage.ObjectStorageProperties;
 import feign.FeignException;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
@@ -14,16 +14,16 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /// 基础设施适配器,实现元数据记录到 patra-object-storage 服务的功能。
-/// 
+///
 /// 此适配器为 patra-object-storage 限界上下文提供轻量级 RPC 集成层。它委托给 {@link StorageClient} Feign 客户端进行实际的服务通信。
-/// 
+///
 /// 职责:
-/// 
+///
 /// - 将领域元数据请求转换为 RPC DTO
 ///   - 通过 Feign 客户端调用 patra-object-storage 服务
 ///   - 将服务响应转换为领域结果
 ///   - 将 Feign 异常转换为领域异常
-/// 
+///
 /// 错误处理和重试逻辑委托给应用层编排器。
 @Component
 @RequiredArgsConstructor

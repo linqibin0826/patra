@@ -1,21 +1,21 @@
 package com.patra.ingest.domain.model.vo.batch;
 
 /// 批次执行结果 Value Object。
-/// 
+///
 /// 描述单个批次执行的结果,包含成功标识、数据计数、游标令牌、错误信息和存储位置。
-/// 
+///
 /// 不变性约束:
-/// 
+///
 /// - `batchNo` >= 1 — 批次序号从 1 开始
 ///   - `fetchedCount` >= 0 — 获取记录数不能为负
 ///   - 当 `success` 为 `false` 时,`errorMessage` 必须提供
-/// 
+///
 /// **业务语义:**
-/// 
+///
 /// - 成功批次包含获取的记录数和下一批次游标
 ///   - 失败批次包含错误详情,其他字段为 null 或 0
 ///   - 存储键指向对象存储路径(如 OSS/S3)
-/// 
+///
 /// @param batchNo 批次序号(从 1 开始)
 /// @param success 成功标识
 /// @param fetchedCount 获取的记录数

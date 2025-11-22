@@ -8,32 +8,31 @@ import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.provenance.api.params.PubMedParamKeys;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.query.QuerySession;
-import java.util.Map;
-
 import com.patra.ingest.infra.mapper.ProviderParameterMapper;
 import com.patra.ingest.infra.mapper.StateTokenKeys;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /// PubMed 参数映射器。
-/// 
+///
 /// 将通用的 offset/limit 映射为 PubMed 特定的 retstart/retmax 参数。
-/// 
+///
 /// **PubMed 分页机制**：
-/// 
+///
 /// - **retstart**: 起始偏移量（从 0 开始）
 ///   - **retmax**: 返回记录数量
 ///   - **WebEnv + query_key**: History Server 会话令牌（可选）
-/// 
+///
 /// **映射规则**：
-/// 
+///
 /// ```java
 /// batch.offset()  → retstart
 /// batch.limit()   → retmax
 /// session.stateToken("webEnv")    → WebEnv
 /// session.stateToken("queryKey")  → query_key
 /// ```
-/// 
+///
 /// @author Patra Architecture Team
 /// @since 0.3.0
 @Component

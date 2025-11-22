@@ -18,7 +18,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,16 +30,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /// MeshImportOrchestrator 单元测试。
-/// 
+///
 /// 测试策略：
-/// 
+///
 /// - Mock 所有 Port 接口（不依赖真实实现）
 ///   - 使用 InOrder 验证调用顺序
 ///   - 验证事务边界（@Transactional 在 Orchestrator 层）
 ///   - 测试编排逻辑：下载 → 解析 → 保存 → 验证 → 更新状态
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 @DisplayName("MeshImportOrchestrator 单元测试")
@@ -62,7 +61,8 @@ class MeshImportOrchestratorTest {
   void setUp() throws Exception {
     // Mock 配置
     when(meshImportConfig.getExpectedCountForTable(anyString())).thenReturn(35000);
-    when(meshImportConfig.getSourceUrl()).thenReturn("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
+    when(meshImportConfig.getSourceUrl())
+        .thenReturn("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
     when(meshImportConfig.getExpectedFileSize()).thenReturn(734_003_200L); // 约 700 MB
     when(meshImportConfig.getFileSizeDifferenceThreshold()).thenReturn(10.0); // 10% 阈值
 
@@ -106,7 +106,9 @@ class MeshImportOrchestratorTest {
     void shouldSuccessfullyCompleteImportFlow() throws Exception {
       // Given: 准备命令
       StartImportCommand command =
-          new StartImportCommand("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml", "2025年MeSH数据首次导入");
+          new StartImportCommand(
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+              "2025年MeSH数据首次导入");
 
       // Mock 下载（文件大小在预期范围内）
       when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
@@ -116,10 +118,14 @@ class MeshImportOrchestratorTest {
       when(meshImportPort.findById(any(MeshImportId.class))).thenReturn(Optional.of(mockAggregate));
 
       // Mock 解析（返回空流用于测试）
-      when(xmlParserPort.parseDescriptors(any(FileInputStream.class))).thenReturn(java.util.stream.Stream.empty());
-      when(xmlParserPort.parseTreeNumbers(any(FileInputStream.class))).thenReturn(java.util.stream.Stream.empty());
-      when(xmlParserPort.parseEntryTerms(any(FileInputStream.class))).thenReturn(java.util.stream.Stream.empty());
-      when(xmlParserPort.parseConcepts(any(FileInputStream.class))).thenReturn(java.util.stream.Stream.empty());
+      when(xmlParserPort.parseDescriptors(any(FileInputStream.class)))
+          .thenReturn(java.util.stream.Stream.empty());
+      when(xmlParserPort.parseTreeNumbers(any(FileInputStream.class)))
+          .thenReturn(java.util.stream.Stream.empty());
+      when(xmlParserPort.parseEntryTerms(any(FileInputStream.class)))
+          .thenReturn(java.util.stream.Stream.empty());
+      when(xmlParserPort.parseConcepts(any(FileInputStream.class)))
+          .thenReturn(java.util.stream.Stream.empty());
 
       // Mock 验证
       when(meshDataValidator.validateDataCounts(anyMap()))
@@ -135,11 +141,7 @@ class MeshImportOrchestratorTest {
 
       // 验证调用顺序
       InOrder inOrder =
-          inOrder(
-              meshFileDownloadPort,
-              meshImportPort,
-              xmlParserPort,
-              meshDataValidator);
+          inOrder(meshFileDownloadPort, meshImportPort, xmlParserPort, meshDataValidator);
 
       inOrder.verify(meshFileDownloadPort).download(anyString());
       inOrder.verify(meshImportPort, atLeastOnce()).save(any(MeshImportAggregate.class));
@@ -152,11 +154,12 @@ class MeshImportOrchestratorTest {
     void shouldMarkTaskAsFailedWhenDownloadFails() {
       // Given: 准备命令
       StartImportCommand command =
-          new StartImportCommand("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml", "2025年MeSH数据导入");
+          new StartImportCommand(
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+              "2025年MeSH数据导入");
 
       // Mock 下载失败
-      when(meshFileDownloadPort.download(anyString()))
-          .thenThrow(new RuntimeException("网络连接失败"));
+      when(meshFileDownloadPort.download(anyString())).thenThrow(new RuntimeException("网络连接失败"));
 
       // Mock 聚合根保存
       when(meshImportPort.save(any(MeshImportAggregate.class))).thenReturn(mockAggregate);
@@ -175,7 +178,9 @@ class MeshImportOrchestratorTest {
     void shouldThrowExceptionWhenFileSizeOutOfRange() throws Exception {
       // Given: 准备命令
       StartImportCommand command =
-          new StartImportCommand("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml", "2025年MeSH数据导入");
+          new StartImportCommand(
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+              "2025年MeSH数据导入");
 
       // Mock 下载成功但文件大小异常（小于预期的 50%，超出 10% 阈值）
       File abnormalFile = new File("/tmp/mesh-import/desc2025-abnormal.xml");
@@ -203,7 +208,9 @@ class MeshImportOrchestratorTest {
     void shouldGenerateWarningsWhenDataValidationFails() throws Exception {
       // Given: 准备命令
       StartImportCommand command =
-          new StartImportCommand("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml", "2025年MeSH数据导入");
+          new StartImportCommand(
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+              "2025年MeSH数据导入");
 
       // Mock 下载（文件大小正常）
       when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
@@ -213,10 +220,14 @@ class MeshImportOrchestratorTest {
       when(meshImportPort.findById(any(MeshImportId.class))).thenReturn(Optional.of(mockAggregate));
 
       // Mock 解析
-      when(xmlParserPort.parseDescriptors(any(FileInputStream.class))).thenReturn(java.util.stream.Stream.empty());
-      when(xmlParserPort.parseTreeNumbers(any(FileInputStream.class))).thenReturn(java.util.stream.Stream.empty());
-      when(xmlParserPort.parseEntryTerms(any(FileInputStream.class))).thenReturn(java.util.stream.Stream.empty());
-      when(xmlParserPort.parseConcepts(any(FileInputStream.class))).thenReturn(java.util.stream.Stream.empty());
+      when(xmlParserPort.parseDescriptors(any(FileInputStream.class)))
+          .thenReturn(java.util.stream.Stream.empty());
+      when(xmlParserPort.parseTreeNumbers(any(FileInputStream.class)))
+          .thenReturn(java.util.stream.Stream.empty());
+      when(xmlParserPort.parseEntryTerms(any(FileInputStream.class)))
+          .thenReturn(java.util.stream.Stream.empty());
+      when(xmlParserPort.parseConcepts(any(FileInputStream.class)))
+          .thenReturn(java.util.stream.Stream.empty());
 
       // Mock 验证失败（数量差异超过 5%）
       when(meshDataValidator.validateDataCounts(anyMap()))
@@ -370,10 +381,14 @@ class MeshImportOrchestratorTest {
       when(meshImportPort.findById(any(MeshImportId.class))).thenReturn(Optional.of(mockAggregate));
 
       // Mock 解析
-      when(xmlParserPort.parseDescriptors(any(FileInputStream.class))).thenReturn(java.util.stream.Stream.empty());
-      when(xmlParserPort.parseTreeNumbers(any(FileInputStream.class))).thenReturn(java.util.stream.Stream.empty());
-      when(xmlParserPort.parseEntryTerms(any(FileInputStream.class))).thenReturn(java.util.stream.Stream.empty());
-      when(xmlParserPort.parseConcepts(any(FileInputStream.class))).thenReturn(java.util.stream.Stream.empty());
+      when(xmlParserPort.parseDescriptors(any(FileInputStream.class)))
+          .thenReturn(java.util.stream.Stream.empty());
+      when(xmlParserPort.parseTreeNumbers(any(FileInputStream.class)))
+          .thenReturn(java.util.stream.Stream.empty());
+      when(xmlParserPort.parseEntryTerms(any(FileInputStream.class)))
+          .thenReturn(java.util.stream.Stream.empty());
+      when(xmlParserPort.parseConcepts(any(FileInputStream.class)))
+          .thenReturn(java.util.stream.Stream.empty());
 
       // Mock 验证
       when(meshDataValidator.validateDataCounts(anyMap()))
@@ -394,7 +409,9 @@ class MeshImportOrchestratorTest {
       when(meshImportPort.existsRunningTask()).thenReturn(true);
 
       StartImportCommand command =
-          new StartImportCommand("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml", "2025年MeSH数据导入");
+          new StartImportCommand(
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+              "2025年MeSH数据导入");
 
       // When & Then: 执行导入，预期抛出异常
       assertThatThrownBy(() -> orchestrator.startImport(command))

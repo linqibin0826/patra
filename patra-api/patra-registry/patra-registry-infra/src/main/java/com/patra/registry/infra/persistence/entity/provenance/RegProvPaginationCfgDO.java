@@ -11,9 +11,9 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /// 数据库实体,映射到表 `reg_prov_pagination_cfg`。
-/// 
+///
 /// 存储特定数据源和操作类型的分页或游标提取参数。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data

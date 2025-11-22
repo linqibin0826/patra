@@ -1,9 +1,9 @@
 package com.patra.registry.api.dto.provenance;
 
 /// 聚合数据源配置响应 DTO,包含所有配置维度。
-/// 
+///
 /// 字段说明:
-/// 
+///
 /// @param provenance 数据源元数据
 /// @param windowOffset 时间窗口偏移配置
 /// @param pagination 分页配置

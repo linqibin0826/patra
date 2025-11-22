@@ -157,8 +157,8 @@ app:
 /// order.confirm();
 /// ```
 /// 
-/// @since 1.0.0
-/// @author 团队名称
+/// @since 0.1.0
+/// @author linqibin
 /// @see com.patra.order.app 应用层服务
 /// @see com.patra.order.infra 基础设施层实现
 package com.patra.order.domain;
@@ -298,7 +298,7 @@ Authorization: Bearer {token}
 /// 线程安全性：此类不是线程安全的，需要外部同步。
 /// 
 /// @author 作者名
-/// @since 1.0.0
+/// @since 0.1.0
 /// @see OrderItem
 /// @see OrderStatus
 public class Order {

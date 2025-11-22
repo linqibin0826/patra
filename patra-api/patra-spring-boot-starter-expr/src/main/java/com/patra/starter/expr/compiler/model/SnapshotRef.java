@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 /// 编译期间使用的 Registry 快照的轻量级引用。
-/// 
+///
 /// @param provenanceId 溯源ID
 /// @param provenanceCode 溯源代码
 /// @param endpointName 端点名称

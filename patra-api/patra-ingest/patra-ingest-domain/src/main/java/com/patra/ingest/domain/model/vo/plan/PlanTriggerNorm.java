@@ -10,19 +10,19 @@ import java.util.Map;
 import java.util.Objects;
 
 /// 计划触发规范化值对象,表示规范化的触发命令。
-/// 
+///
 /// 不可变性:通过值语义比较相等性
-/// 
+///
 /// 业务约束:
-/// 
+///
 /// - scheduleInstanceId必须非空
 ///   - provenanceCode必须非空
 ///   - operationCode必须非空
 ///   - triggerType必须非空
 ///   - scheduler必须非空
-/// 
+///
 /// 使用场景:封装来自不同调度器的触发命令,提供统一的领域模型
-/// 
+///
 /// @param scheduleInstanceId 调度实例标识符
 /// @param provenanceCode 来源代码
 /// @param operationCode 操作类型
@@ -57,22 +57,22 @@ public record PlanTriggerNorm(
   }
 
   /// 检查是否为采集操作。
-/// 
-/// @return 如果操作类型为HARVEST则返回true
+  ///
+  /// @return 如果操作类型为HARVEST则返回true
   public boolean isHarvest() {
     return operationCode == OperationCode.HARVEST;
   }
 
   /// 检查是否为回填操作。
-/// 
-/// @return 如果操作类型为BACKFILL则返回true
+  ///
+  /// @return 如果操作类型为BACKFILL则返回true
   public boolean isBackfill() {
     return operationCode == OperationCode.BACKFILL;
   }
 
   /// 检查是否为更新操作。
-/// 
-/// @return 如果操作类型为UPDATE则返回true
+  ///
+  /// @return 如果操作类型为UPDATE则返回true
   public boolean isUpdate() {
     return operationCode == OperationCode.UPDATE;
   }

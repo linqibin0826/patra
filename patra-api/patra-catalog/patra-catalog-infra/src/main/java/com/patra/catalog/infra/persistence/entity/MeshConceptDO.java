@@ -1,18 +1,17 @@
 package com.patra.catalog.infra.persistence.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
-import lombok.EqualsAndHashCode;
-import com.patra.starter.mybatis.entity.BaseDO;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.time.Instant;
+import com.patra.starter.mybatis.entity.BaseDO;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /// MeSH 概念表数据库实体，映射到表 `cat_mesh_concept`。
-/// 
+///
 /// 表结构：存储 MeSH 主题词下的概念，支持概念级别的关联和检索。
-/// 
+///
 /// 关键字段说明：
-/// 
+///
 /// - `descriptor_id` - 主题词 ID（外键：cat_mesh_descriptor.id）
 ///   - `concept_ui` - 概念唯一标识符（格式：M000001-M999999），唯一约束 uk_concept_ui
 ///   - `concept_name` - 概念名称
@@ -21,15 +20,15 @@ import lombok.Data;
 ///   - `registry_number` - 注册号（如 CAS 号，EC 号）
 ///   - `scope_note` - 范围说明，TEXT 类型
 ///   - `concept_status` - 概念状态（枚举值）
-/// 
+///
 /// 索引说明：
-/// 
+///
 /// - uk_concept_ui - 概念 UI 唯一索引，支持精确查询
 ///   - idx_descriptor - 主题词索引，支持查询某主题词的所有概念
 ///   - idx_registry_number - 注册号索引，支持化学物质查询
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_mesh_concept", autoResultMap = true)
@@ -65,5 +64,4 @@ public class MeshConceptDO extends BaseDO {
   /// 概念状态（枚举值）
   @TableField("concept_status")
   private String conceptStatus;
-
 }

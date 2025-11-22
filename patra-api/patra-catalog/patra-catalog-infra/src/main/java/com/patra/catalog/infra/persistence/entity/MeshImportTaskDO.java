@@ -8,11 +8,11 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /// MeSH 导入任务数据库实体，映射到表 `cat_mesh_import_task`。
-/// 
+///
 /// 表结构：管理 MeSH 数据导入任务的完整生命周期
-/// 
+///
 /// 关键字段说明：
-/// 
+///
 /// - `task_name` - 任务名称（如 "MeSH 2025 导入"）
 ///   - `status` - 任务状态（PENDING/PROCESSING/SUCCESS/FAILED/CANCELLED）
 ///   - `source_url` - NLM 数据源 URL
@@ -20,16 +20,16 @@ import lombok.EqualsAndHashCode;
 ///   - `total_records` - 总记录数（约 350,000）
 ///   - `processed_records` - 已处理记录数（用于断点续传）
 ///   - `failed_batch_count` - 失败批次数（用于错误统计）
-/// 
+///
 /// **设计原则**：
-/// 
+///
 /// - 继承 {@link BaseDO}：获得10个审计字段（created_at、updated_at等）
 ///   - 雪花ID：主键使用 MyBatis-Plus 的 `IdType.ASSIGN_ID`
 ///   - 乐观锁：使用 `version` 字段防止并发修改
 ///   - 纯数据载体：不包含业务逻辑，只负责数据存储
-/// 
+///
 /// @author linqibin
-/// @since 0.2.0
+/// @since 0.1.0
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_mesh_import_task")

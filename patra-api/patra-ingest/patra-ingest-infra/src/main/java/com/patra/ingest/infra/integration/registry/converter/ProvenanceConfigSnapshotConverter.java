@@ -7,18 +7,18 @@ import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 /// 注册中心 API DTO 到采集领域配置快照的转换器。
-/// 
+///
 /// 将 patra-registry 的配置响应转换为采集领域所需的快照对象。遵循 MapStruct 最佳实践进行类型安全的映射。
-/// 
+///
 /// @author linqibin
 /// @since 0.1.0
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ProvenanceConfigSnapshotConverter {
 
   /// 将完整的配置响应转换为快照。
-/// 
-/// @param resp 配置响应
-/// @return 快照
+  ///
+  /// @param resp 配置响应
+  /// @return 快照
   @Mapping(target = "provenance", source = "provenance")
   @Mapping(target = "windowOffset", source = "windowOffset")
   @Mapping(target = "pagination", source = "pagination")
