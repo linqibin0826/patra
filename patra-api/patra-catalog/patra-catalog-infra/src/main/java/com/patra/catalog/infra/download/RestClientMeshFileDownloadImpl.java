@@ -77,24 +77,39 @@ public class RestClientMeshFileDownloadImpl implements MeshFileDownloadPort {
 
     // 4. 下载文件（流式写入）
     try (FileOutputStream outputStream = new FileOutputStream(tempFile)) {
-      // 使用 RestClient 获取响应体（byte[]）
-      byte[] responseBody = restClient
+      restClient
           .get()
           .uri(sourceUrl)
-          .retrieve()
-          .toEntity(byte[].class)
-          .getBody();
+          .exchange(
+              (request, response) -> {
+                // 获取响应输入流
+                try (InputStream inputStream = response.getBody()) {
+                  // 流式复制（使用已定义的方法）
+                  copyStream(inputStream, outputStream);
+                  log.info("文件下载成功，文件大小: {} bytes", tempFile.length());
+                  return tempFile;
+                } catch (IOException e) {
+                  log.error("文件写入失败: {}", tempFile, e);
+                  throw new RuntimeException("磁盘写入失败: " + e.getMessage(), e);
+                }
+              });
 
-      if (responseBody != null) {
-        outputStream.write(responseBody);
-        log.info("文件下载成功，文件大小: {} bytes", tempFile.length());
-        return tempFile;
-      } else {
-        throw new RuntimeException("下载失败: 响应体为空");
-      }
+      return tempFile;
+    } catch (org.springframework.web.client.HttpClientErrorException e) {
+      // 4xx 客户端错误
+      log.error("HTTP 客户端错误（{}）: {}", e.getStatusCode(), sourceUrl, e);
+      throw new RuntimeException("HTTP 请求失败: " + e.getMessage(), e);
+    } catch (org.springframework.web.client.HttpServerErrorException e) {
+      // 5xx 服务器错误
+      log.error("HTTP 服务器错误（{}）: {}", e.getStatusCode(), sourceUrl, e);
+      throw new RuntimeException("服务器错误，稍后重试: " + e.getMessage(), e);
+    } catch (org.springframework.web.client.ResourceAccessException e) {
+      // 网络超时、连接失败
+      log.error("网络访问失败: {}", sourceUrl, e);
+      throw new RuntimeException("网络不可达或超时: " + e.getMessage(), e);
     } catch (IOException e) {
-      log.error("下载文件失败: {}", sourceUrl, e);
-      throw new RuntimeException("下载失败: " + e.getMessage(), e);
+      log.error("文件IO失败: {}", tempFile, e);
+      throw new RuntimeException("文件操作失败: " + e.getMessage(), e);
     } catch (Exception e) {
       log.error("下载文件失败（未知异常）: {}", sourceUrl, e);
       throw new RuntimeException("下载失败: " + e.getMessage(), e);
@@ -135,7 +150,17 @@ public class RestClientMeshFileDownloadImpl implements MeshFileDownloadPort {
   }
 
   /**
-   * 复制输入流到输出流（流式处理）。
+   * 复制输入流到输出流（流式处理，含性能监控）。
+   *
+   * <p>使用固定大小缓冲区（8KB）流式复制数据，避免大文件导致 OOM。
+   *
+   * <p>性能特征：
+   *
+   * <ul>
+   *   <li>内存占用：稳定在 8KB（缓冲区大小）
+   *   <li>下载速度：取决于网络带宽和磁盘 IO
+   *   <li>日志频率：每 10MB 或每 5 秒记录一次进度
+   * </ul>
    *
    * @param inputStream 输入流
    * @param outputStream 输出流
@@ -146,17 +171,39 @@ public class RestClientMeshFileDownloadImpl implements MeshFileDownloadPort {
     byte[] buffer = new byte[8192]; // 8KB 缓冲区
     int bytesRead;
     long totalBytes = 0;
+    long startTime = System.currentTimeMillis();
+    long lastLogTime = startTime;
 
     while ((bytesRead = inputStream.read(buffer)) != -1) {
       outputStream.write(buffer, 0, bytesRead);
       totalBytes += bytesRead;
 
-      // 每 10MB 记录一次进度
-      if (totalBytes % (10 * 1024 * 1024) == 0) {
-        log.info("已下载: {} MB", totalBytes / (1024 * 1024));
+      // 每 10MB 或每 5 秒记录一次进度（避免日志过多）
+      long currentTime = System.currentTimeMillis();
+      if (totalBytes % (10 * 1024 * 1024) == 0 || (currentTime - lastLogTime) >= 5000) {
+        long elapsedSeconds = (currentTime - startTime) / 1000;
+        double speedMBps =
+            elapsedSeconds > 0 ? (totalBytes / (1024.0 * 1024.0)) / elapsedSeconds : 0;
+
+        if (log.isInfoEnabled()) {
+          log.info(
+              "下载进度: {} MB（速度: {:.2f} MB/s）",
+              totalBytes / (1024 * 1024),
+              speedMBps);
+        }
+        lastLogTime = currentTime;
       }
     }
 
-    log.info("下载完成，总大小: {} MB", totalBytes / (1024 * 1024));
+    // 最终统计
+    long totalTime = System.currentTimeMillis() - startTime;
+    double averageSpeedMBps =
+        totalTime > 0 ? (totalBytes / (1024.0 * 1024.0)) / (totalTime / 1000.0) : 0;
+
+    log.info(
+        "下载完成，总大小: {} MB，耗时: {} 秒，平均速度: {:.2f} MB/s",
+        totalBytes / (1024 * 1024),
+        totalTime / 1000,
+        averageSpeedMBps);
   }
 }

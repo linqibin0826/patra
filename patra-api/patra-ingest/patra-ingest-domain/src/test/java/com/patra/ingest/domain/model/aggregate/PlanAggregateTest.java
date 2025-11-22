@@ -75,7 +75,6 @@ class PlanAggregateTest {
       assertThat(plan.getPlanKey()).isEqualTo(planKey);
       assertThat(plan.getProvenanceCode()).isEqualTo(provenanceCode);
       assertThat(plan.getOperationCode()).isEqualTo("HARVEST");
-      assertThat(plan.getOperation()).isEqualTo(OperationCode.HARVEST);
       assertThat(plan.getExprProtoHash()).isEqualTo(exprProtoHash);
       assertThat(plan.getExprProtoSnapshotJson()).isEqualTo(exprProtoSnapshotJson);
       assertThat(plan.getProvenanceConfigSnapshotJson()).isEqualTo(provenanceConfigSnapshotJson);
@@ -97,8 +96,7 @@ class PlanAggregateTest {
       PlanAggregate plan =
           PlanAggregateTestDataBuilder.builder().operationCode(operationCode).build();
 
-      // Then - 应该规范化为枚举
-      assertThat(plan.getOperation()).isEqualTo(OperationCode.HARVEST);
+      // Then - 应该规范化为大写
       assertThat(plan.getOperationCode()).isEqualTo("HARVEST"); // 输出总是大写
     }
 
@@ -113,7 +111,6 @@ class PlanAggregateTest {
           PlanAggregateTestDataBuilder.builder().operationCode(operationCode).build();
 
       // Then
-      assertThat(plan.getOperation()).isNull();
       assertThat(plan.getOperationCode()).isNull();
     }
 
@@ -222,7 +219,6 @@ class PlanAggregateTest {
       assertThat(plan.getPlanKey()).isEqualTo(planKey);
       assertThat(plan.getProvenanceCode()).isEqualTo(provenanceCode);
       assertThat(plan.getOperationCode()).isEqualTo("HARVEST");
-      assertThat(plan.getOperation()).isEqualTo(OperationCode.HARVEST);
       assertThat(plan.getStatus()).isEqualTo(PlanStatus.READY);
       assertThat(plan.getVersion()).isEqualTo(version);
       assertThat(plan.isTransient()).isFalse(); // 已持久化的聚合根不是瞬态的
@@ -445,60 +441,67 @@ class PlanAggregateTest {
       PlanAggregate plan = PlanAggregateTestDataBuilder.builder().windowSpec(windowSpec).build();
 
       // When & Then
-      assertThat(plan.getWindowFrom()).isEqualTo(from);
-      assertThat(plan.getWindowTo()).isEqualTo(to);
+      assertThat(plan.getWindowSpec()).isInstanceOf(WindowSpec.Time.class);
+      WindowSpec.Time timeSpec = (WindowSpec.Time) plan.getWindowSpec();
+      assertThat(timeSpec.from()).isEqualTo(from);
+      assertThat(timeSpec.to()).isEqualTo(to);
     }
 
     @Test
-    @DisplayName("应该返回 null 当使用非 TIME 策略（SINGLE）")
-    void shouldReturnNullForNonTimeStrategy_Single() {
+    @DisplayName("应该返回 SINGLE 窗口规范当使用 SINGLE 策略")
+    void shouldReturnSingleWindowSpecForSingleStrategy() {
       // Given - 使用 SINGLE 策略的计划
       WindowSpec windowSpec = WindowSpec.ofSingle();
 
       PlanAggregate plan = PlanAggregateTestDataBuilder.builder().windowSpec(windowSpec).build();
 
       // When & Then
-      assertThat(plan.getWindowFrom()).isNull();
-      assertThat(plan.getWindowTo()).isNull();
+      assertThat(plan.getWindowSpec()).isInstanceOf(WindowSpec.Single.class);
     }
 
     @Test
-    @DisplayName("应该返回 null 当使用非 TIME 策略（ID_RANGE）")
-    void shouldReturnNullForNonTimeStrategy_IdRange() {
+    @DisplayName("应该返回 ID_RANGE 窗口规范当使用 ID_RANGE 策略")
+    void shouldReturnIdRangeWindowSpecForIdRangeStrategy() {
       // Given - 使用 ID_RANGE 策略的计划
       WindowSpec windowSpec = WindowSpec.ofIdRange(1000L, 2000L);
 
       PlanAggregate plan = PlanAggregateTestDataBuilder.builder().windowSpec(windowSpec).build();
 
       // When & Then
-      assertThat(plan.getWindowFrom()).isNull();
-      assertThat(plan.getWindowTo()).isNull();
+      assertThat(plan.getWindowSpec()).isInstanceOf(WindowSpec.IdRange.class);
+      WindowSpec.IdRange idRangeSpec = (WindowSpec.IdRange) plan.getWindowSpec();
+      assertThat(idRangeSpec.from()).isEqualTo(1000L);
+      assertThat(idRangeSpec.to()).isEqualTo(2000L);
     }
 
     @Test
-    @DisplayName("应该返回 null 当使用非 TIME 策略（CURSOR_LANDMARK）")
-    void shouldReturnNullForNonTimeStrategy_CursorLandmark() {
+    @DisplayName("应该返回 CURSOR_LANDMARK 窗口规范当使用 CURSOR_LANDMARK 策略")
+    void shouldReturnCursorLandmarkWindowSpecForCursorLandmarkStrategy() {
       // Given - 使用 CURSOR_LANDMARK 策略的计划
       WindowSpec windowSpec = WindowSpec.ofCursor("token1", "token2");
 
       PlanAggregate plan = PlanAggregateTestDataBuilder.builder().windowSpec(windowSpec).build();
 
       // When & Then
-      assertThat(plan.getWindowFrom()).isNull();
-      assertThat(plan.getWindowTo()).isNull();
+      assertThat(plan.getWindowSpec()).isInstanceOf(WindowSpec.CursorLandmark.class);
+      WindowSpec.CursorLandmark cursorSpec = (WindowSpec.CursorLandmark) plan.getWindowSpec();
+      assertThat(cursorSpec.from()).isEqualTo("token1");
+      assertThat(cursorSpec.to()).isEqualTo("token2");
     }
 
     @Test
-    @DisplayName("应该返回 null 当使用非 TIME 策略（VOLUME_BUDGET）")
-    void shouldReturnNullForNonTimeStrategy_VolumeBudget() {
+    @DisplayName("应该返回 VOLUME_BUDGET 窗口规范当使用 VOLUME_BUDGET 策略")
+    void shouldReturnVolumeBudgetWindowSpecForVolumeBudgetStrategy() {
       // Given - 使用 VOLUME_BUDGET 策略的计划
       WindowSpec windowSpec = WindowSpec.ofVolume(10000, "RECORDS");
 
       PlanAggregate plan = PlanAggregateTestDataBuilder.builder().windowSpec(windowSpec).build();
 
       // When & Then
-      assertThat(plan.getWindowFrom()).isNull();
-      assertThat(plan.getWindowTo()).isNull();
+      assertThat(plan.getWindowSpec()).isInstanceOf(WindowSpec.VolumeBudget.class);
+      WindowSpec.VolumeBudget volumeSpec = (WindowSpec.VolumeBudget) plan.getWindowSpec();
+      assertThat(volumeSpec.limit()).isEqualTo(10000);
+      assertThat(volumeSpec.unit()).isEqualTo("RECORDS");
     }
   }
 
@@ -597,7 +600,6 @@ class PlanAggregateTest {
         PlanAggregate plan =
             PlanAggregateTestDataBuilder.builder().operationCode(operation.getCode()).build();
 
-        assertThat(plan.getOperation()).isEqualTo(operation);
         assertThat(plan.getOperationCode()).isEqualTo(operation.getCode());
       }
     }
@@ -622,8 +624,10 @@ class PlanAggregateTest {
       PlanAggregate plan = PlanAggregateTestDataBuilder.builder().windowSpec(windowSpec).build();
 
       // Then
-      assertThat(plan.getWindowFrom()).isEqualTo(from);
-      assertThat(plan.getWindowTo()).isEqualTo(to);
+      assertThat(plan.getWindowSpec()).isInstanceOf(WindowSpec.Time.class);
+      WindowSpec.Time timeSpec = (WindowSpec.Time) plan.getWindowSpec();
+      assertThat(timeSpec.from()).isEqualTo(from);
+      assertThat(timeSpec.to()).isEqualTo(to);
     }
 
     @Test
