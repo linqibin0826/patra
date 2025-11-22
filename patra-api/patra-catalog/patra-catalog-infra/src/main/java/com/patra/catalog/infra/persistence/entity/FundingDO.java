@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO;
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDate;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -20,7 +20,7 @@ import lombok.EqualsAndHashCode;
 ///   - `funder_id` Crossref Funder Registry ID,支持标准化查询
 ///   - `ror_id` ROR(Research Organization Registry)标识符
 ///   - `amount` 资助金额(DECIMAL 20,2),映射为 BigDecimal
-///   - `start_date` 和 `end_date` 开始/结束日期(DATE),映射为 Instant（UTC午夜）
+///   - `start_date` 和 `end_date` 开始/结束日期(DATE),映射为 LocalDate
 ///   - `funding_type` 资助类型,CHECK 约束 6 个枚举值
 ///   - `metadata` JSON 扩展数据字段
 ///
@@ -70,11 +70,11 @@ public class FundingDO extends BaseDO {
 
   /// 开始日期
   @TableField("start_date")
-  private Instant startDate;
+  private LocalDate startDate;
 
   /// 结束日期
   @TableField("end_date")
-  private Instant endDate;
+  private LocalDate endDate;
 
   /// Crossref Funder Registry ID
   @TableField("funder_id")

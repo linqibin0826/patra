@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO;
-import java.time.Instant;
+import java.time.LocalDate;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -42,11 +42,11 @@ public class AuthorAffiliationDO extends BaseDO {
 
   /// 开始日期（作者加入机构日期）
   @TableField("start_date")
-  private Instant startDate;
+  private LocalDate startDate;
 
   /// 结束日期（作者离开机构日期）
   @TableField("end_date")
-  private Instant endDate;
+  private LocalDate endDate;
 
   /// 关联类型（如"current","past","visiting"）
   @TableField("affiliation_type")

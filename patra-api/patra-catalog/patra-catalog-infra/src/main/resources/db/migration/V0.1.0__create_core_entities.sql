@@ -128,8 +128,8 @@ CREATE TABLE IF NOT EXISTS `cat_venue_instance` (
     `publication_month` TINYINT NULL DEFAULT NULL COMMENT '出版月份(1-12,可能为空)',
     `publication_day` TINYINT NULL DEFAULT NULL COMMENT '出版日期(1-31,可能为空)',
     `conference_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '会议名称(会议专用)',
-    `conference_start_date` DATE NULL DEFAULT NULL COMMENT '会议开始日期(会议专用)',
-    `conference_end_date` DATE NULL DEFAULT NULL COMMENT '会议结束日期(会议专用)',
+    `conference_start_date` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '会议开始时间(会议专用,UTC微秒精度)',
+    `conference_end_date` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '会议结束时间(会议专用,UTC微秒精度)',
     `conference_location` VARCHAR(200) NULL DEFAULT NULL COMMENT '会议地点(会议专用)',
     `instance_metadata` JSON NULL DEFAULT NULL COMMENT '实例元数据(灵活扩展)',
 

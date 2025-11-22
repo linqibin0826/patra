@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO;
 import java.time.Instant;
+import java.time.LocalDate;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -43,7 +44,7 @@ public class PublicationMetadataDO extends BaseDO {
 
   /// 索引日期
   @TableField("indexed_date")
-  private Instant indexedDate;
+  private LocalDate indexedDate;
 
   /// 数据来源:PubMed/EPMC/Crossref/Manual/Other
   @TableField("data_source")
@@ -79,7 +80,7 @@ public class PublicationMetadataDO extends BaseDO {
 
   /// 审核日期
   @TableField("review_date")
-  private Instant reviewDate;
+  private LocalDate reviewDate;
 
   /// 审核人姓名
   @TableField("reviewer")

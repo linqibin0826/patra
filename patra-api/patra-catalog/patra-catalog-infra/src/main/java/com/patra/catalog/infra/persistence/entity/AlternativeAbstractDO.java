@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO;
-import java.time.Instant;
+import java.time.LocalDate;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -63,7 +63,7 @@ public class AlternativeAbstractDO extends BaseDO {
 
   /// 翻译日期
   @TableField("translation_date")
-  private Instant translationDate;
+  private LocalDate translationDate;
 
   /// 质量级别:Excellent/Good/Fair/Poor
   @TableField("quality_level")
