@@ -172,7 +172,7 @@ public class CoreErrorAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  public TracingInterceptor tracingInterceptor(TraceProvider traceProvider) {
+  public TracingInterceptor errorResolutionTracingInterceptor(TraceProvider traceProvider) {
     return new TracingInterceptor(traceProvider);
   }
 

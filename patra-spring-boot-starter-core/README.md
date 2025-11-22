@@ -32,7 +32,7 @@
 统一错误处理管道,包含以下 Bean:
 - `ErrorResolutionEngine`: 错误解析引擎,支持原因链遍历和特征映射
 - `ErrorResolutionPipeline`: 拦截器责任链,执行错误处理流程
-- `TracingInterceptor`: 追踪上下文传播拦截器
+- `errorResolutionTracingInterceptor`: 追踪上下文传播拦截器（Bean 名称）
 - `MetricsInterceptor`: 错误指标记录拦截器
 - `TraceProvider`: 追踪上下文提取器(默认基于 HTTP Header)
 - `ErrorObservationRecorder`: 错误观测记录器(基于 Micrometer)
@@ -261,5 +261,5 @@ public class GlobalExceptionHandler {
 
 ---
 
-**最后更新**: 2025-01-12
+**最后更新**: 2025-01-22 (Bean 名称更新以解决 Bean 冲突问题)
 **维护者**: Patra Team
