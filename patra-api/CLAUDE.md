@@ -225,6 +225,7 @@
        └─ 是否可以并行委派？
 
 [ ] 6. 失败处理
+    ├─ [ ] 首先查看 /troubleshooting-and-notes/ 寻找已知解决方案
     ├─ [ ] 记录：这是第 X/3 次尝试
     ├─ [ ] 3 次失败 → 🚨 立即停止
     └─ [ ] 启动并行调研流程
@@ -241,6 +242,12 @@
 
 [ ] 8. 用户沟通
     └─ 完成后告知：完成内容 | 委派工作 | 遇到问题 | 后续操作
+
+[ ] 9. 记录疑难问题（仅适用于非常困难的问题）
+    └─ 解决后，将问题和解决方案记录到 /troubleshooting-and-notes/
+       ├─ 触发条件：尝试 3 次以上 / 需要深度调研 / 罕见错误
+       ├─ 格式要求：简洁，一行描述问题 + 解决方案
+       └─ 分类存放：选择对应的文件（testing.md/database.md/configuration.md 等）
 ```
 
 ---
@@ -300,6 +307,18 @@
 ---
 
 ## 问题解决策略（三次原则）
+
+### 📋 第 0 步：查看已知问题
+
+**遇到任何问题时，首先查看 [/troubleshooting-and-notes/](troubleshooting-and-notes/)**
+
+- 从 [README.md](troubleshooting-and-notes/README.md) 选择相关分类
+- 查找是否有类似问题和解决方案
+- 如果找到，直接应用解决方案，无需从头尝试
+
+**仅当未找到相关问题时，才进入三次原则流程**
+
+---
 
 ### 🚨 三次原则
 
@@ -377,6 +396,7 @@
 
 ### 自检问题
 
+0. ❓ 查看过 troubleshooting-and-notes/？→ 否，立即查看
 1. ❓ 已尝试 3 次同样方法？→ 立即停止，启动调研
 2. ❓ 真正理解问题根因？→ 否，委派专业 Subagent
 3. ❓ 查阅过官方文档？→ 否，使用 context7
@@ -436,10 +456,3 @@
 - ❌ 什么都自己干
 
 **你的价值 = 正确的决策 × 高效的资源协调**
-
-**📋 项目关键点**
-- 整个项目数据库没有外键关联、id字段使用雪花ID。
-- 所有DO 对象都必须集成 BaseDO, BaseDO 中定义了表ID(雪花ID), 10个基础审计字段。
-- 使用Mybatis时，不要在 *Mapper.java 中编写SQL，简单的SQL应该使用 LambdaQueryWrapper 等，复杂的SQL使用 xml 文件。
-- patra-{service}-api 模块中定义的接口和DTO 是其他模块调用该服务的唯一契约(暴露给其他服务使用，controller的内容不定义在此模块)。
-- 编写的每一个方法(private/protected/public/default), 都必须要有详细的javadoc (///)进行说明。

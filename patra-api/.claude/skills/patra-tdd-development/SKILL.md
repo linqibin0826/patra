@@ -19,6 +19,10 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__sequential-thinking__se
 
 # Patra TDD 开发专家
 
+## 💡 提示
+
+遇到问题时，可查看 [troubleshooting-and-notes/](../../troubleshooting-and-notes/) 获取已知解决方案。
+
 ## 🎯 TDD 核心理念
 
 **测试驱动开发（TDD）= 先写测试，再写实现**
@@ -1079,6 +1083,7 @@ void should_publish_event_after_save() { ... }
 
 需要深入了解时，查看以下资源：
 
+- [troubleshooting-and-notes/](../../troubleshooting-and-notes/) - 问题排查与注意事项（项目级共享，按分类组织）
 - [tdd-workflow.md](resources/tdd-workflow.md) - TDD 详细工作流程
 - [tdd-domain-examples.md](resources/tdd-domain-examples.md) - Domain 层 TDD 示例
 - [tdd-application-examples.md](resources/tdd-application-examples.md) - Application 层 TDD 示例
