@@ -33,7 +33,7 @@ public class PatraIngestApplication {
   /// 应用程序入口点,启动 Spring Boot 应用。
   ///
   /// @param args 命令行参数
-  public static void main(String[] args) {
+  static void main(String[] args) {
     // 当未配置显式配置文件时,默认使用 'dev' 配置
     if (System.getProperty("spring.profiles.active") == null
         && System.getenv("SPRING_PROFILES_ACTIVE") == null) {
