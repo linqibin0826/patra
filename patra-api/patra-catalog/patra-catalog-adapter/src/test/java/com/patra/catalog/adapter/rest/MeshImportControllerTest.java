@@ -1,6 +1,7 @@
 package com.patra.catalog.adapter.rest;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -13,16 +14,18 @@ import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
 import com.patra.catalog.app.usecase.meshimport.MeshProgressQueryOrchestrator;
 import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
+import com.patra.starter.core.error.config.CoreErrorAutoConfiguration;
+import com.patra.starter.web.error.config.WebErrorAutoConfiguration;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 /// MeSH 导入 Controller 切片测试。
@@ -45,15 +48,19 @@ import org.springframework.test.web.servlet.MockMvc;
 /// @since 0.1.0
 @WebMvcTest(MeshImportController.class)
 @ContextConfiguration(classes = TestConfiguration.class) // 提供 Spring Boot 配置（包含 @EnableAutoConfiguration）
-@Import(MeshImportErrorMappingContributor.class) // 导入异常映射贡献者
+@Import({
+  MeshImportErrorMappingContributor.class, // 导入异常映射贡献者
+  CoreErrorAutoConfiguration.class, // 导入核心错误处理配置
+  WebErrorAutoConfiguration.class // 导入 Web 错误处理配置（包含 GlobalRestExceptionHandler）
+})
 @DisplayName("MeSH 导入 Controller 测试")
 class MeshImportControllerTest {
 
   @Autowired private MockMvc mockMvc;
 
-  @MockBean private MeshImportOrchestrator meshImportOrchestrator;
+  @MockitoBean private MeshImportOrchestrator meshImportOrchestrator;
 
-  @MockBean private MeshProgressQueryOrchestrator meshProgressQueryOrchestrator;
+  @MockitoBean private MeshProgressQueryOrchestrator meshProgressQueryOrchestrator;
 
   @Nested
   @DisplayName("POST /api/v1/mesh/import/start - 开始导入任务")
@@ -123,8 +130,8 @@ class MeshImportControllerTest {
     }
 
     @Test
-    @DisplayName("应该拒绝无效的 URL 格式并返回 400 (RFC 7807 ProblemDetail)")
-    void shouldReturn400WhenInvalidUrlFormat() throws Exception {
+    @DisplayName("应该拒绝无效的 URL 格式并返回 422 (RFC 7807 ProblemDetail)")
+    void shouldReturn422WhenInvalidUrlFormat() throws Exception {
       // given
       var requestBody =
           """
@@ -135,22 +142,23 @@ class MeshImportControllerTest {
           """;
 
       // when & then - 全局异常处理器返回 RFC 7807 ProblemDetail 格式
+      // 参数校验失败返回 422 Unprocessable Entity (符合 RFC 7807 标准)
       mockMvc
           .perform(
               post("/api/v1/mesh/import/start")
                   .contentType(MediaType.APPLICATION_JSON)
                   .content(requestBody))
-          .andExpect(status().isBadRequest())
+          .andExpect(status().isUnprocessableEntity())
           .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
           .andExpect(jsonPath("$.type").exists())
           .andExpect(jsonPath("$.title").exists())
-          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.status").value(422))
           .andExpect(jsonPath("$.detail").exists());
     }
 
     @Test
-    @DisplayName("应该拒绝过长的任务名称并返回 400 (RFC 7807 ProblemDetail)")
-    void shouldReturn400WhenTaskNameTooLong() throws Exception {
+    @DisplayName("应该拒绝过长的任务名称并返回 422 (RFC 7807 ProblemDetail)")
+    void shouldReturn422WhenTaskNameTooLong() throws Exception {
       // given
       var longName = "a".repeat(101); // 超过 100 字符
       var requestBody =
@@ -163,15 +171,16 @@ class MeshImportControllerTest {
               longName);
 
       // when & then - 全局异常处理器返回 RFC 7807 ProblemDetail 格式
+      // 参数校验失败返回 422 Unprocessable Entity (符合 RFC 7807 标准)
       mockMvc
           .perform(
               post("/api/v1/mesh/import/start")
                   .contentType(MediaType.APPLICATION_JSON)
                   .content(requestBody))
-          .andExpect(status().isBadRequest())
+          .andExpect(status().isUnprocessableEntity())
           .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
           .andExpect(jsonPath("$.type").exists())
-          .andExpect(jsonPath("$.status").value(400));
+          .andExpect(jsonPath("$.status").value(422));
     }
 
     @Test
@@ -318,18 +327,18 @@ class MeshImportControllerTest {
     }
 
     @Test
-    @DisplayName("应该在缺少 confirmClear 字段时返回 400 (RFC 7807 ProblemDetail)")
-    void shouldReturn400WhenMissingConfirmClear() throws Exception {
+    @DisplayName("应该在缺少 confirmClear 字段时返回 422 (RFC 7807 ProblemDetail)")
+    void shouldReturn422WhenMissingConfirmClear() throws Exception {
       // given
       var requestBody = "{}";
 
-      // when & then - 参数校验失败，全局异常处理器返回 400
+      // when & then - 参数校验失败，全局异常处理器返回 422 Unprocessable Entity
       mockMvc
           .perform(
               post("/api/v1/mesh/import/clear")
                   .contentType(MediaType.APPLICATION_JSON)
                   .content(requestBody))
-          .andExpect(status().isBadRequest())
+          .andExpect(status().isUnprocessableEntity())
           .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
     }
 
@@ -344,8 +353,10 @@ class MeshImportControllerTest {
           }
           """;
 
-      when(meshImportOrchestrator.startImport(any()))
-          .thenThrow(new IllegalStateException("有任务正在运行，无法清除进度"));
+      // 修正 mock: clear 操作调用的是 clearAndRestart(),而不是 startImport()
+      doThrow(new IllegalStateException("有任务正在运行，无法清除进度"))
+          .when(meshImportOrchestrator)
+          .clearAndRestart();
 
       // when & then - MeshImportErrorMappingContributor 映射到 409
       mockMvc
