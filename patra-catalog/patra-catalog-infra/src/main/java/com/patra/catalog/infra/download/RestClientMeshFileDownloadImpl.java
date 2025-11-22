@@ -19,7 +19,7 @@ import org.springframework.web.client.RestClient;
 ///
 /// **设计原则**：
 ///
-/// - 流式下载：支持大文件（700MB+），不一次性加载到内存
+/// - 流式下载：支持大文件（299MB），不一次性加载到内存
 ///   - 断点续传：支持 HTTP Range 请求（TODO: 后续实现）
 ///   - 超时控制：通过 RestClient 配置超时时间
 ///   - 校验完整性：使用 MD5 哈希验证文件完整性
@@ -28,7 +28,7 @@ import org.springframework.web.client.RestClient;
 ///
 /// - 下载速度：取决于网络带宽（约 10-50 MB/s）
 ///   - 内存占用：流式写入，内存占用可控（<100MB）
-///   - 文件大小：支持 700MB+ 的 XML 文件
+///   - 文件大小：支持 299MB 的 XML 文件
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -185,7 +185,10 @@ public class RestClientMeshFileDownloadImpl implements MeshFileDownloadPort {
             elapsedSeconds > 0 ? (totalBytes / (1024.0 * 1024.0)) / elapsedSeconds : 0;
 
         if (log.isInfoEnabled()) {
-          log.info("下载进度: {} MB（速度: {:.2f} MB/s）", totalBytes / (1024 * 1024), speedMBps);
+          log.info(
+              "下载进度: {} MB（速度: {} MB/s）",
+              totalBytes / (1024 * 1024),
+              String.format("%.2f", speedMBps));
         }
         lastLogTime = currentTime;
       }
@@ -197,9 +200,9 @@ public class RestClientMeshFileDownloadImpl implements MeshFileDownloadPort {
         totalTime > 0 ? (totalBytes / (1024.0 * 1024.0)) / (totalTime / 1000.0) : 0;
 
     log.info(
-        "下载完成，总大小: {} MB，耗时: {} 秒，平均速度: {:.2f} MB/s",
+        "下载完成，总大小: {} MB，耗时: {} 秒，平均速度: {} MB/s",
         totalBytes / (1024 * 1024),
         totalTime / 1000,
-        averageSpeedMBps);
+        String.format("%.2f", averageSpeedMBps));
   }
 }

@@ -51,7 +51,7 @@ public class MeshImportTaskDO extends BaseDO {
   @TableField("xml_file_hash")
   private String xmlFileHash;
 
-  /// 文件大小（字节，约 700MB）
+  /// 文件大小（字节，约 299MB）
   @TableField("xml_file_size")
   private Long xmlFileSize;
 

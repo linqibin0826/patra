@@ -66,6 +66,10 @@ public record MeshUI(String ui) implements Serializable {
   /// 示例：M0000001, M0581777
   private static final String CONCEPT_PATTERN = "M\\d{7}(\\d{2})?";
 
+  /// Term UI 正则表达式：T + 6位数字（旧格式）或 9位数字（新格式）
+  /// 示例：T000001, T001124965
+  private static final String TERM_PATTERN = "T\\d{6}(\\d{3})?";
+
   /// 紧凑构造器：验证 MeSH UI 的有效性。
   ///
   /// @throws IllegalArgumentException 如果 UI 为空或格式无效
@@ -79,11 +83,13 @@ public record MeshUI(String ui) implements Serializable {
     // - Descriptor: D + 6或9位数字
     // - Qualifier: Q + 6或9位数字
     // - Concept: M + 7或9位数字（特殊：原始为8字符）
+    // - Term: T + 6或9位数字
     Assert.isTrue(
         ui.matches(DESCRIPTOR_PATTERN)
             || ui.matches(QUALIFIER_PATTERN)
-            || ui.matches(CONCEPT_PATTERN),
-        "MeSH UI 格式无效。有效格式：Descriptor(D+6/9位数字), Qualifier(Q+6/9位数字), Concept(M+7/9位数字)。实际值：%s",
+            || ui.matches(CONCEPT_PATTERN)
+            || ui.matches(TERM_PATTERN),
+        "MeSH UI 格式无效。有效格式：Descriptor(D+6/9位数字), Qualifier(Q+6/9位数字), Concept(M+7/9位数字), Term(T+6/9位数字)。实际值：%s",
         ui);
   }
 
@@ -123,6 +129,15 @@ public record MeshUI(String ui) implements Serializable {
     return new MeshUI(String.format("M%07d", number));
   }
 
+  /// 创建 Term UI（旧格式：7字符）。
+  ///
+  /// @param number UI 编号（1-999999，生成6位数字）
+  /// @return Term UI（例：T000001）
+  public static MeshUI termOf(int number) {
+    Assert.isTrue(number >= 1 && number <= 999999, "Term UI 编号必须在 1-999999 范围内");
+    return new MeshUI(String.format("T%06d", number));
+  }
+
   /// 判断是否为 Descriptor UI。
   ///
   /// @return true 如果为 Descriptor UI
@@ -144,16 +159,25 @@ public record MeshUI(String ui) implements Serializable {
     return ui.startsWith("M");
   }
 
+  /// 判断是否为 Term UI。
+  ///
+  /// @return true 如果为 Term UI
+  public boolean isTerm() {
+    return ui.startsWith("T");
+  }
+
   /// 获取 UI 类型。
   ///
-  /// @return UI 类型(Descriptor/Qualifier/Concept)
+  /// @return UI 类型(Descriptor/Qualifier/Concept/Term)
   public String getType() {
     if (isDescriptor()) {
       return "Descriptor";
     } else if (isQualifier()) {
       return "Qualifier";
-    } else {
+    } else if (isConcept()) {
       return "Concept";
+    } else {
+      return "Term";
     }
   }
 

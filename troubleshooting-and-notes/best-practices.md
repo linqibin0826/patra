@@ -14,3 +14,6 @@
 12. Domain 层端口接口命名：**Repository** 后缀用于持久化聚合根/实体（本地数据库），**Port** 后缀用于外部服务和技术基础设施（外部 API/消息队列/对象存储等），禁止混用
 13. `patra-{service}-boot` 模块是应用启动入口，必须包含 `@SpringBootApplication` 启动类（命名规范：`Patra{Service}Application`），负责组装所有依赖（adapter、app、infra），禁止在其他模块添加启动类
 14. `patra-{service}-infra` 模块涉及 REST API 调用或文件下载时必须依赖 `patra-spring-boot-starter-rest-client`，使用统一的 `defaultRestClient` Bean，禁止直接依赖 `spring-web` 或手动创建 RestClient（统一超时配置、请求日志、追踪传播、重试机制、指标收集等由 Starter 统一提供）
+15. 测试遵循金字塔原则：**单元测试** 75%+（domain/app 层纯 JUnit，无 Spring 容器）→ **切片测试** 20%（infra/adapter 层 `@MybatisPlusTest`/`@WebMvcTest` 加载必要组件）→ **E2E 测试** <5%（boot 层 `@SpringBootTest` 启动完整应用验证关键流程）
+16. 禁止在代码中使用全类名（Fully Qualified Name），必须使用 `import` 语句导入类型（特例：仅当类名冲突时使用全类名消歧义）
+17.

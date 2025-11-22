@@ -2,8 +2,12 @@ package com.patra.catalog.domain.model.entity;
 
 import cn.hutool.core.lang.Assert;
 import com.patra.catalog.domain.model.enums.LexicalTag;
+import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import lombok.Getter;
 
 /// MeSH 入口术语实体(Aggregate内实体,不是聚合根)。
@@ -57,6 +61,9 @@ public class MeshEntryTerm implements Serializable {
   /// 关联的主题词ID(外键)
   private final Long descriptorId;
 
+  /// 术语唯一标识符(格式：T000001-T999999)
+  private final MeshUI termUi;
+
   // ========== 业务字段 ==========
 
   /// 入口术语/同义词
@@ -74,25 +81,46 @@ public class MeshEntryTerm implements Serializable {
   /// 是否排列术语(用于索引排列)
   private final boolean isPermutedTerm;
 
+  /// 是否概念首选术语(区别于记录首选术语)
+  private final boolean isConceptPreferred;
+
+  /// 术语创建日期(格式：YYYYMMDD)
+  private String dateCreated;
+
+  /// 来源词库列表(如 ["FDA SRS (2014)", "NLM (1975)"])
+  private final List<String> thesaurusIds;
+
+  /// 入口版本(可选)
+  private String entryVersion;
+
   /// 私有构造函数。
   ///
   /// @param id 主键ID(新建时为null)
   /// @param descriptorId 主题词ID
+  /// @param termUi 术语UI
   /// @param term 入口术语
   /// @param lexicalTag 词法标记
   /// @param isPrintFlag 是否打印
   /// @param isRecordPreferred 是否记录首选
   /// @param isPermutedTerm 是否排列术语
+  /// @param isConceptPreferred 是否概念首选术语
   private MeshEntryTerm(
       Long id,
       Long descriptorId,
+      MeshUI termUi,
       String term,
       LexicalTag lexicalTag,
       boolean isPrintFlag,
       boolean isRecordPreferred,
-      boolean isPermutedTerm) {
+      boolean isPermutedTerm,
+      boolean isConceptPreferred) {
     // 必填字段验证（descriptorId 在解析阶段可以为 null，后续通过 setDescriptorId 设置）
     Assert.notBlank(term, "入口术语不能为空");
+
+    // 术语UI验证（如果提供）
+    if (termUi != null) {
+      Assert.isTrue(termUi.isTerm(), "术语UI必须以T开头：%s", termUi.ui());
+    }
 
     // 术语长度验证
     Assert.isTrue(term.length() <= 255, "入口术语长度不能超过255个字符：%s", term);
@@ -100,65 +128,90 @@ public class MeshEntryTerm implements Serializable {
     // 赋值
     this.id = id;
     this.descriptorId = descriptorId;
+    this.termUi = termUi;
     this.term = term;
     this.lexicalTag = lexicalTag;
     this.isPrintFlag = isPrintFlag;
     this.isRecordPreferred = isRecordPreferred;
     this.isPermutedTerm = isPermutedTerm;
+    this.isConceptPreferred = isConceptPreferred;
+
+    // 初始化集合
+    this.thesaurusIds = new ArrayList<>();
   }
 
   // ========== 工厂方法 ==========
 
   /// 创建入口术语。
   ///
+  /// @param termUi 术语UI
   /// @param term 入口术语
   /// @param lexicalTag 词法标记
   /// @param isRecordPreferred 是否记录首选
   /// @param isPrintFlag 是否打印
+  /// @param isConceptPreferred 是否概念首选
+  /// @param isPermutedTerm 是否排列术语
   /// @return 入口术语实体
   public static MeshEntryTerm create(
-      String term, LexicalTag lexicalTag, boolean isRecordPreferred, boolean isPrintFlag) {
-    return new MeshEntryTerm(null, null, term, lexicalTag, isPrintFlag, isRecordPreferred, false);
+      MeshUI termUi,
+      String term,
+      LexicalTag lexicalTag,
+      boolean isRecordPreferred,
+      boolean isPrintFlag,
+      boolean isConceptPreferred,
+      boolean isPermutedTerm) {
+    return new MeshEntryTerm(
+        null, null, termUi, term, lexicalTag, isPrintFlag, isRecordPreferred, isPermutedTerm, isConceptPreferred);
   }
 
   /// 创建入口术语(指定主题词ID)。
   ///
   /// @param descriptorId 主题词ID
+  /// @param termUi 术语UI
   /// @param term 入口术语
   /// @param lexicalTag 词法标记
   /// @param isRecordPreferred 是否记录首选
   /// @param isPrintFlag 是否打印
+  /// @param isConceptPreferred 是否概念首选
+  /// @param isPermutedTerm 是否排列术语
   /// @return 入口术语实体
   public static MeshEntryTerm create(
       Long descriptorId,
+      MeshUI termUi,
       String term,
       LexicalTag lexicalTag,
       boolean isRecordPreferred,
-      boolean isPrintFlag) {
+      boolean isPrintFlag,
+      boolean isConceptPreferred,
+      boolean isPermutedTerm) {
     return new MeshEntryTerm(
-        null, descriptorId, term, lexicalTag, isPrintFlag, isRecordPreferred, false);
+        null, descriptorId, termUi, term, lexicalTag, isPrintFlag, isRecordPreferred, isPermutedTerm, isConceptPreferred);
   }
 
   /// 从持久化状态重建实体(由Repository使用)。
   ///
   /// @param id 主键ID
   /// @param descriptorId 主题词ID
+  /// @param termUi 术语UI
   /// @param term 入口术语
   /// @param lexicalTag 词法标记
   /// @param isPrintFlag 是否打印
   /// @param isRecordPreferred 是否记录首选
   /// @param isPermutedTerm 是否排列术语
+  /// @param isConceptPreferred 是否概念首选
   /// @return 重建的实体
   public static MeshEntryTerm restore(
       Long id,
       Long descriptorId,
+      MeshUI termUi,
       String term,
       LexicalTag lexicalTag,
       boolean isPrintFlag,
       boolean isRecordPreferred,
-      boolean isPermutedTerm) {
+      boolean isPermutedTerm,
+      boolean isConceptPreferred) {
     return new MeshEntryTerm(
-        id, descriptorId, term, lexicalTag, isPrintFlag, isRecordPreferred, isPermutedTerm);
+        id, descriptorId, termUi, term, lexicalTag, isPrintFlag, isRecordPreferred, isPermutedTerm, isConceptPreferred);
   }
 
   // ========== 业务方法 ==========
@@ -182,6 +235,53 @@ public class MeshEntryTerm implements Serializable {
   /// @return true 如果为缩写或首字母缩写
   public boolean isAbbreviation() {
     return lexicalTag != null && lexicalTag.isAbbreviation();
+  }
+
+  /// 设置术语创建日期。
+  ///
+  /// @param dateCreated 术语创建日期(格式：YYYYMMDD)
+  /// @return 当前对象(支持链式调用)
+  public MeshEntryTerm withDateCreated(String dateCreated) {
+    this.dateCreated = dateCreated;
+    return this;
+  }
+
+  /// 设置入口版本。
+  ///
+  /// @param entryVersion 入口版本
+  /// @return 当前对象(支持链式调用)
+  public MeshEntryTerm withEntryVersion(String entryVersion) {
+    this.entryVersion = entryVersion;
+    return this;
+  }
+
+  /// 添加来源词库。
+  ///
+  /// @param thesaurusId 来源词库
+  /// @return 当前对象(支持链式调用)
+  public MeshEntryTerm addThesaurusId(String thesaurusId) {
+    if (thesaurusId != null && !thesaurusIds.contains(thesaurusId)) {
+      thesaurusIds.add(thesaurusId);
+    }
+    return this;
+  }
+
+  /// 批量添加来源词库。
+  ///
+  /// @param thesaurusIdList 来源词库列表
+  /// @return 当前对象(支持链式调用)
+  public MeshEntryTerm addThesaurusIds(List<String> thesaurusIdList) {
+    if (thesaurusIdList != null && !thesaurusIdList.isEmpty()) {
+      thesaurusIdList.forEach(this::addThesaurusId);
+    }
+    return this;
+  }
+
+  /// 获取来源词库列表(不可变视图)。
+  ///
+  /// @return 来源词库列表
+  public List<String> getThesaurusIds() {
+    return Collections.unmodifiableList(thesaurusIds);
   }
 
   @Override

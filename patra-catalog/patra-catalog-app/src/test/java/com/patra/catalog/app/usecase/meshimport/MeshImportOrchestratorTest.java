@@ -98,7 +98,7 @@ class MeshImportOrchestratorTest {
     when(meshImportConfig.getExpectedCountForTable(anyString())).thenReturn(35000);
     when(meshImportConfig.getSourceUrl())
         .thenReturn("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
-    when(meshImportConfig.getExpectedFileSize()).thenReturn(734_003_200L); // 约 700 MB
+    when(meshImportConfig.getExpectedFileSize()).thenReturn(313_524_224L); // 约 299 MB
     when(meshImportConfig.getFileSizeDifferenceThreshold()).thenReturn(10.0); // 10% 阈值
 
     // 初始化表进度列表（模拟 initializeTableProgressList 的逻辑）
@@ -254,7 +254,7 @@ class MeshImportOrchestratorTest {
         abnormalFile.createNewFile();
       }
       File spyAbnormalFile = spy(abnormalFile);
-      when(spyAbnormalFile.length()).thenReturn(300_000_000L); // 约 300 MB，远小于预期的 700 MB
+      when(spyAbnormalFile.length()).thenReturn(300_000_000L); // 约 300 MB，略大于预期的 299 MB
       when(meshFileDownloadPort.download(anyString())).thenReturn(spyAbnormalFile);
 
       // Mock 聚合根保存

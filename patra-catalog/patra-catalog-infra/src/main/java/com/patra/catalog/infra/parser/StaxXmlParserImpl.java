@@ -6,7 +6,11 @@ import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
 import com.patra.catalog.domain.model.enums.DescriptorClass;
 import com.patra.catalog.domain.model.enums.LexicalTag;
+import com.patra.catalog.domain.model.vo.mesh.AllowableQualifier;
+import com.patra.catalog.domain.model.vo.mesh.ConceptRelation;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
+import com.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
+import com.patra.catalog.domain.model.vo.mesh.SeeRelatedDescriptor;
 import com.patra.catalog.domain.port.XmlParserPort;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -36,7 +40,7 @@ import org.springframework.stereotype.Component;
 ///
 /// - 内存占用：<2GB（流式处理，不一次性加载整个 XML）
 ///   - 处理速度：约 1000 条/秒（取决于硬件和批次大小）
-///   - 文件大小：支持 700MB+ 的 XML 文件
+///   - 文件大小：支持 299MB 的 XML 文件
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -171,9 +175,38 @@ public class StaxXmlParserImpl implements XmlParserPort {
     /// 解析单个 DescriptorRecord。
     private MeshDescriptorAggregate parseDescriptorRecord(XMLStreamReader reader)
         throws XMLStreamException {
+      // 必填字段
       String descriptorUI = null;
       String descriptorName = null;
+      DescriptorClass descriptorClass = DescriptorClass.TOPICAL; // 默认值
+
+      // 日期字段
+      String dateCreated = null;
+      String dateRevised = null;
+      String dateEstablished = null;
+
+      // 可选文本字段
+      String historyNote = null;
+      String onlineNote = null;
+      String publicMeshNote = null;
+      String nlmClassificationNumber = null;
+
+      // 集合字段
       List<MeshTreeNumber> treeNumbers = new ArrayList<>();
+      List<AllowableQualifier> allowableQualifiers = new ArrayList<>();
+      List<PharmacologicalAction> pharmacologicalActions = new ArrayList<>();
+      List<String> previousIndexings = new ArrayList<>();
+      List<SeeRelatedDescriptor> seeRelatedDescriptors = new ArrayList<>();
+
+      // 解析 DescriptorClass 属性
+      String descriptorClassAttr = reader.getAttributeValue(null, "DescriptorClass");
+      if (descriptorClassAttr != null) {
+        try {
+          descriptorClass = DescriptorClass.fromCode(descriptorClassAttr);
+        } catch (IllegalArgumentException e) {
+          log.warn("未知的 DescriptorClass 值：{}，使用默认值 TOPICAL", descriptorClassAttr);
+        }
+      }
 
       while (reader.hasNext()) {
         int event = reader.next();
@@ -185,17 +218,48 @@ public class StaxXmlParserImpl implements XmlParserPort {
               break;
             case "DescriptorName":
               // DescriptorName 包含一个 <String> 子元素
-              while (reader.hasNext()) {
-                event = reader.next();
-                if (event == XMLStreamConstants.START_ELEMENT
-                    && "String".equals(reader.getLocalName())) {
-                  descriptorName = reader.getElementText();
-                  break;
-                }
-              }
+              descriptorName = parseNameElement(reader);
+              break;
+            case "DateCreated":
+              dateCreated = parseDate(reader, "DateCreated");
+              break;
+            case "DateRevised":
+              dateRevised = parseDate(reader, "DateRevised");
+              break;
+            case "DateEstablished":
+              dateEstablished = parseDate(reader, "DateEstablished");
+              break;
+            case "HistoryNote":
+              historyNote = reader.getElementText().trim();
+              break;
+            case "OnlineNote":
+              onlineNote = reader.getElementText().trim();
+              break;
+            case "PublicMeSHNote":
+              publicMeshNote = reader.getElementText().trim();
+              break;
+            case "NLMClassificationNumber":
+              nlmClassificationNumber = reader.getElementText().trim();
+              break;
+            case "AllowableQualifiersList":
+              allowableQualifiers = parseAllowableQualifiersList(reader);
+              break;
+            case "PharmacologicalActionList":
+              pharmacologicalActions = parsePharmacologicalActionList(reader);
+              break;
+            case "PreviousIndexingList":
+              previousIndexings = parsePreviousIndexingList(reader);
+              break;
+            case "SeeRelatedList":
+              seeRelatedDescriptors = parseSeeRelatedList(reader);
               break;
             case "TreeNumberList":
               treeNumbers = parseTreeNumberList(reader, descriptorUI);
+              break;
+            case "ConceptList":
+              // 暂时先不解析，避免覆盖 Descriptor 级别的字段
+              // Concept 和 EntryTerm 在 parseConcepts() 和 parseEntryTerms() 中单独解析
+              skipElement(reader, "ConceptList");
               break;
           }
         } else if (event == XMLStreamConstants.END_ELEMENT
@@ -215,13 +279,47 @@ public class StaxXmlParserImpl implements XmlParserPort {
           MeshDescriptorAggregate.create(
               MeshUI.of(descriptorUI),
               descriptorName,
-              DescriptorClass.TOPICAL, // 默认为主题词类型，可从 XML 中解析 DescriptorClass
-              "2025" // 默认版本号，可从 XML 中解析
+              descriptorClass,
+              dateCreated != null ? dateCreated.substring(0, 4) : "2025" // 使用年份作为版本号
               );
 
-      // 添加树形编号
+      // 设置日期字段
+      if (dateCreated != null) {
+        aggregate.setDateCreated(dateCreated);
+      }
+      if (dateRevised != null) {
+        aggregate.setDateRevised(dateRevised);
+      }
+      if (dateEstablished != null) {
+        aggregate.setDateEstablished(dateEstablished);
+      }
+
+      // 设置可选文本字段
+      if (historyNote != null) {
+        aggregate.setHistoryNote(historyNote);
+      }
+      if (onlineNote != null) {
+        aggregate.setOnlineNote(onlineNote);
+      }
+      if (nlmClassificationNumber != null) {
+        aggregate.setNlmClassificationNumber(nlmClassificationNumber);
+      }
+
+      // 添加集合数据
       if (!treeNumbers.isEmpty()) {
         aggregate.addTreeNumbers(treeNumbers);
+      }
+      if (!allowableQualifiers.isEmpty()) {
+        aggregate.addAllowableQualifiers(allowableQualifiers);
+      }
+      if (!pharmacologicalActions.isEmpty()) {
+        aggregate.addPharmacologicalActions(pharmacologicalActions);
+      }
+      if (!previousIndexings.isEmpty()) {
+        aggregate.addPreviousIndexings(previousIndexings);
+      }
+      if (!seeRelatedDescriptors.isEmpty()) {
+        aggregate.addSeeRelatedDescriptors(seeRelatedDescriptors);
       }
 
       return aggregate;
@@ -343,27 +441,53 @@ public class StaxXmlParserImpl implements XmlParserPort {
 
     /// 解析 Term 元素。
     private MeshEntryTerm parseTermElement(XMLStreamReader reader) throws XMLStreamException {
+      // 从属性读取字段
+      String lexicalTagCode = reader.getAttributeValue(null, "LexicalTag");
+      if (lexicalTagCode == null) {
+        lexicalTagCode = "NON"; // 默认值
+      }
+
+      String recordPreferredAttr = reader.getAttributeValue(null, "RecordPreferredTermYN");
+      boolean isRecordPreferred = "Y".equalsIgnoreCase(recordPreferredAttr);
+
+      String conceptPreferredAttr = reader.getAttributeValue(null, "ConceptPreferredTermYN");
+      boolean isConceptPreferred = "Y".equalsIgnoreCase(conceptPreferredAttr);
+
+      String isPermutedAttr = reader.getAttributeValue(null, "IsPermutedTermYN");
+      boolean isPermutedTerm = "Y".equalsIgnoreCase(isPermutedAttr);
+
+      // PrintFlagYN 默认为 true（如果属性不存在，则假定可打印）
+      boolean isPrintFlag = true;
+
+      // 从子元素读取字段
+      String termUI = null;
       String term = null;
-      String lexicalTagCode = "NON"; // 默认值
-      boolean isRecordPreferred = false;
-      boolean isPrintFlag = true; // 默认打印
+      String dateCreated = null;
+      String entryVersion = null;
+      List<String> thesaurusIds = new ArrayList<>();
 
       while (reader.hasNext()) {
         int event = reader.next();
         if (event == XMLStreamConstants.START_ELEMENT) {
           String localName = reader.getLocalName();
           switch (localName) {
+            case "TermUI":
+              termUI = reader.getElementText();
+              break;
             case "String":
               term = reader.getElementText();
               break;
-            case "LexicalTag":
-              lexicalTagCode = reader.getElementText();
+            case "DateCreated":
+              dateCreated = parseDate(reader, "DateCreated");
               break;
-            case "RecordPreferredTerm":
-              String preferredValue = reader.getElementText();
-              isRecordPreferred = "Y".equalsIgnoreCase(preferredValue);
+            case "ThesaurusIDlist":
+              thesaurusIds = parseThesaurusIdList(reader);
+              break;
+            case "EntryVersion":
+              entryVersion = reader.getElementText();
               break;
             case "PrintFlagYN":
+              // 有时 PrintFlagYN 也可能作为子元素出现
               String printFlag = reader.getElementText();
               isPrintFlag = "Y".equalsIgnoreCase(printFlag);
               break;
@@ -389,7 +513,43 @@ public class StaxXmlParserImpl implements XmlParserPort {
         lexicalTag = LexicalTag.NON;
       }
 
-      return MeshEntryTerm.create(term, lexicalTag, isRecordPreferred, isPrintFlag);
+      // 使用工厂方法创建 EntryTerm
+      MeshUI meshTermUI = termUI != null ? MeshUI.of(termUI) : null;
+      MeshEntryTerm entryTerm =
+          MeshEntryTerm.create(
+              meshTermUI, term, lexicalTag, isRecordPreferred, isPrintFlag, isConceptPreferred, isPermutedTerm);
+
+      // 设置可选字段
+      if (dateCreated != null) {
+        entryTerm.withDateCreated(dateCreated);
+      }
+      if (entryVersion != null) {
+        entryTerm.withEntryVersion(entryVersion);
+      }
+      if (!thesaurusIds.isEmpty()) {
+        entryTerm.addThesaurusIds(thesaurusIds);
+      }
+
+      return entryTerm;
+    }
+
+    /// 解析 ThesaurusIDlist。
+    private static List<String> parseThesaurusIdList(XMLStreamReader reader) throws XMLStreamException {
+      List<String> thesaurusIds = new ArrayList<>();
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT
+            && "ThesaurusID".equals(reader.getLocalName())) {
+          String thesaurusId = reader.getElementText();
+          if (thesaurusId != null && !thesaurusId.trim().isEmpty()) {
+            thesaurusIds.add(thesaurusId.trim());
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "ThesaurusIDlist".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+      return thesaurusIds;
     }
 
     @Override
@@ -454,6 +614,8 @@ public class StaxXmlParserImpl implements XmlParserPort {
       String scopeNote = null;
       String casn1Name = null;
       String conceptStatus = null;
+      List<String> relatedRegistryNumbers = new ArrayList<>();
+      List<ConceptRelation> conceptRelations = new ArrayList<>();
 
       // 解析 PreferredConceptYN 属性
       String preferredAttr = reader.getAttributeValue(null, "PreferredConceptYN");
@@ -471,14 +633,7 @@ public class StaxXmlParserImpl implements XmlParserPort {
               break;
             case "ConceptName":
               // ConceptName 包含一个 <String> 子元素
-              while (reader.hasNext()) {
-                event = reader.next();
-                if (event == XMLStreamConstants.START_ELEMENT
-                    && "String".equals(reader.getLocalName())) {
-                  conceptName = reader.getElementText();
-                  break;
-                }
-              }
+              conceptName = parseNameElement(reader);
               break;
             case "RegistryNumber":
               registryNumber = reader.getElementText();
@@ -491,6 +646,12 @@ public class StaxXmlParserImpl implements XmlParserPort {
               break;
             case "ConceptStatus":
               conceptStatus = reader.getElementText();
+              break;
+            case "RelatedRegistryNumberList":
+              relatedRegistryNumbers = parseRelatedRegistryNumberList(reader);
+              break;
+            case "ConceptRelationList":
+              conceptRelations = parseConceptRelationList(reader);
               break;
           }
         } else if (event == XMLStreamConstants.END_ELEMENT
@@ -522,7 +683,97 @@ public class StaxXmlParserImpl implements XmlParserPort {
         concept.withConceptStatus(conceptStatus);
       }
 
+      // 添加集合数据
+      if (!relatedRegistryNumbers.isEmpty()) {
+        concept.addRelatedRegistryNumbers(relatedRegistryNumbers);
+      }
+      if (!conceptRelations.isEmpty()) {
+        concept.addConceptRelations(conceptRelations);
+      }
+
       return concept;
+    }
+
+    /// 解析 RelatedRegistryNumberList。
+    private static List<String> parseRelatedRegistryNumberList(XMLStreamReader reader)
+        throws XMLStreamException {
+      List<String> registryNumbers = new ArrayList<>();
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT
+            && "RelatedRegistryNumber".equals(reader.getLocalName())) {
+          String registryNumber = reader.getElementText();
+          if (registryNumber != null && !registryNumber.trim().isEmpty()) {
+            registryNumbers.add(registryNumber.trim());
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "RelatedRegistryNumberList".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+      return registryNumbers;
+    }
+
+    /// 解析 ConceptRelationList。
+    private static List<ConceptRelation> parseConceptRelationList(XMLStreamReader reader)
+        throws XMLStreamException {
+      List<ConceptRelation> relations = new ArrayList<>();
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT
+            && "ConceptRelation".equals(reader.getLocalName())) {
+          ConceptRelation relation = parseConceptRelation(reader);
+          if (relation != null) {
+            relations.add(relation);
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "ConceptRelationList".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+      return relations;
+    }
+
+    /// 解析单个 ConceptRelation。
+    private static ConceptRelation parseConceptRelation(XMLStreamReader reader) throws XMLStreamException {
+      String relationName = null;
+      String concept1UI = null;
+      String concept2UI = null;
+
+      // 解析 RelationName 属性
+      relationName = reader.getAttributeValue(null, "RelationName");
+
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT) {
+          String localName = reader.getLocalName();
+          switch (localName) {
+            case "Concept1UI":
+              concept1UI = reader.getElementText();
+              break;
+            case "Concept2UI":
+              concept2UI = reader.getElementText();
+              break;
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "ConceptRelation".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+
+      if (relationName != null && concept1UI != null && concept2UI != null) {
+        try {
+          return ConceptRelation.of(relationName, MeshUI.of(concept1UI), MeshUI.of(concept2UI));
+        } catch (Exception e) {
+          log.warn(
+              "解析 ConceptRelation 失败: RelationName={}, Concept1UI={}, Concept2UI={}",
+              relationName,
+              concept1UI,
+              concept2UI,
+              e);
+        }
+      }
+      return null;
     }
 
     @Override
@@ -539,5 +790,380 @@ public class StaxXmlParserImpl implements XmlParserPort {
     public int characteristics() {
       return ORDERED | NONNULL | IMMUTABLE;
     }
+  }
+
+  // ========== 辅助方法 ==========
+
+  /// 解析日期元素(Year/Month/Day 结构)。
+  ///
+  /// @param reader XML 读取器
+  /// @param elementName 日期元素名称(如 "DateCreated")
+  /// @return 格式化的日期字符串(YYYYMMDD)
+  /// @throws XMLStreamException XML 解析异常
+  private static String parseDate(XMLStreamReader reader, String elementName)
+      throws XMLStreamException {
+    String year = null;
+    String month = null;
+    String day = null;
+
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT) {
+        String localName = reader.getLocalName();
+        switch (localName) {
+          case "Year":
+            year = reader.getElementText();
+            break;
+          case "Month":
+            month = reader.getElementText();
+            break;
+          case "Day":
+            day = reader.getElementText();
+            break;
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && elementName.equals(reader.getLocalName())) {
+        break;
+      }
+    }
+
+    // 组装日期字符串(YYYYMMDD 格式)
+    if (year != null && month != null && day != null) {
+      return String.format(
+          "%s%s%s", year, month.length() == 1 ? "0" + month : month, day.length() == 1 ? "0" + day : day);
+    }
+    return null;
+  }
+
+  /// 跳过整个 XML 元素（包括所有子元素）。
+  ///
+  /// @param reader XML 读取器
+  /// @param elementName 要跳过的元素名称
+  /// @throws XMLStreamException 如果解析失败
+  private static void skipElement(XMLStreamReader reader, String elementName)
+      throws XMLStreamException {
+    int depth = 1; // 当前嵌套深度
+    while (reader.hasNext() && depth > 0) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT) {
+        depth++;
+      } else if (event == XMLStreamConstants.END_ELEMENT) {
+        depth--;
+        if (depth == 0 && elementName.equals(reader.getLocalName())) {
+          break;
+        }
+      }
+    }
+  }
+
+  /// 解析 Name 元素（包含 <String> 子元素）。
+  private static String parseNameElement(XMLStreamReader reader) throws XMLStreamException {
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT && "String".equals(reader.getLocalName())) {
+        return reader.getElementText();
+      }
+    }
+    return null;
+  }
+
+  /// 解析 AllowableQualifiersList。
+  private static List<AllowableQualifier> parseAllowableQualifiersList(XMLStreamReader reader)
+      throws XMLStreamException {
+    List<AllowableQualifier> qualifiers = new ArrayList<>();
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT
+          && "AllowableQualifier".equals(reader.getLocalName())) {
+        AllowableQualifier qualifier = parseAllowableQualifier(reader);
+        if (qualifier != null) {
+          qualifiers.add(qualifier);
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && "AllowableQualifiersList".equals(reader.getLocalName())) {
+        break;
+      }
+    }
+    return qualifiers;
+  }
+
+  /// 解析单个 AllowableQualifier。
+  private static AllowableQualifier parseAllowableQualifier(XMLStreamReader reader)
+      throws XMLStreamException {
+    String qualifierUI = null;
+    String qualifierName = null;
+    String abbreviation = null;
+
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT) {
+        String localName = reader.getLocalName();
+        switch (localName) {
+          case "QualifierReferredTo":
+            // QualifierUI 和 QualifierName 在 QualifierReferredTo 内部
+            while (reader.hasNext()) {
+              int innerEvent = reader.next();
+              if (innerEvent == XMLStreamConstants.START_ELEMENT) {
+                String innerName = reader.getLocalName();
+                if ("QualifierUI".equals(innerName)) {
+                  qualifierUI = reader.getElementText();
+                } else if ("QualifierName".equals(innerName)) {
+                  qualifierName = parseNameElement(reader);
+                }
+              } else if (innerEvent == XMLStreamConstants.END_ELEMENT
+                  && "QualifierReferredTo".equals(reader.getLocalName())) {
+                break;
+              }
+            }
+            break;
+          case "Abbreviation":
+            abbreviation = reader.getElementText();
+            break;
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && "AllowableQualifier".equals(reader.getLocalName())) {
+        break;
+      }
+    }
+
+    if (qualifierUI != null && qualifierName != null && abbreviation != null) {
+      try {
+        return AllowableQualifier.of(MeshUI.of(qualifierUI), qualifierName, abbreviation);
+      } catch (Exception e) {
+        log.warn("解析 AllowableQualifier 失败: UI={}, Name={}", qualifierUI, qualifierName, e);
+      }
+    }
+    return null;
+  }
+
+  /// 解析 PharmacologicalActionList。
+  private static List<PharmacologicalAction> parsePharmacologicalActionList(
+      XMLStreamReader reader) throws XMLStreamException {
+    List<PharmacologicalAction> actions = new ArrayList<>();
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT
+          && "PharmacologicalAction".equals(reader.getLocalName())) {
+        PharmacologicalAction action = parsePharmacologicalAction(reader);
+        if (action != null) {
+          actions.add(action);
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && "PharmacologicalActionList".equals(reader.getLocalName())) {
+        break;
+      }
+    }
+    return actions;
+  }
+
+  /// 解析单个 PharmacologicalAction。
+  private static PharmacologicalAction parsePharmacologicalAction(XMLStreamReader reader)
+      throws XMLStreamException {
+    String descriptorUI = null;
+    String descriptorName = null;
+
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT) {
+        String localName = reader.getLocalName();
+        switch (localName) {
+          case "DescriptorUI":
+            descriptorUI = reader.getElementText();
+            break;
+          case "DescriptorName":
+            descriptorName = parseNameElement(reader);
+            break;
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && "PharmacologicalAction".equals(reader.getLocalName())) {
+        break;
+      }
+    }
+
+    if (descriptorUI != null && descriptorName != null) {
+      try {
+        return PharmacologicalAction.of(MeshUI.of(descriptorUI), descriptorName);
+      } catch (Exception e) {
+        log.warn("解析 PharmacologicalAction 失败: UI={}, Name={}", descriptorUI, descriptorName, e);
+      }
+    }
+    return null;
+  }
+
+  /// 解析 PreviousIndexingList。
+  private static List<String> parsePreviousIndexingList(XMLStreamReader reader)
+      throws XMLStreamException {
+    List<String> indexings = new ArrayList<>();
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT
+          && "PreviousIndexing".equals(reader.getLocalName())) {
+        String indexing = reader.getElementText();
+        if (indexing != null && !indexing.trim().isEmpty()) {
+          indexings.add(indexing.trim());
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && "PreviousIndexingList".equals(reader.getLocalName())) {
+        break;
+      }
+    }
+    return indexings;
+  }
+
+  /// 解析 SeeRelatedList。
+  private static List<SeeRelatedDescriptor> parseSeeRelatedList(XMLStreamReader reader)
+      throws XMLStreamException {
+    List<SeeRelatedDescriptor> descriptors = new ArrayList<>();
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT
+          && "SeeRelatedDescriptor".equals(reader.getLocalName())) {
+        SeeRelatedDescriptor descriptor = parseSeeRelatedDescriptor(reader);
+        if (descriptor != null) {
+          descriptors.add(descriptor);
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && "SeeRelatedList".equals(reader.getLocalName())) {
+        break;
+      }
+    }
+    return descriptors;
+  }
+
+  /// 解析单个 SeeRelatedDescriptor。
+  private static SeeRelatedDescriptor parseSeeRelatedDescriptor(XMLStreamReader reader)
+      throws XMLStreamException {
+    String descriptorUI = null;
+    String descriptorName = null;
+
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT) {
+        String localName = reader.getLocalName();
+        switch (localName) {
+          case "DescriptorUI":
+            descriptorUI = reader.getElementText();
+            break;
+          case "DescriptorName":
+            descriptorName = parseNameElement(reader);
+            break;
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && "SeeRelatedDescriptor".equals(reader.getLocalName())) {
+        break;
+      }
+    }
+
+    if (descriptorUI != null && descriptorName != null) {
+      try {
+        return SeeRelatedDescriptor.of(MeshUI.of(descriptorUI), descriptorName);
+      } catch (Exception e) {
+        log.warn("解析 SeeRelatedDescriptor 失败: UI={}, Name={}", descriptorUI, descriptorName, e);
+      }
+    }
+    return null;
+  }
+
+  /// 解析 RelatedRegistryNumberList。
+  private static List<String> parseRelatedRegistryNumberList(XMLStreamReader reader)
+      throws XMLStreamException {
+    List<String> registryNumbers = new ArrayList<>();
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT
+          && "RelatedRegistryNumber".equals(reader.getLocalName())) {
+        String registryNumber = reader.getElementText();
+        if (registryNumber != null && !registryNumber.trim().isEmpty()) {
+          registryNumbers.add(registryNumber.trim());
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && "RelatedRegistryNumberList".equals(reader.getLocalName())) {
+        break;
+      }
+    }
+    return registryNumbers;
+  }
+
+  /// 解析 ConceptRelationList。
+  private static List<ConceptRelation> parseConceptRelationList(XMLStreamReader reader)
+      throws XMLStreamException {
+    List<ConceptRelation> relations = new ArrayList<>();
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT
+          && "ConceptRelation".equals(reader.getLocalName())) {
+        ConceptRelation relation = parseConceptRelation(reader);
+        if (relation != null) {
+          relations.add(relation);
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && "ConceptRelationList".equals(reader.getLocalName())) {
+        break;
+      }
+    }
+    return relations;
+  }
+
+  /// 解析单个 ConceptRelation。
+  private static ConceptRelation parseConceptRelation(XMLStreamReader reader)
+      throws XMLStreamException {
+    String relationName = null;
+    String concept1UI = null;
+    String concept2UI = null;
+
+    // 解析 RelationName 属性
+    relationName = reader.getAttributeValue(null, "RelationName");
+
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT) {
+        String localName = reader.getLocalName();
+        switch (localName) {
+          case "Concept1UI":
+            concept1UI = reader.getElementText();
+            break;
+          case "Concept2UI":
+            concept2UI = reader.getElementText();
+            break;
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && "ConceptRelation".equals(reader.getLocalName())) {
+        break;
+      }
+    }
+
+    if (relationName != null && concept1UI != null && concept2UI != null) {
+      try {
+        return ConceptRelation.of(relationName, MeshUI.of(concept1UI), MeshUI.of(concept2UI));
+      } catch (Exception e) {
+        log.warn(
+            "解析 ConceptRelation 失败: RelationName={}, Concept1UI={}, Concept2UI={}",
+            relationName,
+            concept1UI,
+            concept2UI,
+            e);
+      }
+    }
+    return null;
+  }
+
+  /// 解析 ThesaurusIDlist。
+  private static List<String> parseThesaurusIdList(XMLStreamReader reader)
+      throws XMLStreamException {
+    List<String> thesaurusIds = new ArrayList<>();
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT
+          && "ThesaurusID".equals(reader.getLocalName())) {
+        String thesaurusId = reader.getElementText();
+        if (thesaurusId != null && !thesaurusId.trim().isEmpty()) {
+          thesaurusIds.add(thesaurusId.trim());
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && "ThesaurusIDlist".equals(reader.getLocalName())) {
+        break;
+      }
+    }
+    return thesaurusIds;
   }
 }

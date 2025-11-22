@@ -42,7 +42,7 @@ public interface MeshFileDownloadPort {
   ///
   /// 实现说明：
   ///
-  /// - 从 NLM 服务器下载 XML 文件（约 700MB）
+  /// - 从 NLM 服务器下载 XML 文件（约 299MB）
   ///   - 支持断点续传（使用 HTTP Range 请求）
   ///   - 失败时自动重试（最多 3 次）
   ///   - 下载到临时目录：`/tmp/mesh-import/desc2025.xml`
