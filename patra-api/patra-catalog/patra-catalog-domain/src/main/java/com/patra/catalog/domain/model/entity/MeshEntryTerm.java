@@ -91,8 +91,7 @@ public class MeshEntryTerm implements Serializable {
       boolean isPrintFlag,
       boolean isRecordPreferred,
       boolean isPermutedTerm) {
-    // 必填字段验证
-    Assert.notNull(descriptorId, "主题词ID不能为空");
+    // 必填字段验证（descriptorId 在解析阶段可以为 null，后续通过 setDescriptorId 设置）
     Assert.notBlank(term, "入口术语不能为空");
 
     // 术语长度验证

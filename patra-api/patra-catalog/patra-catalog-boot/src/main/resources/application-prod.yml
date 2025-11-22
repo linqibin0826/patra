@@ -1,0 +1,27 @@
+# ========================================
+# Production Environment Configuration
+# ========================================
+# This configuration is active when spring.profiles.active=prod
+# All sensitive values are injected via environment variables
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  # Production database (environment variables)
+  datasource:
+    url: ${CATALOG_DB_URL}
+    username: ${CATALOG_DB_USERNAME}
+    password: ${CATALOG_DB_PASSWORD}
+
+  # Production Redis (environment variables)
+  data:
+    redis:
+      url: ${CATALOG_REDIS_URL}
+
+# Production logging configuration
+logging:
+  level:
+    com.patra: INFO
+    com.patra.catalog: INFO

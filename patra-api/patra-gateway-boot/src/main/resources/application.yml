@@ -64,6 +64,9 @@ spring:
 # Logging Configuration
 # ----------------------------------------------------------------------------
 logging:
+  file:
+    # Centralized log directory in project root
+    path: ${PATRA_LOG_DIR:/Users/linqibin/Desktop/Patra-api/logs}
   layer: adapter
   level:
     org.springframework.cloud.gateway: INFO

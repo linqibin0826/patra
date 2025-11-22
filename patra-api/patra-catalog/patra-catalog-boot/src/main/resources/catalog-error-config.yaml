@@ -1,0 +1,60 @@
+# Local error-handling configuration for the Catalog module; can be migrated to Nacos later.
+patra:
+  error:
+    enabled: true
+    context-prefix: CAT
+    engine:
+      max-cause-depth: 10
+      enable-trait-mapping: true
+      enable-naming-heuristic: true
+    observation:
+      enabled: true
+      slow-threshold-ms: 200
+      log-slow-resolution: true
+    circuit-breaker:
+      enabled: true
+      failure-rate-threshold: 50.0
+      minimum-number-of-calls: 20
+      sliding-window-size: 50
+      permitted-calls-in-half-open-state: 5
+      wait-duration-in-open-state: PT30S
+
+  feign:
+    problem:
+      enabled: true
+      tolerant: true
+      max-error-body-size: 65536
+      include-stack-trace: false
+      observation:
+        enabled: true
+        slow-parsing-threshold-ms: 150
+        log-slow-parsing: true
+        slow-body-reading-threshold-ms: 80
+        log-slow-body-reading: true
+        log-tolerant-usage: true
+
+# Error code catalog is for documentation only; intended to sync to the configuration center later.
+catalog:
+  error-catalog:
+    # MeSH Import Errors (1200-1299)
+    mesh-import-already-running: CAT-1201
+    mesh-import-task-not-found: CAT-1202
+    mesh-import-invalid-state: CAT-1203
+    mesh-download-failed: CAT-1204
+    mesh-parse-failed: CAT-1205
+    mesh-batch-insert-failed: CAT-1206
+
+    # Repository Errors (1300-1399)
+    repository-persistence-failed: CAT-1301
+    repository-update-conflict: CAT-1302
+    repository-entity-not-found: CAT-1303
+
+    # Validation Errors (1400-1499)
+    mesh-data-validation-failed: CAT-1401
+    publication-validation-failed: CAT-1402
+    author-validation-failed: CAT-1403
+    venue-validation-failed: CAT-1404
+
+    # External Service Errors (1500-1599)
+    registry-service-unavailable: CAT-1501
+    registry-provenance-not-found: CAT-1502

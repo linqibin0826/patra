@@ -1,0 +1,27 @@
+# ========================================
+# Development Environment Configuration
+# ========================================
+# This configuration is active when spring.profiles.active=dev
+# WARNING: Contains development credentials - DO NOT use in production
+
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  # Development database (local Docker container)
+  datasource:
+    url: jdbc:mysql://127.0.0.1:13306/patra_catalog?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+    username: root
+    password: 123456  # Development only - secure in production
+
+  # Development Redis (local Docker container)
+  data:
+    redis:
+      url: redis://localhost:16379
+
+# Development logging configuration
+logging:
+  level:
+    com.patra: DEBUG
+    com.patra.catalog: DEBUG

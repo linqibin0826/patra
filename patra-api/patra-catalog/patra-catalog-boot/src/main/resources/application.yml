@@ -1,0 +1,128 @@
+# ============================================================================
+# Patra Catalog Service - Main Configuration
+# ============================================================================
+# Catalog service manages medical literature classification systems,
+# MeSH vocabulary, authors, affiliations, and journals.
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Server Configuration
+# ----------------------------------------------------------------------------
+server:
+  port: 6300
+
+# ----------------------------------------------------------------------------
+# Spring Boot & Cloud Configuration
+# ----------------------------------------------------------------------------
+spring:
+  application:
+    name: patra-catalog
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # Configuration imports (order matters: later configs override earlier ones)
+  config:
+    import:
+      # Local error-handling configuration
+      - "classpath:catalog-error-config.yaml"
+      # Service-specific configuration from Nacos
+      - "optional:nacos:${spring.application.name}-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
+      # Shared platform configuration from Nacos
+      - "optional:nacos:patra-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
+
+  # Nacos Configuration & Service Discovery
+  cloud:
+    nacos:
+      server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:nacos}
+      discovery:
+        namespace: ${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}
+        group: ${NACOS_DISCOVERY_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}
+
+  # Database Configuration
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # URL, username, password are profile-specific (see application-dev.yml, application-prod.yml)
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000    # 30 seconds
+      idle-timeout: 600000          # 10 minutes
+      max-lifetime: 1800000         # 30 minutes
+
+  # Flyway Database Migration
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0.1.0
+
+# ----------------------------------------------------------------------------
+# Feign Client Configuration
+# ----------------------------------------------------------------------------
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 2000
+        readTimeout: 5000
+
+# ----------------------------------------------------------------------------
+# XXL-Job Distributed Task Scheduler Configuration
+# ----------------------------------------------------------------------------
+xxl:
+  job:
+    admin:
+      addresses: ${XXL_JOB_ADMIN_ADDRESSES:http://localhost:7070/xxl-job-admin}
+    executor:
+      ip: ${XXL_JOB_EXECUTOR_IP:host.docker.internal}
+      # Log directory in centralized logs folder
+      logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PATRA_LOG_DIR:/Users/linqibin/Desktop/Patra-api/logs}/xxl-job/patra-catalog}
+      logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}
+
+# ----------------------------------------------------------------------------
+# Catalog Service Specific Configuration
+# ----------------------------------------------------------------------------
+patra:
+  catalog:
+    mesh-import:
+      # MeSH 数据导入批次大小
+      batch-size: ${MESH_IMPORT_BATCH_SIZE:1000}
+      # 导入任务锁定时长（秒）
+      lock-duration-seconds: ${MESH_IMPORT_LOCK_DURATION:3600}
+      # 数据源 URL
+      source-url: ${MESH_SOURCE_URL:https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml}
+
+# ----------------------------------------------------------------------------
+# Logging Configuration
+# ----------------------------------------------------------------------------
+logging:
+  file:
+    # Centralized log directory in project root
+    path: ${PATRA_LOG_DIR:/Users/linqibin/Desktop/Patra-api/logs}
+
+# ----------------------------------------------------------------------------
+# Actuator & Monitoring Configuration
+# ----------------------------------------------------------------------------
+management:
+  endpoints:
+    web:
+      exposure:
+        # Expose health, info, metrics, and prometheus endpoints
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      # Show detailed health information when authorized
+      show-details: when-authorized
+    prometheus:
+      # Enable Prometheus metrics endpoint at /actuator/prometheus
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        # Enable Prometheus metrics export
+        enabled: true
+    tags:
+      # Add application tag to all metrics for multi-service monitoring
+      application: ${spring.application.name}

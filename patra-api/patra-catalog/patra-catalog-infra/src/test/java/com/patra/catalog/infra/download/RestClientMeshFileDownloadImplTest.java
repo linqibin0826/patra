@@ -50,8 +50,15 @@ class RestClientMeshFileDownloadImplTest {
     // 重置 WireMock 状态
     wireMockServer.resetAll();
 
-    // 创建 RestClient
-    RestClient restClient = RestClient.builder().baseUrl(wireMockServer.baseUrl()).build();
+    // 创建 RestClient（配置2秒超时，避免测试真正等待10秒）
+    // 使用 SimpleClientHttpRequestFactory 更容易配置连接超时和读取超时
+    org.springframework.http.client.SimpleClientHttpRequestFactory requestFactory =
+        new org.springframework.http.client.SimpleClientHttpRequestFactory();
+    requestFactory.setConnectTimeout(java.time.Duration.ofSeconds(2)); // 连接超时
+    requestFactory.setReadTimeout(java.time.Duration.ofSeconds(2)); // 读取超时
+
+    RestClient restClient =
+        RestClient.builder().baseUrl(wireMockServer.baseUrl()).requestFactory(requestFactory).build();
 
     // 创建下载器（注入 RestClient）
     meshFileDownload = new RestClientMeshFileDownloadImpl(restClient);

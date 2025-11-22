@@ -88,8 +88,7 @@ public class MeshConcept implements Serializable {
   /// @param isPreferred 是否首选概念
   private MeshConcept(
       Long id, Long descriptorId, MeshUI conceptUi, String conceptName, boolean isPreferred) {
-    // 必填字段验证
-    Assert.notNull(descriptorId, "主题词ID不能为空");
+    // 必填字段验证（descriptorId 在解析阶段可以为 null，后续通过 setDescriptorId 设置）
     Assert.notNull(conceptUi, "概念UI不能为空");
     Assert.notBlank(conceptName, "概念名称不能为空");
 

@@ -76,6 +76,15 @@ public class RestClientMeshFileDownloadImpl implements MeshFileDownloadPort {
           .uri(sourceUrl)
           .exchange(
               (request, response) -> {
+                // 检查 HTTP 状态码
+                if (response.getStatusCode().isError()) {
+                  int statusCode = response.getStatusCode().value();
+                  String statusText = response.getStatusText();
+                  log.error("HTTP 请求失败，状态码: {} ({}), URL: {}", statusCode, statusText, sourceUrl);
+                  throw new RuntimeException(
+                      String.format("下载失败: HTTP %d (%s)", statusCode, statusText));
+                }
+
                 // 获取响应输入流
                 try (InputStream inputStream = response.getBody()) {
                   // 流式复制（使用已定义的方法）

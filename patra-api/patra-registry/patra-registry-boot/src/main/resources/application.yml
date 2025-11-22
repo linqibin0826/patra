@@ -80,3 +80,11 @@ spring:
     # Allow Flyway to baseline existing databases
     baseline-on-migrate: true
     baseline-version: 0.1.0
+
+# ========================================
+# Logging Configuration
+# ========================================
+logging:
+  file:
+    # Centralized log directory in project root
+    path: ${PATRA_LOG_DIR:/Users/linqibin/Desktop/Patra-api/logs}
