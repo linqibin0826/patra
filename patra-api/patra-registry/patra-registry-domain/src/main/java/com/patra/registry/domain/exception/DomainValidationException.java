@@ -14,10 +14,17 @@ package com.patra.registry.domain.exception;
 /// @since 0.1.0
 public class DomainValidationException extends RuntimeException {
 
+  /// 构造一个包含指定错误消息的领域验证异常。
+  ///
+  /// @param message 描述验证失败原因的错误消息
   public DomainValidationException(String message) {
     super(message);
   }
 
+  /// 构造一个包含指定错误消息和原因的领域验证异常。
+  ///
+  /// @param message 描述验证失败原因的错误消息
+  /// @param cause 导致此异常的底层原因
   public DomainValidationException(String message, Throwable cause) {
     super(message, cause);
   }

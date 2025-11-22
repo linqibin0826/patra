@@ -19,6 +19,16 @@ public record BatchingConfigQuery(
     String idsParamName,
     String idsJoinDelimiter,
     Integer maxIdsPerRequest) {
+  /// 规范构造器,强制执行批处理配置查询视图的验证规则。
+  ///
+  /// 验证规则：
+  ///
+  /// - 批处理配置 ID 必须为正数
+  ///   - 来源 ID 必须为正数
+  ///   - 生效时间不能为 null
+  ///   - 字符串字段自动执行 trim 操作
+  ///
+  /// @throws DomainValidationException 如果验证失败
   public BatchingConfigQuery {
     if (id == null || id <= 0) {
       throw new DomainValidationException("批处理配置ID必须为正数");
