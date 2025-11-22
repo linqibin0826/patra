@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.patra.catalog.adapter.config.TestConfiguration;
 import com.patra.catalog.api.dto.MeshProgressDTO;
 import com.patra.catalog.app.error.MeshImportErrorMappingContributor;
 import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
@@ -21,6 +22,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 /// MeSH 导入 Controller 切片测试。
@@ -42,6 +44,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /// @author linqibin
 /// @since 0.1.0
 @WebMvcTest(MeshImportController.class)
+@ContextConfiguration(classes = TestConfiguration.class) // 提供 Spring Boot 配置
 @Import(MeshImportErrorMappingContributor.class) // 导入异常映射贡献者
 @DisplayName("MeSH 导入 Controller 测试")
 class MeshImportControllerTest {
