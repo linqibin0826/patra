@@ -52,6 +52,21 @@ public record ExprRenderRule(
     /* 模板级渲染函数代码(reg_transform 的子集/扩展);例如,PUBMED_DATETYPE */
     String functionCode)
     implements TemporalEntity {
+
+  /// 规范构造器,强制执行表达式渲染规则值对象的验证规则。
+  ///
+  /// 验证规则：
+  ///
+  /// - 渲染规则 ID 必须为正数
+  ///   - 数据源 ID 必须为正数
+  ///   - 字段键不能为空白
+  ///   - 操作符代码不能为空白
+  ///   - 发射类型代码不能为空白
+  ///   - 生效开始时间不能为 null
+  ///   - 归一化键必须符合规范值
+  ///   - 所有字符串字段自动执行 trim 或归一化处理
+  ///
+  /// @throws DomainValidationException 如果验证失败
   public ExprRenderRule(
       Long id,
       Long provenanceId,

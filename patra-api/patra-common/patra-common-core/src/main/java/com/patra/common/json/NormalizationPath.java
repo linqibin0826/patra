@@ -20,19 +20,23 @@ import java.util.Deque;
 final class NormalizationPath {
   private final Deque<String> tokens = new ArrayDeque<>();
 
-  /// 进入对象字段，将字段名压入路径栈
+  /// 进入对象字段，将字段名压入路径栈。
+  ///
+  /// @param field 字段名
   void pushField(String field) {
     tokens.addLast(field);
   }
 
-  /// 退出当前字段，弹出路径栈顶元素
+  /// 退出当前字段，弹出路径栈顶元素。
+
   void pop() {
     if (!tokens.isEmpty()) {
       tokens.removeLast();
     }
   }
 
-  /// 标记进入数组，在当前字段名后追加 "[]"
+  /// 标记进入数组，在当前字段名后追加 "[]"。
+
   void markArray() {
     if (tokens.isEmpty()) {
       tokens.addLast("[]");
@@ -42,7 +46,8 @@ final class NormalizationPath {
     }
   }
 
-  /// 退出数组，移除路径末尾的 "[]" 标记
+  /// 退出数组，移除路径末尾的 "[]" 标记。
+
   void unmarkArray() {
     if (tokens.isEmpty()) {
       return;

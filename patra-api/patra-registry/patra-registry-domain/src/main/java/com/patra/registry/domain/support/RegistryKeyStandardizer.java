@@ -11,6 +11,7 @@ import java.util.Locale;
 /// @since 0.1.0
 public final class RegistryKeyStandardizer {
 
+  /// 私有构造函数,防止实例化工具类。
   private RegistryKeyStandardizer() {}
 
   // -----------------------------

@@ -18,6 +18,7 @@ public final class JsonNodeMappings {
   private static final ObjectMapper MAPPER = JsonMapperHolder.getObjectMapper();
   private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
+  /// 私有构造函数,防止实例化工具类。
   private JsonNodeMappings() {}
 
   /// 将 JSON 字符串转换为 {@link JsonNode}。

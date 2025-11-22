@@ -53,6 +53,7 @@ final class TemporalCoercion {
           DateTimeFormatter.ofPattern("yyyy/MM/dd").withLocale(Locale.ROOT),
           DateTimeFormatter.ofPattern("yyyyMMdd").withLocale(Locale.ROOT));
 
+  /// 私有构造函数,防止实例化工具类。
   private TemporalCoercion() {}
 
   /// 尝试将字符串强制转换为规范的 ISO-8601 格式。

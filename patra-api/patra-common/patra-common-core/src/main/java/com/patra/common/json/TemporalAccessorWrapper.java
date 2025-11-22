@@ -20,6 +20,9 @@ import java.time.temporal.TemporalAccessor;
 final class TemporalAccessorWrapper {
   private final TemporalAccessor accessor;
 
+  /// 创建 TemporalAccessor 包装器。
+  ///
+  /// @param accessor 要包装的 TemporalAccessor 实例
   TemporalAccessorWrapper(TemporalAccessor accessor) {
     this.accessor = accessor;
   }
@@ -29,6 +32,7 @@ final class TemporalAccessorWrapper {
   /// @param defaultZone 默认时区，用于 LocalDateTime 和 LocalDate 的转换
   /// @return Instant 实例
   /// @throws JsonNormalizationException 如果 accessor 不支持任何已知的时间字段
+
   Instant toInstant(ZoneId defaultZone) {
     if (accessor.isSupported(ChronoField.INSTANT_SECONDS)) {
       return Instant.from(accessor);

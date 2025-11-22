@@ -6,40 +6,39 @@ import java.util.List;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
-/// 只读 Mapper,用于表 `sys_dict_type`.
+/// 只读 Mapper,用于表 `sys_dict_type`。
 ///
-/// Provides convenience queries for dictionary type metadata on the query side.
+/// 在查询侧提供字典类型元数据的便捷查询。
 ///
-/// SQL implementations reside in `resources/mapper/RegSysDictTypeMapper.xml`. To modify
-/// query logic please update the corresponding XML file.
+/// SQL 实现位于 `resources/mapper/RegSysDictTypeMapper.xml`。要修改查询逻辑,请更新相应的 XML 文件。
 ///
 /// @author linqibin
 /// @since 0.1.0
 public interface RegSysDictTypeMapper extends BaseMapper<RegSysDictTypeDO> {
 
-  /// Retrieves a dictionary type by its stable business code.
+  /// 通过稳定的业务代码查询字典类型。
   ///
-  /// @param typeCode dictionary type code (unique)
-  /// @return optional dictionary type definition
+  /// @param typeCode 字典类型代码(唯一)
+  /// @return 字典类型定义(可选)
   Optional<RegSysDictTypeDO> selectByTypeCode(@Param("typeCode") String typeCode);
 
-  /// Lists all non-deleted dictionary types ordered by `type_code`.
+  /// 列出按 `type_code` 排序的所有未删除字典类型。
   ///
-  /// @return dictionary type list
+  /// @return 字典类型列表
   List<RegSysDictTypeDO> selectAllEnabled();
 
-  /// Counts all non-deleted dictionary types.
+  /// 统计所有未删除字典类型的数量。
   ///
-  /// @return active dictionary type count
+  /// @return 激活字典类型计数
   int countTotal();
 
-  /// Lists types that allow business-side custom items.
+  /// 列出允许业务侧自定义项的类型。
   ///
-  /// @return dictionary type list
+  /// @return 字典类型列表
   List<RegSysDictTypeDO> selectCustomizableTypes();
 
-  /// Lists system-managed dictionary types.
+  /// 列出系统管理的字典类型。
   ///
-  /// @return dictionary type list
+  /// @return 字典类型列表
   List<RegSysDictTypeDO> selectSystemTypes();
 }

@@ -10,6 +10,7 @@ package com.patra.registry.domain.support;
 /// @since 0.1.0
 public final class RegistryKeyPlaceholders {
 
+  /// 私有构造函数,防止实例化工具类。
   private RegistryKeyPlaceholders() {}
 
   /// 表示"所有任务/来源",用作作用域合并中的回退键。

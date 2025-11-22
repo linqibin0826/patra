@@ -20,6 +20,17 @@ public record PaginationConfigQuery(
     Integer maxPagesPerExecution,
     String sortFieldParamName,
     Integer sortingDirection) {
+  /// 规范构造器,强制执行分页配置查询视图的验证规则。
+  ///
+  /// 验证规则：
+  ///
+  /// - 分页配置 ID 必须为正数
+  ///   - 数据源 ID 必须为正数
+  ///   - 分页模式代码不能为空
+  ///   - 生效时间不能为 null
+  ///   - 字符串字段自动执行 trim 操作
+  ///
+  /// @throws DomainValidationException 如果验证失败
   public PaginationConfigQuery {
     if (id == null || id <= 0) {
       throw new DomainValidationException("分页配置ID必须为正数");

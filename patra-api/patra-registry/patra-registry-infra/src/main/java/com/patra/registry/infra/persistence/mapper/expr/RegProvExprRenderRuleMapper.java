@@ -7,25 +7,26 @@ import java.util.List;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
-/// 只读 Mapper,用于表 `reg_prov_expr_render_rule`. Supplies helpers to locate the active render
-/// rule for expression atoms.
+/// 只读 Mapper,用于表 `reg_prov_expr_render_rule`。
+///
+/// 提供辅助查询以定位表达式原子的激活渲染规则。
 ///
 /// @author linqibin
 /// @since 0.1.0
 public interface RegProvExprRenderRuleMapper extends BaseMapper<RegProvExprRenderRuleDO> {
 
-  /// Retrieves the most specific active render rule matching the supplied dimension.
+  /// 查询匹配指定维度的最具体激活渲染规则。
   ///
-  /// @param provenanceId provenance identifier
-  /// @param operationType normalized operation type (ALL fallback supported)
-  /// @param fieldKey canonical field key
-  /// @param opCode expression operator code
-  /// @param matchTypeKey normalized match type key
-  /// @param negatedKey normalized negation key
-  /// @param valueTypeKey normalized value type key
-  /// @param emitTypeCode emission type (QUERY/PARAMS)
-  /// @param now evaluation timestamp
-  /// @return optional render rule effective at `now`
+  /// @param provenanceId 数据源标识
+  /// @param operationType 规范化的操作类型(支持 ALL 回退)
+  /// @param fieldKey 规范字段键
+  /// @param opCode 表达式操作符代码
+  /// @param matchTypeKey 规范化的匹配类型键
+  /// @param negatedKey 规范化的否定键
+  /// @param valueTypeKey 规范化的值类型键
+  /// @param emitTypeCode 发射类型(QUERY/PARAMS)
+  /// @param now 评估时间戳
+  /// @return 在 `now` 时刻有效的渲染规则(可选)
   Optional<RegProvExprRenderRuleDO> selectActive(
       @Param("provenanceId") Long provenanceId,
       @Param("operationType") String operationType,
@@ -37,13 +38,12 @@ public interface RegProvExprRenderRuleMapper extends BaseMapper<RegProvExprRende
       @Param("emitTypeCode") String emitTypeCode,
       @Param("now") Instant now);
 
-  /// Lists active render rules for the provided provenance/operation scope, collapsing source-level
-  /// fallbacks per rule signature.
+  /// 列出提供的数据源和操作作用域的激活渲染规则,每个规则签名合并源级回退。
   ///
-  /// @param provenanceId provenance identifier
-  /// @param operationType normalized operation type
-  /// @param now evaluation timestamp
-  /// @return list of render rules, one per unique rule signature
+  /// @param provenanceId 数据源标识
+  /// @param operationType 规范化的操作类型
+  /// @param now 评估时间戳
+  /// @return 渲染规则列表,每个唯一规则签名一条
   List<RegProvExprRenderRuleDO> selectActiveByTask(
       @Param("provenanceId") Long provenanceId,
       @Param("operationType") String operationType,

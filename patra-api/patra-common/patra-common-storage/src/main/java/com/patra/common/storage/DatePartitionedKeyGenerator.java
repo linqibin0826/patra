@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
-/// 按日期分区的对象键生成器,遵循模式: `{service`/{business-type}/{yyyy}/{MM}/{dd}/{business-id}.{extension}}
+/// 按日期分区的对象键生成器,遵循模式: `{service}/{business-type}/{yyyy}/{MM}/{dd}/{business-id}.{extension}`
 ///
 /// 此实现创建具有每日时间分区的对象键,支持基于日期范围的高效生命周期管理、成本分析和查询优化。
 ///
@@ -50,7 +50,7 @@ public final class DatePartitionedKeyGenerator implements ObjectKeyGenerator {
 
   /// 从提供的上下文生成按日期分区的对象键。
   ///
-  /// 生成的键遵循模式: `{service`/{business-type}/{yyyy}/{MM}/{dd}/{business-id}.{extension}}
+  /// 生成的键遵循模式: `{service}/{business-type}/{yyyy}/{MM}/{dd}/{business-id}.{extension}`
   ///
   /// @param context 包含所有键生成参数的不可变上下文
   /// @return 生成的对象键路径
@@ -71,35 +71,42 @@ public final class DatePartitionedKeyGenerator implements ObjectKeyGenerator {
         normalizedExtension);
   }
 
-  /// Normalizes service name to lowercase.
+  /// 将服务名称规范化为小写。
   ///
-  /// Examples:
+  /// 示例:
   ///
   /// - "Ingest" → "ingest"
   ///   - "STORAGE" → "storage"
   ///   - "patra-registry" → "patra-registry"
   ///
+  /// @param serviceName 原始服务名称
+  /// @return 规范化后的小写服务名称
   private String normalizeServiceName(String serviceName) {
     return serviceName.toLowerCase(Locale.ROOT);
   }
 
-  /// Normalizes business type to kebab-case.
+  /// 将业务类型规范化为 kebab-case。
   ///
-  /// Converts underscores to hyphens and lowercases the string for consistency.
+  /// 将下划线转换为连字符并将字符串转换为小写以保持一致性。
   ///
-  /// Examples:
+  /// 示例:
   ///
   /// - "publication_batch" → "publication-batch"
   ///   - "PublicationBatch" → "publicationbatch"
   ///   - "metadata-snapshot" → "metadata-snapshot"
   ///
+  /// @param businessType 原始业务类型
+  /// @return 规范化后的 kebab-case 业务类型
   private String normalizeBusinessType(String businessType) {
     return businessType.toLowerCase(Locale.ROOT).replace('_', '-');
   }
 
-  /// Builds the date partition path in yyyy/MM/dd format.
+  /// 构建 yyyy/MM/dd 格式的日期分区路径。
   ///
-  /// Example: `2025-10-26` → `2025/10/26`
+  /// 示例: `2025-10-26` → `2025/10/26`
+  ///
+  /// @param partitionDate 分区日期
+  /// @return 日期分区路径
   private String buildDatePartition(LocalDate partitionDate) {
     String year = YEAR_FORMATTER.format(partitionDate);
     String month = MONTH_FORMATTER.format(partitionDate);
@@ -107,17 +114,19 @@ public final class DatePartitionedKeyGenerator implements ObjectKeyGenerator {
     return String.format("%s/%s/%s", year, month, day);
   }
 
-  /// Normalizes file extension by removing leading dot if present.
+  /// 通过移除前导点(如果存在)规范化文件扩展名。
   ///
-  /// Supports compound extensions like "json.gz".
+  /// 支持复合扩展名,如 "json.gz"。
   ///
-  /// Examples:
+  /// 示例:
   ///
   /// - ".json" → "json"
   ///   - "json" → "json"
   ///   - ".json.gz" → "json.gz"
   ///   - "tar.gz" → "tar.gz"
   ///
+  /// @param extension 原始扩展名
+  /// @return 规范化后的扩展名
   private String normalizeExtension(String extension) {
     return extension.startsWith(".") ? extension.substring(1) : extension;
   }

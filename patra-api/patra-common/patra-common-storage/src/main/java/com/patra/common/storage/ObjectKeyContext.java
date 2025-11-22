@@ -10,7 +10,7 @@ import java.util.Objects;
 ///
 /// 此记录封装了所有 Patra 微服务中用于对象键生成的标准段, 确保一致的命名约定和结构。
 ///
-/// **标准对象键模式**: `{service`/{business-type}/{yyyy}/{MM}/{dd}/{business-id}.{extension}}
+/// **标准对象键模式**: `{service}/{business-type}/{yyyy}/{MM}/{dd}/{business-id}.{extension}`
 ///
 /// **示例**: `ingest/publication-batch/2025/10/26/pubmed-123-batch-001.json`
 ///
@@ -70,6 +70,10 @@ public record ObjectKeyContext(
   }
 
   /// 验证字符串既不为 null 也不为空白。
+  ///
+  /// @param value 要验证的值
+  /// @param fieldName 字段名称(用于错误消息)
+  /// @throws IllegalArgumentException 如果值为 null 或空白
   private static void validateNonBlank(String value, String fieldName) {
     if (value == null || value.isBlank()) {
       throw new IllegalArgumentException(fieldName + " 不能为 null 或空白");
@@ -77,6 +81,10 @@ public record ObjectKeyContext(
   }
 
   /// 确保自定义段映射是不可变的且非 null。
+  ///
+  /// @param source 源映射
+  /// @return 不可变的自定义段映射
+  /// @throws NullPointerException 如果任何键为 null
   private static Map<String, String> sanitizeCustomSegments(Map<String, String> source) {
     if (source == null || source.isEmpty()) {
       return Map.of();
@@ -99,28 +107,49 @@ public record ObjectKeyContext(
     private String extension;
     private Map<String, String> customSegments = new LinkedHashMap<>();
 
+    /// 私有构造函数,仅通过 {@link ObjectKeyContext#builder()} 访问。
     private Builder() {}
 
+    /// 设置微服务名称。
+    ///
+    /// @param serviceName 微服务名称(短格式,例如 "ingest")
+    /// @return 此构建器
     public Builder serviceName(String serviceName) {
       this.serviceName = serviceName;
       return this;
     }
 
+    /// 设置业务类别。
+    ///
+    /// @param businessType 业务类别(kebab-case,例如 "publication-batch")
+    /// @return 此构建器
     public Builder businessType(String businessType) {
       this.businessType = businessType;
       return this;
     }
 
+    /// 设置唯一业务标识符。
+    ///
+    /// @param businessId 唯一业务标识符
+    /// @return 此构建器
     public Builder businessId(String businessId) {
       this.businessId = businessId;
       return this;
     }
 
+    /// 设置分区日期。
+    ///
+    /// @param partitionDate 用于时间分区的日期
+    /// @return 此构建器
     public Builder partitionDate(LocalDate partitionDate) {
       this.partitionDate = partitionDate;
       return this;
     }
 
+    /// 设置文件扩展名。
+    ///
+    /// @param extension 文件扩展名(不带前导点,例如 "json")
+    /// @return 此构建器
     public Builder extension(String extension) {
       this.extension = extension;
       return this;

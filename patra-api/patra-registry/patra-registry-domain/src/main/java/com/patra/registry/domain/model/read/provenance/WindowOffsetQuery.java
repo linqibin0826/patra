@@ -30,6 +30,20 @@ public record WindowOffsetQuery(
     String windowDateFieldKey,
     Integer maxIdsPerWindow,
     Integer maxWindowSpanSeconds) {
+  /// 规范构造器,强制执行时间窗口偏移配置查询视图的验证规则。
+  ///
+  /// 验证规则：
+  ///
+  /// - 窗口偏移配置 ID 必须为正数
+  ///   - 数据源 ID 必须为正数
+  ///   - 窗口模式代码不能为空
+  ///   - 窗口大小单位代码不能为空
+  ///   - 偏移类型代码不能为空
+  ///   - 生效时间不能为 null
+  ///   - 字符串字段自动执行 trim 操作
+  ///   - 空字符串字段归一化为 null
+  ///
+  /// @throws DomainValidationException 如果验证失败
   public WindowOffsetQuery {
     if (id == null || id <= 0) {
       throw new DomainValidationException("窗口偏移配置ID必须为正数");
