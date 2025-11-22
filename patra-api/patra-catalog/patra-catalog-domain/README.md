@@ -247,6 +247,17 @@ if (id.isAssigned()) {
 
 ### 端口接口
 
+**端口命名规范**（遵循六边形架构最佳实践）：
+
+- **Repository 后缀**：用于聚合根/实体的持久化端口，直接操作本地数据库，由 MyBatis-Plus/JPA 实现
+  - 示例：`MeshImportRepository`、`MeshDescriptorRepository`、`PublicationRepository`
+- **Port 后缀**：用于外部服务和技术基础设施端口，调用外部 API/微服务/技术组件，由 HTTP Client/SDK/框架适配器实现
+  - 示例：`XmlParserPort`（XML 解析能力）、`MeshFileDownloadPort`（文件下载能力）
+
+这种命名方式清晰区分了两类端口的职责：Repository 面向数据持久化，Port 面向外部能力调用。
+
+---
+
 #### MeshImportRepository (MeSH 导入任务仓储接口)
 
 **职责**：定义 MeSH 导入任务的持久化契约。

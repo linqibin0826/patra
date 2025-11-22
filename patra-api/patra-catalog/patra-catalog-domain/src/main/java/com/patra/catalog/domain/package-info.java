@@ -13,9 +13,9 @@
 /// ## 核心组件
 ///
 /// - {@link com.patra.catalog.domain.model.aggregate.MeshImportAggregate} - MeSH
-// 导入任务聚合根，管理导入任务的完整生命周期和状态转换
+/// 导入任务聚合根，管理导入任务的完整生命周期和状态转换
 ///   - {@link com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate} - MeSH
-// 主题词聚合根，包含树形编号、入口术语和概念
+/// 主题词聚合根，包含树形编号、入口术语和概念
 ///   - {@link com.patra.catalog.domain.model.valueobject.TableProgress} - 表导入进度值对象，支持断点续传和进度计算
 ///   - {@link com.patra.catalog.domain.model.valueobject.MeshImportId} - 导入任务强类型 ID，提供类型安全
 ///   - {@link com.patra.catalog.domain.event.MeshImportStarted} - 导入任务启动事件
