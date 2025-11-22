@@ -128,7 +128,7 @@ public class RestClientAutoConfiguration {
       havingValue = "true",
       matchIfMissing = true)
   @Order(50)
-  public TracingInterceptor tracingInterceptor(RestClientProperties properties) {
+  public TracingInterceptor restClientTracingInterceptor(RestClientProperties properties) {
     var headerNames = properties.getInterceptors().getTracing().getHeaderNames();
     return new TracingInterceptor(headerNames);
   }
