@@ -11,3 +11,4 @@
 9. 需要标准化对象存储键生成时依赖 `patra-common-storage`，使用 `ObjectKeyTemplate.generateDailyKey()` 生成日期分区键（格式：`{service}/{business-type}/{yyyy/MM/dd}/{business-id}.{ext}`），禁止手动拼接存储路径
 10. 需要跨服务共享数据模型时依赖 `patra-common-model`（提供 Shared Kernel 契约，如 CanonicalPublication、PlanMetadata 继承体系等），禁止在各服务中重复定义相同概念
 11. Domain 层端口接口命名：**Repository** 后缀用于持久化聚合根/实体（本地数据库），**Port** 后缀用于外部服务和技术基础设施（外部 API/消息队列/对象存储等），禁止混用
+12. `patra-{service}-boot` 模块是应用启动入口，必须包含 `@SpringBootApplication` 启动类（命名规范：`Patra{Service}Application`），负责组装所有依赖（adapter、app、infra），禁止在其他模块添加启动类
