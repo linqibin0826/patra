@@ -211,6 +211,9 @@ public class RestClientProperties {
     /// 是否记录请求/响应体（默认 false）
     private boolean logBody = false;
 
+    /// 记录 Body 的最大字节数（默认 1024 字节，防止大文件导致内存溢出）
+    private int maxBodyLogLength = 1024;
+
     // Getters and Setters
 
     public boolean isEnabled() {
@@ -235,6 +238,14 @@ public class RestClientProperties {
 
     public void setLogBody(boolean logBody) {
       this.logBody = logBody;
+    }
+
+    public int getMaxBodyLogLength() {
+      return maxBodyLogLength;
+    }
+
+    public void setMaxBodyLogLength(int maxBodyLogLength) {
+      this.maxBodyLogLength = maxBodyLogLength;
     }
   }
 

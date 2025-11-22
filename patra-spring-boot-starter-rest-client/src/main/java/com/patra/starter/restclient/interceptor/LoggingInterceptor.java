@@ -40,10 +40,12 @@ public class LoggingInterceptor implements ClientHttpRequestInterceptor {
 
   private final boolean logHeaders;
   private final boolean logBody;
+  private final int maxBodyLogLength;
 
-  public LoggingInterceptor(boolean logHeaders, boolean logBody) {
+  public LoggingInterceptor(boolean logHeaders, boolean logBody, int maxBodyLogLength) {
     this.logHeaders = logHeaders;
     this.logBody = logBody;
+    this.maxBodyLogLength = maxBodyLogLength;
   }
 
   @Override
@@ -74,8 +76,14 @@ public class LoggingInterceptor implements ClientHttpRequestInterceptor {
     }
 
     if (logBody && body.length > 0) {
-      String bodyContent = new String(body, StandardCharsets.UTF_8);
-      log.debug("Body: {}", bodyContent);
+      int lengthToLog = Math.min(body.length, maxBodyLogLength);
+      String bodyContent = new String(body, 0, lengthToLog, StandardCharsets.UTF_8);
+
+      if (body.length > maxBodyLogLength) {
+        log.debug("Body (truncated): {}... (total {} bytes)", bodyContent, body.length);
+      } else {
+        log.debug("Body: {}", bodyContent);
+      }
     }
   }
 

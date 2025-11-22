@@ -112,7 +112,8 @@ public class RestClientAutoConfiguration {
   @Order(100)
   public LoggingInterceptor loggingInterceptor(RestClientProperties properties) {
     var config = properties.getInterceptors().getLogging();
-    return new LoggingInterceptor(config.isLogHeaders(), config.isLogBody());
+    return new LoggingInterceptor(
+        config.isLogHeaders(), config.isLogBody(), config.getMaxBodyLogLength());
   }
 
   /// 创建追踪拦截器。
