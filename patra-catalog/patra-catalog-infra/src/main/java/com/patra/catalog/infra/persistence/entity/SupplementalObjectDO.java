@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO;
-import java.time.Instant;
+import java.time.LocalDate;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -19,7 +19,7 @@ import lombok.EqualsAndHashCode;
 ///   - `object_type` 对象类型,CHECK 约束 9 个枚举值
 ///   - `file_size` 文件大小(字节)(BIGINT),映射为 Long
 ///   - `is_public` 是否公开(0=否,1=是)
-///   - `available_date` 可用日期(延迟发布支持)(DATE),映射为 Instant（UTC午夜）
+///   - `available_date` 可用日期(延迟发布支持)(DATE),映射为 LocalDate
 ///   - `metadata` JSON 扩展数据字段
 ///
 /// @author linqibin
@@ -84,7 +84,7 @@ public class SupplementalObjectDO extends BaseDO {
 
   /// 可用日期(延迟发布支持)
   @TableField("available_date")
-  private Instant availableDate;
+  private LocalDate availableDate;
 
   /// 对象元数据(JSON 格式)
   @TableField(value = "metadata", typeHandler = JacksonTypeHandler.class)

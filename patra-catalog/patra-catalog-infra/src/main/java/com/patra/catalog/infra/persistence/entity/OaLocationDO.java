@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO;
 import java.time.Instant;
+import java.time.LocalDate;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -58,17 +59,21 @@ public class OaLocationDO extends BaseDO {
   @TableField("repository_id")
   private String repositoryId;
 
+  /// 版本类型:publishedVersion/acceptedVersion/submittedVersion
+  @TableField("version_type")
+  private String versionType;
+
   /// 许可证(如"CC-BY-4.0","CC-BY-NC")
   @TableField("license")
   private String license;
 
   /// 可用日期
   @TableField("available_date")
-  private Instant availableDate;
+  private LocalDate availableDate;
 
   /// 禁发期结束日期
   @TableField("embargo_end_date")
-  private Instant embargoEndDate;
+  private LocalDate embargoEndDate;
 
   /// 是否最佳位置(0=否,1=是)
   @TableField("is_best")

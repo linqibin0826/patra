@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO;
-import java.time.Instant;
+import java.time.LocalDate;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -17,7 +17,7 @@ import lombok.EqualsAndHashCode;
 ///
 /// - `publication_id` 出版物ID(外键:cat_publication.id)
 ///   - `date_type` 日期类型(Received/Accepted/Published等)
-///   - `date_value` 日期值(仅完整日期时填充),映射为 Instant（UTC午夜）
+///   - `date_value` 日期值(仅完整日期时填充),映射为 LocalDate
 ///   - `year` 年份(必填,1900-2100)
 ///   - `month` 月份(1-12,可能为空)
 ///   - `day` 日期(1-31,可能为空)
@@ -40,7 +40,7 @@ public class PublicationDateDO extends BaseDO {
 
   /// 日期值(仅完整日期时填充)
   @TableField("date_value")
-  private Instant dateValue;
+  private LocalDate dateValue;
 
   /// 年份(必填,1900-2100)
   @TableField("year")
