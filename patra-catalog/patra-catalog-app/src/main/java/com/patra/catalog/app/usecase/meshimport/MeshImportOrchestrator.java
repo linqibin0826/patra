@@ -120,6 +120,14 @@ public class MeshImportOrchestrator {
 
   /// 重试失败的任务。
   ///
+  /// 重新执行失败任务的完整导入流程。
+  ///
+  /// 设计说明：
+  ///
+  /// - 不复用 startImport() 方法，因为会触发"已有任务运行"检查
+  ///   - 直接从下载步骤重新开始
+  ///   - 复用任务聚合根的 ID 和元数据
+  ///
   /// @param taskId 任务 ID
   /// @return 导入结果
   /// @throws IllegalArgumentException 如果任务不存在
@@ -134,14 +142,40 @@ public class MeshImportOrchestrator {
             .findById(taskId)
             .orElseThrow(() -> new IllegalArgumentException("任务不存在：" + taskId.value()));
 
-    // 2. 重试任务（状态变为 PROCESSING）
+    // 2. 检查任务状态（必须是 FAILED）
+    if (aggregate.getStatus() != MeshImportTaskStatus.FAILED) {
+      throw new IllegalStateException(
+          "只能重试失败的任务，当前状态：" + aggregate.getStatus().getCode());
+    }
+
+    // 3. 重试任务（状态变为 PROCESSING）
     aggregate.retry();
     aggregate = meshImportPort.save(aggregate);
 
-    // 3. 重新执行导入流程（从失败点继续）
-    StartImportCommand command =
-        new StartImportCommand(aggregate.getSourceUrl(), aggregate.getTaskName());
-    return startImport(command);
+    try {
+      // 4. 从下载步骤重新开始（不调用 startImport，避免"已有任务运行"检查）
+      File xmlFile = downloadXmlFile(aggregate.getSourceUrl(), aggregate);
+
+      // 5. 解析并批量导入数据
+      Map<String, Integer> importedCounts = importAllData(xmlFile, aggregate);
+
+      // 6. 验证数据量
+      validateDataCounts(importedCounts, aggregate);
+
+      // 7. 标记任务完成
+      aggregate.markAsCompleted();
+      aggregate = meshImportPort.save(aggregate);
+
+      log.info("MeSH 数据重试导入成功，任务 ID：{}", aggregate.getId().value());
+
+      return buildSuccessResult(aggregate);
+
+    } catch (Exception ex) {
+      log.error("MeSH 数据重试导入失败，任务 ID：{}", aggregate.getId().value(), ex);
+      aggregate.markAsFailed(ex.getMessage());
+      meshImportPort.save(aggregate);
+      throw new RuntimeException("MeSH 数据重试导入失败：" + ex.getMessage(), ex);
+    }
   }
 
   /// 清空进度并重新开始。
