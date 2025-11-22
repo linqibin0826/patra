@@ -6,34 +6,32 @@ import com.patra.starter.provenance.common.gateway.ApiRequest;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * PubMed ESearch API 请求参数
- *
- * <p>与官方E-utilities文档对齐的参数定义。ESearch用于搜索PubMed数据库并返回匹配的PMID列表。
- *
- * <p>字段说明：
- *
- * @param db 目标数据库标识符（如"pubmed"）
- * @param term 布尔查询字符串（当使用日期过滤器时可选）
- * @param retstart 分页的从零开始的偏移量
- * @param retmax 每次调用返回的最大记录数（最多10000）
- * @param retmode 响应格式（json或xml）
- * @param rettype 响应类型（uilist、count等）
- * @param sort PubMed应用的排序策略
- * @param datetype 用于过滤评估的出版日期字段
- * @param mindate 日期约束下限
- * @param maxdate 日期约束上限
- * @param field 字段特定的搜索限制
- * @param reldate 以天为单位表示的相对日期过滤器
- * @param usehistory 是否使用PubMed历史服务器
- * @param webenv 历史会话WebEnv令牌
- * @param queryKey 指向存储查询的数字键
- * @param apiKey 授予提升速率限制的API密钥
- * @param tool 在NCBI注册的客户端标识符
- * @param email NCBI通知的联系邮箱
- * @author linqibin
- * @since 0.1.0
- */
+/// PubMed ESearch API 请求参数
+///
+/// 与官方E-utilities文档对齐的参数定义。ESearch用于搜索PubMed数据库并返回匹配的PMID列表。
+///
+/// 字段说明：
+///
+/// @param db 目标数据库标识符（如"pubmed"）
+/// @param term 布尔查询字符串（当使用日期过滤器时可选）
+/// @param retstart 分页的从零开始的偏移量
+/// @param retmax 每次调用返回的最大记录数（最多10000）
+/// @param retmode 响应格式（json或xml）
+/// @param rettype 响应类型（uilist、count等）
+/// @param sort PubMed应用的排序策略
+/// @param datetype 用于过滤评估的出版日期字段
+/// @param mindate 日期约束下限
+/// @param maxdate 日期约束上限
+/// @param field 字段特定的搜索限制
+/// @param reldate 以天为单位表示的相对日期过滤器
+/// @param usehistory 是否使用PubMed历史服务器
+/// @param webenv 历史会话WebEnv令牌
+/// @param queryKey 指向存储查询的数字键
+/// @param apiKey 授予提升速率限制的API密钥
+/// @param tool 在NCBI注册的客户端标识符
+/// @param email NCBI通知的联系邮箱
+/// @author linqibin
+/// @since 0.1.0
 public record ESearchRequest(
     // 必需参数
     String db, // 数据库名称（如"pubmed"）
@@ -66,16 +64,30 @@ public record ESearchRequest(
     String email // Contact email (NCBI can contact developer)
     ) implements ApiRequest {
 
-  /**
-   * Create a request that targets the PubMed database using JSON output.
-   *
-   * @param db database identifier, typically "pubmed"
-   * @param term Boolean query string that drives the search
-   */
+  /// Create a request that targets the PubMed database using JSON output.
+  ///
+  /// @param db database identifier, typically "pubmed"
+  /// @param term Boolean query string that drives the search
   public ESearchRequest(String db, String term) {
     this(
-        db, term, null, null, RetMode.JSON.value(), null, null, null, null, null, null, null, null, null, null,
-        null, null, null);
+        db,
+        term,
+        null,
+        null,
+        RetMode.JSON.value(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null);
   }
 
   // Compact constructor: validate required parameters
@@ -90,11 +102,9 @@ public record ESearchRequest(
     }
   }
 
-  /**
-   * Compose the outbound query parameter map understood by the ESearch endpoint.
-   *
-   * @return parameter map ready for gateway submission
-   */
+  /// Compose the outbound query parameter map understood by the ESearch endpoint.
+  ///
+  /// @return parameter map ready for gateway submission
   @Override
   public Map<String, String> toQueryParams() {
     Map<String, String> params = new LinkedHashMap<>();

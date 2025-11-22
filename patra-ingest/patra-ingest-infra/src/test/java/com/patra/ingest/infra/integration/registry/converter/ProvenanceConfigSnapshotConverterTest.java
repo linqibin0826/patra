@@ -9,21 +9,17 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * ProvenanceConfigSnapshotConverter 单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>测试完整配置响应的转换
- *   <li>测试各个子配置的映射方法
- *   <li>测试 null 安全性
- *   <li>验证字段映射的正确性
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// ProvenanceConfigSnapshotConverter 单元测试。
+///
+/// 测试策略：
+///
+/// - 测试完整配置响应的转换
+///   - 测试各个子配置的映射方法
+///   - 测试 null 安全性
+///   - 验证字段映射的正确性
+///
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("ProvenanceConfigSnapshotConverter 单元测试")
 class ProvenanceConfigSnapshotConverterTest {
 

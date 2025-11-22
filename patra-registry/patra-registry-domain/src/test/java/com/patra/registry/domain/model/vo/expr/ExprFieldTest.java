@@ -7,39 +7,33 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * ExprField 值对象单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>纯 Java 单元测试，不依赖 Spring 容器
- *   <li>测试 record 的业务约束验证（正整数 ID、非空白字符串、必需字段等）
- *   <li>验证字符串字段自动 trim 处理
- *   <li>测试可选字段的 null 处理（displayName, description）
- *   <li>验证 equals/hashCode 仅基于 fieldKey（业务键）
- *   <li>遵循 Given-When-Then 结构
- *   <li>使用 AssertJ 流畅断言
- * </ul>
- *
- * <p>覆盖范围：
- *
- * <ul>
- *   <li>✅ record 构造函数验证测试
- *   <li>✅ 正整数 ID 验证
- *   <li>✅ 非空白字符串验证（fieldKey, dataTypeCode, cardinalityCode）
- *   <li>✅ 字符串 trim 处理测试
- *   <li>✅ 可选字段处理（displayName, description）
- *   <li>✅ record 的 equals/hashCode 基于 fieldKey
- *   <li>✅ record 的 toString 测试
- *   <li>✅ 不变性保证
- *   <li>✅ 业务场景测试（不同数据类型、基数等）
- *   <li>✅ 边界条件处理
- * </ul>
- *
- * @author Patra Team
- * @since 2.0
- */
+/// ExprField 值对象单元测试。
+///
+/// 测试策略：
+///
+/// - 纯 Java 单元测试，不依赖 Spring 容器
+///   - 测试 record 的业务约束验证（正整数 ID、非空白字符串、必需字段等）
+///   - 验证字符串字段自动 trim 处理
+///   - 测试可选字段的 null 处理（displayName, description）
+///   - 验证 equals/hashCode 仅基于 fieldKey（业务键）
+///   - 遵循 Given-When-Then 结构
+///   - 使用 AssertJ 流畅断言
+///
+/// 覆盖范围：
+///
+/// - ✅ record 构造函数验证测试
+///   - ✅ 正整数 ID 验证
+///   - ✅ 非空白字符串验证（fieldKey, dataTypeCode, cardinalityCode）
+///   - ✅ 字符串 trim 处理测试
+///   - ✅ 可选字段处理（displayName, description）
+///   - ✅ record 的 equals/hashCode 基于 fieldKey
+///   - ✅ record 的 toString 测试
+///   - ✅ 不变性保证
+///   - ✅ 业务场景测试（不同数据类型、基数等）
+///   - ✅ 边界条件处理
+///
+/// @author Patra Team
+/// @since 2.0
 @DisplayName("ExprField 单元测试")
 class ExprFieldTest {
 

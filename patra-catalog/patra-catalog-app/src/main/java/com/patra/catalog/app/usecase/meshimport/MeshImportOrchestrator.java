@@ -1,9 +1,9 @@
 package com.patra.catalog.app.usecase.meshimport;
 
+import com.patra.catalog.app.config.MeshImportConfig;
 import com.patra.catalog.app.usecase.meshimport.command.StartImportCommand;
 import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import com.patra.catalog.app.usecase.meshimport.validator.MeshDataValidator;
-import com.patra.catalog.app.config.MeshImportConfig;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;
 import com.patra.catalog.domain.model.enums.MeshImportTaskStatus;
@@ -28,49 +28,32 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * MeSH 导入编排器。
- *
- * <p>职责：
- *
- * <ul>
- *   <li>编排 MeSH 数据导入的完整流程
- *   <li>协调 Domain 层和 Infrastructure 层
- *   <li>管理事务边界（@Transactional）
- * </ul>
- *
- * <p><b>编排流程</b>（startImport 方法）：
- *
- * <ol>
- *   <li>调用 {@link MeshFileDownloadPort#download} 下载 XML 文件
- *   <li>验证文件校验和 {@link MeshFileDownloadPort#validateChecksum}
- *   <li>使用 {@link XmlParserPort} 流式解析各类数据
- *   <li>按依赖顺序批量导入：Descriptor → Qualifier → TreeNumber/EntryTerm/Concept
- *   <li>调用 {@link MeshDataValidator#validateDataCounts} 验证数据量
- *   <li>更新任务状态，发布完成/失败事件
- * </ol>
- *
- * <p><b>事务管理</b>：
- *
- * <ul>
- *   <li>主方法使用 {@code @Transactional}
- *   <li>每批次独立事务：{@code @Transactional(propagation = REQUIRES_NEW)}
- * </ul>
- *
- * <p><b>依赖注入</b>：
- *
- * <ul>
- *   <li>{@link MeshImportPort} - 任务仓储
- *   <li>{@link XmlParserPort} - XML 解析器
- *   <li>{@link MeshFileDownloadPort} - 文件下载器
- *   <li>{@link MeshDescriptorPort} - 主题词仓储
- *   <li>{@link MeshDataValidator} - 数据验证器
- *   <li>{@link MeshImportConfig} - 配置属性
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// MeSH 导入编排器。
+///
+/// 职责：
+///
+/// - 编排 MeSH 数据导入的完整流程
+///   - 协调 Domain 层和 Infrastructure 层
+///   - 管理事务边界（@Transactional）
+///
+/// **编排流程**（startImport 方法）：
+///
+/// **事务管理**：
+///
+/// - 主方法使用 `@Transactional`
+///   - 每批次独立事务：`@Transactional(propagation = REQUIRES_NEW)`
+///
+/// **依赖注入**：
+///
+/// - {@link MeshImportPort} - 任务仓储
+///   - {@link XmlParserPort} - XML 解析器
+///   - {@link MeshFileDownloadPort} - 文件下载器
+///   - {@link MeshDescriptorPort} - 主题词仓储
+///   - {@link MeshDataValidator} - 数据验证器
+///   - {@link MeshImportConfig} - 配置属性
+///
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -83,16 +66,14 @@ public class MeshImportOrchestrator {
   private final MeshDataValidator meshDataValidator;
   private final MeshImportConfig meshImportConfig;
 
-  /**
-   * 开始导入 MeSH 数据。
-   *
-   * <p>完整流程编排：下载 → 校验 → 解析 → 批量导入 → 验证 → 完成
-   *
-   * @param command 启动命令
-   * @return 导入结果
-   * @throws IllegalStateException 如果已有正在运行的任务或校验失败
-   * @throws RuntimeException 如果下载或导入过程失败
-   */
+  /// 开始导入 MeSH 数据。
+  ///
+  /// 完整流程编排：下载 → 校验 → 解析 → 批量导入 → 验证 → 完成
+  ///
+  /// @param command 启动命令
+  /// @return 导入结果
+  /// @throws IllegalStateException 如果已有正在运行的任务或校验失败
+  /// @throws RuntimeException 如果下载或导入过程失败
   @Transactional
   public MeshImportResultDTO startImport(StartImportCommand command) {
     log.info("开始 MeSH 数据导入流程，命令：{}", command);
@@ -137,14 +118,12 @@ public class MeshImportOrchestrator {
     }
   }
 
-  /**
-   * 重试失败的任务。
-   *
-   * @param taskId 任务 ID
-   * @return 导入结果
-   * @throws IllegalArgumentException 如果任务不存在
-   * @throws IllegalStateException 如果任务不是 FAILED 状态
-   */
+  /// 重试失败的任务。
+  ///
+  /// @param taskId 任务 ID
+  /// @return 导入结果
+  /// @throws IllegalArgumentException 如果任务不存在
+  /// @throws IllegalStateException 如果任务不是 FAILED 状态
   @Transactional
   public MeshImportResultDTO retryFailedTask(MeshImportId taskId) {
     log.info("重试失败的 MeSH 导入任务，任务 ID：{}", taskId.value());
@@ -160,15 +139,14 @@ public class MeshImportOrchestrator {
     aggregate = meshImportPort.save(aggregate);
 
     // 3. 重新执行导入流程（从失败点继续）
-    StartImportCommand command = new StartImportCommand(aggregate.getSourceUrl(), aggregate.getTaskName());
+    StartImportCommand command =
+        new StartImportCommand(aggregate.getSourceUrl(), aggregate.getTaskName());
     return startImport(command);
   }
 
-  /**
-   * 清空进度并重新开始。
-   *
-   * <p>用于中断正在运行的任务并重置状态。
-   */
+  /// 清空进度并重新开始。
+  ///
+  /// 用于中断正在运行的任务并重置状态。
   @Transactional
   public void clearAndRestart() {
     log.info("清空 MeSH 导入进度并重新开始");
@@ -187,62 +165,52 @@ public class MeshImportOrchestrator {
 
   // ========== 私有辅助方法 ==========
 
-  /**
-   * 检查是否有正在运行的任务。
-   *
-   * @throws IllegalStateException 如果已有正在运行的任务
-   */
+  /// 检查是否有正在运行的任务。
+  ///
+  /// @throws IllegalStateException 如果已有正在运行的任务
   private void checkNoRunningTask() {
     if (meshImportPort.existsRunningTask()) {
       throw new IllegalStateException("已有正在运行的 MeSH 导入任务，请等待其完成或手动中断");
     }
   }
 
-  /**
-   * 解析数据源 URL（优先使用命令参数，否则使用配置）。
-   *
-   * @param commandUrl 命令中的 URL（可能为 null）
-   * @return 最终使用的 URL
-   */
+  /// 解析数据源 URL（优先使用命令参数，否则使用配置）。
+  ///
+  /// @param commandUrl 命令中的 URL（可能为 null）
+  /// @return 最终使用的 URL
   private String resolveSourceUrl(String commandUrl) {
-    String url = (commandUrl != null && !commandUrl.isBlank())
-        ? commandUrl
-        : meshImportConfig.getSourceUrl();
+    String url =
+        (commandUrl != null && !commandUrl.isBlank())
+            ? commandUrl
+            : meshImportConfig.getSourceUrl();
     log.debug("解析数据源 URL：{}", url);
     return url;
   }
 
-  /**
-   * 解析任务名称（优先使用命令参数，否则自动生成）。
-   *
-   * @param commandName 命令中的名称（可能为 null）
-   * @return 最终使用的名称
-   */
+  /// 解析任务名称（优先使用命令参数，否则自动生成）。
+  ///
+  /// @param commandName 命令中的名称（可能为 null）
+  /// @return 最终使用的名称
   private String resolveTaskName(String commandName) {
-    String name = (commandName != null && !commandName.isBlank())
-        ? commandName
-        : generateDefaultTaskName();
+    String name =
+        (commandName != null && !commandName.isBlank()) ? commandName : generateDefaultTaskName();
     log.debug("解析任务名称：{}", name);
     return name;
   }
 
-  /**
-   * 生成默认任务名称（格式："{year}年MeSH数据导入"）。
-   *
-   * @return 默认任务名称
-   */
+  /// 生成默认任务名称（格式："{year}年MeSH数据导入"）。
+  ///
+  /// @return 默认任务名称
   private String generateDefaultTaskName() {
     int currentYear = Year.now().getValue();
     return String.format("%d年MeSH数据导入", currentYear);
   }
 
-  /**
-   * 创建 PENDING 状态的任务聚合根。
-   *
-   * @param taskName 任务名称
-   * @param sourceUrl 数据源 URL
-   * @return 保存后的聚合根
-   */
+  /// 创建 PENDING 状态的任务聚合根。
+  ///
+  /// @param taskName 任务名称
+  /// @param sourceUrl 数据源 URL
+  /// @return 保存后的聚合根
   private MeshImportAggregate createPendingTask(String taskName, String sourceUrl) {
     log.info("创建 MeSH 导入任务，名称：{}, 数据源：{}", taskName, sourceUrl);
 
@@ -267,11 +235,9 @@ public class MeshImportOrchestrator {
     return meshImportPort.save(aggregate);
   }
 
-  /**
-   * 初始化表进度列表（5 张表，初始状态为 NOT_STARTED）。
-   *
-   * @return 表进度列表
-   */
+  /// 初始化表进度列表（5 张表，初始状态为 NOT_STARTED）。
+  ///
+  /// @return 表进度列表
   private List<TableProgress> initializeTableProgressList() {
     List<String> tableNames =
         List.of("descriptor", "qualifier", "tree-number", "entry-term", "concept");
@@ -293,33 +259,32 @@ public class MeshImportOrchestrator {
     return progressList;
   }
 
-  /**
-   * 下载 XML 文件并验证文件完整性。
-   *
-   * <p>验证策略（增强验证方案）：
-   *
-   * <ul>
-   *   <li>第一道防线：文件大小验证（允许 ±10% 波动）
-   *   <li>第二道防线：XML 结构解析验证（在后续 importAllData 中执行）
-   *   <li>第三道防线：数据量阈值检查（在 MeshDataValidator 中执行）
-   * </ul>
-   *
-   * <p><b>设计说明</b>：由于 NLM 官方不提供 desc2025.xml 的 MD5 校验和，我们采用多重验证策略来确保文件完整性。
-   * 这种方案比单一 MD5 验证更全面，能够检测文件损坏、下载不完整等问题。
-   *
-   * @param sourceUrl 数据源 URL
-   * @param aggregate 任务聚合根
-   * @return 下载后的文件
-   * @throws IllegalStateException 如果文件大小验证失败
-   */
+  /// 下载 XML 文件并验证文件完整性。
+  ///
+  /// 验证策略（增强验证方案）：
+  ///
+  /// - 第一道防线：文件大小验证（允许 ±10% 波动）
+  ///   - 第二道防线：XML 结构解析验证（在后续 importAllData 中执行）
+  ///   - 第三道防线：数据量阈值检查（在 MeshDataValidator 中执行）
+  ///
+  /// **设计说明**：由于 NLM 官方不提供 desc2025.xml 的 MD5 校验和，我们采用多重验证策略来确保文件完整性。
+  /// 这种方案比单一 MD5 验证更全面，能够检测文件损坏、下载不完整等问题。
+  ///
+  /// @param sourceUrl 数据源 URL
+  /// @param aggregate 任务聚合根
+  /// @return 下载后的文件
+  /// @throws IllegalStateException 如果文件大小验证失败
   private File downloadXmlFile(String sourceUrl, MeshImportAggregate aggregate) {
     log.info("开始下载 MeSH XML 文件，URL：{}", sourceUrl);
 
     // 下载文件
     File xmlFile = meshFileDownloadPort.download(sourceUrl);
     long actualSize = xmlFile.length();
-    log.info("XML 文件下载完成，大小：{} 字节 ({} MB)，路径：{}",
-        actualSize, actualSize / (1024 * 1024), xmlFile.getAbsolutePath());
+    log.info(
+        "XML 文件下载完成，大小：{} 字节 ({} MB)，路径：{}",
+        actualSize,
+        actualSize / (1024 * 1024),
+        xmlFile.getAbsolutePath());
 
     // 验证文件大小（第一道防线）
     long expectedSize = meshImportConfig.getExpectedFileSize();
@@ -327,11 +292,15 @@ public class MeshImportOrchestrator {
     double difference = Math.abs(actualSize - expectedSize) * 100.0 / expectedSize;
 
     if (difference > threshold) {
-      String message = String.format(
-          "XML 文件大小异常，预期：%d 字节 (%d MB)，实际：%d 字节 (%d MB)，差异：%.2f%% (阈值：%.1f%%)",
-          expectedSize, expectedSize / (1024 * 1024),
-          actualSize, actualSize / (1024 * 1024),
-          difference, threshold);
+      String message =
+          String.format(
+              "XML 文件大小异常，预期：%d 字节 (%d MB)，实际：%d 字节 (%d MB)，差异：%.2f%% (阈值：%.1f%%)",
+              expectedSize,
+              expectedSize / (1024 * 1024),
+              actualSize,
+              actualSize / (1024 * 1024),
+              difference,
+              threshold);
       log.error(message);
       throw new IllegalStateException(message);
     }
@@ -340,13 +309,11 @@ public class MeshImportOrchestrator {
     return xmlFile;
   }
 
-  /**
-   * 导入所有数据（按依赖顺序）。
-   *
-   * @param xmlFile XML 文件
-   * @param aggregate 任务聚合根
-   * @return 实际导入数量映射
-   */
+  /// 导入所有数据（按依赖顺序）。
+  ///
+  /// @param xmlFile XML 文件
+  /// @param aggregate 任务聚合根
+  /// @return 实际导入数量映射
   private Map<String, Integer> importAllData(File xmlFile, MeshImportAggregate aggregate)
       throws Exception {
     log.info("开始解析并导入 MeSH 数据，文件：{}", xmlFile.getAbsolutePath());
@@ -377,17 +344,16 @@ public class MeshImportOrchestrator {
     aggregate.updateTableProgress("concept", conceptCount, 1);
     meshImportPort.save(aggregate);
 
-    log.info("所有数据导入完成，总计：{} 条记录", importedCounts.values().stream().mapToInt(Integer::intValue).sum());
+    log.info(
+        "所有数据导入完成，总计：{} 条记录", importedCounts.values().stream().mapToInt(Integer::intValue).sum());
 
     return importedCounts;
   }
 
-  /**
-   * 导入 Descriptor（主题词）。
-   *
-   * @param xmlFile XML 文件
-   * @return 实际导入数量
-   */
+  /// 导入 Descriptor（主题词）。
+  ///
+  /// @param xmlFile XML 文件
+  /// @return 实际导入数量
   private int importDescriptors(File xmlFile) throws Exception {
     log.info("开始导入 Descriptor（主题词）");
     try (FileInputStream fis = new FileInputStream(xmlFile);
@@ -399,12 +365,10 @@ public class MeshImportOrchestrator {
     }
   }
 
-  /**
-   * 导入 TreeNumber（树形编号）。
-   *
-   * @param xmlFile XML 文件
-   * @return 实际导入数量
-   */
+  /// 导入 TreeNumber（树形编号）。
+  ///
+  /// @param xmlFile XML 文件
+  /// @return 实际导入数量
   private int importTreeNumbers(File xmlFile) throws Exception {
     log.info("开始导入 TreeNumber（树形编号）");
     try (FileInputStream fis = new FileInputStream(xmlFile)) {
@@ -415,12 +379,10 @@ public class MeshImportOrchestrator {
     }
   }
 
-  /**
-   * 导入 EntryTerm（入口术语）。
-   *
-   * @param xmlFile XML 文件
-   * @return 实际导入数量
-   */
+  /// 导入 EntryTerm（入口术语）。
+  ///
+  /// @param xmlFile XML 文件
+  /// @return 实际导入数量
   private int importEntryTerms(File xmlFile) throws Exception {
     log.info("开始导入 EntryTerm（入口术语）");
     try (FileInputStream fis = new FileInputStream(xmlFile)) {
@@ -431,12 +393,10 @@ public class MeshImportOrchestrator {
     }
   }
 
-  /**
-   * 导入 Concept（概念）。
-   *
-   * @param xmlFile XML 文件
-   * @return 实际导入数量
-   */
+  /// 导入 Concept（概念）。
+  ///
+  /// @param xmlFile XML 文件
+  /// @return 实际导入数量
   private int importConcepts(File xmlFile) throws Exception {
     log.info("开始导入 Concept（概念）");
     try (FileInputStream fis = new FileInputStream(xmlFile)) {
@@ -447,17 +407,16 @@ public class MeshImportOrchestrator {
     }
   }
 
-  /**
-   * 验证数据量。
-   *
-   * @param importedCounts 实际导入数量
-   * @param aggregate 任务聚合根
-   */
+  /// 验证数据量。
+  ///
+  /// @param importedCounts 实际导入数量
+  /// @param aggregate 任务聚合根
   private void validateDataCounts(
       Map<String, Integer> importedCounts, MeshImportAggregate aggregate) {
     log.info("开始验证数据量，实际导入：{}", importedCounts);
 
-    MeshDataValidator.ValidationResult result = meshDataValidator.validateDataCounts(importedCounts);
+    MeshDataValidator.ValidationResult result =
+        meshDataValidator.validateDataCounts(importedCounts);
 
     if (result.hasWarnings()) {
       log.warn("数据量验证发现 {} 个警告：", result.warningCount());
@@ -468,12 +427,10 @@ public class MeshImportOrchestrator {
     }
   }
 
-  /**
-   * 构建成功结果。
-   *
-   * @param aggregate 任务聚合根
-   * @return 导入结果 DTO
-   */
+  /// 构建成功结果。
+  ///
+  /// @param aggregate 任务聚合根
+  /// @return 导入结果 DTO
   private MeshImportResultDTO buildSuccessResult(MeshImportAggregate aggregate) {
     return MeshImportResultDTO.builder()
         .taskId(aggregate.getId().value().toString())

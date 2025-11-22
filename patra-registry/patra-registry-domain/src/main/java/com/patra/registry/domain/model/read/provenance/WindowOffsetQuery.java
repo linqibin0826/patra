@@ -3,14 +3,12 @@ package com.patra.registry.domain.model.read.provenance;
 import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
-/**
- * 时间窗口与偏移配置查询视图。
- *
- * <p>用于查询时间窗口和偏移配置的读优化投影。定义了窗口模式、大小、回看期、重叠期、水位延迟、偏移类型等时间分片参数。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 时间窗口与偏移配置查询视图。
+///
+/// 用于查询时间窗口和偏移配置的读优化投影。定义了窗口模式、大小、回看期、重叠期、水位延迟、偏移类型等时间分片参数。
+///
+/// @author linqibin
+/// @since 0.1.0
 public record WindowOffsetQuery(
     Long id,
     Long provenanceId,

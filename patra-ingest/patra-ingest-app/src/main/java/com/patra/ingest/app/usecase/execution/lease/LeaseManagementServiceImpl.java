@@ -9,25 +9,21 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/**
- * 租约管理服务实现。
- *
- * <p>职责:封装与任务租约相关的仓储操作并提供统一 API。
- *
- * <p>设计要点:
- *
- * <ul>
- *   <li>tryAcquireLease: 委托给 TaskRepository.tryAcquireLease() 进行 CAS 获取
- *   <li>renewLease: 委托给 TaskRepository.renewLease()
- *   <li>releaseLease: 加载聚合,调用 releaseLease(),然后保存
- *   <li>validateLease: 加载聚合并检查 leaseInfo.owner
- * </ul>
- *
- * <p>日志记录:关键租约操作(获取、释放、验证失败)记录 INFO 级别日志。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 租约管理服务实现。
+///
+/// 职责:封装与任务租约相关的仓储操作并提供统一 API。
+///
+/// 设计要点:
+///
+/// - tryAcquireLease: 委托给 TaskRepository.tryAcquireLease() 进行 CAS 获取
+///   - renewLease: 委托给 TaskRepository.renewLease()
+///   - releaseLease: 加载聚合,调用 releaseLease(),然后保存
+///   - validateLease: 加载聚合并检查 leaseInfo.owner
+///
+/// 日志记录:关键租约操作(获取、释放、验证失败)记录 INFO 级别日志。
+///
+/// @author linqibin
+/// @since 0.1.0
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -36,7 +32,7 @@ public class LeaseManagementServiceImpl implements LeaseManagementService {
   private final TaskRepository taskRepository;
   private final Clock clock;
 
-  /** 尝试获取租约。 */
+  /// 尝试获取租约。
   @Override
   public boolean tryAcquireLease(Long taskId, String owner, Duration leaseDuration) {
     // 加载任务以获取幂等键(tryAcquireLease 需要)
@@ -56,7 +52,7 @@ public class LeaseManagementServiceImpl implements LeaseManagementService {
     return acquired;
   }
 
-  /** 续约租约。 */
+  /// 续约租约。
   @Override
   public boolean renewLease(Long taskId, String owner, Duration leaseDuration) {
     Instant now = clock.instant();
@@ -66,7 +62,7 @@ public class LeaseManagementServiceImpl implements LeaseManagementService {
     return renewed;
   }
 
-  /** 释放租约。 */
+  /// 释放租约。
   @Override
   public void releaseLease(Long taskId) {
     TaskAggregate task =
@@ -80,7 +76,7 @@ public class LeaseManagementServiceImpl implements LeaseManagementService {
     log.info("租约已释放 taskId={}", taskId);
   }
 
-  /** 验证租约(持有者仍然是当前节点)。 */
+  /// 验证租约(持有者仍然是当前节点)。
   @Override
   public boolean validateLease(Long taskId, String owner) {
     TaskAggregate task = taskRepository.findById(taskId).orElse(null);

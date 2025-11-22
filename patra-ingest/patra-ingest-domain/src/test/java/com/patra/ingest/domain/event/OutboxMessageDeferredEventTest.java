@@ -7,34 +7,28 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * OutboxMessageDeferredEvent 单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>纯 Java 单元测试，不依赖 Spring 容器
- *   <li>不使用 Mockito - 使用真实对象
- *   <li>遵循 Given-When-Then 结构
- *   <li>使用 AssertJ 流畅断言
- * </ul>
- *
- * <p>测试范围：
- *
- * <ul>
- *   <li>✅ Record 语义测试（equals/hashCode/toString）
- *   <li>✅ 字段访问器测试
- *   <li>✅ 领域事件特性测试（occurredAt）
- *   <li>✅ 不可变性测试
- *   <li>✅ 边界情况测试
- *   <li>✅ 业务场景测试（延迟重试计划、退避策略）
- *   <li>✅ 重试计数逻辑测试（nextRetryCount = 当前失败次数 + 1）
- *   <li>✅ 时间相关业务逻辑测试（nextRetryAt 退避计算）
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// OutboxMessageDeferredEvent 单元测试。
+///
+/// 测试策略：
+///
+/// - 纯 Java 单元测试，不依赖 Spring 容器
+///   - 不使用 Mockito - 使用真实对象
+///   - 遵循 Given-When-Then 结构
+///   - 使用 AssertJ 流畅断言
+///
+/// 测试范围：
+///
+/// - ✅ Record 语义测试（equals/hashCode/toString）
+///   - ✅ 字段访问器测试
+///   - ✅ 领域事件特性测试（occurredAt）
+///   - ✅ 不可变性测试
+///   - ✅ 边界情况测试
+///   - ✅ 业务场景测试（延迟重试计划、退避策略）
+///   - ✅ 重试计数逻辑测试（nextRetryCount = 当前失败次数 + 1）
+///   - ✅ 时间相关业务逻辑测试（nextRetryAt 退避计算）
+///
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("OutboxMessageDeferredEvent 单元测试")
 class OutboxMessageDeferredEventTest {
 
@@ -378,10 +372,22 @@ class OutboxMessageDeferredEventTest {
       Instant futureTime = now.plusSeconds(300);
       OutboxMessageDeferredEvent event1 =
           new OutboxMessageDeferredEvent(
-              1001L, "publication.parsed", 3, futureTime, "NETWORK_TIMEOUT", "Error message 1", now);
+              1001L,
+              "publication.parsed",
+              3,
+              futureTime,
+              "NETWORK_TIMEOUT",
+              "Error message 1",
+              now);
       OutboxMessageDeferredEvent event2 =
           new OutboxMessageDeferredEvent(
-              1001L, "publication.parsed", 3, futureTime, "NETWORK_TIMEOUT", "Error message 2", now);
+              1001L,
+              "publication.parsed",
+              3,
+              futureTime,
+              "NETWORK_TIMEOUT",
+              "Error message 2",
+              now);
 
       // Then
       assertThat(event1).isNotEqualTo(event2);

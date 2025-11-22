@@ -2,7 +2,7 @@ package com.patra.starter.web.resp;
 
 import lombok.Getter;
 
-/** 共享 API 响应辅助类使用的代表 Web 层结果代码。 */
+/// 共享 API 响应辅助类使用的代表 Web 层结果代码。
 @Getter
 public enum ResultCode {
   OK(0, "OK"),
@@ -17,10 +17,10 @@ public enum ResultCode {
   INTERNAL_ERROR(5500, "Internal Server Error"),
   SERVICE_UNAVAILABLE(5503, "Service Unavailable");
 
-  /** 暴露给客户端的数字代码。 */
+  /// 暴露给客户端的数字代码。
   private final int code;
 
-  /** 与代码关联的人类可读描述。 */
+  /// 与代码关联的人类可读描述。
   private final String message;
 
   ResultCode(int code, String message) {

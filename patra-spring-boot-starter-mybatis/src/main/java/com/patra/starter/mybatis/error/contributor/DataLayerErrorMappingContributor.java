@@ -10,11 +10,9 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * 将数据访问层异常（特别是 MyBatis-Plus 和底层 JDBC 驱动程序）转换为标准化平台错误码的 {@link ErrorMappingContributor}。
- *
- * <p>此组件通过确保将低级数据库错误转换为有意义且一致的 HTTP 响应代码，在全局错误处理策略中发挥着至关重要的作用。它处理常见问题，如数据冲突、约束违规和连接问题。
- */
+/// 将数据访问层异常（特别是 MyBatis-Plus 和底层 JDBC 驱动程序）转换为标准化平台错误码的 {@link ErrorMappingContributor}。
+///
+/// 此组件通过确保将低级数据库错误转换为有意义且一致的 HTTP 响应代码，在全局错误处理策略中发挥着至关重要的作用。它处理常见问题，如数据冲突、约束违规和连接问题。
 @Slf4j
 @Component
 public class DataLayerErrorMappingContributor implements ErrorMappingContributor {
@@ -25,12 +23,10 @@ public class DataLayerErrorMappingContributor implements ErrorMappingContributor
     this.http = http;
   }
 
-  /**
-   * 如果异常源自数据访问层，将给定的 {@link Throwable} 映射到相应的 {@link ErrorCodeLike}。
-   *
-   * @param exception 要映射的异常
-   * @return 包含映射的 {@link ErrorCodeLike} 的 {@link Optional}，如果此贡献器未处理该异常，则返回空 Optional
-   */
+  /// 如果异常源自数据访问层，将给定的 {@link Throwable} 映射到相应的 {@link ErrorCodeLike}。
+  ///
+  /// @param exception 要映射的异常
+  /// @return 包含映射的 {@link ErrorCodeLike} 的 {@link Optional}，如果此贡献器未处理该异常，则返回空 Optional
   @Override
   public Optional<ErrorCodeLike> mapException(Throwable exception) {
     // 通用 MyBatis-Plus 异常被视为内部服务器错误，因为它们通常表示配置或映射问题。
@@ -53,12 +49,10 @@ public class DataLayerErrorMappingContributor implements ErrorMappingContributor
     return Optional.empty();
   }
 
-  /**
-   * 分析 {@link SQLException} 以确定最合适的错误代码。
-   *
-   * @param sqlEx 要分析的 SQL 异常
-   * @return 包含映射错误代码的 Optional
-   */
+  /// 分析 {@link SQLException} 以确定最合适的错误代码。
+  ///
+  /// @param sqlEx 要分析的 SQL 异常
+  /// @return 包含映射错误代码的 Optional
   private Optional<ErrorCodeLike> mapCommonSqlExceptions(SQLException sqlEx) {
     Optional<ErrorCodeLike> mysqlError = mapMysqlSpecificErrors(sqlEx);
     if (mysqlError.isPresent()) {
@@ -73,12 +67,10 @@ public class DataLayerErrorMappingContributor implements ErrorMappingContributor
     return mapUnhandledSqlException(sqlEx);
   }
 
-  /**
-   * 将 MySQL 特定的错误代码映射到适当的错误响应。
-   *
-   * @param sqlEx 包含 MySQL 错误代码的 SQL 异常
-   * @return 如果识别出 MySQL 错误，则返回 Optional 错误代码
-   */
+  /// 将 MySQL 特定的错误代码映射到适当的错误响应。
+  ///
+  /// @param sqlEx 包含 MySQL 错误代码的 SQL 异常
+  /// @return 如果识别出 MySQL 错误，则返回 Optional 错误代码
   private Optional<ErrorCodeLike> mapMysqlSpecificErrors(SQLException sqlEx) {
     int errorCode = sqlEx.getErrorCode();
 
@@ -95,12 +87,10 @@ public class DataLayerErrorMappingContributor implements ErrorMappingContributor
     }
   }
 
-  /**
-   * 将 SQLState 代码映射到适当的错误响应。
-   *
-   * @param sqlEx 包含 SQLState 代码的 SQL 异常
-   * @return 如果 SQLState 指示连接或超时问题，则返回 Optional 错误代码
-   */
+  /// 将 SQLState 代码映射到适当的错误响应。
+  ///
+  /// @param sqlEx 包含 SQLState 代码的 SQL 异常
+  /// @return 如果 SQLState 指示连接或超时问题，则返回 Optional 错误代码
   private Optional<ErrorCodeLike> mapSqlStateErrors(SQLException sqlEx) {
     String sqlState = sqlEx.getSQLState();
     if (sqlState == null) {
@@ -116,12 +106,10 @@ public class DataLayerErrorMappingContributor implements ErrorMappingContributor
     return Optional.empty();
   }
 
-  /**
-   * 将未处理的 SQL 异常映射为内部服务器错误。
-   *
-   * @param sqlEx 未处理的 SQL 异常
-   * @return 内部服务器错误的错误代码
-   */
+  /// 将未处理的 SQL 异常映射为内部服务器错误。
+  ///
+  /// @param sqlEx 未处理的 SQL 异常
+  /// @return 内部服务器错误的错误代码
   private Optional<ErrorCodeLike> mapUnhandledSqlException(SQLException sqlEx) {
     log.error(
         "将未处理的 SQL 异常（SQLState: {}, ErrorCode: {}）映射为内部服务器错误",

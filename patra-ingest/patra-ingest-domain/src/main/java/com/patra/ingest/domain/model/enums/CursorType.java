@@ -2,26 +2,23 @@ package com.patra.ingest.domain.model.enums;
 
 import lombok.Getter;
 
-/**
- * 游标类型 (字典: ing_cursor_type)。
- *
- * <p>字段映射: {@code cursor_type_code → TIME/ID/TOKEN}。
- *
- * <p>类型语义:
- *
- * <ul>
- *   <li>TIME → 基于时间的游标(时间戳)
- *   <li>ID → 基于标识符的游标(数值 ID)
- *   <li>TOKEN → 基于令牌的游标(不透明令牌,如分页 token)
- * </ul>
- */
+/// 游标类型 (字典: ing_cursor_type)。
+///
+/// 字段映射: `cursor_type_code → TIME/ID/TOKEN`。
+///
+/// 类型语义:
+///
+/// - TIME → 基于时间的游标(时间戳)
+///   - ID → 基于标识符的游标(数值 ID)
+///   - TOKEN → 基于令牌的游标(不透明令牌,如分页 token)
+///
 @Getter
 public enum CursorType {
-  /** 时间型;基于时间戳的游标。 */
+  /// 时间型;基于时间戳的游标。
   TIME("TIME", "Time-based"),
-  /** 标识符型;基于数值 ID 的游标。 */
+  /// 标识符型;基于数值 ID 的游标。
   ID("ID", "Identifier-based"),
-  /** 令牌型;基于不透明令牌的游标。 */
+  /// 令牌型;基于不透明令牌的游标。
   TOKEN("TOKEN", "Token-based");
 
   private final String code;

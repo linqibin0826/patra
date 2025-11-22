@@ -12,32 +12,26 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * ScheduleInstanceAggregate 单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>纯 Java 单元测试，不依赖 Spring 容器
- *   <li>使用 TestDataBuilder 模式构建测试数据
- *   <li>遵循 Given-When-Then 结构
- *   <li>使用 AssertJ 流畅断言
- * </ul>
- *
- * <p>测试范围：
- *
- * <ul>
- *   <li>✅ 工厂方法验证（start(), restore()）
- *   <li>✅ 必填字段验证（scheduler, triggerType）
- *   <li>✅ 初始化状态验证
- *   <li>✅ 不可变性验证
- *   <li>✅ 边界条件测试
- *   <li>✅ 聚合根基类行为
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// ScheduleInstanceAggregate 单元测试。
+///
+/// 测试策略：
+///
+/// - 纯 Java 单元测试，不依赖 Spring 容器
+///   - 使用 TestDataBuilder 模式构建测试数据
+///   - 遵循 Given-When-Then 结构
+///   - 使用 AssertJ 流畅断言
+///
+/// 测试范围：
+///
+/// - ✅ 工厂方法验证（start(), restore()）
+///   - ✅ 必填字段验证（scheduler, triggerType）
+///   - ✅ 初始化状态验证
+///   - ✅ 不可变性验证
+///   - ✅ 边界条件测试
+///   - ✅ 聚合根基类行为
+///
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("ScheduleInstanceAggregate 单元测试")
 class ScheduleInstanceAggregateTest {
 
@@ -749,11 +743,9 @@ class ScheduleInstanceAggregateTest {
 
   // ========== TestDataBuilder (辅助类) ==========
 
-  /**
-   * ScheduleInstanceAggregate 测试数据构建器。
-   *
-   * <p>遵循 Builder 模式，提供默认值以简化测试数据构建。
-   */
+  /// ScheduleInstanceAggregate 测试数据构建器。
+  ///
+  /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
   static class ScheduleInstanceAggregateTestDataBuilder {
     private Long id = null; // 默认为 null（新创建的聚合根）
     private Scheduler scheduler = Scheduler.XXL;
@@ -819,7 +811,7 @@ class ScheduleInstanceAggregateTest {
       return this;
     }
 
-    /** 构建新创建的调度实例（使用 start() 工厂方法）。 */
+    /// 构建新创建的调度实例（使用 start() 工厂方法）。
     public ScheduleInstanceAggregate build() {
       return ScheduleInstanceAggregate.start(
           scheduler,
@@ -831,7 +823,7 @@ class ScheduleInstanceAggregateTest {
           provenanceCode);
     }
 
-    /** 构建从持久化重建的调度实例（使用 restore() 工厂方法）。 */
+    /// 构建从持久化重建的调度实例（使用 restore() 工厂方法）。
     public ScheduleInstanceAggregate buildRestored() {
       Long restoredId = (id != null) ? id : 100L; // 默认 ID
       ScheduleInstanceAggregate instance =

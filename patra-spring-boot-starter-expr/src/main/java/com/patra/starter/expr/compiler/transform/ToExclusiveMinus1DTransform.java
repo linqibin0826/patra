@@ -7,18 +7,16 @@ import java.time.format.DateTimeParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * 排他性边界减1天变换:从日期值中减去一天,将排他性上界转换为包含性提供者边界。
- *
- * <p>使用场景示例:PubMed 的 {@code maxdate} 是包含性的,但 std_key {@code to} 是排他性的。 此变换将 "2023-12-31" (排他) 转换为
- * "2023-12-30" (包含)。
- *
- * <p>仅在日期粒度上操作 (YYYY-MM-DD 格式)。
- *
- * <p>参见: docs/expr/03-compiler-bridge-internals.md §3.3.2, docs/expr/04-provider-pubmed.md §4.2
- *
- * @since 1.0.0
- */
+/// 排他性边界减1天变换:从日期值中减去一天,将排他性上界转换为包含性提供者边界。
+///
+/// 使用场景示例:PubMed 的 `maxdate` 是包含性的,但 std_key `to` 是排他性的。 此变换将 "2023-12-31" (排他) 转换为
+/// "2023-12-30" (包含)。
+///
+/// 仅在日期粒度上操作 (YYYY-MM-DD 格式)。
+///
+/// 参见: docs/expr/03-compiler-bridge-internals.md §3.3.2, docs/expr/04-provider-pubmed.md §4.2
+///
+/// @since 0.1.0
 public class ToExclusiveMinus1DTransform implements ValueTransform {
 
   private static final Logger log = LoggerFactory.getLogger(ToExclusiveMinus1DTransform.class);

@@ -4,26 +4,22 @@ import com.patra.ingest.domain.model.enums.SliceStrategy;
 import java.time.Instant;
 import java.util.Map;
 
-/**
- * 窗口规范值对象密封接口,表示数据采集窗口的边界规范。
- *
- * <p>密封继承层次确保编译时完备性检查。支持多种数据采集分区策略:
- *
- * <ul>
- *   <li>TIME - 基于时间的窗口(from/to 时间戳)
- *   <li>ID_RANGE - 基于ID范围的窗口(from/to ID)
- *   <li>CURSOR_LANDMARK - 基于游标/分页的窗口
- *   <li>VOLUME_BUDGET - 基于容量预算的窗口
- *   <li>SINGLE - 单一窗口(无分区)
- * </ul>
- *
- * <p>不可变性:所有实现都是不可变的Record
- *
- * <p>使用场景:在任务规划阶段指定数据采集的窗口边界
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 窗口规范值对象密封接口,表示数据采集窗口的边界规范。
+///
+/// 密封继承层次确保编译时完备性检查。支持多种数据采集分区策略:
+///
+/// - TIME - 基于时间的窗口(from/to 时间戳)
+///   - ID_RANGE - 基于ID范围的窗口(from/to ID)
+///   - CURSOR_LANDMARK - 基于游标/分页的窗口
+///   - VOLUME_BUDGET - 基于容量预算的窗口
+///   - SINGLE - 单一窗口(无分区)
+///
+/// 不可变性:所有实现都是不可变的Record
+///
+/// 使用场景:在任务规划阶段指定数据采集的窗口边界
+///
+/// @author linqibin
+/// @since 0.1.0
 public sealed interface WindowSpec
     permits WindowSpec.Time,
         WindowSpec.IdRange,
@@ -31,46 +27,37 @@ public sealed interface WindowSpec
         WindowSpec.VolumeBudget,
         WindowSpec.Single {
 
-  /**
-   * 获取窗口规范的策略类型。
-   *
-   * @return 切片策略枚举
-   */
+  /// 获取窗口规范的策略类型。
+  ///
+  /// @return 切片策略枚举
   SliceStrategy strategy();
 
-  /**
-   * 转换为可JSON序列化的Map,用于持久化层存储。
-   *
-   * <p>Map结构根据策略类型变化(格式B - 嵌套JSON):
-   *
-   * <ul>
-   *   <li>TIME:
-   *       {"strategy":"TIME","window":{"from":"2024-01-01T00:00:00Z","to":"2024-12-31T23:59:59Z","boundary":{"from":"CLOSED","to":"OPEN"},"timezone":"UTC"}}
-   *   <li>ID_RANGE: {"strategy":"ID_RANGE","window":{"from":1000000,"to":2000000}}
-   *   <li>CURSOR_LANDMARK: {"strategy":"CURSOR_LANDMARK","window":{"from":"token1","to":"token2"}}
-   *   <li>VOLUME_BUDGET: {"strategy":"VOLUME_BUDGET","limit":100000,"unit":"RECORDS"}
-   *   <li>SINGLE: {"strategy":"SINGLE"}
-   * </ul>
-   *
-   * @return 包含策略代码和策略特定字段的JSON可序列化Map
-   */
+  /// 转换为可JSON序列化的Map,用于持久化层存储。
+  ///
+  /// Map结构根据策略类型变化(格式B - 嵌套JSON):
+  ///
+  /// - TIME:
+  ///
+  // {"strategy":"TIME","window":{"from":"2024-01-01T00:00:00Z","to":"2024-12-31T23:59:59Z","boundary":{"from":"CLOSED","to":"OPEN"},"timezone":"UTC"}}
+  ///   - ID_RANGE: {"strategy":"ID_RANGE","window":{"from":1000000,"to":2000000}}
+  ///   - CURSOR_LANDMARK: {"strategy":"CURSOR_LANDMARK","window":{"from":"token1","to":"token2"}}
+  ///   - VOLUME_BUDGET: {"strategy":"VOLUME_BUDGET","limit":100000,"unit":"RECORDS"}
+  ///   - SINGLE: {"strategy":"SINGLE"}
+  ///
+  /// @return 包含策略代码和策略特定字段的JSON可序列化Map
   Map<String, Object> toMap();
 
   // ============ 策略实现 ============
 
-  /**
-   * 基于时间的窗口规范值对象。
-   *
-   * <p>业务约束:
-   *
-   * <ul>
-   *   <li>from和to必须非空
-   *   <li>from必须早于或等于to
-   * </ul>
-   *
-   * @param from 起始时间戳(闭区间)
-   * @param to 结束时间戳(开区间)
-   */
+  /// 基于时间的窗口规范值对象。
+  ///
+  /// 业务约束:
+  ///
+  /// - from和to必须非空
+  ///   - from必须早于或等于to
+  ///
+  /// @param from 起始时间戳(闭区间)
+  /// @param to 结束时间戳(开区间)
   record Time(Instant from, Instant to) implements WindowSpec {
     public Time {
       if (from == null || to == null) {
@@ -106,19 +93,15 @@ public sealed interface WindowSpec
     }
   }
 
-  /**
-   * 基于ID范围的窗口规范值对象。
-   *
-   * <p>业务约束:
-   *
-   * <ul>
-   *   <li>from和to必须非空
-   *   <li>from必须小于或等于to
-   * </ul>
-   *
-   * @param from 起始ID(闭区间)
-   * @param to 结束ID(闭区间)
-   */
+  /// 基于ID范围的窗口规范值对象。
+  ///
+  /// 业务约束:
+  ///
+  /// - from和to必须非空
+  ///   - from必须小于或等于to
+  ///
+  /// @param from 起始ID(闭区间)
+  /// @param to 结束ID(闭区间)
   record IdRange(Long from, Long to) implements WindowSpec {
     public IdRange {
       if (from == null || to == null) {
@@ -144,18 +127,14 @@ public sealed interface WindowSpec
     }
   }
 
-  /**
-   * 基于游标/地标的窗口规范值对象,用于分页场景。
-   *
-   * <p>业务约束:
-   *
-   * <ul>
-   *   <li>from和to必须非空且非空白
-   * </ul>
-   *
-   * @param from 起始游标/令牌
-   * @param to 结束游标/令牌
-   */
+  /// 基于游标/地标的窗口规范值对象,用于分页场景。
+  ///
+  /// 业务约束:
+  ///
+  /// - from和to必须非空且非空白
+  ///
+  /// @param from 起始游标/令牌
+  /// @param to 结束游标/令牌
   record CursorLandmark(String from, String to) implements WindowSpec {
     public CursorLandmark {
       if (from == null || to == null || from.isBlank() || to.isBlank()) {
@@ -178,19 +157,15 @@ public sealed interface WindowSpec
     }
   }
 
-  /**
-   * 基于容量预算的窗口规范值对象。
-   *
-   * <p>业务约束:
-   *
-   * <ul>
-   *   <li>limit必须为正数
-   *   <li>unit必须非空且非空白
-   * </ul>
-   *
-   * @param limit 最大容量/数量
-   * @param unit 度量单位(例如:"RECORDS","BYTES","MB")
-   */
+  /// 基于容量预算的窗口规范值对象。
+  ///
+  /// 业务约束:
+  ///
+  /// - limit必须为正数
+  ///   - unit必须非空且非空白
+  ///
+  /// @param limit 最大容量/数量
+  /// @param unit 度量单位(例如:"RECORDS","BYTES","MB")
   record VolumeBudget(Integer limit, String unit) implements WindowSpec {
     public VolumeBudget {
       if (limit == null || limit <= 0) {
@@ -215,11 +190,9 @@ public sealed interface WindowSpec
     }
   }
 
-  /**
-   * 单一窗口规范值对象(无分区)。
-   *
-   * <p>使用场景:不需要窗口分区的简单采集场景
-   */
+  /// 单一窗口规范值对象(无分区)。
+  ///
+  /// 使用场景:不需要窗口分区的简单采集场景
   record Single() implements WindowSpec {
     @Override
     public SliceStrategy strategy() {
@@ -234,77 +207,64 @@ public sealed interface WindowSpec
 
   // ============ 工厂方法 ============
 
-  /**
-   * 创建基于时间的窗口规范。
-   *
-   * @param from 起始时间戳
-   * @param to 结束时间戳
-   * @return 时间窗口规范
-   */
+  /// 创建基于时间的窗口规范。
+  ///
+  /// @param from 起始时间戳
+  /// @param to 结束时间戳
+  /// @return 时间窗口规范
   static Time ofTime(Instant from, Instant to) {
     return new Time(from, to);
   }
 
-  /**
-   * 创建基于ID范围的窗口规范。
-   *
-   * @param from 起始ID
-   * @param to 结束ID
-   * @return ID范围窗口规范
-   */
+  /// 创建基于ID范围的窗口规范。
+  ///
+  /// @param from 起始ID
+  /// @param to 结束ID
+  /// @return ID范围窗口规范
   static IdRange ofIdRange(Long from, Long to) {
     return new IdRange(from, to);
   }
 
-  /**
-   * 创建基于游标的窗口规范。
-   *
-   * @param from 起始游标
-   * @param to 结束游标
-   * @return 游标窗口规范
-   */
+  /// 创建基于游标的窗口规范。
+  ///
+  /// @param from 起始游标
+  /// @param to 结束游标
+  /// @return 游标窗口规范
   static CursorLandmark ofCursor(String from, String to) {
     return new CursorLandmark(from, to);
   }
 
-  /**
-   * 创建基于容量预算的窗口规范。
-   *
-   * @param limit 最大容量
-   * @param unit 度量单位
-   * @return 容量预算窗口规范
-   */
+  /// 创建基于容量预算的窗口规范。
+  ///
+  /// @param limit 最大容量
+  /// @param unit 度量单位
+  /// @return 容量预算窗口规范
   static VolumeBudget ofVolume(Integer limit, String unit) {
     return new VolumeBudget(limit, unit);
   }
 
-  /**
-   * 创建单一窗口规范(无分区)。
-   *
-   * @return 单一窗口规范
-   */
+  /// 创建单一窗口规范(无分区)。
+  ///
+  /// @return 单一窗口规范
   static Single ofSingle() {
     return new Single();
   }
 
-  /**
-   * 从持久化Map重建WindowSpec(供基础设施层使用)。
-   *
-   * <p>期望的Map格式(格式B - 嵌套JSON):
-   *
-   * <ul>
-   *   <li>TIME:
-   *       {"strategy":"TIME","window":{"from":"2024-01-01T00:00:00Z","to":"2024-12-31T23:59:59Z",...}}
-   *   <li>ID_RANGE: {"strategy":"ID_RANGE","window":{"from":1000000,"to":2000000}}
-   *   <li>CURSOR_LANDMARK: {"strategy":"CURSOR_LANDMARK","window":{"from":"token1","to":"token2"}}
-   *   <li>VOLUME_BUDGET: {"strategy":"VOLUME_BUDGET","limit":100000,"unit":"RECORDS"}
-   *   <li>SINGLE: {"strategy":"SINGLE"}
-   * </ul>
-   *
-   * @param map JSON反序列化的Map,至少包含"strategy"键
-   * @return 重建的WindowSpec实例
-   * @throws IllegalArgumentException 如果map为null、空、结构无效或包含未知策略
-   */
+  /// 从持久化Map重建WindowSpec(供基础设施层使用)。
+  ///
+  /// 期望的Map格式(格式B - 嵌套JSON):
+  ///
+  /// - TIME:
+  ///
+  // {"strategy":"TIME","window":{"from":"2024-01-01T00:00:00Z","to":"2024-12-31T23:59:59Z",...}}
+  ///   - ID_RANGE: {"strategy":"ID_RANGE","window":{"from":1000000,"to":2000000}}
+  ///   - CURSOR_LANDMARK: {"strategy":"CURSOR_LANDMARK","window":{"from":"token1","to":"token2"}}
+  ///   - VOLUME_BUDGET: {"strategy":"VOLUME_BUDGET","limit":100000,"unit":"RECORDS"}
+  ///   - SINGLE: {"strategy":"SINGLE"}
+  ///
+  /// @param map JSON反序列化的Map,至少包含"strategy"键
+  /// @return 重建的WindowSpec实例
+  /// @throws IllegalArgumentException 如果map为null、空、结构无效或包含未知策略
   static WindowSpec fromMap(Map<String, Object> map) {
     if (map == null || map.isEmpty()) {
       throw new IllegalArgumentException("窗口规范map不能为null或空");
@@ -323,13 +283,11 @@ public sealed interface WindowSpec
     };
   }
 
-  /**
-   * 从map中提取并验证策略代码。
-   *
-   * @param map 窗口规范map
-   * @return 已验证的切片策略枚举
-   * @throws IllegalArgumentException 如果策略缺失、类型无效或代码未知
-   */
+  /// 从map中提取并验证策略代码。
+  ///
+  /// @param map 窗口规范map
+  /// @return 已验证的切片策略枚举
+  /// @throws IllegalArgumentException 如果策略缺失、类型无效或代码未知
   private static SliceStrategy extractAndValidateStrategy(Map<String, Object> map) {
     Object strategyObj = map.get("strategy");
     if (strategyObj == null) {
@@ -345,13 +303,11 @@ public sealed interface WindowSpec
         .orElseThrow(() -> new IllegalArgumentException("未知的切片策略代码: '" + strategyCode + "'"));
   }
 
-  /**
-   * 从map中解析TIME或DATE窗口。
-   *
-   * @param map 窗口规范map
-   * @param strategyName 策略名称(用于错误消息)
-   * @return 时间窗口规范
-   */
+  /// 从map中解析TIME或DATE窗口。
+  ///
+  /// @param map 窗口规范map
+  /// @param strategyName 策略名称(用于错误消息)
+  /// @return 时间窗口规范
   private static Time parseTimeWindow(Map<String, Object> map, String strategyName) {
     Map<String, Object> windowMap = extractRequiredWindowMap(map, strategyName);
     Object fromObj = windowMap.get("from");
@@ -367,12 +323,10 @@ public sealed interface WindowSpec
     return new Time(Instant.parse((String) fromObj), Instant.parse((String) toObj));
   }
 
-  /**
-   * 从map中解析ID_RANGE窗口。
-   *
-   * @param map 窗口规范map
-   * @return ID范围窗口规范
-   */
+  /// 从map中解析ID_RANGE窗口。
+  ///
+  /// @param map 窗口规范map
+  /// @return ID范围窗口规范
   private static IdRange parseIdRangeWindow(Map<String, Object> map) {
     Map<String, Object> windowMap = extractRequiredWindowMap(map, "ID_RANGE");
     Object fromObj = windowMap.get("from");
@@ -388,12 +342,10 @@ public sealed interface WindowSpec
     return new IdRange(((Number) fromObj).longValue(), ((Number) toObj).longValue());
   }
 
-  /**
-   * 从map中解析CURSOR_LANDMARK窗口。
-   *
-   * @param map 窗口规范map
-   * @return 游标地标窗口规范
-   */
+  /// 从map中解析CURSOR_LANDMARK窗口。
+  ///
+  /// @param map 窗口规范map
+  /// @return 游标地标窗口规范
   private static CursorLandmark parseCursorLandmarkWindow(Map<String, Object> map) {
     Map<String, Object> windowMap = extractRequiredWindowMap(map, "CURSOR_LANDMARK");
     Object fromObj = windowMap.get("from");
@@ -409,12 +361,10 @@ public sealed interface WindowSpec
     return new CursorLandmark((String) fromObj, (String) toObj);
   }
 
-  /**
-   * 从map中解析VOLUME_BUDGET窗口。
-   *
-   * @param map 窗口规范map
-   * @return 容量预算窗口规范
-   */
+  /// 从map中解析VOLUME_BUDGET窗口。
+  ///
+  /// @param map 窗口规范map
+  /// @return 容量预算窗口规范
   private static VolumeBudget parseVolumeBudgetWindow(Map<String, Object> map) {
     Object limitObj = map.get("limit");
     Object unitObj = map.get("unit");
@@ -432,14 +382,12 @@ public sealed interface WindowSpec
     return new VolumeBudget(((Number) limitObj).intValue(), (String) unitObj);
   }
 
-  /**
-   * 从主map中提取并验证'window'子map。
-   *
-   * @param map 主窗口规范map
-   * @param strategyName 策略名称(用于错误消息)
-   * @return 提取的window子map
-   * @throws IllegalArgumentException 如果'window'缺失或不是map
-   */
+  /// 从主map中提取并验证'window'子map。
+  ///
+  /// @param map 主窗口规范map
+  /// @param strategyName 策略名称(用于错误消息)
+  /// @return 提取的window子map
+  /// @throws IllegalArgumentException 如果'window'缺失或不是map
   @SuppressWarnings("unchecked")
   private static Map<String, Object> extractRequiredWindowMap(
       Map<String, Object> map, String strategyName) {

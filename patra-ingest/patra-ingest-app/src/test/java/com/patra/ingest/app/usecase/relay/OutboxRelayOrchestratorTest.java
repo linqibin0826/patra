@@ -27,23 +27,19 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * OutboxRelayOrchestrator 单元测试
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>✅ 功能开关禁用场景
- *   <li>✅ 正常中继流程 (规划 → 执行 → 发布事件)
- *   <li>✅ 调用顺序验证 (planBuilder → executor → eventPublisher)
- *   <li>✅ 单通道和全通道场景
- *   <li>✅ 空结果和批量结果场景
- *   <li>✅ 报告生成验证
- * </ul>
- *
- * @author Patra Team
- * @since 0.1.0
- */
+/// OutboxRelayOrchestrator 单元测试
+///
+/// 测试覆盖:
+///
+/// - ✅ 功能开关禁用场景
+///   - ✅ 正常中继流程 (规划 → 执行 → 发布事件)
+///   - ✅ 调用顺序验证 (planBuilder → executor → eventPublisher)
+///   - ✅ 单通道和全通道场景
+///   - ✅ 空结果和批量结果场景
+///   - ✅ 报告生成验证
+///
+/// @author Patra Team
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("OutboxRelayOrchestrator 单元测试")
 class OutboxRelayOrchestratorTest {

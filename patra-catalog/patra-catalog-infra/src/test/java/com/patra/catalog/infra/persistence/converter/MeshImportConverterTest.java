@@ -1,5 +1,7 @@
 package com.patra.catalog.infra.persistence.converter;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;
 import com.patra.catalog.domain.model.enums.MeshImportTaskStatus;
 import com.patra.catalog.domain.model.enums.MeshTableImportStatus;
@@ -13,24 +15,18 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-/**
- * MeSH 导入转换器单元测试。
- *
- * <p>验证 Domain 对象与 DO 对象之间的转换正确性。
- *
- * <p><b>测试策略</b>：
- *
- * <ul>
- *   <li>单元测试：测试 MapStruct 生成的转换器
- *   <li>测试覆盖：toDomain()、toTaskDO()、toProgressDOList()、toTableProgress()、toProgressDO()
- *   <li>边界情况：null 值处理、集合转换、嵌套对象转换
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// MeSH 导入转换器单元测试。
+///
+/// 验证 Domain 对象与 DO 对象之间的转换正确性。
+///
+/// **测试策略**：
+///
+/// - 单元测试：测试 MapStruct 生成的转换器
+///   - 测试覆盖：toDomain()、toTaskDO()、toProgressDOList()、toTableProgress()、toProgressDO()
+///   - 边界情况：null 值处理、集合转换、嵌套对象转换
+///
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("MeshImportConverter 单元测试")
 class MeshImportConverterTest {
 
@@ -44,7 +40,8 @@ class MeshImportConverterTest {
     taskDO.setId(123456789L);
     taskDO.setTaskName("MeSH 2025 导入");
     taskDO.setStatus("PENDING");
-    taskDO.setSourceUrl("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
+    taskDO.setSourceUrl(
+        "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
     taskDO.setXmlFileHash("a1b2c3d4e5f6");
     taskDO.setXmlFileSize(700_000_000L);
     taskDO.setTotalRecords(350000);
@@ -74,7 +71,8 @@ class MeshImportConverterTest {
     assertThat(aggregate.getId()).isEqualTo(MeshImportId.of(123456789L));
     assertThat(aggregate.getTaskName()).isEqualTo("MeSH 2025 导入");
     assertThat(aggregate.getStatus()).isEqualTo(MeshImportTaskStatus.PENDING);
-    assertThat(aggregate.getSourceUrl()).isEqualTo("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
+    assertThat(aggregate.getSourceUrl())
+        .isEqualTo("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
     assertThat(aggregate.getXmlFileHash()).isEqualTo("a1b2c3d4e5f6");
     assertThat(aggregate.getXmlFileSize()).isEqualTo(700_000_000L);
     assertThat(aggregate.getTotalRecords()).isEqualTo(350000);
@@ -117,7 +115,8 @@ class MeshImportConverterTest {
     assertThat(taskDO.getId()).isEqualTo(123456789L);
     assertThat(taskDO.getTaskName()).isEqualTo("MeSH 2025 导入");
     assertThat(taskDO.getStatus()).isEqualTo("PROCESSING");
-    assertThat(taskDO.getSourceUrl()).isEqualTo("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
+    assertThat(taskDO.getSourceUrl())
+        .isEqualTo("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
     assertThat(taskDO.getXmlFileHash()).isEqualTo("a1b2c3d4e5f6");
     assertThat(taskDO.getTotalRecords()).isEqualTo(350000);
     assertThat(taskDO.getProcessedRecords()).isEqualTo(5000);
@@ -246,7 +245,8 @@ class MeshImportConverterTest {
     taskDO.setId(123456789L);
     taskDO.setTaskName("MeSH 2025 导入");
     taskDO.setStatus("PENDING");
-    taskDO.setSourceUrl("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
+    taskDO.setSourceUrl(
+        "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
     taskDO.setXmlFileHash(null); // null field
     taskDO.setXmlFileSize(null); // null field
     taskDO.setTotalRecords(350000);

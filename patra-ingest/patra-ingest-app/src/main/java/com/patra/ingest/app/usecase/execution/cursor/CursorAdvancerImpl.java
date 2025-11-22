@@ -21,40 +21,32 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
-/**
- * 游标推进器实现。
- *
- * <p>职责:根据批次结果推进游标水位线,使用乐观锁避免并发冲突。
- *
- * <p>设计要点:
- *
- * <ul>
- *   <li>通过 provenanceCode/operationCode/cursorKey/namespace 查询游标
- *   <li>根据 WindowSpec 策略计算新水位线(TIME 策略使用 windowTo)
- *   <li>通过 Cursor.advanceTo() 更新游标;保存时检查版本号
- *   <li>捕获 OptimisticLockingFailureException;返回 false 表示需要重试
- *   <li>首次推进时不存在游标则创建新游标
- * </ul>
- *
- * <p>命名空间策略:
- *
- * <ul>
- *   <li>GLOBAL: 跨任务共享的全局游标
- *   <li>TASK: 按任务隔离的游标(通过 taskId 隔离)
- *   <li>PLAN: 按计划隔离的游标(通过 planId 隔离)
- * </ul>
- *
- * <p>日志记录:
- *
- * <ul>
- *   <li>INFO: 推进成功(from/to)
- *   <li>WARN: 乐观锁冲突(重试)
- *   <li>DEBUG: 游标查找、创建
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 游标推进器实现。
+///
+/// 职责:根据批次结果推进游标水位线,使用乐观锁避免并发冲突。
+///
+/// 设计要点:
+///
+/// - 通过 provenanceCode/operationCode/cursorKey/namespace 查询游标
+///   - 根据 WindowSpec 策略计算新水位线(TIME 策略使用 windowTo)
+///   - 通过 Cursor.advanceTo() 更新游标;保存时检查版本号
+///   - 捕获 OptimisticLockingFailureException;返回 false 表示需要重试
+///   - 首次推进时不存在游标则创建新游标
+///
+/// 命名空间策略:
+///
+/// - GLOBAL: 跨任务共享的全局游标
+///   - TASK: 按任务隔离的游标(通过 taskId 隔离)
+///   - PLAN: 按计划隔离的游标(通过 planId 隔离)
+///
+/// 日志记录:
+///
+/// - INFO: 推进成功(from/to)
+///   - WARN: 乐观锁冲突(重试)
+///   - DEBUG: 游标查找、创建
+///
+/// @author linqibin
+/// @since 0.1.0
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -63,7 +55,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
   private final CursorRepository cursorRepository;
   private final CursorEventRepository cursorEventRepository;
 
-  /** 推进游标水位线。 */
+  /// 推进游标水位线。
   @Override
   public boolean advance(ExecutionContext context, Long taskId, Long runId, Long batchId) {
     // 1) 提取游标参数
@@ -285,16 +277,14 @@ public class CursorAdvancerImpl implements CursorAdvancer {
     }
   }
 
-  /**
-   * 从 WindowSpec 提取水位线(策略感知)。
-   *
-   * <p>当前仅 TIME 策略支持基于时间戳的水位线推进。
-   *
-   * @param windowSpec 窗口规范
-   * @param taskId 任务 ID(用于日志)
-   * @param runId 运行 ID(用于日志)
-   * @return 水位线时间戳,如果策略不支持则返回 null
-   */
+  /// 从 WindowSpec 提取水位线(策略感知)。
+  ///
+  /// 当前仅 TIME 策略支持基于时间戳的水位线推进。
+  ///
+  /// @param windowSpec 窗口规范
+  /// @param taskId 任务 ID(用于日志)
+  /// @param runId 运行 ID(用于日志)
+  /// @return 水位线时间戳,如果策略不支持则返回 null
   private Instant extractWatermark(WindowSpec windowSpec, Long taskId, Long runId) {
     return switch (windowSpec.strategy()) {
       case TIME, DATE -> {
@@ -315,12 +305,10 @@ public class CursorAdvancerImpl implements CursorAdvancer {
     };
   }
 
-  /**
-   * 根据窗口策略确定游标键。
-   *
-   * @param windowSpec 窗口规范
-   * @return 游标键标识符
-   */
+  /// 根据窗口策略确定游标键。
+  ///
+  /// @param windowSpec 窗口规范
+  /// @return 游标键标识符
   private String determineCursorKey(WindowSpec windowSpec) {
     return switch (windowSpec.strategy()) {
       case TIME, DATE -> "TIME"; // TIME 和 DATE 都使用基于时间的游标键
@@ -330,24 +318,22 @@ public class CursorAdvancerImpl implements CursorAdvancer {
     };
   }
 
-  /**
-   * 生成幂等键用于游标事件去重。
-   *
-   * <p>格式: SHA256(provenance|operation|cursorKey|nsScope|nsKey|prev|new|runId|batchId)
-   *
-   * <p>确保相同的推进(相同上下文和水位线转换)生成相同的幂等键,防止重复的事件记录。
-   *
-   * @param provenanceCode 来源代码
-   * @param operationCode 操作代码
-   * @param cursorKey 游标键
-   * @param namespaceScopeCode 命名空间范围代码
-   * @param namespaceKey 命名空间键(如果为 null 则为空字符串)
-   * @param prevValue 上一个水位线值(如果为 null 则为 NULL 字符串)
-   * @param newValue 新水位线值
-   * @param runId 运行标识符
-   * @param batchId 批次标识符
-   * @return SHA256 哈希作为幂等键(64 字符十六进制字符串)
-   */
+  /// 生成幂等键用于游标事件去重。
+  ///
+  /// 格式: SHA256(provenance|operation|cursorKey|nsScope|nsKey|prev|new|runId|batchId)
+  ///
+  /// 确保相同的推进(相同上下文和水位线转换)生成相同的幂等键,防止重复的事件记录。
+  ///
+  /// @param provenanceCode 来源代码
+  /// @param operationCode 操作代码
+  /// @param cursorKey 游标键
+  /// @param namespaceScopeCode 命名空间范围代码
+  /// @param namespaceKey 命名空间键(如果为 null 则为空字符串)
+  /// @param prevValue 上一个水位线值(如果为 null 则为 NULL 字符串)
+  /// @param newValue 新水位线值
+  /// @param runId 运行标识符
+  /// @param batchId 批次标识符
+  /// @return SHA256 哈希作为幂等键(64 字符十六进制字符串)
   private String generateIdempotentKey(
       String provenanceCode,
       String operationCode,
@@ -392,14 +378,12 @@ public class CursorAdvancerImpl implements CursorAdvancer {
     }
   }
 
-  /**
-   * 根据操作代码确定游标推进方向。
-   *
-   * <p>BACKFILL 操作将游标向后移动(历史数据采集),而所有其他操作将游标向前移动(增量采集)。
-   *
-   * @param operationCode 操作代码(HARVEST/BACKFILL/UPDATE/METRICS)
-   * @return 如果操作是 backfill 则返回 BACKFILL,否则返回 FORWARD
-   */
+  /// 根据操作代码确定游标推进方向。
+  ///
+  /// BACKFILL 操作将游标向后移动(历史数据采集),而所有其他操作将游标向前移动(增量采集)。
+  ///
+  /// @param operationCode 操作代码(HARVEST/BACKFILL/UPDATE/METRICS)
+  /// @return 如果操作是 backfill 则返回 BACKFILL,否则返回 FORWARD
   private CursorDirection determineDirection(String operationCode) {
     return "BACKFILL".equalsIgnoreCase(operationCode)
         ? CursorDirection.BACKFILL

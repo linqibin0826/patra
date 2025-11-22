@@ -24,21 +24,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-/**
- * 基础设施适配器,实现出版物存储到对象存储的功能。
- *
- * <p>此适配器专注于技术性存储操作:
- *
- * <ul>
- *   <li>序列化: 将 {@link CanonicalPublication} 转换为 JSON 字节
- *   <li>校验和计算: MD5 和 SHA-256 用于完整性验证
- *   <li>存储上传: 通过 {@link ObjectStorageTemplate} 上传到 S3/MinIO
- * </ul>
- *
- * <p>存储格式: 直接使用共享内核模型 {@link CanonicalPublication}，保证数据完整性。
- *
- * <p>跨服务集成(元数据记录)在应用层单独处理。
- */
+/// 基础设施适配器,实现出版物存储到对象存储的功能。
+///
+/// 此适配器专注于技术性存储操作:
+///
+/// - 序列化: 将 {@link CanonicalPublication} 转换为 JSON 字节
+///   - 校验和计算: MD5 和 SHA-256 用于完整性验证
+///   - 存储上传: 通过 {@link ObjectStorageTemplate} 上传到 S3/MinIO
+///
+/// 存储格式: 直接使用共享内核模型 {@link CanonicalPublication}，保证数据完整性。
+///
+/// 跨服务集成(元数据记录)在应用层单独处理。
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -183,7 +179,7 @@ public class PublicationStorageAdapter implements PublicationStoragePort {
     return StringUtils.hasText(code) ? code.toLowerCase(Locale.ROOT) : "unknown";
   }
 
-  /** 存储异常,指示序列化或上传失败。 */
+  /// 存储异常,指示序列化或上传失败。
   public static class PublicationStorageException extends RuntimeException {
     public PublicationStorageException(String message, Throwable cause) {
       super(message, cause);

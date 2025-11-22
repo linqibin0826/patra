@@ -6,15 +6,13 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * 描述字段级约束的叶子表达式。
- *
- * <p>原子表示查询的基本构建块，将字段名、运算符和值组合在一起。运算符决定允许哪种值类型。
- *
- * @param fieldKey 要查询的字段名
- * @param operator 要执行的运算
- * @param value 要匹配的值
- */
+/// 描述字段级约束的叶子表达式。
+///
+/// 原子表示查询的基本构建块，将字段名、运算符和值组合在一起。运算符决定允许哪种值类型。
+///
+/// @param fieldKey 要查询的字段名
+/// @param operator 要执行的运算
+/// @param value 要匹配的值
 public record Atom(String fieldKey, Operator operator, Value value) implements Expr {
 
   public Atom {
@@ -32,25 +30,23 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
     return visitor.visitAtom(this);
   }
 
-  /**
-   * 支持的字段运算符。
-   *
-   * <p>每个运算符都关联一个特定的值类型。
-   */
+  /// 支持的字段运算符。
+  ///
+  /// 每个运算符都关联一个特定的值类型。
   public enum Operator {
-    /** 基于文本的词语匹配。 */
+    /// 基于文本的词语匹配。
     TERM(TermValue.class),
 
-    /** 离散值集合匹配。 */
+    /// 离散值集合匹配。
     IN(InValues.class),
 
-    /** 日期、时间和数字的范围匹配。 */
+    /// 日期、时间和数字的范围匹配。
     RANGE(RangeValue.class),
 
-    /** 字段存在性检查。 */
+    /// 字段存在性检查。
     EXISTS(ExistsFlag.class),
 
-    /** 平台特定的令牌匹配。 */
+    /// 平台特定的令牌匹配。
     TOKEN(TokenValue.class);
 
     private final Class<? extends Value> supportedType;
@@ -69,20 +65,16 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
     }
   }
 
-  /**
-   * 所有值变体的标记接口。
-   *
-   * <p>密封以确保类型安全和穷举模式匹配。
-   */
+  /// 所有值变体的标记接口。
+  ///
+  /// 密封以确保类型安全和穷举模式匹配。
   public sealed interface Value permits TermValue, InValues, RangeValue, ExistsFlag, TokenValue {}
 
-  /**
-   * 用于 TERM 操作的基于文本的值。
-   *
-   * @param text 要匹配的文本
-   * @param match 匹配策略
-   * @param caseSensitivity 大小写敏感度行为
-   */
+  /// 用于 TERM 操作的基于文本的值。
+  ///
+  /// @param text 要匹配的文本
+  /// @param match 匹配策略
+  /// @param caseSensitivity 大小写敏感度行为
   public record TermValue(String text, TextMatch match, CaseSensitivity caseSensitivity)
       implements Value {
     public TermValue {
@@ -95,12 +87,10 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
     }
   }
 
-  /**
-   * 用于 IN 操作的离散字符串值的集合。
-   *
-   * @param values 非空的要匹配的值列表
-   * @param caseSensitivity 大小写敏感度行为
-   */
+  /// 用于 IN 操作的离散字符串值的集合。
+  ///
+  /// @param values 非空的要匹配的值列表
+  /// @param caseSensitivity 大小写敏感度行为
   public record InValues(List<String> values, CaseSensitivity caseSensitivity) implements Value {
     public InValues {
       Objects.requireNonNull(values, "values");
@@ -119,36 +109,32 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
     }
   }
 
-  /**
-   * 基于范围值的公共约定。
-   *
-   * <p>支持日期、日期时间和数字范围，具有可配置的边界包含。
-   */
+  /// 基于范围值的公共约定。
+  ///
+  /// 支持日期、日期时间和数字范围，具有可配置的边界包含。
   public sealed interface RangeValue extends Value permits DateRange, DateTimeRange, NumberRange {
-    /** 返回下边界包含类型。 */
+    /// 返回下边界包含类型。
     Boundary fromBoundary();
 
-    /** 返回上边界包含类型。 */
+    /// 返回上边界包含类型。
     Boundary toBoundary();
 
-    /** 范围值的边界包含类型。 */
+    /// 范围值的边界包含类型。
     enum Boundary {
-      /** 从范围中排除边界值。 */
+      /// 从范围中排除边界值。
       OPEN,
 
-      /** 在范围中包含边界值。 */
+      /// 在范围中包含边界值。
       CLOSED
     }
   }
 
-  /**
-   * 日期范围值。
-   *
-   * @param from 下边界日期
-   * @param to 上边界日期
-   * @param fromBoundary 下边界包含类型
-   * @param toBoundary 上边界包含类型
-   */
+  /// 日期范围值。
+  ///
+  /// @param from 下边界日期
+  /// @param to 上边界日期
+  /// @param fromBoundary 下边界包含类型
+  /// @param toBoundary 上边界包含类型
   public record DateRange(LocalDate from, LocalDate to, Boundary fromBoundary, Boundary toBoundary)
       implements RangeValue {
     public DateRange {
@@ -161,14 +147,12 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
     }
   }
 
-  /**
-   * 日期时间范围值。
-   *
-   * @param from 下边界时刻
-   * @param to 上边界时刻
-   * @param fromBoundary 下边界包含类型
-   * @param toBoundary 上边界包含类型
-   */
+  /// 日期时间范围值。
+  ///
+  /// @param from 下边界时刻
+  /// @param to 上边界时刻
+  /// @param fromBoundary 下边界包含类型
+  /// @param toBoundary 上边界包含类型
   public record DateTimeRange(Instant from, Instant to, Boundary fromBoundary, Boundary toBoundary)
       implements RangeValue {
     public DateTimeRange {
@@ -181,14 +165,12 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
     }
   }
 
-  /**
-   * 数字范围值。
-   *
-   * @param from 下边界数字
-   * @param to 上边界数字
-   * @param fromBoundary 下边界包含类型
-   * @param toBoundary 上边界包含类型
-   */
+  /// 数字范围值。
+  ///
+  /// @param from 下边界数字
+  /// @param to 上边界数字
+  /// @param fromBoundary 下边界包含类型
+  /// @param toBoundary 上边界包含类型
   public record NumberRange(
       BigDecimal from, BigDecimal to, Boundary fromBoundary, Boundary toBoundary)
       implements RangeValue {
@@ -202,19 +184,15 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
     }
   }
 
-  /**
-   * EXISTS 操作值，表示字段的存在或不存在。
-   *
-   * @param shouldExist true 检查字段存在，false 检查字段不存在
-   */
+  /// EXISTS 操作值，表示字段的存在或不存在。
+  ///
+  /// @param shouldExist true 检查字段存在，false 检查字段不存在
   public record ExistsFlag(boolean shouldExist) implements Value {}
 
-  /**
-   * TOKEN 操作值，用于平台特定的令牌语义。
-   *
-   * @param tokenType 令牌的类型（例如 "MeSH"、"GeneSymbol"）
-   * @param tokenValue 令牌标识符值
-   */
+  /// TOKEN 操作值，用于平台特定的令牌语义。
+  ///
+  /// @param tokenType 令牌的类型（例如 "MeSH"、"GeneSymbol"）
+  /// @param tokenValue 令牌标识符值
   public record TokenValue(String tokenType, String tokenValue) implements Value {
     public TokenValue {
       Objects.requireNonNull(tokenType, "tokenType");

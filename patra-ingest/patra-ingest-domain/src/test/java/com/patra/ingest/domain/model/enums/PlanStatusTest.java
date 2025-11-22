@@ -6,11 +6,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * PlanStatus 枚举测试。
- *
- * @author Patra Team
- */
+/// PlanStatus 枚举测试。
+///
+/// @author Patra Team
 @DisplayName("PlanStatus 枚举测试")
 class PlanStatusTest {
 

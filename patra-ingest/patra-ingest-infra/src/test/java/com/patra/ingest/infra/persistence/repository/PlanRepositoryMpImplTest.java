@@ -19,36 +19,30 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-/**
- * PlanRepositoryMpImpl 单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>使用 Mockito Mock 所有依赖（Mapper, Converter）
- *   <li>不启动 Spring 容器，纯单元测试
- *   <li>验证方法调用、参数传递和返回值转换
- * </ul>
- *
- * <p>覆盖场景：
- *
- * <ul>
- *   <li>save() - insert 分支
- *   <li>save() - update 分支
- *   <li>findByPlanKey() - 找到记录
- *   <li>findByPlanKey() - 未找到记录
- *   <li>findByPlanKey() - null 或空白参数
- *   <li>existsByPlanKey() - 存在
- *   <li>existsByPlanKey() - 不存在
- *   <li>existsByPlanKey() - null 或空白参数
- *   <li>findById() - 找到记录
- *   <li>findById() - 未找到记录
- *   <li>findById() - null 参数
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// PlanRepositoryMpImpl 单元测试。
+///
+/// 测试策略：
+///
+/// - 使用 Mockito Mock 所有依赖（Mapper, Converter）
+///   - 不启动 Spring 容器，纯单元测试
+///   - 验证方法调用、参数传递和返回值转换
+///
+/// 覆盖场景：
+///
+/// - save() - insert 分支
+///   - save() - update 分支
+///   - findByPlanKey() - 找到记录
+///   - findByPlanKey() - 未找到记录
+///   - findByPlanKey() - null 或空白参数
+///   - existsByPlanKey() - 存在
+///   - existsByPlanKey() - 不存在
+///   - existsByPlanKey() - null 或空白参数
+///   - findById() - 找到记录
+///   - findById() - 未找到记录
+///   - findById() - null 参数
+///
+/// @author linqibin
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("PlanRepositoryMpImpl 单元测试")

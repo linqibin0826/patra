@@ -3,31 +3,27 @@ package com.patra.ingest.domain.model.enums;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import lombok.Getter;
 
-/**
- * 计划状态 (字典: ing_plan_status)。
- *
- * <p>字段映射: {@code ing_plan.status_code → DRAFT/SLICING/READY/ARCHIVED}
- *
- * <p>状态机语义:
- *
- * <ul>
- *   <li>DRAFT → 新创建,尚未开始切片
- *   <li>SLICING → 正在生成切片/任务
- *   <li>READY → 切片和任务创建成功
- *   <li>ARCHIVED → 生命周期已关闭,所有任务已完成(以前称为 COMPLETED)
- * </ul>
- *
- * <p><b>注意:</b> 计划状态仅反映其自身的生命周期。执行结果(部分完成/失败)应通过聚合任务状态来查询。
- */
+/// 计划状态 (字典: ing_plan_status)。
+///
+/// 字段映射: `ing_plan.status_code → DRAFT/SLICING/READY/ARCHIVED`
+///
+/// 状态机语义:
+///
+/// - DRAFT → 新创建,尚未开始切片
+///   - SLICING → 正在生成切片/任务
+///   - READY → 切片和任务创建成功
+///   - ARCHIVED → 生命周期已关闭,所有任务已完成(以前称为 COMPLETED)
+///
+/// **注意:** 计划状态仅反映其自身的生命周期。执行结果(部分完成/失败)应通过聚合任务状态来查询。
 @Getter
 public enum PlanStatus {
-  /** 草稿;尚未开始切片。 */
+  /// 草稿;尚未开始切片。
   DRAFT("DRAFT", "Draft"),
-  /** 切片进行中(不可重复转换)。 */
+  /// 切片进行中(不可重复转换)。
   SLICING("SLICING", "Slicing"),
-  /** 切片已生成,任务已就绪可调度。 */
+  /// 切片已生成,任务已就绪可调度。
   READY("READY", "Ready"),
-  /** 已归档;生命周期已关闭,所有任务已完成。 */
+  /// 已归档;生命周期已关闭,所有任务已完成。
   ARCHIVED("ARCHIVED", "Archived");
 
   private final String code;

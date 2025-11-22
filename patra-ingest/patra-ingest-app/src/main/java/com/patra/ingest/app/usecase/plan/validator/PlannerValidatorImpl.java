@@ -9,24 +9,19 @@ import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * {@link PlannerValidator} 的默认实现 - 执行基线检查,包括窗口合理性、队列背压和数据源能力验证
- *
- * <h3>阈值策略</h3>
- *
- * <ul>
- *   <li><b>DEFAULT_QUEUE_THRESHOLD = 50</b>: 待处理任务超过此值时应用背压
- *   <li><b>MAX_REASONABLE_WINDOW = 30 天</b>: 防止过大窗口导致任务量暴增
- *   <li><b>MIN_REASONABLE_WINDOW = 1 分钟</b>: 避免极小切片浪费资源
- * </ul>
- *
- * <h3>窗口要求</h3>
- *
- * <ul>
- *   <li><b>UPDATE 操作</b>: 可省略窗口
- *   <li><b>HARVEST 操作</b>: 必须提供显式窗口或增量能力配置
- * </ul>
- */
+/// {@link PlannerValidator} 的默认实现 - 执行基线检查,包括窗口合理性、队列背压和数据源能力验证
+///
+/// ### 阈值策略
+///
+/// - **DEFAULT_QUEUE_THRESHOLD = 50**: 待处理任务超过此值时应用背压
+///   - **MAX_REASONABLE_WINDOW = 30 天**: 防止过大窗口导致任务量暴增
+///   - **MIN_REASONABLE_WINDOW = 1 分钟**: 避免极小切片浪费资源
+///
+/// ### 窗口要求
+///
+/// - **UPDATE 操作**: 可省略窗口
+///   - **HARVEST 操作**: 必须提供显式窗口或增量能力配置
+///
 @Slf4j
 @Component
 public class PlannerValidatorImpl implements PlannerValidator {
@@ -60,7 +55,7 @@ public class PlannerValidatorImpl implements PlannerValidator {
     log.debug("Plan 组装验证通过");
   }
 
-  /** 验证采集窗口: 存在性、时序、持续时间边界 */
+  /// 验证采集窗口: 存在性、时序、持续时间边界
   private void validateWindow(PlanTriggerNorm triggerNorm, PlannerWindow window) {
     // UPDATE 操作可无需窗口
     if (triggerNorm.isUpdate()) {
@@ -107,7 +102,7 @@ public class PlannerValidatorImpl implements PlannerValidator {
     log.debug("窗口验证通过,持续时间={}分钟", windowDuration.toMinutes());
   }
 
-  /** 强制执行队列背压: 待处理任务超过阈值时停止规划 */
+  /// 强制执行队列背压: 待处理任务超过阈值时停止规划
   private void validateQueueBackpressure(long currentQueuedTasks) {
     if (currentQueuedTasks > DEFAULT_QUEUE_THRESHOLD) {
       throw new PlanValidationException(
@@ -118,7 +113,7 @@ public class PlannerValidatorImpl implements PlannerValidator {
     log.debug("队列背压检查通过,queuedTasks={}", currentQueuedTasks);
   }
 
-  /** 验证数据源能力以及偏移量/窗口完整性 */
+  /// 验证数据源能力以及偏移量/窗口完整性
   private void validateSourceCapabilities(
       PlanTriggerNorm triggerNorm, ProvenanceConfigSnapshot snapshot, PlannerWindow window) {
 
@@ -138,7 +133,7 @@ public class PlannerValidatorImpl implements PlannerValidator {
     }
   }
 
-  /** 验证增量采集能力 - 若数据源声明增量模式(非 FULL),必须暴露偏移量配置;否则需要显式窗口 */
+  /// 验证增量采集能力 - 若数据源声明增量模式(非 FULL),必须暴露偏移量配置;否则需要显式窗口
   private void validateIncrementalCapability(
       PlanTriggerNorm triggerNorm, ProvenanceConfigSnapshot snapshot, PlannerWindow window) {
 
@@ -171,7 +166,7 @@ public class PlannerValidatorImpl implements PlannerValidator {
     log.debug("增量能力验证通过,数据源={}", triggerNorm.provenanceCode());
   }
 
-  /** 当可选窗口配置(大小/跨度)无效时发出警告 */
+  /// 当可选窗口配置(大小/跨度)无效时发出警告
   private void validateWindowConfigCompleteness(ProvenanceConfigSnapshot snapshot) {
     ProvenanceConfigSnapshot.WindowOffsetConfig windowOffset = snapshot.windowOffset();
 

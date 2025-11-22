@@ -21,21 +21,17 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * TaskReadyMessageListener 单元测试。
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>正常消息消费流程
- *   <li>消息元数据提取(KEYS, TAGS, UserProperties)
- *   <li>TaskReadyCommand 组装
- *   <li>异常处理和日志记录
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// TaskReadyMessageListener 单元测试。
+///
+/// 测试覆盖:
+///
+/// - 正常消息消费流程
+///   - 消息元数据提取(KEYS, TAGS, UserProperties)
+///   - TaskReadyCommand 组装
+///   - 异常处理和日志记录
+///
+/// @author linqibin
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TaskReadyMessageListener 单元测试")
 class TaskReadyMessageListenerTest {
@@ -285,15 +281,13 @@ class TaskReadyMessageListenerTest {
     }
   }
 
-  /**
-   * 创建测试用 MessageExt 对象的辅助方法。
-   *
-   * @param topic 主题名称
-   * @param tags TAGS
-   * @param keys KEYS (dedupKey)
-   * @param payloadJson JSON 消息体
-   * @return MessageExt
-   */
+  /// 创建测试用 MessageExt 对象的辅助方法。
+  ///
+  /// @param topic 主题名称
+  /// @param tags TAGS
+  /// @param keys KEYS (dedupKey)
+  /// @param payloadJson JSON 消息体
+  /// @return MessageExt
   private MessageExt createMessageExt(String topic, String tags, String keys, String payloadJson) {
     MessageExt message = new MessageExt();
     message.setTopic(topic);

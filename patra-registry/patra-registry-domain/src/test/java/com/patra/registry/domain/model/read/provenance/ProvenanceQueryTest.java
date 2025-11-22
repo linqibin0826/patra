@@ -8,22 +8,18 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link ProvenanceQuery} 的单元测试。
- *
- * <p>测试覆盖：
- *
- * <ul>
- *   <li>成功构造场景（所有字段、可选字段为 null）
- *   <li>验证失败场景（id 必须为正数、必填字段不能为空白）
- *   <li>Trim 逻辑（自动修剪前后空格、trimOrNull 转换）
- *   <li>Record 语义（equals、hashCode、toString、组件访问器）
- *   <li>不可变性验证
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// {@link ProvenanceQuery} 的单元测试。
+///
+/// 测试覆盖：
+///
+/// - 成功构造场景（所有字段、可选字段为 null）
+///   - 验证失败场景（id 必须为正数、必填字段不能为空白）
+///   - Trim 逻辑（自动修剪前后空格、trimOrNull 转换）
+///   - Record 语义（equals、hashCode、toString、组件访问器）
+///   - 不可变性验证
+///
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("ProvenanceQuery 单元测试")
 class ProvenanceQueryTest {
 

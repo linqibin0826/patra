@@ -6,11 +6,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * RelayStatus 枚举测试。
- *
- * @author Patra Team
- */
+/// RelayStatus 枚举测试。
+///
+/// @author Patra Team
 @DisplayName("RelayStatus 枚举测试")
 class RelayStatusTest {
 

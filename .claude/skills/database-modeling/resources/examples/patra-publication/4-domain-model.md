@@ -102,73 +102,67 @@ import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import lombok.Getter;
 import java.time.Instant;
 
-/**
- * 采集计划聚合根。封装单个数据采集计划的蓝图及其状态机流转。
- *
- * <p>一致性边界：
- *
- * <ul>
- *   <li>计划的窗口规范、表达式快照、配置快照在整个生命周期中保持不可变
- *   <li>状态转换必须遵循预定义的状态机规则
- *   <li>计划键 (planKey) 保证同一业务场景的计划幂等性
- * </ul>
- *
- * <p>业务规则：
- *
- * <ul>
- *   <li>计划创建时处于 {@code DRAFT} 状态，包含窗口边界、切片策略和配置快照
- *   <li>切片生成开始时转换为 {@code SLICING} 状态
- *   <li>所有切片生成完成后转换为 {@code READY} 状态，准备任务调度
- *   <li>根据任务执行结果聚合，最终转换为 {@code ARCHIVED} 状态
- *   <li>计划键 = hash(provenance + operation + window + strategy) 确保幂等性
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 采集计划聚合根。封装单个数据采集计划的蓝图及其状态机流转。
+/// 
+/// 一致性边界：
+/// 
+/// - 计划的窗口规范、表达式快照、配置快照在整个生命周期中保持不可变
+///   - 状态转换必须遵循预定义的状态机规则
+///   - 计划键 (planKey) 保证同一业务场景的计划幂等性
+/// 
+/// 业务规则：
+/// 
+/// - 计划创建时处于 `DRAFT` 状态，包含窗口边界、切片策略和配置快照
+///   - 切片生成开始时转换为 `SLICING` 状态
+///   - 所有切片生成完成后转换为 `READY` 状态，准备任务调度
+///   - 根据任务执行结果聚合，最终转换为 `ARCHIVED` 状态
+///   - 计划键 = hash(provenance + operation + window + strategy) 确保幂等性
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Getter
 public class PlanAggregate {
 
-  /** 主键标识 */
+  /// 主键标识
   private Long id;
 
-  /** 关联的调度实例标识（外部触发源）。 */
+  /// 关联的调度实例标识（外部触发源）。
   private final Long scheduleInstanceId;
 
-  /** 业务幂等键，用于计划去重（hash(provenance + operation + window + strategy)）。 */
+  /// 业务幂等键，用于计划去重（hash(provenance + operation + window + strategy)）。
   private final String planKey;
 
-  /** 数据来源代码（如：pubmed、epmc）。 */
+  /// 数据来源代码（如：pubmed、epmc）。
   private final ProvenanceCode provenanceCode;
 
-  /** 操作类型（全量采集、增量采集、补偿采集等）。 */
+  /// 操作类型（全量采集、增量采集、补偿采集等）。
   private final OperationCode operationCode;
 
-  /** 表达式原型哈希值，用于变更检测。 */
+  /// 表达式原型哈希值，用于变更检测。
   private final String exprProtoHash;
 
-  /** 表达式原型快照（JSON 格式，编译前的原始表达式）。 */
+  /// 表达式原型快照（JSON 格式，编译前的原始表达式）。
   private final String exprProtoSnapshotJson;
 
-  /** 数据来源配置快照（执行时捕获的不可变配置）。 */
+  /// 数据来源配置快照（执行时捕获的不可变配置）。
   private final String provenanceConfigSnapshotJson;
 
-  /** 数据来源配置哈希值，用于变更检测。 */
+  /// 数据来源配置哈希值，用于变更检测。
   private final String provenanceConfigHash;
 
-  /** 窗口边界规范（支持 TIME/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/SINGLE 策略）。 */
+  /// 窗口边界规范（支持 TIME/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/SINGLE 策略）。
   private final WindowSpec windowSpec;
 
-  /** 切片策略代码（如：TIME、DATE、SINGLE）。 */
+  /// 切片策略代码（如：TIME、DATE、SINGLE）。
   private final String sliceStrategyCode;
 
-  /** 切片策略参数 JSON 载荷。 */
+  /// 切片策略参数 JSON 载荷。
   private final String sliceParamsJson;
 
-  /** 计划当前状态。 */
+  /// 计划当前状态。
   private PlanStatus status;
 
-  /** 乐观锁版本 */
+  /// 乐观锁版本
   private Long version;
 
   private PlanAggregate(
@@ -204,22 +198,20 @@ public class PlanAggregate {
     this.status = status == null ? PlanStatus.DRAFT : status;
   }
 
-  /**
-   * 创建全新的计划蓝图聚合根，初始状态为 {@link PlanStatus#DRAFT DRAFT}。
-   *
-   * @param scheduleInstanceId 调度实例标识
-   * @param planKey 幂等键
-   * @param provenanceCode 数据来源代码
-   * @param operationCode 操作代码
-   * @param exprProtoHash 表达式原型哈希
-   * @param exprProtoSnapshotJson 表达式原型快照 JSON
-   * @param provenanceConfigSnapshotJson 数据来源配置快照 JSON
-   * @param provenanceConfigHash 数据来源配置哈希
-   * @param windowSpec 窗口边界规范
-   * @param sliceStrategyCode 切片策略代码
-   * @param sliceParamsJson 切片策略参数 JSON
-   * @return 新创建的计划聚合根
-   */
+  /// 创建全新的计划蓝图聚合根，初始状态为 {@link PlanStatus#DRAFT DRAFT}。
+/// 
+/// @param scheduleInstanceId 调度实例标识
+/// @param planKey 幂等键
+/// @param provenanceCode 数据来源代码
+/// @param operationCode 操作代码
+/// @param exprProtoHash 表达式原型哈希
+/// @param exprProtoSnapshotJson 表达式原型快照 JSON
+/// @param provenanceConfigSnapshotJson 数据来源配置快照 JSON
+/// @param provenanceConfigHash 数据来源配置哈希
+/// @param windowSpec 窗口边界规范
+/// @param sliceStrategyCode 切片策略代码
+/// @param sliceParamsJson 切片策略参数 JSON
+/// @return 新创建的计划聚合根
   public static PlanAggregate create(
       Long scheduleInstanceId,
       String planKey,
@@ -249,25 +241,23 @@ public class PlanAggregate {
         PlanStatus.DRAFT);
   }
 
-  /**
-   * 从持久化状态重建已存在的计划聚合根（由仓储层使用）。
-   *
-   * @param id 主键标识
-   * @param scheduleInstanceId 调度实例标识
-   * @param planKey 计划幂等键
-   * @param provenanceCode 数据来源代码
-   * @param operationCode 操作代码字符串
-   * @param exprProtoHash 表达式哈希
-   * @param exprProtoSnapshotJson 表达式快照 JSON
-   * @param provenanceConfigSnapshotJson 配置快照 JSON
-   * @param provenanceConfigHash 配置快照哈希
-   * @param windowSpec 窗口边界规范
-   * @param sliceStrategyCode 切片策略代码
-   * @param sliceParamsJson 切片策略参数 JSON
-   * @param status 当前计划状态
-   * @param version 乐观锁版本
-   * @return 从持久化重建的计划聚合根
-   */
+  /// 从持久化状态重建已存在的计划聚合根（由仓储层使用）。
+/// 
+/// @param id 主键标识
+/// @param scheduleInstanceId 调度实例标识
+/// @param planKey 计划幂等键
+/// @param provenanceCode 数据来源代码
+/// @param operationCode 操作代码字符串
+/// @param exprProtoHash 表达式哈希
+/// @param exprProtoSnapshotJson 表达式快照 JSON
+/// @param provenanceConfigSnapshotJson 配置快照 JSON
+/// @param provenanceConfigHash 配置快照哈希
+/// @param windowSpec 窗口边界规范
+/// @param sliceStrategyCode 切片策略代码
+/// @param sliceParamsJson 切片策略参数 JSON
+/// @param status 当前计划状态
+/// @param version 乐观锁版本
+/// @return 从持久化重建的计划聚合根
   public static PlanAggregate restore(
       Long id,
       Long scheduleInstanceId,
@@ -303,11 +293,9 @@ public class PlanAggregate {
     return aggregate;
   }
 
-  /**
-   * 将计划从 DRAFT 状态转换为 SLICING 状态。
-   *
-   * @throws IllegalStateException 如果计划不处于 DRAFT 状态
-   */
+  /// 将计划从 DRAFT 状态转换为 SLICING 状态。
+/// 
+/// @throws IllegalStateException 如果计划不处于 DRAFT 状态
   public void startSlicing() {
     if (this.status != PlanStatus.DRAFT) {
       throw new IllegalStateException("计划状态无效，无法开始切片生成");
@@ -315,30 +303,26 @@ public class PlanAggregate {
     this.status = PlanStatus.SLICING;
   }
 
-  /** 在所有切片生成完成后，将计划标记为就绪状态。 */
+  /// 在所有切片生成完成后，将计划标记为就绪状态。
   public void markReady() {
     this.status = PlanStatus.READY;
   }
 
-  /**
-   * 更新计划状态为指定值。
-   *
-   * <p>此方法由事件处理器使用，根据聚合的切片状态更新计划状态。
-   *
-   * @param newStatus 要设置的新状态
-   * @throws IllegalArgumentException 如果 newStatus 为 null
-   */
+  /// 更新计划状态为指定值。
+/// 
+/// 此方法由事件处理器使用，根据聚合的切片状态更新计划状态。
+/// 
+/// @param newStatus 要设置的新状态
+/// @throws IllegalArgumentException 如果 newStatus 为 null
   public void updateStatus(PlanStatus newStatus) {
     Assert.notNull(newStatus, "newStatus 不能为 null");
     this.status = newStatus;
   }
 
-  /**
-   * 便捷访问器，当使用 TIME 策略时返回窗口起始时间。
-   * 对于不包含时间窗口的策略返回 {@code null}。
-   *
-   * @return 窗口起始时间或 {@code null}
-   */
+  /// 便捷访问器，当使用 TIME 策略时返回窗口起始时间。
+/// 对于不包含时间窗口的策略返回 `null`。
+/// 
+/// @return 窗口起始时间或 `null`
   public Instant getWindowFrom() {
     if (windowSpec instanceof WindowSpec.Time timeSpec) {
       return timeSpec.from();
@@ -346,12 +330,10 @@ public class PlanAggregate {
     return null;
   }
 
-  /**
-   * 便捷访问器，当使用 TIME 策略时返回窗口结束时间。
-   * 对于不暴露时间窗口的策略返回 {@code null}。
-   *
-   * @return 窗口结束时间或 {@code null}
-   */
+  /// 便捷访问器，当使用 TIME 策略时返回窗口结束时间。
+/// 对于不暴露时间窗口的策略返回 `null`。
+/// 
+/// @return 窗口结束时间或 `null`
   public Instant getWindowTo() {
     if (windowSpec instanceof WindowSpec.Time timeSpec) {
       return timeSpec.to();
@@ -359,20 +341,16 @@ public class PlanAggregate {
     return null;
   }
 
-  /**
-   * 获取数据来源代码字符串值。
-   *
-   * @return 数据来源代码字符串
-   */
+  /// 获取数据来源代码字符串值。
+/// 
+/// @return 数据来源代码字符串
   public String getProvenanceCodeValue() {
     return provenanceCode.getCode();
   }
 
-  /**
-   * 获取操作代码字符串（如果存在）。
-   *
-   * @return 操作代码或 {@code null}
-   */
+  /// 获取操作代码字符串（如果存在）。
+/// 
+/// @return 操作代码或 `null`
   public String getOperationCodeValue() {
     return operationCode == null ? null : operationCode.getCode();
   }
@@ -391,24 +369,20 @@ import com.patra.ingest.domain.model.enums.SliceStrategy;
 import java.time.Instant;
 import java.util.Map;
 
-/**
- * 窗口规范值对象密封接口,表示数据采集窗口的边界规范。
- *
- * <p>密封继承层次确保编译时完备性检查。支持多种数据采集分区策略:
- *
- * <ul>
- *   <li>TIME - 基于时间的窗口(from/to 时间戳)
- *   <li>ID_RANGE - 基于ID范围的窗口(from/to ID)
- *   <li>CURSOR_LANDMARK - 基于游标/分页的窗口
- *   <li>VOLUME_BUDGET - 基于容量预算的窗口
- *   <li>SINGLE - 单一窗口(无分区)
- * </ul>
- *
- * <p>不可变性:所有实现都是不可变的Record
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 窗口规范值对象密封接口,表示数据采集窗口的边界规范。
+/// 
+/// 密封继承层次确保编译时完备性检查。支持多种数据采集分区策略:
+/// 
+/// - TIME - 基于时间的窗口(from/to 时间戳)
+///   - ID_RANGE - 基于ID范围的窗口(from/to ID)
+///   - CURSOR_LANDMARK - 基于游标/分页的窗口
+///   - VOLUME_BUDGET - 基于容量预算的窗口
+///   - SINGLE - 单一窗口(无分区)
+/// 
+/// 不可变性:所有实现都是不可变的Record
+/// 
+/// @author linqibin
+/// @since 0.1.0
 public sealed interface WindowSpec
     permits WindowSpec.Time,
         WindowSpec.IdRange,
@@ -416,34 +390,27 @@ public sealed interface WindowSpec
         WindowSpec.VolumeBudget,
         WindowSpec.Single {
 
-  /**
-   * 获取窗口规范的策略类型。
-   *
-   * @return 切片策略枚举
-   */
+  /// 获取窗口规范的策略类型。
+/// 
+/// @return 切片策略枚举
   SliceStrategy strategy();
 
-  /**
-   * 转换为可JSON序列化的Map,用于持久化层存储。
-   *
-   * @return 包含策略代码和策略特定字段的JSON可序列化Map
-   */
+  /// 转换为可JSON序列化的Map,用于持久化层存储。
+/// 
+/// @return 包含策略代码和策略特定字段的JSON可序列化Map
   Map<String, Object> toMap();
 
   // ============ 策略实现 ============
 
-  /**
-   * 基于时间的窗口规范值对象。
-   *
-   * <p>业务约束:
-   * <ul>
-   *   <li>from和to必须非空
-   *   <li>from必须早于或等于to
-   * </ul>
-   *
-   * @param from 起始时间戳(闭区间)
-   * @param to 结束时间戳(开区间)
-   */
+  /// 基于时间的窗口规范值对象。
+/// 
+/// 业务约束:
+/// 
+/// - from和to必须非空
+///   - from必须早于或等于to
+/// 
+/// @param from 起始时间戳(闭区间)
+/// @param to 结束时间戳(开区间)
   record Time(Instant from, Instant to) implements WindowSpec {
     public Time {
       Assert.notNull(from, "时间窗口 from 不能为空");
@@ -469,12 +436,10 @@ public sealed interface WindowSpec
     }
   }
 
-  /**
-   * 基于ID范围的窗口规范值对象。
-   *
-   * @param from 起始ID(闭区间)
-   * @param to 结束ID(闭区间)
-   */
+  /// 基于ID范围的窗口规范值对象。
+/// 
+/// @param from 起始ID(闭区间)
+/// @param to 结束ID(闭区间)
   record IdRange(Long from, Long to) implements WindowSpec {
     public IdRange {
       Assert.notNull(from, "ID 范围 from 不能为空");
@@ -494,11 +459,9 @@ public sealed interface WindowSpec
     }
   }
 
-  /**
-   * 单一窗口规范值对象(无分区)。
-   *
-   * <p>使用场景:不需要窗口分区的简单采集场景
-   */
+  /// 单一窗口规范值对象(无分区)。
+/// 
+/// 使用场景:不需要窗口分区的简单采集场景
   record Single() implements WindowSpec {
     @Override
     public SliceStrategy strategy() {
@@ -513,23 +476,17 @@ public sealed interface WindowSpec
 
   // ============ 工厂方法 ============
 
-  /**
-   * 创建基于时间的窗口规范。
-   */
+  /// 创建基于时间的窗口规范。
   static Time ofTime(Instant from, Instant to) {
     return new Time(from, to);
   }
 
-  /**
-   * 创建基于ID范围的窗口规范。
-   */
+  /// 创建基于ID范围的窗口规范。
   static IdRange ofIdRange(Long from, Long to) {
     return new IdRange(from, to);
   }
 
-  /**
-   * 创建单一窗口规范(无分区)。
-   */
+  /// 创建单一窗口规范(无分区)。
   static Single ofSingle() {
     return new Single();
   }
@@ -546,27 +503,24 @@ package com.patra.ingest.domain.model.enums;
 import cn.hutool.core.lang.Assert;
 import lombok.Getter;
 
-/**
- * 采集操作类型 (字典: ing_operation)。
- *
- * <p><b>持久化映射</b>
- * <ul>
- *   <li>ing_plan.operation_code → HARVEST/BACKFILL/UPDATE/METRICS
- *   <li>ing_task.operation_code → HARVEST/BACKFILL/UPDATE/METRICS
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 采集操作类型 (字典: ing_operation)。
+/// 
+/// **持久化映射**
+/// 
+/// - ing_plan.operation_code → HARVEST/BACKFILL/UPDATE/METRICS
+///   - ing_task.operation_code → HARVEST/BACKFILL/UPDATE/METRICS
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Getter
 public enum OperationCode {
-  /** 全量采集;初次运行或重建窗口的全量数据采集。 */
+  /// 全量采集;初次运行或重建窗口的全量数据采集。
   HARVEST("HARVEST", "Full ingestion"),
-  /** 历史回填;填补数据缺口或修正历史数据。 */
+  /// 历史回填;填补数据缺口或修正历史数据。
   BACKFILL("BACKFILL", "Backfill ingestion"),
-  /** 增量更新;基于游标推进的增量数据更新。 */
+  /// 增量更新;基于游标推进的增量数据更新。
   UPDATE("UPDATE", "Incremental update"),
-  /** 指标采集;面向指标统计的操作(读取密集型)。 */
+  /// 指标采集;面向指标统计的操作(读取密集型)。
   METRICS("METRICS", "Metrics collection");
 
   private final String code;
@@ -577,13 +531,11 @@ public enum OperationCode {
     this.description = description;
   }
 
-  /**
-   * 将提供的代码解析为枚举值。
-   *
-   * @param value 字符串代码
-   * @return 匹配的枚举值
-   * @throws IllegalArgumentException 当值为 null 或未知时
-   */
+  /// 将提供的代码解析为枚举值。
+/// 
+/// @param value 字符串代码
+/// @return 匹配的枚举值
+/// @throws IllegalArgumentException 当值为 null 或未知时
   public static OperationCode fromCode(String value) {
     Assert.notNull(value, "操作代码不能为 null");
     String normalized = value.trim().toUpperCase();
@@ -607,28 +559,26 @@ package com.patra.ingest.domain.model.enums;
 import cn.hutool.core.lang.Assert;
 import lombok.Getter;
 
-/**
- * 计划状态 (字典: ing_plan_status)。
- *
- * <p>字段映射: {@code ing_plan.status_code → DRAFT/SLICING/READY/ARCHIVED}
- *
- * <p>状态机语义:
- * <ul>
- *   <li>DRAFT → 新创建,尚未开始切片
- *   <li>SLICING → 正在生成切片/任务
- *   <li>READY → 切片和任务创建成功
- *   <li>ARCHIVED → 生命周期已关闭,所有任务已完成
- * </ul>
- */
+/// 计划状态 (字典: ing_plan_status)。
+/// 
+/// 字段映射: `ing_plan.status_code → DRAFT/SLICING/READY/ARCHIVED`
+/// 
+/// 状态机语义:
+/// 
+/// - DRAFT → 新创建,尚未开始切片
+///   - SLICING → 正在生成切片/任务
+///   - READY → 切片和任务创建成功
+///   - ARCHIVED → 生命周期已关闭,所有任务已完成
+/// 
 @Getter
 public enum PlanStatus {
-  /** 草稿;尚未开始切片。 */
+  /// 草稿;尚未开始切片。
   DRAFT("DRAFT", "Draft"),
-  /** 切片进行中。 */
+  /// 切片进行中。
   SLICING("SLICING", "Slicing"),
-  /** 切片已生成,任务已就绪可调度。 */
+  /// 切片已生成,任务已就绪可调度。
   READY("READY", "Ready"),
-  /** 已归档;生命周期已关闭,所有任务已完成。 */
+  /// 已归档;生命周期已关闭,所有任务已完成。
   ARCHIVED("ARCHIVED", "Archived");
 
   private final String code;
@@ -660,11 +610,9 @@ package com.patra.common.enums;
 import cn.hutool.core.lang.Assert;
 import lombok.Getter;
 
-/**
- * 上游数据源(溯源/Provenance)枚举。
- *
- * <p>为常见的文献和元数据源提供规范标识符。
- */
+/// 上游数据源(溯源/Provenance)枚举。
+/// 
+/// 为常见的文献和元数据源提供规范标识符。
 @Getter
 public enum ProvenanceCode {
   PUBMED("PUBMED", "PubMed"),
@@ -678,10 +626,10 @@ public enum ProvenanceCode {
   CORE("CORE", "CORE"),
   DATACITE("DATACITE", "DataCite");
 
-  /** 用于持久化和交换的大写代码。 */
+  /// 用于持久化和交换的大写代码。
   private final String code;
 
-  /** 数据源的人类可读描述。 */
+  /// 数据源的人类可读描述。
   private final String description;
 
   ProvenanceCode(String code, String display) {
@@ -689,13 +637,11 @@ public enum ProvenanceCode {
     this.description = display;
   }
 
-  /**
-   * 将字符串解析为 ProvenanceCode。
-   *
-   * @param s 数据源标识符
-   * @return 匹配的数据源代码
-   * @throws IllegalArgumentException 如果标识符为 null 或未知
-   */
+  /// 将字符串解析为 ProvenanceCode。
+/// 
+/// @param s 数据源标识符
+/// @return 匹配的数据源代码
+/// @throws IllegalArgumentException 如果标识符为 null 或未知
   public static ProvenanceCode parse(String s) {
     Assert.notNull(s, "数据源标识符不能为 null");
     String norm = s.trim().toUpperCase().replace('-', '_');

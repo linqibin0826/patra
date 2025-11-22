@@ -23,35 +23,31 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * 仅日期的切片策略(应用层·策略)
- *
- * <p>使用固定步长将上游规划窗口 [from, to) 拆分为多个半开的仅日期子窗口; 每个子窗口与业务表达式配对形成独立的 Slice。
- *
- * <p>此策略专为仅支持日期级查询而不支持时间精度的数据源设计(例如 PubMed 仅接受 YYYY-MM-DD 格式)。
- *
- * <p>设计要点:
- *
- * <ul>
- *   <li>步长配置:优先使用触发上下文中的标准化步长(ISO-8601 Duration);无效时回退到默认 1 天。
- *   <li>时间字段解析:offsetFieldKey(DATE 模式) > windowDateFieldKey。
- *   <li>日期转换:Instant 时间戳使用 UTC 时区转换为 LocalDate 以确保一致的日期提取。
- *   <li>范围语义:使用 {@link Exprs#rangeDate} 的半开区间 [from, to) 以匹配 PubMed 查询行为。
- *   <li>幂等性:构建规范化 JSON 并取 sha256;重复规划产生相同签名。
- *   <li>边界处理:如果最后一个切片短于步长,则对齐到窗口结束。
- *   <li>复杂度:O(n),n = ceil((to - from) / step)。
- * </ul>
- *
- * <p>返回空列表的情况:窗口缺失;from >= to;或时间字段无法解析。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 仅日期的切片策略(应用层·策略)
+///
+/// 使用固定步长将上游规划窗口 [from, to) 拆分为多个半开的仅日期子窗口; 每个子窗口与业务表达式配对形成独立的 Slice。
+///
+/// 此策略专为仅支持日期级查询而不支持时间精度的数据源设计(例如 PubMed 仅接受 YYYY-MM-DD 格式)。
+///
+/// 设计要点:
+///
+/// - 步长配置:优先使用触发上下文中的标准化步长(ISO-8601 Duration);无效时回退到默认 1 天。
+///   - 时间字段解析:offsetFieldKey(DATE 模式) > windowDateFieldKey。
+///   - 日期转换:Instant 时间戳使用 UTC 时区转换为 LocalDate 以确保一致的日期提取。
+///   - 范围语义:使用 {@link Exprs#rangeDate} 的半开区间 [from, to) 以匹配 PubMed 查询行为。
+///   - 幂等性:构建规范化 JSON 并取 sha256;重复规划产生相同签名。
+///   - 边界处理:如果最后一个切片短于步长,则对齐到窗口结束。
+///   - 复杂度:O(n),n = ceil((to - from) / step)。
+///
+/// 返回空列表的情况:窗口缺失;from >= to;或时间字段无法解析。
+///
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Component
 public class DateSlicePlanner implements SlicePlanner {
 
-  /** 默认切片步长(1 天) */
+  /// 默认切片步长(1 天)
   private static final Duration DEFAULT_STEP = Duration.ofDays(1);
 
   @Override
@@ -163,26 +159,22 @@ public class DateSlicePlanner implements SlicePlanner {
     return result;
   }
 
-  /**
-   * 构建日期窗口约束表达式。半开区间语义:from 包含,to 排除。
-   *
-   * @param field 时间字段名
-   * @param from 切片开始日期(包含)
-   * @param to 切片结束日期(排除)
-   * @return 范围表达式
-   */
+  /// 构建日期窗口约束表达式。半开区间语义:from 包含,to 排除。
+  ///
+  /// @param field 时间字段名
+  /// @param from 切片开始日期(包含)
+  /// @param to 切片结束日期(排除)
+  /// @return 范围表达式
   private Expr buildDateWindowConstraint(String field, LocalDate from, LocalDate to) {
     // 使用 rangeDate 的显式边界:[from, to)
     // includeFrom=true(CLOSED), includeTo=false(OPEN)
     return Exprs.rangeDate(field, from, to, true, false);
   }
 
-  /**
-   * 从配置快照解析时间字段。优先级:DATE 模式 offsetFieldKey > windowDateFieldKey。
-   *
-   * @param snapshot 溯源/数据源配置快照
-   * @return 可用于范围过滤的字段名;无法解析时返回 null
-   */
+  /// 从配置快照解析时间字段。优先级:DATE 模式 offsetFieldKey > windowDateFieldKey。
+  ///
+  /// @param snapshot 溯源/数据源配置快照
+  /// @return 可用于范围过滤的字段名;无法解析时返回 null
   private String resolveTimeField(ProvenanceConfigSnapshot snapshot) {
     if (snapshot == null) {
       return null;
@@ -201,14 +193,12 @@ public class DateSlicePlanner implements SlicePlanner {
     return null;
   }
 
-  /**
-   * 构建切片规格 JSON 并规范化。字段:strategy、window(from/to + boundary + timezone)。 规范化失败时,回退到最小 JSON 以保持哈希可用。
-   *
-   * @param context 切片上下文
-   * @param from 窗口开始(Instant 用于审计)
-   * @param to 窗口结束(Instant 用于审计)
-   * @return 规范化结果(规范化 JSON + 哈希材料)
-   */
+  /// 构建切片规格 JSON 并规范化。字段:strategy、window(from/to + boundary + timezone)。 规范化失败时,回退到最小 JSON 以保持哈希可用。
+  ///
+  /// @param context 切片上下文
+  /// @param from 窗口开始(Instant 用于审计)
+  /// @param to 窗口结束(Instant 用于审计)
+  /// @return 规范化结果(规范化 JSON + 哈希材料)
   private JsonNormalizerResult buildSpec(SlicePlanningContext context, Instant from, Instant to) {
     ProvenanceConfigSnapshot configSnapshot = context.configSnapshot();
     ObjectNode root = JsonNodeFactory.instance.objectNode();

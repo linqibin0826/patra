@@ -16,48 +16,40 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-/**
- * 任务（Task）仓储实现,基于 MyBatis-Plus。
- *
- * <p>职责:
- *
- * <ul>
- *   <li>持久化和检索任务聚合根实体
- *   <li>按计划 ID 查询任务,支持切片重放和统计
- *   <li>统计队列中的待处理任务,用于检测数据源队列积压
- *   <li>支持租约操作,包括 CAS 获取、续约和标记为 RUNNING 状态
- * </ul>
- *
- * <p>日志策略:
- *
- * <ul>
- *   <li>DEBUG: insert/update 操作,包括 id 和 planId
- *   <li>INFO: 租约获取和续约等关键事件
- *   <li>高频查询操作不记录日志,减少 I/O
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 任务（Task）仓储实现,基于 MyBatis-Plus。
+///
+/// 职责:
+///
+/// - 持久化和检索任务聚合根实体
+///   - 按计划 ID 查询任务,支持切片重放和统计
+///   - 统计队列中的待处理任务,用于检测数据源队列积压
+///   - 支持租约操作,包括 CAS 获取、续约和标记为 RUNNING 状态
+///
+/// 日志策略:
+///
+/// - DEBUG: insert/update 操作,包括 id 和 planId
+///   - INFO: 租约获取和续约等关键事件
+///   - 高频查询操作不记录日志,减少 I/O
+///
+/// @author linqibin
+/// @since 0.1.0
 @Repository
 @RequiredArgsConstructor
 @Slf4j
 public class TaskRepositoryMpImpl implements TaskRepository {
 
-  /** Task Mapper */
+  /// Task Mapper
   private final TaskMapper mapper;
 
-  /** Task 转换器 */
+  /// Task 转换器
   private final TaskConverter converter;
 
-  /**
-   * 保存任务。
-   *
-   * <p>根据 ID 是否存在决定插入或更新。自动生成的 ID 和 version 字段会被回写;操作类型在 DEBUG 级别记录。
-   *
-   * @param task 任务聚合根
-   * @return 持久化后的任务聚合根
-   */
+  /// 保存任务。
+  ///
+  /// 根据 ID 是否存在决定插入或更新。自动生成的 ID 和 version 字段会被回写;操作类型在 DEBUG 级别记录。
+  ///
+  /// @param task 任务聚合根
+  /// @return 持久化后的任务聚合根
   @Override
   public TaskAggregate save(TaskAggregate task) {
     TaskDO entity = converter.toEntity(task);
@@ -83,14 +75,12 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     return task;
   }
 
-  /**
-   * Batch saves tasks by sequentially calling {@link #save(TaskAggregate)}.
-   *
-   * <p>Ensures version and ID write-back consistency.
-   *
-   * @param tasks task list
-   * @return persisted task collection
-   */
+  /// Batch saves tasks by sequentially calling {@link #save(TaskAggregate)}.
+  ///
+  /// Ensures version and ID write-back consistency.
+  ///
+  /// @param tasks task list
+  /// @return persisted task collection
   @Override
   public List<TaskAggregate> saveAll(List<TaskAggregate> tasks) {
     List<TaskAggregate> persisted = new ArrayList<>(tasks.size());
@@ -100,12 +90,10 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     return persisted;
   }
 
-  /**
-   * Finds tasks by plan ID.
-   *
-   * @param planId plan ID
-   * @return list of task aggregates, empty if none found
-   */
+  /// Finds tasks by plan ID.
+  ///
+  /// @param planId plan ID
+  /// @return list of task aggregates, empty if none found
   @Override
   public List<TaskAggregate> findByPlanId(Long planId) {
     if (planId == null) {
@@ -128,16 +116,14 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     return aggregates;
   }
 
-  /**
-   * Finds the task associated with a specific slice (enforces 1:1 relationship).
-   *
-   * <p><b>Note:</b> After refactoring, Slice:Task is a 1:1 relationship protected by database
-   * unique constraint {@code uk_task_slice}. This method returns at most one task.
-   *
-   * @param sliceId slice ID
-   * @return task aggregate if exists, or {@link Optional#empty()}
-   * @throws IllegalArgumentException if sliceId is null
-   */
+  /// Finds the task associated with a specific slice (enforces 1:1 relationship).
+  ///
+  /// **Note:** After refactoring, Slice:Task is a 1:1 relationship protected by database
+  /// unique constraint `uk_task_slice`. This method returns at most one task.
+  ///
+  /// @param sliceId slice ID
+  /// @return task aggregate if exists, or {@link Optional#empty()}
+  /// @throws IllegalArgumentException if sliceId is null
   @Override
   public Optional<TaskAggregate> findBySliceId(Long sliceId) {
     if (sliceId == null) {
@@ -151,12 +137,10 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     return taskDO == null ? Optional.empty() : Optional.of(converter.toAggregate(taskDO));
   }
 
-  /**
-   * Finds a task by task ID.
-   *
-   * @param taskId task ID
-   * @return task aggregate, empty if not found
-   */
+  /// Finds a task by task ID.
+  ///
+  /// @param taskId task ID
+  /// @return task aggregate, empty if not found
   @Override
   public Optional<TaskAggregate> findById(Long taskId) {
     if (taskId == null) {
@@ -166,13 +150,11 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     return entity == null ? Optional.empty() : Optional.of(converter.toAggregate(entity));
   }
 
-  /**
-   * Counts tasks in QUEUED status with optional filtering by provenance and operation.
-   *
-   * @param provenanceCode provenance code, nullable for no filtering
-   * @param operationCode operation code, nullable for no filtering
-   * @return count of queued tasks
-   */
+  /// Counts tasks in QUEUED status with optional filtering by provenance and operation.
+  ///
+  /// @param provenanceCode provenance code, nullable for no filtering
+  /// @param operationCode operation code, nullable for no filtering
+  /// @return count of queued tasks
   @Override
   public long countQueuedTasks(ProvenanceCode provenanceCode, String operationCode) {
     QueryWrapper<TaskDO> wrapper = new QueryWrapper<>();
@@ -194,16 +176,14 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     return count;
   }
 
-  /**
-   * Attempts to acquire lease using CAS operation.
-   *
-   * @param taskId task ID
-   * @param owner lease owner identifier
-   * @param now current time (UTC)
-   * @param ttlSeconds lease TTL in seconds
-   * @param idempotentKey idempotency key for defensive validation
-   * @return true if lease acquired successfully, false if held by others or conditions not met
-   */
+  /// Attempts to acquire lease using CAS operation.
+  ///
+  /// @param taskId task ID
+  /// @param owner lease owner identifier
+  /// @param now current time (UTC)
+  /// @param ttlSeconds lease TTL in seconds
+  /// @param idempotentKey idempotency key for defensive validation
+  /// @return true if lease acquired successfully, false if held by others or conditions not met
   @Override
   public boolean tryAcquireLease(
       Long taskId, String owner, Instant now, int ttlSeconds, String idempotentKey) {
@@ -218,15 +198,13 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     return affected > 0;
   }
 
-  /**
-   * Marks task as RUNNING and updates lease.
-   *
-   * @param taskId task ID
-   * @param owner lease owner
-   * @param now current time
-   * @param ttlSeconds lease TTL in seconds
-   * @return true if update succeeded, false if lease lost
-   */
+  /// Marks task as RUNNING and updates lease.
+  ///
+  /// @param taskId task ID
+  /// @param owner lease owner
+  /// @param now current time
+  /// @param ttlSeconds lease TTL in seconds
+  /// @return true if update succeeded, false if lease lost
   @Override
   public boolean markRunningWithLease(Long taskId, String owner, Instant now, int ttlSeconds) {
     int affected = mapper.markRunningWithLease(taskId, owner, now, ttlSeconds);
@@ -238,15 +216,13 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     return affected > 0;
   }
 
-  /**
-   * Renews lease via heartbeat.
-   *
-   * @param taskId task ID
-   * @param owner lease owner
-   * @param now current time
-   * @param ttlSeconds lease TTL in seconds
-   * @return true if renewal succeeded, false if lease lost
-   */
+  /// Renews lease via heartbeat.
+  ///
+  /// @param taskId task ID
+  /// @param owner lease owner
+  /// @param now current time
+  /// @param ttlSeconds lease TTL in seconds
+  /// @return true if renewal succeeded, false if lease lost
   @Override
   public boolean renewLease(Long taskId, String owner, Instant now, int ttlSeconds) {
     int affected = mapper.renewLease(taskId, owner, now, ttlSeconds);
@@ -260,15 +236,13 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     return affected > 0;
   }
 
-  /**
-   * Batch renews leases via heartbeat for performance optimization.
-   *
-   * @param taskIds list of task IDs
-   * @param owner lease owner
-   * @param now current time
-   * @param ttlSeconds lease TTL in seconds
-   * @return count of successfully renewed tasks
-   */
+  /// Batch renews leases via heartbeat for performance optimization.
+  ///
+  /// @param taskIds list of task IDs
+  /// @param owner lease owner
+  /// @param now current time
+  /// @param ttlSeconds lease TTL in seconds
+  /// @return count of successfully renewed tasks
   @Override
   public int batchRenewLeases(List<Long> taskIds, String owner, Instant now, int ttlSeconds) {
     if (taskIds == null || taskIds.isEmpty()) {

@@ -12,22 +12,18 @@ import java.nio.file.Files;
 import org.junit.jupiter.api.*;
 import org.springframework.web.client.RestClient;
 
-/**
- * RestClient 文件下载器单元测试。
- *
- * <p>使用 WireMock 模拟 HTTP 响应，测试文件下载和校验功能。
- *
- * <p><b>测试策略</b>：
- *
- * <ul>
- *   <li>单元测试：使用 WireMock 模拟 HTTP 服务器
- *   <li>测试覆盖：download()、validateChecksum()、超时处理
- *   <li>边界情况：网络错误、文件损坏、校验失败
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// RestClient 文件下载器单元测试。
+///
+/// 使用 WireMock 模拟 HTTP 响应，测试文件下载和校验功能。
+///
+/// **测试策略**：
+///
+/// - 单元测试：使用 WireMock 模拟 HTTP 服务器
+///   - 测试覆盖：download()、validateChecksum()、超时处理
+///   - 边界情况：网络错误、文件损坏、校验失败
+///
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("RestClientMeshFileDownloadImpl 单元测试")
 class RestClientMeshFileDownloadImplTest {
 
@@ -65,11 +61,15 @@ class RestClientMeshFileDownloadImplTest {
   @DisplayName("下载文件 - 应该成功下载并保存到本地")
   void download_validUrl_shouldDownloadFile() throws IOException {
     // Given: Mock HTTP 响应
-    String xmlContent = "<DescriptorRecordSet><DescriptorRecord>test</DescriptorRecord></DescriptorRecordSet>";
+    String xmlContent =
+        "<DescriptorRecordSet><DescriptorRecord>test</DescriptorRecord></DescriptorRecordSet>";
     stubFor(
         get(urlEqualTo("/mesh/desc2025.xml"))
             .willReturn(
-                aResponse().withStatus(200).withHeader("Content-Type", "application/xml").withBody(xmlContent)));
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/xml")
+                    .withBody(xmlContent)));
 
     // When: 下载文件
     String sourceUrl = wireMockServer.url("/mesh/desc2025.xml");
@@ -175,7 +175,10 @@ class RestClientMeshFileDownloadImplTest {
     stubFor(
         get(urlEqualTo("/mesh/large.xml"))
             .willReturn(
-                aResponse().withStatus(200).withHeader("Content-Type", "application/xml").withBody(largeContent)));
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/xml")
+                    .withBody(largeContent)));
 
     // When: 下载大文件
     String sourceUrl = wireMockServer.url("/mesh/large.xml");

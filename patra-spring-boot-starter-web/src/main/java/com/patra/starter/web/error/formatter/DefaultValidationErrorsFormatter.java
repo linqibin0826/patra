@@ -10,20 +10,18 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 
-/**
- * 默认的 {@link ValidationErrorsFormatter}，用于掩盖敏感值并限制返回给客户端的验证错误数量。
- *
- * @author linqibin
- * @since 0.1.0
- * @see com.patra.starter.web.error.model.ValidationError
- */
+/// 默认的 {@link ValidationErrorsFormatter}，用于掩盖敏感值并限制返回给客户端的验证错误数量。
+///
+/// @author linqibin
+/// @since 0.1.0
+/// @see com.patra.starter.web.error.model.ValidationError
 @Slf4j
 public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatter {
 
-  /** 响应中包含的验证错误的最大数量。 */
+  /// 响应中包含的验证错误的最大数量。
   private static final int MAX_ERRORS = 100;
 
-  /** 应被掩盖的字段名称模式（不区分大小写，子字符串匹配）。 */
+  /// 应被掩盖的字段名称模式（不区分大小写，子字符串匹配）。
   private static final Set<String> SENSITIVE_PATTERNS =
       Set.of(
           "password",
@@ -58,12 +56,10 @@ public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatt
     return errors;
   }
 
-  /**
-   * 将 Spring 的 {@link ObjectError} 映射到 {@link ValidationError} 并掩盖敏感值。
-   *
-   * @param error Spring 验证报告的绑定错误
-   * @return 清理后的验证错误
-   */
+  /// 将 Spring 的 {@link ObjectError} 映射到 {@link ValidationError} 并掩盖敏感值。
+  ///
+  /// @param error Spring 验证报告的绑定错误
+  /// @return 清理后的验证错误
   private ValidationError mapToValidationError(ObjectError error) {
     if (error instanceof FieldError fieldError) {
       String fieldName = fieldError.getField();
@@ -77,13 +73,11 @@ public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatt
     }
   }
 
-  /**
-   * 基于配置的名称模式掩盖敏感的字段值。
-   *
-   * @param fieldName 逻辑字段名
-   * @param value 客户端提供的被拒绝值
-   * @return 当被认为是敏感时的掩盖值；否则为原始值
-   */
+  /// 基于配置的名称模式掩盖敏感的字段值。
+  ///
+  /// @param fieldName 逻辑字段名
+  /// @param value 客户端提供的被拒绝值
+  /// @return 当被认为是敏感时的掩盖值；否则为原始值
   private Object maskSensitiveValue(String fieldName, Object value) {
     if (fieldName == null || value == null) {
       return value;

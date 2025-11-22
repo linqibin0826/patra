@@ -19,21 +19,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * ProvenanceDataAdapter 单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>测试 ProvenanceConfigSnapshot 到 ProvenanceConfig 的转换逻辑
- *   <li>测试各个子配置的映射方法
- *   <li>测试 null 安全性
- *   <li>验证字段映射的正确性
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// ProvenanceDataAdapter 单元测试。
+///
+/// 测试策略：
+///
+/// - 测试 ProvenanceConfigSnapshot 到 ProvenanceConfig 的转换逻辑
+///   - 测试各个子配置的映射方法
+///   - 测试 null 安全性
+///   - 验证字段映射的正确性
+///
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("ProvenanceDataAdapter 单元测试")
 @ExtendWith(MockitoExtension.class)
 class ProvenanceDataAdapterTest {
@@ -426,7 +422,7 @@ class ProvenanceDataAdapterTest {
 
   // ========== 辅助方法 ==========
 
-  /** 使用反射调用私有方法 convertToProvenanceConfig */
+  /// 使用反射调用私有方法 convertToProvenanceConfig
   private ProvenanceConfig invokeConvertToProvenanceConfig(ExecutionContext context)
       throws Exception {
     Method method =

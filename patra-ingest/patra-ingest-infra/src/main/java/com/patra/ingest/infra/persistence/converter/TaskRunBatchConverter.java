@@ -16,7 +16,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
-/** TaskRunBatch（运行批次）聚合 ↔ DO 转换器。 */
+/// TaskRunBatch（运行批次）聚合 ↔ DO 转换器。
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface TaskRunBatchConverter {
 

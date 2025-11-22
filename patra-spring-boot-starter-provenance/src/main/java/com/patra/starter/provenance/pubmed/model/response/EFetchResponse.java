@@ -11,26 +11,22 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * 解析后的 PubMed EFetch 响应,包含文章详情视图和可选的 UID 列表视图。
- *
- * <p>EFetch 主要返回 XML 格式的详细文章内容。当指定 {@code rettype=uilist} 和 {@code retmode=text} 时, PubMed 返回换行符分隔的
- * UID 列表,本类可解析这两种格式。
- *
- * <p><b>支持的响应格式:</b>
- *
- * <ul>
- *   <li><b>XML文章详情</b>: 包含完整的 PubmedPublication 对象列表，根元素为 &lt;PubmedArticleSet&gt;
- *   <li><b>纯文本UID列表</b>: 仅包含标识符列表,用于轻量级批量处理
- * </ul>
- *
- * <p><b>重要说明</b>: PubMed E-utilities API 返回的XML根元素是 {@code <PubmedArticleSet>}，
- * 每个文献记录标签为 {@code <PubmedArticle>}。参见:
- * https://www.ncbi.nlm.nih.gov/books/NBK25499/
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 解析后的 PubMed EFetch 响应,包含文章详情视图和可选的 UID 列表视图。
+///
+/// EFetch 主要返回 XML 格式的详细文章内容。当指定 `rettype=uilist` 和 `retmode=text` 时, PubMed 返回换行符分隔的
+/// UID 列表,本类可解析这两种格式。
+///
+/// **支持的响应格式:**
+///
+/// - **XML文章详情**: 包含完整的 PubmedPublication 对象列表，根元素为 &lt;PubmedArticleSet&gt;
+///   - **纯文本UID列表**: 仅包含标识符列表,用于轻量级批量处理
+///
+/// **重要说明**: PubMed E-utilities API 返回的XML根元素是 `<PubmedArticleSet>`，
+/// 每个文献记录标签为 `<PubmedArticle>`。参见:
+/// https://www.ncbi.nlm.nih.gov/books/NBK25499/
+///
+/// @author linqibin
+/// @since 0.1.0
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JacksonXmlRootElement(localName = "PubmedArticleSet")
 public final class EFetchResponse {
@@ -51,29 +47,29 @@ public final class EFetchResponse {
     this.uids = uids;
   }
 
-  /** 不可变的已解析文章记录列表。 */
+  /// 不可变的已解析文章记录列表。
   public List<PubmedPublication> articles() {
     return articles != null ? articles : List.of();
   }
 
-  /** {@code rettype=uilist} 返回的不可变 UID 列表。 */
+  /// `rettype=uilist` 返回的不可变 UID 列表。
   public List<String> uids() {
     return uids != null ? uids : List.of();
   }
 
-  /** 当响应既不包含文章也不包含 UID 列表时返回 true。 */
+  /// 当响应既不包含文章也不包含 UID 列表时返回 true。
   public boolean isEmpty() {
     return articles().isEmpty() && uids().isEmpty();
   }
 
-  /** 将 XML 负载解析为 {@link EFetchResponse}。 */
+  /// 将 XML 负载解析为 {@link EFetchResponse}。
   public static EFetchResponse fromXml(XmlMapper xmlMapper, String xml) throws IOException {
     EFetchResponse response = xmlMapper.readValue(xml, EFetchResponse.class);
     response.normalise();
     return response;
   }
 
-  /** 将纯文本 UID 列表负载解析为 {@link EFetchResponse}。 */
+  /// 将纯文本 UID 列表负载解析为 {@link EFetchResponse}。
   public static EFetchResponse fromUidListText(String text) {
     if (text == null || text.isBlank()) {
       return new EFetchResponse(List.of(), List.of());
@@ -92,7 +88,7 @@ public final class EFetchResponse {
     return new EFetchResponse(List.of(), List.copyOf(values));
   }
 
-  /** 创建空响应占位符。 */
+  /// 创建空响应占位符。
   public static EFetchResponse empty() {
     return new EFetchResponse(List.of(), List.of());
   }

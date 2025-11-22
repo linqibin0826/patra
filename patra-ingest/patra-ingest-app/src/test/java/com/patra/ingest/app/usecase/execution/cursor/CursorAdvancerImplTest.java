@@ -29,24 +29,20 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.OptimisticLockingFailureException;
 
-/**
- * CursorAdvancerImpl 单元测试
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>✅ TIME 策略游标推进成功场景
- *   <li>✅ 首次推进创建新游标场景
- *   <li>✅ 乐观锁冲突场景
- *   <li>✅ 表达式哈希变化重置场景
- *   <li>✅ 跳过推进场景 (无窗口规范/非 TIME 策略)
- *   <li>✅ 其他窗口策略场景
- *   <li>✅ 异常处理场景
- * </ul>
- *
- * @author Patra Team
- * @since 0.1.0
- */
+/// CursorAdvancerImpl 单元测试
+///
+/// 测试覆盖:
+///
+/// - ✅ TIME 策略游标推进成功场景
+///   - ✅ 首次推进创建新游标场景
+///   - ✅ 乐观锁冲突场景
+///   - ✅ 表达式哈希变化重置场景
+///   - ✅ 跳过推进场景 (无窗口规范/非 TIME 策略)
+///   - ✅ 其他窗口策略场景
+///   - ✅ 异常处理场景
+///
+/// @author Patra Team
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CursorAdvancerImpl 单元测试")
 class CursorAdvancerImplTest {

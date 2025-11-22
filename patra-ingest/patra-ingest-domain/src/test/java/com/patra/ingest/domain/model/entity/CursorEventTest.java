@@ -12,33 +12,27 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * CursorEvent 单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>纯 Java 单元测试，不依赖 Spring 容器
- *   <li>使用 TestDataBuilder 模式构建测试数据
- *   <li>遵循 Given-When-Then 结构
- *   <li>使用 AssertJ 流畅断言
- * </ul>
- *
- * <p>测试范围：
- *
- * <ul>
- *   <li>✅ 工厂方法测试（create, restore）
- *   <li>✅ 默认值逻辑测试（namespaceKey, lineage）
- *   <li>✅ 不同游标类型测试（TIME, ID）
- *   <li>✅ 方向测试（FORWARD, BACKFILL）
- *   <li>✅ 窗口时间测试
- *   <li>✅ Getter 测试
- *   <li>✅ 边界情况测试
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// CursorEvent 单元测试。
+///
+/// 测试策略：
+///
+/// - 纯 Java 单元测试，不依赖 Spring 容器
+///   - 使用 TestDataBuilder 模式构建测试数据
+///   - 遵循 Given-When-Then 结构
+///   - 使用 AssertJ 流畅断言
+///
+/// 测试范围：
+///
+/// - ✅ 工厂方法测试（create, restore）
+///   - ✅ 默认值逻辑测试（namespaceKey, lineage）
+///   - ✅ 不同游标类型测试（TIME, ID）
+///   - ✅ 方向测试（FORWARD, BACKFILL）
+///   - ✅ 窗口时间测试
+///   - ✅ Getter 测试
+///   - ✅ 边界情况测试
+///
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("CursorEvent 单元测试")
 class CursorEventTest {
 
@@ -1084,11 +1078,9 @@ class CursorEventTest {
 
   // ========== TestDataBuilder (辅助类) ==========
 
-  /**
-   * CursorEvent 测试数据构建器。
-   *
-   * <p>遵循 Builder 模式，提供默认值以简化测试数据构建。
-   */
+  /// CursorEvent 测试数据构建器。
+  ///
+  /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
   static class CursorEventTestDataBuilder {
     private Long id = null; // 默认为 null（新创建的事件）
     private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
@@ -1215,7 +1207,7 @@ class CursorEventTest {
       return this;
     }
 
-    /** 构建新创建的事件（使用 create() 工厂方法）。 */
+    /// 构建新创建的事件（使用 create() 工厂方法）。
     public CursorEvent build() {
       return CursorEvent.create(
           provenanceCode,
@@ -1236,7 +1228,7 @@ class CursorEventTest {
           windowTo);
     }
 
-    /** 构建从持久化重建的事件（使用 restore() 工厂方法）。 */
+    /// 构建从持久化重建的事件（使用 restore() 工厂方法）。
     public CursorEvent buildRestored() {
       Long restoredId = (id != null) ? id : 100L; // 默认 ID
       return CursorEvent.restore(

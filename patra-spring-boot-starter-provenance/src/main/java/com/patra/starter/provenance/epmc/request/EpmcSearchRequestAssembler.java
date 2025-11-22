@@ -5,22 +5,18 @@ import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.patra.common.provenance.api.params.EpmcParamKeys;
 import com.patra.starter.provenance.epmc.model.request.SearchRequest;
 
-/**
- * Europe PMC 搜索请求组装器
- *
- * <p>从表达式编译器生成的数据源参数中组装 {@link SearchRequest} 实例。 负责参数提取、类型转换和验证。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// Europe PMC 搜索请求组装器
+///
+/// 从表达式编译器生成的数据源参数中组装 {@link SearchRequest} 实例。 负责参数提取、类型转换和验证。
+///
+/// @author linqibin
+/// @since 0.1.0
 public class EpmcSearchRequestAssembler {
 
-  /**
-   * 从数据源参数构建Europe PMC搜索请求
-   *
-   * @param params 数据源命名的参数（如query、pageSize、cursorMark等）
-   * @return 组装后的 {@link SearchRequest}
-   */
+  /// 从数据源参数构建Europe PMC搜索请求
+  ///
+  /// @param params 数据源命名的参数（如query、pageSize、cursorMark等）
+  /// @return 组装后的 {@link SearchRequest}
   public SearchRequest build(JsonNode params) {
     String query = text(params, EpmcParamKeys.QUERY);
     if (query == null || query.isBlank()) {

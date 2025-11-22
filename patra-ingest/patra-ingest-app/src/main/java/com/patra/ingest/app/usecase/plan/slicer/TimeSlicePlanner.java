@@ -21,28 +21,24 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * 时间窗口切片策略(应用层·策略)
- *
- * <p>使用固定步长将上游规划窗口 [from, to) 拆分为多个半开子窗口; 每个子窗口与业务表达式配对形成独立的 Slice。
- *
- * <p>设计要点:
- *
- * <ul>
- *   <li>步长配置:优先使用触发上下文中的标准化步长(ISO-8601 Duration);无效时回退到默认 1 小时。
- *   <li>时间字段解析:offsetFieldKey(DATE 模式) > windowDateFieldKey。
- *   <li>幂等性:构建规范化 JSON 并取 sha256;重复规划产生相同签名。
- *   <li>边界处理:如果最后一个切片短于步长,则对齐到窗口结束。
- *   <li>复杂度:O(n),n = ceil((to - from) / step)。
- * </ul>
- *
- * <p>返回空列表的情况:窗口缺失;from >= to;或时间字段无法解析。
- */
+/// 时间窗口切片策略(应用层·策略)
+///
+/// 使用固定步长将上游规划窗口 [from, to) 拆分为多个半开子窗口; 每个子窗口与业务表达式配对形成独立的 Slice。
+///
+/// 设计要点:
+///
+/// - 步长配置:优先使用触发上下文中的标准化步长(ISO-8601 Duration);无效时回退到默认 1 小时。
+///   - 时间字段解析:offsetFieldKey(DATE 模式) > windowDateFieldKey。
+///   - 幂等性:构建规范化 JSON 并取 sha256;重复规划产生相同签名。
+///   - 边界处理:如果最后一个切片短于步长,则对齐到窗口结束。
+///   - 复杂度:O(n),n = ceil((to - from) / step)。
+///
+/// 返回空列表的情况:窗口缺失;from >= to;或时间字段无法解析。
 @Slf4j
 @Component
 public class TimeSlicePlanner implements SlicePlanner {
 
-  /** 默认切片步长(1 小时) */
+  /// 默认切片步长(1 小时)
   private static final Duration DEFAULT_STEP = Duration.ofHours(1);
 
   @Override
@@ -140,24 +136,20 @@ public class TimeSlicePlanner implements SlicePlanner {
     return result;
   }
 
-  /**
-   * 构建时间窗口约束表达式。半开区间语义:from 包含,to 排除。
-   *
-   * @param field 时间字段名
-   * @param from 切片开始(包含)
-   * @param to 切片结束(排除)
-   * @return 范围表达式
-   */
+  /// 构建时间窗口约束表达式。半开区间语义:from 包含,to 排除。
+  ///
+  /// @param field 时间字段名
+  /// @param from 切片开始(包含)
+  /// @param to 切片结束(排除)
+  /// @return 范围表达式
   private Expr buildTimeWindowConstraint(String field, Instant from, Instant to) {
     return Exprs.rangeDateTime(field, from, to);
   }
 
-  /**
-   * 从配置快照解析时间字段。优先级:DATE 模式 offsetFieldKey > windowDateFieldKey。
-   *
-   * @param snapshot 溯源/数据源配置快照
-   * @return 可用于范围过滤的字段名;无法解析时返回 null
-   */
+  /// 从配置快照解析时间字段。优先级:DATE 模式 offsetFieldKey > windowDateFieldKey。
+  ///
+  /// @param snapshot 溯源/数据源配置快照
+  /// @return 可用于范围过滤的字段名;无法解析时返回 null
   private String resolveTimeField(ProvenanceConfigSnapshot snapshot) {
     if (snapshot == null) {
       return null;
@@ -176,14 +168,12 @@ public class TimeSlicePlanner implements SlicePlanner {
     return null;
   }
 
-  /**
-   * 构建切片规格 JSON 并规范化。字段:strategy、window(from/to + boundary + timezone)。 规范化失败时,回退到最小 JSON 以保持哈希可用。
-   *
-   * @param context 切片上下文
-   * @param from 窗口开始
-   * @param to 窗口结束
-   * @return 规范化结果(规范化 JSON + 哈希材料)
-   */
+  /// 构建切片规格 JSON 并规范化。字段:strategy、window(from/to + boundary + timezone)。 规范化失败时,回退到最小 JSON 以保持哈希可用。
+  ///
+  /// @param context 切片上下文
+  /// @param from 窗口开始
+  /// @param to 窗口结束
+  /// @return 规范化结果(规范化 JSON + 哈希材料)
   private JsonNormalizerResult buildSpec(SlicePlanningContext context, Instant from, Instant to) {
     ProvenanceConfigSnapshot configSnapshot = context.configSnapshot();
     ObjectNode root = JsonNodeFactory.instance.objectNode();

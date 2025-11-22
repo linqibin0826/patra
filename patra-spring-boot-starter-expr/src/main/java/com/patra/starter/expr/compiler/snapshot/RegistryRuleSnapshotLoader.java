@@ -8,7 +8,7 @@ import com.patra.registry.api.dto.provenance.ProvenanceResp;
 import com.patra.starter.expr.compiler.snapshot.convert.SnapshotAssembler;
 import java.util.Objects;
 
-/** 基于 Registry 的快照加载器，将 DTO→领域对象转换委托给专用组装器。 */
+/// 基于 Registry 的快照加载器，将 DTO→领域对象转换委托给专用组装器。
 public class RegistryRuleSnapshotLoader implements RuleSnapshotLoader {
 
   private final ProvenanceClient provenanceClient;

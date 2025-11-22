@@ -18,7 +18,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
-/** Feign 错误处理自动配置:注册错误解码器、跟踪传播拦截器和可选的观察记录器 */
+/// Feign 错误处理自动配置:注册错误解码器、跟踪传播拦截器和可选的观察记录器
 @Slf4j
 @AutoConfiguration
 @EnableConfigurationProperties(FeignErrorProperties.class)

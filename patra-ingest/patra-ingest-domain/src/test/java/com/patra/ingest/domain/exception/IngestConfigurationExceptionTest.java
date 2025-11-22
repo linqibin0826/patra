@@ -8,12 +8,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link IngestConfigurationException} 的单元测试。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// {@link IngestConfigurationException} 的单元测试。
+///
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("IngestConfigurationException 单元测试")
 class IngestConfigurationExceptionTest {
 

@@ -28,60 +28,54 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-/**
- * JSON 规范化工具,将任意输入(POJO、{@link JsonNode}、字符串等)转换为确定性结构和规范 JSON 文本。
- *
- * <p>主要特性:
- *
- * <ul>
- *   <li><b>键排序</b>:使用可选的 ASCII/Unicode 比较器进行稳定的对象键排序。
- *   <li><b>数组处理</b>:按类型标签和序列化值对数组去重和排序,同时保留已配置序列字段的顺序。
- *   <li><b>空值策略</b>:删除空对象/数组/字符串,支持白名单。
- *   <li><b>类型强制</b>:规范化布尔值、数字和时间戳;从 {@link BigDecimal} 值中去除尾随零。
- *   <li><b>字符串清理</b>:可选的修剪、空格折叠以及字段/路径级别的小写转换。
- *   <li><b>时间规范化</b>:解析多种格式(包括秒/毫秒纪元),并以毫秒精度发出 UTC 时间戳({@code yyyy-MM-dd'T'HH:mm:ss.SSS'Z'})。
- *   <li><b>安全防护</b>:强制执行 UTF-8 字节限制、最大深度,并拒绝非有限数字。
- *   <li><b>确定性输出</b>:使用配置了 {@link
- *       com.fasterxml.jackson.core.JsonGenerator.Feature#WRITE_BIGDECIMAL_AS_PLAIN} 的 {@link
- *       ObjectWriter} 编写规范 JSON。
- * </ul>
- *
- * <h3>Spring 集成</h3>
- *
- * <p>不依赖 Spring。使用 {@link JsonMapperHolder} 访问 {@link ObjectMapper}。在 Spring 应用中,启动器注册容器映射器;在
- * Spring 之外,创建默认映射器。在业务代码中优先使用依赖注入;仅在不可用时使用静态工厂。
- *
- * <h3>使用场景</h3>
- *
- * <ul>
- *   <li>用于签名、去重、缓存键的规范 JSON
- *   <li>规范化来自多个源的异构有效负载
- *   <li>持久化规范形式及其哈希值
- * </ul>
- *
- * <h3>线程安全</h3>
- *
- * <p>不可变。{@link JsonMapperHolder} 确保安全的 {@link ObjectMapper} 发布。
- *
- * <h3>示例</h3>
- *
- * <pre>{@code
- * // 使用全局 ObjectMapper 和默认配置快速规范化
- * JsonNormalizerResult r = JsonNormalizer.normalizeDefault(input);
- * String canonical = r.getCanonicalJson();
- * byte[] material = r.getHashMaterial();
- *
- * // 自定义配置
- * JsonNormalizer normalizer = JsonNormalizer.withConfig(
- *     JsonNormalizerConfig.builder()
- *         .coerceNumber(true)
- *         .coerceTime(true)
- *         .removeEmpty(true)
- *         .build()
- * );
- * JsonNormalizerResult r2 = normalizer.normalize(input);
- * }</pre>
- */
+/// JSON 规范化工具,将任意输入(POJO、{@link JsonNode}、字符串等)转换为确定性结构和规范 JSON 文本。
+///
+/// 主要特性:
+///
+/// - **键排序**:使用可选的 ASCII/Unicode 比较器进行稳定的对象键排序。
+///   - **数组处理**:按类型标签和序列化值对数组去重和排序,同时保留已配置序列字段的顺序。
+///   - **空值策略**:删除空对象/数组/字符串,支持白名单。
+///   - **类型强制**:规范化布尔值、数字和时间戳;从 {@link BigDecimal} 值中去除尾随零。
+///   - **字符串清理**:可选的修剪、空格折叠以及字段/路径级别的小写转换。
+///   - **时间规范化**:解析多种格式(包括秒/毫秒纪元),并以毫秒精度发出 UTC 时间戳(`yyyy-MM-dd'T'HH:mm:ss.SSS'Z'`)。
+///   - **安全防护**:强制执行 UTF-8 字节限制、最大深度,并拒绝非有限数字。
+///   - **确定性输出**:使用配置了 {@link
+///       com.fasterxml.jackson.core.JsonGenerator.Feature#WRITE_BIGDECIMAL_AS_PLAIN} 的 {@link
+///       ObjectWriter} 编写规范 JSON。
+///
+/// ### Spring 集成
+///
+/// 不依赖 Spring。使用 {@link JsonMapperHolder} 访问 {@link ObjectMapper}。在 Spring 应用中,启动器注册容器映射器;在
+/// Spring 之外,创建默认映射器。在业务代码中优先使用依赖注入;仅在不可用时使用静态工厂。
+///
+/// ### 使用场景
+///
+/// - 用于签名、去重、缓存键的规范 JSON
+///   - 规范化来自多个源的异构有效负载
+///   - 持久化规范形式及其哈希值
+///
+/// ### 线程安全
+///
+/// 不可变。{@link JsonMapperHolder} 确保安全的 {@link ObjectMapper} 发布。
+///
+/// ### 示例
+///
+/// ```java
+/// // 使用全局 ObjectMapper 和默认配置快速规范化
+/// JsonNormalizerResult r = JsonNormalizer.normalizeDefault(input);
+/// String canonical = r.getCanonicalJson();
+/// byte[] material = r.getHashMaterial();
+///
+/// // 自定义配置
+/// JsonNormalizer normalizer = JsonNormalizer.withConfig(
+///     JsonNormalizerConfig.builder()
+///         .coerceNumber(true)
+///         .coerceTime(true)
+///         .removeEmpty(true)
+///         .build()
+/// );
+/// JsonNormalizerResult r2 = normalizer.normalize(input);
+/// ```
 public final class JsonNormalizer {
 
   private static final Pattern SPACE_PATTERN = Pattern.compile("\\s+");
@@ -100,42 +94,34 @@ public final class JsonNormalizer {
             .withFeatures(JsonGenerator.Feature.WRITE_BIGDECIMAL_AS_PLAIN);
   }
 
-  /**
-   * 使用由 {@link JsonMapperHolder} 提供的全局 {@link ObjectMapper}(从 Spring 桥接,如果可用)和默认的 {@link
-   * JsonNormalizerConfig} 规范化给定输入。
-   */
+  /// 使用由 {@link JsonMapperHolder} 提供的全局 {@link ObjectMapper}(从 Spring 桥接,如果可用)和默认的 {@link
+  /// JsonNormalizerConfig} 规范化给定输入。
   public static JsonNormalizerResult normalizeDefault(Object input) {
     return usingDefault().normalize(input);
   }
 
-  /** 创建由全局 {@link ObjectMapper} 和默认 {@link JsonNormalizerConfig} 支持的可重用规范化器。当多个输入共享相同设置时非常理想。 */
+  /// 创建由全局 {@link ObjectMapper} 和默认 {@link JsonNormalizerConfig} 支持的可重用规范化器。当多个输入共享相同设置时非常理想。
   public static JsonNormalizer usingDefault() {
     return new JsonNormalizer(
         JsonMapperHolder.getObjectMapper(), JsonNormalizerConfig.builder().build());
   }
 
-  /**
-   * 创建由全局 {@link ObjectMapper} 和提供的 {@link JsonNormalizerConfig} 支持的规范化器。使用 {@link
-   * #withMapper(ObjectMapper, JsonNormalizerConfig)} 提供自定义映射器。
-   */
+  /// 创建由全局 {@link ObjectMapper} 和提供的 {@link JsonNormalizerConfig} 支持的规范化器。使用 {@link
+  /// #withMapper(ObjectMapper, JsonNormalizerConfig)} 提供自定义映射器。
   public static JsonNormalizer withConfig(JsonNormalizerConfig config) {
     return new JsonNormalizer(JsonMapperHolder.getObjectMapper(), config);
   }
 
-  /**
-   * 使用提供的 {@link ObjectMapper} 和配置构建规范化器。
-   *
-   * <p>优先将映射器注入到服务层并在那里组合此工具,而不是将其视为服务定位器。
-   */
+  /// 使用提供的 {@link ObjectMapper} 和配置构建规范化器。
+  ///
+  /// 优先将映射器注入到服务层并在那里组合此工具,而不是将其视为服务定位器。
   public static JsonNormalizer withMapper(ObjectMapper objectMapper, JsonNormalizerConfig config) {
     return new JsonNormalizer(objectMapper, config);
   }
 
-  /**
-   * 通过将输入转换为 {@link JsonNode}、根据配置的策略递归清理它、渲染规范 JSON 并返回结构化的 {@link JsonNormalizerResult} 来执行规范化。
-   *
-   * <p>对于过度深度、非法数字或超大字符串等违规情况,抛出 {@link JsonNormalizationException}。
-   */
+  /// 通过将输入转换为 {@link JsonNode}、根据配置的策略递归清理它、渲染规范 JSON 并返回结构化的 {@link JsonNormalizerResult} 来执行规范化。
+  ///
+  /// 对于过度深度、非法数字或超大字符串等违规情况,抛出 {@link JsonNormalizationException}。
   public JsonNormalizerResult normalize(Object input) {
     JsonNode root = toJsonNode(input);
     NormalizationPath path = new NormalizationPath();

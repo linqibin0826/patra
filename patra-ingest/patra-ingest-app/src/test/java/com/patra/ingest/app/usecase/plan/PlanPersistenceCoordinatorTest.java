@@ -40,28 +40,24 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-/**
- * PlanPersistenceCoordinator 单元测试。
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>✅ persistScheduleInstance() - 正常持久化调度实例
- *   <li>✅ persistScheduleInstance() - 持久化失败异常包装
- *   <li>✅ savePlan() - 正常持久化计划
- *   <li>✅ savePlan() - 持久化失败异常包装
- *   <li>✅ persistSlices() - 正常批量持久化切片
- *   <li>✅ persistSlices() - 空切片列表处理
- *   <li>✅ persistSlices() - 切片绑定计划 ID 验证
- *   <li>✅ persistTasks() - 正常批量持久化任务
- *   <li>✅ persistTasks() - 空任务列表处理
- *   <li>✅ persistTasks() - 任务绑定计划和切片 ID 验证
- *   <li>✅ saveTask() - 正常持久化单个任务
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// PlanPersistenceCoordinator 单元测试。
+///
+/// 测试覆盖:
+///
+/// - ✅ persistScheduleInstance() - 正常持久化调度实例
+///   - ✅ persistScheduleInstance() - 持久化失败异常包装
+///   - ✅ savePlan() - 正常持久化计划
+///   - ✅ savePlan() - 持久化失败异常包装
+///   - ✅ persistSlices() - 正常批量持久化切片
+///   - ✅ persistSlices() - 空切片列表处理
+///   - ✅ persistSlices() - 切片绑定计划 ID 验证
+///   - ✅ persistTasks() - 正常批量持久化任务
+///   - ✅ persistTasks() - 空任务列表处理
+///   - ✅ persistTasks() - 任务绑定计划和切片 ID 验证
+///   - ✅ saveTask() - 正常持久化单个任务
+///
+/// @author linqibin
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("PlanPersistenceCoordinator 单元测试")
@@ -583,7 +579,7 @@ class PlanPersistenceCoordinatorTest {
 
   // ==================== 辅助方法 ====================
 
-  /** 创建有效的 PlanIngestionCommand。 */
+  /// 创建有效的 PlanIngestionCommand。
   private PlanIngestionCommand createValidCommand() {
     return new PlanIngestionCommand(
         ProvenanceCode.PUBMED,

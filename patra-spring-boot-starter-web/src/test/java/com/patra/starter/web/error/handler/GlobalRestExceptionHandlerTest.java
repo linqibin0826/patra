@@ -29,7 +29,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.context.request.ServletWebRequest;
 
-/** GlobalRestExceptionHandler 单元测试。 */
+/// GlobalRestExceptionHandler 单元测试。
 @ExtendWith(MockitoExtension.class)
 @DisplayName("GlobalRestExceptionHandler 单元测试")
 class GlobalRestExceptionHandlerTest {
@@ -313,7 +313,7 @@ class GlobalRestExceptionHandlerTest {
     assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
   }
 
-  /** 用于测试的虚拟方法。 */
+  /// 用于测试的虚拟方法。
   @SuppressWarnings("unused")
   private void dummyMethod(String param) {
     // 仅用于创建 MethodParameter

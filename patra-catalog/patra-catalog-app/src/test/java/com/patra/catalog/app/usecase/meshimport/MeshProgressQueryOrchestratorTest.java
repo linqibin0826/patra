@@ -25,21 +25,17 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * MeshProgressQueryOrchestrator 单元测试。
- *
- * <p><b>测试策略</b>：
- *
- * <ul>
- *   <li>Mock 所有 Ports（MeshImportPort、MeshBatchDetailPort）
- *   <li>验证调用顺序（InOrder）
- *   <li>验证 DTO 组装正确性
- *   <li>覆盖正常场景和异常场景
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0 (User Story 2 - 实时监控导入进度)
- */
+/// MeshProgressQueryOrchestrator 单元测试。
+///
+/// **测试策略**：
+///
+/// - Mock 所有 Ports（MeshImportPort、MeshBatchDetailPort）
+///   - 验证调用顺序（InOrder）
+///   - 验证 DTO 组装正确性
+///   - 覆盖正常场景和异常场景
+///
+/// @author linqibin
+/// @since 0.1.0 (User Story 2 - 实时监控导入进度)
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MeshProgressQueryOrchestrator 单元测试")
 class MeshProgressQueryOrchestratorTest {

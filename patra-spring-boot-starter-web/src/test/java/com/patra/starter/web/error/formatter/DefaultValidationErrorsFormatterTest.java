@@ -14,7 +14,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 
-/** DefaultValidationErrorsFormatter 单元测试。 */
+/// DefaultValidationErrorsFormatter 单元测试。
 @DisplayName("DefaultValidationErrorsFormatter 单元测试")
 class DefaultValidationErrorsFormatterTest {
 

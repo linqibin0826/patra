@@ -286,9 +286,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
         return providerRegistry.getSupportedTypes(provenanceCode);
     }
 
-    /**
-     * 构建提供者请求
-     */
+    /// 构建提供者请求
     private ProviderRequest buildProviderRequest(ExecutionContext context) {
         return ProviderRequest.builder()
             .query(context.compiledQuery())
@@ -297,9 +295,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
             .build();
     }
 
-    /**
-     * 构建包含批次信息的提供者请求
-     */
+    /// 构建包含批次信息的提供者请求
     private ProviderRequest buildProviderRequest(ExecutionContext context, Batch batch) {
         return ProviderRequest.builder()
             .query(context.compiledQuery())
@@ -309,9 +305,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
             .build();
     }
 
-    /**
-     * 转换为领域数据获取结果
-     */
+    /// 转换为领域数据获取结果
     private <T> DataFetchResult<T> convertToDataFetchResult(ProviderResult<T> result) {
         return DataFetchResult.<T>builder()
             .data(result.data())
@@ -349,17 +343,13 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
 @Mapper(componentModel = "spring")
 public interface PlanConverter {
 
-    /**
-     * Domain → DO
-     */
+    /// Domain → DO
     @Mapping(source = "id", target = "id")
     @Mapping(source = "planKey", target = "planKey")
     @Mapping(source = "status", target = "status")
     PlanDO toDataObject(PlanAggregate plan);
 
-    /**
-     * DO → Domain
-     */
+    /// DO → Domain
     @Mapping(source = "id", target = "id")
     @Mapping(source = "planKey", target = "planKey")
     @Mapping(source = "status", target = "status")

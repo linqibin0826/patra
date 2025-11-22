@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-/** 将注册表 DTO 转换为启动器的不可变 {@link ProvenanceSnapshot} 模型。 */
+/// 将注册表 DTO 转换为启动器的不可变 {@link ProvenanceSnapshot} 模型。
 @SuppressWarnings("unused")
 public class SnapshotAssembler {
 
@@ -173,7 +173,7 @@ public class SnapshotAssembler {
     }
   }
 
-  /** 将 JSON 字符串转换为 Set。 */
+  /// 将 JSON 字符串转换为 Set。
   private Set<String> toSet(String json) {
     if (json == null || json.isBlank()) {
       return Set.of();
