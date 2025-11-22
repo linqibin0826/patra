@@ -74,6 +74,19 @@ public record ExprCapability(
     /* 可选的正则表达式约束,用于令牌值 */
     String tokenValuePattern)
     implements TemporalEntity {
+
+  /// 规范构造器,强制执行表达式能力值对象的验证规则。
+  ///
+  /// 验证规则：
+  ///
+  /// - 能力配置 ID 必须为正数
+  ///   - 数据源 ID 必须为正数
+  ///   - 字段键不能为空白
+  ///   - 范围类型代码不能为空白
+  ///   - 生效开始时间不能为 null
+  ///   - 所有字符串字段自动执行 trim 或归一化处理
+  ///
+  /// @throws DomainValidationException 如果验证失败
   public ExprCapability(
       Long id,
       Long provenanceId,

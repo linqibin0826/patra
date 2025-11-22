@@ -26,6 +26,17 @@ public record RetryConfigQuery(
     boolean retryOnNetworkError,
     Integer circuitBreakThreshold,
     Integer circuitCooldownMillis) {
+  /// 规范构造器,强制执行重试配置查询视图的验证规则。
+  ///
+  /// 验证规则：
+  ///
+  /// - 重试配置 ID 必须为正数
+  ///   - 数据源 ID 必须为正数
+  ///   - 退避策略类型代码不能为空
+  ///   - 生效时间不能为 null
+  ///   - 字符串字段自动执行 trim 操作
+  ///
+  /// @throws DomainValidationException 如果验证失败
   public RetryConfigQuery {
     if (id == null || id <= 0) {
       throw new DomainValidationException("重试配置ID必须为正数");

@@ -17,6 +17,16 @@ public record RateLimitConfigQuery(
     Instant effectiveTo,
     Integer maxConcurrentRequests,
     Integer perCredentialQpsLimit) {
+  /// 规范构造器,强制执行速率限制配置查询视图的验证规则。
+  ///
+  /// 验证规则：
+  ///
+  /// - 限流配置 ID 必须为正数
+  ///   - 数据源 ID 必须为正数
+  ///   - 生效时间不能为 null
+  ///   - 字符串字段自动执行 trim 操作
+  ///
+  /// @throws DomainValidationException 如果验证失败
   public RateLimitConfigQuery {
     if (id == null || id <= 0) {
       throw new DomainValidationException("限流配置ID必须为正数");

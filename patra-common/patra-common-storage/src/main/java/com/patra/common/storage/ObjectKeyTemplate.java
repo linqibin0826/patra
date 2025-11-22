@@ -12,19 +12,19 @@ import java.time.LocalDate;
 ///   - 当前日期分区(分区日期=今天)
 ///   - 用于历史数据采集的自定义日期分区
 ///
-/// **Example Usage**:
+/// **示例用法**:
 ///
 /// ```java
-/// // Generate key with today's date
+/// // 使用今天的日期生成键
 /// String key = ObjectKeyTemplate.generateDailyKey(
 ///     "ingest",
 ///     "publication-batch",
 ///     "pubmed-123-batch-001",
 ///     "json"
 /// );
-/// // Result: ingest/publication-batch/2025/10/26/pubmed-123-batch-001.json
+/// // 结果: ingest/publication-batch/2025/10/26/pubmed-123-batch-001.json
 ///
-/// // Generate key with specific date
+/// // 使用指定日期生成键
 /// String historicalKey = ObjectKeyTemplate.generateDailyKey(
 ///     "ingest",
 ///     "publication-batch",
@@ -32,9 +32,9 @@ import java.time.LocalDate;
 ///     LocalDate.of(2025, 10, 20),
 ///     "json.gz"
 /// );
-/// // Result: ingest/publication-batch/2025/10/20/pubmed-456-batch-002.json.gz
+/// // 结果: ingest/publication-batch/2025/10/20/pubmed-456-batch-002.json.gz
 ///
-/// // Use builder for complex scenarios
+/// // 对于复杂场景使用构建器
 /// String customKey = ObjectKeyTemplate.builder()
 ///     .serviceName("publication")
 ///     .businessType("index_snapshot")
@@ -45,7 +45,7 @@ import java.time.LocalDate;
 ///     .build();
 /// ```
 ///
-/// **Default Strategy**: Uses {@link DatePartitionedKeyGenerator} for all convenience methods.
+/// **默认策略**: 所有便捷方法使用 {@link DatePartitionedKeyGenerator}。
 ///
 /// @author linqibin
 /// @see ObjectKeyGenerator
@@ -56,47 +56,46 @@ public final class ObjectKeyTemplate {
 
   private static final ObjectKeyGenerator DEFAULT_GENERATOR = DatePartitionedKeyGenerator.INSTANCE;
 
-  /// Private constructor to prevent instantiation of utility class.
+  /// 私有构造函数,防止实例化工具类。
   private ObjectKeyTemplate() {
     throw new UnsupportedOperationException("Utility class cannot be instantiated");
   }
 
-  /// Generates a daily-partitioned object key using the current date.
+  /// 使用当前日期生成按日分区的对象键。
   ///
-  /// This is the most common use case: generating keys for newly created objects with today's
-  /// date as the partition.
+  /// 这是最常见的用例:使用今天的日期作为分区为新创建的对象生成键。
   ///
-  /// Equivalent to: {@code generateDailyKey(service, businessType, businessId, LocalDate.now(),
+  /// 等效于: {@code generateDailyKey(service, businessType, businessId, LocalDate.now(),
   /// extension)}
   ///
-  /// @param serviceName microservice name (e.g., "ingest", "storage")
-  /// @param businessType business category (e.g., "publication-batch")
-  /// @param businessId unique business identifier (e.g., "pubmed-123-batch-001")
-  /// @param extension file extension (e.g., "json", "json.gz")
-  /// @return generated object key using today's date
-  /// @throws IllegalArgumentException if any parameter is invalid
+  /// @param serviceName 微服务名称(例如 "ingest"、"storage")
+  /// @param businessType 业务类别(例如 "publication-batch")
+  /// @param businessId 唯一业务标识符(例如 "pubmed-123-batch-001")
+  /// @param extension 文件扩展名(例如 "json"、"json.gz")
+  /// @return 使用今天日期生成的对象键
+  /// @throws IllegalArgumentException 如果任何参数无效
   public static String generateDailyKey(
       String serviceName, String businessType, String businessId, String extension) {
     return generateDailyKey(serviceName, businessType, businessId, LocalDate.now(), extension);
   }
 
-  /// Generates a daily-partitioned object key using a specific partition date.
+  /// 使用指定分区日期生成按日分区的对象键。
   ///
-  /// Use this method when:
+  /// 在以下情况下使用此方法:
   ///
-  /// - Ingesting historical data with original timestamps
-  ///   - Backfilling data for past dates
-  ///   - Re-processing data with original partition dates
+  /// - 采集具有原始时间戳的历史数据
+  ///   - 回填过去日期的数据
+  ///   - 使用原始分区日期重新处理数据
   ///
-  /// Pattern: `{service`/{business-type}/{yyyy}/{MM}/{dd}/{business-id}.{extension}}
+  /// 模式: `{service}/{business-type}/{yyyy}/{MM}/{dd}/{business-id}.{extension}`
   ///
-  /// @param serviceName microservice name (e.g., "ingest", "storage")
-  /// @param businessType business category (e.g., "publication-batch")
-  /// @param businessId unique business identifier (e.g., "pubmed-123-batch-001")
-  /// @param partitionDate date for time-based partitioning
-  /// @param extension file extension (e.g., "json", "json.gz")
-  /// @return generated object key with specified date partition
-  /// @throws IllegalArgumentException if any parameter is invalid
+  /// @param serviceName 微服务名称(例如 "ingest"、"storage")
+  /// @param businessType 业务类别(例如 "publication-batch")
+  /// @param businessId 唯一业务标识符(例如 "pubmed-123-batch-001")
+  /// @param partitionDate 用于基于时间分区的日期
+  /// @param extension 文件扩展名(例如 "json"、"json.gz")
+  /// @return 使用指定日期分区生成的对象键
+  /// @throws IllegalArgumentException 如果任何参数无效
   public static String generateDailyKey(
       String serviceName,
       String businessType,
@@ -108,33 +107,32 @@ public final class ObjectKeyTemplate {
     return DEFAULT_GENERATOR.generate(context);
   }
 
-  /// Generates an object key using a custom generator strategy.
+  /// 使用自定义生成器策略生成对象键。
   ///
-  /// Use this method when you need a non-default key generation pattern (e.g., month-partitioned,
-  /// hierarchical, or custom business logic).
+  /// 当您需要非默认键生成模式(例如月分区、分层或自定义业务逻辑)时使用此方法。
   ///
-  /// @param context immutable context with all key parameters
-  /// @param generator custom generator implementation
-  /// @return generated object key using the specified strategy
+  /// @param context 包含所有键参数的不可变上下文
+  /// @param generator 自定义生成器实现
+  /// @return 使用指定策略生成的对象键
   public static String generate(ObjectKeyContext context, ObjectKeyGenerator generator) {
     return generator.generate(context);
   }
 
-  /// Creates a builder for constructing complex object keys with custom segments.
+  /// 创建用于构建包含自定义段的复杂对象键的构建器。
   ///
-  /// Use this when you need to add custom path segments beyond the standard pattern.
+  /// 当您需要在标准模式之外添加自定义路径段时使用此方法。
   ///
-  /// @return new context builder instance
+  /// @return 新的上下文构建器实例
   public static ObjectKeyContext.Builder builder() {
     return ObjectKeyContext.builder();
   }
 
-  /// Generates an object key using the default daily partitioning generator.
+  /// 使用默认的每日分区生成器生成对象键。
   ///
-  /// This method accepts a fully configured {@link ObjectKeyContext} for maximum flexibility.
+  /// 此方法接受完全配置的 {@link ObjectKeyContext} 以获得最大灵活性。
   ///
-  /// @param context immutable context with all key parameters
-  /// @return generated object key using default (daily) partitioning
+  /// @param context 包含所有键参数的不可变上下文
+  /// @return 使用默认(每日)分区生成的对象键
   public static String generate(ObjectKeyContext context) {
     return DEFAULT_GENERATOR.generate(context);
   }

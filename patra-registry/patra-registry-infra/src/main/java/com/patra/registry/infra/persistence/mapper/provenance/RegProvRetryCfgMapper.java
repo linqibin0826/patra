@@ -6,14 +6,20 @@ import java.time.Instant;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
-/// 只读 Mapper,用于表 `reg_prov_retry_cfg`. SQL statements are defined in
-// `resources/mapper/RegProvRetryCfgMapper.xml`.
+/// 只读 Mapper,用于表 `reg_prov_retry_cfg`。
+///
+/// SQL 语句定义在 `resources/mapper/RegProvRetryCfgMapper.xml`。
 ///
 /// @author linqibin
 /// @since 0.1.0
 public interface RegProvRetryCfgMapper extends BaseMapper<RegProvRetryCfgDO> {
 
-  /// Fetches the retry configuration effective for the specified provenance/operation scope.
+  /// 获取指定数据源和操作作用域的有效重试配置。
+  ///
+  /// @param provenanceId 数据源标识
+  /// @param operationType 规范化的操作类型
+  /// @param now 查询时间戳
+  /// @return 有效的重试配置(可选)
   Optional<RegProvRetryCfgDO> selectActiveMerged(
       @Param("provenanceId") Long provenanceId,
       @Param("operationType") String operationType,
