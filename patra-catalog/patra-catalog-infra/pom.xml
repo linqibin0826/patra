@@ -62,8 +62,8 @@
 
         <!-- RestClient HTTP 客户端（用于文件下载） -->
         <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-web</artifactId>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-rest-client</artifactId>
         </dependency>
 
         <!-- ================================ -->
