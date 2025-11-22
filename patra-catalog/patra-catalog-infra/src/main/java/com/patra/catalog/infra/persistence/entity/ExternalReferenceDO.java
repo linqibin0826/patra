@@ -61,6 +61,10 @@ public class ExternalReferenceDO extends BaseDO {
   @TableField("access_date")
   private Instant accessDate;
 
+  /// 数据库版本号
+  @TableField("database_version")
+  private String databaseVersion;
+
   /// 顺序号(用于排序显示)
   @TableField("order_num")
   private Integer orderNum;
