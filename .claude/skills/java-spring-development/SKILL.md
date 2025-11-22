@@ -27,6 +27,10 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__serena__get_symbols_ove
 
 # Spring Boot 微服务开发专家
 
+## 💡 提示
+
+遇到问题时，可查看 [troubleshooting-and-notes/](../../troubleshooting-and-notes/) 获取已知解决方案。
+
 ## 快速开发指南
 
 ### Controller 开发模式
@@ -644,6 +648,7 @@ com.patra.{service}
 
 需要深入了解时，查看以下资源文件：
 
+- [troubleshooting-and-notes/](../../troubleshooting-and-notes/) - 问题排查与注意事项（项目级共享，按分类组织）
 - [adapter-layer-patterns.md](resources/adapter-layer-patterns.md) - REST/Job/Consumer 模式
 - [orchestrator-coordinator-patterns.md](resources/orchestrator-coordinator-patterns.md) - 编排模式
 - [mybatis-plus-patterns.md](resources/mybatis-plus-patterns.md) - 数据访问模式
