@@ -17,6 +17,11 @@ public class PatraFeignRequestInterceptor implements RequestInterceptor {
   private final PatraFeignProperties props;
   private final Environment env;
 
+  /// 将共享请求头添加到每个 Feign 请求中。
+  ///
+  /// 从 Spring 环境中读取当前服务名称并添加到请求头,以便下游服务识别调用来源。
+  ///
+  /// @param template Feign 请求模板
   @Override
   public void apply(RequestTemplate template) {
     if (!props.isEnabled()) return;

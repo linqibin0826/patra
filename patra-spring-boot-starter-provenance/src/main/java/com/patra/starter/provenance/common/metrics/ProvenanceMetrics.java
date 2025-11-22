@@ -27,6 +27,9 @@ public class ProvenanceMetrics {
 
   private final MeterRegistry meterRegistry;
 
+  /// 创建 Provenance 度量记录器。
+  ///
+  /// @param meterRegistry Micrometer 指标注册表
   public ProvenanceMetrics(MeterRegistry meterRegistry) {
     this.meterRegistry = Objects.requireNonNull(meterRegistry, "meterRegistry cannot be null");
   }
@@ -62,6 +65,12 @@ public class ProvenanceMetrics {
     }
   }
 
+  /// 记录计时器度量。
+  ///
+  /// @param code 数据源代码
+  /// @param apiName API 名称
+  /// @param status 状态（success 或 failure）
+  /// @param sample 计时器采样
   private void recordTimer(
       ProvenanceCode code, String apiName, String status, Timer.Sample sample) {
     sample.stop(
@@ -72,11 +81,24 @@ public class ProvenanceMetrics {
             .register(meterRegistry));
   }
 
+  /// 增加计数器（带错误类型）。
+  ///
+  /// @param metricName 指标名称
+  /// @param code 数据源代码
+  /// @param apiName API 名称
+  /// @param errorType 错误类型（可为 null）
   private void incrementCounter(
       String metricName, ProvenanceCode code, String apiName, String errorType) {
     incrementCounter(metricName, code, apiName, errorType, 1.0d);
   }
 
+  /// 增加计数器（带错误类型和自定义数量）。
+  ///
+  /// @param metricName 指标名称
+  /// @param code 数据源代码
+  /// @param apiName API 名称
+  /// @param errorType 错误类型（可为 null）
+  /// @param amount 增加量
   private void incrementCounter(
       String metricName, ProvenanceCode code, String apiName, String errorType, double amount) {
     Counter.Builder builder =
@@ -87,6 +109,11 @@ public class ProvenanceMetrics {
     builder.register(meterRegistry).increment(amount);
   }
 
+  /// 增加计数器（仅数据源代码）。
+  ///
+  /// @param metricName 指标名称
+  /// @param code 数据源代码
+  /// @param amount 增加量
   private void incrementCounter(String metricName, ProvenanceCode code, double amount) {
     Counter.builder(metricName)
         .tag("provenanceCode", code.getCode())

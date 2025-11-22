@@ -47,6 +47,11 @@ public enum PublicationStatus {
     this.description = description;
   }
 
+  /// 从代码值解析枚举（不区分大小写）。
+  ///
+  /// @param value 代码值（如 "ppublish", "EPUBLISH", "aheadofprint"）
+  /// @return 对应的枚举值
+  /// @throws IllegalArgumentException 如果代码值无效
   public static PublicationStatus fromCode(String value) {
     Assert.notBlank(value, "出版状态代码不能为空");
     String normalized = value.trim().toLowerCase();

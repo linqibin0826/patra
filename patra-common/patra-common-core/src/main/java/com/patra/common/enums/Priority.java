@@ -27,6 +27,9 @@ public enum Priority {
 
   private final int queueValue;
 
+  /// 构造优先级枚举常量。
+  ///
+  /// @param queueValue 队列值,数字越小表示优先级越高
   Priority(int queueValue) {
     this.queueValue = queueValue;
   }

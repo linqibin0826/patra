@@ -31,6 +31,13 @@ import org.springframework.core.env.Environment;
     matchIfMissing = true)
 public class PatraFeignAutoConfiguration {
 
+  /// 注册 Patra Feign 请求拦截器 Bean。
+  ///
+  /// 创建拦截器以在所有 Feign 客户端请求中添加共享的请求头,如调用者服务名称。
+  ///
+  /// @param props Patra Feign 配置属性
+  /// @param env Spring 环境对象
+  /// @return Patra Feign 请求拦截器实例
   @Bean
   @ConditionalOnMissingBean
   public PatraFeignRequestInterceptor patraFeignRequestInterceptor(

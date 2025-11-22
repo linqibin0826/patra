@@ -35,8 +35,12 @@ public abstract class AggregateRoot<ID> implements Serializable {
   /// 待应用层收集的挂起领域事件。
   private final transient List<DomainEvent> domainEvents = new ArrayList<>();
 
+  /// 默认构造函数,用于反序列化或仓储重建。
   protected AggregateRoot() {}
 
+  /// 带标识符的构造函数,用于测试或工厂方法。
+  ///
+  /// @param id 聚合标识符
   protected AggregateRoot(ID id) {
     this.id = id;
   }

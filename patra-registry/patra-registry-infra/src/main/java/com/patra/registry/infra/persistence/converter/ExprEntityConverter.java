@@ -29,13 +29,25 @@ import org.mapstruct.ReportingPolicy;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ExprEntityConverter {
 
+  /// 转换表达式字段字典实体为领域值对象。
+  ///
+  /// @param entity 数据库实体
+  /// @return 表达式字段领域值对象
   @Mapping(target = "exposable", expression = "java(Boolean.TRUE.equals(entity.getExposable()))")
   @Mapping(target = "dateField", expression = "java(Boolean.TRUE.equals(entity.getDateField()))")
   ExprField toDomain(RegExprFieldDictDO entity);
 
+  /// 转换 API 参数映射实体为领域值对象。
+  ///
+  /// @param entity 数据库实体
+  /// @return API 参数映射领域值对象
   @Mapping(target = "notesJson", source = "notes")
   ApiParamMapping toDomain(RegProvApiParamMapDO entity);
 
+  /// 转换表达式能力实体为领域值对象。
+  ///
+  /// @param entity 数据库实体
+  /// @return 表达式能力领域值对象
   @Mapping(target = "opsJson", source = "ops")
   @Mapping(target = "negatableOpsJson", source = "negatableOps")
   @Mapping(
@@ -66,6 +78,10 @@ public interface ExprEntityConverter {
   @Mapping(target = "tokenKindsJson", source = "tokenKinds")
   ExprCapability toDomain(RegProvExprCapabilityDO entity);
 
+  /// 转换表达式渲染规则实体为领域值对象。
+  ///
+  /// @param entity 数据库实体
+  /// @return 表达式渲染规则领域值对象
   @Mapping(target = "negated", expression = "java(entity.getNegated())")
   @Mapping(target = "wrapGroup", expression = "java(Boolean.TRUE.equals(entity.getWrapGroup()))")
   @Mapping(target = "paramsJson", source = "params")

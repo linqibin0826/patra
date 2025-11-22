@@ -48,6 +48,7 @@ public final class ExprCanonicalizer {
     CANONICAL_WRITER = OBJECT_MAPPER.writer();
   }
 
+  /// 私有构造函数,防止实例化工具类。
   private ExprCanonicalizer() {}
 
   /// 规范化给定的表达式,返回包含确定性 JSON 文本及其 SHA-256 摘要的快照。
@@ -121,6 +122,10 @@ public final class ExprCanonicalizer {
     return buildCanonicalArrayNode(sorted);
   }
 
+  /// 构建数组节点的规范化元素列表。
+  ///
+  /// @param arrayNode 待处理的数组节点
+  /// @return 规范化元素列表
   private static List<CanonicalElement> buildCanonicalElements(ArrayNode arrayNode) {
     List<CanonicalElement> elements = new ArrayList<>();
     for (JsonNode element : arrayNode) {
@@ -135,6 +140,10 @@ public final class ExprCanonicalizer {
     return elements;
   }
 
+  /// 去除重复的数组元素。
+  ///
+  /// @param elements 待去重的元素列表
+  /// @return 去重后的元素列表
   private static List<CanonicalElement> deduplicateElements(List<CanonicalElement> elements) {
     Map<String, CanonicalElement> deduplicated = new LinkedHashMap<>();
     for (CanonicalElement element : elements) {
@@ -144,6 +153,10 @@ public final class ExprCanonicalizer {
     return new ArrayList<>(deduplicated.values());
   }
 
+  /// 对数组元素进行排序。
+  ///
+  /// @param elements 待排序的元素列表
+  /// @return 排序后的元素列表
   private static List<CanonicalElement> sortElements(List<CanonicalElement> elements) {
     List<CanonicalElement> sorted = new ArrayList<>(elements);
     sorted.sort(
@@ -152,6 +165,10 @@ public final class ExprCanonicalizer {
     return sorted;
   }
 
+  /// 从规范化元素列表构建数组节点。
+  ///
+  /// @param elements 规范化元素列表
+  /// @return 数组节点,如果为空则返回 NullNode
   private static JsonNode buildCanonicalArrayNode(List<CanonicalElement> elements) {
     ArrayNode canonical = NODE_FACTORY.arrayNode();
     for (CanonicalElement element : elements) {
@@ -237,6 +254,11 @@ public final class ExprCanonicalizer {
     return "9";
   }
 
+  /// 将 JSON 节点序列化为字符串。
+  ///
+  /// @param node 待序列化的节点
+  /// @return JSON 字符串
+  /// @throws IllegalStateException 如果序列化失败
   private static String writeJson(JsonNode node) {
     try {
       return CANONICAL_WRITER.writeValueAsString(node);
@@ -245,7 +267,21 @@ public final class ExprCanonicalizer {
     }
   }
 
+  /// 规范化元素的内部表示。
+  ///
+  /// @param value JSON 节点值
+  /// @param typeTag 类型标签
+  /// @param serialized 序列化字符串
   private record CanonicalElement(JsonNode value, String typeTag, String serialized) {
+    /// 规范构造器,强制执行 CanonicalElement 的验证规则。
+    ///
+    /// 验证规则:
+    ///
+    /// - value 不能为 null
+    /// - typeTag 不能为 null
+    /// - serialized 不能为 null
+    ///
+    /// @throws NullPointerException 如果验证失败
     private CanonicalElement {
       Objects.requireNonNull(value, "value must not be null");
       Objects.requireNonNull(typeTag, "typeTag must not be null");

@@ -60,6 +60,10 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   private final ProblemDetailAdapter problemDetailAdapter;
   private final ValidationErrorsFormatter validationErrorsFormatter;
 
+  /// 构造全局异常处理器实例。
+  ///
+  /// @param problemDetailAdapter 问题详情适配器
+  /// @param validationErrorsFormatter 验证错误格式化器
   public GlobalRestExceptionHandler(
       ProblemDetailAdapter problemDetailAdapter,
       ValidationErrorsFormatter validationErrorsFormatter) {
@@ -68,6 +72,10 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   /// 后备处理器，将任何未捕获的异常转换为问题详情文档。
+  ///
+  /// @param ex 未捕获的异常
+  /// @param request HTTP 请求上下文
+  /// @return 包含问题详情的响应实体
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ProblemDetail> handleException(Exception ex, HttpServletRequest request) {
     ProblemDetailResponse response = problemDetailAdapter.adapt(ex, request);
@@ -80,6 +88,12 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   /// 处理验证失败并将清理后的字段错误附加到响应载荷。
+  ///
+  /// @param ex 验证异常
+  /// @param headers HTTP 响应头
+  /// @param status HTTP 状态码
+  /// @param request Web 请求上下文
+  /// @return 包含问题详情和验证错误列表的响应实体
   @Override
   protected ResponseEntity<Object> handleMethodArgumentNotValid(
       @NonNull MethodArgumentNotValidException ex,

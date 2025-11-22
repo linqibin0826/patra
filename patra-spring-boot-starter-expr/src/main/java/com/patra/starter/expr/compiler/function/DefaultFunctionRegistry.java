@@ -35,6 +35,7 @@ public class DefaultFunctionRegistry implements FunctionRegistry {
                     }));
   }
 
+  /// {@inheritDoc}
   @Override
   public Optional<RenderFunction> find(String code) {
     if (code == null || code.isBlank()) {

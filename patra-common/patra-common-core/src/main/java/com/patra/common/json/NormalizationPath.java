@@ -28,7 +28,6 @@ final class NormalizationPath {
   }
 
   /// 退出当前字段，弹出路径栈顶元素。
-
   void pop() {
     if (!tokens.isEmpty()) {
       tokens.removeLast();
@@ -36,7 +35,6 @@ final class NormalizationPath {
   }
 
   /// 标记进入数组，在当前字段名后追加 "[]"。
-
   void markArray() {
     if (tokens.isEmpty()) {
       tokens.addLast("[]");
@@ -47,7 +45,6 @@ final class NormalizationPath {
   }
 
   /// 退出数组，移除路径末尾的 "[]" 标记。
-
   void unmarkArray() {
     if (tokens.isEmpty()) {
       return;

@@ -22,13 +22,21 @@ public class TraceIdRequestInterceptor implements RequestInterceptor {
   private final TraceProvider traceProvider;
   private final TracingProperties tracingProperties;
 
+  /// 构造跟踪标识符请求拦截器。
+  ///
+  /// @param traceProvider 跟踪标识符提供者 SPI
+  /// @param tracingProperties 跟踪配置属性
   public TraceIdRequestInterceptor(
       TraceProvider traceProvider, TracingProperties tracingProperties) {
     this.traceProvider = traceProvider;
     this.tracingProperties = tracingProperties;
   }
 
-  /// 将跟踪标识符注入到出站请求 header
+  /// 将跟踪标识符注入到出站请求 header。
+  ///
+  /// 从 TraceProvider 获取当前跟踪标识符并添加到请求模板中。如果跟踪传播失败不会导致请求失败。
+  ///
+  /// @param template Feign 请求模板
   @Override
   public void apply(RequestTemplate template) {
     try {
@@ -50,7 +58,7 @@ public class TraceIdRequestInterceptor implements RequestInterceptor {
     }
   }
 
-  /// 获取用于跟踪传播的 header 名称
+  /// 获取用于跟踪传播的 header 名称。
   ///
   /// @return 第一个配置的值或默认值
   private String getTraceHeaderName() {

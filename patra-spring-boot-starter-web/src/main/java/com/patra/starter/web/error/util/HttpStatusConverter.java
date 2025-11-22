@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 @Slf4j
 public final class HttpStatusConverter {
 
+  /// 私有构造函数,防止实例化工具类。
   private HttpStatusConverter() {
     throw new UnsupportedOperationException("工具类不能被实例化");
   }

@@ -36,6 +36,11 @@ public class ErrorResolutionPipeline {
   private final ErrorResolutionEngine engine;
   private final List<ResolutionInterceptor> interceptors;
 
+  /// 构造错误解析管道。
+  ///
+  /// @param engine 错误解析引擎
+  /// @param interceptors 拦截器列表,将按 @Order 注解排序
+
   public ErrorResolutionPipeline(
       ErrorResolutionEngine engine, List<ResolutionInterceptor> interceptors) {
     this.engine = engine;

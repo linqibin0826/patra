@@ -44,6 +44,16 @@ public class DefaultExprCompiler implements ExprCompiler {
   private final ExprModeProperties modeProperties;
   private final ExprMetrics metrics;
 
+  /// 构造默认表达式编译器实例。
+  ///
+  /// @param snapshotLoader 规则快照加载器
+  /// @param capabilityChecker 能力检查器
+  /// @param normalizer 表达式规范化器
+  /// @param renderer 表达式渲染器
+  /// @param transformRegistry 值转换注册表
+  /// @param compilerProperties 编译器配置属性
+  /// @param modeProperties 模式配置属性
+  /// @param metrics 编译指标收集器
   public DefaultExprCompiler(
       RuleSnapshotLoader snapshotLoader,
       CapabilityChecker capabilityChecker,
@@ -63,6 +73,7 @@ public class DefaultExprCompiler implements ExprCompiler {
     this.metrics = metrics == null ? ExprMetrics.noop() : metrics;
   }
 
+  /// {@inheritDoc}
   @Override
   public CompileResult compile(CompileRequest request) {
     Objects.requireNonNull(request, "request");
@@ -107,6 +118,10 @@ public class DefaultExprCompiler implements ExprCompiler {
     }
   }
 
+  /// 从编译请求中提取编译上下文。
+  ///
+  /// @param request 编译请求
+  /// @return 编译上下文
   private CompileContext extractCompileContext(CompileRequest request) {
     boolean strictMode = request.options().strict() || modeProperties.isStrict();
     boolean repeatEnabled = modeProperties.getMulti().isRepeatEnabled();
@@ -118,11 +133,40 @@ public class DefaultExprCompiler implements ExprCompiler {
         strictMode, repeatEnabled, queryLengthLimit, warnParamCount, maxParamCount, bridgeEnabled);
   }
 
+  /// 编译上下文记录,封装编译过程的配置参数。
+  ///
+  /// @param strictMode 是否启用严格模式
+  /// @param repeatEnabled 是否启用重复策略
+  /// @param queryLengthLimit 查询字符串长度限制
+  /// @param warnParamCount 参数数量警告阈值
+  /// @param maxParamCount 参数数量硬限制
+  /// @param bridgeEnabled 是否启用查询桥接
+  private record CompileContext(
+      boolean strictMode,
+      boolean repeatEnabled,
+      int queryLengthLimit,
+      int warnParamCount,
+      int maxParamCount,
+      boolean bridgeEnabled) {}
+
+  /// 加载数据源快照。
+  ///
+  /// @param request 编译请求
+  /// @param ctx 编译上下文
+  /// @return 数据源快照
   private ProvenanceSnapshot loadSnapshot(CompileRequest request, CompileContext ctx) {
     return snapshotLoader.load(
         request.provenance(), request.operationType(), request.endpointName());
   }
 
+  /// 执行能力检查,验证表达式是否满足数据源能力要求。
+  ///
+  /// @param request 编译请求
+  /// @param snapshot 数据源快照
+  /// @param normalized 规范化后的表达式
+  /// @param endpointName 端点名称
+  /// @param ctx 编译上下文
+  /// @return 能力检查结果
   private CapabilityCheckResult performCapabilityCheck(
       CompileRequest request,
       ProvenanceSnapshot snapshot,
@@ -157,6 +201,21 @@ public class DefaultExprCompiler implements ExprCompiler {
     return new CapabilityCheckResult(warnings, failure);
   }
 
+  /// 能力检查结果记录。
+  ///
+  /// @param warnings 警告列表
+  /// @param failure 失败时的编译结果,成功时为 null
+  private record CapabilityCheckResult(List<Issue> warnings, CompileResult failure) {}
+
+  /// 验证查询字符串长度是否超过限制。
+  ///
+  /// @param outcome 渲染结果
+  /// @param normalized 规范化后的表达式
+  /// @param snapshot 数据源快照
+  /// @param endpointName 端点名称
+  /// @param provenanceCode 数据源代码
+  /// @param ctx 编译上下文
+  /// @return 超长时返回错误结果,否则返回 null
   private CompileResult validateQueryLength(
       ExprRenderer.RenderOutcome outcome,
       Expr normalized,
@@ -189,6 +248,17 @@ public class DefaultExprCompiler implements ExprCompiler {
         "", Map.of(), normalized, report, toRef(snapshot, endpointName), outcome.trace());
   }
 
+  /// 构建成功的编译结果。
+  ///
+  /// @param request 编译请求
+  /// @param outcome 渲染结果
+  /// @param normalized 规范化后的表达式
+  /// @param snapshot 数据源快照
+  /// @param endpointName 端点名称
+  /// @param provenanceCode 数据源代码
+  /// @param ctx 编译上下文
+  /// @param capabilityWarnings 能力检查的警告列表
+  /// @return 编译结果
   private CompileResult buildSuccessResult(
       CompileRequest request,
       ExprRenderer.RenderOutcome outcome,
@@ -228,6 +298,17 @@ public class DefaultExprCompiler implements ExprCompiler {
         outcome.trace());
   }
 
+  /// 构建数据源提供商参数映射。
+  ///
+  /// @param outcome 渲染结果
+  /// @param snapshot 数据源快照
+  /// @param endpointName 端点名称
+  /// @param provenanceCode 数据源代码
+  /// @param renderedQuery 渲染后的查询字符串
+  /// @param warnings 警告列表(输出参数)
+  /// @param errors 错误列表(输出参数)
+  /// @param ctx 编译上下文
+  /// @return 提供商参数映射
   private LinkedHashMap<String, String> buildProviderParams(
       ExprRenderer.RenderOutcome outcome,
       ProvenanceSnapshot snapshot,
@@ -265,6 +346,16 @@ public class DefaultExprCompiler implements ExprCompiler {
     return providerParams;
   }
 
+  /// 处理编译错误,构建失败结果。
+  ///
+  /// @param errors 错误列表
+  /// @param normalized 规范化后的表达式
+  /// @param snapshot 数据源快照
+  /// @param endpointName 端点名称
+  /// @param provenanceCode 数据源代码
+  /// @param outcome 渲染结果
+  /// @param providerParams 提供商参数映射
+  /// @return 编译失败结果
   private CompileResult handleCompileErrors(
       List<Issue> errors,
       Expr normalized,
@@ -295,6 +386,12 @@ public class DefaultExprCompiler implements ExprCompiler {
         "", errorParams, normalized, report, toRef(snapshot, endpointName), outcome.trace());
   }
 
+  /// 记录成功编译的日志。
+  ///
+  /// @param provenanceCode 数据源代码
+  /// @param endpointName 端点名称
+  /// @param query 查询字符串
+  /// @param params 参数映射
   private void logSuccessfulCompile(
       String provenanceCode, String endpointName, String query, Map<String, String> params) {
     if (log.isDebugEnabled()) {
@@ -313,6 +410,11 @@ public class DefaultExprCompiler implements ExprCompiler {
     }
   }
 
+  /// 记录编译性能指标。
+  ///
+  /// @param provenanceCode 数据源代码
+  /// @param endpointName 端点名称
+  /// @param startNanos 开始时间(纳秒)
   private void recordMetrics(String provenanceCode, String endpointName, long startNanos) {
     if (provenanceCode != null) {
       long durationMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
@@ -320,16 +422,13 @@ public class DefaultExprCompiler implements ExprCompiler {
     }
   }
 
-  private record CompileContext(
-      boolean strictMode,
-      boolean repeatEnabled,
-      int queryLengthLimit,
-      int warnParamCount,
-      int maxParamCount,
-      boolean bridgeEnabled) {}
-
-  private record CapabilityCheckResult(List<Issue> warnings, CompileResult failure) {}
-
+  /// 应用参数数量限制检查。
+  ///
+  /// @param providerParams 提供商参数映射
+  /// @param warnParamCount 警告阈值
+  /// @param maxParamCount 硬限制阈值
+  /// @param warnings 警告列表(输出参数)
+  /// @param errors 错误列表(输出参数)
   private void applyParamCountLimits(
       Map<String, String> providerParams,
       int warnParamCount,
@@ -352,6 +451,16 @@ public class DefaultExprCompiler implements ExprCompiler {
     }
   }
 
+  /// 桥接查询字符串到提供商参数。
+  ///
+  /// @param query 查询字符串
+  /// @param snapshot 数据源快照
+  /// @param provenanceCode 数据源代码
+  /// @param endpointName 端点名称
+  /// @param strictMode 是否严格模式
+  /// @param warnings 警告列表(输出参数)
+  /// @param errors 错误列表(输出参数)
+  /// @param providerParams 提供商参数映射(输出参数)
   private void bridgeQuery(
       String query,
       ProvenanceSnapshot snapshot,
@@ -386,6 +495,12 @@ public class DefaultExprCompiler implements ExprCompiler {
         providerParams);
   }
 
+  /// 处理查询映射缺失的情况。
+  ///
+  /// @param snapshot 数据源快照
+  /// @param provenanceCode 数据源代码
+  /// @param endpointName 端点名称
+  /// @param warnings 警告列表(输出参数)
   private void handleMissingQueryMapping(
       ProvenanceSnapshot snapshot,
       String provenanceCode,
@@ -402,6 +517,11 @@ public class DefaultExprCompiler implements ExprCompiler {
     metrics.paramMapMiss(provenanceCode, endpointName);
   }
 
+  /// 处理查询桥接参数冲突。
+  ///
+  /// @param providerName 提供商参数名
+  /// @param snapshot 数据源快照
+  /// @param errors 错误列表(输出参数)
   private void handleQueryBridgeConflict(
       String providerName, ProvenanceSnapshot snapshot, List<Issue> errors) {
     errors.add(
@@ -415,6 +535,18 @@ public class DefaultExprCompiler implements ExprCompiler {
         providerName);
   }
 
+  /// 应用查询桥接转换。
+  ///
+  /// @param query 查询字符串
+  /// @param mapping API 参数映射
+  /// @param providerName 提供商参数名
+  /// @param snapshot 数据源快照
+  /// @param provenanceCode 数据源代码
+  /// @param endpointName 端点名称
+  /// @param strictMode 是否严格模式
+  /// @param warnings 警告列表(输出参数)
+  /// @param errors 错误列表(输出参数)
+  /// @param providerParams 提供商参数映射(输出参数)
   private void applyQueryBridge(
       String query,
       ProvenanceSnapshot.ApiParameter mapping,
@@ -444,6 +576,17 @@ public class DefaultExprCompiler implements ExprCompiler {
     metrics.paramMapHit(provenanceCode, endpointName);
   }
 
+  /// 映射标准键到提供商参数。
+  ///
+  /// @param stdKeyParams 标准键参数映射
+  /// @param snapshot 数据源快照
+  /// @param provenanceCode 数据源代码
+  /// @param endpointName 端点名称
+  /// @param strictMode 是否严格模式
+  /// @param repeatEnabled 是否启用重复策略
+  /// @param warnings 警告列表(输出参数)
+  /// @param errors 错误列表(输出参数)
+  /// @param providerParams 提供商参数映射(输出参数)
   private void mapStdKeys(
       Map<String, String> stdKeyParams,
       ProvenanceSnapshot snapshot,
@@ -472,6 +615,17 @@ public class DefaultExprCompiler implements ExprCompiler {
     }
   }
 
+  /// 处理单个标准键条目。
+  ///
+  /// @param entry 标准键条目
+  /// @param snapshot 数据源快照
+  /// @param provenanceCode 数据源代码
+  /// @param endpointName 端点名称
+  /// @param strictMode 是否严格模式
+  /// @param repeatEnabled 是否启用重复策略
+  /// @param warnings 警告列表(输出参数)
+  /// @param errors 错误列表(输出参数)
+  /// @param providerParams 提供商参数映射(输出参数)
   private void processStdKeyEntry(
       Map.Entry<String, String> entry,
       ProvenanceSnapshot snapshot,
@@ -513,6 +667,13 @@ public class DefaultExprCompiler implements ExprCompiler {
     metrics.paramMapHit(provenanceCode, endpointName);
   }
 
+  /// 处理标准键映射缺失的情况。
+  ///
+  /// @param stdKey 标准键
+  /// @param snapshot 数据源快照
+  /// @param provenanceCode 数据源代码
+  /// @param endpointName 端点名称
+  /// @param warnings 警告列表(输出参数)
   private void handleMissingStdKeyMapping(
       String stdKey,
       ProvenanceSnapshot snapshot,
@@ -531,6 +692,14 @@ public class DefaultExprCompiler implements ExprCompiler {
     metrics.paramMapMiss(provenanceCode, endpointName);
   }
 
+  /// 检查多值重复策略。
+  ///
+  /// @param stdKey 标准键
+  /// @param providerName 提供商参数名
+  /// @param mapping API 参数映射
+  /// @param snapshot 数据源快照
+  /// @param repeatEnabled 是否启用重复策略
+  /// @param warnings 警告列表(输出参数)
   private void checkMultiRepeatStrategy(
       String stdKey,
       String providerName,
@@ -558,6 +727,9 @@ public class DefaultExprCompiler implements ExprCompiler {
     }
   }
 
+  /// 记录编译错误到指标系统。
+  ///
+  /// @param errors 错误列表
   private void recordCompileErrors(List<Issue> errors) {
     if (errors == null || errors.isEmpty()) {
       return;
@@ -573,6 +745,11 @@ public class DefaultExprCompiler implements ExprCompiler {
     }
   }
 
+  /// 解析端点名称。
+  ///
+  /// @param snapshot 数据源快照
+  /// @param fallbackEndpoint 默认端点名称
+  /// @return 解析后的端点名称
   private String resolveEndpoint(ProvenanceSnapshot snapshot, String fallbackEndpoint) {
     if (snapshot.operation() != null && snapshot.operation().code() != null) {
       String code = snapshot.operation().code();
@@ -583,10 +760,27 @@ public class DefaultExprCompiler implements ExprCompiler {
     return fallbackEndpoint(fallbackEndpoint);
   }
 
+  /// 提供默认端点名称。
+  ///
+  /// @param endpoint 端点名称
+  /// @return 端点名称或默认值 "SEARCH"
   private String fallbackEndpoint(String endpoint) {
     return endpoint == null || endpoint.isBlank() ? "SEARCH" : endpoint;
   }
 
+  /// 根据需要应用值转换。
+  ///
+  /// @param stdKey 标准键
+  /// @param providerParamName 提供商参数名
+  /// @param value 原始值
+  /// @param transformCode 转换代码
+  /// @param snapshot 数据源快照
+  /// @param provenanceCode 数据源代码
+  /// @param endpointName 端点名称
+  /// @param strictMode 是否严格模式
+  /// @param warnings 警告列表(输出参数)
+  /// @param errors 错误列表(输出参数)
+  /// @return 转换后的值
   private String applyTransformIfNeeded(
       String stdKey,
       String providerParamName,
@@ -620,6 +814,14 @@ public class DefaultExprCompiler implements ExprCompiler {
         endpointName);
   }
 
+  /// 处理转换器缺失的情况。
+  ///
+  /// @param transformCode 转换代码
+  /// @param stdKey 标准键
+  /// @param providerParamName 提供商参数名
+  /// @param strictMode 是否严格模式
+  /// @param warnings 警告列表(输出参数)
+  /// @param errors 错误列表(输出参数)
   private void handleMissingTransform(
       String transformCode,
       String stdKey,
@@ -643,6 +845,17 @@ public class DefaultExprCompiler implements ExprCompiler {
         providerParamName);
   }
 
+  /// 执行值转换。
+  ///
+  /// @param transform 转换器
+  /// @param stdKey 标准键
+  /// @param providerParamName 提供商参数名
+  /// @param value 原始值
+  /// @param transformCode 转换代码
+  /// @param snapshot 数据源快照
+  /// @param provenanceCode 数据源代码
+  /// @param endpointName 端点名称
+  /// @return 转换后的值
   private String executeTransform(
       ValueTransform transform,
       String stdKey,
@@ -666,6 +879,12 @@ public class DefaultExprCompiler implements ExprCompiler {
     return result == null ? "" : result;
   }
 
+  /// 合并渲染器产生的警告。
+  ///
+  /// @param rendererWarnings 渲染器警告列表
+  /// @param warnings 警告列表(输出参数)
+  /// @param errors 错误列表(输出参数)
+  /// @param strictMode 是否严格模式
   private void mergeRendererWarnings(
       List<Issue> rendererWarnings, List<Issue> warnings, List<Issue> errors, boolean strictMode) {
     if (rendererWarnings == null) {
@@ -683,6 +902,11 @@ public class DefaultExprCompiler implements ExprCompiler {
     }
   }
 
+  /// 将能力检查问题分类为警告和错误。
+  ///
+  /// @param issues 问题列表
+  /// @param strictMode 是否严格模式
+  /// @return 分类后的问题桶
   private IssueBuckets bucketCapabilityIssues(List<Issue> issues, boolean strictMode) {
     List<Issue> warnings = new ArrayList<>();
     List<Issue> errors = new ArrayList<>();
@@ -708,6 +932,16 @@ public class DefaultExprCompiler implements ExprCompiler {
     return new IssueBuckets(warnings, errors);
   }
 
+  /// 问题桶记录,分类存储警告和错误。
+  ///
+  /// @param warnings 警告列表
+  /// @param errors 错误列表
+  private record IssueBuckets(List<Issue> warnings, List<Issue> errors) {}
+
+  /// 判断错误是否可以在非严格模式下降级为警告。
+  ///
+  /// @param issue 问题
+  /// @return true 表示可以降级
   private boolean isRelaxableError(Issue issue) {
     if (issue == null) {
       return false;
@@ -715,6 +949,10 @@ public class DefaultExprCompiler implements ExprCompiler {
     return "E-NOT-UNSUPPORTED".equals(issue.code()) || "E-NOT-OP-UNSUPPORTED".equals(issue.code());
   }
 
+  /// 解析最大查询长度限制。
+  ///
+  /// @param request 编译请求
+  /// @return 最大查询长度
   private int resolveMaxQueryLength(CompileRequest request) {
     if (request.options().maxQueryLength() > 0) {
       return request.options().maxQueryLength();
@@ -722,6 +960,10 @@ public class DefaultExprCompiler implements ExprCompiler {
     return Math.max(0, compilerProperties.getMaxQueryLength());
   }
 
+  /// 计算查询字符串的 SHA-256 哈希值。
+  ///
+  /// @param query 查询字符串
+  /// @return 哈希值的十六进制表示
   private String hashQuery(String query) {
     if (query == null || query.isBlank()) {
       return "blank";
@@ -739,11 +981,14 @@ public class DefaultExprCompiler implements ExprCompiler {
     }
   }
 
+  /// 将数据源快照转换为引用对象。
+  ///
+  /// @param snapshot 数据源快照
+  /// @param endpointName 端点名称
+  /// @return 快照引用
   private SnapshotRef toRef(ProvenanceSnapshot snapshot, String endpointName) {
     ProvenanceSnapshot.Identity id = snapshot.identity();
     return new SnapshotRef(
         id.provenanceId(), id.code(), endpointName, snapshot.version(), snapshot.capturedAt());
   }
-
-  private record IssueBuckets(List<Issue> warnings, List<Issue> errors) {}
 }

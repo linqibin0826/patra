@@ -13,6 +13,9 @@ public class DefaultConfigProvider {
 
   private final ProvenanceProperties properties;
 
+  /// 创建默认配置提供者。
+  ///
+  /// @param properties Provenance 配置属性
   public DefaultConfigProvider(ProvenanceProperties properties) {
     this.properties = Objects.requireNonNull(properties, "properties cannot be null");
   }

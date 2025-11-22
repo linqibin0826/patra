@@ -12,7 +12,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class HttpStdErrors {
 
   /// 私有构造函数,防止实例化工具类。
-
   private HttpStdErrors() {}
 
   private static final Map<String, Group> CACHE = new ConcurrentHashMap<>();
@@ -33,7 +32,6 @@ public final class HttpStdErrors {
     /// 创建错误码组。
     ///
     /// @param prefix 错误码前缀
-
     Group(String prefix) {
       this.prefix = prefix;
     }

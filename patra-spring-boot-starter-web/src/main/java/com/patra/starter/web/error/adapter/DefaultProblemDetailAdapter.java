@@ -16,12 +16,21 @@ public class DefaultProblemDetailAdapter implements ProblemDetailAdapter {
   private final ErrorResolutionPipeline pipeline;
   private final ProblemDetailBuilder problemDetailBuilder;
 
+  /// 构造默认问题详情适配器实例。
+  ///
+  /// @param pipeline 错误解析管道
+  /// @param problemDetailBuilder 问题详情构建器
   public DefaultProblemDetailAdapter(
       ErrorResolutionPipeline pipeline, ProblemDetailBuilder problemDetailBuilder) {
     this.pipeline = pipeline;
     this.problemDetailBuilder = problemDetailBuilder;
   }
 
+  /// 将异常转换为符合 RFC 7807 标准的问题详情响应。
+  ///
+  /// @param exception 待适配的异常
+  /// @param request HTTP 请求上下文
+  /// @return 包含问题详情、HTTP 状态和错误解析信息的响应
   @Override
   public ProblemDetailResponse adapt(Throwable exception, HttpServletRequest request) {
     ErrorResolution resolution = pipeline.resolve(exception);

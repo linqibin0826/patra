@@ -28,6 +28,11 @@ public enum PubMedOperation {
   private final String endpoint;
   private final String description;
 
+  /// 构造 PubMed 操作枚举常量。
+  ///
+  /// @param operationName 操作名称
+  /// @param endpoint 端点路径
+  /// @param description 操作描述
   PubMedOperation(String operationName, String endpoint, String description) {
     this.operationName = operationName;
     this.endpoint = endpoint;
@@ -55,6 +60,9 @@ public enum PubMedOperation {
     return description;
   }
 
+  /// 返回操作的字符串表示形式。
+  ///
+  /// @return 格式为 "操作名称 (描述)" 的字符串
   @Override
   public String toString() {
     return operationName + " (" + description + ")";

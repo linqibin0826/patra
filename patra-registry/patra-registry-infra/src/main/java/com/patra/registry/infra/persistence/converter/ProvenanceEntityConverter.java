@@ -34,27 +34,55 @@ import org.mapstruct.ReportingPolicy;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ProvenanceEntityConverter {
 
+  /// 转换数据源实体为领域值对象。
+  ///
+  /// @param entity 数据库实体
+  /// @return 数据源领域值对象
   @Mapping(target = "code", source = "provenanceCode")
   @Mapping(target = "name", source = "provenanceName")
   @Mapping(target = "active", expression = "java(Boolean.TRUE.equals(entity.getIsActive()))")
   Provenance toDomain(RegProvenanceDO entity);
 
+  /// 转换窗口偏移配置实体为领域值对象。
+  ///
+  /// @param entity 数据库实体
+  /// @return 窗口偏移配置领域值对象
   WindowOffsetConfig toDomain(RegProvWindowOffsetCfgDO entity);
 
+  /// 转换分页配置实体为领域值对象。
+  ///
+  /// @param entity 数据库实体
+  /// @return 分页配置领域值对象
   PaginationConfig toDomain(RegProvPaginationCfgDO entity);
 
+  /// 转换 HTTP 配置实体为领域值对象。
+  ///
+  /// @param entity 数据库实体
+  /// @return HTTP 配置领域值对象
   @Mapping(
       target = "tlsVerifyEnabled",
       expression = "java(Boolean.TRUE.equals(entity.getTlsVerifyEnabled()))")
   HttpConfig toDomain(RegProvHttpCfgDO entity);
 
+  /// 转换批处理配置实体为领域值对象。
+  ///
+  /// @param entity 数据库实体
+  /// @return 批处理配置领域值对象
   BatchingConfig toDomain(RegProvBatchingCfgDO entity);
 
+  /// 转换重试配置实体为领域值对象。
+  ///
+  /// @param entity 数据库实体
+  /// @return 重试配置领域值对象
   @Mapping(
       target = "retryOnNetworkError",
       expression = "java(Boolean.TRUE.equals(entity.getRetryOnNetworkError()))")
   RetryConfig toDomain(RegProvRetryCfgDO entity);
 
+  /// 转换速率限制配置实体为领域值对象。
+  ///
+  /// @param entity 数据库实体
+  /// @return 速率限制配置领域值对象
   RateLimitConfig toDomain(RegProvRateLimitCfgDO entity);
 
   /// MapStruct 辅助方法:将 JsonNode 序列化为紧凑 JSON 字符串。

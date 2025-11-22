@@ -19,9 +19,14 @@ public record BusinessContext(
     String businessId,
     Map<String, Object> correlationData) {
 
-  /// 创建新的上下文,确保关键标识符存在。
+  /// 规范构造器,强制执行业务上下文的验证规则。
   ///
-  /// @throws IllegalArgumentException 如果服务名称、业务类型或业务ID为空
+  /// 验证规则:
+  ///
+  /// - 服务名称、业务类型和业务ID不能为空
+  ///   - 关联数据Map会被清理和不可变包装
+  ///
+  /// @throws IllegalArgumentException 如果必需字段为空
   public BusinessContext {
     if (serviceName == null || serviceName.isBlank()) {
       throw new IllegalArgumentException("服务名称不能为空");
@@ -35,6 +40,10 @@ public record BusinessContext(
     correlationData = sanitize(correlationData);
   }
 
+  /// 清理关联数据Map,确保不可变性。
+  ///
+  /// @param source 源Map对象
+  /// @return 不可变的Map副本
   private static Map<String, Object> sanitize(Map<String, Object> source) {
     if (source == null || source.isEmpty()) {
       return Map.of();

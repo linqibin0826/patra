@@ -19,6 +19,9 @@ public class DataLayerErrorMappingContributor implements ErrorMappingContributor
 
   private final HttpStdErrors.Group http;
 
+  /// 构造数据层错误映射贡献器。
+  ///
+  /// @param http 标准 HTTP 错误定义组
   public DataLayerErrorMappingContributor(HttpStdErrors.Group http) {
     this.http = http;
   }

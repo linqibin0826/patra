@@ -29,6 +29,12 @@ public class FileMetadataRepositoryImpl implements FileMetadataRepository {
   private final FileMetadataMapper mapper;
   private final FileMetadataConverter converter;
 
+  /// 保存文件元数据聚合根。
+  ///
+  /// 根据聚合根是否有ID判断执行insert还是update操作,保存后重新查询以获取数据库生成的字段。
+  ///
+  /// @param metadata 文件元数据聚合根
+  /// @return 保存后的聚合根,包含数据库生成的字段
   @Override
   public FileMetadata save(FileMetadata metadata) {
     FileMetadataDO dataObject = converter.toDO(metadata);
@@ -41,6 +47,12 @@ public class FileMetadataRepositoryImpl implements FileMetadataRepository {
     return converter.toAggregate(persisted);
   }
 
+  /// 通过存储键查找文件元数据。
+  ///
+  /// 使用唯一的storage_key字段查找文件元数据记录,实现幂等性检查。
+  ///
+  /// @param storageKey 存储键
+  /// @return 文件元数据聚合根的Optional包装
   @Override
   public Optional<FileMetadata> findByStorageKey(StorageKey storageKey) {
     FileMetadataDO dataObject = mapper.findByStorageKey(storageKey.fullKey());

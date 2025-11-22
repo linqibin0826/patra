@@ -31,6 +31,17 @@ import org.springframework.context.annotation.Bean;
     matchIfMissing = true)
 public class FeignErrorAutoConfiguration {
 
+  /// 注册 Feign 错误观察记录器 Bean。
+  ///
+  /// 根据配置和 Micrometer 可用性选择合适的实现:
+  ///
+  /// - 观察功能禁用时返回 NO_OP 实现
+  ///   - MeterRegistry 不可用时降级为 NO_OP 实现
+  ///   - 其他情况返回基于 Micrometer 的实现
+  ///
+  /// @param properties Feign 错误配置属性
+  /// @param meterRegistryProvider Micrometer 注册表提供者
+  /// @return Feign 错误观察记录器实例
   @Bean
   @ConditionalOnMissingBean
   public FeignErrorObservationRecorder feignErrorObservationRecorder(
@@ -47,6 +58,14 @@ public class FeignErrorAutoConfiguration {
     return new MicrometerFeignErrorObservationRecorder(meterRegistry, properties);
   }
 
+  /// 注册 ProblemDetail 错误解码器 Bean。
+  ///
+  /// 创建支持 RFC 7807 ProblemDetail 格式的错误解码器,配置容错模式和观察记录。
+  ///
+  /// @param objectMapper JSON 序列化器
+  /// @param properties Feign 错误配置属性
+  /// @param observationRecorder 观察记录器
+  /// @return Feign 错误解码器实例
   @Bean
   @ConditionalOnMissingBean(ErrorDecoder.class)
   public ErrorDecoder problemDetailErrorDecoder(
@@ -57,6 +76,13 @@ public class FeignErrorAutoConfiguration {
     return new ProblemDetailErrorDecoder(objectMapper, properties, observationRecorder);
   }
 
+  /// 注册跟踪标识符请求拦截器 Bean。
+  ///
+  /// 创建 Feign 拦截器以在出站请求中传播当前跟踪标识符。
+  ///
+  /// @param traceProvider 跟踪标识符提供者 SPI
+  /// @param tracingProperties 跟踪配置属性
+  /// @return 跟踪标识符请求拦截器实例
   @Bean
   @ConditionalOnMissingBean(TraceIdRequestInterceptor.class)
   public TraceIdRequestInterceptor traceIdRequestInterceptor(

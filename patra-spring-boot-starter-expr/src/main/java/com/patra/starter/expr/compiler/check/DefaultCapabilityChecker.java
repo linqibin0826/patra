@@ -34,6 +34,7 @@ import java.util.Set;
 /// @since 0.1.0
 public class DefaultCapabilityChecker implements CapabilityChecker {
 
+  /// {@inheritDoc}
   @Override
   public List<Issue> check(Expr expression, ProvenanceSnapshot snapshot, boolean strictMode) {
     Objects.requireNonNull(expression, "expression");
@@ -212,6 +213,10 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
   }
 
   /// 验证 IN 操作符的值约束。
+  ///
+  /// @param atom 原子条件
+  /// @param capability 能力定义
+  /// @param out 收集的问题列表
   private void validateIn(Atom atom, ProvenanceSnapshot.Capability capability, List<Issue> out) {
     Atom.InValues values = (Atom.InValues) atom.value();
     if (values.values().isEmpty()) {
@@ -238,6 +243,10 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
   }
 
   /// 验证 RANGE 操作符的类型和边界约束。
+  ///
+  /// @param atom 原子条件
+  /// @param capability 能力定义
+  /// @param out 收集的问题列表
   private void validateRange(Atom atom, ProvenanceSnapshot.Capability capability, List<Issue> out) {
     ProvenanceSnapshot.RangeKind kind = capability.rangeKind();
     Atom.RangeValue value = (Atom.RangeValue) atom.value();
@@ -271,6 +280,13 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
   }
 
   /// 验证日期范围的边界是否在能力定义的最小/最大值内。
+  ///
+  /// @param fieldKey 字段键
+  /// @param from 开始日期
+  /// @param to 结束日期
+  /// @param min 能力定义的最小日期
+  /// @param max 能力定义的最大日期
+  /// @param out 收集的问题列表
   private void validateDateBounds(
       String fieldKey,
       LocalDate from,
@@ -295,6 +311,11 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
   }
 
   /// 报告范围类型不匹配错误。
+  ///
+  /// @param atom 原子条件
+  /// @param actual 实际的范围类型
+  /// @param expected 期望的范围类型
+  /// @param out 收集的问题列表
   private void complainRangeKind(
       Atom atom, ProvenanceSnapshot.RangeKind actual, String expected, List<Issue> out) {
     out.add(
@@ -305,6 +326,10 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
   }
 
   /// 验证 EXISTS 操作符是否被支持。
+  ///
+  /// @param capability 能力定义
+  /// @param fieldKey 字段键
+  /// @param out 收集的问题列表
   private void validateExists(
       ProvenanceSnapshot.Capability capability, String fieldKey, List<Issue> out) {
     if (!capability.existsSupported()) {
@@ -313,6 +338,11 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
   }
 
   /// 验证 TOKEN 操作符的值约束。
+  ///
+  /// @param atom 原子条件
+  /// @param capability 能力定义
+  /// @param strictMode 是否启用严格模式
+  /// @param out 收集的问题列表
   private void validateToken(
       Atom atom, ProvenanceSnapshot.Capability capability, boolean strictMode, List<Issue> out) {
     Atom.TokenValue token = (Atom.TokenValue) atom.value();

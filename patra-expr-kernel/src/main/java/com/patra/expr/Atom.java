@@ -15,6 +15,16 @@ import java.util.Objects;
 /// @param value 要匹配的值
 public record Atom(String fieldKey, Operator operator, Value value) implements Expr {
 
+  /// 规范构造器,强制执行原子表达式的验证规则。
+  ///
+  /// 验证规则:
+  ///
+  /// - fieldKey 不能为 null 或空白
+  /// - operator 不能为 null
+  /// - value 不能为 null
+  /// - value 类型必须与 operator 兼容
+  ///
+  /// @throws IllegalArgumentException 如果验证失败
   public Atom {
     Objects.requireNonNull(fieldKey, "fieldKey");
     if (fieldKey.isBlank()) {
@@ -25,6 +35,11 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
     operator.verifyValueCompatibility(value);
   }
 
+  /// 接受访问者访问此原子表达式。
+  ///
+  /// @param visitor 表达式访问者
+  /// @param <R> 访问者返回类型
+  /// @return 访问者返回的结果
   @Override
   public <R> R accept(ExprVisitor<R> visitor) {
     return visitor.visitAtom(this);
@@ -55,6 +70,10 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
       this.supportedType = supportedType;
     }
 
+    /// 验证值类型是否与此运算符兼容。
+    ///
+    /// @param value 待验证的值
+    /// @throws IllegalArgumentException 如果值类型不兼容
     void verifyValueCompatibility(Value value) {
       if (!supportedType.isInstance(value)) {
         throw new IllegalArgumentException(
@@ -77,11 +96,23 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   /// @param caseSensitivity 大小写敏感度行为
   public record TermValue(String text, TextMatch match, CaseSensitivity caseSensitivity)
       implements Value {
+    /// 规范构造器,强制执行 TermValue 的验证规则。
+    ///
+    /// 验证规则:
+    ///
+    /// - match 不能为 null
+    /// - caseSensitivity 不能为 null
+    ///
+    /// @throws NullPointerException 如果验证失败
     public TermValue {
       Objects.requireNonNull(match, "match");
       Objects.requireNonNull(caseSensitivity, "caseSensitivity");
     }
 
+    /// 创建默认不区分大小写的 TermValue。
+    ///
+    /// @param text 要匹配的文本
+    /// @param match 匹配策略
     public TermValue(String text, TextMatch match) {
       this(text, match, CaseSensitivity.INSENSITIVE);
     }
@@ -92,6 +123,17 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   /// @param values 非空的要匹配的值列表
   /// @param caseSensitivity 大小写敏感度行为
   public record InValues(List<String> values, CaseSensitivity caseSensitivity) implements Value {
+    /// 规范构造器,强制执行 InValues 的验证规则。
+    ///
+    /// 验证规则:
+    ///
+    /// - values 不能为 null
+    /// - values 必须至少包含一个元素
+    /// - values 不能包含 null 元素
+    /// - caseSensitivity 不能为 null
+    /// - 创建不可变副本
+    ///
+    /// @throws IllegalArgumentException 如果验证失败
     public InValues {
       Objects.requireNonNull(values, "values");
       if (values.isEmpty()) {
@@ -104,6 +146,9 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
       Objects.requireNonNull(caseSensitivity, "caseSensitivity");
     }
 
+    /// 创建默认不区分大小写的 InValues。
+    ///
+    /// @param values 要匹配的值列表
     public InValues(List<String> values) {
       this(values, CaseSensitivity.INSENSITIVE);
     }
@@ -137,11 +182,23 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   /// @param toBoundary 上边界包含类型
   public record DateRange(LocalDate from, LocalDate to, Boundary fromBoundary, Boundary toBoundary)
       implements RangeValue {
+    /// 规范构造器,强制执行 DateRange 的验证规则。
+    ///
+    /// 验证规则:
+    ///
+    /// - fromBoundary 不能为 null
+    /// - toBoundary 不能为 null
+    ///
+    /// @throws NullPointerException 如果验证失败
     public DateRange {
       Objects.requireNonNull(fromBoundary, "fromBoundary");
       Objects.requireNonNull(toBoundary, "toBoundary");
     }
 
+    /// 创建默认闭区间的 DateRange。
+    ///
+    /// @param from 下边界日期（包含）
+    /// @param to 上边界日期（包含）
     public DateRange(LocalDate from, LocalDate to) {
       this(from, to, Boundary.CLOSED, Boundary.CLOSED);
     }
@@ -155,11 +212,23 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   /// @param toBoundary 上边界包含类型
   public record DateTimeRange(Instant from, Instant to, Boundary fromBoundary, Boundary toBoundary)
       implements RangeValue {
+    /// 规范构造器,强制执行 DateTimeRange 的验证规则。
+    ///
+    /// 验证规则:
+    ///
+    /// - fromBoundary 不能为 null
+    /// - toBoundary 不能为 null
+    ///
+    /// @throws NullPointerException 如果验证失败
     public DateTimeRange {
       Objects.requireNonNull(fromBoundary, "fromBoundary");
       Objects.requireNonNull(toBoundary, "toBoundary");
     }
 
+    /// 创建默认闭区间的 DateTimeRange。
+    ///
+    /// @param from 下边界时刻（包含）
+    /// @param to 上边界时刻（包含）
     public DateTimeRange(Instant from, Instant to) {
       this(from, to, Boundary.CLOSED, Boundary.CLOSED);
     }
@@ -174,11 +243,23 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   public record NumberRange(
       BigDecimal from, BigDecimal to, Boundary fromBoundary, Boundary toBoundary)
       implements RangeValue {
+    /// 规范构造器,强制执行 NumberRange 的验证规则。
+    ///
+    /// 验证规则:
+    ///
+    /// - fromBoundary 不能为 null
+    /// - toBoundary 不能为 null
+    ///
+    /// @throws NullPointerException 如果验证失败
     public NumberRange {
       Objects.requireNonNull(fromBoundary, "fromBoundary");
       Objects.requireNonNull(toBoundary, "toBoundary");
     }
 
+    /// 创建默认闭区间的 NumberRange。
+    ///
+    /// @param from 下边界数字（包含）
+    /// @param to 上边界数字（包含）
     public NumberRange(BigDecimal from, BigDecimal to) {
       this(from, to, Boundary.CLOSED, Boundary.CLOSED);
     }
@@ -194,6 +275,14 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   /// @param tokenType 令牌的类型（例如 "MeSH"、"GeneSymbol"）
   /// @param tokenValue 令牌标识符值
   public record TokenValue(String tokenType, String tokenValue) implements Value {
+    /// 规范构造器,强制执行 TokenValue 的验证规则。
+    ///
+    /// 验证规则:
+    ///
+    /// - tokenType 不能为 null
+    /// - tokenValue 不能为 null
+    ///
+    /// @throws NullPointerException 如果验证失败
     public TokenValue {
       Objects.requireNonNull(tokenType, "tokenType");
       Objects.requireNonNull(tokenValue, "tokenValue");

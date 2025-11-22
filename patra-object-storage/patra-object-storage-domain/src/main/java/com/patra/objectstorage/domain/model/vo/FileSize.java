@@ -9,7 +9,11 @@ import java.util.Locale;
 /// @param bytes 对象占用的字节数(必须 >= 0)
 public record FileSize(long bytes) {
 
-  /// 创建新的文件大小,确保数量非负。
+  /// 规范构造器,强制执行文件大小的验证规则。
+  ///
+  /// 验证规则:
+  ///
+  /// - 字节数必须大于或等于0
   ///
   /// @throws IllegalArgumentException 如果字节数为负
   public FileSize {

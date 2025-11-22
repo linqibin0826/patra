@@ -48,6 +48,7 @@ public class CircuitBreakerErrorAutoConfiguration {
   ///
   /// @param errorProperties 错误配置属性
   /// @return 错误解析熔断器实例
+
   @Bean(name = "errorResolutionCircuitBreaker")
   @ConditionalOnProperty(
       prefix = "patra.error.circuit-breaker",
@@ -77,6 +78,7 @@ public class CircuitBreakerErrorAutoConfiguration {
   /// @param observationRecorder 错误观测记录器
   /// @param errorProperties 错误配置属性
   /// @return 熔断器拦截器实例
+
   @Bean
   @ConditionalOnBean(name = "errorResolutionCircuitBreaker")
   public CircuitBreakerInterceptor circuitBreakerInterceptor(

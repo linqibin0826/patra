@@ -1,14 +1,13 @@
 package com.patra.starter.expr.compiler.model;
 
-/// Expression compiler commonly used endpoint name constants.
+/// 表达式编译器常用端点名称常量。
 ///
-/// Endpoint names are used to identify different API operation types, and the system selects
-/// corresponding endpoint configuration and rendering rules based on the endpoint name.
+/// 端点名称用于标识不同的 API 操作类型，系统根据端点名称选择对应的端点配置和渲染规则。
 ///
-/// **Usage example:**
+/// **使用示例**：
 ///
 /// ```java
-/// // Use constants instead of hardcoded strings
+/// // 使用常量代替硬编码字符串
 /// CompileRequest request = CompileRequestBuilder.of(expr, ProvenanceCode.PUBMED)
 ///     .forOperation(EndpointNames.SEARCH)
 ///     .build();
@@ -18,39 +17,38 @@ package com.patra.starter.expr.compiler.model;
 /// @since 0.1.0
 public final class EndpointNames {
 
-  /// Search operation: used to retrieve a list of records matching criteria.
+  /// 搜索操作：用于检索符合条件的记录列表。
   ///
-  /// This is the most commonly used operation type, typically returning an ID list or paginated
-  /// results.
+  /// 这是最常用的操作类型，通常返回 ID 列表或分页结果。
   public static final String SEARCH = "SEARCH";
 
-  /// Detail operation: used to retrieve complete information for a specific record.
+  /// 详情操作：用于检索特定记录的完整信息。
   ///
-  /// Usually requires providing a record ID and returns detailed metadata information.
+  /// 通常需要提供记录 ID，返回详细的元数据信息。
   public static final String DETAIL = "DETAIL";
 
-  /// List operation: used to retrieve a simplified list of records.
+  /// 列表操作：用于检索简化的记录列表。
   ///
-  /// Similar to SEARCH, but may return fewer fields or a different format.
+  /// 类似于 SEARCH，但可能返回更少的字段或不同的格式。
   public static final String LIST = "LIST";
 
-  /// Count operation: used to retrieve the count of records matching criteria.
+  /// 计数操作：用于检索符合条件的记录数量。
   ///
-  /// Only returns count information, not actual record data.
+  /// 仅返回数量信息，不返回实际记录数据。
   public static final String COUNT = "COUNT";
 
-  /// Fetch operation: generic data retrieval operation.
+  /// 获取操作：通用数据检索操作。
   ///
-  /// Some APIs use FETCH instead of DETAIL to represent detail retrieval.
+  /// 某些 API 使用 FETCH 而不是 DETAIL 来表示详情检索。
   public static final String FETCH = "FETCH";
 
-  /// Query operation: similar to search but semantically more oriented towards complex queries.
+  /// 查询操作：类似于搜索，但语义上更偏向复杂查询。
   public static final String QUERY = "QUERY";
 
-  /// Export operation: used for bulk data export.
+  /// 导出操作：用于批量数据导出。
   public static final String EXPORT = "EXPORT";
 
-  // Prevent instantiation
+  /// 私有构造函数，防止实例化工具类。
   private EndpointNames() {
     throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
   }

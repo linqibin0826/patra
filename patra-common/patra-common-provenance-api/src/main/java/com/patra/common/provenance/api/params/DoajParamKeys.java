@@ -7,6 +7,10 @@ package com.patra.common.provenance.api.params;
 /// @author linqibin
 /// @since 0.1.0
 public final class DoajParamKeys {
+
+  /// 私有构造函数,防止实例化工具类。
+  ///
+  /// @throws AssertionError 总是抛出，因为工具类不应被实例化
   private DoajParamKeys() {
     throw new AssertionError("工具类不应被实例化");
   }

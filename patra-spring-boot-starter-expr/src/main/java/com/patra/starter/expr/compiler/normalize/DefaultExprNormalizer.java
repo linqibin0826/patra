@@ -27,6 +27,7 @@ import java.util.Set;
 ///
 /// 规范化保持语义等价性,同时产生更简单、更紧凑的表达式树。
 ///
+/// @author linqibin
 /// @since 0.1.0
 public class DefaultExprNormalizer implements ExprNormalizer {
 
@@ -37,6 +38,9 @@ public class DefaultExprNormalizer implements ExprNormalizer {
   }
 
   /// 递归规范化表达式节点。
+  ///
+  /// @param expr 待规范化的表达式节点
+  /// @return 规范化后的表达式
   private Expr normalizeNode(Expr expr) {
     if (expr instanceof Atom atom) {
       return normalizeAtom(atom);
@@ -54,6 +58,9 @@ public class DefaultExprNormalizer implements ExprNormalizer {
   }
 
   /// 规范化原子条件,仅处理 TERM 和 IN 操作符。
+  ///
+  /// @param atom 原子条件
+  /// @return 规范化后的表达式
   private Expr normalizeAtom(Atom atom) {
     return switch (atom.operator()) {
       case TERM -> normalizeTerm(atom);
@@ -63,6 +70,9 @@ public class DefaultExprNormalizer implements ExprNormalizer {
   }
 
   /// 规范化 TERM 操作符:修剪文本空白。
+  ///
+  /// @param atom TERM 原子条件
+  /// @return 规范化后的表达式
   private Expr normalizeTerm(Atom atom) {
     Atom.TermValue term = (Atom.TermValue) atom.value();
     String text = term.text();
@@ -81,6 +91,8 @@ public class DefaultExprNormalizer implements ExprNormalizer {
   ///   - 单元素 → TERM (PHRASE 匹配)
   ///   - 多元素 → 去重后的 IN
   ///
+  /// @param atom IN 原子条件
+  /// @return 规范化后的表达式
   private Expr normalizeIn(Atom atom) {
     Atom.InValues values = (Atom.InValues) atom.value();
     List<String> raw = values.values();
@@ -121,6 +133,8 @@ public class DefaultExprNormalizer implements ExprNormalizer {
   ///   - 去重相同的子表达式
   ///   - 空列表 → TRUE,单元素 → 该元素本身
   ///
+  /// @param andExpr AND 表达式
+  /// @return 规范化后的表达式
   private Expr normalizeAnd(And andExpr) {
     List<Expr> normalized = new ArrayList<>();
     boolean hasFalse = false;
@@ -162,6 +176,8 @@ public class DefaultExprNormalizer implements ExprNormalizer {
   ///   - 去重相同的子表达式
   ///   - 空列表 → FALSE,单元素 → 该元素本身
   ///
+  /// @param orExpr OR 表达式
+  /// @return 规范化后的表达式
   private Expr normalizeOr(Or orExpr) {
     List<Expr> normalized = new ArrayList<>();
     boolean hasTrue = false;
@@ -201,6 +217,8 @@ public class DefaultExprNormalizer implements ExprNormalizer {
   ///   - NOT FALSE → TRUE
   ///   - NOT NOT x → x (双重否定消除)
   ///
+  /// @param notExpr NOT 表达式
+  /// @return 规范化后的表达式
   private Expr normalizeNot(Not notExpr) {
     Expr child = normalizeNode(notExpr.child());
     if (child instanceof Const constant) {
@@ -213,6 +231,9 @@ public class DefaultExprNormalizer implements ExprNormalizer {
   }
 
   /// 去重:保持顺序的同时移除重复的表达式。
+  ///
+  /// @param expressions 表达式列表
+  /// @return 去重后的表达式列表
   private List<Expr> dedupe(List<Expr> expressions) {
     Set<Expr> ordered = new LinkedHashSet<>(expressions);
     return new ArrayList<>(ordered);

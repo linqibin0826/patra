@@ -22,15 +22,28 @@ import java.util.Objects;
 import java.util.Set;
 
 /// 将注册表 DTO 转换为启动器的不可变 {@link ProvenanceSnapshot} 模型。
+///
+/// @author linqibin
+/// @since 0.1.0
 @SuppressWarnings("unused")
 public class SnapshotAssembler {
 
   private final ObjectMapper objectMapper;
 
+  /// 构造快照组装器。
+  ///
+  /// @param objectMapper JSON 对象映射器（必需，用于解析 JSON 字段）
   public SnapshotAssembler(ObjectMapper objectMapper) {
     this.objectMapper = objectMapper;
   }
 
+  /// 组装 Provenance 快照。
+  ///
+  /// @param provenance 数据源响应
+  /// @param snapshot 表达式快照响应
+  /// @param operationType 操作类型
+  /// @param endpointName 端点名称
+  /// @return Provenance 快照
   public ProvenanceSnapshot assemble(
       ProvenanceResp provenance,
       ExprSnapshotResp snapshot,
@@ -93,6 +106,10 @@ public class SnapshotAssembler {
         renderRules);
   }
 
+  /// 转换字段能力。
+  ///
+  /// @param resp 字段能力响应
+  /// @return 字段能力快照
   private ProvenanceSnapshot.Capability toCapability(ExprCapabilityResp resp) {
     Set<String> ops = toSet(resp.opsJson());
     Set<String> negOps = toSet(resp.negatableOpsJson());
@@ -125,6 +142,10 @@ public class SnapshotAssembler {
         resp.tokenValuePattern());
   }
 
+  /// 转换渲染规则。
+  ///
+  /// @param resp 渲染规则响应
+  /// @return 渲染规则快照
   private ProvenanceSnapshot.RenderRule toRenderRule(ExprRenderRuleResp resp) {
     Map<String, String> params = parseParams(resp.paramsJson());
     String normalizedOperationType = normalizeOperationType(resp.operationType());
@@ -153,6 +174,10 @@ public class SnapshotAssembler {
         0);
   }
 
+  /// 规范化操作类型。
+  ///
+  /// @param operationType 原始操作类型
+  /// @return 规范化后的操作类型（大写，null 或空白返回 null）
   private String normalizeOperationType(String operationType) {
     if (operationType == null || operationType.isBlank()) {
       return null;
@@ -160,6 +185,10 @@ public class SnapshotAssembler {
     return operationType.trim().toUpperCase(Locale.ROOT);
   }
 
+  /// 解析参数 JSON。
+  ///
+  /// @param paramsJson 参数 JSON 字符串
+  /// @return 参数映射
   private Map<String, String> parseParams(String paramsJson) {
     if (paramsJson == null || paramsJson.isBlank()) {
       return Map.of();
@@ -174,6 +203,9 @@ public class SnapshotAssembler {
   }
 
   /// 将 JSON 字符串转换为 Set。
+  ///
+  /// @param json JSON 字符串
+  /// @return 字符串集合
   private Set<String> toSet(String json) {
     if (json == null || json.isBlank()) {
       return Set.of();
@@ -187,6 +219,10 @@ public class SnapshotAssembler {
     }
   }
 
+  /// 解析范围类型。
+  ///
+  /// @param code 范围类型代码
+  /// @return 范围类型枚举
   private ProvenanceSnapshot.RangeKind parseRangeKind(String code) {
     if (code == null || code.isBlank()) {
       return ProvenanceSnapshot.RangeKind.NONE;
@@ -194,6 +230,10 @@ public class SnapshotAssembler {
     return ProvenanceSnapshot.RangeKind.valueOf(code.toUpperCase(Locale.ROOT));
   }
 
+  /// 转换取反限定符。
+  ///
+  /// @param value 布尔值（null 表示 ANY）
+  /// @return 取反限定符枚举
   private ProvenanceSnapshot.NegationQualifier toNegationQualifier(Boolean value) {
     if (value == null) {
       return ProvenanceSnapshot.NegationQualifier.ANY;
@@ -203,6 +243,10 @@ public class SnapshotAssembler {
         : ProvenanceSnapshot.NegationQualifier.FALSE;
   }
 
+  /// 转换值类型。
+  ///
+  /// @param code 值类型代码
+  /// @return 值类型枚举
   private ProvenanceSnapshot.ValueType toValueType(String code) {
     if (code == null || code.isBlank()) {
       return ProvenanceSnapshot.ValueType.ANY;
@@ -210,6 +254,11 @@ public class SnapshotAssembler {
     return ProvenanceSnapshot.ValueType.valueOf(code.toUpperCase(Locale.ROOT));
   }
 
+  /// 空安全列表处理。
+  ///
+  /// @param list 可能为 null 的列表
+  /// @param <T> 列表元素类型
+  /// @return 非 null 的列表（null 时返回空列表）
   private <T> List<T> nullSafe(List<T> list) {
     return list == null ? List.of() : list;
   }

@@ -61,6 +61,7 @@ public enum MeshImportTaskStatus {
         return status;
       }
     }
+    // 无效的编码，抛出异常
     throw new IllegalArgumentException("无效的任务状态编码: " + code);
   }
 

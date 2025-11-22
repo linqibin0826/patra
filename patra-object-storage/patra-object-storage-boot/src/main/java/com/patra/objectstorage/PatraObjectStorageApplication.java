@@ -11,6 +11,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class PatraObjectStorageApplication {
 
+  /// 应用程序入口点,启动 Spring Boot 应用。
+  ///
+  /// @param args 命令行参数
   public static void main(String[] args) {
     if (System.getProperty("spring.profiles.active") == null
         && System.getenv("SPRING_PROFILES_ACTIVE") == null) {

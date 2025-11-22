@@ -34,11 +34,17 @@ public record MeshImportFailed(
 
   @Serial private static final long serialVersionUID = 1L;
 
+  /// {@inheritDoc}
+  ///
+  /// 返回任务失败时间作为事件发生时刻。
   @Override
   public Instant occurredAt() {
     return failedTime;
   }
 
+  /// 返回事件的字符串表示形式。
+  ///
+  /// @return 包含所有关键信息的格式化字符串
   @Override
   public String toString() {
     return String.format(

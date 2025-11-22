@@ -44,12 +44,22 @@ public class JsonToJsonNodeTypeHandler extends BaseTypeHandler<JsonNode> {
 
   private final ObjectMapper objectMapper;
 
+  /// 构造 JsonNode 类型处理器。
+  ///
+  /// @param objectMapper Spring 管理的 ObjectMapper 实例
   public JsonToJsonNodeTypeHandler(ObjectMapper objectMapper) {
     this.objectMapper = objectMapper;
   }
 
   // ---------------- 写入 (Java -> JDBC) ----------------
 
+  /// 将非空的 JsonNode 参数设置到 PreparedStatement 中。
+  ///
+  /// @param ps JDBC PreparedStatement
+  /// @param i 参数索引
+  /// @param parameter 要序列化的 JsonNode 对象
+  /// @param jdbcType JDBC 类型
+  /// @throws SQLException 序列化失败时抛出
   @Override
   public void setNonNullParameter(
       PreparedStatement ps, int i, JsonNode parameter, JdbcType jdbcType) throws SQLException {
@@ -71,16 +81,34 @@ public class JsonToJsonNodeTypeHandler extends BaseTypeHandler<JsonNode> {
 
   // ---------------- 读取 (JDBC -> Java) ----------------
 
+  /// 通过列名从 ResultSet 中获取可空的 JsonNode 结果。
+  ///
+  /// @param rs 结果集
+  /// @param columnName 列名
+  /// @return 解析后的 JsonNode 对象,可能为 null
+  /// @throws SQLException 解析失败时抛出
   @Override
   public JsonNode getNullableResult(ResultSet rs, String columnName) throws SQLException {
     return parse(rs.getObject(columnName));
   }
 
+  /// 通过列索引从 ResultSet 中获取可空的 JsonNode 结果。
+  ///
+  /// @param rs 结果集
+  /// @param columnIndex 列索引
+  /// @return 解析后的 JsonNode 对象,可能为 null
+  /// @throws SQLException 解析失败时抛出
   @Override
   public JsonNode getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
     return parse(rs.getObject(columnIndex));
   }
 
+  /// 从 CallableStatement 中获取可空的 JsonNode 结果。
+  ///
+  /// @param cs CallableStatement
+  /// @param columnIndex 列索引
+  /// @return 解析后的 JsonNode 对象,可能为 null
+  /// @throws SQLException 解析失败时抛出
   @Override
   public JsonNode getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
     return parse(cs.getObject(columnIndex));
@@ -88,6 +116,11 @@ public class JsonToJsonNodeTypeHandler extends BaseTypeHandler<JsonNode> {
 
   // ---------------- 内部解析逻辑 ----------------
 
+  /// 解析 JDBC 对象为 JsonNode。
+  ///
+  /// @param raw 从 JDBC 获取的原始对象
+  /// @return 解析后的 JsonNode 对象,可能为 null
+  /// @throws SQLException 解析失败时抛出
   private JsonNode parse(Object raw) throws SQLException {
     if (raw == null) return null;
 
@@ -112,6 +145,11 @@ public class JsonToJsonNodeTypeHandler extends BaseTypeHandler<JsonNode> {
     }
   }
 
+  /// 解析 JSON 字符串为 JsonNode。
+  ///
+  /// @param json JSON 字符串
+  /// @return 解析后的 JsonNode 对象,可能为 null
+  /// @throws Exception 解析失败时抛出
   private JsonNode parseString(String json) throws Exception {
     if (json == null) return null;
     String trimmed = json.trim();
@@ -119,12 +157,22 @@ public class JsonToJsonNodeTypeHandler extends BaseTypeHandler<JsonNode> {
     return objectMapper.readTree(trimmed);
   }
 
+  /// 从 Clob 读取字符串内容。
+  ///
+  /// @param clob CLOB 对象
+  /// @return 读取的字符串内容
+  /// @throws Exception 读取失败时抛出
   private String readClob(Clob clob) throws Exception {
     try (Reader r = clob.getCharacterStream()) {
       return readAll(r);
     }
   }
 
+  /// 从 Reader 读取所有内容。
+  ///
+  /// @param r Reader 对象
+  /// @return 读取的字符串内容
+  /// @throws Exception 读取失败时抛出
   private String readAll(Reader r) throws Exception {
     StringBuilder sb = new StringBuilder(1024);
     char[] buf = new char[2048];

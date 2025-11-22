@@ -32,6 +32,9 @@ public class RegistryErrorMappingContributor implements ErrorMappingContributor 
 
   private final HttpStdErrors.Group http;
 
+  /// 构造 Registry 异常映射贡献者。
+  ///
+  /// @param http HTTP 标准错误码分组
   public RegistryErrorMappingContributor(HttpStdErrors.Group http) {
     this.http = http;
   }
