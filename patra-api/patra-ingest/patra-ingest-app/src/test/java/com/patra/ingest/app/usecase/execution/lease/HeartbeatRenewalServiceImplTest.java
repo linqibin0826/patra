@@ -19,24 +19,20 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
-/**
- * HeartbeatRenewalServiceImpl 单元测试
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>✅ 启动心跳：创建心跳任务，定期续约
- *   <li>✅ 停止心跳：取消心跳任务
- *   <li>✅ 心跳续约：成功续约、续约失败处理
- *   <li>✅ 租约撤销检测：连续失败达到阈值后验证租约
- *   <li>✅ 租约撤销标志：检测到撤销后设置标志
- *   <li>✅ 异常处理：续约过程中的异常
- *   <li>✅ 边界条件：重复启动、重复停止、心跳间隔
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// HeartbeatRenewalServiceImpl 单元测试
+/// 
+/// 测试覆盖:
+/// 
+/// - ✅ 启动心跳：创建心跳任务，定期续约
+///   - ✅ 停止心跳：取消心跳任务
+///   - ✅ 心跳续约：成功续约、续约失败处理
+///   - ✅ 租约撤销检测：连续失败达到阈值后验证租约
+///   - ✅ 租约撤销标志：检测到撤销后设置标志
+///   - ✅ 异常处理：续约过程中的异常
+///   - ✅ 边界条件：重复启动、重复停止、心跳间隔
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("HeartbeatRenewalServiceImpl 单元测试")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

@@ -77,49 +77,33 @@ patra-catalog-api/
 @AllArgsConstructor
 public class MeshProgressDTO {
 
-    /**
-     * 任务 ID
-     */
+    /// 任务 ID
     @NotNull
     private Long taskId;
 
-    /**
-     * 任务名称
-     */
+    /// 任务名称
     @NotBlank
     private String taskName;
 
-    /**
-     * 任务状态
-     */
+    /// 任务状态
     @NotNull
     private String status;
 
-    /**
-     * 整体进度百分比（0-100）
-     */
+    /// 整体进度百分比（0-100）
     @Min(0)
     @Max(100)
     private Double overallProgress;
 
-    /**
-     * 各表导入进度
-     */
+    /// 各表导入进度
     private List<TableProgressDTO> tableProgressList;
 
-    /**
-     * 开始时间
-     */
+    /// 开始时间
     private Instant startedAt;
 
-    /**
-     * 完成时间
-     */
+    /// 完成时间
     private Instant completedAt;
 
-    /**
-     * 错误信息（如果失败）
-     */
+    /// 错误信息（如果失败）
     private String errorMessage;
 }
 ```
@@ -135,21 +119,17 @@ public class MeshProgressDTO {
 @FeignClient(name = "patra-catalog", path = "/api/v1/catalog")
 public interface CatalogEndpoint {
 
-    /**
-     * 查询 MeSH 导入进度
-     *
-     * @param taskId 任务 ID
-     * @return 导入进度 DTO
-     */
+    /// 查询 MeSH 导入进度
+/// 
+/// @param taskId 任务 ID
+/// @return 导入进度 DTO
     @GetMapping("/mesh/import/progress/{taskId}")
     MeshProgressDTO queryProgress(@PathVariable("taskId") Long taskId);
 
-    /**
-     * 开始 MeSH 导入任务
-     *
-     * @param request 导入请求
-     * @return 导入结果 DTO
-     */
+    /// 开始 MeSH 导入任务
+/// 
+/// @param request 导入请求
+/// @return 导入结果 DTO
     @PostMapping("/mesh/import/start")
     MeshImportResultDTO startImport(@RequestBody StartImportRequest request);
 }

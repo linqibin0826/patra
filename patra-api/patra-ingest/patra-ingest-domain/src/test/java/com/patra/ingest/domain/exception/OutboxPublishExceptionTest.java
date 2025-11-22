@@ -9,12 +9,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link OutboxPublishException} 的单元测试。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// {@link OutboxPublishException} 的单元测试。
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("OutboxPublishException 单元测试")
 class OutboxPublishExceptionTest {
 

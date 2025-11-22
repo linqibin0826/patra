@@ -10,28 +10,24 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * TypeReference 单元测试
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>泛型类型捕获测试（简单类型、参数化类型、嵌套泛型）
- *   <li>类型提取测试（getRawType、getType）
- *   <li>类型兼容性检查测试
- *   <li>equals 和 hashCode 测试
- *   <li>错误处理测试（未使用匿名内部类）
- *   <li>边界条件测试
- * </ul>
- *
- * @since 0.1.0
- */
+/// TypeReference 单元测试
+/// 
+/// 测试策略：
+/// 
+/// - 泛型类型捕获测试（简单类型、参数化类型、嵌套泛型）
+///   - 类型提取测试（getRawType、getType）
+///   - 类型兼容性检查测试
+///   - equals 和 hashCode 测试
+///   - 错误处理测试（未使用匿名内部类）
+///   - 边界条件测试
+/// 
+/// @since 0.1.0
 @DisplayName("TypeReference 单元测试")
 class TypeReferenceTest {
 
   // ========== 测试数据类 ==========
 
-  /** 简单测试实体 */
+  /// 简单测试实体
   static class TestEntity {
     private Long id;
     private String name;
@@ -42,7 +38,7 @@ class TypeReferenceTest {
     }
   }
 
-  /** 继承测试实体 */
+  /// 继承测试实体
   static class ExtendedTestEntity extends TestEntity {
     public ExtendedTestEntity(Long id, String name) {
       super(id, name);

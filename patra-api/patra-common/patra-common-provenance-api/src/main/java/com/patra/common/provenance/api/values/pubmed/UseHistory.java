@@ -2,36 +2,26 @@ package com.patra.common.provenance.api.values.pubmed;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 
-/**
- * PubMed UseHistory 参数值枚举
- *
- * <p>控制是否使用 History Server 缓存查询结果
- *
- * <h3>功能说明</h3>
- *
- * <ul>
- *   <li><b>YES</b> - 启用历史服务器，返回 WebEnv 和 QueryKey 用于后续批次请求
- *   <li><b>NO</b> - 不使用历史服务器，直接返回结果
- * </ul>
- *
- * <h3>使用场景</h3>
- *
- * <p>当需要分批获取大量数据时，使用 {@code YES} 可以：
- *
- * <ol>
- *   <li>避免重复查询，提升性能
- *   <li>获取 WebEnv 和 QueryKey 用于 EFetch
- *   <li>支持超大结果集的分页
- * </ol>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// PubMed UseHistory 参数值枚举
+/// 
+/// 控制是否使用 History Server 缓存查询结果
+/// 
+/// ### 功能说明
+/// 
+/// - **YES** - 启用历史服务器，返回 WebEnv 和 QueryKey 用于后续批次请求
+///   - **NO** - 不使用历史服务器，直接返回结果
+/// 
+/// ### 使用场景
+/// 
+/// 当需要分批获取大量数据时，使用 `YES` 可以：
+/// 
+/// @author linqibin
+/// @since 0.1.0
 public enum UseHistory {
-  /** 使用历史服务器（推荐用于批量数据） */
+  /// 使用历史服务器（推荐用于批量数据）
   YES("y"),
 
-  /** 不使用历史服务器（适用于小数据集） */
+  /// 不使用历史服务器（适用于小数据集）
   NO("n");
 
   private final String value;
@@ -68,21 +58,17 @@ public enum UseHistory {
     }
   }
 
-  /**
-   * 从布尔值转换
-   *
-   * @param useHistory true 表示使用历史服务器
-   * @return 对应的枚举值
-   */
+  /// 从布尔值转换
+/// 
+/// @param useHistory true 表示使用历史服务器
+/// @return 对应的枚举值
   public static UseHistory fromBoolean(boolean useHistory) {
     return useHistory ? YES : NO;
   }
 
-  /**
-   * 转换为布尔值
-   *
-   * @return true 如果是 YES
-   */
+  /// 转换为布尔值
+/// 
+/// @return true 如果是 YES
   public boolean toBoolean() {
     return this == YES;
   }

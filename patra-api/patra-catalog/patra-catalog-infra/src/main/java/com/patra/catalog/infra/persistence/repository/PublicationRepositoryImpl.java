@@ -7,21 +7,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-/**
- * 文献聚合根仓储实现（基础设施层）。
- *
- * <p><b>职责</b>：
- *
- * <ul>
- *   <li>实现 PublicationPort 接口定义的仓储契约
- *   <li>负责 Aggregate ↔ DO 转换
- *   <li>协调 MyBatis Mapper 操作
- *   <li>处理跨表数据组装（Publication + Metadata + Abstract）
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 文献聚合根仓储实现（基础设施层）。
+/// 
+/// **职责**：
+/// 
+/// - 实现 PublicationPort 接口定义的仓储契约
+///   - 负责 Aggregate ↔ DO 转换
+///   - 协调 MyBatis Mapper 操作
+///   - 处理跨表数据组装（Publication + Metadata + Abstract）
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Repository
 @RequiredArgsConstructor

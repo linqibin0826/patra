@@ -12,30 +12,24 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/**
- * 数据源配置查询编排器。
- *
- * <p>职责：
- *
- * <ul>
- *   <li>编排数据源元数据和配置的查询用例
- *   <li>协调领域仓储完成数据检索
- *   <li>将领域对象转换为查询 DTO 供外部客户端消费
- * </ul>
- *
- * <p>典型用例：
- *
- * <ul>
- *   <li>列出所有可用数据源
- *   <li>查询单个数据源的元数据
- *   <li>加载指定时间点的完整配置聚合(支持时态切片)
- * </ul>
- *
- * <p>设计模式：应用服务编排,不包含业务逻辑,仅负责用例协调和对象转换。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 数据源配置查询编排器。
+/// 
+/// 职责：
+/// 
+/// - 编排数据源元数据和配置的查询用例
+///   - 协调领域仓储完成数据检索
+///   - 将领域对象转换为查询 DTO 供外部客户端消费
+/// 
+/// 典型用例：
+/// 
+/// - 列出所有可用数据源
+///   - 查询单个数据源的元数据
+///   - 加载指定时间点的完整配置聚合(支持时态切片)
+/// 
+/// 设计模式：应用服务编排,不包含业务逻辑,仅负责用例协调和对象转换。
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -44,13 +38,11 @@ public class ProvenanceConfigOrchestrator {
   private final ProvenanceConfigRepository repository;
   private final ProvenanceQueryAssembler assembler;
 
-  /**
-   * 列出所有可用数据源。
-   *
-   * <p>用例说明：查询系统中注册的所有数据源元数据,返回只读 DTO 列表。
-   *
-   * @return 数据源查询 DTO 列表
-   */
+  /// 列出所有可用数据源。
+/// 
+/// 用例说明：查询系统中注册的所有数据源元数据,返回只读 DTO 列表。
+/// 
+/// @return 数据源查询 DTO 列表
   public List<ProvenanceQuery> listProvenances() {
     List<ProvenanceQuery> provenances =
         repository.findAllProvenances().stream().map(assembler::toQuery).toList();
@@ -59,14 +51,12 @@ public class ProvenanceConfigOrchestrator {
     return provenances;
   }
 
-  /**
-   * 根据代码查找单个数据源。
-   *
-   * <p>用例说明：通过数据源代码(如 PUBMED)查询对应的元数据。
-   *
-   * @param provenanceCode 数据源代码
-   * @return 查询 DTO 的 Optional,如果找到则包含数据源元数据
-   */
+  /// 根据代码查找单个数据源。
+/// 
+/// 用例说明：通过数据源代码(如 PUBMED)查询对应的元数据。
+/// 
+/// @param provenanceCode 数据源代码
+/// @return 查询 DTO 的 Optional,如果找到则包含数据源元数据
   public Optional<ProvenanceQuery> findProvenance(ProvenanceCode provenanceCode) {
     Optional<ProvenanceQuery> result =
         repository.findProvenanceByCode(provenanceCode).map(assembler::toQuery);
@@ -80,24 +70,20 @@ public class ProvenanceConfigOrchestrator {
     return result;
   }
 
-  /**
-   * 加载数据源在特定操作类型下的完整配置聚合。
-   *
-   * <p>用例说明：
-   *
-   * <ul>
-   *   <li>通过时态切片机制查询指定时间点的有效配置
-   *   <li>整合所有维度配置(HTTP、分页、重试、速率限制等)为统一视图
-   *   <li>支持按操作类型过滤(如 HARVEST、UPDATE)
-   * </ul>
-   *
-   * <p>事务边界：只读查询,无需事务管理。
-   *
-   * @param provenanceCode 数据源代码
-   * @param operationType 操作类型(如 HARVEST/UPDATE);{@code null} 表示查询所有类型
-   * @param at 查询有效配置的时间点;{@code null} 默认使用当前时间
-   * @return 配置查询 DTO 的 Optional,如果数据源存在则包含配置聚合
-   */
+  /// 加载数据源在特定操作类型下的完整配置聚合。
+/// 
+/// 用例说明：
+/// 
+/// - 通过时态切片机制查询指定时间点的有效配置
+///   - 整合所有维度配置(HTTP、分页、重试、速率限制等)为统一视图
+///   - 支持按操作类型过滤(如 HARVEST、UPDATE)
+/// 
+/// 事务边界：只读查询,无需事务管理。
+/// 
+/// @param provenanceCode 数据源代码
+/// @param operationType 操作类型(如 HARVEST/UPDATE);`null` 表示查询所有类型
+/// @param at 查询有效配置的时间点;`null` 默认使用当前时间
+/// @return 配置查询 DTO 的 Optional,如果数据源存在则包含配置聚合
   public Optional<ProvenanceConfigQuery> loadConfiguration(
       ProvenanceCode provenanceCode, String operationType, Instant at) {
     Instant effectiveTime = at != null ? at : Instant.now();

@@ -24,25 +24,21 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
-/**
- * PubMed 客户端实现（使用 Spring RestClient）
- *
- * <p>直接通过HTTP调用PubMed E-utilities API。PubMed是美国国家医学图书馆的生物医学出版物数据库， 提供超过3400万条引文和摘要。
- *
- * <p>主要功能：
- *
- * <ul>
- *   <li>ESearch：搜索PubMed数据库，返回匹配的PMID列表
- *   <li>EPost：上传PMID列表到服务器，获取WebEnv和QueryKey用于后续批量操作
- *   <li>EFetch：批量获取文章详细元数据（XML格式）
- *   <li>配置优先级处理：优先使用方法级配置，回退到默认配置
- *   <li>可选的Micrometer指标收集：记录API调用时长和成功率
- *   <li>强类型解析：支持JSON和XML两种PubMed响应格式
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// PubMed 客户端实现（使用 Spring RestClient）
+/// 
+/// 直接通过HTTP调用PubMed E-utilities API。PubMed是美国国家医学图书馆的生物医学出版物数据库， 提供超过3400万条引文和摘要。
+/// 
+/// 主要功能：
+/// 
+/// - ESearch：搜索PubMed数据库，返回匹配的PMID列表
+///   - EPost：上传PMID列表到服务器，获取WebEnv和QueryKey用于后续批量操作
+///   - EFetch：批量获取文章详细元数据（XML格式）
+///   - 配置优先级处理：优先使用方法级配置，回退到默认配置
+///   - 可选的Micrometer指标收集：记录API调用时长和成功率
+///   - 强类型解析：支持JSON和XML两种PubMed响应格式
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 public class PubMedClientImpl implements PubMedClient {
 
@@ -67,13 +63,13 @@ public class PubMedClientImpl implements PubMedClient {
     this.metrics = metrics;
   }
 
-  /** {@inheritDoc} */
+  /// {@inheritDoc}
   @Override
   public ESearchResponse esearch(ESearchRequest request) {
     return esearch(request, null);
   }
 
-  /** {@inheritDoc} */
+  /// {@inheritDoc}
   @Override
   public ESearchResponse esearch(ESearchRequest request, ProvenanceConfig config) {
     if (metrics != null) {
@@ -106,13 +102,13 @@ public class PubMedClientImpl implements PubMedClient {
     }
   }
 
-  /** {@inheritDoc} */
+  /// {@inheritDoc}
   @Override
   public EFetchResponse efetch(EFetchRequest request) {
     return efetch(request, null);
   }
 
-  /** {@inheritDoc} */
+  /// {@inheritDoc}
   @Override
   public EFetchResponse efetch(EFetchRequest request, ProvenanceConfig config) {
     if (metrics != null) {
@@ -165,13 +161,13 @@ public class PubMedClientImpl implements PubMedClient {
     }
   }
 
-  /** {@inheritDoc} */
+  /// {@inheritDoc}
   @Override
   public EPostResponse epost(EPostRequest request) {
     return epost(request, null);
   }
 
-  /** {@inheritDoc} */
+  /// {@inheritDoc}
   @Override
   public EPostResponse epost(EPostRequest request, ProvenanceConfig config) {
     if (metrics != null) {

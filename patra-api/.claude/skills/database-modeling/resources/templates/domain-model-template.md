@@ -67,14 +67,12 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.ToString;
 
-/**
- * {{entity_description}}聚合根。
- *
- * <p>{{aggregate_responsibility_description}}
- *
- * <p>聚合根通过工厂方法创建新实例({@link #create})或从持久化快照恢复({@link #restore}),
- * 确保所有必需的业务规则在对象创建时得到验证。
- */
+/// {{entity_description}}聚合根。
+/// 
+/// {{aggregate_responsibility_description}}
+/// 
+/// 聚合根通过工厂方法创建新实例({@link #create})或从持久化快照恢复({@link #restore}),
+/// 确保所有必需的业务规则在对象创建时得到验证。
 @Getter
 @ToString
 public class {{EntityName}} {
@@ -82,14 +80,14 @@ public class {{EntityName}} {
   // =========================================
   // 实体标识
   // =========================================
-  /** 主键标识符 */
+  /// 主键标识符
   private Long id;
 
   // =========================================
   // 业务字段
   // =========================================
   {{#each business_fields}}
-  /** {{field_comment}} */
+  /// {{field_comment}}
   private {{java_type}} {{field_name}};
 
   {{/each}}
@@ -98,7 +96,7 @@ public class {{EntityName}} {
   // 值对象
   // =========================================
   {{#each value_objects}}
-  /** {{vo_comment}} */
+  /// {{vo_comment}}
   private {{vo_type}} {{vo_field_name}};
 
   {{/each}}
@@ -107,7 +105,7 @@ public class {{EntityName}} {
   // 枚举字段
   // =========================================
   {{#each enum_fields}}
-  /** {{enum_comment}} */
+  /// {{enum_comment}}
   private {{enum_type}} {{enum_field_name}};
 
   {{/each}}
@@ -115,35 +113,35 @@ public class {{EntityName}} {
   // =========================================
   // 审计字段（标准化）
   // =========================================
-  /** 记录备注(JSON格式) */
+  /// 记录备注(JSON格式)
   private String recordRemarks;
 
-  /** 乐观锁版本号 */
+  /// 乐观锁版本号
   private Long version;
 
-  /** 请求者IP地址(二进制格式) */
+  /// 请求者IP地址(二进制格式)
   @Getter(AccessLevel.NONE)
   private byte[] ipAddress;
 
-  /** 创建时间 */
+  /// 创建时间
   private Instant createdAt;
 
-  /** 创建人ID */
+  /// 创建人ID
   private Long createdBy;
 
-  /** 创建人姓名 */
+  /// 创建人姓名
   private String createdByName;
 
-  /** 更新时间 */
+  /// 更新时间
   private Instant updatedAt;
 
-  /** 更新人ID */
+  /// 更新人ID
   private Long updatedBy;
 
-  /** 更新人姓名 */
+  /// 更新人姓名
   private String updatedByName;
 
-  /** 软删除标志 */
+  /// 软删除标志
   private Boolean deleted;
 
   // =========================================
@@ -157,14 +155,12 @@ public class {{EntityName}} {
   // 工厂方法
   // =========================================
 
-  /**
-   * 创建新的{{entity_display_name}}聚合根,初始化必需的审计属性。
-   *
-   * <p>工厂方法用于创建新的记录,自动设置初始状态、版本号和审计时间戳。
-   *
-   * @param {{factory_params_doc}}
-   * @return 新创建的聚合根实例
-   */
+  /// 创建新的{{entity_display_name}}聚合根,初始化必需的审计属性。
+/// 
+/// 工厂方法用于创建新的记录,自动设置初始状态、版本号和审计时间戳。
+/// 
+/// @param {{factory_params_doc}}
+/// @return 新创建的聚合根实例
   public static {{EntityName}} create({{factory_params}}) {
     {{EntityName}} entity = new {{EntityName}}();
 
@@ -186,15 +182,13 @@ public class {{EntityName}} {
     return entity;
   }
 
-  /**
-   * 从持久化快照恢复聚合根。
-   *
-   * <p>用于仓储实现从数据库重建聚合根实例,绕过业务规则验证。
-   *
-   * @param id 主键ID
-   * @param {{restore_params}}
-   * @return 恢复的聚合根实例
-   */
+  /// 从持久化快照恢复聚合根。
+/// 
+/// 用于仓储实现从数据库重建聚合根实例,绕过业务规则验证。
+/// 
+/// @param id 主键ID
+/// @param {{restore_params}}
+/// @return 恢复的聚合根实例
   public static {{EntityName}} restore(
       Long id,
       {{restore_params}}) {
@@ -226,14 +220,12 @@ public class {{EntityName}} {
   // =========================================
 
   {{#each domain_behaviors}}
-  /**
-   * {{behavior_description}}
-   *
-   * @param {{behavior_params_doc}}
-   {{#if behavior_throws}}
-   * @throws {{behavior_throws}}
-   {{/if}}
-   */
+  /// {{behavior_description}}
+/// 
+/// @param {{behavior_params_doc}}
+///    {{#if behavior_throws}}
+/// @throws {{behavior_throws}}
+///    {{/if}}
   public {{behavior_return_type}} {{behavior_name}}({{behavior_params}}) {
     // 前置条件检查
     {{#each preconditions}}
@@ -259,11 +251,9 @@ public class {{EntityName}} {
   // 业务规则验证
   // =========================================
 
-  /**
-   * 验证实体状态的有效性。
-   *
-   * @throws IllegalStateException 如果状态不合法
-   */
+  /// 验证实体状态的有效性。
+/// 
+/// @throws IllegalStateException 如果状态不合法
   private void validate() {
     {{#each validations}}
     if ({{validation_condition}}) {
@@ -283,20 +273,16 @@ public class {{EntityName}} {
   // 包级可见的ID分配方法（仓储使用）
   // =========================================
 
-  /**
-   * 分配主键ID（仅供仓储实现调用）。
-   *
-   * @param id 数据库生成的主键
-   */
+  /// 分配主键ID（仅供仓储实现调用）。
+/// 
+/// @param id 数据库生成的主键
   void assignId(Long id) {
     this.id = id;
   }
 
-  /**
-   * 更新版本号（仅供仓储实现调用）。
-   *
-   * @param version 新的版本号
-   */
+  /// 更新版本号（仅供仓储实现调用）。
+/// 
+/// @param version 新的版本号
   void updateVersion(Long version) {
     this.version = version;
   }
@@ -332,29 +318,25 @@ import java.util.Objects;
 import lombok.Getter;
 import lombok.ToString;
 
-/**
- * {{vo_description}}值对象。
- *
- * <p><b>值对象特征</b></p>
- * <ul>
- *   <li>不可变（Immutable）</li>
- *   <li>无标识，通过属性判断相等</li>
- *   <li>封装业务规则和验证逻辑</li>
- * </ul>
- */
+/// {{vo_description}}值对象。
+/// 
+/// **值对象特征**
+/// 
+/// - 不可变（Immutable）
+///   - 无标识，通过属性判断相等
+///   - 封装业务规则和验证逻辑
+/// 
 @Getter
 @ToString
 public final class {{vo_class_name}} {
 
   {{#each fields}}
-  /** {{field_comment}} */
+  /// {{field_comment}}
   private final {{java_type}} {{field_name}};
 
   {{/each}}
 
-  /**
-   * 私有构造函数。
-   */
+  /// 私有构造函数。
   private {{vo_class_name}}({{vo_constructor_params}}) {
     {{#each fields}}
     this.{{field_name}} = {{field_name}};
@@ -362,22 +344,18 @@ public final class {{vo_class_name}} {
     this.validate();
   }
 
-  /**
-   * 创建值对象实例（工厂方法）。
-   *
-   * @param {{vo_factory_params_doc}}
-   * @return 值对象实例
-   * @throws IllegalArgumentException 如果参数不合法
-   */
+  /// 创建值对象实例（工厂方法）。
+/// 
+/// @param {{vo_factory_params_doc}}
+/// @return 值对象实例
+/// @throws IllegalArgumentException 如果参数不合法
   public static {{vo_class_name}} of({{vo_factory_params}}) {
     return new {{vo_class_name}}({{vo_factory_args}});
   }
 
-  /**
-   * 验证值对象的有效性。
-   *
-   * @throws IllegalArgumentException 如果值不合法
-   */
+  /// 验证值对象的有效性。
+/// 
+/// @throws IllegalArgumentException 如果值不合法
   private void validate() {
     {{#each validations}}
     if ({{validation_condition}}) {
@@ -414,31 +392,27 @@ package com.patra.{{module}}.domain.model.enums;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-/**
- * {{enum_description}}枚举。
- */
+/// {{enum_description}}枚举。
 @Getter
 @RequiredArgsConstructor
 public enum {{enum_class_name}} {
 
   {{#each enum_values}}
-  /** {{value_comment}} */
+  /// {{value_comment}}
   {{value_name}}("{{value_code}}", "{{value_display}}"){{#unless @last}},{{/unless}}
   {{/each}};
 
-  /** 数据库存储的代码值 */
+  /// 数据库存储的代码值
   private final String code;
 
-  /** 显示名称 */
+  /// 显示名称
   private final String displayName;
 
-  /**
-   * 从代码值解析枚举。
-   *
-   * @param code 数据库存储的代码值
-   * @return 对应的枚举值
-   * @throws IllegalArgumentException 如果代码值无效
-   */
+  /// 从代码值解析枚举。
+/// 
+/// @param code 数据库存储的代码值
+/// @return 对应的枚举值
+/// @throws IllegalArgumentException 如果代码值无效
   public static {{enum_class_name}} fromCode(String code) {
     for ({{enum_class_name}} value : values()) {
       if (value.code.equals(code)) {
@@ -461,49 +435,39 @@ package com.patra.{{module}}.domain.port;
 import com.patra.{{module}}.domain.model.aggregate.{{EntityName}};
 import java.util.Optional;
 
-/**
- * {{entity_description}}仓储抽象。
- *
- * <p>定义持久化 {@link {{EntityName}}} 聚合根的仓储接口,作为领域层的端口,
- * 由基础设施层的仓储实现提供具体的持久化逻辑。
- *
- * <p>遵循端口-适配器模式,领域层通过此接口与持久化机制解耦,
- * 基础设施层负责实现数据库访问、ORM映射和事务管理。
- */
+/// {{entity_description}}仓储抽象。
+/// 
+/// 定义持久化 {@link {{EntityName}}} 聚合根的仓储接口,作为领域层的端口,
+/// 由基础设施层的仓储实现提供具体的持久化逻辑。
+/// 
+/// 遵循端口-适配器模式,领域层通过此接口与持久化机制解耦,
+/// 基础设施层负责实现数据库访问、ORM映射和事务管理。
 public interface {{EntityName}}Repository {
 
-  /**
-   * 持久化提供的聚合根。
-   *
-   * <p>保存新的或更新现有的记录。实现需要处理:
-   *
-   * <ul>
-   *   <li>为新记录生成主键ID并通过 {@link {{EntityName}}#assignId} 回填
-   *   <li>通过 {@link {{EntityName}}#updateVersion} 更新乐观锁版本号
-   *   <li>确保唯一约束不被违反
-   * </ul>
-   *
-   * @param entity 要存储的聚合根
-   * @return 持久化后的聚合根(已填充标识符和版本号)
-   */
+  /// 持久化提供的聚合根。
+/// 
+/// 保存新的或更新现有的记录。实现需要处理:
+/// 
+/// - 为新记录生成主键ID并通过 {@link {{EntityName}}#assignId} 回填
+///   - 通过 {@link {{EntityName}}#updateVersion} 更新乐观锁版本号
+///   - 确保唯一约束不被违反
+/// 
+/// @param entity 要存储的聚合根
+/// @return 持久化后的聚合根(已填充标识符和版本号)
   {{EntityName}} save({{EntityName}} entity);
 
   {{#if has_business_key}}
-  /**
-   * 通过{{business_key_description}}加载聚合根。
-   *
-   * @param {{business_key_param}} {{business_key_param_comment}}
-   * @return 存在时返回聚合根,否则返回空
-   */
+  /// 通过{{business_key_description}}加载聚合根。
+/// 
+/// @param {{business_key_param}} {{business_key_param_comment}}
+/// @return 存在时返回聚合根,否则返回空
   Optional<{{EntityName}}> findBy{{business_key_name}}({{business_key_type}} {{business_key_param}});
   {{/if}}
 
-  /**
-   * 通过主键ID加载聚合根。
-   *
-   * @param id 主键ID
-   * @return 存在时返回聚合根,否则返回空
-   */
+  /// 通过主键ID加载聚合根。
+/// 
+/// @param id 主键ID
+/// @return 存在时返回聚合根,否则返回空
   Optional<{{EntityName}}> findById(Long id);
 }
 ```
@@ -524,43 +488,41 @@ import java.time.Instant;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/**
- * {{entity_description}}数据对象。
- *
- * <p>表示 <code>{{table_name}}</code> 表的数据对象(DO),用于MyBatis-Plus的ORM映射。
- * 继承自 {@link BaseDO},包含标准的审计字段(id、version、创建人、更新人、软删除标志等)。
- *
- * <p>数据对象是持久化层的一部分,负责数据库表结构与Java对象之间的映射,
- * 通过转换器({@code {{EntityName}}Converter})与领域聚合根进行转换。
- */
+/// {{entity_description}}数据对象。
+/// 
+/// 表示 `{{table_name}}` 表的数据对象(DO),用于MyBatis-Plus的ORM映射。
+/// 继承自 {@link BaseDO},包含标准的审计字段(id、version、创建人、更新人、软删除标志等)。
+/// 
+/// 数据对象是持久化层的一部分,负责数据库表结构与Java对象之间的映射,
+/// 通过转换器(`{{EntityName`}Converter})与领域聚合根进行转换。
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "{{table_name}}", autoResultMap = true)
 public class {{EntityName}}DO extends BaseDO {
 
   {{#each business_fields_do}}
-  /** {{field_comment}} */
+  /// {{field_comment}}
   @TableField("{{column_name}}")
   private {{java_type}} {{field_name}};
 
   {{/each}}
 
   {{#each json_fields}}
-  /** {{field_comment}} */
+  /// {{field_comment}}
   @TableField(value = "{{column_name}}", typeHandler = JacksonTypeHandler.class)
   private JsonNode {{field_name}};
 
   {{/each}}
 
   {{#each enum_fields}}
-  /** {{field_comment}} */
+  /// {{field_comment}}
   @TableField("{{column_name}}")
   private String {{field_name}};
 
   {{/each}}
 
   {{#each timestamp_fields}}
-  /** {{field_comment}} */
+  /// {{field_comment}}
   @TableField("{{column_name}}")
   private Instant {{field_name}};
 
@@ -594,9 +556,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.{{module}}.infra.persistence.entity.{{EntityName}}DO;
 import org.apache.ibatis.annotations.Mapper;
 
-/**
- * {{entity_description}} MyBatis Mapper。
- */
+/// {{entity_description}} MyBatis Mapper。
 @Mapper
 public interface {{EntityName}}Mapper extends BaseMapper<{{EntityName}}DO> {
 
@@ -618,18 +578,14 @@ import com.patra.{{module}}.domain.model.vo.*;
 import com.patra.{{module}}.infra.persistence.entity.{{EntityName}}DO;
 import org.springframework.stereotype.Component;
 
-/**
- * {{EntityName}} 聚合根与数据对象之间的转换器。
- */
+/// {{EntityName}} 聚合根与数据对象之间的转换器。
 @Component
 public class {{EntityName}}Converter {
 
-  /**
-   * 聚合根 → 数据对象。
-   *
-   * @param entity 聚合根
-   * @return 数据对象
-   */
+  /// 聚合根 → 数据对象。
+/// 
+/// @param entity 聚合根
+/// @return 数据对象
   public {{EntityName}}DO toDO({{EntityName}} entity) {
     if (entity == null) {
       return null;
@@ -660,12 +616,10 @@ public class {{EntityName}}Converter {
     return dobj;
   }
 
-  /**
-   * 数据对象 → 聚合根。
-   *
-   * @param dobj 数据对象
-   * @return 聚合根
-   */
+  /// 数据对象 → 聚合根。
+/// 
+/// @param dobj 数据对象
+/// @return 聚合根
   public {{EntityName}} toAggregate({{EntityName}}DO dobj) {
     if (dobj == null) {
       return null;
@@ -709,11 +663,9 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-/**
- * {{EntityName}} 仓储实现。
- *
- * <p>适配器模式：将 MyBatis-Plus 适配到领域层的仓储接口。
- */
+/// {{EntityName}} 仓储实现。
+/// 
+/// 适配器模式：将 MyBatis-Plus 适配到领域层的仓储接口。
 @Repository
 @RequiredArgsConstructor
 public class {{EntityName}}RepositoryMpImpl implements {{EntityName}}Repository {

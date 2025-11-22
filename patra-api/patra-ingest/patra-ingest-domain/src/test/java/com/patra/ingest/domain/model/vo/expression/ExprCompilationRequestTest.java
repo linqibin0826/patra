@@ -7,7 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/** ExprCompilationRequest 单元测试 */
+/// ExprCompilationRequest 单元测试
 @DisplayName("ExprCompilationRequest 值对象测试")
 class ExprCompilationRequestTest {
 

@@ -28,21 +28,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
 
-/**
- * TaskCompletedEventHandler 单元测试
- *
- * <p>测试策略: Mock 测试,验证事件处理的核心逻辑
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>正常场景: Task 完成 → Slice 状态更新 → 发布事件
- *   <li>幂等性: Slice 状态未变化,跳过更新
- *   <li>异常场景: Task 不存在、Slice 不存在
- *   <li>并发处理: 乐观锁冲突
- *   <li>异常处理: 通用异常捕获
- * </ul>
- */
+/// TaskCompletedEventHandler 单元测试
+/// 
+/// 测试策略: Mock 测试,验证事件处理的核心逻辑
+/// 
+/// 测试覆盖:
+/// 
+/// - 正常场景: Task 完成 → Slice 状态更新 → 发布事件
+///   - 幂等性: Slice 状态未变化,跳过更新
+///   - 异常场景: Task 不存在、Slice 不存在
+///   - 并发处理: 乐观锁冲突
+///   - 异常处理: 通用异常捕获
+/// 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TaskCompletedEventHandler 单元测试")
 class TaskCompletedEventHandlerTest {

@@ -26,24 +26,20 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * RelayPublishCoordinator 单元测试
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>✅ 发布成功场景
- *   <li>✅ 暂时性错误重试场景
- *   <li>✅ 致命错误失败场景
- *   <li>✅ 达到最大重试次数场景
- *   <li>✅ 错误分类逻辑
- *   <li>✅ 重试延迟计算
- *   <li>✅ 状态转换验证 (PUBLISHING → PUBLISHED/FAILED/DEAD)
- * </ul>
- *
- * @author Patra Team
- * @since 0.1.0
- */
+/// RelayPublishCoordinator 单元测试
+/// 
+/// 测试覆盖:
+/// 
+/// - ✅ 发布成功场景
+///   - ✅ 暂时性错误重试场景
+///   - ✅ 致命错误失败场景
+///   - ✅ 达到最大重试次数场景
+///   - ✅ 错误分类逻辑
+///   - ✅ 重试延迟计算
+///   - ✅ 状态转换验证 (PUBLISHING → PUBLISHED/FAILED/DEAD)
+/// 
+/// @author Patra Team
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RelayPublishCoordinator 单元测试")
 class RelayPublishCoordinatorTest {

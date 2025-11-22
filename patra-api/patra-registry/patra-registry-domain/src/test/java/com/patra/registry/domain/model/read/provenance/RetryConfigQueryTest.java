@@ -9,12 +9,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link RetryConfigQuery} 的单元测试。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// {@link RetryConfigQuery} 的单元测试。
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("RetryConfigQuery 单元测试")
 class RetryConfigQueryTest {
 

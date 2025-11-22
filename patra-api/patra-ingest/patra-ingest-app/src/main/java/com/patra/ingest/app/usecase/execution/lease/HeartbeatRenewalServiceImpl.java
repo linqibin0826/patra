@@ -13,38 +13,30 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-/**
- * 心跳续约服务实现。
- *
- * <p>职责:使用 ScheduledExecutorService 定期续约租约。达到连续失败阈值后,验证租约以检测撤销。
- *
- * <p>设计要点:
- *
- * <ul>
- *   <li>使用小型 ScheduledExecutorService 执行定期续约任务
- *   <li>每次续约调用 LeaseManagementService.renewLease()
- *   <li>连续失败 N 次(默认3次)后,调用 validateLease() 确认撤销
- *   <li>如果被撤销,设置 leaseRevoked 标志以便执行器中止
- *   <li>返回 HeartbeatHandle 用于停止心跳和查询租约状态
- * </ul>
- *
- * <p>配置:
- *
- * <ul>
- *   <li>task.execution.heartbeat.failure-threshold: 连续失败阈值(默认 3)
- * </ul>
- *
- * <p>日志记录:
- *
- * <ul>
- *   <li>DEBUG: 每次续约
- *   <li>WARN: 续约失败、租约被撤销
- *   <li>INFO: 心跳启动/停止
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 心跳续约服务实现。
+/// 
+/// 职责:使用 ScheduledExecutorService 定期续约租约。达到连续失败阈值后,验证租约以检测撤销。
+/// 
+/// 设计要点:
+/// 
+/// - 使用小型 ScheduledExecutorService 执行定期续约任务
+///   - 每次续约调用 LeaseManagementService.renewLease()
+///   - 连续失败 N 次(默认3次)后,调用 validateLease() 确认撤销
+///   - 如果被撤销,设置 leaseRevoked 标志以便执行器中止
+///   - 返回 HeartbeatHandle 用于停止心跳和查询租约状态
+/// 
+/// 配置:
+/// 
+/// - task.execution.heartbeat.failure-threshold: 连续失败阈值(默认 3)
+/// 
+/// 日志记录:
+/// 
+/// - DEBUG: 每次续约
+///   - WARN: 续约失败、租约被撤销
+///   - INFO: 心跳启动/停止
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -52,11 +44,11 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
 
   private final LeaseManagementService leaseManagementService;
 
-  /** 连续失败阈值(默认 3)。 */
+  /// 连续失败阈值(默认 3)。
   @Value("${task.execution.heartbeat.failure-threshold:3}")
   private int failureThreshold;
 
-  /** 全局调度器(小池;足够用于心跳任务)。 */
+  /// 全局调度器(小池;足够用于心跳任务)。
   private final ScheduledExecutorService scheduler =
       Executors.newScheduledThreadPool(
           2, // 使用 2 个线程避免单线程饥饿
@@ -66,7 +58,7 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
             return t;
           });
 
-  /** 启动基于心跳的租约续约。 */
+  /// 启动基于心跳的租约续约。
   @Override
   public ExecutionSession.HeartbeatHandle startHeartbeat(
       Long taskId, String leaseOwner, Duration leaseDuration, Duration renewalInterval) {
@@ -128,7 +120,7 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
     return new HeartbeatHandleImpl(taskId, leaseOwner, future, stopped, leaseRevoked);
   }
 
-  /** 心跳句柄实现。 */
+  /// 心跳句柄实现。
   private static class HeartbeatHandleImpl implements ExecutionSession.HeartbeatHandle {
     private final Long taskId;
     private final String leaseOwner;

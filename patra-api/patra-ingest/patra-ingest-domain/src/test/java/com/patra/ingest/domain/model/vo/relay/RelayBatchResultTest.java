@@ -15,18 +15,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link RelayBatchResult} 的单元测试。
- *
- * <p>测试策略:
- *
- * <ul>
- *   <li>Record 语义: equals/hashCode/toString
- *   <li>字段访问器: 所有字段的 getter
- *   <li>构造验证: 防御性复制和 null 处理
- *   <li>工厂方法: empty() 方法
- * </ul>
- */
+/// {@link RelayBatchResult} 的单元测试。
+/// 
+/// 测试策略:
+/// 
+/// - Record 语义: equals/hashCode/toString
+///   - 字段访问器: 所有字段的 getter
+///   - 构造验证: 防御性复制和 null 处理
+///   - 工厂方法: empty() 方法
+/// 
 @DisplayName("RelayBatchResult 测试")
 class RelayBatchResultTest {
 
@@ -715,7 +712,7 @@ class RelayBatchResultTest {
 
   // === 测试辅助方法 ===
 
-  /** 创建示例事件列表用于测试。 */
+  /// 创建示例事件列表用于测试。
   private static List<OutboxRelayDomainEvent> createSampleEvents() {
     var now = Instant.parse("2025-01-15T10:00:00Z");
     return List.of(

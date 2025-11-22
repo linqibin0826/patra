@@ -7,38 +7,32 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * SliceStatusChangedEvent 单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>纯 Java 单元测试，不依赖 Spring 容器
- *   <li>不使用 Mockito，使用真实对象
- *   <li>遵循 Given-When-Then 结构
- *   <li>使用 AssertJ 流畅断言
- *   <li>测试 Record 语义（构造器、访问器、equals/hashCode/toString）
- *   <li>测试 DomainEvent 接口实现
- * </ul>
- *
- * <p>测试范围：
- *
- * <ul>
- *   <li>✅ Record 构造器测试（紧凑构造器逻辑）
- *   <li>✅ 工厂方法测试（of()）
- *   <li>✅ 访问器方法测试（sliceId, planId, oldStatus, newStatus, occurredAt）
- *   <li>✅ DomainEvent 接口实现测试
- *   <li>✅ 时间戳自动填充测试
- *   <li>✅ Record 语义测试（equals, hashCode, toString）
- *   <li>✅ 幂等性键测试（sliceId + newStatus）
- *   <li>✅ 状态转换场景测试
- *   <li>✅ 边界情况测试
- *   <li>✅ 不可变性测试
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// SliceStatusChangedEvent 单元测试。
+/// 
+/// 测试策略：
+/// 
+/// - 纯 Java 单元测试，不依赖 Spring 容器
+///   - 不使用 Mockito，使用真实对象
+///   - 遵循 Given-When-Then 结构
+///   - 使用 AssertJ 流畅断言
+///   - 测试 Record 语义（构造器、访问器、equals/hashCode/toString）
+///   - 测试 DomainEvent 接口实现
+/// 
+/// 测试范围：
+/// 
+/// - ✅ Record 构造器测试（紧凑构造器逻辑）
+///   - ✅ 工厂方法测试（of()）
+///   - ✅ 访问器方法测试（sliceId, planId, oldStatus, newStatus, occurredAt）
+///   - ✅ DomainEvent 接口实现测试
+///   - ✅ 时间戳自动填充测试
+///   - ✅ Record 语义测试（equals, hashCode, toString）
+///   - ✅ 幂等性键测试（sliceId + newStatus）
+///   - ✅ 状态转换场景测试
+///   - ✅ 边界情况测试
+///   - ✅ 不可变性测试
+/// 
+/// @author linqibin
+/// @since 0.2.0
 @DisplayName("SliceStatusChangedEvent 单元测试")
 class SliceStatusChangedEventTest {
 

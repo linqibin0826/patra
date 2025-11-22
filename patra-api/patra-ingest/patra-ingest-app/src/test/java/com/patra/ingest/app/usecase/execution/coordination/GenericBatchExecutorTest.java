@@ -29,26 +29,22 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-/**
- * GenericBatchExecutor 单元测试
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>✅ 正常执行：调用数据源端口成功
- *   <li>✅ 执行失败：数据源端口返回失败结果
- *   <li>✅ 结果映射：验证返回的 BatchResult
- *   <li>✅ 出版物发布：成功发布出版物到下游
- *   <li>✅ 空出版物列表：处理空的出版物列表
- *   <li>✅ 边界条件：null 参数、空批次号等
- *   <li>✅ 部分成功：处理部分成功场景
- * </ul>
- *
- * <p>注意：重试逻辑、配置转换等已在 ProvenanceDataPortAdapter 中处理，本测试聚焦于应用层编排逻辑。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// GenericBatchExecutor 单元测试
+/// 
+/// 测试覆盖:
+/// 
+/// - ✅ 正常执行：调用数据源端口成功
+///   - ✅ 执行失败：数据源端口返回失败结果
+///   - ✅ 结果映射：验证返回的 BatchResult
+///   - ✅ 出版物发布：成功发布出版物到下游
+///   - ✅ 空出版物列表：处理空的出版物列表
+///   - ✅ 边界条件：null 参数、空批次号等
+///   - ✅ 部分成功：处理部分成功场景
+/// 
+/// 注意：重试逻辑、配置转换等已在 ProvenanceDataPortAdapter 中处理，本测试聚焦于应用层编排逻辑。
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("GenericBatchExecutor 单元测试")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

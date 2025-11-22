@@ -40,37 +40,35 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 
-/**
- * PubMed 出版物数据处理器
- *
- * <p>实现DataProcessor<CanonicalPublication>接口，负责从PubMed获取和处理出版物数据。
- *
- * <p><strong>核心职责</strong>：
- *
- * <ul>
- *   <li>ESearch：执行搜索获取PMID列表
- *   <li>EPost（可选）：当ID数量超过阈值时，上传ID列表获取WebEnv
- *   <li>EFetch：批量获取文章详细元数据
- *   <li>转换：将PubMed XML响应转换为CanonicalPublication
- *   <li>验证：验证转换后的出版物数据
- * </ul>
- *
- * <p><strong>架构位置</strong>：
- *
- * <pre>
- * ProvenanceDataProvider (PubmedDataProvider)
- *     ↓ 委托
- * DataProcessor (PubmedPublicationProcessor) ← [本类]
- *     ↓ 调用
- * PubMedClient → NCBI E-utilities API
- * </pre>
- *
- * <p><strong>注意</strong>：此类通过 {@link com.patra.starter.provenance.boot.ProvenanceAutoConfiguration}
- * 自动配置注册为 Spring Bean，不使用 {@code @Component} 注解。
- *
- * @author Patra Architecture Team
- * @since 0.1.0
- */
+/// PubMed 出版物数据处理器
+/// 
+/// 实现DataProcessor<CanonicalPublication>接口，负责从PubMed获取和处理出版物数据。
+/// 
+/// **核心职责**：
+/// 
+/// - ESearch：执行搜索获取PMID列表
+///   - EPost（可选）：当ID数量超过阈值时，上传ID列表获取WebEnv
+///   - EFetch：批量获取文章详细元数据
+///   - 转换：将PubMed XML响应转换为CanonicalPublication
+///   - 验证：验证转换后的出版物数据
+/// 
+/// **架构位置**：
+/// 
+/// ```
+/// 
+/// ProvenanceDataProvider (PubmedDataProvider)
+///     ↓ 委托
+/// DataProcessor (PubmedPublicationProcessor) ← [本类]
+///     ↓ 调用
+/// PubMedClient → NCBI E-utilities API
+/// 
+/// ```
+/// 
+/// **注意**：此类通过 {@link com.patra.starter.provenance.boot.ProvenanceAutoConfiguration}
+/// 自动配置注册为 Spring Bean，不使用 `@Component` 注解。
+/// 
+/// @author Patra Architecture Team
+/// @since 0.1.0
 @Slf4j
 @RequiredArgsConstructor
 public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublication> {
@@ -175,7 +173,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
 
   // ========== 私有辅助方法 ==========
 
-  /** 准备处理上下文 */
+  /// 准备处理上下文
   private ProcessingContext prepareProcessingContext(ProviderRequest request) {
     ProvenanceConfig config =
         properties.mergeWithRuntime(ProvenanceCode.PUBMED.lowerCaseCode(), request.config());
@@ -185,10 +183,10 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     return new ProcessingContext(config, searchRequest);
   }
 
-  /** 处理上下文记录 */
+  /// 处理上下文记录
   private record ProcessingContext(ProvenanceConfig config, ESearchRequest searchRequest) {}
 
-  /** 执行搜索并提取PMID列表 */
+  /// 执行搜索并提取PMID列表
   private SearchResult executeSearch(ProcessingContext ctx) {
     ESearchResponse response = pubMedClient.esearch(ctx.searchRequest(), ctx.config());
     List<String> pmids = extractPmids(response);
@@ -203,14 +201,14 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     return new SearchResult(pmids, cursor);
   }
 
-  /** 搜索结果记录 */
+  /// 搜索结果记录
   private record SearchResult(List<String> pmids, String cursor) {
     boolean isEmpty() {
       return pmids == null || pmids.isEmpty();
     }
   }
 
-  /** 创建空结果（未找到数据时） */
+  /// 创建空结果（未找到数据时）
   private ProcessResult<CanonicalPublication> createEmptyResult(long startTime, String cursor) {
     log.info(
         "PubMed Publication Processor empty result: duration={}ms",
@@ -218,7 +216,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     return ProcessResult.success(List.of(), cursor);
   }
 
-  /** 构建处理结果 */
+  /// 构建处理结果
   private ProcessResult<CanonicalPublication> buildProcessResult(
       ConversionOutcome outcome, String nextCursor, long startTime) {
 
@@ -237,7 +235,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     return result;
   }
 
-  /** 处理客户端异常（HTTP错误、超时等） */
+  /// 处理客户端异常（HTTP错误、超时等）
   private ProcessResult<CanonicalPublication> handleClientException(ProvenanceClientException ex) {
     log.warn(
         "PubMed Publication Processor client error: status={} message={}",
@@ -247,20 +245,20 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     return ProcessResult.failure(formatErrorMessage(ex));
   }
 
-  /** 处理中断异常（任务取消或超时） */
+  /// 处理中断异常（任务取消或超时）
   private ProcessResult<CanonicalPublication> handleInterruptedException(InterruptedException ex) {
     Thread.currentThread().interrupt();
     log.error("PubMed Publication Processor interrupted", ex);
     return ProcessResult.failure("PubMed processor interrupted");
   }
 
-  /** 处理未预期的异常（代码Bug或系统错误） */
+  /// 处理未预期的异常（代码Bug或系统错误）
   private ProcessResult<CanonicalPublication> handleUnexpectedException(Exception ex) {
     log.error("PubMed Publication Processor unexpected error", ex);
     return ProcessResult.failure("Unexpected PubMed error: " + ex.getMessage());
   }
 
-  /** 构建搜索参数 */
+  /// 构建搜索参数
   private JsonNode buildSearchParams(ProviderRequest request) {
     BatchExecutionParams exec = request.executionParams();
     JsonNode params = exec.params();
@@ -280,7 +278,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     return node;
   }
 
-  /** 提取PMID列表 */
+  /// 提取PMID列表
   private List<String> extractPmids(ESearchResponse response) {
     if (response == null || response.result() == null) {
       return CollUtil.newArrayList();
@@ -289,7 +287,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     return CollUtil.isEmpty(idList) ? CollUtil.newArrayList() : idList;
   }
 
-  /** 提取游标令牌 */
+  /// 提取游标令牌
   private String extractCursorToken(ESearchResponse response) {
     if (response == null || response.result() == null) {
       return null;
@@ -297,7 +295,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     return response.result().webEnv();
   }
 
-  /** 获取文章数据（根据数量选择直接EFetch或通过EPost） */
+  /// 获取文章数据（根据数量选择直接EFetch或通过EPost）
   private List<PubmedPublication> fetchArticles(List<String> pmids, ProvenanceConfig config)
       throws InterruptedException {
     int threshold = resolveEpostThreshold(config);
@@ -307,7 +305,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     return fetchArticlesViaEPost(pmids, config);
   }
 
-  /** 解析EPost阈值 */
+  /// 解析EPost阈值
   private int resolveEpostThreshold(ProvenanceConfig config) {
     BatchingConfig batching = config.batching();
     if (batching != null) {
@@ -321,7 +319,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     return DEFAULT_EPOST_THRESHOLD;
   }
 
-  /** 直接通过EFetch获取文章 */
+  /// 直接通过EFetch获取文章
   private List<PubmedPublication> fetchArticlesDirectly(
       List<String> pmids, ProvenanceConfig config) {
     String idParam = StrUtil.join(",", pmids);
@@ -334,7 +332,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     return articles;
   }
 
-  /** 通过EPost获取文章 */
+  /// 通过EPost获取文章
   private List<PubmedPublication> fetchArticlesViaEPost(List<String> pmids, ProvenanceConfig config)
       throws InterruptedException {
     log.info("PubMed EPost strategy triggered: count={}", pmids.size());
@@ -382,7 +380,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     return articles;
   }
 
-  /** 转换文章列表为标准格式 */
+  /// 转换文章列表为标准格式
   private ConversionOutcome convertArticles(List<PubmedPublication> articles) {
     if (CollUtil.isEmpty(articles)) {
       return new ConversionOutcome(CollUtil.newArrayList(), 0, CollUtil.newArrayList());
@@ -426,7 +424,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     return new ConversionOutcome(List.copyOf(publications), attempted, List.copyOf(failures));
   }
 
-  /** 构建转换警告消息 */
+  /// 构建转换警告消息
   private String buildConversionWarning(List<String> failedPmids) {
     if (failedPmids.isEmpty()) {
       return null;
@@ -440,14 +438,12 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     return message;
   }
 
-  /**
-   * 格式化客户端异常消息
-   *
-   * <p>根据HTTP状态码将异常转换为用户友好的错误消息。
-   *
-   * @param ex 客户端异常
-   * @return 格式化的错误消息
-   */
+  /// 格式化客户端异常消息
+/// 
+/// 根据HTTP状态码将异常转换为用户友好的错误消息。
+/// 
+/// @param ex 客户端异常
+/// @return 格式化的错误消息
   private String formatErrorMessage(ProvenanceClientException ex) {
     Integer status = ex.getStatusCode();
     if (status == null) {
@@ -465,7 +461,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     return "PubMed unexpected response (status=%d)".formatted(status);
   }
 
-  /** 记录转换指标 */
+  /// 记录转换指标
   private void recordConversionMetrics(int successCount, int failureCount) {
     if (metrics == null) {
       return;
@@ -473,7 +469,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     metrics.recordConversionMetrics(ProvenanceCode.PUBMED, successCount, failureCount);
   }
 
-  /** 转换结果记录 */
+  /// 转换结果记录
   private record ConversionOutcome(
       List<CanonicalPublication> publications, int attempted, List<String> failedPmids) {}
 }

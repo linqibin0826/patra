@@ -11,28 +11,23 @@ import com.patra.ingest.domain.model.vo.shared.IdempotentKey;
 import java.time.Instant;
 import lombok.Getter;
 
-/**
- * 任务执行批次实体。表示任务执行中的单次分页/游标批次。
- *
- * <p>标识：由 runId + batchNo 唯一标识。
- *
- * <p>生命周期：
- *
- * <ul>
- *   <li>创建时处于 {@code RUNNING} 状态
- *   <li>执行完成后转换为 {@code SUCCEEDED/FAILED} 状态
- * </ul>
- *
- * <p>业务约束：
- *
- * <ul>
- *   <li>支持基于页码的分页 (pageNo + pageSize)
- *   <li>支持基于游标令牌的分页 (beforeToken → afterToken)
- *   <li>幂等键由 runId + (cursorToken or batchNo) 生成
- *   <li>批次统计 (BatchStats) 记录本批次抓取的记录数
- *   <li>可选存储键 (storageKey) 指向原始数据的对象存储位置
- * </ul>
- */
+/// 任务执行批次实体。表示任务执行中的单次分页/游标批次。
+/// 
+/// 标识：由 runId + batchNo 唯一标识。
+/// 
+/// 生命周期：
+/// 
+/// - 创建时处于 `RUNNING` 状态
+///   - 执行完成后转换为 `SUCCEEDED/FAILED` 状态
+/// 
+/// 业务约束：
+/// 
+/// - 支持基于页码的分页 (pageNo + pageSize)
+///   - 支持基于游标令牌的分页 (beforeToken → afterToken)
+///   - 幂等键由 runId + (cursorToken or batchNo) 生成
+///   - 批次统计 (BatchStats) 记录本批次抓取的记录数
+///   - 可选存储键 (storageKey) 指向原始数据的对象存储位置
+/// 
 @SuppressWarnings("unused")
 @Getter
 public class TaskRunBatch {
@@ -188,16 +183,14 @@ public class TaskRunBatch {
     this.committedAt = now;
   }
 
-  /**
-   * Convenience factory for recording the result of a batch execution.
-   *
-   * <p>Used by the task execution engine after a batch completes.
-   *
-   * @param context execution context containing redundant identifiers
-   * @param batch batch definition with cursor metadata
-   * @param result execution result for the batch
-   * @return {@link TaskRunBatch} instance
-   */
+  /// Convenience factory for recording the result of a batch execution.
+/// 
+/// Used by the task execution engine after a batch completes.
+/// 
+/// @param context execution context containing redundant identifiers
+/// @param batch batch definition with cursor metadata
+/// @param result execution result for the batch
+/// @return {@link TaskRunBatch} instance
   public static TaskRunBatch create(ExecutionContext context, Batch batch, BatchResult result) {
     BatchStatus status = result.success() ? BatchStatus.SUCCEEDED : BatchStatus.FAILED;
     BatchStats stats = BatchStats.of(result.fetchedCount());

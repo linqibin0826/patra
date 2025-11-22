@@ -8,32 +8,26 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * PlanSliceAggregate 单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>纯 Java 单元测试，不依赖 Spring 容器
- *   <li>使用 TestDataBuilder 模式构建测试数据
- *   <li>遵循 Given-When-Then 结构
- *   <li>使用 AssertJ 流畅断言
- * </ul>
- *
- * <p>测试覆盖范围：
- *
- * <ul>
- *   <li>✅ 工厂方法测试（create/restore）
- *   <li>✅ 状态机转换测试（PENDING → ASSIGNED → FINISHED）
- *   <li>✅ 业务规则测试（bindPlan, markAssigned, updateStatus）
- *   <li>✅ 不变性测试（final 字段验证）
- *   <li>✅ 边界条件测试（null 处理）
- *   <li>✅ 聚合根基类行为测试
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// PlanSliceAggregate 单元测试。
+/// 
+/// 测试策略：
+/// 
+/// - 纯 Java 单元测试，不依赖 Spring 容器
+///   - 使用 TestDataBuilder 模式构建测试数据
+///   - 遵循 Given-When-Then 结构
+///   - 使用 AssertJ 流畅断言
+/// 
+/// 测试覆盖范围：
+/// 
+/// - ✅ 工厂方法测试（create/restore）
+///   - ✅ 状态机转换测试（PENDING → ASSIGNED → FINISHED）
+///   - ✅ 业务规则测试（bindPlan, markAssigned, updateStatus）
+///   - ✅ 不变性测试（final 字段验证）
+///   - ✅ 边界条件测试（null 处理）
+///   - ✅ 聚合根基类行为测试
+/// 
+/// @author linqibin
+/// @since 0.2.0
 @DisplayName("PlanSliceAggregate 单元测试")
 class PlanSliceAggregateTest {
 
@@ -645,11 +639,9 @@ class PlanSliceAggregateTest {
 
   // ========== TestDataBuilder（辅助类）==========
 
-  /**
-   * PlanSliceAggregate 测试数据构建器。
-   *
-   * <p>遵循 Builder 模式，提供默认值以简化测试数据构建。
-   */
+  /// PlanSliceAggregate 测试数据构建器。
+/// 
+/// 遵循 Builder 模式，提供默认值以简化测试数据构建。
   static class PlanSliceAggregateTestDataBuilder {
     private Long id = null; // 默认为 null（新创建的聚合根）
     private Long planId = 1001L;
@@ -716,7 +708,7 @@ class PlanSliceAggregateTest {
       return this;
     }
 
-    /** 构建新创建的切片（使用 create() 工厂方法）。 */
+    /// 构建新创建的切片（使用 create() 工厂方法）。
     public PlanSliceAggregate build() {
       return PlanSliceAggregate.create(
           planId,
@@ -728,7 +720,7 @@ class PlanSliceAggregateTest {
           exprSnapshotJson);
     }
 
-    /** 构建从持久化重建的切片（使用 restore() 工厂方法）。 */
+    /// 构建从持久化重建的切片（使用 restore() 工厂方法）。
     public PlanSliceAggregate buildRestored() {
       Long restoredId = (id != null) ? id : 100L; // 默认 ID
       return PlanSliceAggregate.restore(

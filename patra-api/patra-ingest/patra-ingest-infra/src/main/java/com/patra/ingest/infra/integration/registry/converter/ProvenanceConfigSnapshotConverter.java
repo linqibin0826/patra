@@ -6,23 +6,19 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
-/**
- * 注册中心 API DTO 到采集领域配置快照的转换器。
- *
- * <p>将 patra-registry 的配置响应转换为采集领域所需的快照对象。遵循 MapStruct 最佳实践进行类型安全的映射。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 注册中心 API DTO 到采集领域配置快照的转换器。
+/// 
+/// 将 patra-registry 的配置响应转换为采集领域所需的快照对象。遵循 MapStruct 最佳实践进行类型安全的映射。
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ProvenanceConfigSnapshotConverter {
 
-  /**
-   * 将完整的配置响应转换为快照。
-   *
-   * @param resp 配置响应
-   * @return 快照
-   */
+  /// 将完整的配置响应转换为快照。
+/// 
+/// @param resp 配置响应
+/// @return 快照
   @Mapping(target = "provenance", source = "provenance")
   @Mapping(target = "windowOffset", source = "windowOffset")
   @Mapping(target = "pagination", source = "pagination")
@@ -32,7 +28,7 @@ public interface ProvenanceConfigSnapshotConverter {
   @Mapping(target = "rateLimit", source = "rateLimit")
   ProvenanceConfigSnapshot convert(ProvenanceConfigResp resp);
 
-  /** 映射溯源基础信息。 */
+  /// 映射溯源基础信息。
   default ProvenanceConfigSnapshot.ProvenanceInfo mapProvenanceInfo(ProvenanceResp source) {
     if (source == null) {
       return null;
@@ -48,7 +44,7 @@ public interface ProvenanceConfigSnapshotConverter {
         source.lifecycleStatusCode());
   }
 
-  /** 映射窗口偏移配置。 */
+  /// 映射窗口偏移配置。
   default ProvenanceConfigSnapshot.WindowOffsetConfig mapWindowOffsetConfig(
       WindowOffsetResp source) {
     if (source == null) {
@@ -77,7 +73,7 @@ public interface ProvenanceConfigSnapshotConverter {
         source.maxWindowSpanSeconds());
   }
 
-  /** 映射分页配置。 */
+  /// 映射分页配置。
   default ProvenanceConfigSnapshot.PaginationConfig mapPaginationConfig(
       PaginationConfigResp source) {
     if (source == null) {
@@ -96,7 +92,7 @@ public interface ProvenanceConfigSnapshotConverter {
         source.sortingDirection());
   }
 
-  /** 映射 HTTP 配置。 */
+  /// 映射 HTTP 配置。
   default ProvenanceConfigSnapshot.HttpConfig mapHttpConfig(HttpConfigResp source) {
     if (source == null) {
       return null;
@@ -119,7 +115,7 @@ public interface ProvenanceConfigSnapshotConverter {
         source.idempotencyTtlSeconds());
   }
 
-  /** 映射批处理配置。 */
+  /// 映射批处理配置。
   default ProvenanceConfigSnapshot.BatchingConfig mapBatchingConfig(BatchingConfigResp source) {
     if (source == null) {
       return null;
@@ -136,7 +132,7 @@ public interface ProvenanceConfigSnapshotConverter {
         source.maxIdsPerRequest());
   }
 
-  /** 映射重试配置。 */
+  /// 映射重试配置。
   default ProvenanceConfigSnapshot.RetryConfig mapRetryConfig(RetryConfigResp source) {
     if (source == null) {
       return null;
@@ -160,7 +156,7 @@ public interface ProvenanceConfigSnapshotConverter {
         source.circuitCooldownMillis());
   }
 
-  /** 映射限流配置。 */
+  /// 映射限流配置。
   default ProvenanceConfigSnapshot.RateLimitConfig mapRateLimitConfig(RateLimitConfigResp source) {
     if (source == null) {
       return null;

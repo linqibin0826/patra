@@ -6,32 +6,26 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * StorageKey 值对象单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>纯 Java 单元测试，不依赖 Spring 容器
- *   <li>遵循 Given-When-Then 结构
- *   <li>使用 AssertJ 流畅断言
- *   <li>使用 @Nested 分组组织测试
- * </ul>
- *
- * <p>测试范围：
- *
- * <ul>
- *   <li>✅ record 构造函数验证（紧凑构造器）
- *   <li>✅ bucket 为 null/空字符串/空白字符串的异常测试
- *   <li>✅ objectKey 为 null/空字符串/空白字符串的异常测试
- *   <li>✅ fullKey() 方法测试（bucket/objectKey 组合格式）
- *   <li>✅ matches() 方法测试（相等性比较）
- *   <li>✅ record 自动生成的 equals/hashCode/toString 测试
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// StorageKey 值对象单元测试。
+/// 
+/// 测试策略：
+/// 
+/// - 纯 Java 单元测试，不依赖 Spring 容器
+///   - 遵循 Given-When-Then 结构
+///   - 使用 AssertJ 流畅断言
+///   - 使用 @Nested 分组组织测试
+/// 
+/// 测试范围：
+/// 
+/// - ✅ record 构造函数验证（紧凑构造器）
+///   - ✅ bucket 为 null/空字符串/空白字符串的异常测试
+///   - ✅ objectKey 为 null/空字符串/空白字符串的异常测试
+///   - ✅ fullKey() 方法测试（bucket/objectKey 组合格式）
+///   - ✅ matches() 方法测试（相等性比较）
+///   - ✅ record 自动生成的 equals/hashCode/toString 测试
+/// 
+/// @author linqibin
+/// @since 0.2.0
 @DisplayName("StorageKey 值对象单元测试")
 class StorageKeyTest {
 

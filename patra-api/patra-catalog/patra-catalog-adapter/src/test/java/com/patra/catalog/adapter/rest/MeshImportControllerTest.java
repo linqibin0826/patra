@@ -23,28 +23,24 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-/**
- * MeSH 导入 Controller 切片测试。
- *
- * <p>测试策略：使用 @WebMvcTest 切片测试，验证 HTTP 请求/响应、参数校验、全局异常处理
- *
- * <p><b>异常处理验证</b>：验证 RFC 7807 ProblemDetail 响应格式（由 {@code patra-spring-boot-starter-web}
- * 自动处理）
- *
- * <p>测试覆盖：
- *
- * <ul>
- *   <li>✅ POST /api/v1/mesh/import/start - 成功场景
- *   <li>✅ POST /api/v1/mesh/import/start - 参数校验失败（400）
- *   <li>✅ POST /api/v1/mesh/import/start - 已有任务运行（409）
- *   <li>✅ POST /api/v1/mesh/import/retry/{taskId} - 成功场景
- *   <li>✅ POST /api/v1/mesh/import/retry/{taskId} - 任务不存在（404）
- *   <li>✅ POST /api/v1/mesh/import/clear - 成功场景
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// MeSH 导入 Controller 切片测试。
+/// 
+/// 测试策略：使用 @WebMvcTest 切片测试，验证 HTTP 请求/响应、参数校验、全局异常处理
+/// 
+/// **异常处理验证**：验证 RFC 7807 ProblemDetail 响应格式（由 `patra-spring-boot-starter-web`
+/// 自动处理）
+/// 
+/// 测试覆盖：
+/// 
+/// - ✅ POST /api/v1/mesh/import/start - 成功场景
+///   - ✅ POST /api/v1/mesh/import/start - 参数校验失败（400）
+///   - ✅ POST /api/v1/mesh/import/start - 已有任务运行（409）
+///   - ✅ POST /api/v1/mesh/import/retry/{taskId} - 成功场景
+///   - ✅ POST /api/v1/mesh/import/retry/{taskId} - 任务不存在（404）
+///   - ✅ POST /api/v1/mesh/import/clear - 成功场景
+/// 
+/// @author linqibin
+/// @since 0.2.0
 @WebMvcTest(MeshImportController.class)
 @Import(MeshImportErrorMappingContributor.class) // 导入异常映射贡献者
 @DisplayName("MeSH 导入 Controller 测试")

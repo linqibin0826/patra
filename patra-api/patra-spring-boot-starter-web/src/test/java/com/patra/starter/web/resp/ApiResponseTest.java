@@ -6,7 +6,7 @@ import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/** 测试 {@link ApiResponse} 的工厂方法和字段值 */
+/// 测试 {@link ApiResponse} 的工厂方法和字段值
 @DisplayName("ApiResponse 单元测试")
 class ApiResponseTest {
 

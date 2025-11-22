@@ -28,38 +28,32 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-/**
- * 完成阶段用例实现
- *
- * <p>在六边形架构+DDD中的角色:应用层用例实现,负责任务执行完成阶段的完整流程。
- *
- * <p>主要职责:游标推进 → 状态决策 → Task/TaskRun更新 → 资源清理(心跳/租约)
- *
- * <p>设计要点:
- *
- * <ul>
- *   <li>状态决策逻辑:
- *       <ul>
- *         <li>全部成功 + 游标推进成功 → Task: SUCCEEDED, TaskRun: SUCCEEDED
- *         <li>全部成功 + 游标推进失败 → Task: FAILED, TaskRun: PARTIAL (可重试检查点)
- *         <li>部分成功 (failed > 0 且 succeeded > 0) → Task: FAILED, TaskRun: PARTIAL
- *         <li>全部失败 (succeeded == 0) → Task: FAILED, TaskRun: FAILED
- *       </ul>
- *   <li>仅当所有批次成功时才推进游标;失败时记录原因
- *   <li>乐观锁冲突或游标失败时,将TaskRun标记为PARTIAL(可重试)
- *   <li>清理:无论结果如何都停止心跳并释放租约
- * </ul>
- *
- * <p>日志策略:
- *
- * <ul>
- *   <li>INFO: 游标推进、任务完成(SUCCEEDED状态)
- *   <li>WARN: 游标失败、部分成功或全部失败状态
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 完成阶段用例实现
+/// 
+/// 在六边形架构+DDD中的角色:应用层用例实现,负责任务执行完成阶段的完整流程。
+/// 
+/// 主要职责:游标推进 → 状态决策 → Task/TaskRun更新 → 资源清理(心跳/租约)
+/// 
+/// 设计要点:
+/// 
+/// - 状态决策逻辑:
+///       
+/// - 全部成功 + 游标推进成功 → Task: SUCCEEDED, TaskRun: SUCCEEDED
+///         - 全部成功 + 游标推进失败 → Task: FAILED, TaskRun: PARTIAL (可重试检查点)
+///         - 部分成功 (failed > 0 且 succeeded > 0) → Task: FAILED, TaskRun: PARTIAL
+///         - 全部失败 (succeeded == 0) → Task: FAILED, TaskRun: FAILED
+/// 
+///   - 仅当所有批次成功时才推进游标;失败时记录原因
+///   - 乐观锁冲突或游标失败时,将TaskRun标记为PARTIAL(可重试)
+///   - 清理:无论结果如何都停止心跳并释放租约
+/// 
+/// 日志策略:
+/// 
+/// - INFO: 游标推进、任务完成(SUCCEEDED状态)
+///   - WARN: 游标失败、部分成功或全部失败状态
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -74,7 +68,7 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
   private final ApplicationEventPublisher applicationEventPublisher;
   private final Clock clock;
 
-  /** Completes execution (advance cursor + update status). */
+  /// Completes execution (advance cursor + update status).
   @Override
   @Transactional(rollbackFor = Exception.class)
   public void complete(
@@ -296,7 +290,7 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
         totalPublicationCount);
   }
 
-  /** Cleanup resources (stop heartbeat, release lease). */
+  /// Cleanup resources (stop heartbeat, release lease).
   private void cleanupResources(ExecutionSession session) {
     Long taskId = session.taskId();
     String leaseOwner = session.leaseOwner();

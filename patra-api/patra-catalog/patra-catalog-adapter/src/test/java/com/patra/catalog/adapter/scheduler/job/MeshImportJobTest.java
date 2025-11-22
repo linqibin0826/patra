@@ -24,23 +24,19 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 
-/**
- * MeSH 导入定时任务单元测试。
- *
- * <p>测试策略：单元测试，Mock 业务层依赖和 Redisson 分布式锁
- *
- * <p>测试覆盖：
- *
- * <ul>
- *   <li>✅ 获取分布式锁成功，调用 Orchestrator
- *   <li>✅ 获取分布式锁失败，记录日志并退出
- *   <li>✅ 执行过程中异常处理
- *   <li>✅ 正确释放分布式锁
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// MeSH 导入定时任务单元测试。
+/// 
+/// 测试策略：单元测试，Mock 业务层依赖和 Redisson 分布式锁
+/// 
+/// 测试覆盖：
+/// 
+/// - ✅ 获取分布式锁成功，调用 Orchestrator
+///   - ✅ 获取分布式锁失败，记录日志并退出
+///   - ✅ 执行过程中异常处理
+///   - ✅ 正确释放分布式锁
+/// 
+/// @author linqibin
+/// @since 0.2.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MeSH 导入定时任务测试")
 class MeshImportJobTest {

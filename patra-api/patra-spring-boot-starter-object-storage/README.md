@@ -38,15 +38,13 @@
 对象存储操作的统一抽象:
 ```java
 public interface ObjectStorageOperations {
-    /**
-     * 上传文件到对象存储
-     *
-     * @param bucket bucket 名称
-     * @param key 对象键(唯一标识)
-     * @param inputStream 文件内容流
-     * @param metadata 文件元数据(大小、Content-Type)
-     * @return 上传结果(storageKey、etag、fileSize)
-     */
+    /// 上传文件到对象存储
+/// 
+/// @param bucket bucket 名称
+/// @param key 对象键(唯一标识)
+/// @param inputStream 文件内容流
+/// @param metadata 文件元数据(大小、Content-Type)
+/// @return 上传结果(storageKey、etag、fileSize)
     UploadResult upload(String bucket, String key,
                        InputStream inputStream, ObjectMetadata metadata);
 }

@@ -14,25 +14,21 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * PlanConverter 单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>测试 toEntity() 转换的正确性（Aggregate → DO）
- *   <li>测试 toAggregate() 转换的正确性（DO → Aggregate）
- *   <li>测试所有 PlanStatus 枚举值的转换
- *   <li>测试所有 WindowSpec 策略的转换
- *   <li>测试 JSON 字段的转换（exprProtoSnapshot, provenanceConfigSnapshot, sliceParams）
- *   <li>测试 denormalized 时间戳字段的处理（windowFromTs/windowToTs）
- *   <li>测试双向转换一致性
- *   <li>测试 null 安全性
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// PlanConverter 单元测试。
+/// 
+/// 测试策略：
+/// 
+/// - 测试 toEntity() 转换的正确性（Aggregate → DO）
+///   - 测试 toAggregate() 转换的正确性（DO → Aggregate）
+///   - 测试所有 PlanStatus 枚举值的转换
+///   - 测试所有 WindowSpec 策略的转换
+///   - 测试 JSON 字段的转换（exprProtoSnapshot, provenanceConfigSnapshot, sliceParams）
+///   - 测试 denormalized 时间戳字段的处理（windowFromTs/windowToTs）
+///   - 测试双向转换一致性
+///   - 测试 null 安全性
+/// 
+/// @author linqibin
+/// @since 0.2.0
 @DisplayName("PlanConverter 单元测试")
 class PlanConverterTest {
 

@@ -22,42 +22,34 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-/**
- * RocketMQ 发件箱发布器实现。
- *
- * <p>使用 RocketMQ 官方 Spring Boot Starter 提供直接的 API 访问和高性能消息发布。
- *
- * <p><strong>架构特性</strong>:
- *
- * <ul>
- *   <li>使用 {@link RocketMQTemplate} 进行消息发送,减少抽象层
- *   <li>通过 {@link RocketMqChannelMapper} 实现业务通道到技术 Topic 的映射,保持领域层纯净
- *   <li>支持顺序消息发送 (syncSendOrderly) 和普通消息发送 (syncSend)
- *   <li>正确分离 dedupKey (业务键) 和 partitionKey (分区键)
- * </ul>
- *
- * <p><strong>职责</strong>:
- *
- * <ul>
- *   <li>将发件箱消息发布到 RocketMQ
- *   <li>根据白名单验证通道许可
- *   <li>构建包含完整元数据的 RocketMQ 消息
- *   <li>处理发送失败并抛出领域异常
- * </ul>
- *
- * <p><strong>消息元数据映射</strong>:
- *
- * <ul>
- *   <li>dedupKey → RocketMQ KEYS (用于消息追踪和去重)
- *   <li>opType → RocketMQ TAGS (用于消费端过滤)
- *   <li>partitionKey → hashKey (用于顺序消息的队列选择)
- *   <li>headers → UserProperties (自定义属性)
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- * @see RocketMqChannelMapper
- */
+/// RocketMQ 发件箱发布器实现。
+/// 
+/// 使用 RocketMQ 官方 Spring Boot Starter 提供直接的 API 访问和高性能消息发布。
+/// 
+/// **架构特性**:
+/// 
+/// - 使用 {@link RocketMQTemplate} 进行消息发送,减少抽象层
+///   - 通过 {@link RocketMqChannelMapper} 实现业务通道到技术 Topic 的映射,保持领域层纯净
+///   - 支持顺序消息发送 (syncSendOrderly) 和普通消息发送 (syncSend)
+///   - 正确分离 dedupKey (业务键) 和 partitionKey (分区键)
+/// 
+/// **职责**:
+/// 
+/// - 将发件箱消息发布到 RocketMQ
+///   - 根据白名单验证通道许可
+///   - 构建包含完整元数据的 RocketMQ 消息
+///   - 处理发送失败并抛出领域异常
+/// 
+/// **消息元数据映射**:
+/// 
+/// - dedupKey → RocketMQ KEYS (用于消息追踪和去重)
+///   - opType → RocketMQ TAGS (用于消费端过滤)
+///   - partitionKey → hashKey (用于顺序消息的队列选择)
+///   - headers → UserProperties (自定义属性)
+/// 
+/// @author linqibin
+/// @since 0.2.0
+/// @see RocketMqChannelMapper
 @Slf4j
 @Component
 public class RocketMqOutboxPublisher implements OutboxPublisherPort {
@@ -172,17 +164,15 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
     }
   }
 
-  /**
-   * 构建 RocketMQ destination 字符串。
-   *
-   * <p>格式: "topic:tags"
-   *
-   * <p>注意：opType 是 NOT NULL，所以始终会添加 tags
-   *
-   * @param topic Topic 名称（粗粒度 Channel，如 INGEST_TASK）
-   * @param tags Tags（操作类型，如 READY、FAILED）
-   * @return destination 字符串（如 "INGEST_TASK:READY"）
-   */
+  /// 构建 RocketMQ destination 字符串。
+/// 
+/// 格式: "topic:tags"
+/// 
+/// 注意：opType 是 NOT NULL，所以始终会添加 tags
+/// 
+/// @param topic Topic 名称（粗粒度 Channel，如 INGEST_TASK）
+/// @param tags Tags（操作类型，如 READY、FAILED）
+/// @return destination 字符串（如 "INGEST_TASK:READY"）
   private String buildDestination(String topic, String tags) {
     // opType 是 NOT NULL，理论上始终有 tags
     if (StringUtils.hasText(tags)) {
@@ -192,22 +182,18 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
     return topic;
   }
 
-  /**
-   * 构建 Spring 消息对象（用于 RocketMQTemplate）。
-   *
-   * <p><strong>消息结构</strong>:
-   *
-   * <ul>
-   *   <li>Payload: JSON 字符串
-   *   <li>Header - KEYS: 对应 OutboxMessage.dedupKey (用于消息追踪和去重)
-   *   <li>Headers: 自定义头信息 + partitionKey + channel
-   * </ul>
-   *
-   * <p><strong>注意</strong>: TAGS 不通过 header 传递，而是通过 destination 参数 ("topic:tags" 格式)
-   *
-   * @param message 发件箱消息
-   * @return Spring 消息对象
-   */
+  /// 构建 Spring 消息对象（用于 RocketMQTemplate）。
+/// 
+/// **消息结构**:
+/// 
+/// - Payload: JSON 字符串
+///   - Header - KEYS: 对应 OutboxMessage.dedupKey (用于消息追踪和去重)
+///   - Headers: 自定义头信息 + partitionKey + channel
+/// 
+/// **注意**: TAGS 不通过 header 传递，而是通过 destination 参数 ("topic:tags" 格式)
+/// 
+/// @param message 发件箱消息
+/// @return Spring 消息对象
   private Message<String> buildSpringMessage(OutboxMessage message) {
 
     // 1. 准备消息体（RocketMQTemplate 不支持空 payload，使用占位符）
@@ -237,12 +223,10 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
     return builder.build();
   }
 
-  /**
-   * 解析 JSON 格式的消息头。
-   *
-   * @param headersJson JSON 字符串
-   * @return 消息头 Map
-   */
+  /// 解析 JSON 格式的消息头。
+/// 
+/// @param headersJson JSON 字符串
+/// @return 消息头 Map
   private Map<String, Object> parseHeaders(String headersJson) {
     if (!StringUtils.hasText(headersJson)) {
       return Collections.emptyMap();

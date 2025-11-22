@@ -251,11 +251,9 @@ package com.patra.ingest.domain.event;
 import com.patra.common.domain.DomainEvent;
 import java.time.Instant;
 
-/**
- * 任务执行完成时发布的领域事件。
- *
- * <p>事件链: TaskCompletedEvent → SliceStatusChangedEvent → PlanAggregate 更新
- */
+/// 任务执行完成时发布的领域事件。
+/// 
+/// 事件链: TaskCompletedEvent → SliceStatusChangedEvent → PlanAggregate 更新
 public record TaskCompletedEvent(
     Long taskId,
     Long sliceId,

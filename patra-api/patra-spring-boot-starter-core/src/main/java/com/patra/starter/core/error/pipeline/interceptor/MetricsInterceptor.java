@@ -10,16 +10,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 
-/**
- * 错误解析拦截器 - 指标记录。
- *
- * <p>记录错误解析管道的时间信息、慢调用检测和聚合指标,用于性能监控和观测。
- *
- * <p>执行优先级: {@link Ordered#LOWEST_PRECEDENCE} - 10,确保在其他拦截器之后执行以获取完整耗时。
- *
- * @author Patra Team
- * @since 2.0
- */
+/// 错误解析拦截器 - 指标记录。
+/// 
+/// 记录错误解析管道的时间信息、慢调用检测和聚合指标,用于性能监控和观测。
+/// 
+/// 执行优先级: {@link Ordered#LOWEST_PRECEDENCE} - 10,确保在其他拦截器之后执行以获取完整耗时。
+/// 
+/// @author Patra Team
+/// @since 2.0
 @Slf4j
 @Order(Ordered.LOWEST_PRECEDENCE - 10)
 public class MetricsInterceptor implements ResolutionInterceptor {
@@ -27,12 +25,10 @@ public class MetricsInterceptor implements ResolutionInterceptor {
   private final ErrorObservationRecorder observationRecorder;
   private final ErrorProperties.ObservationProperties observationProperties;
 
-  /**
-   * 构造指标拦截器。
-   *
-   * @param observationRecorder 观测记录器
-   * @param observationProperties 观测配置属性
-   */
+  /// 构造指标拦截器。
+/// 
+/// @param observationRecorder 观测记录器
+/// @param observationProperties 观测配置属性
   public MetricsInterceptor(
       ErrorObservationRecorder observationRecorder,
       ErrorProperties.ObservationProperties observationProperties) {
@@ -40,21 +36,17 @@ public class MetricsInterceptor implements ResolutionInterceptor {
     this.observationProperties = observationProperties;
   }
 
-  /**
-   * 拦截错误解析调用,记录性能指标。
-   *
-   * <p>记录内容:
-   *
-   * <ul>
-   *   <li>解析耗时(毫秒)
-   *   <li>慢调用标记(超过阈值)
-   *   <li>异常类型和错误码
-   * </ul>
-   *
-   * @param exception 待解析的异常
-   * @param invocation 解析调用链
-   * @return 解析结果
-   */
+  /// 拦截错误解析调用,记录性能指标。
+/// 
+/// 记录内容:
+/// 
+/// - 解析耗时(毫秒)
+///   - 慢调用标记(超过阈值)
+///   - 异常类型和错误码
+/// 
+/// @param exception 待解析的异常
+/// @param invocation 解析调用链
+/// @return 解析结果
   @Override
   public ErrorResolution intercept(Throwable exception, ResolutionInvocation invocation) {
     long start = System.nanoTime();

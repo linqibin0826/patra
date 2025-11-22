@@ -10,21 +10,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-/**
- * MeSH 主题词聚合根仓储实现。
- *
- * <p><b>职责</b>：
- *
- * <ul>
- *   <li>管理 MeSH 主题词聚合根的持久化
- *   <li>协调 Descriptor、TreeNumber、EntryTerm、Concept 的存储
- *   <li>处理树形编号层次查询
- *   <li>支持入口术语全文检索
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// MeSH 主题词聚合根仓储实现。
+/// 
+/// **职责**：
+/// 
+/// - 管理 MeSH 主题词聚合根的持久化
+///   - 协调 Descriptor、TreeNumber、EntryTerm、Concept 的存储
+///   - 处理树形编号层次查询
+///   - 支持入口术语全文检索
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Repository
 @RequiredArgsConstructor

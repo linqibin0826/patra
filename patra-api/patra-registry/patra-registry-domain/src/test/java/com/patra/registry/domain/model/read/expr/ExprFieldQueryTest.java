@@ -8,12 +8,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * ExprFieldQuery 的单元测试。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// ExprFieldQuery 的单元测试。
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("ExprFieldQuery 测试")
 class ExprFieldQueryTest {
 

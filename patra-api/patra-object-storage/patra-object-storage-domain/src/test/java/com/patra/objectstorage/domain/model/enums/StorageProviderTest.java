@@ -6,35 +6,29 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * StorageProvider 枚举单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>纯 Java 单元测试，不依赖 Spring 容器
- *   <li>遵循 Given-When-Then 结构
- *   <li>使用 AssertJ 流畅断言
- *   <li>使用 @Nested 分组组织测试
- * </ul>
- *
- * <p>测试范围：
- *
- * <ul>
- *   <li>✅ 枚举值存在性测试（MINIO, S3, OSS, COS）
- *   <li>✅ values() 方法测试（数量、包含关系、顺序）
- *   <li>✅ valueOf() 方法测试（有效字符串、无效字符串、null）
- *   <li>✅ name() 方法测试（枚举名称验证）
- *   <li>✅ ordinal() 方法测试（枚举序号验证）
- *   <li>✅ fromName() 自定义方法测试（大小写不敏感、异常场景）
- *   <li>✅ equals() 和 == 比较测试
- *   <li>✅ 枚举单例不变性测试
- *   <li>✅ 真实场景集成测试（存储提供商选择、配置解析）
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// StorageProvider 枚举单元测试。
+/// 
+/// 测试策略：
+/// 
+/// - 纯 Java 单元测试，不依赖 Spring 容器
+///   - 遵循 Given-When-Then 结构
+///   - 使用 AssertJ 流畅断言
+///   - 使用 @Nested 分组组织测试
+/// 
+/// 测试范围：
+/// 
+/// - ✅ 枚举值存在性测试（MINIO, S3, OSS, COS）
+///   - ✅ values() 方法测试（数量、包含关系、顺序）
+///   - ✅ valueOf() 方法测试（有效字符串、无效字符串、null）
+///   - ✅ name() 方法测试（枚举名称验证）
+///   - ✅ ordinal() 方法测试（枚举序号验证）
+///   - ✅ fromName() 自定义方法测试（大小写不敏感、异常场景）
+///   - ✅ equals() 和 == 比较测试
+///   - ✅ 枚举单例不变性测试
+///   - ✅ 真实场景集成测试（存储提供商选择、配置解析）
+/// 
+/// @author linqibin
+/// @since 0.2.0
 @DisplayName("StorageProvider 枚举单元测试")
 class StorageProviderTest {
 

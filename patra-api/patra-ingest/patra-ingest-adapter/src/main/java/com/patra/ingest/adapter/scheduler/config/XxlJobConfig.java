@@ -7,23 +7,19 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * XXL-Job 执行器配置类。
- *
- * <p>为 Patra-Ingest 服务配置 XXL-Job 分布式任务调度执行器,包括:
- *
- * <ul>
- *   <li>执行器注册到调度中心 - 自动发现和心跳保活
- *   <li>日志路径和保留策略 - 本地日志存储和自动清理
- *   <li>访问令牌验证 - 确保调度中心与执行器之间的安全通信
- *   <li>任务处理器自动扫描 - 通过 @XxlJob 注解自动注册任务
- * </ul>
- *
- * <p>执行器端口约定: 执行器端口 = 应用端口 + 1,避免与主服务端口冲突。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// XXL-Job 执行器配置类。
+/// 
+/// 为 Patra-Ingest 服务配置 XXL-Job 分布式任务调度执行器,包括:
+/// 
+/// - 执行器注册到调度中心 - 自动发现和心跳保活
+///   - 日志路径和保留策略 - 本地日志存储和自动清理
+///   - 访问令牌验证 - 确保调度中心与执行器之间的安全通信
+///   - 任务处理器自动扫描 - 通过 @XxlJob 注解自动注册任务
+/// 
+/// 执行器端口约定: 执行器端口 = 应用端口 + 1,避免与主服务端口冲突。
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Configuration
 @ConditionalOnProperty(
@@ -33,35 +29,35 @@ import org.springframework.context.annotation.Configuration;
     matchIfMissing = true)
 public class XxlJobConfig {
 
-  /** 管理端服务器地址 */
+  /// 管理端服务器地址
   @Value("${xxl.job.admin.addresses}")
   private String adminAddresses;
 
-  /** 执行器绑定 IP */
+  /// 执行器绑定 IP
   @Value("${xxl.job.executor.ip:}")
   private String ip;
 
-  /** 访问令牌 */
+  /// 访问令牌
   @Value("${xxl.job.accessToken:}")
   private String accessToken;
 
-  /** 执行器日志路径 */
+  /// 执行器日志路径
   @Value("${xxl.job.executor.logpath:logs/xxl-job}")
   private String logPath;
 
-  /** 日志保留天数 */
+  /// 日志保留天数
   @Value("${xxl.job.executor.logretentiondays:30}")
   private int logRetentionDays;
 
-  /** 应用服务端口 */
+  /// 应用服务端口
   @Value("${server.port}")
   private int serverPort;
 
-  /** 应用名称 */
+  /// 应用名称
   @Value("${spring.application.name}")
   private String appName;
 
-  /** 配置 XXL-Job 执行器 Bean。 */
+  /// 配置 XXL-Job 执行器 Bean。
   @Bean
   public XxlJobSpringExecutor xxlJobExecutor() {
     log.info("正在初始化 XXL-Job 执行器配置...");

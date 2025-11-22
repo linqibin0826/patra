@@ -2,26 +2,23 @@ package com.patra.ingest.domain.model.enums;
 
 import lombok.Getter;
 
-/**
- * 触发类型 (字典: ing_trigger_type)。
- *
- * <p>字段映射: {@code ing_schedule_instance.trigger_type_code → SCHEDULE/MANUAL/API}
- *
- * <p>触发类型语义:
- *
- * <ul>
- *   <li>SCHEDULE → 定时调度触发(由调度器自动触发)
- *   <li>MANUAL → 手动触发(由用户手动触发)
- *   <li>API → API 调用触发(通过 API 接口触发)
- * </ul>
- */
+/// 触发类型 (字典: ing_trigger_type)。
+/// 
+/// 字段映射: `ing_schedule_instance.trigger_type_code → SCHEDULE/MANUAL/API`
+/// 
+/// 触发类型语义:
+/// 
+/// - SCHEDULE → 定时调度触发(由调度器自动触发)
+///   - MANUAL → 手动触发(由用户手动触发)
+///   - API → API 调用触发(通过 API 接口触发)
+/// 
 @Getter
 public enum TriggerType {
-  /** 定时调度;由调度器自动触发。 */
+  /// 定时调度;由调度器自动触发。
   SCHEDULE("SCHEDULE", "Scheduled trigger"),
-  /** 手动触发;由用户手动触发。 */
+  /// 手动触发;由用户手动触发。
   MANUAL("MANUAL", "Manual trigger"),
-  /** API 触发;通过 API 接口调用触发。 */
+  /// API 触发;通过 API 接口调用触发。
   API("API", "API invocation");
 
   private final String code;

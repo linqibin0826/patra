@@ -13,23 +13,19 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
-/**
- * 表达式实体转换器,负责将数据库实体转换为领域值对象。
- *
- * <p>转换规则:
- *
- * <ul>
- *   <li>使用 MapStruct 自动映射字段
- *   <li>处理布尔字段的 {@code TINYINT(1)} 到 {@code Boolean} 转换
- *   <li>通过辅助方法处理 JSON 字段序列化
- *   <li>映射表达式能力的复杂字段(操作符、标记匹配等)
- * </ul>
- *
- * <p>注意:仅在 CQRS 读侧使用。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 表达式实体转换器,负责将数据库实体转换为领域值对象。
+/// 
+/// 转换规则:
+/// 
+/// - 使用 MapStruct 自动映射字段
+///   - 处理布尔字段的 `TINYINT(1)` 到 `Boolean` 转换
+///   - 通过辅助方法处理 JSON 字段序列化
+///   - 映射表达式能力的复杂字段(操作符、标记匹配等)
+/// 
+/// 注意:仅在 CQRS 读侧使用。
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ExprEntityConverter {
 
@@ -76,14 +72,12 @@ public interface ExprEntityConverter {
   @Mapping(target = "functionCode", source = "fnCode")
   ExprRenderRule toDomain(RegProvExprRenderRuleDO entity);
 
-  /**
-   * MapStruct 辅助方法:将 JsonNode 序列化为紧凑 JSON 字符串。
-   *
-   * <p>用于领域 VO 将 JSON 保持为 String 类型的场景。
-   *
-   * @param node JSON 节点
-   * @return JSON 字符串或 null
-   */
+  /// MapStruct 辅助方法:将 JsonNode 序列化为紧凑 JSON 字符串。
+/// 
+/// 用于领域 VO 将 JSON 保持为 String 类型的场景。
+/// 
+/// @param node JSON 节点
+/// @return JSON 字符串或 null
   default String map(JsonNode node) {
     return node == null ? null : node.toString();
   }

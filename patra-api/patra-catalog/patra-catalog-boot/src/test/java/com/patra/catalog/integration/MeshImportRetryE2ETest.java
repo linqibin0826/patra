@@ -26,30 +26,24 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-/**
- * MeSH 导入重试与清除 E2E 测试（User Story 3）。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>使用 {@link SpringBootTest} 加载完整应用上下文
- *   <li>使用 {@link Testcontainers} 启动真实的 MySQL 数据库
- *   <li>使用 {@link TestRestTemplate} 发送真实的 HTTP 请求
- *   <li>模拟失败场景并验证重试功能
- * </ul>
- *
- * <p>测试场景：
- *
- * <ul>
- *   <li>✅ 模拟失败 → 重试 → 验证成功
- *   <li>✅ 清除进度 → 重新导入
- *   <li>✅ 验证重试幂等性（多次重试不会重复处理）
- *   <li>✅ 验证错误处理（任务不存在、状态不允许重试）
- * </ul>
- *
- * @author Patra Team
- * @since 0.2.0 (User Story 3)
- */
+/// MeSH 导入重试与清除 E2E 测试（User Story 3）。
+/// 
+/// 测试策略：
+/// 
+/// - 使用 {@link SpringBootTest} 加载完整应用上下文
+///   - 使用 {@link Testcontainers} 启动真实的 MySQL 数据库
+///   - 使用 {@link TestRestTemplate} 发送真实的 HTTP 请求
+///   - 模拟失败场景并验证重试功能
+/// 
+/// 测试场景：
+/// 
+/// - ✅ 模拟失败 → 重试 → 验证成功
+///   - ✅ 清除进度 → 重新导入
+///   - ✅ 验证重试幂等性（多次重试不会重复处理）
+///   - ✅ 验证错误处理（任务不存在、状态不允许重试）
+/// 
+/// @author Patra Team
+/// @since 0.2.0 (User Story 3)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @DisplayName("MeSH 导入重试与清除 E2E 测试")

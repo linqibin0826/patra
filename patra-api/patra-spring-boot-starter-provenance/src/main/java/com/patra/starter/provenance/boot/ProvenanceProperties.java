@@ -15,44 +15,36 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.util.StringUtils;
 
-/**
- * Provenance Starter 配置属性
- *
- * <p>支持通过 {@code sources} 映射设置全局默认值和数据源特定覆盖配置。 可以通过在 {@code patra.provenance.sources}
- * 下定义新条目来添加额外的数据源,无需修改代码。
- *
- * <p>配置优先级(从高到低):
- *
- * <ol>
- *   <li>运行时配置(来自 Registry 快照)
- *   <li>数据源特定覆盖(sources 映射)
- *   <li>全局默认值(defaults)
- * </ol>
- */
+/// Provenance Starter 配置属性
+/// 
+/// 支持通过 `sources` 映射设置全局默认值和数据源特定覆盖配置。 可以通过在 `patra.provenance.sources`
+/// 下定义新条目来添加额外的数据源,无需修改代码。
+/// 
+/// 配置优先级(从高到低):
+/// 
+/// 
 @Data
 @ConfigurationProperties(prefix = "patra.provenance")
 public class ProvenanceProperties {
 
-  /** 是否启用 Provenance 客户端(默认为 true) */
+  /// 是否启用 Provenance 客户端(默认为 true)
   private boolean enabled = true;
 
-  /** 应用于所有数据源的共享默认配置 */
+  /// 应用于所有数据源的共享默认配置
   private final SourceProperties defaults = SourceProperties.defaults();
 
-  /** 按数据源代码键入的特定覆盖配置映射 */
+  /// 按数据源代码键入的特定覆盖配置映射
   private final Map<String, SourceProperties> sources = new LinkedHashMap<>();
 
   public ProvenanceProperties() {
     initializeDefaults();
   }
 
-  /**
-   * 用提供的映射替换当前的数据源配置,同时保留 Starter 默认值
-   *
-   * <p>该方法由 Spring Boot 配置绑定机制调用,将用户配置与内置默认值合并。
-   *
-   * @param newSources 由配置绑定提供的数据源覆盖配置
-   */
+  /// 用提供的映射替换当前的数据源配置,同时保留 Starter 默认值
+/// 
+/// 该方法由 Spring Boot 配置绑定机制调用,将用户配置与内置默认值合并。
+/// 
+/// @param newSources 由配置绑定提供的数据源覆盖配置
   public void setSources(Map<String, SourceProperties> newSources) {
     sources.clear();
     initializeDefaults();
@@ -87,29 +79,25 @@ public class ProvenanceProperties {
     return normalized;
   }
 
-  /**
-   * 返回指定数据源的合并配置属性
-   *
-   * <p>合并全局默认值和数据源特定覆盖配置。
-   *
-   * @param provenanceCode 数据源标识符(如 {@code pubmed})
-   * @return 包含默认值和覆盖配置的合并属性对象
-   */
+  /// 返回指定数据源的合并配置属性
+/// 
+/// 合并全局默认值和数据源特定覆盖配置。
+/// 
+/// @param provenanceCode 数据源标识符(如 `pubmed`)
+/// @return 包含默认值和覆盖配置的合并属性对象
   public SourceProperties getConfigForSource(String provenanceCode) {
     String normalized = normalizeCode(provenanceCode);
     SourceProperties specific = sources.getOrDefault(normalized, new SourceProperties());
     return merge(defaults, specific);
   }
 
-  /**
-   * 合并运行时配置覆盖与静态配置(默认值 + 数据源特定配置)
-   *
-   * <p>合并优先级: 运行时 &gt; 数据源覆盖 &gt; 默认值
-   *
-   * @param provenanceCode 数据源标识符
-   * @param runtime 由 Registry 快照提供的运行时配置(可为 null)
-   * @return 最终的不可变配置对象
-   */
+  /// 合并运行时配置覆盖与静态配置(默认值 + 数据源特定配置)
+/// 
+/// 合并优先级: 运行时 &gt; 数据源覆盖 &gt; 默认值
+/// 
+/// @param provenanceCode 数据源标识符
+/// @param runtime 由 Registry 快照提供的运行时配置(可为 null)
+/// @return 最终的不可变配置对象
   public ProvenanceConfig mergeWithRuntime(String provenanceCode, ProvenanceConfig runtime) {
     SourceProperties mergedSource = getConfigForSource(provenanceCode);
     ProvenanceConfig baseConfig = mergedSource.toProvenanceConfig();
@@ -330,12 +318,10 @@ public class ProvenanceProperties {
     return StringUtils.hasText(primary) ? primary : secondary;
   }
 
-  /**
-   * 数据源特定配置属性
-   *
-   * <p>可变的配置属性类,用于 Spring Boot 配置绑定。 提供 {@link #toProvenanceConfig()} 方法转换为不可变的 {@link
-   * ProvenanceConfig} 对象。
-   */
+  /// 数据源特定配置属性
+/// 
+/// 可变的配置属性类,用于 Spring Boot 配置绑定。 提供 {@link #toProvenanceConfig()} 方法转换为不可变的 {@link
+/// ProvenanceConfig} 对象。
   @Data
   public static class SourceProperties {
 

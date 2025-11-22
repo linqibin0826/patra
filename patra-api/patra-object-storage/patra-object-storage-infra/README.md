@@ -102,12 +102,10 @@ MyBatis-Plus Mapper 接口,提供数据库访问能力。
 @Mapper
 public interface FileMetadataMapper extends BaseMapper<FileMetadataDO> {
 
-    /**
-     * 通过存储键查询记录
-     *
-     * @param storageKey bucket/objectKey 组合
-     * @return 匹配的记录,不存在返回 null
-     */
+    /// 通过存储键查询记录
+/// 
+/// @param storageKey bucket/objectKey 组合
+/// @return 匹配的记录,不存在返回 null
     FileMetadataDO findByStorageKey(@Param("storageKey") String storageKey);
 }
 ```
@@ -210,12 +208,10 @@ MapStruct 转换器,负责聚合根与数据对象之间的双向转换。
 @Mapper(componentModel = "spring")
 public interface FileMetadataConverter {
 
-    /**
-     * 将聚合根转换为数据对象
-     *
-     * @param aggregate 文件元数据聚合根
-     * @return 数据对象
-     */
+    /// 将聚合根转换为数据对象
+/// 
+/// @param aggregate 文件元数据聚合根
+/// @return 数据对象
     @Mapping(target = "storageKey", expression = "java(aggregate.getStorageKey().fullKey())")
     @Mapping(target = "bucketName", expression = "java(aggregate.getStorageKey().bucket())")
     @Mapping(target = "objectKey", expression = "java(aggregate.getStorageKey().objectKey())")
@@ -230,12 +226,10 @@ public interface FileMetadataConverter {
     @Mapping(target = "fileStatus", expression = "java(aggregate.getStatus().name())")
     FileMetadataDO toDO(FileMetadata aggregate);
 
-    /**
-     * 将数据对象转换为聚合根
-     *
-     * @param dataObject 数据对象
-     * @return 文件元数据聚合根
-     */
+    /// 将数据对象转换为聚合根
+/// 
+/// @param dataObject 数据对象
+/// @return 文件元数据聚合根
     @Mapping(target = "storageKey", expression = "java(new StorageKey(dataObject.getBucketName(), dataObject.getObjectKey()))")
     @Mapping(target = "fileSize", expression = "java(new FileSize(dataObject.getFileSize()))")
     @Mapping(target = "checksum", expression = "java(new FileChecksum(dataObject.getMd5Hash(), dataObject.getSha256Hash()))")

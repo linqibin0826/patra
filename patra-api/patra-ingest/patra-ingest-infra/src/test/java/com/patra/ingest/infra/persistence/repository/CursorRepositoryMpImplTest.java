@@ -24,28 +24,22 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-/**
- * CursorRepositoryMpImpl 单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>使用 Mockito Mock 所有依赖（Mapper, Converter）
- *   <li>不启动 Spring 容器，纯单元测试
- *   <li>验证方法调用、参数传递和返回值转换
- * </ul>
- *
- * <p>覆盖场景：
- *
- * <ul>
- *   <li>保存游标（insert/update 分支）
- *   <li>按复合键查找游标
- *   <li>查询最新全局时间水位
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// CursorRepositoryMpImpl 单元测试。
+/// 
+/// 测试策略：
+/// 
+/// - 使用 Mockito Mock 所有依赖（Mapper, Converter）
+///   - 不启动 Spring 容器，纯单元测试
+///   - 验证方法调用、参数传递和返回值转换
+/// 
+/// 覆盖场景：
+/// 
+/// - 保存游标（insert/update 分支）
+///   - 按复合键查找游标
+///   - 查询最新全局时间水位
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("CursorRepositoryMpImpl 单元测试")

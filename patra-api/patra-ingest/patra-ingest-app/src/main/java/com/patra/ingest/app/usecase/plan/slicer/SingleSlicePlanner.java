@@ -12,23 +12,19 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * 单切片策略(应用层·策略)
- *
- * <p>当窗口不需要进一步分区或业务表达式已嵌入足够的过滤条件时使用(例如完整重放或由外部 ID 列表驱动)。 此策略恰好生成一个 sliceNo = 1 的切片,并重用上游 Plan
- * 表达式。保证:
- *
- * <ul>
- *   <li>幂等性:通过规范化 JSON 规格 + 哈希实现稳定签名。
- *   <li>最小开销:无循环;O(1) 复杂度。
- *   <li>窗口语义:如果上游提供了窗口,from/to 将被记录在切片规格中用于审计。
- * </ul>
- *
- * <p>边界情况:如果窗口为 null,切片仍返回单个项;调用方决定是否允许无窗口执行。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 单切片策略(应用层·策略)
+/// 
+/// 当窗口不需要进一步分区或业务表达式已嵌入足够的过滤条件时使用(例如完整重放或由外部 ID 列表驱动)。 此策略恰好生成一个 sliceNo = 1 的切片,并重用上游 Plan
+/// 表达式。保证:
+/// 
+/// - 幂等性:通过规范化 JSON 规格 + 哈希实现稳定签名。
+///   - 最小开销:无循环;O(1) 复杂度。
+///   - 窗口语义:如果上游提供了窗口,from/to 将被记录在切片规格中用于审计。
+/// 
+/// 边界情况:如果窗口为 null,切片仍返回单个项;调用方决定是否允许无窗口执行。
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Component
 public class SingleSlicePlanner implements SlicePlanner {

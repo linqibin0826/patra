@@ -26,30 +26,24 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * ProvenanceConfigRepositoryMpImpl 单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>使用 Mockito Mock 所有依赖 (Mapper, Converter)
- *   <li>不启动 Spring 容器，纯单元测试
- *   <li>验证方法调用、参数传递和返回值转换
- * </ul>
- *
- * <p>覆盖场景：
- *
- * <ul>
- *   <li>数据源查询 (findProvenanceByCode, findAllProvenances)
- *   <li>各种配置查询 (窗口偏移、分页、HTTP、批处理、重试、速率限制)
- *   <li>完整配置聚合 (loadConfiguration)
- *   <li>处理 null 参数 (operationType, at)
- *   <li>操作类型键规范化
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// ProvenanceConfigRepositoryMpImpl 单元测试。
+/// 
+/// 测试策略：
+/// 
+/// - 使用 Mockito Mock 所有依赖 (Mapper, Converter)
+///   - 不启动 Spring 容器，纯单元测试
+///   - 验证方法调用、参数传递和返回值转换
+/// 
+/// 覆盖场景：
+/// 
+/// - 数据源查询 (findProvenanceByCode, findAllProvenances)
+///   - 各种配置查询 (窗口偏移、分页、HTTP、批处理、重试、速率限制)
+///   - 完整配置聚合 (loadConfiguration)
+///   - 处理 null 参数 (operationType, at)
+///   - 操作类型键规范化
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ProvenanceConfigRepositoryMpImpl 单元测试")
 class ProvenanceConfigRepositoryMpImplTest {

@@ -5,15 +5,13 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * PubMed 特定函数，返回用于日期过滤的适当 {@code datetype} 值。 目前默认返回 "pdat"（发布日期）。
- *
- * <p>未来增强：此函数可能会扩展以根据操作类型、端点或快照中的规则上下文在 "pdat"（发布日期） 和 "edat"（条目日期）之间进行选择。
- *
- * <p>参见: docs/expr/03-compiler-bridge-internals.md §3.3.2, docs/expr/04-provider-pubmed.md §4.3.2
- *
- * @since 1.0.0
- */
+/// PubMed 特定函数，返回用于日期过滤的适当 `datetype` 值。 目前默认返回 "pdat"（发布日期）。
+/// 
+/// 未来增强：此函数可能会扩展以根据操作类型、端点或快照中的规则上下文在 "pdat"（发布日期） 和 "edat"（条目日期）之间进行选择。
+/// 
+/// 参见: docs/expr/03-compiler-bridge-internals.md §3.3.2, docs/expr/04-provider-pubmed.md §4.3.2
+/// 
+/// @since 1.0.0
 public class PubmedDatetypeFunction implements RenderFunction {
 
   private static final Logger log = LoggerFactory.getLogger(PubmedDatetypeFunction.class);

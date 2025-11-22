@@ -8,22 +8,18 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link BatchStats} 的单元测试。
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>构造方法 (recordCount >= 0，无验证逻辑)
- *   <li>工厂方法 (of)
- *   <li>Record 语义 (equals, hashCode, toString, 组件访问器)
- *   <li>不变性保证
- *   <li>边界条件测试
- *   <li>业务场景测试
- * </ul>
- *
- * @author Patra Team
- */
+/// {@link BatchStats} 的单元测试。
+/// 
+/// 测试覆盖:
+/// 
+/// - 构造方法 (recordCount >= 0，无验证逻辑)
+///   - 工厂方法 (of)
+///   - Record 语义 (equals, hashCode, toString, 组件访问器)
+///   - 不变性保证
+///   - 边界条件测试
+///   - 业务场景测试
+/// 
+/// @author Patra Team
 @DisplayName("BatchStats 单元测试")
 class BatchStatsTest {
 

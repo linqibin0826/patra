@@ -22,23 +22,19 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
-/**
- * ExprQueryAssembler 单元测试。
- *
- * <p>测试策略: 使用 MapStruct 生成的实现类进行纯 Java 单元测试, 无需 Spring 容器。
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>字段映射验证 - 所有字段正确映射
- *   <li>集合转换 - List 转换保持顺序
- *   <li>复杂对象转换 - ExprSnapshot 聚合转换
- *   <li>Null 值处理 - 输入/可选字段为 null 的场景
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// ExprQueryAssembler 单元测试。
+/// 
+/// 测试策略: 使用 MapStruct 生成的实现类进行纯 Java 单元测试, 无需 Spring 容器。
+/// 
+/// 测试覆盖:
+/// 
+/// - 字段映射验证 - 所有字段正确映射
+///   - 集合转换 - List 转换保持顺序
+///   - 复杂对象转换 - ExprSnapshot 聚合转换
+///   - Null 值处理 - 输入/可选字段为 null 的场景
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("ExprQueryAssembler 单元测试")
 class ExprQueryAssemblerTest {
 

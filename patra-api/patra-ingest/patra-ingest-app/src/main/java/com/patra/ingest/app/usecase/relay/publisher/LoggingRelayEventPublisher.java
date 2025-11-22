@@ -5,11 +5,9 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * 基于日志的事件发布器: 在 DEBUG 级别发出事件用于开发和诊断
- *
- * <p>生产环境部署可以提高日志级别或用转发指标的发布器替换此发布器
- */
+/// 基于日志的事件发布器: 在 DEBUG 级别发出事件用于开发和诊断
+/// 
+/// 生产环境部署可以提高日志级别或用转发指标的发布器替换此发布器
 @Slf4j
 @Component
 public class LoggingRelayEventPublisher implements RelayEventPublisher {

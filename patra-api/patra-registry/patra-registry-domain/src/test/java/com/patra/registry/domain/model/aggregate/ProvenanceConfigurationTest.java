@@ -14,32 +14,26 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * ProvenanceConfiguration 聚合根单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>纯 Java 单元测试，不依赖 Spring 容器
- *   <li>使用 TestDataBuilder 模式构建测试数据
- *   <li>遵循 Given-When-Then 结构
- *   <li>使用 AssertJ 流畅断言
- * </ul>
- *
- * <p>覆盖范围：
- *
- * <ul>
- *   <li>✅ 聚合根创建与验证
- *   <li>✅ 配置可用性检测（hasXxx 方法）
- *   <li>✅ 完整性判断逻辑（isComplete）
- *   <li>✅ 不变性保证
- *   <li>✅ 业务规则验证
- *   <li>✅ 边界条件处理
- * </ul>
- *
- * @author Patra Team
- * @since 2.0
- */
+/// ProvenanceConfiguration 聚合根单元测试。
+/// 
+/// 测试策略：
+/// 
+/// - 纯 Java 单元测试，不依赖 Spring 容器
+///   - 使用 TestDataBuilder 模式构建测试数据
+///   - 遵循 Given-When-Then 结构
+///   - 使用 AssertJ 流畅断言
+/// 
+/// 覆盖范围：
+/// 
+/// - ✅ 聚合根创建与验证
+///   - ✅ 配置可用性检测（hasXxx 方法）
+///   - ✅ 完整性判断逻辑（isComplete）
+///   - ✅ 不变性保证
+///   - ✅ 业务规则验证
+///   - ✅ 边界条件处理
+/// 
+/// @author Patra Team
+/// @since 2.0
 @DisplayName("ProvenanceConfiguration 单元测试")
 class ProvenanceConfigurationTest {
 
@@ -751,11 +745,9 @@ class ProvenanceConfigurationTest {
 
   // ========== TestDataBuilder (辅助类) ==========
 
-  /**
-   * ProvenanceConfiguration 测试数据构建器。
-   *
-   * <p>遵循 Builder 模式，提供默认值以简化测试数据构建。
-   */
+  /// ProvenanceConfiguration 测试数据构建器。
+/// 
+/// 遵循 Builder 模式，提供默认值以简化测试数据构建。
   static class ProvenanceConfigurationTestDataBuilder {
     private Provenance provenance = buildActiveProvenance();
     private WindowOffsetConfig windowOffset = null;
@@ -811,7 +803,7 @@ class ProvenanceConfigurationTest {
 
     // ========== 辅助方法：构建测试数据 ==========
 
-    /** 构建激活状态的 Provenance */
+    /// 构建激活状态的 Provenance
     static Provenance buildActiveProvenance() {
       return new Provenance(
           1001L,
@@ -824,7 +816,7 @@ class ProvenanceConfigurationTest {
           "ACTIVE");
     }
 
-    /** 构建未激活状态的 Provenance */
+    /// 构建未激活状态的 Provenance
     static Provenance buildInactiveProvenance() {
       return new Provenance(
           1002L,
@@ -837,7 +829,7 @@ class ProvenanceConfigurationTest {
           "DEPRECATED");
     }
 
-    /** 构建 WindowOffsetConfig（简化测试用例） */
+    /// 构建 WindowOffsetConfig（简化测试用例）
     static WindowOffsetConfig buildWindowOffset() {
       return new WindowOffsetConfig(
           2001L, // id
@@ -863,7 +855,7 @@ class ProvenanceConfigurationTest {
           );
     }
 
-    /** 构建 PaginationConfig（简化测试用例） */
+    /// 构建 PaginationConfig（简化测试用例）
     static PaginationConfig buildPagination() {
       return new PaginationConfig(
           3001L, // id
@@ -879,7 +871,7 @@ class ProvenanceConfigurationTest {
           );
     }
 
-    /** 构建 HttpConfig（简化测试用例） */
+    /// 构建 HttpConfig（简化测试用例）
     static HttpConfig buildHttp() {
       return new HttpConfig(
           4001L, // id
@@ -900,21 +892,21 @@ class ProvenanceConfigurationTest {
           );
     }
 
-    /** 构建 BatchingConfig（占位符 - 根据实际类定义调整） */
+    /// 构建 BatchingConfig（占位符 - 根据实际类定义调整）
     static BatchingConfig buildBatching() {
       // 注意：实际实现取决于 BatchingConfig 的构造方法
       // 这里返回 null，测试不会使用具体值，只检查存在性
       return null;
     }
 
-    /** 构建 RetryConfig（占位符 - 根据实际类定义调整） */
+    /// 构建 RetryConfig（占位符 - 根据实际类定义调整）
     static RetryConfig buildRetry() {
       // 注意：实际实现取决于 RetryConfig 的构造方法
       // 这里返回 null，测试不会使用具体值，只检查存在性
       return null;
     }
 
-    /** 构建 RateLimitConfig（占位符 - 根据实际类定义调整） */
+    /// 构建 RateLimitConfig（占位符 - 根据实际类定义调整）
     static RateLimitConfig buildRateLimit() {
       // 注意：实际实现取决于 RateLimitConfig 的构造方法
       // 这里返回 null，测试不会使用具体值，只检查存在性

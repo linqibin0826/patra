@@ -111,16 +111,16 @@ public static final String EMAIL = "email";
 
 #### DoajParamKeys（新增）⭐
 ```java
-/** 查询字符串 */
+/// 查询字符串
 public static final String QUERY = "query";
 
-/** 页码（从 1 开始） */
+/// 页码（从 1 开始）
 public static final String PAGE = "page";
 
-/** 每页大小 */
+/// 每页大小
 public static final String PAGE_SIZE = "pageSize";
 
-/** 排序方式 */
+/// 排序方式
 public static final String SORT = "sort";
 ```
 

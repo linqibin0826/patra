@@ -18,15 +18,13 @@ import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
-/**
- * 采集计划对象转换器,负责领域对象与数据库实体转换。
- *
- * <p>转换规则: 计划聚合 {@link PlanAggregate} ↔ 数据对象 {@link PlanDO} 双向转换,处理 JSON
- * 快照字段、枚举类型代码映射、窗口规格序列化/反序列化。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 采集计划对象转换器,负责领域对象与数据库实体转换。
+/// 
+/// 转换规则: 计划聚合 {@link PlanAggregate} ↔ 数据对象 {@link PlanDO} 双向转换,处理 JSON
+/// 快照字段、枚举类型代码映射、窗口规格序列化/反序列化。
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface PlanConverter {
 
@@ -46,16 +44,14 @@ public interface PlanConverter {
   @Mapping(target = "windowSpec", source = "windowSpec", qualifiedByName = "windowSpecToJson")
   PlanDO toEntity(PlanAggregate aggregate);
 
-  /**
-   * Post-mapping hook to populate denormalized timestamp fields for TIME strategy.
-   *
-   * <p>This method extracts {@code from} and {@code to} timestamps from {@link WindowSpec.Time} and
-   * populates the {@code windowFromTs} and {@code windowToTs} fields for query optimization. For
-   * non-TIME strategies, these fields are set to {@code null}.
-   *
-   * @param aggregate source aggregate
-   * @param entity target DO (will be mutated)
-   */
+  /// Post-mapping hook to populate denormalized timestamp fields for TIME strategy.
+/// 
+/// This method extracts `from` and `to` timestamps from {@link WindowSpec.Time} and
+/// populates the `windowFromTs` and `windowToTs` fields for query optimization. For
+/// non-TIME strategies, these fields are set to `null`.
+/// 
+/// @param aggregate source aggregate
+/// @param entity target DO (will be mutated)
   @AfterMapping
   default void populateDenormalizedTimestamps(
       PlanAggregate aggregate, @MappingTarget PlanDO entity) {
@@ -127,12 +123,12 @@ public interface PlanConverter {
 
   // ========== 枚举转换方法 ==========
 
-  /** ProvenanceCode 枚举 → String（用于 Domain → DO） */
+  /// ProvenanceCode 枚举 → String（用于 Domain → DO）
   default String map(ProvenanceCode code) {
     return code == null ? null : code.getCode();
   }
 
-  /** String → ProvenanceCode 枚举（用于 DO → Domain） */
+  /// String → ProvenanceCode 枚举（用于 DO → Domain）
   default ProvenanceCode mapProvenanceCode(String code) {
     if (code == null || code.isBlank()) {
       return null;
@@ -144,12 +140,12 @@ public interface PlanConverter {
     }
   }
 
-  /** OperationCode 枚举 → String */
+  /// OperationCode 枚举 → String
   default String map(OperationCode code) {
     return code == null ? null : code.getCode();
   }
 
-  /** String → OperationCode 枚举 */
+  /// String → OperationCode 枚举
   default OperationCode mapOperationCode(String code) {
     if (code == null || code.isBlank()) {
       return null;

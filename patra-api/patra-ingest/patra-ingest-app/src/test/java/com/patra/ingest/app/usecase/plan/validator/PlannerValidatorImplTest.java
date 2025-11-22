@@ -20,14 +20,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link PlannerValidatorImpl} 单元测试
- *
- * <p>测试策略: 纯单元测试,验证各种验证场景和边界条件
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// {@link PlannerValidatorImpl} 单元测试
+/// 
+/// 测试策略: 纯单元测试,验证各种验证场景和边界条件
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("PlannerValidatorImpl 单元测试")
 class PlannerValidatorImplTest {
 
@@ -489,14 +487,12 @@ class PlannerValidatorImplTest {
 
   // ==================== 辅助方法 ====================
 
-  /**
-   * 创建触发规范
-   *
-   * @param operationCode 操作代码
-   * @param requestedFrom 请求的窗口起始时间
-   * @param requestedTo 请求的窗口结束时间
-   * @return 触发规范
-   */
+  /// 创建触发规范
+/// 
+/// @param operationCode 操作代码
+/// @param requestedFrom 请求的窗口起始时间
+/// @param requestedTo 请求的窗口结束时间
+/// @return 触发规范
   private PlanTriggerNorm createTriggerNorm(
       OperationCode operationCode, Instant requestedFrom, Instant requestedTo) {
     return new PlanTriggerNorm(
@@ -514,11 +510,9 @@ class PlannerValidatorImplTest {
         Map.of());
   }
 
-  /**
-   * 创建最小化配置快照
-   *
-   * @return 最小化配置快照
-   */
+  /// 创建最小化配置快照
+/// 
+/// @return 最小化配置快照
   private ProvenanceConfigSnapshot createMinimalSnapshot() {
     ProvenanceConfigSnapshot.ProvenanceInfo provenanceInfo =
         new ProvenanceConfigSnapshot.ProvenanceInfo(
@@ -527,11 +521,9 @@ class PlannerValidatorImplTest {
     return new ProvenanceConfigSnapshot(provenanceInfo, null, null, null, null, null, null);
   }
 
-  /**
-   * 创建具有增量能力的配置快照
-   *
-   * @return 配置快照
-   */
+  /// 创建具有增量能力的配置快照
+/// 
+/// @return 配置快照
   private ProvenanceConfigSnapshot createSnapshotWithIncrementalCapability() {
     ProvenanceConfigSnapshot.ProvenanceInfo provenanceInfo =
         new ProvenanceConfigSnapshot.ProvenanceInfo(
@@ -563,11 +555,9 @@ class PlannerValidatorImplTest {
     return new ProvenanceConfigSnapshot(provenanceInfo, windowOffset, null, null, null, null, null);
   }
 
-  /**
-   * 创建 FULL 模式的配置快照
-   *
-   * @return 配置快照
-   */
+  /// 创建 FULL 模式的配置快照
+/// 
+/// @return 配置快照
   private ProvenanceConfigSnapshot createSnapshotWithFullMode() {
     ProvenanceConfigSnapshot.ProvenanceInfo provenanceInfo =
         new ProvenanceConfigSnapshot.ProvenanceInfo(
@@ -599,11 +589,9 @@ class PlannerValidatorImplTest {
     return new ProvenanceConfigSnapshot(provenanceInfo, windowOffset, null, null, null, null, null);
   }
 
-  /**
-   * 创建 DATE 偏移类型缺少日期字段配置的配置快照
-   *
-   * @return 配置快照
-   */
+  /// 创建 DATE 偏移类型缺少日期字段配置的配置快照
+/// 
+/// @return 配置快照
   private ProvenanceConfigSnapshot createSnapshotWithDateOffsetMissingFields() {
     ProvenanceConfigSnapshot.ProvenanceInfo provenanceInfo =
         new ProvenanceConfigSnapshot.ProvenanceInfo(
@@ -635,11 +623,9 @@ class PlannerValidatorImplTest {
     return new ProvenanceConfigSnapshot(provenanceInfo, windowOffset, null, null, null, null, null);
   }
 
-  /**
-   * 创建 DATE 偏移类型有 offsetFieldKey 的配置快照
-   *
-   * @return 配置快照
-   */
+  /// 创建 DATE 偏移类型有 offsetFieldKey 的配置快照
+/// 
+/// @return 配置快照
   private ProvenanceConfigSnapshot createSnapshotWithDateOffsetHasOffsetFieldKey() {
     ProvenanceConfigSnapshot.ProvenanceInfo provenanceInfo =
         new ProvenanceConfigSnapshot.ProvenanceInfo(
@@ -671,11 +657,9 @@ class PlannerValidatorImplTest {
     return new ProvenanceConfigSnapshot(provenanceInfo, windowOffset, null, null, null, null, null);
   }
 
-  /**
-   * 创建 COMPOSITE 偏移类型有 windowDateFieldKey 的配置快照
-   *
-   * @return 配置快照
-   */
+  /// 创建 COMPOSITE 偏移类型有 windowDateFieldKey 的配置快照
+/// 
+/// @return 配置快照
   private ProvenanceConfigSnapshot createSnapshotWithCompositeOffsetHasWindowDateFieldKey() {
     ProvenanceConfigSnapshot.ProvenanceInfo provenanceInfo =
         new ProvenanceConfigSnapshot.ProvenanceInfo(
@@ -707,12 +691,10 @@ class PlannerValidatorImplTest {
     return new ProvenanceConfigSnapshot(provenanceInfo, windowOffset, null, null, null, null, null);
   }
 
-  /**
-   * 创建窗口大小无效的配置快照
-   *
-   * @param windowSizeValue 窗口大小值
-   * @return 配置快照
-   */
+  /// 创建窗口大小无效的配置快照
+/// 
+/// @param windowSizeValue 窗口大小值
+/// @return 配置快照
   private ProvenanceConfigSnapshot createSnapshotWithInvalidWindowSize(Integer windowSizeValue) {
     ProvenanceConfigSnapshot.ProvenanceInfo provenanceInfo =
         new ProvenanceConfigSnapshot.ProvenanceInfo(
@@ -744,12 +726,10 @@ class PlannerValidatorImplTest {
     return new ProvenanceConfigSnapshot(provenanceInfo, windowOffset, null, null, null, null, null);
   }
 
-  /**
-   * 创建最大窗口跨度无效的配置快照
-   *
-   * @param maxWindowSpanSeconds 最大窗口跨度秒数
-   * @return 配置快照
-   */
+  /// 创建最大窗口跨度无效的配置快照
+/// 
+/// @param maxWindowSpanSeconds 最大窗口跨度秒数
+/// @return 配置快照
   private ProvenanceConfigSnapshot createSnapshotWithInvalidMaxWindowSpan(
       Integer maxWindowSpanSeconds) {
     ProvenanceConfigSnapshot.ProvenanceInfo provenanceInfo =

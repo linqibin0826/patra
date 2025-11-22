@@ -4,19 +4,19 @@ import ch.qos.logback.classic.pattern.ClassicConverter;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import org.apache.skywalking.apm.toolkit.trace.TraceContext;
 
-/**
- * 用于提取 SkyWalking 段 ID 的自定义 Logback 转换器。
- *
- * <p>在 logback.xml 中的使用：
- *
- * <pre>
- * &lt;conversionRule conversionWord="segmentId"
- *     converterClass="com.patra.starter.core.logging.SegmentIdConverter"/&gt;
- * &lt;pattern&gt;... [segmentId:%segmentId] ...&lt;/pattern&gt;
- * </pre>
- *
- * @since 0.1.0
- */
+/// 用于提取 SkyWalking 段 ID 的自定义 Logback 转换器。
+/// 
+/// 在 logback.xml 中的使用：
+/// 
+/// ```
+/// 
+/// &lt;conversionRule conversionWord="segmentId"
+///     converterClass="com.patra.starter.core.logging.SegmentIdConverter"/&gt;
+/// &lt;pattern&gt;... [segmentId:%segmentId] ...&lt;/pattern&gt;
+/// 
+/// ```
+/// 
+/// @since 0.1.0
 public class SegmentIdConverter extends ClassicConverter {
 
   private static final String EMPTY_SEGMENT_ID = "N/A";

@@ -15,23 +15,19 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * StAX XML 解析器单元测试。
- *
- * <p>使用测试 XML 文件验证流式解析功能。
- *
- * <p><b>测试策略</b>：
- *
- * <ul>
- *   <li>单元测试：不依赖真实 XML 文件
- *   <li>测试数据：使用内存中的 XML 字符串
- *   <li>测试覆盖：parseDescriptors()、parseTreeNumbers()、parseEntryTerms()、parseConcepts()
- *   <li>边界情况：空文件、格式错误、缺少必填字段
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// StAX XML 解析器单元测试。
+/// 
+/// 使用测试 XML 文件验证流式解析功能。
+/// 
+/// **测试策略**：
+/// 
+/// - 单元测试：不依赖真实 XML 文件
+///   - 测试数据：使用内存中的 XML 字符串
+///   - 测试覆盖：parseDescriptors()、parseTreeNumbers()、parseEntryTerms()、parseConcepts()
+///   - 边界情况：空文件、格式错误、缺少必填字段
+/// 
+/// @author linqibin
+/// @since 0.2.0
 @DisplayName("StaxXmlParserImpl 单元测试")
 class StaxXmlParserImplTest {
 

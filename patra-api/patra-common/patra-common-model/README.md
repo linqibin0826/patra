@@ -254,17 +254,13 @@ package com.patra.ingest.domain.port;
 import com.patra.common.model.plan.PlanMetadata;
 import com.patra.common.model.DataType;
 
-/**
- * 数据源端口接口
- */
+/// 数据源端口接口
 public interface DataSourcePort {
-    /**
-     * 准备计划元数据
-     *
-     * @param context 执行上下文
-     * @param dataType 数据类型
-     * @return 计划元数据(使用继承体系支持不同数据源)
-     */
+    /// 准备计划元数据
+/// 
+/// @param context 执行上下文
+/// @param dataType 数据类型
+/// @return 计划元数据(使用继承体系支持不同数据源)
     PlanMetadata preparePlan(ExecutionContext context, DataType dataType);
 }
 ```

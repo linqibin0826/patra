@@ -8,33 +8,27 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * ExprSnapshot 值对象单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>纯 Java 单元测试，不依赖 Spring 容器
- *   <li>测试 record 的非空验证（所有字段永不为 null）
- *   <li>验证空列表是合法的（不为 null 但可以为空）
- *   <li>遵循 Given-When-Then 结构
- *   <li>使用 AssertJ 流畅断言
- * </ul>
- *
- * <p>覆盖范围：
- *
- * <ul>
- *   <li>✅ record 构造函数创建与验证
- *   <li>✅ 非空验证测试（fields, capabilities, renderRules, apiParamMappings）
- *   <li>✅ 所有参数为 null 时抛出 NullPointerException
- *   <li>✅ 空列表是合法的（List.of()）
- *   <li>✅ record 的 equals/hashCode/toString 测试
- *   <li>✅ 不变性保证
- * </ul>
- *
- * @author Patra Team
- * @since 2.0
- */
+/// ExprSnapshot 值对象单元测试。
+/// 
+/// 测试策略：
+/// 
+/// - 纯 Java 单元测试，不依赖 Spring 容器
+///   - 测试 record 的非空验证（所有字段永不为 null）
+///   - 验证空列表是合法的（不为 null 但可以为空）
+///   - 遵循 Given-When-Then 结构
+///   - 使用 AssertJ 流畅断言
+/// 
+/// 覆盖范围：
+/// 
+/// - ✅ record 构造函数创建与验证
+///   - ✅ 非空验证测试（fields, capabilities, renderRules, apiParamMappings）
+///   - ✅ 所有参数为 null 时抛出 NullPointerException
+///   - ✅ 空列表是合法的（List.of()）
+///   - ✅ record 的 equals/hashCode/toString 测试
+///   - ✅ 不变性保证
+/// 
+/// @author Patra Team
+/// @since 2.0
 @DisplayName("ExprSnapshot 单元测试")
 class ExprSnapshotTest {
 
@@ -517,19 +511,17 @@ class ExprSnapshotTest {
 
   // ========== TestDataBuilder (辅助类) ==========
 
-  /**
-   * ExprSnapshot 测试数据构建器。
-   *
-   * <p>提供便捷的测试数据构建方法以简化测试用例编写。
-   */
+  /// ExprSnapshot 测试数据构建器。
+/// 
+/// 提供便捷的测试数据构建方法以简化测试用例编写。
   static class ExprSnapshotTestDataBuilder {
 
-    /** 构建默认的 ExprField */
+    /// 构建默认的 ExprField
     static ExprField buildExprField() {
       return buildExprField(1L, "title");
     }
 
-    /** 构建指定 ID 和 fieldKey 的 ExprField */
+    /// 构建指定 ID 和 fieldKey 的 ExprField
     static ExprField buildExprField(Long id, String fieldKey) {
       return new ExprField(
           id, // id
@@ -543,12 +535,12 @@ class ExprSnapshotTest {
           );
     }
 
-    /** 构建默认的 ExprCapability */
+    /// 构建默认的 ExprCapability
     static ExprCapability buildExprCapability() {
       return buildExprCapability(1L, "title");
     }
 
-    /** 构建指定 ID 和 fieldKey 的 ExprCapability */
+    /// 构建指定 ID 和 fieldKey 的 ExprCapability
     static ExprCapability buildExprCapability(Long id, String fieldKey) {
       return new ExprCapability(
           id, // id
@@ -584,12 +576,12 @@ class ExprSnapshotTest {
           );
     }
 
-    /** 构建默认的 ExprRenderRule */
+    /// 构建默认的 ExprRenderRule
     static ExprRenderRule buildExprRenderRule() {
       return buildExprRenderRule(1L, "title");
     }
 
-    /** 构建指定 ID 和 fieldKey 的 ExprRenderRule */
+    /// 构建指定 ID 和 fieldKey 的 ExprRenderRule
     static ExprRenderRule buildExprRenderRule(Long id, String fieldKey) {
       return new ExprRenderRule(
           id, // id
@@ -615,12 +607,12 @@ class ExprSnapshotTest {
           );
     }
 
-    /** 构建默认的 ApiParamMapping */
+    /// 构建默认的 ApiParamMapping
     static ApiParamMapping buildApiParamMapping() {
       return buildApiParamMapping(1L, "from");
     }
 
-    /** 构建指定 ID 和 stdKey 的 ApiParamMapping */
+    /// 构建指定 ID 和 stdKey 的 ApiParamMapping
     static ApiParamMapping buildApiParamMapping(Long id, String stdKey) {
       return new ApiParamMapping(
           id, // id

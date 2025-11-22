@@ -33,27 +33,23 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 计划接入编排器。
- *
- * <p>职责：
- *
- * <ul>
- *   <li>持久化调度实例并加载数据源配置快照
- *   <li>查询游标水位并解析执行窗口
- *   <li>构建计划表达式并执行预验证
- *   <li>组装并持久化 Plan/Slice/Task（包含幂等性和补偿逻辑）
- *   <li>收集任务入队事件并通过 Outbox 模式发布
- * </ul>
- *
- * <p>该编排器将持久化操作委托给 {@link PlanPersistenceCoordinator}，幂等性处理委托给 {@link
- * PlanIdempotencyCoordinator}，发布操作委托给 {@link PlanPublishingCoordinator}。
- *
- * <p>注意：该编排器维护 {@code @Transactional} 事务边界，确保持久化和事件发布的原子性（Outbox 模式）。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 计划接入编排器。
+/// 
+/// 职责：
+/// 
+/// - 持久化调度实例并加载数据源配置快照
+///   - 查询游标水位并解析执行窗口
+///   - 构建计划表达式并执行预验证
+///   - 组装并持久化 Plan/Slice/Task（包含幂等性和补偿逻辑）
+///   - 收集任务入队事件并通过 Outbox 模式发布
+/// 
+/// 该编排器将持久化操作委托给 {@link PlanPersistenceCoordinator}，幂等性处理委托给 {@link
+/// PlanIdempotencyCoordinator}，发布操作委托给 {@link PlanPublishingCoordinator}。
+/// 
+/// 注意：该编排器维护 `@Transactional` 事务边界，确保持久化和事件发布的原子性（Outbox 模式）。
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -73,23 +69,12 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   private final PlanIdempotencyCoordinator idempotencyCoordinator;
   private final PlanPublishingCoordinator publishingCoordinator;
 
-  /**
-   * 计划编排主流程（入口方法）。
-   *
-   * <p>协调六个阶段：
-   *
-   * <ol>
-   *   <li>持久化调度实例并加载数据源配置快照
-   *   <li>查询游标水位并解析时间窗口
-   *   <li>构建计划表达式
-   *   <li>预验证（窗口/背压/容量）
-   *   <li>组装计划（含幂等复用和补偿重试）
-   *   <li>持久化并发布任务入队事件
-   * </ol>
-   *
-   * @param request 调度请求
-   * @return 计划执行摘要
-   */
+  /// 计划编排主流程（入口方法）。
+/// 
+/// 协调六个阶段：
+/// 
+/// @param request 调度请求
+/// @return 计划执行摘要
   @Override
   @Transactional
   public PlanIngestionResult ingestPlan(PlanIngestionCommand request) {
@@ -111,11 +96,9 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
         assembly.plan(), assembly, context.schedule(), context.window());
   }
 
-  /**
-   * 记录计划接入开始日志及关键请求详情。
-   *
-   * @param request 计划接入命令
-   */
+  /// 记录计划接入开始日志及关键请求详情。
+/// 
+/// @param request 计划接入命令
   private void logPlanIngestionStart(PlanIngestionCommand request) {
     log.info(
         "开始计划接入 数据源 [{}] 操作 [{}]: 触发时间 {} 调度器 [{}]",
@@ -125,12 +108,10 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
         request.scheduler());
   }
 
-  /**
-   * 准备计划上下文：加载配置并解析窗口。
-   *
-   * @param request 计划接入命令
-   * @return 包含调度、配置、规范和窗口的计划上下文
-   */
+  /// 准备计划上下文：加载配置并解析窗口。
+/// 
+/// @param request 计划接入命令
+/// @return 包含调度、配置、规范和窗口的计划上下文
   private PlanningContext preparePlanningContext(PlanIngestionCommand request) {
     log.debug("准备计划上下文 数据源 [{}] 操作 [{}]", request.provenanceCode(), request.operationCode());
 
@@ -155,12 +136,10 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
         schedule, configSnapshot, norm, window, request.provenanceCode(), request.operationCode());
   }
 
-  /**
-   * 构建计划表达式描述符并记录结果。
-   *
-   * @param context 计划上下文
-   * @return 计划表达式描述符
-   */
+  /// 构建计划表达式描述符并记录结果。
+/// 
+/// @param context 计划上下文
+/// @return 计划表达式描述符
   private PlanExpressionDescriptor buildPlanExpression(PlanningContext context) {
     PlanExpressionDescriptor descriptor =
         planExpressionBuilder.build(context.norm(), context.configSnapshot());
@@ -173,12 +152,10 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     return descriptor;
   }
 
-  /**
-   * 执行组装前验证并记录结果。
-   *
-   * @param context 计划上下文
-   * @throws PlanValidationException 验证失败时
-   */
+  /// 执行组装前验证并记录结果。
+/// 
+/// @param context 计划上下文
+/// @throws PlanValidationException 验证失败时
   private void performPreValidation(PlanningContext context) {
     long queuedTasks =
         taskRepository.countQueuedTasks(context.provenanceCode(), opCode(context.operationCode()));
@@ -190,14 +167,12 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
         queuedTasks);
   }
 
-  /**
-   * 组装计划并验证结果。
-   *
-   * @param context 计划上下文
-   * @param expressionDescriptor 计划表达式描述符
-   * @return 组装结果
-   * @throws PlanAssemblyException 组装失败时
-   */
+  /// 组装计划并验证结果。
+/// 
+/// @param context 计划上下文
+/// @param expressionDescriptor 计划表达式描述符
+/// @return 组装结果
+/// @throws PlanAssemblyException 组装失败时
   private PlanAssemblyResult assembleAndValidatePlan(
       PlanningContext context, PlanExpressionDescriptor expressionDescriptor) {
     log.debug("开始组装计划 数据源 [{}] 操作 [{}]", context.provenanceCode(), context.operationCode());
@@ -218,36 +193,30 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     return result;
   }
 
-  /**
-   * 通过 planKey 检查现有计划。
-   *
-   * @param draftPlan 草稿计划聚合根
-   * @return 找到的现有计划，否则返回 null
-   */
+  /// 通过 planKey 检查现有计划。
+/// 
+/// @param draftPlan 草稿计划聚合根
+/// @return 找到的现有计划，否则返回 null
   private PlanAggregate checkForExistingPlan(PlanAggregate draftPlan) {
     return planRepository.findByPlanKey(draftPlan.getPlanKey()).orElse(null);
   }
 
-  /**
-   * 返回操作代码字符串。
-   *
-   * @param op 领域操作枚举
-   * @return 操作代码；op 为 null 时返回 null
-   */
+  /// 返回操作代码字符串。
+/// 
+/// @param op 领域操作枚举
+/// @return 操作代码；op 为 null 时返回 null
   private String opCode(OperationCode op) {
     return op == null ? null : op.getCode();
   }
 
-  /**
-   * 内部记录，持有计划上下文数据。
-   *
-   * @param schedule 调度实例聚合根
-   * @param configSnapshot 数据源配置快照
-   * @param norm 计划触发规范
-   * @param window 计划窗口
-   * @param provenanceCode 数据源代码枚举
-   * @param operationCode 操作代码枚举
-   */
+  /// 内部记录，持有计划上下文数据。
+/// 
+/// @param schedule 调度实例聚合根
+/// @param configSnapshot 数据源配置快照
+/// @param norm 计划触发规范
+/// @param window 计划窗口
+/// @param provenanceCode 数据源代码枚举
+/// @param operationCode 操作代码枚举
   private record PlanningContext(
       ScheduleInstanceAggregate schedule,
       ProvenanceConfigSnapshot configSnapshot,
@@ -256,14 +225,12 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
       ProvenanceCode provenanceCode,
       OperationCode operationCode) {}
 
-  /**
-   * 查询最新的全局时间游标水位。
-   *
-   * @param provenanceCode 数据源代码
-   * @param operationCode 操作枚举
-   * @return 最新水位（null 表示首次运行）
-   * @throws PlanPersistenceException 仓储访问失败时
-   */
+  /// 查询最新的全局时间游标水位。
+/// 
+/// @param provenanceCode 数据源代码
+/// @param operationCode 操作枚举
+/// @return 最新水位（null 表示首次运行）
+/// @throws PlanPersistenceException 仓储访问失败时
   private Instant lookupCursorWatermark(
       ProvenanceCode provenanceCode, OperationCode operationCode) {
     try {
@@ -275,16 +242,14 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     }
   }
 
-  /**
-   * 解析计划的执行窗口。
-   *
-   * @param norm 触发规范
-   * @param configSnapshot 数据源配置快照
-   * @param cursorWatermark 游标水位（可为 null）
-   * @param now 当前触发时间
-   * @return 计划窗口（不应生成计划时为 null）
-   * @throws PlanValidationException 解析或验证失败时
-   */
+  /// 解析计划的执行窗口。
+/// 
+/// @param norm 触发规范
+/// @param configSnapshot 数据源配置快照
+/// @param cursorWatermark 游标水位（可为 null）
+/// @param now 当前触发时间
+/// @return 计划窗口（不应生成计划时为 null）
+/// @throws PlanValidationException 解析或验证失败时
   private PlannerWindow resolvePlannerWindow(
       PlanTriggerNorm norm,
       ProvenanceConfigSnapshot configSnapshot,
@@ -300,14 +265,12 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     }
   }
 
-  /**
-   * 在 DEBUG 级别记录窗口解析详情。
-   *
-   * @param provenanceCode 数据源代码
-   * @param operationCode 操作代码
-   * @param cursorWatermark 游标水位时间戳（可为 null）
-   * @param window 已解析的计划窗口（可为 null）
-   */
+  /// 在 DEBUG 级别记录窗口解析详情。
+/// 
+/// @param provenanceCode 数据源代码
+/// @param operationCode 操作代码
+/// @param cursorWatermark 游标水位时间戳（可为 null）
+/// @param window 已解析的计划窗口（可为 null）
   private void logWindowResolution(
       ProvenanceCode provenanceCode,
       OperationCode operationCode,
@@ -324,15 +287,13 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     }
   }
 
-  /**
-   * 持久化新计划（包含切片和任务），然后发布入队事件。
-   *
-   * @param draftPlan 待持久化的草稿计划聚合根
-   * @param assembly 包含切片和任务的组装结果
-   * @param schedule 调度实例
-   * @param window 计划窗口（可为 null）
-   * @return 包含已持久化 ID 的接入结果
-   */
+  /// 持久化新计划（包含切片和任务），然后发布入队事件。
+/// 
+/// @param draftPlan 待持久化的草稿计划聚合根
+/// @param assembly 包含切片和任务的组装结果
+/// @param schedule 调度实例
+/// @param window 计划窗口（可为 null）
+/// @return 包含已持久化 ID 的接入结果
   private PlanIngestionResult persistAndPublishNewPlan(
       PlanAggregate draftPlan,
       PlanAssemblyResult assembly,
@@ -373,15 +334,13 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
         schedule, persistedPlan, persistedSlices, persistedTasks.size(), assembly.status().name());
   }
 
-  /**
-   * 编排前验证入口点。
-   *
-   * @param norm 触发规范
-   * @param configSnapshot 配置快照
-   * @param window 计划窗口
-   * @param queuedTasks 当前队列任务数
-   * @throws PlanValidationException 验证失败时
-   */
+  /// 编排前验证入口点。
+/// 
+/// @param norm 触发规范
+/// @param configSnapshot 配置快照
+/// @param window 计划窗口
+/// @param queuedTasks 当前队列任务数
+/// @throws PlanValidationException 验证失败时
   private void validateBeforeAssemble(
       PlanTriggerNorm norm,
       ProvenanceConfigSnapshot configSnapshot,
@@ -396,13 +355,11 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     }
   }
 
-  /**
-   * 组装计划蓝图并验证结果完整性。
-   *
-   * @param assemblyRequest 组装请求
-   * @return 组装结果
-   * @throws PlanAssemblyException 组装失败或结果为空时
-   */
+  /// 组装计划蓝图并验证结果完整性。
+/// 
+/// @param assemblyRequest 组装请求
+/// @return 组装结果
+/// @throws PlanAssemblyException 组装失败或结果为空时
   private PlanAssemblyResult assemblePlan(PlanAssemblyRequest assemblyRequest) {
     PlanAssemblyResult assembly;
     try {
@@ -420,13 +377,11 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     return assembly;
   }
 
-  /**
-   * 构建触发规范 (PlanTriggerNorm)。
-   *
-   * @param schedule 调度实例
-   * @param request 调度请求
-   * @return 触发规范（值对象）
-   */
+  /// 构建触发规范 (PlanTriggerNorm)。
+/// 
+/// @param schedule 调度实例
+/// @param request 调度请求
+/// @return 触发规范（值对象）
   private PlanTriggerNorm buildTriggerNorm(
       ScheduleInstanceAggregate schedule, PlanIngestionCommand request) {
     return new PlanTriggerNorm(

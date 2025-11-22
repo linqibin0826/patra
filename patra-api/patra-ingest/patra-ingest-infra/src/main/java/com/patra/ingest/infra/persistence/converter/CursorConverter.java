@@ -17,7 +17,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
-/** Cursor（增量同步游标）聚合 ↔ DO 转换器。 */
+/// Cursor（增量同步游标）聚合 ↔ DO 转换器。
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface CursorConverter {
 
@@ -138,12 +138,12 @@ public interface CursorConverter {
 
   // ========== 枚举转换方法 ==========
 
-  /** ProvenanceCode 枚举 → String（用于 Domain → DO） */
+  /// ProvenanceCode 枚举 → String（用于 Domain → DO）
   default String map(ProvenanceCode code) {
     return code == null ? null : code.getCode();
   }
 
-  /** String → ProvenanceCode 枚举（用于 DO → Domain） */
+  /// String → ProvenanceCode 枚举（用于 DO → Domain）
   default ProvenanceCode mapProvenanceCode(String code) {
     if (code == null || code.isBlank()) {
       return null;
@@ -155,12 +155,12 @@ public interface CursorConverter {
     }
   }
 
-  /** OperationCode 枚举 → String */
+  /// OperationCode 枚举 → String
   default String map(OperationCode code) {
     return code == null ? null : code.getCode();
   }
 
-  /** String → OperationCode 枚举 */
+  /// String → OperationCode 枚举
   default OperationCode mapOperationCode(String code) {
     if (code == null || code.isBlank()) {
       return null;

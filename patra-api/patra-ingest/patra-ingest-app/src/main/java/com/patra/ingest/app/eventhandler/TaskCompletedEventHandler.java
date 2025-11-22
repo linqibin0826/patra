@@ -20,26 +20,22 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-/**
- * Task 完成事件处理器 (强制 1:1 Slice-Task 关系)
- *
- * <p>处理的领域事件: {@link TaskCompletedEvent} (Task 完成事件)
- *
- * <p>触发的后续操作:
- *
- * <ul>
- *   <li>查询该 Slice 对应的 Task (1:1 关系)
- *   <li>使用 {@link SliceStatusCalculator} 直接映射 Task 状态到 Slice 状态
- *   <li>更新 Slice 状态
- *   <li>如果 Slice 状态变化,发布 {@link SliceStatusChangedEvent} 触发 Plan 状态更新
- * </ul>
- *
- * <p>重构说明: Slice:Task 为 1:1 关系。当 Task 完成 (SUCCEEDED/FAILED) 时,直接映射 Task 状态到 Slice 状态
- *
- * <p>事件流转: TaskCompletedEvent → SliceStatusChangedEvent → Plan 状态更新
- *
- * <p>并发处理: 使用乐观锁防止并发冲突,发生冲突时跳过本次更新
- */
+/// Task 完成事件处理器 (强制 1:1 Slice-Task 关系)
+/// 
+/// 处理的领域事件: {@link TaskCompletedEvent} (Task 完成事件)
+/// 
+/// 触发的后续操作:
+/// 
+/// - 查询该 Slice 对应的 Task (1:1 关系)
+///   - 使用 {@link SliceStatusCalculator} 直接映射 Task 状态到 Slice 状态
+///   - 更新 Slice 状态
+///   - 如果 Slice 状态变化,发布 {@link SliceStatusChangedEvent} 触发 Plan 状态更新
+/// 
+/// 重构说明: Slice:Task 为 1:1 关系。当 Task 完成 (SUCCEEDED/FAILED) 时,直接映射 Task 状态到 Slice 状态
+/// 
+/// 事件流转: TaskCompletedEvent → SliceStatusChangedEvent → Plan 状态更新
+/// 
+/// 并发处理: 使用乐观锁防止并发冲突,发生冲突时跳过本次更新
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -49,11 +45,9 @@ public class TaskCompletedEventHandler {
   private final PlanSliceRepository sliceRepository;
   private final ApplicationEventPublisher eventPublisher;
 
-  /**
-   * 处理 Task 完成事件 (事务提交后触发)
-   *
-   * @param event Task 完成事件
-   */
+  /// 处理 Task 完成事件 (事务提交后触发)
+/// 
+/// @param event Task 完成事件
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void handle(TaskCompletedEvent event) {

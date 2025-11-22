@@ -15,22 +15,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/**
- * 计划幂等性协调器。
- *
- * <p>职责：
- *
- * <ul>
- *   <li>处理重复计划检测
- *   <li>识别符合重试条件的任务
- *   <li>协调重试操作
- * </ul>
- *
- * <p>注意：该协调器不使用 {@code @Transactional}，依赖主编排器的外部事务边界来确保与持久化和发布的原子性。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 计划幂等性协调器。
+/// 
+/// 职责：
+/// 
+/// - 处理重复计划检测
+///   - 识别符合重试条件的任务
+///   - 协调重试操作
+/// 
+/// 注意：该协调器不使用 `@Transactional`，依赖主编排器的外部事务边界来确保与持久化和发布的原子性。
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -41,24 +37,14 @@ public class PlanIdempotencyCoordinator {
   private final PlanPersistenceCoordinator persistenceCoordinator;
   private final PlanPublishingCoordinator publishingCoordinator;
 
-  /**
-   * 当发现相同 planKey 的现有计划时处理幂等计划复用。
-   *
-   * <p>该方法：
-   *
-   * <ol>
-   *   <li>加载现有切片和任务
-   *   <li>识别符合重试条件的任务（FAILED 状态）
-   *   <li>重置并重新入队重试任务
-   *   <li>通过 Outbox 发布重试事件
-   *   <li>基于现有计划返回结果
-   * </ol>
-   *
-   * @param existingPlan 现有计划聚合根
-   * @param schedule 当前调度实例
-   * @param planKey 幂等键（用于日志）
-   * @return 基于现有计划的接入结果
-   */
+  /// 当发现相同 planKey 的现有计划时处理幂等计划复用。
+/// 
+/// 该方法：
+/// 
+/// @param existingPlan 现有计划聚合根
+/// @param schedule 当前调度实例
+/// @param planKey 幂等键（用于日志）
+/// @return 基于现有计划的接入结果
   public PlanIngestionResult handleIdempotentPlanReuse(
       PlanAggregate existingPlan, ScheduleInstanceAggregate schedule, String planKey) {
     logDuplicatePlanDetection(existingPlan, planKey);
@@ -78,12 +64,10 @@ public class PlanIdempotencyCoordinator {
         schedule, existingPlan, existingSlices, existingTasks);
   }
 
-  /**
-   * 记录重复计划检测日志。
-   *
-   * @param existingPlan 现有计划聚合根
-   * @param planKey 计划幂等键
-   */
+  /// 记录重复计划检测日志。
+/// 
+/// @param existingPlan 现有计划聚合根
+/// @param planKey 计划幂等键
   private void logDuplicatePlanDetection(PlanAggregate existingPlan, String planKey) {
     log.info(
         "检测到重复计划接入 数据源 [{}] 操作 [{}]: 复用现有计划 [{}]，planKey={}",
@@ -93,15 +77,13 @@ public class PlanIdempotencyCoordinator {
         planKey);
   }
 
-  /**
-   * 通过发布重试事件处理重试任务。
-   *
-   * <p>注意：重构后，Plan 状态在重试期间不变。Plan 保持当前状态（通常为 READY），而失败任务被重新入队。
-   *
-   * @param existingPlan 现有计划聚合根
-   * @param schedule 调度实例
-   * @param retryTasks 待重试任务
-   */
+  /// 通过发布重试事件处理重试任务。
+/// 
+/// 注意：重构后，Plan 状态在重试期间不变。Plan 保持当前状态（通常为 READY），而失败任务被重新入队。
+/// 
+/// @param existingPlan 现有计划聚合根
+/// @param schedule 调度实例
+/// @param retryTasks 待重试任务
   private void processRetryTasks(
       PlanAggregate existingPlan,
       ScheduleInstanceAggregate schedule,
@@ -111,12 +93,10 @@ public class PlanIdempotencyCoordinator {
     publishingCoordinator.publishRetryEvents(retryEvents, existingPlan, schedule);
   }
 
-  /**
-   * 通过重置失败任务来准备重试任务。
-   *
-   * @param tasks 待检查的任务列表
-   * @return 已准备重试的任务列表
-   */
+  /// 通过重置失败任务来准备重试任务。
+/// 
+/// @param tasks 待检查的任务列表
+/// @return 已准备重试的任务列表
   private List<TaskAggregate> prepareTasksForRetry(List<TaskAggregate> tasks) {
     List<TaskAggregate> retryTasks = new ArrayList<>();
     for (TaskAggregate task : tasks) {
@@ -129,14 +109,12 @@ public class PlanIdempotencyCoordinator {
     return retryTasks;
   }
 
-  /**
-   * 判断任务是否符合补偿重试条件。
-   *
-   * <p>注意：重构后仅检查 FAILED 状态。
-   *
-   * @param task 任务聚合根
-   * @return 如需重试则返回 true（仅 FAILED 状态）
-   */
+  /// 判断任务是否符合补偿重试条件。
+/// 
+/// 注意：重构后仅检查 FAILED 状态。
+/// 
+/// @param task 任务聚合根
+/// @return 如需重试则返回 true（仅 FAILED 状态）
   private boolean shouldRetry(TaskAggregate task) {
     TaskStatus status = task.getStatus();
     return status == TaskStatus.FAILED;

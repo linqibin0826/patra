@@ -15,31 +15,27 @@ import com.patra.ingest.infra.mapper.StateTokenKeys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * PubMed 参数映射器。
- *
- * <p>将通用的 offset/limit 映射为 PubMed 特定的 retstart/retmax 参数。
- *
- * <p><strong>PubMed 分页机制</strong>：
- *
- * <ul>
- *   <li><b>retstart</b>: 起始偏移量（从 0 开始）
- *   <li><b>retmax</b>: 返回记录数量
- *   <li><b>WebEnv + query_key</b>: History Server 会话令牌（可选）
- * </ul>
- *
- * <p><strong>映射规则</strong>：
- *
- * <pre>{@code
- * batch.offset()  → retstart
- * batch.limit()   → retmax
- * session.stateToken("webEnv")    → WebEnv
- * session.stateToken("queryKey")  → query_key
- * }</pre>
- *
- * @author Patra Architecture Team
- * @since 0.3.0
- */
+/// PubMed 参数映射器。
+/// 
+/// 将通用的 offset/limit 映射为 PubMed 特定的 retstart/retmax 参数。
+/// 
+/// **PubMed 分页机制**：
+/// 
+/// - **retstart**: 起始偏移量（从 0 开始）
+///   - **retmax**: 返回记录数量
+///   - **WebEnv + query_key**: History Server 会话令牌（可选）
+/// 
+/// **映射规则**：
+/// 
+/// ```java
+/// batch.offset()  → retstart
+/// batch.limit()   → retmax
+/// session.stateToken("webEnv")    → WebEnv
+/// session.stateToken("queryKey")  → query_key
+/// ```
+/// 
+/// @author Patra Architecture Team
+/// @since 0.3.0
 @Component
 @Slf4j
 public class PubmedParameterMapper implements ProviderParameterMapper {

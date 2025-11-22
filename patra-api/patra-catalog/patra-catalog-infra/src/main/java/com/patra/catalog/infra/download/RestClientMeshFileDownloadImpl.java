@@ -13,31 +13,25 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-/**
- * RestClient 文件下载器实现。
- *
- * <p>使用 Spring RestClient（底层 JDK 21 HttpClient）实现 MeSH 文件下载和校验。
- *
- * <p><b>设计原则</b>：
- *
- * <ul>
- *   <li>流式下载：支持大文件（700MB+），不一次性加载到内存
- *   <li>断点续传：支持 HTTP Range 请求（TODO: 后续实现）
- *   <li>超时控制：通过 RestClient 配置超时时间
- *   <li>校验完整性：使用 MD5 哈希验证文件完整性
- * </ul>
- *
- * <p><b>性能特征</b>：
- *
- * <ul>
- *   <li>下载速度：取决于网络带宽（约 10-50 MB/s）
- *   <li>内存占用：流式写入，内存占用可控（<100MB）
- *   <li>文件大小：支持 700MB+ 的 XML 文件
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// RestClient 文件下载器实现。
+/// 
+/// 使用 Spring RestClient（底层 JDK 21 HttpClient）实现 MeSH 文件下载和校验。
+/// 
+/// **设计原则**：
+/// 
+/// - 流式下载：支持大文件（700MB+），不一次性加载到内存
+///   - 断点续传：支持 HTTP Range 请求（TODO: 后续实现）
+///   - 超时控制：通过 RestClient 配置超时时间
+///   - 校验完整性：使用 MD5 哈希验证文件完整性
+/// 
+/// **性能特征**：
+/// 
+/// - 下载速度：取决于网络带宽（约 10-50 MB/s）
+///   - 内存占用：流式写入，内存占用可控（<100MB）
+///   - 文件大小：支持 700MB+ 的 XML 文件
+/// 
+/// @author linqibin
+/// @since 0.2.0
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -45,7 +39,7 @@ public class RestClientMeshFileDownloadImpl implements MeshFileDownloadPort {
 
   private final RestClient restClient;
 
-  /** 临时下载目录 */
+  /// 临时下载目录
   private static final String TEMP_DIR = System.getProperty("java.io.tmpdir") + "/mesh-import";
 
   @Override
@@ -149,23 +143,19 @@ public class RestClientMeshFileDownloadImpl implements MeshFileDownloadPort {
     }
   }
 
-  /**
-   * 复制输入流到输出流（流式处理，含性能监控）。
-   *
-   * <p>使用固定大小缓冲区（8KB）流式复制数据，避免大文件导致 OOM。
-   *
-   * <p>性能特征：
-   *
-   * <ul>
-   *   <li>内存占用：稳定在 8KB（缓冲区大小）
-   *   <li>下载速度：取决于网络带宽和磁盘 IO
-   *   <li>日志频率：每 10MB 或每 5 秒记录一次进度
-   * </ul>
-   *
-   * @param inputStream 输入流
-   * @param outputStream 输出流
-   * @throws IOException IO 异常
-   */
+  /// 复制输入流到输出流（流式处理，含性能监控）。
+/// 
+/// 使用固定大小缓冲区（8KB）流式复制数据，避免大文件导致 OOM。
+/// 
+/// 性能特征：
+/// 
+/// - 内存占用：稳定在 8KB（缓冲区大小）
+///   - 下载速度：取决于网络带宽和磁盘 IO
+///   - 日志频率：每 10MB 或每 5 秒记录一次进度
+/// 
+/// @param inputStream 输入流
+/// @param outputStream 输出流
+/// @throws IOException IO 异常
   private void copyStream(InputStream inputStream, FileOutputStream outputStream)
       throws IOException {
     byte[] buffer = new byte[8192]; // 8KB 缓冲区

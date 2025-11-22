@@ -21,22 +21,18 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * RelayLeaseCoordinator 单元测试
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>✅ 租约获取成功场景
- *   <li>✅ 租约获取失败场景 (并发竞争)
- *   <li>✅ 租约参数传递验证
- *   <li>✅ 乐观锁版本验证
- *   <li>✅ 租约过期时间计算
- * </ul>
- *
- * @author Patra Team
- * @since 0.1.0
- */
+/// RelayLeaseCoordinator 单元测试
+/// 
+/// 测试覆盖:
+/// 
+/// - ✅ 租约获取成功场景
+///   - ✅ 租约获取失败场景 (并发竞争)
+///   - ✅ 租约参数传递验证
+///   - ✅ 乐观锁版本验证
+///   - ✅ 租约过期时间计算
+/// 
+/// @author Patra Team
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RelayLeaseCoordinator 单元测试")
 class RelayLeaseCoordinatorTest {

@@ -3,29 +3,25 @@ package com.patra.common.error.codes;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * HTTP 对齐的标准错误码工厂(0xxx 段)。
- *
- * <p>每个服务拥有独特的前缀(例如,ING 或 REG),而 0xxx 后缀直接映射到 HTTP 语义。 此工厂生成带前缀的错误码对象,以避免模块间的重复。
- */
+/// HTTP 对齐的标准错误码工厂(0xxx 段)。
+/// 
+/// 每个服务拥有独特的前缀(例如,ING 或 REG),而 0xxx 后缀直接映射到 HTTP 语义。 此工厂生成带前缀的错误码对象,以避免模块间的重复。
 public final class HttpStdErrors {
 
   private HttpStdErrors() {}
 
   private static final Map<String, Group> CACHE = new ConcurrentHashMap<>();
 
-  /**
-   * 返回给定前缀的标准 HTTP 错误码组的延迟缓存实例。
-   *
-   * @param prefix 错误码前缀(例如,{@code ING} 或 {@code REG});空值回退到 {@code UNKNOWN}
-   * @return 带前缀的标准 HTTP 错误码组
-   */
+  /// 返回给定前缀的标准 HTTP 错误码组的延迟缓存实例。
+/// 
+/// @param prefix 错误码前缀(例如,`ING` 或 `REG`);空值回退到 `UNKNOWN`
+/// @return 带前缀的标准 HTTP 错误码组
   public static Group of(String prefix) {
     String p = (prefix == null || prefix.isBlank()) ? "UNKNOWN" : prefix;
     return CACHE.computeIfAbsent(p, Group::new);
   }
 
-  /** 绑定到特定前缀的标准 HTTP 错误码组。 */
+  /// 绑定到特定前缀的标准 HTTP 错误码组。
   public static class Group {
     private final String prefix;
 

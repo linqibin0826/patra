@@ -13,35 +13,29 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * MeshImportAggregate 聚合根单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>纯 Java 单元测试，不依赖 Spring 容器
- *   <li>测试领域行为和状态转换
- *   <li>验证业务不变性约束
- *   <li>遵循 Given-When-Then 结构
- *   <li>使用 AssertJ 流畅断言
- * </ul>
- *
- * <p>覆盖范围：
- *
- * <ul>
- *   <li>✅ startImport() - 开始导入任务
- *   <li>✅ updateTableProgress() - 更新表进度
- *   <li>✅ markAsCompleted() - 标记任务完成
- *   <li>✅ markAsFailed() - 标记任务失败
- *   <li>✅ retry() - 重试失败任务
- *   <li>✅ 状态转换验证
- *   <li>✅ 不变性约束验证
- *   <li>✅ 领域事件验证
- * </ul>
- *
- * @author Patra Team
- * @since 2.0
- */
+/// MeshImportAggregate 聚合根单元测试。
+/// 
+/// 测试策略：
+/// 
+/// - 纯 Java 单元测试，不依赖 Spring 容器
+///   - 测试领域行为和状态转换
+///   - 验证业务不变性约束
+///   - 遵循 Given-When-Then 结构
+///   - 使用 AssertJ 流畅断言
+/// 
+/// 覆盖范围：
+/// 
+/// - ✅ startImport() - 开始导入任务
+///   - ✅ updateTableProgress() - 更新表进度
+///   - ✅ markAsCompleted() - 标记任务完成
+///   - ✅ markAsFailed() - 标记任务失败
+///   - ✅ retry() - 重试失败任务
+///   - ✅ 状态转换验证
+///   - ✅ 不变性约束验证
+///   - ✅ 领域事件验证
+/// 
+/// @author Patra Team
+/// @since 2.0
 @DisplayName("MeshImportAggregate 单元测试")
 class MeshImportAggregateTest {
 
@@ -602,7 +596,7 @@ class MeshImportAggregateTest {
 
   // ========== 辅助方法 ==========
 
-  /** 创建初始表进度列表（5张表：descriptor, qualifier, treeNumber, entryTerm, concept） */
+  /// 创建初始表进度列表（5张表：descriptor, qualifier, treeNumber, entryTerm, concept）
   private static List<TableProgress> createInitialTableProgressList() {
     List<TableProgress> progressList = new ArrayList<>();
     progressList.add(
@@ -653,7 +647,7 @@ class MeshImportAggregateTest {
     return progressList;
   }
 
-  /** 创建 PENDING 状态的聚合根 */
+  /// 创建 PENDING 状态的聚合根
   private static MeshImportAggregate createPendingAggregate() {
     return new MeshImportAggregate(
         MeshImportId.of(1001L),
@@ -671,7 +665,7 @@ class MeshImportAggregateTest {
         null);
   }
 
-  /** 创建 PROCESSING 状态的聚合根 */
+  /// 创建 PROCESSING 状态的聚合根
   private static MeshImportAggregate createProcessingAggregate() {
     MeshImportAggregate aggregate = createPendingAggregate();
     aggregate.startImport();
@@ -679,14 +673,14 @@ class MeshImportAggregateTest {
     return aggregate;
   }
 
-  /** 创建所有表都完成的聚合根 */
+  /// 创建所有表都完成的聚合根
   private static MeshImportAggregate createAllTablesCompletedAggregate() {
     MeshImportAggregate aggregate = createProcessingAggregate();
     markAllTablesCompleted(aggregate);
     return aggregate;
   }
 
-  /** 创建 SUCCESS 状态的聚合根 */
+  /// 创建 SUCCESS 状态的聚合根
   private static MeshImportAggregate createCompletedAggregate() {
     MeshImportAggregate aggregate = createAllTablesCompletedAggregate();
     aggregate.markAsCompleted();
@@ -694,7 +688,7 @@ class MeshImportAggregateTest {
     return aggregate;
   }
 
-  /** 创建 FAILED 状态的聚合根 */
+  /// 创建 FAILED 状态的聚合根
   private static MeshImportAggregate createFailedAggregate() {
     MeshImportAggregate aggregate = createProcessingAggregate();
     aggregate.markAsFailed("测试失败原因");
@@ -702,7 +696,7 @@ class MeshImportAggregateTest {
     return aggregate;
   }
 
-  /** 标记所有表为 COMPLETED */
+  /// 标记所有表为 COMPLETED
   private static void markAllTablesCompleted(MeshImportAggregate aggregate) {
     // 创建一个副本以避免在迭代时修改列表
     List<TableProgress> progressListCopy = new ArrayList<>(aggregate.getTableProgressList());

@@ -420,34 +420,22 @@ public class MeshDataValidator {
 @Data
 public class MeshImportConfig {
 
-    /**
-     * MeSH 数据源 URL
-     */
+    /// MeSH 数据源 URL
     private String sourceUrl = "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml";
 
-    /**
-     * 批量插入大小
-     */
+    /// 批量插入大小
     private int batchSize = 1000;
 
-    /**
-     * 是否启用数据量验证
-     */
+    /// 是否启用数据量验证
     private boolean enableDataValidation = true;
 
-    /**
-     * 数据量偏差阈值（百分比）
-     */
+    /// 数据量偏差阈值（百分比）
     private double deviationThreshold = 0.05; // 5%
 
-    /**
-     * 下载超时时间（秒）
-     */
+    /// 下载超时时间（秒）
     private int downloadTimeout = 300; // 5 分钟
 
-    /**
-     * 是否启用文件校验
-     */
+    /// 是否启用文件校验
     private boolean enableChecksumValidation = true;
 }
 ```

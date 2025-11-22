@@ -15,36 +15,32 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * 表达式模型的 Jackson 编解码器。
- *
- * <p>提供双向 JSON 转换,而不会污染模型类的 Jackson 注解。设计目标:
- *
- * <ul>
- *   <li>暴露清晰、稳定的结构,适合跨语言使用者
- *   <li>保持内核不依赖框架注解
- *   <li>通过忽略未知属性保持向前兼容
- * </ul>
- *
- * <p>示例 JSON 格式:
- *
- * <pre>
- * {"type":"AND","children":[ ... ]}
- * {"type":"ATOM","field":"title","op":"TERM","value":{"kind":"TERM","text":"heart","match":"ANY","case":"INSENSITIVE"}}
- * {"type":"CONST","value":true}
- * </pre>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 表达式模型的 Jackson 编解码器。
+/// 
+/// 提供双向 JSON 转换,而不会污染模型类的 Jackson 注解。设计目标:
+/// 
+/// - 暴露清晰、稳定的结构,适合跨语言使用者
+///   - 保持内核不依赖框架注解
+///   - 通过忽略未知属性保持向前兼容
+/// 
+/// 示例 JSON 格式:
+/// 
+/// ```
+/// 
+/// {"type":"AND","children":[ ... ]}
+/// {"type":"ATOM","field":"title","op":"TERM","value":{"kind":"TERM","text":"heart","match":"ANY","case":"INSENSITIVE"}}
+/// {"type":"CONST","value":true}
+/// 
+/// ```
+/// 
+/// @author linqibin
+/// @since 0.1.0
 public final class ExprJsonCodec {
   private ExprJsonCodec() {}
 
-  /**
-   * 创建一个模块,注册 {@link Expr} 的序列化器和反序列化器。
-   *
-   * @return 模块实例
-   */
+  /// 创建一个模块,注册 {@link Expr} 的序列化器和反序列化器。
+/// 
+/// @return 模块实例
   public static com.fasterxml.jackson.databind.Module module() {
     SimpleModule m = new SimpleModule("expr-json-module");
     m.addSerializer(Expr.class, new ExprSerializer());
@@ -52,11 +48,9 @@ public final class ExprJsonCodec {
     return m;
   }
 
-  /**
-   * 构建预配置表达式模块的 {@link ObjectMapper}。
-   *
-   * @return 配置好的 mapper
-   */
+  /// 构建预配置表达式模块的 {@link ObjectMapper}。
+/// 
+/// @return 配置好的 mapper
   public static ObjectMapper mapper() {
     ObjectMapper om = new ObjectMapper();
     om.registerModule(ExprJsonCodec.module());
@@ -423,13 +417,11 @@ public final class ExprJsonCodec {
     }
   }
 
-  /**
-   * 将表达式树序列化为 JSON。
-   *
-   * @param expr 待序列化的表达式
-   * @return JSON 字符串表示
-   * @throws RuntimeException 如果序列化失败
-   */
+  /// 将表达式树序列化为 JSON。
+/// 
+/// @param expr 待序列化的表达式
+/// @return JSON 字符串表示
+/// @throws RuntimeException 如果序列化失败
   public static String toJson(Expr expr) {
     try {
       return mapper().writeValueAsString(expr);
@@ -438,13 +430,11 @@ public final class ExprJsonCodec {
     }
   }
 
-  /**
-   * 将 JSON 反序列化为表达式树。
-   *
-   * @param json 待解析的 JSON 字符串
-   * @return 表达式树
-   * @throws RuntimeException 如果反序列化失败
-   */
+  /// 将 JSON 反序列化为表达式树。
+/// 
+/// @param json 待解析的 JSON 字符串
+/// @return 表达式树
+/// @throws RuntimeException 如果反序列化失败
   public static Expr fromJson(String json) {
     Objects.requireNonNull(json, "json");
     try {

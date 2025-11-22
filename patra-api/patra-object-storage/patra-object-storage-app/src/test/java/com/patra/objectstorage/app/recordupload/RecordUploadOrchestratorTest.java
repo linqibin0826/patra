@@ -25,21 +25,18 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * RecordUploadOrchestrator 单元测试。
- *
- * <p>测试策略：纯单元测试，使用 Mockito Mock {@link FileMetadataRepository}。
- *
- * <p>测试覆盖：
- *
- * <ul>
- *   <li>核心功能：命令执行、聚合根创建、仓储保存
- *   <li>可选字段：contentType、expiresAt、ipAddress、recordRemarks、correlationData
- *   <li>存储提供商：MINIO、S3、OSS、COS
- *   <li>异常处理：null 命令
- *   <li>集成场景：完整字段、最小字段
- * </ul>
- */
+/// RecordUploadOrchestrator 单元测试。
+/// 
+/// 测试策略：纯单元测试，使用 Mockito Mock {@link FileMetadataRepository}。
+/// 
+/// 测试覆盖：
+/// 
+/// - 核心功能：命令执行、聚合根创建、仓储保存
+///   - 可选字段：contentType、expiresAt、ipAddress、recordRemarks、correlationData
+///   - 存储提供商：MINIO、S3、OSS、COS
+///   - 异常处理：null 命令
+///   - 集成场景：完整字段、最小字段
+/// 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RecordUploadOrchestrator 单元测试")
 class RecordUploadOrchestratorTest {
@@ -48,11 +45,9 @@ class RecordUploadOrchestratorTest {
 
   @InjectMocks private RecordUploadOrchestrator orchestrator;
 
-  /**
-   * 配置 Repository Mock 的默认行为。
-   *
-   * <p>模拟数据库保存后返回带 ID 的实体。使用 lenient() 允许某些测试不使用此 stub（如异常测试）。
-   */
+  /// 配置 Repository Mock 的默认行为。
+/// 
+/// 模拟数据库保存后返回带 ID 的实体。使用 lenient() 允许某些测试不使用此 stub（如异常测试）。
   @BeforeEach
   void setUp() {
     lenient()
@@ -609,11 +604,9 @@ class RecordUploadOrchestratorTest {
 
   // ========== 辅助方法 ==========
 
-  /**
-   * 创建包含完整字段的命令对象。
-   *
-   * @return 完整配置的命令
-   */
+  /// 创建包含完整字段的命令对象。
+/// 
+/// @return 完整配置的命令
   private RecordUploadCommand createFullCommand() {
     return new RecordUploadCommand(
         "test-bucket",
@@ -632,11 +625,9 @@ class RecordUploadOrchestratorTest {
         "测试上传");
   }
 
-  /**
-   * 创建只包含必需字段的命令对象。
-   *
-   * @return 最小配置的命令
-   */
+  /// 创建只包含必需字段的命令对象。
+/// 
+/// @return 最小配置的命令
   private RecordUploadCommand createMinimalCommand() {
     return new RecordUploadCommand(
         "test-bucket",
