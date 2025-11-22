@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.persistence.repository;
 
-import com.patra.catalog.domain.port.AuthorPort;
+import com.patra.catalog.domain.port.AuthorRepository;
 import com.patra.catalog.infra.persistence.converter.AuthorConverter;
 import com.patra.catalog.infra.persistence.mapper.AuthorMapper;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Repository;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class AuthorRepositoryImpl implements AuthorPort {
+public class AuthorRepositoryImpl implements AuthorRepository {
 
   private final AuthorMapper authorMapper;
   private final AuthorConverter authorConverter;

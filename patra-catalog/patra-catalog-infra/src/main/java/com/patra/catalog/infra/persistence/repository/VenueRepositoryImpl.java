@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.persistence.repository;
 
-import com.patra.catalog.domain.port.VenuePort;
+import com.patra.catalog.domain.port.VenueRepository;
 import com.patra.catalog.infra.persistence.converter.VenueConverter;
 import com.patra.catalog.infra.persistence.mapper.VenueInstanceMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueMapper;
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Repository;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class VenueRepositoryImpl implements VenuePort {
+public class VenueRepositoryImpl implements VenueRepository {
 
   private final VenueMapper venueMapper;
   private final VenueInstanceMapper venueInstanceMapper;

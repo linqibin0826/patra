@@ -10,9 +10,9 @@ import com.patra.catalog.domain.model.enums.MeshImportTaskStatus;
 import com.patra.catalog.domain.model.enums.MeshTableImportStatus;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import com.patra.catalog.domain.model.valueobject.TableProgress;
-import com.patra.catalog.domain.port.MeshDescriptorPort;
+import com.patra.catalog.domain.port.MeshDescriptorRepository;
 import com.patra.catalog.domain.port.MeshFileDownloadPort;
-import com.patra.catalog.domain.port.MeshImportPort;
+import com.patra.catalog.domain.port.MeshImportRepository;
 import com.patra.catalog.domain.port.XmlParserPort;
 import java.io.File;
 import java.io.FileInputStream;
@@ -45,10 +45,10 @@ import org.springframework.transaction.annotation.Transactional;
 ///
 /// **依赖注入**：
 ///
-/// - {@link MeshImportPort} - 任务仓储
+/// - {@link MeshImportRepository} - 任务仓储
 ///   - {@link XmlParserPort} - XML 解析器
 ///   - {@link MeshFileDownloadPort} - 文件下载器
-///   - {@link MeshDescriptorPort} - 主题词仓储
+///   - {@link MeshDescriptorRepository} - 主题词仓储
 ///   - {@link MeshDataValidator} - 数据验证器
 ///   - {@link MeshImportConfig} - 配置属性
 ///
@@ -59,10 +59,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MeshImportOrchestrator {
 
-  private final MeshImportPort meshImportPort;
+  private final MeshImportRepository meshImportPort;
   private final XmlParserPort xmlParserPort;
   private final MeshFileDownloadPort meshFileDownloadPort;
-  private final MeshDescriptorPort meshDescriptorPort;
+  private final MeshDescriptorRepository meshDescriptorPort;
   private final MeshDataValidator meshDataValidator;
   private final MeshImportConfig meshImportConfig;
 

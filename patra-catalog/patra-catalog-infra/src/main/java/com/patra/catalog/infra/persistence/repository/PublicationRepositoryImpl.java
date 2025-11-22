@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.persistence.repository;
 
-import com.patra.catalog.domain.port.PublicationPort;
+import com.patra.catalog.domain.port.PublicationRepository;
 import com.patra.catalog.infra.persistence.converter.PublicationConverter;
 import com.patra.catalog.infra.persistence.mapper.PublicationMapper;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Repository;
 ///
 /// **职责**：
 ///
-/// - 实现 PublicationPort 接口定义的仓储契约
+/// - 实现 PublicationRepository 接口定义的仓储契约
 ///   - 负责 Aggregate ↔ DO 转换
 ///   - 协调 MyBatis Mapper 操作
 ///   - 处理跨表数据组装（Publication + Metadata + Abstract）
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Repository;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class PublicationRepositoryImpl implements PublicationPort {
+public class PublicationRepositoryImpl implements PublicationRepository {
 
   private final PublicationMapper publicationMapper;
   private final PublicationConverter publicationConverter;

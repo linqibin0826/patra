@@ -5,14 +5,14 @@ import com.patra.catalog.domain.model.valueobject.FailedBatch;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import java.util.List;
 
-/// MeSH 批次详情仓储接口（Port）。
+/// MeSH 批次详情仓储接口（Repository）。
 ///
 /// 定义批次详情的查询能力，用于进度监控和失败批次追踪。
 ///
 /// **设计原则**：
 ///
 /// - 依赖倒置：Domain 层定义接口，Infrastructure 层实现
-///   - 只读Port：仅提供查询方法，批次详情由导入流程创建
+///   - 只读仓储：仅提供查询方法，批次详情由导入流程创建
 ///   - 支持进度监控：提供按状态统计和失败批次查询
 ///
 /// **使用场景**：
@@ -23,7 +23,7 @@ import java.util.List;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface MeshBatchDetailPort {
+public interface MeshBatchDetailRepository {
 
   /// 查询指定任务的失败批次。
   ///

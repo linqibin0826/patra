@@ -55,13 +55,13 @@ patra-catalog-domain/
    │  ├─ MeshImportCompleted.java         # 导入任务完成事件
    │  └─ MeshImportFailed.java            # 导入任务失败事件
    └─ port/                        # 端口接口（由 infra 实现）
-      ├─ MeshImportPort.java              # MeSH 导入任务仓储
-      ├─ MeshDescriptorPort.java          # MeSH 主题词仓储
-      ├─ MeshBatchDetailPort.java         # MeSH 批次详情仓储
-      ├─ PublicationPort.java             # 文献仓储
-      ├─ AuthorPort.java                  # 作者仓储
-      ├─ AffiliationPort.java             # 机构仓储
-      ├─ VenuePort.java                   # 期刊仓储
+      ├─ MeshImportRepository.java              # MeSH 导入任务仓储
+      ├─ MeshDescriptorRepository.java          # MeSH 主题词仓储
+      ├─ MeshBatchDetailRepository.java         # MeSH 批次详情仓储
+      ├─ PublicationRepository.java             # 文献仓储
+      ├─ AuthorRepository.java                  # 作者仓储
+      ├─ AffiliationRepository.java             # 机构仓储
+      ├─ VenueRepository.java                   # 期刊仓储
       ├─ XmlParserPort.java               # XML 解析器端口
       └─ MeshFileDownloadPort.java        # 文件下载端口
 ```
@@ -247,13 +247,13 @@ if (id.isAssigned()) {
 
 ### 端口接口
 
-#### MeshImportPort (MeSH 导入任务仓储接口)
+#### MeshImportRepository (MeSH 导入任务仓储接口)
 
 **职责**：定义 MeSH 导入任务的持久化契约。
 
 **核心方法**：
 ```java
-public interface MeshImportPort {
+public interface MeshImportRepository {
     MeshImportAggregate save(MeshImportAggregate aggregate);
     Optional<MeshImportAggregate> findById(MeshImportId id);
     Optional<MeshImportAggregate> findLatest();
@@ -262,7 +262,7 @@ public interface MeshImportPort {
 }
 ```
 
-**文件**：`port/MeshImportPort.java`
+**文件**：`port/MeshImportRepository.java`
 
 #### XmlParserPort (XML 解析器端口)
 
@@ -333,7 +333,7 @@ public interface MeshFileDownloadPort {
 ### 3. 仓储模式 (Repository Pattern)
 
 通过接口定义持久化契约，由基础设施层实现：
-- MeshImportPort、MeshDescriptorPort 等
+- MeshImportRepository、MeshDescriptorRepository 等
 
 ### 4. 领域事件模式 (Domain Event Pattern)
 

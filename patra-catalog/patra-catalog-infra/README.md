@@ -120,7 +120,7 @@ patra-catalog-infra/
 
 #### MeshImportRepositoryImpl (MeSH 导入任务仓储实现)
 
-**实现接口**：`MeshImportPort`
+**实现接口**：`MeshImportRepository`
 
 **核心方法**：
 
@@ -204,7 +204,7 @@ public boolean existsRunningTask() {
 
 #### MeshDescriptorRepositoryImpl (MeSH 主题词仓储实现)
 
-**实现接口**：`MeshDescriptorPort`
+**实现接口**：`MeshDescriptorRepository`
 
 **核心方法**：
 
@@ -489,7 +489,7 @@ public class RestClientMeshFileDownloadImpl implements MeshFileDownloadPort {
 ```java
 @Repository
 @RequiredArgsConstructor
-public class MeshImportRepositoryImpl implements MeshImportPort {
+public class MeshImportRepositoryImpl implements MeshImportRepository {
 
     private final MeshImportTaskMapper meshImportTaskMapper;
     private final MeshTableProgressMapper meshTableProgressMapper;
@@ -632,7 +632,7 @@ public class RestClientMeshFileDownloadImpl implements MeshFileDownloadPort {
 **核心思想**：Infrastructure 层实现 Domain 层定义的 Port 接口，适配外部技术实现。
 
 **示例**：
-- `MeshImportRepositoryImpl` 实现 `MeshImportPort`
+- `MeshImportRepositoryImpl` 实现 `MeshImportRepository`
 - `StaxXmlParserImpl` 实现 `XmlParserPort`
 - `RestClientMeshFileDownloadImpl` 实现 `MeshFileDownloadPort`
 

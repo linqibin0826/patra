@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.patra.catalog.domain.model.enums.MeshBatchStatus;
 import com.patra.catalog.domain.model.valueobject.FailedBatch;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
-import com.patra.catalog.domain.port.MeshBatchDetailPort;
+import com.patra.catalog.domain.port.MeshBatchDetailRepository;
 import com.patra.catalog.infra.persistence.entity.MeshBatchDetailDO;
 import com.patra.catalog.infra.persistence.mapper.MeshBatchDetailMapper;
 import java.util.List;
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Repository;
 
 /// MeSH 批次详情仓储实现。
 ///
-/// 实现 {@link MeshBatchDetailPort} 接口，提供批次详情查询能力。
+/// 实现 {@link MeshBatchDetailRepository} 接口，提供批次详情查询能力。
 ///
 /// **实现策略**：
 ///
@@ -34,7 +34,7 @@ import org.springframework.stereotype.Repository;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class MeshBatchDetailRepositoryImpl implements MeshBatchDetailPort {
+public class MeshBatchDetailRepositoryImpl implements MeshBatchDetailRepository {
 
   private final MeshBatchDetailMapper batchDetailMapper;
 

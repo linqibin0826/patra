@@ -3,7 +3,7 @@ package com.patra.catalog.infra.persistence.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
-import com.patra.catalog.domain.port.MeshImportPort;
+import com.patra.catalog.domain.port.MeshImportRepository;
 import com.patra.catalog.infra.persistence.converter.MeshImportConverter;
 import com.patra.catalog.infra.persistence.entity.MeshImportTaskDO;
 import com.patra.catalog.infra.persistence.entity.MeshTableProgressDO;
@@ -28,7 +28,7 @@ import org.springframework.stereotype.Repository;
 ///
 /// **设计原则**：
 ///
-/// - 六边形架构：实现 Domain 层定义的 {@link MeshImportPort} 接口
+/// - 六边形架构：实现 Domain 层定义的 {@link MeshImportRepository} 接口
 ///   - 依赖注入：使用构造器注入 Mapper 和 Converter
 ///   - 事务管理：由 Application 层管理事务边界
 ///   - 乐观锁：使用 MyBatis-Plus 的 version 字段防止并发修改
@@ -38,7 +38,7 @@ import org.springframework.stereotype.Repository;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class MeshImportRepositoryImpl implements MeshImportPort {
+public class MeshImportRepositoryImpl implements MeshImportRepository {
 
   private final MeshImportTaskMapper taskMapper;
   private final MeshTableProgressMapper progressMapper;

@@ -4,7 +4,7 @@ import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import java.util.Optional;
 
-/// MeSH 导入任务仓储接口（Port）。
+/// MeSH 导入任务仓储接口（Repository）。
 ///
 /// 定义聚合根的持久化操作，由 Infrastructure 层实现。
 ///
@@ -13,7 +13,7 @@ import java.util.Optional;
 /// - 纯接口定义：不包含实现逻辑
 ///   - 面向领域对象：参数和返回值都是领域对象
 ///   - 六边形架构：领域层定义接口，基础设施层实现
-///   - 命名规范：使用 Port 后缀表示端口
+///   - 命名规范：使用 Repository 后缀表示仓储端口
 ///
 /// **实现说明**：
 ///
@@ -24,7 +24,7 @@ import java.util.Optional;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface MeshImportPort {
+public interface MeshImportRepository {
 
   /// 保存导入任务（新增或更新）。
   ///
