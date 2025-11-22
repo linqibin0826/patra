@@ -6,8 +6,9 @@
     <!-- Property for application name (fallback to "application") -->
     <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="application"/>
 
-    <!-- Property for log file path (relative to module root) -->
-    <property name="LOG_PATH" value="logs"/>
+    <!-- Property for log file path (centralized in project root) -->
+    <!-- Default to ${user.dir}/logs if logging.file.path not set -->
+    <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="logs"/>
     <property name="LOG_FILE" value="${LOG_PATH}/${appName}"/>
 
     <!-- Register custom SkyWalking converters for separated trace info -->

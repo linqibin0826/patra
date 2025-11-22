@@ -6,49 +6,65 @@ import java.io.Serializable;
 
 /// MeSH 唯一标识符值对象。封装 MeSH UI 格式验证和类型区分。
 ///
-/// MeSH UI 格式说明：
+/// MeSH UI 格式说明（基于 NLM 官方规范）：
 ///
-/// - **Descriptor UI**：D000001-D999999(主题词)
-///   - **Qualifier UI**：Q000001-Q999999(限定词)
-///   - **Concept UI**：M000001-M999999(概念)
+/// - **Descriptor UI**：D + 6位数字（旧格式）或 D + 9位数字（新格式），例：D000001, D000009711
+///   - **Qualifier UI**：Q + 6位数字（旧格式）或 Q + 9位数字（新格式），例：Q000002, Q000941
+///   - **Concept UI**：M + 7位数字（旧格式）或 M + 9位数字（新格式），例：M0000001, M0581777
+///
+/// **历史演变**：
+///
+/// - 2013年4月15日前：Descriptor/Qualifier 为7字符（前缀+6位），Concept 为8字符（前缀+7位）
+///   - 2013年4月15日起：新 UI 扩展为10字符（前缀+9位），旧 UI 保持不变
+///   - 向后兼容：系统同时支持新旧两种格式
 ///
 /// 设计原则：
 ///
 /// - 不可变性：Record 自动提供
-///   - 格式验证：UI 必须符合 NLM 规范
+///   - 格式验证：UI 必须符合 NLM 官方规范
 ///   - 类型安全：通过前缀识别 UI 类型
+///   - 向后兼容：支持新旧两种长度格式
 ///
 /// 使用示例：
 ///
 /// ```java
-/// // 创建 Descriptor UI
+/// // 创建 Descriptor UI（旧格式）
 /// MeshUI descriptorUi = MeshUI.of("D000001");
 /// assert descriptorUi.isDescriptor();
+///
+/// // 创建 Descriptor UI（新格式）
+/// MeshUI descriptorUiNew = MeshUI.of("D000009711");
 ///
 /// // 创建 Qualifier UI
 /// MeshUI qualifierUi = MeshUI.of("Q000123");
 /// assert qualifierUi.isQualifier();
 ///
-/// // 创建 Concept UI
-/// MeshUI conceptUi = MeshUI.of("M000456");
+/// // 创建 Concept UI（旧格式：7位数字）
+/// MeshUI conceptUi = MeshUI.of("M0000001");
 /// assert conceptUi.isConcept();
 /// ```
 ///
-/// @param ui MeSH 唯一标识符(格式：D/Q/M + 6位数字)
+/// @param ui MeSH 唯一标识符（格式：D/Q + 6或9位数字，M + 7或9位数字）
 /// @author linqibin
 /// @since 0.1.0
+/// @see <a href="https://www.nlm.nih.gov/mesh/xml_data_elements.html">MeSH XML Data Elements</a>
+/// @see <a href="https://www.nlm.nih.gov/pubs/techbull/ma13/ma13_mesh_ui_expand.html">MeSH UI Length Expansion</a>
 public record MeshUI(String ui) implements Serializable {
 
   @Serial private static final long serialVersionUID = 1L;
 
-  /// Descriptor UI 正则表达式：D + 6位数字
-  private static final String DESCRIPTOR_PATTERN = "D\\d{6}";
+  /// Descriptor UI 正则表达式：D + 6位数字（旧格式）或 9位数字（新格式）
+  /// 示例：D000001, D000009711
+  private static final String DESCRIPTOR_PATTERN = "D\\d{6}(\\d{3})?";
 
-  /// Qualifier UI 正则表达式：Q + 6位数字
-  private static final String QUALIFIER_PATTERN = "Q\\d{6}";
+  /// Qualifier UI 正则表达式：Q + 6位数字（旧格式）或 9位数字（新格式）
+  /// 示例：Q000002, Q000941
+  private static final String QUALIFIER_PATTERN = "Q\\d{6}(\\d{3})?";
 
-  /// Concept UI 正则表达式：M + 6位数字
-  private static final String CONCEPT_PATTERN = "M\\d{6}";
+  /// Concept UI 正则表达式：M + 7位数字（旧格式）或 9位数字（新格式）
+  /// 注意：Concept UI 原始格式为 8字符（M + 7位数字），与其他类型不同
+  /// 示例：M0000001, M0581777
+  private static final String CONCEPT_PATTERN = "M\\d{7}(\\d{2})?";
 
   /// 紧凑构造器：验证 MeSH UI 的有效性。
   ///
@@ -56,16 +72,19 @@ public record MeshUI(String ui) implements Serializable {
   public MeshUI {
     Assert.notBlank(ui, "MeSH UI 不能为空");
 
-    // UI 格式验证(D/Q/M开头 + 6位数字)
+    // 标准化为大写
+    ui = ui.toUpperCase();
+
+    // UI 格式验证
+    // - Descriptor: D + 6或9位数字
+    // - Qualifier: Q + 6或9位数字
+    // - Concept: M + 7或9位数字（特殊：原始为8字符）
     Assert.isTrue(
         ui.matches(DESCRIPTOR_PATTERN)
             || ui.matches(QUALIFIER_PATTERN)
             || ui.matches(CONCEPT_PATTERN),
-        "MeSH UI 格式无效,必须符合 'D/Q/M + 6位数字' 格式：%s",
+        "MeSH UI 格式无效。有效格式：Descriptor(D+6/9位数字), Qualifier(Q+6/9位数字), Concept(M+7/9位数字)。实际值：%s",
         ui);
-
-    // 标准化为大写
-    ui = ui.toUpperCase();
   }
 
   /// 创建 MeSH UI。
@@ -77,31 +96,31 @@ public record MeshUI(String ui) implements Serializable {
     return new MeshUI(ui);
   }
 
-  /// 创建 Descriptor UI。
+  /// 创建 Descriptor UI（旧格式：7字符）。
   ///
-  /// @param number UI 编号(6位数字)
-  /// @return Descriptor UI
+  /// @param number UI 编号（1-999999，生成6位数字）
+  /// @return Descriptor UI（例：D000001）
   public static MeshUI descriptorOf(int number) {
     Assert.isTrue(number >= 1 && number <= 999999, "Descriptor UI 编号必须在 1-999999 范围内");
     return new MeshUI(String.format("D%06d", number));
   }
 
-  /// 创建 Qualifier UI。
+  /// 创建 Qualifier UI（旧格式：7字符）。
   ///
-  /// @param number UI 编号(6位数字)
-  /// @return Qualifier UI
+  /// @param number UI 编号（1-999999，生成6位数字）
+  /// @return Qualifier UI（例：Q000002）
   public static MeshUI qualifierOf(int number) {
     Assert.isTrue(number >= 1 && number <= 999999, "Qualifier UI 编号必须在 1-999999 范围内");
     return new MeshUI(String.format("Q%06d", number));
   }
 
-  /// 创建 Concept UI。
+  /// 创建 Concept UI（旧格式：8字符）。
   ///
-  /// @param number UI 编号(6位数字)
-  /// @return Concept UI
+  /// @param number UI 编号（1-9999999，生成7位数字）
+  /// @return Concept UI（例：M0000001）
   public static MeshUI conceptOf(int number) {
-    Assert.isTrue(number >= 1 && number <= 999999, "Concept UI 编号必须在 1-999999 范围内");
-    return new MeshUI(String.format("M%06d", number));
+    Assert.isTrue(number >= 1 && number <= 9999999, "Concept UI 编号必须在 1-9999999 范围内");
+    return new MeshUI(String.format("M%07d", number));
   }
 
   /// 判断是否为 Descriptor UI。
@@ -138,9 +157,9 @@ public record MeshUI(String ui) implements Serializable {
     }
   }
 
-  /// 获取 UI 编号(去掉前缀字母)。
+  /// 获取 UI 编号（去掉前缀字母）。
   ///
-  /// @return UI 编号(6位数字)
+  /// @return UI 编号（Descriptor/Qualifier: 6或9位数字，Concept: 7或9位数字）
   public int getNumber() {
     return Integer.parseInt(ui.substring(1));
   }

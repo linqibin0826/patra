@@ -73,8 +73,7 @@ public class MeshTreeNumber implements Serializable {
   /// @param isPrimary 是否主要位置
   private MeshTreeNumber(
       Long id, Long descriptorId, String treeNumber, int treeLevel, boolean isPrimary) {
-    // 必填字段验证
-    Assert.notNull(descriptorId, "主题词ID不能为空");
+    // 必填字段验证（descriptorId 在解析阶段可以为 null，后续通过 setDescriptorId 设置）
     Assert.notBlank(treeNumber, "树形编号不能为空");
 
     // 树形编号格式验证(字母+数字组合,点号分隔)

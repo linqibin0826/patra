@@ -35,6 +35,11 @@ spring:
 mybatis-plus:
   mapper-locations: classpath*:mapper/*.xml
 
+logging:
+  file:
+    # Centralized log directory in project root
+    path: ${PATRA_LOG_DIR:/Users/linqibin/Desktop/Patra-api/logs}
+
 management:
   endpoints:
     web:

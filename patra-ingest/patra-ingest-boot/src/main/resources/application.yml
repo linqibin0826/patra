@@ -50,8 +50,8 @@ xxl:
       addresses: ${XXL_JOB_ADMIN_ADDRESSES:http://localhost:7070/xxl-job-admin}
     executor:
       ip: ${XXL_JOB_EXECUTOR_IP:host.docker.internal}
-      # Log directory defaults to ./logs/patra-ingest/xxl-job in development
-      logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PATRA_LOG_DIR:./logs}/patra-ingest/xxl-job}
+      # Log directory in centralized logs folder
+      logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PATRA_LOG_DIR:/Users/linqibin/Desktop/Patra-api/logs}/xxl-job/patra-ingest}
       logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}
 
 patra:
@@ -80,6 +80,11 @@ task:
       failure-threshold: ${TASK_EXECUTION_HEARTBEAT_FAILURE_THRESHOLD:3}
     # When true, fail immediately on first error instead of continuing
     fail-fast: ${TASK_EXECUTION_FAIL_FAST:false}
+
+logging:
+  file:
+    # Centralized log directory in project root
+    path: ${PATRA_LOG_DIR:/Users/linqibin/Desktop/Patra-api/logs}
 
 management:
   endpoints:
