@@ -26,6 +26,16 @@ public record ProvenanceConfig(
     BatchingConfig batching,
     RetryConfig retry,
     RateLimitConfig rateLimit) {
+
+  /// 规范构造器,强制执行数据源配置的验证规则。
+  ///
+  /// 验证规则:
+  ///
+  /// - baseUrl 不能为空或空白字符串
+  /// - baseUrl 自动去除尾部斜杠
+  /// - http 配置缺失时自动填充空配置
+  ///
+  /// @throws IllegalArgumentException 如果 baseUrl 为 null 或空白
   public ProvenanceConfig {
     if (!StringUtils.hasText(baseUrl)) {
       throw new IllegalArgumentException("baseUrl cannot be null or blank");
@@ -34,6 +44,10 @@ public record ProvenanceConfig(
     http = http != null ? http : new HttpConfig(Map.of(), null, null, null);
   }
 
+  /// 去除 URL 尾部的斜杠。
+  ///
+  /// @param url 待处理的 URL 字符串
+  /// @return 去除尾部斜杠后的 URL
   private String trimTrailingSlash(String url) {
     if (url.endsWith("/")) {
       return url.substring(0, url.length() - 1);

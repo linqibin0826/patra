@@ -85,6 +85,7 @@ public class FileMetadata {
   /// 软删除标志
   private Boolean deleted;
 
+  /// 私有构造函数,强制使用工厂方法。
   private FileMetadata() {
     // 使用静态工厂方法创建实例
   }

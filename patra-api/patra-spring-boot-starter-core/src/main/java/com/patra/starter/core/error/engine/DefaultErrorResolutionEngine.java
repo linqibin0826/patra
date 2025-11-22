@@ -14,9 +14,9 @@ import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 
-/// {@link ErrorResolutionEngine} 的默认实现，将异常映射到统一的错误码和 HTTP 状态。
+/// {@link ErrorResolutionEngine} 的默认实现,将异常映射到统一的错误码和 HTTP 状态。
 ///
-/// 错误解析顺序：
+/// 错误解析顺序:
 ///
 ///
 @Slf4j
@@ -55,6 +55,11 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   private final boolean traitMappingEnabled;
   private final boolean namingHeuristicEnabled;
 
+  /// 构造错误解析引擎。
+  ///
+  /// @param errorProperties 错误配置属性
+  /// @param mappingContributors 错误映射贡献者列表
+
   public DefaultErrorResolutionEngine(
       ErrorProperties errorProperties, List<ErrorMappingContributor> mappingContributors) {
     String prefix = errorProperties.getContextPrefix();
@@ -65,16 +70,25 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
     this.namingHeuristicEnabled = errorProperties.getEngine().isEnableNamingHeuristic();
   }
 
+  /// 将异常解析为标准化的错误表示。
+  ///
+  /// @param exception 待解析的异常
+  /// @return 错误解析结果
   @Override
   public ErrorResolution resolve(Throwable exception) {
     if (exception == null) {
-      log.warn("接收到 null 异常，返回回退错误码", new IllegalStateException("Null 异常追踪"));
+      log.warn("接收到 null 异常,返回回退错误码", new IllegalStateException("Null 异常追踪"));
       return fallbackServerError();
     }
     return resolveWithCause(exception, 0);
   }
 
-  /// 递归解析异常，直到达到最大原因链深度。
+  /// 递归解析异常,直到达到最大原因链深度。
+  ///
+  /// @param exception 待解析的异常
+  /// @param depth 当前递归深度
+  /// @return 错误解析结果
+
   private ErrorResolution resolveWithCause(Throwable exception, int depth) {
     if (depth > maxCauseDepth) {
       log.warn("超过最大原因链深度 {} — 返回服务器错误", maxCauseDepth);
@@ -90,6 +104,10 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   }
 
   /// 尝试解析为 ApplicationException。
+  ///
+  /// @param exception 待解析的异常
+  /// @return 解析结果,如果不是 ApplicationException 则返回空
+
   private Optional<ErrorResolution> resolveAsApplicationException(Throwable exception) {
     if (exception instanceof ApplicationException appEx) {
       ErrorCodeLike errorCode = appEx.getErrorCode();
@@ -100,6 +118,10 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   }
 
   /// 尝试通过已注册的 ErrorMappingContributor 解析。
+  ///
+  /// @param exception 待解析的异常
+  /// @return 解析结果,如果没有匹配的贡献者则返回空
+
   private Optional<ErrorResolution> resolveViaContributors(Throwable exception) {
     for (ErrorMappingContributor contributor : mappingContributors) {
       try {
@@ -123,6 +145,10 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   }
 
   /// 尝试通过错误特征解析。
+  ///
+  /// @param exception 待解析的异常
+  /// @return 解析结果,如果没有匹配的特征则返回空
+
   private Optional<ErrorResolution> resolveViaTraits(Throwable exception) {
     if (!traitMappingEnabled || !(exception instanceof HasErrorTraits hasTraits)) {
       return Optional.empty();
@@ -142,6 +168,10 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   }
 
   /// 尝试通过类命名约定解析。
+  ///
+  /// @param exception 待解析的异常
+  /// @return 解析结果,如果没有匹配的命名模式则返回空
+
   private Optional<ErrorResolution> resolveViaNamingHeuristic(Throwable exception) {
     if (!namingHeuristicEnabled) {
       return Optional.empty();
@@ -157,6 +187,11 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   }
 
   /// 尝试通过递归进入异常原因解析。
+  ///
+  /// @param exception 待解析的异常
+  /// @param depth 当前递归深度
+  /// @return 解析结果,如果没有原因则返回空
+
   private Optional<ErrorResolution> resolveCause(Throwable exception, int depth) {
     Throwable cause = exception.getCause();
     if (cause != null && cause != exception) {
@@ -166,11 +201,19 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   }
 
   /// 为异常返回适当的回退解析。
+  ///
+  /// @param exception 待解析的异常
+  /// @return 回退错误解析(客户端错误 422 或服务器错误 500)
+
   private ErrorResolution fallbackForException(Throwable exception) {
     return isClientErrorLike(exception) ? createResolution("0422") : fallbackServerError();
   }
 
   /// 检查异常名称是否暗示客户端错误。
+  ///
+  /// @param exception 待检查的异常
+  /// @return 如果异常名称包含客户端错误关键字则返回 true
+
   private boolean isClientErrorLike(Throwable exception) {
     String className = exception.getClass().getSimpleName().toLowerCase();
     return className.contains("validation")
@@ -185,14 +228,18 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   }
 
   /// 返回 500 内部服务器错误解析。
+  ///
+  /// @return 500 错误解析
+
   private ErrorResolution fallbackServerError() {
     return createResolution("0500");
   }
 
   /// 从 HTTP 状态码后缀创建错误解析。
   ///
-  /// @param suffix HTTP 状态码（例如，"0404"、"0500"）
+  /// @param suffix HTTP 状态码(例如,"0404","0500")
   /// @return 应用了上下文前缀的错误解析
+
   private ErrorResolution createResolution(String suffix) {
     ErrorCodeLike code = SimpleErrorCode.create(contextPrefix, suffix);
     return new ErrorResolution(code, code.httpStatus());

@@ -35,6 +35,11 @@ public enum MediaType {
     this.description = description;
   }
 
+  /// 从代码值解析枚举（不区分大小写）。
+  ///
+  /// @param value 代码值（如 "print", "ELECTRONIC", "both"）
+  /// @return 对应的枚举值
+  /// @throws IllegalArgumentException 如果代码值无效
   public static MediaType fromCode(String value) {
     Assert.notBlank(value, "媒介类型代码不能为空");
     String normalized = value.trim().toLowerCase();

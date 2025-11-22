@@ -40,10 +40,16 @@ public class ExprModeProperties {
     return strict;
   }
 
+  /// 设置 STRICT 模式状态。
+  ///
+  /// @param strict 是否启用严格模式
   public void setStrict(boolean strict) {
     this.strict = strict;
   }
 
+  /// 获取 MULTI 基准键配置。
+  ///
+  /// @return MULTI 配置实例
   public Multi getMulti() {
     return multi;
   }
@@ -63,6 +69,9 @@ public class ExprModeProperties {
       return repeatEnabled;
     }
 
+    /// 设置重复参数发出的状态。
+    ///
+    /// @param repeatEnabled 是否启用重复策略
     public void setRepeatEnabled(boolean repeatEnabled) {
       this.repeatEnabled = repeatEnabled;
     }

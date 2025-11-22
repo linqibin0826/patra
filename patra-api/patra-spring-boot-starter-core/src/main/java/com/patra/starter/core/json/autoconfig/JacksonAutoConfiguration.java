@@ -36,6 +36,7 @@ public class JacksonAutoConfiguration {
   /// ObjectMapper。
   ///
   /// @return ObjectMapper 提供者实例
+
   @ConditionalOnMissingBean(ObjectMapperProvider.class)
   @Bean
   public ObjectMapperProvider jacksonProvider() {

@@ -1,57 +1,58 @@
 package com.patra.starter.expr.compiler.model;
 
-/// Common operation type constants that help callers avoid hardcoded strings.
+/// 常用操作类型常量，帮助调用者避免硬编码字符串。
 ///
-/// Operation types differentiate configuration slices for the same provenance in different
-/// business scenarios.
+/// 操作类型用于区分同一数据源在不同业务场景下的配置切片。
 ///
-/// **Usage example:**
+/// **使用示例**：
 ///
 /// ```java
 /// CompileRequest request = CompileRequestBuilder.of(expr, ProvenanceCode.PUBMED)
 ///     .forOperationType(OperationTypes.UPDATE)
 ///     .build();
 /// ```
+///
+/// @author linqibin
+/// @since 0.1.0
 public final class OperationTypes {
 
-  /// Initial full harvest, typically used for the first crawl or rebuilding large windows.
+  /// 初始全量采集，通常用于首次爬取或重建大型时间窗口。
   public static final String HARVEST = "HARVEST";
 
-  /// Historical backfill or remediation runs.
+  /// 历史回填或补救运行。
   public static final String BACKFILL = "BACKFILL";
 
-  /// Incremental updates used for regularly syncing new or changed data.
+  /// 增量更新，用于定期同步新数据或变更数据。
   ///
-  /// This is the most common operation type and often uses aggressive parameters to capture fresh
-  /// content.
+  /// 这是最常见的操作类型，通常使用激进的参数来捕获最新内容。
   public static final String UPDATE = "UPDATE";
 
-  /// Full synchronization covering the complete dataset.
+  /// 全量同步，覆盖完整数据集。
   ///
-  /// Often used for initialization or periodic refreshes that require special handling for large
-  /// data volumes.
+  /// 通常用于初始化或定期刷新，需要对大数据量进行特殊处理。
   public static final String FULL = "FULL";
 
-  /// Interactive search scenarios.
+  /// 交互式搜索场景。
   ///
-  /// Usually optimized for latency and may rely on different timeout or retry policies.
+  /// 通常针对延迟进行优化，可能依赖不同的超时或重试策略。
   public static final String SEARCH = "SEARCH";
 
-  /// Metric or analytical aggregations.
+  /// 指标或分析聚合。
   public static final String METRICS = "METRICS";
 
-  /// Monitoring or health-check operations with lightweight queries.
+  /// 监控或健康检查操作，使用轻量级查询。
   public static final String MONITOR = "MONITOR";
 
-  /// Data validation or quality assurance flows.
+  /// 数据验证或质量保证流程。
   public static final String VALIDATE = "VALIDATE";
 
-  /// Analytical operations that support complex investigation or reporting use cases.
+  /// 分析操作，支持复杂调查或报告用例。
   public static final String ANALYZE = "ANALYZE";
 
-  /// Bulk data export.
+  /// 批量数据导出。
   public static final String EXPORT = "EXPORT";
 
+  /// 私有构造函数，防止实例化工具类。
   private OperationTypes() {
     throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
   }

@@ -21,6 +21,7 @@ public interface ErrorObservationRecorder {
   /// @param resolution 解析产生的规范化错误
   /// @param durationMs 解析耗时(毫秒)
   /// @param slow 是否为慢解析(超过配置阈值)
+
   void recordResolution(
       Throwable exception, ErrorResolution resolution, long durationMs, boolean slow);
 
@@ -29,6 +30,7 @@ public interface ErrorObservationRecorder {
   /// 当熔断器打开时,记录降级响应而非执行完整的解析管道。
   ///
   /// @param exception 触发降级的原始异常
+
   void recordCircuitBreakerFallback(Throwable exception);
 
   /// 无操作实现,便于在禁用观测时进行依赖注入。
@@ -36,11 +38,19 @@ public interface ErrorObservationRecorder {
   /// 所有方法均为空实现,不执行任何观测记录逻辑。
   ErrorObservationRecorder NO_OP =
       new ErrorObservationRecorder() {
+        /// {@inheritDoc}
+        ///
+        /// 空实现,不执行任何操作。
+
         @Override
         public void recordResolution(
             Throwable exception, ErrorResolution resolution, long durationMs, boolean slow) {
           // 无操作
         }
+
+        /// {@inheritDoc}
+        ///
+        /// 空实现,不执行任何操作。
 
         @Override
         public void recordCircuitBreakerFallback(Throwable exception) {

@@ -29,6 +29,10 @@ public class WebConversionAutoConfiguration {
   public Converter<String, ProvenanceCode> provenanceCodeConverter() {
     log.info("注册 String-to-ProvenanceCode 转换器,用于请求参数绑定");
     return new Converter<String, ProvenanceCode>() {
+      /// 将字符串形式的数据源标识符转换为 {@link ProvenanceCode} 枚举值。
+      ///
+      /// @param source 数据源标识符字符串
+      /// @return 对应的 {@link ProvenanceCode},如果源为空则返回 null
       @Override
       public ProvenanceCode convert(String source) {
         if (!StringUtils.hasText(source)) {

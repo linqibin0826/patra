@@ -18,6 +18,13 @@ public record HttpConfig(
     Integer timeoutConnectMillis,
     Integer timeoutReadMillis,
     Integer timeoutTotalMillis) {
+
+  /// 规范构造器,强制执行 HTTP 配置的验证规则。
+  ///
+  /// 验证规则:
+  ///
+  /// - defaultHeaders 为 null 时自动填充空 Map
+  /// - defaultHeaders 自动转换为不可变 Map
   public HttpConfig {
     defaultHeaders = defaultHeaders == null ? Map.of() : Map.copyOf(defaultHeaders);
   }

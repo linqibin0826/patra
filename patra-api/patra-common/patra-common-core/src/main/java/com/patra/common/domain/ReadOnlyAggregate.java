@@ -24,12 +24,17 @@ public abstract class ReadOnlyAggregate<ID> implements Serializable {
   /// 聚合标识符。
   @Getter private final ID id;
 
-  protected ReadOnlyAggregate(ID id) {
-    this.id = Objects.requireNonNull(id, "聚合 ID 不能为 null");
-  }
-
+  /// 默认构造函数,用于反序列化或仓储重建(标识符为空)。
   protected ReadOnlyAggregate() {
     this.id = null;
+  }
+
+  /// 带标识符的构造函数,用于创建已持久化的聚合。
+  ///
+  /// @param id 聚合标识符,不能为 null
+  /// @throws NullPointerException 如果 id 为 null
+  protected ReadOnlyAggregate(ID id) {
+    this.id = Objects.requireNonNull(id, "聚合 ID 不能为 null");
   }
 
   /// 指示聚合是否为瞬态(标识符未分配)。

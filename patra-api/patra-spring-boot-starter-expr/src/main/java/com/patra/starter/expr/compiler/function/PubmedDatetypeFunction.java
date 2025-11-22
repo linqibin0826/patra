@@ -18,11 +18,13 @@ public class PubmedDatetypeFunction implements RenderFunction {
   private static final String CODE = "PUBMED_DATETYPE";
   private static final String DEFAULT_DATETYPE = "pdat";
 
+  /// {@inheritDoc}
   @Override
   public String code() {
     return CODE;
   }
 
+  /// {@inheritDoc}
   @Override
   public String apply(Map<String, String> placeholders, ProvenanceSnapshot snapshot) {
     // 从占位符中读取 fieldKey 以确定正确的 datetype

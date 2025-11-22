@@ -34,6 +34,11 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
   private final FeignErrorProperties properties;
   private final FeignErrorObservationRecorder observationRecorder;
 
+  /// 构造 ProblemDetail 错误解码器。
+  ///
+  /// @param objectMapper JSON 序列化器
+  /// @param properties Feign 错误配置属性
+  /// @param observationRecorder 观察记录器
   public ProblemDetailErrorDecoder(
       ObjectMapper objectMapper,
       FeignErrorProperties properties,
@@ -43,6 +48,13 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     this.observationRecorder = observationRecorder;
   }
 
+  /// 解码 Feign 错误响应为适当的异常。
+  ///
+  /// 尝试解析 ProblemDetail 格式的错误响应,在容错模式下优雅降级为通用错误包装。
+  ///
+  /// @param methodKey Feign 方法标识
+  /// @param response Feign 响应对象
+  /// @return 解码后的异常实例
   @Override
   public Exception decode(String methodKey, Response response) {
     DecodingState state = new DecodingState();
@@ -84,7 +96,7 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     }
   }
 
-  /// 尝试解码 ProblemDetail 响应
+  /// 尝试解码 ProblemDetail 响应。
   ///
   /// @param methodKey Feign 方法键
   /// @param response Feign 响应对象
@@ -116,7 +128,7 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     return new DecodingResult(bodyBuffer, false, null);
   }
 
-  /// 处理错误解码期间的异常,如启用则应用宽容模式
+  /// 处理错误解码期间的异常,如启用则应用宽容模式。
   ///
   /// @param methodKey Feign 方法键
   /// @param response Feign 响应对象
@@ -149,6 +161,14 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     return FeignException.errorStatus(methodKey, response);
   }
 
+  /// 在容错模式下处理错误响应。
+  ///
+  /// 创建包含降级信息的 RemoteCallException,尽可能提取跟踪标识符。
+  ///
+  /// @param methodKey Feign 方法键
+  /// @param response Feign 响应对象
+  /// @param bodyBuffer 响应体缓冲区
+  /// @return 容错模式下的远程调用异常
   private RemoteCallException handleTolerantMode(
       String methodKey, Response response, BodyBuffer bodyBuffer) {
     TraceExtraction traceExtraction = extractTraceId(response);
@@ -160,6 +180,10 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
         response.status(), message, methodKey, traceExtraction.traceId());
   }
 
+  /// 解析响应体缓冲区为 ProblemDetail 对象。
+  ///
+  /// @param bodyBuffer 响应体缓冲区
+  /// @return ProblemDetail 解析结果,包含解析耗时和成功状态
   private ParsingResult parseProblemDetail(BodyBuffer bodyBuffer) {
     if (bodyBuffer == null || bodyBuffer.content() == null || bodyBuffer.content().isBlank()) {
       return new ParsingResult(null, 0L, false);
@@ -179,6 +203,14 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     }
   }
 
+  /// 读取 Feign 响应体到内存缓冲区。
+  ///
+  /// 限制最大读取大小以防止内存耗尽,超过限制时截断响应体。
+  ///
+  /// @param methodKey Feign 方法键
+  /// @param response Feign 响应对象
+  /// @return 响应体缓冲区,包含内容、大小和截断状态
+  /// @throws IOException 读取响应体失败时抛出
   private BodyBuffer readResponseBody(String methodKey, Response response) throws IOException {
     if (response.body() == null) {
       return BodyBuffer.empty();
@@ -200,6 +232,13 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     return new BodyBuffer(content, effectiveLength, truncated);
   }
 
+  /// 构建降级错误消息。
+  ///
+  /// 优先级:响应原因短语 > 响应体内容(截断为 200 字符) > 默认 HTTP 状态码消息。
+  ///
+  /// @param response Feign 响应对象
+  /// @param bodyBuffer 响应体缓冲区
+  /// @return 降级错误消息
   private String buildFallbackMessage(Response response, BodyBuffer bodyBuffer) {
     String reason = response.reason();
     if (reason != null && !reason.isBlank()) {
@@ -217,6 +256,12 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     return "HTTP " + response.status();
   }
 
+  /// 从响应头中提取跟踪标识符。
+  ///
+  /// 按优先级尝试多个常见的跟踪头:traceId, X-B3-TraceId, traceparent, X-Trace-Id。
+  ///
+  /// @param response Feign 响应对象
+  /// @return 跟踪标识符提取结果,包含 trace ID 和所在的响应头名称
   private TraceExtraction extractTraceId(Response response) {
     String[] headers = {"traceId", "X-B3-TraceId", "traceparent", "X-Trace-Id"};
     for (String header : headers) {
@@ -231,6 +276,10 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     return new TraceExtraction(null, null);
   }
 
+  /// 获取响应的 Content-Type 头。
+  ///
+  /// @param response Feign 响应对象
+  /// @return Content-Type 值,不存在时返回 null
   private String getContentType(Response response) {
     Collection<String> contentTypes = response.headers().get("content-type");
     if (contentTypes == null || contentTypes.isEmpty()) {
@@ -242,24 +291,46 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     return null;
   }
 
+  /// 判断响应是否为 ProblemDetail 格式。
+  ///
+  /// @param contentType Content-Type 头值
+  /// @return 如果是 application/problem+json 则返回 true
   private boolean isProblemDetailResponse(String contentType) {
     return contentType != null && contentType.toLowerCase().contains("application/problem+json");
   }
 
-  /// 持有响应体内容和元数据
+  /// 持有响应体内容和元数据。
+  ///
+  /// @param content 响应体文本内容
+  /// @param length 响应体长度(字节)
+  /// @param truncated 是否被截断
   private record BodyBuffer(String content, int length, boolean truncated) {
+    /// 创建空的响应体缓冲区。
+    ///
+    /// @return 空缓冲区实例
     static BodyBuffer empty() {
       return new BodyBuffer(null, 0, false);
     }
   }
 
-  /// ProblemDetail 解析操作结果
+  /// ProblemDetail 解析操作结果。
+  ///
+  /// @param problemDetail 解析后的 ProblemDetail 对象,失败时为 null
+  /// @param durationMs 解析耗时(毫秒)
+  /// @param success 是否解析成功
   private record ParsingResult(ProblemDetail problemDetail, long durationMs, boolean success) {}
 
-  /// 跟踪标识符提取结果
+  /// 跟踪标识符提取结果。
+  ///
+  /// @param traceId 提取的跟踪标识符,未找到时为 null
+  /// @param headerName 跟踪标识符所在的响应头名称,未找到时为 null
   private record TraceExtraction(String traceId, String headerName) {}
 
-  /// ProblemDetail 解码操作结果
+  /// ProblemDetail 解码操作结果。
+  ///
+  /// @param bodyBuffer 响应体缓冲区
+  /// @param success 解码是否成功
+  /// @param exception 解码成功时构造的异常,失败时为 null
   private record DecodingResult(BodyBuffer bodyBuffer, boolean success, Exception exception) {}
 
   /// 用于跟踪解码进度的可变状态持有者

@@ -34,6 +34,9 @@ public class ExprMetrics {
     this(null);
   }
 
+  /// 私有构造函数。
+  ///
+  /// @param meterRegistry Micrometer 注册表（可选，null 时创建空操作实例）
   private ExprMetrics(MeterRegistry meterRegistry) {
     this.meterRegistry = meterRegistry;
   }
@@ -54,6 +57,10 @@ public class ExprMetrics {
     return NO_OP;
   }
 
+  /// 记录渲染规则命中。
+  ///
+  /// @param provenance 数据源代码
+  /// @param endpoint 端点名称
   public void renderRuleHit(String provenance, String endpoint) {
     if (disabled()) {
       return;
@@ -61,6 +68,10 @@ public class ExprMetrics {
     counter("expr.render.rule_hits", provenance, endpoint).increment();
   }
 
+  /// 记录渲染规则未命中。
+  ///
+  /// @param provenance 数据源代码
+  /// @param endpoint 端点名称
   public void renderRuleMiss(String provenance, String endpoint) {
     if (disabled()) {
       return;
@@ -68,6 +79,10 @@ public class ExprMetrics {
     counter("expr.render.rule_miss", provenance, endpoint).increment();
   }
 
+  /// 记录参数映射命中。
+  ///
+  /// @param provenance 数据源代码
+  /// @param endpoint 端点名称
   public void paramMapHit(String provenance, String endpoint) {
     if (disabled()) {
       return;
@@ -75,6 +90,10 @@ public class ExprMetrics {
     counter("expr.param.map_hit", provenance, endpoint).increment();
   }
 
+  /// 记录参数映射未命中。
+  ///
+  /// @param provenance 数据源代码
+  /// @param endpoint 端点名称
   public void paramMapMiss(String provenance, String endpoint) {
     if (disabled()) {
       return;
@@ -82,6 +101,11 @@ public class ExprMetrics {
     counter("expr.param.map_miss", provenance, endpoint).increment();
   }
 
+  /// 记录变换已应用。
+  ///
+  /// @param provenance 数据源代码
+  /// @param endpoint 端点名称
+  /// @param transformCode 变换代码
   public void transformApplied(String provenance, String endpoint, String transformCode) {
     if (disabled()) {
       return;
@@ -94,6 +118,9 @@ public class ExprMetrics {
         .increment();
   }
 
+  /// 记录编译错误。
+  ///
+  /// @param code 错误代码
   public void compileError(String code) {
     if (disabled()) {
       return;
@@ -104,6 +131,11 @@ public class ExprMetrics {
         .increment();
   }
 
+  /// 记录编译耗时。
+  ///
+  /// @param provenance 数据源代码
+  /// @param endpoint 端点名称
+  /// @param durationMillis 耗时（毫秒）
   public void compileDuration(String provenance, String endpoint, long durationMillis) {
     if (disabled() || durationMillis < 0) {
       return;
@@ -116,6 +148,12 @@ public class ExprMetrics {
         .record(durationMillis);
   }
 
+  /// 创建计数器。
+  ///
+  /// @param name 指标名称
+  /// @param provenance 数据源代码
+  /// @param endpoint 端点名称
+  /// @return 计数器实例
   private Counter counter(String name, String provenance, String endpoint) {
     return Counter.builder(name)
         .tag("provenance", safeTag(provenance))
@@ -123,10 +161,17 @@ public class ExprMetrics {
         .register(meterRegistry);
   }
 
+  /// 检查指标记录是否被禁用。
+  ///
+  /// @return 如果未配置注册表则返回 true
   private boolean disabled() {
     return meterRegistry == null;
   }
 
+  /// 安全处理标签值。
+  ///
+  /// @param value 标签值
+  /// @return 处理后的标签值（null 或空白时返回 "UNKNOWN"）
   private String safeTag(String value) {
     return value == null || value.isBlank() ? "UNKNOWN" : value;
   }

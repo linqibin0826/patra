@@ -9,12 +9,20 @@ import com.patra.starter.expr.compiler.snapshot.convert.SnapshotAssembler;
 import java.util.Objects;
 
 /// 基于 Registry 的快照加载器，将 DTO→领域对象转换委托给专用组装器。
+///
+/// @author linqibin
+/// @since 0.1.0
 public class RegistryRuleSnapshotLoader implements RuleSnapshotLoader {
 
   private final ProvenanceClient provenanceClient;
   private final ExprClient exprClient;
   private final SnapshotAssembler snapshotAssembler;
 
+  /// 构造 Registry 快照加载器。
+  ///
+  /// @param provenanceClient 数据源客户端（必需，非空）
+  /// @param exprClient 表达式客户端（必需，非空）
+  /// @param snapshotAssembler 快照组装器（必需，非空）
   public RegistryRuleSnapshotLoader(
       ProvenanceClient provenanceClient,
       ExprClient exprClient,

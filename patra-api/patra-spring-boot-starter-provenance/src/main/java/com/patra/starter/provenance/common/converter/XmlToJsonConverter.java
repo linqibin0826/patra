@@ -26,6 +26,12 @@ public class XmlToJsonConverter {
   private final ObjectMapper jsonMapper;
 
   /// 创建带有宽容 XML 和 JSON 映射器的转换器
+  ///
+  /// 配置说明：
+  ///
+  /// - 禁用未知属性失败
+  /// - 启用单值作为数组处理
+  /// - XML 禁用默认包装器
   public XmlToJsonConverter() {
     this.xmlMapper = XmlMapper.builder().defaultUseWrapper(false).build();
     xmlMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);

@@ -100,6 +100,29 @@ public class TaskAggregate extends AggregateRoot<Long> {
   /// 随任务传播的调度器上下文。
   private TaskSchedulerContext schedulerContext;
 
+  /// 私有构造函数，用于内部对象构建和重建。
+  ///
+  /// 通过静态工厂方法 {@link #create} 或 {@link #restore} 创建实例。
+  ///
+  /// @param id 任务标识
+  /// @param scheduleInstanceId 调度实例标识
+  /// @param planId 所属计划标识
+  /// @param sliceId 所属切片标识
+  /// @param provenanceCode 数据来源代码
+  /// @param operationCode 操作代码
+  /// @param paramsJson 任务参数载荷
+  /// @param idempotentKey 幂等键
+  /// @param exprHash 表达式哈希
+  /// @param priority 调度优先级
+  /// @param scheduledAt 计划执行时间
+  /// @param lastHeartbeatAt 最后心跳时间戳
+  /// @param retryCount 重试次数
+  /// @param lastErrorCode 最近错误代码
+  /// @param lastErrorMsg 最近错误消息
+  /// @param status 当前任务状态
+  /// @param leaseInfo 租约信息
+  /// @param executionTimeline 执行时间线
+  /// @param schedulerContext 调度器上下文
   private TaskAggregate(
       Long id,
       Long scheduleInstanceId,
@@ -258,6 +281,30 @@ public class TaskAggregate extends AggregateRoot<Long> {
     return aggregate;
   }
 
+  /// 私有辅助方法，创建重建的任务实例（不分配版本）。
+  ///
+  /// 用于分离对象构建和版本分配逻辑。
+  ///
+  /// @param id 任务标识
+  /// @param scheduleInstanceId 调度实例标识
+  /// @param planId 所属计划标识
+  /// @param sliceId 所属切片标识
+  /// @param provenanceCode 数据来源代码
+  /// @param operationCode 操作代码
+  /// @param paramsJson 任务参数载荷
+  /// @param idempotentKey 幂等键
+  /// @param exprHash 表达式哈希
+  /// @param priority 调度优先级
+  /// @param scheduledAt 计划执行时间
+  /// @param lastHeartbeatAt 最后心跳时间戳
+  /// @param retryCount 重试次数
+  /// @param lastErrorCode 最近错误代码
+  /// @param lastErrorMsg 最近错误消息
+  /// @param status 当前任务状态
+  /// @param leaseInfo 租约信息
+  /// @param executionTimeline 执行时间线
+  /// @param schedulerContext 调度器上下文
+  /// @return 重建的任务实例（不含版本）
   private static TaskAggregate createRestoredInstance(
       Long id,
       Long scheduleInstanceId,

@@ -10,7 +10,12 @@ import java.util.Objects;
 /// @param objectKey 存储桶内的对象键路径(不能为空)
 public record StorageKey(String bucket, String objectKey) {
 
-  /// 创建新的存储键并验证必需部分。
+  /// 规范构造器,强制执行存储键的验证规则。
+  ///
+  /// 验证规则:
+  ///
+  /// - 存储桶名称不能为空
+  ///   - 对象键不能为空
   ///
   /// @throws IllegalArgumentException 如果存储桶或对象键为空
   public StorageKey {

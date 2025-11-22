@@ -53,12 +53,20 @@ public class StorageEndpointImpl implements StorageEndpoint {
     return new RecordUploadResponse(result.metadataId(), result.recordedAt());
   }
 
+  /// 获取当前HTTP请求对象。
+  ///
+  /// @return 当前请求的 HttpServletRequest
   private HttpServletRequest getCurrentRequest() {
     ServletRequestAttributes attributes =
         (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
     return attributes.getRequest();
   }
 
+  /// 构建记录上传命令。
+  ///
+  /// @param request 上传记录请求
+  /// @param httpRequest HTTP请求对象
+  /// @return 记录上传命令
   private RecordUploadCommand buildCommand(
       UploadRecordRequest request, HttpServletRequest httpRequest) {
     return new RecordUploadCommand(
@@ -78,6 +86,10 @@ public class StorageEndpointImpl implements StorageEndpoint {
         request.recordRemarks());
   }
 
+  /// 解析客户端IP地址。
+  ///
+  /// @param request HTTP请求对象
+  /// @return IP地址的字节数组表示,解析失败时返回null
   private byte[] resolveIp(HttpServletRequest request) {
     String header = request.getHeader("X-Forwarded-For");
     String source = header != null ? header.split(",")[0].trim() : request.getRemoteAddr();

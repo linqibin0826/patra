@@ -62,6 +62,10 @@ import org.springframework.context.annotation.Bean;
 @EnableConfigurationProperties({CompilerProperties.class, ExprModeProperties.class})
 public class ExprCompilerAutoConfiguration {
 
+  /// 创建快照组装器 Bean。
+  ///
+  /// @param objectMapper Jackson ObjectMapper 实例
+  /// @return 快照组装器实例
   @Bean
   @ConditionalOnMissingBean(RuleSnapshotLoader.class)
   @ConditionalOnProperty(
@@ -73,6 +77,12 @@ public class ExprCompilerAutoConfiguration {
     return new SnapshotAssembler(objectMapper);
   }
 
+  /// 创建基于 Registry 的规则快照加载器 Bean。
+  ///
+  /// @param provenanceClient Provenance API 客户端
+  /// @param exprClient 表达式 API 客户端
+  /// @param snapshotAssembler 快照组装器
+  /// @return 规则快照加载器实例
   @Bean
   @ConditionalOnMissingBean(RuleSnapshotLoader.class)
   @ConditionalOnClass(
@@ -92,18 +102,28 @@ public class ExprCompilerAutoConfiguration {
     return new RegistryRuleSnapshotLoader(provenanceClient, exprClient, snapshotAssembler);
   }
 
+  /// 创建默认能力检查器 Bean。
+  ///
+  /// @return 能力检查器实例
   @Bean
   @ConditionalOnMissingBean(CapabilityChecker.class)
   public CapabilityChecker capabilityChecker() {
     return new DefaultCapabilityChecker();
   }
 
+  /// 创建默认表达式标准化器 Bean。
+  ///
+  /// @return 表达式标准化器实例
   @Bean
   @ConditionalOnMissingBean(ExprNormalizer.class)
   public ExprNormalizer exprNormalizer() {
     return new DefaultExprNormalizer();
   }
 
+  /// 创建表达式编译指标收集器 Bean。
+  ///
+  /// @param meterRegistryProvider Micrometer MeterRegistry 提供器
+  /// @return 表达式指标实例
   @Bean
   @ConditionalOnMissingBean(ExprMetrics.class)
   public ExprMetrics exprMetrics(ObjectProvider<MeterRegistry> meterRegistryProvider) {
@@ -111,6 +131,11 @@ public class ExprCompilerAutoConfiguration {
     return registry != null ? ExprMetrics.of(registry) : ExprMetrics.noop();
   }
 
+  /// 创建默认表达式渲染器 Bean。
+  ///
+  /// @param functionRegistry 函数注册表
+  /// @param exprMetrics 表达式指标收集器
+  /// @return 表达式渲染器实例
   @Bean
   @ConditionalOnMissingBean(ExprRenderer.class)
   @ConditionalOnBean(FunctionRegistry.class)
@@ -118,6 +143,17 @@ public class ExprCompilerAutoConfiguration {
     return new DefaultExprRenderer(functionRegistry, exprMetrics);
   }
 
+  /// 创建默认表达式编译器 Bean。
+  ///
+  /// @param loader 规则快照加载器
+  /// @param checker 能力检查器
+  /// @param normalizer 表达式标准化器
+  /// @param renderer 表达式渲染器
+  /// @param transformRegistry 值转换注册表
+  /// @param compilerProperties 编译器配置属性
+  /// @param modeProperties 模式配置属性
+  /// @param exprMetrics 表达式指标收集器
+  /// @return 表达式编译器实例
   @Bean
   @ConditionalOnMissingBean(ExprCompiler.class)
   @ConditionalOnBean({

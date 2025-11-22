@@ -101,7 +101,7 @@ public enum DataType {
 
   // ========== 构造函数 ==========
 
-  /// 构造函数
+  /// 构造数据类型枚举常量。
   ///
   /// @param code 类型代码
   /// @param description 中文描述
@@ -264,6 +264,10 @@ public enum DataType {
   ///
   /// TODO: 后续由实际的 PublicationFulltext 领域模型替换
   public static class PublicationFulltext {
+
+    /// 私有构造函数,防止占位符类实例化。
+    ///
+    /// @throws AssertionError 总是抛出，因为占位符类不应被实例化
     private PublicationFulltext() {
       throw new AssertionError("占位符类，不应实例化");
     }
@@ -273,6 +277,10 @@ public enum DataType {
   ///
   /// TODO: 后续由实际的 Journal 领域模型替换
   public static class Journal {
+
+    /// 私有构造函数,防止占位符类实例化。
+    ///
+    /// @throws AssertionError 总是抛出，因为占位符类不应被实例化
     private Journal() {
       throw new AssertionError("占位符类，不应实例化");
     }
@@ -282,6 +290,10 @@ public enum DataType {
   ///
   /// TODO: 后续由实际的 JournalMetrics 领域模型替换
   public static class JournalMetrics {
+
+    /// 私有构造函数,防止占位符类实例化。
+    ///
+    /// @throws AssertionError 总是抛出，因为占位符类不应被实例化
     private JournalMetrics() {
       throw new AssertionError("占位符类，不应实例化");
     }
@@ -291,6 +303,10 @@ public enum DataType {
   ///
   /// TODO: 后续由实际的 Citation 领域模型替换
   public static class Citation {
+
+    /// 私有构造函数,防止占位符类实例化。
+    ///
+    /// @throws AssertionError 总是抛出，因为占位符类不应被实例化
     private Citation() {
       throw new AssertionError("占位符类，不应实例化");
     }
@@ -300,6 +316,10 @@ public enum DataType {
   ///
   /// TODO: 后续由实际的 Reference 领域模型替换
   public static class Reference {
+
+    /// 私有构造函数,防止占位符类实例化。
+    ///
+    /// @throws AssertionError 总是抛出，因为占位符类不应被实例化
     private Reference() {
       throw new AssertionError("占位符类，不应实例化");
     }
@@ -309,6 +329,10 @@ public enum DataType {
   ///
   /// TODO: 后续由实际的 Drug 领域模型替换
   public static class Drug {
+
+    /// 私有构造函数,防止占位符类实例化。
+    ///
+    /// @throws AssertionError 总是抛出，因为占位符类不应被实例化
     private Drug() {
       throw new AssertionError("占位符类，不应实例化");
     }
@@ -318,6 +342,10 @@ public enum DataType {
   ///
   /// TODO: 后续由实际的 DrugInteraction 领域模型替换
   public static class DrugInteraction {
+
+    /// 私有构造函数,防止占位符类实例化。
+    ///
+    /// @throws AssertionError 总是抛出，因为占位符类不应被实例化
     private DrugInteraction() {
       throw new AssertionError("占位符类，不应实例化");
     }
@@ -327,6 +355,10 @@ public enum DataType {
   ///
   /// TODO: 后续由实际的 Author 领域模型替换
   public static class Author {
+
+    /// 私有构造函数,防止占位符类实例化。
+    ///
+    /// @throws AssertionError 总是抛出，因为占位符类不应被实例化
     private Author() {
       throw new AssertionError("占位符类，不应实例化");
     }
@@ -336,6 +368,10 @@ public enum DataType {
   ///
   /// TODO: 后续由实际的 Affiliation 领域模型替换
   public static class Affiliation {
+
+    /// 私有构造函数,防止占位符类实例化。
+    ///
+    /// @throws AssertionError 总是抛出，因为占位符类不应被实例化
     private Affiliation() {
       throw new AssertionError("占位符类，不应实例化");
     }

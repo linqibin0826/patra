@@ -19,6 +19,7 @@ import java.util.List;
 ///
 /// 提供了便捷的方法来构建表达式树，而无需直接实例化记录类。所有方法都执行验证并返回不可变表达式节点。
 public final class Exprs {
+  /// 私有构造函数,防止实例化工具类。
   private Exprs() {}
 
   /// 返回常量 TRUE 表达式。
@@ -241,6 +242,10 @@ public final class Exprs {
     return ExprJsonCodec.fromJson(json);
   }
 
+  /// 将布尔值转换为边界类型。
+  ///
+  /// @param inclusive true 表示闭区间，false 表示开区间
+  /// @return 边界类型
   private static Boundary toBoundary(boolean inclusive) {
     return inclusive ? Boundary.CLOSED : Boundary.OPEN;
   }

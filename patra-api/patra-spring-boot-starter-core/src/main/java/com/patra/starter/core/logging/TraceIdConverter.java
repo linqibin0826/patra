@@ -21,6 +21,12 @@ public class TraceIdConverter extends ClassicConverter {
 
   private static final String EMPTY_TRACE_ID = "N/A";
 
+  /// 将日志事件转换为 SkyWalking 追踪 ID 字符串。
+  ///
+  /// 从 SkyWalking 追踪 ID(格式: traceId.segmentId.spanId)中提取 traceId 部分。
+  ///
+  /// @param event 日志事件
+  /// @return 追踪 ID,如果不可用则返回 "N/A"
   @Override
   public String convert(ILoggingEvent event) {
     try {

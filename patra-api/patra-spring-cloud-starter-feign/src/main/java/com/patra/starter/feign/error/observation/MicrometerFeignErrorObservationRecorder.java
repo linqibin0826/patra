@@ -31,12 +31,24 @@ public class MicrometerFeignErrorObservationRecorder implements FeignErrorObserv
   private final MeterRegistry meterRegistry;
   private final FeignErrorProperties.ObservationProperties observationProperties;
 
+  /// 构造基于 Micrometer 的观察记录器。
+  ///
+  /// @param meterRegistry Micrometer 指标注册表
+  /// @param properties Feign 错误配置属性
   public MicrometerFeignErrorObservationRecorder(
       MeterRegistry meterRegistry, FeignErrorProperties properties) {
     this.meterRegistry = meterRegistry;
     this.observationProperties = properties.getObservation();
   }
 
+  /// 记录 ProblemDetail 解析的性能和结果。
+  ///
+  /// 使用 Timer 指标记录解析耗时,当超过慢解析阈值时记录警告日志。
+  ///
+  /// @param methodKey Feign 方法标识
+  /// @param status HTTP 状态码
+  /// @param durationMs 解析耗时(毫秒)
+  /// @param success 是否解析成功
   @Override
   public void recordProblemDetailParsing(
       String methodKey, int status, long durationMs, boolean success) {
@@ -65,6 +77,14 @@ public class MicrometerFeignErrorObservationRecorder implements FeignErrorObserv
     }
   }
 
+  /// 记录错误解码的结果和容错模式使用情况。
+  ///
+  /// 使用 Counter 指标统计解码成功率和容错模式触发次数。
+  ///
+  /// @param methodKey Feign 方法标识
+  /// @param status HTTP 状态码
+  /// @param success 解码是否成功
+  /// @param tolerantMode 是否使用了容错模式
   @Override
   public void recordDecodingOutcome(
       String methodKey, int status, boolean success, boolean tolerantMode) {
@@ -81,6 +101,14 @@ public class MicrometerFeignErrorObservationRecorder implements FeignErrorObserv
     }
   }
 
+  /// 记录响应体读取的性能和截断情况。
+  ///
+  /// 使用 Timer 指标记录读取耗时,当超过慢读取阈值时记录警告日志。
+  ///
+  /// @param methodKey Feign 方法标识
+  /// @param bodySize 响应体大小(字节)
+  /// @param durationMs 读取耗时(毫秒)
+  /// @param truncated 是否被截断
   @Override
   public void recordResponseBodyRead(
       String methodKey, int bodySize, long durationMs, boolean truncated) {
@@ -101,6 +129,13 @@ public class MicrometerFeignErrorObservationRecorder implements FeignErrorObserv
     }
   }
 
+  /// 记录跟踪标识符提取的结果。
+  ///
+  /// 使用 Counter 指标统计跟踪标识符的提取成功率和使用的响应头类型。
+  ///
+  /// @param methodKey Feign 方法标识
+  /// @param found 是否找到跟踪标识符
+  /// @param headerName 跟踪标识符所在的响应头名称,未找到时为 null
   @Override
   public void recordTraceIdExtraction(String methodKey, boolean found, String headerName) {
     Counter.builder("patra.feign.error.traceid")

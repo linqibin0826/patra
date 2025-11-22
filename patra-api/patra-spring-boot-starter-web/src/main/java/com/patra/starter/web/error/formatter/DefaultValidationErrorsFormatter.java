@@ -36,6 +36,10 @@ public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatt
           "card",
           "account");
 
+  /// 格式化验证错误并掩码敏感字段值。
+  ///
+  /// @param bindingResult Spring 验证绑定结果
+  /// @return 格式化并掩码后的验证错误列表
   @Override
   public List<ValidationError> formatWithMasking(BindingResult bindingResult) {
     log.debug("Formatting validation errors: errorCount={}", bindingResult.getErrorCount());

@@ -10,7 +10,12 @@ import java.util.Locale;
 /// @param sha256Hash 可选的SHA-256摘要(十六进制编码)
 public record FileChecksum(String md5Hash, String sha256Hash) {
 
-  /// 创建校验和,确保至少提供一个哈希值。
+  /// 规范构造器,强制执行校验和的验证规则。
+  ///
+  /// 验证规则:
+  ///
+  /// - 至少提供MD5或SHA-256哈希值之一
+  ///   - 哈希值会被标准化为小写形式
   ///
   /// @throws IllegalArgumentException 如果MD5和SHA-256哈希都未提供
   public FileChecksum {
@@ -21,10 +26,18 @@ public record FileChecksum(String md5Hash, String sha256Hash) {
     sha256Hash = normalize(sha256Hash);
   }
 
+  /// 检查字符串是否为空白。
+  ///
+  /// @param value 待检查的字符串
+  /// @return 如果字符串为null或空白则返回true
   private static boolean isBlank(String value) {
     return value == null || value.isBlank();
   }
 
+  /// 标准化哈希值为小写形式。
+  ///
+  /// @param value 原始哈希值
+  /// @return 小写的哈希值,如果输入为null则返回null
   private static String normalize(String value) {
     return value == null ? null : value.trim().toLowerCase(Locale.ENGLISH);
   }

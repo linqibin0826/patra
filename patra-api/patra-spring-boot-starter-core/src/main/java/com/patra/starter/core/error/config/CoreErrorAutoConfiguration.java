@@ -58,6 +58,7 @@ public class CoreErrorAutoConfiguration {
   ///
   /// @param tracingProperties 追踪配置属性
   /// @return 基于 Header 的追踪上下文提取器
+
   @Bean
   @ConditionalOnMissingBean
   public TraceProvider defaultTraceProvider(TracingProperties tracingProperties) {
@@ -75,6 +76,7 @@ public class CoreErrorAutoConfiguration {
   /// @param errorProperties 错误配置属性
   /// @param meterRegistryProvider Micrometer 指标注册表提供者
   /// @return 错误观测记录器实例
+
   @Bean
   @ConditionalOnMissingBean
   public ErrorObservationRecorder errorObservationRecorder(
@@ -98,6 +100,7 @@ public class CoreErrorAutoConfiguration {
   /// @param errorProperties 错误配置属性
   /// @param mappingContributors 错误映射贡献者列表(SPI 扩展点)
   /// @return 错误解析引擎实例
+
   @Bean
   @ConditionalOnMissingBean
   public ErrorResolutionEngine errorResolutionEngine(
@@ -132,6 +135,7 @@ public class CoreErrorAutoConfiguration {
   /// @param engine 错误解析引擎
   /// @param interceptorsProvider 拦截器提供者,自动收集所有 {@link ResolutionInterceptor} Bean
   /// @return 错误解析管道实例
+
   @Bean
   public ErrorResolutionPipeline errorResolutionPipeline(
       ErrorResolutionEngine engine, ObjectProvider<ResolutionInterceptor> interceptorsProvider) {
@@ -147,6 +151,7 @@ public class CoreErrorAutoConfiguration {
   /// @param observationRecorder 错误观测记录器
   /// @param errorProperties 错误配置属性
   /// @return 指标拦截器实例
+
   @Bean
   @ConditionalOnProperty(
       prefix = "patra.error.observation",
@@ -164,6 +169,7 @@ public class CoreErrorAutoConfiguration {
   ///
   /// @param traceProvider 追踪上下文提取器
   /// @return 追踪拦截器实例
+
   @Bean
   @ConditionalOnMissingBean
   public TracingInterceptor tracingInterceptor(TraceProvider traceProvider) {

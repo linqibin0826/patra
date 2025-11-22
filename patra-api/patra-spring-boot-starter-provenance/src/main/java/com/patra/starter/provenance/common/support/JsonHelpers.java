@@ -20,6 +20,7 @@ import java.util.List;
 /// @since 0.1.0
 public final class JsonHelpers {
 
+  /// 私有构造函数,防止实例化工具类。
   private JsonHelpers() {}
 
   /// 从节点中提取文本值，容忍PubMed/EPMC的特殊结构

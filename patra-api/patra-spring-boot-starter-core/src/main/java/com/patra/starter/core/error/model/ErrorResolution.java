@@ -12,11 +12,15 @@ import com.patra.common.error.codes.ErrorCodeLike;
 /// @since 0.1.0
 public record ErrorResolution(ErrorCodeLike errorCode, int httpStatus) {
 
-  /// 验证构造函数参数。
+  /// 规范构造器,强制执行错误解析结果的验证规则。
   ///
-  /// @param errorCode 解析后的错误码(永不为 `null`)
-  /// @param httpStatus HTTP 状态码,范围必须在 100–599 之间
-  /// @throws IllegalArgumentException 如果错误码为 null 或 HTTP 状态码不在有效范围内
+  /// 验证规则:
+  ///
+  /// - 错误码不能为 null
+  ///   - HTTP 状态码必须在 100–599 之间
+  ///
+  /// @throws IllegalArgumentException 如果验证失败
+
   public ErrorResolution {
     if (errorCode == null) {
       throw new IllegalArgumentException("错误码不能为 null");
