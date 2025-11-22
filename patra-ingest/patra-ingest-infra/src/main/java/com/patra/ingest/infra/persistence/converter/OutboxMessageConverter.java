@@ -6,7 +6,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
-/** Outbox 消息转换器：应用层值对象 ↔ 持久化数据对象。 */
+/// Outbox 消息转换器：应用层值对象 ↔ 持久化数据对象。
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface OutboxMessageConverter {
 

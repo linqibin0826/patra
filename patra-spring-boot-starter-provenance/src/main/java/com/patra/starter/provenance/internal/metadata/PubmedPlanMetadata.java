@@ -2,25 +2,19 @@ package com.patra.starter.provenance.internal.metadata;
 
 import com.patra.common.enums.ProvenanceCode;
 
-/**
- * PubMed 特定的计划元数据
- *
- * <p>包含 PubMed ESearch API 返回的特定信息:
- *
- * <ul>
- *   <li>webEnv - History Server 会话令牌
- *   <li>queryKey - 查询键,与 webEnv 配对使用
- * </ul>
- *
- * <p>业务约束:
- *
- * <ul>
- *   <li>webEnv 和 queryKey 必须同时存在或同时为空
- * </ul>
- *
- * @author Patra Architecture Team
- * @since 0.2.0
- */
+/// PubMed 特定的计划元数据
+/// 
+/// 包含 PubMed ESearch API 返回的特定信息:
+/// 
+/// - webEnv - History Server 会话令牌
+///   - queryKey - 查询键,与 webEnv 配对使用
+/// 
+/// 业务约束:
+/// 
+/// - webEnv 和 queryKey 必须同时存在或同时为空
+/// 
+/// @author Patra Architecture Team
+/// @since 0.2.0
 public class PubmedPlanMetadata extends PlanMetadata {
 
   private final String webEnv;

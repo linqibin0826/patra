@@ -13,21 +13,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Outbox 中继用例的应用服务: 提供单批次发布的编排入口
- *
- * <p>执行流程:
- *
- * <ol>
- *   <li>检查功能开关 (禁用时返回空报告,避免调度器报错)
- *   <li>构建 {@link RelayPlan}
- *   <li>委托给执行器并收集 {@link RelayBatchResult}
- *   <li>发布领域事件用于审计和监控
- *   <li>组装并返回 {@link RelayReport}
- * </ol>
- *
- * 事务语义: 方法使用 {@code @Transactional} 注解 (单数据库写入原子性), 执行器在相同边界内更新消息状态。
- */
+/// Outbox 中继用例的应用服务: 提供单批次发布的编排入口
+/// 
+/// 执行流程:
+/// 
+/// 事务语义: 方法使用 `@Transactional` 注解 (单数据库写入原子性), 执行器在相同边界内更新消息状态。
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -38,14 +28,12 @@ public class OutboxRelayOrchestrator implements OutboxRelayUseCase {
   private final OutboxRelayExecutor relayExecutor;
   private final RelayEventPublisher eventPublisher;
 
-  /**
-   * 执行一轮中继任务。当功能开关关闭时,返回空报告以保持调度器健康。
-   *
-   * <p>支持针对特定通道或在 {@code instruction.channel()} 为 {@code null} 时处理所有通道。
-   *
-   * @param instruction 指令负载,允许可选的覆盖配置
-   * @return 执行报告
-   */
+  /// 执行一轮中继任务。当功能开关关闭时,返回空报告以保持调度器健康。
+/// 
+/// 支持针对特定通道或在 `instruction.channel()` 为 `null` 时处理所有通道。
+/// 
+/// @param instruction 指令负载,允许可选的覆盖配置
+/// @return 执行报告
   @Override
   @Transactional
   public RelayReport relay(OutboxRelayCommand instruction) {

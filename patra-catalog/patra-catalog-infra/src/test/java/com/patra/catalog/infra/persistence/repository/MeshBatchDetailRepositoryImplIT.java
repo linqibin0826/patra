@@ -21,31 +21,25 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * MeSH 批次详情仓储实现集成测试。
- *
- * <p>使用 @MybatisPlusTest + TestContainers（MySQL 8）测试批次查询操作。
- *
- * <p><b>测试策略</b>：
- *
- * <ul>
- *   <li>集成测试：使用真实 MySQL 数据库
- *   <li>测试隔离：每个测试方法独立，使用 @Transactional 自动回滚
- *   <li>TestContainers：自动启动和停止 MySQL 容器
- *   <li>测试覆盖：findFailedBatches()、countByStatus()
- * </ul>
- *
- * <p><b>重点测试场景</b>：
- *
- * <ul>
- *   <li>查询失败批次：验证返回所有状态为 FAILED 的批次
- *   <li>按状态计数：验证按状态统计批次数量
- *   <li>边界情况：无失败批次时返回空列表
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// MeSH 批次详情仓储实现集成测试。
+/// 
+/// 使用 @MybatisPlusTest + TestContainers（MySQL 8）测试批次查询操作。
+/// 
+/// **测试策略**：
+/// 
+/// - 集成测试：使用真实 MySQL 数据库
+///   - 测试隔离：每个测试方法独立，使用 @Transactional 自动回滚
+///   - TestContainers：自动启动和停止 MySQL 容器
+///   - 测试覆盖：findFailedBatches()、countByStatus()
+/// 
+/// **重点测试场景**：
+/// 
+/// - 查询失败批次：验证返回所有状态为 FAILED 的批次
+///   - 按状态计数：验证按状态统计批次数量
+///   - 边界情况：无失败批次时返回空列表
+/// 
+/// @author linqibin
+/// @since 0.2.0
 @MybatisPlusTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -179,15 +173,13 @@ class MeshBatchDetailRepositoryImplIT {
     assertThat(failedCount).isEqualTo(0L);
   }
 
-  /**
-   * 创建批次详情测试数据。
-   *
-   * @param importId 任务ID
-   * @param tableName 表名
-   * @param batchNum 批次号
-   * @param status 状态
-   * @return 批次详情DO
-   */
+  /// 创建批次详情测试数据。
+/// 
+/// @param importId 任务ID
+/// @param tableName 表名
+/// @param batchNum 批次号
+/// @param status 状态
+/// @return 批次详情DO
   private MeshBatchDetailDO createBatchDetail(
       Long importId, String tableName, Integer batchNum, String status) {
     MeshBatchDetailDO batchDetail = new MeshBatchDetailDO();

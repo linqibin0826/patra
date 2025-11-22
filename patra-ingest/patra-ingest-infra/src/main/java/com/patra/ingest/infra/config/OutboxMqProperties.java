@@ -15,11 +15,9 @@ import java.util.Set;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
-/**
- * 发件箱 MQ 发布属性配置。
- *
- * <p>约束发布器实现的装配,并在启动时执行快速失败验证。
- */
+/// 发件箱 MQ 发布属性配置。
+/// 
+/// 约束发布器实现的装配,并在启动时执行快速失败验证。
 @ConfigurationProperties(prefix = "patra.ingest.outbox")
 @Validated
 public class OutboxMqProperties {
@@ -32,49 +30,49 @@ public class OutboxMqProperties {
 
   private Set<String> allowedChannels = new LinkedHashSet<>();
 
-  /** 发送消息超时时间（毫秒），默认 3000ms */
+  /// 发送消息超时时间（毫秒），默认 3000ms
   @Min(100)
   @Max(60000)
   private int sendTimeout = 3000;
 
-  /** 同步发送失败重试次数，默认 2 次 */
+  /// 同步发送失败重试次数，默认 2 次
   @Min(0)
   @Max(10)
   private int retryTimesWhenSendFailed = 2;
 
-  /** 是否启用顺序消息（全局开关），默认 false */
+  /// 是否启用顺序消息（全局开关），默认 false
   private boolean enableOrderly = false;
 
-  /**
-   * 业务通道到 RocketMQ Topic 的映射表。
-   *
-   * <p>示例配置:
-   *
-   * <pre>
-   * patra:
-   *   ingest:
-   *     outbox:
-   *       channel-mapping:
-   *         TASK_READY: INGEST_TASK_READY
-   *         PUBLICATION_READY: INGEST_PUBLICATION_READY
-   * </pre>
-   *
-   * <p>如果未配置，则使用 RocketMqChannelMapper 中的默认映射。
-   */
+  /// 业务通道到 RocketMQ Topic 的映射表。
+/// 
+/// 示例配置:
+/// 
+/// ```
+/// 
+/// patra:
+///   ingest:
+///     outbox:
+///       channel-mapping:
+///         TASK_READY: INGEST_TASK_READY
+///         PUBLICATION_READY: INGEST_PUBLICATION_READY
+/// 
+/// ```
+/// 
+/// 如果未配置，则使用 RocketMqChannelMapper 中的默认映射。
   private Map<String, String> channelMapping = new LinkedHashMap<>();
 
-  /**
-   * Topic 前缀（用于多环境隔离）。
-   *
-   * <p>示例:
-   *
-   * <pre>
-   * patra:
-   *   ingest:
-   *     outbox:
-   *       topic-prefix: dev-   # 生成的 Topic: dev-INGEST_TASK_READY
-   * </pre>
-   */
+  /// Topic 前缀（用于多环境隔离）。
+/// 
+/// 示例:
+/// 
+/// ```
+/// 
+/// patra:
+///   ingest:
+///     outbox:
+///       topic-prefix: dev-   # 生成的 Topic: dev-INGEST_TASK_READY
+/// 
+/// ```
   private String topicPrefix = "";
 
   @PostConstruct

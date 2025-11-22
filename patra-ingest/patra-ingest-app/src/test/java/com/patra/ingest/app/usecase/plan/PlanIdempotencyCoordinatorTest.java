@@ -34,22 +34,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-/**
- * PlanIdempotencyCoordinator 单元测试。
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>✅ handleIdempotentPlanReuse() - 存在失败任务，需要重试
- *   <li>✅ handleIdempotentPlanReuse() - 无失败任务，直接返回现有状态
- *   <li>✅ handleIdempotentPlanReuse() - 多个失败任务批量重试
- *   <li>✅ 任务重试状态重置验证
- *   <li>✅ 重试事件发布验证
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// PlanIdempotencyCoordinator 单元测试。
+/// 
+/// 测试覆盖:
+/// 
+/// - ✅ handleIdempotentPlanReuse() - 存在失败任务，需要重试
+///   - ✅ handleIdempotentPlanReuse() - 无失败任务，直接返回现有状态
+///   - ✅ handleIdempotentPlanReuse() - 多个失败任务批量重试
+///   - ✅ 任务重试状态重置验证
+///   - ✅ 重试事件发布验证
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("PlanIdempotencyCoordinator 单元测试")
@@ -385,7 +381,7 @@ class PlanIdempotencyCoordinatorTest {
 
   // ==================== 辅助方法 ====================
 
-  /** 创建 Mock TaskAggregate。 */
+  /// 创建 Mock TaskAggregate。
   private TaskAggregate createMockTask(Long id, TaskStatus status) {
     TaskAggregate task = org.mockito.Mockito.mock(TaskAggregate.class);
     when(task.getId()).thenReturn(id);
@@ -393,7 +389,7 @@ class PlanIdempotencyCoordinatorTest {
     return task;
   }
 
-  /** 创建 TaskQueuedEvent。 */
+  /// 创建 TaskQueuedEvent。
   private TaskQueuedEvent createTaskQueuedEvent(Long taskId) {
     return TaskQueuedEvent.of(
         taskId,
@@ -408,7 +404,7 @@ class PlanIdempotencyCoordinatorTest {
         Instant.now());
   }
 
-  /** 创建 PlanIngestionResult。 */
+  /// 创建 PlanIngestionResult。
   private PlanIngestionResult createIngestionResult() {
     return new PlanIngestionResult(1L, 100L, List.of(10L), 1, "SUCCESS");
   }

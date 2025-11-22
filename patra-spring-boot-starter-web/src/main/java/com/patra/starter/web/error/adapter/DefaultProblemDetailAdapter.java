@@ -9,7 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 
-/** 由核心错误解析管道支持的默认 {@link ProblemDetailAdapter}。 */
+/// 由核心错误解析管道支持的默认 {@link ProblemDetailAdapter}。
 @Slf4j
 public class DefaultProblemDetailAdapter implements ProblemDetailAdapter {
 

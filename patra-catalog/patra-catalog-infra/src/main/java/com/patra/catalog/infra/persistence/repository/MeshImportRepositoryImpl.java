@@ -17,30 +17,24 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-/**
- * MeSH 导入任务仓储实现。
- *
- * <p><b>职责</b>：
- *
- * <ul>
- *   <li>管理 MeSH 导入任务聚合根的持久化
- *   <li>协调任务主表和表进度的存储
- *   <li>使用 MapStruct 进行 Domain 对象与 DO 对象转换
- *   <li>保证 DO 对象不泄露到 Infrastructure 层外
- * </ul>
- *
- * <p><b>设计原则</b>：
- *
- * <ul>
- *   <li>六边形架构：实现 Domain 层定义的 {@link MeshImportPort} 接口
- *   <li>依赖注入：使用构造器注入 Mapper 和 Converter
- *   <li>事务管理：由 Application 层管理事务边界
- *   <li>乐观锁：使用 MyBatis-Plus 的 version 字段防止并发修改
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// MeSH 导入任务仓储实现。
+/// 
+/// **职责**：
+/// 
+/// - 管理 MeSH 导入任务聚合根的持久化
+///   - 协调任务主表和表进度的存储
+///   - 使用 MapStruct 进行 Domain 对象与 DO 对象转换
+///   - 保证 DO 对象不泄露到 Infrastructure 层外
+/// 
+/// **设计原则**：
+/// 
+/// - 六边形架构：实现 Domain 层定义的 {@link MeshImportPort} 接口
+///   - 依赖注入：使用构造器注入 Mapper 和 Converter
+///   - 事务管理：由 Application 层管理事务边界
+///   - 乐观锁：使用 MyBatis-Plus 的 version 字段防止并发修改
+/// 
+/// @author linqibin
+/// @since 0.2.0
 @Slf4j
 @Repository
 @RequiredArgsConstructor
@@ -50,37 +44,29 @@ public class MeshImportRepositoryImpl implements MeshImportPort {
   private final MeshTableProgressMapper progressMapper;
   private final MeshImportConverter converter;
 
-  /**
-   * 保存导入任务（新增或更新）。
-   *
-   * <p><b>设计原则</b>：
-   *
-   * <ul>
-   *   <li>Repository 模式：save() 表示持久化聚合根，而非 SQL 操作
-   *   <li>调用者无需关心是新增还是更新，由 Repository 自动判断
-   *   <li>符合 DDD "告诉，别问" 原则
-   * </ul>
-   *
-   * <p><b>实现逻辑</b>：
-   *
-   * <ul>
-   *   <li>如果 aggregate.getId() 为 null → INSERT（自动分配雪花 ID）
-   *   <li>如果 aggregate.getId() 不为 null → UPDATE（使用乐观锁）
-   *   <li>关联数据采用"删除+重新插入"策略（简化并发控制）
-   * </ul>
-   *
-   * <p><b>标准参考</b>：
-   *
-   * <ul>
-   *   <li>Spring Data JPA: save() → upsert 语义
-   *   <li>Hibernate: save() / persist() → upsert 语义
-   *   <li>Evans DDD 书籍：Repository 应隐藏持久化细节
-   * </ul>
-   *
-   * @param aggregate 导入任务聚合根
-   * @return 保存后的聚合根（包含生成的 ID 和更新后的 version）
-   * @throws IllegalStateException 如果更新时发生乐观锁冲突
-   */
+  /// 保存导入任务（新增或更新）。
+/// 
+/// **设计原则**：
+/// 
+/// - Repository 模式：save() 表示持久化聚合根，而非 SQL 操作
+///   - 调用者无需关心是新增还是更新，由 Repository 自动判断
+///   - 符合 DDD "告诉，别问" 原则
+/// 
+/// **实现逻辑**：
+/// 
+/// - 如果 aggregate.getId() 为 null → INSERT（自动分配雪花 ID）
+///   - 如果 aggregate.getId() 不为 null → UPDATE（使用乐观锁）
+///   - 关联数据采用"删除+重新插入"策略（简化并发控制）
+/// 
+/// **标准参考**：
+/// 
+/// - Spring Data JPA: save() → upsert 语义
+///   - Hibernate: save() / persist() → upsert 语义
+///   - Evans DDD 书籍：Repository 应隐藏持久化细节
+/// 
+/// @param aggregate 导入任务聚合根
+/// @return 保存后的聚合根（包含生成的 ID 和更新后的 version）
+/// @throws IllegalStateException 如果更新时发生乐观锁冲突
   @Override
   public MeshImportAggregate save(MeshImportAggregate aggregate) {
     log.debug("保存 MeSH 导入任务: {}", aggregate);

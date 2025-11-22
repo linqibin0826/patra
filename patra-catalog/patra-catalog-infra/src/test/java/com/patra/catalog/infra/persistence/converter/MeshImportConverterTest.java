@@ -15,22 +15,18 @@ import org.mapstruct.factory.Mappers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * MeSH 导入转换器单元测试。
- *
- * <p>验证 Domain 对象与 DO 对象之间的转换正确性。
- *
- * <p><b>测试策略</b>：
- *
- * <ul>
- *   <li>单元测试：测试 MapStruct 生成的转换器
- *   <li>测试覆盖：toDomain()、toTaskDO()、toProgressDOList()、toTableProgress()、toProgressDO()
- *   <li>边界情况：null 值处理、集合转换、嵌套对象转换
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// MeSH 导入转换器单元测试。
+/// 
+/// 验证 Domain 对象与 DO 对象之间的转换正确性。
+/// 
+/// **测试策略**：
+/// 
+/// - 单元测试：测试 MapStruct 生成的转换器
+///   - 测试覆盖：toDomain()、toTaskDO()、toProgressDOList()、toTableProgress()、toProgressDO()
+///   - 边界情况：null 值处理、集合转换、嵌套对象转换
+/// 
+/// @author linqibin
+/// @since 0.2.0
 @DisplayName("MeshImportConverter 单元测试")
 class MeshImportConverterTest {
 

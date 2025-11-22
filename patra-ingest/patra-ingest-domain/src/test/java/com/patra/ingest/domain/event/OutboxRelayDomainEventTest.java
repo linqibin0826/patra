@@ -13,19 +13,16 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * OutboxRelayDomainEvent 接口契约测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>接口继承关系验证（DomainEvent、Serializable）
- *   <li>使用真实实现类测试接口契约
- *   <li>验证 occurredAt() 方法契约
- *   <li>验证序列化能力
- *   <li>测试多态性
- * </ul>
- */
+/// OutboxRelayDomainEvent 接口契约测试。
+/// 
+/// 测试策略：
+/// 
+/// - 接口继承关系验证（DomainEvent、Serializable）
+///   - 使用真实实现类测试接口契约
+///   - 验证 occurredAt() 方法契约
+///   - 验证序列化能力
+///   - 测试多态性
+/// 
 @DisplayName("OutboxRelayDomainEvent 接口契约测试")
 class OutboxRelayDomainEventTest {
 

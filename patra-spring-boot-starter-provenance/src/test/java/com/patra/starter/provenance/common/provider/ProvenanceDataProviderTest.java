@@ -15,24 +15,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * ProvenanceDataProvider接口测试
- *
- * <p>测试v2.0多数据类型架构的核心提供者接口。
- *
- * <p><strong>TDD测试策略</strong>：
- *
- * <ol>
- *   <li>测试基本接口契约（getProvenanceCode、getSupportedDataTypes）
- *   <li>测试类型支持检查（supports方法）
- *   <li>测试泛型fetchData方法（多种数据类型）
- *   <li>测试getProcessor可选方法
- *   <li>测试ProviderResult泛型化
- * </ol>
- *
- * @author Patra Architecture Team
- * @since 0.1.0
- */
+/// ProvenanceDataProvider接口测试
+/// 
+/// 测试v2.0多数据类型架构的核心提供者接口。
+/// 
+/// **TDD测试策略**：
+/// 
+/// @author Patra Architecture Team
+/// @since 0.1.0
 @DisplayName("ProvenanceDataProvider接口测试")
 class ProvenanceDataProviderTest {
 
@@ -297,7 +287,7 @@ class ProvenanceDataProviderTest {
 
   // ==================== Mock实现类 ====================
 
-  /** Mock PubMed Provider实现（用于测试） */
+  /// Mock PubMed Provider实现（用于测试）
   private static class MockPubmedProvider implements ProvenanceDataProvider {
 
     private static final Set<DataType> SUPPORTED_TYPES =
@@ -345,7 +335,7 @@ class ProvenanceDataProviderTest {
     }
   }
 
-  /** Mock Publication Processor（用于测试） */
+  /// Mock Publication Processor（用于测试）
   private static class MockPublicationProcessor implements DataProcessor<CanonicalPublication> {
 
     @Override
@@ -373,14 +363,14 @@ class ProvenanceDataProviderTest {
 
   // ==================== 辅助方法 ====================
 
-  /** 创建Mock请求 */
+  /// 创建Mock请求
   private static ProviderRequest createMockRequest() {
     return ProviderRequest.builder()
         .executionParams(new BatchExecutionParams("test", null))
         .build();
   }
 
-  /** 创建Mock文献 */
+  /// 创建Mock文献
   private static CanonicalPublication createMockPublication(String identifier) {
     // CanonicalPublication使用Builder模式
     return CanonicalPublication.builder()

@@ -18,14 +18,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link PlanExpressionBuilder} 单元测试
- *
- * <p>测试策略: 纯单元测试,验证表达式构建的各种场景
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// {@link PlanExpressionBuilder} 单元测试
+/// 
+/// 测试策略: 纯单元测试,验证表达式构建的各种场景
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("PlanExpressionBuilder 单元测试")
 class PlanExpressionBuilderTest {
 
@@ -457,14 +455,12 @@ class PlanExpressionBuilderTest {
 
   // ==================== 辅助方法 ====================
 
-  /**
-   * 创建触发规范
-   *
-   * @param operationCode 操作代码
-   * @param requestedFrom 请求的窗口起始时间
-   * @param requestedTo 请求的窗口结束时间
-   * @return 触发规范
-   */
+  /// 创建触发规范
+/// 
+/// @param operationCode 操作代码
+/// @param requestedFrom 请求的窗口起始时间
+/// @param requestedTo 请求的窗口结束时间
+/// @return 触发规范
   private PlanTriggerNorm createTriggerNorm(
       OperationCode operationCode, Instant requestedFrom, Instant requestedTo) {
     return new PlanTriggerNorm(
@@ -482,11 +478,9 @@ class PlanExpressionBuilderTest {
         Map.of());
   }
 
-  /**
-   * 创建最小化配置快照
-   *
-   * @return 最小化配置快照
-   */
+  /// 创建最小化配置快照
+/// 
+/// @return 最小化配置快照
   private ProvenanceConfigSnapshot createMinimalSnapshot() {
     ProvenanceConfigSnapshot.ProvenanceInfo provenanceInfo =
         new ProvenanceConfigSnapshot.ProvenanceInfo(

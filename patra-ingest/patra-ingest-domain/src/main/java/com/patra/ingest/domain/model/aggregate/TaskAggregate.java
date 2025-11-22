@@ -12,102 +12,92 @@ import java.time.Instant;
 import java.util.Objects;
 import lombok.Getter;
 
-/**
- * 采集任务聚合根。封装数据采集任务的原子工作单元，包含调度元数据、执行进度、租约管理和重试簿记。
- *
- * <p>一致性边界：
- *
- * <ul>
- *   <li>任务的参数快照、幂等键在整个生命周期中保持不可变
- *   <li>租约信息确保分布式环境下的任务互斥执行
- *   <li>执行时间线记录任务的完整生命周期
- * </ul>
- *
- * <p>业务规则：
- *
- * <ul>
- *   <li>任务创建时处于 {@code QUEUED} 状态，等待工作者拉取
- *   <li>工作者获取租约后转换为 {@code RUNNING} 状态
- *   <li>执行成功后转换为 {@code SUCCEEDED} 状态，发布 {@link TaskCompletedEvent}
- *   <li>执行失败后转换为 {@code FAILED} 状态，可根据重试策略重新入队
- *   <li>租约到期后任务可被其他工作者重新获取
- *   <li>幂等键 = hash(provenance + operation + params) 确保任务去重
- * </ul>
- *
- * <p>状态转换：
- *
- * <ul>
- *   <li>{@code QUEUED} → {@code RUNNING}: 工作者获取租约并开始执行
- *   <li>{@code RUNNING} → {@code SUCCEEDED}: 任务执行成功
- *   <li>{@code RUNNING} → {@code FAILED}: 任务执行失败
- *   <li>{@code FAILED} → {@code QUEUED}: 根据重试策略重新入队
- * </ul>
- *
- * <p>领域事件：
- *
- * <ul>
- *   <li>{@link TaskQueuedEvent}: 任务创建时发布，通知工作者拉取
- *   <li>{@link TaskCompletedEvent}: 任务完成时发布，触发切片和计划状态聚合
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 采集任务聚合根。封装数据采集任务的原子工作单元，包含调度元数据、执行进度、租约管理和重试簿记。
+/// 
+/// 一致性边界：
+/// 
+/// - 任务的参数快照、幂等键在整个生命周期中保持不可变
+///   - 租约信息确保分布式环境下的任务互斥执行
+///   - 执行时间线记录任务的完整生命周期
+/// 
+/// 业务规则：
+/// 
+/// - 任务创建时处于 `QUEUED` 状态，等待工作者拉取
+///   - 工作者获取租约后转换为 `RUNNING` 状态
+///   - 执行成功后转换为 `SUCCEEDED` 状态，发布 {@link TaskCompletedEvent}
+///   - 执行失败后转换为 `FAILED` 状态，可根据重试策略重新入队
+///   - 租约到期后任务可被其他工作者重新获取
+///   - 幂等键 = hash(provenance + operation + params) 确保任务去重
+/// 
+/// 状态转换：
+/// 
+/// - `QUEUED` → `RUNNING`: 工作者获取租约并开始执行
+///   - `RUNNING` → `SUCCEEDED`: 任务执行成功
+///   - `RUNNING` → `FAILED`: 任务执行失败
+///   - `FAILED` → `QUEUED`: 根据重试策略重新入队
+/// 
+/// 领域事件：
+/// 
+/// - {@link TaskQueuedEvent}: 任务创建时发布，通知工作者拉取
+///   - {@link TaskCompletedEvent}: 任务完成时发布，触发切片和计划状态聚合
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Getter
 public class TaskAggregate extends AggregateRoot<Long> {
 
-  /** 调度实例标识。 */
+  /// 调度实例标识。
   private Long scheduleInstanceId;
 
-  /** 所属计划标识。 */
+  /// 所属计划标识。
   private Long planId;
 
-  /** 所属切片标识。 */
+  /// 所属切片标识。
   private Long sliceId;
 
-  /** 数据来源代码（如：pubmed）。 */
+  /// 数据来源代码（如：pubmed）。
   private final ProvenanceCode provenanceCode;
 
-  /** 操作代码（如：harvest、update）。 */
+  /// 操作代码（如：harvest、update）。
   private final String operationCode;
 
-  /** 任务参数载荷（JSON 格式）。 */
+  /// 任务参数载荷（JSON 格式）。
   private final String paramsJson;
 
-  /** 幂等键，用于任务去重。 */
+  /// 幂等键，用于任务去重。
   private final String idempotentKey;
 
-  /** 表达式哈希值。 */
+  /// 表达式哈希值。
   private final String exprHash;
 
-  /** 调度优先级。 */
+  /// 调度优先级。
   private final Integer priority;
 
-  /** 计划执行时间。 */
+  /// 计划执行时间。
   private final Instant scheduledAt;
 
-  /** 最后心跳时间戳。 */
+  /// 最后心跳时间戳。
   private final Instant lastHeartbeatAt;
 
-  /** 重试次数。 */
+  /// 重试次数。
   private final Integer retryCount;
 
-  /** 最近错误代码。 */
+  /// 最近错误代码。
   private final String lastErrorCode;
 
-  /** 最近错误消息。 */
+  /// 最近错误消息。
   private final String lastErrorMsg;
 
-  /** 任务当前状态。 */
+  /// 任务当前状态。
   private TaskStatus status;
 
-  /** 租约所有权元数据（owner + leasedUntil）。 */
+  /// 租约所有权元数据（owner + leasedUntil）。
   private LeaseInfo leaseInfo;
 
-  /** 执行时间线标记（startedAt + completedAt）。 */
+  /// 执行时间线标记（startedAt + completedAt）。
   private ExecutionTimeline executionTimeline;
 
-  /** 随任务传播的调度器上下文。 */
+  /// 随任务传播的调度器上下文。
   private TaskSchedulerContext schedulerContext;
 
   private TaskAggregate(
@@ -153,21 +143,19 @@ public class TaskAggregate extends AggregateRoot<Long> {
         schedulerContext == null ? TaskSchedulerContext.empty() : schedulerContext;
   }
 
-  /**
-   * 创建新的任务聚合根，初始状态为队列中 (QUEUED)。
-   *
-   * @param scheduleInstanceId 调度实例标识
-   * @param planId 所属计划标识
-   * @param sliceId 所属切片标识占位符
-   * @param provenanceCode 数据来源代码
-   * @param operationCode 操作代码
-   * @param paramsJson 任务参数载荷（JSON 格式）
-   * @param idempotentKey 幂等键
-   * @param exprHash 表达式哈希
-   * @param priority 调度优先级
-   * @param scheduledAt 计划执行时间
-   * @return 新创建的任务聚合根，准备持久化
-   */
+  /// 创建新的任务聚合根，初始状态为队列中 (QUEUED)。
+/// 
+/// @param scheduleInstanceId 调度实例标识
+/// @param planId 所属计划标识
+/// @param sliceId 所属切片标识占位符
+/// @param provenanceCode 数据来源代码
+/// @param operationCode 操作代码
+/// @param paramsJson 任务参数载荷（JSON 格式）
+/// @param idempotentKey 幂等键
+/// @param exprHash 表达式哈希
+/// @param priority 调度优先级
+/// @param scheduledAt 计划执行时间
+/// @return 新创建的任务聚合根，准备持久化
   public static TaskAggregate create(
       Long scheduleInstanceId,
       Long planId,
@@ -201,31 +189,29 @@ public class TaskAggregate extends AggregateRoot<Long> {
         TaskSchedulerContext.empty());
   }
 
-  /**
-   * 从持久化状态重建已存在的任务聚合根。
-   *
-   * @param id 任务标识
-   * @param scheduleInstanceId 调度实例标识
-   * @param planId 所属计划标识
-   * @param sliceId 所属切片标识
-   * @param provenanceCode 数据来源代码
-   * @param operationCode 操作代码
-   * @param paramsJson 任务参数载荷（JSON 格式）
-   * @param idempotentKey 幂等键
-   * @param exprHash 表达式哈希
-   * @param priority 调度优先级
-   * @param scheduledAt 计划执行时间
-   * @param lastHeartbeatAt 最后心跳时间戳
-   * @param retryCount 重试次数
-   * @param lastErrorCode 最近错误代码
-   * @param lastErrorMsg 最近错误消息
-   * @param status 当前任务状态
-   * @param leaseInfo 租约所有权元数据
-   * @param executionTimeline 执行时间线标记
-   * @param schedulerContext 调度器上下文
-   * @param version 乐观锁版本
-   * @return 从持久化重建的任务聚合根
-   */
+  /// 从持久化状态重建已存在的任务聚合根。
+/// 
+/// @param id 任务标识
+/// @param scheduleInstanceId 调度实例标识
+/// @param planId 所属计划标识
+/// @param sliceId 所属切片标识
+/// @param provenanceCode 数据来源代码
+/// @param operationCode 操作代码
+/// @param paramsJson 任务参数载荷（JSON 格式）
+/// @param idempotentKey 幂等键
+/// @param exprHash 表达式哈希
+/// @param priority 调度优先级
+/// @param scheduledAt 计划执行时间
+/// @param lastHeartbeatAt 最后心跳时间戳
+/// @param retryCount 重试次数
+/// @param lastErrorCode 最近错误代码
+/// @param lastErrorMsg 最近错误消息
+/// @param status 当前任务状态
+/// @param leaseInfo 租约所有权元数据
+/// @param executionTimeline 执行时间线标记
+/// @param schedulerContext 调度器上下文
+/// @param version 乐观锁版本
+/// @return 从持久化重建的任务聚合根
   public static TaskAggregate restore(
       Long id,
       Long scheduleInstanceId,
@@ -314,24 +300,20 @@ public class TaskAggregate extends AggregateRoot<Long> {
         schedulerContext);
   }
 
-  /**
-   * 在持久化后将任务绑定到特定计划和切片。
-   *
-   * @param planId 计划标识
-   * @param sliceId 切片标识
-   */
+  /// 在持久化后将任务绑定到特定计划和切片。
+/// 
+/// @param planId 计划标识
+/// @param sliceId 切片标识
   public void bindPlanAndSlice(Long planId, Long sliceId) {
     this.planId = planId;
     this.sliceId = sliceId;
   }
 
-  /**
-   * 当任务准备入队时发布领域事件。
-   *
-   * <p>应用层应将此事件发布到消息队列。
-   *
-   * @return 任务入队事件
-   */
+  /// 当任务准备入队时发布领域事件。
+/// 
+/// 应用层应将此事件发布到消息队列。
+/// 
+/// @return 任务入队事件
   public TaskQueuedEvent raiseQueuedEvent() {
     TaskQueuedEvent event =
         TaskQueuedEvent.of(
@@ -349,37 +331,31 @@ public class TaskAggregate extends AggregateRoot<Long> {
     return event;
   }
 
-  /**
-   * 获取数据来源代码字符串值。
-   *
-   * @return 数据来源代码字符串
-   */
+  /// 获取数据来源代码字符串值。
+/// 
+/// @return 数据来源代码字符串
   public String getProvenanceCodeValue() {
     return provenanceCode.getCode();
   }
 
-  /** 将任务标记为队列中状态。 */
+  /// 将任务标记为队列中状态。
   public void markQueued() {
     this.status = TaskStatus.QUEUED;
   }
 
-  /**
-   * 将任务标记为运行中并记录执行上下文。
-   *
-   * @param startedAt 执行开始时间
-   * @param correlationId 跟踪关联标识
-   */
+  /// 将任务标记为运行中并记录执行上下文。
+/// 
+/// @param startedAt 执行开始时间
+/// @param correlationId 跟踪关联标识
   public void markRunning(Instant startedAt, String correlationId) {
     this.executionTimeline = executionTimeline.onStart(startedAt);
     this.schedulerContext = schedulerContext.withCorrelation(correlationId);
     this.status = TaskStatus.RUNNING;
   }
 
-  /**
-   * 将任务标记为执行成功。
-   *
-   * @param finishedAt 执行完成时间
-   */
+  /// 将任务标记为执行成功。
+/// 
+/// @param finishedAt 执行完成时间
   public void markSucceeded(Instant finishedAt) {
     this.executionTimeline = executionTimeline.onFinish(finishedAt);
     this.status = TaskStatus.SUCCEEDED;
@@ -390,11 +366,9 @@ public class TaskAggregate extends AggregateRoot<Long> {
             this.getId(), this.sliceId, this.planId, TaskStatus.SUCCEEDED.getCode(), finishedAt));
   }
 
-  /**
-   * 将任务标记为执行失败。
-   *
-   * @param finishedAt 执行完成时间
-   */
+  /// 将任务标记为执行失败。
+/// 
+/// @param finishedAt 执行完成时间
   public void markFailed(Instant finishedAt) {
     this.executionTimeline = executionTimeline.onFinish(finishedAt);
     this.status = TaskStatus.FAILED;
@@ -416,36 +390,30 @@ public class TaskAggregate extends AggregateRoot<Long> {
   // - CURSOR_PENDING 状态已合并到 TaskRun.PARTIAL 并支持检查点
   // - CANCELLED 状态已移除（当前设计不支持取消操作）
 
-  /**
-   * 为此任务获取租约。
-   *
-   * @param owner 租约所有者标识
-   * @param leasedUntil 租约过期时间
-   */
+  /// 为此任务获取租约。
+/// 
+/// @param owner 租约所有者标识
+/// @param leasedUntil 租约过期时间
   public void acquireLease(String owner, Instant leasedUntil) {
     this.leaseInfo = leaseInfo.acquire(owner, leasedUntil);
   }
 
-  /**
-   * 续约现有租约。
-   *
-   * @param owner 租约所有者标识
-   * @param leasedUntil 新的租约过期时间
-   */
+  /// 续约现有租约。
+/// 
+/// @param owner 租约所有者标识
+/// @param leasedUntil 新的租约过期时间
   public void renewLease(String owner, Instant leasedUntil) {
     this.leaseInfo = leaseInfo.renew(owner, leasedUntil);
   }
 
-  /** 释放当前租约。 */
+  /// 释放当前租约。
   public void releaseLease() {
     this.leaseInfo = leaseInfo.release();
   }
 
-  /**
-   * 通过清除运行时上下文来重置任务以便重试。
-   *
-   * <p>释放租约、清除执行时间线和调度器上下文，然后标记为队列中状态。
-   */
+  /// 通过清除运行时上下文来重置任务以便重试。
+/// 
+/// 释放租约、清除执行时间线和调度器上下文，然后标记为队列中状态。
   public void prepareForRetry() {
     releaseLease();
     this.executionTimeline = ExecutionTimeline.empty();

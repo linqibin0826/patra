@@ -18,28 +18,24 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * ProvenanceDataPort 接口测试
- *
- * <p>测试 v2.0 多数据类型架构的核心接口：泛型化数据获取端口
- *
- * <p><strong>测试策略</strong>：
- *
- * <ul>
- *   <li>使用 Mock 实现进行接口契约测试
- *   <li>验证泛型方法的类型安全性
- *   <li>验证 DataFetchResult 工厂方法
- *   <li>验证 supports 和 getSupportedTypes 方法
- * </ul>
- *
- * @since 0.1.0.0
- */
+/// ProvenanceDataPort 接口测试
+/// 
+/// 测试 v2.0 多数据类型架构的核心接口：泛型化数据获取端口
+/// 
+/// **测试策略**：
+/// 
+/// - 使用 Mock 实现进行接口契约测试
+///   - 验证泛型方法的类型安全性
+///   - 验证 DataFetchResult 工厂方法
+///   - 验证 supports 和 getSupportedTypes 方法
+/// 
+/// @since 0.1.0.0
 @DisplayName("ProvenanceDataPort v2.0 接口测试")
 class ProvenanceDataPortTest {
 
   // ========== Mock 实现 ==========
 
-  /** Mock 数据源端口实现（用于接口契约测试） */
+  /// Mock 数据源端口实现（用于接口契约测试）
   static class MockProvenanceDataPort implements ProvenanceDataPort {
     private final Map<String, Set<DataType>> supportedTypes =
         Map.of(
@@ -484,7 +480,7 @@ class ProvenanceDataPortTest {
 
   // ========== 测试辅助方法 ==========
 
-  /** 创建测试用的执行上下文 */
+  /// 创建测试用的执行上下文
   private static ExecutionContext createTestContext(ProvenanceCode provenanceCode) {
     // 简化的 Mock 上下文（实际实现会更复杂）
     return new ExecutionContext(
@@ -505,7 +501,7 @@ class ProvenanceDataPortTest {
         );
   }
 
-  /** 创建测试用的批次定义 */
+  /// 创建测试用的批次定义
   private static Batch createTestBatch() {
     // 简化的 Mock 批次（使用新的构造方法）
     return new Batch(
@@ -516,12 +512,12 @@ class ProvenanceDataPortTest {
         );
   }
 
-  /** 创建测试用的查询会话 */
+  /// 创建测试用的查询会话
   private static QuerySession createTestSession(ProvenanceCode provenanceCode) {
     return QuerySession.empty(provenanceCode);
   }
 
-  /** 创建 Mock 出版物对象 */
+  /// 创建 Mock 出版物对象
   private static CanonicalPublication createMockPublication() {
     // 简化的 Mock 出版物（使用 builder）
     return CanonicalPublication.builder().title("Test Publication").build();

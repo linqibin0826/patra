@@ -26,21 +26,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-/**
- * TaskRepositoryMpImpl 单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>使用 Mockito Mock 所有依赖（Mapper, Converter）
- *   <li>不启动 Spring 容器，纯单元测试
- *   <li>验证方法调用、参数传递和返回值转换
- *   <li>覆盖租约操作的 CAS 语义
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// TaskRepositoryMpImpl 单元测试。
+/// 
+/// 测试策略：
+/// 
+/// - 使用 Mockito Mock 所有依赖（Mapper, Converter）
+///   - 不启动 Spring 容器，纯单元测试
+///   - 验证方法调用、参数传递和返回值转换
+///   - 覆盖租约操作的 CAS 语义
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("TaskRepositoryMpImpl 单元测试")

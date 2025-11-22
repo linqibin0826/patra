@@ -8,19 +8,16 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link PublicationDataReadyEvent} 的单元测试。
- *
- * <p>测试范围:
- *
- * <ul>
- *   <li>字段访问器 - 验证所有字段的 getter 方法
- *   <li>Builder 构建 - 验证 Lombok @Builder 功能
- *   <li>Record 语义 - equals/hashCode/toString 行为
- *   <li>不可变性 - Record 的不可变特性
- *   <li>边界条件 - 空集合、null 值、边界数值
- * </ul>
- */
+/// {@link PublicationDataReadyEvent} 的单元测试。
+/// 
+/// 测试范围:
+/// 
+/// - 字段访问器 - 验证所有字段的 getter 方法
+///   - Builder 构建 - 验证 Lombok @Builder 功能
+///   - Record 语义 - equals/hashCode/toString 行为
+///   - 不可变性 - Record 的不可变特性
+///   - 边界条件 - 空集合、null 值、边界数值
+/// 
 @DisplayName("PublicationDataReadyEvent 单元测试")
 class PublicationDataReadyEventTest {
 
@@ -38,7 +35,7 @@ class PublicationDataReadyEventTest {
 
   // ==================== 辅助方法 ====================
 
-  /** 创建默认的测试事件。 */
+  /// 创建默认的测试事件。
   private PublicationDataReadyEvent createDefaultEvent() {
     return PublicationDataReadyEvent.builder()
         .taskId(TASK_ID)

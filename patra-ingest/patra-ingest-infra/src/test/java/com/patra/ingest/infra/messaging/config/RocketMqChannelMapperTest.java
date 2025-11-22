@@ -11,23 +11,19 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * RocketMqChannelMapper 单元测试。
- *
- * <p>测试覆盖：
- *
- * <ul>
- *   <li>业务通道到 RocketMQ Topic 的映射
- *   <li>RocketMQ Topic 到业务通道的反向映射
- *   <li>映射存在性检查
- *   <li>未配置通道的异常处理
- *   <li>Topic 前缀支持
- *   <li>自定义映射覆盖默认映射
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// RocketMqChannelMapper 单元测试。
+/// 
+/// 测试覆盖：
+/// 
+/// - 业务通道到 RocketMQ Topic 的映射
+///   - RocketMQ Topic 到业务通道的反向映射
+///   - 映射存在性检查
+///   - 未配置通道的异常处理
+///   - Topic 前缀支持
+///   - 自定义映射覆盖默认映射
+/// 
+/// @author linqibin
+/// @since 0.2.0
 @DisplayName("RocketMqChannelMapper 单元测试")
 class RocketMqChannelMapperTest {
 

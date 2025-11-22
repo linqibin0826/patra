@@ -12,22 +12,18 @@ import java.nio.file.Files;
 import org.junit.jupiter.api.*;
 import org.springframework.web.client.RestClient;
 
-/**
- * RestClient 文件下载器单元测试。
- *
- * <p>使用 WireMock 模拟 HTTP 响应，测试文件下载和校验功能。
- *
- * <p><b>测试策略</b>：
- *
- * <ul>
- *   <li>单元测试：使用 WireMock 模拟 HTTP 服务器
- *   <li>测试覆盖：download()、validateChecksum()、超时处理
- *   <li>边界情况：网络错误、文件损坏、校验失败
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// RestClient 文件下载器单元测试。
+/// 
+/// 使用 WireMock 模拟 HTTP 响应，测试文件下载和校验功能。
+/// 
+/// **测试策略**：
+/// 
+/// - 单元测试：使用 WireMock 模拟 HTTP 服务器
+///   - 测试覆盖：download()、validateChecksum()、超时处理
+///   - 边界情况：网络错误、文件损坏、校验失败
+/// 
+/// @author linqibin
+/// @since 0.2.0
 @DisplayName("RestClientMeshFileDownloadImpl 单元测试")
 class RestClientMeshFileDownloadImplTest {
 

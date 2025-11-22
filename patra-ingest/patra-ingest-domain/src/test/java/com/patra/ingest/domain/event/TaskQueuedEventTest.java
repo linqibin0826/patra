@@ -8,18 +8,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link TaskQueuedEvent} 的单元测试。
- *
- * <p>测试范围：
- *
- * <ul>
- *   <li>Record 基本语义：equals、hashCode、toString、字段访问器
- *   <li>Compact Constructor：occurredAt 自动填充
- *   <li>工厂方法：TaskQueuedEvent.of()
- *   <li>领域事件特性：实现 DomainEvent 接口
- * </ul>
- */
+/// {@link TaskQueuedEvent} 的单元测试。
+/// 
+/// 测试范围：
+/// 
+/// - Record 基本语义：equals、hashCode、toString、字段访问器
+///   - Compact Constructor：occurredAt 自动填充
+///   - 工厂方法：TaskQueuedEvent.of()
+///   - 领域事件特性：实现 DomainEvent 接口
+/// 
 @DisplayName("TaskQueuedEvent 任务入队领域事件")
 class TaskQueuedEventTest {
 

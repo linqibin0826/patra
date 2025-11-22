@@ -31,23 +31,19 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-/**
- * PlanPublishingCoordinator 单元测试。
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>✅ publishNewPlanEvents() - 正常发布新计划事件
- *   <li>✅ publishRetryEvents() - 正常发布重试事件
- *   <li>✅ collectQueuedEvents() - 正常收集任务事件
- *   <li>✅ collectQueuedEvents() - 处理空任务列表
- *   <li>✅ buildIngestionResult() - 构建结果（带任务列表）
- *   <li>✅ buildIngestionResult() - 构建结果（带任务数量）
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// PlanPublishingCoordinator 单元测试。
+/// 
+/// 测试覆盖:
+/// 
+/// - ✅ publishNewPlanEvents() - 正常发布新计划事件
+///   - ✅ publishRetryEvents() - 正常发布重试事件
+///   - ✅ collectQueuedEvents() - 正常收集任务事件
+///   - ✅ collectQueuedEvents() - 处理空任务列表
+///   - ✅ buildIngestionResult() - 构建结果（带任务列表）
+///   - ✅ buildIngestionResult() - 构建结果（带任务数量）
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("PlanPublishingCoordinator 单元测试")
@@ -510,7 +506,7 @@ class PlanPublishingCoordinatorTest {
 
   // ==================== 辅助方法 ====================
 
-  /** 创建 TaskQueuedEvent。 */
+  /// 创建 TaskQueuedEvent。
   private TaskQueuedEvent createTaskQueuedEvent(Long taskId) {
     return TaskQueuedEvent.of(
         taskId,

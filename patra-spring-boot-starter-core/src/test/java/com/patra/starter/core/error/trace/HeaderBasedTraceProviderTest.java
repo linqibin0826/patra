@@ -14,24 +14,20 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
 
-/**
- * {@link HeaderBasedTraceProvider} 单元测试。
- *
- * <p>测试策略: 应用层服务 - 单元测试，验证 MDC 提取逻辑。
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>✅ Header 提取逻辑（单个和多个 Header）
- *   <li>✅ Header 优先级顺序
- *   <li>✅ 空值和 trim 处理
- *   <li>✅ 回退场景（无 Header）
- *   <li>✅ 不同 Trace ID 格式支持
- * </ul>
- *
- * @author Patra Team
- * @since 2.0
- */
+/// {@link HeaderBasedTraceProvider} 单元测试。
+/// 
+/// 测试策略: 应用层服务 - 单元测试，验证 MDC 提取逻辑。
+/// 
+/// 测试覆盖:
+/// 
+/// - ✅ Header 提取逻辑（单个和多个 Header）
+///   - ✅ Header 优先级顺序
+///   - ✅ 空值和 trim 处理
+///   - ✅ 回退场景（无 Header）
+///   - ✅ 不同 Trace ID 格式支持
+/// 
+/// @author Patra Team
+/// @since 2.0
 @DisplayName("HeaderBasedTraceProvider 单元测试")
 @ExtendWith(MockitoExtension.class)
 class HeaderBasedTraceProviderTest {

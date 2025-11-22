@@ -12,7 +12,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
-/** 计划切片聚合 ↔ 数据对象转换器。 */
+/// 计划切片聚合 ↔ 数据对象转换器。
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface PlanSliceConverter {
 

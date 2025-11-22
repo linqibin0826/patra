@@ -6,32 +6,26 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * FileSize 值对象单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>纯 Java 单元测试，不依赖 Spring 容器
- *   <li>遵循 Given-When-Then 结构
- *   <li>使用 AssertJ 流畅断言
- *   <li>使用 @Nested 分组组织测试
- * </ul>
- *
- * <p>测试范围：
- *
- * <ul>
- *   <li>✅ record 构造函数验证（紧凑构造器）
- *   <li>✅ 非负字节数验证（bytes >= 0）
- *   <li>✅ 负数字节抛出 IllegalArgumentException
- *   <li>✅ humanReadable() 方法测试（B/KB/MB/GB 单位转换）
- *   <li>✅ 边界值测试（0, 1023, 1024, 1024*1024-1, etc.）
- *   <li>✅ record 自动生成的 equals/hashCode/toString 测试
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// FileSize 值对象单元测试。
+/// 
+/// 测试策略：
+/// 
+/// - 纯 Java 单元测试，不依赖 Spring 容器
+///   - 遵循 Given-When-Then 结构
+///   - 使用 AssertJ 流畅断言
+///   - 使用 @Nested 分组组织测试
+/// 
+/// 测试范围：
+/// 
+/// - ✅ record 构造函数验证（紧凑构造器）
+///   - ✅ 非负字节数验证（bytes >= 0）
+///   - ✅ 负数字节抛出 IllegalArgumentException
+///   - ✅ humanReadable() 方法测试（B/KB/MB/GB 单位转换）
+///   - ✅ 边界值测试（0, 1023, 1024, 1024*1024-1, etc.）
+///   - ✅ record 自动生成的 equals/hashCode/toString 测试
+/// 
+/// @author linqibin
+/// @since 0.2.0
 @DisplayName("FileSize 值对象单元测试")
 class FileSizeTest {
 

@@ -15,7 +15,7 @@
 
 2. **字段级别**：简单行内注释
    ```java
-   /** 任务名称 */
+   /// 任务名称
    private String taskName;
    ```
 
@@ -82,22 +82,19 @@
 
 **传统风格**：
 ```java
-/**
- * 开始导入任务。
- *
- * <p>前置条件：任务状态为 PENDING
- *
- * <p>此方法会：</p>
- * <ul>
- *   <li>验证任务状态</li>
- *   <li>更新开始时间</li>
- *   <li>发布启动事件</li>
- * </ul>
- *
- * @param command 导入命令
- * @return 导入结果
- * @throws IllegalStateException 如果状态不是 PENDING
- */
+/// 开始导入任务。
+/// 
+/// 前置条件：任务状态为 PENDING
+/// 
+/// 此方法会：
+/// 
+/// - 验证任务状态
+///   - 更新开始时间
+///   - 发布启动事件
+/// 
+/// @param command 导入命令
+/// @return 导入结果
+/// @throws IllegalStateException 如果状态不是 PENDING
 ```
 
 **Markdown 风格**：
@@ -122,19 +119,19 @@
 
 **传统风格**：
 ```java
-/** 任务名称 */
+/// 任务名称
 private String taskName;
 
-/** 任务状态（PENDING/PROCESSING/SUCCESS/FAILED/CANCELLED） */
+/// 任务状态（PENDING/PROCESSING/SUCCESS/FAILED/CANCELLED）
 private MeshImportTaskStatus status;
 ```
 
 **Markdown 风格**（保持不变，因为字段注释通常很简短）：
 ```java
-/** 任务名称 */
+/// 任务名称
 private String taskName;
 
-/** 任务状态（PENDING/PROCESSING/SUCCESS/FAILED/CANCELLED） */
+/// 任务状态（PENDING/PROCESSING/SUCCESS/FAILED/CANCELLED）
 private MeshImportTaskStatus status;
 ```
 

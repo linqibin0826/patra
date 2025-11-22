@@ -3,14 +3,12 @@ package com.patra.registry.domain.model.read.provenance;
 import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
-/**
- * HTTP配置查询视图。
- *
- * <p>用于查询HTTP客户端配置的读优化投影。包含超时设置、代理配置、重试策略等HTTP相关参数。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// HTTP配置查询视图。
+/// 
+/// 用于查询HTTP客户端配置的读优化投影。包含超时设置、代理配置、重试策略等HTTP相关参数。
+/// 
+/// @author linqibin
+/// @since 0.1.0
 public record HttpConfigQuery(
     Long id,
     Long provenanceId,

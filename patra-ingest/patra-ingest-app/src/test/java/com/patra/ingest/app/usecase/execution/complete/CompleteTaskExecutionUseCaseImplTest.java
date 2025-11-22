@@ -41,24 +41,20 @@ import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
 
-/**
- * CompleteTaskExecutionUseCaseImpl 单元测试
- *
- * <p>测试范围:
- *
- * <ul>
- *   <li>✅ 全部成功场景: 游标推进成功 → Task/TaskRun: SUCCEEDED
- *   <li>✅ 全部成功但游标失败: Task: FAILED, TaskRun: PARTIAL
- *   <li>✅ 部分成功场景: Task: FAILED, TaskRun: PARTIAL
- *   <li>✅ 全部失败场景: Task: FAILED, TaskRun: FAILED
- *   <li>✅ 乐观锁冲突: 游标推进失败时的处理
- *   <li>✅ 资源清理: 心跳停止、租约释放
- *   <li>✅ 事件发布: TaskCompletedEvent、PublicationDataReadyEvent
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// CompleteTaskExecutionUseCaseImpl 单元测试
+/// 
+/// 测试范围:
+/// 
+/// - ✅ 全部成功场景: 游标推进成功 → Task/TaskRun: SUCCEEDED
+///   - ✅ 全部成功但游标失败: Task: FAILED, TaskRun: PARTIAL
+///   - ✅ 部分成功场景: Task: FAILED, TaskRun: PARTIAL
+///   - ✅ 全部失败场景: Task: FAILED, TaskRun: FAILED
+///   - ✅ 乐观锁冲突: 游标推进失败时的处理
+///   - ✅ 资源清理: 心跳停止、租约释放
+///   - ✅ 事件发布: TaskCompletedEvent、PublicationDataReadyEvent
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("CompleteTaskExecutionUseCaseImpl 单元测试")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

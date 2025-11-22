@@ -26,12 +26,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * DateSlicePlanner 单元测试
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// DateSlicePlanner 单元测试
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("DateSlicePlanner 单元测试")
 class DateSlicePlannerTest {

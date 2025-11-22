@@ -12,13 +12,11 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/**
- * {@link ListJoinTransform} 单元测试。
- *
- * <p>测试策略：纯单元测试，Mock ProvenanceSnapshot 依赖。
- *
- * @since 1.0.0
- */
+/// {@link ListJoinTransform} 单元测试。
+/// 
+/// 测试策略：纯单元测试，Mock ProvenanceSnapshot 依赖。
+/// 
+/// @since 1.0.0
 @DisplayName("ListJoinTransform 单元测试")
 class ListJoinTransformTest {
 

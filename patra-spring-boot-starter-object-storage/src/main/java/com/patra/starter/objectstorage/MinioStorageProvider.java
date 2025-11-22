@@ -15,51 +15,41 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * MinIO 对象存储提供者实现。
- *
- * <p>此实现负责:
- *
- * <ul>
- *   <li>上传文件到 MinIO 服务器
- *   <li>自动创建不存在的存储桶(lazy bucket creation)
- *   <li>缓存已知存储桶,避免重复的存在性检查
- *   <li>严格的参数验证(存储桶名称、对象键、文件大小)
- * </ul>
- *
- * @see S3StorageProvider AWS S3 实现
- */
+/// MinIO 对象存储提供者实现。
+/// 
+/// 此实现负责:
+/// 
+/// - 上传文件到 MinIO 服务器
+///   - 自动创建不存在的存储桶(lazy bucket creation)
+///   - 缓存已知存储桶,避免重复的存在性检查
+///   - 严格的参数验证(存储桶名称、对象键、文件大小)
+/// 
+/// @see S3StorageProvider AWS S3 实现
 @Slf4j
 public class MinioStorageProvider implements ObjectStorageProvider {
 
-  /**
-   * 存储桶名称验证模式,遵循 S3 命名规则。
-   *
-   * <p><b>规则:</b> 3-63 个字符,仅小写字母/数字/点/连字符,必须以字母或数字开头和结尾。
-   */
+  /// 存储桶名称验证模式,遵循 S3 命名规则。
+/// 
+/// **规则:** 3-63 个字符,仅小写字母/数字/点/连字符,必须以字母或数字开头和结尾。
   private static final Pattern BUCKET_NAME_PATTERN =
       Pattern.compile("^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$");
 
-  /** 对象键的最大长度(S3 兼容性限制)。 */
+  /// 对象键的最大长度(S3 兼容性限制)。
   private static final int MAX_KEY_LENGTH = 1024;
 
   private final MinioClient minioClient;
   private final long maxFileSize;
 
-  /**
-   * 已知存储桶的本地缓存,避免冗余的存在性检查。
-   *
-   * <p>此缓存通过跳过对 {@link MinioClient#bucketExists} 的网络调用, 提高了向同一存储桶进行高频上传的性能。如果存储桶在外部被删除,
-   * 缓存将变为陈旧,但后续上传尝试将优雅地失败并提供清晰的错误消息。
-   */
+  /// 已知存储桶的本地缓存,避免冗余的存在性检查。
+/// 
+/// 此缓存通过跳过对 {@link MinioClient#bucketExists} 的网络调用, 提高了向同一存储桶进行高频上传的性能。如果存储桶在外部被删除,
+/// 缓存将变为陈旧,但后续上传尝试将优雅地失败并提供清晰的错误消息。
   private final Set<String> knownBuckets = ConcurrentHashMap.newKeySet();
 
-  /**
-   * 构造一个新的 MinIO 存储提供者。
-   *
-   * @param minioClient 配置好的 MinIO 客户端
-   * @param maxFileSize 允许的最大文件大小(字节)
-   */
+  /// 构造一个新的 MinIO 存储提供者。
+/// 
+/// @param minioClient 配置好的 MinIO 客户端
+/// @param maxFileSize 允许的最大文件大小(字节)
   public MinioStorageProvider(MinioClient minioClient, long maxFileSize) {
     this.minioClient = minioClient;
     this.maxFileSize = maxFileSize;
@@ -70,21 +60,19 @@ public class MinioStorageProvider implements ObjectStorageProvider {
     return ProviderType.MINIO;
   }
 
-  /**
-   * 上传对象到 MinIO 存储。
-   *
-   * <p>此方法在上传前确保目标存储桶存在。如果存储桶不存在,将自动创建。
-   *
-   * <p><b>资源管理:</b> MinIO SDK 会消费 {@code inputStream} 并在内部关闭它。 调用者不应在此方法返回后尝试重用或关闭流。
-   *
-   * @param bucket 存储桶名称(如果不存在将自动创建)
-   * @param key 存储桶内的唯一对象键
-   * @param inputStream 要上传的内容流(将被 MinIO SDK 关闭)
-   * @param metadata 文件元数据,包括大小和内容类型
-   * @return 上传结果,包含存储键和 ETag
-   * @throws InvalidUploadRequestException 如果参数无效(不可重试)
-   * @throws UploadFailedException 如果上传因网络或服务器错误失败(可重试)
-   */
+  /// 上传对象到 MinIO 存储。
+/// 
+/// 此方法在上传前确保目标存储桶存在。如果存储桶不存在,将自动创建。
+/// 
+/// **资源管理:** MinIO SDK 会消费 `inputStream` 并在内部关闭它。 调用者不应在此方法返回后尝试重用或关闭流。
+/// 
+/// @param bucket 存储桶名称(如果不存在将自动创建)
+/// @param key 存储桶内的唯一对象键
+/// @param inputStream 要上传的内容流(将被 MinIO SDK 关闭)
+/// @param metadata 文件元数据,包括大小和内容类型
+/// @return 上传结果,包含存储键和 ETag
+/// @throws InvalidUploadRequestException 如果参数无效(不可重试)
+/// @throws UploadFailedException 如果上传因网络或服务器错误失败(可重试)
   @Override
   public UploadResult upload(
       String bucket, String key, InputStream inputStream, ObjectMetadata metadata) {
@@ -132,14 +120,12 @@ public class MinioStorageProvider implements ObjectStorageProvider {
     }
   }
 
-  /**
-   * 确保指定的存储桶存在,必要时创建它。
-   *
-   * <p>此方法使用本地缓存避免对频繁访问的存储桶进行冗余网络调用。 首次访问时,它会检查 MinIO 并缓存结果。
-   *
-   * @param bucket 要检查/创建的存储桶名称
-   * @throws Exception 如果存储桶检查或创建失败
-   */
+  /// 确保指定的存储桶存在,必要时创建它。
+/// 
+/// 此方法使用本地缓存避免对频繁访问的存储桶进行冗余网络调用。 首次访问时,它会检查 MinIO 并缓存结果。
+/// 
+/// @param bucket 要检查/创建的存储桶名称
+/// @throws Exception 如果存储桶检查或创建失败
   private void ensureBucketExists(String bucket) throws Exception {
     // 首先检查缓存以避免网络调用
     if (knownBuckets.contains(bucket)) {
@@ -157,15 +143,13 @@ public class MinioStorageProvider implements ObjectStorageProvider {
     knownBuckets.add(bucket);
   }
 
-  /**
-   * 验证上传参数的 null/空检查、格式合规性和大小限制。
-   *
-   * @param bucket 存储桶名称
-   * @param key 对象键
-   * @param inputStream 内容流
-   * @param metadata 文件元数据
-   * @throws InvalidUploadRequestException 如果任何验证失败
-   */
+  /// 验证上传参数的 null/空检查、格式合规性和大小限制。
+/// 
+/// @param bucket 存储桶名称
+/// @param key 对象键
+/// @param inputStream 内容流
+/// @param metadata 文件元数据
+/// @throws InvalidUploadRequestException 如果任何验证失败
   private void validateArguments(
       String bucket, String key, InputStream inputStream, ObjectMetadata metadata) {
     // Null/空检查

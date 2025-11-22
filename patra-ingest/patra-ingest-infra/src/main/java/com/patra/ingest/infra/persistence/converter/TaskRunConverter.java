@@ -18,14 +18,12 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
-/**
- * 任务执行记录对象转换器,负责领域对象与数据库实体转换。
- *
- * <p>转换规则: 任务执行记录(单次任务运行)聚合 ↔ DO 双向转换。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 任务执行记录对象转换器,负责领域对象与数据库实体转换。
+/// 
+/// 转换规则: 任务执行记录(单次任务运行)聚合 ↔ DO 双向转换。
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface TaskRunConverter {
 

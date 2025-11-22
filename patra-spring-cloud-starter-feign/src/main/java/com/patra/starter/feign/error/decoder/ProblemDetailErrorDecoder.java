@@ -16,21 +16,17 @@ import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ProblemDetail;
 
-/**
- * Feign {@link ErrorDecoder} 实现,优先处理 {@link ProblemDetail} 错误载荷,并在启用宽容模式时优雅降级
- *
- * <p>此解码器实现了智能的错误处理策略:
- *
- * <ul>
- *   <li>优先尝试解析 RFC 7807 ProblemDetail 格式的错误响应
- *   <li>在宽容模式下,对非 ProblemDetail 响应进行包装而非抛出 FeignException
- *   <li>自动提取并传播跟踪标识符(支持多种 trace header)
- *   <li>记录解析性能指标和慢操作警告
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// Feign {@link ErrorDecoder} 实现,优先处理 {@link ProblemDetail} 错误载荷,并在启用宽容模式时优雅降级
+/// 
+/// 此解码器实现了智能的错误处理策略:
+/// 
+/// - 优先尝试解析 RFC 7807 ProblemDetail 格式的错误响应
+///   - 在宽容模式下,对非 ProblemDetail 响应进行包装而非抛出 FeignException
+///   - 自动提取并传播跟踪标识符(支持多种 trace header)
+///   - 记录解析性能指标和慢操作警告
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 public class ProblemDetailErrorDecoder implements ErrorDecoder {
 
@@ -88,14 +84,12 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     }
   }
 
-  /**
-   * 尝试解码 ProblemDetail 响应
-   *
-   * @param methodKey Feign 方法键
-   * @param response Feign 响应对象
-   * @return 包含成功状态、响应体缓冲区和异常(如成功解析)的解码结果
-   * @throws IOException 响应体读取失败时抛出
-   */
+  /// 尝试解码 ProblemDetail 响应
+/// 
+/// @param methodKey Feign 方法键
+/// @param response Feign 响应对象
+/// @return 包含成功状态、响应体缓冲区和异常(如成功解析)的解码结果
+/// @throws IOException 响应体读取失败时抛出
   private DecodingResult decodeProblemDetailResponse(String methodKey, Response response)
       throws IOException {
     BodyBuffer bodyBuffer = readResponseBody(methodKey, response);
@@ -122,15 +116,13 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     return new DecodingResult(bodyBuffer, false, null);
   }
 
-  /**
-   * 处理错误解码期间的异常,如启用则应用宽容模式
-   *
-   * @param methodKey Feign 方法键
-   * @param response Feign 响应对象
-   * @param state 跟踪成功状态和缓冲区的解码状态
-   * @param ex 解码期间发生的异常
-   * @return 要抛出的异常(RemoteCallException 或 FeignException)
-   */
+  /// 处理错误解码期间的异常,如启用则应用宽容模式
+/// 
+/// @param methodKey Feign 方法键
+/// @param response Feign 响应对象
+/// @param state 跟踪成功状态和缓冲区的解码状态
+/// @param ex 解码期间发生的异常
+/// @return 要抛出的异常(RemoteCallException 或 FeignException)
   private Exception handleDecodingException(
       String methodKey, Response response, DecodingState state, Exception ex) {
     log.warn(
@@ -254,23 +246,23 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     return contentType != null && contentType.toLowerCase().contains("application/problem+json");
   }
 
-  /** 持有响应体内容和元数据 */
+  /// 持有响应体内容和元数据
   private record BodyBuffer(String content, int length, boolean truncated) {
     static BodyBuffer empty() {
       return new BodyBuffer(null, 0, false);
     }
   }
 
-  /** ProblemDetail 解析操作结果 */
+  /// ProblemDetail 解析操作结果
   private record ParsingResult(ProblemDetail problemDetail, long durationMs, boolean success) {}
 
-  /** 跟踪标识符提取结果 */
+  /// 跟踪标识符提取结果
   private record TraceExtraction(String traceId, String headerName) {}
 
-  /** ProblemDetail 解码操作结果 */
+  /// ProblemDetail 解码操作结果
   private record DecodingResult(BodyBuffer bodyBuffer, boolean success, Exception exception) {}
 
-  /** 用于跟踪解码进度的可变状态持有者 */
+  /// 用于跟踪解码进度的可变状态持有者
   private static class DecodingState {
     boolean decodingSuccess = false;
     boolean tolerantModeUsed = false;

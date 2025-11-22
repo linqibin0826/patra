@@ -30,26 +30,22 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
-/**
- * ExecuteTaskBatchesUseCaseImpl 单元测试
- *
- * <p>测试范围:
- *
- * <ul>
- *   <li>✅ 正常流程: 批次调度 → 批次执行 → 持久化结果
- *   <li>✅ 多批次执行: 顺序执行多个批次
- *   <li>✅ 批次执行失败: 某个批次失败，记录错误继续
- *   <li>✅ 全部批次失败: 所有批次都失败
- *   <li>✅ 空批次列表: 没有批次需要执行
- *   <li>✅ 批次限制检查: 超出限制时抛出异常
- *   <li>✅ 租约撤销检查: 租约撤销时中止执行
- *   <li>✅ 快速失败模式: fail-fast 配置测试
- *   <li>✅ 心跳更新: 批次执行后更新心跳
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// ExecuteTaskBatchesUseCaseImpl 单元测试
+/// 
+/// 测试范围:
+/// 
+/// - ✅ 正常流程: 批次调度 → 批次执行 → 持久化结果
+///   - ✅ 多批次执行: 顺序执行多个批次
+///   - ✅ 批次执行失败: 某个批次失败，记录错误继续
+///   - ✅ 全部批次失败: 所有批次都失败
+///   - ✅ 空批次列表: 没有批次需要执行
+///   - ✅ 批次限制检查: 超出限制时抛出异常
+///   - ✅ 租约撤销检查: 租约撤销时中止执行
+///   - ✅ 快速失败模式: fail-fast 配置测试
+///   - ✅ 心跳更新: 批次执行后更新心跳
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("ExecuteTaskBatchesUseCaseImpl 单元测试")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

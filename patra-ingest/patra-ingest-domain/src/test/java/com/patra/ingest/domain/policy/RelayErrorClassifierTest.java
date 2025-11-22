@@ -14,22 +14,18 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * RelayErrorClassifier 单元测试
- *
- * <p>测试重点：
- *
- * <ul>
- *   <li>错误分类正确性（TRANSIENT vs FATAL）
- *   <li>异常链处理（根本原因分析）
- *   <li>边界条件（null、嵌套异常）
- *   <li>典型错误场景覆盖
- * </ul>
- *
- * <p>注意：由于 RelayErrorClassifier 是接口，此测试使用模拟实现来验证分类逻辑
- *
- * @author linqibin
- */
+/// RelayErrorClassifier 单元测试
+/// 
+/// 测试重点：
+/// 
+/// - 错误分类正确性（TRANSIENT vs FATAL）
+///   - 异常链处理（根本原因分析）
+///   - 边界条件（null、嵌套异常）
+///   - 典型错误场景覆盖
+/// 
+/// 注意：由于 RelayErrorClassifier 是接口，此测试使用模拟实现来验证分类逻辑
+/// 
+/// @author linqibin
 @DisplayName("RelayErrorClassifier 单元测试")
 class RelayErrorClassifierTest {
 
@@ -392,11 +388,9 @@ class RelayErrorClassifierTest {
     }
   }
 
-  /**
-   * 测试用的 RelayErrorClassifier 实现
-   *
-   * <p>模拟真实实现的分类逻辑（参考 RelayErrorClassifierImpl）
-   */
+  /// 测试用的 RelayErrorClassifier 实现
+/// 
+/// 模拟真实实现的分类逻辑（参考 RelayErrorClassifierImpl）
   private static class TestRelayErrorClassifier implements RelayErrorClassifier {
 
     @Override
@@ -423,7 +417,7 @@ class RelayErrorClassifierTest {
       return RelayErrorKind.TRANSIENT;
     }
 
-    /** 查找异常链中的 OutboxPublishException */
+    /// 查找异常链中的 OutboxPublishException
     private Throwable findPublishException(Throwable cause) {
       Throwable current = cause;
       int depth = 0;
@@ -441,7 +435,7 @@ class RelayErrorClassifierTest {
       return null;
     }
 
-    /** 获取异常链的根本原因 */
+    /// 获取异常链的根本原因
     private Throwable getRootCause(Throwable cause) {
       Throwable current = cause;
       Throwable root = cause;

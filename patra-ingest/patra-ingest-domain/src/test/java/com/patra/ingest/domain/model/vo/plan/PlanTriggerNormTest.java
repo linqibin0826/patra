@@ -15,24 +15,21 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link PlanTriggerNorm} 的单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>验证构造器的非空约束
- *   <li>验证 record 语义（equals/hashCode/toString）
- *   <li>验证业务方法（isHarvest/isBackfill/isUpdate）
- *   <li>测试边界条件和各种参数组合
- * </ul>
- */
+/// {@link PlanTriggerNorm} 的单元测试。
+/// 
+/// 测试策略：
+/// 
+/// - 验证构造器的非空约束
+///   - 验证 record 语义（equals/hashCode/toString）
+///   - 验证业务方法（isHarvest/isBackfill/isUpdate）
+///   - 测试边界条件和各种参数组合
+/// 
 @DisplayName("PlanTriggerNorm 值对象测试")
 class PlanTriggerNormTest {
 
   // ==================== 测试数据工厂 ====================
 
-  /** 创建有效的 PlanTriggerNorm 实例（包含所有可选字段）。 */
+  /// 创建有效的 PlanTriggerNorm 实例（包含所有可选字段）。
   private PlanTriggerNorm createValidNorm() {
     return new PlanTriggerNorm(
         1001L,
@@ -49,7 +46,7 @@ class PlanTriggerNormTest {
         Map.of("batchSize", 1000, "retryCount", 3));
   }
 
-  /** 创建最小有效实例（所有可选字段为 null）。 */
+  /// 创建最小有效实例（所有可选字段为 null）。
   private PlanTriggerNorm createMinimalNorm() {
     return new PlanTriggerNorm(
         2002L,

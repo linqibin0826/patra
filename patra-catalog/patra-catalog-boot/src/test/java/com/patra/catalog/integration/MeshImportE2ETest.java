@@ -30,50 +30,46 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * MeSH 导入端到端测试。
- *
- * <p>测试完整的 MeSH 数据导入工作流，从 HTTP 请求到数据库持久化。
- *
- * <h3>测试覆盖的完整流程</h3>
- *
- * <pre>
- * 1. HTTP POST /api/v1/mesh/import/start
- *    ↓
- * 2. Controller 接收请求并转换为 Command
- *    ↓
- * 3. Orchestrator 执行业务编排
- *    ↓
- * 4. 下载 XML 文件（模拟）
- *    ↓
- * 5. 解析并批量导入数据
- *    ↓
- * 6. 更新任务状态并持久化
- *    ↓
- * 7. 返回 HTTP 响应
- * </pre>
- *
- * <h3>测试场景</h3>
- *
- * <ul>
- *   <li>✅ 完整导入流程（Happy Path）
- *   <li>✅ 并发导入防护（409 Conflict）
- *   <li>✅ 重试失败任务
- *   <li>✅ 清除进度重新开始
- * </ul>
- *
- * <h3>测试策略</h3>
- *
- * <ul>
- *   <li><strong>真实依赖</strong>: MySQL (Testcontainers)
- *   <li><strong>Mock 外部服务</strong>: XML 下载和解析（避免网络依赖）
- *   <li><strong>事务测试</strong>: 使用 {@code @Transactional} 确保测试隔离
- *   <li><strong>异步验证</strong>: 使用 Awaitility 等待异步操作完成
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// MeSH 导入端到端测试。
+/// 
+/// 测试完整的 MeSH 数据导入工作流，从 HTTP 请求到数据库持久化。
+/// 
+/// ### 测试覆盖的完整流程
+/// 
+/// ```
+/// 
+/// 1. HTTP POST /api/v1/mesh/import/start
+///    ↓
+/// 2. Controller 接收请求并转换为 Command
+///    ↓
+/// 3. Orchestrator 执行业务编排
+///    ↓
+/// 4. 下载 XML 文件（模拟）
+///    ↓
+/// 5. 解析并批量导入数据
+///    ↓
+/// 6. 更新任务状态并持久化
+///    ↓
+/// 7. 返回 HTTP 响应
+/// 
+/// ```
+/// 
+/// ### 测试场景
+/// 
+/// - ✅ 完整导入流程（Happy Path）
+///   - ✅ 并发导入防护（409 Conflict）
+///   - ✅ 重试失败任务
+///   - ✅ 清除进度重新开始
+/// 
+/// ### 测试策略
+/// 
+/// - **真实依赖**: MySQL (Testcontainers)
+///   - **Mock 外部服务**: XML 下载和解析（避免网络依赖）
+///   - **事务测试**: 使用 `@Transactional` 确保测试隔离
+///   - **异步验证**: 使用 Awaitility 等待异步操作完成
+/// 
+/// @author linqibin
+/// @since 0.2.0
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {

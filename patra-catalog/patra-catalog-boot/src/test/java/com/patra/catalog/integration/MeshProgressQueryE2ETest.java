@@ -21,32 +21,26 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-/**
- * MeSH 导入进度查询 E2E 测试（User Story 2）。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>使用 {@link SpringBootTest} 加载完整应用上下文
- *   <li>使用 {@link Testcontainers} 启动真实的 MySQL 数据库
- *   <li>使用 {@link TestRestTemplate} 发送真实的 HTTP 请求
- *   <li>使用 {@link org.awaitility.Awaitility} 等待异步任务完成
- * </ul>
- *
- * <p>测试场景：
- *
- * <ul>
- *   <li>✅ 查询导入进度并验证进度递增
- *   <li>✅ 验证处理速度计算正确
- *   <li>✅ 验证预计剩余时间递减
- *   <li>✅ 验证各表进度详情
- * </ul>
- *
- * <p><b>注意</b>：此测试依赖完整的导入流程，执行时间较长（约 1-2 分钟）
- *
- * @author Patra Team
- * @since 0.2.0 (User Story 2)
- */
+/// MeSH 导入进度查询 E2E 测试（User Story 2）。
+/// 
+/// 测试策略：
+/// 
+/// - 使用 {@link SpringBootTest} 加载完整应用上下文
+///   - 使用 {@link Testcontainers} 启动真实的 MySQL 数据库
+///   - 使用 {@link TestRestTemplate} 发送真实的 HTTP 请求
+///   - 使用 {@link org.awaitility.Awaitility} 等待异步任务完成
+/// 
+/// 测试场景：
+/// 
+/// - ✅ 查询导入进度并验证进度递增
+///   - ✅ 验证处理速度计算正确
+///   - ✅ 验证预计剩余时间递减
+///   - ✅ 验证各表进度详情
+/// 
+/// **注意**：此测试依赖完整的导入流程，执行时间较长（约 1-2 分钟）
+/// 
+/// @author Patra Team
+/// @since 0.2.0 (User Story 2)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @DisplayName("MeSH 导入进度查询 E2E 测试")

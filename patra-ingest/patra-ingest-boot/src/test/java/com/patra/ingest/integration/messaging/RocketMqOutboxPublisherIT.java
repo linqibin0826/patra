@@ -24,64 +24,54 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.stereotype.Component;
 import org.springframework.test.context.ContextConfiguration;
 
-/**
- * RocketMQ Outbox 发布器集成测试。
- *
- * <p>使用 Testcontainers 启动真实 RocketMQ 环境（由 {@link RocketMQContainerInitializer} 提供）， 测试 {@link
- * RocketMqOutboxPublisher} 的消息发送功能。
- *
- * <h3>测试范围</h3>
- *
- * <ul>
- *   <li>✅ 普通消息发送和接收
- *   <li>✅ 消息元数据映射 (KEYS, TAGS, UserProperties)
- *   <li>✅ 批量消息发送
- *   <li>✅ 业务通道到 Topic 映射
- *   <li>✅ 消息序列化和编码
- *   <li>✅ 顺序消息发送 (带 partitionKey)
- *   <li>✅ 边界情况处理 (空 payload, 无 TAGS, 空 headers)
- * </ul>
- *
- * <h3>测试策略</h3>
- *
- * <p>遵循 testing-guide.md §7 集成测试模式：
- *
- * <ul>
- *   <li><strong>真实依赖</strong>: 使用 RocketMQ Testcontainers (由 RocketMQContainerInitializer 提供)
- *   <li><strong>Spring 管理 Consumer</strong>: 使用内部类 {@link MessageCollector} 自动订阅和收集消息
- *   <li><strong>异步断言</strong>: 使用 Awaitility 等待消息接收
- *   <li><strong>测试隔离</strong>: 每个测试前清空消息收集器
- * </ul>
- *
- * <h3>环境要求</h3>
- *
- * <ul>
- *   <li>Docker Desktop 运行中
- *   <li>至少 4GB 可用内存
- *   <li>首次启动需要 ~30-40 秒 (拉取镜像 + 启动容器)
- * </ul>
- *
- * <h3>性能优化</h3>
- *
- * <ul>
- *   <li>容器单例: 由 {@link RocketMQContainerInitializer} 和 {@link MySQLContainerInitializer}
- *       配置，所有集成测试共享容器
- *   <li>Spring Consumer: 自动管理生命周期，无需手动等待启动
- *   <li>并行测试: 测试方法可并发执行 (不同 Consumer Group)
- * </ul>
- *
- * <h3>容器依赖说明</h3>
- *
- * <p>虽然本测试主要测试 RocketMQ 消息发送，但由于 Spring 上下文中包含依赖数据库的组件（如 OutboxMessageRepository）， 因此也需要启动 MySQL
- * 容器。这样可以确保完整的应用上下文正常启动。
- *
- * @author linqibin
- * @since 0.2.0
- * @see RocketMQContainerInitializer
- * @see MySQLContainerInitializer
- * @see OutboxMessageTestBuilder
- * @see MessageCollector
- */
+/// RocketMQ Outbox 发布器集成测试。
+/// 
+/// 使用 Testcontainers 启动真实 RocketMQ 环境（由 {@link RocketMQContainerInitializer} 提供）， 测试 {@link
+/// RocketMqOutboxPublisher} 的消息发送功能。
+/// 
+/// ### 测试范围
+/// 
+/// - ✅ 普通消息发送和接收
+///   - ✅ 消息元数据映射 (KEYS, TAGS, UserProperties)
+///   - ✅ 批量消息发送
+///   - ✅ 业务通道到 Topic 映射
+///   - ✅ 消息序列化和编码
+///   - ✅ 顺序消息发送 (带 partitionKey)
+///   - ✅ 边界情况处理 (空 payload, 无 TAGS, 空 headers)
+/// 
+/// ### 测试策略
+/// 
+/// 遵循 testing-guide.md §7 集成测试模式：
+/// 
+/// - **真实依赖**: 使用 RocketMQ Testcontainers (由 RocketMQContainerInitializer 提供)
+///   - **Spring 管理 Consumer**: 使用内部类 {@link MessageCollector} 自动订阅和收集消息
+///   - **异步断言**: 使用 Awaitility 等待消息接收
+///   - **测试隔离**: 每个测试前清空消息收集器
+/// 
+/// ### 环境要求
+/// 
+/// - Docker Desktop 运行中
+///   - 至少 4GB 可用内存
+///   - 首次启动需要 ~30-40 秒 (拉取镜像 + 启动容器)
+/// 
+/// ### 性能优化
+/// 
+/// - 容器单例: 由 {@link RocketMQContainerInitializer} 和 {@link MySQLContainerInitializer}
+///       配置，所有集成测试共享容器
+///   - Spring Consumer: 自动管理生命周期，无需手动等待启动
+///   - 并行测试: 测试方法可并发执行 (不同 Consumer Group)
+/// 
+/// ### 容器依赖说明
+/// 
+/// 虽然本测试主要测试 RocketMQ 消息发送，但由于 Spring 上下文中包含依赖数据库的组件（如 OutboxMessageRepository）， 因此也需要启动 MySQL
+/// 容器。这样可以确保完整的应用上下文正常启动。
+/// 
+/// @author linqibin
+/// @since 0.2.0
+/// @see RocketMQContainerInitializer
+/// @see MySQLContainerInitializer
+/// @see OutboxMessageTestBuilder
+/// @see MessageCollector
 @SpringBootTest(
     properties = {
       "spring.cloud.nacos.config.enabled=false",
@@ -104,7 +94,7 @@ class RocketMqOutboxPublisherIT {
 
   @Autowired private RocketMqOutboxPublisher publisher;
 
-  /** 测试用的消息收集器（Spring 管理的 Consumer） */
+  /// 测试用的消息收集器（Spring 管理的 Consumer）
   @Autowired private MessageCollector messageCollector;
 
   @BeforeEach
@@ -322,21 +312,18 @@ class RocketMqOutboxPublisherIT {
 
   // ==================== 内部类：消息收集器 ====================
 
-  /**
-   * 测试用消息收集器（仅用于本集成测试）。
-   *
-   * <p>继承 {@link com.patra.ingest.testutil.RocketMQMessageCollector}，配合 Spring 管理的
-   * {@code @RocketMQMessageListener} 自动收集测试消息。
-   *
-   * <h3>设计考虑</h3>
-   *
-   * <ul>
-   *   <li><strong>Spring 管理生命周期</strong>: 避免手动创建 Consumer 的初始化延迟问题
-   *   <li><strong>按需启用</strong>: 通过 @ConditionalOnProperty 控制是否启用（仅在集成测试中启用）
-   *   <li><strong>代码复用</strong>: 继承统一的 RocketMQMessageCollector，避免重复实现
-   *   <li><strong>高内聚</strong>: 作为测试类的内部类，明确其作用域仅限于此测试
-   * </ul>
-   */
+  /// 测试用消息收集器（仅用于本集成测试）。
+/// 
+/// 继承 {@link com.patra.ingest.testutil.RocketMQMessageCollector}，配合 Spring 管理的
+/// `@RocketMQMessageListener` 自动收集测试消息。
+/// 
+/// ### 设计考虑
+/// 
+/// - **Spring 管理生命周期**: 避免手动创建 Consumer 的初始化延迟问题
+///   - **按需启用**: 通过 @ConditionalOnProperty 控制是否启用（仅在集成测试中启用）
+///   - **代码复用**: 继承统一的 RocketMQMessageCollector，避免重复实现
+///   - **高内聚**: 作为测试类的内部类，明确其作用域仅限于此测试
+/// 
   @Slf4j
   @Component
   @ConditionalOnProperty(

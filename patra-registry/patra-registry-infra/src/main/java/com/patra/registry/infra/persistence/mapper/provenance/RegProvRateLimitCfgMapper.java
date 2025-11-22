@@ -6,16 +6,13 @@ import java.time.Instant;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
-/**
- * 只读 Mapper,用于表 {@code reg_prov_rate_limit_cfg}. SQL implementation located in {@code
- * resources/mapper/RegProvRateLimitCfgMapper.xml}.
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 只读 Mapper,用于表 `reg_prov_rate_limit_cfg`. SQL implementation located in `resources/mapper/RegProvRateLimitCfgMapper.xml`.
+/// 
+/// @author linqibin
+/// @since 0.1.0
 public interface RegProvRateLimitCfgMapper extends BaseMapper<RegProvRateLimitCfgDO> {
 
-  /** Retrieves the effective rate limit configuration scoped by provenance and operation. */
+  /// Retrieves the effective rate limit configuration scoped by provenance and operation.
   Optional<RegProvRateLimitCfgDO> selectActiveMerged(
       @Param("provenanceId") Long provenanceId,
       @Param("operationType") String operationType,

@@ -31,85 +31,81 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Outbox 模式端到端测试。
- *
- * <p>测试完整的 Outbox 模式工作流,从业务数据写入到消息最终被消费。
- *
- * <h3>测试覆盖的完整流程</h3>
- *
- * <pre>
- * 1. 业务操作 + 写入 Outbox 表 (原子性)
- *    ↓
- * 2. Outbox 扫描器发现 PENDING 消息
- *    ↓
- * 3. 获取租约并标记为 PUBLISHING
- *    ↓
- * 4. RocketMqOutboxPublisher 发送到 RocketMQ
- *    ↓
- * 5. 标记为 PUBLISHED
- *    ↓
- * 6. Consumer 接收并验证消息
- * </pre>
- *
- * <h3>测试场景</h3>
- *
- * <ul>
- *   <li>✅ 完整成功流程 (Happy Path)
- *   <li>✅ 幂等性保证 (重复扫描不重复发送)
- *   <li>✅ 事务原子性 (业务操作失败时 Outbox 一起回滚)
- *   <li>✅ 失败重试机制
- *   <li>✅ 租约竞争 (多实例并发)
- *   <li>✅ dedupKey 唯一性约束
- * </ul>
- *
- * <h3>测试策略</h3>
- *
- * <p>遵循 testing-guide.md §7.2 Outbox 模式测试要求:
- *
- * <ul>
- *   <li><strong>真实依赖</strong>: MySQL + RocketMQ (Testcontainers)
- *   <li><strong>事务测试</strong>: 使用 {@code @Transactional} 测试原子性
- *   <li><strong>异步验证</strong>: 使用 Awaitility 等待消息接收
- *   <li><strong>状态验证</strong>: 检查数据库中 Outbox 消息状态变化
- * </ul>
- *
- * <h3>与集成测试的区别</h3>
- *
- * <table border="1">
- *   <tr>
- *     <th>对比项</th>
- *     <th>集成测试 (Integration)</th>
- *     <th>E2E 测试 (本类)</th>
- *   </tr>
- *   <tr>
- *     <td>测试范围</td>
- *     <td>单一组件 (Publisher)</td>
- *     <td>完整工作流 (多组件)</td>
- *   </tr>
- *   <tr>
- *     <td>涉及组件</td>
- *     <td>RocketMqOutboxPublisher</td>
- *     <td>Repository + RelayStore + Orchestrator + Publisher + Consumer</td>
- *   </tr>
- *   <tr>
- *     <td>数据源</td>
- *     <td>内存对象</td>
- *     <td>数据库持久化</td>
- *   </tr>
- *   <tr>
- *     <td>执行时间</td>
- *     <td>~10 秒</td>
- *     <td>~20-30 秒</td>
- *   </tr>
- * </table>
- *
- * @author linqibin
- * @since 0.2.0
- * @see MySQLContainerInitializer
- * @see RocketMQContainerInitializer
- * @see OutboxMessageTestBuilder
- */
+/// Outbox 模式端到端测试。
+/// 
+/// 测试完整的 Outbox 模式工作流,从业务数据写入到消息最终被消费。
+/// 
+/// ### 测试覆盖的完整流程
+/// 
+/// ```
+/// 
+/// 1. 业务操作 + 写入 Outbox 表 (原子性)
+///    ↓
+/// 2. Outbox 扫描器发现 PENDING 消息
+///    ↓
+/// 3. 获取租约并标记为 PUBLISHING
+///    ↓
+/// 4. RocketMqOutboxPublisher 发送到 RocketMQ
+///    ↓
+/// 5. 标记为 PUBLISHED
+///    ↓
+/// 6. Consumer 接收并验证消息
+/// 
+/// ```
+/// 
+/// ### 测试场景
+/// 
+/// - ✅ 完整成功流程 (Happy Path)
+///   - ✅ 幂等性保证 (重复扫描不重复发送)
+///   - ✅ 事务原子性 (业务操作失败时 Outbox 一起回滚)
+///   - ✅ 失败重试机制
+///   - ✅ 租约竞争 (多实例并发)
+///   - ✅ dedupKey 唯一性约束
+/// 
+/// ### 测试策略
+/// 
+/// 遵循 testing-guide.md §7.2 Outbox 模式测试要求:
+/// 
+/// - **真实依赖**: MySQL + RocketMQ (Testcontainers)
+///   - **事务测试**: 使用 `@Transactional` 测试原子性
+///   - **异步验证**: 使用 Awaitility 等待消息接收
+///   - **状态验证**: 检查数据库中 Outbox 消息状态变化
+/// 
+/// ### 与集成测试的区别
+/// 
+/// <table border="1">
+///   <tr>
+///     <th>对比项</th>
+///     <th>集成测试 (Integration)</th>
+///     <th>E2E 测试 (本类)</th>
+///   </tr>
+///   <tr>
+///     <td>测试范围</td>
+///     <td>单一组件 (Publisher)</td>
+///     <td>完整工作流 (多组件)</td>
+///   </tr>
+///   <tr>
+///     <td>涉及组件</td>
+///     <td>RocketMqOutboxPublisher</td>
+///     <td>Repository + RelayStore + Orchestrator + Publisher + Consumer</td>
+///   </tr>
+///   <tr>
+///     <td>数据源</td>
+///     <td>内存对象</td>
+///     <td>数据库持久化</td>
+///   </tr>
+///   <tr>
+///     <td>执行时间</td>
+///     <td>~10 秒</td>
+///     <td>~20-30 秒</td>
+///   </tr>
+/// </table>
+/// 
+/// @author linqibin
+/// @since 0.2.0
+/// @see MySQLContainerInitializer
+/// @see RocketMQContainerInitializer
+/// @see OutboxMessageTestBuilder
 @SpringBootTest(
     properties = {
       "spring.cloud.nacos.config.enabled=false",

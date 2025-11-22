@@ -10,22 +10,18 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * WindowSpec 单元测试。
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>所有实现类的构造器验证逻辑
- *   <li>工厂方法
- *   <li>Record 语义(equals/hashCode/toString)
- *   <li>toMap() 序列化
- *   <li>fromMap() 反序列化
- *   <li>边界条件和异常场景
- * </ul>
- *
- * @author linqibin
- */
+/// WindowSpec 单元测试。
+/// 
+/// 测试覆盖:
+/// 
+/// - 所有实现类的构造器验证逻辑
+///   - 工厂方法
+///   - Record 语义(equals/hashCode/toString)
+///   - toMap() 序列化
+///   - fromMap() 反序列化
+///   - 边界条件和异常场景
+/// 
+/// @author linqibin
 @DisplayName("WindowSpec 单元测试")
 class WindowSpecTest {
 

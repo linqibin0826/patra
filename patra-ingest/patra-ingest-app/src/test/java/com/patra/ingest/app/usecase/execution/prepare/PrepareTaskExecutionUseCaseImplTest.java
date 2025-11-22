@@ -38,23 +38,19 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
-/**
- * PrepareTaskExecutionUseCaseImpl 单元测试
- *
- * <p>测试范围:
- *
- * <ul>
- *   <li>✅ 正常流程: 幂等检查 → 租约获取 → 会话创建 → 上下文加载
- *   <li>✅ 幂等跳过: 任务已成功时抛出异常
- *   <li>✅ 租约失败: 租约获取失败时抛出异常
- *   <li>✅ 异常处理: 失败时资源清理（心跳停止、租约释放）
- *   <li>✅ Slice 状态转换: PENDING → ASSIGNED
- *   <li>✅ Task/TaskRun 状态更新: 标记为 RUNNING
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// PrepareTaskExecutionUseCaseImpl 单元测试
+/// 
+/// 测试范围:
+/// 
+/// - ✅ 正常流程: 幂等检查 → 租约获取 → 会话创建 → 上下文加载
+///   - ✅ 幂等跳过: 任务已成功时抛出异常
+///   - ✅ 租约失败: 租约获取失败时抛出异常
+///   - ✅ 异常处理: 失败时资源清理（心跳停止、租约释放）
+///   - ✅ Slice 状态转换: PENDING → ASSIGNED
+///   - ✅ Task/TaskRun 状态更新: 标记为 RUNNING
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("PrepareTaskExecutionUseCaseImpl 单元测试")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

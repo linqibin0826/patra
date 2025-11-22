@@ -4,11 +4,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
-/**
- * 上游数据源(溯源/Provenance)枚举。
- *
- * <p>为常见的文献和元数据源(如 PubMed、Crossref 和 DataCite)提供规范标识符。 支持字符串解析以及 Jackson 序列化和反序列化。
- */
+/// 上游数据源(溯源/Provenance)枚举。
+/// 
+/// 为常见的文献和元数据源(如 PubMed、Crossref 和 DataCite)提供规范标识符。 支持字符串解析以及 Jackson 序列化和反序列化。
 @Getter
 public enum ProvenanceCode {
   PUBMED("PUBMED", "PubMed"),
@@ -30,13 +28,13 @@ public enum ProvenanceCode {
   CORD19("CORD19", "CORD-19"),
   GIM("GIM", "WHO GIM");
 
-  /** 用于持久化和交换的大写代码(例如 {@code PUBMED})。 */
+  /// 用于持久化和交换的大写代码(例如 `PUBMED`)。
   private final String code;
 
-  /** 数据源的人类可读描述。 */
+  /// 数据源的人类可读描述。
   private final String description;
 
-  /** 缓存的小写代码，避免重复调用 toLowerCase() */
+  /// 缓存的小写代码，避免重复调用 toLowerCase()
   private final String lowerCaseCode;
 
   ProvenanceCode(String code, String display) {
@@ -45,13 +43,11 @@ public enum ProvenanceCode {
     this.lowerCaseCode = code.toLowerCase();
   }
 
-  /**
-   * 将字符串解析为 {@link ProvenanceCode},同时规范化大小写和常见别名。
-   *
-   * @param s 数据源标识符
-   * @return 匹配的数据源代码
-   * @throws IllegalArgumentException 如果标识符为 null 或未知
-   */
+  /// 将字符串解析为 {@link ProvenanceCode},同时规范化大小写和常见别名。
+/// 
+/// @param s 数据源标识符
+/// @return 匹配的数据源代码
+/// @throws IllegalArgumentException 如果标识符为 null 或未知
   public static ProvenanceCode parse(String s) {
     if (s == null) {
       throw new IllegalArgumentException("数据源标识符不能为 null");
@@ -80,48 +76,40 @@ public enum ProvenanceCode {
     };
   }
 
-  /**
-   * 用于 JSON 反序列化的 Jackson 工厂方法。
-   *
-   * @param value JSON 中的值
-   * @return 匹配的数据源代码
-   */
+  /// 用于 JSON 反序列化的 Jackson 工厂方法。
+/// 
+/// @param value JSON 中的值
+/// @return 匹配的数据源代码
   @JsonCreator
   public static ProvenanceCode fromJson(String value) {
     return parse(value);
   }
 
-  /**
-   * 将代码序列化为 JSON。
-   *
-   * @return 数据源代码字符串
-   */
+  /// 将代码序列化为 JSON。
+/// 
+/// @return 数据源代码字符串
   @JsonValue
   public String toJson() {
     return this.code;
   }
 
-  /**
-   * 返回小写的数据源代码
-   *
-   * <p>用于配置文件键、API参数、内部标识符等需要小写的场景。
-   * 例如：{@code patra.provenance.sources.pubmed}
-   *
-   * <p>注意：此方法返回构造时缓存的小写值，避免重复调用 {@code toLowerCase()}。
-   *
-   * @return 小写的数据源代码（如 "pubmed", "epmc"）
-   */
+  /// 返回小写的数据源代码
+/// 
+/// 用于配置文件键、API参数、内部标识符等需要小写的场景。
+/// 例如：`patra.provenance.sources.pubmed`
+/// 
+/// 注意：此方法返回构造时缓存的小写值，避免重复调用 `toLowerCase()`。
+/// 
+/// @return 小写的数据源代码（如 "pubmed", "epmc"）
   public String lowerCaseCode() {
     return this.lowerCaseCode;
   }
 
-  /**
-   * 返回代码字符串，用于日志打印和字符串拼接。
-   *
-   * <p>使 SLF4J 的 {@code {}} 占位符可以直接使用 ProvenanceCode 对象， 无需手动调用 {@code getCode()} 或处理 null 检查。
-   *
-   * @return 数据源代码字符串
-   */
+  /// 返回代码字符串，用于日志打印和字符串拼接。
+/// 
+/// 使 SLF4J 的 `{`} 占位符可以直接使用 ProvenanceCode 对象， 无需手动调用 `getCode()` 或处理 null 检查。
+/// 
+/// @return 数据源代码字符串
   @Override
   public String toString() {
     return this.code;

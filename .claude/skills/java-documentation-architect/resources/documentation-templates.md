@@ -118,128 +118,112 @@ patra-{service}/
 #### Domain 层 - Aggregate/Entity 包
 
 ```java
-/**
- * [聚合根/实体] 包。
- *
- * <p>本包定义 [业务概念] 的领域模型，遵循 DDD 设计原则。
- *
- * <h2>职责</h2>
- * <ul>
- *   <li>封装业务规则和不变性约束
- *   <li>管理聚合内的一致性边界
- *   <li>发布领域事件
- * </ul>
- *
- * <h2>核心组件</h2>
- * <ul>
- *   <li>{@link AggregateRoot} - 聚合根，管理一致性边界
- *   <li>{@link Entity} - 实体，有唯一标识
- * </ul>
- *
- * <h2>设计原则</h2>
- * <ul>
- *   <li><strong>不变性约束</strong>: 通过构造函数和方法确保对象始终有效
- *   <li><strong>富领域模型</strong>: 业务逻辑封装在领域对象中
- *   <li><strong>聚合边界</strong>: 仅通过聚合根访问内部实体
- * </ul>
- *
- * <h2>使用示例</h2>
- * <pre>{@code
- * // 创建聚合根
- * var aggregate = AggregateRoot.create(params);
- *
- * // 业务操作
- * aggregate.businessMethod();
- *
- * // 持久化（通过仓储）
- * repository.save(aggregate);
- * }</pre>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// [聚合根/实体] 包。
+/// 
+/// 本包定义 [业务概念] 的领域模型，遵循 DDD 设计原则。
+/// 
+/// ## 职责
+/// 
+/// - 封装业务规则和不变性约束
+///   - 管理聚合内的一致性边界
+///   - 发布领域事件
+/// 
+/// ## 核心组件
+/// 
+/// - {@link AggregateRoot} - 聚合根，管理一致性边界
+///   - {@link Entity} - 实体，有唯一标识
+/// 
+/// ## 设计原则
+/// 
+/// - **不变性约束**: 通过构造函数和方法确保对象始终有效
+///   - **富领域模型**: 业务逻辑封装在领域对象中
+///   - **聚合边界**: 仅通过聚合根访问内部实体
+/// 
+/// ## 使用示例
+/// ```java
+/// // 创建聚合根
+/// var aggregate = AggregateRoot.create(params);
+/// 
+/// // 业务操作
+/// aggregate.businessMethod();
+/// 
+/// // 持久化（通过仓储）
+/// repository.save(aggregate);
+/// ```
+/// 
+/// @author linqibin
+/// @since 0.1.0
 package com.patra.{service}.domain.model.aggregate;
 ```
 
 #### Domain 层 - Value Object 包
 
 ```java
-/**
- * [值对象] 包。
- *
- * <p>本包定义 [业务概念] 的值对象，遵循不可变性原则。
- *
- * <h2>职责</h2>
- * <ul>
- *   <li>封装无标识的业务概念
- *   <li>提供类型安全的领域值
- *   <li>实现基于值的相等性比较
- * </ul>
- *
- * <h2>核心组件</h2>
- * <ul>
- *   <li>{@link ValueObject1} - [说明]
- *   <li>{@link ValueObject2} - [说明]
- * </ul>
- *
- * <h2>设计原则</h2>
- * <ul>
- *   <li><strong>不可变性</strong>: 所有字段为 final，无 setter
- *   <li><strong>值相等</strong>: 重写 equals() 和 hashCode()
- *   <li><strong>自验证</strong>: 构造时验证有效性
- * </ul>
- *
- * <h2>使用示例</h2>
- * <pre>{@code
- * var vo = new ValueObject(value);
- * // 修改通过创建新对象
- * var newVo = vo.withNewValue(newValue);
- * }</pre>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// [值对象] 包。
+/// 
+/// 本包定义 [业务概念] 的值对象，遵循不可变性原则。
+/// 
+/// ## 职责
+/// 
+/// - 封装无标识的业务概念
+///   - 提供类型安全的领域值
+///   - 实现基于值的相等性比较
+/// 
+/// ## 核心组件
+/// 
+/// - {@link ValueObject1} - [说明]
+///   - {@link ValueObject2} - [说明]
+/// 
+/// ## 设计原则
+/// 
+/// - **不可变性**: 所有字段为 final，无 setter
+///   - **值相等**: 重写 equals() 和 hashCode()
+///   - **自验证**: 构造时验证有效性
+/// 
+/// ## 使用示例
+/// ```java
+/// var vo = new ValueObject(value);
+/// // 修改通过创建新对象
+/// var newVo = vo.withNewValue(newValue);
+/// ```
+/// 
+/// @author linqibin
+/// @since 0.1.0
 package com.patra.{service}.domain.model.vo;
 ```
 
 #### Domain 层 - Repository Port 包
 
 ```java
-/**
- * 仓储端口接口包。
- *
- * <p>本包定义领域层的数据访问契约（Port），由基础设施层实现。
- *
- * <h2>职责</h2>
- * <ul>
- *   <li>定义聚合根的持久化接口
- *   <li>提供领域语言的查询方法
- *   <li>隔离领域层与数据访问细节
- * </ul>
- *
- * <h2>核心组件</h2>
- * <ul>
- *   <li>{@link AggregateRepository} - 聚合根仓储接口
- * </ul>
- *
- * <h2>设计原则</h2>
- * <ul>
- *   <li><strong>领域语言</strong>: 方法名使用业务术语
- *   <li><strong>仅聚合根</strong>: 不为实体单独提供仓储
- *   <li><strong>纯接口</strong>: 不包含实现细节
- * </ul>
- *
- * <h2>使用示例</h2>
- * <pre>{@code
- * public interface ProvenanceRepository {
- *     void save(Provenance aggregate);
- *     Optional<Provenance> findById(ProvenanceId id);
- * }
- * }</pre>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 仓储端口接口包。
+/// 
+/// 本包定义领域层的数据访问契约（Port），由基础设施层实现。
+/// 
+/// ## 职责
+/// 
+/// - 定义聚合根的持久化接口
+///   - 提供领域语言的查询方法
+///   - 隔离领域层与数据访问细节
+/// 
+/// ## 核心组件
+/// 
+/// - {@link AggregateRepository} - 聚合根仓储接口
+/// 
+/// ## 设计原则
+/// 
+/// - **领域语言**: 方法名使用业务术语
+///   - **仅聚合根**: 不为实体单独提供仓储
+///   - **纯接口**: 不包含实现细节
+/// 
+/// ## 使用示例
+/// ```java
+/// public interface ProvenanceRepository {
+///     void save(Provenance aggregate);
+///     Optional<Provenance> findById(ProvenanceId id);
+/// ```
+/// 
+/// @author linqibin
+/// @since 0.1.0
 package com.patra.{service}.domain.port;
 ```
 
@@ -248,94 +232,82 @@ package com.patra.{service}.domain.port;
 #### App 层 - Orchestrator 包
 
 ```java
-/**
- * [UseCase名称] 编排器包。
- *
- * <p>本包实现 [UseCase] 的应用层编排逻辑，协调领域对象、仓储和基础设施服务完成业务用例。
- *
- * <h2>职责</h2>
- * <ul>
- *   <li>接收来自 Adapter 层的 Command/Query
- *   <li>协调 Domain 层的聚合根和领域服务
- *   <li>通过 Port 接口调用基础设施服务
- *   <li>管理事务边界
- *   <li>发布领域事件（通过 Outbox）
- * </ul>
- *
- * <h2>核心组件</h2>
- * <ul>
- *   <li>{@link XxxOrchestrator} - 主编排器
- *   <li>{@link XxxCoordinator} - 协调器（子流程）
- *   <li>{@link XxxUseCase} - 用例接口
- * </ul>
- *
- * <h2>设计原则</h2>
- * <ul>
- *   <li><strong>薄应用层</strong>: 不包含业务逻辑，仅协调
- *   <li><strong>事务一致性</strong>: 使用 @Transactional 管理事务边界
- *   <li><strong>依赖方向</strong>: App → Domain, App → Port, App ← Adapter
- * </ul>
- *
- * <h2>使用示例</h2>
- * <pre>{@code
- * @Service
- * @RequiredArgsConstructor
- * public class XxxOrchestrator {
- *     private final XxxRepository repository;
- *
- *     @Transactional
- *     public XxxId execute(XxxCommand command) {
- *         // 1. 调用领域逻辑
- *         var aggregate = Xxx.create(command);
- *
- *         // 2. 持久化
- *         repository.save(aggregate);
- *
- *         // 3. 发布事件
- *         outbox.publish(aggregate.getDomainEvents());
- *
- *         return aggregate.getId();
- *     }
- * }
- * }</pre>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// [UseCase名称] 编排器包。
+/// 
+/// 本包实现 [UseCase] 的应用层编排逻辑，协调领域对象、仓储和基础设施服务完成业务用例。
+/// 
+/// ## 职责
+/// 
+/// - 接收来自 Adapter 层的 Command/Query
+///   - 协调 Domain 层的聚合根和领域服务
+///   - 通过 Port 接口调用基础设施服务
+///   - 管理事务边界
+///   - 发布领域事件（通过 Outbox）
+/// 
+/// ## 核心组件
+/// 
+/// - {@link XxxOrchestrator} - 主编排器
+///   - {@link XxxCoordinator} - 协调器（子流程）
+///   - {@link XxxUseCase} - 用例接口
+/// 
+/// ## 设计原则
+/// 
+/// - **薄应用层**: 不包含业务逻辑，仅协调
+///   - **事务一致性**: 使用 @Transactional 管理事务边界
+///   - **依赖方向**: App → Domain, App → Port, App ← Adapter
+/// 
+/// ## 使用示例
+/// ```java
+/// @Service
+/// @RequiredArgsConstructor
+/// public class XxxOrchestrator {
+///     private final XxxRepository repository;
+/// 
+///     @Transactional
+///     public XxxId execute(XxxCommand command) {
+///         // 1. 调用领域逻辑
+///         var aggregate = Xxx.create(command);
+/// 
+///         // 2. 持久化
+///         repository.save(aggregate);
+/// 
+///         // 3. 发布事件
+///         outbox.publish(aggregate.getDomainEvents());
+/// 
+///         return aggregate.getId();
+/// ```
+/// 
+/// @author linqibin
+/// @since 0.1.0
 package com.patra.{service}.app.usecase.xxx;
 ```
 
 #### App 层 - Command/DTO 包
 
 ```java
-/**
- * [UseCase] 命令/DTO 包。
- *
- * <p>本包定义应用层的输入命令和输出 DTO。
- *
- * <h2>职责</h2>
- * <ul>
- *   <li>封装用例的输入参数（Command）
- *   <li>封装用例的输出结果（DTO）
- *   <li>提供与领域模型不同的视图
- * </ul>
- *
- * <h2>核心组件</h2>
- * <ul>
- *   <li>{@link XxxCommand} - 输入命令
- *   <li>{@link XxxResult} - 输出结果
- * </ul>
- *
- * <h2>设计原则</h2>
- * <ul>
- *   <li><strong>不可变性</strong>: Command 和 DTO 应为不可变对象
- *   <li><strong>验证</strong>: Command 可包含基本验证逻辑
- *   <li><strong>转换</strong>: 通过 Converter 与领域模型互转
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// [UseCase] 命令/DTO 包。
+/// 
+/// 本包定义应用层的输入命令和输出 DTO。
+/// 
+/// ## 职责
+/// 
+/// - 封装用例的输入参数（Command）
+///   - 封装用例的输出结果（DTO）
+///   - 提供与领域模型不同的视图
+/// 
+/// ## 核心组件
+/// 
+/// - {@link XxxCommand} - 输入命令
+///   - {@link XxxResult} - 输出结果
+/// 
+/// ## 设计原则
+/// 
+/// - **不可变性**: Command 和 DTO 应为不可变对象
+///   - **验证**: Command 可包含基本验证逻辑
+///   - **转换**: 通过 Converter 与领域模型互转
+/// 
+/// @author linqibin
+/// @since 0.1.0
 package com.patra.{service}.app.usecase.xxx.command;
 ```
 
@@ -344,79 +316,68 @@ package com.patra.{service}.app.usecase.xxx.command;
 #### Adapter 层 - REST 包
 
 ```java
-/**
- * REST API 适配器包。
- *
- * <p>本包实现驱动适配器，接收 HTTP 请求并转换为应用层用例调用。
- *
- * <h2>职责</h2>
- * <ul>
- *   <li>实现 API 契约（patra-xxx-api）
- *   <li>验证请求 DTO（@Valid）
- *   <li>委托给应用层编排器
- *   <li>转换领域结果为 API 响应
- *   <li>映射领域异常为 HTTP 响应
- * </ul>
- *
- * <h2>核心组件</h2>
- * <ul>
- *   <li>{@link XxxEndpointImpl} - REST 端点实现
- *   <li>{@link XxxApiConverter} - DTO 转换器
- * </ul>
- *
- * <h2>命名约定</h2>
- * <ul>
- *   <li>端点实现: {@code *EndpointImpl}
- *   <li>API 转换器: {@code *ApiConverter}
- * </ul>
- *
- * <h2>使用示例</h2>
- * <pre>{@code
- * @RestController
- * @RequiredArgsConstructor
- * public class XxxEndpointImpl implements XxxEndpoint {
- *     private final XxxOrchestrator orchestrator;
- *
- *     @Override
- *     public XxxResponse createXxx(@Valid @RequestBody CreateXxxRequest request) {
- *         var command = converter.toCommand(request);
- *         var result = orchestrator.execute(command);
- *         return converter.toResponse(result);
- *     }
- * }
- * }</pre>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// REST API 适配器包。
+/// 
+/// 本包实现驱动适配器，接收 HTTP 请求并转换为应用层用例调用。
+/// 
+/// ## 职责
+/// 
+/// - 实现 API 契约（patra-xxx-api）
+///   - 验证请求 DTO（@Valid）
+///   - 委托给应用层编排器
+///   - 转换领域结果为 API 响应
+///   - 映射领域异常为 HTTP 响应
+/// 
+/// ## 核心组件
+/// 
+/// - {@link XxxEndpointImpl} - REST 端点实现
+///   - {@link XxxApiConverter} - DTO 转换器
+/// 
+/// ## 命名约定
+/// 
+/// - 端点实现: `*EndpointImpl`
+///   - API 转换器: `*ApiConverter`
+/// 
+/// ## 使用示例
+/// ```java
+/// @RestController
+/// @RequiredArgsConstructor
+/// public class XxxEndpointImpl implements XxxEndpoint {
+///     private final XxxOrchestrator orchestrator;
+/// 
+///     @Override
+///     public XxxResponse createXxx(@Valid @RequestBody CreateXxxRequest request) {
+///         var command = converter.toCommand(request);
+///         var result = orchestrator.execute(command);
+///         return converter.toResponse(result);
+/// ```
+/// 
+/// @author linqibin
+/// @since 0.1.0
 package com.patra.{service}.adapter.rest;
 ```
 
 #### Adapter 层 - Scheduler/MQ 包
 
 ```java
-/**
- * [Scheduler/MQ] 适配器包。
- *
- * <p>本包实现驱动适配器，处理定时任务或消息队列事件。
- *
- * <h2>职责</h2>
- * <ul>
- *   <li>处理定时触发的任务
- *   <li>消费消息队列事件
- *   <li>转换外部事件为应用层命令
- *   <li>处理异步任务
- * </ul>
- *
- * <h2>核心组件</h2>
- * <ul>
- *   <li>{@link XxxScheduler} - 定时任务
- *   <li>{@link XxxListener} - 消息监听器
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// [Scheduler/MQ] 适配器包。
+/// 
+/// 本包实现驱动适配器，处理定时任务或消息队列事件。
+/// 
+/// ## 职责
+/// 
+/// - 处理定时触发的任务
+///   - 消费消息队列事件
+///   - 转换外部事件为应用层命令
+///   - 处理异步任务
+/// 
+/// ## 核心组件
+/// 
+/// - {@link XxxScheduler} - 定时任务
+///   - {@link XxxListener} - 消息监听器
+/// 
+/// @author linqibin
+/// @since 0.1.0
 package com.patra.{service}.adapter.scheduler;
 ```
 
@@ -425,86 +386,74 @@ package com.patra.{service}.adapter.scheduler;
 #### Infra 层 - Repository 实现包
 
 ```java
-/**
- * 仓储实现包。
- *
- * <p>本包实现 Domain 层定义的 Repository Port 接口，提供数据持久化能力。
- *
- * <h2>职责</h2>
- * <ul>
- *   <li>实现仓储接口（Port）
- *   <li>领域对象与持久化对象互转
- *   <li>封装数据访问技术细节（MyBatis）
- * </ul>
- *
- * <h2>核心组件</h2>
- * <ul>
- *   <li>{@link XxxRepositoryImpl} - 仓储实现
- *   <li>{@link XxxConverter} - 对象转换器
- *   <li>{@link XxxMapper} - MyBatis Mapper
- *   <li>{@link XxxDO} - 数据库对象
- * </ul>
- *
- * <h2>设计原则</h2>
- * <ul>
- *   <li><strong>隔离</strong>: DO 对象不能离开基础设施层
- *   <li><strong>转换</strong>: 使用 MapStruct 进行 DO ↔ Domain 转换
- *   <li><strong>封装</strong>: 隐藏 MyBatis 实现细节
- * </ul>
- *
- * <h2>使用示例</h2>
- * <pre>{@code
- * @Repository
- * @RequiredArgsConstructor
- * public class XxxRepositoryImpl implements XxxRepository {
- *     private final XxxMapper mapper;
- *     private final XxxConverter converter;
- *
- *     @Override
- *     public void save(Xxx aggregate) {
- *         var entity = converter.toEntity(aggregate);
- *         mapper.insert(entity);
- *     }
- * }
- * }</pre>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 仓储实现包。
+/// 
+/// 本包实现 Domain 层定义的 Repository Port 接口，提供数据持久化能力。
+/// 
+/// ## 职责
+/// 
+/// - 实现仓储接口（Port）
+///   - 领域对象与持久化对象互转
+///   - 封装数据访问技术细节（MyBatis）
+/// 
+/// ## 核心组件
+/// 
+/// - {@link XxxRepositoryImpl} - 仓储实现
+///   - {@link XxxConverter} - 对象转换器
+///   - {@link XxxMapper} - MyBatis Mapper
+///   - {@link XxxDO} - 数据库对象
+/// 
+/// ## 设计原则
+/// 
+/// - **隔离**: DO 对象不能离开基础设施层
+///   - **转换**: 使用 MapStruct 进行 DO ↔ Domain 转换
+///   - **封装**: 隐藏 MyBatis 实现细节
+/// 
+/// ## 使用示例
+/// ```java
+/// @Repository
+/// @RequiredArgsConstructor
+/// public class XxxRepositoryImpl implements XxxRepository {
+///     private final XxxMapper mapper;
+///     private final XxxConverter converter;
+/// 
+///     @Override
+///     public void save(Xxx aggregate) {
+///         var entity = converter.toEntity(aggregate);
+///         mapper.insert(entity);
+/// ```
+/// 
+/// @author linqibin
+/// @since 0.1.0
 package com.patra.{service}.infra.persistence.repository;
 ```
 
 #### Infra 层 - Mapper/Entity 包
 
 ```java
-/**
- * MyBatis Mapper 和数据库实体包。
- *
- * <p>本包定义 MyBatis Mapper 接口和数据库实体（DO）。
- *
- * <h2>职责</h2>
- * <ul>
- *   <li>定义数据库表映射（DO）
- *   <li>定义 SQL 操作接口（Mapper）
- *   <li>支持复杂查询（XML Mapper）
- * </ul>
- *
- * <h2>核心组件</h2>
- * <ul>
- *   <li>{@link XxxDO} - 数据库对象
- *   <li>{@link XxxMapper} - MyBatis Mapper
- * </ul>
- *
- * <h2>设计原则</h2>
- * <ul>
- *   <li><strong>表对应</strong>: 一个 DO 对应一个表
- *   <li><strong>审计字段</strong>: 继承 BaseDO 获得审计能力
- *   <li><strong>复杂查询</strong>: 使用 XML Mapper
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// MyBatis Mapper 和数据库实体包。
+/// 
+/// 本包定义 MyBatis Mapper 接口和数据库实体（DO）。
+/// 
+/// ## 职责
+/// 
+/// - 定义数据库表映射（DO）
+///   - 定义 SQL 操作接口（Mapper）
+///   - 支持复杂查询（XML Mapper）
+/// 
+/// ## 核心组件
+/// 
+/// - {@link XxxDO} - 数据库对象
+///   - {@link XxxMapper} - MyBatis Mapper
+/// 
+/// ## 设计原则
+/// 
+/// - **表对应**: 一个 DO 对应一个表
+///   - **审计字段**: 继承 BaseDO 获得审计能力
+///   - **复杂查询**: 使用 XML Mapper
+/// 
+/// @author linqibin
+/// @since 0.1.0
 package com.patra.{service}.infra.persistence.mapper;
 ```
 
@@ -513,60 +462,51 @@ package com.patra.{service}.infra.persistence.mapper;
 #### API 层 - DTO 包
 
 ```java
-/**
- * [功能模块] REST API DTO 包。
- *
- * <p>本包定义对外暴露的 REST API 数据传输对象（DTO）。
- *
- * <h2>职责</h2>
- * <ul>
- *   <li>定义请求 DTO（Request）
- *   <li>定义响应 DTO（Response）
- *   <li>定义验证规则（@Valid 注解）
- * </ul>
- *
- * <h2>核心组件</h2>
- * <ul>
- *   <li>{@link XxxRequest} - 请求 DTO
- *   <li>{@link XxxResponse} - 响应 DTO
- * </ul>
- *
- * <h2>设计原则</h2>
- * <ul>
- *   <li><strong>不可变性</strong>: DTO 应为不可变对象
- *   <li><strong>验证</strong>: 使用 Bean Validation 注解
- *   <li><strong>版本化</strong>: 通过 URL 版本管理 API 演进
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// [功能模块] REST API DTO 包。
+/// 
+/// 本包定义对外暴露的 REST API 数据传输对象（DTO）。
+/// 
+/// ## 职责
+/// 
+/// - 定义请求 DTO（Request）
+///   - 定义响应 DTO（Response）
+///   - 定义验证规则（@Valid 注解）
+/// 
+/// ## 核心组件
+/// 
+/// - {@link XxxRequest} - 请求 DTO
+///   - {@link XxxResponse} - 响应 DTO
+/// 
+/// ## 设计原则
+/// 
+/// - **不可变性**: DTO 应为不可变对象
+///   - **验证**: 使用 Bean Validation 注解
+///   - **版本化**: 通过 URL 版本管理 API 演进
+/// 
+/// @author linqibin
+/// @since 0.1.0
 package com.patra.{service}.api.dto.xxx;
 ```
 
 #### API 层 - Endpoint 接口包
 
 ```java
-/**
- * REST API 端点接口包。
- *
- * <p>本包定义 OpenAPI 端点接口契约，由 Adapter 层实现。
- *
- * <h2>职责</h2>
- * <ul>
- *   <li>定义 REST API 契约
- *   <li>使用 OpenAPI 注解描述 API
- *   <li>定义请求/响应格式
- * </ul>
- *
- * <h2>核心组件</h2>
- * <ul>
- *   <li>{@link XxxEndpoint} - API 端点接口
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// REST API 端点接口包。
+/// 
+/// 本包定义 OpenAPI 端点接口契约，由 Adapter 层实现。
+/// 
+/// ## 职责
+/// 
+/// - 定义 REST API 契约
+///   - 使用 OpenAPI 注解描述 API
+///   - 定义请求/响应格式
+/// 
+/// ## 核心组件
+/// 
+/// - {@link XxxEndpoint} - API 端点接口
+/// 
+/// @author linqibin
+/// @since 0.1.0
 package com.patra.{service}.api.endpoint;
 ```
 

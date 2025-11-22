@@ -23,22 +23,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-/**
- * TaskExecutionUseCaseImpl 单元测试
- *
- * <p>测试范围:
- *
- * <ul>
- *   <li>✅ 正常流程: 准备 → 执行 → 完成
- *   <li>✅ 幂等跳过: 任务已成功场景
- *   <li>✅ 租约失败: 租约获取失败场景
- *   <li>✅ 异常处理: 各阶段异常的资源清理
- *   <li>✅ 调用顺序验证: 三阶段编排顺序
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// TaskExecutionUseCaseImpl 单元测试
+/// 
+/// 测试范围:
+/// 
+/// - ✅ 正常流程: 准备 → 执行 → 完成
+///   - ✅ 幂等跳过: 任务已成功场景
+///   - ✅ 租约失败: 租约获取失败场景
+///   - ✅ 异常处理: 各阶段异常的资源清理
+///   - ✅ 调用顺序验证: 三阶段编排顺序
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("TaskExecutionUseCaseImpl 单元测试")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

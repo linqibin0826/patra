@@ -15,23 +15,19 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 
-/**
- * {@link ExprNormalizer} 的默认实现,通过消除冗余、扁平化嵌套和去重来简化表达式。
- *
- * <p>主要规范化策略:
- *
- * <ul>
- *   <li><b>TERM</b>: 修剪空白字符
- *   <li><b>IN</b>: 去重、移除空白值、单元素转 TERM、空列表转 FALSE
- *   <li><b>AND</b>: 扁平化嵌套 AND、移除 TRUE、发现 FALSE 则短路为 FALSE、去重
- *   <li><b>OR</b>: 扁平化嵌套 OR、移除 FALSE、发现 TRUE 则短路为 TRUE、去重
- *   <li><b>NOT</b>: 双重否定消除 (NOT NOT x → x)、常量翻转 (NOT TRUE → FALSE)
- * </ul>
- *
- * <p>规范化保持语义等价性,同时产生更简单、更紧凑的表达式树。
- *
- * @since 1.0.0
- */
+/// {@link ExprNormalizer} 的默认实现,通过消除冗余、扁平化嵌套和去重来简化表达式。
+/// 
+/// 主要规范化策略:
+/// 
+/// - **TERM**: 修剪空白字符
+///   - **IN**: 去重、移除空白值、单元素转 TERM、空列表转 FALSE
+///   - **AND**: 扁平化嵌套 AND、移除 TRUE、发现 FALSE 则短路为 FALSE、去重
+///   - **OR**: 扁平化嵌套 OR、移除 FALSE、发现 TRUE 则短路为 TRUE、去重
+///   - **NOT**: 双重否定消除 (NOT NOT x → x)、常量翻转 (NOT TRUE → FALSE)
+/// 
+/// 规范化保持语义等价性,同时产生更简单、更紧凑的表达式树。
+/// 
+/// @since 1.0.0
 public class DefaultExprNormalizer implements ExprNormalizer {
 
   @Override
@@ -40,7 +36,7 @@ public class DefaultExprNormalizer implements ExprNormalizer {
     return normalizeNode(expression);
   }
 
-  /** 递归规范化表达式节点。 */
+  /// 递归规范化表达式节点。
   private Expr normalizeNode(Expr expr) {
     if (expr instanceof Atom atom) {
       return normalizeAtom(atom);
@@ -57,7 +53,7 @@ public class DefaultExprNormalizer implements ExprNormalizer {
     return expr;
   }
 
-  /** 规范化原子条件,仅处理 TERM 和 IN 操作符。 */
+  /// 规范化原子条件,仅处理 TERM 和 IN 操作符。
   private Expr normalizeAtom(Atom atom) {
     return switch (atom.operator()) {
       case TERM -> normalizeTerm(atom);
@@ -66,7 +62,7 @@ public class DefaultExprNormalizer implements ExprNormalizer {
     };
   }
 
-  /** 规范化 TERM 操作符:修剪文本空白。 */
+  /// 规范化 TERM 操作符:修剪文本空白。
   private Expr normalizeTerm(Atom atom) {
     Atom.TermValue term = (Atom.TermValue) atom.value();
     String text = term.text();
@@ -77,17 +73,14 @@ public class DefaultExprNormalizer implements ExprNormalizer {
     return Exprs.term(atom.fieldKey(), trimmed, term.match(), term.caseSensitivity());
   }
 
-  /**
-   * 规范化 IN 操作符:去重、移除空白值、优化单元素和空列表。
-   *
-   * <p>转换规则:
-   *
-   * <ul>
-   *   <li>空列表 → Const.FALSE
-   *   <li>单元素 → TERM (PHRASE 匹配)
-   *   <li>多元素 → 去重后的 IN
-   * </ul>
-   */
+  /// 规范化 IN 操作符:去重、移除空白值、优化单元素和空列表。
+/// 
+/// 转换规则:
+/// 
+/// - 空列表 → Const.FALSE
+///   - 单元素 → TERM (PHRASE 匹配)
+///   - 多元素 → 去重后的 IN
+/// 
   private Expr normalizeIn(Atom atom) {
     Atom.InValues values = (Atom.InValues) atom.value();
     List<String> raw = values.values();
@@ -118,19 +111,16 @@ public class DefaultExprNormalizer implements ExprNormalizer {
     return Exprs.in(atom.fieldKey(), cleaned, values.caseSensitivity());
   }
 
-  /**
-   * 规范化 AND 表达式:扁平化、短路求值、去重。
-   *
-   * <p>优化规则:
-   *
-   * <ul>
-   *   <li>发现 FALSE → 整个表达式为 FALSE (短路)
-   *   <li>移除所有 TRUE 子节点
-   *   <li>扁平化嵌套 AND (AND(AND(a,b),c) → AND(a,b,c))
-   *   <li>去重相同的子表达式
-   *   <li>空列表 → TRUE,单元素 → 该元素本身
-   * </ul>
-   */
+  /// 规范化 AND 表达式:扁平化、短路求值、去重。
+/// 
+/// 优化规则:
+/// 
+/// - 发现 FALSE → 整个表达式为 FALSE (短路)
+///   - 移除所有 TRUE 子节点
+///   - 扁平化嵌套 AND (AND(AND(a,b),c) → AND(a,b,c))
+///   - 去重相同的子表达式
+///   - 空列表 → TRUE,单元素 → 该元素本身
+/// 
   private Expr normalizeAnd(And andExpr) {
     List<Expr> normalized = new ArrayList<>();
     boolean hasFalse = false;
@@ -162,19 +152,16 @@ public class DefaultExprNormalizer implements ExprNormalizer {
     return Exprs.and(normalized);
   }
 
-  /**
-   * 规范化 OR 表达式:扁平化、短路求值、去重。
-   *
-   * <p>优化规则:
-   *
-   * <ul>
-   *   <li>发现 TRUE → 整个表达式为 TRUE (短路)
-   *   <li>移除所有 FALSE 子节点
-   *   <li>扁平化嵌套 OR (OR(OR(a,b),c) → OR(a,b,c))
-   *   <li>去重相同的子表达式
-   *   <li>空列表 → FALSE,单元素 → 该元素本身
-   * </ul>
-   */
+  /// 规范化 OR 表达式:扁平化、短路求值、去重。
+/// 
+/// 优化规则:
+/// 
+/// - 发现 TRUE → 整个表达式为 TRUE (短路)
+///   - 移除所有 FALSE 子节点
+///   - 扁平化嵌套 OR (OR(OR(a,b),c) → OR(a,b,c))
+///   - 去重相同的子表达式
+///   - 空列表 → FALSE,单元素 → 该元素本身
+/// 
   private Expr normalizeOr(Or orExpr) {
     List<Expr> normalized = new ArrayList<>();
     boolean hasTrue = false;
@@ -206,17 +193,14 @@ public class DefaultExprNormalizer implements ExprNormalizer {
     return Exprs.or(normalized);
   }
 
-  /**
-   * 规范化 NOT 表达式:双重否定消除和常量翻转。
-   *
-   * <p>优化规则:
-   *
-   * <ul>
-   *   <li>NOT TRUE → FALSE
-   *   <li>NOT FALSE → TRUE
-   *   <li>NOT NOT x → x (双重否定消除)
-   * </ul>
-   */
+  /// 规范化 NOT 表达式:双重否定消除和常量翻转。
+/// 
+/// 优化规则:
+/// 
+/// - NOT TRUE → FALSE
+///   - NOT FALSE → TRUE
+///   - NOT NOT x → x (双重否定消除)
+/// 
   private Expr normalizeNot(Not notExpr) {
     Expr child = normalizeNode(notExpr.child());
     if (child instanceof Const constant) {
@@ -228,7 +212,7 @@ public class DefaultExprNormalizer implements ExprNormalizer {
     return Exprs.not(child);
   }
 
-  /** 去重:保持顺序的同时移除重复的表达式。 */
+  /// 去重:保持顺序的同时移除重复的表达式。
   private List<Expr> dedupe(List<Expr> expressions) {
     Set<Expr> ordered = new LinkedHashSet<>(expressions);
     return new ArrayList<>(ordered);

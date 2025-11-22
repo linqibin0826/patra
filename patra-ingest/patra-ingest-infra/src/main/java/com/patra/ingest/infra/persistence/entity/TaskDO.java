@@ -9,108 +9,104 @@ import java.time.Instant;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/**
- * 采集任务数据库实体,映射到表 {@code ing_task}。
- *
- * <p>表结构: 表示从计划切片派生的可执行任务,绑定到数据源、操作、幂等键和租约。
- *
- * <p>关键字段说明:
- *
- * <ul>
- *   <li>{@code idempotent_key} 全局唯一(唯一约束: uk_task_idem),防止重复任务
- *   <li>{@code params} 存储规范化的任务参数;通过 {@link JacksonTypeHandler} 持久化
- *   <li>租约字段({@code lease_owner}/{@code leased_until}/{@code lease_count}) 支持抢占/续约模型
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 采集任务数据库实体,映射到表 `ing_task`。
+/// 
+/// 表结构: 表示从计划切片派生的可执行任务,绑定到数据源、操作、幂等键和租约。
+/// 
+/// 关键字段说明:
+/// 
+/// - `idempotent_key` 全局唯一(唯一约束: uk_task_idem),防止重复任务
+///   - `params` 存储规范化的任务参数;通过 {@link JacksonTypeHandler} 持久化
+///   - 租约字段(`lease_owner`/`leased_until`/`lease_count`) 支持抢占/续约模型
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "ing_task", autoResultMap = true)
 public class TaskDO extends BaseDO {
 
-  /** Schedule instance ID (redundant). */
+  /// Schedule instance ID (redundant).
   @TableField("schedule_instance_id")
   private Long scheduleInstanceId;
 
-  /** Associated plan ID. */
+  /// Associated plan ID.
   @TableField("plan_id")
   private Long planId;
 
-  /** Associated slice ID. */
+  /// Associated slice ID.
   @TableField("slice_id")
   private Long sliceId;
 
-  /** Provenance code (DICT: ing_provenance). */
+  /// Provenance code (DICT: ing_provenance).
   @TableField("provenance_code")
   private String provenanceCode;
 
-  /** Operation type code (DICT: ing_operation). */
+  /// Operation type code (DICT: ing_operation).
   @TableField("operation_code")
   private String operationCode;
 
-  /** Task parameters (JSON; normalized and persisted). */
+  /// Task parameters (JSON; normalized and persisted).
   @TableField(value = "params", typeHandler = JacksonTypeHandler.class)
   private JsonNode params;
 
-  /** Idempotent key (UK: uk_task_idem). */
+  /// Idempotent key (UK: uk_task_idem).
   @TableField("idempotent_key")
   private String idempotentKey;
 
-  /** Execution expression hash. */
+  /// Execution expression hash.
   @TableField("expr_hash")
   private String exprHash;
 
-  /** Scheduling priority (1 high → 9 low). */
+  /// Scheduling priority (1 high → 9 low).
   @TableField("priority")
   private Integer priority;
 
-  /** Lease owner. */
+  /// Lease owner.
   @TableField("lease_owner")
   private String leaseOwner;
 
-  /** Lease expiration time (UTC). */
+  /// Lease expiration time (UTC).
   @TableField("leased_until")
   private Instant leasedUntil;
 
-  /** Lease preemption/renewal count. */
+  /// Lease preemption/renewal count.
   @TableField("lease_count")
   private Integer leaseCount;
 
-  /** Heartbeat time during execution. */
+  /// Heartbeat time during execution.
   @TableField("last_heartbeat_at")
   private Instant lastHeartbeatAt;
 
-  /** Retry count. */
+  /// Retry count.
   @TableField("retry_count")
   private Integer retryCount;
 
-  /** Last error code. */
+  /// Last error code.
   @TableField("last_error_code")
   private String lastErrorCode;
 
-  /** Last error message. */
+  /// Last error message.
   @TableField("last_error_msg")
   private String lastErrorMsg;
 
-  /** Task status (DICT: ing_task_status). */
+  /// Task status (DICT: ing_task_status).
   @TableField("status_code")
   private String statusCode;
 
-  /** Scheduled start time. */
+  /// Scheduled start time.
   @TableField("scheduled_at")
   private Instant scheduledAt;
 
-  /** Actual start time. */
+  /// Actual start time.
   @TableField("started_at")
   private Instant startedAt;
 
-  /** Finish time. */
+  /// Finish time.
   @TableField("finished_at")
   private Instant finishedAt;
 
-  /** Trace / Correlation ID for distributed tracing */
+  /// Trace / Correlation ID for distributed tracing
   @TableField("correlation_id")
   private String correlationId;
 }

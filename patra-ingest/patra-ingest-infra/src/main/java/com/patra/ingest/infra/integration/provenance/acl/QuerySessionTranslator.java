@@ -11,32 +11,26 @@ import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 
-/**
- * 查询会话翻译器（防腐层）
- *
- * <p>将 Provenance Starter 的 {@link PlanMetadata} 翻译为 Ingest 领域的 {@link QuerySession}。
- *
- * <p><strong>翻译策略</strong>：
- *
- * <ul>
- *   <li>提取批次生成所需的核心信息（总记录数、数据源代码）
- *   <li>将数据源特定的状态令牌转换为通用的 Map 结构
- *   <li>屏蔽 Provenance 的实现细节（如 plannedAt、extensionMetadata）
- * </ul>
- *
- * @author Patra Architecture Team
- * @since 0.3.0
- */
+/// 查询会话翻译器（防腐层）
+/// 
+/// 将 Provenance Starter 的 {@link PlanMetadata} 翻译为 Ingest 领域的 {@link QuerySession}。
+/// 
+/// **翻译策略**：
+/// 
+/// - 提取批次生成所需的核心信息（总记录数、数据源代码）
+///   - 将数据源特定的状态令牌转换为通用的 Map 结构
+///   - 屏蔽 Provenance 的实现细节（如 plannedAt、extensionMetadata）
+/// 
+/// @author Patra Architecture Team
+/// @since 0.3.0
 @Component
 public class QuerySessionTranslator {
 
-  /**
-   * 翻译 PlanMetadata 为 QuerySession
-   *
-   * @param planMetadata Provenance 的计划元数据
-   * @return Ingest 的查询会话
-   * @throws IllegalArgumentException 如果遇到未知的 PlanMetadata 类型
-   */
+  /// 翻译 PlanMetadata 为 QuerySession
+/// 
+/// @param planMetadata Provenance 的计划元数据
+/// @return Ingest 的查询会话
+/// @throws IllegalArgumentException 如果遇到未知的 PlanMetadata 类型
   public QuerySession translate(PlanMetadata planMetadata) {
     // 空计划处理
     if (planMetadata.totalCount() == 0) {
@@ -54,7 +48,7 @@ public class QuerySessionTranslator {
     };
   }
 
-  /** 翻译 PubMed 计划元数据 */
+  /// 翻译 PubMed 计划元数据
   private QuerySession translatePubmed(PubmedPlanMetadata pubmed) {
     return new SimpleQuerySession(
         pubmed.totalCount(),
@@ -62,7 +56,7 @@ public class QuerySessionTranslator {
         extractPubmedStateToken(pubmed));
   }
 
-  /** 提取 PubMed 状态令牌 */
+  /// 提取 PubMed 状态令牌
   private Optional<Map<String, String>> extractPubmedStateToken(PubmedPlanMetadata pubmed) {
     if (!pubmed.hasSessionToken()) {
       return Optional.empty();
@@ -73,7 +67,7 @@ public class QuerySessionTranslator {
             StateTokenKeys.PUBMED_QUERY_KEY, pubmed.queryKey()));
   }
 
-  /** 翻译 DOAJ 计划元数据 */
+  /// 翻译 DOAJ 计划元数据
   private QuerySession translateDoaj(DoajPlanMetadata doaj) {
     return new SimpleQuerySession(
         doaj.totalCount(),
@@ -81,7 +75,7 @@ public class QuerySessionTranslator {
         extractDoajStateToken(doaj));
   }
 
-  /** 提取 DOAJ 状态令牌（DOAJ 使用 scrollId） */
+  /// 提取 DOAJ 状态令牌（DOAJ 使用 scrollId）
   private Optional<Map<String, String>> extractDoajStateToken(DoajPlanMetadata doaj) {
     if (!doaj.hasSessionToken()) {
       return Optional.empty();
@@ -89,7 +83,7 @@ public class QuerySessionTranslator {
     return Optional.of(Map.of(StateTokenKeys.DOAJ_CURSOR_MARK, doaj.scrollId()));
   }
 
-  /** 翻译 EPMC 计划元数据 */
+  /// 翻译 EPMC 计划元数据
   private QuerySession translateEpmc(EpmcPlanMetadata epmc) {
     return new SimpleQuerySession(
         epmc.totalCount(),
@@ -97,7 +91,7 @@ public class QuerySessionTranslator {
         extractEpmcStateToken(epmc));
   }
 
-  /** 提取 EPMC 状态令牌（EPMC 使用 cursorMark） */
+  /// 提取 EPMC 状态令牌（EPMC 使用 cursorMark）
   private Optional<Map<String, String>> extractEpmcStateToken(EpmcPlanMetadata epmc) {
     if (!epmc.hasSessionToken()) {
       return Optional.empty();
@@ -106,7 +100,7 @@ public class QuerySessionTranslator {
   }
 }
 
-/** 简单的 QuerySession 实现（包级私有） */
+/// 简单的 QuerySession 实现（包级私有）
 record SimpleQuerySession(
     int totalRecords, ProvenanceCode provenanceCode, Optional<Map<String, String>> stateToken)
     implements QuerySession {

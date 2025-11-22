@@ -3,11 +3,9 @@ package com.patra.expr;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * 逻辑析取表达式。
- *
- * <p>表示多个表达式的或逻辑结合。
- */
+/// 逻辑析取表达式。
+/// 
+/// 表示多个表达式的或逻辑结合。
 public record Or(List<Expr> children) implements Expr {
 
   public Or {

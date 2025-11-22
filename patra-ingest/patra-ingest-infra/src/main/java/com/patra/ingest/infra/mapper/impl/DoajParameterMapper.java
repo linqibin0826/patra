@@ -12,30 +12,26 @@ import com.patra.ingest.infra.mapper.ProviderParameterMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * DOAJ 参数映射器。
- *
- * <p>将通用的 offset/limit 映射为 DOAJ 特定的分页参数。
- *
- * <p><strong>DOAJ 分页机制</strong>：
- *
- * <ul>
- *   <li><b>page</b>: 页码（从 1 开始）
- *   <li><b>pageSize</b>: 每页记录数
- * </ul>
- *
- * <p><strong>映射规则</strong>：
- *
- * <pre>{@code
- * batch.offset() / batch.limit() + 1 → page（计算页码）
- * batch.limit()  → pageSize
- * }</pre>
- *
- * <p><strong>注意</strong>：DOAJ 使用页码分页（从1开始），需要从 offset 计算出 page。
- *
- * @author Patra Architecture Team
- * @since 0.3.0
- */
+/// DOAJ 参数映射器。
+/// 
+/// 将通用的 offset/limit 映射为 DOAJ 特定的分页参数。
+/// 
+/// **DOAJ 分页机制**：
+/// 
+/// - **page**: 页码（从 1 开始）
+///   - **pageSize**: 每页记录数
+/// 
+/// **映射规则**：
+/// 
+/// ```java
+/// batch.offset() / batch.limit() + 1 → page（计算页码）
+/// batch.limit()  → pageSize
+/// ```
+/// 
+/// **注意**：DOAJ 使用页码分页（从1开始），需要从 offset 计算出 page。
+/// 
+/// @author Patra Architecture Team
+/// @since 0.3.0
 @Component
 @Slf4j
 public class DoajParameterMapper implements ProviderParameterMapper {

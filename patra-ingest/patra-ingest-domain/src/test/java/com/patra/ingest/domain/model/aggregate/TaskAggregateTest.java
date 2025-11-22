@@ -11,23 +11,19 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * TaskAggregate 单元测试。
- *
- * <p>测试范围:
- *
- * <ul>
- *   <li>✅ 租约机制（获取、续期、释放、冲突）
- *   <li>✅ 执行时间线管理
- *   <li>✅ 状态转换逻辑
- *   <li>✅ 重试准备流程
- *   <li>✅ 领域事件发布
- *   <li>✅ 聚合根创建和恢复
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// TaskAggregate 单元测试。
+/// 
+/// 测试范围:
+/// 
+/// - ✅ 租约机制（获取、续期、释放、冲突）
+///   - ✅ 执行时间线管理
+///   - ✅ 状态转换逻辑
+///   - ✅ 重试准备流程
+///   - ✅ 领域事件发布
+///   - ✅ 聚合根创建和恢复
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("TaskAggregate 单元测试")
 class TaskAggregateTest {
 

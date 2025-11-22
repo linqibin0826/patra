@@ -30,21 +30,17 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * MeshImportOrchestrator 单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>Mock 所有 Port 接口（不依赖真实实现）
- *   <li>使用 InOrder 验证调用顺序
- *   <li>验证事务边界（@Transactional 在 Orchestrator 层）
- *   <li>测试编排逻辑：下载 → 解析 → 保存 → 验证 → 更新状态
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// MeshImportOrchestrator 单元测试。
+/// 
+/// 测试策略：
+/// 
+/// - Mock 所有 Port 接口（不依赖真实实现）
+///   - 使用 InOrder 验证调用顺序
+///   - 验证事务边界（@Transactional 在 Orchestrator 层）
+///   - 测试编排逻辑：下载 → 解析 → 保存 → 验证 → 更新状态
+/// 
+/// @author linqibin
+/// @since 0.2.0
 @ExtendWith(MockitoExtension.class)
 @org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 @DisplayName("MeshImportOrchestrator 单元测试")

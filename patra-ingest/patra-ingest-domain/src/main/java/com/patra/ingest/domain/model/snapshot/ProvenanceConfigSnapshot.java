@@ -2,43 +2,35 @@ package com.patra.ingest.domain.model.snapshot;
 
 import java.time.Instant;
 
-/**
- * Provenance 配置聚合快照 Value Object。
- *
- * <p>将注册中心多个子域表的配置合并为单一的 Immutable 视图,确保调度器执行时观察到一致、可重放的配置。
- *
- * <p><b>业务价值:</b>
- *
- * <ul>
- *   <li>配置时点快照 - 捕获某一时刻的完整配置状态
- *   <li>可重放性 - 支持历史配置回放和故障排查
- *   <li>一致性保证 - 避免执行过程中配置变更导致的不一致
- * </ul>
- *
- * <p><b>选择规则:</b> 对于每个维度,选择满足以下条件的最新行:
- *
- * <ul>
- *   <li>{@code NOW()} 落在 {@code [effective_from, effective_to)} 时间窗口内
- *   <li>{@code lifecycle=ACTIVE} 且 {@code deleted=0}
- *   <li>按 {@code effective_from DESC, id DESC} 排序后取第一行
- *   <li>凭证维度可能返回多行(已从快照中移除)
- * </ul>
- *
- * <p><b>包含的维度:</b> (表 → 嵌套 record)
- *
- * <ul>
- *   <li>reg_provenance → ProvenanceInfo
- *   <li>reg_prov_window_offset_cfg → WindowOffsetConfig
- *   <li>reg_prov_pagination_cfg → PaginationConfig
- *   <li>reg_prov_http_cfg → HttpConfig
- *   <li>reg_prov_batching_cfg → BatchingConfig
- *   <li>reg_prov_retry_cfg → RetryConfig
- *   <li>reg_prov_rate_limit_cfg → RateLimitConfig
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// Provenance 配置聚合快照 Value Object。
+/// 
+/// 将注册中心多个子域表的配置合并为单一的 Immutable 视图,确保调度器执行时观察到一致、可重放的配置。
+/// 
+/// **业务价值:**
+/// 
+/// - 配置时点快照 - 捕获某一时刻的完整配置状态
+///   - 可重放性 - 支持历史配置回放和故障排查
+///   - 一致性保证 - 避免执行过程中配置变更导致的不一致
+/// 
+/// **选择规则:** 对于每个维度,选择满足以下条件的最新行:
+/// 
+/// - `NOW()` 落在 `[effective_from, effective_to)` 时间窗口内
+///   - `lifecycle=ACTIVE` 且 `deleted=0`
+///   - 按 `effective_from DESC, id DESC` 排序后取第一行
+///   - 凭证维度可能返回多行(已从快照中移除)
+/// 
+/// **包含的维度:** (表 → 嵌套 record)
+/// 
+/// - reg_provenance → ProvenanceInfo
+///   - reg_prov_window_offset_cfg → WindowOffsetConfig
+///   - reg_prov_pagination_cfg → PaginationConfig
+///   - reg_prov_http_cfg → HttpConfig
+///   - reg_prov_batching_cfg → BatchingConfig
+///   - reg_prov_retry_cfg → RetryConfig
+///   - reg_prov_rate_limit_cfg → RateLimitConfig
+/// 
+/// @author linqibin
+/// @since 0.1.0
 public record ProvenanceConfigSnapshot(
     /* 数据源元数据 */ ProvenanceInfo provenance,
     /* 时间窗口/增量偏移配置(可为 null) */ WindowOffsetConfig windowOffset,
@@ -48,11 +40,9 @@ public record ProvenanceConfigSnapshot(
     /* 重试和退避配置(可为 null) */ RetryConfig retry,
     /* 速率限制和并发配置(可为 null) */ RateLimitConfig rateLimit) {
 
-  /**
-   * Provenance 元数据 (reg_provenance)。
-   *
-   * <p>字典: lifecycle_status = DRAFT|ACTIVE|DEPRECATED|RETIRED
-   */
+  /// Provenance 元数据 (reg_provenance)。
+/// 
+/// 字典: lifecycle_status = DRAFT|ACTIVE|DEPRECATED|RETIRED
   public record ProvenanceInfo(
       /* 主键 ID */ Long id,
       /* Provenance 代码(全局唯一,例如 pubmed/crossref) */ String code,
@@ -63,12 +53,10 @@ public record ProvenanceConfigSnapshot(
       /* 激活标识(快速开关) */ boolean active,
       /* 生命周期状态(lifecycle_status: DRAFT|ACTIVE|DEPRECATED|RETIRED) */ String lifecycleStatusCode) {}
 
-  /**
-   * 窗口与偏移配置 (reg_prov_window_offset_cfg)。
-   *
-   * <p>字典: window_mode = SLIDING|CALENDAR; time_unit = SECOND|MINUTE|HOUR|DAY; offset_type =
-   * DATE|ID|COMPOSITE; lifecycle_status 同上。
-   */
+  /// 窗口与偏移配置 (reg_prov_window_offset_cfg)。
+/// 
+/// 字典: window_mode = SLIDING|CALENDAR; time_unit = SECOND|MINUTE|HOUR|DAY; offset_type =
+/// DATE|ID|COMPOSITE; lifecycle_status 同上。
   public record WindowOffsetConfig(
       /* 主键 ID */ Long id,
       /* Provenance ID */ Long provenanceId,
@@ -91,11 +79,9 @@ public record ProvenanceConfigSnapshot(
       /* 每个窗口最大 ID 数(超过则重新拆分) */ Integer maxIdsPerWindow,
       /* 窗口最大跨度秒数(超过则强制拆分) */ Integer maxWindowSpanSeconds) {}
 
-  /**
-   * 分页 / 游标 / 令牌 / 滚动配置 (reg_prov_pagination_cfg)。
-   *
-   * <p>字典: pagination_mode = PAGE_NUMBER|CURSOR|TOKEN|SCROLL; lifecycle_status 同上。
-   */
+  /// 分页 / 游标 / 令牌 / 滚动配置 (reg_prov_pagination_cfg)。
+/// 
+/// 字典: pagination_mode = PAGE_NUMBER|CURSOR|TOKEN|SCROLL; lifecycle_status 同上。
   public record PaginationConfig(
       /* 主键 ID */ Long id,
       /* Provenance ID */ Long provenanceId,
@@ -108,11 +94,9 @@ public record ProvenanceConfigSnapshot(
       /* 排序字段参数名(例如 sort) */ String sortFieldParamName,
       /* 排序方向(1=ASC, 0=DESC) */ Integer sortingDirection) {}
 
-  /**
-   * HTTP 策略配置 (reg_prov_http_cfg)。
-   *
-   * <p>字典: retry_after_policy = IGNORE|RESPECT|CLAMP; lifecycle_status 同上。
-   */
+  /// HTTP 策略配置 (reg_prov_http_cfg)。
+/// 
+/// 字典: retry_after_policy = IGNORE|RESPECT|CLAMP; lifecycle_status 同上。
   public record HttpConfig(
       /* 主键 ID */ Long id,
       /* Provenance ID */ Long provenanceId,
@@ -130,11 +114,9 @@ public record ProvenanceConfigSnapshot(
       /* 幂等性 Header 名称(例如 Idempotency-Key) */ String idempotencyHeaderName,
       /* 幂等性键 TTL 秒数(如果客户端/服务器支持) */ Integer idempotencyTtlSeconds) {}
 
-  /**
-   * 批处理与请求塑形配置 (reg_prov_batching_cfg)。
-   *
-   * <p>字典: lifecycle_status 同上。
-   */
+  /// 批处理与请求塑形配置 (reg_prov_batching_cfg)。
+/// 
+/// 字典: lifecycle_status 同上。
   public record BatchingConfig(
       /* 主键 ID */ Long id,
       /* Provenance ID */ Long provenanceId,
@@ -146,12 +128,10 @@ public record ProvenanceConfigSnapshot(
       /* IDs 连接分隔符(默认逗号) */ String idsJoinDelimiter,
       /* 每个请求最大 IDs 数量(硬限制) */ Integer maxIdsPerRequest) {}
 
-  /**
-   * 重试与退避配置 (reg_prov_retry_cfg)。
-   *
-   * <p>字典: scope = SOURCE|TASK; backoff_policy_type = FIXED|EXP|EXP_JITTER|DECOR_JITTER;
-   * lifecycle_status 同上。
-   */
+  /// 重试与退避配置 (reg_prov_retry_cfg)。
+/// 
+/// 字典: scope = SOURCE|TASK; backoff_policy_type = FIXED|EXP|EXP_JITTER|DECOR_JITTER;
+/// lifecycle_status 同上。
   public record RetryConfig(
       /* 主键 ID */ Long id,
       /* Provenance ID */ Long provenanceId,
@@ -170,11 +150,9 @@ public record ProvenanceConfigSnapshot(
       /* 熔断器阈值(连续失败次数) */ Integer circuitBreakThreshold,
       /* 熔断器冷却毫秒数 */ Integer circuitCooldownMillis) {}
 
-  /**
-   * 速率限制与并发配置 (reg_prov_rate_limit_cfg)。
-   *
-   * <p>字典: lifecycle_status 同上。
-   */
+  /// 速率限制与并发配置 (reg_prov_rate_limit_cfg)。
+/// 
+/// 字典: lifecycle_status 同上。
   public record RateLimitConfig(
       /* 主键 ID */ Long id,
       /* Provenance ID */ Long provenanceId,

@@ -19,97 +19,95 @@ import java.time.ZoneId;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * 默认的规划窗口解析器实现(HARVEST / BACKFILL / UPDATE)。
- *
- * <p>专注于"计划级别"窗口(非切片阶段)。不处理切片重叠或多游标高级策略。
- *
- * <h4>通用规则</h4>
- *
- * <ul>
- *   <li>nowSafe = min(currentTime - watermarkLag, currentTime) (配置缺失时不减)
- *   <li>窗口是半开区间 [from, to)。日历对齐后,如果 from == to,视为空窗口
- *   <li>如果无法确定模式或不支持,返回 full() 以便上游决定是否全量扫描
- *   <li>最小非空长度: 如果跨度小于 1s,扩展到 1s 以避免下游任务长度为零
- * </ul>
- *
- * <h4>HARVEST(采集模式)</h4>
- *
- * <pre>
- * toCandidate   = min(user.to?, nowSafe)
- * fromCandidate = harvestWM? max(user.from?, harvestWM - lookback) : (user.from? | toCandidate - windowSize)
- * CALENDAR 对齐 -> 空窗口检查
- * </pre>
- *
- * <h4>BACKFILL(回填模式)</h4>
- *
- * <pre>
- * upperAnchor   = min(user.to?, forwardWM?, nowSafe)  // forwardWM 保留,暂未注入
- * fromCandidate = backfillWM? max(backfillWM, user.from?) : (user.from? | upperAnchor - windowSize)
- * 边界修正: fromCandidate 不得 > upperAnchor
- * CALENDAR 对齐 -> 空窗口检查
- * </pre>
- *
- * <h4>UPDATE(更新模式)</h4>
- *
- * <pre>
- * timeDriven = (offsetType=DATE 且用户窗口存在) 或 (提供了任何用户窗口)
- * if timeDriven:
- *   toCandidate   = min(user.to?, nowSafe) (默认为 nowSafe)
- *   fromCandidate = if updateWM and user.from? -> max(updateWM, user.from?)
- *                |  仅 updateWM           -> updateWM (然后与 user.from? 比较)
- *                |  仅 user.from          -> user.from
- *                |  否则                   -> nowSafe - windowSize
- * else (ID驱动):
- *   if 用户窗口存在: toCandidate = min(user.to?, nowSafe) (默认为 nowSafe)
- *                    fromCandidate = user.from? | (toCandidate - windowSize)
- *   else:            [nowSafe - windowSize, nowSafe]
- * CALENDAR 对齐 -> 空窗口检查
- * </pre>
- *
- * <h4>设计权衡</h4>
- *
- * <ul>
- *   <li>forwardWM 暂未暴露;需要时可通过接口扩展或嵌入 triggerNorm 中
- *   <li>maxWindowSpanSeconds 在此未硬性限制;切片阶段(TimeSlicePlanner)应控制粒度
- *   <li>对齐后遇到空窗口时,返回"最小有效窗口"而非 null 以简化上游检查; 仍可通过 from==to (加 +1s 扩展) 检测原始空状态
- * </ul>
- *
- * <h4>复杂度</h4>
- *
- * <p>所有分支均为 O(1) 且不执行外部 IO。
- *
- * <h4>线程安全</h4>
- *
- * <p>无状态;可安全地作为单例复用。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 默认的规划窗口解析器实现(HARVEST / BACKFILL / UPDATE)。
+/// 
+/// 专注于"计划级别"窗口(非切片阶段)。不处理切片重叠或多游标高级策略。
+/// 
+/// #### 通用规则
+/// 
+/// - nowSafe = min(currentTime - watermarkLag, currentTime) (配置缺失时不减)
+///   - 窗口是半开区间 [from, to)。日历对齐后,如果 from == to,视为空窗口
+///   - 如果无法确定模式或不支持,返回 full() 以便上游决定是否全量扫描
+///   - 最小非空长度: 如果跨度小于 1s,扩展到 1s 以避免下游任务长度为零
+/// 
+/// #### HARVEST(采集模式)
+/// 
+/// ```
+/// 
+/// toCandidate   = min(user.to?, nowSafe)
+/// fromCandidate = harvestWM? max(user.from?, harvestWM - lookback) : (user.from? | toCandidate - windowSize)
+/// CALENDAR 对齐 -> 空窗口检查
+/// 
+/// ```
+/// 
+/// #### BACKFILL(回填模式)
+/// 
+/// ```
+/// 
+/// upperAnchor   = min(user.to?, forwardWM?, nowSafe)  // forwardWM 保留,暂未注入
+/// fromCandidate = backfillWM? max(backfillWM, user.from?) : (user.from? | upperAnchor - windowSize)
+/// 边界修正: fromCandidate 不得 > upperAnchor
+/// CALENDAR 对齐 -> 空窗口检查
+/// 
+/// ```
+/// 
+/// #### UPDATE(更新模式)
+/// 
+/// ```
+/// 
+/// timeDriven = (offsetType=DATE 且用户窗口存在) 或 (提供了任何用户窗口)
+/// if timeDriven:
+///   toCandidate   = min(user.to?, nowSafe) (默认为 nowSafe)
+///   fromCandidate = if updateWM and user.from? -> max(updateWM, user.from?)
+///                |  仅 updateWM           -> updateWM (然后与 user.from? 比较)
+///                |  仅 user.from          -> user.from
+///                |  否则                   -> nowSafe - windowSize
+/// else (ID驱动):
+///   if 用户窗口存在: toCandidate = min(user.to?, nowSafe) (默认为 nowSafe)
+///                    fromCandidate = user.from? | (toCandidate - windowSize)
+///   else:            [nowSafe - windowSize, nowSafe]
+/// CALENDAR 对齐 -> 空窗口检查
+/// 
+/// ```
+/// 
+/// #### 设计权衡
+/// 
+/// - forwardWM 暂未暴露;需要时可通过接口扩展或嵌入 triggerNorm 中
+///   - maxWindowSpanSeconds 在此未硬性限制;切片阶段(TimeSlicePlanner)应控制粒度
+///   - 对齐后遇到空窗口时,返回"最小有效窗口"而非 null 以简化上游检查; 仍可通过 from==to (加 +1s 扩展) 检测原始空状态
+/// 
+/// #### 复杂度
+/// 
+/// 所有分支均为 O(1) 且不执行外部 IO。
+/// 
+/// #### 线程安全
+/// 
+/// 无状态;可安全地作为单例复用。
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Component
 public class PlanningWindowResolverImpl implements PlanningWindowResolver {
 
-  /** 默认总窗口跨度(24小时)。 */
+  /// 默认总窗口跨度(24小时)。
   private static final Duration DEFAULT_WINDOW_SIZE = Duration.ofHours(24);
 
-  /** 计算 nowSafe 时用于限制"当前时间"的默认安全延迟。 */
+  /// 计算 nowSafe 时用于限制"当前时间"的默认安全延迟。
   private static final Duration DEFAULT_SAFETY_LAG = Duration.ZERO;
 
-  /** 最小有效窗口长度(> 0秒),避免空窗口。 */
+  /// 最小有效窗口长度(> 0秒),避免空窗口。
   private static final Duration MIN_EFFECTIVE_WINDOW = Duration.ofSeconds(1);
 
-  /**
-   * 解析规划窗口。
-   *
-   * <p>根据触发器规范化信息、配置快照和游标水位线,解析适合当前模式的窗口。
-   *
-   * @param triggerNorm 触发器规范化信息(包含模式和用户窗口)
-   * @param snapshot Provenance 配置快照
-   * @param cursorWatermark 游标水位线(根据模式使用不同的水位线)
-   * @param currentTime 当前时间
-   * @return 规划窗口
-   */
+  /// 解析规划窗口。
+/// 
+/// 根据触发器规范化信息、配置快照和游标水位线,解析适合当前模式的窗口。
+/// 
+/// @param triggerNorm 触发器规范化信息(包含模式和用户窗口)
+/// @param snapshot Provenance 配置快照
+/// @param cursorWatermark 游标水位线(根据模式使用不同的水位线)
+/// @param currentTime 当前时间
+/// @return 规划窗口
   @Override
   public PlannerWindow resolveWindow(
       PlanTriggerNorm triggerNorm,
@@ -143,34 +141,19 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
 
   /* ===================== HARVEST(采集模式) ===================== */
 
-  /**
-   * 解析 HARVEST 模式的窗口。
-   *
-   * <p>使用当前 HARVEST 水位线(harvestWM)和可配置的回看时间以避免遗漏数据。 当水位线不存在时,视为首次运行,从用户提供的下界导出, 或通过使用默认窗口跨度从上界回滚。
-   *
-   * <p>算法步骤:
-   *
-   * <ol>
-   *   <li>解析窗口大小和回看时间
-   *   <li>计算上界候选: min(用户to, nowSafe)
-   *   <li>计算下界候选:
-   *       <ul>
-   *         <li>有 harvestWM: max(harvestWM - lookback, 用户from)
-   *         <li>仅用户from: 使用 from
-   *         <li>都没有: toCandidate - windowSize
-   *       </ul>
-   *   <li>如果是日历模式,进行对齐
-   *   <li>检查空窗口并返回安全窗口
-   * </ol>
-   *
-   * @param cfg 窗口偏移配置
-   * @param harvestWM HARVEST 水位线
-   * @param userFrom 用户请求的下界
-   * @param userTo 用户请求的上界
-   * @param nowSafe 安全的当前时间(减去延迟后)
-   * @param timezone 时区
-   * @return 规划窗口
-   */
+  /// 解析 HARVEST 模式的窗口。
+/// 
+/// 使用当前 HARVEST 水位线(harvestWM)和可配置的回看时间以避免遗漏数据。 当水位线不存在时,视为首次运行,从用户提供的下界导出, 或通过使用默认窗口跨度从上界回滚。
+/// 
+/// 算法步骤:
+/// 
+/// @param cfg 窗口偏移配置
+/// @param harvestWM HARVEST 水位线
+/// @param userFrom 用户请求的下界
+/// @param userTo 用户请求的上界
+/// @param nowSafe 安全的当前时间(减去延迟后)
+/// @param timezone 时区
+/// @return 规划窗口
   private PlannerWindow resolveHarvest(
       ProvenanceConfigSnapshot.WindowOffsetConfig cfg,
       Instant harvestWM,
@@ -244,36 +227,20 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
 
   /* ===================== BACKFILL(回填模式) ===================== */
 
-  /**
-   * 解析 BACKFILL 模式的窗口。
-   *
-   * <p>BACKFILL 水位线(backfillWM)控制最小下界。上界受用户提供的 'to' 和 nowSafe 限制。 forwardWM 保留供将来使用。
-   *
-   * <p>算法步骤:
-   *
-   * <ol>
-   *   <li>解析窗口大小
-   *   <li>计算上锚点: min(用户to, forwardWM, nowSafe)
-   *   <li>计算下界候选:
-   *       <ul>
-   *         <li>有 backfillWM: max(backfillWM, 用户from)
-   *         <li>仅用户from: 使用 from
-   *         <li>都没有: upperAnchor - windowSize
-   *       </ul>
-   *   <li>边界修正: 确保 fromCandidate <= upperAnchor
-   *   <li>如果是日历模式,进行对齐
-   *   <li>检查空窗口并返回安全窗口
-   * </ol>
-   *
-   * @param cfg 窗口偏移配置
-   * @param backfillWM BACKFILL 水位线
-   * @param forwardWM 前向水位线(保留,暂未使用)
-   * @param userFrom 用户请求的下界
-   * @param userTo 用户请求的上界
-   * @param nowSafe 安全的当前时间
-   * @param timezone 时区
-   * @return 规划窗口
-   */
+  /// 解析 BACKFILL 模式的窗口。
+/// 
+/// BACKFILL 水位线(backfillWM)控制最小下界。上界受用户提供的 'to' 和 nowSafe 限制。 forwardWM 保留供将来使用。
+/// 
+/// 算法步骤:
+/// 
+/// @param cfg 窗口偏移配置
+/// @param backfillWM BACKFILL 水位线
+/// @param forwardWM 前向水位线(保留,暂未使用)
+/// @param userFrom 用户请求的下界
+/// @param userTo 用户请求的上界
+/// @param nowSafe 安全的当前时间
+/// @param timezone 时区
+/// @return 规划窗口
   private PlannerWindow resolveBackfill(
       ProvenanceConfigSnapshot.WindowOffsetConfig cfg,
       Instant backfillWM,
@@ -342,32 +309,19 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
 
   /* ===================== UPDATE(更新模式) ===================== */
 
-  /**
-   * 解析 UPDATE 模式的窗口。
-   *
-   * <p>区分时间驱动和 ID 驱动流程;时间驱动需要用户窗口或 offsetType 为 DATE。
-   *
-   * <p>算法步骤:
-   *
-   * <ol>
-   *   <li>解析窗口大小并判断是否为时间驱动
-   *   <li>根据驱动类型计算窗口:
-   *       <ul>
-   *         <li>时间驱动: 基于 updateWM 和用户窗口计算
-   *         <li>ID驱动: 基于用户窗口或默认窗口
-   *       </ul>
-   *   <li>如果是日历模式,进行对齐
-   *   <li>检查空窗口并返回安全窗口
-   * </ol>
-   *
-   * @param cfg 窗口偏移配置
-   * @param updateWM UPDATE 水位线
-   * @param userFrom 用户请求的下界
-   * @param userTo 用户请求的上界
-   * @param nowSafe 安全的当前时间
-   * @param timezone 时区
-   * @return 规划窗口
-   */
+  /// 解析 UPDATE 模式的窗口。
+/// 
+/// 区分时间驱动和 ID 驱动流程;时间驱动需要用户窗口或 offsetType 为 DATE。
+/// 
+/// 算法步骤:
+/// 
+/// @param cfg 窗口偏移配置
+/// @param updateWM UPDATE 水位线
+/// @param userFrom 用户请求的下界
+/// @param userTo 用户请求的上界
+/// @param nowSafe 安全的当前时间
+/// @param timezone 时区
+/// @return 规划窗口
   private PlannerWindow resolveUpdate(
       ProvenanceConfigSnapshot.WindowOffsetConfig cfg,
       Instant updateWM,
@@ -452,13 +406,11 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
 
   /* ===================== 辅助方法 ===================== */
 
-  /**
-   * 构造安全窗口: 如果长度低于最小阈值,扩展 'to' 以避免零长度窗口。
-   *
-   * @param from 窗口起始时间
-   * @param to 窗口结束时间
-   * @return 安全窗口(至少 MIN_EFFECTIVE_WINDOW 长度)
-   */
+  /// 构造安全窗口: 如果长度低于最小阈值,扩展 'to' 以避免零长度窗口。
+/// 
+/// @param from 窗口起始时间
+/// @param to 窗口结束时间
+/// @return 安全窗口(至少 MIN_EFFECTIVE_WINDOW 长度)
   private PlannerWindow safeWindow(Instant from, Instant to) {
     if (Duration.between(from, to).compareTo(MIN_EFFECTIVE_WINDOW) < 0) {
       to = from.plus(MIN_EFFECTIVE_WINDOW);
@@ -466,13 +418,11 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
     return new PlannerWindow(from, to);
   }
 
-  /**
-   * 最小窗口回退: 当对齐导致 from >= to 时,返回 [from, from + MIN_EFFECTIVE_WINDOW], 以便调用方保持线性流程,同时仍能检测原始空状态。
-   *
-   * @param from 窗口起始时间
-   * @param to 窗口结束时间(可能等于或小于 from)
-   * @return 最小有效窗口
-   */
+  /// 最小窗口回退: 当对齐导致 from >= to 时,返回 [from, from + MIN_EFFECTIVE_WINDOW], 以便调用方保持线性流程,同时仍能检测原始空状态。
+/// 
+/// @param from 窗口起始时间
+/// @param to 窗口结束时间(可能等于或小于 from)
+/// @return 最小有效窗口
   private PlannerWindow nullWindowIfEmpty(Instant from, Instant to) {
     // 返回最小窗口以便上游可以继续,验证器可以处理空情况;
     // 避免在规划期间抛出 IllegalArgumentException

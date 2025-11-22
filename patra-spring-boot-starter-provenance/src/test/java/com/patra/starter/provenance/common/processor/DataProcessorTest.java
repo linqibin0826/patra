@@ -14,20 +14,18 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * DataProcessor 接口契约测试
- *
- * <p>测试策略：使用Mock实现进行接口契约测试，验证接口设计的正确性。
- *
- * @author Patra Architecture Team
- * @since 0.1.0
- */
+/// DataProcessor 接口契约测试
+/// 
+/// 测试策略：使用Mock实现进行接口契约测试，验证接口设计的正确性。
+/// 
+/// @author Patra Architecture Team
+/// @since 0.1.0
 @DisplayName("DataProcessor 策略接口测试")
 class DataProcessorTest {
 
   // ==================== 测试辅助方法 ====================
 
-  /** 创建测试用的ProviderRequest */
+  /// 创建测试用的ProviderRequest
   private ProviderRequest createTestRequest() {
     return ProviderRequest.builder()
         .config(createTestConfig())
@@ -35,17 +33,17 @@ class DataProcessorTest {
         .build();
   }
 
-  /** 创建测试用的ProvenanceConfig */
+  /// 创建测试用的ProvenanceConfig
   private ProvenanceConfig createTestConfig() {
     return new ProvenanceConfig("https://api.test.com", null, null, null, null, null, null);
   }
 
-  /** 创建测试用的BatchExecutionParams */
+  /// 创建测试用的BatchExecutionParams
   private BatchExecutionParams createTestExecutionParams() {
     return new BatchExecutionParams("test query", null);
   }
 
-  /** 创建测试用的ProviderContext */
+  /// 创建测试用的ProviderContext
   private ProviderContext createTestContext() {
     return ProviderContext.builder()
         .config(createTestConfig())
@@ -54,7 +52,7 @@ class DataProcessorTest {
         .build();
   }
 
-  /** 创建测试用的CanonicalPublication */
+  /// 创建测试用的CanonicalPublication
   private CanonicalPublication createValidPublication() {
     return CanonicalPublication.builder()
         .title("Test Article")
@@ -64,7 +62,7 @@ class DataProcessorTest {
         .build();
   }
 
-  /** 创建测试用的无效CanonicalPublication（缺少必填字段） */
+  /// 创建测试用的无效CanonicalPublication（缺少必填字段）
   private CanonicalPublication createInvalidPublication() {
     return CanonicalPublication.builder()
         .abstractContent(
@@ -74,7 +72,7 @@ class DataProcessorTest {
 
   // ==================== Mock实现 ====================
 
-  /** Mock实现：用于测试接口契约 */
+  /// Mock实现：用于测试接口契约
   static class MockPublicationProcessor implements DataProcessor<CanonicalPublication> {
 
     private final ProcessResult<CanonicalPublication> mockResult;

@@ -59,25 +59,21 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-/**
- * PlanIngestionOrchestrator 单元测试。
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>✅ ingestPlan() - 正常流程，创建新计划
- *   <li>✅ ingestPlan() - 幂等性场景，复用现有计划
- *   <li>✅ ingestPlan() - 游标水位查询失败
- *   <li>✅ ingestPlan() - 窗口解析失败
- *   <li>✅ ingestPlan() - 预验证失败
- *   <li>✅ ingestPlan() - 组装失败
- *   <li>✅ ingestPlan() - 持久化失败
- *   <li>✅ 调用顺序验证
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// PlanIngestionOrchestrator 单元测试。
+/// 
+/// 测试覆盖:
+/// 
+/// - ✅ ingestPlan() - 正常流程，创建新计划
+///   - ✅ ingestPlan() - 幂等性场景，复用现有计划
+///   - ✅ ingestPlan() - 游标水位查询失败
+///   - ✅ ingestPlan() - 窗口解析失败
+///   - ✅ ingestPlan() - 预验证失败
+///   - ✅ ingestPlan() - 组装失败
+///   - ✅ ingestPlan() - 持久化失败
+///   - ✅ 调用顺序验证
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("PlanIngestionOrchestrator 单元测试")
@@ -553,7 +549,7 @@ class PlanIngestionOrchestratorTest {
 
   // ==================== 辅助方法 ====================
 
-  /** 创建有效的 PlanIngestionCommand。 */
+  /// 创建有效的 PlanIngestionCommand。
   private PlanIngestionCommand createValidCommand() {
     return new PlanIngestionCommand(
         ProvenanceCode.PUBMED,
@@ -570,13 +566,13 @@ class PlanIngestionOrchestratorTest {
         Map.of());
   }
 
-  /** 创建 PlanAssemblyResult。 */
+  /// 创建 PlanAssemblyResult。
   private PlanAssemblyResult createAssemblyResult() {
     return new PlanAssemblyResult(
         plan, List.of(slice), List.of(task), PlanAssemblyResult.AssemblyStatus.READY);
   }
 
-  /** 创建 TaskQueuedEvent。 */
+  /// 创建 TaskQueuedEvent。
   private TaskQueuedEvent createTaskQueuedEvent() {
     return TaskQueuedEvent.of(
         1L,
@@ -591,12 +587,12 @@ class PlanIngestionOrchestratorTest {
         Instant.now());
   }
 
-  /** 创建 PlanIngestionResult。 */
+  /// 创建 PlanIngestionResult。
   private PlanIngestionResult createIngestionResult() {
     return new PlanIngestionResult(1L, 100L, List.of(10L), 1, "SUCCESS");
   }
 
-  /** 设置持久化相关的 Mocks。 */
+  /// 设置持久化相关的 Mocks。
   private void setupPersistenceMocks() {
     when(schedule.getId()).thenReturn(1L);
     when(plan.getId()).thenReturn(100L);

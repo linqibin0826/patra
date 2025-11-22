@@ -11,12 +11,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/**
- * ApiParamMappingQuery 查询视图测试。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// ApiParamMappingQuery 查询视图测试。
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("ApiParamMappingQuery 查询视图测试")
 class ApiParamMappingQueryTest {
 

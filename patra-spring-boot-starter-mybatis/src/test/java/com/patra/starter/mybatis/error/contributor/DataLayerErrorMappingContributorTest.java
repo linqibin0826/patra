@@ -12,24 +12,21 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link DataLayerErrorMappingContributor} 的单元测试。
- *
- * <p>测试策略：纯单元测试，验证异常到错误码的映射逻辑。
- *
- * <p>关键测试点：
- *
- * <ul>
- *   <li>MyBatis-Plus 异常 → INTERNAL_ERROR (500)
- *   <li>SQL 完整性约束异常 → CONFLICT (409)
- *   <li>MySQL 重复键异常(1062) → CONFLICT (409)
- *   <li>MySQL 外键约束异常(1451/1452) → CONFLICT (409)
- *   <li>SQL 连接异常(SQLState: 08xxx) → UNAVAILABLE (503)
- *   <li>SQL 超时异常(SQLState: HYxxx) → UNAVAILABLE (503)
- *   <li>未知 SQL 异常 → INTERNAL_ERROR (500)
- *   <li>非数据库异常 → Optional.empty()
- * </ul>
- */
+/// {@link DataLayerErrorMappingContributor} 的单元测试。
+/// 
+/// 测试策略：纯单元测试，验证异常到错误码的映射逻辑。
+/// 
+/// 关键测试点：
+/// 
+/// - MyBatis-Plus 异常 → INTERNAL_ERROR (500)
+///   - SQL 完整性约束异常 → CONFLICT (409)
+///   - MySQL 重复键异常(1062) → CONFLICT (409)
+///   - MySQL 外键约束异常(1451/1452) → CONFLICT (409)
+///   - SQL 连接异常(SQLState: 08xxx) → UNAVAILABLE (503)
+///   - SQL 超时异常(SQLState: HYxxx) → UNAVAILABLE (503)
+///   - 未知 SQL 异常 → INTERNAL_ERROR (500)
+///   - 非数据库异常 → Optional.empty()
+/// 
 @DisplayName("DataLayerErrorMappingContributor 单元测试")
 class DataLayerErrorMappingContributorTest {
 

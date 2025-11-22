@@ -32,52 +32,39 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * Plan 组装器实现类
- *
- * <p>将 {@link PlanAssemblyRequest} 转换为 {@link PlanAssemblyResult} 聚合根:
- *
- * <ol>
- *   <li>决定切片策略 (UPDATE → SINGLE; 其他 → TIME)
- *   <li>规范化配置 (规范 JSON + 哈希材料)
- *   <li>创建 Plan 聚合根 (表达式快照 / 配置签名 / 窗口 / 策略代码)
- *   <li>调用切片生成 SlicePlan 草稿并转换为 PlanSlice 聚合根 (规范表达式 + 哈希)
- *   <li>为每个切片派生 Task 聚合根 (幂等键、优先级、调度时间)
- *   <li>根据切片/任务是否存在标记 Plan 状态为 FAILED 或 READY
- * </ol>
- *
- * <h4>幂等性</h4>
- *
- * <p>PlanKey 在 createPlanAggregate 中从 (provenance, operation, endpoint?, windowFrom-windowTo?) 生成。
- * Task 幂等键使用 (provenance | operation | sliceSignatureHash)。 本类不进行重复检查,由上层通过持久化和唯一索引强制执行。
- *
- * <h4>失败条件</h4>
- *
- * <ul>
- *   <li>没有切片策略实现 (注册表返回 null) → FAILED (空集合)
- *   <li>切片策略返回空列表 → FAILED
- *   <li>切片存在但派生任务为空 (不应发生) → FAILED
- * </ul>
- *
- * <h4>复杂度</h4>
- *
- * <p>O(n), n = 切片数量; 规范化和哈希计算是线性的。
- *
- * <h4>线程安全</h4>
- *
- * <p>无共享可变状态; 注册表查找是只读的且单例安全。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// Plan 组装器实现类
+/// 
+/// 将 {@link PlanAssemblyRequest} 转换为 {@link PlanAssemblyResult} 聚合根:
+/// 
+/// #### 幂等性
+/// 
+/// PlanKey 在 createPlanAggregate 中从 (provenance, operation, endpoint?, windowFrom-windowTo?) 生成。
+/// Task 幂等键使用 (provenance | operation | sliceSignatureHash)。 本类不进行重复检查,由上层通过持久化和唯一索引强制执行。
+/// 
+/// #### 失败条件
+/// 
+/// - 没有切片策略实现 (注册表返回 null) → FAILED (空集合)
+///   - 切片策略返回空列表 → FAILED
+///   - 切片存在但派生任务为空 (不应发生) → FAILED
+/// 
+/// #### 复杂度
+/// 
+/// O(n), n = 切片数量; 规范化和哈希计算是线性的。
+/// 
+/// #### 线程安全
+/// 
+/// 无共享可变状态; 注册表查找是只读的且单例安全。
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Component
 public class PlanAssemblerImpl implements PlanAssembler {
 
-  /** 默认 JSON 规范化器,用于配置和策略参数的稳定序列化 */
+  /// 默认 JSON 规范化器,用于配置和策略参数的稳定序列化
   private static final JsonNormalizer DEFAULT_NORMALIZER = JsonNormalizer.usingDefault();
 
-  /** 任务参数规范化器: 禁用布尔值/时间强制转换,避免 0/1 被转换为布尔值或时间戳 */
+  /// 任务参数规范化器: 禁用布尔值/时间强制转换,避免 0/1 被转换为布尔值或时间戳
   private static final JsonNormalizer TASK_PARAM_NORMALIZER =
       JsonNormalizer.withConfig(
           JsonNormalizerConfig.builder()
@@ -91,11 +78,9 @@ public class PlanAssemblerImpl implements PlanAssembler {
     this.slicePlannerRegistry = slicePlannerRegistry;
   }
 
-  /**
-   * Assembly entrypoint.
-   *
-   * <p>Side-effect free (apart from Instant.now and canonicalization); no persistence here.
-   */
+  /// Assembly entrypoint.
+/// 
+/// Side-effect free (apart from Instant.now and canonicalization); no persistence here.
   @Override
   public PlanAssemblyResult assemble(PlanAssemblyRequest request) {
     PlanTriggerNorm norm = request.triggerNorm();
@@ -150,12 +135,10 @@ public class PlanAssemblerImpl implements PlanAssembler {
     return new PlanAssemblyResult(plan, slices, tasks, PlanAssemblyResult.AssemblyStatus.READY);
   }
 
-  /**
-   * Creates plan aggregate root.
-   *
-   * <p>Contains: expression hash, expression JSON snapshot, config canonical JSON + hash, window,
-   * slice strategy, slice params JSON.
-   */
+  /// Creates plan aggregate root.
+/// 
+/// Contains: expression hash, expression JSON snapshot, config canonical JSON + hash, window,
+/// slice strategy, slice params JSON.
   private PlanAggregate createPlanAggregate(
       PlanTriggerNorm norm,
       PlannerWindow window,
@@ -189,19 +172,17 @@ public class PlanAssemblerImpl implements PlanAssembler {
         buildSliceParams(sliceStrategy));
   }
 
-  /**
-   * Generates slices by invoking strategy and converting to aggregates.
-   *
-   * <p>Flow: invoke planner strategy → SlicePlan list → canonical expr snapshot → PlanSlice
-   * aggregates
-   *
-   * @param norm plan trigger norm
-   * @param window planner window
-   * @param planExpression plan expression descriptor
-   * @param configSnapshot provenance config snapshot
-   * @param sliceStrategy slice strategy
-   * @return slice generation result
-   */
+  /// Generates slices by invoking strategy and converting to aggregates.
+/// 
+/// Flow: invoke planner strategy → SlicePlan list → canonical expr snapshot → PlanSlice
+/// aggregates
+/// 
+/// @param norm plan trigger norm
+/// @param window planner window
+/// @param planExpression plan expression descriptor
+/// @param configSnapshot provenance config snapshot
+/// @param sliceStrategy slice strategy
+/// @return slice generation result
   private SliceGenerationResult createSlices(
       PlanTriggerNorm norm,
       PlannerWindow window,
@@ -246,16 +227,14 @@ public class PlanAssemblerImpl implements PlanAssembler {
     return new SliceGenerationResult(slices, drafts);
   }
 
-  /**
-   * Generates slice plans using planner strategy.
-   *
-   * @param planner slice planner
-   * @param norm plan trigger norm
-   * @param window planner window
-   * @param planExpression plan expression descriptor
-   * @param configSnapshot provenance config snapshot
-   * @return list of slice plans
-   */
+  /// Generates slice plans using planner strategy.
+/// 
+/// @param planner slice planner
+/// @param norm plan trigger norm
+/// @param window planner window
+/// @param planExpression plan expression descriptor
+/// @param configSnapshot provenance config snapshot
+/// @return list of slice plans
   private List<SlicePlan> generateSlicePlans(
       SlicePlanner planner,
       PlanTriggerNorm norm,
@@ -265,13 +244,11 @@ public class PlanAssemblerImpl implements PlanAssembler {
     return planner.slice(new SlicePlanningContext(norm, window, planExpression, configSnapshot));
   }
 
-  /**
-   * Converts slice plans to slice aggregates.
-   *
-   * @param norm plan trigger norm
-   * @param drafts slice plan drafts
-   * @return list of slice aggregates
-   */
+  /// Converts slice plans to slice aggregates.
+/// 
+/// @param norm plan trigger norm
+/// @param drafts slice plan drafts
+/// @return list of slice aggregates
   private List<PlanSliceAggregate> convertToSliceAggregates(
       PlanTriggerNorm norm, List<SlicePlan> drafts) {
     List<PlanSliceAggregate> slices = new ArrayList<>(drafts.size());
@@ -291,12 +268,10 @@ public class PlanAssemblerImpl implements PlanAssembler {
     return slices;
   }
 
-  /**
-   * Generates tasks: one task per slice.
-   *
-   * <p>Task idempotent key material = provenance | operation | sliceSignatureHash → sha256 →
-   * Base64Url.
-   */
+  /// Generates tasks: one task per slice.
+/// 
+/// Task idempotent key material = provenance | operation | sliceSignatureHash → sha256 →
+/// Base64Url.
   private List<TaskAggregate> createTasks(
       PlanTriggerNorm norm, PlannerWindow window, SliceGenerationResult sliceResult) {
     List<PlanSliceAggregate> slices = sliceResult.aggregates();
@@ -339,10 +314,8 @@ public class PlanAssemblerImpl implements PlanAssembler {
     return tasks;
   }
 
-  /**
-   * Compute task scheduled time: prefer slice windowFrom (parsed), else overall window.from, else
-   * now.
-   */
+  /// Compute task scheduled time: prefer slice windowFrom (parsed), else overall window.from, else
+/// now.
   private Instant determineScheduledAt(SlicePlan draft, PlannerWindow window) {
     // Try to extract windowFrom from windowSpecJson
     Instant windowFrom = extractWindowFrom(draft.windowSpecJson());
@@ -356,7 +329,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
     return Instant.now();
   }
 
-  /** Extracts window.from from windowSpecJson when present. */
+  /// Extracts window.from from windowSpecJson when present.
   private Instant extractWindowFrom(String windowSpecJson) {
     try {
       com.fasterxml.jackson.databind.ObjectMapper mapper =
@@ -373,7 +346,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
     return null;
   }
 
-  /** Builds PlanKey: provenance:operation[:endpoint][:from-toMillis]. */
+  /// Builds PlanKey: provenance:operation[:endpoint][:from-toMillis].
   private String buildPlanKey(PlanTriggerNorm norm, PlannerWindow window) {
     StringBuilder builder = new StringBuilder();
     builder
@@ -390,24 +363,20 @@ public class PlanAssemblerImpl implements PlanAssembler {
     return builder.toString();
   }
 
-  /**
-   * Selects slice strategy based on operation type and data source configuration.
-   *
-   * <p>Strategy selection logic:
-   *
-   * <ul>
-   *   <li>UPDATE operations → SINGLE (no partitioning)
-   *   <li>DATE-only data sources (e.g., PubMed) → DATE (day-level granularity)
-   *   <li>Other sources → DATE (default, safer and more compatible)
-   * </ul>
-   *
-   * <p>Date-only detection: checks {@code offsetDateFormat} for date-only patterns (yyyyMMdd,
-   * yyyy-MM-dd) vs timestamp patterns (ISO_INSTANT, epochMillis).
-   *
-   * @param norm plan trigger norm containing operation type
-   * @param configSnapshot provenance configuration snapshot (nullable)
-   * @return selected slice strategy
-   */
+  /// Selects slice strategy based on operation type and data source configuration.
+/// 
+/// Strategy selection logic:
+/// 
+/// - UPDATE operations → SINGLE (no partitioning)
+///   - DATE-only data sources (e.g., PubMed) → DATE (day-level granularity)
+///   - Other sources → DATE (default, safer and more compatible)
+/// 
+/// Date-only detection: checks `offsetDateFormat` for date-only patterns (yyyyMMdd,
+/// yyyy-MM-dd) vs timestamp patterns (ISO_INSTANT, epochMillis).
+/// 
+/// @param norm plan trigger norm containing operation type
+/// @param configSnapshot provenance configuration snapshot (nullable)
+/// @return selected slice strategy
   private SliceStrategy determineSliceStrategy(
       PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
     if (norm.isUpdate()) {
@@ -431,20 +400,16 @@ public class PlanAssemblerImpl implements PlanAssembler {
     return SliceStrategy.DATE;
   }
 
-  /**
-   * Determines if the data source only supports date-level queries (no time component).
-   *
-   * <p>Detection heuristic:
-   *
-   * <ul>
-   *   <li>If offsetDateFormat is blank/null → default to DATE-only (safer)
-   *   <li>If contains timestamp indicators (INSTANT, MILLIS, HH, SS) → supports TIME
-   *   <li>If contains only date patterns (YYYY, MM, DD) → DATE-only
-   * </ul>
-   *
-   * @param offsetDateFormat date format string from configuration
-   * @return true if only date-level queries are supported, false if time precision is supported
-   */
+  /// Determines if the data source only supports date-level queries (no time component).
+/// 
+/// Detection heuristic:
+/// 
+/// - If offsetDateFormat is blank/null → default to DATE-only (safer)
+///   - If contains timestamp indicators (INSTANT, MILLIS, HH, SS) → supports TIME
+///   - If contains only date patterns (YYYY, MM, DD) → DATE-only
+/// 
+/// @param offsetDateFormat date format string from configuration
+/// @return true if only date-level queries are supported, false if time precision is supported
   private boolean supportsDateOnly(String offsetDateFormat) {
     if (offsetDateFormat == null || offsetDateFormat.isBlank()) {
       return true; // Default to DATE-only for safety
@@ -462,7 +427,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
     return normalized.matches(".*(?:YYYY|YY|MM|DD).*");
   }
 
-  /** Builds slice params JSON with stable serialization (e.g., {"strategy":"time"}). */
+  /// Builds slice params JSON with stable serialization (e.g., {"strategy":"time"}).
   private String buildSliceParams(SliceStrategy sliceStrategy) {
     // TODO does not need to keep the strategy field, there is a strategy field in the plan, and the
     // parameters only need to contain specific configurations,
@@ -472,14 +437,14 @@ public class PlanAssemblerImpl implements PlanAssembler {
     return normalized.getCanonicalJson();
   }
 
-  /** Builds task params JSON: only sliceNo; use custom normalizer to avoid type ambiguity. */
+  /// Builds task params JSON: only sliceNo; use custom normalizer to avoid type ambiguity.
   private String buildTaskParamsJson(int sliceSequence) {
     JsonNormalizerResult normalized =
         TASK_PARAM_NORMALIZER.normalize(Map.of("sliceNo", sliceSequence));
     return normalized.getCanonicalJson();
   }
 
-  /** Canonicalizes config snapshot; returns null when no config (allowed in UPDATE mode). */
+  /// Canonicalizes config snapshot; returns null when no config (allowed in UPDATE mode).
   private JsonNormalizerResult normalizeConfigSnapshot(ProvenanceConfigSnapshot snapshot) {
     if (snapshot == null) {
       return null;
@@ -487,9 +452,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
     return DEFAULT_NORMALIZER.normalize(snapshot);
   }
 
-  /**
-   * Builds task idempotent key: sha256(provenance|operation|sliceHash) → Base64Url without padding.
-   */
+  /// Builds task idempotent key: sha256(provenance|operation|sliceHash) → Base64Url without padding.
   private String computeSignature(PlanTriggerNorm norm, String payload) {
     String material =
         CharSequenceUtil.join(

@@ -10,16 +10,14 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * EPMC 批次生成策略
- *
- * <p>根据查询会话生成批次列表。
- *
- * <p>EPMC 使用 Solr 风格的 cursorMark 分页机制，具体参数映射由 Infrastructure 层的 EpmcParameterMapper 处理。
- *
- * @author Patra Architecture Team
- * @since 0.2.0
- */
+/// EPMC 批次生成策略
+/// 
+/// 根据查询会话生成批次列表。
+/// 
+/// EPMC 使用 Solr 风格的 cursorMark 分页机制，具体参数映射由 Infrastructure 层的 EpmcParameterMapper 处理。
+/// 
+/// @author Patra Architecture Team
+/// @since 0.2.0
 @Component
 @Slf4j
 public class EpmcBatchGenerationStrategy implements BatchGenerationStrategy {
