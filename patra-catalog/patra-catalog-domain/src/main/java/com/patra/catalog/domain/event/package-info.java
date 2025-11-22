@@ -56,7 +56,7 @@
 ///         // 发布领域事件
 ///         addDomainEvent(
 ///             new MeshImportCompleted(this.getId(), this.totalRecords, elapsedSeconds,
-// this.endTime)
+/// this.endTime)
 ///         );
 ///
 /// // 示例 2：Application 层处理领域事件

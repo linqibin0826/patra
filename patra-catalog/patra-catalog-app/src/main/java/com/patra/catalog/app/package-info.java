@@ -20,7 +20,7 @@
 ///           - retryFailedTask(MeshImportId)：重试失败任务
 ///           - clearAndRestart()：清除进度重新开始
 ///       - {@link com.patra.catalog.app.usecase.meshimport.MeshProgressQueryOrchestrator} -
-// 进度查询编排器（规划中）
+/// 进度查询编排器（规划中）
 ///
 /// - queryProgress(MeshImportId)：查询导入进度
 ///       - {@link com.patra.catalog.app.usecase.meshimport.validator.MeshDataValidator} - 数据量验证器

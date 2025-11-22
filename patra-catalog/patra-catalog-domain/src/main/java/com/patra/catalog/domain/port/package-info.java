@@ -38,6 +38,23 @@
 ///       - findById(DescriptorId)：根据主题词 ID 查询
 ///       - saveBatch(List<MeshDescriptorAggregate>)：批量保存主题词
 ///
+/// ## 命名约定
+///
+/// **端口接口命名遵循以下规范**（符合六边形架构最佳实践）：
+///
+/// - **Repository 后缀**：用于聚合根/实体的持久化端口
+///
+/// - **职责**：直接操作本地数据库，提供 CRUD 操作
+///     - **实现方式**：由 MyBatis-Plus/JPA 等 ORM 框架实现
+///     - **示例**：MeshImportRepository、MeshDescriptorRepository、PublicationRepository
+/// - **Port 后缀**：用于外部服务和技术基础设施端口
+///
+/// - **职责**：调用外部 API/微服务/技术组件
+///     - **实现方式**：由 HTTP Client/SDK/框架适配器实现
+///     - **示例**：XmlParserPort（XML 解析能力）、MeshFileDownloadPort（文件下载能力）
+///
+/// **区分原则**：Repository 面向数据持久化，Port 面向外部能力调用
+///
 /// ## 设计原则
 ///
 /// - **依赖倒置**：Domain 层定义接口，Infrastructure 层实现接口，依赖方向从外向内
