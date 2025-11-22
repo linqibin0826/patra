@@ -1,12 +1,13 @@
 package com.patra.ingest.app.usecase.relay.coordinator;
 
 import com.patra.ingest.app.usecase.relay.metrics.OutboxRelayMetrics;
-import com.patra.ingest.domain.factory.OutboxRelayLogFactory;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.model.entity.OutboxRelayLog;
 import com.patra.ingest.domain.model.enums.RelayStatus;
 import com.patra.ingest.domain.model.vo.relay.RelayBatchId;
 import com.patra.ingest.domain.port.OutboxRelayLogRepository;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,7 +19,7 @@ import org.springframework.stereotype.Component;
 ///
 /// ### 职责
 ///
-/// - 使用 OutboxRelayLogFactory 创建中继执行日志
+/// - 创建中继执行日志
 ///   - 在批次执行期间在内存中累积日志
 ///   - 批量持久化日志到数据库以提高性能
 ///   - 支持所有中继结果: PUBLISHED, DEFERRED, FAILED, LEASE_MISSED
@@ -61,7 +62,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class RelayLogCoordinator {
 
-  private final OutboxRelayLogFactory logFactory;
+  private final Clock clock;
   private final OutboxRelayLogRepository logRepository;
   private final OutboxRelayMetrics metrics;
 
@@ -72,7 +73,7 @@ public class RelayLogCoordinator {
   /// @param batchId 用于分组日志的中继批次标识符
   /// @return 准备记录中继结果的空日志累加器
   public LogAccumulator createAccumulator(RelayBatchId batchId) {
-    return new LogAccumulator(batchId);
+    return new LogAccumulator(batchId, clock);
   }
 
   /// 批量持久化累积的中继日志到数据库并记录指标
@@ -120,12 +121,13 @@ public class RelayLogCoordinator {
     String channel = relayLog.getChannel();
     RelayStatus status = relayLog.getRelayStatus();
 
+    // 移除 default 分支，让编译器强制检查枚举完整性
+    // 如果新增 RelayStatus 值，编译器会强制要求在此处理
     switch (status) {
       case PUBLISHED -> metrics.recordPublished(channel);
       case DEFERRED -> metrics.recordDeferred(channel, relayLog.getErrorCode());
       case FAILED -> metrics.recordFailed(channel, relayLog.getErrorCode());
       case LEASE_MISSED -> metrics.recordLeaseMissed(channel);
-      default -> log.warn("未知的中继状态用于指标: {}", status);
     }
   }
 
@@ -135,11 +137,98 @@ public class RelayLogCoordinator {
   public class LogAccumulator {
 
     private final RelayBatchId batchId;
+    private final Clock clock;
     private final List<OutboxRelayLog> logs;
 
-    private LogAccumulator(RelayBatchId batchId) {
+    private LogAccumulator(RelayBatchId batchId, Clock clock) {
       this.batchId = batchId;
+      this.clock = clock;
       this.logs = new ArrayList<>();
+    }
+
+    /// 创建 OutboxRelayLog 的基础 Builder,包含所有日志共有的字段
+    ///
+    /// @param message Outbox 消息
+    /// @param leaseOwner 租约持有者标识符
+    /// @param startTime 中继开始时间戳
+    /// @return 已填充共有字段的 Builder
+    /// @throws NullPointerException 如果任何参数为 null
+    /// @throws IllegalArgumentException 如果 leaseOwner 为空字符串
+    private OutboxRelayLog.OutboxRelayLogBuilder createBaseBuilder(
+        OutboxMessage message, String leaseOwner, Instant startTime) {
+
+      // 参数验证
+      if (message == null) {
+        throw new NullPointerException("message 不能为 null");
+      }
+      if (leaseOwner == null) {
+        throw new NullPointerException("leaseOwner 不能为 null");
+      }
+      if (leaseOwner.isBlank()) {
+        throw new IllegalArgumentException("leaseOwner 不能为空字符串");
+      }
+      if (startTime == null) {
+        throw new NullPointerException("startTime 不能为 null");
+      }
+
+      return OutboxRelayLog.builder()
+          .outboxMessageId(message.getId())
+          .relayBatchId(batchId.getValue())
+          .channel(message.getChannel())
+          .partitionKey(message.getPartitionKey())
+          .leaseOwner(leaseOwner)
+          .attemptNumber(message.computeNextAttempt())
+          .startedAt(startTime);
+    }
+
+    /// 计算中继执行持续时间(毫秒)
+    ///
+    /// 如果 endTime 早于 startTime (系统时间回拨), 返回 0 并记录警告。
+    /// 如果持续时间超过 int 范围 (超过 24.8 天), 截断为 Integer.MAX_VALUE 并记录警告。
+    ///
+    /// @param startTime 开始时间
+    /// @param endTime 结束时间
+    /// @return 持续时间(毫秒), 最小值为 0, 最大值为 Integer.MAX_VALUE
+    private int computeDuration(Instant startTime, Instant endTime) {
+      long durationMs = Duration.between(startTime, endTime).toMillis();
+
+      if (durationMs < 0) {
+        log.warn(
+            "检测到时间倒流: startTime={}, endTime={}, 将持续时间设为 0",
+            startTime,
+            endTime);
+        return 0;
+      }
+
+      if (durationMs > Integer.MAX_VALUE) {
+        log.warn("持续时间过长: {}ms, 截断为 Integer.MAX_VALUE", durationMs);
+        return Integer.MAX_VALUE;
+      }
+
+      return (int) durationMs;
+    }
+
+    /// 截断错误消息到最大长度
+    ///
+    /// - null → null
+    /// - 空字符串或纯空白 → null (避免存储无意义数据)
+    /// - 超长字符串 → 截断并添加省略标记 "..."
+    ///
+    /// @param errorMessage 原始错误消息
+    /// @param maxLength 最大长度
+    /// @return 截断后的错误消息
+    private String truncateErrorMessage(String errorMessage, int maxLength) {
+      if (errorMessage == null || errorMessage.isBlank()) {
+        return null;
+      }
+
+      String trimmed = errorMessage.trim();
+      if (trimmed.length() <= maxLength) {
+        return trimmed;
+      }
+
+      // 截断并添加省略标记，让读者知道消息被截断
+      return trimmed.substring(0, maxLength - 3) + "...";
     }
 
     /// 记录租约获取失败 (并发竞争)
@@ -150,9 +239,13 @@ public class RelayLogCoordinator {
     /// @param leaseOwner 尝试获取租约的实例标识符
     /// @param startTime 中继尝试开始时间戳
     public void recordLeaseMissed(OutboxMessage message, String leaseOwner, Instant startTime) {
-      OutboxRelayLog relayLog =
-          logFactory.createForLeaseMissed(message, batchId, leaseOwner, startTime);
-      logs.add(relayLog);
+      Instant completedAt = Instant.now(clock);
+      logs.add(
+          createBaseBuilder(message, leaseOwner, startTime)
+              .relayStatus(RelayStatus.LEASE_MISSED)
+              .completedAt(completedAt)
+              .durationMs(computeDuration(startTime, completedAt))
+              .build());
     }
 
     /// 记录成功的消息发布
@@ -165,9 +258,12 @@ public class RelayLogCoordinator {
     /// @param publishedAt 确认消息已发布的时间戳
     public void recordPublished(
         OutboxMessage message, String leaseOwner, Instant startTime, Instant publishedAt) {
-      OutboxRelayLog relayLog =
-          logFactory.createForPublished(message, batchId, leaseOwner, startTime, publishedAt);
-      logs.add(relayLog);
+      logs.add(
+          createBaseBuilder(message, leaseOwner, startTime)
+              .relayStatus(RelayStatus.PUBLISHED)
+              .completedAt(publishedAt)
+              .durationMs(computeDuration(startTime, publishedAt))
+              .build());
     }
 
     /// 记录延迟重试 (暂时性错误)
@@ -189,17 +285,17 @@ public class RelayLogCoordinator {
         String errorCode,
         String errorMessage,
         String errorKind) {
-      OutboxRelayLog relayLog =
-          logFactory.createForDeferred(
-              message,
-              batchId,
-              leaseOwner,
-              startTime,
-              nextRetryAt,
-              errorCode,
-              errorMessage,
-              errorKind);
-      logs.add(relayLog);
+      Instant completedAt = Instant.now(clock);
+      logs.add(
+          createBaseBuilder(message, leaseOwner, startTime)
+              .relayStatus(RelayStatus.DEFERRED)
+              .errorCode(errorCode)
+              .errorMessage(truncateErrorMessage(errorMessage, 512))
+              .errorKind(errorKind)
+              .nextRetryAt(nextRetryAt)
+              .completedAt(completedAt)
+              .durationMs(computeDuration(startTime, completedAt))
+              .build());
     }
 
     /// 记录永久失败 (达到最大重试次数或致命错误)
@@ -219,10 +315,16 @@ public class RelayLogCoordinator {
         String errorCode,
         String errorMessage,
         String errorKind) {
-      OutboxRelayLog relayLog =
-          logFactory.createForFailed(
-              message, batchId, leaseOwner, startTime, errorCode, errorMessage, errorKind);
-      logs.add(relayLog);
+      Instant completedAt = Instant.now(clock);
+      logs.add(
+          createBaseBuilder(message, leaseOwner, startTime)
+              .relayStatus(RelayStatus.FAILED)
+              .errorCode(errorCode)
+              .errorMessage(truncateErrorMessage(errorMessage, 512))
+              .errorKind(errorKind)
+              .completedAt(completedAt)
+              .durationMs(computeDuration(startTime, completedAt))
+              .build());
     }
 
     /// 检查累加器是否没有日志

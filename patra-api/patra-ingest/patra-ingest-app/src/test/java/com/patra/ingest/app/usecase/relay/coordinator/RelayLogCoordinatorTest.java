@@ -1,20 +1,19 @@
 package com.patra.ingest.app.usecase.relay.coordinator;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import com.patra.ingest.app.usecase.relay.coordinator.RelayLogCoordinator.LogAccumulator;
 import com.patra.ingest.app.usecase.relay.metrics.OutboxRelayMetrics;
-import com.patra.ingest.domain.factory.OutboxRelayLogFactory;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.model.entity.OutboxRelayLog;
 import com.patra.ingest.domain.model.enums.RelayStatus;
 import com.patra.ingest.domain.model.vo.relay.RelayBatchId;
 import com.patra.ingest.domain.port.OutboxRelayLogRepository;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -23,7 +22,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -46,16 +44,14 @@ import org.mockito.quality.Strictness;
 @DisplayName("RelayLogCoordinator 单元测试")
 class RelayLogCoordinatorTest {
 
-  @Mock private OutboxRelayLogFactory logFactory;
-
   @Mock private OutboxRelayLogRepository logRepository;
 
   @Mock private OutboxRelayMetrics metrics;
 
-  @InjectMocks private RelayLogCoordinator coordinator;
-
   @Captor private ArgumentCaptor<List<OutboxRelayLog>> logListCaptor;
 
+  private RelayLogCoordinator coordinator;
+  private Clock fixedClock;
   private RelayBatchId batchId;
   private OutboxMessage testMessage;
   private String leaseOwner;
@@ -63,7 +59,9 @@ class RelayLogCoordinatorTest {
 
   @BeforeEach
   void setUp() {
-    startTime = Instant.now();
+    startTime = Instant.parse("2025-01-01T00:00:00Z");
+    fixedClock = Clock.fixed(startTime, ZoneOffset.UTC);
+    coordinator = new RelayLogCoordinator(fixedClock, logRepository, metrics);
     batchId = RelayBatchId.generate(startTime);
     leaseOwner = "test-owner";
 
@@ -77,6 +75,7 @@ class RelayLogCoordinatorTest {
             .opType("TASK_READY")
             .dedupKey("task-001")
             .partitionKey("")
+            .retryCount(0)
             .build();
   }
 
@@ -99,16 +98,22 @@ class RelayLogCoordinatorTest {
     @Test
     @DisplayName("累加器应关联正确的批次 ID")
     void shouldAssociateBatchIdWithAccumulator() {
-      // When
+      // Given
       LogAccumulator accumulator = coordinator.createAccumulator(batchId);
 
-      // Then: 通过记录日志验证批次 ID (间接验证,因为 batchId 是私有的)
-      OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.PUBLISHED);
-      when(logFactory.createForPublished(any(), eq(batchId), anyString(), any(), any()))
-          .thenReturn(mockLog);
-
+      // When
       accumulator.recordPublished(testMessage, leaseOwner, startTime, Instant.now());
+
+      // Then: 验证累加器接受日志
       assertThat(accumulator.size()).isEqualTo(1);
+
+      // 通过持久化验证批次 ID
+      coordinator.persistBatch(accumulator);
+      verify(logRepository).saveBatch(logListCaptor.capture());
+
+      List<OutboxRelayLog> savedLogs = logListCaptor.getValue();
+      assertThat(savedLogs).hasSize(1);
+      assertThat(savedLogs.get(0).getRelayBatchId()).isEqualTo(batchId.getValue());
     }
 
     @Test
@@ -123,12 +128,9 @@ class RelayLogCoordinatorTest {
       LogAccumulator acc1 = coordinator.createAccumulator(batch1);
       LogAccumulator acc2 = coordinator.createAccumulator(batch2);
 
-      // Then: 两个累加器独立
-      OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.PUBLISHED);
-      when(logFactory.createForPublished(any(), any(), anyString(), any(), any()))
-          .thenReturn(mockLog);
-
       acc1.recordPublished(testMessage, leaseOwner, startTime, Instant.now());
+
+      // Then: 两个累加器独立
       assertThat(acc1.size()).isEqualTo(1);
       assertThat(acc2.size()).isZero();
     }
@@ -160,11 +162,8 @@ class RelayLogCoordinatorTest {
     void shouldPersistSingleLog() {
       // Given
       LogAccumulator accumulator = coordinator.createAccumulator(batchId);
-      OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.PUBLISHED);
-      when(logFactory.createForPublished(any(), any(), anyString(), any(), any()))
-          .thenReturn(mockLog);
-
-      accumulator.recordPublished(testMessage, leaseOwner, startTime, Instant.now());
+      Instant publishedAt = Instant.now();
+      accumulator.recordPublished(testMessage, leaseOwner, startTime, publishedAt);
 
       // When
       coordinator.persistBatch(accumulator);
@@ -173,7 +172,14 @@ class RelayLogCoordinatorTest {
       verify(logRepository).saveBatch(logListCaptor.capture());
       List<OutboxRelayLog> savedLogs = logListCaptor.getValue();
       assertThat(savedLogs).hasSize(1);
-      assertThat(savedLogs.get(0)).isEqualTo(mockLog);
+
+      OutboxRelayLog savedLog = savedLogs.get(0);
+      assertThat(savedLog.getOutboxMessageId()).isEqualTo(testMessage.getId());
+      assertThat(savedLog.getRelayBatchId()).isEqualTo(batchId.getValue());
+      assertThat(savedLog.getChannel()).isEqualTo("TASK_READY");
+      assertThat(savedLog.getRelayStatus()).isEqualTo(RelayStatus.PUBLISHED);
+      assertThat(savedLog.getAttemptNumber()).isEqualTo(1);
+      assertThat(savedLog.getErrorCode()).isNull();
 
       // 验证指标记录
       verify(metrics).recordPublished("TASK_READY");
@@ -184,17 +190,6 @@ class RelayLogCoordinatorTest {
     void shouldPersistMultipleLogs() {
       // Given: 累加器包含多条日志
       LogAccumulator accumulator = coordinator.createAccumulator(batchId);
-
-      OutboxRelayLog log1 = createMockRelayLog(RelayStatus.PUBLISHED);
-      OutboxRelayLog log2 = createMockRelayLog(RelayStatus.DEFERRED);
-      OutboxRelayLog log3 = createMockRelayLog(RelayStatus.FAILED);
-
-      when(logFactory.createForPublished(any(), any(), anyString(), any(), any())).thenReturn(log1);
-      when(logFactory.createForDeferred(
-              any(), any(), anyString(), any(), any(), any(), any(), any()))
-          .thenReturn(log2);
-      when(logFactory.createForFailed(any(), any(), anyString(), any(), any(), any(), any()))
-          .thenReturn(log3);
 
       accumulator.recordPublished(testMessage, leaseOwner, startTime, Instant.now());
       accumulator.recordDeferred(
@@ -209,10 +204,26 @@ class RelayLogCoordinatorTest {
       List<OutboxRelayLog> savedLogs = logListCaptor.getValue();
       assertThat(savedLogs).hasSize(3);
 
-      // 验证指标记录 (每种状态一次) - 实际使用 mock 返回的 ERROR_CODE
+      // 验证各日志的状态
+      assertThat(savedLogs).extracting(OutboxRelayLog::getRelayStatus)
+          .containsExactly(RelayStatus.PUBLISHED, RelayStatus.DEFERRED, RelayStatus.FAILED);
+
+      // 验证 PUBLISHED 日志
+      OutboxRelayLog publishedLog = savedLogs.get(0);
+      assertThat(publishedLog.getErrorCode()).isNull();
+
+      // 验证 DEFERRED 日志
+      OutboxRelayLog deferredLog = savedLogs.get(1);
+      assertThat(deferredLog.getErrorCode()).isEqualTo("TIMEOUT");
+
+      // 验证 FAILED 日志
+      OutboxRelayLog failedLog = savedLogs.get(2);
+      assertThat(failedLog.getErrorCode()).isEqualTo("FATAL_ERROR");
+
+      // 验证指标记录 (每种状态一次)
       verify(metrics).recordPublished("TASK_READY");
-      verify(metrics).recordDeferred("TASK_READY", "ERROR_CODE");
-      verify(metrics).recordFailed("TASK_READY", "ERROR_CODE");
+      verify(metrics).recordDeferred("TASK_READY", "TIMEOUT");
+      verify(metrics).recordFailed("TASK_READY", "FATAL_ERROR");
     }
 
     @Test
@@ -220,10 +231,6 @@ class RelayLogCoordinatorTest {
     void shouldNotModifyAccumulatorAfterPersist() {
       // Given
       LogAccumulator accumulator = coordinator.createAccumulator(batchId);
-      OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.PUBLISHED);
-      when(logFactory.createForPublished(any(), any(), anyString(), any(), any()))
-          .thenReturn(mockLog);
-
       accumulator.recordPublished(testMessage, leaseOwner, startTime, Instant.now());
 
       // When
@@ -245,17 +252,26 @@ class RelayLogCoordinatorTest {
       // Given
       LogAccumulator accumulator = coordinator.createAccumulator(batchId);
       Instant publishedAt = Instant.now();
-      OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.PUBLISHED);
-      when(logFactory.createForPublished(any(), any(), anyString(), any(), any()))
-          .thenReturn(mockLog);
 
       // When
       accumulator.recordPublished(testMessage, leaseOwner, startTime, publishedAt);
 
       // Then
       assertThat(accumulator.size()).isEqualTo(1);
-      verify(logFactory)
-          .createForPublished(testMessage, batchId, leaseOwner, startTime, publishedAt);
+
+      // 验证实际创建的日志对象
+      coordinator.persistBatch(accumulator);
+      verify(logRepository).saveBatch(logListCaptor.capture());
+
+      OutboxRelayLog savedLog = logListCaptor.getValue().get(0);
+      assertThat(savedLog.getOutboxMessageId()).isEqualTo(testMessage.getId());
+      assertThat(savedLog.getRelayBatchId()).isEqualTo(batchId.getValue());
+      assertThat(savedLog.getLeaseOwner()).isEqualTo(leaseOwner);
+      assertThat(savedLog.getRelayStatus()).isEqualTo(RelayStatus.PUBLISHED);
+      assertThat(savedLog.getAttemptNumber()).isEqualTo(1);
+      assertThat(savedLog.getChannel()).isEqualTo("TASK_READY");
+      assertThat(savedLog.getErrorCode()).isNull();
+      assertThat(savedLog.getErrorMessage()).isNull();
     }
 
     @Test
@@ -263,9 +279,6 @@ class RelayLogCoordinatorTest {
     void shouldAccumulateMultiplePublishedLogs() {
       // Given
       LogAccumulator accumulator = coordinator.createAccumulator(batchId);
-      OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.PUBLISHED);
-      when(logFactory.createForPublished(any(), any(), anyString(), any(), any()))
-          .thenReturn(mockLog);
 
       // When: 记录 3 次
       accumulator.recordPublished(testMessage, leaseOwner, startTime, Instant.now());
@@ -274,6 +287,12 @@ class RelayLogCoordinatorTest {
 
       // Then
       assertThat(accumulator.size()).isEqualTo(3);
+
+      // 验证持久化时有 3 条日志
+      coordinator.persistBatch(accumulator);
+      verify(logRepository).saveBatch(logListCaptor.capture());
+      assertThat(logListCaptor.getValue()).hasSize(3);
+      assertThat(logListCaptor.getValue()).allMatch(log -> log.getRelayStatus() == RelayStatus.PUBLISHED);
     }
   }
 
@@ -291,27 +310,27 @@ class RelayLogCoordinatorTest {
       String errorMessage = "Connection timed out";
       String errorKind = "TRANSIENT";
 
-      OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.DEFERRED);
-      when(logFactory.createForDeferred(
-              any(), any(), anyString(), any(), any(), any(), any(), any()))
-          .thenReturn(mockLog);
-
       // When
       accumulator.recordDeferred(
           testMessage, leaseOwner, startTime, nextRetryAt, errorCode, errorMessage, errorKind);
 
       // Then
       assertThat(accumulator.size()).isEqualTo(1);
-      verify(logFactory)
-          .createForDeferred(
-              testMessage,
-              batchId,
-              leaseOwner,
-              startTime,
-              nextRetryAt,
-              errorCode,
-              errorMessage,
-              errorKind);
+
+      // 验证实际创建的日志对象
+      coordinator.persistBatch(accumulator);
+      verify(logRepository).saveBatch(logListCaptor.capture());
+
+      OutboxRelayLog savedLog = logListCaptor.getValue().get(0);
+      assertThat(savedLog.getOutboxMessageId()).isEqualTo(testMessage.getId());
+      assertThat(savedLog.getRelayBatchId()).isEqualTo(batchId.getValue());
+      assertThat(savedLog.getLeaseOwner()).isEqualTo(leaseOwner);
+      assertThat(savedLog.getRelayStatus()).isEqualTo(RelayStatus.DEFERRED);
+      assertThat(savedLog.getAttemptNumber()).isEqualTo(1);
+      assertThat(savedLog.getChannel()).isEqualTo("TASK_READY");
+      assertThat(savedLog.getErrorCode()).isEqualTo(errorCode);
+      assertThat(savedLog.getErrorMessage()).isEqualTo(errorMessage);
+      assertThat(savedLog.getErrorKind()).isEqualTo(errorKind);
     }
 
     @Test
@@ -319,10 +338,6 @@ class RelayLogCoordinatorTest {
     void shouldHandleNullErrorMessage() {
       // Given
       LogAccumulator accumulator = coordinator.createAccumulator(batchId);
-      OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.DEFERRED);
-      when(logFactory.createForDeferred(
-              any(), any(), anyString(), any(), any(), any(), any(), any()))
-          .thenReturn(mockLog);
 
       // When: 错误消息为 null
       accumulator.recordDeferred(
@@ -330,16 +345,15 @@ class RelayLogCoordinatorTest {
 
       // Then: 应正常记录
       assertThat(accumulator.size()).isEqualTo(1);
-      verify(logFactory)
-          .createForDeferred(
-              eq(testMessage),
-              eq(batchId),
-              eq(leaseOwner),
-              eq(startTime),
-              any(Instant.class),
-              eq("ERROR"),
-              eq(null),
-              eq("TRANSIENT"));
+
+      // 验证日志对象的错误消息字段为 null
+      coordinator.persistBatch(accumulator);
+      verify(logRepository).saveBatch(logListCaptor.capture());
+
+      OutboxRelayLog savedLog = logListCaptor.getValue().get(0);
+      assertThat(savedLog.getErrorCode()).isEqualTo("ERROR");
+      assertThat(savedLog.getErrorMessage()).isNull();
+      assertThat(savedLog.getErrorKind()).isEqualTo("TRANSIENT");
     }
   }
 
@@ -356,19 +370,27 @@ class RelayLogCoordinatorTest {
       String errorMessage = "Invalid message format";
       String errorKind = "FATAL";
 
-      OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.FAILED);
-      when(logFactory.createForFailed(any(), any(), anyString(), any(), any(), any(), any()))
-          .thenReturn(mockLog);
-
       // When
       accumulator.recordFailed(
           testMessage, leaseOwner, startTime, errorCode, errorMessage, errorKind);
 
       // Then
       assertThat(accumulator.size()).isEqualTo(1);
-      verify(logFactory)
-          .createForFailed(
-              testMessage, batchId, leaseOwner, startTime, errorCode, errorMessage, errorKind);
+
+      // 验证实际创建的日志对象
+      coordinator.persistBatch(accumulator);
+      verify(logRepository).saveBatch(logListCaptor.capture());
+
+      OutboxRelayLog savedLog = logListCaptor.getValue().get(0);
+      assertThat(savedLog.getOutboxMessageId()).isEqualTo(testMessage.getId());
+      assertThat(savedLog.getRelayBatchId()).isEqualTo(batchId.getValue());
+      assertThat(savedLog.getLeaseOwner()).isEqualTo(leaseOwner);
+      assertThat(savedLog.getRelayStatus()).isEqualTo(RelayStatus.FAILED);
+      assertThat(savedLog.getAttemptNumber()).isEqualTo(1);
+      assertThat(savedLog.getChannel()).isEqualTo("TASK_READY");
+      assertThat(savedLog.getErrorCode()).isEqualTo(errorCode);
+      assertThat(savedLog.getErrorMessage()).isEqualTo(errorMessage);
+      assertThat(savedLog.getErrorKind()).isEqualTo(errorKind);
     }
 
     @Test
@@ -376,9 +398,6 @@ class RelayLogCoordinatorTest {
     void shouldDifferentiateFatalAndMaxRetries() {
       // Given
       LogAccumulator accumulator = coordinator.createAccumulator(batchId);
-      OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.FAILED);
-      when(logFactory.createForFailed(any(), any(), anyString(), any(), any(), any(), any()))
-          .thenReturn(mockLog);
 
       // When: 记录两种失败类型
       accumulator.recordFailed(testMessage, leaseOwner, startTime, "FATAL", "Fatal", "FATAL");
@@ -387,8 +406,15 @@ class RelayLogCoordinatorTest {
 
       // Then: 都应记录,但 errorKind 不同
       assertThat(accumulator.size()).isEqualTo(2);
-      verify(logFactory, times(2))
-          .createForFailed(any(), any(), anyString(), any(), any(), any(), anyString());
+
+      // 验证日志对象的 errorKind 字段
+      coordinator.persistBatch(accumulator);
+      verify(logRepository).saveBatch(logListCaptor.capture());
+
+      List<OutboxRelayLog> savedLogs = logListCaptor.getValue();
+      assertThat(savedLogs).hasSize(2);
+      assertThat(savedLogs.get(0).getErrorKind()).isEqualTo("FATAL");
+      assertThat(savedLogs.get(1).getErrorKind()).isEqualTo("TRANSIENT");
     }
   }
 
@@ -401,15 +427,26 @@ class RelayLogCoordinatorTest {
     void shouldRecordLeaseMissedLog() {
       // Given
       LogAccumulator accumulator = coordinator.createAccumulator(batchId);
-      OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.LEASE_MISSED);
-      when(logFactory.createForLeaseMissed(any(), any(), anyString(), any())).thenReturn(mockLog);
 
       // When
       accumulator.recordLeaseMissed(testMessage, leaseOwner, startTime);
 
       // Then
       assertThat(accumulator.size()).isEqualTo(1);
-      verify(logFactory).createForLeaseMissed(testMessage, batchId, leaseOwner, startTime);
+
+      // 验证实际创建的日志对象
+      coordinator.persistBatch(accumulator);
+      verify(logRepository).saveBatch(logListCaptor.capture());
+
+      OutboxRelayLog savedLog = logListCaptor.getValue().get(0);
+      assertThat(savedLog.getOutboxMessageId()).isEqualTo(testMessage.getId());
+      assertThat(savedLog.getRelayBatchId()).isEqualTo(batchId.getValue());
+      assertThat(savedLog.getLeaseOwner()).isEqualTo(leaseOwner);
+      assertThat(savedLog.getRelayStatus()).isEqualTo(RelayStatus.LEASE_MISSED);
+      assertThat(savedLog.getAttemptNumber()).isEqualTo(1);
+      assertThat(savedLog.getChannel()).isEqualTo("TASK_READY");
+      assertThat(savedLog.getErrorCode()).isNull();
+      assertThat(savedLog.getErrorMessage()).isNull();
     }
 
     @Test
@@ -417,8 +454,6 @@ class RelayLogCoordinatorTest {
     void shouldAccumulateMultipleLeaseMissedLogs() {
       // Given
       LogAccumulator accumulator = coordinator.createAccumulator(batchId);
-      OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.LEASE_MISSED);
-      when(logFactory.createForLeaseMissed(any(), any(), anyString(), any())).thenReturn(mockLog);
 
       // When: 记录 5 次租约丢失
       for (int i = 0; i < 5; i++) {
@@ -427,6 +462,12 @@ class RelayLogCoordinatorTest {
 
       // Then
       assertThat(accumulator.size()).isEqualTo(5);
+
+      // 验证持久化时有 5 条日志
+      coordinator.persistBatch(accumulator);
+      verify(logRepository).saveBatch(logListCaptor.capture());
+      assertThat(logListCaptor.getValue()).hasSize(5);
+      assertThat(logListCaptor.getValue()).allMatch(log -> log.getRelayStatus() == RelayStatus.LEASE_MISSED);
     }
   }
 
@@ -440,34 +481,19 @@ class RelayLogCoordinatorTest {
       // Given: 包含所有状态的累加器
       LogAccumulator accumulator = coordinator.createAccumulator(batchId);
 
-      OutboxRelayLog publishedLog = createMockRelayLog(RelayStatus.PUBLISHED);
-      OutboxRelayLog deferredLog = createMockRelayLog(RelayStatus.DEFERRED);
-      OutboxRelayLog failedLog = createMockRelayLog(RelayStatus.FAILED);
-      OutboxRelayLog leaseMissedLog = createMockRelayLog(RelayStatus.LEASE_MISSED);
-
-      when(logFactory.createForPublished(any(), any(), anyString(), any(), any()))
-          .thenReturn(publishedLog);
-      when(logFactory.createForDeferred(
-              any(), any(), anyString(), any(), any(), any(), any(), any()))
-          .thenReturn(deferredLog);
-      when(logFactory.createForFailed(any(), any(), anyString(), any(), any(), any(), any()))
-          .thenReturn(failedLog);
-      when(logFactory.createForLeaseMissed(any(), any(), anyString(), any()))
-          .thenReturn(leaseMissedLog);
-
       accumulator.recordPublished(testMessage, leaseOwner, startTime, Instant.now());
       accumulator.recordDeferred(
-          testMessage, leaseOwner, startTime, Instant.now(), "ERR", "msg", "TRANSIENT");
-      accumulator.recordFailed(testMessage, leaseOwner, startTime, "ERR", "msg", "FATAL");
+          testMessage, leaseOwner, startTime, Instant.now(), "ERR_DEFERRED", "msg", "TRANSIENT");
+      accumulator.recordFailed(testMessage, leaseOwner, startTime, "ERR_FAILED", "msg", "FATAL");
       accumulator.recordLeaseMissed(testMessage, leaseOwner, startTime);
 
       // When
       coordinator.persistBatch(accumulator);
 
-      // Then: 验证每种状态的指标都被记录 - 实际使用 mock 返回的 ERROR_CODE
+      // Then: 验证每种状态的指标都被记录
       verify(metrics).recordPublished("TASK_READY");
-      verify(metrics).recordDeferred("TASK_READY", "ERROR_CODE");
-      verify(metrics).recordFailed("TASK_READY", "ERROR_CODE");
+      verify(metrics).recordDeferred("TASK_READY", "ERR_DEFERRED");
+      verify(metrics).recordFailed("TASK_READY", "ERR_FAILED");
       verify(metrics).recordLeaseMissed("TASK_READY");
     }
 
@@ -476,9 +502,6 @@ class RelayLogCoordinatorTest {
     void shouldRecordMetricsForEachLog() {
       // Given: 多条 PUBLISHED 日志
       LogAccumulator accumulator = coordinator.createAccumulator(batchId);
-      OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.PUBLISHED);
-      when(logFactory.createForPublished(any(), any(), anyString(), any(), any()))
-          .thenReturn(mockLog);
 
       accumulator.recordPublished(testMessage, leaseOwner, startTime, Instant.now());
       accumulator.recordPublished(testMessage, leaseOwner, startTime, Instant.now());
@@ -501,10 +524,6 @@ class RelayLogCoordinatorTest {
     void shouldReturnUnmodifiableCopyOfLogs() {
       // Given
       LogAccumulator accumulator = coordinator.createAccumulator(batchId);
-      OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.PUBLISHED);
-      when(logFactory.createForPublished(any(), any(), anyString(), any(), any()))
-          .thenReturn(mockLog);
-
       accumulator.recordPublished(testMessage, leaseOwner, startTime, Instant.now());
 
       // When
@@ -519,10 +538,6 @@ class RelayLogCoordinatorTest {
     void shouldAllowMultiplePersistCallsOnSameAccumulator() {
       // Given
       LogAccumulator accumulator = coordinator.createAccumulator(batchId);
-      OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.PUBLISHED);
-      when(logFactory.createForPublished(any(), any(), anyString(), any(), any()))
-          .thenReturn(mockLog);
-
       accumulator.recordPublished(testMessage, leaseOwner, startTime, Instant.now());
 
       // When: 多次持久化
@@ -539,9 +554,6 @@ class RelayLogCoordinatorTest {
     void shouldHandleLargeBatchOfLogs() {
       // Given: 1000 条日志
       LogAccumulator accumulator = coordinator.createAccumulator(batchId);
-      OutboxRelayLog mockLog = createMockRelayLog(RelayStatus.PUBLISHED);
-      when(logFactory.createForPublished(any(), any(), anyString(), any(), any()))
-          .thenReturn(mockLog);
 
       for (int i = 0; i < 1000; i++) {
         accumulator.recordPublished(testMessage, leaseOwner, startTime, Instant.now());
@@ -555,19 +567,5 @@ class RelayLogCoordinatorTest {
       assertThat(logListCaptor.getValue()).hasSize(1000);
       verify(metrics, times(1000)).recordPublished("TASK_READY");
     }
-  }
-
-  // ==================== 辅助方法 ====================
-
-  /// 创建 Mock RelayLog,模拟不同状态
-  ///
-  /// @param status 中继状态
-  /// @return Mock OutboxRelayLog
-  private OutboxRelayLog createMockRelayLog(RelayStatus status) {
-    OutboxRelayLog mockLog = mock(OutboxRelayLog.class);
-    when(mockLog.getChannel()).thenReturn("TASK_READY");
-    when(mockLog.getRelayStatus()).thenReturn(status);
-    when(mockLog.getErrorCode()).thenReturn(status == RelayStatus.PUBLISHED ? null : "ERROR_CODE");
-    return mockLog;
   }
 }
