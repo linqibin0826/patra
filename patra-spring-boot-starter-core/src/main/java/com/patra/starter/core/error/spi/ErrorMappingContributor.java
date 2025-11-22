@@ -19,8 +19,8 @@ import java.util.Optional;
 ///     return Optional.empty();  // 传递给下一个贡献者
 /// ```
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 public interface ErrorMappingContributor {
 
   /// 为提供的异常提供错误码(如果此贡献者可以处理)。

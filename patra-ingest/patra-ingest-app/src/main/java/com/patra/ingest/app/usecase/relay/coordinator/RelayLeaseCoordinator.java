@@ -28,7 +28,7 @@ import org.springframework.stereotype.Component;
 /// - DEBUG: 租约获取详情 (messageId, leaseOwner, 结果)
 ///   - 无 INFO/WARN 日志 (高频操作,避免日志噪音)
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @Slf4j
 @Component

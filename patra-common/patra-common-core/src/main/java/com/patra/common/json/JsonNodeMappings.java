@@ -11,7 +11,7 @@ import java.util.Map;
 ///
 /// 提供 JSON 字符串、JsonNode、Map 之间的双向转换，确保使用统一的 ObjectMapper 配置。
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 public final class JsonNodeMappings {
 

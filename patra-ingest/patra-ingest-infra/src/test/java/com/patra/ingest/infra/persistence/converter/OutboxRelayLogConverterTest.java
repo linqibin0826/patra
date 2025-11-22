@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 ///   - 批量转换功能
 ///   - Null 值处理
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @DisplayName("OutboxRelayLogConverter 单元测试")
 class OutboxRelayLogConverterTest {

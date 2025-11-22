@@ -25,7 +25,7 @@ import lombok.EqualsAndHashCode;
 ///   - `metadata` 位置元数据(灵活扩展)
 ///
 /// @author linqibin
-/// @since 0.5.0
+/// @since 0.1.0
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_oa_location", autoResultMap = true)

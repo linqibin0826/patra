@@ -59,7 +59,7 @@ import lombok.extern.slf4j.Slf4j;
 ///         return provider.fetchData(request, dataType, targetClass);
 /// ```
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 @Slf4j
 public class ProviderRegistry {

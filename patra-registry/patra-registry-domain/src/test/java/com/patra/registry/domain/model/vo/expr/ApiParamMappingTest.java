@@ -32,8 +32,8 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ 业务场景测试（API 参数映射、时间有效性等）
 ///   - ✅ 边界条件处理
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("ApiParamMapping 单元测试")
 class ApiParamMappingTest {
 

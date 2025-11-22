@@ -15,7 +15,7 @@ import lombok.Builder;
 ///
 /// @param isValid 是否有效
 /// @param errors 错误列表（不可变）
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 @Builder
 public record ValidationResult(boolean isValid, List<String> errors) {

@@ -6,5 +6,5 @@ import com.patra.catalog.infra.persistence.entity.OaLocationDO;
 /// 开放获取位置 Mapper 接口 — 对开放获取位置表的数据访问操作。
 ///
 /// @author linqibin
-/// @since 0.5.0
+/// @since 0.1.0
 public interface OaLocationMapper extends BaseMapper<OaLocationDO> {}

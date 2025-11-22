@@ -37,7 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 ///   - {@link MeshBatchDetailPort} - 批次详情仓储（查询失败批次）
 ///
 /// @author linqibin
-/// @since 0.1.0 (User Story 2 - 实时监控导入进度)
+/// @since 0.1.0
 @Slf4j
 @Service
 @RequiredArgsConstructor

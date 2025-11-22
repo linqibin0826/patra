@@ -33,8 +33,8 @@ import org.springframework.stereotype.Component;
 /// session.stateToken("queryKey")  → query_key
 /// ```
 ///
-/// @author Patra Architecture Team
-/// @since 0.3.0
+/// @author linqibin
+/// @since 0.1.0
 @Component
 @Slf4j
 public class PubmedParameterMapper implements ProviderParameterMapper {

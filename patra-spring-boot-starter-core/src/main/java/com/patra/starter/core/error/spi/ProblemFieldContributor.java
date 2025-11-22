@@ -17,8 +17,8 @@ import java.util.Map;
 ///     fields.put("timestamp", Instant.now().toString());
 /// ```
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 public interface ProblemFieldContributor {
 
   /// 向 `ProblemDetail` 响应添加自定义扩展字段。

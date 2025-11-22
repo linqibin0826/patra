@@ -12,7 +12,7 @@ import java.util.List;
 ///
 /// 该类封装了PubMed文章的核心信息,包括PMID、文章元数据、期刊信息和补充数据。 提供便捷的访问器方法用于获取关键字、文章标识符等常用信息。
 ///
-/// @author Patra
+/// @author linqibin
 @JsonIgnoreProperties(ignoreUnknown = true)
 public final class PubmedPublication {
 
@@ -1915,7 +1915,7 @@ public final class PubmedPublication {
   ///
   /// 包含期刊的标准化缩写、出版国家、NLM唯一标识符和链接ISSN等信息。
   ///
-  /// @author Patra
+  /// @author linqibin
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class MedlineJournalInfo {
 
@@ -1962,7 +1962,7 @@ public final class PubmedPublication {
   ///
   /// 包含文章的发布状态、历史事件时间线和各类文章标识符(DOI、PMC等)。 提供便捷的方法用于访问和检查这些补充信息。
   ///
-  /// @author Patra
+  /// @author linqibin
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class PubmedData {
 

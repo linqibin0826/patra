@@ -30,7 +30,7 @@ import java.util.List;
 /// @param context 执行上下文
 /// @param querySession 查询会话
 /// @author linqibin
-/// @since 0.3.0
+/// @since 0.1.0
 public record BatchSchedule(
     List<Batch> batches, ExecutionContext context, QuerySession querySession) {
 

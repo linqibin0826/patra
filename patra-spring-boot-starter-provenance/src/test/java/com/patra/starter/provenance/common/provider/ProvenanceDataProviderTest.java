@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 ///
 /// **TDD测试策略**：
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 @DisplayName("ProvenanceDataProvider接口测试")
 class ProvenanceDataProviderTest {

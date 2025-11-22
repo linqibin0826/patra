@@ -26,8 +26,8 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ 不可变性验证
 ///   - ✅ 状态自动计算
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("TableProgress 单元测试")
 class TableProgressTest {
 

@@ -49,7 +49,7 @@ import com.patra.starter.provenance.common.provider.ProviderRequest;
 /// ```
 ///
 /// @param <T> 处理的数据类型（如CanonicalPublication、Journal、Drug）
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 public interface DataProcessor<T> {
 

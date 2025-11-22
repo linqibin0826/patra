@@ -8,7 +8,7 @@ import com.patra.common.enums.ProvenanceCode;
 ///
 /// - cursorMark - 游标标记,用于基于游标的分页
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 public class EpmcPlanMetadata extends PlanMetadata {
 

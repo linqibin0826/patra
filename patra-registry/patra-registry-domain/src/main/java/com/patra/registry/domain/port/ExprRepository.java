@@ -16,8 +16,8 @@ import java.time.Instant;
 ///
 /// **注意**:本仓储为只读仓储,不提供写操作。所有方法使用领域语言 表达业务意图,隐藏底层持久化技术细节。
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 public interface ExprRepository {
 
   /// 加载指定数据源和作用域的聚合表达式快照。

@@ -20,8 +20,8 @@ import java.util.concurrent.TimeUnit;
 ///
 /// 所有指标包含标签: `context`(上下文前缀)、`exception`(异常类型)、`errorCode`(错误码)
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 public class MicrometerErrorObservationRecorder implements ErrorObservationRecorder {
 
   private final MeterRegistry meterRegistry;

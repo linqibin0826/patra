@@ -157,5 +157,5 @@
 /// ```
 ///
 /// @since 0.1.0
-/// @author Patra Team
+/// @author linqibin
 package com.patra.catalog.domain.port;

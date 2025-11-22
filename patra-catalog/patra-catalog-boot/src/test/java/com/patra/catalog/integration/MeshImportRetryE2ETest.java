@@ -41,8 +41,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 ///   - ✅ 验证重试幂等性（多次重试不会重复处理）
 ///   - ✅ 验证错误处理（任务不存在、状态不允许重试）
 ///
-/// @author Patra Team
-/// @since 0.1.0 (User Story 3)
+/// @author linqibin
+/// @since 0.1.0
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @DisplayName("MeSH 导入重试与清除 E2E 测试")

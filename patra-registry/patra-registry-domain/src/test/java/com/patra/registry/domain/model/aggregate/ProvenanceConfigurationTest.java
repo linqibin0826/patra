@@ -32,8 +32,8 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ 业务规则验证
 ///   - ✅ 边界条件处理
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("ProvenanceConfiguration 单元测试")
 class ProvenanceConfigurationTest {
 

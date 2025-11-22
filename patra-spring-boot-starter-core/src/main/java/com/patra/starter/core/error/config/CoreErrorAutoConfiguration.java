@@ -40,8 +40,8 @@ import org.springframework.context.annotation.Configuration;
 ///
 /// 设计原则: 提供可被应用程序覆盖的默认引擎、拦截器和观测 Bean。
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({ErrorProperties.class, TracingProperties.class})

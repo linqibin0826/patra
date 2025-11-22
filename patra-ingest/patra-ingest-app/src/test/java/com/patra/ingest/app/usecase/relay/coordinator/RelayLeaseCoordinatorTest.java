@@ -31,7 +31,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///   - ✅ 乐观锁版本验证
 ///   - ✅ 租约过期时间计算
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RelayLeaseCoordinator 单元测试")

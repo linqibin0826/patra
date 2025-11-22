@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 /// PlanStatus 枚举测试。
 ///
-/// @author Patra Team
+/// @author linqibin
 @DisplayName("PlanStatus 枚举测试")
 class PlanStatusTest {
 

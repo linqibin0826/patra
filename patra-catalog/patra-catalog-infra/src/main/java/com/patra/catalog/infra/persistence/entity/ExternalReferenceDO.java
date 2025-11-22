@@ -24,7 +24,7 @@ import lombok.EqualsAndHashCode;
 /// 唯一约束: uk_external_ref(publication_id, database_name, accession_number),防止重复引用。
 ///
 /// @author linqibin
-/// @since 0.4.0
+/// @since 0.1.0
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_external_reference", autoResultMap = true)

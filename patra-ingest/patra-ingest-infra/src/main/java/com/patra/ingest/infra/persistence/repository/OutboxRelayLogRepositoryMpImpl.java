@@ -42,7 +42,7 @@ import org.springframework.stereotype.Repository;
 ///
 /// 无共享可变状态(Mapper/Converter 无状态或线程安全); 实例可跨线程重用。
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @Slf4j
 @Repository

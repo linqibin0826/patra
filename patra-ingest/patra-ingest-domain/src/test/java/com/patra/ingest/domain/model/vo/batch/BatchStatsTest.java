@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 ///   - 边界条件测试
 ///   - 业务场景测试
 ///
-/// @author Patra Team
+/// @author linqibin
 @DisplayName("BatchStats 单元测试")
 class BatchStatsTest {
 

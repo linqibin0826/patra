@@ -32,8 +32,8 @@ import com.patra.registry.domain.model.vo.provenance.WindowOffsetConfig;
 ///   - `retry` - 重试策略配置,包含退避算法、最大重试次数等,可选
 ///   - `rateLimit` - 速率限制配置,用于API节流保护,可选
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 public record ProvenanceConfiguration(
     Provenance provenance,
     WindowOffsetConfig windowOffset,

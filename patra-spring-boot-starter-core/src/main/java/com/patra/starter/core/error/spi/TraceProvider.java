@@ -17,8 +17,8 @@ import java.util.Optional;
 ///     return Optional.ofNullable(TraceContext.traceId());
 /// ```
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 public interface TraceProvider {
 
   /// 从当前执行上下文中提取追踪标识符。

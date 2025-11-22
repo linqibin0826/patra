@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 /// OutboxStatus 枚举测试。
 ///
-/// @author Patra Team
+/// @author linqibin
 @DisplayName("OutboxStatus 枚举测试")
 class OutboxStatusTest {
 

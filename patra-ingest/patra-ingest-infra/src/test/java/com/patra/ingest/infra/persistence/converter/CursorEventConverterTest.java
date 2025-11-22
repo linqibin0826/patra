@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
 ///   - 所有枚举值的转换
 ///   - Null 值处理
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @DisplayName("CursorEventConverter 单元测试")
 class CursorEventConverterTest {

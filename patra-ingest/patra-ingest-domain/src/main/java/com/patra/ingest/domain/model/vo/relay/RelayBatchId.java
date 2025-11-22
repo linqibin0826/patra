@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
 /// **不变性:** 一旦创建,批次 ID 不可更改。使用 {@link #generate(Instant)} 生成新 ID, 使用 {@link #of(String)}
 /// 从字符串重建 ID(带格式验证)。
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 public final class RelayBatchId {
 

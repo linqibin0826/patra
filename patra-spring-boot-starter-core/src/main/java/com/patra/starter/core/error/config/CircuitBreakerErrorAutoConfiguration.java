@@ -28,8 +28,8 @@ import org.springframework.context.annotation.Bean;
 /// 设计说明: 此配置与 {@link CoreErrorAutoConfiguration} 分离,避免 Resilience4j 不存在时 出现
 /// ClassNotFoundException(可选依赖)。
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @AutoConfiguration(after = CoreErrorAutoConfiguration.class)
 @ConditionalOnClass(CircuitBreaker.class)

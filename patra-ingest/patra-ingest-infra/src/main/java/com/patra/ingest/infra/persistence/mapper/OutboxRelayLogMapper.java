@@ -24,7 +24,7 @@ import org.apache.ibatis.annotations.Param;
 ///   - `idx_status(relay_status, started_at)`: 按状态查询日志(用于告警)
 ///   - `idx_created_at(created_at)`: 按创建时间归档旧日志
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 public interface OutboxRelayLogMapper extends BaseMapper<OutboxRelayLogDO> {
 

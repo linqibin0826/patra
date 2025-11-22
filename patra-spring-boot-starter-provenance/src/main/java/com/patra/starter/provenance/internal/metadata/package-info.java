@@ -88,7 +88,7 @@
 ///         - patra-spring-boot-starter-provenance（Provider 实现）
 ///
 /// @since 0.1.0
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @see com.patra.common.model 通用领域模型
 /// @see <a
 ///

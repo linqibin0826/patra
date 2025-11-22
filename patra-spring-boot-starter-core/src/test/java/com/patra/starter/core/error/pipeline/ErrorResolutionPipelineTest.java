@@ -35,8 +35,8 @@ import org.springframework.core.annotation.Order;
 ///   - ✅ 拦截器前置和后置处理
 ///   - ✅ 异常传播
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("ErrorResolutionPipeline 单元测试")
 @ExtendWith(MockitoExtension.class)
 class ErrorResolutionPipelineTest {

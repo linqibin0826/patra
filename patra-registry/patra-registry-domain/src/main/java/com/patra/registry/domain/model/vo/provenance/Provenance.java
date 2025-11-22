@@ -23,8 +23,8 @@ import com.patra.registry.domain.exception.DomainValidationException;
 /// @param docsUrl 官方文档或参考URL,用于故障排查和API验证,可为null
 /// @param active 激活标志,`true`表示激活可用,`false`表示停用
 /// @param lifecycleStatusCode 生命周期状态代码(字典值,如`ACTIVE`),用于精细化状态管理
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 public record Provenance(
     Long id,
     String code,

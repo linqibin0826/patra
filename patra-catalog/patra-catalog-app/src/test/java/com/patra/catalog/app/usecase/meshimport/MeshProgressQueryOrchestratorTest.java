@@ -35,7 +35,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///   - 覆盖正常场景和异常场景
 ///
 /// @author linqibin
-/// @since 0.1.0 (User Story 2 - 实时监控导入进度)
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MeshProgressQueryOrchestrator 单元测试")
 class MeshProgressQueryOrchestratorTest {

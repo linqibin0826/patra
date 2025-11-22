@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ 业务场景测试（不同发射类型、操作符等）
 ///   - ✅ 边界条件处理
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @DisplayName("ExprRenderRule 单元测试")
 class ExprRenderRuleTest {

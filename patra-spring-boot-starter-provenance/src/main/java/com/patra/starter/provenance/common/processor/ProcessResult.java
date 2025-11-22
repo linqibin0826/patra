@@ -21,7 +21,7 @@ import lombok.Builder;
 /// @param errorMessage 错误消息或警告消息
 /// @param status 处理状态
 /// @param metadata 扩展元数据（如recordCount、processingTime等）
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 @Builder
 public record ProcessResult<T>(

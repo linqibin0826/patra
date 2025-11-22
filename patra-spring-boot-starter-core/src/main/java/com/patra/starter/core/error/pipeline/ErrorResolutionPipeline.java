@@ -29,8 +29,8 @@ import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 ///
 /// 拦截器的执行顺序由 {@link org.springframework.core.annotation.Order} 注解决定, 数值越小优先级越高。
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 public class ErrorResolutionPipeline {
 
   private final ErrorResolutionEngine engine;

@@ -10,7 +10,7 @@ package com.patra.starter.provenance.common.processor;
 ///   - 必填字段缺失
 ///   - 数据类型不匹配
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 public class TransformationException extends Exception {
 

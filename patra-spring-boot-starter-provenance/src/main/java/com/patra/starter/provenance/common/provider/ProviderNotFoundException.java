@@ -10,7 +10,7 @@ package com.patra.starter.provenance.common.provider;
 ///   - Provider不支持指定的DataType
 ///   - (provenanceCode, dataType)组合未注册
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 public class ProviderNotFoundException extends RuntimeException {
 

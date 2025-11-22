@@ -36,8 +36,8 @@ import org.springframework.stereotype.Component;
 ///
 /// **注意**：EPMC 使用游标分页，不使用 offset。每次请求返回 nextCursorMark 用于下次请求。
 ///
-/// @author Patra Architecture Team
-/// @since 0.3.0
+/// @author linqibin
+/// @since 0.1.0
 @Component
 @Slf4j
 public class EpmcParameterMapper implements ProviderParameterMapper {

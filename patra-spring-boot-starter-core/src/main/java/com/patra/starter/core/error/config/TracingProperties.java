@@ -10,8 +10,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 ///
 /// 用于从 HTTP Header 中提取追踪 ID,支持多种分布式追踪系统的 Header 格式。
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @Data
 @ConfigurationProperties(prefix = "patra.tracing")
 public class TracingProperties {

@@ -38,8 +38,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///   - ✅ null 异常处理
 ///   - ✅ 配置开关控制
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("DefaultErrorResolutionEngine 单元测试")
 @ExtendWith(MockitoExtension.class)
 class DefaultErrorResolutionEngineTest {

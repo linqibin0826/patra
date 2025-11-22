@@ -30,8 +30,8 @@ import org.springframework.stereotype.Component;
 ///
 /// **注意**：DOAJ 使用页码分页（从1开始），需要从 offset 计算出 page。
 ///
-/// @author Patra Architecture Team
-/// @since 0.3.0
+/// @author linqibin
+/// @since 0.1.0
 @Component
 @Slf4j
 public class DoajParameterMapper implements ProviderParameterMapper {

@@ -30,8 +30,8 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ 不变性保证
 ///   - ✅ 边界条件处理
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("Provenance 单元测试")
 class ProvenanceTest {
 

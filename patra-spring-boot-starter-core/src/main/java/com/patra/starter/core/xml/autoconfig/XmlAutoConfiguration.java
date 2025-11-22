@@ -27,8 +27,8 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 ///   - 复用 Spring Boot 的 {@link Jackson2ObjectMapperBuilder},使全局 Jackson 自定义配置生效
 ///   - 保持条件激活(不需要 XML 的服务不会产生硬依赖)
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @AutoConfiguration(
     after = org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration.class)

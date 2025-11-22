@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 /// BatchStatus 枚举测试。
 ///
-/// @author Patra Team
+/// @author linqibin
 @DisplayName("BatchStatus 枚举测试")
 class BatchStatusTest {
 

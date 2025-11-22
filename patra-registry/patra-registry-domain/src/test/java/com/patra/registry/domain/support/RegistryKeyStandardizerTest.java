@@ -34,7 +34,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 ///   - ✅ 工具类语义测试（final class、private constructor、static methods）
 ///   - ✅ 边界条件和特殊场景测试
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @DisplayName("RegistryKeyStandardizer 单元测试")
 class RegistryKeyStandardizerTest {

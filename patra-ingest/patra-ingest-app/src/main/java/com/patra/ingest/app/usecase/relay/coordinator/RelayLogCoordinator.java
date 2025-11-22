@@ -54,7 +54,7 @@ import org.springframework.stereotype.Component;
 /// - DEBUG: 批量持久化操作 (大小、受影响的行数、批次 ID)
 ///   - 无单条消息日志 (由其他协调器处理)
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @Slf4j
 @Component

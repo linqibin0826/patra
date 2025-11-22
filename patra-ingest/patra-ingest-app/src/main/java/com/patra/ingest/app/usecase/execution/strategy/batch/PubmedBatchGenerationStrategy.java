@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 ///
 /// 根据查询会话生成批次列表，支持使用 WebEnv 会话令牌优化批次请求。
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 @Component
 @Slf4j

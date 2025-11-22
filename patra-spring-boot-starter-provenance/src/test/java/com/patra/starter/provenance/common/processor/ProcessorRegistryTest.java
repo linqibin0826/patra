@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 ///   - 类型支持检查测试（supports、getSupportedTypes）
 ///   - 异常情况测试（重复注册、Processor不存在、空列表）
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 @DisplayName("ProcessorRegistry注册表测试")
 class ProcessorRegistryTest {

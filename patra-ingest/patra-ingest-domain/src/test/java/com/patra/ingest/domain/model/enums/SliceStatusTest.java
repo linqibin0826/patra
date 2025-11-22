@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 /// SliceStatus 枚举测试。
 ///
-/// @author Patra Team
+/// @author linqibin
 @DisplayName("SliceStatus 枚举测试")
 class SliceStatusTest {
 

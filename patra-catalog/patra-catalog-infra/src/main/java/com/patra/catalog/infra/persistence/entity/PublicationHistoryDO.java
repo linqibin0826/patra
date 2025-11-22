@@ -27,7 +27,7 @@ import lombok.EqualsAndHashCode;
 /// 唯一约束: uk_history_order(publication_id, order_num),保证顺序号在同一文献内唯一。
 ///
 /// @author linqibin
-/// @since 0.4.0
+/// @since 0.1.0
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_publication_history", autoResultMap = true)

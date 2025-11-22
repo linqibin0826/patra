@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 /// **事务管理原则：**
 ///
 /// @author linqibin
-/// @since 2025-01-10
+/// @since 0.1.0
 public final class TransactionBoundaryRules {
 
   private TransactionBoundaryRules() {

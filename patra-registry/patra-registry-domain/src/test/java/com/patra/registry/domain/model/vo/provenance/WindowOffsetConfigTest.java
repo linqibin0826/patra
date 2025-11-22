@@ -34,8 +34,8 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ 业务场景测试（不同窗口模式、偏移量类型等）
 ///   - ✅ 边界条件处理
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("WindowOffsetConfig 单元测试")
 class WindowOffsetConfigTest {
 

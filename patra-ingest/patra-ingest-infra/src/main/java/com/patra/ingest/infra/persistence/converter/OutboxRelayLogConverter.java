@@ -22,7 +22,7 @@ import org.mapstruct.ReportingPolicy;
 ///   - 字段映射大多为 1:1(messageId ↔ messageId、relayBatchId ↔ relayBatchId)
 ///   - 无需自定义转换(无 JSON 字段、无枚举转换)
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface OutboxRelayLogConverter {

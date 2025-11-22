@@ -50,7 +50,7 @@ import java.util.Objects;
 ///   - Spring: `org.springframework.core.ParameterizedTypeReference`
 ///
 /// @param <T> 要引用的类型
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 /// @see java.lang.reflect.Type
 /// @see java.lang.reflect.ParameterizedType

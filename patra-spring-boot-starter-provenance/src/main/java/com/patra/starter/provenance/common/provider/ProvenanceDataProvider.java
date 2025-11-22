@@ -66,7 +66,7 @@ import java.util.Set;
 ///
 /// **注意**：此接口位于 starter 包中，属于框架层抽象。 如果需要在领域层定义端口（Port），请在对应的 domain 模块中定义。
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 public interface ProvenanceDataProvider {
 

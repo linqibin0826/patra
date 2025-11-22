@@ -17,8 +17,8 @@ import org.springframework.context.annotation.Bean;
 ///   - **可覆盖性**: 使用 `@ConditionalOnMissingBean` 允许自定义实现
 ///   - **可测试性**: Bean 可在测试中替换(例如使用 Clock.fixed() 实现确定性测试)
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @AutoConfiguration
 public class CoreAutoConfiguration {
 

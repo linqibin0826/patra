@@ -38,7 +38,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///   - ✅ 重试延迟计算
 ///   - ✅ 状态转换验证 (PUBLISHING → PUBLISHED/FAILED/DEAD)
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RelayPublishCoordinator 单元测试")

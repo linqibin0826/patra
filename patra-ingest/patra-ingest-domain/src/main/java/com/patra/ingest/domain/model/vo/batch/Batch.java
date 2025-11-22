@@ -32,7 +32,7 @@ package com.patra.ingest.domain.model.vo.batch;
 /// @param offset 起始偏移量 (从 0 开始)
 /// @param limit 获取数量 (必须 > 0)
 /// @author linqibin
-/// @since 0.3.0
+/// @since 0.1.0
 public record Batch(int batchNo, String query, int offset, int limit) {
 
   /// 紧凑构造器：验证不变式。

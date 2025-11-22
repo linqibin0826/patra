@@ -27,6 +27,6 @@
 ///
 /// ```
 ///
-/// @since 0.3.0
-/// @author Patra Architecture Team
+/// @since 0.1.0
+/// @author linqibin
 package com.patra.ingest.domain.model.vo.query;

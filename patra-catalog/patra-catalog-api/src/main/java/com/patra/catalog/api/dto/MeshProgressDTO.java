@@ -24,7 +24,7 @@ import lombok.Builder;
 ///   - failedBatches - 失败批次列表（用于错误追踪）
 ///
 /// @author linqibin
-/// @since 0.1.0 (User Story 2 - 实时监控导入进度)
+/// @since 0.1.0
 @Builder
 public record MeshProgressDTO(
     // ========== 任务基本信息 ==========

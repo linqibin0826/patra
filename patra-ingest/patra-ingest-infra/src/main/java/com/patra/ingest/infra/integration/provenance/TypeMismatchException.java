@@ -18,7 +18,7 @@ package com.patra.ingest.infra.integration.provenance;
 /// // 抛出 TypeMismatchException
 /// ```
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 public class TypeMismatchException extends RuntimeException {
 

@@ -35,7 +35,7 @@ import java.time.Instant;
 /// OutboxRelayLog log = factory.createForPublished(message, batchId, ...);
 /// ```
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 public class OutboxRelayLogFactory {
 

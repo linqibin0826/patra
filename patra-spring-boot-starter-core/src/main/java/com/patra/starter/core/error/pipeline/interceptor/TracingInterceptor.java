@@ -14,8 +14,8 @@ import org.springframework.core.annotation.Order;
 ///
 /// 执行优先级: {@link Ordered#HIGHEST_PRECEDENCE},确保追踪信息最先被记录。
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class TracingInterceptor implements ResolutionInterceptor {

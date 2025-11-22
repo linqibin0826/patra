@@ -33,7 +33,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 ///   - 【CHK-TEST-005】E2E 测试需要完整的应用上下文
 ///
 /// @author linqibin
-/// @since 2025-01-10
+/// @since 0.1.0
 public final class TestingRules {
 
   private TestingRules() {

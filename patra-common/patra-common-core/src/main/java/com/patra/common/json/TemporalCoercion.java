@@ -27,7 +27,7 @@ import java.util.Optional;
 ///
 /// **输出格式**: 统一输出为 UTC 时区的 ISO-8601 格式，精度为毫秒。
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 final class TemporalCoercion {
   private static final DateTimeFormatter CANONICAL_INSTANT =

@@ -38,7 +38,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///   - ✅ 空结果和批量结果场景
 ///   - ✅ 报告生成验证
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("OutboxRelayOrchestrator 单元测试")

@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 ///   - 验证 DataFetchResult 工厂方法
 ///   - 验证 supports 和 getSupportedTypes 方法
 ///
-/// @since 0.1.0.0
+/// @since 0.1.0
 @DisplayName("ProvenanceDataPort v2.0 接口测试")
 class ProvenanceDataPortTest {
 

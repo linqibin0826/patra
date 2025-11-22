@@ -141,7 +141,7 @@ public class MeshImportController {
   /// @param taskId 任务 ID
   /// @return 进度详情 DTO
   /// @throws IllegalArgumentException 如果任务不存在（返回 404 Not Found）
-  /// @since 0.1.0 (User Story 2)
+  /// @since 0.1.0
   @GetMapping("/progress/{taskId}")
   public ResponseEntity<MeshProgressDTO> getProgress(@PathVariable @NotNull String taskId) {
     log.info("收到查询导入进度请求，任务 ID：{}", taskId);
