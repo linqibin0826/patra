@@ -220,10 +220,10 @@
 - [x] **CHK060** - 是否明确定义了 6 张表对应的领域实体（Descriptor、Qualifier、TreeNumber、EntryTerm、Concept、PublicationMesh）及其关系？[完整性, data-model.md]
   - ✅ data-model.md 第 524-712 行: 完整定义了所有 6 类领域实体及其关系
 - [x] **CHK061** - 是否定义了 MeshImportRepository Port 接口的方法签名（保存聚合根、查询任务状态、更新进度）？[完整性, data-model.md]
-  - ✅ tasks.md T016: "定义 MeshImportPort 仓储接口，方法：save(MeshImportAggregate), findById(MeshImportId), findRunningTask(), existsRunningTask()"
+  - ✅ tasks.md T016: "定义 MeshImportRepository 仓储接口，方法：save(MeshImportAggregate), findById(MeshImportId), findRunningTask(), existsRunningTask()"
 - [x] **CHK062** - 是否定义了 MeshImportRepository 在 Domain 层定义、Infrastructure 层实现的需求？[完整性, Spec §NFR 架构约束]
   - ✅ spec.md NFR 架构约束: "Infrastructure 层实现 Domain 层定义的 Repository 接口"
-  - ✅ plan.md: "Port 接口定义 - MeshImportPort（Domain 层）、MeshImportRepositoryImpl（Infrastructure 层）"
+  - ✅ plan.md: "Port 接口定义 - MeshImportRepository（Domain 层）、MeshImportRepositoryImpl（Infrastructure 层）"
 
 ---
 
@@ -260,8 +260,8 @@
 ### 命名约定和可测试性
 
 - [x] **CHK071** - 是否明确定义了 Port 接口在 domain.port 包的命名约定？[完整性, plan.md, tasks.md]
-  - ✅ plan.md: "Port 接口定义 - MeshImportPort、XmlParserPort、MeshFileDownloadPort"
-  - ✅ tasks.md T016-T018: Port 接口路径 `com.patra.catalog.domain.port.MeshImportPort`
+  - ✅ plan.md: "Port 接口定义 - MeshImportRepository、XmlParserPort、MeshFileDownloadPort"
+  - ✅ tasks.md T016-T018: Port 接口路径 `com.patra.catalog.domain.port.MeshImportRepository`
 - [x] **CHK072** - 是否明确定义了 Repository 实现在 infra 层的命名约定？[完整性, plan.md, tasks.md]
   - ✅ plan.md: "Repository 实现 - MeshImportRepositoryImpl"
   - ✅ tasks.md T030: 路径 `com.patra.catalog.infra.persistence.repository.MeshImportRepositoryImpl`

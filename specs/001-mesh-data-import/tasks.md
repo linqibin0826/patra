@@ -142,7 +142,7 @@
   - 参考：data-model.md 第 507-522 行
   - 属性：MeshImportId importId, String failureReason, Integer processedRecords, Instant failedTime
 
-- [x] T016 [P] [Domain] [US1] 定义 MeshImportPort 仓储接口 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/port/MeshImportPort.java
+- [x] T016 [P] [Domain] [US1] 定义 MeshImportRepository 仓储接口 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/port/MeshImportRepository.java
   - 方法：save(MeshImportAggregate), findById(MeshImportId), findRunningTask(), existsRunningTask()
 
 - [x] T017 [P] [Domain] [US1] 定义 XmlParserPort 解析接口 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/port/XmlParserPort.java
@@ -210,7 +210,7 @@
 
 - [x] T030 [Infra] [US1] 实现 MeshImportRepositoryImpl in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/repository/MeshImportRepositoryImpl.java
   - 参考：patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/repository/MeshDescriptorRepositoryImpl.java:1-40
-  - 实现：MeshImportPort
+  - 实现：MeshImportRepository
   - 依赖：MeshImportTaskMapper, MeshTableProgressMapper, MeshImportConverter
   - 依赖：T028-T031（Repository 依赖 Mapper 和 Converter）
 
@@ -237,7 +237,7 @@
 - [x] T033 [App] [US1] 为 MeshImportOrchestrator 编写单元测试 in patra-catalog/patra-catalog-app/src/test/java/com/patra/catalog/app/usecase/meshimport/MeshImportOrchestratorTest.java
   - 测试场景：startImport()、retryFailedTask()、clearAndRestart()
   - 测试编排逻辑：调用顺序、事务边界
-  - Mock 所有 Port 接口（MeshImportPort、XmlParserPort、MeshFileDownloadPort、MeshDescriptorPort）
+  - Mock 所有 Port 接口（MeshImportRepository、XmlParserPort、MeshFileDownloadPort、MeshDescriptorRepository）
   - 测试框架：JUnit 5 + Mockito + InOrder（验证调用顺序）
   - 参考：patra-ingest/patra-ingest-app/src/test/java/com/patra/ingest/app/usecase/plan/PlanIngestionOrchestratorTest.java（Orchestrator 测试模式）
 
@@ -262,7 +262,7 @@
     6. 更新任务状态，发布完成/失败事件
   - 事务管理：每批次独立事务（@Transactional(propagation = REQUIRES_NEW)）
   - @Transactional（主事务边界在 Application 层）
-  - 依赖：MeshImportPort, XmlParserPort, MeshFileDownloadPort, MeshDescriptorPort, MeshDataValidator
+  - 依赖：MeshImportRepository, XmlParserPort, MeshFileDownloadPort, MeshDescriptorRepository, MeshDataValidator
   - 依赖：T014, T018-T020, T032-T035, T036a（Orchestrator 依赖 Domain 层、Infra 层和验证器）
 
 - [x] T036a [App] [US1] 实现 MeshDataValidator 数据量验证器 in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/usecase/meshimport/validator/MeshDataValidator.java
@@ -369,11 +369,11 @@
 
 #### 实施（Green 阶段）🟢
 
-- [x] T045 [Domain] [US2] 定义 MeshBatchDetailPort 接口 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/port/MeshBatchDetailPort.java
+- [x] T045 [Domain] [US2] 定义 MeshBatchDetailRepository 接口 in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/port/MeshBatchDetailRepository.java
   - 方法：findFailedBatches(MeshImportId), countByStatus(MeshImportId, MeshBatchStatus)
 
 - [x] T046 [Infra] [US2] 实现 MeshBatchDetailRepositoryImpl in patra-catalog/patra-catalog-infra/src/main/java/com/patra/catalog/infra/persistence/repository/MeshBatchDetailRepositoryImpl.java
-  - 实现：MeshBatchDetailPort
+  - 实现：MeshBatchDetailRepository
   - 依赖：MeshBatchDetailMapper
 
 ### Application 层 - 进度查询编排（TDD）
@@ -393,7 +393,7 @@
 
 - [x] T049 [App] [US2] 实现 MeshProgressQueryOrchestrator in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/usecase/meshimport/MeshProgressQueryOrchestrator.java
   - 职责：查询任务 → 计算进度 → 查询失败批次 → 组装响应
-  - 依赖：MeshImportPort, MeshBatchDetailPort
+  - 依赖：MeshImportRepository, MeshBatchDetailRepository
 
 ### Adapter 层 - 进度查询接口（TDD）
 
@@ -505,7 +505,7 @@
 
 - [x] T064 [P] [Doc] 生成 package-info.java for com.patra.catalog.domain.port in patra-catalog/patra-catalog-domain/src/main/java/com/patra/catalog/domain/port/package-info.java
   - 描述：Catalog Port 接口包（依赖倒置）
-  - 主要组件：MeshImportPort、XmlParserPort、MeshFileDownloadPort
+  - 主要组件：MeshImportRepository、XmlParserPort、MeshFileDownloadPort
 
 - [x] T065 [P] [Doc] 生成 package-info.java for com.patra.catalog.app in patra-catalog/patra-catalog-app/src/main/java/com/patra/catalog/app/package-info.java
   - 描述：Catalog 应用层用例编排包
