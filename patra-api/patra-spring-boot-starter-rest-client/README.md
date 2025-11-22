@@ -171,6 +171,7 @@ patra:
         enabled: true                # 启用日志拦截器
         log-headers: false           # 是否记录 HTTP 头（避免敏感信息泄露）
         log-body: false              # 是否记录请求/响应体
+        max-body-log-length: 1024    # 记录 Body 的最大字节数（默认 1024，防止大文件导致内存溢出）
       tracing:
         enabled: true                # 启用追踪拦截器
         header-names:                # 追踪 Header 名称列表
@@ -528,9 +529,12 @@ patra:
     interceptors:
       logging:
         enabled: true
-        log-headers: true   # 方便调试
-        log-body: true      # 查看请求/响应内容
+        log-headers: true         # 方便调试
+        log-body: true            # 查看请求/响应内容
+        max-body-log-length: 1024 # 限制记录长度，防止大文件占用内存
 ```
+
+**注意**：即使在开发环境，`max-body-log-length` 也建议保持合理值（如 1024 或 2048 字节），避免记录大文件（如图片、PDF）导致日志文件爆炸和内存溢出。
 
 ### 3. 重试策略
 

@@ -65,7 +65,7 @@ class LoggingInterceptorTest {
   @DisplayName("应该记录请求方法和 URI")
   void should_log_request_method_and_uri() throws IOException {
     // given
-    var interceptor = new LoggingInterceptor(false, false);
+    var interceptor = new LoggingInterceptor(false, false, 1024);
     when(request.getMethod()).thenReturn(HttpMethod.GET);
     when(request.getURI()).thenReturn(URI.create("https://api.example.com/test"));
     when(execution.execute(request, new byte[0])).thenReturn(response);
@@ -87,7 +87,7 @@ class LoggingInterceptorTest {
   @DisplayName("应该记录响应状态码和耗时")
   void should_log_response_status_and_duration() throws IOException {
     // given
-    var interceptor = new LoggingInterceptor(false, false);
+    var interceptor = new LoggingInterceptor(false, false, 1024);
     when(request.getMethod()).thenReturn(HttpMethod.POST);
     when(request.getURI()).thenReturn(URI.create("https://api.example.com/create"));
     when(execution.execute(request, new byte[0])).thenReturn(response);
@@ -109,7 +109,7 @@ class LoggingInterceptorTest {
   @DisplayName("当 logHeaders=true 时应该记录请求 Headers")
   void should_log_request_headers_when_enabled() throws IOException {
     // given
-    var interceptor = new LoggingInterceptor(true, false);
+    var interceptor = new LoggingInterceptor(true, false, 1024);
     HttpHeaders headers = new HttpHeaders();
     headers.add("Content-Type", "application/json");
     headers.add("User-Agent", "Patra-RestClient/1.0");
@@ -138,7 +138,7 @@ class LoggingInterceptorTest {
   @DisplayName("当 logHeaders=false 时不应该记录请求 Headers")
   void should_not_log_request_headers_when_disabled() throws IOException {
     // given
-    var interceptor = new LoggingInterceptor(false, false);
+    var interceptor = new LoggingInterceptor(false, false, 1024);
     HttpHeaders headers = new HttpHeaders();
     headers.add("Authorization", "Bearer secret-token");
 
@@ -162,7 +162,7 @@ class LoggingInterceptorTest {
   @DisplayName("当 logBody=true 且有请求体时应该记录 Body")
   void should_log_request_body_when_enabled_and_has_body() throws IOException {
     // given
-    var interceptor = new LoggingInterceptor(false, true);
+    var interceptor = new LoggingInterceptor(false, true, 1024);
     String requestBody = "{\"name\":\"test\",\"value\":\"data\"}";
     byte[] bodyBytes = requestBody.getBytes(StandardCharsets.UTF_8);
 
@@ -187,7 +187,7 @@ class LoggingInterceptorTest {
   @DisplayName("当 logBody=true 但无请求体时不应该记录 Body")
   void should_not_log_request_body_when_empty() throws IOException {
     // given
-    var interceptor = new LoggingInterceptor(false, true);
+    var interceptor = new LoggingInterceptor(false, true, 1024);
 
     when(request.getMethod()).thenReturn(HttpMethod.GET);
     when(request.getURI()).thenReturn(URI.create("https://api.example.com/test"));
@@ -208,7 +208,7 @@ class LoggingInterceptorTest {
   @DisplayName("当 logBody=false 时不应该记录请求 Body")
   void should_not_log_request_body_when_disabled() throws IOException {
     // given
-    var interceptor = new LoggingInterceptor(false, false);
+    var interceptor = new LoggingInterceptor(false, false, 1024);
     String requestBody = "{\"password\":\"secret123\"}";
     byte[] bodyBytes = requestBody.getBytes(StandardCharsets.UTF_8);
 
@@ -232,7 +232,7 @@ class LoggingInterceptorTest {
   void should_not_log_when_debug_level_disabled() throws IOException {
     // given
     logger.setLevel(Level.INFO); // 设置为 INFO 级别
-    var interceptor = new LoggingInterceptor(true, true);
+    var interceptor = new LoggingInterceptor(true, true, 1024);
 
     lenient().when(request.getMethod()).thenReturn(HttpMethod.GET);
     lenient().when(request.getURI()).thenReturn(URI.create("https://api.example.com/test"));
@@ -250,7 +250,7 @@ class LoggingInterceptorTest {
   @DisplayName("应该正确传播请求执行结果")
   void should_propagate_execution_result() throws IOException {
     // given
-    var interceptor = new LoggingInterceptor(false, false);
+    var interceptor = new LoggingInterceptor(false, false, 1024);
     when(request.getMethod()).thenReturn(HttpMethod.GET);
     when(request.getURI()).thenReturn(URI.create("https://api.example.com/test"));
     when(execution.execute(request, new byte[0])).thenReturn(response);
@@ -268,7 +268,7 @@ class LoggingInterceptorTest {
   @DisplayName("应该记录请求耗时")
   void should_log_request_duration() throws IOException {
     // given
-    var interceptor = new LoggingInterceptor(false, false);
+    var interceptor = new LoggingInterceptor(false, false, 1024);
     when(request.getMethod()).thenReturn(HttpMethod.GET);
     when(request.getURI()).thenReturn(URI.create("https://api.example.com/slow"));
     when(execution.execute(request, new byte[0])).thenAnswer(invocation -> {
@@ -291,7 +291,7 @@ class LoggingInterceptorTest {
   @DisplayName("当获取响应状态码失败时应该记录警告")
   void should_log_warning_when_failed_to_get_status_code() throws IOException {
     // given
-    var interceptor = new LoggingInterceptor(false, false);
+    var interceptor = new LoggingInterceptor(false, false, 1024);
     when(request.getMethod()).thenReturn(HttpMethod.GET);
     when(request.getURI()).thenReturn(URI.create("https://api.example.com/test"));
     when(execution.execute(request, new byte[0])).thenReturn(response);
@@ -314,7 +314,7 @@ class LoggingInterceptorTest {
   @DisplayName("应该正确处理不同的 HTTP 方法")
   void should_handle_different_http_methods() throws IOException {
     // given
-    var interceptor = new LoggingInterceptor(false, false);
+    var interceptor = new LoggingInterceptor(false, false, 1024);
     HttpMethod[] methods = {
       HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT,
       HttpMethod.DELETE, HttpMethod.PATCH, HttpMethod.HEAD
@@ -341,7 +341,7 @@ class LoggingInterceptorTest {
   @DisplayName("应该正确处理不同的 HTTP 状态码")
   void should_handle_different_http_status_codes() throws IOException {
     // given
-    var interceptor = new LoggingInterceptor(false, false);
+    var interceptor = new LoggingInterceptor(false, false, 1024);
     HttpStatusCode[] statusCodes = {
       HttpStatus.OK, HttpStatus.CREATED, HttpStatus.BAD_REQUEST,
       HttpStatus.NOT_FOUND, HttpStatus.INTERNAL_SERVER_ERROR
@@ -368,7 +368,7 @@ class LoggingInterceptorTest {
   @DisplayName("应该正确处理包含特殊字符的请求体")
   void should_handle_request_body_with_special_characters() throws IOException {
     // given
-    var interceptor = new LoggingInterceptor(false, true);
+    var interceptor = new LoggingInterceptor(false, true, 1024);
     String requestBody = "{\"text\":\"Hello\\nWorld\\t测试\",\"emoji\":\"😀\"}";
     byte[] bodyBytes = requestBody.getBytes(StandardCharsets.UTF_8);
 
@@ -393,7 +393,7 @@ class LoggingInterceptorTest {
   @DisplayName("应该正确处理空 URI")
   void should_handle_null_uri_gracefully() throws IOException {
     // given
-    var interceptor = new LoggingInterceptor(false, false);
+    var interceptor = new LoggingInterceptor(false, false, 1024);
     lenient().when(request.getMethod()).thenReturn(HttpMethod.GET);
     lenient().when(request.getURI()).thenReturn(null);
     lenient().when(execution.execute(request, new byte[0])).thenReturn(response);
@@ -402,5 +402,77 @@ class LoggingInterceptorTest {
     // when & then
     assertThatCode(() -> interceptor.intercept(request, new byte[0], execution))
         .doesNotThrowAnyException();
+  }
+
+  @Test
+  @DisplayName("当 Body 大于 maxBodyLogLength 时应该截断并记录总字节数")
+  void should_truncate_large_body_and_log_total_bytes() throws IOException {
+    // given
+    int maxBodyLogLength = 50; // 设置最大记录长度为 50 字节
+    var interceptor = new LoggingInterceptor(false, true, maxBodyLogLength);
+
+    // 创建一个 100 字节的请求体
+    String largeBody = "A".repeat(100);
+    byte[] bodyBytes = largeBody.getBytes(StandardCharsets.UTF_8);
+
+    when(request.getMethod()).thenReturn(HttpMethod.POST);
+    when(request.getURI()).thenReturn(URI.create("https://api.example.com/test"));
+    when(execution.execute(request, bodyBytes)).thenReturn(response);
+    when(response.getStatusCode()).thenReturn(HttpStatus.OK);
+
+    // when
+    interceptor.intercept(request, bodyBytes, execution);
+
+    // then
+    var logs = listAppender.list;
+    var bodyLog = logs.stream()
+        .filter(log -> log.getFormattedMessage().contains("Body (truncated):"))
+        .findFirst();
+
+    assertThat(bodyLog).isPresent();
+    String logMessage = bodyLog.get().getFormattedMessage();
+
+    // 验证日志包含截断标记和总字节数
+    assertThat(logMessage).contains("Body (truncated):");
+    assertThat(logMessage).contains("(total 100 bytes)");
+
+    // 验证只记录了前 50 个字符
+    assertThat(logMessage).contains("A".repeat(50));
+    // 验证没有记录完整的 100 个字符（通过检查是否有超过 50 个连续的 A）
+    assertThat(logMessage).doesNotContain("A".repeat(51));
+  }
+
+  @Test
+  @DisplayName("当 Body 小于 maxBodyLogLength 时应该完整记录")
+  void should_log_full_body_when_smaller_than_max_length() throws IOException {
+    // given
+    int maxBodyLogLength = 1024; // 设置最大记录长度为 1024 字节
+    var interceptor = new LoggingInterceptor(false, true, maxBodyLogLength);
+
+    // 创建一个 30 字节的小请求体
+    String smallBody = "{\"name\":\"test\",\"id\":123}";
+    byte[] bodyBytes = smallBody.getBytes(StandardCharsets.UTF_8);
+
+    when(request.getMethod()).thenReturn(HttpMethod.POST);
+    when(request.getURI()).thenReturn(URI.create("https://api.example.com/test"));
+    when(execution.execute(request, bodyBytes)).thenReturn(response);
+    when(response.getStatusCode()).thenReturn(HttpStatus.OK);
+
+    // when
+    interceptor.intercept(request, bodyBytes, execution);
+
+    // then
+    var logs = listAppender.list;
+    var bodyLog = logs.stream()
+        .filter(log -> log.getFormattedMessage().contains("Body:"))
+        .findFirst();
+
+    assertThat(bodyLog).isPresent();
+    String logMessage = bodyLog.get().getFormattedMessage();
+
+    // 验证完整记录了 Body（没有截断标记）
+    assertThat(logMessage).contains("Body:");
+    assertThat(logMessage).doesNotContain("truncated");
+    assertThat(logMessage).contains(smallBody);
   }
 }
