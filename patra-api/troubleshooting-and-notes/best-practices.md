@@ -10,4 +10,4 @@
 8. 所有服务的所有层（domain、app、infra、adapter、api）必须依赖 `patra-common-core`（提供 DDD 领域基类 AggregateRoot/DomainEvent、异常体系 DomainException/ApplicationException/ErrorTrait、共享枚举 ProvenanceCode/Priority、JSON 标准化 JsonNormalizer、通用工具 HashUtils 等核心基础设施）
 9. 需要标准化对象存储键生成时依赖 `patra-common-storage`，使用 `ObjectKeyTemplate.generateDailyKey()` 生成日期分区键（格式：`{service}/{business-type}/{yyyy/MM/dd}/{business-id}.{ext}`），禁止手动拼接存储路径
 10. 需要跨服务共享数据模型时依赖 `patra-common-model`（提供 Shared Kernel 契约，如 CanonicalPublication、PlanMetadata 继承体系等），禁止在各服务中重复定义相同概念
-11. 需要使用 Provenance API 常量时依赖 `patra-common-provenance-api`，使用类型安全的端点常量（PubMedEndpoints）、参数键常量（PubMedParamKeys）和参数值枚举（RetMode、UseHistory 等），禁止使用魔法字符串
+11. Domain 层端口接口命名：**Repository** 后缀用于持久化聚合根/实体（本地数据库），**Port** 后缀用于外部服务和技术基础设施（外部 API/消息队列/对象存储等），禁止混用
