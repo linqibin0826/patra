@@ -24,9 +24,10 @@
 ///
 ///   - `RelayLogCoordinator` - 日志协调器
 ///
-/// - 记录中继结果（成功数、失败数、租约丢失数）
+/// - **批处理模式** - 使用 LogAccumulator 在内存中收集日志，批量持久化
+///         - 支持所有中继结果：PUBLISHED、DEFERRED、FAILED、LEASE_MISSED
+///         - 批量插入 100-500 条日志到单个 SQL 语句
 ///         - 更新中继指标（OutboxRelayMetrics）
-///         - 记录错误详情
 ///
 /// ## 租约协调器流程
 ///
@@ -63,6 +64,37 @@
 ///
 /// ```
 ///
+/// ## 日志协调器流程（批处理模式）
+///
+/// ```
+///
+/// 1. 创建日志累加器
+///    LogAccumulator accumulator = coordinator.createAccumulator(batchId);
+///
+/// 2. 中继批次执行期间在内存中收集日志
+///    for (OutboxMessage msg : batch) {
+///      if (!leaseAcquired) {
+///        accumulator.recordLeaseMissed(...);
+///      } else if (publishSuccess) {
+///        accumulator.recordPublished(...);
+///      } else if (retryable) {
+///        accumulator.recordDeferred(...);
+///      } else {
+///        accumulator.recordFailed(...);
+///      }
+///    }
+///
+/// 3. 批量持久化所有日志到数据库（单条 INSERT 语句处理 N 行）
+///    coordinator.persistBatch(accumulator);
+///
+/// 4. 自动记录指标（每个中继结果）
+///    - PUBLISHED: outbox.relay.attempts{channel=X, status=PUBLISHED}
+///    - DEFERRED: outbox.relay.attempts{channel=X, status=DEFERRED} + 错误计数器
+///    - FAILED: outbox.relay.attempts{channel=X, status=FAILED} + 错误计数器
+///    - LEASE_MISSED: outbox.relay.attempts{channel=X, status=LEASE_MISSED}
+///
+/// ```
+///
 /// ## 使用示例
 ///
 /// ### 租约协调器
@@ -84,11 +116,15 @@
 ///             try {
 ///                 message.acquireLease(leaseOwner, leaseExpireAt);
 ///                 outboxRepository.save(message);
-///                 acquiredMessages.add(message); catch (OptimisticLockingFailureException e) {
-///                 log.warn("Lease acquisition failed (concurrent conflict): messageId={",
-// message.getId());
-///
+///                 acquiredMessages.add(message);
+///             } catch (OptimisticLockingFailureException e) {
+///                 log.warn("Lease acquisition failed (concurrent conflict): messageId={}",
+///                     message.getId());
+///             }
+///         }
 ///         return new LeaseResult(acquiredMessages);
+///     }
+/// }
 /// ```
 ///
 /// ### 发布协调器
@@ -116,18 +152,68 @@
 ///                 // 3. 标记为已发布
 ///                 message.markAsPublished();
 ///                 outboxRepository.save(message);
-///                 publishedCount++; catch (Exception e) {
+///                 publishedCount++;
+///             } catch (Exception e) {
 ///                 // 4. 错误处理
 ///                 if (errorClassifier.isRetryable(e)) {
 ///                     // 可重试错误：恢复为 PENDING
-///                     message.markAsPending(); else {
+///                     message.markAsPending();
+///                 } else {
 ///                     // 不可重试错误：标记为 FAILED
 ///                     message.markAsFailed(e.getMessage());
+///                 }
 ///                 outboxRepository.save(message);
 ///                 failedCount++;
-///                 log.error("Message publish failed: messageId={", message.getId(), e);
-///
+///                 log.error("Message publish failed: messageId={}", message.getId(), e);
+///             }
+///         }
 ///         return new PublishResult(publishedCount, failedCount);
+///     }
+/// }
+/// ```
+///
+/// ### 日志协调器（批处理模式）
+///
+/// ```java
+/// @Component
+/// @RequiredArgsConstructor
+/// public class OutboxRelayExecutor {
+///     private final RelayLogCoordinator logCoordinator;
+///
+///     public void executeBatch(RelayBatchId batchId, List<OutboxMessage> messages) {
+///         // 1. 创建日志累加器
+///         LogAccumulator accumulator = logCoordinator.createAccumulator(batchId);
+///
+///         // 2. 处理消息并记录结果
+///         for (OutboxMessage msg : messages) {
+///             Instant startTime = Instant.now();
+///
+///             // 尝试获取租约
+///             boolean leaseAcquired = tryAcquireLease(msg);
+///             if (!leaseAcquired) {
+///                 accumulator.recordLeaseMissed(msg, leaseOwner, startTime);
+///                 continue;
+///             }
+///
+///             // 尝试发布消息
+///             try {
+///                 publishToMQ(msg);
+///                 Instant publishedAt = Instant.now();
+///                 accumulator.recordPublished(msg, leaseOwner, startTime, publishedAt);
+///             } catch (RetryableException e) {
+///                 Instant nextRetryAt = calculateNextRetry();
+///                 accumulator.recordDeferred(msg, leaseOwner, startTime, nextRetryAt,
+///                     e.getErrorCode(), e.getMessage(), "TRANSIENT");
+///             } catch (FatalException e) {
+///                 accumulator.recordFailed(msg, leaseOwner, startTime,
+///                     e.getErrorCode(), e.getMessage(), "FATAL");
+///             }
+///         }
+///
+///         // 3. 批量持久化所有日志（单个 SQL INSERT）
+///         logCoordinator.persistBatch(accumulator);
+///     }
+/// }
 /// ```
 ///
 /// @since 0.1.0

@@ -256,7 +256,57 @@ public RelayReport relay(OutboxRelayCommand command) {
 
 **文件**: `usecase/plan/PlanIdempotencyCoordinator.java`
 
-#### 3. ExecutionContextLoader (执行上下文加载器)
+#### 3. RelayLogCoordinator (中继日志协调器)
+
+**职责**: 管理中继执行审计跟踪，使用批处理模式收集和持久化日志。
+
+**核心设计**: LogAccumulator 模式
+- **内存累积**: 批次执行期间在内存中累积日志
+- **批量持久化**: 单个 SQL INSERT 语句处理多行（100-500 条）
+- **性能优化**: 将数据库往返次数从 N 减少到 1
+
+**支持的中继结果**:
+- `PUBLISHED`: 消息成功发布到 MQ
+- `DEFERRED`: 暂时性错误，延迟重试
+- `FAILED`: 永久失败（达到最大重试次数或致命错误）
+- `LEASE_MISSED`: 租约获取失败（并发竞争）
+
+**使用流程**:
+```java
+// 1. 创建日志累加器
+LogAccumulator accumulator = coordinator.createAccumulator(batchId);
+
+// 2. 批次执行期间记录结果
+for (OutboxMessage msg : batch) {
+    Instant startTime = Instant.now();
+
+    if (!leaseAcquired) {
+        accumulator.recordLeaseMissed(msg, leaseOwner, startTime);
+    } else if (publishSuccess) {
+        Instant publishedAt = Instant.now();
+        accumulator.recordPublished(msg, leaseOwner, startTime, publishedAt);
+    } else if (retryable) {
+        Instant nextRetryAt = calculateNextRetry();
+        accumulator.recordDeferred(msg, leaseOwner, startTime, nextRetryAt,
+            errorCode, errorMessage, "TRANSIENT");
+    } else {
+        accumulator.recordFailed(msg, leaseOwner, startTime,
+            errorCode, errorMessage, "FATAL");
+    }
+}
+
+// 3. 批量持久化所有日志（单个 SQL INSERT）
+coordinator.persistBatch(accumulator);
+```
+
+**性能优势**:
+- 批量插入减少数据库往返
+- 提高高频中继作业的吞吐量
+- 自动记录指标（每个中继结果）
+
+**文件**: `usecase/relay/coordinator/RelayLogCoordinator.java`
+
+#### 4. ExecutionContextLoader (执行上下文加载器)
 
 **职责**: 加载任务执行所需的完整上下文,包括编译表达式。
 
@@ -470,6 +520,13 @@ public abstract class AbstractOutboxPublisher {
 
 通过领域事件驱动跨聚合的最终一致性:
 - `TaskCompletedEvent` → `TaskCompletedEventHandler` → 更新 Slice/Plan 状态
+
+### 6. 累加器模式 (Accumulator Pattern)
+
+`RelayLogCoordinator.LogAccumulator` 在内存中收集数据,批量持久化:
+- 减少数据库往返次数
+- 提高批量操作性能
+- 支持事务性批量插入
 
 ---
 
