@@ -9,7 +9,7 @@ import static org.mockito.Mockito.when;
 import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
 import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;
 import com.patra.catalog.domain.model.enums.MeshImportTaskStatus;
-import com.patra.catalog.domain.port.MeshImportPort;
+import com.patra.catalog.domain.port.MeshImportRepository;
 import com.patra.catalog.integration.config.MySQLContainerInitializer;
 import java.io.File;
 import java.util.Optional;
@@ -90,7 +90,7 @@ class MeshImportE2ETest {
 
   @Autowired private TestRestTemplate restTemplate;
 
-  @Autowired private MeshImportPort meshImportPort;
+  @Autowired private MeshImportRepository meshImportPort;
 
   @Autowired private MeshImportOrchestrator orchestrator;
 

@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.persistence.repository;
 
-import com.patra.catalog.domain.port.AffiliationPort;
+import com.patra.catalog.domain.port.AffiliationRepository;
 import com.patra.catalog.infra.persistence.converter.AffiliationConverter;
 import com.patra.catalog.infra.persistence.mapper.AffiliationMapper;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Repository;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class AffiliationRepositoryImpl implements AffiliationPort {
+public class AffiliationRepositoryImpl implements AffiliationRepository {
 
   private final AffiliationMapper affiliationMapper;
   private final AffiliationConverter affiliationConverter;

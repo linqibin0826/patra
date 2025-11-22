@@ -11,6 +11,6 @@ package com.patra.catalog.domain.port;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface PublicationPort {
+public interface PublicationRepository {
   // 方法待添加
 }

@@ -10,8 +10,8 @@ import com.patra.catalog.domain.model.enums.MeshTableImportStatus;
 import com.patra.catalog.domain.model.valueobject.FailedBatch;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import com.patra.catalog.domain.model.valueobject.TableProgress;
-import com.patra.catalog.domain.port.MeshBatchDetailPort;
-import com.patra.catalog.domain.port.MeshImportPort;
+import com.patra.catalog.domain.port.MeshBatchDetailRepository;
+import com.patra.catalog.domain.port.MeshImportRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -29,7 +29,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///
 /// **测试策略**：
 ///
-/// - Mock 所有 Ports（MeshImportPort、MeshBatchDetailPort）
+/// - Mock 所有 Ports（MeshImportRepository、MeshBatchDetailRepository）
 ///   - 验证调用顺序（InOrder）
 ///   - 验证 DTO 组装正确性
 ///   - 覆盖正常场景和异常场景
@@ -40,9 +40,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @DisplayName("MeshProgressQueryOrchestrator 单元测试")
 class MeshProgressQueryOrchestratorTest {
 
-  @Mock private MeshImportPort meshImportPort;
+  @Mock private MeshImportRepository meshImportPort;
 
-  @Mock private MeshBatchDetailPort meshBatchDetailPort;
+  @Mock private MeshBatchDetailRepository meshBatchDetailPort;
 
   @InjectMocks private MeshProgressQueryOrchestrator orchestrator;
 

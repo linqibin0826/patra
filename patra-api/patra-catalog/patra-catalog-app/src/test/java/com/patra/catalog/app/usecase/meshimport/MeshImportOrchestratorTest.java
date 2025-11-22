@@ -10,9 +10,9 @@ import com.patra.catalog.app.usecase.meshimport.validator.MeshDataValidator;
 import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;
 import com.patra.catalog.domain.model.enums.MeshImportTaskStatus;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
-import com.patra.catalog.domain.port.MeshDescriptorPort;
+import com.patra.catalog.domain.port.MeshDescriptorRepository;
 import com.patra.catalog.domain.port.MeshFileDownloadPort;
-import com.patra.catalog.domain.port.MeshImportPort;
+import com.patra.catalog.domain.port.MeshImportRepository;
 import com.patra.catalog.domain.port.XmlParserPort;
 import java.io.File;
 import java.io.FileInputStream;
@@ -45,10 +45,10 @@ import org.mockito.junit.jupiter.MockitoSettings;
 @DisplayName("MeshImportOrchestrator 单元测试")
 class MeshImportOrchestratorTest {
 
-  @Mock private MeshImportPort meshImportPort;
+  @Mock private MeshImportRepository meshImportPort;
   @Mock private XmlParserPort xmlParserPort;
   @Mock private MeshFileDownloadPort meshFileDownloadPort;
-  @Mock private MeshDescriptorPort meshDescriptorPort;
+  @Mock private MeshDescriptorRepository meshDescriptorPort;
   @Mock private MeshDataValidator meshDataValidator;
   @Mock private com.patra.catalog.app.config.MeshImportConfig meshImportConfig;
 

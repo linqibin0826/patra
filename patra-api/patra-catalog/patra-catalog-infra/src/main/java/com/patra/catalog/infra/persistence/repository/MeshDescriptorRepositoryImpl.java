@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.persistence.repository;
 
-import com.patra.catalog.domain.port.MeshDescriptorPort;
+import com.patra.catalog.domain.port.MeshDescriptorRepository;
 import com.patra.catalog.infra.persistence.converter.MeshDescriptorConverter;
 import com.patra.catalog.infra.persistence.mapper.MeshConceptMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshDescriptorMapper;
@@ -24,7 +24,7 @@ import org.springframework.stereotype.Repository;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class MeshDescriptorRepositoryImpl implements MeshDescriptorPort {
+public class MeshDescriptorRepositoryImpl implements MeshDescriptorRepository {
 
   private final MeshDescriptorMapper meshDescriptorMapper;
   private final MeshTreeNumberMapper meshTreeNumberMapper;

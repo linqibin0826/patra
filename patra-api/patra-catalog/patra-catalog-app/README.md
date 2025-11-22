@@ -261,10 +261,10 @@ public Optional<ErrorCodeLike> mapException(Throwable exception) {
 @RequiredArgsConstructor
 public class MeshImportOrchestrator {
 
-    private final MeshImportPort meshImportPort;
+    private final MeshImportRepository meshImportPort;
     private final XmlParserPort xmlParserPort;
     private final MeshFileDownloadPort meshFileDownloadPort;
-    private final MeshDescriptorPort meshDescriptorPort;
+    private final MeshDescriptorRepository meshDescriptorPort;
     private final MeshDataValidator meshDataValidator;
 
     @Transactional

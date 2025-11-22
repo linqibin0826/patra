@@ -17,7 +17,7 @@
 /// - {@link com.patra.catalog.infra.persistence.repository.MeshImportRepositoryImpl} - MeSH
 // 导入任务仓储实现
 ///
-/// - 实现 MeshImportPort 接口
+/// - 实现 MeshImportRepository 接口
 ///           - 使用 MeshImportTaskMapper 和 MeshTableProgressMapper 操作数据库
 ///           - 使用 MeshImportConverter 转换领域对象和 DO 对象
 ///       - {@link com.patra.catalog.infra.persistence.repository.MeshBatchDetailRepositoryImpl} -
@@ -71,7 +71,7 @@
 /// // 示例 1：Repository 实现（实现 Port 接口）
 /// @Repository
 /// @RequiredArgsConstructor
-/// public class MeshImportRepositoryImpl implements MeshImportPort {
+/// public class MeshImportRepositoryImpl implements MeshImportRepository {
 ///
 ///     private final MeshImportTaskMapper meshImportTaskMapper;
 ///     private final MeshTableProgressMapper meshTableProgressMapper;

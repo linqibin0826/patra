@@ -5,8 +5,8 @@ import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;
 import com.patra.catalog.domain.model.valueobject.FailedBatch;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import com.patra.catalog.domain.model.valueobject.TableProgress;
-import com.patra.catalog.domain.port.MeshBatchDetailPort;
-import com.patra.catalog.domain.port.MeshImportPort;
+import com.patra.catalog.domain.port.MeshBatchDetailRepository;
+import com.patra.catalog.domain.port.MeshImportRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -33,8 +33,8 @@ import org.springframework.transaction.annotation.Transactional;
 ///
 /// **依赖注入**：
 ///
-/// - {@link MeshImportPort} - 任务仓储（查询聚合根）
-///   - {@link MeshBatchDetailPort} - 批次详情仓储（查询失败批次）
+/// - {@link MeshImportRepository} - 任务仓储（查询聚合根）
+///   - {@link MeshBatchDetailRepository} - 批次详情仓储（查询失败批次）
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -43,8 +43,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MeshProgressQueryOrchestrator {
 
-  private final MeshImportPort meshImportPort;
-  private final MeshBatchDetailPort meshBatchDetailPort;
+  private final MeshImportRepository meshImportPort;
+  private final MeshBatchDetailRepository meshBatchDetailPort;
 
   /// 查询导入任务的实时进度。
   ///

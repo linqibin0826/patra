@@ -26,7 +26,7 @@ import org.testcontainers.containers.MySQLContainer;
 /// class MeshImportE2ETest {
 ///
 ///     @Autowired
-///     private MeshImportPort meshImportPort;
+///     private MeshImportRepository meshImportPort;
 ///
 ///     @Test
 ///     @DisplayName("应该完成完整导入流程")

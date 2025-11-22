@@ -11,13 +11,13 @@
 ///
 /// ## 核心组件
 ///
-/// - {@link com.patra.catalog.domain.port.MeshImportPort} - MeSH 导入任务仓储接口
+/// - {@link com.patra.catalog.domain.port.MeshImportRepository} - MeSH 导入任务仓储接口
 ///
 /// - save(MeshImportAggregate)：保存或更新导入任务聚合根
 ///       - findById(MeshImportId)：根据任务 ID 查询聚合根
 ///       - findRunningTask()：查询正在运行的任务
 ///       - existsRunningTask()：检查是否有正在运行的任务
-///   - {@link com.patra.catalog.domain.port.MeshBatchDetailPort} - MeSH 批次详情仓储接口
+///   - {@link com.patra.catalog.domain.port.MeshBatchDetailRepository} - MeSH 批次详情仓储接口
 ///
 /// - findFailedBatches(MeshImportId)：查询失败批次列表
 ///       - countByStatus(MeshImportId, MeshBatchStatus)：统计某状态批次数量
@@ -32,7 +32,7 @@
 ///
 /// - download(String sourceUrl)：下载 XML 文件
 ///       - validateChecksum(File xmlFile, String expectedHash)：验证文件校验和
-///   - {@link com.patra.catalog.domain.port.MeshDescriptorPort} - MeSH 主题词仓储接口
+///   - {@link com.patra.catalog.domain.port.MeshDescriptorRepository} - MeSH 主题词仓储接口
 ///
 /// - save(MeshDescriptorAggregate)：保存主题词聚合根
 ///       - findById(DescriptorId)：根据主题词 ID 查询
@@ -53,10 +53,10 @@
 /// @RequiredArgsConstructor
 /// public class MeshImportOrchestrator {
 ///
-///     private final MeshImportPort meshImportPort;
+///     private final MeshImportRepository meshImportPort;
 ///     private final XmlParserPort xmlParserPort;
 ///     private final MeshFileDownloadPort meshFileDownloadPort;
-///     private final MeshDescriptorPort meshDescriptorPort;
+///     private final MeshDescriptorRepository meshDescriptorPort;
 ///
 ///     @Transactional
 ///     public MeshImportResultDTO startImport(StartImportCommand command) {
@@ -92,7 +92,7 @@
 /// // 示例 2：Infrastructure 层实现 Port 接口
 /// @Repository
 /// @RequiredArgsConstructor
-/// public class MeshImportRepositoryImpl implements MeshImportPort {
+/// public class MeshImportRepositoryImpl implements MeshImportRepository {
 ///
 ///     private final MeshImportTaskMapper meshImportTaskMapper;
 ///     private final MeshTableProgressMapper meshTableProgressMapper;
@@ -132,7 +132,7 @@
 /// class MeshImportOrchestratorTest {
 ///
 ///     @Mock
-///     private MeshImportPort meshImportPort;
+///     private MeshImportRepository meshImportPort;
 ///
 ///     @Mock
 ///     private XmlParserPort xmlParserPort;
