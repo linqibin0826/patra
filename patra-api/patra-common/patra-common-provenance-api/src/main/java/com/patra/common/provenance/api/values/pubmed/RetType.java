@@ -2,30 +2,26 @@ package com.patra.common.provenance.api.values.pubmed;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 
-/**
- * PubMed RetType 参数值枚举
- *
- * <p>控制 API 返回内容类型
- *
- * <h3>各值说明</h3>
- *
- * <ul>
- *   <li><b>COUNT</b> - 仅返回匹配数量，用于快速统计
- *   <li><b>UILIST</b> - 返回 PMID 列表，用于分页获取 ID
- *   <li><b>ABSTRACT</b> - 返回摘要信息（EFetch 专用）
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// PubMed RetType 参数值枚举
+///
+/// 控制 API 返回内容类型
+///
+/// ### 各值说明
+///
+/// - **COUNT** - 仅返回匹配数量，用于快速统计
+///   - **UILIST** - 返回 PMID 列表，用于分页获取 ID
+///   - **ABSTRACT** - 返回摘要信息（EFetch 专用）
+///
+/// @author linqibin
+/// @since 0.1.0
 public enum RetType {
-  /** 仅返回数量（适用于 ESearch） */
+  /// 仅返回数量（适用于 ESearch）
   COUNT("count"),
 
-  /** 返回 ID 列表（适用于 ESearch） */
+  /// 返回 ID 列表（适用于 ESearch）
   UILIST("uilist"),
 
-  /** 返回摘要（适用于 EFetch） */
+  /// 返回摘要（适用于 EFetch）
   ABSTRACT("abstract");
 
   private final String value;

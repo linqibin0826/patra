@@ -7,22 +7,18 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Europe PMC 搜索响应结构化表示
- *
- * <p>暴露精选字段，同时提供原始JSON访问以支持下游处理。
- *
- * <p>设计特点：
- *
- * <ul>
- *   <li>类型安全：将JSON响应映射为强类型Java对象
- *   <li>防御性解析：容忍缺失字段和格式变化
- *   <li>原始数据保留：保留完整JSON以支持高级用例
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// Europe PMC 搜索响应结构化表示
+///
+/// 暴露精选字段，同时提供原始JSON访问以支持下游处理。
+///
+/// 设计特点：
+///
+/// - 类型安全：将JSON响应映射为强类型Java对象
+///   - 防御性解析：容忍缺失字段和格式变化
+///   - 原始数据保留：保留完整JSON以支持高级用例
+///
+/// @author linqibin
+/// @since 0.1.0
 public final class SearchResponse {
 
   private final String version;
@@ -50,12 +46,10 @@ public final class SearchResponse {
     this.raw = raw;
   }
 
-  /**
-   * 将Europe PMC响应树解析为强类型表示
-   *
-   * @param root 响应根节点
-   * @return 结构化响应视图
-   */
+  /// 将Europe PMC响应树解析为强类型表示
+  ///
+  /// @param root 响应根节点
+  /// @return 结构化响应视图
   public static SearchResponse from(JsonNode root) {
     Objects.requireNonNull(root, "root cannot be null");
     String version = JsonHelpers.textValue(root.path("version"));
@@ -78,64 +72,60 @@ public final class SearchResponse {
         root.deepCopy());
   }
 
-  /**
-   * 为无操作场景创建空响应占位符
-   *
-   * @return 空响应实例
-   */
+  /// 为无操作场景创建空响应占位符
+  ///
+  /// @return 空响应实例
   public static SearchResponse empty() {
     return new SearchResponse(null, 0, null, null, Request.empty(), Collections.emptyList(), null);
   }
 
-  /** 获取Europe PMC报告的API版本 */
+  /// 获取Europe PMC报告的API版本
   public String version() {
     return version;
   }
 
-  /** 获取查询的总命中数 */
+  /// 获取查询的总命中数
   public long hitCount() {
     return hitCount;
   }
 
-  /** 获取用于继续分页的游标标记 */
+  /// 获取用于继续分页的游标标记
   public String nextCursorMark() {
     return nextCursorMark;
   }
 
-  /** 获取下一页链接URL（如果提供） */
+  /// 获取下一页链接URL（如果提供）
   public String nextPageUrl() {
     return nextPageUrl;
   }
 
-  /** 获取Europe PMC返回的结构化请求回显 */
+  /// 获取Europe PMC返回的结构化请求回显
   public Request request() {
     return request;
   }
 
-  /** 获取搜索结果的不可变列表 */
+  /// 获取搜索结果的不可变列表
   public List<Result> results() {
     return results;
   }
 
-  /** 获取原始JSON载荷供高级消费者使用 */
+  /// 获取原始JSON载荷供高级消费者使用
   public JsonNode raw() {
     return raw;
   }
 
-  /**
-   * Europe PMC返回的请求回显参数
-   *
-   * <p>字段说明：
-   *
-   * @param queryString 解析后的查询字符串
-   * @param resultType 请求的结果投影
-   * @param cursorMark 深度分页的游标令牌
-   * @param pageSize API回显的页面大小
-   * @param sort 应用于结果的排序
-   * @param synonym 是否启用同义词扩展
-   * @author linqibin
-   * @since 0.1.0
-   */
+  /// Europe PMC返回的请求回显参数
+  ///
+  /// 字段说明：
+  ///
+  /// @param queryString 解析后的查询字符串
+  /// @param resultType 请求的结果投影
+  /// @param cursorMark 深度分页的游标令牌
+  /// @param pageSize API回显的页面大小
+  /// @param sort 应用于结果的排序
+  /// @param synonym 是否启用同义词扩展
+  /// @author linqibin
+  /// @since 0.1.0
   public record Request(
       String queryString,
       String resultType,
@@ -163,29 +153,27 @@ public final class SearchResponse {
     }
   }
 
-  /**
-   * 单个搜索结果摘要
-   *
-   * <p>字段说明：
-   *
-   * @param id Europe PMC标识符
-   * @param source 来源仓库（如MED）
-   * @param pmid PubMed标识符（如果可用）
-   * @param pmcid PubMed Central标识符（如果可用）
-   * @param doi 数字对象标识符
-   * @param title 文章标题
-   * @param authorString 连接的作者列表
-   * @param journalTitle 期刊名称
-   * @param pubYear 发表年份
-   * @param journalIssn ISSN代码
-   * @param pageInfo 页面信息字符串
-   * @param pubType 出版物类型
-   * @param abstractText 摘要片段
-   * @param citedByCount 引用计数
-   * @param raw 记录的原始JSON节点
-   * @author linqibin
-   * @since 0.1.0
-   */
+  /// 单个搜索结果摘要
+  ///
+  /// 字段说明：
+  ///
+  /// @param id Europe PMC标识符
+  /// @param source 来源仓库（如MED）
+  /// @param pmid PubMed标识符（如果可用）
+  /// @param pmcid PubMed Central标识符（如果可用）
+  /// @param doi 数字对象标识符
+  /// @param title 文章标题
+  /// @param authorString 连接的作者列表
+  /// @param journalTitle 期刊名称
+  /// @param pubYear 发表年份
+  /// @param journalIssn ISSN代码
+  /// @param pageInfo 页面信息字符串
+  /// @param pubType 出版物类型
+  /// @param abstractText 摘要片段
+  /// @param citedByCount 引用计数
+  /// @param raw 记录的原始JSON节点
+  /// @author linqibin
+  /// @since 0.1.0
   public record Result(
       String id,
       String source,

@@ -18,34 +18,30 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link BatchSchedule} 的单元测试。
- *
- * <p>测试覆盖：
- *
- * <ul>
- *   <li>成功构造场景（有效字段、空列表、多批次）
- *   <li>验证失败场景（null batches、null context、null querySession）
- *   <li>工厂方法（empty、single）
- *   <li>业务方法（hasBatches、totalBatches、exceedsLimit）
- *   <li>Record 语义（equals、hashCode、toString、访问器）
- *   <li>不可变性验证
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// {@link BatchSchedule} 的单元测试。
+///
+/// 测试覆盖：
+///
+/// - 成功构造场景（有效字段、空列表、多批次）
+///   - 验证失败场景（null batches、null context、null querySession）
+///   - 工厂方法（empty、single）
+///   - 业务方法（hasBatches、totalBatches、exceedsLimit）
+///   - Record 语义（equals、hashCode、toString、访问器）
+///   - 不可变性验证
+///
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("BatchSchedule 批次调度结果值对象测试")
 class BatchScheduleTest {
 
   // ==================== 测试工具方法 ====================
 
-  /** 创建一个测试用 Batch 实例 */
+  /// 创建一个测试用 Batch 实例
   private Batch createTestBatch(int batchNo, int offset, int limit) {
     return new Batch(batchNo, "test query " + batchNo, offset, limit);
   }
 
-  /** 创建一个测试用 ProvenanceInfo 实例 */
+  /// 创建一个测试用 ProvenanceInfo 实例
   private ProvenanceConfigSnapshot.ProvenanceInfo createTestProvenanceInfo() {
     return new ProvenanceConfigSnapshot.ProvenanceInfo(
         1L, // id
@@ -59,7 +55,7 @@ class BatchScheduleTest {
         );
   }
 
-  /** 创建一个测试用 PaginationConfig 实例 */
+  /// 创建一个测试用 PaginationConfig 实例
   private ProvenanceConfigSnapshot.PaginationConfig createTestPaginationConfig() {
     return new ProvenanceConfigSnapshot.PaginationConfig(
         1L, // id
@@ -75,7 +71,7 @@ class BatchScheduleTest {
         );
   }
 
-  /** 创建一个测试用 ProvenanceConfigSnapshot 实例 */
+  /// 创建一个测试用 ProvenanceConfigSnapshot 实例
   private ProvenanceConfigSnapshot createTestConfigSnapshot() {
     return new ProvenanceConfigSnapshot(
         createTestProvenanceInfo(), // provenance
@@ -88,7 +84,7 @@ class BatchScheduleTest {
         );
   }
 
-  /** 创建一个测试用 ExecutionContext 实例 */
+  /// 创建一个测试用 ExecutionContext 实例
   private ExecutionContext createTestContext() {
     return new ExecutionContext(
         1L, // taskId
@@ -108,7 +104,7 @@ class BatchScheduleTest {
         );
   }
 
-  /** 创建一个测试用 QuerySession 实例 */
+  /// 创建一个测试用 QuerySession 实例
   private QuerySession createTestSession(int totalRecords) {
     return new QuerySession() {
       @Override
@@ -133,7 +129,7 @@ class BatchScheduleTest {
     };
   }
 
-  /** 创建一个带状态令牌的 QuerySession */
+  /// 创建一个带状态令牌的 QuerySession
   private QuerySession createSessionWithToken(int totalRecords, Map<String, String> token) {
     return new QuerySession() {
       @Override

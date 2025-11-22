@@ -13,7 +13,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
-/** 调度实例聚合 ↔ DO 转换器。 */
+/// 调度实例聚合 ↔ DO 转换器。
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ScheduleInstanceConverter {
 

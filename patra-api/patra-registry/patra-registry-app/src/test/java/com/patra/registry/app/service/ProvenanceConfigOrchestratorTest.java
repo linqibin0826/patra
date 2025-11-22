@@ -25,27 +25,23 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * ProvenanceConfigOrchestrator 单元测试。
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>✅ listProvenances() - 正常场景，返回多个数据源
- *   <li>✅ listProvenances() - 空列表场景
- *   <li>✅ listProvenances() - Repository 抛出异常
- *   <li>✅ findProvenance() - 找到数据源
- *   <li>✅ findProvenance() - 未找到数据源 (Optional.empty)
- *   <li>✅ findProvenance() - Repository 抛出异常
- *   <li>✅ loadConfiguration() - 加载配置成功
- *   <li>✅ loadConfiguration() - 使用 null 时间点 (默认当前时间)
- *   <li>✅ loadConfiguration() - 数据源不存在，返回 Optional.empty
- *   <li>✅ loadConfiguration() - 配置不存在，返回 Optional.empty
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// ProvenanceConfigOrchestrator 单元测试。
+///
+/// 测试覆盖:
+///
+/// - ✅ listProvenances() - 正常场景，返回多个数据源
+///   - ✅ listProvenances() - 空列表场景
+///   - ✅ listProvenances() - Repository 抛出异常
+///   - ✅ findProvenance() - 找到数据源
+///   - ✅ findProvenance() - 未找到数据源 (Optional.empty)
+///   - ✅ findProvenance() - Repository 抛出异常
+///   - ✅ loadConfiguration() - 加载配置成功
+///   - ✅ loadConfiguration() - 使用 null 时间点 (默认当前时间)
+///   - ✅ loadConfiguration() - 数据源不存在，返回 Optional.empty
+///   - ✅ loadConfiguration() - 配置不存在，返回 Optional.empty
+///
+/// @author linqibin
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ProvenanceConfigOrchestrator 单元测试")
 class ProvenanceConfigOrchestratorTest {
@@ -391,7 +387,7 @@ class ProvenanceConfigOrchestratorTest {
 
   // ==================== 辅助方法 ====================
 
-  /** 创建 Mock Provenance。 */
+  /// 创建 Mock Provenance。
   private Provenance createMockProvenance(Long id, String code, String name) {
     return new Provenance(
         id,
@@ -404,7 +400,7 @@ class ProvenanceConfigOrchestratorTest {
         "ACTIVE");
   }
 
-  /** 创建 Mock ProvenanceQuery。 */
+  /// 创建 Mock ProvenanceQuery。
   private ProvenanceQuery createMockProvenanceQuery(Long id, String code, String name) {
     return new ProvenanceQuery(
         id,

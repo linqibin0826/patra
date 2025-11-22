@@ -24,22 +24,19 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.OptimisticLockingFailureException;
 
-/**
- * SliceStatusChangedEventHandler 单元测试
- *
- * <p>测试策略: Mock 测试,验证事件处理的核心逻辑
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>正常场景: Slice 状态变化 → 聚合计算 Plan 状态 → 更新 Plan
- *   <li>幂等性: Plan 状态未变化,跳过更新
- *   <li>异常场景: Plan 不存在
- *   <li>并发处理: 乐观锁冲突
- *   <li>异常处理: 通用异常捕获
- *   <li>多 Slice 聚合: 测试所有 Slice FINISHED → Plan ARCHIVED
- * </ul>
- */
+/// SliceStatusChangedEventHandler 单元测试
+///
+/// 测试策略: Mock 测试,验证事件处理的核心逻辑
+///
+/// 测试覆盖:
+///
+/// - 正常场景: Slice 状态变化 → 聚合计算 Plan 状态 → 更新 Plan
+///   - 幂等性: Plan 状态未变化,跳过更新
+///   - 异常场景: Plan 不存在
+///   - 并发处理: 乐观锁冲突
+///   - 异常处理: 通用异常捕获
+///   - 多 Slice 聚合: 测试所有 Slice FINISHED → Plan ARCHIVED
+///
 @ExtendWith(MockitoExtension.class)
 @DisplayName("SliceStatusChangedEventHandler 单元测试")
 class SliceStatusChangedEventHandlerTest {

@@ -1,5 +1,7 @@
 package com.patra.catalog.infra.persistence.repository;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;
 import com.patra.catalog.domain.model.enums.MeshImportTaskStatus;
@@ -7,9 +9,6 @@ import com.patra.catalog.domain.model.enums.MeshTableImportStatus;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import com.patra.catalog.domain.model.valueobject.TableProgress;
 import com.patra.catalog.infra.persistence.converter.MeshImportConverterImpl;
-import com.patra.catalog.infra.persistence.mapper.MeshBatchDetailMapper;
-import com.patra.catalog.infra.persistence.mapper.MeshImportTaskMapper;
-import com.patra.catalog.infra.persistence.mapper.MeshTableProgressMapper;
 import com.patra.starter.mybatis.autoconfig.MybatisPluginAutoConfig;
 import java.time.Instant;
 import java.util.List;
@@ -25,38 +24,34 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-/**
- * MeSH 导入仓储实现集成测试。
- *
- * <p>使用 Testcontainers + MySQL 8 测试完整的 CRUD 操作。
- *
- * <p><b>测试策略</b>：
- *
- * <ul>
- *   <li>集成测试：使用真实 MySQL 数据库
- *   <li>测试隔离：每个测试方法独立，使用 @Transactional 自动回滚
- *   <li>TestContainers：自动启动和停止 MySQL 容器
- *   <li>测试覆盖：save()、findById()、findRunningTask()、existsRunningTask()
- * </ul>
- *
- * <p><b>重点测试场景</b>：
- *
- * <ul>
- *   <li>save() 新增场景：验证 ID 为 null 时执行 INSERT（自动分配雪花 ID）
- *   <li>save() 更新场景：验证 ID 不为 null 时执行 UPDATE（使用乐观锁）
- *   <li>关联数据处理：验证 TableProgress 的"删除+重新插入"策略
- *   <li>并发控制：验证乐观锁机制（version 字段）
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// MeSH 导入仓储实现集成测试。
+///
+/// 使用 Testcontainers + MySQL 8 测试完整的 CRUD 操作。
+///
+/// **测试策略**：
+///
+/// - 集成测试：使用真实 MySQL 数据库
+///   - 测试隔离：每个测试方法独立，使用 @Transactional 自动回滚
+///   - TestContainers：自动启动和停止 MySQL 容器
+///   - 测试覆盖：save()、findById()、findRunningTask()、existsRunningTask()
+///
+/// **重点测试场景**：
+///
+/// - save() 新增场景：验证 ID 为 null 时执行 INSERT（自动分配雪花 ID）
+///   - save() 更新场景：验证 ID 不为 null 时执行 UPDATE（使用乐观锁）
+///   - 关联数据处理：验证 TableProgress 的"删除+重新插入"策略
+///   - 并发控制：验证乐观锁机制（version 字段）
+///
+/// @author linqibin
+/// @since 0.1.0
 @MybatisPlusTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({MeshImportRepositoryImpl.class, MeshImportConverterImpl.class, MybatisPluginAutoConfig.class})
+@Import({
+  MeshImportRepositoryImpl.class,
+  MeshImportConverterImpl.class,
+  MybatisPluginAutoConfig.class
+})
 @DisplayName("MeshImportRepositoryImpl 集成测试")
 class MeshImportRepositoryImplIT {
 
@@ -322,8 +317,7 @@ class MeshImportRepositoryImplIT {
   @DisplayName("根据ID查询任务 - 任务不存在时应该返回空")
   void findById_taskNotExists_shouldReturnEmpty() {
     // When: 查询不存在的任务
-    Optional<MeshImportAggregate> found =
-        meshImportRepository.findById(MeshImportId.of(999999L));
+    Optional<MeshImportAggregate> found = meshImportRepository.findById(MeshImportId.of(999999L));
 
     // Then: 应该返回空
     assertThat(found).isEmpty();

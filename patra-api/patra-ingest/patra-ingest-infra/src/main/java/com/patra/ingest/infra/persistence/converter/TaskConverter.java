@@ -15,14 +15,12 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
-/**
- * 任务对象转换器,负责领域对象与数据库实体转换。
- *
- * <p>转换规则: 任务聚合 {@link TaskAggregate} ↔ {@link TaskDO} 双向转换。在单个转换器中处理JSON字段、状态枚举转换和值对象分解,避免额外的支持类。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 任务对象转换器,负责领域对象与数据库实体转换。
+///
+/// 转换规则: 任务聚合 {@link TaskAggregate} ↔ {@link TaskDO} 双向转换。在单个转换器中处理JSON字段、状态枚举转换和值对象分解,避免额外的支持类。
+///
+/// @author linqibin
+/// @since 0.1.0
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface TaskConverter {
 
@@ -90,12 +88,12 @@ public interface TaskConverter {
 
   // ========== 枚举转换方法 ==========
 
-  /** ProvenanceCode 枚举 → String（用于 Domain → DO） */
+  /// ProvenanceCode 枚举 → String（用于 Domain → DO）
   default String map(ProvenanceCode code) {
     return code == null ? null : code.getCode();
   }
 
-  /** String → ProvenanceCode 枚举（用于 DO → Domain） */
+  /// String → ProvenanceCode 枚举（用于 DO → Domain）
   default ProvenanceCode mapProvenanceCode(String code) {
     if (code == null || code.isBlank()) {
       return null;
@@ -107,12 +105,12 @@ public interface TaskConverter {
     }
   }
 
-  /** OperationCode 枚举 → String */
+  /// OperationCode 枚举 → String
   default String map(OperationCode code) {
     return code == null ? null : code.getCode();
   }
 
-  /** String → OperationCode 枚举 */
+  /// String → OperationCode 枚举
   default OperationCode mapOperationCode(String code) {
     if (code == null || code.isBlank()) {
       return null;

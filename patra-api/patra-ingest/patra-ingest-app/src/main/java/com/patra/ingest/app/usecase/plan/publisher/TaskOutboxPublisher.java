@@ -21,38 +21,32 @@ import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * Task Outbox 发布器(重构为使用统一框架)
- *
- * <p>将任务排队事件发布为 Outbox 消息,确保可靠的 MQ 投递。
- *
- * <h3>幂等性策略</h3>
- *
- * <ul>
- *   <li><b>首次发布</b>: 跳过没有 taskId 的事件(尚未持久化)
- *   <li><b>重试发布</b>: 使用 UPSERT 处理并发重试场景
- * </ul>
- *
- * <h3>分区策略</h3>
- *
- * <p>partitionKey = provenance:operation (降级为拼接)
- *
- * <h3>延迟发布</h3>
- *
- * <p>notBefore = scheduledAt (若为 null 则使用 Instant.now())
- *
- * <h3>适配器方法</h3>
- *
- * <p>提供向后兼容的适配器方法:
- *
- * <ul>
- *   <li>{@link #publish(List, PlanAggregate, ScheduleInstanceAggregate)}: 首次发布
- *   <li>{@link #publishRetry(List, PlanAggregate, ScheduleInstanceAggregate)}: 重试发布
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// Task Outbox 发布器(重构为使用统一框架)
+///
+/// 将任务排队事件发布为 Outbox 消息,确保可靠的 MQ 投递。
+///
+/// ### 幂等性策略
+///
+/// - **首次发布**: 跳过没有 taskId 的事件(尚未持久化)
+///   - **重试发布**: 使用 UPSERT 处理并发重试场景
+///
+/// ### 分区策略
+///
+/// partitionKey = provenance:operation (降级为拼接)
+///
+/// ### 延迟发布
+///
+/// notBefore = scheduledAt (若为 null 则使用 Instant.now())
+///
+/// ### 适配器方法
+///
+/// 提供向后兼容的适配器方法:
+///
+/// - {@link #publish(List, PlanAggregate, ScheduleInstanceAggregate)}: 首次发布
+///   - {@link #publishRetry(List, PlanAggregate, ScheduleInstanceAggregate)}: 重试发布
+///
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Component
 public class TaskOutboxPublisher
@@ -71,15 +65,13 @@ public class TaskOutboxPublisher
 
   // ==================== 适配器方法(向后兼容) ====================
 
-  /**
-   * 首次发布(适配器方法,向后兼容)
-   *
-   * <p>将聚合转换为上下文并委托给框架。
-   *
-   * @param events 任务排队事件
-   * @param plan Plan 聚合(不能为 null)
-   * @param schedule 调度实例聚合(不能为 null)
-   */
+  /// 首次发布(适配器方法,向后兼容)
+  ///
+  /// 将聚合转换为上下文并委托给框架。
+  ///
+  /// @param events 任务排队事件
+  /// @param plan Plan 聚合(不能为 null)
+  /// @param schedule 调度实例聚合(不能为 null)
   public void publish(
       List<TaskQueuedEvent> events, PlanAggregate plan, ScheduleInstanceAggregate schedule) {
     Objects.requireNonNull(plan, "plan must not be null");
@@ -100,15 +92,13 @@ public class TaskOutboxPublisher
     log.debug("已成功发布 {} 个任务就绪事件到 Outbox", events.size());
   }
 
-  /**
-   * 重试发布(适配器方法,向后兼容)
-   *
-   * <p>将聚合转换为上下文并委托给框架。
-   *
-   * @param events 任务排队事件
-   * @param plan Plan 聚合(不能为 null)
-   * @param schedule 调度实例聚合(不能为 null)
-   */
+  /// 重试发布(适配器方法,向后兼容)
+  ///
+  /// 将聚合转换为上下文并委托给框架。
+  ///
+  /// @param events 任务排队事件
+  /// @param plan Plan 聚合(不能为 null)
+  /// @param schedule 调度实例聚合(不能为 null)
   public void publishRetry(
       List<TaskQueuedEvent> events, PlanAggregate plan, ScheduleInstanceAggregate schedule) {
     Objects.requireNonNull(plan, "plan must not be null");

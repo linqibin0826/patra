@@ -8,32 +8,26 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * TableProgress 值对象单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>纯 Java 单元测试，不依赖 Spring 容器
- *   <li>验证值对象不可变性
- *   <li>测试进度计算逻辑
- *   <li>遵循 Given-When-Then 结构
- *   <li>使用 AssertJ 流畅断言
- * </ul>
- *
- * <p>覆盖范围：
- *
- * <ul>
- *   <li>✅ getProgressPercentage() - 进度百分比计算
- *   <li>✅ updateProgress() - 更新进度（返回新实例）
- *   <li>✅ incrementFailedCount() - 增加失败数（返回新实例）
- *   <li>✅ 不可变性验证
- *   <li>✅ 状态自动计算
- * </ul>
- *
- * @author Patra Team
- * @since 2.0
- */
+/// TableProgress 值对象单元测试。
+///
+/// 测试策略：
+///
+/// - 纯 Java 单元测试，不依赖 Spring 容器
+///   - 验证值对象不可变性
+///   - 测试进度计算逻辑
+///   - 遵循 Given-When-Then 结构
+///   - 使用 AssertJ 流畅断言
+///
+/// 覆盖范围：
+///
+/// - ✅ getProgressPercentage() - 进度百分比计算
+///   - ✅ updateProgress() - 更新进度（返回新实例）
+///   - ✅ incrementFailedCount() - 增加失败数（返回新实例）
+///   - ✅ 不可变性验证
+///   - ✅ 状态自动计算
+///
+/// @author Patra Team
+/// @since 2.0
 @DisplayName("TableProgress 单元测试")
 class TableProgressTest {
 

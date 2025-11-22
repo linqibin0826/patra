@@ -1,8 +1,8 @@
 package com.patra.catalog.adapter.scheduler.job;
 
+import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
 import com.patra.catalog.app.usecase.meshimport.command.StartImportCommand;
 import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
-import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import java.util.concurrent.TimeUnit;
@@ -12,81 +12,61 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Component;
 
-/**
- * MeSH 数据导入定时任务。
- *
- * <p>通过 XXL-Job 调度，定期执行 MeSH 数据导入任务。使用 Redisson 分布式锁确保同一时刻只有一个实例执行导入。
- *
- * <p><b>职责</b>：
- *
- * <ul>
- *   <li>暴露 XXL-Job 执行入口点（@XxlJob 注解）
- *   <li>获取 Redisson 分布式锁，避免并发导入
- *   <li>调用 {@link MeshImportOrchestrator} 执行导入逻辑
- *   <li>记录执行日志到 XXL-Job 控制台
- * </ul>
- *
- * <p><b>分布式锁策略</b>：
- *
- * <ul>
- *   <li>锁名称：{@code mesh:import:lock}
- *   <li>获取方式：非阻塞（tryLock）
- *   <li>锁超时：30 分钟（租约时间）
- *   <li>如果获取失败，记录日志并退出（不抛异常）
- * </ul>
- *
- * <p><b>调度策略</b>：
- *
- * <ul>
- *   <li>由 XXL-Job 调度中心配置（通常按需手动触发）
- *   <li>支持手动触发和失败重试
- * </ul>
- *
- * <p><b>异常处理</b>：
- *
- * <ul>
- *   <li>导入失败：记录错误日志，抛出异常（XXL-Job 会标记为失败）
- *   <li>锁获取失败：记录日志，正常退出（不视为任务失败）
- *   <li>确保 finally 块中释放锁
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// MeSH 数据导入定时任务。
+///
+/// 通过 XXL-Job 调度，定期执行 MeSH 数据导入任务。使用 Redisson 分布式锁确保同一时刻只有一个实例执行导入。
+///
+/// **职责**：
+///
+/// - 暴露 XXL-Job 执行入口点（@XxlJob 注解）
+///   - 获取 Redisson 分布式锁，避免并发导入
+///   - 调用 {@link MeshImportOrchestrator} 执行导入逻辑
+///   - 记录执行日志到 XXL-Job 控制台
+///
+/// **分布式锁策略**：
+///
+/// - 锁名称：`mesh:import:lock`
+///   - 获取方式：非阻塞（tryLock）
+///   - 锁超时：30 分钟（租约时间）
+///   - 如果获取失败，记录日志并退出（不抛异常）
+///
+/// **调度策略**：
+///
+/// - 由 XXL-Job 调度中心配置（通常按需手动触发）
+///   - 支持手动触发和失败重试
+///
+/// **异常处理**：
+///
+/// - 导入失败：记录错误日志，抛出异常（XXL-Job 会标记为失败）
+///   - 锁获取失败：记录日志，正常退出（不视为任务失败）
+///   - 确保 finally 块中释放锁
+///
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class MeshImportJob {
 
-  /** 分布式锁名称 */
+  /// 分布式锁名称
   private static final String LOCK_NAME = "mesh:import:lock";
 
-  /** 锁租约时间（30 分钟） */
+  /// 锁租约时间（30 分钟）
   private static final long LOCK_LEASE_TIME = 30;
 
-  /** 锁租约时间单位 */
+  /// 锁租约时间单位
   private static final TimeUnit LOCK_TIME_UNIT = TimeUnit.MINUTES;
 
   private final MeshImportOrchestrator meshImportOrchestrator;
   private final RedissonClient redissonClient;
 
-  /**
-   * XXL-Job 执行入口点。
-   *
-   * <p>任务名称：{@code meshImport}
-   *
-   * <p>执行流程：
-   *
-   * <ol>
-   *   <li>获取 XXL-Job 参数（可选）
-   *   <li>尝试获取分布式锁
-   *   <li>如果获取成功，调用 Orchestrator 执行导入
-   *   <li>如果获取失败，记录日志并退出
-   *   <li>finally 块中释放锁
-   * </ol>
-   *
-   * @throws RuntimeException 如果导入失败
-   */
+  /// XXL-Job 执行入口点。
+  ///
+  /// 任务名称：`meshImport`
+  ///
+  /// 执行流程：
+  ///
+  /// @throws RuntimeException 如果导入失败
   @XxlJob("meshImport")
   public void execute() {
     String jobParam = XxlJobHelper.getJobParam();

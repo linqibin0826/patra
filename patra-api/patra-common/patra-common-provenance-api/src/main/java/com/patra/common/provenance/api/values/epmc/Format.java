@@ -2,34 +2,30 @@ package com.patra.common.provenance.api.values.epmc;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 
-/**
- * EPMC Format 参数值枚举
- *
- * <p>控制 API 返回格式和详细程度
- *
- * <h3>格式说明</h3>
- *
- * <ul>
- *   <li><b>JSON</b> - JSON 格式（默认，推荐）
- *   <li><b>XML</b> - XML 格式
- *   <li><b>LITE</b> - 轻量级格式，仅返回核心字段
- *   <li><b>CORE</b> - 核心格式，返回常用字段
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// EPMC Format 参数值枚举
+///
+/// 控制 API 返回格式和详细程度
+///
+/// ### 格式说明
+///
+/// - **JSON** - JSON 格式（默认，推荐）
+///   - **XML** - XML 格式
+///   - **LITE** - 轻量级格式，仅返回核心字段
+///   - **CORE** - 核心格式，返回常用字段
+///
+/// @author linqibin
+/// @since 0.1.0
 public enum Format {
-  /** JSON 格式（推荐） */
+  /// JSON 格式（推荐）
   JSON("json"),
 
-  /** XML 格式 */
+  /// XML 格式
   XML("xml"),
 
-  /** 轻量级格式 */
+  /// 轻量级格式
   LITE("lite"),
 
-  /** 核心格式 */
+  /// 核心格式
   CORE("core");
 
   private final String value;

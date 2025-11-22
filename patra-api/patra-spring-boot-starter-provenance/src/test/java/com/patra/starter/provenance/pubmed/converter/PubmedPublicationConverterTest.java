@@ -10,11 +10,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/**
- * PubmedPublicationConverter 单元测试
- *
- * @author linqibin
- */
+/// PubmedPublicationConverter 单元测试
+///
+/// @author linqibin
 @DisplayName("PubmedPublicationConverter 测试")
 class PubmedPublicationConverterTest {
 

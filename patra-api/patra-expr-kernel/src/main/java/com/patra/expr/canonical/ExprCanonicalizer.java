@@ -22,24 +22,20 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-/**
- * 为表达式生成确定性的 JSON 快照和哈希值,使下游服务能够一致地进行缓存、去重或审计。
- *
- * <p>规范化过程包括:
- *
- * <ul>
- *   <li>对对象键进行排序
- *   <li>对数组元素去重并排序
- *   <li>修剪空白并折叠多余空格
- *   <li>去除尾随零
- *   <li>移除空值和空集合
- * </ul>
- *
- * <p>输出的规范 JSON 可用于生成 SHA-256 哈希,确保逻辑相同的表达式产生相同的哈希值。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 为表达式生成确定性的 JSON 快照和哈希值,使下游服务能够一致地进行缓存、去重或审计。
+///
+/// 规范化过程包括:
+///
+/// - 对对象键进行排序
+///   - 对数组元素去重并排序
+///   - 修剪空白并折叠多余空格
+///   - 去除尾随零
+///   - 移除空值和空集合
+///
+/// 输出的规范 JSON 可用于生成 SHA-256 哈希,确保逻辑相同的表达式产生相同的哈希值。
+///
+/// @author linqibin
+/// @since 0.1.0
 public final class ExprCanonicalizer {
   private static final ObjectMapper OBJECT_MAPPER;
   private static final JsonNodeFactory NODE_FACTORY;
@@ -54,13 +50,11 @@ public final class ExprCanonicalizer {
 
   private ExprCanonicalizer() {}
 
-  /**
-   * 规范化给定的表达式,返回包含确定性 JSON 文本及其 SHA-256 摘要的快照。
-   *
-   * @param expr 待规范化的表达式
-   * @return 规范化快照
-   * @throws IllegalStateException 如果规范化过程失败
-   */
+  /// 规范化给定的表达式,返回包含确定性 JSON 文本及其 SHA-256 摘要的快照。
+  ///
+  /// @param expr 待规范化的表达式
+  /// @return 规范化快照
+  /// @throws IllegalStateException 如果规范化过程失败
   public static ExprCanonicalSnapshot canonicalize(Expr expr) {
     Objects.requireNonNull(expr, "expr must not be null");
     try {
@@ -74,12 +68,10 @@ public final class ExprCanonicalizer {
     }
   }
 
-  /**
-   * 递归规范化 JSON 节点。
-   *
-   * @param node 待规范化的节点
-   * @return 规范化后的 JSON 节点
-   */
+  /// 递归规范化 JSON 节点。
+  ///
+  /// @param node 待规范化的节点
+  /// @return 规范化后的 JSON 节点
   private static JsonNode canonicalizeNode(JsonNode node) {
     if (node == null || node.isNull() || node.isMissingNode()) {
       return NullNode.getInstance();
@@ -99,12 +91,10 @@ public final class ExprCanonicalizer {
     return node;
   }
 
-  /**
-   * 通过排序键并移除空值来规范化对象节点。
-   *
-   * @param objectNode 待规范化的对象节点
-   * @return 规范化后的对象节点
-   */
+  /// 通过排序键并移除空值来规范化对象节点。
+  ///
+  /// @param objectNode 待规范化的对象节点
+  /// @return 规范化后的对象节点
   private static JsonNode canonicalizeObject(ObjectNode objectNode) {
     List<String> fieldNames = new ArrayList<>();
     objectNode.fieldNames().forEachRemaining(fieldNames::add);
@@ -120,12 +110,10 @@ public final class ExprCanonicalizer {
     return canonical;
   }
 
-  /**
-   * 通过去重和排序元素来规范化数组节点。
-   *
-   * @param arrayNode 待规范化的数组节点
-   * @return 规范化后的数组节点,如果为空则返回 NullNode
-   */
+  /// 通过去重和排序元素来规范化数组节点。
+  ///
+  /// @param arrayNode 待规范化的数组节点
+  /// @return 规范化后的数组节点,如果为空则返回 NullNode
   private static JsonNode canonicalizeArray(ArrayNode arrayNode) {
     List<CanonicalElement> elements = buildCanonicalElements(arrayNode);
     List<CanonicalElement> deduplicated = deduplicateElements(elements);
@@ -172,12 +160,10 @@ public final class ExprCanonicalizer {
     return canonical.isEmpty() ? NullNode.getInstance() : canonical;
   }
 
-  /**
-   * 通过修剪和折叠空白来规范化文本。
-   *
-   * @param text 待规范化的文本
-   * @return 规范化后的文本节点,如果为空则返回 NullNode
-   */
+  /// 通过修剪和折叠空白来规范化文本。
+  ///
+  /// @param text 待规范化的文本
+  /// @return 规范化后的文本节点,如果为空则返回 NullNode
   private static JsonNode canonicalizeText(String text) {
     if (text == null) {
       return NullNode.getInstance();
@@ -190,12 +176,10 @@ public final class ExprCanonicalizer {
     return NODE_FACTORY.textNode(collapsed);
   }
 
-  /**
-   * 通过去除尾随零来规范化数字。
-   *
-   * @param node 待规范化的数字节点
-   * @return 规范化后的数字节点
-   */
+  /// 通过去除尾随零来规范化数字。
+  ///
+  /// @param node 待规范化的数字节点
+  /// @return 规范化后的数字节点
   private static JsonNode canonicalizeNumber(JsonNode node) {
     if (!node.isNumber()) {
       return node;
@@ -207,12 +191,10 @@ public final class ExprCanonicalizer {
     return NODE_FACTORY.numberNode(decimal);
   }
 
-  /**
-   * 检查 JSON 节点是否被视为空。
-   *
-   * @param node 待检查的节点
-   * @return 如果节点为 null、缺失或空,则返回 true
-   */
+  /// 检查 JSON 节点是否被视为空。
+  ///
+  /// @param node 待检查的节点
+  /// @return 如果节点为 null、缺失或空,则返回 true
   private static boolean isEmpty(JsonNode node) {
     if (node == null || node.isNull() || node.isMissingNode()) {
       return true;
@@ -229,12 +211,10 @@ public final class ExprCanonicalizer {
     return false;
   }
 
-  /**
-   * 返回用于排序 JSON 节点的类型标签。
-   *
-   * @param node 待标记的节点
-   * @return 数字类型标签的字符串表示
-   */
+  /// 返回用于排序 JSON 节点的类型标签。
+  ///
+  /// @param node 待标记的节点
+  /// @return 数字类型标签的字符串表示
   private static String typeTag(JsonNode node) {
     if (node == null || node.isNull() || node.isMissingNode()) {
       return "0";

@@ -17,27 +17,21 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-/**
- * {@link CapabilityChecker} 的默认实现，遍历表达式树并根据 Provenance 快照中的能力定义验证每个原子条件。
- *
- * <p>核心验证逻辑：
- *
- * <ul>
- *   <li>字段是否在 Provenance 中注册
- *   <li>操作符是否被字段支持
- *   <li>否定是否被允许（整体和特定操作符）
- *   <li>操作符特定的值约束（长度、模式、范围边界等）
- * </ul>
- *
- * <p>严格模式影响：
- *
- * <ul>
- *   <li>{@code strictMode=false}: 仅检查结构性约束
- *   <li>{@code strictMode=true}: 额外检查语义约束（如 TOKEN 空白值）
- * </ul>
- *
- * @since 1.0.0
- */
+/// {@link CapabilityChecker} 的默认实现，遍历表达式树并根据 Provenance 快照中的能力定义验证每个原子条件。
+///
+/// 核心验证逻辑：
+///
+/// - 字段是否在 Provenance 中注册
+///   - 操作符是否被字段支持
+///   - 否定是否被允许（整体和特定操作符）
+///   - 操作符特定的值约束（长度、模式、范围边界等）
+///
+/// 严格模式影响：
+///
+/// - `strictMode=false`: 仅检查结构性约束
+///   - `strictMode=true`: 额外检查语义约束（如 TOKEN 空白值）
+///
+/// @since 0.1.0
 public class DefaultCapabilityChecker implements CapabilityChecker {
 
   @Override
@@ -49,15 +43,13 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
     return issues;
   }
 
-  /**
-   * 递归访问表达式树节点。
-   *
-   * @param node 当前节点
-   * @param underNot 当前节点是否在 NOT 操作符下
-   * @param snapshot Provenance 快照
-   * @param strictMode 是否启用严格模式
-   * @param out 收集的问题列表
-   */
+  /// 递归访问表达式树节点。
+  ///
+  /// @param node 当前节点
+  /// @param underNot 当前节点是否在 NOT 操作符下
+  /// @param snapshot Provenance 快照
+  /// @param strictMode 是否启用严格模式
+  /// @param out 收集的问题列表
   private void visit(
       Expr node,
       boolean underNot,
@@ -86,15 +78,13 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
     }
   }
 
-  /**
-   * 验证原子条件的完整性和可行性。
-   *
-   * @param atom 原子条件
-   * @param underNot 是否在 NOT 操作符下
-   * @param snapshot Provenance 快照
-   * @param strictMode 是否启用严格模式
-   * @param out 收集的问题列表
-   */
+  /// 验证原子条件的完整性和可行性。
+  ///
+  /// @param atom 原子条件
+  /// @param underNot 是否在 NOT 操作符下
+  /// @param snapshot Provenance 快照
+  /// @param strictMode 是否启用严格模式
+  /// @param out 收集的问题列表
   private void validateAtom(
       Atom atom,
       boolean underNot,
@@ -144,19 +134,16 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
     }
   }
 
-  /**
-   * 验证 TERM 操作符的值约束。
-   *
-   * <p>检查项：
-   *
-   * <ul>
-   *   <li>空白值限制
-   *   <li>最小/最大长度
-   *   <li>正则表达式模式
-   *   <li>大小写敏感性
-   *   <li>匹配策略支持（PHRASE、WILDCARD 等）
-   * </ul>
-   */
+  /// 验证 TERM 操作符的值约束。
+  ///
+  /// 检查项：
+  ///
+  /// - 空白值限制
+  ///   - 最小/最大长度
+  ///   - 正则表达式模式
+  ///   - 大小写敏感性
+  ///   - 匹配策略支持（PHRASE、WILDCARD 等）
+  ///
   private void validateTerm(Atom atom, ProvenanceSnapshot.Capability capability, List<Issue> out) {
     Atom.TermValue value = (Atom.TermValue) atom.value();
     String text = value.text();
@@ -224,7 +211,7 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
     }
   }
 
-  /** 验证 IN 操作符的值约束。 */
+  /// 验证 IN 操作符的值约束。
   private void validateIn(Atom atom, ProvenanceSnapshot.Capability capability, List<Issue> out) {
     Atom.InValues values = (Atom.InValues) atom.value();
     if (values.values().isEmpty()) {
@@ -250,7 +237,7 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
     }
   }
 
-  /** 验证 RANGE 操作符的类型和边界约束。 */
+  /// 验证 RANGE 操作符的类型和边界约束。
   private void validateRange(Atom atom, ProvenanceSnapshot.Capability capability, List<Issue> out) {
     ProvenanceSnapshot.RangeKind kind = capability.rangeKind();
     Atom.RangeValue value = (Atom.RangeValue) atom.value();
@@ -283,7 +270,7 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
     }
   }
 
-  /** 验证日期范围的边界是否在能力定义的最小/最大值内。 */
+  /// 验证日期范围的边界是否在能力定义的最小/最大值内。
   private void validateDateBounds(
       String fieldKey,
       LocalDate from,
@@ -307,7 +294,7 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
     }
   }
 
-  /** 报告范围类型不匹配错误。 */
+  /// 报告范围类型不匹配错误。
   private void complainRangeKind(
       Atom atom, ProvenanceSnapshot.RangeKind actual, String expected, List<Issue> out) {
     out.add(
@@ -317,7 +304,7 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
             Map.of("fieldKey", atom.fieldKey(), "expected", expected, "actual", actual)));
   }
 
-  /** 验证 EXISTS 操作符是否被支持。 */
+  /// 验证 EXISTS 操作符是否被支持。
   private void validateExists(
       ProvenanceSnapshot.Capability capability, String fieldKey, List<Issue> out) {
     if (!capability.existsSupported()) {
@@ -325,7 +312,7 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
     }
   }
 
-  /** 验证 TOKEN 操作符的值约束。 */
+  /// 验证 TOKEN 操作符的值约束。
   private void validateToken(
       Atom atom, ProvenanceSnapshot.Capability capability, boolean strictMode, List<Issue> out) {
     Atom.TokenValue token = (Atom.TokenValue) atom.value();

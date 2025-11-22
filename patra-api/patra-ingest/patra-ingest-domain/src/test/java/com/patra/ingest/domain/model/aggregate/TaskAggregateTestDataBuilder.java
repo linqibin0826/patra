@@ -7,36 +7,34 @@ import com.patra.ingest.domain.model.vo.plan.TaskSchedulerContext;
 import com.patra.ingest.domain.model.vo.shared.LeaseInfo;
 import java.time.Instant;
 
-/**
- * TaskAggregate 测试数据构建器。
- *
- * <p>使用 Builder 模式简化测试用例中的聚合根构建。
- *
- * <h3>使用示例</h3>
- *
- * <pre>{@code
- * // 创建队列中的任务
- * TaskAggregate task = TaskAggregateTestDataBuilder.aQueuedTask().build();
- *
- * // 创建运行中的任务，自定义租约信息
- * TaskAggregate task = TaskAggregateTestDataBuilder.aRunningTask()
- *     .leaseOwner("worker-1")
- *     .leasedUntil(Instant.now().plusSeconds(300))
- *     .build();
- *
- * // 创建完全自定义的任务
- * TaskAggregate task = TaskAggregateTestDataBuilder.aQueuedTask()
- *     .id(1001L)
- *     .provenanceCode("pubmed")
- *     .operationCode("harvest")
- *     .priority(10)
- *     .retryCount(2)
- *     .build();
- * }</pre>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// TaskAggregate 测试数据构建器。
+///
+/// 使用 Builder 模式简化测试用例中的聚合根构建。
+///
+/// ### 使用示例
+///
+/// ```java
+/// // 创建队列中的任务
+/// TaskAggregate task = TaskAggregateTestDataBuilder.aQueuedTask().build();
+///
+/// // 创建运行中的任务，自定义租约信息
+/// TaskAggregate task = TaskAggregateTestDataBuilder.aRunningTask()
+///     .leaseOwner("worker-1")
+///     .leasedUntil(Instant.now().plusSeconds(300))
+///     .build();
+///
+/// // 创建完全自定义的任务
+/// TaskAggregate task = TaskAggregateTestDataBuilder.aQueuedTask()
+///     .id(1001L)
+///     .provenanceCode("pubmed")
+///     .operationCode("harvest")
+///     .priority(10)
+///     .retryCount(2)
+///     .build();
+/// ```
+///
+/// @author linqibin
+/// @since 0.1.0
 public class TaskAggregateTestDataBuilder {
 
   // ========== 基础字段 ==========
@@ -78,30 +76,24 @@ public class TaskAggregateTestDataBuilder {
 
   // ========== 静态工厂方法 ==========
 
-  /**
-   * 创建默认的队列中任务构建器。
-   *
-   * @return 任务构建器
-   */
+  /// 创建默认的队列中任务构建器。
+  ///
+  /// @return 任务构建器
   public static TaskAggregateTestDataBuilder aQueuedTask() {
     return new TaskAggregateTestDataBuilder().status(TaskStatus.QUEUED);
   }
 
-  /**
-   * 创建默认的运行中任务构建器。
-   *
-   * <p>包含以下默认配置：
-   *
-   * <ul>
-   *   <li>状态: RUNNING
-   *   <li>租约持有者: worker-1
-   *   <li>租约过期时间: 当前时间 + 5 分钟
-   *   <li>租约计数: 1
-   *   <li>开始时间: 2025-01-01T10:00:00Z
-   * </ul>
-   *
-   * @return 任务构建器
-   */
+  /// 创建默认的运行中任务构建器。
+  ///
+  /// 包含以下默认配置：
+  ///
+  /// - 状态: RUNNING
+  ///   - 租约持有者: worker-1
+  ///   - 租约过期时间: 当前时间 + 5 分钟
+  ///   - 租约计数: 1
+  ///   - 开始时间: 2025-01-01T10:00:00Z
+  ///
+  /// @return 任务构建器
   public static TaskAggregateTestDataBuilder aRunningTask() {
     return new TaskAggregateTestDataBuilder()
         .status(TaskStatus.RUNNING)
@@ -111,19 +103,15 @@ public class TaskAggregateTestDataBuilder {
         .startedAt(Instant.parse("2025-01-01T10:00:00Z"));
   }
 
-  /**
-   * 创建默认的成功任务构建器。
-   *
-   * <p>包含以下默认配置：
-   *
-   * <ul>
-   *   <li>状态: SUCCEEDED
-   *   <li>开始时间: 2025-01-01T10:00:00Z
-   *   <li>完成时间: 2025-01-01T10:05:00Z
-   * </ul>
-   *
-   * @return 任务构建器
-   */
+  /// 创建默认的成功任务构建器。
+  ///
+  /// 包含以下默认配置：
+  ///
+  /// - 状态: SUCCEEDED
+  ///   - 开始时间: 2025-01-01T10:00:00Z
+  ///   - 完成时间: 2025-01-01T10:05:00Z
+  ///
+  /// @return 任务构建器
   public static TaskAggregateTestDataBuilder aSucceededTask() {
     return new TaskAggregateTestDataBuilder()
         .status(TaskStatus.SUCCEEDED)
@@ -131,21 +119,17 @@ public class TaskAggregateTestDataBuilder {
         .finishedAt(Instant.parse("2025-01-01T10:05:00Z"));
   }
 
-  /**
-   * 创建默认的失败任务构建器。
-   *
-   * <p>包含以下默认配置：
-   *
-   * <ul>
-   *   <li>状态: FAILED
-   *   <li>开始时间: 2025-01-01T10:00:00Z
-   *   <li>完成时间: 2025-01-01T10:03:00Z
-   *   <li>错误代码: ERR_GENERIC
-   *   <li>错误消息: Test error
-   * </ul>
-   *
-   * @return 任务构建器
-   */
+  /// 创建默认的失败任务构建器。
+  ///
+  /// 包含以下默认配置：
+  ///
+  /// - 状态: FAILED
+  ///   - 开始时间: 2025-01-01T10:00:00Z
+  ///   - 完成时间: 2025-01-01T10:03:00Z
+  ///   - 错误代码: ERR_GENERIC
+  ///   - 错误消息: Test error
+  ///
+  /// @return 任务构建器
   public static TaskAggregateTestDataBuilder aFailedTask() {
     return new TaskAggregateTestDataBuilder()
         .status(TaskStatus.FAILED)
@@ -279,13 +263,11 @@ public class TaskAggregateTestDataBuilder {
 
   // ========== Build 方法 ==========
 
-  /**
-   * 构建 TaskAggregate 实例。
-   *
-   * <p>总是使用 {@code restore} 方法构建，以便能够完全控制所有字段的状态。
-   *
-   * @return TaskAggregate 实例
-   */
+  /// 构建 TaskAggregate 实例。
+  ///
+  /// 总是使用 `restore` 方法构建，以便能够完全控制所有字段的状态。
+  ///
+  /// @return TaskAggregate 实例
   public TaskAggregate build() {
     // 构建值对象
     LeaseInfo leaseInfo = LeaseInfo.snapshotOf(leaseOwner, leasedUntil, leaseCount);

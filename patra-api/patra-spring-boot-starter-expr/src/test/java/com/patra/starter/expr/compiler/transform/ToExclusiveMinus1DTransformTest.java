@@ -12,13 +12,11 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/**
- * {@link ToExclusiveMinus1DTransform} 单元测试。
- *
- * <p>测试策略：纯单元测试，Mock ProvenanceSnapshot 依赖，重点测试日期转换逻辑和边界条件。
- *
- * @since 1.0.0
- */
+/// {@link ToExclusiveMinus1DTransform} 单元测试。
+///
+/// 测试策略：纯单元测试，Mock ProvenanceSnapshot 依赖，重点测试日期转换逻辑和边界条件。
+///
+/// @since 0.1.0
 @DisplayName("ToExclusiveMinus1DTransform 单元测试")
 class ToExclusiveMinus1DTransformTest {
 

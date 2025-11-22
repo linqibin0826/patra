@@ -8,7 +8,7 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/** 测试 {@link PageResult} 的分页元数据计算和边界条件 */
+/// 测试 {@link PageResult} 的分页元数据计算和边界条件
 @DisplayName("PageResult 单元测试")
 class PageResultTest {
 

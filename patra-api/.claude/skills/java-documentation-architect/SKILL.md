@@ -133,38 +133,34 @@ app:
 ## package-info.java 模板
 
 ```java
-/**
- * 订单管理领域模型包。
- *
- * <p>本包包含订单管理的核心领域模型，遵循 DDD 原则设计。</p>
- *
- * <h2>主要组件：</h2>
- * <ul>
- *   <li>{@link com.patra.order.domain.Order} - 订单聚合根</li>
- *   <li>{@link com.patra.order.domain.OrderItem} - 订单项实体</li>
- *   <li>{@link com.patra.order.domain.OrderStatus} - 订单状态枚举</li>
- * </ul>
- *
- * <h2>设计原则：</h2>
- * <ul>
- *   <li>聚合根负责维护业务不变量</li>
- *   <li>实体包含业务逻辑，避免贫血模型</li>
- *   <li>值对象不可变，通过构造函数创建</li>
- * </ul>
- *
- * <h2>使用示例：</h2>
- * <pre>{@code
- * // 创建订单
- * Order order = Order.create(customerId);
- * order.addItem(product, quantity);
- * order.confirm();
- * }</pre>
- *
- * @since 1.0.0
- * @author 团队名称
- * @see com.patra.order.app 应用层服务
- * @see com.patra.order.infra 基础设施层实现
- */
+/// 订单管理领域模型包。
+/// 
+/// 本包包含订单管理的核心领域模型，遵循 DDD 原则设计。
+/// 
+/// ## 主要组件：
+/// 
+/// - {@link com.patra.order.domain.Order} - 订单聚合根
+///   - {@link com.patra.order.domain.OrderItem} - 订单项实体
+///   - {@link com.patra.order.domain.OrderStatus} - 订单状态枚举
+/// 
+/// ## 设计原则：
+/// 
+/// - 聚合根负责维护业务不变量
+///   - 实体包含业务逻辑，避免贫血模型
+///   - 值对象不可变，通过构造函数创建
+/// 
+/// ## 使用示例：
+/// ```java
+/// // 创建订单
+/// Order order = Order.create(customerId);
+/// order.addItem(product, quantity);
+/// order.confirm();
+/// ```
+/// 
+/// @since 0.1.0
+/// @author linqibin
+/// @see com.patra.order.app 应用层服务
+/// @see com.patra.order.infra 基础设施层实现
 package com.patra.order.domain;
 ```
 
@@ -288,22 +284,23 @@ Authorization: Bearer {token}
 
 ### 类文档
 ```java
-/**
- * 订单聚合根，负责管理订单的生命周期。
- *
- * <p>订单包含以下状态转换：</p>
- * <pre>
- * PENDING -> CONFIRMED -> SHIPPED -> COMPLETED
- *         \-> CANCELLED
- * </pre>
- *
- * <p>线程安全性：此类不是线程安全的，需要外部同步。</p>
- *
- * @author 作者名
- * @since 1.0.0
- * @see OrderItem
- * @see OrderStatus
- */
+/// 订单聚合根，负责管理订单的生命周期。
+/// 
+/// 订单包含以下状态转换：
+/// 
+/// ```
+/// 
+/// PENDING -> CONFIRMED -> SHIPPED -> COMPLETED
+///         \-> CANCELLED
+/// 
+/// ```
+/// 
+/// 线程安全性：此类不是线程安全的，需要外部同步。
+/// 
+/// @author 作者名
+/// @since 0.1.0
+/// @see OrderItem
+/// @see OrderStatus
 public class Order {
     // ...
 }
@@ -311,30 +308,27 @@ public class Order {
 
 ### 方法文档
 ```java
-/**
- * 添加商品到订单。
- *
- * <p>此方法会：</p>
- * <ul>
- *   <li>验证商品是否有效</li>
- *   <li>检查库存是否充足</li>
- *   <li>重新计算订单总额</li>
- *   <li>发布商品添加事件</li>
- * </ul>
- *
- * @param product 要添加的商品，不能为 null
- * @param quantity 商品数量，必须大于 0
- * @throws IllegalArgumentException 如果商品为 null 或数量无效
- * @throws InsufficientInventoryException 如果库存不足
- * @throws OrderException 如果订单状态不允许添加商品
- * @return 添加后的订单项
- *
- * @example
- * <pre>{@code
- * Order order = Order.create(customerId);
- * OrderItem item = order.addItem(product, 2);
- * }</pre>
- */
+/// 添加商品到订单。
+/// 
+/// 此方法会：
+/// 
+/// - 验证商品是否有效
+///   - 检查库存是否充足
+///   - 重新计算订单总额
+///   - 发布商品添加事件
+/// 
+/// @param product 要添加的商品，不能为 null
+/// @param quantity 商品数量，必须大于 0
+/// @throws IllegalArgumentException 如果商品为 null 或数量无效
+/// @throws InsufficientInventoryException 如果库存不足
+/// @throws OrderException 如果订单状态不允许添加商品
+/// @return 添加后的订单项
+/// 
+/// @example
+/// ```java
+/// Order order = Order.create(customerId);
+/// OrderItem item = order.addItem(product, 2);
+/// ```
 public OrderItem addItem(Product product, int quantity) {
     // ...
 }

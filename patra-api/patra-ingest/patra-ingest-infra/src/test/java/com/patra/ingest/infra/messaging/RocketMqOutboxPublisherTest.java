@@ -39,25 +39,21 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.messaging.Message;
 
-/**
- * RocketMqOutboxPublisher 单元测试。
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>✅ 正常消息发送 (无 partitionKey)
- *   <li>✅ 顺序消息发送 (有 partitionKey)
- *   <li>✅ 通道白名单验证
- *   <li>✅ 发送失败处理 (SendStatus 不是 SEND_OK)
- *   <li>✅ 异常处理 (RocketMQ 抛出异常)
- *   <li>✅ Headers 解析正常
- *   <li>✅ Headers 解析失败 (无效 JSON)
- *   <li>✅ 消息元数据映射 (dedupKey → KEYS, opType → TAGS, partitionKey → UserProperty)
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- */
+/// RocketMqOutboxPublisher 单元测试。
+///
+/// 测试覆盖:
+///
+/// - ✅ 正常消息发送 (无 partitionKey)
+///   - ✅ 顺序消息发送 (有 partitionKey)
+///   - ✅ 通道白名单验证
+///   - ✅ 发送失败处理 (SendStatus 不是 SEND_OK)
+///   - ✅ 异常处理 (RocketMQ 抛出异常)
+///   - ✅ Headers 解析正常
+///   - ✅ Headers 解析失败 (无效 JSON)
+///   - ✅ 消息元数据映射 (dedupKey → KEYS, opType → TAGS, partitionKey → UserProperty)
+///
+/// @author linqibin
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("RocketMqOutboxPublisher 单元测试")
@@ -563,11 +559,9 @@ class RocketMqOutboxPublisherTest {
 
   // ==================== 辅助方法 ====================
 
-  /**
-   * 创建测试用的 OutboxMessage Builder,预填充必填字段。
-   *
-   * @return OutboxMessage.Builder
-   */
+  /// 创建测试用的 OutboxMessage Builder,预填充必填字段。
+  ///
+  /// @return OutboxMessage.Builder
   private OutboxMessage.Builder createBaseOutboxMessageBuilder() {
     return OutboxMessage.builder()
         .aggregateType("Task") // 必填字段
@@ -575,11 +569,9 @@ class RocketMqOutboxPublisherTest {
         .partitionKey(""); // 默认空字符串,避免 null 异常
   }
 
-  /**
-   * 创建测试用的 RelayPlan。
-   *
-   * @return RelayPlan 实例
-   */
+  /// 创建测试用的 RelayPlan。
+  ///
+  /// @return RelayPlan 实例
   private RelayPlan createTestRelayPlan() {
     return new RelayPlan(
         null, // channel (null 表示所有通道)
@@ -594,14 +586,12 @@ class RocketMqOutboxPublisherTest {
         );
   }
 
-  /**
-   * 创建成功的 SendResult。
-   *
-   * @param topic Topic 名称
-   * @param msgId 消息 ID
-   * @param queueId 队列 ID
-   * @return SendResult
-   */
+  /// 创建成功的 SendResult。
+  ///
+  /// @param topic Topic 名称
+  /// @param msgId 消息 ID
+  /// @param queueId 队列 ID
+  /// @return SendResult
   private SendResult createSuccessSendResult(String topic, String msgId, int queueId) {
     SendResult result = new SendResult();
     result.setSendStatus(SendStatus.SEND_OK);

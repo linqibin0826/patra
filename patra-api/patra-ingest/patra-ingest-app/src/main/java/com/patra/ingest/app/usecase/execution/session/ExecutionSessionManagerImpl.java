@@ -11,34 +11,28 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-/**
- * 执行会话管理器实现
- *
- * <p>职责: 创建 TaskRun、启动心跳续期、封装会话清理逻辑。
- *
- * <h3>设计要点</h3>
- *
- * <ul>
- *   <li>获取最新 attemptNo,然后创建新的 TaskRun (attemptNo + 1)
- *   <li>持久化 TaskRun 以获取 runId
- *   <li>通过 {@link HeartbeatRenewalService} 启动心跳续期
- *   <li>返回包含 taskId/runId/leaseOwner/heartbeatHandle 的 {@link ExecutionSession}
- * </ul>
- *
- * <h3>配置项</h3>
- *
- * <ul>
- *   <li><b>task.execution.lease.duration</b>: 租约持续时间(秒,默认 60)
- *   <li><b>task.execution.lease.renewal-interval</b>: 续期间隔(秒,默认 20)
- * </ul>
- *
- * <h3>日志</h3>
- *
- * <p>会话创建时记录 INFO 级别日志(taskId/runId/attemptNo)。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 执行会话管理器实现
+///
+/// 职责: 创建 TaskRun、启动心跳续期、封装会话清理逻辑。
+///
+/// ### 设计要点
+///
+/// - 获取最新 attemptNo,然后创建新的 TaskRun (attemptNo + 1)
+///   - 持久化 TaskRun 以获取 runId
+///   - 通过 {@link HeartbeatRenewalService} 启动心跳续期
+///   - 返回包含 taskId/runId/leaseOwner/heartbeatHandle 的 {@link ExecutionSession}
+///
+/// ### 配置项
+///
+/// - **task.execution.lease.duration**: 租约持续时间(秒,默认 60)
+///   - **task.execution.lease.renewal-interval**: 续期间隔(秒,默认 20)
+///
+/// ### 日志
+///
+/// 会话创建时记录 INFO 级别日志(taskId/runId/attemptNo)。
+///
+/// @author linqibin
+/// @since 0.1.0
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -54,7 +48,7 @@ public class ExecutionSessionManagerImpl implements ExecutionSessionManager {
   @Value("${task.execution.lease.renewal-interval:20}")
   private int renewalIntervalSeconds;
 
-  /** 创建执行会话(TaskRun + 心跳) */
+  /// 创建执行会话(TaskRun + 心跳)
   @Override
   public ExecutionSession createSession(Long taskId, String leaseOwner, String correlationId) {
     // 查询任务并委托给重载方法
@@ -66,7 +60,7 @@ public class ExecutionSessionManagerImpl implements ExecutionSessionManager {
     return createSession(task, leaseOwner, correlationId);
   }
 
-  /** 创建执行会话(TaskRun + 心跳) - 优化版,避免重复加载 Task */
+  /// 创建执行会话(TaskRun + 心跳) - 优化版,避免重复加载 Task
   @Override
   public ExecutionSession createSession(
       TaskAggregate task, String leaseOwner, String correlationId) {

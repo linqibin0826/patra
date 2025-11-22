@@ -19,23 +19,19 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
-/**
- * TaskRunConverter 单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>测试 TaskRun → TaskRunDO 的转换
- *   <li>测试 TaskRunDO → TaskRun 的转换
- *   <li>测试双向转换的一致性
- *   <li>测试 RunStats 与 JSON 的双向转换
- *   <li>测试 TaskRunCheckpoint 与 JSON 的双向转换
- *   <li>测试状态枚举转换
- *   <li>测试空值和边界情况
- * </ul>
- *
- * <p>注意：MapStruct 转换器通过 Mappers.getMapper() 直接实例化，无需 Spring 容器。
- */
+/// TaskRunConverter 单元测试。
+///
+/// 测试策略：
+///
+/// - 测试 TaskRun → TaskRunDO 的转换
+///   - 测试 TaskRunDO → TaskRun 的转换
+///   - 测试双向转换的一致性
+///   - 测试 RunStats 与 JSON 的双向转换
+///   - 测试 TaskRunCheckpoint 与 JSON 的双向转换
+///   - 测试状态枚举转换
+///   - 测试空值和边界情况
+///
+/// 注意：MapStruct 转换器通过 Mappers.getMapper() 直接实例化，无需 Spring 容器。
 class TaskRunConverterTest {
 
   private final TaskRunConverter converter = Mappers.getMapper(TaskRunConverter.class);

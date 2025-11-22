@@ -464,7 +464,8 @@ class PublicationReadyMessageTest {
             new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
         PublicationReadyMessage.Header header =
-            new PublicationReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
+            new PublicationReadyMessage.Header(
+                ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
 
         // When
         PublicationReadyMessage message = new PublicationReadyMessage(payload, header);
@@ -498,7 +499,8 @@ class PublicationReadyMessageTest {
             new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
         PublicationReadyMessage.Header header =
-            new PublicationReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
+            new PublicationReadyMessage.Header(
+                ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
 
         PublicationReadyMessage message1 = new PublicationReadyMessage(payload, header);
         PublicationReadyMessage message2 = new PublicationReadyMessage(payload, header);
@@ -519,7 +521,8 @@ class PublicationReadyMessageTest {
             new PublicationReadyMessage.Payload(
                 999L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
         PublicationReadyMessage.Header header =
-            new PublicationReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
+            new PublicationReadyMessage.Header(
+                ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
 
         PublicationReadyMessage message1 = new PublicationReadyMessage(payload1, header);
         PublicationReadyMessage message2 = new PublicationReadyMessage(payload2, header);
@@ -536,7 +539,8 @@ class PublicationReadyMessageTest {
             new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
         PublicationReadyMessage.Header header1 =
-            new PublicationReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
+            new PublicationReadyMessage.Header(
+                ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
         PublicationReadyMessage.Header header2 =
             new PublicationReadyMessage.Header(ProvenanceCode.EPMC, 123L, 456L, 1, 1699999999999L);
 
@@ -555,7 +559,8 @@ class PublicationReadyMessageTest {
             new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
         PublicationReadyMessage.Header header =
-            new PublicationReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
+            new PublicationReadyMessage.Header(
+                ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
         PublicationReadyMessage message = new PublicationReadyMessage(payload, header);
 
         // When & Then
@@ -570,7 +575,8 @@ class PublicationReadyMessageTest {
             new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
         PublicationReadyMessage.Header header =
-            new PublicationReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
+            new PublicationReadyMessage.Header(
+                ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
         PublicationReadyMessage message = new PublicationReadyMessage(payload, header);
 
         // When & Then
@@ -590,7 +596,8 @@ class PublicationReadyMessageTest {
             new PublicationReadyMessage.Payload(
                 123L, 456L, ProvenanceCode.PUBMED, List.of("key1"), 100, 8, 2, 1699999999999L);
         PublicationReadyMessage.Header header =
-            new PublicationReadyMessage.Header(ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
+            new PublicationReadyMessage.Header(
+                ProvenanceCode.PUBMED, 123L, 456L, 1, 1699999999999L);
         PublicationReadyMessage message = new PublicationReadyMessage(payload, header);
 
         // When
@@ -628,7 +635,8 @@ class PublicationReadyMessageTest {
             new PublicationReadyMessage.Payload(
                 100L, 123L, ProvenanceCode.PUBMED, storageKeys, 200, 10, 0, 1699999999999L);
         PublicationReadyMessage.Header header =
-            new PublicationReadyMessage.Header(ProvenanceCode.PUBMED, 100L, 123L, 2, 1699999999999L);
+            new PublicationReadyMessage.Header(
+                ProvenanceCode.PUBMED, 100L, 123L, 2, 1699999999999L);
 
         // When
         PublicationReadyMessage message = new PublicationReadyMessage(payload, header);

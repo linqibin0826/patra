@@ -7,24 +7,20 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link LeaseInfo} 单元测试。
- *
- * <p>测试策略: Record 值对象 - 纯单元测试,无 Mock。
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>✅ Record 语义 (equals, hashCode, toString)
- *   <li>✅ 不变性约束 (leaseCount >= 0)
- *   <li>✅ 工厂方法 (none, snapshotOf)
- *   <li>✅ 业务方法 (isHeld, acquire, renew, release)
- *   <li>✅ 边界条件和异常场景
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// {@link LeaseInfo} 单元测试。
+///
+/// 测试策略: Record 值对象 - 纯单元测试,无 Mock。
+///
+/// 测试覆盖:
+///
+/// - ✅ Record 语义 (equals, hashCode, toString)
+///   - ✅ 不变性约束 (leaseCount >= 0)
+///   - ✅ 工厂方法 (none, snapshotOf)
+///   - ✅ 业务方法 (isHeld, acquire, renew, release)
+///   - ✅ 边界条件和异常场景
+///
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("LeaseInfo 值对象单元测试")
 class LeaseInfoTest {
 

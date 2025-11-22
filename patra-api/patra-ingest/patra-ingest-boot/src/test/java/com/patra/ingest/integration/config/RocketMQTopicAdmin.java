@@ -7,53 +7,43 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.ComposeContainer;
 import org.testcontainers.containers.ContainerState;
 
-/**
- * RocketMQ Topic 管理工具类。
- *
- * <p>负责 RocketMQ Topic 的创建、删除和路由验证，与容器管理职责分离。
- *
- * <h3>职责范围</h3>
- *
- * <ul>
- *   <li><strong>Topic 创建</strong>: 使用 mqadmin 命令创建 Topic
- *   <li><strong>路由验证</strong>: 等待 Topic 路由信息同步完成
- *   <li><strong>Topic 删除</strong>: 测试清理时删除 Topic（可选）
- * </ul>
- *
- * <h3>设计原则</h3>
- *
- * <ul>
- *   <li><strong>单一职责</strong>: 只管理 Topic，不管理容器生命周期
- *   <li><strong>幂等性</strong>: 重复创建同一 Topic 不会报错
- *   <li><strong>健壮性</strong>: 使用 Awaitility 等待操作成功，自动重试
- * </ul>
- *
- * @author linqibin
- * @since 0.2.0
- * @see com.patra.ingest.integration.RocketMQContainerSupport
- */
+/// RocketMQ Topic 管理工具类。
+///
+/// 负责 RocketMQ Topic 的创建、删除和路由验证，与容器管理职责分离。
+///
+/// ### 职责范围
+///
+/// - **Topic 创建**: 使用 mqadmin 命令创建 Topic
+///   - **路由验证**: 等待 Topic 路由信息同步完成
+///   - **Topic 删除**: 测试清理时删除 Topic（可选）
+///
+/// ### 设计原则
+///
+/// - **单一职责**: 只管理 Topic，不管理容器生命周期
+///   - **幂等性**: 重复创建同一 Topic 不会报错
+///   - **健壮性**: 使用 Awaitility 等待操作成功，自动重试
+///
+/// @author linqibin
+/// @since 0.1.0
+/// @see com.patra.ingest.integration.RocketMQContainerSupport
 public class RocketMQTopicAdmin {
 
   private static final Logger log = LoggerFactory.getLogger(RocketMQTopicAdmin.class);
 
   private final ComposeContainer composeContainer;
 
-  /**
-   * 构造函数。
-   *
-   * @param composeContainer RocketMQ Compose 容器实例
-   */
+  /// 构造函数。
+  ///
+  /// @param composeContainer RocketMQ Compose 容器实例
   public RocketMQTopicAdmin(ComposeContainer composeContainer) {
     this.composeContainer = composeContainer;
   }
 
-  /**
-   * 创建 Topic（使用 Awaitility 等待成功）。
-   *
-   * <p>基于 Apache Camel 的方案，确保 Topic 创建成功并等待路由信息同步。
-   *
-   * @param topic Topic 名称
-   */
+  /// 创建 Topic（使用 Awaitility 等待成功）。
+  ///
+  /// 基于 Apache Camel 的方案，确保 Topic 创建成功并等待路由信息同步。
+  ///
+  /// @param topic Topic 名称
   public void createTopic(String topic) {
     log.info("创建 Topic: {}", topic);
 
@@ -108,13 +98,11 @@ public class RocketMQTopicAdmin {
     log.info("Topic {} 已创建并且路由信息已同步", topic);
   }
 
-  /**
-   * 验证 Topic 路由信息。
-   *
-   * @param topic Topic 名称
-   * @param brokerContainer Broker 容器
-   * @return 路由信息是否可用
-   */
+  /// 验证 Topic 路由信息。
+  ///
+  /// @param topic Topic 名称
+  /// @param brokerContainer Broker 容器
+  /// @return 路由信息是否可用
   private boolean verifyTopicRoute(String topic, ContainerState brokerContainer) {
     try {
       var result =
@@ -137,11 +125,9 @@ public class RocketMQTopicAdmin {
     }
   }
 
-  /**
-   * 删除 Topic。
-   *
-   * @param topic Topic 名称
-   */
+  /// 删除 Topic。
+  ///
+  /// @param topic Topic 名称
   public void deleteTopic(String topic) {
     log.info("删除 Topic: {}", topic);
 

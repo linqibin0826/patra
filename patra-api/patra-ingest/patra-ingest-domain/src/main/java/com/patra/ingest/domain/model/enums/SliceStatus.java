@@ -2,28 +2,24 @@ package com.patra.ingest.domain.model.enums;
 
 import lombok.Getter;
 
-/**
- * 计划切片状态 (字典: ing_slice_status)。
- *
- * <p>字段映射: {@code ing_plan_slice.status_code → PENDING/ASSIGNED/FINISHED}
- *
- * <p>状态机语义(强制 1:1 Slice-Task 关系):
- *
- * <ul>
- *   <li>PENDING → 等待 Task 生成
- *   <li>ASSIGNED → 对应的 Task 已创建(1:1 映射)
- *   <li>FINISHED → 关联的 Task 达到终态(SUCCEEDED 或 FAILED)
- * </ul>
- *
- * <p><b>注意:</b> Slice 不区分成功/失败。查询关联的 Task 以获取执行结果。
- */
+/// 计划切片状态 (字典: ing_slice_status)。
+///
+/// 字段映射: `ing_plan_slice.status_code → PENDING/ASSIGNED/FINISHED`
+///
+/// 状态机语义(强制 1:1 Slice-Task 关系):
+///
+/// - PENDING → 等待 Task 生成
+///   - ASSIGNED → 对应的 Task 已创建(1:1 映射)
+///   - FINISHED → 关联的 Task 达到终态(SUCCEEDED 或 FAILED)
+///
+/// **注意:** Slice 不区分成功/失败。查询关联的 Task 以获取执行结果。
 @Getter
 public enum SliceStatus {
-  /** 待处理;等待 Task 生成。 */
+  /// 待处理;等待 Task 生成。
   PENDING("PENDING", "Pending"),
-  /** 已分配;对应的 Task 已创建。 */
+  /// 已分配;对应的 Task 已创建。
   ASSIGNED("ASSIGNED", "Assigned"),
-  /** 已完成;关联的 Task 达到终态。 */
+  /// 已完成;关联的 Task 达到终态。
   FINISHED("FINISHED", "Finished");
 
   private final String code;

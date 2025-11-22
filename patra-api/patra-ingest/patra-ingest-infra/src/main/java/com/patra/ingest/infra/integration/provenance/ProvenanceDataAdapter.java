@@ -38,37 +38,35 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * 数据源适配器
- *
- * <p>ProvenanceDataAdapter是Infrastructure层的核心组件，实现Domain层的ProvenanceDataPort接口，
- * 桥接Domain层和Framework层。
- *
- * <p><strong>主要职责</strong>：
- *
- * <ul>
- *   <li>实现ProvenanceDataPort接口（Domain层契约）
- *   <li>使用ProviderRegistry查找Provider（二维索引）
- *   <li>验证类型一致性（DataType vs TypeReference）
- *   <li>转换参数（ExecutionContext + Batch → ProviderRequest）
- *   <li>转换结果（ProviderResult → DataFetchResult）
- * </ul>
- *
- * <p><strong>架构位置</strong>：
- *
- * <pre>
- * Application Layer (GenericBatchExecutor)
- *     ↓ 调用
- * Domain Layer (ProvenanceDataPort接口)
- *     ↑ 实现
- * Infrastructure Layer (ProvenanceDataAdapter) ← [本类]
- *     ↓ 使用
- * ProviderRegistry → ProvenanceDataProvider → DataProcessor
- * </pre>
- *
- * @author Patra Architecture Team
- * @since 0.1.0
- */
+/// 数据源适配器
+///
+/// ProvenanceDataAdapter是Infrastructure层的核心组件，实现Domain层的ProvenanceDataPort接口，
+/// 桥接Domain层和Framework层。
+///
+/// **主要职责**：
+///
+/// - 实现ProvenanceDataPort接口（Domain层契约）
+///   - 使用ProviderRegistry查找Provider（二维索引）
+///   - 验证类型一致性（DataType vs TypeReference）
+///   - 转换参数（ExecutionContext + Batch → ProviderRequest）
+///   - 转换结果（ProviderResult → DataFetchResult）
+///
+/// **架构位置**：
+///
+/// ```
+///
+/// Application Layer (GenericBatchExecutor)
+///     ↓ 调用
+/// Domain Layer (ProvenanceDataPort接口)
+///     ↑ 实现
+/// Infrastructure Layer (ProvenanceDataAdapter) ← [本类]
+///     ↓ 使用
+/// ProviderRegistry → ProvenanceDataProvider → DataProcessor
+///
+/// ```
+///
+/// @author Patra Architecture Team
+/// @since 0.1.0
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -78,25 +76,15 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
   private final QuerySessionTranslator querySessionTranslator;
   private final ProviderParameterMapperRegistry parameterMapperRegistry;
 
-  /**
-   * 准备查询会话
-   *
-   * <p><strong>实现流程</strong>:
-   *
-   * <ol>
-   *   <li>从ExecutionContext提取通用参数(query, params, config)
-   *   <li>使用ProviderRegistry查找Provider
-   *   <li>调用Provider.preparePlan()获取计划元数据
-   *   <li>使用QuerySessionTranslator翻译为领域模型
-   *   <li>处理异常转换
-   * </ol>
-   *
-   * @param context 执行上下文
-   * @param dataType 数据类型标识
-   * @return 查询会话（领域模型）
-   * @throws ProviderNotFoundException 如果Provider不存在
-   * @throws ProvenanceDataException 如果调用数据源失败
-   */
+  /// 准备查询会话
+  ///
+  /// **实现流程**:
+  ///
+  /// @param context 执行上下文
+  /// @param dataType 数据类型标识
+  /// @return 查询会话（领域模型）
+  /// @throws ProviderNotFoundException 如果Provider不存在
+  /// @throws ProvenanceDataException 如果调用数据源失败
   @Override
   public QuerySession prepareQuerySession(ExecutionContext context, DataType dataType) {
     ProvenanceCode provenanceCode = context.provenanceCode();
@@ -148,15 +136,13 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
     }
   }
 
-  /**
-   * 转换ExecutionContext为ProvenanceConfig
-   *
-   * <p>将Domain层的ProvenanceConfigSnapshot转换为Starter层的ProvenanceConfig。
-   * 如果没有配置快照,返回null(Provider将使用默认配置)。
-   *
-   * @param context 执行上下文
-   * @return ProvenanceConfig,如果快照为空则返回null
-   */
+  /// 转换ExecutionContext为ProvenanceConfig
+  ///
+  /// 将Domain层的ProvenanceConfigSnapshot转换为Starter层的ProvenanceConfig。
+  /// 如果没有配置快照,返回null(Provider将使用默认配置)。
+  ///
+  /// @param context 执行上下文
+  /// @return ProvenanceConfig,如果快照为空则返回null
   private ProvenanceConfig convertToProvenanceConfig(ExecutionContext context) {
     var snapshot = context.configSnapshot();
 
@@ -188,7 +174,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
         rateLimitConfig);
   }
 
-  /** 转换HTTP配置 */
+  /// 转换HTTP配置
   private HttpConfig toHttpConfig(
       com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.HttpConfig httpInfo) {
     if (httpInfo == null) {
@@ -205,7 +191,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
         httpInfo.timeoutTotalMillis());
   }
 
-  /** 解析Headers JSON字符串为Map */
+  /// 解析Headers JSON字符串为Map
   private Map<String, String> parseHeadersJson(String headersJson) {
     if (headersJson == null || headersJson.isBlank()) {
       return Map.of();
@@ -221,7 +207,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
     }
   }
 
-  /** 转换分页配置 */
+  /// 转换分页配置
   private PaginationConfig toPaginationConfig(
       com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.PaginationConfig
           paginationInfo) {
@@ -233,7 +219,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
         paginationInfo.pageSizeValue(), paginationInfo.maxPagesPerExecution());
   }
 
-  /** 转换窗口偏移配置 */
+  /// 转换窗口偏移配置
   private WindowOffsetConfig toWindowOffsetConfig(
       com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.WindowOffsetConfig
           windowOffsetInfo) {
@@ -253,7 +239,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
         windowOffsetInfo.maxIdsPerWindow());
   }
 
-  /** 转换批处理配置 */
+  /// 转换批处理配置
   private BatchingConfig toBatchingConfig(
       com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.BatchingConfig batchingInfo) {
     if (batchingInfo == null) {
@@ -267,7 +253,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
         );
   }
 
-  /** 转换重试配置 */
+  /// 转换重试配置
   private RetryConfig toRetryConfig(
       com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.RetryConfig retryInfo) {
     if (retryInfo == null) {
@@ -277,7 +263,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
     return new RetryConfig(retryInfo.maxRetryTimes(), retryInfo.initialDelayMillis());
   }
 
-  /** 转换限流配置 */
+  /// 转换限流配置
   private RateLimitConfig toRateLimitConfig(
       com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.RateLimitConfig
           rateLimitInfo) {
@@ -289,29 +275,19 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
         rateLimitInfo.maxConcurrentRequests(), rateLimitInfo.perCredentialQpsLimit());
   }
 
-  /**
-   * 从数据源获取指定类型的数据
-   *
-   * <p><strong>实现流程</strong>：
-   *
-   * <ol>
-   *   <li>验证类型一致性（DataType.getDataClass() vs TypeReference.getRawType()）
-   *   <li>使用ProviderRegistry查找Provider（二维索引：provenanceCode + dataType）
-   *   <li>构建ProviderRequest（合并ExecutionContext和Batch参数）
-   *   <li>调用Provider.fetchData()获取数据
-   *   <li>转换ProviderResult为DataFetchResult
-   * </ol>
-   *
-   * @param <T> 数据类型
-   * @param context 执行上下文
-   * @param dataType 数据类型标识
-   * @param typeRef 类型引用
-   * @param batch 批次定义
-   * @param querySession 查询会话（包含总记录数、会话令牌等）
-   * @return 数据获取结果
-   * @throws TypeMismatchException 如果DataType与TypeReference不一致
-   * @throws ProviderNotFoundException 如果Provider不存在
-   */
+  /// 从数据源获取指定类型的数据
+  ///
+  /// **实现流程**：
+  ///
+  /// @param <T> 数据类型
+  /// @param context 执行上下文
+  /// @param dataType 数据类型标识
+  /// @param typeRef 类型引用
+  /// @param batch 批次定义
+  /// @param querySession 查询会话（包含总记录数、会话令牌等）
+  /// @return 数据获取结果
+  /// @throws TypeMismatchException 如果DataType与TypeReference不一致
+  /// @throws ProviderNotFoundException 如果Provider不存在
   @Override
   public <T> DataFetchResult<T> fetchData(
       ExecutionContext context,
@@ -377,41 +353,35 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
     }
   }
 
-  /**
-   * 判断是否支持指定的数据源和数据类型
-   *
-   * @param provenanceCode 数据源代码
-   * @param dataType 数据类型
-   * @return 如果支持则返回true
-   */
+  /// 判断是否支持指定的数据源和数据类型
+  ///
+  /// @param provenanceCode 数据源代码
+  /// @param dataType 数据类型
+  /// @return 如果支持则返回true
   @Override
   public boolean supports(ProvenanceCode provenanceCode, DataType dataType) {
     return providerRegistry.supports(provenanceCode, dataType);
   }
 
-  /**
-   * 获取指定数据源支持的所有数据类型
-   *
-   * @param provenanceCode 数据源代码
-   * @return 数据类型集合
-   */
+  /// 获取指定数据源支持的所有数据类型
+  ///
+  /// @param provenanceCode 数据源代码
+  /// @return 数据类型集合
   @Override
   public Set<DataType> getSupportedTypes(ProvenanceCode provenanceCode) {
     return providerRegistry.getSupportedTypes(provenanceCode);
   }
 
-  /**
-   * 验证类型一致性
-   *
-   * <p>确保DataType.getDataClass()与TypeReference.getRawType()一致。
-   *
-   * <p><strong>特殊处理</strong>：支持List<T>泛型类型（防御性处理）
-   *
-   * @param <T> 数据类型
-   * @param dataType 数据类型标识
-   * @param typeRef 类型引用
-   * @throws TypeMismatchException 如果类型不一致
-   */
+  /// 验证类型一致性
+  ///
+  /// 确保DataType.getDataClass()与TypeReference.getRawType()一致。
+  ///
+  /// **特殊处理**：支持List<T>泛型类型（防御性处理）
+  ///
+  /// @param <T> 数据类型
+  /// @param dataType 数据类型标识
+  /// @param typeRef 类型引用
+  /// @throws TypeMismatchException 如果类型不一致
   private <T> void validateTypeConsistency(DataType dataType, TypeReference<T> typeRef) {
     Class<?> expectedClass = dataType.getDataClass();
     Class<?> actualClass = typeRef.getRawType();
@@ -443,16 +413,14 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
     log.debug("类型验证通过: dataType={}, typeRef={}", dataType, actualClass.getSimpleName());
   }
 
-  /**
-   * 构建ProviderRequest
-   *
-   * <p>将业务层的查询和分页参数转换为技术层的请求参数。
-   *
-   * @param context 执行上下文
-   * @param batch 批次定义
-   * @param querySession 查询会话
-   * @return Provider请求参数
-   */
+  /// 构建ProviderRequest
+  ///
+  /// 将业务层的查询和分页参数转换为技术层的请求参数。
+  ///
+  /// @param context 执行上下文
+  /// @param batch 批次定义
+  /// @param querySession 查询会话
+  /// @return Provider请求参数
   private ProviderRequest buildProviderRequest(
       ExecutionContext context, Batch batch, QuerySession querySession) {
     // 构建BatchExecutionParams
@@ -471,13 +439,11 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
     return ProviderRequest.builder().config(config).executionParams(executionParams).build();
   }
 
-  /**
-   * 转换ProviderResult为DataFetchResult
-   *
-   * @param <T> 数据类型
-   * @param providerResult Provider结果
-   * @return DataFetchResult
-   */
+  /// 转换ProviderResult为DataFetchResult
+  ///
+  /// @param <T> 数据类型
+  /// @param providerResult Provider结果
+  /// @return DataFetchResult
   private <T> DataFetchResult<T> convertToDataFetchResult(ProviderResult<T> providerResult) {
     if (providerResult.success()) {
       return DataFetchResult.<T>builder()
@@ -501,12 +467,10 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
     }
   }
 
-  /**
-   * 转换错误类型
-   *
-   * @param providerErrorType Provider错误类型
-   * @return ProvenanceDataPort错误类型
-   */
+  /// 转换错误类型
+  ///
+  /// @param providerErrorType Provider错误类型
+  /// @return ProvenanceDataPort错误类型
   private DataFetchResult.ErrorType convertErrorType(ProviderResult.ErrorType providerErrorType) {
     return switch (providerErrorType) {
       case NONE -> DataFetchResult.ErrorType.NONE;

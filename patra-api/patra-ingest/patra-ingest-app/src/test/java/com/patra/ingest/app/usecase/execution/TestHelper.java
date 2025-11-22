@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/** 测试辅助类 */
+/// 测试辅助类
 public class TestHelper {
 
   public static TaskReadyCommand createTestCommand(long taskId, String idempotentKey) {

@@ -20,24 +20,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-/**
- * PubMed文章转换器
- *
- * <p>将 {@link PubmedPublication} 响应映射为 {@link CanonicalPublication} 标准出版物模型。
- * 集中所有字段提取逻辑，使下游组件能够操作稳定的共享内核模型。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// PubMed文章转换器
+///
+/// 将 {@link PubmedPublication} 响应映射为 {@link CanonicalPublication} 标准出版物模型。
+/// 集中所有字段提取逻辑，使下游组件能够操作稳定的共享内核模型。
+///
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 public class PubmedPublicationConverter {
 
-  /**
-   * 将PubMed文章转换为标准化出版物模型
-   *
-   * @param article PubMed文章响应
-   * @return 标准化的文献表示
-   */
+  /// 将PubMed文章转换为标准化出版物模型
+  ///
+  /// @param article PubMed文章响应
+  /// @return 标准化的文献表示
   public CanonicalPublication toCanonicalPublication(PubmedPublication article) {
     if (article == null) {
       return null;
@@ -126,12 +122,10 @@ public class PubmedPublicationConverter {
         .build();
   }
 
-  /**
-   * 转换作者列表
-   *
-   * @param article PubMed文章
-   * @return 标准化的作者列表，如果没有作者则返回空列表
-   */
+  /// 转换作者列表
+  ///
+  /// @param article PubMed文章
+  /// @return 标准化的作者列表，如果没有作者则返回空列表
   private List<CanonicalPublication.Author> convertAuthors(PubmedPublication article) {
     Article citationArticle = article.article();
     if (citationArticle == null || CollectionUtils.isEmpty(citationArticle.authors())) {
@@ -202,12 +196,10 @@ public class PubmedPublicationConverter {
     return canonicalAuthors;
   }
 
-  /**
-   * 转换期刊信息
-   *
-   * @param article PubMed文章
-   * @return 标准化的期刊信息，如果没有期刊信息则返回null
-   */
+  /// 转换期刊信息
+  ///
+  /// @param article PubMed文章
+  /// @return 标准化的期刊信息，如果没有期刊信息则返回null
   private CanonicalPublication.Journal convertJournal(PubmedPublication article) {
     Article citation = article.article();
     Journal journal = citation != null ? citation.journal() : null;
@@ -277,12 +269,10 @@ public class PubmedPublicationConverter {
         .build();
   }
 
-  /**
-   * 构建标识符列表
-   *
-   * @param article PubMed文章
-   * @return 标识符列表，如果没有标识符则返回null
-   */
+  /// 构建标识符列表
+  ///
+  /// @param article PubMed文章
+  /// @return 标识符列表，如果没有标识符则返回null
   private List<CanonicalPublication.Identifier> buildIdentifiers(PubmedPublication article) {
     List<CanonicalPublication.Identifier> identifiers = new ArrayList<>();
 
@@ -346,12 +336,10 @@ public class PubmedPublicationConverter {
     return identifiers.isEmpty() ? null : identifiers;
   }
 
-  /**
-   * 提取出版日期信息
-   *
-   * @param article PubMed文章
-   * @return 出版日期信息，如果没有任何日期则返回null
-   */
+  /// 提取出版日期信息
+  ///
+  /// @param article PubMed文章
+  /// @return 出版日期信息，如果没有任何日期则返回null
   private CanonicalPublication.PublicationDates extractPublicationDates(PubmedPublication article) {
     LocalDate publishedDate = extractPublicationDate(article);
 
@@ -453,12 +441,10 @@ public class PubmedPublicationConverter {
     return 1;
   }
 
-  /**
-   * 提取关键字集合
-   *
-   * @param article PubMed文章
-   * @return 关键字集合列表，如果没有则返回null
-   */
+  /// 提取关键字集合
+  ///
+  /// @param article PubMed文章
+  /// @return 关键字集合列表，如果没有则返回null
   private List<CanonicalPublication.KeywordSet> extractKeywords(PubmedPublication article) {
     List<PubmedPublication.KeywordList> keywordLists = article.keywordLists();
     if (CollectionUtils.isEmpty(keywordLists)) {
@@ -511,13 +497,11 @@ public class PubmedPublicationConverter {
     return keywordSets.isEmpty() ? null : keywordSets;
   }
 
-  /**
-   * 从History中提取特定类型的日期
-   *
-   * @param article PubMed文章
-   * @param pubStatus 发布状态（如received、accepted、revised）
-   * @return 日期，如果不存在则返回null
-   */
+  /// 从History中提取特定类型的日期
+  ///
+  /// @param article PubMed文章
+  /// @param pubStatus 发布状态（如received、accepted、revised）
+  /// @return 日期，如果不存在则返回null
   private LocalDate extractHistoryDate(PubmedPublication article, String pubStatus) {
     for (PubmedData.HistoryEvent event : article.pubmedData().history()) {
       if (pubStatus.equalsIgnoreCase(event.status())) {
@@ -527,12 +511,10 @@ public class PubmedPublicationConverter {
     return null;
   }
 
-  /**
-   * 从DateInfo提取日期
-   *
-   * @param dateInfo 日期信息
-   * @return 日期，如果为null则返回null
-   */
+  /// 从DateInfo提取日期
+  ///
+  /// @param dateInfo 日期信息
+  /// @return 日期，如果为null则返回null
   private LocalDate extractDateInfo(PubmedPublication.DateInfo dateInfo) {
     if (dateInfo == null) {
       return null;
@@ -540,12 +522,10 @@ public class PubmedPublicationConverter {
     return parseDate(dateInfo.year(), dateInfo.month(), dateInfo.day());
   }
 
-  /**
-   * 提取电子版发布日期
-   *
-   * @param article PubMed文章
-   * @return 电子版发布日期，如果不存在则返回null
-   */
+  /// 提取电子版发布日期
+  ///
+  /// @param article PubMed文章
+  /// @return 电子版发布日期，如果不存在则返回null
   private LocalDate extractElectronicDate(PubmedPublication article) {
     Article citation = article.article();
     if (citation == null) {
@@ -561,14 +541,12 @@ public class PubmedPublicationConverter {
     return null;
   }
 
-  /**
-   * 解析日期
-   *
-   * @param year 年份
-   * @param month 月份
-   * @param day 日期
-   * @return LocalDate对象，解析失败返回null
-   */
+  /// 解析日期
+  ///
+  /// @param year 年份
+  /// @param month 月份
+  /// @param day 日期
+  /// @return LocalDate对象，解析失败返回null
   private LocalDate parseDate(String year, String month, String day) {
     if (!StringUtils.hasText(year)) {
       return null;
@@ -589,12 +567,10 @@ public class PubmedPublicationConverter {
     }
   }
 
-  /**
-   * 转换化学物质列表
-   *
-   * @param article PubMed文章
-   * @return 化学物质列表，如果没有则返回null
-   */
+  /// 转换化学物质列表
+  ///
+  /// @param article PubMed文章
+  /// @return 化学物质列表，如果没有则返回null
   private List<CanonicalPublication.Substance> convertSubstances(PubmedPublication article) {
     List<PubmedPublication.Chemical> chemicals = article.chemicals();
     if (CollectionUtils.isEmpty(chemicals)) {
@@ -620,12 +596,10 @@ public class PubmedPublicationConverter {
     return substances.isEmpty() ? null : substances;
   }
 
-  /**
-   * 转换MeSH主题标引列表
-   *
-   * @param article PubMed文章
-   * @return MeSH主题标引列表，如果没有则返回null
-   */
+  /// 转换MeSH主题标引列表
+  ///
+  /// @param article PubMed文章
+  /// @return MeSH主题标引列表，如果没有则返回null
   private List<CanonicalPublication.MeshHeading> convertMeshHeadings(PubmedPublication article) {
     List<PubmedPublication.MeshHeading> meshHeadings = article.meshHeadings();
     if (CollectionUtils.isEmpty(meshHeadings)) {
@@ -689,12 +663,10 @@ public class PubmedPublicationConverter {
     return canonicalMeshHeadings.isEmpty() ? null : canonicalMeshHeadings;
   }
 
-  /**
-   * 转换资助信息列表
-   *
-   * @param article PubMed文章
-   * @return 资助信息列表，如果没有则返回null
-   */
+  /// 转换资助信息列表
+  ///
+  /// @param article PubMed文章
+  /// @return 资助信息列表，如果没有则返回null
   private List<CanonicalPublication.FundingInfo> convertFunding(PubmedPublication article) {
     Article citationArticle = article.article();
     if (citationArticle == null) {
@@ -724,12 +696,10 @@ public class PubmedPublicationConverter {
     return fundingList.isEmpty() ? null : fundingList;
   }
 
-  /**
-   * 转换其他语言摘要列表
-   *
-   * @param article PubMed文章
-   * @return 其他语言摘要列表，如果没有则返回null
-   */
+  /// 转换其他语言摘要列表
+  ///
+  /// @param article PubMed文章
+  /// @return 其他语言摘要列表，如果没有则返回null
   private List<CanonicalPublication.AlternativeAbstract> convertAlternativeAbstracts(
       PubmedPublication article) {
     List<PubmedPublication.OtherAbstract> otherAbstracts = article.otherAbstracts();
@@ -756,23 +726,19 @@ public class PubmedPublicationConverter {
     return abstracts.isEmpty() ? null : abstracts;
   }
 
-  /**
-   * 转换基因符号列表
-   *
-   * @param article PubMed文章
-   * @return 基因符号列表，如果没有则返回null
-   */
+  /// 转换基因符号列表
+  ///
+  /// @param article PubMed文章
+  /// @return 基因符号列表，如果没有则返回null
   private List<String> convertGenes(PubmedPublication article) {
     List<String> geneSymbols = article.geneSymbols();
     return CollectionUtils.isEmpty(geneSymbols) ? null : geneSymbols;
   }
 
-  /**
-   * 转换页码信息
-   *
-   * @param article PubMed文章
-   * @return 页码信息对象，如果没有则返回null
-   */
+  /// 转换页码信息
+  ///
+  /// @param article PubMed文章
+  /// @return 页码信息对象，如果没有则返回null
   private CanonicalPublication.Pagination convertPagination(PubmedPublication article) {
     Article citationArticle = article.article();
     if (citationArticle == null) {
@@ -803,12 +769,10 @@ public class PubmedPublicationConverter {
         .build();
   }
 
-  /**
-   * 提取出版类型列表
-   *
-   * @param article PubMed文章
-   * @return 出版类型列表，如果没有则返回null
-   */
+  /// 提取出版类型列表
+  ///
+  /// @param article PubMed文章
+  /// @return 出版类型列表，如果没有则返回null
   private List<CanonicalPublication.PublicationType> extractPublicationTypes(
       PubmedPublication article) {
     Article citationArticle = article.article();
@@ -837,12 +801,10 @@ public class PubmedPublicationConverter {
     return types.isEmpty() ? null : types;
   }
 
-  /**
-   * 提取作者列表完整性标志
-   *
-   * @param article 文章信息
-   * @return 作者列表是否完整，如果未指定则返回null
-   */
+  /// 提取作者列表完整性标志
+  ///
+  /// @param article 文章信息
+  /// @return 作者列表是否完整，如果未指定则返回null
   private Boolean extractAuthorsComplete(Article article) {
     if (article == null) {
       return null;
@@ -854,12 +816,10 @@ public class PubmedPublicationConverter {
     return "Y".equalsIgnoreCase(completeYN);
   }
 
-  /**
-   * 提取发布历史时间线
-   *
-   * @param article PubMed文章
-   * @return 发布历史事件列表，如果没有则返回null
-   */
+  /// 提取发布历史时间线
+  ///
+  /// @param article PubMed文章
+  /// @return 发布历史事件列表，如果没有则返回null
   private List<CanonicalPublication.PublicationHistoryEvent> extractPublicationHistory(
       PubmedPublication article) {
     List<PubmedData.HistoryEvent> historyEvents = article.pubmedData().history();
@@ -885,12 +845,10 @@ public class PubmedPublicationConverter {
     return events.isEmpty() ? null : events;
   }
 
-  /**
-   * 提取出版物元数据
-   *
-   * @param article PubMed文章
-   * @return 出版物元数据，如果所有字段都为空则返回null
-   */
+  /// 提取出版物元数据
+  ///
+  /// @param article PubMed文章
+  /// @return 出版物元数据，如果所有字段都为空则返回null
   private CanonicalPublication.PublicationMetadata extractMetadata(PubmedPublication article) {
     String indexingMethod = article.indexingMethod();
     String owner = article.owner();
@@ -913,12 +871,10 @@ public class PubmedPublicationConverter {
         .build();
   }
 
-  /**
-   * 转换补充MeSH概念列表
-   *
-   * @param article PubMed文章
-   * @return 补充MeSH概念列表，如果没有则返回null
-   */
+  /// 转换补充MeSH概念列表
+  ///
+  /// @param article PubMed文章
+  /// @return 补充MeSH概念列表，如果没有则返回null
   private List<CanonicalPublication.SupplMeshName> convertSupplMeshNames(
       PubmedPublication article) {
     List<PubmedPublication.SupplMeshName> supplMeshNames = article.supplMeshNames();
@@ -941,12 +897,10 @@ public class PubmedPublicationConverter {
     return canonicalSupplMeshNames.isEmpty() ? null : canonicalSupplMeshNames;
   }
 
-  /**
-   * 转换研究者列表
-   *
-   * @param article PubMed文章
-   * @return 研究者列表，如果没有则返回null
-   */
+  /// 转换研究者列表
+  ///
+  /// @param article PubMed文章
+  /// @return 研究者列表，如果没有则返回null
   private List<CanonicalPublication.Investigator> convertInvestigators(PubmedPublication article) {
     List<PubmedPublication.Investigator> investigators = article.investigators();
     if (CollectionUtils.isEmpty(investigators)) {
@@ -1008,12 +962,10 @@ public class PubmedPublicationConverter {
     return canonicalInvestigators.isEmpty() ? null : canonicalInvestigators;
   }
 
-  /**
-   * 转换作为主题的人物列表
-   *
-   * @param article PubMed文章
-   * @return 人物主题列表，如果没有则返回null
-   */
+  /// 转换作为主题的人物列表
+  ///
+  /// @param article PubMed文章
+  /// @return 人物主题列表，如果没有则返回null
   private List<CanonicalPublication.PersonalNameSubject> convertPersonalNameSubjects(
       PubmedPublication article) {
     List<PubmedPublication.PersonalNameSubject> personalNameSubjects =
@@ -1038,12 +990,10 @@ public class PubmedPublicationConverter {
     return canonicalPersonalNameSubjects.isEmpty() ? null : canonicalPersonalNameSubjects;
   }
 
-  /**
-   * 转换外部引用列表
-   *
-   * @param article PubMed文章
-   * @return 外部引用列表，如果没有则返回null
-   */
+  /// 转换外部引用列表
+  ///
+  /// @param article PubMed文章
+  /// @return 外部引用列表，如果没有则返回null
   private List<CanonicalPublication.ExternalReference> convertExternalReferences(
       PubmedPublication article) {
     Article citationArticle = article.article();
@@ -1074,12 +1024,10 @@ public class PubmedPublicationConverter {
     return externalReferences.isEmpty() ? null : externalReferences;
   }
 
-  /**
-   * 转换补充对象列表
-   *
-   * @param article PubMed文章
-   * @return 补充对象列表，如果没有则返回null
-   */
+  /// 转换补充对象列表
+  ///
+  /// @param article PubMed文章
+  /// @return 补充对象列表，如果没有则返回null
   private List<CanonicalPublication.SupplementalObject> convertSupplementalObjects(
       PubmedPublication article) {
     List<PubmedData.ObjectInfo> objects = article.pubmedData().objects();
@@ -1113,18 +1061,19 @@ public class PubmedPublicationConverter {
       }
 
       supplementalObjects.add(
-          CanonicalPublication.SupplementalObject.builder().type(object.type()).params(params).build());
+          CanonicalPublication.SupplementalObject.builder()
+              .type(object.type())
+              .params(params)
+              .build());
     }
 
     return supplementalObjects.isEmpty() ? null : supplementalObjects;
   }
 
-  /**
-   * 转换参考文献列表
-   *
-   * @param article PubMed文章
-   * @return 参考文献列表，如果没有则返回null
-   */
+  /// 转换参考文献列表
+  ///
+  /// @param article PubMed文章
+  /// @return 参考文献列表，如果没有则返回null
   private List<CanonicalPublication.Reference> convertReferences(PubmedPublication article) {
     List<PubmedData.Reference> references = article.pubmedData().references();
     if (CollectionUtils.isEmpty(references)) {
@@ -1161,15 +1110,12 @@ public class PubmedPublicationConverter {
     return canonicalReferences.isEmpty() ? null : canonicalReferences;
   }
 
-  /**
-   * 转换相关项目列表（评论、更正、撤稿等）
-   *
-   * @param article PubMed文章
-   * @return 相关项目列表，如果没有则返回null
-   */
+  /// 转换相关项目列表（评论、更正、撤稿等）
+  ///
+  /// @param article PubMed文章
+  /// @return 相关项目列表，如果没有则返回null
   private List<CanonicalPublication.RelatedItem> convertRelatedItems(PubmedPublication article) {
-    List<PubmedPublication.CommentsCorrections> commentsCorrections =
-        article.commentsCorrections();
+    List<PubmedPublication.CommentsCorrections> commentsCorrections = article.commentsCorrections();
     if (CollectionUtils.isEmpty(commentsCorrections)) {
       return null;
     }

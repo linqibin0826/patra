@@ -7,11 +7,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/**
- * XmlToJsonConverter 单元测试
- *
- * @author linqibin
- */
+/// XmlToJsonConverter 单元测试
+///
+/// @author linqibin
 @DisplayName("XmlToJsonConverter 测试")
 class XmlToJsonConverterTest {
 

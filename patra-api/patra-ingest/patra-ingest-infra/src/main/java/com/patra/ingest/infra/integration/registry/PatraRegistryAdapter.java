@@ -15,28 +15,26 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * 出站适配器,调用 patra-registry 获取溯源配置。
- *
- * <p>遵循六边形架构:基础设施组件实现应用端口。从注册服务检索完整的溯源配置快照,具有健壮的错误处理。
- *
- * <p>亮点: - 全面的错误处理和日志记录 - 使用 MapStruct 进行类型安全转换 - 通过返回最小可用快照实现优雅降级
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 出站适配器,调用 patra-registry 获取溯源配置。
+///
+/// 遵循六边形架构:基础设施组件实现应用端口。从注册服务检索完整的溯源配置快照,具有健壮的错误处理。
+///
+/// 亮点: - 全面的错误处理和日志记录 - 使用 MapStruct 进行类型安全转换 - 通过返回最小可用快照实现优雅降级
+///
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class PatraRegistryAdapter implements PatraRegistryPort {
 
-  /** 注册中心 RPC 客户端。 */
+  /// 注册中心 RPC 客户端。
   private final ProvenanceClient provenanceClient;
 
-  /** 配置快照转换器。 */
+  /// 配置快照转换器。
   private final ProvenanceConfigSnapshotConverter converter;
 
-  /** 调用注册中心获取溯源配置。 */
+  /// 调用注册中心获取溯源配置。
   @Override
   public ProvenanceConfigSnapshot fetchConfig(
       ProvenanceCode provenanceCode, OperationCode operationCode) {
@@ -53,7 +51,7 @@ public class PatraRegistryAdapter implements PatraRegistryPort {
     }
   }
 
-  /** 调用注册服务检索配置。 */
+  /// 调用注册服务检索配置。
   private ProvenanceConfigResp callRegistry(ProvenanceCode provenanceCode, String operationType) {
     long startTime = System.currentTimeMillis();
     ProvenanceConfigResp resp =
@@ -69,7 +67,7 @@ public class PatraRegistryAdapter implements PatraRegistryPort {
     return resp;
   }
 
-  /** 转换并验证注册中心响应。 */
+  /// 转换并验证注册中心响应。
   private ProvenanceConfigSnapshot convertAndValidateResponse(
       ProvenanceConfigResp resp, String code) {
     if (resp == null) {
@@ -80,7 +78,7 @@ public class PatraRegistryAdapter implements PatraRegistryPort {
     return converter.convert(resp);
   }
 
-  /** 处理配置检索期间的意外异常。 */
+  /// 处理配置检索期间的意外异常。
   private IngestConfigurationException handleUnexpectedException(
       Exception ex, String code, String operationType) {
     String msg = String.format("获取配置时发生意外错误, code=%s, operationType=%s", code, operationType);
@@ -88,7 +86,7 @@ public class PatraRegistryAdapter implements PatraRegistryPort {
     return new IngestConfigurationException(code, operationType, msg, ex);
   }
 
-  /** 处理远程 ProblemDetail 异常。 */
+  /// 处理远程 ProblemDetail 异常。
   private ProvenanceConfigSnapshot handleRemoteException(
       RemoteCallException ex, String code, String operationType) {
     if (RemoteErrorHelper.isNotFound(ex)) {
@@ -100,7 +98,7 @@ public class PatraRegistryAdapter implements PatraRegistryPort {
     throw createClientErrorException(ex, code, operationType);
   }
 
-  /** 为配置未找到错误创建异常。 */
+  /// 为配置未找到错误创建异常。
   private IngestConfigurationException createConfigNotFoundException(
       RemoteCallException ex, String code, String operationType) {
     String msg = String.format("未找到溯源配置, code=%s, operationType=%s", code, operationType);
@@ -113,7 +111,7 @@ public class PatraRegistryAdapter implements PatraRegistryPort {
     return new IngestConfigurationException(code, operationType, msg, ex);
   }
 
-  /** 通过返回最小快照来处理注册中心不可用。 */
+  /// 通过返回最小快照来处理注册中心不可用。
   private ProvenanceConfigSnapshot handleRegistryUnavailable(RemoteCallException ex, String code) {
     log.warn(
         "注册中心不可用,降级到最小快照, code={}, status={}, traceId={}",
@@ -123,7 +121,7 @@ public class PatraRegistryAdapter implements PatraRegistryPort {
     return createMinimalSnapshot(code);
   }
 
-  /** 为客户端错误创建异常。 */
+  /// 为客户端错误创建异常。
   private IngestConfigurationException createClientErrorException(
       RemoteCallException ex, String code, String operationType) {
     String msg =
@@ -134,7 +132,7 @@ public class PatraRegistryAdapter implements PatraRegistryPort {
     return new IngestConfigurationException(code, operationType, msg, ex);
   }
 
-  /** 创建最小可用的配置快照。 */
+  /// 创建最小可用的配置快照。
   private ProvenanceConfigSnapshot createMinimalSnapshot(String provenanceCode) {
     log.info("创建最小溯源快照, code={}", provenanceCode);
 

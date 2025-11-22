@@ -3,44 +3,40 @@ package com.patra.catalog.domain.model.enums;
 import cn.hutool.core.lang.Assert;
 import lombok.Getter;
 
-/**
- * 文献出版状态枚举。
- *
- * <p>字段映射：cat_publication.publication_status
- *
- * <p>状态说明：
- *
- * <ul>
- *   <li><b>PPUBLISH</b> - 纸质出版（Print Published）
- *   <li><b>EPUBLISH</b> - 电子出版（Electronic Published）
- *   <li><b>AHEADOFPRINT</b> - 预印版（Ahead of Print）
- *   <li><b>PUBMED</b> - 已收录到 PubMed
- *   <li><b>PUBMEDNOTMEDLINE</b> - 收录到 PubMed 但未收录到 MEDLINE
- *   <li><b>PREMEDLINE</b> - MEDLINE 预处理状态
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 文献出版状态枚举。
+///
+/// 字段映射：cat_publication.publication_status
+///
+/// 状态说明：
+///
+/// - **PPUBLISH** - 纸质出版（Print Published）
+///   - **EPUBLISH** - 电子出版（Electronic Published）
+///   - **AHEADOFPRINT** - 预印版（Ahead of Print）
+///   - **PUBMED** - 已收录到 PubMed
+///   - **PUBMEDNOTMEDLINE** - 收录到 PubMed 但未收录到 MEDLINE
+///   - **PREMEDLINE** - MEDLINE 预处理状态
+///
+/// @author linqibin
+/// @since 0.1.0
 @Getter
 public enum PublicationStatus {
 
-  /** 纸质出版 */
+  /// 纸质出版
   PPUBLISH("ppublish", "Print Published"),
 
-  /** 电子出版 */
+  /// 电子出版
   EPUBLISH("epublish", "Electronic Published"),
 
-  /** 预印版 */
+  /// 预印版
   AHEADOFPRINT("aheadofprint", "Ahead of Print"),
 
-  /** 已收录到 PubMed */
+  /// 已收录到 PubMed
   PUBMED("pubmed", "PubMed"),
 
-  /** 收录到 PubMed 但未收录到 MEDLINE */
+  /// 收录到 PubMed 但未收录到 MEDLINE
   PUBMEDNOTMEDLINE("pubmednotmedline", "PubMed Not MEDLINE"),
 
-  /** MEDLINE 预处理状态 */
+  /// MEDLINE 预处理状态
   PREMEDLINE("premedline", "Pre-MEDLINE");
 
   private final String code;

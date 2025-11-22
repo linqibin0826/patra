@@ -33,14 +33,12 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * OutboxRelayJob 单元测试。
- *
- * <p>测试策略: - Mock 所有依赖(ObjectMapper, OutboxRelayUseCase, OutboxRelayProperties, Clock) - Mock 静态方法
- * XxlJobHelper, NetUtil, IdUtil - 测试参数解析、命令构建、成功/失败场景 - 验证异常处理和日志记录
- *
- * <p>不使用 @SpringBootTest - 纯单元测试,不依赖 Spring 容器
- */
+/// OutboxRelayJob 单元测试。
+///
+/// 测试策略: - Mock 所有依赖(ObjectMapper, OutboxRelayUseCase, OutboxRelayProperties, Clock) - Mock 静态方法
+/// XxlJobHelper, NetUtil, IdUtil - 测试参数解析、命令构建、成功/失败场景 - 验证异常处理和日志记录
+///
+/// 不使用 @SpringBootTest - 纯单元测试,不依赖 Spring 容器
 @ExtendWith(MockitoExtension.class)
 @DisplayName("OutboxRelayJob 单元测试")
 class OutboxRelayJobTest {

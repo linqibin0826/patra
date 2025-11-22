@@ -15,46 +15,38 @@ import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-/**
- * RocketMQ 任务就绪消息监听器。
- *
- * <p>使用 RocketMQ 官方 Spring Boot Starter 订阅 INGEST_TASK 主题（READY 标签）并启动任务执行工作流。
- *
- * <p><strong>架构特性</strong>:
- *
- * <ul>
- *   <li>使用 {@link MessageExt} 保留完整的消息元数据(KEYS, TAGS, UserProperties)
- *   <li>通过 {@link RocketMQMessageListener} 注解配置消费者组和 TAGS 过滤
- *   <li>直接 API 访问,性能优异
- * </ul>
- *
- * <p><strong>职责</strong>:
- *
- * <ul>
- *   <li>订阅 INGEST_TASK 主题的 READY 标签(任务就绪事件)
- *   <li>从 {@link MessageExt} 提取完整元数据(KEYS, TAGS, messageId, UserProperties)
- *   <li>解析 JSON 消息体为 {@link TaskReadyPayload} DTO
- *   <li>验证必填字段(taskId, idempotentKey)
- *   <li>组装 {@link TaskReadyCommand} 并委托给应用层用例
- *   <li>处理消费失败(抛出异常触发 RocketMQ 自动重试)
- * </ul>
- *
- * <p><strong>消息元数据</strong>:
- *
- * <ul>
- *   <li>KEYS - 从 {@link MessageExt#getKeys()} 获取,对应发送端的 dedupKey
- *   <li>TAGS - 从 {@link MessageExt#getTags()} 获取,用于消费端过滤
- *   <li>messageId - 从 {@link MessageExt#getMsgId()} 获取
- *   <li>UserProperties - 从 {@link MessageExt#getUserProperty(String)} 获取自定义属性
- * </ul>
- *
- * <p><strong>错误处理</strong>: 消费失败抛出 RuntimeException,由 RocketMQ 框架处理重试和死信队列路由。
- *
- * @author linqibin
- * @since 0.2.0
- * @see TaskExecutionUseCase
- * @see TaskReadyCommand
- */
+/// RocketMQ 任务就绪消息监听器。
+///
+/// 使用 RocketMQ 官方 Spring Boot Starter 订阅 INGEST_TASK 主题（READY 标签）并启动任务执行工作流。
+///
+/// **架构特性**:
+///
+/// - 使用 {@link MessageExt} 保留完整的消息元数据(KEYS, TAGS, UserProperties)
+///   - 通过 {@link RocketMQMessageListener} 注解配置消费者组和 TAGS 过滤
+///   - 直接 API 访问,性能优异
+///
+/// **职责**:
+///
+/// - 订阅 INGEST_TASK 主题的 READY 标签(任务就绪事件)
+///   - 从 {@link MessageExt} 提取完整元数据(KEYS, TAGS, messageId, UserProperties)
+///   - 解析 JSON 消息体为 {@link TaskReadyPayload} DTO
+///   - 验证必填字段(taskId, idempotentKey)
+///   - 组装 {@link TaskReadyCommand} 并委托给应用层用例
+///   - 处理消费失败(抛出异常触发 RocketMQ 自动重试)
+///
+/// **消息元数据**:
+///
+/// - KEYS - 从 {@link MessageExt#getKeys()} 获取,对应发送端的 dedupKey
+///   - TAGS - 从 {@link MessageExt#getTags()} 获取,用于消费端过滤
+///   - messageId - 从 {@link MessageExt#getMsgId()} 获取
+///   - UserProperties - 从 {@link MessageExt#getUserProperty(String)} 获取自定义属性
+///
+/// **错误处理**: 消费失败抛出 RuntimeException,由 RocketMQ 框架处理重试和死信队列路由。
+///
+/// @author linqibin
+/// @since 0.1.0
+/// @see TaskExecutionUseCase
+/// @see TaskReadyCommand
 @Slf4j
 @Component
 @ConditionalOnProperty(
@@ -102,11 +94,9 @@ public class TaskReadyMessageListener implements RocketMQListener<MessageExt> {
     }
   }
 
-  /**
-   * 从 RocketMQ MessageExt 提取并记录关键消息元数据。
-   *
-   * @param message RocketMQ 消息
-   */
+  /// 从 RocketMQ MessageExt 提取并记录关键消息元数据。
+  ///
+  /// @param message RocketMQ 消息
   private void logMessageMetadata(MessageExt message) {
     String topic = message.getTopic();
     String keys = message.getKeys(); // 对应发送端的 dedupKey
@@ -131,13 +121,11 @@ public class TaskReadyMessageListener implements RocketMQListener<MessageExt> {
     }
   }
 
-  /**
-   * 将 RocketMQ MessageExt 解析为 TaskReadyCommand。
-   *
-   * @param message RocketMQ 消息
-   * @return TaskReadyCommand
-   * @throws Exception 当解析失败时
-   */
+  /// 将 RocketMQ MessageExt 解析为 TaskReadyCommand。
+  ///
+  /// @param message RocketMQ 消息
+  /// @return TaskReadyCommand
+  /// @throws Exception 当解析失败时
   private TaskReadyCommand parseMessage(MessageExt message) throws Exception {
     // 1. 解析 JSON 消息体
     String payload = new String(message.getBody(), StandardCharsets.UTF_8);

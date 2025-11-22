@@ -18,38 +18,30 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-/**
- * 执行任务批次用例的实现。
- *
- * <p>核心职责: 批次调度构建 → 批次执行 → 持久化结果 → 返回统计信息。
- *
- * <p>设计要点:
- *
- * <ul>
- *   <li>通过 BatchScheduleBuilder 进行批次调度构建,构建批次列表
- *   <li>强制执行批次限制,超出时抛出异常
- *   <li>批次执行委托给 GenericBatchExecutor,由适配器注册表支持
- *   <li>通过 TaskRunBatchRepository 立即持久化每个批次结果
- *   <li>每个批次执行前检查租约;租约被撤销时中止执行
- *   <li>错误处理:记录失败并继续(可配置快速失败)
- * </ul>
- *
- * <p>配置项:
- *
- * <ul>
- *   <li>task.execution.fail-fast: 默认 false(继续执行)
- * </ul>
- *
- * <p>日志策略:
- *
- * <ul>
- *   <li>INFO: 计划创建、批次开始/完成、统计信息
- *   <li>WARN: 超出限制、租约撤销、批次失败
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 执行任务批次用例的实现。
+///
+/// 核心职责: 批次调度构建 → 批次执行 → 持久化结果 → 返回统计信息。
+///
+/// 设计要点:
+///
+/// - 通过 BatchScheduleBuilder 进行批次调度构建,构建批次列表
+///   - 强制执行批次限制,超出时抛出异常
+///   - 批次执行委托给 GenericBatchExecutor,由适配器注册表支持
+///   - 通过 TaskRunBatchRepository 立即持久化每个批次结果
+///   - 每个批次执行前检查租约;租约被撤销时中止执行
+///   - 错误处理:记录失败并继续(可配置快速失败)
+///
+/// 配置项:
+///
+/// - task.execution.fail-fast: 默认 false(继续执行)
+///
+/// 日志策略:
+///
+/// - INFO: 计划创建、批次开始/完成、统计信息
+///   - WARN: 超出限制、租约撤销、批次失败
+///
+/// @author linqibin
+/// @since 0.1.0
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -63,30 +55,14 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
   @Value("${task.execution.fail-fast:false}")
   private boolean failFast;
 
-  /**
-   * 执行批次(构建调度 + 执行)。
-   *
-   * <p>执行流程:
-   *
-   * <ol>
-   *   <li>通过 BatchScheduleBuilder 构建批次调度表
-   *   <li>验证批次数量不超过限制
-   *   <li>循环执行每个批次:
-   *       <ul>
-   *         <li>检查租约状态,撤销时中止
-   *         <li>执行批次并捕获异常
-   *         <li>持久化批次结果
-   *         <li>更新心跳时间戳
-   *         <li>更新统计计数器
-   *       </ul>
-   *   <li>返回执行统计结果
-   * </ol>
-   *
-   * @param session 执行会话
-   * @param context 执行上下文
-   * @return 包含批次统计信息的执行结果
-   * @throws BatchLimitExceededException 如果批次数量超过限制
-   */
+  /// 执行批次(构建调度 + 执行)。
+  ///
+  /// 执行流程:
+  ///
+  /// @param session 执行会话
+  /// @param context 执行上下文
+  /// @return 包含批次统计信息的执行结果
+  /// @throws BatchLimitExceededException 如果批次数量超过限制
   @Override
   public ExecuteResult execute(ExecutionSession session, ExecutionContext context) {
     Long taskId = session.taskId();
@@ -213,11 +189,9 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
     return new ExecuteResult(schedule.totalBatches(), succeededCount, failedCount);
   }
 
-  /**
-   * 批次数量超过限制异常。
-   *
-   * <p>当生成的批次数量超过系统配置的最大限制时抛出此异常。
-   */
+  /// 批次数量超过限制异常。
+  ///
+  /// 当生成的批次数量超过系统配置的最大限制时抛出此异常。
   public static class BatchLimitExceededException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;

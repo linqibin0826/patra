@@ -147,9 +147,7 @@ public abstract class AbstractProvenanceScheduleJob {
   protected abstract ProvenanceCode getProvenanceCode();
   protected abstract OperationCode getOperationCode();
 
-  /**
-   * 通用作业执行流程: 解析参数 → 调用编排者 → 报告结果
-   */
+  /// 通用作业执行流程: 解析参数 → 调用编排者 → 报告结果
   protected void executeScheduleJob(String paramStr) {
     long startTime = System.currentTimeMillis();
 
@@ -238,9 +236,7 @@ public class PubmedHarvestJob extends AbstractProvenanceScheduleJob {
     return OperationCode.HARVEST;
   }
 
-  /**
-   * XXL-Job 入口点: 获取参数并委托给基类
-   */
+  /// XXL-Job 入口点: 获取参数并委托给基类
   @XxlJob("pubmedHarvest")
   public void run() {
     String jobParam = XxlJobHelper.getJobParam();

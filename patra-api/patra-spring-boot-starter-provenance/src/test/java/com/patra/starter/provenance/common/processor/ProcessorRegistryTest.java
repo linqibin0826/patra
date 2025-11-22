@@ -11,21 +11,17 @@ import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/**
- * ProcessorRegistry单元测试
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>自动注册功能测试
- *   <li>Processor查找测试（getProcessor、findProcessor）
- *   <li>类型支持检查测试（supports、getSupportedTypes）
- *   <li>异常情况测试（重复注册、Processor不存在、空列表）
- * </ul>
- *
- * @author Patra Architecture Team
- * @since 0.1.0
- */
+/// ProcessorRegistry单元测试
+///
+/// 测试策略：
+///
+/// - 自动注册功能测试
+///   - Processor查找测试（getProcessor、findProcessor）
+///   - 类型支持检查测试（supports、getSupportedTypes）
+///   - 异常情况测试（重复注册、Processor不存在、空列表）
+///
+/// @author Patra Architecture Team
+/// @since 0.1.0
 @DisplayName("ProcessorRegistry注册表测试")
 class ProcessorRegistryTest {
 
@@ -223,7 +219,9 @@ class ProcessorRegistryTest {
     // Given: 创建多种类型的Processor
     List<DataProcessor<?>> processors =
         List.of(
-            new MockPublicationProcessor(), new MockJournalProcessor(), new MockCitationProcessor());
+            new MockPublicationProcessor(),
+            new MockJournalProcessor(),
+            new MockCitationProcessor());
 
     // When
     ProcessorRegistry registry = new ProcessorRegistry(processors);
@@ -237,7 +235,7 @@ class ProcessorRegistryTest {
 
   // ==================== 辅助方法 ====================
 
-  /** 创建测试用的ProcessorRegistry */
+  /// 创建测试用的ProcessorRegistry
   private ProcessorRegistry createTestRegistry() {
     List<DataProcessor<?>> processors =
         List.of(new MockPublicationProcessor(), new MockJournalProcessor());
@@ -246,7 +244,7 @@ class ProcessorRegistryTest {
 
   // ==================== Mock实现类 ====================
 
-  /** Mock文献Processor */
+  /// Mock文献Processor
   static class MockPublicationProcessor implements DataProcessor<CanonicalPublication> {
     @Override
     public DataType getDataType() {
@@ -270,7 +268,7 @@ class ProcessorRegistryTest {
     }
   }
 
-  /** Mock期刊Processor */
+  /// Mock期刊Processor
   static class MockJournalProcessor implements DataProcessor<MockJournal> {
     @Override
     public DataType getDataType() {
@@ -293,7 +291,7 @@ class ProcessorRegistryTest {
     }
   }
 
-  /** Mock引用Processor */
+  /// Mock引用Processor
   static class MockCitationProcessor implements DataProcessor<MockCitation> {
     @Override
     public DataType getDataType() {
@@ -316,7 +314,7 @@ class ProcessorRegistryTest {
     }
   }
 
-  /** 另一个文献Processor（用于测试重复注册） */
+  /// 另一个文献Processor（用于测试重复注册）
   static class AnotherPublicationProcessor implements DataProcessor<CanonicalPublication> {
     @Override
     public DataType getDataType() {
@@ -342,13 +340,13 @@ class ProcessorRegistryTest {
 
   // ==================== Mock数据类型 ====================
 
-  /** Mock期刊数据类型（用于测试） */
+  /// Mock期刊数据类型（用于测试）
   static class MockJournal {
     private String issn;
     private String name;
   }
 
-  /** Mock引用数据类型（用于测试） */
+  /// Mock引用数据类型（用于测试）
   static class MockCitation {
     private String citingPmid;
     private String citedPmid;

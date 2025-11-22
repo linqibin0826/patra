@@ -4,21 +4,17 @@ import com.patra.common.domain.DomainEvent;
 import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 
-/**
- * 任务入队领域事件。当任务进入执行队列时发布。
- *
- * <p>触发时机：任务成功创建并持久化到可调度状态后触发。
- *
- * <p>用途：
- *
- * <ul>
- *   <li>指标：按来源和操作维度度量任务创建速率
- *   <li>审计：追溯调度实例和切片到具体任务的关联
- *   <li>下游：更新实时监控仪表板
- * </ul>
- *
- * <p>幂等性：{@code taskId} 作为唯一键。重复发布表明上游存在问题。
- */
+/// 任务入队领域事件。当任务进入执行队列时发布。
+///
+/// 触发时机：任务成功创建并持久化到可调度状态后触发。
+///
+/// 用途：
+///
+/// - 指标：按来源和操作维度度量任务创建速率
+///   - 审计：追溯调度实例和切片到具体任务的关联
+///   - 下游：更新实时监控仪表板
+///
+/// 幂等性：`taskId` 作为唯一键。重复发布表明上游存在问题。
 public record TaskQueuedEvent(
     /* Primary identifier of the task. */
     Long taskId,
@@ -49,22 +45,19 @@ public record TaskQueuedEvent(
     occurredAt = occurredAt == null ? Instant.now() : occurredAt;
   }
 
-  /**
-   * Factory method that creates the event with mandatory context and auto-populates {@code
-   * occurredAt}.
-   *
-   * @param taskId task identifier
-   * @param planId plan identifier
-   * @param sliceId slice identifier
-   * @param scheduleInstanceId scheduling instance identifier
-   * @param provenanceCode provenance code
-   * @param operationCode operation code
-   * @param idempotentKey idempotency key
-   * @param paramsJson task parameters JSON
-   * @param priority scheduling priority
-   * @param scheduledAt planned execution timestamp
-   * @return event instance
-   */
+  /// Factory method that creates the event with mandatory context and auto-populates `occurredAt`.
+  ///
+  /// @param taskId task identifier
+  /// @param planId plan identifier
+  /// @param sliceId slice identifier
+  /// @param scheduleInstanceId scheduling instance identifier
+  /// @param provenanceCode provenance code
+  /// @param operationCode operation code
+  /// @param idempotentKey idempotency key
+  /// @param paramsJson task parameters JSON
+  /// @param priority scheduling priority
+  /// @param scheduledAt planned execution timestamp
+  /// @return event instance
   public static TaskQueuedEvent of(
       Long taskId,
       Long planId,

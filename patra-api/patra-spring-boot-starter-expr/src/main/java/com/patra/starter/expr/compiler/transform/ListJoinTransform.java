@@ -7,24 +7,24 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * 列表连接变换:将多个值用逗号分隔符连接,用于 MULTI std_keys。
- *
- * <p>当 MULTI std_keys 需要合并为单个提供者参数值时使用。
- *
- * <p>该变换期望接收一个特殊分隔符分隔的值字符串(来自渲染器的内部格式),并将其转换为适合提供者使用的逗号分隔列表。
- *
- * <p>示例:
- *
- * <pre>
- * 内部格式: "value1||value2||value3"
- * 输出:     "value1,value2,value3"
- * </pre>
- *
- * <p>参见: docs/expr/03-compiler-bridge-internals.md §3.8 (MULTI Join Strategy)
- *
- * @since 1.0.0
- */
+/// 列表连接变换:将多个值用逗号分隔符连接,用于 MULTI std_keys。
+///
+/// 当 MULTI std_keys 需要合并为单个提供者参数值时使用。
+///
+/// 该变换期望接收一个特殊分隔符分隔的值字符串(来自渲染器的内部格式),并将其转换为适合提供者使用的逗号分隔列表。
+///
+/// 示例:
+///
+/// ```
+///
+/// 内部格式: "value1||value2||value3"
+/// 输出:     "value1,value2,value3"
+///
+/// ```
+///
+/// 参见: docs/expr/03-compiler-bridge-internals.md §3.8 (MULTI Join Strategy)
+///
+/// @since 0.1.0
 public class ListJoinTransform implements ValueTransform {
 
   private static final Logger log = LoggerFactory.getLogger(ListJoinTransform.class);

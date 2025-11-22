@@ -13,18 +13,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 
-/**
- * 错误解析拦截器 - 熔断保护。
- *
- * <p>使用 Resilience4j 熔断器保护错误解析管道,防止级联故障。
- *
- * <p>当熔断器打开时,返回合成的 503 错误码({contextPrefix}:0503),避免系统雪崩。
- *
- * <p>执行优先级: {@link Ordered#HIGHEST_PRECEDENCE} + 10,确保在追踪拦截器之后执行。
- *
- * @author Patra Team
- * @since 2.0
- */
+/// 错误解析拦截器 - 熔断保护。
+///
+/// 使用 Resilience4j 熔断器保护错误解析管道,防止级联故障。
+///
+/// 当熔断器打开时,返回合成的 503 错误码({contextPrefix}:0503),避免系统雪崩。
+///
+/// 执行优先级: {@link Ordered#HIGHEST_PRECEDENCE} + 10,确保在追踪拦截器之后执行。
+///
+/// @author Patra Team
+/// @since 2.0
 @Slf4j
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
 public class CircuitBreakerInterceptor implements ResolutionInterceptor {
@@ -33,13 +31,11 @@ public class CircuitBreakerInterceptor implements ResolutionInterceptor {
   private final ErrorObservationRecorder observationRecorder;
   private final String contextPrefix;
 
-  /**
-   * 构造熔断拦截器。
-   *
-   * @param circuitBreaker Resilience4j 熔断器实例
-   * @param observationRecorder 观测记录器
-   * @param errorProperties 错误配置属性(用于获取上下文前缀)
-   */
+  /// 构造熔断拦截器。
+  ///
+  /// @param circuitBreaker Resilience4j 熔断器实例
+  /// @param observationRecorder 观测记录器
+  /// @param errorProperties 错误配置属性(用于获取上下文前缀)
   public CircuitBreakerInterceptor(
       CircuitBreaker circuitBreaker,
       ErrorObservationRecorder observationRecorder,
@@ -50,21 +46,17 @@ public class CircuitBreakerInterceptor implements ResolutionInterceptor {
     this.contextPrefix = (prefix == null || prefix.isBlank()) ? "UNKNOWN" : prefix;
   }
 
-  /**
-   * 拦截错误解析调用,应用熔断保护。
-   *
-   * <p>当熔断器打开时:
-   *
-   * <ul>
-   *   <li>记录熔断降级事件
-   *   <li>返回 {contextPrefix}:0503 降级错误码
-   *   <li>记录告警日志
-   * </ul>
-   *
-   * @param exception 待解析的异常
-   * @param invocation 解析调用链
-   * @return 解析结果或降级响应
-   */
+  /// 拦截错误解析调用,应用熔断保护。
+  ///
+  /// 当熔断器打开时:
+  ///
+  /// - 记录熔断降级事件
+  ///   - 返回 {contextPrefix}:0503 降级错误码
+  ///   - 记录告警日志
+  ///
+  /// @param exception 待解析的异常
+  /// @param invocation 解析调用链
+  /// @return 解析结果或降级响应
   @Override
   public ErrorResolution intercept(Throwable exception, ResolutionInvocation invocation) {
     try {

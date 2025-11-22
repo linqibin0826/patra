@@ -6,7 +6,6 @@ import static org.awaitility.Awaitility.*;
 import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
 import com.patra.catalog.app.usecase.meshimport.command.StartImportCommand;
 import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
-import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import java.time.Duration;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -26,30 +25,24 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-/**
- * MeSH 导入重试与清除 E2E 测试（User Story 3）。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>使用 {@link SpringBootTest} 加载完整应用上下文
- *   <li>使用 {@link Testcontainers} 启动真实的 MySQL 数据库
- *   <li>使用 {@link TestRestTemplate} 发送真实的 HTTP 请求
- *   <li>模拟失败场景并验证重试功能
- * </ul>
- *
- * <p>测试场景：
- *
- * <ul>
- *   <li>✅ 模拟失败 → 重试 → 验证成功
- *   <li>✅ 清除进度 → 重新导入
- *   <li>✅ 验证重试幂等性（多次重试不会重复处理）
- *   <li>✅ 验证错误处理（任务不存在、状态不允许重试）
- * </ul>
- *
- * @author Patra Team
- * @since 0.2.0 (User Story 3)
- */
+/// MeSH 导入重试与清除 E2E 测试（User Story 3）。
+///
+/// 测试策略：
+///
+/// - 使用 {@link SpringBootTest} 加载完整应用上下文
+///   - 使用 {@link Testcontainers} 启动真实的 MySQL 数据库
+///   - 使用 {@link TestRestTemplate} 发送真实的 HTTP 请求
+///   - 模拟失败场景并验证重试功能
+///
+/// 测试场景：
+///
+/// - ✅ 模拟失败 → 重试 → 验证成功
+///   - ✅ 清除进度 → 重新导入
+///   - ✅ 验证重试幂等性（多次重试不会重复处理）
+///   - ✅ 验证错误处理（任务不存在、状态不允许重试）
+///
+/// @author Patra Team
+/// @since 0.1.0 (User Story 3)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @DisplayName("MeSH 导入重试与清除 E2E 测试")
@@ -80,8 +73,7 @@ class MeshImportRetryE2ETest {
     StartImportCommand command =
         new StartImportCommand(
             "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-            "E2E 重试测试任务"
-        );
+            "E2E 重试测试任务");
 
     MeshImportResultDTO startResult = meshImportOrchestrator.startImport(command);
     String taskId = startResult.getTaskId();
@@ -91,25 +83,21 @@ class MeshImportRetryE2ETest {
     await()
         .atMost(Duration.ofSeconds(5))
         .pollInterval(Duration.ofSeconds(1))
-        .until(() -> {
-          // 检查任务状态
-          ResponseEntity<Map> statusResponse =
-              restTemplate.getForEntity(
-                  "/api/v1/mesh/import/progress/{taskId}",
-                  Map.class,
-                  taskId);
+        .until(
+            () -> {
+              // 检查任务状态
+              ResponseEntity<Map> statusResponse =
+                  restTemplate.getForEntity(
+                      "/api/v1/mesh/import/progress/{taskId}", Map.class, taskId);
 
-          String status = (String) statusResponse.getBody().get("status");
-          return "FAILED".equals(status) || "SUCCESS".equals(status);
-        });
+              String status = (String) statusResponse.getBody().get("status");
+              return "FAILED".equals(status) || "SUCCESS".equals(status);
+            });
 
     // When: 调用重试接口
     ResponseEntity<MeshImportResultDTO> retryResponse =
         restTemplate.postForEntity(
-            "/api/v1/mesh/import/retry/{taskId}",
-            null,
-            MeshImportResultDTO.class,
-            taskId);
+            "/api/v1/mesh/import/retry/{taskId}", null, MeshImportResultDTO.class, taskId);
 
     // Then: 验证重试成功
     assertThat(retryResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -129,10 +117,7 @@ class MeshImportRetryE2ETest {
     // When: 尝试重试不存在的任务
     ResponseEntity<String> response =
         restTemplate.postForEntity(
-            "/api/v1/mesh/import/retry/{taskId}",
-            null,
-            String.class,
-            nonExistentTaskId);
+            "/api/v1/mesh/import/retry/{taskId}", null, String.class, nonExistentTaskId);
 
     // Then: 应该返回 404 Not Found
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -145,8 +130,7 @@ class MeshImportRetryE2ETest {
     StartImportCommand command =
         new StartImportCommand(
             "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-            "E2E 状态冲突测试任务"
-        );
+            "E2E 状态冲突测试任务");
 
     MeshImportResultDTO startResult = meshImportOrchestrator.startImport(command);
     String taskId = startResult.getTaskId();
@@ -154,10 +138,7 @@ class MeshImportRetryE2ETest {
     // When: 尝试重试一个 PROCESSING 状态的任务（不允许）
     ResponseEntity<String> response =
         restTemplate.postForEntity(
-            "/api/v1/mesh/import/retry/{taskId}",
-            null,
-            String.class,
-            taskId);
+            "/api/v1/mesh/import/retry/{taskId}", null, String.class, taskId);
 
     // Then: 应该返回 409 Conflict
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
@@ -170,8 +151,7 @@ class MeshImportRetryE2ETest {
     StartImportCommand command =
         new StartImportCommand(
             "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-            "E2E 清除测试任务"
-        );
+            "E2E 清除测试任务");
 
     MeshImportResultDTO startResult = meshImportOrchestrator.startImport(command);
     String firstTaskId = startResult.getTaskId();
@@ -180,16 +160,15 @@ class MeshImportRetryE2ETest {
     await()
         .atMost(Duration.ofSeconds(3))
         .pollInterval(Duration.ofMillis(500))
-        .until(() -> {
-          ResponseEntity<Map> statusResponse =
-              restTemplate.getForEntity(
-                  "/api/v1/mesh/import/progress/{taskId}",
-                  Map.class,
-                  firstTaskId);
+        .until(
+            () -> {
+              ResponseEntity<Map> statusResponse =
+                  restTemplate.getForEntity(
+                      "/api/v1/mesh/import/progress/{taskId}", Map.class, firstTaskId);
 
-          String status = (String) statusResponse.getBody().get("status");
-          return "PROCESSING".equals(status);
-        });
+              String status = (String) statusResponse.getBody().get("status");
+              return "PROCESSING".equals(status);
+            });
 
     // When: 调用清除接口
     HttpHeaders headers = new HttpHeaders();
@@ -199,11 +178,7 @@ class MeshImportRetryE2ETest {
     HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
 
     ResponseEntity<Map> clearResponse =
-        restTemplate.exchange(
-            "/api/v1/mesh/import/clear",
-            HttpMethod.POST,
-            request,
-            Map.class);
+        restTemplate.exchange("/api/v1/mesh/import/clear", HttpMethod.POST, request, Map.class);
 
     // Then: 验证清除成功
     assertThat(clearResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -213,12 +188,11 @@ class MeshImportRetryE2ETest {
     assertThat(clearResult.get("message")).asString().contains("进度已清除");
 
     // And: 验证可以重新开始导入
-    MeshImportResultDTO restartResult = meshImportOrchestrator.startImport(
-        new StartImportCommand(
-            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-            "E2E 重新导入测试任务"
-        )
-    );
+    MeshImportResultDTO restartResult =
+        meshImportOrchestrator.startImport(
+            new StartImportCommand(
+                "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+                "E2E 重新导入测试任务"));
 
     assertThat(restartResult).isNotNull();
     assertThat(restartResult.getStatus()).isEqualTo("PROCESSING");
@@ -236,11 +210,7 @@ class MeshImportRetryE2ETest {
 
     // When: 发送清除请求但未确认
     ResponseEntity<String> response =
-        restTemplate.exchange(
-            "/api/v1/mesh/import/clear",
-            HttpMethod.POST,
-            request,
-            String.class);
+        restTemplate.exchange("/api/v1/mesh/import/clear", HttpMethod.POST, request, String.class);
 
     // Then: 应该返回 400 Bad Request
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -253,8 +223,7 @@ class MeshImportRetryE2ETest {
     StartImportCommand command =
         new StartImportCommand(
             "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-            "E2E 幂等性测试任务"
-        );
+            "E2E 幂等性测试任务");
 
     MeshImportResultDTO startResult = meshImportOrchestrator.startImport(command);
     String taskId = startResult.getTaskId();
@@ -263,24 +232,20 @@ class MeshImportRetryE2ETest {
     await()
         .atMost(Duration.ofSeconds(10))
         .pollInterval(Duration.ofSeconds(2))
-        .until(() -> {
-          ResponseEntity<Map> statusResponse =
-              restTemplate.getForEntity(
-                  "/api/v1/mesh/import/progress/{taskId}",
-                  Map.class,
-                  taskId);
+        .until(
+            () -> {
+              ResponseEntity<Map> statusResponse =
+                  restTemplate.getForEntity(
+                      "/api/v1/mesh/import/progress/{taskId}", Map.class, taskId);
 
-          String status = (String) statusResponse.getBody().get("status");
-          return "FAILED".equals(status);
-        });
+              String status = (String) statusResponse.getBody().get("status");
+              return "FAILED".equals(status);
+            });
 
     // When: 第一次重试
     ResponseEntity<MeshImportResultDTO> firstRetryResponse =
         restTemplate.postForEntity(
-            "/api/v1/mesh/import/retry/{taskId}",
-            null,
-            MeshImportResultDTO.class,
-            taskId);
+            "/api/v1/mesh/import/retry/{taskId}", null, MeshImportResultDTO.class, taskId);
 
     // Then: 验证第一次重试成功
     assertThat(firstRetryResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -288,17 +253,15 @@ class MeshImportRetryE2ETest {
     // When: 第二次重试（幂等性验证）
     ResponseEntity<MeshImportResultDTO> secondRetryResponse =
         restTemplate.postForEntity(
-            "/api/v1/mesh/import/retry/{taskId}",
-            null,
-            MeshImportResultDTO.class,
-            taskId);
+            "/api/v1/mesh/import/retry/{taskId}", null, MeshImportResultDTO.class, taskId);
 
     // Then: 验证第二次重试也能正确处理
     // 实际实现中应该只重新处理失败的批次，已成功的批次不会重复处理
-    assertThat(secondRetryResponse.getStatusCode()).isIn(
-        HttpStatus.OK,       // 如果还在 FAILED 状态，可以再次重试
-        HttpStatus.CONFLICT  // 如果已经变为 PROCESSING/SUCCESS，不允许重试
-    );
+    assertThat(secondRetryResponse.getStatusCode())
+        .isIn(
+            HttpStatus.OK, // 如果还在 FAILED 状态，可以再次重试
+            HttpStatus.CONFLICT // 如果已经变为 PROCESSING/SUCCESS，不允许重试
+            );
   }
 
   @Test
@@ -308,8 +271,7 @@ class MeshImportRetryE2ETest {
     StartImportCommand command =
         new StartImportCommand(
             "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-            "E2E 清除冲突测试任务"
-        );
+            "E2E 清除冲突测试任务");
 
     meshImportOrchestrator.startImport(command);
 
@@ -321,11 +283,7 @@ class MeshImportRetryE2ETest {
     HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
 
     ResponseEntity<String> response =
-        restTemplate.exchange(
-            "/api/v1/mesh/import/clear",
-            HttpMethod.POST,
-            request,
-            String.class);
+        restTemplate.exchange("/api/v1/mesh/import/clear", HttpMethod.POST, request, String.class);
 
     // Then: 应该返回 409 Conflict
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);

@@ -32,18 +32,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * 出版物发布编排器单元测试
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>Mock PublicationStoragePort、StorageMetadataPort、TechnicalRetryPort
- *   <li>验证存储和元数据记录编排
- *   <li>测试元数据记录失败场景和重试委托
- *   <li>覆盖 Feign 异常处理
- * </ul>
- */
+/// 出版物发布编排器单元测试
+///
+/// 测试策略：
+///
+/// - Mock PublicationStoragePort、StorageMetadataPort、TechnicalRetryPort
+///   - 验证存储和元数据记录编排
+///   - 测试元数据记录失败场景和重试委托
+///   - 覆盖 Feign 异常处理
+///
 @ExtendWith(MockitoExtension.class)
 @DisplayName("出版物发布编排器测试")
 class PublicationPublisherOrchestratorTest {
@@ -159,7 +156,10 @@ class PublicationPublisherOrchestratorTest {
     void shouldHandleNullPublicationList() {
       // Arrange
       PublicationStoragePort.StorageResult emptyResult =
-          PublicationStoragePort.StorageResult.builder().storageKey(null).publicationCount(0).build();
+          PublicationStoragePort.StorageResult.builder()
+              .storageKey(null)
+              .publicationCount(0)
+              .build();
       when(publicationStoragePort.store(any(), any())).thenReturn(emptyResult);
 
       // Act

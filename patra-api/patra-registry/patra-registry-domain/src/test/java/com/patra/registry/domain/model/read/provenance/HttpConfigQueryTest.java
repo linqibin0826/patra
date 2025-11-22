@@ -9,24 +9,20 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link HttpConfigQuery} 单元测试。
- *
- * <p>测试策略: Record 验证测试 (纯 Java，无框架依赖)
- *
- * <p>覆盖场景:
- *
- * <ul>
- *   <li>✅ 成功构造场景 (完整字段、最小字段、可选字段为null)
- *   <li>✅ Compact Constructor 验证失败 (id、provenanceId、retryAfterPolicyCode、effectiveFrom)
- *   <li>✅ Trim 逻辑验证 (operationType、proxyUrlValue、retryAfterPolicyCode、idempotencyHeaderName)
- *   <li>✅ Record 语义验证 (equals、hashCode、toString、组件访问器)
- *   <li>✅ 不可变性验证
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// {@link HttpConfigQuery} 单元测试。
+///
+/// 测试策略: Record 验证测试 (纯 Java，无框架依赖)
+///
+/// 覆盖场景:
+///
+/// - ✅ 成功构造场景 (完整字段、最小字段、可选字段为null)
+///   - ✅ Compact Constructor 验证失败 (id、provenanceId、retryAfterPolicyCode、effectiveFrom)
+///   - ✅ Trim 逻辑验证 (operationType、proxyUrlValue、retryAfterPolicyCode、idempotencyHeaderName)
+///   - ✅ Record 语义验证 (equals、hashCode、toString、组件访问器)
+///   - ✅ 不可变性验证
+///
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("HttpConfigQuery 单元测试")
 class HttpConfigQueryTest {
 
@@ -50,7 +46,7 @@ class HttpConfigQueryTest {
 
   // ========== 辅助方法 ==========
 
-  /** 创建完整的有效 HttpConfigQuery 实例 */
+  /// 创建完整的有效 HttpConfigQuery 实例
   private HttpConfigQuery createValidHttpConfigQuery() {
     return new HttpConfigQuery(
         VALID_ID,
@@ -70,7 +66,7 @@ class HttpConfigQueryTest {
         VALID_IDEMPOTENCY_TTL_SECONDS);
   }
 
-  /** 创建只包含必填字段的 HttpConfigQuery 实例 */
+  /// 创建只包含必填字段的 HttpConfigQuery 实例
   private HttpConfigQuery createMinimalHttpConfigQuery() {
     return new HttpConfigQuery(
         VALID_ID,

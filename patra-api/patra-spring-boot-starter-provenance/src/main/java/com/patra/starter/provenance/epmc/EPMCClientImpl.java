@@ -14,22 +14,18 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.client.RestClient;
 
-/**
- * Europe PMC 客户端实现（使用 Spring RestClient）
- *
- * <p>直接通过HTTP调用Europe PMC API。Europe PMC是欧洲的生物医学出版物数据库， 提供PubMed数据以及欧洲特色的开放获取出版物。
- *
- * <p>主要功能：
- *
- * <ul>
- *   <li>配置优先级处理：优先使用方法级配置，回退到默认配置
- *   <li>可选的Micrometer指标收集：记录API调用时长和成功率
- *   <li>防御性响应解析：容忍格式变化和缺失字段
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// Europe PMC 客户端实现（使用 Spring RestClient）
+///
+/// 直接通过HTTP调用Europe PMC API。Europe PMC是欧洲的生物医学出版物数据库， 提供PubMed数据以及欧洲特色的开放获取出版物。
+///
+/// 主要功能：
+///
+/// - 配置优先级处理：优先使用方法级配置，回退到默认配置
+///   - 可选的Micrometer指标收集：记录API调用时长和成功率
+///   - 防御性响应解析：容忍格式变化和缺失字段
+///
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 public class EPMCClientImpl implements EPMCClient {
 
@@ -51,18 +47,21 @@ public class EPMCClientImpl implements EPMCClient {
     this.metrics = metrics;
   }
 
-  /** {@inheritDoc} */
+  /// {@inheritDoc}
   @Override
   public SearchResponse search(SearchRequest request) {
     return search(request, null);
   }
 
-  /** {@inheritDoc} */
+  /// {@inheritDoc}
   @Override
   public SearchResponse search(SearchRequest request, ProvenanceConfig config) {
     if (metrics != null) {
       // 当Micrometer存在时，包装调用以捕获时长和成功/失败计数器
-      return metrics.recordApiCall(PROVENANCE, EpmcOperation.SEARCH.getOperationName(), () -> executeSearch(request, config));
+      return metrics.recordApiCall(
+          PROVENANCE,
+          EpmcOperation.SEARCH.getOperationName(),
+          () -> executeSearch(request, config));
     }
     return executeSearch(request, config);
   }
@@ -89,7 +88,13 @@ public class EPMCClientImpl implements EPMCClient {
       return SearchResponse.from(root);
     } catch (Exception ex) {
       throw new ProvenanceClientException(
-          PROVENANCE.getCode(), EpmcOperation.SEARCH.getOperationName(), null, null, body, "解析JSON响应失败", ex);
+          PROVENANCE.getCode(),
+          EpmcOperation.SEARCH.getOperationName(),
+          null,
+          null,
+          body,
+          "解析JSON响应失败",
+          ex);
     }
   }
 }

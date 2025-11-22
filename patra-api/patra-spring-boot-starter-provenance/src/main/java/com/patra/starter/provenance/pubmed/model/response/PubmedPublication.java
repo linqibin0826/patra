@@ -8,329 +8,305 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlText;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 从XML直接解析的PubMed文章简化视图。
- *
- * <p>该类封装了PubMed文章的核心信息,包括PMID、文章元数据、期刊信息和补充数据。 提供便捷的访问器方法用于获取关键字、文章标识符等常用信息。
- *
- * @author Patra
- */
+/// 从XML直接解析的PubMed文章简化视图。
+///
+/// 该类封装了PubMed文章的核心信息,包括PMID、文章元数据、期刊信息和补充数据。 提供便捷的访问器方法用于获取关键字、文章标识符等常用信息。
+///
+/// @author Patra
 @JsonIgnoreProperties(ignoreUnknown = true)
 public final class PubmedPublication {
 
   private static final PubmedData EMPTY_PUBMED_DATA = new PubmedData();
 
-  /** Medline引用信息,包含PMID和文章核心元数据 */
+  /// Medline引用信息,包含PMID和文章核心元数据
   @JacksonXmlProperty(localName = "MedlineCitation")
   private MedlineCitation medlineCitation;
 
-  /** PubMed补充数据,包含历史事件和文章标识符 */
+  /// PubMed补充数据,包含历史事件和文章标识符
   @JacksonXmlProperty(localName = "PubmedData")
   private PubmedData pubmedData;
 
   public PubmedPublication() {}
 
-  /** 返回PubMed标识符(PMID) */
+  /// 返回PubMed标识符(PMID)
   public String pmid() {
     return medlineCitation != null ? medlineCitation.pmid() : null;
   }
 
-  /** 返回核心文章元数据 */
+  /// 返回核心文章元数据
   public Article article() {
     return medlineCitation != null ? medlineCitation.article() : null;
   }
 
-  /** 返回Medline报告的期刊信息 */
+  /// 返回Medline报告的期刊信息
   public MedlineJournalInfo journalInfo() {
     return medlineCitation != null ? medlineCitation.journalInfo() : null;
   }
 
-  /** 返回PubMed补充数据,如历史事件和文章标识符 */
+  /// 返回PubMed补充数据,如历史事件和文章标识符
   public PubmedData pubmedData() {
     return pubmedData != null ? pubmedData : EMPTY_PUBMED_DATA;
   }
 
-  /** 返回从所有关键字块合并的关键字列表 */
+  /// 返回从所有关键字块合并的关键字列表
   public List<String> keywords() {
     return medlineCitation != null ? medlineCitation.keywords() : List.of();
   }
 
-  /**
-   * 返回关键字列表集合（包含来源和主题标志）。
-   *
-   * @return 关键字列表集合，如果没有则返回空列表
-   */
+  /// 返回关键字列表集合（包含来源和主题标志）。
+  ///
+  /// @return 关键字列表集合，如果没有则返回空列表
   public List<KeywordList> keywordLists() {
     return medlineCitation != null ? medlineCitation.keywordLists() : List.of();
   }
 
-  /** 返回文章标识符列表的便捷访问器(例如DOI、PMC) */
+  /// 返回文章标识符列表的便捷访问器(例如DOI、PMC)
   public List<PubmedData.ArticleId> articleIds() {
     return pubmedData != null ? pubmedData.articleIds() : List.of();
   }
 
-  /** 返回文献创建日期 */
+  /// 返回文献创建日期
   public DateInfo dateCreated() {
     return medlineCitation != null ? medlineCitation.dateCreated() : null;
   }
 
-  /** 返回文献完成日期 */
+  /// 返回文献完成日期
   public DateInfo dateCompleted() {
     return medlineCitation != null ? medlineCitation.dateCompleted() : null;
   }
 
-  /** 返回文献修订日期 */
+  /// 返回文献修订日期
   public DateInfo dateRevised() {
     return medlineCitation != null ? medlineCitation.dateRevised() : null;
   }
 
-  /** 返回数据记录的所有者或来源 */
+  /// 返回数据记录的所有者或来源
   public String owner() {
     return medlineCitation != null ? medlineCitation.owner() : null;
   }
 
-  /** 返回文献记录的处理状态 */
+  /// 返回文献记录的处理状态
   public String status() {
     return medlineCitation != null ? medlineCitation.status() : null;
   }
 
-  /** 返回文献记录的标引方式 */
+  /// 返回文献记录的标引方式
   public String indexingMethod() {
     return medlineCitation != null ? medlineCitation.indexingMethod() : null;
   }
 
-  /** 返回化学物质列表 */
+  /// 返回化学物质列表
   public List<Chemical> chemicals() {
     return medlineCitation != null ? medlineCitation.chemicals() : List.of();
   }
 
-  /** 返回引文子集标识 */
+  /// 返回引文子集标识
   public String citationSubset() {
     return medlineCitation != null ? medlineCitation.citationSubset() : null;
   }
 
-  /** 返回参考文献数量 */
+  /// 返回参考文献数量
   public Integer numberOfReferences() {
     return medlineCitation != null ? medlineCitation.numberOfReferences() : null;
   }
 
-  /** 返回利益冲突声明 */
+  /// 返回利益冲突声明
   public String coiStatement() {
     return medlineCitation != null ? medlineCitation.coiStatement() : null;
   }
 
-  /**
-   * 返回 MeSH 标引列表。
-   *
-   * <p>MeSH (Medical Subject Headings) 是美国国家医学图书馆创建的受控词表, 用于标引医学出版物的主题和内容。每个 MeSH 标引项包含一个主题词和可选的限定词。
-   *
-   * @return MeSH 标引列表,如果没有则返回空列表
-   */
+  /// 返回 MeSH 标引列表。
+  ///
+  /// MeSH (Medical Subject Headings) 是美国国家医学图书馆创建的受控词表, 用于标引医学出版物的主题和内容。每个 MeSH 标引项包含一个主题词和可选的限定词。
+  ///
+  /// @return MeSH 标引列表,如果没有则返回空列表
   public List<MeshHeading> meshHeadings() {
     return medlineCitation != null ? medlineCitation.meshHeadings() : List.of();
   }
 
-  /**
-   * 返回补充 MeSH 概念列表。
-   *
-   * <p>补充 MeSH 概念用于描述疾病、药物试验等特定主题。
-   *
-   * @return 补充 MeSH 概念列表,如果没有则返回空列表
-   */
+  /// 返回补充 MeSH 概念列表。
+  ///
+  /// 补充 MeSH 概念用于描述疾病、药物试验等特定主题。
+  ///
+  /// @return 补充 MeSH 概念列表,如果没有则返回空列表
   public List<SupplMeshName> supplMeshNames() {
     return medlineCitation != null ? medlineCitation.supplMeshNames() : List.of();
   }
 
-  /**
-   * 返回评论、更正、撤稿信息列表。
-   *
-   * <p>包含与本文献相关的评论、更正、撤稿、勘误等信息。
-   *
-   * @return 评论更正信息列表,如果没有则返回空列表
-   */
+  /// 返回评论、更正、撤稿信息列表。
+  ///
+  /// 包含与本文献相关的评论、更正、撤稿、勘误等信息。
+  ///
+  /// @return 评论更正信息列表,如果没有则返回空列表
   public List<CommentsCorrections> commentsCorrections() {
     return medlineCitation != null ? medlineCitation.commentsCorrections() : List.of();
   }
 
-  /**
-   * 返回基因符号列表。
-   *
-   * <p>与本文献相关的基因符号标识。
-   *
-   * @return 基因符号列表,如果没有则返回空列表
-   */
+  /// 返回基因符号列表。
+  ///
+  /// 与本文献相关的基因符号标识。
+  ///
+  /// @return 基因符号列表,如果没有则返回空列表
   public List<String> geneSymbols() {
     return medlineCitation != null ? medlineCitation.geneSymbols() : List.of();
   }
 
-  /**
-   * 返回其他 ID 列表（如 PMC ID）。
-   *
-   * <p>除 PMID 外的其他标识符,如 PMC ID、NLM ID 等。
-   *
-   * @return 其他 ID 列表,如果没有则返回空列表
-   */
+  /// 返回其他 ID 列表（如 PMC ID）。
+  ///
+  /// 除 PMID 外的其他标识符,如 PMC ID、NLM ID 等。
+  ///
+  /// @return 其他 ID 列表,如果没有则返回空列表
   public List<OtherId> otherIds() {
     return medlineCitation != null ? medlineCitation.otherIds() : List.of();
   }
 
-  /**
-   * 返回其他语言的摘要列表。
-   *
-   * <p>除主摘要外的其他语言版本摘要。
-   *
-   * @return 其他语言摘要列表,如果没有则返回空列表
-   */
+  /// 返回其他语言的摘要列表。
+  ///
+  /// 除主摘要外的其他语言版本摘要。
+  ///
+  /// @return 其他语言摘要列表,如果没有则返回空列表
   public List<OtherAbstract> otherAbstracts() {
     return medlineCitation != null ? medlineCitation.otherAbstracts() : List.of();
   }
 
-  /**
-   * 返回作为主题的人物列表。
-   *
-   * <p>以人物为主题的文献中涉及的人物信息。
-   *
-   * @return 人物主题列表,如果没有则返回空列表
-   */
+  /// 返回作为主题的人物列表。
+  ///
+  /// 以人物为主题的文献中涉及的人物信息。
+  ///
+  /// @return 人物主题列表,如果没有则返回空列表
   public List<PersonalNameSubject> personalNameSubjects() {
     return medlineCitation != null ? medlineCitation.personalNameSubjects() : List.of();
   }
 
-  /**
-   * 返回研究者列表。
-   *
-   * <p>参与研究但非文章作者的研究者信息。
-   *
-   * @return 研究者列表,如果没有则返回空列表
-   */
+  /// 返回研究者列表。
+  ///
+  /// 参与研究但非文章作者的研究者信息。
+  ///
+  /// @return 研究者列表,如果没有则返回空列表
   public List<Investigator> investigators() {
     return medlineCitation != null ? medlineCitation.investigators() : List.of();
   }
 
-  /**
-   * 返回 NLM 内部注释列表。
-   *
-   * <p>NLM 对文献的内部注释和备注信息。
-   *
-   * @return NLM 注释列表,如果没有则返回空列表
-   */
+  /// 返回 NLM 内部注释列表。
+  ///
+  /// NLM 对文献的内部注释和备注信息。
+  ///
+  /// @return NLM 注释列表,如果没有则返回空列表
   public List<GeneralNote> generalNotes() {
     return medlineCitation != null ? medlineCitation.generalNotes() : List.of();
   }
 
-  /**
-   * 返回航天任务列表。
-   *
-   * <p>与本文献相关的航天任务名称列表。
-   *
-   * @return 航天任务列表,如果没有则返回空列表
-   */
+  /// 返回航天任务列表。
+  ///
+  /// 与本文献相关的航天任务名称列表。
+  ///
+  /// @return 航天任务列表,如果没有则返回空列表
   public List<String> spaceFlightMissions() {
     return medlineCitation != null ? medlineCitation.spaceFlightMissions() : List.of();
   }
 
-  /** Medline引用信息的内部表示 */
+  /// Medline引用信息的内部表示
   @JsonIgnoreProperties(ignoreUnknown = true)
   private static final class MedlineCitation {
 
-    /** PubMed标识符对象 */
+    /// PubMed标识符对象
     @JacksonXmlProperty(localName = "PMID")
     private Pmid pmid;
 
-    /** 文章核心元数据 */
+    /// 文章核心元数据
     @JacksonXmlProperty(localName = "Article")
     private Article article;
 
-    /** Medline期刊信息 */
+    /// Medline期刊信息
     @JacksonXmlProperty(localName = "MedlineJournalInfo")
     private MedlineJournalInfo journalInfo;
 
-    /** 关键字列表集合 */
+    /// 关键字列表集合
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "KeywordList")
     private List<KeywordList> keywordLists;
 
-    /** 文献创建日期 */
+    /// 文献创建日期
     @JacksonXmlProperty(localName = "DateCreated")
     private DateInfo dateCreated;
 
-    /** 文献完成日期 */
+    /// 文献完成日期
     @JacksonXmlProperty(localName = "DateCompleted")
     private DateInfo dateCompleted;
 
-    /** 文献修订日期 */
+    /// 文献修订日期
     @JacksonXmlProperty(localName = "DateRevised")
     private DateInfo dateRevised;
 
-    /** 数据记录的所有者或来源 */
+    /// 数据记录的所有者或来源
     @JacksonXmlProperty(isAttribute = true, localName = "Owner")
     private String owner;
 
-    /** 文献记录的处理状态 */
+    /// 文献记录的处理状态
     @JacksonXmlProperty(isAttribute = true, localName = "Status")
     private String status;
 
-    /** 文献记录的标引方式 */
+    /// 文献记录的标引方式
     @JacksonXmlProperty(isAttribute = true, localName = "IndexingMethod")
     private String indexingMethod;
 
-    /** 引文子集标识 */
+    /// 引文子集标识
     @JacksonXmlProperty(localName = "CitationSubset")
     private String citationSubset;
 
-    /** 参考文献数量 */
+    /// 参考文献数量
     @JacksonXmlProperty(localName = "NumberOfReferences")
     private Integer numberOfReferences;
 
-    /** 利益冲突声明 */
+    /// 利益冲突声明
     @JacksonXmlProperty(localName = "CoiStatement")
     private String coiStatement;
 
-    /** 化学物质列表 */
+    /// 化学物质列表
     @JacksonXmlProperty(localName = "ChemicalList")
     private ChemicalList chemicalList;
 
-    /** MeSH 标引列表 */
+    /// MeSH 标引列表
     @JacksonXmlProperty(localName = "MeshHeadingList")
     private MeshHeadingList meshHeadingList;
 
-    /** 补充 MeSH 概念列表 */
+    /// 补充 MeSH 概念列表
     @JacksonXmlProperty(localName = "SupplMeshList")
     private SupplMeshList supplMeshList;
 
-    /** 评论、更正、撤稿信息列表 */
+    /// 评论、更正、撤稿信息列表
     @JacksonXmlProperty(localName = "CommentsCorrectionsList")
     private CommentsCorrectionsList commentsCorrectionsList;
 
-    /** 基因符号列表 */
+    /// 基因符号列表
     @JacksonXmlProperty(localName = "GeneSymbolList")
     private GeneSymbolList geneSymbolList;
 
-    /** 其他 ID 列表（如 PMC ID） */
+    /// 其他 ID 列表（如 PMC ID）
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "OtherID")
     private List<OtherId> otherIds;
 
-    /** 其他语言的摘要列表 */
+    /// 其他语言的摘要列表
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "OtherAbstract")
     private List<OtherAbstract> otherAbstracts;
 
-    /** 作为主题的人物列表 */
+    /// 作为主题的人物列表
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "PersonalNameSubject")
     private List<PersonalNameSubject> personalNameSubjects;
 
-    /** 研究者列表 */
+    /// 研究者列表
     @JacksonXmlProperty(localName = "InvestigatorList")
     private InvestigatorList investigatorList;
 
-    /** NLM 内部注释列表 */
+    /// NLM 内部注释列表
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "GeneralNote")
     private List<GeneralNote> generalNotes;
 
-    /** 航天任务列表 */
+    /// 航天任务列表
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "SpaceFlightMission")
     private List<String> spaceFlightMissions;
@@ -447,31 +423,29 @@ public final class PubmedPublication {
     }
   }
 
-  /**
-   * 关键字列表。
-   *
-   * <p>包含关键字来源和关键字集合。
-   */
+  /// 关键字列表。
+  ///
+  /// 包含关键字来源和关键字集合。
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class KeywordList {
 
-    /** 关键字来源（如 NOTNLM, NLM）。 */
+    /// 关键字来源（如 NOTNLM, NLM）。
     @JacksonXmlProperty(isAttribute = true, localName = "Owner")
     private String owner;
 
-    /** 关键字集合 */
+    /// 关键字集合
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "Keyword")
     private List<Keyword> keywords;
 
     private KeywordList() {}
 
-    /** 返回关键字来源。 */
+    /// 返回关键字来源。
     public String owner() {
       return owner;
     }
 
-    /** 返回关键字列表。 */
+    /// 返回关键字列表。
     public List<Keyword> keywords() {
       return keywords != null ? List.copyOf(keywords) : List.of();
     }
@@ -490,59 +464,57 @@ public final class PubmedPublication {
     }
   }
 
-  /**
-   * 单个关键字。
-   *
-   * <p>包含关键字文本和主要主题标志。
-   */
+  /// 单个关键字。
+  ///
+  /// 包含关键字文本和主要主题标志。
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class Keyword {
 
-    /** 关键字文本内容 */
+    /// 关键字文本内容
     @JacksonXmlText private String value;
 
-    /** 是否为主要主题 (Y/N) */
+    /// 是否为主要主题 (Y/N)
     @JacksonXmlProperty(isAttribute = true, localName = "MajorTopicYN")
     private String majorTopicYN;
 
     private Keyword() {}
 
-    /** 返回关键字文本。 */
+    /// 返回关键字文本。
     public String value() {
       return value;
     }
 
-    /** 返回是否为主要主题 (Y/N)。 */
+    /// 返回是否为主要主题 (Y/N)。
     public String majorTopicYN() {
       return majorTopicYN;
     }
   }
 
-  /** PMID标识符的内部表示 */
+  /// PMID标识符的内部表示
   @JsonIgnoreProperties(ignoreUnknown = true)
   private static final class Pmid {
 
-    /** PMID数值 */
+    /// PMID数值
     @JacksonXmlText private String value;
 
-    /** PMID版本号 */
+    /// PMID版本号
     @JacksonXmlProperty(isAttribute = true, localName = "Version")
     private String version;
 
     private Pmid() {}
 
-    /** 返回PMID值 */
+    /// 返回PMID值
     String value() {
       return value;
     }
 
-    /** 返回PMID版本 */
+    /// 返回PMID版本
     String version() {
       return version;
     }
   }
 
-  /** 日期信息的内部表示 */
+  /// 日期信息的内部表示
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class DateInfo {
 
@@ -557,23 +529,23 @@ public final class PubmedPublication {
 
     private DateInfo() {}
 
-    /** 返回年份 */
+    /// 返回年份
     public String year() {
       return year;
     }
 
-    /** 返回月份 */
+    /// 返回月份
     public String month() {
       return month;
     }
 
-    /** 返回日期 */
+    /// 返回日期
     public String day() {
       return day;
     }
   }
 
-  /** 化学物质列表的内部表示 */
+  /// 化学物质列表的内部表示
   @JsonIgnoreProperties(ignoreUnknown = true)
   private static final class ChemicalList {
 
@@ -588,7 +560,7 @@ public final class PubmedPublication {
     }
   }
 
-  /** 化学物质的内部表示 */
+  /// 化学物质的内部表示
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class Chemical {
 
@@ -600,18 +572,18 @@ public final class PubmedPublication {
 
     private Chemical() {}
 
-    /** 返回CAS注册号 */
+    /// 返回CAS注册号
     public String registryNumber() {
       return registryNumber;
     }
 
-    /** 返回物质名称信息 */
+    /// 返回物质名称信息
     public NameOfSubstance nameOfSubstance() {
       return nameOfSubstance;
     }
   }
 
-  /** 物质名称的内部表示 */
+  /// 物质名称的内部表示
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class NameOfSubstance {
 
@@ -622,18 +594,18 @@ public final class PubmedPublication {
 
     private NameOfSubstance() {}
 
-    /** 返回物质名称 */
+    /// 返回物质名称
     public String value() {
       return value;
     }
 
-    /** 返回MeSH UI标识 */
+    /// 返回MeSH UI标识
     public String ui() {
       return ui;
     }
   }
 
-  /** MeSH 标引列表容器。 */
+  /// MeSH 标引列表容器。
   @JsonIgnoreProperties(ignoreUnknown = true)
   private static final class MeshHeadingList {
 
@@ -648,13 +620,11 @@ public final class PubmedPublication {
     }
   }
 
-  /**
-   * MeSH 标引项。
-   *
-   * <p>包含主题词(DescriptorName)和可选的限定词列表(QualifierName)。
-   *
-   * <p>例如: "Humans" [DescriptorName] + "genetics" [QualifierName] 表示"人类遗传学"主题。
-   */
+  /// MeSH 标引项。
+  ///
+  /// 包含主题词(DescriptorName)和可选的限定词列表(QualifierName)。
+  ///
+  /// 例如: "Humans" [DescriptorName] + "genetics" [QualifierName] 表示"人类遗传学"主题。
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class MeshHeading {
 
@@ -667,31 +637,28 @@ public final class PubmedPublication {
 
     private MeshHeading() {}
 
-    /** 返回 MeSH 主题词。 */
+    /// 返回 MeSH 主题词。
     public DescriptorName descriptorName() {
       return descriptorName;
     }
 
-    /** 返回 MeSH 限定词列表。 */
+    /// 返回 MeSH 限定词列表。
     public List<QualifierName> qualifierNames() {
       return qualifierNames != null ? List.copyOf(qualifierNames) : List.of();
     }
   }
 
-  /**
-   * MeSH 主题词。
-   *
-   * <p>主题词是 MeSH 术语的主要部分,描述文章的核心主题。
-   *
-   * <p>包含:
-   *
-   * <ul>
-   *   <li>UI: MeSH 主题词的唯一标识符
-   *   <li>MajorTopicYN: 是否为文章的主要主题(Y=是, N=否)
-   *   <li>Type: 主题词的类别类型(如 Geographic 表示地理名称)
-   *   <li>value: 主题词的文本值(如 "Humans", "Antibodies")
-   * </ul>
-   */
+  /// MeSH 主题词。
+  ///
+  /// 主题词是 MeSH 术语的主要部分,描述文章的核心主题。
+  ///
+  /// 包含:
+  ///
+  /// - UI: MeSH 主题词的唯一标识符
+  ///   - MajorTopicYN: 是否为文章的主要主题(Y=是, N=否)
+  ///   - Type: 主题词的类别类型(如 Geographic 表示地理名称)
+  ///   - value: 主题词的文本值(如 "Humans", "Antibodies")
+  ///
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class DescriptorName {
 
@@ -708,53 +675,44 @@ public final class PubmedPublication {
 
     private DescriptorName() {}
 
-    /** 返回主题词的文本值。 */
+    /// 返回主题词的文本值。
     public String value() {
       return value;
     }
 
-    /** 返回主题词的唯一标识符。 */
+    /// 返回主题词的唯一标识符。
     public String ui() {
       return ui;
     }
 
-    /**
-     * 返回是否为文章的主要主题。
-     *
-     * @return "Y" 表示是,"N" 表示否
-     */
+    /// 返回是否为文章的主要主题。
+    ///
+    /// @return "Y" 表示是,"N" 表示否
     public String majorTopicYN() {
       return majorTopicYN;
     }
 
-    /**
-     * 返回主题词的类别类型。
-     *
-     * @return 如 "Geographic" 表示地理名称
-     */
+    /// 返回主题词的类别类型。
+    ///
+    /// @return 如 "Geographic" 表示地理名称
     public String type() {
       return type;
     }
   }
 
-  /**
-   * MeSH 副主题词（限定词）。
-   *
-   * <p>限定词用于进一步细化主题词的含义,例如:
-   *
-   * <ul>
-   *   <li>"Humans" [主题词] + "genetics" [限定词] = "人类遗传学"
-   *   <li>"Diabetes Mellitus" [主题词] + "drug therapy" [限定词] = "糖尿病药物治疗"
-   * </ul>
-   *
-   * <p>包含:
-   *
-   * <ul>
-   *   <li>UI: MeSH 限定词的唯一标识符
-   *   <li>MajorTopicYN: 是否为文章的主要主题(Y=是, N=否)
-   *   <li>value: 限定词的文本值(如 "genetics", "drug therapy")
-   * </ul>
-   */
+  /// MeSH 副主题词（限定词）。
+  ///
+  /// 限定词用于进一步细化主题词的含义,例如:
+  ///
+  /// - "Humans" [主题词] + "genetics" [限定词] = "人类遗传学"
+  ///   - "Diabetes Mellitus" [主题词] + "drug therapy" [限定词] = "糖尿病药物治疗"
+  ///
+  /// 包含:
+  ///
+  /// - UI: MeSH 限定词的唯一标识符
+  ///   - MajorTopicYN: 是否为文章的主要主题(Y=是, N=否)
+  ///   - value: 限定词的文本值(如 "genetics", "drug therapy")
+  ///
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class QualifierName {
 
@@ -768,27 +726,25 @@ public final class PubmedPublication {
 
     private QualifierName() {}
 
-    /** 返回限定词的文本值。 */
+    /// 返回限定词的文本值。
     public String value() {
       return value;
     }
 
-    /** 返回限定词的唯一标识符。 */
+    /// 返回限定词的唯一标识符。
     public String ui() {
       return ui;
     }
 
-    /**
-     * 返回是否为文章的主要主题。
-     *
-     * @return "Y" 表示是,"N" 表示否
-     */
+    /// 返回是否为文章的主要主题。
+    ///
+    /// @return "Y" 表示是,"N" 表示否
     public String majorTopicYN() {
       return majorTopicYN;
     }
   }
 
-  /** 补充 MeSH 概念列表容器 */
+  /// 补充 MeSH 概念列表容器
   @JsonIgnoreProperties(ignoreUnknown = true)
   private static final class SupplMeshList {
 
@@ -803,11 +759,9 @@ public final class PubmedPublication {
     }
   }
 
-  /**
-   * 补充 MeSH 概念。
-   *
-   * <p>补充 MeSH 概念用于描述疾病、药物试验等特定主题。
-   */
+  /// 补充 MeSH 概念。
+  ///
+  /// 补充 MeSH 概念用于描述疾病、药物试验等特定主题。
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class SupplMeshName {
 
@@ -821,23 +775,23 @@ public final class PubmedPublication {
 
     private SupplMeshName() {}
 
-    /** 返回补充 MeSH 名称 */
+    /// 返回补充 MeSH 名称
     public String value() {
       return value;
     }
 
-    /** 返回补充 MeSH 类型（如 Protocol, Disease） */
+    /// 返回补充 MeSH 类型（如 Protocol, Disease）
     public String type() {
       return type;
     }
 
-    /** 返回唯一标识符 */
+    /// 返回唯一标识符
     public String ui() {
       return ui;
     }
   }
 
-  /** 评论更正列表容器 */
+  /// 评论更正列表容器
   @JsonIgnoreProperties(ignoreUnknown = true)
   private static final class CommentsCorrectionsList {
 
@@ -852,11 +806,9 @@ public final class PubmedPublication {
     }
   }
 
-  /**
-   * 评论、更正、撤稿信息。
-   *
-   * <p>包含与本文献相关的评论、更正、撤稿、勘误等信息。
-   */
+  /// 评论、更正、撤稿信息。
+  ///
+  /// 包含与本文献相关的评论、更正、撤稿、勘误等信息。
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class CommentsCorrections {
 
@@ -874,27 +826,27 @@ public final class PubmedPublication {
 
     private CommentsCorrections() {}
 
-    /** 返回关系类型（如 RetractionOf, ErratumIn, CommentOn） */
+    /// 返回关系类型（如 RetractionOf, ErratumIn, CommentOn）
     public String refType() {
       return refType;
     }
 
-    /** 返回原始来源 */
+    /// 返回原始来源
     public String refSource() {
       return refSource;
     }
 
-    /** 返回关联的 PMID */
+    /// 返回关联的 PMID
     public String pmid() {
       return pmid != null ? pmid.value() : null;
     }
 
-    /** 返回备注 */
+    /// 返回备注
     public String note() {
       return note;
     }
 
-    /** PMID 引用的内部表示 */
+    /// PMID 引用的内部表示
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final class PmidRef {
 
@@ -915,7 +867,7 @@ public final class PubmedPublication {
     }
   }
 
-  /** 基因符号列表容器 */
+  /// 基因符号列表容器
   @JsonIgnoreProperties(ignoreUnknown = true)
   private static final class GeneSymbolList {
 
@@ -930,7 +882,7 @@ public final class PubmedPublication {
     }
   }
 
-  /** 其他 ID（如 PMC ID）。 */
+  /// 其他 ID（如 PMC ID）。
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class OtherId {
 
@@ -941,18 +893,18 @@ public final class PubmedPublication {
 
     private OtherId() {}
 
-    /** 返回 ID 值 */
+    /// 返回 ID 值
     public String value() {
       return value;
     }
 
-    /** 返回 ID 来源（如 PMC, NLM） */
+    /// 返回 ID 来源（如 PMC, NLM）
     public String source() {
       return source;
     }
   }
 
-  /** 其他语言的摘要。 */
+  /// 其他语言的摘要。
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class OtherAbstract {
 
@@ -970,32 +922,30 @@ public final class PubmedPublication {
 
     private OtherAbstract() {}
 
-    /** 返回摘要类型 */
+    /// 返回摘要类型
     public String type() {
       return type;
     }
 
-    /** 返回摘要语言 */
+    /// 返回摘要语言
     public String language() {
       return language;
     }
 
-    /** 返回摘要文本 */
+    /// 返回摘要文本
     public String abstractText() {
       return abstractText;
     }
 
-    /** 返回版权信息 */
+    /// 返回版权信息
     public String copyrightInformation() {
       return copyrightInformation;
     }
   }
 
-  /**
-   * 作为主题的人物。
-   *
-   * <p>以人物为主题的文献中涉及的人物信息。
-   */
+  /// 作为主题的人物。
+  ///
+  /// 以人物为主题的文献中涉及的人物信息。
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class PersonalNameSubject {
 
@@ -1013,28 +963,28 @@ public final class PubmedPublication {
 
     private PersonalNameSubject() {}
 
-    /** 返回姓 */
+    /// 返回姓
     public String lastName() {
       return lastName;
     }
 
-    /** 返回名 */
+    /// 返回名
     public String foreName() {
       return foreName;
     }
 
-    /** 返回姓名缩写 */
+    /// 返回姓名缩写
     public String initials() {
       return initials;
     }
 
-    /** 返回后缀 */
+    /// 返回后缀
     public String suffix() {
       return suffix;
     }
   }
 
-  /** 研究者列表容器 */
+  /// 研究者列表容器
   @JsonIgnoreProperties(ignoreUnknown = true)
   private static final class InvestigatorList {
 
@@ -1049,11 +999,9 @@ public final class PubmedPublication {
     }
   }
 
-  /**
-   * 研究者（非作者）。
-   *
-   * <p>参与研究但非文章作者的研究者信息。
-   */
+  /// 研究者（非作者）。
+  ///
+  /// 参与研究但非文章作者的研究者信息。
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class Investigator {
 
@@ -1082,43 +1030,43 @@ public final class PubmedPublication {
 
     private Investigator() {}
 
-    /** 返回是否有效（Y/N） */
+    /// 返回是否有效（Y/N）
     public String validYN() {
       return validYN;
     }
 
-    /** 返回姓 */
+    /// 返回姓
     public String lastName() {
       return lastName;
     }
 
-    /** 返回名 */
+    /// 返回名
     public String foreName() {
       return foreName;
     }
 
-    /** 返回姓名缩写 */
+    /// 返回姓名缩写
     public String initials() {
       return initials;
     }
 
-    /** 返回后缀 */
+    /// 返回后缀
     public String suffix() {
       return suffix;
     }
 
-    /** 返回标识符列表（如 ORCID） */
+    /// 返回标识符列表（如 ORCID）
     public List<Author.Identifier> identifiers() {
       return identifiers != null ? List.copyOf(identifiers) : List.of();
     }
 
-    /** 返回单位信息列表 */
+    /// 返回单位信息列表
     public List<Author.AffiliationInfo> affiliationInfo() {
       return affiliationInfo != null ? List.copyOf(affiliationInfo) : List.of();
     }
   }
 
-  /** NLM 内部注释。 */
+  /// NLM 内部注释。
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class GeneralNote {
 
@@ -1132,48 +1080,44 @@ public final class PubmedPublication {
 
     private GeneralNote() {}
 
-    /** 返回注释内容 */
+    /// 返回注释内容
     public String value() {
       return value;
     }
 
-    /** 返回注释所有者 */
+    /// 返回注释所有者
     public String owner() {
       return owner;
     }
 
-    /** 返回注释类型 */
+    /// 返回注释类型
     public String noteType() {
       return noteType;
     }
   }
 
-  /**
-   * 从 Medline 引文中提取的简化 PubMed 文章元数据。
-   *
-   * <p>包含文章的核心信息,包括标题、摘要、作者列表、期刊信息、发表类型等。 这是 PubMed 文章数据的主要数据传输对象。
-   *
-   * <p><b>主要字段:</b>
-   *
-   * <ul>
-   *   <li><b>pubModel</b>: 文章出版形式 (Print, Electronic 等)
-   *   <li><b>journal</b>: 期刊元数据 (标题、ISSN、发表日期等)
-   *   <li><b>title</b>: 文章标题
-   *   <li><b>pagination</b>: 页码信息
-   *   <li><b>eLocationIds</b>: 电子定位标识列表 (如 DOI)
-   *   <li><b>abstractContent</b>: 摘要内容 (可能包含多个分段)
-   *   <li><b>authors</b>: 作者列表
-   *   <li><b>languages</b>: 语言列表
-   *   <li><b>dataBankList</b>: 关联的数据库列表 (如 GENBANK)
-   *   <li><b>grantList</b>: 资助信息列表
-   *   <li><b>publicationTypes</b>: 发表类型标识符
-   *   <li><b>vernacularTitle</b>: 非英语文章的原文标题
-   *   <li><b>articleDates</b>: 文章日期列表 (如电子版发布日期)
-   * </ul>
-   *
-   * @author linqibin
-   * @since 0.1.0
-   */
+  /// 从 Medline 引文中提取的简化 PubMed 文章元数据。
+  ///
+  /// 包含文章的核心信息,包括标题、摘要、作者列表、期刊信息、发表类型等。 这是 PubMed 文章数据的主要数据传输对象。
+  ///
+  /// **主要字段:**
+  ///
+  /// - **pubModel**: 文章出版形式 (Print, Electronic 等)
+  ///   - **journal**: 期刊元数据 (标题、ISSN、发表日期等)
+  ///   - **title**: 文章标题
+  ///   - **pagination**: 页码信息
+  ///   - **eLocationIds**: 电子定位标识列表 (如 DOI)
+  ///   - **abstractContent**: 摘要内容 (可能包含多个分段)
+  ///   - **authors**: 作者列表
+  ///   - **languages**: 语言列表
+  ///   - **dataBankList**: 关联的数据库列表 (如 GENBANK)
+  ///   - **grantList**: 资助信息列表
+  ///   - **publicationTypes**: 发表类型标识符
+  ///   - **vernacularTitle**: 非英语文章的原文标题
+  ///   - **articleDates**: 文章日期列表 (如电子版发布日期)
+  ///
+  /// @author linqibin
+  /// @since 0.1.0
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class Article {
 
@@ -1222,32 +1166,32 @@ public final class PubmedPublication {
 
     private Article() {}
 
-    /** 文章的出版形式 (Print, Electronic, Print-Electronic 等)。 */
+    /// 文章的出版形式 (Print, Electronic, Print-Electronic 等)。
     public String pubModel() {
       return pubModel;
     }
 
-    /** 与文章关联的期刊元数据。 */
+    /// 与文章关联的期刊元数据。
     public Journal journal() {
       return journal;
     }
 
-    /** 文章标题。 */
+    /// 文章标题。
     public String title() {
       return title;
     }
 
-    /** 页码信息。 */
+    /// 页码信息。
     public Pagination pagination() {
       return pagination;
     }
 
-    /** 电子定位标识列表 (如 DOI)。 */
+    /// 电子定位标识列表 (如 DOI)。
     public List<ELocationId> eLocationIds() {
       return eLocationIds != null ? List.copyOf(eLocationIds) : List.of();
     }
 
-    /** PubMed 报告的主要语言。 */
+    /// PubMed 报告的主要语言。
     public String language() {
       if (languages == null || languages.isEmpty()) {
         return null;
@@ -1255,42 +1199,42 @@ public final class PubmedPublication {
       return languages.get(0);
     }
 
-    /** 摘要分段 (标签 + 文本)。 */
+    /// 摘要分段 (标签 + 文本)。
     public List<AbstractSection> abstractSections() {
       return abstractContent != null ? abstractContent.sections() : List.of();
     }
 
-    /** 摘要的版权信息。 */
+    /// 摘要的版权信息。
     public String copyrightInformation() {
       return abstractContent != null ? abstractContent.copyrightInformation() : null;
     }
 
-    /** 已解析的作者列表。 */
+    /// 已解析的作者列表。
     public List<Author> authors() {
       return authorList != null ? authorList.authors() : List.of();
     }
 
-    /** 作者列表是否完整 (Y = 完整, N = 不完整)。 */
+    /// 作者列表是否完整 (Y = 完整, N = 不完整)。
     public String authorsCompleteYN() {
       return authorList != null ? authorList.completeYN() : null;
     }
 
-    /** 关联的数据库列表 (如 GENBANK)。 */
+    /// 关联的数据库列表 (如 GENBANK)。
     public List<DataBank> dataBanks() {
       return dataBankList != null ? dataBankList.dataBanks() : List.of();
     }
 
-    /** 数据库列表是否完整 (Y = 完整, N = 不完整)。 */
+    /// 数据库列表是否完整 (Y = 完整, N = 不完整)。
     public String dataBanksCompleteYN() {
       return dataBankList != null ? dataBankList.completeYN() : null;
     }
 
-    /** 资助信息列表。 */
+    /// 资助信息列表。
     public List<Grant> grants() {
       return grantList != null ? grantList.grants() : List.of();
     }
 
-    /** PubMed 分配的发表类型标识符。 */
+    /// PubMed 分配的发表类型标识符。
     public List<PublicationType> publicationTypes() {
       if (publicationTypes == null || publicationTypes.isEmpty()) {
         return List.of();
@@ -1298,12 +1242,12 @@ public final class PubmedPublication {
       return List.copyOf(publicationTypes);
     }
 
-    /** 非英语文章的原文标题。 */
+    /// 非英语文章的原文标题。
     public String vernacularTitle() {
       return vernacularTitle;
     }
 
-    /** 文章日期列表 (如电子版发布日期)。 */
+    /// 文章日期列表 (如电子版发布日期)。
     public List<ArticleDate> articleDates() {
       return articleDates != null ? List.copyOf(articleDates) : List.of();
     }
@@ -1365,20 +1309,16 @@ public final class PubmedPublication {
       }
     }
 
-    /**
-     * 从引文中提取的摘要分段,带可选标签和类别。
-     *
-     * @param label 段落标签（如 BACKGROUND, METHODS, RESULTS）
-     * @param nlmCategory NLM 类别（如 BACKGROUND, METHODS, RESULTS, CONCLUSIONS）
-     * @param text 段落文本
-     */
+    /// 从引文中提取的摘要分段,带可选标签和类别。
+    ///
+    /// @param label 段落标签（如 BACKGROUND, METHODS, RESULTS）
+    /// @param nlmCategory NLM 类别（如 BACKGROUND, METHODS, RESULTS, CONCLUSIONS）
+    /// @param text 段落文本
     public record AbstractSection(String label, String nlmCategory, String text) {}
 
-    /**
-     * 页码信息。
-     *
-     * <p>包含文章的起始页码、结束页码和 MEDLINE 格式页码。
-     */
+    /// 页码信息。
+    ///
+    /// 包含文章的起始页码、结束页码和 MEDLINE 格式页码。
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class Pagination {
 
@@ -1393,27 +1333,25 @@ public final class PubmedPublication {
 
       private Pagination() {}
 
-      /** 起始页码。 */
+      /// 起始页码。
       public String startPage() {
         return startPage;
       }
 
-      /** 结束页码。 */
+      /// 结束页码。
       public String endPage() {
         return endPage;
       }
 
-      /** MEDLINE 格式页码。 */
+      /// MEDLINE 格式页码。
       public String medlinePgn() {
         return medlinePgn;
       }
     }
 
-    /**
-     * 电子定位标识 (如 DOI)。
-     *
-     * <p>包含电子出版物的唯一标识符及其类型。
-     */
+    /// 电子定位标识 (如 DOI)。
+    ///
+    /// 包含电子出版物的唯一标识符及其类型。
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class ELocationId {
 
@@ -1427,27 +1365,25 @@ public final class PubmedPublication {
 
       private ELocationId() {}
 
-      /** 电子定位标识的实际值 (如 DOI 字符串)。 */
+      /// 电子定位标识的实际值 (如 DOI 字符串)。
       public String value() {
         return value;
       }
 
-      /** 标识类型 (如 doi, pii)。 */
+      /// 标识类型 (如 doi, pii)。
       public String eidType() {
         return eidType;
       }
 
-      /** 标识是否有效 (Y = 有效, N = 无效)。 */
+      /// 标识是否有效 (Y = 有效, N = 无效)。
       public String validYN() {
         return validYN;
       }
     }
 
-    /**
-     * 数据库列表容器。
-     *
-     * <p>包含文章关联的数据库信息,如 GENBANK。
-     */
+    /// 数据库列表容器。
+    ///
+    /// 包含文章关联的数据库信息,如 GENBANK。
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final class DataBankList {
 
@@ -1469,11 +1405,9 @@ public final class PubmedPublication {
       }
     }
 
-    /**
-     * 数据库信息 (如 GENBANK)。
-     *
-     * <p>包含数据库名称和登记号列表。
-     */
+    /// 数据库信息 (如 GENBANK)。
+    ///
+    /// 包含数据库名称和登记号列表。
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class DataBank {
 
@@ -1486,22 +1420,20 @@ public final class PubmedPublication {
 
       private DataBank() {}
 
-      /** 数据库名称 (如 GENBANK)。 */
+      /// 数据库名称 (如 GENBANK)。
       public String dataBankName() {
         return dataBankName;
       }
 
-      /** 登记号列表。 */
+      /// 登记号列表。
       public List<String> accessionNumbers() {
         return accessionNumbers != null ? List.copyOf(accessionNumbers) : List.of();
       }
     }
 
-    /**
-     * 资助信息列表容器。
-     *
-     * <p>包含文章的研究资助信息。
-     */
+    /// 资助信息列表容器。
+    ///
+    /// 包含文章的研究资助信息。
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final class GrantList {
 
@@ -1523,11 +1455,9 @@ public final class PubmedPublication {
       }
     }
 
-    /**
-     * 作者列表容器。
-     *
-     * <p>包含作者列表及其完整性标志。
-     */
+    /// 作者列表容器。
+    ///
+    /// 包含作者列表及其完整性标志。
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final class AuthorListWrapper {
 
@@ -1549,11 +1479,9 @@ public final class PubmedPublication {
       }
     }
 
-    /**
-     * 资助信息。
-     *
-     * <p>包含研究项目的资助编号、机构和国家等信息。
-     */
+    /// 资助信息。
+    ///
+    /// 包含研究项目的资助编号、机构和国家等信息。
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class Grant {
 
@@ -1571,32 +1499,30 @@ public final class PubmedPublication {
 
       private Grant() {}
 
-      /** 资助编号。 */
+      /// 资助编号。
       public String grantId() {
         return grantId;
       }
 
-      /** 机构缩写。 */
+      /// 机构缩写。
       public String acronym() {
         return acronym;
       }
 
-      /** 资助机构。 */
+      /// 资助机构。
       public String agency() {
         return agency;
       }
 
-      /** 国家。 */
+      /// 国家。
       public String country() {
         return country;
       }
     }
 
-    /**
-     * 文章日期信息。
-     *
-     * <p>包含文章的电子发布日期等信息。
-     */
+    /// 文章日期信息。
+    ///
+    /// 包含文章的电子发布日期等信息。
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class ArticleDate {
 
@@ -1614,78 +1540,72 @@ public final class PubmedPublication {
 
       private ArticleDate() {}
 
-      /** 日期类型 (如 Electronic, Collection)。 */
+      /// 日期类型 (如 Electronic, Collection)。
       public String dateType() {
         return dateType;
       }
 
-      /** 年。 */
+      /// 年。
       public String year() {
         return year;
       }
 
-      /** 月。 */
+      /// 月。
       public String month() {
         return month;
       }
 
-      /** 日。 */
+      /// 日。
       public String day() {
         return day;
       }
     }
 
-    /**
-     * 发表类型。
-     *
-     * <p>包含发表类型的文本值和 MeSH UI 标识符。
-     */
+    /// 发表类型。
+    ///
+    /// 包含发表类型的文本值和 MeSH UI 标识符。
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class PublicationType {
 
-      /** 发表类型文本 */
+      /// 发表类型文本
       @JacksonXmlText private String value;
 
-      /** MeSH UI 标识符 */
+      /// MeSH UI 标识符
       @JacksonXmlProperty(isAttribute = true, localName = "UI")
       private String ui;
 
       private PublicationType() {}
 
-      /** 返回发表类型文本 */
+      /// 返回发表类型文本
       public String value() {
         return value;
       }
 
-      /** 返回 MeSH UI 标识符 */
+      /// 返回 MeSH UI 标识符
       public String ui() {
         return ui;
       }
     }
   }
 
-  /**
-   * 从 PubMed 引文中提取的作者信息。
-   *
-   * <p>包含作者的姓名、缩写、机构隶属关系和可选的标识符 (如 ORCID)。 支持个人作者和团体作者两种类型。
-   *
-   * <p><b>主要字段:</b>
-   *
-   * <ul>
-   *   <li><b>lastName</b>: 姓氏(个人作者)
-   *   <li><b>foreName</b>: 名字(个人作者)
-   *   <li><b>initials</b>: 姓名缩写(个人作者)
-   *   <li><b>suffix</b>: 后缀(如 Jr, III)
-   *   <li><b>collectiveName</b>: 团体作者名称
-   *   <li><b>affiliationInfo</b>: 机构隶属关系列表
-   *   <li><b>identifiers</b>: 作者标识符列表(如 ORCID)
-   *   <li><b>validYN</b>: 作者信息是否有效(Y/N)
-   *   <li><b>equalContrib</b>: 是否为同等贡献作者(Y/N)
-   * </ul>
-   *
-   * @author linqibin
-   * @since 0.1.0
-   */
+  /// 从 PubMed 引文中提取的作者信息。
+  ///
+  /// 包含作者的姓名、缩写、机构隶属关系和可选的标识符 (如 ORCID)。 支持个人作者和团体作者两种类型。
+  ///
+  /// **主要字段:**
+  ///
+  /// - **lastName**: 姓氏(个人作者)
+  ///   - **foreName**: 名字(个人作者)
+  ///   - **initials**: 姓名缩写(个人作者)
+  ///   - **suffix**: 后缀(如 Jr, III)
+  ///   - **collectiveName**: 团体作者名称
+  ///   - **affiliationInfo**: 机构隶属关系列表
+  ///   - **identifiers**: 作者标识符列表(如 ORCID)
+  ///   - **validYN**: 作者信息是否有效(Y/N)
+  ///   - **equalContrib**: 是否为同等贡献作者(Y/N)
+  ///
+  /// @author linqibin
+  /// @since 0.1.0
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class Author {
 
@@ -1766,14 +1686,12 @@ public final class PubmedPublication {
       return identifiers != null ? List.copyOf(identifiers) : List.of();
     }
 
-    /**
-     * 作者的机构隶属关系信息。
-     *
-     * <p>包含机构文本和可选的机构标识符(如 ROR)。
-     *
-     * @author linqibin
-     * @since 0.1.0
-     */
+    /// 作者的机构隶属关系信息。
+    ///
+    /// 包含机构文本和可选的机构标识符(如 ROR)。
+    ///
+    /// @author linqibin
+    /// @since 0.1.0
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class AffiliationInfo {
 
@@ -1800,14 +1718,12 @@ public final class PubmedPublication {
       }
     }
 
-    /**
-     * 作者或机构的唯一标识符。
-     *
-     * <p>常见来源包括 ORCID、ResearcherID、ROR 等。
-     *
-     * @author linqibin
-     * @since 0.1.0
-     */
+    /// 作者或机构的唯一标识符。
+    ///
+    /// 常见来源包括 ORCID、ResearcherID、ROR 等。
+    ///
+    /// @author linqibin
+    /// @since 0.1.0
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class Identifier {
 
@@ -1828,23 +1744,19 @@ public final class PubmedPublication {
     }
   }
 
-  /**
-   * 从 PubMed 引文中衍生的期刊元数据。
-   *
-   * <p>包含期刊的标识信息 (ISSN)、标题、ISO 缩写以及期刊期号和发表日期信息。
-   *
-   * <p><b>主要字段:</b>
-   *
-   * <ul>
-   *   <li><b>issn</b>: 期刊 ISSN (国际标准连续出版物编号)
-   *   <li><b>title</b>: 完整期刊标题
-   *   <li><b>isoAbbreviation</b>: ISO 标准期刊缩写
-   *   <li><b>journalIssue</b>: 期号信息,包含发表日期
-   * </ul>
-   *
-   * @author linqibin
-   * @since 0.1.0
-   */
+  /// 从 PubMed 引文中衍生的期刊元数据。
+  ///
+  /// 包含期刊的标识信息 (ISSN)、标题、ISO 缩写以及期刊期号和发表日期信息。
+  ///
+  /// **主要字段:**
+  ///
+  /// - **issn**: 期刊 ISSN (国际标准连续出版物编号)
+  ///   - **title**: 完整期刊标题
+  ///   - **isoAbbreviation**: ISO 标准期刊缩写
+  ///   - **journalIssue**: 期号信息,包含发表日期
+  ///
+  /// @author linqibin
+  /// @since 0.1.0
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class Journal {
 
@@ -1862,27 +1774,27 @@ public final class PubmedPublication {
 
     public Journal() {}
 
-    /** Journal ISSN value. */
+    /// Journal ISSN value.
     public String issn() {
       return issn != null ? issn.value : null;
     }
 
-    /** Journal ISSN type attribute. */
+    /// Journal ISSN type attribute.
     public String issnType() {
       return issn != null ? issn.type : null;
     }
 
-    /** Full journal title. */
+    /// Full journal title.
     public String title() {
       return title;
     }
 
-    /** ISO abbreviation for the journal. */
+    /// ISO abbreviation for the journal.
     public String isoAbbreviation() {
       return isoAbbreviation;
     }
 
-    /** Issue information containing publication date. */
+    /// Issue information containing publication date.
     public JournalIssue journalIssue() {
       return journalIssue;
     }
@@ -1904,22 +1816,22 @@ public final class PubmedPublication {
 
       private JournalIssue() {}
 
-      /** 引用媒介类型(Print 或 Internet). */
+      /// 引用媒介类型(Print 或 Internet).
       public String citedMedium() {
         return citedMedium;
       }
 
-      /** 卷号. */
+      /// 卷号.
       public String volume() {
         return volume;
       }
 
-      /** 期号. */
+      /// 期号.
       public String issue() {
         return issue;
       }
 
-      /** 出版日期元数据. */
+      /// 出版日期元数据.
       public PubDate pubDate() {
         return pubDate;
       }
@@ -1999,132 +1911,128 @@ public final class PubmedPublication {
     }
   }
 
-  /**
-   * Medline 提供的额外期刊元数据。
-   *
-   * <p>包含期刊的标准化缩写、出版国家、NLM唯一标识符和链接ISSN等信息。
-   *
-   * @author Patra
-   */
+  /// Medline 提供的额外期刊元数据。
+  ///
+  /// 包含期刊的标准化缩写、出版国家、NLM唯一标识符和链接ISSN等信息。
+  ///
+  /// @author Patra
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class MedlineJournalInfo {
 
-    /** Medline标准化期刊缩写名称 */
+    /// Medline标准化期刊缩写名称
     @JacksonXmlProperty(localName = "MedlineTA")
     private String medlineTa;
 
-    /** 期刊出版国家/地区 */
+    /// 期刊出版国家/地区
     @JacksonXmlProperty(localName = "Country")
     private String country;
 
-    /** NLM(美国国家医学图书馆)唯一标识符 */
+    /// NLM(美国国家医学图书馆)唯一标识符
     @JacksonXmlProperty(localName = "NlmUniqueID")
     private String nlmUniqueId;
 
-    /** 链接ISSN(国际标准期刊号) */
+    /// 链接ISSN(国际标准期刊号)
     @JacksonXmlProperty(localName = "ISSNLinking")
     private String issnLinking;
 
     public MedlineJournalInfo() {}
 
-    /** 返回Medline标准化期刊缩写名称 */
+    /// 返回Medline标准化期刊缩写名称
     public String medlineTa() {
       return medlineTa;
     }
 
-    /** 返回期刊出版国家/地区 */
+    /// 返回期刊出版国家/地区
     public String country() {
       return country;
     }
 
-    /** 返回NLM唯一标识符 */
+    /// 返回NLM唯一标识符
     public String nlmUniqueId() {
       return nlmUniqueId;
     }
 
-    /** 返回链接ISSN值 */
+    /// 返回链接ISSN值
     public String issnLinking() {
       return issnLinking;
     }
   }
 
-  /**
-   * 从XML直接解析的PubMed补充数据块。
-   *
-   * <p>包含文章的发布状态、历史事件时间线和各类文章标识符(DOI、PMC等)。 提供便捷的方法用于访问和检查这些补充信息。
-   *
-   * @author Patra
-   */
+  /// 从XML直接解析的PubMed补充数据块。
+  ///
+  /// 包含文章的发布状态、历史事件时间线和各类文章标识符(DOI、PMC等)。 提供便捷的方法用于访问和检查这些补充信息。
+  ///
+  /// @author Patra
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class PubmedData {
 
-    /** 文章发布状态(如epublish、ppublish等) */
+    /// 文章发布状态(如epublish、ppublish等)
     @JacksonXmlProperty(localName = "PublicationStatus")
     private String publicationStatus;
 
-    /** 文章发布历史时间线 */
+    /// 文章发布历史时间线
     @JacksonXmlProperty(localName = "History")
     private History history;
 
-    /** 文章标识符列表 */
+    /// 文章标识符列表
     @JacksonXmlProperty(localName = "ArticleIdList")
     private ArticleIdList articleIdList;
 
-    /** 参考文献列表 */
+    /// 参考文献列表
     @JacksonXmlProperty(localName = "ReferenceList")
     private ReferenceList referenceList;
 
-    /** 补充对象列表 */
+    /// 补充对象列表
     @JacksonXmlProperty(localName = "ObjectList")
     private ObjectList objectList;
 
-    /** PMC 引用计数 */
+    /// PMC 引用计数
     @JacksonXmlProperty(localName = "PmcRefCount")
     private Integer pmcRefCount;
 
     public PubmedData() {}
 
-    /** 返回PubMed报告的发布状态 */
+    /// 返回PubMed报告的发布状态
     public String publicationStatus() {
       return publicationStatus;
     }
 
-    /** 返回描述发布时间线的不可变历史事件列表 */
+    /// 返回描述发布时间线的不可变历史事件列表
     public List<HistoryEvent> history() {
       return history != null ? history.events() : List.of();
     }
 
-    /** 返回文章标识符的不可变列表(例如DOI、PMC) */
+    /// 返回文章标识符的不可变列表(例如DOI、PMC)
     public List<ArticleId> articleIds() {
       return articleIdList != null ? articleIdList.articleIds() : List.of();
     }
 
-    /** 返回参考文献的不可变列表 */
+    /// 返回参考文献的不可变列表
     public List<Reference> references() {
       return referenceList != null ? referenceList.references() : List.of();
     }
 
-    /** 返回补充对象的不可变列表 */
+    /// 返回补充对象的不可变列表
     public List<ObjectInfo> objects() {
       return objectList != null ? objectList.objects() : List.of();
     }
 
-    /** 返回在 PMC 中被引用的次数 */
+    /// 返回在 PMC 中被引用的次数
     public Integer pmcRefCount() {
       return pmcRefCount;
     }
 
-    /** 检查是否包含文章标识符 */
+    /// 检查是否包含文章标识符
     @JsonIgnore
     public boolean hasArticleIds() {
       return !articleIds().isEmpty();
     }
 
-    /** 历史事件集合的内部表示 */
+    /// 历史事件集合的内部表示
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final class History {
 
-      /** 发布日期事件列表 */
+      /// 发布日期事件列表
       @JacksonXmlElementWrapper(useWrapping = false)
       @JacksonXmlProperty(localName = "PubMedPubDate")
       private List<PubDate> events;
@@ -2143,31 +2051,31 @@ public final class PubmedPublication {
       }
     }
 
-    /** 发布日期的内部表示 */
+    /// 发布日期的内部表示
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final class PubDate {
 
-      /** 发布状态(如received、accepted、epublish等) */
+      /// 发布状态(如received、accepted、epublish等)
       @JacksonXmlProperty(isAttribute = true, localName = "PubStatus")
       private String status;
 
-      /** 年份 */
+      /// 年份
       @JacksonXmlProperty(localName = "Year")
       private String year;
 
-      /** 月份 */
+      /// 月份
       @JacksonXmlProperty(localName = "Month")
       private String month;
 
-      /** 日期 */
+      /// 日期
       @JacksonXmlProperty(localName = "Day")
       private String day;
 
-      /** 小时 */
+      /// 小时
       @JacksonXmlProperty(localName = "Hour")
       private String hour;
 
-      /** 分钟 */
+      /// 分钟
       @JacksonXmlProperty(localName = "Minute")
       private String minute;
 
@@ -2178,11 +2086,11 @@ public final class PubmedPublication {
       }
     }
 
-    /** 文章标识符列表的内部表示 */
+    /// 文章标识符列表的内部表示
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final class ArticleIdList {
 
-      /** 文章标识符集合 */
+      /// 文章标识符集合
       @JacksonXmlElementWrapper(useWrapping = false)
       @JacksonXmlProperty(localName = "ArticleId")
       private List<ArticleId> articleIds;
@@ -2197,35 +2105,33 @@ public final class PubmedPublication {
       }
     }
 
-    /**
-     * 文章标识符,表示各类唯一标识(DOI、PMC、PubMed等)。
-     *
-     * <p>每个标识符包含类型和对应的值。
-     */
+    /// 文章标识符,表示各类唯一标识(DOI、PMC、PubMed等)。
+    ///
+    /// 每个标识符包含类型和对应的值。
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class ArticleId {
 
-      /** 标识符值 */
+      /// 标识符值
       @JacksonXmlText private String value;
 
-      /** 标识符类型 */
+      /// 标识符类型
       @JacksonXmlProperty(isAttribute = true, localName = "IdType")
       private String type;
 
       public ArticleId() {}
 
-      /** 返回标识符值(例如DOI、PMC值) */
+      /// 返回标识符值(例如DOI、PMC值)
       public String value() {
         return value;
       }
 
-      /** 返回PubMed报告的标识符类型(例如doi、pmc、pubmed) */
+      /// 返回PubMed报告的标识符类型(例如doi、pmc、pubmed)
       public String type() {
         return type;
       }
     }
 
-    /** 参考文献列表的内部表示 */
+    /// 参考文献列表的内部表示
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final class ReferenceList {
 
@@ -2240,11 +2146,9 @@ public final class PubmedPublication {
       }
     }
 
-    /**
-     * 单条参考文献。
-     *
-     * <p>包含引文文本和可选的文章标识符列表。
-     */
+    /// 单条参考文献。
+    ///
+    /// 包含引文文本和可选的文章标识符列表。
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class Reference {
 
@@ -2265,7 +2169,7 @@ public final class PubmedPublication {
       }
     }
 
-    /** 补充对象列表的内部表示 */
+    /// 补充对象列表的内部表示
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final class ObjectList {
 
@@ -2280,11 +2184,9 @@ public final class PubmedPublication {
       }
     }
 
-    /**
-     * 补充对象信息(如图表、关键词等)。
-     *
-     * <p>每个对象包含类型和参数列表。
-     */
+    /// 补充对象信息(如图表、关键词等)。
+    ///
+    /// 每个对象包含类型和参数列表。
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class ObjectInfo {
 
@@ -2306,11 +2208,9 @@ public final class PubmedPublication {
       }
     }
 
-    /**
-     * 对象参数。
-     *
-     * <p>表示补充对象的键值对属性。
-     */
+    /// 对象参数。
+    ///
+    /// 表示补充对象的键值对属性。
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class Param {
 
@@ -2330,16 +2230,14 @@ public final class PubmedPublication {
       }
     }
 
-    /**
-     * 历史事件记录,描述关键的发布里程碑。
-     *
-     * @param status 发布状态(如received、accepted、epublish等)
-     * @param year 年份
-     * @param month 月份
-     * @param day 日期
-     * @param hour 小时
-     * @param minute 分钟
-     */
+    /// 历史事件记录,描述关键的发布里程碑。
+    ///
+    /// @param status 发布状态(如received、accepted、epublish等)
+    /// @param year 年份
+    /// @param month 月份
+    /// @param day 日期
+    /// @param hour 小时
+    /// @param minute 分钟
     public record HistoryEvent(
         String status, String year, String month, String day, String hour, String minute) {}
   }

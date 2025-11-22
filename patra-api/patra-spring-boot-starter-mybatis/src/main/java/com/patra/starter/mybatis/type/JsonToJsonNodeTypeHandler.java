@@ -7,33 +7,29 @@ import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import org.apache.ibatis.type.*;
 
-/**
- * 用于在 Jackson 的 {@link JsonNode} 和 SQL 列之间进行转换的统一类型处理器。
- *
- * <p><b>设计原则：</b>
- *
- * <ul>
- *   <li><b>依赖注入：</b> 使用 Spring 管理的 {@link ObjectMapper} 实例，以确保与全局 Jackson 配置保持一致，而不是创建自己的实例。
- *   <li><b>写入数据库：</b> 将 {@code JsonNode} 序列化为 JSON 字符串。如果指定了 {@link JdbcType}，则遵循相应的 TYPE_CODE。
- *   <li><b>从数据库读取：</b> 灵活地从各种 JDBC 表示形式反序列化 {@code JsonNode}，包括 String、CLOB、字节数组和 PostgreSQL 的
- *       PGobject（用于 json/jsonb 类型）。
- *   <li><b>空值处理：</b> 将数据库 NULL 值转换为 Java null。空字符串或仅包含空白字符的字符串也会被视为 null，以防止解析错误。
- * </ul>
- *
- * <p><b>数据库兼容性：</b>
- *
- * <ul>
- *   <li><b>MySQL：</b> 兼容 JSON、TEXT 和 LONGTEXT 列类型。
- *   <li><b>PostgreSQL：</b> 兼容 JSON 和 JSONB 列类型；自动处理驱动程序返回的 {@code org.postgresql.util.PGobject}。
- * </ul>
- *
- * <p><b>注册示例：</b>
- *
- * <pre>
- * configuration.getTypeHandlerRegistry()
- *              .register(JsonNode.class, new JsonToJsonNodeTypeHandler(objectMapper));
- * </pre>
- */
+/// 用于在 Jackson 的 {@link JsonNode} 和 SQL 列之间进行转换的统一类型处理器。
+///
+/// **设计原则：**
+///
+/// - **依赖注入：** 使用 Spring 管理的 {@link ObjectMapper} 实例，以确保与全局 Jackson 配置保持一致，而不是创建自己的实例。
+///   - **写入数据库：** 将 `JsonNode` 序列化为 JSON 字符串。如果指定了 {@link JdbcType}，则遵循相应的 TYPE_CODE。
+///   - **从数据库读取：** 灵活地从各种 JDBC 表示形式反序列化 `JsonNode`，包括 String、CLOB、字节数组和 PostgreSQL 的
+///       PGobject（用于 json/jsonb 类型）。
+///   - **空值处理：** 将数据库 NULL 值转换为 Java null。空字符串或仅包含空白字符的字符串也会被视为 null，以防止解析错误。
+///
+/// **数据库兼容性：**
+///
+/// - **MySQL：** 兼容 JSON、TEXT 和 LONGTEXT 列类型。
+///   - **PostgreSQL：** 兼容 JSON 和 JSONB 列类型；自动处理驱动程序返回的 `org.postgresql.util.PGobject`。
+///
+/// **注册示例：**
+///
+/// ```
+///
+/// configuration.getTypeHandlerRegistry()
+///              .register(JsonNode.class, new JsonToJsonNodeTypeHandler(objectMapper));
+///
+/// ```
 @MappedTypes(JsonNode.class)
 @MappedJdbcTypes(
     value = {

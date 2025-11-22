@@ -15,42 +15,34 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
-/**
- * AWS S3 对象存储提供者实现。
- *
- * <p>此实现负责:
- *
- * <ul>
- *   <li>上传文件到 AWS S3 服务
- *   <li><b>不会自动创建存储桶</b> - 存储桶必须预先存在
- *   <li>严格的参数验证(存储桶名称、对象键、文件大小)
- * </ul>
- *
- * @see MinioStorageProvider MinIO 实现(支持自动创建存储桶)
- */
+/// AWS S3 对象存储提供者实现。
+///
+/// 此实现负责:
+///
+/// - 上传文件到 AWS S3 服务
+///   - **不会自动创建存储桶** - 存储桶必须预先存在
+///   - 严格的参数验证(存储桶名称、对象键、文件大小)
+///
+/// @see MinioStorageProvider MinIO 实现(支持自动创建存储桶)
 @Slf4j
 public class S3StorageProvider implements ObjectStorageProvider {
 
-  /**
-   * 存储桶名称验证模式,遵循 S3 命名规则。
-   *
-   * <p><b>规则:</b> 3-63 个字符,仅小写字母/数字/点/连字符,必须以字母或数字开头和结尾。
-   */
+  /// 存储桶名称验证模式,遵循 S3 命名规则。
+  ///
+  /// **规则:** 3-63 个字符,仅小写字母/数字/点/连字符,必须以字母或数字开头和结尾。
   private static final Pattern BUCKET_NAME_PATTERN =
       Pattern.compile("^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$");
 
-  /** 对象键的最大长度(S3 限制)。 */
+  /// 对象键的最大长度(S3 限制)。
   private static final int MAX_KEY_LENGTH = 1024;
 
   private final S3Client s3Client;
   private final long maxFileSize;
 
-  /**
-   * 构造一个新的 S3 存储提供者。
-   *
-   * @param s3Client 配置好的 S3 客户端
-   * @param maxFileSize 允许的最大文件大小(字节)
-   */
+  /// 构造一个新的 S3 存储提供者。
+  ///
+  /// @param s3Client 配置好的 S3 客户端
+  /// @param maxFileSize 允许的最大文件大小(字节)
   public S3StorageProvider(S3Client s3Client, long maxFileSize) {
     this.s3Client = s3Client;
     this.maxFileSize = maxFileSize;
@@ -61,21 +53,19 @@ public class S3StorageProvider implements ObjectStorageProvider {
     return ProviderType.S3;
   }
 
-  /**
-   * 上传对象到 AWS S3 存储。
-   *
-   * <p><b>重要区别:</b> 与 MinIO 不同,S3 不会自动创建存储桶。 在调用此方法之前,目标存储桶必须已存在,否则将抛出异常。
-   *
-   * <p><b>资源管理:</b> AWS SDK 会消费 {@code inputStream} 并在内部关闭它。 调用者不应在此方法返回后尝试重用或关闭流。
-   *
-   * @param bucket 存储桶名称(必须已存在)
-   * @param key 存储桶内的唯一对象键
-   * @param inputStream 要上传的内容流(将被 AWS SDK 关闭)
-   * @param metadata 文件元数据,包括大小和内容类型
-   * @return 上传结果,包含存储键和 ETag
-   * @throws InvalidUploadRequestException 如果参数无效(不可重试)
-   * @throws UploadFailedException 如果上传因网络或服务器错误失败(可重试)
-   */
+  /// 上传对象到 AWS S3 存储。
+  ///
+  /// **重要区别:** 与 MinIO 不同,S3 不会自动创建存储桶。 在调用此方法之前,目标存储桶必须已存在,否则将抛出异常。
+  ///
+  /// **资源管理:** AWS SDK 会消费 `inputStream` 并在内部关闭它。 调用者不应在此方法返回后尝试重用或关闭流。
+  ///
+  /// @param bucket 存储桶名称(必须已存在)
+  /// @param key 存储桶内的唯一对象键
+  /// @param inputStream 要上传的内容流(将被 AWS SDK 关闭)
+  /// @param metadata 文件元数据,包括大小和内容类型
+  /// @return 上传结果,包含存储键和 ETag
+  /// @throws InvalidUploadRequestException 如果参数无效(不可重试)
+  /// @throws UploadFailedException 如果上传因网络或服务器错误失败(可重试)
   @Override
   public UploadResult upload(
       String bucket, String key, InputStream inputStream, ObjectMetadata metadata) {
@@ -127,15 +117,13 @@ public class S3StorageProvider implements ObjectStorageProvider {
     }
   }
 
-  /**
-   * 验证上传参数的 null/空检查、格式合规性和大小限制。
-   *
-   * @param bucket 存储桶名称
-   * @param key 对象键
-   * @param inputStream 内容流
-   * @param metadata 文件元数据
-   * @throws InvalidUploadRequestException 如果任何验证失败
-   */
+  /// 验证上传参数的 null/空检查、格式合规性和大小限制。
+  ///
+  /// @param bucket 存储桶名称
+  /// @param key 对象键
+  /// @param inputStream 内容流
+  /// @param metadata 文件元数据
+  /// @throws InvalidUploadRequestException 如果任何验证失败
   private void validateArguments(
       String bucket, String key, InputStream inputStream, ObjectMetadata metadata) {
     // Null/空检查

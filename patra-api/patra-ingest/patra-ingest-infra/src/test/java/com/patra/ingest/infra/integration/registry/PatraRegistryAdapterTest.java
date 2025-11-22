@@ -24,14 +24,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * PatraRegistryAdapter 单元测试。
- *
- * <p>测试策略: 使用 Mockito mock 所有外部依赖，测试适配器的转换逻辑和异常处理。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// PatraRegistryAdapter 单元测试。
+///
+/// 测试策略: 使用 Mockito mock 所有外部依赖，测试适配器的转换逻辑和异常处理。
+///
+/// @author linqibin
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PatraRegistryAdapter 单元测试")
 class PatraRegistryAdapterTest {

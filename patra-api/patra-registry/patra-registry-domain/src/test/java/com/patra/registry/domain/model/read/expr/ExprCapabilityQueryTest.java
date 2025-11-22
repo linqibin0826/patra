@@ -11,12 +11,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link ExprCapabilityQuery} 单元测试。
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// {@link ExprCapabilityQuery} 单元测试。
+///
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("ExprCapabilityQuery 表达式能力查询视图")
 class ExprCapabilityQueryTest {
 
@@ -1069,7 +1067,7 @@ class ExprCapabilityQueryTest {
 
   // ==================== 辅助方法 ====================
 
-  /** 创建最小化的查询对象（仅包含必需字段）。 */
+  /// 创建最小化的查询对象（仅包含必需字段）。
   private ExprCapabilityQuery createMinimalQuery(
       Long provenanceId, String fieldKey, String rangeKindCode, Instant effectiveFrom) {
     return new ExprCapabilityQuery(

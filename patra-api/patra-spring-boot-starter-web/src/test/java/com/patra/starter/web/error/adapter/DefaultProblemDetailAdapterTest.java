@@ -22,7 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 
-/** 测试 {@link DefaultProblemDetailAdapter} 的异常转换和 ProblemDetail 构建 */
+/// 测试 {@link DefaultProblemDetailAdapter} 的异常转换和 ProblemDetail 构建
 @DisplayName("DefaultProblemDetailAdapter 单元测试")
 @ExtendWith(MockitoExtension.class)
 class DefaultProblemDetailAdapterTest {

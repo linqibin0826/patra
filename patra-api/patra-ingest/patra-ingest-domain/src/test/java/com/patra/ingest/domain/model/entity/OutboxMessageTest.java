@@ -7,36 +7,30 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * OutboxMessage 单元测试。
- *
- * <p>测试策略：
- *
- * <ul>
- *   <li>纯 Java 单元测试，不依赖 Spring 容器
- *   <li>使用 TestDataBuilder 模式构建测试数据
- *   <li>遵循 Given-When-Then 结构
- *   <li>使用 AssertJ 流畅断言
- * </ul>
- *
- * <p>测试覆盖范围:
- *
- * <ul>
- *   <li>✅ Builder 模式创建和字段验证
- *   <li>✅ 必填字段校验
- *   <li>✅ 默认值设置
- *   <li>✅ 状态机行为方法
- *   <li>✅ 租约机制
- *   <li>✅ 重试机制
- *   <li>✅ 延迟发布逻辑
- *   <li>✅ refreshForRetry 方法
- *   <li>✅ 不变性测试
- *   <li>✅ 边界条件测试
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// OutboxMessage 单元测试。
+///
+/// 测试策略：
+///
+/// - 纯 Java 单元测试，不依赖 Spring 容器
+///   - 使用 TestDataBuilder 模式构建测试数据
+///   - 遵循 Given-When-Then 结构
+///   - 使用 AssertJ 流畅断言
+///
+/// 测试覆盖范围:
+///
+/// - ✅ Builder 模式创建和字段验证
+///   - ✅ 必填字段校验
+///   - ✅ 默认值设置
+///   - ✅ 状态机行为方法
+///   - ✅ 租约机制
+///   - ✅ 重试机制
+///   - ✅ 延迟发布逻辑
+///   - ✅ refreshForRetry 方法
+///   - ✅ 不变性测试
+///   - ✅ 边界条件测试
+///
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("OutboxMessage 单元测试")
 class OutboxMessageTest {
 
@@ -1099,11 +1093,9 @@ class OutboxMessageTest {
 
   // ========== TestDataBuilder (辅助类) ==========
 
-  /**
-   * OutboxMessage 测试数据构建器。
-   *
-   * <p>遵循 Builder 模式，提供默认值以简化测试数据构建。
-   */
+  /// OutboxMessage 测试数据构建器。
+  ///
+  /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
   static class OutboxMessageTestDataBuilder {
     private Long id = null;
     private Long version = 0L;
@@ -1124,12 +1116,12 @@ class OutboxMessageTest {
     private String leaseOwner = null;
     private Instant leaseExpireAt = null;
 
-    /** 创建一个默认的 PENDING 状态消息构建器。 */
+    /// 创建一个默认的 PENDING 状态消息构建器。
     public static OutboxMessageTestDataBuilder aPendingMessage() {
       return new OutboxMessageTestDataBuilder().statusCode("PENDING");
     }
 
-    /** 创建一个 PUBLISHING 状态消息构建器。 */
+    /// 创建一个 PUBLISHING 状态消息构建器。
     public static OutboxMessageTestDataBuilder aPublishingMessage() {
       return new OutboxMessageTestDataBuilder()
           .statusCode("PUBLISHING")
@@ -1137,7 +1129,7 @@ class OutboxMessageTest {
           .leaseExpireAt(Instant.now().plusSeconds(300));
     }
 
-    /** 创建一个 FAILED 状态消息构建器。 */
+    /// 创建一个 FAILED 状态消息构建器。
     public static OutboxMessageTestDataBuilder aFailedMessage() {
       return new OutboxMessageTestDataBuilder()
           .statusCode("FAILED")
@@ -1236,7 +1228,7 @@ class OutboxMessageTest {
       return this;
     }
 
-    /** 构建 OutboxMessage 实例。 */
+    /// 构建 OutboxMessage 实例。
     public OutboxMessage build() {
       return OutboxMessage.builder()
           .id(id)

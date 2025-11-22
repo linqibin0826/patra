@@ -6,11 +6,11 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 
-/** 基于 MDC 的 {@link TraceProvider}，从配置的头部名称中提取追踪标识符。 */
+/// 基于 MDC 的 {@link TraceProvider}，从配置的头部名称中提取追踪标识符。
 @Slf4j
 public class HeaderBasedTraceProvider implements TraceProvider {
 
-  /** 追踪配置属性。 */
+  /// 追踪配置属性。
   private final TracingProperties tracingProperties;
 
   public HeaderBasedTraceProvider(TracingProperties tracingProperties) {

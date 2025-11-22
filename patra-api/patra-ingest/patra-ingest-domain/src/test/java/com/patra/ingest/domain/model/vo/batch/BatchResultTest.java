@@ -8,22 +8,18 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link BatchResult} 的单元测试。
- *
- * <p>测试覆盖:
- *
- * <ul>
- *   <li>构造方法验证 (batchNo >= 1, fetchedCount >= 0, 失败批次必须提供错误信息)
- *   <li>工厂方法 (success, failure)
- *   <li>业务方法 (hasNextCursor)
- *   <li>Record 语义 (equals, hashCode, toString, 组件访问器)
- *   <li>不变性保证
- *   <li>边界条件测试
- * </ul>
- *
- * @author Patra Team
- */
+/// {@link BatchResult} 的单元测试。
+///
+/// 测试覆盖:
+///
+/// - 构造方法验证 (batchNo >= 1, fetchedCount >= 0, 失败批次必须提供错误信息)
+///   - 工厂方法 (success, failure)
+///   - 业务方法 (hasNextCursor)
+///   - Record 语义 (equals, hashCode, toString, 组件访问器)
+///   - 不变性保证
+///   - 边界条件测试
+///
+/// @author Patra Team
 @DisplayName("BatchResult 单元测试")
 class BatchResultTest {
 

@@ -10,38 +10,33 @@ import java.time.Instant;
 import java.util.Objects;
 import lombok.Getter;
 
-/**
- * 游标实体。表示增量采集的当前游标状态。
- *
- * <p>标识：由 provenanceCode + operationCode + cursorKey + namespaceScope + namespaceKey 唯一标识。
- *
- * <p>生命周期：
- *
- * <ul>
- *   <li>首次采集时创建游标，记录初始水位线
- *   <li>每次采集完成后前进游标，更新水位线和血缘信息
- *   <li>表达式哈希变更时需要重置游标
- * </ul>
- *
- * <p>业务约束：
- *
- * <ul>
- *   <li>游标水位线单调递增，不允许回退
- *   <li>支持 GLOBAL/TASK/PLAN 三种命名空间范围
- *   <li>游标值 (CursorValue) 支持时间、数值、字符串等多种类型
- *   <li>水位线 (CursorWatermark) 记录归一化的时间戳或数值
- *   <li>血缘 (CursorLineage) 捕获 task/run/plan/slice 标识用于追溯
- * </ul>
- */
+/// 游标实体。表示增量采集的当前游标状态。
+///
+/// 标识：由 provenanceCode + operationCode + cursorKey + namespaceScope + namespaceKey 唯一标识。
+///
+/// 生命周期：
+///
+/// - 首次采集时创建游标，记录初始水位线
+///   - 每次采集完成后前进游标，更新水位线和血缘信息
+///   - 表达式哈希变更时需要重置游标
+///
+/// 业务约束：
+///
+/// - 游标水位线单调递增，不允许回退
+///   - 支持 GLOBAL/TASK/PLAN 三种命名空间范围
+///   - 游标值 (CursorValue) 支持时间、数值、字符串等多种类型
+///   - 水位线 (CursorWatermark) 记录归一化的时间戳或数值
+///   - 血缘 (CursorLineage) 捕获 task/run/plan/slice 标识用于追溯
+///
 @SuppressWarnings("unused")
 @Getter
 public class Cursor {
 
-  /** 游标前进操作的结果。 */
+  /// 游标前进操作的结果。
   public enum AdvancementResult {
-    /** 游标成功前进。 */
+    /// 游标成功前进。
     SUCCESS,
-    /** 表达式哈希已变更，游标需要重置。 */
+    /// 表达式哈希已变更，游标需要重置。
     EXPRESSION_CHANGED
   }
 
@@ -134,7 +129,7 @@ public class Cursor {
             observedMax, watermark.normalizedInstant(), watermark.normalizedNumeric());
   }
 
-  /** Factory method creating a time-based cursor. */
+  /// Factory method creating a time-based cursor.
   public static Cursor create(
       ProvenanceCode provenanceCode,
       String operationCode,
@@ -152,18 +147,16 @@ public class Cursor {
         CursorLineage.empty());
   }
 
-  /**
-   * Factory method creating a time-based cursor with lineage context.
-   *
-   * @param provenanceCode provenance code
-   * @param operationCode operation code
-   * @param cursorKey cursor key identifier
-   * @param namespaceScope namespace scope (GLOBAL/TASK/PLAN)
-   * @param namespaceKey namespace key
-   * @param watermark initial watermark timestamp
-   * @param lineage lineage context capturing task/run/plan/slice identifiers
-   * @return new cursor instance
-   */
+  /// Factory method creating a time-based cursor with lineage context.
+  ///
+  /// @param provenanceCode provenance code
+  /// @param operationCode operation code
+  /// @param cursorKey cursor key identifier
+  /// @param namespaceScope namespace scope (GLOBAL/TASK/PLAN)
+  /// @param namespaceKey namespace key
+  /// @param watermark initial watermark timestamp
+  /// @param lineage lineage context capturing task/run/plan/slice identifiers
+  /// @return new cursor instance
   public static Cursor create(
       ProvenanceCode provenanceCode,
       String operationCode,
@@ -183,19 +176,17 @@ public class Cursor {
         null);
   }
 
-  /**
-   * Factory method creating a time-based cursor with lineage context and expression hash.
-   *
-   * @param provenanceCode provenance code
-   * @param operationCode operation code
-   * @param cursorKey cursor key identifier
-   * @param namespaceScope namespace scope (GLOBAL/TASK/PLAN)
-   * @param namespaceKey namespace key
-   * @param watermark initial watermark timestamp
-   * @param lineage lineage context capturing task/run/plan/slice identifiers
-   * @param exprHash expression hash for tracking strategy changes
-   * @return new cursor instance
-   */
+  /// Factory method creating a time-based cursor with lineage context and expression hash.
+  ///
+  /// @param provenanceCode provenance code
+  /// @param operationCode operation code
+  /// @param cursorKey cursor key identifier
+  /// @param namespaceScope namespace scope (GLOBAL/TASK/PLAN)
+  /// @param namespaceKey namespace key
+  /// @param watermark initial watermark timestamp
+  /// @param lineage lineage context capturing task/run/plan/slice identifiers
+  /// @param exprHash expression hash for tracking strategy changes
+  /// @return new cursor instance
   public static Cursor create(
       ProvenanceCode provenanceCode,
       String operationCode,
@@ -224,17 +215,15 @@ public class Cursor {
         exprHash);
   }
 
-  /** Advance the cursor to the supplied time watermark. */
+  /// Advance the cursor to the supplied time watermark.
   public void advanceTo(Instant newWatermark) {
     advanceTo(newWatermark, null);
   }
 
-  /**
-   * Advance the cursor to the supplied time watermark with lineage update.
-   *
-   * @param newWatermark new watermark timestamp
-   * @param newLineage new lineage context (optional, keeps existing if null)
-   */
+  /// Advance the cursor to the supplied time watermark with lineage update.
+  ///
+  /// @param newWatermark new watermark timestamp
+  /// @param newLineage new lineage context (optional, keeps existing if null)
   public void advanceTo(Instant newWatermark, CursorLineage newLineage) {
     if (newWatermark == null) {
       throw new IllegalArgumentException("New watermark must not be null");
@@ -254,18 +243,16 @@ public class Cursor {
     }
   }
 
-  /**
-   * Advance the cursor to the supplied time watermark with expression hash tracking.
-   *
-   * <p>This method detects expression changes and returns a result indicating whether the cursor
-   * was advanced successfully or if the expression hash has changed (requiring a reset).
-   *
-   * @param newWatermark new watermark timestamp
-   * @param newLineage new lineage context (optional, keeps existing if null)
-   * @param newExprHash new expression hash (nullable)
-   * @return {@link AdvancementResult#SUCCESS} if advanced, {@link
-   *     AdvancementResult#EXPRESSION_CHANGED} if expression hash changed
-   */
+  /// Advance the cursor to the supplied time watermark with expression hash tracking.
+  ///
+  /// This method detects expression changes and returns a result indicating whether the cursor
+  /// was advanced successfully or if the expression hash has changed (requiring a reset).
+  ///
+  /// @param newWatermark new watermark timestamp
+  /// @param newLineage new lineage context (optional, keeps existing if null)
+  /// @param newExprHash new expression hash (nullable)
+  /// @return {@link AdvancementResult#SUCCESS} if advanced, {@link
+  ///     AdvancementResult#EXPRESSION_CHANGED} if expression hash changed
   public AdvancementResult advanceTo(
       Instant newWatermark, CursorLineage newLineage, String newExprHash) {
     if (newWatermark == null) {
@@ -297,28 +284,24 @@ public class Cursor {
     return AdvancementResult.SUCCESS;
   }
 
-  /**
-   * Check if the cursor's expression hash matches the given expression hash.
-   *
-   * <p>Uses null-safe comparison to handle cases where either hash might be null.
-   *
-   * @param exprHash expression hash to compare against
-   * @return true if hashes match, false otherwise
-   */
+  /// Check if the cursor's expression hash matches the given expression hash.
+  ///
+  /// Uses null-safe comparison to handle cases where either hash might be null.
+  ///
+  /// @param exprHash expression hash to compare against
+  /// @return true if hashes match, false otherwise
   public boolean matchesExpression(String exprHash) {
     return Objects.equals(this.exprHash, exprHash);
   }
 
-  /** Return the current time-based watermark. */
+  /// Return the current time-based watermark.
   public Instant getCurrentWatermark() {
     return watermark.normalizedInstant();
   }
 
-  /**
-   * 获取数据来源代码字符串值。
-   *
-   * @return 数据来源代码字符串
-   */
+  /// 获取数据来源代码字符串值。
+  ///
+  /// @return 数据来源代码字符串
   public String getProvenanceCodeValue() {
     return provenanceCode.getCode();
   }

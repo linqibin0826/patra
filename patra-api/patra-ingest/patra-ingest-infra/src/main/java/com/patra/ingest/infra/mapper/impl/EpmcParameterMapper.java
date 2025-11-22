@@ -8,42 +8,36 @@ import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.provenance.api.params.EpmcParamKeys;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.query.QuerySession;
-import java.util.Map;
-
 import com.patra.ingest.infra.mapper.ProviderParameterMapper;
 import com.patra.ingest.infra.mapper.StateTokenKeys;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * EPMC 参数映射器。
- *
- * <p>将通用的 offset/limit 映射为 EPMC 特定的游标分页参数。
- *
- * <p><strong>EPMC 分页机制</strong>：
- *
- * <ul>
- *   <li><b>pageSize</b>: 每页记录数
- *   <li><b>cursorMark</b>: Solr 风格的游标令牌
- *       <ul>
- *         <li>首次请求：cursorMark="*"
- *         <li>后续请求：使用上次返回的 nextCursorMark
- *         <li>结束标志：nextCursorMark 等于当前 cursorMark
- *       </ul>
- * </ul>
- *
- * <p><strong>映射规则</strong>：
- *
- * <pre>{@code
- * batch.limit()  → pageSize
- * session.stateToken("cursorMark") → cursorMark（如果有）
- * }</pre>
- *
- * <p><strong>注意</strong>：EPMC 使用游标分页，不使用 offset。每次请求返回 nextCursorMark 用于下次请求。
- *
- * @author Patra Architecture Team
- * @since 0.3.0
- */
+/// EPMC 参数映射器。
+///
+/// 将通用的 offset/limit 映射为 EPMC 特定的游标分页参数。
+///
+/// **EPMC 分页机制**：
+///
+/// - **pageSize**: 每页记录数
+///   - **cursorMark**: Solr 风格的游标令牌
+///
+/// - 首次请求：cursorMark="*"
+///         - 后续请求：使用上次返回的 nextCursorMark
+///         - 结束标志：nextCursorMark 等于当前 cursorMark
+///
+/// **映射规则**：
+///
+/// ```java
+/// batch.limit()  → pageSize
+/// session.stateToken("cursorMark") → cursorMark（如果有）
+/// ```
+///
+/// **注意**：EPMC 使用游标分页，不使用 offset。每次请求返回 nextCursorMark 用于下次请求。
+///
+/// @author Patra Architecture Team
+/// @since 0.3.0
 @Component
 @Slf4j
 public class EpmcParameterMapper implements ProviderParameterMapper {

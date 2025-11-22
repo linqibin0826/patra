@@ -40,14 +40,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * PubmedPublicationProcessor 单元测试
- *
- * <p>测试策略：使用Mock对象进行单元测试，验证处理器的核心逻辑和异常处理。
- *
- * @author Patra Architecture Team
- * @since 0.1.0
- */
+/// PubmedPublicationProcessor 单元测试
+///
+/// 测试策略：使用Mock对象进行单元测试，验证处理器的核心逻辑和异常处理。
+///
+/// @author Patra Architecture Team
+/// @since 0.1.0
 @DisplayName("PubmedPublicationProcessor 单元测试")
 @ExtendWith(MockitoExtension.class)
 class PubmedPublicationProcessorTest {
@@ -75,12 +73,12 @@ class PubmedPublicationProcessorTest {
 
   // ==================== 测试辅助方法 ====================
 
-  /** 创建测试用的ProviderRequest */
+  /// 创建测试用的ProviderRequest
   private ProviderRequest createTestRequest() {
     return createTestRequest(TEST_QUERY, null);
   }
 
-  /** 创建测试用的ProviderRequest（指定查询和参数） */
+  /// 创建测试用的ProviderRequest（指定查询和参数）
   private ProviderRequest createTestRequest(String query, JsonNode params) {
     return ProviderRequest.builder()
         .config(createTestConfig())
@@ -88,13 +86,13 @@ class PubmedPublicationProcessorTest {
         .build();
   }
 
-  /** 创建测试用的ProvenanceConfig */
+  /// 创建测试用的ProvenanceConfig
   private ProvenanceConfig createTestConfig() {
     return new ProvenanceConfig(
         "https://eutils.ncbi.nlm.nih.gov/entrez/eutils", null, null, null, null, null, null);
   }
 
-  /** 创建测试用的ProvenanceConfig（带批处理配置） */
+  /// 创建测试用的ProvenanceConfig（带批处理配置）
   private ProvenanceConfig createTestConfigWithBatching(Integer epostThreshold) {
     BatchingConfig batchingConfig = new BatchingConfig(100, 100, epostThreshold);
     return new ProvenanceConfig(
@@ -107,7 +105,7 @@ class PubmedPublicationProcessorTest {
         null);
   }
 
-  /** 创建测试用的ProviderContext */
+  /// 创建测试用的ProviderContext
   private ProviderContext createTestContext() {
     return ProviderContext.builder()
         .config(createTestConfig())
@@ -116,7 +114,7 @@ class PubmedPublicationProcessorTest {
         .build();
   }
 
-  /** 创建测试用的ESearchResponse（包含PMID列表） */
+  /// 创建测试用的ESearchResponse（包含PMID列表）
   private ESearchResponse createESearchResponse(List<String> pmids, String webEnv) {
     ESearchResponse.Result result =
         new ESearchResponse.Result(
@@ -134,14 +132,14 @@ class PubmedPublicationProcessorTest {
     return new ESearchResponse(null, result);
   }
 
-  /** 创建测试用的空ESearchResponse */
+  /// 创建测试用的空ESearchResponse
   private ESearchResponse createEmptyESearchResponse() {
     ESearchResponse.Result result =
         new ESearchResponse.Result(0, 0, 0, List.of(), null, null, null, null, null, null, null);
     return new ESearchResponse(null, result);
   }
 
-  /** 创建测试用的EFetchResponse */
+  /// 创建测试用的EFetchResponse
   private EFetchResponse createEFetchResponse(List<PubmedPublication> articles) {
     // 使用反射或工厂方法创建EFetchResponse
     // 由于EFetchResponse的构造逻辑，这里直接返回mock
@@ -150,14 +148,14 @@ class PubmedPublicationProcessorTest {
     return response;
   }
 
-  /** 创建测试用的PubmedPublication */
+  /// 创建测试用的PubmedPublication
   private PubmedPublication createMockArticle(String pmid) {
     PubmedPublication article = mock(PubmedPublication.class, withSettings().lenient());
     when(article.pmid()).thenReturn(pmid);
     return article;
   }
 
-  /** 创建测试用的CanonicalPublication */
+  /// 创建测试用的CanonicalPublication
   private CanonicalPublication createValidPublication(String pmid) {
     return CanonicalPublication.builder()
         .title("Test Article " + pmid)
@@ -168,7 +166,7 @@ class PubmedPublicationProcessorTest {
         .build();
   }
 
-  /** 创建测试用的无效CanonicalPublication（缺少必填字段） */
+  /// 创建测试用的无效CanonicalPublication（缺少必填字段）
   private CanonicalPublication createInvalidPublication() {
     return CanonicalPublication.builder()
         .abstractContent(
@@ -178,7 +176,7 @@ class PubmedPublicationProcessorTest {
         .build();
   }
 
-  /** 创建测试用的EPostResponse */
+  /// 创建测试用的EPostResponse
   private EPostResponse createEPostResponse() {
     EPostResponse response = mock(EPostResponse.class);
     when(response.webEnv()).thenReturn(TEST_WEB_ENV);

@@ -6,50 +6,44 @@ import java.io.Serial;
 import java.io.Serializable;
 import lombok.Getter;
 
-/**
- * MeSH 入口术语实体(Aggregate内实体,不是聚合根)。
- *
- * <p>入口术语说明：
- *
- * <ul>
- *   <li><b>同义词</b>：主题词的同义词(如 "Aspirin" → "Acetylsalicylic Acid")
- *   <li><b>缩写</b>：主题词的缩写形式(如 "AIDS" → "Acquired Immunodeficiency Syndrome")
- *   <li><b>化学名称</b>：化学物质的不同名称(如 "A-23187" → "Calcimycin")
- *   <li><b>多语言</b>：同一主题词的不同语言表达
- * </ul>
- *
- * <p>业务规则：
- *
- * <ul>
- *   <li>一个主题词平均有 7-8 个入口术语
- *   <li>词法标记(LexicalTag)区分不同类型的术语
- *   <li>record_preferred 标记该术语是否为记录首选
- *   <li>is_print_flag 控制术语是否打印在索引中
- * </ul>
- *
- * <p>使用示例：
- *
- * <pre>{@code
- * // 创建首选术语
- * MeshEntryTerm preferred = MeshEntryTerm.create(
- *     "Acetylsalicylic Acid",
- *     LexicalTag.PEF,
- *     true,
- *     true
- * );
- *
- * // 创建缩写术语
- * MeshEntryTerm abbreviation = MeshEntryTerm.create(
- *     "ASA",
- *     LexicalTag.ABB,
- *     false,
- *     true
- * );
- * }</pre>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// MeSH 入口术语实体(Aggregate内实体,不是聚合根)。
+///
+/// 入口术语说明：
+///
+/// - **同义词**：主题词的同义词(如 "Aspirin" → "Acetylsalicylic Acid")
+///   - **缩写**：主题词的缩写形式(如 "AIDS" → "Acquired Immunodeficiency Syndrome")
+///   - **化学名称**：化学物质的不同名称(如 "A-23187" → "Calcimycin")
+///   - **多语言**：同一主题词的不同语言表达
+///
+/// 业务规则：
+///
+/// - 一个主题词平均有 7-8 个入口术语
+///   - 词法标记(LexicalTag)区分不同类型的术语
+///   - record_preferred 标记该术语是否为记录首选
+///   - is_print_flag 控制术语是否打印在索引中
+///
+/// 使用示例：
+///
+/// ```java
+/// // 创建首选术语
+/// MeshEntryTerm preferred = MeshEntryTerm.create(
+///     "Acetylsalicylic Acid",
+///     LexicalTag.PEF,
+///     true,
+///     true
+/// );
+///
+/// // 创建缩写术语
+/// MeshEntryTerm abbreviation = MeshEntryTerm.create(
+///     "ASA",
+///     LexicalTag.ABB,
+///     false,
+///     true
+/// );
+/// ```
+///
+/// @author linqibin
+/// @since 0.1.0
 @Getter
 public class MeshEntryTerm implements Serializable {
 
@@ -57,40 +51,38 @@ public class MeshEntryTerm implements Serializable {
 
   // ========== 标识符 ==========
 
-  /** 主键ID(由Repository在持久化时分配) */
+  /// 主键ID(由Repository在持久化时分配)
   private Long id;
 
-  /** 关联的主题词ID(外键) */
+  /// 关联的主题词ID(外键)
   private final Long descriptorId;
 
   // ========== 业务字段 ==========
 
-  /** 入口术语/同义词 */
+  /// 入口术语/同义词
   private final String term;
 
-  /** 词法标记(NON/PEF/LAB/ABB/ACR/NAM) */
+  /// 词法标记(NON/PEF/LAB/ABB/ACR/NAM)
   private final LexicalTag lexicalTag;
 
-  /** 是否打印(控制术语是否打印在索引中) */
+  /// 是否打印(控制术语是否打印在索引中)
   private final boolean isPrintFlag;
 
-  /** 是否记录首选(该术语是否为记录首选) */
+  /// 是否记录首选(该术语是否为记录首选)
   private final boolean isRecordPreferred;
 
-  /** 是否排列术语(用于索引排列) */
+  /// 是否排列术语(用于索引排列)
   private final boolean isPermutedTerm;
 
-  /**
-   * 私有构造函数。
-   *
-   * @param id 主键ID(新建时为null)
-   * @param descriptorId 主题词ID
-   * @param term 入口术语
-   * @param lexicalTag 词法标记
-   * @param isPrintFlag 是否打印
-   * @param isRecordPreferred 是否记录首选
-   * @param isPermutedTerm 是否排列术语
-   */
+  /// 私有构造函数。
+  ///
+  /// @param id 主键ID(新建时为null)
+  /// @param descriptorId 主题词ID
+  /// @param term 入口术语
+  /// @param lexicalTag 词法标记
+  /// @param isPrintFlag 是否打印
+  /// @param isRecordPreferred 是否记录首选
+  /// @param isPermutedTerm 是否排列术语
   private MeshEntryTerm(
       Long id,
       Long descriptorId,
@@ -104,10 +96,7 @@ public class MeshEntryTerm implements Serializable {
     Assert.notBlank(term, "入口术语不能为空");
 
     // 术语长度验证
-    Assert.isTrue(
-        term.length() <= 255,
-        "入口术语长度不能超过255个字符：%s",
-        term);
+    Assert.isTrue(term.length() <= 255, "入口术语长度不能超过255个字符：%s", term);
 
     // 赋值
     this.id = id;
@@ -121,40 +110,26 @@ public class MeshEntryTerm implements Serializable {
 
   // ========== 工厂方法 ==========
 
-  /**
-   * 创建入口术语。
-   *
-   * @param term 入口术语
-   * @param lexicalTag 词法标记
-   * @param isRecordPreferred 是否记录首选
-   * @param isPrintFlag 是否打印
-   * @return 入口术语实体
-   */
+  /// 创建入口术语。
+  ///
+  /// @param term 入口术语
+  /// @param lexicalTag 词法标记
+  /// @param isRecordPreferred 是否记录首选
+  /// @param isPrintFlag 是否打印
+  /// @return 入口术语实体
   public static MeshEntryTerm create(
-      String term,
-      LexicalTag lexicalTag,
-      boolean isRecordPreferred,
-      boolean isPrintFlag) {
-    return new MeshEntryTerm(
-        null,
-        null,
-        term,
-        lexicalTag,
-        isPrintFlag,
-        isRecordPreferred,
-        false);
+      String term, LexicalTag lexicalTag, boolean isRecordPreferred, boolean isPrintFlag) {
+    return new MeshEntryTerm(null, null, term, lexicalTag, isPrintFlag, isRecordPreferred, false);
   }
 
-  /**
-   * 创建入口术语(指定主题词ID)。
-   *
-   * @param descriptorId 主题词ID
-   * @param term 入口术语
-   * @param lexicalTag 词法标记
-   * @param isRecordPreferred 是否记录首选
-   * @param isPrintFlag 是否打印
-   * @return 入口术语实体
-   */
+  /// 创建入口术语(指定主题词ID)。
+  ///
+  /// @param descriptorId 主题词ID
+  /// @param term 入口术语
+  /// @param lexicalTag 词法标记
+  /// @param isRecordPreferred 是否记录首选
+  /// @param isPrintFlag 是否打印
+  /// @return 入口术语实体
   public static MeshEntryTerm create(
       Long descriptorId,
       String term,
@@ -162,27 +137,19 @@ public class MeshEntryTerm implements Serializable {
       boolean isRecordPreferred,
       boolean isPrintFlag) {
     return new MeshEntryTerm(
-        null,
-        descriptorId,
-        term,
-        lexicalTag,
-        isPrintFlag,
-        isRecordPreferred,
-        false);
+        null, descriptorId, term, lexicalTag, isPrintFlag, isRecordPreferred, false);
   }
 
-  /**
-   * 从持久化状态重建实体(由Repository使用)。
-   *
-   * @param id 主键ID
-   * @param descriptorId 主题词ID
-   * @param term 入口术语
-   * @param lexicalTag 词法标记
-   * @param isPrintFlag 是否打印
-   * @param isRecordPreferred 是否记录首选
-   * @param isPermutedTerm 是否排列术语
-   * @return 重建的实体
-   */
+  /// 从持久化状态重建实体(由Repository使用)。
+  ///
+  /// @param id 主键ID
+  /// @param descriptorId 主题词ID
+  /// @param term 入口术语
+  /// @param lexicalTag 词法标记
+  /// @param isPrintFlag 是否打印
+  /// @param isRecordPreferred 是否记录首选
+  /// @param isPermutedTerm 是否排列术语
+  /// @return 重建的实体
   public static MeshEntryTerm restore(
       Long id,
       Long descriptorId,
@@ -192,40 +159,28 @@ public class MeshEntryTerm implements Serializable {
       boolean isRecordPreferred,
       boolean isPermutedTerm) {
     return new MeshEntryTerm(
-        id,
-        descriptorId,
-        term,
-        lexicalTag,
-        isPrintFlag,
-        isRecordPreferred,
-        isPermutedTerm);
+        id, descriptorId, term, lexicalTag, isPrintFlag, isRecordPreferred, isPermutedTerm);
   }
 
   // ========== 业务方法 ==========
 
-  /**
-   * 设置ID(由Repository在持久化后回写)。
-   *
-   * @param id 主键ID
-   */
+  /// 设置ID(由Repository在持久化后回写)。
+  ///
+  /// @param id 主键ID
   public void assignId(Long id) {
     this.id = id;
   }
 
-  /**
-   * 判断是否为首选术语。
-   *
-   * @return true 如果为首选术语
-   */
+  /// 判断是否为首选术语。
+  ///
+  /// @return true 如果为首选术语
   public boolean isPreferred() {
     return lexicalTag != null && lexicalTag.isPreferred();
   }
 
-  /**
-   * 判断是否为缩写术语。
-   *
-   * @return true 如果为缩写或首字母缩写
-   */
+  /// 判断是否为缩写术语。
+  ///
+  /// @return true 如果为缩写或首字母缩写
   public boolean isAbbreviation() {
     return lexicalTag != null && lexicalTag.isAbbreviation();
   }
@@ -234,9 +189,7 @@ public class MeshEntryTerm implements Serializable {
   public String toString() {
     return String.format(
         "MeshEntryTerm[term=%s, lexicalTag=%s, preferred=%b]",
-        term,
-        lexicalTag != null ? lexicalTag.getCode() : "null",
-        isRecordPreferred);
+        term, lexicalTag != null ? lexicalTag.getCode() : "null", isRecordPreferred);
   }
 
   @Override

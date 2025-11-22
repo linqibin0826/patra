@@ -9,7 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/** ExprCompilationResult 单元测试 */
+/// ExprCompilationResult 单元测试
 @DisplayName("ExprCompilationResult 值对象测试")
 class ExprCompilationResultTest {
 
@@ -418,12 +418,10 @@ class ExprCompilationResultTest {
     }
   }
 
-  /**
-   * 辅助方法：从 JSON 字符串创建 JsonNode
-   *
-   * @param json JSON 字符串
-   * @return JsonNode 对象
-   */
+  /// 辅助方法：从 JSON 字符串创建 JsonNode
+  ///
+  /// @param json JSON 字符串
+  /// @return JsonNode 对象
   private static JsonNode createJsonNode(String json) {
     try {
       return MAPPER.readTree(json);

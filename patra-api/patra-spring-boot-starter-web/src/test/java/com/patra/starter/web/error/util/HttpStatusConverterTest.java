@@ -7,7 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
-/** HttpStatusConverter 单元测试。 */
+/// HttpStatusConverter 单元测试。
 @DisplayName("HttpStatusConverter 单元测试")
 class HttpStatusConverterTest {
 

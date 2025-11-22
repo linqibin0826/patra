@@ -254,91 +254,85 @@ import lombok.Getter;
 
 import java.time.Instant;
 
-/**
- * 医学文献聚合根。封装出版物的核心元数据及其一致性规则。
- *
- * <p>一致性边界:
- *
- * <ul>
- *   <li>标识符(PMID/DOI)在同一数据来源中必须唯一
- *   <li>出版年份必须与载体实例保持一致
- *   <li>OA 状态必须与 OA 位置集合同步
- *   <li>语言信息遵循三层标准化结构
- * </ul>
- *
- * <p>业务规则:
- *
- * <ul>
- *   <li>文献必须关联到具体的载体实例(venue_instance_id)
- *   <li>venue_id 冗余字段避免二级 JOIN,由应用层同步更新
- *   <li>publication_year 冗余字段优化高频查询,由应用层同步更新
- *   <li>is_oa 和 oa_status 冗余字段由 OA 位置管理同步更新
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 医学文献聚合根。封装出版物的核心元数据及其一致性规则。
+/// 
+/// 一致性边界:
+/// 
+/// - 标识符(PMID/DOI)在同一数据来源中必须唯一
+///   - 出版年份必须与载体实例保持一致
+///   - OA 状态必须与 OA 位置集合同步
+///   - 语言信息遵循三层标准化结构
+/// 
+/// 业务规则:
+/// 
+/// - 文献必须关联到具体的载体实例(venue_instance_id)
+///   - venue_id 冗余字段避免二级 JOIN,由应用层同步更新
+///   - publication_year 冗余字段优化高频查询,由应用层同步更新
+///   - is_oa 和 oa_status 冗余字段由 OA 位置管理同步更新
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Getter
 public class PublicationAggregate {
 
-  /** 主键标识 */
+  /// 主键标识
   private Long id;
 
-  /** 标识符值对象(PMID, DOI, PMC 等) */
+  /// 标识符值对象(PMID, DOI, PMC 等)
   private final PublicationIdentifiers identifiers;
 
-  /** 关联的出版载体 ID(冗余优化-避免二级 JOIN) */
+  /// 关联的出版载体 ID(冗余优化-避免二级 JOIN)
   private final Long venueId;
 
-  /** 关联的载体实例 ID */
+  /// 关联的载体实例 ID
   private final Long venueInstanceId;
 
-  /** 文献标题(英文或原语言) */
+  /// 文献标题(英文或原语言)
   private final String title;
 
-  /** 原始语言标题(非英文时填充) */
+  /// 原始语言标题(非英文时填充)
   private final String originalTitle;
 
-  /** 语言信息值对象(三层设计:raw → code → base) */
+  /// 语言信息值对象(三层设计:raw → code → base)
   private final LanguageInfo languageInfo;
 
-  /** 出版状态 */
+  /// 出版状态
   private final PublicationStatus publicationStatus;
 
-  /** 媒介类型 */
+  /// 媒介类型
   private final MediaType mediaType;
 
-  /** 是否有 OA 版本(冗余-快速筛选) */
+  /// 是否有 OA 版本(冗余-快速筛选)
   private Boolean isOa;
 
-  /** 最佳 OA 状态(冗余-gold/green/hybrid/bronze/closed) */
+  /// 最佳 OA 状态(冗余-gold/green/hybrid/bronze/closed)
   private OaStatus oaStatus;
 
-  /** 出版年份(冗余优化-最高频查询字段) */
+  /// 出版年份(冗余优化-最高频查询字段)
   private final Integer publicationYear;
 
-  /** 作者列表是否完整(0=不完整,1=完整) */
+  /// 作者列表是否完整(0=不完整,1=完整)
   private final Boolean authorsComplete;
 
-  /** 被引次数(定期更新) */
+  /// 被引次数(定期更新)
   private Integer citationCount;
 
-  /** 参考文献数量 */
+  /// 参考文献数量
   private Integer numberOfReferences;
 
-  /** 利益冲突声明 */
+  /// 利益冲突声明
   private final String conflictOfInterest;
 
-  /** 扩展数据(JSON) */
+  /// 扩展数据(JSON)
   private String extDataJson;
 
-  /** 摘要(0..1 关系) */
+  /// 摘要(0..1 关系)
   private Abstract abstract_;
 
-  /** 元数据(1:1 关系) */
+  /// 元数据(1:1 关系)
   private PublicationMetadata metadata;
 
-  /** 乐观锁版本 */
+  /// 乐观锁版本
   private Long version;
 
   private PublicationAggregate(
@@ -381,22 +375,20 @@ public class PublicationAggregate {
     this.conflictOfInterest = conflictOfInterest;
   }
 
-  /**
-   * 创建全新的文献聚合根。
-   *
-   * @param identifiers 标识符值对象
-   * @param venueId 载体 ID
-   * @param venueInstanceId 载体实例 ID
-   * @param title 标题
-   * @param originalTitle 原始标题
-   * @param languageInfo 语言信息
-   * @param publicationStatus 出版状态
-   * @param mediaType 媒介类型
-   * @param publicationYear 出版年份
-   * @param authorsComplete 作者列表完整性
-   * @param conflictOfInterest 利益冲突声明
-   * @return 新创建的文献聚合根
-   */
+  /// 创建全新的文献聚合根。
+/// 
+/// @param identifiers 标识符值对象
+/// @param venueId 载体 ID
+/// @param venueInstanceId 载体实例 ID
+/// @param title 标题
+/// @param originalTitle 原始标题
+/// @param languageInfo 语言信息
+/// @param publicationStatus 出版状态
+/// @param mediaType 媒介类型
+/// @param publicationYear 出版年份
+/// @param authorsComplete 作者列表完整性
+/// @param conflictOfInterest 利益冲突声明
+/// @return 新创建的文献聚合根
   public static PublicationAggregate create(
       PublicationIdentifiers identifiers,
       Long venueId,
@@ -428,28 +420,26 @@ public class PublicationAggregate {
         conflictOfInterest);
   }
 
-  /**
-   * 从持久化状态重建已存在的文献聚合根(由仓储层使用)。
-   *
-   * @param id 主键标识
-   * @param identifiers 标识符值对象
-   * @param venueId 载体 ID
-   * @param venueInstanceId 载体实例 ID
-   * @param title 标题
-   * @param originalTitle 原始标题
-   * @param languageInfo 语言信息
-   * @param publicationStatus 出版状态
-   * @param mediaType 媒介类型
-   * @param isOa 是否 OA
-   * @param oaStatus OA 状态
-   * @param publicationYear 出版年份
-   * @param authorsComplete 作者完整性
-   * @param citationCount 被引次数
-   * @param numberOfReferences 参考文献数
-   * @param conflictOfInterest 利益冲突
-   * @param version 乐观锁版本
-   * @return 从持久化重建的文献聚合根
-   */
+  /// 从持久化状态重建已存在的文献聚合根(由仓储层使用)。
+/// 
+/// @param id 主键标识
+/// @param identifiers 标识符值对象
+/// @param venueId 载体 ID
+/// @param venueInstanceId 载体实例 ID
+/// @param title 标题
+/// @param originalTitle 原始标题
+/// @param languageInfo 语言信息
+/// @param publicationStatus 出版状态
+/// @param mediaType 媒介类型
+/// @param isOa 是否 OA
+/// @param oaStatus OA 状态
+/// @param publicationYear 出版年份
+/// @param authorsComplete 作者完整性
+/// @param citationCount 被引次数
+/// @param numberOfReferences 参考文献数
+/// @param conflictOfInterest 利益冲突
+/// @param version 乐观锁版本
+/// @return 从持久化重建的文献聚合根
   public static PublicationAggregate restore(
       Long id,
       PublicationIdentifiers identifiers,
@@ -490,79 +480,63 @@ public class PublicationAggregate {
     return aggregate;
   }
 
-  /**
-   * 更新 OA 状态(由 OA 位置管理触发)。
-   *
-   * @param isOa 是否有 OA 版本
-   * @param oaStatus 最佳 OA 状态
-   */
+  /// 更新 OA 状态(由 OA 位置管理触发)。
+/// 
+/// @param isOa 是否有 OA 版本
+/// @param oaStatus 最佳 OA 状态
   public void updateOaStatus(Boolean isOa, OaStatus oaStatus) {
     this.isOa = isOa;
     this.oaStatus = oaStatus;
   }
 
-  /**
-   * 增加被引次数。
-   *
-   * @param increment 增量
-   */
+  /// 增加被引次数。
+/// 
+/// @param increment 增量
   public void incrementCitationCount(int increment) {
     Assert.isTrue(increment > 0, "increment must be positive");
     this.citationCount += increment;
   }
 
-  /**
-   * 关联摘要。
-   *
-   * @param abstract_ 摘要实体
-   */
+  /// 关联摘要。
+/// 
+/// @param abstract_ 摘要实体
   public void attachAbstract(Abstract abstract_) {
     Assert.notNull(abstract_, "abstract must not be null");
     this.abstract_ = abstract_;
   }
 
-  /**
-   * 关联元数据。
-   *
-   * @param metadata 元数据实体
-   */
+  /// 关联元数据。
+/// 
+/// @param metadata 元数据实体
   public void attachMetadata(PublicationMetadata metadata) {
     Assert.notNull(metadata, "metadata must not be null");
     this.metadata = metadata;
   }
 
-  /**
-   * 获取 PMID(便捷访问器)。
-   *
-   * @return PMID 值或 null
-   */
+  /// 获取 PMID(便捷访问器)。
+/// 
+/// @return PMID 值或 null
   public String getPmid() {
     return identifiers.pmid();
   }
 
-  /**
-   * 获取 DOI(便捷访问器)。
-   *
-   * @return DOI 值或 null
-   */
+  /// 获取 DOI(便捷访问器)。
+/// 
+/// @return DOI 值或 null
   public String getDoi() {
     return identifiers.doi();
   }
 
-  /**
-   * 判断是否为开放获取文献。
-   *
-   * @return true 如果有任何形式的 OA 版本
-   */
+  /// 判断是否为开放获取文献。
+/// 
+/// @return true 如果有任何形式的 OA 版本
   public boolean isOpenAccess() {
     return isOa != null && isOa;
   }
 
-  /**
-   * 判断是否为黄金 OA。
-   *
-   * @return true 如果为黄金 OA
-   */
+  /// 判断是否为黄金 OA。
+/// 
+/// @return true 如果为黄金 OA
   public boolean isGoldOa() {
     return OaStatus.GOLD.equals(oaStatus);
   }
@@ -578,22 +552,18 @@ package com.patra.catalog.domain.model.vo.publication;
 
 import cn.hutool.core.lang.Assert;
 
-/**
- * 文献标识符值对象。封装文献的多种标识符(PMID、DOI 等)。
- *
- * <p>设计原则:
- *
- * <ul>
- *   <li>不可变性: Record 自动提供
- *   <li>至少包含一个非空标识符
- *   <li>PMID 和 DOI 是最常用标识符,冗余到主表优化查询
- * </ul>
- *
- * @param pmid PubMed ID(冗余优化)
- * @param doi Digital Object Identifier(冗余优化)
- * @author linqibin
- * @since 0.1.0
- */
+/// 文献标识符值对象。封装文献的多种标识符(PMID、DOI 等)。
+/// 
+/// 设计原则:
+/// 
+/// - 不可变性: Record 自动提供
+///   - 至少包含一个非空标识符
+///   - PMID 和 DOI 是最常用标识符,冗余到主表优化查询
+/// 
+/// @param pmid PubMed ID(冗余优化)
+/// @param doi Digital Object Identifier(冗余优化)
+/// @author linqibin
+/// @since 0.1.0
 public record PublicationIdentifiers(String pmid, String doi) {
 
   public PublicationIdentifiers {
@@ -616,51 +586,41 @@ public record PublicationIdentifiers(String pmid, String doi) {
     }
   }
 
-  /**
-   * 创建仅包含 PMID 的标识符。
-   *
-   * @param pmid PubMed ID
-   * @return 标识符值对象
-   */
+  /// 创建仅包含 PMID 的标识符。
+/// 
+/// @param pmid PubMed ID
+/// @return 标识符值对象
   public static PublicationIdentifiers ofPmid(String pmid) {
     return new PublicationIdentifiers(pmid, null);
   }
 
-  /**
-   * 创建仅包含 DOI 的标识符。
-   *
-   * @param doi Digital Object Identifier
-   * @return 标识符值对象
-   */
+  /// 创建仅包含 DOI 的标识符。
+/// 
+/// @param doi Digital Object Identifier
+/// @return 标识符值对象
   public static PublicationIdentifiers ofDoi(String doi) {
     return new PublicationIdentifiers(null, doi);
   }
 
-  /**
-   * 创建包含 PMID 和 DOI 的标识符。
-   *
-   * @param pmid PubMed ID
-   * @param doi Digital Object Identifier
-   * @return 标识符值对象
-   */
+  /// 创建包含 PMID 和 DOI 的标识符。
+/// 
+/// @param pmid PubMed ID
+/// @param doi Digital Object Identifier
+/// @return 标识符值对象
   public static PublicationIdentifiers of(String pmid, String doi) {
     return new PublicationIdentifiers(pmid, doi);
   }
 
-  /**
-   * 判断是否包含 PMID。
-   *
-   * @return true 如果包含 PMID
-   */
+  /// 判断是否包含 PMID。
+/// 
+/// @return true 如果包含 PMID
   public boolean hasPmid() {
     return pmid != null;
   }
 
-  /**
-   * 判断是否包含 DOI。
-   *
-   * @return true 如果包含 DOI
-   */
+  /// 判断是否包含 DOI。
+/// 
+/// @return true 如果包含 DOI
   public boolean hasDoi() {
     return doi != null;
   }
@@ -680,59 +640,45 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Map;
 
-/**
- * 不完整日期值对象密封接口。表示医学文献的出版日期,支持不同精度级别。
- *
- * <p>密封继承层次确保编译时完备性检查。支持三种日期精度:
- *
- * <ul>
- *   <li>YEAR_ONLY - 仅年份(约 30% 的文献)
- *   <li>YEAR_MONTH - 年+月(约 40% 的文献)
- *   <li>FULL_DATE - 完整日期(约 30% 的文献)
- * </ul>
- *
- * <p>设计原则:
- *
- * <ul>
- *   <li>精确表达不完整性: NULL 表示"不存在此精度",而非"未知"
- *   <li>避免虚假精度: 不会将 "2023-06" 存为 "2023-06-01"
- *   <li>不可变性: 所有实现都是不可变的 Record
- *   <li>数值类型存储: 索引效率高,排序友好
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 不完整日期值对象密封接口。表示医学文献的出版日期,支持不同精度级别。
+/// 
+/// 密封继承层次确保编译时完备性检查。支持三种日期精度:
+/// 
+/// - YEAR_ONLY - 仅年份(约 30% 的文献)
+///   - YEAR_MONTH - 年+月(约 40% 的文献)
+///   - FULL_DATE - 完整日期(约 30% 的文献)
+/// 
+/// 设计原则:
+/// 
+/// - 精确表达不完整性: NULL 表示"不存在此精度",而非"未知"
+///   - 避免虚假精度: 不会将 "2023-06" 存为 "2023-06-01"
+///   - 不可变性: 所有实现都是不可变的 Record
+///   - 数值类型存储: 索引效率高,排序友好
+/// 
+/// @author linqibin
+/// @since 0.1.0
 public sealed interface DateSpec
     permits DateSpec.YearOnly, DateSpec.YearMonth, DateSpec.FullDate {
 
-  /**
-   * 获取年份。
-   *
-   * @return 年份值
-   */
+  /// 获取年份。
+/// 
+/// @return 年份值
   int year();
 
-  /**
-   * 转换为可 JSON 序列化的 Map,用于持久化层存储。
-   *
-   * @return 包含年/月/日字段的 Map
-   */
+  /// 转换为可 JSON 序列化的 Map,用于持久化层存储。
+/// 
+/// @return 包含年/月/日字段的 Map
   Map<String, Integer> toMap();
 
   // ============ 精度实现 ============
 
-  /**
-   * 仅年份的日期规范值对象。
-   *
-   * <p>业务约束:
-   *
-   * <ul>
-   *   <li>year 必须在合理范围内(1800-2100)
-   * </ul>
-   *
-   * @param year 年份(1800-2100)
-   */
+  /// 仅年份的日期规范值对象。
+/// 
+/// 业务约束:
+/// 
+/// - year 必须在合理范围内(1800-2100)
+/// 
+/// @param year 年份(1800-2100)
   record YearOnly(int year) implements DateSpec {
     public YearOnly {
       Assert.isTrue(
@@ -746,19 +692,15 @@ public sealed interface DateSpec
     }
   }
 
-  /**
-   * 年+月的日期规范值对象。
-   *
-   * <p>业务约束:
-   *
-   * <ul>
-   *   <li>year 必须在 1800-2100 范围内
-   *   <li>month 必须在 1-12 范围内
-   * </ul>
-   *
-   * @param year 年份(1800-2100)
-   * @param month 月份(1-12)
-   */
+  /// 年+月的日期规范值对象。
+/// 
+/// 业务约束:
+/// 
+/// - year 必须在 1800-2100 范围内
+///   - month 必须在 1-12 范围内
+/// 
+/// @param year 年份(1800-2100)
+/// @param month 月份(1-12)
   record YearMonth(int year, int month) implements DateSpec {
     public YearMonth {
       Assert.isTrue(
@@ -775,21 +717,17 @@ public sealed interface DateSpec
     }
   }
 
-  /**
-   * 完整日期的日期规范值对象。
-   *
-   * <p>业务约束:
-   *
-   * <ul>
-   *   <li>year 必须在 1800-2100 范围内
-   *   <li>month 必须在 1-12 范围内
-   *   <li>day 必须在 1-31 范围内,且符合该月的实际天数
-   * </ul>
-   *
-   * @param year 年份(1800-2100)
-   * @param month 月份(1-12)
-   * @param day 日期(1-31)
-   */
+  /// 完整日期的日期规范值对象。
+/// 
+/// 业务约束:
+/// 
+/// - year 必须在 1800-2100 范围内
+///   - month 必须在 1-12 范围内
+///   - day 必须在 1-31 范围内,且符合该月的实际天数
+/// 
+/// @param year 年份(1800-2100)
+/// @param month 月份(1-12)
+/// @param day 日期(1-31)
   record FullDate(int year, int month, int day) implements DateSpec {
     public FullDate {
       Assert.isTrue(
@@ -816,11 +754,9 @@ public sealed interface DateSpec
       return Map.of("year", year, "month", month, "day", day);
     }
 
-    /**
-     * 转换为 LocalDate。
-     *
-     * @return LocalDate 对象
-     */
+    /// 转换为 LocalDate。
+/// 
+/// @return LocalDate 对象
     public LocalDate toLocalDate() {
       return LocalDate.of(year, month, day);
     }
@@ -828,45 +764,37 @@ public sealed interface DateSpec
 
   // ============ 工厂方法 ============
 
-  /**
-   * 创建仅年份的日期规范。
-   *
-   * @param year 年份
-   * @return 日期规范值对象
-   */
+  /// 创建仅年份的日期规范。
+/// 
+/// @param year 年份
+/// @return 日期规范值对象
   static YearOnly ofYear(int year) {
     return new YearOnly(year);
   }
 
-  /**
-   * 创建年+月的日期规范。
-   *
-   * @param year 年份
-   * @param month 月份
-   * @return 日期规范值对象
-   */
+  /// 创建年+月的日期规范。
+/// 
+/// @param year 年份
+/// @param month 月份
+/// @return 日期规范值对象
   static YearMonth ofYearMonth(int year, int month) {
     return new YearMonth(year, month);
   }
 
-  /**
-   * 创建完整日期的日期规范。
-   *
-   * @param year 年份
-   * @param month 月份
-   * @param day 日期
-   * @return 日期规范值对象
-   */
+  /// 创建完整日期的日期规范。
+/// 
+/// @param year 年份
+/// @param month 月份
+/// @param day 日期
+/// @return 日期规范值对象
   static FullDate ofFullDate(int year, int month, int day) {
     return new FullDate(year, month, day);
   }
 
-  /**
-   * 从 LocalDate 创建完整日期规范。
-   *
-   * @param date LocalDate 对象
-   * @return 日期规范值对象
-   */
+  /// 从 LocalDate 创建完整日期规范。
+/// 
+/// @param date LocalDate 对象
+/// @return 日期规范值对象
   static FullDate from(LocalDate date) {
     Assert.notNull(date, "date must not be null");
     return new FullDate(date.getYear(), date.getMonthValue(), date.getDayOfMonth());
@@ -934,23 +862,21 @@ package com.patra.catalog.domain.model.enums;
 import cn.hutool.core.lang.Assert;
 import lombok.Getter;
 
-/**
- * 出版载体类型枚举。
- *
- * <p>字段映射: cat_venue.venue_type → JOURNAL/BOOK/CONFERENCE/OTHER
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 出版载体类型枚举。
+/// 
+/// 字段映射: cat_venue.venue_type → JOURNAL/BOOK/CONFERENCE/OTHER
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Getter
 public enum VenueType {
-  /** 期刊 */
+  /// 期刊
   JOURNAL("JOURNAL", "Journal"),
-  /** 书籍 */
+  /// 书籍
   BOOK("BOOK", "Book"),
-  /** 会议 */
+  /// 会议
   CONFERENCE("CONFERENCE", "Conference"),
-  /** 其他(预印本、技术报告等) */
+  /// 其他(预印本、技术报告等)
   OTHER("OTHER", "Other");
 
   private final String code;
@@ -982,35 +908,31 @@ package com.patra.catalog.domain.model.enums;
 import cn.hutool.core.lang.Assert;
 import lombok.Getter;
 
-/**
- * 开放获取状态枚举(字典: cat_oa_status)。
- *
- * <p>字段映射: cat_publication.oa_status → gold/green/hybrid/bronze/closed
- *
- * <p>优先级排序(从高到低):
- *
- * <ul>
- *   <li>GOLD - 黄金 OA(出版商开放,最佳)
- *   <li>GREEN - 绿色 OA(机构仓储,次佳)
- *   <li>HYBRID - 混合 OA(部分开放)
- *   <li>BRONZE - 青铜 OA(免费但无许可证)
- *   <li>CLOSED - 封闭获取
- * </ul>
- *
- * @author linqibin
- * @since 0.1.0
- */
+/// 开放获取状态枚举(字典: cat_oa_status)。
+/// 
+/// 字段映射: cat_publication.oa_status → gold/green/hybrid/bronze/closed
+/// 
+/// 优先级排序(从高到低):
+/// 
+/// - GOLD - 黄金 OA(出版商开放,最佳)
+///   - GREEN - 绿色 OA(机构仓储,次佳)
+///   - HYBRID - 混合 OA(部分开放)
+///   - BRONZE - 青铜 OA(免费但无许可证)
+///   - CLOSED - 封闭获取
+/// 
+/// @author linqibin
+/// @since 0.1.0
 @Getter
 public enum OaStatus {
-  /** 黄金 OA - 出版商完全开放,优先级最高(100) */
+  /// 黄金 OA - 出版商完全开放,优先级最高(100)
   GOLD("gold", "Gold Open Access", 100),
-  /** 绿色 OA - 机构仓储/作者存档,优先级次高(80) */
+  /// 绿色 OA - 机构仓储/作者存档,优先级次高(80)
   GREEN("green", "Green Open Access", 80),
-  /** 混合 OA - 订阅期刊部分文章开放,优先级中等(70) */
+  /// 混合 OA - 订阅期刊部分文章开放,优先级中等(70)
   HYBRID("hybrid", "Hybrid Open Access", 70),
-  /** 青铜 OA - 免费但无明确开放许可证,优先级较低(50) */
+  /// 青铜 OA - 免费但无明确开放许可证,优先级较低(50)
   BRONZE("bronze", "Bronze Open Access", 50),
-  /** 封闭获取 - 需付费或订阅,优先级最低(0) */
+  /// 封闭获取 - 需付费或订阅,优先级最低(0)
   CLOSED("closed", "Closed Access", 0);
 
   private final String code;
@@ -1034,21 +956,17 @@ public enum OaStatus {
     throw new IllegalArgumentException("未知的 OA 状态: " + value);
   }
 
-  /**
-   * 判断是否为开放获取(非封闭)。
-   *
-   * @return true 如果为任何形式的 OA
-   */
+  /// 判断是否为开放获取(非封闭)。
+/// 
+/// @return true 如果为任何形式的 OA
   public boolean isOpenAccess() {
     return this != CLOSED;
   }
 
-  /**
-   * 判断是否优于另一 OA 状态。
-   *
-   * @param other 另一 OA 状态
-   * @return true 如果当前状态优先级更高
-   */
+  /// 判断是否优于另一 OA 状态。
+/// 
+/// @param other 另一 OA 状态
+/// @return true 如果当前状态优先级更高
   public boolean isBetterThan(OaStatus other) {
     return this.priority > other.priority;
   }

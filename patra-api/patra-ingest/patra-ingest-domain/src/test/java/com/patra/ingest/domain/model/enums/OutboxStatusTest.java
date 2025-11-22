@@ -6,11 +6,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * OutboxStatus 枚举测试。
- *
- * @author Patra Team
- */
+/// OutboxStatus 枚举测试。
+///
+/// @author Patra Team
 @DisplayName("OutboxStatus 枚举测试")
 class OutboxStatusTest {
 

@@ -8,22 +8,18 @@ import java.time.ZoneId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link AuditMetaObjectHandler} 的单元测试。
- *
- * <p>测试策略：验证 AuditMetaObjectHandler 的时钟配置和时间获取逻辑。
- *
- * <p>关键测试点：
- *
- * <ul>
- *   <li>使用固定时钟进行可控测试
- *   <li>使用系统时钟的默认行为
- *   <li>验证构造函数接受 null Clock 参数
- * </ul>
- *
- * <p>注意：由于 MyBatis-Plus 的 strictInsertFill/strictUpdateFill 依赖运行时 TableInfo 元数据，
- * 本测试重点验证时钟配置逻辑。完整的填充行为需要在集成测试中验证。
- */
+/// {@link AuditMetaObjectHandler} 的单元测试。
+///
+/// 测试策略：验证 AuditMetaObjectHandler 的时钟配置和时间获取逻辑。
+///
+/// 关键测试点：
+///
+/// - 使用固定时钟进行可控测试
+///   - 使用系统时钟的默认行为
+///   - 验证构造函数接受 null Clock 参数
+///
+/// 注意：由于 MyBatis-Plus 的 strictInsertFill/strictUpdateFill 依赖运行时 TableInfo 元数据，
+/// 本测试重点验证时钟配置逻辑。完整的填充行为需要在集成测试中验证。
 @DisplayName("AuditMetaObjectHandler 单元测试")
 class AuditMetaObjectHandlerTest {
 
