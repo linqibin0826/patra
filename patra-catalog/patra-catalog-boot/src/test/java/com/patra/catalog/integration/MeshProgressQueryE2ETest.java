@@ -228,7 +228,7 @@ class MeshProgressQueryE2ETest {
       progress.failedBatches().forEach(failedBatch -> {
         assertThat(failedBatch.tableName()).isNotBlank();
         assertThat(failedBatch.batchNum()).isGreaterThan(0);
-        assertThat(failedBatch.errorMessage()).isNotBlank();
+        assertThat(failedBatch.failureReason()).isNotBlank();
         assertThat(failedBatch.retryCount()).isGreaterThanOrEqualTo(0);
       });
     }

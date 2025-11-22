@@ -119,7 +119,7 @@ class MeshImportE2ETest {
   @AfterEach
   void tearDown() {
     // 清理测试数据
-    meshImportPort.deleteAll();
+    // TODO: 添加清理逻辑（暂时依赖 @Transactional 回滚）
   }
 
   @Nested
@@ -151,13 +151,21 @@ class MeshImportE2ETest {
       assertThat(response.getBody()).contains("taskId");
       assertThat(response.getBody()).contains("E2E测试-2025年MeSH数据导入");
 
+      // 提取 taskId（简单的字符串解析，实际项目中应使用 JSON 库）
+      String responseBody = response.getBody();
+      String taskIdStr = responseBody.substring(
+          responseBody.indexOf("\"taskId\":") + 9,
+          responseBody.indexOf(",", responseBody.indexOf("\"taskId\":"))).trim().replace("\"", "");
+      Long taskIdValue = Long.parseLong(taskIdStr);
+      com.patra.catalog.domain.model.valueobject.MeshImportId taskId =
+          com.patra.catalog.domain.model.valueobject.MeshImportId.of(taskIdValue);
+
       // then - 验证数据库状态
       await()
           .atMost(10, SECONDS)
           .untilAsserted(
               () -> {
-                Optional<MeshImportAggregate> taskOpt =
-                    meshImportPort.findByTaskName("E2E测试-2025年MeSH数据导入");
+                Optional<MeshImportAggregate> taskOpt = meshImportPort.findById(taskId);
                 assertThat(taskOpt).isPresent();
 
                 MeshImportAggregate task = taskOpt.get();
