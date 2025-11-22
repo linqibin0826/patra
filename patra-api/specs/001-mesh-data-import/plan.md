@@ -140,7 +140,7 @@
   - **边界**: 批次详情不属于聚合，存储在 Infrastructure 层
   - 参考: [java-hexagonal-architecture/SKILL.md#聚合设计模式](../../.claude/skills/java-hexagonal-architecture/SKILL.md#常见架构模式)
 - [x] **Port 接口定义** → 设计 Repository 和其他端口接口
-  - **决策**: MeshImportPort（任务管理）、MeshDescriptorPort（数据持久化）、XmlParserPort（XML 解析）
+  - **决策**: MeshImportRepository（任务管理）、MeshDescriptorRepository（数据持久化）、XmlParserPort（XML 解析）
   - 参考: [java-hexagonal-architecture/SKILL.md#Port-Adapter模式](../../.claude/skills/java-hexagonal-architecture/SKILL.md#常见架构模式)
 
 ### TDD 驱动的后端开发阶段（Phase 2 - 由 /speckit.implement 调用）
@@ -240,8 +240,8 @@
    - 通信方式：领域事件（MeshImportCompleted、MeshImportFailed）
 
 5. **定义 Port 接口**:
-   - MeshImportPort：任务管理仓储接口
-   - MeshDescriptorPort：MeSH 数据持久化接口（已存在）
+   - MeshImportRepository：任务管理仓储接口
+   - MeshDescriptorRepository：MeSH 数据持久化接口（已存在）
    - XmlParserPort：XML 解析接口
    - MeshFileDownloadPort：MeSH 文件下载接口（基于 RestClient）
 
@@ -398,8 +398,8 @@ patra-catalog/
 │   │       ├── MeshImportCompleted.java
 │   │       └── MeshImportFailed.java
 │   └── port/
-│       ├── MeshImportPort.java
-│       ├── MeshDescriptorPort.java
+│       ├── MeshImportRepository.java
+│       ├── MeshDescriptorRepository.java
 │       ├── XmlParserPort.java
 │       └── MeshFileDownloadPort.java
 └── patra-catalog-infra/         # 基础设施层
