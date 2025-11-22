@@ -234,27 +234,27 @@ AGGREGATE_CLASS=$(从 tasks.md 提取)
 使用 mcp__serena__find_symbol 读取类定义
 
 # 检查是否已有 JavaDoc
-if ! grep -q "^/\*\*" "$CLASS_FILE"; then
-  # 生成 JavaDoc
+if ! grep -q "^///" "$CLASS_FILE"; then
+  # 生成 JavaDoc (Markdown 格式)
   在类定义前添加:
 
-  /**
-   * [聚合根名称] - [从 spec.md 提取业务描述]
-   *
-   * <p>[从 spec.md 的"领域模型"章节提取设计说明]</p>
-   *
-   * <h2>业务不变量</h2>
-   * <ul>
-   *   <li>[从 spec.md 提取]</li>
-   * </ul>
-   *
-   * <h2>状态转换</h2>
-   * <p>[从 spec.md 的"状态机"章节提取]</p>
-   *
-   * @author Patra System
-   * @since [当前版本]
-   * @see [相关类]
-   */
+  ///
+  /// [聚合根名称] - [从 spec.md 提取业务描述]
+  ///
+  /// [从 spec.md 的"领域模型"章节提取设计说明]
+  ///
+  /// ## 业务不变量
+  ///
+  /// - [从 spec.md 提取]
+  ///
+  /// ## 状态转换
+  ///
+  /// [从 spec.md 的"状态机"章节提取]
+  ///
+  /// @author linqibin
+  /// @since 0.1.0
+  /// @see [相关类]
+  ///
 fi
 ```
 

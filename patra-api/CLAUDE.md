@@ -442,3 +442,4 @@
 - 所有DO 对象都必须集成 BaseDO, BaseDO 中定义了表ID(雪花ID), 10个基础审计字段。
 - 使用Mybatis时，不要在 *Mapper.java 中编写SQL，简单的SQL应该使用 LambdaQueryWrapper 等，复杂的SQL使用 xml 文件。
 - patra-{service}-api 模块中定义的接口和DTO 是其他模块调用该服务的唯一契约(暴露给其他服务使用，controller的内容不定义在此模块)。
+- 编写的每一个方法(private/protected/public/default), 都必须要有详细的javadoc (///)进行说明。

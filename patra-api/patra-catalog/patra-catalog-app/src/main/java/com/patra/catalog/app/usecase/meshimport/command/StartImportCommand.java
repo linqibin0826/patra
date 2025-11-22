@@ -9,31 +9,27 @@ import java.util.Objects;
 /// #### 字段说明
 ///
 /// - **taskName**: 任务名称，用于标识导入任务（必填）
-///   - **sourceUrl**: MeSH 数据源 URL（必填）
+///   - **sourceUrl**: MeSH 数据源 URL（可选，为 null 或空时使用配置的默认值）
 ///
 /// #### 不变量
 ///
 /// - `taskName != null && !taskName.isBlank()`
-///   - `sourceUrl != null && !sourceUrl.isBlank()`
 ///
 /// #### 线程安全
 ///
 /// Record 是不可变的，可安全地在多线程间共享。
 ///
 /// @param taskName 任务名称（必填）
-/// @param sourceUrl 数据源 URL（必填）
+/// @param sourceUrl 数据源 URL（可选，为 null 或空时使用配置的默认值）
 /// @author linqibin
 /// @since 0.1.0
 public record StartImportCommand(String taskName, String sourceUrl) {
   public StartImportCommand {
     Objects.requireNonNull(taskName, "任务名称不能为 null");
-    Objects.requireNonNull(sourceUrl, "数据源 URL 不能为 null");
 
     if (taskName.isBlank()) {
       throw new IllegalArgumentException("任务名称不能为空");
     }
-    if (sourceUrl.isBlank()) {
-      throw new IllegalArgumentException("数据源 URL 不能为空");
-    }
+    // sourceUrl 允许为 null 或空字符串，会在 Orchestrator 层使用配置的默认值
   }
 }
