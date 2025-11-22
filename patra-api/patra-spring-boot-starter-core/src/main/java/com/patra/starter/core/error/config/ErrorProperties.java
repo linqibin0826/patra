@@ -10,8 +10,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 ///
 /// 控制错误码上下文、错误解析行为、观测和断路器设置。
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @Data
 @ConfigurationProperties(prefix = "patra.error")
 public class ErrorProperties {

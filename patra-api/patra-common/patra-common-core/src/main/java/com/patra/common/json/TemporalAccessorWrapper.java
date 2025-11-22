@@ -15,7 +15,7 @@ import java.time.temporal.TemporalAccessor;
 ///
 /// **转换策略优先级**:
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 final class TemporalAccessorWrapper {
   private final TemporalAccessor accessor;

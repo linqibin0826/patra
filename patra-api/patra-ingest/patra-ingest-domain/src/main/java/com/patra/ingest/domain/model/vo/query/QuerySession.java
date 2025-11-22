@@ -26,8 +26,8 @@ import java.util.Optional;
 ///   - BatchGenerationStrategy.generateBatches() 接收此接口作为输入
 ///   - QuerySessionTranslator 将外部元数据翻译为此接口
 ///
-/// @author Patra Architecture Team
-/// @since 0.3.0
+/// @author linqibin
+/// @since 0.1.0
 public interface QuerySession {
 
   /// 获取总记录数

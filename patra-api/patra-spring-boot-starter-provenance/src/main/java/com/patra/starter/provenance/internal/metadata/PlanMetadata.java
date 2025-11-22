@@ -20,7 +20,7 @@ import java.util.Map;
 /// - totalCount 必须 >= 0
 ///   - dataSourceType 不能为空
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 public abstract class PlanMetadata {
 

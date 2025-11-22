@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 ///   - Value Object 语义 (equals, hashCode, toString)
 ///   - 不变性保证
 ///
-/// @author Patra Team
+/// @author linqibin
 @DisplayName("RelayBatchId 单元测试")
 class RelayBatchIdTest {
 

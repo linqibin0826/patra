@@ -23,7 +23,7 @@ import com.tngtech.archunit.library.Architectures;
 ///   - 【CHK-ARCH-005】不允许循环依赖
 ///
 /// @author linqibin
-/// @since 2025-01-10
+/// @since 0.1.0
 public final class LayerDependencyRules {
 
   private LayerDependencyRules() {

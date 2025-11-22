@@ -20,7 +20,7 @@ import lombok.EqualsAndHashCode;
 ///   - `metadata` JSON 扩展数据字段
 ///
 /// @author linqibin
-/// @since 0.3.0
+/// @since 0.1.0
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_personal_name_subject", autoResultMap = true)

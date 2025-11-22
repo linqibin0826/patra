@@ -11,8 +11,8 @@ import com.patra.common.error.codes.ErrorCodeLike;
 /// - REG-0404 (注册服务,资源未找到)
 ///   - INGEST-0500 (采集服务,内部服务器错误)
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 public final class SimpleErrorCode implements ErrorCodeLike {
 
   private final String code;

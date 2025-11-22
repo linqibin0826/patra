@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 ///   - Record 语义 (equals, hashCode, toString, 组件访问器)
 ///   - 不变性保证
 ///
-/// @author Patra Team
+/// @author linqibin
 @DisplayName("Batch 单元测试")
 class BatchTest {
 

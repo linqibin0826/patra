@@ -6,8 +6,8 @@ import com.patra.starter.core.error.model.ErrorResolution;
 ///
 /// 这是一个函数式接口,拦截器通过调用 {@link #proceed(Throwable)} 方法传递异常到管道下游。
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 /// @see ResolutionInterceptor
 @FunctionalInterface
 public interface ResolutionInvocation {

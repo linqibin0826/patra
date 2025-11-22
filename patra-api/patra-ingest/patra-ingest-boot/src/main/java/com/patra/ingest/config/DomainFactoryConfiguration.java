@@ -31,7 +31,7 @@ import org.springframework.context.annotation.Configuration;
 ///   - 严格遵守六边形架构和洋葱架构依赖规则
 ///   - 集中式基础设施 Bean 配置,避免重复定义
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @Configuration
 public class DomainFactoryConfiguration {

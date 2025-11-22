@@ -7,7 +7,7 @@ package com.patra.starter.provenance.internal.metadata;
 /// - scrollId - Elasticsearch Scroll ID
 ///   - pageSize - 每页大小
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 public class DoajPlanMetadata extends PlanMetadata {
 

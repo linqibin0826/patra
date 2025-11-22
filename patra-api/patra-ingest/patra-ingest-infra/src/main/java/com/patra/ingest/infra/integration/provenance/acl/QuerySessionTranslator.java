@@ -21,8 +21,8 @@ import org.springframework.stereotype.Component;
 ///   - 将数据源特定的状态令牌转换为通用的 Map 结构
 ///   - 屏蔽 Provenance 的实现细节（如 plannedAt、extensionMetadata）
 ///
-/// @author Patra Architecture Team
-/// @since 0.3.0
+/// @author linqibin
+/// @since 0.1.0
 @Component
 public class QuerySessionTranslator {
 

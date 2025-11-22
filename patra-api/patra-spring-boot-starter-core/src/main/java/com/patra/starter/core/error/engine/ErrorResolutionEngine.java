@@ -6,8 +6,8 @@ import com.patra.starter.core.error.model.ErrorResolution;
 ///
 /// 解析策略(按优先级):
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 /// @see com.patra.starter.core.error.engine.DefaultErrorResolutionEngine
 public interface ErrorResolutionEngine {
 

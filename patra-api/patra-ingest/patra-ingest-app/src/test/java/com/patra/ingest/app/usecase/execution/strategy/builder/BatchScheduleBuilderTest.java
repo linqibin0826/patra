@@ -41,8 +41,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
  *   <li>ProvenanceDataPort.prepareQuerySession() 的调用
  * </ul>
  *
- * @author Patra Architecture Team
- * @since 0.2.0
+ * @author linqibin
+ * @since 0.1.0
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("BatchScheduleBuilder 单元测试")

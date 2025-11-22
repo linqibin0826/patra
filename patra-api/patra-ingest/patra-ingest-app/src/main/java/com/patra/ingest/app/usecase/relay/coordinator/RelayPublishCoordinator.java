@@ -46,7 +46,7 @@ import org.springframework.stereotype.Component;
 ///   - WARN: 暂时性错误并重试 (messageId, attemptNumber, nextRetryAt, errorCode)
 ///   - ERROR: 致命错误或达到最大重试 (messageId, totalAttempts, errorCode, exception)
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @Slf4j
 @Component

@@ -15,7 +15,7 @@ import java.util.Deque;
 ///
 /// **线程安全**: 此类不是线程安全的，应在单线程上下文中使用。
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 final class NormalizationPath {
   private final Deque<String> tokens = new ArrayDeque<>();

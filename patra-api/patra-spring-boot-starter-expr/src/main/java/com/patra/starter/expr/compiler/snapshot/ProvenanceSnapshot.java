@@ -33,7 +33,7 @@ import java.util.Set;
 /// @param capabilityMatrix 能力矩阵（字段键 → 字段能力）
 /// @param apiParameterMap API 参数映射（标准键 → API 参数）
 /// @param renderRules 渲染规则列表
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 public record ProvenanceSnapshot(
     Identity identity,

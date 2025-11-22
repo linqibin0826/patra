@@ -27,7 +27,7 @@ import java.util.List;
 /// @param failed 失败的消息数
 /// @param leaseMissed 租约丢失的消息数
 /// @param events 领域事件列表(不可变)
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 public record RelayBatchResult(
     ChannelKey channel,

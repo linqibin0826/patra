@@ -25,8 +25,8 @@ import org.springframework.stereotype.Component;
 /// JsonNode params = mapper.mapParameters(batch, baseParams, metadata);
 /// ```
 ///
-/// @author Patra Architecture Team
-/// @since 0.3.0
+/// @author linqibin
+/// @since 0.1.0
 /// @see ProviderParameterMapper
 @Component
 @Slf4j

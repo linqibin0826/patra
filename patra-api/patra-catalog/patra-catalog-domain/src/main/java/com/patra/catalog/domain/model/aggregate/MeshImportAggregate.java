@@ -268,7 +268,7 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   ///   - 如果未处理任何记录，返回 0.0
   ///
   /// @return 处理速度（记录/秒），如果任务未开始返回 null
-  /// @since 0.1.0 (User Story 2 - 实时监控导入进度)
+  /// @since 0.1.0
   public Double calculateProcessSpeed() {
     if (this.startTime == null) {
       return null; // 任务未开始
@@ -298,7 +298,7 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   ///   - 如果所有记录已处理，返回 0
   ///
   /// @return 剩余时间（秒），如果无法估算返回 null
-  /// @since 0.1.0 (User Story 2 - 实时监控导入进度)
+  /// @since 0.1.0
   public Long estimateRemainingTime() {
     if (this.startTime == null || this.processedRecords == null || this.processedRecords == 0) {
       return null; // 无法估算（任务未开始或无进度）
@@ -325,7 +325,7 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   ///   - 如果总记录数为 0，返回 0.0
   ///
   /// @return 整体进度百分比（0.0 - 100.0）
-  /// @since 0.1.0 (User Story 2 - 实时监控导入进度)
+  /// @since 0.1.0
   public Double getOverallProgress() {
     if (this.totalRecords == null || this.totalRecords == 0) {
       return 0.0;

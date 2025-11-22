@@ -155,5 +155,5 @@
 /// ```
 ///
 /// @since 0.1.0
-/// @author Patra Architecture Team
+/// @author linqibin
 package com.patra.starter.provenance.pubmed.processor;

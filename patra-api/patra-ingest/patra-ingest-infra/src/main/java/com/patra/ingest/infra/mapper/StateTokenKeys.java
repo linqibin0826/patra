@@ -9,8 +9,8 @@ package com.patra.ingest.infra.mapper;
 ///
 /// **注意**：这些是系统内部使用的键，不是外部 API 的参数名。外部 API 参数名定义在 `patra-common-provenance-api` 模块中。
 ///
-/// @author Patra Architecture Team
-/// @since 0.3.0
+/// @author linqibin
+/// @since 0.1.0
 public final class StateTokenKeys {
   private StateTokenKeys() {
     throw new AssertionError("工具类不应被实例化");

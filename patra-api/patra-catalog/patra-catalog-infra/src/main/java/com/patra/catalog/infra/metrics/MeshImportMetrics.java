@@ -40,7 +40,7 @@ import org.springframework.stereotype.Component;
 ///   - 平均批次处理速度：avg(mesh.import.batch.speed)
 ///   - 各表进度：mesh.import.table.progress{table="descriptor"}
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @Slf4j
 @Component

@@ -21,7 +21,7 @@ import java.util.List;
 /// **端口语义**: 此接口是六边形架构中的 **仓储端口(Repository Port)**,定义在 Domain
 /// 层,由基础设施层(Infrastructure)实现,确保领域逻辑与持久化技术解耦。
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 public interface OutboxRelayLogRepository {
 

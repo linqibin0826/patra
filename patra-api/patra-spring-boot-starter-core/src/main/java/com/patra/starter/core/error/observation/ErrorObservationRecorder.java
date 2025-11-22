@@ -11,8 +11,8 @@ import com.patra.starter.core.error.model.ErrorResolution;
 /// - {@link MicrometerErrorObservationRecorder} - 基于 Micrometer 的实现
 ///   - {@link #NO_OP} - 禁用观测时的空实现
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 public interface ErrorObservationRecorder {
 
   /// 记录单次错误解析的结果和耗时。

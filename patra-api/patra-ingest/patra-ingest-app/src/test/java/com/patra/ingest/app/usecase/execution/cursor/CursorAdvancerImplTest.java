@@ -41,7 +41,7 @@ import org.springframework.dao.OptimisticLockingFailureException;
 ///   - ✅ 其他窗口策略场景
 ///   - ✅ 异常处理场景
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CursorAdvancerImpl 单元测试")

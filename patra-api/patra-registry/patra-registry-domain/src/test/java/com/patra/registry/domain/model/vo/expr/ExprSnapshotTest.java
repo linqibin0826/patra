@@ -27,8 +27,8 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ record 的 equals/hashCode/toString 测试
 ///   - ✅ 不变性保证
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("ExprSnapshot 单元测试")
 class ExprSnapshotTest {
 

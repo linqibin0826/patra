@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 ///
 /// EPMC 使用 Solr 风格的 cursorMark 分页机制，具体参数映射由 Infrastructure 层的 EpmcParameterMapper 处理。
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 @Component
 @Slf4j

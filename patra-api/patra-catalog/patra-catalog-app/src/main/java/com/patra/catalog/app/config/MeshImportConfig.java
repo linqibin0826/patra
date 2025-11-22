@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 ///   - 下载超时和重试配置
 ///   - 数据量验证的预期值配置
 ///
-/// @author Patra Lin
+/// @author linqibin
 /// @since 0.1.0
 @Data
 @Component

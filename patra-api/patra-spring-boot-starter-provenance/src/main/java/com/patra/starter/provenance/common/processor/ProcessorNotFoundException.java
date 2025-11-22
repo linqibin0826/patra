@@ -15,7 +15,7 @@ package com.patra.starter.provenance.common.processor;
 ///   - 提供详细的错误信息（包含DataType）
 ///   - 支持异常链（可选的cause参数）
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 public class ProcessorNotFoundException extends RuntimeException {
 

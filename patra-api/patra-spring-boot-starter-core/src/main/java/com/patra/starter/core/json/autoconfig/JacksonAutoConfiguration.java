@@ -23,8 +23,8 @@ import org.springframework.context.annotation.Bean;
 ///
 /// 应用程序代码应**优先使用依赖注入**来获取 `ObjectMapper`。此自动配置仅为无法使用 依赖注入的场景提供桥接,不应被用作服务定位器。
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @AutoConfiguration
 @ConditionalOnClass(ObjectMapper.class)

@@ -65,7 +65,7 @@ import org.springframework.stereotype.Component;
 ///
 /// ```
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 @Component
 @RequiredArgsConstructor

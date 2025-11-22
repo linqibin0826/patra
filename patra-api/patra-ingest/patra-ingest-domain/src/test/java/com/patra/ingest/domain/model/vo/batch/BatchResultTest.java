@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 ///   - 不变性保证
 ///   - 边界条件测试
 ///
-/// @author Patra Team
+/// @author linqibin
 @DisplayName("BatchResult 单元测试")
 class BatchResultTest {
 

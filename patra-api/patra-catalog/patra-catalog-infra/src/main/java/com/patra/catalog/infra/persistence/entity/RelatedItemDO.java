@@ -26,7 +26,7 @@ import lombok.EqualsAndHashCode;
 ///   - `metadata` JSON 扩展数据字段
 ///
 /// @author linqibin
-/// @since 0.4.0
+/// @since 0.1.0
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_related_item", autoResultMap = true)

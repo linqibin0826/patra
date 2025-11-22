@@ -9,7 +9,7 @@ package com.patra.ingest.domain.model.enums;
 ///   - **FAILED**: 中继永久失败(达到最大重试次数或致命错误)
 ///   - **LEASE_MISSED**: 由于并发竞争未能获取租约(瞬态)
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 public enum RelayStatus {
 

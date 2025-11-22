@@ -16,8 +16,8 @@ import org.springframework.core.annotation.Order;
 ///
 /// 执行优先级: {@link Ordered#LOWEST_PRECEDENCE} - 10,确保在其他拦截器之后执行以获取完整耗时。
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Order(Ordered.LOWEST_PRECEDENCE - 10)
 public class MetricsInterceptor implements ResolutionInterceptor {

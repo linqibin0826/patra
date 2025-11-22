@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 /// TaskRunStatus 枚举测试。
 ///
-/// @author Patra Team
+/// @author linqibin
 @DisplayName("TaskRunStatus 枚举测试")
 class TaskRunStatusTest {
 

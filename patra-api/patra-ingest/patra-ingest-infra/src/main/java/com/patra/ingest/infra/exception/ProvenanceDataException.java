@@ -10,7 +10,7 @@ package com.patra.ingest.infra.exception;
 ///   - Infrastructure层: ProvenanceDataException (本类)
 ///   - Domain层: 无异常定义,由上层决定如何处理
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 public class ProvenanceDataException extends RuntimeException {
 

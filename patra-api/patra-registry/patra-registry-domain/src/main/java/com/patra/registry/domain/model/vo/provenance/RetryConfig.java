@@ -40,8 +40,8 @@ import java.time.Instant;
 /// @param retryOnNetworkError 是否对网络级错误重试(连接超时/重置),`true`重试,`false`快速失败
 /// @param circuitBreakThreshold 熔断器失败阈值,连续失败N次后打开熔断器,null表示禁用熔断器
 /// @param circuitCooldownMillis 熔断器冷却期(毫秒),打开后等待此时长再半开尝试,null表示使用默认值
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 public record RetryConfig(
     Long id,
     Long provenanceId,

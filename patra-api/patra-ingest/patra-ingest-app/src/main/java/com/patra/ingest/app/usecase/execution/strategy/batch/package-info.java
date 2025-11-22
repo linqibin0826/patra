@@ -242,6 +242,6 @@
 ///   - {@link com.patra.ingest.app.usecase.execution.strategy.builder.BatchScheduleBuilder} -
 ///       批次调度构建器
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 package com.patra.ingest.app.usecase.execution.strategy.batch;

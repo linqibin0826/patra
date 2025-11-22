@@ -21,7 +21,7 @@ import com.tngtech.archunit.lang.ArchRule;
 ///   - 新开发者快速理解架构
 ///
 /// @author linqibin
-/// @since 2025-01-10
+/// @since 0.1.0
 public final class NamingConventionRules {
 
   private NamingConventionRules() {

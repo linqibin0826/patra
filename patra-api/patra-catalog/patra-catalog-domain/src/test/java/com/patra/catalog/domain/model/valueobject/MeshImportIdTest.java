@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ 零值 → 抛出 IllegalArgumentException
 ///   - ✅ 负数 → 抛出 IllegalArgumentException
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @DisplayName("MeshImportId 单元测试")
 class MeshImportIdTest {

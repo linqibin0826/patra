@@ -42,7 +42,7 @@ import lombok.EqualsAndHashCode;
 ///
 /// 分层说明: 六边形架构中的*基础设施/持久化 DO*;不含领域行为。
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @Data
 @EqualsAndHashCode(callSuper = true)

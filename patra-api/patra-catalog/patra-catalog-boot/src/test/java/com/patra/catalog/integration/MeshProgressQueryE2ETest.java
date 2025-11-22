@@ -39,8 +39,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 ///
 /// **注意**：此测试依赖完整的导入流程，执行时间较长（约 1-2 分钟）
 ///
-/// @author Patra Team
-/// @since 0.1.0 (User Story 2)
+/// @author linqibin
+/// @since 0.1.0
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @DisplayName("MeSH 导入进度查询 E2E 测试")

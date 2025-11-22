@@ -13,7 +13,7 @@ import com.patra.common.enums.ProvenanceCode;
 ///
 /// - webEnv 和 queryKey 必须同时存在或同时为空
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 public class PubmedPlanMetadata extends PlanMetadata {
 

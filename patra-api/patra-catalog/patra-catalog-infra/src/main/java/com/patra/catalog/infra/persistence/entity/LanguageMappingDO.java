@@ -24,7 +24,7 @@ import lombok.EqualsAndHashCode;
 ///   - `metadata` 映射元数据(灵活扩展)
 ///
 /// @author linqibin
-/// @since 0.5.0
+/// @since 0.1.0
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_language_mapping", autoResultMap = true)

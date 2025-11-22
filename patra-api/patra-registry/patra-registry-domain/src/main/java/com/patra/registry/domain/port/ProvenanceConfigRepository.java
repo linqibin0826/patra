@@ -26,8 +26,8 @@ import java.util.Optional;
 ///
 /// **注意**:所有方法使用领域语言表达业务意图,隐藏底层持久化技术细节(SQL/NoSQL)。
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 public interface ProvenanceConfigRepository {
 
   /// 根据数据源代码查询数据源元数据。

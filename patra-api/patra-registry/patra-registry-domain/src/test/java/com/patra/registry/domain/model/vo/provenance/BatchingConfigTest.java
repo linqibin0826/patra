@@ -31,8 +31,8 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ 业务场景测试（批处理配置、ID 参数定制、硬上限保护等）
 ///   - ✅ 边界条件处理
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("BatchingConfig 单元测试")
 class BatchingConfigTest {
 

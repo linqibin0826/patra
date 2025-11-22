@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 ///   - 验证工厂正确委托给 OutboxMessage.computeNextAttempt()
 ///   - 验证日志创建的一致性和完整性
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @DisplayName("OutboxRelayLogFactory 单元测试")
 class OutboxRelayLogFactoryTest {

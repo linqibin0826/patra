@@ -23,7 +23,7 @@ import lombok.EqualsAndHashCode;
 /// 唯一约束: uk_pub_funding(publication_id, funding_id),防止重复关联。
 ///
 /// @author linqibin
-/// @since 0.4.0
+/// @since 0.1.0
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_publication_funding", autoResultMap = true)

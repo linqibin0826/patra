@@ -64,7 +64,7 @@ import org.springframework.stereotype.Component;
 ///   - {@link OutboxMessageDeferredEvent}: 暂时性错误,已调度重试
 ///   - {@link OutboxMessageFailedEvent}: 达到最大重试次数后永久失败
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @Slf4j
 @Component

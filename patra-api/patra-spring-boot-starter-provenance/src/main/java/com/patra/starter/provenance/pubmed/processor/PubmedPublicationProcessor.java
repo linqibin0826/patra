@@ -67,7 +67,7 @@ import org.springframework.lang.Nullable;
 /// **注意**：此类通过 {@link com.patra.starter.provenance.boot.ProvenanceAutoConfiguration}
 /// 自动配置注册为 Spring Bean，不使用 `@Component` 注解。
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 @Slf4j
 @RequiredArgsConstructor

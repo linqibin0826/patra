@@ -19,7 +19,7 @@ import com.tngtech.archunit.lang.ArchRule;
 /// - 【CHK-ARCH-001】Domain 层必须是纯 Java（无框架依赖）
 ///
 /// @author linqibin
-/// @since 2025-01-10
+/// @since 0.1.0
 public final class DomainLayerRules {
 
   private DomainLayerRules() {

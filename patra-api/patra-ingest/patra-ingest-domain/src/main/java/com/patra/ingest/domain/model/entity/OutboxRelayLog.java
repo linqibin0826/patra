@@ -20,7 +20,7 @@ import lombok.Value;
 ///   - 完整性：捕获故障排查所需的所有信息
 ///   - 高效性：针对仅追加写入和时间范围查询优化
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @Value
 @Builder(toBuilder = true)

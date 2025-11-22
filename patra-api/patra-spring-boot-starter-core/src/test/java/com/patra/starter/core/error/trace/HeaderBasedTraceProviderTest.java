@@ -26,8 +26,8 @@ import org.slf4j.MDC;
 ///   - ✅ 回退场景（无 Header）
 ///   - ✅ 不同 Trace ID 格式支持
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("HeaderBasedTraceProvider 单元测试")
 @ExtendWith(MockitoExtension.class)
 class HeaderBasedTraceProviderTest {

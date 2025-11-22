@@ -40,7 +40,7 @@ import org.junit.jupiter.api.Test;
 /// **冻结模式：** 首次运行会记录现有违规到 `src/test/resources/archunit/` 目录， 后续运行会禁止新增违规，并要求逐步减少现有违规。
 ///
 /// @author linqibin
-/// @since 2025-01-10
+/// @since 0.1.0
 @DisplayName("patra-ingest 架构测试")
 class IngestArchitectureTest {
 

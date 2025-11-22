@@ -21,8 +21,8 @@ import org.springframework.core.annotation.Order;
 ///
 /// 执行优先级: {@link Ordered#HIGHEST_PRECEDENCE} + 10,确保在追踪拦截器之后执行。
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
 public class CircuitBreakerInterceptor implements ResolutionInterceptor {

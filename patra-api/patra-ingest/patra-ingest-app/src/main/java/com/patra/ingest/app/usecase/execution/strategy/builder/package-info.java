@@ -162,7 +162,7 @@
  *   <li><strong>一致性</strong>: 命名和设计与 PlanExpressionBuilder 保持一致
  * </ul>
  *
- * @since 0.2.0
- * @author Patra Architecture Team
+ * @since 0.1.0
+ * @author linqibin
  */
 package com.patra.ingest.app.usecase.execution.strategy.builder;

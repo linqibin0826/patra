@@ -19,7 +19,7 @@ import com.tngtech.archunit.lang.ArchRule;
 /// - 【CHK-ARCH-004】永不暴露 DO（DO 实体不能离开基础设施层）
 ///
 /// @author linqibin
-/// @since 2025-01-10
+/// @since 0.1.0
 public final class EncapsulationRules {
 
   private EncapsulationRules() {

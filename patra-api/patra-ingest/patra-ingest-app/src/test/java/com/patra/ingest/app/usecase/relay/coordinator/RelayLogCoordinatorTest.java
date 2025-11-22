@@ -39,7 +39,7 @@ import org.mockito.quality.Strictness;
 ///   - ✅ 各种中继结果记录 (PUBLISHED, DEFERRED, FAILED, LEASE_MISSED)
 ///   - ✅ 指标记录验证
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

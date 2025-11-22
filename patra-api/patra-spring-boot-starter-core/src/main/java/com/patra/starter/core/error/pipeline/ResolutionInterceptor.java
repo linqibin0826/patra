@@ -24,8 +24,8 @@ import com.patra.starter.core.error.model.ErrorResolution;
 ///     return resolution;
 /// ```
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 /// @see ResolutionInvocation
 /// @see ErrorResolutionPipeline
 public interface ResolutionInterceptor {

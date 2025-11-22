@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ record 自动生成的 equals/hashCode/toString 测试
 ///   - ✅ 边界值和时间精度测试
 ///
-/// @author Patra Team
+/// @author linqibin
 /// @since 0.1.0
 @DisplayName("PlannerWindow 值对象单元测试")
 class PlannerWindowTest {

@@ -33,7 +33,7 @@ import java.util.Objects;
 /// @param fetchedCount 获取或尝试的记录数量,用于度量统计
 /// @param errorType 错误分类,指导重试语义
 /// @param metadata 扩展元数据（如processingTime、recordCount等）
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 public record ProviderResult<T>(
     boolean success,

@@ -14,6 +14,6 @@
 ///   - 类型安全：使用模式匹配处理不同数据源
 ///
 /// @see com.patra.ingest.domain.model.vo.plan.BatchPlan
-/// @author Patra Architecture Team
-/// @since 0.3.0
+/// @author linqibin
+/// @since 0.1.0
 package com.patra.ingest.infra.integration.provenance.acl;

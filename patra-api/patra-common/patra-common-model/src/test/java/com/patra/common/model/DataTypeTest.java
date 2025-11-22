@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 ///   - 分组方法测试 - 验证类型分组功能
 ///   - 边界情况测试 - null、空字符串、大小写等
 ///
-/// @since 2.0.0
+/// @since 0.1.0
 @DisplayName("DataType 枚举测试")
 class DataTypeTest {
 

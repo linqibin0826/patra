@@ -15,7 +15,7 @@ import lombok.Value;
 ///   - 客户端实例（如PubMedClient、DoajClient）
 ///   - 扩展属性（自定义上下文信息）
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 @Value
 @Builder

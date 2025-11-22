@@ -34,8 +34,8 @@ import org.junit.jupiter.api.Test;
 ///   - ✅ 不变性约束验证
 ///   - ✅ 领域事件验证
 ///
-/// @author Patra Team
-/// @since 2.0
+/// @author linqibin
+/// @since 0.1.0
 @DisplayName("MeshImportAggregate 单元测试")
 class MeshImportAggregateTest {
 

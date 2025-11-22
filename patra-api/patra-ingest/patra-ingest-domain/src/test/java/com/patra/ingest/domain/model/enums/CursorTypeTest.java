@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 /// CursorType 枚举测试。
 ///
-/// @author Patra Team
+/// @author linqibin
 @DisplayName("CursorType 枚举测试")
 class CursorTypeTest {
 

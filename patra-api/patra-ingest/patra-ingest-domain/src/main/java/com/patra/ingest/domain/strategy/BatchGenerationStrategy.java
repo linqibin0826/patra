@@ -29,7 +29,7 @@ import java.util.List;
 ///   - 新增数据源时无需修改任何现有代码
 ///   - 解耦外部实现：不依赖 Provenance Starter 的具体类型
 ///
-/// @author Patra Architecture Team
+/// @author linqibin
 /// @since 0.1.0
 public interface BatchGenerationStrategy {
 
@@ -52,7 +52,7 @@ public interface BatchGenerationStrategy {
   ///     return ProvenanceCode.PUBMED;
   /// ```
   ///
-  /// @since 0.3.0
+  /// @since 0.1.0
   ProvenanceCode getSupportedProvenanceCode();
 
   /// 根据查询会话生成批次列表
