@@ -172,6 +172,12 @@
       </dependency>
 
       <dependency>
+        <groupId>com.patra</groupId>
+        <artifactId>patra-spring-boot-starter-redisson</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
         <groupId>org.mapstruct</groupId>
         <artifactId>mapstruct</artifactId>
         <version>${mapstruct.version}</version>
