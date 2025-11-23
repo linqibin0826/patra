@@ -79,15 +79,16 @@
 
 ```
 业务服务 (patra-catalog)
-├─ Adapter: XXL-Job Handler + REST API
+├─ Adapter: XXL-Job Handler (使用 @DistributedLock) + REST API
 ├─ Application: Job 配置和编排
 └─ Infrastructure: ItemReader/Writer/Processor
            ↓ 依赖
 patra-spring-boot-starter-batch
 ├─ 自动配置: Spring Batch 核心组件
-├─ 分布式锁: @DistributedJobLock 注解
 ├─ 可观测性: SkyWalking + Micrometer + 日志
 └─ 基础组件: JobLauncherHelper 等
+           ↓ 依赖
+patra-spring-boot-starter-redisson (提供 @DistributedLock)
            ↓ 依赖
 Spring Batch 5.2.x
 ```
