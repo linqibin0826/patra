@@ -333,13 +333,25 @@ patra-spring-boot-starter-observability
 ├── apm-toolkit-trace (必需)
 ├── apm-toolkit-logback-1.x (必需)
 ├── apm-toolkit-micrometer-registry (必需)
-└── micrometer-registry-prometheus (可选)
+├── micrometer-registry-prometheus (可选)
+├── patra-spring-boot-starter-core (optional: true，编译期依赖)
+├── patra-spring-boot-starter-rest-client (optional: true，编译期依赖)
+└── patra-spring-boot-starter-batch (optional: true，编译期依赖)
 
 patra-spring-boot-starter-core
-└── patra-spring-boot-starter-observability (新增依赖)
+❌ 绝对不能依赖 observability（保持纯净）
 
-其他 patra-starter-*
-└── patra-spring-boot-starter-core (已有依赖，间接依赖 observability)
+patra-spring-boot-starter-rest-client
+❌ 绝对不能依赖 observability（保持纯净）
+
+patra-spring-boot-starter-batch
+❌ 绝对不能依赖 observability（保持纯净）
+
+应用服务（如 patra-ingest-boot）
+├── patra-spring-boot-starter-observability（显式引入以启用可观测性）
+├── patra-spring-boot-starter-core（业务依赖）
+├── patra-spring-boot-starter-rest-client（业务依赖）
+└── patra-spring-boot-starter-batch（业务依赖）
 ```
 
 ### 技术选型理由
@@ -919,42 +931,98 @@ public class SensitiveDataMaskingHandler implements ObservationHandler<Observati
 
     @Override
     public void onStart(Observation.Context context) {
+        // ✅ 正确的脱敏实现：使用 Context API 重新设置 KeyValues
+
         // 脱敏低基数标签（Low Cardinality Key Values）
-        maskKeyValues(context.getLowCardinalityKeyValues());
+        io.micrometer.common.KeyValues maskedLowCardinality = maskKeyValues(
+            context.getLowCardinalityKeyValues()
+        );
+        // 使用反射或 Context 的内部方法设置脱敏后的 KeyValues
+        // 注意：Micrometer 1.12.0+ 提供了 addLowCardinalityKeyValue 方法
+        setLowCardinalityKeyValues(context, maskedLowCardinality);
 
         // 脱敏高基数标签（High Cardinality Key Values）
-        maskKeyValues(context.getHighCardinalityKeyValues());
+        io.micrometer.common.KeyValues maskedHighCardinality = maskKeyValues(
+            context.getHighCardinalityKeyValues()
+        );
+        setHighCardinalityKeyValues(context, maskedHighCardinality);
 
         log.trace("已对 Observation [{}] 的敏感数据进行脱敏", context.getName());
     }
 
     /**
-     * 脱敏 KeyValue 集合
+     * 脱敏 KeyValue 集合（返回新的不可变集合）
+     * <p>
+     * 因为 KeyValues 是不可变的，所以需要构建新的 KeyValues 对象
      */
-    private void maskKeyValues(io.micrometer.common.KeyValues keyValues) {
+    private io.micrometer.common.KeyValues maskKeyValues(io.micrometer.common.KeyValues keyValues) {
         if (keyValues == null || keyValues.stream().count() == 0) {
-            return;
+            return keyValues;
         }
 
-        keyValues.stream().forEach(keyValue -> {
+        // 构建新的 KeyValues（不可变）
+        io.micrometer.common.KeyValues maskedKeyValues = io.micrometer.common.KeyValues.empty();
+
+        for (io.micrometer.common.KeyValue keyValue : keyValues) {
             String key = keyValue.getKey();
             String value = keyValue.getValue();
 
             // 检查字段名是否敏感
             if (isSensitiveField(key)) {
                 // 字段名敏感，直接脱敏
-                replaceKeyValue(keyValues, key, MASK_PLACEHOLDER);
+                maskedKeyValues = maskedKeyValues.and(key, MASK_PLACEHOLDER);
                 log.debug("脱敏敏感字段: key={}", key);
-                return;
+                continue;
             }
 
             // 检查值是否包含敏感数据
             String maskedValue = maskSensitiveValue(value);
             if (!maskedValue.equals(value)) {
-                replaceKeyValue(keyValues, key, maskedValue);
+                maskedKeyValues = maskedKeyValues.and(key, maskedValue);
                 log.debug("脱敏敏感值: key={}, original={}, masked={}", key, value, maskedValue);
+            } else {
+                // 无需脱敏，保持原值
+                maskedKeyValues = maskedKeyValues.and(key, value);
             }
-        });
+        }
+
+        return maskedKeyValues;
+    }
+
+    /**
+     * 设置低基数 KeyValues（使用反射访问 Context 的私有字段）
+     * <p>
+     * 注意：这是必要的 hack，因为 Observation.Context 不提供公开的 setter 方法
+     */
+    private void setLowCardinalityKeyValues(
+        Observation.Context context,
+        io.micrometer.common.KeyValues keyValues
+    ) {
+        try {
+            java.lang.reflect.Field field = context.getClass().getDeclaredField("lowCardinalityKeyValues");
+            field.setAccessible(true);
+            field.set(context, keyValues);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            log.error("无法设置低基数 KeyValues，脱敏失败", e);
+            throw new IllegalStateException("敏感数据脱敏失败：无法访问 Context 字段", e);
+        }
+    }
+
+    /**
+     * 设置高基数 KeyValues（使用反射访问 Context 的私有字段）
+     */
+    private void setHighCardinalityKeyValues(
+        Observation.Context context,
+        io.micrometer.common.KeyValues keyValues
+    ) {
+        try {
+            java.lang.reflect.Field field = context.getClass().getDeclaredField("highCardinalityKeyValues");
+            field.setAccessible(true);
+            field.set(context, keyValues);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            log.error("无法设置高基数 KeyValues，脱敏失败", e);
+            throw new IllegalStateException("敏感数据脱敏失败：无法访问 Context 字段", e);
+        }
     }
 
     /**
@@ -1001,16 +1069,6 @@ public class SensitiveDataMaskingHandler implements ObservationHandler<Observati
         }
 
         return result;
-    }
-
-    /**
-     * 替换 KeyValue（Micrometer KeyValues 是不可变的，需要重新构建）
-     * 注意：这是简化示例，实际实现需要使用 Observation.Context 的 API
-     */
-    private void replaceKeyValue(io.micrometer.common.KeyValues keyValues, String key, String newValue) {
-        // 实际实现中，需要通过 Context 的方法来修改 KeyValues
-        // 这里仅作为设计示例
-        log.trace("替换 KeyValue: key={}, newValue={}", key, newValue);
     }
 
     @Override
@@ -1108,6 +1166,225 @@ patra:
 3. **多层防护**: 同时检查字段名和字段值，双重保护
 4. **错误消息脱敏**: 异常信息中的敏感数据也会被脱敏
 5. **审计日志**: 记录脱敏操作，便于安全审计
+
+---
+
+## 🗣️ 统一语言（Ubiquitous Language）
+
+### DDD 原则：使用业务语言而非技术术语
+
+**问题**：传统可观测性 API 使用技术术语（`track`, `record`, `observe`），不符合 DDD 的统一语言原则。
+
+**解决方案**：定义业务语言术语表，将技术概念映射到业务领域。
+
+### 术语表（Glossary）
+
+#### 核心业务术语
+
+| 业务术语（中文） | 业务术语（英文） | 技术术语（避免使用） | 业务含义 | 使用场景 |
+|---------------|----------------|-------------------|---------|---------|
+| **监控操作** | `monitorOperation` | `trackOperation` / `observe` | 监控一个业务操作的执行过程 | 数据导入、文献检索、批处理作业 |
+| **测量指标** | `measureMetric` | `recordMetric` / `gauge` | 测量一个业务指标的数值 | 处理数量、耗时、成功率 |
+| **记录事件** | `recordEvent` | `publishEvent` / `emit` | 记录一个已发生的业务事件 | 数据已导入、作业已完成 |
+| **操作上下文** | `OperationContext` | `ObservationContext` | 描述业务操作的上下文信息 | 操作名称、数据源类型、批次大小 |
+| **指标快照** | `MetricSnapshot` | `MeterReading` | 某一时刻的业务指标状态 | 记录数、字节数、百分比 |
+| **业务事件** | `BusinessEvent` | `DomainEvent` | 业务上已发生的重要事实 | Mesh 数据已导入、批处理已完成 |
+
+#### 领域特定术语（Patra 项目）
+
+| 业务术语 | 技术实现 | 业务含义 |
+|---------|---------|---------|
+| **监控文献导入** | `monitorLiteratureIngestion` | 监控从 PubMed/EPMC 导入文献的过程 |
+| **测量导入吞吐量** | `measureIngestionThroughput` | 测量每秒导入的文献记录数 |
+| **记录数据源切换** | `recordDataSourceSwitch` | 记录数据源切换事件（如从 PubMed 切到 EPMC） |
+| **监控批处理作业** | `monitorBatchJob` | 监控定时批处理任务的执行 |
+| **测量检索性能** | `measureSearchPerformance` | 测量文献检索的响应时间和准确率 |
+
+### 业务语言版 API（推荐）
+
+#### 重命名后的接口
+
+```java
+// patra-{service}-domain/src/main/java/com/patra/{service}/domain/port/ObservabilityPort.java
+package com.patra.{service}.domain.port;
+
+/**
+ * 可观测性端口 - 使用业务语言（Ubiquitous Language）
+ * <p>
+ * 设计原则：
+ * 1. 使用业务领域的术语，而非技术术语
+ * 2. 方法名表达业务意图，而非技术实现
+ * 3. 参数使用领域概念，而非技术对象
+ */
+public interface ObservabilityPort {
+
+    /**
+     * 监控业务操作的执行
+     * <p>
+     * 业务含义：当执行一个重要的业务操作时（如导入数据、检索文献），
+     * 使用此方法包裹操作，以便监控其执行情况（耗时、成功/失败、异常）
+     *
+     * @param context 操作上下文（描述这是什么业务操作）
+     * @param action  要执行的业务操作
+     * @param <T>     操作返回值类型
+     * @return 操作执行结果
+     */
+    <T> T monitorOperation(OperationContext context, Supplier<T> action);
+
+    /**
+     * 测量业务指标
+     * <p>
+     * 业务含义：当需要记录一个业务指标时（如导入记录数、处理耗时、错误率），
+     * 使用此方法测量并记录指标值
+     *
+     * @param snapshot 指标快照（某一时刻的业务指标状态）
+     */
+    void measureMetric(MetricSnapshot snapshot);
+
+    /**
+     * 记录业务事件
+     * <p>
+     * 业务含义：当一个重要的业务事实发生时（如数据已导入、作业已完成），
+     * 使用此方法记录事件，用于后续的审计和追踪
+     *
+     * @param event 业务事件（已发生的业务事实）
+     */
+    void recordEvent(BusinessEvent event);
+
+    /**
+     * 监控文献导入操作（领域特定方法 - 可选）
+     * <p>
+     * 业务含义：专门用于监控从外部数据源（PubMed, EPMC 等）导入文献的操作
+     * <p>
+     * 注意：这是一个领域特定的便捷方法，内部会调用 monitorOperation，
+     * 但使用业务领域的术语，更符合统一语言原则
+     *
+     * @param dataSource    数据源（PubMed, EPMC 等）
+     * @param recordCount   导入记录数
+     * @param action        导入操作
+     * @param <T>           操作返回值类型
+     * @return 导入结果
+     */
+    default <T> T monitorLiteratureIngestion(
+        String dataSource,
+        int recordCount,
+        Supplier<T> action
+    ) {
+        OperationContext context = OperationContext.forDataImport("literature.ingest")
+            .withLabel("dataSource", dataSource)
+            .withLabel("recordCount", String.valueOf(recordCount));
+        return monitorOperation(context, action);
+    }
+
+    /**
+     * 测量导入吞吐量（领域特定方法 - 可选）
+     * <p>
+     * 业务含义：测量单位时间内导入的文献记录数（记录/秒）
+     */
+    default void measureIngestionThroughput(String dataSource, long recordsPerSecond) {
+        measureMetric(
+            MetricSnapshot.counter("patra.literature.ingestion.throughput", recordsPerSecond)
+                .withTag("data_source", dataSource)
+        );
+    }
+
+    /**
+     * 记录数据源切换事件（领域特定方法 - 可选）
+     * <p>
+     * 业务含义：当系统从一个数据源切换到另一个数据源时（如从 PubMed 切到 EPMC），
+     * 记录此事件用于审计和故障排查
+     */
+    default void recordDataSourceSwitch(String fromSource, String toSource, String reason) {
+        recordEvent(
+            BusinessEvent.of("data_source.switched")
+                .withAttribute("from_source", fromSource)
+                .withAttribute("to_source", toSource)
+                .withAttribute("reason", reason)
+        );
+    }
+}
+```
+
+### 业务语言使用示例
+
+#### 示例 1：使用通用方法
+
+```java
+@Service
+public class MeshIngestionService {
+
+    private final ObservabilityPort observabilityPort;
+
+    public ImportResult ingestMeshData(DataSource source, List<MeshData> data) {
+        // ✅ 使用业务术语：monitorLiteratureIngestion（监控文献导入）
+        // 而非技术术语：trackOperation（追踪操作）
+        return observabilityPort.monitorLiteratureIngestion(
+            source.getName(),
+            data.size(),
+            () -> {
+                ImportResult result = doIngest(data);
+
+                // ✅ 使用业务术语：measureMetric（测量指标）
+                // 而非技术术语：recordMetric（记录指标）
+                observabilityPort.measureMetric(
+                    MetricSnapshot.counter("patra.mesh.ingested_records", result.getCount())
+                );
+
+                return result;
+            }
+        );
+    }
+}
+```
+
+#### 示例 2：使用领域特定方法
+
+```java
+@Service
+public class DataSourceManager {
+
+    private final ObservabilityPort observabilityPort;
+
+    public void switchDataSource(DataSource from, DataSource to, String reason) {
+        // ✅ 使用领域特定的业务术语：recordDataSourceSwitch（记录数据源切换）
+        // 业务人员可以直接理解这段代码的含义
+        observabilityPort.recordDataSourceSwitch(
+            from.getName(),
+            to.getName(),
+            reason
+        );
+
+        // 执行切换逻辑
+        performSwitch(from, to);
+
+        // ✅ 测量切换后的吞吐量
+        observabilityPort.measureIngestionThroughput(
+            to.getName(),
+            calculateThroughput(to)
+        );
+    }
+}
+```
+
+### 业务语言的价值
+
+| 方面 | 技术术语 | 业务语言 |
+|-----|---------|---------|
+| **可理解性** | ❌ 技术人员才能理解 `trackOperation` | ✅ 业务人员也能理解 `monitorLiteratureIngestion` |
+| **沟通成本** | ❌ 需要翻译：业务术语 ↔ 技术术语 | ✅ 直接使用统一语言，无需翻译 |
+| **需求追溯** | ❌ 难以从代码追溯到业务需求 | ✅ 代码直接表达业务需求 |
+| **知识共享** | ❌ 业务知识锁定在开发者脑中 | ✅ 代码本身就是业务知识库 |
+| **DDD 合规** | ❌ 不符合统一语言原则 | ✅ 完全符合 DDD 原则 |
+
+### 最佳实践
+
+1. **与领域专家协作**：术语表应与业务人员、产品经理共同定义
+2. **定期更新术语表**：随着业务发展，及时更新和补充术语
+3. **代码即文档**：API 方法名和参数名直接表达业务含义，减少注释需求
+4. **避免技术泄露**：领域层不出现技术术语（如 `track`, `observe`, `gauge`）
+5. **分层使用术语**：
+   - **Domain 层**：纯业务术语（`monitorLiteratureIngestion`）
+   - **Infrastructure 层**：技术术语（`Observation`, `MeterRegistry`）
 
 ---
 
@@ -1248,21 +1525,247 @@ public interface ObservabilityPort {
 }
 
 /**
- * 操作上下文 - 业务概念（Value Object）
+ * 操作名称 - 富领域模型（Value Object）
+ * <p>
+ * 业务规则：
+ * 1. 不能为空
+ * 2. 必须遵循命名规范：{domain}.{action} 或 {module}.{domain}.{action}
+ * 3. 只能包含小写字母、数字、点号和下划线
+ * 4. 长度限制：3-100 字符
  */
-public record OperationContext(
-    String operationName,        // 操作名称（业务术语，如 "user.register"）
-    Map<String, String> labels,  // 业务标签（如 {"sourceType": "manual"}）
-    OperationType type           // 操作类型（业务分类）
-) {
-    public static OperationContext of(String operationName) {
-        return new OperationContext(operationName, Map.of(), OperationType.GENERAL);
+public record OperationName(String value) {
+    private static final Pattern VALID_PATTERN = Pattern.compile("^[a-z0-9_]+(\\.[a-z0-9_]+)+$");
+    private static final int MIN_LENGTH = 3;
+    private static final int MAX_LENGTH = 100;
+
+    public OperationName {
+        Objects.requireNonNull(value, "操作名称不能为空");
+        if (value.length() < MIN_LENGTH || value.length() > MAX_LENGTH) {
+            throw new IllegalArgumentException(
+                String.format("操作名称长度必须在 %d-%d 之间，实际：%d", MIN_LENGTH, MAX_LENGTH, value.length())
+            );
+        }
+        if (!VALID_PATTERN.matcher(value).matches()) {
+            throw new IllegalArgumentException(
+                "操作名称格式错误，必须遵循 {domain}.{action} 格式，只能包含小写字母、数字、点号和下划线"
+            );
+        }
     }
 
+    /**
+     * 提取领域名称（第一个点号前的部分）
+     */
+    public String extractDomain() {
+        return value.substring(0, value.indexOf('.'));
+    }
+
+    /**
+     * 提取操作动作（最后一个点号后的部分）
+     */
+    public String extractAction() {
+        return value.substring(value.lastIndexOf('.') + 1);
+    }
+}
+
+/**
+ * 操作标签 - 富领域模型（Value Object）
+ * <p>
+ * 业务规则：
+ * 1. 标签数量限制：最多 20 个（防止高基数问题）
+ * 2. 禁止高基数键：userId、timestamp、uuid、traceId 等
+ * 3. 标签键和值都不能为空
+ * 4. 标签键长度限制：1-50 字符
+ * 5. 标签值长度限制：1-200 字符
+ */
+public record OperationLabels(Map<String, String> values) {
+    private static final int MAX_LABELS = 20;
+    private static final int MAX_KEY_LENGTH = 50;
+    private static final int MAX_VALUE_LENGTH = 200;
+    private static final List<String> FORBIDDEN_HIGH_CARDINALITY_KEYS = List.of(
+        "userId", "user_id", "timestamp", "uuid", "traceId", "trace_id", "requestId", "request_id"
+    );
+
+    public OperationLabels {
+        Objects.requireNonNull(values, "标签不能为空");
+        if (values.size() > MAX_LABELS) {
+            throw new IllegalArgumentException(
+                String.format("标签数量不能超过 %d，实际：%d", MAX_LABELS, values.size())
+            );
+        }
+        validateHighCardinality(values);
+        validateKeyValueConstraints(values);
+    }
+
+    private static void validateHighCardinality(Map<String, String> values) {
+        for (String key : values.keySet()) {
+            if (FORBIDDEN_HIGH_CARDINALITY_KEYS.contains(key)) {
+                throw new IllegalArgumentException(
+                    String.format("禁止使用高基数标签键：%s（会导致时序数据库性能问题）", key)
+                );
+            }
+        }
+    }
+
+    private static void validateKeyValueConstraints(Map<String, String> values) {
+        values.forEach((key, value) -> {
+            if (key == null || key.isBlank()) {
+                throw new IllegalArgumentException("标签键不能为空");
+            }
+            if (value == null || value.isBlank()) {
+                throw new IllegalArgumentException(String.format("标签值不能为空，标签键：%s", key));
+            }
+            if (key.length() > MAX_KEY_LENGTH) {
+                throw new IllegalArgumentException(
+                    String.format("标签键长度不能超过 %d，实际：%d，键：%s", MAX_KEY_LENGTH, key.length(), key)
+                );
+            }
+            if (value.length() > MAX_VALUE_LENGTH) {
+                throw new IllegalArgumentException(
+                    String.format("标签值长度不能超过 %d，实际：%d，键：%s", MAX_VALUE_LENGTH, value.length(), key)
+                );
+            }
+        });
+    }
+
+    /**
+     * 创建空标签
+     */
+    public static OperationLabels empty() {
+        return new OperationLabels(Map.of());
+    }
+
+    /**
+     * 添加新标签（返回新实例，保持不可变性）
+     */
+    public OperationLabels with(String key, String value) {
+        Map<String, String> newValues = new HashMap<>(values);
+        newValues.put(key, value);
+        return new OperationLabels(Map.copyOf(newValues));
+    }
+
+    /**
+     * 合并标签（返回新实例）
+     */
+    public OperationLabels merge(OperationLabels other) {
+        Map<String, String> newValues = new HashMap<>(values);
+        newValues.putAll(other.values);
+        return new OperationLabels(Map.copyOf(newValues));
+    }
+}
+
+/**
+ * 操作时间戳 - 富领域模型（Value Object）
+ */
+public record OperationTimestamp(Instant value) {
+    public OperationTimestamp {
+        Objects.requireNonNull(value, "时间戳不能为空");
+        if (value.isAfter(Instant.now())) {
+            throw new IllegalArgumentException("操作时间戳不能是未来时间");
+        }
+    }
+
+    public static OperationTimestamp now() {
+        return new OperationTimestamp(Instant.now());
+    }
+
+    /**
+     * 计算距离现在的时长
+     */
+    public Duration elapsedSinceNow() {
+        return Duration.between(value, Instant.now());
+    }
+}
+
+/**
+ * 操作上下文 - 富领域模型（Aggregate Root）
+ * <p>
+ * 领域行为：
+ * 1. 计算操作耗时
+ * 2. 判断是否为慢操作
+ * 3. 判断操作类型
+ * 4. 构建观测上下文
+ */
+public record OperationContext(
+    OperationName name,
+    OperationLabels labels,
+    OperationType type,
+    OperationTimestamp startedAt
+) {
+    public OperationContext {
+        Objects.requireNonNull(name, "操作名称不能为空");
+        Objects.requireNonNull(labels, "标签不能为空");
+        Objects.requireNonNull(type, "操作类型不能为空");
+        Objects.requireNonNull(startedAt, "开始时间不能为空");
+    }
+
+    /**
+     * 工厂方法：创建一般操作上下文
+     */
+    public static OperationContext of(String operationName) {
+        return new OperationContext(
+            new OperationName(operationName),
+            OperationLabels.empty(),
+            OperationType.GENERAL,
+            OperationTimestamp.now()
+        );
+    }
+
+    /**
+     * 工厂方法：创建数据导入操作上下文
+     */
+    public static OperationContext forDataImport(String operationName) {
+        return new OperationContext(
+            new OperationName(operationName),
+            OperationLabels.empty().with("operationType", "data_import"),
+            OperationType.DATA_IMPORT,
+            OperationTimestamp.now()
+        );
+    }
+
+    /**
+     * 添加标签（返回新实例）
+     */
     public OperationContext withLabel(String key, String value) {
-        Map<String, String> newLabels = new HashMap<>(labels);
-        newLabels.put(key, value);
-        return new OperationContext(operationName, newLabels, type);
+        return new OperationContext(name, labels.with(key, value), type, startedAt);
+    }
+
+    /**
+     * 领域行为：计算操作耗时
+     */
+    public Duration elapsedTime() {
+        return startedAt.elapsedSinceNow();
+    }
+
+    /**
+     * 领域行为：判断是否为慢操作
+     *
+     * @param threshold 慢操作阈值（如 2 秒）
+     * @return true 表示耗时超过阈值
+     */
+    public boolean isSlowOperation(Duration threshold) {
+        Objects.requireNonNull(threshold, "阈值不能为空");
+        return elapsedTime().compareTo(threshold) > 0;
+    }
+
+    /**
+     * 领域行为：判断是否为批量操作
+     */
+    public boolean isBatchOperation() {
+        return type == OperationType.BATCH_JOB;
+    }
+
+    /**
+     * 领域行为：获取操作领域名称
+     */
+    public String getDomain() {
+        return name.extractDomain();
+    }
+
+    /**
+     * 领域行为：获取操作动作
+     */
+    public String getAction() {
+        return name.extractAction();
     }
 }
 
@@ -1277,33 +1780,214 @@ public enum OperationType {
 }
 
 /**
- * 指标快照 - 业务概念（Value Object）
+ * 指标名称 - 富领域模型（Value Object）
+ */
+public record MetricName(String value) {
+    private static final Pattern VALID_PATTERN = Pattern.compile("^patra\\.[a-z0-9_]+(\\.[a-z0-9_]+)*$");
+
+    public MetricName {
+        Objects.requireNonNull(value, "指标名称不能为空");
+        if (!VALID_PATTERN.matcher(value).matches()) {
+            throw new IllegalArgumentException(
+                "指标名称必须以 'patra.' 开头，格式：patra.{module}.{metric}"
+            );
+        }
+    }
+}
+
+/**
+ * 指标值 - 富领域模型（Value Object）
+ */
+public record MetricValue(double value, MetricUnit unit) {
+    public MetricValue {
+        Objects.requireNonNull(unit, "计量单位不能为空");
+        // 业务规则：计数类型不能为负数
+        if (unit == MetricUnit.COUNT && value < 0) {
+            throw new IllegalArgumentException("计数指标值不能为负数");
+        }
+        // 业务规则：百分比必须在 0-100 之间
+        if (unit == MetricUnit.PERCENTAGE && (value < 0 || value > 100)) {
+            throw new IllegalArgumentException("百分比指标值必须在 0-100 之间");
+        }
+    }
+
+    /**
+     * 领域行为：转换为基础单位（如 MB → Bytes）
+     */
+    public MetricValue toBaseUnit() {
+        return switch (unit) {
+            case MEGABYTES -> new MetricValue(value * 1024 * 1024, MetricUnit.BYTES);
+            case MILLISECONDS -> new MetricValue(value / 1000.0, MetricUnit.SECONDS);
+            default -> this;
+        };
+    }
+}
+
+/**
+ * 指标标签 - 富领域模型（Value Object）
+ * <p>
+ * 与 OperationLabels 规则一致
+ */
+public record MetricTags(Map<String, String> values) {
+    private static final int MAX_TAGS = 20;
+
+    public MetricTags {
+        Objects.requireNonNull(values, "标签不能为空");
+        if (values.size() > MAX_TAGS) {
+            throw new IllegalArgumentException(
+                String.format("标签数量不能超过 %d", MAX_TAGS)
+            );
+        }
+    }
+
+    public static MetricTags empty() {
+        return new MetricTags(Map.of());
+    }
+
+    public MetricTags with(String key, String value) {
+        Map<String, String> newValues = new HashMap<>(values);
+        newValues.put(key, value);
+        return new MetricTags(Map.copyOf(newValues));
+    }
+}
+
+/**
+ * 指标快照 - 富领域模型（Value Object）
  */
 public record MetricSnapshot(
-    String metricName,           // 指标名称（业务术语）
-    double value,                // 指标值
-    Map<String, String> tags,    // 业务标签
-    MetricUnit unit              // 计量单位
-) {}
+    MetricName name,
+    MetricValue value,
+    MetricTags tags,
+    Instant timestamp
+) {
+    public MetricSnapshot {
+        Objects.requireNonNull(name, "指标名称不能为空");
+        Objects.requireNonNull(value, "指标值不能为空");
+        Objects.requireNonNull(tags, "标签不能为空");
+        Objects.requireNonNull(timestamp, "时间戳不能为空");
+    }
+
+    /**
+     * 工厂方法：创建计数指标
+     */
+    public static MetricSnapshot counter(String name, long count) {
+        return new MetricSnapshot(
+            new MetricName(name),
+            new MetricValue(count, MetricUnit.COUNT),
+            MetricTags.empty(),
+            Instant.now()
+        );
+    }
+
+    /**
+     * 工厂方法：创建耗时指标
+     */
+    public static MetricSnapshot duration(String name, Duration duration) {
+        return new MetricSnapshot(
+            new MetricName(name),
+            new MetricValue(duration.toMillis() / 1000.0, MetricUnit.SECONDS),
+            MetricTags.empty(),
+            Instant.now()
+        );
+    }
+}
 
 /**
  * 指标单位
  */
 public enum MetricUnit {
-    COUNT,        // 计数
-    SECONDS,      // 秒
-    BYTES,        // 字节
-    PERCENTAGE    // 百分比
+    COUNT,          // 计数
+    SECONDS,        // 秒
+    MILLISECONDS,   // 毫秒
+    BYTES,          // 字节
+    MEGABYTES,      // 兆字节
+    PERCENTAGE      // 百分比
 }
 
 /**
- * 业务事件 - 业务概念
+ * 事件类型 - 富领域模型（Value Object）
+ */
+public record EventType(String value) {
+    private static final Pattern VALID_PATTERN = Pattern.compile("^[a-z0-9_]+(\\.[a-z0-9_]+)+$");
+
+    public EventType {
+        Objects.requireNonNull(value, "事件类型不能为空");
+        if (!VALID_PATTERN.matcher(value).matches()) {
+            throw new IllegalArgumentException(
+                "事件类型格式错误，必须遵循 {domain}.{event} 格式"
+            );
+        }
+    }
+}
+
+/**
+ * 事件属性 - 富领域模型（Value Object）
+ */
+public record EventAttributes(Map<String, String> values) {
+    private static final int MAX_ATTRIBUTES = 50;
+
+    public EventAttributes {
+        Objects.requireNonNull(values, "事件属性不能为空");
+        if (values.size() > MAX_ATTRIBUTES) {
+            throw new IllegalArgumentException(
+                String.format("事件属性数量不能超过 %d", MAX_ATTRIBUTES)
+            );
+        }
+    }
+
+    public static EventAttributes empty() {
+        return new EventAttributes(Map.of());
+    }
+
+    public EventAttributes with(String key, String value) {
+        Map<String, String> newValues = new HashMap<>(values);
+        newValues.put(key, value);
+        return new EventAttributes(Map.copyOf(newValues));
+    }
+}
+
+/**
+ * 业务事件 - 富领域模型（Domain Event）
  */
 public record BusinessEvent(
-    String eventType,            // 事件类型（如 "user.created"）
-    Map<String, String> attributes, // 事件属性
-    Instant occurredAt           // 发生时间
-) {}
+    EventType type,
+    EventAttributes attributes,
+    Instant occurredAt
+) {
+    public BusinessEvent {
+        Objects.requireNonNull(type, "事件类型不能为空");
+        Objects.requireNonNull(attributes, "事件属性不能为空");
+        Objects.requireNonNull(occurredAt, "发生时间不能为空");
+        if (occurredAt.isAfter(Instant.now())) {
+            throw new IllegalArgumentException("事件时间不能是未来时间");
+        }
+    }
+
+    /**
+     * 工厂方法：创建业务事件
+     */
+    public static BusinessEvent of(String eventType) {
+        return new BusinessEvent(
+            new EventType(eventType),
+            EventAttributes.empty(),
+            Instant.now()
+        );
+    }
+
+    /**
+     * 领域行为：计算事件发生后的时长
+     */
+    public Duration elapsedSinceOccurred() {
+        return Duration.between(occurredAt, Instant.now());
+    }
+
+    /**
+     * 领域行为：判断是否为最近发生的事件
+     */
+    public boolean isRecentEvent(Duration threshold) {
+        return elapsedSinceOccurred().compareTo(threshold) <= 0;
+    }
+}
 ```
 
 #### 2. Infrastructure 层适配器（Adapter）
@@ -1345,40 +2029,62 @@ public class MicrometerObservabilityAdapter implements ObservabilityPort {
     public <T> T trackOperation(OperationContext context, Supplier<T> action) {
         // 将业务概念转换为 Micrometer Observation
         Observation observation = Observation.createNotStarted(
-            context.operationName(),
+            context.name().value(),  // 从富领域模型提取原始值
             observationRegistry
         );
 
-        // 转换业务标签为技术标签
-        context.labels().forEach(observation::lowCardinalityKeyValue);
+        // 转换业务标签为技术标签（直接访问 values() 获取底层 Map）
+        context.labels().values().forEach(observation::lowCardinalityKeyValue);
         observation.lowCardinalityKeyValue("operation.type", context.type().name());
 
-        // 执行并观测
-        return observation.observe(action);
+        // 利用富领域模型的业务行为：检测慢操作
+        T result = observation.observe(action);
+
+        // 后置检查：如果是慢操作，记录额外日志（展示富领域模型的价值）
+        if (context.isSlowOperation(Duration.ofSeconds(2))) {
+            log.warn("检测到慢操作：{}, 耗时：{}ms, 领域：{}, 动作：{}",
+                context.name().value(),
+                context.elapsedTime().toMillis(),
+                context.getDomain(),
+                context.getAction()
+            );
+        }
+
+        return result;
     }
 
     @Override
     public void recordMetric(MetricSnapshot snapshot) {
         // 将业务指标转换为 Micrometer Meter
-        Counter counter = Counter.builder(snapshot.metricName())
-            .tags(snapshot.tags())
+        Counter counter = Counter.builder(snapshot.name().value())  // 从富领域模型提取原始值
+            .tags(snapshot.tags().values())  // 访问底层 Map
             .description("Business metric from domain layer")
             .register(meterRegistry);
 
-        counter.increment(snapshot.value());
+        // 使用富领域模型的值（已包含单位和验证）
+        counter.increment(snapshot.value().value());
     }
 
     @Override
     public void recordEvent(BusinessEvent event) {
         // 将业务事件转换为 Observation Event
         Observation observation = Observation.createNotStarted(
-            "event." + event.eventType(),
+            "event." + event.type().value(),  // 从富领域模型提取原始值
             observationRegistry
         );
 
-        event.attributes().forEach(observation::lowCardinalityKeyValue);
-        observation.event(Observation.Event.of(event.eventType()));
+        // 转换事件属性
+        event.attributes().values().forEach(observation::lowCardinalityKeyValue);
+        observation.event(Observation.Event.of(event.type().value()));
         observation.observe(() -> {});
+
+        // 利用富领域模型的业务行为：检测延迟事件
+        if (!event.isRecentEvent(Duration.ofMinutes(5))) {
+            log.warn("延迟事件处理：{}, 发生于 {} 分钟前",
+                event.type().value(),
+                event.elapsedSinceOccurred().toMinutes()
+            );
+        }
     }
 }
 ```
@@ -1397,8 +2103,8 @@ public class DataImportService {
     }
 
     public ImportResult importData(DataSource source, List<MeshData> data) {
-        // 使用业务语言描述操作
-        OperationContext context = OperationContext.of("data.import")
+        // 使用富领域模型：自动验证操作名称格式和标签约束
+        OperationContext context = OperationContext.forDataImport("mesh.import")
             .withLabel("sourceType", source.getType().toString())
             .withLabel("dataCount", String.valueOf(data.size()));
 
@@ -1406,16 +2112,46 @@ public class DataImportService {
             // 业务逻辑
             ImportResult result = doImport(source, data);
 
-            // 记录业务指标
-            observabilityPort.recordMetric(new MetricSnapshot(
-                "patra.catalog.import.records",
-                result.getProcessedCount(),
-                Map.of("status", "success"),
-                MetricUnit.COUNT
-            ));
+            // 使用富领域模型：工厂方法自动创建符合规范的计数指标
+            observabilityPort.recordMetric(
+                MetricSnapshot.counter("patra.catalog.import.records", result.getProcessedCount())
+            );
+
+            // 发布业务事件（使用富领域模型）
+            observabilityPort.recordEvent(
+                BusinessEvent.of("mesh.imported")
+                    .withAttribute("domain", context.getDomain())  // 利用富领域模型的业务行为
+                    .withAttribute("action", context.getAction())
+            );
 
             return result;
         });
+    }
+
+    public void processLargeDataset(String jobId, List<MeshData> dataset) {
+        // 富领域模型的价值：编译时类型安全 + 运行时验证
+        try {
+            OperationContext context = OperationContext.of("batch.mesh_processing")
+                .withLabel("jobId", jobId)
+                .withLabel("datasetSize", String.valueOf(dataset.size()));
+
+            observabilityPort.trackOperation(context, () -> {
+                processData(dataset);
+                return null;
+            });
+
+            // 利用富领域模型的业务行为：判断是否为慢操作
+            Duration threshold = Duration.ofMinutes(10);
+            if (context.isSlowOperation(threshold)) {
+                // 触发告警或优化建议
+                sendSlowJobAlert(jobId, context.elapsedTime());
+            }
+
+        } catch (IllegalArgumentException e) {
+            // 富领域模型在构造时就会验证，早期失败（Fail-Fast）
+            log.error("操作上下文验证失败：{}", e.getMessage());
+            throw new InvalidOperationException("无效的操作参数", e);
+        }
     }
 }
 ```
@@ -1430,12 +2166,467 @@ public class DataImportService {
 | **测试性** | ❌ 需要 Mock Micrometer | ✅ 可提供测试用实现 |
 | **架构合规** | ❌ 违反六边形架构 | ✅ 符合六边形架构 |
 
+#### 对比：贫血领域模型 vs 富领域模型
+
+| 方面 | 贫血领域模型（Anemic） | 富领域模型（Rich） |
+|-----|----------------------|------------------|
+| **数据验证** | ❌ 无验证，任何值都可传入 | ✅ 构造时验证，早期失败（Fail-Fast） |
+| **业务规则** | ❌ 分散在各处，难以维护 | ✅ 封装在值对象中，集中管理 |
+| **类型安全** | ❌ 使用原始类型（String, Map） | ✅ 使用强类型（OperationName, OperationLabels） |
+| **业务行为** | ❌ 无行为，仅数据容器 | ✅ 包含业务逻辑（isSlowOperation, getDomain） |
+| **可读性** | ❌ 需要注释说明约束 | ✅ 代码即文档，约束清晰可见 |
+| **可维护性** | ❌ 规则变更需修改多处 | ✅ 规则变更只需修改值对象 |
+| **错误检测** | ❌ 运行时才发现问题 | ✅ 编译时 + 构造时双重保障 |
+
+**富领域模型的具体收益**：
+
+```java
+// ❌ 贫血领域模型：运行时才发现问题
+OperationContext badContext = new OperationContext(
+    "INVALID_NAME",  // 格式错误，但编译通过
+    Map.of("userId", "123"),  // 高基数键，导致性能问题
+    OperationType.GENERAL
+);
+// 问题延迟到 Micrometer 处理时才暴露，难以追溯
+
+// ✅ 富领域模型：构造时立即验证
+try {
+    OperationContext goodContext = OperationContext.of("INVALID_NAME");
+    // 抛出 IllegalArgumentException: 操作名称格式错误，必须遵循 {domain}.{action} 格式
+} catch (IllegalArgumentException e) {
+    // 早期失败，清晰的错误消息，易于定位
+}
+
+try {
+    OperationLabels labels = new OperationLabels(Map.of("userId", "123"));
+    // 抛出 IllegalArgumentException: 禁止使用高基数标签键：userId（会导致时序数据库性能问题）
+} catch (IllegalArgumentException e) {
+    // 防止性能问题，保护生产环境
+}
+
+// ✅ 富领域模型提供业务行为
+OperationContext context = OperationContext.of("mesh.import");
+if (context.isSlowOperation(Duration.ofSeconds(2))) {
+    // 利用领域逻辑做决策，而非手动计算
+}
+String domain = context.getDomain();  // "mesh"（从 "mesh.import" 提取）
+String action = context.getAction();  // "import"
+```
+
 #### 防腐层的价值
 
 1. **隔离框架变更**: 如果未来从 Micrometer 迁移到 OpenTelemetry，只需修改适配器，Domain 层代码无需变更
 2. **业务语言优先**: Domain 层使用业务术语（`importData`, `sourceType`），而非技术术语（`observe`, `lowCardinalityKeyValue`）
 3. **易于测试**: 可以提供 `NoOpObservabilityAdapter` 用于单元测试，无需依赖真实的 Micrometer
 4. **符合架构原则**: 遵守依赖倒置原则（DIP）和六边形架构的端口/适配器模式
+5. **富领域模型**: 通过值对象封装业务规则，实现编译时类型安全和运行时验证，防止无效数据进入系统
+
+---
+
+### 🎯 Domain Events 驱动可观测性（DDD 最佳实践）
+
+#### 设计理念
+
+传统的技术拦截器（Interceptor）虽然能实现可观测性，但存在以下问题：
+
+| 问题 | 说明 |
+|-----|------|
+| **技术侵入** | 拦截器是技术实现细节，与业务逻辑混合 |
+| **违反 DDD** | 可观测性逻辑不应是领域关注点 |
+| **隐式耦合** | 拦截器依赖方法签名，重构困难 |
+| **缺乏语义** | 拦截点是技术性的，不表达业务含义 |
+
+**✅ DDD 推荐方式：Domain Events 驱动可观测性**
+
+- **领域事件（Domain Events）** 表达业务语义，是领域模型的自然产物
+- **可观测性** 作为事件的副作用，由基础设施层监听和处理
+- **解耦** 业务逻辑和可观测性逻辑完全分离
+
+#### 架构模式
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Domain Layer（领域层）                                       │
+│                                                              │
+│  ┌──────────────┐     发布领域事件    ┌─────────────────┐   │
+│  │ Aggregate    │ ──────────────────> │ Domain Event    │   │
+│  │ Root         │                     │ (业务语义)      │   │
+│  └──────────────┘                     └─────────────────┘   │
+│                                              │               │
+└──────────────────────────────────────────────┼───────────────┘
+                                               │
+                            Spring ApplicationEventPublisher
+                                               │
+                                               ▼
+┌──────────────────────────────────────────────┴───────────────┐
+│ Infrastructure Layer（基础设施层）                            │
+│                                                              │
+│  ┌────────────────────────────────────────────────────┐     │
+│  │ ObservabilityEventListener (@EventListener)        │     │
+│  │                                                     │     │
+│  │  监听领域事件 → 转换为可观测信号 → 发送到后端        │     │
+│  └────────────────────────────────────────────────────┘     │
+│                          │                                   │
+│                          ▼                                   │
+│              ┌────────────────────┐                          │
+│              │ ObservabilityPort  │                          │
+│              │ (Micrometer)       │                          │
+│              └────────────────────┘                          │
+└──────────────────────────────────────────────────────────────┘
+```
+
+#### 实现步骤
+
+##### 1. 定义领域事件（Domain Layer）
+
+```java
+// patra-{service}-domain/src/main/java/com/patra/{service}/domain/event/MeshDataImportedEvent.java
+package com.patra.{service}.domain.event;
+
+import java.time.Instant;
+import java.util.Objects;
+
+/**
+ * 领域事件：Mesh 数据已导入
+ * <p>
+ * 业务含义：当一批 Mesh 数据成功导入到系统时发布此事件
+ * <p>
+ * 设计原则：
+ * 1. 使用过去时态命名（已发生的事实）
+ * 2. 包含业务上下文信息
+ * 3. 不可变（Immutable）
+ * 4. 独立于技术框架
+ */
+public record MeshDataImportedEvent(
+    String dataSourceId,      // 数据源 ID
+    String dataSourceType,    // 数据源类型（PubMed, EPMC 等）
+    int recordCount,          // 导入记录数
+    long durationMillis,      // 导入耗时（毫秒）
+    Instant occurredAt        // 事件发生时间
+) {
+    public MeshDataImportedEvent {
+        Objects.requireNonNull(dataSourceId, "数据源 ID 不能为空");
+        Objects.requireNonNull(dataSourceType, "数据源类型不能为空");
+        Objects.requireNonNull(occurredAt, "事件时间不能为空");
+        if (recordCount < 0) {
+            throw new IllegalArgumentException("记录数不能为负数");
+        }
+        if (durationMillis < 0) {
+            throw new IllegalArgumentException("耗时不能为负数");
+        }
+    }
+
+    /**
+     * 领域行为：判断是否为慢导入
+     */
+    public boolean isSlowImport() {
+        return durationMillis > 120_000;  // 超过 2 分钟
+    }
+
+    /**
+     * 领域行为：判断是否为大批量导入
+     */
+    public boolean isLargeImport() {
+        return recordCount > 10_000;
+    }
+}
+
+/**
+ * 领域事件：批处理作业已完成
+ */
+public record BatchJobCompletedEvent(
+    String jobId,
+    String jobType,
+    JobStatus status,
+    int processedItems,
+    int failedItems,
+    long executionTimeMillis,
+    Instant occurredAt
+) {
+    public boolean isSuccessful() {
+        return status == JobStatus.SUCCESS;
+    }
+
+    public boolean hasFailed() {
+        return failedItems > 0;
+    }
+}
+
+/**
+ * 领域事件：文献检索已执行
+ */
+public record LiteratureSearchedEvent(
+    String searchQuery,
+    String dataSource,
+    int resultCount,
+    long searchTimeMillis,
+    Instant occurredAt
+) {
+    public boolean hasResults() {
+        return resultCount > 0;
+    }
+
+    public boolean isSlowSearch() {
+        return searchTimeMillis > 5000;  // 超过 5 秒
+    }
+}
+```
+
+##### 2. 聚合根发布领域事件（Domain Layer）
+
+```java
+// patra-{service}-domain/src/main/java/com/patra/{service}/domain/model/MeshDataImporter.java
+package com.patra.{service}.domain.model;
+
+import com.patra.{service}.domain.event.MeshDataImportedEvent;
+import org.springframework.data.domain.AbstractAggregateRoot;
+
+/**
+ * 聚合根：Mesh 数据导入器
+ * <p>
+ * 使用 Spring Data 的 AbstractAggregateRoot 支持领域事件发布
+ */
+public class MeshDataImporter extends AbstractAggregateRoot<MeshDataImporter> {
+
+    private final String dataSourceId;
+    private final DataSourceType dataSourceType;
+    private ImportStatus status;
+
+    public ImportResult importData(List<MeshData> data) {
+        Instant startTime = Instant.now();
+
+        // 执行业务逻辑
+        ImportResult result = doImport(data);
+
+        // 发布领域事件（业务逻辑的自然结果）
+        long durationMillis = Duration.between(startTime, Instant.now()).toMillis();
+        registerEvent(new MeshDataImportedEvent(
+            dataSourceId,
+            dataSourceType.name(),
+            result.getRecordCount(),
+            durationMillis,
+            Instant.now()
+        ));
+
+        return result;
+    }
+}
+```
+
+##### 3. 事件监听器桥接可观测性（Infrastructure Layer）
+
+```java
+// patra-{service}-infra/src/main/java/com/patra/{service}/infra/observability/ObservabilityEventListener.java
+package com.patra.{service}.infra.observability;
+
+import com.patra.{service}.domain.event.*;
+import com.patra.{service}.domain.port.ObservabilityPort;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * 可观测性事件监听器 - 将领域事件转换为可观测信号
+ * <p>
+ * 职责：
+ * 1. 监听所有领域事件
+ * 2. 提取业务指标和追踪信息
+ * 3. 发送到可观测性后端
+ * <p>
+ * 设计原则：
+ * - 领域层无需知道可观测性的存在
+ * - 可观测性作为基础设施关注点，独立演进
+ * - 事件驱动，松耦合
+ */
+@Component
+public class ObservabilityEventListener {
+
+    private static final Logger log = LoggerFactory.getLogger(ObservabilityEventListener.class);
+    private final ObservabilityPort observabilityPort;
+
+    public ObservabilityEventListener(ObservabilityPort observabilityPort) {
+        this.observabilityPort = observabilityPort;
+    }
+
+    /**
+     * 监听 MeshDataImportedEvent 并记录可观测性信号
+     */
+    @EventListener
+    public void onMeshDataImported(MeshDataImportedEvent event) {
+        // 记录业务指标：导入记录数
+        observabilityPort.recordMetric(
+            MetricSnapshot.counter(
+                "patra.mesh.import.records",
+                event.recordCount()
+            ).withTag("source_type", event.dataSourceType())
+        );
+
+        // 记录业务指标：导入耗时
+        observabilityPort.recordMetric(
+            MetricSnapshot.duration(
+                "patra.mesh.import.duration",
+                Duration.ofMillis(event.durationMillis())
+            ).withTag("source_type", event.dataSourceType())
+        );
+
+        // 利用领域事件的业务行为：检测慢导入
+        if (event.isSlowImport()) {
+            log.warn("检测到慢导入：数据源={}, 耗时={}ms, 记录数={}",
+                event.dataSourceId(),
+                event.durationMillis(),
+                event.recordCount()
+            );
+
+            // 记录慢导入次数
+            observabilityPort.recordMetric(
+                MetricSnapshot.counter("patra.mesh.import.slow_operations", 1)
+                    .withTag("source_id", event.dataSourceId())
+            );
+        }
+
+        // 利用领域事件的业务行为：检测大批量导入
+        if (event.isLargeImport()) {
+            observabilityPort.recordMetric(
+                MetricSnapshot.counter("patra.mesh.import.large_batches", 1)
+            );
+        }
+
+        // 记录业务事件（用于追踪）
+        observabilityPort.recordEvent(
+            BusinessEvent.of("mesh.data.imported")
+                .withAttribute("source_id", event.dataSourceId())
+                .withAttribute("source_type", event.dataSourceType())
+                .withAttribute("record_count", String.valueOf(event.recordCount()))
+        );
+    }
+
+    /**
+     * 监听 BatchJobCompletedEvent
+     */
+    @EventListener
+    public void onBatchJobCompleted(BatchJobCompletedEvent event) {
+        // 记录作业执行时间
+        observabilityPort.recordMetric(
+            MetricSnapshot.duration(
+                "patra.batch.job.duration",
+                Duration.ofMillis(event.executionTimeMillis())
+            ).withTag("job_type", event.jobType())
+             .withTag("status", event.status().name())
+        );
+
+        // 记录处理项数
+        observabilityPort.recordMetric(
+            MetricSnapshot.counter("patra.batch.job.items_processed", event.processedItems())
+                .withTag("job_type", event.jobType())
+        );
+
+        // 记录失败项数
+        if (event.hasFailed()) {
+            observabilityPort.recordMetric(
+                MetricSnapshot.counter("patra.batch.job.items_failed", event.failedItems())
+                    .withTag("job_type", event.jobType())
+            );
+        }
+    }
+
+    /**
+     * 监听 LiteratureSearchedEvent
+     */
+    @EventListener
+    public void onLiteratureSearched(LiteratureSearchedEvent event) {
+        // 记录搜索耗时
+        observabilityPort.recordMetric(
+            MetricSnapshot.duration(
+                "patra.literature.search.duration",
+                Duration.ofMillis(event.searchTimeMillis())
+            ).withTag("data_source", event.dataSource())
+        );
+
+        // 记录搜索结果数
+        observabilityPort.recordMetric(
+            MetricSnapshot.counter("patra.literature.search.results", event.resultCount())
+                .withTag("data_source", event.dataSource())
+        );
+
+        // 检测慢搜索
+        if (event.isSlowSearch()) {
+            log.warn("检测到慢搜索：查询={}, 数据源={}, 耗时={}ms",
+                event.searchQuery(),
+                event.dataSource(),
+                event.searchTimeMillis()
+            );
+        }
+    }
+}
+```
+
+#### Domain Events vs 技术拦截器对比
+
+| 方面 | 技术拦截器（Interceptor） | 领域事件（Domain Events） |
+|-----|-------------------------|-------------------------|
+| **业务语义** | ❌ 技术性（`beforeMethod`, `afterMethod`） | ✅ 业务性（`MeshDataImported`, `JobCompleted`） |
+| **耦合度** | ❌ 与方法签名耦合，重构困难 | ✅ 与领域模型解耦，易于重构 |
+| **DDD 合规** | ❌ 不符合 DDD 原则 | ✅ 完全符合 DDD 原则 |
+| **可测试性** | ❌ 需要 Mock 拦截器框架 | ✅ 直接测试事件监听器 |
+| **可扩展性** | ❌ 难以添加新的观测点 | ✅ 添加新事件监听器即可 |
+| **业务逻辑** | ❌ 可观测逻辑侵入业务代码 | ✅ 业务逻辑自然发布事件 |
+| **关注点分离** | ❌ 技术关注点混入领域层 | ✅ 基础设施关注点独立 |
+
+#### 最佳实践
+
+1. **事件命名**：使用业务术语 + 过去时态（`MeshDataImported`, `JobCompleted`）
+2. **事件粒度**：粗粒度业务事件（一个用户故事一个事件），而非细粒度技术事件
+3. **事件不可变**：使用 `record` 确保事件不可变
+4. **富领域事件**：包含业务行为方法（`isSlowImport()`, `isLargeImport()`）
+5. **异步处理**：使用 `@Async` 异步处理可观测性逻辑，避免影响业务性能
+6. **失败隔离**：事件监听器失败不应影响业务逻辑（使用 try-catch）
+
+#### 配置启用异步事件
+
+```java
+// patra-{service}-boot/src/main/java/com/patra/{service}/config/AsyncConfig.java
+@Configuration
+@EnableAsync
+public class AsyncConfig {
+
+    @Bean
+    public Executor observabilityEventExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(5);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("observability-event-");
+        executor.initialize();
+        return executor;
+    }
+}
+
+// 在事件监听器上使用异步
+@Component
+public class ObservabilityEventListener {
+
+    @Async("observabilityEventExecutor")
+    @EventListener
+    public void onMeshDataImported(MeshDataImportedEvent event) {
+        // 异步处理，不阻塞业务逻辑
+    }
+}
+```
+
+#### 总结
+
+**✅ 推荐：Domain Events 驱动可观测性**
+
+- **业务语义清晰**：事件名称直接表达业务含义
+- **架构合规**：符合 DDD 和六边形架构原则
+- **易于扩展**：添加新的可观测点只需监听相应事件
+- **解耦优雅**：领域层无需知道可观测性的存在
+
+**⚠️ 技术拦截器的适用场景**：
+
+- 仅在无法修改领域模型时使用（如第三方库、遗留系统）
+- 用于技术性横切关注点（如性能监控、安全审计）
 
 ---
 
@@ -1597,12 +2788,28 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        # 开发环境：暴露所有端点
+        # 生产环境：仅暴露必要端点（health、info、prometheus）
+        include: ${ACTUATOR_ENDPOINTS:health,info,prometheus}
+      base-path: /actuator
+
+  endpoint:
+    health:
+      # 生产环境：仅授权用户可见详情
+      show-details: ${ACTUATOR_HEALTH_SHOW_DETAILS:when-authorized}
+      show-components: ${ACTUATOR_HEALTH_SHOW_COMPONENTS:when-authorized}
 
   # 启用 @Observed 注解扫描
   observations:
     annotations:
       enabled: true
+
+# 生产环境安全配置（通过 Spring Security 实现）
+spring:
+  security:
+    user:
+      name: ${ACTUATOR_USERNAME:actuator}
+      password: ${ACTUATOR_PASSWORD}  # 必须通过环境变量注入，禁止硬编码
 
   # Metrics 配置
   metrics:
@@ -1667,6 +2874,503 @@ patra:
     tracing:
       sampling-rate: 0.2  # Ingest 服务采样率 20%
 ```
+
+---
+
+## 🏥 健康检查与故障降级设计
+
+### 设计目标
+
+**问题**：可观测性组件故障（SkyWalking OAP 宕机、Prometheus 不可用）不应影响业务系统正常运行。
+
+**解决方案**：
+
+1. **健康检查**：实时监控可观测性后端状态
+2. **故障降级**：后端不可用时自动切换到降级模式
+3. **熔断保护**：防止可观测性故障拖垮业务系统
+4. **优雅恢复**：后端恢复后自动恢复正常模式
+
+### 架构设计
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ Application（业务应用）                                  │
+│                                                          │
+│  ┌────────────────┐                                     │
+│  │ Business Logic │ → 不受可观测性故障影响                │
+│  └────────────────┘                                     │
+│          ↓                                               │
+│  ┌──────────────────────────────────────────────┐       │
+│  │ ObservabilityPort (Interface)                │       │
+│  └──────────────────────────────────────────────┘       │
+│          ↓                                               │
+│  ┌──────────────────────────────────────────────┐       │
+│  │ ResilientObservabilityAdapter (装饰器)       │       │
+│  │                                              │       │
+│  │  ┌─────────────────────────────────────┐    │       │
+│  │  │ Circuit Breaker（熔断器）           │    │       │
+│  │  │  - CLOSED: 正常转发                 │    │       │
+│  │  │  - OPEN: 熔断，直接降级             │    │       │
+│  │  │  - HALF_OPEN: 尝试恢复              │    │       │
+│  │  └─────────────────────────────────────┘    │       │
+│  │          ↓          ↓                        │       │
+│  │   [正常模式]    [降级模式]                   │       │
+│  │          ↓          ↓                        │       │
+│  │  MicrometerAdapter  NoOpAdapter              │       │
+│  └──────────────────────────────────────────────┘       │
+│          ↓                                               │
+│  ┌──────────────────────────────────────────────┐       │
+│  │ ObservabilityHealthIndicator                 │       │
+│  │  - 定期检测 SkyWalking OAP                   │       │
+│  │  - 定期检测 Prometheus                       │       │
+│  │  - 更新熔断器状态                            │       │
+│  └──────────────────────────────────────────────┘       │
+└─────────────────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────────────┐
+│ Observability Backend（可观测性后端）                    │
+│  - SkyWalking OAP                                        │
+│  - Prometheus                                            │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 实现设计
+
+#### 1. 健康检查指示器
+
+```java
+// patra-spring-boot-starter-observability/src/main/java/com/patra/starter/observability/health/ObservabilityHealthIndicator.java
+package com.patra.starter.observability.health;
+
+import org.springframework.boot.actuate.health.Health;
+import org.springframework.boot.actuate.health.HealthIndicator;
+import org.springframework.stereotype.Component;
+import io.micrometer.observation.ObservationRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
+
+/**
+ * 可观测性健康检查指示器
+ * <p>
+ * 职责：
+ * 1. 检查 ObservationRegistry 状态
+ * 2. 检查 MeterRegistry 状态
+ * 3. 检查 SkyWalking Agent 连接状态
+ * 4. 提供健康状态给 Spring Boot Actuator
+ */
+@Component
+public class ObservabilityHealthIndicator implements HealthIndicator {
+
+    private final ObservationRegistry observationRegistry;
+    private final MeterRegistry meterRegistry;
+    private final ObservabilityProperties properties;
+
+    public ObservabilityHealthIndicator(
+        ObservationRegistry observationRegistry,
+        MeterRegistry meterRegistry,
+        ObservabilityProperties properties
+    ) {
+        this.observationRegistry = observationRegistry;
+        this.meterRegistry = meterRegistry;
+        this.properties = properties;
+    }
+
+    @Override
+    public Health health() {
+        Health.Builder builder = new Health.Builder();
+
+        // 检查 ObservationRegistry
+        boolean observationRegistryHealthy = checkObservationRegistry();
+        builder.withDetail("observationRegistry", observationRegistryHealthy ? "UP" : "DOWN");
+
+        // 检查 MeterRegistry
+        boolean meterRegistryHealthy = checkMeterRegistry();
+        builder.withDetail("meterRegistry", meterRegistryHealthy ? "UP" : "DOWN");
+
+        // 检查 SkyWalking Agent（如果启用）
+        if (properties.getTracing().isEnabled()) {
+            boolean skyWalkingHealthy = checkSkyWalkingConnection();
+            builder.withDetail("skyWalkingAgent", skyWalkingHealthy ? "UP" : "DOWN");
+
+            if (!skyWalkingHealthy) {
+                return builder
+                    .down()
+                    .withDetail("reason", "SkyWalking Agent 连接失败")
+                    .build();
+            }
+        }
+
+        // 所有组件健康才返回 UP
+        if (observationRegistryHealthy && meterRegistryHealthy) {
+            return builder.up().build();
+        } else {
+            return builder
+                .down()
+                .withDetail("reason", "部分可观测性组件不可用")
+                .build();
+        }
+    }
+
+    private boolean checkObservationRegistry() {
+        try {
+            // 尝试创建一个测试 Observation
+            Observation.createNotStarted("health.check", observationRegistry)
+                .observe(() -> {});
+            return true;
+        } catch (Exception e) {
+            log.error("ObservationRegistry 健康检查失败", e);
+            return false;
+        }
+    }
+
+    private boolean checkMeterRegistry() {
+        try {
+            // 检查 MeterRegistry 是否可用
+            meterRegistry.counter("health.check").increment(0);
+            return true;
+        } catch (Exception e) {
+            log.error("MeterRegistry 健康检查失败", e);
+            return false;
+        }
+    }
+
+    private boolean checkSkyWalkingConnection() {
+        try {
+            // 检查 SkyWalking Agent 是否正常工作
+            // 通过反射检查 SkyWalking Agent 状态
+            Class<?> agentStatus = Class.forName("org.apache.skywalking.apm.agent.core.boot.AgentPackageNotFoundException");
+            return true;
+        } catch (ClassNotFoundException e) {
+            // SkyWalking Agent 未加载或不可用
+            return false;
+        }
+    }
+}
+```
+
+#### 2. 弹性可观测性适配器（装饰器模式 + 熔断器）
+
+```java
+// patra-spring-boot-starter-observability/src/main/java/com/patra/starter/observability/resilience/ResilientObservabilityAdapter.java
+package com.patra.starter.observability.resilience;
+
+import com.patra.{service}.domain.port.ObservabilityPort;
+import org.springframework.stereotype.Component;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.time.Instant;
+import java.time.Duration;
+
+/**
+ * 弹性可观测性适配器 - 实现熔断和降级
+ * <p>
+ * 熔断器状态机：
+ * CLOSED（正常） → OPEN（熔断） → HALF_OPEN（半开） → CLOSED
+ */
+@Component
+public class ResilientObservabilityAdapter implements ObservabilityPort {
+
+    private final ObservabilityPort delegate;           // 正常模式的适配器（Micrometer）
+    private final ObservabilityPort fallback;           // 降级模式的适配器（NoOp）
+    private final CircuitBreaker circuitBreaker;
+
+    public ResilientObservabilityAdapter(
+        MicrometerObservabilityAdapter delegate,
+        NoOpObservabilityAdapter fallback,
+        ObservabilityProperties properties
+    ) {
+        this.delegate = delegate;
+        this.fallback = fallback;
+        this.circuitBreaker = new CircuitBreaker(
+            properties.getResilience().getFailureThreshold(),
+            properties.getResilience().getHalfOpenTimeout()
+        );
+    }
+
+    @Override
+    public <T> T monitorOperation(OperationContext context, Supplier<T> action) {
+        if (circuitBreaker.allowRequest()) {
+            try {
+                T result = delegate.monitorOperation(context, action);
+                circuitBreaker.recordSuccess();
+                return result;
+            } catch (Exception e) {
+                circuitBreaker.recordFailure();
+                log.warn("可观测性操作失败，降级处理：{}", e.getMessage());
+                return fallback.monitorOperation(context, action);
+            }
+        } else {
+            // 熔断器打开，直接降级
+            return fallback.monitorOperation(context, action);
+        }
+    }
+
+    @Override
+    public void measureMetric(MetricSnapshot snapshot) {
+        if (circuitBreaker.allowRequest()) {
+            try {
+                delegate.measureMetric(snapshot);
+                circuitBreaker.recordSuccess();
+            } catch (Exception e) {
+                circuitBreaker.recordFailure();
+                log.warn("指标记录失败，降级处理：{}", e.getMessage());
+                fallback.measureMetric(snapshot);
+            }
+        } else {
+            fallback.measureMetric(snapshot);
+        }
+    }
+
+    @Override
+    public void recordEvent(BusinessEvent event) {
+        if (circuitBreaker.allowRequest()) {
+            try {
+                delegate.recordEvent(event);
+                circuitBreaker.recordSuccess();
+            } catch (Exception e) {
+                circuitBreaker.recordFailure();
+                log.warn("事件记录失败，降级处理：{}", e.getMessage());
+                fallback.recordEvent(event);
+            }
+        } else {
+            fallback.recordEvent(event);
+        }
+    }
+
+    /**
+     * 简单的熔断器实现
+     */
+    static class CircuitBreaker {
+        private enum State { CLOSED, OPEN, HALF_OPEN }
+
+        private final int failureThreshold;          // 失败阈值
+        private final Duration halfOpenTimeout;       // 半开超时时间
+        private final AtomicInteger failureCount;     // 失败计数
+        private final AtomicInteger successCount;     // 成功计数（半开状态）
+        private final AtomicLong lastFailureTime;     // 最后失败时间
+        private volatile State state;
+
+        CircuitBreaker(int failureThreshold, Duration halfOpenTimeout) {
+            this.failureThreshold = failureThreshold;
+            this.halfOpenTimeout = halfOpenTimeout;
+            this.failureCount = new AtomicInteger(0);
+            this.successCount = new AtomicInteger(0);
+            this.lastFailureTime = new AtomicLong(0);
+            this.state = State.CLOSED;
+        }
+
+        boolean allowRequest() {
+            if (state == State.CLOSED) {
+                return true;
+            }
+
+            if (state == State.OPEN) {
+                // 检查是否应该进入半开状态
+                long timeSinceLastFailure = System.currentTimeMillis() - lastFailureTime.get();
+                if (timeSinceLastFailure > halfOpenTimeout.toMillis()) {
+                    state = State.HALF_OPEN;
+                    successCount.set(0);
+                    return true;
+                }
+                return false;
+            }
+
+            // HALF_OPEN 状态：允许少量请求通过
+            return true;
+        }
+
+        void recordSuccess() {
+            if (state == State.HALF_OPEN) {
+                if (successCount.incrementAndGet() >= 3) {
+                    // 连续成功 3 次，恢复正常
+                    state = State.CLOSED;
+                    failureCount.set(0);
+                    log.info("可观测性服务已恢复，熔断器关闭");
+                }
+            } else if (state == State.CLOSED) {
+                // 正常状态下成功，重置失败计数
+                failureCount.set(0);
+            }
+        }
+
+        void recordFailure() {
+            lastFailureTime.set(System.currentTimeMillis());
+
+            if (state == State.HALF_OPEN) {
+                // 半开状态失败，立即回到熔断状态
+                state = State.OPEN;
+                log.warn("可观测性服务仍不可用，熔断器重新打开");
+                return;
+            }
+
+            if (failureCount.incrementAndGet() >= failureThreshold) {
+                state = State.OPEN;
+                log.error("可观测性服务连续失败 {} 次，熔断器打开", failureThreshold);
+            }
+        }
+
+        State getState() {
+            return state;
+        }
+    }
+}
+```
+
+#### 3. NoOp 降级适配器
+
+```java
+// patra-spring-boot-starter-observability/src/main/java/com/patra/starter/observability/resilience/NoOpObservabilityAdapter.java
+package com.patra.starter.observability.resilience;
+
+/**
+ * NoOp 可观测性适配器 - 降级模式
+ * <p>
+ * 职责：
+ * 1. 在可观测性后端不可用时提供降级实现
+ * 2. 所有操作不抛异常，静默失败
+ * 3. 可选：记录本地日志作为补偿
+ */
+@Component
+public class NoOpObservabilityAdapter implements ObservabilityPort {
+
+    private static final Logger log = LoggerFactory.getLogger(NoOpObservabilityAdapter.class);
+    private final ObservabilityProperties properties;
+
+    @Override
+    public <T> T monitorOperation(OperationContext context, Supplier<T> action) {
+        // 降级模式：直接执行业务逻辑，不进行观测
+        if (properties.getResilience().isLogFallback()) {
+            log.debug("[降级模式] 执行操作：{}", context.name().value());
+        }
+        return action.get();
+    }
+
+    @Override
+    public void measureMetric(MetricSnapshot snapshot) {
+        // 降级模式：静默失败
+        if (properties.getResilience().isLogFallback()) {
+            log.debug("[降级模式] 指标记录：{} = {}",
+                snapshot.name().value(),
+                snapshot.value().value()
+            );
+        }
+    }
+
+    @Override
+    public void recordEvent(BusinessEvent event) {
+        // 降级模式：静默失败
+        if (properties.getResilience().isLogFallback()) {
+            log.debug("[降级模式] 事件记录：{}", event.type().value());
+        }
+    }
+}
+```
+
+### 配置设计
+
+```yaml
+# application.yml
+patra:
+  observability:
+    # 弹性配置
+    resilience:
+      enabled: true                    # 启用弹性机制（默认 true）
+      failure-threshold: 5             # 失败阈值（连续失败 5 次后熔断）
+      half-open-timeout: 30s           # 半开超时（30 秒后尝试恢复）
+      log-fallback: true               # 降级模式是否记录日志（默认 true）
+
+    # 健康检查配置
+    health:
+      enabled: true                    # 启用健康检查（默认 true）
+      check-interval: 30s              # 健康检查间隔（30 秒）
+      skywalking-timeout: 5s           # SkyWalking 连接超时
+```
+
+### 故障场景与处理策略
+
+| 故障场景 | 检测方式 | 处理策略 | 恢复机制 |
+|---------|---------|---------|---------|
+| **SkyWalking OAP 宕机** | 连接超时 | 熔断器打开 → NoOp 降级 | 定期重试，成功后恢复 |
+| **Prometheus 不可用** | 指标推送失败 | 降级到本地日志 | 后端恢复后自动恢复 |
+| **网络抖动** | 间歇性失败 | 熔断器保护 | 短暂降级后自动恢复 |
+| **高负载** | 响应变慢 | 降级减少开销 | 负载降低后恢复 |
+| **部分功能故障** | 部分操作失败 | 仅降级失败部分 | 故障修复后恢复 |
+
+### 监控与告警
+
+#### 熔断器状态指标
+
+```java
+// 在 ResilientObservabilityAdapter 中暴露指标
+@Component
+public class CircuitBreakerMetrics {
+
+    private final MeterRegistry meterRegistry;
+    private final CircuitBreaker circuitBreaker;
+
+    public CircuitBreakerMetrics(MeterRegistry meterRegistry, CircuitBreaker circuitBreaker) {
+        this.meterRegistry = meterRegistry;
+        this.circuitBreaker = circuitBreaker;
+
+        // 注册熔断器状态 Gauge
+        Gauge.builder("patra.observability.circuit_breaker.state", circuitBreaker,
+                cb -> cb.getState().ordinal())
+            .description("熔断器状态（0=CLOSED, 1=OPEN, 2=HALF_OPEN）")
+            .register(meterRegistry);
+
+        // 注册失败计数
+        Gauge.builder("patra.observability.circuit_breaker.failures", circuitBreaker,
+                cb -> cb.getFailureCount())
+            .description("熔断器失败计数")
+            .register(meterRegistry);
+    }
+}
+```
+
+#### Grafana 告警规则
+
+```yaml
+# Prometheus 告警规则
+groups:
+  - name: observability-health
+    rules:
+      - alert: ObservabilityCircuitBreakerOpen
+        expr: patra_observability_circuit_breaker_state == 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "可观测性熔断器已打开"
+          description: "服务 {{ $labels.application }} 的可观测性熔断器已打开，当前处于降级模式"
+
+      - alert: ObservabilityHealthDown
+        expr: up{job="spring-actuator", endpoint="observability"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "可观测性健康检查失败"
+          description: "服务 {{ $labels.application }} 的可观测性组件不可用"
+```
+
+### 最佳实践
+
+1. **熔断器参数调优**：
+   - 失败阈值：根据实际环境调整（生产建议 5-10 次）
+   - 半开超时：避免频繁重试（建议 30-60 秒）
+
+2. **降级模式日志**：
+   - 开发环境：`log-fallback: true`（便于调试）
+   - 生产环境：`log-fallback: false`（减少日志量）
+
+3. **健康检查频率**：
+   - 不要过于频繁（避免额外开销）
+   - 不要过于稀疏（及时发现问题）
+   - 推荐：30 秒
+
+4. **监控告警**：
+   - 熔断器打开：立即告警
+   - 降级模式运行：持续告警
+   - 自动恢复：发送恢复通知
 
 ---
 
@@ -2064,6 +3768,238 @@ class MetricsCollectionTest {
 }
 ```
 
+### 架构测试（ArchUnit）
+
+#### 1. 依赖方向测试
+
+```java
+// patra-spring-boot-starter-core/src/test/java/com/patra/starter/core/architecture/HexagonalArchitectureTest.java
+package com.patra.starter.core.architecture;
+
+import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.importer.ClassFileImporter;
+import com.tngtech.archunit.lang.ArchRule;
+import org.junit.jupiter.api.Test;
+
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
+
+/**
+ * 六边形架构合规性测试
+ * <p>
+ * 验证依赖方向和层边界
+ */
+class HexagonalArchitectureTest {
+
+    private final JavaClasses classes = new ClassFileImporter()
+        .importPackages("com.patra.starter.core");
+
+    @Test
+    void core_should_not_depend_on_observability() {
+        ArchRule rule = noClasses()
+            .that().resideInAPackage("com.patra.starter.core..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage(
+                "com.patra.starter.observability..",
+                "io.micrometer..",
+                "org.apache.skywalking.."
+            )
+            .because("核心模块必须保持纯净，不依赖可观测性框架");
+
+        rule.check(classes);
+    }
+
+    @Test
+    void core_should_not_depend_on_spring_web() {
+        ArchRule rule = noClasses()
+            .that().resideInAPackage("com.patra.starter.core..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage("org.springframework.web..")
+            .because("核心模块不应依赖 Web 层");
+
+        rule.check(classes);
+    }
+
+    @Test
+    void interceptors_must_be_interfaces() {
+        ArchRule rule = noClasses()
+            .that().resideInAPackage("..interceptor..")
+            .and().haveSimpleNameEndingWith("Interceptor")
+            .should().notBeInterfaces()
+            .because("拦截器应该是接口，实现由外部模块提供");
+
+        rule.check(classes);
+    }
+}
+```
+
+#### 2. Domain 层依赖保护测试
+
+```java
+// patra-catalog-domain/src/test/java/com/patra/catalog/domain/architecture/DomainLayerTest.java
+package com.patra.catalog.domain.architecture;
+
+import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.importer.ClassFileImporter;
+import com.tngtech.archunit.lang.ArchRule;
+import org.junit.jupiter.api.Test;
+
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+
+/**
+ * Domain 层纯净性测试
+ * <p>
+ * 验证 Domain 层不依赖任何基础设施框架
+ */
+class DomainLayerTest {
+
+    private final JavaClasses classes = new ClassFileImporter()
+        .importPackages("com.patra.catalog");
+
+    @Test
+    void domain_should_not_depend_on_infrastructure() {
+        ArchRule rule = noClasses()
+            .that().resideInAPackage("..domain..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage(
+                "..infra..",
+                "..adapter..",
+                "org.springframework..",
+                "io.micrometer..",
+                "org.apache.skywalking..",
+                "com.baomidou.mybatisplus.."
+            )
+            .because("Domain 层必须保持纯净，不依赖基础设施框架");
+
+        rule.check(classes);
+    }
+
+    @Test
+    void domain_should_only_depend_on_common_and_self() {
+        ArchRule rule = noClasses()
+            .that().resideInAPackage("..domain..")
+            .should().dependOnClassesThat()
+            .resideOutsideOfPackages(
+                "..domain..",
+                "com.patra.common..",
+                "java..",
+                "javax..",
+                "jakarta.."
+            )
+            .because("Domain 层只能依赖自身和 patra-common");
+
+        rule.check(classes);
+    }
+}
+```
+
+#### 3. 拦截器异常处理测试
+
+```java
+// patra-spring-boot-starter-observability/src/test/java/com/patra/starter/observability/architecture/InterceptorSafetyTest.java
+package com.patra.starter.observability.architecture;
+
+import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.importer.ClassFileImporter;
+import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.ArchCondition;
+import com.tngtech.archunit.core.domain.JavaMethod;
+import com.tngtech.archunit.core.domain.JavaCodeUnit;
+import org.junit.jupiter.api.Test;
+
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
+
+/**
+ * 拦截器安全性测试
+ * <p>
+ * 验证所有拦截器方法都有异常处理保护
+ */
+class InterceptorSafetyTest {
+
+    private final JavaClasses classes = new ClassFileImporter()
+        .importPackages("com.patra.starter.observability.interceptor");
+
+    @Test
+    void interceptor_methods_must_catch_exceptions() {
+        ArchRule rule = methods()
+            .that().areDeclaredInClassesThat()
+            .implement(com.patra.starter.core.interceptor.ErrorInterceptor.class)
+            .should(new ArchCondition<JavaCodeUnit>("catch all exceptions") {
+                @Override
+                public void check(JavaCodeUnit method, ConditionEvents events) {
+                    // 检查方法体是否包含 try-catch
+                    // 这是一个简化示例，实际需要更复杂的检查
+                    String methodName = method.getName();
+                    if (!methodName.startsWith("get") && !methodName.startsWith("is")) {
+                        // 非 getter 方法应该有异常处理
+                        // 实际实现需要分析方法体的 AST
+                    }
+                }
+            })
+            .because("拦截器方法不能让异常传播到业务逻辑");
+
+        rule.check(classes);
+    }
+}
+```
+
+#### 4. 命名规范测试
+
+```java
+// patra-spring-boot-starter-observability/src/test/java/com/patra/starter/observability/architecture/NamingConventionTest.java
+package com.patra.starter.observability.architecture;
+
+import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.importer.ClassFileImporter;
+import com.tngtech.archunit.lang.ArchRule;
+import org.junit.jupiter.api.Test;
+
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+
+/**
+ * 命名规范测试
+ */
+class NamingConventionTest {
+
+    private final JavaClasses classes = new ClassFileImporter()
+        .importPackages("com.patra.starter.observability");
+
+    @Test
+    void handlers_should_end_with_handler() {
+        ArchRule rule = classes()
+            .that().resideInAPackage("..handler..")
+            .and().implement(io.micrometer.observation.ObservationHandler.class)
+            .should().haveSimpleNameEndingWith("Handler")
+            .because("ObservationHandler 实现类应以 Handler 结尾");
+
+        rule.check(classes);
+    }
+
+    @Test
+    void interceptors_should_end_with_interceptor() {
+        ArchRule rule = classes()
+            .that().resideInAPackage("..interceptor..")
+            .and().areNotInterfaces()
+            .should().haveSimpleNameEndingWith("Interceptor")
+            .because("拦截器实现类应以 Interceptor 结尾");
+
+        rule.check(classes);
+    }
+}
+```
+
+#### 5. Maven 依赖配置
+
+```xml
+<!-- pom.xml - 添加 ArchUnit 依赖 -->
+<dependency>
+    <groupId>com.tngtech.archunit</groupId>
+    <artifactId>archunit-junit5</artifactId>
+    <version>1.2.1</version>
+    <scope>test</scope>
+</dependency>
+```
+
 ### 性能测试
 
 #### 1. 基准测试
@@ -2149,6 +4085,340 @@ agent.sample_n_per_3_secs=3        # 每 3 秒采样 3 次
 trace.ignore_path=/health,/metrics  # 忽略健康检查端点
 plugin.jdbc.trace_sql_parameters=false  # 不收集 SQL 参数
 ```
+
+### PoC 性能测试方案
+
+#### 测试目标
+
+在 Patra 项目实际环境中验证可观测性方案的性能影响，确保满足以下批准条件：
+- ✅ CPU 开销 < 10%（相对基准场景）
+- ✅ 内存开销 < 50MB（相对基准场景）
+- ✅ TPS 下降 < 5%
+- ✅ P99 响应时间增加 < 10%
+
+#### 测试服务选择
+
+**推荐测试服务**：`patra-ingest`
+
+**选择理由**：
+- 最繁重的批处理服务
+- 包含大量数据库操作、HTTP 调用、文件 I/O
+- 代表性强，如果能在 ingest 通过，其他服务更无问题
+
+#### 测试场景
+
+| 场景 | 说明 | SkyWalking Agent | Observability Starter | 用途 |
+|-----|------|------------------|----------------------|-----|
+| **场景 A：基准** | 无可观测性 | ❌ 未启用 | ❌ 未引入 | 建立性能基准 |
+| **场景 B：Agent** | 仅 Agent | ✅ 启用 | ❌ 未引入 | 测试 Agent 开销 |
+| **场景 C：完整** | 完整可观测性 | ✅ 启用 | ✅ 引入 | 测试总开销 |
+
+#### 测试指标
+
+**1. 资源使用指标**
+
+| 指标 | 采集方式 | 采样频率 |
+|-----|---------|---------|
+| CPU 使用率（平均值、峰值） | `top`、`vmstat`、Arthas | 每 5 秒 |
+| 内存占用（堆内存、非堆内存） | `jstat -gc`、JMX | 每 5 秒 |
+| GC 频率和停顿时间 | GC 日志、JMX | 实时 |
+| 线程数 | JMX | 每 5 秒 |
+
+**2. 性能指标**
+
+| 指标 | 采集方式 | 说明 |
+|-----|---------|------|
+| TPS（每秒事务数） | JMeter | 吞吐量 |
+| 响应时间（P50、P95、P99） | JMeter | 延迟分布 |
+| 错误率 | JMeter | 成功率 |
+
+#### 测试工具
+
+**1. 负载生成工具：JMeter**
+
+```xml
+<!-- jmeter-test-plan.jmx -->
+<jmeterTestPlan>
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Patra Ingest 负载测试">
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="TARGET_HOST" elementType="Argument">
+            <stringProp name="Argument.value">localhost</stringProp>
+          </elementProp>
+          <elementProp name="TARGET_PORT" elementType="Argument">
+            <stringProp name="Argument.value">8080</stringProp>
+          </elementProp>
+          <elementProp name="THREAD_COUNT" elementType="Argument">
+            <stringProp name="Argument.value">100</stringProp>
+          </elementProp>
+          <elementProp name="RAMP_UP" elementType="Argument">
+            <stringProp name="Argument.value">60</stringProp>
+          </elementProp>
+          <elementProp name="DURATION" elementType="Argument">
+            <stringProp name="Argument.value">600</stringProp> <!-- 10 分钟 -->
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+    </TestPlan>
+
+    <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="用户组">
+      <stringProp name="ThreadGroup.num_threads">${THREAD_COUNT}</stringProp>
+      <stringProp name="ThreadGroup.ramp_time">${RAMP_UP}</stringProp>
+      <stringProp name="ThreadGroup.duration">${DURATION}</stringProp>
+      <boolProp name="ThreadGroup.scheduler">true</boolProp>
+
+      <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="导入数据">
+        <stringProp name="HTTPSampler.domain">${TARGET_HOST}</stringProp>
+        <stringProp name="HTTPSampler.port">${TARGET_PORT}</stringProp>
+        <stringProp name="HTTPSampler.protocol">http</stringProp>
+        <stringProp name="HTTPSampler.path">/api/ingest/pubmed</stringProp>
+        <stringProp name="HTTPSampler.method">POST</stringProp>
+      </HTTPSamplerProxy>
+    </ThreadGroup>
+  </hashTree>
+</jmeterTestPlan>
+```
+
+**2. 微基准测试工具：JMH**
+
+```java
+// patra-spring-boot-starter-observability/src/test/java/benchmark/ObservationOverheadBenchmark.java
+package com.patra.starter.observability.benchmark;
+
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
+import org.openjdk.jmh.annotations.*;
+
+import java.util.concurrent.TimeUnit;
+
+@State(Scope.Benchmark)
+@BenchmarkMode(Mode.AverageTime)
+@OutputTimeUnit(TimeUnit.NANOSECONDS)
+@Warmup(iterations = 3, time = 5)
+@Measurement(iterations = 5, time = 5)
+@Fork(1)
+public class ObservationOverheadBenchmark {
+
+    private ObservationRegistry registry;
+
+    @Setup
+    public void setup() {
+        registry = ObservationRegistry.create();
+        // 注册所有 Handler
+        registry.observationConfig()
+            .observationHandler(new LoggingObservationHandler())
+            .observationHandler(new PerformanceObservationHandler());
+    }
+
+    @Benchmark
+    public void measureObservationCreation() {
+        Observation observation = Observation.createNotStarted("test", registry);
+        observation.lowCardinalityKeyValue("key", "value");
+    }
+
+    @Benchmark
+    public void measureObservationLifecycle() {
+        Observation.createNotStarted("test", registry)
+            .lowCardinalityKeyValue("key", "value")
+            .observe(() -> {
+                // 模拟业务逻辑
+                return "result";
+            });
+    }
+}
+```
+
+**3. 运行时监控工具：Arthas**
+
+```bash
+# 启动 Arthas 并连接到 patra-ingest 进程
+java -jar arthas-boot.jar
+
+# 监控 CPU 使用率
+dashboard
+
+# 监控 GC 情况
+dashboard -i 5000
+
+# 监控方法执行时间
+trace com.patra.ingest.app.DataImportUseCase importData -n 100
+
+# 监控堆内存
+memory
+```
+
+#### 测试执行步骤
+
+**步骤 1：环境准备**
+
+```bash
+# 1. 准备测试数据
+./scripts/prepare-test-data.sh
+
+# 2. 启动 MySQL、Redis 等依赖
+docker-compose up -d mysql redis
+
+# 3. 预热 JVM
+curl -X POST http://localhost:8080/api/ingest/pubmed -d @sample-data.json
+# 重复 100 次
+```
+
+**步骤 2：场景 A - 基准测试（无可观测性）**
+
+```bash
+# 1. 修改 patra-ingest-boot/pom.xml
+# 移除 patra-spring-boot-starter-observability 依赖
+
+# 2. 编译并启动
+mvn clean package -DskipTests
+java -jar -Xms2g -Xmx2g \
+  -XX:+PrintGCDetails \
+  -XX:+PrintGCDateStamps \
+  -Xloggc:gc-baseline.log \
+  patra-ingest-boot/target/patra-ingest-boot.jar
+
+# 3. 使用 JMeter 执行负载测试
+jmeter -n -t jmeter-test-plan.jmx -l baseline-results.jtl
+
+# 4. 同时使用 Arthas 监控
+# 在另一个终端启动 Arthas 并记录数据
+```
+
+**步骤 3：场景 B - 仅 SkyWalking Agent**
+
+```bash
+# 1. 下载 SkyWalking Agent
+wget https://downloads.apache.org/skywalking/java-agent/9.5.0/apache-skywalking-java-agent-9.5.0.tgz
+tar -xzf apache-skywalking-java-agent-9.5.0.tgz
+
+# 2. 启动 SkyWalking OAP (可选)
+docker run -d --name skywalking-oap \
+  -e SW_STORAGE=memory \
+  -p 11800:11800 \
+  apache/skywalking-oap-server:9.5.0
+
+# 3. 启动应用（带 Agent）
+java -javaagent:./skywalking-agent/skywalking-agent.jar \
+  -Dskywalking.agent.service_name=patra-ingest \
+  -Dskywalking.collector.backend_service=localhost:11800 \
+  -jar -Xms2g -Xmx2g \
+  -XX:+PrintGCDetails \
+  -Xloggc:gc-agent.log \
+  patra-ingest-boot/target/patra-ingest-boot.jar
+
+# 4. 执行相同的负载测试
+jmeter -n -t jmeter-test-plan.jmx -l agent-results.jtl
+```
+
+**步骤 4：场景 C - 完整可观测性**
+
+```bash
+# 1. 修改 patra-ingest-boot/pom.xml
+# 添加 patra-spring-boot-starter-observability 依赖
+
+# 2. 编译并启动
+mvn clean package -DskipTests
+java -javaagent:./skywalking-agent/skywalking-agent.jar \
+  -Dskywalking.agent.service_name=patra-ingest \
+  -Dskywalking.collector.backend_service=localhost:11800 \
+  -jar -Xms2g -Xmx2g \
+  -XX:+PrintGCDetails \
+  -Xloggc:gc-full.log \
+  patra-ingest-boot/target/patra-ingest-boot.jar
+
+# 3. 执行相同的负载测试
+jmeter -n -t jmeter-test-plan.jmx -l full-results.jtl
+```
+
+**步骤 5：数据收集与分析**
+
+```bash
+# 1. 分析 JMeter 结果
+jmeter -g baseline-results.jtl -o baseline-report/
+jmeter -g agent-results.jtl -o agent-report/
+jmeter -g full-results.jtl -o full-report/
+
+# 2. 分析 GC 日志
+gceasy.io # 上传 gc-*.log 文件分析
+
+# 3. 汇总结果到 Excel 或 Markdown 表格
+```
+
+#### 性能对比报告模板
+
+```markdown
+# Patra Ingest PoC 性能测试报告
+
+## 测试环境
+- **硬件**: 4 Core CPU, 8GB RAM
+- **JVM 参数**: -Xms2g -Xmx2g
+- **测试时长**: 10 分钟稳定负载
+- **并发用户数**: 100
+- **测试日期**: YYYY-MM-DD
+
+## 测试结果汇总
+
+### 资源使用对比
+
+| 指标 | 场景 A（基准） | 场景 B（Agent） | 场景 C（完整） |
+|-----|--------------|---------------|--------------|
+| **CPU 平均使用率** | 45% | 50% (+11%) | 52% (+16%) |
+| **CPU 峰值使用率** | 68% | 75% (+10%) | 78% (+15%) |
+| **堆内存平均** | 1.2GB | 1.25GB (+4%) | 1.28GB (+7%) |
+| **非堆内存平均** | 150MB | 170MB (+13%) | 175MB (+17%) |
+| **GC 频率（Minor GC）** | 12 次/10min | 14 次/10min | 15 次/10min |
+| **GC 总停顿时间** | 850ms | 920ms (+8%) | 950ms (+12%) |
+
+### 性能指标对比
+
+| 指标 | 场景 A（基准） | 场景 B（Agent） | 场景 C（完整） |
+|-----|--------------|---------------|--------------|
+| **TPS** | 1250 | 1220 (-2.4%) | 1200 (-4.0%) |
+| **响应时间 P50** | 45ms | 47ms (+4%) | 48ms (+7%) |
+| **响应时间 P95** | 120ms | 128ms (+7%) | 132ms (+10%) |
+| **响应时间 P99** | 250ms | 265ms (+6%) | 272ms (+9%) |
+| **错误率** | 0.01% | 0.01% | 0.01% |
+
+## 批准条件评估
+
+| 批准条件 | 目标 | 实际结果（场景 C） | 是否通过 |
+|---------|------|------------------|---------|
+| CPU 开销 < 10% | < 10% | +16% | ❌ 不通过 |
+| 内存开销 < 50MB | < 50MB | +80MB | ❌ 不通过 |
+| TPS 下降 < 5% | < 5% | -4.0% | ✅ 通过 |
+| P99 延迟增加 < 10% | < 10% | +9% | ✅ 通过 |
+
+## 分析与建议
+
+### 问题分析
+- CPU 开销超标（16% vs 目标 10%）
+- 内存开销超标（80MB vs 目标 50MB）
+
+### 优化建议
+1. 降低 SkyWalking Agent 采样率至 10%
+2. 禁用部分高开销 ObservationHandler
+3. 禁用 SQL 参数收集
+4. 调整 GC 参数（-XX:+UseG1GC -XX:MaxGCPauseMillis=100）
+
+### 重新测试计划
+- 应用优化建议后重新执行场景 C
+- 目标：CPU < 10%，内存 < 50MB
+```
+
+#### Go/No-Go 决策
+
+**批准条件（所有条件必须满足）**：
+- ✅ CPU 开销 < 10%
+- ✅ 内存开销 < 50MB
+- ✅ TPS 下降 < 5%
+- ✅ P99 延迟增加 < 10%
+
+**如果不满足**：
+1. 分析性能瓶颈（使用 Arthas、JProfiler）
+2. 应用优化建议
+3. 重新测试
+4. 如果仍不满足，考虑备选方案（如仅使用 SkyWalking Agent）
 
 ---
 
@@ -2273,12 +4543,29 @@ agent.sample_n_per_3_secs=3
 # 忽略端点
 trace.ignore_path=/health,/actuator/**,/metrics,/favicon.ico
 
-# SQL 参数收集
-plugin.jdbc.trace_sql_parameters=true
-plugin.jdbc.sql_parameters_max_length=512
+# ========================================
+# 安全加固配置（生产环境必须）
+# ========================================
 
-# HTTP 参数收集
-plugin.http.http_params_length_threshold=2048
+# SQL 参数收集 - 生产环境必须禁用（防止密码泄露）
+plugin.mysql.trace_sql_parameters=${SW_MYSQL_TRACE_SQL_PARAMETERS:false}
+
+# HTTP Body 收集 - 生产环境必须禁用（防止 Token、API Key 泄露）
+plugin.http.collect_http_params=${SW_HTTP_COLLECT_PARAMS:false}
+
+# MongoDB 查询参数 - 生产环境必须禁用
+plugin.mongodb.trace_parameters=${SW_MONGODB_TRACE_PARAMS:false}
+
+# Redis 参数 - 生产环境必须禁用
+plugin.redis.trace_redis_parameters=${SW_REDIS_TRACE_PARAMS:false}
+
+# ========================================
+# 开发环境配置（通过环境变量启用）
+# ========================================
+# 仅在开发环境启用参数收集，便于调试：
+# export SW_MYSQL_TRACE_SQL_PARAMETERS=true
+# export SW_HTTP_COLLECT_PARAMS=true
+# export SW_MONGODB_TRACE_PARAMS=true
 
 # 日志级别
 logging.level=INFO
