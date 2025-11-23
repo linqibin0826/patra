@@ -50,18 +50,19 @@ public class MeshProgressQueryOrchestrator {
   ///
   /// 包含整体进度、各表进度、失败批次、处理速度和剩余时间估算。
   ///
-  /// @param importId 任务 ID
+  /// @param taskId 任务 ID
   /// @return 进度 DTO
   /// @throws IllegalArgumentException 如果任务不存在
   @Transactional(readOnly = true)
-  public MeshProgressDTO queryProgress(MeshImportId importId) {
-    log.debug("查询任务进度，任务 ID：{}", importId.value());
+  public MeshProgressDTO queryProgress(Long taskId) {
+    log.debug("查询任务进度，任务 ID：{}", taskId);
 
-    // 1. 查询任务聚合根
+    // 1. 转换为强类型 ID 并查询任务聚合根
+    MeshImportId importId = MeshImportId.of(taskId);
     MeshImportAggregate aggregate =
         meshImportPort
             .findById(importId)
-            .orElseThrow(() -> new IllegalArgumentException("任务不存在: " + importId.value()));
+            .orElseThrow(() -> new IllegalArgumentException("任务不存在: " + taskId));
 
     // 2. 调用聚合根的进度计算方法
     Double overallProgress = aggregate.getOverallProgress();

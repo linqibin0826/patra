@@ -101,7 +101,7 @@ class MeshProgressQueryOrchestratorTest {
     given(meshImportPort.findById(importId)).willReturn(Optional.of(aggregate));
     given(meshBatchDetailPort.findFailedBatches(importId)).willReturn(failedBatches);
 
-    MeshProgressDTO result = orchestrator.queryProgress(importId);
+    MeshProgressDTO result = orchestrator.queryProgress(importId.value());
 
     // Then: 验证调用顺序
     InOrder inOrder = inOrder(meshImportPort, meshBatchDetailPort);
@@ -202,7 +202,7 @@ class MeshProgressQueryOrchestratorTest {
     given(meshImportPort.findById(importId)).willReturn(Optional.of(aggregate));
     given(meshBatchDetailPort.findFailedBatches(importId)).willReturn(failedBatches);
 
-    MeshProgressDTO result = orchestrator.queryProgress(importId);
+    MeshProgressDTO result = orchestrator.queryProgress(importId.value());
 
     // Then: 验证失败批次
     assertThat(result.failedBatches()).hasSize(2);
@@ -261,7 +261,7 @@ class MeshProgressQueryOrchestratorTest {
     given(meshImportPort.findById(importId)).willReturn(Optional.of(aggregate));
     given(meshBatchDetailPort.findFailedBatches(importId)).willReturn(List.of());
 
-    MeshProgressDTO result = orchestrator.queryProgress(importId);
+    MeshProgressDTO result = orchestrator.queryProgress(importId.value());
 
     // Then: 验证已完成状态
     assertThat(result.status()).isEqualTo("success"); // 枚举的code是小写
@@ -278,7 +278,7 @@ class MeshProgressQueryOrchestratorTest {
     given(meshImportPort.findById(importId)).willReturn(Optional.empty());
 
     // When & Then: 抛出异常
-    assertThatThrownBy(() -> orchestrator.queryProgress(importId))
+    assertThatThrownBy(() -> orchestrator.queryProgress(importId.value()))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("任务不存在");
   }
@@ -323,7 +323,7 @@ class MeshProgressQueryOrchestratorTest {
     given(meshImportPort.findById(importId)).willReturn(Optional.of(aggregate));
     given(meshBatchDetailPort.findFailedBatches(importId)).willReturn(List.of());
 
-    MeshProgressDTO result = orchestrator.queryProgress(importId);
+    MeshProgressDTO result = orchestrator.queryProgress(importId.value());
 
     // Then: 验证未开始状态
     assertThat(result.status()).isEqualTo("pending"); // 枚举的code是小写
