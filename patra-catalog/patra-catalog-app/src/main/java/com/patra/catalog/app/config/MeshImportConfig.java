@@ -24,13 +24,21 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "patra.catalog.mesh.import")
 public class MeshImportConfig {
 
-  /// NLM 官方 MeSH 数据源 URL。
+  /// NLM 官方 MeSH 主题词数据源 URL。
   ///
   /// 默认值: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml
   ///
   /// 说明: 支持通过 Nacos Config 动态修改,无需重启应用
   private String sourceUrl =
       "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml";
+
+  /// NLM 官方 MeSH 限定词数据源 URL。
+  ///
+  /// 默认值: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml
+  ///
+  /// 说明: 限定词是独立的主数据文件,必须先于主题词导入
+  private String qualifierSourceUrl =
+      "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml";
 
   /// 默认批次大小 (当表没有特定配置时使用)。
   ///
@@ -45,18 +53,19 @@ public class MeshImportConfig {
   /// ```
   ///
   /// patra.catalog.mesh.import.batch-size-map.descriptor=1000
-  /// patra.catalog.mesh.import.batch-size-map.qualifier=100
   /// patra.catalog.mesh.import.batch-size-map.tree-number=1500
   /// patra.catalog.mesh.import.batch-size-map.entry-term=2000
   /// patra.catalog.mesh.import.batch-size-map.concept=2000
   ///
   /// ```
   ///
-  /// 说明: 根据表的数据量和复杂度调整批次大小,优化导入性能
+  /// 说明：
+  ///
+  /// - 根据表的数据量和复杂度调整批次大小，优化导入性能
+  ///   - Qualifier 表数据量极小（约 80 条），一次性导入，无需配置批次大小
   private Map<String, Integer> batchSizeMap =
       Map.of(
           "descriptor", 1000, // 主题词表 (约 35,000 条)
-          "qualifier", 100, // 限定词表 (约 80 条,数据量小)
           "tree-number", 1500, // 树形编号表 (约 80,000 条)
           "entry-term", 2000, // 入口术语表 (约 250,000 条,数据量大)
           "concept", 2000 // 概念表 (约 180,000 条,数据量大)
