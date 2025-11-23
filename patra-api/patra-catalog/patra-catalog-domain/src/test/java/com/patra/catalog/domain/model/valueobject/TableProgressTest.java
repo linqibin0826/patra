@@ -409,8 +409,8 @@ class TableProgressTest {
     }
 
     @Test
-    @DisplayName("当已经完成时应该直接返回自身")
-    void shouldReturnSelfWhenAlreadyCompleted() {
+    @DisplayName("应该始终返回新实例（即使已完成）")
+    void shouldAlwaysReturnNewInstanceEvenWhenAlreadyCompleted() {
       // Given: 已完成的表进度
       TableProgress original =
           TableProgress.builder()
@@ -426,8 +426,11 @@ class TableProgressTest {
       // When: 再次标记为完成
       TableProgress result = original.markAsCompleted(34800);
 
-      // Then: 应该返回原实例
-      assertThat(result).isSameAs(original);
+      // Then: 应该返回新实例（保持值对象不可变性）
+      assertThat(result).isNotSameAs(original);
+      assertThat(result.getStatus()).isEqualTo(MeshTableImportStatus.COMPLETED);
+      assertThat(result.getActualTotalCount()).isEqualTo(34800);
+      assertThat(result.getProcessedCount()).isEqualTo(34800);
     }
   }
 
