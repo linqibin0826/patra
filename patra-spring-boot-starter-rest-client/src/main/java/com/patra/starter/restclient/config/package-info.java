@@ -23,9 +23,12 @@
 /// |-----------|------|---------|
 /// | `defaultRestClient` | `RestClient` | 无依赖 |
 /// | `defaultHttpRequestFactory` | `JdkClientHttpRequestFactory` | 无依赖 |
-/// | `loggingInterceptor` | `LoggingInterceptor` | `patra.rest-client.interceptors.logging.enabled=true`(默认) |
-/// | `restClientTracingInterceptor` | `TracingInterceptor` | `patra.rest-client.interceptors.tracing.enabled=true`(默认) |
-/// | `metricsInterceptor` | `MetricsInterceptor` | `patra.rest-client.interceptors.metrics.enabled=true`(默认) + MeterRegistry 存在 |
+/// | `loggingInterceptor` | `LoggingInterceptor` |
+// `patra.rest-client.interceptors.logging.enabled=true`(默认) |
+/// | `restClientTracingInterceptor` | `TracingInterceptor` |
+// `patra.rest-client.interceptors.tracing.enabled=true`(默认) |
+/// | `metricsInterceptor` | `MetricsInterceptor` |
+// `patra.rest-client.interceptors.metrics.enabled=true`(默认) + MeterRegistry 存在 |
 ///
 /// ## 拦截器执行顺序
 ///

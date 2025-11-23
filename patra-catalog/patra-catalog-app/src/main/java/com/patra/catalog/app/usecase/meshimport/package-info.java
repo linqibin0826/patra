@@ -12,7 +12,8 @@
 /// ## 核心组件
 ///
 /// - {@link com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator} - 主编排器，协调完整导入流程
-/// - {@link com.patra.catalog.app.usecase.meshimport.validator.MeshDataValidator} - 数据验证器，验证导入数据量是否符合预期
+/// - {@link com.patra.catalog.app.usecase.meshimport.validator.MeshDataValidator} -
+// 数据验证器，验证导入数据量是否符合预期
 /// - {@link com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO} - 导入结果 DTO
 ///
 /// ## 使用示例
@@ -71,8 +72,10 @@
 /// <pre>{@code
 /// mesh:
 ///   import:
-///     descriptor-source-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml
-///     qualifier-source-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml
+///     descriptor-source-url:
+// https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml
+///     qualifier-source-url:
+// https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml
 ///     batch-sizes:
 ///       descriptor: 1000
 ///       tree-number: 2000

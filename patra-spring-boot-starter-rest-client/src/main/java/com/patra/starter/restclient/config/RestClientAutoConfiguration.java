@@ -1,8 +1,10 @@
 package com.patra.starter.restclient.config;
 
+import com.patra.starter.restclient.interceptor.LoggingInterceptor;
+import com.patra.starter.restclient.interceptor.MetricsInterceptor;
+import com.patra.starter.restclient.interceptor.TracingInterceptor;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.net.http.HttpClient;
-import java.time.Duration;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -14,10 +16,6 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
-
-import com.patra.starter.restclient.interceptor.LoggingInterceptor;
-import com.patra.starter.restclient.interceptor.MetricsInterceptor;
-import com.patra.starter.restclient.interceptor.TracingInterceptor;
 
 /// REST Client 自动配置类。
 ///
@@ -57,14 +55,14 @@ public class RestClientAutoConfiguration {
       ObjectProvider<ClientHttpRequestInterceptor> interceptorsProvider,
       JdkClientHttpRequestFactory requestFactory) {
 
-    var clientConfig = properties.getClients().getOrDefault("default", new RestClientProperties.ClientConfig());
+    var clientConfig =
+        properties.getClients().getOrDefault("default", new RestClientProperties.ClientConfig());
 
     var builder = RestClient.builder().requestFactory(requestFactory);
 
     // 应用默认 Headers
     if (clientConfig.getDefaultHeaders() != null && !clientConfig.getDefaultHeaders().isEmpty()) {
-      builder.defaultHeaders(
-          headers -> clientConfig.getDefaultHeaders().forEach(headers::add));
+      builder.defaultHeaders(headers -> clientConfig.getDefaultHeaders().forEach(headers::add));
     }
 
     // 注入所有拦截器（按 @Order 排序）
@@ -82,15 +80,12 @@ public class RestClientAutoConfiguration {
   /// @return JDK HTTP 请求工厂
   @Bean
   @ConditionalOnMissingBean
-  public JdkClientHttpRequestFactory defaultHttpRequestFactory(
-      RestClientProperties properties) {
+  public JdkClientHttpRequestFactory defaultHttpRequestFactory(RestClientProperties properties) {
 
     var timeout = properties.getTimeout();
 
     // 创建 JDK HttpClient（支持 HTTP/2）
-    var httpClient = HttpClient.newBuilder()
-        .connectTimeout(timeout.connect())
-        .build();
+    var httpClient = HttpClient.newBuilder().connectTimeout(timeout.connect()).build();
 
     var factory = new JdkClientHttpRequestFactory(httpClient);
     factory.setReadTimeout(timeout.read());

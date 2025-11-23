@@ -17,8 +17,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 class RestClientPropertiesTest {
 
   private final ApplicationContextRunner contextRunner =
-      new ApplicationContextRunner()
-          .withUserConfiguration(TestConfiguration.class);
+      new ApplicationContextRunner().withUserConfiguration(TestConfiguration.class);
 
   @EnableConfigurationProperties(RestClientProperties.class)
   static class TestConfiguration {}
@@ -182,8 +181,7 @@ class RestClientPropertiesTest {
               var pubmedClient = properties.getClients().get("pubmed");
 
               assertThat(pubmedClient).isNotNull();
-              assertThat(pubmedClient.getBaseUrl())
-                  .isEqualTo("https://eutils.ncbi.nlm.nih.gov");
+              assertThat(pubmedClient.getBaseUrl()).isEqualTo("https://eutils.ncbi.nlm.nih.gov");
               assertThat(pubmedClient.getDefaultHeaders())
                   .containsEntry("Accept", "application/xml")
                   .containsEntry("User-Agent", "Patra/1.0");
@@ -217,8 +215,7 @@ class RestClientPropertiesTest {
   @DisplayName("应该支持客户端级超时配置")
   void should_support_client_level_timeout_configuration() {
     contextRunner
-        .withPropertyValues(
-            "patra.rest-client.clients.slow-api.base-url=https://slow.api.com")
+        .withPropertyValues("patra.rest-client.clients.slow-api.base-url=https://slow.api.com")
         .run(
             context -> {
               RestClientProperties properties = context.getBean(RestClientProperties.class);

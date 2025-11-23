@@ -3,7 +3,6 @@ package com.patra.catalog.adapter.scheduler.job;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
@@ -120,8 +119,7 @@ class MeshImportJobTest {
 
       // then
       verify(lock).unlock();
-      xxlJobHelperMock.verify(
-          () -> XxlJobHelper.log(anyString()), atLeastOnce());
+      xxlJobHelperMock.verify(() -> XxlJobHelper.log(anyString()), atLeastOnce());
     }
   }
 
@@ -288,7 +286,8 @@ class MeshImportJobTest {
       when(lock.tryLock(0, 30, TimeUnit.MINUTES)).thenReturn(true);
       when(lock.isHeldByCurrentThread()).thenReturn(true);
 
-      var resultDTO = MeshImportResultDTO.builder().taskId("123").taskName("测试任务名称").status("SUCCESS").build();
+      var resultDTO =
+          MeshImportResultDTO.builder().taskId("123").taskName("测试任务名称").status("SUCCESS").build();
 
       when(meshImportOrchestrator.startImport()).thenReturn(resultDTO);
 
@@ -310,7 +309,8 @@ class MeshImportJobTest {
       when(lock.tryLock(0, 30, TimeUnit.MINUTES)).thenReturn(true);
       when(lock.isHeldByCurrentThread()).thenReturn(true);
 
-      var resultDTO = MeshImportResultDTO.builder().taskId("123").taskName("测试任务名称").status("SUCCESS").build();
+      var resultDTO =
+          MeshImportResultDTO.builder().taskId("123").taskName("测试任务名称").status("SUCCESS").build();
 
       when(meshImportOrchestrator.startImport()).thenReturn(resultDTO);
 

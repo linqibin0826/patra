@@ -177,7 +177,8 @@ class MeshQualifierRepositoryImplIT {
     // 验证名称
     assertThat(savedQualifiers)
         .extracting(MeshQualifierDO::getName)
-        .containsExactlyInAnyOrder("immunology", "genetics", "diagnosis", "therapy", "pharmacology");
+        .containsExactlyInAnyOrder(
+            "immunology", "genetics", "diagnosis", "therapy", "pharmacology");
 
     // 验证所有记录都有ID
     assertThat(savedQualifiers).allMatch(q -> q.getId() != null);
@@ -283,8 +284,7 @@ class MeshQualifierRepositoryImplIT {
     // Then: 验证不同状态
     List<MeshQualifierDO> savedQualifiers = meshQualifierMapper.selectList(null);
     long activeCount = savedQualifiers.stream().filter(MeshQualifierDO::getActiveStatus).count();
-    long inactiveCount =
-        savedQualifiers.stream().filter(q -> !q.getActiveStatus()).count();
+    long inactiveCount = savedQualifiers.stream().filter(q -> !q.getActiveStatus()).count();
 
     assertThat(activeCount).isEqualTo(2);
     assertThat(inactiveCount).isEqualTo(1);

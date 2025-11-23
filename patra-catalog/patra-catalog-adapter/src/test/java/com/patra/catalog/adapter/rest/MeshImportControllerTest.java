@@ -46,7 +46,8 @@ import org.springframework.test.web.servlet.MockMvc;
 /// @author linqibin
 /// @since 0.1.0
 @WebMvcTest(MeshImportController.class)
-@ContextConfiguration(classes = TestConfiguration.class) // 提供 Spring Boot 配置（包含 @EnableAutoConfiguration）
+@ContextConfiguration(
+    classes = TestConfiguration.class) // 提供 Spring Boot 配置（包含 @EnableAutoConfiguration）
 @Import({
   MeshImportErrorMappingContributor.class, // 导入异常映射贡献者
   CoreErrorAutoConfiguration.class, // 导入核心错误处理配置

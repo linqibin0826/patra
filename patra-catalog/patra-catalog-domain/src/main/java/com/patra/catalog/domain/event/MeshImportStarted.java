@@ -27,7 +27,8 @@ import java.time.Instant;
 /// @param startTime 开始时间
 /// @author linqibin
 /// @since 0.1.0
-public record MeshImportStarted(MeshImportId importId, String descriptorSourceUrl, String qualifierSourceUrl, Instant startTime)
+public record MeshImportStarted(
+    MeshImportId importId, String descriptorSourceUrl, String qualifierSourceUrl, Instant startTime)
     implements DomainEvent {
 
   @Serial private static final long serialVersionUID = 1L;

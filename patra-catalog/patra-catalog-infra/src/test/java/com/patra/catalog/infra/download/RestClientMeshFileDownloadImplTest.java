@@ -58,7 +58,10 @@ class RestClientMeshFileDownloadImplTest {
     requestFactory.setReadTimeout(java.time.Duration.ofSeconds(2)); // 读取超时
 
     RestClient restClient =
-        RestClient.builder().baseUrl(wireMockServer.baseUrl()).requestFactory(requestFactory).build();
+        RestClient.builder()
+            .baseUrl(wireMockServer.baseUrl())
+            .requestFactory(requestFactory)
+            .build();
 
     // 创建下载器（注入 RestClient）
     meshFileDownload = new RestClientMeshFileDownloadImpl(restClient);

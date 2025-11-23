@@ -216,9 +216,9 @@ class RestClientAutoConfigurationTest {
               RestClientProperties properties = context.getBean(RestClientProperties.class);
               var pubmedClient = properties.getClients().get("pubmed");
               assertThat(pubmedClient).isNotNull();
-              assertThat(pubmedClient.getBaseUrl())
-                  .isEqualTo("https://eutils.ncbi.nlm.nih.gov");
-              assertThat(pubmedClient.getDefaultHeaders()).containsEntry("Accept", "application/xml");
+              assertThat(pubmedClient.getBaseUrl()).isEqualTo("https://eutils.ncbi.nlm.nih.gov");
+              assertThat(pubmedClient.getDefaultHeaders())
+                  .containsEntry("Accept", "application/xml");
             });
   }
 

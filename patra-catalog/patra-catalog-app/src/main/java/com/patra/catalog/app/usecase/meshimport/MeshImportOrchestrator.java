@@ -1,5 +1,11 @@
 package com.patra.catalog.app.usecase.meshimport;
 
+import static com.patra.catalog.domain.model.enums.MeshDataType.CONCEPT;
+import static com.patra.catalog.domain.model.enums.MeshDataType.DESCRIPTOR;
+import static com.patra.catalog.domain.model.enums.MeshDataType.ENTRY_TERM;
+import static com.patra.catalog.domain.model.enums.MeshDataType.QUALIFIER;
+import static com.patra.catalog.domain.model.enums.MeshDataType.TREE_NUMBER;
+
 import com.patra.catalog.app.config.MeshImportConfig;
 import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import com.patra.catalog.app.usecase.meshimport.validator.MeshDataValidator;
@@ -9,12 +15,6 @@ import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
-import static com.patra.catalog.domain.model.enums.MeshDataType.CONCEPT;
-import static com.patra.catalog.domain.model.enums.MeshDataType.DESCRIPTOR;
-import static com.patra.catalog.domain.model.enums.MeshDataType.ENTRY_TERM;
-import static com.patra.catalog.domain.model.enums.MeshDataType.QUALIFIER;
-import static com.patra.catalog.domain.model.enums.MeshDataType.TREE_NUMBER;
-
 import com.patra.catalog.domain.model.enums.MeshDataType;
 import com.patra.catalog.domain.model.enums.MeshImportTaskStatus;
 import com.patra.catalog.domain.model.enums.MeshTableImportStatus;
@@ -101,11 +101,15 @@ public class MeshImportOrchestrator {
     String descriptorSourceUrl = meshImportConfig.getDescriptorSourceUrl();
     String qualifierSourceUrl = meshImportConfig.getQualifierSourceUrl();
     String taskName = generateDefaultTaskName();
-    log.info("[MeshImport] 任务配置 | 任务名称: {} | Descriptor源: {} | Qualifier源: {}",
-        taskName, descriptorSourceUrl, qualifierSourceUrl);
+    log.info(
+        "[MeshImport] 任务配置 | 任务名称: {} | Descriptor源: {} | Qualifier源: {}",
+        taskName,
+        descriptorSourceUrl,
+        qualifierSourceUrl);
 
     // 3. 创建任务聚合根（PENDING 状态）
-    MeshImportAggregate aggregate = createPendingTask(taskName, descriptorSourceUrl, qualifierSourceUrl);
+    MeshImportAggregate aggregate =
+        createPendingTask(taskName, descriptorSourceUrl, qualifierSourceUrl);
 
     try {
       // 4. 下载 XML 文件（主题词和限定词）
@@ -120,7 +124,11 @@ public class MeshImportOrchestrator {
       return completeImportProcess(descXmlFile, qualXmlFile, aggregate);
 
     } catch (Exception ex) {
-      log.error("[MeshImport] 导入任务失败 | 任务ID: {} | 错误: {}", aggregate.getId().value(), ex.getMessage(), ex);
+      log.error(
+          "[MeshImport] 导入任务失败 | 任务ID: {} | 错误: {}",
+          aggregate.getId().value(),
+          ex.getMessage(),
+          ex);
       aggregate.markAsFailed(ex.getMessage());
       meshImportPort.save(aggregate);
       throw new RuntimeException("MeSH 数据导入失败：" + ex.getMessage(), ex);
@@ -153,8 +161,7 @@ public class MeshImportOrchestrator {
 
     // 2. 检查任务状态（必须是 FAILED）
     if (aggregate.getStatus() != MeshImportTaskStatus.FAILED) {
-      throw new IllegalStateException(
-          "只能重试失败的任务，当前状态：" + aggregate.getStatus().getCode());
+      throw new IllegalStateException("只能重试失败的任务，当前状态：" + aggregate.getStatus().getCode());
     }
 
     // 3. 重试任务（状态变为 PROCESSING）
@@ -171,7 +178,11 @@ public class MeshImportOrchestrator {
       return completeImportProcess(descXmlFile, qualXmlFile, aggregate);
 
     } catch (Exception ex) {
-      log.error("[MeshImport] 重试任务失败 | 任务ID: {} | 错误: {}", aggregate.getId().value(), ex.getMessage(), ex);
+      log.error(
+          "[MeshImport] 重试任务失败 | 任务ID: {} | 错误: {}",
+          aggregate.getId().value(),
+          ex.getMessage(),
+          ex);
       aggregate.markAsFailed(ex.getMessage());
       meshImportPort.save(aggregate);
       throw new RuntimeException("MeSH 数据重试导入失败：" + ex.getMessage(), ex);
@@ -223,9 +234,13 @@ public class MeshImportOrchestrator {
   /// @param descriptorSourceUrl 主题词数据源 URL
   /// @param qualifierSourceUrl 限定词数据源 URL
   /// @return 保存后的聚合根
-  private MeshImportAggregate createPendingTask(String taskName, String descriptorSourceUrl, String qualifierSourceUrl) {
-    log.info("[MeshImport] 创建导入任务 | 任务名称: {} | Descriptor源: {} | Qualifier源: {}",
-        taskName, descriptorSourceUrl, qualifierSourceUrl);
+  private MeshImportAggregate createPendingTask(
+      String taskName, String descriptorSourceUrl, String qualifierSourceUrl) {
+    log.info(
+        "[MeshImport] 创建导入任务 | 任务名称: {} | Descriptor源: {} | Qualifier源: {}",
+        taskName,
+        descriptorSourceUrl,
+        qualifierSourceUrl);
 
     // 创建聚合根（使用全参构造函数）
     MeshImportAggregate aggregate =
@@ -442,7 +457,12 @@ public class MeshImportOrchestrator {
             batch.clear();
 
           } catch (Exception e) {
-            log.error("[Descriptor-Import] 批次 {} 保存失败 | 本批记录数: {} | 错误: {}", batchNum, batch.size(), e.getMessage(), e);
+            log.error(
+                "[Descriptor-Import] 批次 {} 保存失败 | 本批记录数: {} | 错误: {}",
+                batchNum,
+                batch.size(),
+                e.getMessage(),
+                e);
             throw new RuntimeException("批次保存失败：" + e.getMessage(), e);
           }
         }
@@ -505,7 +525,12 @@ public class MeshImportOrchestrator {
             batch.clear();
 
           } catch (Exception e) {
-            log.error("[TreeNumber-Import] 批次 {} 保存失败 | 本批记录数: {} | 错误: {}", batchNum, batch.size(), e.getMessage(), e);
+            log.error(
+                "[TreeNumber-Import] 批次 {} 保存失败 | 本批记录数: {} | 错误: {}",
+                batchNum,
+                batch.size(),
+                e.getMessage(),
+                e);
             throw new RuntimeException("批次保存失败：" + e.getMessage(), e);
           }
         }
@@ -568,7 +593,12 @@ public class MeshImportOrchestrator {
             batch.clear();
 
           } catch (Exception e) {
-            log.error("[EntryTerm-Import] 批次 {} 保存失败 | 本批记录数: {} | 错误: {}", batchNum, batch.size(), e.getMessage(), e);
+            log.error(
+                "[EntryTerm-Import] 批次 {} 保存失败 | 本批记录数: {} | 错误: {}",
+                batchNum,
+                batch.size(),
+                e.getMessage(),
+                e);
             throw new RuntimeException("批次保存失败：" + e.getMessage(), e);
           }
         }
@@ -631,7 +661,12 @@ public class MeshImportOrchestrator {
             batch.clear();
 
           } catch (Exception e) {
-            log.error("[Concept-Import] 批次 {} 保存失败 | 本批记录数: {} | 错误: {}", batchNum, batch.size(), e.getMessage(), e);
+            log.error(
+                "[Concept-Import] 批次 {} 保存失败 | 本批记录数: {} | 错误: {}",
+                batchNum,
+                batch.size(),
+                e.getMessage(),
+                e);
             throw new RuntimeException("批次保存失败：" + e.getMessage(), e);
           }
         }
@@ -684,8 +719,7 @@ public class MeshImportOrchestrator {
     aggregate = meshImportPort.save(aggregate);
 
     // 4. 记录完成日志
-    long duration =
-        Duration.between(aggregate.getStartTime(), aggregate.getEndTime()).toMillis();
+    long duration = Duration.between(aggregate.getStartTime(), aggregate.getEndTime()).toMillis();
     log.info(
         "[MeshImport] 导入任务成功完成 | 任务ID: {} | 耗时: {}ms | Descriptor: {} 条 | Qualifier: {} 条 | TreeNumber: {} 条 | EntryTerm: {} 条 | Concept: {} 条",
         aggregate.getId().value(),

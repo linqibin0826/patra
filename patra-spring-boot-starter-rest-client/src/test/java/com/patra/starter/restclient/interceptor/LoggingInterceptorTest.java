@@ -5,7 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.lenient;
 
-import java.io.ByteArrayInputStream;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -24,10 +27,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpResponse;
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
 
 /// LoggingInterceptor 单元测试。
 ///
@@ -79,8 +78,7 @@ class LoggingInterceptorTest {
     assertThat(logs).hasSize(2); // 请求日志 + 响应日志
 
     var requestLog = logs.get(0);
-    assertThat(requestLog.getFormattedMessage())
-        .contains("HTTP GET https://api.example.com/test");
+    assertThat(requestLog.getFormattedMessage()).contains("HTTP GET https://api.example.com/test");
   }
 
   @Test
@@ -125,9 +123,8 @@ class LoggingInterceptorTest {
 
     // then
     var logs = listAppender.list;
-    var headerLog = logs.stream()
-        .filter(log -> log.getFormattedMessage().contains("Headers:"))
-        .findFirst();
+    var headerLog =
+        logs.stream().filter(log -> log.getFormattedMessage().contains("Headers:")).findFirst();
     assertThat(headerLog).isPresent();
     assertThat(headerLog.get().getFormattedMessage())
         .contains("Content-Type")
@@ -153,8 +150,7 @@ class LoggingInterceptorTest {
 
     // then
     var logs = listAppender.list;
-    var headerLog = logs.stream()
-        .anyMatch(log -> log.getFormattedMessage().contains("Headers:"));
+    var headerLog = logs.stream().anyMatch(log -> log.getFormattedMessage().contains("Headers:"));
     assertThat(headerLog).isFalse();
   }
 
@@ -176,9 +172,8 @@ class LoggingInterceptorTest {
 
     // then
     var logs = listAppender.list;
-    var bodyLog = logs.stream()
-        .filter(log -> log.getFormattedMessage().contains("Body:"))
-        .findFirst();
+    var bodyLog =
+        logs.stream().filter(log -> log.getFormattedMessage().contains("Body:")).findFirst();
     assertThat(bodyLog).isPresent();
     assertThat(bodyLog.get().getFormattedMessage()).contains(requestBody);
   }
@@ -199,8 +194,7 @@ class LoggingInterceptorTest {
 
     // then
     var logs = listAppender.list;
-    var bodyLog = logs.stream()
-        .anyMatch(log -> log.getFormattedMessage().contains("Body:"));
+    var bodyLog = logs.stream().anyMatch(log -> log.getFormattedMessage().contains("Body:"));
     assertThat(bodyLog).isFalse();
   }
 
@@ -222,8 +216,7 @@ class LoggingInterceptorTest {
 
     // then
     var logs = listAppender.list;
-    var bodyLog = logs.stream()
-        .anyMatch(log -> log.getFormattedMessage().contains("password"));
+    var bodyLog = logs.stream().anyMatch(log -> log.getFormattedMessage().contains("password"));
     assertThat(bodyLog).isFalse();
   }
 
@@ -271,10 +264,12 @@ class LoggingInterceptorTest {
     var interceptor = new LoggingInterceptor(false, false, 1024);
     when(request.getMethod()).thenReturn(HttpMethod.GET);
     when(request.getURI()).thenReturn(URI.create("https://api.example.com/slow"));
-    when(execution.execute(request, new byte[0])).thenAnswer(invocation -> {
-      Thread.sleep(100); // 模拟慢请求
-      return response;
-    });
+    when(execution.execute(request, new byte[0]))
+        .thenAnswer(
+            invocation -> {
+              Thread.sleep(100); // 模拟慢请求
+              return response;
+            });
     when(response.getStatusCode()).thenReturn(HttpStatus.OK);
 
     // when
@@ -283,8 +278,7 @@ class LoggingInterceptorTest {
     // then
     var logs = listAppender.list;
     var responseLog = logs.get(1);
-    assertThat(responseLog.getFormattedMessage())
-        .matches(".*\\d+ ms\\)"); // 应该包含耗时（毫秒）
+    assertThat(responseLog.getFormattedMessage()).matches(".*\\d+ ms\\)"); // 应该包含耗时（毫秒）
   }
 
   @Test
@@ -302,12 +296,9 @@ class LoggingInterceptorTest {
 
     // then
     var logs = listAppender.list;
-    var warnLog = logs.stream()
-        .filter(log -> log.getLevel() == Level.WARN)
-        .findFirst();
+    var warnLog = logs.stream().filter(log -> log.getLevel() == Level.WARN).findFirst();
     assertThat(warnLog).isPresent();
-    assertThat(warnLog.get().getFormattedMessage())
-        .contains("Failed to log response status");
+    assertThat(warnLog.get().getFormattedMessage()).contains("Failed to log response status");
   }
 
   @Test
@@ -343,8 +334,11 @@ class LoggingInterceptorTest {
     // given
     var interceptor = new LoggingInterceptor(false, false, 1024);
     HttpStatusCode[] statusCodes = {
-      HttpStatus.OK, HttpStatus.CREATED, HttpStatus.BAD_REQUEST,
-      HttpStatus.NOT_FOUND, HttpStatus.INTERNAL_SERVER_ERROR
+      HttpStatus.OK,
+      HttpStatus.CREATED,
+      HttpStatus.BAD_REQUEST,
+      HttpStatus.NOT_FOUND,
+      HttpStatus.INTERNAL_SERVER_ERROR
     };
 
     for (HttpStatusCode statusCode : statusCodes) {
@@ -383,9 +377,8 @@ class LoggingInterceptorTest {
 
     // then
     var logs = listAppender.list;
-    var bodyLog = logs.stream()
-        .filter(log -> log.getFormattedMessage().contains("Body:"))
-        .findFirst();
+    var bodyLog =
+        logs.stream().filter(log -> log.getFormattedMessage().contains("Body:")).findFirst();
     assertThat(bodyLog).isPresent();
   }
 
@@ -425,9 +418,10 @@ class LoggingInterceptorTest {
 
     // then
     var logs = listAppender.list;
-    var bodyLog = logs.stream()
-        .filter(log -> log.getFormattedMessage().contains("Body (truncated):"))
-        .findFirst();
+    var bodyLog =
+        logs.stream()
+            .filter(log -> log.getFormattedMessage().contains("Body (truncated):"))
+            .findFirst();
 
     assertThat(bodyLog).isPresent();
     String logMessage = bodyLog.get().getFormattedMessage();
@@ -463,9 +457,8 @@ class LoggingInterceptorTest {
 
     // then
     var logs = listAppender.list;
-    var bodyLog = logs.stream()
-        .filter(log -> log.getFormattedMessage().contains("Body:"))
-        .findFirst();
+    var bodyLog =
+        logs.stream().filter(log -> log.getFormattedMessage().contains("Body:")).findFirst();
 
     assertThat(bodyLog).isPresent();
     String logMessage = bodyLog.get().getFormattedMessage();

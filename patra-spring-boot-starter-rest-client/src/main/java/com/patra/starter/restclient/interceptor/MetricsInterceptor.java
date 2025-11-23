@@ -57,8 +57,7 @@ public class MetricsInterceptor implements ClientHttpRequestInterceptor {
 
   @Override
   public ClientHttpResponse intercept(
-      HttpRequest request, byte[] body, ClientHttpRequestExecution execution)
-      throws IOException {
+      HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
 
     Timer.Sample sample = Timer.start();
 

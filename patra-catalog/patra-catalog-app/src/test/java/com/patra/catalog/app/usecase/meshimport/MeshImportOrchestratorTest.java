@@ -191,7 +191,11 @@ class MeshImportOrchestratorTest {
       when(xmlParserPort.parseDescriptors(any(FileInputStream.class)))
           .thenReturn(
               java.util.stream.IntStream.range(0, 35000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate.class)));
+                  .mapToObj(
+                      i ->
+                          mock(
+                              com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate
+                                  .class)));
       when(xmlParserPort.parseTreeNumbers(any(FileInputStream.class)))
           .thenReturn(
               java.util.stream.IntStream.range(0, 35000)
@@ -289,7 +293,11 @@ class MeshImportOrchestratorTest {
       when(xmlParserPort.parseDescriptors(any(FileInputStream.class)))
           .thenReturn(
               java.util.stream.IntStream.range(0, 35000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate.class)));
+                  .mapToObj(
+                      i ->
+                          mock(
+                              com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate
+                                  .class)));
       when(xmlParserPort.parseTreeNumbers(any(FileInputStream.class)))
           .thenReturn(
               java.util.stream.IntStream.range(0, 35000)
@@ -337,8 +345,7 @@ class MeshImportOrchestratorTest {
       // Given: 模拟失败的任务（包含初始化的表进度列表）
       List<com.patra.catalog.domain.model.valueobject.TableProgress> tableProgressList =
           new java.util.ArrayList<>();
-      List<String> tableNames =
-          List.of("descriptor", "tree-number", "entry-term", "concept");
+      List<String> tableNames = List.of("descriptor", "tree-number", "entry-term", "concept");
       for (String tableName : tableNames) {
         tableProgressList.add(
             com.patra.catalog.domain.model.valueobject.TableProgress.builder()
@@ -384,7 +391,11 @@ class MeshImportOrchestratorTest {
       when(xmlParserPort.parseDescriptors(any(FileInputStream.class)))
           .thenReturn(
               java.util.stream.IntStream.range(0, 35000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate.class)));
+                  .mapToObj(
+                      i ->
+                          mock(
+                              com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate
+                                  .class)));
       when(xmlParserPort.parseTreeNumbers(any(FileInputStream.class)))
           .thenReturn(
               java.util.stream.IntStream.range(0, 35000)
@@ -514,7 +525,11 @@ class MeshImportOrchestratorTest {
       when(xmlParserPort.parseDescriptors(any(FileInputStream.class)))
           .thenReturn(
               java.util.stream.IntStream.range(0, 35000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate.class)));
+                  .mapToObj(
+                      i ->
+                          mock(
+                              com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate
+                                  .class)));
       when(xmlParserPort.parseTreeNumbers(any(FileInputStream.class)))
           .thenReturn(
               java.util.stream.IntStream.range(0, 35000)
@@ -572,21 +587,23 @@ class MeshImportOrchestratorTest {
       // 关键修复：所有 save() 调用都返回传入的 aggregate（保留状态更新和正确的 totalCount）
       // 使用反射设置 ID（模拟 Repository 分配 ID）
       when(meshImportPort.save(any(MeshImportAggregate.class)))
-          .thenAnswer(invocation -> {
-            MeshImportAggregate aggregate = invocation.getArgument(0);
-            // 如果 aggregate 没有 ID，通过反射设置 ID（模拟 Repository 行为）
-            if (aggregate.getId() == null) {
-              try {
-                // ID 字段在父类 AggregateRoot 中
-                java.lang.reflect.Field idField = com.patra.common.domain.AggregateRoot.class.getDeclaredField("id");
-                idField.setAccessible(true);
-                idField.set(aggregate, MeshImportId.of(1L));
-              } catch (Exception e) {
-                throw new RuntimeException("无法设置 ID", e);
-              }
-            }
-            return aggregate;
-          });
+          .thenAnswer(
+              invocation -> {
+                MeshImportAggregate aggregate = invocation.getArgument(0);
+                // 如果 aggregate 没有 ID，通过反射设置 ID（模拟 Repository 行为）
+                if (aggregate.getId() == null) {
+                  try {
+                    // ID 字段在父类 AggregateRoot 中
+                    java.lang.reflect.Field idField =
+                        com.patra.common.domain.AggregateRoot.class.getDeclaredField("id");
+                    idField.setAccessible(true);
+                    idField.set(aggregate, MeshImportId.of(1L));
+                  } catch (Exception e) {
+                    throw new RuntimeException("无法设置 ID", e);
+                  }
+                }
+                return aggregate;
+              });
       when(meshImportPort.findById(any(MeshImportId.class)))
           .thenReturn(java.util.Optional.of(mockAggregate));
 
@@ -652,20 +669,22 @@ class MeshImportOrchestratorTest {
 
       // 关键修复：所有 save() 调用都返回传入的 aggregate（保留状态更新和正确的 totalCount）
       when(meshImportPort.save(any(MeshImportAggregate.class)))
-          .thenAnswer(invocation -> {
-            MeshImportAggregate aggregate = invocation.getArgument(0);
-            if (aggregate.getId() == null) {
-              try {
-                // ID 字段在父类 AggregateRoot 中
-                java.lang.reflect.Field idField = com.patra.common.domain.AggregateRoot.class.getDeclaredField("id");
-                idField.setAccessible(true);
-                idField.set(aggregate, MeshImportId.of(1L));
-              } catch (Exception e) {
-                throw new RuntimeException("无法设置 ID", e);
-              }
-            }
-            return aggregate;
-          });
+          .thenAnswer(
+              invocation -> {
+                MeshImportAggregate aggregate = invocation.getArgument(0);
+                if (aggregate.getId() == null) {
+                  try {
+                    // ID 字段在父类 AggregateRoot 中
+                    java.lang.reflect.Field idField =
+                        com.patra.common.domain.AggregateRoot.class.getDeclaredField("id");
+                    idField.setAccessible(true);
+                    idField.set(aggregate, MeshImportId.of(1L));
+                  } catch (Exception e) {
+                    throw new RuntimeException("无法设置 ID", e);
+                  }
+                }
+                return aggregate;
+              });
       when(meshImportPort.findById(any(MeshImportId.class)))
           .thenReturn(java.util.Optional.of(mockAggregate));
 
@@ -721,9 +740,7 @@ class MeshImportOrchestratorTest {
                                   .class)));
 
       // Mock 批量保存失败
-      doThrow(new RuntimeException("数据库连接失败"))
-          .when(meshDescriptorPort)
-          .saveBatch(any(List.class));
+      doThrow(new RuntimeException("数据库连接失败")).when(meshDescriptorPort).saveBatch(any(List.class));
 
       // When & Then: 执行导入，预期抛出异常
       assertThatThrownBy(() -> orchestrator.startImport())
@@ -749,20 +766,22 @@ class MeshImportOrchestratorTest {
 
       // 关键修复：所有 save() 调用都返回传入的 aggregate（保留状态更新和正确的 totalCount）
       when(meshImportPort.save(any(MeshImportAggregate.class)))
-          .thenAnswer(invocation -> {
-            MeshImportAggregate aggregate = invocation.getArgument(0);
-            if (aggregate.getId() == null) {
-              try {
-                // ID 字段在父类 AggregateRoot 中
-                java.lang.reflect.Field idField = com.patra.common.domain.AggregateRoot.class.getDeclaredField("id");
-                idField.setAccessible(true);
-                idField.set(aggregate, MeshImportId.of(1L));
-              } catch (Exception e) {
-                throw new RuntimeException("无法设置 ID", e);
-              }
-            }
-            return aggregate;
-          });
+          .thenAnswer(
+              invocation -> {
+                MeshImportAggregate aggregate = invocation.getArgument(0);
+                if (aggregate.getId() == null) {
+                  try {
+                    // ID 字段在父类 AggregateRoot 中
+                    java.lang.reflect.Field idField =
+                        com.patra.common.domain.AggregateRoot.class.getDeclaredField("id");
+                    idField.setAccessible(true);
+                    idField.set(aggregate, MeshImportId.of(1L));
+                  } catch (Exception e) {
+                    throw new RuntimeException("无法设置 ID", e);
+                  }
+                }
+                return aggregate;
+              });
       when(meshImportPort.findById(any(MeshImportId.class)))
           .thenReturn(java.util.Optional.of(mockAggregate));
 
@@ -826,20 +845,22 @@ class MeshImportOrchestratorTest {
 
       // 关键修复：所有 save() 调用都返回传入的 aggregate（保留状态更新和正确的 totalCount）
       when(meshImportPort.save(aggregateCaptor.capture()))
-          .thenAnswer(invocation -> {
-            MeshImportAggregate aggregate = invocation.getArgument(0);
-            if (aggregate.getId() == null) {
-              try {
-                // ID 字段在父类 AggregateRoot 中
-                java.lang.reflect.Field idField = com.patra.common.domain.AggregateRoot.class.getDeclaredField("id");
-                idField.setAccessible(true);
-                idField.set(aggregate, MeshImportId.of(1L));
-              } catch (Exception e) {
-                throw new RuntimeException("无法设置 ID", e);
-              }
-            }
-            return aggregate;
-          });
+          .thenAnswer(
+              invocation -> {
+                MeshImportAggregate aggregate = invocation.getArgument(0);
+                if (aggregate.getId() == null) {
+                  try {
+                    // ID 字段在父类 AggregateRoot 中
+                    java.lang.reflect.Field idField =
+                        com.patra.common.domain.AggregateRoot.class.getDeclaredField("id");
+                    idField.setAccessible(true);
+                    idField.set(aggregate, MeshImportId.of(1L));
+                  } catch (Exception e) {
+                    throw new RuntimeException("无法设置 ID", e);
+                  }
+                }
+                return aggregate;
+              });
       when(meshImportPort.findById(any(MeshImportId.class)))
           .thenReturn(java.util.Optional.of(mockAggregate));
 

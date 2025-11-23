@@ -7,6 +7,7 @@ import static org.mockito.Mockito.lenient;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
+import org.apache.skywalking.apm.toolkit.trace.TraceContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,7 +22,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpResponse;
-import org.apache.skywalking.apm.toolkit.trace.TraceContext;
 
 /// TracingInterceptor 单元测试。
 ///
@@ -82,7 +82,9 @@ class TracingInterceptorTest {
     var interceptor = new TracingInterceptor(List.of("X-Trace-ID"));
 
     try (MockedStatic<TraceContext> mockedTraceContext = mockStatic(TraceContext.class)) {
-      mockedTraceContext.when(TraceContext::traceId).thenThrow(new RuntimeException("SkyWalking not available"));
+      mockedTraceContext
+          .when(TraceContext::traceId)
+          .thenThrow(new RuntimeException("SkyWalking not available"));
       when(execution.execute(request, new byte[0])).thenReturn(response);
 
       // when

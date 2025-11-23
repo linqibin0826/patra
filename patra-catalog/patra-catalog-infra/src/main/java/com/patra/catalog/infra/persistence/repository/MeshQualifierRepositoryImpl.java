@@ -24,8 +24,7 @@ import org.springframework.stereotype.Repository;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class MeshQualifierRepositoryImpl
-    extends ServiceImpl<MeshQualifierMapper, MeshQualifierDO>
+public class MeshQualifierRepositoryImpl extends ServiceImpl<MeshQualifierMapper, MeshQualifierDO>
     implements MeshQualifierRepository {
 
   private final MeshQualifierConverter meshQualifierConverter;
