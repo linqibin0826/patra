@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import lombok.Getter;
+import lombok.Setter;
 
 /// MeSH 主题词聚合根。管理 NLM MeSH(医学主题词表)的核心信息。
 ///
@@ -47,6 +48,7 @@ import lombok.Getter;
 /// @author linqibin
 /// @since 0.1.0
 @Getter
+@Setter
 public class MeshDescriptorAggregate extends AggregateRoot<Long> {
 
   @Serial private static final long serialVersionUID = 1L;
@@ -440,69 +442,6 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
     Assert.notBlank(newVersion, "版本不能为空");
     Assert.isTrue(newVersion.matches("^\\d{4}$"), "版本格式无效,必须为4位年份：%s", newVersion);
     this.meshVersion = newVersion;
-  }
-
-  /// 设置创建日期。
-  ///
-  /// @param dateCreated 创建日期(格式：YYYYMMDD)
-  public void setDateCreated(String dateCreated) {
-    this.dateCreated = dateCreated;
-  }
-
-  /// 设置修订日期。
-  ///
-  /// @param dateRevised 修订日期(格式：YYYYMMDD)
-  public void setDateRevised(String dateRevised) {
-    this.dateRevised = dateRevised;
-  }
-
-  /// 设置建立日期。
-  ///
-  /// @param dateEstablished 建立日期(格式：YYYYMMDD)
-  public void setDateEstablished(String dateEstablished) {
-    this.dateEstablished = dateEstablished;
-  }
-
-  /// 设置范围说明。
-  ///
-  /// @param scopeNote 范围说明
-  public void setScopeNote(String scopeNote) {
-    this.scopeNote = scopeNote;
-  }
-
-  /// 设置注释。
-  ///
-  /// @param annotation 注释
-  public void setAnnotation(String annotation) {
-    this.annotation = annotation;
-  }
-
-  /// 设置元数据JSON。
-  ///
-  /// @param json 元数据JSON
-  public void setMetadataJson(String json) {
-    this.metadataJson = json;
-  }
-
-  /// 设置历史记录。
-  ///
-  /// @param historyNote 历史记录
-  public void setHistoryNote(String historyNote) {
-    this.historyNote = historyNote;
-  }
-
-  /// 设置在线检索说明。
-  ///
-  /// @param onlineNote 在线检索说明
-  public void setOnlineNote(String onlineNote) {
-    this.onlineNote = onlineNote;
-  }
-
-  /// 设置NLM分类号。
-  ///
-  /// @param nlmClassificationNumber NLM分类号
-  public void setNlmClassificationNumber(String nlmClassificationNumber) {
-    this.nlmClassificationNumber = nlmClassificationNumber;
   }
 
   // ========== 允许的限定词管理 ==========
