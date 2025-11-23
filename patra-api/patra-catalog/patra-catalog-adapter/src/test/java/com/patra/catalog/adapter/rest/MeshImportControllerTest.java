@@ -1,6 +1,7 @@
 package com.patra.catalog.adapter.rest;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -129,7 +130,7 @@ class MeshImportControllerTest {
               .message("任务正在重试")
               .build();
 
-      when(meshImportOrchestrator.retryFailedTask(any(MeshImportId.class))).thenReturn(resultDTO);
+      when(meshImportOrchestrator.retryFailedTask(anyLong())).thenReturn(resultDTO);
 
       // when & then
       mockMvc
@@ -146,7 +147,7 @@ class MeshImportControllerTest {
       // given
       String taskId = "9999999999";
 
-      when(meshImportOrchestrator.retryFailedTask(any(MeshImportId.class)))
+      when(meshImportOrchestrator.retryFailedTask(anyLong()))
           .thenThrow(new IllegalArgumentException("任务不存在：" + taskId));
 
       // when & then - MeshImportErrorMappingContributor 映射到 404
@@ -165,7 +166,7 @@ class MeshImportControllerTest {
       // given
       String taskId = "1234567890";
 
-      when(meshImportOrchestrator.retryFailedTask(any(MeshImportId.class)))
+      when(meshImportOrchestrator.retryFailedTask(anyLong()))
           .thenThrow(new IllegalStateException("任务状态不允许重试，当前状态：SUCCESS"));
 
       // when & then - MeshImportErrorMappingContributor 映射到 409
@@ -302,7 +303,7 @@ class MeshImportControllerTest {
               .failedBatches(java.util.List.of())
               .build();
 
-      when(meshProgressQueryOrchestrator.queryProgress(any(MeshImportId.class)))
+      when(meshProgressQueryOrchestrator.queryProgress(anyLong()))
           .thenReturn(progressDTO);
 
       // when & then
@@ -324,7 +325,7 @@ class MeshImportControllerTest {
       // given
       String taskId = "9999999999";
 
-      when(meshProgressQueryOrchestrator.queryProgress(any(MeshImportId.class)))
+      when(meshProgressQueryOrchestrator.queryProgress(anyLong()))
           .thenThrow(new IllegalArgumentException("任务不存在: " + taskId));
 
       // when & then - MeshImportErrorMappingContributor 映射到 404

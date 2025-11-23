@@ -79,10 +79,10 @@ public class MeshImportController {
   /// @throws IllegalArgumentException 如果任务不存在（返回 404 Not Found）
   /// @throws IllegalStateException 如果任务状态不允许重试（返回 409 Conflict）
   @PostMapping("/retry/{taskId}")
-  public ResponseEntity<MeshImportResultDTO> retryFailedTask(@PathVariable @NotNull String taskId) {
+  public ResponseEntity<MeshImportResultDTO> retryFailedTask(@PathVariable @NotNull Long taskId) {
     log.info("收到重试失败任务请求，任务 ID：{}", taskId);
 
-    MeshImportResultDTO result = meshImportOrchestrator.retryFailedTask(Long.parseLong(taskId));
+    MeshImportResultDTO result = meshImportOrchestrator.retryFailedTask(taskId);
 
     log.info("MeSH 导入任务重试已启动，任务 ID：{}", taskId);
 
@@ -131,10 +131,10 @@ public class MeshImportController {
   /// @throws IllegalArgumentException 如果任务不存在（返回 404 Not Found）
   /// @since 0.1.0
   @GetMapping("/progress/{taskId}")
-  public ResponseEntity<MeshProgressDTO> getProgress(@PathVariable @NotNull String taskId) {
+  public ResponseEntity<MeshProgressDTO> getProgress(@PathVariable @NotNull Long taskId) {
     log.info("收到查询导入进度请求，任务 ID：{}", taskId);
 
-    MeshProgressDTO progress = meshProgressQueryOrchestrator.queryProgress(Long.parseLong(taskId));
+    MeshProgressDTO progress = meshProgressQueryOrchestrator.queryProgress(taskId);
 
     log.debug(
         "查询进度成功，任务 ID：{}，整体进度：{}%，处理速度：{} 记录/秒",

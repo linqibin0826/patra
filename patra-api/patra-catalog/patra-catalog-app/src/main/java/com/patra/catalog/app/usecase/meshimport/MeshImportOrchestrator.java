@@ -47,8 +47,12 @@ import org.springframework.transaction.annotation.Transactional;
 ///
 /// **事务管理**：
 ///
-/// - 主方法使用 `@Transactional`
-///   - 每批次独立事务：`@Transactional(propagation = REQUIRES_NEW)`
+/// - 主方法（`startImport`, `retryFailedTask`）使用 `@Transactional`
+///   - 控制主流程（下载、验证、标记完成）
+/// - 批次保存使用独立事务（`REQUIRES_NEW`）
+///   - 由 `AbstractBatchImporter.saveBatchWithProgress` 实现
+///   - 每批次独立提交，失败不影响已完成批次
+///   - 支持断点续传
 ///
 /// **依赖注入**：
 ///
