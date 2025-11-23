@@ -49,6 +49,7 @@ class MeshImportOrchestratorTest {
   @Mock private XmlParserPort xmlParserPort;
   @Mock private MeshFileDownloadPort meshFileDownloadPort;
   @Mock private MeshDescriptorRepository meshDescriptorPort;
+  @Mock private com.patra.catalog.domain.port.MeshQualifierRepository meshQualifierRepository;
   @Mock private MeshDataValidator meshDataValidator;
   @Mock private com.patra.catalog.app.config.MeshImportConfig meshImportConfig;
 
@@ -187,7 +188,11 @@ class MeshImportOrchestratorTest {
       when(xmlParserPort.parseQualifiers(any(FileInputStream.class)))
           .thenReturn(
               java.util.stream.IntStream.range(0, 35000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshQualifier.class)));
+                  .mapToObj(
+                      i ->
+                          mock(
+                              com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate
+                                  .class)));
       when(xmlParserPort.parseDescriptors(any(FileInputStream.class)))
           .thenReturn(
               java.util.stream.IntStream.range(0, 35000)
@@ -619,7 +624,11 @@ class MeshImportOrchestratorTest {
       when(xmlParserPort.parseQualifiers(any(FileInputStream.class)))
           .thenReturn(
               java.util.stream.IntStream.range(0, 80)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshQualifier.class)));
+                  .mapToObj(
+                      i ->
+                          mock(
+                              com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate
+                                  .class)));
       when(xmlParserPort.parseDescriptors(any(FileInputStream.class)))
           .thenReturn(
               java.util.stream.IntStream.range(0, 3000)

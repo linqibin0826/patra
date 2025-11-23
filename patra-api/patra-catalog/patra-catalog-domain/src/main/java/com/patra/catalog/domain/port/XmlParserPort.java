@@ -1,9 +1,9 @@
 package com.patra.catalog.domain.port;
 
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
+import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.model.entity.MeshEntryTerm;
-import com.patra.catalog.domain.model.entity.MeshQualifier;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
 import java.io.InputStream;
 import java.util.stream.Stream;
@@ -51,13 +51,13 @@ public interface XmlParserPort {
   /// 实现说明：
   ///
   /// - 解析 `<QualifierRecord>` 元素
-  ///   - 限定词是独立的主数据
+  ///   - 限定词是独立的聚合根
   ///   - 约 80 条记录
   ///   - 必须先于主题词导入
   ///
   /// @param xmlInputStream XML 文件输入流（qual2025.xml）
-  /// @return 限定词实体流（Stream）
-  Stream<MeshQualifier> parseQualifiers(InputStream xmlInputStream);
+  /// @return 限定词聚合根流（Stream）
+  Stream<MeshQualifierAggregate> parseQualifiers(InputStream xmlInputStream);
 
   /// 解析主题词（Descriptor）。
   ///

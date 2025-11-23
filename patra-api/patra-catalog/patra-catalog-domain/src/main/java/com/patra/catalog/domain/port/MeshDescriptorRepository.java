@@ -3,7 +3,6 @@ package com.patra.catalog.domain.port;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.model.entity.MeshEntryTerm;
-import com.patra.catalog.domain.model.entity.MeshQualifier;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
 import java.util.List;
 
@@ -19,18 +18,6 @@ import java.util.List;
 /// @author linqibin
 /// @since 0.1.0
 public interface MeshDescriptorRepository {
-
-  /// 批量保存限定词。
-  ///
-  /// 实现说明：
-  ///
-  /// - 直接批量插入到 cat_mesh_qualifier 表
-  ///   - 限定词是独立的主数据，不依赖其他实体
-  ///   - 用于导入 qual2025.xml 中的限定词数据
-  ///   - 必须先于主题词导入
-  ///
-  /// @param qualifiers 限定词实体列表
-  void saveQualifiersBatch(List<MeshQualifier> qualifiers);
 
   /// 批量保存主题词聚合根。
   ///

@@ -32,5 +32,32 @@ public class MeshDescriptorRepositoryImpl implements MeshDescriptorRepository {
   private final MeshConceptMapper meshConceptMapper;
   private final MeshDescriptorConverter meshDescriptorConverter;
 
-  // 方法待添加
+  @Override
+  public void saveBatch(
+      java.util.List<com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate>
+          descriptors) {
+    // TODO: 待实现
+    throw new UnsupportedOperationException("Not implemented yet");
+  }
+
+  @Override
+  public void saveTreeNumbersBatch(
+      java.util.List<com.patra.catalog.domain.model.entity.MeshTreeNumber> treeNumbers) {
+    // TODO: 待实现
+    throw new UnsupportedOperationException("Not implemented yet");
+  }
+
+  @Override
+  public void saveEntryTermsBatch(
+      java.util.List<com.patra.catalog.domain.model.entity.MeshEntryTerm> entryTerms) {
+    // TODO: 待实现
+    throw new UnsupportedOperationException("Not implemented yet");
+  }
+
+  @Override
+  public void saveConceptsBatch(
+      java.util.List<com.patra.catalog.domain.model.entity.MeshConcept> concepts) {
+    // TODO: 待实现
+    throw new UnsupportedOperationException("Not implemented yet");
+  }
 }

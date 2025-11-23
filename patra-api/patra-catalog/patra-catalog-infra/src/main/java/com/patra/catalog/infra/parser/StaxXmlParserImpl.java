@@ -1,6 +1,7 @@
 package com.patra.catalog.infra.parser;
 
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
+import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
@@ -58,6 +59,20 @@ public class StaxXmlParserImpl implements XmlParserPort {
     try {
       XMLStreamReader reader = XML_INPUT_FACTORY.createXMLStreamReader(xmlInputStream);
       DescriptorSpliterator spliterator = new DescriptorSpliterator(reader);
+      return StreamSupport.stream(spliterator, false).onClose(() -> closeReader(reader));
+    } catch (XMLStreamException e) {
+      log.error("创建 XML 读取器失败", e);
+      throw new RuntimeException("XML 解析失败", e);
+    }
+  }
+
+  @Override
+  public Stream<MeshQualifierAggregate> parseQualifiers(InputStream xmlInputStream) {
+    log.info("开始解析 MeSH Qualifier XML 文件");
+
+    try {
+      XMLStreamReader reader = XML_INPUT_FACTORY.createXMLStreamReader(xmlInputStream);
+      QualifierSpliterator spliterator = new QualifierSpliterator(reader);
       return StreamSupport.stream(spliterator, false).onClose(() -> closeReader(reader));
     } catch (XMLStreamException e) {
       log.error("创建 XML 读取器失败", e);
@@ -345,6 +360,180 @@ public class StaxXmlParserImpl implements XmlParserPort {
         }
       }
       return treeNumbers;
+    }
+  }
+
+  /// Qualifier Spliterator（用于流式解析 Qualifier）。
+  private static class QualifierSpliterator
+      implements java.util.Spliterator<MeshQualifierAggregate> {
+
+    private final XMLStreamReader reader;
+    private boolean hasNext = true;
+
+    public QualifierSpliterator(XMLStreamReader reader) {
+      this.reader = reader;
+    }
+
+    @Override
+    public boolean tryAdvance(
+        java.util.function.Consumer<? super MeshQualifierAggregate> action) {
+      if (!hasNext) {
+        return false;
+      }
+
+      try {
+        while (reader.hasNext()) {
+          int event = reader.next();
+          if (event == XMLStreamConstants.START_ELEMENT
+              && "QualifierRecord".equals(reader.getLocalName())) {
+            MeshQualifierAggregate qualifier = parseQualifierRecord(reader);
+            if (qualifier != null) {
+              action.accept(qualifier);
+              return true;
+            }
+          }
+        }
+        hasNext = false;
+        return false;
+      } catch (XMLStreamException e) {
+        log.error("解析 Qualifier 失败", e);
+        throw new RuntimeException("XML 解析失败", e);
+      }
+    }
+
+    @Override
+    public java.util.Spliterator<MeshQualifierAggregate> trySplit() {
+      return null;
+    }
+
+    @Override
+    public long estimateSize() {
+      return Long.MAX_VALUE;
+    }
+
+    @Override
+    public int characteristics() {
+      return ORDERED | NONNULL | IMMUTABLE;
+    }
+
+    /// 解析单个 QualifierRecord 元素。
+    private MeshQualifierAggregate parseQualifierRecord(XMLStreamReader reader)
+        throws XMLStreamException {
+      String qualifierUi = null;
+      String name = null;
+      String abbreviation = null;
+      String annotation = null;
+      String dateCreated = null;
+      String dateRevised = null;
+      String dateEstablished = null;
+
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT) {
+          String localName = reader.getLocalName();
+          switch (localName) {
+            case "QualifierUI":
+              qualifierUi = reader.getElementText();
+              break;
+            case "QualifierName":
+              name = parseNameElement(reader);
+              break;
+            case "Annotation":
+              annotation = reader.getElementText();
+              break;
+            case "DateCreated":
+              dateCreated = parseDate(reader, "DateCreated");
+              break;
+            case "DateRevised":
+              dateRevised = parseDate(reader, "DateRevised");
+              break;
+            case "DateEstablished":
+              dateEstablished = parseDate(reader, "DateEstablished");
+              break;
+            case "ConceptList":
+              // 从 ConceptList 中提取 Abbreviation
+              abbreviation = extractAbbreviationFromPreferredTerm(reader);
+              break;
+            default:
+              // 跳过其他元素（如 HistoryNote, OnlineNote, TreeNumberList）
+              skipElement(reader, localName);
+              break;
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "QualifierRecord".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+
+      // 创建聚合根
+      if (qualifierUi != null && name != null && abbreviation != null) {
+        return MeshQualifierAggregate.create(
+                MeshUI.qualifierOf(Integer.parseInt(qualifierUi.substring(1))), // 移除 "Q" 前缀
+                name,
+                abbreviation)
+            .withAnnotation(annotation)
+            .withDateCreated(dateCreated)
+            .withDateRevised(dateRevised)
+            .withDateEstablished(dateEstablished)
+            .withActiveStatus(true) // 默认为有效
+            .withMeshVersion("2025"); // TODO: 从文件名提取
+      }
+
+      log.warn("跳过不完整的 Qualifier 记录: UI={}, name={}, abbr={}", qualifierUi, name, abbreviation);
+      return null;
+    }
+
+    /// 从 ConceptList 的 preferred term 中提取 Abbreviation。
+    ///
+    /// 查找 PreferredConceptYN="Y" 的 Concept，
+    /// 然后在其 TermList 中找到 RecordPreferredTermYN="Y" 的 Term，
+    /// 提取其 Abbreviation 元素。
+    private String extractAbbreviationFromPreferredTerm(XMLStreamReader reader)
+        throws XMLStreamException {
+      String abbreviation = null;
+      boolean inPreferredConcept = false;
+
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT) {
+          String localName = reader.getLocalName();
+          if ("Concept".equals(localName)) {
+            // 检查是否为 preferred concept
+            String preferredAttr = reader.getAttributeValue(null, "PreferredConceptYN");
+            inPreferredConcept = "Y".equals(preferredAttr);
+          } else if ("Term".equals(localName) && inPreferredConcept) {
+            // 检查是否为 record preferred term
+            String recordPreferredAttr = reader.getAttributeValue(null, "RecordPreferredTermYN");
+            if ("Y".equals(recordPreferredAttr)) {
+              // 进入 Term 元素，查找 Abbreviation
+              abbreviation = extractAbbreviationFromTerm(reader);
+              if (abbreviation != null) {
+                return abbreviation; // 找到后立即返回
+              }
+            }
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "ConceptList".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+
+      return abbreviation;
+    }
+
+    /// 从 Term 元素中提取 Abbreviation。
+    private String extractAbbreviationFromTerm(XMLStreamReader reader) throws XMLStreamException {
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT
+            && "Abbreviation".equals(reader.getLocalName())) {
+          return reader.getElementText();
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "Term".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+      return null;
     }
   }
 

@@ -1,33 +1,41 @@
-package com.patra.catalog.domain.model.entity;
+package com.patra.catalog.domain.model.aggregate;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
+import com.patra.common.domain.AggregateRoot;
 import java.io.Serial;
-import java.io.Serializable;
 import lombok.Getter;
 
-/// MeSH 限定词实体(独立主数据,不属于任何聚合根)。
+/// MeSH 限定词聚合根。管理 NLM MeSH 限定词主数据。
 ///
-/// 限定词说明：
+/// **一致性边界**：
 ///
-/// - 限定词用于修饰主题词,提供更精确的检索维度
-///   - 示例："Antibodies/immunology" 表示"抗体的免疫学方面"
-///   - 限定词数量：约 80 个
-///   - 每个限定词可应用于多个主题词
+/// - Qualifier UI 全局唯一
+///   - 限定词名称和缩写不能为空
+///   - 版本号格式必须为4位年份(如"2025")
 ///
-/// 业务规则：
+/// **业务规则**：
 ///
 /// - 限定词是主数据,必须先于主题词导入
 ///   - UI 格式：Q000001-Q999999
 ///   - 每个限定词有标准缩写(如 DI=诊断, GE=遗传学, IM=免疫学)
-///   - active_status 标记限定词是否有效(0=已废弃, 1=有效)
+///   - activeStatus=false 表示限定词已废弃
+///   - 约 80 个限定词，数量稳定
+///   - meshVersion 每年更新一次
+///
+/// **设计说明**：
+///
+/// - 限定词用于修饰主题词,提供更精确的检索维度
+///   - 示例："Antibodies/immunology" 表示"抗体的免疫学方面"
+///   - 每个限定词可应用于多个主题词
+///   - 限定词独立管理，不依赖其他聚合根
 ///
 /// 使用示例：
 ///
 /// ```java
 /// // 创建限定词
-/// MeshQualifier qualifier = MeshQualifier.create(
+/// MeshQualifierAggregate qualifier = MeshQualifierAggregate.create(
 ///     MeshUI.qualifierOf(1),
 ///     "immunology",
 ///     "IM"
@@ -39,14 +47,11 @@ import lombok.Getter;
 /// @author linqibin
 /// @since 0.1.0
 @Getter
-public class MeshQualifier implements Serializable {
+public class MeshQualifierAggregate extends AggregateRoot<Long> {
 
   @Serial private static final long serialVersionUID = 1L;
 
   // ========== 标识符 ==========
-
-  /// 主键ID(由Repository在持久化时分配)
-  private Long id;
 
   /// 限定词唯一标识符(格式：Q000001-Q999999)
   private final MeshUI qualifierUi;
@@ -83,7 +88,9 @@ public class MeshQualifier implements Serializable {
   /// @param qualifierUi 限定词UI
   /// @param name 限定词名称
   /// @param abbreviation 限定词缩写
-  private MeshQualifier(Long id, MeshUI qualifierUi, String name, String abbreviation) {
+  private MeshQualifierAggregate(Long id, MeshUI qualifierUi, String name, String abbreviation) {
+    super(id);
+
     // 必填字段验证
     Assert.notNull(qualifierUi, "限定词UI不能为空");
     Assert.notBlank(name, "限定词名称不能为空");
@@ -99,7 +106,6 @@ public class MeshQualifier implements Serializable {
     Assert.isTrue(abbreviation.length() <= 10, "限定词缩写长度不能超过10个字符：%s", abbreviation);
 
     // 赋值
-    this.id = id;
     this.qualifierUi = qualifierUi;
     this.name = name;
     this.abbreviation = abbreviation;
@@ -107,17 +113,18 @@ public class MeshQualifier implements Serializable {
 
   // ========== 工厂方法 ==========
 
-  /// 创建限定词。
+  /// 创建限定词聚合根。
   ///
   /// @param qualifierUi 限定词UI
   /// @param name 限定词名称
   /// @param abbreviation 限定词缩写
-  /// @return 限定词实体
-  public static MeshQualifier create(MeshUI qualifierUi, String name, String abbreviation) {
-    return new MeshQualifier(null, qualifierUi, name, abbreviation);
+  /// @return 限定词聚合根
+  public static MeshQualifierAggregate create(
+      MeshUI qualifierUi, String name, String abbreviation) {
+    return new MeshQualifierAggregate(null, qualifierUi, name, abbreviation);
   }
 
-  /// 从持久化状态重建实体(由Repository使用)。
+  /// 从持久化状态重建聚合根(由Repository使用)。
   ///
   /// @param id 主键ID
   /// @param qualifierUi 限定词UI
@@ -129,8 +136,8 @@ public class MeshQualifier implements Serializable {
   /// @param dateEstablished 确立日期
   /// @param activeStatus 是否有效
   /// @param meshVersion MeSH版本
-  /// @return 重建的实体
-  public static MeshQualifier restore(
+  /// @return 重建的聚合根
+  public static MeshQualifierAggregate restore(
       Long id,
       MeshUI qualifierUi,
       String name,
@@ -141,7 +148,8 @@ public class MeshQualifier implements Serializable {
       String dateEstablished,
       Boolean activeStatus,
       String meshVersion) {
-    MeshQualifier qualifier = new MeshQualifier(id, qualifierUi, name, abbreviation);
+    MeshQualifierAggregate qualifier =
+        new MeshQualifierAggregate(id, qualifierUi, name, abbreviation);
     qualifier.annotation = annotation;
     qualifier.dateCreated = dateCreated;
     qualifier.dateRevised = dateRevised;
@@ -153,18 +161,11 @@ public class MeshQualifier implements Serializable {
 
   // ========== 业务方法 ==========
 
-  /// 设置ID(由Repository在持久化后回写)。
-  ///
-  /// @param id 主键ID
-  public void assignId(Long id) {
-    this.id = id;
-  }
-
   /// 设置注释说明。
   ///
   /// @param annotation 注释说明
   /// @return 当前对象(支持链式调用)
-  public MeshQualifier withAnnotation(String annotation) {
+  public MeshQualifierAggregate withAnnotation(String annotation) {
     this.annotation = annotation;
     return this;
   }
@@ -173,7 +174,7 @@ public class MeshQualifier implements Serializable {
   ///
   /// @param dateCreated 创建日期(格式：YYYYMMDD)
   /// @return 当前对象(支持链式调用)
-  public MeshQualifier withDateCreated(String dateCreated) {
+  public MeshQualifierAggregate withDateCreated(String dateCreated) {
     this.dateCreated = dateCreated;
     return this;
   }
@@ -182,7 +183,7 @@ public class MeshQualifier implements Serializable {
   ///
   /// @param dateRevised 修订日期(格式：YYYYMMDD)
   /// @return 当前对象(支持链式调用)
-  public MeshQualifier withDateRevised(String dateRevised) {
+  public MeshQualifierAggregate withDateRevised(String dateRevised) {
     this.dateRevised = dateRevised;
     return this;
   }
@@ -191,7 +192,7 @@ public class MeshQualifier implements Serializable {
   ///
   /// @param dateEstablished 确立日期(格式：YYYYMMDD)
   /// @return 当前对象(支持链式调用)
-  public MeshQualifier withDateEstablished(String dateEstablished) {
+  public MeshQualifierAggregate withDateEstablished(String dateEstablished) {
     this.dateEstablished = dateEstablished;
     return this;
   }
@@ -200,7 +201,7 @@ public class MeshQualifier implements Serializable {
   ///
   /// @param activeStatus 是否有效
   /// @return 当前对象(支持链式调用)
-  public MeshQualifier withActiveStatus(Boolean activeStatus) {
+  public MeshQualifierAggregate withActiveStatus(Boolean activeStatus) {
     this.activeStatus = activeStatus;
     return this;
   }
@@ -209,7 +210,7 @@ public class MeshQualifier implements Serializable {
   ///
   /// @param meshVersion MeSH版本年份
   /// @return 当前对象(支持链式调用)
-  public MeshQualifier withMeshVersion(String meshVersion) {
+  public MeshQualifierAggregate withMeshVersion(String meshVersion) {
     if (StrUtil.isNotBlank(meshVersion)) {
       Assert.isTrue(meshVersion.matches("^\\d{4}$"), "MeSH版本必须是4位年份：%s", meshVersion);
     }
@@ -241,7 +242,7 @@ public class MeshQualifier implements Serializable {
   @Override
   public String toString() {
     return String.format(
-        "MeshQualifier[ui=%s, name=%s, abbr=%s, active=%b]",
+        "MeshQualifierAggregate[ui=%s, name=%s, abbr=%s, active=%b]",
         qualifierUi.ui(), name, abbreviation, isActive());
   }
 
@@ -250,7 +251,7 @@ public class MeshQualifier implements Serializable {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof MeshQualifier that)) {
+    if (!(o instanceof MeshQualifierAggregate that)) {
       return false;
     }
     return qualifierUi.equals(that.qualifierUi);
