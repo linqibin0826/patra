@@ -23,10 +23,11 @@ import java.time.Instant;
 ///
 /// @param importId 任务 ID（强类型 ID）
 /// @param descriptorSourceUrl 主题词数据源 URL
+/// @param qualifierSourceUrl 限定词数据源 URL
 /// @param startTime 开始时间
 /// @author linqibin
 /// @since 0.1.0
-public record MeshImportStarted(MeshImportId importId, String descriptorSourceUrl, Instant startTime)
+public record MeshImportStarted(MeshImportId importId, String descriptorSourceUrl, String qualifierSourceUrl, Instant startTime)
     implements DomainEvent {
 
   @Serial private static final long serialVersionUID = 1L;
@@ -45,7 +46,7 @@ public record MeshImportStarted(MeshImportId importId, String descriptorSourceUr
   @Override
   public String toString() {
     return String.format(
-        "MeshImportStarted[importId=%s, descriptorSourceUrl=%s, startTime=%s]",
-        importId, descriptorSourceUrl, startTime);
+        "MeshImportStarted[importId=%s, descriptorSourceUrl=%s, qualifierSourceUrl=%s, startTime=%s]",
+        importId, descriptorSourceUrl, qualifierSourceUrl, startTime);
   }
 }
