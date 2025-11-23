@@ -76,7 +76,7 @@ public class MeshImportOrchestrator {
   private final MeshImportRepository meshImportPort;
   private final XmlParserPort xmlParserPort;
   private final MeshFileDownloadPort meshFileDownloadPort;
-  private final MeshDescriptorRepository meshDescriptorPort;
+  private final MeshDescriptorRepository meshDescriptorRepository;
   private final MeshQualifierRepository meshQualifierRepository;
   private final MeshDataValidator meshDataValidator;
   private final MeshImportConfig meshImportConfig;
@@ -268,6 +268,12 @@ public class MeshImportOrchestrator {
   ///
   /// 包含的表：descriptor、qualifier、tree-number、entry-term、concept
   ///
+  /// **设计说明**：
+  ///
+  /// - 使用 {@link TableProgress#create(String, Integer)} 工厂方法创建初始进度
+  ///   - `expectedCount` 用于进度估算和数据验证
+  ///   - `actualTotalCount` 在导入完成后通过 {@link MeshImportAggregate#markTableAsCompleted} 设置
+  ///
   /// @return 表进度列表
   private List<TableProgress> initializeTableProgressList() {
     List<String> tableNames = MeshDataType.getAllCodes();
@@ -275,16 +281,7 @@ public class MeshImportOrchestrator {
     List<TableProgress> progressList = new ArrayList<>();
     for (String tableName : tableNames) {
       Integer expectedCount = meshImportConfig.getExpectedCountForTable(tableName);
-      progressList.add(
-          TableProgress.builder()
-              .tableName(tableName)
-              .totalCount(expectedCount)
-              .processedCount(0)
-              .failedCount(0)
-              .status(MeshTableImportStatus.NOT_STARTED)
-              .lastBatchNum(0)
-              .lastUpdateTime(Instant.now())
-              .build());
+      progressList.add(TableProgress.create(tableName, expectedCount));
     }
     return progressList;
   }
@@ -293,12 +290,14 @@ public class MeshImportOrchestrator {
   ///
   /// 数据完整性验证策略：
   ///
-  /// - XML 结构解析验证（在 importAllData 中执行）
+  /// - 文件大小阈值检查（下载完成后立即验证）
+  ///   - XML 结构解析验证（在 importAllData 中执行）
   ///   - 数据量阈值检查（在 MeshDataValidator 中执行）
   ///
   /// @param sourceUrl 数据源 URL
   /// @param fileType 文件类型（"Descriptor" 或 "Qualifier"）
   /// @return 下载后的文件
+  /// @throws RuntimeException 如果文件大小超出阈值
   private File downloadXmlFile(String sourceUrl, String fileType) {
     log.info("[{}-Download] 开始下载文件 | URL: {}", fileType, sourceUrl);
 
@@ -311,7 +310,50 @@ public class MeshImportOrchestrator {
         actualSize / (1024 * 1024),
         xmlFile.getAbsolutePath());
 
+    // 验证文件大小（防止下载不完整或数据源异常）
+    validateFileSize(actualSize, fileType);
+
     return xmlFile;
+  }
+
+  /// 验证文件大小是否在预期范围内。
+  ///
+  /// 防止下载不完整或数据源文件异常的情况。
+  ///
+  /// @param actualSize 实际文件大小（字节）
+  /// @param fileType 文件类型（用于日志）
+  /// @throws RuntimeException 如果文件大小超出阈值
+  private void validateFileSize(long actualSize, String fileType) {
+    Long expectedSize = meshImportConfig.getExpectedFileSize();
+    Double threshold = meshImportConfig.getFileSizeDifferenceThreshold();
+
+    if (expectedSize == null || threshold == null) {
+      log.warn("[{}-Download] 未配置文件大小验证参数，跳过验证", fileType);
+      return;
+    }
+
+    // 计算差异百分比
+    double difference = Math.abs(actualSize - expectedSize) * 100.0 / expectedSize;
+
+    if (difference > threshold) {
+      String errorMsg =
+          String.format(
+              "[%s-Download] 文件大小异常 | 预期: %d MB | 实际: %d MB | 差异: %.1f%% (阈值: %.1f%%)",
+              fileType,
+              expectedSize / (1024 * 1024),
+              actualSize / (1024 * 1024),
+              difference,
+              threshold);
+      log.error(errorMsg);
+      throw new RuntimeException(errorMsg);
+    }
+
+    log.info(
+        "[{}-Download] 文件大小验证通过 | 预期: {} MB | 实际: {} MB | 差异: {:.1f}%",
+        fileType,
+        expectedSize / (1024 * 1024),
+        actualSize / (1024 * 1024),
+        difference);
   }
 
   /// 导入所有数据（按依赖顺序）。
@@ -396,8 +438,8 @@ public class MeshImportOrchestrator {
 
       int totalCount = qualifiers.size();
 
-      // 更新进度（标记为完成）
-      aggregate.updateTableProgress(QUALIFIER.getCode(), totalCount, 1);
+      // 标记表为已完成（设置实际总数）
+      aggregate.markTableAsCompleted(QUALIFIER.getCode(), totalCount);
       meshImportPort.save(aggregate);
 
       log.info("[Qualifier-Import] 导入完成 | 实际数量: {} 条", totalCount);
@@ -435,7 +477,7 @@ public class MeshImportOrchestrator {
           try {
             // 5. 批量保存到数据库
             int currentBatchSize = batch.size();
-            meshDescriptorPort.saveBatch(batch);
+            meshDescriptorRepository.saveBatch(batch);
 
             totalProcessed += currentBatchSize;
             double progress = expectedTotal != null ? (totalProcessed * 100.0 / expectedTotal) : 0;
@@ -467,6 +509,10 @@ public class MeshImportOrchestrator {
           }
         }
       }
+
+      // 标记表为已完成（设置实际总数）
+      aggregate.markTableAsCompleted(DESCRIPTOR.getCode(), totalProcessed);
+      meshImportPort.save(aggregate);
 
       log.info("[Descriptor-Import] 导入完成 | 总数量: {} 条 | 批次数: {}", totalProcessed, batchNum - 1);
       return totalProcessed;
@@ -503,7 +549,7 @@ public class MeshImportOrchestrator {
           try {
             // 5. 批量保存到数据库
             int currentBatchSize = batch.size();
-            meshDescriptorPort.saveTreeNumbersBatch(batch);
+            meshDescriptorRepository.saveTreeNumbersBatch(batch);
 
             totalProcessed += currentBatchSize;
             double progress = expectedTotal != null ? (totalProcessed * 100.0 / expectedTotal) : 0;
@@ -535,6 +581,10 @@ public class MeshImportOrchestrator {
           }
         }
       }
+
+      // 标记表为已完成（设置实际总数）
+      aggregate.markTableAsCompleted(TREE_NUMBER.getCode(), totalProcessed);
+      meshImportPort.save(aggregate);
 
       log.info("[TreeNumber-Import] 导入完成 | 总数量: {} 条 | 批次数: {}", totalProcessed, batchNum - 1);
       return totalProcessed;
@@ -571,7 +621,7 @@ public class MeshImportOrchestrator {
           try {
             // 5. 批量保存到数据库
             int currentBatchSize = batch.size();
-            meshDescriptorPort.saveEntryTermsBatch(batch);
+            meshDescriptorRepository.saveEntryTermsBatch(batch);
 
             totalProcessed += currentBatchSize;
             double progress = expectedTotal != null ? (totalProcessed * 100.0 / expectedTotal) : 0;
@@ -603,6 +653,10 @@ public class MeshImportOrchestrator {
           }
         }
       }
+
+      // 标记表为已完成（设置实际总数）
+      aggregate.markTableAsCompleted(ENTRY_TERM.getCode(), totalProcessed);
+      meshImportPort.save(aggregate);
 
       log.info("[EntryTerm-Import] 导入完成 | 总数量: {} 条 | 批次数: {}", totalProcessed, batchNum - 1);
       return totalProcessed;
@@ -639,7 +693,7 @@ public class MeshImportOrchestrator {
           try {
             // 5. 批量保存到数据库
             int currentBatchSize = batch.size();
-            meshDescriptorPort.saveConceptsBatch(batch);
+            meshDescriptorRepository.saveConceptsBatch(batch);
 
             totalProcessed += currentBatchSize;
             double progress = expectedTotal != null ? (totalProcessed * 100.0 / expectedTotal) : 0;
@@ -671,6 +725,10 @@ public class MeshImportOrchestrator {
           }
         }
       }
+
+      // 标记表为已完成（设置实际总数）
+      aggregate.markTableAsCompleted(CONCEPT.getCode(), totalProcessed);
+      meshImportPort.save(aggregate);
 
       log.info("[Concept-Import] 导入完成 | 总数量: {} 条 | 批次数: {}", totalProcessed, batchNum - 1);
       return totalProcessed;

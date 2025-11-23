@@ -95,6 +95,8 @@ public interface MeshImportConverter {
   ///
   /// @param progressDO ProgressDO
   /// @return TableProgress
+  @Mapping(target = "expectedCount", source = "totalCount")
+  @Mapping(target = "actualTotalCount", ignore = true)
   @Mapping(target = "status", expression = "java(toTableStatus(progressDO.getStatus()))")
   @Mapping(target = "lastUpdateTime", expression = "java(progressDO.getUpdatedAt())")
   TableProgress toTableProgress(MeshTableProgressDO progressDO);
@@ -107,6 +109,7 @@ public interface MeshImportConverter {
   /// @return ProgressDO
   @Mapping(target = "id", ignore = true)
   @Mapping(target = "importId", ignore = true)
+  @Mapping(target = "totalCount", source = "expectedCount")
   @Mapping(target = "status", expression = "java(fromTableStatus(progress.getStatus()))")
   @Mapping(target = "recordRemarks", ignore = true)
   @Mapping(target = "createdAt", ignore = true)

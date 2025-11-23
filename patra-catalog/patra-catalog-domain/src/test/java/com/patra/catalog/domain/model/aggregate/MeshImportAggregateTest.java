@@ -607,51 +607,11 @@ class MeshImportAggregateTest {
   /// 创建初始表进度列表（5张表：descriptor, qualifier, treeNumber, entryTerm, concept）
   private static List<TableProgress> createInitialTableProgressList() {
     List<TableProgress> progressList = new ArrayList<>();
-    progressList.add(
-        TableProgress.builder()
-            .tableName("descriptor")
-            .totalCount(35000)
-            .processedCount(0)
-            .failedCount(0)
-            .status(MeshTableImportStatus.NOT_STARTED)
-            .lastBatchNum(0)
-            .build());
-    progressList.add(
-        TableProgress.builder()
-            .tableName("qualifier")
-            .totalCount(100)
-            .processedCount(0)
-            .failedCount(0)
-            .status(MeshTableImportStatus.NOT_STARTED)
-            .lastBatchNum(0)
-            .build());
-    progressList.add(
-        TableProgress.builder()
-            .tableName("treeNumber")
-            .totalCount(80000)
-            .processedCount(0)
-            .failedCount(0)
-            .status(MeshTableImportStatus.NOT_STARTED)
-            .lastBatchNum(0)
-            .build());
-    progressList.add(
-        TableProgress.builder()
-            .tableName("entryTerm")
-            .totalCount(250000)
-            .processedCount(0)
-            .failedCount(0)
-            .status(MeshTableImportStatus.NOT_STARTED)
-            .lastBatchNum(0)
-            .build());
-    progressList.add(
-        TableProgress.builder()
-            .tableName("concept")
-            .totalCount(180000)
-            .processedCount(0)
-            .failedCount(0)
-            .status(MeshTableImportStatus.NOT_STARTED)
-            .lastBatchNum(0)
-            .build());
+    progressList.add(TableProgress.create("descriptor", 35000));
+    progressList.add(TableProgress.create("qualifier", 100));
+    progressList.add(TableProgress.create("treeNumber", 80000));
+    progressList.add(TableProgress.create("entryTerm", 250000));
+    progressList.add(TableProgress.create("concept", 180000));
     return progressList;
   }
 
@@ -711,11 +671,12 @@ class MeshImportAggregateTest {
     List<TableProgress> progressListCopy = new ArrayList<>(aggregate.getTableProgressList());
 
     for (TableProgress progress : progressListCopy) {
-      // 使用 updateTableProgress 方法更新进度，它会自动计算状态为 COMPLETED
-      aggregate.updateTableProgress(
+      // 使用 markTableAsCompleted 方法显式标记为完成
+      // 实际总数设置为预期值（模拟无差异情况）
+      aggregate.markTableAsCompleted(
           progress.getTableName(),
-          progress.getTotalCount(), // processedCount = totalCount（完成）
-          progress.getTotalCount() / 1000); // lastBatchNum
+          progress.getExpectedCount() // actualCount = expectedCount（无差异）
+      );
     }
   }
 }
