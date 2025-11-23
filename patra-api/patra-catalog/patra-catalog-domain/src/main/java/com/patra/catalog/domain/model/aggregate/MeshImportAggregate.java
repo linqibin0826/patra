@@ -154,7 +154,9 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
     this.status = MeshImportTaskStatus.PROCESSING;
     this.startTime = Instant.now();
     // 发布领域事件
-    addDomainEvent(new MeshImportStarted(this.getId(), this.descriptorSourceUrl, this.qualifierSourceUrl, this.startTime));
+    addDomainEvent(
+        new MeshImportStarted(
+            this.getId(), this.descriptorSourceUrl, this.qualifierSourceUrl, this.startTime));
   }
 
   /// 更新指定表的进度。

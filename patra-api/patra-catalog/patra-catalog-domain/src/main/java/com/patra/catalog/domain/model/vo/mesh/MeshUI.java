@@ -48,7 +48,8 @@ import java.io.Serializable;
 /// @author linqibin
 /// @since 0.1.0
 /// @see <a href="https://www.nlm.nih.gov/mesh/xml_data_elements.html">MeSH XML Data Elements</a>
-/// @see <a href="https://www.nlm.nih.gov/pubs/techbull/ma13/ma13_mesh_ui_expand.html">MeSH UI Length Expansion</a>
+/// @see <a href="https://www.nlm.nih.gov/pubs/techbull/ma13/ma13_mesh_ui_expand.html">MeSH UI
+// Length Expansion</a>
 public record MeshUI(String ui) implements Serializable {
 
   @Serial private static final long serialVersionUID = 1L;

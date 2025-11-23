@@ -193,10 +193,7 @@ public class RelayLogCoordinator {
       long durationMs = Duration.between(startTime, endTime).toMillis();
 
       if (durationMs < 0) {
-        log.warn(
-            "检测到时间倒流: startTime={}, endTime={}, 将持续时间设为 0",
-            startTime,
-            endTime);
+        log.warn("检测到时间倒流: startTime={}, endTime={}, 将持续时间设为 0", startTime, endTime);
         return 0;
       }
 

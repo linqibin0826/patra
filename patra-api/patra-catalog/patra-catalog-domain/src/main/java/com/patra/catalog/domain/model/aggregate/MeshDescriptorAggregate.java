@@ -7,7 +7,6 @@ import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
 import com.patra.catalog.domain.model.enums.DescriptorClass;
 import com.patra.catalog.domain.model.vo.mesh.AllowableQualifier;
-import com.patra.catalog.domain.model.vo.mesh.ConceptRelation;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
 import com.patra.catalog.domain.model.vo.mesh.SeeRelatedDescriptor;
@@ -455,8 +454,7 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
 
     // 检查是否已存在相同的限定词
     boolean exists =
-        allowableQualifiers.stream()
-            .anyMatch(q -> q.qualifierUi().equals(qualifier.qualifierUi()));
+        allowableQualifiers.stream().anyMatch(q -> q.qualifierUi().equals(qualifier.qualifierUi()));
 
     if (!exists) {
       allowableQualifiers.add(qualifier);
@@ -581,7 +579,8 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
   ///
   /// @param descriptorList 相关主题词列表
   /// @return 当前聚合根(支持链式调用)
-  public MeshDescriptorAggregate addSeeRelatedDescriptors(List<SeeRelatedDescriptor> descriptorList) {
+  public MeshDescriptorAggregate addSeeRelatedDescriptors(
+      List<SeeRelatedDescriptor> descriptorList) {
     if (descriptorList != null && !descriptorList.isEmpty()) {
       descriptorList.forEach(this::addSeeRelatedDescriptor);
     }

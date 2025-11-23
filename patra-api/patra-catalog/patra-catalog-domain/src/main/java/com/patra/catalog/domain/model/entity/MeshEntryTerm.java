@@ -161,7 +161,15 @@ public class MeshEntryTerm implements Serializable {
       boolean isConceptPreferred,
       boolean isPermutedTerm) {
     return new MeshEntryTerm(
-        null, null, termUi, term, lexicalTag, isPrintFlag, isRecordPreferred, isPermutedTerm, isConceptPreferred);
+        null,
+        null,
+        termUi,
+        term,
+        lexicalTag,
+        isPrintFlag,
+        isRecordPreferred,
+        isPermutedTerm,
+        isConceptPreferred);
   }
 
   /// 创建入口术语(指定主题词ID)。
@@ -185,7 +193,15 @@ public class MeshEntryTerm implements Serializable {
       boolean isConceptPreferred,
       boolean isPermutedTerm) {
     return new MeshEntryTerm(
-        null, descriptorId, termUi, term, lexicalTag, isPrintFlag, isRecordPreferred, isPermutedTerm, isConceptPreferred);
+        null,
+        descriptorId,
+        termUi,
+        term,
+        lexicalTag,
+        isPrintFlag,
+        isRecordPreferred,
+        isPermutedTerm,
+        isConceptPreferred);
   }
 
   /// 从持久化状态重建实体(由Repository使用)。
@@ -211,7 +227,15 @@ public class MeshEntryTerm implements Serializable {
       boolean isPermutedTerm,
       boolean isConceptPreferred) {
     return new MeshEntryTerm(
-        id, descriptorId, termUi, term, lexicalTag, isPrintFlag, isRecordPreferred, isPermutedTerm, isConceptPreferred);
+        id,
+        descriptorId,
+        termUi,
+        term,
+        lexicalTag,
+        isPrintFlag,
+        isRecordPreferred,
+        isPermutedTerm,
+        isConceptPreferred);
   }
 
   // ========== 业务方法 ==========

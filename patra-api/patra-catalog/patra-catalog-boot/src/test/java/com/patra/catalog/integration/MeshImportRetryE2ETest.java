@@ -172,8 +172,7 @@ class MeshImportRetryE2ETest {
     assertThat(clearResult.get("message")).asString().contains("进度已清除");
 
     // And: 验证可以重新开始导入
-    MeshImportResultDTO restartResult =
-        meshImportOrchestrator.startImport();
+    MeshImportResultDTO restartResult = meshImportOrchestrator.startImport();
 
     assertThat(restartResult).isNotNull();
     assertThat(restartResult.getStatus()).isEqualTo("PROCESSING");

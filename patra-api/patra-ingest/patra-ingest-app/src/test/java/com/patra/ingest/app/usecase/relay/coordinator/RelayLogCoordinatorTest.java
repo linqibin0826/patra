@@ -205,7 +205,8 @@ class RelayLogCoordinatorTest {
       assertThat(savedLogs).hasSize(3);
 
       // 验证各日志的状态
-      assertThat(savedLogs).extracting(OutboxRelayLog::getRelayStatus)
+      assertThat(savedLogs)
+          .extracting(OutboxRelayLog::getRelayStatus)
           .containsExactly(RelayStatus.PUBLISHED, RelayStatus.DEFERRED, RelayStatus.FAILED);
 
       // 验证 PUBLISHED 日志
@@ -292,7 +293,8 @@ class RelayLogCoordinatorTest {
       coordinator.persistBatch(accumulator);
       verify(logRepository).saveBatch(logListCaptor.capture());
       assertThat(logListCaptor.getValue()).hasSize(3);
-      assertThat(logListCaptor.getValue()).allMatch(log -> log.getRelayStatus() == RelayStatus.PUBLISHED);
+      assertThat(logListCaptor.getValue())
+          .allMatch(log -> log.getRelayStatus() == RelayStatus.PUBLISHED);
     }
   }
 
@@ -467,7 +469,8 @@ class RelayLogCoordinatorTest {
       coordinator.persistBatch(accumulator);
       verify(logRepository).saveBatch(logListCaptor.capture());
       assertThat(logListCaptor.getValue()).hasSize(5);
-      assertThat(logListCaptor.getValue()).allMatch(log -> log.getRelayStatus() == RelayStatus.LEASE_MISSED);
+      assertThat(logListCaptor.getValue())
+          .allMatch(log -> log.getRelayStatus() == RelayStatus.LEASE_MISSED);
     }
   }
 

@@ -375,8 +375,7 @@ public class StaxXmlParserImpl implements XmlParserPort {
     }
 
     @Override
-    public boolean tryAdvance(
-        java.util.function.Consumer<? super MeshQualifierAggregate> action) {
+    public boolean tryAdvance(java.util.function.Consumer<? super MeshQualifierAggregate> action) {
       if (!hasNext) {
         return false;
       }
@@ -706,7 +705,13 @@ public class StaxXmlParserImpl implements XmlParserPort {
       MeshUI meshTermUI = termUI != null ? MeshUI.of(termUI) : null;
       MeshEntryTerm entryTerm =
           MeshEntryTerm.create(
-              meshTermUI, term, lexicalTag, isRecordPreferred, isPrintFlag, isConceptPreferred, isPermutedTerm);
+              meshTermUI,
+              term,
+              lexicalTag,
+              isRecordPreferred,
+              isPrintFlag,
+              isConceptPreferred,
+              isPermutedTerm);
 
       // 设置可选字段
       if (dateCreated != null) {
@@ -723,7 +728,8 @@ public class StaxXmlParserImpl implements XmlParserPort {
     }
 
     /// 解析 ThesaurusIDlist。
-    private static List<String> parseThesaurusIdList(XMLStreamReader reader) throws XMLStreamException {
+    private static List<String> parseThesaurusIdList(XMLStreamReader reader)
+        throws XMLStreamException {
       List<String> thesaurusIds = new ArrayList<>();
       while (reader.hasNext()) {
         int event = reader.next();
@@ -924,7 +930,8 @@ public class StaxXmlParserImpl implements XmlParserPort {
     }
 
     /// 解析单个 ConceptRelation。
-    private static ConceptRelation parseConceptRelation(XMLStreamReader reader) throws XMLStreamException {
+    private static ConceptRelation parseConceptRelation(XMLStreamReader reader)
+        throws XMLStreamException {
       String relationName = null;
       String concept1UI = null;
       String concept2UI = null;
@@ -1019,7 +1026,8 @@ public class StaxXmlParserImpl implements XmlParserPort {
     // 组装日期字符串(YYYYMMDD 格式)
     if (year != null && month != null && day != null) {
       return String.format(
-          "%s%s%s", year, month.length() == 1 ? "0" + month : month, day.length() == 1 ? "0" + day : day);
+          "%s%s%s",
+          year, month.length() == 1 ? "0" + month : month, day.length() == 1 ? "0" + day : day);
     }
     return null;
   }
@@ -1126,8 +1134,8 @@ public class StaxXmlParserImpl implements XmlParserPort {
   }
 
   /// 解析 PharmacologicalActionList。
-  private static List<PharmacologicalAction> parsePharmacologicalActionList(
-      XMLStreamReader reader) throws XMLStreamException {
+  private static List<PharmacologicalAction> parsePharmacologicalActionList(XMLStreamReader reader)
+      throws XMLStreamException {
     List<PharmacologicalAction> actions = new ArrayList<>();
     while (reader.hasNext()) {
       int event = reader.next();

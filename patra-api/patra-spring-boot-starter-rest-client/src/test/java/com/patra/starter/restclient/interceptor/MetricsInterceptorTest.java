@@ -181,10 +181,12 @@ class MetricsInterceptorTest {
   void should_record_request_duration() throws IOException {
     // given
     var interceptor = new MetricsInterceptor(meterRegistry);
-    when(execution.execute(request, new byte[0])).thenAnswer(invocation -> {
-      Thread.sleep(100); // 模拟耗时操作
-      return response;
-    });
+    when(execution.execute(request, new byte[0]))
+        .thenAnswer(
+            invocation -> {
+              Thread.sleep(100); // 模拟耗时操作
+              return response;
+            });
     when(response.getStatusCode()).thenReturn(HttpStatus.OK);
 
     // when
@@ -203,10 +205,12 @@ class MetricsInterceptorTest {
   void should_record_request_duration_even_on_exception() throws IOException {
     // given
     var interceptor = new MetricsInterceptor(meterRegistry);
-    when(execution.execute(request, new byte[0])).thenAnswer(invocation -> {
-      Thread.sleep(50);
-      throw new IOException("Connection failed");
-    });
+    when(execution.execute(request, new byte[0]))
+        .thenAnswer(
+            invocation -> {
+              Thread.sleep(50);
+              throw new IOException("Connection failed");
+            });
 
     // when & then
     assertThatThrownBy(() -> interceptor.intercept(request, new byte[0], execution))
@@ -298,8 +302,7 @@ class MetricsInterceptorTest {
     // then
     Counter successCounter = meterRegistry.find("rest_client_requests_success_total").counter();
     assertThat(successCounter).isNotNull();
-    assertThat(successCounter.getId().getDescription())
-        .isEqualTo("Total successful HTTP requests");
+    assertThat(successCounter.getId().getDescription()).isEqualTo("Total successful HTTP requests");
 
     Counter failureCounter = meterRegistry.find("rest_client_requests_failure_total").counter();
     assertThat(failureCounter).isNotNull();
@@ -359,18 +362,22 @@ class MetricsInterceptorTest {
     var interceptor = new MetricsInterceptor(meterRegistry);
 
     // 第一个请求（快）
-    when(execution.execute(request, new byte[0])).thenAnswer(invocation -> {
-      Thread.sleep(10);
-      return response;
-    });
+    when(execution.execute(request, new byte[0]))
+        .thenAnswer(
+            invocation -> {
+              Thread.sleep(10);
+              return response;
+            });
     when(response.getStatusCode()).thenReturn(HttpStatus.OK);
     interceptor.intercept(request, new byte[0], execution);
 
     // 第二个请求（慢）
-    when(execution.execute(request, new byte[0])).thenAnswer(invocation -> {
-      Thread.sleep(100);
-      return response;
-    });
+    when(execution.execute(request, new byte[0]))
+        .thenAnswer(
+            invocation -> {
+              Thread.sleep(100);
+              return response;
+            });
     interceptor.intercept(request, new byte[0], execution);
 
     // then

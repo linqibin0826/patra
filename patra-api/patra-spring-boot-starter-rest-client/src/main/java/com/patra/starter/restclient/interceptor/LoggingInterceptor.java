@@ -50,8 +50,7 @@ public class LoggingInterceptor implements ClientHttpRequestInterceptor {
 
   @Override
   public ClientHttpResponse intercept(
-      HttpRequest request, byte[] body, ClientHttpRequestExecution execution)
-      throws IOException {
+      HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
 
     logRequest(request, body);
     long startTime = System.currentTimeMillis();

@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.*;
 import com.patra.catalog.domain.port.MeshFileDownloadPort;
 import java.io.File;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -53,10 +52,7 @@ import org.springframework.web.client.RestClient;
 /// @since 0.1.0
 @Slf4j
 @ExtendWith(SpringExtension.class)
-@Import({
-  RestClientMeshFileDownloadImpl.class,
-  MeshFileDownloadManualTest.TestConfig.class
-})
+@Import({RestClientMeshFileDownloadImpl.class, MeshFileDownloadManualTest.TestConfig.class})
 @Tag("manual") // CI/CD 中排除此测试
 @DisplayName("MeSH 文件下载手动验证测试")
 class MeshFileDownloadManualTest {
@@ -97,21 +93,14 @@ class MeshFileDownloadManualTest {
     File downloadedFile = meshFileDownload.download(SOURCE_URL);
 
     // Then: 验证文件存在
-    assertThat(downloadedFile)
-        .as("下载的文件应该存在")
-        .exists()
-        .isFile();
+    assertThat(downloadedFile).as("下载的文件应该存在").exists().isFile();
 
     // Then: 验证文件大小（MeSH XML 文件至少 100MB）
     long fileSizeMB = downloadedFile.length() / (1024 * 1024);
-    assertThat(downloadedFile.length())
-        .as("下载的文件大小应该至少 100MB")
-        .isGreaterThan(100_000_000);
+    assertThat(downloadedFile.length()).as("下载的文件大小应该至少 100MB").isGreaterThan(100_000_000);
 
     // Then: 验证文件路径
-    assertThat(downloadedFile.getAbsolutePath())
-        .as("文件应该保存在临时目录")
-        .contains("mesh-import");
+    assertThat(downloadedFile.getAbsolutePath()).as("文件应该保存在临时目录").contains("mesh-import");
 
     // 记录成功信息
     log.info("========================================");
@@ -139,15 +128,10 @@ class MeshFileDownloadManualTest {
     RestClient restClient = RestClient.create();
 
     try {
-      var response = restClient.head()
-          .uri(SOURCE_URL)
-          .retrieve()
-          .toBodilessEntity();
+      var response = restClient.head().uri(SOURCE_URL).retrieve().toBodilessEntity();
 
       // Then: 验证响应状态码
-      assertThat(response.getStatusCode().is2xxSuccessful())
-          .as("NLM 服务器应该返回成功状态码")
-          .isTrue();
+      assertThat(response.getStatusCode().is2xxSuccessful()).as("NLM 服务器应该返回成功状态码").isTrue();
 
       log.info("✅ NLM 服务器可访问，文件存在");
       log.info("HTTP 状态码: {}", response.getStatusCode());
@@ -171,13 +155,9 @@ class MeshFileDownloadManualTest {
     File downloadedFile = meshFileDownload.download(testUrl);
 
     // Then: 验证文件存在
-    assertThat(downloadedFile)
-        .exists()
-        .isFile();
+    assertThat(downloadedFile).exists().isFile();
 
-    assertThat(downloadedFile.length())
-        .as("文件大小应该为 1024 字节")
-        .isEqualTo(1024);
+    assertThat(downloadedFile.length()).as("文件大小应该为 1024 字节").isEqualTo(1024);
 
     log.info("✅ 下载功能正常");
     log.info("文件路径: {}", downloadedFile.getAbsolutePath());
