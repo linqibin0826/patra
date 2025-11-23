@@ -4,18 +4,13 @@ import static com.patra.catalog.domain.model.enums.MeshDataType.DESCRIPTOR;
 
 import com.patra.catalog.app.config.MeshImportConfig;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
-import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;
 import com.patra.catalog.domain.model.enums.MeshDataType;
 import com.patra.catalog.domain.port.MeshDescriptorRepository;
 import com.patra.catalog.domain.port.MeshImportRepository;
 import com.patra.catalog.domain.port.XmlParserPort;
-import java.io.File;
 import java.io.FileInputStream;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -25,6 +20,7 @@ import org.springframework.stereotype.Component;
 ///
 /// - 导入 Descriptor（主题词）数据
 ///   - 批次流式导入（数据量大，约 35000 条）
+///   - 每批次独立事务（REQUIRES_NEW）
 ///   - 更新任务聚合根的表进度
 ///
 /// **导入方式**：
@@ -33,84 +29,44 @@ import org.springframework.stereotype.Component;
 ///   - 分批保存到数据库（避免内存溢出）
 ///   - 每批次更新进度（支持断点续传）
 ///
+/// **事务管理**：
+///
+/// - 继承 `AbstractBatchImporter`，自动获得批次级别的独立事务
+///   - 每批次 `REQUIRES_NEW` 传播级别
+///   - 失败不影响已完成批次
+///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
 @Component
-@RequiredArgsConstructor
-public class DescriptorImporter implements MeshDataImporter {
+public class DescriptorImporter extends AbstractBatchImporter<MeshDescriptorAggregate> {
 
   private final XmlParserPort xmlParserPort;
   private final MeshDescriptorRepository meshDescriptorRepository;
-  private final MeshImportRepository meshImportRepository;
-  private final MeshImportConfig meshImportConfig;
+
+  public DescriptorImporter(
+      XmlParserPort xmlParserPort,
+      MeshDescriptorRepository meshDescriptorRepository,
+      MeshImportRepository meshImportRepository,
+      MeshImportConfig meshImportConfig) {
+    super(meshImportRepository, meshImportConfig);
+    this.xmlParserPort = xmlParserPort;
+    this.meshDescriptorRepository = meshDescriptorRepository;
+  }
 
   @Override
-  public int importData(File xmlFile, MeshImportAggregate aggregate) throws Exception {
-    // 1. 获取批次大小配置和预期总数
-    int batchSize = meshImportConfig.getBatchSizeForTable(DESCRIPTOR.getCode());
-    Integer expectedTotal = meshImportConfig.getExpectedCountForTable(DESCRIPTOR.getCode());
-    log.info("[Descriptor-Import] 开始导入 | 预期数量: {} 条 | 批次大小: {}", expectedTotal, batchSize);
+  protected Stream<MeshDescriptorAggregate> parseStream(FileInputStream fis) throws Exception {
+    return xmlParserPort.parseDescriptors(fis);
+  }
 
-    int totalProcessed = 0;
-    int batchNum = 1;
+  @Override
+  protected void saveBatch(List<MeshDescriptorAggregate> batch) {
+    meshDescriptorRepository.saveBatch(batch);
+  }
 
-    try (FileInputStream fis = new FileInputStream(xmlFile);
-        Stream<MeshDescriptorAggregate> stream = xmlParserPort.parseDescriptors(fis)) {
-
-      // 2. 准备批次容器
-      List<MeshDescriptorAggregate> batch = new ArrayList<>(batchSize);
-
-      // 3. 流式消费
-      Iterator<MeshDescriptorAggregate> iterator = stream.iterator();
-      while (iterator.hasNext()) {
-        batch.add(iterator.next());
-
-        // 4. 达到批次大小或已是最后一条
-        if (batch.size() >= batchSize || !iterator.hasNext()) {
-          try {
-            // 5. 批量保存到数据库
-            int currentBatchSize = batch.size();
-            meshDescriptorRepository.saveBatch(batch);
-
-            totalProcessed += currentBatchSize;
-            double progress = expectedTotal != null ? (totalProcessed * 100.0 / expectedTotal) : 0;
-            String progressStr = String.format("%.1f%%", progress);
-
-            // 6. 更新进度
-            aggregate.updateTableProgress(DESCRIPTOR.getCode(), totalProcessed, batchNum);
-            meshImportRepository.save(aggregate);
-
-            log.info(
-                "[Descriptor-Import] 批次 {} 保存成功 | 本批: {} 条 | 累计: {}/{} 条 ({})",
-                batchNum,
-                currentBatchSize,
-                totalProcessed,
-                expectedTotal != null ? expectedTotal : "?",
-                progressStr);
-
-            batchNum++;
-            batch.clear();
-
-          } catch (Exception e) {
-            log.error(
-                "[Descriptor-Import] 批次 {} 保存失败 | 本批记录数: {} | 错误: {}",
-                batchNum,
-                batch.size(),
-                e.getMessage(),
-                e);
-            throw new RuntimeException("批次保存失败：" + e.getMessage(), e);
-          }
-        }
-      }
-
-      // 标记表为已完成（设置实际总数）
-      aggregate.markTableAsCompleted(DESCRIPTOR.getCode(), totalProcessed);
-      meshImportRepository.save(aggregate);
-
-      log.info("[Descriptor-Import] 导入完成 | 总数量: {} 条 | 批次数: {}", totalProcessed, batchNum - 1);
-      return totalProcessed;
-    }
+  @Override
+  protected String getLogTag() {
+    return "[Descriptor-Import]";
   }
 
   @Override

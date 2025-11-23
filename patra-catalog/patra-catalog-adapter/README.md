@@ -45,7 +45,7 @@ patra-catalog-adapter/
 | POST | `/api/v1/mesh/import/start` | 开始导入任务 | ✅ 已实现 |
 | POST | `/api/v1/mesh/import/retry/{taskId}` | 重试失败任务 | ✅ 已实现 |
 | POST | `/api/v1/mesh/import/clear` | 清除数据重新导入 | ✅ 已实现 |
-| GET | `/api/v1/mesh/import/progress/{taskId}` | 查询导入进度 | 🚧 规划中 |
+| GET | `/api/v1/mesh/import/progress/{taskId}` | 查询导入进度（User Story 2） | ✅ 已实现 |
 | GET | `/api/v1/mesh/import/tasks` | 查询所有导入任务 | 🚧 规划中 |
 
 ### 2. 定时任务
@@ -191,6 +191,71 @@ public ResponseEntity<Void> clearAndRestart() {
     return ResponseEntity.ok().build();
 }
 ```
+
+**文件**：`rest/MeshImportController.java`
+
+#### GET /api/v1/mesh/import/progress/{taskId}
+
+查询导入进度（User Story 2 - 实时监控导入进度）。
+
+**请求**：
+```http
+GET /api/v1/mesh/import/progress/123456789
+```
+
+**响应**：
+```json
+{
+  "taskId": "123456789",
+  "taskName": "2025年MeSH数据导入",
+  "status": "PROCESSING",
+  "totalRecords": 540000,
+  "processedRecords": 245000,
+  "overallProgress": 45.37,
+  "processSpeed": 125.5,
+  "estimatedRemainingSeconds": 2350,
+  "startTime": "2025-11-22T10:00:00Z",
+  "endTime": null,
+  "elapsedSeconds": 1952,
+  "tableProgress": [
+    {
+      "tableName": "qualifier",
+      "displayName": "限定词",
+      "totalCount": 80,
+      "processedCount": 80,
+      "failedCount": 0,
+      "progressPercentage": 100.0,
+      "status": "COMPLETED"
+    },
+    {
+      "tableName": "descriptor",
+      "displayName": "主题词",
+      "totalCount": 30000,
+      "processedCount": 30000,
+      "failedCount": 0,
+      "progressPercentage": 100.0,
+      "status": "COMPLETED"
+    },
+    {
+      "tableName": "tree-number",
+      "displayName": "树形编号",
+      "totalCount": 80000,
+      "processedCount": 55000,
+      "failedCount": 0,
+      "progressPercentage": 68.75,
+      "status": "IN_PROGRESS"
+    }
+  ],
+  "failedBatches": []
+}
+```
+
+**特性**：
+- 实时进度百分比（基于 expectedCount 估算，完成后使用 actualTotalCount）
+- 处理速度计算（记录/秒）
+- 预计剩余时间估算
+- 各表详细进度
+- 失败批次追踪（用于错误分析）
 
 **文件**：`rest/MeshImportController.java`
 
@@ -485,6 +550,6 @@ public class StartImportRequest {
 
 ---
 
-**最后更新**：2025-11-22
+**最后更新**：2025-11-23
 **Maven 坐标**：`com.patra:patra-catalog-adapter:0.2.0-SNAPSHOT`
 **作者**：Patra Team

@@ -20,7 +20,7 @@
 patra-catalog-api/
 └─ src/main/java/.../api/
    ├─ dto/                         # 数据传输对象
-   │  └─ MeshProgressDTO.java                 # MeSH 导入进度 DTO（规划中）
+   │  └─ MeshProgressDTO.java                 # MeSH 导入进度 DTO
    ├─ endpoint/                    # Feign Client 接口（规划中）
    │  └─ CatalogEndpoint.java                 # 目录管理接口
    └─ error/                       # 错误码定义（规划中）
@@ -67,44 +67,80 @@ patra-catalog-api/
 
 ### 1. MeshProgressDTO (MeSH 导入进度 DTO)
 
-**职责**：传输 MeSH 导入进度信息。
+**职责**：传输 MeSH 导入进度信息，用于实时监控导入任务（User Story 2）。
 
-**字段**：
+**设计原则**：
+- **API 契约优先**：严格遵循 OpenAPI 规范
+- **不可变对象**：使用 Record 类型保证线程安全
+- **跨模块共享**：放在 api 模块，供其他服务调用
+- **扁平化设计**：避免过度嵌套，便于前端使用
+
+**核心字段**：
 ```java
-@Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class MeshProgressDTO {
+public record MeshProgressDTO(
+    // ========== 任务基本信息 ==========
+    String taskId,              // 任务 ID
+    String taskName,            // 任务名称
+    String status,              // 任务状态（PENDING/PROCESSING/SUCCESS/FAILED/CANCELLED）
 
-    /// 任务 ID
-    @NotNull
-    private Long taskId;
+    // ========== 整体进度 ==========
+    Integer totalRecords,       // 总记录数
+    Integer processedRecords,   // 已处理记录数
+    Double overallProgress,     // 整体进度百分比（0.0 ~ 100.0）
+    Double processSpeed,        // 处理速度（记录/秒），如果任务未开始返回 null
+    Long estimatedRemainingSeconds,  // 预计剩余时间（秒），如果无法估算返回 null
 
-    /// 任务名称
-    @NotBlank
-    private String taskName;
+    // ========== 时间信息 ==========
+    Instant startTime,          // 开始时间
+    Instant endTime,            // 结束时间（任务完成或失败时）
+    Long elapsedSeconds,        // 已用时间（秒）
 
-    /// 任务状态
-    @NotNull
-    private String status;
+    // ========== 各表进度 ==========
+    List<TableProgressDTO> tableProgress,  // 各表进度列表
 
-    /// 整体进度百分比（0-100）
-    @Min(0)
-    @Max(100)
-    private Double overallProgress;
+    // ========== 失败批次 ==========
+    List<FailedBatchDTO> failedBatches     // 失败批次列表（用于错误追踪和重试）
+) {
 
-    /// 各表导入进度
-    private List<TableProgressDTO> tableProgressList;
+    // 嵌套对象：表进度 DTO
+    @Builder
+    public record TableProgressDTO(
+        String tableName,       // 表名（如 "descriptor"）
+        String displayName,     // 显示名称（如 "主题词"）
+        Integer totalCount,     // 总记录数（预期值或实际值）
+        Integer processedCount, // 已处理数
+        Integer failedCount,    // 失败数
+        Double progressPercentage,  // 进度百分比（0.0 ~ 100.0）
+        String status           // 表状态（NOT_STARTED/IN_PROGRESS/COMPLETED/FAILED）
+    ) {}
 
-    /// 开始时间
-    private Instant startedAt;
+    // 嵌套对象：失败批次 DTO
+    @Builder
+    public record FailedBatchDTO(
+        Long batchId,           // 批次 ID
+        String tableName,       // 表名
+        Integer batchNum,       // 批次序号（从 1 开始）
+        String failureReason,   // 失败原因
+        Instant failureTime,    // 失败时间
+        Integer retryCount      // 重试次数
+    ) {}
+}
+```
 
-    /// 完成时间
-    private Instant completedAt;
+**使用示例**：
+```java
+// 查询导入进度
+MeshProgressDTO progress = catalogEndpoint.queryProgress(123L);
 
-    /// 错误信息（如果失败）
-    private String errorMessage;
+// 访问进度信息
+System.out.println("整体进度: " + progress.overallProgress() + "%");
+System.out.println("处理速度: " + progress.processSpeed() + " 记录/秒");
+System.out.println("预计剩余时间: " + progress.estimatedRemainingSeconds() + " 秒");
+
+// 访问各表进度
+for (TableProgressDTO table : progress.tableProgress()) {
+    System.out.println(table.displayName() + ": " + table.progressPercentage() + "%");
 }
 ```
 
@@ -120,14 +156,14 @@ public class MeshProgressDTO {
 public interface CatalogEndpoint {
 
     /// 查询 MeSH 导入进度
-/// 
+///
 /// @param taskId 任务 ID
 /// @return 导入进度 DTO
     @GetMapping("/mesh/import/progress/{taskId}")
     MeshProgressDTO queryProgress(@PathVariable("taskId") Long taskId);
 
     /// 开始 MeSH 导入任务
-/// 
+///
 /// @param request 导入请求
 /// @return 导入结果 DTO
     @PostMapping("/mesh/import/start")
@@ -223,7 +259,9 @@ public class SomeService {
 
     public void checkMeshImportProgress(Long taskId) {
         MeshProgressDTO progress = catalogEndpoint.queryProgress(taskId);
-        log.info("MeSH 导入进度：{}%", progress.getOverallProgress());
+        log.info("MeSH 导入进度：{}%", progress.overallProgress());
+        log.info("处理速度：{} 记录/秒", progress.processSpeed());
+        log.info("预计剩余时间：{} 秒", progress.estimatedRemainingSeconds());
     }
 }
 ```
@@ -233,11 +271,26 @@ public class SomeService {
 ```java
 // 构建 DTO
 MeshProgressDTO dto = MeshProgressDTO.builder()
-    .taskId(123L)
+    .taskId("123")
     .taskName("2025年MeSH数据导入")
     .status("PROCESSING")
-    .overallProgress(45.5)
-    .startedAt(Instant.now())
+    .totalRecords(540000)
+    .processedRecords(245000)
+    .overallProgress(45.37)
+    .processSpeed(125.5)
+    .estimatedRemainingSeconds(2350L)
+    .startTime(Instant.now())
+    .tableProgress(List.of(
+        MeshProgressDTO.TableProgressDTO.builder()
+            .tableName("descriptor")
+            .displayName("主题词")
+            .totalCount(30000)
+            .processedCount(30000)
+            .progressPercentage(100.0)
+            .status("COMPLETED")
+            .build()
+    ))
+    .failedBatches(List.of())
     .build();
 
 // JSON 序列化
@@ -302,6 +355,6 @@ MeshProgressDTO parsedDto = objectMapper.readValue(json, MeshProgressDTO.class);
 
 ---
 
-**最后更新**：2025-11-22
+**最后更新**：2025-11-23
 **Maven 坐标**：`com.patra:patra-catalog-api:0.2.0-SNAPSHOT`
 **作者**：Patra Team
