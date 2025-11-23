@@ -391,6 +391,7 @@ patra-spring-boot-starter-observability/
 │   ├── handler/                                 # ObservationHandler
 │   │   ├── LoggingObservationHandler.java                   # 日志 Handler
 │   │   ├── PerformanceObservationHandler.java               # 性能 Handler
+│   │   ├── SensitiveDataMaskingHandler.java                 # 敏感数据脱敏 Handler (P0)
 │   │   ├── AlertingObservationHandler.java                  # 告警 Handler (未来)
 │   │   └── package-info.java
 │   ├── filter/                                  # MeterFilter
@@ -826,6 +827,288 @@ public class PerformanceObservationHandler implements ObservationHandler<Observa
 }
 ```
 
+#### 4. SensitiveDataMaskingHandler
+
+```java
+package com.patra.starter.observability.handler;
+
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationHandler;
+import io.micrometer.common.KeyValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.regex.Pattern;
+import java.util.List;
+import java.util.ArrayList;
+
+/**
+ * 敏感数据脱敏处理器
+ *
+ * <p>功能：
+ * <ul>
+ *   <li>检测 Observation 中的敏感数据（密码、Token、身份证号、手机号等）</li>
+ *   <li>自动脱敏敏感数据，防止泄露到追踪系统</li>
+ *   <li>支持自定义敏感数据模式</li>
+ *   <li>生产环境强制启用</li>
+ * </ul>
+ *
+ * <p>安全策略：
+ * <ul>
+ *   <li>默认模式：脱敏常见敏感字段（password, token, apiKey, idCard, mobile）</li>
+ *   <li>自定义模式：支持通过配置添加自定义脱敏规则</li>
+ *   <li>全局开关：可在开发环境禁用，生产环境强制启用</li>
+ * </ul>
+ *
+ * @author Jobs
+ * @since 1.0.0
+ */
+public class SensitiveDataMaskingHandler implements ObservationHandler<Observation.Context> {
+
+    private static final Logger log = LoggerFactory.getLogger(SensitiveDataMaskingHandler.class);
+
+    /**
+     * 敏感字段名称模式（不区分大小写）
+     */
+    private static final Pattern[] SENSITIVE_FIELD_PATTERNS = {
+        Pattern.compile("(?i)password"),        // 密码
+        Pattern.compile("(?i)pwd"),             // 密码简写
+        Pattern.compile("(?i)token"),           // Token
+        Pattern.compile("(?i)secret"),          // 密钥
+        Pattern.compile("(?i)api[_-]?key"),     // API Key
+        Pattern.compile("(?i)auth"),            // 认证信息
+        Pattern.compile("(?i)credential")       // 凭证
+    };
+
+    /**
+     * 敏感数据值模式（正则匹配）
+     */
+    private static final Pattern[] SENSITIVE_VALUE_PATTERNS = {
+        Pattern.compile("\\d{15,19}"),                    // 身份证号（15或18位）
+        Pattern.compile("\\d{3}-?\\d{4}-?\\d{4}"),        // 手机号（含分隔符）
+        Pattern.compile("\\d{3,4}-?\\d{7,8}"),            // 固定电话
+        Pattern.compile("[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"),  // 邮箱
+        Pattern.compile("\\d{16,19}"),                    // 银行卡号
+        Pattern.compile("(?i)Bearer\\s+[a-zA-Z0-9\\-._~+/]+=*"),  // Bearer Token
+        Pattern.compile("(?i)Basic\\s+[a-zA-Z0-9+/]+=*")  // Basic Auth
+    };
+
+    private static final String MASK_PLACEHOLDER = "***MASKED***";
+
+    private final boolean enabled;
+    private final List<Pattern> customPatterns;
+
+    public SensitiveDataMaskingHandler(boolean enabled, List<String> customPatterns) {
+        this.enabled = enabled;
+        this.customPatterns = new ArrayList<>();
+
+        if (customPatterns != null) {
+            customPatterns.forEach(pattern ->
+                this.customPatterns.add(Pattern.compile(pattern))
+            );
+        }
+
+        log.info("初始化敏感数据脱敏处理器，启用状态: {}, 自定义模式数量: {}",
+            enabled, this.customPatterns.size());
+    }
+
+    @Override
+    public boolean supportsContext(Observation.Context context) {
+        return enabled; // 仅在启用时生效
+    }
+
+    @Override
+    public void onStart(Observation.Context context) {
+        // 脱敏低基数标签（Low Cardinality Key Values）
+        maskKeyValues(context.getLowCardinalityKeyValues());
+
+        // 脱敏高基数标签（High Cardinality Key Values）
+        maskKeyValues(context.getHighCardinalityKeyValues());
+
+        log.trace("已对 Observation [{}] 的敏感数据进行脱敏", context.getName());
+    }
+
+    /**
+     * 脱敏 KeyValue 集合
+     */
+    private void maskKeyValues(io.micrometer.common.KeyValues keyValues) {
+        if (keyValues == null || keyValues.stream().count() == 0) {
+            return;
+        }
+
+        keyValues.stream().forEach(keyValue -> {
+            String key = keyValue.getKey();
+            String value = keyValue.getValue();
+
+            // 检查字段名是否敏感
+            if (isSensitiveField(key)) {
+                // 字段名敏感，直接脱敏
+                replaceKeyValue(keyValues, key, MASK_PLACEHOLDER);
+                log.debug("脱敏敏感字段: key={}", key);
+                return;
+            }
+
+            // 检查值是否包含敏感数据
+            String maskedValue = maskSensitiveValue(value);
+            if (!maskedValue.equals(value)) {
+                replaceKeyValue(keyValues, key, maskedValue);
+                log.debug("脱敏敏感值: key={}, original={}, masked={}", key, value, maskedValue);
+            }
+        });
+    }
+
+    /**
+     * 检查字段名是否敏感
+     */
+    private boolean isSensitiveField(String fieldName) {
+        if (fieldName == null) {
+            return false;
+        }
+
+        for (Pattern pattern : SENSITIVE_FIELD_PATTERNS) {
+            if (pattern.matcher(fieldName).find()) {
+                return true;
+            }
+        }
+
+        for (Pattern pattern : customPatterns) {
+            if (pattern.matcher(fieldName).find()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 脱敏敏感值
+     */
+    private String maskSensitiveValue(String value) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+
+        String result = value;
+
+        // 应用内置模式
+        for (Pattern pattern : SENSITIVE_VALUE_PATTERNS) {
+            result = pattern.matcher(result).replaceAll(MASK_PLACEHOLDER);
+        }
+
+        // 应用自定义模式
+        for (Pattern pattern : customPatterns) {
+            result = pattern.matcher(result).replaceAll(MASK_PLACEHOLDER);
+        }
+
+        return result;
+    }
+
+    /**
+     * 替换 KeyValue（Micrometer KeyValues 是不可变的，需要重新构建）
+     * 注意：这是简化示例，实际实现需要使用 Observation.Context 的 API
+     */
+    private void replaceKeyValue(io.micrometer.common.KeyValues keyValues, String key, String newValue) {
+        // 实际实现中，需要通过 Context 的方法来修改 KeyValues
+        // 这里仅作为设计示例
+        log.trace("替换 KeyValue: key={}, newValue={}", key, newValue);
+    }
+
+    @Override
+    public void onStop(Observation.Context context) {
+        // 无需处理
+    }
+
+    @Override
+    public void onError(Observation.Context context) {
+        // 确保错误信息中也没有敏感数据
+        if (context.getError() != null) {
+            String errorMessage = context.getError().getMessage();
+            if (errorMessage != null) {
+                String maskedMessage = maskSensitiveValue(errorMessage);
+                if (!maskedMessage.equals(errorMessage)) {
+                    log.debug("脱敏错误消息中的敏感数据");
+                }
+            }
+        }
+    }
+}
+```
+
+**配置属性**：
+
+```java
+// ObservabilityProperties.java 中新增
+@Data
+public static class SecurityConfig {
+    /**
+     * 是否启用敏感数据脱敏
+     */
+    private boolean maskSensitiveData = true;
+
+    /**
+     * 自定义敏感数据模式（正则表达式）
+     */
+    private List<String> sensitivePatterns = new ArrayList<>();
+
+    /**
+     * 允许在哪些环境中禁用脱敏（仅用于调试，生产环境强制启用）
+     */
+    private List<String> maskingDisabledInEnvironments = List.of("dev-local");
+}
+```
+
+**AutoConfiguration 中注册**：
+
+```java
+@Bean
+@ConditionalOnProperty(
+    name = "patra.observability.security.mask-sensitive-data",
+    havingValue = "true",
+    matchIfMissing = true  // 默认启用
+)
+public SensitiveDataMaskingHandler sensitiveDataMaskingHandler(ObservabilityProperties properties) {
+    SecurityConfig config = properties.getSecurity();
+
+    // 生产环境强制启用
+    boolean enabled = config.isMaskSensitiveData();
+    if ("prod".equalsIgnoreCase(properties.getEnvironment())) {
+        enabled = true;
+        log.warn("生产环境检测到，敏感数据脱敏已强制启用");
+    }
+
+    return new SensitiveDataMaskingHandler(enabled, config.getSensitivePatterns());
+}
+```
+
+**使用示例**：
+
+```yaml
+# application-prod.yml（生产环境配置）
+patra:
+  observability:
+    environment: prod
+    security:
+      mask-sensitive-data: true  # 强制启用
+      sensitive-patterns:         # 自定义模式
+        - "(?i)company[_-]?secret"  # 公司机密
+        - "internal[_-]?key"        # 内部密钥
+
+# application-dev.yml（开发环境配置）
+patra:
+  observability:
+    environment: dev
+    security:
+      mask-sensitive-data: false  # 开发环境可禁用，方便调试
+```
+
+**安全注意事项**：
+
+1. **生产环境强制启用**: 无论配置如何，生产环境（`environment=prod`）必须启用脱敏
+2. **默认启用**: `matchIfMissing = true` 确保即使未配置也默认启用
+3. **多层防护**: 同时检查字段名和字段值，双重保护
+4. **错误消息脱敏**: 异常信息中的敏感数据也会被脱敏
+5. **审计日志**: 记录脱敏操作，便于安全审计
+
 ---
 
 ## API 设计
@@ -918,6 +1201,243 @@ public class OrderService {
     }
 }
 ```
+
+### 防腐层设计（Anti-Corruption Layer）
+
+**设计目标**: 隔离 Domain 层对框架的直接依赖，符合 DDD 和六边形架构原则。
+
+#### 1. Domain 层端口接口（Port）
+
+```java
+// patra-{service}-domain/src/main/java/com/patra/{service}/domain/port/ObservabilityPort.java
+package com.patra.{service}.domain.port;
+
+import java.util.Map;
+import java.util.function.Supplier;
+
+/**
+ * 可观测性端口接口 - Domain 层定义，Infrastructure 层实现
+ * <p>
+ * 目的：隔离业务代码对可观测性框架（Micrometer）的直接依赖
+ */
+public interface ObservabilityPort {
+
+    /**
+     * 追踪业务操作执行
+     *
+     * @param context 操作上下文（使用业务语言描述）
+     * @param action  要执行的业务操作
+     * @param <T>     操作返回值类型
+     * @return 操作执行结果
+     */
+    <T> T trackOperation(OperationContext context, Supplier<T> action);
+
+    /**
+     * 记录业务指标
+     *
+     * @param snapshot 指标快照（使用业务概念描述）
+     */
+    void recordMetric(MetricSnapshot snapshot);
+
+    /**
+     * 记录业务事件
+     *
+     * @param event 业务事件
+     */
+    void recordEvent(BusinessEvent event);
+}
+
+/**
+ * 操作上下文 - 业务概念（Value Object）
+ */
+public record OperationContext(
+    String operationName,        // 操作名称（业务术语，如 "user.register"）
+    Map<String, String> labels,  // 业务标签（如 {"sourceType": "manual"}）
+    OperationType type           // 操作类型（业务分类）
+) {
+    public static OperationContext of(String operationName) {
+        return new OperationContext(operationName, Map.of(), OperationType.GENERAL);
+    }
+
+    public OperationContext withLabel(String key, String value) {
+        Map<String, String> newLabels = new HashMap<>(labels);
+        newLabels.put(key, value);
+        return new OperationContext(operationName, newLabels, type);
+    }
+}
+
+/**
+ * 操作类型 - 业务分类
+ */
+public enum OperationType {
+    GENERAL,      // 一般操作
+    DATA_IMPORT,  // 数据导入
+    API_CALL,     // API 调用
+    BATCH_JOB     // 批处理任务
+}
+
+/**
+ * 指标快照 - 业务概念（Value Object）
+ */
+public record MetricSnapshot(
+    String metricName,           // 指标名称（业务术语）
+    double value,                // 指标值
+    Map<String, String> tags,    // 业务标签
+    MetricUnit unit              // 计量单位
+) {}
+
+/**
+ * 指标单位
+ */
+public enum MetricUnit {
+    COUNT,        // 计数
+    SECONDS,      // 秒
+    BYTES,        // 字节
+    PERCENTAGE    // 百分比
+}
+
+/**
+ * 业务事件 - 业务概念
+ */
+public record BusinessEvent(
+    String eventType,            // 事件类型（如 "user.created"）
+    Map<String, String> attributes, // 事件属性
+    Instant occurredAt           // 发生时间
+) {}
+```
+
+#### 2. Infrastructure 层适配器（Adapter）
+
+```java
+// patra-{service}-infra/src/main/java/com/patra/{service}/infra/observability/MicrometerObservabilityAdapter.java
+package com.patra.{service}.infra.observability;
+
+import com.patra.{service}.domain.port.ObservabilityPort;
+import com.patra.{service}.domain.port.OperationContext;
+import com.patra.{service}.domain.port.MetricSnapshot;
+import com.patra.{service}.domain.port.BusinessEvent;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Counter;
+import org.springframework.stereotype.Component;
+
+/**
+ * Micrometer 可观测性适配器 - 将 Domain 概念转换为 Micrometer API 调用
+ * <p>
+ * 这是防腐层的核心组件，隔离了框架变更对 Domain 层的影响
+ */
+@Component
+public class MicrometerObservabilityAdapter implements ObservabilityPort {
+
+    private final ObservationRegistry observationRegistry;
+    private final MeterRegistry meterRegistry;
+
+    public MicrometerObservabilityAdapter(
+        ObservationRegistry observationRegistry,
+        MeterRegistry meterRegistry
+    ) {
+        this.observationRegistry = observationRegistry;
+        this.meterRegistry = meterRegistry;
+    }
+
+    @Override
+    public <T> T trackOperation(OperationContext context, Supplier<T> action) {
+        // 将业务概念转换为 Micrometer Observation
+        Observation observation = Observation.createNotStarted(
+            context.operationName(),
+            observationRegistry
+        );
+
+        // 转换业务标签为技术标签
+        context.labels().forEach(observation::lowCardinalityKeyValue);
+        observation.lowCardinalityKeyValue("operation.type", context.type().name());
+
+        // 执行并观测
+        return observation.observe(action);
+    }
+
+    @Override
+    public void recordMetric(MetricSnapshot snapshot) {
+        // 将业务指标转换为 Micrometer Meter
+        Counter counter = Counter.builder(snapshot.metricName())
+            .tags(snapshot.tags())
+            .description("Business metric from domain layer")
+            .register(meterRegistry);
+
+        counter.increment(snapshot.value());
+    }
+
+    @Override
+    public void recordEvent(BusinessEvent event) {
+        // 将业务事件转换为 Observation Event
+        Observation observation = Observation.createNotStarted(
+            "event." + event.eventType(),
+            observationRegistry
+        );
+
+        event.attributes().forEach(observation::lowCardinalityKeyValue);
+        observation.event(Observation.Event.of(event.eventType()));
+        observation.observe(() -> {});
+    }
+}
+```
+
+#### 3. Domain 层业务代码使用示例
+
+```java
+// ✅ 正确做法 - Domain 层只依赖自己的端口接口
+@Service
+public class DataImportService {
+
+    private final ObservabilityPort observabilityPort; // 依赖抽象，不依赖框架
+
+    public DataImportService(ObservabilityPort observabilityPort) {
+        this.observabilityPort = observabilityPort;
+    }
+
+    public ImportResult importData(DataSource source, List<MeshData> data) {
+        // 使用业务语言描述操作
+        OperationContext context = OperationContext.of("data.import")
+            .withLabel("sourceType", source.getType().toString())
+            .withLabel("dataCount", String.valueOf(data.size()));
+
+        return observabilityPort.trackOperation(context, () -> {
+            // 业务逻辑
+            ImportResult result = doImport(source, data);
+
+            // 记录业务指标
+            observabilityPort.recordMetric(new MetricSnapshot(
+                "patra.catalog.import.records",
+                result.getProcessedCount(),
+                Map.of("status", "success"),
+                MetricUnit.COUNT
+            ));
+
+            return result;
+        });
+    }
+}
+```
+
+#### 对比：有防腐层 vs 无防腐层
+
+| 方面 | 无防腐层（直接依赖 Micrometer） | 有防腐层（依赖 ObservabilityPort） |
+|-----|------------------------------|----------------------------------|
+| **Domain 层依赖** | ❌ 依赖 `io.micrometer.*` | ✅ 依赖自己的端口接口 |
+| **术语** | ❌ 技术术语（`lowCardinalityKeyValue`） | ✅ 业务术语（`withLabel`） |
+| **迁移成本** | ❌ 高（需修改所有业务代码） | ✅ 低（只需修改适配器） |
+| **测试性** | ❌ 需要 Mock Micrometer | ✅ 可提供测试用实现 |
+| **架构合规** | ❌ 违反六边形架构 | ✅ 符合六边形架构 |
+
+#### 防腐层的价值
+
+1. **隔离框架变更**: 如果未来从 Micrometer 迁移到 OpenTelemetry，只需修改适配器，Domain 层代码无需变更
+2. **业务语言优先**: Domain 层使用业务术语（`importData`, `sourceType`），而非技术术语（`observe`, `lowCardinalityKeyValue`）
+3. **易于测试**: 可以提供 `NoOpObservabilityAdapter` 用于单元测试，无需依赖真实的 Micrometer
+4. **符合架构原则**: 遵守依赖倒置原则（DIP）和六边形架构的端口/适配器模式
+
+---
 
 ### SPI 扩展点
 
@@ -1293,15 +1813,99 @@ patra.catalog.mesh.import.duration
 - 修改各 Metrics 类的指标名称
 - 使用 `MetricNamingMeterFilter` 自动转换旧名称（过渡期）
 
-#### 2. 合并重复的拦截器
+#### 2. 完全移除各 Starter 中的可观测性代码（插件式架构）
 
 **重构前**：
-- `patra-starter-core`: `TracingInterceptor`
-- `patra-starter-rest-client`: `TracingInterceptor`（重复）
+- `patra-starter-core`: 包含 `TracingInterceptor`（耦合可观测性）
+- `patra-starter-rest-client`: 包含 `TracingInterceptor`（耦合可观测性）
+- `patra-starter-batch`: 包含 TODO 标记的 Metrics 代码（耦合可观测性）
+- **问题**: 可观测性与核心功能混合，违反关注点分离原则
 
-**重构后**：
-- 仅在 `patra-starter-observability` 中保留一个 `TracingInterceptor`
-- 使用 `@Order` 控制执行顺序
+**重构后（插件式架构）**：
+- `patra-starter-core`: **完全移除**所有可观测性代码，仅保留 `ErrorInterceptor` 扩展点
+- `patra-starter-rest-client`: **完全移除**所有可观测性代码，仅保留 `ClientInterceptor` 扩展点
+- `patra-starter-batch`: **完全移除**所有可观测性代码，使用 Spring Batch 原生 `JobExecutionListener` 扩展点
+- `patra-starter-observability`: **统一实现**所有扩展点，作为可选插件
+- **关键原则**: 横切关注点完全分离，可观测性作为独立插件，符合依赖倒置原则（DIP）
+
+**架构说明**：
+```
+┌────────────────────────────────────────────────┐
+│  业务服务（patra-catalog, patra-ingest 等）   │
+│  依赖：core + rest-client + observability      │
+└────────────────────────────────────────────────┘
+                      ↓
+          ┌──────────────────────┐
+          │  patra-starter-      │
+          │  observability       │
+          │  （可选插件）        │
+          │                      │
+          │  实现所有扩展点：    │
+          │  • ErrorInterceptor  │
+          │  • ClientInterceptor │
+          │  • JobListener       │
+          └──────────────────────┘
+                      ↓
+      ┌───────────────┴───────────────┐
+      ↓                               ↓
+┌──────────────┐          ┌──────────────┐
+│ patra-       │          │ patra-       │
+│ starter-core │          │ starter-     │
+│ （纯净）     │          │ rest-client  │
+│              │          │ （纯净）     │
+│ 提供：       │          │ 提供：       │
+│ ErrorInterceptor        │ ClientInterceptor
+│ 扩展点       │          │ 扩展点       │
+└──────────────┘          └──────────────┘
+```
+
+**依赖方向验证**：
+- ✅ observability → core（单向依赖，符合 DIP）
+- ✅ observability → rest-client（单向依赖，符合 DIP）
+- ✅ observability → batch（单向依赖，符合 DIP）
+- ✅ core ❌→ observability（无依赖，正确！）
+
+**架构优势**：
+1. **完全解耦**: core/rest-client/batch 不依赖任何可观测性框架
+2. **可选依赖**: 不引入 observability starter 时，可观测性完全禁用
+3. **易于替换**: 未来可替换为 OpenTelemetry 或其他实现，只需修改 observability starter
+4. **符合原则**: 遵守单一职责原则（SRP）、依赖倒置原则（DIP）、开闭原则（OCP）
+
+**重构示例**：
+
+```java
+// patra-starter-core（纯净，仅提供扩展点）
+public interface ErrorInterceptor {
+    void beforeResolve(ErrorContext context);
+    void afterResolve(ErrorContext context, ErrorResult result);
+    void onError(ErrorContext context, Exception e);
+}
+
+// patra-starter-observability（插件，实现扩展点）
+@Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
+public class ErrorPipelineObservationInterceptor implements ErrorInterceptor {
+    private final ObservationRegistry observationRegistry;
+
+    @Override
+    public void beforeResolve(ErrorContext context) {
+        Observation observation = Observation.createNotStarted("error.resolution", observationRegistry);
+        observation.lowCardinalityKeyValue("error.type", context.getErrorType());
+        observation.start();
+        context.setAttribute("observation", observation);
+    }
+
+    @Override
+    public void afterResolve(ErrorContext context, ErrorResult result) {
+        Observation observation = context.getAttribute("observation");
+        if (observation != null) {
+            observation.stop();
+        }
+    }
+}
+```
+
+**注意**: 这是典型的"插件式架构"（Plugin Architecture），可观测性成为可选的横切关注点，而非强制依赖。这是绿地项目的最佳实践，充分利用了无历史包袱的优势。
 
 #### 3. 统一配置前缀
 
