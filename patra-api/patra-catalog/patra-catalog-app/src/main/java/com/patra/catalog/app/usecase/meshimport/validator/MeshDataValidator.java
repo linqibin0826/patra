@@ -75,11 +75,12 @@ public class MeshDataValidator {
 
       // 计算差异百分比
       double differencePercentage = calculateDifferencePercentage(actualCount, expectedCount);
+      String differenceStr = String.format("%.2f%%", differencePercentage);
 
       // 记录验证结果
       log.info(
-          "表 [{}] 数据量验证: 预期 {}, 实际 {}, 差异 {:.2f}%",
-          tableName, expectedCount, actualCount, differencePercentage);
+          "表 [{}] 数据量验证: 预期 {}, 实际 {}, 差异 {}",
+          tableName, expectedCount, actualCount, differenceStr);
 
       // 差异超过阈值时生成警告
       if (differencePercentage > threshold) {
