@@ -89,7 +89,8 @@ class MeshImportRepositoryImplIT {
             List.of(
                 TableProgress.builder()
                     .tableName("cat_mesh_descriptor")
-                    .totalCount(35000)
+                    .expectedCount(35000)
+                    .actualTotalCount(null)
                     .processedCount(0)
                     .failedCount(0)
                     .status(MeshTableImportStatus.NOT_STARTED)
@@ -135,7 +136,8 @@ class MeshImportRepositoryImplIT {
             List.of(
                 TableProgress.builder()
                     .tableName("cat_mesh_descriptor")
-                    .totalCount(35000)
+                    .expectedCount(35000)
+                    .actualTotalCount(null)
                     .processedCount(0)
                     .failedCount(0)
                     .status(MeshTableImportStatus.NOT_STARTED)
@@ -163,7 +165,8 @@ class MeshImportRepositoryImplIT {
             List.of(
                 TableProgress.builder()
                     .tableName("cat_mesh_descriptor")
-                    .totalCount(35000)
+                    .expectedCount(35000)
+                    .actualTotalCount(null)
                     .processedCount(5000) // 更新进度
                     .failedCount(10)
                     .status(MeshTableImportStatus.IN_PROGRESS)

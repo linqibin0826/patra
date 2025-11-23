@@ -161,7 +161,9 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
 
   /// 更新指定表的进度。
   ///
-  /// 用于断点续传，记录每张表的最后处理批次号
+  /// 用于断点续传，记录每张表的最后处理批次号。
+  ///
+  /// **状态转换**：自动将状态从 NOT_STARTED 转换为 IN_PROGRESS
   ///
   /// @param tableName 表名
   /// @param processedCount 已处理数
@@ -171,6 +173,26 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
     TableProgress progress = findTableProgress(tableName);
     TableProgress updated = progress.updateProgress(processedCount, lastBatchNum);
     replaceTableProgress(tableName, updated);
+    recalculateOverallProgress();
+  }
+
+  /// 标记指定表为已完成。
+  ///
+  /// 设置表的实际总数并将状态标记为 COMPLETED。
+  ///
+  /// **使用场景**：
+  ///
+  /// - 流式解析完成后，已知实际总数时调用
+  ///   - 实际总数可能与预期值有差异（数据源更新导致）
+  ///   - 允许差异在配置的阈值范围内（通常 5%）
+  ///
+  /// @param tableName 表名
+  /// @param actualCount 实际导入的总数
+  /// @throws IllegalArgumentException 如果表不存在
+  public void markTableAsCompleted(String tableName, Integer actualCount) {
+    TableProgress progress = findTableProgress(tableName);
+    TableProgress completed = progress.markAsCompleted(actualCount);
+    replaceTableProgress(tableName, completed);
     recalculateOverallProgress();
   }
 
@@ -252,8 +274,7 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   ///
   /// @return true 如果所有表都完成
   private boolean allTablesCompleted() {
-    return tableProgressList.stream()
-        .allMatch(p -> p.getStatus() == MeshTableImportStatus.COMPLETED);
+    return tableProgressList.stream().allMatch(TableProgress::isCompleted);
   }
 
   // ========== 公共查询方法 ==========

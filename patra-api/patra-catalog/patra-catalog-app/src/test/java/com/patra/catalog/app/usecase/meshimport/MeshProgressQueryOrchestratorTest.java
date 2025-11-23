@@ -57,7 +57,8 @@ class MeshProgressQueryOrchestratorTest {
     tableProgressList.add(
         TableProgress.builder()
             .tableName("descriptor")
-            .totalCount(30000)
+            .expectedCount(30000)
+            .actualTotalCount(30000) // 进行中，实际总数已知
             .processedCount(15000)
             .failedCount(0)
             .status(MeshTableImportStatus.IN_PROGRESS)
@@ -67,7 +68,8 @@ class MeshProgressQueryOrchestratorTest {
     tableProgressList.add(
         TableProgress.builder()
             .tableName("qualifier")
-            .totalCount(100)
+            .expectedCount(100)
+            .actualTotalCount(null) // 未开始，实际总数未知
             .processedCount(0)
             .failedCount(0)
             .status(MeshTableImportStatus.NOT_STARTED)
@@ -150,7 +152,8 @@ class MeshProgressQueryOrchestratorTest {
     tableProgressList.add(
         TableProgress.builder()
             .tableName("descriptor")
-            .totalCount(30000)
+            .expectedCount(30000)
+            .actualTotalCount(30000) // 进行中，实际总数已知
             .processedCount(20000)
             .failedCount(100)
             .status(MeshTableImportStatus.IN_PROGRESS)
@@ -228,7 +231,8 @@ class MeshProgressQueryOrchestratorTest {
     tableProgressList.add(
         TableProgress.builder()
             .tableName("descriptor")
-            .totalCount(30000)
+            .expectedCount(30000)
+            .actualTotalCount(30000) // 已完成，实际总数已知
             .processedCount(30000)
             .failedCount(0)
             .status(MeshTableImportStatus.COMPLETED)
@@ -289,7 +293,8 @@ class MeshProgressQueryOrchestratorTest {
     tableProgressList.add(
         TableProgress.builder()
             .tableName("descriptor")
-            .totalCount(30000)
+            .expectedCount(30000)
+            .actualTotalCount(null) // 未开始，实际总数未知
             .processedCount(0)
             .failedCount(0)
             .status(MeshTableImportStatus.NOT_STARTED)

@@ -82,7 +82,7 @@ class MeshImportConverterTest {
     assertThat(aggregate.getTableProgressList()).hasSize(1);
     TableProgress progress = aggregate.getTableProgressList().get(0);
     assertThat(progress.getTableName()).isEqualTo("cat_mesh_descriptor");
-    assertThat(progress.getTotalCount()).isEqualTo(35000);
+    assertThat(progress.getExpectedCount()).isEqualTo(35000);
     assertThat(progress.getProcessedCount()).isEqualTo(0);
     assertThat(progress.getStatus()).isEqualTo(MeshTableImportStatus.NOT_STARTED);
   }
@@ -131,7 +131,8 @@ class MeshImportConverterTest {
     TableProgress progress1 =
         TableProgress.builder()
             .tableName("cat_mesh_descriptor")
-            .totalCount(35000)
+            .expectedCount(35000)
+            .actualTotalCount(null)
             .processedCount(5000)
             .failedCount(10)
             .status(MeshTableImportStatus.IN_PROGRESS)
@@ -142,7 +143,8 @@ class MeshImportConverterTest {
     TableProgress progress2 =
         TableProgress.builder()
             .tableName("cat_mesh_qualifier")
-            .totalCount(500)
+            .expectedCount(500)
+            .actualTotalCount(null)
             .processedCount(0)
             .failedCount(0)
             .status(MeshTableImportStatus.NOT_STARTED)
@@ -204,7 +206,7 @@ class MeshImportConverterTest {
     // Then: 应该正确转换
     assertThat(progress).isNotNull();
     assertThat(progress.getTableName()).isEqualTo("cat_mesh_descriptor");
-    assertThat(progress.getTotalCount()).isEqualTo(35000);
+    assertThat(progress.getExpectedCount()).isEqualTo(35000);
     assertThat(progress.getProcessedCount()).isEqualTo(5000);
     assertThat(progress.getFailedCount()).isEqualTo(10);
     assertThat(progress.getStatus()).isEqualTo(MeshTableImportStatus.IN_PROGRESS);
@@ -218,7 +220,8 @@ class MeshImportConverterTest {
     TableProgress progress =
         TableProgress.builder()
             .tableName("cat_mesh_descriptor")
-            .totalCount(35000)
+            .expectedCount(35000)
+            .actualTotalCount(null)
             .processedCount(5000)
             .failedCount(10)
             .status(MeshTableImportStatus.IN_PROGRESS)

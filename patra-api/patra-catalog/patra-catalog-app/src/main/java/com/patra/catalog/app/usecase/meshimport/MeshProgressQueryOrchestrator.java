@@ -146,10 +146,16 @@ public class MeshProgressQueryOrchestrator {
   /// @param tableProgress 表进度值对象
   /// @return 表进度 DTO
   private MeshProgressDTO.TableProgressDTO toTableProgressDTO(TableProgress tableProgress) {
+    // 优先使用实际总数，如未设置则使用预期值（与进度百分比计算逻辑一致）
+    Integer totalCountForDisplay =
+        tableProgress.getActualTotalCount() != null
+            ? tableProgress.getActualTotalCount()
+            : tableProgress.getExpectedCount();
+
     return MeshProgressDTO.TableProgressDTO.builder()
         .tableName(tableProgress.getTableName())
         .displayName(getDisplayName(tableProgress.getTableName()))
-        .totalCount(tableProgress.getTotalCount())
+        .totalCount(totalCountForDisplay)
         .processedCount(tableProgress.getProcessedCount())
         .failedCount(tableProgress.getFailedCount())
         .progressPercentage(tableProgress.getProgressPercentage())
