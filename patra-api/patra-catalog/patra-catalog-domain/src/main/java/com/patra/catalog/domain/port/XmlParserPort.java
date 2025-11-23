@@ -3,6 +3,7 @@ package com.patra.catalog.domain.port;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.model.entity.MeshEntryTerm;
+import com.patra.catalog.domain.model.entity.MeshQualifier;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
 import java.io.InputStream;
 import java.util.stream.Stream;
@@ -43,9 +44,24 @@ import java.util.stream.Stream;
 /// @since 0.1.0
 public interface XmlParserPort {
 
+  /// 解析限定词（Qualifier）。
+  ///
+  /// 从 MeSH qual2025.xml 文件中解析所有 Qualifier 记录。
+  ///
+  /// 实现说明：
+  ///
+  /// - 解析 `<QualifierRecord>` 元素
+  ///   - 限定词是独立的主数据
+  ///   - 约 80 条记录
+  ///   - 必须先于主题词导入
+  ///
+  /// @param xmlInputStream XML 文件输入流（qual2025.xml）
+  /// @return 限定词实体流（Stream）
+  Stream<MeshQualifier> parseQualifiers(InputStream xmlInputStream);
+
   /// 解析主题词（Descriptor）。
   ///
-  /// 从 MeSH XML 文件中解析所有 Descriptor 记录。
+  /// 从 MeSH desc2025.xml 文件中解析所有 Descriptor 记录。
   ///
   /// 实现说明：
   ///
@@ -54,13 +70,13 @@ public interface XmlParserPort {
   ///   - 返回完整的聚合根对象
   ///   - 约 35,000 条记录
   ///
-  /// @param xmlInputStream XML 文件输入流
+  /// @param xmlInputStream XML 文件输入流（desc2025.xml）
   /// @return 主题词聚合根流（Stream）
   Stream<MeshDescriptorAggregate> parseDescriptors(InputStream xmlInputStream);
 
   /// 解析树形编号（TreeNumber）。
   ///
-  /// 从 MeSH XML 文件中解析所有树形编号。
+  /// 从 MeSH desc2025.xml 文件中解析所有树形编号。
   ///
   /// 实现说明：
   ///
@@ -68,13 +84,13 @@ public interface XmlParserPort {
   ///   - 关联到对应的 Descriptor UI
   ///   - 约 80,000 条记录（平均每个 Descriptor 2.3 个）
   ///
-  /// @param xmlInputStream XML 文件输入流
+  /// @param xmlInputStream XML 文件输入流（desc2025.xml）
   /// @return 树形编号实体流（Stream）
   Stream<MeshTreeNumber> parseTreeNumbers(InputStream xmlInputStream);
 
   /// 解析入口术语（EntryTerm）。
   ///
-  /// 从 MeSH XML 文件中解析所有入口术语（同义词）。
+  /// 从 MeSH desc2025.xml 文件中解析所有入口术语（同义词）。
   ///
   /// 实现说明：
   ///
@@ -82,13 +98,13 @@ public interface XmlParserPort {
   ///   - 关联到对应的 Descriptor UI
   ///   - 约 250,000 条记录（平均每个 Descriptor 7-8 个）
   ///
-  /// @param xmlInputStream XML 文件输入流
+  /// @param xmlInputStream XML 文件输入流（desc2025.xml）
   /// @return 入口术语实体流（Stream）
   Stream<MeshEntryTerm> parseEntryTerms(InputStream xmlInputStream);
 
   /// 解析概念（Concept）。
   ///
-  /// 从 MeSH XML 文件中解析所有概念。
+  /// 从 MeSH desc2025.xml 文件中解析所有概念。
   ///
   /// 实现说明：
   ///
@@ -96,7 +112,7 @@ public interface XmlParserPort {
   ///   - 关联到对应的 Descriptor UI
   ///   - 约 180,000 条记录（平均每个 Descriptor 5-6 个）
   ///
-  /// @param xmlInputStream XML 文件输入流
+  /// @param xmlInputStream XML 文件输入流（desc2025.xml）
   /// @return 概念实体流（Stream）
   Stream<MeshConcept> parseConcepts(InputStream xmlInputStream);
 }
