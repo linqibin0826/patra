@@ -1,7 +1,6 @@
 package com.patra.catalog.app.usecase.meshimport;
 
 import com.patra.catalog.app.config.MeshImportConfig;
-import com.patra.catalog.app.usecase.meshimport.command.StartImportCommand;
 import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import com.patra.catalog.app.usecase.meshimport.validator.MeshDataValidator;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
@@ -19,7 +18,8 @@ import com.patra.catalog.domain.port.XmlParserPort;
 import java.io.File;
 import java.io.FileInputStream;
 import java.time.Instant;
-import java.time.Year;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -74,27 +74,30 @@ public class MeshImportOrchestrator {
   ///
   /// 完整流程编排：下载 → 校验 → 解析 → 批量导入 → 验证 → 完成
   ///
-  /// @param command 启动命令
+  /// 使用配置文件中的数据源 URL 和自动生成的任务名称执行导入。
+  ///
   /// @return 导入结果
   /// @throws IllegalStateException 如果已有正在运行的任务或校验失败
   /// @throws RuntimeException 如果下载或导入过程失败
   @Transactional
-  public MeshImportResultDTO startImport(StartImportCommand command) {
-    log.info("开始 MeSH 数据导入流程，命令：{}", command);
+  public MeshImportResultDTO startImport() {
+    log.info("开始 MeSH 数据导入流程，使用配置文件默认值");
 
     // 1. 前置检查：确保没有正在运行的任务
     checkNoRunningTask();
 
-    // 2. 解析命令参数
-    String sourceUrl = resolveSourceUrl(command.sourceUrl());
-    String taskName = resolveTaskName(command.taskName());
+    // 2. 从配置读取参数
+    String descriptorSourceUrl = meshImportConfig.getDescriptorSourceUrl();
+    String qualifierSourceUrl = meshImportConfig.getQualifierSourceUrl();
+    String taskName = generateDefaultTaskName();
+    log.debug("主题词数据源 URL：{}，限定词数据源 URL：{}，任务名称：{}", descriptorSourceUrl, qualifierSourceUrl, taskName);
 
     // 3. 创建任务聚合根（PENDING 状态）
-    MeshImportAggregate aggregate = createPendingTask(taskName, sourceUrl);
+    MeshImportAggregate aggregate = createPendingTask(taskName, descriptorSourceUrl, qualifierSourceUrl);
 
     try {
-      // 4. 下载 XML 文件（desc2025.xml 和 qual2025.xml）
-      File descXmlFile = downloadXmlFile(sourceUrl, aggregate);
+      // 4. 下载 XML 文件（主题词和限定词）
+      File descXmlFile = downloadXmlFile(descriptorSourceUrl, aggregate);
       File qualXmlFile =
           downloadXmlFile(meshImportConfig.getQualifierSourceUrl(), aggregate);
 
@@ -160,7 +163,7 @@ public class MeshImportOrchestrator {
 
     try {
       // 4. 从下载步骤重新开始（不调用 startImport，避免"已有任务运行"检查）
-      File descXmlFile = downloadXmlFile(aggregate.getSourceUrl(), aggregate);
+      File descXmlFile = downloadXmlFile(aggregate.getDescriptorSourceUrl(), aggregate);
       File qualXmlFile =
           downloadXmlFile(meshImportConfig.getQualifierSourceUrl(), aggregate);
 
@@ -216,45 +219,23 @@ public class MeshImportOrchestrator {
     }
   }
 
-  /// 解析数据源 URL（优先使用命令参数，否则使用配置）。
-  ///
-  /// @param commandUrl 命令中的 URL（可能为 null）
-  /// @return 最终使用的 URL
-  private String resolveSourceUrl(String commandUrl) {
-    String url =
-        (commandUrl != null && !commandUrl.isBlank())
-            ? commandUrl
-            : meshImportConfig.getSourceUrl();
-    log.debug("解析数据源 URL：{}", url);
-    return url;
-  }
-
-  /// 解析任务名称（优先使用命令参数，否则自动生成）。
-  ///
-  /// @param commandName 命令中的名称（可能为 null）
-  /// @return 最终使用的名称
-  private String resolveTaskName(String commandName) {
-    String name =
-        (commandName != null && !commandName.isBlank()) ? commandName : generateDefaultTaskName();
-    log.debug("解析任务名称：{}", name);
-    return name;
-  }
-
-  /// 生成默认任务名称（格式："{year}年MeSH数据导入"）。
+  /// 生成默认任务名称（格式："MeSH 数据导入 - yyyy-MM-dd"）。
   ///
   /// @return 默认任务名称
   private String generateDefaultTaskName() {
-    int currentYear = Year.now().getValue();
-    return String.format("%d年MeSH数据导入", currentYear);
+    LocalDate today = LocalDate.now();
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    return "MeSH 数据导入 - " + today.format(formatter);
   }
 
   /// 创建 PENDING 状态的任务聚合根。
   ///
   /// @param taskName 任务名称
-  /// @param sourceUrl 数据源 URL
+  /// @param descriptorSourceUrl 主题词数据源 URL
+  /// @param qualifierSourceUrl 限定词数据源 URL
   /// @return 保存后的聚合根
-  private MeshImportAggregate createPendingTask(String taskName, String sourceUrl) {
-    log.info("创建 MeSH 导入任务，名称：{}, 数据源：{}", taskName, sourceUrl);
+  private MeshImportAggregate createPendingTask(String taskName, String descriptorSourceUrl, String qualifierSourceUrl) {
+    log.info("创建 MeSH 导入任务，名称：{}, 主题词数据源：{}, 限定词数据源：{}", taskName, descriptorSourceUrl, qualifierSourceUrl);
 
     // 创建聚合根（使用全参构造函数）
     MeshImportAggregate aggregate =
@@ -264,7 +245,8 @@ public class MeshImportOrchestrator {
             MeshImportTaskStatus.PENDING,
             null, // startTime 在 startImport() 时设置
             null, // endTime 在 markAsCompleted() 时设置
-            sourceUrl,
+            descriptorSourceUrl,
+            qualifierSourceUrl,
             null, // xmlFileHash 在下载后设置
             null, // xmlFileSize 在下载后设置
             initializeTableProgressList(), // 初始化表进度
@@ -311,7 +293,7 @@ public class MeshImportOrchestrator {
   ///   - 第二道防线：XML 结构解析验证（在后续 importAllData 中执行）
   ///   - 第三道防线：数据量阈值检查（在 MeshDataValidator 中执行）
   ///
-  /// **设计说明**：由于 NLM 官方不提供 desc2025.xml 的 MD5 校验和，我们采用多重验证策略来确保文件完整性。
+  /// **设计说明**：由于 NLM 官方不提供 MeSH XML 文件的 MD5 校验和，我们采用多重验证策略来确保文件完整性。
   /// 这种方案比单一 MD5 验证更全面，能够检测文件损坏、下载不完整等问题。
   ///
   /// @param sourceUrl 数据源 URL
@@ -357,14 +339,14 @@ public class MeshImportOrchestrator {
   ///
   /// 导入顺序：
   ///
-  /// - 1. Qualifier（限定词） - 从 qual2025.xml
-  ///   - 2. Descriptor（主题词） - 从 desc2025.xml
-  ///   - 3. TreeNumber（树形编号） - 从 desc2025.xml
-  ///   - 4. EntryTerm（入口术语） - 从 desc2025.xml
-  ///   - 5. Concept（概念） - 从 desc2025.xml
+  /// - 1. Qualifier（限定词） - 从限定词 XML
+  ///   - 2. Descriptor（主题词） - 从主题词 XML
+  ///   - 3. TreeNumber（树形编号） - 从主题词 XML
+  ///   - 4. EntryTerm（入口术语） - 从主题词 XML
+  ///   - 5. Concept（概念） - 从主题词 XML
   ///
-  /// @param descXmlFile 主题词 XML 文件（desc2025.xml）
-  /// @param qualXmlFile 限定词 XML 文件（qual2025.xml）
+  /// @param descXmlFile 主题词 XML 文件
+  /// @param qualXmlFile 限定词 XML 文件
   /// @param aggregate 任务聚合根
   /// @return 实际导入数量映射
   private Map<String, Integer> importAllData(
@@ -410,7 +392,7 @@ public class MeshImportOrchestrator {
   ///   - 简化逻辑，提高性能
   ///   - 内存占用可忽略（约几 KB）
   ///
-  /// @param xmlFile XML 文件（qual2025.xml）
+  /// @param xmlFile 限定词 XML 文件
   /// @param aggregate 导入任务聚合根（用于更新进度）
   /// @return 实际导入数量
   private int importQualifiers(File xmlFile, MeshImportAggregate aggregate) throws Exception {

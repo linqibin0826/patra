@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.patra.catalog.app.usecase.meshimport.command.StartImportCommand;
 import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import com.patra.catalog.app.usecase.meshimport.validator.MeshDataValidator;
 import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;
@@ -90,6 +89,7 @@ class MeshImportOrchestratorTest {
         java.time.Instant.now(),
         null,
         "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+        "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml",
         null,
         null,
         completedTableProgressList,
@@ -103,7 +103,7 @@ class MeshImportOrchestratorTest {
   void setUp() throws Exception {
     // Mock 配置
     when(meshImportConfig.getExpectedCountForTable(anyString())).thenReturn(35000);
-    when(meshImportConfig.getSourceUrl())
+    when(meshImportConfig.getDescriptorSourceUrl())
         .thenReturn("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
     when(meshImportConfig.getQualifierSourceUrl())
         .thenReturn("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml");
@@ -137,6 +137,7 @@ class MeshImportOrchestratorTest {
             null,
             null,
             "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml",
             null,
             null,
             tableProgressList,
@@ -166,12 +167,6 @@ class MeshImportOrchestratorTest {
     @Test
     @DisplayName("应该成功执行完整导入流程")
     void shouldSuccessfullyCompleteImportFlow() throws Exception {
-      // Given: 准备命令
-      StartImportCommand command =
-          new StartImportCommand(
-              "2025年MeSH数据首次导入",
-              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
-
       // Mock 下载（文件大小在预期范围内，返回两个文件：desc 和 qual）
       when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
 
@@ -215,7 +210,7 @@ class MeshImportOrchestratorTest {
           .thenReturn(new MeshDataValidator.ValidationResult(true, List.of()));
 
       // When: 执行导入
-      MeshImportResultDTO result = orchestrator.startImport(command);
+      MeshImportResultDTO result = orchestrator.startImport();
 
       // Then: 验证结果
       assertThat(result).isNotNull();
@@ -236,12 +231,6 @@ class MeshImportOrchestratorTest {
     @Test
     @DisplayName("当下载失败时应该标记任务为 FAILED")
     void shouldMarkTaskAsFailedWhenDownloadFails() {
-      // Given: 准备命令
-      StartImportCommand command =
-          new StartImportCommand(
-              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-              "2025年MeSH数据导入");
-
       // Mock 下载失败
       when(meshFileDownloadPort.download(anyString())).thenThrow(new RuntimeException("网络连接失败"));
 
@@ -249,7 +238,7 @@ class MeshImportOrchestratorTest {
       when(meshImportPort.save(any(MeshImportAggregate.class))).thenReturn(mockAggregate);
 
       // When & Then: 执行导入，预期抛出异常
-      assertThatThrownBy(() -> orchestrator.startImport(command))
+      assertThatThrownBy(() -> orchestrator.startImport())
           .isInstanceOf(RuntimeException.class)
           .hasMessageContaining("网络连接失败");
 
@@ -260,12 +249,6 @@ class MeshImportOrchestratorTest {
     @Test
     @DisplayName("当文件大小超出阈值时应该抛出异常")
     void shouldThrowExceptionWhenFileSizeOutOfRange() throws Exception {
-      // Given: 准备命令
-      StartImportCommand command =
-          new StartImportCommand(
-              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-              "2025年MeSH数据导入");
-
       // Mock 下载成功但文件大小异常（小于预期的 50%，超出 10% 阈值）
       File abnormalFile = new File("/tmp/mesh-import/desc2025-abnormal.xml");
       if (!abnormalFile.exists()) {
@@ -279,7 +262,7 @@ class MeshImportOrchestratorTest {
       when(meshImportPort.save(any(MeshImportAggregate.class))).thenReturn(mockAggregate);
 
       // When & Then: 执行导入，预期抛出异常（被包装成 RuntimeException）
-      assertThatThrownBy(() -> orchestrator.startImport(command))
+      assertThatThrownBy(() -> orchestrator.startImport())
           .isInstanceOf(RuntimeException.class)
           .hasMessageContaining("文件大小异常");
 
@@ -290,12 +273,6 @@ class MeshImportOrchestratorTest {
     @Test
     @DisplayName("当数据验证失败时应该生成警告")
     void shouldGenerateWarningsWhenDataValidationFails() throws Exception {
-      // Given: 准备命令
-      StartImportCommand command =
-          new StartImportCommand(
-              "2025年MeSH数据导入",
-              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
-
       // Mock 下载（文件大小正常）
       when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
 
@@ -333,7 +310,7 @@ class MeshImportOrchestratorTest {
                   false, List.of("Descriptor 数量差异超过 5%: 预期 35000, 实际 30000")));
 
       // When: 执行导入
-      MeshImportResultDTO result = orchestrator.startImport(command);
+      MeshImportResultDTO result = orchestrator.startImport();
 
       // Then: 验证结果（即使有警告，任务仍标记为成功）
       assertThat(result).isNotNull();
@@ -378,11 +355,12 @@ class MeshImportOrchestratorTest {
       MeshImportAggregate failedAggregate =
           new MeshImportAggregate(
               MeshImportId.of(1L),
-              "2025年MeSH数据导入",
+              "MeSH 数据导入 - 2025-01-20",
               MeshImportTaskStatus.FAILED,
               Instant.now(),
               Instant.now(),
               "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml",
               null,
               null,
               tableProgressList,
@@ -455,11 +433,12 @@ class MeshImportOrchestratorTest {
       MeshImportAggregate successAggregate =
           new MeshImportAggregate(
               MeshImportId.of(1L),
-              "2025年MeSH数据导入",
+              "MeSH 数据导入 - 2025-01-20",
               MeshImportTaskStatus.SUCCESS,
               Instant.now(),
               Instant.now(),
               "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml",
               null,
               null,
               List.of(),
@@ -519,9 +498,6 @@ class MeshImportOrchestratorTest {
     @Test
     @DisplayName("当命令中没有提供 sourceUrl 时应该使用配置的默认值")
     void shouldUseDefaultSourceUrlWhenNotProvided() throws Exception {
-      // Given: 命令不包含 sourceUrl（使用默认值）
-      StartImportCommand command = new StartImportCommand("2025年MeSH数据导入", null);
-
       // Mock 下载（验证使用了配置的 URL，文件大小正常）
       when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
 
@@ -557,7 +533,7 @@ class MeshImportOrchestratorTest {
           .thenReturn(new MeshDataValidator.ValidationResult(true, List.of()));
 
       // When: 执行导入
-      MeshImportResultDTO result = orchestrator.startImport(command);
+      MeshImportResultDTO result = orchestrator.startImport();
 
       // Then: 验证使用了默认 URL
       assertThat(result).isNotNull();
@@ -570,13 +546,8 @@ class MeshImportOrchestratorTest {
       // Given: 已存在正在运行的任务
       when(meshImportPort.existsRunningTask()).thenReturn(true);
 
-      StartImportCommand command =
-          new StartImportCommand(
-              "2025年MeSH数据导入",
-              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
-
       // When & Then: 执行导入，预期抛出异常
-      assertThatThrownBy(() -> orchestrator.startImport(command))
+      assertThatThrownBy(() -> orchestrator.startImport())
           .isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("已有正在运行的 MeSH 导入任务");
     }
@@ -654,16 +625,11 @@ class MeshImportOrchestratorTest {
       when(meshDataValidator.validateDataCounts(anyMap()))
           .thenReturn(new MeshDataValidator.ValidationResult(true, List.of()));
 
-      StartImportCommand command =
-          new StartImportCommand(
-              "2025年MeSH数据导入",
-              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
-
       // When: 执行导入
-      orchestrator.startImport(command);
+      orchestrator.startImport();
 
       // Then: 验证 Qualifier 一次性保存（约 80 条，不分批）
-      verify(meshDescriptorPort, times(1)).saveQualifiersBatch(any(List.class));
+      verify(meshQualifierRepository, times(1)).saveBatch(any(List.class));
 
       // 验证 Descriptor 调用 3 次批量保存 (1000 + 1000 + 1000)
       verify(meshDescriptorPort, times(3)).saveBatch(any(List.class));
@@ -729,13 +695,8 @@ class MeshImportOrchestratorTest {
       when(meshDataValidator.validateDataCounts(anyMap()))
           .thenReturn(new MeshDataValidator.ValidationResult(true, List.of()));
 
-      StartImportCommand command =
-          new StartImportCommand(
-              "2025年MeSH数据导入",
-              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
-
       // When: 执行导入
-      orchestrator.startImport(command);
+      orchestrator.startImport();
 
       // Then: 验证调用 3 次批量保存 (1000 + 1000 + 500)
       verify(meshDescriptorPort, times(3)).saveBatch(any(List.class));
@@ -764,13 +725,8 @@ class MeshImportOrchestratorTest {
           .when(meshDescriptorPort)
           .saveBatch(any(List.class));
 
-      StartImportCommand command =
-          new StartImportCommand(
-              "2025年MeSH数据导入",
-              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
-
       // When & Then: 执行导入，预期抛出异常
-      assertThatThrownBy(() -> orchestrator.startImport(command))
+      assertThatThrownBy(() -> orchestrator.startImport())
           .isInstanceOf(RuntimeException.class)
           .hasMessageContaining("批次保存失败");
 
@@ -836,13 +792,8 @@ class MeshImportOrchestratorTest {
       when(meshDataValidator.validateDataCounts(anyMap()))
           .thenReturn(new MeshDataValidator.ValidationResult(true, List.of()));
 
-      StartImportCommand command =
-          new StartImportCommand(
-              "2025年MeSH数据导入",
-              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
-
       // When: 执行导入
-      orchestrator.startImport(command);
+      orchestrator.startImport();
 
       // Then: 验证 descriptor 调用 3 次 (3000 / 1000)
       verify(meshDescriptorPort, times(3)).saveBatch(any(List.class));
@@ -918,13 +869,8 @@ class MeshImportOrchestratorTest {
       when(meshDataValidator.validateDataCounts(anyMap()))
           .thenReturn(new MeshDataValidator.ValidationResult(true, List.of()));
 
-      StartImportCommand command =
-          new StartImportCommand(
-              "2025年MeSH数据导入",
-              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
-
       // When: 执行导入
-      orchestrator.startImport(command);
+      orchestrator.startImport();
 
       // Then: 验证调用了批量保存
       verify(meshDescriptorPort, times(2)).saveBatch(any(List.class));

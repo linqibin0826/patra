@@ -1,7 +1,6 @@
 package com.patra.catalog.adapter.scheduler.job;
 
 import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
-import com.patra.catalog.app.usecase.meshimport.command.StartImportCommand;
 import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
@@ -89,9 +88,8 @@ public class MeshImportJob {
       log.info("成功获取分布式锁，开始执行 MeSH 导入任务");
       XxlJobHelper.log("成功获取分布式锁，开始执行 MeSH 导入任务");
 
-      // 调用 Orchestrator 执行导入
-      StartImportCommand command = new StartImportCommand("定时任务-MeSH数据导入", null); // 使用默认配置
-      MeshImportResultDTO result = meshImportOrchestrator.startImport(command);
+      // 调用 Orchestrator 执行导入（使用配置文件默认值）
+      MeshImportResultDTO result = meshImportOrchestrator.startImport();
 
       log.info(
           "MeSH 导入任务执行成功，任务 ID：{}，状态：{}，消息：{}",

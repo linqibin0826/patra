@@ -51,8 +51,10 @@ class MeshImportAggregateTest {
       // Given: 任务基本信息
       MeshImportId id = MeshImportId.of(1001L);
       String taskName = "MeSH 2025 首次导入";
-      String sourceUrl =
+      String descriptorSourceUrl =
           "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml";
+      String qualifierSourceUrl =
+          "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml";
       List<TableProgress> tableProgressList = createInitialTableProgressList();
 
       // When: 创建聚合根
@@ -63,7 +65,8 @@ class MeshImportAggregateTest {
               MeshImportTaskStatus.PENDING,
               null, // startTime
               null, // endTime
-              sourceUrl,
+              descriptorSourceUrl,
+              qualifierSourceUrl,
               null, // xmlFileHash
               null, // xmlFileSize
               tableProgressList,
@@ -78,7 +81,7 @@ class MeshImportAggregateTest {
       assertThat(aggregate.getId()).isEqualTo(id);
       assertThat(aggregate.getTaskName()).isEqualTo(taskName);
       assertThat(aggregate.getStatus()).isEqualTo(MeshImportTaskStatus.PENDING);
-      assertThat(aggregate.getSourceUrl()).isEqualTo(sourceUrl);
+      assertThat(aggregate.getDescriptorSourceUrl()).isEqualTo(descriptorSourceUrl);
       assertThat(aggregate.getTotalRecords()).isEqualTo(350000);
       assertThat(aggregate.getProcessedRecords()).isEqualTo(0);
       assertThat(aggregate.getFailedBatchCount()).isEqualTo(0);
@@ -358,7 +361,8 @@ class MeshImportAggregateTest {
               MeshImportTaskStatus.PROCESSING,
               startTime,
               null,
-              aggregate.getSourceUrl(),
+              aggregate.getDescriptorSourceUrl(),
+              aggregate.getQualifierSourceUrl(),
               aggregate.getXmlFileHash(),
               aggregate.getXmlFileSize(),
               aggregate.getTableProgressList(),
@@ -413,6 +417,7 @@ class MeshImportAggregateTest {
               startTime,
               null,
               "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml",
               null,
               null,
               createInitialTableProgressList(),
@@ -466,6 +471,7 @@ class MeshImportAggregateTest {
               Instant.now().minusSeconds(100),
               null,
               "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml",
               null,
               null,
               createInitialTableProgressList(),
@@ -493,6 +499,7 @@ class MeshImportAggregateTest {
               Instant.now().minusSeconds(100),
               null,
               "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml",
               null,
               null,
               createInitialTableProgressList(),
@@ -520,6 +527,7 @@ class MeshImportAggregateTest {
               Instant.now(),
               null,
               "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml",
               null,
               null,
               createInitialTableProgressList(),
@@ -656,6 +664,7 @@ class MeshImportAggregateTest {
         null,
         null,
         "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+        "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml",
         null,
         null,
         createInitialTableProgressList(),

@@ -1,11 +1,8 @@
 package com.patra.catalog.adapter.rest;
 
-import com.patra.catalog.adapter.rest.assembler.StartImportAssembler;
-import com.patra.catalog.adapter.rest.request.StartImportRequest;
 import com.patra.catalog.api.dto.MeshProgressDTO;
 import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
 import com.patra.catalog.app.usecase.meshimport.MeshProgressQueryOrchestrator;
-import com.patra.catalog.app.usecase.meshimport.command.StartImportCommand;
 import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import jakarta.validation.Valid;
@@ -29,7 +26,6 @@ import org.springframework.web.bind.annotation.*;
 /// **职责**：
 ///
 /// - 接收 HTTP 请求并验证格式（{@link jakarta.validation.Valid}）
-///   - 委托 {@link StartImportAssembler} 将 Request 转换为 Command
 ///   - 调用 {@link MeshImportOrchestrator} 执行业务逻辑
 ///   - 异常由全局 {@link com.patra.starter.web.error.handler.GlobalRestExceptionHandler} 处理
 ///
@@ -53,28 +49,22 @@ public class MeshImportController {
 
   private final MeshImportOrchestrator meshImportOrchestrator;
   private final MeshProgressQueryOrchestrator meshProgressQueryOrchestrator;
-  private final StartImportAssembler startImportAssembler;
 
   /// 开始导入任务。
   ///
   /// 接口定义：POST /api/v1/mesh/import/start
   ///
-  /// 流程：Request → {@link StartImportAssembler} → Command → {@link MeshImportOrchestrator}
+  /// 流程：{@link MeshImportOrchestrator}
   ///
-  /// @param request 启动请求（可选参数，空请求体时使用默认配置）
+  /// 使用配置文件中预定义的数据源 URL 和任务名称启动导入任务。
+  ///
   /// @return 导入任务结果
   /// @throws IllegalStateException 如果已有任务正在运行（返回 409 Conflict）
   @PostMapping("/start")
-  public ResponseEntity<MeshImportResultDTO> startImport(
-      @Valid @RequestBody(required = false) StartImportRequest request) {
-    log.info("收到 MeSH 导入请求，参数：{}", request);
+  public ResponseEntity<MeshImportResultDTO> startImport() {
+    log.info("收到 MeSH 导入请求，使用配置文件默认值");
 
-    // 使用 Assembler 将 Request 转换为 Command
-    StartImportCommand command = startImportAssembler.assemble(request);
-
-    log.debug("已装配启动命令：taskName={}, sourceUrl={}", command.taskName(), command.sourceUrl());
-
-    MeshImportResultDTO result = meshImportOrchestrator.startImport(command);
+    MeshImportResultDTO result = meshImportOrchestrator.startImport();
 
     log.info("MeSH 导入任务已创建，任务 ID：{}", result.getTaskId());
 

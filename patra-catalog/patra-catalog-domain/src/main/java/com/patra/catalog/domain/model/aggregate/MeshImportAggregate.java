@@ -61,8 +61,11 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
 
   // ========== 数据源信息 ==========
 
-  /// NLM 数据源 URL
-  private String sourceUrl;
+  /// NLM 主题词数据源 URL
+  private String descriptorSourceUrl;
+
+  /// NLM 限定词数据源 URL
+  private String qualifierSourceUrl;
 
   /// XML 文件 MD5 哈希（验证完整性）
   private String xmlFileHash;
@@ -94,7 +97,8 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   /// @param status 任务状态
   /// @param startTime 开始时间
   /// @param endTime 结束时间
-  /// @param sourceUrl 数据源 URL
+  /// @param descriptorSourceUrl 主题词数据源 URL
+  /// @param qualifierSourceUrl 限定词数据源 URL
   /// @param xmlFileHash XML 文件哈希
   /// @param xmlFileSize XML 文件大小
   /// @param tableProgressList 表进度列表
@@ -108,7 +112,8 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
       MeshImportTaskStatus status,
       Instant startTime,
       Instant endTime,
-      String sourceUrl,
+      String descriptorSourceUrl,
+      String qualifierSourceUrl,
       String xmlFileHash,
       Long xmlFileSize,
       List<TableProgress> tableProgressList,
@@ -121,7 +126,8 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
     this.status = status;
     this.startTime = startTime;
     this.endTime = endTime;
-    this.sourceUrl = sourceUrl;
+    this.descriptorSourceUrl = descriptorSourceUrl;
+    this.qualifierSourceUrl = qualifierSourceUrl;
     this.xmlFileHash = xmlFileHash;
     this.xmlFileSize = xmlFileSize;
     this.tableProgressList =
@@ -148,7 +154,7 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
     this.status = MeshImportTaskStatus.PROCESSING;
     this.startTime = Instant.now();
     // 发布领域事件
-    addDomainEvent(new MeshImportStarted(this.getId(), this.sourceUrl, this.startTime));
+    addDomainEvent(new MeshImportStarted(this.getId(), this.descriptorSourceUrl, this.startTime));
   }
 
   /// 更新指定表的进度。
@@ -356,7 +362,8 @@ public class MeshImportAggregate extends AggregateRoot<MeshImportId> {
   protected void assertInvariants() {
     Assert.notBlank(taskName, "任务名称不能为空");
     Assert.notNull(status, "任务状态不能为空");
-    Assert.notBlank(sourceUrl, "数据源 URL 不能为空");
+    Assert.notBlank(descriptorSourceUrl, "主题词数据源 URL 不能为空");
+    Assert.notBlank(qualifierSourceUrl, "限定词数据源 URL 不能为空");
   }
 
   @Override

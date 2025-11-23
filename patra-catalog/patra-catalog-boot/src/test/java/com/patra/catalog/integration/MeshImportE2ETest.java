@@ -175,7 +175,7 @@ class MeshImportE2ETest {
                         MeshImportTaskStatus.PROCESSING,
                         MeshImportTaskStatus.SUCCESS,
                         MeshImportTaskStatus.FAILED);
-                assertThat(task.getSourceUrl()).contains("desc2025.xml");
+                assertThat(task.getDescriptorSourceUrl()).contains("desc2025.xml");
               });
     }
 
@@ -216,6 +216,7 @@ class MeshImportE2ETest {
               null,
               null,
               "https://nlmpubs.nlm.nih.gov/projects/mesh/desc2025.xml",
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/qual2025.xml",
               null,
               null,
               java.util.List.of(),
@@ -264,6 +265,7 @@ class MeshImportE2ETest {
               null,
               null,
               "https://nlmpubs.nlm.nih.gov/projects/mesh/desc2025.xml",
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/qual2025.xml",
               null,
               null,
               java.util.List.of(),
@@ -372,6 +374,7 @@ class MeshImportE2ETest {
               null,
               null,
               "https://nlmpubs.nlm.nih.gov/projects/mesh/desc2025.xml",
+              "https://nlmpubs.nlm.nih.gov/projects/mesh/qual2025.xml",
               null,
               null,
               java.util.List.of(),

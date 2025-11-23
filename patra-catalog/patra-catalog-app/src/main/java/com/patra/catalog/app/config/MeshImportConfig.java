@@ -29,7 +29,7 @@ public class MeshImportConfig {
   /// 默认值: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml
   ///
   /// 说明: 支持通过 Nacos Config 动态修改,无需重启应用
-  private String sourceUrl =
+  private String descriptorSourceUrl =
       "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml";
 
   /// NLM 官方 MeSH 限定词数据源 URL。
@@ -121,7 +121,7 @@ public class MeshImportConfig {
   /// 说明: 用于下载后的文件完整性初步验证。由于 NLM 官方不提供 MD5 校验和，
   /// 我们使用文件大小作为完整性验证的第一道防线。允许 ±10% 的合理波动范围。
   ///
-  /// 参考值来源: 2025年1月实际下载的 desc2025.xml 文件大小
+  /// 参考值来源: 实际下载的 MeSH 主题词 XML 文件大小
   private Long expectedFileSize = 313_524_224L;
 
   /// 文件大小差异容忍百分比 (超过此值验证失败)。

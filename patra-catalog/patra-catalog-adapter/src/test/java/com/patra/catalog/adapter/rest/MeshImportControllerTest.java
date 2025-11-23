@@ -38,7 +38,6 @@ import org.springframework.test.web.servlet.MockMvc;
 /// 测试覆盖：
 ///
 /// - ✅ POST /api/v1/mesh/import/start - 成功场景
-///   - ✅ POST /api/v1/mesh/import/start - 参数校验失败（400）
 ///   - ✅ POST /api/v1/mesh/import/start - 已有任务运行（409）
 ///   - ✅ POST /api/v1/mesh/import/retry/{taskId} - 成功场景
 ///   - ✅ POST /api/v1/mesh/import/retry/{taskId} - 任务不存在（404）
@@ -70,134 +69,37 @@ class MeshImportControllerTest {
     @DisplayName("应该成功创建导入任务并返回 200")
     void shouldReturn200WhenStartImportSuccessfully() throws Exception {
       // given
-      var requestBody =
-          """
-          {
-            "sourceUrl": "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-            "taskName": "2025年MeSH数据首次导入"
-          }
-          """;
-
       var resultDTO =
           MeshImportResultDTO.builder()
               .taskId("1234567890")
-              .taskName("2025年MeSH数据首次导入")
+              .taskName("MeSH 数据导入 - 2025-01-20")
               .status("PENDING")
               .startTime(Instant.parse("2025-01-20T10:00:00Z"))
               .message("任务已创建，等待执行")
               .build();
 
-      when(meshImportOrchestrator.startImport(any())).thenReturn(resultDTO);
+      when(meshImportOrchestrator.startImport()).thenReturn(resultDTO);
 
       // when & then
       mockMvc
-          .perform(
-              post("/api/v1/mesh/import/start")
-                  .contentType(MediaType.APPLICATION_JSON)
-                  .content(requestBody))
+          .perform(post("/api/v1/mesh/import/start"))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.taskId").value("1234567890"))
-          .andExpect(jsonPath("$.taskName").value("2025年MeSH数据首次导入"))
+          .andExpect(jsonPath("$.taskName").value("MeSH 数据导入 - 2025-01-20"))
           .andExpect(jsonPath("$.status").value("PENDING"))
           .andExpect(jsonPath("$.message").value("任务已创建，等待执行"));
-    }
-
-    @Test
-    @DisplayName("应该支持空请求体（使用默认配置）")
-    void shouldAcceptEmptyRequestBodyWithDefaults() throws Exception {
-      // given
-      var requestBody = "{}";
-
-      var resultDTO =
-          MeshImportResultDTO.builder()
-              .taskId("1234567890")
-              .taskName("2025年MeSH数据导入")
-              .status("PENDING")
-              .startTime(Instant.now())
-              .message("任务已创建")
-              .build();
-
-      when(meshImportOrchestrator.startImport(any())).thenReturn(resultDTO);
-
-      // when & then
-      mockMvc
-          .perform(
-              post("/api/v1/mesh/import/start")
-                  .contentType(MediaType.APPLICATION_JSON)
-                  .content(requestBody))
-          .andExpect(status().isOk())
-          .andExpect(jsonPath("$.taskId").exists());
-    }
-
-    @Test
-    @DisplayName("应该拒绝无效的 URL 格式并返回 422 (RFC 7807 ProblemDetail)")
-    void shouldReturn422WhenInvalidUrlFormat() throws Exception {
-      // given
-      var requestBody =
-          """
-          {
-            "sourceUrl": "invalid-url",
-            "taskName": "测试任务"
-          }
-          """;
-
-      // when & then - 全局异常处理器返回 RFC 7807 ProblemDetail 格式
-      // 参数校验失败返回 422 Unprocessable Entity (符合 RFC 7807 标准)
-      mockMvc
-          .perform(
-              post("/api/v1/mesh/import/start")
-                  .contentType(MediaType.APPLICATION_JSON)
-                  .content(requestBody))
-          .andExpect(status().isUnprocessableEntity())
-          .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-          .andExpect(jsonPath("$.type").exists())
-          .andExpect(jsonPath("$.title").exists())
-          .andExpect(jsonPath("$.status").value(422))
-          .andExpect(jsonPath("$.detail").exists());
-    }
-
-    @Test
-    @DisplayName("应该拒绝过长的任务名称并返回 422 (RFC 7807 ProblemDetail)")
-    void shouldReturn422WhenTaskNameTooLong() throws Exception {
-      // given
-      var longName = "a".repeat(101); // 超过 100 字符
-      var requestBody =
-          String.format(
-              """
-          {
-            "taskName": "%s"
-          }
-          """,
-              longName);
-
-      // when & then - 全局异常处理器返回 RFC 7807 ProblemDetail 格式
-      // 参数校验失败返回 422 Unprocessable Entity (符合 RFC 7807 标准)
-      mockMvc
-          .perform(
-              post("/api/v1/mesh/import/start")
-                  .contentType(MediaType.APPLICATION_JSON)
-                  .content(requestBody))
-          .andExpect(status().isUnprocessableEntity())
-          .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-          .andExpect(jsonPath("$.type").exists())
-          .andExpect(jsonPath("$.status").value(422));
     }
 
     @Test
     @DisplayName("应该在已有任务运行时返回 409 (RFC 7807 ProblemDetail)")
     void shouldReturn409WhenTaskAlreadyRunning() throws Exception {
       // given
-      var requestBody = "{}";
-
-      when(meshImportOrchestrator.startImport(any()))
+      when(meshImportOrchestrator.startImport())
           .thenThrow(new IllegalStateException("已有正在运行的 MeSH 导入任务，请等待其完成或手动中断"));
 
       // when & then - MeshImportErrorMappingContributor 映射到 409
       mockMvc
-          .perform(
-              post("/api/v1/mesh/import/start")
-                  .contentType(MediaType.APPLICATION_JSON)
-                  .content(requestBody))
+          .perform(post("/api/v1/mesh/import/start"))
           .andExpect(status().isConflict())
           .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
           .andExpect(jsonPath("$.type").exists())
@@ -220,7 +122,7 @@ class MeshImportControllerTest {
       var resultDTO =
           MeshImportResultDTO.builder()
               .taskId(taskId)
-              .taskName("2025年MeSH数据导入")
+              .taskName("MeSH 数据导入 - 2025-01-20")
               .status("PROCESSING")
               .startTime(Instant.now())
               .message("任务正在重试")
@@ -385,7 +287,7 @@ class MeshImportControllerTest {
       var progressDTO =
           MeshProgressDTO.builder()
               .taskId(taskId)
-              .taskName("2025年MeSH数据导入")
+              .taskName("MeSH 数据导入 - 2025-01-20")
               .status("processing")
               .totalRecords(30000)
               .processedRecords(15000)

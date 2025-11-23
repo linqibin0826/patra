@@ -79,13 +79,13 @@ class MeshImportJobTest {
       var resultDTO =
           MeshImportResultDTO.builder()
               .taskId("1234567890")
-              .taskName("2025年MeSH数据导入")
+              .taskName("MeSH 数据导入 - 2025-01-20")
               .status("PROCESSING")
               .startTime(Instant.now())
               .message("任务已启动")
               .build();
 
-      when(meshImportOrchestrator.startImport(any())).thenReturn(resultDTO);
+      when(meshImportOrchestrator.startImport()).thenReturn(resultDTO);
 
       // when
       meshImportJob.execute();
@@ -93,7 +93,7 @@ class MeshImportJobTest {
       // then
       verify(redissonClient).getLock("mesh:import:lock");
       verify(lock).tryLock(0, 30, TimeUnit.MINUTES);
-      verify(meshImportOrchestrator).startImport(any());
+      verify(meshImportOrchestrator).startImport();
       verify(lock).unlock();
     }
 
@@ -113,7 +113,7 @@ class MeshImportJobTest {
               .message("任务已完成")
               .build();
 
-      when(meshImportOrchestrator.startImport(any())).thenReturn(resultDTO);
+      when(meshImportOrchestrator.startImport()).thenReturn(resultDTO);
 
       // when
       meshImportJob.execute();
@@ -141,7 +141,7 @@ class MeshImportJobTest {
 
       // then
       verify(lock).tryLock(0, 30, TimeUnit.MINUTES);
-      verify(meshImportOrchestrator, never()).startImport(any());
+      verify(meshImportOrchestrator, never()).startImport();
       verify(lock, never()).unlock();
       xxlJobHelperMock.verify(() -> XxlJobHelper.log(anyString()));
     }
@@ -157,7 +157,7 @@ class MeshImportJobTest {
       meshImportJob.execute();
 
       // then
-      verify(meshImportOrchestrator, never()).startImport(any());
+      verify(meshImportOrchestrator, never()).startImport();
       xxlJobHelperMock.verify(() -> XxlJobHelper.log(anyString()));
     }
   }
@@ -175,7 +175,7 @@ class MeshImportJobTest {
       when(lock.isHeldByCurrentThread()).thenReturn(true);
 
       RuntimeException importException = new RuntimeException("MeSH 数据导入失败：网络连接超时");
-      when(meshImportOrchestrator.startImport(any())).thenThrow(importException);
+      when(meshImportOrchestrator.startImport()).thenThrow(importException);
 
       // when
       assertThatThrownBy(() -> meshImportJob.execute())
@@ -197,7 +197,7 @@ class MeshImportJobTest {
 
       IllegalStateException stateException =
           new IllegalStateException("已有正在运行的 MeSH 导入任务，请等待其完成或手动中断");
-      when(meshImportOrchestrator.startImport(any())).thenThrow(stateException);
+      when(meshImportOrchestrator.startImport()).thenThrow(stateException);
 
       // when
       assertThatThrownBy(() -> meshImportJob.execute())
@@ -221,7 +221,7 @@ class MeshImportJobTest {
       assertThatThrownBy(() -> meshImportJob.execute()).isInstanceOf(RuntimeException.class);
 
       // then
-      verify(meshImportOrchestrator, never()).startImport(any());
+      verify(meshImportOrchestrator, never()).startImport();
       verify(lock, never()).unlock();
       xxlJobHelperMock.verify(() -> XxlJobHelper.log(anyString(), any()));
     }
@@ -239,7 +239,7 @@ class MeshImportJobTest {
       when(lock.tryLock(0, 30, TimeUnit.MINUTES)).thenReturn(true);
       when(lock.isHeldByCurrentThread()).thenReturn(true);
 
-      when(meshImportOrchestrator.startImport(any())).thenThrow(new RuntimeException("模拟导入异常"));
+      when(meshImportOrchestrator.startImport()).thenThrow(new RuntimeException("模拟导入异常"));
 
       // when
       assertThatThrownBy(() -> meshImportJob.execute()).isInstanceOf(RuntimeException.class);
@@ -264,7 +264,7 @@ class MeshImportJobTest {
               .message("任务已完成")
               .build();
 
-      when(meshImportOrchestrator.startImport(any())).thenReturn(resultDTO);
+      when(meshImportOrchestrator.startImport()).thenReturn(resultDTO);
 
       // when
       meshImportJob.execute();
@@ -290,13 +290,13 @@ class MeshImportJobTest {
 
       var resultDTO = MeshImportResultDTO.builder().taskId("123").taskName("测试任务名称").status("SUCCESS").build();
 
-      when(meshImportOrchestrator.startImport(any())).thenReturn(resultDTO);
+      when(meshImportOrchestrator.startImport()).thenReturn(resultDTO);
 
       // when
       meshImportJob.execute();
 
       // then
-      verify(meshImportOrchestrator).startImport(any());
+      verify(meshImportOrchestrator).startImport();
     }
 
     @Test
@@ -312,13 +312,13 @@ class MeshImportJobTest {
 
       var resultDTO = MeshImportResultDTO.builder().taskId("123").taskName("测试任务名称").status("SUCCESS").build();
 
-      when(meshImportOrchestrator.startImport(any())).thenReturn(resultDTO);
+      when(meshImportOrchestrator.startImport()).thenReturn(resultDTO);
 
       // when
       meshImportJob.execute();
 
       // then
-      verify(meshImportOrchestrator).startImport(any());
+      verify(meshImportOrchestrator).startImport();
       xxlJobHelperMock.verify(() -> XxlJobHelper.log(anyString()), atLeastOnce());
     }
   }
