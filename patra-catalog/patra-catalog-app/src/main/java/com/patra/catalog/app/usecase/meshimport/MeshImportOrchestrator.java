@@ -6,6 +6,9 @@ import com.patra.catalog.app.usecase.meshimport.validator.MeshDataValidator;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
+import com.patra.catalog.domain.model.entity.MeshConcept;
+import com.patra.catalog.domain.model.entity.MeshEntryTerm;
+import com.patra.catalog.domain.model.entity.MeshTreeNumber;
 import com.patra.catalog.domain.model.enums.MeshImportTaskStatus;
 import com.patra.catalog.domain.model.enums.MeshTableImportStatus;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
@@ -17,6 +20,7 @@ import com.patra.catalog.domain.port.MeshQualifierRepository;
 import com.patra.catalog.domain.port.XmlParserPort;
 import java.io.File;
 import java.io.FileInputStream;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -81,7 +85,7 @@ public class MeshImportOrchestrator {
   /// @throws RuntimeException 如果下载或导入过程失败
   @Transactional
   public MeshImportResultDTO startImport() {
-    log.info("开始 MeSH 数据导入流程，使用配置文件默认值");
+    log.info("[MeshImport] 开始导入任务，使用配置文件默认值");
 
     // 1. 前置检查：确保没有正在运行的任务
     checkNoRunningTask();
@@ -90,37 +94,26 @@ public class MeshImportOrchestrator {
     String descriptorSourceUrl = meshImportConfig.getDescriptorSourceUrl();
     String qualifierSourceUrl = meshImportConfig.getQualifierSourceUrl();
     String taskName = generateDefaultTaskName();
-    log.debug("主题词数据源 URL：{}，限定词数据源 URL：{}，任务名称：{}", descriptorSourceUrl, qualifierSourceUrl, taskName);
+    log.info("[MeshImport] 任务配置 | 任务名称: {} | Descriptor源: {} | Qualifier源: {}",
+        taskName, descriptorSourceUrl, qualifierSourceUrl);
 
     // 3. 创建任务聚合根（PENDING 状态）
     MeshImportAggregate aggregate = createPendingTask(taskName, descriptorSourceUrl, qualifierSourceUrl);
 
     try {
       // 4. 下载 XML 文件（主题词和限定词）
-      File descXmlFile = downloadXmlFile(descriptorSourceUrl, aggregate);
-      File qualXmlFile =
-          downloadXmlFile(meshImportConfig.getQualifierSourceUrl(), aggregate);
+      File descXmlFile = downloadXmlFile(descriptorSourceUrl, "Descriptor");
+      File qualXmlFile = downloadXmlFile(qualifierSourceUrl, "Qualifier");
 
       // 5. 开始导入（状态变为 PROCESSING）
       aggregate.startImport();
       aggregate = meshImportPort.save(aggregate);
 
-      // 6. 解析并批量导入数据（先 qualifier，再 descriptor 及其子表）
-      Map<String, Integer> importedCounts = importAllData(descXmlFile, qualXmlFile, aggregate);
-
-      // 7. 验证数据量
-      validateDataCounts(importedCounts, aggregate);
-
-      // 8. 标记任务完成
-      aggregate.markAsCompleted();
-      aggregate = meshImportPort.save(aggregate);
-
-      log.info("MeSH 数据导入成功完成，任务 ID：{}", aggregate.getId().value());
-
-      return buildSuccessResult(aggregate);
+      // 6. 完成导入流程（导入 → 验证 → 标记完成 → 返回结果）
+      return completeImportProcess(descXmlFile, qualXmlFile, aggregate);
 
     } catch (Exception ex) {
-      log.error("MeSH 数据导入失败，任务 ID：{}", aggregate.getId().value(), ex);
+      log.error("[MeshImport] 导入任务失败 | 任务ID: {} | 错误: {}", aggregate.getId().value(), ex.getMessage(), ex);
       aggregate.markAsFailed(ex.getMessage());
       meshImportPort.save(aggregate);
       throw new RuntimeException("MeSH 数据导入失败：" + ex.getMessage(), ex);
@@ -143,7 +136,7 @@ public class MeshImportOrchestrator {
   /// @throws IllegalStateException 如果任务不是 FAILED 状态
   @Transactional
   public MeshImportResultDTO retryFailedTask(MeshImportId taskId) {
-    log.info("重试失败的 MeSH 导入任务，任务 ID：{}", taskId.value());
+    log.info("[MeshImport] 重试失败任务 | 任务ID: {}", taskId.value());
 
     // 1. 查询任务
     MeshImportAggregate aggregate =
@@ -163,26 +156,15 @@ public class MeshImportOrchestrator {
 
     try {
       // 4. 从下载步骤重新开始（不调用 startImport，避免"已有任务运行"检查）
-      File descXmlFile = downloadXmlFile(aggregate.getDescriptorSourceUrl(), aggregate);
-      File qualXmlFile =
-          downloadXmlFile(meshImportConfig.getQualifierSourceUrl(), aggregate);
+      //    重要：使用聚合根中保存的 URL，确保重试时使用与首次导入相同的数据源
+      File descXmlFile = downloadXmlFile(aggregate.getDescriptorSourceUrl(), "Descriptor");
+      File qualXmlFile = downloadXmlFile(aggregate.getQualifierSourceUrl(), "Qualifier");
 
-      // 5. 解析并批量导入数据（先 qualifier，再 descriptor 及其子表）
-      Map<String, Integer> importedCounts = importAllData(descXmlFile, qualXmlFile, aggregate);
-
-      // 6. 验证数据量
-      validateDataCounts(importedCounts, aggregate);
-
-      // 7. 标记任务完成
-      aggregate.markAsCompleted();
-      aggregate = meshImportPort.save(aggregate);
-
-      log.info("MeSH 数据重试导入成功，任务 ID：{}", aggregate.getId().value());
-
-      return buildSuccessResult(aggregate);
+      // 5. 完成导入流程（导入 → 验证 → 标记完成 → 返回结果）
+      return completeImportProcess(descXmlFile, qualXmlFile, aggregate);
 
     } catch (Exception ex) {
-      log.error("MeSH 数据重试导入失败，任务 ID：{}", aggregate.getId().value(), ex);
+      log.error("[MeshImport] 重试任务失败 | 任务ID: {} | 错误: {}", aggregate.getId().value(), ex.getMessage(), ex);
       aggregate.markAsFailed(ex.getMessage());
       meshImportPort.save(aggregate);
       throw new RuntimeException("MeSH 数据重试导入失败：" + ex.getMessage(), ex);
@@ -194,14 +176,14 @@ public class MeshImportOrchestrator {
   /// 用于中断正在运行的任务并重置状态。
   @Transactional
   public void clearAndRestart() {
-    log.info("清空 MeSH 导入进度并重新开始");
+    log.info("[MeshImport] 清空进度并重新开始");
 
     // 查询正在运行的任务
     meshImportPort
         .findRunningTask()
         .ifPresent(
             aggregate -> {
-              log.warn("发现正在运行的任务，任务 ID：{}，重置为 PENDING 状态", aggregate.getId().value());
+              log.warn("[MeshImport] 发现正在运行的任务 | 任务ID: {} | 操作: 标记为失败", aggregate.getId().value());
               // 重置任务状态（通过创建新的聚合根，保留原任务记录）
               aggregate.markAsFailed("用户手动中断任务");
               meshImportPort.save(aggregate);
@@ -235,7 +217,8 @@ public class MeshImportOrchestrator {
   /// @param qualifierSourceUrl 限定词数据源 URL
   /// @return 保存后的聚合根
   private MeshImportAggregate createPendingTask(String taskName, String descriptorSourceUrl, String qualifierSourceUrl) {
-    log.info("创建 MeSH 导入任务，名称：{}, 主题词数据源：{}, 限定词数据源：{}", taskName, descriptorSourceUrl, qualifierSourceUrl);
+    log.info("[MeshImport] 创建导入任务 | 任务名称: {} | Descriptor源: {} | Qualifier源: {}",
+        taskName, descriptorSourceUrl, qualifierSourceUrl);
 
     // 创建聚合根（使用全参构造函数）
     MeshImportAggregate aggregate =
@@ -285,53 +268,28 @@ public class MeshImportOrchestrator {
     return progressList;
   }
 
-  /// 下载 XML 文件并验证文件完整性。
+  /// 下载 XML 文件。
   ///
-  /// 验证策略（增强验证方案）：
+  /// 数据完整性验证策略：
   ///
-  /// - 第一道防线：文件大小验证（允许 ±10% 波动）
-  ///   - 第二道防线：XML 结构解析验证（在后续 importAllData 中执行）
-  ///   - 第三道防线：数据量阈值检查（在 MeshDataValidator 中执行）
-  ///
-  /// **设计说明**：由于 NLM 官方不提供 MeSH XML 文件的 MD5 校验和，我们采用多重验证策略来确保文件完整性。
-  /// 这种方案比单一 MD5 验证更全面，能够检测文件损坏、下载不完整等问题。
+  /// - XML 结构解析验证（在 importAllData 中执行）
+  ///   - 数据量阈值检查（在 MeshDataValidator 中执行）
   ///
   /// @param sourceUrl 数据源 URL
-  /// @param aggregate 任务聚合根
+  /// @param fileType 文件类型（"Descriptor" 或 "Qualifier"）
   /// @return 下载后的文件
-  /// @throws IllegalStateException 如果文件大小验证失败
-  private File downloadXmlFile(String sourceUrl, MeshImportAggregate aggregate) {
-    log.info("开始下载 MeSH XML 文件，URL：{}", sourceUrl);
+  private File downloadXmlFile(String sourceUrl, String fileType) {
+    log.info("[{}-Download] 开始下载文件 | URL: {}", fileType, sourceUrl);
 
     // 下载文件
     File xmlFile = meshFileDownloadPort.download(sourceUrl);
     long actualSize = xmlFile.length();
     log.info(
-        "XML 文件下载完成，大小：{} 字节 ({} MB)，路径：{}",
-        actualSize,
+        "[{}-Download] 文件下载完成 | 大小: {} MB | 路径: {}",
+        fileType,
         actualSize / (1024 * 1024),
         xmlFile.getAbsolutePath());
 
-    // 验证文件大小（第一道防线）
-    long expectedSize = meshImportConfig.getExpectedFileSize();
-    double threshold = meshImportConfig.getFileSizeDifferenceThreshold();
-    double difference = Math.abs(actualSize - expectedSize) * 100.0 / expectedSize;
-
-    if (difference > threshold) {
-      String message =
-          String.format(
-              "XML 文件大小异常，预期：%d 字节 (%d MB)，实际：%d 字节 (%d MB)，差异：%.2f%% (阈值：%.1f%%)",
-              expectedSize,
-              expectedSize / (1024 * 1024),
-              actualSize,
-              actualSize / (1024 * 1024),
-              difference,
-              threshold);
-      log.error(message);
-      throw new IllegalStateException(message);
-    }
-
-    log.info("文件大小验证通过，差异：{:.2f}% (阈值：{:.1f}%)", difference, threshold);
     return xmlFile;
   }
 
@@ -351,9 +309,9 @@ public class MeshImportOrchestrator {
   /// @return 实际导入数量映射
   private Map<String, Integer> importAllData(
       File descXmlFile, File qualXmlFile, MeshImportAggregate aggregate) throws Exception {
-    log.info("开始解析并导入 MeSH 数据");
-    log.info("  - 主题词文件：{}", descXmlFile.getAbsolutePath());
-    log.info("  - 限定词文件：{}", qualXmlFile.getAbsolutePath());
+    log.info("[MeshImport] 开始解析并导入所有数据");
+    log.info("[MeshImport] Descriptor文件: {}", descXmlFile.getAbsolutePath());
+    log.info("[MeshImport] Qualifier文件: {}", qualXmlFile.getAbsolutePath());
 
     Map<String, Integer> importedCounts = new HashMap<>();
 
@@ -377,8 +335,15 @@ public class MeshImportOrchestrator {
     int conceptCount = importConcepts(descXmlFile, aggregate);
     importedCounts.put("concept", conceptCount);
 
+    int totalRecords = importedCounts.values().stream().mapToInt(Integer::intValue).sum();
     log.info(
-        "所有数据导入完成，总计：{} 条记录", importedCounts.values().stream().mapToInt(Integer::intValue).sum());
+        "[MeshImport] 所有数据导入完成 | 总计: {} 条 | Descriptor: {} | Qualifier: {} | TreeNumber: {} | EntryTerm: {} | Concept: {}",
+        totalRecords,
+        importedCounts.get("descriptor"),
+        importedCounts.get("qualifier"),
+        importedCounts.get("tree-number"),
+        importedCounts.get("entry-term"),
+        importedCounts.get("concept"));
 
     return importedCounts;
   }
@@ -396,7 +361,8 @@ public class MeshImportOrchestrator {
   /// @param aggregate 导入任务聚合根（用于更新进度）
   /// @return 实际导入数量
   private int importQualifiers(File xmlFile, MeshImportAggregate aggregate) throws Exception {
-    log.info("开始导入 Qualifier（限定词）");
+    Integer expectedCount = meshImportConfig.getExpectedCountForTable("qualifier");
+    log.info("[Qualifier-Import] 开始导入（一次性批量）| 预期数量: {} 条", expectedCount);
 
     try (FileInputStream fis = new FileInputStream(xmlFile);
         Stream<MeshQualifierAggregate> stream = xmlParserPort.parseQualifiers(fis)) {
@@ -413,7 +379,7 @@ public class MeshImportOrchestrator {
       aggregate.updateTableProgress("qualifier", totalCount, 1);
       meshImportPort.save(aggregate);
 
-      log.info("Qualifier 导入完成，总数量：{}", totalCount);
+      log.info("[Qualifier-Import] 导入完成 | 实际数量: {} 条", totalCount);
       return totalCount;
     }
   }
@@ -424,10 +390,11 @@ public class MeshImportOrchestrator {
   /// @param aggregate 导入任务聚合根（用于更新进度）
   /// @return 实际导入数量
   private int importDescriptors(File xmlFile, MeshImportAggregate aggregate) throws Exception {
-    log.info("开始导入 Descriptor（主题词）");
-
-    // 1. 获取批次大小配置
+    // 1. 获取批次大小配置和预期总数
     int batchSize = meshImportConfig.getBatchSizeForTable("descriptor");
+    Integer expectedTotal = meshImportConfig.getExpectedCountForTable("descriptor");
+    log.info("[Descriptor-Import] 开始导入 | 预期数量: {} 条 | 批次大小: {}", expectedTotal, batchSize);
+
     int totalProcessed = 0;
     int batchNum = 1;
 
@@ -446,27 +413,36 @@ public class MeshImportOrchestrator {
         if (batch.size() >= batchSize || !iterator.hasNext()) {
           try {
             // 5. 批量保存到数据库
+            int currentBatchSize = batch.size();
             meshDescriptorPort.saveBatch(batch);
 
-            totalProcessed += batch.size();
+            totalProcessed += currentBatchSize;
+            double progress = expectedTotal != null ? (totalProcessed * 100.0 / expectedTotal) : 0;
+            String progressStr = String.format("%.1f%%", progress);
 
             // 6. 更新进度
             aggregate.updateTableProgress("descriptor", totalProcessed, batchNum);
             meshImportPort.save(aggregate);
 
-            log.info("批次 {} 保存成功，已处理 {}", batchNum, totalProcessed);
+            log.info(
+                "[Descriptor-Import] 批次 {} 保存成功 | 本批: {} 条 | 累计: {}/{} 条 ({})",
+                batchNum,
+                currentBatchSize,
+                totalProcessed,
+                expectedTotal != null ? expectedTotal : "?",
+                progressStr);
 
             batchNum++;
             batch.clear();
 
           } catch (Exception e) {
-            log.error("批次 {} 保存失败，表：descriptor", batchNum, e);
+            log.error("[Descriptor-Import] 批次 {} 保存失败 | 本批记录数: {} | 错误: {}", batchNum, batch.size(), e.getMessage(), e);
             throw new RuntimeException("批次保存失败：" + e.getMessage(), e);
           }
         }
       }
 
-      log.info("Descriptor 导入完成，总数量：{}", totalProcessed);
+      log.info("[Descriptor-Import] 导入完成 | 总数量: {} 条 | 批次数: {}", totalProcessed, batchNum - 1);
       return totalProcessed;
     }
   }
@@ -477,24 +453,22 @@ public class MeshImportOrchestrator {
   /// @param aggregate 导入任务聚合根（用于更新进度）
   /// @return 实际导入数量
   private int importTreeNumbers(File xmlFile, MeshImportAggregate aggregate) throws Exception {
-    log.info("开始导入 TreeNumber（树形编号）");
-
-    // 1. 获取批次大小配置
+    // 1. 获取批次大小配置和预期总数
     int batchSize = meshImportConfig.getBatchSizeForTable("tree-number");
+    Integer expectedTotal = meshImportConfig.getExpectedCountForTable("tree-number");
+    log.info("[TreeNumber-Import] 开始导入 | 预期数量: {} 条 | 批次大小: {}", expectedTotal, batchSize);
+
     int totalProcessed = 0;
     int batchNum = 1;
 
     try (FileInputStream fis = new FileInputStream(xmlFile);
-        Stream<com.patra.catalog.domain.model.entity.MeshTreeNumber> stream =
-            xmlParserPort.parseTreeNumbers(fis)) {
+        Stream<MeshTreeNumber> stream = xmlParserPort.parseTreeNumbers(fis)) {
 
       // 2. 准备批次容器
-      List<com.patra.catalog.domain.model.entity.MeshTreeNumber> batch =
-          new ArrayList<>(batchSize);
+      List<MeshTreeNumber> batch = new ArrayList<>(batchSize);
 
       // 3. 流式消费
-      Iterator<com.patra.catalog.domain.model.entity.MeshTreeNumber> iterator =
-          stream.iterator();
+      Iterator<MeshTreeNumber> iterator = stream.iterator();
       while (iterator.hasNext()) {
         batch.add(iterator.next());
 
@@ -502,27 +476,36 @@ public class MeshImportOrchestrator {
         if (batch.size() >= batchSize || !iterator.hasNext()) {
           try {
             // 5. 批量保存到数据库
+            int currentBatchSize = batch.size();
             meshDescriptorPort.saveTreeNumbersBatch(batch);
 
-            totalProcessed += batch.size();
+            totalProcessed += currentBatchSize;
+            double progress = expectedTotal != null ? (totalProcessed * 100.0 / expectedTotal) : 0;
+            String progressStr = String.format("%.1f%%", progress);
 
             // 6. 更新进度
             aggregate.updateTableProgress("tree-number", totalProcessed, batchNum);
             meshImportPort.save(aggregate);
 
-            log.info("批次 {} 保存成功，已处理 {}", batchNum, totalProcessed);
+            log.info(
+                "[TreeNumber-Import] 批次 {} 保存成功 | 本批: {} 条 | 累计: {}/{} 条 ({})",
+                batchNum,
+                currentBatchSize,
+                totalProcessed,
+                expectedTotal != null ? expectedTotal : "?",
+                progressStr);
 
             batchNum++;
             batch.clear();
 
           } catch (Exception e) {
-            log.error("批次 {} 保存失败，表：tree-number", batchNum, e);
+            log.error("[TreeNumber-Import] 批次 {} 保存失败 | 本批记录数: {} | 错误: {}", batchNum, batch.size(), e.getMessage(), e);
             throw new RuntimeException("批次保存失败：" + e.getMessage(), e);
           }
         }
       }
 
-      log.info("TreeNumber 导入完成，总数量：{}", totalProcessed);
+      log.info("[TreeNumber-Import] 导入完成 | 总数量: {} 条 | 批次数: {}", totalProcessed, batchNum - 1);
       return totalProcessed;
     }
   }
@@ -533,23 +516,22 @@ public class MeshImportOrchestrator {
   /// @param aggregate 导入任务聚合根（用于更新进度）
   /// @return 实际导入数量
   private int importEntryTerms(File xmlFile, MeshImportAggregate aggregate) throws Exception {
-    log.info("开始导入 EntryTerm（入口术语）");
-
-    // 1. 获取批次大小配置
+    // 1. 获取批次大小配置和预期总数
     int batchSize = meshImportConfig.getBatchSizeForTable("entry-term");
+    Integer expectedTotal = meshImportConfig.getExpectedCountForTable("entry-term");
+    log.info("[EntryTerm-Import] 开始导入 | 预期数量: {} 条 | 批次大小: {}", expectedTotal, batchSize);
+
     int totalProcessed = 0;
     int batchNum = 1;
 
     try (FileInputStream fis = new FileInputStream(xmlFile);
-        Stream<com.patra.catalog.domain.model.entity.MeshEntryTerm> stream =
-            xmlParserPort.parseEntryTerms(fis)) {
+        Stream<MeshEntryTerm> stream = xmlParserPort.parseEntryTerms(fis)) {
 
       // 2. 准备批次容器
-      List<com.patra.catalog.domain.model.entity.MeshEntryTerm> batch =
-          new ArrayList<>(batchSize);
+      List<MeshEntryTerm> batch = new ArrayList<>(batchSize);
 
       // 3. 流式消费
-      Iterator<com.patra.catalog.domain.model.entity.MeshEntryTerm> iterator = stream.iterator();
+      Iterator<MeshEntryTerm> iterator = stream.iterator();
       while (iterator.hasNext()) {
         batch.add(iterator.next());
 
@@ -557,27 +539,36 @@ public class MeshImportOrchestrator {
         if (batch.size() >= batchSize || !iterator.hasNext()) {
           try {
             // 5. 批量保存到数据库
+            int currentBatchSize = batch.size();
             meshDescriptorPort.saveEntryTermsBatch(batch);
 
-            totalProcessed += batch.size();
+            totalProcessed += currentBatchSize;
+            double progress = expectedTotal != null ? (totalProcessed * 100.0 / expectedTotal) : 0;
+            String progressStr = String.format("%.1f%%", progress);
 
             // 6. 更新进度
             aggregate.updateTableProgress("entry-term", totalProcessed, batchNum);
             meshImportPort.save(aggregate);
 
-            log.info("批次 {} 保存成功，已处理 {}", batchNum, totalProcessed);
+            log.info(
+                "[EntryTerm-Import] 批次 {} 保存成功 | 本批: {} 条 | 累计: {}/{} 条 ({})",
+                batchNum,
+                currentBatchSize,
+                totalProcessed,
+                expectedTotal != null ? expectedTotal : "?",
+                progressStr);
 
             batchNum++;
             batch.clear();
 
           } catch (Exception e) {
-            log.error("批次 {} 保存失败，表：entry-term", batchNum, e);
+            log.error("[EntryTerm-Import] 批次 {} 保存失败 | 本批记录数: {} | 错误: {}", batchNum, batch.size(), e.getMessage(), e);
             throw new RuntimeException("批次保存失败：" + e.getMessage(), e);
           }
         }
       }
 
-      log.info("EntryTerm 导入完成，总数量：{}", totalProcessed);
+      log.info("[EntryTerm-Import] 导入完成 | 总数量: {} 条 | 批次数: {}", totalProcessed, batchNum - 1);
       return totalProcessed;
     }
   }
@@ -588,22 +579,22 @@ public class MeshImportOrchestrator {
   /// @param aggregate 导入任务聚合根（用于更新进度）
   /// @return 实际导入数量
   private int importConcepts(File xmlFile, MeshImportAggregate aggregate) throws Exception {
-    log.info("开始导入 Concept（概念）");
-
-    // 1. 获取批次大小配置
+    // 1. 获取批次大小配置和预期总数
     int batchSize = meshImportConfig.getBatchSizeForTable("concept");
+    Integer expectedTotal = meshImportConfig.getExpectedCountForTable("concept");
+    log.info("[Concept-Import] 开始导入 | 预期数量: {} 条 | 批次大小: {}", expectedTotal, batchSize);
+
     int totalProcessed = 0;
     int batchNum = 1;
 
     try (FileInputStream fis = new FileInputStream(xmlFile);
-        Stream<com.patra.catalog.domain.model.entity.MeshConcept> stream =
-            xmlParserPort.parseConcepts(fis)) {
+        Stream<MeshConcept> stream = xmlParserPort.parseConcepts(fis)) {
 
       // 2. 准备批次容器
-      List<com.patra.catalog.domain.model.entity.MeshConcept> batch = new ArrayList<>(batchSize);
+      List<MeshConcept> batch = new ArrayList<>(batchSize);
 
       // 3. 流式消费
-      Iterator<com.patra.catalog.domain.model.entity.MeshConcept> iterator = stream.iterator();
+      Iterator<MeshConcept> iterator = stream.iterator();
       while (iterator.hasNext()) {
         batch.add(iterator.next());
 
@@ -611,27 +602,36 @@ public class MeshImportOrchestrator {
         if (batch.size() >= batchSize || !iterator.hasNext()) {
           try {
             // 5. 批量保存到数据库
+            int currentBatchSize = batch.size();
             meshDescriptorPort.saveConceptsBatch(batch);
 
-            totalProcessed += batch.size();
+            totalProcessed += currentBatchSize;
+            double progress = expectedTotal != null ? (totalProcessed * 100.0 / expectedTotal) : 0;
+            String progressStr = String.format("%.1f%%", progress);
 
             // 6. 更新进度
             aggregate.updateTableProgress("concept", totalProcessed, batchNum);
             meshImportPort.save(aggregate);
 
-            log.info("批次 {} 保存成功，已处理 {}", batchNum, totalProcessed);
+            log.info(
+                "[Concept-Import] 批次 {} 保存成功 | 本批: {} 条 | 累计: {}/{} 条 ({})",
+                batchNum,
+                currentBatchSize,
+                totalProcessed,
+                expectedTotal != null ? expectedTotal : "?",
+                progressStr);
 
             batchNum++;
             batch.clear();
 
           } catch (Exception e) {
-            log.error("批次 {} 保存失败，表：concept", batchNum, e);
+            log.error("[Concept-Import] 批次 {} 保存失败 | 本批记录数: {} | 错误: {}", batchNum, batch.size(), e.getMessage(), e);
             throw new RuntimeException("批次保存失败：" + e.getMessage(), e);
           }
         }
       }
 
-      log.info("Concept 导入完成，总数量：{}", totalProcessed);
+      log.info("[Concept-Import] 导入完成 | 总数量: {} 条 | 批次数: {}", totalProcessed, batchNum - 1);
       return totalProcessed;
     }
   }
@@ -642,18 +642,56 @@ public class MeshImportOrchestrator {
   /// @param aggregate 任务聚合根
   private void validateDataCounts(
       Map<String, Integer> importedCounts, MeshImportAggregate aggregate) {
-    log.info("开始验证数据量，实际导入：{}", importedCounts);
+    log.info("[MeshImport] 开始验证数据量 | 实际导入: {}", importedCounts);
 
     MeshDataValidator.ValidationResult result =
         meshDataValidator.validateDataCounts(importedCounts);
 
     if (result.hasWarnings()) {
-      log.warn("数据量验证发现 {} 个警告：", result.warningCount());
-      result.warnings().forEach(log::warn);
+      log.warn("[MeshImport] 数据量验证发现 {} 个警告", result.warningCount());
+      result.warnings().forEach(warning -> log.warn("[MeshImport] 警告: {}", warning));
       // 注意：有警告不阻塞任务完成，只记录警告信息
     } else {
-      log.info("数据量验证通过，所有表数据量在预期范围内");
+      log.info("[MeshImport] 数据量验证通过，所有表数据量在预期范围内");
     }
+  }
+
+  /// 完成导入流程（导入数据 → 验证 → 标记完成 → 返回结果）。
+  ///
+  /// 此方法封装了导入流程的核心步骤，被 {@link #startImport()} 和 {@link #retryFailedTask(MeshImportId)} 复用。
+  ///
+  /// @param descXmlFile 主题词 XML 文件
+  /// @param qualXmlFile 限定词 XML 文件
+  /// @param aggregate 任务聚合根
+  /// @return 导入结果 DTO
+  /// @throws Exception 如果导入过程失败
+  private MeshImportResultDTO completeImportProcess(
+      File descXmlFile, File qualXmlFile, MeshImportAggregate aggregate) throws Exception {
+    // 1. 解析并批量导入数据（先 qualifier，再 descriptor 及其子表）
+    Map<String, Integer> importedCounts = importAllData(descXmlFile, qualXmlFile, aggregate);
+
+    // 2. 验证数据量
+    validateDataCounts(importedCounts, aggregate);
+
+    // 3. 标记任务完成
+    aggregate.markAsCompleted();
+    aggregate = meshImportPort.save(aggregate);
+
+    // 4. 记录完成日志
+    long duration =
+        Duration.between(aggregate.getStartTime(), aggregate.getEndTime()).toMillis();
+    log.info(
+        "[MeshImport] 导入任务成功完成 | 任务ID: {} | 耗时: {}ms | Descriptor: {} 条 | Qualifier: {} 条 | TreeNumber: {} 条 | EntryTerm: {} 条 | Concept: {} 条",
+        aggregate.getId().value(),
+        duration,
+        importedCounts.get("descriptor"),
+        importedCounts.get("qualifier"),
+        importedCounts.get("tree-number"),
+        importedCounts.get("entry-term"),
+        importedCounts.get("concept"));
+
+    // 5. 返回结果
+    return buildSuccessResult(aggregate);
   }
 
   /// 构建成功结果。
