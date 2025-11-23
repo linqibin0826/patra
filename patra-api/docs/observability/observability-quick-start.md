@@ -375,7 +375,7 @@ grep -i "MeterRegistry" logs/application.log
 ## 📖 完整文档
 
 - [架构设计文档](./observability-starter-design.md)
-- [实施指南](./observability-implementation-guide.md)
+- [插件式架构重构指南](./plugin-architecture-refactoring-guide.md)
 - [配置示例](./observability-config-examples.yaml)
 
 ---

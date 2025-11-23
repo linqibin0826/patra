@@ -73,25 +73,28 @@
 ---
 
 #### 2. 实施与操作
-📄 **[实施指南](./observability-implementation-guide.md)**（操作手册，30+ 页）
+📄 **[插件式架构重构指南](./plugin-architecture-refactoring-guide.md)**（操作手册，26KB）
 
 **适合**：开发者、DevOps 工程师
 
 **包含内容**：
-- ✅ 前提条件和环境准备
-- ✅ 详细的实施步骤（阶段 1-6）
-- ✅ 配置迁移指南（含自动化脚本）
+- ✅ 插件式架构设计说明
+- ✅ 完整的删除清单（从各 Starter 移除可观测性代码）
+- ✅ 完整的新增清单（在 observability 中实现所有拦截器）
+- ✅ 详细的实施步骤（7 个阶段）
 - ✅ 功能验证清单
-- ✅ 性能验证方法
-- ✅ 常见问题和故障排查
+- ✅ 架构验证清单
+- ✅ 性能验证清单
 - ✅ 回滚方案
 
-**实施阶段**：
-1. 创建 Observability Starter 模块（3-4 天）
-2. 重构现有 Starter（3-4 天）
-3. 配置 SkyWalking Agent（1 天）
-4. 服务集成（2 天）
-5. 文档和验证（2 天）
+**实施阶段**（预计 12-15 小时）：
+1. 准备工作（1 小时）
+2. 重构 patra-starter-core（2 小时）
+3. 重构 patra-starter-rest-client（2 小时）
+4. 重构 patra-starter-batch（1 小时）
+5. 创建 patra-starter-observability（4 小时）
+6. 集成测试（2 小时）
+7. 文档更新（1 小时）
 
 ---
 
@@ -146,7 +149,7 @@
    - 架构设计
    - 技术选型
    - 风险评估
-2. 🔧 [实施指南](./observability-implementation-guide.md) - 重点看：
+2. 🔧 [插件式架构重构指南](./plugin-architecture-refactoring-guide.md) - 重点看：
    - 实施计划
    - 资源需求
 
@@ -164,7 +167,7 @@
 **阅读路径**：
 1. 🚀 [快速开始指南](./observability-quick-start.md) - 5 分钟入门
 2. 📝 [配置示例](./observability-config-examples.yaml) - 复制配置模板
-3. 🔧 [实施指南](./observability-implementation-guide.md) - 详细步骤参考
+3. 🔧 [插件式架构重构指南](./plugin-architecture-refactoring-guide.md) - 详细步骤参考
 
 **常见任务**：
 - 添加 `@Observed` 注解
@@ -178,7 +181,7 @@
 **目标**：部署、监控、故障排查
 
 **阅读路径**：
-1. 🔧 [实施指南](./observability-implementation-guide.md) - 重点看：
+1. 🔧 [插件式架构重构指南](./plugin-architecture-refactoring-guide.md) - 重点看：
    - SkyWalking Agent 配置
    - Docker Compose 配置
    - 验证清单
@@ -198,7 +201,8 @@
 docs/observability/
 ├── README.md                                    # 本文档（导航页）
 ├── observability-starter-design.md              # 架构设计文档（核心）
-├── observability-implementation-guide.md        # 实施指南
+├── plugin-architecture-refactoring-guide.md     # 插件式架构重构指南
+├── architecture-review-summary.md               # 架构评审总结
 ├── observability-config-examples.yaml           # 配置示例
 └── observability-quick-start.md                 # 快速开始指南
 ```
@@ -239,12 +243,12 @@ docs/observability/
 
 ### 深入了解
 - 📖 [完整设计方案](./observability-starter-design.md)（60+ 页）
-- 🔧 [详细实施步骤](./observability-implementation-guide.md)（30+ 页）
+- 🔧 [详细实施步骤](./plugin-architecture-refactoring-guide.md)（26KB）
 
 ### 常见问题
-- [Q: SkyWalking UI 看不到服务？](./observability-implementation-guide.md#q1-skywalking-ui-看不到服务)
-- [Q: 指标未上报到 Prometheus？](./observability-implementation-guide.md#q2-指标未上报到-prometheus)
-- [Q: 日志中 traceId 显示为空？](./observability-implementation-guide.md#q3-日志中-traceid-显示为空)
+- [Q: SkyWalking UI 看不到服务？](./observability-quick-start.md#问题skywalking-ui-看不到服务)
+- [Q: 日志中 traceId 显示为空？](./observability-quick-start.md#问题日志中无traceid)
+- 更多故障排查，请参考 [快速开始指南 - 故障排查](./observability-quick-start.md)
 
 ---
 
