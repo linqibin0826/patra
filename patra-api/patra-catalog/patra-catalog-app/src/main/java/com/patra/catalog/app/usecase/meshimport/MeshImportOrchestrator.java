@@ -73,6 +73,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MeshImportOrchestrator {
 
+  /// 字节转 MB 的常量（1 MB = 1024 * 1024 字节）
+  private static final long BYTES_PER_MB = 1024 * 1024;
+
   private final MeshImportRepository meshImportPort;
   private final XmlParserPort xmlParserPort;
   private final MeshFileDownloadPort meshFileDownloadPort;
@@ -307,7 +310,7 @@ public class MeshImportOrchestrator {
     log.info(
         "[{}-Download] 文件下载完成 | 大小: {} MB | 路径: {}",
         fileType,
-        actualSize / (1024 * 1024),
+        actualSize / BYTES_PER_MB,
         xmlFile.getAbsolutePath());
 
     // 验证文件大小（防止下载不完整或数据源异常）
@@ -340,8 +343,8 @@ public class MeshImportOrchestrator {
           String.format(
               "[%s-Download] 文件大小异常 | 预期: %d MB | 实际: %d MB | 差异: %.1f%% (阈值: %.1f%%)",
               fileType,
-              expectedSize / (1024 * 1024),
-              actualSize / (1024 * 1024),
+              expectedSize / BYTES_PER_MB,
+              actualSize / BYTES_PER_MB,
               difference,
               threshold);
       log.error(errorMsg);
@@ -349,11 +352,11 @@ public class MeshImportOrchestrator {
     }
 
     log.info(
-        "[{}-Download] 文件大小验证通过 | 预期: {} MB | 实际: {} MB | 差异: {:.1f}%",
+        "[{}-Download] 文件大小验证通过 | 预期: {} MB | 实际: {} MB | 差异: {}%",
         fileType,
-        expectedSize / (1024 * 1024),
-        actualSize / (1024 * 1024),
-        difference);
+        expectedSize / BYTES_PER_MB,
+        actualSize / BYTES_PER_MB,
+        String.format("%.1f", difference));
   }
 
   /// 导入所有数据（按依赖顺序）。

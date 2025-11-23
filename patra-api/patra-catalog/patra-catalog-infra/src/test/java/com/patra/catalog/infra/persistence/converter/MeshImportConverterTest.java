@@ -297,4 +297,67 @@ class MeshImportConverterTest {
     // Then: 应该返回空列表
     assertThat(progressDOList).isEmpty();
   }
+
+  @Test
+  @DisplayName("转换actualTotalCount - 应该正确双向转换实际总数")
+  void actualTotalCount_bidirectionalConversion_shouldPreserveValue() {
+    // Given: 已完成的表进度（有实际总数）
+    TableProgress completedProgress =
+        TableProgress.builder()
+            .tableName("cat_mesh_descriptor")
+            .expectedCount(35000)
+            .actualTotalCount(35123) // 实际总数（导入完成后设置）
+            .processedCount(35123)
+            .failedCount(0)
+            .status(MeshTableImportStatus.COMPLETED)
+            .lastBatchNum(36)
+            .lastUpdateTime(Instant.now())
+            .build();
+
+    // When: Domain → DO 转换
+    MeshTableProgressDO progressDO = converter.toProgressDO(completedProgress);
+
+    // Then: actualTotalCount 应该正确持久化到 DO
+    assertThat(progressDO.getTotalCount()).isEqualTo(35000); // expectedCount → totalCount
+    assertThat(progressDO.getActualTotalCount()).isEqualTo(35123); // actualTotalCount → actualTotalCount
+
+    // When: DO → Domain 转换（模拟从数据库读取）
+    TableProgress restoredProgress = converter.toTableProgress(progressDO);
+
+    // Then: actualTotalCount 应该正确恢复
+    assertThat(restoredProgress.getExpectedCount()).isEqualTo(35000);
+    assertThat(restoredProgress.getActualTotalCount()).isEqualTo(35123);
+    assertThat(restoredProgress.getProcessedCount()).isEqualTo(35123);
+  }
+
+  @Test
+  @DisplayName("转换actualTotalCount为null - 应该正确处理未完成的表")
+  void actualTotalCount_nullValue_shouldHandleGracefully() {
+    // Given: 进行中的表进度（实际总数未知）
+    TableProgress inProgressProgress =
+        TableProgress.builder()
+            .tableName("cat_mesh_descriptor")
+            .expectedCount(35000)
+            .actualTotalCount(null) // 进行中，实际总数未知
+            .processedCount(5000)
+            .failedCount(10)
+            .status(MeshTableImportStatus.IN_PROGRESS)
+            .lastBatchNum(5)
+            .lastUpdateTime(Instant.now())
+            .build();
+
+    // When: Domain → DO 转换
+    MeshTableProgressDO progressDO = converter.toProgressDO(inProgressProgress);
+
+    // Then: actualTotalCount 应该为 null
+    assertThat(progressDO.getTotalCount()).isEqualTo(35000);
+    assertThat(progressDO.getActualTotalCount()).isNull();
+
+    // When: DO → Domain 转换
+    TableProgress restoredProgress = converter.toTableProgress(progressDO);
+
+    // Then: actualTotalCount 应该仍然为 null
+    assertThat(restoredProgress.getExpectedCount()).isEqualTo(35000);
+    assertThat(restoredProgress.getActualTotalCount()).isNull();
+  }
 }

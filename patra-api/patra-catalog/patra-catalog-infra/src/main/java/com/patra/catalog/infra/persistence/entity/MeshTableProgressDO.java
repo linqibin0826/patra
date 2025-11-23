@@ -47,9 +47,13 @@ public class MeshTableProgressDO extends BaseDO {
   @TableField("table_name")
   private String tableName;
 
-  /// 总记录数（该表需要导入的总数）
+  /// 总记录数（预期值，导入前从配置或XML元数据获取）
   @TableField("total_count")
   private Integer totalCount;
+
+  /// 实际总记录数（导入完成后设置，用于数据差异分析）
+  @TableField("actual_total_count")
+  private Integer actualTotalCount;
 
   /// 已处理数（成功导入的记录数）
   @TableField("processed_count")
