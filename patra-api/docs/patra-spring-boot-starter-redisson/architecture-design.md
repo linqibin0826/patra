@@ -286,22 +286,82 @@ public void updateUser(Long userId) {
 
 #### 4.1.5 异常处理 (P1)
 
-**自定义异常**：
+**自定义异常**（继承 patra-common-core 的统一异常体系）：
 ```java
-public class LockAcquisitionException extends RuntimeException {
-    private final String lockKey;
-    private final long waitTime;
+/**
+ * 锁获取失败异常
+ * <p>
+ * 继承 ApplicationException，集成统一错误处理框架
+ */
+public class LockAcquisitionException extends ApplicationException {
+
+    public LockAcquisitionException(String lockKey, long waitTime) {
+        super(LockErrorCode.ACQUISITION_FAILED,
+              Map.of("lockKey", lockKey, "waitTime", waitTime));
+    }
+
+    public LockAcquisitionException(String message, String lockKey, long waitTime) {
+        super(LockErrorCode.ACQUISITION_FAILED, message,
+              Map.of("lockKey", lockKey, "waitTime", waitTime));
+    }
 }
 
-public class LockTimeoutException extends RuntimeException {
-    private final String lockKey;
-    private final long holdTime;
+/**
+ * 锁超时异常
+ */
+public class LockTimeoutException extends ApplicationException {
+
+    public LockTimeoutException(String lockKey, long holdTime) {
+        super(LockErrorCode.TIMEOUT,
+              Map.of("lockKey", lockKey, "holdTime", holdTime));
+    }
+}
+
+/**
+ * Redis 基础设施异常（连接失败等）
+ */
+public class LockInfrastructureException extends ApplicationException {
+
+    public LockInfrastructureException(String message, Throwable cause) {
+        super(LockErrorCode.INFRASTRUCTURE_ERROR, message, cause);
+    }
+}
+
+/**
+ * 锁错误码枚举
+ */
+public enum LockErrorCode implements ErrorCode {
+    ACQUISITION_FAILED("LOCK_001", "Failed to acquire distributed lock"),
+    TIMEOUT("LOCK_002", "Lock operation timeout"),
+    INFRASTRUCTURE_ERROR("LOCK_003", "Redis infrastructure error"),
+    EXPRESSION_ERROR("LOCK_004", "SpEL expression parsing error");
+
+    private final String code;
+    private final String message;
+
+    LockErrorCode(String code, String message) {
+        this.code = code;
+        this.message = message;
+    }
+
+    @Override
+    public String getCode() { return code; }
+
+    @Override
+    public String getMessage() { return message; }
 }
 ```
 
-**异常映射**：
-- `LockAcquisitionException` → 409 Conflict（业务冲突）
+**异常映射**（通过 patra-spring-boot-starter-core 自动映射）：
+- `LockAcquisitionException` → 409 Conflict（业务冲突，客户端可重试）
 - `LockTimeoutException` → 500 Internal Server Error（系统问题）
+- `LockInfrastructureException` → 503 Service Unavailable（基础设施不可用）
+
+**集成收益**：
+- ✅ HTTP 响应自动映射为标准 ProblemDetail（RFC 7807）
+- ✅ 自动集成 TraceId、统一日志追踪
+- ✅ 统一错误监控和告警
+- ✅ 符合 Patra 项目架构规范（best-practices.md 规则9）
 
 #### 4.1.6 分布式缓存 (P2)
 
@@ -456,6 +516,7 @@ import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 import org.redisson.spring.starter.RedissonAutoConfigurationCustomizer;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -465,8 +526,15 @@ import org.springframework.context.annotation.Bean;
  * Redisson 自动配置
  * <p>
  * 基于 redisson-spring-boot-starter，添加项目级别的默认配置
+ * <p>
+ * ⚠️ 依赖检查：
+ * <ul>
+ *   <li>@ConditionalOnClass(RedissonClient.class): 仅在 Redisson 类存在时启用</li>
+ *   <li>防止 Redisson 依赖缺失时启动失败</li>
+ * </ul>
  */
 @AutoConfiguration
+@ConditionalOnClass(RedissonClient.class)  // ← 新增：检查 Redisson 类存在
 @ConditionalOnProperty(prefix = "patra.redisson", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(RedissonProperties.class)
 public class RedissonAutoConfiguration {
@@ -506,17 +574,26 @@ import com.patra.starter.redisson.listener.LockTracingListener;
 import com.patra.starter.redisson.lock.LockAspect;
 import com.patra.starter.redisson.lock.LockKeyGenerator;
 import io.micrometer.core.instrument.MeterRegistry;
+import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
 /**
  * 分布式锁自动配置
+ * <p>
+ * ⚠️ 依赖检查：
+ * <ul>
+ *   <li>@ConditionalOnClass({RedissonClient.class, RLock.class}): 仅在 Redisson 类存在时启用</li>
+ *   <li>符合 Spring Boot Starter 设计规范</li>
+ * </ul>
  */
 @AutoConfiguration
+@ConditionalOnClass({RedissonClient.class, RLock.class})  // ← 新增：检查 Redisson 类存在
 @ConditionalOnProperty(prefix = "patra.redisson.lock", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(RedissonProperties.class)
 public class LockAutoConfiguration {
@@ -633,9 +710,29 @@ public @interface DistributedLock {
     /**
      * 锁租约时间（防止死锁）
      * <p>
-     * 超过此时间后，锁会自动释放。默认 30 秒。
+     * <b>参数说明</b>：
+     * <ul>
+     *   <li><b>正数</b>（如 30）：锁在指定时间后自动释放（即使业务未完成），不启用看门狗</li>
+     *   <li><b>-1</b>：启用看门狗机制，锁会自动续期直到业务完成</li>
+     *   <li><b>0</b>：永不过期（⚠️ 不推荐，可能导致死锁）</li>
+     * </ul>
      * <p>
-     * ⚠️ 建议根据业务逻辑执行时间设置，留出充足的余量。
+     * <b>⚠️ 使用建议</b>：
+     * <ul>
+     *   <li>业务执行时间<b>确定</b>：leaseTime = 业务时间 × 2（留出充足余量）</li>
+     *   <li>业务执行时间<b>不确定</b>：leaseTime = -1（启用看门狗）</li>
+     * </ul>
+     * <p>
+     * <b>看门狗机制</b>（leaseTime = -1 时）：<br>
+     * Redisson 会启动看门狗线程，每隔 10 秒（lockWatchdogTimeout/3）自动续期锁为 30 秒（lockWatchdogTimeout），
+     * 直到业务完成或看门狗续期失败。
+     * <p>
+     * <b>⚠️ 风险提示</b>：
+     * <ul>
+     *   <li>使用 -1 时，如果业务逻辑挂起（如数据库死锁），锁将永久占用</li>
+     *   <li>看门狗续期失败会释放锁，但主线程不会收到通知</li>
+     *   <li>建议显式设置 leaseTime，而非依赖看门狗</li>
+     * </ul>
      */
     long leaseTime() default 30;
 
@@ -2732,6 +2829,120 @@ public class PaymentService {
 - 对锁安全性有极高要求
 - 可接受性能开销
 
+#### 9.2.6 在 Patra 项目中使用 RedLock
+
+**v1.0 支持情况**：
+
+| 功能 | v1.0 支持 | 说明 |
+|------|---------|------|
+| **@DistributedLock 注解** | ❌ 不支持 RedLock | 注解仅支持单 Redis 实例锁 |
+| **手动 API 调用** | ✅ 完全支持 | 可直接使用 RedissonClient.getMultiLock() |
+| **配置多 Redis 实例** | ✅ 支持 | 通过 application.yml 配置 |
+
+**当前使用方式**（手动 API）：
+
+```java
+package com.patra.payment.app.service;
+
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
+
+/**
+ * 支付服务（使用 RedLock 保证高安全性）
+ */
+@Service
+@RequiredArgsConstructor
+public class PaymentService {
+
+    private final RedissonClient redissonClient;
+
+    /**
+     * 处理支付（手动使用 RedLock）
+     * <p>
+     * ⚠️ 当前版本不支持 @DistributedLock 注解直接使用 RedLock，需手动调用 API
+     */
+    public void processPayment(String orderId, BigDecimal amount) {
+        // 1. 创建多个锁实例（对应多个 Redis 节点）
+        RLock lock1 = redissonClient.getLock("payment:" + orderId);
+        RLock lock2 = redissonClient.getLock("payment:" + orderId);
+        RLock lock3 = redissonClient.getLock("payment:" + orderId);
+
+        // 2. 创建 RedLock（需在大多数实例上获取成功）
+        RLock redLock = redissonClient.getMultiLock(lock1, lock2, lock3);
+
+        try {
+            boolean acquired = redLock.tryLock(10, 300, TimeUnit.SECONDS);
+            if (!acquired) {
+                throw new LockAcquisitionException("payment:" + orderId, 10L);
+            }
+
+            // 3. 执行支付业务逻辑
+            doPayment(orderId, amount);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new LockInfrastructureException("Lock interrupted", e);
+        } finally {
+            // 4. 释放 RedLock（释放所有实例上的锁）
+            if (redLock.isHeldByCurrentThread()) {
+                redLock.unlock();
+            }
+        }
+    }
+}
+```
+
+**配置多 Redis 实例**（application.yml）：
+
+```yaml
+spring:
+  data:
+    redis:
+      redisson:
+        config: |
+          # 配置多个独立 Redis 实例（用于 RedLock）
+          # ⚠️ 注意：不是主从或集群模式，是完全独立的实例
+          multiServerConfig:
+            - singleServerConfig:
+                address: "redis://redis1.patra.com:6379"
+                password: ${REDIS_PASSWORD}
+            - singleServerConfig:
+                address: "redis://redis2.patra.com:6379"
+                password: ${REDIS_PASSWORD}
+            - singleServerConfig:
+                address: "redis://redis3.patra.com:6379"
+                password: ${REDIS_PASSWORD}
+```
+
+**未来支持计划**（v1.2.0）：
+
+计划在 v1.2.0 中增加 RedLock 的注解支持：
+
+```java
+// 未来版本（v1.2.0）的计划功能
+@DistributedLock(
+    key = "payment:#{#orderId}",
+    mode = LockMode.REDLOCK,  // ← 指定使用 RedLock
+    leaseTime = 300
+)
+public void processPayment(String orderId, BigDecimal amount) {
+    // 业务逻辑
+}
+```
+
+**当前推荐方案**：
+
+对于 Patra 项目，推荐使用以下方案替代 RedLock：
+
+| 场景 | 推荐方案 | 理由 |
+|------|---------|------|
+| **一般业务** | Redis 集群 + 单实例锁 | 简单、性能高、已足够 |
+| **高可用需求** | Redis 哨兵 + 单实例锁 | 自动故障转移 |
+| **极高安全性** | Zookeeper/etcd 分布式锁 | 基于共识算法，更安全 |
+| **多数据中心** | 本地化处理 + 最终一致性 | 避免跨数据中心锁 |
+
 ---
 
 ### 9.3 锁键命名规范
@@ -2917,6 +3128,220 @@ public void updateConfig(String key, String value) { ... }
 - 锁获取失败率 > 5% → 检查锁粒度或业务逻辑
 - 锁持有时间 P99 > 60 秒 → 检查业务优化空间
 - 锁等待时间 P99 > 5 秒 → 检查并发冲突
+
+---
+
+### 9.5 使用层级约束（⚠️ 必读）
+
+#### 9.5.1 六边形架构分层使用规范
+
+**@DistributedLock 是技术基础设施注解，必须遵循六边形架构的依赖规则**：
+
+```
+Domain 层（纯 Java）← ❌ 禁止使用分布式锁
+  ↓
+Application 层（编排层）← ✅ 推荐使用
+  ↓
+Infrastructure 层（基础设施层）← ✅ 推荐使用
+  ↓
+Adapter 层（适配器层）← ✅ 推荐使用
+```
+
+#### 9.5.2 推荐使用位置 ✅
+
+**Application 层（Orchestrator）**：
+
+```java
+package com.patra.catalog.app.orchestrator;
+
+import com.patra.starter.redisson.lock.DistributedLock;
+import org.springframework.stereotype.Service;
+
+/**
+ * ✅ 正确示例：在编排器中使用分布式锁
+ */
+@Service
+public class MeshImportOrchestrator {
+
+    @DistributedLock(
+        key = "catalog:mesh-import:#{#year}",
+        leaseTime = 300
+    )
+    public void importMeshData(int year) {
+        // 协调多个领域服务
+        meshTermService.importTerms(year);
+        meshDescriptorService.importDescriptors(year);
+    }
+}
+```
+
+**Infrastructure 层（Repository）**：
+
+```java
+package com.patra.catalog.infra.repository;
+
+import com.patra.starter.redisson.lock.DistributedLock;
+
+/**
+ * ✅ 正确示例：在数据库操作层使用分布式锁
+ */
+@Repository
+public class JournalRepositoryImpl implements JournalRepository {
+
+    @Override
+    @DistributedLock(
+        key = "catalog:journal:#{#issn}",
+        leaseTime = 30
+    )
+    public void updateJournal(String issn, Journal journal) {
+        journalMapper.updateByIssn(issn, journal);
+    }
+}
+```
+
+#### 9.5.3 禁止使用位置 ❌
+
+**Domain 层（领域层）**：
+
+```java
+package com.patra.catalog.domain.journal;
+
+import com.patra.common.core.ddd.AggregateRoot;
+import com.patra.starter.redisson.lock.DistributedLock;  // ❌ 禁止导入！
+
+/**
+ * ❌ 错误示例：Domain 层不应依赖任何框架！
+ */
+public class Journal extends AggregateRoot<Long> {
+
+    /**
+     * ❌ 错误！Domain 层不应使用 @DistributedLock
+     * <p>
+     * 违反原因：
+     * 1. 违反六边形架构依赖规则
+     * 2. Domain 层必须保持纯净（Pure Java）
+     * 3. 分布式锁是技术关注点，应在 Application/Infrastructure 层处理
+     */
+    @DistributedLock(key = "journal:#{#issn}")  // ❌ 违反架构原则！
+    public void updateImpactFactor(BigDecimal newFactor) {
+        this.impactFactor = newFactor;
+    }
+
+    /**
+     * ✅ 正确做法：保持 Domain 层纯净
+     */
+    public void updateImpactFactor(BigDecimal newFactor) {
+        // 纯领域逻辑，不依赖任何框架
+        if (newFactor.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Impact factor cannot be negative");
+        }
+        this.impactFactor = newFactor;
+    }
+}
+```
+
+**禁止原因**：
+
+| 原因 | 说明 |
+|------|------|
+| **违反依赖规则** | Domain 层不应依赖 Infrastructure 层（分布式锁是基础设施） |
+| **破坏可移植性** | Domain 层应可独立于框架测试和运行 |
+| **混淆职责** | 分布式锁是技术关注点，不是业务逻辑 |
+| **降低可测试性** | Domain 层单元测试不应依赖 Redis |
+
+#### 9.5.4 ArchUnit 测试规则（强制执行）
+
+```java
+package com.patra.catalog;
+
+import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.importer.ClassFileImporter;
+import org.junit.jupiter.api.Test;
+
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+
+/**
+ * 架构约束测试：防止 Domain 层误用 @DistributedLock
+ */
+class ArchitectureTest {
+
+    @Test
+    void domainLayerShouldNotDependOnRedissonStarter() {
+        JavaClasses importedClasses = new ClassFileImporter()
+            .importPackages("com.patra");
+
+        noClasses()
+            .that().resideInAPackage("..domain..")
+            .should().dependOnClassesThat()
+            .resideInAPackage("com.patra.starter.redisson..")
+            .because("Domain layer must remain pure")
+            .check(importedClasses);
+    }
+}
+```
+
+---
+
+### 9.6 版本管理策略
+
+#### 9.6.1 Maven 依赖版本管理（推荐做法）
+
+**在 `patra-parent/pom.xml` 中统一管理版本**：
+
+```xml
+<!-- patra-parent/pom.xml -->
+<project>
+    <dependencyManagement>
+        <dependencies>
+            <!-- 统一管理 Redisson 版本 -->
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-boot-starter</artifactId>
+                <version>3.36.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>
+```
+
+**在子模块中不指定版本**：
+
+```xml
+<!-- patra-spring-boot-starter-redisson/pom.xml -->
+<project>
+    <dependencies>
+        <!-- 版本由 parent 管理 -->
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson-spring-boot-starter</artifactId>
+            <!-- 不指定版本 -->
+        </dependency>
+    </dependencies>
+</project>
+```
+
+**优势**：
+- ✅ 版本集中管理，便于升级
+- ✅ 避免版本冲突
+- ✅ 符合 Maven 最佳实践
+
+#### 9.6.2 Redisson 版本升级策略
+
+**升级检查清单**：
+
+| 检查项 | 说明 |
+|--------|------|
+| **Spring Boot 兼容性** | 检查 Redisson Release Notes 中的 Spring Boot 版本支持 |
+| **API 变更** | 检查是否有破坏性 API 变更 |
+| **Redis 版本要求** | 检查 Redis 最低版本要求 |
+| **测试覆盖** | 运行完整测试套件 |
+
+**升级步骤**：
+
+1. 修改 `patra-parent/pom.xml` 中的版本号
+2. 运行 `mvn clean test` 验证所有测试通过
+3. 在开发环境验证功能正常
+4. 更新 `docs/patra-spring-boot-starter-redisson/architecture-design.md`
 
 ---
 
