@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -95,9 +95,9 @@ class MeshImportE2ETest {
   @Autowired private MeshImportOrchestrator orchestrator;
 
   // Mock 外部依赖（避免真实下载）
-  @MockBean private com.patra.catalog.domain.port.MeshFileDownloadPort meshFileDownloadPort;
+  @MockitoBean private com.patra.catalog.domain.port.MeshFileDownloadPort meshFileDownloadPort;
 
-  @MockBean private com.patra.catalog.domain.port.XmlParserPort xmlParserPort;
+  @MockitoBean private com.patra.catalog.domain.port.XmlParserPort xmlParserPort;
 
   @BeforeEach
   void setUp() {
