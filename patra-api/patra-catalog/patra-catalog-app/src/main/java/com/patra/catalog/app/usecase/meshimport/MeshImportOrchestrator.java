@@ -9,6 +9,13 @@ import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
+import static com.patra.catalog.domain.model.enums.MeshDataType.CONCEPT;
+import static com.patra.catalog.domain.model.enums.MeshDataType.DESCRIPTOR;
+import static com.patra.catalog.domain.model.enums.MeshDataType.ENTRY_TERM;
+import static com.patra.catalog.domain.model.enums.MeshDataType.QUALIFIER;
+import static com.patra.catalog.domain.model.enums.MeshDataType.TREE_NUMBER;
+
+import com.patra.catalog.domain.model.enums.MeshDataType;
 import com.patra.catalog.domain.model.enums.MeshImportTaskStatus;
 import com.patra.catalog.domain.model.enums.MeshTableImportStatus;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
@@ -248,8 +255,7 @@ public class MeshImportOrchestrator {
   ///
   /// @return 表进度列表
   private List<TableProgress> initializeTableProgressList() {
-    List<String> tableNames =
-        List.of("descriptor", "qualifier", "tree-number", "entry-term", "concept");
+    List<String> tableNames = MeshDataType.getAllCodes();
 
     List<TableProgress> progressList = new ArrayList<>();
     for (String tableName : tableNames) {
@@ -317,33 +323,33 @@ public class MeshImportOrchestrator {
 
     // 1. 导入 Qualifier（限定词）- 必须先导入
     int qualifierCount = importQualifiers(qualXmlFile, aggregate);
-    importedCounts.put("qualifier", qualifierCount);
+    importedCounts.put(QUALIFIER.getCode(), qualifierCount);
 
     // 2. 导入 Descriptor（主题词）
     int descriptorCount = importDescriptors(descXmlFile, aggregate);
-    importedCounts.put("descriptor", descriptorCount);
+    importedCounts.put(DESCRIPTOR.getCode(), descriptorCount);
 
     // 3. 导入 TreeNumber（树形编号）
     int treeNumberCount = importTreeNumbers(descXmlFile, aggregate);
-    importedCounts.put("tree-number", treeNumberCount);
+    importedCounts.put(TREE_NUMBER.getCode(), treeNumberCount);
 
     // 4. 导入 EntryTerm（入口术语）
     int entryTermCount = importEntryTerms(descXmlFile, aggregate);
-    importedCounts.put("entry-term", entryTermCount);
+    importedCounts.put(ENTRY_TERM.getCode(), entryTermCount);
 
     // 5. 导入 Concept（概念）
     int conceptCount = importConcepts(descXmlFile, aggregate);
-    importedCounts.put("concept", conceptCount);
+    importedCounts.put(CONCEPT.getCode(), conceptCount);
 
     int totalRecords = importedCounts.values().stream().mapToInt(Integer::intValue).sum();
     log.info(
         "[MeshImport] 所有数据导入完成 | 总计: {} 条 | Descriptor: {} | Qualifier: {} | TreeNumber: {} | EntryTerm: {} | Concept: {}",
         totalRecords,
-        importedCounts.get("descriptor"),
-        importedCounts.get("qualifier"),
-        importedCounts.get("tree-number"),
-        importedCounts.get("entry-term"),
-        importedCounts.get("concept"));
+        importedCounts.get(DESCRIPTOR.getCode()),
+        importedCounts.get(QUALIFIER.getCode()),
+        importedCounts.get(TREE_NUMBER.getCode()),
+        importedCounts.get(ENTRY_TERM.getCode()),
+        importedCounts.get(CONCEPT.getCode()));
 
     return importedCounts;
   }
@@ -361,7 +367,7 @@ public class MeshImportOrchestrator {
   /// @param aggregate 导入任务聚合根（用于更新进度）
   /// @return 实际导入数量
   private int importQualifiers(File xmlFile, MeshImportAggregate aggregate) throws Exception {
-    Integer expectedCount = meshImportConfig.getExpectedCountForTable("qualifier");
+    Integer expectedCount = meshImportConfig.getExpectedCountForTable(QUALIFIER.getCode());
     log.info("[Qualifier-Import] 开始导入（一次性批量）| 预期数量: {} 条", expectedCount);
 
     try (FileInputStream fis = new FileInputStream(xmlFile);
@@ -376,7 +382,7 @@ public class MeshImportOrchestrator {
       int totalCount = qualifiers.size();
 
       // 更新进度（标记为完成）
-      aggregate.updateTableProgress("qualifier", totalCount, 1);
+      aggregate.updateTableProgress(QUALIFIER.getCode(), totalCount, 1);
       meshImportPort.save(aggregate);
 
       log.info("[Qualifier-Import] 导入完成 | 实际数量: {} 条", totalCount);
@@ -391,8 +397,8 @@ public class MeshImportOrchestrator {
   /// @return 实际导入数量
   private int importDescriptors(File xmlFile, MeshImportAggregate aggregate) throws Exception {
     // 1. 获取批次大小配置和预期总数
-    int batchSize = meshImportConfig.getBatchSizeForTable("descriptor");
-    Integer expectedTotal = meshImportConfig.getExpectedCountForTable("descriptor");
+    int batchSize = meshImportConfig.getBatchSizeForTable(DESCRIPTOR.getCode());
+    Integer expectedTotal = meshImportConfig.getExpectedCountForTable(DESCRIPTOR.getCode());
     log.info("[Descriptor-Import] 开始导入 | 预期数量: {} 条 | 批次大小: {}", expectedTotal, batchSize);
 
     int totalProcessed = 0;
@@ -421,7 +427,7 @@ public class MeshImportOrchestrator {
             String progressStr = String.format("%.1f%%", progress);
 
             // 6. 更新进度
-            aggregate.updateTableProgress("descriptor", totalProcessed, batchNum);
+            aggregate.updateTableProgress(DESCRIPTOR.getCode(), totalProcessed, batchNum);
             meshImportPort.save(aggregate);
 
             log.info(
@@ -454,8 +460,8 @@ public class MeshImportOrchestrator {
   /// @return 实际导入数量
   private int importTreeNumbers(File xmlFile, MeshImportAggregate aggregate) throws Exception {
     // 1. 获取批次大小配置和预期总数
-    int batchSize = meshImportConfig.getBatchSizeForTable("tree-number");
-    Integer expectedTotal = meshImportConfig.getExpectedCountForTable("tree-number");
+    int batchSize = meshImportConfig.getBatchSizeForTable(TREE_NUMBER.getCode());
+    Integer expectedTotal = meshImportConfig.getExpectedCountForTable(TREE_NUMBER.getCode());
     log.info("[TreeNumber-Import] 开始导入 | 预期数量: {} 条 | 批次大小: {}", expectedTotal, batchSize);
 
     int totalProcessed = 0;
@@ -484,7 +490,7 @@ public class MeshImportOrchestrator {
             String progressStr = String.format("%.1f%%", progress);
 
             // 6. 更新进度
-            aggregate.updateTableProgress("tree-number", totalProcessed, batchNum);
+            aggregate.updateTableProgress(TREE_NUMBER.getCode(), totalProcessed, batchNum);
             meshImportPort.save(aggregate);
 
             log.info(
@@ -517,8 +523,8 @@ public class MeshImportOrchestrator {
   /// @return 实际导入数量
   private int importEntryTerms(File xmlFile, MeshImportAggregate aggregate) throws Exception {
     // 1. 获取批次大小配置和预期总数
-    int batchSize = meshImportConfig.getBatchSizeForTable("entry-term");
-    Integer expectedTotal = meshImportConfig.getExpectedCountForTable("entry-term");
+    int batchSize = meshImportConfig.getBatchSizeForTable(ENTRY_TERM.getCode());
+    Integer expectedTotal = meshImportConfig.getExpectedCountForTable(ENTRY_TERM.getCode());
     log.info("[EntryTerm-Import] 开始导入 | 预期数量: {} 条 | 批次大小: {}", expectedTotal, batchSize);
 
     int totalProcessed = 0;
@@ -547,7 +553,7 @@ public class MeshImportOrchestrator {
             String progressStr = String.format("%.1f%%", progress);
 
             // 6. 更新进度
-            aggregate.updateTableProgress("entry-term", totalProcessed, batchNum);
+            aggregate.updateTableProgress(ENTRY_TERM.getCode(), totalProcessed, batchNum);
             meshImportPort.save(aggregate);
 
             log.info(
@@ -580,8 +586,8 @@ public class MeshImportOrchestrator {
   /// @return 实际导入数量
   private int importConcepts(File xmlFile, MeshImportAggregate aggregate) throws Exception {
     // 1. 获取批次大小配置和预期总数
-    int batchSize = meshImportConfig.getBatchSizeForTable("concept");
-    Integer expectedTotal = meshImportConfig.getExpectedCountForTable("concept");
+    int batchSize = meshImportConfig.getBatchSizeForTable(CONCEPT.getCode());
+    Integer expectedTotal = meshImportConfig.getExpectedCountForTable(CONCEPT.getCode());
     log.info("[Concept-Import] 开始导入 | 预期数量: {} 条 | 批次大小: {}", expectedTotal, batchSize);
 
     int totalProcessed = 0;
@@ -610,7 +616,7 @@ public class MeshImportOrchestrator {
             String progressStr = String.format("%.1f%%", progress);
 
             // 6. 更新进度
-            aggregate.updateTableProgress("concept", totalProcessed, batchNum);
+            aggregate.updateTableProgress(CONCEPT.getCode(), totalProcessed, batchNum);
             meshImportPort.save(aggregate);
 
             log.info(
@@ -684,11 +690,11 @@ public class MeshImportOrchestrator {
         "[MeshImport] 导入任务成功完成 | 任务ID: {} | 耗时: {}ms | Descriptor: {} 条 | Qualifier: {} 条 | TreeNumber: {} 条 | EntryTerm: {} 条 | Concept: {} 条",
         aggregate.getId().value(),
         duration,
-        importedCounts.get("descriptor"),
-        importedCounts.get("qualifier"),
-        importedCounts.get("tree-number"),
-        importedCounts.get("entry-term"),
-        importedCounts.get("concept"));
+        importedCounts.get(DESCRIPTOR.getCode()),
+        importedCounts.get(QUALIFIER.getCode()),
+        importedCounts.get(TREE_NUMBER.getCode()),
+        importedCounts.get(ENTRY_TERM.getCode()),
+        importedCounts.get(CONCEPT.getCode()));
 
     // 5. 返回结果
     return buildSuccessResult(aggregate);
