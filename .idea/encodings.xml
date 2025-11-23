@@ -75,6 +75,8 @@
     <file url="file://$PROJECT_DIR$/patra-registry/patra-registry-infra/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-registry/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-registry/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-spring-boot-starter-batch/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-spring-boot-starter-batch/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-spring-boot-starter-core/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-spring-boot-starter-core/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-spring-boot-starter-expr/src/main/java" charset="UTF-8" />

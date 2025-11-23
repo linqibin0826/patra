@@ -1,0 +1,2 @@
+com.patra.starter.batch.autoconfigure.BatchAutoConfiguration
+com.patra.starter.batch.autoconfigure.ObservabilityAutoConfiguration

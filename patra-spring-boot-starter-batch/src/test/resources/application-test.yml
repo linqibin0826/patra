@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+    url: jdbc:tc:mysql:8.0.40:///test_batch?TC_TMPFS=/testtmpfs:rw&TC_MY_CNF=/tc/mysql/conf.d
+    username: test
+    password: test
+
+  batch:
+    jdbc:
+      initialize-schema: always
+    job:
+      enabled: false  # 禁止启动时自动运行 Job
+
+  autoconfigure:
+    exclude:
+      - org.redisson.spring.starter.RedissonAutoConfigurationV2  # 测试环境禁用 Redisson
+
+patra:
+  batch:
+    enabled: true
+    observability:
+      tracing:
+        enabled: true
+      metrics:
+        enabled: true
+      logging:
+        enabled: true
+    chunk:
+      default-size: 1000
+      max-size: 10000
