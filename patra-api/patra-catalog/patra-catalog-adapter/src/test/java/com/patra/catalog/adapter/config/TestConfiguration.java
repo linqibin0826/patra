@@ -32,7 +32,7 @@ public class TestConfiguration {
   @Bean
   public MeshImportConfig meshImportConfig() {
     MeshImportConfig config = new MeshImportConfig();
-    config.setSourceUrl(
+    config.setDescriptorSourceUrl(
         "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
     return config;
   }

@@ -127,7 +127,7 @@ PENDING → PROCESSING → COMPLETED
 - `id`: MeshImportId - 强类型 ID
 - `taskName`: String - 任务名称
 - `status`: MeshImportTaskStatus - 任务状态
-- `sourceUrl`: String - MeSH XML 文件下载地址
+- `descriptorSourceUrl`: String - MeSH Descriptor XML 文件下载地址
 - `tableProgressList`: List<TableProgress> - 各表导入进度
 - `totalRecords`: Integer - 总记录数
 - `processedRecords`: Integer - 已处理记录数
@@ -412,10 +412,10 @@ List<TableProgress> tableProgressList = List.of(
 // 创建导入任务聚合根
 MeshImportAggregate aggregate = new MeshImportAggregate(
     null, // ID 由仓储生成
-    "2025年MeSH数据导入",
+    "MeSH Descriptor 数据导入",
     MeshImportTaskStatus.PENDING,
     null, null,
-    "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+    "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc.xml",
     null, null,
     tableProgressList,
     0, 0, 0, null
@@ -519,6 +519,6 @@ meshDescriptorPort.save(descriptor);
 
 ---
 
-**最后更新**：2025-11-22
+**最后更新**：2025-11-23
 **Maven 坐标**：`com.patra:patra-catalog-domain:0.2.0-SNAPSHOT`
 **作者**：Patra Team

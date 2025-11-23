@@ -5,7 +5,6 @@ import static org.awaitility.Awaitility.*;
 
 import com.patra.catalog.api.dto.MeshProgressDTO;
 import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
-import com.patra.catalog.app.usecase.meshimport.command.StartImportCommand;
 import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
@@ -68,13 +67,7 @@ class MeshProgressQueryE2ETest {
   @DisplayName("应该能够实时查询导入进度并验证进度递增")
   void shouldQueryProgressInRealTime() {
     // Given: 启动一个导入任务
-    StartImportCommand command =
-        new StartImportCommand(
-            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml", // sourceUrl（实际测试可用mock数据）
-            "E2E 测试导入任务" // taskName
-            );
-
-    MeshImportResultDTO startResult = meshImportOrchestrator.startImport(command);
+    MeshImportResultDTO startResult = meshImportOrchestrator.startImport();
     String taskId = startResult.getTaskId();
 
     // When & Then: 多次查询进度,验证进度递增
@@ -144,12 +137,7 @@ class MeshProgressQueryE2ETest {
   @DisplayName("应该正确计算多表进度")
   void shouldCalculateMultiTableProgress() {
     // Given: 启动一个导入任务并等待部分完成
-    StartImportCommand command =
-        new StartImportCommand(
-            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-            "多表进度测试任务");
-
-    MeshImportResultDTO startResult = meshImportOrchestrator.startImport(command);
+    MeshImportResultDTO startResult = meshImportOrchestrator.startImport();
     String taskId = startResult.getTaskId();
 
     // When: 等待一段时间后查询进度
@@ -196,12 +184,7 @@ class MeshProgressQueryE2ETest {
   @DisplayName("应该在任务完成后显示失败批次")
   void shouldShowFailedBatchesWhenPresent() {
     // Given: 启动一个可能有失败批次的导入任务（实际测试中可模拟失败）
-    StartImportCommand command =
-        new StartImportCommand(
-            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-            "失败批次测试任务");
-
-    MeshImportResultDTO startResult = meshImportOrchestrator.startImport(command);
+    MeshImportResultDTO startResult = meshImportOrchestrator.startImport();
     String taskId = startResult.getTaskId();
 
     // When: 查询进度

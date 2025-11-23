@@ -83,6 +83,7 @@ class MeshProgressQueryOrchestratorTest {
             startTime,
             null, // endTime
             "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml",
             "abc123hash",
             1024000L,
             tableProgressList,
@@ -165,6 +166,7 @@ class MeshProgressQueryOrchestratorTest {
             startTime,
             null,
             "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml",
             "abc123hash",
             1024000L,
             tableProgressList,
@@ -242,6 +244,7 @@ class MeshProgressQueryOrchestratorTest {
             startTime,
             endTime,
             "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml",
             "abc123hash",
             1024000L,
             tableProgressList,
@@ -302,6 +305,7 @@ class MeshProgressQueryOrchestratorTest {
             null, // startTime 为 null
             null,
             "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml",
             null,
             null,
             tableProgressList,

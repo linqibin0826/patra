@@ -43,7 +43,7 @@
 ///     "2025年MeSH数据导入",
 ///     MeshImportTaskStatus.PENDING,
 ///     null, null,
-///     "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
+///     "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc{year}.xml",
 ///     null, null,
 ///     List.of(),
 ///     0, 0, 0, null

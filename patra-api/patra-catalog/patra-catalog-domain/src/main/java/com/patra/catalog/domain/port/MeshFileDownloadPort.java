@@ -25,7 +25,7 @@ import java.io.File;
 /// ```java
 /// // 1. 下载 XML 文件
 /// File xmlFile =
-// meshFileDownloadPort.download("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
+// meshFileDownloadPort.download("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc{year}.xml");
 ///
 /// // 2. 验证文件完整性
 /// boolean valid = meshFileDownloadPort.validateChecksum(xmlFile, "a1b2c3d4e5f6...");
@@ -45,11 +45,11 @@ public interface MeshFileDownloadPort {
   /// - 从 NLM 服务器下载 XML 文件（约 299MB）
   ///   - 支持断点续传（使用 HTTP Range 请求）
   ///   - 失败时自动重试（最多 3 次）
-  ///   - 下载到临时目录：`/tmp/mesh-import/desc2025.xml`
+  ///   - 下载到临时目录：`/tmp/mesh-import/{filename}.xml`
   ///   - 记录下载进度日志
   ///
   /// @param sourceUrl 数据源 URL（如
-  // https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml）
+  // https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc{year}.xml）
   /// @return 下载后的本地文件
   /// @throws IllegalArgumentException 如果 URL 无效
   /// @throws RuntimeException 如果下载失败（网络异常、IO 异常等）

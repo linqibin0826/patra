@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.awaitility.Awaitility.*;
 
 import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
-import com.patra.catalog.app.usecase.meshimport.command.StartImportCommand;
 import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import java.time.Duration;
 import java.util.Map;
@@ -70,12 +69,7 @@ class MeshImportRetryE2ETest {
   @DisplayName("应该能够重试失败的导入任务")
   void shouldRetryFailedTask() {
     // Given: 创建一个导入任务（实际测试中可模拟失败）
-    StartImportCommand command =
-        new StartImportCommand(
-            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-            "E2E 重试测试任务");
-
-    MeshImportResultDTO startResult = meshImportOrchestrator.startImport(command);
+    MeshImportResultDTO startResult = meshImportOrchestrator.startImport();
     String taskId = startResult.getTaskId();
 
     // 模拟任务失败（实际场景中可能是网络错误、解析错误等）
@@ -127,12 +121,7 @@ class MeshImportRetryE2ETest {
   @DisplayName("应该在任务状态不允许重试时返回 409")
   void shouldReturn409WhenTaskStatusNotAllowRetry() {
     // Given: 创建一个正在运行的任务
-    StartImportCommand command =
-        new StartImportCommand(
-            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-            "E2E 状态冲突测试任务");
-
-    MeshImportResultDTO startResult = meshImportOrchestrator.startImport(command);
+    MeshImportResultDTO startResult = meshImportOrchestrator.startImport();
     String taskId = startResult.getTaskId();
 
     // When: 尝试重试一个 PROCESSING 状态的任务（不允许）
@@ -148,12 +137,7 @@ class MeshImportRetryE2ETest {
   @DisplayName("应该能够清除进度并重新开始导入")
   void shouldClearAndRestartImport() {
     // Given: 创建一个导入任务
-    StartImportCommand command =
-        new StartImportCommand(
-            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-            "E2E 清除测试任务");
-
-    MeshImportResultDTO startResult = meshImportOrchestrator.startImport(command);
+    MeshImportResultDTO startResult = meshImportOrchestrator.startImport();
     String firstTaskId = startResult.getTaskId();
 
     // 等待任务开始处理
@@ -189,10 +173,7 @@ class MeshImportRetryE2ETest {
 
     // And: 验证可以重新开始导入
     MeshImportResultDTO restartResult =
-        meshImportOrchestrator.startImport(
-            new StartImportCommand(
-                "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-                "E2E 重新导入测试任务"));
+        meshImportOrchestrator.startImport();
 
     assertThat(restartResult).isNotNull();
     assertThat(restartResult.getStatus()).isEqualTo("PROCESSING");
@@ -220,12 +201,7 @@ class MeshImportRetryE2ETest {
   @DisplayName("应该验证重试幂等性（仅处理失败批次）")
   void shouldRetryOnlyFailedBatches() {
     // Given: 创建一个导入任务并假设部分批次失败
-    StartImportCommand command =
-        new StartImportCommand(
-            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-            "E2E 幂等性测试任务");
-
-    MeshImportResultDTO startResult = meshImportOrchestrator.startImport(command);
+    MeshImportResultDTO startResult = meshImportOrchestrator.startImport();
     String taskId = startResult.getTaskId();
 
     // 等待任务失败
@@ -268,12 +244,7 @@ class MeshImportRetryE2ETest {
   @DisplayName("应该在有任务运行时拒绝清除操作")
   void shouldRejectClearWhenTaskRunning() {
     // Given: 启动一个导入任务
-    StartImportCommand command =
-        new StartImportCommand(
-            "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-            "E2E 清除冲突测试任务");
-
-    meshImportOrchestrator.startImport(command);
+    meshImportOrchestrator.startImport();
 
     // When: 尝试清除（但有任务正在运行）
     HttpHeaders headers = new HttpHeaders();

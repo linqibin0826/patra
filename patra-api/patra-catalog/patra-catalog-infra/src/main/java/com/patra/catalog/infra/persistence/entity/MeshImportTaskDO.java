@@ -15,7 +15,8 @@ import lombok.EqualsAndHashCode;
 ///
 /// - `task_name` - 任务名称（如 "MeSH 2025 导入"）
 ///   - `status` - 任务状态（PENDING/PROCESSING/SUCCESS/FAILED/CANCELLED）
-///   - `source_url` - NLM 数据源 URL
+///   - `descriptor_source_url` - NLM 主题词数据源 URL
+///   - `qualifier_source_url` - NLM 限定词数据源 URL
 ///   - `xml_file_hash` - XML 文件 MD5 哈希（验证完整性）
 ///   - `total_records` - 总记录数（约 350,000）
 ///   - `processed_records` - 已处理记录数（用于断点续传）
@@ -43,9 +44,13 @@ public class MeshImportTaskDO extends BaseDO {
   @TableField("status")
   private String status;
 
-  /// 数据源 URL（如 https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml）
-  @TableField("source_url")
-  private String sourceUrl;
+  /// 主题词数据源 URL（如 https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc{year}.xml）
+  @TableField("descriptor_source_url")
+  private String descriptorSourceUrl;
+
+  /// 限定词数据源 URL（如 https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual{year}.xml）
+  @TableField("qualifier_source_url")
+  private String qualifierSourceUrl;
 
   /// XML 文件 MD5 哈希（用于验证文件完整性）
   @TableField("xml_file_hash")
