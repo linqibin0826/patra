@@ -159,11 +159,6 @@ public class TableProgress {
   /// @param actualTotal 实际导入的总数
   /// @return 已完成的新实例
   public TableProgress markAsCompleted(Integer actualTotal) {
-    if (this.status == MeshTableImportStatus.COMPLETED) {
-      // 已经完成，直接返回自身
-      return this;
-    }
-
     return this.toBuilder()
         .actualTotalCount(actualTotal)
         .processedCount(actualTotal)
