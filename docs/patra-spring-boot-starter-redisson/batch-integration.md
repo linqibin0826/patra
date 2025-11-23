@@ -276,47 +276,7 @@ patra-spring-boot-starter-batch
 
 ---
 
-## 五、迁移步骤
-
-### 5.1 如果已开发 Batch Starter（含自定义锁）
-
-**步骤 1**：创建 Redisson Starter
-
-```bash
-# 创建 patra-spring-boot-starter-redisson 模块
-# 参考 architecture-design.md 实施
-```
-
-**步骤 2**：重构 Batch Starter
-
-```bash
-# 删除自定义锁代码
-rm -rf patra-spring-boot-starter-batch/src/main/java/com/patra/starter/batch/lock/
-
-# 更新 pom.xml（添加 Redisson Starter 依赖）
-# 更新 README.md（说明依赖关系）
-```
-
-**步骤 3**：更新业务服务
-
-```bash
-# 替换注解
-# @DistributedJobLock → @DistributedLock
-```
-
-### 5.2 如果尚未开发 Batch Starter
-
-**推荐顺序**：
-
-1. **先开发 Redisson Starter**（2-3 天）
-2. **再开发 Batch Starter**（依赖 Redisson Starter，3-4 天）
-3. **重构 patra-catalog MeSH 导入**（2-3 天）
-
-**总时间**：7-10 天
-
----
-
-## 六、FAQ
+## 五、FAQ
 
 ### Q1: 为什么要创建独立的 Redisson Starter？
 
@@ -340,7 +300,7 @@ rm -rf patra-spring-boot-starter-batch/src/main/java/com/patra/starter/batch/loc
 
 ---
 
-## 七、总结
+## 六、总结
 
 ### ✅ 推荐做法
 
