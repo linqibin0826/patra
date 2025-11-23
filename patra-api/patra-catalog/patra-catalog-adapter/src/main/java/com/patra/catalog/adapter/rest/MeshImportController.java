@@ -4,7 +4,6 @@ import com.patra.catalog.api.dto.MeshProgressDTO;
 import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
 import com.patra.catalog.app.usecase.meshimport.MeshProgressQueryOrchestrator;
 import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
-import com.patra.catalog.domain.model.valueobject.MeshImportId;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.util.Map;
@@ -83,8 +82,7 @@ public class MeshImportController {
   public ResponseEntity<MeshImportResultDTO> retryFailedTask(@PathVariable @NotNull String taskId) {
     log.info("收到重试失败任务请求，任务 ID：{}", taskId);
 
-    MeshImportId importId = new MeshImportId(Long.parseLong(taskId));
-    MeshImportResultDTO result = meshImportOrchestrator.retryFailedTask(importId);
+    MeshImportResultDTO result = meshImportOrchestrator.retryFailedTask(Long.parseLong(taskId));
 
     log.info("MeSH 导入任务重试已启动，任务 ID：{}", taskId);
 
@@ -136,8 +134,7 @@ public class MeshImportController {
   public ResponseEntity<MeshProgressDTO> getProgress(@PathVariable @NotNull String taskId) {
     log.info("收到查询导入进度请求，任务 ID：{}", taskId);
 
-    MeshImportId importId = MeshImportId.of(Long.parseLong(taskId));
-    MeshProgressDTO progress = meshProgressQueryOrchestrator.queryProgress(importId);
+    MeshProgressDTO progress = meshProgressQueryOrchestrator.queryProgress(Long.parseLong(taskId));
 
     log.debug(
         "查询进度成功，任务 ID：{}，整体进度：{}%，处理速度：{} 记录/秒",

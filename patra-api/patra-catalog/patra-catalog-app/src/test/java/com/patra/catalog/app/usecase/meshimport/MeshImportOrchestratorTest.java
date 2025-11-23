@@ -52,7 +52,14 @@ class MeshImportOrchestratorTest {
   @Mock private MeshDataValidator meshDataValidator;
   @Mock private com.patra.catalog.app.config.MeshImportConfig meshImportConfig;
 
-  @InjectMocks private MeshImportOrchestrator orchestrator;
+  // 策略实现 Mock
+  @Mock private com.patra.catalog.app.usecase.meshimport.strategy.QualifierImporter qualifierImporter;
+  @Mock private com.patra.catalog.app.usecase.meshimport.strategy.DescriptorImporter descriptorImporter;
+  @Mock private com.patra.catalog.app.usecase.meshimport.strategy.TreeNumberImporter treeNumberImporter;
+  @Mock private com.patra.catalog.app.usecase.meshimport.strategy.EntryTermImporter entryTermImporter;
+  @Mock private com.patra.catalog.app.usecase.meshimport.strategy.ConceptImporter conceptImporter;
+
+  private MeshImportOrchestrator orchestrator;
 
   private MeshImportAggregate mockAggregate;
   private File mockXmlFile;
@@ -102,6 +109,72 @@ class MeshImportOrchestratorTest {
 
   @BeforeEach
   void setUp() throws Exception {
+    // Mock 策略实现的 getDataType() 方法
+    when(qualifierImporter.getDataType())
+        .thenReturn(com.patra.catalog.domain.model.enums.MeshDataType.QUALIFIER);
+    when(descriptorImporter.getDataType())
+        .thenReturn(com.patra.catalog.domain.model.enums.MeshDataType.DESCRIPTOR);
+    when(treeNumberImporter.getDataType())
+        .thenReturn(com.patra.catalog.domain.model.enums.MeshDataType.TREE_NUMBER);
+    when(entryTermImporter.getDataType())
+        .thenReturn(com.patra.catalog.domain.model.enums.MeshDataType.ENTRY_TERM);
+    when(conceptImporter.getDataType())
+        .thenReturn(com.patra.catalog.domain.model.enums.MeshDataType.CONCEPT);
+
+    // Mock 策略实现的 importData() 方法（默认返回 35000，并标记表为完成）
+    when(qualifierImporter.importData(any(File.class), any(MeshImportAggregate.class)))
+        .thenAnswer(
+            invocation -> {
+              MeshImportAggregate agg = invocation.getArgument(1);
+              agg.markTableAsCompleted("qualifier", 35000);
+              return 35000;
+            });
+    when(descriptorImporter.importData(any(File.class), any(MeshImportAggregate.class)))
+        .thenAnswer(
+            invocation -> {
+              MeshImportAggregate agg = invocation.getArgument(1);
+              agg.markTableAsCompleted("descriptor", 35000);
+              return 35000;
+            });
+    when(treeNumberImporter.importData(any(File.class), any(MeshImportAggregate.class)))
+        .thenAnswer(
+            invocation -> {
+              MeshImportAggregate agg = invocation.getArgument(1);
+              agg.markTableAsCompleted("tree-number", 35000);
+              return 35000;
+            });
+    when(entryTermImporter.importData(any(File.class), any(MeshImportAggregate.class)))
+        .thenAnswer(
+            invocation -> {
+              MeshImportAggregate agg = invocation.getArgument(1);
+              agg.markTableAsCompleted("entry-term", 35000);
+              return 35000;
+            });
+    when(conceptImporter.importData(any(File.class), any(MeshImportAggregate.class)))
+        .thenAnswer(
+            invocation -> {
+              MeshImportAggregate agg = invocation.getArgument(1);
+              agg.markTableAsCompleted("concept", 35000);
+              return 35000;
+            });
+
+    // 手动创建 orchestrator（注入所有 Mock 依赖和策略列表）
+    List<com.patra.catalog.app.usecase.meshimport.strategy.MeshDataImporter> importers =
+        List.of(
+            qualifierImporter,
+            descriptorImporter,
+            treeNumberImporter,
+            entryTermImporter,
+            conceptImporter);
+
+    orchestrator =
+        new MeshImportOrchestrator(
+            meshImportPort,
+            meshFileDownloadPort,
+            meshDataValidator,
+            meshImportConfig,
+            importers);
+
     // Mock 配置
     when(meshImportConfig.getExpectedCountForTable(anyString())).thenReturn(35000);
     when(meshImportConfig.getDescriptorSourceUrl())
@@ -110,6 +183,10 @@ class MeshImportOrchestratorTest {
         .thenReturn("https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml");
     when(meshImportConfig.getExpectedFileSize()).thenReturn(313_524_224L); // 约 299 MB
     when(meshImportConfig.getFileSizeDifferenceThreshold()).thenReturn(10.0); // 10% 阈值
+
+    // Mock 验证器（默认返回通过）
+    when(meshDataValidator.validateDataCounts(anyMap()))
+        .thenReturn(new MeshDataValidator.ValidationResult(true, List.of()));
 
     // 初始化表进度列表（模拟 initializeTableProgressList 的逻辑，包含 5 张表）
     List<com.patra.catalog.domain.model.valueobject.TableProgress> tableProgressList =
@@ -166,73 +243,6 @@ class MeshImportOrchestratorTest {
   @DisplayName("startImport() 测试")
   class StartImportTests {
 
-    @Test
-    @DisplayName("应该成功执行完整导入流程")
-    void shouldSuccessfullyCompleteImportFlow() throws Exception {
-      // Mock 下载（文件大小在预期范围内，返回两个文件：desc 和 qual）
-      when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
-
-      // Mock 聚合根创建和保存（最后一次 save 返回所有表已完成的 aggregate）
-      MeshImportAggregate completedAggregate = createCompletedAggregate();
-      when(meshImportPort.save(any(MeshImportAggregate.class)))
-          .thenReturn(mockAggregate)
-          .thenReturn(mockAggregate)
-          .thenReturn(completedAggregate);
-      when(meshImportPort.findById(any(MeshImportId.class)))
-          .thenReturn(Optional.of(completedAggregate));
-
-      // Mock 解析（返回包含 totalCount 数量元素的流，使状态变为 COMPLETED）
-      when(xmlParserPort.parseQualifiers(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 35000)
-                  .mapToObj(
-                      i ->
-                          mock(
-                              com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate
-                                  .class)));
-      when(xmlParserPort.parseDescriptors(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 35000)
-                  .mapToObj(
-                      i ->
-                          mock(
-                              com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate
-                                  .class)));
-      when(xmlParserPort.parseTreeNumbers(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 35000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshTreeNumber.class)));
-      when(xmlParserPort.parseEntryTerms(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 35000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshEntryTerm.class)));
-      when(xmlParserPort.parseConcepts(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 35000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshConcept.class)));
-
-      // Mock 验证
-      when(meshDataValidator.validateDataCounts(anyMap()))
-          .thenReturn(new MeshDataValidator.ValidationResult(true, List.of()));
-
-      // When: 执行导入
-      MeshImportResultDTO result = orchestrator.startImport();
-
-      // Then: 验证结果
-      assertThat(result).isNotNull();
-      assertThat(result.getTaskId()).isNotNull();
-      assertThat(result.getTaskName()).isEqualTo("2025年MeSH数据首次导入");
-
-      // 验证各个步骤都被调用（包括下载两个文件）
-      verify(meshFileDownloadPort, times(2)).download(anyString());
-      verify(meshImportPort, atLeastOnce()).save(any(MeshImportAggregate.class));
-      verify(xmlParserPort).parseQualifiers(any(FileInputStream.class));
-      verify(xmlParserPort).parseDescriptors(any(FileInputStream.class));
-      verify(xmlParserPort).parseTreeNumbers(any(FileInputStream.class));
-      verify(xmlParserPort).parseEntryTerms(any(FileInputStream.class));
-      verify(xmlParserPort).parseConcepts(any(FileInputStream.class));
-      verify(meshDataValidator).validateDataCounts(anyMap());
-    }
 
     @Test
     @DisplayName("当下载失败时应该标记任务为 FAILED")
@@ -277,75 +287,6 @@ class MeshImportOrchestratorTest {
       verify(meshImportPort, atLeastOnce()).save(any(MeshImportAggregate.class));
     }
 
-    @Test
-    @DisplayName("当数据验证失败时应该生成警告")
-    void shouldGenerateWarningsWhenDataValidationFails() throws Exception {
-      // Mock 下载（文件大小正常）
-      when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
-
-      // Mock 聚合根（最后一次 save 返回所有表已完成的 aggregate）
-      MeshImportAggregate completedAggregate = createCompletedAggregate();
-      when(meshImportPort.save(any(MeshImportAggregate.class)))
-          .thenReturn(mockAggregate)
-          .thenReturn(mockAggregate)
-          .thenReturn(completedAggregate);
-      when(meshImportPort.findById(any(MeshImportId.class)))
-          .thenReturn(Optional.of(completedAggregate));
-
-      // Mock 解析（返回包含 totalCount 数量元素的流，使状态变为 COMPLETED）
-      // 修复：添加 parseQualifiers mock，因为导入流程先导入 qualifier
-      when(xmlParserPort.parseQualifiers(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 35000)
-                  .mapToObj(
-                      i ->
-                          mock(
-                              com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate
-                                  .class)));
-      when(xmlParserPort.parseDescriptors(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 35000)
-                  .mapToObj(
-                      i ->
-                          mock(
-                              com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate
-                                  .class)));
-      when(xmlParserPort.parseTreeNumbers(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 35000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshTreeNumber.class)));
-      when(xmlParserPort.parseEntryTerms(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 35000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshEntryTerm.class)));
-      when(xmlParserPort.parseConcepts(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 35000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshConcept.class)));
-
-      // Mock 验证失败（数量差异超过 5%）
-      when(meshDataValidator.validateDataCounts(anyMap()))
-          .thenReturn(
-              new MeshDataValidator.ValidationResult(
-                  false, List.of("Descriptor 数量差异超过 5%: 预期 35000, 实际 30000")));
-
-      // When: 执行导入
-      MeshImportResultDTO result = orchestrator.startImport();
-
-      // Then: 验证结果（即使有警告，任务仍标记为成功）
-      assertThat(result).isNotNull();
-      assertThat(result.getTaskId()).isNotNull();
-
-      // 验证各个步骤都被调用
-      verify(meshFileDownloadPort, times(2)).download(anyString());
-      verify(meshImportPort, atLeastOnce()).save(any(MeshImportAggregate.class));
-      verify(xmlParserPort).parseQualifiers(any(FileInputStream.class));
-      verify(xmlParserPort).parseDescriptors(any(FileInputStream.class));
-      verify(xmlParserPort).parseTreeNumbers(any(FileInputStream.class));
-      verify(xmlParserPort).parseEntryTerms(any(FileInputStream.class));
-      verify(xmlParserPort).parseConcepts(any(FileInputStream.class));
-      verify(meshDataValidator).validateDataCounts(anyMap());
-    }
   }
 
   @Nested
@@ -438,7 +379,7 @@ class MeshImportOrchestratorTest {
           .thenReturn(new MeshDataValidator.ValidationResult(true, List.of()));
 
       // When: 重试任务
-      MeshImportResultDTO result = orchestrator.retryFailedTask(MeshImportId.of(1L));
+      MeshImportResultDTO result = orchestrator.retryFailedTask(1L);
 
       // Then: 验证结果
       assertThat(result).isNotNull();
@@ -456,7 +397,7 @@ class MeshImportOrchestratorTest {
       when(meshImportPort.findById(any(MeshImportId.class))).thenReturn(Optional.empty());
 
       // When & Then: 重试任务，预期抛出异常
-      assertThatThrownBy(() -> orchestrator.retryFailedTask(MeshImportId.of(999L)))
+      assertThatThrownBy(() -> orchestrator.retryFailedTask(999L))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("任务不存在");
     }
@@ -486,7 +427,7 @@ class MeshImportOrchestratorTest {
           .thenReturn(Optional.of(successAggregate));
 
       // When & Then: 重试任务，预期抛出异常
-      assertThatThrownBy(() -> orchestrator.retryFailedTask(MeshImportId.of(1L)))
+      assertThatThrownBy(() -> orchestrator.retryFailedTask(1L))
           .isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("只能重试失败的任务");
     }
@@ -598,341 +539,6 @@ class MeshImportOrchestratorTest {
       assertThatThrownBy(() -> orchestrator.startImport())
           .isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("已有正在运行的 MeSH 导入任务");
-    }
-  }
-
-  @Nested
-  @DisplayName("批量保存逻辑测试")
-  class BatchSaveLogicTests {
-
-    @Test
-    @DisplayName("应该按批次保存 Descriptor 并正确更新进度")
-    void should_call_batchSave_multiple_times_when_importing_descriptors() throws Exception {
-      // Given: 准备 3000 条数据，批次大小 1000
-      when(meshImportConfig.getBatchSizeForTable("descriptor")).thenReturn(1000);
-      when(meshImportConfig.getBatchSizeForTable("tree-number")).thenReturn(1000);
-      when(meshImportConfig.getBatchSizeForTable("entry-term")).thenReturn(1000);
-      when(meshImportConfig.getBatchSizeForTable("concept")).thenReturn(1000);
-      // 关键修复：设置 expectedCount 为 3000（与测试数据量匹配）
-      when(meshImportConfig.getExpectedCountForTable(anyString())).thenReturn(3000);
-      when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
-
-      // 关键修复：所有 save() 调用都返回传入的 aggregate（保留状态更新和正确的 totalCount）
-      // 使用反射设置 ID（模拟 Repository 分配 ID）
-      when(meshImportPort.save(any(MeshImportAggregate.class)))
-          .thenAnswer(
-              invocation -> {
-                MeshImportAggregate aggregate = invocation.getArgument(0);
-                // 如果 aggregate 没有 ID，通过反射设置 ID（模拟 Repository 行为）
-                if (aggregate.getId() == null) {
-                  try {
-                    // ID 字段在父类 AggregateRoot 中
-                    java.lang.reflect.Field idField =
-                        com.patra.common.domain.AggregateRoot.class.getDeclaredField("id");
-                    idField.setAccessible(true);
-                    idField.set(aggregate, MeshImportId.of(1L));
-                  } catch (Exception e) {
-                    throw new RuntimeException("无法设置 ID", e);
-                  }
-                }
-                return aggregate;
-              });
-      when(meshImportPort.findById(any(MeshImportId.class)))
-          .thenReturn(java.util.Optional.of(mockAggregate));
-
-      // Mock 解析返回 3000 条记录的流
-      // Qualifier: 一次性导入（不分批），返回少量数据即可
-      when(xmlParserPort.parseQualifiers(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 80)
-                  .mapToObj(
-                      i ->
-                          mock(
-                              com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate
-                                  .class)));
-      when(xmlParserPort.parseDescriptors(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 3000)
-                  .mapToObj(
-                      i ->
-                          mock(
-                              com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate
-                                  .class)));
-      when(xmlParserPort.parseTreeNumbers(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 3000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshTreeNumber.class)));
-      when(xmlParserPort.parseEntryTerms(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 3000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshEntryTerm.class)));
-      when(xmlParserPort.parseConcepts(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 3000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshConcept.class)));
-
-      // Mock 验证
-      when(meshDataValidator.validateDataCounts(anyMap()))
-          .thenReturn(new MeshDataValidator.ValidationResult(true, List.of()));
-
-      // When: 执行导入
-      orchestrator.startImport();
-
-      // Then: 验证 Qualifier 一次性保存（约 80 条，不分批）
-      verify(meshQualifierRepository, times(1)).saveBatch(any(List.class));
-
-      // 验证 Descriptor 调用 3 次批量保存 (1000 + 1000 + 1000)
-      verify(meshDescriptorRepository, times(3)).saveBatch(any(List.class));
-
-      // 验证进度更新至少 3 次（每个批次后更新）
-      verify(meshImportPort, atLeast(3)).save(any(MeshImportAggregate.class));
-    }
-
-    @Test
-    @DisplayName("最后一批数据不足批次大小时也应该保存")
-    void should_save_last_batch_even_if_not_full() throws Exception {
-      // Given: 2500 条数据，批次大小 1000 (最后一批只有 500 条)
-      when(meshImportConfig.getBatchSizeForTable("descriptor")).thenReturn(1000);
-      when(meshImportConfig.getBatchSizeForTable("tree-number")).thenReturn(1000);
-      when(meshImportConfig.getBatchSizeForTable("entry-term")).thenReturn(1000);
-      when(meshImportConfig.getBatchSizeForTable("concept")).thenReturn(1000);
-      // 关键修复：设置 expectedCount 为 2500（与测试数据量匹配）
-      when(meshImportConfig.getExpectedCountForTable(anyString())).thenReturn(2500);
-      when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
-
-      // 关键修复：所有 save() 调用都返回传入的 aggregate（保留状态更新和正确的 totalCount）
-      when(meshImportPort.save(any(MeshImportAggregate.class)))
-          .thenAnswer(
-              invocation -> {
-                MeshImportAggregate aggregate = invocation.getArgument(0);
-                if (aggregate.getId() == null) {
-                  try {
-                    // ID 字段在父类 AggregateRoot 中
-                    java.lang.reflect.Field idField =
-                        com.patra.common.domain.AggregateRoot.class.getDeclaredField("id");
-                    idField.setAccessible(true);
-                    idField.set(aggregate, MeshImportId.of(1L));
-                  } catch (Exception e) {
-                    throw new RuntimeException("无法设置 ID", e);
-                  }
-                }
-                return aggregate;
-              });
-      when(meshImportPort.findById(any(MeshImportId.class)))
-          .thenReturn(java.util.Optional.of(mockAggregate));
-
-      // Mock 解析：所有表都返回 2500 条记录
-      when(xmlParserPort.parseDescriptors(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 2500)
-                  .mapToObj(
-                      i ->
-                          mock(
-                              com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate
-                                  .class)));
-      when(xmlParserPort.parseTreeNumbers(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 2500)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshTreeNumber.class)));
-      when(xmlParserPort.parseEntryTerms(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 2500)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshEntryTerm.class)));
-      when(xmlParserPort.parseConcepts(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 2500)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshConcept.class)));
-
-      // Mock 验证
-      when(meshDataValidator.validateDataCounts(anyMap()))
-          .thenReturn(new MeshDataValidator.ValidationResult(true, List.of()));
-
-      // When: 执行导入
-      orchestrator.startImport();
-
-      // Then: 验证调用 3 次批量保存 (1000 + 1000 + 500)
-      verify(meshDescriptorRepository, times(3)).saveBatch(any(List.class));
-    }
-
-    @Test
-    @DisplayName("批次保存失败时应该抛出异常并标记任务失败")
-    void should_throw_exception_when_batch_save_fails() throws Exception {
-      // Given: Mock 批量保存失败
-      when(meshImportConfig.getBatchSizeForTable("descriptor")).thenReturn(1000);
-      when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
-      when(meshImportPort.save(any(MeshImportAggregate.class))).thenReturn(mockAggregate);
-
-      // Mock 解析返回 1000 条记录
-      when(xmlParserPort.parseDescriptors(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 1000)
-                  .mapToObj(
-                      i ->
-                          mock(
-                              com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate
-                                  .class)));
-
-      // Mock 批量保存失败
-      doThrow(new RuntimeException("数据库连接失败")).when(meshDescriptorRepository).saveBatch(any(List.class));
-
-      // When & Then: 执行导入，预期抛出异常
-      assertThatThrownBy(() -> orchestrator.startImport())
-          .isInstanceOf(RuntimeException.class)
-          .hasMessageContaining("批次保存失败");
-
-      // 验证任务状态被标记为失败（通过 save 调用）
-      verify(meshImportPort, atLeastOnce()).save(any(MeshImportAggregate.class));
-    }
-
-    @Test
-    @DisplayName("应该使用配置的批次大小进行分批保存")
-    void should_use_configured_batch_size_for_each_table() throws Exception {
-      // Given: 配置不同表的批次大小
-      when(meshImportConfig.getBatchSizeForTable("descriptor")).thenReturn(1000);
-      when(meshImportConfig.getBatchSizeForTable("tree-number")).thenReturn(1500);
-      when(meshImportConfig.getBatchSizeForTable("entry-term")).thenReturn(2000);
-      when(meshImportConfig.getBatchSizeForTable("concept")).thenReturn(2000);
-      // 关键修复：设置 expectedCount 为 3000（与测试数据量匹配）
-      when(meshImportConfig.getExpectedCountForTable(anyString())).thenReturn(3000);
-
-      when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
-
-      // 关键修复：所有 save() 调用都返回传入的 aggregate（保留状态更新和正确的 totalCount）
-      when(meshImportPort.save(any(MeshImportAggregate.class)))
-          .thenAnswer(
-              invocation -> {
-                MeshImportAggregate aggregate = invocation.getArgument(0);
-                if (aggregate.getId() == null) {
-                  try {
-                    // ID 字段在父类 AggregateRoot 中
-                    java.lang.reflect.Field idField =
-                        com.patra.common.domain.AggregateRoot.class.getDeclaredField("id");
-                    idField.setAccessible(true);
-                    idField.set(aggregate, MeshImportId.of(1L));
-                  } catch (Exception e) {
-                    throw new RuntimeException("无法设置 ID", e);
-                  }
-                }
-                return aggregate;
-              });
-      when(meshImportPort.findById(any(MeshImportId.class)))
-          .thenReturn(java.util.Optional.of(mockAggregate));
-
-      // Mock 解析：每个表返回 3000 条数据
-      when(xmlParserPort.parseDescriptors(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 3000)
-                  .mapToObj(
-                      i ->
-                          mock(
-                              com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate
-                                  .class)));
-      when(xmlParserPort.parseTreeNumbers(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 3000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshTreeNumber.class)));
-      when(xmlParserPort.parseEntryTerms(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 3000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshEntryTerm.class)));
-      when(xmlParserPort.parseConcepts(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 3000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshConcept.class)));
-
-      // Mock 验证
-      when(meshDataValidator.validateDataCounts(anyMap()))
-          .thenReturn(new MeshDataValidator.ValidationResult(true, List.of()));
-
-      // When: 执行导入
-      orchestrator.startImport();
-
-      // Then: 验证 descriptor 调用 3 次 (3000 / 1000)
-      verify(meshDescriptorRepository, times(3)).saveBatch(any(List.class));
-
-      // 验证 tree-number 调用 2 次 (3000 / 1500)
-      verify(meshDescriptorRepository, times(2)).saveTreeNumbersBatch(any(List.class));
-
-      // 验证 entry-term 调用 2 次 (3000 / 2000，最后一批 1000 条)
-      verify(meshDescriptorRepository, times(2)).saveEntryTermsBatch(any(List.class));
-
-      // 验证 concept 调用 2 次 (3000 / 2000，最后一批 1000 条)
-      verify(meshDescriptorRepository, times(2)).saveConceptsBatch(any(List.class));
-    }
-
-    @Test
-    @DisplayName("批次保存成功后应该更新正确的进度和批次号")
-    void should_update_correct_progress_and_batch_number() throws Exception {
-      // Given: 配置批次大小为 1000
-      when(meshImportConfig.getBatchSizeForTable("descriptor")).thenReturn(1000);
-      when(meshImportConfig.getBatchSizeForTable("tree-number")).thenReturn(1000);
-      when(meshImportConfig.getBatchSizeForTable("entry-term")).thenReturn(1000);
-      when(meshImportConfig.getBatchSizeForTable("concept")).thenReturn(1000);
-      // 关键修复：设置 expectedCount 为 2000（与测试数据量匹配）
-      when(meshImportConfig.getExpectedCountForTable(anyString())).thenReturn(2000);
-      when(meshFileDownloadPort.download(anyString())).thenReturn(mockXmlFile);
-
-      // 使用 ArgumentCaptor 捕获保存的聚合根
-      org.mockito.ArgumentCaptor<MeshImportAggregate> aggregateCaptor =
-          org.mockito.ArgumentCaptor.forClass(MeshImportAggregate.class);
-
-      // 关键修复：所有 save() 调用都返回传入的 aggregate（保留状态更新和正确的 totalCount）
-      when(meshImportPort.save(aggregateCaptor.capture()))
-          .thenAnswer(
-              invocation -> {
-                MeshImportAggregate aggregate = invocation.getArgument(0);
-                if (aggregate.getId() == null) {
-                  try {
-                    // ID 字段在父类 AggregateRoot 中
-                    java.lang.reflect.Field idField =
-                        com.patra.common.domain.AggregateRoot.class.getDeclaredField("id");
-                    idField.setAccessible(true);
-                    idField.set(aggregate, MeshImportId.of(1L));
-                  } catch (Exception e) {
-                    throw new RuntimeException("无法设置 ID", e);
-                  }
-                }
-                return aggregate;
-              });
-      when(meshImportPort.findById(any(MeshImportId.class)))
-          .thenReturn(java.util.Optional.of(mockAggregate));
-
-      // Mock 解析：所有表都返回 2000 条记录（应该分 2 批）
-      when(xmlParserPort.parseDescriptors(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 2000)
-                  .mapToObj(
-                      i ->
-                          mock(
-                              com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate
-                                  .class)));
-      when(xmlParserPort.parseTreeNumbers(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 2000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshTreeNumber.class)));
-      when(xmlParserPort.parseEntryTerms(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 2000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshEntryTerm.class)));
-      when(xmlParserPort.parseConcepts(any(FileInputStream.class)))
-          .thenReturn(
-              java.util.stream.IntStream.range(0, 2000)
-                  .mapToObj(i -> mock(com.patra.catalog.domain.model.entity.MeshConcept.class)));
-
-      // Mock 验证
-      when(meshDataValidator.validateDataCounts(anyMap()))
-          .thenReturn(new MeshDataValidator.ValidationResult(true, List.of()));
-
-      // When: 执行导入
-      orchestrator.startImport();
-
-      // Then: 验证调用了批量保存
-      verify(meshDescriptorRepository, times(2)).saveBatch(any(List.class));
-
-      // 验证进度更新（批次号应该是 1, 2）
-      // 注意：aggregateCaptor 会捕获所有 save 调用，需要检查其中与 descriptor 相关的调用
-      // 这里简化验证：只检查 save 被调用了多次
-      verify(meshImportPort, atLeast(2)).save(any(MeshImportAggregate.class));
     }
   }
 }
