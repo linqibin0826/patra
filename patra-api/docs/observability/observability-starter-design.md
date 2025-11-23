@@ -1793,42 +1793,31 @@ patra:
 
 #### 1. 统一指标命名规范
 
-**重构前**：
-```
-rest_client_requests_success_total
-patra.object_storage.upload.total
-provenance.client.api.duration
-mesh.import.task.duration
-```
+**命名格式**: `patra.{module}.{operation}.{metric}`
 
-**重构后**（统一为 `patra.{module}.{operation}.{metric}` 格式）：
+**示例**：
 ```
-patra.http.client.requests.success
-patra.storage.upload.total
-patra.provenance.api.duration
-patra.catalog.mesh.import.duration
+patra.http.client.requests.success        # HTTP 客户端请求成功次数
+patra.storage.upload.total                # 对象存储上传总数
+patra.provenance.api.duration             # Provenance API 调用耗时
+patra.catalog.mesh.import.duration        # Catalog Mesh 导入耗时
 ```
 
-**执行方式**：
-- 修改各 Metrics 类的指标名称
-- 使用 `MetricNamingMeterFilter` 自动转换旧名称（过渡期）
+**实施要点**：
+- 所有新增指标必须遵守此命名规范
+- 使用 `MetricNamingMeterFilter` 确保命名一致性
 
-#### 2. 完全移除各 Starter 中的可观测性代码（插件式架构）
+#### 2. 插件式架构：完全分离可观测性关注点
 
-**重构前**：
-- `patra-starter-core`: 包含 `TracingInterceptor`（耦合可观测性）
-- `patra-starter-rest-client`: 包含 `TracingInterceptor`（耦合可观测性）
-- `patra-starter-batch`: 包含 TODO 标记的 Metrics 代码（耦合可观测性）
-- **问题**: 可观测性与核心功能混合，违反关注点分离原则
+**设计原则**: 横切关注点完全分离，可观测性作为独立插件，符合依赖倒置原则（DIP）
 
-**重构后（插件式架构）**：
-- `patra-starter-core`: **完全移除**所有可观测性代码，仅保留 `ErrorInterceptor` 扩展点
-- `patra-starter-rest-client`: **完全移除**所有可观测性代码，仅保留 `ClientInterceptor` 扩展点
-- `patra-starter-batch`: **完全移除**所有可观测性代码，使用 Spring Batch 原生 `JobExecutionListener` 扩展点
-- `patra-starter-observability`: **统一实现**所有扩展点，作为可选插件
-- **关键原则**: 横切关注点完全分离，可观测性作为独立插件，符合依赖倒置原则（DIP）
+**模块职责**：
+- `patra-starter-core`: 纯净的基础设施，提供 `ErrorInterceptor` 扩展点
+- `patra-starter-rest-client`: 纯净的 HTTP 客户端，提供 `ClientInterceptor` 扩展点
+- `patra-starter-batch`: 纯净的批处理配置，使用 Spring Batch 原生 `JobExecutionListener` 扩展点
+- `patra-starter-observability`: 统一实现所有扩展点，作为可选插件
 
-**架构说明**：
+**架构设计**：
 ```
 ┌────────────────────────────────────────────────┐
 │  业务服务（patra-catalog, patra-ingest 等）   │
@@ -1859,11 +1848,11 @@ patra.catalog.mesh.import.duration
 └──────────────┘          └──────────────┘
 ```
 
-**依赖方向验证**：
+**依赖方向**：
 - ✅ observability → core（单向依赖，符合 DIP）
 - ✅ observability → rest-client（单向依赖，符合 DIP）
 - ✅ observability → batch（单向依赖，符合 DIP）
-- ✅ core ❌→ observability（无依赖，正确！）
+- ✅ core ❌→ observability（无依赖，正确）
 
 **架构优势**：
 1. **完全解耦**: core/rest-client/batch 不依赖任何可观测性框架
@@ -1871,7 +1860,7 @@ patra.catalog.mesh.import.duration
 3. **易于替换**: 未来可替换为 OpenTelemetry 或其他实现，只需修改 observability starter
 4. **符合原则**: 遵守单一职责原则（SRP）、依赖倒置原则（DIP）、开闭原则（OCP）
 
-**重构示例**：
+**实现示例**：
 
 ```java
 // patra-starter-core（纯净，仅提供扩展点）
@@ -1905,46 +1894,37 @@ public class ErrorPipelineObservationInterceptor implements ErrorInterceptor {
 }
 ```
 
-**注意**: 这是典型的"插件式架构"（Plugin Architecture），可观测性成为可选的横切关注点，而非强制依赖。这是绿地项目的最佳实践，充分利用了无历史包袱的优势。
-
 #### 3. 统一配置前缀
 
-**重构前**：
-```yaml
-patra:
-  rest-client:
-    interceptors:
-      tracing:
-        enabled: true
-  error:
-    observation:
-      enabled: true
-```
+**配置格式**: 所有可观测性配置统一使用 `patra.observability` 前缀
 
-**重构后**：
+**配置示例**：
 ```yaml
 patra:
   observability:
+    enabled: true              # 全局开关
     tracing:
       enabled: true
+      sampling-rate: 1.0
     metrics:
+      enabled: true
+      step: 60s
+    logging:
       enabled: true
 ```
 
-**迁移脚本**（可选）：
-```bash
-# 自动替换配置文件中的旧前缀
-find . -name "application*.yml" -exec sed -i 's/patra\.rest-client\.interceptors\.tracing/patra.observability.tracing/g' {} \;
-```
+**设计原则**：
+- 所有可观测性配置集中在一个命名空间
+- 提供分层开关（全局 → 功能 → 细节）
 
-#### 4. 移除分散的 MeterRegistry 配置
+#### 4. 统一 MeterRegistry 配置
 
-**重构前**：
-- 每个 Starter 自己创建 MeterRegistry Bean
+**设计原则**: 仅在 `observability` starter 中配置 `CompositeMeterRegistry`，其他 Starter 通过依赖注入使用
 
-**重构后**：
-- 仅在 `observability` starter 中配置 `CompositeMeterRegistry`
-- 其他 Starter 通过依赖注入使用
+**实施要点**：
+- `observability` starter 创建 `CompositeMeterRegistry` Bean
+- 自动注册 SkyWalking 和 Prometheus 后端
+- 其他 Starter 通过构造器注入 `MeterRegistry`
 
 ### 重构执行步骤
 
