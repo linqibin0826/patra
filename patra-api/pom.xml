@@ -27,6 +27,8 @@
         <module>patra-spring-boot-starter-mybatis</module>
         <module>patra-spring-boot-starter-provenance</module>
         <module>patra-spring-boot-starter-object-storage</module>
+        <module>patra-spring-boot-starter-redisson</module>
+        <module>patra-spring-boot-starter-batch</module>
 
         <module>patra-spring-cloud-starter-feign</module>
     </modules>
