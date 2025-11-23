@@ -20,33 +20,13 @@
 
 ## 🚨 关键问题汇总（P0 - 必须修复）
 
-### 问题 1: "合并重复拦截器"策略存在致命缺陷（已升级为更优方案）
+### 问题 1: 插件式架构设计（已完成）
 
-**来源**: 六边形架构评审 + 用户架构优化
-**严重性**: ❌ CRITICAL → ✅ **已优化为最佳方案**
-**问题描述**:
+**来源**: 架构评审 + 架构优化
+**严重性**: ✅ **已采纳最佳方案**
 
-原始设计提议将 `patra-starter-core` 和 `patra-starter-rest-client` 的 `TracingInterceptor` 合并，后修正为"保留在各自模块"。但用户提出了更优的架构方案：**完全移除各 Starter 中的可观测性代码，采用插件式架构**。
+**最终架构方案**:
 
-**为什么原方案（即使修正后）仍有问题**:
-```
-修正后的方案（仍有缺陷）:
-patra-starter-core:
-├─ ErrorResolutionPipeline（核心功能）
-└─ ErrorPipelineTracingInterceptor（可观测性）⚠️ 职责混淆
-
-patra-starter-rest-client:
-├─ RestClient（核心功能）
-└─ RestClientTracingInterceptor（可观测性）⚠️ 职责混淆
-
-问题：
-1. 强制依赖：所有使用 core 的模块都被迫引入 Micrometer
-2. 职责混淆：core 应该是"通用基础设施"，而非"可观测性+基础设施"
-3. 无法可选：可观测性成了强制功能，而非可选插件
-4. 违反关注点分离原则（Separation of Concerns）
-```
-
-**✅ 最优方案（用户提出，已采纳）**:
 ```
 插件式架构（完全解耦）:
 
@@ -68,28 +48,24 @@ patra-spring-boot-starter-observability（插件）:
 ├─ BatchObservationJobListener（实现 JobExecutionListener）✅
 └─ 所有 ObservationHandlers、MeterFilters
 
-依赖方向验证：
+依赖方向：
 - ✅ observability → core（单向依赖，符合 DIP）
 - ✅ observability → rest-client（单向依赖，符合 DIP）
 - ✅ observability → batch（单向依赖，符合 DIP）
-- ✅ core ❌→ observability（无依赖，正确！）
+- ✅ core ❌→ observability（无依赖，正确）
 ```
 
-**架构优势对比**:
-
-| 维度 | 原方案（修正后） | 最优方案（用户方案）|
-|------|----------------|-------------------|
-| **关注点分离** | ❌ 混合 | ✅ 完全分离 |
-| **依赖方向** | core ⇄ Micrometer（耦合）| observability → core（单向）|
-| **可选性** | ❌ 强制启用 | ✅ 可选插件 |
-| **遵循原则** | 违反 SRP、DIP | ✅ 符合 SRP、DIP、OCP |
-| **未来扩展** | 难以替换框架 | ✅ 易于替换（如迁移到 OpenTelemetry）|
-| **测试隔离** | 需要 Mock Micrometer | ✅ 可完全禁用可观测性 |
+**架构优势**:
+1. **完全解耦**: core/rest-client/batch 不依赖任何可观测性框架
+2. **可选依赖**: 不引入 observability starter 时，可观测性完全禁用
+3. **易于替换**: 未来可替换为 OpenTelemetry 或其他实现，只需修改 observability starter
+4. **符合原则**: 遵守单一职责原则（SRP）、依赖倒置原则（DIP）、开闭原则（OCP）
 
 **影响范围**:
-- ✅ 设计文档第 6 章已更新为"完全移除可观测性代码（插件式架构）"
-- ⏳ 实施指南需要更新为"从各 Starter 删除可观测性代码，在 observability 中统一实现"
+- ✅ 设计文档第 6 章已更新为"插件式架构：完全分离可观测性关注点"
+- ✅ 已创建完整的重构指南 `plugin-architecture-refactoring-guide.md`
 - ⏳ 需要在 core/rest-client/batch 中定义清晰的扩展点接口
+- ⏳ 需要在 observability 中实现所有拦截器
 
 ---
 

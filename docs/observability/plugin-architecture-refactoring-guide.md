@@ -24,26 +24,9 @@
 
 **关键决策**: 将可观测性从各 Starter 中**完全移除**，作为**独立的可选插件**，通过扩展点机制实现观测逻辑。
 
-### 架构对比
+### 架构设计
 
-#### ❌ 旧架构（耦合）
-
-```
-patra-starter-core
-├─ 核心功能（ErrorResolutionPipeline）
-└─ 可观测性（TracingInterceptor）⚠️ 耦合
-
-patra-starter-rest-client
-├─ 核心功能（RestClient）
-└─ 可观测性（TracingInterceptor）⚠️ 耦合
-
-问题：
-- 强制依赖 Micrometer
-- 可观测性无法禁用
-- 违反单一职责原则
-```
-
-#### ✅ 新架构（插件式）
+**插件式架构**：
 
 ```
 patra-starter-core（纯净）
@@ -60,7 +43,7 @@ patra-starter-observability（插件）
 ├─ BatchObservationJobListener（实现扩展点）
 └─ 所有 ObservationHandlers、MeterFilters
 
-优势：
+架构优势：
 ✅ 可观测性完全可选
 ✅ 依赖方向正确（observability → core）
 ✅ 符合 SRP、DIP、OCP 原则
