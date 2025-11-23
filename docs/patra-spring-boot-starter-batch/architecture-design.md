@@ -114,7 +114,7 @@ Patra 医学文献数据平台需要处理大量批处理任务，包括：
 patra-spring-boot-starter-batch
 ├── spring-boot-starter-batch (Spring Batch 核心)
 ├── patra-spring-boot-starter-core (错误处理、可观测性)
-├── redisson-spring-boot-starter (分布式锁)
+├── patra-spring-boot-starter-redisson (分布式锁)
 ├── mysql-connector-j (MySQL JDBC 驱动)
 └── micrometer-core (指标收集)
 ```
@@ -124,8 +124,8 @@ patra-spring-boot-starter-batch
 | Starter | 关系 | 说明 |
 |---------|------|------|
 | `patra-spring-boot-starter-core` | **依赖** | 复用错误处理框架、Clock、可观测性 |
+| `patra-spring-boot-starter-redisson` | **依赖** | 提供 @DistributedLock 分布式锁能力 |
 | `patra-spring-boot-starter-mybatis` | **可选依赖** | ItemWriter 可使用 MyBatis Mapper |
-| `redisson-spring-boot-starter` | **依赖** | 提供分布式锁能力 |
 
 ---
 
@@ -139,10 +139,6 @@ patra-spring-boot-starter-batch
 - 配置 Spring Batch 元数据表（BATCH_JOB_INSTANCE、BATCH_JOB_EXECUTION 等）
 - 自动创建 JobRepository、JobLauncher Bean
 - 配置事务管理器（复用业务 DataSource）
-
-**DistributedLockAutoConfiguration**：
-- 配置基于 Redisson 的分布式锁
-- 提供 `@DistributedJobLock` 注解，防止多实例并发执行
 
 **ObservabilityAutoConfiguration**：
 - 配置 SkyWalking 追踪拦截器（记录 Job/Step Span）
@@ -187,22 +183,33 @@ public Job meshImportJob(JobRepository jobRepository, Step step1, Step step2) {
 
 #### 4.1.4 分布式锁 (P0)
 
-**DistributedJobLock 注解**：
+**使用 @DistributedLock 注解**（由 patra-spring-boot-starter-redisson 提供）：
 - 基于 Redisson 实现分布式锁
-- 支持自定义锁键（基于 Job 名称 + 业务参数）
-- 支持锁超时配置（防止死锁）
-- 支持重入锁
+- 支持自定义锁键（支持 SpEL 表达式）
+- 支持多种锁类型（可重入、公平、读写锁）
+- 支持自动续期（看门狗机制）
+- 集成可观测性（SkyWalking、Micrometer、日志）
 
 **使用方式**：
 ```java
 @XxlJob("meshImportJob")
-@DistributedJobLock(key = "mesh-import-#{provenanceCode}")
+@DistributedLock(
+    key = "batch:job:mesh-import:#{#provenanceCode}",
+    leaseTime = 7200000,  // 2 小时（毫秒）
+    waitTime = 0          // 不等待，获取失败立即抛异常
+)
 public void executeMeshImport(String provenanceCode) {
     jobLauncher.run(meshImportJob, new JobParametersBuilder()
         .addString("provenanceCode", provenanceCode)
         .toJobParameters());
 }
 ```
+
+**注解参数说明**：
+- `key`: 锁键（支持 SpEL 表达式，参数需用 `#` 前缀）
+- `leaseTime`: 租约时间（毫秒），默认 -1（启用看门狗自动续期）
+- `waitTime`: 等待时间（毫秒），默认 -1（使用配置文件默认值）
+- `lockType`: 锁类型，默认 REENTRANT（可重入锁）
 
 #### 4.1.5 可观测性 (P1)
 
@@ -286,9 +293,6 @@ public class MeshImportJobHandler {
 │  │   ├─ JobLauncher Bean                                        │
 │  │   ├─ JobExplorer Bean                                        │
 │  │   └─ JobOperator Bean                                        │
-│  ├─ DistributedLockAutoConfiguration                            │
-│  │   ├─ RedissonClient Bean (复用)                              │
-│  │   └─ @DistributedJobLock 注解处理器                          │
 │  └─ ObservabilityAutoConfiguration                              │
 │      ├─ SkyWalking JobListener                                  │
 │      ├─ Micrometer JobListener                                  │
@@ -298,8 +302,7 @@ public class MeshImportJobHandler {
 │  ├─ JobLauncherHelper: 封装 JobLauncher 调用                    │
 │  ├─ AbstractBatchItemReader<T>: ItemReader 抽象基类             │
 │  ├─ AbstractBatchItemWriter<T>: ItemWriter 抽象基类             │
-│  ├─ JobParametersBuilder: 参数构建器                             │
-│  └─ BatchJobLockAspect: 分布式锁 AOP                            │
+│  └─ JobParametersBuilder: 参数构建器                             │
 ├─────────────────────────────────────────────────────────────────┤
 │  监听器层                                                         │
 │  ├─ SkyWalkingJobListener: 追踪 Job/Step                        │
@@ -321,17 +324,12 @@ patra-spring-boot-starter-batch/
 ├─ src/main/java/com/patra/starter/batch/
 │  ├─ autoconfigure/                    # 自动配置
 │  │  ├─ BatchAutoConfiguration.java
-│  │  ├─ DistributedLockAutoConfiguration.java
 │  │  └─ ObservabilityAutoConfiguration.java
 │  ├─ core/                             # 核心组件
 │  │  ├─ JobLauncherHelper.java
 │  │  ├─ AbstractBatchItemReader.java
 │  │  ├─ AbstractBatchItemWriter.java
 │  │  └─ BatchJobParametersBuilder.java
-│  ├─ lock/                             # 分布式锁
-│  │  ├─ DistributedJobLock.java        # 注解
-│  │  ├─ BatchJobLockAspect.java        # AOP 实现
-│  │  └─ JobLockKeyGenerator.java       # 锁键生成器
 │  ├─ listener/                         # 监听器
 │  │  ├─ SkyWalkingJobListener.java
 │  │  ├─ MetricsJobListener.java
@@ -339,7 +337,6 @@ patra-spring-boot-starter-batch/
 │  ├─ config/                           # 配置类
 │  │  └─ BatchProperties.java
 │  └─ exception/                        # 异常定义
-│     ├─ BatchJobLockException.java
 │     └─ BatchJobExecutionException.java
 ├─ src/main/resources/
 │  ├─ META-INF/spring/
@@ -397,7 +394,7 @@ CREATE TABLE batch_skip_records (
        ↓ @XxlJob
 ┌────────────────────────────────────┐
 │ MeshImportJobHandler               │
-│ @DistributedJobLock                │ ← AOP 拦截，获取分布式锁
+│ @DistributedLock                   │ ← AOP 拦截，获取分布式锁（redisson starter）
 └─────────┬──────────────────────────┘
           │
           ↓ jobLauncherHelper.launch()
@@ -437,10 +434,7 @@ CREATE TABLE batch_skip_records (
 │ 3. 结束 SkyWalking Span            │
 └─────────┬──────────────────────────┘
           │
-          ↓ 释放分布式锁
-┌────────────────────────────────────┐
-│ BatchJobLockAspect.afterReturning()│
-└────────────────────────────────────┘
+          ↓ 释放分布式锁（由 redisson starter 的 LockAspect 自动处理）
 ```
 
 #### 5.4.2 Step 执行流程（Chunk-oriented）
@@ -553,41 +547,9 @@ public class BatchAutoConfiguration {
 }
 ```
 
-#### 6.1.2 DistributedLockAutoConfiguration
+**说明**：分布式锁由 `patra-spring-boot-starter-redisson` 提供，batch starter 直接使用 `@DistributedLock` 注解即可，无需自己实现锁逻辑。
 
-**职责**：配置分布式锁支持
-
-```java
-package com.patra.starter.batch.autoconfigure;
-
-@Configuration
-@ConditionalOnProperty(prefix = "patra.batch.lock", name = "enabled", havingValue = "true", matchIfMissing = true)
-@ConditionalOnClass(RedissonClient.class)
-@AutoConfiguration
-public class DistributedLockAutoConfiguration {
-
-    /**
-     * 配置分布式锁 AOP 切面
-     */
-    @Bean
-    public BatchJobLockAspect batchJobLockAspect(
-            RedissonClient redissonClient,
-            BatchProperties properties
-    ) {
-        return new BatchJobLockAspect(redissonClient, properties);
-    }
-
-    /**
-     * 配置锁键生成器
-     */
-    @Bean
-    public JobLockKeyGenerator jobLockKeyGenerator() {
-        return new JobLockKeyGenerator();
-    }
-}
-```
-
-#### 6.1.3 ObservabilityAutoConfiguration
+#### 6.1.2 ObservabilityAutoConfiguration
 
 **职责**：配置可观测性组件
 
@@ -628,7 +590,7 @@ public class ObservabilityAutoConfiguration {
 }
 ```
 
-#### 6.1.4 JobLauncherHelper
+#### 6.1.3 JobLauncherHelper
 
 **职责**：封装 JobLauncher 调用逻辑
 
@@ -716,102 +678,15 @@ public class JobLauncherHelper {
 }
 ```
 
-#### 6.1.5 DistributedJobLock 注解
+**说明**：分布式锁相关的注解和 AOP 实现由 `patra-spring-boot-starter-redisson` 提供，包括：
+- `@DistributedLock` 注解
+- `LockAspect` AOP 切面
+- `LockKeyGenerator` 锁键生成器
+- 完整的可观测性集成
 
-**职责**：声明式分布式锁
+batch starter 无需实现任何锁逻辑，直接使用即可。
 
-```java
-package com.patra.starter.batch.lock;
-
-@Target(ElementType.METHOD)
-@Retention(RetentionPolicy.RUNTIME)
-@Documented
-public @interface DistributedJobLock {
-
-    /**
-     * 锁键（支持 SpEL 表达式）
-     * 例如：batch:job:mesh-import:#{#provenanceCode}
-     */
-    String key();
-
-    /**
-     * 锁超时时间（秒）
-     */
-    long timeout() default 3600;
-
-    /**
-     * 等待锁的最大时间（秒），0 表示不等待
-     */
-    long waitTime() default 0;
-
-    /**
-     * 是否在获取锁失败时抛出异常
-     */
-    boolean throwExceptionOnFailure() default true;
-}
-```
-
-#### 6.1.6 BatchJobLockAspect
-
-**职责**：AOP 实现分布式锁
-
-```java
-package com.patra.starter.batch.lock;
-
-@Aspect
-@Slf4j
-@RequiredArgsConstructor
-public class BatchJobLockAspect {
-
-    private final RedissonClient redissonClient;
-    private final BatchProperties properties;
-    private final JobLockKeyGenerator keyGenerator;
-
-    @Around("@annotation(distributedJobLock)")
-    public Object around(ProceedingJoinPoint pjp, DistributedJobLock distributedJobLock) throws Throwable {
-
-        // 生成锁键
-        String lockKey = keyGenerator.generateKey(distributedJobLock.key(), pjp);
-
-        log.info("尝试获取分布式锁: {}", lockKey);
-
-        RLock lock = redissonClient.getLock(lockKey);
-        boolean acquired = false;
-
-        try {
-            // 尝试获取锁
-            acquired = lock.tryLock(
-                distributedJobLock.waitTime(),
-                distributedJobLock.timeout(),
-                TimeUnit.SECONDS
-            );
-
-            if (!acquired) {
-                String message = "无法获取分布式锁: " + lockKey;
-                log.error(message);
-
-                if (distributedJobLock.throwExceptionOnFailure()) {
-                    throw new BatchJobLockException(message);
-                }
-                return null;
-            }
-
-            log.info("成功获取分布式锁: {}", lockKey);
-
-            // 执行业务逻辑
-            return pjp.proceed();
-
-        } finally {
-            if (acquired && lock.isHeldByCurrentThread()) {
-                lock.unlock();
-                log.info("释放分布式锁: {}", lockKey);
-            }
-        }
-    }
-}
-```
-
-#### 6.1.7 SkyWalkingJobListener
+#### 6.1.4 SkyWalkingJobListener
 
 **职责**：集成 SkyWalking 追踪
 
@@ -867,7 +742,7 @@ public class SkyWalkingJobListener implements JobExecutionListener {
 }
 ```
 
-#### 6.1.8 MetricsJobListener
+#### 6.1.5 MetricsJobListener
 
 **职责**：记录 Micrometer 指标
 
@@ -1321,9 +1196,15 @@ public class MeshImportJobHandler {
 
     /**
      * MeSH 数据导入任务
+     * <p>
+     * 使用 @DistributedLock 防止多实例并发执行
      */
     @XxlJob("meshImportJob")
-    @DistributedJobLock(key = "batch:job:mesh-import", timeout = 7200)
+    @DistributedLock(
+        key = "batch:job:mesh-import",
+        leaseTime = 7200000,  // 2 小时（毫秒）
+        waitTime = 0          // 不等待，获取失败立即抛异常
+    )
     public void execute() {
         log.info("MeSH 数据导入任务启动");
 
@@ -1414,22 +1295,18 @@ public class MeshImportController {
 |  | - 配置 pom.xml 依赖 | 0.5h |  |
 |  | - 创建包结构 | 0.5h |  |
 |  | - 编写 README.md | 0.5h |  |
-| **阶段 2** | 实现核心自动配置 | 8h | P0 |
+| **阶段 2** | 实现核心自动配置 | 6h | P0 |
 |  | - BatchAutoConfiguration | 3h |  |
-|  | - DistributedLockAutoConfiguration | 2h |  |
 |  | - ObservabilityAutoConfiguration | 3h |  |
-| **阶段 3** | 实现基础组件 | 6h | P0 |
+| **阶段 3** | 实现基础组件 | 3h | P0 |
 |  | - JobLauncherHelper | 2h |  |
-|  | - BatchJobLockAspect | 2h |  |
-|  | - JobLockKeyGenerator | 1h |  |
 |  | - BatchProperties | 1h |  |
 | **阶段 4** | 实现监听器 | 6h | P1 |
 |  | - SkyWalkingJobListener | 2h |  |
 |  | - MetricsJobListener | 2h |  |
 |  | - LoggingJobListener | 2h |  |
-| **阶段 5** | 编写单元测试 | 8h | P1 |
+| **阶段 5** | 编写单元测试 | 6h | P1 |
 |  | - 自动配置测试 | 3h |  |
-|  | - 分布式锁测试 | 2h |  |
 |  | - 监听器测试 | 3h |  |
 | **阶段 6** | 编写集成测试 | 6h | P1 |
 |  | - 完整 Job 执行测试 | 4h |  |
@@ -1438,7 +1315,9 @@ public class MeshImportController {
 |  | - README.md（使用指南） | 2h |  |
 |  | - 示例代码 | 2h |  |
 
-**总计**：约 **40 工时**（5 个工作日）
+**总计**：约 **33 工时**（4 个工作日）
+
+**说明**：分布式锁功能由 `patra-spring-boot-starter-redisson` 提供，无需在 batch starter 中实现，节省约 7 工时。
 
 ### 9.2 验证阶段
 

@@ -459,7 +459,7 @@ public class MeshDescriptorItemWriter implements ItemWriter<MeshDescriptorDO> {
 package com.patra.catalog.adapter.scheduler.job;
 
 import com.patra.starter.batch.core.JobLauncherHelper;
-import com.patra.starter.batch.lock.DistributedJobLock;
+import com.patra.starter.redisson.lock.DistributedLock;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -482,10 +482,14 @@ public class MeshImportJob {
     /**
      * MeSH 数据导入任务
      * <p>
-     * 使用分布式锁防止多实例并发执行
+     * 使用 @DistributedLock 防止多实例并发执行（由 patra-spring-boot-starter-redisson 提供）
      */
     @XxlJob("meshImportJob")
-    @DistributedJobLock(key = "batch:job:mesh-import", timeout = 7200)
+    @DistributedLock(
+        key = "batch:job:mesh-import",
+        leaseTime = 7200000,  // 2 小时（毫秒）
+        waitTime = 0          // 不等待，获取失败立即抛异常
+    )
     public void execute() {
         log.info("MeSH 数据导入任务启动");
 
