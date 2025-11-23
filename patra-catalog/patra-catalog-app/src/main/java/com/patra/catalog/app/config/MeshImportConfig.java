@@ -1,5 +1,11 @@
 package com.patra.catalog.app.config;
 
+import static com.patra.catalog.domain.model.enums.MeshDataType.CONCEPT;
+import static com.patra.catalog.domain.model.enums.MeshDataType.DESCRIPTOR;
+import static com.patra.catalog.domain.model.enums.MeshDataType.ENTRY_TERM;
+import static com.patra.catalog.domain.model.enums.MeshDataType.QUALIFIER;
+import static com.patra.catalog.domain.model.enums.MeshDataType.TREE_NUMBER;
+
 import java.time.Duration;
 import java.util.Map;
 import lombok.Data;
@@ -65,10 +71,10 @@ public class MeshImportConfig {
   ///   - Qualifier 表数据量极小（约 80 条），一次性导入，无需配置批次大小
   private Map<String, Integer> batchSizeMap =
       Map.of(
-          "descriptor", 1000, // 主题词表 (约 35,000 条)
-          "tree-number", 1500, // 树形编号表 (约 80,000 条)
-          "entry-term", 2000, // 入口术语表 (约 250,000 条,数据量大)
-          "concept", 2000 // 概念表 (约 180,000 条,数据量大)
+          DESCRIPTOR.getCode(), 1000, // 主题词表 (约 35,000 条)
+          TREE_NUMBER.getCode(), 1500, // 树形编号表 (约 80,000 条)
+          ENTRY_TERM.getCode(), 2000, // 入口术语表 (约 250,000 条,数据量大)
+          CONCEPT.getCode(), 2000 // 概念表 (约 180,000 条,数据量大)
           );
 
   /// XML 文件下载超时时间。
@@ -101,11 +107,11 @@ public class MeshImportConfig {
   /// 说明: 导入完成后验证实际数量与预期的差异,超过 5% 生成警告
   private Map<String, Integer> expectedCounts =
       Map.of(
-          "descriptor", 35000,
-          "qualifier", 80,
-          "tree-number", 80000,
-          "entry-term", 250000,
-          "concept", 180000);
+          DESCRIPTOR.getCode(), 35000,
+          QUALIFIER.getCode(), 80,
+          TREE_NUMBER.getCode(), 80000,
+          ENTRY_TERM.getCode(), 250000,
+          CONCEPT.getCode(), 180000);
 
   /// 数据量差异容忍百分比 (超过此值生成警告)。
   ///
