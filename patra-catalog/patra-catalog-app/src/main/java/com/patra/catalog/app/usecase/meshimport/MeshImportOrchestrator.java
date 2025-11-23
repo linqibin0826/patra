@@ -6,6 +6,7 @@ import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import com.patra.catalog.app.usecase.meshimport.validator.MeshDataValidator;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;
+import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.enums.MeshImportTaskStatus;
 import com.patra.catalog.domain.model.enums.MeshTableImportStatus;
 import com.patra.catalog.domain.model.valueobject.MeshImportId;
@@ -13,6 +14,7 @@ import com.patra.catalog.domain.model.valueobject.TableProgress;
 import com.patra.catalog.domain.port.MeshDescriptorRepository;
 import com.patra.catalog.domain.port.MeshFileDownloadPort;
 import com.patra.catalog.domain.port.MeshImportRepository;
+import com.patra.catalog.domain.port.MeshQualifierRepository;
 import com.patra.catalog.domain.port.XmlParserPort;
 import java.io.File;
 import java.io.FileInputStream;
@@ -64,6 +66,7 @@ public class MeshImportOrchestrator {
   private final XmlParserPort xmlParserPort;
   private final MeshFileDownloadPort meshFileDownloadPort;
   private final MeshDescriptorRepository meshDescriptorPort;
+  private final MeshQualifierRepository meshQualifierRepository;
   private final MeshDataValidator meshDataValidator;
   private final MeshImportConfig meshImportConfig;
 
@@ -414,14 +417,13 @@ public class MeshImportOrchestrator {
     log.info("开始导入 Qualifier（限定词）");
 
     try (FileInputStream fis = new FileInputStream(xmlFile);
-        Stream<com.patra.catalog.domain.model.entity.MeshQualifier> stream =
-            xmlParserPort.parseQualifiers(fis)) {
+        Stream<MeshQualifierAggregate> stream = xmlParserPort.parseQualifiers(fis)) {
 
       // 一次性收集所有记录（约 80 条，内存占用极小）
-      List<com.patra.catalog.domain.model.entity.MeshQualifier> qualifiers = stream.toList();
+      List<MeshQualifierAggregate> qualifiers = stream.toList();
 
       // 一次性批量保存
-      meshDescriptorPort.saveQualifiersBatch(qualifiers);
+      meshQualifierRepository.saveBatch(qualifiers);
 
       int totalCount = qualifiers.size();
 
