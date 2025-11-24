@@ -31,4 +31,3 @@
 
 - Spring Boot 3.4+ 使用 `@MockitoBean`（`org.springframework.test.context.bean.override.mockito`）
 - 测试超时配置真实值（2s），避免过长超时拖慢测试
-- 使用 @Valid 验证输入
