@@ -1,5 +1,12 @@
 # 架构与模块依赖规范
 
+## 六边形架构依赖规则
+
+- **Domain 层不依赖任何层**：纯业务逻辑，不依赖任何框架
+- **Application 层只依赖 Domain 层**：编排领域服务，管理事务边界
+- **Infrastructure 层实现 Domain 端口**：实现领域端口（Repository、外部服务调用、消息发布）
+- **Adapter 层调用 Application 层**：HTTP 接口、消息监听、定时任务
+
 ## 模块职责与边界
 
 1. `patra-{service}-api` 模块仅定义服务间调用的接口和 DTO（不包含 Controller）
