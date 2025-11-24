@@ -839,14 +839,14 @@ public class PerformanceObservationHandler implements ObservationHandler<Observa
 }
 ```
 
-#### 4. SensitiveDataMaskingHandler
+#### 4. SensitiveDataObservationFilter
 
 ```java
-package com.patra.starter.observability.handler;
+package com.patra.starter.observability.filter;
 
 import io.micrometer.observation.Observation;
-import io.micrometer.observation.ObservationHandler;
-import io.micrometer.common.KeyValue;
+import io.micrometer.observation.ObservationFilter;
+import io.micrometer.common.KeyValues;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -855,29 +855,34 @@ import java.util.List;
 import java.util.ArrayList;
 
 /**
- * 敏感数据脱敏处理器
+ * 敏感数据脱敏过滤器
  *
  * <p>功能：
  * <ul>
- *   <li>检测 Observation 中的敏感数据（密码、Token、身份证号、手机号等）</li>
- *   <li>自动脱敏敏感数据，防止泄露到追踪系统</li>
+ *   <li>在 Observation 创建后、启动前拦截并脱敏敏感数据</li>
+ *   <li>检测密码、Token、身份证号、手机号等敏感信息</li>
  *   <li>支持自定义敏感数据模式</li>
- *   <li>生产环境强制启用</li>
+ *   <li>生产环境强制启用，开发环境可选</li>
  * </ul>
  *
  * <p>安全策略：
  * <ul>
- *   <li>默认模式：脱敏常见敏感字段（password, token, apiKey, idCard, mobile）</li>
+ *   <li>默认模式：脱敏常见敏感字段（password, token, apiKey, secret 等）</li>
  *   <li>自定义模式：支持通过配置添加自定义脱敏规则</li>
- *   <li>全局开关：可在开发环境禁用，生产环境强制启用</li>
+ *   <li>静默失败：脱敏失败不影响业务逻辑，仅记录警告日志</li>
  * </ul>
+ *
+ * <p>设计说明：
+ * 使用 {@link ObservationFilter} 而非 {@link io.micrometer.observation.ObservationHandler}，
+ * 因为 Filter 在 Observation 创建阶段执行，可以安全地修改 Context，
+ * 而 Handler 在执行阶段，修改 Context 需要使用反射，存在兼容性风险。
  *
  * @author Jobs
  * @since 1.0.0
  */
-public class SensitiveDataMaskingHandler implements ObservationHandler<Observation.Context> {
+public class SensitiveDataObservationFilter implements ObservationFilter {
 
-    private static final Logger log = LoggerFactory.getLogger(SensitiveDataMaskingHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(SensitiveDataObservationFilter.class);
 
     /**
      * 敏感字段名称模式（不区分大小写）
@@ -910,7 +915,7 @@ public class SensitiveDataMaskingHandler implements ObservationHandler<Observati
     private final boolean enabled;
     private final List<Pattern> customPatterns;
 
-    public SensitiveDataMaskingHandler(boolean enabled, List<String> customPatterns) {
+    public SensitiveDataObservationFilter(boolean enabled, List<String> customPatterns) {
         this.enabled = enabled;
         this.customPatterns = new ArrayList<>();
 
@@ -920,48 +925,59 @@ public class SensitiveDataMaskingHandler implements ObservationHandler<Observati
             );
         }
 
-        log.info("初始化敏感数据脱敏处理器，启用状态: {}, 自定义模式数量: {}",
+        log.info("初始化敏感数据脱敏过滤器，启用状态: {}, 自定义模式数量: {}",
             enabled, this.customPatterns.size());
     }
 
     @Override
-    public boolean supportsContext(Observation.Context context) {
-        return enabled; // 仅在启用时生效
-    }
+    public Observation.Context map(Observation.Context context) {
+        if (!enabled) {
+            return context;
+        }
 
-    @Override
-    public void onStart(Observation.Context context) {
-        // ✅ 正确的脱敏实现：使用 Context API 重新设置 KeyValues
+        try {
+            // 脱敏低基数标签
+            KeyValues originalLow = context.getLowCardinalityKeyValues();
+            KeyValues maskedLow = maskKeyValues(originalLow);
 
-        // 脱敏低基数标签（Low Cardinality Key Values）
-        io.micrometer.common.KeyValues maskedLowCardinality = maskKeyValues(
-            context.getLowCardinalityKeyValues()
-        );
-        // 使用反射或 Context 的内部方法设置脱敏后的 KeyValues
-        // 注意：Micrometer 1.12.0+ 提供了 addLowCardinalityKeyValue 方法
-        setLowCardinalityKeyValues(context, maskedLowCardinality);
+            // 脱敏高基数标签
+            KeyValues originalHigh = context.getHighCardinalityKeyValues();
+            KeyValues maskedHigh = maskKeyValues(originalHigh);
 
-        // 脱敏高基数标签（High Cardinality Key Values）
-        io.micrometer.common.KeyValues maskedHighCardinality = maskKeyValues(
-            context.getHighCardinalityKeyValues()
-        );
-        setHighCardinalityKeyValues(context, maskedHighCardinality);
+            // 如果有脱敏，创建新的 Context
+            if (!maskedLow.equals(originalLow) || !maskedHigh.equals(originalHigh)) {
+                // 使用 Observation.Context 的公开方法重新设置 KeyValues
+                // 通过先清空再添加的方式实现替换
+                Observation.Context newContext = new Observation.Context();
+                newContext.setName(context.getName());
+                newContext.setContextualName(context.getContextualName());
+                newContext.setError(context.getError());
 
-        log.trace("已对 Observation [{}] 的敏感数据进行脱敏", context.getName());
+                // 添加脱敏后的 KeyValues
+                maskedLow.forEach(kv -> newContext.addLowCardinalityKeyValue(kv));
+                maskedHigh.forEach(kv -> newContext.addHighCardinalityKeyValue(kv));
+
+                log.trace("已对 Observation [{}] 的敏感数据进行脱敏", context.getName());
+                return newContext;
+            }
+
+            return context;
+        } catch (Exception e) {
+            // 静默失败：脱敏失败不应影响业务逻辑
+            log.warn("敏感数据脱敏失败，跳过脱敏处理: {}", e.getMessage());
+            return context;
+        }
     }
 
     /**
-     * 脱敏 KeyValue 集合（返回新的不可变集合）
-     * <p>
-     * 因为 KeyValues 是不可变的，所以需要构建新的 KeyValues 对象
+     * 脱敏 KeyValue 集合
      */
-    private io.micrometer.common.KeyValues maskKeyValues(io.micrometer.common.KeyValues keyValues) {
+    private KeyValues maskKeyValues(KeyValues keyValues) {
         if (keyValues == null || keyValues.stream().count() == 0) {
             return keyValues;
         }
 
-        // 构建新的 KeyValues（不可变）
-        io.micrometer.common.KeyValues maskedKeyValues = io.micrometer.common.KeyValues.empty();
+        KeyValues maskedKeyValues = KeyValues.empty();
 
         for (io.micrometer.common.KeyValue keyValue : keyValues) {
             String key = keyValue.getKey();
@@ -969,7 +985,6 @@ public class SensitiveDataMaskingHandler implements ObservationHandler<Observati
 
             // 检查字段名是否敏感
             if (isSensitiveField(key)) {
-                // 字段名敏感，直接脱敏
                 maskedKeyValues = maskedKeyValues.and(key, MASK_PLACEHOLDER);
                 log.debug("脱敏敏感字段: key={}", key);
                 continue;
@@ -979,50 +994,13 @@ public class SensitiveDataMaskingHandler implements ObservationHandler<Observati
             String maskedValue = maskSensitiveValue(value);
             if (!maskedValue.equals(value)) {
                 maskedKeyValues = maskedKeyValues.and(key, maskedValue);
-                log.debug("脱敏敏感值: key={}, original={}, masked={}", key, value, maskedValue);
+                log.debug("脱敏敏感值: key={}", key);
             } else {
-                // 无需脱敏，保持原值
                 maskedKeyValues = maskedKeyValues.and(key, value);
             }
         }
 
         return maskedKeyValues;
-    }
-
-    /**
-     * 设置低基数 KeyValues（使用反射访问 Context 的私有字段）
-     * <p>
-     * 注意：这是必要的 hack，因为 Observation.Context 不提供公开的 setter 方法
-     */
-    private void setLowCardinalityKeyValues(
-        Observation.Context context,
-        io.micrometer.common.KeyValues keyValues
-    ) {
-        try {
-            java.lang.reflect.Field field = context.getClass().getDeclaredField("lowCardinalityKeyValues");
-            field.setAccessible(true);
-            field.set(context, keyValues);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            log.error("无法设置低基数 KeyValues，脱敏失败", e);
-            throw new IllegalStateException("敏感数据脱敏失败：无法访问 Context 字段", e);
-        }
-    }
-
-    /**
-     * 设置高基数 KeyValues（使用反射访问 Context 的私有字段）
-     */
-    private void setHighCardinalityKeyValues(
-        Observation.Context context,
-        io.micrometer.common.KeyValues keyValues
-    ) {
-        try {
-            java.lang.reflect.Field field = context.getClass().getDeclaredField("highCardinalityKeyValues");
-            field.setAccessible(true);
-            field.set(context, keyValues);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            log.error("无法设置高基数 KeyValues，脱敏失败", e);
-            throw new IllegalStateException("敏感数据脱敏失败：无法访问 Context 字段", e);
-        }
     }
 
     /**
@@ -1070,25 +1048,6 @@ public class SensitiveDataMaskingHandler implements ObservationHandler<Observati
 
         return result;
     }
-
-    @Override
-    public void onStop(Observation.Context context) {
-        // 无需处理
-    }
-
-    @Override
-    public void onError(Observation.Context context) {
-        // 确保错误信息中也没有敏感数据
-        if (context.getError() != null) {
-            String errorMessage = context.getError().getMessage();
-            if (errorMessage != null) {
-                String maskedMessage = maskSensitiveValue(errorMessage);
-                if (!maskedMessage.equals(errorMessage)) {
-                    log.debug("脱敏错误消息中的敏感数据");
-                }
-            }
-        }
-    }
 }
 ```
 
@@ -1124,7 +1083,10 @@ public static class SecurityConfig {
     havingValue = "true",
     matchIfMissing = true  // 默认启用
 )
-public SensitiveDataMaskingHandler sensitiveDataMaskingHandler(ObservabilityProperties properties) {
+public SensitiveDataObservationFilter sensitiveDataObservationFilter(
+    ObservabilityProperties properties,
+    ObservationRegistry observationRegistry
+) {
     SecurityConfig config = properties.getSecurity();
 
     // 生产环境强制启用
@@ -1134,7 +1096,15 @@ public SensitiveDataMaskingHandler sensitiveDataMaskingHandler(ObservabilityProp
         log.warn("生产环境检测到，敏感数据脱敏已强制启用");
     }
 
-    return new SensitiveDataMaskingHandler(enabled, config.getSensitivePatterns());
+    SensitiveDataObservationFilter filter = new SensitiveDataObservationFilter(
+        enabled,
+        config.getSensitivePatterns()
+    );
+
+    // 注册到 ObservationRegistry
+    observationRegistry.observationConfig().observationFilter(filter);
+
+    return filter;
 }
 ```
 
@@ -1479,7 +1449,47 @@ public class OrderService {
 }
 ```
 
+---
+
+## Domain 层可观测性集成策略
+
+### 方案选择指南
+
+**本项目推荐方案：Domain Events 驱动可观测性（推荐优先级 ⭐️⭐️⭐️⭐️⭐️）**
+
+Domain Events 是 DDD 和六边形架构的最佳实践，能够实现业务逻辑与可观测性的完全解耦：
+
+| 评估维度 | Domain Events 驱动 | 防腐层（ObservabilityPort） |
+|---------|------------------|---------------------------|
+| **架构合规性** | ⭐️⭐️⭐️⭐️⭐️ 完全符合 DDD 和六边形架构 | ⭐️⭐️⭐️⭐️ 符合六边形架构 |
+| **解耦程度** | ⭐️⭐️⭐️⭐️⭐️ 领域层完全不知道可观测性存在 | ⭐️⭐️⭐️ 需要依赖 ObservabilityPort 接口 |
+| **业务语义** | ⭐️⭐️⭐️⭐️⭐️ 事件名称直接表达业务含义 | ⭐️⭐️⭐️ 需要通过 Port 方法表达 |
+| **可扩展性** | ⭐️⭐️⭐️⭐️⭐️ 添加新监听器即可，无需修改领域代码 | ⭐️⭐️⭐️ 需要调用 Port 方法 |
+| **可测试性** | ⭐️⭐️⭐️⭐️⭐️ 测试事件监听器与领域逻辑分离 | ⭐️⭐️⭐️ 需要 Mock Port 接口 |
+| **实现复杂度** | ⭐️⭐️⭐️⭐️ 需要事件基础设施（Spring 内置） | ⭐️⭐️⭐️⭐️ 需要定义 Port 和 Value Objects |
+| **学习曲线** | ⭐️⭐️⭐️⭐️ 需要理解事件驱动 | ⭐️⭐️⭐️ 需要理解防腐层 |
+
+**推荐决策**：
+
+✅ **优先使用 Domain Events 驱动方案**（见下文"Domain Events 驱动可观测性"章节）
+- 适用场景：新项目、重构项目、追求架构卓越
+- 优势：架构最优，完全解耦，易于扩展
+- 要求：团队理解事件驱动架构
+
+⚠️ **备选使用防腐层方案**（见下文"防腐层设计"章节）
+- 适用场景：需要显式控制可观测性调用、需要细粒度控制
+- 优势：调用点明确，更容易理解
+- 劣势：领域层仍需依赖 Port 接口，耦合度较高
+
+**两种方案可以共存**：
+- **粗粒度业务操作**：使用 Domain Events（如数据导入完成、批处理完成）
+- **细粒度技术操作**：使用防腐层（如需要在方法执行中途记录指标）
+
+---
+
 ### 防腐层设计（Anti-Corruption Layer）
+
+> **⚠️ 注意**：本方案为备选方案，推荐优先使用 Domain Events 驱动方案（见下文"Domain Events 驱动可观测性"章节）。
 
 **设计目标**: 隔离 Domain 层对框架的直接依赖，符合 DDD 和六边形架构原则。
 
@@ -1990,6 +2000,96 @@ public record BusinessEvent(
 }
 ```
 
+##### 简化版本（推荐）
+
+> **⚠️ 重要**：上述富领域模型设计对于可观测性这一基础设施关注点来说可能过于复杂。以下是简化版本，更适合实际项目使用。
+
+如果不需要严格的领域验证和业务行为方法，可以使用简化版本的 API：
+
+```java
+// patra-{service}-domain/src/main/java/com/patra/{service}/domain/port/ObservabilityPort.java
+package com.patra.{service}.domain.port;
+
+import java.time.Duration;
+import java.util.Map;
+import java.util.function.Supplier;
+
+/**
+ * 可观测性端口接口 - 简化版本
+ */
+public interface ObservabilityPort {
+
+    /**
+     * 追踪业务操作执行
+     *
+     * @param operationName 操作名称（使用业务术语，如 "mesh.data.import"）
+     * @param labels        操作标签（低基数，如 data_source=pubmed）
+     * @param action        要执行的业务操作
+     * @return 操作执行结果
+     */
+    <T> T trackOperation(String operationName, Map<String, String> labels, Supplier<T> action);
+
+    /**
+     * 记录业务指标
+     *
+     * @param metricName 指标名称（必须以 "patra." 开头）
+     * @param value      指标值
+     * @param tags       指标标签
+     */
+    void recordMetric(String metricName, double value, Map<String, String> tags);
+
+    /**
+     * 记录业务事件
+     *
+     * @param eventType  事件类型（使用业务术语，如 "mesh.data.imported"）
+     * @param attributes 事件属性
+     */
+    void recordEvent(String eventType, Map<String, String> attributes);
+}
+```
+
+**使用示例（简化版本）**：
+
+```java
+@Service
+public class MeshIngestionService {
+
+    private final ObservabilityPort observabilityPort;
+
+    public ImportResult ingestMeshData(DataSource source, List<MeshData> data) {
+        return observabilityPort.trackOperation(
+            "mesh.data.import",
+            Map.of("data_source", source.getName()),
+            () -> {
+                ImportResult result = doIngest(data);
+
+                // 记录导入记录数
+                observabilityPort.recordMetric(
+                    "patra.mesh.imported_records",
+                    result.getCount(),
+                    Map.of("data_source", source.getName())
+                );
+
+                return result;
+            }
+        );
+    }
+}
+```
+
+**简化版本的优势**：
+
+| 方面 | 富领域模型 | 简化版本 |
+|------|-----------|---------|
+| **代码量** | ❌ ~500 行（11 个 Value Objects） | ✅ ~50 行（简单接口） |
+| **学习曲线** | ❌ 需要理解 DDD Value Object 概念 | ✅ 直接使用，无需学习 |
+| **维护成本** | ❌ 高（验证逻辑、业务行为方法） | ✅ 低（简单参数传递） |
+| **适用场景** | 核心业务域（需要严格验证） | 基础设施关注点（可观测性） |
+
+**建议**：对于可观测性这一基础设施关注点，**推荐使用简化版本**。将复杂的领域建模留给真正的核心业务域。
+
+---
+
 #### 2. Infrastructure 层适配器（Adapter）
 
 ```java
@@ -2223,7 +2323,9 @@ String action = context.getAction();  // "import"
 
 ---
 
-### 🎯 Domain Events 驱动可观测性（DDD 最佳实践）
+### 🎯 Domain Events 驱动可观测性（⭐️ 推荐方案）
+
+> **✅ 本项目推荐方案**：这是 DDD 和六边形架构的最佳实践，能够实现业务逻辑与可观测性的完全解耦。优先使用此方案。
 
 #### 设计理念
 
@@ -2875,6 +2977,283 @@ patra:
       sampling-rate: 0.2  # Ingest 服务采样率 20%
 ```
 
+### 配置验证与约束
+
+为确保配置的正确性，添加以下验证机制：
+
+#### 1. 配置类验证
+
+```java
+// patra-spring-boot-starter-observability/src/main/java/com/patra/starter/observability/config/ObservabilityProperties.java
+package com.patra.starter.observability.config;
+
+import jakarta.validation.constraints.*;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
+
+/**
+ * 可观测性配置属性（带验证）
+ */
+@ConfigurationProperties(prefix = "patra.observability")
+@Validated
+public class ObservabilityProperties {
+
+    /**
+     * 全局开关
+     */
+    private boolean enabled = true;
+
+    /**
+     * 应用名称（必填，从 spring.application.name 自动注入）
+     */
+    @NotBlank(message = "应用名称不能为空，请配置 spring.application.name")
+    @Pattern(regexp = "^[a-z][a-z0-9-]*$", message = "应用名称格式错误，仅支持小写字母、数字、连字符，且必须以字母开头")
+    private String applicationName;
+
+    /**
+     * 环境标识
+     */
+    @NotBlank(message = "环境标识不能为空")
+    @Pattern(regexp = "^(dev|test|staging|prod)$", message = "环境标识必须是：dev、test、staging、prod 之一")
+    private String environment = "dev";
+
+    /**
+     * 区域标识
+     */
+    @NotBlank(message = "区域标识不能为空")
+    private String region = "unknown";
+
+    /**
+     * 集群标识
+     */
+    @NotBlank(message = "集群标识不能为空")
+    private String cluster = "default";
+
+    /**
+     * 指标配置
+     */
+    @Valid
+    private MetricsProperties metrics = new MetricsProperties();
+
+    /**
+     * 追踪配置
+     */
+    @Valid
+    private TracingProperties tracing = new TracingProperties();
+
+    // ... getters and setters
+}
+
+/**
+ * 指标配置（带验证）
+ */
+@Validated
+public static class MetricsProperties {
+
+    private boolean enabled = true;
+
+    /**
+     * 指标前缀
+     */
+    @Pattern(regexp = "^[a-z][a-z0-9_]*$", message = "指标前缀格式错误，仅支持小写字母、数字、下划线，且必须以字母开头")
+    private String prefix = "";
+
+    /**
+     * 导出间隔（秒）
+     */
+    @Min(value = 1, message = "导出间隔不能小于 1 秒")
+    @Max(value = 300, message = "导出间隔不能大于 300 秒（5 分钟）")
+    private int step = 60;
+
+    /**
+     * SkyWalking 配置
+     */
+    @Valid
+    private SkyWalkingProperties skywalking = new SkyWalkingProperties();
+
+    // ... getters and setters
+
+    public static class SkyWalkingProperties {
+        private boolean enabled = true;
+
+        /**
+         * OAP 地址
+         */
+        @NotBlank(message = "SkyWalking OAP 地址不能为空")
+        @Pattern(regexp = "^[a-zA-Z0-9.-]+(:[0-9]{1,5})?$", message = "OAP 地址格式错误，示例：skywalking-oap:11800")
+        private String oapAddress = "skywalking-oap:11800";
+
+        // ... getters and setters
+    }
+}
+
+/**
+ * 追踪配置（带验证）
+ */
+@Validated
+public static class TracingProperties {
+
+    private boolean enabled = true;
+
+    /**
+     * 采样率（0.0-1.0）
+     */
+    @Min(value = 0, message = "采样率不能小于 0")
+    @Max(value = 1, message = "采样率不能大于 1")
+    private double samplingRate = 1.0;
+
+    /**
+     * Baggage 传播字段（最多 10 个）
+     */
+    @Size(max = 10, message = "Baggage 字段不能超过 10 个")
+    private List<@NotBlank(message = "Baggage 字段名不能为空") String> baggageFields = new ArrayList<>();
+
+    // ... getters and setters
+}
+```
+
+#### 2. 配置验证失败处理
+
+```java
+// patra-spring-boot-starter-observability/src/main/java/com/patra/starter/observability/config/ObservabilityAutoConfiguration.java
+@Configuration
+@ConditionalOnProperty(prefix = "patra.observability", name = "enabled", havingValue = "true", matchIfMissing = true)
+@EnableConfigurationProperties(ObservabilityProperties.class)
+public class ObservabilityAutoConfiguration {
+
+    private static final Logger log = LoggerFactory.getLogger(ObservabilityAutoConfiguration.class);
+
+    public ObservabilityAutoConfiguration(ObservabilityProperties properties) {
+        // 启动时验证配置
+        validateConfiguration(properties);
+    }
+
+    private void validateConfiguration(ObservabilityProperties properties) {
+        log.info("=".repeat(80));
+        log.info("Patra Observability Starter - 配置验证");
+        log.info("=".repeat(80));
+        log.info("应用名称: {}", properties.getApplicationName());
+        log.info("环境: {}", properties.getEnvironment());
+        log.info("区域: {}", properties.getRegion());
+        log.info("集群: {}", properties.getCluster());
+        log.info("指标启用: {}", properties.getMetrics().isEnabled());
+        log.info("追踪启用: {}", properties.getTracing().isEnabled());
+        log.info("追踪采样率: {}", properties.getTracing().getSamplingRate());
+        log.info("=".repeat(80));
+    }
+}
+```
+
+#### 3. 配置模板（开发/生产环境）
+
+**开发环境配置模板**（`application-dev.yml`）：
+
+```yaml
+# 开发环境：完整日志、100% 采样、所有端点暴露
+patra:
+  observability:
+    enabled: true
+    environment: dev
+
+    metrics:
+      enabled: true
+      step: 10s  # 开发环境更频繁导出
+
+      skywalking:
+        enabled: true
+        oap-address: localhost:11800
+
+    tracing:
+      enabled: true
+      sampling-rate: 1.0  # 开发环境 100% 采样
+
+    handlers:
+      logging:
+        enabled: true
+        log-level: DEBUG  # 开发环境详细日志
+      performance:
+        enabled: true
+        slow-threshold: 1s  # 开发环境更严格的慢操作阈值
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"  # 开发环境暴露所有端点
+  endpoint:
+    health:
+      show-details: always  # 开发环境始终显示健康检查详情
+
+logging:
+  level:
+    com.patra: DEBUG
+    io.micrometer: DEBUG
+    org.apache.skywalking: DEBUG
+```
+
+**生产环境配置模板**（`application-prod.yml`）：
+
+```yaml
+# 生产环境：最小日志、低采样率、安全端点
+patra:
+  observability:
+    enabled: true
+    environment: prod
+    region: ${REGION}  # 从环境变量注入
+    cluster: ${CLUSTER_NAME}
+
+    metrics:
+      enabled: true
+      step: 60s
+
+      skywalking:
+        enabled: true
+        oap-address: ${SKYWALKING_OAP_ADDRESS}
+
+    tracing:
+      enabled: true
+      sampling-rate: ${TRACING_SAMPLING_RATE:0.1}  # 生产环境 10% 采样
+
+    handlers:
+      logging:
+        enabled: false  # 生产环境禁用日志 Handler（减少日志量）
+      performance:
+        enabled: true
+        slow-threshold: 5s  # 生产环境宽松的慢操作阈值
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus  # 生产环境仅暴露必要端点
+  endpoint:
+    health:
+      show-details: when-authorized  # 生产环境仅授权用户可见详情
+
+spring:
+  security:
+    user:
+      name: ${ACTUATOR_USERNAME}  # 从环境变量注入
+      password: ${ACTUATOR_PASSWORD}  # 从环境变量注入
+
+logging:
+  level:
+    root: INFO
+    com.patra: INFO
+    org.apache.skywalking: WARN
+```
+
+#### 4. 配置最佳实践
+
+| 配置项 | 开发环境 | 测试环境 | 生产环境 | 说明 |
+|-------|---------|---------|---------|------|
+| **采样率** | 1.0 (100%) | 0.5 (50%) | 0.1 (10%) | 生产环境降低采样率减少开销 |
+| **导出间隔** | 10s | 30s | 60s | 开发环境更频繁导出便于调试 |
+| **日志级别** | DEBUG | INFO | WARN | 生产环境减少日志量 |
+| **端点暴露** | 所有 | 部分 | 最少 | 生产环境仅暴露必要端点 |
+| **慢操作阈值** | 1s | 3s | 5s | 根据环境调整性能标准 |
+| **日志 Handler** | 启用 | 启用 | 禁用 | 生产环境依赖 APM，禁用日志 Handler |
+
 ---
 
 ## 🏥 健康检查与故障降级设计
@@ -3047,27 +3426,45 @@ public class ObservabilityHealthIndicator implements HealthIndicator {
 }
 ```
 
-#### 2. 弹性可观测性适配器（装饰器模式 + 熔断器）
+#### 2. 弹性可观测性适配器（装饰器模式 + Resilience4j 熔断器）
 
 ```java
 // patra-spring-boot-starter-observability/src/main/java/com/patra/starter/observability/resilience/ResilientObservabilityAdapter.java
 package com.patra.starter.observability.resilience;
 
 import com.patra.{service}.domain.port.ObservabilityPort;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.time.Instant;
-import java.time.Duration;
+
+import java.util.function.Supplier;
 
 /**
- * 弹性可观测性适配器 - 实现熔断和降级
+ * 弹性可观测性适配器 - 使用 Resilience4j 实现熔断和降级
  * <p>
- * 熔断器状态机：
+ * 熔断器状态机（由 Resilience4j 管理）：
  * CLOSED（正常） → OPEN（熔断） → HALF_OPEN（半开） → CLOSED
+ * <p>
+ * 设计说明：
+ * 使用成熟的 Resilience4j 库而非自实现熔断器，获得以下优势：
+ * <ul>
+ *   <li>线程安全的状态转换</li>
+ *   <li>自动指标暴露（集成 Micrometer）</li>
+ *   <li>丰富的事件通知机制</li>
+ *   <li>支持动态配置</li>
+ *   <li>经过生产验证的稳定实现</li>
+ * </ul>
+ *
+ * @author Jobs
+ * @since 1.0.0
  */
 @Component
 public class ResilientObservabilityAdapter implements ObservabilityPort {
+
+    private static final Logger log = LoggerFactory.getLogger(ResilientObservabilityAdapter.class);
+    private static final String CIRCUIT_BREAKER_NAME = "observability";
 
     private final ObservabilityPort delegate;           // 正常模式的适配器（Micrometer）
     private final ObservabilityPort fallback;           // 降级模式的适配器（NoOp）
@@ -3076,141 +3473,84 @@ public class ResilientObservabilityAdapter implements ObservabilityPort {
     public ResilientObservabilityAdapter(
         MicrometerObservabilityAdapter delegate,
         NoOpObservabilityAdapter fallback,
-        ObservabilityProperties properties
+        CircuitBreakerRegistry circuitBreakerRegistry
     ) {
         this.delegate = delegate;
         this.fallback = fallback;
-        this.circuitBreaker = new CircuitBreaker(
-            properties.getResilience().getFailureThreshold(),
-            properties.getResilience().getHalfOpenTimeout()
-        );
+        this.circuitBreaker = circuitBreakerRegistry.circuitBreaker(CIRCUIT_BREAKER_NAME);
+
+        // 注册事件监听器
+        registerEventListeners();
     }
 
     @Override
     public <T> T monitorOperation(OperationContext context, Supplier<T> action) {
-        if (circuitBreaker.allowRequest()) {
-            try {
-                T result = delegate.monitorOperation(context, action);
-                circuitBreaker.recordSuccess();
-                return result;
-            } catch (Exception e) {
-                circuitBreaker.recordFailure();
-                log.warn("可观测性操作失败，降级处理：{}", e.getMessage());
+        return circuitBreaker.executeSupplier(
+            // 正常执行
+            () -> delegate.monitorOperation(context, action),
+            // 降级执行
+            throwable -> {
+                log.warn("可观测性操作失败，降级处理：{}", throwable.getMessage());
                 return fallback.monitorOperation(context, action);
             }
-        } else {
-            // 熔断器打开，直接降级
-            return fallback.monitorOperation(context, action);
-        }
+        );
     }
 
     @Override
     public void measureMetric(MetricSnapshot snapshot) {
-        if (circuitBreaker.allowRequest()) {
-            try {
-                delegate.measureMetric(snapshot);
-                circuitBreaker.recordSuccess();
-            } catch (Exception e) {
-                circuitBreaker.recordFailure();
-                log.warn("指标记录失败，降级处理：{}", e.getMessage());
+        circuitBreaker.executeRunnable(
+            // 正常执行
+            () -> delegate.measureMetric(snapshot),
+            // 降级执行
+            throwable -> {
+                log.warn("指标记录失败，降级处理：{}", throwable.getMessage());
                 fallback.measureMetric(snapshot);
             }
-        } else {
-            fallback.measureMetric(snapshot);
-        }
+        );
     }
 
     @Override
     public void recordEvent(BusinessEvent event) {
-        if (circuitBreaker.allowRequest()) {
-            try {
-                delegate.recordEvent(event);
-                circuitBreaker.recordSuccess();
-            } catch (Exception e) {
-                circuitBreaker.recordFailure();
-                log.warn("事件记录失败，降级处理：{}", e.getMessage());
+        circuitBreaker.executeRunnable(
+            // 正常执行
+            () -> delegate.recordEvent(event),
+            // 降级执行
+            throwable -> {
+                log.warn("事件记录失败，降级处理：{}", throwable.getMessage());
                 fallback.recordEvent(event);
             }
-        } else {
-            fallback.recordEvent(event);
-        }
+        );
     }
 
     /**
-     * 简单的熔断器实现
+     * 注册熔断器事件监听器
      */
-    static class CircuitBreaker {
-        private enum State { CLOSED, OPEN, HALF_OPEN }
-
-        private final int failureThreshold;          // 失败阈值
-        private final Duration halfOpenTimeout;       // 半开超时时间
-        private final AtomicInteger failureCount;     // 失败计数
-        private final AtomicInteger successCount;     // 成功计数（半开状态）
-        private final AtomicLong lastFailureTime;     // 最后失败时间
-        private volatile State state;
-
-        CircuitBreaker(int failureThreshold, Duration halfOpenTimeout) {
-            this.failureThreshold = failureThreshold;
-            this.halfOpenTimeout = halfOpenTimeout;
-            this.failureCount = new AtomicInteger(0);
-            this.successCount = new AtomicInteger(0);
-            this.lastFailureTime = new AtomicLong(0);
-            this.state = State.CLOSED;
-        }
-
-        boolean allowRequest() {
-            if (state == State.CLOSED) {
-                return true;
-            }
-
-            if (state == State.OPEN) {
-                // 检查是否应该进入半开状态
-                long timeSinceLastFailure = System.currentTimeMillis() - lastFailureTime.get();
-                if (timeSinceLastFailure > halfOpenTimeout.toMillis()) {
-                    state = State.HALF_OPEN;
-                    successCount.set(0);
-                    return true;
+    private void registerEventListeners() {
+        circuitBreaker.getEventPublisher()
+            .onSuccess(event -> log.debug("可观测性操作成功"))
+            .onError(event -> log.warn("可观测性操作失败: {}", event.getThrowable().getMessage()))
+            .onStateTransition(event -> {
+                switch (event.getStateTransition()) {
+                    case CLOSED_TO_OPEN ->
+                        log.error("可观测性熔断器打开，进入降级模式");
+                    case OPEN_TO_HALF_OPEN ->
+                        log.info("可观测性熔断器进入半开状态，尝试恢复");
+                    case HALF_OPEN_TO_CLOSED ->
+                        log.info("可观测性服务已恢复，熔断器关闭");
+                    case HALF_OPEN_TO_OPEN ->
+                        log.warn("可观测性服务仍不可用，熔断器重新打开");
                 }
-                return false;
-            }
+            })
+            .onCallNotPermitted(event ->
+                log.debug("可观测性熔断器打开，请求被拒绝")
+            );
+    }
 
-            // HALF_OPEN 状态：允许少量请求通过
-            return true;
-        }
-
-        void recordSuccess() {
-            if (state == State.HALF_OPEN) {
-                if (successCount.incrementAndGet() >= 3) {
-                    // 连续成功 3 次，恢复正常
-                    state = State.CLOSED;
-                    failureCount.set(0);
-                    log.info("可观测性服务已恢复，熔断器关闭");
-                }
-            } else if (state == State.CLOSED) {
-                // 正常状态下成功，重置失败计数
-                failureCount.set(0);
-            }
-        }
-
-        void recordFailure() {
-            lastFailureTime.set(System.currentTimeMillis());
-
-            if (state == State.HALF_OPEN) {
-                // 半开状态失败，立即回到熔断状态
-                state = State.OPEN;
-                log.warn("可观测性服务仍不可用，熔断器重新打开");
-                return;
-            }
-
-            if (failureCount.incrementAndGet() >= failureThreshold) {
-                state = State.OPEN;
-                log.error("可观测性服务连续失败 {} 次，熔断器打开", failureThreshold);
-            }
-        }
-
-        State getState() {
-            return state;
-        }
+    /**
+     * 获取熔断器状态（用于健康检查）
+     */
+    public CircuitBreaker.State getCircuitBreakerState() {
+        return circuitBreaker.getState();
     }
 }
 ```
@@ -3267,22 +3607,100 @@ public class NoOpObservabilityAdapter implements ObservabilityPort {
 
 ### 配置设计
 
+**Maven 依赖**：
+
+```xml
+<!-- pom.xml - 添加 Resilience4j 依赖 -->
+<dependency>
+    <groupId>io.github.resilience4j</groupId>
+    <artifactId>resilience4j-spring-boot3</artifactId>
+    <version>2.1.0</version>
+</dependency>
+<dependency>
+    <groupId>io.github.resilience4j</groupId>
+    <artifactId>resilience4j-micrometer</artifactId>
+    <version>2.1.0</version>
+</dependency>
+```
+
+**应用配置**：
+
 ```yaml
 # application.yml
 patra:
   observability:
-    # 弹性配置
-    resilience:
-      enabled: true                    # 启用弹性机制（默认 true）
-      failure-threshold: 5             # 失败阈值（连续失败 5 次后熔断）
-      half-open-timeout: 30s           # 半开超时（30 秒后尝试恢复）
-      log-fallback: true               # 降级模式是否记录日志（默认 true）
-
     # 健康检查配置
     health:
       enabled: true                    # 启用健康检查（默认 true）
       check-interval: 30s              # 健康检查间隔（30 秒）
       skywalking-timeout: 5s           # SkyWalking 连接超时
+
+    # 弹性配置（Resilience4j）
+    resilience:
+      enabled: true                    # 启用弹性机制（默认 true）
+      log-fallback: true               # 降级模式是否记录日志（默认 true）
+
+# Resilience4j 熔断器配置
+resilience4j:
+  circuitbreaker:
+    instances:
+      observability:                   # 可观测性熔断器
+        failure-rate-threshold: 50     # 失败率阈值（50%）
+        minimum-number-of-calls: 10    # 最小调用次数（至少 10 次才计算失败率）
+        wait-duration-in-open-state: 30s  # 熔断后等待时间（30 秒）
+        permitted-number-of-calls-in-half-open-state: 3  # 半开状态允许调用次数
+        sliding-window-type: COUNT_BASED   # 滑动窗口类型（基于计数）
+        sliding-window-size: 20           # 滑动窗口大小（20 次调用）
+        automatic-transition-from-open-to-half-open-enabled: true  # 自动从开启转为半开
+        record-exceptions:                 # 记录为失败的异常
+          - java.lang.Exception
+    metrics:
+      enabled: true                    # 启用 Micrometer 指标
+```
+
+**AutoConfiguration 配置类**：
+
+```java
+// ObservabilityAutoConfiguration.java
+@Configuration
+@EnableConfigurationProperties(ObservabilityProperties.class)
+public class ObservabilityAutoConfiguration {
+
+    @Bean
+    public CircuitBreakerRegistry circuitBreakerRegistry(ObservabilityProperties properties) {
+        CircuitBreakerConfig config = CircuitBreakerConfig.custom()
+            .failureRateThreshold(50)
+            .minimumNumberOfCalls(10)
+            .waitDurationInOpenState(Duration.ofSeconds(30))
+            .permittedNumberOfCallsInHalfOpenState(3)
+            .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)
+            .slidingWindowSize(20)
+            .automaticTransitionFromOpenToHalfOpenEnabled(true)
+            .build();
+
+        CircuitBreakerRegistry registry = CircuitBreakerRegistry.of(config);
+
+        // 注册到 Micrometer（自动暴露指标）
+        CircuitBreakerMetrics.ofCircuitBreakerRegistry(registry).bindTo(meterRegistry);
+
+        return registry;
+    }
+
+    @Bean
+    @ConditionalOnProperty(
+        prefix = "patra.observability.resilience",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true
+    )
+    public ResilientObservabilityAdapter resilientObservabilityAdapter(
+        MicrometerObservabilityAdapter delegate,
+        NoOpObservabilityAdapter fallback,
+        CircuitBreakerRegistry circuitBreakerRegistry
+    ) {
+        return new ResilientObservabilityAdapter(delegate, fallback, circuitBreakerRegistry);
+    }
+}
 ```
 
 ### 故障场景与处理策略
@@ -3299,31 +3717,30 @@ patra:
 
 #### 熔断器状态指标
 
-```java
-// 在 ResilientObservabilityAdapter 中暴露指标
-@Component
-public class CircuitBreakerMetrics {
+Resilience4j 自动通过 Micrometer 暴露以下指标（无需手动注册）：
 
-    private final MeterRegistry meterRegistry;
-    private final CircuitBreaker circuitBreaker;
+| 指标名称 | 类型 | 说明 |
+|---------|------|------|
+| `resilience4j.circuitbreaker.state` | Gauge | 熔断器状态（0=CLOSED, 1=OPEN, 2=HALF_OPEN, 3=DISABLED, 4=FORCED_OPEN） |
+| `resilience4j.circuitbreaker.calls` | Counter | 调用统计（tags: name, kind=[successful/failed/not_permitted]） |
+| `resilience4j.circuitbreaker.failure.rate` | Gauge | 失败率（0-100） |
+| `resilience4j.circuitbreaker.slow.call.rate` | Gauge | 慢调用率（0-100） |
+| `resilience4j.circuitbreaker.buffered.calls` | Gauge | 缓冲调用数量（tags: name, kind=[successful/failed]） |
 
-    public CircuitBreakerMetrics(MeterRegistry meterRegistry, CircuitBreaker circuitBreaker) {
-        this.meterRegistry = meterRegistry;
-        this.circuitBreaker = circuitBreaker;
+**配置指标导出**：
 
-        // 注册熔断器状态 Gauge
-        Gauge.builder("patra.observability.circuit_breaker.state", circuitBreaker,
-                cb -> cb.getState().ordinal())
-            .description("熔断器状态（0=CLOSED, 1=OPEN, 2=HALF_OPEN）")
-            .register(meterRegistry);
-
-        // 注册失败计数
-        Gauge.builder("patra.observability.circuit_breaker.failures", circuitBreaker,
-                cb -> cb.getFailureCount())
-            .description("熔断器失败计数")
-            .register(meterRegistry);
-    }
-}
+```yaml
+# application.yml
+management:
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
+  endpoint:
+    metrics:
+      enabled: true
 ```
 
 #### Grafana 告警规则
@@ -3333,8 +3750,9 @@ public class CircuitBreakerMetrics {
 groups:
   - name: observability-health
     rules:
+      # 熔断器打开告警
       - alert: ObservabilityCircuitBreakerOpen
-        expr: patra_observability_circuit_breaker_state == 1
+        expr: resilience4j_circuitbreaker_state{name="observability"} == 1
         for: 1m
         labels:
           severity: warning
@@ -3342,6 +3760,27 @@ groups:
           summary: "可观测性熔断器已打开"
           description: "服务 {{ $labels.application }} 的可观测性熔断器已打开，当前处于降级模式"
 
+      # 熔断器失败率过高告警
+      - alert: ObservabilityHighFailureRate
+        expr: resilience4j_circuitbreaker_failure_rate{name="observability"} > 50
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "可观测性失败率过高"
+          description: "服务 {{ $labels.application }} 的可观测性失败率为 {{ $value }}%"
+
+      # 熔断器调用被拒绝告警
+      - alert: ObservabilityCallsNotPermitted
+        expr: rate(resilience4j_circuitbreaker_calls{name="observability",kind="not_permitted"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "可观测性调用被熔断器拒绝"
+          description: "服务 {{ $labels.application }} 的可观测性调用被熔断器拒绝，速率：{{ $value }}/s"
+
+      # 健康检查失败告警
       - alert: ObservabilityHealthDown
         expr: up{job="spring-actuator", endpoint="observability"} == 0
         for: 5m
@@ -3376,111 +3815,114 @@ groups:
 
 ## 实施计划
 
-### 阶段 1：创建 Observability Starter（3-4 天）
+> **注**：本项目为单人开发项目且无时间压力，优先追求质量和架构卓越。以下任务分解仅供参考，无需关注时间估算。
 
-#### 1.1 创建模块结构（半天）
+### 阶段 1：创建 Observability Starter
+
+#### 1.1 创建模块结构
 - [x] 在 patra-parent 中添加模块声明
 - [x] 创建 pom.xml，配置依赖
 - [x] 创建目录结构
 
-#### 1.2 实现配置类（1 天）
+#### 1.2 实现配置类
 - [x] `ObservabilityProperties`
 - [x] `MetricsProperties`
 - [x] `TracingProperties`
 - [x] `LoggingProperties`
 - [x] `additional-spring-configuration-metadata.json`
 
-#### 1.3 实现自动配置（1.5 天）
+#### 1.3 实现自动配置
 - [x] `ObservabilityAutoConfiguration`
 - [x] `MicrometerAutoConfiguration`
 - [x] `SkyWalkingMeterAutoConfiguration`
 - [x] `PrometheusAutoConfiguration`
 - [x] `ObservationHandlerAutoConfiguration`
 
-#### 1.4 实现 ObservationHandler（半天）
+#### 1.4 实现 ObservationFilter
 - [x] `LoggingObservationHandler`
 - [x] `PerformanceObservationHandler`
+- [x] `SensitiveDataObservationFilter`
 
-#### 1.5 实现 MeterFilter（半天）
+#### 1.5 实现 MeterFilter
 - [x] `CommonTagsMeterFilter`
 - [x] `MetricNamingMeterFilter`
 
-#### 1.6 编写单元测试（1 天）
+#### 1.6 编写单元测试
 - [x] `ObservabilityAutoConfigurationTest`
 - [x] `PerformanceObservationHandlerTest`
 - [x] 集成测试
 
-### 阶段 2：重构现有 Starter（3-4 天）
+### 阶段 2：重构现有 Starter
 
-#### 2.1 重构 patra-starter-core（1 天）
+#### 2.1 重构 patra-starter-core
 - [x] 添加对 observability starter 的依赖
 - [x] 移除重复的追踪配置（保留兼容性）
 - [x] 统一 TracingInterceptor 使用 Observation API
 - [x] 更新 README
 
-#### 2.2 重构 patra-starter-rest-client（1 天）
+#### 2.2 重构 patra-starter-rest-client
 - [x] 重构 `MetricsInterceptor` 使用 Observation API
 - [x] 统一指标命名为 `patra.http.client.*`
 - [x] 移除独立的 MeterRegistry 配置
 - [x] 更新文档
 
-#### 2.3 重构 patra-starter-batch（1 天）
+#### 2.3 重构 patra-starter-batch
 - [x] 实现 `ObservationJobListener`
 - [x] 实现 `MetricsJobListener`
 - [x] 移除 TODO 标记
 - [x] 添加测试
 
-#### 2.4 重构其他 Starter（1 天）
+#### 2.4 重构其他 Starter
 - [x] object-storage: 统一指标命名
 - [x] provenance: 统一指标命名
 - [x] expr: 统一指标命名
 - [x] feign: 使用统一错误观测
 - [x] redisson: 统一指标命名
 
-### 阶段 3：SkyWalking Agent 配置（1 天）
+### 阶段 3：SkyWalking Agent 配置
 
-#### 3.1 Docker 配置（半天）
+#### 3.1 Docker 配置
 - [x] 编写 `docker/scripts/start-with-skywalking.sh`
 - [x] 下载 SkyWalking Java Agent
 - [x] 配置 `agent.config`
 - [x] 更新 `docker-compose.dev.yaml`
 
-#### 3.2 Kubernetes 配置（可选，半天）
+#### 3.2 Kubernetes 配置（可选）
 - [ ] 编写 `k8s/skywalking-agent-init-container.yaml`
 - [ ] 配置 ConfigMap
 - [ ] 更新 Deployment
 
-### 阶段 4：服务集成（2 天）
+### 阶段 4：服务集成
 
-#### 4.1 patra-ingest（半天）
+#### 4.1 patra-ingest
 - [x] 添加 observability starter 依赖
 - [x] 调整 application.yml 配置
 - [x] 验证功能正常
 
-#### 4.2 patra-catalog（半天）
+#### 4.2 patra-catalog
 - [x] 添加 observability starter 依赖
 - [x] 调整 application.yml 配置
 - [x] 验证 MeSH 导入指标
 
-#### 4.3 patra-registry（半天）
+#### 4.3 patra-registry
 - [x] 添加 observability starter 依赖
 - [x] 调整 application.yml 配置
 - [x] 验证功能正常
 
-#### 4.4 patra-gateway（半天）
+#### 4.4 patra-gateway
 - [x] 添加 observability starter 依赖
 - [x] 调整 application.yml 配置
 - [x] 验证 Gateway 追踪
 
-### 阶段 5：文档和验证（2 天）
+### 阶段 5：文档和验证
 
-#### 5.1 编写文档（1 天）
+#### 5.1 编写文档
 - [ ] `patra-spring-boot-starter-observability/README.md`
 - [ ] 使用指南
 - [ ] 配置参考
 - [ ] FAQ
 
-#### 5.2 端到端验证（1 天）
+#### 5.2 端到端验证
 - [ ] 启动完整环境（docker-compose up）
 - [ ] 验证分布式追踪链路
 - [ ] 验证指标收集和导出
