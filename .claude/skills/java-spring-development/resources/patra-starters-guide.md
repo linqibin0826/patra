@@ -1,510 +1,330 @@
-# Patra 自定义 Starter 完整使用指南
+# Patra Starters 快速参考
 
-## 🚨 强制使用规范
+## 按模块层分类
 
-**Patra 项目必须使用自定义 Starter，禁止直接引入原始依赖。**
+| 模块层 | Starters |
+|-------|----------|
+| **adapter** | `patra-spring-boot-starter-web` |
+| **infra（数据库）** | `patra-spring-boot-starter-mybatis` |
+| **infra（服务调用）** | `patra-spring-cloud-starter-feign` |
+| **infra（对象存储）** | `patra-spring-boot-starter-object-storage` |
+| **infra（REST 调用）** | `patra-spring-boot-starter-rest-client` |
+| **infra（分布式锁）** | `patra-spring-boot-starter-redisson` |
+| **所有层（除 domain）** | `patra-spring-boot-starter-core` |
+| **可选增强** | `patra-spring-boot-starter-observability` |
 
-## Starter 与模块层对应关系
-
-| 模块层 | 必须使用的 Starter | Maven 坐标 |
-|-------|------------------|-----------|
-| **adapter 层** | Web Starter | `com.patra:patra-spring-boot-starter-web` |
-| **infra 层（数据库）** | MyBatis Starter | `com.patra:patra-spring-boot-starter-mybatis` |
-| **infra 层（Feign）** | Feign Starter | `com.patra:patra-spring-cloud-starter-feign` |
-| **infra 层（对象存储）** | Object Storage Starter | `com.patra:patra-spring-boot-starter-object-storage` |
-| **所有层（除 domain）** | Core Starter | `com.patra:patra-spring-boot-starter-core` |
+---
 
 ## 1. patra-spring-boot-starter-web
 
-### 适用场景
-`patra-{service}-adapter` 模块
+**Maven 坐标**: `com.patra:patra-spring-boot-starter-web`
 
-### 提供功能
-- REST Controller 支持（Spring MVC）
-- 统一异常处理（GlobalExceptionHandler）
-- 参数校验（Validation）
-- 请求响应日志
-- CORS 配置
-- API 文档（Swagger/OpenAPI）
+**适用场景**: `patra-{service}-adapter` 模块
 
-### Maven 依赖
-```xml
-<!-- patra-xxx-adapter/pom.xml -->
-<dependency>
-    <groupId>com.patra</groupId>
-    <artifactId>patra-spring-boot-starter-web</artifactId>
-</dependency>
-```
+**核心功能**:
+- REST Controller（Spring MVC）
+- 全局异常处理
+- 参数校验（`@Valid`）
+- 统一响应模型
 
-### 使用示例
+**使用示例**:
 ```java
-// ✅ 正确：在 adapter 模块中使用
 @RestController
-@RequestMapping("/api/v1/resources")
-public class ResourceController {
-    // Web Starter 自动配置了异常处理、参数校验等
+@RequestMapping("/api/v1/users")
+@RequiredArgsConstructor
+public class UserController {
+    private final UserService userService;
+
+    @GetMapping("/{id}")
+    public User getUser(@PathVariable Long id) {
+        return userService.findById(id);
+    }
 }
 ```
+
+---
 
 ## 2. patra-spring-boot-starter-mybatis
 
-### 适用场景
-`patra-{service}-infra` 模块（涉及数据库时）
+**Maven 坐标**: `com.patra:patra-spring-boot-starter-mybatis`
 
-### 提供功能
-- MyBatis-Plus 核心功能
-- 分页插件
-- 乐观锁插件
-- 自动填充（创建时间、更新时间等）
-- 雪花 ID 生成器
-- 审计字段支持（BaseDO）
+**适用场景**: `patra-{service}-infra` 模块（涉及数据库）
 
-### Maven 依赖
-```xml
-<!-- patra-xxx-infra/pom.xml -->
-<dependency>
-    <groupId>com.patra</groupId>
-    <artifactId>patra-spring-boot-starter-mybatis</artifactId>
-</dependency>
-```
+**核心功能**:
+- MyBatis-Plus 自动配置
+- `BaseDO` 基类（雪花 ID + 10 个审计字段）
+- 分页插件、乐观锁插件
+- Flyway 数据库迁移
 
-### BaseDO 继承规范
+**使用示例**:
 ```java
-// ✅ 正确：所有 DO 必须继承 BaseDO
-@TableName("t_resource")
+/// DO 定义
+@TableName("t_user")
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class ResourceDO extends BaseDO {
-    // BaseDO 提供：id (雪花ID)、10个审计字段
-
-    @TableField("resource_name")
-    private String name;
-
-    @TableField("resource_type")
-    private String type;
-
-    @TableField("resource_status")
-    private Integer status;
+public class UserDO extends BaseDO {
+    ///  用户手机号
+    @TableField("phone")
+    private String phone;
 }
-```
 
-### Mapper 使用规范
-```java
-// ✅ 正确：使用 MyBatis-Plus BaseMapper
+/// Mapper 定义
 @Mapper
-public interface ResourceMapper extends BaseMapper<ResourceDO> {
-    // 自动继承 CRUD 方法
-}
+public interface UserMapper extends BaseMapper<UserDO> {}
 
-// ✅ 正确：复杂查询使用 XML
-// resources/mapper/ResourceMapper.xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.patra.xxx.infra.mapper.ResourceMapper">
-    <select id="selectByComplexCondition" resultType="com.patra.xxx.infra.dataobject.ResourceDO">
-        SELECT * FROM t_resource
-        WHERE status = #{status}
-        <if test="keyword != null">
-            AND name LIKE CONCAT('%', #{keyword}, '%')
-        </if>
-    </select>
-</mapper>
-```
-
-### Repository 实现模式
-```java
+/// Repository 实现
 @Repository
 @RequiredArgsConstructor
-public class ResourceRepositoryImpl implements ResourceRepository {
-    private final ResourceMapper mapper;
-    private final ResourceConverter converter;
+public class UserRepositoryImpl implements UserRepository {
+    private final UserMapper mapper;
 
     @Override
-    public void save(Resource resource) {
-        var resourceDO = converter.toDO(resource);
-        mapper.insert(resourceDO);
-        resource.setId(resourceDO.getId());
-    }
-
-    @Override
-    public Optional<Resource> findById(Long id) {
-        var wrapper = new LambdaQueryWrapper<ResourceDO>()
-            .eq(ResourceDO::getId, id)
-            .eq(ResourceDO::getDeleted, false);
-
-        return Optional.ofNullable(mapper.selectOne(wrapper))
+    public Optional<User> findById(Long id) {
+        return Optional.ofNullable(mapper.selectById(id))
             .map(converter::toDomain);
-    }
-
-    @Override
-    public Page<Resource> search(ResourceQuery query, Pageable pageable) {
-        var page = new com.baomidou.mybatisplus.extension.plugins.pagination.Page<ResourceDO>(
-            pageable.getPageNumber() + 1,
-            pageable.getPageSize()
-        );
-
-        var wrapper = new LambdaQueryWrapper<ResourceDO>()
-            .like(StringUtils.isNotBlank(query.getKeyword()),
-                  ResourceDO::getName, query.getKeyword())
-            .eq(query.getType() != null,
-                ResourceDO::getType, query.getType())
-            .orderByDesc(ResourceDO::getCreatedAt);
-
-        var result = mapper.selectPage(page, wrapper);
-
-        return new PageImpl<>(
-            result.getRecords().stream()
-                .map(converter::toDomain)
-                .toList(),
-            pageable,
-            result.getTotal()
-        );
     }
 }
 ```
 
-### 注意事项
-- ✅ **所有 DO 必须继承 `BaseDO`**
-- ✅ **表没有外键关联，id 使用雪花 ID**
-- ❌ **不要在 Mapper.java 中编写 SQL**，简单查询使用 `LambdaQueryWrapper`，复杂查询使用 XML
+---
 
 ## 3. patra-spring-cloud-starter-feign
 
-### 适用场景
-`patra-{service}-infra` 模块（调用方和提供方都需要）
+**Maven 坐标**: `com.patra:patra-spring-cloud-starter-feign`
 
-### 提供功能
-- OpenFeign 客户端
-- 负载均衡（Nacos Discovery）
-- 请求重试
-- 熔断降级（Resilience4j）
-- 请求日志
+**适用场景**: `patra-{service}-infra` 模块（调用其他服务）
+
+**核心功能**:
+- OpenFeign 客户端自动配置
+- Nacos 服务发现
 - 统一错误处理
+- 熔断降级（Resilience4j）
 
-### Maven 依赖
-```xml
-<!-- patra-xxx-infra/pom.xml (调用方) -->
-<dependency>
-    <groupId>com.patra</groupId>
-    <artifactId>patra-spring-cloud-starter-feign</artifactId>
-</dependency>
-
-<!-- patra-xxx-api/pom.xml (提供方也需要，用于定义 FeignClient 接口) -->
-<dependency>
-    <groupId>com.patra</groupId>
-    <artifactId>patra-spring-cloud-starter-feign</artifactId>
-    <scope>provided</scope>
-</dependency>
-```
-
-### FeignClient 定义规范
+**使用示例**:
 ```java
-// ✅ 正确：在 -api 模块定义接口
-package com.patra.registry.api.client;
-
-@FeignClient(name = "patra-registry", path = "/api/v1/metadata")
-public interface MetadataServiceClient {
-
-    @GetMapping("/{id}")
-    MetadataDTO getById(@PathVariable Long id);
-
-    @GetMapping("/list")
-    List<MetadataDTO> list(@RequestParam("type") String type);
-
-    @PostMapping
-    MetadataDTO create(@RequestBody CreateMetadataRequest request);
+/// 步骤 1: 在 -api 模块定义 Endpoint 接口
+public interface ProvenanceEndpoint {
+    @GetMapping("/_internal/provenances/{code}/config")
+    ProvenanceConfigResp getConfiguration(
+        @PathVariable("code") ProvenanceCode code,
+        @RequestParam(value = "operationType", required = false) String operationType
+    );
 }
-```
 
-### Adapter 实现模式
-```java
-// ✅ 正确：在 -infra 模块实现 Port
+/// 步骤 2: 在 -api 模块定义 FeignClient（继承 Endpoint）
+@FeignClient(name = "patra-registry", contextId = "provenanceClient")
+public interface ProvenanceClient extends ProvenanceEndpoint {}
+
+/// 步骤 3: 在 -infra 模块注入使用
 @Component
 @RequiredArgsConstructor
-public class MetadataServiceAdapter implements MetadataPort {
-    private final MetadataServiceClient client;
-    private final MetadataConverter converter;
-
+public class ProvenanceAdapter implements ProvenancePort {
+    private final ProvenanceClient client;
     @Override
-    public Metadata fetchById(Long id) {
-        try {
-            var dto = client.getById(id);
-            return converter.toDomain(dto);
-        } catch (FeignException.NotFound e) {
-            throw new ResourceNotFoundException("元数据不存在: " + id);
-        } catch (FeignException e) {
-            log.error("调用元数据服务失败", e);
-            throw new ExternalServiceException("元数据服务不可用");
-        }
-    }
-
-    @Override
-    public List<Metadata> fetchByType(String type) {
-        var dtos = client.list(type);
-        return dtos.stream()
-            .map(converter::toDomain)
-            .toList();
+    public ProvenanceConfig getConfig(ProvenanceCode code) {
+        return converter.toDomain(client.getConfiguration(code, "HARVEST"));
     }
 }
 ```
 
-### 配置示例
-```yaml
-feign:
-  client:
-    config:
-      default:
-        connectTimeout: 5000
-        readTimeout: 10000
-        loggerLevel: BASIC
-  circuitbreaker:
-    enabled: true
-
-resilience4j:
-  circuitbreaker:
-    instances:
-      patra-registry:
-        slidingWindowSize: 100
-        failureRateThreshold: 50
-        waitDurationInOpenState: 30s
-```
+---
 
 ## 4. patra-spring-boot-starter-object-storage
 
-### 适用场景
-`patra-{service}-infra` 模块（需要对象存储时）
+**Maven 坐标**: `com.patra:patra-spring-boot-starter-object-storage`
 
-### 提供功能
-- 阿里云 OSS 支持
-- MinIO 支持
-- 统一的对象存储接口
-- 自动配置
+**适用场景**: `patra-{service}-infra` 模块（需要对象存储）
 
-### Maven 依赖
-```xml
-<!-- patra-xxx-infra/pom.xml -->
-<dependency>
-    <groupId>com.patra</groupId>
-    <artifactId>patra-spring-boot-starter-object-storage</artifactId>
-</dependency>
-```
+**核心功能**:
+- MinIO/S3 统一抽象
+- `ObjectStorageTemplate` 核心操作
+- `StorageLocationResolver` 位置解析
+- 自动重试、指标收集、Bucket 自动管理
 
-### 使用示例
+**使用示例**:
 ```java
-// ✅ 正确：使用统一接口
 @Component
 @RequiredArgsConstructor
-public class FileStorageAdapter implements FileStoragePort {
-    private final ObjectStorageService storageService;
+public class PublicationStorageAdapter implements PublicationStoragePort {
+    private final ObjectStorageTemplate objectStorageTemplate;
+    private final StorageLocationResolver storageLocationResolver;
 
     @Override
-    public String upload(FileData file) {
-        var objectKey = generateObjectKey(file);
-        return storageService.upload(
-            file.getInputStream(),
-            objectKey,
-            file.getContentType()
+    public StorageResult store(List<CanonicalPublication> publications) {
+        byte[] payload = objectMapper.writeValueAsBytes(publications);
+
+        StorageLocation location = storageLocationResolver.resolve(
+            StorageContext.builder()
+                .businessType("publication-batch")
+                .filename("batch-001.json")
+                .build()
         );
-    }
 
-    @Override
-    public byte[] download(String objectKey) {
-        return storageService.download(objectKey);
-    }
-
-    @Override
-    public void delete(String objectKey) {
-        storageService.delete(objectKey);
-    }
-
-    private String generateObjectKey(FileData file) {
-        var date = LocalDate.now();
-        return String.format("%d/%02d/%02d/%s_%s",
-            date.getYear(),
-            date.getMonthValue(),
-            date.getDayOfMonth(),
-            UUID.randomUUID().toString(),
-            file.getOriginalName()
+        UploadResult result = objectStorageTemplate.upload(
+            location.bucket(), location.objectKey(),
+            new ByteArrayInputStream(payload),
+            ObjectMetadata.builder().contentType("application/json").build()
         );
+
+        return new StorageResult(result.getStorageKey());
     }
 }
 ```
 
-### 配置示例
-```yaml
-object-storage:
-  type: oss  # oss 或 minio
-  oss:
-    endpoint: oss-cn-hangzhou.aliyuncs.com
-    access-key-id: ${OSS_ACCESS_KEY_ID}
-    access-key-secret: ${OSS_ACCESS_KEY_SECRET}
-    bucket-name: patra-files
-  minio:
-    endpoint: http://localhost:9000
-    access-key: minioadmin
-    secret-key: minioadmin
-    bucket-name: patra-files
-```
+---
 
-## 5. patra-spring-boot-starter-core
+## 5. patra-spring-boot-starter-rest-client
 
-### 适用场景
-**所有模块（除了 domain 层）**
+**Maven 坐标**: `com.patra:patra-spring-boot-starter-rest-client`
 
-### 提供功能
-- 公共工具类（Hutool 增强）
-- 基础数据对象（BaseDO、BaseDTO）
-- 通用异常定义
-- 日期时间工具
-- JSON 序列化配置
-- ID 生成器
+**适用场景**: `patra-{service}-infra` 模块（调用外部 REST API、下载文件）
 
-### Maven 依赖
-```xml
-<!-- patra-xxx-adapter/pom.xml -->
-<!-- patra-xxx-app/pom.xml -->
-<!-- patra-xxx-infra/pom.xml -->
-<!-- patra-xxx-api/pom.xml -->
-<dependency>
-    <groupId>com.patra</groupId>
-    <artifactId>patra-spring-boot-starter-core</artifactId>
-</dependency>
+**核心功能**:
+- Spring RestClient 自动配置（基于 JDK 21 HttpClient）
+- 统一超时控制
+- 日志拦截器
+- `ClientInterceptor` 扩展点（可观测性集成）
 
-<!-- ❌ domain 模块不能使用 -->
-```
-
-### 使用示例
+**使用示例**:
 ```java
-// ✅ 正确：在 app/adapter/infra 中使用
-import com.patra.common.util.DateUtils;
-import com.patra.common.exception.BusinessException;
-import com.patra.common.util.IdGenerator;
-import com.patra.common.util.JsonUtils;
+@Repository
+@RequiredArgsConstructor
+public class ExternalApiAdapter implements ExternalApiPort {
+    private final RestClient defaultRestClient;
 
+    @Override
+    public UserData fetchUser(Long id) {
+        return defaultRestClient.get()
+            .uri("https://api.example.com/users/{id}", id)
+            .retrieve()
+            .body(UserData.class);
+    }
+}
+```
+
+---
+
+## 6. patra-spring-boot-starter-redisson
+
+**Maven 坐标**: `com.patra:patra-spring-boot-starter-redisson`
+
+**适用场景**: `patra-{service}-infra` 模块（需要分布式锁）
+
+**核心功能**:
+- RedissonClient 自动配置
+- `@DistributedLock` 声明式注解
+- SpEL 表达式支持（动态生成锁键）
+- 多种锁类型（可重入锁、公平锁、读写锁）
+- 可观测性集成（SkyWalking、Micrometer）
+
+**使用示例**:
+```java
+@Service
+public class PlanService {
+
+    @DistributedLock(
+        key = "plan:#{#planId}",
+        leaseTime = 30,
+        waitTime = 5
+    )
+    public void executePlan(Long planId) {
+        // 业务逻辑自动受锁保护
+    }
+
+    @DistributedLock(
+        key = "config:#{#key}",
+        type = LockType.READ
+    )
+    public String getConfig(String key) {
+        // 读锁：允许并发读
+    }
+}
+```
+
+---
+
+## 7. patra-spring-boot-starter-core
+
+**Maven 坐标**: `com.patra:patra-spring-boot-starter-core`
+
+**适用场景**: **所有模块（除了 domain 层）**
+
+**核心功能**:
+- JSON/XML 序列化标准化配置
+- 错误处理框架与追踪传播
+- 统一 UTC 时间源
+
+**强制规范**:
+- ✅ 所有非 domain 模块（adapter、app、infra、api）都可以依赖
+- ❌ domain 模块禁止依赖
+
+**使用示例**:
+```java
+// 所有非 domain 模块自动继承以下能力
 @Service
 public class SomeService {
-    public void process() {
-        // 使用日期工具
-        var now = DateUtils.now();
-        var formattedDate = DateUtils.format(now, "yyyy-MM-dd");
+    // 自动获得：
+    // - JSON 序列化配置
+    // - 错误处理框架
+    // - UTC 时间源
+}
+```
 
-        // 生成唯一 ID
-        var uniqueId = IdGenerator.generateId();
+---
 
-        // JSON 序列化
-        var json = JsonUtils.toJson(someObject);
-        var object = JsonUtils.fromJson(json, SomeClass.class);
+## 8. patra-spring-boot-starter-observability
 
-        // 抛出业务异常
-        if (!isValid) {
-            throw new BusinessException("ERROR_CODE", "错误信息");
-        }
+**Maven 坐标**: `com.patra:patra-spring-boot-starter-observability`
+
+**适用场景**: 可选依赖（增强可观测性）
+
+**核心功能**:
+- **Metrics**（指标）：Micrometer + Prometheus/SkyWalking
+- **Tracing**（追踪）：SkyWalking APM Toolkit
+- **Logging**（日志）：Logback + SkyWalking 插件
+- **敏感数据脱敏**（P0 级别）
+- **插件式架构**：通过扩展点接口集成（`ResolutionInterceptor`、`ClientInterceptor`、`JobExecutionListener`）
+
+**使用示例**:
+```java
+// 添加依赖后，自动启用可观测性
+// 无需修改代码，所有拦截器自动注册
+
+// 自定义 ObservationHandler
+@Component
+public class CustomHandler implements ObservationHandler<Observation.Context> {
+    @Override
+    public void onStart(Observation.Context context) {
+        // 观察开始时的逻辑
+    }
+
+    @Override
+    public void onStop(Observation.Context context) {
+        // 观察结束时的逻辑
+    }
+
+    @Override
+    public boolean supportsContext(Observation.Context context) {
+        return true;
     }
 }
-
-// ❌ 错误：domain 层不能使用
-// domain 层必须保持纯 Java，不能依赖任何框架
 ```
 
-## 依赖声明检查清单
+---
 
-开发新功能时，按以下检查清单添加依赖：
+## 依赖检查清单
 
-```
-[ ] 1. 是 adapter 层吗？
-       → 是 → 添加 patra-spring-boot-starter-web
+新建功能时，按以下顺序检查：
 
-[ ] 2. 是 infra 层且需要数据库吗？
-       → 是 → 添加 patra-spring-boot-starter-mybatis
-       → 确认 DO 继承了 BaseDO
-
-[ ] 3. 需要调用其他服务吗？
-       → 是 → 添加 patra-spring-cloud-starter-feign
-       → 在 -api 模块定义 FeignClient
-       → 在 -infra 模块实现 Adapter
-
-[ ] 4. 需要对象存储吗？
-       → 是 → 添加 patra-spring-boot-starter-object-storage
-
-[ ] 5. 是 domain 层吗？
-       → 是 → ❌ 不能添加任何 Spring Boot Starter
-       → 否 → ✅ 添加 patra-spring-boot-starter-core
-```
-
-## 常见错误与解决
-
-### 错误 1：直接使用原始依赖
-```xml
-<!-- ❌ 错误 -->
-<dependency>
-    <groupId>com.baomidou</groupId>
-    <artifactId>mybatis-plus-boot-starter</artifactId>
-</dependency>
-
-<!-- ✅ 正确 -->
-<dependency>
-    <groupId>com.patra</groupId>
-    <artifactId>patra-spring-boot-starter-mybatis</artifactId>
-</dependency>
-```
-
-### 错误 2：domain 层引入 Spring 依赖
-```xml
-<!-- ❌ 错误：domain 模块的 pom.xml -->
-<dependency>
-    <groupId>com.patra</groupId>
-    <artifactId>patra-spring-boot-starter-core</artifactId>
-</dependency>
-
-<!-- ✅ 正确：domain 层只能使用纯 Java -->
-<dependency>
-    <groupId>org.projectlombok</groupId>
-    <artifactId>lombok</artifactId>
-    <scope>provided</scope>
-</dependency>
-```
-
-### 错误 3：DO 没有继承 BaseDO
-```java
-// ❌ 错误
-@TableName("t_resource")
-@Data
-public class ResourceDO {
-    private Long id;
-    private String name;
-    // 手动添加审计字段
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-}
-
-// ✅ 正确
-@TableName("t_resource")
-@Data
-@EqualsAndHashCode(callSuper = true)
-public class ResourceDO extends BaseDO {
-    // BaseDO 已提供 id 和审计字段
-    private String name;
-}
-```
-
-### 错误 4：在 Mapper 接口中写 SQL
-```java
-// ❌ 错误
-@Mapper
-public interface ResourceMapper extends BaseMapper<ResourceDO> {
-    @Select("SELECT * FROM t_resource WHERE name = #{name}")
-    ResourceDO findByName(String name);
-}
-
-// ✅ 正确：简单查询使用 LambdaQueryWrapper
-public Optional<Resource> findByName(String name) {
-    var wrapper = new LambdaQueryWrapper<ResourceDO>()
-        .eq(ResourceDO::getName, name);
-    return Optional.ofNullable(mapper.selectOne(wrapper))
-        .map(converter::toDomain);
-}
-
-// ✅ 正确：复杂查询使用 XML
-// 在 resources/mapper/ResourceMapper.xml 中定义
-```
+1. ✅ **Adapter 层** → 添加 `patra-spring-boot-starter-web`
+2. ✅ **Infra 层（数据库）** → 添加 `patra-spring-boot-starter-mybatis`
+   - 确认 DO 继承 `BaseDO`
+3. ✅ **Infra 层（服务调用）** → 添加 `patra-spring-cloud-starter-feign`(可选)
+   - 在 `-api` 模块定义 FeignClient
+   - 在 `-infra` 模块实现 Adapter
+4. ✅ **Infra 层（对象存储）** → 添加 `patra-spring-boot-starter-object-storage`(可选)
+5. ✅ **Infra 层（REST 调用）** → 添加 `patra-spring-boot-starter-rest-client`(可选)
+6. ✅ **Infra 层（分布式锁）** → 添加 `patra-spring-boot-starter-redisson` (可选)
+7. ✅ **Domain 层** → ❌ 不能添加任何 Spring Boot Starter
+8. ✅ **其他层** → 添加 `patra-spring-boot-starter-core`
+9. ✅ **可选** → 添加 `patra-spring-boot-starter-observability`
