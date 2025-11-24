@@ -10,39 +10,33 @@ import java.util.regex.Pattern;
 import java.util.List;
 import java.util.ArrayList;
 
-/**
- * 敏感数据脱敏过滤器。
- *
- * <p>功能：
- * <ul>
- *   <li>在 Observation 创建后、启动前拦截并脱敏敏感数据</li>
- *   <li>检测密码、Token、身份证号、手机号等敏感信息</li>
- *   <li>支持自定义敏感数据模式</li>
- *   <li>生产环境强制启用，开发环境可选</li>
- * </ul>
- *
- * <p>安全策略：
- * <ul>
- *   <li>默认模式：脱敏常见敏感字段（password, token, apiKey, secret 等）</li>
- *   <li>自定义模式：支持通过配置添加自定义脱敏规则</li>
- *   <li>静默失败：脱敏失败不影响业务逻辑，仅记录警告日志</li>
- * </ul>
- *
- * <p>设计说明：
- * 使用 {@link ObservationFilter} 而非 {@link io.micrometer.observation.ObservationHandler}，
- * 因为 Filter 在 Observation 创建阶段执行，可以安全地修改 Context，
- * 而 Handler 在执行阶段，修改 Context 需要使用反射，存在兼容性风险。
- *
- * @author Jobs
- * @since 1.0.0
- */
+/// 敏感数据脱敏过滤器。
+///
+/// 功能：
+///
+/// - 在 Observation 创建后、启动前拦截并脱敏敏感数据
+/// - 检测密码、Token、身份证号、手机号等敏感信息
+/// - 支持自定义敏感数据模式
+/// - 生产环境强制启用，开发环境可选
+///
+/// 安全策略：
+///
+/// - 默认模式：脱敏常见敏感字段（password, token, apiKey, secret 等）
+/// - 自定义模式：支持通过配置添加自定义脱敏规则
+/// - 静默失败：脱敏失败不影响业务逻辑，仅记录警告日志
+///
+/// 设计说明：
+/// 使用 ObservationFilter 而非 ObservationHandler，
+/// 因为 Filter 在 Observation 创建阶段执行，可以安全地修改 Context，
+/// 而 Handler 在执行阶段，修改 Context 需要使用反射，存在兼容性风险。
+///
+/// @author Jobs
+/// @since 1.0.0
 public class SensitiveDataObservationFilter implements ObservationFilter {
 
     private static final Logger log = LoggerFactory.getLogger(SensitiveDataObservationFilter.class);
 
-    /**
-     * 敏感字段名称模式（不区分大小写）。
-     */
+    /// 敏感字段名称模式（不区分大小写）。
     private static final Pattern[] SENSITIVE_FIELD_PATTERNS = {
         Pattern.compile("(?i)password"),        // 密码
         Pattern.compile("(?i)pwd"),             // 密码简写
@@ -53,9 +47,7 @@ public class SensitiveDataObservationFilter implements ObservationFilter {
         Pattern.compile("(?i)credential")       // 凭证
     };
 
-    /**
-     * 敏感数据值模式（正则匹配）。
-     */
+    /// 敏感数据值模式（正则匹配）。
     private static final Pattern[] SENSITIVE_VALUE_PATTERNS = {
         Pattern.compile("\\d{15,19}"),                    // 身份证号（15或18位）
         Pattern.compile("\\d{3}-?\\d{4}-?\\d{4}"),        // 手机号（含分隔符）
@@ -71,12 +63,10 @@ public class SensitiveDataObservationFilter implements ObservationFilter {
     private final boolean enabled;
     private final List<Pattern> customPatterns;
 
-    /**
-     * 构造函数。
-     *
-     * @param enabled 是否启用脱敏
-     * @param customPatterns 自定义敏感数据模式（正则表达式）
-     */
+    /// 构造函数。
+    ///
+    /// @param enabled 是否启用脱敏
+    /// @param customPatterns 自定义敏感数据模式（正则表达式）
     public SensitiveDataObservationFilter(boolean enabled, List<String> customPatterns) {
         this.enabled = enabled;
         this.customPatterns = new ArrayList<>();
@@ -91,16 +81,14 @@ public class SensitiveDataObservationFilter implements ObservationFilter {
             enabled, this.customPatterns.size());
     }
 
-    /**
-     * 检测并告警 Observation Context 中的敏感数据。
-     *
-     * <p>设计说明：
-     * 不直接修改 Context 以避免丢失关键上下文信息（如 parentObservation、scope 等），
-     * 而是采用"检测 + 告警"策略，帮助开发者识别和移除敏感数据源头。
-     *
-     * @param context Observation 上下文
-     * @return 原始上下文（不修改）
-     */
+    /// 检测并告警 Observation Context 中的敏感数据。
+    ///
+    /// 设计说明：
+    /// 不直接修改 Context 以避免丢失关键上下文信息（如 parentObservation、scope 等），
+    /// 而是采用"检测 + 告警"策略，帮助开发者识别和移除敏感数据源头。
+    ///
+    /// @param context Observation 上下文
+    /// @return 原始上下文（不修改）
     @Override
     public Observation.Context map(Observation.Context context) {
         if (!enabled) {
@@ -142,12 +130,10 @@ public class SensitiveDataObservationFilter implements ObservationFilter {
         }
     }
 
-    /**
-     * 检测 KeyValues 是否包含敏感数据。
-     *
-     * @param keyValues KeyValue 集合
-     * @return true 如果包含敏感数据
-     */
+    /// 检测 KeyValues 是否包含敏感数据。
+    ///
+    /// @param keyValues KeyValue 集合
+    /// @return true 如果包含敏感数据
     private boolean containsSensitiveData(KeyValues keyValues) {
         if (keyValues == null || keyValues.stream().count() == 0) {
             return false;
@@ -171,12 +157,10 @@ public class SensitiveDataObservationFilter implements ObservationFilter {
         return false;
     }
 
-    /**
-     * 详细记录敏感字段（DEBUG 级别）。
-     *
-     * @param keyValues KeyValue 集合
-     * @param category 标签类别（lowCardinality 或 highCardinality）
-     */
+    /// 详细记录敏感字段（DEBUG 级别）。
+    ///
+    /// @param keyValues KeyValue 集合
+    /// @param category 标签类别（lowCardinality 或 highCardinality）
     private void logSensitiveFields(KeyValues keyValues, String category) {
         if (keyValues == null || keyValues.stream().count() == 0) {
             return;
@@ -194,13 +178,11 @@ public class SensitiveDataObservationFilter implements ObservationFilter {
         }
     }
 
-    /**
-     * 脱敏 KeyValue 集合。
-     *
-     * @param keyValues 原始 KeyValue 集合
-     * @return 脱敏后的 KeyValue 集合
-     * @deprecated 改用检测 + 告警策略，不再直接修改 Context
-     */
+    /// 脱敏 KeyValue 集合。
+    ///
+    /// @param keyValues 原始 KeyValue 集合
+    /// @return 脱敏后的 KeyValue 集合
+    /// @deprecated 改用检测 + 告警策略，不再直接修改 Context
     @Deprecated
     private KeyValues maskKeyValues(KeyValues keyValues) {
         if (keyValues == null || keyValues.stream().count() == 0) {
@@ -233,12 +215,10 @@ public class SensitiveDataObservationFilter implements ObservationFilter {
         return maskedKeyValues;
     }
 
-    /**
-     * 检查字段名是否敏感。
-     *
-     * @param fieldName 字段名
-     * @return true 如果字段名敏感
-     */
+    /// 检查字段名是否敏感。
+    ///
+    /// @param fieldName 字段名
+    /// @return true 如果字段名敏感
     private boolean isSensitiveField(String fieldName) {
         if (fieldName == null) {
             return false;
@@ -259,12 +239,10 @@ public class SensitiveDataObservationFilter implements ObservationFilter {
         return false;
     }
 
-    /**
-     * 脱敏敏感值。
-     *
-     * @param value 原始值
-     * @return 脱敏后的值
-     */
+    /// 脱敏敏感值。
+    ///
+    /// @param value 原始值
+    /// @return 脱敏后的值
     private String maskSensitiveValue(String value) {
         if (value == null || value.isEmpty()) {
             return value;

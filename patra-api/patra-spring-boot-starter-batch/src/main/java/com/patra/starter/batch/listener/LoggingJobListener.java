@@ -6,41 +6,33 @@ import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobExecutionListener;
 
-/**
- * 日志记录 Job 监听器
- *
- * <p>记录 Spring Batch Job 的启动、完成、失败等关键事件
- *
- * <p>日志级别：
- *
- * <ul>
- *   <li>启动：INFO
- *   <li>成功完成：INFO
- *   <li>失败：ERROR
- * </ul>
- *
- * @author Patra Team
- * @since 1.0.0
- */
+/// 日志记录 Job 监听器。
+///
+/// 记录 Spring Batch Job 的启动、完成、失败等关键事件。
+///
+/// ## 日志级别
+///
+/// - 启动：INFO
+/// - 成功完成：INFO
+/// - 失败：ERROR
+///
+/// @author Patra Team
+/// @since 1.0.0
 @Slf4j
 public class LoggingJobListener implements JobExecutionListener {
 
-  /**
-   * Job 启动前触发
-   *
-   * @param jobExecution Job 执行上下文
-   */
+  /// Job 启动前触发。
+  ///
+  /// @param jobExecution Job 执行上下文
   @Override
   public void beforeJob(JobExecution jobExecution) {
     String jobName = jobExecution.getJobInstance().getJobName();
     log.info("Job [{}] 启动，执行 ID: {}", jobName, jobExecution.getId());
   }
 
-  /**
-   * Job 完成后触发
-   *
-   * @param jobExecution Job 执行上下文
-   */
+  /// Job 完成后触发。
+  ///
+  /// @param jobExecution Job 执行上下文
   @Override
   public void afterJob(JobExecution jobExecution) {
     String jobName = jobExecution.getJobInstance().getJobName();
@@ -61,12 +53,10 @@ public class LoggingJobListener implements JobExecutionListener {
     }
   }
 
-  /**
-   * 计算 Job 执行耗时
-   *
-   * @param jobExecution Job 执行上下文
-   * @return 耗时（毫秒）
-   */
+  /// 计算 Job 执行耗时。
+  ///
+  /// @param jobExecution Job 执行上下文
+  /// @return 耗时（毫秒）
   private long calculateDuration(JobExecution jobExecution) {
     if (jobExecution.getStartTime() == null || jobExecution.getEndTime() == null) {
       return 0;

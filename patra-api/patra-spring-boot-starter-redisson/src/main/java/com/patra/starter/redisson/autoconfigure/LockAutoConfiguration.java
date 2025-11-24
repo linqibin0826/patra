@@ -14,14 +14,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
-/**
- * 分布式锁自动配置
- * <p>
- * 配置所有锁相关的 Bean（LockKeyGenerator、LockExecutor、LockAspect）
- *
- * @author Patra Team
- * @since 1.0.0
- */
+/// 分布式锁自动配置。
+///
+/// 配置所有锁相关的 Bean（LockKeyGenerator、LockExecutor、LockAspect）
+///
+/// @author Patra Team
+/// @since 1.0.0
 @Slf4j
 @AutoConfiguration(after = RedissonAutoConfiguration.class)
 @ConditionalOnClass({RedissonClient.class, RLock.class})
@@ -30,38 +28,32 @@ import org.springframework.context.annotation.Bean;
 @EnableConfigurationProperties(RedissonProperties.class)
 public class LockAutoConfiguration {
 
-    /**
-     * 配置锁键生成器
-     *
-     * @param properties Redisson 配置属性
-     * @return LockKeyGenerator
-     */
+    /// 配置锁键生成器。
+    ///
+    /// @param properties Redisson 配置属性
+    /// @return LockKeyGenerator
     @Bean
     public LockKeyGenerator lockKeyGenerator(RedissonProperties properties) {
         log.info("初始化 LockKeyGenerator");
         return new LockKeyGenerator(properties);
     }
 
-    /**
-     * 配置锁执行器
-     *
-     * @param redissonClient Redisson 客户端
-     * @return LockExecutor
-     */
+    /// 配置锁执行器。
+    ///
+    /// @param redissonClient Redisson 客户端
+    /// @return LockExecutor
     @Bean
     public LockExecutor lockExecutor(RedissonClient redissonClient) {
         log.info("初始化 LockExecutor");
         return new LockExecutor(redissonClient);
     }
 
-    /**
-     * 配置锁切面
-     *
-     * @param lockKeyGenerator 锁键生成器
-     * @param lockExecutor     锁执行器
-     * @param properties       Redisson 配置属性
-     * @return LockAspect
-     */
+    /// 配置锁切面。
+    ///
+    /// @param lockKeyGenerator 锁键生成器
+    /// @param lockExecutor     锁执行器
+    /// @param properties       Redisson 配置属性
+    /// @return LockAspect
     @Bean
     public LockAspect lockAspect(
         LockKeyGenerator lockKeyGenerator,

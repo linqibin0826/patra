@@ -8,34 +8,29 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
-/**
- * 公共标签过滤器。
- *
- * <p>功能：
- * <ul>
- *   <li>自动为所有 Observation 添加公共标签（低基数标签）</li>
- *   <li>添加系统标签：application、environment、region、cluster</li>
- *   <li>添加用户自定义标签</li>
- * </ul>
- *
- * <p>标签来源：
- * <ul>
- *   <li>application: {@code patra.observability.applicationName}</li>
- *   <li>environment: {@code patra.observability.environment}</li>
- *   <li>region: {@code patra.observability.region}</li>
- *   <li>cluster: {@code patra.observability.cluster}</li>
- *   <li>自定义标签: {@code patra.observability.metrics.commonTags}</li>
- * </ul>
- *
- * <p>注意：
- * <ul>
- *   <li>所有标签添加到 {@code lowCardinalityKeyValues}（低基数）</li>
- *   <li>如果标签值为 {@code null}，则跳过该标签</li>
- * </ul>
- *
- * @author Jobs
- * @since 1.0.0
- */
+/// 公共标签过滤器。
+///
+/// 功能：
+///
+/// - 自动为所有 Observation 添加公共标签（低基数标签）
+/// - 添加系统标签：application、environment、region、cluster
+/// - 添加用户自定义标签
+///
+/// 标签来源：
+///
+/// - application: patra.observability.applicationName
+/// - environment: patra.observability.environment
+/// - region: patra.observability.region
+/// - cluster: patra.observability.cluster
+/// - 自定义标签: patra.observability.metrics.commonTags
+///
+/// 注意：
+///
+/// - 所有标签添加到 lowCardinalityKeyValues（低基数）
+/// - 如果标签值为 null，则跳过该标签
+///
+/// @author Jobs
+/// @since 1.0.0
 public class CommonTagsObservationFilter implements ObservationFilter {
 
     private static final Logger log = LoggerFactory.getLogger(CommonTagsObservationFilter.class);
@@ -46,15 +41,13 @@ public class CommonTagsObservationFilter implements ObservationFilter {
     private final String cluster;
     private final Map<String, String> customTags;
 
-    /**
-     * 构造函数。
-     *
-     * @param applicationName 应用名称
-     * @param environment 环境标识
-     * @param region 区域标识
-     * @param cluster 集群标识
-     * @param customTags 自定义标签
-     */
+    /// 构造函数。
+    ///
+    /// @param applicationName 应用名称
+    /// @param environment 环境标识
+    /// @param region 区域标识
+    /// @param cluster 集群标识
+    /// @param customTags 自定义标签
     public CommonTagsObservationFilter(
         String applicationName,
         String environment,
@@ -72,12 +65,10 @@ public class CommonTagsObservationFilter implements ObservationFilter {
             applicationName, environment, region, cluster, this.customTags.size());
     }
 
-    /**
-     * 为 Observation Context 添加公共标签。
-     *
-     * @param context Observation 上下文
-     * @return 添加了公共标签的上下文
-     */
+    /// 为 Observation Context 添加公共标签。
+    ///
+    /// @param context Observation 上下文
+    /// @return 添加了公共标签的上下文
     @Override
     public Observation.Context map(Observation.Context context) {
         // 添加系统标签

@@ -11,30 +11,27 @@ import org.redisson.api.RedissonClient;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-/**
- * 分布式锁执行器
- * <p>
- * 负责执行锁的获取、释放和业务逻辑调用。
- *
- * @author Patra Team
- * @since 1.0.0
- */
+/// 分布式锁执行器。
+///
+/// 负责执行锁的获取、释放和业务逻辑调用。
+///
+/// @author Patra Team
+/// @since 1.0.0
 @Slf4j
 @RequiredArgsConstructor
 public class LockExecutor {
 
+    /// Redisson 客户端
     private final RedissonClient redissonClient;
 
-    /**
-     * 执行带锁的业务逻辑
-     *
-     * @param context        锁上下文
-     * @param businessLogic  业务逻辑（Supplier）
-     * @param <T>            返回值类型
-     * @return 业务逻辑执行结果
-     * @throws LockAcquisitionException   锁获取失败时抛出
-     * @throws LockInfrastructureException Redis 基础设施错误时抛出
-     */
+    /// 执行带锁的业务逻辑。
+    ///
+    /// @param context        锁上下文
+    /// @param businessLogic  业务逻辑（Supplier）
+    /// @param <T>            返回值类型
+    /// @return 业务逻辑执行结果
+    /// @throws LockAcquisitionException   锁获取失败时抛出
+    /// @throws LockInfrastructureException Redis 基础设施错误时抛出
     public <T> T execute(LockContext context, Supplier<T> businessLogic) {
         // 获取锁
         RLock lock = getLock(context);
@@ -73,12 +70,10 @@ public class LockExecutor {
         }
     }
 
-    /**
-     * 根据锁类型获取对应的 RLock 实例
-     *
-     * @param context 锁上下文
-     * @return RLock 实例
-     */
+    /// 根据锁类型获取对应的 RLock 实例。
+    ///
+    /// @param context 锁上下文
+    /// @return RLock 实例
     private RLock getLock(LockContext context) {
         return switch (context.getLockType()) {
             case REENTRANT -> redissonClient.getLock(context.getLockKey());
@@ -94,14 +89,12 @@ public class LockExecutor {
         };
     }
 
-    /**
-     * 尝试获取锁
-     *
-     * @param lock    RLock 实例
-     * @param context 锁上下文
-     * @return true 如果成功获取锁
-     * @throws InterruptedException 锁获取过程被中断时抛出
-     */
+    /// 尝试获取锁。
+    ///
+    /// @param lock    RLock 实例
+    /// @param context 锁上下文
+    /// @return true 如果成功获取锁
+    /// @throws InterruptedException 锁获取过程被中断时抛出
     private boolean tryLock(RLock lock, LockContext context) throws InterruptedException {
         if (context.isWatchdogEnabled()) {
             // 启用看门狗机制（leaseTime = -1）
@@ -118,12 +111,10 @@ public class LockExecutor {
         }
     }
 
-    /**
-     * 释放锁
-     *
-     * @param lock    RLock 实例
-     * @param context 锁上下文
-     */
+    /// 释放锁。
+    ///
+    /// @param lock    RLock 实例
+    /// @param context 锁上下文
     private void releaseLock(RLock lock, LockContext context) {
         try {
             if (lock.isHeldByCurrentThread()) {

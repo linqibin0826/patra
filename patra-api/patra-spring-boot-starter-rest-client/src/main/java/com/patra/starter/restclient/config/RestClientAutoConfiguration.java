@@ -15,21 +15,22 @@ import org.springframework.web.client.RestClient;
 
 /// REST Client 自动配置类。
 ///
-/// <p>提供默认的 RestClient Bean 和标准的拦截器支持。
+/// 提供默认的 RestClient Bean 和标准的拦截器支持。
 ///
-/// <h2>自动配置内容</h2>
-/// <ul>
-///   <li>{@code defaultRestClient}: 默认 RestClient Bean
-///   <li>{@code defaultHttpRequestFactory}: HTTP 请求工厂（配置超时）
-///   <li>{@code loggingInterceptor}: 日志拦截器（可选）
-/// </ul>
+/// ## 自动配置内容
 ///
-/// <h2>拦截器扩展</h2>
-/// <p>外部模块（如 patra-spring-boot-starter-observability）可以注册 Spring 标准的
+/// - `defaultRestClient`: 默认 RestClient Bean
+/// - `defaultHttpRequestFactory`: HTTP 请求工厂（配置超时）
+/// - `loggingInterceptor`: 日志拦截器（可选）
+///
+/// ## 拦截器扩展
+///
+/// 外部模块（如 patra-spring-boot-starter-observability）可以注册 Spring 标准的
 /// {@link ClientHttpRequestInterceptor} 来注入可观测性、安全、审计等横切关注点。
 ///
-/// <h2>设计说明</h2>
-/// <p>追踪传播和指标收集功能已移至 patra-spring-boot-starter-observability，
+/// ## 设计说明
+///
+/// 追踪传播和指标收集功能已移至 patra-spring-boot-starter-observability，
 /// 通过 Spring 标准的 {@link ClientHttpRequestInterceptor} 接口提供，符合关注点分离原则。
 ///
 /// @author linqibin
@@ -45,7 +46,7 @@ public class RestClientAutoConfiguration {
 
   /// 创建默认的 RestClient Bean。
   ///
-  /// <p>自动注入所有已注册的 {@link ClientHttpRequestInterceptor}，并应用全局超时配置。
+  /// 自动注入所有已注册的 {@link ClientHttpRequestInterceptor}，并应用全局超时配置。
   ///
   /// @param properties 配置属性
   /// @param interceptorsProvider Spring 标准拦截器提供者
@@ -96,7 +97,7 @@ public class RestClientAutoConfiguration {
 
   /// 创建日志拦截器（可选）。
   ///
-  /// <p>日志拦截器不属于可观测性范畴，而是基础设施层的调试工具，因此保留在 core 模块中。
+  /// 日志拦截器不属于可观测性范畴，而是基础设施层的调试工具，因此保留在 core 模块中。
   ///
   /// @param properties 配置属性
   /// @return 日志拦截器

@@ -12,54 +12,46 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * 高基数标签过滤器。
- *
- * <p>功能：
- * <ul>
- *   <li>过滤高基数标签（userId、requestId、traceId 等）</li>
- *   <li>防止时序数据库性能问题</li>
- *   <li>支持自定义高基数标签黑名单</li>
- * </ul>
- *
- * <p>高基数标签的危害：
- * <ul>
- *   <li>值的可能性非常多（如 userId 可能有数百万个不同值）</li>
- *   <li>导致时序数据库创建大量唯一的时间序列</li>
- *   <li>严重影响查询性能和存储成本</li>
- * </ul>
- *
- * <p>默认高基数标签黑名单：
- * <ul>
- *   <li>userId、user_id</li>
- *   <li>requestId、request_id</li>
- *   <li>traceId、trace_id</li>
- *   <li>spanId、span_id</li>
- *   <li>sessionId、session_id</li>
- *   <li>timestamp</li>
- *   <li>uuid</li>
- *   <li>ip</li>
- *   <li>email</li>
- *   <li>phone</li>
- * </ul>
- *
- * <p>使用场景：
- * <ul>
- *   <li>保护时序数据库：防止高基数标签导致的性能问题</li>
- *   <li>生产环境必备：确保指标系统的稳定性</li>
- *   <li>开发规范：强制开发者使用低基数标签</li>
- * </ul>
- *
- * @author Jobs
- * @since 1.0.0
- */
+/// 高基数标签过滤器。
+///
+/// 功能：
+///
+/// - 过滤高基数标签（userId、requestId、traceId 等）
+/// - 防止时序数据库性能问题
+/// - 支持自定义高基数标签黑名单
+///
+/// 高基数标签的危害：
+///
+/// - 值的可能性非常多（如 userId 可能有数百万个不同值）
+/// - 导致时序数据库创建大量唯一的时间序列
+/// - 严重影响查询性能和存储成本
+///
+/// 默认高基数标签黑名单：
+///
+/// - userId、user_id
+/// - requestId、request_id
+/// - traceId、trace_id
+/// - spanId、span_id
+/// - sessionId、session_id
+/// - timestamp
+/// - uuid
+/// - ip
+/// - email
+/// - phone
+///
+/// 使用场景：
+///
+/// - 保护时序数据库：防止高基数标签导致的性能问题
+/// - 生产环境必备：确保指标系统的稳定性
+/// - 开发规范：强制开发者使用低基数标签
+///
+/// @author Jobs
+/// @since 1.0.0
 public class HighCardinalityMeterFilter implements MeterFilter {
 
     private static final Logger log = LoggerFactory.getLogger(HighCardinalityMeterFilter.class);
 
-    /**
-     * 默认高基数标签黑名单。
-     */
+    /// 默认高基数标签黑名单。
     private static final Set<String> DEFAULT_HIGH_CARDINALITY_KEYS = Set.of(
         "userId", "user_id",
         "requestId", "request_id",
@@ -75,18 +67,14 @@ public class HighCardinalityMeterFilter implements MeterFilter {
 
     private final Set<String> highCardinalityKeys;
 
-    /**
-     * 构造函数（使用默认黑名单）。
-     */
+    /// 构造函数（使用默认黑名单）。
     public HighCardinalityMeterFilter() {
         this(null);
     }
 
-    /**
-     * 构造函数。
-     *
-     * @param customHighCardinalityKeys 用户自定义高基数标签黑名单（null 表示仅使用默认黑名单）
-     */
+    /// 构造函数。
+    ///
+    /// @param customHighCardinalityKeys 用户自定义高基数标签黑名单（null 表示仅使用默认黑名单）
     public HighCardinalityMeterFilter(Set<String> customHighCardinalityKeys) {
         this.highCardinalityKeys = new HashSet<>(DEFAULT_HIGH_CARDINALITY_KEYS);
 
@@ -99,12 +87,10 @@ public class HighCardinalityMeterFilter implements MeterFilter {
             this.highCardinalityKeys.size(), this.highCardinalityKeys);
     }
 
-    /**
-     * 过滤高基数标签。
-     *
-     * @param id Meter ID
-     * @return 移除高基数标签后的 Meter ID
-     */
+    /// 过滤高基数标签。
+    ///
+    /// @param id Meter ID
+    /// @return 移除高基数标签后的 Meter ID
     @Override
     public Meter.Id map(Meter.Id id) {
         List<Tag> originalTags = id.getTags();
