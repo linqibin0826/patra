@@ -6,10 +6,8 @@ import com.patra.catalog.app.usecase.meshimport.MeshProgressQueryOrchestrator;
 import com.patra.catalog.app.usecase.meshimport.dto.MeshImportResultDTO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -60,14 +58,14 @@ public class MeshImportController {
   /// @return 导入任务结果
   /// @throws IllegalStateException 如果已有任务正在运行（返回 409 Conflict）
   @PostMapping("/start")
-  public ResponseEntity<MeshImportResultDTO> startImport() {
+  public MeshImportResultDTO startImport() {
     log.info("收到 MeSH 导入请求，使用配置文件默认值");
 
     MeshImportResultDTO result = meshImportOrchestrator.startImport();
 
     log.info("MeSH 导入任务已创建，任务 ID：{}", result.getTaskId());
 
-    return ResponseEntity.ok(result);
+    return result;
   }
 
   /// 重试失败任务。
@@ -76,17 +74,15 @@ public class MeshImportController {
   ///
   /// @param taskId 任务 ID
   /// @return 导入任务结果
-  /// @throws IllegalArgumentException 如果任务不存在（返回 404 Not Found）
-  /// @throws IllegalStateException 如果任务状态不允许重试（返回 409 Conflict）
   @PostMapping("/retry/{taskId}")
-  public ResponseEntity<MeshImportResultDTO> retryFailedTask(@PathVariable @NotNull Long taskId) {
+  public MeshImportResultDTO retryFailedTask(@PathVariable @NotNull Long taskId) {
     log.info("收到重试失败任务请求，任务 ID：{}", taskId);
 
     MeshImportResultDTO result = meshImportOrchestrator.retryFailedTask(taskId);
 
     log.info("MeSH 导入任务重试已启动，任务 ID：{}", taskId);
 
-    return ResponseEntity.ok(result);
+    return result;
   }
 
   /// 清除进度重新开始。
@@ -98,8 +94,7 @@ public class MeshImportController {
   /// @throws IllegalStateException 如果有任务正在运行（返回 409 Conflict）
   /// @throws IllegalArgumentException 如果未确认清除（返回 400 Bad Request）
   @PostMapping("/clear")
-  public ResponseEntity<Map<String, Object>> clearAndRestart(
-      @Valid @RequestBody ClearImportRequest request) {
+  public ClearImportResponse clearAndRestart(@Valid @RequestBody ClearImportRequest request) {
     log.info("收到清除进度请求，确认清除：{}", request.confirmClear());
 
     // 验证确认标志
@@ -111,7 +106,7 @@ public class MeshImportController {
 
     log.info("MeSH 导入进度已清除");
 
-    return ResponseEntity.ok(Map.of("success", true, "message", "进度已清除，可以重新开始导入"));
+    return new ClearImportResponse(true, "进度已清除，可以重新开始导入");
   }
 
   /// 查询导入进度（User Story 2 - 实时监控导入进度）。
@@ -131,7 +126,7 @@ public class MeshImportController {
   /// @throws IllegalArgumentException 如果任务不存在（返回 404 Not Found）
   /// @since 0.1.0
   @GetMapping("/progress/{taskId}")
-  public ResponseEntity<MeshProgressDTO> getProgress(@PathVariable @NotNull Long taskId) {
+  public MeshProgressDTO getProgress(@PathVariable @NotNull Long taskId) {
     log.info("收到查询导入进度请求，任务 ID：{}", taskId);
 
     MeshProgressDTO progress = meshProgressQueryOrchestrator.queryProgress(taskId);
@@ -140,7 +135,7 @@ public class MeshImportController {
         "查询进度成功，任务 ID：{}，整体进度：{}%，处理速度：{} 记录/秒",
         taskId, progress.overallProgress(), progress.processSpeed());
 
-    return ResponseEntity.ok(progress);
+    return progress;
   }
 
   /// 清除导入请求。
@@ -148,4 +143,10 @@ public class MeshImportController {
   /// @param confirmClear 确认清除标志（必须为 true）
   public record ClearImportRequest(
       @NotNull(message = "confirmClear 字段不能为空") Boolean confirmClear) {}
+
+  /// 清除导入响应。
+  ///
+  /// @param success 操作是否成功
+  /// @param message 操作结果消息
+  public record ClearImportResponse(boolean success, String message) {}
 }

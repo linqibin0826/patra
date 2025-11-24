@@ -12,31 +12,36 @@
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "ing_plan", autoResultMap = true)
 public class PlanDO extends BaseDO {
+    
+    /// 字段注释
     @TableField("plan_key")
     private String planKey;
 
+    /// 字段注释
     @TableField("status_code")
     private String statusCode;
 
-    // JSON 列使用 JsonNode + TypeHandler
+    /// 字段注释
     @TableField(value = "window_spec", typeHandler = JacksonTypeHandler.class)
     private JsonNode windowSpec;
 }
 
-// 2. 创建 Mapper 接口
+/// 2. 创建 Mapper 接口
 public interface PlanMapper extends BaseMapper<PlanDO> {
-    // 自定义查询方法
+    /// 自定义查询方法
     PlanDO findByPlanKey(@Param("planKey") String planKey);
 }
 
-// 3. 创建 MapStruct 转换器
+/// 3. 创建 MapStruct 转换器
 @Mapper(componentModel = "spring")
 public interface PlanConverter {
     PlanDO toEntity(PlanAggregate aggregate);
     PlanAggregate toAggregate(PlanDO entity);
 }
 
-// 4. 实现仓储接口
+/// 4. 实现仓储接口
+/// @author linqibin 
+/// @since 0.1.0
 @Repository
 @RequiredArgsConstructor
 public class PlanRepositoryImpl implements PlanRepository {
@@ -149,95 +154,6 @@ public interface OutboxMessageConverter {
 
 </details>
 
-### 场景 2: 批量操作优化
-
-<details>
-<summary>查看批量插入和更新实现</summary>
-
-```java
-@Repository
-@RequiredArgsConstructor
-public class OutboxRepositoryImpl implements OutboxRepository {
-
-    private final OutboxMessageMapper mapper;
-    private final OutboxMessageConverter converter;
-
-    // ❌ 错误: 逐条插入
-    public void saveAllWrong(List<OutboxMessage> messages) {
-        for (OutboxMessage msg : messages) {
-            mapper.insert(converter.toEntity(msg));  // N 次数据库调用
-        }
-    }
-
-    // ✅ 正确: 批量插入
-    @Override
-    public void saveAll(List<OutboxMessage> messages) {
-        if (messages.isEmpty()) return;
-
-        List<OutboxMessageDO> entities = messages.stream()
-            .map(converter::toEntity)
-            .collect(Collectors.toList());
-
-        // 使用 MyBatis-Plus 批量插入 (100 条一批)
-        new ServiceImpl<>(OutboxMessageMapper.class, OutboxMessageDO.class)
-            .saveBatch(entities, 100);
-    }
-}
-```
-
-</details>
-
-### 场景 3: 避免 N+1 查询
-
-<details>
-<summary>查看优化方案</summary>
-
-```java
-// ❌ 错误: N+1 查询
-public void processPlansWrong() {
-    List<PlanDO> plans = planMapper.selectList(wrapper);  // 1 次查询
-
-    for (PlanDO plan : plans) {
-        // ❌ 每个 plan 查询一次，共 N 次
-        List<SliceDO> slices = sliceMapper.selectList(
-            Wrappers.lambdaQuery(SliceDO.class)
-                .eq(SliceDO::getPlanId, plan.getId())
-        );
-        // 处理...
-    }
-}
-
-// ✅ 正确: 批量查询
-public void processPlans() {
-    // 1. 查询所有 plans
-    List<PlanDO> plans = planMapper.selectList(wrapper);
-
-    // 2. 批量查询所有 slices
-    List<Long> planIds = plans.stream()
-        .map(PlanDO::getId)
-        .collect(Collectors.toList());
-
-    List<SliceDO> slices = sliceMapper.selectList(
-        Wrappers.lambdaQuery(SliceDO.class)
-            .in(SliceDO::getPlanId, planIds)  // 1 次查询
-    );
-
-    // 3. 在内存中分组
-    Map<Long, List<SliceDO>> slicesByPlan = slices.stream()
-        .collect(Collectors.groupingBy(SliceDO::getPlanId));
-
-    // 4. 处理
-    for (PlanDO plan : plans) {
-        List<SliceDO> planSlices = slicesByPlan.getOrDefault(
-            plan.getId(), List.of()
-        );
-        // 处理...
-    }
-}
-```
-
-</details>
-
 ---
 
 ## 📋 速查表
@@ -251,19 +167,6 @@ public void processPlans() {
 | @TableField + typeHandler | JSON 列 | `@TableField(value="data", typeHandler=JacksonTypeHandler.class)` |
 | @TableId | 主键 | `@TableId(type=IdType.AUTO)` |
 | @Version | 乐观锁 | `@Version private Long version` |
-
-### LambdaQueryWrapper 常用方法
-
-| 方法 | 说明 | 示例 |
-|------|------|------|
-| eq | 等于 | `.eq(PlanDO::getPlanKey, "key")` |
-| ne | 不等于 | `.ne(PlanDO::getStatus, "DELETED")` |
-| in | IN 查询 | `.in(PlanDO::getId, ids)` |
-| like | 模糊查询 | `.like(PlanDO::getName, "test")` |
-| ge / le | 大于等于 / 小于等于 | `.ge(PlanDO::getCreatedAt, start)` |
-| orderByDesc | 降序排序 | `.orderByDesc(PlanDO::getCreatedAt)` |
-| select | 选择字段 | `.select(PlanDO::getId, PlanDO::getName)` |
-| last | 添加 SQL 片段 | `.last("LIMIT 10")` |
 
 ### 基础设施层约束
 
@@ -291,10 +194,10 @@ public void processPlans() {
 @TableName(value = "ing_plan", autoResultMap = true)  // 表映射
 public class PlanDO extends BaseDO {  // 继承 BaseDO (id, version, created_at, etc.)
 
-    @TableField("plan_key")  // 字段映射
+    @TableField("plan_key")  
     private String planKey;
 
-    // JSON 列处理
+    /// 字段注释
     @TableField(value = "window_spec", typeHandler = JacksonTypeHandler.class)
     private JsonNode windowSpec;
 }
@@ -389,125 +292,6 @@ public class PlanRepositoryImpl implements PlanRepository {
 }
 ```
 
----
-
-## 🔧 高级用法
-
-### LambdaQueryWrapper 实战
-
-<details>
-<summary>查看常用查询模式</summary>
-
-```java
-// 1. 简单条件查询
-LambdaQueryWrapper<PlanDO> wrapper = Wrappers.lambdaQuery();
-wrapper.eq(PlanDO::getPlanKey, "key")
-       .eq(PlanDO::getDeleted, 0);
-PlanDO plan = mapper.selectOne(wrapper);
-
-// 2. 多条件 AND 查询
-wrapper = Wrappers.lambdaQuery();
-wrapper.eq(PlanDO::getProvenanceCode, "PUBMED")
-       .eq(PlanDO::getOperationCode, "HARVEST")
-       .in(PlanDO::getStatusCode, List.of("READY", "RUNNING"));
-List<PlanDO> plans = mapper.selectList(wrapper);
-
-// 3. 动态条件查询 (条件为 null 时跳过)
-wrapper = Wrappers.lambdaQuery();
-wrapper.eq(code != null, PlanDO::getProvenanceCode, code)
-       .ge(start != null, PlanDO::getCreatedAt, start)
-       .le(end != null, PlanDO::getCreatedAt, end);
-List<PlanDO> plans = mapper.selectList(wrapper);
-
-// 4. 排序和分页
-wrapper = Wrappers.lambdaQuery();
-wrapper.eq(PlanDO::getProvenanceCode, "PUBMED")
-       .orderByDesc(PlanDO::getCreatedAt)
-       .last("LIMIT 10");
-List<PlanDO> recent = mapper.selectList(wrapper);
-
-// 5. 只查询部分字段
-wrapper = Wrappers.lambdaQuery();
-wrapper.select(PlanDO::getId, PlanDO::getPlanKey, PlanDO::getStatusCode)
-       .eq(PlanDO::getProvenanceCode, "PUBMED");
-List<PlanDO> lightweight = mapper.selectList(wrapper);
-
-// 6. 统计查询
-wrapper = Wrappers.lambdaQuery();
-wrapper.eq(PlanDO::getStatusCode, "READY");
-Long count = mapper.selectCount(wrapper);
-```
-
-</details>
-
-### XML Mapper 实战
-
-<details>
-<summary>查看 XML Mapper 示例</summary>
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.patra.ingest.infra.persistence.mapper.PlanMapper">
-
-  <!-- ResultMap 定义 -->
-  <resultMap id="PlanResultMap" type="com.patra.ingest.infra.persistence.entity.PlanDO">
-    <id column="id" property="id"/>
-    <result column="plan_key" property="planKey"/>
-  </resultMap>
-
-  <!-- 简单查询 -->
-  <select id="findByPlanKey" resultMap="PlanResultMap">
-    SELECT * FROM ing_plan
-    WHERE plan_key = #{planKey}
-      AND deleted = 0
-  </select>
-
-  <!-- IN 查询 -->
-  <select id="findByStatusCodes" resultMap="PlanResultMap">
-    SELECT * FROM ing_plan
-    WHERE provenance_code = #{provenanceCode}
-      AND status_code IN
-      <foreach collection="statusCodes" item="status" open="(" separator="," close=")">
-        #{status}
-      </foreach>
-      AND deleted = 0
-    ORDER BY created_at DESC
-  </select>
-
-  <!-- 批量更新 -->
-  <update id="batchUpdateStatus">
-    UPDATE ing_plan
-    SET status_code = #{statusCode},
-        updated_at = NOW(),
-        version = version + 1
-    WHERE id IN
-    <foreach collection="ids" item="id" open="(" separator="," close=")">
-      #{id}
-    </foreach>
-      AND deleted = 0
-  </update>
-
-  <!-- JSON 部分更新 -->
-  <update id="updateRemarks">
-    UPDATE ing_plan
-    SET record_remarks = JSON_SET(
-          COALESCE(record_remarks, '{}'),
-          '$.updateReason',
-          #{reason}
-        ),
-        version = version + 1
-    WHERE id = #{id}
-  </update>
-
-</mapper>
-```
-
-</details>
-
----
-
 ## ⚠️ 常见问题与解决
 
 ### 问题 1: 乐观锁更新失败
@@ -571,7 +355,6 @@ try (SqlSession session = sqlSessionFactory.openSession(ExecutorType.BATCH)) {
 - [ ] JSON 列使用 JsonNode + JacksonTypeHandler
 
 ### 性能优化
-- [ ] 避免 N+1 查询（使用批量查询）
 - [ ] 批量操作超过 10 条使用 saveBatch
 - [ ] 只查询需要的字段（使用 select）
 - [ ] 为常用查询添加索引
@@ -584,7 +367,7 @@ try (SqlSession session = sqlSessionFactory.openSession(ExecutorType.BATCH)) {
 ### 代码质量
 - [ ] 复杂查询使用 XML Mapper
 - [ ] DEBUG 级别记录 CRUD 日志
-- [ ] 单元测试覆盖仓储实现
+- [ ] 单元测试 + 集成测试覆盖仓储实现
 
 ---
 
