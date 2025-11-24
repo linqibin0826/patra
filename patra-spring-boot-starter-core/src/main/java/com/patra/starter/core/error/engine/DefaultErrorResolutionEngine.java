@@ -4,6 +4,7 @@ import com.patra.common.error.ApplicationException;
 import com.patra.common.error.codes.ErrorCodeLike;
 import com.patra.common.error.trait.ErrorTrait;
 import com.patra.common.error.trait.HasErrorTraits;
+import com.patra.common.error.trait.StandardErrorTrait;
 import com.patra.starter.core.error.config.ErrorProperties;
 import com.patra.starter.core.error.model.ErrorResolution;
 import com.patra.starter.core.error.model.SimpleErrorCode;
@@ -24,17 +25,20 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
 
   private static final String DEFAULT_CONTEXT = "UNKNOWN";
 
-  /// 将错误特征映射到 HTTP 状态码后缀。
+  /// 将标准错误特征映射到 HTTP 状态码后缀。
+  ///
+  /// 注意: 这个映射只包含 {@link StandardErrorTrait} 的映射。
+  /// 自定义 {@link ErrorTrait} 实现应该通过 {@link com.patra.starter.core.error.spi.ErrorMappingContributor} 提供映射。
   private static final Map<ErrorTrait, String> TRAIT_TO_CODE_MAP =
       Map.ofEntries(
-          Map.entry(ErrorTrait.NOT_FOUND, "0404"),
-          Map.entry(ErrorTrait.CONFLICT, "0409"),
-          Map.entry(ErrorTrait.RULE_VIOLATION, "0422"),
-          Map.entry(ErrorTrait.QUOTA_EXCEEDED, "0429"),
-          Map.entry(ErrorTrait.UNAUTHORIZED, "0401"),
-          Map.entry(ErrorTrait.FORBIDDEN, "0403"),
-          Map.entry(ErrorTrait.TIMEOUT, "0504"),
-          Map.entry(ErrorTrait.DEP_UNAVAILABLE, "0503"));
+          Map.entry(StandardErrorTrait.NOT_FOUND, "0404"),
+          Map.entry(StandardErrorTrait.CONFLICT, "0409"),
+          Map.entry(StandardErrorTrait.RULE_VIOLATION, "0422"),
+          Map.entry(StandardErrorTrait.QUOTA_EXCEEDED, "0429"),
+          Map.entry(StandardErrorTrait.UNAUTHORIZED, "0401"),
+          Map.entry(StandardErrorTrait.FORBIDDEN, "0403"),
+          Map.entry(StandardErrorTrait.TIMEOUT, "0504"),
+          Map.entry(StandardErrorTrait.DEP_UNAVAILABLE, "0503"));
 
   /// 将异常类名后缀映射到 HTTP 状态码后缀。
   private static final Map<String, String> NAMING_SUFFIX_TO_CODE_MAP =

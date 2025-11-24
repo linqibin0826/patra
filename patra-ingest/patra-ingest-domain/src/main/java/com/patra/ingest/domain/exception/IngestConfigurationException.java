@@ -1,8 +1,6 @@
 package com.patra.ingest.domain.exception;
 
-import com.patra.common.error.trait.ErrorTrait;
-import com.patra.common.error.trait.HasErrorTraits;
-import java.util.Set;
+import com.patra.common.error.trait.StandardErrorTrait;
 
 /// 采集配置异常。
 ///
@@ -25,7 +23,7 @@ import java.util.Set;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public class IngestConfigurationException extends IngestException implements HasErrorTraits {
+public class IngestConfigurationException extends IngestException {
 
   /// 标识上游数据源的 Provenance Code。
   private final String provenanceCode;
@@ -41,7 +39,7 @@ public class IngestConfigurationException extends IngestException implements Has
   /// @param operationCode Operation Code
   /// @param message 错误消息,应详细说明缺失或无效的字段
   public IngestConfigurationException(String provenanceCode, String operationCode, String message) {
-    super(message);
+    super(message, StandardErrorTrait.RULE_VIOLATION);
     this.provenanceCode = provenanceCode;
     this.operationCode = operationCode;
   }
@@ -56,14 +54,9 @@ public class IngestConfigurationException extends IngestException implements Has
   /// @param cause 根本原因
   public IngestConfigurationException(
       String provenanceCode, String operationCode, String message, Throwable cause) {
-    super(message, cause);
+    super(message, cause, StandardErrorTrait.RULE_VIOLATION);
     this.provenanceCode = provenanceCode;
     this.operationCode = operationCode;
-  }
-
-  @Override
-  public Set<ErrorTrait> getErrorTraits() {
-    return Set.of(ErrorTrait.RULE_VIOLATION);
   }
 
   /// 获取 Provenance Code。

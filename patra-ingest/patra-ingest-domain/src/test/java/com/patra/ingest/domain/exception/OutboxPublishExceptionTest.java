@@ -3,6 +3,7 @@ package com.patra.ingest.domain.exception;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.common.error.trait.ErrorTrait;
+import com.patra.common.error.trait.StandardErrorTrait;
 import com.patra.ingest.domain.exception.OutboxPublishException.Reason;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
@@ -129,8 +130,8 @@ class OutboxPublishExceptionTest {
       Set<ErrorTrait> headersTraits = headersException.getErrorTraits();
 
       // Then
-      assertThat(channelTraits).containsExactly(ErrorTrait.RULE_VIOLATION);
-      assertThat(headersTraits).containsExactly(ErrorTrait.RULE_VIOLATION);
+      assertThat(channelTraits).containsExactly(StandardErrorTrait.RULE_VIOLATION);
+      assertThat(headersTraits).containsExactly(StandardErrorTrait.RULE_VIOLATION);
     }
 
     @Test
@@ -143,7 +144,7 @@ class OutboxPublishExceptionTest {
       Set<ErrorTrait> traits = exception.getErrorTraits();
 
       // Then
-      assertThat(traits).containsExactly(ErrorTrait.DEP_UNAVAILABLE);
+      assertThat(traits).containsExactly(StandardErrorTrait.DEP_UNAVAILABLE);
     }
   }
 

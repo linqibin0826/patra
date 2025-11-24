@@ -7,6 +7,7 @@ import com.patra.common.error.ApplicationException;
 import com.patra.common.error.codes.ErrorCodeLike;
 import com.patra.common.error.trait.ErrorTrait;
 import com.patra.common.error.trait.HasErrorTraits;
+import com.patra.common.error.trait.StandardErrorTrait;
 import com.patra.starter.core.error.config.ErrorProperties;
 import com.patra.starter.core.error.model.ErrorResolution;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
@@ -192,14 +193,14 @@ class DefaultErrorResolutionEngineTest {
 
     static Stream<Arguments> provideErrorTraits() {
       return Stream.of(
-          Arguments.of(ErrorTrait.NOT_FOUND, "0404"),
-          Arguments.of(ErrorTrait.CONFLICT, "0409"),
-          Arguments.of(ErrorTrait.RULE_VIOLATION, "0422"),
-          Arguments.of(ErrorTrait.QUOTA_EXCEEDED, "0429"),
-          Arguments.of(ErrorTrait.UNAUTHORIZED, "0401"),
-          Arguments.of(ErrorTrait.FORBIDDEN, "0403"),
-          Arguments.of(ErrorTrait.TIMEOUT, "0504"),
-          Arguments.of(ErrorTrait.DEP_UNAVAILABLE, "0503"));
+          Arguments.of(StandardErrorTrait.NOT_FOUND, "0404"),
+          Arguments.of(StandardErrorTrait.CONFLICT, "0409"),
+          Arguments.of(StandardErrorTrait.RULE_VIOLATION, "0422"),
+          Arguments.of(StandardErrorTrait.QUOTA_EXCEEDED, "0429"),
+          Arguments.of(StandardErrorTrait.UNAUTHORIZED, "0401"),
+          Arguments.of(StandardErrorTrait.FORBIDDEN, "0403"),
+          Arguments.of(StandardErrorTrait.TIMEOUT, "0504"),
+          Arguments.of(StandardErrorTrait.DEP_UNAVAILABLE, "0503"));
     }
 
     @Test
@@ -214,7 +215,7 @@ class DefaultErrorResolutionEngineTest {
       class TestException extends RuntimeException implements HasErrorTraits {
         @Override
         public Set<ErrorTrait> getErrorTraits() {
-          return Set.of(ErrorTrait.NOT_FOUND);
+          return Set.of(StandardErrorTrait.NOT_FOUND);
         }
       }
 

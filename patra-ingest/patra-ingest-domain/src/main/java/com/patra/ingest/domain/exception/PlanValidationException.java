@@ -1,9 +1,6 @@
 package com.patra.ingest.domain.exception;
 
-import com.patra.common.error.trait.ErrorTrait;
-import com.patra.common.error.trait.HasErrorTraits;
-import java.util.EnumSet;
-import java.util.Set;
+import com.patra.common.error.trait.StandardErrorTrait;
 
 /// 计划验证异常。
 ///
@@ -23,7 +20,7 @@ import java.util.Set;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public class PlanValidationException extends IngestException implements HasErrorTraits {
+public class PlanValidationException extends IngestException {
 
   /// 验证失败的原因分类。
   ///
@@ -67,7 +64,7 @@ public class PlanValidationException extends IngestException implements HasError
   /// @param reason 失败原因
   /// @param cause 底层异常(可选)
   public PlanValidationException(String message, Reason reason, Throwable cause) {
-    super(message, cause);
+    super(message, cause, StandardErrorTrait.RULE_VIOLATION);
     this.reason = reason;
   }
 
@@ -84,10 +81,5 @@ public class PlanValidationException extends IngestException implements HasError
   /// @return 失败原因,可能为 `null`
   public Reason getReason() {
     return reason;
-  }
-
-  @Override
-  public Set<ErrorTrait> getErrorTraits() {
-    return EnumSet.of(ErrorTrait.RULE_VIOLATION);
   }
 }

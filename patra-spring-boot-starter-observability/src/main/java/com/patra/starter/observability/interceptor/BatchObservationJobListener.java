@@ -1,5 +1,8 @@
 package com.patra.starter.observability.interceptor;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
 import org.slf4j.Logger;
@@ -8,8 +11,7 @@ import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobExecutionListener;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.time.Duration;
 
 /// 批处理任务可观测性监听器。
 ///
@@ -54,15 +56,45 @@ public class BatchObservationJobListener implements JobExecutionListener {
 
     private final ObservationRegistry observationRegistry;
 
-    /// 存储正在执行的任务的 Observation（Key: JobExecution ID）。
-    private final ConcurrentMap<Long, Observation> observationMap = new ConcurrentHashMap<>();
+    /// 使用 Caffeine Cache 存储 Observation，自动过期防止内存泄漏。
+    ///
+    /// 配置：
+    /// - expireAfterWrite(24小时)：24 小时后自动清理未完成的 Job Observation
+    /// - maximumSize(1000)：限制最大缓存条目数
+    /// - recordStats()：记录缓存统计信息
+    /// - removalListener：过期时自动停止未关闭的 Observation
+    private final Cache<Long, Observation> observationCache;
 
     /// 构造函数。
     ///
     /// @param observationRegistry Observation 注册中心
     public BatchObservationJobListener(ObservationRegistry observationRegistry) {
         this.observationRegistry = observationRegistry;
+        this.observationCache = Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofHours(24))  // 24 小时后自动过期
+            .maximumSize(1_000)                      // 限制最大条目数
+            .recordStats()                            // 记录统计信息
+            .removalListener(this::onObservationRemoved)  // 过期时清理
+            .build();
         log.info("初始化批处理任务可观测性监听器");
+    }
+
+    /// Observation 被移除时的回调（过期或手动移除）。
+    ///
+    /// 如果 Observation 因超时被移除，自动停止它以释放资源。
+    ///
+    /// @param executionId Job 执行 ID
+    /// @param observation Observation 实例
+    /// @param cause 移除原因
+    private void onObservationRemoved(Long executionId, Observation observation, RemovalCause cause) {
+        if (observation != null && cause == RemovalCause.EXPIRED) {
+            try {
+                observation.stop();
+                log.warn("⚠️ Job {} 的 Observation 超时清理（24 小时未完成），已强制停止", executionId);
+            } catch (Exception e) {
+                log.error("清理 Job {} 的 Observation 失败", executionId, e);
+            }
+        }
     }
 
     /// 任务开始前回调。
@@ -89,8 +121,8 @@ public class BatchObservationJobListener implements JobExecutionListener {
         // 启动 Observation
         observation.start();
 
-        // 存储 Observation
-        observationMap.put(executionId, observation);
+        // 存储 Observation 到缓存
+        observationCache.put(executionId, observation);
 
         log.debug("批处理任务开始: {} (执行 ID: {})", jobName, executionId);
     }
@@ -112,11 +144,14 @@ public class BatchObservationJobListener implements JobExecutionListener {
         Long executionId = jobExecution.getId();
         BatchStatus status = jobExecution.getStatus();
 
-        // 从映射中获取 Observation
-        Observation observation = observationMap.remove(executionId);
+        // 从缓存中获取并移除 Observation
+        Observation observation = observationCache.getIfPresent(executionId);
+        if (observation != null) {
+            observationCache.invalidate(executionId);
+        }
 
         if (observation == null) {
-            log.warn("未找到任务 {} (执行 ID: {}) 的 Observation", jobName, executionId);
+            log.warn("⚠️ 未找到任务 {} (执行 ID: {}) 的 Observation，可能已超时清理", jobName, executionId);
             return;
         }
 
@@ -141,12 +176,17 @@ public class BatchObservationJobListener implements JobExecutionListener {
         }
     }
 
-    /// 获取当前活跃的 Observation 数量。
-    ///
-    /// 用于监控和调试，检查是否存在内存泄漏。
+    /// 获取当前活跃的 Observation 数量（用于监控）。
     ///
     /// @return 活跃 Observation 数量
-    public int getActiveObservationCount() {
-        return observationMap.size();
+    public long getActiveObservationCount() {
+        return observationCache.estimatedSize();
+    }
+
+    /// 获取缓存统计信息（用于监控）。
+    ///
+    /// @return 缓存统计信息（命中率、驱逐数等）
+    public com.github.benmanes.caffeine.cache.stats.CacheStats getCacheStats() {
+        return observationCache.stats();
     }
 }

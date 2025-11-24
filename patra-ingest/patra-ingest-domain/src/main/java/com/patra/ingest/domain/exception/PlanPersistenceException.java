@@ -1,9 +1,6 @@
 package com.patra.ingest.domain.exception;
 
-import com.patra.common.error.trait.ErrorTrait;
-import com.patra.common.error.trait.HasErrorTraits;
-import java.util.EnumSet;
-import java.util.Set;
+import com.patra.common.error.trait.StandardErrorTrait;
 
 /// 计划持久化异常。
 ///
@@ -24,7 +21,7 @@ import java.util.Set;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public class PlanPersistenceException extends IngestException implements HasErrorTraits {
+public class PlanPersistenceException extends IngestException {
 
   /// 持久化操作的阶段分类。
   ///
@@ -59,7 +56,7 @@ public class PlanPersistenceException extends IngestException implements HasErro
   /// @param message 描述性消息
   /// @param cause 底层原因
   public PlanPersistenceException(Stage stage, String message, Throwable cause) {
-    super(message, cause);
+    super(message, cause, StandardErrorTrait.DEP_UNAVAILABLE);
     this.stage = stage;
   }
 
@@ -68,10 +65,5 @@ public class PlanPersistenceException extends IngestException implements HasErro
   /// @return 阶段枚举
   public Stage getStage() {
     return stage;
-  }
-
-  @Override
-  public Set<ErrorTrait> getErrorTraits() {
-    return EnumSet.of(ErrorTrait.DEP_UNAVAILABLE);
   }
 }

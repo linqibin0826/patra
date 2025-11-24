@@ -1,9 +1,6 @@
 package com.patra.ingest.domain.exception;
 
-import com.patra.common.error.trait.ErrorTrait;
-import com.patra.common.error.trait.HasErrorTraits;
-import java.util.EnumSet;
-import java.util.Set;
+import com.patra.common.error.trait.StandardErrorTrait;
 
 /// Outbox 持久化异常。
 ///
@@ -27,7 +24,7 @@ import java.util.Set;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public class OutboxPersistenceException extends IngestException implements HasErrorTraits {
+public class OutboxPersistenceException extends IngestException {
 
   public enum Stage {
     /// 标记消息为已发布状态时失败。
@@ -46,7 +43,7 @@ public class OutboxPersistenceException extends IngestException implements HasEr
   /// @param stage 失败阶段
   /// @param message 描述性消息
   public OutboxPersistenceException(Stage stage, String message) {
-    super(message);
+    super(message, StandardErrorTrait.CONFLICT);
     this.stage = stage;
   }
 
@@ -56,7 +53,7 @@ public class OutboxPersistenceException extends IngestException implements HasEr
   /// @param message 描述性消息
   /// @param cause 底层原因
   public OutboxPersistenceException(Stage stage, String message, Throwable cause) {
-    super(message, cause);
+    super(message, cause, StandardErrorTrait.CONFLICT);
     this.stage = stage;
   }
 
@@ -65,10 +62,5 @@ public class OutboxPersistenceException extends IngestException implements HasEr
   /// @return 阶段枚举
   public Stage getStage() {
     return stage;
-  }
-
-  @Override
-  public Set<ErrorTrait> getErrorTraits() {
-    return EnumSet.of(ErrorTrait.CONFLICT);
   }
 }

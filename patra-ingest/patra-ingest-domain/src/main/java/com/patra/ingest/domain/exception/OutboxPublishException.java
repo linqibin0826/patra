@@ -1,8 +1,6 @@
 package com.patra.ingest.domain.exception;
 
-import com.patra.common.error.trait.ErrorTrait;
-import java.util.EnumSet;
-import java.util.Set;
+import com.patra.common.error.trait.StandardErrorTrait;
 
 /// Outbox 发布异常。
 ///
@@ -25,7 +23,7 @@ public class OutboxPublishException extends OutboxRelayExecutionException {
   /// @param reason 失败原因
   /// @param message 描述性消息
   public OutboxPublishException(Reason reason, String message) {
-    super(message, null);
+    super(message, null, determineErrorTrait(reason));
     this.reason = reason;
   }
 
@@ -35,7 +33,7 @@ public class OutboxPublishException extends OutboxRelayExecutionException {
   /// @param message 描述性消息
   /// @param cause 底层异常
   public OutboxPublishException(Reason reason, String message, Throwable cause) {
-    super(message, cause);
+    super(message, cause, determineErrorTrait(reason));
     this.reason = reason;
   }
 
@@ -46,12 +44,15 @@ public class OutboxPublishException extends OutboxRelayExecutionException {
     return reason;
   }
 
-  @Override
-  public Set<ErrorTrait> getErrorTraits() {
+  /// 根据失败原因确定错误特征。
+  ///
+  /// @param reason 失败原因
+  /// @return 对应的错误特征
+  private static StandardErrorTrait determineErrorTrait(Reason reason) {
     if (reason == Reason.CHANNEL_NOT_ALLOWED || reason == Reason.HEADERS_INVALID) {
-      return EnumSet.of(ErrorTrait.RULE_VIOLATION);
+      return StandardErrorTrait.RULE_VIOLATION;
     }
-    return EnumSet.of(ErrorTrait.DEP_UNAVAILABLE);
+    return StandardErrorTrait.DEP_UNAVAILABLE;
   }
 
   /// 发布失败的根因分类。
