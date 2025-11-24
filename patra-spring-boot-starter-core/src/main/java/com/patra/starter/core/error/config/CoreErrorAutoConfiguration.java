@@ -3,16 +3,11 @@ package com.patra.starter.core.error.config;
 import com.patra.common.error.codes.HttpStdErrors;
 import com.patra.starter.core.error.engine.DefaultErrorResolutionEngine;
 import com.patra.starter.core.error.engine.ErrorResolutionEngine;
-import com.patra.starter.core.error.observation.ErrorObservationRecorder;
-import com.patra.starter.core.error.observation.MicrometerErrorObservationRecorder;
 import com.patra.starter.core.error.pipeline.ErrorResolutionPipeline;
 import com.patra.starter.core.error.pipeline.ResolutionInterceptor;
-import com.patra.starter.core.error.pipeline.interceptor.MetricsInterceptor;
-import com.patra.starter.core.error.pipeline.interceptor.TracingInterceptor;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
 import com.patra.starter.core.error.spi.TraceProvider;
 import com.patra.starter.core.error.trace.HeaderBasedTraceProvider;
-import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -28,17 +23,15 @@ import org.springframework.context.annotation.Configuration;
 ///
 /// - {@link ErrorResolutionEngine} - 错误解析引擎,负责异常到错误码的映射
 ///   - {@link ErrorResolutionPipeline} - 错误解析管道,通过拦截器链处理异常
-///   - {@link TracingInterceptor} - 追踪上下文传播拦截器
-///   - {@link MetricsInterceptor} - 错误指标记录拦截器
 ///   - {@link TraceProvider} - 追踪上下文提取器(默认基于 HTTP Header)
-///   - {@link ErrorObservationRecorder} - 错误观测记录器(基于 Micrometer)
 ///   - {@link HttpStdErrors.Group} - 标准 HTTP 错误定义组
 ///
 /// 启用条件:
 ///
 /// - `patra.error.enabled=true`(默认启用)
 ///
-/// 设计原则: 提供可被应用程序覆盖的默认引擎、拦截器和观测 Bean。
+/// 设计原则: 提供可被应用程序覆盖的默认引擎和核心 Bean。
+/// 可观测性功能(追踪、指标)由 patra-spring-boot-starter-observability 通过 ResolutionInterceptor 扩展点提供。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -64,33 +57,6 @@ public class CoreErrorAutoConfiguration {
   public TraceProvider defaultTraceProvider(TracingProperties tracingProperties) {
     log.debug("使用默认的基于 Header 的 TraceProvider,Header 名称: {}", tracingProperties.getHeaderNames());
     return new HeaderBasedTraceProvider(tracingProperties);
-  }
-
-  /// 提供错误观测记录器,负责记录错误解析的指标和慢解析警告。
-  ///
-  /// 根据配置和 Micrometer 可用性决定使用何种实现:
-  ///
-  /// - 观测已启用且 MeterRegistry 可用: 使用 {@link MicrometerErrorObservationRecorder}
-  ///   - 观测已禁用或 MeterRegistry 不可用: 使用 NO_OP 实现(不记录任何指标)
-  ///
-  /// @param errorProperties 错误配置属性
-  /// @param meterRegistryProvider Micrometer 指标注册表提供者
-  /// @return 错误观测记录器实例
-
-  @Bean
-  @ConditionalOnMissingBean
-  public ErrorObservationRecorder errorObservationRecorder(
-      ErrorProperties errorProperties, ObjectProvider<MeterRegistry> meterRegistryProvider) {
-    if (!errorProperties.getObservation().isEnabled()) {
-      log.info("错误观测已禁用,注入 NO_OP 记录器");
-      return ErrorObservationRecorder.NO_OP;
-    }
-    MeterRegistry meterRegistry = meterRegistryProvider.getIfAvailable();
-    if (meterRegistry == null) {
-      log.warn("Micrometer MeterRegistry 不可用,降级为 NO_OP 观测");
-      return ErrorObservationRecorder.NO_OP;
-    }
-    return new MicrometerErrorObservationRecorder(meterRegistry, errorProperties);
   }
 
   /// 提供错误解析引擎,负责将异常映射为标准化的错误表示。
@@ -121,10 +87,8 @@ public class CoreErrorAutoConfiguration {
   /// 异常抛出
   ///   ↓
   /// 拦截器链 (按 @Order 排序)
-  ///   ├─ TracingInterceptor (追踪传播)
-  ///   ├─ MetricsInterceptor (指标记录)
   ///   ├─ CircuitBreakerInterceptor (熔断保护,可选)
-  ///   └─ ... (自定义拦截器)
+  ///   └─ ... (自定义拦截器,如 observability starter 提供的追踪和指标拦截器)
   ///   ↓
   /// ErrorResolutionEngine (核心解析逻辑)
   ///   ↓
@@ -142,38 +106,6 @@ public class CoreErrorAutoConfiguration {
     List<ResolutionInterceptor> interceptors = interceptorsProvider.orderedStream().toList();
     log.info("构建错误解析管道,包含 {} 个拦截器", interceptors.size());
     return new ErrorResolutionPipeline(engine, interceptors);
-  }
-
-  /// 提供指标拦截器,负责记录错误解析的指标和慢解析警告。
-  ///
-  /// 启用条件: `patra.error.observation.enabled=true`(默认启用)
-  ///
-  /// @param observationRecorder 错误观测记录器
-  /// @param errorProperties 错误配置属性
-  /// @return 指标拦截器实例
-
-  @Bean
-  @ConditionalOnProperty(
-      prefix = "patra.error.observation",
-      name = "enabled",
-      havingValue = "true",
-      matchIfMissing = true)
-  public MetricsInterceptor metricsInterceptor(
-      ErrorObservationRecorder observationRecorder, ErrorProperties errorProperties) {
-    return new MetricsInterceptor(observationRecorder, errorProperties.getObservation());
-  }
-
-  /// 提供追踪拦截器,负责传播追踪上下文到错误解析流程中。
-  ///
-  /// 将追踪 ID 注入到错误解析结果中,支持分布式追踪系统(如 SkyWalking)关联错误日志。
-  ///
-  /// @param traceProvider 追踪上下文提取器
-  /// @return 追踪拦截器实例
-
-  @Bean
-  @ConditionalOnMissingBean
-  public TracingInterceptor errorResolutionTracingInterceptor(TraceProvider traceProvider) {
-    return new TracingInterceptor(traceProvider);
   }
 
   /// 提供标准 HTTP 错误定义组,用于统一的错误码定义。

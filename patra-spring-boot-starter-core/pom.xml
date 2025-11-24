@@ -38,12 +38,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Micrometer metrics -->
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-core</artifactId>
-        </dependency>
-
         <!-- Resilience4j circuit breaker (optional: only needed if error-pipeline circuit breaker is enabled) -->
         <dependency>
             <groupId>io.github.resilience4j</groupId>

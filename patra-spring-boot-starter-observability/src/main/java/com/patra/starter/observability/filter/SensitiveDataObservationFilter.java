@@ -1,0 +1,228 @@
+package com.patra.starter.observability.filter;
+
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationFilter;
+import io.micrometer.common.KeyValues;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.regex.Pattern;
+import java.util.List;
+import java.util.ArrayList;
+
+/**
+ * 敏感数据脱敏过滤器。
+ *
+ * <p>功能：
+ * <ul>
+ *   <li>在 Observation 创建后、启动前拦截并脱敏敏感数据</li>
+ *   <li>检测密码、Token、身份证号、手机号等敏感信息</li>
+ *   <li>支持自定义敏感数据模式</li>
+ *   <li>生产环境强制启用，开发环境可选</li>
+ * </ul>
+ *
+ * <p>安全策略：
+ * <ul>
+ *   <li>默认模式：脱敏常见敏感字段（password, token, apiKey, secret 等）</li>
+ *   <li>自定义模式：支持通过配置添加自定义脱敏规则</li>
+ *   <li>静默失败：脱敏失败不影响业务逻辑，仅记录警告日志</li>
+ * </ul>
+ *
+ * <p>设计说明：
+ * 使用 {@link ObservationFilter} 而非 {@link io.micrometer.observation.ObservationHandler}，
+ * 因为 Filter 在 Observation 创建阶段执行，可以安全地修改 Context，
+ * 而 Handler 在执行阶段，修改 Context 需要使用反射，存在兼容性风险。
+ *
+ * @author Jobs
+ * @since 1.0.0
+ */
+public class SensitiveDataObservationFilter implements ObservationFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(SensitiveDataObservationFilter.class);
+
+    /**
+     * 敏感字段名称模式（不区分大小写）。
+     */
+    private static final Pattern[] SENSITIVE_FIELD_PATTERNS = {
+        Pattern.compile("(?i)password"),        // 密码
+        Pattern.compile("(?i)pwd"),             // 密码简写
+        Pattern.compile("(?i)token"),           // Token
+        Pattern.compile("(?i)secret"),          // 密钥
+        Pattern.compile("(?i)api[_-]?key"),     // API Key
+        Pattern.compile("(?i)auth"),            // 认证信息
+        Pattern.compile("(?i)credential")       // 凭证
+    };
+
+    /**
+     * 敏感数据值模式（正则匹配）。
+     */
+    private static final Pattern[] SENSITIVE_VALUE_PATTERNS = {
+        Pattern.compile("\\d{15,19}"),                    // 身份证号（15或18位）
+        Pattern.compile("\\d{3}-?\\d{4}-?\\d{4}"),        // 手机号（含分隔符）
+        Pattern.compile("\\d{3,4}-?\\d{7,8}"),            // 固定电话
+        Pattern.compile("[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"),  // 邮箱
+        Pattern.compile("\\d{16,19}"),                    // 银行卡号
+        Pattern.compile("(?i)Bearer\\s+[a-zA-Z0-9\\-._~+/]+=*"),  // Bearer Token
+        Pattern.compile("(?i)Basic\\s+[a-zA-Z0-9+/]+=*")  // Basic Auth
+    };
+
+    private static final String MASK_PLACEHOLDER = "***MASKED***";
+
+    private final boolean enabled;
+    private final List<Pattern> customPatterns;
+
+    /**
+     * 构造函数。
+     *
+     * @param enabled 是否启用脱敏
+     * @param customPatterns 自定义敏感数据模式（正则表达式）
+     */
+    public SensitiveDataObservationFilter(boolean enabled, List<String> customPatterns) {
+        this.enabled = enabled;
+        this.customPatterns = new ArrayList<>();
+
+        if (customPatterns != null) {
+            customPatterns.forEach(pattern ->
+                this.customPatterns.add(Pattern.compile(pattern))
+            );
+        }
+
+        log.info("初始化敏感数据脱敏过滤器，启用状态: {}, 自定义模式数量: {}",
+            enabled, this.customPatterns.size());
+    }
+
+    /**
+     * 脱敏 Observation Context。
+     *
+     * @param context Observation 上下文
+     * @return 脱敏后的上下文
+     */
+    @Override
+    public Observation.Context map(Observation.Context context) {
+        if (!enabled) {
+            return context;
+        }
+
+        try {
+            // 脱敏低基数标签
+            KeyValues originalLow = context.getLowCardinalityKeyValues();
+            KeyValues maskedLow = maskKeyValues(originalLow);
+
+            // 脱敏高基数标签
+            KeyValues originalHigh = context.getHighCardinalityKeyValues();
+            KeyValues maskedHigh = maskKeyValues(originalHigh);
+
+            // 如果有脱敏，创建新的 Context
+            if (!maskedLow.equals(originalLow) || !maskedHigh.equals(originalHigh)) {
+                // 使用 Observation.Context 的公开方法重新设置 KeyValues
+                // 通过先清空再添加的方式实现替换
+                Observation.Context newContext = new Observation.Context();
+                newContext.setName(context.getName());
+                newContext.setContextualName(context.getContextualName());
+                newContext.setError(context.getError());
+
+                // 添加脱敏后的 KeyValues
+                maskedLow.forEach(kv -> newContext.addLowCardinalityKeyValue(kv));
+                maskedHigh.forEach(kv -> newContext.addHighCardinalityKeyValue(kv));
+
+                log.trace("已对 Observation [{}] 的敏感数据进行脱敏", context.getName());
+                return newContext;
+            }
+
+            return context;
+        } catch (Exception e) {
+            // 静默失败：脱敏失败不应影响业务逻辑
+            log.warn("敏感数据脱敏失败，跳过脱敏处理: {}", e.getMessage());
+            return context;
+        }
+    }
+
+    /**
+     * 脱敏 KeyValue 集合。
+     *
+     * @param keyValues 原始 KeyValue 集合
+     * @return 脱敏后的 KeyValue 集合
+     */
+    private KeyValues maskKeyValues(KeyValues keyValues) {
+        if (keyValues == null || keyValues.stream().count() == 0) {
+            return keyValues;
+        }
+
+        KeyValues maskedKeyValues = KeyValues.empty();
+
+        for (io.micrometer.common.KeyValue keyValue : keyValues) {
+            String key = keyValue.getKey();
+            String value = keyValue.getValue();
+
+            // 检查字段名是否敏感
+            if (isSensitiveField(key)) {
+                maskedKeyValues = maskedKeyValues.and(key, MASK_PLACEHOLDER);
+                log.debug("脱敏敏感字段: key={}", key);
+                continue;
+            }
+
+            // 检查值是否包含敏感数据
+            String maskedValue = maskSensitiveValue(value);
+            if (!maskedValue.equals(value)) {
+                maskedKeyValues = maskedKeyValues.and(key, maskedValue);
+                log.debug("脱敏敏感值: key={}", key);
+            } else {
+                maskedKeyValues = maskedKeyValues.and(key, value);
+            }
+        }
+
+        return maskedKeyValues;
+    }
+
+    /**
+     * 检查字段名是否敏感。
+     *
+     * @param fieldName 字段名
+     * @return true 如果字段名敏感
+     */
+    private boolean isSensitiveField(String fieldName) {
+        if (fieldName == null) {
+            return false;
+        }
+
+        for (Pattern pattern : SENSITIVE_FIELD_PATTERNS) {
+            if (pattern.matcher(fieldName).find()) {
+                return true;
+            }
+        }
+
+        for (Pattern pattern : customPatterns) {
+            if (pattern.matcher(fieldName).find()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 脱敏敏感值。
+     *
+     * @param value 原始值
+     * @return 脱敏后的值
+     */
+    private String maskSensitiveValue(String value) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+
+        String result = value;
+
+        // 应用内置模式
+        for (Pattern pattern : SENSITIVE_VALUE_PATTERNS) {
+            result = pattern.matcher(result).replaceAll(MASK_PLACEHOLDER);
+        }
+
+        // 应用自定义模式
+        for (Pattern pattern : customPatterns) {
+            result = pattern.matcher(result).replaceAll(MASK_PLACEHOLDER);
+        }
+
+        return result;
+    }
+}
