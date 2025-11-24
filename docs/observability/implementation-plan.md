@@ -369,47 +369,66 @@ com.patra.starter.core.error.pipeline.ResolutionInterceptor
 
 ---
 
-#### 阶段 2: 重构现有 Starters（4天）
+#### 阶段 2: 重构现有 Starters（4天）✅ 已完成（2025-11-24）
 
 **目标**: 从现有 Starter 中移除可观测性代码，保留扩展点
 
 **任务清单**:
 
-**3.1 重构 patra-starter-core**
-- [ ] 分析 `TracingInterceptor` 和 `MetricsInterceptor` 的依赖
-- [ ] ⚠️ 保留 `ResolutionInterceptor` 接口（不创建新接口）
-- [ ] 删除 `TracingInterceptor`（移动到 observability starter）
-- [ ] 删除 `MetricsInterceptor`（移动到 observability starter）
-- [ ] 删除 Micrometer 依赖（从 pom.xml）
-- [ ] 验证编译通过
-- [ ] 更新 package-info.java 文档
+**3.1 重构 patra-starter-core** ✅ 已完成（2025-11-24）
+- [x] 分析 `TracingInterceptor` 和 `MetricsInterceptor` 的依赖
+- [x] ⚠️ 保留 `ResolutionInterceptor` 接口（不创建新接口）
+- [x] 删除 `TracingInterceptor`（已移至 observability starter）
+- [x] 删除 `MetricsInterceptor`（已移至 observability starter）
+- [x] 删除 `ErrorObservationRecorder` 及其实现（observation 包）
+- [x] 修改 `CircuitBreakerInterceptor` 移除 ErrorObservationRecorder 依赖
+- [x] 删除 Micrometer 依赖（从 pom.xml）
+- [x] 验证编译通过（36 个源文件编译成功）
+- [x] 更新 package-info.java 文档
+- [x] 更新 README.md 文档
 
-**3.2 重构 patra-starter-rest-client**
-- [ ] 查找现有的可观测性代码
-- [ ] 定义 `ClientInterceptor` 扩展点接口
-- [ ] 修改 RestClient 配置以支持拦截器注入
-- [ ] 删除现有的可观测性代码
-- [ ] 删除 Micrometer 依赖（从 pom.xml）
-- [ ] 验证编译通过
-- [ ] 更新 package-info.java 文档
+**3.2 重构 patra-starter-rest-client** ✅ 已完成（2025-11-24）
+- [x] 查找现有的可观测性代码（TracingInterceptor、MetricsInterceptor）
+- [x] 定义 `ClientInterceptor` 扩展点接口
+- [x] 修改 RestClient 配置以支持拦截器注入（添加 ClientInterceptorAdapter）
+- [x] 删除 `TracingInterceptor`（已移至 observability starter）
+- [x] 删除 `MetricsInterceptor`（已移至 observability starter）
+- [x] 删除 Micrometer 依赖（从 pom.xml）
+- [x] 保留 `LoggingInterceptor`（基础设施层调试工具）
+- [x] 验证编译通过（7 个源文件编译成功）
+- [x] 更新 package-info.java 文档
+- [x] 更新 README.md 文档
 
-**3.3 重构 patra-starter-batch**
-- [ ] 查找 TODO 标记的 Metrics 代码
-- [ ] 删除 TODO 标记的代码
-- [ ] 删除 Micrometer 依赖（如果有）
-- [ ] 验证编译通过
-- [ ] 更新 package-info.java 文档
+**3.3 重构 patra-starter-batch** ✅ 已完成（2025-11-24）
+- [x] 查找 TODO 标记的 Metrics 代码
+- [x] 删除 TODO 标记的代码（MetricsJobListener、SkyWalkingJobListener）
+- [x] 验证无需删除 Micrometer 依赖（从 core starter 继承，未直接依赖）
+- [x] 保留 `LoggingJobListener`（基础设施层调试工具）
+- [x] 验证编译通过（7 个源文件编译成功）
+- [x] 更新 ObservabilityAutoConfiguration 文档
 
-**3.4 验证依赖方向**
-- [ ] 验证: core ❌→ observability（无依赖）
-- [ ] 验证: rest-client ❌→ observability（无依赖）
-- [ ] 验证: batch ❌→ observability（无依赖）
-- [ ] 验证: observability → core（单向依赖）
-- [ ] 使用 `mvn dependency:tree` 验证
+**3.4 验证依赖方向** ✅ 已完成（2025-11-24）
+- [x] 验证: core ❌→ observability（无依赖 ✅）
+- [x] 验证: rest-client ❌→ observability（无依赖 ✅）
+- [x] 验证: batch ❌→ observability（无依赖 ✅）
+- [x] 验证: observability → core（单向依赖 ✅）
+- [x] 使用 `mvn dependency:tree` 验证
 
 **产出物**:
-- 重构后的 core、rest-client、batch 模块（无 Micrometer 依赖）
-- 扩展点接口文档
+- ✅ 重构后的 core、rest-client、batch 模块（无 Micrometer 依赖）
+- ✅ 扩展点接口文档（ResolutionInterceptor、ClientInterceptor）
+- ✅ 插件式架构实现（DIP、OCP、SoC 原则）
+- ✅ 依赖方向验证通过
+
+**关键成果**:
+- **扩展点设计**:
+  - `ResolutionInterceptor` - 错误处理管道扩展点（patra-starter-core）
+  - `ClientInterceptor` - HTTP 客户端拦截器扩展点（patra-starter-rest-client）
+- **架构改进**:
+  - ✅ 依赖倒置原则（DIP）: Core 定义扩展点，Observability 实现扩展点
+  - ✅ 开放封闭原则（OCP）: Core 对扩展开放，对修改封闭
+  - ✅ 关注点分离（SoC）: 可观测性功能完全独立，可选择性启用
+- **编译验证**: 所有模块编译通过，无依赖冲突
 
 ---
 
