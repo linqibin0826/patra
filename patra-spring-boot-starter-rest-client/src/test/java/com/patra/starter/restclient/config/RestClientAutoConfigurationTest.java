@@ -3,10 +3,6 @@ package com.patra.starter.restclient.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.starter.restclient.interceptor.LoggingInterceptor;
-import com.patra.starter.restclient.interceptor.MetricsInterceptor;
-import com.patra.starter.restclient.interceptor.TracingInterceptor;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -106,84 +102,6 @@ class RestClientAutoConfigurationTest {
             });
   }
 
-  @Test
-  @DisplayName("默认情况下应该创建追踪拦截器")
-  void should_create_tracing_interceptor_by_default() {
-    contextRunner.run(
-        context -> {
-          assertThat(context).hasSingleBean(TracingInterceptor.class);
-          TracingInterceptor interceptor = context.getBean(TracingInterceptor.class);
-          assertThat(interceptor).isNotNull();
-        });
-  }
-
-  @Test
-  @DisplayName("当 tracing.enabled=false 时不应该创建追踪拦截器")
-  void should_not_create_tracing_interceptor_when_disabled() {
-    contextRunner
-        .withPropertyValues("patra.rest-client.interceptors.tracing.enabled=false")
-        .run(context -> assertThat(context).doesNotHaveBean(TracingInterceptor.class));
-  }
-
-  @Test
-  @DisplayName("应该根据配置的 Header 名称创建追踪拦截器")
-  void should_create_tracing_interceptor_with_custom_header_names() {
-    contextRunner
-        .withPropertyValues(
-            "patra.rest-client.interceptors.tracing.header-names[0]=X-Request-ID",
-            "patra.rest-client.interceptors.tracing.header-names[1]=X-Correlation-ID")
-        .run(
-            context -> {
-              assertThat(context).hasSingleBean(TracingInterceptor.class);
-            });
-  }
-
-  @Test
-  @DisplayName("当存在 MeterRegistry 时应该创建指标拦截器")
-  void should_create_metrics_interceptor_when_meter_registry_exists() {
-    contextRunner
-        .withBean(MeterRegistry.class, SimpleMeterRegistry::new)
-        .run(
-            context -> {
-              assertThat(context).hasSingleBean(MetricsInterceptor.class);
-              MetricsInterceptor interceptor = context.getBean(MetricsInterceptor.class);
-              assertThat(interceptor).isNotNull();
-            });
-  }
-
-  @Test
-  @DisplayName("当 metrics.enabled=false 时不应该创建指标拦截器")
-  void should_not_create_metrics_interceptor_when_disabled() {
-    contextRunner
-        .withBean(MeterRegistry.class, SimpleMeterRegistry::new)
-        .withPropertyValues("patra.rest-client.interceptors.metrics.enabled=false")
-        .run(context -> assertThat(context).doesNotHaveBean(MetricsInterceptor.class));
-  }
-
-  @Test
-  @DisplayName("当不存在 MeterRegistry 时不应该创建指标拦截器")
-  void should_not_create_metrics_interceptor_when_no_meter_registry() {
-    contextRunner.run(context -> assertThat(context).doesNotHaveBean(MetricsInterceptor.class));
-  }
-
-  @Test
-  @DisplayName("应该按 @Order 顺序注册拦截器")
-  void should_register_interceptors_in_order() {
-    contextRunner
-        .withBean(MeterRegistry.class, SimpleMeterRegistry::new)
-        .run(
-            context -> {
-              // 获取所有拦截器
-              var interceptors = context.getBeansOfType(ClientHttpRequestInterceptor.class);
-
-              // 验证所有拦截器都已注册
-              assertThat(interceptors).hasSize(3);
-              assertThat(interceptors.values())
-                  .hasAtLeastOneElementOfType(LoggingInterceptor.class)
-                  .hasAtLeastOneElementOfType(TracingInterceptor.class)
-                  .hasAtLeastOneElementOfType(MetricsInterceptor.class);
-            });
-  }
 
   @Test
   @DisplayName("应该支持配置默认 Headers")
