@@ -3,29 +3,199 @@
     {
       "name": "patra.observability",
       "type": "com.patra.starter.observability.config.ObservabilityProperties",
-      "description": "Patra 可观测性配置属性"
+      "description": "Patra 可观测性统一配置属性"
     },
     {
       "name": "patra.observability.metrics",
-      "type": "com.patra.starter.observability.config.MetricsConfig",
+      "type": "com.patra.starter.observability.config.ObservabilityProperties$MetricsConfig",
       "description": "指标（Metrics）配置"
     },
     {
+      "name": "patra.observability.metrics.skywalking",
+      "type": "com.patra.starter.observability.config.ObservabilityProperties$SkyWalkingMeterConfig",
+      "description": "SkyWalking Meter Registry 配置"
+    },
+    {
+      "name": "patra.observability.metrics.prometheus",
+      "type": "com.patra.starter.observability.config.ObservabilityProperties$PrometheusConfig",
+      "description": "Prometheus Registry 配置"
+    },
+    {
       "name": "patra.observability.tracing",
-      "type": "com.patra.starter.observability.config.TracingConfig",
+      "type": "com.patra.starter.observability.config.ObservabilityProperties$TracingConfig",
       "description": "追踪（Tracing）配置"
     },
     {
       "name": "patra.observability.logging",
-      "type": "com.patra.starter.observability.config.LoggingConfig",
+      "type": "com.patra.starter.observability.config.ObservabilityProperties$LoggingConfig",
       "description": "日志（Logging）配置"
     },
     {
+      "name": "patra.observability.handlers",
+      "type": "com.patra.starter.observability.config.ObservabilityProperties$HandlersConfig",
+      "description": "ObservationHandler 配置"
+    },
+    {
+      "name": "patra.observability.handlers.logging",
+      "type": "com.patra.starter.observability.config.ObservabilityProperties$LoggingHandlerConfig",
+      "description": "日志 Handler 配置"
+    },
+    {
+      "name": "patra.observability.handlers.performance",
+      "type": "com.patra.starter.observability.config.ObservabilityProperties$PerformanceHandlerConfig",
+      "description": "性能 Handler 配置"
+    },
+    {
+      "name": "patra.observability.handlers.alerting",
+      "type": "com.patra.starter.observability.config.ObservabilityProperties$AlertingHandlerConfig",
+      "description": "告警 Handler 配置（未来扩展）"
+    },
+    {
       "name": "patra.observability.security",
-      "type": "com.patra.starter.observability.config.SecurityConfig",
+      "type": "com.patra.starter.observability.config.ObservabilityProperties$SecurityConfig",
       "description": "安全配置（敏感数据脱敏）"
     }
   ],
-  "properties": [],
-  "hints": []
+  "properties": [
+    {
+      "name": "patra.observability.enabled",
+      "type": "java.lang.Boolean",
+      "description": "全局开关，是否启用可观测性功能",
+      "defaultValue": true
+    },
+    {
+      "name": "patra.observability.environment",
+      "type": "java.lang.String",
+      "description": "环境标识（dev, staging, prod）。生产环境会强制启用敏感数据脱敏",
+      "defaultValue": "dev"
+    },
+    {
+      "name": "patra.observability.metrics.enabled",
+      "type": "java.lang.Boolean",
+      "description": "是否启用指标收集",
+      "defaultValue": true
+    },
+    {
+      "name": "patra.observability.metrics.prefix",
+      "type": "java.lang.String",
+      "description": "指标前缀（可选，默认为空）",
+      "defaultValue": ""
+    },
+    {
+      "name": "patra.observability.metrics.step",
+      "type": "java.time.Duration",
+      "description": "指标导出间隔",
+      "defaultValue": "60s"
+    },
+    {
+      "name": "patra.observability.metrics.skywalking.enabled",
+      "type": "java.lang.Boolean",
+      "description": "是否启用 SkyWalking Meter Registry",
+      "defaultValue": true
+    },
+    {
+      "name": "patra.observability.metrics.skywalking.oap-address",
+      "type": "java.lang.String",
+      "description": "SkyWalking OAP 服务器地址",
+      "defaultValue": "skywalking-oap:11800"
+    },
+    {
+      "name": "patra.observability.metrics.prometheus.enabled",
+      "type": "java.lang.Boolean",
+      "description": "是否启用 Prometheus Registry",
+      "defaultValue": true
+    },
+    {
+      "name": "patra.observability.metrics.prometheus.enable-exemplars",
+      "type": "java.lang.Boolean",
+      "description": "是否启用 Exemplars（与 Tracing 关联）",
+      "defaultValue": true
+    },
+    {
+      "name": "patra.observability.tracing.enabled",
+      "type": "java.lang.Boolean",
+      "description": "是否启用追踪",
+      "defaultValue": true
+    },
+    {
+      "name": "patra.observability.tracing.sampling-rate",
+      "type": "java.lang.Double",
+      "description": "追踪采样率（0.0 - 1.0）",
+      "defaultValue": 1.0
+    },
+    {
+      "name": "patra.observability.logging.enabled",
+      "type": "java.lang.Boolean",
+      "description": "是否启用日志关联",
+      "defaultValue": true
+    },
+    {
+      "name": "patra.observability.logging.include-trace-id",
+      "type": "java.lang.Boolean",
+      "description": "是否在日志中包含 traceId",
+      "defaultValue": true
+    },
+    {
+      "name": "patra.observability.handlers.performance.enabled",
+      "type": "java.lang.Boolean",
+      "description": "是否启用性能 Handler",
+      "defaultValue": true
+    },
+    {
+      "name": "patra.observability.handlers.performance.slow-threshold",
+      "type": "java.time.Duration",
+      "description": "慢操作阈值",
+      "defaultValue": "3s"
+    },
+    {
+      "name": "patra.observability.security.mask-sensitive-data",
+      "type": "java.lang.Boolean",
+      "description": "是否启用敏感数据脱敏（生产环境强制启用）",
+      "defaultValue": true
+    }
+  ],
+  "hints": [
+    {
+      "name": "patra.observability.environment",
+      "values": [
+        {
+          "value": "dev",
+          "description": "开发环境"
+        },
+        {
+          "value": "staging",
+          "description": "预发布环境"
+        },
+        {
+          "value": "prod",
+          "description": "生产环境（强制启用敏感数据脱敏）"
+        }
+      ]
+    },
+    {
+      "name": "patra.observability.handlers.logging.log-level",
+      "values": [
+        {
+          "value": "TRACE",
+          "description": "最详细日志"
+        },
+        {
+          "value": "DEBUG",
+          "description": "调试日志"
+        },
+        {
+          "value": "INFO",
+          "description": "信息日志"
+        },
+        {
+          "value": "WARN",
+          "description": "警告日志"
+        },
+        {
+          "value": "ERROR",
+          "description": "错误日志"
+        }
+      ]
+    }
+  ]
 }

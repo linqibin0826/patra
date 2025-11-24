@@ -1,6 +1,5 @@
 package com.patra.starter.core.error.config;
 
-import com.patra.starter.core.error.observation.ErrorObservationRecorder;
 import com.patra.starter.core.error.pipeline.interceptor.CircuitBreakerInterceptor;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
@@ -75,7 +74,6 @@ public class CircuitBreakerErrorAutoConfiguration {
   /// 启用条件: 存在名为 "errorResolutionCircuitBreaker" 的 Bean
   ///
   /// @param circuitBreaker 错误解析熔断器
-  /// @param observationRecorder 错误观测记录器
   /// @param errorProperties 错误配置属性
   /// @return 熔断器拦截器实例
 
@@ -83,8 +81,7 @@ public class CircuitBreakerErrorAutoConfiguration {
   @ConditionalOnBean(name = "errorResolutionCircuitBreaker")
   public CircuitBreakerInterceptor circuitBreakerInterceptor(
       @Qualifier("errorResolutionCircuitBreaker") CircuitBreaker circuitBreaker,
-      ErrorObservationRecorder observationRecorder,
       ErrorProperties errorProperties) {
-    return new CircuitBreakerInterceptor(circuitBreaker, observationRecorder, errorProperties);
+    return new CircuitBreakerInterceptor(circuitBreaker, errorProperties);
   }
 }

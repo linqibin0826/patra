@@ -9,10 +9,10 @@
 ## 核心功能
 
 - **JSON/XML 序列化**: 基于 Jackson 的标准化序列化配置(日期格式、空值处理等)
-- **错误处理框架**: 可扩展的错误解析管道,支持追踪传播、指标收集和熔断保护
-- **可观测性支持**: 集成 Micrometer(指标)和 SkyWalking(分布式追踪)
+- **错误处理框架**: 可扩展的错误解析管道,通过 ResolutionInterceptor 扩展点支持自定义拦截器
 - **统一时间源**: 提供全局 UTC Clock,支持可测试性和时间戳一致性
 - **弹性支持**: 可选的 Resilience4j 熔断器,保护错误处理管道
+- **扩展点机制**: 提供 ResolutionInterceptor 接口,允许外部模块（如 patra-spring-boot-starter-observability）注入可观测性功能
 
 ## 自动配置内容
 
@@ -32,11 +32,11 @@
 统一错误处理管道,包含以下 Bean:
 - `ErrorResolutionEngine`: 错误解析引擎,支持原因链遍历和特征映射
 - `ErrorResolutionPipeline`: 拦截器责任链,执行错误处理流程
-- `errorResolutionTracingInterceptor`: 追踪上下文传播拦截器（Bean 名称）
-- `MetricsInterceptor`: 错误指标记录拦截器
 - `TraceProvider`: 追踪上下文提取器(默认基于 HTTP Header)
-- `ErrorObservationRecorder`: 错误观测记录器(基于 Micrometer)
 - `HttpStdErrors.Group`: 标准 HTTP 错误定义组
+
+注意: 追踪传播和指标收集功能已移至 patra-spring-boot-starter-observability，
+通过 ResolutionInterceptor 扩展点机制提供。
 
 ### CircuitBreakerErrorAutoConfiguration (可选)
 当 `resilience4j-circuitbreaker` 在 classpath 中时自动激活:
@@ -63,10 +63,9 @@ public class MyService {
 异常抛出
     ↓
 ErrorResolutionPipeline
-    ├─ TracingInterceptor (传播追踪上下文)
-    ├─ MetricsInterceptor (记录错误指标)
     ├─ CircuitBreakerInterceptor (熔断保护,可选)
-    └─ ... (自定义拦截器)
+    ├─ ... (自定义拦截器,如 observability starter 提供的追踪和指标拦截器)
+    └─ 调用下游 ↓
     ↓
 ErrorResolutionEngine
     ├─ ErrorMappingContributor (SPI: 自定义映射)
@@ -75,6 +74,8 @@ ErrorResolutionEngine
     ↓
 ErrorResolution (标准化错误表示)
 ```
+
+注意: 可观测性功能（追踪、指标）由 patra-spring-boot-starter-observability 通过 ResolutionInterceptor 扩展点提供。
 
 ## 扩展点
 
@@ -192,9 +193,11 @@ patra:
 **传递依赖**(自动包含):
 - `patra-common-core`: 领域基础类和工具
 - `spring-boot-starter-json`: Jackson JSON 支持
-- `micrometer-core`: 指标收集
 - `resilience4j-circuitbreaker`: 熔断器(可选)
 - `apm-toolkit-logback-1.x`, `apm-toolkit-trace`: SkyWalking APM 集成
+
+**可选功能**:
+- 可观测性（追踪、指标）: 添加 `patra-spring-boot-starter-observability` 依赖自动启用
 
 ### 配置示例
 
@@ -211,13 +214,10 @@ patra:
   error:
     enabled: true
     context-prefix: INGEST
-    observation:
-      enabled: true
-      slow-threshold-ms: 200
-
-  tracing:
-    header-names:
-      - X-Trace-ID
+    circuit-breaker:
+      enabled: true                        # 启用熔断器
+      failure-rate-threshold: 50.0
+      minimum-number-of-calls: 20
 ```
 
 ### 代码示例
@@ -255,11 +255,10 @@ public class GlobalExceptionHandler {
 
 - **Spring Boot**: 3.5.7
 - **Jackson**: 2.18.2 (JSON/XML 序列化)
-- **Micrometer**: 1.15.1 (指标)
 - **Resilience4j**: 2.2.0 (熔断器)
-- **SkyWalking**: 9.4.0 (分布式追踪)
+- **SkyWalking**: 9.4.0 (日志追踪集成)
 
 ---
 
-**最后更新**: 2025-01-22 (Bean 名称更新以解决 Bean 冲突问题)
+**最后更新**: 2025-11-24 (重构: 移除 Micrometer 依赖，可观测性功能移至 patra-spring-boot-starter-observability)
 **维护者**: Patra Team
