@@ -224,25 +224,25 @@ $ARGUMENTS
 
 **根据任务类型，参考对应的 Skills 获取代码模板和最佳实践**：
 
-#### 1. Domain 层任务 → java-hexagonal-architecture
+#### 1. Domain 层任务
 - **聚合根和实体**：参考 [聚合设计模式](../../.claude/skills/java-hexagonal-architecture/SKILL.md#聚合设计模式)
 - **Port 接口定义**：参考 [Port-Adapter 模式](../../.claude/skills/java-hexagonal-architecture/SKILL.md#常见架构模式)
 - **领域事件**：参考 [event-driven-architecture.md](../../.claude/skills/java-hexagonal-architecture/resources/event-driven-architecture.md)
 
-#### 2. Application 层任务 → patra-backend-developer
+#### 2. Application 层任务
 - **Orchestrator/Coordinator**：参考 [Orchestrator 编排模式](../../.claude/skills/java-spring-development/SKILL.md#orchestrator-编排模式)
 - **事务管理**：参考 [事务管理最佳实践](../../.claude/skills/java-spring-development/SKILL.md#事务管理最佳实践)
 
-#### 3. Infrastructure 层任务 → patra-backend-developer
+#### 3. Infrastructure 层任务
 - **Repository 实现**：参考 [MyBatis-Plus 数据访问](../../.claude/skills/java-spring-development/SKILL.md#mybatis-plus-数据访问)
 - **DO 和 Converter**：参考 [MapStruct 对象转换](../../.claude/skills/java-spring-development/SKILL.md#mapstruct-对象转换)
 
-#### 4. Adapter 层任务 → patra-backend-developer
+#### 4. Adapter 层任务
 - **Controller**：参考 [Controller 开发模式](../../.claude/skills/java-spring-development/SKILL.md#controller-开发模式)
 - **XXL-Job**：参考 [XXL-Job 定时任务](../../.claude/skills/java-spring-development/SKILL.md#xxl-job-定时任务)
 - **错误处理**：参考 [错误处理模式](../../.claude/skills/java-spring-development/SKILL.md#错误处理模式)
 
-#### 5. 所有层开发 → patra-backend-developer（TDD 驱动）
+#### 5. 所有层开发（TDD 驱动）
 
 **重要**：遵循 TDD 工作流（Red-Green-Refactor），测试先行驱动设计
 

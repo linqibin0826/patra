@@ -145,7 +145,7 @@
 
 ### TDD 驱动的后端开发阶段（Phase 2 - 由 /speckit.implement 调用）
 
-**执行 Agent**: `patra-backend-developer`（加载 `patra-tdd-development` + `java-spring-development` Skills）
+**参考技能**: `patra-tdd-development` + `java-spring-development`
 
 **核心原则**：测试驱动设计，遵循 Red-Green-Refactor 循环
 - 🔴 **Red**：先写失败的测试（定义期望行为）
