@@ -199,10 +199,13 @@ com.patra.starter.core.error.pipeline.ResolutionInterceptor
 
 **任务清单**:
 
-**2.1 创建模块结构**
-- [ ] 创建 `patra-spring-boot-starter-observability` 目录
-- [ ] 创建 pom.xml 并配置依赖
-- [ ] 创建包结构（autoconfigure、config、handler、filter、convention）
+**2.1 创建模块结构** ✅ 已完成（2025-11-24）
+- [x] 创建 `patra-spring-boot-starter-observability` 目录
+- [x] 创建 pom.xml 并配置依赖
+- [x] 创建包结构（autoconfigure、config、handler、filter、convention、interceptor）
+- [x] 创建 AutoConfiguration.imports 和 configuration-metadata.json
+- [x] 创建 README.md
+- [x] 验证模块编译通过
 
 **2.2 实现配置类**
 - [ ] 实现 `ObservabilityProperties`（主配置属性）
@@ -533,7 +536,7 @@ com.patra.starter.core.error.pipeline.ResolutionInterceptor
 ### 决策 1: 采用保守策略（PoC 先行）
 
 **日期**: 2025-11-24
-**状态**: 🟡 待确认
+**状态**: ✅ 已确认
 **理由**:
 - SkyWalking 官方 Benchmark 数据不能替代实际环境测试
 - 性能不达标会导致整个方案失败
@@ -565,7 +568,7 @@ com.patra.starter.core.error.pipeline.ResolutionInterceptor
 ### 决策 3: 推荐 Domain Events 优先，防腐层备选
 
 **日期**: 2025-11-24
-**状态**: 🟡 待确认
+**状态**: ✅ 已确认
 **理由**:
 - Domain Events 是 DDD 最佳实践
 - 完全解耦，领域层不知道可观测性存在
@@ -610,49 +613,6 @@ com.patra.starter.core.error.pipeline.ResolutionInterceptor
 
 ---
 
-## 📋 待确认事项
-
-### ⏸️ 等待用户确认
-
-在开始实施前，需要你明确确认以下问题：
-
-#### Q1: PoC 性能测试优先级 ✋
-- [ ] **问题**: 是否同意先执行 PoC 性能测试，再开始大规模重构？
-- [ ] **问题**: 如果 PoC 失败（性能不达标），是否接受调整方案甚至放弃 SkyWalking？
-
-**你的确认**: _待填写_
-
----
-
-#### Q2: 现有可观测性代码的处理 ✋
-- [ ] **问题**: 是否允许删除现有的 `TracingInterceptor` 和 `MetricsInterceptor`？
-- [ ] **问题**: 还是需要保留兼容性，逐步迁移？
-
-**你的确认**: _待填写_
-
----
-
-#### Q3: 实施节奏 ✋
-- [ ] **问题**: 是否认同"质量优先，无时间压力"的原则？
-- [ ] **问题**: 预计 15-20 天的实施周期是否可接受？
-
-**你的确认**: _待填写_
-
----
-
-#### Q4: 技术选型 ✋
-- [ ] **问题**: 是否同意使用 Micrometer Observation + SkyWalking 的混合架构？
-- [ ] **问题**: 是否需要对比 OpenTelemetry 方案？
-
-**你的确认**: _待填写_
-
----
-
-#### Q5: Domain Events vs 防腐层 ✋
-- [ ] **问题**: 是否同意优先使用 Domain Events 驱动可观测性？
-- [ ] **问题**: 是否接受防腐层（ObservabilityPort）作为备选方案？
-
-**你的确认**: _待填写_
 
 ---
 

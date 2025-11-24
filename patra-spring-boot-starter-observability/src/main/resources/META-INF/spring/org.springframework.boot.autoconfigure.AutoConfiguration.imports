@@ -1,0 +1,17 @@
+# Patra Observability Auto-Configuration
+# 自动配置类列表（按加载顺序排列）
+
+# 主配置：可观测性核心配置
+com.patra.starter.observability.autoconfigure.ObservabilityAutoConfiguration
+
+# Micrometer 配置：Observation API 和 MeterRegistry
+com.patra.starter.observability.autoconfigure.MicrometerAutoConfiguration
+
+# SkyWalking Meter 配置（可选）
+com.patra.starter.observability.autoconfigure.SkyWalkingMeterAutoConfiguration
+
+# Prometheus 配置（可选）
+com.patra.starter.observability.autoconfigure.PrometheusAutoConfiguration
+
+# 拦截器配置：插件式架构
+com.patra.starter.observability.autoconfigure.ObservationInterceptorsAutoConfiguration
