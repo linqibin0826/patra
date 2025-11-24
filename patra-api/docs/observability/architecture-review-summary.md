@@ -3,6 +3,8 @@
 > **评审日期**: 2025-11-23
 > **评审类型**: 三维度并行评审（六边形架构 + DDD + 技术选型）
 > **项目背景**: 绿地项目，允许破坏性重构，追求生产级别的完整方案
+>
+> **重要说明**: 本文档记录的时间估算为历史评审数据。实际执行时，本项目为单人开发、无时间压力，采用质量优先原则，不受时间约束。
 
 ---
 
@@ -347,7 +349,11 @@ class HexagonalArchitectureTest {
 
 设计中启用了 SQL 参数收集和 HTTP Body 收集，可能导致敏感数据（密码、身份证号、API Key）泄露到追踪系统。
 
-**必须执行的修正**:
+> **✅ 设计已更新**（2025-11-24）：
+> 最终采用 `ObservationFilter` 替代 `ObservationHandler`，在 Observation 创建阶段进行脱敏，避免反射访问私有字段。
+> 详见 `observability-starter-design.md` Lines 842-1109（SensitiveDataObservationFilter 设计）。
+
+**必须执行的修正**（历史评审建议）:
 
 **步骤 1: 创建敏感数据过滤器**
 ```java

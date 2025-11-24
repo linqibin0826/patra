@@ -436,5 +436,109 @@ management:
         include: "*"  # 暴露所有端点（仅用于故障排查）
 
 # ================================================================
+# Resilience4j 熔断器配置（健康检查与故障降级）
+# ================================================================
+
+# 配置可观测性组件的熔断保护，防止后端（SkyWalking/Prometheus）故障影响业务
+---
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        # 熔断器打开条件
+        failure-rate-threshold: 50              # 失败率达到 50% 时打开熔断器
+        slow-call-rate-threshold: 50            # 慢调用率达到 50% 时打开熔断器
+        slow-call-duration-threshold: 3s        # 慢调用阈值（超过 3 秒）
+
+        # 滑动窗口配置
+        sliding-window-type: COUNT_BASED        # 基于调用次数的滑动窗口
+        sliding-window-size: 20                 # 滑动窗口大小（20 次调用）
+        minimum-number-of-calls: 10             # 最小调用次数（至少 10 次才计算失败率）
+
+        # 熔断器状态转换
+        wait-duration-in-open-state: 30s        # 熔断器打开后等待 30 秒再进入半开状态
+        permitted-number-of-calls-in-half-open-state: 3  # 半开状态允许 3 次测试调用
+
+        # 自动从半开转为关闭的条件
+        automatic-transition-from-open-to-half-open-enabled: true
+
+        # 记录的异常类型
+        record-exceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+
+        # 忽略的异常类型（不计入失败率）
+        ignore-exceptions:
+          - java.lang.IllegalArgumentException
+
+    instances:
+      # 为可观测性后端配置专用熔断器
+      observability:
+        base-config: default
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+
+# 开发环境：更严格的熔断条件（快速发现问题）
+---
+spring:
+  profiles: dev
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      observability:
+        failure-rate-threshold: 30              # 开发环境 30% 失败率即打开
+        minimum-number-of-calls: 5              # 最少 5 次调用
+        wait-duration-in-open-state: 10s        # 更短的等待时间
+
+# 生产环境：更宽松的熔断条件（避免误判）
+---
+spring:
+  profiles: prod
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      observability:
+        failure-rate-threshold: 60              # 生产环境 60% 失败率才打开
+        minimum-number-of-calls: 20             # 至少 20 次调用
+        wait-duration-in-open-state: 60s        # 更长的等待时间
+
+# ================================================================
+# 敏感数据脱敏配置
+# ================================================================
+
+# 配置敏感数据脱敏规则（通过 SensitiveDataObservationFilter）
+---
+patra:
+  observability:
+    security:
+      # 敏感数据脱敏开关
+      sensitive-data-masking:
+        enabled: true
+
+        # 自定义敏感字段模式（正则表达式）
+        patterns:
+          - "(?i)password=([^&\\s]+)"           # 密码参数
+          - "(?i)token=([^&\\s]+)"              # Token
+          - "(?i)api[_-]?key=([^&\\s]+)"        # API Key
+          - "(?i)secret=([^&\\s]+)"             # Secret
+          - "\\d{15,19}"                        # 可能的身份证号
+          - "\\d{3}-?\\d{4}-?\\d{4}"            # 手机号
+          - "\\d{16}"                           # 可能的银行卡号
+
+        # 脱敏替换文本
+        mask-placeholder: "***MASKED***"
+
+        # 需要脱敏的 KeyValue 键名
+        sensitive-keys:
+          - "password"
+          - "token"
+          - "apiKey"
+          - "secret"
+          - "authorization"
+          - "sessionId"
+
+# ================================================================
 # 结束
 # ================================================================
