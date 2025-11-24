@@ -91,9 +91,21 @@ public class PerformanceObservationHandler implements ObservationHandler<Observa
      */
     @Override
     public void onError(Observation.Context context) {
-        log.error("观测错误: {}, 错误: {}",
-            context.getName(),
-            context.getError() != null ? context.getError().getMessage() : "Unknown");
+        // 清理 startTimes，防止内存泄漏
+        String key = getKey(context);
+        Long startTime = startTimes.remove(key);
+
+        if (startTime != null) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("观测错误: {}, 耗时 {}ms, 错误: {}",
+                context.getName(),
+                duration,
+                context.getError() != null ? context.getError().getMessage() : "Unknown");
+        } else {
+            log.error("观测错误: {}, 错误: {}",
+                context.getName(),
+                context.getError() != null ? context.getError().getMessage() : "Unknown");
+        }
     }
 
     /**

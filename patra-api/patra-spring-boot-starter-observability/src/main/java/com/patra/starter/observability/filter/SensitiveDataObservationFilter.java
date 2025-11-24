@@ -92,10 +92,14 @@ public class SensitiveDataObservationFilter implements ObservationFilter {
     }
 
     /**
-     * 脱敏 Observation Context。
+     * 检测并告警 Observation Context 中的敏感数据。
+     *
+     * <p>设计说明：
+     * 不直接修改 Context 以避免丢失关键上下文信息（如 parentObservation、scope 等），
+     * 而是采用"检测 + 告警"策略，帮助开发者识别和移除敏感数据源头。
      *
      * @param context Observation 上下文
-     * @return 脱敏后的上下文
+     * @return 原始上下文（不修改）
      */
     @Override
     public Observation.Context map(Observation.Context context) {
@@ -104,36 +108,89 @@ public class SensitiveDataObservationFilter implements ObservationFilter {
         }
 
         try {
-            // 脱敏低基数标签
-            KeyValues originalLow = context.getLowCardinalityKeyValues();
-            KeyValues maskedLow = maskKeyValues(originalLow);
+            // 检测低基数标签
+            KeyValues lowCardinality = context.getLowCardinalityKeyValues();
+            boolean hasLowSensitive = containsSensitiveData(lowCardinality);
 
-            // 脱敏高基数标签
-            KeyValues originalHigh = context.getHighCardinalityKeyValues();
-            KeyValues maskedHigh = maskKeyValues(originalHigh);
+            // 检测高基数标签
+            KeyValues highCardinality = context.getHighCardinalityKeyValues();
+            boolean hasHighSensitive = containsSensitiveData(highCardinality);
 
-            // 如果有脱敏，创建新的 Context
-            if (!maskedLow.equals(originalLow) || !maskedHigh.equals(originalHigh)) {
-                // 使用 Observation.Context 的公开方法重新设置 KeyValues
-                // 通过先清空再添加的方式实现替换
-                Observation.Context newContext = new Observation.Context();
-                newContext.setName(context.getName());
-                newContext.setContextualName(context.getContextualName());
-                newContext.setError(context.getError());
+            // 如果检测到敏感数据，记录警告
+            if (hasLowSensitive || hasHighSensitive) {
+                log.warn("⚠️ 检测到敏感数据: observation={}, " +
+                    "lowCardinality包含敏感数据={}, highCardinality包含敏感数据={}, " +
+                    "建议在数据源头移除敏感标签以保护数据安全",
+                    context.getName(), hasLowSensitive, hasHighSensitive);
 
-                // 添加脱敏后的 KeyValues
-                maskedLow.forEach(kv -> newContext.addLowCardinalityKeyValue(kv));
-                maskedHigh.forEach(kv -> newContext.addHighCardinalityKeyValue(kv));
-
-                log.trace("已对 Observation [{}] 的敏感数据进行脱敏", context.getName());
-                return newContext;
+                // 详细记录敏感字段（仅 DEBUG 级别）
+                if (log.isDebugEnabled()) {
+                    logSensitiveFields(lowCardinality, "lowCardinality");
+                    logSensitiveFields(highCardinality, "highCardinality");
+                }
+            } else {
+                log.trace("未检测到敏感数据: observation={}", context.getName());
             }
 
+            // 返回原始 Context，不修改
             return context;
         } catch (Exception e) {
-            // 静默失败：脱敏失败不应影响业务逻辑
-            log.warn("敏感数据脱敏失败，跳过脱敏处理: {}", e.getMessage());
+            // 静默失败：检测失败不应影响业务逻辑
+            log.warn("敏感数据检测失败，跳过检测: observation={}, error={}",
+                context.getName(), e.getMessage());
             return context;
+        }
+    }
+
+    /**
+     * 检测 KeyValues 是否包含敏感数据。
+     *
+     * @param keyValues KeyValue 集合
+     * @return true 如果包含敏感数据
+     */
+    private boolean containsSensitiveData(KeyValues keyValues) {
+        if (keyValues == null || keyValues.stream().count() == 0) {
+            return false;
+        }
+
+        for (io.micrometer.common.KeyValue keyValue : keyValues) {
+            String key = keyValue.getKey();
+            String value = keyValue.getValue();
+
+            // 检查字段名是否敏感
+            if (isSensitiveField(key)) {
+                return true;
+            }
+
+            // 检查值是否包含敏感数据
+            if (!maskSensitiveValue(value).equals(value)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 详细记录敏感字段（DEBUG 级别）。
+     *
+     * @param keyValues KeyValue 集合
+     * @param category 标签类别（lowCardinality 或 highCardinality）
+     */
+    private void logSensitiveFields(KeyValues keyValues, String category) {
+        if (keyValues == null || keyValues.stream().count() == 0) {
+            return;
+        }
+
+        for (io.micrometer.common.KeyValue keyValue : keyValues) {
+            String key = keyValue.getKey();
+            String value = keyValue.getValue();
+
+            if (isSensitiveField(key)) {
+                log.debug("  - 敏感字段 [{}]: key={}, value=***MASKED***", category, key);
+            } else if (!maskSensitiveValue(value).equals(value)) {
+                log.debug("  - 敏感值 [{}]: key={}, value=***MASKED***", category, key);
+            }
         }
     }
 
@@ -142,7 +199,9 @@ public class SensitiveDataObservationFilter implements ObservationFilter {
      *
      * @param keyValues 原始 KeyValue 集合
      * @return 脱敏后的 KeyValue 集合
+     * @deprecated 改用检测 + 告警策略，不再直接修改 Context
      */
+    @Deprecated
     private KeyValues maskKeyValues(KeyValues keyValues) {
         if (keyValues == null || keyValues.stream().count() == 0) {
             return keyValues;
