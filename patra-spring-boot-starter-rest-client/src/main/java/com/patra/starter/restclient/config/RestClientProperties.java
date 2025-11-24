@@ -8,10 +8,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /// REST Client 配置属性。
 ///
-/// <p>绑定 {@code patra.rest-client} 配置前缀，支持超时、重试、拦截器和多客户端配置。
+/// 绑定 {@code patra.rest-client} 配置前缀，支持超时、重试、拦截器和多客户端配置。
 ///
-/// <h2>配置示例</h2>
-/// <pre>{@code
+/// ## 配置示例
+///
+/// ```yaml
 /// patra:
 ///   rest-client:
 ///     enabled: true
@@ -27,7 +28,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 ///     clients:
 ///       pubmed:
 ///         base-url: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
-/// }</pre>
+/// ```
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -49,44 +50,72 @@ public class RestClientProperties {
   /// 客户端配置映射（按用途分组）
   private Map<String, ClientConfig> clients = new HashMap<>();
 
-  // Getters and Setters
-
+  /// 获取是否启用自动配置。
+  ///
+  /// @return 是否启用
   public boolean isEnabled() {
     return enabled;
   }
 
+  /// 设置是否启用自动配置。
+  ///
+  /// @param enabled 是否启用
   public void setEnabled(boolean enabled) {
     this.enabled = enabled;
   }
 
+  /// 获取全局超时配置。
+  ///
+  /// @return 超时配置
   public TimeoutConfig getTimeout() {
     return timeout;
   }
 
+  /// 设置全局超时配置。
+  ///
+  /// @param timeout 超时配置
   public void setTimeout(TimeoutConfig timeout) {
     this.timeout = timeout;
   }
 
+  /// 获取重试配置。
+  ///
+  /// @return 重试配置
   public RetryConfig getRetry() {
     return retry;
   }
 
+  /// 设置重试配置。
+  ///
+  /// @param retry 重试配置
   public void setRetry(RetryConfig retry) {
     this.retry = retry;
   }
 
+  /// 获取拦截器配置。
+  ///
+  /// @return 拦截器配置
   public InterceptorsConfig getInterceptors() {
     return interceptors;
   }
 
+  /// 设置拦截器配置。
+  ///
+  /// @param interceptors 拦截器配置
   public void setInterceptors(InterceptorsConfig interceptors) {
     this.interceptors = interceptors;
   }
 
+  /// 获取客户端配置映射。
+  ///
+  /// @return 客户端配置映射
   public Map<String, ClientConfig> getClients() {
     return clients;
   }
 
+  /// 设置客户端配置映射。
+  ///
+  /// @param clients 客户端配置映射
   public void setClients(Map<String, ClientConfig> clients) {
     this.clients = clients;
   }
@@ -119,44 +148,72 @@ public class RestClientProperties {
     /// 最大等待时间（默认 30000 毫秒）
     private long maxWaitDuration = 30000;
 
-    // Getters and Setters
-
+    /// 获取是否启用重试。
+    ///
+    /// @return 是否启用重试
     public boolean isEnabled() {
       return enabled;
     }
 
+    /// 设置是否启用重试。
+    ///
+    /// @param enabled 是否启用重试
     public void setEnabled(boolean enabled) {
       this.enabled = enabled;
     }
 
+    /// 获取最大重试次数。
+    ///
+    /// @return 最大重试次数
     public int getMaxAttempts() {
       return maxAttempts;
     }
 
+    /// 设置最大重试次数。
+    ///
+    /// @param maxAttempts 最大重试次数
     public void setMaxAttempts(int maxAttempts) {
       this.maxAttempts = maxAttempts;
     }
 
+    /// 获取初始重试等待时间（毫秒）。
+    ///
+    /// @return 初始等待时间
     public long getWaitDuration() {
       return waitDuration;
     }
 
+    /// 设置初始重试等待时间（毫秒）。
+    ///
+    /// @param waitDuration 初始等待时间
     public void setWaitDuration(long waitDuration) {
       this.waitDuration = waitDuration;
     }
 
+    /// 获取退避倍数。
+    ///
+    /// @return 退避倍数
     public double getBackoffMultiplier() {
       return backoffMultiplier;
     }
 
+    /// 设置退避倍数。
+    ///
+    /// @param backoffMultiplier 退避倍数
     public void setBackoffMultiplier(double backoffMultiplier) {
       this.backoffMultiplier = backoffMultiplier;
     }
 
+    /// 获取最大等待时间（毫秒）。
+    ///
+    /// @return 最大等待时间
     public long getMaxWaitDuration() {
       return maxWaitDuration;
     }
 
+    /// 设置最大等待时间（毫秒）。
+    ///
+    /// @param maxWaitDuration 最大等待时间
     public void setMaxWaitDuration(long maxWaitDuration) {
       this.maxWaitDuration = maxWaitDuration;
     }
@@ -173,28 +230,44 @@ public class RestClientProperties {
     /// 指标拦截器配置
     private MetricsConfig metrics = new MetricsConfig();
 
-    // Getters and Setters
-
+    /// 获取日志拦截器配置。
+    ///
+    /// @return 日志拦截器配置
     public LoggingConfig getLogging() {
       return logging;
     }
 
+    /// 设置日志拦截器配置。
+    ///
+    /// @param logging 日志拦截器配置
     public void setLogging(LoggingConfig logging) {
       this.logging = logging;
     }
 
+    /// 获取追踪拦截器配置。
+    ///
+    /// @return 追踪拦截器配置
     public TracingConfig getTracing() {
       return tracing;
     }
 
+    /// 设置追踪拦截器配置。
+    ///
+    /// @param tracing 追踪拦截器配置
     public void setTracing(TracingConfig tracing) {
       this.tracing = tracing;
     }
 
+    /// 获取指标拦截器配置。
+    ///
+    /// @return 指标拦截器配置
     public MetricsConfig getMetrics() {
       return metrics;
     }
 
+    /// 设置指标拦截器配置。
+    ///
+    /// @param metrics 指标拦截器配置
     public void setMetrics(MetricsConfig metrics) {
       this.metrics = metrics;
     }
@@ -214,36 +287,58 @@ public class RestClientProperties {
     /// 记录 Body 的最大字节数（默认 1024 字节，防止大文件导致内存溢出）
     private int maxBodyLogLength = 1024;
 
-    // Getters and Setters
-
+    /// 获取是否启用日志拦截器。
+    ///
+    /// @return 是否启用
     public boolean isEnabled() {
       return enabled;
     }
 
+    /// 设置是否启用日志拦截器。
+    ///
+    /// @param enabled 是否启用
     public void setEnabled(boolean enabled) {
       this.enabled = enabled;
     }
 
+    /// 获取是否记录 HTTP 头。
+    ///
+    /// @return 是否记录 HTTP 头
     public boolean isLogHeaders() {
       return logHeaders;
     }
 
+    /// 设置是否记录 HTTP 头。
+    ///
+    /// @param logHeaders 是否记录 HTTP 头
     public void setLogHeaders(boolean logHeaders) {
       this.logHeaders = logHeaders;
     }
 
+    /// 获取是否记录请求/响应体。
+    ///
+    /// @return 是否记录请求/响应体
     public boolean isLogBody() {
       return logBody;
     }
 
+    /// 设置是否记录请求/响应体。
+    ///
+    /// @param logBody 是否记录请求/响应体
     public void setLogBody(boolean logBody) {
       this.logBody = logBody;
     }
 
+    /// 获取 Body 日志的最大字节数。
+    ///
+    /// @return 最大字节数
     public int getMaxBodyLogLength() {
       return maxBodyLogLength;
     }
 
+    /// 设置 Body 日志的最大字节数。
+    ///
+    /// @param maxBodyLogLength 最大字节数
     public void setMaxBodyLogLength(int maxBodyLogLength) {
       this.maxBodyLogLength = maxBodyLogLength;
     }
@@ -257,20 +352,30 @@ public class RestClientProperties {
     /// 追踪 ID 的 HTTP 头名称列表
     private List<String> headerNames = List.of("X-Trace-ID", "X-B3-TraceId");
 
-    // Getters and Setters
-
+    /// 获取是否启用追踪拦截器。
+    ///
+    /// @return 是否启用
     public boolean isEnabled() {
       return enabled;
     }
 
+    /// 设置是否启用追踪拦截器。
+    ///
+    /// @param enabled 是否启用
     public void setEnabled(boolean enabled) {
       this.enabled = enabled;
     }
 
+    /// 获取追踪 ID 的 HTTP 头名称列表。
+    ///
+    /// @return HTTP 头名称列表
     public List<String> getHeaderNames() {
       return headerNames;
     }
 
+    /// 设置追踪 ID 的 HTTP 头名称列表。
+    ///
+    /// @param headerNames HTTP 头名称列表
     public void setHeaderNames(List<String> headerNames) {
       this.headerNames = headerNames;
     }
@@ -281,12 +386,16 @@ public class RestClientProperties {
     /// 是否启用（默认 true）
     private boolean enabled = true;
 
-    // Getters and Setters
-
+    /// 获取是否启用指标拦截器。
+    ///
+    /// @return 是否启用
     public boolean isEnabled() {
       return enabled;
     }
 
+    /// 设置是否启用指标拦截器。
+    ///
+    /// @param enabled 是否启用
     public void setEnabled(boolean enabled) {
       this.enabled = enabled;
     }
@@ -303,28 +412,44 @@ public class RestClientProperties {
     /// 客户端级超时配置（覆盖全局配置）
     private TimeoutConfig timeout;
 
-    // Getters and Setters
-
+    /// 获取基础 URL。
+    ///
+    /// @return 基础 URL
     public String getBaseUrl() {
       return baseUrl;
     }
 
+    /// 设置基础 URL。
+    ///
+    /// @param baseUrl 基础 URL
     public void setBaseUrl(String baseUrl) {
       this.baseUrl = baseUrl;
     }
 
+    /// 获取默认 HTTP 头映射。
+    ///
+    /// @return HTTP 头映射
     public Map<String, String> getDefaultHeaders() {
       return defaultHeaders;
     }
 
+    /// 设置默认 HTTP 头映射。
+    ///
+    /// @param defaultHeaders HTTP 头映射
     public void setDefaultHeaders(Map<String, String> defaultHeaders) {
       this.defaultHeaders = defaultHeaders;
     }
 
+    /// 获取客户端级超时配置。
+    ///
+    /// @return 超时配置
     public TimeoutConfig getTimeout() {
       return timeout;
     }
 
+    /// 设置客户端级超时配置。
+    ///
+    /// @param timeout 超时配置
     public void setTimeout(TimeoutConfig timeout) {
       this.timeout = timeout;
     }

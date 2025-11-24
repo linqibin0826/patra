@@ -9,41 +9,35 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * 公共标签过滤器。
- *
- * <p>功能：
- * <ul>
- *   <li>自动为所有 Meter 添加公共标签</li>
- *   <li>添加系统标签：application、environment、region、cluster</li>
- *   <li>添加用户自定义标签</li>
- * </ul>
- *
- * <p>使用场景：
- * <ul>
- *   <li>统一标签体系：确保所有指标都包含核心标识标签</li>
- *   <li>多环境区分：通过 environment、region 区分不同环境的指标</li>
- *   <li>多集群管理：通过 cluster 标签区分不同集群</li>
- * </ul>
- *
- * @author Jobs
- * @since 1.0.0
- */
+/// 公共标签过滤器。
+///
+/// 功能：
+///
+/// - 自动为所有 Meter 添加公共标签
+/// - 添加系统标签：application、environment、region、cluster
+/// - 添加用户自定义标签
+///
+/// 使用场景：
+///
+/// - 统一标签体系：确保所有指标都包含核心标识标签
+/// - 多环境区分：通过 environment、region 区分不同环境的指标
+/// - 多集群管理：通过 cluster 标签区分不同集群
+///
+/// @author Jobs
+/// @since 1.0.0
 public class CommonTagsMeterFilter implements MeterFilter {
 
     private static final Logger log = LoggerFactory.getLogger(CommonTagsMeterFilter.class);
 
     private final Map<String, String> commonTags;
 
-    /**
-     * 构造函数。
-     *
-     * @param applicationName 应用名称
-     * @param environment     环境标识（dev、staging、prod）
-     * @param region          区域标识
-     * @param cluster         集群标识
-     * @param customTags      用户自定义标签
-     */
+    /// 构造函数。
+    ///
+    /// @param applicationName 应用名称
+    /// @param environment     环境标识（dev、staging、prod）
+    /// @param region          区域标识
+    /// @param cluster         集群标识
+    /// @param customTags      用户自定义标签
     public CommonTagsMeterFilter(
         String applicationName,
         String environment,
@@ -75,12 +69,10 @@ public class CommonTagsMeterFilter implements MeterFilter {
         log.info("初始化公共标签过滤器，标签数量: {}, 标签: {}", this.commonTags.size(), this.commonTags);
     }
 
-    /**
-     * 为 Meter 添加公共标签。
-     *
-     * @param id Meter ID
-     * @return 添加公共标签后的 Meter ID
-     */
+    /// 为 Meter 添加公共标签。
+    ///
+    /// @param id Meter ID
+    /// @return 添加公共标签后的 Meter ID
     @Override
     public Meter.Id map(Meter.Id id) {
         // 为 Meter 添加所有公共标签

@@ -14,21 +14,19 @@ import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.stereotype.Component;
 
-/**
- * Job 启动辅助类
- *
- * <p>封装 Spring Batch JobLauncher 调用逻辑，简化批处理任务启动
- *
- * <p><strong>关键改进</strong>：支持可选的 timestamp 参数，控制 Job 幂等性：
- *
- * <ul>
- *   <li>{@code addTimestamp=true}: 每次执行都创建新 JobInstance（适用于可重复执行的任务）
- *   <li>{@code addTimestamp=false}: 相同参数的 Job 只执行一次（幂等性保证）
- * </ul>
- *
- * @author Patra Team
- * @since 1.0.0
- */
+/// Job 启动辅助类。
+///
+/// 封装 Spring Batch JobLauncher 调用逻辑，简化批处理任务启动。
+///
+/// ## 关键改进
+///
+/// 支持可选的 timestamp 参数，控制 Job 幂等性：
+///
+/// - `addTimestamp=true`: 每次执行都创建新 JobInstance（适用于可重复执行的任务）
+/// - `addTimestamp=false`: 相同参数的 Job 只执行一次（幂等性保证）
+///
+/// @author Patra Team
+/// @since 1.0.0
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -37,33 +35,28 @@ public class JobLauncherHelper {
   private final JobLauncher jobLauncher;
   private final JobExplorer jobExplorer;
 
-  /**
-   * 启动 Job（默认添加 timestamp，每次创建新实例）
-   *
-   * @param job Job 实例
-   * @param params Job 参数
-   * @return JobExecution ID
-   */
+  /// 启动 Job（默认添加 timestamp，每次创建新实例）。
+  ///
+  /// @param job Job 实例
+  /// @param params Job 参数
+  /// @return JobExecution ID
   public Long launch(Job job, Map<String, Object> params) {
     return launch(job, params, true);
   }
 
-  /**
-   * 启动 Job
-   *
-   * <p><strong>关键改进</strong>：支持可选的 timestamp 参数
-   *
-   * @param job Job 实例
-   * @param params Job 参数（Map 形式）
-   * @param addTimestamp 是否添加时间戳
-   *     <ul>
-   *       <li>{@code true}: 每次执行都创建新 JobInstance（适用于可重复执行的任务）
-   *       <li>{@code false}: 相同参数的 Job 只执行一次（幂等性保证）
-   *     </ul>
-   *
-   * @return JobExecution ID
-   * @throws BatchJobExecutionException Job 启动失败时抛出
-   */
+  /// 启动 Job。
+  ///
+  /// ## 关键改进
+  ///
+  /// 支持可选的 timestamp 参数。
+  ///
+  /// @param job Job 实例
+  /// @param params Job 参数（Map 形式）
+  /// @param addTimestamp 是否添加时间戳
+  ///     - `true`: 每次执行都创建新 JobInstance（适用于可重复执行的任务）
+  ///     - `false`: 相同参数的 Job 只执行一次（幂等性保证）
+  /// @return JobExecution ID
+  /// @throws BatchJobExecutionException Job 启动失败时抛出
   public Long launch(Job job, Map<String, Object> params, boolean addTimestamp) {
     try {
       JobParameters jobParameters = buildJobParameters(params, addTimestamp);
@@ -78,15 +71,13 @@ public class JobLauncherHelper {
     }
   }
 
-  /**
-   * 构建 JobParameters
-   *
-   * <p>支持常见 Java 类型到 Spring Batch JobParameters 的转换
-   *
-   * @param params 参数 Map
-   * @param addTimestamp 是否添加时间戳（控制幂等性）
-   * @return JobParameters 实例
-   */
+  /// 构建 JobParameters。
+  ///
+  /// 支持常见 Java 类型到 Spring Batch JobParameters 的转换。
+  ///
+  /// @param params 参数 Map
+  /// @param addTimestamp 是否添加时间戳（控制幂等性）
+  /// @return JobParameters 实例
   private JobParameters buildJobParameters(Map<String, Object> params, boolean addTimestamp) {
     JobParametersBuilder builder = new JobParametersBuilder();
 
@@ -115,12 +106,10 @@ public class JobLauncherHelper {
     return builder.toJobParameters();
   }
 
-  /**
-   * 查询 Job 执行状态
-   *
-   * @param executionId JobExecution ID
-   * @return JobExecution（如果存在）
-   */
+  /// 查询 Job 执行状态。
+  ///
+  /// @param executionId JobExecution ID
+  /// @return JobExecution（如果存在）
   public Optional<JobExecution> findJobExecution(Long executionId) {
     return Optional.ofNullable(jobExplorer.getJobExecution(executionId));
   }

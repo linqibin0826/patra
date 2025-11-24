@@ -11,25 +11,21 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
-/**
- * 可观测性自动配置
- * <p>
- * 配置可观测性 Recorder（Metrics、Logging）
- *
- * @author Patra Team
- * @since 1.0.0
- */
+/// 可观测性自动配置。
+///
+/// 配置可观测性 Recorder（Metrics、Logging）
+///
+/// @author Patra Team
+/// @since 1.0.0
 @Slf4j
 @AutoConfiguration(after = LockAutoConfiguration.class)
 @EnableConfigurationProperties(RedissonProperties.class)
 public class ObservabilityAutoConfiguration {
 
-    /**
-     * 配置 Micrometer 指标记录器
-     *
-     * @param meterRegistry Micrometer 注册表
-     * @return LockMetricsRecorder
-     */
+    /// 配置 Micrometer 指标记录器。
+    ///
+    /// @param meterRegistry Micrometer 注册表
+    /// @return LockMetricsRecorder
     @Bean
     @ConditionalOnClass(MeterRegistry.class)
     @ConditionalOnProperty(prefix = "patra.redisson.observability", name = "metrics-enabled", havingValue = "true", matchIfMissing = true)
@@ -38,12 +34,10 @@ public class ObservabilityAutoConfiguration {
         return new LockMetricsRecorder(meterRegistry);
     }
 
-    /**
-     * 配置日志记录器
-     *
-     * @param properties Redisson 配置属性
-     * @return LockLoggingRecorder
-     */
+    /// 配置日志记录器。
+    ///
+    /// @param properties Redisson 配置属性
+    /// @return LockLoggingRecorder
     @Bean
     @ConditionalOnProperty(prefix = "patra.redisson.observability", name = "logging-enabled", havingValue = "true", matchIfMissing = true)
     public LockLoggingRecorder lockLoggingRecorder(RedissonProperties properties) {

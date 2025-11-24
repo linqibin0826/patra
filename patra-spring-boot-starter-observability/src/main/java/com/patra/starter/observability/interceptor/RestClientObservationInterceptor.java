@@ -11,42 +11,36 @@ import org.springframework.http.client.ClientHttpResponse;
 
 import java.io.IOException;
 
-/**
- * REST 客户端可观测性拦截器。
- *
- * <p>功能：
- * <ul>
- *   <li>为 HTTP 请求创建 Observation</li>
- *   <li>自动记录请求方法、URI、状态码等关键信息</li>
- *   <li>与 Micrometer Observation 集成，自动生成追踪和指标</li>
- * </ul>
- *
- * <p>实现模式：
- * <ul>
- *   <li>在请求执行前创建并启动 Observation</li>
- *   <li>执行 HTTP 请求</li>
- *   <li>记录响应状态码</li>
- *   <li>停止 Observation（成功或失败）</li>
- * </ul>
- *
- * <p>Observation 标签：
- * <ul>
- *   <li>http.method - HTTP 请求方法（GET、POST 等）</li>
- *   <li>http.uri - 请求 URI（不含查询参数，避免高基数）</li>
- *   <li>http.status_code - HTTP 响应状态码</li>
- *   <li>http.outcome - 请求结果（SUCCESS、CLIENT_ERROR、SERVER_ERROR、UNKNOWN）</li>
- * </ul>
- *
- * <p>使用场景：
- * <ul>
- *   <li>监控 REST 客户端请求的性能和成功率</li>
- *   <li>自动集成分布式追踪（与 Sleuth/Zipkin 集成）</li>
- *   <li>生成 HTTP 客户端指标（通过 DefaultMeterObservationHandler）</li>
- * </ul>
- *
- * @author Jobs
- * @since 1.0.0
- */
+/// REST 客户端可观测性拦截器。
+///
+/// 功能：
+///
+/// - 为 HTTP 请求创建 Observation
+/// - 自动记录请求方法、URI、状态码等关键信息
+/// - 与 Micrometer Observation 集成，自动生成追踪和指标
+///
+/// 实现模式：
+///
+/// - 在请求执行前创建并启动 Observation
+/// - 执行 HTTP 请求
+/// - 记录响应状态码
+/// - 停止 Observation（成功或失败）
+///
+/// Observation 标签：
+///
+/// - `http.method` - HTTP 请求方法（GET、POST 等）
+/// - `http.uri` - 请求 URI（不含查询参数，避免高基数）
+/// - `http.status_code` - HTTP 响应状态码
+/// - `http.outcome` - 请求结果（SUCCESS、CLIENT_ERROR、SERVER_ERROR、UNKNOWN）
+///
+/// 使用场景：
+///
+/// - 监控 REST 客户端请求的性能和成功率
+/// - 自动集成分布式追踪（与 Sleuth/Zipkin 集成）
+/// - 生成 HTTP 客户端指标（通过 DefaultMeterObservationHandler）
+///
+/// @author Jobs
+/// @since 1.0.0
 public class RestClientObservationInterceptor implements ClientHttpRequestInterceptor {
 
     private static final Logger log = LoggerFactory.getLogger(RestClientObservationInterceptor.class);
@@ -55,35 +49,30 @@ public class RestClientObservationInterceptor implements ClientHttpRequestInterc
 
     private final ObservationRegistry observationRegistry;
 
-    /**
-     * 构造函数。
-     *
-     * @param observationRegistry Observation 注册中心
-     */
+    /// 构造函数。
+    ///
+    /// @param observationRegistry Observation 注册中心
     public RestClientObservationInterceptor(ObservationRegistry observationRegistry) {
         this.observationRegistry = observationRegistry;
         log.info("初始化 REST 客户端可观测性拦截器");
     }
 
-    /**
-     * 拦截 HTTP 请求。
-     *
-     * <p>流程：
-     * <ol>
-     *   <li>创建 Observation 并添加请求信息标签</li>
-     *   <li>启动 Observation</li>
-     *   <li>执行 HTTP 请求</li>
-     *   <li>记录响应状态码和结果</li>
-     *   <li>停止 Observation</li>
-     *   <li>如果发生异常，记录错误事件</li>
-     * </ol>
-     *
-     * @param request   HTTP 请求
-     * @param body      请求体
-     * @param execution 请求执行器
-     * @return HTTP 响应
-     * @throws IOException 请求执行异常
-     */
+    /// 拦截 HTTP 请求。
+    ///
+    /// 流程：
+    ///
+    /// 1. 创建 Observation 并添加请求信息标签
+    /// 2. 启动 Observation
+    /// 3. 执行 HTTP 请求
+    /// 4. 记录响应状态码和结果
+    /// 5. 停止 Observation
+    /// 6. 如果发生异常，记录错误事件
+    ///
+    /// @param request HTTP 请求
+    /// @param body 请求体
+    /// @param execution 请求执行器
+    /// @return HTTP 响应
+    /// @throws IOException 请求执行异常
     @Override
     public ClientHttpResponse intercept(
         HttpRequest request,
@@ -128,18 +117,15 @@ public class RestClientObservationInterceptor implements ClientHttpRequestInterc
         }
     }
 
-    /**
-     * 提取请求路径（移除查询参数，避免高基数）。
-     *
-     * <p>示例：
-     * <ul>
-     *   <li>https://api.example.com/users/123?token=xxx → /users/123</li>
-     *   <li>http://localhost:8080/api/v1/data → /api/v1/data</li>
-     * </ul>
-     *
-     * @param uri 完整 URI
-     * @return 请求路径（不含查询参数）
-     */
+    /// 提取请求路径（移除查询参数，避免高基数）。
+    ///
+    /// 示例：
+    ///
+    /// - https://api.example.com/users/123?token=xxx → /users/123
+    /// - http://localhost:8080/api/v1/data → /api/v1/data
+    ///
+    /// @param uri 完整 URI
+    /// @return 请求路径（不含查询参数）
     private String extractPath(String uri) {
         try {
             // 移除查询参数
@@ -161,12 +147,10 @@ public class RestClientObservationInterceptor implements ClientHttpRequestInterc
         }
     }
 
-    /**
-     * 根据状态码判断请求结果。
-     *
-     * @param statusCode HTTP 状态码
-     * @return 请求结果（SUCCESS、CLIENT_ERROR、SERVER_ERROR）
-     */
+    /// 根据状态码判断请求结果。
+    ///
+    /// @param statusCode HTTP 状态码
+    /// @return 请求结果（SUCCESS、CLIENT_ERROR、SERVER_ERROR）
     private String determineOutcome(int statusCode) {
         if (statusCode >= 200 && statusCode < 300) {
             return "SUCCESS";

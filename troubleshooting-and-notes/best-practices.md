@@ -1,6 +1,17 @@
 # 最佳实践
 
-1. 所有方法（任何访问级别）必须编写 JavaDoc 注释
+1. 所有方法（任何访问级别）必须编写 JavaDoc（markdown 格式）注释
+   - **格式要求**：使用 `///` 风格（而非传统的 `/** */`），内容使用 markdown 语法（而非 HTML 标签）
+   - **示例**：
+     ```java
+     /// 创建用户。
+     ///
+     /// @param name 用户名
+     /// @return 用户 ID
+     public Long createUser(String name) { ... }
+     ```
+   - **例外**：使用 Lombok 注解（`@Data`, `@Getter`, `@Setter`, `@Builder`, `@AllArgsConstructor`, `@NoArgsConstructor` 等）自动生成的方法可以豁免 Javadoc 要求，但类级别和字段必须有完整文档注释
+   - **HTML vs Markdown**：禁止使用 HTML 标签（`<p>`, `<ul>`, `<li>`, `<h2>` 等），改用 markdown 语法（段落换行、`-` 列表、`##` 标题）
 2. 禁止在 Mapper 接口中使用 `@Select` 等注解编写 SQL，简单查询使用 `LambdaQueryWrapper`，复杂查询使用 XML
 3. `patra-{service}-api` 模块仅定义服务间调用的接口和 DTO（不包含 Controller）
 4. `patra-{service}-adapter` 模块必须依赖 `patra-spring-boot-starter-web`，禁止在 adapter 层重复实现已有功能（全局异常处理、参数验证、类型转换、统一响应模型等由 Starter 统一提供）

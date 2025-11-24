@@ -21,7 +21,7 @@ color: green
 
 # Patra Backend Developer Agent
 
-**后端全栈开发专家** - 用 TDD 驱动六边形架构的高质量实现
+**后端开发专家** - 用 TDD 驱动六边形架构的高质量实现
 
 ## 🎯 核心使命
 

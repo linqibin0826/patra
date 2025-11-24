@@ -9,40 +9,34 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 
-/**
- * 错误解析可观测性拦截器。
- *
- * <p>功能：
- * <ul>
- *   <li>为错误解析流程创建 Observation</li>
- *   <li>自动记录错误类型、错误类、解析结果等关键信息</li>
- *   <li>与其他可观测性组件（日志、指标、追踪）集成</li>
- * </ul>
- *
- * <p>实现模式：
- * <ul>
- *   <li>在 beforeResolve 阶段创建并启动 Observation</li>
- *   <li>将 Observation 存储在调用链上下文中</li>
- *   <li>在 afterResolve 阶段停止 Observation 并记录结果</li>
- *   <li>异常时记录错误事件</li>
- * </ul>
- *
- * <p>Observation 标签：
- * <ul>
- *   <li>error.class - 异常的完全限定类名</li>
- *   <li>error.type - 异常的简单类名</li>
- *   <li>resolution.success - 解析是否成功（true/false）</li>
- * </ul>
- *
- * <p>执行顺序：
- * <ul>
- *   <li>使用 {@link Ordered#HIGHEST_PRECEDENCE} 确保最早执行</li>
- *   <li>这样可以捕获整个错误解析流程的时间</li>
- * </ul>
- *
- * @author Jobs
- * @since 1.0.0
- */
+/// 错误解析可观测性拦截器。
+///
+/// 功能：
+///
+/// - 为错误解析流程创建 Observation
+/// - 自动记录错误类型、错误类、解析结果等关键信息
+/// - 与其他可观测性组件（日志、指标、追踪）集成
+///
+/// 实现模式：
+///
+/// - 在 beforeResolve 阶段创建并启动 Observation
+/// - 将 Observation 存储在调用链上下文中
+/// - 在 afterResolve 阶段停止 Observation 并记录结果
+/// - 异常时记录错误事件
+///
+/// Observation 标签：
+///
+/// - error.class - 异常的完全限定类名
+/// - error.type - 异常的简单类名
+/// - resolution.success - 解析是否成功（true/false）
+///
+/// 执行顺序：
+///
+/// - 使用 Ordered.HIGHEST_PRECEDENCE 确保最早执行
+/// - 这样可以捕获整个错误解析流程的时间
+///
+/// @author Jobs
+/// @since 1.0.0
 public class ObservationResolutionInterceptor implements ResolutionInterceptor, Ordered {
 
     private static final Logger log = LoggerFactory.getLogger(ObservationResolutionInterceptor.class);
@@ -52,32 +46,27 @@ public class ObservationResolutionInterceptor implements ResolutionInterceptor, 
 
     private final ObservationRegistry observationRegistry;
 
-    /**
-     * 构造函数。
-     *
-     * @param observationRegistry Observation 注册中心
-     */
+    /// 构造函数。
+    ///
+    /// @param observationRegistry Observation 注册中心
     public ObservationResolutionInterceptor(ObservationRegistry observationRegistry) {
         this.observationRegistry = observationRegistry;
         log.info("初始化错误解析可观测性拦截器");
     }
 
-    /**
-     * 拦截错误解析流程。
-     *
-     * <p>流程：
-     * <ol>
-     *   <li>创建 Observation 并添加错误信息标签</li>
-     *   <li>启动 Observation</li>
-     *   <li>调用下一个拦截器或解析引擎</li>
-     *   <li>停止 Observation 并记录解析结果</li>
-     *   <li>如果发生异常，记录错误事件</li>
-     * </ol>
-     *
-     * @param exception  正在解析的异常
-     * @param invocation 管道调用对象
-     * @return 解析后的错误
-     */
+    /// 拦截错误解析流程。
+    ///
+    /// 流程：
+    ///
+    /// - 创建 Observation 并添加错误信息标签
+    /// - 启动 Observation
+    /// - 调用下一个拦截器或解析引擎
+    /// - 停止 Observation 并记录解析结果
+    /// - 如果发生异常，记录错误事件
+    ///
+    /// @param exception  正在解析的异常
+    /// @param invocation 管道调用对象
+    /// @return 解析后的错误
     @Override
     public ErrorResolution intercept(Throwable exception, ResolutionInvocation invocation) {
         // 创建 Observation
@@ -116,17 +105,14 @@ public class ObservationResolutionInterceptor implements ResolutionInterceptor, 
         }
     }
 
-    /**
-     * 获取拦截器执行顺序。
-     *
-     * <p>使用最高优先级确保最早执行，这样可以：
-     * <ul>
-     *   <li>捕获整个错误解析流程的时间</li>
-     *   <li>包含其他拦截器的执行时间</li>
-     * </ul>
-     *
-     * @return 执行顺序值
-     */
+    /// 获取拦截器执行顺序。
+    ///
+    /// 使用最高优先级确保最早执行，这样可以：
+    ///
+    /// - 捕获整个错误解析流程的时间
+    /// - 包含其他拦截器的执行时间
+    ///
+    /// @return 执行顺序值
     @Override
     public int getOrder() {
         return Ordered.HIGHEST_PRECEDENCE;

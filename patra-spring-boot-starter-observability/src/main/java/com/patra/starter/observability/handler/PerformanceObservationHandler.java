@@ -9,19 +9,16 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * 性能观测处理器。
- *
- * <p>功能：
- * <ul>
- *   <li>记录 Observation 的执行时间</li>
- *   <li>检测慢操作并记录警告日志</li>
- *   <li>收集性能统计信息</li>
- * </ul>
- *
- * @author Jobs
- * @since 1.0.0
- */
+/// 性能观测处理器。
+///
+/// 功能：
+///
+/// - 记录 Observation 的执行时间
+/// - 检测慢操作并记录警告日志
+/// - 收集性能统计信息
+///
+/// @author Jobs
+/// @since 1.0.0
 public class PerformanceObservationHandler implements ObservationHandler<Observation.Context> {
 
     private static final Logger log = LoggerFactory.getLogger(PerformanceObservationHandler.class);
@@ -29,32 +26,26 @@ public class PerformanceObservationHandler implements ObservationHandler<Observa
     private final Map<String, Long> startTimes = new ConcurrentHashMap<>();
     private final Duration slowThreshold;
 
-    /**
-     * 构造函数。
-     *
-     * @param slowThreshold 慢操作阈值
-     */
+    /// 构造函数。
+    ///
+    /// @param slowThreshold 慢操作阈值
     public PerformanceObservationHandler(Duration slowThreshold) {
         this.slowThreshold = slowThreshold;
         log.info("初始化性能观测处理器，慢操作阈值: {}ms", slowThreshold.toMillis());
     }
 
-    /**
-     * 判断是否支持该 Context。
-     *
-     * @param context Observation 上下文
-     * @return true 表示支持所有 Context
-     */
+    /// 判断是否支持该 Context。
+    ///
+    /// @param context Observation 上下文
+    /// @return true 表示支持所有 Context
     @Override
     public boolean supportsContext(Observation.Context context) {
         return true;
     }
 
-    /**
-     * Observation 启动时的处理。
-     *
-     * @param context Observation 上下文
-     */
+    /// Observation 启动时的处理。
+    ///
+    /// @param context Observation 上下文
     @Override
     public void onStart(Observation.Context context) {
         String key = getKey(context);
@@ -62,11 +53,9 @@ public class PerformanceObservationHandler implements ObservationHandler<Observa
         log.trace("观测开始: {}", context.getName());
     }
 
-    /**
-     * Observation 停止时的处理。
-     *
-     * @param context Observation 上下文
-     */
+    /// Observation 停止时的处理。
+    ///
+    /// @param context Observation 上下文
     @Override
     public void onStop(Observation.Context context) {
         String key = getKey(context);
@@ -84,11 +73,9 @@ public class PerformanceObservationHandler implements ObservationHandler<Observa
         }
     }
 
-    /**
-     * Observation 发生错误时的处理。
-     *
-     * @param context Observation 上下文
-     */
+    /// Observation 发生错误时的处理。
+    ///
+    /// @param context Observation 上下文
     @Override
     public void onError(Observation.Context context) {
         // 清理 startTimes，防止内存泄漏
@@ -108,14 +95,12 @@ public class PerformanceObservationHandler implements ObservationHandler<Observa
         }
     }
 
-    /**
-     * 生成唯一 Key。
-     *
-     * <p>使用 Observation 名称和线程 ID 组合，确保并发场景下的唯一性。
-     *
-     * @param context Observation 上下文
-     * @return 唯一 Key
-     */
+    /// 生成唯一 Key。
+    ///
+    /// 使用 Observation 名称和线程 ID 组合，确保并发场景下的唯一性。
+    ///
+    /// @param context Observation 上下文
+    /// @return 唯一 Key
     private String getKey(Observation.Context context) {
         return context.getName() + "-" + Thread.currentThread().getId();
     }

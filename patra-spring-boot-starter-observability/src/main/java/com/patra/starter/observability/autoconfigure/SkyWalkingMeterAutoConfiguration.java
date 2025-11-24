@@ -11,25 +11,21 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
-/**
- * SkyWalking Meter Registry 自动配置。
- *
- * <p>当满足以下条件时启用：
- * <ul>
- *   <li>类路径中存在 {@link SkywalkingMeterRegistry}</li>
- *   <li>配置 {@code patra.observability.metrics.skywalking.enabled=true}</li>
- * </ul>
- *
- * <p>功能：
- * <ul>
- *   <li>创建 {@link SkywalkingMeterRegistry} Bean</li>
- *   <li>配置 SkyWalking OAP 服务器地址</li>
- *   <li>配置指标导出间隔</li>
- * </ul>
- *
- * @author Jobs
- * @since 1.0.0
- */
+/// SkyWalking Meter Registry 自动配置。
+///
+/// 当满足以下条件时启用：
+///
+/// - 类路径中存在 SkywalkingMeterRegistry
+/// - 配置 patra.observability.metrics.skywalking.enabled=true
+///
+/// 功能：
+///
+/// - 创建 SkywalkingMeterRegistry Bean
+/// - 配置 SkyWalking OAP 服务器地址
+/// - 配置指标导出间隔
+///
+/// @author Jobs
+/// @since 1.0.0
 @AutoConfiguration(after = MicrometerAutoConfiguration.class)
 @ConditionalOnClass(SkywalkingMeterRegistry.class)
 @EnableConfigurationProperties(ObservabilityProperties.class)
@@ -43,14 +39,12 @@ public class SkyWalkingMeterAutoConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(SkyWalkingMeterAutoConfiguration.class);
 
-    /**
-     * 创建 SkyWalking Meter Registry。
-     *
-     * <p>SkyWalking Meter Registry 会将 Micrometer 收集的指标转发到 SkyWalking OAP 服务器。
-     *
-     * @param properties 可观测性配置属性
-     * @return SkywalkingMeterRegistry 实例
-     */
+    /// 创建 SkyWalking Meter Registry。
+    ///
+    /// SkyWalking Meter Registry 会将 Micrometer 收集的指标转发到 SkyWalking OAP 服务器。
+    ///
+    /// @param properties 可观测性配置属性
+    /// @return SkywalkingMeterRegistry 实例
     @Bean
     @ConditionalOnMissingBean(SkywalkingMeterRegistry.class)
     public SkywalkingMeterRegistry skywalkingMeterRegistry(ObservabilityProperties properties) {
