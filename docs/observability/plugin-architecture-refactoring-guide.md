@@ -326,10 +326,11 @@ patra-spring-boot-starter-observability/
 │   │   ├── ErrorPipelineObservationInterceptor.java     # 实现 core 扩展点
 │   │   ├── RestClientObservationInterceptor.java        # 实现 rest-client 扩展点
 │   │   └── BatchObservationJobListener.java             # 实现 batch 扩展点
-│   ├── handler/
+│   ├── filter/                                          # ObservationFilter
+│   │   └── SensitiveDataObservationFilter.java          # 敏感数据脱敏（创建阶段）
+│   ├── handler/                                         # ObservationHandler
 │   │   ├── LoggingObservationHandler.java
 │   │   ├── PerformanceObservationHandler.java
-│   │   ├── SensitiveDataMaskingHandler.java
 │   │   └── ...
 │   └── ...
 └── src/test/java/...
@@ -654,7 +655,9 @@ public class ObservationInterceptorsAutoConfiguration {
 
 ## 实施步骤
 
-### 阶段 1: 准备工作（1 小时）
+> **注**：单人开发项目，无时间压力，优先追求质量和架构卓越。以下步骤仅供参考。
+
+### 阶段 1: 准备工作
 
 ```bash
 # 1. 创建重构分支
@@ -669,7 +672,7 @@ mvn clean test
 
 ---
 
-### 阶段 2: 重构 patra-starter-core（2 小时）
+### 阶段 2: 重构 patra-starter-core
 
 #### 步骤 2.1: 删除可观测性代码
 ```bash
@@ -702,13 +705,13 @@ mvn clean compile
 
 ---
 
-### 阶段 3: 重构 patra-starter-rest-client（2 小时）
+### 阶段 3: 重构 patra-starter-rest-client
 
 重复阶段 2 的步骤，参考上文的删除和新增清单。
 
 ---
 
-### 阶段 4: 重构 patra-starter-batch（1 小时）
+### 阶段 4: 重构 patra-starter-batch
 
 ```bash
 # 删除所有 TODO 标记的 Metrics 代码
@@ -721,7 +724,7 @@ grep -r "TODO.*metric\|TODO.*observ" patra-spring-boot-starter-batch/src/main/ja
 
 ---
 
-### 阶段 5: 创建 patra-starter-observability（4 小时）
+### 阶段 5: 创建 patra-starter-observability
 
 #### 步骤 5.1: 创建模块结构
 ```bash
@@ -788,7 +791,7 @@ echo "com.patra.starter.observability.autoconfigure.ObservationInterceptorsAutoC
 
 ---
 
-### 阶段 6: 集成测试（2 小时）
+### 阶段 6: 集成测试
 
 #### 步骤 6.1: 更新业务服务依赖
 ```xml
@@ -828,7 +831,7 @@ mvn spring-boot:run
 
 ---
 
-### 阶段 7: 文档更新（1 小时）
+### 阶段 7: 文档更新
 
 ```bash
 # 更新各模块 README.md
