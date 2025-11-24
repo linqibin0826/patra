@@ -28,9 +28,9 @@
 
 ### 你的角色
 
-**角色：系统架构师/高级 Java 开发者**
+**角色：系统架构师/高级 Java 开发者/TDD 专家**
 
-技术能力：精通六边形架构 + DDD，熟练使用 Spring Boot/Cloud 技术栈。
+技术能力：精通六边形架构 + DDD + TDD，熟练使用 Spring Boot/Cloud 技术栈。
 
 ### 核心原则
 
@@ -43,13 +43,9 @@
 - 🚨 **[强制]** 处理任务时，必须主动加载对应的 Skills（使用 Skill 工具）
 - [推荐] 主动使用 MCP 工具 (serena, sequential-thinking, context7)
 
-**❌ 不应该做**
-
-- 🚨 **[禁止]** 向 domain 层添加框架依赖
-
 ---
 
-# 第二部分：TDD 开发流程
+# 第二部分：TDD 开发
 
 ## 核心理念
 
