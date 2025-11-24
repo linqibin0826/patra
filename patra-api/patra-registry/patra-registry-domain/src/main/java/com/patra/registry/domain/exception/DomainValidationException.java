@@ -1,18 +1,21 @@
 package com.patra.registry.domain.exception;
 
-/// 领域范围的验证异常(用于替代分散的 IllegalArgumentException 使用)。
+/// 领域范围的验证异常（用于替代分散的 IllegalArgumentException 使用）。
 ///
-/// 典型场景:构造领域对象、强制不变性、验证查询视图参数。 这表示调用者提供的无效输入,而非内部系统错误。
+/// 典型场景：构造领域对象、强制不变性、验证查询视图参数。
+/// 这表示调用者提供的无效输入，而非内部系统错误。
 ///
-/// 指南:
+/// **自动语义**: 所有验证异常自动携带 {@link com.patra.common.error.trait.StandardErrorTrait#RULE_VIOLATION} 特征。
 ///
-/// - 适配器/网关可将其映射到 HTTP 400(或 422,如需要)。
-///   - 通过日志过滤预期的验证失败,有助于减少告警噪音。
-///   - 此处不包含业务错误代码,以避免领域依赖 API;映射发生在启动层。
+/// **指南**:
+///
+/// - 适配器/网关自动映射为 HTTP 422 (Unprocessable Entity)
+/// - 通过日志过滤预期的验证失败，有助于减少告警噪音
+/// - 此类提供便捷的静态工厂方法用于常见验证场景
 ///
 /// @author linqibin
 /// @since 0.1.0
-public class DomainValidationException extends RuntimeException {
+public class DomainValidationException extends RegistryRuleViolation {
 
   /// 构造一个包含指定错误消息的领域验证异常。
   ///
@@ -29,7 +32,7 @@ public class DomainValidationException extends RuntimeException {
     super(message, cause);
   }
 
-  /// 便捷工厂方法,当条件为 false 时抛出异常。
+  /// 便捷工厂方法，当条件为 false 时抛出异常。
   ///
   /// @param condition 要检查的布尔条件
   /// @param message 条件失败时的错误消息
@@ -40,10 +43,10 @@ public class DomainValidationException extends RuntimeException {
     }
   }
 
-  /// 断言字符串非空且非空白,返回修剪后的值。
+  /// 断言字符串非空且非空白，返回修剪后的值。
   ///
   /// @param value 要检查的值
-  /// @param field 字段名称(用于组合消息)
+  /// @param field 字段名称（用于组合消息）
   /// @return 验证通过时的修剪值
   /// @throws DomainValidationException 当 value 为 null 或空白时
   public static String notBlank(String value, String field) {
@@ -67,7 +70,7 @@ public class DomainValidationException extends RuntimeException {
     return obj;
   }
 
-  /// 断言数字为正数(大于 0)。
+  /// 断言数字为正数（大于 0）。
   ///
   /// @param number 要检查的数值
   /// @param field 错误消息的字段名称
@@ -80,7 +83,7 @@ public class DomainValidationException extends RuntimeException {
     return number;
   }
 
-  /// 断言整数非负(大于或等于 0)。
+  /// 断言整数非负（大于或等于 0）。
   ///
   /// @param number 要检查的数值
   /// @param field 错误消息的字段名称
@@ -93,7 +96,7 @@ public class DomainValidationException extends RuntimeException {
     return number;
   }
 
-  /// 断言数组非空(仅检查 null 或 length == 0)。
+  /// 断言数组非空（仅检查 null 或 length == 0）。
   ///
   /// @param arr 要检查的数组
   /// @param field 错误消息的字段名称
@@ -110,8 +113,8 @@ public class DomainValidationException extends RuntimeException {
   /// 断言值在包含性范围 [min, max] 内。
   ///
   /// @param value 要检查的值
-  /// @param minInclusive 最小允许值(包含)
-  /// @param maxInclusive 最大允许值(包含)
+  /// @param minInclusive 最小允许值（包含）
+  /// @param maxInclusive 最大允许值（包含）
   /// @param field 错误消息的字段名称
   /// @return 验证通过时的值
   /// @throws DomainValidationException 当值超出范围时
@@ -123,7 +126,7 @@ public class DomainValidationException extends RuntimeException {
     return value;
   }
 
-  /// 返回修剪后的字符串,如果输入为 null 则返回 null。
+  /// 返回修剪后的字符串，如果输入为 null 则返回 null。
   ///
   /// 用于归一化可为 null 的字符串字段的实用方法。
   ///

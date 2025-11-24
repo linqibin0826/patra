@@ -8,6 +8,7 @@ import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 
@@ -119,30 +120,39 @@ public class RestClientObservationInterceptor implements ClientHttpRequestInterc
 
     /// 提取请求路径（移除查询参数，避免高基数）。
     ///
+    /// 使用 Spring 的 UriComponentsBuilder 进行健壮的 URI 解析，支持：
+    /// - 标准 HTTP/HTTPS URL
+    /// - 相对路径（无 scheme）
+    /// - IPv6 地址
+    /// - 特殊字符和编码
+    ///
     /// 示例：
     ///
     /// - https://api.example.com/users/123?token=xxx → /users/123
     /// - http://localhost:8080/api/v1/data → /api/v1/data
+    /// - /api/v1/users → /api/v1/users（相对路径）
+    /// - http://[::1]:8080/api → /api（IPv6）
     ///
     /// @param uri 完整 URI
     /// @return 请求路径（不含查询参数）
     private String extractPath(String uri) {
         try {
-            // 移除查询参数
-            int queryIndex = uri.indexOf('?');
-            if (queryIndex > 0) {
-                uri = uri.substring(0, queryIndex);
+            // 使用 Spring 的 UriComponentsBuilder 进行健壮的 URI 解析
+            String path = UriComponentsBuilder.fromUriString(uri)
+                .build()
+                .getPath();
+
+            // 如果解析成功且路径不为空，返回路径
+            if (path != null && !path.isEmpty()) {
+                return path;
             }
 
-            // 提取路径部分
-            int pathStart = uri.indexOf('/', uri.indexOf("://") + 3);
-            if (pathStart > 0) {
-                return uri.substring(pathStart);
-            }
+            // 降级：如果没有路径部分，返回根路径
+            return "/";
 
-            return uri;
         } catch (Exception e) {
-            log.warn("无法解析 URI: {}", uri, e);
+            // 降级处理：解析失败时返回 UNKNOWN，避免影响业务
+            log.warn("⚠️ 无法解析 URI: {}, 使用降级值 UNKNOWN", uri, e);
             return "UNKNOWN";
         }
     }

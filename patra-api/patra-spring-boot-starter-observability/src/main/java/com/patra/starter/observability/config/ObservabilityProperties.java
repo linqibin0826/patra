@@ -1,7 +1,12 @@
 package com.patra.starter.observability.config;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -79,6 +84,7 @@ public class ObservabilityProperties {
         ///
         /// 导出间隔。
 
+        @NotNull(message = "导出间隔不能为 null")
         private Duration step = Duration.ofSeconds(60);
 
         ///
@@ -137,6 +143,8 @@ public class ObservabilityProperties {
         ///
         /// 采样率（0.0 - 1.0）。
 
+        @DecimalMin(value = "0.0", message = "采样率必须 >= 0.0")
+        @DecimalMax(value = "1.0", message = "采样率必须 <= 1.0")
         private double samplingRate = 1.0;
 
         ///
@@ -228,6 +236,7 @@ public class ObservabilityProperties {
         ///
         /// 慢操作阈值。
 
+        @NotNull(message = "慢操作阈值不能为 null")
         private Duration slowThreshold = Duration.ofSeconds(3);
     }
 

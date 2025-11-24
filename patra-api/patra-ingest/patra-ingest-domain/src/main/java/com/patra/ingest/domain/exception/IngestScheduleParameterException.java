@@ -1,8 +1,6 @@
 package com.patra.ingest.domain.exception;
 
-import com.patra.common.error.trait.ErrorTrait;
-import com.patra.common.error.trait.HasErrorTraits;
-import java.util.Set;
+import com.patra.common.error.trait.StandardErrorTrait;
 
 /// 调度参数异常。
 ///
@@ -22,13 +20,13 @@ import java.util.Set;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public class IngestScheduleParameterException extends IngestException implements HasErrorTraits {
+public class IngestScheduleParameterException extends IngestException {
 
   /// 构造调度参数异常。
   ///
   /// @param message 人类可读的错误消息,应说明具体缺失或错误的参数
   public IngestScheduleParameterException(String message) {
-    super(message);
+    super(message, StandardErrorTrait.RULE_VIOLATION);
   }
 
   /// 构造调度参数异常并附带底层原因。
@@ -38,11 +36,6 @@ public class IngestScheduleParameterException extends IngestException implements
   /// @param message 描述性消息
   /// @param cause 底层异常
   public IngestScheduleParameterException(String message, Throwable cause) {
-    super(message, cause);
-  }
-
-  @Override
-  public Set<ErrorTrait> getErrorTraits() {
-    return Set.of(ErrorTrait.RULE_VIOLATION);
+    super(message, cause, StandardErrorTrait.RULE_VIOLATION);
   }
 }

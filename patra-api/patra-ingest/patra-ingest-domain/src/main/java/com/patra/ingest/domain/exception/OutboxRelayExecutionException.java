@@ -1,9 +1,6 @@
 package com.patra.ingest.domain.exception;
 
-import com.patra.common.error.trait.ErrorTrait;
-import com.patra.common.error.trait.HasErrorTraits;
-import java.util.EnumSet;
-import java.util.Set;
+import com.patra.common.error.trait.StandardErrorTrait;
 
 /// Outbox Relay 执行异常。
 ///
@@ -24,18 +21,22 @@ import java.util.Set;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public class OutboxRelayExecutionException extends IngestException implements HasErrorTraits {
+public class OutboxRelayExecutionException extends IngestException {
 
   /// 构造 Outbox Relay 执行异常。
   ///
   /// @param message 描述性消息
   /// @param cause 底层异常
   public OutboxRelayExecutionException(String message, Throwable cause) {
-    super(message, cause);
+    super(message, cause, StandardErrorTrait.DEP_UNAVAILABLE);
   }
 
-  @Override
-  public Set<ErrorTrait> getErrorTraits() {
-    return EnumSet.of(ErrorTrait.DEP_UNAVAILABLE);
+  /// 构造 Outbox Relay 执行异常(包含 trait 参数以支持子类自定义)。
+  ///
+  /// @param message 描述性消息
+  /// @param cause 底层异常
+  /// @param trait 错误特征
+  protected OutboxRelayExecutionException(String message, Throwable cause, StandardErrorTrait trait) {
+    super(message, cause, trait);
   }
 }

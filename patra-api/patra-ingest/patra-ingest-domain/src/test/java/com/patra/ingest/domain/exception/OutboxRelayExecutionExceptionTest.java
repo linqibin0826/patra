@@ -3,6 +3,7 @@ package com.patra.ingest.domain.exception;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.common.error.trait.ErrorTrait;
+import com.patra.common.error.trait.StandardErrorTrait;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -69,7 +70,7 @@ class OutboxRelayExecutionExceptionTest {
       Set<ErrorTrait> traits = exception.getErrorTraits();
 
       // Then
-      assertThat(traits).containsExactly(ErrorTrait.DEP_UNAVAILABLE);
+      assertThat(traits).containsExactly(StandardErrorTrait.DEP_UNAVAILABLE);
     }
   }
 

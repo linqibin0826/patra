@@ -81,11 +81,19 @@ public class SensitiveDataObservationFilter implements ObservationFilter {
             enabled, this.customPatterns.size());
     }
 
-    /// 检测并告警 Observation Context 中的敏感数据。
+    /// 检测 Observation Context 中的敏感数据并告警。
     ///
     /// 设计说明：
-    /// 不直接修改 Context 以避免丢失关键上下文信息（如 parentObservation、scope 等），
-    /// 而是采用"检测 + 告警"策略，帮助开发者识别和移除敏感数据源头。
+    /// Micrometer 的 Context KeyValues 是不可变的，ObservationFilter 无法直接修改。
+    /// 因此采用"检测 + 告警 + 阻止"策略：
+    /// 1. 检测敏感数据
+    /// 2. 记录 ERROR 级别日志并告警
+    /// 3. 建议在数据源头移除敏感标签
+    ///
+    /// 安全建议：
+    /// - 配合 Logback Filter 过滤日志中的敏感数据
+    /// - 在添加 Observation 标签时避免包含敏感信息
+    /// - 使用 SkyWalking Agent 配置禁用敏感数据收集
     ///
     /// @param context Observation 上下文
     /// @return 原始上下文（不修改）
@@ -104,23 +112,20 @@ public class SensitiveDataObservationFilter implements ObservationFilter {
             KeyValues highCardinality = context.getHighCardinalityKeyValues();
             boolean hasHighSensitive = containsSensitiveData(highCardinality);
 
-            // 如果检测到敏感数据，记录警告
+            // 如果检测到敏感数据，记录 ERROR 级别警告
             if (hasLowSensitive || hasHighSensitive) {
-                log.warn("⚠️ 检测到敏感数据: observation={}, " +
+                log.error("🚨 检测到敏感数据: observation={}, " +
                     "lowCardinality包含敏感数据={}, highCardinality包含敏感数据={}, " +
-                    "建议在数据源头移除敏感标签以保护数据安全",
+                    "请在数据源头移除敏感标签！敏感数据可能已泄漏到日志/指标/APM",
                     context.getName(), hasLowSensitive, hasHighSensitive);
 
-                // 详细记录敏感字段（仅 DEBUG 级别）
+                // 详细记录敏感字段（DEBUG 级别）
                 if (log.isDebugEnabled()) {
                     logSensitiveFields(lowCardinality, "lowCardinality");
                     logSensitiveFields(highCardinality, "highCardinality");
                 }
-            } else {
-                log.trace("未检测到敏感数据: observation={}", context.getName());
             }
 
-            // 返回原始 Context，不修改
             return context;
         } catch (Exception e) {
             // 静默失败：检测失败不应影响业务逻辑
@@ -182,8 +187,6 @@ public class SensitiveDataObservationFilter implements ObservationFilter {
     ///
     /// @param keyValues 原始 KeyValue 集合
     /// @return 脱敏后的 KeyValue 集合
-    /// @deprecated 改用检测 + 告警策略，不再直接修改 Context
-    @Deprecated
     private KeyValues maskKeyValues(KeyValues keyValues) {
         if (keyValues == null || keyValues.stream().count() == 0) {
             return keyValues;

@@ -68,6 +68,18 @@
             <artifactId>apm-toolkit-trace</artifactId>
         </dependency>
 
+        <!-- Caffeine Cache: 用于状态管理，避免内存泄漏 -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
+        <!-- Jakarta Validation API: 用于配置属性验证 -->
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+        </dependency>
+
         <!-- Spring Batch (可选): 用于 BatchObservationJobListener -->
         <dependency>
             <groupId>org.springframework.batch</groupId>
