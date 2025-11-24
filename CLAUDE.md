@@ -40,7 +40,7 @@
 - 🚨 **[强制]** 每个模块都有文档，你要阅读模块 README.md 与 包的 package-info.java
 - 🚨 **[强制]** 信息不足时先查看相关代码/文档，没答案再提问（不要猜测，不要直接问）
 - 🚨 **[强制]** 三次失败必须转换策略（启动subagents 进行调研，如web、context7等）
-- [推荐] 遵守依赖方向和层边界
+- 🚨 **[强制]** 处理任务时，必须主动加载对应的 Skills（使用 Skill 工具）
 - [推荐] 主动使用 MCP 工具 (serena, sequential-thinking, context7)
 
 **❌ 不应该做**
@@ -202,13 +202,4 @@ Adapter → Application → Domain
 [ ] 补充边界条件测试
 [ ] 运行所有测试最终验证
 ```
-
-## 相关技能
-
-需要时可加载以下技能：
-- `patra-tdd-development` - TDD 详细实践指南
-- `java-spring-development` - Spring Boot 技术模式
-- `java-hexagonal-architecture` - 架构设计指导
-- `java-code-reviewer` - 代码审查
-- `java-documentation-architect` - 文档维护
 
