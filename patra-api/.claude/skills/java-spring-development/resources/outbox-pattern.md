@@ -229,85 +229,66 @@ public final class OutboxMessage {
 <summary>查看实际表结构 (ing_outbox_message)</summary>
 
 ```sql
-CREATE TABLE IF NOT EXISTS `ing_outbox_message`
+-- auto-generated definition
+create table ing_outbox_message
 (
-    `id`               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK · OutboxID',
-    `aggregate_type`   VARCHAR(32)     NOT NULL COMMENT 'Aggregate type: e.g. TASK/PLAN/...',
-    `aggregate_id`     BIGINT UNSIGNED NOT NULL COMMENT 'Aggregate root ID',
-    `channel`          VARCHAR(64)     NOT NULL COMMENT 'Logical channel=target Topic, e.g. ingest.task',
-    `op_type`          VARCHAR(32)     NOT NULL COMMENT 'Business semantic label: e.g. TASK_READY',
-    `partition_key`    VARCHAR(128)    NOT NULL COMMENT 'Partitioning/ordering routing key',
-    `dedup_key`        VARCHAR(128)    NOT NULL COMMENT 'Idempotency key',
-    `payload_json`     JSON            NOT NULL COMMENT 'Message payload (JSON)',
-    `headers_json`     JSON            NULL COMMENT 'Extension headers (JSON)',
-    `not_before`       TIMESTAMP(6)    NULL COMMENT 'Earliest publishable time (UTC)',
-    `published_at`     TIMESTAMP(6)    NULL COMMENT 'Successful publish timestamp (UTC)',
+    id               bigint unsigned auto_increment comment '主键 · OutboxID'
+        primary key,
+    aggregate_type   varchar(32)                                  not null comment '聚合类型: 例如 TASK/PLAN/...; 用于审计和重放定位',
+    aggregate_id     bigint unsigned                              not null comment '聚合根ID; 任务场景=ing_task.id',
+    channel          varchar(64)                                  not null comment '逻辑通道=目标 Topic, 例如 ingest.task',
+    op_type          varchar(32)                                  not null comment '业务语义标签: 例如 TASK_READY / EVENT_PUBLISHED',
+    partition_key    varchar(128)                                 not null comment '分区/排序路由键; 推荐 "provenance:operation"; 用于有序投递或分区限速, 例如 PUBMED:HARVEST',
+    dedup_key        varchar(128)                                 not null comment '幂等键; 任务=ing_task.idempotent_key; (channel, dedup_key) 唯一',
+    payload_json     json                                         not null comment '最小必要负载 (JSON): taskId/sliceKey/planKey/provenance/operation/endpoint/priority/notBefore 等; 大字段不入队',
+    headers_json     json                                         null comment '扩展头 (JSON): correlationId 等',
+    not_before       timestamp(6)                                 null comment '最早可发布时间 (UTC): NULL=任何时候可发布; 用于计划/延迟发布',
+    published_at     timestamp(6)                                 null comment '成功发布时间戳 (UTC), 当状态转换为 PUBLISHED 时设置',
+    status_code      varchar(16)     default 'PENDING'            not null comment '发布状态: PENDING/PUBLISHING/PUBLISHED/FAILED/DEAD',
+    retry_count      int unsigned    default '0'                  not null comment '发布重试次数 (失败时递增)',
+    next_retry_at    timestamp(6)                                 null comment '下次发布尝试时间 (UTC), 配合退避曲线使用',
+    error_code       varchar(64)                                  null comment '最新发布错误代码',
+    error_msg        varchar(512)                                 null comment '最新发布错误详情',
+    pub_lease_owner  varchar(128)                                 null comment '发布者租约持有者 (实例ID或workerId), 防止同行并发发布',
+    pub_leased_until timestamp(6)                                 null comment '发布者租约过期时间 (UTC), 过期可被其他发布者接管',
+    record_remarks   json                                         null comment 'JSON 数组, 备注/变更日志 [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
+    version          bigint unsigned default '0'                  not null comment '乐观锁版本号',
+    ip_address       varbinary(16)                                null comment '请求者IP (二进制, 支持 IPv4/IPv6)',
+    created_at       timestamp(6)    default CURRENT_TIMESTAMP(6) not null comment '创建时间 (UTC)',
+    created_by       bigint unsigned                              null comment '创建人ID',
+    created_by_name  varchar(100)                                 null comment '创建人姓名',
+    updated_at       timestamp(6)    default CURRENT_TIMESTAMP(6) not null on update CURRENT_TIMESTAMP(6) comment '更新时间 (UTC)',
+    updated_by       bigint unsigned                              null comment '更新人ID',
+    updated_by_name  varchar(100)                                 null comment '更新人姓名',
+    deleted          tinyint(1)      default 0                    not null comment '软删除: 0=活动, 1=已删除',
+    constraint uk_outbox_channel_dedup
+        unique (channel, dedup_key)
+)
+    comment '发件箱: 通用出站消息表 (统一管理任务调度/集成事件; 与业务写入同一事务; 由 Relay 扫描并投递到 MQ)';
 
-    `status_code`      VARCHAR(16)     NOT NULL DEFAULT 'PENDING'
-        COMMENT 'Publishing status: PENDING/PUBLISHING/PUBLISHED/FAILED/DEAD',
-    `retry_count`      INT UNSIGNED    NOT NULL DEFAULT 0
-        COMMENT 'Publishing retry count',
-    `next_retry_at`    TIMESTAMP(6)    NULL
-        COMMENT 'Next publishing attempt time (UTC)',
-    `error_code`       VARCHAR(64)     NULL
-        COMMENT 'Latest publishing error code',
-    `error_msg`        VARCHAR(512)    NULL
-        COMMENT 'Latest publishing error details',
+create index idx_outbox_created
+    on ing_outbox_message (created_at);
 
-    `pub_lease_owner`  VARCHAR(128)    NULL
-        COMMENT 'Publisher lease holder (instance ID or workerId)',
-    `pub_leased_until` TIMESTAMP(6)    NULL
-        COMMENT 'Publisher lease expiration (UTC)',
+create index idx_outbox_deleted_upd
+    on ing_outbox_message (deleted, updated_at);
 
-    -- 审计字段 (统一审计字段规范)
-    `record_remarks`   JSON            NULL
-        COMMENT 'JSON array, remarks/change log',
-    `version`          BIGINT UNSIGNED NOT NULL DEFAULT 0
-        COMMENT 'Optimistic lock version number',
-    `ip_address`       VARBINARY(16)   NULL
-        COMMENT 'Requester IP (binary, supports IPv4/IPv6)',
-    `created_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
-        COMMENT 'Creation time (UTC)',
-    `created_by`       BIGINT UNSIGNED NULL
-        COMMENT 'Creator ID',
-    `created_by_name`  VARCHAR(100)    NULL
-        COMMENT 'Creator name',
-    `updated_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
-        ON UPDATE CURRENT_TIMESTAMP(6)
-        COMMENT 'Update time (UTC)',
-    `updated_by`       BIGINT UNSIGNED NULL
-        COMMENT 'Updater ID',
-    `updated_by_name`  VARCHAR(100)    NULL
-        COMMENT 'Updater name',
-    `deleted`          TINYINT(1)      NOT NULL DEFAULT 0
-        COMMENT 'Soft delete: 0=active, 1=deleted',
+create index idx_outbox_lease
+    on ing_outbox_message (status_code, pub_leased_until);
 
-    PRIMARY KEY (`id`),
+create index idx_outbox_partition
+    on ing_outbox_message (channel, partition_key, status_code);
 
-    -- 幂等性约束
-    UNIQUE KEY `uk_outbox_channel_dedup` (`channel`, `dedup_key`),
+create index idx_outbox_status_time
+    on ing_outbox_message (status_code, not_before, id);
 
-    -- 中继查询优化
-    KEY `idx_outbox_status_time` (`status_code`, `not_before`, `id`),
-    KEY `idx_outbox_partition` (`channel`, `partition_key`, `status_code`),
-    KEY `idx_outbox_lease` (`status_code`, `pub_leased_until`),
+create index idx_pending_relay
+    on ing_outbox_message (channel, status_code, not_before, id)
+    comment '优化 PENDING 消息中继查询 (UNION ALL 第一子查询)';
 
-    -- V2.0 增强 - UNION ALL 查询优化
-    KEY `idx_pending_relay` (`channel`, `status_code`, `not_before`, `id`)
-        COMMENT 'PENDING 消息中继查询优化',
-    KEY `idx_publishing_lease` (`channel`, `status_code`, `pub_leased_until`, `id`)
-        COMMENT 'PUBLISHING 消息租约过期查询优化'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+create index idx_publishing_lease
+    on ing_outbox_message (channel, status_code, pub_leased_until, id)
+    comment '优化 PUBLISHING 过期租约消息查询 (UNION ALL 第二子查询)';
 ```
-
-**关键索引说明**:
-- `uk_outbox_channel_dedup`: 保证幂等性 (channel + dedupKey 唯一)
-- `idx_pending_relay`: PENDING 消息批量获取优化
-- `idx_publishing_lease`: 租约过期回收优化
-- `idx_outbox_partition`: 分区处理优化
-
-**参考**: `patra-ingest-infra/src/main/resources/db/migration/V0.1.0__init_ingest_schema.sql:519-571`
-
 </details>
 
 ### 3. 中继逻辑

@@ -1,43 +1,54 @@
-# 配置管理详细指南
+# 配置管理指南
+
+## Spring Boot 3 配置加载机制
+
+Spring Boot 3 移除了 bootstrap context，配置优先级（由高到低）：
+
+1. **命令行参数** - `--spring.datasource.url=...`
+2. **环境变量** - `SPRING_DATASOURCE_URL`
+3. **Nacos 配置中心** - 通过 `spring.config.import` 导入
+4. **application-{profile}.yaml** - 环境特定配置
+5. **application.yaml** - 基础配置
 
 ## Nacos 配置中心
 
 ### 基础配置
 
 ```yaml
-# bootstrap.yml
+# application.yaml
 spring:
+  application:
+    name: patra-catalog
   cloud:
     nacos:
+      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:nacos}
       config:
-        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
-        namespace: ${NACOS_NAMESPACE:dev}
+        namespace: ${NACOS_NAMESPACE:}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
         file-extension: yaml
         refresh-enabled: true
+  config:
+    # Spring Boot 3 使用 spring.config.import 导入 Nacos 配置
+    import:
+      - optional:nacos:${spring.application.name}.yaml
+      - optional:nacos:${spring.application.name}-database.yaml?group=DATABASE_GROUP
 ```
+
+**说明**：
+- `optional:` 前缀表示配置不存在时不会导致启动失败
+- 使用 `?group=XXX` 指定配置所属的 Group
+- 后加载的配置会覆盖先加载的配置
 
 ### 动态配置刷新
 
 ```java
 @RestController
 @RefreshScope  // 支持配置动态刷新
-@RequiredArgsConstructor
 public class ConfigController {
-
     @Value("${app.feature.enabled:false}")
     private boolean featureEnabled;
-
-    @Value("${app.max-retry:3}")
-    private int maxRetry;
-
-    @GetMapping("/config/status")
-    public Map<String, Object> getConfig() {
-        return Map.of(
-            "featureEnabled", featureEnabled,
-            "maxRetry", maxRetry
-        );
-    }
 }
 ```
 
@@ -45,390 +56,245 @@ public class ConfigController {
 
 ```java
 @Component
-@ConfigurationProperties(prefix = "app.datasource")
+@ConfigurationProperties(prefix = "app")
 @RefreshScope
+@Validated
 @Data
-public class DataSourceConfig {
-    private String url;
-    private String username;
-    private String password;
-    private int maxPoolSize = 10;
-    private int minIdle = 5;
-    private long connectionTimeout = 30000;
+public class AppConfig {
+    @NotBlank
+    private String name;
+
+    @Min(1) @Max(60)
+    private int timeout;
 }
 ```
 
-## 配置文件组织
+## 环境配置
 
-### 环境配置分离
+Patra 项目使用两个环境：**dev（开发）** 和 **prod（生产）**
+
+### application.yaml（基础配置）
 
 ```yaml
-# application.yml - 基础配置
 spring:
   application:
     name: patra-catalog
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+      config:
+        namespace: ${NACOS_NAMESPACE:}
+  config:
+    import:
+      - optional:nacos:${spring.application.name}.yaml
+```
 
-# application-dev.yml - 开发环境
+### application-dev.yaml（开发环境）
+
+```yaml
 spring:
   datasource:
     url: jdbc:mysql://localhost:3306/patra_dev
+    username: root
+    password: dev_password
+  cloud:
+    nacos:
+      server-addr: localhost:8848
+      config:
+        namespace: dev
 
-# application-test.yml - 测试环境
-spring:
-  datasource:
-    url: jdbc:mysql://test.db.com:3306/patra_test
-
-# application-prod.yml - 生产环境
-spring:
-  datasource:
-    url: jdbc:mysql://prod.db.com:3306/patra_prod
+logging:
+  level:
+    com.patra: DEBUG
 ```
 
-### Nacos 配置分组
+### application-prod.yaml（生产环境）
 
 ```yaml
-# Nacos 配置中心的配置组织
-# Data ID: patra-catalog.yaml
-# Group: DEFAULT_GROUP
-# 公共配置
-common:
-  timeout: 5000
-  retry-times: 3
-
-# Data ID: patra-catalog-database.yaml
-# Group: DATABASE_GROUP
-# 数据库配置
 spring:
   datasource:
-    hikari:
-      maximum-pool-size: 20
-      minimum-idle: 5
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR}
+      config:
+        namespace: prod
 
-# Data ID: patra-catalog-redis.yaml
-# Group: CACHE_GROUP
-# 缓存配置
-spring:
-  redis:
-    host: redis.server.com
-    port: 6379
+logging:
+  level:
+    com.patra: INFO
 ```
 
-## 配置监听与处理
+**环境激活**：
+```bash
+# 开发环境
+java -jar app.jar --spring.profiles.active=dev
 
-### 配置变更监听器
-
-```java
-@Component
-@Slf4j
-public class ConfigChangeListener implements ApplicationListener<RefreshScopeRefreshedEvent> {
-
-    @Autowired
-    private ApplicationContext context;
-
-    @Override
-    public void onApplicationEvent(RefreshScopeRefreshedEvent event) {
-        log.info("配置已刷新，执行相关处理");
-
-        // 重新初始化某些组件
-        reinitializeComponents();
-
-        // 清理缓存
-        clearCache();
-    }
-
-    private void reinitializeComponents() {
-        // 获取需要重新初始化的 Bean
-        var dataSource = context.getBean(DataSourceConfig.class);
-        log.info("数据源配置已更新: maxPoolSize={}", dataSource.getMaxPoolSize());
-    }
-
-    private void clearCache() {
-        // 清理本地缓存
-        log.info("清理本地缓存");
-    }
-}
+# 生产环境
+java -jar app.jar --spring.profiles.active=prod
 ```
 
-### 自定义配置监听
-
-```java
-@Component
-@Slf4j
-public class CustomConfigListener {
-
-    @NacosConfigListener(dataId = "patra-catalog-feature.yaml", autoRefreshed = true)
-    public void onFeatureConfigChange(String config) {
-        log.info("功能配置发生变化: {}", config);
-
-        // 解析配置
-        var features = parseFeatures(config);
-
-        // 更新功能开关
-        updateFeatureFlags(features);
-    }
-
-    @NacosValue(value = "${rate.limit:100}", autoRefreshed = true)
-    private int rateLimit;
-
-    @PostConstruct
-    public void init() {
-        log.info("初始限流配置: {}", rateLimit);
-    }
-}
-```
-
-## 多环境配置管理
-
-### 配置优先级
-
-```
-1. 命令行参数
-2. 环境变量
-3. Nacos 配置中心
-4. application-{profile}.yml
-5. application.yml
-```
-
-### 环境隔离策略
+## 环境隔离
 
 ```java
 @Configuration
 public class EnvironmentConfig {
-
-    @Value("${spring.profiles.active}")
-    private String activeProfile;
-
     @Bean
     @Profile("dev")
-    public DataSource devDataSource() {
-        // 开发环境数据源
-        return DataSourceBuilder.create()
-            .url("jdbc:mysql://localhost:3306/dev")
-            .build();
+    public FeatureToggle devFeatureToggle() {
+        return new DevFeatureToggle();
     }
 
     @Bean
     @Profile("prod")
-    public DataSource prodDataSource() {
-        // 生产环境数据源
-        return DataSourceBuilder.create()
-            .url("jdbc:mysql://prod.db.com:3306/prod")
-            .build();
-    }
-
-    @Bean
-    public FeatureToggle featureToggle() {
-        return switch (activeProfile) {
-            case "dev" -> new DevFeatureToggle();
-            case "test" -> new TestFeatureToggle();
-            case "prod" -> new ProdFeatureToggle();
-            default -> new DefaultFeatureToggle();
-        };
-    }
-}
-```
-
-## 敏感配置管理
-
-### 配置加密
-
-```yaml
-# Nacos 中存储加密后的配置
-database:
-  password: ENC(ASFASDFASDFA234ASDFASDF)
-
-# 配置解密器
-jasypt:
-  encryptor:
-    password: ${JASYPT_PASSWORD}
-    algorithm: PBEWithMD5AndDES
-```
-
-### 敏感信息处理
-
-```java
-@Component
-@Slf4j
-public class SensitiveConfigProcessor {
-
-    @Value("${database.password}")
-    private String encryptedPassword;
-
-    @Autowired
-    private StringEncryptor encryptor;
-
-    @PostConstruct
-    public void init() {
-        // 解密密码
-        String decrypted = encryptor.decrypt(encryptedPassword);
-
-        // 不要记录敏感信息
-        log.info("数据库连接已初始化");
-        // ❌ 错误：log.info("数据库密码: {}", decrypted);
-    }
-
-    public String getDecryptedPassword() {
-        return encryptor.decrypt(encryptedPassword);
-    }
-}
-```
-
-## 配置版本管理
-
-### Nacos 配置版本控制
-
-```java
-@Component
-public class ConfigVersionManager {
-
-    @Autowired
-    private NacosConfigManager configManager;
-
-    public void saveConfigWithVersion(String dataId, String content, String comment) {
-        // Nacos 自动保存配置历史版本
-        configManager.getConfigService().publishConfig(
-            dataId,
-            "DEFAULT_GROUP",
-            content,
-            ConfigType.YAML.getType()
-        );
-
-        log.info("配置已发布: dataId={}, comment={}", dataId, comment);
-    }
-
-    public String rollbackConfig(String dataId, int version) {
-        // 回滚到指定版本
-        var historyConfig = configManager.getConfigService()
-            .getConfigHistory(dataId, "DEFAULT_GROUP", version);
-
-        configManager.getConfigService().publishConfig(
-            dataId,
-            "DEFAULT_GROUP",
-            historyConfig,
-            ConfigType.YAML.getType()
-        );
-
-        return historyConfig;
+    public FeatureToggle prodFeatureToggle() {
+        return new ProdFeatureToggle();
     }
 }
 ```
 
 ## 配置最佳实践
 
-### 1. 配置分层管理
-```yaml
-# 基础设施配置
-infrastructure:
-  database:
-    pool-size: 20
-  redis:
-    timeout: 5000
+### 1. 配置命名规范
 
-# 业务配置
-business:
-  order:
-    timeout: 30000
-    max-retry: 3
-  payment:
-    gateway: alipay
-```
-
-### 2. 配置命名规范
 ```yaml
-# ✅ 正确：使用清晰的层级结构
+# ✅ 正确：层级结构 + 语义化命名
 app:
-  feature:
-    payment:
-      enabled: true
-      timeout: 5000
+  ingest:
+    pubmed:
+      batch-size: 1000
+      api-timeout: 30s
 
-# ❌ 错误：扁平化配置
-paymentEnabled: true
-paymentTimeout: 5000
+# ❌ 错误：扁平化命名
+pubmedBatchSize: 1000
+timeout1: 30
 ```
 
-### 3. 默认值处理
+### 2. 默认值处理
+
 ```java
 @Component
 public class AppConfig {
-    // 总是提供合理的默认值
-    @Value("${app.cache.ttl:3600}")
+    @Value("${app.cache.ttl:3600}")  // 总是提供默认值
     private int cacheTtl;
-
-    @Value("${app.retry.max:3}")
-    private int maxRetry;
-
-    @Value("${app.feature.new:false}")
-    private boolean newFeature;
 }
 ```
 
-### 4. 配置验证
-```java
-@Component
-@ConfigurationProperties(prefix = "app")
-@Validated
-public class ApplicationConfig {
+### 3. 敏感信息管理
 
-    @NotNull(message = "服务名称不能为空")
-    private String name;
+```yaml
+# ❌ 错误：硬编码
+spring:
+  datasource:
+    password: MySecretPassword123
 
-    @Min(value = 1, message = "超时时间至少 1 秒")
-    @Max(value = 60, message = "超时时间最多 60 秒")
-    private int timeout;
-
-    @Valid
-    @NotNull
-    private DatabaseConfig database;
-
-    @Data
-    public static class DatabaseConfig {
-        @NotBlank
-        private String url;
-
-        @Min(1)
-        @Max(100)
-        private int poolSize;
-    }
-}
+# ✅ 正确：环境变量
+spring:
+  datasource:
+    password: ${DB_PASSWORD}
 ```
+
+### 4. Spring Boot 3 配置导入
+
+```yaml
+spring:
+  config:
+    import:
+      # ✅ 使用 optional: 避免启动失败
+      - optional:nacos:${spring.application.name}.yaml
+      # ✅ 使用 Group 分组管理
+      - optional:nacos:database.yaml?group=DATABASE_GROUP
+```
+
+## Spring Boot 3 迁移指南
+
+### 从 Spring Boot 2.x 迁移
+
+**移除的功能**：
+- ❌ `bootstrap.yaml` / `bootstrap.properties` - 不再支持
+- ❌ Spring Cloud Bootstrap Context - 已移除
+
+**新的配置方式**：
+- ✅ 使用 `spring.config.import` 导入外部配置
+- ✅ 在 `application.yaml` 中配置 Nacos 连接信息
+
+**迁移示例**：
+
+```yaml
+# Spring Boot 2.x（bootstrap.yaml）❌
+spring:
+  cloud:
+    nacos:
+      config:
+        server-addr: localhost:8848
+
+# Spring Boot 3（application.yaml）✅
+spring:
+  cloud:
+    nacos:
+      server-addr: localhost:8848
+  config:
+    import:
+      - optional:nacos:${spring.application.name}.yaml
+```
+
+## Patra 项目配置规范
+
+### 配置文件结构
+
+```
+patra-{service}-boot/
+└── src/main/resources/
+    ├── application.yaml           # 基础配置
+    ├── application-dev.yaml       # 开发环境
+    └── application-prod.yaml      # 生产环境
+```
+
+### 配置注入方式
+
+| 场景 | 推荐方式 | 示例 |
+|------|----------|------|
+| 简单配置值 | `@Value` | `@Value("${app.timeout:30}")` |
+| 复杂配置对象 | `@ConfigurationProperties` | `@ConfigurationProperties("app")` |
+| 动态配置 | `@RefreshScope` + `@Value` | `@RefreshScope @Value("${app.feature}")` |
+| 环境特定 Bean | `@Profile` | `@Bean @Profile("prod")` |
+
+### 强制规范
+
+✅ **必须遵守**：
+1. Spring Boot 3 项目禁止使用 `bootstrap.yaml`
+2. 使用 `spring.config.import` 导入 Nacos 配置
+3. 仅使用 dev 和 prod 两个环境
+4. 生产环境敏感信息通过环境变量注入
+5. 所有配置属性必须提供默认值
+
+❌ **禁止行为**：
+1. 硬编码敏感信息（密码、密钥、Token）
+2. 使用 `@Profile("test")`（项目不存在 test 环境）
+3. 在日志中输出敏感配置
+4. 使用扁平化配置命名（如 `dbUrl`）
+
+### 配置变更流程
+
+**开发环境**：
+- 直接修改 `application-dev.yaml`
+- 提交到 Git 仓库
+
+**生产环境**：
+- 在 Nacos 控制台修改配置
+- 应用自动刷新（`@RefreshScope` 生效）
 
 ## 故障排查
 
 ### 配置不生效检查清单
 
 ```
-1. [ ] 检查 @RefreshScope 注解是否添加
-2. [ ] 检查 Nacos namespace 和 group 是否正确
-3. [ ] 检查配置文件优先级
-4. [ ] 检查配置的 Data ID 是否匹配
-5. [ ] 检查网络连接和 Nacos 服务状态
+1. [ ] 确认没有使用 bootstrap.yaml（Spring Boot 3 不支持）
+2. [ ] 检查 spring.config.import 是否正确配置
+3. [ ] 检查 @RefreshScope 注解是否添加
+4. [ ] 检查 Nacos namespace 和 group 是否正确
+5. [ ] 检查配置的 Data ID 是否匹配
 6. [ ] 查看应用日志中的配置加载信息
-```
-
-### 调试配置
-
-```java
-@RestController
-@RequestMapping("/debug")
-public class ConfigDebugController {
-
-    @Autowired
-    private Environment env;
-
-    @Autowired
-    private ConfigurableEnvironment configurableEnv;
-
-    @GetMapping("/config/{key}")
-    public String getConfig(@PathVariable String key) {
-        return env.getProperty(key, "未找到配置");
-    }
-
-    @GetMapping("/sources")
-    public List<String> getPropertySources() {
-        return configurableEnv.getPropertySources().stream()
-            .map(PropertySource::getName)
-            .toList();
-    }
-}
 ```

@@ -75,7 +75,7 @@ eventPublisher.publishEvent(new TaskCompletedEvent(...));
 <summary>查看完整实现</summary>
 
 ```java
-// 1. 定义事件
+/// 1. 定义事件
 public record TaskCompletedEvent(
     Long taskId,
     Long sliceId,
@@ -93,7 +93,7 @@ public record TaskCompletedEvent(
     }
 }
 
-// 2. 事件处理器
+/// 2. 事件处理器
 @Component
 @RequiredArgsConstructor
 @Slf4j
