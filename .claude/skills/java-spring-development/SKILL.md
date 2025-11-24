@@ -84,7 +84,6 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__serena__get_symbols_ove
 │   ├── 需要调用服务 → patra-spring-cloud-starter-feign
 │   └── 需要对象存储 → patra-spring-boot-starter-object-storage
 ├── domain 层 → ❌ 不能添加任何 Starter
-└── 其他层 → patra-spring-boot-starter-core
 ```
 
 详细使用指南请查看 [patra-starters-guide.md](resources/patra-starters-guide.md)
