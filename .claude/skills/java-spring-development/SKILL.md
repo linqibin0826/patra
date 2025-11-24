@@ -96,22 +96,12 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__serena__get_symbols_ove
 3. 遵循配置分层和环境隔离原则
 4. 敏感配置需要加密处理
 
-## 开发规范
-
-遵循团队开发规范：
-1. 命名约定：查看 [development-standards.md](resources/development-standards.md#命名约定)
-2. 包结构：查看 [development-standards.md](resources/development-standards.md#包结构组织)
-3. 代码风格：查看 [development-standards.md](resources/development-standards.md#代码风格规范)
-4. 异常处理：查看 [development-standards.md](resources/development-standards.md#异常处理规范)
-
 ## 性能优化建议
 
 1. **数据库优化**：避免 N+1 查询，使用批量操作
 2. **缓存策略**：合理使用 Redis 缓存，注意缓存失效
 3. **异步处理**：使用 @Async 和 CompletableFuture
 4. **连接池配置**：根据负载调整数据库和 HTTP 连接池
-
-详见 [development-standards.md](resources/development-standards.md#性能优化建议)
 
 ## 详细资源索引
 
@@ -129,9 +119,8 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__serena__get_symbols_ove
 - [事件驱动架构](resources/event-driven-architecture.md)
 - [Outbox 模式](resources/outbox-pattern.md)
 
-### 配置与规范
+### 配置
 - [配置管理指南](resources/configuration-management.md)
-- [开发规范详解](resources/development-standards.md)
 
 ## 常见问题快速解答
 
