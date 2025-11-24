@@ -8,11 +8,10 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__serena__get_symbols_ove
 
 自动为 Spring Boot 开发任务提供指导：Controller、Service、Repository 开发，MyBatis-Plus 配置，Patra Starter 依赖管理等。
 
-## 💡 快速开始
-
-遇到问题时，查看 [troubleshooting-and-notes/](../../troubleshooting-and-notes/) 获取已知解决方案。
-
 ## 核心工作流
+
+### 0. TDD（测试驱动开发）
+在开始编码前，编写单元测试和集成测试。
 
 ### 1. 创建 REST Controller
 
