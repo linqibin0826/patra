@@ -168,7 +168,7 @@ public void updateConfig(String key, String value) { ... }
 ### 内部文档
 
 - [Patra 项目架构宪章](../../.specify/memory/constitution.md)
-- [Patra 最佳实践](../../troubleshooting-and-notes/best-practices.md)
+- [Patra 最佳实践](../../.claude/memories/best-practices.md)
 
 ---
 
