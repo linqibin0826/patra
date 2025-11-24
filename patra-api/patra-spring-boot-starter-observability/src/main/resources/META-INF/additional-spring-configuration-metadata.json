@@ -1,0 +1,31 @@
+{
+  "groups": [
+    {
+      "name": "patra.observability",
+      "type": "com.patra.starter.observability.config.ObservabilityProperties",
+      "description": "Patra 可观测性配置属性"
+    },
+    {
+      "name": "patra.observability.metrics",
+      "type": "com.patra.starter.observability.config.MetricsConfig",
+      "description": "指标（Metrics）配置"
+    },
+    {
+      "name": "patra.observability.tracing",
+      "type": "com.patra.starter.observability.config.TracingConfig",
+      "description": "追踪（Tracing）配置"
+    },
+    {
+      "name": "patra.observability.logging",
+      "type": "com.patra.starter.observability.config.LoggingConfig",
+      "description": "日志（Logging）配置"
+    },
+    {
+      "name": "patra.observability.security",
+      "type": "com.patra.starter.observability.config.SecurityConfig",
+      "description": "安全配置（敏感数据脱敏）"
+    }
+  ],
+  "properties": [],
+  "hints": []
+}

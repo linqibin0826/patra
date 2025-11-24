@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.patra</groupId>
+        <artifactId>patra-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../patra-parent/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>patra-spring-boot-starter-observability</artifactId>
+    <packaging>jar</packaging>
+    <name>Patra Spring Boot Starter - Observability</name>
+    <description>可观测性 Starter，统一集成 Metrics、Tracing、Logging 三大支柱</description>
+
+    <dependencies>
+        <!-- Internal shared library: utilities/exceptions -->
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-common-core</artifactId>
+        </dependency>
+
+        <!-- Core starter: 使用 ResolutionInterceptor 扩展点 -->
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-core</artifactId>
+        </dependency>
+
+        <!-- Foundation for custom AutoConfiguration -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <!-- Micrometer Observation API (核心) -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-observation</artifactId>
+        </dependency>
+
+        <!-- Micrometer Core (Metrics) -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+        </dependency>
+
+        <!-- Prometheus Registry (可选): 用于导出 Prometheus 格式的指标 -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- SkyWalking Micrometer Registry (可选): 用于将 Meter 数据发送到 SkyWalking -->
+        <dependency>
+            <groupId>org.apache.skywalking</groupId>
+            <artifactId>apm-toolkit-micrometer-registry</artifactId>
+            <version>${skywalking.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- SkyWalking APM Toolkit for trace context API -->
+        <dependency>
+            <groupId>org.apache.skywalking</groupId>
+            <artifactId>apm-toolkit-trace</artifactId>
+        </dependency>
+
+        <!-- Spring Batch (可选): 用于 BatchObservationJobListener -->
+        <dependency>
+            <groupId>org.springframework.batch</groupId>
+            <artifactId>spring-batch-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Spring Web (可选): 用于 RestClientObservationInterceptor -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Configuration metadata (IDE hints during development; not used at runtime) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <!-- Version and base executions inherited from parent pluginManagement -->
+                <executions>
+                    <execution>
+                        <id>check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.80</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
