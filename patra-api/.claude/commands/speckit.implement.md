@@ -164,8 +164,7 @@ $ARGUMENTS
 
 9. **🔍 阶段性代码审查**：
 
-   在每个阶段完成后，使用 Task tool 调用 `code-reviewer` subagent 进行代码审查
-   **注意**：code-reviewer subagent 会自动激活 java-code-reviewer skill 并执行架构合规性、代码质量、性能等全面审查
+   在每个阶段完成后，可以人工审查代码质量和架构合规性
 
 10. **📝 Polish 阶段：文档生成**：
 
@@ -215,7 +214,6 @@ $ARGUMENTS
    - 检查实现的特性是否符合原始规格说明
    - 验证测试通过且覆盖率满足要求（参考 CHK-TEST-* 验证项）
    - 确认实现遵循技术计划
-   - **运行最终代码审查**：调用 code-reviewer agent 生成完整审查报告
    - 报告最终状态及已完成工作的摘要
 
 ## 🎯 Skills 集成指令（实施阶段）
@@ -293,7 +291,7 @@ $ARGUMENTS
    - Spring Boot 技术模式 → java-spring-development
    - TDD 工作流 → patra-tdd-development
 
-6. **阶段性审查**：每个层完成后调用 code-reviewer agent
+6. **阶段性审查**：每个层完成后进行人工审查
    - Domain 层完成 → 审查 CHK-ARCH-001, CHK-CODE-003
    - Application 层完成 → 审查 CHK-ARCH-003, CHK-CODE-002
    - Infrastructure 层完成 → 审查 CHK-ARCH-004, CHK-CODE-005

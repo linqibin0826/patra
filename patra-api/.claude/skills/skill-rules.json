@@ -103,42 +103,6 @@
         ]
       }
     },
-    "java-code-reviewer": {
-      "type": "domain",
-      "enforcement": "suggest",
-      "priority": "medium",
-      "description": "Code review and architecture compliance expert",
-      "promptTriggers": {
-        "keywords": [
-          "code review",
-          "review code",
-          "check architecture",
-          "compliance check",
-          "code quality",
-          "refactor",
-          "anti-pattern",
-          "design pattern",
-          "dependency violation",
-          "代码审查",
-          "审查代码",
-          "架构检查",
-          "合规检查",
-          "代码质量",
-          "重构",
-          "反模式",
-          "设计模式",
-          "依赖违规"
-        ],
-        "intentPatterns": [
-          "(review|check|audit|assess).*?(code|architecture|compliance)",
-          "(identify|find).*?(issue|problem|violation|anti-pattern)",
-          "(improve|refactor).*?code",
-          "(审查|检查|评审|评估).*(代码|架构|合规)",
-          "(识别|查找).*(问题|违规|反模式)",
-          "(改进|重构).*代码"
-        ]
-      }
-    },
     "java-documentation-architect": {
       "type": "domain",
       "enforcement": "suggest",
