@@ -113,12 +113,6 @@
 
 ## 依赖规则
 
-```
-Adapter → Application → Domain
-           ↑
-      Infrastructure
-```
-
 - **Domain 层不依赖任何层**
 - Application 层只依赖 Domain 层
 - Infrastructure 层实现 Domain 端口
@@ -154,7 +148,7 @@ Adapter → Application → Domain
 ✅ Domain 层保持纯 Java，无框架依赖
 ✅ Application 层管理事务边界（@Transactional）
 ✅ 使用 MapStruct 进行对象转换
-✅ 通过 Port 接口定义依赖
+✅ 通过 Port 和 Repository 接口定义依赖
 ✅ 使用 @Valid 验证输入
 
 ### DON'T 反模式
