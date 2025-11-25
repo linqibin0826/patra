@@ -87,17 +87,18 @@ mvn test-compile -pl :patra-ingest-boot,:patra-registry-boot -am
 
 **🚨 编译通过后，必须在单个响应中使用两个 Task 工具调用来并行启动以下两个 agents：**
 
-#### 1. 架构合规性审查
+#### 1. 代码质量与架构合规性审查
 ```
-subagent_type: java-hexagonal-architecture
-description: 架构合规性审查
+subagent_type: code-reviewer
+description: 代码质量与架构合规性审查
 prompt: |
   基于上述 Git 变更上下文，审查所有变更的代码文件
 
   **输出要求：**
   - 列出所有架构问题（如果有）
+  - 列出代码质量问题（如果有）
   - 对每个问题提供具体的文件位置和修复建议
-  - 评估整体架构健康度（优秀/良好/需改进/严重问题）
+  - 评估整体代码健康度（优秀/良好/需改进/严重问题）
 ```
 
 #### 2. 文档完整性检查

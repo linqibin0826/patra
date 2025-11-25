@@ -95,7 +95,7 @@ $ARGUMENTS
     - 每次呈现**确切一个**问题。
     - 对于多选问题：
        - **分析所有选项**并基于以下确定**最合适的选项**（优先级从高到低）：
-          - **Patra 架构规范**：参考 java-hexagonal-architecture Skill 和 constitution.md 的 CHK-* 验证项
+          - **Patra 架构规范**：参考 java-spring-development Skill 和 constitution.md 的 CHK-* 验证项
           - **SSOT 原则**：配置必须从 patra-registry 获取（CHK-SSOT-001）
           - **DDD 最佳实践**：聚合边界、值对象不可变性、领域事件命名
           - 风险降低（安全、性能、可维护性）
