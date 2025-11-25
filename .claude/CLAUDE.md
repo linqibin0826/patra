@@ -8,9 +8,9 @@
 
 ### 核心事实
 
-1. 零历史包袱：不存在旧版本，无需向后兼容、数据迁移或渐进式重构
-2. 单人团队：整个项目由 Qibin Lin 一人负责，无团队协作成本
-3. 质量优先：可投入任何必要时间实现最优方案，技术卓越是唯一标准
+1. 零历史包袱:不存在旧版本，无需向后兼容、数据迁移或渐进式重构
+2. 单人团队:整个项目由 Qibin Lin 一人负责，无团队协作成本
+3. 质量优先:可投入任何必要时间实现最优方案，技术卓越是唯一标准
 
 ### 执行要求
 
@@ -33,7 +33,7 @@
 
 ### Red-Green-Refactor 循环
 
-所有功能开发必须严格遵循 TDD 流程：
+所有功能开发必须严格遵循 TDD 流程:
 
 1. **Red（红）**: 先编写一个失败的测试，明确定义期望行为
 2. **Green（绿）**: 编写最少量的代码使测试通过，不多不少
@@ -68,9 +68,9 @@
 
 ## 开发规范
 
-1. 测试策略与注意事项：@memories/testing.md
-2. 六边形架构依赖规则与模块职责：@memories/architecture.md
-3. 开发最佳实践：@memories/best-practices.md
-4. 代码风格与命名规范：@memories/code-style.md
-5. MyBatis-Plus 使用规范：@memories/mybatis-plus.md
-6. 异常处理与错误码规范：@memories/error-handling.md
+1. 测试策略与注意事项 @memories/testing.md
+2. 六边形架构依赖规则与模块职责 @memories/architecture.md
+3. 开发最佳实践 @memories/best-practices.md
+4. 代码风格与命名规范 @memories/code-style.md
+5. MyBatis-Plus 使用规范 @memories/mybatis-plus.md
+6. 异常处理与错误码规范 @memories/error-handling.md
