@@ -22,6 +22,7 @@
 5. `patra-{service}-infra` 模块涉及 REST API 调用时必须依赖 `patra-spring-boot-starter-rest-client`，使用 `defaultRestClient` Bean，禁止手动创建 RestClient
 6. 所有非 domain 模块（adapter、app、infra、api）必须依赖 `patra-spring-boot-starter-core`，domain 模块禁止依赖
 7. 所有服务的所有层必须依赖 `patra-common-core`（提供 DDD 基类、异常体系、共享枚举、工具类等）
+8. 所有 Spring 模块（`patra-{service}-*` 除 domain 和 api 层、`patra-spring-boot-starter-*`、`patra-spring-cloud-starter-*`）测试时必须依赖 `patra-spring-boot-starter-test`（提供 TestContainers 容器初始化器、ArchUnit 架构规则、测试工具集），禁止重复声明 JUnit、AssertJ、Mockito、TestContainers、ArchUnit、Awaitility 等已传递的依赖；`patra-common-*`、`patra-{service}-api` 等纯 Java 模块不适用此规则
 
 ## Common 模块使用规范
 

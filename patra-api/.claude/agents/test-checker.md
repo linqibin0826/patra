@@ -46,6 +46,14 @@ color: yellow
 | Adapter | `@MockitoBean` | Mock 领域对象 |
 | Boot | 真实中间件 | Mock 核心组件 |
 
+## 测试基础设施
+
+所有 Spring 模块（除 domain 层、api 层和 `patra-common-*`）必须使用 `patra-spring-boot-starter-test`：
+- **容器初始化器**：`MySQLContainerInitializer`、`RocketMQContainerInitializer` 基类
+- **ArchUnit 规则**：`HexagonalArchitectureRules`、`TestingRules`
+- **传递依赖**：JUnit 5、AssertJ、Mockito、TestContainers、ArchUnit、Awaitility、WireMock
+- **禁止重复声明**：上述已传递的依赖不应在模块 pom.xml 中重复声明
+
 ## 注意事项
 
 - **Spring Boot 3.4+**：使用 `@MockitoBean`（`o.s.test.context.bean.override.mockito`），禁止废弃的 `@MockBean`

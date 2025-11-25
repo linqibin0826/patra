@@ -43,4 +43,5 @@ patra-{service}/
 - `patra-spring-boot-starter-observability` - 可观测性 (Metrics/Tracing/Logging)
 - `patra-spring-boot-starter-redisson` - 分布式锁/Redis (Redisson + @DistributedLock)
 - `patra-spring-boot-starter-provenance` - PubMed/EPMC HTTP 客户端
+- `patra-spring-boot-starter-test` - 测试基础设施 (TestContainers/ArchUnit/测试工具集)
 - `patra-spring-cloud-starter-feign` - Feign 客户端自动配置

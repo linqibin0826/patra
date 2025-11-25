@@ -37,11 +37,18 @@ color: cyan
 
 ### 第四步：实现测试
 - 遵循项目测试规范（参考 @.claude/memories/testing.md）
-- 使用 JUnit 5 + AssertJ + Mockito
+- 使用 `patra-spring-boot-starter-test` 提供的测试基础设施：
+  - **测试框架**：JUnit 5 + AssertJ + Mockito（已传递，无需重复声明）
+  - **容器初始化器**：继承 `MySQLContainerInitializer`、`RocketMQContainerInitializer` 基类
+  - **ArchUnit 规则**：使用 `HexagonalArchitectureRules`、`TestingRules`
+  - **异步断言**：使用 Awaitility（已传递）
+  - **HTTP Mock**：使用 WireMock（已传递）
 - 按照六边形架构分层编写相应类型的测试：
   - Domain 层：纯单元测试，无 Spring 依赖
   - Application 层：单元测试，Mock 端口接口
-  - Adapter 层：集成测试或契约测试
+  - Infrastructure 层：集成测试，使用 TestContainers
+  - Adapter 层：切片测试或契约测试
+  - Boot 层：E2E 测试，使用服务特定的容器初始化器
 - 确保测试独立、可重复、快速执行
 
 ### 第五步：运行验证
