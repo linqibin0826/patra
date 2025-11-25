@@ -9,8 +9,8 @@ import static org.mockito.Mockito.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.app.usecase.execution.TaskExecutionUseCase;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
-import com.patra.ingest.integration.config.MySQLContainerInitializer;
-import com.patra.ingest.integration.config.RocketMQContainerInitializer;
+import com.patra.ingest.integration.config.IngestMySQLContainerInitializer;
+import com.patra.ingest.integration.config.IngestRocketMQContainerInitializer;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -80,7 +80,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
       "patra.ingest.mq.consumer-groups.task-ready=test-task-ready-consumer-group"
     })
 @ContextConfiguration(
-    initializers = {MySQLContainerInitializer.class, RocketMQContainerInitializer.class})
+    initializers = {IngestMySQLContainerInitializer.class, IngestRocketMQContainerInitializer.class})
 @org.springframework.test.context.ActiveProfiles("integration-test")
 // 移除 @DirtiesContext: 共享 ApplicationContext 以提升测试性能
 // 测试隔离通过不同的 Consumer Group (test-task-ready-consumer-group) 保证

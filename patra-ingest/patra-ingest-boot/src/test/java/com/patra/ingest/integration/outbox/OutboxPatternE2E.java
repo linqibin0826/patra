@@ -11,10 +11,11 @@ import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.port.OutboxMessageRepository;
 import com.patra.ingest.domain.port.OutboxRelayRepository;
 import com.patra.ingest.infra.messaging.RocketMqOutboxPublisher;
-import com.patra.ingest.integration.config.MySQLContainerInitializer;
-import com.patra.ingest.integration.config.RocketMQContainerInitializer;
+import com.patra.ingest.integration.config.IngestMySQLContainerInitializer;
+import com.patra.ingest.integration.config.IngestRocketMQContainerInitializer;
 import com.patra.ingest.testutil.OutboxMessageTestBuilder;
 import com.patra.ingest.testutil.RocketMQMessageCollector;
+import com.patra.starter.test.container.initializer.RocketMQContainerInitializer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
@@ -103,8 +104,8 @@ import org.springframework.transaction.annotation.Transactional;
 ///
 /// @author linqibin
 /// @since 0.1.0
-/// @see MySQLContainerInitializer
-/// @see RocketMQContainerInitializer
+/// @see IngestMySQLContainerInitializer
+/// @see IngestRocketMQContainerInitializer
 /// @see OutboxMessageTestBuilder
 @SpringBootTest(
     properties = {
@@ -114,7 +115,7 @@ import org.springframework.transaction.annotation.Transactional;
       "spring.config.import=classpath:ingest-error-config.yaml,classpath:ingest-rocketmq.yaml"
     })
 @ContextConfiguration(
-    initializers = {MySQLContainerInitializer.class, RocketMQContainerInitializer.class})
+    initializers = {IngestMySQLContainerInitializer.class, IngestRocketMQContainerInitializer.class})
 @DisplayName("Outbox 模式端到端测试")
 @org.springframework.test.context.ActiveProfiles("e2e-test")
 // 移除 @DirtiesContext: 共享 ApplicationContext 以提升测试性能

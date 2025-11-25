@@ -10,7 +10,7 @@ import com.patra.catalog.app.usecase.meshimport.MeshImportOrchestrator;
 import com.patra.catalog.domain.model.aggregate.MeshImportAggregate;
 import com.patra.catalog.domain.model.enums.MeshImportTaskStatus;
 import com.patra.catalog.domain.port.MeshImportRepository;
-import com.patra.catalog.integration.config.MySQLContainerInitializer;
+import com.patra.catalog.integration.config.CatalogMySQLContainerInitializer;
 import java.io.File;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
@@ -83,7 +83,7 @@ import org.springframework.transaction.annotation.Transactional;
       "patra.catalog.mesh.import.expected-counts.entry-term=250000",
       "patra.catalog.mesh.import.expected-counts.concept=300000"
     })
-@ContextConfiguration(initializers = {MySQLContainerInitializer.class})
+@ContextConfiguration(initializers = {CatalogMySQLContainerInitializer.class})
 @DisplayName("MeSH 导入端到端测试")
 @Transactional
 class MeshImportE2ETest {

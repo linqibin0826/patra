@@ -1,4 +1,4 @@
-package com.patra.ingest.integration.config;
+package com.patra.starter.test.container.rocketmq;
 
 import java.util.concurrent.TimeUnit;
 import org.awaitility.Awaitility;
@@ -14,22 +14,23 @@ import org.testcontainers.containers.ContainerState;
 /// ### 职责范围
 ///
 /// - **Topic 创建**: 使用 mqadmin 命令创建 Topic
-///   - **路由验证**: 等待 Topic 路由信息同步完成
-///   - **Topic 删除**: 测试清理时删除 Topic（可选）
+/// - **路由验证**: 等待 Topic 路由信息同步完成
+/// - **Topic 删除**: 测试清理时删除 Topic（可选）
 ///
 /// ### 设计原则
 ///
 /// - **单一职责**: 只管理 Topic，不管理容器生命周期
-///   - **幂等性**: 重复创建同一 Topic 不会报错
-///   - **健壮性**: 使用 Awaitility 等待操作成功，自动重试
+/// - **幂等性**: 重复创建同一 Topic 不会报错
+/// - **健壮性**: 使用 Awaitility 等待操作成功，自动重试
 ///
 /// @author linqibin
 /// @since 0.1.0
-/// @see com.patra.ingest.integration.RocketMQContainerSupport
+/// @see RocketMQContainerSupport
 public class RocketMQTopicAdmin {
 
   private static final Logger log = LoggerFactory.getLogger(RocketMQTopicAdmin.class);
 
+  /// Docker Compose 容器实例。
   private final ComposeContainer composeContainer;
 
   /// 构造函数。
@@ -49,11 +50,11 @@ public class RocketMQTopicAdmin {
 
     // 获取 broker 容器（Docker Compose 的服务名称格式可能是 <service>-1 或 <service>_1）
     var brokerContainerOpt = composeContainer.getContainerByServiceName("broker-1");
-    if (!brokerContainerOpt.isPresent()) {
+    if (brokerContainerOpt.isEmpty()) {
       brokerContainerOpt = composeContainer.getContainerByServiceName("broker_1");
     }
 
-    if (!brokerContainerOpt.isPresent()) {
+    if (brokerContainerOpt.isEmpty()) {
       throw new IllegalStateException("找不到 Broker 容器");
     }
 
@@ -132,11 +133,11 @@ public class RocketMQTopicAdmin {
     log.info("删除 Topic: {}", topic);
 
     var brokerContainerOpt = composeContainer.getContainerByServiceName("broker-1");
-    if (!brokerContainerOpt.isPresent()) {
+    if (brokerContainerOpt.isEmpty()) {
       brokerContainerOpt = composeContainer.getContainerByServiceName("broker_1");
     }
 
-    if (!brokerContainerOpt.isPresent()) {
+    if (brokerContainerOpt.isEmpty()) {
       log.warn("找不到 Broker 容器，无法删除 Topic");
       return;
     }
