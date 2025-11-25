@@ -24,14 +24,7 @@
             <artifactId>patra-spring-boot-starter-core</artifactId>
         </dependency>
 
-        <!-- 2. 可观测性（可选，由 starter-observability 提供 LockMetricsRecorder） -->
-        <dependency>
-            <groupId>com.patra</groupId>
-            <artifactId>patra-spring-boot-starter-observability</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- 3. Redisson 官方 Starter（必须） -->
+        <!-- 2. Redisson 官方 Starter（必须） -->
         <dependency>
             <groupId>org.redisson</groupId>
             <artifactId>redisson-spring-boot-starter</artifactId>
@@ -55,6 +48,12 @@
         </dependency>
 
         <!-- 6. 测试依赖 -->
+        <!-- Micrometer (测试用): 用于集成测试验证锁指标 -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

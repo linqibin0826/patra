@@ -1,7 +1,7 @@
 package com.patra.starter.redisson.autoconfigure;
 
-import com.patra.starter.observability.interceptor.redisson.LockMetricsRecorder;
 import com.patra.starter.redisson.config.RedissonProperties;
+import com.patra.starter.redisson.listener.LockObserver;
 import com.patra.starter.redisson.lock.LockAspect;
 import com.patra.starter.redisson.lock.LockExecutor;
 import com.patra.starter.redisson.lock.LockKeyGenerator;
@@ -43,20 +43,20 @@ public class LockAutoConfiguration {
 
     /// 配置锁执行器。
     ///
-    /// 自动注入可观测性组件（如果已启用），否则为 null。
-    /// LockMetricsRecorder 由 patra-spring-boot-starter-observability 提供。
+    /// 自动注入锁观察者（如果已启用），否则为 null。
+    /// LockObserver 实现（如 LockMetricsRecorder）由 patra-spring-boot-starter-observability 提供。
     ///
-    /// @param redissonClient   Redisson 客户端
-    /// @param metricsRecorder  指标记录器（可选，由 starter-observability 提供）
+    /// @param redissonClient Redisson 客户端
+    /// @param lockObserver   锁观察者（可选，由 starter-observability 提供实现）
     /// @return LockExecutor
     @Bean
     public LockExecutor lockExecutor(
         RedissonClient redissonClient,
-        @Autowired(required = false) LockMetricsRecorder metricsRecorder
+        @Autowired(required = false) LockObserver lockObserver
     ) {
-        log.info("初始化 LockExecutor (metrics={})",
-            metricsRecorder != null ? "启用" : "禁用");
-        return new LockExecutor(redissonClient, metricsRecorder);
+        log.info("初始化 LockExecutor (observer={})",
+            lockObserver != null ? "启用" : "禁用");
+        return new LockExecutor(redissonClient, lockObserver);
     }
 
     /// 配置锁切面。

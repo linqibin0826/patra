@@ -407,9 +407,9 @@ class DistributedLockIT {
      * 测试配置类
      */
     @Configuration
-    @EnableAutoConfiguration(exclude = {
+    @EnableAutoConfiguration(excludeName = {
         // 排除依赖 Spring Batch 的配置（测试环境无 Spring Batch）
-        com.patra.starter.observability.autoconfigure.ObservationInterceptorsAutoConfiguration.class
+        "com.patra.starter.observability.autoconfigure.ObservationInterceptorsAutoConfiguration"
     })
     static class TestConfiguration {
         // Spring Boot 自动配置会自动加载 LockAutoConfiguration
@@ -422,8 +422,19 @@ class DistributedLockIT {
          */
         @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
         @org.springframework.context.annotation.Bean
-        io.micrometer.core.instrument.MeterRegistry meterRegistry() {
+        MeterRegistry meterRegistry() {
             return new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
+        }
+
+        /**
+         * 提供 LockObserver Bean（测试用实现）
+         *
+         * @param meterRegistry 指标注册表
+         * @return 测试用锁指标记录器
+         */
+        @org.springframework.context.annotation.Bean
+        com.patra.starter.redisson.listener.LockObserver lockObserver(MeterRegistry meterRegistry) {
+            return new TestLockMetricsRecorder(meterRegistry);
         }
 
         /**

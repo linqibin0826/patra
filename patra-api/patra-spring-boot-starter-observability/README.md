@@ -51,6 +51,7 @@
 | `ObservationResolutionInterceptor` | 为错误解析流程创建 Observation | 错误处理 |
 | `RestClientObservationInterceptor` | 为 HTTP 请求创建 Observation | REST 客户端 |
 | `BatchObservationJobListener` | 为批处理任务创建 Observation | Spring Batch |
+| `LockMetricsRecorder` | 记录分布式锁指标（等待时间、持有时间、成功/失败率） | Redisson 分布式锁 |
 
 ## 快速开始
 
@@ -244,6 +245,7 @@ public class OrderService {
 patra-spring-boot-starter-observability
 ├── patra-common-core                    # 公共工具和异常
 ├── patra-spring-boot-starter-core       # 核心 Starter（ResolutionInterceptor）
+├── patra-spring-boot-starter-redisson   # (可选) Redisson 分布式锁（LockObserver SPI）
 ├── micrometer-observation               # Micrometer Observation API
 ├── micrometer-core                      # Micrometer 核心
 ├── micrometer-registry-prometheus       # (可选) Prometheus Registry
@@ -275,10 +277,12 @@ com.patra.starter.observability
 ├── handler/                             # 处理器
 │   ├── LoggingObservationHandler        # 日志 Handler
 │   └── PerformanceObservationHandler    # 性能 Handler
-└── interceptor/                         # 拦截器
-    ├── BatchObservationJobListener      # 批处理监听器
-    ├── ObservationResolutionInterceptor # 错误解析拦截器
-    └── RestClientObservationInterceptor # HTTP 客户端拦截器
+├── interceptor/                         # 拦截器
+│   ├── BatchObservationJobListener      # 批处理监听器
+│   ├── ObservationResolutionInterceptor # 错误解析拦截器
+│   ├── RestClientObservationInterceptor # HTTP 客户端拦截器
+│   └── redisson/
+│       └── LockMetricsRecorder          # 分布式锁指标记录器（实现 LockObserver SPI）
 ```
 
 ## 设计原则

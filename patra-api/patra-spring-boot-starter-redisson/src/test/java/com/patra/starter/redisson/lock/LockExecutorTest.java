@@ -1,8 +1,8 @@
 package com.patra.starter.redisson.lock;
 
-import com.patra.starter.observability.interceptor.redisson.LockMetricsRecorder;
 import com.patra.starter.redisson.exception.LockAcquisitionException;
 import com.patra.starter.redisson.exception.LockInfrastructureException;
+import com.patra.starter.redisson.listener.LockObserver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -42,13 +42,13 @@ class LockExecutorTest {
     private RReadWriteLock readWriteLock;
 
     @Mock
-    private LockMetricsRecorder metricsRecorder;
+    private LockObserver lockObserver;
 
     private LockExecutor executor;
 
     @BeforeEach
     void setUp() {
-        executor = new LockExecutor(redissonClient, metricsRecorder);
+        executor = new LockExecutor(redissonClient, lockObserver);
     }
 
     // ==================== 锁获取成功测试 ====================
@@ -72,15 +72,15 @@ class LockExecutorTest {
             // Then
             assertThat(result).isEqualTo("success");
 
-            // 验证指标记录
-            verify(metricsRecorder).onLockAcquired(
+            // 验证观察者记录
+            verify(lockObserver).onLockAcquired(
                 eq("patra:lock:user:123"),
                 eq("REENTRANT"),
                 anyLong()
             );
 
             // 验证锁释放时记录
-            verify(metricsRecorder).onLockReleased(
+            verify(lockObserver).onLockReleased(
                 eq("patra:lock:user:123"),
                 eq("REENTRANT"),
                 anyLong()
@@ -101,7 +101,7 @@ class LockExecutorTest {
 
             // Then
             verify(rLock).tryLock(1000, TimeUnit.MILLISECONDS);
-            verify(metricsRecorder).onLockAcquired(anyString(), eq("REENTRANT"), anyLong());
+            verify(lockObserver).onLockAcquired(anyString(), eq("REENTRANT"), anyLong());
         }
 
         @Test
@@ -133,7 +133,7 @@ class LockExecutorTest {
 
             // Then
             verify(readWriteLock).readLock();
-            verify(metricsRecorder).onLockAcquired(anyString(), eq("READ"), anyLong());
+            verify(lockObserver).onLockAcquired(anyString(), eq("READ"), anyLong());
         }
 
         @Test
@@ -151,7 +151,7 @@ class LockExecutorTest {
 
             // Then
             verify(readWriteLock).writeLock();
-            verify(metricsRecorder).onLockAcquired(anyString(), eq("WRITE"), anyLong());
+            verify(lockObserver).onLockAcquired(anyString(), eq("WRITE"), anyLong());
         }
     }
 
@@ -174,14 +174,14 @@ class LockExecutorTest {
                 .isInstanceOf(LockAcquisitionException.class);
 
             // 验证失败指标记录
-            verify(metricsRecorder).onLockFailed(
+            verify(lockObserver).onLockFailed(
                 eq("patra:lock:user:123"),
                 eq("REENTRANT"),
                 eq("timeout")
             );
 
             // 不应该记录成功指标
-            verify(metricsRecorder, never()).onLockAcquired(anyString(), anyString(), anyLong());
+            verify(lockObserver, never()).onLockAcquired(anyString(), anyString(), anyLong());
         }
 
         @Test
@@ -196,7 +196,7 @@ class LockExecutorTest {
             assertThatThrownBy(() -> executor.execute(context, () -> "never"))
                 .isInstanceOf(LockInfrastructureException.class);
 
-            verify(metricsRecorder).onLockFailed(
+            verify(lockObserver).onLockFailed(
                 eq("patra:lock:task:1"),
                 eq("REENTRANT"),
                 eq("interrupted")
@@ -216,7 +216,7 @@ class LockExecutorTest {
             assertThatThrownBy(() -> executor.execute(context, () -> "never"))
                 .isInstanceOf(LockInfrastructureException.class);
 
-            verify(metricsRecorder).onLockFailed(
+            verify(lockObserver).onLockFailed(
                 eq("patra:lock:task:1"),
                 eq("REENTRANT"),
                 eq("infrastructure_error")
@@ -224,24 +224,24 @@ class LockExecutorTest {
         }
     }
 
-    // ==================== Recorder 为 null 的场景 ====================
+    // ==================== Observer 为 null 的场景 ====================
 
     @Nested
-    @DisplayName("Recorder 为 null 的场景")
-    class NullRecorderTest {
+    @DisplayName("Observer 为 null 的场景")
+    class NullObserverTest {
 
         @Test
-        @DisplayName("MetricsRecorder 为 null 时不应该抛出异常")
-        void shouldNotThrowWhenMetricsRecorderIsNull() throws InterruptedException {
+        @DisplayName("LockObserver 为 null 时不应该抛出异常")
+        void shouldNotThrowWhenLockObserverIsNull() throws InterruptedException {
             // Given
-            LockExecutor executorWithNullMetrics = new LockExecutor(redissonClient, null);
+            LockExecutor executorWithNullObserver = new LockExecutor(redissonClient, null);
             LockContext context = createContext("patra:lock:user:1", LockType.REENTRANT, 1000, 30000);
             given(redissonClient.getLock("patra:lock:user:1")).willReturn(rLock);
             given(rLock.tryLock(1000, 30000, TimeUnit.MILLISECONDS)).willReturn(true);
             given(rLock.isHeldByCurrentThread()).willReturn(true);
 
             // When
-            String result = executorWithNullMetrics.execute(context, () -> "success");
+            String result = executorWithNullObserver.execute(context, () -> "success");
 
             // Then
             assertThat(result).isEqualTo("success");
@@ -269,7 +269,7 @@ class LockExecutorTest {
             // Then
             verify(rLock, never()).unlock();
             // 不应该记录锁释放指标
-            verify(metricsRecorder, never()).onLockReleased(anyString(), anyString(), anyLong());
+            verify(lockObserver, never()).onLockReleased(anyString(), anyString(), anyLong());
         }
 
         @Test
@@ -315,10 +315,10 @@ class LockExecutorTest {
             verify(rLock).unlock();
 
             // 验证成功指标被记录（获取锁成功了）
-            verify(metricsRecorder).onLockAcquired(anyString(), eq("REENTRANT"), anyLong());
+            verify(lockObserver).onLockAcquired(anyString(), eq("REENTRANT"), anyLong());
 
             // 验证释放指标被记录
-            verify(metricsRecorder).onLockReleased(anyString(), eq("REENTRANT"), anyLong());
+            verify(lockObserver).onLockReleased(anyString(), eq("REENTRANT"), anyLong());
         }
     }
 
