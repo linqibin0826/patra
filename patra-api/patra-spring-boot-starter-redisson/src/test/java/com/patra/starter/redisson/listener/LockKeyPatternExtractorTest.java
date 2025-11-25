@@ -40,7 +40,7 @@ class LockKeyPatternExtractorTest {
     }
 
     @Test
-    @DisplayName("应处理无前缀的锁键")π
+    @DisplayName("应处理无前缀的锁键")
     void shouldHandleKeyWithoutPrefix() {
       assertThat(LockKeyPatternExtractor.extract("user:123")).isEqualTo("user");
       assertThat(LockKeyPatternExtractor.extract("order:item:789")).isEqualTo("order.item");
