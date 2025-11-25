@@ -1,6 +1,7 @@
 package com.patra.starter.core.error.engine;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.within;
 import static org.mockito.Mockito.*;
 
 import com.patra.common.error.ApplicationException;
@@ -10,6 +11,7 @@ import com.patra.common.error.trait.HasErrorTraits;
 import com.patra.common.error.trait.StandardErrorTrait;
 import com.patra.starter.core.error.config.ErrorProperties;
 import com.patra.starter.core.error.model.ErrorResolution;
+import com.patra.starter.core.error.model.ResolutionStrategy;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
 import java.util.*;
 import java.util.stream.Stream;
@@ -637,6 +639,187 @@ class DefaultErrorResolutionEngineTest {
       // Then
       assertThat(resolution.errorCode()).isEqualTo(appErrorCode);
       verifyNoInteractions(mockContributor);
+    }
+  }
+
+  @Nested
+  @DisplayName("缓存策略测试")
+  class CacheStrategyTests {
+
+    @Test
+    @DisplayName("相同异常类型应该命中缓存")
+    void shouldHitCacheForSameExceptionType() {
+      // Given
+      when(mockContributor.mapException(any())).thenReturn(Optional.empty());
+
+      var exception1 = new IllegalArgumentException("test1");
+      var exception2 = new IllegalArgumentException("test2");
+
+      // When
+      engine.resolve(exception1); // 第一次：缓存 miss
+      engine.resolve(exception2); // 第二次：缓存 hit
+
+      // Then
+      var stats = engine.getCacheStatistics();
+      assertThat(stats.hits()).isEqualTo(1);
+      assertThat(stats.misses()).isEqualTo(1);
+      assertThat(stats.cacheSize()).isGreaterThanOrEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("不同异常类型应该分别缓存")
+    void shouldCacheDifferentExceptionTypesSeparately() {
+      // Given
+      when(mockContributor.mapException(any())).thenReturn(Optional.empty());
+
+      var exception1 = new IllegalArgumentException("test1");
+      var exception2 = new IllegalStateException("test2");
+      var exception3 = new IllegalArgumentException("test3"); // 与 exception1 同类型
+
+      // When
+      engine.resolve(exception1); // miss - IllegalArgumentException
+      engine.resolve(exception2); // miss - IllegalStateException
+      engine.resolve(exception3); // hit - IllegalArgumentException 已缓存
+
+      // Then
+      var stats = engine.getCacheStatistics();
+      assertThat(stats.misses()).isEqualTo(2);
+      assertThat(stats.hits()).isEqualTo(1);
+      assertThat(stats.cacheSize()).isGreaterThanOrEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("清空缓存后应该重新解析")
+    void shouldResolveAfterClearCache() {
+      // Given
+      when(mockContributor.mapException(any())).thenReturn(Optional.empty());
+
+      var exception = new IllegalArgumentException("test");
+      engine.resolve(exception); // 第一次 miss
+
+      // When
+      engine.clearCache();
+      engine.resolve(exception); // 清空后再次 miss
+
+      // Then
+      var stats = engine.getCacheStatistics();
+      assertThat(stats.misses()).isEqualTo(2);
+      assertThat(stats.hits()).isEqualTo(0);
+      assertThat(stats.cacheSize()).isGreaterThanOrEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("缓存命中率应该正确计算")
+    void shouldCalculateCacheHitRateCorrectly() {
+      // Given
+      when(mockContributor.mapException(any())).thenReturn(Optional.empty());
+
+      var exception = new RuntimeException("test");
+
+      // When - 1 次 miss + 3 次 hit = 75% 命中率
+      engine.resolve(exception); // miss
+      engine.resolve(exception); // hit
+      engine.resolve(exception); // hit
+      engine.resolve(exception); // hit
+
+      // Then
+      var stats = engine.getCacheStatistics();
+      assertThat(stats.hits()).isEqualTo(3);
+      assertThat(stats.misses()).isEqualTo(1);
+      assertThat(stats.hitRate()).isCloseTo(75.0, within(0.01));
+    }
+
+    @Test
+    @DisplayName("缓存应该返回正确的解析策略")
+    void shouldReturnCorrectResolutionStrategy() {
+      // Given
+      when(mockContributor.mapException(any())).thenReturn(Optional.empty());
+
+      // 命名启发式解析的异常
+      var notFoundException = new NamingHeuristicMappingTests.ResourceNotFound();
+
+      // When
+      ErrorResolution firstResolution = engine.resolve(notFoundException); // miss
+      ErrorResolution cachedResolution = engine.resolve(notFoundException); // hit
+
+      // Then - 两次解析应该返回相同的结果
+      assertThat(firstResolution.errorCode().code()).isEqualTo(cachedResolution.errorCode().code());
+      assertThat(firstResolution.httpStatus()).isEqualTo(cachedResolution.httpStatus());
+      assertThat(cachedResolution.strategy()).isEqualTo(ResolutionStrategy.NAMING);
+    }
+
+    @Test
+    @DisplayName("ErrorTrait 解析应该被缓存")
+    void shouldCacheTraitResolution() {
+      // Given
+      when(mockContributor.mapException(any())).thenReturn(Optional.empty());
+
+      class TestTraitException extends RuntimeException implements HasErrorTraits {
+        @Override
+        public Set<ErrorTrait> getErrorTraits() {
+          return Set.of(StandardErrorTrait.NOT_FOUND);
+        }
+      }
+
+      var exception1 = new TestTraitException();
+      var exception2 = new TestTraitException();
+
+      // When
+      ErrorResolution first = engine.resolve(exception1); // miss
+      ErrorResolution second = engine.resolve(exception2); // hit
+
+      // Then
+      assertThat(first.strategy()).isEqualTo(ResolutionStrategy.TRAIT);
+      assertThat(second.errorCode().code()).contains("0404");
+
+      var stats = engine.getCacheStatistics();
+      assertThat(stats.hits()).isEqualTo(1);
+      assertThat(stats.misses()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Fallback 策略应该被缓存")
+    void shouldCacheFallbackStrategy() {
+      // Given
+      when(mockContributor.mapException(any())).thenReturn(Optional.empty());
+
+      // 不匹配任何策略的异常
+      var exception1 = new RuntimeException("unknown1");
+      var exception2 = new RuntimeException("unknown2");
+
+      // When
+      ErrorResolution first = engine.resolve(exception1); // miss
+      ErrorResolution second = engine.resolve(exception2); // hit
+
+      // Then
+      assertThat(first.strategy()).isEqualTo(ResolutionStrategy.FALLBACK);
+      assertThat(first.errorCode().code()).contains("0500");
+      assertThat(second.errorCode().code()).contains("0500");
+
+      var stats = engine.getCacheStatistics();
+      assertThat(stats.hits()).isEqualTo(1);
+      assertThat(stats.misses()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("CacheStatistics toString 应该返回格式化字符串")
+    void shouldReturnFormattedCacheStatisticsString() {
+      // Given
+      when(mockContributor.mapException(any())).thenReturn(Optional.empty());
+
+      var exception = new RuntimeException("test");
+      engine.resolve(exception);
+
+      // When
+      var stats = engine.getCacheStatistics();
+      String statsString = stats.toString();
+
+      // Then
+      assertThat(statsString).contains("CacheStatistics");
+      assertThat(statsString).contains("size=");
+      assertThat(statsString).contains("hits=");
+      assertThat(statsString).contains("misses=");
+      assertThat(statsString).contains("hitRate=");
     }
   }
 }
