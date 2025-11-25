@@ -71,4 +71,11 @@ public class LockContext {
     public void markAcquired(long timestamp) {
         this.lockAcquiredTime = timestamp;
     }
+
+    /// 检查锁是否已被获取。
+    ///
+    /// @return 如果锁已被获取返回 true，否则返回 false
+    public boolean isAcquired() {
+        return this.lockAcquiredTime > 0;
+    }
 }
