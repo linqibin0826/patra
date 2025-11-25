@@ -6,11 +6,10 @@ import static org.awaitility.Awaitility.await;
 
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.infra.messaging.RocketMqOutboxPublisher;
-import com.patra.ingest.integration.config.MySQLContainerInitializer;
-import com.patra.ingest.integration.config.RocketMQContainerInitializer;
+import com.patra.ingest.integration.config.IngestMySQLContainerInitializer;
+import com.patra.ingest.integration.config.IngestRocketMQContainerInitializer;
 import com.patra.ingest.testutil.OutboxMessageTestBuilder;
 import java.nio.charset.StandardCharsets;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
@@ -68,8 +67,8 @@ import org.springframework.test.context.ContextConfiguration;
 ///
 /// @author linqibin
 /// @since 0.1.0
-/// @see RocketMQContainerInitializer
-/// @see MySQLContainerInitializer
+/// @see IngestRocketMQContainerInitializer
+/// @see IngestMySQLContainerInitializer
 /// @see OutboxMessageTestBuilder
 /// @see MessageCollector
 @SpringBootTest(
@@ -84,7 +83,7 @@ import org.springframework.test.context.ContextConfiguration;
       "patra.ingest.test.rocketmq.consumer.enabled=true"
     })
 @ContextConfiguration(
-    initializers = {MySQLContainerInitializer.class, RocketMQContainerInitializer.class})
+    initializers = {IngestMySQLContainerInitializer.class, IngestRocketMQContainerInitializer.class})
 @org.springframework.context.annotation.Import(RocketMqOutboxPublisherIT.MessageCollector.class)
 @DisplayName("RocketMQ Outbox 发布器集成测试")
 @org.springframework.test.context.ActiveProfiles("integration-test")
@@ -324,7 +323,6 @@ class RocketMqOutboxPublisherIT {
   ///   - **代码复用**: 继承统一的 RocketMQMessageCollector，避免重复实现
   ///   - **高内聚**: 作为测试类的内部类，明确其作用域仅限于此测试
   ///
-  @Slf4j
   @Component
   @ConditionalOnProperty(
       name = "patra.ingest.test.rocketmq.consumer.enabled",
@@ -341,18 +339,7 @@ class RocketMqOutboxPublisherIT {
 
     @Override
     public void onMessage(MessageExt message) {
-      String keys = message.getKeys();
-      String topic = message.getTopic();
-      String msgId = message.getMsgId();
-
-      log.info("✅ 消息收集器收到消息: topic={}, keys={}, msgId={}", topic, keys, msgId);
-
-      // 存储消息（如果没有 KEYS，会使用 MsgId）
-      if (keys == null || keys.isEmpty()) {
-        log.warn("收到没有 KEYS 的消息，msgId={}", msgId);
-      }
-
-      // 委托给父类处理
+      // 委托给父类处理（父类已包含日志记录）
       collect(message);
     }
   }

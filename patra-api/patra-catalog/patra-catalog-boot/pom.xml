@@ -62,6 +62,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Patra Test Starter (TestContainers, ArchUnit rules) -->
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- ArchUnit for architecture validation tests -->
         <dependency>
             <groupId>com.tngtech.archunit</groupId>
