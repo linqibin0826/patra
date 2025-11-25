@@ -158,7 +158,7 @@ curl http://localhost:8082/actuator/health   # Ingest
 
 - [**架构**](./docs/ARCHITECTURE.md) — 六边形架构 + DDD 原则、依赖规则、设计模式
 - [**开发指南**](./docs/DEV-GUIDE.md) — 添加用例、聚合、端点的代码示例
-- [**CLAUDE.md**](CLAUDE.md) — AI 助手使用本代码库的说明
+- [**CLAUDE.md**](.claude/CLAUDE.md) — AI 助手使用本代码库的说明
 
 ### 模块 README
 
