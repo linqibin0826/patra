@@ -223,9 +223,9 @@ $ARGUMENTS
 **根据任务类型，参考对应的 Skills 获取代码模板和最佳实践**：
 
 #### 1. Domain 层任务
-- **聚合根和实体**：参考 [聚合设计模式](../../.claude/skills/java-hexagonal-architecture/SKILL.md#聚合设计模式)
-- **Port 接口定义**：参考 [Port-Adapter 模式](../../.claude/skills/java-hexagonal-architecture/SKILL.md#常见架构模式)
-- **领域事件**：参考 [event-driven-architecture.md](../../.claude/skills/java-hexagonal-architecture/resources/event-driven-architecture.md)
+- **聚合根和实体**：参考 java-spring-development Skill 中的聚合设计模式
+- **Port 接口定义**：参考 java-spring-development Skill 中的 Port-Adapter 模式
+- **领域事件**：参考 [event-driven-architecture.md](../../.claude/skills/java-spring-development/resources/event-driven-architecture.md)
 
 #### 2. Application 层任务
 - **Orchestrator/Coordinator**：参考 [Orchestrator 编排模式](../../.claude/skills/java-spring-development/SKILL.md#orchestrator-编排模式)
@@ -287,8 +287,7 @@ $ARGUMENTS
 ### 📋 推荐规则
 
 5. **参考 Skills 获取代码模板**：不要凭空编写，先查看 Skills 中的示例
-   - 架构模式 → java-hexagonal-architecture
-   - Spring Boot 技术模式 → java-spring-development
+   - 架构模式与 Spring Boot 技术模式 → java-spring-development
    - TDD 工作流 → patra-tdd-development
 
 6. **阶段性审查**：每个层完成后进行人工审查

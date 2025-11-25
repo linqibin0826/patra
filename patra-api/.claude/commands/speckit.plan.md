@@ -17,9 +17,8 @@ $ARGUMENTS
 2. **加载上下文**：读取 FEATURE_SPEC 和 `.specify/memory/constitution.md`。加载 IMPL_PLAN 模板。
 
 3. **🔧 架构设计集成**：
-   - **调用 java-hexagonal-architecture Skill**：用于架构决策和设计指导
    - **参考 Constitution CHK-* 验证项**：确保设计符合架构规范
-   - **使用 Skills 中的代码模式**：聚合设计、Port-Adapter 模式
+   - **使用 java-spring-development Skill 中的代码模式**：聚合设计、Port-Adapter 模式
 
 4. **执行规划工作流**：遵循 IMPL_PLAN 模板中的结构：
    - 填写技术上下文（将未知项标记为 "需要澄清"）
@@ -35,21 +34,21 @@ $ARGUMENTS
 
 ### Phase 0 之前：架构设计决策
 
-**使用 java-hexagonal-architecture Skill 进行架构分析**：
+**使用 java-spring-development Skill 进行架构分析**：
 
-1. **确定适配器类型**（参考 [架构决策流程](../../.claude/skills/java-hexagonal-architecture/SKILL.md#架构决策流程)）：
+1. **确定适配器类型**：
    ```
    - REST API → Controller
    - 定时任务 → XXL-Job
    - 消息队列 → MessageListener
    ```
 
-2. **设计聚合边界**（参考 [领域建模检查](../../.claude/skills/java-hexagonal-architecture/SKILL.md#领域建模检查)）：
+2. **设计聚合边界**：
    - 识别聚合根（Aggregate Root）
    - 确定聚合内实体
    - 定义业务不变量
 
-3. **定义 Port 接口**（参考 [Port-Adapter 模式](../../.claude/skills/java-hexagonal-architecture/SKILL.md#常见架构模式)）：
+3. **定义 Port 接口**：
    - 领域层定义 Port 接口
    - 基础设施层实现 Adapter
 
@@ -96,9 +95,9 @@ $ARGUMENTS
      - 示例：`MyBatis-Plus 分页 → 现有实现：patra-catalog-infra/repository/JournalRepositoryImpl.java:45 - 使用 IPage<T> 分页查询`
 
 3. **🔍 架构设计研究**（基于项目现有架构）：
-   - 如果涉及复杂的聚合设计，调用 java-hexagonal-architecture 分析
-   - 如果涉及事件驱动架构，参考 [event-driven-architecture.md](../../.claude/skills/java-hexagonal-architecture/resources/event-driven-architecture.md)
-   - 如果涉及 Outbox 模式，参考 [outbox-pattern.md](../../.claude/skills/java-hexagonal-architecture/resources/outbox-pattern.md)
+   - 如果涉及复杂的聚合设计，参考 java-spring-development Skill
+   - 如果涉及事件驱动架构，参考 [event-driven-architecture.md](../../.claude/skills/java-spring-development/resources/event-driven-architecture.md)
+   - 如果涉及 Outbox 模式，参考 [outbox-pattern.md](../../.claude/skills/java-spring-development/resources/outbox-pattern.md)
 
 4. **生成并派遣研究代理**（仅针对真正的未知项）：
 
@@ -112,7 +111,7 @@ $ARGUMENTS
    ```
 
    **优先级**：
-   - 高优先级：涉及架构设计决策的研究（使用 java-hexagonal-architecture）
+   - 高优先级：涉及架构设计决策的研究（参考 java-spring-development Skill）
    - 中优先级：技术栈最佳实践研究（使用 context7 或 web-research-specialist）
    - 低优先级：实现细节研究（可在 Phase 2 实施时再查）
 
@@ -144,7 +143,7 @@ $ARGUMENTS
    - 实体名称、字段、关系
    - 来自需求的验证规则
    - 状态转换（如适用）
-   - **🔧 参考 DDD 设计模式**：[domain-modeling-patterns.md](../../.claude/skills/java-hexagonal-architecture/resources/domain-modeling-patterns.md)
+   - **🔧 参考 java-spring-development Skill 中的 DDD 设计模式**
 
 2. **从功能需求生成 API 契约**：
    - 对于每个用户操作 → 端点
@@ -154,7 +153,7 @@ $ARGUMENTS
 
 3. **项目结构设计**：
    - 基于六边形架构 6 层模块结构
-   - 参考 [模块结构规范](../../.claude/skills/java-hexagonal-architecture/SKILL.md#模块结构规范)
+   - 参考 java-spring-development Skill 中的模块结构规范
 
 **输出**：data-model.md、/contracts/*、quickstart.md
 
@@ -171,5 +170,5 @@ $ARGUMENTS
 
 - 使用绝对路径
 - 对于关卡失败或未解决的澄清问题报错
-- **优先参考 Skills**：遇到架构设计问题时，先查看 java-hexagonal-architecture
+- **优先参考 Skills**：遇到架构设计问题时，先查看 java-spring-development Skill
 - **引用 CHK-* 编号**：在 Constitution Check 中使用具体的验证项编号
