@@ -3,10 +3,13 @@ package com.patra.starter.observability.autoconfigure;
 import com.patra.starter.observability.interceptor.BatchObservationJobListener;
 import com.patra.starter.observability.interceptor.ObservationResolutionInterceptor;
 import com.patra.starter.observability.interceptor.RestClientObservationInterceptor;
+import com.patra.starter.observability.interceptor.redisson.LockMetricsRecorder;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -18,6 +21,7 @@ import org.springframework.context.annotation.Bean;
 /// - ObservationResolutionInterceptor - 错误处理管道观测拦截器（patra-starter-core）
 /// - RestClientObservationInterceptor - HTTP 客户端观测拦截器（patra-starter-rest-client）
 /// - BatchObservationJobListener - Batch 任务观测监听器（patra-starter-batch）
+/// - LockMetricsRecorder - 分布式锁指标记录器（patra-starter-redisson）
 ///
 /// 拦截器注册策略：
 ///
@@ -99,5 +103,19 @@ public class ObservationInterceptorsAutoConfiguration {
     ) {
         log.debug("注册批处理任务可观测性监听器");
         return new BatchObservationJobListener(observationRegistry);
+    }
+
+    /// 注册分布式锁指标记录器。
+    ///
+    /// 仅在 patra-spring-boot-starter-redisson 存在时生效。
+    ///
+    /// @param meterRegistry Micrometer 指标注册表
+    /// @return 分布式锁指标记录器实例
+    @Bean
+    @ConditionalOnClass(name = "org.redisson.api.RedissonClient")
+    @ConditionalOnBean(MeterRegistry.class)
+    public LockMetricsRecorder lockMetricsRecorder(MeterRegistry meterRegistry) {
+        log.debug("注册分布式锁指标记录器");
+        return new LockMetricsRecorder(meterRegistry);
     }
 }

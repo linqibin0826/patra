@@ -1,9 +1,8 @@
 package com.patra.starter.redisson.lock;
 
+import com.patra.starter.observability.interceptor.redisson.LockMetricsRecorder;
 import com.patra.starter.redisson.exception.LockAcquisitionException;
 import com.patra.starter.redisson.exception.LockInfrastructureException;
-import com.patra.starter.redisson.listener.LockLoggingRecorder;
-import com.patra.starter.redisson.listener.LockMetricsRecorder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -45,14 +44,11 @@ class LockExecutorTest {
     @Mock
     private LockMetricsRecorder metricsRecorder;
 
-    @Mock
-    private LockLoggingRecorder loggingRecorder;
-
     private LockExecutor executor;
 
     @BeforeEach
     void setUp() {
-        executor = new LockExecutor(redissonClient, metricsRecorder, loggingRecorder);
+        executor = new LockExecutor(redissonClient, metricsRecorder);
     }
 
     // ==================== 锁获取成功测试 ====================
@@ -62,8 +58,8 @@ class LockExecutorTest {
     class LockAcquiredSuccessTest {
 
         @Test
-        @DisplayName("成功获取锁时应该记录指标和日志")
-        void shouldRecordMetricsAndLogsOnSuccess() throws InterruptedException {
+        @DisplayName("成功获取锁时应该记录指标")
+        void shouldRecordMetricsOnSuccess() throws InterruptedException {
             // Given
             LockContext context = createContext("patra:lock:user:123", LockType.REENTRANT, 1000, 30000);
             given(redissonClient.getLock("patra:lock:user:123")).willReturn(rLock);
@@ -83,20 +79,10 @@ class LockExecutorTest {
                 anyLong()
             );
 
-            // 验证日志记录
-            verify(loggingRecorder).onLockAcquired(
-                eq("patra:lock:user:123"),
-                anyLong()
-            );
-
             // 验证锁释放时记录
             verify(metricsRecorder).onLockReleased(
                 eq("patra:lock:user:123"),
                 eq("REENTRANT"),
-                anyLong()
-            );
-            verify(loggingRecorder).onLockReleased(
-                eq("patra:lock:user:123"),
                 anyLong()
             );
         }
@@ -193,10 +179,6 @@ class LockExecutorTest {
                 eq("REENTRANT"),
                 eq("timeout")
             );
-            verify(loggingRecorder).onLockFailed(
-                eq("patra:lock:user:123"),
-                eq("timeout")
-            );
 
             // 不应该记录成功指标
             verify(metricsRecorder, never()).onLockAcquired(anyString(), anyString(), anyLong());
@@ -252,7 +234,7 @@ class LockExecutorTest {
         @DisplayName("MetricsRecorder 为 null 时不应该抛出异常")
         void shouldNotThrowWhenMetricsRecorderIsNull() throws InterruptedException {
             // Given
-            LockExecutor executorWithNullMetrics = new LockExecutor(redissonClient, null, loggingRecorder);
+            LockExecutor executorWithNullMetrics = new LockExecutor(redissonClient, null);
             LockContext context = createContext("patra:lock:user:1", LockType.REENTRANT, 1000, 30000);
             given(redissonClient.getLock("patra:lock:user:1")).willReturn(rLock);
             given(rLock.tryLock(1000, 30000, TimeUnit.MILLISECONDS)).willReturn(true);
@@ -260,42 +242,6 @@ class LockExecutorTest {
 
             // When
             String result = executorWithNullMetrics.execute(context, () -> "success");
-
-            // Then
-            assertThat(result).isEqualTo("success");
-            verify(loggingRecorder).onLockAcquired(anyString(), anyLong());
-        }
-
-        @Test
-        @DisplayName("LoggingRecorder 为 null 时不应该抛出异常")
-        void shouldNotThrowWhenLoggingRecorderIsNull() throws InterruptedException {
-            // Given
-            LockExecutor executorWithNullLogging = new LockExecutor(redissonClient, metricsRecorder, null);
-            LockContext context = createContext("patra:lock:user:1", LockType.REENTRANT, 1000, 30000);
-            given(redissonClient.getLock("patra:lock:user:1")).willReturn(rLock);
-            given(rLock.tryLock(1000, 30000, TimeUnit.MILLISECONDS)).willReturn(true);
-            given(rLock.isHeldByCurrentThread()).willReturn(true);
-
-            // When
-            String result = executorWithNullLogging.execute(context, () -> "success");
-
-            // Then
-            assertThat(result).isEqualTo("success");
-            verify(metricsRecorder).onLockAcquired(anyString(), eq("REENTRANT"), anyLong());
-        }
-
-        @Test
-        @DisplayName("两个 Recorder 都为 null 时不应该抛出异常")
-        void shouldNotThrowWhenBothRecordersAreNull() throws InterruptedException {
-            // Given
-            LockExecutor executorWithNullRecorders = new LockExecutor(redissonClient, null, null);
-            LockContext context = createContext("patra:lock:user:1", LockType.REENTRANT, 1000, 30000);
-            given(redissonClient.getLock("patra:lock:user:1")).willReturn(rLock);
-            given(rLock.tryLock(1000, 30000, TimeUnit.MILLISECONDS)).willReturn(true);
-            given(rLock.isHeldByCurrentThread()).willReturn(true);
-
-            // When
-            String result = executorWithNullRecorders.execute(context, () -> "success");
 
             // Then
             assertThat(result).isEqualTo("success");

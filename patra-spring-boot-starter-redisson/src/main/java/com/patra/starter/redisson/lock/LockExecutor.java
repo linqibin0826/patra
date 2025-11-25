@@ -1,9 +1,8 @@
 package com.patra.starter.redisson.lock;
 
+import com.patra.starter.observability.interceptor.redisson.LockMetricsRecorder;
 import com.patra.starter.redisson.exception.LockAcquisitionException;
 import com.patra.starter.redisson.exception.LockInfrastructureException;
-import com.patra.starter.redisson.listener.LockLoggingRecorder;
-import com.patra.starter.redisson.listener.LockMetricsRecorder;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RReadWriteLock;
@@ -24,25 +23,19 @@ public class LockExecutor {
     /// Redisson 客户端
     private final RedissonClient redissonClient;
 
-    /// 指标记录器（可选）
+    /// 指标记录器（可选，由 starter-observability 提供）
     private final LockMetricsRecorder metricsRecorder;
-
-    /// 日志记录器（可选）
-    private final LockLoggingRecorder loggingRecorder;
 
     /// 构造函数。
     ///
     /// @param redissonClient   Redisson 客户端
-    /// @param metricsRecorder  指标记录器（可为 null）
-    /// @param loggingRecorder  日志记录器（可为 null）
+    /// @param metricsRecorder  指标记录器（可为 null，由 starter-observability 提供）
     public LockExecutor(
         RedissonClient redissonClient,
-        LockMetricsRecorder metricsRecorder,
-        LockLoggingRecorder loggingRecorder
+        LockMetricsRecorder metricsRecorder
     ) {
         this.redissonClient = redissonClient;
         this.metricsRecorder = metricsRecorder;
-        this.loggingRecorder = loggingRecorder;
     }
 
     /// 执行带锁的业务逻辑。
@@ -180,9 +173,6 @@ public class LockExecutor {
         if (metricsRecorder != null) {
             metricsRecorder.onLockAcquired(lockKey, lockType, waitTimeMs);
         }
-        if (loggingRecorder != null) {
-            loggingRecorder.onLockAcquired(lockKey, waitTimeMs);
-        }
     }
 
     /// 记录锁获取失败。
@@ -190,18 +180,12 @@ public class LockExecutor {
         if (metricsRecorder != null) {
             metricsRecorder.onLockFailed(lockKey, lockType, reason);
         }
-        if (loggingRecorder != null) {
-            loggingRecorder.onLockFailed(lockKey, reason);
-        }
     }
 
     /// 记录锁释放。
     private void recordLockReleased(String lockKey, String lockType, long holdTimeMs) {
         if (metricsRecorder != null) {
             metricsRecorder.onLockReleased(lockKey, lockType, holdTimeMs);
-        }
-        if (loggingRecorder != null) {
-            loggingRecorder.onLockReleased(lockKey, holdTimeMs);
         }
     }
 }

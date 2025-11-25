@@ -1,4 +1,4 @@
-package com.patra.starter.redisson.listener;
+package com.patra.starter.observability.interceptor.redisson;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
