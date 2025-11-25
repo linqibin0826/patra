@@ -335,66 +335,53 @@ patra:
 
 ## 使用示例
 
-### 基本使用
+### 业务代码（推荐方式）
+
+**业务代码通常不需要直接使用 `ErrorResolutionPipeline`**。只需抛出适当的异常，框架会自动处理：
 
 ```java
 @Service
-public class MyService {
+public class UserService {
 
-  private final ErrorResolutionPipeline pipeline;
-
-  public ErrorResolution handleException(Throwable ex) {
-    return pipeline.resolve(ex);
+  public User findById(String userId) {
+    return userRepository.findById(userId)
+        .orElseThrow(() -> new UserNotFoundException(userId));  // 直接抛出异常
   }
 }
 ```
 
-### 定义领域异常
+框架会自动完成以下流程：
 
-```java
-public class UserNotFoundException extends DomainException {
-  public UserNotFoundException(String userId) {
-    super("用户未找到: " + userId, StandardErrorTrait.NOT_FOUND);
-  }
-}
-
-public class ResourceConflictException extends DomainException {
-  public ResourceConflictException(String resourceId) {
-    super(
-      "资源冲突: " + resourceId,
-      StandardErrorTrait.CONFLICT,
-      StandardErrorTrait.RULE_VIOLATION
-    );
-  }
-}
+```
+业务代码抛异常 → GlobalExceptionHandler 捕获 → ProblemDetailAdapter.adapt()
+                                                        ↓
+                                          ErrorResolutionPipeline.resolve()
+                                                        ↓
+                                          返回 RFC 7807 ProblemDetail 响应
 ```
 
-### 定义应用层异常
+### 直接使用 Pipeline（特殊场景）
 
-```java
-public class IngestException extends ApplicationException {
-  public IngestException(IngestErrorCode errorCode, String message) {
-    super(errorCode, message);
-  }
-}
-```
+以下场景需要直接使用 `ErrorResolutionPipeline`：
 
-### 自定义错误码映射
+- **自定义异常处理器**：需要编写自己的异常适配逻辑
+- **非 Web 上下文**：消息消费者、定时任务中需要将异常转换为特定格式
+- **测试/调试**：验证异常解析结果是否符合预期
 
 ```java
 @Component
-@Order(-100)  // 高优先级
-public class IngestErrorMappingContributor implements ErrorMappingContributor {
+public class MessageErrorHandler {
 
-  private final HttpStdErrors.Group errors = HttpStdErrors.of("INGEST");
+  private final ErrorResolutionPipeline pipeline;
 
-  @Override
-  public Optional<ErrorCodeLike> mapException(Throwable exception) {
-    return switch (exception) {
-      case JsonParseException e -> Optional.of(errors.BAD_REQUEST());
-      case PubMedApiException e -> Optional.of(errors.UNAVAILABLE());
-      default -> Optional.empty();
-    };
+  public void handleConsumerError(Throwable ex, Message message) {
+    ErrorResolution resolution = pipeline.resolve(ex);
+    // 根据解析结果决定重试策略或死信处理
+    if (resolution.httpStatus() >= 500) {
+      scheduleRetry(message);
+    } else {
+      sendToDeadLetter(message, resolution.errorCode().code());
+    }
   }
 }
 ```
@@ -430,8 +417,3 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
 - `patra-common-core` - 异常基类和错误码契约
 - `patra-spring-boot-starter-web` - Web 层异常处理（`GlobalRestExceptionHandler`）
 - `patra-spring-boot-starter-observability` - 可观测性拦截器（追踪、指标）
-
-## 版本
-
-@since 0.1.0
-@author linqibin
