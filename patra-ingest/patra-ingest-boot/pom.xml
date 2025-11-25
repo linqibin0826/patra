@@ -73,52 +73,14 @@
             </exclusions>
         </dependency>
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- Patra Test Starter (TestContainers, ArchUnit rules) -->
+        <!-- Patra Test Starter (包含 TestContainers, ArchUnit, Spring Boot Test, Awaitility 等) -->
         <dependency>
             <groupId>com.patra</groupId>
             <artifactId>patra-spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- ArchUnit for architecture validation tests -->
-        <dependency>
-            <groupId>com.tngtech.archunit</groupId>
-            <artifactId>archunit-junit5</artifactId>
-            <!-- Version inherited from parent dependencyManagement -->
-            <scope>test</scope>
-        </dependency>
-
-        <!-- Testcontainers for integration tests -->
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>testcontainers</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>mysql</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- Awaitility for async test assertions -->
-        <dependency>
-            <groupId>org.awaitility</groupId>
-            <artifactId>awaitility</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- JMH for performance benchmarks -->
+        <!-- JMH for performance benchmarks (starter-test 未包含) -->
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>

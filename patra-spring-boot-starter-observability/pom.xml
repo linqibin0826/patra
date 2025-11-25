@@ -145,12 +145,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Redisson Starter: LockMetricsRecorder 测试需要 LockObserver 接口 -->
-        <dependency>
-            <groupId>com.patra</groupId>
-            <artifactId>patra-spring-boot-starter-redisson</artifactId>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>
