@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-查看 @.claude/memories/project-info.md 了解项目概览和技术栈。
+查看 @memories/project-info.md 了解项目概览和技术栈。
 
 ## 项目背景
 
@@ -68,9 +68,9 @@
 
 ## 开发规范
 
-1. 测试策略与注意事项：@.claude/memories/testing.md
-2. 六边形架构依赖规则与模块职责：@.claude/memories/architecture.md
-3. 开发最佳实践：@.claude/memories/best-practices.md
-4. 代码风格与命名规范：@.claude/memories/code-style.md
-5. MyBatis-Plus 使用规范：@.claude/memories/mybatis-plus.md
-6. 异常处理与错误码规范：@.claude/memories/error-handling.md
+1. 测试策略与注意事项：@memories/testing.md
+2. 六边形架构依赖规则与模块职责：@memories/architecture.md
+3. 开发最佳实践：@memories/best-practices.md
+4. 代码风格与命名规范：@memories/code-style.md
+5. MyBatis-Plus 使用规范：@memories/mybatis-plus.md
+6. 异常处理与错误码规范：@memories/error-handling.md
