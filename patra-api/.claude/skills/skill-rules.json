@@ -47,46 +47,6 @@
         ]
       }
     },
-    "java-documentation-architect": {
-      "type": "domain",
-      "enforcement": "suggest",
-      "priority": "medium",
-      "description": "Documentation architect for README, JavaDoc, and architectural decision records",
-      "promptTriggers": {
-        "keywords": [
-          "documentation",
-          "document",
-          "README",
-          "JavaDoc",
-          "package-info",
-          "API documentation",
-          "ADR",
-          "architectural decision record",
-          "PlantUML",
-          "diagram",
-          "文档",
-          "文档化",
-          "架构决策记录",
-          "架构图"
-        ],
-        "intentPatterns": [
-          "(write|create|update|generate).*?(documentation|README|JavaDoc)",
-          "(document|describe).*?(API|architecture|module)",
-          "(create|draw).*?diagram",
-          "(写|创建|更新|生成).*(文档|README|JavaDoc)",
-          "(文档化|描述).*(API|架构|模块)",
-          "(创建|绘制).*图"
-        ]
-      },
-      "fileTriggers": {
-        "pathPatterns": [
-          "**/README.md",
-          "**/package-info.java",
-          "**/docs/**/*.md",
-          "**/*.puml"
-        ]
-      }
-    },
     "database-modeling": {
       "type": "domain",
       "enforcement": "suggest",
