@@ -64,25 +64,10 @@
             <artifactId>apm-toolkit-trace</artifactId>
         </dependency>
 
-        <!-- Test dependencies (keep the suite lightweight; no spring-boot-starter-test) -->
+        <!-- 测试依赖 -->
         <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-junit-jupiter</artifactId>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

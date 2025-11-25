@@ -46,30 +46,18 @@
             <artifactId>patra-registry-infra</artifactId>
         </dependency>
 
-        <!-- Test: Spring Boot integration testing support (MockMvc, @SpringBootTest) -->
+        <!-- 测试依赖 -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-
-        <!-- Test: Testcontainers for MySQL and JUnit 5 integration -->
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>mysql</artifactId>
-            <scope>test</scope>
-        </dependency>
+        <!-- Testcontainers JDBC 扩展（starter-test 未包含） -->
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>jdbc</artifactId>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
     <build>
