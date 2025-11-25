@@ -34,10 +34,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * @author Patra Team
  * @since 1.0.0
  */
-@SpringBootTest(classes = DistributedLockIntegrationTest.TestConfiguration.class)
+@SpringBootTest(classes = DistributedLockIT.TestConfiguration.class)
 @Testcontainers
 @Slf4j
-class DistributedLockIntegrationTest {
+class DistributedLockIT {
 
     @Container
     static final GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine")

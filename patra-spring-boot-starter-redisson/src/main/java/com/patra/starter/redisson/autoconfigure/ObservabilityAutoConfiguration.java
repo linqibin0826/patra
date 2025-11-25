@@ -10,6 +10,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /// 可观测性自动配置。
 ///
@@ -23,16 +24,23 @@ import org.springframework.context.annotation.Bean;
 @EnableConfigurationProperties(RedissonProperties.class)
 public class ObservabilityAutoConfiguration {
 
-    /// 配置 Micrometer 指标记录器。
+    /// Micrometer 指标配置。
     ///
-    /// @param meterRegistry Micrometer 注册表
-    /// @return LockMetricsRecorder
-    @Bean
+    /// 仅在 Micrometer 依赖存在时加载，避免 NoClassDefFoundError。
+    @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(MeterRegistry.class)
-    @ConditionalOnProperty(prefix = "patra.redisson.observability", name = "metrics-enabled", havingValue = "true", matchIfMissing = true)
-    public LockMetricsRecorder lockMetricsRecorder(MeterRegistry meterRegistry) {
-        log.info("初始化 LockMetricsRecorder (Micrometer 指标)");
-        return new LockMetricsRecorder(meterRegistry);
+    static class MetricsConfiguration {
+
+        /// 配置 Micrometer 指标记录器。
+        ///
+        /// @param meterRegistry Micrometer 注册表
+        /// @return LockMetricsRecorder
+        @Bean
+        @ConditionalOnProperty(prefix = "patra.redisson.observability", name = "metrics-enabled", havingValue = "true", matchIfMissing = true)
+        LockMetricsRecorder lockMetricsRecorder(MeterRegistry meterRegistry) {
+            log.info("初始化 LockMetricsRecorder (Micrometer 指标)");
+            return new LockMetricsRecorder(meterRegistry);
+        }
     }
 
     /// 配置日志记录器。

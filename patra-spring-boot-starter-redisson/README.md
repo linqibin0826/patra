@@ -184,6 +184,8 @@ patra:
     observability:
       metrics-enabled: true   # Micrometer 指标
       logging-enabled: true   # 日志记录
+      log-level: DEBUG        # 日志级别（DEBUG/INFO/WARN/ERROR）
+      tracing-enabled: false  # SkyWalking 追踪（v1.2.0 计划支持）
 ```
 
 ### 锁键命名规范
@@ -336,7 +338,7 @@ public class PaymentService {
 |------|------|------|
 | `key_pattern` | 锁键模式（去除动态部分） | 低 |
 | `lock_type` | 锁类型（REENTRANT/FAIR/READ/WRITE） | 低 |
-| `reason` | 失败原因（仅失败计数） | 低 |
+| `reason` | 失败原因：`timeout`/`interrupted`/`infrastructure_error`（仅失败计数） | 低 |
 | `application` | 应用名称（由 observability 模块自动添加） | 低 |
 | `environment` | 环境标识（由 observability 模块自动添加） | 低 |
 
