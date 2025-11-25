@@ -70,4 +70,76 @@ class BatchPropertiesTest {
     assertThat(properties.getChunk().getDefaultSize()).isEqualTo(500);
     assertThat(properties.getChunk().getMaxSize()).isEqualTo(5000);
   }
+
+  @Test
+  void datasourceProperties_ShouldHaveCorrectDefaults() {
+    // When
+    BatchProperties properties = new BatchProperties();
+    BatchProperties.DataSourceProperties datasource = properties.getDatasource();
+
+    // Then
+    assertThat(datasource).isNotNull();
+    assertThat(datasource.getUrl()).isNull();
+    assertThat(datasource.getUsername()).isNull();
+    assertThat(datasource.getPassword()).isNull();
+    assertThat(datasource.getDriverClassName()).isNull();
+    assertThat(datasource.isConfigured()).isFalse();
+  }
+
+  @Test
+  void datasourceProperties_isConfigured_ShouldReturnTrueWhenUrlIsSet() {
+    // Given
+    BatchProperties properties = new BatchProperties();
+
+    // When
+    properties.getDatasource().setUrl("jdbc:mysql://localhost:3306/batch_meta");
+
+    // Then
+    assertThat(properties.getDatasource().isConfigured()).isTrue();
+  }
+
+  @Test
+  void datasourceProperties_isConfigured_ShouldReturnFalseWhenUrlIsBlank() {
+    // Given
+    BatchProperties properties = new BatchProperties();
+
+    // When
+    properties.getDatasource().setUrl("   ");
+
+    // Then
+    assertThat(properties.getDatasource().isConfigured()).isFalse();
+  }
+
+  @Test
+  void hikariProperties_ShouldHaveCorrectDefaults() {
+    // When
+    BatchProperties properties = new BatchProperties();
+    BatchProperties.HikariProperties hikari = properties.getDatasource().getHikari();
+
+    // Then
+    assertThat(hikari).isNotNull();
+    assertThat(hikari.getMaximumPoolSize()).isEqualTo(5);
+    assertThat(hikari.getMinimumIdle()).isEqualTo(2);
+    assertThat(hikari.getConnectionTimeout()).isEqualTo(30000L);
+    assertThat(hikari.getIdleTimeout()).isEqualTo(600000L);
+  }
+
+  @Test
+  void hikariProperties_Setters_ShouldWorkCorrectly() {
+    // Given
+    BatchProperties properties = new BatchProperties();
+    BatchProperties.HikariProperties hikari = properties.getDatasource().getHikari();
+
+    // When
+    hikari.setMaximumPoolSize(10);
+    hikari.setMinimumIdle(3);
+    hikari.setConnectionTimeout(60000L);
+    hikari.setIdleTimeout(300000L);
+
+    // Then
+    assertThat(hikari.getMaximumPoolSize()).isEqualTo(10);
+    assertThat(hikari.getMinimumIdle()).isEqualTo(3);
+    assertThat(hikari.getConnectionTimeout()).isEqualTo(60000L);
+    assertThat(hikari.getIdleTimeout()).isEqualTo(300000L);
+  }
 }
