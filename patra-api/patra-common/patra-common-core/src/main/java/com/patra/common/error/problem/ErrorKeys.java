@@ -23,6 +23,9 @@ public final class ErrorKeys {
   /// 详细验证错误信息字段键
   public static final String ERRORS = "errors";
 
+  /// 错误语义特征列表字段键（用于服务间错误传播）
+  public static final String TRAITS = "traits";
+
   private ErrorKeys() {
     // 工具类 - 防止实例化
   }

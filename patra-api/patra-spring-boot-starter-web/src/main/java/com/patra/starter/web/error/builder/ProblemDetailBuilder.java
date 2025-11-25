@@ -2,6 +2,8 @@ package com.patra.starter.web.error.builder;
 
 import com.patra.common.error.codes.ErrorCodeLike;
 import com.patra.common.error.problem.ErrorKeys;
+import com.patra.common.error.trait.ErrorTrait;
+import com.patra.common.error.trait.HasErrorTraits;
 import com.patra.starter.core.error.config.ErrorProperties;
 import com.patra.starter.core.error.model.ErrorResolution;
 import com.patra.starter.core.error.spi.ProblemFieldContributor;
@@ -16,6 +18,7 @@ import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -120,6 +123,27 @@ public class ProblemDetailBuilder {
     problemDetail.setProperty(ErrorKeys.PATH, extractPath(request));
     problemDetail.setProperty(
         ErrorKeys.TIMESTAMP, Instant.now().atOffset(ZoneOffset.UTC).toString());
+
+    // 输出错误语义特征（用于服务间错误传播）
+    addErrorTraitsIfPresent(problemDetail, exception);
+  }
+
+  /// 当异常实现 HasErrorTraits 接口时,将错误特征添加到 ProblemDetail 中。
+  ///
+  /// 这使得下游服务能够识别上游错误的语义类型（如 NOT_FOUND、CONFLICT 等）,
+  /// 而无需仅依赖 HTTP 状态码判断。
+  ///
+  /// @param problemDetail 目标问题详情实例
+  /// @param exception 源异常
+  private void addErrorTraitsIfPresent(ProblemDetail problemDetail, Throwable exception) {
+    if (exception instanceof HasErrorTraits hasTraits) {
+      Set<ErrorTrait> traits = hasTraits.getErrorTraits();
+      if (traits != null && !traits.isEmpty()) {
+        List<String> traitNames = traits.stream().map(ErrorTrait::name).toList();
+        problemDetail.setProperty(ErrorKeys.TRAITS, traitNames);
+        log.debug("已将错误特征 {} 添加到 ProblemDetail", traitNames);
+      }
+    }
   }
 
   /**
