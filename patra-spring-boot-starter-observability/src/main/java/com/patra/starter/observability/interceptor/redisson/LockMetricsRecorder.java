@@ -1,5 +1,6 @@
 package com.patra.starter.observability.interceptor.redisson;
 
+import com.patra.starter.redisson.listener.LockKeyPatternExtractor;
 import com.patra.starter.redisson.listener.LockObserver;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -48,7 +49,7 @@ public class LockMetricsRecorder implements LockObserver {
     /// @param waitTimeMs 等待时间（毫秒）
     @Override
     public void onLockAcquired(String lockKey, String lockType, long waitTimeMs) {
-        String keyPattern = extractKeyPattern(lockKey);
+        String keyPattern = LockKeyPatternExtractor.extract(lockKey);
 
         Counter.builder(METRIC_LOCK_ACQUIRED)
             .description("分布式锁获取成功计数")
@@ -75,7 +76,7 @@ public class LockMetricsRecorder implements LockObserver {
     /// @param reason   失败原因
     @Override
     public void onLockFailed(String lockKey, String lockType, String reason) {
-        String keyPattern = extractKeyPattern(lockKey);
+        String keyPattern = LockKeyPatternExtractor.extract(lockKey);
 
         Counter.builder(METRIC_LOCK_FAILED)
             .description("分布式锁获取失败计数")
@@ -96,7 +97,7 @@ public class LockMetricsRecorder implements LockObserver {
     /// @param holdTimeMs 持有时间（毫秒）
     @Override
     public void onLockReleased(String lockKey, String lockType, long holdTimeMs) {
-        String keyPattern = extractKeyPattern(lockKey);
+        String keyPattern = LockKeyPatternExtractor.extract(lockKey);
 
         Timer.builder(METRIC_LOCK_HOLD_TIME)
             .description("分布式锁持有时间")
@@ -107,62 +108,5 @@ public class LockMetricsRecorder implements LockObserver {
 
         log.debug("记录锁持有时间指标: key={}, pattern={}, type={}, holdTime={}ms",
             lockKey, keyPattern, lockType, holdTimeMs);
-    }
-
-    /// 从锁键中提取模式（去除动态部分）。
-    ///
-    /// 示例：
-    /// - "patra:lock:user:123" -> "user"
-    /// - "patra:lock:order:456:item:789" -> "order.item"
-    /// - "catalog:lock:mesh-import:2024" -> "mesh-import"
-    ///
-    /// @param lockKey 完整锁键
-    /// @return 锁键模式（低基数）
-    private String extractKeyPattern(String lockKey) {
-        if (lockKey == null || lockKey.isEmpty()) {
-            return "unknown";
-        }
-
-        // 移除常见前缀（如 "patra:lock:", "catalog:lock:" 等）
-        String pattern = lockKey.replaceFirst("^[a-z-]+:lock:", "");
-
-        // 分割并提取非数字部分作为模式
-        String[] parts = pattern.split(":");
-        StringBuilder patternBuilder = new StringBuilder();
-
-        for (String part : parts) {
-            // 跳过纯数字、UUID、日期等动态值
-            if (isStaticPart(part)) {
-                if (!patternBuilder.isEmpty()) {
-                    patternBuilder.append(".");
-                }
-                patternBuilder.append(part);
-            }
-        }
-
-        return patternBuilder.isEmpty() ? "unknown" : patternBuilder.toString();
-    }
-
-    /// 判断是否为静态部分（非动态值）。
-    ///
-    /// @param part 键的一部分
-    /// @return true 如果是静态部分
-    private boolean isStaticPart(String part) {
-        if (part == null || part.isEmpty()) {
-            return false;
-        }
-        // 纯数字
-        if (part.matches("^\\d+$")) {
-            return false;
-        }
-        // UUID 格式
-        if (part.matches("^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$")) {
-            return false;
-        }
-        // 日期格式（如 2024-01-01, 20240101）
-        if (part.matches("^\\d{4}(-\\d{2}){0,2}$") || part.matches("^\\d{8}$")) {
-            return false;
-        }
-        return true;
     }
 }
