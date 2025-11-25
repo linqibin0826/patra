@@ -1,122 +1,58 @@
-# patra-spring-boot-starter-web
+# Patra Spring Boot Starter - Web
 
-## 概述
+Web 层 Starter，提供统一的 REST API 错误处理和类型转换支持。
 
-Web 层自动配置 Starter,为 REST API 提供统一的 HTTP 错误处理、参数验证、类型转换和响应封装能力。基于 RFC 7807 ProblemDetail 标准,提供一致的错误响应格式。
+## 模块概述
 
-本 Starter 专为适配器层(Adapter Layer)设计,简化 REST 控制器的开发,自动处理常见的 Web 层关注点。
+本模块提供 Web 层基础设施，基于 RFC 7807 Problem Details 标准构建，支持：
+
+- **统一错误处理**：全局异常处理器，将所有异常转换为标准化的 ProblemDetail 响应
+- **验证错误格式化**：敏感字段掩码，验证错误列表格式化
+- **类型转换**：自定义参数绑定转换器（如 ProvenanceCode）
 
 ## 核心功能
 
-- **RFC 7807 ProblemDetail**: 标准化的错误响应格式,符合 HTTP API 最佳实践
-- **全局异常处理**: 自动捕获并转换异常为 HTTP 错误响应
-- **参数验证**: 集成 JSR-303 Bean Validation,自动格式化验证错误
-- **类型转换**: 自动转换请求参数到领域类型(如 ProvenanceCode)
-- **统一响应模型**: ApiResponse、PageResult 等标准响应封装
+### 自动配置
 
-## 自动配置内容
+| 配置类 | 功能 | 条件 |
+|--------|------|------|
+| `WebErrorAutoConfiguration` | 错误处理核心配置，创建全局异常处理器、验证格式化器、ProblemDetail 构建器 | Servlet Web 应用，`patra.web.problem.enabled=true`（默认启用） |
+| `WebConversionAutoConfiguration` | 注册类型转换器（String → ProvenanceCode） | Converter 类存在 |
 
-### WebConversionAutoConfiguration
-自动注册 Web 层类型转换器:
-- `provenanceCodeConverter`: String → ProvenanceCode 转换器,支持 `@PathVariable` 和 `@RequestParam` 自动绑定
+### 异常处理流程
 
-### WebErrorAutoConfiguration
-配置 Web 层错误处理组件:
-- `GlobalRestExceptionHandler`: 全局异常处理器(@RestControllerAdvice)
-- `ProblemDetailAdapter`: 异常到 ProblemDetail 的适配器
-- `ProblemDetailBuilder`: ProblemDetail 构建器,支持扩展字段
-- `ValidationErrorsFormatter`: 验证错误格式化器,支持敏感信息脱敏
-
-## 主要组件
-
-### GlobalRestExceptionHandler
-全局 REST 异常处理器,捕获所有未处理的异常并转换为 RFC 7807 ProblemDetail 响应:
-- 处理通用异常(`Exception.class`)
-- 特殊处理 Bean Validation 异常(`MethodArgumentNotValidException`)
-- 自动记录错误日志(包含追踪 ID、请求路径等上下文信息)
-- 限制验证错误最大返回数量(100 个)
-
-### ProblemDetailBuilder
-构建符合 RFC 7807 标准的错误响应:
-- 自动包含追踪 ID(来自 TraceProvider)
-- 支持通过 `ProblemFieldContributor` 和 `WebProblemFieldContributor` 扩展字段
-- 生成错误类型 URI(基于 `type-base-url` 配置)
-- 可选包含堆栈跟踪(仅用于开发/调试)
-
-### ApiResponse / PageResult
-统一的响应封装模型:
-```java
-// 标准响应
-ApiResponse.ok(data);                           // 成功响应
-ApiResponse.failure(ResultCode.ERROR, message); // 业务失败
-ApiResponse.error(500, message);                // 错误响应
-
-// 分页响应
-PageResult.of(items, total, page, size);
+```
+异常发生
+    ↓
+GlobalRestExceptionHandler 捕获
+    ↓
+ProblemDetailAdapter 转换
+    ├── ErrorResolutionPipeline（核心模块）解析错误码和 HTTP 状态
+    └── ProblemDetailBuilder 构建 RFC 7807 响应
+    ↓
+返回 application/problem+json 响应
 ```
 
-## 扩展点
+### 组件说明
 
-### 1. WebProblemFieldContributor (SPI)
-向 ProblemDetail 添加 Web 特定的扩展字段:
-```java
-@Component
-public class CustomFieldContributor implements WebProblemFieldContributor {
-    @Override
-    public void contribute(Map<String, Object> fields, Throwable exception,
-                          HttpServletRequest request) {
-        fields.put("requestId", request.getHeader("X-Request-ID"));
-        fields.put("clientVersion", request.getHeader("X-Client-Version"));
-        fields.put("path", request.getRequestURI());
-    }
-}
-```
+| 组件 | 职责 |
+|------|------|
+| `GlobalRestExceptionHandler` | 全局异常处理器，拦截所有 REST 异常 |
+| `ProblemDetailAdapter` | 异常到 ProblemDetail 的转换适配器 |
+| `ProblemDetailBuilder` | RFC 7807 响应构建器，支持字段贡献器扩展 |
+| `ValidationErrorsFormatter` | 验证错误格式化 SPI，支持敏感字段掩码 |
 
-### 2. ValidationErrorsFormatter (SPI)
-自定义验证错误格式化和脱敏逻辑:
-```java
-@Component
-public class MyValidationErrorsFormatter implements ValidationErrorsFormatter {
-    @Override
-    public List<ValidationError> formatWithMasking(BindingResult bindingResult) {
-        return bindingResult.getFieldErrors().stream()
-            .map(error -> new ValidationError(
-                error.getField(),
-                maskSensitiveMessage(error.getDefaultMessage())
-            ))
-            .toList();
-    }
-}
-```
+### SPI 扩展点
 
-### 3. 类型转换器
-注册自定义 Spring Converter:
-```java
-@Component
-public class MyConverter implements Converter<String, MyDomainType> {
-    @Override
-    public MyDomainType convert(String source) {
-        return MyDomainType.parse(source);
-    }
-}
-```
+| SPI | 功能 |
+|-----|------|
+| `ValidationErrorsFormatter` | 自定义验证错误格式化逻辑 |
+| `WebProblemFieldContributor` | 向 ProblemDetail 贡献 Web 特定扩展字段 |
 
-## 配置属性
+## 快速开始
 
-**配置前缀**: `patra.web.problem`
+### 1. 添加依赖
 
-```yaml
-patra:
-  web:
-    problem:
-      enabled: true                                    # 是否启用 Web 错误处理
-      type-base-url: https://errors.example.com/       # ProblemDetail type URI 基础 URL
-      include-stack: false                             # 是否包含堆栈跟踪(生产环境应为 false)
-```
-
-## 使用方式
-
-### Maven 依赖
 ```xml
 <dependency>
     <groupId>com.patra</groupId>
@@ -124,116 +60,172 @@ patra:
 </dependency>
 ```
 
-**传递依赖**(自动包含):
-- `patra-spring-boot-starter-core`: 核心错误处理管道
-- `patra-common-core`: 领域基础类
-- `spring-boot-starter-web`: Spring MVC
-- `spring-boot-starter-validation`: Bean Validation (JSR-303)
-
-### 配置示例
+### 2. 配置属性
 
 ```yaml
 patra:
   web:
     problem:
-      enabled: true
-      type-base-url: https://api.patra.com/errors/
-      include-stack: false
-
-  error:
-    context-prefix: INGEST
-    observation:
-      enabled: true
+      enabled: true                              # 是否启用错误处理（默认 true）
+      type-base-url: https://errors.example.com/ # ProblemDetail type URI 基础 URL
+      include-stack: false                       # 是否在响应中包含堆栈跟踪（仅调试）
 ```
 
-### 代码示例
+### 3. 响应格式示例
 
-**REST 控制器**:
-```java
-@RestController
-@RequestMapping("/api/plans")
-public class PlanController {
-    private final PlanQueryService queryService;
-    private final PlanIngestionOrchestrator orchestrator;
+**通用异常响应：**
 
-    // 自动验证请求参数
-    @PostMapping
-    public ApiResponse<PlanResponse> create(@Valid @RequestBody CreatePlanRequest request) {
-        PlanAggregate plan = orchestrator.ingest(request.toCommand());
-        return ApiResponse.ok(PlanResponse.from(plan));
-    }
-
-    // ProvenanceCode 自动转换
-    @GetMapping("/by-source/{provenanceCode}")
-    public ApiResponse<List<PlanResponse>> listBySource(
-        @PathVariable ProvenanceCode provenanceCode  // 自动从 String 转换
-    ) {
-        List<PlanAggregate> plans = queryService.listBySource(provenanceCode);
-        return ApiResponse.ok(plans.stream()
-            .map(PlanResponse::from)
-            .toList());
-    }
-}
-```
-
-**请求/响应模型**:
-```java
-public record CreatePlanRequest(
-    @NotNull(message = "Provenance code is required")
-    ProvenanceCode provenanceCode,
-
-    @NotBlank(message = "External ID is required")
-    String externalId
-) {
-    public PlanIngestionCommand toCommand() {
-        return new PlanIngestionCommand(provenanceCode, externalId);
-    }
-}
-```
-
-**错误响应示例**(RFC 7807 ProblemDetail):
 ```json
 {
-  "type": "https://api.patra.com/errors/plan-not-found",
-  "title": "Not Found",
-  "status": 404,
-  "detail": "Plan not found: 123",
-  "instance": "/api/plans/123",
-  "traceId": "abc123def456",
-  "timestamp": "2025-01-12T10:30:45.123Z"
+  "type": "https://errors.example.com/err_internal_error",
+  "title": "ERR_INTERNAL_ERROR",
+  "status": 500,
+  "detail": "An unexpected error occurred",
+  "code": "ERR_INTERNAL_ERROR",
+  "path": "/api/users",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "traceId": "abc123def456"
 }
 ```
 
-**验证错误响应示例**:
+**验证异常响应：**
+
 ```json
 {
-  "type": "https://api.patra.com/errors/validation-failed",
-  "title": "Bad Request",
+  "type": "https://errors.example.com/err_validation_failed",
+  "title": "ERR_VALIDATION_FAILED",
   "status": 400,
-  "detail": "Validation failed",
-  "instance": "/api/plans",
-  "traceId": "xyz789",
+  "detail": "Validation failed for object='userRequest'",
+  "code": "ERR_VALIDATION_FAILED",
+  "path": "/api/users",
+  "timestamp": "2024-01-15T10:30:00.000Z",
   "errors": [
-    {
-      "field": "provenanceCode",
-      "message": "Provenance code is required"
-    },
-    {
-      "field": "externalId",
-      "message": "External ID is required"
-    }
+    { "field": "email", "rejectedValue": "invalid", "message": "must be a valid email" },
+    { "field": "password", "rejectedValue": "***", "message": "size must be between 8 and 32" }
   ]
 }
 ```
 
-## 技术栈
+## 配置参考
 
-- **Spring Boot**: 3.5.7
-- **Spring MVC**: 6.2.2
-- **Hibernate Validator**: 8.0.2 (JSR-303 实现)
-- **Jackson**: 2.18.2
+| 属性 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `patra.web.problem.enabled` | boolean | true | 是否启用 Web 错误处理 |
+| `patra.web.problem.type-base-url` | String | https://errors.example.com/ | ProblemDetail type URI 基础 URL |
+| `patra.web.problem.include-stack` | boolean | false | 是否在响应中包含堆栈跟踪 |
 
----
+## 安全特性
 
-**最后更新**: 2025-01-12
-**维护者**: Patra Team
+### 敏感数据掩码
+
+`ProblemDetailBuilder` 自动对错误消息中的敏感数据进行掩码：
+
+**掩码规则：**
+- `password=xxx` → `password=***`
+- `token=xxx` → `token=***`
+- `secret=xxx` → `secret=***`
+- `key=xxx` → `key=***`
+
+### 验证错误掩码
+
+`DefaultValidationErrorsFormatter` 对敏感字段的 `rejectedValue` 进行掩码，防止密码等敏感信息泄露到响应中。
+
+### 代理感知路径提取
+
+支持从反向代理头中提取原始请求路径，优先级：
+1. `Forwarded` 头（RFC 7239）
+2. `X-Forwarded-Path` 头
+3. `X-Forwarded-Uri` 头
+4. `request.getRequestURI()`
+
+## 扩展示例
+
+### 自定义 Web 字段贡献器
+
+```java
+@Component
+public class CustomWebFieldContributor implements WebProblemFieldContributor {
+
+    @Override
+    public void contribute(Map<String, Object> fields, Throwable exception,
+                          HttpServletRequest request) {
+        fields.put("requestId", request.getHeader("X-Request-Id"));
+        fields.put("userAgent", request.getHeader("User-Agent"));
+    }
+}
+```
+
+### 自定义验证错误格式化器
+
+```java
+@Component
+public class CustomValidationErrorsFormatter implements ValidationErrorsFormatter {
+
+    @Override
+    public List<ValidationError> formatWithMasking(BindingResult bindingResult) {
+        return bindingResult.getFieldErrors().stream()
+            .map(error -> new ValidationError(
+                error.getField(),
+                maskValue(error.getField(), error.getRejectedValue()),
+                error.getDefaultMessage()
+            ))
+            .toList();
+    }
+
+    private Object maskValue(String field, Object value) {
+        if (field.toLowerCase().contains("password") ||
+            field.toLowerCase().contains("secret")) {
+            return "***";
+        }
+        return value;
+    }
+}
+```
+
+## 依赖关系
+
+```
+patra-spring-boot-starter-web
+├── patra-common-core                    # 公共工具、错误码定义
+├── patra-spring-boot-starter-core       # 核心 Starter（ErrorResolutionPipeline）
+├── spring-boot-starter-web              # Spring Web MVC
+└── spring-boot-starter-validation       # Bean Validation
+```
+
+## 包结构
+
+```
+com.patra.starter.web
+├── autoconfig/
+│   └── WebConversionAutoConfiguration   # 类型转换器自动配置
+└── error/
+    ├── adapter/
+    │   ├── DefaultProblemDetailAdapter  # 默认适配器实现
+    │   ├── ProblemDetailAdapter         # 适配器接口
+    │   └── model/
+    │       └── ProblemDetailResponse    # 响应封装
+    ├── builder/
+    │   └── ProblemDetailBuilder         # RFC 7807 响应构建器
+    ├── config/
+    │   ├── WebErrorAutoConfiguration    # 错误处理自动配置
+    │   └── WebErrorProperties           # 配置属性
+    ├── formatter/
+    │   └── DefaultValidationErrorsFormatter  # 默认验证格式化器
+    ├── handler/
+    │   └── GlobalRestExceptionHandler   # 全局异常处理器
+    ├── model/
+    │   └── ValidationError              # 验证错误模型
+    ├── spi/
+    │   ├── ValidationErrorsFormatter    # 验证格式化 SPI
+    │   └── WebProblemFieldContributor   # Web 字段贡献器 SPI
+    └── util/
+        └── HttpStatusConverter          # HTTP 状态码转换工具
+```
+
+## 设计原则
+
+1. **RFC 7807 标准**：完全遵循 Problem Details for HTTP APIs 标准
+2. **零配置启用**：添加依赖即可使用，无需额外配置
+3. **安全优先**：敏感数据自动掩码，防止信息泄露
+4. **可扩展性**：通过 SPI 支持自定义字段贡献器和格式化器
+5. **与核心模块集成**：复用 `patra-spring-boot-starter-core` 的错误解析管道
