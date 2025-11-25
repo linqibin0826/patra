@@ -44,9 +44,11 @@ git status       # 未提交变更
 
 ### 代码质量
 
-- 方法职责单一，长度适中
-- 命名准确反映意图
-- 适当的异常处理，使用项目异常体系
+- 方法职责单一，长度 ≤ 80 行
+- **命名**: 抽象用抽象名（Repository/Service/Port），具体用具体名（PubMedRepository/MeshImportService），禁止模糊名（Manager/Helper/Util 作为业务类名）
+- **异常处理**: Domain 用 `DomainException`+`HasErrorTraits`，Application 用 `ApplicationException`+`ErrorCodeLike`，Infra 用 `ErrorMappingContributor` 映射第三方异常，Feign 调用 catch `RemoteCallException` 转换为领域异常
+- **日志**: 等级恰当（DEBUG/INFO/WARN/ERROR），关键路径有日志，支持问题排查
+- **注释**: 无冗余注释，复杂逻辑有必要说明
 
 ### 安全
 
