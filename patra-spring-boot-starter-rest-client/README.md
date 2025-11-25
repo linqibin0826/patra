@@ -1,199 +1,19 @@
-# patra-spring-boot-starter-rest-client
+# Patra Spring Boot Starter - REST Client
 
-## 概述
+基于 Spring 6 RestClient 的 HTTP 客户端自动配置，提供开箱即用的超时、日志、重试等功能。
 
-REST 客户端 Starter，提供统一的 HTTP 调用能力和拦截器扩展点。
+## 特性
 
-本 Starter 基于 **Spring RestClient**（使用底层 JDK 21 HttpClient）提供类型安全的 HTTP 调用，支持自动配置超时、拦截器和重试机制，为基础设施层（Infrastructure Layer）提供标准化的外部 API 调用能力。
+- **零配置启动**：引入依赖即可使用，默认配置满足大多数场景
+- **JDK HttpClient**：基于 JDK 11+ 原生 HTTP 客户端，支持 HTTP/2
+- **灵活的超时配置**：支持全局和客户端级别的超时设置
+- **日志拦截器**：可选记录请求/响应的 Headers 和 Body
+- **拦截器扩展**：支持注入自定义 `ClientHttpRequestInterceptor`
+- **多客户端配置**：支持按用途定义多个客户端配置
 
-**HTTP 客户端技术选型**：
-- **Spring RestClient**：Spring 官方推荐的现代化 HTTP 客户端（Spring 6.1+）
-- **JDK 21 HttpClient**：底层使用 JDK 原生 HTTP 客户端，支持 HTTP/2
-- **类型安全**：完全基于流式 API，支持泛型和 ResponseEntity
+## 快速开始
 
-## 核心功能
-
-- **默认 RestClient Bean**：开箱即用的 `defaultRestClient` Bean
-- **统一超时控制**：全局配置连接超时、读取超时和写入超时
-- **日志拦截器**：记录 HTTP 请求和响应（可配置 Headers/Body）
-- **ClientInterceptor 扩展点**：允许外部模块注入可观测性、安全、审计等横切关注点
-- **多客户端支持**：支持多个命名客户端配置（如 pubmed、epmc）
-- **灵活配置**：支持全局默认值和客户端级覆盖
-
-## 自动配置内容
-
-### RestClientAutoConfiguration
-
-`RestClientAutoConfiguration` 自动配置以下 Bean：
-
-| Bean 名称 | 类型 | 描述 |
-|-----------|------|------|
-| `defaultRestClient` | `RestClient` | 默认 RestClient Bean（自动注入所有拦截器） |
-| `defaultHttpRequestFactory` | `JdkClientHttpRequestFactory` | HTTP 请求工厂（配置超时，使用 JDK HttpClient） |
-| `loggingInterceptor` | `LoggingInterceptor` | 日志拦截器（@Order(100)，可选） |
-
-### 启用条件
-
-- 配置属性 `patra.rest-client.enabled=true`（默认启用）
-- 日志拦截器可独立启用/禁用
-
-### 扩展点机制
-
-外部模块（如 patra-spring-boot-starter-observability）可以实现 `ClientInterceptor` 接口来注入可观测性、安全、审计等横切关注点：
-
-```java
-@Component
-@Order(10)
-public class MetricsInterceptor implements ClientInterceptor {
-    @Override
-    public void beforeRequest(HttpRequest request) {
-        // 记录请求开始时间
-    }
-
-    @Override
-    public void afterResponse(HttpRequest request, ClientHttpResponse response) {
-        // 记录请求成功指标
-    }
-
-    @Override
-    public void onError(HttpRequest request, Exception e) {
-        // 记录请求失败指标
-    }
-}
-```
-
-拦截器按 `getOrder()` 返回值**从小到大**执行，值越小优先级越高。
-
-## 主要组件
-
-### RestClient（Spring 管理）
-
-提供类型安全的 HTTP 调用能力：
-
-- **流式 API**：链式调用，类型安全
-- **自动配置**：超时、拦截器、默认 Headers 自动应用
-- **底层实现**：JDK 21 HttpClient（支持 HTTP/2）
-- **配置来源**：从 `RestClientProperties` 自动提取
-
-**使用示例**：
-```java
-@Component
-@RequiredArgsConstructor
-public class ExternalApiClient {
-
-    private final RestClient defaultRestClient;
-
-    public UserResponse fetchUser(Long userId) {
-        return defaultRestClient.get()
-            .uri("/users/{id}", userId)
-            .retrieve()
-            .body(UserResponse.class);
-    }
-
-    public CreateResponse createUser(UserRequest request) {
-        return defaultRestClient.post()
-            .uri("/users")
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(request)
-            .retrieve()
-            .body(CreateResponse.class);
-    }
-}
-```
-
-### LoggingInterceptor（日志拦截器）
-
-记录 HTTP 请求和响应信息：
-
-- **请求日志**：HTTP 方法、URI、Headers（可选）、Body（可选）
-- **响应日志**：状态码、请求耗时
-- **性能监控**：自动记录每个请求的耗时（毫秒）
-- **配置控制**：可配置是否记录 Headers 和 Body（避免敏感信息泄露）
-
-**注意**：日志拦截器不属于可观测性范畴，而是基础设施层的调试工具，因此保留在本模块中。
-
-**配置示例**：
-```yaml
-patra:
-  rest-client:
-    interceptors:
-      logging:
-        enabled: true
-        log-headers: false  # 避免记录敏感 Headers（如 Authorization）
-        log-body: false     # 避免记录大文件或敏感数据
-```
-
-### ClientInterceptor（扩展点接口）
-
-允许外部模块注入自定义逻辑：
-
-- **beforeRequest**：HTTP 请求发送前执行（添加 Header、记录日志等）
-- **afterResponse**：HTTP 响应接收后执行（记录指标、提取追踪信息等）
-- **onError**：HTTP 请求异常时执行（错误记录、告警等）
-- **getOrder**：指定执行优先级（值越小优先级越高）
-
-**追踪传播和指标收集**由 patra-spring-boot-starter-observability 提供：
-- 添加 patra-spring-boot-starter-observability 依赖自动启用
-- 通过 ClientInterceptor 扩展点无缝集成
-- 符合依赖倒置原则（DIP）和关注点分离（SoC）原则
-
-## 配置属性
-
-**配置前缀**：`patra.rest-client`
-
-### 全局配置
-
-```yaml
-patra:
-  rest-client:
-    enabled: true                    # 启用自动配置（默认 true）
-    timeout:
-      connect: 10s                   # 连接超时（默认 10 秒）
-      read: 30s                      # 读取超时（默认 30 秒）
-      write: 30s                     # 写入超时（默认 30 秒）
-    retry:
-      enabled: false                 # 启用重试（默认 false，避免过于激进）
-      max-attempts: 3                # 最大重试次数
-      wait-duration: 1000            # 初始重试等待时间（毫秒）
-      backoff-multiplier: 2.0        # 退避倍数
-      max-wait-duration: 30000       # 最大等待时间（毫秒）
-    interceptors:
-      logging:
-        enabled: true                # 启用日志拦截器
-        log-headers: false           # 是否记录 HTTP 头（避免敏感信息泄露）
-        log-body: false              # 是否记录请求/响应体
-        max-body-log-length: 1024    # 记录 Body 的最大字节数（默认 1024，防止大文件导致内存溢出）
-```
-
-### 多客户端配置
-
-```yaml
-patra:
-  rest-client:
-    clients:
-      pubmed:                        # 客户端名称（自定义）
-        base-url: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
-        default-headers:
-          User-Agent: "Patra-Ingest/0.1.0"
-        timeout:
-          read: 60s                  # 覆盖 PubMed 读取超时
-      epmc:
-        base-url: "https://www.ebi.ac.uk/europepmc/webservices/rest"
-        timeout:
-          read: 45s
-```
-
-**注意**：当前版本（v0.1.0）多客户端配置仅用于文档化，实际需要手动创建命名 Bean。未来版本将支持自动创建命名客户端。
-
-### 配置优先级
-
-1. **客户端级配置** > 全局默认值
-2. **超时配置**：客户端 timeout > 全局 timeout
-3. **拦截器**：全局启用/禁用，不支持客户端级覆盖
-
-## 使用方式
-
-### Maven 依赖
+### 添加依赖
 
 ```xml
 <dependency>
@@ -202,419 +22,201 @@ patra:
 </dependency>
 ```
 
-**传递依赖**（自动包含）：
-- `patra-spring-boot-starter-core`：核心基础设施
-- `patra-common-core`：共享工具和异常
-- `spring-web`：RestClient 支持
-- `spring-retry`：重试机制（可选）
-- `apm-toolkit-trace`：SkyWalking 追踪
+### 基本使用
 
-**可选功能**：
-- 可观测性（追踪、指标）: 添加 `patra-spring-boot-starter-observability` 依赖自动启用
-
-### 配置示例
-
-**application.yml**：
-```yaml
-spring:
-  application:
-    name: patra-ingest
-
-patra:
-  rest-client:
-    enabled: true
-    timeout:
-      connect: 10s
-      read: 30s
-    interceptors:
-      logging:
-        enabled: true
-        log-headers: false
-        log-body: false
-```
-
-### 代码示例
-
-#### 基本使用（注入默认客户端）
+无需任何配置，直接注入 `RestClient` 使用：
 
 ```java
-@Component
-@RequiredArgsConstructor
-public class PubMedApiClient {
+@Service
+public class MyService {
 
-    private final RestClient defaultRestClient;
+    private final RestClient restClient;
 
-    public ESearchResponse search(String query) {
-        return defaultRestClient.get()
-            .uri("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={query}&retmode=json", query)
-            .retrieve()
-            .body(ESearchResponse.class);
+    public MyService(RestClient restClient) {
+        this.restClient = restClient;
     }
 
-    public String fetchArticle(String pmid) {
-        return defaultRestClient.get()
-            .uri("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id={pmid}&retmode=xml", pmid)
+    public String fetchData() {
+        return restClient.get()
+            .uri("https://api.example.com/data")
             .retrieve()
             .body(String.class);
     }
 }
 ```
 
-#### 高级使用（自定义客户端）
+## 配置项
 
-```java
-@Configuration
-public class CustomRestClientConfig {
+所有配置项均以 `patra.rest-client` 为前缀。
 
-    @Bean
-    public RestClient pubmedRestClient(
-        JdkClientHttpRequestFactory requestFactory,
-        ObjectProvider<ClientHttpRequestInterceptor> interceptorsProvider
-    ) {
-        // 创建专用于 PubMed 的 RestClient
-        return RestClient.builder()
-            .requestFactory(requestFactory)
-            .baseUrl("https://eutils.ncbi.nlm.nih.gov/entrez/eutils")
-            .defaultHeader("User-Agent", "Patra-Ingest/0.1.0")
-            .requestInterceptors(list ->
-                list.addAll(interceptorsProvider.orderedStream().toList())
-            )
-            .build();
-    }
-}
+### 完整配置示例
+
+```yaml
+patra:
+  rest-client:
+    # 是否启用自动配置（默认 true）
+    enabled: true
+
+    # 全局超时配置
+    timeout:
+      connect: 10s      # 连接超时（默认 10s）
+      read: 30s         # 读取超时（默认 30s）
+      write: 30s        # 写入超时（默认 30s）
+
+    # 重试配置
+    retry:
+      enabled: false           # 是否启用重试（默认 false）
+      max-attempts: 3          # 最大重试次数
+      wait-duration: 1000      # 初始等待时间（ms）
+      backoff-multiplier: 2.0  # 退避倍数
+      max-wait-duration: 30000 # 最大等待时间（ms）
+
+    # 拦截器配置
+    interceptors:
+      logging:
+        enabled: true           # 是否启用日志（默认 true）
+        log-headers: false      # 是否记录 Headers（默认 false）
+        log-body: false         # 是否记录 Body（默认 false）
+        max-body-log-length: 1024  # Body 日志最大字节数
+
+      tracing:
+        enabled: true                           # 是否启用追踪（默认 true）
+        header-names:                           # 追踪 ID 头名称
+          - X-Trace-ID
+          - X-B3-TraceId
+
+      metrics:
+        enabled: true           # 是否启用指标（默认 true）
+
+    # 多客户端配置
+    clients:
+      pubmed:
+        base-url: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+        default-headers:
+          Accept: "application/json"
+        timeout:
+          connect: 5s
+          read: 60s
 ```
 
-#### 文件下载（流式响应）
+### 配置项说明
 
-```java
-@Component
-@RequiredArgsConstructor
-public class FileDownloadService {
+| 配置项 | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `enabled` | boolean | `true` | 是否启用自动配置 |
+| `timeout.connect` | Duration | `10s` | 连接超时时间 |
+| `timeout.read` | Duration | `30s` | 读取超时时间 |
+| `timeout.write` | Duration | `30s` | 写入超时时间 |
+| `retry.enabled` | boolean | `false` | 是否启用重试 |
+| `retry.max-attempts` | int | `3` | 最大重试次数 |
+| `retry.wait-duration` | long | `1000` | 初始重试等待时间（ms） |
+| `retry.backoff-multiplier` | double | `2.0` | 退避倍数 |
+| `retry.max-wait-duration` | long | `30000` | 最大等待时间（ms） |
+| `interceptors.logging.enabled` | boolean | `true` | 是否启用日志拦截器 |
+| `interceptors.logging.log-headers` | boolean | `false` | 是否记录 HTTP 头 |
+| `interceptors.logging.log-body` | boolean | `false` | 是否记录请求/响应体 |
+| `interceptors.logging.max-body-log-length` | int | `1024` | Body 日志最大字节数 |
 
-    private final RestClient defaultRestClient;
+## 日志输出
 
-    public void downloadFile(String url, Path outputPath) throws IOException {
-        defaultRestClient.get()
-            .uri(url)
-            .exchange((request, response) -> {
-                if (response.getStatusCode().is2xxSuccessful()) {
-                    Files.copy(response.getBody(), outputPath, StandardCopyOption.REPLACE_EXISTING);
-                    return true;
-                }
-                throw new RuntimeException("Download failed: " + response.getStatusCode());
-            });
-    }
-}
-```
-
-#### 错误处理
-
-```java
-@Component
-@RequiredArgsConstructor
-public class ResilientApiClient {
-
-    private final RestClient defaultRestClient;
-
-    public Optional<UserResponse> fetchUserSafely(Long userId) {
-        try {
-            return Optional.ofNullable(
-                defaultRestClient.get()
-                    .uri("/users/{id}", userId)
-                    .retrieve()
-                    .onStatus(
-                        status -> status.value() == 404,
-                        (request, response) -> {
-                            throw new UserNotFoundException("User not found: " + userId);
-                        }
-                    )
-                    .body(UserResponse.class)
-            );
-        } catch (UserNotFoundException e) {
-            log.warn("User not found: {}", userId);
-            return Optional.empty();
-        } catch (Exception e) {
-            log.error("Failed to fetch user: {}", userId, e);
-            throw new ExternalApiException("External API error", e);
-        }
-    }
-}
-```
-
-## 架构集成
-
-### 六边形架构中的位置
-
-本 Starter 位于**框架层（Framework Layer）**，为基础设施层提供技术支撑：
+启用日志拦截器后，DEBUG 级别日志示例：
 
 ```
-Domain Layer (patra-xxx-domain)
-  - ExternalApiPort (业务端口接口)
-    ↑ implements
-Infrastructure Layer (patra-xxx-infra)
-  - ExternalApiAdapter (桥接适配器)
-    ↓ uses
-Framework Layer (patra-starter-rest-client) ← 本 Starter
-  - defaultRestClient (统一 HTTP 客户端)
-  - LoggingInterceptor (日志记录)
-  - TracingInterceptor (追踪传播)
-  - MetricsInterceptor (指标收集)
-    ↓ calls
-External APIs (第三方服务)
-  - PubMed API
-  - Europe PMC API
-  - 其他 REST API
+DEBUG c.p.s.r.i.LoggingInterceptor - HTTP GET https://api.example.com/data
+DEBUG c.p.s.r.i.LoggingInterceptor - HTTP GET https://api.example.com/data -> 200 OK (156 ms)
 ```
 
-### 与其他 Starter 的关系
+启用 `log-headers` 和 `log-body` 后：
 
-**依赖关系**：
-- **patra-spring-boot-starter-core**：提供错误处理、JSON 序列化、追踪传播等核心能力
-- **patra-spring-boot-starter-web**：Adapter 层使用（提供 REST 控制器能力）
-- **patra-spring-boot-starter-provenance**：数据源客户端使用（PubMed、EPMC 等）
-
-**分层使用**：
-- **Adapter 层**：不应使用（Adapter 提供 REST 服务，不调用外部 API）
-- **Infrastructure 层**：主要使用场景（调用外部 API、下载文件）
-- **Domain 层**：禁止使用（Domain 层不依赖框架）
-
-### 使用场景
-
-**典型场景**：
-1. **外部 API 调用**：调用 PubMed、Europe PMC、Crossref 等外部 REST API
-2. **文件下载**：从外部 URL 下载文件（XML、PDF、图片等）
-3. **Webhook 发送**：向外部系统发送 Webhook 通知
-4. **服务间调用**：微服务之间的 HTTP 调用（优先使用 Feign，简单调用使用 RestClient）
-
-**Infrastructure 层使用示例**：
-```java
-@Repository
-@RequiredArgsConstructor
-public class PubMedDataAdapter implements ProvenanceDataPort {
-
-    private final RestClient defaultRestClient;
-
-    @Override
-    public ESearchResponse search(String query) {
-        // 调用外部 PubMed API
-        return defaultRestClient.get()
-            .uri("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={query}&retmode=json", query)
-            .retrieve()
-            .body(ESearchResponse.class);
-    }
-}
+```
+DEBUG c.p.s.r.i.LoggingInterceptor - HTTP POST https://api.example.com/data
+DEBUG c.p.s.r.i.LoggingInterceptor - Headers: {Content-Type=[application/json]}
+DEBUG c.p.s.r.i.LoggingInterceptor - Body: {"name":"test"}
+DEBUG c.p.s.r.i.LoggingInterceptor - HTTP POST https://api.example.com/data -> 201 Created (234 ms)
 ```
 
-## 扩展点
+## 自定义扩展
 
-### 自定义拦截器（ClientInterceptor）
+### 自定义拦截器
 
-通过实现 `ClientInterceptor` 接口添加自定义拦截器：
+实现 `ClientHttpRequestInterceptor` 并注册为 Bean：
 
 ```java
 @Component
-@Order(20)
-public class CustomAuthInterceptor implements ClientInterceptor {
-
-    @Override
-    public void beforeRequest(HttpRequest request) {
-        // 添加认证 Header
-        request.getHeaders().add("Authorization", "Bearer " + getToken());
-    }
-
-    @Override
-    public void afterResponse(HttpRequest request, ClientHttpResponse response) {
-        // 响应后处理（如提取 Token）
-    }
-
-    @Override
-    public void onError(HttpRequest request, Exception e) {
-        // 错误处理（如记录认证失败）
-    }
-
-    @Override
-    public int getOrder() {
-        return 20;  // 自定义优先级
-    }
-
-    private String getToken() {
-        // 获取访问令牌逻辑
-        return "your-access-token";
-    }
-}
-```
-
-### Spring 标准拦截器（ClientHttpRequestInterceptor）
-
-也可以使用 Spring 标准的 `ClientHttpRequestInterceptor` 接口：
-
-```java
-@Component
-@Order(20)
-public class CustomAuthInterceptor implements ClientHttpRequestInterceptor {
+@Order(50)  // 控制拦截器执行顺序
+public class AuthInterceptor implements ClientHttpRequestInterceptor {
 
     @Override
     public ClientHttpResponse intercept(
-        HttpRequest request, byte[] body, ClientHttpRequestExecution execution
-    ) throws IOException {
-        // 添加认证 Header
+            HttpRequest request,
+            byte[] body,
+            ClientHttpRequestExecution execution) throws IOException {
+
         request.getHeaders().add("Authorization", "Bearer " + getToken());
         return execution.execute(request, body);
     }
-
-    private String getToken() {
-        return "your-access-token";
-    }
 }
 ```
 
-### 禁用自动配置
+### 自定义 RestClient
 
-如需完全自定义配置，可禁用自动配置：
-
-```yaml
-patra:
-  rest-client:
-    enabled: false
-```
+如需完全自定义，可替换默认 Bean：
 
 ```java
-@Configuration
-public class CustomRestClientConfig {
-
-    @Bean
-    public RestClient customRestClient() {
-        return RestClient.builder()
-            .baseUrl("https://custom-api.example.com")
-            .defaultHeader("Custom-Header", "value")
-            .build();
-    }
+@Bean
+public RestClient customRestClient(JdkClientHttpRequestFactory factory) {
+    return RestClient.builder()
+        .requestFactory(factory)
+        .baseUrl("https://api.example.com")
+        .defaultHeader("X-Custom-Header", "value")
+        .build();
 }
 ```
 
-### 自定义超时配置
+### 拦截器顺序
 
-```java
-@Configuration
-public class TimeoutConfig {
+内置拦截器默认顺序：
 
-    @Bean
-    public JdkClientHttpRequestFactory customRequestFactory() {
-        var httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))  // 自定义连接超时
-            .build();
+| 拦截器 | Order | 说明 |
+|--------|-------|------|
+| LoggingInterceptor | 100 | 日志拦截器 |
 
-        var factory = new JdkClientHttpRequestFactory(httpClient);
-        factory.setReadTimeout(Duration.ofMinutes(2));  // 自定义读取超时
-        return factory;
-    }
-}
+建议自定义拦截器使用小于 100 的值，以确保在日志记录之前执行。
+
+## 自动配置的 Bean
+
+| Bean 名称 | 类型 | 条件 |
+|-----------|------|------|
+| `defaultRestClient` | `RestClient` | 无同名 Bean |
+| `defaultHttpRequestFactory` | `JdkClientHttpRequestFactory` | 无同类型 Bean |
+| `loggingInterceptor` | `LoggingInterceptor` | `logging.enabled=true` |
+
+## 依赖关系
+
+```
+patra-spring-boot-starter-rest-client
+├── patra-common-core          # 通用工具类
+├── patra-spring-boot-starter-core  # 核心 starter
+├── spring-boot-autoconfigure  # 自动配置支持
+├── spring-web                 # RestClient
+├── spring-retry (optional)    # 重试支持
+└── apm-toolkit-trace          # SkyWalking 追踪
 ```
 
-## 技术栈
+## 与可观测性集成
 
-- **Spring Boot**: 3.5.7
-- **Spring Web**: 6.2.2（提供 RestClient）
-- **JDK HttpClient**: JDK 21 内置（HTTP/2 支持）
-- **Spring Retry**: 2.0.10（可选）
-- **SkyWalking APM Toolkit**: 9.4.0
+追踪传播和指标收集功能由 `patra-spring-boot-starter-observability` 提供。
+引入该 starter 后，会自动注入追踪和指标拦截器，无需额外配置。
 
-## 最佳实践
+## 注意事项
 
-### 1. 超时配置
+1. **敏感信息保护**：`log-headers` 和 `log-body` 默认关闭，避免敏感信息泄露
+2. **Body 截断**：启用 `log-body` 时，超过 `max-body-log-length` 的内容会被截断
+3. **日志级别**：日志拦截器仅在 DEBUG 级别输出，生产环境建议保持 INFO 级别
+4. **重试策略**：重试功能默认关闭，启用前请评估对下游服务的影响
 
-**推荐**：根据 API 响应时间特性配置合理的超时：
-- **快速 API**（如查询）：`connect=5s, read=10s`
-- **慢速 API**（如复杂计算）：`connect=10s, read=60s`
-- **文件下载**：`connect=10s, read=300s`（5 分钟）
+## 版本要求
 
-### 2. 日志配置
-
-**生产环境推荐**：
-```yaml
-patra:
-  rest-client:
-    interceptors:
-      logging:
-        enabled: true
-        log-headers: false  # 避免记录敏感 Headers（如 API Key）
-        log-body: false     # 避免记录大文件或敏感数据
-```
-
-**开发环境推荐**：
-```yaml
-patra:
-  rest-client:
-    interceptors:
-      logging:
-        enabled: true
-        log-headers: true         # 方便调试
-        log-body: true            # 查看请求/响应内容
-        max-body-log-length: 1024 # 限制记录长度，防止大文件占用内存
-```
-
-**注意**：即使在开发环境，`max-body-log-length` 也建议保持合理值（如 1024 或 2048 字节），避免记录大文件（如图片、PDF）导致日志文件爆炸和内存溢出。
-
-### 3. 重试策略
-
-**推荐**：仅对幂等操作启用重试：
-- ✅ **GET 请求**：安全启用重试
-- ❌ **POST/PUT/DELETE**：避免重复操作，除非业务逻辑保证幂等性
-
-```yaml
-patra:
-  rest-client:
-    retry:
-      enabled: true       # 仅对 GET 请求启用
-      max-attempts: 3
-      wait-duration: 1000
-```
-
-### 4. 避免在 Domain 层使用
-
-**错误示例**：
-```java
-// ❌ 错误：Domain 层不应依赖框架
-package com.patra.ingest.domain.service;
-
-import org.springframework.web.client.RestClient;
-
-public class PlanDomainService {
-    private final RestClient restClient;  // ❌ 违反依赖方向
-}
-```
-
-**正确示例**：
-```java
-// ✅ 正确：在 Infrastructure 层使用
-package com.patra.ingest.infra.adapter;
-
-import org.springframework.web.client.RestClient;
-
-@Repository
-public class ExternalApiAdapter implements ExternalApiPort {
-    private final RestClient defaultRestClient;  // ✅ 符合六边形架构
-}
-```
-
-### 5. 统一使用 defaultRestClient
-
-**推荐**：除非有特殊需求（如不同超时配置），否则统一使用 `defaultRestClient`：
-
-```java
-// ✅ 推荐：注入默认客户端
-@RequiredArgsConstructor
-public class ApiClient {
-    private final RestClient defaultRestClient;
-}
-
-// ❌ 避免：手动创建 RestClient（除非有充分理由）
-public class ApiClient {
-    private final RestClient customClient = RestClient.create();
-}
-```
-
----
-
-**最后更新**: 2025-11-24 (重构: 移除 Micrometer 依赖，可观测性功能移至 patra-spring-boot-starter-observability)
-**维护者**: Patra Team
+- Java 21+
+- Spring Boot 3.5+
+- Spring Framework 6.2+
