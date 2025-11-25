@@ -1,15 +1,15 @@
 # 开发最佳实践
 
-## DO 原则
+## 推荐做法
 
-✅ Domain 层保持纯 Java，无框架依赖
-✅ Application 层管理事务边界（@Transactional）
-✅ 使用 MapStruct 进行对象转换
-✅ 通过 Port 和 Repository 接口定义依赖
+1. Domain 层保持纯 Java，禁止依赖 Spring、MyBatis 等框架注解和类
+2. Application 层统一管理事务边界，使用 `@Transactional` 注解，禁止在其他层管理事务
+3. 使用 MapStruct 进行对象转换（DO/DTO/Entity 之间），禁止手动编写转换代码
+4. 通过 Port 和 Repository 接口定义依赖，Infrastructure 层提供实现，实现依赖倒置
 
-## DON'T 反模式
+## 禁止行为
 
-❌ 在 Domain 层使用 Spring 注解
-❌ 跨层直接调用（如 Controller 直接调用 Repository）
-❌ 在 Controller 层处理业务逻辑
-❌ 硬编码配置值
+1. 禁止在 Domain 层使用 Spring 注解（如 `@Service`、`@Autowired`、`@Value` 等）
+2. 禁止跨层直接调用（如 Controller 直接调用 Repository，必须经过 Application 层编排）
+3. 禁止在 Controller 层处理业务逻辑，Controller 仅负责参数校验、协议转换和调用 Application 层
+4. 禁止硬编码配置值，使用 `@ConfigurationProperties` 或 `@Value` 注入配置
