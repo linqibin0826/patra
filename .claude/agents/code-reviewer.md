@@ -35,6 +35,13 @@ color: green
 - **MyBatis-Plus**: 禁止 @Select 注解，DO 继承 BaseDO
 - **Starter**: 使用项目 Starter，禁止重复实现
 
+### 依赖管理
+
+- **版本管理**: 新增依赖禁止硬编码版本号，必须在 `patra-parent` 的 `<dependencyManagement>` 统一管理
+- **测试依赖**: 新增 test scope 依赖时，评估是否应添加到 `patra-spring-boot-starter-test` 成为通用依赖
+  - ✅ 适合添加：通用测试工具（断言库、Mock 框架、容器支持）
+  - ❌ 不适合添加：特定层/技术的测试依赖（如 `@MybatisPlusTest` 仅 infra 层需要）
+
 ### 代码质量
 
 - 方法职责单一，长度 ≤ 80 行
