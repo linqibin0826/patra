@@ -12,7 +12,6 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SyncTaskExecutor;
 import org.springframework.jdbc.support.JdbcTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -41,9 +40,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 ///
 /// 条件激活：`patra.batch.enabled=true`（默认启用）
 ///
-/// @author Patra Lin
+/// @author Patra Team
 /// @since 0.1.0
-@Configuration
 @ConditionalOnProperty(
     prefix = "patra.batch",
     name = "enabled",
