@@ -1,53 +1,26 @@
-# 测试策略与注意事项
+# 测试策略
 
-## 层级测试策略
+## 层级测试规则
 
-| 层级 | 测试方式 | Mock 策略 | 说明 |
-|------|----------|-----------|------|
-| Domain | 纯单元测试 | 无 Mock | 必须单元测试 |
-| Application | 单元测试 | Mock 所有 Ports | 必须单元测试 |
-| Infrastructure | `@MybatisPlusTest`（Repository）、WireMock（Feign） | 真实数据库（TestContainers）、Mock 外部 API | **集成测试优先** |
-| Adapter | `@WebMvcTest`（Controller）、单元测试（Listener/Job） | Mock 业务层 | 切片测试 |
-| Boot | `@SpringBootTest`（E2E） | 真实中间件 | 仅关键路径 |
+| 层级 | 测试方式 | Mock 策略 | 文件后缀 |
+|------|----------|-----------|---------|
+| Domain | 纯单元测试 | 无 Mock | `*Test.java` |
+| Application | 单元测试 | Mock Ports | `*Test.java` |
+| Infrastructure | 集成测试优先 | TestContainers / WireMock | `*IT.java` |
+| Adapter | 切片测试 | `@MockitoBean` | `*IT.java` |
+| Boot | E2E 测试 | 真实中间件 | `*E2E.java` |
 
-### Infrastructure 层测试策略
+## 测试比例
 
-Infra 层代码主要是委托调用（Repository → Mapper、Client → Feign），单元测试价值有限：
-- Mock Mapper 只能验证方法被调用，无法验证 SQL 正确性和字段映射
-- 集成测试能验证完整链路：SQL 语法、字段映射、数据库约束、转换逻辑
+单元测试 ≥75%，切片测试 ~20%，E2E <5%
 
-**例外**：如有复杂转换逻辑（如 `XxxConverter`），可单独对转换器编写单元测试
+## 覆盖率
 
-## 测试金字塔
-
-1. 单元测试占比 75% 以上，切片测试占比约 20%，E2E 测试占比不超过 5%
-2. 优先编写单元测试，仅在必要时编写集成测试和 E2E 测试
-
-## 测试覆盖率要求
-
-| 指标 | 目标 |
-|------|------|
-| 行覆盖率 | ≥ 80% |
-| 分支覆盖率 | ≥ 70% |
-| 关键业务逻辑 | 100% |
-
-### 检查方法
-
-```bash
-# 运行测试并生成覆盖率报告
-mvn clean verify -pl 模块名
-# 查看 target/site/jacoco/index.html
-```
-
-### 排除项
-
-以下代码可不计入覆盖率统计：
-- DTO/VO/Entity 的 getter/setter/toString/equals/hashCode
-- Spring 配置类（`@Configuration`）
-- 启动类（`@SpringBootApplication`）
+行覆盖率 ≥80%，分支覆盖率 ≥70%，关键业务逻辑 100%
+**排除项**：DTO getter/setter、配置类、启动类
 
 ## 注意事项
 
-1. Spring Boot 3.4+ 使用 `@MockitoBean`，禁止使用已废弃的 `@MockBean`
-2. 测试超时配置使用真实值（如 2s），禁止配置过长超时以避免拖慢测试执行
-3. 测试文件命名规范：`*Test.java`（单元测试）、`*IT.java`（集成测试）、`*E2E.java`（端到端测试）
+1. Spring Boot 3.4+ 使用 `@MockitoBean`，禁止废弃的 `@MockBean`
+2. 测试超时 ≤2s，避免拖慢测试执行
+3. Infrastructure 层集成测试优先，单元测试价值有限（仅验证调用，无法验证 SQL）
