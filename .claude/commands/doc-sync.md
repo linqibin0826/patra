@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(git log:*), Bash(git status:*), Edit, Write, mcp__serena__get_symbols_overview, mcp__serena__find_symbol
-description: 文档同步维护。分析代码变更，创建/更新 ADR、服务 README、package-info.java
-argument-hint: [adr|readme|package-info|all]
+description: 文档同步维护。分析代码变更，创建/更新 ADR、服务 README
+argument-hint: [adr|readme|all]
 ---
 
 # 文档同步
@@ -25,7 +25,6 @@ argument-hint: [adr|readme|package-info|all]
 根据参数 `$ARGUMENTS` 决定操作范围：
 - `adr` — 只处理架构决策记录
 - `readme` — 只处理服务 README
-- `package-info` — 只处理包级文档
 - `all` 或空 — 处理所有类型
 
 ## 字数限制（硬性约束）
@@ -34,7 +33,6 @@ argument-hint: [adr|readme|package-info|all]
 |----------|------|----------|
 | ADR | ≤ 300 字 | 删减背景描述，保留决策和原因 |
 | 服务 README | ≤ 300 字 | 删减配置表，只保留关键项 |
-| package-info | ≤ 150 字 | 只列最核心的 2-3 个类型 |
 
 ---
 
@@ -97,35 +95,6 @@ argument-hint: [adr|readme|package-info|all]
 ## 关键配置
 | 配置项 | 说明 | 默认值 |
 |--------|------|--------|
-```
-
----
-
-## package-info.java 模板（≤ 150 字）
-
-只处理顶层边界包：
-- `com.patra.{service}.domain`
-- `com.patra.{service}.domain.model`
-- `com.patra.{service}.domain.port`
-- `com.patra.{service}.app`
-- `com.patra.{service}.infra`
-- `com.patra.{service}.adapter`
-
-触发条件：
-- 新增聚合根或核心实体
-- 端口接口变更
-- 包职责边界变化
-
-```java
-/// [包职责一句话描述]
-///
-/// ## 核心类型（仅列出 2-5 个最重要的）
-/// - `ClassName` - [一句话说明]
-///
-/// ## 依赖/被依赖（可选，仅边界包需要）
-/// - 依赖: [包名]
-/// - 被依赖: [包名]
-package com.patra.xxx.domain;
 ```
 
 ---

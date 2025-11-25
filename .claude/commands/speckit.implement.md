@@ -166,18 +166,7 @@ $ARGUMENTS
 
    在每个阶段完成后，可以人工审查代码质量和架构合规性
 
-10. **📝 Polish 阶段：文档生成**：
-
-   **当执行 Polish 阶段的文档任务时，使用 Task tool 调用 `documentation-architect` subagent 生成文档**：
-
-   - **生成 package-info.java** → 调用 documentation-architect 生成各层的包文档
-   - **更新模块 README.md** → 调用 documentation-architect 增量更新模块文档
-   - **生成/更新 API 文档** → 调用 documentation-architect 生成 API 契约文档
-   - **为核心类添加 JavaDoc** → 调用 documentation-architect 为聚合根、Port 接口等核心类添加文档
-
-   **注意**：documentation-architect subagent 会自动激活 java-documentation-architect skill 并执行文档生成任务
-
-11. **进度跟踪、变更记录和错误处理**：
+10. **进度跟踪、变更记录和错误处理**：
 
    ### A. 任务进度追踪
    - 在每个完成的任务后报告进度
@@ -209,7 +198,7 @@ $ARGUMENTS
    - 如果实现无法继续则建议下一步
    - **记录错误到 implementation-log.md**（使用任务失败记录模板）
 
-12. 完成验证：
+11. 完成验证：
    - 验证所有必需任务已完成
    - 检查实现的特性是否符合原始规格说明
    - 验证测试通过且覆盖率满足要求（参考 CHK-TEST-* 验证项）
@@ -296,8 +285,7 @@ $ARGUMENTS
    - Infrastructure 层完成 → 审查 CHK-ARCH-004, CHK-CODE-005
    - Adapter 层完成 → 审查 CHK-ARCH-002, 错误处理
 
-7. **最后生成文档**：所有代码完成后调用 documentation-architect agent
-   - package-info.java
+7. **最后生成文档**：所有代码完成后生成必要文档
    - 模块 README.md
    - API 文档
    - JavaDoc
