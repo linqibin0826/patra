@@ -8,13 +8,21 @@
 
 ## 层级测试策略
 
-| 层级 | 测试方式 | Mock 策略 |
-|------|----------|-----------|
-| Domain | 纯单元测试 | 无 Mock |
-| Application | 单元测试 | Mock 所有 Ports |
-| Infrastructure | `@MybatisPlusTest`（Repository）、WireMock（Feign） | 真实数据库（TestContainers）、Mock 外部 API |
-| Adapter | `@WebMvcTest`（Controller）、单元测试（Listener/Job） | Mock 业务层 |
-| Boot | `@SpringBootTest`（E2E） | 真实中间件 |
+| 层级 | 测试方式 | Mock 策略 | 说明 |
+|------|----------|-----------|------|
+| Domain | 纯单元测试 | 无 Mock | 必须单元测试 |
+| Application | 单元测试 | Mock 所有 Ports | 必须单元测试 |
+| Infrastructure | `@MybatisPlusTest`（Repository）、WireMock（Feign） | 真实数据库（TestContainers）、Mock 外部 API | **集成测试优先** |
+| Adapter | `@WebMvcTest`（Controller）、单元测试（Listener/Job） | Mock 业务层 | 切片测试 |
+| Boot | `@SpringBootTest`（E2E） | 真实中间件 | 仅关键路径 |
+
+### Infrastructure 层测试策略
+
+Infra 层代码主要是委托调用（Repository → Mapper、Client → Feign），单元测试价值有限：
+- Mock Mapper 只能验证方法被调用，无法验证 SQL 正确性和字段映射
+- 集成测试能验证完整链路：SQL 语法、字段映射、数据库约束、转换逻辑
+
+**例外**：如有复杂转换逻辑（如 `XxxConverter`），可单独对转换器编写单元测试
 
 ## 测试金字塔
 
@@ -23,5 +31,6 @@
 
 ## 注意事项
 
-1. Spring Boot 3.4+ 使用 `@MockitoBean`（包路径：`org.springframework.test.context.bean.override.mockito`），禁止使用已废弃的 `@MockBean`
+1. Spring Boot 3.4+ 使用 `@MockitoBean`，禁止使用已废弃的 `@MockBean`
 2. 测试超时配置使用真实值（如 2s），禁止配置过长超时以避免拖慢测试执行
+3. 测试文件命名规范：`*Test.java`（单元测试）、`*IT.java`（集成测试）、`*E2E.java`（端到端测试）
