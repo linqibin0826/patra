@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.patra.common.error.codes.ErrorCodeLike;
 import com.patra.starter.core.error.model.ErrorResolution;
+import com.patra.starter.core.error.model.ResolutionStrategy;
 import com.patra.starter.core.error.pipeline.ErrorResolutionPipeline;
 import com.patra.starter.web.error.adapter.model.ProblemDetailResponse;
 import com.patra.starter.web.error.builder.ProblemDetailBuilder;
@@ -205,6 +206,6 @@ class DefaultProblemDetailAdapterTest {
     when(errorCode.code()).thenReturn(errorCodeValue);
     // ErrorCodeLike.httpStatus() 在测试中不被调用，因为 ErrorResolution 直接存储 httpStatus
 
-    return new ErrorResolution(errorCode, httpStatus);
+    return new ErrorResolution(errorCode, httpStatus, ResolutionStrategy.FALLBACK);
   }
 }

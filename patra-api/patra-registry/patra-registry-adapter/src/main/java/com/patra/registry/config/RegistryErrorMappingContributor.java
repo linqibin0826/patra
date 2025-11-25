@@ -7,6 +7,7 @@ import com.patra.registry.domain.exception.RegistryQuotaExceeded;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -24,10 +25,13 @@ import org.springframework.stereotype.Component;
 ///   - {@link DataIntegrityViolationException} → `UNPROCESSABLE`
 ///   - {@link OptimisticLockingFailureException} → `CONFLICT`
 ///
+/// **优先级**: 50（中等优先级）- 业务特定异常,在基础设施异常之后处理。
+///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
 @Component
+@Order(50)
 public class RegistryErrorMappingContributor implements ErrorMappingContributor {
 
   private final HttpStdErrors.Group http;
