@@ -1,3 +1,2 @@
 com.patra.starter.redisson.autoconfigure.RedissonAutoConfiguration
 com.patra.starter.redisson.autoconfigure.LockAutoConfiguration
-com.patra.starter.redisson.autoconfigure.ObservabilityAutoConfiguration

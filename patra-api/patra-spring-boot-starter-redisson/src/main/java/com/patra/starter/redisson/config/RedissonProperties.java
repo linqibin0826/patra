@@ -27,9 +27,6 @@ public class RedissonProperties {
     /// 分布式锁配置
     private LockProperties lock = new LockProperties();
 
-    /// 可观测性配置
-    private ObservabilityProperties observability = new ObservabilityProperties();
-
     /// 分布式锁配置。
     @Data
     public static class LockProperties {
@@ -61,30 +58,5 @@ public class RedissonProperties {
         ///
         /// 默认: "patra:lock:"
         private String keyPrefix = "patra:lock:";
-    }
-
-    /// 可观测性配置。
-    @Data
-    public static class ObservabilityProperties {
-
-        /// 是否启用 Micrometer 指标，默认 true。
-        ///
-        /// 记录锁的等待时间、持有时间、成功/失败率等指标。
-        private boolean metricsEnabled = true;
-
-        /// 是否启用分布式追踪（SkyWalking），默认 true。
-        ///
-        /// 为每个锁操作创建 Span，便于追踪性能瓶颈。
-        private boolean tracingEnabled = true;
-
-        /// 是否启用日志记录，默认 true。
-        ///
-        /// 记录锁的获取、释放、失败等事件。
-        private boolean loggingEnabled = true;
-
-        /// 日志级别，默认 DEBUG。
-        ///
-        /// 锁操作的日志级别，可选: DEBUG, INFO, WARN, ERROR
-        private String logLevel = "DEBUG";
     }
 }

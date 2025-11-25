@@ -1,4 +1,4 @@
-package com.patra.starter.redisson.listener;
+package com.patra.starter.observability.interceptor.redisson;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -11,6 +11,19 @@ import java.util.concurrent.TimeUnit;
 /// 分布式锁 Micrometer 指标记录器。
 ///
 /// 记录锁的等待时间、持有时间、成功/失败率。
+///
+/// 指标列表：
+///
+/// - `patra.redisson.lock.acquired` - 锁获取成功计数
+/// - `patra.redisson.lock.failed` - 锁获取失败计数
+/// - `patra.redisson.lock.wait_time` - 锁等待时间
+/// - `patra.redisson.lock.hold_time` - 锁持有时间
+///
+/// 标签：
+///
+/// - `key_pattern` - 锁键模式（低基数，去除动态部分）
+/// - `lock_type` - 锁类型（REENTRANT、FAIR、READ、WRITE）
+/// - `reason` - 失败原因（仅失败指标）
 ///
 /// @author Patra Team
 /// @since 1.0.0
