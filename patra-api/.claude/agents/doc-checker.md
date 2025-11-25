@@ -16,14 +16,6 @@ model: sonnet
 2. **服务 README** — 服务描述是否准确
 3. **package-info.java** — 包级文档是否存在且准确
 
-## 📚 初始化
-
-```bash
-git diff HEAD~1 --name-only    # 最近提交变更
-git diff --name-only           # 未提交变更
-git log -3 --oneline           # 最近提交信息
-```
-
 ## 🔍 检查清单
 
 ### 1. ADR 检查
