@@ -13,12 +13,13 @@ import org.springframework.context.annotation.Bean;
 
 /// 可观测性自动配置。
 ///
-/// 配置可观测性 Recorder（Metrics、Logging）
+/// 配置可观测性 Recorder（Metrics、Logging）。
+/// 在 RedissonAutoConfiguration 之后、LockAutoConfiguration 之前加载。
 ///
 /// @author Patra Team
 /// @since 1.0.0
 @Slf4j
-@AutoConfiguration(after = LockAutoConfiguration.class)
+@AutoConfiguration(after = RedissonAutoConfiguration.class)
 @EnableConfigurationProperties(RedissonProperties.class)
 public class ObservabilityAutoConfiguration {
 

@@ -14,9 +14,9 @@
 
 ### P1 高级功能
 
-- ✅ **SkyWalking 追踪集成**：自动创建分布式追踪 Span
-- ✅ **Micrometer 指标集成**：锁等待时间、持有时间、成功/失败率
+- ✅ **Micrometer 指标集成**：锁等待时间、持有时间、成功/失败率（符合 Patra 命名规范）
 - ✅ **性能优化**：SpEL 表达式缓存、静态字符串检测
+- 🔜 **SkyWalking 追踪集成**：计划在 v1.2.0 支持
 
 ## 快速开始
 
@@ -183,7 +183,6 @@ patra:
     # 可观测性配置
     observability:
       metrics-enabled: true   # Micrometer 指标
-      tracing-enabled: true   # SkyWalking 追踪
       logging-enabled: true   # 日志记录
 ```
 
@@ -322,26 +321,34 @@ public class PaymentService {
 
 ### Micrometer 指标
 
-自动记录以下指标：
+自动记录以下指标（符合 `patra.{module}.{metric}` 命名规范）：
 
-- `redisson.lock.acquired`：锁获取成功计数（Counter）
-- `redisson.lock.failed`：锁获取失败计数（Counter）
-- `redisson.lock.wait.time`：锁等待时间（Timer）
-- `redisson.lock.hold.time`：锁持有时间（Timer）
+| 指标名称 | 类型 | 描述 |
+|----------|------|------|
+| `patra.redisson.lock.acquired` | Counter | 锁获取成功计数 |
+| `patra.redisson.lock.failed` | Counter | 锁获取失败计数 |
+| `patra.redisson.lock.wait_time` | Timer | 锁等待时间 |
+| `patra.redisson.lock.hold_time` | Timer | 锁持有时间 |
 
 **标签（Tags）**：
-- `key`：锁键
-- `type`：锁类型（REENTRANT/FAIR/READ/WRITE）
-- `reason`：失败原因（仅失败计数）
 
-### SkyWalking 追踪
+| 标签 | 描述 | 基数 |
+|------|------|------|
+| `key_pattern` | 锁键模式（去除动态部分） | 低 |
+| `lock_type` | 锁类型（REENTRANT/FAIR/READ/WRITE） | 低 |
+| `reason` | 失败原因（仅失败计数） | 低 |
+| `application` | 应用名称（由 observability 模块自动添加） | 低 |
+| `environment` | 环境标识（由 observability 模块自动添加） | 低 |
 
-每次锁操作自动创建 Span：`DistributedLock: {lockKey}`
+**高基数标签处理**：
 
-记录内容：
-- 锁等待时间
-- 锁持有时间
-- 锁获取成功/失败状态
+锁键中的动态部分（如 ID、日期、UUID）会被自动过滤，只保留静态模式：
+
+```
+patra:lock:user:123        -> key_pattern="user"
+patra:lock:order:456:item  -> key_pattern="order.item"
+catalog:lock:mesh-import:2024 -> key_pattern="mesh-import"
+```
 
 ### 日志记录
 
@@ -396,10 +403,13 @@ private void updateUserInTransaction(Long userId) {
 ```
 patra-spring-boot-starter-redisson
 ├── patra-common-core（异常体系、工具类）
-├── patra-spring-boot-starter-core（错误处理、可观测性）
+├── patra-spring-boot-starter-core（错误处理）
+├── patra-spring-boot-starter-observability（可观测性：指标、日志、追踪）
 ├── redisson-spring-boot-starter（Redisson 官方 Starter）
 └── spring-boot-starter-aop（AOP 支持）
 ```
+
+> **说明**：强制依赖 observability 模块，确保所有指标自动应用命名规范、公共标签和高基数过滤。
 
 ## 性能优化
 
@@ -563,27 +573,28 @@ public void processTask(Long id) {
 监控关键指标：
 
 ```promql
-# 锁获取成功率
-sum(rate(redisson_lock_acquired_total[5m]))
+# 锁获取成功率（全局）
+sum(rate(patra_redisson_lock_acquired_total[5m]))
 /
-(sum(rate(redisson_lock_acquired_total[5m])) + sum(rate(redisson_lock_failed_total[5m])))
+(sum(rate(patra_redisson_lock_acquired_total[5m])) + sum(rate(patra_redisson_lock_failed_total[5m])))
+
+# 按应用分组的锁获取成功率
+sum(rate(patra_redisson_lock_acquired_total[5m])) by (application)
+/
+(sum(rate(patra_redisson_lock_acquired_total[5m])) by (application) + sum(rate(patra_redisson_lock_failed_total[5m])) by (application))
 
 # 锁等待时间 P99
-histogram_quantile(0.99, sum(rate(redisson_lock_wait_time_seconds_bucket[5m])) by (le))
+histogram_quantile(0.99, sum(rate(patra_redisson_lock_wait_time_seconds_bucket[5m])) by (le))
 
 # 锁持有时间 P99
-histogram_quantile(0.99, sum(rate(redisson_lock_hold_time_seconds_bucket[5m])) by (le))
+histogram_quantile(0.99, sum(rate(patra_redisson_lock_hold_time_seconds_bucket[5m])) by (le))
 
-# 按锁键分组的失败率
-sum(rate(redisson_lock_failed_total[5m])) by (key)
+# 按锁模式分组的失败率
+sum(rate(patra_redisson_lock_failed_total[5m])) by (key_pattern)
+
+# 按应用和锁类型分组的等待时间
+histogram_quantile(0.99, sum(rate(patra_redisson_lock_wait_time_seconds_bucket[5m])) by (le, application, lock_type))
 ```
-
-### SkyWalking 追踪示例
-
-在 SkyWalking UI 中查看：
-- **Trace 列表**：搜索 `DistributedLock`
-- **Span 详情**：查看锁等待时间、持有时间
-- **拓扑图**：查看锁调用链
 
 ## 技术规格
 

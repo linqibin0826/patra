@@ -23,6 +23,10 @@
             <groupId>com.patra</groupId>
             <artifactId>patra-spring-boot-starter-core</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-observability</artifactId>
+        </dependency>
 
         <!-- 2. Redisson 官方 Starter（必须） -->
         <dependency>
@@ -38,14 +42,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-aop</artifactId>
-        </dependency>
-
-        <!-- 4. Micrometer 指标（可选） -->
-        <!-- 当 patra-spring-boot-starter-observability 存在时自动启用指标收集 -->
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-core</artifactId>
-            <optional>true</optional>
         </dependency>
 
         <!-- 6. 配置元数据（开发时） -->
