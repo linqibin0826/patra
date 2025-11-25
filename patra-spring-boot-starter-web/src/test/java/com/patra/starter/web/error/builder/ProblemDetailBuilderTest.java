@@ -10,6 +10,9 @@ import static org.mockito.Mockito.when;
 
 import com.patra.common.error.codes.ErrorCodeLike;
 import com.patra.common.error.problem.ErrorKeys;
+import com.patra.common.error.trait.ErrorTrait;
+import com.patra.common.error.trait.HasErrorTraits;
+import com.patra.common.error.trait.StandardErrorTrait;
 import com.patra.starter.core.error.config.ErrorProperties;
 import com.patra.starter.core.error.model.ErrorResolution;
 import com.patra.starter.core.error.spi.ProblemFieldContributor;
@@ -20,6 +23,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -293,5 +297,133 @@ class ProblemDetailBuilderTest {
 
     // Then: 验证状态码
     assertThat(result.getStatus()).isEqualTo(404);
+  }
+
+  @Test
+  @DisplayName("应该在异常实现 HasErrorTraits 时添加 traits 字段")
+  @SuppressWarnings("unchecked")
+  void shouldAddTraitsWhenExceptionHasErrorTraits() {
+    // Given: 准备实现 HasErrorTraits 的异常
+    ErrorCodeLike errorCode = mock(ErrorCodeLike.class);
+    when(errorCode.code()).thenReturn("ERR_NOT_FOUND");
+
+    ErrorResolution resolution = mock(ErrorResolution.class);
+    when(resolution.errorCode()).thenReturn(errorCode);
+    when(resolution.httpStatus()).thenReturn(404);
+
+    // 创建实现 HasErrorTraits 的异常
+    TraitfulException exception =
+        new TraitfulException("资源未找到", Set.of(StandardErrorTrait.NOT_FOUND));
+
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    when(request.getRequestURI()).thenReturn("/api/resource");
+
+    when(traceProvider.getCurrentTraceId()).thenReturn(Optional.empty());
+
+    // When: 构建 ProblemDetail
+    ProblemDetail result = builder.build(resolution, exception, request);
+
+    // Then: 验证 traits 字段
+    assertThat(result.getProperties()).containsKey(ErrorKeys.TRAITS);
+    List<String> traits = (List<String>) result.getProperties().get(ErrorKeys.TRAITS);
+    assertThat(traits).containsExactly("NOT_FOUND");
+  }
+
+  @Test
+  @DisplayName("应该在异常包含多个 traits 时全部添加")
+  @SuppressWarnings("unchecked")
+  void shouldAddMultipleTraitsWhenPresent() {
+    // Given: 准备包含多个 traits 的异常
+    ErrorCodeLike errorCode = mock(ErrorCodeLike.class);
+    when(errorCode.code()).thenReturn("ERR_CONFLICT");
+
+    ErrorResolution resolution = mock(ErrorResolution.class);
+    when(resolution.errorCode()).thenReturn(errorCode);
+    when(resolution.httpStatus()).thenReturn(409);
+
+    // 创建包含多个 traits 的异常
+    TraitfulException exception =
+        new TraitfulException(
+            "冲突且违反规则", Set.of(StandardErrorTrait.CONFLICT, StandardErrorTrait.RULE_VIOLATION));
+
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    when(request.getRequestURI()).thenReturn("/api/resource");
+
+    when(traceProvider.getCurrentTraceId()).thenReturn(Optional.empty());
+
+    // When: 构建 ProblemDetail
+    ProblemDetail result = builder.build(resolution, exception, request);
+
+    // Then: 验证包含所有 traits
+    assertThat(result.getProperties()).containsKey(ErrorKeys.TRAITS);
+    List<String> traits = (List<String>) result.getProperties().get(ErrorKeys.TRAITS);
+    assertThat(traits).containsExactlyInAnyOrder("CONFLICT", "RULE_VIOLATION");
+  }
+
+  @Test
+  @DisplayName("应该在异常未实现 HasErrorTraits 时不添加 traits 字段")
+  void shouldNotAddTraitsWhenExceptionDoesNotHaveErrorTraits() {
+    // Given: 准备普通异常（不实现 HasErrorTraits）
+    ErrorCodeLike errorCode = mock(ErrorCodeLike.class);
+    when(errorCode.code()).thenReturn("ERR_INTERNAL");
+
+    ErrorResolution resolution = mock(ErrorResolution.class);
+    when(resolution.errorCode()).thenReturn(errorCode);
+    when(resolution.httpStatus()).thenReturn(500);
+
+    Throwable exception = new RuntimeException("内部错误");
+
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    when(request.getRequestURI()).thenReturn("/api/resource");
+
+    when(traceProvider.getCurrentTraceId()).thenReturn(Optional.empty());
+
+    // When: 构建 ProblemDetail
+    ProblemDetail result = builder.build(resolution, exception, request);
+
+    // Then: 验证不包含 traits 字段
+    assertThat(result.getProperties()).doesNotContainKey(ErrorKeys.TRAITS);
+  }
+
+  @Test
+  @DisplayName("应该在异常 traits 为空时不添加 traits 字段")
+  void shouldNotAddTraitsWhenTraitsAreEmpty() {
+    // Given: 准备 traits 为空的异常
+    ErrorCodeLike errorCode = mock(ErrorCodeLike.class);
+    when(errorCode.code()).thenReturn("ERR_UNKNOWN");
+
+    ErrorResolution resolution = mock(ErrorResolution.class);
+    when(resolution.errorCode()).thenReturn(errorCode);
+    when(resolution.httpStatus()).thenReturn(500);
+
+    TraitfulException exception = new TraitfulException("未知错误", Set.of());
+
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    when(request.getRequestURI()).thenReturn("/api/resource");
+
+    when(traceProvider.getCurrentTraceId()).thenReturn(Optional.empty());
+
+    // When: 构建 ProblemDetail
+    ProblemDetail result = builder.build(resolution, exception, request);
+
+    // Then: 验证不包含 traits 字段
+    assertThat(result.getProperties()).doesNotContainKey(ErrorKeys.TRAITS);
+  }
+
+  // ==================== 辅助类 ====================
+
+  /// 测试用辅助异常类，同时继承 RuntimeException 并实现 HasErrorTraits
+  private static class TraitfulException extends RuntimeException implements HasErrorTraits {
+    private final Set<ErrorTrait> traits;
+
+    TraitfulException(String message, Set<ErrorTrait> traits) {
+      super(message);
+      this.traits = traits;
+    }
+
+    @Override
+    public Set<ErrorTrait> getErrorTraits() {
+      return traits;
+    }
   }
 }

@@ -11,9 +11,11 @@ import com.patra.ingest.domain.exception.PlanPersistenceException;
 import com.patra.ingest.domain.exception.PlanValidationException;
 import com.patra.ingest.domain.exception.TaskCheckpointException;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
+import com.patra.common.error.trait.ErrorTrait;
+import com.patra.common.error.trait.StandardErrorTrait;
 import com.patra.starter.feign.error.exception.RemoteCallException;
-import com.patra.starter.feign.error.util.RemoteErrorHelper;
 import java.util.Optional;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -132,21 +134,24 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
     return Optional.empty();
   }
 
-  /// 基于远程调用异常详细信息解析配置错误。
+  /// 基于远程调用异常的错误特征解析配置错误。
+  ///
+  /// 使用 {@link RemoteCallException#getErrorTraits()} 进行语义判断，
+  /// 根据下游服务传播的 traits 信息确定错误类型。
   ///
   /// @param exception 要分析的配置异常
-  /// @return 基于远程失败类型的适当错误码
+  /// @return 基于错误特征的适当错误码
   private ErrorCodeLike resolveConfigurationError(IngestConfigurationException exception) {
     Throwable cause = exception.getCause();
     if (cause instanceof RemoteCallException remote) {
-      if (RemoteErrorHelper.isNotFound(remote)) {
+      Set<ErrorTrait> traits = remote.getErrorTraits();
+      if (traits.contains(StandardErrorTrait.NOT_FOUND)) {
         return IngestErrorCode.ING_1201;
       }
-      if (RemoteErrorHelper.isServerError(remote) || RemoteErrorHelper.isRetryable(remote)) {
+      if (traits.contains(StandardErrorTrait.DEP_UNAVAILABLE)
+          || traits.contains(StandardErrorTrait.TIMEOUT)
+          || traits.contains(StandardErrorTrait.QUOTA_EXCEEDED)) {
         return IngestErrorCode.ING_1203;
-      }
-      if (RemoteErrorHelper.isClientError(remote)) {
-        return IngestErrorCode.ING_1202;
       }
     }
     return IngestErrorCode.ING_1202;
