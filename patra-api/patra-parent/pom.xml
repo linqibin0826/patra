@@ -541,6 +541,12 @@
             <jvmArguments>-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8</jvmArguments>
           </configuration>
         </plugin>
+        <!-- Maven Jar Plugin - for test-jar goal -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.4.1</version>
+        </plugin>
       </plugins>
     </pluginManagement>
 
