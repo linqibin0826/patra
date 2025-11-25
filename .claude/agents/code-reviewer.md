@@ -46,9 +46,28 @@ git status       # 未提交变更
 
 - 方法职责单一，长度 ≤ 80 行
 - **命名**: 抽象用抽象名（Repository/Service/Port），具体用具体名（PubMedRepository/MeshImportService），禁止模糊名（Manager/Helper/Util 作为业务类名）
-- **异常处理**: Domain 用 `DomainException`+`HasErrorTraits`，Application 用 `ApplicationException`+`ErrorCodeLike`，Infra 用 `ErrorMappingContributor` 映射第三方异常，Feign 调用 catch `RemoteCallException` 转换为领域异常
 - **日志**: 等级恰当（DEBUG/INFO/WARN/ERROR），关键路径有日志，支持问题排查
 - **注释**: 无冗余注释，复杂逻辑有必要说明
+
+### 异常处理
+
+**各层异常使用规范**:
+
+| 层级 | 异常类型 | 要求 |
+|------|---------|------|
+| **Domain** | `DomainException` | 携带 `StandardErrorTrait` 语义特征，禁止依赖框架异常 |
+| **Application** | `ApplicationException` | 包装领域异常，携带明确的 `ErrorCodeLike` |
+| **Infrastructure** | `ErrorMappingContributor` | SPI 映射第三方异常（SQL、外部 API 等） |
+| **Adapter** | 捕获 `RemoteCallException` | 基于 `ErrorTrait` 语义特征转换为领域异常 |
+
+**错误码格式**: `{SERVICE}-{0xxx}`（如 `INGEST-0404`），0xxx 映射 HTTP 状态码
+
+**Feign 调用检查**:
+- ✅ 捕获 `RemoteCallException`，优先用 `ex.getErrorTraits()` 判断
+- ✅ 备选使用 `RemoteErrorHelper` 工具类（`isNotFound()`、`isServerError()`）
+- ❌ 禁止直接捕获 `FeignException`
+
+**命名启发式**: 类名后缀自动映射（`NotFoundException` → 404，`ConflictException` → 409）
 
 ### 安全
 

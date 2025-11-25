@@ -50,3 +50,4 @@
 3. 开发最佳实践：@.claude/memories/best-practices.md
 4. 代码风格与命名规范：@.claude/memories/code-style.md
 5. MyBatis-Plus 使用规范：@.claude/memories/mybatis-plus.md
+6. 异常处理与错误码规范：@.claude/memories/error-handling.md
