@@ -2,62 +2,6 @@
   "version": "2.0",
   "description": "Skill activation triggers for Patra Java backend - Refactored for specialized skills (Claude Code)",
   "skills": {
-    "java-hexagonal-architecture": {
-      "type": "domain",
-      "enforcement": "suggest",
-      "priority": "high",
-      "description": "Hexagonal Architecture and DDD expert for design and architectural decisions",
-      "promptTriggers": {
-        "keywords": [
-          "hexagonal architecture",
-          "DDD",
-          "domain-driven design",
-          "clean architecture",
-          "onion architecture",
-          "ports and adapters",
-          "architectural decision",
-          "bounded context",
-          "aggregate",
-          "domain model",
-          "value object",
-          "entity design",
-          "dependency rule",
-          "layer boundary",
-          "module structure",
-          "六边形架构",
-          "领域驱动设计",
-          "洋葱架构",
-          "端口适配器",
-          "架构决策",
-          "界限上下文",
-          "聚合根",
-          "领域模型",
-          "值对象",
-          "实体设计",
-          "依赖规则",
-          "层次边界",
-          "模块结构"
-        ],
-        "intentPatterns": [
-          "(design|architect|structure).*?(system|module|service|domain)",
-          "(how to|best practice).*?(hexagonal|DDD|architecture|domain model)",
-          "(evaluate|review|assess).*?architecture",
-          "(refactor|restructure).*?(to|into).*?(hexagonal|DDD)",
-          "(设计|架构|构建).*(系统|模块|服务|领域)",
-          "(如何|最佳实践).*(六边形|DDD|架构|领域模型)",
-          "(评估|评审|审查).*架构",
-          "(重构|改造).*(六边形|DDD)"
-        ]
-      },
-      "fileTriggers": {
-        "pathPatterns": [
-          "**/patra-*-domain/src/**/*.java",
-          "**/ARCHITECTURE.md",
-          "**/docs/architecture/**",
-          "**/docs/design/**"
-        ]
-      }
-    },
     "java-runtime-diagnostic": {
       "type": "domain",
       "enforcement": "suggest",
