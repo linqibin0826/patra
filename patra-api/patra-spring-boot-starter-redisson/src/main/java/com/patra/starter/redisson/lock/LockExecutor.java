@@ -93,11 +93,6 @@ public class LockExecutor {
             recordLockFailed(context.getLockKey(), lockType, "infrastructure_error");
             throw new LockInfrastructureException(context.getLockKey(), e);
 
-        } catch (Exception e) {
-            log.error("Redis 基础设施错误: {}", context.getLockKey(), e);
-            recordLockFailed(context.getLockKey(), lockType, "infrastructure_error");
-            throw new LockInfrastructureException(context.getLockKey(), e);
-
         } finally {
             // 释放锁并记录持有时间
             releaseLock(lock, context, lockType);
