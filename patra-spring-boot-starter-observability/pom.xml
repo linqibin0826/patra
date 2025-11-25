@@ -87,6 +87,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Redisson Starter (可选): 用于 LockMetricsRecorder 实现 LockObserver SPI -->
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-redisson</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Spring Web (可选): 用于 RestClientObservationInterceptor -->
         <dependency>
             <groupId>org.springframework</groupId>

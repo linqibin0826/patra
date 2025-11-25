@@ -109,8 +109,13 @@ public class ObservationInterceptorsAutoConfiguration {
     ///
     /// 仅在 patra-spring-boot-starter-redisson 存在时生效。
     ///
+    /// **SPI 设计说明**：
+    /// - `LockObserver` 接口定义在 redisson 模块
+    /// - `LockMetricsRecorder` 实现该接口，提供 Micrometer 指标记录
+    /// - 通过依赖倒置，redisson 不需要编译期依赖 observability
+    ///
     /// @param meterRegistry Micrometer 指标注册表
-    /// @return 分布式锁指标记录器实例
+    /// @return 分布式锁指标记录器实例（作为 LockObserver 注入到 LockExecutor）
     @Bean
     @ConditionalOnClass(name = "org.redisson.api.RedissonClient")
     @ConditionalOnBean(MeterRegistry.class)

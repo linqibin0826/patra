@@ -164,14 +164,22 @@ patra:
       default-wait-time: 3000        # 默认等待时间
       default-lease-time: -1         # 默认租约时间（-1 启用看门狗）
       key-prefix: "patra:lock:"      # 锁键前缀
-
-    observability:
-      metrics-enabled: true          # Micrometer 指标
-      logging-enabled: true          # Slf4j 日志
-      log-level: "DEBUG"             # 日志级别
 ```
 
 ## 可观测性
+
+可观测性功能由 `patra-spring-boot-starter-observability` 提供（可选依赖）。
+
+### 启用方式
+
+添加 observability 依赖后，自动启用分布式锁指标记录：
+
+```xml
+<dependency>
+    <groupId>com.patra</groupId>
+    <artifactId>patra-spring-boot-starter-observability</artifactId>
+</dependency>
+```
 
 ### 指标（Micrometer）
 
@@ -195,6 +203,23 @@ DEBUG - 锁释放: key=patra:lock:order:12345, holdTime=120ms
 WARN  - 锁获取失败: key=patra:lock:order:12345, reason=timeout
 ```
 
+### 扩展点
+
+可以实现 `LockObserver` 接口自定义可观测性行为：
+
+```java
+@Bean
+public LockObserver customLockObserver() {
+    return new LockObserver() {
+        @Override
+        public void onLockAcquired(String lockKey, String lockType, long waitTimeMs) {
+            // 自定义处理
+        }
+        // ... 其他方法
+    };
+}
+```
+
 ## 模块结构
 
 ```
@@ -214,13 +239,11 @@ patra-spring-boot-starter-redisson/
 │   ├── LockInfrastructureException.java
 │   ├── LockExpressionException.java
 │   └── LockTimeoutException.java
-├── listener/                   # 可观测性
-│   ├── LockMetricsRecorder.java
-│   └── LockLoggingRecorder.java
+├── listener/                   # 扩展点
+│   └── LockObserver.java       # SPI 接口（observability 实现）
 └── autoconfigure/              # 自动配置
     ├── RedissonAutoConfiguration.java
-    ├── LockAutoConfiguration.java
-    └── ObservabilityAutoConfiguration.java
+    └── LockAutoConfiguration.java
 ```
 
 ## 依赖关系
@@ -228,7 +251,7 @@ patra-spring-boot-starter-redisson/
 - `redisson-spring-boot-starter`：Redisson 官方 Starter
 - `spring-boot-starter-aop`：AOP 支持
 - `patra-common-core`：错误码框架
-- `patra-spring-boot-starter-observability`：可观测性基础设施
+- `patra-spring-boot-starter-observability`（可选）：可观测性基础设施，提供 `LockMetricsRecorder` 实现
 
 ## 设计原则
 
