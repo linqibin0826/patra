@@ -90,6 +90,16 @@ public class LockExecutor {
             // 已经记录过失败指标，直接重新抛出
             throw e;
 
+        } catch (RuntimeException e) {
+            // 如果锁已获取，说明是业务逻辑异常，直接重新抛出
+            if (context.isAcquired()) {
+                throw e;
+            }
+            // 否则是 Redis 基础设施错误
+            log.error("Redis 基础设施错误: {}", context.getLockKey(), e);
+            recordLockFailed(context.getLockKey(), lockType, "infrastructure_error");
+            throw new LockInfrastructureException(context.getLockKey(), e);
+
         } catch (Exception e) {
             log.error("Redis 基础设施错误: {}", context.getLockKey(), e);
             recordLockFailed(context.getLockKey(), lockType, "infrastructure_error");
