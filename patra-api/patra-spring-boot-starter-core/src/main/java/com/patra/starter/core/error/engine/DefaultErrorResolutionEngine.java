@@ -87,6 +87,7 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   private final boolean traitMappingEnabled;
   private final boolean namingHeuristicEnabled;
   private final long slowThresholdMs;
+  private final boolean logSlowResolutionEnabled;
 
   /// 异常类型到解析策略的缓存。
   ///
@@ -144,16 +145,18 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
     this.traitMappingEnabled = errorProperties.getEngine().isEnableTraitMapping();
     this.namingHeuristicEnabled = errorProperties.getEngine().isEnableNamingHeuristic();
     this.slowThresholdMs = errorProperties.getObservation().getSlowThresholdMs();
+    this.logSlowResolutionEnabled = errorProperties.getObservation().isLogSlowResolution();
 
     log.info(
         "初始化 ErrorResolutionEngine: contextPrefix={}, contributors={}, maxCauseDepth={}, "
-            + "traitMappingEnabled={}, namingHeuristicEnabled={}, slowThresholdMs={}ms",
+            + "traitMappingEnabled={}, namingHeuristicEnabled={}, slowThresholdMs={}ms, logSlowResolution={}",
         contextPrefix,
         sorted.size(),
         maxCauseDepth,
         traitMappingEnabled,
         namingHeuristicEnabled,
-        slowThresholdMs);
+        slowThresholdMs,
+        logSlowResolutionEnabled);
   }
 
   /// 将异常解析为标准化的错误表示。
@@ -221,6 +224,9 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
 
   /// 记录慢解析日志（带限流）。
   private void logSlowResolution(Throwable exception, long durationMs) {
+    if (!logSlowResolutionEnabled) {
+      return;
+    }
     long now = System.currentTimeMillis();
     // 限流：每分钟最多记录一次
     if (now - lastSlowLogTime > SLOW_RESOLUTION_LOG_INTERVAL_MS) {
