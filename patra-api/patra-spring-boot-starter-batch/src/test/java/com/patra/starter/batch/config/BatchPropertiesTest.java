@@ -2,17 +2,17 @@ package com.patra.starter.batch.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link BatchProperties} 单元测试
- *
- * @author Patra Team
- * @since 1.0.0
- */
+/// {@link BatchProperties} 单元测试。
+///
+/// @author Patra Team
+/// @since 0.1.0
 class BatchPropertiesTest {
 
   @Test
+  @DisplayName("默认值：应正确初始化")
   void defaultValues_ShouldBeCorrect() {
     // When
     BatchProperties properties = new BatchProperties();
@@ -25,6 +25,7 @@ class BatchPropertiesTest {
   }
 
   @Test
+  @DisplayName("可观测性配置：应具有正确的默认值")
   void observabilityProperties_ShouldHaveCorrectDefaults() {
     // When
     BatchProperties properties = new BatchProperties();
@@ -43,6 +44,7 @@ class BatchPropertiesTest {
   }
 
   @Test
+  @DisplayName("Chunk 配置：应具有正确的默认值")
   void chunkProperties_ShouldHaveCorrectDefaults() {
     // When
     BatchProperties properties = new BatchProperties();
@@ -54,6 +56,7 @@ class BatchPropertiesTest {
   }
 
   @Test
+  @DisplayName("Setter 方法：应正确设置属性值")
   void setters_ShouldWorkCorrectly() {
     // Given
     BatchProperties properties = new BatchProperties();
@@ -72,6 +75,7 @@ class BatchPropertiesTest {
   }
 
   @Test
+  @DisplayName("数据源配置：应具有正确的默认值")
   void datasourceProperties_ShouldHaveCorrectDefaults() {
     // When
     BatchProperties properties = new BatchProperties();
@@ -87,6 +91,7 @@ class BatchPropertiesTest {
   }
 
   @Test
+  @DisplayName("数据源配置：设置 URL 后 isConfigured() 应返回 true")
   void datasourceProperties_isConfigured_ShouldReturnTrueWhenUrlIsSet() {
     // Given
     BatchProperties properties = new BatchProperties();
@@ -99,6 +104,7 @@ class BatchPropertiesTest {
   }
 
   @Test
+  @DisplayName("数据源配置：URL 为空白时 isConfigured() 应返回 false")
   void datasourceProperties_isConfigured_ShouldReturnFalseWhenUrlIsBlank() {
     // Given
     BatchProperties properties = new BatchProperties();
@@ -111,6 +117,7 @@ class BatchPropertiesTest {
   }
 
   @Test
+  @DisplayName("Hikari 配置：应具有正确的默认值")
   void hikariProperties_ShouldHaveCorrectDefaults() {
     // When
     BatchProperties properties = new BatchProperties();
@@ -122,9 +129,11 @@ class BatchPropertiesTest {
     assertThat(hikari.getMinimumIdle()).isEqualTo(2);
     assertThat(hikari.getConnectionTimeout()).isEqualTo(30000L);
     assertThat(hikari.getIdleTimeout()).isEqualTo(600000L);
+    assertThat(hikari.getMaxLifetime()).isEqualTo(1800000L);
   }
 
   @Test
+  @DisplayName("Hikari 配置：Setter 方法应正确设置属性值")
   void hikariProperties_Setters_ShouldWorkCorrectly() {
     // Given
     BatchProperties properties = new BatchProperties();
@@ -135,11 +144,13 @@ class BatchPropertiesTest {
     hikari.setMinimumIdle(3);
     hikari.setConnectionTimeout(60000L);
     hikari.setIdleTimeout(300000L);
+    hikari.setMaxLifetime(900000L);
 
     // Then
     assertThat(hikari.getMaximumPoolSize()).isEqualTo(10);
     assertThat(hikari.getMinimumIdle()).isEqualTo(3);
     assertThat(hikari.getConnectionTimeout()).isEqualTo(60000L);
     assertThat(hikari.getIdleTimeout()).isEqualTo(300000L);
+    assertThat(hikari.getMaxLifetime()).isEqualTo(900000L);
   }
 }

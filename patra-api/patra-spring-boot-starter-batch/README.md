@@ -181,6 +181,7 @@ patra:
         minimum-idle: 2         # 最小空闲连接（默认 2）
         connection-timeout: 30000  # 连接超时毫秒（默认 30s）
         idle-timeout: 600000    # 空闲超时毫秒（默认 10min）
+        max-lifetime: 1800000   # 连接最大生存时间毫秒（默认 30min）
 
     # 可观测性配置
     observability:

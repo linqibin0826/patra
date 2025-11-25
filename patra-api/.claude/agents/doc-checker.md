@@ -12,10 +12,9 @@ color: blue
 
 ## 🎯 核心职责
 
-检查三类文档与代码的一致性：
+检查两类文档与代码的一致性：
 1. **ADR** — 架构决策是否有记录
 2. **服务 README** — 服务描述是否准确
-3. **package-info.java** — 包级文档是否存在且准确
 
 ## 🔍 检查清单
 
@@ -45,21 +44,6 @@ ls docs/adr/ 2>/dev/null || echo "ADR 目录不存在"
 find . -maxdepth 2 -name "README.md" -path "*/patra-*/*" ! -path "*/patra-*-*/*"
 ```
 
-### 3. package-info.java 检查
-
-**只检查顶层边界包：**
-- `com.patra.{service}.domain`
-- `com.patra.{service}.domain.model`
-- `com.patra.{service}.domain.port`
-- `com.patra.{service}.app`
-- `com.patra.{service}.infra`
-- `com.patra.{service}.adapter`
-
-**检查内容：**
-- package-info.java 是否存在
-- 核心类型列表是否与实际类一致
-- 包职责描述是否准确
-
 ## 📝 输出格式
 
 ```markdown
@@ -71,7 +55,6 @@ find . -maxdepth 2 -name "README.md" -path "*/patra-*/*" ! -path "*/patra-*-*/*"
 ## 🔴 缺失文档
 - `docs/adr/` — [描述缺失的决策记录]
 - `patra-xxx/README.md` — 服务 README 不存在
-- `com.patra.xxx.domain/package-info.java` — 包文档不存在
 
 ## 🟡 内容过时
 - **文件**: `path/to/file`
@@ -87,6 +70,5 @@ find . -maxdepth 2 -name "README.md" -path "*/patra-*/*" ! -path "*/patra-*-*/*"
 
 ## ⚠️ 注意事项
 
-1. **只检查，不修改** 
+1. **只检查，不修改**
 2. **不要过度检查** — 实现细节不需要文档
-3. **聚焦边界** — 只检查顶层包，不检查子包

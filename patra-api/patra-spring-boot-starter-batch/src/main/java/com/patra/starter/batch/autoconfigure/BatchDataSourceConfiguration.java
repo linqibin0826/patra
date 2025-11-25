@@ -5,11 +5,12 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.support.JdbcTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.util.StringUtils;
@@ -29,8 +30,9 @@ import org.springframework.util.StringUtils;
 /// - `batchTransactionManager` - JDBC 事务管理器
 ///
 /// @author Patra Team
-/// @since 1.0.0
-@Configuration
+/// @since 0.1.0
+@AutoConfiguration
+@ConditionalOnClass(HikariDataSource.class)
 @ConditionalOnProperty(prefix = "patra.batch.datasource", name = "url")
 @EnableConfigurationProperties(BatchProperties.class)
 public class BatchDataSourceConfiguration {
@@ -60,6 +62,7 @@ public class BatchDataSourceConfiguration {
     config.setMinimumIdle(hikariProps.getMinimumIdle());
     config.setConnectionTimeout(hikariProps.getConnectionTimeout());
     config.setIdleTimeout(hikariProps.getIdleTimeout());
+    config.setMaxLifetime(hikariProps.getMaxLifetime());
     config.setPoolName("batch-hikari-pool");
 
     return new HikariDataSource(config);

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.patra.starter.batch.config.BatchProperties;
 import com.zaxxer.hikari.HikariDataSource;
 import javax.sql.DataSource;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -20,6 +21,7 @@ class BatchDataSourceConfigurationTest {
           .withConfiguration(AutoConfigurations.of(BatchDataSourceConfiguration.class));
 
   @Test
+  @DisplayName("未配置 datasource.url 时：不应创建 batchDataSource Bean")
   void batchDataSource_ShouldNotBeCreated_WhenUrlNotConfigured() {
     // When: 没有配置 datasource.url
     contextRunner.run(
@@ -31,6 +33,7 @@ class BatchDataSourceConfigurationTest {
   }
 
   @Test
+  @DisplayName("配置 datasource.url 时：应创建 batchDataSource 和 batchTransactionManager Bean")
   void batchDataSource_ShouldBeCreated_WhenUrlConfigured() {
     // When: 配置了 datasource.url
     contextRunner
@@ -54,6 +57,7 @@ class BatchDataSourceConfigurationTest {
   }
 
   @Test
+  @DisplayName("未配置 Hikari 参数时：应使用默认 Hikari 配置")
   void batchDataSource_ShouldUseHikariDefaults() {
     // When: 只配置 URL，不配置 Hikari 参数
     contextRunner
@@ -76,6 +80,7 @@ class BatchDataSourceConfigurationTest {
   }
 
   @Test
+  @DisplayName("配置自定义 Hikari 参数时：应使用自定义配置")
   void batchDataSource_ShouldUseCustomHikariConfig() {
     // When: 配置了自定义 Hikari 参数
     contextRunner
@@ -101,6 +106,7 @@ class BatchDataSourceConfigurationTest {
   }
 
   @Test
+  @DisplayName("用户自定义 batchDataSource Bean 时：不应覆盖用户定义的 Bean")
   void batchDataSource_ShouldNotOverrideUserDefinedBean() {
     // Given: 用户自定义了 batchDataSource Bean
     contextRunner
