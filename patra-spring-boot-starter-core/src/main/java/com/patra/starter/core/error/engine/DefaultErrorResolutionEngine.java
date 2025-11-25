@@ -182,19 +182,19 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
 
     ErrorResolution resolution;
     if (cachedStrategy != null) {
-      // 缓存命中
-      cacheHits.incrementAndGet();
       Optional<ErrorResolution> cached = cachedStrategy.resolve(exception, 0);
       if (cached.isPresent()) {
+        // 缓存命中（只在策略实际返回结果时才算命中）
+        cacheHits.incrementAndGet();
         resolution = cached.get();
         logCacheHit(exceptionClass, resolution, startTime);
         return resolution;
       }
-      // 缓存策略失效（罕见场景，如异常的 cause 不同）
+      // 缓存策略失效（罕见场景，如异常的 cause 不同）- 算作 miss
       log.debug("缓存策略失效: {}", exceptionClass.getSimpleName());
     }
 
-    // 缓存未命中，执行完整解析
+    // 缓存未命中或策略失效，执行完整解析
     cacheMisses.incrementAndGet();
     resolution = resolveAndCache(exception, exceptionClass, startTime);
 
