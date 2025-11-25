@@ -2,7 +2,7 @@
 name: code-reviewer
 description: 代码审查专家。在代码变更后主动审查代码质量、架构合规性和项目规范。关键词：代码审查、code review、PR 审查、代码质量、安全检查。use proactively 在编写或修改代码后进行审查。
 tools: Read, Grep, Glob, Bash, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols
-model: sonnet
+model: opus
 color: green
 ---
 
