@@ -24,7 +24,7 @@ import org.springframework.util.StringUtils;
 /// 未配置 `datasource.url` 时，使用应用默认数据源（向后兼容）。
 ///
 /// @author Patra Team
-/// @since 1.0.0
+/// @since 0.1.0
 @ConfigurationProperties(prefix = "patra.batch")
 @Data
 public class BatchProperties {
@@ -141,5 +141,10 @@ public class BatchProperties {
 
     /// 空闲连接超时时间（毫秒，默认 10 分钟）。
     private long idleTimeout = 600000;
+
+    /// 连接最大生存时间（毫秒，默认 30 分钟）。
+    ///
+    /// 建议设置为小于数据库 `wait_timeout` 的值，避免连接被数据库服务器关闭。
+    private long maxLifetime = 1800000;
   }
 }
