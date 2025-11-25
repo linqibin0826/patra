@@ -1,17 +1,16 @@
 package com.patra.starter.batch.autoconfigure;
 
+import com.patra.starter.batch.config.BatchProperties;
 import javax.sql.DataSource;
-import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.support.DefaultBatchConfiguration;
-import org.springframework.batch.core.explore.JobExplorer;
-import org.springframework.batch.core.explore.support.JobExplorerFactoryBean;
 import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
-import org.springframework.batch.core.repository.support.JobRepositoryFactoryBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SyncTaskExecutor;
@@ -27,9 +26,18 @@ import org.springframework.transaction.PlatformTransactionManager;
 /// - JobExplorer - Job 执行历史查询
 /// - JobOperator - Job 运维操作接口
 ///
+/// ## 数据源选择
+///
+/// 支持独立数据源配置，优先级如下：
+///
+/// 1. 用户自定义 `batchDataSource` Bean（最高）
+/// 2. `patra.batch.datasource.*` 配置创建的数据源
+/// 3. 主数据源 `@Primary DataSource`（默认回退）
+///
 /// ## 关键改进
 ///
-/// JobLauncher 使用 `SyncTaskExecutor` 而非 `SimpleAsyncTaskExecutor`，因为 XXL-Job 已提供异步调度能力，无需二次异步。
+/// - JobLauncher 使用 `SyncTaskExecutor`（XXL-Job 已异步）
+/// - 移除 `@EnableBatchProcessing`（Spring Boot 3 推荐）
 ///
 /// 条件激活：`patra.batch.enabled=true`（默认启用）
 ///
@@ -41,28 +49,58 @@ import org.springframework.transaction.PlatformTransactionManager;
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
-@EnableBatchProcessing
-@AutoConfiguration
+@AutoConfiguration(after = BatchDataSourceConfiguration.class)
+@EnableConfigurationProperties(BatchProperties.class)
 public class BatchAutoConfiguration extends DefaultBatchConfiguration {
 
-  /// 配置 JobRepository（基于数据库）。
+  private final BatchProperties properties;
+  private final DataSource batchDataSource;
+  private final PlatformTransactionManager batchTransactionManager;
+
+  /// 构造函数：优先使用独立数据源，否则回退到主数据源。
   ///
-  /// JobRepository 负责持久化 Spring Batch 元数据（Job 实例、执行记录、步骤信息等）
+  /// @param properties Batch 配置属性
+  /// @param primaryDataSource 主数据源（Spring Boot 自动配置）
+  /// @param batchDataSource 独立 Batch 数据源（可选，由 BatchDataSourceConfiguration 创建）
+  /// @param batchTransactionManager 独立 Batch 事务管理器（可选）
+  public BatchAutoConfiguration(
+      BatchProperties properties,
+      DataSource primaryDataSource,
+      @Autowired(required = false) @Qualifier("batchDataSource") DataSource batchDataSource,
+      @Autowired(required = false) @Qualifier("batchTransactionManager")
+          PlatformTransactionManager batchTransactionManager) {
+    this.properties = properties;
+    // 优先使用独立数据源，否则回退到主数据源
+    this.batchDataSource = (batchDataSource != null) ? batchDataSource : primaryDataSource;
+    // 优先使用独立事务管理器，否则创建新的
+    this.batchTransactionManager =
+        (batchTransactionManager != null)
+            ? batchTransactionManager
+            : new JdbcTransactionManager(this.batchDataSource);
+  }
+
+  /// 返回 Batch 使用的数据源。
   ///
-  /// @param dataSource 数据源（Spring Boot 自动配置）
-  /// @param transactionManager 事务管理器
-  /// @return JobRepository 实例
-  /// @throws Exception 工厂 Bean 初始化异常
-  @Bean
-  public JobRepository jobRepository(
-      DataSource dataSource, PlatformTransactionManager transactionManager) throws Exception {
-    JobRepositoryFactoryBean factory = new JobRepositoryFactoryBean();
-    factory.setDataSource(dataSource);
-    factory.setTransactionManager(transactionManager);
-    factory.setIsolationLevelForCreate("ISOLATION_READ_COMMITTED");
-    factory.setTablePrefix("BATCH_"); // Spring Batch 默认表前缀
-    factory.afterPropertiesSet();
-    return factory.getObject();
+  /// 重写父类方法，支持独立数据源。
+  @Override
+  protected DataSource getDataSource() {
+    return batchDataSource;
+  }
+
+  /// 返回 Batch 使用的事务管理器。
+  ///
+  /// 重写父类方法，支持独立事务管理器。
+  @Override
+  protected PlatformTransactionManager getTransactionManager() {
+    return batchTransactionManager;
+  }
+
+  /// 返回表前缀。
+  ///
+  /// 从配置属性读取，默认为 `BATCH_`。
+  @Override
+  protected String getTablePrefix() {
+    return properties.getTablePrefix();
   }
 
   /// 配置 JobLauncher（同步执行）。
@@ -96,46 +134,4 @@ public class BatchAutoConfiguration extends DefaultBatchConfiguration {
 
     return launcher;
   }
-
-  /// 配置 JobExplorer（查询 Job 执行历史）。
-  ///
-  /// JobExplorer 提供只读访问 Job 元数据的能力，用于查询历史执行记录。
-  ///
-  /// @param dataSource 数据源
-  /// @param transactionManager 事务管理器
-  /// @return JobExplorer 实例
-  /// @throws Exception 工厂 Bean 初始化异常
-  @Bean
-  public JobExplorer jobExplorer(DataSource dataSource, PlatformTransactionManager transactionManager)
-      throws Exception {
-    JobExplorerFactoryBean factory = new JobExplorerFactoryBean();
-    factory.setDataSource(dataSource);
-    factory.setTransactionManager(transactionManager);
-    factory.setTablePrefix("BATCH_");
-    factory.afterPropertiesSet();
-    return factory.getObject();
-  }
-
-  /// 配置事务管理器。
-  ///
-  /// Spring Batch 需要事务支持来管理 Job 元数据。
-  ///
-  /// @param dataSource 数据源
-  /// @return 事务管理器
-  @Bean
-  public PlatformTransactionManager transactionManager(DataSource dataSource) {
-    return new JdbcTransactionManager(dataSource);
-  }
-
-  /// 配置 JobOperator（运维操作）。
-  ///
-  /// JobOperator 提供 Job 运维操作能力（启动、停止、重启、查询等）
-  ///
-  /// 注意：需要 JobRegistry 支持，由 `EnableBatchProcessing` 自动提供。
-  ///
-  /// @param jobExplorer Job 查询器
-  /// @param jobLauncher Job 启动器
-  /// @param jobRepository Job 元数据仓库
-  /// @return JobOperator 实例（由父类 DefaultBatchConfiguration 提供）
-  // JobOperator 由 DefaultBatchConfiguration 自动配置，无需手动创建
 }

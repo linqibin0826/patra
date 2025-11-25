@@ -1,0 +1,128 @@
+package com.patra.starter.batch.autoconfigure;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.patra.starter.batch.config.BatchProperties;
+import com.zaxxer.hikari.HikariDataSource;
+import javax.sql.DataSource;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.transaction.PlatformTransactionManager;
+
+/// {@link BatchDataSourceConfiguration} 单元测试。
+///
+/// 验证 Batch 独立数据源的条件装配逻辑。
+class BatchDataSourceConfigurationTest {
+
+  private final ApplicationContextRunner contextRunner =
+      new ApplicationContextRunner()
+          .withConfiguration(AutoConfigurations.of(BatchDataSourceConfiguration.class));
+
+  @Test
+  void batchDataSource_ShouldNotBeCreated_WhenUrlNotConfigured() {
+    // When: 没有配置 datasource.url
+    contextRunner.run(
+        context -> {
+          // Then: 不应创建 batchDataSource Bean
+          assertThat(context).doesNotHaveBean("batchDataSource");
+          assertThat(context).doesNotHaveBean("batchTransactionManager");
+        });
+  }
+
+  @Test
+  void batchDataSource_ShouldBeCreated_WhenUrlConfigured() {
+    // When: 配置了 datasource.url
+    contextRunner
+        .withPropertyValues(
+            "patra.batch.datasource.url=jdbc:h2:mem:batch_test;MODE=MySQL",
+            "patra.batch.datasource.username=sa",
+            "patra.batch.datasource.password=")
+        .run(
+            context -> {
+              // Then: 应创建 batchDataSource 和 batchTransactionManager Bean
+              assertThat(context).hasBean("batchDataSource");
+              assertThat(context).hasBean("batchTransactionManager");
+
+              DataSource dataSource = context.getBean("batchDataSource", DataSource.class);
+              assertThat(dataSource).isInstanceOf(HikariDataSource.class);
+
+              PlatformTransactionManager txManager =
+                  context.getBean("batchTransactionManager", PlatformTransactionManager.class);
+              assertThat(txManager).isNotNull();
+            });
+  }
+
+  @Test
+  void batchDataSource_ShouldUseHikariDefaults() {
+    // When: 只配置 URL，不配置 Hikari 参数
+    contextRunner
+        .withPropertyValues(
+            "patra.batch.datasource.url=jdbc:h2:mem:batch_test;MODE=MySQL",
+            "patra.batch.datasource.username=sa",
+            "patra.batch.datasource.password=")
+        .run(
+            context -> {
+              HikariDataSource dataSource =
+                  context.getBean("batchDataSource", HikariDataSource.class);
+
+              // Then: 应使用默认的 Hikari 配置
+              assertThat(dataSource.getMaximumPoolSize()).isEqualTo(5);
+              assertThat(dataSource.getMinimumIdle()).isEqualTo(2);
+              assertThat(dataSource.getConnectionTimeout()).isEqualTo(30000L);
+              assertThat(dataSource.getIdleTimeout()).isEqualTo(600000L);
+              assertThat(dataSource.getPoolName()).isEqualTo("batch-hikari-pool");
+            });
+  }
+
+  @Test
+  void batchDataSource_ShouldUseCustomHikariConfig() {
+    // When: 配置了自定义 Hikari 参数
+    contextRunner
+        .withPropertyValues(
+            "patra.batch.datasource.url=jdbc:h2:mem:batch_test;MODE=MySQL",
+            "patra.batch.datasource.username=sa",
+            "patra.batch.datasource.password=",
+            "patra.batch.datasource.hikari.maximum-pool-size=10",
+            "patra.batch.datasource.hikari.minimum-idle=3",
+            "patra.batch.datasource.hikari.connection-timeout=60000",
+            "patra.batch.datasource.hikari.idle-timeout=300000")
+        .run(
+            context -> {
+              HikariDataSource dataSource =
+                  context.getBean("batchDataSource", HikariDataSource.class);
+
+              // Then: 应使用自定义配置
+              assertThat(dataSource.getMaximumPoolSize()).isEqualTo(10);
+              assertThat(dataSource.getMinimumIdle()).isEqualTo(3);
+              assertThat(dataSource.getConnectionTimeout()).isEqualTo(60000L);
+              assertThat(dataSource.getIdleTimeout()).isEqualTo(300000L);
+            });
+  }
+
+  @Test
+  void batchDataSource_ShouldNotOverrideUserDefinedBean() {
+    // Given: 用户自定义了 batchDataSource Bean
+    contextRunner
+        .withPropertyValues(
+            "patra.batch.datasource.url=jdbc:h2:mem:batch_test;MODE=MySQL",
+            "patra.batch.datasource.username=sa",
+            "patra.batch.datasource.password=")
+        .withBean(
+            "batchDataSource",
+            DataSource.class,
+            () -> {
+              HikariDataSource ds = new HikariDataSource();
+              ds.setJdbcUrl("jdbc:h2:mem:user_defined");
+              ds.setPoolName("user-defined-pool");
+              return ds;
+            })
+        .run(
+            context -> {
+              // Then: 应使用用户定义的 Bean
+              HikariDataSource dataSource =
+                  context.getBean("batchDataSource", HikariDataSource.class);
+              assertThat(dataSource.getPoolName()).isEqualTo("user-defined-pool");
+            });
+  }
+}
