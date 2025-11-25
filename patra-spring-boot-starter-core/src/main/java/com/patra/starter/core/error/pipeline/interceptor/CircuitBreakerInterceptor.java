@@ -3,6 +3,7 @@ package com.patra.starter.core.error.pipeline.interceptor;
 import com.patra.common.error.codes.ErrorCodeLike;
 import com.patra.starter.core.error.config.ErrorProperties;
 import com.patra.starter.core.error.model.ErrorResolution;
+import com.patra.starter.core.error.model.ResolutionStrategy;
 import com.patra.starter.core.error.model.SimpleErrorCode;
 import com.patra.starter.core.error.pipeline.ResolutionInterceptor;
 import com.patra.starter.core.error.pipeline.ResolutionInvocation;
@@ -58,7 +59,7 @@ public class CircuitBreakerInterceptor implements ResolutionInterceptor {
     } catch (CallNotPermittedException ex) {
       log.warn("错误解析期间熔断器已打开,使用降级错误码。原因: {}", ex.getMessage());
       ErrorCodeLike code = SimpleErrorCode.create(contextPrefix, "0503");
-      return new ErrorResolution(code, code.httpStatus());
+      return new ErrorResolution(code, code.httpStatus(), ResolutionStrategy.FALLBACK);
     }
   }
 }

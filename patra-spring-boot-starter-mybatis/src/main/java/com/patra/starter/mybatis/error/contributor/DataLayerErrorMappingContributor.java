@@ -8,13 +8,21 @@ import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /// 将数据访问层异常（特别是 MyBatis-Plus 和底层 JDBC 驱动程序）转换为标准化平台错误码的 {@link ErrorMappingContributor}。
 ///
 /// 此组件通过确保将低级数据库错误转换为有意义且一致的 HTTP 响应代码，在全局错误处理策略中发挥着至关重要的作用。它处理常见问题，如数据冲突、约束违规和连接问题。
+///
+/// **优先级**: {@link Ordered#HIGHEST_PRECEDENCE} - SQL 异常非常常见,应优先处理以提升性能。
+///
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class DataLayerErrorMappingContributor implements ErrorMappingContributor {
 
   private final HttpStdErrors.Group http;

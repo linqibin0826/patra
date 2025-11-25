@@ -5,6 +5,7 @@ import com.patra.starter.core.error.model.SimpleErrorCode;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /// MeSH 导入业务异常映射贡献者。
@@ -21,7 +22,7 @@ import org.springframework.stereotype.Component;
 ///   - 通过异常消息内容区分业务语义（实用主义）
 ///   - 集中管理异常到 HTTP 状态码的映射（DRY 原则）
 ///
-/// **优先级**： 高于框架默认的类名启发式（IllegalXxxException → 422），确保业务语义正确映射。
+/// **优先级**： 40（高优先级） - 处理通用异常（IllegalStateException、IllegalArgumentException）的业务语义映射，需要高于框架默认的类名启发式（IllegalXxxException → 422），确保业务语义正确映射。
 ///
 /// **错误码格式**： CATALOG-{httpStatusCode}，例如：
 ///
@@ -35,6 +36,7 @@ import org.springframework.stereotype.Component;
 /// @since 0.1.0
 @Slf4j
 @Component
+@Order(40)
 public class MeshImportErrorMappingContributor implements ErrorMappingContributor {
 
   private static final String CONTEXT_PREFIX = "CATALOG";

@@ -29,6 +29,8 @@ import org.springframework.core.Ordered;
 /// - error.class - 异常的完全限定类名
 /// - error.type - 异常的简单类名
 /// - resolution.success - 解析是否成功（true/false）
+/// - resolution.strategy - 使用的解析策略（cache/application-exception/contributor/trait/naming/cause/fallback）
+/// - resolution.depth - 原因链递归深度（仅在 CAUSE 策略时有意义）
 ///
 /// 执行顺序：
 ///
@@ -83,10 +85,13 @@ public class ObservationResolutionInterceptor implements ResolutionInterceptor, 
             // 调用下一个拦截器或解析引擎
             ErrorResolution resolution = invocation.proceed(exception);
 
-            // 记录解析结果
+            // 记录解析结果和策略
             observation.lowCardinalityKeyValue("resolution.success", "true");
+            observation.lowCardinalityKeyValue("resolution.strategy", resolution.strategy().getValue());
 
-            log.debug("错误解析成功: {}", exception.getClass().getSimpleName());
+            log.debug("错误解析成功: {} (策略: {})",
+                exception.getClass().getSimpleName(),
+                resolution.strategy().getValue());
 
             return resolution;
 
