@@ -41,6 +41,7 @@ public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptor
 
   private final XmlParserPort xmlParserPort;
   private final String filePath;
+  private final String meshVersion;
 
   private InputStream inputStream;
   private Stream<MeshDescriptorAggregate> stream;
@@ -52,16 +53,19 @@ public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptor
   ///
   /// @param xmlParserPort XML 解析端口
   /// @param filePath XML 文件路径（从 Job 参数注入）
+  /// @param meshVersion MeSH 版本号（从 Job 参数注入）
   public MeshDescriptorItemReader(
       XmlParserPort xmlParserPort,
-      @Value("#{jobParameters['filePath']}") String filePath) {
+      @Value("#{jobParameters['filePath']}") String filePath,
+      @Value("#{jobParameters['meshVersion']}") String meshVersion) {
     this.xmlParserPort = xmlParserPort;
     this.filePath = filePath;
+    this.meshVersion = meshVersion;
   }
 
   @Override
   public void open(ExecutionContext executionContext) throws ItemStreamException {
-    log.info("打开 MeSH Descriptor XML 文件：{}", filePath);
+    log.info("打开 MeSH Descriptor XML 文件：{}，版本：{}", filePath, meshVersion);
 
     // 从 ExecutionContext 恢复进度
     if (executionContext.containsKey(CURRENT_INDEX_KEY)) {
@@ -74,7 +78,7 @@ public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptor
       inputStream = Files.newInputStream(Path.of(filePath));
 
       // 委托 XmlParserPort 解析
-      stream = xmlParserPort.parseDescriptors(inputStream);
+      stream = xmlParserPort.parseDescriptors(inputStream, meshVersion);
       iterator = stream.iterator();
 
       // 跳过已处理的记录

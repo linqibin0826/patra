@@ -75,7 +75,8 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
       log.info("已清空所有限定词旧数据");
 
       // 3. 解析 XML 并批量保存（使用 Path 重载方法，由 Infra 层负责文件 I/O）
-      List<MeshQualifierAggregate> qualifiers = xmlParserPort.parseQualifiers(localFile).toList();
+      List<MeshQualifierAggregate> qualifiers =
+          xmlParserPort.parseQualifiers(localFile, command.meshVersion()).toList();
       qualifierRepository.saveBatch(qualifiers);
 
       log.info("MeSH 限定词导入完成，数量：{}", qualifiers.size());

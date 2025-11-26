@@ -3,6 +3,7 @@ package com.patra.catalog.app.usecase.mesh;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -251,7 +252,7 @@ class MeshImportOrchestratorTest {
           createMockQualifier("Q000002"));
 
       when(fileDownloadPort.downloadToTemp(URI.create(QUALIFIER_URL))).thenReturn(QUALIFIER_LOCAL_PATH);
-      when(xmlParserPort.parseQualifiers(any(Path.class))).thenReturn(qualifiers.stream());
+      when(xmlParserPort.parseQualifiers(any(Path.class), anyString())).thenReturn(qualifiers.stream());
 
       // When
       MeshQualifierImportResult result = orchestrator.importQualifiers(command);
@@ -259,7 +260,7 @@ class MeshImportOrchestratorTest {
       // Then - 验证调用顺序：下载 → 清空 → 解析 → 保存
       verify(fileDownloadPort).downloadToTemp(URI.create(QUALIFIER_URL));
       verify(qualifierRepository).truncateAll();
-      verify(xmlParserPort).parseQualifiers(any(Path.class));
+      verify(xmlParserPort).parseQualifiers(any(Path.class), anyString());
       verify(qualifierRepository).saveBatch(qualifiers);
 
       // Then - 验证结果
@@ -283,7 +284,7 @@ class MeshImportOrchestratorTest {
           createMockQualifier("Q000005"));
 
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(QUALIFIER_LOCAL_PATH);
-      when(xmlParserPort.parseQualifiers(any(Path.class))).thenReturn(qualifiers.stream());
+      when(xmlParserPort.parseQualifiers(any(Path.class), anyString())).thenReturn(qualifiers.stream());
 
       // When
       MeshQualifierImportResult result = orchestrator.importQualifiers(command);
@@ -298,7 +299,7 @@ class MeshImportOrchestratorTest {
       // Given
       MeshQualifierImportCommand command = MeshQualifierImportCommand.of(QUALIFIER_URL, "2025");
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(QUALIFIER_LOCAL_PATH);
-      when(xmlParserPort.parseQualifiers(any(Path.class))).thenReturn(Stream.empty());
+      when(xmlParserPort.parseQualifiers(any(Path.class), anyString())).thenReturn(Stream.empty());
 
       // When
       MeshQualifierImportResult result = orchestrator.importQualifiers(command);
@@ -314,7 +315,7 @@ class MeshImportOrchestratorTest {
       // Given
       MeshQualifierImportCommand command = MeshQualifierImportCommand.of(QUALIFIER_URL, "2025");
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(QUALIFIER_LOCAL_PATH);
-      when(xmlParserPort.parseQualifiers(any(Path.class)))
+      when(xmlParserPort.parseQualifiers(any(Path.class), anyString()))
           .thenThrow(new RuntimeException("XML 解析失败"));
 
       // When & Then
