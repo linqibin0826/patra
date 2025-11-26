@@ -35,6 +35,64 @@ color: green
 - **MyBatis-Plus**: 禁止 @Select 注解，DO 继承 BaseDO
 - **Starter**: 使用项目 Starter，禁止重复实现
 
+### Adapter 层入口
+
+**UseCase 模式检查**:
+
+| 检查项 | ✅ 正确 | ❌ 错误 |
+|--------|--------|--------|
+| 依赖方向 | 依赖 `UseCase` 接口 | 依赖 `Orchestrator` 实现 |
+| 参数传递 | `execute(Command cmd)` | `execute(String a, String b, Mode c)` |
+| 入口职责 | 协议转换、日志、响应封装 | 包含业务逻辑、复杂验证 |
+| 参数验证 | 在 `Command` 构造函数中 | 在 Controller/Job/Listener 中 |
+
+**包结构检查**:
+
+```
+patra-{service}-app/usecase/{feature}/
+├── {Feature}UseCase.java           # 必须：接口
+├── {Feature}Orchestrator.java      # 必须：实现 UseCase
+├── command/{Feature}Command.java   # 必须：参数验证在此
+└── dto/{Feature}Result.java        # 必须：返回结果
+
+patra-{service}-adapter/
+├── rest/{Feature}Controller.java   # HTTP 入口
+├── scheduler/job/{Feature}Job.java # 定时任务入口
+└── mq/{Feature}Listener.java       # 消息监听入口
+```
+
+**常见违规**:
+- ❌ Adapter 直接调用 Orchestrator 而非 UseCase 接口
+- ❌ 方法签名使用多个简单类型参数而非 Command 对象
+- ❌ 在 Controller/Job/Listener 中进行业务验证或枚举转换
+- ❌ 返回简单类型而非 Result 对象
+
+### 参数传递
+
+**核心原则**: 各层之间传递参数必须使用 POJO，禁止使用多个简单类型参数
+
+| 检查项 | ✅ 正确 | ❌ 错误 |
+|--------|--------|--------|
+| 方法签名 | `execute(ImportCommand cmd)` | `execute(String path, String version, String mode)` |
+| 返回值 | `ImportResult` / `Optional<Entity>` | `Long` / `boolean` / `void` |
+| 层间通信 | Command → UseCase → Result | 多参数散落传递 |
+| DTO 转换 | Adapter: DTO → Command | Application 层处理 DTO |
+
+**参数对象职责**:
+
+| 对象类型 | 所属层 | 职责 |
+|----------|--------|------|
+| `Param` / `DTO` | Adapter | 请求反序列化，无业务逻辑 |
+| `Command` | Application | 参数验证、枚举转换、业务约束 |
+| `Result` | Application | 封装执行结果、状态信息 |
+| `Entity` / `Aggregate` | Domain | 领域行为、业务规则 |
+
+**常见违规**:
+- ❌ `useCase.execute(filePath, version, mode)` 使用多个简单类型
+- ❌ `return executionId;` 返回原始类型而非 Result 对象
+- ❌ 在 Adapter 层创建领域对象或进行枚举转换
+- ❌ Command 不验证参数，验证逻辑散落在各处
+
 ### 依赖管理
 
 - **版本管理**: 新增依赖禁止硬编码版本号，必须在 `patra-parent` 的 `<dependencyManagement>` 统一管理
