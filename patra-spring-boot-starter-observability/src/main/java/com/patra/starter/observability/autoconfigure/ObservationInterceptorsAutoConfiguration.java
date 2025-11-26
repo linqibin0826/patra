@@ -1,6 +1,5 @@
 package com.patra.starter.observability.autoconfigure;
 
-import com.patra.starter.observability.interceptor.BatchObservationJobListener;
 import com.patra.starter.observability.interceptor.ObservationResolutionInterceptor;
 import com.patra.starter.observability.interceptor.RestClientObservationInterceptor;
 import com.patra.starter.observability.interceptor.redisson.LockMetricsRecorder;
@@ -20,8 +19,10 @@ import org.springframework.context.annotation.Bean;
 ///
 /// - ObservationResolutionInterceptor - 错误处理管道观测拦截器（patra-starter-core）
 /// - RestClientObservationInterceptor - HTTP 客户端观测拦截器（patra-starter-rest-client）
-/// - BatchObservationJobListener - Batch 任务观测监听器（patra-starter-batch）
 /// - LockMetricsRecorder - 分布式锁指标记录器（patra-starter-redisson）
+///
+/// **注意**：Batch 可观测性已迁移至 patra-spring-boot-starter-batch，
+/// 使用 Spring Batch 原生 `BatchObservabilityBeanPostProcessor` 实现零配置集成。
 ///
 /// 拦截器注册策略：
 ///
@@ -33,13 +34,11 @@ import org.springframework.context.annotation.Bean;
 ///
 /// - ObservationResolutionInterceptor 实现自定义的 ResolutionInterceptor 扩展点（符合 DIP）
 /// - RestClientObservationInterceptor 实现 Spring 标准的 ClientHttpRequestInterceptor（生命周期管理更可靠）
-/// - BatchObservationJobListener 实现 Spring Batch 标准的 JobExecutionListener
 ///
 /// @author Jobs
 /// @since 1.0.0
 /// @see com.patra.starter.core.error.pipeline.ResolutionInterceptor
 /// @see org.springframework.http.client.ClientHttpRequestInterceptor
-/// @see org.springframework.batch.core.JobExecutionListener
 @AutoConfiguration(after = ObservabilityAutoConfiguration.class)
 @ConditionalOnProperty(
     prefix = "patra.observability",
@@ -88,21 +87,6 @@ public class ObservationInterceptorsAutoConfiguration {
     ) {
         log.debug("注册 REST 客户端可观测性拦截器");
         return new RestClientObservationInterceptor(observationRegistry);
-    }
-
-    /// 注册批处理任务可观测性监听器。
-    ///
-    /// 仅在 patra-spring-boot-starter-batch 存在时生效。
-    ///
-    /// @param observationRegistry Micrometer Observation 注册表
-    /// @return 批处理任务监听器实例
-    @Bean
-    @ConditionalOnClass(name = "org.springframework.batch.core.JobExecutionListener")
-    public BatchObservationJobListener batchObservationJobListener(
-        ObservationRegistry observationRegistry
-    ) {
-        log.debug("注册批处理任务可观测性监听器");
-        return new BatchObservationJobListener(observationRegistry);
     }
 
     /// 注册分布式锁指标记录器。

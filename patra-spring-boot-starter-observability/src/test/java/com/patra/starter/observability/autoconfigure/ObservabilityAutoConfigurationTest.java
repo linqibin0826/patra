@@ -4,7 +4,6 @@ import com.patra.starter.observability.config.ObservabilityProperties;
 import com.patra.starter.observability.filter.SensitiveDataObservationFilter;
 import com.patra.starter.observability.handler.LoggingObservationHandler;
 import com.patra.starter.observability.handler.PerformanceObservationHandler;
-import com.patra.starter.observability.interceptor.BatchObservationJobListener;
 import com.patra.starter.observability.interceptor.ObservationResolutionInterceptor;
 import com.patra.starter.observability.interceptor.RestClientObservationInterceptor;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -114,8 +113,8 @@ class ObservabilityAutoConfigurationTest {
         assertThat(context.getBeanNamesForType(ObservationResolutionInterceptor.class))
             .isNotEmpty();
 
-        // 注意：RestClientObservationInterceptor 和 BatchObservationJobListener
-        // 是条件化 Bean，仅在相应类存在时注册，这里不验证
+        // 注意：RestClientObservationInterceptor 是条件化 Bean，仅在 spring-web 存在时注册
+        // Batch 可观测性已迁移至 patra-spring-boot-starter-batch
     }
 
     /**
@@ -136,40 +135,11 @@ class ObservabilityAutoConfigurationTest {
     }
 
     /**
-     * 测试条件化 Bean - BatchObservationJobListener。
-     *
-     * <p>仅在 spring-batch-core 存在时注册。
-     */
-    @Test
-    void shouldConditionallyRegisterBatchJobListener() {
-        // 如果 spring-batch-core 存在，BatchObservationJobListener 应该被注册
-        String[] beanNames = context.getBeanNamesForType(BatchObservationJobListener.class);
-
-        if (isSpringBatchPresent()) {
-            assertThat(beanNames).isNotEmpty();
-        } else {
-            assertThat(beanNames).isEmpty();
-        }
-    }
-
-    /**
      * 检查 spring-web 是否存在。
      */
     private boolean isSpringWebPresent() {
         try {
             Class.forName("org.springframework.http.client.ClientHttpRequestInterceptor");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
-    }
-
-    /**
-     * 检查 spring-batch-core 是否存在。
-     */
-    private boolean isSpringBatchPresent() {
-        try {
-            Class.forName("org.springframework.batch.core.JobExecutionListener");
             return true;
         } catch (ClassNotFoundException e) {
             return false;

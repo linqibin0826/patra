@@ -47,8 +47,13 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- 5. Micrometer 指标（继承自 core starter） -->
-        <!-- 无需单独依赖，patra-spring-boot-starter-core 已提供 -->
+        <!-- 5. Micrometer Observation（可选，用于 Spring Batch 原生可观测性） -->
+        <!-- 当 observability starter 存在时自动生效 -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-observation</artifactId>
+            <optional>true</optional>
+        </dependency>
 
         <!-- 6. SkyWalking 追踪（继承自 core starter） -->
         <!-- 无需单独依赖，patra-spring-boot-starter-core 已提供 -->
