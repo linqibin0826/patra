@@ -1,0 +1,24 @@
+package com.patra.catalog.adapter.scheduler.param;
+
+/// MeSH 限定词导入任务参数记录。
+///
+/// 通过 XXL-Job 调度器以 JSON 格式传递的任务参数。所有字段均为必填。
+///
+/// **导入模式**：
+///
+/// 限定词仅支持 TRUNCATE_REIMPORT 模式，每次导入前会清空所有现有数据。
+///
+/// JSON 格式示例：
+///
+/// ```json
+/// {
+///   "url": "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/qual2025.xml",
+///   "meshVersion": "2025"
+/// }
+/// ```
+///
+/// @param url XML 文件 URL（必填）- MeSH 限定词 XML 文件的 HTTP/HTTPS URL
+/// @param meshVersion MeSH 版本（必填）- 如 "2025"
+/// @author linqibin
+/// @since 0.1.0
+public record MeshQualifierImportJobParam(String url, String meshVersion) {}

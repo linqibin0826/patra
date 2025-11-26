@@ -1,0 +1,72 @@
+package com.patra.catalog.app.usecase.mesh.command;
+
+import cn.hutool.core.text.CharSequenceUtil;
+import com.patra.catalog.domain.exception.CatalogScheduleParameterException;
+import java.net.URI;
+
+/// MeSH 限定词导入命令（Adapter → Application）。
+///
+/// 由调度任务构建，经 Adapter 层协议转换后传递到应用层执行 MeSH 限定词导入。
+///
+/// **字段语义与约束**：
+///
+/// - **url**：远程 XML 文件 URL，必填，必须是 HTTP/HTTPS 协议
+/// - **meshVersion**：MeSH 版本号（如 "2025"），必填，不能为空白
+///
+/// **导入模式**：
+///
+/// 限定词导入仅支持 TRUNCATE_REIMPORT 模式（清空重导），因此不需要 mode 参数。
+/// 每次导入前会清空所有现有限定词数据。
+///
+/// **不变量**：
+///
+/// - 所有字段不为 null 且不为空白（在 compact constructor 中校验）
+/// - url 必须是有效的 HTTP 或 HTTPS URL
+///
+/// **线程安全**：
+///
+/// Record 是不可变的，可安全跨线程共享。
+///
+/// @param url 远程 XML 文件 URL（必填，HTTP/HTTPS 协议）
+/// @param meshVersion MeSH 版本号（必填）
+/// @author linqibin
+/// @since 0.1.0
+public record MeshQualifierImportCommand(String url, String meshVersion) {
+
+  /// 构造并验证命令参数。
+  ///
+  /// @throws CatalogScheduleParameterException 当 url 为空或格式无效时
+  /// @throws CatalogScheduleParameterException 当 meshVersion 为空时
+  public MeshQualifierImportCommand {
+    if (CharSequenceUtil.isBlank(url)) {
+      throw new CatalogScheduleParameterException("url 参数不能为空");
+    }
+    validateUrl(url);
+    if (CharSequenceUtil.isBlank(meshVersion)) {
+      throw new CatalogScheduleParameterException("meshVersion 参数不能为空");
+    }
+  }
+
+  /// 从原始字符串构建命令。
+  ///
+  /// @param url 远程 XML 文件 URL
+  /// @param meshVersion MeSH 版本号
+  /// @return 构建的命令对象
+  /// @throws CatalogScheduleParameterException 当参数无效时
+  public static MeshQualifierImportCommand of(String url, String meshVersion) {
+    return new MeshQualifierImportCommand(url, meshVersion);
+  }
+
+  /// 验证 URL 格式（必须是 HTTP 或 HTTPS 协议）。
+  private static void validateUrl(String url) {
+    try {
+      URI uri = URI.create(url);
+      String scheme = uri.getScheme();
+      if (scheme == null || !scheme.matches("https?")) {
+        throw new CatalogScheduleParameterException("url 必须是 HTTP 或 HTTPS 协议：" + url);
+      }
+    } catch (IllegalArgumentException e) {
+      throw new CatalogScheduleParameterException("url 格式无效：" + url, e);
+    }
+  }
+}

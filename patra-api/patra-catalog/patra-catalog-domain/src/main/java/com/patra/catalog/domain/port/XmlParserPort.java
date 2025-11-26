@@ -6,6 +6,7 @@ import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.stream.Stream;
 
 /// MeSH XML 解析接口（Port）。
@@ -58,6 +59,14 @@ public interface XmlParserPort {
   /// @param xmlInputStream 限定词 XML 文件输入流
   /// @return 限定词聚合根流（Stream）
   Stream<MeshQualifierAggregate> parseQualifiers(InputStream xmlInputStream);
+
+  /// 解析限定词（Qualifier）- 从文件路径。
+  ///
+  /// 从指定文件路径读取并解析 MeSH 限定词 XML 文件。
+  ///
+  /// @param filePath XML 文件路径
+  /// @return 限定词聚合根流（Stream）
+  Stream<MeshQualifierAggregate> parseQualifiers(Path filePath);
 
   /// 解析主题词（Descriptor）。
   ///

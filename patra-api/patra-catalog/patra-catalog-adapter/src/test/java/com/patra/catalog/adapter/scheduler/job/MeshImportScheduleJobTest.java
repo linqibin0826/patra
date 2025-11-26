@@ -10,9 +10,12 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.catalog.adapter.scheduler.param.MeshImportJobParam;
+import com.patra.catalog.adapter.scheduler.param.MeshQualifierImportJobParam;
 import com.patra.catalog.app.usecase.mesh.MeshImportUseCase;
 import com.patra.catalog.app.usecase.mesh.command.MeshImportCommand;
+import com.patra.catalog.app.usecase.mesh.command.MeshQualifierImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshImportResult;
+import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
 import com.patra.catalog.domain.exception.CatalogScheduleParameterException;
 import com.patra.catalog.domain.model.enums.MeshDescriptorImportMode;
 import com.xxl.job.core.context.XxlJobHelper;
@@ -76,7 +79,7 @@ class MeshImportScheduleJobTest {
             .thenReturn(result);
 
         // When
-        meshImportScheduleJob.execute();
+        meshImportScheduleJob.executeDescriptorImport();
 
         // Then
         verify(objectMapper).readValue(jsonParam, MeshImportJobParam.class);
@@ -111,7 +114,7 @@ class MeshImportScheduleJobTest {
             .thenReturn(result);
 
         // When
-        meshImportScheduleJob.execute();
+        meshImportScheduleJob.executeDescriptorImport();
 
         // Then
         verify(meshImportUseCase).importDescriptors(any(MeshImportCommand.class));
@@ -144,7 +147,7 @@ class MeshImportScheduleJobTest {
             .thenReturn(result);
 
         // When
-        meshImportScheduleJob.execute();
+        meshImportScheduleJob.executeDescriptorImport();
 
         // Then
         verify(meshImportUseCase).importDescriptors(any(MeshImportCommand.class));
@@ -165,7 +168,7 @@ class MeshImportScheduleJobTest {
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
         // When & Then
-        assertThatThrownBy(() -> meshImportScheduleJob.execute())
+        assertThatThrownBy(() -> meshImportScheduleJob.executeDescriptorImport())
             .isInstanceOf(CatalogScheduleParameterException.class)
             .hasMessageContaining("参数不能为空");
 
@@ -183,7 +186,7 @@ class MeshImportScheduleJobTest {
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
         // When & Then
-        assertThatThrownBy(() -> meshImportScheduleJob.execute())
+        assertThatThrownBy(() -> meshImportScheduleJob.executeDescriptorImport())
             .isInstanceOf(CatalogScheduleParameterException.class)
             .hasMessageContaining("参数不能为空");
 
@@ -204,7 +207,7 @@ class MeshImportScheduleJobTest {
             .thenThrow(new RuntimeException("JSON 解析错误"));
 
         // When & Then
-        assertThatThrownBy(() -> meshImportScheduleJob.execute())
+        assertThatThrownBy(() -> meshImportScheduleJob.executeDescriptorImport())
             .isInstanceOf(CatalogScheduleParameterException.class)
             .hasMessageContaining("参数解析失败");
 
@@ -226,7 +229,7 @@ class MeshImportScheduleJobTest {
         when(objectMapper.readValue(jsonParam, MeshImportJobParam.class)).thenReturn(param);
 
         // When & Then
-        assertThatThrownBy(() -> meshImportScheduleJob.execute())
+        assertThatThrownBy(() -> meshImportScheduleJob.executeDescriptorImport())
             .isInstanceOf(CatalogScheduleParameterException.class)
             .hasMessageContaining("url");
 
@@ -250,7 +253,7 @@ class MeshImportScheduleJobTest {
         when(objectMapper.readValue(jsonParam, MeshImportJobParam.class)).thenReturn(param);
 
         // When & Then
-        assertThatThrownBy(() -> meshImportScheduleJob.execute())
+        assertThatThrownBy(() -> meshImportScheduleJob.executeDescriptorImport())
             .isInstanceOf(CatalogScheduleParameterException.class)
             .hasMessageContaining("meshVersion");
 
@@ -274,7 +277,7 @@ class MeshImportScheduleJobTest {
         when(objectMapper.readValue(jsonParam, MeshImportJobParam.class)).thenReturn(param);
 
         // When & Then
-        assertThatThrownBy(() -> meshImportScheduleJob.execute())
+        assertThatThrownBy(() -> meshImportScheduleJob.executeDescriptorImport())
             .isInstanceOf(CatalogScheduleParameterException.class)
             .hasMessageContaining("mode");
 
@@ -299,7 +302,7 @@ class MeshImportScheduleJobTest {
         when(objectMapper.readValue(jsonParam, MeshImportJobParam.class)).thenReturn(param);
 
         // When & Then
-        assertThatThrownBy(() -> meshImportScheduleJob.execute())
+        assertThatThrownBy(() -> meshImportScheduleJob.executeDescriptorImport())
             .isInstanceOf(CatalogScheduleParameterException.class)
             .hasMessageContaining("非法的导入模式值");
 
@@ -333,9 +336,139 @@ class MeshImportScheduleJobTest {
             .thenThrow(cause);
 
         // When & Then
-        assertThatThrownBy(() -> meshImportScheduleJob.execute())
+        assertThatThrownBy(() -> meshImportScheduleJob.executeDescriptorImport())
             .isInstanceOf(RuntimeException.class)
             .hasMessageContaining("MeSH 导入任务执行失败")
+            .hasCause(cause);
+
+        xxlJobHelper.verify(() -> XxlJobHelper.handleFail(any(String.class)), times(1));
+      }
+    }
+  }
+
+  // ==================== Qualifier 导入测试 ====================
+
+  @Nested
+  @DisplayName("executeQualifierImport 方法测试")
+  class ExecuteQualifierImportTests {
+
+    @Test
+    @DisplayName("应该成功解析 JSON 参数并执行限定词导入")
+    void executeQualifierImport_shouldSucceedWithValidJsonParam() throws Exception {
+      try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
+        // Given
+        String jsonParam =
+            "{\"url\":\"https://nlmpubs.nlm.nih.gov/projects/mesh/2025/qual2025.xml\",\"meshVersion\":\"2025\"}";
+        MeshQualifierImportJobParam param =
+            new MeshQualifierImportJobParam(
+                "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/qual2025.xml", "2025");
+        MeshQualifierImportResult result =
+            MeshQualifierImportResult.success(
+                "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/qual2025.xml", "2025", 80);
+
+        xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
+        xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
+
+        when(objectMapper.readValue(jsonParam, MeshQualifierImportJobParam.class)).thenReturn(param);
+        when(meshImportUseCase.importQualifiers(any(MeshQualifierImportCommand.class)))
+            .thenReturn(result);
+
+        // When
+        meshImportScheduleJob.executeQualifierImport();
+
+        // Then
+        verify(objectMapper).readValue(jsonParam, MeshQualifierImportJobParam.class);
+        verify(meshImportUseCase).importQualifiers(any(MeshQualifierImportCommand.class));
+        xxlJobHelper.verify(() -> XxlJobHelper.handleSuccess(any(String.class)), times(1));
+      }
+    }
+
+    @Test
+    @DisplayName("应该在参数为空时抛出 CatalogScheduleParameterException")
+    void executeQualifierImport_shouldThrowExceptionWhenParamIsEmpty() {
+      try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
+        // Given
+        xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn("");
+        xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
+
+        // When & Then
+        assertThatThrownBy(() -> meshImportScheduleJob.executeQualifierImport())
+            .isInstanceOf(CatalogScheduleParameterException.class)
+            .hasMessageContaining("参数不能为空");
+
+        xxlJobHelper.verify(() -> XxlJobHelper.handleFail(any(String.class)), times(1));
+        verify(meshImportUseCase, never()).importQualifiers(any(MeshQualifierImportCommand.class));
+      }
+    }
+
+    @Test
+    @DisplayName("应该在缺少 url 字段时抛出 CatalogScheduleParameterException")
+    void executeQualifierImport_shouldThrowExceptionWhenUrlMissing() throws Exception {
+      try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
+        // Given
+        String jsonParam = "{\"meshVersion\":\"2025\"}";
+        MeshQualifierImportJobParam param = new MeshQualifierImportJobParam(null, "2025");
+
+        xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
+        xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
+
+        when(objectMapper.readValue(jsonParam, MeshQualifierImportJobParam.class)).thenReturn(param);
+
+        // When & Then
+        assertThatThrownBy(() -> meshImportScheduleJob.executeQualifierImport())
+            .isInstanceOf(CatalogScheduleParameterException.class)
+            .hasMessageContaining("url");
+
+        xxlJobHelper.verify(() -> XxlJobHelper.handleFail(any(String.class)), times(1));
+      }
+    }
+
+    @Test
+    @DisplayName("应该在缺少 meshVersion 字段时抛出 CatalogScheduleParameterException")
+    void executeQualifierImport_shouldThrowExceptionWhenMeshVersionMissing() throws Exception {
+      try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
+        // Given
+        String jsonParam = "{\"url\":\"https://example.com/mesh/qual2025.xml\"}";
+        MeshQualifierImportJobParam param =
+            new MeshQualifierImportJobParam("https://example.com/mesh/qual2025.xml", null);
+
+        xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
+        xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
+
+        when(objectMapper.readValue(jsonParam, MeshQualifierImportJobParam.class)).thenReturn(param);
+
+        // When & Then
+        assertThatThrownBy(() -> meshImportScheduleJob.executeQualifierImport())
+            .isInstanceOf(CatalogScheduleParameterException.class)
+            .hasMessageContaining("meshVersion");
+
+        xxlJobHelper.verify(() -> XxlJobHelper.handleFail(any(String.class)), times(1));
+      }
+    }
+
+    @Test
+    @DisplayName("应该在执行失败时包装并抛出 RuntimeException")
+    void executeQualifierImport_shouldWrapAndThrowExceptionWhenExecutionFails() throws Exception {
+      try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
+        // Given
+        String jsonParam =
+            "{\"url\":\"https://example.com/mesh/qual2025.xml\",\"meshVersion\":\"2025\"}";
+        MeshQualifierImportJobParam param =
+            new MeshQualifierImportJobParam("https://example.com/mesh/qual2025.xml", "2025");
+
+        xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
+        xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
+
+        when(objectMapper.readValue(jsonParam, MeshQualifierImportJobParam.class)).thenReturn(param);
+
+        RuntimeException cause = new RuntimeException("XML 解析失败");
+        when(meshImportUseCase.importQualifiers(any(MeshQualifierImportCommand.class)))
+            .thenThrow(cause);
+
+        // When & Then
+        assertThatThrownBy(() -> meshImportScheduleJob.executeQualifierImport())
+            .isInstanceOf(RuntimeException.class)
+            .hasMessageContaining("MeSH 限定词导入任务执行失败")
             .hasCause(cause);
 
         xxlJobHelper.verify(() -> XxlJobHelper.handleFail(any(String.class)), times(1));

@@ -1,7 +1,9 @@
 package com.patra.catalog.app.usecase.mesh;
 
 import com.patra.catalog.app.usecase.mesh.command.MeshImportCommand;
+import com.patra.catalog.app.usecase.mesh.command.MeshQualifierImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshImportResult;
+import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.enums.MeshDescriptorImportMode;
 import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
@@ -11,7 +13,6 @@ import com.patra.catalog.domain.port.MeshDescriptorRepository;
 import com.patra.catalog.domain.port.MeshQualifierRepository;
 import com.patra.catalog.domain.port.XmlParserPort;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,23 +50,42 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
 
   /// 导入 MeSH 限定词。
   ///
-  /// 小数据量（约 100 条），不使用 Spring Batch，直接在事务内批量保存。
+  /// 从远程 URL 下载 XML 文件，清空现有数据，解析并批量保存。
   ///
-  /// @param xmlInputStream 限定词 XML 文件输入流
-  /// @return 导入的限定词数量
+  /// **导入模式**：
+  ///
+  /// 限定词仅支持 TRUNCATE_REIMPORT 模式，每次导入前会清空所有现有数据。
+  ///
+  /// **注意**：TRUNCATE 是 DDL 操作，会隐式提交事务，无法回滚。
+  ///
+  /// @param command 导入命令（包含 URL 和版本号）
+  /// @return 导入结果摘要
+  @Override
   @Transactional
-  public int importQualifiers(InputStream xmlInputStream) {
-    log.info("开始导入 MeSH 限定词");
+  public MeshQualifierImportResult importQualifiers(MeshQualifierImportCommand command) {
+    log.info("启动 MeSH 限定词导入，URL：{}，版本：{}", command.url(), command.meshVersion());
 
-    // 使用 XmlParserPort 解析 XML
-    List<MeshQualifierAggregate> qualifiers =
-        xmlParserPort.parseQualifiers(xmlInputStream).toList();
+    // 1. 下载文件到临时目录
+    Path localFile = fileDownloadPort.downloadToTemp(URI.create(command.url()));
+    log.info("限定词文件已下载到：{}", localFile);
 
-    // 批量保存
-    qualifierRepository.saveBatch(qualifiers);
+    try {
+      // 2. 清空现有数据（TRUNCATE_REIMPORT 模式）
+      qualifierRepository.truncateAll();
+      log.info("已清空所有限定词旧数据");
 
-    log.info("MeSH 限定词导入完成，数量：{}", qualifiers.size());
-    return qualifiers.size();
+      // 3. 解析 XML 并批量保存（使用 Path 重载方法，由 Infra 层负责文件 I/O）
+      List<MeshQualifierAggregate> qualifiers = xmlParserPort.parseQualifiers(localFile).toList();
+      qualifierRepository.saveBatch(qualifiers);
+
+      log.info("MeSH 限定词导入完成，数量：{}", qualifiers.size());
+      return MeshQualifierImportResult.success(command.url(), command.meshVersion(), qualifiers.size());
+    } catch (Exception e) {
+      throw e instanceof RuntimeException re ? re : new RuntimeException("限定词导入失败", e);
+    } finally {
+      // 无论成功或失败，都清理临时文件
+      cleanupTempFile(localFile);
+    }
   }
 
   /// 导入 MeSH 主题词。

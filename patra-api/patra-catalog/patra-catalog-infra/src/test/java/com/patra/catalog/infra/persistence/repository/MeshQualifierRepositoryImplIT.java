@@ -289,4 +289,109 @@ class MeshQualifierRepositoryImplIT {
     assertThat(activeCount).isEqualTo(2);
     assertThat(inactiveCount).isEqualTo(1);
   }
+
+  @Test
+  @DisplayName("truncateAll() 空表 - 应该不抛出异常")
+  void truncateAll_emptyTable_shouldNotThrowException() {
+    // Given: 空表
+    long initialCount = meshQualifierMapper.selectCount(null);
+    assertThat(initialCount).isEqualTo(0);
+
+    // When: 清空空表
+    meshQualifierRepository.truncateAll();
+
+    // Then: 不抛出异常，表仍然为空
+    long count = meshQualifierMapper.selectCount(null);
+    assertThat(count).isEqualTo(0);
+  }
+
+  @Test
+  @DisplayName("truncateAll() 有数据 - 应该清空所有记录")
+  void truncateAll_withData_shouldDeleteAllRecords() {
+    // Given: 插入测试数据
+    List<MeshQualifierAggregate> qualifiers =
+        List.of(
+            MeshQualifierAggregate.create(MeshUI.qualifierOf(1), "immunology", "IM")
+                .withActiveStatus(true)
+                .withMeshVersion("2025"),
+            MeshQualifierAggregate.create(MeshUI.qualifierOf(2), "genetics", "GE")
+                .withActiveStatus(true)
+                .withMeshVersion("2025"),
+            MeshQualifierAggregate.create(MeshUI.qualifierOf(3), "diagnosis", "DI")
+                .withActiveStatus(true)
+                .withMeshVersion("2025"));
+    meshQualifierRepository.saveBatch(qualifiers);
+
+    // 验证数据已插入
+    long initialCount = meshQualifierMapper.selectCount(null);
+    assertThat(initialCount).isEqualTo(3);
+
+    // When: 清空表
+    meshQualifierRepository.truncateAll();
+
+    // Then: 表应该为空
+    long count = meshQualifierMapper.selectCount(null);
+    assertThat(count).isEqualTo(0);
+  }
+
+  @Test
+  @DisplayName("truncateAll() 大批量数据 - 应该清空所有80条记录")
+  void truncateAll_largeDataSet_shouldDeleteAllRecords() {
+    // Given: 插入80条测试数据
+    List<MeshQualifierAggregate> qualifiers = new ArrayList<>();
+    for (int i = 1; i <= 80; i++) {
+      qualifiers.add(
+          MeshQualifierAggregate.create(
+                  MeshUI.qualifierOf(i), "qualifier_" + i, "Q" + String.format("%02d", i))
+              .withActiveStatus(true)
+              .withMeshVersion("2025"));
+    }
+    meshQualifierRepository.saveBatch(qualifiers);
+
+    // 验证数据已插入
+    long initialCount = meshQualifierMapper.selectCount(null);
+    assertThat(initialCount).isEqualTo(80);
+
+    // When: 清空表
+    meshQualifierRepository.truncateAll();
+
+    // Then: 表应该为空
+    long count = meshQualifierMapper.selectCount(null);
+    assertThat(count).isEqualTo(0);
+  }
+
+  @Test
+  @DisplayName("truncateAll() 后重新插入 - 应该能正常保存新数据")
+  void truncateAll_thenSaveBatch_shouldSaveNewDataSuccessfully() {
+    // Given: 插入初始数据并清空
+    List<MeshQualifierAggregate> initialQualifiers =
+        List.of(
+            MeshQualifierAggregate.create(MeshUI.qualifierOf(1), "old qualifier 1", "O1")
+                .withMeshVersion("2024"),
+            MeshQualifierAggregate.create(MeshUI.qualifierOf(2), "old qualifier 2", "O2")
+                .withMeshVersion("2024"));
+    meshQualifierRepository.saveBatch(initialQualifiers);
+    meshQualifierRepository.truncateAll();
+
+    // When: 插入新数据
+    List<MeshQualifierAggregate> newQualifiers =
+        List.of(
+            MeshQualifierAggregate.create(MeshUI.qualifierOf(1), "new qualifier 1", "N1")
+                .withMeshVersion("2025"),
+            MeshQualifierAggregate.create(MeshUI.qualifierOf(2), "new qualifier 2", "N2")
+                .withMeshVersion("2025"),
+            MeshQualifierAggregate.create(MeshUI.qualifierOf(3), "new qualifier 3", "N3")
+                .withMeshVersion("2025"));
+    meshQualifierRepository.saveBatch(newQualifiers);
+
+    // Then: 应该只有新数据
+    long count = meshQualifierMapper.selectCount(null);
+    assertThat(count).isEqualTo(3);
+
+    List<MeshQualifierDO> savedQualifiers = meshQualifierMapper.selectList(null);
+    assertThat(savedQualifiers)
+        .extracting(MeshQualifierDO::getName)
+        .containsExactlyInAnyOrder("new qualifier 1", "new qualifier 2", "new qualifier 3");
+    assertThat(savedQualifiers).allMatch(q -> "2025".equals(q.getMeshVersion()));
+  }
 }

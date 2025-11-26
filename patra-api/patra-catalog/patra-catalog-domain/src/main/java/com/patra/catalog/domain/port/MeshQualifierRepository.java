@@ -27,4 +27,14 @@ public interface MeshQualifierRepository {
   ///
   /// @param qualifiers 限定词聚合根列表
   void saveBatch(List<MeshQualifierAggregate> qualifiers);
+
+  /// 清空所有限定词数据。
+  ///
+  /// **警告**：此方法使用 TRUNCATE TABLE，是 DDL 操作，会隐式提交事务，无法回滚。
+  ///
+  /// 使用场景：
+  ///
+  /// - TRUNCATE_REIMPORT 模式下，先清空再重新导入
+  /// - 仅用于限定词导入场景，不应在其他业务逻辑中调用
+  void truncateAll();
 }

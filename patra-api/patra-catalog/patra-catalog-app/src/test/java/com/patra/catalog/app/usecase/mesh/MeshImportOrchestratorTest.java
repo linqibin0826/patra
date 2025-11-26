@@ -8,7 +8,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.patra.catalog.app.usecase.mesh.command.MeshImportCommand;
+import com.patra.catalog.app.usecase.mesh.command.MeshQualifierImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshImportResult;
+import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.enums.MeshDescriptorImportMode;
 import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
@@ -18,8 +20,6 @@ import com.patra.catalog.domain.port.MeshDescriptorBatchPort;
 import com.patra.catalog.domain.port.MeshDescriptorRepository;
 import com.patra.catalog.domain.port.MeshQualifierRepository;
 import com.patra.catalog.domain.port.XmlParserPort;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
@@ -235,68 +235,97 @@ class MeshImportOrchestratorTest {
   }
 
   @Nested
-  @DisplayName("importQualifiers() 方法测试")
-  class ImportQualifiersTest {
+  @DisplayName("importQualifiers(Command) 方法测试 - XXL-Job 调度入口")
+  class ImportQualifiersWithCommandTest {
+
+    private static final String QUALIFIER_URL = "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/qual2025.xml";
+    private static final Path QUALIFIER_LOCAL_PATH = Path.of("/tmp/mesh-qualifier-12345.xml");
 
     @Test
-    @DisplayName("应该解析 XML 并批量保存限定词")
-    void shouldParseXmlAndSaveBatch() {
+    @DisplayName("应该下载文件、清空数据、解析 XML 并批量保存")
+    void shouldDownloadTruncateParseAndSave() {
       // Given
-      InputStream inputStream = new ByteArrayInputStream("<QualifierRecordSet/>".getBytes());
-      MeshQualifierAggregate qualifier1 = createMockQualifier("Q000001");
-      MeshQualifierAggregate qualifier2 = createMockQualifier("Q000002");
-      List<MeshQualifierAggregate> qualifiers = List.of(qualifier1, qualifier2);
+      MeshQualifierImportCommand command = MeshQualifierImportCommand.of(QUALIFIER_URL, "2025");
+      List<MeshQualifierAggregate> qualifiers = List.of(
+          createMockQualifier("Q000001"),
+          createMockQualifier("Q000002"));
 
-      when(xmlParserPort.parseQualifiers(inputStream)).thenReturn(qualifiers.stream());
+      when(fileDownloadPort.downloadToTemp(URI.create(QUALIFIER_URL))).thenReturn(QUALIFIER_LOCAL_PATH);
+      when(xmlParserPort.parseQualifiers(any(Path.class))).thenReturn(qualifiers.stream());
 
       // When
-      int count = orchestrator.importQualifiers(inputStream);
+      MeshQualifierImportResult result = orchestrator.importQualifiers(command);
 
-      // Then
-      assertThat(count).isEqualTo(2);
-      verify(xmlParserPort).parseQualifiers(inputStream);
+      // Then - 验证调用顺序：下载 → 清空 → 解析 → 保存
+      verify(fileDownloadPort).downloadToTemp(URI.create(QUALIFIER_URL));
+      verify(qualifierRepository).truncateAll();
+      verify(xmlParserPort).parseQualifiers(any(Path.class));
       verify(qualifierRepository).saveBatch(qualifiers);
+
+      // Then - 验证结果
+      assertThat(result).isNotNull();
+      assertThat(result.sourceUrl()).isEqualTo(QUALIFIER_URL);
+      assertThat(result.meshVersion()).isEqualTo("2025");
+      assertThat(result.importedCount()).isEqualTo(2);
+      assertThat(result.message()).contains("限定词导入完成");
     }
 
     @Test
-    @DisplayName("应该正确返回导入的限定词数量")
-    void shouldReturnCorrectCount() {
+    @DisplayName("应该返回正确的导入数量")
+    void shouldReturnCorrectImportedCount() {
       // Given
-      InputStream inputStream = new ByteArrayInputStream("<QualifierRecordSet/>".getBytes());
-      List<MeshQualifierAggregate> qualifiers =
-          List.of(
-              createMockQualifier("Q000001"),
-              createMockQualifier("Q000002"),
-              createMockQualifier("Q000003"));
+      MeshQualifierImportCommand command = MeshQualifierImportCommand.of(QUALIFIER_URL, "2025");
+      List<MeshQualifierAggregate> qualifiers = List.of(
+          createMockQualifier("Q000001"),
+          createMockQualifier("Q000002"),
+          createMockQualifier("Q000003"),
+          createMockQualifier("Q000004"),
+          createMockQualifier("Q000005"));
 
-      when(xmlParserPort.parseQualifiers(inputStream)).thenReturn(qualifiers.stream());
+      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(QUALIFIER_LOCAL_PATH);
+      when(xmlParserPort.parseQualifiers(any(Path.class))).thenReturn(qualifiers.stream());
 
       // When
-      int count = orchestrator.importQualifiers(inputStream);
+      MeshQualifierImportResult result = orchestrator.importQualifiers(command);
 
       // Then
-      assertThat(count).isEqualTo(3);
+      assertThat(result.importedCount()).isEqualTo(5);
     }
 
     @Test
-    @DisplayName("空 XML 应该返回 0")
+    @DisplayName("空 XML 应该返回导入数量为 0")
     void shouldReturnZeroForEmptyXml() {
       // Given
-      InputStream inputStream = new ByteArrayInputStream("<QualifierRecordSet/>".getBytes());
-      when(xmlParserPort.parseQualifiers(inputStream)).thenReturn(Stream.empty());
+      MeshQualifierImportCommand command = MeshQualifierImportCommand.of(QUALIFIER_URL, "2025");
+      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(QUALIFIER_LOCAL_PATH);
+      when(xmlParserPort.parseQualifiers(any(Path.class))).thenReturn(Stream.empty());
 
       // When
-      int count = orchestrator.importQualifiers(inputStream);
+      MeshQualifierImportResult result = orchestrator.importQualifiers(command);
 
       // Then
-      assertThat(count).isEqualTo(0);
+      assertThat(result.importedCount()).isEqualTo(0);
       verify(qualifierRepository).saveBatch(List.of());
     }
 
+    @Test
+    @DisplayName("导入失败时应该清理临时文件并抛出异常")
+    void shouldCleanupTempFileWhenImportFails() {
+      // Given
+      MeshQualifierImportCommand command = MeshQualifierImportCommand.of(QUALIFIER_URL, "2025");
+      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(QUALIFIER_LOCAL_PATH);
+      when(xmlParserPort.parseQualifiers(any(Path.class)))
+          .thenThrow(new RuntimeException("XML 解析失败"));
+
+      // When & Then
+      assertThatThrownBy(() -> orchestrator.importQualifiers(command))
+          .isInstanceOf(RuntimeException.class)
+          .hasMessageContaining("XML 解析失败");
+
+      // 注意：实际文件清理行为需要在集成测试中验证
+    }
+
     /// 创建测试用限定词聚合根。
-    ///
-    /// @param qualifierUi 限定词 UI 字符串，格式如 "Q000001"
-    /// @return 限定词聚合根实例
     private MeshQualifierAggregate createMockQualifier(String qualifierUi) {
       int num = Integer.parseInt(qualifierUi.substring(1));
       return MeshQualifierAggregate.create(
