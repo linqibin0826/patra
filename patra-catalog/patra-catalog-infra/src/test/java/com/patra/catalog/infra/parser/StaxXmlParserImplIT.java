@@ -7,6 +7,7 @@ import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
+import com.patra.catalog.infra.adapter.parser.XmlParserAdapter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
@@ -50,11 +51,11 @@ class StaxXmlParserImplIT {
       Path.of("src/test/resources/xml/test-qualifiers.xml");
   private static final String TEST_DESCRIPTORS_RESOURCE = "/xml/test-descriptors.xml";
 
-  private StaxXmlParserImpl xmlParser;
+  private XmlParserAdapter xmlParser;
 
   @BeforeEach
   void setUp() {
-    xmlParser = new StaxXmlParserImpl();
+    xmlParser = new XmlParserAdapter();
   }
 
   @Nested
@@ -62,8 +63,8 @@ class StaxXmlParserImplIT {
   class ParseQualifiersTest {
 
     @Test
-    @DisplayName("解析测试 XML - 应该返回 2 个限定词聚合根")
-    void parseQualifiers_testXml_shouldReturnTwoQualifiers() {
+    @DisplayName("解析测试 XML - 应该返回 3 个限定词聚合根（包含 10 位 UI 格式）")
+    void parseQualifiers_testXml_shouldReturnThreeQualifiers() {
       // Given: 测试 XML 文件路径
       Path xmlPath = TEST_QUALIFIERS_PATH;
 
@@ -74,21 +75,29 @@ class StaxXmlParserImplIT {
         qualifiers = stream.toList();
       }
 
-      // Then: 验证返回 2 个限定词
-      assertThat(qualifiers).hasSize(2);
+      // Then: 验证返回 3 个限定词（2 个 7 位 + 1 个 10 位）
+      assertThat(qualifiers).hasSize(3);
 
-      // 验证第一个限定词
+      // 验证第一个限定词（7 位 UI 格式）
       MeshQualifierAggregate qualifier1 = qualifiers.get(0);
       assertThat(qualifier1.getQualifierUi().ui()).isEqualTo("Q000001");
       assertThat(qualifier1.getName()).isEqualTo("test qualifier 1");
       assertThat(qualifier1.getMeshVersion()).isEqualTo(TEST_MESH_VERSION);
       assertThat(qualifier1.getAbbreviation()).isEqualTo("TQ1");
 
-      // 验证第二个限定词
+      // 验证第二个限定词（7 位 UI 格式）
       MeshQualifierAggregate qualifier2 = qualifiers.get(1);
       assertThat(qualifier2.getQualifierUi().ui()).isEqualTo("Q000002");
       assertThat(qualifier2.getName()).isEqualTo("test qualifier 2");
       assertThat(qualifier2.getAbbreviation()).isEqualTo("TQ2");
+
+      // 验证第三个限定词（10 位 UI 格式 - 关键测试：验证 BUG 修复）
+      MeshQualifierAggregate qualifier3 = qualifiers.get(2);
+      // 修复前：Q000000981 会被错误转换为 Q000981
+      // 修复后：Q000000981 应保持原样
+      assertThat(qualifier3.getQualifierUi().ui()).isEqualTo("Q000000981");
+      assertThat(qualifier3.getName()).isEqualTo("test qualifier 10-digit");
+      assertThat(qualifier3.getAbbreviation()).isEqualTo("TQ10");
     }
 
     @Test

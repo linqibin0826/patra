@@ -245,4 +245,47 @@ class MeshQualifierConverterTest {
     assertThat(aggregate.isActive()).isFalse();
     assertThat(aggregate.isDeprecated()).isTrue();
   }
+
+  @Test
+  @DisplayName("转换为领域对象 - 10 位 UI 格式（如 Q000000981）应该保持原样")
+  void toDomain_tenDigitQualifierUI_shouldPreserveFormat() {
+    // Given: 10 位 UI 格式的数据库实体（MeSH 2025 新格式）
+    MeshQualifierDO dataObject = new MeshQualifierDO();
+    dataObject.setId(981L);
+    dataObject.setUi("Q000000981"); // 10 位格式
+    dataObject.setName("diagnostic imaging");
+    dataObject.setAbbreviation("DG");
+    dataObject.setActiveStatus(true);
+    dataObject.setMeshVersion("2025");
+
+    // When: 转换为领域对象
+    MeshQualifierAggregate aggregate = converter.toDomain(dataObject);
+
+    // Then: 应该保持 10 位格式（修复前会被错误转换为 Q000981）
+    assertThat(aggregate).isNotNull();
+    assertThat(aggregate.getQualifierUi().ui()).isEqualTo("Q000000981");
+    assertThat(aggregate.getName()).isEqualTo("diagnostic imaging");
+    assertThat(aggregate.getAbbreviation()).isEqualTo("DG");
+  }
+
+  @Test
+  @DisplayName("双向转换 - 10 位 UI 格式应该保持数据一致性")
+  void bidirectionalConversion_tenDigitUI_shouldMaintainConsistency() {
+    // Given: 10 位 UI 格式的数据库实体
+    MeshQualifierDO originalDO = new MeshQualifierDO();
+    originalDO.setId(981L);
+    originalDO.setUi("Q000000981");
+    originalDO.setName("diagnostic imaging");
+    originalDO.setAbbreviation("DG");
+    originalDO.setActiveStatus(true);
+    originalDO.setMeshVersion("2025");
+
+    // When: DO -> Domain -> DO
+    MeshQualifierAggregate aggregate = converter.toDomain(originalDO);
+    MeshQualifierDO convertedDO = converter.toDataObject(aggregate);
+
+    // Then: UI 格式应该保持一致（10 位）
+    assertThat(convertedDO.getUi()).isEqualTo("Q000000981");
+    assertThat(convertedDO.getUi()).isEqualTo(originalDO.getUi());
+  }
 }
