@@ -20,27 +20,7 @@ class BatchPropertiesTest {
     // Then
     assertThat(properties.isEnabled()).isTrue();
     assertThat(properties.getTablePrefix()).isEqualTo("BATCH_");
-    assertThat(properties.getObservability()).isNotNull();
     assertThat(properties.getChunk()).isNotNull();
-  }
-
-  @Test
-  @DisplayName("可观测性配置：应具有正确的默认值")
-  void observabilityProperties_ShouldHaveCorrectDefaults() {
-    // When
-    BatchProperties properties = new BatchProperties();
-    BatchProperties.ObservabilityProperties observability = properties.getObservability();
-
-    // Then
-    assertThat(observability.getTracing()).isNotNull();
-    assertThat(observability.getTracing().isEnabled()).isTrue();
-
-    assertThat(observability.getMetrics()).isNotNull();
-    assertThat(observability.getMetrics().isEnabled()).isTrue();
-
-    assertThat(observability.getLogging()).isNotNull();
-    assertThat(observability.getLogging().isEnabled()).isTrue();
-    assertThat(observability.getLogging().getLevel()).isEqualTo("INFO");
   }
 
   @Test
