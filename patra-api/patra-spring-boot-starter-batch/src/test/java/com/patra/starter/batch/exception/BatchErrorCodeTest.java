@@ -18,7 +18,7 @@ class BatchErrorCodeTest {
     BatchErrorCode errorCode = BatchErrorCode.JOB_EXECUTION_FAILED;
 
     // Then
-    assertThat(errorCode.code()).isEqualTo("BATCH_001");
+    assertThat(errorCode.code()).isEqualTo("BATCH-0500");
     assertThat(errorCode.httpStatus()).isEqualTo(500);
   }
 
@@ -28,7 +28,7 @@ class BatchErrorCodeTest {
     BatchErrorCode errorCode = BatchErrorCode.JOB_ALREADY_RUNNING;
 
     // Then
-    assertThat(errorCode.code()).isEqualTo("BATCH_002");
+    assertThat(errorCode.code()).isEqualTo("BATCH-0409");
     assertThat(errorCode.httpStatus()).isEqualTo(409);
   }
 
@@ -38,7 +38,7 @@ class BatchErrorCodeTest {
     BatchErrorCode errorCode = BatchErrorCode.JOB_NOT_FOUND;
 
     // Then
-    assertThat(errorCode.code()).isEqualTo("BATCH_003");
+    assertThat(errorCode.code()).isEqualTo("BATCH-0404");
     assertThat(errorCode.httpStatus()).isEqualTo(404);
   }
 

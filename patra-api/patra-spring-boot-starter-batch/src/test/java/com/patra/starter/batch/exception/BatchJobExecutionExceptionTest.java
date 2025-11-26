@@ -47,7 +47,7 @@ class BatchJobExecutionExceptionTest {
 
     // Then
     assertThat(exception.getErrorCode()).isEqualTo(BatchErrorCode.JOB_EXECUTION_FAILED);
-    assertThat(exception.getErrorCode().code()).isEqualTo("BATCH_001");
+    assertThat(exception.getErrorCode().code()).isEqualTo("BATCH-0500");
     assertThat(exception.getErrorCode().httpStatus()).isEqualTo(500);
   }
 }

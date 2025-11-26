@@ -68,7 +68,7 @@ class LockAcquisitionExceptionTest {
     void shouldReturnCorrectErrorCode() {
         LockAcquisitionException exception = new LockAcquisitionException("test:lock", 1000L);
 
-        assertThat(exception.getErrorCode().code()).isEqualTo("LOCK_001");
+        assertThat(exception.getErrorCode().code()).isEqualTo("LOCK-0409");
         assertThat(exception.getErrorCode().httpStatus()).isEqualTo(409);
     }
 }
