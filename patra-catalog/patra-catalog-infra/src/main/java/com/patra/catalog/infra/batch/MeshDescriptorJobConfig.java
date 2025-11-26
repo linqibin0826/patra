@@ -2,6 +2,7 @@ package com.patra.catalog.infra.batch;
 
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.port.XmlParserPort;
+import com.patra.catalog.infra.batch.listener.MeshImportJobExecutionListener;
 import com.patra.starter.batch.config.BatchProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +50,7 @@ public class MeshDescriptorJobConfig {
   private final XmlParserPort xmlParserPort;
   private final MeshDescriptorItemWriter meshDescriptorItemWriter;
   private final BatchProperties batchProperties;
+  private final MeshImportJobExecutionListener meshImportJobExecutionListener;
 
   /// 配置 MeSH 主题词导入 Job。
   ///
@@ -56,6 +58,7 @@ public class MeshDescriptorJobConfig {
   @Bean
   public Job meshDescriptorImportJob() {
     return new JobBuilder("meshDescriptorImportJob", jobRepository)
+        .listener(meshImportJobExecutionListener)
         .start(meshDescriptorImportStep())
         .build();
   }

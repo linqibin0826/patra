@@ -54,6 +54,12 @@
         <!-- ================================ -->
         <!-- 外部通信 -->
         <!-- ================================ -->
+        <!-- REST Client（文件下载） -->
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-rest-client</artifactId>
+        </dependency>
+
         <!-- Feign 远程调用 -->
         <dependency>
             <groupId>com.patra</groupId>

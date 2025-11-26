@@ -34,15 +34,17 @@ public class MeshDescriptorBatchAdapter implements MeshDescriptorBatchPort {
   @Override
   public Long launchImport(MeshImportParams params) {
     log.info(
-        "启动 MeSH 主题词导入 Job，文件：{}，版本：{}，强制新实例：{}",
+        "启动 MeSH 主题词导入 Job，文件：{}，版本：{}，强制新实例：{}，临时文件：{}",
         params.filePath(),
         params.meshVersion(),
-        params.forceNewInstance());
+        params.forceNewInstance(),
+        params.tempFile());
 
     MeshImportJobParams jobParams =
         MeshImportJobParams.builder()
             .filePath(params.filePath())
             .meshVersion(params.meshVersion())
+            .tempFile(String.valueOf(params.tempFile()))
             .build();
 
     return jobLauncherHelper.launch(meshDescriptorImportJob, jobParams, params.forceNewInstance());

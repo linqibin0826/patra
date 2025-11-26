@@ -5,11 +5,16 @@ import com.patra.catalog.app.usecase.mesh.dto.MeshImportResult;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.enums.MeshDescriptorImportMode;
 import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
+import com.patra.catalog.domain.port.FileDownloadPort;
 import com.patra.catalog.domain.port.MeshDescriptorBatchPort;
 import com.patra.catalog.domain.port.MeshDescriptorRepository;
 import com.patra.catalog.domain.port.MeshQualifierRepository;
 import com.patra.catalog.domain.port.XmlParserPort;
+import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +45,7 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
   private final MeshQualifierRepository qualifierRepository;
   private final MeshDescriptorRepository descriptorRepository;
   private final MeshDescriptorBatchPort meshDescriptorBatchPort;
+  private final FileDownloadPort fileDownloadPort;
 
   /// 导入 MeSH 限定词。
   ///
@@ -82,22 +88,44 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
   @Override
   public MeshImportResult importDescriptors(MeshImportCommand command) {
     log.info(
-        "启动 MeSH 主题词导入，文件：{}，版本：{}，模式：{}",
-        command.filePath(),
+        "启动 MeSH 主题词导入，URL：{}，版本：{}，模式：{}",
+        command.url(),
         command.meshVersion(),
         command.mode());
 
+    // 1. 下载文件到临时目录
+    Path localFile = fileDownloadPort.downloadToTemp(URI.create(command.url()));
+    log.info("文件已下载到：{}", localFile);
+
+    // 2. 清空数据（如果是 TRUNCATE 模式）
     if (command.mode() == MeshDescriptorImportMode.TRUNCATE_REIMPORT) {
       descriptorRepository.truncateAll();
       log.info("已清空所有旧数据");
     }
 
-    boolean forceNewInstance = (command.mode() == MeshDescriptorImportMode.TRUNCATE_REIMPORT);
-    MeshImportParams params =
-        new MeshImportParams(command.filePath(), command.meshVersion(), forceNewInstance);
-    Long executionId = meshDescriptorBatchPort.launchImport(params);
+    // 3. 启动批处理导入（标记为临时文件，Job 完成后自动清理）
+    try {
+      boolean forceNewInstance = (command.mode() == MeshDescriptorImportMode.TRUNCATE_REIMPORT);
+      MeshImportParams params =
+          new MeshImportParams(localFile.toString(), command.meshVersion(), forceNewInstance, true);
+      Long executionId = meshDescriptorBatchPort.launchImport(params);
 
-    return MeshImportResult.success(
-        executionId, command.filePath(), command.meshVersion(), command.mode());
+      return MeshImportResult.success(
+          executionId, command.url(), localFile.toString(), command.meshVersion(), command.mode());
+    } catch (Exception e) {
+      // Job 启动失败，清理临时文件
+      cleanupTempFile(localFile);
+      throw e;
+    }
+  }
+
+  /// 清理临时文件。
+  private void cleanupTempFile(Path file) {
+    try {
+      Files.deleteIfExists(file);
+      log.info("已清理临时文件：{}", file);
+    } catch (IOException e) {
+      log.warn("清理临时文件失败：{}，原因：{}", file, e.getMessage());
+    }
   }
 }
