@@ -5,7 +5,9 @@ import lombok.RequiredArgsConstructor;
 
 /// 批处理错误码枚举。
 ///
-/// 集成 patra-common-core 的统一错误处理框架。
+/// 错误码格式: `BATCH-{0xxx}`，遵循项目统一错误码规范：
+///
+/// - 0xxx: 通用 HTTP 错误（状态码映射）
 ///
 /// @author Patra Team
 /// @since 1.0.0
@@ -13,13 +15,13 @@ import lombok.RequiredArgsConstructor;
 public enum BatchErrorCode implements ErrorCodeLike {
 
   /// 批处理任务执行失败。
-  JOB_EXECUTION_FAILED("BATCH_001", 500),
+  JOB_EXECUTION_FAILED("BATCH-0500", 500),
 
   /// 批处理任务已在运行中。
-  JOB_ALREADY_RUNNING("BATCH_002", 409),
+  JOB_ALREADY_RUNNING("BATCH-0409", 409),
 
   /// 批处理任务不存在。
-  JOB_NOT_FOUND("BATCH_003", 404);
+  JOB_NOT_FOUND("BATCH-0404", 404);
 
   /// 错误码。
   private final String codeValue;

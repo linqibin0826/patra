@@ -26,7 +26,7 @@ class LockErrorCodeTest {
     void acquisitionFailed_ShouldReturnCorrectCodeAndStatus() {
         LockErrorCode errorCode = LockErrorCode.ACQUISITION_FAILED;
 
-        assertThat(errorCode.code()).isEqualTo("LOCK_001");
+        assertThat(errorCode.code()).isEqualTo("LOCK-0409");
         assertThat(errorCode.httpStatus()).isEqualTo(409);
     }
 
@@ -35,7 +35,7 @@ class LockErrorCodeTest {
     void timeout_ShouldReturnCorrectCodeAndStatus() {
         LockErrorCode errorCode = LockErrorCode.TIMEOUT;
 
-        assertThat(errorCode.code()).isEqualTo("LOCK_002");
+        assertThat(errorCode.code()).isEqualTo("LOCK-1001");
         assertThat(errorCode.httpStatus()).isEqualTo(500);
     }
 
@@ -44,7 +44,7 @@ class LockErrorCodeTest {
     void infrastructureError_ShouldReturnCorrectCodeAndStatus() {
         LockErrorCode errorCode = LockErrorCode.INFRASTRUCTURE_ERROR;
 
-        assertThat(errorCode.code()).isEqualTo("LOCK_003");
+        assertThat(errorCode.code()).isEqualTo("LOCK-0503");
         assertThat(errorCode.httpStatus()).isEqualTo(503);
     }
 
@@ -53,7 +53,7 @@ class LockErrorCodeTest {
     void expressionError_ShouldReturnCorrectCodeAndStatus() {
         LockErrorCode errorCode = LockErrorCode.EXPRESSION_ERROR;
 
-        assertThat(errorCode.code()).isEqualTo("LOCK_004");
+        assertThat(errorCode.code()).isEqualTo("LOCK-1002");
         assertThat(errorCode.httpStatus()).isEqualTo(500);
     }
 
