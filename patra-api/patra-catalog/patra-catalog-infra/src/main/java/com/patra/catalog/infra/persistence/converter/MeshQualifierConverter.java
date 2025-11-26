@@ -51,8 +51,8 @@ public class MeshQualifierConverter {
       return null;
     }
 
-    // 从 UI 字符串中提取数字部分（如 "Q000001" -> 1）
-    MeshUI qualifierUi = MeshUI.qualifierOf(Integer.parseInt(dataObject.getUi().substring(1)));
+    // 直接使用原始 UI 字符串，保留格式（支持 7 位和 10 位）
+    MeshUI qualifierUi = MeshUI.of(dataObject.getUi());
 
     return MeshQualifierAggregate.restore(
         dataObject.getId(),

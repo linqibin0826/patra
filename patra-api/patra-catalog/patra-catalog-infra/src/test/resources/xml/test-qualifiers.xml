@@ -83,4 +83,31 @@
       </Concept>
     </ConceptList>
   </QualifierRecord>
+  <!-- 测试 10 位 UI 格式（新格式，如 Q000000981） -->
+  <QualifierRecord>
+    <QualifierUI>Q000000981</QualifierUI>
+    <QualifierName>
+      <String>test qualifier 10-digit</String>
+    </QualifierName>
+    <DateCreated>
+      <Year>2024</Year>
+      <Month>03</Month>
+      <Day>01</Day>
+    </DateCreated>
+    <ConceptList>
+      <Concept PreferredConceptYN="Y">
+        <ConceptUI>M0000003</ConceptUI>
+        <ConceptName>
+          <String>test qualifier 10-digit</String>
+        </ConceptName>
+        <TermList>
+          <Term ConceptPreferredTermYN="Y" IsPermutedTermYN="N" LexicalTag="NON" RecordPreferredTermYN="Y">
+            <TermUI>T000003</TermUI>
+            <String>test qualifier 10-digit</String>
+            <Abbreviation>TQ10</Abbreviation>
+          </Term>
+        </TermList>
+      </Concept>
+    </ConceptList>
+  </QualifierRecord>
 </QualifierRecordSet>

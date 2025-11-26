@@ -492,10 +492,10 @@ public class XmlParserAdapter implements XmlParserPort {
         }
       }
 
-      // 创建聚合根
-      if (qualifierUi != null && name != null && abbreviation != null) {
+      // 创建聚合根（UI、name、abbreviation 均为必填）
+      if (qualifierUi != null && name != null && abbreviation != null && !abbreviation.isBlank()) {
         return MeshQualifierAggregate.create(
-                MeshUI.qualifierOf(Integer.parseInt(qualifierUi.substring(1))), // 移除 "Q" 前缀
+                MeshUI.of(qualifierUi), // 直接使用原始 UI，保留格式（支持 7 位和 10 位）
                 name,
                 abbreviation)
             .withAnnotation(annotation)
@@ -506,7 +506,14 @@ public class XmlParserAdapter implements XmlParserPort {
             .withMeshVersion(meshVersion);
       }
 
-      log.warn("跳过不完整的 Qualifier 记录: UI={}, name={}, abbr={}", qualifierUi, name, abbreviation);
+      // 记录详细的跳过原因
+      if (qualifierUi == null) {
+        log.warn("跳过 Qualifier 记录：缺少 QualifierUI");
+      } else if (name == null) {
+        log.warn("跳过 Qualifier 记录：UI={}, 缺少 QualifierName", qualifierUi);
+      } else {
+        log.warn("跳过 Qualifier 记录：UI={}, 缺少 Abbreviation（preferred term 无缩写）", qualifierUi);
+      }
       return null;
     }
 
