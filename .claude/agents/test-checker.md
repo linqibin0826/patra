@@ -56,8 +56,12 @@ color: yellow
 
 ## 注意事项
 
-- **Spring Boot 3.4+**：使用 `@MockitoBean`（`o.s.test.context.bean.override.mockito`），禁止废弃的 `@MockBean`
-- **超时时间**：`Thread.sleep` ≤1s，`@Timeout` ≤5s，`Awaitility.atMost` ≤2s；长时间等待用 Mock 替代
+1. 使用 `@MockitoBean`（`o.s.test.context.bean.override.mockito`），禁止废弃的 `@MockBean`
+2. 关于超时时间, `Thread.sleep` ≤1s，`@Timeout` ≤3s，`Awaitility.atMost` ≤2s；长时间等待用 Mock 替代
+3. 使用 TestContainers 模拟真实中间件，避免使用内存数据库
+4. 切片测试仅测试 Adapter 层，禁止跨层调用
+5. E2E 测试覆盖核心业务流程，避免冗余测试场景
+6. 使用 `patra-spring-boot-starter-test` 提供的测试基础设施，禁止重复实现
 
 ## 输出格式
 

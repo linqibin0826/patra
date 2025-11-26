@@ -2,10 +2,13 @@ package com.patra.starter.batch.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.starter.test.container.initializer.MySQLContainerInitializer;
+import io.micrometer.observation.ObservationRegistry;
 import java.lang.reflect.Field;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.batch.core.configuration.annotation.BatchObservabilityBeanPostProcessor;
 import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.JobOperator;
@@ -16,28 +19,23 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.task.SyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.context.ContextConfiguration;
 
-/**
- * BatchAutoConfiguration 的测试
- *
- * <p>验证 Spring Batch 核心组件的自动配置功能
- *
- * @author Patra Lin
- * @since 0.1.0
- */
+/// BatchAutoConfiguration 的测试。
+///
+/// 验证 Spring Batch 核心组件的自动配置功能。
+/// 使用 MySQL TestContainer 确保与生产环境一致。
+///
+/// @author Patra Lin
+/// @since 0.1.0
 @SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1",
-    "spring.datasource.driver-class-name=org.h2.Driver",
-    "spring.datasource.username=sa",
-    "spring.datasource.password=",
     "spring.batch.jdbc.initialize-schema=always",
     "spring.batch.job.enabled=false",
     "spring.autoconfigure.exclude=org.redisson.spring.starter.RedissonAutoConfigurationV2",
     "patra.batch.enabled=true",
     "patra.redisson.observability.metrics-enabled=false"
 })
+@ContextConfiguration(initializers = MySQLContainerInitializer.class)
 class BatchAutoConfigurationTest {
 
   @Autowired private ApplicationContext applicationContext;
@@ -108,5 +106,29 @@ class BatchAutoConfigurationTest {
 
     // Then
     assertThat(dataSource).isNotNull();
+  }
+
+  @Test
+  @DisplayName("BatchObservabilityBeanPostProcessor 应根据 ObservationRegistry 条件化注册")
+  void batchObservabilityBeanPostProcessor_ShouldBeConditionalOnObservationRegistry() {
+    // Given - 检查 ObservationRegistry 是否存在
+    String[] observationRegistryBeans =
+        applicationContext.getBeanNamesForType(ObservationRegistry.class);
+    boolean hasObservationRegistry = observationRegistryBeans.length > 0;
+
+    // When - 检查 BatchObservabilityBeanPostProcessor 是否注册
+    String[] beanPostProcessorBeans =
+        applicationContext.getBeanNamesForType(BatchObservabilityBeanPostProcessor.class);
+
+    // Then - 条件化验证
+    if (hasObservationRegistry) {
+      assertThat(beanPostProcessorBeans)
+          .as("当 ObservationRegistry 存在时，BatchObservabilityBeanPostProcessor 应被注册")
+          .isNotEmpty();
+    } else {
+      assertThat(beanPostProcessorBeans)
+          .as("当 ObservationRegistry 不存在时，BatchObservabilityBeanPostProcessor 不应被注册")
+          .isEmpty();
+    }
   }
 }
