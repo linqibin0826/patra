@@ -92,7 +92,7 @@ $ARGUMENTS
    - **记录现有模式**：
      - 在 research.md 中记录"项目现有方案"章节
      - 格式：`[技术点] → 现有实现：[文件路径:行号] - [简要说明]`
-     - 示例：`MyBatis-Plus 分页 → 现有实现：patra-catalog-infra/repository/JournalRepositoryImpl.java:45 - 使用 IPage<T> 分页查询`
+     - 示例：`MyBatis-Plus 分页 → 现有实现：patra-catalog-infra/repository/JournalRepositoryAdapter.java:45 - 使用 IPage<T> 分页查询`
 
 3. **🔍 架构设计研究**（基于项目现有架构）：
    - 如果涉及复杂的聚合设计，参考 java-spring-development Skill

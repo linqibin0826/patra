@@ -656,7 +656,7 @@ public class CustomProvenanceConfig {
         ObjectMapper objectMapper,
         XmlMapper xmlMapper
     ) {
-        return new PubMedClientImpl(
+        return new PubMedClientAdapter(
             customPubMedRestClient,
             customConfigProvider(),
             objectMapper,
@@ -824,7 +824,7 @@ Integer refCount = publication.getNumberOfReferences();
 
 2. **自动配置变更**:
    - 新增: `pubMedRestClient` 和 `epmcRestClient` Bean
-   - 修改: `PubMedClientImpl` 和 `EPMCClientImpl` 构造函数接受 `RestClient`
+   - 修改: `PubMedClientAdapter` 和 `EpmcClientAdapter` 构造函数接受 `RestClient`
 
 3. **配置保持不变**:
    - `patra.provenance.defaults.http.*` 配置继续有效
@@ -832,13 +832,13 @@ Integer refCount = publication.getNumberOfReferences();
 
 **影响范围**:
 - **对用户透明**: 如果使用 `PubMedClient` 或 `EPMCClient` 接口，无需修改代码
-- **自定义配置**: 如果手动创建了 `PubMedClientImpl`，需要传入 `RestClient` 而非 `SimpleHttpClient`
+- **自定义配置**: 如果手动创建了 `PubMedClientAdapter`，需要传入 `RestClient` 而非 `SimpleHttpClient`
 
 **示例**:
 
 ```java
 // 旧版本（已废弃）
-PubMedClient client = new PubMedClientImpl(
+PubMedClient client = new PubMedClientAdapter(
     new SimpleHttpClient(),  // ❌ 已移除
     configProvider,
     objectMapper,
@@ -856,7 +856,7 @@ RestClient restClient = RestClient.builder()
     .baseUrl("https://eutils.ncbi.nlm.nih.gov/entrez/eutils")
     .build();
 
-PubMedClient client = new PubMedClientImpl(
+PubMedClient client = new PubMedClientAdapter(
     restClient,  // ✅ 使用 RestClient
     configProvider,
     objectMapper,

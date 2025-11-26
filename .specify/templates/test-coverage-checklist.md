@@ -417,7 +417,7 @@
 
 - [ ] **CHK-ARCH-002**: 测试命名规范
   - [ ] Controller 以 `Controller` 结尾
-  - [ ] Repository 实现以 `RepositoryImpl` 结尾
+  - [ ] Repository 实现以 `RepositoryAdapter` 结尾
   - [ ] Mapper 以 `Mapper` 结尾
 
 ### 包结构测试

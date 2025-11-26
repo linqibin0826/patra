@@ -295,14 +295,14 @@ public interface {EntityName}Mapper extends BaseMapper<{EntityName}DO> {
 #### 5.4 Repository 实现代码生成
 
 **命名规则**：
-- 文件路径：`infra/persistence/repository/{EntityName}RepositoryMpImpl.java`
-- 类名：`{EntityName}RepositoryMpImpl`（Mp = MyBatis-Plus）
+- 文件路径：`infra/persistence/repository/{EntityName}RepositoryAdapter.java`
+- 类名：`{EntityName}RepositoryAdapter`（Mp = MyBatis-Plus）
 
 **必需元素**：
 ```java
 @Repository
 @RequiredArgsConstructor
-public class {EntityName}RepositoryMpImpl implements {EntityName}Repository {
+public class {EntityName}RepositoryAdapter implements {EntityName}Repository {
 
     private final {EntityName}Mapper mapper;
     private final {EntityName}Converter converter;
@@ -346,7 +346,7 @@ public class {EntityName}RepositoryMpImpl implements {EntityName}Repository {
 | 值对象 | `PublicationIdentifier` | - |
 | 枚举 | `PublicationType` | - |
 | 仓储接口 | `PublicationRepository` | - |
-| 仓储实现 | - | `PublicationRepositoryMpImpl` |
+| 仓储实现 | - | `PublicationRepositoryAdapter` |
 | Mapper | - | `PublicationMapper` |
 | Converter | - | `PublicationConverter` |
 
@@ -439,7 +439,7 @@ Infra 层（依赖 Domain 层，实现端口接口）
 ### 1. DO：{EntityName}DO.java
 ### 2. Converter：{EntityName}Converter.java
 ### 3. Mapper：{EntityName}Mapper.java
-### 4. Repository 实现：{EntityName}RepositoryMpImpl.java
+### 4. Repository 实现：{EntityName}RepositoryAdapter.java
 
 ## ✅ 设计验证
 ...

@@ -44,7 +44,7 @@ public interface PlanConverter {
 /// @since 0.1.0
 @Repository
 @RequiredArgsConstructor
-public class PlanRepositoryImpl implements PlanRepository {
+public class PlanRepositoryAdapter implements PlanRepository {
     private final PlanMapper mapper;
     private final PlanConverter converter;
 
@@ -262,7 +262,7 @@ public interface PlanConverter {
 ```java
 @Repository
 @RequiredArgsConstructor
-public class PlanRepositoryImpl implements PlanRepository {
+public class PlanRepositoryAdapter implements PlanRepository {
 
     private final PlanMapper mapper;
     private final PlanConverter converter;

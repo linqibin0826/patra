@@ -126,7 +126,7 @@ plan.md 中计划使用 Spring Data JPA 作为数据访问层：
 #### 🔍 影响范围
 
 - **代码影响**:
-  - `ArticleRepositoryImpl.java` 需要使用 MyBatis-Plus BaseMapper
+  - `ArticleRepositoryAdapter.java` 需要使用 MyBatis-Plus BaseMapper
   - 增加 `ArticleMapper.xml` 和 `ArticleConverter.java`
 - **测试影响**: Repository IT 测试需要使用 @MybatisPlusTest 而非 @DataJpaTest
 - **文档影响**: plan.md 技术栈章节
@@ -320,7 +320,7 @@ tasks.md 中未包含缓存相关任务
 
 - **代码影响**:
   - 新增 `ArticleCache.java` 和 `ArticleCacheConfig.java`
-  - `ArticleRepositoryImpl.java` 增加缓存注解
+  - `ArticleRepositoryAdapter.java` 增加缓存注解
 - **测试影响**: 新增 `ArticleCacheIT.java` 集成测试
 - **文档影响**: tasks.md, plan.md（技术栈增加 Redis）
 - **依赖影响**:

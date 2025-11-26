@@ -16,7 +16,7 @@ public interface ExpressionCompilerPort {
 
   /// 编译表达式。
   ///
-  /// **实现细节**: 基础设施层实现(ExpressionCompilerPortImpl)负责:
+  /// **实现细节**: 基础设施层实现(ExpressionCompilerAdapter)负责:
   ///
   /// - 使用 ExprJsonCodec 将 JSON 表达式快照转换为 Expr 对象
   ///   - 构建 CompileRequest 并设置合适的选项

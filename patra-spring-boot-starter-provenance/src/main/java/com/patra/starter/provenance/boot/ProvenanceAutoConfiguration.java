@@ -11,9 +11,9 @@ import com.patra.starter.provenance.common.metrics.ProvenanceMetrics;
 import com.patra.starter.provenance.common.provider.ProvenanceDataProvider;
 import com.patra.starter.provenance.common.provider.ProviderRegistry;
 import com.patra.starter.provenance.epmc.EPMCClient;
-import com.patra.starter.provenance.epmc.EPMCClientImpl;
+import com.patra.starter.provenance.epmc.EpmcClientAdapter;
 import com.patra.starter.provenance.pubmed.PubMedClient;
-import com.patra.starter.provenance.pubmed.PubMedClientImpl;
+import com.patra.starter.provenance.pubmed.PubMedClientAdapter;
 import com.patra.starter.provenance.pubmed.PubmedDataProvider;
 import com.patra.starter.provenance.pubmed.converter.PubmedPublicationConverter;
 import com.patra.starter.provenance.pubmed.processor.PubmedPublicationProcessor;
@@ -215,7 +215,7 @@ public class ProvenanceAutoConfiguration {
       ObjectMapper objectMapper,
       Optional<ProvenanceMetrics> metrics) {
     log.info("自动配置 PubMed 客户端,用于访问 E-utilities API (使用 RestClient)");
-    return new PubMedClientImpl(
+    return new PubMedClientAdapter(
         pubMedRestClient, configProvider, objectMapper, xmlMapper, metrics.orElse(null));
   }
 
@@ -234,7 +234,7 @@ public class ProvenanceAutoConfiguration {
       ObjectMapper objectMapper,
       Optional<ProvenanceMetrics> metrics) {
     log.info("自动配置 Europe PMC 客户端,用于访问 EPMC API (使用 RestClient)");
-    return new EPMCClientImpl(epmcRestClient, configProvider, objectMapper, metrics.orElse(null));
+    return new EpmcClientAdapter(epmcRestClient, configProvider, objectMapper, metrics.orElse(null));
   }
 
   /// 创建 PubMed ESearch 请求组装器

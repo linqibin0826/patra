@@ -75,7 +75,7 @@ public interface UserMapper extends BaseMapper<UserDO> {}
 /// Repository 实现
 @Repository
 @RequiredArgsConstructor
-public class UserRepositoryImpl implements UserRepository {
+public class UserRepositoryAdapter implements UserRepository {
     private final UserMapper mapper;
 
     @Override

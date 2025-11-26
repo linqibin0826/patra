@@ -125,7 +125,7 @@ tasks.md 应该可立即执行 - 每个任务必须足够具体，以便 LLM 可
 - ✅ 正确：`- [ ] T001 按实现计划创建项目结构`
 - ✅ 正确（带现有实现参考）：`- [ ] T005 [P] [Domain] [US1] 在 patra-ingest-domain/.../Article.java 中创建 Article 聚合根（参考 patra-catalog-domain/model/Journal.java:12）`
 - ✅ 正确：`- [ ] T012 [P] [App] [US1] 在 patra-ingest-app/.../IngestOrchestrator.java 中实现编排器（参考 patra-catalog-app/orchestrator/JournalOrchestrator.java:25）`
-- ✅ 正确：`- [ ] T014 [Infra] [US1] 在 patra-ingest-infra/.../ArticleRepositoryImpl.java 中实现仓储（参考 patra-catalog-infra/repository/JournalRepositoryImpl.java:18）`
+- ✅ 正确：`- [ ] T014 [Infra] [US1] 在 patra-ingest-infra/.../ArticleRepositoryAdapter.java 中实现仓储（参考 patra-catalog-infra/repository/JournalRepositoryAdapter.java:18）`
 - ✅ 正确：`- [ ] T018 [Adapter] [US1] 在 patra-ingest-adapter/.../IngestController.java 中实现 REST 端点（参考 patra-catalog-adapter/controller/JournalController.java:30）`
 - ❌ 错误：`- [ ] 创建 Article 聚合根`（缺少 ID、层标签和故事标签）
 - ❌ 错误：`T001 [US1] 创建聚合根`（缺少复选框）
