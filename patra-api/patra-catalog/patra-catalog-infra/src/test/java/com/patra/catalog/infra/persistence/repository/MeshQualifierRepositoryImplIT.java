@@ -11,8 +11,10 @@ import com.patra.catalog.infra.persistence.mapper.MeshQualifierMapper;
 import com.patra.starter.mybatis.autoconfig.MybatisPluginAutoConfig;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -53,6 +55,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 })
 @MapperScan("com.patra.catalog.infra.persistence.mapper")
 @DisplayName("MeshQualifierRepositoryImpl 集成测试")
+@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class MeshQualifierRepositoryImplIT {
 
   @Container

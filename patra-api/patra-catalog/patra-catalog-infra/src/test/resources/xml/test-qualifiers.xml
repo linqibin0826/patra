@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<QualifierRecordSet LanguageCode="eng">
+  <QualifierRecord>
+    <QualifierUI>Q000001</QualifierUI>
+    <QualifierName>
+      <String>test qualifier 1</String>
+    </QualifierName>
+    <DateCreated>
+      <Year>2024</Year>
+      <Month>01</Month>
+      <Day>01</Day>
+    </DateCreated>
+    <DateRevised>
+      <Year>2024</Year>
+      <Month>06</Month>
+      <Day>15</Day>
+    </DateRevised>
+    <DateEstablished>
+      <Year>2024</Year>
+      <Month>01</Month>
+      <Day>01</Day>
+    </DateEstablished>
+    <Annotation>Test annotation for qualifier 1</Annotation>
+    <TreeNumberList>
+      <TreeNumber>Y01.001</TreeNumber>
+    </TreeNumberList>
+    <ConceptList>
+      <Concept PreferredConceptYN="Y">
+        <ConceptUI>M0000001</ConceptUI>
+        <ConceptName>
+          <String>test qualifier 1</String>
+        </ConceptName>
+        <ScopeNote>Test scope note</ScopeNote>
+        <TermList>
+          <Term ConceptPreferredTermYN="Y" IsPermutedTermYN="N" LexicalTag="NON" RecordPreferredTermYN="Y">
+            <TermUI>T000001</TermUI>
+            <String>test qualifier 1</String>
+            <Abbreviation>TQ1</Abbreviation>
+          </Term>
+        </TermList>
+      </Concept>
+    </ConceptList>
+  </QualifierRecord>
+  <QualifierRecord>
+    <QualifierUI>Q000002</QualifierUI>
+    <QualifierName>
+      <String>test qualifier 2</String>
+    </QualifierName>
+    <DateCreated>
+      <Year>2024</Year>
+      <Month>02</Month>
+      <Day>01</Day>
+    </DateCreated>
+    <DateRevised>
+      <Year>2024</Year>
+      <Month>07</Month>
+      <Day>20</Day>
+    </DateRevised>
+    <DateEstablished>
+      <Year>2024</Year>
+      <Month>02</Month>
+      <Day>01</Day>
+    </DateEstablished>
+    <Annotation>Test annotation for qualifier 2</Annotation>
+    <TreeNumberList>
+      <TreeNumber>Y01.002</TreeNumber>
+      <TreeNumber>Y02.001</TreeNumber>
+    </TreeNumberList>
+    <ConceptList>
+      <Concept PreferredConceptYN="Y">
+        <ConceptUI>M0000002</ConceptUI>
+        <ConceptName>
+          <String>test qualifier 2</String>
+        </ConceptName>
+        <ScopeNote>Test scope note 2</ScopeNote>
+        <TermList>
+          <Term ConceptPreferredTermYN="Y" IsPermutedTermYN="N" LexicalTag="NON" RecordPreferredTermYN="Y">
+            <TermUI>T000002</TermUI>
+            <String>test qualifier 2</String>
+            <Abbreviation>TQ2</Abbreviation>
+          </Term>
+        </TermList>
+      </Concept>
+    </ConceptList>
+  </QualifierRecord>
+</QualifierRecordSet>

@@ -21,8 +21,10 @@ import com.patra.catalog.infra.persistence.mapper.MeshEntryTermMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshTreeNumberMapper;
 import com.patra.starter.mybatis.autoconfig.MybatisPluginAutoConfig;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.batch.item.Chunk;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,6 +66,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 })
 @MapperScan("com.patra.catalog.infra.persistence.mapper")
 @DisplayName("MeshDescriptorItemWriter 集成测试")
+@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class MeshDescriptorItemWriterIT {
 
   @Container

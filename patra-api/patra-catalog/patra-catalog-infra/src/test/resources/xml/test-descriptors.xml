@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DescriptorRecordSet LanguageCode="eng">
+  <DescriptorRecord DescriptorClass="1">
+    <DescriptorUI>D000001</DescriptorUI>
+    <DescriptorName>
+      <String>Test Descriptor 1</String>
+    </DescriptorName>
+    <DateCreated>
+      <Year>2024</Year>
+      <Month>01</Month>
+      <Day>01</Day>
+    </DateCreated>
+    <DateRevised>
+      <Year>2024</Year>
+      <Month>06</Month>
+      <Day>15</Day>
+    </DateRevised>
+    <DateEstablished>
+      <Year>2024</Year>
+      <Month>01</Month>
+      <Day>01</Day>
+    </DateEstablished>
+    <AllowableQualifiersList>
+      <AllowableQualifier>
+        <QualifierReferredTo>
+          <QualifierUI>Q000001</QualifierUI>
+          <QualifierName>
+            <String>test qualifier</String>
+          </QualifierName>
+        </QualifierReferredTo>
+        <Abbreviation>TQ</Abbreviation>
+      </AllowableQualifier>
+    </AllowableQualifiersList>
+    <Annotation>Test annotation</Annotation>
+    <HistoryNote>Test history note</HistoryNote>
+    <PublicMeSHNote>Test public note</PublicMeSHNote>
+    <TreeNumberList>
+      <TreeNumber>A01.001</TreeNumber>
+      <TreeNumber>B02.002</TreeNumber>
+    </TreeNumberList>
+    <ConceptList>
+      <Concept PreferredConceptYN="Y">
+        <ConceptUI>M0000001</ConceptUI>
+        <ConceptName>
+          <String>Test Concept 1</String>
+        </ConceptName>
+        <CASN1Name>Test CAS Name</CASN1Name>
+        <RegistryNumber>12345-67-8</RegistryNumber>
+        <ScopeNote>Test scope note for concept 1</ScopeNote>
+        <RelatedRegistryNumberList>
+          <RelatedRegistryNumber>11111-11-1</RelatedRegistryNumber>
+          <RelatedRegistryNumber>22222-22-2</RelatedRegistryNumber>
+        </RelatedRegistryNumberList>
+        <ConceptRelationList>
+          <ConceptRelation RelationName="NRW">
+            <Concept1UI>M0000001</Concept1UI>
+            <Concept2UI>M0000002</Concept2UI>
+          </ConceptRelation>
+        </ConceptRelationList>
+        <TermList>
+          <Term ConceptPreferredTermYN="Y" IsPermutedTermYN="N" LexicalTag="NON" RecordPreferredTermYN="Y">
+            <TermUI>T000001</TermUI>
+            <String>Test Term 1</String>
+            <DateCreated>
+              <Year>2024</Year>
+              <Month>01</Month>
+              <Day>01</Day>
+            </DateCreated>
+            <ThesaurusIDlist>
+              <ThesaurusID>NLM (2024)</ThesaurusID>
+            </ThesaurusIDlist>
+          </Term>
+          <Term ConceptPreferredTermYN="N" IsPermutedTermYN="N" LexicalTag="NON" RecordPreferredTermYN="N">
+            <TermUI>T000002</TermUI>
+            <String>Test Term 2 (synonym)</String>
+            <DateCreated>
+              <Year>2024</Year>
+              <Month>01</Month>
+              <Day>02</Day>
+            </DateCreated>
+          </Term>
+        </TermList>
+      </Concept>
+      <Concept PreferredConceptYN="N">
+        <ConceptUI>M0000002</ConceptUI>
+        <ConceptName>
+          <String>Test Concept 2</String>
+        </ConceptName>
+        <ScopeNote>Test scope note for concept 2</ScopeNote>
+        <TermList>
+          <Term ConceptPreferredTermYN="Y" IsPermutedTermYN="N" LexicalTag="NON" RecordPreferredTermYN="N">
+            <TermUI>T000003</TermUI>
+            <String>Test Term 3</String>
+            <DateCreated>
+              <Year>2024</Year>
+              <Month>01</Month>
+              <Day>03</Day>
+            </DateCreated>
+          </Term>
+        </TermList>
+      </Concept>
+    </ConceptList>
+  </DescriptorRecord>
+  <DescriptorRecord DescriptorClass="2">
+    <DescriptorUI>D000002</DescriptorUI>
+    <DescriptorName>
+      <String>Test Descriptor 2</String>
+    </DescriptorName>
+    <DateCreated>
+      <Year>2024</Year>
+      <Month>02</Month>
+      <Day>01</Day>
+    </DateCreated>
+    <DateRevised>
+      <Year>2024</Year>
+      <Month>07</Month>
+      <Day>20</Day>
+    </DateRevised>
+    <DateEstablished>
+      <Year>2024</Year>
+      <Month>02</Month>
+      <Day>01</Day>
+    </DateEstablished>
+    <TreeNumberList>
+      <TreeNumber>C03.003</TreeNumber>
+    </TreeNumberList>
+    <ConceptList>
+      <Concept PreferredConceptYN="Y">
+        <ConceptUI>M0000003</ConceptUI>
+        <ConceptName>
+          <String>Test Concept 3</String>
+        </ConceptName>
+        <ScopeNote>Test scope note for concept 3</ScopeNote>
+        <TermList>
+          <Term ConceptPreferredTermYN="Y" IsPermutedTermYN="N" LexicalTag="NON" RecordPreferredTermYN="Y">
+            <TermUI>T000004</TermUI>
+            <String>Test Term 4</String>
+            <DateCreated>
+              <Year>2024</Year>
+              <Month>02</Month>
+              <Day>01</Day>
+            </DateCreated>
+          </Term>
+        </TermList>
+      </Concept>
+    </ConceptList>
+  </DescriptorRecord>
+</DescriptorRecordSet>
