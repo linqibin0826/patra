@@ -19,8 +19,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 ///
 /// &#64;MybatisPlusTest
 /// &#64;Testcontainers
-/// &#64;Import({MeshImportRepositoryImpl.class, MybatisPluginAutoConfig.class})
-/// class MeshImportRepositoryImplIT {
+/// &#64;Import({MeshQualifierRepositoryImpl.class, MybatisPluginAutoConfig.class})
+/// class MeshQualifierRepositoryImplIT {
 ///     // 测试代码
 /// }
 ///

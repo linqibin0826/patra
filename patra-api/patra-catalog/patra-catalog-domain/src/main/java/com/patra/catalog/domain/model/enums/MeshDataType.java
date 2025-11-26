@@ -45,13 +45,12 @@ public enum MeshDataType {
   /**
    * 数据类型代码（用于配置文件、Map key、数据库表名）。
    *
-   * <p>此值必须与以下保持一致：
+   * <p>此值用于标识 MeSH 数据类型，可用于：
    *
    * <ul>
-   *   <li>配置文件中的 key（如 {@code patra.catalog.mesh.import.batch-size-map.descriptor}）
-   *   <li>{@link com.patra.catalog.app.config.MeshImportConfig} 中的 Map key
-   *   <li>{@link com.patra.catalog.domain.model.aggregate.MeshImportAggregate#updateTableProgress}
-   *       的参数
+   *   <li>配置文件中的 key
+   *   <li>数据库表名后缀（如 {@code cat_mesh_descriptor}）
+   *   <li>批处理 Job 参数
    * </ul>
    */
   private final String code;
