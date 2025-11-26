@@ -56,17 +56,10 @@ public interface XmlParserPort {
   ///   - 约 80 条记录
   ///   - 必须先于主题词导入
   ///
-  /// @param xmlInputStream 限定词 XML 文件输入流
-  /// @return 限定词聚合根流（Stream）
-  Stream<MeshQualifierAggregate> parseQualifiers(InputStream xmlInputStream);
-
-  /// 解析限定词（Qualifier）- 从文件路径。
-  ///
-  /// 从指定文件路径读取并解析 MeSH 限定词 XML 文件。
-  ///
   /// @param filePath XML 文件路径
+  /// @param meshVersion MeSH 版本号（如 "2025"）
   /// @return 限定词聚合根流（Stream）
-  Stream<MeshQualifierAggregate> parseQualifiers(Path filePath);
+  Stream<MeshQualifierAggregate> parseQualifiers(Path filePath, String meshVersion);
 
   /// 解析主题词（Descriptor）。
   ///
@@ -80,8 +73,9 @@ public interface XmlParserPort {
   ///   - 约 35,000 条记录
   ///
   /// @param xmlInputStream 主题词 XML 文件输入流
+  /// @param meshVersion MeSH 版本号（如 "2025"）
   /// @return 主题词聚合根流（Stream）
-  Stream<MeshDescriptorAggregate> parseDescriptors(InputStream xmlInputStream);
+  Stream<MeshDescriptorAggregate> parseDescriptors(InputStream xmlInputStream, String meshVersion);
 
   /// 解析树形编号（TreeNumber）。
   ///

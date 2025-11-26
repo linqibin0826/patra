@@ -73,7 +73,7 @@ public class MeshDescriptorJobConfig {
 
     return new StepBuilder("meshDescriptorImportStep", jobRepository)
         .<MeshDescriptorAggregate, MeshDescriptorAggregate>chunk(chunkSize, transactionManager)
-        .reader(meshDescriptorItemReader(null))
+        .reader(meshDescriptorItemReader(null, null))
         .writer(meshDescriptorItemWriter)
         .faultTolerant()
         .skipLimit(SKIP_LIMIT)
@@ -84,12 +84,14 @@ public class MeshDescriptorJobConfig {
   /// 创建 MeSH 主题词 ItemReader（StepScope）。
   ///
   /// @param filePath XML 文件路径（从 Job 参数注入）
+  /// @param meshVersion MeSH 版本号（从 Job 参数注入）
   /// @return ItemReader 实例
   @Bean
   @StepScope
   public MeshDescriptorItemReader meshDescriptorItemReader(
-      @Value("#{jobParameters['filePath']}") String filePath) {
-    return new MeshDescriptorItemReader(xmlParserPort, filePath);
+      @Value("#{jobParameters['filePath']}") String filePath,
+      @Value("#{jobParameters['meshVersion']}") String meshVersion) {
+    return new MeshDescriptorItemReader(xmlParserPort, filePath, meshVersion);
   }
 
   /// 获取 chunk size。

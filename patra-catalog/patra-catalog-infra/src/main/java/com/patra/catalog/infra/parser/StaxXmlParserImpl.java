@@ -54,15 +54,23 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class StaxXmlParserImpl implements XmlParserPort {
 
-  private static final XMLInputFactory XML_INPUT_FACTORY = XMLInputFactory.newInstance();
+  private static final XMLInputFactory XML_INPUT_FACTORY;
+
+  static {
+    XML_INPUT_FACTORY = XMLInputFactory.newInstance();
+    // 禁用外部实体引用，防止 XXE 攻击（OWASP A03:2021 Injection）
+    XML_INPUT_FACTORY.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, Boolean.FALSE);
+    XML_INPUT_FACTORY.setProperty(XMLInputFactory.SUPPORT_DTD, Boolean.FALSE);
+  }
 
   @Override
-  public Stream<MeshDescriptorAggregate> parseDescriptors(InputStream xmlInputStream) {
-    log.info("开始解析 MeSH Descriptor XML 文件");
+  public Stream<MeshDescriptorAggregate> parseDescriptors(
+      InputStream xmlInputStream, String meshVersion) {
+    log.info("开始解析 MeSH Descriptor XML 文件，版本：{}", meshVersion);
 
     try {
       XMLStreamReader reader = XML_INPUT_FACTORY.createXMLStreamReader(xmlInputStream);
-      DescriptorSpliterator spliterator = new DescriptorSpliterator(reader);
+      DescriptorSpliterator spliterator = new DescriptorSpliterator(reader, meshVersion);
       return StreamSupport.stream(spliterator, false).onClose(() -> closeReader(reader));
     } catch (XMLStreamException e) {
       log.error("创建 XML 读取器失败", e);
@@ -71,29 +79,22 @@ public class StaxXmlParserImpl implements XmlParserPort {
   }
 
   @Override
-  public Stream<MeshQualifierAggregate> parseQualifiers(InputStream xmlInputStream) {
-    log.info("开始解析 MeSH Qualifier XML 文件");
-
-    try {
-      XMLStreamReader reader = XML_INPUT_FACTORY.createXMLStreamReader(xmlInputStream);
-      QualifierSpliterator spliterator = new QualifierSpliterator(reader);
-      return StreamSupport.stream(spliterator, false).onClose(() -> closeReader(reader));
-    } catch (XMLStreamException e) {
-      log.error("创建 XML 读取器失败", e);
-      throw new RuntimeException("XML 解析失败", e);
-    }
-  }
-
-  @Override
-  public Stream<MeshQualifierAggregate> parseQualifiers(Path filePath) {
-    log.info("开始解析 MeSH Qualifier XML 文件：{}", filePath);
+  public Stream<MeshQualifierAggregate> parseQualifiers(Path filePath, String meshVersion) {
+    log.info("开始解析 MeSH Qualifier XML 文件：{}，版本：{}", filePath, meshVersion);
 
     try {
       InputStream inputStream = Files.newInputStream(filePath);
-      return parseQualifiers(inputStream).onClose(() -> closeInputStream(inputStream));
+      XMLStreamReader reader = XML_INPUT_FACTORY.createXMLStreamReader(inputStream);
+      QualifierSpliterator spliterator = new QualifierSpliterator(reader, meshVersion);
+      return StreamSupport.stream(spliterator, false)
+          .onClose(() -> closeReader(reader))
+          .onClose(() -> closeInputStream(inputStream));
     } catch (IOException e) {
       log.error("打开文件失败：{}", filePath, e);
       throw new RuntimeException("打开 XML 文件失败：" + filePath, e);
+    } catch (XMLStreamException e) {
+      log.error("创建 XML 读取器失败", e);
+      throw new RuntimeException("XML 解析失败", e);
     }
   }
 
@@ -166,10 +167,12 @@ public class StaxXmlParserImpl implements XmlParserPort {
       implements Spliterator<MeshDescriptorAggregate> {
 
     private final XMLStreamReader reader;
+    private final String meshVersion;
     private boolean hasNext = true;
 
-    public DescriptorSpliterator(XMLStreamReader reader) {
+    public DescriptorSpliterator(XMLStreamReader reader, String meshVersion) {
       this.reader = reader;
+      this.meshVersion = meshVersion;
     }
 
     @Override
@@ -184,7 +187,7 @@ public class StaxXmlParserImpl implements XmlParserPort {
           if (event == XMLStreamConstants.START_ELEMENT
               && "DescriptorRecord".equals(reader.getLocalName())) {
             // 解析单个 DescriptorRecord
-            MeshDescriptorAggregate descriptor = parseDescriptorRecord(reader);
+            MeshDescriptorAggregate descriptor = parseDescriptorRecord(reader, meshVersion);
             if (descriptor != null) {
               action.accept(descriptor);
               return true;
@@ -215,8 +218,8 @@ public class StaxXmlParserImpl implements XmlParserPort {
     }
 
     /// 解析单个 DescriptorRecord。
-    private MeshDescriptorAggregate parseDescriptorRecord(XMLStreamReader reader)
-        throws XMLStreamException {
+    private MeshDescriptorAggregate parseDescriptorRecord(
+        XMLStreamReader reader, String meshVersion) throws XMLStreamException {
       // 必填字段
       String descriptorUI = null;
       String descriptorName = null;
@@ -319,11 +322,7 @@ public class StaxXmlParserImpl implements XmlParserPort {
       // 创建聚合根（使用 Domain 层的工厂方法）
       MeshDescriptorAggregate aggregate =
           MeshDescriptorAggregate.create(
-              MeshUI.of(descriptorUI),
-              descriptorName,
-              descriptorClass,
-              dateCreated != null ? dateCreated.substring(0, 4) : "2025" // 使用年份作为版本号
-              );
+              MeshUI.of(descriptorUI), descriptorName, descriptorClass, meshVersion);
 
       // 设置日期字段
       if (dateCreated != null) {
@@ -395,10 +394,12 @@ public class StaxXmlParserImpl implements XmlParserPort {
       implements java.util.Spliterator<MeshQualifierAggregate> {
 
     private final XMLStreamReader reader;
+    private final String meshVersion;
     private boolean hasNext = true;
 
-    public QualifierSpliterator(XMLStreamReader reader) {
+    public QualifierSpliterator(XMLStreamReader reader, String meshVersion) {
       this.reader = reader;
+      this.meshVersion = meshVersion;
     }
 
     @Override
@@ -502,7 +503,7 @@ public class StaxXmlParserImpl implements XmlParserPort {
             .withDateRevised(dateRevised)
             .withDateEstablished(dateEstablished)
             .withActiveStatus(true) // 默认为有效
-            .withMeshVersion("2025"); // TODO: 从文件名提取
+            .withMeshVersion(meshVersion);
       }
 
       log.warn("跳过不完整的 Qualifier 记录: UI={}, name={}, abbr={}", qualifierUi, name, abbreviation);
