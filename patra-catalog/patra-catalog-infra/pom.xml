@@ -60,12 +60,6 @@
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
 
-        <!-- RestClient HTTP 客户端（用于文件下载） -->
-        <dependency>
-            <groupId>com.patra</groupId>
-            <artifactId>patra-spring-boot-starter-rest-client</artifactId>
-        </dependency>
-
         <!-- ================================ -->
         <!-- 事件发布 -->
         <!-- ================================ -->
@@ -82,12 +76,6 @@
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
-        </dependency>
-
-        <!-- Hutool 加密工具（MD5 校验） -->
-        <dependency>
-            <groupId>cn.hutool</groupId>
-            <artifactId>hutool-crypto</artifactId>
         </dependency>
 
         <!-- ================================ -->
