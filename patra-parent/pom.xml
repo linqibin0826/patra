@@ -264,6 +264,11 @@
         <artifactId>patra-spring-boot-starter-mybatis</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.patra</groupId>
+        <artifactId>patra-spring-boot-starter-batch</artifactId>
+        <version>${project.version}</version>
+      </dependency>
 
       <dependency>
         <groupId>com.patra</groupId>
