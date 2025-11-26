@@ -28,3 +28,40 @@
 
 1. 需要标准化对象存储键生成时依赖 `patra-common-storage`，使用 `ObjectKeyTemplate.generateDailyKey()` 生成日期分区键，禁止手动拼接存储路径
 2. 需要跨服务共享数据模型时依赖 `patra-common-model`（Shared Kernel 契约），禁止在各服务中重复定义相同概念
+
+## Adapter 层入口开发规范
+
+Adapter 层负责入站适配（Controller、定时任务、消息监听），统一遵循以下模式。
+
+### 包结构
+
+```
+patra-{service}-app/usecase/{feature}/
+├── {Feature}UseCase.java           # 接口（Adapter 依赖此接口）
+├── {Feature}Orchestrator.java      # 实现（implements UseCase）
+├── command/{Feature}Command.java   # 命令（含参数验证）
+└── dto/{Feature}Result.java        # 结果
+
+patra-{service}-adapter/
+├── rest/{Feature}Controller.java   # HTTP 入口
+├── scheduler/job/{Feature}Job.java # 定时任务入口
+└── mq/{Feature}Listener.java       # 消息监听入口
+```
+
+### 开发流程
+
+1. **Application 层**：创建 `{Feature}UseCase` 接口定义用例契约，`{Feature}Orchestrator` 实现该接口
+2. **Command/Result**：`{Feature}Command` 在构造函数中完成参数验证，`{Feature}Result` 封装执行结果
+3. **Adapter 层**：入口类只做协议转换（DTO/JSON/Message → Command），禁止包含业务逻辑
+4. **依赖方向**：Adapter 依赖 UseCase 接口（非 Orchestrator 实现），实现依赖倒置
+5. **参数传递**：各层之间传递参数必须使用 POJO（Command/Result/DTO），禁止使用多个简单类型参数，面向对象开发
+
+### 职责划分
+
+| 层级 | 组件 | 职责 | 禁止行为 |
+|------|------|------|----------|
+| Adapter | Controller/Job/Listener | 协议转换、日志、响应封装 | 业务逻辑、复杂验证 |
+| Adapter | DTO/Param | 请求反序列化 | 业务验证 |
+| Application | Command | 参数验证、枚举转换 | 业务逻辑 |
+| Application | UseCase | 定义用例契约 | 实现细节 |
+| Application | Orchestrator | 业务编排、事务管理 | 直接依赖框架 |
