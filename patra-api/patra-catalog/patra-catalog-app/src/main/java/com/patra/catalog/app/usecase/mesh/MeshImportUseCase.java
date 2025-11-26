@@ -1,8 +1,8 @@
 package com.patra.catalog.app.usecase.mesh;
 
-import com.patra.catalog.app.usecase.mesh.command.MeshImportCommand;
+import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.command.MeshQualifierImportCommand;
-import com.patra.catalog.app.usecase.mesh.dto.MeshImportResult;
+import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
 
 /// MeSH 导入用例接口，定义调度入口契约。
@@ -17,7 +17,7 @@ public interface MeshImportUseCase {
   ///
   /// @param command 导入命令
   /// @return 导入结果摘要
-  MeshImportResult importDescriptors(MeshImportCommand command);
+  MeshDescriptorImportResult importDescriptors(MeshDescriptorImportCommand command);
 
   /// 执行 MeSH 限定词导入。
   ///

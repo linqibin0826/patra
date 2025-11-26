@@ -1,8 +1,8 @@
 package com.patra.catalog.app.usecase.mesh;
 
-import com.patra.catalog.app.usecase.mesh.command.MeshImportCommand;
+import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.command.MeshQualifierImportCommand;
-import com.patra.catalog.app.usecase.mesh.dto.MeshImportResult;
+import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.enums.MeshDescriptorImportMode;
@@ -107,7 +107,7 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
   /// @param command 导入命令（包含文件路径、版本、模式）
   /// @return 导入结果
   @Override
-  public MeshImportResult importDescriptors(MeshImportCommand command) {
+  public MeshDescriptorImportResult importDescriptors(MeshDescriptorImportCommand command) {
     log.info(
         "启动 MeSH 主题词导入，URL：{}，版本：{}，模式：{}",
         command.url(),
@@ -131,7 +131,7 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
           new MeshImportParams(localFile.toString(), command.meshVersion(), forceNewInstance, true);
       Long executionId = meshDescriptorBatchPort.launchImport(params);
 
-      return MeshImportResult.success(
+      return MeshDescriptorImportResult.success(
           executionId, command.url(), localFile.toString(), command.meshVersion(), command.mode());
     } catch (Exception e) {
       // Job 启动失败，清理临时文件
