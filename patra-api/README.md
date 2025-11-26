@@ -277,7 +277,7 @@ Patra 项目遵循**测试金字塔**，各层使用不同的测试策略：
 ### 代码风格
 
 - **Java 25 特性**: 适当使用 `record`、模式匹配、密封类
-- **命名**: `*Aggregate`, `*Orchestrator`, `*RepositoryMpImpl`
+- **命名**: `*Aggregate`, `*Orchestrator`, `*RepositoryAdapter`
 - **日志**: 参数化、仅英文 (`log.info("Processing {}", id)`)
 - **不可变性**: 优先使用 `record` 和 `final` 字段
 

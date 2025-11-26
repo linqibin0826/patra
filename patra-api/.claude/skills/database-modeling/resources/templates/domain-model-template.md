@@ -48,8 +48,8 @@ patra-{{module}}/
             │   └── {{EntityName}}Mapper.java
             ├── converter/                      # 转换器
             │   └── {{EntityName}}Converter.java
-            └── repository/                     # 仓储实现
-                └── {{EntityName}}RepositoryMpImpl.java
+            └── adapter/persistence/            # 仓储适配器
+                └── {{EntityName}}RepositoryAdapter.java
 ```
 
 ---
@@ -663,12 +663,12 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-/// {{EntityName}} 仓储实现。
-/// 
+/// {{EntityName}} 仓储适配器。
+///
 /// 适配器模式：将 MyBatis-Plus 适配到领域层的仓储接口。
 @Repository
 @RequiredArgsConstructor
-public class {{EntityName}}RepositoryMpImpl implements {{EntityName}}Repository {
+public class {{EntityName}}RepositoryAdapter implements {{EntityName}}Repository {
 
   private final {{EntityName}}Mapper mapper;
   private final {{EntityName}}Converter converter;
@@ -770,7 +770,7 @@ public void {{behavior_example_name}}(Long id, {{behavior_params}}) {
 | 枚举 | 大驼峰 | `FileStatus` |
 | 数据对象 | 大驼峰 + DO 后缀 | `FileMetadataDO` |
 | 仓储接口 | 大驼峰 + Repository 后缀 | `FileMetadataRepository` |
-| 仓储实现 | 大驼峰 + RepositoryMpImpl 后缀 | `FileMetadataRepositoryMpImpl` |
+| 仓储适配器 | 大驼峰 + RepositoryAdapter 后缀 | `FileMetadataRepositoryAdapter` |
 
 ### 2. 包结构约定
 

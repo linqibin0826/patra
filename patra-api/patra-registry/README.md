@@ -166,7 +166,7 @@ Flyway 自动执行数据库迁移,种子数据包括:
 3. **更新聚合根**: 在 `ProvenanceConfiguration` 中添加 `cacheConfig` 字段
 4. **扩展仓储接口**: 在 `ProvenanceConfigRepository` 中添加查询方法
 5. **创建 DO 和 Mapper**: 在 `patra-registry-infra` 中创建数据库实体和映射器
-6. **实现仓储方法**: 在 `ProvenanceConfigRepositoryMpImpl` 中实现查询逻辑
+6. **实现仓储方法**: 在 `ProvenanceConfigRepositoryAdapter` 中实现查询逻辑
 7. **更新 DTO**: 在 `patra-registry-api` 中添加响应 DTO
 
 ## 相关文档

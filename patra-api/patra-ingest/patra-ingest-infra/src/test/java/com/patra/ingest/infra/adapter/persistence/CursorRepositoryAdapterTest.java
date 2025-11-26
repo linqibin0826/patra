@@ -1,4 +1,4 @@
-package com.patra.ingest.infra.persistence.repository;
+package com.patra.ingest.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,7 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-/// CursorRepositoryMpImpl 单元测试。
+/// CursorRepositoryAdapter 单元测试。
 ///
 /// 测试策略：
 ///
@@ -42,13 +42,13 @@ import org.mockito.quality.Strictness;
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-@DisplayName("CursorRepositoryMpImpl 单元测试")
-class CursorRepositoryMpImplTest {
+@DisplayName("CursorRepositoryAdapter 单元测试")
+class CursorRepositoryAdapterTest {
 
   @Mock private CursorMapper mapper;
   @Mock private CursorConverter converter;
 
-  @InjectMocks private CursorRepositoryMpImpl repository;
+  @InjectMocks private CursorRepositoryAdapter repository;
 
   private static final Long TEST_CURSOR_ID = 1L;
   private static final ProvenanceCode TEST_PROVENANCE_CODE = ProvenanceCode.PUBMED;
