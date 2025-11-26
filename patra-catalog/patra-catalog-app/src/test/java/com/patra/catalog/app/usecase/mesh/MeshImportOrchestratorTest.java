@@ -8,9 +8,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.catalog.app.usecase.mesh.command.MeshImportCommand;
+import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.command.MeshQualifierImportCommand;
-import com.patra.catalog.app.usecase.mesh.dto.MeshImportResult;
+import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.enums.MeshDescriptorImportMode;
@@ -83,12 +83,12 @@ class MeshImportOrchestratorTest {
     @DisplayName("INCREMENTAL 模式 - 不应该清空表")
     void incremental_shouldNotTruncateTable() {
       // Given
-      MeshImportCommand command = MeshImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
+      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(12345L);
 
       // When
-      MeshImportResult result = orchestrator.importDescriptors(command);
+      MeshDescriptorImportResult result = orchestrator.importDescriptors(command);
 
       // Then
       verify(fileDownloadPort).downloadToTemp(URI.create(TEST_URL));
@@ -107,7 +107,7 @@ class MeshImportOrchestratorTest {
     @DisplayName("INCREMENTAL 模式 - forceNewInstance 应该为 false，tempFile 应该为 true")
     void incremental_shouldSetForceNewInstanceFalseAndTempFileTrue() {
       // Given
-      MeshImportCommand command = MeshImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
+      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(12345L);
 
@@ -129,12 +129,12 @@ class MeshImportOrchestratorTest {
     @DisplayName("TRUNCATE_REIMPORT 模式 - 应该先清空表再导入")
     void truncateReimport_shouldTruncateBeforeImport() {
       // Given
-      MeshImportCommand command = MeshImportCommand.of(TEST_URL, "2025", "TRUNCATE_REIMPORT");
+      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, "2025", "TRUNCATE_REIMPORT");
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(67890L);
 
       // When
-      MeshImportResult result = orchestrator.importDescriptors(command);
+      MeshDescriptorImportResult result = orchestrator.importDescriptors(command);
 
       // Then
       verify(fileDownloadPort).downloadToTemp(URI.create(TEST_URL));
@@ -152,7 +152,7 @@ class MeshImportOrchestratorTest {
     @DisplayName("TRUNCATE_REIMPORT 模式 - forceNewInstance 应该为 true，tempFile 应该为 true")
     void truncateReimport_shouldSetForceNewInstanceTrueAndTempFileTrue() {
       // Given
-      MeshImportCommand command = MeshImportCommand.of(TEST_URL, "2025", "TRUNCATE_REIMPORT");
+      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, "2025", "TRUNCATE_REIMPORT");
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(67890L);
 
@@ -177,12 +177,12 @@ class MeshImportOrchestratorTest {
       String url = "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/desc2025.xml";
       String meshVersion = "2025";
       Path localPath = Path.of("/tmp/mesh-import-param-test.xml");
-      MeshImportCommand command = MeshImportCommand.of(url, meshVersion, "INCREMENTAL");
+      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(url, meshVersion, "INCREMENTAL");
       when(fileDownloadPort.downloadToTemp(URI.create(url))).thenReturn(localPath);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(99999L);
 
       // When
-      MeshImportResult result = orchestrator.importDescriptors(command);
+      MeshDescriptorImportResult result = orchestrator.importDescriptors(command);
 
       // Then
       ArgumentCaptor<MeshImportParams> captor = ArgumentCaptor.forClass(MeshImportParams.class);
@@ -202,13 +202,13 @@ class MeshImportOrchestratorTest {
     void shouldReturnCorrectExecutionId() {
       // Given
       Long expectedExecutionId = 1234567890L;
-      MeshImportCommand command = MeshImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
+      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class)))
           .thenReturn(expectedExecutionId);
 
       // When
-      MeshImportResult result = orchestrator.importDescriptors(command);
+      MeshDescriptorImportResult result = orchestrator.importDescriptors(command);
 
       // Then
       assertThat(result.executionId()).isEqualTo(expectedExecutionId);
@@ -219,7 +219,7 @@ class MeshImportOrchestratorTest {
     @DisplayName("Job 启动失败时应该清理临时文件")
     void shouldCleanupTempFileWhenJobLaunchFails() {
       // Given
-      MeshImportCommand command = MeshImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
+      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
       Path tempFile = Path.of("/tmp/mesh-import-cleanup-test.xml");
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(tempFile);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class)))

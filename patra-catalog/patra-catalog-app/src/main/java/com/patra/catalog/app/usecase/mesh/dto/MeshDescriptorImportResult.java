@@ -2,9 +2,9 @@ package com.patra.catalog.app.usecase.mesh.dto;
 
 import com.patra.catalog.domain.model.enums.MeshDescriptorImportMode;
 
-/// MeSH 导入结果（Application → Adapter）。
+/// MeSH 主题词导入结果（Application → Adapter）。
 ///
-/// 导入任务执行后返回给调度器的结果摘要。
+/// 主题词（Descriptor）导入任务执行后返回给调度器的结果摘要。
 ///
 /// @param executionId 批处理执行标识符（Spring Batch Job Execution ID）
 /// @param sourceUrl 原始数据源 URL
@@ -14,7 +14,7 @@ import com.patra.catalog.domain.model.enums.MeshDescriptorImportMode;
 /// @param message 人类可读的状态摘要（不含敏感的服务器路径）
 /// @author linqibin
 /// @since 0.1.0
-public record MeshImportResult(
+public record MeshDescriptorImportResult(
     Long executionId,
     String sourceUrl,
     String filePath,
@@ -30,13 +30,13 @@ public record MeshImportResult(
   /// @param meshVersion 版本号
   /// @param mode 导入模式
   /// @return 成功结果对象
-  public static MeshImportResult success(
+  public static MeshDescriptorImportResult success(
       Long executionId,
       String sourceUrl,
       String filePath,
       String meshVersion,
       MeshDescriptorImportMode mode) {
-    return new MeshImportResult(
+    return new MeshDescriptorImportResult(
         executionId,
         sourceUrl,
         filePath,

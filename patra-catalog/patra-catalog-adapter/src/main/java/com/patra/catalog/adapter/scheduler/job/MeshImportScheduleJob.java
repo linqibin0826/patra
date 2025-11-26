@@ -2,12 +2,12 @@ package com.patra.catalog.adapter.scheduler.job;
 
 import cn.hutool.core.text.CharSequenceUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.patra.catalog.adapter.scheduler.param.MeshImportJobParam;
+import com.patra.catalog.adapter.scheduler.param.MeshDescriptorImportJobParam;
 import com.patra.catalog.adapter.scheduler.param.MeshQualifierImportJobParam;
 import com.patra.catalog.app.usecase.mesh.MeshImportUseCase;
-import com.patra.catalog.app.usecase.mesh.command.MeshImportCommand;
+import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.command.MeshQualifierImportCommand;
-import com.patra.catalog.app.usecase.mesh.dto.MeshImportResult;
+import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
 import com.patra.catalog.domain.exception.CatalogScheduleParameterException;
 import com.xxl.job.core.context.XxlJobHelper;
@@ -65,14 +65,14 @@ public class MeshImportScheduleJob {
     log.info("MeSH 导入任务已触发，jobId [{}]，参数：{}", XxlJobHelper.getJobId(), rawParam);
 
     try {
-      MeshImportCommand command = parseJobParam(rawParam);
+      MeshDescriptorImportCommand command = parseJobParam(rawParam);
       log.debug(
           "已解析 MeSH 导入命令：URL [{}]，版本 [{}]，模式 [{}]",
           command.url(),
           command.meshVersion(),
           command.mode());
 
-      MeshImportResult result = meshImportUseCase.importDescriptors(command);
+      MeshDescriptorImportResult result = meshImportUseCase.importDescriptors(command);
       handleSuccess(result.message());
 
     } catch (CatalogScheduleParameterException ex) {
@@ -91,20 +91,20 @@ public class MeshImportScheduleJob {
   /// @param rawParam 原始 JSON 参数
   /// @return 导入命令
   /// @throws CatalogScheduleParameterException 当参数无法解析或验证失败时
-  private MeshImportCommand parseJobParam(String rawParam) {
+  private MeshDescriptorImportCommand parseJobParam(String rawParam) {
     if (CharSequenceUtil.isBlank(rawParam)) {
       throw new CatalogScheduleParameterException("MeSH 导入参数不能为空，请提供 JSON 格式参数");
     }
 
-    MeshImportJobParam param;
+    MeshDescriptorImportJobParam param;
     try {
-      param = objectMapper.readValue(rawParam, MeshImportJobParam.class);
+      param = objectMapper.readValue(rawParam, MeshDescriptorImportJobParam.class);
     } catch (Exception ex) {
       throw new CatalogScheduleParameterException("MeSH 导入参数解析失败：" + ex.getMessage(), ex);
     }
 
     // 委托给 Command 进行参数验证和枚举转换
-    return MeshImportCommand.of(param.url(), param.meshVersion(), param.mode());
+    return MeshDescriptorImportCommand.of(param.url(), param.meshVersion(), param.mode());
   }
 
   /// 处理参数错误。

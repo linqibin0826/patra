@@ -6,9 +6,9 @@ import com.patra.catalog.domain.model.enums.MeshDescriptorImportMode;
 import java.net.URI;
 import java.util.Objects;
 
-/// MeSH 导入命令（Adapter → Application）。
+/// MeSH 主题词导入命令（Adapter → Application）。
 ///
-/// 由调度任务或外部调用方构建，经 Adapter 层协议转换后传递到应用层执行 MeSH 主题词导入。
+/// 由调度任务或外部调用方构建，经 Adapter 层协议转换后传递到应用层执行 MeSH 主题词（Descriptor）导入。
 ///
 /// **字段语义与约束**：
 ///
@@ -30,14 +30,14 @@ import java.util.Objects;
 /// @param mode 导入模式（必填）
 /// @author linqibin
 /// @since 0.1.0
-public record MeshImportCommand(String url, String meshVersion, MeshDescriptorImportMode mode) {
+public record MeshDescriptorImportCommand(String url, String meshVersion, MeshDescriptorImportMode mode) {
 
   /// 构造并验证命令参数。
   ///
   /// @throws CatalogScheduleParameterException 当 url 为空或格式无效时
   /// @throws CatalogScheduleParameterException 当 meshVersion 为空时
   /// @throws NullPointerException 当 mode 为 null 时
-  public MeshImportCommand {
+  public MeshDescriptorImportCommand {
     if (CharSequenceUtil.isBlank(url)) {
       throw new CatalogScheduleParameterException("url 参数不能为空");
     }
@@ -57,9 +57,9 @@ public record MeshImportCommand(String url, String meshVersion, MeshDescriptorIm
   /// @param modeStr 导入模式字符串
   /// @return 构建的命令对象
   /// @throws CatalogScheduleParameterException 当参数无效时
-  public static MeshImportCommand of(String url, String meshVersion, String modeStr) {
+  public static MeshDescriptorImportCommand of(String url, String meshVersion, String modeStr) {
     MeshDescriptorImportMode mode = parseMode(modeStr);
-    return new MeshImportCommand(url, meshVersion, mode);
+    return new MeshDescriptorImportCommand(url, meshVersion, mode);
   }
 
   /// 验证 URL 格式（必须是 HTTP 或 HTTPS 协议）。
