@@ -1,5 +1,7 @@
 package com.patra.starter.batch.core;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.json.JsonMapperHolder;
 import com.patra.starter.batch.exception.BatchJobExecutionException;
 import java.util.Date;
 import java.util.Map;
@@ -18,9 +20,27 @@ import org.springframework.stereotype.Component;
 ///
 /// 封装 Spring Batch JobLauncher 调用逻辑，简化批处理任务启动。
 ///
-/// ## 关键改进
+/// ## 强类型参数支持
 ///
-/// 支持可选的 timestamp 参数，控制 Job 幂等性：
+/// 支持强类型的 `JobParams` 参数对象，通过 Jackson 自动转换为 `JobParameters`：
+///
+/// ```java
+/// @Data
+/// @Builder
+/// public class MeshImportJobParams implements JobParams {
+///     private String filePath;
+///     private String meshVersion;
+/// }
+///
+/// // 使用示例
+/// var params = MeshImportJobParams.builder()
+///     .filePath("/path/to/mesh.xml")
+///     .meshVersion("2025")
+///     .build();
+/// jobLauncherHelper.launch(meshImportJob, params);
+/// ```
+///
+/// ## timestamp 参数控制幂等性
 ///
 /// - `addTimestamp=true`: 每次执行都创建新 JobInstance（适用于可重复执行的任务）
 /// - `addTimestamp=false`: 相同参数的 Job 只执行一次（幂等性保证）
@@ -38,28 +58,25 @@ public class JobLauncherHelper {
   /// 启动 Job（默认添加 timestamp，每次创建新实例）。
   ///
   /// @param job Job 实例
-  /// @param params Job 参数
+  /// @param params Job 参数（强类型）
   /// @return JobExecution ID
-  public Long launch(Job job, Map<String, Object> params) {
+  public Long launch(Job job, JobParams params) {
     return launch(job, params, true);
   }
 
   /// 启动 Job。
   ///
-  /// ## 关键改进
-  ///
-  /// 支持可选的 timestamp 参数。
-  ///
   /// @param job Job 实例
-  /// @param params Job 参数（Map 形式）
+  /// @param params Job 参数（强类型）
   /// @param addTimestamp 是否添加时间戳
   ///     - `true`: 每次执行都创建新 JobInstance（适用于可重复执行的任务）
   ///     - `false`: 相同参数的 Job 只执行一次（幂等性保证）
   /// @return JobExecution ID
   /// @throws BatchJobExecutionException Job 启动失败时抛出
-  public Long launch(Job job, Map<String, Object> params, boolean addTimestamp) {
+  public Long launch(Job job, JobParams params, boolean addTimestamp) {
     try {
-      JobParameters jobParameters = buildJobParameters(params, addTimestamp);
+      Map<String, Object> paramsMap = convertToMap(params);
+      JobParameters jobParameters = buildJobParameters(paramsMap, addTimestamp);
       JobExecution execution = jobLauncher.run(job, jobParameters);
 
       log.info("Job [{}] 启动成功，执行 ID: {}", job.getName(), execution.getId());
@@ -71,9 +88,27 @@ public class JobLauncherHelper {
     }
   }
 
+  /// 将 JobParams 转换为 Map。
+  ///
+  /// 使用 Jackson ObjectMapper 进行转换，null 字段会被自动跳过。
+  ///
+  /// @param params Job 参数对象
+  /// @return 参数 Map
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> convertToMap(JobParams params) {
+    ObjectMapper objectMapper = JsonMapperHolder.getObjectMapper();
+    return objectMapper.convertValue(params, Map.class);
+  }
+
   /// 构建 JobParameters。
   ///
-  /// 支持常见 Java 类型到 Spring Batch JobParameters 的转换。
+  /// 支持常见 Java 类型到 Spring Batch JobParameters 的转换：
+  ///
+  /// - `String` → `addString`
+  /// - `Long` / `Integer` → `addLong`
+  /// - `Double` / `Float` → `addDouble`
+  /// - `Date` → `addDate`
+  /// - 其他类型 → `addString`（通过 `toString()`）
   ///
   /// @param params 参数 Map
   /// @param addTimestamp 是否添加时间戳（控制幂等性）
@@ -83,20 +118,20 @@ public class JobLauncherHelper {
 
     params.forEach(
         (key, value) -> {
-          if (value instanceof String) {
-            builder.addString(key, (String) value);
-          } else if (value instanceof Long) {
-            builder.addLong(key, (Long) value);
-          } else if (value instanceof Double) {
-            builder.addDouble(key, (Double) value);
-          } else if (value instanceof Date) {
-            builder.addDate(key, (Date) value);
-          } else {
-            builder.addString(key, value.toString());
+          switch (value) {
+            case null -> {
+              // 跳过 null 值
+            }
+            case String stringValue -> builder.addString(key, stringValue);
+            case Long longValue -> builder.addLong(key, longValue);
+            case Integer intValue -> builder.addLong(key, intValue.longValue());
+            case Double doubleValue -> builder.addDouble(key, doubleValue);
+            case Float floatValue -> builder.addDouble(key, floatValue.doubleValue());
+            case Date dateValue -> builder.addDate(key, dateValue);
+            default -> builder.addString(key, value.toString());
           }
         });
-
-    // ⭐ 关键改进：timestamp 可选
+    // timestamp 控制幂等性
     // - true: 每次执行都是新 JobInstance
     // - false: 相同参数只执行一次（幂等性）
     if (addTimestamp) {

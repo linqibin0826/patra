@@ -60,4 +60,25 @@ public class MeshDescriptorRepositoryImpl implements MeshDescriptorRepository {
     // TODO: 待实现
     throw new UnsupportedOperationException("Not implemented yet");
   }
+
+  @Override
+  public void truncateAll() {
+    log.info("开始清空所有 MeSH 主题词数据");
+
+    // 先清空子表（避免外键约束问题）
+    meshTreeNumberMapper.truncateTable();
+    log.debug("已清空 cat_mesh_tree_number 表");
+
+    meshConceptMapper.truncateTable();
+    log.debug("已清空 cat_mesh_concept 表");
+
+    meshEntryTermMapper.truncateTable();
+    log.debug("已清空 cat_mesh_entry_term 表");
+
+    // 最后清空主表
+    meshDescriptorMapper.truncateTable();
+    log.debug("已清空 cat_mesh_descriptor 表");
+
+    log.info("MeSH 主题词数据清空完成");
+  }
 }

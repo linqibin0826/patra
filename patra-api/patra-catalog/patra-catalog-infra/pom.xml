@@ -39,6 +39,12 @@
             <artifactId>patra-spring-boot-starter-mybatis</artifactId>
         </dependency>
 
+        <!-- Spring Batch 批处理 -->
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-batch</artifactId>
+        </dependency>
+
         <!-- Elasticsearch 持久化 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

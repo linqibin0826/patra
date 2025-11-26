@@ -1,0 +1,296 @@
+package com.patra.catalog.infra.batch;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
+import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
+import com.patra.catalog.domain.model.entity.MeshConcept;
+import com.patra.catalog.domain.model.entity.MeshEntryTerm;
+import com.patra.catalog.domain.model.entity.MeshTreeNumber;
+import com.patra.catalog.domain.model.enums.DescriptorClass;
+import com.patra.catalog.domain.model.enums.LexicalTag;
+import com.patra.catalog.domain.model.vo.mesh.MeshUI;
+import com.patra.catalog.infra.persistence.converter.MeshDescriptorConverter;
+import com.patra.catalog.infra.persistence.entity.MeshConceptDO;
+import com.patra.catalog.infra.persistence.entity.MeshDescriptorDO;
+import com.patra.catalog.infra.persistence.entity.MeshEntryTermDO;
+import com.patra.catalog.infra.persistence.entity.MeshTreeNumberDO;
+import com.patra.catalog.infra.persistence.mapper.MeshConceptMapper;
+import com.patra.catalog.infra.persistence.mapper.MeshDescriptorMapper;
+import com.patra.catalog.infra.persistence.mapper.MeshEntryTermMapper;
+import com.patra.catalog.infra.persistence.mapper.MeshTreeNumberMapper;
+import com.patra.starter.mybatis.autoconfig.MybatisPluginAutoConfig;
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.batch.item.Chunk;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
+/// MeSH 主题词批量写入器集成测试。
+///
+/// 使用 Testcontainers + MySQL 8 测试批量写入操作。
+///
+/// **测试策略**：
+///
+/// - 集成测试：使用真实 MySQL 数据库
+///   - 测试隔离：每个测试方法独立
+///   - TestContainers：自动启动和停止 MySQL 容器
+///   - 测试覆盖：write() 的各种场景
+///
+/// **重点测试场景**：
+///
+/// - write() 单个 Descriptor：验证主表和子表数据正确写入
+///   - write() 批量 Descriptor：验证批量写入正确性
+///   - write() 空 Chunk：验证空数据处理
+///   - write() 含全部关联实体：验证 TreeNumber/Concept/EntryTerm 完整写入
+///
+/// @author linqibin
+/// @since 0.1.0
+@MybatisPlusTest
+@Testcontainers
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import({
+  MeshDescriptorItemWriter.class,
+  MeshDescriptorConverter.class,
+  MybatisPluginAutoConfig.class
+})
+@MapperScan("com.patra.catalog.infra.persistence.mapper")
+@DisplayName("MeshDescriptorItemWriter 集成测试")
+class MeshDescriptorItemWriterIT {
+
+  @Container
+  static MySQLContainer<?> mysql =
+      new MySQLContainer<>("mysql:8.0.35")
+          .withDatabaseName("patra_catalog_test")
+          .withUsername("test")
+          .withPassword("test");
+
+  @DynamicPropertySource
+  static void configureProperties(DynamicPropertyRegistry registry) {
+    registry.add("spring.datasource.url", mysql::getJdbcUrl);
+    registry.add("spring.datasource.username", mysql::getUsername);
+    registry.add("spring.datasource.password", mysql::getPassword);
+  }
+
+  @Autowired private MeshDescriptorItemWriter meshDescriptorItemWriter;
+
+  @Autowired private MeshDescriptorMapper descriptorMapper;
+  @Autowired private MeshTreeNumberMapper treeNumberMapper;
+  @Autowired private MeshConceptMapper conceptMapper;
+  @Autowired private MeshEntryTermMapper entryTermMapper;
+
+  @Test
+  @DisplayName("write() 空 Chunk - 应该不抛出异常，直接返回")
+  void write_emptyChunk_shouldReturnWithoutError() throws Exception {
+    // Given: 空 Chunk
+    Chunk<MeshDescriptorAggregate> emptyChunk = new Chunk<>();
+
+    // When: 写入空 Chunk
+    meshDescriptorItemWriter.write(emptyChunk);
+
+    // Then: 不抛出异常，数据库应该没有记录
+    long count = descriptorMapper.selectCount(null);
+    assertThat(count).isEqualTo(0);
+  }
+
+  @Test
+  @DisplayName("write() 单个 Descriptor - 应该正确写入主表和子表")
+  void write_singleDescriptor_shouldInsertAllTables() throws Exception {
+    // Given: 创建包含所有关联实体的 Descriptor
+    MeshDescriptorAggregate descriptor = createTestDescriptor(1);
+
+    Chunk<MeshDescriptorAggregate> chunk = new Chunk<>(List.of(descriptor));
+
+    // When: 写入 Chunk
+    meshDescriptorItemWriter.write(chunk);
+
+    // Then: 验证主表数据
+    long descriptorCount = descriptorMapper.selectCount(null);
+    assertThat(descriptorCount).isEqualTo(1);
+
+    MeshDescriptorDO savedDescriptor = descriptorMapper.selectList(null).get(0);
+    assertThat(savedDescriptor.getUi()).isEqualTo("D000001");
+    assertThat(savedDescriptor.getName()).isEqualTo("Test Descriptor 1");
+    assertThat(savedDescriptor.getDescriptorClass()).isEqualTo("1");
+    assertThat(savedDescriptor.getMeshVersion()).isEqualTo("2025");
+
+    // Then: 验证 TreeNumber 子表
+    long treeNumberCount = treeNumberMapper.selectCount(null);
+    assertThat(treeNumberCount).isEqualTo(2);
+
+    List<MeshTreeNumberDO> treeNumbers = treeNumberMapper.selectList(null);
+    assertThat(treeNumbers)
+        .extracting(MeshTreeNumberDO::getTreeNumber)
+        .containsExactlyInAnyOrder("C01.001", "D01.001");
+
+    // Then: 验证 Concept 子表
+    long conceptCount = conceptMapper.selectCount(null);
+    assertThat(conceptCount).isEqualTo(1);
+
+    MeshConceptDO concept = conceptMapper.selectList(null).get(0);
+    assertThat(concept.getConceptUi()).isEqualTo("M0000001");
+    assertThat(concept.getIsPreferred()).isTrue();
+
+    // Then: 验证 EntryTerm 子表
+    long entryTermCount = entryTermMapper.selectCount(null);
+    assertThat(entryTermCount).isEqualTo(2);
+
+    List<MeshEntryTermDO> entryTerms = entryTermMapper.selectList(null);
+    assertThat(entryTerms)
+        .extracting(MeshEntryTermDO::getTerm)
+        .containsExactlyInAnyOrder("Synonym 1", "Synonym 2");
+  }
+
+  @Test
+  @DisplayName("write() 批量 Descriptor - 应该正确批量写入")
+  void write_multipleDescriptors_shouldInsertAllSuccessfully() throws Exception {
+    // Given: 创建 3 个 Descriptor
+    List<MeshDescriptorAggregate> descriptors =
+        List.of(createTestDescriptor(1), createTestDescriptor(2), createTestDescriptor(3));
+
+    Chunk<MeshDescriptorAggregate> chunk = new Chunk<>(descriptors);
+
+    // When: 批量写入
+    meshDescriptorItemWriter.write(chunk);
+
+    // Then: 验证主表数据
+    long descriptorCount = descriptorMapper.selectCount(null);
+    assertThat(descriptorCount).isEqualTo(3);
+
+    List<MeshDescriptorDO> savedDescriptors = descriptorMapper.selectList(null);
+    assertThat(savedDescriptors)
+        .extracting(MeshDescriptorDO::getUi)
+        .containsExactlyInAnyOrder("D000001", "D000002", "D000003");
+
+    // Then: 验证子表数据（每个 Descriptor 2 个 TreeNumber）
+    long treeNumberCount = treeNumberMapper.selectCount(null);
+    assertThat(treeNumberCount).isEqualTo(6);
+
+    // Then: 验证子表数据（每个 Descriptor 1 个 Concept）
+    long conceptCount = conceptMapper.selectCount(null);
+    assertThat(conceptCount).isEqualTo(3);
+
+    // Then: 验证子表数据（每个 Descriptor 2 个 EntryTerm）
+    long entryTermCount = entryTermMapper.selectCount(null);
+    assertThat(entryTermCount).isEqualTo(6);
+  }
+
+  @Test
+  @DisplayName("write() 只有必填字段的 Descriptor - 应该正确写入")
+  void write_minimalDescriptor_shouldInsertSuccessfully() throws Exception {
+    // Given: 只包含必填字段的 Descriptor（至少一个 TreeNumber）
+    MeshDescriptorAggregate descriptor =
+        MeshDescriptorAggregate.create(
+                MeshUI.descriptorOf(99), "Minimal Descriptor", DescriptorClass.TOPICAL, "2025")
+            .addTreeNumber(MeshTreeNumber.create("A01.001", true));
+
+    Chunk<MeshDescriptorAggregate> chunk = new Chunk<>(List.of(descriptor));
+
+    // When: 写入
+    meshDescriptorItemWriter.write(chunk);
+
+    // Then: 验证主表数据
+    long descriptorCount = descriptorMapper.selectCount(null);
+    assertThat(descriptorCount).isEqualTo(1);
+
+    MeshDescriptorDO savedDescriptor = descriptorMapper.selectList(null).get(0);
+    assertThat(savedDescriptor.getUi()).isEqualTo("D000099");
+    assertThat(savedDescriptor.getScopeNote()).isNull();
+
+    // Then: 验证 TreeNumber
+    long treeNumberCount = treeNumberMapper.selectCount(null);
+    assertThat(treeNumberCount).isEqualTo(1);
+
+    // Then: 验证无 Concept 和 EntryTerm
+    long conceptCount = conceptMapper.selectCount(null);
+    assertThat(conceptCount).isEqualTo(0);
+
+    long entryTermCount = entryTermMapper.selectCount(null);
+    assertThat(entryTermCount).isEqualTo(0);
+  }
+
+  @Test
+  @DisplayName("write() 子表关联正确性 - 验证 descriptorId 外键正确设置")
+  void write_shouldSetCorrectForeignKeys() throws Exception {
+    // Given: 创建一个 Descriptor
+    MeshDescriptorAggregate descriptor = createTestDescriptor(1);
+
+    Chunk<MeshDescriptorAggregate> chunk = new Chunk<>(List.of(descriptor));
+
+    // When: 写入
+    meshDescriptorItemWriter.write(chunk);
+
+    // Then: 获取主表 ID
+    MeshDescriptorDO savedDescriptor = descriptorMapper.selectList(null).get(0);
+    Long descriptorId = savedDescriptor.getId();
+    assertThat(descriptorId).isNotNull();
+
+    // Then: 验证所有子表的 descriptorId 外键
+    List<MeshTreeNumberDO> treeNumbers = treeNumberMapper.selectList(null);
+    assertThat(treeNumbers).allMatch(tn -> tn.getDescriptorId().equals(descriptorId));
+
+    List<MeshConceptDO> concepts = conceptMapper.selectList(null);
+    assertThat(concepts).allMatch(c -> c.getDescriptorId().equals(descriptorId));
+
+    List<MeshEntryTermDO> entryTerms = entryTermMapper.selectList(null);
+    assertThat(entryTerms).allMatch(et -> et.getDescriptorId().equals(descriptorId));
+  }
+
+  /// 创建测试用 MeshDescriptorAggregate。
+  ///
+  /// @param index 索引号，用于生成唯一的 UI 和名称
+  /// @return 测试数据
+  private MeshDescriptorAggregate createTestDescriptor(int index) {
+    MeshDescriptorAggregate descriptor =
+        MeshDescriptorAggregate.create(
+            MeshUI.descriptorOf(index),
+            "Test Descriptor " + index,
+            DescriptorClass.TOPICAL,
+            "2025");
+
+    // 添加说明字段
+    descriptor.setScopeNote("Scope note for descriptor " + index);
+    descriptor.setAnnotation("Annotation for descriptor " + index);
+
+    // 添加 TreeNumber（每个 Descriptor 2 个）
+    descriptor.addTreeNumber(
+        MeshTreeNumber.create(String.format("C%02d.00%d", index, 1), true));
+    descriptor.addTreeNumber(
+        MeshTreeNumber.create(String.format("D%02d.00%d", index, 1), false));
+
+    // 添加 Concept（每个 Descriptor 1 个首选概念）
+    descriptor.addConcept(
+        MeshConcept.create(MeshUI.conceptOf(index), "Concept " + index, true)
+            .withScopeNote("Concept scope note " + index));
+
+    // 添加 EntryTerm（每个 Descriptor 2 个）
+    descriptor.addEntryTerm(
+        MeshEntryTerm.create(
+            MeshUI.termOf(index * 10 + 1),
+            "Synonym 1",
+            LexicalTag.PEF,
+            true,
+            true,
+            true,
+            false));
+    descriptor.addEntryTerm(
+        MeshEntryTerm.create(
+            MeshUI.termOf(index * 10 + 2),
+            "Synonym 2",
+            LexicalTag.NON,
+            false,
+            true,
+            false,
+            false));
+
+    return descriptor;
+  }
+}

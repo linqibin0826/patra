@@ -69,6 +69,19 @@ feign:
         readTimeout: 5000
 
 # ----------------------------------------------------------------------------
+# XXL-Job Distributed Task Scheduler
+# ----------------------------------------------------------------------------
+xxl:
+  job:
+    admin:
+      addresses: ${XXL_JOB_ADMIN_ADDRESSES:http://localhost:7070/xxl-job-admin}
+    executor:
+      ip: ${XXL_JOB_EXECUTOR_IP:host.docker.internal}
+      # Log directory in centralized logs folder
+      logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PATRA_LOG_DIR:/Users/linqibin/Desktop/Patra-api/logs}/xxl-job/patra-catalog}
+      logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}
+
+# ----------------------------------------------------------------------------
 # Logging Configuration
 # ----------------------------------------------------------------------------
 logging:
