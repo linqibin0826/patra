@@ -13,7 +13,10 @@ import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
 import com.patra.catalog.domain.model.vo.mesh.SeeRelatedDescriptor;
 import com.patra.catalog.domain.port.XmlParserPort;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Spliterator;
@@ -82,6 +85,19 @@ public class StaxXmlParserImpl implements XmlParserPort {
   }
 
   @Override
+  public Stream<MeshQualifierAggregate> parseQualifiers(Path filePath) {
+    log.info("开始解析 MeSH Qualifier XML 文件：{}", filePath);
+
+    try {
+      InputStream inputStream = Files.newInputStream(filePath);
+      return parseQualifiers(inputStream).onClose(() -> closeInputStream(inputStream));
+    } catch (IOException e) {
+      log.error("打开文件失败：{}", filePath, e);
+      throw new RuntimeException("打开 XML 文件失败：" + filePath, e);
+    }
+  }
+
+  @Override
   public Stream<MeshTreeNumber> parseTreeNumbers(InputStream xmlInputStream) {
     log.info("开始解析 MeSH TreeNumber XML 文件");
 
@@ -130,6 +146,16 @@ public class StaxXmlParserImpl implements XmlParserPort {
       log.debug("XMLStreamReader 已关闭");
     } catch (XMLStreamException e) {
       log.warn("关闭 XMLStreamReader 失败", e);
+    }
+  }
+
+  /// 关闭输入流。
+  private void closeInputStream(InputStream inputStream) {
+    try {
+      inputStream.close();
+      log.debug("InputStream 已关闭");
+    } catch (IOException e) {
+      log.warn("关闭 InputStream 失败", e);
     }
   }
 

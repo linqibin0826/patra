@@ -47,4 +47,11 @@ public class MeshQualifierRepositoryImpl extends ServiceImpl<MeshQualifierMapper
 
     log.info("限定词批量保存完成");
   }
+
+  @Override
+  public void truncateAll() {
+    log.info("开始清空限定词表");
+    baseMapper.truncateTable();
+    log.info("限定词表已清空");
+  }
 }
