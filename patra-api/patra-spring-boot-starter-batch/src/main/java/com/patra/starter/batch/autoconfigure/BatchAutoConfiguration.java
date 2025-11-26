@@ -1,14 +1,17 @@
 package com.patra.starter.batch.autoconfigure;
 
 import com.patra.starter.batch.config.BatchProperties;
+import io.micrometer.observation.ObservationRegistry;
 import javax.sql.DataSource;
 import org.springframework.batch.core.configuration.support.DefaultBatchConfiguration;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
+import org.springframework.batch.core.configuration.annotation.BatchObservabilityBeanPostProcessor;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -131,5 +134,24 @@ public class BatchAutoConfiguration extends DefaultBatchConfiguration {
     }
 
     return launcher;
+  }
+
+  /// 注册 Spring Batch 原生可观测性支持。
+  ///
+  /// 当 `ObservationRegistry` 存在时，自动将其注入到所有 Job 和 Step Bean 中，
+  /// 创建 Job 级别的 trace 和 Step 级别的 span。
+  ///
+  /// ## 关键点
+  ///
+  /// - 使用 `static` 方法声明 BeanPostProcessor，避免生命周期问题
+  /// - 条件激活：仅在 `ObservationRegistry` Bean 存在时生效
+  /// - 零配置：用户无需修改任何 Job 定义代码
+  /// - BeanPostProcessor 会自动从 ApplicationContext 获取 ObservationRegistry
+  ///
+  /// @return BatchObservabilityBeanPostProcessor 实例
+  @Bean
+  @ConditionalOnBean(ObservationRegistry.class)
+  public static BatchObservabilityBeanPostProcessor batchObservabilityBeanPostProcessor() {
+    return new BatchObservabilityBeanPostProcessor();
   }
 }
