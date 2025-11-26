@@ -7,4 +7,38 @@
     TRUNCATE TABLE cat_mesh_descriptor
   </update>
 
+  <!-- 批量插入主题词（单条 SQL 语句，多行值） -->
+  <insert id="insertBatch">
+    INSERT INTO cat_mesh_descriptor (
+      id, ui, name, descriptor_class, scope_note, annotation,
+      previous_indexing, public_mesh_note, consider_also,
+      date_created, date_revised, date_established,
+      active_status, mesh_version, metadata,
+      version, created_at, updated_at, deleted
+    ) VALUES
+    <foreach collection="list" item="item" separator=",">
+      (
+        #{item.id},
+        #{item.ui},
+        #{item.name},
+        #{item.descriptorClass},
+        #{item.scopeNote},
+        #{item.annotation},
+        #{item.previousIndexing},
+        #{item.publicMeshNote},
+        #{item.considerAlso},
+        #{item.dateCreated},
+        #{item.dateRevised},
+        #{item.dateEstablished},
+        #{item.activeStatus},
+        #{item.meshVersion},
+        #{item.metadata, typeHandler=com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler},
+        0,
+        NOW(6),
+        NOW(6),
+        0
+      )
+    </foreach>
+  </insert>
+
 </mapper>

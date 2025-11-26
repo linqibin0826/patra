@@ -7,4 +7,25 @@
     TRUNCATE TABLE cat_mesh_tree_number
   </update>
 
+  <!-- 批量插入树形编号（单条 SQL 语句，多行值） -->
+  <insert id="insertBatch">
+    INSERT INTO cat_mesh_tree_number (
+      id, descriptor_id, tree_number, tree_level, is_primary,
+      version, created_at, updated_at, deleted
+    ) VALUES
+    <foreach collection="list" item="item" separator=",">
+      (
+        #{item.id},
+        #{item.descriptorId},
+        #{item.treeNumber},
+        #{item.treeLevel},
+        #{item.isPrimary},
+        0,
+        NOW(6),
+        NOW(6),
+        0
+      )
+    </foreach>
+  </insert>
+
 </mapper>

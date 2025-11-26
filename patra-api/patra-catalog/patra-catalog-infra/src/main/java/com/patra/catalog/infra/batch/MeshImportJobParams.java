@@ -10,8 +10,8 @@ import lombok.NoArgsConstructor;
 ///
 /// 用于 MeSH Descriptor 批量导入任务的强类型参数。
 ///
-/// @author Patra Team
-/// @since 1.0.0
+/// @author linqibin
+/// @since 0.1.0
 @Data
 @Builder
 @NoArgsConstructor

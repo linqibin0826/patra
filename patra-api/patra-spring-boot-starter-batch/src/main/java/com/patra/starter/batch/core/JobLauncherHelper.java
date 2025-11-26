@@ -45,8 +45,8 @@ import org.springframework.stereotype.Component;
 /// - `addTimestamp=true`: 每次执行都创建新 JobInstance（适用于可重复执行的任务）
 /// - `addTimestamp=false`: 相同参数的 Job 只执行一次（幂等性保证）
 ///
-/// @author Patra Team
-/// @since 1.0.0
+/// @author linqibin
+/// @since 0.1.0
 @Component
 @RequiredArgsConstructor
 @Slf4j

@@ -120,15 +120,50 @@ patra:
 ### 方法签名
 
 ```java
-// 启动 Job（每次创建新实例）
+// 使用 Map 参数启动 Job（每次创建新实例）
 Long launch(Job job, Map<String, Object> params)
 
-// 启动 Job（控制幂等性）
+// 使用 Map 参数启动 Job（控制幂等性）
 Long launch(Job job, Map<String, Object> params, boolean addTimestamp)
+
+// 使用强类型 JobParams 启动 Job（推荐）
+Long launch(Job job, JobParams params, boolean addTimestamp)
 
 // 查询执行状态
 Optional<JobExecution> findJobExecution(Long executionId)
 ```
+
+### JobParams 接口（推荐）
+
+定义强类型的 Job 参数类，实现 `JobParams` 标记接口：
+
+```java
+@Data
+@Builder
+public class MyJobParams implements JobParams {
+    private String filePath;
+    private String version;
+    private Integer batchSize;
+}
+
+// 使用
+MyJobParams params = MyJobParams.builder()
+    .filePath("/data/input.xml")
+    .version("2025")
+    .batchSize(1000)
+    .build();
+
+jobLauncherHelper.launch(job, params, false);
+```
+
+**支持的字段类型**：
+- `String`、`Long`、`Integer`、`Double`
+- `LocalDate`、`LocalDateTime`、`Instant`
+
+**优势**：
+- 编译时类型检查
+- IDE 自动补全
+- 参数验证集中管理
 
 ### 幂等控制
 
@@ -233,7 +268,8 @@ patra-spring-boot-starter-batch/
 ├── config/
 │   └── BatchProperties.java             # 配置属性
 ├── core/
-│   └── JobLauncherHelper.java           # Job 启动辅助类
+│   ├── JobLauncherHelper.java           # Job 启动辅助类
+│   └── JobParams.java                   # 强类型参数标记接口
 └── exception/
     ├── BatchErrorCode.java              # 错误码枚举
     └── BatchJobExecutionException.java  # 执行异常

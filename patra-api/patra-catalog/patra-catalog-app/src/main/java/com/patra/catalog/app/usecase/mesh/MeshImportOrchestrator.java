@@ -4,6 +4,7 @@ import com.patra.catalog.app.usecase.mesh.command.MeshImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshImportResult;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.enums.MeshDescriptorImportMode;
+import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
 import com.patra.catalog.domain.port.MeshDescriptorBatchPort;
 import com.patra.catalog.domain.port.MeshDescriptorRepository;
 import com.patra.catalog.domain.port.MeshQualifierRepository;
@@ -92,9 +93,9 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
     }
 
     boolean forceNewInstance = (command.mode() == MeshDescriptorImportMode.TRUNCATE_REIMPORT);
-    Long executionId =
-        meshDescriptorBatchPort.launchImport(
-            command.filePath(), command.meshVersion(), forceNewInstance);
+    MeshImportParams params =
+        new MeshImportParams(command.filePath(), command.meshVersion(), forceNewInstance);
+    Long executionId = meshDescriptorBatchPort.launchImport(params);
 
     return MeshImportResult.success(
         executionId, command.filePath(), command.meshVersion(), command.mode());

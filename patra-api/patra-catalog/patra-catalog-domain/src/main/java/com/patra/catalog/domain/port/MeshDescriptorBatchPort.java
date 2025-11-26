@@ -1,5 +1,7 @@
 package com.patra.catalog.domain.port;
 
+import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
+
 /// MeSH 主题词批量导入端口接口（领域层定义，基础设施层实现）。
 ///
 /// **设计原则**：
@@ -20,11 +22,8 @@ public interface MeshDescriptorBatchPort {
 
   /// 启动主题词批量导入任务。
   ///
-  /// @param filePath XML 文件路径
-  /// @param meshVersion MeSH 版本（如 "2025"）
-  /// @param forceNewInstance 是否强制创建新实例
-  ///   - `false`：幂等执行，相同参数复用 Job 实例，支持断点续传
-  ///   - `true`：强制创建新实例，每次执行都创建新的任务实例
+  /// @param params 导入参数（包含文件路径、版本、是否强制新实例）
   /// @return 批处理执行标识符
-  Long launchImport(String filePath, String meshVersion, boolean forceNewInstance);
+  /// @see MeshImportParams
+  Long launchImport(MeshImportParams params);
 }

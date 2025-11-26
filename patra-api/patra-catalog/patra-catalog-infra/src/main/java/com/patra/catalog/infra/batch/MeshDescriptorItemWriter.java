@@ -1,5 +1,6 @@
 package com.patra.catalog.infra.batch;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.infra.persistence.converter.MeshDescriptorConverter;
 import com.patra.catalog.infra.persistence.entity.MeshConceptDO;
@@ -28,10 +29,16 @@ import org.springframework.stereotype.Component;
 ///
 /// **写入顺序**：
 ///
-/// 1. 批量 INSERT Descriptor 主表（获取自动生成的 ID）
+/// 1. 批量 INSERT Descriptor 主表（预先生成雪花 ID）
 /// 2. 批量 INSERT TreeNumber 子表
 /// 3. 批量 INSERT Concept 子表
 /// 4. 批量 INSERT EntryTerm 子表
+///
+/// **性能优化**：
+///
+/// - 使用单条 SQL 批量插入（`INSERT INTO ... VALUES (...), (...), ...`）
+/// - 避免逐条 INSERT 产生的网络开销
+/// - 典型场景：chunk size 100，每次写入约 100 主表 + 500 子表记录
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -55,15 +62,15 @@ public class MeshDescriptorItemWriter implements ItemWriter<MeshDescriptorAggreg
 
     log.debug("开始写入 {} 条 Descriptor 记录", items.size());
 
-    // 1. 转换并批量 INSERT Descriptor 主表
-    List<MeshDescriptorDO> descriptorDOs = new ArrayList<>();
+    // 1. 转换 Descriptor 并预先生成 ID
+    List<MeshDescriptorDO> descriptorDOs = new ArrayList<>(items.size());
     for (MeshDescriptorAggregate aggregate : items) {
       MeshDescriptorDO dataObject = converter.toDescriptorDO(aggregate);
-      descriptorMapper.insert(dataObject);
+      dataObject.setId(IdWorker.getId());
       descriptorDOs.add(dataObject);
     }
 
-    // 2. 收集并批量 INSERT 子表
+    // 2. 收集子表数据并设置外键和 ID
     List<MeshTreeNumberDO> treeNumberDOs = new ArrayList<>();
     List<MeshConceptDO> conceptDOs = new ArrayList<>();
     List<MeshEntryTermDO> entryTermDOs = new ArrayList<>();
@@ -73,25 +80,39 @@ public class MeshDescriptorItemWriter implements ItemWriter<MeshDescriptorAggreg
       Long descriptorId = descriptorDOs.get(i).getId();
 
       // TreeNumber
-      aggregate
-          .getTreeNumbers()
-          .forEach(tn -> treeNumberDOs.add(converter.toTreeNumberDO(tn, descriptorId)));
+      aggregate.getTreeNumbers().forEach(tn -> {
+        MeshTreeNumberDO treeNumberDO = converter.toTreeNumberDO(tn, descriptorId);
+        treeNumberDO.setId(IdWorker.getId());
+        treeNumberDOs.add(treeNumberDO);
+      });
 
       // Concept
-      aggregate
-          .getConcepts()
-          .forEach(c -> conceptDOs.add(converter.toConceptDO(c, descriptorId)));
+      aggregate.getConcepts().forEach(c -> {
+        MeshConceptDO conceptDO = converter.toConceptDO(c, descriptorId);
+        conceptDO.setId(IdWorker.getId());
+        conceptDOs.add(conceptDO);
+      });
 
       // EntryTerm
-      aggregate
-          .getEntryTerms()
-          .forEach(et -> entryTermDOs.add(converter.toEntryTermDO(et, descriptorId)));
+      aggregate.getEntryTerms().forEach(et -> {
+        MeshEntryTermDO entryTermDO = converter.toEntryTermDO(et, descriptorId);
+        entryTermDO.setId(IdWorker.getId());
+        entryTermDOs.add(entryTermDO);
+      });
     }
 
-    // 批量 INSERT 子表
-    treeNumberDOs.forEach(treeNumberMapper::insert);
-    conceptDOs.forEach(conceptMapper::insert);
-    entryTermDOs.forEach(entryTermMapper::insert);
+    // 3. 批量 INSERT（单条 SQL 语句）
+    descriptorMapper.insertBatch(descriptorDOs);
+
+    if (!treeNumberDOs.isEmpty()) {
+      treeNumberMapper.insertBatch(treeNumberDOs);
+    }
+    if (!conceptDOs.isEmpty()) {
+      conceptMapper.insertBatch(conceptDOs);
+    }
+    if (!entryTermDOs.isEmpty()) {
+      entryTermMapper.insertBatch(entryTermDOs);
+    }
 
     log.debug(
         "写入完成：Descriptor={}, TreeNumber={}, Concept={}, EntryTerm={}",

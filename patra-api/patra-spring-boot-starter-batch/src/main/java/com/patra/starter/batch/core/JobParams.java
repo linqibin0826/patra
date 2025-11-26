@@ -26,7 +26,7 @@ package com.patra.starter.batch.core;
 ///
 /// 其他类型将自动转换为 String（通过 `toString()`）。
 ///
-/// @author Patra Team
-/// @since 1.0.0
+/// @author linqibin
+/// @since 0.1.0
 public interface JobParams {
 }
