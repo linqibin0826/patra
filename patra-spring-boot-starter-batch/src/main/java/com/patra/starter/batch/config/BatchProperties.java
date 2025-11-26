@@ -35,9 +35,6 @@ public class BatchProperties {
   /// 表前缀。
   private String tablePrefix = "BATCH_";
 
-  /// 可观测性配置。
-  private ObservabilityProperties observability = new ObservabilityProperties();
-
   /// Chunk 配置。
   private ChunkProperties chunk = new ChunkProperties();
 
@@ -45,44 +42,6 @@ public class BatchProperties {
   ///
   /// 配置此项后，Spring Batch 元数据将存储到独立数据库，与业务数据隔离。
   private DataSourceProperties datasource = new DataSourceProperties();
-
-  /// 可观测性配置。
-  @Data
-  public static class ObservabilityProperties {
-
-    /// 追踪配置。
-    private TracingProperties tracing = new TracingProperties();
-
-    /// 指标配置。
-    private MetricsProperties metrics = new MetricsProperties();
-
-    /// 日志配置。
-    private LoggingProperties logging = new LoggingProperties();
-
-    /// SkyWalking 追踪配置。
-    @Data
-    public static class TracingProperties {
-      /// 是否启用追踪。
-      private boolean enabled = true;
-    }
-
-    /// Micrometer 指标配置。
-    @Data
-    public static class MetricsProperties {
-      /// 是否启用指标收集。
-      private boolean enabled = true;
-    }
-
-    /// 日志配置。
-    @Data
-    public static class LoggingProperties {
-      /// 是否启用日志记录。
-      private boolean enabled = true;
-
-      /// 日志级别。
-      private String level = "INFO";
-    }
-  }
 
   /// Chunk 批次处理配置。
   @Data
