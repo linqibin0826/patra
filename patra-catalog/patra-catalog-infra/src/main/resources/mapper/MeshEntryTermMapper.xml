@@ -7,4 +7,28 @@
     TRUNCATE TABLE cat_mesh_entry_term
   </update>
 
+  <!-- 批量插入入口术语（单条 SQL 语句，多行值） -->
+  <insert id="insertBatch">
+    INSERT INTO cat_mesh_entry_term (
+      id, descriptor_id, term, lexical_tag, is_print_flag,
+      record_preferred, is_permuted_term,
+      version, created_at, updated_at, deleted
+    ) VALUES
+    <foreach collection="list" item="item" separator=",">
+      (
+        #{item.id},
+        #{item.descriptorId},
+        #{item.term},
+        #{item.lexicalTag},
+        #{item.isPrintFlag},
+        #{item.recordPreferred},
+        #{item.isPermutedTerm},
+        0,
+        NOW(6),
+        NOW(6),
+        0
+      )
+    </foreach>
+  </insert>
+
 </mapper>

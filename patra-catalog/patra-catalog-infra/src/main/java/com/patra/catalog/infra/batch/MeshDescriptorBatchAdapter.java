@@ -1,5 +1,6 @@
 package com.patra.catalog.infra.batch;
 
+import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
 import com.patra.catalog.domain.port.MeshDescriptorBatchPort;
 import com.patra.starter.batch.core.JobLauncherHelper;
 import lombok.RequiredArgsConstructor;
@@ -31,16 +32,19 @@ public class MeshDescriptorBatchAdapter implements MeshDescriptorBatchPort {
   private final Job meshDescriptorImportJob;
 
   @Override
-  public Long launchImport(String filePath, String meshVersion, boolean forceNewInstance) {
+  public Long launchImport(MeshImportParams params) {
     log.info(
         "启动 MeSH 主题词导入 Job，文件：{}，版本：{}，强制新实例：{}",
-        filePath,
-        meshVersion,
-        forceNewInstance);
+        params.filePath(),
+        params.meshVersion(),
+        params.forceNewInstance());
 
-    MeshImportJobParams params =
-        MeshImportJobParams.builder().filePath(filePath).meshVersion(meshVersion).build();
+    MeshImportJobParams jobParams =
+        MeshImportJobParams.builder()
+            .filePath(params.filePath())
+            .meshVersion(params.meshVersion())
+            .build();
 
-    return jobLauncherHelper.launch(meshDescriptorImportJob, params, forceNewInstance);
+    return jobLauncherHelper.launch(meshDescriptorImportJob, jobParams, params.forceNewInstance());
   }
 }
