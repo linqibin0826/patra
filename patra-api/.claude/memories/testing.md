@@ -23,4 +23,7 @@
 
 1. Spring Boot 3.4+ 使用 `@MockitoBean`，禁止废弃的 `@MockBean`
 2. 测试超时 ≤2s，避免拖慢测试执行
-3. Infrastructure 层集成测试优先，单元测试价值有限（仅验证调用，无法验证 SQL）
+3. infra 层集成测试优先，单元测试价值有限（仅验证调用，无法验证 SQL）
+4. 使用 TestContainers 模拟真实中间件，避免使用内存数据库
+5. 切片测试仅测试 Adapter 层，禁止跨层调用
+6. E2E 测试覆盖核心业务流程，避免冗余测试场景

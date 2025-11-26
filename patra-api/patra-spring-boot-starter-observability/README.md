@@ -20,7 +20,7 @@
 | `MicrometerAutoConfiguration` | 注册 Filter、Handler、MeterFilter | metrics.enabled=true |
 | `PrometheusAutoConfiguration` | 配置 Prometheus Registry 和 Exemplars | prometheus.enabled=true |
 | `SkyWalkingMeterAutoConfiguration` | 创建 SkyWalking Meter Registry | skywalking.enabled=true |
-| `ObservationInterceptorsAutoConfiguration` | 注册拦截器（错误解析、HTTP 客户端、批处理） | 默认启用 |
+| `ObservationInterceptorsAutoConfiguration` | 注册拦截器（错误解析、HTTP 客户端、分布式锁） | 默认启用 |
 
 ### ObservationHandler
 
@@ -50,8 +50,9 @@
 |--------|------|----------|
 | `ObservationResolutionInterceptor` | 为错误解析流程创建 Observation | 错误处理 |
 | `RestClientObservationInterceptor` | 为 HTTP 请求创建 Observation | REST 客户端 |
-| `BatchObservationJobListener` | 为批处理任务创建 Observation | Spring Batch |
 | `LockMetricsRecorder` | 记录分布式锁指标（等待时间、持有时间、成功/失败率） | Redisson 分布式锁 |
+
+> **注意**：批处理可观测性已迁移至 `patra-spring-boot-starter-batch`，使用 Spring Batch 原生 `BatchObservabilityBeanPostProcessor` 实现零配置集成。
 
 ## 快速开始
 
@@ -252,7 +253,6 @@ patra-spring-boot-starter-observability
 ├── apm-toolkit-micrometer-registry      # (可选) SkyWalking Meter Registry
 ├── apm-toolkit-trace                    # SkyWalking Trace API
 ├── caffeine                             # 缓存（状态管理）
-├── spring-batch-core                    # (可选) Spring Batch
 └── spring-web                           # (可选) REST Client
 ```
 
@@ -278,7 +278,6 @@ com.patra.starter.observability
 │   ├── LoggingObservationHandler        # 日志 Handler
 │   └── PerformanceObservationHandler    # 性能 Handler
 ├── interceptor/                         # 拦截器
-│   ├── BatchObservationJobListener      # 批处理监听器
 │   ├── ObservationResolutionInterceptor # 错误解析拦截器
 │   ├── RestClientObservationInterceptor # HTTP 客户端拦截器
 │   └── redisson/
