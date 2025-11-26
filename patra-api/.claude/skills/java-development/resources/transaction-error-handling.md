@@ -80,7 +80,7 @@ public ProblemDetail handleInvalidPlan(InvalidPlanException ex) {
 **❌ 错误：在 Repository 层**
 ```java
 @Repository
-public class PlanRepositoryImpl implements PlanRepository {
+public class PlanRepositoryAdapter implements PlanRepository {
     @Transactional  // ❌ 太细粒度，无法协调多个操作
     public void save(PlanAggregate plan) { }
 }

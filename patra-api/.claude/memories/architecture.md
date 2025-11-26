@@ -13,6 +13,23 @@
 2. `patra-{service}-boot` 模块是应用启动入口，必须包含 `@SpringBootApplication` 启动类（命名规范：`Patra{Service}Application`），负责组装所有依赖（adapter、app、infra），禁止在其他模块添加启动类
 3. Domain 层端口接口命名：`Repository` 后缀用于持久化聚合根/实体（本地数据库），`Port` 后缀用于外部服务和技术基础设施（外部 API/消息队列/对象存储等），禁止混用
 
+## 被动适配器命名规范
+
+Infrastructure 层实现 Domain 层定义的端口接口（被动适配器/Driven Adapter），统一使用 `*Adapter` 后缀：
+
+| 端口类型 | 接口命名 | 实现命名 | 目录位置 | 示例 |
+|----------|----------|----------|----------|------|
+| Repository | `{Entity}Repository` | `{Entity}RepositoryAdapter` | `adapter/persistence/` | `MeshDescriptorRepository` → `MeshDescriptorRepositoryAdapter` |
+| Port | `{Function}Port` | `{Function}Adapter` | `adapter/{function}/` | `XmlParserPort` → `XmlParserAdapter` |
+| Client | `{Service}Client` | `{Service}ClientAdapter` | 保持原位置 | `PubMedClient` → `PubMedClientAdapter` |
+
+### 命名要点
+
+1. 所有被动适配器统一使用 `*Adapter` 后缀，体现六边形架构的适配器模式
+2. Repository 实现放入 `adapter/persistence/` 目录，与技术无关（MyBatis-Plus、JPA 等实现细节不体现在类名中）
+3. Port 实现按功能分类放入对应目录（如 `adapter/parser/`、`adapter/compiler/`）
+4. Client 实现保持与接口同目录，因为它们通常在独立的 Starter 模块中
+
 ## Starter 依赖规范
 
 1. `patra-{service}-adapter` 模块必须依赖 `patra-spring-boot-starter-web`，禁止重复实现全局异常处理、参数验证、类型转换、统一响应模型等功能

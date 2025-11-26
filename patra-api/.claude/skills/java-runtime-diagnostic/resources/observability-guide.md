@@ -66,7 +66,7 @@ public class MyOrchestrator {
 
 ```java
 @Slf4j
-public class MyRepositoryImpl {
+public class MyRepositoryAdapter {
 
     public Entity findById(Long id) {
         // SQL 日志 (DEBUG)

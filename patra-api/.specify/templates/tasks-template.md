@@ -121,7 +121,7 @@ description: "特性实施的任务列表模板"
 - [ ] T014 [P] [Domain] [US1] 定义 [DomainEvent] 领域事件 in patra-[service]-domain/src/main/java/com/patra/[service]/domain/event/[DomainEvent].java
 - [ ] T015 [Domain] [US1] 定义 [Repository] 仓储接口 in patra-[service]-domain/src/main/java/com/patra/[service]/domain/repository/[Repository].java
 - [ ] T016 [App] [US1] 实现 [Coordinator] 协调器 in patra-[service]-app/src/main/java/com/patra/[service]/app/coordinator/[Coordinator].java（依赖 T012-T015）
-- [ ] T017 [P] [Infra] [US1] 实现 [RepositoryImpl] 仓储实现 in patra-[service]-infra/src/main/java/com/patra/[service]/infra/repository/[RepositoryImpl].java
+- [ ] T017 [P] [Infra] [US1] 实现 [RepositoryAdapter] 仓储实现 in patra-[service]-infra/src/main/java/com/patra/[service]/infra/repository/[RepositoryAdapter].java
 - [ ] T018 [P] [Infra] [US1] 创建 MyBatis Mapper in patra-[service]-infra/src/main/java/com/patra/[service]/infra/repository/mapper/[EntityMapper].java
 - [ ] T019 [Adapter] [US1] 实现 REST API Controller in patra-[service]-adapter/src/main/java/com/patra/[service]/adapter/controller/[Controller].java（依赖 T016）
 
@@ -147,7 +147,7 @@ description: "特性实施的任务列表模板"
 - [ ] T020 [P] [Domain] [US2] 定义 [AggregateRoot] 聚合根 in patra-[service]-domain/src/main/java/com/patra/[service]/domain/model/[AggregateRoot].java
 - [ ] T021 [P] [Domain] [US2] 定义 [ValueObject] 值对象 in patra-[service]-domain/src/main/java/com/patra/[service]/domain/model/[ValueObject].java
 - [ ] T022 [App] [US2] 实现 [Orchestrator] 编排器 in patra-[service]-app/src/main/java/com/patra/[service]/app/orchestrator/[Orchestrator].java（依赖 T020-T021）
-- [ ] T023 [P] [Infra] [US2] 实现 [RepositoryImpl] 仓储实现 in patra-[service]-infra/src/main/java/com/patra/[service]/infra/repository/[RepositoryImpl].java
+- [ ] T023 [P] [Infra] [US2] 实现 [RepositoryAdapter] 仓储实现 in patra-[service]-infra/src/main/java/com/patra/[service]/infra/repository/[RepositoryAdapter].java
 - [ ] T024 [Adapter] [US2] 实现 REST API Controller in patra-[service]-adapter/src/main/java/com/patra/[service]/adapter/controller/[Controller].java（依赖 T022）
 - [ ] T025 [US2] 如需要，与用户故事 1 组件集成（跨聚合调用需通过 Application 层）
 
@@ -173,7 +173,7 @@ description: "特性实施的任务列表模板"
 - [ ] T026 [P] [Domain] [US3] 定义 [AggregateRoot] 聚合根 in patra-[service]-domain/src/main/java/com/patra/[service]/domain/model/[AggregateRoot].java
 - [ ] T027 [P] [Domain] [US3] 定义 [ValueObject] 值对象 in patra-[service]-domain/src/main/java/com/patra/[service]/domain/model/[ValueObject].java
 - [ ] T028 [App] [US3] 实现 [Coordinator] 协调器 in patra-[service]-app/src/main/java/com/patra/[service]/app/coordinator/[Coordinator].java（依赖 T026-T027）
-- [ ] T029 [P] [Infra] [US3] 实现 [RepositoryImpl] 仓储实现 in patra-[service]-infra/src/main/java/com/patra/[service]/infra/repository/[RepositoryImpl].java
+- [ ] T029 [P] [Infra] [US3] 实现 [RepositoryAdapter] 仓储实现 in patra-[service]-infra/src/main/java/com/patra/[service]/infra/repository/[RepositoryAdapter].java
 - [ ] T030 [Adapter] [US3] 实现 REST API Controller in patra-[service]-adapter/src/main/java/com/patra/[service]/adapter/controller/[Controller].java（依赖 T028）
 
 **检查点**: 所有用户故事现在都应该独立可用
@@ -228,7 +228,7 @@ description: "特性实施的任务列表模板"
 
 - [ ] T998 [P] 生成 package-info.java for com.patra.[service].infra in patra-[service]-infra/src/main/java/com/patra/[service]/infra/package-info.java
   - **描述**: 基础设施层技术实现包
-  - **主要组件**: RepositoryImpl、Converter、Mapper、Config
+  - **主要组件**: RepositoryAdapter、Converter、Mapper、Config
   - **设计原则**: MyBatis-Plus、MapStruct、依赖倒置
 
 - [ ] T999 [P] 生成 package-info.java for com.patra.[service].adapter in patra-[service]-adapter/src/main/java/com/patra/[service]/adapter/package-info.java
@@ -253,14 +253,14 @@ description: "特性实施的任务列表模板"
       |-----|------|------|
       | Article | 文章聚合根 | Domain |
       | ArticleOrchestrator | 文章业务编排 | Application |
-      | ArticleRepositoryImpl | 文章持久化实现 | Infrastructure |
+      | ArticleRepositoryAdapter | 文章持久化实现 | Infrastructure |
       | ArticleController | 文章 REST API | Adapter |
       ```
     - 在"📝 变更日志"章节添加:
       ```markdown
       ### v1.x.0 (日期)
       - 新增：[从 spec.md 的概览提取特性描述]
-      - 核心类：Article、ArticleOrchestrator、ArticleRepositoryImpl
+      - 核心类：Article、ArticleOrchestrator、ArticleRepositoryAdapter
       ```
   - **数据来源**:
     - 核心类列表：从 tasks.md 的 Domain/App/Infra/Adapter 任务提取
@@ -313,7 +313,7 @@ description: "特性实施的任务列表模板"
   - **JavaDoc 内容**:
     - 接口职责（数据访问、外部服务调用）
     - 方法说明（查询、保存、删除）
-    - 实现位置提示（@see 指向 RepositoryImpl）
+    - 实现位置提示（@see 指向 RepositoryAdapter）
 
 ### 其他润色任务
 
@@ -371,7 +371,7 @@ Task: "定义 ArticleId 值对象 in patra-ingest-domain/src/main/java/com/patra
 Task: "定义 ArticleCreated 领域事件 in patra-ingest-domain/src/main/java/com/patra/ingest/domain/event/ArticleCreated.java"
 
 # 同时启动用户故事 1 的所有 Infra 层任务（不同文件，可并行）:
-Task: "实现 ArticleRepositoryImpl in patra-ingest-infra/src/main/java/com/patra/ingest/infra/repository/ArticleRepositoryImpl.java"
+Task: "实现 ArticleRepositoryAdapter in patra-ingest-infra/src/main/java/com/patra/ingest/infra/repository/ArticleRepositoryAdapter.java"
 Task: "创建 ArticleMapper in patra-ingest-infra/src/main/java/com/patra/ingest/infra/repository/mapper/ArticleMapper.java"
 ```
 

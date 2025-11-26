@@ -134,7 +134,7 @@ patra:
 ```java
 @Component
 @RequiredArgsConstructor
-public class ExpressionCompilerPortImpl implements ExpressionCompilerPort {
+public class ExpressionCompilerAdapter implements ExpressionCompilerPort {
 
     private final ExprCompiler compiler;
 

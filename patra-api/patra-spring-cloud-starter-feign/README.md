@@ -169,7 +169,7 @@ public interface ProvenanceClient extends ProvenanceEndpoint {
 ```java
 @Component
 @RequiredArgsConstructor
-public class RegistryPortImpl implements RegistryPort {
+public class RegistryAdapter implements RegistryPort {
 
     private final ProvenanceClient client;
 
