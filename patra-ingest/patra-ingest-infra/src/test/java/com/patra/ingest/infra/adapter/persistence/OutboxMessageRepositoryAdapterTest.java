@@ -1,4 +1,4 @@
-package com.patra.ingest.infra.persistence.repository;
+package com.patra.ingest.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,7 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-/// OutboxMessageRepositoryMpImpl 单元测试。
+/// OutboxMessageRepositoryAdapter 单元测试。
 ///
 /// 测试策略：
 ///
@@ -51,13 +51,13 @@ import org.mockito.quality.Strictness;
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-@DisplayName("OutboxMessageRepositoryMpImpl 单元测试")
-class OutboxMessageRepositoryMpImplTest {
+@DisplayName("OutboxMessageRepositoryAdapter 单元测试")
+class OutboxMessageRepositoryAdapterTest {
 
   @Mock private OutboxMessageMapper mapper;
   @Mock private OutboxMessageConverter converter;
 
-  @InjectMocks private OutboxMessageRepositoryMpImpl repository;
+  @InjectMocks private OutboxMessageRepositoryAdapter repository;
 
   private static final Long TEST_MESSAGE_ID = 1L;
   private static final String TEST_CHANNEL = "task-ready";

@@ -1,4 +1,4 @@
-package com.patra.ingest.infra.persistence.repository;
+package com.patra.ingest.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
@@ -19,7 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-/// PlanRepositoryMpImpl 单元测试。
+/// PlanRepositoryAdapter 单元测试。
 ///
 /// 测试策略：
 ///
@@ -45,13 +45,13 @@ import org.mockito.quality.Strictness;
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-@DisplayName("PlanRepositoryMpImpl 单元测试")
-class PlanRepositoryMpImplTest {
+@DisplayName("PlanRepositoryAdapter 单元测试")
+class PlanRepositoryAdapterTest {
 
   @Mock private PlanMapper planMapper;
   @Mock private PlanConverter planConverter;
 
-  @InjectMocks private PlanRepositoryMpImpl repository;
+  @InjectMocks private PlanRepositoryAdapter repository;
 
   private static final Long TEST_PLAN_ID = 1L;
   private static final String TEST_PLAN_KEY = "plan-001";

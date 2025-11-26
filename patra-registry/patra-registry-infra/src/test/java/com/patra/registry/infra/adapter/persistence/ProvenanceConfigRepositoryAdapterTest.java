@@ -1,4 +1,4 @@
-package com.patra.registry.infra.persistence.repository;
+package com.patra.registry.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -26,7 +26,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/// ProvenanceConfigRepositoryMpImpl 单元测试。
+/// ProvenanceConfigRepositoryAdapter 单元测试。
 ///
 /// 测试策略：
 ///
@@ -45,8 +45,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
-@DisplayName("ProvenanceConfigRepositoryMpImpl 单元测试")
-class ProvenanceConfigRepositoryMpImplTest {
+@DisplayName("ProvenanceConfigRepositoryAdapter 单元测试")
+class ProvenanceConfigRepositoryAdapterTest {
 
   @Mock private RegProvenanceMapper provenanceMapper;
   @Mock private RegProvWindowOffsetCfgMapper windowOffsetCfgMapper;
@@ -57,7 +57,7 @@ class ProvenanceConfigRepositoryMpImplTest {
   @Mock private RegProvRateLimitCfgMapper rateLimitCfgMapper;
   @Mock private ProvenanceEntityConverter converter;
 
-  @InjectMocks private ProvenanceConfigRepositoryMpImpl repository;
+  @InjectMocks private ProvenanceConfigRepositoryAdapter repository;
 
   private static final ProvenanceCode TEST_PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final Long TEST_PROVENANCE_ID = 1L;

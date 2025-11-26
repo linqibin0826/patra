@@ -211,7 +211,7 @@
 
   <!-- Repository implementations may have seemingly unused methods (called by framework) -->
   <Match>
-    <Class name="~.*RepositoryImpl$"/>
+    <Class name="~.*RepositoryAdapter$"/>
     <Bug pattern="UPM_UNCALLED_PRIVATE_METHOD"/>
   </Match>
 
@@ -234,7 +234,7 @@
 
   <!-- Exclude SQL injection warnings for MyBatis-Plus (uses parameterized queries) -->
   <Match>
-    <Class name="~.*RepositoryImpl$"/>
+    <Class name="~.*RepositoryAdapter$"/>
     <Bug pattern="SQL_INJECTION_HIBERNATE"/>
   </Match>
 

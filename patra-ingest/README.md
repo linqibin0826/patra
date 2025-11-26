@@ -67,7 +67,7 @@
 | **patra-ingest-adapter** | 驱动适配器(定时任务、MQ 消费者) | `PubmedHarvestJob`, `TaskReadyMessageListener` |
 | **patra-ingest-app** | 应用层编排器(事务边界) | `PlanIngestionOrchestrator`, `TaskExecutionUseCase` |
 | **patra-ingest-domain** | 领域模型(纯 Java,无框架依赖) | `PlanAggregate`, `TaskAggregate`, `WindowSpec` |
-| **patra-ingest-infra** | 基础设施实现(数据库、RPC、MQ) | `PlanRepositoryMpImpl`, `PatraRegistryAdapter` |
+| **patra-ingest-infra** | 基础设施实现(数据库、RPC、MQ) | `PlanRepositoryAdapter`, `PatraRegistryAdapter` |
 | **patra-ingest-api** | 外部 API 契约(错误码、Future APIs) | `IngestErrorCode` |
 
 ---

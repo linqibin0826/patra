@@ -1,4 +1,4 @@
-package com.patra.registry.infra.persistence.repository;
+package com.patra.registry.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -35,7 +35,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/// ExprRepositoryMpImpl 单元测试。
+/// ExprRepositoryAdapter 单元测试。
 ///
 /// 测试策略：
 ///
@@ -54,8 +54,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
-@DisplayName("ExprRepositoryMpImpl 单元测试")
-class ExprRepositoryMpImplTest {
+@DisplayName("ExprRepositoryAdapter 单元测试")
+class ExprRepositoryAdapterTest {
 
   @Mock private RegExprFieldDictMapper fieldDictMapper;
   @Mock private RegProvApiParamMapMapper apiParamMapMapper;
@@ -64,7 +64,7 @@ class ExprRepositoryMpImplTest {
   @Mock private RegProvenanceMapper provenanceMapper;
   @Mock private ExprEntityConverter converter;
 
-  @InjectMocks private ExprRepositoryMpImpl repository;
+  @InjectMocks private ExprRepositoryAdapter repository;
 
   private static final ProvenanceCode TEST_PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final Long TEST_PROVENANCE_ID = 1L;
