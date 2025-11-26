@@ -23,4 +23,7 @@ public class MeshImportJobParams implements JobParams {
 
   /// MeSH 版本号（如 "2025"）
   private String meshVersion;
+
+  /// 是否为临时文件（Job 完成后需要清理）
+  private String tempFile;
 }

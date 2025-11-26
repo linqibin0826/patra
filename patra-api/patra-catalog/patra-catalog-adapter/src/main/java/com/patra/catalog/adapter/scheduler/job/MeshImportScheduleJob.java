@@ -27,7 +27,7 @@ import org.springframework.stereotype.Component;
 ///
 /// ```json
 /// {
-///   "filePath": "/data/mesh/desc2025.xml",
+///   "url": "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/desc2025.xml",
 ///   "meshVersion": "2025",
 ///   "mode": "INCREMENTAL"
 /// }
@@ -59,8 +59,8 @@ public class MeshImportScheduleJob {
     try {
       MeshImportCommand command = parseJobParam(rawParam);
       log.debug(
-          "已解析 MeSH 导入命令：文件路径 [{}]，版本 [{}]，模式 [{}]",
-          command.filePath(),
+          "已解析 MeSH 导入命令：URL [{}]，版本 [{}]，模式 [{}]",
+          command.url(),
           command.meshVersion(),
           command.mode());
 
@@ -96,7 +96,7 @@ public class MeshImportScheduleJob {
     }
 
     // 委托给 Command 进行参数验证和枚举转换
-    return MeshImportCommand.of(param.filePath(), param.meshVersion(), param.mode());
+    return MeshImportCommand.of(param.url(), param.meshVersion(), param.mode());
   }
 
   /// 处理成功执行。

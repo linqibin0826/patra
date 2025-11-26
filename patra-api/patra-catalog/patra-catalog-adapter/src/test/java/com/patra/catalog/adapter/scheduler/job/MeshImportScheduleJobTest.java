@@ -54,13 +54,17 @@ class MeshImportScheduleJobTest {
       try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
         // Given
         String jsonParam =
-            "{\"filePath\":\"/data/mesh/desc2025.xml\",\"meshVersion\":\"2025\",\"mode\":\"INCREMENTAL\"}";
+            "{\"url\":\"https://nlmpubs.nlm.nih.gov/projects/mesh/2025/desc2025.xml\",\"meshVersion\":\"2025\",\"mode\":\"INCREMENTAL\"}";
         MeshImportJobParam param =
-            new MeshImportJobParam("/data/mesh/desc2025.xml", "2025", "INCREMENTAL");
+            new MeshImportJobParam(
+                "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/desc2025.xml",
+                "2025",
+                "INCREMENTAL");
         MeshImportResult result =
             MeshImportResult.success(
                 1001L,
-                "/data/mesh/desc2025.xml",
+                "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/desc2025.xml",
+                "/tmp/mesh-import-12345.xml",
                 "2025",
                 MeshDescriptorImportMode.INCREMENTAL);
 
@@ -87,13 +91,15 @@ class MeshImportScheduleJobTest {
       try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
         // Given
         String jsonParam =
-            "{\"filePath\":\"/data/mesh/desc2025.xml\",\"meshVersion\":\"2025\",\"mode\":\"TRUNCATE_REIMPORT\"}";
+            "{\"url\":\"https://example.com/mesh/desc2025.xml\",\"meshVersion\":\"2025\",\"mode\":\"TRUNCATE_REIMPORT\"}";
         MeshImportJobParam param =
-            new MeshImportJobParam("/data/mesh/desc2025.xml", "2025", "TRUNCATE_REIMPORT");
+            new MeshImportJobParam(
+                "https://example.com/mesh/desc2025.xml", "2025", "TRUNCATE_REIMPORT");
         MeshImportResult result =
             MeshImportResult.success(
                 1002L,
-                "/data/mesh/desc2025.xml",
+                "https://example.com/mesh/desc2025.xml",
+                "/tmp/mesh-import-12345.xml",
                 "2025",
                 MeshDescriptorImportMode.TRUNCATE_REIMPORT);
 
@@ -119,13 +125,14 @@ class MeshImportScheduleJobTest {
       try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
         // Given
         String jsonParam =
-            "{\"filePath\":\"/data/mesh/desc2025.xml\",\"meshVersion\":\"2025\",\"mode\":\"incremental\"}";
+            "{\"url\":\"https://example.com/mesh/desc2025.xml\",\"meshVersion\":\"2025\",\"mode\":\"incremental\"}";
         MeshImportJobParam param =
-            new MeshImportJobParam("/data/mesh/desc2025.xml", "2025", "incremental");
+            new MeshImportJobParam("https://example.com/mesh/desc2025.xml", "2025", "incremental");
         MeshImportResult result =
             MeshImportResult.success(
                 1003L,
-                "/data/mesh/desc2025.xml",
+                "https://example.com/mesh/desc2025.xml",
+                "/tmp/mesh-import-12345.xml",
                 "2025",
                 MeshDescriptorImportMode.INCREMENTAL);
 
@@ -206,8 +213,8 @@ class MeshImportScheduleJobTest {
     }
 
     @Test
-    @DisplayName("应该在缺少 filePath 字段时抛出 CatalogScheduleParameterException")
-    void execute_shouldThrowExceptionWhenFilePathMissing() throws Exception {
+    @DisplayName("应该在缺少 url 字段时抛出 CatalogScheduleParameterException")
+    void execute_shouldThrowExceptionWhenUrlMissing() throws Exception {
       try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
         // Given
         String jsonParam = "{\"meshVersion\":\"2025\",\"mode\":\"INCREMENTAL\"}";
@@ -221,7 +228,7 @@ class MeshImportScheduleJobTest {
         // When & Then
         assertThatThrownBy(() -> meshImportScheduleJob.execute())
             .isInstanceOf(CatalogScheduleParameterException.class)
-            .hasMessageContaining("filePath");
+            .hasMessageContaining("url");
 
         xxlJobHelper.verify(() -> XxlJobHelper.handleFail(any(String.class)), times(1));
       }
@@ -232,9 +239,10 @@ class MeshImportScheduleJobTest {
     void execute_shouldThrowExceptionWhenMeshVersionMissing() throws Exception {
       try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
         // Given
-        String jsonParam = "{\"filePath\":\"/data/mesh/desc2025.xml\",\"mode\":\"INCREMENTAL\"}";
+        String jsonParam =
+            "{\"url\":\"https://example.com/mesh/desc2025.xml\",\"mode\":\"INCREMENTAL\"}";
         MeshImportJobParam param =
-            new MeshImportJobParam("/data/mesh/desc2025.xml", null, "INCREMENTAL");
+            new MeshImportJobParam("https://example.com/mesh/desc2025.xml", null, "INCREMENTAL");
 
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
@@ -256,9 +264,9 @@ class MeshImportScheduleJobTest {
       try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
         // Given
         String jsonParam =
-            "{\"filePath\":\"/data/mesh/desc2025.xml\",\"meshVersion\":\"2025\"}";
+            "{\"url\":\"https://example.com/mesh/desc2025.xml\",\"meshVersion\":\"2025\"}";
         MeshImportJobParam param =
-            new MeshImportJobParam("/data/mesh/desc2025.xml", "2025", null);
+            new MeshImportJobParam("https://example.com/mesh/desc2025.xml", "2025", null);
 
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
@@ -280,9 +288,10 @@ class MeshImportScheduleJobTest {
       try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
         // Given
         String jsonParam =
-            "{\"filePath\":\"/data/mesh/desc2025.xml\",\"meshVersion\":\"2025\",\"mode\":\"INVALID_MODE\"}";
+            "{\"url\":\"https://example.com/mesh/desc2025.xml\",\"meshVersion\":\"2025\",\"mode\":\"INVALID_MODE\"}";
         MeshImportJobParam param =
-            new MeshImportJobParam("/data/mesh/desc2025.xml", "2025", "INVALID_MODE");
+            new MeshImportJobParam(
+                "https://example.com/mesh/desc2025.xml", "2025", "INVALID_MODE");
 
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
@@ -309,9 +318,10 @@ class MeshImportScheduleJobTest {
       try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
         // Given
         String jsonParam =
-            "{\"filePath\":\"/data/mesh/desc2025.xml\",\"meshVersion\":\"2025\",\"mode\":\"INCREMENTAL\"}";
+            "{\"url\":\"https://example.com/mesh/desc2025.xml\",\"meshVersion\":\"2025\",\"mode\":\"INCREMENTAL\"}";
         MeshImportJobParam param =
-            new MeshImportJobParam("/data/mesh/desc2025.xml", "2025", "INCREMENTAL");
+            new MeshImportJobParam(
+                "https://example.com/mesh/desc2025.xml", "2025", "INCREMENTAL");
 
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);

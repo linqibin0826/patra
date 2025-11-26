@@ -61,6 +61,7 @@
 2. 信息不足时先查看相关代码/文档，没答案再提问（不要猜测，不要直接问）
 3. 三次失败必须转换策略（启动 subagents 进行调研，如 web、context7 等）
 4. **🚨 编写代码前必须加载 `java-development` 技能！** 这是强制要求，无任何例外。在编写、修改、重构任何 Java 代码之前，必须先执行 `Skill(java-development)` 加载开发规范和最佳实践指南
+5. 在使用 Plan subagent 制定开发计划时，必须优先考虑 TDD 流程和六边形架构原则，并且必须调用 `Skill(java-development)` 以确保计划符合项目的开发规范
 
 ### 推荐做法
 
