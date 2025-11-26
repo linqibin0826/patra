@@ -82,19 +82,6 @@ xxl:
       logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}
 
 # ----------------------------------------------------------------------------
-# Catalog Service Specific Configuration
-# ----------------------------------------------------------------------------
-patra:
-  catalog:
-    mesh-import:
-      # MeSH 数据导入批次大小
-      batch-size: ${MESH_IMPORT_BATCH_SIZE:1000}
-      # 导入任务锁定时长（秒）
-      lock-duration-seconds: ${MESH_IMPORT_LOCK_DURATION:3600}
-      # 数据源 URL
-      source-url: ${MESH_SOURCE_URL:https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml}
-
-# ----------------------------------------------------------------------------
 # Logging Configuration
 # ----------------------------------------------------------------------------
 logging:

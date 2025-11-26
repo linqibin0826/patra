@@ -36,14 +36,6 @@ patra:
 # Error code catalog is for documentation only; intended to sync to the configuration center later.
 catalog:
   error-catalog:
-    # MeSH Import Errors (1200-1299)
-    mesh-import-already-running: CAT-1201
-    mesh-import-task-not-found: CAT-1202
-    mesh-import-invalid-state: CAT-1203
-    mesh-download-failed: CAT-1204
-    mesh-parse-failed: CAT-1205
-    mesh-batch-insert-failed: CAT-1206
-
     # Repository Errors (1300-1399)
     repository-persistence-failed: CAT-1301
     repository-update-conflict: CAT-1302
