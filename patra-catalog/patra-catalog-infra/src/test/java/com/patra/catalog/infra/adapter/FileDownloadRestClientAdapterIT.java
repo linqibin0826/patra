@@ -12,9 +12,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.web.client.RestClient;
 
@@ -29,6 +31,7 @@ import org.springframework.web.client.RestClient;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("FileDownloadRestClientAdapter 集成测试")
+@Timeout(value = 10, unit = TimeUnit.SECONDS)
 class FileDownloadRestClientAdapterIT {
 
   @RegisterExtension

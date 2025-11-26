@@ -160,7 +160,7 @@ public class StaxXmlParserImpl implements XmlParserPort {
     }
   }
 
-  // ========== Spliterator 实现 ==========f
+  // ========== Spliterator 实现 ==========
 
   /// Descriptor Spliterator（用于流式解析 Descriptor）。
   private static class DescriptorSpliterator
@@ -915,89 +915,6 @@ public class StaxXmlParserImpl implements XmlParserPort {
       }
 
       return concept;
-    }
-
-    /// 解析 RelatedRegistryNumberList。
-    private static List<String> parseRelatedRegistryNumberList(XMLStreamReader reader)
-        throws XMLStreamException {
-      List<String> registryNumbers = new ArrayList<>();
-      while (reader.hasNext()) {
-        int event = reader.next();
-        if (event == XMLStreamConstants.START_ELEMENT
-            && "RelatedRegistryNumber".equals(reader.getLocalName())) {
-          String registryNumber = reader.getElementText();
-          if (registryNumber != null && !registryNumber.trim().isEmpty()) {
-            registryNumbers.add(registryNumber.trim());
-          }
-        } else if (event == XMLStreamConstants.END_ELEMENT
-            && "RelatedRegistryNumberList".equals(reader.getLocalName())) {
-          break;
-        }
-      }
-      return registryNumbers;
-    }
-
-    /// 解析 ConceptRelationList。
-    private static List<ConceptRelation> parseConceptRelationList(XMLStreamReader reader)
-        throws XMLStreamException {
-      List<ConceptRelation> relations = new ArrayList<>();
-      while (reader.hasNext()) {
-        int event = reader.next();
-        if (event == XMLStreamConstants.START_ELEMENT
-            && "ConceptRelation".equals(reader.getLocalName())) {
-          ConceptRelation relation = parseConceptRelation(reader);
-          if (relation != null) {
-            relations.add(relation);
-          }
-        } else if (event == XMLStreamConstants.END_ELEMENT
-            && "ConceptRelationList".equals(reader.getLocalName())) {
-          break;
-        }
-      }
-      return relations;
-    }
-
-    /// 解析单个 ConceptRelation。
-    private static ConceptRelation parseConceptRelation(XMLStreamReader reader)
-        throws XMLStreamException {
-      String relationName = null;
-      String concept1UI = null;
-      String concept2UI = null;
-
-      // 解析 RelationName 属性
-      relationName = reader.getAttributeValue(null, "RelationName");
-
-      while (reader.hasNext()) {
-        int event = reader.next();
-        if (event == XMLStreamConstants.START_ELEMENT) {
-          String localName = reader.getLocalName();
-          switch (localName) {
-            case "Concept1UI":
-              concept1UI = reader.getElementText();
-              break;
-            case "Concept2UI":
-              concept2UI = reader.getElementText();
-              break;
-          }
-        } else if (event == XMLStreamConstants.END_ELEMENT
-            && "ConceptRelation".equals(reader.getLocalName())) {
-          break;
-        }
-      }
-
-      if (relationName != null && concept1UI != null && concept2UI != null) {
-        try {
-          return ConceptRelation.of(relationName, MeshUI.of(concept1UI), MeshUI.of(concept2UI));
-        } catch (Exception e) {
-          log.warn(
-              "解析 ConceptRelation 失败: RelationName={}, Concept1UI={}, Concept2UI={}",
-              relationName,
-              concept1UI,
-              concept2UI,
-              e);
-        }
-      }
-      return null;
     }
 
     @Override
