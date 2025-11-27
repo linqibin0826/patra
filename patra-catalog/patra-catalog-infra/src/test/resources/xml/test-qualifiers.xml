@@ -21,6 +21,8 @@
       <Day>01</Day>
     </DateEstablished>
     <Annotation>Test annotation for qualifier 1</Annotation>
+    <HistoryNote>66; used with Category A 1966-74; test history note</HistoryNote>
+    <OnlineNote>search policy: Online Manual; use: main heading/TQ1 or TQ1 (SH)</OnlineNote>
     <TreeNumberList>
       <TreeNumber>Y01.001</TreeNumber>
     </TreeNumberList>
@@ -62,6 +64,8 @@
       <Day>01</Day>
     </DateEstablished>
     <Annotation>Test annotation for qualifier 2</Annotation>
+    <HistoryNote>75; used with Category D 1975 forward; test history note 2</HistoryNote>
+    <OnlineNote>search policy: Online Manual; use: main heading/TQ2 or TQ2 (SH)</OnlineNote>
     <TreeNumberList>
       <TreeNumber>Y01.002</TreeNumber>
       <TreeNumber>Y02.001</TreeNumber>

@@ -5,6 +5,8 @@ import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.common.domain.AggregateRoot;
 import java.io.Serial;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Getter;
 
 /// MeSH 限定词聚合根。管理 NLM MeSH 限定词主数据。
@@ -82,6 +84,15 @@ public class MeshQualifierAggregate extends AggregateRoot<Long> {
   /// MeSH 版本年份(如 "2025")
   private String meshVersion;
 
+  /// 历史说明（记录限定词的历史使用规则）
+  private String historyNote;
+
+  /// 在线检索说明（检索策略指南）
+  private String onlineNote;
+
+  /// 树形编号列表（限定词在 MeSH 层级树中的位置）
+  private List<String> treeNumbers = new ArrayList<>();
+
   /// 私有构造函数。
   ///
   /// @param id 主键ID(新建时为null)
@@ -136,6 +147,9 @@ public class MeshQualifierAggregate extends AggregateRoot<Long> {
   /// @param dateEstablished 确立日期
   /// @param activeStatus 是否有效
   /// @param meshVersion MeSH版本
+  /// @param historyNote 历史说明
+  /// @param onlineNote 在线检索说明
+  /// @param treeNumbers 树形编号列表
   /// @return 重建的聚合根
   public static MeshQualifierAggregate restore(
       Long id,
@@ -147,7 +161,10 @@ public class MeshQualifierAggregate extends AggregateRoot<Long> {
       String dateRevised,
       String dateEstablished,
       Boolean activeStatus,
-      String meshVersion) {
+      String meshVersion,
+      String historyNote,
+      String onlineNote,
+      List<String> treeNumbers) {
     MeshQualifierAggregate qualifier =
         new MeshQualifierAggregate(id, qualifierUi, name, abbreviation);
     qualifier.annotation = annotation;
@@ -156,6 +173,9 @@ public class MeshQualifierAggregate extends AggregateRoot<Long> {
     qualifier.dateEstablished = dateEstablished;
     qualifier.activeStatus = activeStatus;
     qualifier.meshVersion = meshVersion;
+    qualifier.historyNote = historyNote;
+    qualifier.onlineNote = onlineNote;
+    qualifier.treeNumbers = treeNumbers != null ? new ArrayList<>(treeNumbers) : new ArrayList<>();
     return qualifier;
   }
 
@@ -215,6 +235,33 @@ public class MeshQualifierAggregate extends AggregateRoot<Long> {
       Assert.isTrue(meshVersion.matches("^\\d{4}$"), "MeSH版本必须是4位年份：%s", meshVersion);
     }
     this.meshVersion = meshVersion;
+    return this;
+  }
+
+  /// 设置历史说明。
+  ///
+  /// @param historyNote 历史说明
+  /// @return 当前对象(支持链式调用)
+  public MeshQualifierAggregate withHistoryNote(String historyNote) {
+    this.historyNote = historyNote;
+    return this;
+  }
+
+  /// 设置在线检索说明。
+  ///
+  /// @param onlineNote 在线检索说明
+  /// @return 当前对象(支持链式调用)
+  public MeshQualifierAggregate withOnlineNote(String onlineNote) {
+    this.onlineNote = onlineNote;
+    return this;
+  }
+
+  /// 设置树形编号列表。
+  ///
+  /// @param treeNumbers 树形编号列表
+  /// @return 当前对象(支持链式调用)
+  public MeshQualifierAggregate withTreeNumbers(List<String> treeNumbers) {
+    this.treeNumbers = treeNumbers != null ? new ArrayList<>(treeNumbers) : new ArrayList<>();
     return this;
   }
 

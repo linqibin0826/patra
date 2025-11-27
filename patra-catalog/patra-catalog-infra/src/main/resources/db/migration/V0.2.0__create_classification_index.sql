@@ -146,6 +146,9 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_qualifier` (
     `date_established` VARCHAR(10) NULL DEFAULT NULL COMMENT '确立日期(格式:YYYYMMDD)',
     `active_status` BOOLEAN NOT NULL DEFAULT 1 COMMENT '是否有效(0=已废弃,1=有效)',
     `mesh_version` VARCHAR(10) NULL DEFAULT NULL COMMENT 'MeSH 版本年份(如"2025")',
+    `history_note` TEXT NULL DEFAULT NULL COMMENT '历史说明(记录限定词的历史使用规则)',
+    `online_note` TEXT NULL DEFAULT NULL COMMENT '在线检索说明(检索策略指南)',
+    `tree_numbers` JSON NULL DEFAULT NULL COMMENT '树形编号列表(JSON数组,限定词在MeSH层级树中的位置)',
 
     -- ========================================
     -- 审计字段(简化版)

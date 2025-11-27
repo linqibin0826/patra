@@ -1,8 +1,15 @@
 package com.patra.catalog.infra.persistence.converter;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.infra.persistence.entity.MeshQualifierDO;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.stereotype.Component;
 
 /// MeSH 限定词聚合根转换器。
@@ -17,6 +24,9 @@ import org.springframework.stereotype.Component;
 /// @since 0.1.0
 @Component
 public class MeshQualifierConverter {
+
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final TypeReference<List<String>> LIST_STRING_TYPE = new TypeReference<>() {};
 
   /// 将聚合根转换为数据库实体。
   ///
@@ -38,6 +48,9 @@ public class MeshQualifierConverter {
     dataObject.setDateEstablished(aggregate.getDateEstablished());
     dataObject.setActiveStatus(aggregate.getActiveStatus());
     dataObject.setMeshVersion(aggregate.getMeshVersion());
+    dataObject.setHistoryNote(aggregate.getHistoryNote());
+    dataObject.setOnlineNote(aggregate.getOnlineNote());
+    dataObject.setTreeNumbers(convertTreeNumbersToJson(aggregate.getTreeNumbers()));
 
     return dataObject;
   }
@@ -64,6 +77,39 @@ public class MeshQualifierConverter {
         dataObject.getDateRevised(),
         dataObject.getDateEstablished(),
         dataObject.getActiveStatus(),
-        dataObject.getMeshVersion());
+        dataObject.getMeshVersion(),
+        dataObject.getHistoryNote(),
+        dataObject.getOnlineNote(),
+        parseTreeNumbersFromJson(dataObject.getTreeNumbers()));
+  }
+
+  /// 将树形编号列表转换为 JSON 字符串。
+  ///
+  /// @param treeNumbers 树形编号列表
+  /// @return JSON 字符串，空列表返回 null
+  private String convertTreeNumbersToJson(List<String> treeNumbers) {
+    if (CollUtil.isEmpty(treeNumbers)) {
+      return null;
+    }
+    try {
+      return OBJECT_MAPPER.writeValueAsString(treeNumbers);
+    } catch (JsonProcessingException e) {
+      throw new IllegalStateException("Failed to serialize tree numbers to JSON", e);
+    }
+  }
+
+  /// 从 JSON 字符串解析树形编号列表。
+  ///
+  /// @param json JSON 字符串
+  /// @return 树形编号列表，null 或空字符串返回空列表
+  private List<String> parseTreeNumbersFromJson(String json) {
+    if (StrUtil.isBlank(json)) {
+      return new ArrayList<>();
+    }
+    try {
+      return OBJECT_MAPPER.readValue(json, LIST_STRING_TYPE);
+    } catch (JsonProcessingException e) {
+      throw new IllegalStateException("Failed to parse tree numbers from JSON: " + json, e);
+    }
   }
 }
