@@ -61,6 +61,8 @@ public class XmlParserAdapter implements XmlParserPort {
     // 禁用外部实体引用，防止 XXE 攻击（OWASP A03:2021 Injection）
     XML_INPUT_FACTORY.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, Boolean.FALSE);
     XML_INPUT_FACTORY.setProperty(XMLInputFactory.SUPPORT_DTD, Boolean.FALSE);
+    // 设置空的 XMLResolver，忽略所有外部 DTD/实体引用（避免 DOCTYPE 解析错误）
+    XML_INPUT_FACTORY.setXMLResolver((publicID, systemID, baseURI, namespace) -> null);
   }
 
   @Override
