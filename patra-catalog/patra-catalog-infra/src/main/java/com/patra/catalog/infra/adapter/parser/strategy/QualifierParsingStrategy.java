@@ -95,19 +95,21 @@ public final class QualifierParsingStrategy
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case "QualifierUI" -> qualifierUi = reader.getElementText();
-          case "QualifierName" -> name = XmlParsingHelper.parseNameElement(reader);
-          case "Annotation" -> annotation = reader.getElementText();
-          case "DateCreated" -> dateCreated =
+          case MeshXmlElements.Identifier.QUALIFIER_UI -> qualifierUi = reader.getElementText();
+          case MeshXmlElements.Name.QUALIFIER_NAME ->
+              name = XmlParsingHelper.parseNameElement(reader);
+          case MeshXmlElements.Other.ANNOTATION -> annotation = reader.getElementText();
+          case MeshXmlElements.Date.DATE_CREATED -> dateCreated =
               XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_CREATED);
-          case "DateRevised" -> dateRevised =
+          case MeshXmlElements.Date.DATE_REVISED -> dateRevised =
               XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_REVISED);
-          case "DateEstablished" -> dateEstablished =
+          case MeshXmlElements.Date.DATE_ESTABLISHED -> dateEstablished =
               XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_ESTABLISHED);
-          case "HistoryNote" -> historyNote = reader.getElementText().trim();
-          case "OnlineNote" -> onlineNote = reader.getElementText().trim();
-          case "TreeNumberList" -> treeNumbers = parseTreeNumberList(reader);
-          case "ConceptList" -> abbreviation = extractAbbreviationFromPreferredTerm(reader);
+          case MeshXmlElements.Other.HISTORY_NOTE -> historyNote = reader.getElementText().trim();
+          case MeshXmlElements.Other.ONLINE_NOTE -> onlineNote = reader.getElementText().trim();
+          case MeshXmlElements.List.TREE_NUMBER_LIST -> treeNumbers = parseTreeNumberList(reader);
+          case MeshXmlElements.List.CONCEPT_LIST ->
+              abbreviation = extractAbbreviationFromPreferredTerm(reader);
           default -> {
             // 跳过其他未处理的元素
             XmlParsingHelper.skipElement(reader, localName);

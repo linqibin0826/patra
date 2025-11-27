@@ -97,28 +97,30 @@ public final class ConceptParsingStrategy implements RecordParsingStrategy<MeshC
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case "ConceptUI" -> conceptUi = reader.getElementText();
-          case "ConceptName" -> conceptName = XmlParsingHelper.parseNameElement(reader);
-          case "ScopeNote" -> scopeNote = reader.getElementText();
-          case "CASN1Name" -> casn1Name = reader.getElementText();
-          case "ConceptStatus" -> conceptStatus = reader.getElementText();
-          case "TranslatorsEnglishScopeNote" -> translatorsEnglishScopeNote =
-              reader.getElementText();
-          case "TranslatorsScopeNote" -> translatorsScopeNote = reader.getElementText();
-          case "RegistryNumber" -> {
+          case MeshXmlElements.Identifier.CONCEPT_UI -> conceptUi = reader.getElementText();
+          case MeshXmlElements.Name.CONCEPT_NAME ->
+              conceptName = XmlParsingHelper.parseNameElement(reader);
+          case MeshXmlElements.Other.SCOPE_NOTE -> scopeNote = reader.getElementText();
+          case MeshXmlElements.Other.CASN1_NAME -> casn1Name = reader.getElementText();
+          case MeshXmlElements.Other.CONCEPT_STATUS -> conceptStatus = reader.getElementText();
+          case MeshXmlElements.Other.TRANSLATORS_ENGLISH_SCOPE_NOTE ->
+              translatorsEnglishScopeNote = reader.getElementText();
+          case MeshXmlElements.Other.TRANSLATORS_SCOPE_NOTE ->
+              translatorsScopeNote = reader.getElementText();
+          case MeshXmlElements.Other.REGISTRY_NUMBER -> {
             // 单个 RegistryNumber（旧版 DTD）
             String regNum = reader.getElementText();
             if (regNum != null && !regNum.trim().isEmpty()) {
               registryNumbers.add(regNum.trim());
             }
           }
-          case "RegistryNumberList" -> registryNumbers.addAll(
+          case MeshXmlElements.List.REGISTRY_NUMBER_LIST -> registryNumbers.addAll(
               parseRegistryNumberList(reader));
-          case "RelatedRegistryNumberList" -> relatedRegistryNumbers.addAll(
+          case MeshXmlElements.List.RELATED_REGISTRY_NUMBER_LIST -> relatedRegistryNumbers.addAll(
               parseRelatedRegistryNumberList(reader));
-          case "ConceptRelationList" -> conceptRelations.addAll(
+          case MeshXmlElements.List.CONCEPT_RELATION_LIST -> conceptRelations.addAll(
               parseConceptRelationList(reader));
-          case "TermList" -> {
+          case MeshXmlElements.List.TERM_LIST -> {
             // 独立解析 Concept 时跳过 TermList（由 DescriptorParsingStrategy 处理）
             XmlParsingHelper.skipElement(reader, MeshXmlElements.List.TERM_LIST);
           }
@@ -242,8 +244,8 @@ public final class ConceptParsingStrategy implements RecordParsingStrategy<MeshC
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case "Concept1UI" -> concept1Ui = reader.getElementText();
-          case "Concept2UI" -> concept2Ui = reader.getElementText();
+          case MeshXmlElements.Identifier.CONCEPT1_UI -> concept1Ui = reader.getElementText();
+          case MeshXmlElements.Identifier.CONCEPT2_UI -> concept2Ui = reader.getElementText();
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && MeshXmlElements.Other.CONCEPT_RELATION.equals(reader.getLocalName())) {

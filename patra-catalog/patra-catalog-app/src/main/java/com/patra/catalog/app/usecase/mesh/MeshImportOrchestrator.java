@@ -82,7 +82,7 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
       log.info("MeSH 限定词导入完成，数量：{}", qualifiers.size());
       return MeshQualifierImportResult.success(command.url(), command.meshVersion(), qualifiers.size());
     } catch (Exception e) {
-      throw e instanceof RuntimeException re ? re : new RuntimeException("限定词导入失败", e);
+      throw (RuntimeException) e;
     } finally {
       // 无论成功或失败，都清理临时文件
       cleanupTempFile(localFile);

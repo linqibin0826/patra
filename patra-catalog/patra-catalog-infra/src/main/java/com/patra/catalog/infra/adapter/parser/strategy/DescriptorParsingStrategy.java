@@ -121,30 +121,37 @@ public final class DescriptorParsingStrategy
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case "DescriptorUI" -> descriptorUI = reader.getElementText();
-          case "DescriptorName" -> descriptorName = XmlParsingHelper.parseNameElement(reader);
-          case "DateCreated" -> dateCreated =
+          case MeshXmlElements.Identifier.DESCRIPTOR_UI -> descriptorUI = reader.getElementText();
+          case MeshXmlElements.Name.DESCRIPTOR_NAME ->
+              descriptorName = XmlParsingHelper.parseNameElement(reader);
+          case MeshXmlElements.Date.DATE_CREATED -> dateCreated =
               XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_CREATED);
-          case "DateRevised" -> dateRevised =
+          case MeshXmlElements.Date.DATE_REVISED -> dateRevised =
               XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_REVISED);
-          case "DateEstablished" -> dateEstablished =
+          case MeshXmlElements.Date.DATE_ESTABLISHED -> dateEstablished =
               XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_ESTABLISHED);
-          case "HistoryNote" -> historyNote = reader.getElementText().trim();
-          case "OnlineNote" -> onlineNote = reader.getElementText().trim();
-          case "PublicMeSHNote" -> publicMeshNote = reader.getElementText().trim();
-          case "NLMClassificationNumber" -> nlmClassificationNumber = reader.getElementText().trim();
-          case "Annotation" -> annotation = reader.getElementText().trim();
-          case "ConsiderAlso" -> considerAlso = reader.getElementText().trim();
-          case "ScopeNote" -> scopeNote = reader.getElementText().trim();
-          case "TreeNumberList" -> treeNumbers = parseTreeNumberList(reader);
-          case "AllowableQualifiersList" -> allowableQualifiers =
+          case MeshXmlElements.Other.HISTORY_NOTE -> historyNote = reader.getElementText().trim();
+          case MeshXmlElements.Other.ONLINE_NOTE -> onlineNote = reader.getElementText().trim();
+          case MeshXmlElements.Other.PUBLIC_MESH_NOTE ->
+              publicMeshNote = reader.getElementText().trim();
+          case MeshXmlElements.Other.NLM_CLASSIFICATION_NUMBER ->
+              nlmClassificationNumber = reader.getElementText().trim();
+          case MeshXmlElements.Other.ANNOTATION -> annotation = reader.getElementText().trim();
+          case MeshXmlElements.Other.CONSIDER_ALSO -> considerAlso = reader.getElementText().trim();
+          case MeshXmlElements.Other.SCOPE_NOTE -> scopeNote = reader.getElementText().trim();
+          case MeshXmlElements.List.TREE_NUMBER_LIST -> treeNumbers = parseTreeNumberList(reader);
+          case MeshXmlElements.List.ALLOWABLE_QUALIFIERS_LIST -> allowableQualifiers =
               parseAllowableQualifiersList(reader);
-          case "PharmacologicalActionList" -> pharmacologicalActions =
+          case MeshXmlElements.List.PHARMACOLOGICAL_ACTION_LIST -> pharmacologicalActions =
               parsePharmacologicalActionList(reader);
-          case "PreviousIndexingList" -> previousIndexings = parsePreviousIndexingList(reader);
-          case "SeeRelatedList" -> seeRelatedDescriptors = parseSeeRelatedList(reader);
-          case "EntryCombinationList" -> entryCombinations = parseEntryCombinationList(reader);
-          case "ConceptList" -> parseConceptListIntoAggregate(reader, concepts, entryTerms);
+          case MeshXmlElements.List.PREVIOUS_INDEXING_LIST ->
+              previousIndexings = parsePreviousIndexingList(reader);
+          case MeshXmlElements.List.SEE_RELATED_LIST ->
+              seeRelatedDescriptors = parseSeeRelatedList(reader);
+          case MeshXmlElements.List.ENTRY_COMBINATION_LIST ->
+              entryCombinations = parseEntryCombinationList(reader);
+          case MeshXmlElements.List.CONCEPT_LIST ->
+              parseConceptListIntoAggregate(reader, concepts, entryTerms);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && MeshXmlElements.Record.DESCRIPTOR.equals(reader.getLocalName())) {
@@ -280,13 +287,13 @@ public final class DescriptorParsingStrategy
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case "QualifierReferredTo" -> {
+          case MeshXmlElements.Referred.QUALIFIER_REFERRED_TO -> {
             // 解析嵌套的 QualifierReferredTo
             var result = parseQualifierReferredTo(reader);
             qualifierUi = result[0];
             qualifierName = result[1];
           }
-          case "Abbreviation" -> abbreviation = reader.getElementText();
+          case MeshXmlElements.Other.ABBREVIATION -> abbreviation = reader.getElementText();
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && MeshXmlElements.Other.ALLOWABLE_QUALIFIER.equals(reader.getLocalName())) {
@@ -314,8 +321,9 @@ public final class DescriptorParsingStrategy
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case "QualifierUI" -> qualifierUi = reader.getElementText();
-          case "QualifierName" -> qualifierName = XmlParsingHelper.parseNameElement(reader);
+          case MeshXmlElements.Identifier.QUALIFIER_UI -> qualifierUi = reader.getElementText();
+          case MeshXmlElements.Name.QUALIFIER_NAME ->
+              qualifierName = XmlParsingHelper.parseNameElement(reader);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && MeshXmlElements.Referred.QUALIFIER_REFERRED_TO.equals(reader.getLocalName())) {
@@ -384,8 +392,9 @@ public final class DescriptorParsingStrategy
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case "DescriptorUI" -> descriptorUi = reader.getElementText();
-          case "DescriptorName" -> descriptorName = XmlParsingHelper.parseNameElement(reader);
+          case MeshXmlElements.Identifier.DESCRIPTOR_UI -> descriptorUi = reader.getElementText();
+          case MeshXmlElements.Name.DESCRIPTOR_NAME ->
+              descriptorName = XmlParsingHelper.parseNameElement(reader);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && MeshXmlElements.Referred.DESCRIPTOR_REFERRED_TO.equals(reader.getLocalName())) {
@@ -495,12 +504,12 @@ public final class DescriptorParsingStrategy
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case "ECIN" -> {
+          case MeshXmlElements.Referred.ECIN -> {
             var result = parseEcElement(reader, MeshXmlElements.Referred.ECIN);
             ecinDescriptorUi = result[0];
             ecinQualifierUi = result[1];
           }
-          case "ECOUT" -> {
+          case MeshXmlElements.Referred.ECOUT -> {
             var result = parseEcElement(reader, MeshXmlElements.Referred.ECOUT);
             ecoutDescriptorUi = result[0];
             ecoutQualifierUi = result[1];
@@ -537,11 +546,11 @@ public final class DescriptorParsingStrategy
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case "DescriptorReferredTo" -> {
+          case MeshXmlElements.Referred.DESCRIPTOR_REFERRED_TO -> {
             var result = parseDescriptorReferredTo(reader);
             descriptorUi = result[0];
           }
-          case "QualifierReferredTo" -> {
+          case MeshXmlElements.Referred.QUALIFIER_REFERRED_TO -> {
             var result = parseQualifierReferredTo(reader);
             qualifierUi = result[0];
           }
@@ -596,24 +605,28 @@ public final class DescriptorParsingStrategy
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case "ConceptUI" -> conceptUi = reader.getElementText();
-          case "ConceptName" -> conceptName = XmlParsingHelper.parseNameElement(reader);
-          case "ScopeNote" -> scopeNote = reader.getElementText();
-          case "CASN1Name" -> casn1Name = reader.getElementText();
-          case "ConceptStatus" -> conceptStatus = reader.getElementText();
-          case "TranslatorsEnglishScopeNote" -> translatorsEnglishScopeNote =
-              reader.getElementText();
-          case "TranslatorsScopeNote" -> translatorsScopeNote = reader.getElementText();
-          case "RegistryNumber" -> {
+          case MeshXmlElements.Identifier.CONCEPT_UI -> conceptUi = reader.getElementText();
+          case MeshXmlElements.Name.CONCEPT_NAME ->
+              conceptName = XmlParsingHelper.parseNameElement(reader);
+          case MeshXmlElements.Other.SCOPE_NOTE -> scopeNote = reader.getElementText();
+          case MeshXmlElements.Other.CASN1_NAME -> casn1Name = reader.getElementText();
+          case MeshXmlElements.Other.CONCEPT_STATUS -> conceptStatus = reader.getElementText();
+          case MeshXmlElements.Other.TRANSLATORS_ENGLISH_SCOPE_NOTE ->
+              translatorsEnglishScopeNote = reader.getElementText();
+          case MeshXmlElements.Other.TRANSLATORS_SCOPE_NOTE ->
+              translatorsScopeNote = reader.getElementText();
+          case MeshXmlElements.Other.REGISTRY_NUMBER -> {
             String regNum = reader.getElementText();
             if (regNum != null && !regNum.trim().isEmpty()) {
               registryNumbers.add(regNum.trim());
             }
           }
-          case "RegistryNumberList" -> registryNumbers.addAll(parseRegistryNumberList(reader));
-          case "RelatedRegistryNumberList" -> relatedRegistryNumbers.addAll(
+          case MeshXmlElements.List.REGISTRY_NUMBER_LIST ->
+              registryNumbers.addAll(parseRegistryNumberList(reader));
+          case MeshXmlElements.List.RELATED_REGISTRY_NUMBER_LIST -> relatedRegistryNumbers.addAll(
               parseRelatedRegistryNumberList(reader));
-          case "TermList" -> parseTermListIntoEntryTerms(reader, entryTerms, conceptUi);
+          case MeshXmlElements.List.TERM_LIST ->
+              parseTermListIntoEntryTerms(reader, entryTerms, conceptUi);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && MeshXmlElements.Record.CONCEPT.equals(reader.getLocalName())) {

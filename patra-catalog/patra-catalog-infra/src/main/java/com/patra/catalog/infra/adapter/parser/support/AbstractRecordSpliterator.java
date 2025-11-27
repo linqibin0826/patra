@@ -1,5 +1,6 @@
 package com.patra.catalog.infra.adapter.parser.support;
 
+import com.patra.catalog.infra.adapter.parser.XmlParsingException;
 import com.patra.catalog.infra.adapter.parser.strategy.RecordParsingStrategy;
 import java.util.Spliterator;
 import java.util.function.Consumer;
@@ -81,7 +82,7 @@ public abstract class AbstractRecordSpliterator<T> implements Spliterator<T> {
       return false;
     } catch (XMLStreamException e) {
       log.error("解析 {} 记录失败", strategy.rootElementName(), e);
-      throw new RuntimeException("XML 解析失败", e);
+      throw new XmlParsingException("XML 解析失败", e);
     }
   }
 

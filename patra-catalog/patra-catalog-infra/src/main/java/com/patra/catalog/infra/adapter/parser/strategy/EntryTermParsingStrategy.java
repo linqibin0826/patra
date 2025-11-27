@@ -97,19 +97,19 @@ public final class EntryTermParsingStrategy implements RecordParsingStrategy<Mes
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case "TermUI" -> termUI = reader.getElementText();
-          case "String" -> termText = reader.getElementText();
-          case "DateCreated" -> dateCreated =
+          case MeshXmlElements.Identifier.TERM_UI -> termUI = reader.getElementText();
+          case MeshXmlElements.Name.STRING -> termText = reader.getElementText();
+          case MeshXmlElements.Date.DATE_CREATED -> dateCreated =
               XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_CREATED);
-          case "ThesaurusIDlist" -> thesaurusIds =
+          case MeshXmlElements.List.THESAURUS_ID_LIST -> thesaurusIds =
               XmlParsingHelper.parseStringList(
                   reader,
                   MeshXmlElements.List.THESAURUS_ID_LIST,
                   MeshXmlElements.Other.THESAURUS_ID);
-          case "EntryVersion" -> entryVersion = reader.getElementText();
-          case "Abbreviation" -> abbreviation = reader.getElementText();
-          case "SortVersion" -> sortVersion = reader.getElementText();
-          case "TermNote" -> termNote = reader.getElementText();
+          case MeshXmlElements.Other.ENTRY_VERSION -> entryVersion = reader.getElementText();
+          case MeshXmlElements.Other.ABBREVIATION -> abbreviation = reader.getElementText();
+          case MeshXmlElements.Other.SORT_VERSION -> sortVersion = reader.getElementText();
+          case MeshXmlElements.Other.TERM_NOTE -> termNote = reader.getElementText();
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && MeshXmlElements.Record.TERM.equals(reader.getLocalName())) {
