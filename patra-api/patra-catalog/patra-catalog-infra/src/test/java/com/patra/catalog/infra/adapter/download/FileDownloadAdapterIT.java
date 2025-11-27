@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.adapter;
+package com.patra.catalog.infra.adapter.download;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.web.client.RestClient;
 
-/// FileDownloadRestClientAdapter 集成测试。
+/// FileDownloadAdapter 集成测试。
 ///
 /// **测试策略**：
 ///
@@ -30,21 +30,21 @@ import org.springframework.web.client.RestClient;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@DisplayName("FileDownloadRestClientAdapter 集成测试")
+@DisplayName("FileDownloadAdapter 集成测试")
 @Timeout(value = 10, unit = TimeUnit.SECONDS)
-class FileDownloadRestClientAdapterIT {
+class FileDownloadAdapterIT {
 
   @RegisterExtension
   static WireMockExtension wireMock =
       WireMockExtension.newInstance().options(com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig().dynamicPort()).build();
 
-  private FileDownloadRestClientAdapter adapter;
+  private FileDownloadAdapter adapter;
   private Path downloadedFile;
 
   @BeforeEach
   void setUp() {
     RestClient restClient = RestClient.builder().build();
-    adapter = new FileDownloadRestClientAdapter(restClient);
+    adapter = new FileDownloadAdapter(restClient);
   }
 
   @AfterEach

@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.adapter;
+package com.patra.catalog.infra.adapter.download;
 
 import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.port.FileDownloadPort;
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
-/// 文件下载端口的 RestClient 实现。
+/// 文件下载端口适配器。
 ///
 /// 使用 defaultRestClient 下载远程文件到系统临时目录。
 ///
@@ -31,7 +31,7 @@ import org.springframework.web.client.RestClient;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class FileDownloadRestClientAdapter implements FileDownloadPort {
+public class FileDownloadAdapter implements FileDownloadPort {
 
   private static final String TEMP_FILE_PREFIX = "mesh-import-";
   private static final String TEMP_FILE_SUFFIX = ".xml";
