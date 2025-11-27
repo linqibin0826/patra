@@ -30,8 +30,12 @@ import org.springframework.web.client.RestClient;
 ///
 /// ## 设计说明
 ///
-/// 追踪传播和指标收集功能已移至 patra-spring-boot-starter-observability，
-/// 通过 Spring 标准的 {@link ClientHttpRequestInterceptor} 接口提供，符合关注点分离原则。
+/// 1. 追踪传播和指标收集功能已移至 patra-spring-boot-starter-observability，
+///    通过 Spring 标准的 {@link ClientHttpRequestInterceptor} 接口提供，符合关注点分离原则。
+///
+/// 2. **LoadBalancer 拦截器隔离**：`defaultRestClient` 设计用于调用外部 API（如 PubMed、EPMC），
+///    会自动过滤掉 Spring Cloud LoadBalancer 注册的拦截器（如 `RetryLoadBalancerInterceptor`），
+///    避免外部域名被错误解析为 Nacos 服务 ID。Feign 客户端使用独立的 HTTP 客户端栈，不受影响。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -73,11 +77,27 @@ public class RestClientAutoConfiguration {
       builder.defaultHeaders(headers -> clientConfig.getDefaultHeaders().forEach(headers::add));
     }
 
-    // 注入所有拦截器（按 @Order 排序）
+    // 注入拦截器（按 @Order 排序），过滤掉 LoadBalancer 拦截器
     builder.requestInterceptors(
-        list -> list.addAll(interceptorsProvider.orderedStream().toList()));
+        list ->
+            list.addAll(
+                interceptorsProvider.orderedStream()
+                    .filter(i -> !isLoadBalancerInterceptor(i))
+                    .toList()));
 
     return builder.build();
+  }
+
+  /// 判断是否为 Spring Cloud LoadBalancer 拦截器。
+  ///
+  /// LoadBalancer 拦截器会将请求 URL 的 host 解析为服务 ID，
+  /// 导致外部 API 调用（如 `nlmpubs.nlm.nih.gov`）失败。
+  ///
+  /// @param interceptor 待检查的拦截器
+  /// @return 如果是 LoadBalancer 拦截器返回 true
+  private boolean isLoadBalancerInterceptor(ClientHttpRequestInterceptor interceptor) {
+    String className = interceptor.getClass().getName();
+    return className.contains("LoadBalancer");
   }
 
   /// 创建 HTTP 请求工厂（配置超时）。

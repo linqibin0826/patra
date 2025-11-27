@@ -35,10 +35,8 @@
 
 | Bean 名称 | 类型 | 描述 |
 |-----------|------|------|
-| `pubMedRestClient` | `RestClient` | PubMed 专用 RestClient（含超时和默认 Headers） |
-| `epmcRestClient` | `RestClient` | EPMC 专用 RestClient（含超时和默认 Headers） |
-| `pubMedClient` | `PubMedClient` | PubMed E-utilities 客户端 |
-| `epmcClient` | `EPMCClient` | Europe PMC 搜索客户端 |
+| `pubMedClient` | `PubMedClient` | PubMed E-utilities 客户端（使用 defaultRestClient） |
+| `epmcClient` | `EPMCClient` | Europe PMC 搜索客户端（使用 defaultRestClient） |
 | `provenanceXmlMapper` | `XmlMapper` | PubMed XML 响应映射器 |
 | `pubmedArticleConverter` | `PubmedPublicationConverter` | **PubMed 医学出版物转换器（核心组件）** |
 | `defaultConfigProvider` | `DefaultConfigProvider` | 配置提供器 |
@@ -53,14 +51,14 @@
 
 ## 主要组件
 
-### RestClient（Spring 管理）
+### RestClient（统一管理）
 
-提供类型安全的 HTTP 调用能力:
+使用 `patra-spring-boot-starter-rest-client` 提供的 `defaultRestClient`，实现 HTTP 客户端统一管理：
 
-- **PubMed RestClient**: 自动配置 baseUrl、超时、默认 Headers
-- **EPMC RestClient**: 自动配置 baseUrl、超时、默认 Headers
+- **统一配置**: 超时、重试、日志等配置由 rest-client Starter 统一管理
 - **底层实现**: JDK 21 HttpClient（通过 JdkClientHttpRequestFactory）
-- **配置来源**: 从 `ProvenanceConfig.http()` 提取
+- **BaseUrl 动态构建**: 每次请求时从 `ProvenanceConfig.baseUrl()` 动态构建完整 URL
+- **避免 LoadBalancer 污染**: 使用非 Bean 方式创建 Factory，避免被 Spring Cloud LoadBalancer 包装
 
 ### PubMedClient
 
@@ -643,22 +641,16 @@ patra:
 public class CustomProvenanceConfig {
 
     @Bean
-    public RestClient customPubMedRestClient() {
-        return RestClient.builder()
-            .baseUrl("https://custom-url")
-            .defaultHeader("Custom-Header", "value")
-            .build();
-    }
-
-    @Bean
     public PubMedClient customPubMedClient(
-        RestClient customPubMedRestClient,
+        RestClient defaultRestClient,  // 使用统一的 defaultRestClient
+        DefaultConfigProvider configProvider,
         ObjectMapper objectMapper,
         XmlMapper xmlMapper
     ) {
+        // 自定义配置提供者（覆盖 baseUrl 等）
         return new PubMedClientAdapter(
-            customPubMedRestClient,
-            customConfigProvider(),
+            defaultRestClient,
+            configProvider,
             objectMapper,
             xmlMapper,
             null
@@ -812,52 +804,43 @@ Integer refCount = publication.getNumberOfReferences();
 - ✅ 提供结构化的参考文献和外部数据库引用
 - ✅ 优化医学出版物处理性能
 
-### v0.1.0: 从 SimpleHttpClient 到 RestClient
+### v0.1.0: RestClient 统一管理
 
-**背景**: v0.1.0 版本将 HTTP 调用从自定义的 `SimpleHttpClient` 迁移到 Spring 管理的 `RestClient`。
+**背景**: v0.1.0 版本统一使用 `patra-spring-boot-starter-rest-client` 提供的 `defaultRestClient`，不再创建专用的 RestClient Bean。
 
 **主要变更**:
 
 1. **依赖变更**:
-   - 新增: `spring-web` 依赖（提供 RestClient）
-   - 移除: 自定义 `SimpleHttpClient`、`HttpResilienceConfig`
+   - 新增: `patra-spring-boot-starter-rest-client` 依赖
+   - 移除: 自定义 `pubMedRestClient` 和 `epmcRestClient` Bean
 
 2. **自动配置变更**:
-   - 新增: `pubMedRestClient` 和 `epmcRestClient` Bean
-   - 修改: `PubMedClientAdapter` 和 `EpmcClientAdapter` 构造函数接受 `RestClient`
+   - 移除: `pubMedRestClient` 和 `epmcRestClient` Bean
+   - 修改: `PubMedClientAdapter` 和 `EpmcClientAdapter` 使用 `defaultRestClient`
+   - 修改: BaseUrl 在每次请求时从 `ProvenanceConfig.baseUrl()` 动态构建
 
-3. **配置保持不变**:
-   - `patra.provenance.defaults.http.*` 配置继续有效
-   - 超时和默认 Headers 从配置中自动提取
+3. **设计意图**:
+   - 避免 Spring Cloud LoadBalancer 的 BeanPostProcessor 包装 `JdkClientHttpRequestFactory`
+   - 统一 HTTP 客户端配置管理（超时、重试、日志等）
+   - 支持运行时动态切换配置
 
 **影响范围**:
 - **对用户透明**: 如果使用 `PubMedClient` 或 `EPMCClient` 接口，无需修改代码
-- **自定义配置**: 如果手动创建了 `PubMedClientAdapter`，需要传入 `RestClient` 而非 `SimpleHttpClient`
+- **自定义配置**: 如果手动创建了 `PubMedClientAdapter`，需要传入 `defaultRestClient`
 
 **示例**:
 
 ```java
-// 旧版本（已废弃）
-PubMedClient client = new PubMedClientAdapter(
-    new SimpleHttpClient(),  // ❌ 已移除
-    configProvider,
-    objectMapper,
-    xmlMapper,
-    null
-);
-
-// 新版本（推荐）
-// 1. 使用自动配置（推荐）
+// 使用自动配置（推荐）
 @Autowired
 private PubMedClient pubMedClient;  // ✅ 直接注入
 
-// 2. 手动配置（高级用法）
-RestClient restClient = RestClient.builder()
-    .baseUrl("https://eutils.ncbi.nlm.nih.gov/entrez/eutils")
-    .build();
+// 手动配置（高级用法）
+@Autowired
+private RestClient defaultRestClient;  // 使用统一的 RestClient
 
 PubMedClient client = new PubMedClientAdapter(
-    restClient,  // ✅ 使用 RestClient
+    defaultRestClient,  // ✅ 使用 defaultRestClient
     configProvider,
     objectMapper,
     xmlMapper,
@@ -866,10 +849,10 @@ PubMedClient client = new PubMedClientAdapter(
 ```
 
 **优势**:
-- ✅ 与 Spring 生态深度集成
-- ✅ 统一的超时、重试、拦截器配置
-- ✅ 更好的测试支持（MockRestServiceServer）
-- ✅ 减少自定义代码维护成本
+- ✅ HTTP 客户端配置统一管理
+- ✅ 避免 LoadBalancer 包装导致的外部 URL 调用失败
+- ✅ 减少 Bean 数量，简化自动配置
+- ✅ 支持运行时动态切换 baseUrl
 
 ### v0.1.0: API 常量迁移到 patra-common-provenance-api
 

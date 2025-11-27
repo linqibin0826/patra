@@ -263,7 +263,12 @@ try {
 ## 技术栈
 
 - Spring Cloud OpenFeign
+- **Spring Cloud LoadBalancer**（已包含，无需单独引入）
 - Spring Boot 3.5.7
 - Micrometer
 - patra-spring-boot-starter-core
 - patra-common-core（ErrorTrait、HasErrorTraits）
+
+> **注意**: 本 Starter 已包含 `spring-cloud-starter-loadbalancer` 依赖，使用 Feign 客户端时无需在
+> 服务模块中额外引入。LoadBalancer 依赖集中管理可避免与 `patra-spring-boot-starter-rest-client`
+> 的 `defaultRestClient` 产生冲突。
