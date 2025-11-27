@@ -13,8 +13,8 @@ import lombok.EqualsAndHashCode;
 /// 关键字段说明：
 ///
 /// - `publication_id` - 出版物 ID（外键：cat_publication.id）
-///   - `descriptor_id` - 主题词 ID（外键：cat_mesh_descriptor.id）
-///   - `qualifier_id` - 限定词 ID（外键：cat_mesh_qualifier.id，可选）
+///   - `descriptor_ui` - 主题词 UI（格式：D000001）
+///   - `qualifier_ui` - 限定词 UI（格式：Q000001，可选）
 ///   - `is_major_topic` - 是否主要主题（0=副主题，1=主要主题，对应 MeSH 星号 *）
 ///   - `order_num` - 顺序号（在同一文献内的排序）
 ///   - `indexing_method` - 标引方法（如 Manual/Automatic）
@@ -24,7 +24,7 @@ import lombok.EqualsAndHashCode;
 /// - idx_pub_desc - 文献+主题词复合索引，支持查询文献的 MeSH（&lt;20ms）
 ///   - idx_desc_pub - 主题词+文献复合索引，支持查询 MeSH 的文献（&lt;50ms）
 ///   - idx_major_topic - 主题词+主/副主题复合索引，筛选主要主题文献
-///   - idx_qualifier - 限定词索引，支持按限定词筛选文献
+///   - idx_qualifier_ui - 限定词索引，支持按限定词筛选文献
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -36,13 +36,13 @@ public class PublicationMeshDO extends BaseDO {
   @TableField("publication_id")
   private Long publicationId;
 
-  /// 主题词 ID（外键：cat_mesh_descriptor.id）
-  @TableField("descriptor_id")
-  private Long descriptorId;
+  /// 主题词 UI（格式：D000001）
+  @TableField("descriptor_ui")
+  private String descriptorUi;
 
-  /// 限定词 ID（外键：cat_mesh_qualifier.id，可选）
-  @TableField("qualifier_id")
-  private Long qualifierId;
+  /// 限定词 UI（格式：Q000001，可选）
+  @TableField("qualifier_ui")
+  private String qualifierUi;
 
   /// 是否主要主题（0=副主题，1=主要主题，对应 MeSH 星号 *）
   @TableField("is_major_topic")

@@ -14,7 +14,7 @@ import lombok.EqualsAndHashCode;
 ///
 /// 关键字段说明：
 ///
-/// - `descriptor_id` - 主题词 ID（外键：cat_mesh_descriptor.id）
+/// - `descriptor_ui` - 主题词 UI（格式：D000001）
 ///   - `concept_ui` - 概念唯一标识符（格式：M000001-M999999），唯一约束 uk_concept_ui
 ///   - `concept_name` - 概念名称
 ///   - `is_preferred` - 是否首选概念（0=否，1=是）
@@ -26,7 +26,7 @@ import lombok.EqualsAndHashCode;
 /// 索引说明：
 ///
 /// - uk_concept_ui - 概念 UI 唯一索引，支持精确查询
-///   - idx_descriptor - 主题词索引，支持查询某主题词的所有概念
+///   - idx_descriptor_ui - 主题词索引，支持查询某主题词的所有概念
 ///   - idx_registry_number - 注册号索引，支持化学物质查询
 ///
 /// @author linqibin
@@ -35,9 +35,9 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_mesh_concept", autoResultMap = true)
 public class MeshConceptDO extends BaseDO {
-  /// 主题词 ID（外键：cat_mesh_descriptor.id）
-  @TableField("descriptor_id")
-  private Long descriptorId;
+  /// 主题词 UI（格式：D000001）
+  @TableField("descriptor_ui")
+  private String descriptorUi;
 
   /// 概念唯一标识符（格式：M000001-M999999）
   @TableField("concept_ui")

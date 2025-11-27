@@ -282,8 +282,8 @@ class MeshDescriptorItemWriterIT {
   }
 
   @Test
-  @DisplayName("write() 子表关联正确性 - 验证 descriptorId 外键正确设置")
-  void write_shouldSetCorrectForeignKeys() throws Exception {
+  @DisplayName("write() 子表关联正确性 - 验证 descriptorUi 关联键正确设置")
+  void write_shouldSetCorrectRelationKeys() throws Exception {
     // Given: 创建一个 Descriptor
     MeshDescriptorAggregate descriptor = createTestDescriptor(1);
 
@@ -292,26 +292,26 @@ class MeshDescriptorItemWriterIT {
     // When: 写入
     meshDescriptorItemWriter.write(chunk);
 
-    // Then: 获取主表 ID
+    // Then: 获取主表 UI
     MeshDescriptorDO savedDescriptor = descriptorMapper.selectList(null).get(0);
-    Long descriptorId = savedDescriptor.getId();
-    assertThat(descriptorId).isNotNull();
+    String descriptorUi = savedDescriptor.getUi();
+    assertThat(descriptorUi).isNotNull();
 
-    // Then: 验证所有子表的 descriptorId 外键
+    // Then: 验证所有子表的 descriptorUi 关联键
     List<MeshTreeNumberDO> treeNumbers = treeNumberMapper.selectList(null);
-    assertThat(treeNumbers).allMatch(tn -> tn.getDescriptorId().equals(descriptorId));
+    assertThat(treeNumbers).allMatch(tn -> tn.getDescriptorUi().equals(descriptorUi));
 
     List<MeshConceptDO> concepts = conceptMapper.selectList(null);
-    assertThat(concepts).allMatch(c -> c.getDescriptorId().equals(descriptorId));
+    assertThat(concepts).allMatch(c -> c.getDescriptorUi().equals(descriptorUi));
 
     List<MeshEntryTermDO> entryTerms = entryTermMapper.selectList(null);
-    assertThat(entryTerms).allMatch(et -> et.getDescriptorId().equals(descriptorId));
+    assertThat(entryTerms).allMatch(et -> et.getDescriptorUi().equals(descriptorUi));
 
     List<MeshEntryCombinationDO> entryCombinations = entryCombinationMapper.selectList(null);
-    assertThat(entryCombinations).allMatch(ec -> ec.getDescriptorId().equals(descriptorId));
+    assertThat(entryCombinations).allMatch(ec -> ec.getDescriptorUi().equals(descriptorUi));
 
     List<MeshConceptRelationDO> conceptRelations = conceptRelationMapper.selectList(null);
-    assertThat(conceptRelations).allMatch(cr -> cr.getDescriptorId().equals(descriptorId));
+    assertThat(conceptRelations).allMatch(cr -> cr.getDescriptorUi().equals(descriptorUi));
   }
 
   /// 创建测试用 MeshDescriptorAggregate。

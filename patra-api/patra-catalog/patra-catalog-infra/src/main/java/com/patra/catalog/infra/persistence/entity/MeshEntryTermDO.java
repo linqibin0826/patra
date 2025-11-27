@@ -14,7 +14,7 @@ import lombok.EqualsAndHashCode;
 ///
 /// 关键字段说明：
 ///
-/// - `descriptor_id` - 主题词 ID（外键：cat_mesh_descriptor.id）
+/// - `descriptor_ui` - 主题词 UI（格式：D000001）
 ///   - `term` - 入口术语/同义词
 ///   - `lexical_tag` - 词法标记（枚举：NON/PEF/LAB/ABB/ACR/NAM）
 ///   - `is_print_flag` - 是否打印（0=否，1=是）
@@ -23,7 +23,7 @@ import lombok.EqualsAndHashCode;
 ///
 /// 索引说明：
 ///
-/// - idx_descriptor - 主题词索引，支持查询某主题词的所有入口术语
+/// - idx_descriptor_ui - 主题词索引，支持查询某主题词的所有入口术语
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -31,9 +31,9 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_mesh_entry_term", autoResultMap = true)
 public class MeshEntryTermDO extends BaseDO {
-  /// 主题词 ID（外键：cat_mesh_descriptor.id）
-  @TableField("descriptor_id")
-  private Long descriptorId;
+  /// 主题词 UI（格式：D000001）
+  @TableField("descriptor_ui")
+  private String descriptorUi;
 
   /// 术语唯一标识符（格式：T000001-T999999）
   @TableField("term_ui")

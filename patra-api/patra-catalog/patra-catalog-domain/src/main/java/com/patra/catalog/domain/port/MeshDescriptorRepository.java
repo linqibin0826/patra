@@ -25,7 +25,7 @@ public interface MeshDescriptorRepository {
   ///
   /// - 保存完整的聚合根（包括所有子实体：TreeNumber、EntryTerm、Concept）
   ///   - 使用 MyBatis-Plus 的 saveBatch 方法进行批量插入
-  ///   - 子实体通过 descriptor_id 外键关联
+  ///   - 子实体通过 descriptor_ui 关联（MeSH 原生 UI 标识符）
   ///   - 事务由调用方（Application 层）管理
   ///
   /// @param descriptors 主题词聚合根列表
@@ -36,7 +36,7 @@ public interface MeshDescriptorRepository {
   /// 实现说明：
   ///
   /// - 直接批量插入到 cat_mesh_tree_number 表
-  ///   - 需要确保 descriptor_id 已存在（引用完整性）
+  ///   - 通过 descriptor_ui 关联主表（MeSH 原生 UI 标识符）
   ///   - 用于性能优化场景（分开导入主表和子表）
   ///
   /// @param treeNumbers 树形编号实体列表
@@ -47,7 +47,7 @@ public interface MeshDescriptorRepository {
   /// 实现说明：
   ///
   /// - 直接批量插入到 cat_mesh_entry_term 表
-  ///   - 需要确保 descriptor_id 已存在（引用完整性）
+  ///   - 通过 descriptor_ui 关联主表（MeSH 原生 UI 标识符）
   ///   - 用于性能优化场景（分开导入主表和子表）
   ///
   /// @param entryTerms 入口术语实体列表
@@ -58,7 +58,7 @@ public interface MeshDescriptorRepository {
   /// 实现说明：
   ///
   /// - 直接批量插入到 cat_mesh_concept 表
-  ///   - 需要确保 descriptor_id 已存在（引用完整性）
+  ///   - 通过 descriptor_ui 关联主表（MeSH 原生 UI 标识符）
   ///   - 用于性能优化场景（分开导入主表和子表）
   ///
   /// @param concepts 概念实体列表

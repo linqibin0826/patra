@@ -87,25 +87,25 @@ public class MeshDescriptorItemWriter implements ItemWriter<MeshDescriptorAggreg
 
     for (int i = 0; i < items.size(); i++) {
       MeshDescriptorAggregate aggregate = items.get(i);
-      Long descriptorId = descriptorDOs.get(i).getId();
+      String descriptorUi = aggregate.getUi().ui();
 
       // TreeNumber
       aggregate.getTreeNumbers().forEach(tn -> {
-        MeshTreeNumberDO treeNumberDO = converter.toTreeNumberDO(tn, descriptorId);
+        MeshTreeNumberDO treeNumberDO = converter.toTreeNumberDO(tn, descriptorUi);
         treeNumberDO.setId(IdWorker.getId());
         treeNumberDOs.add(treeNumberDO);
       });
 
       // Concept 和 ConceptRelation
       aggregate.getConcepts().forEach(c -> {
-        MeshConceptDO conceptDO = converter.toConceptDO(c, descriptorId);
+        MeshConceptDO conceptDO = converter.toConceptDO(c, descriptorUi);
         conceptDO.setId(IdWorker.getId());
         conceptDOs.add(conceptDO);
 
         // 收集概念的 ConceptRelation
         c.getConceptRelations().forEach(cr -> {
           MeshConceptRelationDO conceptRelationDO =
-              converter.toConceptRelationDO(cr, c.getConceptUi(), c.isPreferred(), descriptorId);
+              converter.toConceptRelationDO(cr, c.getConceptUi(), c.isPreferred(), descriptorUi);
           conceptRelationDO.setId(IdWorker.getId());
           conceptRelationDOs.add(conceptRelationDO);
         });
@@ -113,14 +113,14 @@ public class MeshDescriptorItemWriter implements ItemWriter<MeshDescriptorAggreg
 
       // EntryTerm
       aggregate.getEntryTerms().forEach(et -> {
-        MeshEntryTermDO entryTermDO = converter.toEntryTermDO(et, descriptorId);
+        MeshEntryTermDO entryTermDO = converter.toEntryTermDO(et, descriptorUi);
         entryTermDO.setId(IdWorker.getId());
         entryTermDOs.add(entryTermDO);
       });
 
       // EntryCombination
       aggregate.getEntryCombinations().forEach(ec -> {
-        MeshEntryCombinationDO entryCombinationDO = converter.toEntryCombinationDO(ec, descriptorId);
+        MeshEntryCombinationDO entryCombinationDO = converter.toEntryCombinationDO(ec, descriptorUi);
         entryCombinationDO.setId(IdWorker.getId());
         entryCombinationDOs.add(entryCombinationDO);
       });

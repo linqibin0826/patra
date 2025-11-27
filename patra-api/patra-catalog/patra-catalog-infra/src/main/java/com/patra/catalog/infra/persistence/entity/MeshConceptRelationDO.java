@@ -12,7 +12,7 @@ import lombok.EqualsAndHashCode;
 ///
 /// 关键字段说明：
 ///
-/// - `descriptor_id` - 主题词 ID（外键：cat_mesh_descriptor.id）
+/// - `descriptor_ui` - 主题词 UI（格式：D000001）
 ///   - `concept_ui` - 所属概念 UI（拥有此关系列表的概念）
 ///   - `is_preferred` - 所属概念是否为首选概念
 ///   - `relation_name` - 关系类型（NRW=Narrower/BRD=Broader/REL=Related，可为 null）
@@ -21,7 +21,7 @@ import lombok.EqualsAndHashCode;
 ///
 /// 索引说明：
 ///
-/// - idx_descriptor - 主题词索引，支持查询某主题词的所有概念关系
+/// - idx_descriptor_ui - 主题词索引，支持查询某主题词的所有概念关系
 ///   - idx_concept - 概念索引，支持查询某概念的所有关系
 ///
 /// @author linqibin
@@ -31,9 +31,9 @@ import lombok.EqualsAndHashCode;
 @TableName(value = "cat_mesh_concept_relation", autoResultMap = true)
 public class MeshConceptRelationDO extends BaseDO {
 
-  /// 主题词 ID（外键：cat_mesh_descriptor.id）
-  @TableField("descriptor_id")
-  private Long descriptorId;
+  /// 主题词 UI（格式：D000001）
+  @TableField("descriptor_ui")
+  private String descriptorUi;
 
   /// 所属概念 UI（拥有此关系列表的概念）
   @TableField("concept_ui")

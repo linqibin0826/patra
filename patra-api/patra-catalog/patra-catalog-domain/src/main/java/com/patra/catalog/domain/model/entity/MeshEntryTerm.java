@@ -59,8 +59,8 @@ public class MeshEntryTerm implements Serializable {
   /// 主键ID(由Repository在持久化时分配)
   private Long id;
 
-  /// 关联的主题词ID(外键)
-  private final Long descriptorId;
+  /// 关联的主题词UI(格式:D000001)
+  private final MeshUI descriptorUi;
 
   /// 术语唯一标识符(格式：T000001-T999999)
   private final MeshUI termUi;
@@ -109,7 +109,7 @@ public class MeshEntryTerm implements Serializable {
   /// 私有构造函数。
   ///
   /// @param id 主键ID(新建时为null)
-  /// @param descriptorId 主题词ID
+  /// @param descriptorUi 主题词UI
   /// @param termUi 术语UI
   /// @param term 入口术语
   /// @param lexicalTag 词法标记
@@ -119,7 +119,7 @@ public class MeshEntryTerm implements Serializable {
   /// @param isConceptPreferred 是否概念首选术语
   private MeshEntryTerm(
       Long id,
-      Long descriptorId,
+      MeshUI descriptorUi,
       MeshUI termUi,
       String term,
       LexicalTag lexicalTag,
@@ -127,7 +127,7 @@ public class MeshEntryTerm implements Serializable {
       boolean isRecordPreferred,
       boolean isPermutedTerm,
       boolean isConceptPreferred) {
-    // 必填字段验证（descriptorId 在解析阶段可以为 null，后续通过 setDescriptorId 设置）
+    // 必填字段验证（descriptorUi 在解析阶段可以为 null，后续由聚合根设置）
     Assert.notBlank(term, "入口术语不能为空");
 
     // 术语UI验证（如果提供）
@@ -140,7 +140,7 @@ public class MeshEntryTerm implements Serializable {
 
     // 赋值
     this.id = id;
-    this.descriptorId = descriptorId;
+    this.descriptorUi = descriptorUi;
     this.termUi = termUi;
     this.term = term;
     this.lexicalTag = lexicalTag;
@@ -185,9 +185,9 @@ public class MeshEntryTerm implements Serializable {
         isConceptPreferred);
   }
 
-  /// 创建入口术语(指定主题词ID)。
+  /// 创建入口术语(指定主题词UI)。
   ///
-  /// @param descriptorId 主题词ID
+  /// @param descriptorUi 主题词UI
   /// @param termUi 术语UI
   /// @param term 入口术语
   /// @param lexicalTag 词法标记
@@ -197,7 +197,7 @@ public class MeshEntryTerm implements Serializable {
   /// @param isPermutedTerm 是否排列术语
   /// @return 入口术语实体
   public static MeshEntryTerm create(
-      Long descriptorId,
+      MeshUI descriptorUi,
       MeshUI termUi,
       String term,
       LexicalTag lexicalTag,
@@ -207,7 +207,7 @@ public class MeshEntryTerm implements Serializable {
       boolean isPermutedTerm) {
     return new MeshEntryTerm(
         null,
-        descriptorId,
+        descriptorUi,
         termUi,
         term,
         lexicalTag,
@@ -220,7 +220,7 @@ public class MeshEntryTerm implements Serializable {
   /// 从持久化状态重建实体(由Repository使用)。
   ///
   /// @param id 主键ID
-  /// @param descriptorId 主题词ID
+  /// @param descriptorUi 主题词UI
   /// @param termUi 术语UI
   /// @param term 入口术语
   /// @param lexicalTag 词法标记
@@ -231,7 +231,7 @@ public class MeshEntryTerm implements Serializable {
   /// @return 重建的实体
   public static MeshEntryTerm restore(
       Long id,
-      Long descriptorId,
+      MeshUI descriptorUi,
       MeshUI termUi,
       String term,
       LexicalTag lexicalTag,
@@ -241,7 +241,7 @@ public class MeshEntryTerm implements Serializable {
       boolean isConceptPreferred) {
     return new MeshEntryTerm(
         id,
-        descriptorId,
+        descriptorUi,
         termUi,
         term,
         lexicalTag,
@@ -375,12 +375,12 @@ public class MeshEntryTerm implements Serializable {
     if (!(o instanceof MeshEntryTerm that)) {
       return false;
     }
-    return term.equals(that.term) && Objects.equals(descriptorId, that.descriptorId);
+    return term.equals(that.term) && Objects.equals(descriptorUi, that.descriptorUi);
   }
 
   @Override
   public int hashCode() {
-    int result = descriptorId != null ? descriptorId.hashCode() : 0;
+    int result = descriptorUi != null ? descriptorUi.hashCode() : 0;
     result = 31 * result + term.hashCode();
     return result;
   }
