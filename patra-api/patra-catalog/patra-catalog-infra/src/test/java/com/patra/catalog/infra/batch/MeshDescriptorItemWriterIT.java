@@ -134,6 +134,9 @@ class MeshDescriptorItemWriterIT {
     MeshConceptDO concept = conceptMapper.selectList(null).get(0);
     assertThat(concept.getConceptUi()).isEqualTo("M0000001");
     assertThat(concept.getIsPreferred()).isTrue();
+    // 验证 RelatedRegistryNumbers 被正确持久化
+    assertThat(concept.getRelatedRegistryNumbers())
+        .containsExactlyInAnyOrder("EC 1.1.1.1", "EC 2.2.2.1");
 
     // Then: 验证 EntryTerm 子表
     long entryTermCount = entryTermMapper.selectCount(null);
@@ -333,7 +336,7 @@ class MeshDescriptorItemWriterIT {
     descriptor.addTreeNumber(
         MeshTreeNumber.create(String.format("D%02d.00%d", index, 1), false));
 
-    // 添加 Concept（每个 Descriptor 1 个首选概念，包含 2 个 ConceptRelation）
+    // 添加 Concept（每个 Descriptor 1 个首选概念，包含 2 个 ConceptRelation 和 2 个 RelatedRegistryNumber）
     MeshConcept concept =
         MeshConcept.create(MeshUI.conceptOf(index), "Concept " + index, true)
             .withScopeNote("Concept scope note " + index)
@@ -346,10 +349,12 @@ class MeshDescriptorItemWriterIT {
                 ConceptRelation.ofNullable(
                     MeshUI.conceptOf(index),
                     MeshUI.conceptOf(index + 2),
-                    null));
+                    null))
+            .addRelatedRegistryNumber("EC 1.1.1." + index)
+            .addRelatedRegistryNumber("EC 2.2.2." + index);
     descriptor.addConcept(concept);
 
-    // 添加 EntryTerm（每个 Descriptor 2 个）
+    // 添加 EntryTerm（每个 Descriptor 2 个）π
     descriptor.addEntryTerm(
         MeshEntryTerm.create(
             MeshUI.termOf(index * 10 + 1),

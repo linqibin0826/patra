@@ -11,7 +11,7 @@
   <insert id="insertBatch">
     INSERT INTO cat_mesh_concept (
       id, descriptor_id, concept_ui, concept_name, is_preferred,
-      casn1_name, registry_numbers, scope_note,
+      casn1_name, registry_numbers, related_registry_numbers, scope_note,
       translators_english_scope_note, translators_scope_note, concept_status,
       version, created_at, updated_at, deleted
     ) VALUES
@@ -24,6 +24,7 @@
         #{item.isPreferred},
         #{item.casn1Name},
         #{item.registryNumbers, typeHandler=com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler},
+        #{item.relatedRegistryNumbers, typeHandler=com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler},
         #{item.scopeNote},
         #{item.translatorsEnglishScopeNote},
         #{item.translatorsScopeNote},
