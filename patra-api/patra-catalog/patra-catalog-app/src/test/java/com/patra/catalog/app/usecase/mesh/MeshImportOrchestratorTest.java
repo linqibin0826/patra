@@ -174,7 +174,7 @@ class MeshImportOrchestratorTest {
     @DisplayName("参数传递正确性 - URL 和版本应该正确传递")
     void shouldPassCorrectParameters() {
       // Given
-      String url = "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/desc2025.xml";
+      String url = "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml";
       String meshVersion = "2025";
       Path localPath = Path.of("/tmp/mesh-import-param-test.xml");
       MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(url, meshVersion, "INCREMENTAL");
@@ -239,7 +239,7 @@ class MeshImportOrchestratorTest {
   @DisplayName("importQualifiers(Command) 方法测试 - XXL-Job 调度入口")
   class ImportQualifiersWithCommandTest {
 
-    private static final String QUALIFIER_URL = "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/qual2025.xml";
+    private static final String QUALIFIER_URL = "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml";
     private static final Path QUALIFIER_LOCAL_PATH = Path.of("/tmp/mesh-qualifier-12345.xml");
 
     @Test

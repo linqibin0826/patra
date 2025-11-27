@@ -8,7 +8,7 @@ package com.patra.catalog.adapter.scheduler.param;
 ///
 /// ```json
 /// {
-///   "url": "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/desc2025.xml",
+///   "url": "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
 ///   "meshVersion": "2025",
 ///   "mode": "INCREMENTAL"
 /// }
