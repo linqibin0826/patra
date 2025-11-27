@@ -179,6 +179,8 @@ linked_adrs: [{ADR_LINKS}]
 
 ## 关联
 
+<!-- Wikilink 示例：[[bugs/2025/11/BUG-001-xxx|BUG-001-xxx]] -->
+
 - Bug: {BUG_LINKS}
 - TIL: {TIL_LINKS}
 - ADR: {ADR_LINKS}
@@ -252,3 +254,4 @@ linked_adrs: [{ADR_LINKS}]
 4. **模块识别**：根据文件路径自动识别 patra-* 模块
 5. **标签提取**：从 commit message 前缀（feat/fix/refactor/docs/test）提取类型标签
 6. **避免嵌套命令**：执行 git 命令时，不要使用 `$(...)` 嵌套子命令，分步执行后汇总数据
+7. **Wikilink 语法**：所有关联链接必须使用 Obsidian Wikilink 语法 `[[path/to/file]]`，禁止使用标准 Markdown 链接语法 `[text](url)`
