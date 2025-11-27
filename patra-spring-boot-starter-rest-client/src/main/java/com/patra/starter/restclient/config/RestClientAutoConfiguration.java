@@ -6,6 +6,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.annotation.Order;
@@ -116,6 +117,61 @@ public class RestClientAutoConfiguration {
     factory.setReadTimeout(timeout.read());
 
     return factory;
+  }
+
+  /// 创建长时间运行操作的 RestClient Bean。
+  ///
+  /// 适用于大文件下载、批量数据传输等需要较长超时的场景。
+  /// 默认超时：connect=30s, read=600s (10分钟), write=30s。
+  ///
+  /// **使用方式**：通过 `@Qualifier("longRunningRestClient")` 注入。
+  ///
+  /// **禁用方式**：设置 `patra.rest-client.clients.long-running.enabled=false`。
+  ///
+  /// @param properties 配置属性
+  /// @param interceptorsProvider Spring 标准拦截器提供者
+  /// @return 配置长超时的 RestClient
+  @Bean
+  @ConditionalOnMissingBean(name = "longRunningRestClient")
+  @Conditional(LongRunningClientEnabledCondition.class)
+  public RestClient longRunningRestClient(
+      RestClientProperties properties,
+      ObjectProvider<ClientHttpRequestInterceptor> interceptorsProvider) {
+
+    var clientConfig = properties.getClients().get("long-running");
+
+    // 使用配置的超时或默认值
+    var timeout =
+        (clientConfig != null && clientConfig.getTimeout() != null)
+            ? clientConfig.getTimeout()
+            : defaultLongRunningTimeout();
+
+    // 创建专用 Factory（长超时）
+    var httpClient = HttpClient.newBuilder().connectTimeout(timeout.connect()).build();
+    var factory = new JdkClientHttpRequestFactory(httpClient);
+    factory.setReadTimeout(timeout.read());
+
+    var builder = RestClient.builder().requestFactory(factory);
+
+    // 注入拦截器，过滤 LoadBalancer
+    builder.requestInterceptors(
+        list ->
+            list.addAll(
+                interceptorsProvider.orderedStream()
+                    .filter(i -> !isLoadBalancerInterceptor(i))
+                    .toList()));
+
+    return builder.build();
+  }
+
+  /// 创建长时间运行客户端的默认超时配置。
+  ///
+  /// @return 默认超时配置（connect=30s, read=600s, write=30s）
+  private RestClientProperties.TimeoutConfig defaultLongRunningTimeout() {
+    return new RestClientProperties.TimeoutConfig(
+        java.time.Duration.ofSeconds(30),
+        java.time.Duration.ofSeconds(600),
+        java.time.Duration.ofSeconds(30));
   }
 
   /// 创建日志拦截器（可选）。

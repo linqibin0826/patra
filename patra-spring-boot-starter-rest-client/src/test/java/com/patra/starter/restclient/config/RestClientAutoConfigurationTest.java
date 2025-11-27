@@ -25,7 +25,8 @@ class RestClientAutoConfigurationTest {
     contextRunner.run(
         context -> {
           assertThat(context).hasSingleBean(RestClientProperties.class);
-          assertThat(context).hasSingleBean(RestClient.class);
+          assertThat(context).hasBean("defaultRestClient");
+          assertThat(context).hasBean("longRunningRestClient");
         });
   }
 
@@ -42,7 +43,7 @@ class RestClientAutoConfigurationTest {
   void should_create_default_rest_client_bean() {
     contextRunner.run(
         context -> {
-          assertThat(context).hasSingleBean(RestClient.class);
+          assertThat(context).hasBean("defaultRestClient");
           RestClient restClient = context.getBean("defaultRestClient", RestClient.class);
           assertThat(restClient).isNotNull();
         });
@@ -90,7 +91,7 @@ class RestClientAutoConfigurationTest {
             "patra.rest-client.clients.default.default-headers.Accept=application/json")
         .run(
             context -> {
-              assertThat(context).hasSingleBean(RestClient.class);
+              assertThat(context).hasBean("defaultRestClient");
               RestClientProperties properties = context.getBean(RestClientProperties.class);
               var defaultClient = properties.getClients().get("default");
               assertThat(defaultClient).isNotNull();
@@ -158,8 +159,9 @@ class RestClientAutoConfigurationTest {
         .withBean("defaultRestClient", RestClient.class, () -> RestClient.builder().build())
         .run(
             context -> {
-              assertThat(context).hasSingleBean(RestClient.class);
+              // 应该存在自定义的 defaultRestClient 和自动配置的 longRunningRestClient
               assertThat(context).hasBean("defaultRestClient");
+              assertThat(context).hasBean("longRunningRestClient");
             });
   }
 
@@ -182,6 +184,47 @@ class RestClientAutoConfigurationTest {
               assertThat(retry.getWaitDuration()).isEqualTo(2000);
               assertThat(retry.getBackoffMultiplier()).isEqualTo(1.5);
               assertThat(retry.getMaxWaitDuration()).isEqualTo(60000);
+            });
+  }
+
+  // ==================== longRunningRestClient 测试 ====================
+
+  @Test
+  @DisplayName("默认情况下应该创建 longRunningRestClient Bean")
+  void should_create_long_running_rest_client_by_default() {
+    contextRunner.run(
+        context -> {
+          assertThat(context).hasBean("longRunningRestClient");
+          RestClient longRunningClient = context.getBean("longRunningRestClient", RestClient.class);
+          assertThat(longRunningClient).isNotNull();
+        });
+  }
+
+  @Test
+  @DisplayName("当 long-running.enabled=false 时不应该创建 longRunningRestClient")
+  void should_not_create_long_running_rest_client_when_disabled() {
+    contextRunner
+        .withPropertyValues("patra.rest-client.clients.long-running.enabled=false")
+        .run(context -> assertThat(context).doesNotHaveBean("longRunningRestClient"));
+  }
+
+  @Test
+  @DisplayName("应该支持自定义 longRunningRestClient 超时配置")
+  void should_support_custom_long_running_timeout_configuration() {
+    contextRunner
+        .withPropertyValues(
+            "patra.rest-client.clients.long-running.base-url=http://example.com",
+            "patra.rest-client.clients.long-running.timeout.connect=60s",
+            "patra.rest-client.clients.long-running.timeout.read=900s",
+            "patra.rest-client.clients.long-running.timeout.write=60s")
+        .run(
+            context -> {
+              assertThat(context).hasBean("longRunningRestClient");
+              RestClientProperties properties = context.getBean(RestClientProperties.class);
+              var longRunningConfig = properties.getClients().get("long-running");
+              // 验证配置已加载（clients Map 已填充）
+              assertThat(longRunningConfig).isNotNull();
+              assertThat(longRunningConfig.getBaseUrl()).isEqualTo("http://example.com");
             });
   }
 }

@@ -9,20 +9,23 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 /// 文件下载端口适配器。
 ///
-/// 使用 defaultRestClient 下载远程文件到系统临时目录。
+/// 使用 longRunningRestClient 下载远程文件到系统临时目录。
 ///
 /// **技术选型**：使用 RestClient 而非 WebClient，因为：
 ///
 /// - 同步下载更简单（300MB 文件一次性下载）
 /// - 与项目现有技术栈一致
+///
+/// **超时配置**：使用 longRunningRestClient（默认 10 分钟读取超时），
+/// 适合大文件下载场景，可通过 `patra.rest-client.clients.long-running.timeout` 配置调整。
 ///
 /// **文件命名**：`mesh-import-{uuid}.xml`
 ///
@@ -30,13 +33,19 @@ import org.springframework.web.client.RestClient;
 /// @since 0.1.0
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class FileDownloadAdapter implements FileDownloadPort {
 
   private static final String TEMP_FILE_PREFIX = "mesh-import-";
   private static final String TEMP_FILE_SUFFIX = ".xml";
 
   private final RestClient restClient;
+
+  /// 构造文件下载适配器。
+  ///
+  /// @param restClient 长时间运行 RestClient（10 分钟读取超时）
+  public FileDownloadAdapter(@Qualifier("longRunningRestClient") RestClient restClient) {
+    this.restClient = restClient;
+  }
 
   @Override
   public Path downloadToTemp(URI url) {
