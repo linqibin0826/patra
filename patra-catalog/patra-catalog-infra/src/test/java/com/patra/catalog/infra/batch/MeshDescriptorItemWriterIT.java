@@ -19,7 +19,8 @@ import com.patra.catalog.infra.persistence.mapper.MeshConceptMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshDescriptorMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshEntryTermMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshTreeNumberMapper;
-import com.patra.starter.mybatis.autoconfig.MybatisPluginAutoConfig;
+import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
@@ -30,11 +31,8 @@ import org.springframework.batch.item.Chunk;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 
 /// MeSH 主题词批量写入器集成测试。
 ///
@@ -57,31 +55,18 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 /// @author linqibin
 /// @since 0.1.0
 @MybatisPlusTest
-@Testcontainers
+@ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   MeshDescriptorItemWriter.class,
   MeshDescriptorConverter.class,
-  MybatisPluginAutoConfig.class
+  TestMybatisPlusAutoConfiguration.class
 })
 @MapperScan("com.patra.catalog.infra.persistence.mapper")
+@ActiveProfiles("test")
 @DisplayName("MeshDescriptorItemWriter 集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
 class MeshDescriptorItemWriterIT {
-
-  @Container
-  static MySQLContainer<?> mysql =
-      new MySQLContainer<>("mysql:8.0.35")
-          .withDatabaseName("patra_catalog_test")
-          .withUsername("test")
-          .withPassword("test");
-
-  @DynamicPropertySource
-  static void configureProperties(DynamicPropertyRegistry registry) {
-    registry.add("spring.datasource.url", mysql::getJdbcUrl);
-    registry.add("spring.datasource.username", mysql::getUsername);
-    registry.add("spring.datasource.password", mysql::getPassword);
-  }
 
   @Autowired private MeshDescriptorItemWriter meshDescriptorItemWriter;
 

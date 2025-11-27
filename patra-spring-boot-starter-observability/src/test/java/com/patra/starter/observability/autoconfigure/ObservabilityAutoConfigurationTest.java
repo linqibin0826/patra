@@ -13,6 +13,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
+import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -153,7 +156,12 @@ class ObservabilityAutoConfigurationTest {
      * 由于测试环境没有 Spring Boot Actuator，需要手动创建 SimpleMeterRegistry。
      */
     @Configuration
-    @EnableAutoConfiguration
+    @EnableAutoConfiguration(exclude = {
+        DataSourceAutoConfiguration.class,
+        RedisAutoConfiguration.class,
+        RedisRepositoriesAutoConfiguration.class,
+        org.redisson.spring.starter.RedissonAutoConfigurationV2.class
+    })
     static class TestConfiguration {
         /**
          * 创建 SimpleMeterRegistry 用于测试。

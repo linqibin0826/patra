@@ -10,7 +10,7 @@
 
     <!-- Batch insert relay logs (single SQL statement) -->
     <insert id="insertBatch">
-        INSERT INTO patra_ingest.ing_outbox_relay_log (
+        INSERT INTO ing_outbox_relay_log (
             message_id,
             relay_batch_id,
             channel,
@@ -65,7 +65,7 @@
         <!-- Expected index: idx_message_id(message_id, started_at DESC) -->
         SELECT
             *
-        FROM patra_ingest.ing_outbox_relay_log
+        FROM ing_outbox_relay_log
         WHERE message_id = #{messageId}
           AND deleted = 0
         ORDER BY started_at DESC
@@ -76,7 +76,7 @@
         <!-- Expected index: idx_batch_id(relay_batch_id) -->
         SELECT
             *
-        FROM patra_ingest.ing_outbox_relay_log
+        FROM ing_outbox_relay_log
         WHERE relay_batch_id = #{batchId}
           AND deleted = 0
         ORDER BY started_at ASC
@@ -87,7 +87,7 @@
         <!-- Expected index: idx_channel_time or idx_status -->
         SELECT
             COUNT(*)
-        FROM patra_ingest.ing_outbox_relay_log
+        FROM ing_outbox_relay_log
         WHERE deleted = 0
         <if test="channel != null and channel != ''">
             AND channel = #{channel}
@@ -108,7 +108,7 @@
         <!-- Expected index: idx_status(relay_status, started_at DESC) -->
         SELECT
             *
-        FROM patra_ingest.ing_outbox_relay_log
+        FROM ing_outbox_relay_log
         WHERE relay_status = 'FAILED'
           AND deleted = 0
         <if test="channel != null and channel != ''">
@@ -123,7 +123,7 @@
         <!-- Expected index: idx_channel_time(channel, started_at) -->
         SELECT
             *
-        FROM patra_ingest.ing_outbox_relay_log
+        FROM ing_outbox_relay_log
         WHERE deleted = 0
         <if test="channel != null and channel != ''">
             AND channel = #{channel}
