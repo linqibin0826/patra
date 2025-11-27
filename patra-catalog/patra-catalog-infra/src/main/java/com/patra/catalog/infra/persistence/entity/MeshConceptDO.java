@@ -59,6 +59,10 @@ public class MeshConceptDO extends BaseDO {
   @TableField(value = "registry_numbers", typeHandler = JacksonTypeHandler.class)
   private List<String> registryNumbers;
 
+  /// 相关注册号列表（RelatedRegistryNumberList）
+  @TableField(value = "related_registry_numbers", typeHandler = JacksonTypeHandler.class)
+  private List<String> relatedRegistryNumbers;
+
   /// 范围说明
   @TableField("scope_note")
   private String scopeNote;
