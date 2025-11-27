@@ -403,6 +403,9 @@ public class RestClientProperties {
 
   /// 客户端配置。
   public static class ClientConfig {
+    /// 是否启用此客户端（默认 true）
+    private boolean enabled = true;
+
     /// 基础 URL（可选）
     private String baseUrl;
 
@@ -411,6 +414,20 @@ public class RestClientProperties {
 
     /// 客户端级超时配置（覆盖全局配置）
     private TimeoutConfig timeout;
+
+    /// 获取是否启用此客户端。
+    ///
+    /// @return 是否启用
+    public boolean isEnabled() {
+      return enabled;
+    }
+
+    /// 设置是否启用此客户端。
+    ///
+    /// @param enabled 是否启用
+    public void setEnabled(boolean enabled) {
+      this.enabled = enabled;
+    }
 
     /// 获取基础 URL。
     ///
