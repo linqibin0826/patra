@@ -22,5 +22,8 @@ module:
 ```
 
 ## 相关
+
+<!-- Wikilink 示例：[[til/spring/2025-11-27-xxx|Spring 条件注解]] -->
+
 - commit: ``
 - 相关知识: [[]]

@@ -54,6 +54,8 @@ SORT date ASC
 
 ## 关联记录
 
+<!-- 手动添加链接时使用 Wikilink 语法：[[bugs/2025/11/BUG-001-xxx|BUG-001-xxx]] -->
+
 ### 本月 Bug
 
 ```dataview

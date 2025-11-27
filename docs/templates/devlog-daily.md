@@ -43,6 +43,12 @@ linked_adrs: []
 
 ## 关联
 
+<!-- 使用 Wikilink 语法链接相关文档，示例：
+- Bug: [[bugs/2025/11/BUG-001-xxx|BUG-001-xxx]]
+- TIL: [[til/spring/2025-11-27-xxx|Spring 条件注解优先级]]
+- ADR: [[decisions/ADR-001-xxx|ADR-001-xxx]]
+-->
+
 - Bug: {{linked_bugs}}
 - TIL: {{linked_tils}}
 - ADR: {{linked_adrs}}

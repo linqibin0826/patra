@@ -50,6 +50,12 @@ module:
 - ⚠️ 改进:
 
 ## 相关资源
+
+<!-- Wikilink 示例：
+- 参考: [[til/spring/2025-11-27-xxx|Spring 条件注解]]
+- ADR: [[decisions/ADR-001-xxx|ADR-001-xxx]]
+-->
+
 - commit: ``
 - 参考: [[]]
 - 文档:
