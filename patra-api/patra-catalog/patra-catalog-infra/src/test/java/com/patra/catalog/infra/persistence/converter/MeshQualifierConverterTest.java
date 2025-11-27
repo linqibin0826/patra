@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.infra.persistence.entity.MeshQualifierDO;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -71,7 +72,10 @@ class MeshQualifierConverterTest {
             "20250101",
             "19990101",
             true,
-            "2025");
+            "2025",
+            null, // historyNote
+            null, // onlineNote
+            null); // treeNumbers
 
     // When: 转换为数据库实体
     MeshQualifierDO dataObject = converter.toDataObject(aggregate);
@@ -287,5 +291,153 @@ class MeshQualifierConverterTest {
     // Then: UI 格式应该保持一致（10 位）
     assertThat(convertedDO.getUi()).isEqualTo("Q000000981");
     assertThat(convertedDO.getUi()).isEqualTo(originalDO.getUi());
+  }
+
+  // ========== 新增字段测试（HistoryNote, OnlineNote, TreeNumbers） ==========
+
+  @Test
+  @DisplayName("转换为数据库实体 - 应该正确转换 HistoryNote 和 OnlineNote")
+  void toDataObject_withHistoryNoteAndOnlineNote_shouldConvertCorrectly() {
+    // Given: 创建包含历史说明和在线说明的聚合根
+    MeshQualifierAggregate aggregate =
+        MeshQualifierAggregate.create(MeshUI.qualifierOf(1), "immunology", "IM")
+            .withHistoryNote("66; used with Category A 1966-74")
+            .withOnlineNote("search policy: Online Manual; use: main heading/IM or IM (SH)")
+            .withActiveStatus(true)
+            .withMeshVersion("2025");
+
+    // When: 转换为数据库实体
+    MeshQualifierDO dataObject = converter.toDataObject(aggregate);
+
+    // Then: 应该正确转换新字段
+    assertThat(dataObject).isNotNull();
+    assertThat(dataObject.getHistoryNote()).isEqualTo("66; used with Category A 1966-74");
+    assertThat(dataObject.getOnlineNote())
+        .isEqualTo("search policy: Online Manual; use: main heading/IM or IM (SH)");
+  }
+
+  @Test
+  @DisplayName("转换为数据库实体 - 应该正确转换 TreeNumbers 为 JSON")
+  void toDataObject_withTreeNumbers_shouldConvertToJson() {
+    // Given: 创建包含树形编号的聚合根
+    List<String> treeNumbers = List.of("Y01.060", "Y01.060.010");
+    MeshQualifierAggregate aggregate =
+        MeshQualifierAggregate.create(MeshUI.qualifierOf(1), "immunology", "IM")
+            .withTreeNumbers(treeNumbers)
+            .withActiveStatus(true)
+            .withMeshVersion("2025");
+
+    // When: 转换为数据库实体
+    MeshQualifierDO dataObject = converter.toDataObject(aggregate);
+
+    // Then: 应该正确转换为 JSON 字符串
+    assertThat(dataObject).isNotNull();
+    assertThat(dataObject.getTreeNumbers()).isEqualTo("[\"Y01.060\",\"Y01.060.010\"]");
+  }
+
+  @Test
+  @DisplayName("转换为数据库实体 - 空 TreeNumbers 应该转换为 null")
+  void toDataObject_withEmptyTreeNumbers_shouldConvertToNull() {
+    // Given: 创建没有树形编号的聚合根
+    MeshQualifierAggregate aggregate =
+        MeshQualifierAggregate.create(MeshUI.qualifierOf(1), "immunology", "IM")
+            .withTreeNumbers(List.of())
+            .withActiveStatus(true);
+
+    // When: 转换为数据库实体
+    MeshQualifierDO dataObject = converter.toDataObject(aggregate);
+
+    // Then: 空列表应该转换为 null
+    assertThat(dataObject).isNotNull();
+    assertThat(dataObject.getTreeNumbers()).isNull();
+  }
+
+  @Test
+  @DisplayName("转换为领域对象 - 应该正确转换 HistoryNote 和 OnlineNote")
+  void toDomain_withHistoryNoteAndOnlineNote_shouldConvertCorrectly() {
+    // Given: 创建包含历史说明和在线说明的数据库实体
+    MeshQualifierDO dataObject = new MeshQualifierDO();
+    dataObject.setId(12345678L);
+    dataObject.setUi("Q000001");
+    dataObject.setName("immunology");
+    dataObject.setAbbreviation("IM");
+    dataObject.setHistoryNote("66; used with Category A 1966-74");
+    dataObject.setOnlineNote("search policy: Online Manual");
+    dataObject.setActiveStatus(true);
+    dataObject.setMeshVersion("2025");
+
+    // When: 转换为领域对象
+    MeshQualifierAggregate aggregate = converter.toDomain(dataObject);
+
+    // Then: 应该正确转换新字段
+    assertThat(aggregate).isNotNull();
+    assertThat(aggregate.getHistoryNote()).isEqualTo("66; used with Category A 1966-74");
+    assertThat(aggregate.getOnlineNote()).isEqualTo("search policy: Online Manual");
+  }
+
+  @Test
+  @DisplayName("转换为领域对象 - 应该正确解析 TreeNumbers JSON")
+  void toDomain_withTreeNumbersJson_shouldParseCorrectly() {
+    // Given: 创建包含 JSON 树形编号的数据库实体
+    MeshQualifierDO dataObject = new MeshQualifierDO();
+    dataObject.setId(12345678L);
+    dataObject.setUi("Q000001");
+    dataObject.setName("immunology");
+    dataObject.setAbbreviation("IM");
+    dataObject.setTreeNumbers("[\"Y01.060\",\"Y01.060.010\"]");
+    dataObject.setActiveStatus(true);
+    dataObject.setMeshVersion("2025");
+
+    // When: 转换为领域对象
+    MeshQualifierAggregate aggregate = converter.toDomain(dataObject);
+
+    // Then: 应该正确解析 JSON 为列表
+    assertThat(aggregate).isNotNull();
+    assertThat(aggregate.getTreeNumbers()).containsExactly("Y01.060", "Y01.060.010");
+  }
+
+  @Test
+  @DisplayName("转换为领域对象 - null TreeNumbers 应该转换为空列表")
+  void toDomain_withNullTreeNumbers_shouldConvertToEmptyList() {
+    // Given: 创建没有树形编号的数据库实体
+    MeshQualifierDO dataObject = new MeshQualifierDO();
+    dataObject.setId(12345678L);
+    dataObject.setUi("Q000001");
+    dataObject.setName("immunology");
+    dataObject.setAbbreviation("IM");
+    dataObject.setTreeNumbers(null);
+    dataObject.setActiveStatus(true);
+
+    // When: 转换为领域对象
+    MeshQualifierAggregate aggregate = converter.toDomain(dataObject);
+
+    // Then: null 应该转换为空列表
+    assertThat(aggregate).isNotNull();
+    assertThat(aggregate.getTreeNumbers()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("双向转换 - 新字段应该保持数据一致性")
+  void bidirectionalConversion_newFields_shouldMaintainConsistency() {
+    // Given: 包含所有新字段的数据库实体
+    MeshQualifierDO originalDO = new MeshQualifierDO();
+    originalDO.setId(12345678L);
+    originalDO.setUi("Q000001");
+    originalDO.setName("immunology");
+    originalDO.setAbbreviation("IM");
+    originalDO.setHistoryNote("66; used with Category A 1966-74");
+    originalDO.setOnlineNote("search policy: Online Manual");
+    originalDO.setTreeNumbers("[\"Y01.060\",\"Y01.060.010\"]");
+    originalDO.setActiveStatus(true);
+    originalDO.setMeshVersion("2025");
+
+    // When: DO -> Domain -> DO
+    MeshQualifierAggregate aggregate = converter.toDomain(originalDO);
+    MeshQualifierDO convertedDO = converter.toDataObject(aggregate);
+
+    // Then: 新字段应该保持数据一致性
+    assertThat(convertedDO.getHistoryNote()).isEqualTo(originalDO.getHistoryNote());
+    assertThat(convertedDO.getOnlineNote()).isEqualTo(originalDO.getOnlineNote());
+    assertThat(convertedDO.getTreeNumbers()).isEqualTo(originalDO.getTreeNumbers());
   }
 }

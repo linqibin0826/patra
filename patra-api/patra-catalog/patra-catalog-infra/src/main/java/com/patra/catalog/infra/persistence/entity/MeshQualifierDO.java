@@ -65,4 +65,16 @@ public class MeshQualifierDO extends BaseDO {
   /// MeSH 版本年份（如 "2025"）
   @TableField("mesh_version")
   private String meshVersion;
+
+  /// 历史说明（记录限定词的历史使用规则）
+  @TableField("history_note")
+  private String historyNote;
+
+  /// 在线检索说明（检索策略指南）
+  @TableField("online_note")
+  private String onlineNote;
+
+  /// 树形编号列表（JSON 字符串，限定词在 MeSH 层级树中的位置）
+  @TableField("tree_numbers")
+  private String treeNumbers;
 }

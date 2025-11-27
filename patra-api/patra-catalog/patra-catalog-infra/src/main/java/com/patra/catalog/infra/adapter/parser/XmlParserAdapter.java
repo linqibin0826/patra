@@ -453,6 +453,9 @@ public class XmlParserAdapter implements XmlParserPort {
       String dateCreated = null;
       String dateRevised = null;
       String dateEstablished = null;
+      String historyNote = null;
+      String onlineNote = null;
+      List<String> treeNumbers = new ArrayList<>();
 
       while (reader.hasNext()) {
         int event = reader.next();
@@ -477,12 +480,21 @@ public class XmlParserAdapter implements XmlParserPort {
             case "DateEstablished":
               dateEstablished = parseDate(reader, "DateEstablished");
               break;
+            case "HistoryNote":
+              historyNote = reader.getElementText().trim();
+              break;
+            case "OnlineNote":
+              onlineNote = reader.getElementText().trim();
+              break;
+            case "TreeNumberList":
+              treeNumbers = parseTreeNumberList(reader);
+              break;
             case "ConceptList":
               // 从 ConceptList 中提取 Abbreviation
               abbreviation = extractAbbreviationFromPreferredTerm(reader);
               break;
             default:
-              // 跳过其他元素（如 HistoryNote, OnlineNote, TreeNumberList）
+              // 跳过其他未处理的元素
               skipElement(reader, localName);
               break;
           }
@@ -502,6 +514,9 @@ public class XmlParserAdapter implements XmlParserPort {
             .withDateCreated(dateCreated)
             .withDateRevised(dateRevised)
             .withDateEstablished(dateEstablished)
+            .withHistoryNote(historyNote)
+            .withOnlineNote(onlineNote)
+            .withTreeNumbers(treeNumbers)
             .withActiveStatus(true) // 默认为有效
             .withMeshVersion(meshVersion);
       }
@@ -515,6 +530,23 @@ public class XmlParserAdapter implements XmlParserPort {
         log.warn("跳过 Qualifier 记录：UI={}, 缺少 Abbreviation（preferred term 无缩写）", qualifierUi);
       }
       return null;
+    }
+
+    /// 解析 TreeNumberList 元素，返回树形编号列表。
+    private List<String> parseTreeNumberList(XMLStreamReader reader) throws XMLStreamException {
+      List<String> treeNumbers = new ArrayList<>();
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT) {
+          if ("TreeNumber".equals(reader.getLocalName())) {
+            treeNumbers.add(reader.getElementText());
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "TreeNumberList".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+      return treeNumbers;
     }
 
     /// 从 ConceptList 的 preferred term 中提取 Abbreviation。

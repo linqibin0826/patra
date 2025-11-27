@@ -117,6 +117,67 @@ class XmlParserAdapterIT {
       assertThat(qualifier1.getDateCreated()).isNotNull();
       assertThat(qualifier1.getDateCreated()).isEqualTo("20240101");
     }
+
+    @Test
+    @DisplayName("解析限定词 - 应该正确解析 HistoryNote 和 OnlineNote")
+    void parseQualifiers_shouldParseHistoryNoteAndOnlineNote() {
+      // Given
+      Path xmlPath = TEST_QUALIFIERS_PATH;
+
+      // When
+      List<MeshQualifierAggregate> qualifiers;
+      try (Stream<MeshQualifierAggregate> stream =
+          xmlParser.parseQualifiers(xmlPath, TEST_MESH_VERSION)) {
+        qualifiers = stream.toList();
+      }
+
+      // Then: 验证第一个限定词的 HistoryNote 和 OnlineNote
+      MeshQualifierAggregate qualifier1 = qualifiers.get(0);
+      assertThat(qualifier1.getHistoryNote())
+          .isEqualTo("66; used with Category A 1966-74; test history note");
+      assertThat(qualifier1.getOnlineNote())
+          .isEqualTo("search policy: Online Manual; use: main heading/TQ1 or TQ1 (SH)");
+
+      // 验证第二个限定词
+      MeshQualifierAggregate qualifier2 = qualifiers.get(1);
+      assertThat(qualifier2.getHistoryNote())
+          .isEqualTo("75; used with Category D 1975 forward; test history note 2");
+      assertThat(qualifier2.getOnlineNote())
+          .isEqualTo("search policy: Online Manual; use: main heading/TQ2 or TQ2 (SH)");
+
+      // 第三个限定词没有这两个字段，应该为 null
+      MeshQualifierAggregate qualifier3 = qualifiers.get(2);
+      assertThat(qualifier3.getHistoryNote()).isNull();
+      assertThat(qualifier3.getOnlineNote()).isNull();
+    }
+
+    @Test
+    @DisplayName("解析限定词 - 应该正确解析 TreeNumberList")
+    void parseQualifiers_shouldParseTreeNumbers() {
+      // Given
+      Path xmlPath = TEST_QUALIFIERS_PATH;
+
+      // When
+      List<MeshQualifierAggregate> qualifiers;
+      try (Stream<MeshQualifierAggregate> stream =
+          xmlParser.parseQualifiers(xmlPath, TEST_MESH_VERSION)) {
+        qualifiers = stream.toList();
+      }
+
+      // Then: 验证第一个限定词的树形编号（1 个）
+      MeshQualifierAggregate qualifier1 = qualifiers.get(0);
+      assertThat(qualifier1.getTreeNumbers()).hasSize(1);
+      assertThat(qualifier1.getTreeNumbers()).containsExactly("Y01.001");
+
+      // 验证第二个限定词的树形编号（2 个）
+      MeshQualifierAggregate qualifier2 = qualifiers.get(1);
+      assertThat(qualifier2.getTreeNumbers()).hasSize(2);
+      assertThat(qualifier2.getTreeNumbers()).containsExactly("Y01.002", "Y02.001");
+
+      // 第三个限定词没有树形编号，应该为空列表
+      MeshQualifierAggregate qualifier3 = qualifiers.get(2);
+      assertThat(qualifier3.getTreeNumbers()).isEmpty();
+    }
   }
 
   @Nested
