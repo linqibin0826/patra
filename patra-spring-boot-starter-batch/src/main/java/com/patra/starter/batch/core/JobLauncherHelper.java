@@ -14,7 +14,6 @@ import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.stereotype.Component;
 
 /// Job 启动辅助类。
 ///
@@ -47,7 +46,6 @@ import org.springframework.stereotype.Component;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@Component
 @RequiredArgsConstructor
 @Slf4j
 public class JobLauncherHelper {

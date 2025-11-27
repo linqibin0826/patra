@@ -1,9 +1,11 @@
 package com.patra.starter.batch.autoconfigure;
 
 import com.patra.starter.batch.config.BatchProperties;
+import com.patra.starter.batch.core.JobLauncherHelper;
 import io.micrometer.observation.ObservationRegistry;
 import javax.sql.DataSource;
 import org.springframework.batch.core.configuration.support.DefaultBatchConfiguration;
+import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
 import org.springframework.batch.core.configuration.annotation.BatchObservabilityBeanPostProcessor;
@@ -153,5 +155,17 @@ public class BatchAutoConfiguration extends DefaultBatchConfiguration {
   @ConditionalOnBean(ObservationRegistry.class)
   public static BatchObservabilityBeanPostProcessor batchObservabilityBeanPostProcessor() {
     return new BatchObservabilityBeanPostProcessor();
+  }
+
+  /// 配置 JobLauncherHelper。
+  ///
+  /// 封装 JobLauncher 调用逻辑，提供强类型参数支持和幂等性控制。
+  ///
+  /// @param jobLauncher Job 启动器
+  /// @param jobExplorer Job 执行历史查询器
+  /// @return JobLauncherHelper 实例
+  @Bean
+  public JobLauncherHelper jobLauncherHelper(JobLauncher jobLauncher, JobExplorer jobExplorer) {
+    return new JobLauncherHelper(jobLauncher, jobExplorer);
   }
 }
