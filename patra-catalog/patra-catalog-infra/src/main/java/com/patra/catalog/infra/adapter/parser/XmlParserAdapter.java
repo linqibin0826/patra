@@ -797,17 +797,19 @@ public class XmlParserAdapter implements XmlParserPort {
         }
       }
 
-      if (ecinDescriptorUi != null && ecoutDescriptorUi != null) {
+      // 根据 DTD 定义：ECIN 的 Descriptor 和 Qualifier 都是必填的
+      if (ecinDescriptorUi != null && ecinQualifierUi != null && ecoutDescriptorUi != null) {
         return EntryCombination.of(
             MeshUI.of(ecinDescriptorUi),
-            ecinQualifierUi != null ? MeshUI.of(ecinQualifierUi) : null,
+            MeshUI.of(ecinQualifierUi),
             MeshUI.of(ecoutDescriptorUi),
             ecoutQualifierUi != null ? MeshUI.of(ecoutQualifierUi) : null);
       }
 
       log.warn(
-          "跳过无效 EntryCombination: ecinDescriptorUi={}, ecoutDescriptorUi={}",
+          "跳过无效 EntryCombination: ecinDescriptorUi={}, ecinQualifierUi={}, ecoutDescriptorUi={}",
           ecinDescriptorUi,
+          ecinQualifierUi,
           ecoutDescriptorUi);
       return null;
     }

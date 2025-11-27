@@ -34,6 +34,62 @@
     <Annotation>Test annotation</Annotation>
     <HistoryNote>Test history note</HistoryNote>
     <PublicMeSHNote>Test public note</PublicMeSHNote>
+    <EntryCombinationList>
+      <EntryCombination>
+        <ECIN>
+          <DescriptorReferredTo>
+            <DescriptorUI>D000001</DescriptorUI>
+            <DescriptorName>
+              <String>Test Descriptor 1</String>
+            </DescriptorName>
+          </DescriptorReferredTo>
+          <QualifierReferredTo>
+            <QualifierUI>Q000188</QualifierUI>
+            <QualifierName>
+              <String>drug therapy</String>
+            </QualifierName>
+          </QualifierReferredTo>
+        </ECIN>
+        <ECOUT>
+          <DescriptorReferredTo>
+            <DescriptorUI>D000002</DescriptorUI>
+            <DescriptorName>
+              <String>Test Descriptor 2</String>
+            </DescriptorName>
+          </DescriptorReferredTo>
+          <QualifierReferredTo>
+            <QualifierUI>Q000628</QualifierUI>
+            <QualifierName>
+              <String>therapy</String>
+            </QualifierName>
+          </QualifierReferredTo>
+        </ECOUT>
+      </EntryCombination>
+      <EntryCombination>
+        <ECIN>
+          <DescriptorReferredTo>
+            <DescriptorUI>D000001</DescriptorUI>
+            <DescriptorName>
+              <String>Test Descriptor 1</String>
+            </DescriptorName>
+          </DescriptorReferredTo>
+          <QualifierReferredTo>
+            <QualifierUI>Q000175</QualifierUI>
+            <QualifierName>
+              <String>diagnosis</String>
+            </QualifierName>
+          </QualifierReferredTo>
+        </ECIN>
+        <ECOUT>
+          <DescriptorReferredTo>
+            <DescriptorUI>D000003</DescriptorUI>
+            <DescriptorName>
+              <String>Test Descriptor 3</String>
+            </DescriptorName>
+          </DescriptorReferredTo>
+        </ECOUT>
+      </EntryCombination>
+    </EntryCombinationList>
     <TreeNumberList>
       <TreeNumber>A01.001</TreeNumber>
       <TreeNumber>B02.002</TreeNumber>
