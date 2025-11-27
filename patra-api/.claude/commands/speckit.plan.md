@@ -112,7 +112,7 @@ $ARGUMENTS
 
    **优先级**：
    - 高优先级：涉及架构设计决策的研究（参考 java-spring-development Skill）
-   - 中优先级：技术栈最佳实践研究（使用 context7 或 web-research-specialist）
+   - 中优先级：技术栈最佳实践研究（使用 context7）
    - 低优先级：实现细节研究（可在 Phase 2 实施时再查）
 
 5. **在 `research.md` 中整合发现**，使用格式：

@@ -45,6 +45,51 @@ public class MyService {
 }
 ```
 
+### 长时间运行客户端
+
+对于大文件下载、批量数据传输等需要较长超时的场景，使用 `longRunningRestClient`：
+
+```java
+@Service
+public class FileDownloadService {
+
+    private final RestClient restClient;
+
+    /// 通过 @Qualifier 注入长时间运行客户端
+    public FileDownloadService(
+            @Qualifier("longRunningRestClient") RestClient restClient) {
+        this.restClient = restClient;
+    }
+
+    public void downloadLargeFile(URI url, Path targetPath) {
+        restClient.get()
+            .uri(url)
+            .exchange((request, response) -> {
+                try (var is = response.getBody();
+                     var os = Files.newOutputStream(targetPath)) {
+                    is.transferTo(os);
+                }
+                return null;
+            });
+    }
+}
+```
+
+**默认超时配置**：
+- 连接超时：30 秒
+- 读取超时：600 秒（10 分钟）
+- 写入超时：30 秒
+
+**禁用方式**：
+
+```yaml
+patra:
+  rest-client:
+    clients:
+      long-running:
+        enabled: false
+```
+
 ## 配置项
 
 所有配置项均以 `patra.rest-client` 为前缀。
@@ -90,6 +135,15 @@ patra:
 
     # 多客户端配置
     clients:
+      # 长时间运行客户端（自动配置，可选覆盖）
+      long-running:
+        enabled: true         # 是否启用（默认 true）
+        timeout:
+          connect: 30s        # 连接超时（默认 30s）
+          read: 600s          # 读取超时（默认 600s / 10分钟）
+          write: 30s          # 写入超时（默认 30s）
+
+      # 自定义客户端示例
       pubmed:
         base-url: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
         default-headers:
@@ -116,6 +170,10 @@ patra:
 | `interceptors.logging.log-headers` | boolean | `false` | 是否记录 HTTP 头 |
 | `interceptors.logging.log-body` | boolean | `false` | 是否记录请求/响应体 |
 | `interceptors.logging.max-body-log-length` | int | `1024` | Body 日志最大字节数 |
+| `clients.*.enabled` | boolean | `true` | 是否启用指定客户端 |
+| `clients.*.timeout.connect` | Duration | - | 客户端级连接超时（覆盖全局） |
+| `clients.*.timeout.read` | Duration | - | 客户端级读取超时（覆盖全局） |
+| `clients.long-running.timeout.read` | Duration | `600s` | 长时间运行客户端读取超时 |
 
 ## 日志输出
 
@@ -185,10 +243,11 @@ public RestClient customRestClient(JdkClientHttpRequestFactory factory) {
 
 ## 自动配置的 Bean
 
-| Bean 名称 | 类型 | 条件 |
-|-----------|------|------|
-| `defaultRestClient` | `RestClient` | 无同名 Bean |
-| `loggingInterceptor` | `LoggingInterceptor` | `logging.enabled=true` |
+| Bean 名称 | 类型 | 条件 | 说明 |
+|-----------|------|------|------|
+| `defaultRestClient` | `RestClient` | 无同名 Bean | 默认客户端（read=30s） |
+| `longRunningRestClient` | `RestClient` | `clients.long-running.enabled=true` | 长时间运行客户端（read=600s） |
+| `loggingInterceptor` | `LoggingInterceptor` | `logging.enabled=true` | 日志拦截器 |
 
 > **注意**: `JdkClientHttpRequestFactory` 不再作为 Bean 暴露，改为在 `defaultRestClient` 内部直接创建。
 > 这是为了避免被 Spring Cloud LoadBalancer 的 BeanPostProcessor 包装，导致调用外部 URL 时出现
