@@ -13,11 +13,14 @@ import lombok.EqualsAndHashCode;
 /// 关键字段说明：
 ///
 /// - `ui` - 限定词唯一标识符（格式：Q000001-Q999999），唯一约束 uk_qualifier_ui
-///   - `name` - 限定词名称（英文）
-///   - `abbreviation` - 限定词缩写（如 DI, GE, IM）
-///   - `annotation` - 注释说明，TEXT 类型
-///   - `active_status` - 是否有效（0=已废弃，1=有效）
-///   - `mesh_version` - MeSH 版本年份（如 "2025"）
+/// - `name` - 限定词名称（英文）
+/// - `abbreviation` - 限定词缩写（如 DI, GE, IM）
+/// - `annotation` - 注释说明，TEXT 类型
+/// - `active_status` - 是否有效（0=已废弃，1=有效）
+/// - `mesh_version` - MeSH 版本年份（如 "2025"）
+/// - `history_note` - 历史说明（记录限定词的历史使用规则），TEXT 类型
+/// - `online_note` - 在线检索说明（检索策略指南），TEXT 类型
+/// - `tree_numbers` - 树形编号列表（限定词在 MeSH 层级树中的位置），JSON 类型
 ///
 /// 索引说明：
 ///
