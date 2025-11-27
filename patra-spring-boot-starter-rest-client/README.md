@@ -188,8 +188,11 @@ public RestClient customRestClient(JdkClientHttpRequestFactory factory) {
 | Bean 名称 | 类型 | 条件 |
 |-----------|------|------|
 | `defaultRestClient` | `RestClient` | 无同名 Bean |
-| `defaultHttpRequestFactory` | `JdkClientHttpRequestFactory` | 无同类型 Bean |
 | `loggingInterceptor` | `LoggingInterceptor` | `logging.enabled=true` |
+
+> **注意**: `JdkClientHttpRequestFactory` 不再作为 Bean 暴露，改为在 `defaultRestClient` 内部直接创建。
+> 这是为了避免被 Spring Cloud LoadBalancer 的 BeanPostProcessor 包装，导致调用外部 URL 时出现
+> `Service Instance cannot be null` 错误。
 
 ## 依赖关系
 
