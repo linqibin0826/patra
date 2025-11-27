@@ -1,13 +1,16 @@
 package com.patra.catalog.infra.persistence.converter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.infra.persistence.entity.MeshQualifierDO;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /// MeSH 限定词转换器单元测试。
 ///
@@ -22,6 +25,7 @@ import org.junit.jupiter.api.Test;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("MeshQualifierConverter 单元测试")
+@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class MeshQualifierConverterTest {
 
   private final MeshQualifierConverter converter = new MeshQualifierConverter();
@@ -439,5 +443,22 @@ class MeshQualifierConverterTest {
     assertThat(convertedDO.getHistoryNote()).isEqualTo(originalDO.getHistoryNote());
     assertThat(convertedDO.getOnlineNote()).isEqualTo(originalDO.getOnlineNote());
     assertThat(convertedDO.getTreeNumbers()).isEqualTo(originalDO.getTreeNumbers());
+  }
+
+  @Test
+  @DisplayName("转换为领域对象 - 无效 JSON 格式应该抛出异常")
+  void toDomain_withInvalidJsonTreeNumbers_shouldThrowException() {
+    // Given: 包含无效 JSON 的数据库实体
+    MeshQualifierDO dataObject = new MeshQualifierDO();
+    dataObject.setId(1L);
+    dataObject.setUi("Q000001");
+    dataObject.setName("test");
+    dataObject.setAbbreviation("TT");
+    dataObject.setTreeNumbers("invalid json");
+
+    // When & Then: 应该抛出 IllegalStateException
+    assertThatThrownBy(() -> converter.toDomain(dataObject))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Failed to parse tree numbers from JSON");
   }
 }
