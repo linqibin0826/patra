@@ -47,25 +47,7 @@ argument-hint: [adr|readme|all]
 - 核心领域模型重构
 - API 契约重大变更
 
-```markdown
-# ADR-NNNN: [决策标题]
-
-## 状态
-已采纳 / 已废弃（被 ADR-XXXX 取代）
-
-## 背景（2-3 句话）
-[为什么需要做这个决策？]
-
-## 决策（1-2 句话）
-[最终选择的方案]
-
-## 原因（3-5 个要点）
-1. [核心原因]
-
-## 后果（2-4 个要点）
-- ✅ [正面影响]
-- ⚠️ [需要注意的点]
-```
+参考 `/Users/linqibin/Desktop/Patra-api/docs/templates/adr.md`
 
 ---
 
