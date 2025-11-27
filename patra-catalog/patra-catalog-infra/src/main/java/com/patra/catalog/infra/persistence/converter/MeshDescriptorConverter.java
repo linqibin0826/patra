@@ -4,8 +4,11 @@ import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
+import com.patra.catalog.domain.model.vo.mesh.ConceptRelation;
 import com.patra.catalog.domain.model.vo.mesh.EntryCombination;
+import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.infra.persistence.entity.MeshConceptDO;
+import com.patra.catalog.infra.persistence.entity.MeshConceptRelationDO;
 import com.patra.catalog.infra.persistence.entity.MeshDescriptorDO;
 import com.patra.catalog.infra.persistence.entity.MeshEntryCombinationDO;
 import com.patra.catalog.infra.persistence.entity.MeshEntryTermDO;
@@ -156,6 +159,30 @@ public class MeshDescriptorConverter {
         entryCombination.ecoutQualifierUi() != null
             ? entryCombination.ecoutQualifierUi().ui()
             : null);
+
+    return dataObject;
+  }
+
+  /// 将概念关系值对象转换为 DO。
+  ///
+  /// @param conceptRelation 概念关系值对象
+  /// @param conceptUi 所属概念 UI（拥有此关系列表的概念）
+  /// @param isPreferred 所属概念是否为首选概念
+  /// @param descriptorId 主题词 ID（外键）
+  /// @return 概念关系 DO
+  public MeshConceptRelationDO toConceptRelationDO(
+      ConceptRelation conceptRelation, MeshUI conceptUi, boolean isPreferred, Long descriptorId) {
+    if (conceptRelation == null) {
+      return null;
+    }
+
+    MeshConceptRelationDO dataObject = new MeshConceptRelationDO();
+    dataObject.setDescriptorId(descriptorId);
+    dataObject.setConceptUi(conceptUi.ui());
+    dataObject.setIsPreferred(isPreferred);
+    dataObject.setRelationName(conceptRelation.relationName());
+    dataObject.setConcept1Ui(conceptRelation.concept1Ui().ui());
+    dataObject.setConcept2Ui(conceptRelation.concept2Ui().ui());
 
     return dataObject;
   }

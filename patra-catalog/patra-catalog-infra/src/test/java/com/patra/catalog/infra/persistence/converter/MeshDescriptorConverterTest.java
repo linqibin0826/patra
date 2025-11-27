@@ -8,9 +8,11 @@ import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
 import com.patra.catalog.domain.model.enums.DescriptorClass;
 import com.patra.catalog.domain.model.enums.LexicalTag;
+import com.patra.catalog.domain.model.vo.mesh.ConceptRelation;
 import com.patra.catalog.domain.model.vo.mesh.EntryCombination;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.infra.persistence.entity.MeshConceptDO;
+import com.patra.catalog.infra.persistence.entity.MeshConceptRelationDO;
 import com.patra.catalog.infra.persistence.entity.MeshDescriptorDO;
 import com.patra.catalog.infra.persistence.entity.MeshEntryCombinationDO;
 import com.patra.catalog.infra.persistence.entity.MeshEntryTermDO;
@@ -277,6 +279,63 @@ class MeshDescriptorConverterTest {
     @DisplayName("参数为 null 时应该返回 null")
     void shouldReturnNullWhenEntryCombinationIsNull() {
       assertThat(converter.toEntryCombinationDO(null, DESCRIPTOR_ID)).isNull();
+    }
+  }
+
+  @Nested
+  @DisplayName("toConceptRelationDO() 方法测试")
+  class ToConceptRelationDOTests {
+
+    // 测试数据
+    private static final MeshUI CONCEPT_UI = MeshUI.of("M0000001");
+    private static final MeshUI CONCEPT1_UI = MeshUI.of("M0000001");
+    private static final MeshUI CONCEPT2_UI = MeshUI.of("M0353609");
+
+    @Test
+    @DisplayName("应该正确转换 ConceptRelation 到 DO（包含 relationName）")
+    void shouldConvertConceptRelationToDO() {
+      // Given
+      ConceptRelation relation =
+          ConceptRelation.of(ConceptRelation.NRW, CONCEPT1_UI, CONCEPT2_UI);
+
+      // When
+      MeshConceptRelationDO result =
+          converter.toConceptRelationDO(relation, CONCEPT_UI, true, DESCRIPTOR_ID);
+
+      // Then
+      assertThat(result).isNotNull();
+      assertThat(result.getDescriptorId()).isEqualTo(DESCRIPTOR_ID);
+      assertThat(result.getConceptUi()).isEqualTo("M0000001");
+      assertThat(result.getIsPreferred()).isTrue();
+      assertThat(result.getRelationName()).isEqualTo("NRW");
+      assertThat(result.getConcept1Ui()).isEqualTo("M0000001");
+      assertThat(result.getConcept2Ui()).isEqualTo("M0353609");
+    }
+
+    @Test
+    @DisplayName("relationName 为 null 时应该正确处理")
+    void shouldHandleNullRelationName() {
+      // Given - DTD 定义 RelationName 为 #IMPLIED（可选）
+      ConceptRelation relation =
+          ConceptRelation.ofNullable(CONCEPT1_UI, CONCEPT2_UI, null);
+
+      // When
+      MeshConceptRelationDO result =
+          converter.toConceptRelationDO(relation, CONCEPT_UI, false, DESCRIPTOR_ID);
+
+      // Then
+      assertThat(result).isNotNull();
+      assertThat(result.getConceptUi()).isEqualTo("M0000001");
+      assertThat(result.getIsPreferred()).isFalse();
+      assertThat(result.getRelationName()).isNull();
+      assertThat(result.getConcept1Ui()).isEqualTo("M0000001");
+      assertThat(result.getConcept2Ui()).isEqualTo("M0353609");
+    }
+
+    @Test
+    @DisplayName("参数为 null 时应该返回 null")
+    void shouldReturnNullWhenRelationIsNull() {
+      assertThat(converter.toConceptRelationDO(null, CONCEPT_UI, true, DESCRIPTOR_ID)).isNull();
     }
   }
 }
