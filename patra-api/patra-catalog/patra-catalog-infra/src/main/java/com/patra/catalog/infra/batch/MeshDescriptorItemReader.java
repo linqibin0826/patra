@@ -12,10 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamReader;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.batch.core.configuration.annotation.StepScope;
-import org.springframework.stereotype.Component;
-
 /// MeSH 主题词 XML 文件读取器。
 ///
 /// **职责**：
@@ -30,11 +26,14 @@ import org.springframework.stereotype.Component;
 /// - 在 `update()` 中保存 `currentIndex` 到 ExecutionContext
 /// - chunk size 决定断点精度（如 chunk=500，最多重复处理 499 条）
 ///
+/// **Bean 注册**：
+///
+/// 通过 [MeshDescriptorJobConfig#meshDescriptorItemReader] 方法注册为 `@StepScope` Bean，
+/// 支持 Job 参数注入（filePath、meshVersion）。
+///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
-@Component
-@StepScope
 public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptorAggregate> {
 
   private static final String CURRENT_INDEX_KEY = "mesh.descriptor.current.index";
@@ -52,12 +51,9 @@ public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptor
   /// 构造函数。
   ///
   /// @param xmlParserPort XML 解析端口
-  /// @param filePath XML 文件路径（从 Job 参数注入）
-  /// @param meshVersion MeSH 版本号（从 Job 参数注入）
-  public MeshDescriptorItemReader(
-      XmlParserPort xmlParserPort,
-      @Value("#{jobParameters['filePath']}") String filePath,
-      @Value("#{jobParameters['meshVersion']}") String meshVersion) {
+  /// @param filePath XML 文件路径
+  /// @param meshVersion MeSH 版本号
+  public MeshDescriptorItemReader(XmlParserPort xmlParserPort, String filePath, String meshVersion) {
     this.xmlParserPort = xmlParserPort;
     this.filePath = filePath;
     this.meshVersion = meshVersion;
