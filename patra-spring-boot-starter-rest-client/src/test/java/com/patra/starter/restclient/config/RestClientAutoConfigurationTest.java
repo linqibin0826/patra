@@ -3,8 +3,10 @@ package com.patra.starter.restclient.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.starter.restclient.interceptor.LoggingInterceptor;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.web.client.RestClient;
@@ -13,6 +15,7 @@ import org.springframework.web.client.RestClient;
 ///
 /// <p>测试自动配置类的条件装配、Bean 创建和配置属性加载。
 @DisplayName("RestClientAutoConfiguration 单元测试")
+@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class RestClientAutoConfigurationTest {
 
   private final ApplicationContextRunner contextRunner =
@@ -225,6 +228,19 @@ class RestClientAutoConfigurationTest {
               // 验证配置已加载（clients Map 已填充）
               assertThat(longRunningConfig).isNotNull();
               assertThat(longRunningConfig.getBaseUrl()).isEqualTo("http://example.com");
+            });
+  }
+
+  @Test
+  @DisplayName("当自定义名称为 longRunningRestClient 的 Bean 存在时不应该创建默认 longRunningRestClient")
+  void should_not_create_long_running_rest_client_when_custom_exists() {
+    contextRunner
+        .withBean("longRunningRestClient", RestClient.class, () -> RestClient.builder().build())
+        .run(
+            context -> {
+              // 应该存在自定义的 longRunningRestClient 和自动配置的 defaultRestClient
+              assertThat(context).hasBean("longRunningRestClient");
+              assertThat(context).hasBean("defaultRestClient");
             });
   }
 }
