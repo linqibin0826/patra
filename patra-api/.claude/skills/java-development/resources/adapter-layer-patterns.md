@@ -110,7 +110,7 @@ public abstract class AbstractProvenanceScheduleJob {
       // 失败：记录错误并报告
       log.error("作业失败: provenance={} error={}", getProvenanceCode(), e.getMessage(), e);
       XxlJobHelper.handleFail("作业失败: " + e.getMessage());
-      throw e;  // 让 XXL-Job 处理重试
+      // 不再抛出异常，handleFail 已标记任务失败，避免堆栈覆盖友好消息
     }
   }
 }
@@ -212,24 +212,25 @@ public interface ProvenanceApiConverter {
 ### XXL-Job 错误处理
 
 ```java
-// ✅ 良好：向调度器报告错误
+// ✅ 良好：向调度器报告错误，不再抛出异常
 try {
   RelayReport report = relayUseCase.relay(command);
   XxlJobHelper.handleSuccess("成功中继 " + report.count() + " 条消息");
 } catch (Exception ex) {
   log.error("中继失败", ex);
   XxlJobHelper.handleFail("中继失败: " + ex.getMessage());
-  throw ex;  // 让 XXL-Job 重试策略决定
+  // 不再抛出异常，handleFail 已标记任务失败
+  // 抛出异常会导致 XXL-Job 用堆栈覆盖 handleFail 设置的友好消息
 }
 ```
 
 ```java
-// ❌ 错误：吞掉异常
+// ❌ 错误：既不报告也不记录
 try {
   relayUseCase.relay(command);
 } catch (Exception ex) {
-  log.error("错误: {}", ex.getMessage());
   // ❌ 不向调度器报告，作业看起来成功了！
+  // ❌ 不记录日志，无法排查问题！
 }
 ```
 

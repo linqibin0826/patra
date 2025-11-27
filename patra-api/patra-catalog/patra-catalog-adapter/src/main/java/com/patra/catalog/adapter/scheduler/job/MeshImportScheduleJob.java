@@ -50,7 +50,7 @@ public class MeshImportScheduleJob {
   /// ```json
   /// {
   ///   "url": "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/desc2025.xml",
-  ///   "meshVersion": "2025",π
+  ///   "meshVersion": "2025",
   ///   "mode": "INCREMENTAL"
   /// }
   /// ```
@@ -77,10 +77,10 @@ public class MeshImportScheduleJob {
 
     } catch (CatalogScheduleParameterException ex) {
       handleParameterError(ex);
-      throw ex;
+      // 已通过 handleFail 报告失败,不再抛出异常
     } catch (Exception ex) {
       handleExecutionError(ex);
-      throw new RuntimeException("MeSH 导入任务执行失败", ex);
+      // 已通过 handleFail 报告失败,不再抛出异常
     }
   }
 
@@ -149,10 +149,10 @@ public class MeshImportScheduleJob {
 
     } catch (CatalogScheduleParameterException ex) {
       handleParameterError(ex);
-      throw ex;
+      // 已通过 handleFail 报告失败,不再抛出异常
     } catch (Exception ex) {
       handleExecutionError(ex);
-      throw new RuntimeException("MeSH 限定词导入任务执行失败", ex);
+      // 已通过 handleFail 报告失败,不再抛出异常
     }
   }
 

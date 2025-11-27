@@ -108,87 +108,6 @@ public class ProvenanceAutoConfiguration {
         .build();
   }
 
-  /// 创建 PubMed 专用的 RestClient
-  ///
-  /// 从配置中提取 baseUrl、超时和默认 Headers，使用 JdkClientHttpRequestFactory 保持 Java 21 HttpClient
-  ///
-  /// @param configProvider 配置提供者
-  /// @return 配置好的 PubMed RestClient
-  @Bean
-  @ConditionalOnMissingBean(name = "pubMedRestClient")
-  public RestClient pubMedRestClient(DefaultConfigProvider configProvider) {
-    ProvenanceConfig config = configProvider.getPubMedDefaultConfig();
-    log.info("创建 PubMed RestClient，baseUrl={}", config.baseUrl());
-
-    JdkClientHttpRequestFactory factory = createHttpRequestFactory(config.http());
-
-    return RestClient.builder()
-        .baseUrl(config.baseUrl())
-        .requestFactory(factory)
-        .defaultHeaders(
-            headers -> {
-              if (config.http() != null && config.http().defaultHeaders() != null) {
-                config.http().defaultHeaders().forEach(headers::add);
-              }
-            })
-        .build();
-  }
-
-  /// 创建 EPMC 专用的 RestClient
-  ///
-  /// 从配置中提取 baseUrl、超时和默认 Headers，使用 JdkClientHttpRequestFactory 保持 Java 21 HttpClient
-  ///
-  /// @param configProvider 配置提供者
-  /// @return 配置好的 EPMC RestClient
-  @Bean
-  @ConditionalOnMissingBean(name = "epmcRestClient")
-  public RestClient epmcRestClient(DefaultConfigProvider configProvider) {
-    ProvenanceConfig config = configProvider.getEPMCDefaultConfig();
-    log.info("创建 EPMC RestClient，baseUrl={}", config.baseUrl());
-
-    JdkClientHttpRequestFactory factory = createHttpRequestFactory(config.http());
-
-    return RestClient.builder()
-        .baseUrl(config.baseUrl())
-        .requestFactory(factory)
-        .defaultHeaders(
-            headers -> {
-              if (config.http() != null && config.http().defaultHeaders() != null) {
-                config.http().defaultHeaders().forEach(headers::add);
-              }
-            })
-        .build();
-  }
-
-  /// 创建配置了超时的 JdkClientHttpRequestFactory
-  ///
-  /// 使用 JDK HttpClient 并配置连接超时和读取超时
-  ///
-  /// @param httpConfig HTTP 配置
-  /// @return 配置好的请求工厂
-  private JdkClientHttpRequestFactory createHttpRequestFactory(HttpConfig httpConfig) {
-    java.net.http.HttpClient.Builder httpClientBuilder = java.net.http.HttpClient.newBuilder();
-
-    // 配置连接超时
-    if (httpConfig != null
-        && httpConfig.timeoutConnectMillis() != null
-        && httpConfig.timeoutConnectMillis() > 0) {
-      httpClientBuilder.connectTimeout(Duration.ofMillis(httpConfig.timeoutConnectMillis()));
-    }
-
-    java.net.http.HttpClient httpClient = httpClientBuilder.build();
-    JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
-
-    // 配置读取超时（通过 factory 设置）
-    if (httpConfig != null
-        && httpConfig.timeoutReadMillis() != null
-        && httpConfig.timeoutReadMillis() > 0) {
-      factory.setReadTimeout(Duration.ofMillis(httpConfig.timeoutReadMillis()));
-    }
-
-    return factory;
-  }
-
   /// 创建 PubMed 文章转换器,用于将 PubMed 响应转换为 CanonicalPublication
   ///
   /// @return PubMed 文章转换器实例
@@ -200,7 +119,9 @@ public class ProvenanceAutoConfiguration {
 
   /// 创建用于直接 HTTP 访问 E-utilities API 的 PubMed 客户端
   ///
-  /// @param pubMedRestClient PubMed 专用的 RestClient
+  /// 使用 patra-spring-boot-starter-rest-client 提供的 defaultRestClient，统一管理 HTTP 客户端配置。
+  ///
+  /// @param defaultRestClient 统一的 RestClient（来自 rest-client starter）
   /// @param configProvider PubMed 设置的配置提供者
   /// @param xmlMapper 用于解析 PubMed XML 响应的 XML 映射器
   /// @param objectMapper 用于解析 PubMed JSON 响应的 JSON 映射器
@@ -209,19 +130,21 @@ public class ProvenanceAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   public PubMedClient pubMedClient(
-      RestClient pubMedRestClient,
+      RestClient defaultRestClient,
       DefaultConfigProvider configProvider,
       XmlMapper xmlMapper,
       ObjectMapper objectMapper,
       Optional<ProvenanceMetrics> metrics) {
-    log.info("自动配置 PubMed 客户端,用于访问 E-utilities API (使用 RestClient)");
+    log.info("自动配置 PubMed 客户端,用于访问 E-utilities API (使用 defaultRestClient)");
     return new PubMedClientAdapter(
-        pubMedRestClient, configProvider, objectMapper, xmlMapper, metrics.orElse(null));
+        defaultRestClient, configProvider, objectMapper, xmlMapper, metrics.orElse(null));
   }
 
   /// 创建用于直接 HTTP 访问 EPMC API 的 Europe PMC 客户端
   ///
-  /// @param epmcRestClient EPMC 专用的 RestClient
+  /// 使用 patra-spring-boot-starter-rest-client 提供的 defaultRestClient，统一管理 HTTP 客户端配置。
+  ///
+  /// @param defaultRestClient 统一的 RestClient（来自 rest-client starter）
   /// @param configProvider EPMC 设置的配置提供者
   /// @param objectMapper 用于解析 EPMC 响应的 JSON 映射器
   /// @param metrics 可选的指标记录器
@@ -229,12 +152,12 @@ public class ProvenanceAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   public EPMCClient epmcClient(
-      RestClient epmcRestClient,
+      RestClient defaultRestClient,
       DefaultConfigProvider configProvider,
       ObjectMapper objectMapper,
       Optional<ProvenanceMetrics> metrics) {
-    log.info("自动配置 Europe PMC 客户端,用于访问 EPMC API (使用 RestClient)");
-    return new EpmcClientAdapter(epmcRestClient, configProvider, objectMapper, metrics.orElse(null));
+    log.info("自动配置 Europe PMC 客户端,用于访问 EPMC API (使用 defaultRestClient)");
+    return new EpmcClientAdapter(defaultRestClient, configProvider, objectMapper, metrics.orElse(null));
   }
 
   /// 创建 PubMed ESearch 请求组装器

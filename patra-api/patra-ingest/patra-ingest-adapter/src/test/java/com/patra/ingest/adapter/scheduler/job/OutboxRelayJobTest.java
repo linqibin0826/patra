@@ -1,6 +1,5 @@
 package com.patra.ingest.adapter.scheduler.job;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mockStatic;
@@ -120,8 +119,8 @@ class OutboxRelayJobTest {
     }
 
     @Test
-    @DisplayName("应该在参数解析失败时抛出 IngestScheduleParameterException")
-    void execute_shouldThrowIngestScheduleParameterExceptionWhenParamParseFails() throws Exception {
+    @DisplayName("应该在参数解析失败时调用 handleFail 报告错误")
+    void execute_shouldCallHandleFailWhenParamParseFails() throws Exception {
       try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
 
         // Given
@@ -132,19 +131,17 @@ class OutboxRelayJobTest {
         when(objectMapper.readValue(invalidJson, OutboxRelayJobParam.class))
             .thenThrow(new RuntimeException("JSON 解析错误"));
 
-        // When & Then
-        assertThatThrownBy(() -> outboxRelayJob.execute())
-            .isInstanceOf(OutboxRelayExecutionException.class)
-            .hasMessageContaining("Outbox relay 执行失败")
-            .hasCauseInstanceOf(IngestScheduleParameterException.class);
+        // When
+        outboxRelayJob.execute();
 
+        // Then
         xxlJobHelper.verify(() -> XxlJobHelper.handleFail(any(String.class)), times(1));
       }
     }
 
     @Test
-    @DisplayName("应该在 UseCase 抛出 OutboxRelayExecutionException 时传播异常")
-    void execute_shouldPropagateOutboxRelayExecutionException() {
+    @DisplayName("应该在 UseCase 抛出 OutboxRelayExecutionException 时调用 handleFail 报告错误")
+    void execute_shouldCallHandleFailWhenOutboxRelayExecutionExceptionThrown() {
       try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class);
           MockedStatic<NetUtil> netUtil = mockStatic(NetUtil.class);
           MockedStatic<IdUtil> idUtil = mockStatic(IdUtil.class)) {
@@ -159,16 +156,17 @@ class OutboxRelayJobTest {
             new OutboxRelayExecutionException("Relay 执行失败", new RuntimeException("底层错误"));
         when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenThrow(expectedException);
 
-        // When & Then
-        assertThatThrownBy(() -> outboxRelayJob.execute())
-            .isInstanceOf(OutboxRelayExecutionException.class)
-            .hasMessage("Relay 执行失败");
+        // When
+        outboxRelayJob.execute();
+
+        // Then
+        xxlJobHelper.verify(() -> XxlJobHelper.handleFail(any(String.class)), times(1));
       }
     }
 
     @Test
-    @DisplayName("应该在 UseCase 抛出其他异常时包装为 OutboxRelayExecutionException")
-    void execute_shouldWrapOtherExceptionsAsOutboxRelayExecutionException() {
+    @DisplayName("应该在 UseCase 抛出其他异常时调用 handleFail 报告错误")
+    void execute_shouldCallHandleFailWhenOtherExceptionThrown() {
       try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class);
           MockedStatic<NetUtil> netUtil = mockStatic(NetUtil.class);
           MockedStatic<IdUtil> idUtil = mockStatic(IdUtil.class)) {
@@ -182,12 +180,10 @@ class OutboxRelayJobTest {
         RuntimeException cause = new RuntimeException("数据库连接失败");
         when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenThrow(cause);
 
-        // When & Then
-        assertThatThrownBy(() -> outboxRelayJob.execute())
-            .isInstanceOf(OutboxRelayExecutionException.class)
-            .hasMessageContaining("Outbox relay 执行失败")
-            .hasCause(cause);
+        // When
+        outboxRelayJob.execute();
 
+        // Then
         xxlJobHelper.verify(() -> XxlJobHelper.handleFail(any(String.class)), times(1));
       }
     }
@@ -227,8 +223,8 @@ class OutboxRelayJobTest {
     }
 
     @Test
-    @DisplayName("应该在非法通道值时抛出异常")
-    void shouldThrowExceptionForInvalidChannel() throws Exception {
+    @DisplayName("应该在非法通道值时调用 handleFail 报告错误")
+    void shouldCallHandleFailForInvalidChannel() throws Exception {
       try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
 
         // Given
@@ -241,11 +237,11 @@ class OutboxRelayJobTest {
 
         when(objectMapper.readValue(jsonParam, OutboxRelayJobParam.class)).thenReturn(param);
 
-        // When & Then
-        assertThatThrownBy(() -> outboxRelayJob.execute())
-            .isInstanceOf(OutboxRelayExecutionException.class)
-            .hasMessageContaining("Outbox relay 执行失败")
-            .hasCauseInstanceOf(IngestScheduleParameterException.class);
+        // When
+        outboxRelayJob.execute();
+
+        // Then
+        xxlJobHelper.verify(() -> XxlJobHelper.handleFail(any(String.class)), times(1));
       }
     }
 
@@ -308,8 +304,8 @@ class OutboxRelayJobTest {
     }
 
     @Test
-    @DisplayName("应该在非法持续时间格式时抛出异常")
-    void shouldThrowExceptionForInvalidDuration() throws Exception {
+    @DisplayName("应该在非法持续时间格式时调用 handleFail 报告错误")
+    void shouldCallHandleFailForInvalidDuration() throws Exception {
       try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
 
         // Given
@@ -321,11 +317,11 @@ class OutboxRelayJobTest {
 
         when(objectMapper.readValue(jsonParam, OutboxRelayJobParam.class)).thenReturn(param);
 
-        // When & Then
-        assertThatThrownBy(() -> outboxRelayJob.execute())
-            .isInstanceOf(OutboxRelayExecutionException.class)
-            .hasMessageContaining("Outbox relay 执行失败")
-            .hasCauseInstanceOf(IngestScheduleParameterException.class);
+        // When
+        outboxRelayJob.execute();
+
+        // Then
+        xxlJobHelper.verify(() -> XxlJobHelper.handleFail(any(String.class)), times(1));
       }
     }
   }

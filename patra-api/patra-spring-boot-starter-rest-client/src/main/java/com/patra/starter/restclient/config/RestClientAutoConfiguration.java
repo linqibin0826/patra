@@ -48,21 +48,25 @@ public class RestClientAutoConfiguration {
   ///
   /// 自动注入所有已注册的 {@link ClientHttpRequestInterceptor}，并应用全局超时配置。
   ///
+  /// **设计说明**：直接创建 `JdkClientHttpRequestFactory` 而非通过 Bean 注入，
+  /// 避免被 Spring Cloud LoadBalancer 的 BeanPostProcessor 包装，
+  /// 确保外部 URL 调用不会被错误地当作服务发现处理。
+  ///
   /// @param properties 配置属性
   /// @param interceptorsProvider Spring 标准拦截器提供者
-  /// @param requestFactory HTTP 请求工厂
   /// @return 配置完成的 RestClient
   @Bean
   @ConditionalOnMissingBean(name = "defaultRestClient")
   public RestClient defaultRestClient(
       RestClientProperties properties,
-      ObjectProvider<ClientHttpRequestInterceptor> interceptorsProvider,
-      JdkClientHttpRequestFactory requestFactory) {
+      ObjectProvider<ClientHttpRequestInterceptor> interceptorsProvider) {
 
     var clientConfig =
         properties.getClients().getOrDefault("default", new RestClientProperties.ClientConfig());
 
-    var builder = RestClient.builder().requestFactory(requestFactory);
+    // 直接创建 Factory，不通过 Bean 注入，避免被 LoadBalancer 包装
+    var factory = createHttpRequestFactory(properties);
+    var builder = RestClient.builder().requestFactory(factory);
 
     // 应用默认 Headers
     if (clientConfig.getDefaultHeaders() != null && !clientConfig.getDefaultHeaders().isEmpty()) {
@@ -78,12 +82,11 @@ public class RestClientAutoConfiguration {
 
   /// 创建 HTTP 请求工厂（配置超时）。
   ///
+  /// 使用 JDK HttpClient（支持 HTTP/2），配置连接超时和读取超时。
+  ///
   /// @param properties 配置属性
   /// @return JDK HTTP 请求工厂
-  @Bean
-  @ConditionalOnMissingBean
-  public JdkClientHttpRequestFactory defaultHttpRequestFactory(RestClientProperties properties) {
-
+  private JdkClientHttpRequestFactory createHttpRequestFactory(RestClientProperties properties) {
     var timeout = properties.getTimeout();
 
     // 创建 JDK HttpClient（支持 HTTP/2）

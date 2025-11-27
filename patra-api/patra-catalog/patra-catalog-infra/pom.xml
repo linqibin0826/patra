@@ -60,16 +60,10 @@
             <artifactId>patra-spring-boot-starter-rest-client</artifactId>
         </dependency>
 
-        <!-- Feign 远程调用 -->
+        <!-- Feign 远程调用（已包含 LoadBalancer） -->
         <dependency>
             <groupId>com.patra</groupId>
             <artifactId>patra-spring-cloud-starter-feign</artifactId>
-        </dependency>
-
-        <!-- 负载均衡器 -->
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
 
         <!-- ================================ -->
