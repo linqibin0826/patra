@@ -9,6 +9,7 @@ import com.patra.catalog.domain.model.enums.DescriptorClass;
 import com.patra.catalog.domain.model.enums.LexicalTag;
 import com.patra.catalog.domain.model.vo.mesh.AllowableQualifier;
 import com.patra.catalog.domain.model.vo.mesh.ConceptRelation;
+import com.patra.catalog.domain.model.vo.mesh.EntryCombination;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
 import com.patra.catalog.domain.model.vo.mesh.SeeRelatedDescriptor;
@@ -237,6 +238,9 @@ public class XmlParserAdapter implements XmlParserPort {
       String onlineNote = null;
       String publicMeshNote = null;
       String nlmClassificationNumber = null;
+      String annotation = null;
+      String considerAlso = null;
+      String scopeNote = null;
 
       // 集合字段
       List<MeshTreeNumber> treeNumbers = new ArrayList<>();
@@ -244,6 +248,9 @@ public class XmlParserAdapter implements XmlParserPort {
       List<PharmacologicalAction> pharmacologicalActions = new ArrayList<>();
       List<String> previousIndexings = new ArrayList<>();
       List<SeeRelatedDescriptor> seeRelatedDescriptors = new ArrayList<>();
+      List<MeshConcept> concepts = new ArrayList<>();
+      List<MeshEntryTerm> entryTerms = new ArrayList<>();
+      List<EntryCombination> entryCombinations = new ArrayList<>();
 
       // 解析 DescriptorClass 属性
       String descriptorClassAttr = reader.getAttributeValue(null, "DescriptorClass");
@@ -288,6 +295,15 @@ public class XmlParserAdapter implements XmlParserPort {
             case "NLMClassificationNumber":
               nlmClassificationNumber = reader.getElementText().trim();
               break;
+            case "Annotation":
+              annotation = reader.getElementText().trim();
+              break;
+            case "ConsiderAlso":
+              considerAlso = reader.getElementText().trim();
+              break;
+            case "ScopeNote":
+              scopeNote = reader.getElementText().trim();
+              break;
             case "AllowableQualifiersList":
               allowableQualifiers = parseAllowableQualifiersList(reader);
               break;
@@ -303,10 +319,12 @@ public class XmlParserAdapter implements XmlParserPort {
             case "TreeNumberList":
               treeNumbers = parseTreeNumberList(reader, descriptorUI);
               break;
+            case "EntryCombinationList":
+              entryCombinations = parseEntryCombinationList(reader);
+              break;
             case "ConceptList":
-              // 暂时先不解析，避免覆盖 Descriptor 级别的字段
-              // Concept 和 EntryTerm 在 parseConcepts() 和 parseEntryTerms() 中单独解析
-              skipElement(reader, "ConceptList");
+              // 解析 ConceptList，提取所有 Concept 和 EntryTerm
+              parseConceptListIntoAggregate(reader, concepts, entryTerms);
               break;
           }
         } else if (event == XMLStreamConstants.END_ELEMENT
@@ -347,6 +365,15 @@ public class XmlParserAdapter implements XmlParserPort {
       if (nlmClassificationNumber != null) {
         aggregate.setNlmClassificationNumber(nlmClassificationNumber);
       }
+      if (annotation != null) {
+        aggregate.setAnnotation(annotation);
+      }
+      if (considerAlso != null) {
+        aggregate.setConsiderAlso(considerAlso);
+      }
+      if (scopeNote != null) {
+        aggregate.setScopeNote(scopeNote);
+      }
 
       // 添加集合数据
       if (!treeNumbers.isEmpty()) {
@@ -363,6 +390,15 @@ public class XmlParserAdapter implements XmlParserPort {
       }
       if (!seeRelatedDescriptors.isEmpty()) {
         aggregate.addSeeRelatedDescriptors(seeRelatedDescriptors);
+      }
+      if (!concepts.isEmpty()) {
+        aggregate.addConcepts(concepts);
+      }
+      if (!entryTerms.isEmpty()) {
+        aggregate.addEntryTerms(entryTerms);
+      }
+      if (!entryCombinations.isEmpty()) {
+        aggregate.addEntryCombinations(entryCombinations);
       }
 
       return aggregate;
@@ -388,6 +424,448 @@ public class XmlParserAdapter implements XmlParserPort {
         }
       }
       return treeNumbers;
+    }
+
+    /// 解析 ConceptList，提取 Concept 和 EntryTerm。
+    ///
+    /// 根据 2025 DTD 结构：
+    /// ```
+    /// ConceptList
+    ///   └── Concept (many)
+    ///         ├── ConceptUI
+    ///         ├── ConceptName
+    ///         ├── RegistryNumber / RegistryNumberList
+    ///         ├── ScopeNote
+    ///         ├── TranslatorsEnglishScopeNote
+    ///         ├── TranslatorsScopeNote
+    ///         └── TermList
+    ///               └── Term (many - 作为 EntryTerm)
+    /// ```
+    ///
+    /// @param reader XML 读取器
+    /// @param concepts 存放解析出的 Concept 列表
+    /// @param entryTerms 存放解析出的 EntryTerm 列表
+    private void parseConceptListIntoAggregate(
+        XMLStreamReader reader, List<MeshConcept> concepts, List<MeshEntryTerm> entryTerms)
+        throws XMLStreamException {
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT
+            && "Concept".equals(reader.getLocalName())) {
+          parseConceptAndTerms(reader, concepts, entryTerms);
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "ConceptList".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+    }
+
+    /// 解析单个 Concept 及其 TermList。
+    private void parseConceptAndTerms(
+        XMLStreamReader reader, List<MeshConcept> concepts, List<MeshEntryTerm> entryTerms)
+        throws XMLStreamException {
+      String conceptUi = null;
+      String conceptName = null;
+      boolean isPreferred = false;
+      List<String> registryNumbers = new ArrayList<>();
+      String scopeNote = null;
+      String casn1Name = null;
+      String conceptStatus = null;
+      String translatorsEnglishScopeNote = null;
+      String translatorsScopeNote = null;
+      List<String> relatedRegistryNumbers = new ArrayList<>();
+      List<ConceptRelation> conceptRelations = new ArrayList<>();
+
+      // 解析 PreferredConceptYN 属性
+      String preferredAttr = reader.getAttributeValue(null, "PreferredConceptYN");
+      if (preferredAttr != null) {
+        isPreferred = "Y".equalsIgnoreCase(preferredAttr);
+      }
+
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT) {
+          String localName = reader.getLocalName();
+          switch (localName) {
+            case "ConceptUI":
+              conceptUi = reader.getElementText();
+              break;
+            case "ConceptName":
+              conceptName = parseNameElement(reader);
+              break;
+            case "RegistryNumber":
+              // 单个 RegistryNumber（旧版 DTD）
+              String regNum = reader.getElementText();
+              if (regNum != null && !regNum.trim().isEmpty()) {
+                registryNumbers.add(regNum.trim());
+              }
+              break;
+            case "RegistryNumberList":
+              // RegistryNumberList（2025 DTD）
+              registryNumbers.addAll(parseRegistryNumberList(reader));
+              break;
+            case "ScopeNote":
+              scopeNote = reader.getElementText();
+              break;
+            case "CASN1Name":
+              casn1Name = reader.getElementText();
+              break;
+            case "ConceptStatus":
+              conceptStatus = reader.getElementText();
+              break;
+            case "TranslatorsEnglishScopeNote":
+              translatorsEnglishScopeNote = reader.getElementText();
+              break;
+            case "TranslatorsScopeNote":
+              translatorsScopeNote = reader.getElementText();
+              break;
+            case "RelatedRegistryNumberList":
+              relatedRegistryNumbers = parseRelatedRegistryNumberList(reader);
+              break;
+            case "ConceptRelationList":
+              conceptRelations = parseConceptRelationList(reader);
+              break;
+            case "TermList":
+              // 解析 TermList 中的 EntryTerm，并关联 conceptUi
+              parseTermListIntoEntryTerms(reader, entryTerms, conceptUi);
+              break;
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "Concept".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+
+      // 创建并添加 Concept
+      if (conceptUi != null && conceptName != null) {
+        MeshConcept concept = MeshConcept.create(MeshUI.of(conceptUi), conceptName, isPreferred);
+        if (!registryNumbers.isEmpty()) {
+          concept.addRegistryNumbers(registryNumbers);
+        }
+        if (scopeNote != null) {
+          concept.withScopeNote(scopeNote);
+        }
+        if (casn1Name != null) {
+          concept.withCasn1Name(casn1Name);
+        }
+        if (conceptStatus != null) {
+          concept.withConceptStatus(conceptStatus);
+        }
+        if (translatorsEnglishScopeNote != null) {
+          concept.withTranslatorsEnglishScopeNote(translatorsEnglishScopeNote);
+        }
+        if (translatorsScopeNote != null) {
+          concept.withTranslatorsScopeNote(translatorsScopeNote);
+        }
+        if (!relatedRegistryNumbers.isEmpty()) {
+          concept.addRelatedRegistryNumbers(relatedRegistryNumbers);
+        }
+        if (!conceptRelations.isEmpty()) {
+          concept.addConceptRelations(conceptRelations);
+        }
+        concepts.add(concept);
+      } else {
+        log.warn("跳过无效 Concept（缺少必填字段）: UI={}, Name={}", conceptUi, conceptName);
+      }
+    }
+
+    /// 解析 RegistryNumberList（2025 DTD）。
+    private List<String> parseRegistryNumberList(XMLStreamReader reader) throws XMLStreamException {
+      List<String> registryNumbers = new ArrayList<>();
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT
+            && "RegistryNumber".equals(reader.getLocalName())) {
+          String regNum = reader.getElementText();
+          if (regNum != null && !regNum.trim().isEmpty()) {
+            registryNumbers.add(regNum.trim());
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "RegistryNumberList".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+      return registryNumbers;
+    }
+
+    /// 解析 TermList 中的 Term 并添加到 EntryTerm 列表。
+    private void parseTermListIntoEntryTerms(
+        XMLStreamReader reader, List<MeshEntryTerm> entryTerms, String conceptUi)
+        throws XMLStreamException {
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT && "Term".equals(reader.getLocalName())) {
+          MeshEntryTerm entryTerm = parseTermElement(reader, conceptUi);
+          if (entryTerm != null) {
+            entryTerms.add(entryTerm);
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "TermList".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+    }
+
+    /// 解析 Term 元素（在 Descriptor 解析上下文中）。
+    private MeshEntryTerm parseTermElement(XMLStreamReader reader, String conceptUi)
+        throws XMLStreamException {
+      // 从属性读取字段
+      String lexicalTagCode = reader.getAttributeValue(null, "LexicalTag");
+      if (lexicalTagCode == null) {
+        lexicalTagCode = "NON";
+      }
+
+      String recordPreferredAttr = reader.getAttributeValue(null, "RecordPreferredTermYN");
+      boolean isRecordPreferred = "Y".equalsIgnoreCase(recordPreferredAttr);
+
+      String conceptPreferredAttr = reader.getAttributeValue(null, "ConceptPreferredTermYN");
+      boolean isConceptPreferred = "Y".equalsIgnoreCase(conceptPreferredAttr);
+
+      String isPermutedAttr = reader.getAttributeValue(null, "IsPermutedTermYN");
+      boolean isPermutedTerm = "Y".equalsIgnoreCase(isPermutedAttr);
+
+      boolean isPrintFlag = true;
+
+      // 从子元素读取字段
+      String termUI = null;
+      String term = null;
+      String dateCreated = null;
+      String entryVersion = null;
+      String abbreviation = null;
+      String sortVersion = null;
+      String termNote = null;
+      List<String> thesaurusIds = new ArrayList<>();
+
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT) {
+          String localName = reader.getLocalName();
+          switch (localName) {
+            case "TermUI":
+              termUI = reader.getElementText();
+              break;
+            case "String":
+              term = reader.getElementText();
+              break;
+            case "DateCreated":
+              dateCreated = parseDate(reader, "DateCreated");
+              break;
+            case "ThesaurusIDlist":
+              thesaurusIds = parseThesaurusIdList(reader);
+              break;
+            case "EntryVersion":
+              entryVersion = reader.getElementText();
+              break;
+            case "Abbreviation":
+              abbreviation = reader.getElementText();
+              break;
+            case "SortVersion":
+              sortVersion = reader.getElementText();
+              break;
+            case "TermNote":
+              termNote = reader.getElementText();
+              break;
+            case "PrintFlagYN":
+              String printFlag = reader.getElementText();
+              isPrintFlag = "Y".equalsIgnoreCase(printFlag);
+              break;
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "Term".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+
+      // 验证必填字段
+      if (term == null) {
+        log.warn("跳过无效 EntryTerm（缺少术语文本）");
+        return null;
+      }
+
+      // 创建实体
+      LexicalTag lexicalTag;
+      try {
+        lexicalTag = LexicalTag.fromCode(lexicalTagCode);
+      } catch (IllegalArgumentException e) {
+        log.warn("未知的词法标记：{}，使用默认值 NON", lexicalTagCode);
+        lexicalTag = LexicalTag.NON;
+      }
+
+      MeshUI meshTermUI = termUI != null ? MeshUI.of(termUI) : null;
+      MeshEntryTerm entryTerm =
+          MeshEntryTerm.create(
+              meshTermUI,
+              term,
+              lexicalTag,
+              isRecordPreferred,
+              isPrintFlag,
+              isConceptPreferred,
+              isPermutedTerm);
+
+      // 设置 conceptUi
+      if (conceptUi != null) {
+        entryTerm.withConceptUi(MeshUI.of(conceptUi));
+      }
+
+      // 设置可选字段
+      if (dateCreated != null) {
+        entryTerm.withDateCreated(dateCreated);
+      }
+      if (entryVersion != null) {
+        entryTerm.withEntryVersion(entryVersion);
+      }
+      if (abbreviation != null) {
+        entryTerm.withAbbreviation(abbreviation);
+      }
+      if (sortVersion != null) {
+        entryTerm.withSortVersion(sortVersion);
+      }
+      if (termNote != null) {
+        entryTerm.withTermNote(termNote);
+      }
+      if (!thesaurusIds.isEmpty()) {
+        entryTerm.addThesaurusIds(thesaurusIds);
+      }
+
+      return entryTerm;
+    }
+
+    /// 解析 EntryCombinationList。
+    private List<EntryCombination> parseEntryCombinationList(XMLStreamReader reader)
+        throws XMLStreamException {
+      List<EntryCombination> combinations = new ArrayList<>();
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT
+            && "EntryCombination".equals(reader.getLocalName())) {
+          EntryCombination combination = parseEntryCombination(reader);
+          if (combination != null) {
+            combinations.add(combination);
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "EntryCombinationList".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+      return combinations;
+    }
+
+    /// 解析单个 EntryCombination。
+    ///
+    /// 结构示例：
+    /// ```xml
+    /// <EntryCombination>
+    ///   <ECIN>
+    ///     <DescriptorReferredTo>
+    ///       <DescriptorUI>D000001</DescriptorUI>
+    ///       <DescriptorName><String>Calcimycin</String></DescriptorName>
+    ///     </DescriptorReferredTo>
+    ///     <QualifierReferredTo>
+    ///       <QualifierUI>Q000008</QualifierUI>
+    ///       <QualifierName><String>administration & dosage</String></QualifierName>
+    ///     </QualifierReferredTo>
+    ///   </ECIN>
+    ///   <ECOUT>
+    ///     <DescriptorReferredTo>...</DescriptorReferredTo>
+    ///     <QualifierReferredTo>...</QualifierReferredTo>
+    ///   </ECOUT>
+    /// </EntryCombination>
+    /// ```
+    private EntryCombination parseEntryCombination(XMLStreamReader reader)
+        throws XMLStreamException {
+      String ecinDescriptorUi = null;
+      String ecinQualifierUi = null;
+      String ecoutDescriptorUi = null;
+      String ecoutQualifierUi = null;
+
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT) {
+          String localName = reader.getLocalName();
+          if ("ECIN".equals(localName)) {
+            String[] refs = parseEcInOutElement(reader, "ECIN");
+            ecinDescriptorUi = refs[0];
+            ecinQualifierUi = refs[1];
+          } else if ("ECOUT".equals(localName)) {
+            String[] refs = parseEcInOutElement(reader, "ECOUT");
+            ecoutDescriptorUi = refs[0];
+            ecoutQualifierUi = refs[1];
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "EntryCombination".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+
+      if (ecinDescriptorUi != null && ecoutDescriptorUi != null) {
+        return EntryCombination.of(
+            MeshUI.of(ecinDescriptorUi),
+            ecinQualifierUi != null ? MeshUI.of(ecinQualifierUi) : null,
+            MeshUI.of(ecoutDescriptorUi),
+            ecoutQualifierUi != null ? MeshUI.of(ecoutQualifierUi) : null);
+      }
+
+      log.warn(
+          "跳过无效 EntryCombination: ecinDescriptorUi={}, ecoutDescriptorUi={}",
+          ecinDescriptorUi,
+          ecoutDescriptorUi);
+      return null;
+    }
+
+    /// 解析 ECIN 或 ECOUT 元素，返回 [descriptorUI, qualifierUI]。
+    private String[] parseEcInOutElement(XMLStreamReader reader, String elementName)
+        throws XMLStreamException {
+      String descriptorUi = null;
+      String qualifierUi = null;
+
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT) {
+          String localName = reader.getLocalName();
+          if ("DescriptorReferredTo".equals(localName)) {
+            descriptorUi = parseDescriptorReferredTo(reader);
+          } else if ("QualifierReferredTo".equals(localName)) {
+            qualifierUi = parseQualifierReferredTo(reader);
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && elementName.equals(reader.getLocalName())) {
+          break;
+        }
+      }
+
+      return new String[] {descriptorUi, qualifierUi};
+    }
+
+    /// 解析 DescriptorReferredTo 并返回 DescriptorUI。
+    private String parseDescriptorReferredTo(XMLStreamReader reader) throws XMLStreamException {
+      String descriptorUi = null;
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT
+            && "DescriptorUI".equals(reader.getLocalName())) {
+          descriptorUi = reader.getElementText();
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "DescriptorReferredTo".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+      return descriptorUi;
+    }
+
+    /// 解析 QualifierReferredTo 并返回 QualifierUI。
+    private String parseQualifierReferredTo(XMLStreamReader reader) throws XMLStreamException {
+      String qualifierUi = null;
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT
+            && "QualifierUI".equals(reader.getLocalName())) {
+          qualifierUi = reader.getElementText();
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "QualifierReferredTo".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+      return qualifierUi;
     }
   }
 
@@ -874,10 +1352,12 @@ public class XmlParserAdapter implements XmlParserPort {
       String conceptUi = null;
       String conceptName = null;
       boolean isPreferred = false;
-      String registryNumber = null;
+      List<String> registryNumbers = new ArrayList<>();
       String scopeNote = null;
       String casn1Name = null;
       String conceptStatus = null;
+      String translatorsEnglishScopeNote = null;
+      String translatorsScopeNote = null;
       List<String> relatedRegistryNumbers = new ArrayList<>();
       List<ConceptRelation> conceptRelations = new ArrayList<>();
 
@@ -900,7 +1380,15 @@ public class XmlParserAdapter implements XmlParserPort {
               conceptName = parseNameElement(reader);
               break;
             case "RegistryNumber":
-              registryNumber = reader.getElementText();
+              // 单个 RegistryNumber（旧版 DTD）
+              String regNum = reader.getElementText();
+              if (regNum != null && !regNum.trim().isEmpty()) {
+                registryNumbers.add(regNum.trim());
+              }
+              break;
+            case "RegistryNumberList":
+              // RegistryNumberList（2025 DTD）
+              registryNumbers.addAll(parseRegistryNumberListElement(reader));
               break;
             case "ScopeNote":
               scopeNote = reader.getElementText();
@@ -910,6 +1398,12 @@ public class XmlParserAdapter implements XmlParserPort {
               break;
             case "ConceptStatus":
               conceptStatus = reader.getElementText();
+              break;
+            case "TranslatorsEnglishScopeNote":
+              translatorsEnglishScopeNote = reader.getElementText();
+              break;
+            case "TranslatorsScopeNote":
+              translatorsScopeNote = reader.getElementText();
               break;
             case "RelatedRegistryNumberList":
               relatedRegistryNumbers = parseRelatedRegistryNumberList(reader);
@@ -934,8 +1428,8 @@ public class XmlParserAdapter implements XmlParserPort {
       MeshConcept concept = MeshConcept.create(MeshUI.of(conceptUi), conceptName, isPreferred);
 
       // 设置可选字段
-      if (registryNumber != null) {
-        concept.withRegistryNumber(registryNumber);
+      if (!registryNumbers.isEmpty()) {
+        concept.addRegistryNumbers(registryNumbers);
       }
       if (scopeNote != null) {
         concept.withScopeNote(scopeNote);
@@ -945,6 +1439,12 @@ public class XmlParserAdapter implements XmlParserPort {
       }
       if (conceptStatus != null) {
         concept.withConceptStatus(conceptStatus);
+      }
+      if (translatorsEnglishScopeNote != null) {
+        concept.withTranslatorsEnglishScopeNote(translatorsEnglishScopeNote);
+      }
+      if (translatorsScopeNote != null) {
+        concept.withTranslatorsScopeNote(translatorsScopeNote);
       }
 
       // 添加集合数据
@@ -956,6 +1456,26 @@ public class XmlParserAdapter implements XmlParserPort {
       }
 
       return concept;
+    }
+
+    /// 解析 RegistryNumberList（2025 DTD，独立 Concept 解析）。
+    private List<String> parseRegistryNumberListElement(XMLStreamReader reader)
+        throws XMLStreamException {
+      List<String> registryNumbers = new ArrayList<>();
+      while (reader.hasNext()) {
+        int event = reader.next();
+        if (event == XMLStreamConstants.START_ELEMENT
+            && "RegistryNumber".equals(reader.getLocalName())) {
+          String regNum = reader.getElementText();
+          if (regNum != null && !regNum.trim().isEmpty()) {
+            registryNumbers.add(regNum.trim());
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT
+            && "RegistryNumberList".equals(reader.getLocalName())) {
+          break;
+        }
+      }
+      return registryNumbers;
     }
 
     @Override

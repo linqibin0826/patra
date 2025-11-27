@@ -64,6 +64,9 @@ public class MeshEntryTerm implements Serializable {
   /// 术语唯一标识符(格式：T000001-T999999)
   private final MeshUI termUi;
 
+  /// 所属概念UI(格式：M000001-M999999)
+  private MeshUI conceptUi;
+
   // ========== 业务字段 ==========
 
   /// 入口术语/同义词
@@ -92,6 +95,15 @@ public class MeshEntryTerm implements Serializable {
 
   /// 入口版本(可选)
   private String entryVersion;
+
+  /// 术语缩写(可选)
+  private String abbreviation;
+
+  /// 排序版本(可选)
+  private String sortVersion;
+
+  /// 术语说明(可选)
+  private String termNote;
 
   /// 私有构造函数。
   ///
@@ -276,6 +288,45 @@ public class MeshEntryTerm implements Serializable {
   /// @return 当前对象(支持链式调用)
   public MeshEntryTerm withEntryVersion(String entryVersion) {
     this.entryVersion = entryVersion;
+    return this;
+  }
+
+  /// 设置所属概念UI。
+  ///
+  /// @param conceptUi 概念UI
+  /// @return 当前对象(支持链式调用)
+  public MeshEntryTerm withConceptUi(MeshUI conceptUi) {
+    if (conceptUi != null) {
+      Assert.isTrue(conceptUi.isConcept(), "概念UI必须以M开头：%s", conceptUi.ui());
+    }
+    this.conceptUi = conceptUi;
+    return this;
+  }
+
+  /// 设置术语缩写。
+  ///
+  /// @param abbreviation 术语缩写
+  /// @return 当前对象(支持链式调用)
+  public MeshEntryTerm withAbbreviation(String abbreviation) {
+    this.abbreviation = abbreviation;
+    return this;
+  }
+
+  /// 设置排序版本。
+  ///
+  /// @param sortVersion 排序版本
+  /// @return 当前对象(支持链式调用)
+  public MeshEntryTerm withSortVersion(String sortVersion) {
+    this.sortVersion = sortVersion;
+    return this;
+  }
+
+  /// 设置术语说明。
+  ///
+  /// @param termNote 术语说明
+  /// @return 当前对象(支持链式调用)
+  public MeshEntryTerm withTermNote(String termNote) {
+    this.termNote = termNote;
     return this;
   }
 
