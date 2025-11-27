@@ -12,7 +12,7 @@ import lombok.EqualsAndHashCode;
 ///
 /// 关键字段说明：
 ///
-/// - `descriptor_id` - 主题词 ID（外键：cat_mesh_descriptor.id）
+/// - `descriptor_ui` - 主题词 UI（格式：D000001）
 ///   - `tree_number` - 树形编号（如 C04.557.337.428），唯一约束 uk_tree_number
 ///   - `tree_level` - 层级深度（1-10，自动计算）
 ///   - `is_primary` - 是否主要位置（0=次要，1=主要）
@@ -20,7 +20,7 @@ import lombok.EqualsAndHashCode;
 /// 索引说明：
 ///
 /// - uk_tree_number - 树形编号唯一索引，保证编号唯一性
-///   - idx_descriptor - 主题词索引，支持查询某主题词的所有位置
+///   - idx_descriptor_ui - 主题词索引，支持查询某主题词的所有位置
 ///   - idx_tree_prefix - 树形编号前缀索引（20 字符），支持层次查询（LIKE "D12.%"）
 ///   - idx_tree_level - 层级+主题词复合索引，支持按层级筛选
 ///
@@ -30,9 +30,9 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_mesh_tree_number", autoResultMap = true)
 public class MeshTreeNumberDO extends BaseDO {
-  /// 主题词 ID（外键：cat_mesh_descriptor.id）
-  @TableField("descriptor_id")
-  private Long descriptorId;
+  /// 主题词 UI（格式：D000001）
+  @TableField("descriptor_ui")
+  private String descriptorUi;
 
   /// 树形编号（如 C04.557.337.428）
   @TableField("tree_number")

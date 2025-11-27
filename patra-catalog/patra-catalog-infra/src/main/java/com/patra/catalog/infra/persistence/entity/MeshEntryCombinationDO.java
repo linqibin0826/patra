@@ -12,7 +12,7 @@ import lombok.EqualsAndHashCode;
 ///
 /// 关键字段说明：
 ///
-/// - `descriptor_id` - 主题词 ID（外键：cat_mesh_descriptor.id）
+/// - `descriptor_ui` - 主题词 UI（格式：D000001）
 /// - `ecin_descriptor_ui` - ECIN Descriptor UI（输入组合的主题词）
 /// - `ecin_qualifier_ui` - ECIN Qualifier UI（输入组合的限定词）
 /// - `ecout_descriptor_ui` - ECOUT Descriptor UI（输出组合的主题词）
@@ -26,7 +26,7 @@ import lombok.EqualsAndHashCode;
 ///
 /// 索引说明：
 ///
-/// - idx_descriptor - 主题词索引，支持查询某主题词的所有组合条目
+/// - idx_descriptor_ui - 主题词索引，支持查询某主题词的所有组合条目
 /// - idx_ecin_descriptor - ECIN 主题词索引
 /// - idx_ecout_descriptor - ECOUT 主题词索引
 ///
@@ -36,9 +36,9 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "cat_mesh_entry_combination", autoResultMap = true)
 public class MeshEntryCombinationDO extends BaseDO {
-  /// 主题词 ID（外键：cat_mesh_descriptor.id）
-  @TableField("descriptor_id")
-  private Long descriptorId;
+  /// 主题词 UI（格式：D000001）
+  @TableField("descriptor_ui")
+  private String descriptorUi;
 
   /// ECIN Descriptor UI（输入组合的主题词）
   @TableField("ecin_descriptor_ui")

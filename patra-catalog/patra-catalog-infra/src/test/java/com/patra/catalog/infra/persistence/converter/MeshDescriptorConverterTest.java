@@ -42,8 +42,8 @@ class MeshDescriptorConverterTest {
   private MeshDescriptorConverter converter;
 
   // 测试数据
-  private static final Long DESCRIPTOR_ID = 12345L;
   private static final MeshUI DESCRIPTOR_UI = MeshUI.of("D000001");
+  private static final String DESCRIPTOR_UI_STR = "D000001";
   private static final String DESCRIPTOR_NAME = "Test Descriptor";
   private static final DescriptorClass DESCRIPTOR_CLASS = DescriptorClass.TOPICAL;
   private static final String MESH_VERSION = "2025";
@@ -102,11 +102,11 @@ class MeshDescriptorConverterTest {
       MeshTreeNumber treeNumber = MeshTreeNumber.create("A01.001.002", true);
 
       // When
-      MeshTreeNumberDO result = converter.toTreeNumberDO(treeNumber, DESCRIPTOR_ID);
+      MeshTreeNumberDO result = converter.toTreeNumberDO(treeNumber, DESCRIPTOR_UI_STR);
 
       // Then
       assertThat(result).isNotNull();
-      assertThat(result.getDescriptorId()).isEqualTo(DESCRIPTOR_ID);
+      assertThat(result.getDescriptorUi()).isEqualTo(DESCRIPTOR_UI_STR);
       assertThat(result.getTreeNumber()).isEqualTo("A01.001.002");
       assertThat(result.getTreeLevel()).isEqualTo(3);
       assertThat(result.getIsPrimary()).isTrue();
@@ -115,7 +115,7 @@ class MeshDescriptorConverterTest {
     @Test
     @DisplayName("参数为 null 时应该返回 null")
     void shouldReturnNullWhenTreeNumberIsNull() {
-      assertThat(converter.toTreeNumberDO(null, DESCRIPTOR_ID)).isNull();
+      assertThat(converter.toTreeNumberDO(null, DESCRIPTOR_UI_STR)).isNull();
     }
   }
 
@@ -134,11 +134,11 @@ class MeshDescriptorConverterTest {
               .addRegistryNumber("12345-67-8");
 
       // When
-      MeshConceptDO result = converter.toConceptDO(concept, DESCRIPTOR_ID);
+      MeshConceptDO result = converter.toConceptDO(concept, DESCRIPTOR_UI_STR);
 
       // Then
       assertThat(result).isNotNull();
-      assertThat(result.getDescriptorId()).isEqualTo(DESCRIPTOR_ID);
+      assertThat(result.getDescriptorUi()).isEqualTo(DESCRIPTOR_UI_STR);
       assertThat(result.getConceptUi()).isEqualTo("M0000001");
       assertThat(result.getConceptName()).isEqualTo("Test Concept");
       assertThat(result.getIsPreferred()).isTrue();
@@ -150,7 +150,7 @@ class MeshDescriptorConverterTest {
     @Test
     @DisplayName("参数为 null 时应该返回 null")
     void shouldReturnNullWhenConceptIsNull() {
-      assertThat(converter.toConceptDO(null, DESCRIPTOR_ID)).isNull();
+      assertThat(converter.toConceptDO(null, DESCRIPTOR_UI_STR)).isNull();
     }
 
     @Test
@@ -163,7 +163,7 @@ class MeshDescriptorConverterTest {
               .addRelatedRegistryNumber("22222-22-2");
 
       // When
-      MeshConceptDO result = converter.toConceptDO(concept, DESCRIPTOR_ID);
+      MeshConceptDO result = converter.toConceptDO(concept, DESCRIPTOR_UI_STR);
 
       // Then
       assertThat(result).isNotNull();
@@ -188,11 +188,11 @@ class MeshDescriptorConverterTest {
               .withDateCreated("20240101");
 
       // When
-      MeshEntryTermDO result = converter.toEntryTermDO(entryTerm, DESCRIPTOR_ID);
+      MeshEntryTermDO result = converter.toEntryTermDO(entryTerm, DESCRIPTOR_UI_STR);
 
       // Then
       assertThat(result).isNotNull();
-      assertThat(result.getDescriptorId()).isEqualTo(DESCRIPTOR_ID);
+      assertThat(result.getDescriptorUi()).isEqualTo(DESCRIPTOR_UI_STR);
       assertThat(result.getTermUi()).isEqualTo("T000001");
       assertThat(result.getConceptUi()).isEqualTo("M0000001");
       assertThat(result.getTerm()).isEqualTo("Test Term");
@@ -213,7 +213,7 @@ class MeshDescriptorConverterTest {
           MeshEntryTerm.create(null, "Test Term", null, false, true, false, false);
 
       // When
-      MeshEntryTermDO result = converter.toEntryTermDO(entryTerm, DESCRIPTOR_ID);
+      MeshEntryTermDO result = converter.toEntryTermDO(entryTerm, DESCRIPTOR_UI_STR);
 
       // Then
       assertThat(result).isNotNull();
@@ -226,7 +226,7 @@ class MeshDescriptorConverterTest {
     @Test
     @DisplayName("参数为 null 时应该返回 null")
     void shouldReturnNullWhenEntryTermIsNull() {
-      assertThat(converter.toEntryTermDO(null, DESCRIPTOR_ID)).isNull();
+      assertThat(converter.toEntryTermDO(null, DESCRIPTOR_UI_STR)).isNull();
     }
   }
 
@@ -246,11 +246,11 @@ class MeshDescriptorConverterTest {
               MeshUI.of("Q000628"));
 
       // When
-      MeshEntryCombinationDO result = converter.toEntryCombinationDO(entryCombination, DESCRIPTOR_ID);
+      MeshEntryCombinationDO result = converter.toEntryCombinationDO(entryCombination, DESCRIPTOR_UI_STR);
 
       // Then
       assertThat(result).isNotNull();
-      assertThat(result.getDescriptorId()).isEqualTo(DESCRIPTOR_ID);
+      assertThat(result.getDescriptorUi()).isEqualTo(DESCRIPTOR_UI_STR);
       assertThat(result.getEcinDescriptorUi()).isEqualTo("D000001");
       assertThat(result.getEcinQualifierUi()).isEqualTo("Q000188");
       assertThat(result.getEcoutDescriptorUi()).isEqualTo("D000002");
@@ -265,7 +265,7 @@ class MeshDescriptorConverterTest {
           EntryCombination.of(MeshUI.of("D000001"), MeshUI.of("Q000188"), MeshUI.of("D000002"));
 
       // When
-      MeshEntryCombinationDO result = converter.toEntryCombinationDO(entryCombination, DESCRIPTOR_ID);
+      MeshEntryCombinationDO result = converter.toEntryCombinationDO(entryCombination, DESCRIPTOR_UI_STR);
 
       // Then
       assertThat(result).isNotNull();
@@ -278,7 +278,7 @@ class MeshDescriptorConverterTest {
     @Test
     @DisplayName("参数为 null 时应该返回 null")
     void shouldReturnNullWhenEntryCombinationIsNull() {
-      assertThat(converter.toEntryCombinationDO(null, DESCRIPTOR_ID)).isNull();
+      assertThat(converter.toEntryCombinationDO(null, DESCRIPTOR_UI_STR)).isNull();
     }
   }
 
@@ -300,11 +300,11 @@ class MeshDescriptorConverterTest {
 
       // When
       MeshConceptRelationDO result =
-          converter.toConceptRelationDO(relation, CONCEPT_UI, true, DESCRIPTOR_ID);
+          converter.toConceptRelationDO(relation, CONCEPT_UI, true, DESCRIPTOR_UI_STR);
 
       // Then
       assertThat(result).isNotNull();
-      assertThat(result.getDescriptorId()).isEqualTo(DESCRIPTOR_ID);
+      assertThat(result.getDescriptorUi()).isEqualTo(DESCRIPTOR_UI_STR);
       assertThat(result.getConceptUi()).isEqualTo("M0000001");
       assertThat(result.getIsPreferred()).isTrue();
       assertThat(result.getRelationName()).isEqualTo("NRW");
@@ -321,7 +321,7 @@ class MeshDescriptorConverterTest {
 
       // When
       MeshConceptRelationDO result =
-          converter.toConceptRelationDO(relation, CONCEPT_UI, false, DESCRIPTOR_ID);
+          converter.toConceptRelationDO(relation, CONCEPT_UI, false, DESCRIPTOR_UI_STR);
 
       // Then
       assertThat(result).isNotNull();
@@ -335,7 +335,7 @@ class MeshDescriptorConverterTest {
     @Test
     @DisplayName("参数为 null 时应该返回 null")
     void shouldReturnNullWhenRelationIsNull() {
-      assertThat(converter.toConceptRelationDO(null, CONCEPT_UI, true, DESCRIPTOR_ID)).isNull();
+      assertThat(converter.toConceptRelationDO(null, CONCEPT_UI, true, DESCRIPTOR_UI_STR)).isNull();
     }
   }
 }

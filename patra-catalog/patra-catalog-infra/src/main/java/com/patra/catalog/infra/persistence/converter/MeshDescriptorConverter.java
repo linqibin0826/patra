@@ -66,15 +66,15 @@ public class MeshDescriptorConverter {
   /// 将树形编号实体转换为 DO。
   ///
   /// @param treeNumber 树形编号实体
-  /// @param descriptorId 主题词 ID（外键）
+  /// @param descriptorUi 主题词 UI
   /// @return 树形编号 DO
-  public MeshTreeNumberDO toTreeNumberDO(MeshTreeNumber treeNumber, Long descriptorId) {
+  public MeshTreeNumberDO toTreeNumberDO(MeshTreeNumber treeNumber, String descriptorUi) {
     if (treeNumber == null) {
       return null;
     }
 
     MeshTreeNumberDO dataObject = new MeshTreeNumberDO();
-    dataObject.setDescriptorId(descriptorId);
+    dataObject.setDescriptorUi(descriptorUi);
     dataObject.setTreeNumber(treeNumber.getTreeNumber());
     dataObject.setTreeLevel(treeNumber.getTreeLevel());
     dataObject.setIsPrimary(treeNumber.isPrimary());
@@ -85,15 +85,15 @@ public class MeshDescriptorConverter {
   /// 将概念实体转换为 DO。
   ///
   /// @param concept 概念实体
-  /// @param descriptorId 主题词 ID（外键）
+  /// @param descriptorUi 主题词 UI
   /// @return 概念 DO
-  public MeshConceptDO toConceptDO(MeshConcept concept, Long descriptorId) {
+  public MeshConceptDO toConceptDO(MeshConcept concept, String descriptorUi) {
     if (concept == null) {
       return null;
     }
 
     MeshConceptDO dataObject = new MeshConceptDO();
-    dataObject.setDescriptorId(descriptorId);
+    dataObject.setDescriptorUi(descriptorUi);
     dataObject.setConceptUi(concept.getConceptUi().ui());
     dataObject.setConceptName(concept.getConceptName());
     dataObject.setIsPreferred(concept.isPreferred());
@@ -111,15 +111,15 @@ public class MeshDescriptorConverter {
   /// 将入口术语实体转换为 DO。
   ///
   /// @param entryTerm 入口术语实体
-  /// @param descriptorId 主题词 ID（外键）
+  /// @param descriptorUi 主题词 UI
   /// @return 入口术语 DO
-  public MeshEntryTermDO toEntryTermDO(MeshEntryTerm entryTerm, Long descriptorId) {
+  public MeshEntryTermDO toEntryTermDO(MeshEntryTerm entryTerm, String descriptorUi) {
     if (entryTerm == null) {
       return null;
     }
 
     MeshEntryTermDO dataObject = new MeshEntryTermDO();
-    dataObject.setDescriptorId(descriptorId);
+    dataObject.setDescriptorUi(descriptorUi);
     dataObject.setTermUi(entryTerm.getTermUi() != null ? entryTerm.getTermUi().ui() : null);
     dataObject.setConceptUi(entryTerm.getConceptUi() != null ? entryTerm.getConceptUi().ui() : null);
     dataObject.setTerm(entryTerm.getTerm());
@@ -142,16 +142,16 @@ public class MeshDescriptorConverter {
   /// 将组合条目值对象转换为 DO。
   ///
   /// @param entryCombination 组合条目值对象
-  /// @param descriptorId 主题词 ID（外键）
+  /// @param descriptorUi 主题词 UI
   /// @return 组合条目 DO
   public MeshEntryCombinationDO toEntryCombinationDO(
-      EntryCombination entryCombination, Long descriptorId) {
+      EntryCombination entryCombination, String descriptorUi) {
     if (entryCombination == null) {
       return null;
     }
 
     MeshEntryCombinationDO dataObject = new MeshEntryCombinationDO();
-    dataObject.setDescriptorId(descriptorId);
+    dataObject.setDescriptorUi(descriptorUi);
     dataObject.setEcinDescriptorUi(entryCombination.ecinDescriptorUi().ui());
     dataObject.setEcinQualifierUi(entryCombination.ecinQualifierUi().ui());
     dataObject.setEcoutDescriptorUi(entryCombination.ecoutDescriptorUi().ui());
@@ -168,16 +168,16 @@ public class MeshDescriptorConverter {
   /// @param conceptRelation 概念关系值对象
   /// @param conceptUi 所属概念 UI（拥有此关系列表的概念）
   /// @param isPreferred 所属概念是否为首选概念
-  /// @param descriptorId 主题词 ID（外键）
+  /// @param descriptorUi 主题词 UI
   /// @return 概念关系 DO
   public MeshConceptRelationDO toConceptRelationDO(
-      ConceptRelation conceptRelation, MeshUI conceptUi, boolean isPreferred, Long descriptorId) {
+      ConceptRelation conceptRelation, MeshUI conceptUi, boolean isPreferred, String descriptorUi) {
     if (conceptRelation == null) {
       return null;
     }
 
     MeshConceptRelationDO dataObject = new MeshConceptRelationDO();
-    dataObject.setDescriptorId(descriptorId);
+    dataObject.setDescriptorUi(descriptorUi);
     dataObject.setConceptUi(conceptUi.ui());
     dataObject.setIsPreferred(isPreferred);
     dataObject.setRelationName(conceptRelation.relationName());

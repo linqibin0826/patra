@@ -2,6 +2,7 @@ package com.patra.catalog.domain.model.entity;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
+import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import java.io.Serial;
 import java.io.Serializable;
 import lombok.Getter;
@@ -50,8 +51,8 @@ public class MeshTreeNumber implements Serializable {
   /// 主键ID(由Repository在持久化时分配)
   private Long id;
 
-  /// 关联的主题词ID(外键)
-  private final Long descriptorId;
+  /// 关联的主题词UI(格式:D000001)
+  private final MeshUI descriptorUi;
 
   // ========== 业务字段 ==========
 
@@ -67,13 +68,13 @@ public class MeshTreeNumber implements Serializable {
   /// 私有构造函数。
   ///
   /// @param id 主键ID(新建时为null)
-  /// @param descriptorId 主题词ID
+  /// @param descriptorUi 主题词UI
   /// @param treeNumber 树形编号
   /// @param treeLevel 层级深度
   /// @param isPrimary 是否主要位置
   private MeshTreeNumber(
-      Long id, Long descriptorId, String treeNumber, int treeLevel, boolean isPrimary) {
-    // 必填字段验证（descriptorId 在解析阶段可以为 null，后续通过 setDescriptorId 设置）
+      Long id, MeshUI descriptorUi, String treeNumber, int treeLevel, boolean isPrimary) {
+    // 必填字段验证（descriptorUi 在解析阶段可以为 null，后续由聚合根设置）
     Assert.notBlank(treeNumber, "树形编号不能为空");
 
     // 树形编号格式验证(字母+数字组合,点号分隔)
@@ -87,7 +88,7 @@ public class MeshTreeNumber implements Serializable {
 
     // 赋值
     this.id = id;
-    this.descriptorId = descriptorId;
+    this.descriptorUi = descriptorUi;
     this.treeNumber = treeNumber;
     this.treeLevel = treeLevel;
     this.isPrimary = isPrimary;
@@ -105,28 +106,28 @@ public class MeshTreeNumber implements Serializable {
     return new MeshTreeNumber(null, null, treeNumber, level, isPrimary);
   }
 
-  /// 创建树形编号(指定主题词ID)。
+  /// 创建树形编号(指定主题词UI)。
   ///
-  /// @param descriptorId 主题词ID
+  /// @param descriptorUi 主题词UI
   /// @param treeNumber 树形编号
   /// @param isPrimary 是否主要位置
   /// @return 树形编号实体
-  public static MeshTreeNumber create(Long descriptorId, String treeNumber, boolean isPrimary) {
+  public static MeshTreeNumber create(MeshUI descriptorUi, String treeNumber, boolean isPrimary) {
     int level = calculateLevel(treeNumber);
-    return new MeshTreeNumber(null, descriptorId, treeNumber, level, isPrimary);
+    return new MeshTreeNumber(null, descriptorUi, treeNumber, level, isPrimary);
   }
 
   /// 从持久化状态重建实体(由Repository使用)。
   ///
   /// @param id 主键ID
-  /// @param descriptorId 主题词ID
+  /// @param descriptorUi 主题词UI
   /// @param treeNumber 树形编号
   /// @param treeLevel 层级深度
   /// @param isPrimary 是否主要位置
   /// @return 重建的实体
   public static MeshTreeNumber restore(
-      Long id, Long descriptorId, String treeNumber, int treeLevel, boolean isPrimary) {
-    return new MeshTreeNumber(id, descriptorId, treeNumber, treeLevel, isPrimary);
+      Long id, MeshUI descriptorUi, String treeNumber, int treeLevel, boolean isPrimary) {
+    return new MeshTreeNumber(id, descriptorUi, treeNumber, treeLevel, isPrimary);
   }
 
   // ========== 业务方法 ==========

@@ -10,7 +10,7 @@
   <!-- 批量插入入口术语（单条 SQL 语句，多行值） -->
   <insert id="insertBatch">
     INSERT INTO cat_mesh_entry_term (
-      id, descriptor_id, term_ui, concept_ui, term, lexical_tag, is_print_flag,
+      id, descriptor_ui, term_ui, concept_ui, term, lexical_tag, is_print_flag,
       record_preferred, is_permuted_term, is_concept_preferred,
       abbreviation, sort_version, entry_version, term_note, date_created, thesaurus_ids,
       version, created_at, updated_at, deleted
@@ -18,7 +18,7 @@
     <foreach collection="list" item="item" separator=",">
       (
         #{item.id},
-        #{item.descriptorId},
+        #{item.descriptorUi},
         #{item.termUi},
         #{item.conceptUi},
         #{item.term},
