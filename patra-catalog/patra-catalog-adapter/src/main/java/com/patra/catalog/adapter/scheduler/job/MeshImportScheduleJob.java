@@ -22,8 +22,8 @@ import org.springframework.stereotype.Component;
 ///
 /// **包含两个 JobHandler**：
 ///
-/// - `catalogMeshDescriptorImportJob`：导入 MeSH 主题词（约 35,000 条）
-/// - `catalogMeshQualifierImportJob`：导入 MeSH 限定词（约 80 条）
+/// - `meshDescriptorImportJob`：导入 MeSH 主题词（约 35,000 条）
+/// - `meshQualifierImportJob`：导入 MeSH 限定词（约 80 条）
 ///
 /// **职责**：
 ///
@@ -43,14 +43,14 @@ public class MeshImportScheduleJob {
 
   /// 执行 MeSH 主题词导入任务。
   ///
-  /// **JobHandler 名称**: `catalogMeshDescriptorImportJob`
+  /// **JobHandler 名称**: `meshDescriptorImportJob`
   ///
   /// **参数格式**（JSON）：
   ///
   /// ```json
   /// {
   ///   "url": "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/desc2025.xml",
-  ///   "meshVersion": "2025",
+  ///   "meshVersion": "2025",π
   ///   "mode": "INCREMENTAL"
   /// }
   /// ```
@@ -59,7 +59,7 @@ public class MeshImportScheduleJob {
   ///
   /// - `INCREMENTAL`：增量导入，幂等执行，支持断点续传
   /// - `TRUNCATE_REIMPORT`：清空重导入，先清空所有数据再重新导入
-  @XxlJob("catalogMeshDescriptorImportJob")
+  @XxlJob("meshDescriptorImportJob")
   public void executeDescriptorImport() {
     String rawParam = XxlJobHelper.getJobParam();
     log.info("MeSH 导入任务已触发，jobId [{}]，参数：{}", XxlJobHelper.getJobId(), rawParam);
@@ -121,7 +121,7 @@ public class MeshImportScheduleJob {
 
   /// 执行 MeSH 限定词导入任务。
   ///
-  /// **JobHandler 名称**: `catalogMeshQualifierImportJob`
+  /// **JobHandler 名称**: `meshQualifierImportJob`
   ///
   /// **参数格式**（JSON）：
   ///
@@ -135,7 +135,7 @@ public class MeshImportScheduleJob {
   /// **导入模式**：
   ///
   /// 限定词仅支持 TRUNCATE_REIMPORT 模式，每次导入前会清空所有现有数据。
-  @XxlJob("catalogMeshQualifierImportJob")
+  @XxlJob("meshQualifierImportJob")
   public void executeQualifierImport() {
     String rawParam = XxlJobHelper.getJobParam();
     log.info("MeSH 限定词导入任务已触发，jobId [{}]，参数：{}", XxlJobHelper.getJobId(), rawParam);
