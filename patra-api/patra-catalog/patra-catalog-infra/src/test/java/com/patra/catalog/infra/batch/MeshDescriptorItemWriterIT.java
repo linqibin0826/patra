@@ -9,14 +9,17 @@ import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
 import com.patra.catalog.domain.model.enums.DescriptorClass;
 import com.patra.catalog.domain.model.enums.LexicalTag;
+import com.patra.catalog.domain.model.vo.mesh.EntryCombination;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.infra.persistence.converter.MeshDescriptorConverter;
 import com.patra.catalog.infra.persistence.entity.MeshConceptDO;
 import com.patra.catalog.infra.persistence.entity.MeshDescriptorDO;
+import com.patra.catalog.infra.persistence.entity.MeshEntryCombinationDO;
 import com.patra.catalog.infra.persistence.entity.MeshEntryTermDO;
 import com.patra.catalog.infra.persistence.entity.MeshTreeNumberDO;
 import com.patra.catalog.infra.persistence.mapper.MeshConceptMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshDescriptorMapper;
+import com.patra.catalog.infra.persistence.mapper.MeshEntryCombinationMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshEntryTermMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshTreeNumberMapper;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
@@ -74,6 +77,7 @@ class MeshDescriptorItemWriterIT {
   @Autowired private MeshTreeNumberMapper treeNumberMapper;
   @Autowired private MeshConceptMapper conceptMapper;
   @Autowired private MeshEntryTermMapper entryTermMapper;
+  @Autowired private MeshEntryCombinationMapper entryCombinationMapper;
 
   @Test
   @DisplayName("write() 空 Chunk - 应该不抛出异常，直接返回")
@@ -135,6 +139,31 @@ class MeshDescriptorItemWriterIT {
     assertThat(entryTerms)
         .extracting(MeshEntryTermDO::getTerm)
         .containsExactlyInAnyOrder("Synonym 1", "Synonym 2");
+
+    // Then: 验证 EntryCombination 子表
+    long entryCombinationCount = entryCombinationMapper.selectCount(null);
+    assertThat(entryCombinationCount).isEqualTo(2);
+
+    List<MeshEntryCombinationDO> entryCombinations = entryCombinationMapper.selectList(null);
+    // 验证第一个 EntryCombination（有 ECOUT Qualifier）
+    MeshEntryCombinationDO ec1 =
+        entryCombinations.stream()
+            .filter(ec -> ec.getEcinQualifierUi().equals("Q000188"))
+            .findFirst()
+            .orElseThrow();
+    assertThat(ec1.getEcinDescriptorUi()).isEqualTo("D000001");
+    assertThat(ec1.getEcoutDescriptorUi()).isEqualTo("D000101");
+    assertThat(ec1.getEcoutQualifierUi()).isEqualTo("Q000628");
+
+    // 验证第二个 EntryCombination（无 ECOUT Qualifier）
+    MeshEntryCombinationDO ec2 =
+        entryCombinations.stream()
+            .filter(ec -> ec.getEcinQualifierUi().equals("Q000175"))
+            .findFirst()
+            .orElseThrow();
+    assertThat(ec2.getEcinDescriptorUi()).isEqualTo("D000001");
+    assertThat(ec2.getEcoutDescriptorUi()).isEqualTo("D000201");
+    assertThat(ec2.getEcoutQualifierUi()).isNull();
   }
 
   @Test
@@ -169,6 +198,10 @@ class MeshDescriptorItemWriterIT {
     // Then: 验证子表数据（每个 Descriptor 2 个 EntryTerm）
     long entryTermCount = entryTermMapper.selectCount(null);
     assertThat(entryTermCount).isEqualTo(6);
+
+    // Then: 验证子表数据（每个 Descriptor 2 个 EntryCombination）
+    long entryCombinationCount = entryCombinationMapper.selectCount(null);
+    assertThat(entryCombinationCount).isEqualTo(6);
   }
 
   @Test
@@ -197,12 +230,15 @@ class MeshDescriptorItemWriterIT {
     long treeNumberCount = treeNumberMapper.selectCount(null);
     assertThat(treeNumberCount).isEqualTo(1);
 
-    // Then: 验证无 Concept 和 EntryTerm
+    // Then: 验证无 Concept 和 EntryTerm 和 EntryCombination
     long conceptCount = conceptMapper.selectCount(null);
     assertThat(conceptCount).isEqualTo(0);
 
     long entryTermCount = entryTermMapper.selectCount(null);
     assertThat(entryTermCount).isEqualTo(0);
+
+    long entryCombinationCount = entryCombinationMapper.selectCount(null);
+    assertThat(entryCombinationCount).isEqualTo(0);
   }
 
   @Test
@@ -230,6 +266,9 @@ class MeshDescriptorItemWriterIT {
 
     List<MeshEntryTermDO> entryTerms = entryTermMapper.selectList(null);
     assertThat(entryTerms).allMatch(et -> et.getDescriptorId().equals(descriptorId));
+
+    List<MeshEntryCombinationDO> entryCombinations = entryCombinationMapper.selectList(null);
+    assertThat(entryCombinations).allMatch(ec -> ec.getDescriptorId().equals(descriptorId));
   }
 
   /// 创建测试用 MeshDescriptorAggregate。
@@ -278,6 +317,19 @@ class MeshDescriptorItemWriterIT {
             true,
             false,
             false));
+
+    // 添加 EntryCombination（每个 Descriptor 2 个）
+    descriptor.addEntryCombination(
+        EntryCombination.of(
+            MeshUI.descriptorOf(index),
+            MeshUI.qualifierOf(188),
+            MeshUI.descriptorOf(index + 100),
+            MeshUI.qualifierOf(628)));
+    descriptor.addEntryCombination(
+        EntryCombination.of(
+            MeshUI.descriptorOf(index),
+            MeshUI.qualifierOf(175),
+            MeshUI.descriptorOf(index + 200)));
 
     return descriptor;
   }

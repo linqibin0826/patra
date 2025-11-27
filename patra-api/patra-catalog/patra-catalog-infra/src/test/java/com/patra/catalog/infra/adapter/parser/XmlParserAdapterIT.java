@@ -7,6 +7,7 @@ import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
+import com.patra.catalog.domain.model.vo.mesh.EntryCombination;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
@@ -264,6 +265,51 @@ class XmlParserAdapterIT {
         assertThat(descriptor1.getAllowableQualifiers().get(0).qualifierUi().ui())
             .isEqualTo("Q000001");
         assertThat(descriptor1.getAllowableQualifiers().get(0).abbreviation()).isEqualTo("TQ");
+      }
+    }
+  }
+
+  @Nested
+  @DisplayName("parseDescriptors() - EntryCombination 测试")
+  class ParseDescriptorsEntryCombinationTest {
+
+    @Test
+    @DisplayName("解析主题词 - 应该正确解析 EntryCombinationList")
+    void parseDescriptors_shouldParseEntryCombinationsCorrectly() throws IOException {
+      // Given
+      try (InputStream inputStream = getClass().getResourceAsStream(TEST_DESCRIPTORS_RESOURCE)) {
+        assertThat(inputStream).isNotNull();
+
+        // When
+        List<MeshDescriptorAggregate> descriptors;
+        try (Stream<MeshDescriptorAggregate> stream =
+            xmlParser.parseDescriptors(inputStream, TEST_MESH_VERSION)) {
+          descriptors = stream.toList();
+        }
+
+        // Then: 第一个主题词有 2 个组合条目
+        MeshDescriptorAggregate descriptor1 = descriptors.get(0);
+        assertThat(descriptor1.getEntryCombinations()).hasSize(2);
+
+        // 验证第一个 EntryCombination（有 ECOUT Qualifier）
+        EntryCombination combination1 = descriptor1.getEntryCombinations().get(0);
+        assertThat(combination1.ecinDescriptorUi().ui()).isEqualTo("D000001");
+        assertThat(combination1.ecinQualifierUi().ui()).isEqualTo("Q000188");
+        assertThat(combination1.ecoutDescriptorUi().ui()).isEqualTo("D000002");
+        assertThat(combination1.ecoutQualifierUi().ui()).isEqualTo("Q000628");
+        assertThat(combination1.hasEcoutQualifier()).isTrue();
+
+        // 验证第二个 EntryCombination（无 ECOUT Qualifier）
+        EntryCombination combination2 = descriptor1.getEntryCombinations().get(1);
+        assertThat(combination2.ecinDescriptorUi().ui()).isEqualTo("D000001");
+        assertThat(combination2.ecinQualifierUi().ui()).isEqualTo("Q000175");
+        assertThat(combination2.ecoutDescriptorUi().ui()).isEqualTo("D000003");
+        assertThat(combination2.ecoutQualifierUi()).isNull();
+        assertThat(combination2.hasEcoutQualifier()).isFalse();
+
+        // 第二个主题词没有组合条目
+        MeshDescriptorAggregate descriptor2 = descriptors.get(1);
+        assertThat(descriptor2.getEntryCombinations()).isEmpty();
       }
     }
   }

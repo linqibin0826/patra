@@ -8,6 +8,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import lombok.Getter;
 
 /// MeSH 入口术语实体(Aggregate内实体,不是聚合根)。
@@ -374,7 +375,7 @@ public class MeshEntryTerm implements Serializable {
     if (!(o instanceof MeshEntryTerm that)) {
       return false;
     }
-    return term.equals(that.term) && descriptorId.equals(that.descriptorId);
+    return term.equals(that.term) && Objects.equals(descriptorId, that.descriptorId);
   }
 
   @Override
