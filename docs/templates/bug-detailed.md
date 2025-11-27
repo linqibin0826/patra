@@ -1,0 +1,55 @@
+---
+id: BUG-{{date:YYYY}}-
+date: {{date:YYYY-MM-DD}}
+severity: high
+status: open
+tags: [bug, root-cause-analysis]
+resolved_at:
+time_spent:
+module:
+---
+
+# {{title}}
+
+## 问题现象
+
+
+## 重现步骤
+1.
+2.
+3.
+
+## 环境
+- Spring Boot: 3.5.7
+- MyBatis-Plus: 3.5.8
+- Java: 25
+
+## 根因分析（Five Whys）
+
+| # | 问题 | 答案 |
+|---|------|------|
+| 1 | 为什么...？ |  |
+| 2 | 为什么...？ |  |
+| 3 | 为什么...？ |  |
+| 4 | **根因** |  |
+
+## 解决方案
+
+### 即时修复
+
+```java
+// 修复代码
+```
+
+### 长期改进
+- [ ]
+- [ ]
+
+## 经验教训
+- ✅ 学到:
+- ⚠️ 改进:
+
+## 相关资源
+- commit: ``
+- 参考: [[]]
+- 文档:
