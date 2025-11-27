@@ -2,7 +2,9 @@ package com.patra.catalog.infra.persistence.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.patra.starter.mybatis.entity.BaseDO;
+import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -53,13 +55,21 @@ public class MeshConceptDO extends BaseDO {
   @TableField("casn1_name")
   private String casn1Name;
 
-  /// 注册号（如 CAS 号，EC 号）
-  @TableField("registry_number")
-  private String registryNumber;
+  /// 注册号列表（如 CAS 号，EC 号，2025 DTD 支持多个）
+  @TableField(value = "registry_numbers", typeHandler = JacksonTypeHandler.class)
+  private List<String> registryNumbers;
 
   /// 范围说明
   @TableField("scope_note")
   private String scopeNote;
+
+  /// 翻译者英文范围说明
+  @TableField("translators_english_scope_note")
+  private String translatorsEnglishScopeNote;
+
+  /// 翻译者范围说明
+  @TableField("translators_scope_note")
+  private String translatorsScopeNote;
 
   /// 概念状态（枚举值）
   @TableField("concept_status")

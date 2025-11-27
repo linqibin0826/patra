@@ -5,10 +5,12 @@ import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.infra.persistence.converter.MeshDescriptorConverter;
 import com.patra.catalog.infra.persistence.entity.MeshConceptDO;
 import com.patra.catalog.infra.persistence.entity.MeshDescriptorDO;
+import com.patra.catalog.infra.persistence.entity.MeshEntryCombinationDO;
 import com.patra.catalog.infra.persistence.entity.MeshEntryTermDO;
 import com.patra.catalog.infra.persistence.entity.MeshTreeNumberDO;
 import com.patra.catalog.infra.persistence.mapper.MeshConceptMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshDescriptorMapper;
+import com.patra.catalog.infra.persistence.mapper.MeshEntryCombinationMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshEntryTermMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshTreeNumberMapper;
 import java.util.ArrayList;
@@ -33,6 +35,7 @@ import org.springframework.stereotype.Component;
 /// 2. 批量 INSERT TreeNumber 子表
 /// 3. 批量 INSERT Concept 子表
 /// 4. 批量 INSERT EntryTerm 子表
+/// 5. 批量 INSERT EntryCombination 子表
 ///
 /// **性能优化**：
 ///
@@ -51,6 +54,7 @@ public class MeshDescriptorItemWriter implements ItemWriter<MeshDescriptorAggreg
   private final MeshTreeNumberMapper treeNumberMapper;
   private final MeshConceptMapper conceptMapper;
   private final MeshEntryTermMapper entryTermMapper;
+  private final MeshEntryCombinationMapper entryCombinationMapper;
   private final MeshDescriptorConverter converter;
 
   @Override
@@ -74,6 +78,7 @@ public class MeshDescriptorItemWriter implements ItemWriter<MeshDescriptorAggreg
     List<MeshTreeNumberDO> treeNumberDOs = new ArrayList<>();
     List<MeshConceptDO> conceptDOs = new ArrayList<>();
     List<MeshEntryTermDO> entryTermDOs = new ArrayList<>();
+    List<MeshEntryCombinationDO> entryCombinationDOs = new ArrayList<>();
 
     for (int i = 0; i < items.size(); i++) {
       MeshDescriptorAggregate aggregate = items.get(i);
@@ -99,6 +104,13 @@ public class MeshDescriptorItemWriter implements ItemWriter<MeshDescriptorAggreg
         entryTermDO.setId(IdWorker.getId());
         entryTermDOs.add(entryTermDO);
       });
+
+      // EntryCombination
+      aggregate.getEntryCombinations().forEach(ec -> {
+        MeshEntryCombinationDO entryCombinationDO = converter.toEntryCombinationDO(ec, descriptorId);
+        entryCombinationDO.setId(IdWorker.getId());
+        entryCombinationDOs.add(entryCombinationDO);
+      });
     }
 
     // 3. 批量 INSERT（单条 SQL 语句）
@@ -113,12 +125,16 @@ public class MeshDescriptorItemWriter implements ItemWriter<MeshDescriptorAggreg
     if (!entryTermDOs.isEmpty()) {
       entryTermMapper.insertBatch(entryTermDOs);
     }
+    if (!entryCombinationDOs.isEmpty()) {
+      entryCombinationMapper.insertBatch(entryCombinationDOs);
+    }
 
     log.debug(
-        "写入完成：Descriptor={}, TreeNumber={}, Concept={}, EntryTerm={}",
+        "写入完成：Descriptor={}, TreeNumber={}, Concept={}, EntryTerm={}, EntryCombination={}",
         descriptorDOs.size(),
         treeNumberDOs.size(),
         conceptDOs.size(),
-        entryTermDOs.size());
+        entryTermDOs.size(),
+        entryCombinationDOs.size());
   }
 }

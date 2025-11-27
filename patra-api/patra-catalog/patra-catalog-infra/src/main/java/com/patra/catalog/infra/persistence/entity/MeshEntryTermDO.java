@@ -2,7 +2,9 @@ package com.patra.catalog.infra.persistence.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.patra.starter.mybatis.entity.BaseDO;
+import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -33,6 +35,14 @@ public class MeshEntryTermDO extends BaseDO {
   @TableField("descriptor_id")
   private Long descriptorId;
 
+  /// 术语唯一标识符（格式：T000001-T999999）
+  @TableField("term_ui")
+  private String termUi;
+
+  /// 所属概念 UI（格式：M000001-M999999）
+  @TableField("concept_ui")
+  private String conceptUi;
+
   /// 入口术语/同义词
   @TableField("term")
   private String term;
@@ -52,4 +62,32 @@ public class MeshEntryTermDO extends BaseDO {
   /// 是否排列术语（0=否，1=是）
   @TableField("is_permuted_term")
   private Boolean isPermutedTerm;
+
+  /// 是否概念首选术语（0=否，1=是）
+  @TableField("is_concept_preferred")
+  private Boolean isConceptPreferred;
+
+  /// 术语缩写
+  @TableField("abbreviation")
+  private String abbreviation;
+
+  /// 排序版本
+  @TableField("sort_version")
+  private String sortVersion;
+
+  /// 入口版本
+  @TableField("entry_version")
+  private String entryVersion;
+
+  /// 术语说明
+  @TableField("term_note")
+  private String termNote;
+
+  /// 创建日期（格式：YYYYMMDD）
+  @TableField("date_created")
+  private String dateCreated;
+
+  /// 来源词库 ID 列表（JSON 数组）
+  @TableField(value = "thesaurus_ids", typeHandler = JacksonTypeHandler.class)
+  private List<String> thesaurusIds;
 }

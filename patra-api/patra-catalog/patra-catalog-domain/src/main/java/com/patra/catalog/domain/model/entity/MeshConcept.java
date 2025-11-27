@@ -74,11 +74,17 @@ public class MeshConcept implements Serializable {
   /// CAS 类型 1 名称(化学物质专用)
   private String casn1Name;
 
-  /// 注册号(如 CAS 号,EC 号)
-  private String registryNumber;
+  /// 注册号列表(如 CAS 号,EC 号,2025 DTD 支持多个)
+  private final List<String> registryNumbers;
 
   /// 范围说明
   private String scopeNote;
+
+  /// 翻译者英文范围说明
+  private String translatorsEnglishScopeNote;
+
+  /// 翻译者范围说明
+  private String translatorsScopeNote;
 
   /// 概念状态
   private String conceptStatus;
@@ -116,6 +122,7 @@ public class MeshConcept implements Serializable {
     this.isPreferred = isPreferred;
 
     // 初始化集合
+    this.registryNumbers = new ArrayList<>();
     this.relatedRegistryNumbers = new ArrayList<>();
     this.conceptRelations = new ArrayList<>();
   }
@@ -152,8 +159,10 @@ public class MeshConcept implements Serializable {
   /// @param conceptName 概念名称
   /// @param isPreferred 是否首选概念
   /// @param casn1Name CAS类型1名称
-  /// @param registryNumber 注册号
+  /// @param registryNumbers 注册号列表
   /// @param scopeNote 范围说明
+  /// @param translatorsEnglishScopeNote 翻译者英文范围说明
+  /// @param translatorsScopeNote 翻译者范围说明
   /// @param conceptStatus 概念状态
   /// @return 重建的实体
   public static MeshConcept restore(
@@ -163,13 +172,19 @@ public class MeshConcept implements Serializable {
       String conceptName,
       boolean isPreferred,
       String casn1Name,
-      String registryNumber,
+      List<String> registryNumbers,
       String scopeNote,
+      String translatorsEnglishScopeNote,
+      String translatorsScopeNote,
       String conceptStatus) {
     MeshConcept concept = new MeshConcept(id, descriptorId, conceptUi, conceptName, isPreferred);
     concept.casn1Name = casn1Name;
-    concept.registryNumber = registryNumber;
+    if (registryNumbers != null) {
+      concept.registryNumbers.addAll(registryNumbers);
+    }
     concept.scopeNote = scopeNote;
+    concept.translatorsEnglishScopeNote = translatorsEnglishScopeNote;
+    concept.translatorsScopeNote = translatorsScopeNote;
     concept.conceptStatus = conceptStatus;
     return concept;
   }
@@ -192,16 +207,41 @@ public class MeshConcept implements Serializable {
     return this;
   }
 
-  /// 设置注册号。
+  /// 添加注册号。
   ///
   /// @param registryNumber 注册号
   /// @return 当前对象(支持链式调用)
-  public MeshConcept withRegistryNumber(String registryNumber) {
-    if (StrUtil.isNotBlank(registryNumber)) {
+  public MeshConcept addRegistryNumber(String registryNumber) {
+    if (StrUtil.isNotBlank(registryNumber) && !registryNumbers.contains(registryNumber)) {
       Assert.isTrue(registryNumber.length() <= 50, "注册号长度不能超过50个字符：%s", registryNumber);
+      registryNumbers.add(registryNumber);
     }
-    this.registryNumber = registryNumber;
     return this;
+  }
+
+  /// 批量添加注册号。
+  ///
+  /// @param registryNumberList 注册号列表
+  /// @return 当前对象(支持链式调用)
+  public MeshConcept addRegistryNumbers(List<String> registryNumberList) {
+    if (registryNumberList != null && !registryNumberList.isEmpty()) {
+      registryNumberList.forEach(this::addRegistryNumber);
+    }
+    return this;
+  }
+
+  /// 获取注册号列表(不可变视图)。
+  ///
+  /// @return 注册号列表
+  public List<String> getRegistryNumbers() {
+    return Collections.unmodifiableList(registryNumbers);
+  }
+
+  /// 获取第一个注册号(向后兼容)。
+  ///
+  /// @return 第一个注册号,如果不存在则返回null
+  public String getFirstRegistryNumber() {
+    return registryNumbers.isEmpty() ? null : registryNumbers.get(0);
   }
 
   /// 设置范围说明。
@@ -222,11 +262,29 @@ public class MeshConcept implements Serializable {
     return this;
   }
 
+  /// 设置翻译者英文范围说明。
+  ///
+  /// @param translatorsEnglishScopeNote 翻译者英文范围说明
+  /// @return 当前对象(支持链式调用)
+  public MeshConcept withTranslatorsEnglishScopeNote(String translatorsEnglishScopeNote) {
+    this.translatorsEnglishScopeNote = translatorsEnglishScopeNote;
+    return this;
+  }
+
+  /// 设置翻译者范围说明。
+  ///
+  /// @param translatorsScopeNote 翻译者范围说明
+  /// @return 当前对象(支持链式调用)
+  public MeshConcept withTranslatorsScopeNote(String translatorsScopeNote) {
+    this.translatorsScopeNote = translatorsScopeNote;
+    return this;
+  }
+
   /// 判断是否为化学物质概念。
   ///
   /// @return true 如果有注册号
   public boolean isChemicalConcept() {
-    return StrUtil.isNotBlank(registryNumber);
+    return !registryNumbers.isEmpty();
   }
 
   /// 判断是否有范围说明。

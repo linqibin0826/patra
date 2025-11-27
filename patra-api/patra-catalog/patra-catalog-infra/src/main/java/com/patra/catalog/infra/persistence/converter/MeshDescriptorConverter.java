@@ -4,10 +4,14 @@ import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
+import com.patra.catalog.domain.model.vo.mesh.EntryCombination;
 import com.patra.catalog.infra.persistence.entity.MeshConceptDO;
 import com.patra.catalog.infra.persistence.entity.MeshDescriptorDO;
+import com.patra.catalog.infra.persistence.entity.MeshEntryCombinationDO;
 import com.patra.catalog.infra.persistence.entity.MeshEntryTermDO;
 import com.patra.catalog.infra.persistence.entity.MeshTreeNumberDO;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -49,6 +53,9 @@ public class MeshDescriptorConverter {
     dataObject.setDateEstablished(aggregate.getDateEstablished());
     dataObject.setActiveStatus(aggregate.isActiveStatus());
     dataObject.setMeshVersion(aggregate.getMeshVersion());
+    dataObject.setHistoryNote(aggregate.getHistoryNote());
+    dataObject.setOnlineNote(aggregate.getOnlineNote());
+    dataObject.setNlmClassificationNumber(aggregate.getNlmClassificationNumber());
 
     return dataObject;
   }
@@ -88,8 +95,10 @@ public class MeshDescriptorConverter {
     dataObject.setConceptName(concept.getConceptName());
     dataObject.setIsPreferred(concept.isPreferred());
     dataObject.setCasn1Name(concept.getCasn1Name());
-    dataObject.setRegistryNumber(concept.getRegistryNumber());
+    dataObject.setRegistryNumbers(concept.getRegistryNumbers());
     dataObject.setScopeNote(concept.getScopeNote());
+    dataObject.setTranslatorsEnglishScopeNote(concept.getTranslatorsEnglishScopeNote());
+    dataObject.setTranslatorsScopeNote(concept.getTranslatorsScopeNote());
     dataObject.setConceptStatus(concept.getConceptStatus());
 
     return dataObject;
@@ -107,12 +116,48 @@ public class MeshDescriptorConverter {
 
     MeshEntryTermDO dataObject = new MeshEntryTermDO();
     dataObject.setDescriptorId(descriptorId);
+    dataObject.setTermUi(entryTerm.getTermUi() != null ? entryTerm.getTermUi().ui() : null);
+    dataObject.setConceptUi(entryTerm.getConceptUi() != null ? entryTerm.getConceptUi().ui() : null);
     dataObject.setTerm(entryTerm.getTerm());
     dataObject.setLexicalTag(
         entryTerm.getLexicalTag() != null ? entryTerm.getLexicalTag().getCode() : null);
     dataObject.setIsPrintFlag(entryTerm.isPrintFlag());
     dataObject.setRecordPreferred(entryTerm.isRecordPreferred() ? "Y" : "N");
     dataObject.setIsPermutedTerm(entryTerm.isPermutedTerm());
+    dataObject.setIsConceptPreferred(entryTerm.isConceptPreferred());
+    dataObject.setAbbreviation(entryTerm.getAbbreviation());
+    dataObject.setSortVersion(entryTerm.getSortVersion());
+    dataObject.setEntryVersion(entryTerm.getEntryVersion());
+    dataObject.setTermNote(entryTerm.getTermNote());
+    dataObject.setDateCreated(entryTerm.getDateCreated());
+    dataObject.setThesaurusIds(entryTerm.getThesaurusIds());
+
+    return dataObject;
+  }
+
+  /// 将组合条目值对象转换为 DO。
+  ///
+  /// @param entryCombination 组合条目值对象
+  /// @param descriptorId 主题词 ID（外键）
+  /// @return 组合条目 DO
+  public MeshEntryCombinationDO toEntryCombinationDO(
+      EntryCombination entryCombination, Long descriptorId) {
+    if (entryCombination == null) {
+      return null;
+    }
+
+    MeshEntryCombinationDO dataObject = new MeshEntryCombinationDO();
+    dataObject.setDescriptorId(descriptorId);
+    dataObject.setEcinDescriptorUi(entryCombination.ecinDescriptorUi().ui());
+    dataObject.setEcinQualifierUi(
+        entryCombination.ecinQualifierUi() != null
+            ? entryCombination.ecinQualifierUi().ui()
+            : null);
+    dataObject.setEcoutDescriptorUi(entryCombination.ecoutDescriptorUi().ui());
+    dataObject.setEcoutQualifierUi(
+        entryCombination.ecoutQualifierUi() != null
+            ? entryCombination.ecoutQualifierUi().ui()
+            : null);
 
     return dataObject;
   }

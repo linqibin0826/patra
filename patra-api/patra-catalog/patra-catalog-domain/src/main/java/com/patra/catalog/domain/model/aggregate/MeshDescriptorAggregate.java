@@ -7,6 +7,7 @@ import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
 import com.patra.catalog.domain.model.enums.DescriptorClass;
 import com.patra.catalog.domain.model.vo.mesh.AllowableQualifier;
+import com.patra.catalog.domain.model.vo.mesh.EntryCombination;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
 import com.patra.catalog.domain.model.vo.mesh.SeeRelatedDescriptor;
@@ -129,6 +130,9 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
   /// 相关主题词列表(See Related,约 0.2 个/主题词)
   private final List<SeeRelatedDescriptor> seeRelatedDescriptors;
 
+  /// 组合条目列表(EntryCombinationList,约 0.1 个/主题词)
+  private final List<EntryCombination> entryCombinations;
+
   // ========== 扩展字段 ==========
 
   /// 元数据(JSON,灵活扩展)
@@ -177,6 +181,7 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
     this.pharmacologicalActions = new ArrayList<>();
     this.previousIndexings = new ArrayList<>();
     this.seeRelatedDescriptors = new ArrayList<>();
+    this.entryCombinations = new ArrayList<>();
   }
 
   // ========== 工厂方法 ==========
@@ -592,6 +597,48 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
   /// @return 相关主题词列表
   public List<SeeRelatedDescriptor> getSeeRelatedDescriptors() {
     return Collections.unmodifiableList(seeRelatedDescriptors);
+  }
+
+  // ========== 组合条目管理 ==========
+
+  /// 添加组合条目。
+  ///
+  /// @param entryCombination 组合条目
+  /// @return 当前聚合根(支持链式调用)
+  public MeshDescriptorAggregate addEntryCombination(EntryCombination entryCombination) {
+    Assert.notNull(entryCombination, "组合条目不能为空");
+
+    // 检查是否已存在相同的组合条目
+    boolean exists =
+        entryCombinations.stream()
+            .anyMatch(
+                ec ->
+                    ec.ecinDescriptorUi().equals(entryCombination.ecinDescriptorUi())
+                        && ec.ecinQualifierUi().equals(entryCombination.ecinQualifierUi()));
+
+    if (!exists) {
+      entryCombinations.add(entryCombination);
+    }
+
+    return this;
+  }
+
+  /// 批量添加组合条目。
+  ///
+  /// @param entryCombinationList 组合条目列表
+  /// @return 当前聚合根(支持链式调用)
+  public MeshDescriptorAggregate addEntryCombinations(List<EntryCombination> entryCombinationList) {
+    if (entryCombinationList != null && !entryCombinationList.isEmpty()) {
+      entryCombinationList.forEach(this::addEntryCombination);
+    }
+    return this;
+  }
+
+  /// 获取组合条目列表(不可变视图)。
+  ///
+  /// @return 组合条目列表
+  public List<EntryCombination> getEntryCombinations() {
+    return Collections.unmodifiableList(entryCombinations);
   }
 
   // ========== 便捷判断方法 ==========

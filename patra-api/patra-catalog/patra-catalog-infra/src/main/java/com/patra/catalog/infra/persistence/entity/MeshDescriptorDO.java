@@ -66,6 +66,18 @@ public class MeshDescriptorDO extends BaseDO {
   @TableField("consider_also")
   private String considerAlso;
 
+  /// 历史说明（记录主题词的历史使用规则）
+  @TableField("history_note")
+  private String historyNote;
+
+  /// 在线检索说明（检索策略指南）
+  @TableField("online_note")
+  private String onlineNote;
+
+  /// NLM 分类号
+  @TableField("nlm_classification_number")
+  private String nlmClassificationNumber;
+
   /// 创建日期（格式：YYYYMMDD，如 20230115）
   @TableField("date_created")
   private String dateCreated;

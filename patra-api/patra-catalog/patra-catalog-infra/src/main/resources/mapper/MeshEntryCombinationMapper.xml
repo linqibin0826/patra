@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.patra.catalog.infra.persistence.mapper.MeshEntryCombinationMapper">
+
+  <update id="truncateTable">
+    TRUNCATE TABLE cat_mesh_entry_combination
+  </update>
+
+  <!-- 批量插入组合条目（单条 SQL 语句，多行值） -->
+  <insert id="insertBatch">
+    INSERT INTO cat_mesh_entry_combination (
+      id, descriptor_id, ecin_descriptor_ui, ecin_qualifier_ui,
+      ecout_descriptor_ui, ecout_qualifier_ui,
+      version, created_at, updated_at, deleted
+    ) VALUES
+    <foreach collection="list" item="item" separator=",">
+      (
+        #{item.id},
+        #{item.descriptorId},
+        #{item.ecinDescriptorUi},
+        #{item.ecinQualifierUi},
+        #{item.ecoutDescriptorUi},
+        #{item.ecoutQualifierUi},
+        0,
+        NOW(6),
+        NOW(6),
+        0
+      )
+    </foreach>
+  </insert>
+
+</mapper>
