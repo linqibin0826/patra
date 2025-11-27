@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.patra.catalog.infra.persistence.mapper.MeshConceptRelationMapper">
+
+  <update id="truncateTable">
+    TRUNCATE TABLE cat_mesh_concept_relation
+  </update>
+
+  <!-- 批量插入概念关系（单条 SQL 语句，多行值） -->
+  <insert id="insertBatch">
+    INSERT INTO cat_mesh_concept_relation (
+      id, descriptor_id, concept_ui, is_preferred,
+      relation_name, concept1_ui, concept2_ui,
+      version, created_at, updated_at, deleted
+    ) VALUES
+    <foreach collection="list" item="item" separator=",">
+      (
+        #{item.id},
+        #{item.descriptorId},
+        #{item.conceptUi},
+        #{item.isPreferred},
+        #{item.relationName},
+        #{item.concept1Ui},
+        #{item.concept2Ui},
+        0,
+        NOW(6),
+        NOW(6),
+        0
+      )
+    </foreach>
+  </insert>
+
+</mapper>

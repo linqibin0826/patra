@@ -4,11 +4,13 @@ import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.infra.persistence.converter.MeshDescriptorConverter;
 import com.patra.catalog.infra.persistence.entity.MeshConceptDO;
+import com.patra.catalog.infra.persistence.entity.MeshConceptRelationDO;
 import com.patra.catalog.infra.persistence.entity.MeshDescriptorDO;
 import com.patra.catalog.infra.persistence.entity.MeshEntryCombinationDO;
 import com.patra.catalog.infra.persistence.entity.MeshEntryTermDO;
 import com.patra.catalog.infra.persistence.entity.MeshTreeNumberDO;
 import com.patra.catalog.infra.persistence.mapper.MeshConceptMapper;
+import com.patra.catalog.infra.persistence.mapper.MeshConceptRelationMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshDescriptorMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshEntryCombinationMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshEntryTermMapper;
@@ -34,8 +36,9 @@ import org.springframework.stereotype.Component;
 /// 1. 批量 INSERT Descriptor 主表（预先生成雪花 ID）
 /// 2. 批量 INSERT TreeNumber 子表
 /// 3. 批量 INSERT Concept 子表
-/// 4. 批量 INSERT EntryTerm 子表
-/// 5. 批量 INSERT EntryCombination 子表
+/// 4. 批量 INSERT ConceptRelation 子表
+/// 5. 批量 INSERT EntryTerm 子表
+/// 6. 批量 INSERT EntryCombination 子表
 ///
 /// **性能优化**：
 ///
@@ -53,6 +56,7 @@ public class MeshDescriptorItemWriter implements ItemWriter<MeshDescriptorAggreg
   private final MeshDescriptorMapper descriptorMapper;
   private final MeshTreeNumberMapper treeNumberMapper;
   private final MeshConceptMapper conceptMapper;
+  private final MeshConceptRelationMapper conceptRelationMapper;
   private final MeshEntryTermMapper entryTermMapper;
   private final MeshEntryCombinationMapper entryCombinationMapper;
   private final MeshDescriptorConverter converter;
@@ -77,6 +81,7 @@ public class MeshDescriptorItemWriter implements ItemWriter<MeshDescriptorAggreg
     // 2. 收集子表数据并设置外键和 ID
     List<MeshTreeNumberDO> treeNumberDOs = new ArrayList<>();
     List<MeshConceptDO> conceptDOs = new ArrayList<>();
+    List<MeshConceptRelationDO> conceptRelationDOs = new ArrayList<>();
     List<MeshEntryTermDO> entryTermDOs = new ArrayList<>();
     List<MeshEntryCombinationDO> entryCombinationDOs = new ArrayList<>();
 
@@ -91,11 +96,19 @@ public class MeshDescriptorItemWriter implements ItemWriter<MeshDescriptorAggreg
         treeNumberDOs.add(treeNumberDO);
       });
 
-      // Concept
+      // Concept 和 ConceptRelation
       aggregate.getConcepts().forEach(c -> {
         MeshConceptDO conceptDO = converter.toConceptDO(c, descriptorId);
         conceptDO.setId(IdWorker.getId());
         conceptDOs.add(conceptDO);
+
+        // 收集概念的 ConceptRelation
+        c.getConceptRelations().forEach(cr -> {
+          MeshConceptRelationDO conceptRelationDO =
+              converter.toConceptRelationDO(cr, c.getConceptUi(), c.isPreferred(), descriptorId);
+          conceptRelationDO.setId(IdWorker.getId());
+          conceptRelationDOs.add(conceptRelationDO);
+        });
       });
 
       // EntryTerm
@@ -122,6 +135,9 @@ public class MeshDescriptorItemWriter implements ItemWriter<MeshDescriptorAggreg
     if (!conceptDOs.isEmpty()) {
       conceptMapper.insertBatch(conceptDOs);
     }
+    if (!conceptRelationDOs.isEmpty()) {
+      conceptRelationMapper.insertBatch(conceptRelationDOs);
+    }
     if (!entryTermDOs.isEmpty()) {
       entryTermMapper.insertBatch(entryTermDOs);
     }
@@ -130,10 +146,11 @@ public class MeshDescriptorItemWriter implements ItemWriter<MeshDescriptorAggreg
     }
 
     log.debug(
-        "写入完成：Descriptor={}, TreeNumber={}, Concept={}, EntryTerm={}, EntryCombination={}",
+        "写入完成：Descriptor={}, TreeNumber={}, Concept={}, ConceptRelation={}, EntryTerm={}, EntryCombination={}",
         descriptorDOs.size(),
         treeNumberDOs.size(),
         conceptDOs.size(),
+        conceptRelationDOs.size(),
         entryTermDOs.size(),
         entryCombinationDOs.size());
   }

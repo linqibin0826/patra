@@ -3,7 +3,9 @@ package com.patra.catalog.infra.adapter.persistence;
 import com.patra.catalog.domain.port.MeshDescriptorRepository;
 import com.patra.catalog.infra.persistence.converter.MeshDescriptorConverter;
 import com.patra.catalog.infra.persistence.mapper.MeshConceptMapper;
+import com.patra.catalog.infra.persistence.mapper.MeshConceptRelationMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshDescriptorMapper;
+import com.patra.catalog.infra.persistence.mapper.MeshEntryCombinationMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshEntryTermMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshTreeNumberMapper;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,8 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
   private final MeshTreeNumberMapper meshTreeNumberMapper;
   private final MeshEntryTermMapper meshEntryTermMapper;
   private final MeshConceptMapper meshConceptMapper;
+  private final MeshConceptRelationMapper meshConceptRelationMapper;
+  private final MeshEntryCombinationMapper meshEntryCombinationMapper;
   private final MeshDescriptorConverter meshDescriptorConverter;
 
   @Override
@@ -69,11 +73,17 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
     meshTreeNumberMapper.truncateTable();
     log.debug("已清空 cat_mesh_tree_number 表");
 
+    meshConceptRelationMapper.truncateTable();
+    log.debug("已清空 cat_mesh_concept_relation 表");
+
     meshConceptMapper.truncateTable();
     log.debug("已清空 cat_mesh_concept 表");
 
     meshEntryTermMapper.truncateTable();
     log.debug("已清空 cat_mesh_entry_term 表");
+
+    meshEntryCombinationMapper.truncateTable();
+    log.debug("已清空 cat_mesh_entry_combination 表");
 
     // 最后清空主表
     meshDescriptorMapper.truncateTable();

@@ -9,15 +9,18 @@ import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
 import com.patra.catalog.domain.model.enums.DescriptorClass;
 import com.patra.catalog.domain.model.enums.LexicalTag;
+import com.patra.catalog.domain.model.vo.mesh.ConceptRelation;
 import com.patra.catalog.domain.model.vo.mesh.EntryCombination;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.infra.persistence.converter.MeshDescriptorConverter;
 import com.patra.catalog.infra.persistence.entity.MeshConceptDO;
+import com.patra.catalog.infra.persistence.entity.MeshConceptRelationDO;
 import com.patra.catalog.infra.persistence.entity.MeshDescriptorDO;
 import com.patra.catalog.infra.persistence.entity.MeshEntryCombinationDO;
 import com.patra.catalog.infra.persistence.entity.MeshEntryTermDO;
 import com.patra.catalog.infra.persistence.entity.MeshTreeNumberDO;
 import com.patra.catalog.infra.persistence.mapper.MeshConceptMapper;
+import com.patra.catalog.infra.persistence.mapper.MeshConceptRelationMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshDescriptorMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshEntryCombinationMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshEntryTermMapper;
@@ -76,6 +79,7 @@ class MeshDescriptorItemWriterIT {
   @Autowired private MeshDescriptorMapper descriptorMapper;
   @Autowired private MeshTreeNumberMapper treeNumberMapper;
   @Autowired private MeshConceptMapper conceptMapper;
+  @Autowired private MeshConceptRelationMapper conceptRelationMapper;
   @Autowired private MeshEntryTermMapper entryTermMapper;
   @Autowired private MeshEntryCombinationMapper entryCombinationMapper;
 
@@ -164,6 +168,32 @@ class MeshDescriptorItemWriterIT {
     assertThat(ec2.getEcinDescriptorUi()).isEqualTo("D000001");
     assertThat(ec2.getEcoutDescriptorUi()).isEqualTo("D000201");
     assertThat(ec2.getEcoutQualifierUi()).isNull();
+
+    // Then: 验证 ConceptRelation 子表
+    long conceptRelationCount = conceptRelationMapper.selectCount(null);
+    assertThat(conceptRelationCount).isEqualTo(2);
+
+    List<MeshConceptRelationDO> conceptRelations = conceptRelationMapper.selectList(null);
+    // 验证首选概念的关系（relationName = NRW）
+    MeshConceptRelationDO cr1 =
+        conceptRelations.stream()
+            .filter(cr -> "NRW".equals(cr.getRelationName()))
+            .findFirst()
+            .orElseThrow();
+    assertThat(cr1.getConceptUi()).isEqualTo("M0000001");
+    assertThat(cr1.getIsPreferred()).isTrue();
+    assertThat(cr1.getConcept1Ui()).isEqualTo("M0000001");
+    assertThat(cr1.getConcept2Ui()).isEqualTo("M0000002");
+
+    // 验证 relationName 为 null 的关系
+    MeshConceptRelationDO cr2 =
+        conceptRelations.stream()
+            .filter(cr -> cr.getRelationName() == null)
+            .findFirst()
+            .orElseThrow();
+    assertThat(cr2.getConceptUi()).isEqualTo("M0000001");
+    assertThat(cr2.getConcept1Ui()).isEqualTo("M0000001");
+    assertThat(cr2.getConcept2Ui()).isEqualTo("M0000003");
   }
 
   @Test
@@ -202,6 +232,10 @@ class MeshDescriptorItemWriterIT {
     // Then: 验证子表数据（每个 Descriptor 2 个 EntryCombination）
     long entryCombinationCount = entryCombinationMapper.selectCount(null);
     assertThat(entryCombinationCount).isEqualTo(6);
+
+    // Then: 验证子表数据（每个 Descriptor 2 个 ConceptRelation）
+    long conceptRelationCount = conceptRelationMapper.selectCount(null);
+    assertThat(conceptRelationCount).isEqualTo(6);
   }
 
   @Test
@@ -230,9 +264,12 @@ class MeshDescriptorItemWriterIT {
     long treeNumberCount = treeNumberMapper.selectCount(null);
     assertThat(treeNumberCount).isEqualTo(1);
 
-    // Then: 验证无 Concept 和 EntryTerm 和 EntryCombination
+    // Then: 验证无 Concept、ConceptRelation、EntryTerm 和 EntryCombination
     long conceptCount = conceptMapper.selectCount(null);
     assertThat(conceptCount).isEqualTo(0);
+
+    long conceptRelationCount = conceptRelationMapper.selectCount(null);
+    assertThat(conceptRelationCount).isEqualTo(0);
 
     long entryTermCount = entryTermMapper.selectCount(null);
     assertThat(entryTermCount).isEqualTo(0);
@@ -269,6 +306,9 @@ class MeshDescriptorItemWriterIT {
 
     List<MeshEntryCombinationDO> entryCombinations = entryCombinationMapper.selectList(null);
     assertThat(entryCombinations).allMatch(ec -> ec.getDescriptorId().equals(descriptorId));
+
+    List<MeshConceptRelationDO> conceptRelations = conceptRelationMapper.selectList(null);
+    assertThat(conceptRelations).allMatch(cr -> cr.getDescriptorId().equals(descriptorId));
   }
 
   /// 创建测试用 MeshDescriptorAggregate。
@@ -293,10 +333,21 @@ class MeshDescriptorItemWriterIT {
     descriptor.addTreeNumber(
         MeshTreeNumber.create(String.format("D%02d.00%d", index, 1), false));
 
-    // 添加 Concept（每个 Descriptor 1 个首选概念）
-    descriptor.addConcept(
+    // 添加 Concept（每个 Descriptor 1 个首选概念，包含 2 个 ConceptRelation）
+    MeshConcept concept =
         MeshConcept.create(MeshUI.conceptOf(index), "Concept " + index, true)
-            .withScopeNote("Concept scope note " + index));
+            .withScopeNote("Concept scope note " + index)
+            .addConceptRelation(
+                ConceptRelation.of(
+                    ConceptRelation.NRW,
+                    MeshUI.conceptOf(index),
+                    MeshUI.conceptOf(index + 1)))
+            .addConceptRelation(
+                ConceptRelation.ofNullable(
+                    MeshUI.conceptOf(index),
+                    MeshUI.conceptOf(index + 2),
+                    null));
+    descriptor.addConcept(concept);
 
     // 添加 EntryTerm（每个 Descriptor 2 个）
     descriptor.addEntryTerm(
