@@ -56,16 +56,16 @@ class MeshImportScheduleJobTest {
       try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
         // Given
         String jsonParam =
-            "{\"url\":\"https://nlmpubs.nlm.nih.gov/projects/mesh/2025/desc2025.xml\",\"meshVersion\":\"2025\",\"mode\":\"INCREMENTAL\"}";
+            "{\"url\":\"https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml\",\"meshVersion\":\"2025\",\"mode\":\"INCREMENTAL\"}";
         MeshDescriptorImportJobParam param =
             new MeshDescriptorImportJobParam(
-                "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/desc2025.xml",
+                "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
                 "2025",
                 "INCREMENTAL");
         MeshDescriptorImportResult result =
             MeshDescriptorImportResult.success(
                 1001L,
-                "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/desc2025.xml",
+                "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
                 "/tmp/mesh-import-12345.xml",
                 "2025",
                 MeshDescriptorImportMode.INCREMENTAL);
@@ -348,13 +348,13 @@ class MeshImportScheduleJobTest {
       try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
         // Given
         String jsonParam =
-            "{\"url\":\"https://nlmpubs.nlm.nih.gov/projects/mesh/2025/qual2025.xml\",\"meshVersion\":\"2025\"}";
+            "{\"url\":\"https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml\",\"meshVersion\":\"2025\"}";
         MeshQualifierImportJobParam param =
             new MeshQualifierImportJobParam(
-                "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/qual2025.xml", "2025");
+                "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml", "2025");
         MeshQualifierImportResult result =
             MeshQualifierImportResult.success(
-                "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/qual2025.xml", "2025", 80);
+                "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml", "2025", 80);
 
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);

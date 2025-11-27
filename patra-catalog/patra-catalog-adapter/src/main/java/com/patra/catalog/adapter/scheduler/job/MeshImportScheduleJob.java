@@ -49,7 +49,7 @@ public class MeshImportScheduleJob {
   ///
   /// ```json
   /// {
-  ///   "url": "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/desc2025.xml",
+  ///   "url": "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
   ///   "meshVersion": "2025",
   ///   "mode": "INCREMENTAL"
   /// }
@@ -127,7 +127,7 @@ public class MeshImportScheduleJob {
   ///
   /// ```json
   /// {
-  ///   "url": "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/qual2025.xml",
+  ///   "url": "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml",
   ///   "meshVersion": "2025"
   /// }
   /// ```
