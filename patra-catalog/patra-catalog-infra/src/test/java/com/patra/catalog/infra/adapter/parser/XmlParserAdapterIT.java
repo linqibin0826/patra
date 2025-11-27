@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.parser;
+package com.patra.catalog.infra.adapter.parser;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -7,7 +7,6 @@ import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
-import com.patra.catalog.infra.adapter.parser.XmlParserAdapter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
@@ -20,7 +19,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-/// StaxXmlParserImpl 集成测试。
+/// XmlParserAdapter 集成测试。
 ///
 /// 使用测试 XML 文件验证 XML 解析逻辑的正确性。
 ///
@@ -42,9 +41,9 @@ import org.junit.jupiter.api.Timeout;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@DisplayName("StaxXmlParserImpl 集成测试")
+@DisplayName("XmlParserAdapter 集成测试")
 @Timeout(value = 2, unit = TimeUnit.SECONDS)
-class StaxXmlParserImplIT {
+class XmlParserAdapterIT {
 
   private static final String TEST_MESH_VERSION = "2025";
   private static final Path TEST_QUALIFIERS_PATH =
