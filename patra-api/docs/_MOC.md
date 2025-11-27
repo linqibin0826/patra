@@ -7,6 +7,7 @@ updated: 2025-11-27
 
 ## 快速导航
 
+- [[devlog/_MOC|开发日志]]
 - [[bugs/_MOC|Bug 记录]]
 - [[til/_MOC|学习笔记 (TIL)]]
 - [[decisions/_MOC|架构决策 (ADR)]]
@@ -37,4 +38,16 @@ LIST
 FROM "til"
 WHERE date >= date(today) - dur(7 days)
 SORT date DESC
+```
+
+## 最近开发日志
+
+```dataview
+TABLE WITHOUT ID
+  file.link as "日期",
+  commits as "提交",
+  join(modules, ", ") as "模块"
+FROM "devlog/daily"
+SORT date DESC
+LIMIT 5
 ```
