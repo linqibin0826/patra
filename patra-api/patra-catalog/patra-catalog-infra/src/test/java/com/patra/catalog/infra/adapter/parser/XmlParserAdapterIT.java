@@ -270,6 +270,35 @@ class XmlParserAdapterIT {
   }
 
   @Nested
+  @DisplayName("parseDescriptors() - PublicMeSHNote 测试")
+  class ParseDescriptorsPublicMeshNoteTest {
+
+    @Test
+    @DisplayName("解析主题词 - 应该正确解析 PublicMeSHNote 字段")
+    void parseDescriptors_shouldParsePublicMeshNoteCorrectly() throws IOException {
+      // Given
+      try (InputStream inputStream = getClass().getResourceAsStream(TEST_DESCRIPTORS_RESOURCE)) {
+        assertThat(inputStream).isNotNull();
+
+        // When
+        List<MeshDescriptorAggregate> descriptors;
+        try (Stream<MeshDescriptorAggregate> stream =
+            xmlParser.parseDescriptors(inputStream, TEST_MESH_VERSION)) {
+          descriptors = stream.toList();
+        }
+
+        // Then: 第一个主题词有 PublicMeSHNote
+        MeshDescriptorAggregate descriptor1 = descriptors.get(0);
+        assertThat(descriptor1.getPublicMeshNote()).isEqualTo("Test public note");
+
+        // 第二个主题词没有 PublicMeSHNote，应该为 null
+        MeshDescriptorAggregate descriptor2 = descriptors.get(1);
+        assertThat(descriptor2.getPublicMeshNote()).isNull();
+      }
+    }
+  }
+
+  @Nested
   @DisplayName("parseDescriptors() - EntryCombination 测试")
   class ParseDescriptorsEntryCombinationTest {
 

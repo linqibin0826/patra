@@ -96,6 +96,7 @@ public class MeshDescriptorConverter {
     dataObject.setIsPreferred(concept.isPreferred());
     dataObject.setCasn1Name(concept.getCasn1Name());
     dataObject.setRegistryNumbers(concept.getRegistryNumbers());
+    dataObject.setRelatedRegistryNumbers(concept.getRelatedRegistryNumbers());
     dataObject.setScopeNote(concept.getScopeNote());
     dataObject.setTranslatorsEnglishScopeNote(concept.getTranslatorsEnglishScopeNote());
     dataObject.setTranslatorsScopeNote(concept.getTranslatorsScopeNote());

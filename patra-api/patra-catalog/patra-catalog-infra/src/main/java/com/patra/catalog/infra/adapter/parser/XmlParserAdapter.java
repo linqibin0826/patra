@@ -374,6 +374,9 @@ public class XmlParserAdapter implements XmlParserPort {
       if (scopeNote != null) {
         aggregate.setScopeNote(scopeNote);
       }
+      if (publicMeshNote != null) {
+        aggregate.setPublicMeshNote(publicMeshNote);
+      }
 
       // 添加集合数据
       if (!treeNumbers.isEmpty()) {

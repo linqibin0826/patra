@@ -150,6 +150,24 @@ class MeshDescriptorConverterTest {
     void shouldReturnNullWhenConceptIsNull() {
       assertThat(converter.toConceptDO(null, DESCRIPTOR_ID)).isNull();
     }
+
+    @Test
+    @DisplayName("应该正确转换 RelatedRegistryNumbers")
+    void shouldConvertRelatedRegistryNumbers() {
+      // Given
+      MeshConcept concept =
+          MeshConcept.create(MeshUI.of("M0000001"), "Test Concept", true)
+              .addRelatedRegistryNumber("11111-11-1")
+              .addRelatedRegistryNumber("22222-22-2");
+
+      // When
+      MeshConceptDO result = converter.toConceptDO(concept, DESCRIPTOR_ID);
+
+      // Then
+      assertThat(result).isNotNull();
+      assertThat(result.getRelatedRegistryNumbers())
+          .containsExactlyInAnyOrder("11111-11-1", "22222-22-2");
+    }
   }
 
   @Nested
