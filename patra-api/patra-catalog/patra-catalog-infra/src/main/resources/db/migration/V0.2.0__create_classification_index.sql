@@ -407,7 +407,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_entry_combination` (
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键,雪花算法生成',
     `descriptor_id` BIGINT UNSIGNED NOT NULL COMMENT '主题词ID(外键:cat_mesh_descriptor.id)',
     `ecin_descriptor_ui` VARCHAR(10) NOT NULL COMMENT 'ECIN Descriptor UI(输入组合的主题词)',
-    `ecin_qualifier_ui` VARCHAR(10) NULL DEFAULT NULL COMMENT 'ECIN Qualifier UI(输入组合的限定词,可选)',
+    `ecin_qualifier_ui` VARCHAR(10) NOT NULL COMMENT 'ECIN Qualifier UI(输入组合的限定词)',
     `ecout_descriptor_ui` VARCHAR(10) NOT NULL COMMENT 'ECOUT Descriptor UI(输出组合的主题词)',
     `ecout_qualifier_ui` VARCHAR(10) NULL DEFAULT NULL COMMENT 'ECOUT Qualifier UI(输出组合的限定词,可选)',
 

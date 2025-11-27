@@ -149,10 +149,7 @@ public class MeshDescriptorConverter {
     MeshEntryCombinationDO dataObject = new MeshEntryCombinationDO();
     dataObject.setDescriptorId(descriptorId);
     dataObject.setEcinDescriptorUi(entryCombination.ecinDescriptorUi().ui());
-    dataObject.setEcinQualifierUi(
-        entryCombination.ecinQualifierUi() != null
-            ? entryCombination.ecinQualifierUi().ui()
-            : null);
+    dataObject.setEcinQualifierUi(entryCombination.ecinQualifierUi().ui());
     dataObject.setEcoutDescriptorUi(entryCombination.ecoutDescriptorUi().ui());
     dataObject.setEcoutQualifierUi(
         entryCombination.ecoutQualifierUi() != null

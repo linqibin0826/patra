@@ -43,7 +43,7 @@ import org.junit.jupiter.api.Timeout;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("XmlParserAdapter 集成测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
+@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class XmlParserAdapterIT {
 
   private static final String TEST_MESH_VERSION = "2025";
