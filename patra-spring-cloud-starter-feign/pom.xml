@@ -26,6 +26,12 @@
             <artifactId>spring-cloud-starter-openfeign</artifactId>
         </dependency>
 
+        <!-- 负载均衡器（Feign 服务发现需要） -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
+
         <!-- 编译期提供 Servlet API（在非 Web 环境下也能编译），运行期由宿主应用提供 -->
         <dependency>
             <groupId>jakarta.servlet</groupId>

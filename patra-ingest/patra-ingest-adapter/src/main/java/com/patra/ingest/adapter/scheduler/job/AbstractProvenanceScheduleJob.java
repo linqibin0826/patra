@@ -191,7 +191,7 @@ public abstract class AbstractProvenanceScheduleJob {
       handleJobSuccess(result, startTime);
     } catch (Exception e) {
       handleJobFailure(e, startTime);
-      throw e;
+      // 已通过 handleFail 报告失败,不再抛出异常
     }
   }
 

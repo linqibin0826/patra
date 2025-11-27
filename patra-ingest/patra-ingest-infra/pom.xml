@@ -50,10 +50,7 @@
             <groupId>com.patra</groupId>
             <artifactId>patra-spring-boot-starter-provenance</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
-        </dependency>
+        <!-- LoadBalancer 已由 patra-spring-cloud-starter-feign 传递 -->
         <dependency>
             <groupId>com.patra</groupId>
             <artifactId>patra-registry-api</artifactId>

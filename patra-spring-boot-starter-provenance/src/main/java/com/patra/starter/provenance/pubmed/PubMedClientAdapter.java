@@ -23,6 +23,7 @@ import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /// PubMed 客户端实现（使用 Spring RestClient）
 ///
@@ -83,19 +84,17 @@ public class PubMedClientAdapter implements PubMedClient {
   }
 
   private ESearchResponse executeESearch(ESearchRequest request, ProvenanceConfig config) {
+    ProvenanceConfig finalConfig =
+        config != null ? config : configProvider.getPubMedDefaultConfig();
     Map<String, String> queryParams = request.toQueryParams();
 
+    var uriBuilder =
+        UriComponentsBuilder.fromHttpUrl(finalConfig.baseUrl())
+            .path(PubMedOperation.ESEARCH.getEndpoint());
+    queryParams.forEach(uriBuilder::queryParam);
+
     String body =
-        restClient
-            .get()
-            .uri(
-                uriBuilder -> {
-                  uriBuilder.path(PubMedOperation.ESEARCH.getEndpoint());
-                  queryParams.forEach(uriBuilder::queryParam);
-                  return uriBuilder.build();
-                })
-            .retrieve()
-            .body(String.class);
+        restClient.get().uri(uriBuilder.build().toUri()).retrieve().body(String.class);
 
     try {
       return objectMapper.readValue(body, ESearchResponse.class);
@@ -136,17 +135,13 @@ public class PubMedClientAdapter implements PubMedClient {
 
     Map<String, String> queryParams = request.toQueryParams();
 
+    var uriBuilder =
+        UriComponentsBuilder.fromHttpUrl(finalConfig.baseUrl())
+            .path(PubMedOperation.EFETCH.getEndpoint());
+    queryParams.forEach(uriBuilder::queryParam);
+
     String body =
-        restClient
-            .get()
-            .uri(
-                uriBuilder -> {
-                  uriBuilder.path(PubMedOperation.EFETCH.getEndpoint());
-                  queryParams.forEach(uriBuilder::queryParam);
-                  return uriBuilder.build();
-                })
-            .retrieve()
-            .body(String.class);
+        restClient.get().uri(uriBuilder.build().toUri()).retrieve().body(String.class);
 
     try {
       String retmode = request.retmode();
@@ -209,10 +204,16 @@ public class PubMedClientAdapter implements PubMedClient {
     MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
     formParams.forEach(formData::add);
 
+    var uri =
+        UriComponentsBuilder.fromHttpUrl(finalConfig.baseUrl())
+            .path(PubMedOperation.EPOST.getEndpoint())
+            .build()
+            .toUri();
+
     String body =
         restClient
             .post()
-            .uri(PubMedOperation.EPOST.getEndpoint())
+            .uri(uri)
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .body(formData)
             .retrieve()

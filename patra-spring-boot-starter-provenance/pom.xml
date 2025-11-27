@@ -24,6 +24,12 @@
             <artifactId>patra-common-core</artifactId>
         </dependency>
 
+        <!-- REST Client（统一使用 rest-client starter 管理） -->
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-rest-client</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.patra</groupId>
             <artifactId>patra-common-model</artifactId>
@@ -48,11 +54,7 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Spring Web (核心库，用于 RestClient) -->
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-web</artifactId>
-        </dependency>
+        <!-- Spring Web 由 patra-spring-boot-starter-rest-client 传递 -->
 
         <!-- ==================== JSON/XML Processing ==================== -->
 

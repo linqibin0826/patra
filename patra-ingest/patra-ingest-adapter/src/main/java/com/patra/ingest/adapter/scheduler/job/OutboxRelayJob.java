@@ -74,10 +74,11 @@ public class OutboxRelayJob {
       RelayReport report = relayUseCase.relay(command);
       handleRelaySuccess(report);
     } catch (OutboxRelayExecutionException ex) {
-      throw ex;
+      handleRelayFailure(ex);
+      // 已通过 handleFail 报告失败,不再抛出异常
     } catch (Exception ex) {
       handleRelayFailure(ex);
-      throw new OutboxRelayExecutionException("Outbox relay 执行失败", ex);
+      // 已通过 handleFail 报告失败,不再抛出异常
     }
   }
 

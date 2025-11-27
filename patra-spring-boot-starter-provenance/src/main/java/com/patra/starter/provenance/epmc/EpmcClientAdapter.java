@@ -13,6 +13,7 @@ import com.patra.starter.provenance.epmc.model.response.SearchResponse;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /// Europe PMC 客户端实现（使用 Spring RestClient）
 ///
@@ -71,17 +72,13 @@ public class EpmcClientAdapter implements EPMCClient {
 
     Map<String, String> queryParams = request.toQueryParams();
 
+    var uriBuilder =
+        UriComponentsBuilder.fromHttpUrl(finalConfig.baseUrl())
+            .path(EpmcOperation.SEARCH.getEndpoint());
+    queryParams.forEach(uriBuilder::queryParam);
+
     String body =
-        restClient
-            .get()
-            .uri(
-                uriBuilder -> {
-                  uriBuilder.path(EpmcOperation.SEARCH.getEndpoint());
-                  queryParams.forEach(uriBuilder::queryParam);
-                  return uriBuilder.build();
-                })
-            .retrieve()
-            .body(String.class);
+        restClient.get().uri(uriBuilder.build().toUri()).retrieve().body(String.class);
 
     try {
       JsonNode root = objectMapper.readTree(body);

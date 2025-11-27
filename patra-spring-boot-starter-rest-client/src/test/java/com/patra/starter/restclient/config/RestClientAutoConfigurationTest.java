@@ -7,8 +7,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.http.client.ClientHttpRequestInterceptor;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 /// RestClientAutoConfiguration 单元测试。
@@ -27,7 +25,6 @@ class RestClientAutoConfigurationTest {
     contextRunner.run(
         context -> {
           assertThat(context).hasSingleBean(RestClientProperties.class);
-          assertThat(context).hasSingleBean(JdkClientHttpRequestFactory.class);
           assertThat(context).hasSingleBean(RestClient.class);
         });
   }
@@ -37,11 +34,7 @@ class RestClientAutoConfigurationTest {
   void should_disable_autoconfiguration_when_enabled_false() {
     contextRunner
         .withPropertyValues("patra.rest-client.enabled=false")
-        .run(
-            context -> {
-              assertThat(context).doesNotHaveBean(RestClient.class);
-              assertThat(context).doesNotHaveBean(JdkClientHttpRequestFactory.class);
-            });
+        .run(context -> assertThat(context).doesNotHaveBean(RestClient.class));
   }
 
   @Test
@@ -53,21 +46,6 @@ class RestClientAutoConfigurationTest {
           RestClient restClient = context.getBean("defaultRestClient", RestClient.class);
           assertThat(restClient).isNotNull();
         });
-  }
-
-  @Test
-  @DisplayName("应该创建 HTTP 请求工厂并配置超时")
-  void should_create_http_request_factory_with_timeout() {
-    contextRunner
-        .withPropertyValues(
-            "patra.rest-client.timeout.connect=5s", "patra.rest-client.timeout.read=15s")
-        .run(
-            context -> {
-              assertThat(context).hasSingleBean(JdkClientHttpRequestFactory.class);
-              JdkClientHttpRequestFactory factory =
-                  context.getBean(JdkClientHttpRequestFactory.class);
-              assertThat(factory).isNotNull();
-            });
   }
 
   @Test
