@@ -1,0 +1,11 @@
+# Registry Infra 集成测试配置
+# 使用 target 版本限制，跳过种子数据迁移
+
+spring:
+  flyway:
+    # 只执行到 V1.0.2（最后一个 schema 迁移），跳过 V1.1.0 种子数据
+    target: 1.0.2
+    # 允许清理数据库（仅用于测试）
+    clean-disabled: false
+    # 设置 baseline 跳过已存在的迁移历史检查
+    baseline-on-migrate: true

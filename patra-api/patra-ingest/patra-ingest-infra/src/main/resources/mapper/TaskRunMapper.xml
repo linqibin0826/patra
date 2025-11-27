@@ -12,7 +12,7 @@
     -->
     <select id="selectLatestAttemptNo" resultType="int">
         SELECT IFNULL(MAX(attempt_no), 0)
-          FROM patra_ingest.ing_task_run
+          FROM ing_task_run
          WHERE task_id = #{taskId} and deleted = 0
     </select>
 
@@ -21,7 +21,7 @@
         Empty string or null clears the checkpoint.
     -->
     <update id="updateCheckpointAndHeartbeat">
-        UPDATE patra_ingest.ing_task_run
+        UPDATE ing_task_run
            SET last_heartbeat = #{now},
                updated_at = #{now},
                checkpoint =
@@ -41,7 +41,7 @@
         Refresh heartbeat only, do not modify the checkpoint.
     -->
     <update id="touchHeartbeat">
-        UPDATE patra_ingest.ing_task_run
+        UPDATE ing_task_run
            SET last_heartbeat = #{now},
                updated_at = #{now}
          WHERE id = #{runId}
@@ -52,7 +52,7 @@
         Mark the run as FAILED and save the error message.
     -->
     <update id="markFailed">
-        UPDATE patra_ingest.ing_task_run
+        UPDATE ing_task_run
            SET status_code = 'FAILED',
                error = #{errorMsg},
                finished_at = #{now},

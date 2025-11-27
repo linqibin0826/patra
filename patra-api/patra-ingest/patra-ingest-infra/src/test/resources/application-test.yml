@@ -1,0 +1,9 @@
+# Ingest Infra 集成测试配置
+# Ingest 模块无种子数据迁移，使用默认迁移位置
+
+spring:
+  flyway:
+    # 允许清理数据库（仅用于测试）
+    clean-disabled: false
+    # 设置 baseline 跳过已存在的迁移历史检查
+    baseline-on-migrate: true

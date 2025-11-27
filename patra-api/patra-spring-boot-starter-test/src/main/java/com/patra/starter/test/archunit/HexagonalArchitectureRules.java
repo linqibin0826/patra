@@ -124,14 +124,17 @@ public class HexagonalArchitectureRules {
 
   /// Adapter 层不能反向依赖 Infra 层。
   ///
+  /// 注意：此规则仅检查主动适配器层（`{service}.adapter.*`），不包括 infra 模块内部的被动适配器
+  /// （`infra.adapter.persistence.*`）。被动适配器作为 Repository 实现，必须依赖 Mapper、Converter、DO。
+  ///
   /// @return ArchRule 规则实例
   public ArchRule adapterShouldNotDependOnInfra() {
     return noClasses()
         .that()
-        .resideInAPackage("..adapter..")
+        .resideInAPackage(".." + serviceName + ".adapter..")
         .should()
         .dependOnClassesThat()
-        .resideInAPackage("..infra..")
+        .resideInAPackage(".." + serviceName + ".infra..")
         .as("Adapter 层不能反向依赖 Infra 层")
         .because("Adapter 和 Infra 应该通过 App 层协调，避免直接耦合");
   }

@@ -16,7 +16,7 @@
         Returns: number of affected rows (1=success, 0=failed)
     -->
     <update id="tryAcquireLease">
-        UPDATE patra_ingest.ing_task
+        UPDATE ing_task
            SET lease_owner = #{owner},
                leased_until = DATE_ADD(#{now}, INTERVAL #{ttlSec} SECOND),
                lease_count = lease_count + 1

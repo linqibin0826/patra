@@ -107,12 +107,6 @@
             <artifactId>patra-spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- MyBatis-Plus 测试支持（@MybatisPlusTest） -->
-        <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>

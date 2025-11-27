@@ -154,6 +154,36 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
+
+        <!-- ==================== MyBatis-Plus 测试支持（可选）==================== -->
+
+        <!-- MyBatis-Plus 核心（可选，仅当 classpath 中存在时激活） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- MyBatis-Plus JSqlParser（分页拦截器需要） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- MyBatis-Plus 测试切片（@MybatisPlusTest 注解） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter-test</artifactId>
+            <scope>compile</scope>
+        </dependency>
+
+        <!-- Jackson（JSON TypeHandler 需要） -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
     <build>

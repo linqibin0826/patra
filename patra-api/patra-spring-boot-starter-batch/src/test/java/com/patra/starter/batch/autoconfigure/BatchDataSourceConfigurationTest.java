@@ -2,19 +2,43 @@ package com.patra.starter.batch.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.starter.batch.config.BatchProperties;
 import com.zaxxer.hikari.HikariDataSource;
 import javax.sql.DataSource;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /// {@link BatchDataSourceConfiguration} 单元测试。
 ///
 /// 验证 Batch 独立数据源的条件装配逻辑。
+/// 使用 MySQL TestContainers 确保与生产环境一致。
+@Testcontainers
 class BatchDataSourceConfigurationTest {
+
+  /// MySQL 容器（JVM 级别共享）。
+  @Container
+  private static final MySQLContainer<?> MYSQL =
+      new MySQLContainer<>("mysql:8.0.36")
+          .withDatabaseName("batch_test")
+          .withUsername("root")
+          .withPassword("123456");
+
+  private static String jdbcUrl;
+  private static String username;
+  private static String password;
+
+  @BeforeAll
+  static void setupDatabase() {
+    jdbcUrl = MYSQL.getJdbcUrl();
+    username = MYSQL.getUsername();
+    password = MYSQL.getPassword();
+  }
 
   private final ApplicationContextRunner contextRunner =
       new ApplicationContextRunner()
@@ -35,12 +59,12 @@ class BatchDataSourceConfigurationTest {
   @Test
   @DisplayName("配置 datasource.url 时：应创建 batchDataSource 和 batchTransactionManager Bean")
   void batchDataSource_ShouldBeCreated_WhenUrlConfigured() {
-    // When: 配置了 datasource.url
+    // When: 配置了 datasource.url（使用 MySQL TestContainers）
     contextRunner
         .withPropertyValues(
-            "patra.batch.datasource.url=jdbc:h2:mem:batch_test;MODE=MySQL",
-            "patra.batch.datasource.username=sa",
-            "patra.batch.datasource.password=")
+            "patra.batch.datasource.url=" + jdbcUrl,
+            "patra.batch.datasource.username=" + username,
+            "patra.batch.datasource.password=" + password)
         .run(
             context -> {
               // Then: 应创建 batchDataSource 和 batchTransactionManager Bean
@@ -59,12 +83,12 @@ class BatchDataSourceConfigurationTest {
   @Test
   @DisplayName("未配置 Hikari 参数时：应使用默认 Hikari 配置")
   void batchDataSource_ShouldUseHikariDefaults() {
-    // When: 只配置 URL，不配置 Hikari 参数
+    // When: 只配置 URL，不配置 Hikari 参数（使用 MySQL TestContainers）
     contextRunner
         .withPropertyValues(
-            "patra.batch.datasource.url=jdbc:h2:mem:batch_test;MODE=MySQL",
-            "patra.batch.datasource.username=sa",
-            "patra.batch.datasource.password=")
+            "patra.batch.datasource.url=" + jdbcUrl,
+            "patra.batch.datasource.username=" + username,
+            "patra.batch.datasource.password=" + password)
         .run(
             context -> {
               HikariDataSource dataSource =
@@ -82,12 +106,12 @@ class BatchDataSourceConfigurationTest {
   @Test
   @DisplayName("配置自定义 Hikari 参数时：应使用自定义配置")
   void batchDataSource_ShouldUseCustomHikariConfig() {
-    // When: 配置了自定义 Hikari 参数
+    // When: 配置了自定义 Hikari 参数（使用 MySQL TestContainers）
     contextRunner
         .withPropertyValues(
-            "patra.batch.datasource.url=jdbc:h2:mem:batch_test;MODE=MySQL",
-            "patra.batch.datasource.username=sa",
-            "patra.batch.datasource.password=",
+            "patra.batch.datasource.url=" + jdbcUrl,
+            "patra.batch.datasource.username=" + username,
+            "patra.batch.datasource.password=" + password,
             "patra.batch.datasource.hikari.maximum-pool-size=10",
             "patra.batch.datasource.hikari.minimum-idle=3",
             "patra.batch.datasource.hikari.connection-timeout=60000",
@@ -108,18 +132,20 @@ class BatchDataSourceConfigurationTest {
   @Test
   @DisplayName("用户自定义 batchDataSource Bean 时：不应覆盖用户定义的 Bean")
   void batchDataSource_ShouldNotOverrideUserDefinedBean() {
-    // Given: 用户自定义了 batchDataSource Bean
+    // Given: 用户自定义了 batchDataSource Bean（使用 MySQL TestContainers）
     contextRunner
         .withPropertyValues(
-            "patra.batch.datasource.url=jdbc:h2:mem:batch_test;MODE=MySQL",
-            "patra.batch.datasource.username=sa",
-            "patra.batch.datasource.password=")
+            "patra.batch.datasource.url=" + jdbcUrl,
+            "patra.batch.datasource.username=" + username,
+            "patra.batch.datasource.password=" + password)
         .withBean(
             "batchDataSource",
             DataSource.class,
             () -> {
               HikariDataSource ds = new HikariDataSource();
-              ds.setJdbcUrl("jdbc:h2:mem:user_defined");
+              ds.setJdbcUrl(jdbcUrl);
+              ds.setUsername(username);
+              ds.setPassword(password);
               ds.setPoolName("user-defined-pool");
               return ds;
             })
