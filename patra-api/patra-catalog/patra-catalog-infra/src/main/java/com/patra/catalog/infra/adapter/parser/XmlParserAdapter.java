@@ -86,10 +86,10 @@ public class XmlParserAdapter implements XmlParserPort {
           .onClose(() -> closeInputStream(inputStream));
     } catch (IOException e) {
       log.error("打开文件失败：{}", filePath, e);
-      throw new RuntimeException("打开 XML 文件失败：" + filePath, e);
+      throw new XmlParsingException("打开 XML 文件失败：" + filePath, e);
     } catch (XMLStreamException e) {
       log.error("创建 XML 读取器失败", e);
-      throw new RuntimeException("XML 解析失败", e);
+      throw new XmlParsingException("XML 解析失败", e);
     }
   }
 
@@ -130,7 +130,7 @@ public class XmlParserAdapter implements XmlParserPort {
       return StreamSupport.stream(spliterator, false).onClose(() -> closeReader(reader));
     } catch (XMLStreamException e) {
       log.error("创建 XML 读取器失败", e);
-      throw new RuntimeException("XML 解析失败", e);
+      throw new XmlParsingException("XML 解析失败", e);
     }
   }
 

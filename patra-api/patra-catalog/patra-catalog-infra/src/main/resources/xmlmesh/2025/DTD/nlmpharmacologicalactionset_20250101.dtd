@@ -1,0 +1,28 @@
+<!-- DTD file for Substances with a given Pharmacological Action. pa2025.dtd -->
+
+<!-- #PCDATA: parseable character data = text
+
+     occurrence indicators (default: required, not repeatable):
+     ?: zero or one occurrence, i.e., at most one (optional)
+     *: zero or more occurrences (optional, repeatable)
+     +: one or more occurrences (required, repeatable)
+
+     |: choice, one or the other, but not both
+ -->
+
+<!ENTITY  % DescriptorReference "(DescriptorUI, DescriptorName)">
+
+<!ELEMENT PharmacologicalActionSet (PharmacologicalAction*)>
+<!ELEMENT PharmacologicalAction (
+                DescriptorReferredTo,
+                PharmacologicalActionSubstanceList) >
+   <!ELEMENT DescriptorReferredTo (%DescriptorReference;) >
+   <!ELEMENT PharmacologicalActionSubstanceList (Substance)+>
+   <!ELEMENT Substance (RecordUI,RecordName)+>
+      <!ELEMENT RecordUI (#PCDATA) >
+      <!ELEMENT RecordName (String) >
+
+<!ELEMENT DescriptorUI (#PCDATA) >
+<!ELEMENT DescriptorName (String) >
+
+<!ELEMENT String (#PCDATA)>
