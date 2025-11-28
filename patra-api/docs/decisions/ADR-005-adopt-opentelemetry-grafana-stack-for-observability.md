@@ -48,32 +48,44 @@ tags: [architecture, observability, opentelemetry, grafana, monitoring]
 
 ### 架构图
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Grafana（统一可视化入口）                           │
-│                    日志检索 | 指标仪表盘 | 链路追踪 | 告警管理                  │
-└───────────────────────────────┬─────────────────────────────────────────────┘
-                                │
-        ┌───────────────────────┼───────────────────────┐
-        │                       │                       │
-        ▼                       ▼                       ▼
-┌───────────────┐       ┌───────────────┐       ┌───────────────┐
-│  Prometheus   │       │     Loki      │       │    Tempo      │
-│   (Metrics)   │       │    (Logs)     │       │   (Traces)    │
-└───────┬───────┘       └───────┬───────┘       └───────┬───────┘
-        │                       │                       │
-        └───────────────────────┼───────────────────────┘
-                                │
-                    ┌───────────▼───────────┐
-                    │  OpenTelemetry        │
-                    │  Collector            │
-                    └───────────┬───────────┘
-                                │
-                    ┌───────────▼───────────┐
-                    │  Spring Boot App      │
-                    │  + OTel Java Agent    │
-                    │  + Micrometer         │
-                    └───────────────────────┘
+```mermaid
+flowchart BT
+    subgraph 采集层["采集层 Collection"]
+        App["Spring Boot Application"]
+        Agent["OTel Java Agent<br/>(Traces)"]
+        Micrometer["Micrometer<br/>(Metrics)"]
+        Logback["Logback + OTLP<br/>(Logs)"]
+    end
+
+    subgraph 处理层["处理层 Processing"]
+        Collector["OpenTelemetry Collector<br/>接收 → 处理 → 导出"]
+    end
+
+    subgraph 存储层["存储层 Storage"]
+        Prometheus["Prometheus<br/>(Metrics)"]
+        Loki["Loki<br/>(Logs)"]
+        Tempo["Tempo<br/>(Traces)"]
+    end
+
+    subgraph 展示层["展示层 Visualization"]
+        Grafana["Grafana<br/>日志检索 | 指标仪表盘 | 链路追踪 | 告警管理"]
+    end
+
+    App --> Agent
+    App --> Micrometer
+    App --> Logback
+
+    Agent --> Collector
+    Micrometer --> Collector
+    Logback --> Collector
+
+    Collector --> Prometheus
+    Collector --> Loki
+    Collector --> Tempo
+
+    Prometheus --> Grafana
+    Loki --> Grafana
+    Tempo --> Grafana
 ```
 
 ## 后果
