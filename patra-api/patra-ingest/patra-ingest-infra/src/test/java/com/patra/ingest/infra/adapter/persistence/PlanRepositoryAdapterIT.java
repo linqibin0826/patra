@@ -4,15 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
+import com.patra.ingest.infra.config.IngestMySQLContainerInitializer;
 import com.patra.ingest.infra.persistence.entity.PlanDO;
 import com.patra.ingest.infra.persistence.entity.ScheduleInstanceDO;
 import com.patra.ingest.infra.persistence.mapper.PlanMapper;
 import com.patra.ingest.infra.persistence.mapper.ScheduleInstanceMapper;
-import com.patra.ingest.infra.config.IngestMySQLContainerInitializer;
 import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;

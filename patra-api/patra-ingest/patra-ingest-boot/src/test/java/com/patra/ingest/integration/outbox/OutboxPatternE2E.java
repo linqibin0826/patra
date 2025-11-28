@@ -115,7 +115,10 @@ import org.springframework.transaction.annotation.Transactional;
       "spring.config.import=classpath:ingest-error-config.yaml,classpath:ingest-rocketmq.yaml"
     })
 @ContextConfiguration(
-    initializers = {IngestMySQLContainerInitializer.class, IngestRocketMQContainerInitializer.class})
+    initializers = {
+      IngestMySQLContainerInitializer.class,
+      IngestRocketMQContainerInitializer.class
+    })
 @DisplayName("Outbox 模式端到端测试")
 @org.springframework.test.context.ActiveProfiles("e2e-test")
 // 移除 @DirtiesContext: 共享 ApplicationContext 以提升测试性能

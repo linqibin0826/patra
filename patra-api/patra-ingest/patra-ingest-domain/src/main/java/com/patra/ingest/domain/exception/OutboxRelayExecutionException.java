@@ -36,7 +36,8 @@ public class OutboxRelayExecutionException extends IngestException {
   /// @param message 描述性消息
   /// @param cause 底层异常
   /// @param trait 错误特征
-  protected OutboxRelayExecutionException(String message, Throwable cause, StandardErrorTrait trait) {
+  protected OutboxRelayExecutionException(
+      String message, Throwable cause, StandardErrorTrait trait) {
     super(message, cause, trait);
   }
 }

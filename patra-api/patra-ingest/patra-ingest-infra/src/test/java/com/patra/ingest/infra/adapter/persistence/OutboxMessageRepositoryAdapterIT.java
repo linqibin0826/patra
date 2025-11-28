@@ -5,14 +5,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
-import com.patra.ingest.domain.exception.OutboxPersistenceException;
-import com.patra.ingest.domain.model.entity.OutboxMessage;
-import com.patra.ingest.infra.persistence.entity.OutboxMessageDO;
-import com.patra.ingest.infra.persistence.mapper.OutboxMessageMapper;
-import com.patra.ingest.infra.config.IngestMySQLContainerInitializer;
-import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.patra.ingest.domain.exception.OutboxPersistenceException;
+import com.patra.ingest.domain.model.entity.OutboxMessage;
+import com.patra.ingest.infra.config.IngestMySQLContainerInitializer;
+import com.patra.ingest.infra.persistence.entity.OutboxMessageDO;
+import com.patra.ingest.infra.persistence.mapper.OutboxMessageMapper;
+import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -169,8 +169,7 @@ class OutboxMessageRepositoryAdapterIT {
       Instant leaseExpireAt = TEST_NOW.plusSeconds(300);
 
       // When: 使用初始版本号 0L（MyBatis-Plus @Version 默认值）
-      boolean result =
-          repository.acquireLease(messageDO.getId(), 0L, TEST_OWNER, leaseExpireAt);
+      boolean result = repository.acquireLease(messageDO.getId(), 0L, TEST_OWNER, leaseExpireAt);
 
       // Then
       assertThat(result).isTrue();
@@ -186,8 +185,7 @@ class OutboxMessageRepositoryAdapterIT {
       Instant leaseExpireAt = TEST_NOW.plusSeconds(300);
 
       // When: 使用错误的版本号
-      boolean result =
-          repository.acquireLease(messageDO.getId(), 999L, TEST_OWNER, leaseExpireAt);
+      boolean result = repository.acquireLease(messageDO.getId(), 999L, TEST_OWNER, leaseExpireAt);
 
       // Then
       assertThat(result).isFalse();
@@ -243,12 +241,7 @@ class OutboxMessageRepositoryAdapterIT {
 
       // When: 使用获取租约后的版本号 1L
       repository.markDeferred(
-          messageDO.getId(),
-          1L,
-          1,
-          nextRetryAt,
-          "NETWORK_ERROR",
-          "Connection timeout");
+          messageDO.getId(), 1L, 1, nextRetryAt, "NETWORK_ERROR", "Connection timeout");
 
       // Then
       Optional<OutboxMessage> updated = repository.findByChannelAndDedup(TEST_CHANNEL, "dedup-001");
@@ -266,11 +259,7 @@ class OutboxMessageRepositoryAdapterIT {
 
       // When: 使用获取租约后的版本号 1L
       repository.markFailed(
-          messageDO.getId(),
-          1L,
-          3,
-          "MAX_RETRIES_EXCEEDED",
-          "Exhausted all retries");
+          messageDO.getId(), 1L, 3, "MAX_RETRIES_EXCEEDED", "Exhausted all retries");
 
       // Then
       Optional<OutboxMessage> updated = repository.findByChannelAndDedup(TEST_CHANNEL, "dedup-001");
