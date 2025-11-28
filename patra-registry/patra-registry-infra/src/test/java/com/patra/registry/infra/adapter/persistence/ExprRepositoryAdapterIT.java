@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException;
 import com.patra.registry.domain.model.vo.expr.ApiParamMapping;
@@ -11,6 +13,7 @@ import com.patra.registry.domain.model.vo.expr.ExprCapability;
 import com.patra.registry.domain.model.vo.expr.ExprField;
 import com.patra.registry.domain.model.vo.expr.ExprRenderRule;
 import com.patra.registry.domain.model.vo.expr.ExprSnapshot;
+import com.patra.registry.infra.config.RegistryMySQLContainerInitializer;
 import com.patra.registry.infra.persistence.entity.expr.RegExprFieldDictDO;
 import com.patra.registry.infra.persistence.entity.expr.RegProvApiParamMapDO;
 import com.patra.registry.infra.persistence.entity.expr.RegProvExprCapabilityDO;
@@ -21,10 +24,7 @@ import com.patra.registry.infra.persistence.mapper.expr.RegProvApiParamMapMapper
 import com.patra.registry.infra.persistence.mapper.expr.RegProvExprCapabilityMapper;
 import com.patra.registry.infra.persistence.mapper.expr.RegProvExprRenderRuleMapper;
 import com.patra.registry.infra.persistence.mapper.provenance.RegProvenanceMapper;
-import com.patra.registry.infra.config.RegistryMySQLContainerInitializer;
 import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.TimeUnit;
@@ -124,13 +124,21 @@ class ExprRepositoryAdapterIT {
       // Then: 验证结果
       assertThat(snapshot).isNotNull();
       assertThat(snapshot.fields()).hasSize(2);
-      assertThat(snapshot.fields()).extracting(ExprField::fieldKey).containsExactlyInAnyOrder("title", "author");
+      assertThat(snapshot.fields())
+          .extracting(ExprField::fieldKey)
+          .containsExactlyInAnyOrder("title", "author");
       assertThat(snapshot.capabilities()).hasSize(1);
-      assertThat(snapshot.capabilities()).extracting(ExprCapability::fieldKey).containsExactly("title");
+      assertThat(snapshot.capabilities())
+          .extracting(ExprCapability::fieldKey)
+          .containsExactly("title");
       assertThat(snapshot.renderRules()).hasSize(1);
-      assertThat(snapshot.renderRules()).extracting(ExprRenderRule::fieldKey).containsExactly("title");
+      assertThat(snapshot.renderRules())
+          .extracting(ExprRenderRule::fieldKey)
+          .containsExactly("title");
       assertThat(snapshot.apiParamMappings()).hasSize(1);
-      assertThat(snapshot.apiParamMappings()).extracting(ApiParamMapping::stdKey).containsExactly("title");
+      assertThat(snapshot.apiParamMappings())
+          .extracting(ApiParamMapping::stdKey)
+          .containsExactly("title");
     }
 
     @Test
@@ -143,7 +151,8 @@ class ExprRepositoryAdapterIT {
 
       // When: at 参数为 null
       ExprSnapshot snapshot =
-          repository.loadSnapshot(ProvenanceCode.PUBMED, TEST_OPERATION_TYPE, TEST_ENDPOINT_NAME, null);
+          repository.loadSnapshot(
+              ProvenanceCode.PUBMED, TEST_OPERATION_TYPE, TEST_ENDPOINT_NAME, null);
 
       // Then: 应成功加载（使用当前时间查询）
       assertThat(snapshot).isNotNull();
@@ -178,7 +187,8 @@ class ExprRepositoryAdapterIT {
 
       // When: endpointName 为空白字符串
       ExprSnapshot snapshot =
-          repository.loadSnapshot(ProvenanceCode.PUBMED, TEST_OPERATION_TYPE, "   ", TEST_TIMESTAMP);
+          repository.loadSnapshot(
+              ProvenanceCode.PUBMED, TEST_OPERATION_TYPE, "   ", TEST_TIMESTAMP);
 
       // Then: 应返回无端点限制的映射
       assertThat(snapshot).isNotNull();
@@ -200,7 +210,8 @@ class ExprRepositoryAdapterIT {
 
       // When: 传入小写操作类型 "search"
       ExprSnapshot snapshot =
-          repository.loadSnapshot(ProvenanceCode.PUBMED, "search", TEST_ENDPOINT_NAME, TEST_TIMESTAMP);
+          repository.loadSnapshot(
+              ProvenanceCode.PUBMED, "search", TEST_ENDPOINT_NAME, TEST_TIMESTAMP);
 
       // Then: 应正确匹配大写操作类型
       assertThat(snapshot).isNotNull();
@@ -256,7 +267,8 @@ class ExprRepositoryAdapterIT {
 
       // When: 传入小写端点名称 "esearch"
       ExprSnapshot snapshot =
-          repository.loadSnapshot(ProvenanceCode.PUBMED, TEST_OPERATION_TYPE, "esearch", TEST_TIMESTAMP);
+          repository.loadSnapshot(
+              ProvenanceCode.PUBMED, TEST_OPERATION_TYPE, "esearch", TEST_TIMESTAMP);
 
       // Then: 应正确匹配大写端点名称
       assertThat(snapshot).isNotNull();
@@ -273,7 +285,8 @@ class ExprRepositoryAdapterIT {
 
       // When: 传入混合大小写端点名称 "ESearch"
       ExprSnapshot snapshot =
-          repository.loadSnapshot(ProvenanceCode.PUBMED, TEST_OPERATION_TYPE, "ESearch", TEST_TIMESTAMP);
+          repository.loadSnapshot(
+              ProvenanceCode.PUBMED, TEST_OPERATION_TYPE, "ESearch", TEST_TIMESTAMP);
 
       // Then: 应正确匹配大写端点名称
       assertThat(snapshot).isNotNull();
@@ -294,7 +307,10 @@ class ExprRepositoryAdapterIT {
       assertThatThrownBy(
               () ->
                   repository.loadSnapshot(
-                      ProvenanceCode.PUBMED, TEST_OPERATION_TYPE, TEST_ENDPOINT_NAME, TEST_TIMESTAMP))
+                      ProvenanceCode.PUBMED,
+                      TEST_OPERATION_TYPE,
+                      TEST_ENDPOINT_NAME,
+                      TEST_TIMESTAMP))
           .isInstanceOf(ProvenanceNotFoundException.class)
           .hasMessageContaining("Provenance code not found: PUBMED");
     }
