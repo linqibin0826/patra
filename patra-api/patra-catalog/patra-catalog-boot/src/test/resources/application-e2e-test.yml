@@ -1,0 +1,83 @@
+# Catalog E2E 测试环境配置
+#
+# 此配置用于 MeSH 导入等 E2E 测试，测试完整的业务流程：
+# - Application 层编排 → Spring Batch Job → 数据库持久化
+# - 完整的事务、断点续传、幂等性验证
+
+spring:
+  application:
+    name: patra-catalog
+  # 禁用不需要的自动配置
+  autoconfigure:
+    exclude:
+      - org.redisson.spring.starter.RedissonAutoConfigurationV2
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchClientAutoConfiguration
+      - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchRestClientAutoConfiguration
+      # 排除生产 MyBatis 配置（使用 TestMybatisPlusAutoConfiguration 以禁用 BlockAttackInnerInterceptor）
+      - com.patra.starter.mybatis.autoconfig.MybatisPluginAutoConfig
+  # 导入错误配置
+  config:
+    import:
+      - "classpath:catalog-error-config.yaml"
+  cloud:
+    nacos:
+      discovery:
+        enabled: false  # 禁用服务注册
+      config:
+        enabled: false  # 禁用配置中心
+  datasource:
+    # 由 Testcontainers 动态配置
+    url: ${spring.datasource.url}
+    username: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+    driver-class-name: ${spring.datasource.driver-class-name}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+  # Flyway 自动初始化测试数据库
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: false
+    clean-disabled: false  # 允许清理（仅测试）
+  # Spring Batch 配置
+  # BATCH_* 元数据表由 patra-spring-boot-starter-batch 自动初始化
+  batch:
+    job:
+      enabled: false  # 禁止启动时自动运行 Job
+
+# XXL-Job 配置（测试环境禁用）
+xxl:
+  job:
+    enabled: false
+
+# Spring Batch 配置
+patra:
+  batch:
+    enabled: true
+  # 禁用 Redisson（E2E 测试不需要 Redis）
+  redisson:
+    enabled: false
+
+# Management & Monitoring (禁用测试环境不需要的)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  metrics:
+    export:
+      prometheus:
+        enabled: false
+
+# 日志配置
+logging:
+  level:
+    com.patra: INFO
+    org.springframework.batch: DEBUG
+    org.testcontainers: INFO
+    com.alibaba.nacos: WARN
