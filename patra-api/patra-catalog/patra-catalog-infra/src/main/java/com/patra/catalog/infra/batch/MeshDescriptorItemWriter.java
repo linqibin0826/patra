@@ -127,22 +127,22 @@ public class MeshDescriptorItemWriter implements ItemWriter<MeshDescriptorAggreg
     }
 
     // 3. 批量 INSERT（单条 SQL 语句）
-    descriptorMapper.insertBatch(descriptorDOs);
+    descriptorMapper.insertBatchSomeColumn(descriptorDOs);
 
     if (!treeNumberDOs.isEmpty()) {
-      treeNumberMapper.insertBatch(treeNumberDOs);
+      treeNumberMapper.insertBatchSomeColumn(treeNumberDOs);
     }
     if (!conceptDOs.isEmpty()) {
-      conceptMapper.insertBatch(conceptDOs);
+      conceptMapper.insertBatchSomeColumn(conceptDOs);
     }
     if (!conceptRelationDOs.isEmpty()) {
-      conceptRelationMapper.insertBatch(conceptRelationDOs);
+      conceptRelationMapper.insertBatchSomeColumn(conceptRelationDOs);
     }
     if (!entryTermDOs.isEmpty()) {
-      entryTermMapper.insertBatch(entryTermDOs);
+      entryTermMapper.insertBatchSomeColumn(entryTermDOs);
     }
     if (!entryCombinationDOs.isEmpty()) {
-      entryCombinationMapper.insertBatch(entryCombinationDOs);
+      entryCombinationMapper.insertBatchSomeColumn(entryCombinationDOs);
     }
 
     log.debug(
