@@ -37,27 +37,25 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
     prefix = "patra.observability.metrics.prometheus",
     name = "enabled",
     havingValue = "true",
-    matchIfMissing = true
-)
+    matchIfMissing = true)
 public class PrometheusAutoConfiguration {
 
-    private static final Logger log = LoggerFactory.getLogger(PrometheusAutoConfiguration.class);
+  private static final Logger log = LoggerFactory.getLogger(PrometheusAutoConfiguration.class);
 
-    /// 构造函数。
-    ///
-    /// @param properties 可观测性配置属性
-    public PrometheusAutoConfiguration(ObservabilityProperties properties) {
-        ObservabilityProperties.PrometheusConfig config = properties.getMetrics().getPrometheus();
+  /// 构造函数。
+  ///
+  /// @param properties 可观测性配置属性
+  public PrometheusAutoConfiguration(ObservabilityProperties properties) {
+    ObservabilityProperties.PrometheusConfig config = properties.getMetrics().getPrometheus();
 
-        log.info("初始化 Prometheus 自动配置 [Exemplars启用: {}]",
-            config.isEnableExemplars());
+    log.info("初始化 Prometheus 自动配置 [Exemplars启用: {}]", config.isEnableExemplars());
 
-        if (config.isEnableExemplars()) {
-            log.info("Exemplars 已启用，Prometheus 指标将关联 Tracing 信息");
-        }
+    if (config.isEnableExemplars()) {
+      log.info("Exemplars 已启用，Prometheus 指标将关联 Tracing 信息");
     }
+  }
 
-    // TODO: 如果需要自定义 PrometheusMeterRegistry 配置，可以在此处添加
-    // Spring Boot Actuator 已经提供了默认的 PrometheusMeterRegistry 自动配置
-    // 如果需要自定义，可以通过 MeterRegistryCustomizer<PrometheusMeterRegistry> 实现
+  // TODO: 如果需要自定义 PrometheusMeterRegistry 配置，可以在此处添加
+  // Spring Boot Actuator 已经提供了默认的 PrometheusMeterRegistry 自动配置
+  // 如果需要自定义，可以通过 MeterRegistryCustomizer<PrometheusMeterRegistry> 实现
 }

@@ -33,29 +33,29 @@ import org.springframework.context.annotation.Bean;
     prefix = "patra.observability.metrics.skywalking",
     name = "enabled",
     havingValue = "true",
-    matchIfMissing = true
-)
+    matchIfMissing = true)
 public class SkyWalkingMeterAutoConfiguration {
 
-    private static final Logger log = LoggerFactory.getLogger(SkyWalkingMeterAutoConfiguration.class);
+  private static final Logger log = LoggerFactory.getLogger(SkyWalkingMeterAutoConfiguration.class);
 
-    /// 创建 SkyWalking Meter Registry。
-    ///
-    /// SkyWalking Meter Registry 会将 Micrometer 收集的指标转发到 SkyWalking OAP 服务器。
-    ///
-    /// @param properties 可观测性配置属性
-    /// @return SkywalkingMeterRegistry 实例
-    @Bean
-    @ConditionalOnMissingBean(SkywalkingMeterRegistry.class)
-    public SkywalkingMeterRegistry skywalkingMeterRegistry(ObservabilityProperties properties) {
-        ObservabilityProperties.SkyWalkingMeterConfig config = properties.getMetrics().getSkywalking();
+  /// 创建 SkyWalking Meter Registry。
+  ///
+  /// SkyWalking Meter Registry 会将 Micrometer 收集的指标转发到 SkyWalking OAP 服务器。
+  ///
+  /// @param properties 可观测性配置属性
+  /// @return SkywalkingMeterRegistry 实例
+  @Bean
+  @ConditionalOnMissingBean(SkywalkingMeterRegistry.class)
+  public SkywalkingMeterRegistry skywalkingMeterRegistry(ObservabilityProperties properties) {
+    ObservabilityProperties.SkyWalkingMeterConfig config = properties.getMetrics().getSkywalking();
 
-        log.info("创建 SkyWalking Meter Registry [OAP地址: {}, 导出间隔: {}]",
-            config.getOapAddress(),
-            properties.getMetrics().getStep());
+    log.info(
+        "创建 SkyWalking Meter Registry [OAP地址: {}, 导出间隔: {}]",
+        config.getOapAddress(),
+        properties.getMetrics().getStep());
 
-        // 使用无参构造函数创建 SkywalkingMeterRegistry
-        // SkyWalking Agent 会自动连接到配置的 OAP 服务器
-        return new SkywalkingMeterRegistry();
-    }
+    // 使用无参构造函数创建 SkywalkingMeterRegistry
+    // SkyWalking Agent 会自动连接到配置的 OAP 服务器
+    return new SkywalkingMeterRegistry();
+  }
 }

@@ -29,7 +29,8 @@ import org.springframework.core.Ordered;
 /// - error.class - 异常的完全限定类名
 /// - error.type - 异常的简单类名
 /// - resolution.success - 解析是否成功（true/false）
-/// - resolution.strategy - 使用的解析策略（cache/application-exception/contributor/trait/naming/cause/fallback）
+/// - resolution.strategy -
+// 使用的解析策略（cache/application-exception/contributor/trait/naming/cause/fallback）
 /// - resolution.depth - 原因链递归深度（仅在 CAUSE 策略时有意义）
 ///
 /// 执行顺序：
@@ -41,85 +42,86 @@ import org.springframework.core.Ordered;
 /// @since 1.0.0
 public class ObservationResolutionInterceptor implements ResolutionInterceptor, Ordered {
 
-    private static final Logger log = LoggerFactory.getLogger(ObservationResolutionInterceptor.class);
+  private static final Logger log = LoggerFactory.getLogger(ObservationResolutionInterceptor.class);
 
-    private static final String OBSERVATION_NAME = "error.resolution";
-    private static final String OBSERVATION_CONTEXT_KEY = "observation";
+  private static final String OBSERVATION_NAME = "error.resolution";
+  private static final String OBSERVATION_CONTEXT_KEY = "observation";
 
-    private final ObservationRegistry observationRegistry;
+  private final ObservationRegistry observationRegistry;
 
-    /// 构造函数。
-    ///
-    /// @param observationRegistry Observation 注册中心
-    public ObservationResolutionInterceptor(ObservationRegistry observationRegistry) {
-        this.observationRegistry = observationRegistry;
-        log.info("初始化错误解析可观测性拦截器");
+  /// 构造函数。
+  ///
+  /// @param observationRegistry Observation 注册中心
+  public ObservationResolutionInterceptor(ObservationRegistry observationRegistry) {
+    this.observationRegistry = observationRegistry;
+    log.info("初始化错误解析可观测性拦截器");
+  }
+
+  /// 拦截错误解析流程。
+  ///
+  /// 流程：
+  ///
+  /// - 创建 Observation 并添加错误信息标签
+  /// - 启动 Observation
+  /// - 调用下一个拦截器或解析引擎
+  /// - 停止 Observation 并记录解析结果
+  /// - 如果发生异常，记录错误事件
+  ///
+  /// @param exception  正在解析的异常
+  /// @param invocation 管道调用对象
+  /// @return 解析后的错误
+  @Override
+  public ErrorResolution intercept(Throwable exception, ResolutionInvocation invocation) {
+    // 创建 Observation
+    Observation observation = Observation.createNotStarted(OBSERVATION_NAME, observationRegistry);
+
+    // 添加低基数标签（错误类型信息）
+    observation.lowCardinalityKeyValue("error.class", exception.getClass().getName());
+    observation.lowCardinalityKeyValue("error.type", exception.getClass().getSimpleName());
+
+    // 启动 Observation
+    observation.start();
+
+    try {
+      // 调用下一个拦截器或解析引擎
+      ErrorResolution resolution = invocation.proceed(exception);
+
+      // 记录解析结果和策略
+      observation.lowCardinalityKeyValue("resolution.success", "true");
+      observation.lowCardinalityKeyValue("resolution.strategy", resolution.strategy().getValue());
+
+      log.debug(
+          "错误解析成功: {} (策略: {})",
+          exception.getClass().getSimpleName(),
+          resolution.strategy().getValue());
+
+      return resolution;
+
+    } catch (Exception e) {
+      // 记录解析失败
+      observation.lowCardinalityKeyValue("resolution.success", "false");
+      observation.error(e);
+
+      log.error("错误解析失败: {}", exception.getClass().getSimpleName(), e);
+
+      throw e;
+
+    } finally {
+      // 停止 Observation（无论成功或失败）
+      observation.stop();
     }
+  }
 
-    /// 拦截错误解析流程。
-    ///
-    /// 流程：
-    ///
-    /// - 创建 Observation 并添加错误信息标签
-    /// - 启动 Observation
-    /// - 调用下一个拦截器或解析引擎
-    /// - 停止 Observation 并记录解析结果
-    /// - 如果发生异常，记录错误事件
-    ///
-    /// @param exception  正在解析的异常
-    /// @param invocation 管道调用对象
-    /// @return 解析后的错误
-    @Override
-    public ErrorResolution intercept(Throwable exception, ResolutionInvocation invocation) {
-        // 创建 Observation
-        Observation observation = Observation.createNotStarted(OBSERVATION_NAME, observationRegistry);
-
-        // 添加低基数标签（错误类型信息）
-        observation.lowCardinalityKeyValue("error.class", exception.getClass().getName());
-        observation.lowCardinalityKeyValue("error.type", exception.getClass().getSimpleName());
-
-        // 启动 Observation
-        observation.start();
-
-        try {
-            // 调用下一个拦截器或解析引擎
-            ErrorResolution resolution = invocation.proceed(exception);
-
-            // 记录解析结果和策略
-            observation.lowCardinalityKeyValue("resolution.success", "true");
-            observation.lowCardinalityKeyValue("resolution.strategy", resolution.strategy().getValue());
-
-            log.debug("错误解析成功: {} (策略: {})",
-                exception.getClass().getSimpleName(),
-                resolution.strategy().getValue());
-
-            return resolution;
-
-        } catch (Exception e) {
-            // 记录解析失败
-            observation.lowCardinalityKeyValue("resolution.success", "false");
-            observation.error(e);
-
-            log.error("错误解析失败: {}", exception.getClass().getSimpleName(), e);
-
-            throw e;
-
-        } finally {
-            // 停止 Observation（无论成功或失败）
-            observation.stop();
-        }
-    }
-
-    /// 获取拦截器执行顺序。
-    ///
-    /// 使用最高优先级确保最早执行，这样可以：
-    ///
-    /// - 捕获整个错误解析流程的时间
-    /// - 包含其他拦截器的执行时间
-    ///
-    /// @return 执行顺序值
-    @Override
-    public int getOrder() {
-        return Ordered.HIGHEST_PRECEDENCE;
-    }
+  /// 获取拦截器执行顺序。
+  ///
+  /// 使用最高优先级确保最早执行，这样可以：
+  ///
+  /// - 捕获整个错误解析流程的时间
+  /// - 包含其他拦截器的执行时间
+  ///
+  /// @return 执行顺序值
+  @Override
+  public int getOrder() {
+    return Ordered.HIGHEST_PRECEDENCE;
+  }
 }
