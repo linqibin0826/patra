@@ -144,8 +144,7 @@ public class MySQLContainerInitializer
     // 确保容器已初始化
     initializeContainer();
 
-    MySQLContainer<?> mysql =
-        ContainerRegistry.get(ContainerType.MYSQL, MySQLContainer.class);
+    MySQLContainer<?> mysql = ContainerRegistry.get(ContainerType.MYSQL, MySQLContainer.class);
 
     if (mysql == null) {
       throw new IllegalStateException("MySQL 容器未正确注册");

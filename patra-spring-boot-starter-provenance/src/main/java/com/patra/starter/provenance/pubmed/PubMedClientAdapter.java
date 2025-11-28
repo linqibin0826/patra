@@ -93,8 +93,7 @@ public class PubMedClientAdapter implements PubMedClient {
             .path(PubMedOperation.ESEARCH.getEndpoint());
     queryParams.forEach(uriBuilder::queryParam);
 
-    String body =
-        restClient.get().uri(uriBuilder.build().toUri()).retrieve().body(String.class);
+    String body = restClient.get().uri(uriBuilder.build().toUri()).retrieve().body(String.class);
 
     try {
       return objectMapper.readValue(body, ESearchResponse.class);
@@ -140,8 +139,7 @@ public class PubMedClientAdapter implements PubMedClient {
             .path(PubMedOperation.EFETCH.getEndpoint());
     queryParams.forEach(uriBuilder::queryParam);
 
-    String body =
-        restClient.get().uri(uriBuilder.build().toUri()).retrieve().body(String.class);
+    String body = restClient.get().uri(uriBuilder.build().toUri()).retrieve().body(String.class);
 
     try {
       String retmode = request.retmode();

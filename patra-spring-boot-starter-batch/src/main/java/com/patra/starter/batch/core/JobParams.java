@@ -28,5 +28,4 @@ package com.patra.starter.batch.core;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface JobParams {
-}
+public interface JobParams {}

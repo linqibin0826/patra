@@ -34,9 +34,7 @@ public class CircuitBreakerInterceptor implements ResolutionInterceptor {
   ///
   /// @param circuitBreaker Resilience4j 熔断器实例
   /// @param errorProperties 错误配置属性(用于获取上下文前缀)
-  public CircuitBreakerInterceptor(
-      CircuitBreaker circuitBreaker,
-      ErrorProperties errorProperties) {
+  public CircuitBreakerInterceptor(CircuitBreaker circuitBreaker, ErrorProperties errorProperties) {
     this.circuitBreaker = circuitBreaker;
     String prefix = errorProperties.getContextPrefix();
     this.contextPrefix = (prefix == null || prefix.isBlank()) ? "UNKNOWN" : prefix;

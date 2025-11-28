@@ -77,8 +77,7 @@ public class EpmcClientAdapter implements EPMCClient {
             .path(EpmcOperation.SEARCH.getEndpoint());
     queryParams.forEach(uriBuilder::queryParam);
 
-    String body =
-        restClient.get().uri(uriBuilder.build().toUri()).retrieve().body(String.class);
+    String body = restClient.get().uri(uriBuilder.build().toUri()).retrieve().body(String.class);
 
     try {
       JsonNode root = objectMapper.readTree(body);

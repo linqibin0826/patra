@@ -113,4 +113,3 @@ public abstract class DomainException extends RuntimeException implements HasErr
     return traits;
   }
 }
-

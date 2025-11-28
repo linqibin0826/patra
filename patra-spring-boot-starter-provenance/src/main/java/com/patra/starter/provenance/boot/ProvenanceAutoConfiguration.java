@@ -5,8 +5,6 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.patra.starter.provenance.common.config.DefaultConfigProvider;
-import com.patra.starter.provenance.common.config.HttpConfig;
-import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import com.patra.starter.provenance.common.metrics.ProvenanceMetrics;
 import com.patra.starter.provenance.common.provider.ProvenanceDataProvider;
 import com.patra.starter.provenance.common.provider.ProviderRegistry;
@@ -19,7 +17,6 @@ import com.patra.starter.provenance.pubmed.converter.PubmedPublicationConverter;
 import com.patra.starter.provenance.pubmed.processor.PubmedPublicationProcessor;
 import com.patra.starter.provenance.pubmed.request.PubMedESearchRequestAssembler;
 import io.micrometer.core.instrument.MeterRegistry;
-import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +27,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 /// Provenance Starter 自动配置类
@@ -157,7 +153,8 @@ public class ProvenanceAutoConfiguration {
       ObjectMapper objectMapper,
       Optional<ProvenanceMetrics> metrics) {
     log.info("自动配置 Europe PMC 客户端,用于访问 EPMC API (使用 defaultRestClient)");
-    return new EpmcClientAdapter(defaultRestClient, configProvider, objectMapper, metrics.orElse(null));
+    return new EpmcClientAdapter(
+        defaultRestClient, configProvider, objectMapper, metrics.orElse(null));
   }
 
   /// 创建 PubMed ESearch 请求组装器

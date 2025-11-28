@@ -145,9 +145,7 @@ public class RocketMQContainerInitializer
             throw new IllegalStateException("RocketMQ 容器初始化失败", e);
           }
         } else {
-          log.info(
-              "RocketMQ 容器已由其他线程初始化，复用现有实例 (线程: {})",
-              Thread.currentThread().getName());
+          log.info("RocketMQ 容器已由其他线程初始化，复用现有实例 (线程: {})", Thread.currentThread().getName());
         }
       }
     } else {

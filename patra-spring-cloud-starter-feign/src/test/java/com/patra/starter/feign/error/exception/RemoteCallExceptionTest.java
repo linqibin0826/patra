@@ -55,7 +55,8 @@ class RemoteCallExceptionTest {
       Set<ErrorTrait> traits = exception.getErrorTraits();
       assertThat(traits).hasSize(2);
       assertThat(traits)
-          .containsExactlyInAnyOrder(StandardErrorTrait.CONFLICT, StandardErrorTrait.RULE_VIOLATION);
+          .containsExactlyInAnyOrder(
+              StandardErrorTrait.CONFLICT, StandardErrorTrait.RULE_VIOLATION);
     }
 
     @Test
@@ -64,7 +65,8 @@ class RemoteCallExceptionTest {
       // Given: 包含未知 trait 的 ProblemDetail
       ProblemDetail problemDetail = ProblemDetail.forStatus(500);
       problemDetail.setDetail("错误");
-      problemDetail.setProperty(ErrorKeys.TRAITS, List.of("NOT_FOUND", "UNKNOWN_TRAIT", "CONFLICT"));
+      problemDetail.setProperty(
+          ErrorKeys.TRAITS, List.of("NOT_FOUND", "UNKNOWN_TRAIT", "CONFLICT"));
 
       // When: 创建 RemoteCallException
       RemoteCallException exception = new RemoteCallException(problemDetail, "TestClient#call");
@@ -127,7 +129,9 @@ class RemoteCallExceptionTest {
       assertThat(traits).hasSize(3);
       assertThat(traits)
           .containsExactlyInAnyOrder(
-              StandardErrorTrait.NOT_FOUND, StandardErrorTrait.CONFLICT, StandardErrorTrait.TIMEOUT);
+              StandardErrorTrait.NOT_FOUND,
+              StandardErrorTrait.CONFLICT,
+              StandardErrorTrait.TIMEOUT);
     }
 
     @Test

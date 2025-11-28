@@ -32,8 +32,7 @@ class MyBatisArchRulesTest {
     @DisplayName("继承 ServiceImpl 的 RepositoryAdapter 应被检测")
     void shouldDetectRepositoryAdapterExtendingServiceImpl() {
       // Arrange
-      JavaClasses classes =
-          new ClassFileImporter().importClasses(ViolatingRepositoryAdapter.class);
+      JavaClasses classes = new ClassFileImporter().importClasses(ViolatingRepositoryAdapter.class);
       ArchRule rule = MyBatisArchRules.noServiceImplInRepository();
 
       // Act & Assert
@@ -46,8 +45,7 @@ class MyBatisArchRulesTest {
     @DisplayName("不继承 ServiceImpl 的 RepositoryAdapter 应通过")
     void shouldPassForRepositoryAdapterNotExtendingServiceImpl() {
       // Arrange
-      JavaClasses classes =
-          new ClassFileImporter().importClasses(CompliantRepositoryAdapter.class);
+      JavaClasses classes = new ClassFileImporter().importClasses(CompliantRepositoryAdapter.class);
       ArchRule rule = MyBatisArchRules.noServiceImplInRepository();
 
       // Act & Assert
@@ -106,8 +104,7 @@ class MyBatisArchRulesTest {
     @DisplayName("非 infra 包的类不应被检测")
     void shouldNotDetectClassesOutsideInfraPackage() {
       // Arrange - 类不在 infra 包下
-      JavaClasses classes =
-          new ClassFileImporter().importClasses(ViolatingRepositoryAdapter.class);
+      JavaClasses classes = new ClassFileImporter().importClasses(ViolatingRepositoryAdapter.class);
       // 允许空匹配，因为 ViolatingRepositoryAdapter 不在 ..infra.. 包下
       ArchRule rule = MyBatisArchRules.noServiceImplInInfraLayer().allowEmptyShould(true);
 
