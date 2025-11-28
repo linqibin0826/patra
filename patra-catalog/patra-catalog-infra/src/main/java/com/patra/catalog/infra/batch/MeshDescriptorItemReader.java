@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamReader;
+
 /// MeSH 主题词 XML 文件读取器。
 ///
 /// **职责**：
@@ -53,7 +54,8 @@ public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptor
   /// @param xmlParserPort XML 解析端口
   /// @param filePath XML 文件路径
   /// @param meshVersion MeSH 版本号
-  public MeshDescriptorItemReader(XmlParserPort xmlParserPort, String filePath, String meshVersion) {
+  public MeshDescriptorItemReader(
+      XmlParserPort xmlParserPort, String filePath, String meshVersion) {
     this.xmlParserPort = xmlParserPort;
     this.filePath = filePath;
     this.meshVersion = meshVersion;

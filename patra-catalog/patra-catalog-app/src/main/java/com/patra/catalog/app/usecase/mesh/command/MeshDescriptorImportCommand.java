@@ -30,7 +30,8 @@ import java.util.Objects;
 /// @param mode 导入模式（必填）
 /// @author linqibin
 /// @since 0.1.0
-public record MeshDescriptorImportCommand(String url, String meshVersion, MeshDescriptorImportMode mode) {
+public record MeshDescriptorImportCommand(
+    String url, String meshVersion, MeshDescriptorImportMode mode) {
 
   /// 构造并验证命令参数。
   ///

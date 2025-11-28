@@ -103,8 +103,7 @@ class MeshDescriptorItemReaderIT {
           .thenReturn(Stream.empty());
 
       itemReader =
-          new MeshDescriptorItemReader(
-              xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
+          new MeshDescriptorItemReader(xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
 
       // When: 打开 Reader
       itemReader.open(executionContext);
@@ -118,8 +117,7 @@ class MeshDescriptorItemReaderIT {
     void open_fileNotExists_shouldThrowItemStreamException() {
       // Given: 不存在的文件路径
       String nonExistentPath = tempDir.resolve("non-existent.xml").toString();
-      itemReader =
-          new MeshDescriptorItemReader(xmlParserPort, nonExistentPath, TEST_MESH_VERSION);
+      itemReader = new MeshDescriptorItemReader(xmlParserPort, nonExistentPath, TEST_MESH_VERSION);
 
       // When & Then: 应该抛出异常
       assertThatThrownBy(() -> itemReader.open(executionContext))
@@ -146,8 +144,7 @@ class MeshDescriptorItemReaderIT {
           .thenReturn(mockStream);
 
       itemReader =
-          new MeshDescriptorItemReader(
-              xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
+          new MeshDescriptorItemReader(xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
 
       // When: 打开 Reader（应该跳过前 2 条）
       itemReader.open(executionContext);
@@ -179,8 +176,7 @@ class MeshDescriptorItemReaderIT {
           .thenReturn(mockStream);
 
       itemReader =
-          new MeshDescriptorItemReader(
-              xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
+          new MeshDescriptorItemReader(xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
       itemReader.open(executionContext);
 
       // When & Then: 逐条读取
@@ -200,8 +196,7 @@ class MeshDescriptorItemReaderIT {
           .thenReturn(Stream.empty());
 
       itemReader =
-          new MeshDescriptorItemReader(
-              xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
+          new MeshDescriptorItemReader(xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
       itemReader.open(executionContext);
 
       // When & Then: 应该立即返回 null
@@ -229,8 +224,7 @@ class MeshDescriptorItemReaderIT {
           .thenReturn(mockStream);
 
       itemReader =
-          new MeshDescriptorItemReader(
-              xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
+          new MeshDescriptorItemReader(xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
       itemReader.open(executionContext);
 
       // When: 读取 2 条后保存进度
@@ -257,8 +251,7 @@ class MeshDescriptorItemReaderIT {
           .thenReturn(Stream.empty());
 
       itemReader =
-          new MeshDescriptorItemReader(
-              xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
+          new MeshDescriptorItemReader(xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
       itemReader.open(executionContext);
 
       // When & Then: 关闭不应该抛出异常
@@ -273,8 +266,7 @@ class MeshDescriptorItemReaderIT {
           .thenReturn(Stream.empty());
 
       itemReader =
-          new MeshDescriptorItemReader(
-              xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
+          new MeshDescriptorItemReader(xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
       itemReader.open(executionContext);
 
       // When & Then: 重复关闭不应该抛出异常
@@ -306,8 +298,7 @@ class MeshDescriptorItemReaderIT {
 
       ExecutionContext context1 = new ExecutionContext();
       MeshDescriptorItemReader reader1 =
-          new MeshDescriptorItemReader(
-              xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
+          new MeshDescriptorItemReader(xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
       reader1.open(context1);
 
       // 读取 3 条记录后"中断"
@@ -335,8 +326,7 @@ class MeshDescriptorItemReaderIT {
           .thenReturn(mockStream2);
 
       MeshDescriptorItemReader reader2 =
-          new MeshDescriptorItemReader(
-              xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
+          new MeshDescriptorItemReader(xmlParserPort, testXmlFile.toString(), TEST_MESH_VERSION);
       reader2.open(context1); // 使用保存的 context 恢复
 
       // Then: 应该从第 4 条开始读取

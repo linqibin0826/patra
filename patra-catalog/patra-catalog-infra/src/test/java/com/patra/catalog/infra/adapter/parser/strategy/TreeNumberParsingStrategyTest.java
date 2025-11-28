@@ -122,8 +122,10 @@ class TreeNumberParsingStrategyTest {
     @Test
     @DisplayName("应处理所有根分类字母")
     void shouldHandleAllRootCategories() throws Exception {
-      String[] categories = {"A01", "B01", "C01", "D01", "E01", "F01", "G01", "H01", "I01",
-          "J01", "K01", "L01", "M01", "N01", "V01", "Z01"};
+      String[] categories = {
+        "A01", "B01", "C01", "D01", "E01", "F01", "G01", "H01", "I01", "J01", "K01", "L01", "M01",
+        "N01", "V01", "Z01"
+      };
 
       for (String category : categories) {
         var xml = "<TreeNumber>" + category + "</TreeNumber>";

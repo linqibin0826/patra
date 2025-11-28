@@ -78,8 +78,7 @@ public final class EntryTermParsingStrategy implements RecordParsingStrategy<Mes
         XmlParsingHelper.parseYesNoAttribute(
             reader, MeshXmlElements.Attribute.IS_PERMUTED_TERM_YN, false);
     boolean isPrintFlag =
-        XmlParsingHelper.parseYesNoAttribute(
-            reader, MeshXmlElements.Attribute.PRINT_FLAG_YN, true);
+        XmlParsingHelper.parseYesNoAttribute(reader, MeshXmlElements.Attribute.PRINT_FLAG_YN, true);
 
     // 子元素字段
     String termUI = null;
@@ -99,13 +98,14 @@ public final class EntryTermParsingStrategy implements RecordParsingStrategy<Mes
         switch (localName) {
           case MeshXmlElements.Identifier.TERM_UI -> termUI = reader.getElementText();
           case MeshXmlElements.Name.STRING -> termText = reader.getElementText();
-          case MeshXmlElements.Date.DATE_CREATED -> dateCreated =
-              XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_CREATED);
-          case MeshXmlElements.List.THESAURUS_ID_LIST -> thesaurusIds =
-              XmlParsingHelper.parseStringList(
-                  reader,
-                  MeshXmlElements.List.THESAURUS_ID_LIST,
-                  MeshXmlElements.Other.THESAURUS_ID);
+          case MeshXmlElements.Date.DATE_CREATED ->
+              dateCreated = XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_CREATED);
+          case MeshXmlElements.List.THESAURUS_ID_LIST ->
+              thesaurusIds =
+                  XmlParsingHelper.parseStringList(
+                      reader,
+                      MeshXmlElements.List.THESAURUS_ID_LIST,
+                      MeshXmlElements.Other.THESAURUS_ID);
           case MeshXmlElements.Other.ENTRY_VERSION -> entryVersion = reader.getElementText();
           case MeshXmlElements.Other.ABBREVIATION -> abbreviation = reader.getElementText();
           case MeshXmlElements.Other.SORT_VERSION -> sortVersion = reader.getElementText();

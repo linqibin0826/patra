@@ -176,9 +176,7 @@ class AbstractRecordSpliteratorTest {
   static class TestSpliterator extends AbstractRecordSpliterator<String> {
 
     public TestSpliterator(
-        XMLStreamReader reader,
-        RecordParsingStrategy<String> strategy,
-        XmlParsingContext context) {
+        XMLStreamReader reader, RecordParsingStrategy<String> strategy, XmlParsingContext context) {
       super(reader, strategy, context);
     }
   }

@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.persistence.mapper;
 
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import com.patra.catalog.infra.persistence.entity.MeshEntryTermDO;
+import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 
 /// MeSH 入口术语表 Mapper 接口。
 ///

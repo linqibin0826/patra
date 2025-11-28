@@ -62,10 +62,8 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
         BatchInsertHelper.batchInsert(dataObjects, meshDescriptorMapper::insertBatchSomeColumn);
 
     if (result.hasErrors()) {
-      log.error(
-          "主题词批量保存部分失败：成功 {} / 总计 {}", result.successCount(), result.totalCount());
-      throw new MeshPersistenceException(
-          "主题词批量插入部分失败，失败批次数: " + result.errors().size());
+      log.error("主题词批量保存部分失败：成功 {} / 总计 {}", result.successCount(), result.totalCount());
+      throw new MeshPersistenceException("主题词批量插入部分失败，失败批次数: " + result.errors().size());
     }
     log.info("主题词批量保存完成，共 {} 条", result.successCount());
   }
@@ -87,12 +85,8 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
         BatchInsertHelper.batchInsert(dataObjects, meshTreeNumberMapper::insertBatchSomeColumn);
 
     if (result.hasErrors()) {
-      log.error(
-          "树形编号批量保存部分失败：成功 {} / 总计 {}",
-          result.successCount(),
-          result.totalCount());
-      throw new MeshPersistenceException(
-          "树形编号批量插入部分失败，失败批次数: " + result.errors().size());
+      log.error("树形编号批量保存部分失败：成功 {} / 总计 {}", result.successCount(), result.totalCount());
+      throw new MeshPersistenceException("树形编号批量插入部分失败，失败批次数: " + result.errors().size());
     }
     log.info("树形编号批量保存完成，共 {} 条", result.successCount());
   }
@@ -114,12 +108,8 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
         BatchInsertHelper.batchInsert(dataObjects, meshEntryTermMapper::insertBatchSomeColumn);
 
     if (result.hasErrors()) {
-      log.error(
-          "入口术语批量保存部分失败：成功 {} / 总计 {}",
-          result.successCount(),
-          result.totalCount());
-      throw new MeshPersistenceException(
-          "入口术语批量插入部分失败，失败批次数: " + result.errors().size());
+      log.error("入口术语批量保存部分失败：成功 {} / 总计 {}", result.successCount(), result.totalCount());
+      throw new MeshPersistenceException("入口术语批量插入部分失败，失败批次数: " + result.errors().size());
     }
     log.info("入口术语批量保存完成，共 {} 条", result.successCount());
   }
@@ -141,10 +131,8 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
         BatchInsertHelper.batchInsert(dataObjects, meshConceptMapper::insertBatchSomeColumn);
 
     if (result.hasErrors()) {
-      log.error(
-          "概念批量保存部分失败：成功 {} / 总计 {}", result.successCount(), result.totalCount());
-      throw new MeshPersistenceException(
-          "概念批量插入部分失败，失败批次数: " + result.errors().size());
+      log.error("概念批量保存部分失败：成功 {} / 总计 {}", result.successCount(), result.totalCount());
+      throw new MeshPersistenceException("概念批量插入部分失败，失败批次数: " + result.errors().size());
     }
     log.info("概念批量保存完成，共 {} 条", result.successCount());
   }

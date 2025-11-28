@@ -90,40 +90,56 @@ public class MeshDescriptorItemWriter implements ItemWriter<MeshDescriptorAggreg
       String descriptorUi = aggregate.getUi().ui();
 
       // TreeNumber
-      aggregate.getTreeNumbers().forEach(tn -> {
-        MeshTreeNumberDO treeNumberDO = converter.toTreeNumberDO(tn, descriptorUi);
-        treeNumberDO.setId(IdWorker.getId());
-        treeNumberDOs.add(treeNumberDO);
-      });
+      aggregate
+          .getTreeNumbers()
+          .forEach(
+              tn -> {
+                MeshTreeNumberDO treeNumberDO = converter.toTreeNumberDO(tn, descriptorUi);
+                treeNumberDO.setId(IdWorker.getId());
+                treeNumberDOs.add(treeNumberDO);
+              });
 
       // Concept 和 ConceptRelation
-      aggregate.getConcepts().forEach(c -> {
-        MeshConceptDO conceptDO = converter.toConceptDO(c, descriptorUi);
-        conceptDO.setId(IdWorker.getId());
-        conceptDOs.add(conceptDO);
+      aggregate
+          .getConcepts()
+          .forEach(
+              c -> {
+                MeshConceptDO conceptDO = converter.toConceptDO(c, descriptorUi);
+                conceptDO.setId(IdWorker.getId());
+                conceptDOs.add(conceptDO);
 
-        // 收集概念的 ConceptRelation
-        c.getConceptRelations().forEach(cr -> {
-          MeshConceptRelationDO conceptRelationDO =
-              converter.toConceptRelationDO(cr, c.getConceptUi(), c.isPreferred(), descriptorUi);
-          conceptRelationDO.setId(IdWorker.getId());
-          conceptRelationDOs.add(conceptRelationDO);
-        });
-      });
+                // 收集概念的 ConceptRelation
+                c.getConceptRelations()
+                    .forEach(
+                        cr -> {
+                          MeshConceptRelationDO conceptRelationDO =
+                              converter.toConceptRelationDO(
+                                  cr, c.getConceptUi(), c.isPreferred(), descriptorUi);
+                          conceptRelationDO.setId(IdWorker.getId());
+                          conceptRelationDOs.add(conceptRelationDO);
+                        });
+              });
 
       // EntryTerm
-      aggregate.getEntryTerms().forEach(et -> {
-        MeshEntryTermDO entryTermDO = converter.toEntryTermDO(et, descriptorUi);
-        entryTermDO.setId(IdWorker.getId());
-        entryTermDOs.add(entryTermDO);
-      });
+      aggregate
+          .getEntryTerms()
+          .forEach(
+              et -> {
+                MeshEntryTermDO entryTermDO = converter.toEntryTermDO(et, descriptorUi);
+                entryTermDO.setId(IdWorker.getId());
+                entryTermDOs.add(entryTermDO);
+              });
 
       // EntryCombination
-      aggregate.getEntryCombinations().forEach(ec -> {
-        MeshEntryCombinationDO entryCombinationDO = converter.toEntryCombinationDO(ec, descriptorUi);
-        entryCombinationDO.setId(IdWorker.getId());
-        entryCombinationDOs.add(entryCombinationDO);
-      });
+      aggregate
+          .getEntryCombinations()
+          .forEach(
+              ec -> {
+                MeshEntryCombinationDO entryCombinationDO =
+                    converter.toEntryCombinationDO(ec, descriptorUi);
+                entryCombinationDO.setId(IdWorker.getId());
+                entryCombinationDOs.add(entryCombinationDO);
+              });
     }
 
     // 3. 批量 INSERT（单条 SQL 语句）

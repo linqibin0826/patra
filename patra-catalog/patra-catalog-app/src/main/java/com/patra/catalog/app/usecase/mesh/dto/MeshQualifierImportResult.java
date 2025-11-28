@@ -32,7 +32,6 @@ public record MeshQualifierImportResult(
         meshVersion,
         importedCount,
         String.format(
-            "MeSH 限定词导入完成，sourceUrl=%s，version=%s，导入数量=%d",
-            sourceUrl, meshVersion, importedCount));
+            "MeSH 限定词导入完成，sourceUrl=%s，version=%s，导入数量=%d", sourceUrl, meshVersion, importedCount));
   }
 }

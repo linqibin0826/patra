@@ -80,8 +80,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertNotNull(result);
       assertEquals("Q000001", result.getQualifierUi().ui());
@@ -114,8 +113,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertNotNull(result);
       assertEquals("Q000000981", result.getQualifierUi().ui());
@@ -152,8 +150,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertEquals("Used with diseases for diagnostic procedures", result.getAnnotation());
     }
@@ -196,8 +193,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertEquals("19660101", result.getDateCreated());
       assertEquals("20200615", result.getDateRevised());
@@ -229,8 +225,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertEquals("66; used with Category A-D 1966-74", result.getHistoryNote());
       assertEquals("search policy: Online Manual", result.getOnlineNote());
@@ -263,8 +258,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertThat(result.getTreeNumbers()).containsExactly("Y01.060", "Y02.060");
     }
@@ -309,8 +303,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertEquals("DI", result.getAbbreviation());
     }
@@ -344,8 +337,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertNull(result);
     }
@@ -370,8 +362,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertNull(result);
     }
@@ -399,8 +390,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertNull(result);
     }
@@ -428,8 +418,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.empty());
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.empty());
 
       assertNotNull(result);
       assertNull(result.getMeshVersion());
@@ -482,8 +471,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertNotNull(result);
       assertEquals("Q000001", result.getQualifierUi().ui());

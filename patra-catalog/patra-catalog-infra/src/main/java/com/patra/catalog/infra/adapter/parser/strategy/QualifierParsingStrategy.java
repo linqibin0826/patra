@@ -99,12 +99,13 @@ public final class QualifierParsingStrategy
           case MeshXmlElements.Name.QUALIFIER_NAME ->
               name = XmlParsingHelper.parseNameElement(reader);
           case MeshXmlElements.Other.ANNOTATION -> annotation = reader.getElementText();
-          case MeshXmlElements.Date.DATE_CREATED -> dateCreated =
-              XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_CREATED);
-          case MeshXmlElements.Date.DATE_REVISED -> dateRevised =
-              XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_REVISED);
-          case MeshXmlElements.Date.DATE_ESTABLISHED -> dateEstablished =
-              XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_ESTABLISHED);
+          case MeshXmlElements.Date.DATE_CREATED ->
+              dateCreated = XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_CREATED);
+          case MeshXmlElements.Date.DATE_REVISED ->
+              dateRevised = XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_REVISED);
+          case MeshXmlElements.Date.DATE_ESTABLISHED ->
+              dateEstablished =
+                  XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_ESTABLISHED);
           case MeshXmlElements.Other.HISTORY_NOTE -> historyNote = reader.getElementText().trim();
           case MeshXmlElements.Other.ONLINE_NOTE -> onlineNote = reader.getElementText().trim();
           case MeshXmlElements.List.TREE_NUMBER_LIST -> treeNumbers = parseTreeNumberList(reader);

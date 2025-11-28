@@ -10,9 +10,9 @@ import com.patra.common.error.trait.StandardErrorTrait;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -36,7 +36,11 @@ class FileDownloadAdapterIT {
 
   @RegisterExtension
   static WireMockExtension wireMock =
-      WireMockExtension.newInstance().options(com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig().dynamicPort()).build();
+      WireMockExtension.newInstance()
+          .options(
+              com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig()
+                  .dynamicPort())
+          .build();
 
   private FileDownloadAdapter adapter;
   private Path downloadedFile;

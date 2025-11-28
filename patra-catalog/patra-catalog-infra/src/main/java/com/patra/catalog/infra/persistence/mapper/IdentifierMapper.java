@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.persistence.mapper;
 
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import com.patra.catalog.infra.persistence.entity.IdentifierDO;
+import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 
 /// 标识符 Mapper 接口 — 对标识符表的数据访问操作。
 ///

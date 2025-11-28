@@ -50,7 +50,8 @@ class MeshImportJobExecutionListenerTest {
       Path tempFile = Files.createFile(tempDir.resolve("mesh-import-test.xml"));
       assertThat(Files.exists(tempFile)).isTrue();
 
-      JobExecution jobExecution = createJobExecution(tempFile.toString(), true, BatchStatus.COMPLETED);
+      JobExecution jobExecution =
+          createJobExecution(tempFile.toString(), true, BatchStatus.COMPLETED);
 
       // When
       listener.afterJob(jobExecution);
@@ -66,7 +67,8 @@ class MeshImportJobExecutionListenerTest {
       Path tempFile = Files.createFile(tempDir.resolve("mesh-import-stopped.xml"));
       assertThat(Files.exists(tempFile)).isTrue();
 
-      JobExecution jobExecution = createJobExecution(tempFile.toString(), true, BatchStatus.STOPPED);
+      JobExecution jobExecution =
+          createJobExecution(tempFile.toString(), true, BatchStatus.STOPPED);
 
       // When
       listener.afterJob(jobExecution);
@@ -98,7 +100,8 @@ class MeshImportJobExecutionListenerTest {
       Path regularFile = Files.createFile(tempDir.resolve("regular-file.xml"));
       assertThat(Files.exists(regularFile)).isTrue();
 
-      JobExecution jobExecution = createJobExecution(regularFile.toString(), false, BatchStatus.COMPLETED);
+      JobExecution jobExecution =
+          createJobExecution(regularFile.toString(), false, BatchStatus.COMPLETED);
 
       // When
       listener.afterJob(jobExecution);
@@ -115,7 +118,9 @@ class MeshImportJobExecutionListenerTest {
       assertThat(Files.exists(regularFile)).isTrue();
 
       JobParameters params =
-          new JobParametersBuilder().addString("filePath", regularFile.toString()).toJobParameters();
+          new JobParametersBuilder()
+              .addString("filePath", regularFile.toString())
+              .toJobParameters();
       JobExecution jobExecution = mock(JobExecution.class);
       when(jobExecution.getJobParameters()).thenReturn(params);
       when(jobExecution.getStatus()).thenReturn(BatchStatus.COMPLETED);

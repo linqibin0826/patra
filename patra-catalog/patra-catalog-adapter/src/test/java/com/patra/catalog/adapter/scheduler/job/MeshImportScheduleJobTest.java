@@ -15,7 +15,6 @@ import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.command.MeshQualifierImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
-import com.patra.catalog.domain.exception.CatalogScheduleParameterException;
 import com.patra.catalog.domain.model.enums.MeshDescriptorImportMode;
 import com.xxl.job.core.context.XxlJobHelper;
 import org.junit.jupiter.api.DisplayName;
@@ -73,7 +72,8 @@ class MeshImportScheduleJobTest {
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
-        when(objectMapper.readValue(jsonParam, MeshDescriptorImportJobParam.class)).thenReturn(param);
+        when(objectMapper.readValue(jsonParam, MeshDescriptorImportJobParam.class))
+            .thenReturn(param);
         when(meshImportUseCase.importDescriptors(any(MeshDescriptorImportCommand.class)))
             .thenReturn(result);
 
@@ -108,7 +108,8 @@ class MeshImportScheduleJobTest {
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
-        when(objectMapper.readValue(jsonParam, MeshDescriptorImportJobParam.class)).thenReturn(param);
+        when(objectMapper.readValue(jsonParam, MeshDescriptorImportJobParam.class))
+            .thenReturn(param);
         when(meshImportUseCase.importDescriptors(any(MeshDescriptorImportCommand.class)))
             .thenReturn(result);
 
@@ -129,7 +130,8 @@ class MeshImportScheduleJobTest {
         String jsonParam =
             "{\"url\":\"https://example.com/mesh/desc2025.xml\",\"meshVersion\":\"2025\",\"mode\":\"incremental\"}";
         MeshDescriptorImportJobParam param =
-            new MeshDescriptorImportJobParam("https://example.com/mesh/desc2025.xml", "2025", "incremental");
+            new MeshDescriptorImportJobParam(
+                "https://example.com/mesh/desc2025.xml", "2025", "incremental");
         MeshDescriptorImportResult result =
             MeshDescriptorImportResult.success(
                 1003L,
@@ -141,7 +143,8 @@ class MeshImportScheduleJobTest {
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
-        when(objectMapper.readValue(jsonParam, MeshDescriptorImportJobParam.class)).thenReturn(param);
+        when(objectMapper.readValue(jsonParam, MeshDescriptorImportJobParam.class))
+            .thenReturn(param);
         when(meshImportUseCase.importDescriptors(any(MeshDescriptorImportCommand.class)))
             .thenReturn(result);
 
@@ -171,7 +174,8 @@ class MeshImportScheduleJobTest {
 
         // Then
         xxlJobHelper.verify(() -> XxlJobHelper.handleFail(any(String.class)), times(1));
-        verify(meshImportUseCase, never()).importDescriptors(any(MeshDescriptorImportCommand.class));
+        verify(meshImportUseCase, never())
+            .importDescriptors(any(MeshDescriptorImportCommand.class));
       }
     }
 
@@ -217,12 +221,14 @@ class MeshImportScheduleJobTest {
       try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
         // Given
         String jsonParam = "{\"meshVersion\":\"2025\",\"mode\":\"INCREMENTAL\"}";
-        MeshDescriptorImportJobParam param = new MeshDescriptorImportJobParam(null, "2025", "INCREMENTAL");
+        MeshDescriptorImportJobParam param =
+            new MeshDescriptorImportJobParam(null, "2025", "INCREMENTAL");
 
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
-        when(objectMapper.readValue(jsonParam, MeshDescriptorImportJobParam.class)).thenReturn(param);
+        when(objectMapper.readValue(jsonParam, MeshDescriptorImportJobParam.class))
+            .thenReturn(param);
 
         // When
         meshImportScheduleJob.executeDescriptorImport();
@@ -240,12 +246,14 @@ class MeshImportScheduleJobTest {
         String jsonParam =
             "{\"url\":\"https://example.com/mesh/desc2025.xml\",\"mode\":\"INCREMENTAL\"}";
         MeshDescriptorImportJobParam param =
-            new MeshDescriptorImportJobParam("https://example.com/mesh/desc2025.xml", null, "INCREMENTAL");
+            new MeshDescriptorImportJobParam(
+                "https://example.com/mesh/desc2025.xml", null, "INCREMENTAL");
 
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
-        when(objectMapper.readValue(jsonParam, MeshDescriptorImportJobParam.class)).thenReturn(param);
+        when(objectMapper.readValue(jsonParam, MeshDescriptorImportJobParam.class))
+            .thenReturn(param);
 
         // When
         meshImportScheduleJob.executeDescriptorImport();
@@ -268,7 +276,8 @@ class MeshImportScheduleJobTest {
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
-        when(objectMapper.readValue(jsonParam, MeshDescriptorImportJobParam.class)).thenReturn(param);
+        when(objectMapper.readValue(jsonParam, MeshDescriptorImportJobParam.class))
+            .thenReturn(param);
 
         // When
         meshImportScheduleJob.executeDescriptorImport();
@@ -292,7 +301,8 @@ class MeshImportScheduleJobTest {
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
-        when(objectMapper.readValue(jsonParam, MeshDescriptorImportJobParam.class)).thenReturn(param);
+        when(objectMapper.readValue(jsonParam, MeshDescriptorImportJobParam.class))
+            .thenReturn(param);
 
         // When
         meshImportScheduleJob.executeDescriptorImport();
@@ -321,7 +331,8 @@ class MeshImportScheduleJobTest {
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
-        when(objectMapper.readValue(jsonParam, MeshDescriptorImportJobParam.class)).thenReturn(param);
+        when(objectMapper.readValue(jsonParam, MeshDescriptorImportJobParam.class))
+            .thenReturn(param);
 
         RuntimeException cause = new RuntimeException("数据库连接失败");
         when(meshImportUseCase.importDescriptors(any(MeshDescriptorImportCommand.class)))
@@ -351,15 +362,19 @@ class MeshImportScheduleJobTest {
             "{\"url\":\"https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml\",\"meshVersion\":\"2025\"}";
         MeshQualifierImportJobParam param =
             new MeshQualifierImportJobParam(
-                "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml", "2025");
+                "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml",
+                "2025");
         MeshQualifierImportResult result =
             MeshQualifierImportResult.success(
-                "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml", "2025", 80);
+                "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml",
+                "2025",
+                80);
 
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
-        when(objectMapper.readValue(jsonParam, MeshQualifierImportJobParam.class)).thenReturn(param);
+        when(objectMapper.readValue(jsonParam, MeshQualifierImportJobParam.class))
+            .thenReturn(param);
         when(meshImportUseCase.importQualifiers(any(MeshQualifierImportCommand.class)))
             .thenReturn(result);
 
@@ -401,7 +416,8 @@ class MeshImportScheduleJobTest {
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
-        when(objectMapper.readValue(jsonParam, MeshQualifierImportJobParam.class)).thenReturn(param);
+        when(objectMapper.readValue(jsonParam, MeshQualifierImportJobParam.class))
+            .thenReturn(param);
 
         // When
         meshImportScheduleJob.executeQualifierImport();
@@ -423,7 +439,8 @@ class MeshImportScheduleJobTest {
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
-        when(objectMapper.readValue(jsonParam, MeshQualifierImportJobParam.class)).thenReturn(param);
+        when(objectMapper.readValue(jsonParam, MeshQualifierImportJobParam.class))
+            .thenReturn(param);
 
         // When
         meshImportScheduleJob.executeQualifierImport();
@@ -446,7 +463,8 @@ class MeshImportScheduleJobTest {
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
-        when(objectMapper.readValue(jsonParam, MeshQualifierImportJobParam.class)).thenReturn(param);
+        when(objectMapper.readValue(jsonParam, MeshQualifierImportJobParam.class))
+            .thenReturn(param);
 
         RuntimeException cause = new RuntimeException("XML 解析失败");
         when(meshImportUseCase.importQualifiers(any(MeshQualifierImportCommand.class)))

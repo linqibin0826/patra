@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.persistence.mapper;
 
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import com.patra.catalog.infra.persistence.entity.MeshQualifierDO;
+import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 
 /// MeSH 限定词 Mapper 接口。
 ///

@@ -83,7 +83,8 @@ class MeshImportOrchestratorTest {
     @DisplayName("INCREMENTAL 模式 - 不应该清空表")
     void incremental_shouldNotTruncateTable() {
       // Given
-      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
+      MeshDescriptorImportCommand command =
+          MeshDescriptorImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(12345L);
 
@@ -107,7 +108,8 @@ class MeshImportOrchestratorTest {
     @DisplayName("INCREMENTAL 模式 - forceNewInstance 应该为 false，tempFile 应该为 true")
     void incremental_shouldSetForceNewInstanceFalseAndTempFileTrue() {
       // Given
-      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
+      MeshDescriptorImportCommand command =
+          MeshDescriptorImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(12345L);
 
@@ -129,7 +131,8 @@ class MeshImportOrchestratorTest {
     @DisplayName("TRUNCATE_REIMPORT 模式 - 应该先清空表再导入")
     void truncateReimport_shouldTruncateBeforeImport() {
       // Given
-      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, "2025", "TRUNCATE_REIMPORT");
+      MeshDescriptorImportCommand command =
+          MeshDescriptorImportCommand.of(TEST_URL, "2025", "TRUNCATE_REIMPORT");
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(67890L);
 
@@ -152,7 +155,8 @@ class MeshImportOrchestratorTest {
     @DisplayName("TRUNCATE_REIMPORT 模式 - forceNewInstance 应该为 true，tempFile 应该为 true")
     void truncateReimport_shouldSetForceNewInstanceTrueAndTempFileTrue() {
       // Given
-      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, "2025", "TRUNCATE_REIMPORT");
+      MeshDescriptorImportCommand command =
+          MeshDescriptorImportCommand.of(TEST_URL, "2025", "TRUNCATE_REIMPORT");
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(67890L);
 
@@ -177,7 +181,8 @@ class MeshImportOrchestratorTest {
       String url = "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml";
       String meshVersion = "2025";
       Path localPath = Path.of("/tmp/mesh-import-param-test.xml");
-      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(url, meshVersion, "INCREMENTAL");
+      MeshDescriptorImportCommand command =
+          MeshDescriptorImportCommand.of(url, meshVersion, "INCREMENTAL");
       when(fileDownloadPort.downloadToTemp(URI.create(url))).thenReturn(localPath);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(99999L);
 
@@ -202,7 +207,8 @@ class MeshImportOrchestratorTest {
     void shouldReturnCorrectExecutionId() {
       // Given
       Long expectedExecutionId = 1234567890L;
-      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
+      MeshDescriptorImportCommand command =
+          MeshDescriptorImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class)))
           .thenReturn(expectedExecutionId);
@@ -219,7 +225,8 @@ class MeshImportOrchestratorTest {
     @DisplayName("Job 启动失败时应该清理临时文件")
     void shouldCleanupTempFileWhenJobLaunchFails() {
       // Given
-      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
+      MeshDescriptorImportCommand command =
+          MeshDescriptorImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
       Path tempFile = Path.of("/tmp/mesh-import-cleanup-test.xml");
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(tempFile);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class)))
@@ -239,7 +246,8 @@ class MeshImportOrchestratorTest {
   @DisplayName("importQualifiers(Command) 方法测试 - XXL-Job 调度入口")
   class ImportQualifiersWithCommandTest {
 
-    private static final String QUALIFIER_URL = "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml";
+    private static final String QUALIFIER_URL =
+        "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml";
     private static final Path QUALIFIER_LOCAL_PATH = Path.of("/tmp/mesh-qualifier-12345.xml");
 
     @Test
@@ -247,12 +255,13 @@ class MeshImportOrchestratorTest {
     void shouldDownloadTruncateParseAndSave() {
       // Given
       MeshQualifierImportCommand command = MeshQualifierImportCommand.of(QUALIFIER_URL, "2025");
-      List<MeshQualifierAggregate> qualifiers = List.of(
-          createMockQualifier("Q000001"),
-          createMockQualifier("Q000002"));
+      List<MeshQualifierAggregate> qualifiers =
+          List.of(createMockQualifier("Q000001"), createMockQualifier("Q000002"));
 
-      when(fileDownloadPort.downloadToTemp(URI.create(QUALIFIER_URL))).thenReturn(QUALIFIER_LOCAL_PATH);
-      when(xmlParserPort.parseQualifiers(any(Path.class), anyString())).thenReturn(qualifiers.stream());
+      when(fileDownloadPort.downloadToTemp(URI.create(QUALIFIER_URL)))
+          .thenReturn(QUALIFIER_LOCAL_PATH);
+      when(xmlParserPort.parseQualifiers(any(Path.class), anyString()))
+          .thenReturn(qualifiers.stream());
 
       // When
       MeshQualifierImportResult result = orchestrator.importQualifiers(command);
@@ -276,15 +285,17 @@ class MeshImportOrchestratorTest {
     void shouldReturnCorrectImportedCount() {
       // Given
       MeshQualifierImportCommand command = MeshQualifierImportCommand.of(QUALIFIER_URL, "2025");
-      List<MeshQualifierAggregate> qualifiers = List.of(
-          createMockQualifier("Q000001"),
-          createMockQualifier("Q000002"),
-          createMockQualifier("Q000003"),
-          createMockQualifier("Q000004"),
-          createMockQualifier("Q000005"));
+      List<MeshQualifierAggregate> qualifiers =
+          List.of(
+              createMockQualifier("Q000001"),
+              createMockQualifier("Q000002"),
+              createMockQualifier("Q000003"),
+              createMockQualifier("Q000004"),
+              createMockQualifier("Q000005"));
 
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(QUALIFIER_LOCAL_PATH);
-      when(xmlParserPort.parseQualifiers(any(Path.class), anyString())).thenReturn(qualifiers.stream());
+      when(xmlParserPort.parseQualifiers(any(Path.class), anyString()))
+          .thenReturn(qualifiers.stream());
 
       // When
       MeshQualifierImportResult result = orchestrator.importQualifiers(command);
@@ -330,9 +341,7 @@ class MeshImportOrchestratorTest {
     private MeshQualifierAggregate createMockQualifier(String qualifierUi) {
       int num = Integer.parseInt(qualifierUi.substring(1));
       return MeshQualifierAggregate.create(
-          MeshUI.qualifierOf(num),
-          "Test Qualifier " + qualifierUi,
-          "TQ");
+          MeshUI.qualifierOf(num), "Test Qualifier " + qualifierUi, "TQ");
     }
   }
 }

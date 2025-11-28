@@ -64,7 +64,8 @@ public record ConceptRelation(String relationName, MeshUI concept1Ui, MeshUI con
   /// @param concept2Ui 概念2 UI（关联概念）
   /// @param relationName 关系类型（可为 null）
   /// @return 概念关系值对象
-  public static ConceptRelation ofNullable(MeshUI concept1Ui, MeshUI concept2Ui, String relationName) {
+  public static ConceptRelation ofNullable(
+      MeshUI concept1Ui, MeshUI concept2Ui, String relationName) {
     Assert.notNull(concept1Ui, "概念1 UI不能为空");
     Assert.notNull(concept2Ui, "概念2 UI不能为空");
     Assert.isTrue(concept1Ui.isConcept(), "概念1 UI必须是概念类型(M开头)：%s", concept1Ui.ui());

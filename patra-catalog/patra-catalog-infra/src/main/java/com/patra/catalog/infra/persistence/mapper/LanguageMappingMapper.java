@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.persistence.mapper;
 
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import com.patra.catalog.infra.persistence.entity.LanguageMappingDO;
+import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 
 /// 语言映射 Mapper 接口 — 对语言映射表的数据访问操作。
 ///
