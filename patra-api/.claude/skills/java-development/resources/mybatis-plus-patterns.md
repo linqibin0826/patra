@@ -26,8 +26,8 @@ public class PlanDO extends BaseDO {
     private JsonNode windowSpec;
 }
 
-/// 2. 创建 Mapper 接口
-public interface PlanMapper extends BaseMapper<PlanDO> {
+/// 2. 创建 Mapper 接口（必须继承 PatraBaseMapper）
+public interface PlanMapper extends PatraBaseMapper<PlanDO> {
     /// 自定义查询方法
     PlanDO findByPlanKey(@Param("planKey") String planKey);
 }
@@ -177,7 +177,8 @@ public interface OutboxMessageConverter {
 | 返回领域类型 | 返回 DO 给上层 |
 | JSON 列用 JsonNode + TypeHandler | JSON 存为 String |
 | 使用乐观锁 (@Version) | 依赖数据库锁 |
-| 批量操作 (>10 条记录) | 逐条操作 |
+| Mapper 继承 PatraBaseMapper | 继承 BaseMapper |
+| 批量插入用 insertBatchSomeColumn (>100 条) | 循环 insert() 或 ServiceImpl.saveBatch() |
 
 ---
 
@@ -205,11 +206,12 @@ public class PlanDO extends BaseDO {  // 继承 BaseDO (id, version, created_at,
 
 ### 2. MyBatis-Plus Mapper
 
-**定义**: 继承 BaseMapper 的接口，提供数据访问方法。
+**定义**: 继承 PatraBaseMapper 的接口，提供数据访问方法和批量插入能力。
 
 **关键模式**:
 ```java
-public interface PlanMapper extends BaseMapper<PlanDO> {
+// ✅ 必须继承 PatraBaseMapper（而非 BaseMapper），获得 insertBatchSomeColumn 批量插入能力
+public interface PlanMapper extends PatraBaseMapper<PlanDO> {
     // ✅ 自定义查询方法
     PlanDO findByPlanKey(@Param("planKey") String planKey);
 
@@ -330,18 +332,17 @@ private JsonNode windowSpec;
 
 **解决方案**:
 ```java
-// ✅ 使用批量插入服务
-IService<PlanDO> service = new ServiceImpl<>(PlanMapper.class, PlanDO.class);
-service.saveBatch(entities, 100);  // 100 条一批
+// ✅ 方案 1: 使用 PatraBaseMapper.insertBatchSomeColumn()（推荐，数据量 > 100 条时必须使用）
+// 注意：insertBatchSomeColumn 自动触发审计字段填充，无需手动设置 createdAt、updatedAt、version、deleted
+planMapper.insertBatchSomeColumn(entities);
 
-// 或使用 MyBatis-Plus 批处理
-try (SqlSession session = sqlSessionFactory.openSession(ExecutorType.BATCH)) {
-    PlanMapper mapper = session.getMapper(PlanMapper.class);
-    for (PlanDO entity : entities) {
-        mapper.insert(entity);
-    }
-    session.commit();
-}
+// ✅ 方案 2: 使用 BatchInsertHelper 工具类（支持自定义批次大小）
+BatchInsertHelper.batchInsert(entities, planMapper::insertBatchSomeColumn, 500);
+
+// ❌ 禁止使用以下方式：
+// - ServiceImpl.saveBatch()（底层是循环 INSERT，性能差）
+// - 继承 ServiceImpl（RepositoryAdapter 应直接注入 Mapper）
+// - 循环调用 mapper.insert()
 ```
 
 ---
@@ -351,11 +352,13 @@ try (SqlSession session = sqlSessionFactory.openSession(ExecutorType.BATCH)) {
 ### 设计原则
 - [ ] DO 只在基础设施层使用，不暴露给上层
 - [ ] 所有仓储实现领域层端口接口
+- [ ] 所有 Mapper 继承 `PatraBaseMapper`（而非 `BaseMapper`）
 - [ ] 使用 MapStruct 自动转换，避免手动代码
 - [ ] JSON 列使用 JsonNode + JacksonTypeHandler
 
 ### 性能优化
-- [ ] 批量操作超过 10 条使用 saveBatch
+- [ ] 数据量 > 100 条使用 `PatraBaseMapper.insertBatchSomeColumn()` 或 `BatchInsertHelper.batchInsert()` 批量插入
+- [ ] 禁止使用 `ServiceImpl.saveBatch()`（底层是循环 INSERT）和循环调用 `insert()`
 - [ ] 只查询需要的字段（使用 select）
 - [ ] 为常用查询添加索引
 
