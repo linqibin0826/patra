@@ -63,11 +63,15 @@ public record EntryCombination(
     // ECIN 参数验证
     Assert.notNull(ecinDescriptorUi, "ECIN 主题词 UI 不能为空");
     Assert.isTrue(
-        ecinDescriptorUi.isDescriptor(), "ECIN 主题词 UI 必须是 Descriptor 类型(D开头)：%s", ecinDescriptorUi.ui());
+        ecinDescriptorUi.isDescriptor(),
+        "ECIN 主题词 UI 必须是 Descriptor 类型(D开头)：%s",
+        ecinDescriptorUi.ui());
 
     Assert.notNull(ecinQualifierUi, "ECIN 限定词 UI 不能为空");
     Assert.isTrue(
-        ecinQualifierUi.isQualifier(), "ECIN 限定词 UI 必须是 Qualifier 类型(Q开头)：%s", ecinQualifierUi.ui());
+        ecinQualifierUi.isQualifier(),
+        "ECIN 限定词 UI 必须是 Qualifier 类型(Q开头)：%s",
+        ecinQualifierUi.ui());
 
     // ECOUT Descriptor 参数验证
     Assert.notNull(ecoutDescriptorUi, "ECOUT 主题词 UI 不能为空");
@@ -84,7 +88,8 @@ public record EntryCombination(
           ecoutQualifierUi.ui());
     }
 
-    return new EntryCombination(ecinDescriptorUi, ecinQualifierUi, ecoutDescriptorUi, ecoutQualifierUi);
+    return new EntryCombination(
+        ecinDescriptorUi, ecinQualifierUi, ecoutDescriptorUi, ecoutQualifierUi);
   }
 
   /// 工厂方法（无 ECOUT Qualifier）。

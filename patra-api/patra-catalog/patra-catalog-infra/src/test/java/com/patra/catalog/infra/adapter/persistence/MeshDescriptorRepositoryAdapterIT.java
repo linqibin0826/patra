@@ -597,7 +597,10 @@ class MeshDescriptorRepositoryAdapterIT {
               MeshDescriptorAggregate.create(
                   MeshUI.descriptorOf(10), "New Descriptor 1", DescriptorClass.TOPICAL, "2025"),
               MeshDescriptorAggregate.create(
-                  MeshUI.descriptorOf(20), "New Descriptor 2", DescriptorClass.GEOGRAPHICALS, "2025"),
+                  MeshUI.descriptorOf(20),
+                  "New Descriptor 2",
+                  DescriptorClass.GEOGRAPHICALS,
+                  "2025"),
               MeshDescriptorAggregate.create(
                   MeshUI.descriptorOf(30), "New Descriptor 3", DescriptorClass.TOPICAL, "2025"));
       repository.saveBatch(newDescriptors);

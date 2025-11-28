@@ -83,7 +83,8 @@ class MeshImportParamsTest {
     @DisplayName("四参数构造函数应该正确设置所有字段")
     void fourArgConstructorShouldSetAllFields() {
       // When
-      MeshImportParams params = new MeshImportParams(VALID_FILE_PATH, VALID_MESH_VERSION, true, true);
+      MeshImportParams params =
+          new MeshImportParams(VALID_FILE_PATH, VALID_MESH_VERSION, true, true);
 
       // Then
       assertThat(params.filePath()).isEqualTo(VALID_FILE_PATH);

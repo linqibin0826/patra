@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.persistence.mapper;
 
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import com.patra.catalog.infra.persistence.entity.VenueDO;
+import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 
 /// 出版载体 Mapper 接口 — 对载体表的数据访问操作。
 ///

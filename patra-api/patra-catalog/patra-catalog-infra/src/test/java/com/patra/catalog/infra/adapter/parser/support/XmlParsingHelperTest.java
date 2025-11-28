@@ -180,8 +180,7 @@ class XmlParsingHelperTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      var result =
-          XmlParsingHelper.parseStringList(reader, "RegistryNumberList", "RegistryNumber");
+      var result = XmlParsingHelper.parseStringList(reader, "RegistryNumberList", "RegistryNumber");
 
       assertThat(result).containsExactly("RN1", "RN2");
     }

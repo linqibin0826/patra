@@ -44,7 +44,8 @@ public class MeshQualifierRepositoryAdapter implements MeshQualifierRepository {
         qualifiers.stream().map(meshQualifierConverter::toDataObject).toList();
 
     // 使用 BatchInsertHelper 批量插入（自动分片）
-    var result = BatchInsertHelper.batchInsert(dataObjects, meshQualifierMapper::insertBatchSomeColumn);
+    var result =
+        BatchInsertHelper.batchInsert(dataObjects, meshQualifierMapper::insertBatchSomeColumn);
 
     if (result.hasErrors()) {
       log.error("限定词批量保存部分失败：成功 {} / 总计 {}", result.successCount(), result.totalCount());

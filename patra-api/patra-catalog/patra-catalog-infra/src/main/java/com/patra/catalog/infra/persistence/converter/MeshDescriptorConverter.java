@@ -13,8 +13,6 @@ import com.patra.catalog.infra.persistence.entity.MeshDescriptorDO;
 import com.patra.catalog.infra.persistence.entity.MeshEntryCombinationDO;
 import com.patra.catalog.infra.persistence.entity.MeshEntryTermDO;
 import com.patra.catalog.infra.persistence.entity.MeshTreeNumberDO;
-import java.util.ArrayList;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -121,7 +119,8 @@ public class MeshDescriptorConverter {
     MeshEntryTermDO dataObject = new MeshEntryTermDO();
     dataObject.setDescriptorUi(descriptorUi);
     dataObject.setTermUi(entryTerm.getTermUi() != null ? entryTerm.getTermUi().ui() : null);
-    dataObject.setConceptUi(entryTerm.getConceptUi() != null ? entryTerm.getConceptUi().ui() : null);
+    dataObject.setConceptUi(
+        entryTerm.getConceptUi() != null ? entryTerm.getConceptUi().ui() : null);
     dataObject.setTerm(entryTerm.getTerm());
     dataObject.setLexicalTag(
         entryTerm.getLexicalTag() != null ? entryTerm.getLexicalTag().getCode() : null);

@@ -80,7 +80,8 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
       qualifierRepository.saveBatch(qualifiers);
 
       log.info("MeSH 限定词导入完成，数量：{}", qualifiers.size());
-      return MeshQualifierImportResult.success(command.url(), command.meshVersion(), qualifiers.size());
+      return MeshQualifierImportResult.success(
+          command.url(), command.meshVersion(), qualifiers.size());
     } catch (Exception e) {
       throw (RuntimeException) e;
     } finally {
@@ -109,10 +110,7 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
   @Override
   public MeshDescriptorImportResult importDescriptors(MeshDescriptorImportCommand command) {
     log.info(
-        "启动 MeSH 主题词导入，URL：{}，版本：{}，模式：{}",
-        command.url(),
-        command.meshVersion(),
-        command.mode());
+        "启动 MeSH 主题词导入，URL：{}，版本：{}，模式：{}", command.url(), command.meshVersion(), command.mode());
 
     // 1. 下载文件到临时目录
     Path localFile = fileDownloadPort.downloadToTemp(URI.create(command.url()));

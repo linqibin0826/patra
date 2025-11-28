@@ -47,7 +47,8 @@ class MeshDescriptorAggregateTest {
   @BeforeEach
   void setUp() {
     aggregate =
-        MeshDescriptorAggregate.create(DESCRIPTOR_UI, DESCRIPTOR_NAME, DESCRIPTOR_CLASS, MESH_VERSION);
+        MeshDescriptorAggregate.create(
+            DESCRIPTOR_UI, DESCRIPTOR_NAME, DESCRIPTOR_CLASS, MESH_VERSION);
   }
 
   @Nested
@@ -59,7 +60,8 @@ class MeshDescriptorAggregateTest {
     void shouldAddEntryCombination() {
       // Given
       EntryCombination combination =
-          EntryCombination.of(ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, ECOUT_QUALIFIER_1);
+          EntryCombination.of(
+              ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, ECOUT_QUALIFIER_1);
 
       // When
       MeshDescriptorAggregate result = aggregate.addEntryCombination(combination);
@@ -75,9 +77,11 @@ class MeshDescriptorAggregateTest {
     void shouldDeduplicateSameEntryCombination() {
       // Given
       EntryCombination combination1 =
-          EntryCombination.of(ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, ECOUT_QUALIFIER_1);
+          EntryCombination.of(
+              ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, ECOUT_QUALIFIER_1);
       EntryCombination combination2 =
-          EntryCombination.of(ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, null); // 相同 ECIN，不同 ECOUT
+          EntryCombination.of(
+              ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, null); // 相同 ECIN，不同 ECOUT
 
       // When
       aggregate.addEntryCombination(combination1);
@@ -93,7 +97,8 @@ class MeshDescriptorAggregateTest {
     void shouldAllowDifferentEcinCombinations() {
       // Given
       EntryCombination combination1 =
-          EntryCombination.of(ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, ECOUT_QUALIFIER_1);
+          EntryCombination.of(
+              ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, ECOUT_QUALIFIER_1);
       EntryCombination combination2 =
           EntryCombination.of(ECIN_DESCRIPTOR_2, ECIN_QUALIFIER_2, ECOUT_DESCRIPTOR_2, null);
 
@@ -123,7 +128,8 @@ class MeshDescriptorAggregateTest {
     void shouldAddMultipleEntryCombinations() {
       // Given
       EntryCombination combination1 =
-          EntryCombination.of(ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, ECOUT_QUALIFIER_1);
+          EntryCombination.of(
+              ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, ECOUT_QUALIFIER_1);
       EntryCombination combination2 =
           EntryCombination.of(ECIN_DESCRIPTOR_2, ECIN_QUALIFIER_2, ECOUT_DESCRIPTOR_2, null);
       List<EntryCombination> combinations = Arrays.asList(combination1, combination2);
@@ -141,7 +147,8 @@ class MeshDescriptorAggregateTest {
     void shouldHandleEmptyList() {
       // Given
       EntryCombination combination =
-          EntryCombination.of(ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, ECOUT_QUALIFIER_1);
+          EntryCombination.of(
+              ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, ECOUT_QUALIFIER_1);
       aggregate.addEntryCombination(combination);
 
       // When
@@ -156,7 +163,8 @@ class MeshDescriptorAggregateTest {
     void shouldHandleNullList() {
       // Given
       EntryCombination combination =
-          EntryCombination.of(ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, ECOUT_QUALIFIER_1);
+          EntryCombination.of(
+              ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, ECOUT_QUALIFIER_1);
       aggregate.addEntryCombination(combination);
 
       // When
@@ -171,7 +179,8 @@ class MeshDescriptorAggregateTest {
     void shouldDeduplicateWhenBatchAdding() {
       // Given - 两个相同 ECIN 的组合条目
       EntryCombination combination1 =
-          EntryCombination.of(ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, ECOUT_QUALIFIER_1);
+          EntryCombination.of(
+              ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, ECOUT_QUALIFIER_1);
       EntryCombination combination2 =
           EntryCombination.of(ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, null);
       List<EntryCombination> combinations = Arrays.asList(combination1, combination2);
@@ -193,7 +202,8 @@ class MeshDescriptorAggregateTest {
     void shouldReturnUnmodifiableList() {
       // Given
       EntryCombination combination =
-          EntryCombination.of(ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, ECOUT_QUALIFIER_1);
+          EntryCombination.of(
+              ECIN_DESCRIPTOR_1, ECIN_QUALIFIER_1, ECOUT_DESCRIPTOR_1, ECOUT_QUALIFIER_1);
       aggregate.addEntryCombination(combination);
 
       // When

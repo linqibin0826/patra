@@ -36,7 +36,8 @@ class MeshDescriptorImportCommandTest {
       String url = "http://example.com/mesh/desc2025.xml";
 
       // When
-      MeshDescriptorImportCommand command = new MeshDescriptorImportCommand(url, "2025", MeshDescriptorImportMode.INCREMENTAL);
+      MeshDescriptorImportCommand command =
+          new MeshDescriptorImportCommand(url, "2025", MeshDescriptorImportMode.INCREMENTAL);
 
       // Then
       assertThat(command.url()).isEqualTo(url);
@@ -51,7 +52,8 @@ class MeshDescriptorImportCommandTest {
       String url = "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/xmlmesh/desc2025.xml";
 
       // When
-      MeshDescriptorImportCommand command = new MeshDescriptorImportCommand(url, "2025", MeshDescriptorImportMode.TRUNCATE_REIMPORT);
+      MeshDescriptorImportCommand command =
+          new MeshDescriptorImportCommand(url, "2025", MeshDescriptorImportMode.TRUNCATE_REIMPORT);
 
       // Then
       assertThat(command.url()).isEqualTo(url);
@@ -64,23 +66,30 @@ class MeshDescriptorImportCommandTest {
     @DisplayName("空白 URL - 应该抛出 CatalogScheduleParameterException")
     void blankUrl_shouldThrowException(String url) {
       // When & Then
-      assertThatThrownBy(() -> new MeshDescriptorImportCommand(url, "2025", MeshDescriptorImportMode.INCREMENTAL))
+      assertThatThrownBy(
+              () ->
+                  new MeshDescriptorImportCommand(
+                      url, "2025", MeshDescriptorImportMode.INCREMENTAL))
           .isInstanceOf(CatalogScheduleParameterException.class)
           .hasMessageContaining("url");
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {
-        "ftp://example.com/file.xml",
-        "file:///local/path.xml",
-        "/local/path.xml",
-        "not-a-url",
-        "example.com/file.xml"
-    })
+    @ValueSource(
+        strings = {
+          "ftp://example.com/file.xml",
+          "file:///local/path.xml",
+          "/local/path.xml",
+          "not-a-url",
+          "example.com/file.xml"
+        })
     @DisplayName("非 HTTP/HTTPS 协议 - 应该抛出 CatalogScheduleParameterException")
     void nonHttpProtocol_shouldThrowException(String url) {
       // When & Then
-      assertThatThrownBy(() -> new MeshDescriptorImportCommand(url, "2025", MeshDescriptorImportMode.INCREMENTAL))
+      assertThatThrownBy(
+              () ->
+                  new MeshDescriptorImportCommand(
+                      url, "2025", MeshDescriptorImportMode.INCREMENTAL))
           .isInstanceOf(CatalogScheduleParameterException.class)
           .hasMessageContaining("HTTP");
     }
@@ -92,7 +101,10 @@ class MeshDescriptorImportCommandTest {
       String invalidUrl = "http://[invalid";
 
       // When & Then
-      assertThatThrownBy(() -> new MeshDescriptorImportCommand(invalidUrl, "2025", MeshDescriptorImportMode.INCREMENTAL))
+      assertThatThrownBy(
+              () ->
+                  new MeshDescriptorImportCommand(
+                      invalidUrl, "2025", MeshDescriptorImportMode.INCREMENTAL))
           .isInstanceOf(CatalogScheduleParameterException.class)
           .hasMessageContaining("url");
     }
@@ -108,7 +120,12 @@ class MeshDescriptorImportCommandTest {
     @DisplayName("空白 meshVersion - 应该抛出 CatalogScheduleParameterException")
     void blankMeshVersion_shouldThrowException(String meshVersion) {
       // When & Then
-      assertThatThrownBy(() -> new MeshDescriptorImportCommand("https://example.com/mesh.xml", meshVersion, MeshDescriptorImportMode.INCREMENTAL))
+      assertThatThrownBy(
+              () ->
+                  new MeshDescriptorImportCommand(
+                      "https://example.com/mesh.xml",
+                      meshVersion,
+                      MeshDescriptorImportMode.INCREMENTAL))
           .isInstanceOf(CatalogScheduleParameterException.class)
           .hasMessageContaining("meshVersion");
     }
@@ -122,7 +139,8 @@ class MeshDescriptorImportCommandTest {
     @DisplayName("null mode - 应该抛出 NullPointerException")
     void nullMode_shouldThrowException() {
       // When & Then
-      assertThatThrownBy(() -> new MeshDescriptorImportCommand("https://example.com/mesh.xml", "2025", null))
+      assertThatThrownBy(
+              () -> new MeshDescriptorImportCommand("https://example.com/mesh.xml", "2025", null))
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("mode");
     }
@@ -141,7 +159,8 @@ class MeshDescriptorImportCommandTest {
       String modeStr = "INCREMENTAL";
 
       // When
-      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(url, meshVersion, modeStr);
+      MeshDescriptorImportCommand command =
+          MeshDescriptorImportCommand.of(url, meshVersion, modeStr);
 
       // Then
       assertThat(command.url()).isEqualTo(url);
@@ -153,7 +172,9 @@ class MeshDescriptorImportCommandTest {
     @DisplayName("小写 mode 字符串 - 应该正确转换")
     void lowercaseModeString_shouldConvert() {
       // When
-      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of("https://example.com/mesh.xml", "2025", "truncate_reimport");
+      MeshDescriptorImportCommand command =
+          MeshDescriptorImportCommand.of(
+              "https://example.com/mesh.xml", "2025", "truncate_reimport");
 
       // Then
       assertThat(command.mode()).isEqualTo(MeshDescriptorImportMode.TRUNCATE_REIMPORT);
@@ -165,7 +186,8 @@ class MeshDescriptorImportCommandTest {
     @DisplayName("无效 mode 字符串 - 应该抛出 CatalogScheduleParameterException")
     void invalidModeString_shouldThrowException(String modeStr) {
       // When & Then
-      assertThatThrownBy(() -> MeshDescriptorImportCommand.of("https://example.com/mesh.xml", "2025", modeStr))
+      assertThatThrownBy(
+              () -> MeshDescriptorImportCommand.of("https://example.com/mesh.xml", "2025", modeStr))
           .isInstanceOf(CatalogScheduleParameterException.class);
     }
   }

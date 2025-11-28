@@ -65,9 +65,7 @@ public class XmlParserAdapter implements XmlParserPort {
       InputStream xmlInputStream, String meshVersion) {
     log.info("开始解析 MeSH Descriptor XML 文件，版本：{}", meshVersion);
     return createStream(
-        xmlInputStream,
-        DescriptorParsingStrategy.INSTANCE,
-        XmlParsingContext.of(meshVersion));
+        xmlInputStream, DescriptorParsingStrategy.INSTANCE, XmlParsingContext.of(meshVersion));
   }
 
   @Override
@@ -78,8 +76,7 @@ public class XmlParserAdapter implements XmlParserPort {
       InputStream inputStream = Files.newInputStream(filePath);
       XMLStreamReader reader = XML_INPUT_FACTORY.createXMLStreamReader(inputStream);
       XmlParsingContext context = XmlParsingContext.of(meshVersion);
-      var spliterator =
-          new RecordSpliterator<>(reader, QualifierParsingStrategy.INSTANCE, context);
+      var spliterator = new RecordSpliterator<>(reader, QualifierParsingStrategy.INSTANCE, context);
 
       return StreamSupport.stream(spliterator, false)
           .onClose(() -> closeReader(reader))
@@ -96,13 +93,15 @@ public class XmlParserAdapter implements XmlParserPort {
   @Override
   public Stream<MeshTreeNumber> parseTreeNumbers(InputStream xmlInputStream) {
     log.info("开始解析 MeSH TreeNumber XML 文件");
-    return createStream(xmlInputStream, TreeNumberParsingStrategy.INSTANCE, XmlParsingContext.empty());
+    return createStream(
+        xmlInputStream, TreeNumberParsingStrategy.INSTANCE, XmlParsingContext.empty());
   }
 
   @Override
   public Stream<MeshEntryTerm> parseEntryTerms(InputStream xmlInputStream) {
     log.info("开始解析 MeSH EntryTerm XML 文件");
-    return createStream(xmlInputStream, EntryTermParsingStrategy.INSTANCE, XmlParsingContext.empty());
+    return createStream(
+        xmlInputStream, EntryTermParsingStrategy.INSTANCE, XmlParsingContext.empty());
   }
 
   @Override

@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.persistence.mapper;
 
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import com.patra.catalog.infra.persistence.entity.AuthorDO;
+import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 
 /// 作者 Mapper 接口 — 对作者表的数据访问操作。
 ///

@@ -69,8 +69,7 @@ class DescriptorParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshDescriptorAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshDescriptorAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertNotNull(result);
       assertEquals("D000001", result.getUi().ui());
@@ -95,8 +94,7 @@ class DescriptorParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshDescriptorAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshDescriptorAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertEquals(DescriptorClass.PUBLICATION_TYPE, result.getDescriptorClass());
     }
@@ -115,8 +113,7 @@ class DescriptorParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshDescriptorAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshDescriptorAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertEquals(DescriptorClass.TOPICAL, result.getDescriptorClass());
     }
@@ -157,8 +154,7 @@ class DescriptorParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshDescriptorAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshDescriptorAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertEquals("19741119", result.getDateCreated());
       assertEquals("20230615", result.getDateRevised());
@@ -193,8 +189,7 @@ class DescriptorParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshDescriptorAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshDescriptorAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertEquals("91(75)", result.getHistoryNote());
       assertEquals("use CALCIMYCIN to search A 23187 1975-90", result.getOnlineNote());
@@ -230,8 +225,7 @@ class DescriptorParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshDescriptorAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshDescriptorAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertThat(result.getTreeNumbers()).hasSize(2);
       assertTrue(result.getTreeNumbers().get(0).isPrimary());
@@ -280,8 +274,7 @@ class DescriptorParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshDescriptorAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshDescriptorAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertThat(result.getAllowableQualifiers()).hasSize(2);
       assertEquals("Q000008", result.getAllowableQualifiers().get(0).qualifierUi().ui());
@@ -319,12 +312,12 @@ class DescriptorParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshDescriptorAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshDescriptorAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertThat(result.getPharmacologicalActions()).hasSize(1);
       assertEquals("D000890", result.getPharmacologicalActions().get(0).descriptorUi().ui());
-      assertEquals("Anti-Infective Agents", result.getPharmacologicalActions().get(0).descriptorName());
+      assertEquals(
+          "Anti-Infective Agents", result.getPharmacologicalActions().get(0).descriptorName());
     }
   }
 
@@ -352,8 +345,7 @@ class DescriptorParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshDescriptorAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshDescriptorAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertThat(result.getPreviousIndexings())
           .containsExactly("Antibiotics (1973-1974)", "Ionophores (1975-1990)");
@@ -390,8 +382,7 @@ class DescriptorParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshDescriptorAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshDescriptorAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertThat(result.getSeeRelatedDescriptors()).hasSize(1);
       assertEquals("D007476", result.getSeeRelatedDescriptors().get(0).descriptorUi().ui());
@@ -451,8 +442,7 @@ class DescriptorParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshDescriptorAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshDescriptorAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertThat(result.getEntryCombinations()).hasSize(1);
       var combo = result.getEntryCombinations().get(0);
@@ -498,8 +488,7 @@ class DescriptorParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshDescriptorAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshDescriptorAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertThat(result.getConcepts()).hasSize(2);
       assertTrue(result.getConcepts().get(0).isPreferred());
@@ -539,8 +528,7 @@ class DescriptorParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshDescriptorAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshDescriptorAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertThat(result.getEntryTerms()).hasSize(2);
       assertTrue(result.getEntryTerms().get(0).isRecordPreferred());
@@ -567,8 +555,7 @@ class DescriptorParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshDescriptorAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshDescriptorAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertNull(result);
     }
@@ -584,8 +571,7 @@ class DescriptorParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshDescriptorAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshDescriptorAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
       assertNull(result);
     }
@@ -604,8 +590,7 @@ class DescriptorParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshDescriptorAggregate result =
-          strategy.parseRecord(reader, XmlParsingContext.empty());
+      MeshDescriptorAggregate result = strategy.parseRecord(reader, XmlParsingContext.empty());
 
       assertNotNull(result);
       assertNull(result.getMeshVersion());

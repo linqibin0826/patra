@@ -114,12 +114,12 @@ public final class ConceptParsingStrategy implements RecordParsingStrategy<MeshC
               registryNumbers.add(regNum.trim());
             }
           }
-          case MeshXmlElements.List.REGISTRY_NUMBER_LIST -> registryNumbers.addAll(
-              parseRegistryNumberList(reader));
-          case MeshXmlElements.List.RELATED_REGISTRY_NUMBER_LIST -> relatedRegistryNumbers.addAll(
-              parseRelatedRegistryNumberList(reader));
-          case MeshXmlElements.List.CONCEPT_RELATION_LIST -> conceptRelations.addAll(
-              parseConceptRelationList(reader));
+          case MeshXmlElements.List.REGISTRY_NUMBER_LIST ->
+              registryNumbers.addAll(parseRegistryNumberList(reader));
+          case MeshXmlElements.List.RELATED_REGISTRY_NUMBER_LIST ->
+              relatedRegistryNumbers.addAll(parseRelatedRegistryNumberList(reader));
+          case MeshXmlElements.List.CONCEPT_RELATION_LIST ->
+              conceptRelations.addAll(parseConceptRelationList(reader));
           case MeshXmlElements.List.TERM_LIST -> {
             // 独立解析 Concept 时跳过 TermList（由 DescriptorParsingStrategy 处理）
             XmlParsingHelper.skipElement(reader, MeshXmlElements.List.TERM_LIST);
@@ -138,8 +138,7 @@ public final class ConceptParsingStrategy implements RecordParsingStrategy<MeshC
     }
 
     // 创建实体
-    MeshConcept concept =
-        MeshConcept.create(MeshUI.of(conceptUi), conceptName, isPreferred);
+    MeshConcept concept = MeshConcept.create(MeshUI.of(conceptUi), conceptName, isPreferred);
 
     // 设置可选字段
     if (!registryNumbers.isEmpty()) {

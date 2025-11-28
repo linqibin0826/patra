@@ -124,12 +124,13 @@ public final class DescriptorParsingStrategy
           case MeshXmlElements.Identifier.DESCRIPTOR_UI -> descriptorUI = reader.getElementText();
           case MeshXmlElements.Name.DESCRIPTOR_NAME ->
               descriptorName = XmlParsingHelper.parseNameElement(reader);
-          case MeshXmlElements.Date.DATE_CREATED -> dateCreated =
-              XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_CREATED);
-          case MeshXmlElements.Date.DATE_REVISED -> dateRevised =
-              XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_REVISED);
-          case MeshXmlElements.Date.DATE_ESTABLISHED -> dateEstablished =
-              XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_ESTABLISHED);
+          case MeshXmlElements.Date.DATE_CREATED ->
+              dateCreated = XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_CREATED);
+          case MeshXmlElements.Date.DATE_REVISED ->
+              dateRevised = XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_REVISED);
+          case MeshXmlElements.Date.DATE_ESTABLISHED ->
+              dateEstablished =
+                  XmlParsingHelper.parseDate(reader, MeshXmlElements.Date.DATE_ESTABLISHED);
           case MeshXmlElements.Other.HISTORY_NOTE -> historyNote = reader.getElementText().trim();
           case MeshXmlElements.Other.ONLINE_NOTE -> onlineNote = reader.getElementText().trim();
           case MeshXmlElements.Other.PUBLIC_MESH_NOTE ->
@@ -140,10 +141,10 @@ public final class DescriptorParsingStrategy
           case MeshXmlElements.Other.CONSIDER_ALSO -> considerAlso = reader.getElementText().trim();
           case MeshXmlElements.Other.SCOPE_NOTE -> scopeNote = reader.getElementText().trim();
           case MeshXmlElements.List.TREE_NUMBER_LIST -> treeNumbers = parseTreeNumberList(reader);
-          case MeshXmlElements.List.ALLOWABLE_QUALIFIERS_LIST -> allowableQualifiers =
-              parseAllowableQualifiersList(reader);
-          case MeshXmlElements.List.PHARMACOLOGICAL_ACTION_LIST -> pharmacologicalActions =
-              parsePharmacologicalActionList(reader);
+          case MeshXmlElements.List.ALLOWABLE_QUALIFIERS_LIST ->
+              allowableQualifiers = parseAllowableQualifiersList(reader);
+          case MeshXmlElements.List.PHARMACOLOGICAL_ACTION_LIST ->
+              pharmacologicalActions = parsePharmacologicalActionList(reader);
           case MeshXmlElements.List.PREVIOUS_INDEXING_LIST ->
               previousIndexings = parsePreviousIndexingList(reader);
           case MeshXmlElements.List.SEE_RELATED_LIST ->
@@ -623,8 +624,8 @@ public final class DescriptorParsingStrategy
           }
           case MeshXmlElements.List.REGISTRY_NUMBER_LIST ->
               registryNumbers.addAll(parseRegistryNumberList(reader));
-          case MeshXmlElements.List.RELATED_REGISTRY_NUMBER_LIST -> relatedRegistryNumbers.addAll(
-              parseRelatedRegistryNumberList(reader));
+          case MeshXmlElements.List.RELATED_REGISTRY_NUMBER_LIST ->
+              relatedRegistryNumbers.addAll(parseRelatedRegistryNumberList(reader));
           case MeshXmlElements.List.TERM_LIST ->
               parseTermListIntoEntryTerms(reader, entryTerms, conceptUi);
         }
@@ -637,8 +638,7 @@ public final class DescriptorParsingStrategy
     // 创建 Concept
     if (conceptUi != null && conceptName != null) {
       try {
-        MeshConcept concept =
-            MeshConcept.create(MeshUI.of(conceptUi), conceptName, isPreferred);
+        MeshConcept concept = MeshConcept.create(MeshUI.of(conceptUi), conceptName, isPreferred);
 
         if (!registryNumbers.isEmpty()) {
           concept.addRegistryNumbers(registryNumbers);
@@ -716,7 +716,8 @@ public final class DescriptorParsingStrategy
       int event = reader.next();
       if (event == XMLStreamConstants.START_ELEMENT
           && MeshXmlElements.Record.TERM.equals(reader.getLocalName())) {
-        MeshEntryTerm term = EntryTermParsingStrategy.INSTANCE.parseRecord(reader, XmlParsingContext.empty());
+        MeshEntryTerm term =
+            EntryTermParsingStrategy.INSTANCE.parseRecord(reader, XmlParsingContext.empty());
         if (term != null) {
           entryTerms.add(term);
         }

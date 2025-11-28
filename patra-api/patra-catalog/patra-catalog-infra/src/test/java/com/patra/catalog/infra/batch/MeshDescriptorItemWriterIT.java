@@ -12,6 +12,7 @@ import com.patra.catalog.domain.model.enums.LexicalTag;
 import com.patra.catalog.domain.model.vo.mesh.ConceptRelation;
 import com.patra.catalog.domain.model.vo.mesh.EntryCombination;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
+import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.catalog.infra.persistence.converter.MeshDescriptorConverter;
 import com.patra.catalog.infra.persistence.entity.MeshConceptDO;
 import com.patra.catalog.infra.persistence.entity.MeshConceptRelationDO;
@@ -25,7 +26,6 @@ import com.patra.catalog.infra.persistence.mapper.MeshDescriptorMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshEntryCombinationMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshEntryTermMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshTreeNumberMapper;
-import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -331,10 +331,8 @@ class MeshDescriptorItemWriterIT {
     descriptor.setAnnotation("Annotation for descriptor " + index);
 
     // 添加 TreeNumber（每个 Descriptor 2 个）
-    descriptor.addTreeNumber(
-        MeshTreeNumber.create(String.format("C%02d.00%d", index, 1), true));
-    descriptor.addTreeNumber(
-        MeshTreeNumber.create(String.format("D%02d.00%d", index, 1), false));
+    descriptor.addTreeNumber(MeshTreeNumber.create(String.format("C%02d.00%d", index, 1), true));
+    descriptor.addTreeNumber(MeshTreeNumber.create(String.format("D%02d.00%d", index, 1), false));
 
     // 添加 Concept（每个 Descriptor 1 个首选概念，包含 2 个 ConceptRelation 和 2 个 RelatedRegistryNumber）
     MeshConcept concept =
@@ -342,14 +340,10 @@ class MeshDescriptorItemWriterIT {
             .withScopeNote("Concept scope note " + index)
             .addConceptRelation(
                 ConceptRelation.of(
-                    ConceptRelation.NRW,
-                    MeshUI.conceptOf(index),
-                    MeshUI.conceptOf(index + 1)))
+                    ConceptRelation.NRW, MeshUI.conceptOf(index), MeshUI.conceptOf(index + 1)))
             .addConceptRelation(
                 ConceptRelation.ofNullable(
-                    MeshUI.conceptOf(index),
-                    MeshUI.conceptOf(index + 2),
-                    null))
+                    MeshUI.conceptOf(index), MeshUI.conceptOf(index + 2), null))
             .addRelatedRegistryNumber("EC 1.1.1." + index)
             .addRelatedRegistryNumber("EC 2.2.2." + index);
     descriptor.addConcept(concept);
@@ -357,22 +351,10 @@ class MeshDescriptorItemWriterIT {
     // 添加 EntryTerm（每个 Descriptor 2 个）π
     descriptor.addEntryTerm(
         MeshEntryTerm.create(
-            MeshUI.termOf(index * 10 + 1),
-            "Synonym 1",
-            LexicalTag.PEF,
-            true,
-            true,
-            true,
-            false));
+            MeshUI.termOf(index * 10 + 1), "Synonym 1", LexicalTag.PEF, true, true, true, false));
     descriptor.addEntryTerm(
         MeshEntryTerm.create(
-            MeshUI.termOf(index * 10 + 2),
-            "Synonym 2",
-            LexicalTag.NON,
-            false,
-            true,
-            false,
-            false));
+            MeshUI.termOf(index * 10 + 2), "Synonym 2", LexicalTag.NON, false, true, false, false));
 
     // 添加 EntryCombination（每个 Descriptor 2 个）
     descriptor.addEntryCombination(
@@ -383,9 +365,7 @@ class MeshDescriptorItemWriterIT {
             MeshUI.qualifierOf(628)));
     descriptor.addEntryCombination(
         EntryCombination.of(
-            MeshUI.descriptorOf(index),
-            MeshUI.qualifierOf(175),
-            MeshUI.descriptorOf(index + 200)));
+            MeshUI.descriptorOf(index), MeshUI.qualifierOf(175), MeshUI.descriptorOf(index + 200)));
 
     return descriptor;
   }

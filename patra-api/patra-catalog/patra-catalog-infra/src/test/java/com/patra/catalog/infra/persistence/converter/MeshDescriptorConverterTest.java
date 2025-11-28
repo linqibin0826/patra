@@ -62,7 +62,8 @@ class MeshDescriptorConverterTest {
     void shouldConvertAggregateToDO() {
       // Given
       MeshDescriptorAggregate aggregate =
-          MeshDescriptorAggregate.create(DESCRIPTOR_UI, DESCRIPTOR_NAME, DESCRIPTOR_CLASS, MESH_VERSION);
+          MeshDescriptorAggregate.create(
+              DESCRIPTOR_UI, DESCRIPTOR_NAME, DESCRIPTOR_CLASS, MESH_VERSION);
       aggregate.setScopeNote("Test scope note");
       aggregate.setAnnotation("Test annotation");
       aggregate.setHistoryNote("Test history note");
@@ -246,7 +247,8 @@ class MeshDescriptorConverterTest {
               MeshUI.of("Q000628"));
 
       // When
-      MeshEntryCombinationDO result = converter.toEntryCombinationDO(entryCombination, DESCRIPTOR_UI_STR);
+      MeshEntryCombinationDO result =
+          converter.toEntryCombinationDO(entryCombination, DESCRIPTOR_UI_STR);
 
       // Then
       assertThat(result).isNotNull();
@@ -265,7 +267,8 @@ class MeshDescriptorConverterTest {
           EntryCombination.of(MeshUI.of("D000001"), MeshUI.of("Q000188"), MeshUI.of("D000002"));
 
       // When
-      MeshEntryCombinationDO result = converter.toEntryCombinationDO(entryCombination, DESCRIPTOR_UI_STR);
+      MeshEntryCombinationDO result =
+          converter.toEntryCombinationDO(entryCombination, DESCRIPTOR_UI_STR);
 
       // Then
       assertThat(result).isNotNull();
@@ -295,8 +298,7 @@ class MeshDescriptorConverterTest {
     @DisplayName("应该正确转换 ConceptRelation 到 DO（包含 relationName）")
     void shouldConvertConceptRelationToDO() {
       // Given
-      ConceptRelation relation =
-          ConceptRelation.of(ConceptRelation.NRW, CONCEPT1_UI, CONCEPT2_UI);
+      ConceptRelation relation = ConceptRelation.of(ConceptRelation.NRW, CONCEPT1_UI, CONCEPT2_UI);
 
       // When
       MeshConceptRelationDO result =
@@ -316,8 +318,7 @@ class MeshDescriptorConverterTest {
     @DisplayName("relationName 为 null 时应该正确处理")
     void shouldHandleNullRelationName() {
       // Given - DTD 定义 RelationName 为 #IMPLIED（可选）
-      ConceptRelation relation =
-          ConceptRelation.ofNullable(CONCEPT1_UI, CONCEPT2_UI, null);
+      ConceptRelation relation = ConceptRelation.ofNullable(CONCEPT1_UI, CONCEPT2_UI, null);
 
       // When
       MeshConceptRelationDO result =
