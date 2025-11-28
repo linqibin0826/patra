@@ -20,7 +20,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 
@@ -56,7 +55,8 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   /// 将标准错误特征映射到 HTTP 状态码后缀。
   ///
   /// 注意: 这个映射只包含 {@link StandardErrorTrait} 的映射。
-  /// 自定义 {@link ErrorTrait} 实现应该通过 {@link com.patra.starter.core.error.spi.ErrorMappingContributor} 提供映射。
+  /// 自定义 {@link ErrorTrait} 实现应该通过 {@link com.patra.starter.core.error.spi.ErrorMappingContributor}
+  // 提供映射。
   private static final Map<ErrorTrait, String> TRAIT_TO_CODE_MAP =
       Map.ofEntries(
           Map.entry(StandardErrorTrait.NOT_FOUND, "0404"),
@@ -282,8 +282,7 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
       Optional<ErrorResolution> traitResult = resolveViaTraits(exception);
       if (traitResult.isPresent()) {
         strategyCache.put(exceptionClass, this::resolveViaTraitsCached);
-        log.debug(
-            "缓存策略: {} -> Traits", exceptionClass.getSimpleName());
+        log.debug("缓存策略: {} -> Traits", exceptionClass.getSimpleName());
         return traitResult.get();
       }
     }
@@ -292,8 +291,7 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
     Optional<ErrorResolution> namingResult = resolveViaNamingHeuristic(exception);
     if (namingResult.isPresent()) {
       strategyCache.put(exceptionClass, this::resolveViaNamingHeuristicCached);
-      log.debug(
-          "缓存策略: {} -> Naming", exceptionClass.getSimpleName());
+      log.debug("缓存策略: {} -> Naming", exceptionClass.getSimpleName());
       return namingResult.get();
     }
 
@@ -314,10 +312,10 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
         isClientError ? this::resolveFallbackClient : this::resolveFallbackServer;
     strategyCache.put(exceptionClass, fallbackStrategy);
     log.debug(
-        "缓存策略: {} -> Fallback({})",
-        exceptionClass.getSimpleName(),
-        isClientError ? "422" : "500");
-    return isClientError ? createResolution("0422", ResolutionStrategy.FALLBACK) : fallbackServerError();
+        "缓存策略: {} -> Fallback({})", exceptionClass.getSimpleName(), isClientError ? "422" : "500");
+    return isClientError
+        ? createResolution("0422", ResolutionStrategy.FALLBACK)
+        : fallbackServerError();
   }
 
   /// 递归解析异常,直到达到最大原因链深度。
@@ -362,7 +360,8 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   private ErrorResolution resolveAsApplicationExceptionDirect(ApplicationException appEx) {
     ErrorCodeLike errorCode = appEx.getErrorCode();
     log.debug("通过 ApplicationException 解析 -> {}", errorCode.code());
-    return new ErrorResolution(errorCode, errorCode.httpStatus(), ResolutionStrategy.APPLICATION_EXCEPTION);
+    return new ErrorResolution(
+        errorCode, errorCode.httpStatus(), ResolutionStrategy.APPLICATION_EXCEPTION);
   }
 
   /// 缓存策略方法 - ApplicationException
@@ -407,7 +406,8 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
               "由 ErrorMappingContributor({}) 解析 -> {}",
               contributor.getClass().getSimpleName(),
               code.code());
-          return Optional.of(new ErrorResolution(code, code.httpStatus(), ResolutionStrategy.CONTRIBUTOR));
+          return Optional.of(
+              new ErrorResolution(code, code.httpStatus(), ResolutionStrategy.CONTRIBUTOR));
         }
       } catch (Exception ex) {
         log.warn(
@@ -476,10 +476,7 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
 
     if (bestCode != null) {
       log.debug(
-          "通过命名启发式解析: {} (matched suffix: {}) -> {}",
-          className,
-          longestMatchedSuffix,
-          bestCode);
+          "通过命名启发式解析: {} (matched suffix: {}) -> {}", className, longestMatchedSuffix, bestCode);
       return Optional.of(createResolution(bestCode, ResolutionStrategy.NAMING));
     }
 
@@ -583,7 +580,9 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   /// @return 回退错误解析(客户端错误 422 或服务器错误 500)
 
   private ErrorResolution fallbackForException(Throwable exception) {
-    return isClientErrorLike(exception) ? createResolution("0422", ResolutionStrategy.CAUSE) : fallbackServerError();
+    return isClientErrorLike(exception)
+        ? createResolution("0422", ResolutionStrategy.CAUSE)
+        : fallbackServerError();
   }
 
   /// 检查异常名称是否暗示客户端错误。

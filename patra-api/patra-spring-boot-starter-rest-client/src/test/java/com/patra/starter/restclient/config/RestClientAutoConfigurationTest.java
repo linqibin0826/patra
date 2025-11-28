@@ -84,7 +84,6 @@ class RestClientAutoConfigurationTest {
             });
   }
 
-
   @Test
   @DisplayName("应该支持配置默认 Headers")
   void should_support_default_headers_configuration() {

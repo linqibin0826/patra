@@ -58,10 +58,11 @@ import org.springframework.context.annotation.Primary;
 /// @since 0.1.0
 @AutoConfiguration
 @Import(JacksonAutoConfiguration.class)
-@ConditionalOnClass(name = {
-    "com.baomidou.mybatisplus.autoconfigure.ConfigurationCustomizer",
-    "com.fasterxml.jackson.databind.ObjectMapper"
-})
+@ConditionalOnClass(
+    name = {
+      "com.baomidou.mybatisplus.autoconfigure.ConfigurationCustomizer",
+      "com.fasterxml.jackson.databind.ObjectMapper"
+    })
 public class TestMybatisPlusAutoConfiguration {
 
   /// 注册 JsonNode 类型处理器。
@@ -101,13 +102,15 @@ public class TestMybatisPlusAutoConfiguration {
   /// @return 配置了分页和乐观锁的拦截器
   @Bean
   @Primary
-  @ConditionalOnClass(name = "com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor")
+  @ConditionalOnClass(
+      name = "com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor")
   MybatisPlusInterceptor testMybatisPlusInterceptor() {
     MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
     try {
       // 通过反射创建 PaginationInnerInterceptor，避免类加载时的 NoClassDefFoundError
       Class<?> paginationClass =
-          Class.forName("com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor");
+          Class.forName(
+              "com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor");
       Object paginationInterceptor =
           paginationClass.getConstructor(DbType.class).newInstance(DbType.MYSQL);
       interceptor.addInnerInterceptor((InnerInterceptor) paginationInterceptor);
@@ -135,9 +138,7 @@ public class TestMybatisPlusAutoConfiguration {
           Class.forName("com.patra.starter.mybatis.handler.AuditMetaObjectHandler");
       // AuditMetaObjectHandler 构造函数接受 @Nullable Clock 参数
       return (MetaObjectHandler)
-          handlerClass
-              .getConstructor(java.time.Clock.class)
-              .newInstance((Object) null);
+          handlerClass.getConstructor(java.time.Clock.class).newInstance((Object) null);
     } catch (ReflectiveOperationException e) {
       throw new IllegalStateException("无法创建 AuditMetaObjectHandler", e);
     }
@@ -155,8 +156,7 @@ public class TestMybatisPlusAutoConfiguration {
   @ConditionalOnMissingBean(ISqlInjector.class)
   ISqlInjector testSqlInjector() {
     try {
-      Class<?> injectorClass =
-          Class.forName("com.patra.starter.mybatis.injector.PatraSqlInjector");
+      Class<?> injectorClass = Class.forName("com.patra.starter.mybatis.injector.PatraSqlInjector");
       return (ISqlInjector) injectorClass.getDeclaredConstructor().newInstance();
     } catch (ReflectiveOperationException e) {
       throw new IllegalStateException("无法创建 PatraSqlInjector", e);

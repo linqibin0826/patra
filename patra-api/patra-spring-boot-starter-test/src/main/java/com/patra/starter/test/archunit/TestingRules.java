@@ -94,14 +94,12 @@ public final class TestingRules {
                         || simpleName.endsWith("E2E");
                 if (!isValid) {
                   String message =
-                      String.format(
-                          "测试类 %s 命名不符合规范，应以 Test/IT/E2E 结尾", javaClass.getFullName());
+                      String.format("测试类 %s 命名不符合规范，应以 Test/IT/E2E 结尾", javaClass.getFullName());
                   events.add(SimpleConditionEvent.violated(javaClass, message));
                 }
               }
             })
-        .as(
-            "测试类命名必须以 Test / IT / E2E 结尾（工具类除外：*Builder/*Support/*Helper/*Collector/*Initializer）")
+        .as("测试类命名必须以 Test / IT / E2E 结尾（工具类除外：*Builder/*Support/*Helper/*Collector/*Initializer）")
         .because("统一的命名规范便于识别测试类型和执行范围");
   }
 

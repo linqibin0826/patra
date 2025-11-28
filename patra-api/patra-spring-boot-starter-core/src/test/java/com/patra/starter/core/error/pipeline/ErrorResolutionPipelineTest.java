@@ -148,7 +148,8 @@ class ErrorResolutionPipelineTest {
       ErrorCodeLike modifiedErrorCode = mock(ErrorCodeLike.class);
       lenient().when(modifiedErrorCode.code()).thenReturn("MODIFIED:0400");
       lenient().when(modifiedErrorCode.httpStatus()).thenReturn(400);
-      ErrorResolution modifiedResolution = new ErrorResolution(modifiedErrorCode, 400, ResolutionStrategy.CONTRIBUTOR);
+      ErrorResolution modifiedResolution =
+          new ErrorResolution(modifiedErrorCode, 400, ResolutionStrategy.CONTRIBUTOR);
 
       ResolutionInterceptor interceptor =
           (ex, invocation) -> {
@@ -436,7 +437,8 @@ class ErrorResolutionPipelineTest {
       ErrorCodeLike shortCircuitErrorCode = mock(ErrorCodeLike.class);
       lenient().when(shortCircuitErrorCode.code()).thenReturn("SHORT:0000");
       lenient().when(shortCircuitErrorCode.httpStatus()).thenReturn(200);
-      ErrorResolution shortCircuitResolution = new ErrorResolution(shortCircuitErrorCode, 200, ResolutionStrategy.FALLBACK);
+      ErrorResolution shortCircuitResolution =
+          new ErrorResolution(shortCircuitErrorCode, 200, ResolutionStrategy.FALLBACK);
 
       ResolutionInterceptor shortCircuitInterceptor =
           (ex, invocation) -> shortCircuitResolution; // 不调用 proceed
@@ -597,7 +599,8 @@ class ErrorResolutionPipelineTest {
       ErrorCodeLike fallbackErrorCode = mock(ErrorCodeLike.class);
       lenient().when(fallbackErrorCode.code()).thenReturn("FALLBACK:0500");
       lenient().when(fallbackErrorCode.httpStatus()).thenReturn(500);
-      ErrorResolution fallbackResolution = new ErrorResolution(fallbackErrorCode, 500, ResolutionStrategy.FALLBACK);
+      ErrorResolution fallbackResolution =
+          new ErrorResolution(fallbackErrorCode, 500, ResolutionStrategy.FALLBACK);
 
       ResolutionInterceptor errorHandlingInterceptor =
           (ex, invocation) -> {

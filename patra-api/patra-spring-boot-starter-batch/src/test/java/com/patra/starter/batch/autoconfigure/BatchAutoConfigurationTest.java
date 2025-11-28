@@ -28,13 +28,14 @@ import org.springframework.test.context.ContextConfiguration;
 ///
 /// @author Patra Lin
 /// @since 0.1.0
-@SpringBootTest(properties = {
-    "spring.batch.jdbc.initialize-schema=always",
-    "spring.batch.job.enabled=false",
-    "spring.autoconfigure.exclude=org.redisson.spring.starter.RedissonAutoConfigurationV2",
-    "patra.batch.enabled=true",
-    "patra.redisson.observability.metrics-enabled=false"
-})
+@SpringBootTest(
+    properties = {
+      "spring.batch.jdbc.initialize-schema=always",
+      "spring.batch.job.enabled=false",
+      "spring.autoconfigure.exclude=org.redisson.spring.starter.RedissonAutoConfigurationV2",
+      "patra.batch.enabled=true",
+      "patra.redisson.observability.metrics-enabled=false"
+    })
 @ContextConfiguration(initializers = MySQLContainerInitializer.class)
 class BatchAutoConfigurationTest {
 

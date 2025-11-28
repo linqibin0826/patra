@@ -11,7 +11,8 @@ import com.patra.common.error.codes.ErrorCodeLike;
 /// @param strategy 使用的解析策略（用于可观测性和调试）
 /// @author linqibin
 /// @since 0.1.0
-public record ErrorResolution(ErrorCodeLike errorCode, int httpStatus, ResolutionStrategy strategy) {
+public record ErrorResolution(
+    ErrorCodeLike errorCode, int httpStatus, ResolutionStrategy strategy) {
 
   /// 规范构造器,强制执行错误解析结果的验证规则。
   ///

@@ -6,9 +6,9 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Conditional;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -82,7 +82,8 @@ public class RestClientAutoConfiguration {
     builder.requestInterceptors(
         list ->
             list.addAll(
-                interceptorsProvider.orderedStream()
+                interceptorsProvider
+                    .orderedStream()
                     .filter(i -> !isLoadBalancerInterceptor(i))
                     .toList()));
 
@@ -157,7 +158,8 @@ public class RestClientAutoConfiguration {
     builder.requestInterceptors(
         list ->
             list.addAll(
-                interceptorsProvider.orderedStream()
+                interceptorsProvider
+                    .orderedStream()
                     .filter(i -> !isLoadBalancerInterceptor(i))
                     .toList()));
 

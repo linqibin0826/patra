@@ -15,9 +15,6 @@ public class BatchJobExecutionException extends ApplicationException {
   /// @param jobName Job 名称
   /// @param cause 根本原因
   public BatchJobExecutionException(String jobName, Throwable cause) {
-    super(
-        BatchErrorCode.JOB_EXECUTION_FAILED,
-        String.format("批处理任务执行失败: %s", jobName),
-        cause);
+    super(BatchErrorCode.JOB_EXECUTION_FAILED, String.format("批处理任务执行失败: %s", jobName), cause);
   }
 }

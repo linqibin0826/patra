@@ -91,11 +91,7 @@ public final class BatchInsertHelper {
     BatchInsertResult<T> result = new BatchInsertResult<>(totalSize, successCount, errors);
 
     if (result.hasErrors()) {
-      log.warn(
-          "批量插入完成，存在失败批次：成功 {} / 总计 {}，失败批次数: {}",
-          successCount,
-          totalSize,
-          errors.size());
+      log.warn("批量插入完成，存在失败批次：成功 {} / 总计 {}，失败批次数: {}", successCount, totalSize, errors.size());
     } else {
       log.info("批量插入完成：成功 {} 条", successCount);
     }

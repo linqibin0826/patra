@@ -20,7 +20,8 @@ import com.tngtech.archunit.lang.ArchRule;
 /// class IngestArchitectureTest {
 ///
 ///     @ArchTest
-///     static final ArchRule noServiceImplInRepository = MyBatisArchRules.noServiceImplInRepository();
+///     static final ArchRule noServiceImplInRepository =
+// MyBatisArchRules.noServiceImplInRepository();
 /// }
 /// ```
 ///
@@ -91,8 +92,6 @@ public final class MyBatisArchRules {
         .should()
         .beAssignableTo(ServiceImpl.class)
         .as("Infra 层禁止继承 ServiceImpl")
-        .because(
-            "ServiceImpl 是 MyBatis-Plus 的 Service 层实现，"
-                + "在六边形架构中应使用 Mapper 接口直接操作数据库");
+        .because("ServiceImpl 是 MyBatis-Plus 的 Service 层实现，" + "在六边形架构中应使用 Mapper 接口直接操作数据库");
   }
 }
