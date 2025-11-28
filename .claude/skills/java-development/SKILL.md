@@ -50,7 +50,7 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__serena__get_symbols_ove
 
 **开发流程**：
 ```
-创建 DO（继承 BaseDO）→ 创建 Mapper（继承 BaseMapper）→ 实现 Repository
+创建 DO（继承 BaseDO）→ 创建 Mapper（继承 PatraBaseMapper）→ 实现 Repository
 ```
 
 ### 4. 事务和错误处理

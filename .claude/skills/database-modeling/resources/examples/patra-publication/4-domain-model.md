@@ -17,7 +17,7 @@
 ┌─────────────────────────────────────┐
 │ Infra 层（patra-ingest-infra）       │
 │ ✅ DO（继承 BaseDO）                  │
-│ ✅ Mapper（BaseMapper）               │
+│ ✅ Mapper（PatraBaseMapper）          │
 │ ✅ RepositoryAdapter（适配器）           │
 │ ✅ Converter（Entity ↔ DO）          │
 └─────────────────────────────────────┘
