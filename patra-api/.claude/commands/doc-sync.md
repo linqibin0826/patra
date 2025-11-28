@@ -38,7 +38,7 @@ argument-hint: [adr|readme|all]
 
 ## ADR 模板（≤ 300 字）
 
-位置：`docs/adr/NNNN-title.md`
+位置：`docs/decisions/ADR-{NNN}-{slug}.md`
 
 触发条件：
 - 新增/删除服务或模块
