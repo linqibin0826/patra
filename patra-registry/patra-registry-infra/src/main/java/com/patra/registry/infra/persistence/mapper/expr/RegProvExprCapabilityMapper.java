@@ -1,7 +1,7 @@
 package com.patra.registry.infra.persistence.mapper.expr;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.registry.infra.persistence.entity.expr.RegProvExprCapabilityDO;
+import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -13,7 +13,7 @@ import org.apache.ibatis.annotations.Param;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface RegProvExprCapabilityMapper extends BaseMapper<RegProvExprCapabilityDO> {
+public interface RegProvExprCapabilityMapper extends PatraBaseMapper<RegProvExprCapabilityDO> {
 
   /// 获取请求字段的最具体激活能力切片。
   ///

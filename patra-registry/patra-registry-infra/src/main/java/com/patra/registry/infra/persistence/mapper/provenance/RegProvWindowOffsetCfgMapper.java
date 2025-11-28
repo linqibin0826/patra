@@ -1,7 +1,7 @@
 package com.patra.registry.infra.persistence.mapper.provenance;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvWindowOffsetCfgDO;
+import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.time.Instant;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
@@ -12,7 +12,7 @@ import org.apache.ibatis.annotations.Param;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface RegProvWindowOffsetCfgMapper extends BaseMapper<RegProvWindowOffsetCfgDO> {
+public interface RegProvWindowOffsetCfgMapper extends PatraBaseMapper<RegProvWindowOffsetCfgDO> {
 
   /// 查询激活的时间窗口偏移配置,优先选择特定操作键,回退到 `ALL`。
   ///

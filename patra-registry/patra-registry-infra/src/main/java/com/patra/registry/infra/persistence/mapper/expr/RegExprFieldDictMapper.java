@@ -1,7 +1,7 @@
 package com.patra.registry.infra.persistence.mapper.expr;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.registry.infra.persistence.entity.expr.RegExprFieldDictDO;
+import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.util.List;
 
 /// 只读 Mapper,用于表 `reg_expr_field_dict`。
@@ -12,7 +12,7 @@ import java.util.List;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface RegExprFieldDictMapper extends BaseMapper<RegExprFieldDictDO> {
+public interface RegExprFieldDictMapper extends PatraBaseMapper<RegExprFieldDictDO> {
 
   /// 列出按 `field_key` 排序的所有未删除表达式字段定义。
   ///

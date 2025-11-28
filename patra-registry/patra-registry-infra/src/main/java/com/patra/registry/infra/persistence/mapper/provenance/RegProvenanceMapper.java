@@ -1,7 +1,7 @@
 package com.patra.registry.infra.persistence.mapper.provenance;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvenanceDO;
+import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.util.List;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
@@ -12,7 +12,7 @@ import org.apache.ibatis.annotations.Param;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface RegProvenanceMapper extends BaseMapper<RegProvenanceDO> {
+public interface RegProvenanceMapper extends PatraBaseMapper<RegProvenanceDO> {
 
   /// 通过其稳定的业务代码获取激活的数据源行。
   ///
