@@ -126,7 +126,6 @@ public class BatchAutoConfiguration extends DefaultBatchConfiguration {
     TaskExecutorJobLauncher launcher = new TaskExecutorJobLauncher();
     launcher.setJobRepository(jobRepository);
 
-    // ⭐ 关键改进：使用 SyncTaskExecutor（XXL-Job 已异步）
     launcher.setTaskExecutor(new SyncTaskExecutor());
 
     try {
