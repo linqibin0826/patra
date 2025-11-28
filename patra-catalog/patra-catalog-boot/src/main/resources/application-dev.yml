@@ -25,3 +25,10 @@ logging:
   level:
     com.patra: DEBUG
     com.patra.catalog: DEBUG
+
+# Observability - 本地 IDE 运行时连接 Docker 内的 SkyWalking
+patra:
+  observability:
+    metrics:
+      skywalking:
+        oap-address: localhost:11800  # 覆盖默认值 skywalking-oap:11800（Docker 内部地址）

@@ -36,9 +36,10 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- Patra Observability Starter (包含 Prometheus + SkyWalking + Tracing + Logging) -->
         <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-registry-prometheus</artifactId>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-observability</artifactId>
         </dependency>
 
         <dependency>
