@@ -44,10 +44,12 @@ public interface OutboxRelayLogConverter {
   @Mapping(target = "relayStatus", expression = "java(log.getRelayStatus().getCode())")
   OutboxRelayLogDO toEntity(OutboxRelayLog log);
 
-  /// 为批量插入初始化默认值。
+  /// 为批量插入初始化审计字段默认值。
   ///
-  /// 批量插入使用 `insertBatchSomeColumn` 不会触发 `MetaObjectHandler.insertFill()`，
-  /// 因此需要手动设置审计字段和乐观锁版本号的默认值。
+  /// 虽然 `insertBatchSomeColumn` 会触发 `MetaObjectHandler.insertFill()`，
+  /// 但在 Converter 阶段预设值可以确保：
+  /// 1. 批量操作中所有记录的时间戳一致性（同一批次使用相同时间）
+  /// 2. 避免依赖 MetaObjectHandler 的隐式行为
   ///
   /// @param target 目标 DO 对象
   /// @param source 源领域对象

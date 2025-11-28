@@ -166,6 +166,7 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
       case MARK_PUBLISHED -> IngestErrorCode.ING_1302;
       case MARK_RETRY -> IngestErrorCode.ING_1301;
       case MARK_DEAD -> IngestErrorCode.ING_1303;
+      case BATCH_INSERT -> IngestErrorCode.ING_1304;
     };
   }
 
