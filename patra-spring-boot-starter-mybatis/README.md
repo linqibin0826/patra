@@ -140,9 +140,11 @@ mapper.insertBatchSomeColumn(dataList);
 
 | 方法 | 说明 |
 |------|------|
+| `totalCount()` | 待插入的总记录数 |
+| `successCount()` | 成功插入的记录数 |
+| `getFailedCount()` | 插入失败的记录数 |
 | `isAllSuccess()` | 是否全部批次成功 |
 | `hasErrors()` | 是否存在失败批次 |
-| `totalInserted()` | 成功插入的总行数 |
 | `errors()` | 失败批次的异常列表 |
 
 **分片策略:**
