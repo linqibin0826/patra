@@ -105,6 +105,54 @@ public class MetadataDO extends BaseDO {
 }
 ```
 
+### PatraBaseMapper - Mapper 基类
+
+所有 Mapper 接口必须继承此基类（而非 `BaseMapper`），以获得批量插入能力：
+
+```java
+public interface UserMapper extends PatraBaseMapper<UserDO> {
+    // 自定义查询方法
+}
+```
+
+**扩展方法:**
+
+| 方法 | 说明 |
+|------|------|
+| `insertBatchSomeColumn(List<T>)` | 批量插入，生成单条 INSERT 语句多行 VALUES |
+
+### BatchInsertHelper - 批量插入工具
+
+分片批量插入工具，自动将大数据集拆分为多个批次：
+
+```java
+// 推荐：简化版（默认 1000 条/批）
+BatchInsertHelper.batchInsert(dataList, mapper::insertBatchSomeColumn);
+
+// 自定义批次大小
+BatchInsertHelper.batchInsert(dataList, 500, mapper::insertBatchSomeColumn);
+
+// 小数据量可直接调用（确定 < 1000 条时）
+mapper.insertBatchSomeColumn(dataList);
+```
+
+**返回值 `BatchInsertResult<T>`:**
+
+| 方法 | 说明 |
+|------|------|
+| `isAllSuccess()` | 是否全部批次成功 |
+| `hasErrors()` | 是否存在失败批次 |
+| `totalInserted()` | 成功插入的总行数 |
+| `errors()` | 失败批次的异常列表 |
+
+**分片策略:**
+
+| 数据量 | 批次大小 | 说明 |
+|--------|----------|------|
+| < 1000 | 不分片 | 直接调用 `insertBatchSomeColumn` |
+| 1K-10K | 1000/批 | 使用 `BatchInsertHelper` 自动分片 |
+| 10K-100K | 5000/批 | 需确保 `max_allowed_packet >= 64MB` |
+
 ### MybatisPlusInterceptor - 拦截器配置
 
 自动配置以下内置插件：
