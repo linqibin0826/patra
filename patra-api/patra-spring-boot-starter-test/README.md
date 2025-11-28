@@ -96,6 +96,7 @@ class CatalogArchitectureTest {
 |---|---|---|
 | `HexagonalArchitectureRules` | 18 条 | 六边形架构依赖规则、命名规范、封装规则 |
 | `TestingRules` | 6 条 | 测试命名规范、测试比例、Mock 策略 |
+| `MyBatisArchRules` | 2 条 | MyBatis-Plus 使用规范（禁止 RepositoryAdapter 继承 ServiceImpl） |
 
 ### 自动配置
 
