@@ -15,7 +15,6 @@ import com.patra.ingest.app.usecase.relay.OutboxRelayUseCase;
 import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
 import com.patra.ingest.app.usecase.relay.config.OutboxRelayProperties;
 import com.patra.ingest.app.usecase.relay.dto.RelayReport;
-import com.patra.ingest.domain.exception.IngestScheduleParameterException;
 import com.patra.ingest.domain.exception.OutboxRelayExecutionException;
 import com.patra.ingest.domain.messaging.IngestPublishingChannels;
 import com.xxl.job.core.context.XxlJobHelper;

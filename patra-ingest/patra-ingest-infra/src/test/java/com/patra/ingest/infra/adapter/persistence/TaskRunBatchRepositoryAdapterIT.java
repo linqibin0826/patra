@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.entity.TaskRunBatch;
 import com.patra.ingest.domain.model.enums.BatchStatus;
@@ -22,8 +24,6 @@ import com.patra.ingest.infra.persistence.mapper.TaskMapper;
 import com.patra.ingest.infra.persistence.mapper.TaskRunBatchMapper;
 import com.patra.ingest.infra.persistence.mapper.TaskRunMapper;
 import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

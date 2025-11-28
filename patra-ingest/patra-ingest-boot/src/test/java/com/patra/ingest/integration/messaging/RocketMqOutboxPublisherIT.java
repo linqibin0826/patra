@@ -83,7 +83,10 @@ import org.springframework.test.context.ContextConfiguration;
       "patra.ingest.test.rocketmq.consumer.enabled=true"
     })
 @ContextConfiguration(
-    initializers = {IngestMySQLContainerInitializer.class, IngestRocketMQContainerInitializer.class})
+    initializers = {
+      IngestMySQLContainerInitializer.class,
+      IngestRocketMQContainerInitializer.class
+    })
 @org.springframework.context.annotation.Import(RocketMqOutboxPublisherIT.MessageCollector.class)
 @DisplayName("RocketMQ Outbox 发布器集成测试")
 @org.springframework.test.context.ActiveProfiles("integration-test")

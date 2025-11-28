@@ -5,11 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.ingest.domain.model.entity.OutboxRelayLog;
 import com.patra.ingest.domain.model.enums.RelayStatus;
 import com.patra.ingest.infra.config.IngestMySQLContainerInitializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.ingest.infra.persistence.entity.OutboxMessageDO;
 import com.patra.ingest.infra.persistence.entity.OutboxRelayLogDO;
 import com.patra.ingest.infra.persistence.mapper.OutboxMessageMapper;
@@ -82,8 +82,7 @@ class OutboxRelayLogRepositoryAdapterIT {
   void setUp() {
     // 清理现有数据（按外键依赖顺序）
     logMapper.delete(Wrappers.<OutboxRelayLogDO>lambdaQuery().ne(OutboxRelayLogDO::getId, 0L));
-    messageMapper.delete(
-        Wrappers.<OutboxMessageDO>lambdaQuery().ne(OutboxMessageDO::getId, 0L));
+    messageMapper.delete(Wrappers.<OutboxMessageDO>lambdaQuery().ne(OutboxMessageDO::getId, 0L));
 
     // 创建测试用的发件箱消息
     testMessageId = insertOutboxMessage("dedup-key-1");
@@ -385,10 +384,7 @@ class OutboxRelayLogRepositoryAdapterIT {
       // When
       List<OutboxRelayLog> result =
           repository.findByChannelAndTimeRange(
-              TEST_CHANNEL,
-              now.minus(1, ChronoUnit.HOURS),
-              now.plus(1, ChronoUnit.HOURS),
-              10);
+              TEST_CHANNEL, now.minus(1, ChronoUnit.HOURS), now.plus(1, ChronoUnit.HOURS), 10);
 
       // Then
       assertThat(result).hasSize(2);

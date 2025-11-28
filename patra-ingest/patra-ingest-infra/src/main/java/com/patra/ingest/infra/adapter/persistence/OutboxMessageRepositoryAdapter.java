@@ -96,8 +96,7 @@ public class OutboxMessageRepositoryAdapter
     List<OutboxMessageDO> entities = messages.stream().map(converter::toEntity).toList();
     var result = BatchInsertHelper.batchInsert(entities, mapper::insertBatchSomeColumn);
     if (result.hasErrors()) {
-      log.error(
-          "Outbox 批量插入部分失败：成功 {} / 总计 {}", result.successCount(), result.totalCount());
+      log.error("Outbox 批量插入部分失败：成功 {} / 总计 {}", result.successCount(), result.totalCount());
       throw new OutboxPersistenceException(
           OutboxPersistenceException.Stage.BATCH_INSERT,
           "Outbox 批量插入部分失败，失败批次数: " + result.errors().size());

@@ -79,9 +79,7 @@ public class TaskRunBatchRepositoryAdapter implements TaskRunBatchRepository {
       var result = BatchInsertHelper.batchInsert(toInsert, mapper::insertBatchSomeColumn);
       if (result.hasErrors()) {
         log.error(
-            "TaskRunBatch 批量插入部分失败：成功 {} / 总计 {}",
-            result.successCount(),
-            result.totalCount());
+            "TaskRunBatch 批量插入部分失败：成功 {} / 总计 {}", result.successCount(), result.totalCount());
         throw new TaskPersistenceException(
             "TaskRunBatch 批量插入部分失败，失败批次数: " + result.errors().size());
       }
