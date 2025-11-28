@@ -14,30 +14,30 @@ package com.patra.starter.redisson.listener;
 /// @since 1.0.0
 public interface LockObserver {
 
-    /// 锁获取成功时回调。
-    ///
-    /// @param lockKey    锁键
-    /// @param lockType   锁类型（REENTRANT、FAIR、READ、WRITE）
-    /// @param waitTimeMs 等待时间（毫秒）
-    default void onLockAcquired(String lockKey, String lockType, long waitTimeMs) {
-        // 默认空实现，子类可选择性覆盖
-    }
+  /// 锁获取成功时回调。
+  ///
+  /// @param lockKey    锁键
+  /// @param lockType   锁类型（REENTRANT、FAIR、READ、WRITE）
+  /// @param waitTimeMs 等待时间（毫秒）
+  default void onLockAcquired(String lockKey, String lockType, long waitTimeMs) {
+    // 默认空实现，子类可选择性覆盖
+  }
 
-    /// 锁获取失败时回调。
-    ///
-    /// @param lockKey  锁键
-    /// @param lockType 锁类型
-    /// @param reason   失败原因（timeout、interrupted、infrastructure_error）
-    default void onLockFailed(String lockKey, String lockType, String reason) {
-        // 默认空实现，子类可选择性覆盖
-    }
+  /// 锁获取失败时回调。
+  ///
+  /// @param lockKey  锁键
+  /// @param lockType 锁类型
+  /// @param reason   失败原因（timeout、interrupted、infrastructure_error）
+  default void onLockFailed(String lockKey, String lockType, String reason) {
+    // 默认空实现，子类可选择性覆盖
+  }
 
-    /// 锁释放时回调。
-    ///
-    /// @param lockKey    锁键
-    /// @param lockType   锁类型
-    /// @param holdTimeMs 持有时间（毫秒）
-    default void onLockReleased(String lockKey, String lockType, long holdTimeMs) {
-        // 默认空实现，子类可选择性覆盖
-    }
+  /// 锁释放时回调。
+  ///
+  /// @param lockKey    锁键
+  /// @param lockType   锁类型
+  /// @param holdTimeMs 持有时间（毫秒）
+  default void onLockReleased(String lockKey, String lockType, long holdTimeMs) {
+    // 默认空实现，子类可选择性覆盖
+  }
 }

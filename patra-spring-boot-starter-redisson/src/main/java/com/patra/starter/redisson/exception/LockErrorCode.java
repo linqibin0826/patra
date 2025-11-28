@@ -15,37 +15,37 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum LockErrorCode implements ErrorCodeLike {
 
-    /// 锁获取失败（资源冲突）
-    ACQUISITION_FAILED("LOCK-0409", 409),
+  /// 锁获取失败（资源冲突）
+  ACQUISITION_FAILED("LOCK-0409", 409),
 
-    /// 锁操作超时
-    TIMEOUT("LOCK-1001", 500),
+  /// 锁操作超时
+  TIMEOUT("LOCK-1001", 500),
 
-    /// Redis 基础设施错误
-    INFRASTRUCTURE_ERROR("LOCK-0503", 503),
+  /// Redis 基础设施错误
+  INFRASTRUCTURE_ERROR("LOCK-0503", 503),
 
-    /// SpEL 表达式解析错误
-    EXPRESSION_ERROR("LOCK-1002", 500);
+  /// SpEL 表达式解析错误
+  EXPRESSION_ERROR("LOCK-1002", 500);
 
-    /// 错误码
-    private final String codeValue;
+  /// 错误码
+  private final String codeValue;
 
-    /// HTTP 状态码
-    private final int httpStatusValue;
+  /// HTTP 状态码
+  private final int httpStatusValue;
 
-    /// 获取错误码。
-    ///
-    /// @return 错误码字符串
-    @Override
-    public String code() {
-        return codeValue;
-    }
+  /// 获取错误码。
+  ///
+  /// @return 错误码字符串
+  @Override
+  public String code() {
+    return codeValue;
+  }
 
-    /// 获取 HTTP 状态码。
-    ///
-    /// @return HTTP 状态码
-    @Override
-    public int httpStatus() {
-        return httpStatusValue;
-    }
+  /// 获取 HTTP 状态码。
+  ///
+  /// @return HTTP 状态码
+  @Override
+  public int httpStatus() {
+    return httpStatusValue;
+  }
 }

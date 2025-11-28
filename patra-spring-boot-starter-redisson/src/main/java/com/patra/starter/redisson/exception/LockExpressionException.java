@@ -11,38 +11,30 @@ import com.patra.common.error.ApplicationException;
 /// @since 1.0.0
 public class LockExpressionException extends ApplicationException {
 
-    /// 创建 SpEL 表达式解析错误异常。
-    ///
-    /// @param expression SpEL 表达式
-    /// @param cause      根本原因
-    public LockExpressionException(String expression, Throwable cause) {
-        super(
-            LockErrorCode.EXPRESSION_ERROR,
-            String.format("无法解析 SpEL 表达式: %s", expression),
-            cause
-        );
-    }
+  /// 创建 SpEL 表达式解析错误异常。
+  ///
+  /// @param expression SpEL 表达式
+  /// @param cause      根本原因
+  public LockExpressionException(String expression, Throwable cause) {
+    super(LockErrorCode.EXPRESSION_ERROR, String.format("无法解析 SpEL 表达式: %s", expression), cause);
+  }
 
-    /// 创建 SpEL 表达式解析错误异常（自定义消息）。
-    ///
-    /// @param message    自定义消息
-    /// @param expression SpEL 表达式
-    /// @param cause      根本原因
-    public LockExpressionException(String message, String expression, Throwable cause) {
-        super(
-            LockErrorCode.EXPRESSION_ERROR,
-            String.format("%s (expression: %s)", message, expression),
-            cause
-        );
-    }
+  /// 创建 SpEL 表达式解析错误异常（自定义消息）。
+  ///
+  /// @param message    自定义消息
+  /// @param expression SpEL 表达式
+  /// @param cause      根本原因
+  public LockExpressionException(String message, String expression, Throwable cause) {
+    super(
+        LockErrorCode.EXPRESSION_ERROR,
+        String.format("%s (expression: %s)", message, expression),
+        cause);
+  }
 
-    /// 创建 SpEL 表达式解析错误异常（无 cause）。
-    ///
-    /// @param expression SpEL 表达式
-    public LockExpressionException(String expression) {
-        super(
-            LockErrorCode.EXPRESSION_ERROR,
-            String.format("无法解析 SpEL 表达式: %s", expression)
-        );
-    }
+  /// 创建 SpEL 表达式解析错误异常（无 cause）。
+  ///
+  /// @param expression SpEL 表达式
+  public LockExpressionException(String expression) {
+    super(LockErrorCode.EXPRESSION_ERROR, String.format("无法解析 SpEL 表达式: %s", expression));
+  }
 }

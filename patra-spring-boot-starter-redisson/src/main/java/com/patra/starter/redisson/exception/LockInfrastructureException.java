@@ -11,38 +11,33 @@ import com.patra.common.error.ApplicationException;
 /// @since 1.0.0
 public class LockInfrastructureException extends ApplicationException {
 
-    /// 创建锁基础设施错误异常。
-    ///
-    /// @param lockKey 锁键
-    /// @param cause   根本原因
-    public LockInfrastructureException(String lockKey, Throwable cause) {
-        super(
-            LockErrorCode.INFRASTRUCTURE_ERROR,
-            String.format("Redis 基础设施错误导致锁操作失败: %s", lockKey),
-            cause
-        );
-    }
+  /// 创建锁基础设施错误异常。
+  ///
+  /// @param lockKey 锁键
+  /// @param cause   根本原因
+  public LockInfrastructureException(String lockKey, Throwable cause) {
+    super(
+        LockErrorCode.INFRASTRUCTURE_ERROR,
+        String.format("Redis 基础设施错误导致锁操作失败: %s", lockKey),
+        cause);
+  }
 
-    /// 创建锁基础设施错误异常（自定义消息）。
-    ///
-    /// @param message 自定义消息
-    /// @param lockKey 锁键
-    /// @param cause   根本原因
-    public LockInfrastructureException(String message, String lockKey, Throwable cause) {
-        super(
-            LockErrorCode.INFRASTRUCTURE_ERROR,
-            String.format("%s (lockKey: %s)", message, lockKey),
-            cause
-        );
-    }
+  /// 创建锁基础设施错误异常（自定义消息）。
+  ///
+  /// @param message 自定义消息
+  /// @param lockKey 锁键
+  /// @param cause   根本原因
+  public LockInfrastructureException(String message, String lockKey, Throwable cause) {
+    super(
+        LockErrorCode.INFRASTRUCTURE_ERROR,
+        String.format("%s (lockKey: %s)", message, lockKey),
+        cause);
+  }
 
-    /// 创建锁基础设施错误异常（无 cause）。
-    ///
-    /// @param lockKey 锁键
-    public LockInfrastructureException(String lockKey) {
-        super(
-            LockErrorCode.INFRASTRUCTURE_ERROR,
-            String.format("Redis 基础设施错误导致锁操作失败: %s", lockKey)
-        );
-    }
+  /// 创建锁基础设施错误异常（无 cause）。
+  ///
+  /// @param lockKey 锁键
+  public LockInfrastructureException(String lockKey) {
+    super(LockErrorCode.INFRASTRUCTURE_ERROR, String.format("Redis 基础设施错误导致锁操作失败: %s", lockKey));
+  }
 }
