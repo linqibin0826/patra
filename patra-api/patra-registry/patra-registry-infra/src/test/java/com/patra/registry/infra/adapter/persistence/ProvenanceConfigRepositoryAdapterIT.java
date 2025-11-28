@@ -12,6 +12,7 @@ import com.patra.registry.domain.model.vo.provenance.Provenance;
 import com.patra.registry.domain.model.vo.provenance.RateLimitConfig;
 import com.patra.registry.domain.model.vo.provenance.RetryConfig;
 import com.patra.registry.domain.model.vo.provenance.WindowOffsetConfig;
+import com.patra.registry.infra.config.RegistryMySQLContainerInitializer;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvBatchingCfgDO;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvHttpCfgDO;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvPaginationCfgDO;
@@ -26,7 +27,6 @@ import com.patra.registry.infra.persistence.mapper.provenance.RegProvRateLimitCf
 import com.patra.registry.infra.persistence.mapper.provenance.RegProvRetryCfgMapper;
 import com.patra.registry.infra.persistence.mapper.provenance.RegProvWindowOffsetCfgMapper;
 import com.patra.registry.infra.persistence.mapper.provenance.RegProvenanceMapper;
-import com.patra.registry.infra.config.RegistryMySQLContainerInitializer;
 import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -346,7 +346,10 @@ class ProvenanceConfigRepositoryAdapterIT {
       // Given: 插入已过期的配置
       testProvenanceId = insertProvenance("PUBMED", "PubMed", true);
       insertWindowOffsetConfigWithExpiry(
-          testProvenanceId, TEST_OPERATION_TYPE, EFFECTIVE_FROM, EFFECTIVE_FROM.plus(7, ChronoUnit.DAYS));
+          testProvenanceId,
+          TEST_OPERATION_TYPE,
+          EFFECTIVE_FROM,
+          EFFECTIVE_FROM.plus(7, ChronoUnit.DAYS));
 
       // When: 使用过期后的时间戳查询
       Instant afterExpiry = EFFECTIVE_FROM.plus(10, ChronoUnit.DAYS);
@@ -363,7 +366,10 @@ class ProvenanceConfigRepositoryAdapterIT {
       // Given: 插入有限期的配置
       testProvenanceId = insertProvenance("PUBMED", "PubMed", true);
       insertWindowOffsetConfigWithExpiry(
-          testProvenanceId, TEST_OPERATION_TYPE, EFFECTIVE_FROM, EFFECTIVE_FROM.plus(30, ChronoUnit.DAYS));
+          testProvenanceId,
+          TEST_OPERATION_TYPE,
+          EFFECTIVE_FROM,
+          EFFECTIVE_FROM.plus(30, ChronoUnit.DAYS));
 
       // When: 使用有效期内的时间戳查询
       Instant withinPeriod = EFFECTIVE_FROM.plus(15, ChronoUnit.DAYS);
