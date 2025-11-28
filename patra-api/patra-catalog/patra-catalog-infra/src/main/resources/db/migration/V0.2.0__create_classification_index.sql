@@ -211,8 +211,8 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_tree_number` (
     -- ========================================
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键,雪花算法生成',
     `descriptor_ui` VARCHAR(10) NOT NULL COMMENT '主题词UI(关联:cat_mesh_descriptor.ui,格式:D000001)',
-    `tree_number` VARCHAR(50) NOT NULL COMMENT '树形编号(如 C04.557.337.428)',
-    `tree_level` TINYINT NOT NULL COMMENT '层级深度(1-10,自动计算)',
+    `tree_number` VARCHAR(100) NOT NULL COMMENT '树形编号(如 C04.557.337.428，最多15层约59字符)',
+    `tree_level` TINYINT NOT NULL COMMENT '层级深度(1-15,自动计算)',
     `is_primary` BOOLEAN NOT NULL DEFAULT 1 COMMENT '是否主要位置(0=次要,1=主要)',
 
     -- ========================================
@@ -253,7 +253,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_tree_number` (
     -- ========================================
     -- 约束
     -- ========================================
-    CONSTRAINT `chk_tree_level` CHECK (`tree_level` BETWEEN 1 AND 10)
+    CONSTRAINT `chk_tree_level` CHECK (`tree_level` BETWEEN 1 AND 15)
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='MeSH 树形编号表:存储主题词树形编号,支持多位置和层次查询';
