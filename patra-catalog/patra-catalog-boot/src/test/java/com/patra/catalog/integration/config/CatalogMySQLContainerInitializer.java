@@ -2,19 +2,9 @@ package com.patra.catalog.integration.config;
 
 import com.patra.starter.test.container.initializer.MySQLContainerInitializer;
 
-/// Catalog 服务专用 MySQL 容器初始化器。
+/// Catalog 服务 E2E 测试专用 MySQL 容器初始化器。
 ///
 /// 继承 starter-test 的 {@link MySQLContainerInitializer}，指定 catalog 服务的数据库名。
-///
-/// ### 使用方式
-///
-/// ```java
-/// @SpringBootTest
-/// @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
-/// class SomeRepositoryIT {
-///     // ...
-/// }
-/// ```
 ///
 /// @author linqibin
 /// @since 0.1.0
