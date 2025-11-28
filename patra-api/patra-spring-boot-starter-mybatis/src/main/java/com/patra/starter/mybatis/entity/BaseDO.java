@@ -78,9 +78,9 @@ public abstract class BaseDO implements Serializable {
   /// 用于乐观锁的版本号。
   ///
   /// 此字段由 MyBatis-Plus 的 {@link OptimisticLockerInnerInterceptor} 管理，以防止并发更新冲突。
-  /// 每次更新时自动递增。
+  /// 插入时由 {@link MetaObjectHandler} 自动填充初始值 1，每次更新时自动递增。
   @Version
-  @TableField(value = "version")
+  @TableField(value = "version", fill = FieldFill.INSERT)
   private Long version;
 
   /// 发起请求的客户端IP地址，以二进制格式存储。

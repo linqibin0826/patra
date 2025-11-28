@@ -24,9 +24,12 @@ public class AuditMetaObjectHandler implements MetaObjectHandler {
     log.debug("初始化 AuditMetaObjectHandler，时钟: {}", clock);
   }
 
+  /// 乐观锁版本号的初始值。
+  private static final Long INITIAL_VERSION = 1L;
+
   /// 在插入操作期间填充审计字段。
   ///
-  /// 由于这是初始保存，因此填充创建和更新时间戳。
+  /// 由于这是初始保存，因此填充创建和更新时间戳，以及乐观锁版本号。
   ///
   /// @param metaObject 代表要插入的实体的元数据对象
   @Override
@@ -34,6 +37,16 @@ public class AuditMetaObjectHandler implements MetaObjectHandler {
     Instant now = getCurrentTime();
     fillCreationFields(metaObject, now);
     fillUpdateFields(metaObject, now);
+    fillVersionField(metaObject);
+  }
+
+  /// 填充乐观锁版本号字段。
+  ///
+  /// 插入时设置版本号初始值为 1。
+  ///
+  /// @param metaObject 实体元数据
+  private void fillVersionField(MetaObject metaObject) {
+    this.strictInsertFill(metaObject, "version", () -> INITIAL_VERSION, Long.class);
   }
 
   /// 在更新操作期间填充审计字段。
