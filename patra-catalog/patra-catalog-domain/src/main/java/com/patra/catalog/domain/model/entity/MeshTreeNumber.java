@@ -1,7 +1,5 @@
 package com.patra.catalog.domain.model.entity;
 
-import cn.hutool.core.lang.Assert;
-import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import java.io.Serial;
 import java.io.Serializable;
@@ -13,7 +11,7 @@ import lombok.Getter;
 ///
 /// - 树形结构：采用层次编号系统(如 C04.557.337.428)
 ///   - 多位置：一个主题词可以有多个树形位置(平均 2.3 个)
-///   - 层级深度：最多 10 层
+///   - 层级深度：最多 15 层（实际数据中最大约 13 层）
 ///   - 示例：
 ///
 /// - C04.557.337.428 - "Lung Neoplasms"(肺肿瘤)
@@ -59,7 +57,7 @@ public class MeshTreeNumber implements Serializable {
   /// 树形编号(如 C04.557.337.428)
   private final String treeNumber;
 
-  /// 层级深度(1-10,通过点号分隔数计算)
+  /// 层级深度(1-15,通过点号分隔数计算)
   private final int treeLevel;
 
   /// 是否主要位置(主要位置在检索时优先)
@@ -75,16 +73,20 @@ public class MeshTreeNumber implements Serializable {
   private MeshTreeNumber(
       Long id, MeshUI descriptorUi, String treeNumber, int treeLevel, boolean isPrimary) {
     // 必填字段验证（descriptorUi 在解析阶段可以为 null，后续由聚合根设置）
-    Assert.notBlank(treeNumber, "树形编号不能为空");
+    if (treeNumber == null || treeNumber.isBlank()) {
+      throw new IllegalArgumentException("树形编号不能为空");
+    }
 
     // 树形编号格式验证(字母+数字组合,点号分隔)
-    Assert.isTrue(
-        treeNumber.matches("^[A-Z]\\d{2}(\\.\\d{3})*$"),
-        "树形编号格式无效,必须符合 'X00.000.000' 格式：%s",
-        treeNumber);
+    if (!treeNumber.matches("^[A-Z]\\d{2}(\\.\\d{3})*$")) {
+      throw new IllegalArgumentException(
+          String.format("树形编号格式无效,必须符合 'X00.000.000' 格式：%s", treeNumber));
+    }
 
-    // 层级深度范围验证
-    Assert.isTrue(treeLevel >= 1 && treeLevel <= 10, "层级深度必须在1-10范围内：%d", treeLevel);
+    // 层级深度范围验证（MeSH 实际数据中最大深度约 13 层，预留余量到 15 层）
+    if (treeLevel < 1 || treeLevel > 15) {
+      throw new IllegalArgumentException(String.format("层级深度必须在1-15范围内：%d", treeLevel));
+    }
 
     // 赋值
     this.id = id;
@@ -190,7 +192,7 @@ public class MeshTreeNumber implements Serializable {
   /// @param treeNumber 树形编号
   /// @return 层级深度(点号数量 + 1)
   private static int calculateLevel(String treeNumber) {
-    if (StrUtil.isBlank(treeNumber)) {
+    if (treeNumber == null || treeNumber.isBlank()) {
       return 0;
     }
     return (int) treeNumber.chars().filter(ch -> ch == '.').count() + 1;
