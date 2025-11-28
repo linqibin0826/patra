@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zaxxer.hikari.HikariDataSource;
 import java.lang.reflect.Field;
+import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
@@ -42,6 +44,7 @@ import org.springframework.core.task.TaskExecutor;
       "spring.autoconfigure.exclude=org.redisson.spring.starter.RedissonAutoConfigurationV2",
       "patra.redisson.observability.metrics-enabled=false"
     })
+@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class DualDataSourceIT {
 
   @Autowired private ApplicationContext applicationContext;
