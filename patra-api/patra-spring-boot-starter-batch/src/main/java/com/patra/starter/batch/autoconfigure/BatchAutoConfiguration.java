@@ -2,6 +2,7 @@ package com.patra.starter.batch.autoconfigure;
 
 import com.patra.starter.batch.config.BatchProperties;
 import com.patra.starter.batch.core.JobLauncherHelper;
+import com.patra.starter.batch.schema.BatchSchemaInitializer;
 import io.micrometer.observation.ObservationRegistry;
 import javax.sql.DataSource;
 import org.springframework.batch.core.configuration.annotation.BatchObservabilityBeanPostProcessor;
@@ -62,16 +63,21 @@ public class BatchAutoConfiguration extends DefaultBatchConfiguration {
 
   /// 构造函数：优先使用独立数据源，否则回退到主数据源。
   ///
+  /// 在构造时触发 Schema 初始化（如果配置了 `BatchSchemaInitializer`），
+  /// 确保 `JobRepository` 创建前元数据表已存在。
+  ///
   /// @param properties Batch 配置属性
   /// @param primaryDataSource 主数据源（Spring Boot 自动配置）
   /// @param batchDataSource 独立 Batch 数据源（可选，由 BatchDataSourceConfiguration 创建）
   /// @param batchTransactionManager 独立 Batch 事务管理器（可选）
+  /// @param schemaInitializer Schema 初始化器（可选，由 BatchSchemaInitializerConfiguration 创建）
   public BatchAutoConfiguration(
       BatchProperties properties,
       DataSource primaryDataSource,
       @Autowired(required = false) @Qualifier("batchDataSource") DataSource batchDataSource,
       @Autowired(required = false) @Qualifier("batchTransactionManager")
-          PlatformTransactionManager batchTransactionManager) {
+          PlatformTransactionManager batchTransactionManager,
+      @Autowired(required = false) BatchSchemaInitializer schemaInitializer) {
     this.properties = properties;
     // 优先使用独立数据源，否则回退到主数据源
     this.batchDataSource = (batchDataSource != null) ? batchDataSource : primaryDataSource;
@@ -80,6 +86,11 @@ public class BatchAutoConfiguration extends DefaultBatchConfiguration {
         (batchTransactionManager != null)
             ? batchTransactionManager
             : new JdbcTransactionManager(this.batchDataSource);
+
+    // 触发 Schema 初始化（幂等，可安全重复调用）
+    if (schemaInitializer != null) {
+      schemaInitializer.initialize();
+    }
   }
 
   /// 返回 Batch 使用的数据源。

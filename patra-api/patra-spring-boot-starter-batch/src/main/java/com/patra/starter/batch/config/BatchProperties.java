@@ -43,6 +43,9 @@ public class BatchProperties {
   /// 配置此项后，Spring Batch 元数据将存储到独立数据库，与业务数据隔离。
   private DataSourceProperties datasource = new DataSourceProperties();
 
+  /// Schema 初始化配置。
+  private SchemaProperties schema = new SchemaProperties();
+
   /// Chunk 批次处理配置。
   @Data
   public static class ChunkProperties {
@@ -105,5 +108,30 @@ public class BatchProperties {
     ///
     /// 建议设置为小于数据库 `wait_timeout` 的值，避免连接被数据库服务器关闭。
     private long maxLifetime = 1800000;
+  }
+
+  /// Schema 初始化配置。
+  ///
+  /// 控制 Spring Batch 元数据表的自动创建行为。
+  ///
+  /// ## 配置示例
+  ///
+  /// ```yaml
+  /// patra:
+  ///   batch:
+  ///     schema:
+  ///       initialize: false  # 禁用自动初始化
+  /// ```
+  @Data
+  public static class SchemaProperties {
+
+    /// 是否自动初始化 Spring Batch Schema。
+    ///
+    /// 默认启用。设置为 `false` 可禁用自动初始化，适用于：
+    ///
+    /// - 使用 Flyway/Liquibase 管理 Schema 迁移
+    /// - 多服务共享数据库，仅由指定服务初始化
+    /// - 使用预配置的数据库（Schema 已存在）
+    private boolean initialize = true;
   }
 }
