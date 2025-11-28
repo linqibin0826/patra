@@ -31,50 +31,49 @@ import org.springframework.context.annotation.Bean;
     prefix = "patra.observability",
     name = "enabled",
     havingValue = "true",
-    matchIfMissing = true
-)
+    matchIfMissing = true)
 public class ObservabilityAutoConfiguration {
 
-    private static final Logger log = LoggerFactory.getLogger(ObservabilityAutoConfiguration.class);
+  private static final Logger log = LoggerFactory.getLogger(ObservabilityAutoConfiguration.class);
 
-    /// 构造函数。
-    ///
-    /// @param properties 可观测性配置属性
-    public ObservabilityAutoConfiguration(ObservabilityProperties properties) {
-        log.info("初始化 Patra 可观测性自动配置 [环境: {}, 应用: {}]",
-            properties.getEnvironment(),
-            properties.getApplicationName() != null ? properties.getApplicationName() : "未配置");
-    }
+  /// 构造函数。
+  ///
+  /// @param properties 可观测性配置属性
+  public ObservabilityAutoConfiguration(ObservabilityProperties properties) {
+    log.info(
+        "初始化 Patra 可观测性自动配置 [环境: {}, 应用: {}]",
+        properties.getEnvironment(),
+        properties.getApplicationName() != null ? properties.getApplicationName() : "未配置");
+  }
 
-    /// 创建或注入 ObservationRegistry。
-    ///
-    /// ObservationRegistry 是 Micrometer Observation API 的核心，
-    /// 用于创建和管理 Observation 实例。
-    ///
-    /// @return ObservationRegistry 实例
-    @Bean
-    @ConditionalOnMissingBean
-    public ObservationRegistry observationRegistry() {
-        log.info("创建 ObservationRegistry");
-        return ObservationRegistry.create();
-    }
+  /// 创建或注入 ObservationRegistry。
+  ///
+  /// ObservationRegistry 是 Micrometer Observation API 的核心，
+  /// 用于创建和管理 Observation 实例。
+  ///
+  /// @return ObservationRegistry 实例
+  @Bean
+  @ConditionalOnMissingBean
+  public ObservationRegistry observationRegistry() {
+    log.info("创建 ObservationRegistry");
+    return ObservationRegistry.create();
+  }
 
-    /// 启用 @Observed 注解支持。
-    ///
-    /// 通过 AOP 拦截标注 @Observed 的方法，自动创建 Observation。
-    ///
-    /// @param observationRegistry ObservationRegistry 实例
-    /// @return ObservedAspect 实例
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(
-        prefix = "management.observations.annotations",
-        name = "enabled",
-        havingValue = "true",
-        matchIfMissing = true
-    )
-    public ObservedAspect observedAspect(ObservationRegistry observationRegistry) {
-        log.info("启用 @Observed 注解支持");
-        return new ObservedAspect(observationRegistry);
-    }
+  /// 启用 @Observed 注解支持。
+  ///
+  /// 通过 AOP 拦截标注 @Observed 的方法，自动创建 Observation。
+  ///
+  /// @param observationRegistry ObservationRegistry 实例
+  /// @return ObservedAspect 实例
+  @Bean
+  @ConditionalOnMissingBean
+  @ConditionalOnProperty(
+      prefix = "management.observations.annotations",
+      name = "enabled",
+      havingValue = "true",
+      matchIfMissing = true)
+  public ObservedAspect observedAspect(ObservationRegistry observationRegistry) {
+    log.info("启用 @Observed 注解支持");
+    return new ObservedAspect(observationRegistry);
+  }
 }
