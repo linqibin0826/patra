@@ -1,13 +1,13 @@
 package com.patra.catalog.infra.persistence.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import com.patra.catalog.infra.persistence.entity.MeshQualifierDO;
 
 /// MeSH 限定词 Mapper 接口。
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface MeshQualifierMapper extends BaseMapper<MeshQualifierDO> {
+public interface MeshQualifierMapper extends PatraBaseMapper<MeshQualifierDO> {
 
   /// 清空限定词表（TRUNCATE TABLE）。
   ///

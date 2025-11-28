@@ -7,27 +7,4 @@
     TRUNCATE TABLE cat_mesh_entry_combination
   </update>
 
-  <!-- 批量插入组合条目（单条 SQL 语句，多行值） -->
-  <insert id="insertBatch">
-    INSERT INTO cat_mesh_entry_combination (
-      id, descriptor_ui, ecin_descriptor_ui, ecin_qualifier_ui,
-      ecout_descriptor_ui, ecout_qualifier_ui,
-      version, created_at, updated_at, deleted
-    ) VALUES
-    <foreach collection="list" item="item" separator=",">
-      (
-        #{item.id},
-        #{item.descriptorUi},
-        #{item.ecinDescriptorUi},
-        #{item.ecinQualifierUi},
-        #{item.ecoutDescriptorUi},
-        #{item.ecoutQualifierUi},
-        0,
-        NOW(6),
-        NOW(6),
-        0
-      )
-    </foreach>
-  </insert>
-
 </mapper>
