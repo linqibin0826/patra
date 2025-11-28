@@ -32,7 +32,9 @@ public class OutboxPersistenceException extends IngestException {
     /// 标记消息为重试状态时失败(通常由并发写入导致)。
     MARK_RETRY,
     /// 标记消息为死信状态时失败。
-    MARK_DEAD
+    MARK_DEAD,
+    /// 批量插入消息时失败。
+    BATCH_INSERT
   }
 
   /// 持久化失败所在的阶段。

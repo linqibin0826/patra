@@ -4,58 +4,6 @@
 
     <!--
     ==========================================================================
-    INSERT METHODS (Append-only audit trail)
-    ==========================================================================
-    -->
-
-    <!-- Batch insert relay logs (single SQL statement) -->
-    <insert id="insertBatch">
-        INSERT INTO ing_outbox_relay_log (
-            message_id,
-            relay_batch_id,
-            channel,
-            partition_key,
-            lease_owner,
-            attempt_number,
-            relay_status,
-            error_code,
-            error_message,
-            error_kind,
-            started_at,
-            completed_at,
-            duration_ms,
-            next_retry_at,
-            version,
-            created_at,
-            updated_at,
-            deleted
-        ) VALUES
-        <foreach collection="logs" item="log" separator=",">
-            (
-                #{log.messageId},
-                #{log.relayBatchId},
-                #{log.channel},
-                #{log.partitionKey},
-                #{log.leaseOwner},
-                #{log.attemptNumber},
-                #{log.relayStatus},
-                #{log.errorCode},
-                #{log.errorMessage},
-                #{log.errorKind},
-                #{log.startedAt},
-                #{log.completedAt},
-                #{log.durationMs},
-                #{log.nextRetryAt},
-                0,
-                NOW(6),
-                NOW(6),
-                0
-            )
-        </foreach>
-    </insert>
-
-    <!--
-    ==========================================================================
     QUERY METHODS (Troubleshooting and monitoring)
     ==========================================================================
     -->

@@ -2,9 +2,12 @@ package com.patra.ingest.infra.persistence.converter;
 
 import com.patra.ingest.domain.model.entity.OutboxRelayLog;
 import com.patra.ingest.infra.persistence.entity.OutboxRelayLogDO;
+import java.time.Instant;
 import java.util.List;
+import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.ReportingPolicy;
 
 /// 发件箱中继日志对象转换器,负责领域对象与数据库实体转换。
@@ -40,6 +43,30 @@ public interface OutboxRelayLogConverter {
   @Mapping(target = "messageId", source = "outboxMessageId")
   @Mapping(target = "relayStatus", expression = "java(log.getRelayStatus().getCode())")
   OutboxRelayLogDO toEntity(OutboxRelayLog log);
+
+  /// 为批量插入初始化默认值。
+  ///
+  /// 批量插入使用 `insertBatchSomeColumn` 不会触发 `MetaObjectHandler.insertFill()`，
+  /// 因此需要手动设置审计字段和乐观锁版本号的默认值。
+  ///
+  /// @param target 目标 DO 对象
+  /// @param source 源领域对象
+  @AfterMapping
+  default void initializeDefaults(@MappingTarget OutboxRelayLogDO target, OutboxRelayLog source) {
+    // 仅对新增记录（无 ID）设置默认值
+    if (source.getId() == null) {
+      Instant now = Instant.now();
+      if (target.getCreatedAt() == null) {
+        target.setCreatedAt(now);
+      }
+      if (target.getUpdatedAt() == null) {
+        target.setUpdatedAt(now);
+      }
+      if (target.getVersion() == null) {
+        target.setVersion(0L);
+      }
+    }
+  }
 
   /// 将持久化 DO 转换为领域实体(用于查询结果映射)。
   ///

@@ -87,7 +87,7 @@ public class OutboxRelayLogRepositoryAdapter implements OutboxRelayLogRepository
     }
 
     List<OutboxRelayLogDO> entities = converter.toEntities(logs);
-    int rows = mapper.insertBatch(entities);
+    int rows = mapper.insertBatchSomeColumn(entities);
 
     log.debug(
         "Batch saved relay logs: batchSize={}, affectedRows={}, batchIds={}",

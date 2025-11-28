@@ -86,7 +86,8 @@ class OutboxPersistenceExceptionTest {
 
       // Then
       assertThat(stages)
-          .containsExactlyInAnyOrder(Stage.MARK_PUBLISHED, Stage.MARK_RETRY, Stage.MARK_DEAD);
+          .containsExactlyInAnyOrder(
+              Stage.MARK_PUBLISHED, Stage.MARK_RETRY, Stage.MARK_DEAD, Stage.BATCH_INSERT);
     }
 
     @Test
