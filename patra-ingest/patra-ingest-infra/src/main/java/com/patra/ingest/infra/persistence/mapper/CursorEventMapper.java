@@ -1,7 +1,7 @@
 package com.patra.ingest.infra.persistence.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.ingest.infra.persistence.entity.CursorEventDO;
+import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 
 /// 游标事件 Mapper 接口 — 对游标事件表的数据访问操作。
@@ -11,4 +11,4 @@ import org.apache.ibatis.annotations.Mapper;
 /// @author linqibin
 /// @since 0.1.0
 @Mapper
-public interface CursorEventMapper extends BaseMapper<CursorEventDO> {}
+public interface CursorEventMapper extends PatraBaseMapper<CursorEventDO> {}

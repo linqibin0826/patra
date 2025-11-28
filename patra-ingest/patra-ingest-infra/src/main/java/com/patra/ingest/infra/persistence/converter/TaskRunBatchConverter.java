@@ -11,8 +11,11 @@ import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.vo.batch.BatchStats;
 import com.patra.ingest.domain.model.vo.shared.IdempotentKey;
 import com.patra.ingest.infra.persistence.entity.TaskRunBatchDO;
+import java.time.Instant;
+import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
@@ -29,6 +32,30 @@ public interface TaskRunBatchConverter {
   @Mapping(target = "statusCode", source = "status", qualifiedByName = "batchStatusToCode")
   @Mapping(target = "storageKey", source = "storageKey")
   TaskRunBatchDO toDO(TaskRunBatch source);
+
+  /// 为批量插入初始化默认值。
+  ///
+  /// 批量插入使用 `insertBatchSomeColumn` 不会触发 `MetaObjectHandler.insertFill()`，
+  /// 因此需要手动设置审计字段和乐观锁版本号的默认值。
+  ///
+  /// @param target 目标 DO 对象
+  /// @param source 源领域对象
+  @AfterMapping
+  default void initializeDefaults(@MappingTarget TaskRunBatchDO target, TaskRunBatch source) {
+    // 仅对新增记录（无 ID）设置默认值
+    if (source.getId() == null) {
+      Instant now = Instant.now();
+      if (target.getCreatedAt() == null) {
+        target.setCreatedAt(now);
+      }
+      if (target.getUpdatedAt() == null) {
+        target.setUpdatedAt(now);
+      }
+      if (target.getVersion() == null) {
+        target.setVersion(0L);
+      }
+    }
+  }
 
   default TaskRunBatch toDomain(TaskRunBatchDO entity) {
     return toTaskRunBatch(entity);

@@ -1,7 +1,7 @@
 package com.patra.ingest.infra.persistence.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.ingest.infra.persistence.entity.OutboxMessageDO;
+import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.time.Instant;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
@@ -21,7 +21,7 @@ import org.apache.ibatis.annotations.Param;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface OutboxMessageMapper extends BaseMapper<OutboxMessageDO> {
+public interface OutboxMessageMapper extends PatraBaseMapper<OutboxMessageDO> {
 
   /// 根据(channel, dedupKey)幂等查找
   OutboxMessageDO findByChannelAndDedup(

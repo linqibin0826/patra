@@ -7,6 +7,7 @@ import com.patra.ingest.domain.port.OutboxRelayRepository;
 import com.patra.ingest.infra.persistence.converter.OutboxMessageConverter;
 import com.patra.ingest.infra.persistence.entity.OutboxMessageDO;
 import com.patra.ingest.infra.persistence.mapper.OutboxMessageMapper;
+import com.patra.starter.mybatis.batch.BatchInsertHelper;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -91,10 +92,15 @@ public class OutboxMessageRepositoryAdapter
           messages.size(),
           messages.get(0).getChannel());
     }
-    for (OutboxMessage message : messages) {
-      // Convert to data object and insert via MyBatis-Plus
-      OutboxMessageDO entity = converter.toEntity(message);
-      mapper.insert(entity);
+
+    List<OutboxMessageDO> entities = messages.stream().map(converter::toEntity).toList();
+    var result = BatchInsertHelper.batchInsert(entities, mapper::insertBatchSomeColumn);
+    if (result.hasErrors()) {
+      log.error(
+          "Outbox 批量插入部分失败：成功 {} / 总计 {}", result.successCount(), result.totalCount());
+      throw new OutboxPersistenceException(
+          OutboxPersistenceException.Stage.BATCH_INSERT,
+          "Outbox 批量插入部分失败，失败批次数: " + result.errors().size());
     }
   }
 

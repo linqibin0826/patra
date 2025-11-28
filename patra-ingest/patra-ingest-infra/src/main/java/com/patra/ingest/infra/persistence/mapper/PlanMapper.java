@@ -1,7 +1,7 @@
 package com.patra.ingest.infra.persistence.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.ingest.infra.persistence.entity.PlanDO;
+import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 
@@ -9,7 +9,7 @@ import org.apache.ibatis.annotations.Param;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface PlanMapper extends BaseMapper<PlanDO> {
+public interface PlanMapper extends PatraBaseMapper<PlanDO> {
 
   /// 根据计划键查找计划
   PlanDO findByPlanKey(@Param("planKey") String planKey);
