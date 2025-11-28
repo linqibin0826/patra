@@ -21,25 +21,29 @@ import org.springframework.context.annotation.Configuration;
 @Slf4j
 @AutoConfiguration(after = RedissonAutoConfigurationV2.class)
 @ConditionalOnClass(RedissonClient.class)
-@ConditionalOnProperty(prefix = "patra.redisson", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(
+    prefix = "patra.redisson",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
 @EnableConfigurationProperties(RedissonProperties.class)
 @Configuration
 @RequiredArgsConstructor
 public class RedissonAutoConfiguration {
 
-    /// Redisson 配置属性
-    private final RedissonProperties properties;
+  /// Redisson 配置属性
+  private final RedissonProperties properties;
 
-    /// 初始化日志。
-    ///
-    /// Redisson 官方 Starter 已经提供了 RedissonClient Bean，
-    /// 这里只需要记录我们的自定义配置。
-    @PostConstruct
-    public void init() {
-        log.info("Redisson Starter 已启用");
-        log.info("  - lockWatchdogTimeout: {} ms", properties.getLockWatchdogTimeout());
-        log.info("  - lock.keyPrefix: {}", properties.getLock().getKeyPrefix());
-        log.info("  - lock.defaultWaitTime: {} ms", properties.getLock().getDefaultWaitTime());
-        log.info("  - lock.defaultLeaseTime: {} ms", properties.getLock().getDefaultLeaseTime());
-    }
+  /// 初始化日志。
+  ///
+  /// Redisson 官方 Starter 已经提供了 RedissonClient Bean，
+  /// 这里只需要记录我们的自定义配置。
+  @PostConstruct
+  public void init() {
+    log.info("Redisson Starter 已启用");
+    log.info("  - lockWatchdogTimeout: {} ms", properties.getLockWatchdogTimeout());
+    log.info("  - lock.keyPrefix: {}", properties.getLock().getKeyPrefix());
+    log.info("  - lock.defaultWaitTime: {} ms", properties.getLock().getDefaultWaitTime());
+    log.info("  - lock.defaultLeaseTime: {} ms", properties.getLock().getDefaultLeaseTime());
+  }
 }

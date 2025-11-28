@@ -11,39 +11,36 @@ import com.patra.common.error.ApplicationException;
 /// @since 1.0.0
 public class LockAcquisitionException extends ApplicationException {
 
-    /// 创建锁获取失败异常。
-    ///
-    /// @param lockKey  锁键
-    /// @param waitTime 等待时间（毫秒）
-    public LockAcquisitionException(String lockKey, long waitTime) {
-        super(
-            LockErrorCode.ACQUISITION_FAILED,
-            String.format("无法获取分布式锁: %s（等待时间: %d ms）", lockKey, waitTime)
-        );
-    }
+  /// 创建锁获取失败异常。
+  ///
+  /// @param lockKey  锁键
+  /// @param waitTime 等待时间（毫秒）
+  public LockAcquisitionException(String lockKey, long waitTime) {
+    super(
+        LockErrorCode.ACQUISITION_FAILED,
+        String.format("无法获取分布式锁: %s（等待时间: %d ms）", lockKey, waitTime));
+  }
 
-    /// 创建锁获取失败异常（自定义消息）。
-    ///
-    /// @param message  自定义消息
-    /// @param lockKey  锁键
-    /// @param waitTime 等待时间（毫秒）
-    public LockAcquisitionException(String message, String lockKey, long waitTime) {
-        super(
-            LockErrorCode.ACQUISITION_FAILED,
-            String.format("%s (lockKey: %s, waitTime: %d ms)", message, lockKey, waitTime)
-        );
-    }
+  /// 创建锁获取失败异常（自定义消息）。
+  ///
+  /// @param message  自定义消息
+  /// @param lockKey  锁键
+  /// @param waitTime 等待时间（毫秒）
+  public LockAcquisitionException(String message, String lockKey, long waitTime) {
+    super(
+        LockErrorCode.ACQUISITION_FAILED,
+        String.format("%s (lockKey: %s, waitTime: %d ms)", message, lockKey, waitTime));
+  }
 
-    /// 创建锁获取失败异常（带根本原因）。
-    ///
-    /// @param lockKey  锁键
-    /// @param waitTime 等待时间（毫秒）
-    /// @param cause    根本原因
-    public LockAcquisitionException(String lockKey, long waitTime, Throwable cause) {
-        super(
-            LockErrorCode.ACQUISITION_FAILED,
-            String.format("无法获取分布式锁: %s（等待时间: %d ms）", lockKey, waitTime),
-            cause
-        );
-    }
+  /// 创建锁获取失败异常（带根本原因）。
+  ///
+  /// @param lockKey  锁键
+  /// @param waitTime 等待时间（毫秒）
+  /// @param cause    根本原因
+  public LockAcquisitionException(String lockKey, long waitTime, Throwable cause) {
+    super(
+        LockErrorCode.ACQUISITION_FAILED,
+        String.format("无法获取分布式锁: %s（等待时间: %d ms）", lockKey, waitTime),
+        cause);
+  }
 }

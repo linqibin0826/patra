@@ -73,7 +73,8 @@ class LockKeyPatternExtractorTest {
     @DisplayName("应过滤 UUID 格式")
     void shouldFilterUuidParts() {
       String uuid = "550e8400-e29b-41d4-a716-446655440000";
-      assertThat(LockKeyPatternExtractor.extract("patra:lock:session:" + uuid)).isEqualTo("session");
+      assertThat(LockKeyPatternExtractor.extract("patra:lock:session:" + uuid))
+          .isEqualTo("session");
       assertThat(LockKeyPatternExtractor.extract("patra:lock:user:" + uuid + ":profile"))
           .isEqualTo("user.profile");
     }
@@ -115,16 +116,15 @@ class LockKeyPatternExtractorTest {
     @DisplayName("仅包含动态部分应返回 unknown")
     void shouldReturnUnknownForOnlyDynamicParts() {
       assertThat(LockKeyPatternExtractor.extract("patra:lock:123:456:789")).isEqualTo("unknown");
-      assertThat(
-              LockKeyPatternExtractor.extract(
-                  "patra:lock:550e8400-e29b-41d4-a716-446655440000"))
+      assertThat(LockKeyPatternExtractor.extract("patra:lock:550e8400-e29b-41d4-a716-446655440000"))
           .isEqualTo("unknown");
     }
 
     @Test
     @DisplayName("应处理连续冒号")
     void shouldHandleConsecutiveColons() {
-      assertThat(LockKeyPatternExtractor.extract("patra:lock:user::action")).isEqualTo("user.action");
+      assertThat(LockKeyPatternExtractor.extract("patra:lock:user::action"))
+          .isEqualTo("user.action");
     }
 
     @Test

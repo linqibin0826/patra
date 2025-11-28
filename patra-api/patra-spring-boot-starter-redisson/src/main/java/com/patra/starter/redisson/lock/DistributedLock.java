@@ -83,42 +83,42 @@ import java.lang.annotation.*;
 @Documented
 public @interface DistributedLock {
 
-    /// 锁的键（支持 SpEL 表达式）。
-    ///
-    /// 示例：
-    ///
-    /// - 静态字符串：`"user:lock"`
-    /// - 方法参数：`"user:#{#userId}"`
-    /// - 对象属性：`"order:#{#request.orderId}"`
-    ///
-    /// @return 锁键表达式
-    String key();
+  /// 锁的键（支持 SpEL 表达式）。
+  ///
+  /// 示例：
+  ///
+  /// - 静态字符串：`"user:lock"`
+  /// - 方法参数：`"user:#{#userId}"`
+  /// - 对象属性：`"order:#{#request.orderId}"`
+  ///
+  /// @return 锁键表达式
+  String key();
 
-    /// 锁类型，默认 `REENTRANT`。
-    ///
-    /// @return 锁类型
-    LockType lockType() default LockType.REENTRANT;
+  /// 锁类型，默认 `REENTRANT`。
+  ///
+  /// @return 锁类型
+  LockType lockType() default LockType.REENTRANT;
 
-    /// 等待时间（毫秒），默认 -1。
-    ///
-    /// 获取锁的最大等待时间，超时未获取到锁则抛出 `LockAcquisitionException`。
-    ///
-    /// 设置为 0 时，不等待，获取失败立即抛异常（tryLock 模式）。
-    ///
-    /// 默认: -1（使用配置文件中的 patra.redisson.lock.default-wait-time）
-    ///
-    /// @return 等待时间（毫秒）
-    long waitTime() default -1;
+  /// 等待时间（毫秒），默认 -1。
+  ///
+  /// 获取锁的最大等待时间，超时未获取到锁则抛出 `LockAcquisitionException`。
+  ///
+  /// 设置为 0 时，不等待，获取失败立即抛异常（tryLock 模式）。
+  ///
+  /// 默认: -1（使用配置文件中的 patra.redisson.lock.default-wait-time）
+  ///
+  /// @return 等待时间（毫秒）
+  long waitTime() default -1;
 
-    /// 租约时间（毫秒），默认 -1。
-    ///
-    /// 锁的自动过期时间，防止死锁。
-    ///
-    /// **重要：看门狗机制说明**
-    ///
-    /// - `leaseTime = -1`（默认）：启用看门狗，自动续期直到方法执行完成
-    /// - `leaseTime > 0`：关闭看门狗，锁在指定时间后自动释放（即使方法未执行完）
-    ///
-    /// @return 租约时间（毫秒）
-    long leaseTime() default -1;
+  /// 租约时间（毫秒），默认 -1。
+  ///
+  /// 锁的自动过期时间，防止死锁。
+  ///
+  /// **重要：看门狗机制说明**
+  ///
+  /// - `leaseTime = -1`（默认）：启用看门狗，自动续期直到方法执行完成
+  /// - `leaseTime > 0`：关闭看门狗，锁在指定时间后自动释放（即使方法未执行完）
+  ///
+  /// @return 租约时间（毫秒）
+  long leaseTime() default -1;
 }

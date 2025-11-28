@@ -11,39 +11,32 @@ import com.patra.common.error.ApplicationException;
 /// @since 1.0.0
 public class LockTimeoutException extends ApplicationException {
 
-    /// 创建锁操作超时异常。
-    ///
-    /// @param lockKey   锁键
-    /// @param leaseTime 租约时间（毫秒）
-    public LockTimeoutException(String lockKey, long leaseTime) {
-        super(
-            LockErrorCode.TIMEOUT,
-            String.format("锁操作超时: %s（租约时间: %d ms）", lockKey, leaseTime)
-        );
-    }
+  /// 创建锁操作超时异常。
+  ///
+  /// @param lockKey   锁键
+  /// @param leaseTime 租约时间（毫秒）
+  public LockTimeoutException(String lockKey, long leaseTime) {
+    super(LockErrorCode.TIMEOUT, String.format("锁操作超时: %s（租约时间: %d ms）", lockKey, leaseTime));
+  }
 
-    /// 创建锁操作超时异常（自定义消息）。
-    ///
-    /// @param message   自定义消息
-    /// @param lockKey   锁键
-    /// @param leaseTime 租约时间（毫秒）
-    public LockTimeoutException(String message, String lockKey, long leaseTime) {
-        super(
-            LockErrorCode.TIMEOUT,
-            String.format("%s (lockKey: %s, leaseTime: %d ms)", message, lockKey, leaseTime)
-        );
-    }
+  /// 创建锁操作超时异常（自定义消息）。
+  ///
+  /// @param message   自定义消息
+  /// @param lockKey   锁键
+  /// @param leaseTime 租约时间（毫秒）
+  public LockTimeoutException(String message, String lockKey, long leaseTime) {
+    super(
+        LockErrorCode.TIMEOUT,
+        String.format("%s (lockKey: %s, leaseTime: %d ms)", message, lockKey, leaseTime));
+  }
 
-    /// 创建锁操作超时异常（带根本原因）。
-    ///
-    /// @param lockKey   锁键
-    /// @param leaseTime 租约时间（毫秒）
-    /// @param cause     根本原因
-    public LockTimeoutException(String lockKey, long leaseTime, Throwable cause) {
-        super(
-            LockErrorCode.TIMEOUT,
-            String.format("锁操作超时: %s（租约时间: %d ms）", lockKey, leaseTime),
-            cause
-        );
-    }
+  /// 创建锁操作超时异常（带根本原因）。
+  ///
+  /// @param lockKey   锁键
+  /// @param leaseTime 租约时间（毫秒）
+  /// @param cause     根本原因
+  public LockTimeoutException(String lockKey, long leaseTime, Throwable cause) {
+    super(
+        LockErrorCode.TIMEOUT, String.format("锁操作超时: %s（租约时间: %d ms）", lockKey, leaseTime), cause);
+  }
 }
