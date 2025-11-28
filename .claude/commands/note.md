@@ -1,6 +1,6 @@
 ---
-description: 记录 Bug、学习笔记(TIL)或架构决策(ADR)
-argument-hint: [bug | til | adr | 空]
+description: 记录 Bug、学习笔记(TIL)、架构决策(ADR)或学习材料(Learning)
+argument-hint: [bug | til | adr | learning | 空]
 ---
 
 ## 参数说明
@@ -9,11 +9,12 @@ argument-hint: [bug | til | adr | 空]
 
 **参数解析规则**：
 
-| 参数值 | 记录类型 | 存放目录 | 模板 |
+| 参数值 | 记录类型 | 存放目录 | 说明 |
 |--------|----------|----------|------|
-| `bug` | Bug 记录 | `docs/bugs/YYYY/MM/` | `bug-simple.md` 或 `bug-detailed.md` |
-| `til` / `study` / `学习` | 学习笔记 | `docs/til/{category}/` | `til.md` |
-| `adr` / `决策` | 架构决策 | `docs/decisions/` | `adr.md` |
+| `bug` | Bug 记录 | `docs/bugs/YYYY/MM/` | 问题记录与解决方案 |
+| `til` / `study` / `学习` | 每日学习总结 | `docs/til/{YYYY}/{MM}/` | **一天结束后**的学习汇总 |
+| `adr` / `决策` | 架构决策 | `docs/decisions/` | 技术选型和架构决策 |
+| `learning` / `教程` | 详细学习材料 | `docs/learning/{topic}/` | 完整的教程内容 |
 | 空 | **根据上下文推断** | - | - |
 
 ---
@@ -25,31 +26,20 @@ argument-hint: [bug | til | adr | 空]
 | 上下文特征 | 推断类型 |
 |------------|----------|
 | 刚修复了一个 Bug、解决了一个报错 | `bug` |
-| 学到了新知识、发现了技巧、理解了原理 | `til` |
+| 刚完成了一个知识点/章节的详细讲解 | `learning` |
+| 用户说"今天学完了"、"总结一下今天学的" | `til` |
 | 做出了技术选型、架构决策、方案对比 | `adr` |
 | 无法推断 | **询问用户** |
 
 ---
 
-## 执行流程
+## 各类型详细说明
 
-### 第一步：确定记录类型
+### Bug 记录
 
-```
-用户参数: $ARGUMENTS
-```
+**触发时机**：修复了一个非平凡的 Bug
 
-1. 如果参数明确指定了类型 → 使用该类型
-2. 如果参数为空 → 分析当前对话上下文，推断类型
-3. 如果无法推断 → 使用 AskUserQuestion 询问用户
-
----
-
-### 第二步：收集记录信息
-
-根据记录类型，从对话上下文中提取关键信息：
-
-#### Bug 记录需要收集：
+**需要收集的信息**：
 
 | 字段 | 来源 | 必需 |
 |------|------|------|
@@ -58,35 +48,154 @@ argument-hint: [bug | til | adr | 空]
 | 解决方案 | 修复代码或配置 | ✅ |
 | 严重程度 | 根据影响范围推断 | ✅ |
 | 所属模块 | 根据文件路径推断 | ✅ |
-| 相关提交 | 最近的 git commit | 可选 |
-| 根因分析 | 如果问题复杂，进行 Five Whys | 可选 |
 
-**严重程度判断**：
-- `critical`: 系统崩溃、数据丢失
-- `high`: 核心功能不可用、架构性问题
-- `medium`: 功能异常但有绑定方案
-- `low`: 小问题、优化项
+**文件路径**：`docs/bugs/{YYYY}/{MM}/BUG-{NNN}-{slug}.md`
 
-#### TIL 记录需要收集：
+**模板**：`docs/templates/bug-simple.md` 或 `docs/templates/bug-detailed.md`
+
+---
+
+### Learning 详细学习材料（新增）
+
+**触发时机**：完成了一个知识点/章节的详细讲解，需要保存完整内容
+
+**特点**：
+- 包含详细的概念讲解、示例、图表
+- 按主题/系列组织（如 `observability/01-core-concepts.md`）
+- 是可以日后反复查阅的**完整教程**
+
+**需要收集的信息**：
 
 | 字段 | 来源 | 必需 |
 |------|------|------|
-| 知识点标题 | 总结学到的内容 | ✅ |
-| 场景 | 为什么需要学这个 | ✅ |
-| 核心知识 | 关键概念和原理 | ✅ |
-| 代码示例 | 实际代码片段 | ✅ |
-| 分类 | spring/mybatis/java/architecture/ai-coding | ✅ |
-| 来源 | debugging/reading/experiment/ai-suggestion | ✅ |
-| 置信度 | 是否经过验证 | ✅ |
+| 主题/系列 | 当前学习的主题（如 observability） | ✅ |
+| 章节编号 | 序号（如 01, 02） | ✅ |
+| 标题 | 章节标题 | ✅ |
+| 完整内容 | 对话中讲解的详细内容 | ✅ |
 
-**分类判断**：
-- `spring`: Spring Boot/Cloud/Framework 相关
-- `mybatis`: MyBatis/MyBatis-Plus 相关
-- `java`: Java 语言特性、JDK API
-- `architecture`: 设计模式、架构原则、DDD
-- `ai-coding`: AI 辅助编程技巧
+**文件路径**：`docs/learning/{topic}/{NN}-{slug}.md`
 
-#### ADR 记录需要收集：
+**目录结构示例**：
+```
+docs/learning/
+├── observability/
+│   ├── _index.md           # 系列索引
+│   ├── 01-core-concepts.md
+│   ├── 02-metrics.md
+│   └── 03-logs.md
+└── spring-batch/
+    ├── _index.md
+    └── 01-fundamentals.md
+```
+
+**执行流程**：
+1. 确定主题和章节编号
+2. 从对话上下文提取完整的讲解内容
+3. 创建/更新系列索引文件（`_index.md`）
+4. 创建章节文件
+
+---
+
+### TIL 每日学习总结（修改后）
+
+**触发时机**：一天的学习结束后，用户主动调用
+
+**重要变更**：
+- ❌ 不再是学完一个小节就创建
+- ✅ 是一天结束后的学习汇总
+- ✅ 可以汇总多个 learning 文件
+
+**信息来源**（按优先级）：
+1. **用户说明**：用户在调用时描述今天学了什么
+2. **Git 历史**：查询今天新增的 `docs/learning/**/*.md` 文件
+3. **对话上下文**：当前对话中讨论的学习内容
+
+**需要收集的信息**：
+
+| 字段 | 来源 | 必需 |
+|------|------|------|
+| 日期 | 今天的日期 | ✅（自动） |
+| 学习主题 | 今天学习的主题列表 | ✅ |
+| 核心收获 | 每个主题的关键要点（简洁） | ✅ |
+| 关联的 Learning 文件 | 今天创建的详细学习材料 | ✅ |
+| 标签 | 涉及的技术标签 | ✅ |
+
+**文件路径**：`docs/til/{YYYY}/{MM}/{YYYY-MM-DD}-{slug}.md`
+
+**目录结构示例**：
+```
+docs/til/
+├── _MOC.md           # 总索引
+├── 2025/
+│   ├── 11/
+│   │   ├── 2025-11-28-observability-basics.md
+│   │   └── 2025-11-29-metrics-deep-dive.md
+│   └── 12/
+│       └── 2025-12-01-logs-and-tracing.md
+└── 2026/
+    └── ...
+```
+
+**TIL 内容结构**：
+```markdown
+---
+date: 2025-11-28
+tags: [observability, metrics, logs]
+learning_series: observability
+chapters_completed: [01, 02]
+---
+
+# 今日学习：可观测性基础
+
+## 学习概要
+
+今天系统学习了可观测性（Observability）的核心概念，包括：
+- 可观测性与监控的区别
+- 三大支柱：Metrics / Logs / Traces
+- 信号之间的关联
+
+## 核心收获
+
+### 1. 可观测性 vs 监控
+- 监控：已知问题的阈值告警
+- 可观测性：回答未知问题的能力
+
+### 2. 三大支柱
+- Metrics：聚合数值，适合告警
+- Logs：离散事件，适合调试
+- Traces：请求路径，适合追踪
+
+## 详细学习材料
+
+- [[learning/observability/01-core-concepts|第一章：核心概念]]
+- [[learning/observability/02-metrics|第二章：Metrics]]
+
+## 明日计划
+
+- 继续学习第三章：Logs
+```
+
+**执行流程**：
+1. 检查用户是否提供了学习说明
+2. 如果没有，查询 git 历史获取今天新增的 learning 文件：
+   ```bash
+   git diff --name-only --diff-filter=A HEAD~10 -- 'docs/learning/**/*.md'
+   # 或按日期
+   git log --since="6am" --name-only --diff-filter=A -- 'docs/learning/**/*.md'
+   ```
+3. 汇总今天的学习内容
+4. 生成 TIL 文件，包含：
+   - 简洁的学习概要
+   - 核心收获要点
+   - 指向详细 Learning 文件的链接
+
+---
+
+### ADR 架构决策
+
+**触发时机**：做出了重要的技术选型或架构决策
+
+**需要收集的信息**：
 
 | 字段 | 来源 | 必需 |
 |------|------|------|
@@ -97,115 +206,87 @@ argument-hint: [bug | til | adr | 空]
 | 负面影响 | 可能的代价 | ✅ |
 | 替代方案 | 考虑过的其他方案 | 可选 |
 
----
+**文件路径**：`docs/decisions/ADR-{NNN}-{slug}.md`
 
-### 第三步：确定文件路径
-
-#### Bug 文件路径
-
-```
-docs/bugs/{YYYY}/{MM}/BUG-{NNN}-{slug}.md
-```
-
-**NNN 生成规则**：查询 `docs/bugs/{YYYY}/` 目录下现有文件，取最大编号 +1
-
-**slug 生成规则**：从标题提取关键词，用 `-` 连接，全小写
-
-**示例**：`docs/bugs/2025/11/BUG-001-transaction-not-rollback.md`
-
-#### TIL 文件路径
-
-```
-docs/til/{category}/{YYYY-MM-DD}-{slug}.md
-```
-
-**示例**：`docs/til/spring/2025-11-27-conditional-annotation-priority.md`
-
-#### ADR 文件路径
-
-```
-docs/decisions/ADR-{NNN}-{slug}.md
-```
-
-**NNN 生成规则**：查询 `docs/decisions/` 目录下现有 ADR 文件，取最大编号 +1
-
-**示例**：`docs/decisions/ADR-004-choose-redisson-for-distributed-lock.md`
-
----
-
-### 第四步：生成文件内容
-
-根据模板和收集的信息，生成完整的 Markdown 文件。
-
-**模板位置**：
-- Bug: `docs/templates/bug-simple.md` 或 `docs/templates/bug-detailed.md`
-- TIL: `docs/templates/til.md`
-- ADR: `docs/templates/adr.md`
-
-**选择 Bug 模板的规则**：
-- 如果需要 Five Whys 根因分析（问题复杂、架构性问题）→ `bug-detailed.md`
-- 否则 → `bug-simple.md`
-
----
-
-### 第五步：创建文件并确认
-
-1. 创建必要的目录（如 `docs/bugs/2025/11/`）
-2. 写入文件内容
-3. 展示创建结果给用户确认
-
----
-
-## 输出格式
-
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📝 知识记录已创建
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📁 文件：docs/bugs/2025/11/BUG-001-xxx.md
-📋 类型：Bug 记录
-🏷️ 标签：#mybatis #transaction
-
-📄 内容预览：
----
-id: BUG-2025-001
-severity: high
-status: fixed
-...
----
-
-# 事务未正确回滚
-
-## 现象
-...
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💡 提示：在 Obsidian 中打开 docs/ 目录查看
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
+**模板**：`docs/templates/adr.md`
 
 ---
 
 ## 使用示例
 
 ```bash
-# 明确指定类型
-/note bug          # 记录 Bug
-/note til          # 记录学习笔记
-/note study        # 同上
-/note adr          # 记录架构决策
+# 记录 Bug
+/note bug
 
-# 根据上下文推断
-/note              # 自动推断类型
+# 保存刚学完的章节（详细内容）
+/note learning
+
+# 一天结束后，总结今天的学习
+/note til
+/note til 今天学了可观测性的核心概念和 Metrics
+
+# 记录架构决策
+/note adr
+
+# 根据上下文自动推断
+/note
+```
+
+---
+
+## 输出格式
+
+### Learning 输出
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📚 学习材料已保存
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📁 文件：docs/learning/observability/02-metrics.md
+📋 系列：可观测性学习系列
+🏷️ 章节：第二章 - Metrics（指标）
+
+📄 内容概要：
+├── 四种指标类型
+├── Micrometer API
+├── Prometheus 与 PromQL
+└── 自定义业务指标
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+### TIL 输出
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 每日学习总结已创建
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📁 文件：docs/til/2025/11/2025-11-28-observability-fundamentals.md
+📅 日期：2025-11-28
+🏷️ 标签：#observability #metrics #logs
+
+📄 今日学习：
+├── ✅ 可观测性核心概念
+├── ✅ Metrics 指标类型
+└── 📎 关联 2 个详细学习材料
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ---
 
 ## 注意事项
 
-1. **从上下文提取信息**：不要询问用户已经在对话中提供过的信息
-2. **自动填充字段**：日期、编号、模块等可自动推断的字段不要询问
-3. **简洁记录**：重点是「问题是什么」「为什么发生」「如何解决」
-4. **双向链接**：如果涉及其他已有记录，使用 `[[]]` 创建链接
-5. **立即可用**：创建的文件应该内容完整，用户无需再编辑
+1. **Learning vs TIL 的区别**：
+   - Learning：完整的教程内容，学完一个章节就保存
+   - TIL：每日学习汇总，一天结束后创建，指向 Learning 文件
+
+2. **从上下文提取信息**：不要询问用户已经在对话中提供过的信息
+
+3. **自动填充字段**：日期、编号、模块等可自动推断的字段不要询问
+
+4. **双向链接**：使用 `[[]]` Wikilink 语法创建关联
+
+5. **Git 历史查询**：TIL 可以通过 git 历史自动发现今天的学习内容
