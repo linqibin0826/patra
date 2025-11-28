@@ -2,22 +2,26 @@ package com.patra.starter.mybatis.autoconfig;
 
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
+import com.baomidou.mybatisplus.core.injector.ISqlInjector;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.patra.starter.mybatis.handler.AuditMetaObjectHandler;
+import com.patra.starter.mybatis.injector.PatraSqlInjector;
 import java.time.Clock;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.lang.Nullable;
 
 /// MyBatis-Plus 插件的自动配置类。
 ///
 /// 该配置类启用分页、乐观锁和全表操作防护等核心插件,同时提供审计字段自动填充的元数据处理器。
+/// 还配置了自定义 SQL 注入器以支持高效的批量插入操作。
 @Slf4j
 @AutoConfiguration
 public class MybatisPluginAutoConfig {
@@ -76,5 +80,18 @@ public class MybatisPluginAutoConfig {
                     "注册 InnerInterceptor {} 失败: {}", inner.getClass().getName(), e.getMessage());
               }
             });
+  }
+
+  /// 配置自定义 SQL 注入器，启用批量插入方法。
+  ///
+  /// 此注入器为所有继承 `PatraBaseMapper` 的 Mapper 添加 `insertBatchSomeColumn` 方法，
+  /// 该方法生成单条 INSERT 语句实现高效批量插入。
+  ///
+  /// @return PatraSqlInjector 实例
+  @Bean
+  @ConditionalOnMissingBean(ISqlInjector.class)
+  public PatraSqlInjector patraSqlInjector() {
+    log.info("初始化 Patra SQL 注入器，启用 InsertBatchSomeColumn 批量插入方法");
+    return new PatraSqlInjector();
   }
 }
