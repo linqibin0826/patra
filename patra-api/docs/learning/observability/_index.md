@@ -12,13 +12,18 @@ tags: [observability, learning, tutorial]
 
 ```mermaid
 flowchart LR
-    A["✓ 第一章：核心概念"] --> B["第二章：Metrics"]
-    B --> C["第三章：Logs"]
-    C --> D["第四章：Traces"]
-    D --> E["第五章：告警"]
-    E --> F["第六章：Grafana 可视化"]
+    A["✓ 第一章：核心概念"] --> B["✓ 第二章：Metrics"]
+    B --> C["✓ 第三章：Logs"]
+    C --> D["✓ 第四章：Traces"]
+    D --> E["✓ 第五章：告警"]
+    E --> F["✓ 第六章：Grafana 可视化"]
 
     style A fill:#d4edda,stroke:#28a745
+    style B fill:#d4edda,stroke:#28a745
+    style C fill:#d4edda,stroke:#28a745
+    style D fill:#d4edda,stroke:#28a745
+    style E fill:#d4edda,stroke:#28a745
+    style F fill:#d4edda,stroke:#28a745
 ```
 
 ## 章节目录
@@ -26,11 +31,11 @@ flowchart LR
 | 章节 | 标题 | 状态 | 内容 |
 |------|------|------|------|
 | 01 | [[01-core-concepts\|核心概念]] | 已完成 | 可观测性定义、三大支柱、信号关联 |
-| 02 | [[02-metrics\|Metrics（指标）]] | 待学习 | 指标类型、Micrometer、Prometheus、PromQL |
-| 03 | [[03-logs\|Logs（日志）]] | 待学习 | 结构化日志、Loki、LogQL、日志与 Trace 关联 |
-| 04 | [[04-traces\|Traces（链路追踪）]] | 待学习 | OpenTelemetry、Span、Context Propagation |
-| 05 | [[05-alerting\|告警]] | 待学习 | Alertmanager、告警规则、通知配置 |
-| 06 | [[06-grafana\|Grafana 可视化]] | 待学习 | 数据源配置、仪表盘设计、统一查询 |
+| 02 | [[02-metrics\|Metrics（指标）]] | 已完成 | 指标类型、Micrometer、Prometheus、PromQL |
+| 03 | [[03-logs\|Logs（日志）]] | 已完成 | 结构化日志、Loki、LogQL、日志与 Trace 关联 |
+| 04 | [[04-traces\|Traces（链路追踪）]] | 已完成 | OpenTelemetry、Span、Context Propagation、Tempo |
+| 05 | [[05-alerting\|告警]] | 已完成 | Prometheus Rules、Alertmanager、通知渠道、OnCall |
+| 06 | [[06-grafana\|Grafana 可视化]] | 已完成 | 数据源配置、仪表盘设计、信号关联、Provisioning |
 
 ## 技术栈
 
