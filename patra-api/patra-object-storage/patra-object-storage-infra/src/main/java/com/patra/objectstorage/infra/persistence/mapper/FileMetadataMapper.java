@@ -1,17 +1,17 @@
 package com.patra.objectstorage.infra.persistence.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.objectstorage.infra.persistence.entity.FileMetadataDO;
+import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /// 文件元数据MyBatis-Plus映射器。
 ///
-/// 为 `storage_file_metadata` 表提供数据访问接口。 继承 {@link BaseMapper} 提供标准的CRUD操作,并扩展了自定义查询方法。
+/// 为 `storage_file_metadata` 表提供数据访问接口。 继承 {@link PatraBaseMapper} 提供标准的CRUD操作,并扩展了自定义查询方法。
 ///
 /// 对应的SQL映射文件位于 resources/mapper/FileMetadataMapper.xml。
 @Mapper
-public interface FileMetadataMapper extends BaseMapper<FileMetadataDO> {
+public interface FileMetadataMapper extends PatraBaseMapper<FileMetadataDO> {
 
   /// 通过规范存储键加载记录。
   ///

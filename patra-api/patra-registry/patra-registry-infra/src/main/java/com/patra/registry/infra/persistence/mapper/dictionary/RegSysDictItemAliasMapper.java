@@ -1,8 +1,8 @@
 package com.patra.registry.infra.persistence.mapper.dictionary;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.registry.infra.persistence.entity.dictionary.RegSysDictItemAliasDO;
 import com.patra.registry.infra.persistence.entity.dictionary.RegSysDictItemDO;
+import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.util.List;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
@@ -15,7 +15,7 @@ import org.apache.ibatis.annotations.Param;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface RegSysDictItemAliasMapper extends BaseMapper<RegSysDictItemAliasDO> {
+public interface RegSysDictItemAliasMapper extends PatraBaseMapper<RegSysDictItemAliasDO> {
 
   /// 通过外部别名解析激活的字典项。
   ///
