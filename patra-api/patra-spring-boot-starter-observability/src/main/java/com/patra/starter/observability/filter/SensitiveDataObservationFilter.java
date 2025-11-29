@@ -89,7 +89,7 @@ public class SensitiveDataObservationFilter implements ObservationFilter {
   /// 安全建议：
   /// - 配合 Logback Filter 过滤日志中的敏感数据
   /// - 在添加 Observation 标签时避免包含敏感信息
-  /// - 使用 SkyWalking Agent 配置禁用敏感数据收集
+  /// - 使用 OpenTelemetry Agent 配置禁用敏感数据收集
   ///
   /// @param context Observation 上下文
   /// @return 原始上下文（不修改）

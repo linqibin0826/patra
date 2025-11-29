@@ -7,7 +7,6 @@ import com.patra.starter.observability.filter.SensitiveDataObservationFilter;
 import com.patra.starter.observability.handler.LoggingObservationHandler;
 import com.patra.starter.observability.handler.PerformanceObservationHandler;
 import com.patra.starter.observability.interceptor.ObservationResolutionInterceptor;
-import com.patra.starter.observability.interceptor.RestClientObservationInterceptor;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
@@ -100,35 +99,8 @@ class ObservabilityAutoConfigurationTest {
     // 验证 ObservationResolutionInterceptor 已注册
     assertThat(context.getBeanNamesForType(ObservationResolutionInterceptor.class)).isNotEmpty();
 
-    // 注意：RestClientObservationInterceptor 是条件化 Bean，仅在 spring-web 存在时注册
+    // 注意：HTTP 客户端观测由 Spring Boot 3.x 内置的 RestClient.Builder 自动配置处理
     // Batch 可观测性已迁移至 patra-spring-boot-starter-batch
-  }
-
-  /**
-   * 测试条件化 Bean - RestClientObservationInterceptor。
-   *
-   * <p>仅在 spring-web 存在时注册。
-   */
-  @Test
-  void shouldConditionallyRegisterRestClientInterceptor() {
-    // 如果 spring-web 存在，RestClientObservationInterceptor 应该被注册
-    String[] beanNames = context.getBeanNamesForType(RestClientObservationInterceptor.class);
-
-    if (isSpringWebPresent()) {
-      assertThat(beanNames).isNotEmpty();
-    } else {
-      assertThat(beanNames).isEmpty();
-    }
-  }
-
-  /** 检查 spring-web 是否存在。 */
-  private boolean isSpringWebPresent() {
-    try {
-      Class.forName("org.springframework.http.client.ClientHttpRequestInterceptor");
-      return true;
-    } catch (ClassNotFoundException e) {
-      return false;
-    }
   }
 
   /**
@@ -142,15 +114,14 @@ class ObservabilityAutoConfigurationTest {
       exclude = {
         DataSourceAutoConfiguration.class,
         RedisAutoConfiguration.class,
-        RedisRepositoriesAutoConfiguration.class,
-        org.redisson.spring.starter.RedissonAutoConfigurationV2.class
+        RedisRepositoriesAutoConfiguration.class
       })
   static class TestConfiguration {
     /**
      * 创建 SimpleMeterRegistry 用于测试。
      *
-     * <p>注意：在没有 Actuator 的环境中，Spring Boot 不会自动创建 MeterRegistry。 使用 @Primary 标记为主要 Bean，避免与
-     * SkyWalkingMeterRegistry 冲突。
+     * <p>注意：在没有 Actuator 的环境中，Spring Boot 不会自动创建 MeterRegistry。 使用 @Primary 标记为主要 Bean，避免与其他
+     * MeterRegistry 实现冲突。
      */
     @org.springframework.context.annotation.Primary
     @Bean

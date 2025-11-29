@@ -1,7 +1,5 @@
 package com.patra.starter.observability.config;
 
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -13,16 +11,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /// Patra 可观测性统一配置属性。
 ///
-/// 提供可观测性三大支柱的配置：
+/// 架构说明：
 ///
-/// - Metrics（指标）：指标收集、导出、命名规范
-/// - Tracing（追踪）：分布式追踪、采样率、Baggage 传播
-/// - Logging（日志）：日志关联、TraceID 包含、日志格式
+/// - **Tracing**: 由 OTel Java Agent 通过 `-javaagent` 参数自动处理（零代码侵入）
+/// - **Metrics**: 由 Micrometer + Prometheus Registry 处理，Prometheus 定期 Pull
+/// - **Logging**: 由 Agent 自动注入 `trace_id`/`span_id` 到 MDC
 ///
-/// 安全特性：
-///
-/// - 敏感数据脱敏：生产环境强制启用
-/// - Actuator 访问控制：保护可观测性端点
+/// 本配置仅包含应用层需要的 Metrics 和 Handlers 配置，
+/// Tracing 配置由 Agent JVM 参数控制（如 `-Dotel.traces.sampler.arg=0.1`）。
 ///
 /// @author Jobs
 /// @since 1.0.0
@@ -48,14 +44,8 @@ public class ObservabilityProperties {
   /// 指标配置。
   private MetricsConfig metrics = new MetricsConfig();
 
-  /// 追踪配置。
-  private TracingConfig tracing = new TracingConfig();
-
-  /// 日志配置。
+  /// 日志配置（日志关联）。
   private LoggingConfig logging = new LoggingConfig();
-
-  /// OTLP Exporter 配置（统一导出 Traces/Logs/Metrics）。
-  private OtlpExporterConfig exporter = new OtlpExporterConfig();
 
   /// ObservationHandler 配置。
   private HandlersConfig handlers = new HandlersConfig();
@@ -94,64 +84,6 @@ public class ObservabilityProperties {
   }
 
   ///
-  /// OTLP Exporter 配置。
-  ///
-  /// 用于将 Metrics 和 Traces 通过 OTLP 协议推送到 OpenTelemetry Collector。
-
-  @Data
-  public static class OtlpExporterConfig {
-    ///
-    /// 是否启用 OTLP 导出。
-
-    private boolean enabled = true;
-
-    ///
-    /// OTel Collector 端点地址（gRPC）。
-
-    private String endpoint = "http://localhost:4317";
-
-    ///
-    /// 协议类型（grpc 或 http）。
-
-    private Protocol protocol = Protocol.GRPC;
-
-    ///
-    /// 导出超时时间。
-
-    @NotNull(message = "导出超时时间不能为 null")
-    private Duration timeout = Duration.ofSeconds(10);
-
-    ///
-    /// 压缩算法。
-
-    private Compression compression = Compression.GZIP;
-
-    ///
-    /// 自定义 Headers（用于认证等）。
-
-    private Map<String, String> headers = new HashMap<>();
-
-    ///
-    /// OTLP 协议类型。
-    ///
-    /// - `GRPC`：gRPC 传输（默认，性能最优）
-    /// - `HTTP_PROTOBUF`：HTTP/Protobuf 传输（适用于无法使用 gRPC 的环境）
-
-    public enum Protocol {
-      GRPC,
-      HTTP_PROTOBUF
-    }
-
-    ///
-    /// 压缩算法。
-
-    public enum Compression {
-      NONE,
-      GZIP
-    }
-  }
-
-  ///
   /// Prometheus 配置。
 
   @Data
@@ -165,34 +97,6 @@ public class ObservabilityProperties {
     /// 是否启用 Exemplars（与 Tracing 关联）。
 
     private boolean enableExemplars = true;
-  }
-
-  ///
-  /// 追踪配置。
-
-  @Data
-  public static class TracingConfig {
-    ///
-    /// 是否启用追踪。
-
-    private boolean enabled = true;
-
-    ///
-    /// 采样率（0.0 - 1.0）。
-
-    @DecimalMin(value = "0.0", message = "采样率必须 >= 0.0")
-    @DecimalMax(value = "1.0", message = "采样率必须 <= 1.0")
-    private double samplingRate = 1.0;
-
-    ///
-    /// Baggage 传播字段。
-
-    private List<String> baggageFields = List.of("X-Request-Id", "X-Correlation-Id");
-
-    ///
-    /// 追踪 Header 名称。
-
-    private List<String> headerNames = List.of("X-Trace-ID", "X-B3-TraceId", "traceparent");
   }
 
   ///
