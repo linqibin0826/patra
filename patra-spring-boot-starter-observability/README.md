@@ -2,13 +2,20 @@
 
 可观测性 Starter，统一集成 Metrics、Tracing、Logging 三大支柱。
 
-## 模块概述
+## 架构说明
 
-本模块提供统一的可观测性基础设施，基于 Micrometer Observation API 构建，支持：
+本模块采用 **OTel Agent + Micrometer 混合架构**：
 
-- **Metrics（指标）**：通过 Micrometer 收集和导出指标到 Prometheus、SkyWalking 等后端
-- **Tracing（追踪）**：集成 SkyWalking APM，支持分布式追踪和 TraceID 传播
-- **Logging（日志）**：日志与追踪关联，支持 TraceID 注入
+| 支柱 | 技术方案 | 说明 |
+|------|----------|------|
+| **Tracing** | OTel Java Agent | 通过 `-javaagent` 参数启动，零代码侵入，自动 instrument HTTP/JDBC/Redis/MQ |
+| **Metrics** | Micrometer + Prometheus | 应用代码使用 Micrometer API，Prometheus 定期 Pull `/actuator/prometheus` |
+| **Logging** | Agent MDC 注入 | Agent 自动将 `trace_id`/`span_id` 注入日志上下文 |
+
+> **为什么选择 Agent 模式？**
+> - 零代码侵入：无需修改应用代码即可获得完整的分布式追踪
+> - 自动覆盖：HTTP、JDBC、Redis、消息队列等基础设施自动 instrument
+> - 统一标准：与 OTel Collector 原生集成，避免 SDK 版本兼容问题
 
 ## 核心功能
 
@@ -19,8 +26,7 @@
 | `ObservabilityAutoConfiguration` | 核心配置，创建 ObservationRegistry，启用 @Observed 注解 | 默认启用 |
 | `MicrometerAutoConfiguration` | 注册 Filter、Handler、MeterFilter | metrics.enabled=true |
 | `PrometheusAutoConfiguration` | 配置 Prometheus Registry 和 Exemplars | prometheus.enabled=true |
-| `SkyWalkingMeterAutoConfiguration` | 创建 SkyWalking Meter Registry | skywalking.enabled=true |
-| `ObservationInterceptorsAutoConfiguration` | 注册拦截器（错误解析、HTTP 客户端、分布式锁） | 默认启用 |
+| `ObservationInterceptorsAutoConfiguration` | 注册拦截器（错误解析、HTTP 客户端） | 默认启用 |
 
 ### ObservationHandler
 
@@ -49,10 +55,10 @@
 | 拦截器 | 功能 | 适用场景 |
 |--------|------|----------|
 | `ObservationResolutionInterceptor` | 为错误解析流程创建 Observation | 错误处理 |
-| `RestClientObservationInterceptor` | 为 HTTP 请求创建 Observation | REST 客户端 |
-| `LockMetricsRecorder` | 记录分布式锁指标（等待时间、持有时间、成功/失败率） | Redisson 分布式锁 |
 
-> **注意**：批处理可观测性已迁移至 `patra-spring-boot-starter-batch`，使用 Spring Batch 原生 `BatchObservabilityBeanPostProcessor` 实现零配置集成。
+> **注意**：
+> - 批处理可观测性已迁移至 `patra-spring-boot-starter-batch`，使用 Spring Batch 原生 `BatchObservabilityBeanPostProcessor`
+> - HTTP 客户端观测由 Spring Boot 3.x 内置的 `RestClient.Builder` 自动配置处理
 
 ## 快速开始
 
@@ -65,7 +71,19 @@
 </dependency>
 ```
 
-### 2. 配置属性
+### 2. 配置 OTel Agent（启动参数）
+
+```bash
+java -javaagent:/path/to/opentelemetry-javaagent.jar \
+     -Dotel.service.name=my-service \
+     -Dotel.traces.exporter=otlp \
+     -Dotel.exporter.otlp.endpoint=http://otel-collector:4317 \
+     -Dotel.traces.sampler=parentbased_traceidratio \
+     -Dotel.traces.sampler.arg=0.1 \
+     -jar my-app.jar
+```
+
+### 3. 配置属性
 
 ```yaml
 patra:
@@ -73,8 +91,6 @@ patra:
     enabled: true
     application-name: ${spring.application.name}
     environment: dev
-    region: cn-east-1
-    cluster: default
 
     metrics:
       enabled: true
@@ -86,18 +102,7 @@ patra:
 
       prometheus:
         enabled: true
-        enable-exemplars: true
-
-      skywalking:
-        enabled: true
-        oap-address: skywalking-oap:11800
-
-    tracing:
-      enabled: true
-      sampling-rate: 1.0
-      baggage-fields:
-        - X-Request-Id
-        - X-Correlation-Id
+        enable-exemplars: true  # 与 Tracing 关联
 
     logging:
       enabled: true
@@ -119,7 +124,7 @@ patra:
         - dev-local
 ```
 
-### 3. 使用 @Observed 注解
+### 4. 使用 @Observed 注解
 
 ```java
 @Service
@@ -132,7 +137,7 @@ public class UserService {
 }
 ```
 
-### 4. 手动创建 Observation
+### 5. 手动创建 Observation
 
 ```java
 @Service
@@ -177,22 +182,7 @@ public class OrderService {
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `patra.observability.metrics.prometheus.enabled` | boolean | true | 是否启用 |
-| `patra.observability.metrics.prometheus.enable-exemplars` | boolean | true | 是否启用 Exemplars |
-
-### SkyWalking 配置
-
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `patra.observability.metrics.skywalking.enabled` | boolean | true | 是否启用 |
-| `patra.observability.metrics.skywalking.oap-address` | String | skywalking-oap:11800 | OAP 服务器地址 |
-
-### 追踪配置
-
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `patra.observability.tracing.enabled` | boolean | true | 是否启用追踪 |
-| `patra.observability.tracing.sampling-rate` | double | 1.0 | 采样率（0.0-1.0） |
-| `patra.observability.tracing.baggage-fields` | List | [X-Request-Id, X-Correlation-Id] | Baggage 传播字段 |
+| `patra.observability.metrics.prometheus.enable-exemplars` | boolean | true | 是否启用 Exemplars（Metrics→Tracing 关联） |
 
 ### Handler 配置
 
@@ -210,6 +200,16 @@ public class OrderService {
 | `patra.observability.security.mask-sensitive-data` | boolean | true | 是否启用敏感数据脱敏 |
 | `patra.observability.security.sensitive-patterns` | List | [] | 自定义敏感数据模式（正则） |
 | `patra.observability.security.masking-disabled-in-environments` | List | [dev-local] | 允许禁用脱敏的环境 |
+
+### Tracing 配置（Agent JVM 参数）
+
+| JVM 参数 | 说明 | 示例 |
+|----------|------|------|
+| `-Dotel.service.name` | 服务名称 | my-service |
+| `-Dotel.traces.exporter` | 导出器类型 | otlp |
+| `-Dotel.exporter.otlp.endpoint` | OTLP 端点 | http://otel-collector:4317 |
+| `-Dotel.traces.sampler` | 采样器 | parentbased_traceidratio |
+| `-Dotel.traces.sampler.arg` | 采样率 | 0.1 |
 
 ## 安全特性
 
@@ -246,12 +246,9 @@ public class OrderService {
 patra-spring-boot-starter-observability
 ├── patra-common-core                    # 公共工具和异常
 ├── patra-spring-boot-starter-core       # 核心 Starter（ResolutionInterceptor）
-├── patra-spring-boot-starter-redisson   # (可选) Redisson 分布式锁（LockObserver SPI）
 ├── micrometer-observation               # Micrometer Observation API
 ├── micrometer-core                      # Micrometer 核心
 ├── micrometer-registry-prometheus       # (可选) Prometheus Registry
-├── apm-toolkit-micrometer-registry      # (可选) SkyWalking Meter Registry
-├── apm-toolkit-trace                    # SkyWalking Trace API
 ├── caffeine                             # 缓存（状态管理）
 └── spring-web                           # (可选) REST Client
 ```
@@ -264,7 +261,6 @@ com.patra.starter.observability
 │   ├── ObservabilityAutoConfiguration   # 核心自动配置
 │   ├── MicrometerAutoConfiguration      # Micrometer 配置
 │   ├── PrometheusAutoConfiguration      # Prometheus 配置
-│   ├── SkyWalkingMeterAutoConfiguration # SkyWalking 配置
 │   └── ObservationInterceptorsAutoConfiguration
 ├── config/
 │   └── ObservabilityProperties          # 配置属性
@@ -277,17 +273,15 @@ com.patra.starter.observability
 ├── handler/                             # 处理器
 │   ├── LoggingObservationHandler        # 日志 Handler
 │   └── PerformanceObservationHandler    # 性能 Handler
-├── interceptor/                         # 拦截器
-│   ├── ObservationResolutionInterceptor # 错误解析拦截器
-│   ├── RestClientObservationInterceptor # HTTP 客户端拦截器
-│   └── redisson/
-│       └── LockMetricsRecorder          # 分布式锁指标记录器（实现 LockObserver SPI）
+└── interceptor/                         # 拦截器
+    └── ObservationResolutionInterceptor # 错误解析拦截器
 ```
 
 ## 设计原则
 
 1. **零配置启用**：默认启用所有功能，开箱即用
-2. **生产环境安全**：敏感数据检测、高基数过滤等安全特性自动启用
-3. **内存安全**：使用 Caffeine Cache 管理状态，自动过期防止内存泄漏
-4. **可扩展性**：支持自定义敏感数据模式、公共标签、Handler 等
-5. **与 Spring Boot 集成**：复用 Spring Boot Actuator 的自动配置，避免重复
+2. **Agent + SDK 分离**：Tracing 由 Agent 处理，Metrics 由 Micrometer 处理，职责清晰
+3. **生产环境安全**：敏感数据检测、高基数过滤等安全特性自动启用
+4. **内存安全**：使用 Caffeine Cache 管理状态，自动过期防止内存泄漏
+5. **可扩展性**：支持自定义敏感数据模式、公共标签、Handler 等
+6. **与 Spring Boot 集成**：复用 Spring Boot Actuator 的自动配置，避免重复

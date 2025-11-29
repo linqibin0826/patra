@@ -284,15 +284,14 @@ class TestObservabilityApplication {
       exclude = {
         DataSourceAutoConfiguration.class,
         RedisAutoConfiguration.class,
-        RedisRepositoriesAutoConfiguration.class,
-        org.redisson.spring.starter.RedissonAutoConfigurationV2.class
+        RedisRepositoriesAutoConfiguration.class
       })
   static class TestConfiguration {
     /**
      * 创建 SimpleMeterRegistry 用于测试。
      *
-     * <p>注意：在没有 Actuator 的环境中，Spring Boot 不会自动创建 MeterRegistry。 使用 @Primary 标记为主要 Bean，避免与
-     * SkyWalkingMeterRegistry 冲突。
+     * <p>注意：在没有 Actuator 的环境中，Spring Boot 不会自动创建 MeterRegistry。 使用 @Primary 标记为主要 Bean，避免与其他
+     * MeterRegistry 实现冲突。
      */
     @org.springframework.context.annotation.Primary
     @Bean

@@ -3,7 +3,7 @@
     {
       "name": "patra.observability",
       "type": "com.patra.starter.observability.config.ObservabilityProperties",
-      "description": "Patra 可观测性统一配置属性"
+      "description": "Patra 可观测性统一配置属性（Agent 模式：Tracing 由 OTel Agent 处理，Metrics 由 Prometheus Pull）"
     },
     {
       "name": "patra.observability.metrics",
@@ -11,19 +11,9 @@
       "description": "指标（Metrics）配置"
     },
     {
-      "name": "patra.observability.exporter",
-      "type": "com.patra.starter.observability.config.ObservabilityProperties$OtlpExporterConfig",
-      "description": "OTLP Exporter 配置（统一导出 Traces/Logs/Metrics 到 OpenTelemetry Collector）"
-    },
-    {
       "name": "patra.observability.metrics.prometheus",
       "type": "com.patra.starter.observability.config.ObservabilityProperties$PrometheusConfig",
       "description": "Prometheus Registry 配置"
-    },
-    {
-      "name": "patra.observability.tracing",
-      "type": "com.patra.starter.observability.config.ObservabilityProperties$TracingConfig",
-      "description": "追踪（Tracing）配置"
     },
     {
       "name": "patra.observability.logging",
@@ -88,36 +78,6 @@
       "defaultValue": "60s"
     },
     {
-      "name": "patra.observability.exporter.enabled",
-      "type": "java.lang.Boolean",
-      "description": "是否启用 OTLP 导出到 OpenTelemetry Collector",
-      "defaultValue": true
-    },
-    {
-      "name": "patra.observability.exporter.endpoint",
-      "type": "java.lang.String",
-      "description": "OTel Collector 端点地址（gRPC）",
-      "defaultValue": "http://localhost:4317"
-    },
-    {
-      "name": "patra.observability.exporter.protocol",
-      "type": "com.patra.starter.observability.config.ObservabilityProperties$OtlpExporterConfig$Protocol",
-      "description": "OTLP 协议类型（GRPC 或 HTTP_PROTOBUF）",
-      "defaultValue": "GRPC"
-    },
-    {
-      "name": "patra.observability.exporter.timeout",
-      "type": "java.time.Duration",
-      "description": "导出超时时间",
-      "defaultValue": "10s"
-    },
-    {
-      "name": "patra.observability.exporter.compression",
-      "type": "com.patra.starter.observability.config.ObservabilityProperties$OtlpExporterConfig$Compression",
-      "description": "压缩算法（NONE 或 GZIP）",
-      "defaultValue": "GZIP"
-    },
-    {
       "name": "patra.observability.metrics.prometheus.enabled",
       "type": "java.lang.Boolean",
       "description": "是否启用 Prometheus Registry",
@@ -128,18 +88,6 @@
       "type": "java.lang.Boolean",
       "description": "是否启用 Exemplars（与 Tracing 关联）",
       "defaultValue": true
-    },
-    {
-      "name": "patra.observability.tracing.enabled",
-      "type": "java.lang.Boolean",
-      "description": "是否启用追踪",
-      "defaultValue": true
-    },
-    {
-      "name": "patra.observability.tracing.sampling-rate",
-      "type": "java.lang.Double",
-      "description": "追踪采样率（0.0 - 1.0）",
-      "defaultValue": 1.0
     },
     {
       "name": "patra.observability.logging.enabled",

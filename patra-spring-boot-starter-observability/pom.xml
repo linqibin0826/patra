@@ -54,35 +54,12 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- ========== OpenTelemetry 集成 ========== -->
-
-        <!-- Micrometer Tracing + OTel Bridge：桥接 Micrometer Observation → OTel Tracer -->
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-tracing-bridge-otel</artifactId>
-        </dependency>
-
-        <!-- OTLP Exporter：通过 OTLP 协议导出 Traces/Metrics 到 OTel Collector -->
-        <dependency>
-            <groupId>io.opentelemetry</groupId>
-            <artifactId>opentelemetry-exporter-otlp</artifactId>
-        </dependency>
-
-        <!-- Logback OTLP Appender：日志通过 OTLP 发送到 OTel Collector → Loki -->
-        <dependency>
-            <groupId>io.opentelemetry.instrumentation</groupId>
-            <artifactId>opentelemetry-logback-appender-1.0</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- OTLP Meter Registry：指标通过 OTLP 推送到 OTel Collector（双模式支持） -->
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-registry-otlp</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- ========== /OpenTelemetry 集成 ========== -->
+        <!--
+            架构说明：
+            - Tracing: OTel Java Agent（-javaagent）自动处理，零代码侵入
+            - Metrics: Micrometer + Prometheus Registry，Prometheus 定期 Pull
+            - Logging: Agent 自动注入 trace_id/span_id 到 MDC
+        -->
 
         <!-- Caffeine Cache: 用于状态管理，避免内存泄漏 -->
         <dependency>
@@ -96,18 +73,17 @@
             <artifactId>jakarta.validation-api</artifactId>
         </dependency>
 
-        <!-- Redisson Starter (可选): 用于 LockMetricsRecorder 实现 LockObserver SPI -->
+        <!-- Jakarta Servlet API (可选): 用于 HTTP 可观测性 Filter 配置 -->
         <dependency>
-            <groupId>com.patra</groupId>
-            <artifactId>patra-spring-boot-starter-redisson</artifactId>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
             <optional>true</optional>
         </dependency>
 
-        <!-- Spring Web (可选): 用于 RestClientObservationInterceptor -->
+        <!-- Spring Boot Actuator: 提供 WebMvcObservationAutoConfiguration 等观测相关自动配置 -->
         <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-web</artifactId>
-            <optional>true</optional>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
         <!-- Configuration metadata (IDE hints during development; not used at runtime) -->

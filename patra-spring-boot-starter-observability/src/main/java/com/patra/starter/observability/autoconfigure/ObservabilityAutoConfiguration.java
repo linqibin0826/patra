@@ -12,6 +12,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /// Patra 可观测性自动配置。
 ///
@@ -59,21 +60,34 @@ public class ObservabilityAutoConfiguration {
     return ObservationRegistry.create();
   }
 
-  /// 启用 @Observed 注解支持。
+  /// @Observed 注解支持配置。
   ///
-  /// 通过 AOP 拦截标注 @Observed 的方法，自动创建 Observation。
-  ///
-  /// @param observationRegistry ObservationRegistry 实例
-  /// @return ObservedAspect 实例
-  @Bean
-  @ConditionalOnMissingBean
+  /// 使用独立内部类的原因：
+  /// - `ObservedAspect` 依赖 AspectJ（`org.aspectj.lang.*`）
+  /// - 如果 AspectJ 不在类路径，类加载时就会失败
+  /// - 通过类级别 `@ConditionalOnClass` 避免 `NoClassDefFoundError`
+  @Configuration(proxyBeanMethods = false)
+  @ConditionalOnClass(name = "org.aspectj.lang.Aspects")
   @ConditionalOnProperty(
       prefix = "management.observations.annotations",
       name = "enabled",
       havingValue = "true",
       matchIfMissing = true)
-  public ObservedAspect observedAspect(ObservationRegistry observationRegistry) {
-    log.info("启用 @Observed 注解支持");
-    return new ObservedAspect(observationRegistry);
+  static class ObservedAspectConfiguration {
+
+    private static final Logger log = LoggerFactory.getLogger(ObservedAspectConfiguration.class);
+
+    /// 启用 @Observed 注解支持。
+    ///
+    /// 通过 AOP 拦截标注 @Observed 的方法，自动创建 Observation。
+    ///
+    /// @param observationRegistry ObservationRegistry 实例
+    /// @return ObservedAspect 实例
+    @Bean
+    @ConditionalOnMissingBean
+    ObservedAspect observedAspect(ObservationRegistry observationRegistry) {
+      log.info("启用 @Observed 注解支持");
+      return new ObservedAspect(observationRegistry);
+    }
   }
 }
