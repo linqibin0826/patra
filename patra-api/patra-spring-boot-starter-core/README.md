@@ -118,8 +118,8 @@ public class MyProblemFieldContributor implements ProblemFieldContributor {
 public class MyTraceProvider implements TraceProvider {
     @Override
     public Optional<String> getCurrentTraceId() {
-        // 从 MDC、SkyWalking 或其他追踪系统中提取
-        return Optional.ofNullable(TraceContext.traceId());
+        // 从 MDC 或 OpenTelemetry 追踪系统中提取
+        return Optional.ofNullable(MDC.get("traceId"));
     }
 }
 ```
@@ -194,7 +194,6 @@ patra:
 - `patra-common-core`: 领域基础类和工具
 - `spring-boot-starter-json`: Jackson JSON 支持
 - `resilience4j-circuitbreaker`: 熔断器(可选)
-- `apm-toolkit-logback-1.x`, `apm-toolkit-trace`: SkyWalking APM 集成
 
 **可选功能**:
 - 可观测性（追踪、指标）: 添加 `patra-spring-boot-starter-observability` 依赖自动启用
@@ -256,7 +255,6 @@ public class GlobalExceptionHandler {
 - **Spring Boot**: 3.5.7
 - **Jackson**: 2.18.2 (JSON/XML 序列化)
 - **Resilience4j**: 2.2.0 (熔断器)
-- **SkyWalking**: 9.4.0 (日志追踪集成)
 
 ---
 

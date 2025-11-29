@@ -52,18 +52,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- SkyWalking APM Toolkit for distributed tracing (logback integration) -->
-        <dependency>
-            <groupId>org.apache.skywalking</groupId>
-            <artifactId>apm-toolkit-logback-1.x</artifactId>
-        </dependency>
-
-        <!-- SkyWalking APM Toolkit for trace context API (used by custom converters) -->
-        <dependency>
-            <groupId>org.apache.skywalking</groupId>
-            <artifactId>apm-toolkit-trace</artifactId>
-        </dependency>
-
         <!-- 测试依赖 -->
         <dependency>
             <groupId>com.patra</groupId>
