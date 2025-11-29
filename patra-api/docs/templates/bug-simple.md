@@ -1,10 +1,12 @@
 ---
-id: BUG-{{date:YYYY}}-
+type: bug
+bug_id: BUG-{{date:YYYY}}-
 date: {{date:YYYY-MM-DD}}
 severity: medium
 status: open
-tags: [bug]
 module:
+tags:
+  - record/bug
 ---
 
 # {{title}}

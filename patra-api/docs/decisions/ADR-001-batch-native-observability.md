@@ -1,8 +1,15 @@
 ---
-id: ADR-001
+type: adr
+adr_id: 1
 date: 2025-11-26
 status: accepted
-tags: [architecture, decision, batch, observability, spring-batch]
+date_decided: 2025-11-26
+deciders: [Qibin Lin]
+technical_debt: none
+tags:
+  - decision/architecture
+  - tech/spring-batch
+  - tech/observability
 ---
 
 # ADR-001: Batch 可观测性迁移至 Spring 原生支持

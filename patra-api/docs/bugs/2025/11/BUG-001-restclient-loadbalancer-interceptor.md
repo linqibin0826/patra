@@ -1,11 +1,17 @@
 ---
-id: BUG-2025-001
+type: bug
+bug_id: BUG-2025-001
 date: 2025-11-27
 severity: high
-status: fixed
-tags: [spring-cloud, loadbalancer, restclient]
+status: resolved
+resolved_date: 2025-11-27
+time_spent: ~2h
 module: patra-spring-boot-starter-rest-client
-resolved_at: 2025-11-27
+tags:
+  - record/bug
+  - tech/spring-cloud
+  - tech/loadbalancer
+  - tech/restclient
 ---
 
 # RestClient 外部 API 调用被 LoadBalancer 拦截器错误处理

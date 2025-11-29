@@ -1,16 +1,19 @@
 ---
+type: devlog
+period: daily
 date: {{date}}
-type: devlog/daily
 time_range: "{{time_start}} - {{time_end}}"
 commits: {{commit_count}}
 files_changed: {{files_count}}
 lines_added: {{lines_added}}
 lines_deleted: {{lines_deleted}}
 modules: [{{modules}}]
-tags: [{{tags}}]
 linked_bugs: []
 linked_tils: []
 linked_adrs: []
+tags:
+  - record/devlog
+  - period/daily
 ---
 
 # {{date}} 开发日志

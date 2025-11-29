@@ -1,8 +1,15 @@
 ---
-id: ADR-002
+type: adr
+adr_id: 2
 date: 2025-11-26
 status: accepted
-tags: [architecture, decision, testing, integration-test, testcontainers]
+date_decided: 2025-11-26
+deciders: [Qibin Lin]
+technical_debt: none
+tags:
+  - decision/architecture
+  - tech/testing
+  - tech/testcontainers
 ---
 
 # ADR-002: Infra 层采用集成测试替代单元测试

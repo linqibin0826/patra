@@ -1,10 +1,14 @@
 ---
+type: devlog
+period: monthly
 month: {{month}}
-type: devlog/monthly
 total_commits: {{total_commits}}
 total_files: {{total_files}}
 milestones: []
-tags: [monthly-review]
+tags:
+  - record/devlog
+  - period/monthly
+  - review/monthly
 ---
 
 # {{month}} 月报

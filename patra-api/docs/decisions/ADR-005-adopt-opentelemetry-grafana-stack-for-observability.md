@@ -1,8 +1,16 @@
 ---
-id: ADR-005
+type: adr
+adr_id: 5
 date: 2025-11-28
 status: accepted
-tags: [architecture, observability, opentelemetry, grafana, monitoring]
+date_decided: 2025-11-28
+deciders: [Qibin Lin]
+technical_debt: none
+tags:
+  - decision/architecture
+  - tech/observability
+  - tech/opentelemetry
+  - tech/grafana
 ---
 
 # ADR-005: 采用 OpenTelemetry + Grafana Stack 作为可观测性方案
@@ -48,44 +56,104 @@ tags: [architecture, observability, opentelemetry, grafana, monitoring]
 
 ### 架构图
 
-```mermaid
-flowchart BT
-    subgraph 采集层["采集层 Collection"]
-        App["Spring Boot Application"]
-        Agent["OTel Java Agent<br/>(Traces)"]
-        Micrometer["Micrometer<br/>(Metrics)"]
-        Logback["Logback + OTLP<br/>(Logs)"]
-    end
+```d2
+direction: down
 
-    subgraph 处理层["处理层 Processing"]
-        Collector["OpenTelemetry Collector<br/>接收 → 处理 → 导出"]
-    end
+classes: {
+  layer: {
+    style: {
+      border-radius: 8
+      fill: "#f8f9fa"
+      stroke: "#dee2e6"
+    }
+  }
+  app: {
+    style: {
+      fill: "#6db33f"
+      stroke: "#5a9a32"
+      font-color: white
+    }
+  }
+  collector: {
+    shape: hexagon
+    style: {
+      fill: "#425cc7"
+      stroke: "#3449a8"
+      font-color: white
+    }
+  }
+  storage: {
+    shape: cylinder
+    style: {
+      fill: "#f46800"
+      stroke: "#c45400"
+      font-color: white
+    }
+  }
+  viz: {
+    style: {
+      fill: "#ff6600"
+      stroke: "#cc5200"
+      font-color: white
+    }
+  }
+}
 
-    subgraph 存储层["存储层 Storage"]
-        Prometheus["Prometheus<br/>(Metrics)"]
-        Loki["Loki<br/>(Logs)"]
-        Tempo["Tempo<br/>(Traces)"]
-    end
+# 采集层
+collection: 采集层 Collection {
+  class: layer
 
-    subgraph 展示层["展示层 Visualization"]
-        Grafana["Grafana<br/>日志检索 | 指标仪表盘 | 链路追踪 | 告警管理"]
-    end
+  app: Spring Boot Application {
+    class: app
+  }
+  agent: OTel Java Agent\n(Traces)
+  micrometer: Micrometer\n(Metrics)
+  logback: Logback + OTLP\n(Logs)
 
-    App --> Agent
-    App --> Micrometer
-    App --> Logback
+  app -> agent
+  app -> micrometer
+  app -> logback
+}
 
-    Agent --> Collector
-    Micrometer --> Collector
-    Logback --> Collector
+# 处理层
+processing: 处理层 Processing {
+  class: layer
 
-    Collector --> Prometheus
-    Collector --> Loki
-    Collector --> Tempo
+  collector: OpenTelemetry Collector\n接收 → 处理 → 导出 {
+    class: collector
+  }
+}
 
-    Prometheus --> Grafana
-    Loki --> Grafana
-    Tempo --> Grafana
+# 存储层
+storage: 存储层 Storage {
+  class: layer
+
+  prometheus: Prometheus\n(Metrics) {class: storage}
+  loki: Loki\n(Logs) {class: storage}
+  tempo: Tempo\n(Traces) {class: storage}
+}
+
+# 展示层
+visualization: 展示层 Visualization {
+  class: layer
+
+  grafana: Grafana\n日志检索 | 指标仪表盘 | 链路追踪 | 告警管理 {
+    class: viz
+  }
+}
+
+# 层间连接
+collection.agent -> processing.collector: OTLP
+collection.micrometer -> processing.collector: OTLP
+collection.logback -> processing.collector: OTLP
+
+processing.collector -> storage.prometheus: Remote Write
+processing.collector -> storage.loki: Push
+processing.collector -> storage.tempo: Push
+
+storage.prometheus -> visualization.grafana: Query
+storage.loki -> visualization.grafana: Query
+storage.tempo -> visualization.grafana: Query
 ```
 
 ## 后果

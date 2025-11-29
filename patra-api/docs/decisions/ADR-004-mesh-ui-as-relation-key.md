@@ -1,8 +1,15 @@
 ---
-id: ADR-004
+type: adr
+adr_id: 4
 date: 2025-11-27
 status: accepted
-tags: [architecture, decision, data-model, mesh]
+date_decided: 2025-11-27
+deciders: [Qibin Lin]
+technical_debt: none
+tags:
+  - decision/architecture
+  - domain/mesh
+  - tech/data-model
 ---
 
 # ADR-004: MeSH 子表使用原生 UI 作为关联键
