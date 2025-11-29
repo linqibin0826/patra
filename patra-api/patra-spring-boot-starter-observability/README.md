@@ -24,23 +24,9 @@
 | 配置类 | 功能 | 条件 |
 |--------|------|------|
 | `ObservabilityAutoConfiguration` | 核心配置，创建 ObservationRegistry，启用 @Observed 注解 | 默认启用 |
-| `MicrometerAutoConfiguration` | 注册 Filter、Handler、MeterFilter | metrics.enabled=true |
+| `MicrometerAutoConfiguration` | 注册 MeterFilter（命名规范、公共标签、高基数过滤） | metrics.enabled=true |
 | `PrometheusAutoConfiguration` | 配置 Prometheus Registry 和 Exemplars | prometheus.enabled=true |
-| `ObservationInterceptorsAutoConfiguration` | 注册拦截器（错误解析、HTTP 客户端） | 默认启用 |
-
-### ObservationHandler
-
-| Handler | 功能 | 配置项 |
-|---------|------|--------|
-| `LoggingObservationHandler` | 记录 Observation 生命周期到日志 | handlers.logging.enabled |
-| `PerformanceObservationHandler` | 检测慢操作，记录执行时间 | handlers.performance.enabled |
-
-### ObservationFilter
-
-| Filter | 功能 | 执行顺序 |
-|--------|------|----------|
-| `SensitiveDataObservationFilter` | 检测并告警敏感数据（生产环境强制启用） | HIGHEST_PRECEDENCE |
-| `CommonTagsObservationFilter` | 添加公共标签（application、environment 等） | LOWEST_PRECEDENCE |
+| `ObservationInterceptorsAutoConfiguration` | 注册拦截器（错误解析） | 默认启用 |
 
 ### MeterFilter
 
@@ -57,6 +43,7 @@
 | `ObservationResolutionInterceptor` | 为错误解析流程创建 Observation | 错误处理 |
 
 > **注意**：
+> - Tracing 由 OTel Java Agent 自动处理，无需额外的 ObservationHandler
 > - 批处理可观测性已迁移至 `patra-spring-boot-starter-batch`，使用 Spring Batch 原生 `BatchObservabilityBeanPostProcessor`
 > - HTTP 客户端观测由 Spring Boot 3.x 内置的 `RestClient.Builder` 自动配置处理
 
@@ -91,11 +78,12 @@ patra:
     enabled: true
     application-name: ${spring.application.name}
     environment: dev
+    region: cn-north
+    cluster: default
 
     metrics:
       enabled: true
       prefix: ""
-      step: 60s
       common-tags:
         team: platform
         version: ${project.version}
@@ -107,21 +95,6 @@ patra:
     logging:
       enabled: true
       include-trace-id: true
-
-    handlers:
-      logging:
-        enabled: true
-        log-level: DEBUG
-      performance:
-        enabled: true
-        slow-threshold: 3s
-
-    security:
-      mask-sensitive-data: true
-      sensitive-patterns:
-        - "custom-secret-\\d+"
-      masking-disabled-in-environments:
-        - dev-local
 ```
 
 ### 4. 使用 @Observed 注解
@@ -174,7 +147,6 @@ public class OrderService {
 |------|------|--------|------|
 | `patra.observability.metrics.enabled` | boolean | true | 是否启用指标收集 |
 | `patra.observability.metrics.prefix` | String | "" | 指标前缀 |
-| `patra.observability.metrics.step` | Duration | 60s | 导出间隔 |
 | `patra.observability.metrics.common-tags` | Map | {} | 公共标签 |
 
 ### Prometheus 配置
@@ -184,22 +156,12 @@ public class OrderService {
 | `patra.observability.metrics.prometheus.enabled` | boolean | true | 是否启用 |
 | `patra.observability.metrics.prometheus.enable-exemplars` | boolean | true | 是否启用 Exemplars（Metrics→Tracing 关联） |
 
-### Handler 配置
+### 日志配置
 
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `patra.observability.handlers.logging.enabled` | boolean | true | 是否启用日志 Handler |
-| `patra.observability.handlers.logging.log-level` | String | DEBUG | 日志级别 |
-| `patra.observability.handlers.performance.enabled` | boolean | true | 是否启用性能 Handler |
-| `patra.observability.handlers.performance.slow-threshold` | Duration | 3s | 慢操作阈值 |
-
-### 安全配置
-
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `patra.observability.security.mask-sensitive-data` | boolean | true | 是否启用敏感数据脱敏 |
-| `patra.observability.security.sensitive-patterns` | List | [] | 自定义敏感数据模式（正则） |
-| `patra.observability.security.masking-disabled-in-environments` | List | [dev-local] | 允许禁用脱敏的环境 |
+| `patra.observability.logging.enabled` | boolean | true | 是否启用日志集成 |
+| `patra.observability.logging.include-trace-id` | boolean | true | 是否在日志中包含 trace_id |
 
 ### Tracing 配置（Agent JVM 参数）
 
@@ -213,23 +175,6 @@ public class OrderService {
 
 ## 安全特性
 
-### 敏感数据检测
-
-`SensitiveDataObservationFilter` 自动检测以下敏感数据：
-
-**敏感字段名**：password、pwd、token、secret、api-key、auth、credential
-
-**敏感数据值**（正则匹配）：
-- 身份证号（15/18 位）
-- 手机号
-- 固定电话
-- 邮箱地址
-- 银行卡号
-- Bearer Token
-- Basic Auth
-
-**生产环境强制启用**：当 `environment=prod` 时，敏感数据脱敏自动强制启用。
-
 ### 高基数标签过滤
 
 `HighCardinalityMeterFilter` 自动过滤以下高基数标签，防止时序数据库性能问题：
@@ -239,6 +184,8 @@ public class OrderService {
 - sessionId、session_id
 - correlationId、correlation_id
 - transactionId、transaction_id
+
+> **注意**：敏感数据脱敏由 OTel Agent 或日志框架配置处理，不在本模块范围内。
 
 ## 依赖关系
 
@@ -264,15 +211,10 @@ com.patra.starter.observability
 │   └── ObservationInterceptorsAutoConfiguration
 ├── config/
 │   └── ObservabilityProperties          # 配置属性
-├── filter/                              # 过滤器
-│   ├── CommonTagsMeterFilter            # 公共标签（Meter）
-│   ├── CommonTagsObservationFilter      # 公共标签（Observation）
+├── filter/                              # MeterFilter
+│   ├── CommonTagsMeterFilter            # 公共标签
 │   ├── HighCardinalityMeterFilter       # 高基数标签过滤
-│   ├── MetricNamingMeterFilter          # 指标命名规范
-│   └── SensitiveDataObservationFilter   # 敏感数据检测
-├── handler/                             # 处理器
-│   ├── LoggingObservationHandler        # 日志 Handler
-│   └── PerformanceObservationHandler    # 性能 Handler
+│   └── MetricNamingMeterFilter          # 指标命名规范
 └── interceptor/                         # 拦截器
     └── ObservationResolutionInterceptor # 错误解析拦截器
 ```
@@ -281,7 +223,7 @@ com.patra.starter.observability
 
 1. **零配置启用**：默认启用所有功能，开箱即用
 2. **Agent + SDK 分离**：Tracing 由 Agent 处理，Metrics 由 Micrometer 处理，职责清晰
-3. **生产环境安全**：敏感数据检测、高基数过滤等安全特性自动启用
+3. **生产环境安全**：高基数过滤等安全特性自动启用
 4. **内存安全**：使用 Caffeine Cache 管理状态，自动过期防止内存泄漏
-5. **可扩展性**：支持自定义敏感数据模式、公共标签、Handler 等
+5. **可扩展性**：支持自定义公共标签等
 6. **与 Spring Boot 集成**：复用 Spring Boot Actuator 的自动配置，避免重复

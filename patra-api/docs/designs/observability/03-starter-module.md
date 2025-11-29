@@ -1,7 +1,7 @@
 ---
 title: 可观测性系统设计 - Starter 模块设计
 type: design
-status: draft
+status: completed
 date: 2025-11-29
 module: patra-spring-boot-starter-observability
 related_adrs: [ADR-005]
@@ -13,474 +13,209 @@ tags:
 
 # Starter 模块设计
 
-## 现有组件分析
+## 架构说明
 
-### 目录结构
+> [!important] 核心架构决策
+> 本模块采用 **OTel Java Agent + Micrometer** 混合模式：
+> - **Tracing**: OTel Java Agent 通过 `-javaagent` 参数自动处理（零代码侵入）
+> - **Metrics**: Micrometer + Prometheus Registry，Prometheus 定期 Pull
+> - **Logging**: Agent 自动注入 `trace_id`/`span_id` 到 MDC
+
+## 目录结构
 
 ```
 patra-spring-boot-starter-observability/
 ├── src/main/java/com/patra/starter/observability/
 │   ├── autoconfigure/
-│   │   ├── ObservabilityAutoConfiguration.java      # 核心配置
-│   │   ├── MicrometerAutoConfiguration.java         # Micrometer 配置
-│   │   ├── PrometheusAutoConfiguration.java         # Prometheus Registry
-│   │   └── ObservationInterceptorsAutoConfiguration.java  # 拦截器配置
+│   │   ├── ObservabilityAutoConfiguration.java           # 核心配置
+│   │   ├── MicrometerAutoConfiguration.java              # Micrometer 配置
+│   │   ├── PrometheusAutoConfiguration.java              # Prometheus Registry
+│   │   └── ObservationInterceptorsAutoConfiguration.java # 拦截器配置
 │   ├── config/
-│   │   └── ObservabilityProperties.java             # 配置属性
-│   ├── handler/
-│   │   ├── LoggingObservationHandler.java           # 日志处理器
-│   │   └── PerformanceObservationHandler.java       # 性能处理器
+│   │   └── ObservabilityProperties.java                  # 配置属性
 │   ├── filter/
-│   │   ├── SensitiveDataObservationFilter.java      # 敏感数据脱敏
-│   │   ├── CommonTagsObservationFilter.java         # 通用标签
-│   │   ├── HighCardinalityMeterFilter.java          # 高基数过滤
-│   │   ├── MetricNamingMeterFilter.java             # 指标命名
-│   │   └── CommonTagsMeterFilter.java               # 通用标签
+│   │   ├── HighCardinalityMeterFilter.java               # 高基数过滤
+│   │   ├── MetricNamingMeterFilter.java                  # 指标命名规范
+│   │   └── CommonTagsMeterFilter.java                    # 通用标签
 │   └── interceptor/
-│       └── ObservationResolutionInterceptor.java    # 观测拦截器
+│       └── ObservationResolutionInterceptor.java         # 观测拦截器
+├── src/main/resources/
+│   └── META-INF/spring/
+│       └── org.springframework.boot.autoconfigure.AutoConfiguration.imports
 └── pom.xml
 ```
 
-### 组件状态汇总
+## 组件状态汇总
 
 | 类别 | 组件数 | 说明 |
 |------|--------|------|
 | AutoConfiguration | 4 | 核心、Micrometer、Prometheus、拦截器 |
 | Properties | 1 | ObservabilityProperties |
-| Handler | 2 | 日志、性能处理器 |
-| Filter | 5 | 观测和指标过滤器 |
-| Interceptor | 1 | 观测拦截器 |
+| MeterFilter | 3 | 高基数过滤、命名规范、公共标签 |
+| Interceptor | 1 | ObservationResolutionInterceptor |
 
-## 核心配置
+> **注意**：Logback MDC 转换器（TraceId、SpanId、SegmentId）位于 `patra-spring-boot-starter-core` 模块。
 
-### ObservabilityProperties
+> [!note] 已移除组件
+> - **ObservationHandler**：Tracing 由 OTel Java Agent 自动处理
+> - **ObservationFilter**：公共标签由 MeterFilter 统一处理
 
-**OTLP Exporter 配置**
+## 自动配置类
+
+### ObservabilityAutoConfiguration
+
+**职责**：可观测性核心配置和属性绑定
 
 ```java
-// ✅ 新增
-private OtlpExporterConfig exporter = new OtlpExporterConfig();
-
-@Data
-public static class OtlpExporterConfig {
-    /// 是否启用 OTLP 导出。
-    private boolean enabled = true;
-
-    /// OTLP 端点地址。
-    private String endpoint = "http://localhost:4317";
-
-    /// 传输协议（grpc 或 http/protobuf）。
-    private Protocol protocol = Protocol.GRPC;
-
-    /// 导出超时时间。
-    private Duration timeout = Duration.ofSeconds(10);
-
-    /// 压缩方式。
-    private Compression compression = Compression.GZIP;
-
-    /// 自定义 Headers。
-    private Map<String, String> headers = new HashMap<>();
-
-    public enum Protocol {
-        GRPC, HTTP_PROTOBUF
-    }
-
-    public enum Compression {
-        NONE, GZIP
-    }
+@AutoConfiguration
+@EnableConfigurationProperties(ObservabilityProperties.class)
+@ConditionalOnClass({ObservationRegistry.class, MeterRegistry.class})
+@ConditionalOnProperty(prefix = "patra.observability", name = "enabled", havingValue = "true", matchIfMissing = true)
+public class ObservabilityAutoConfiguration {
+    // 创建 ObservationRegistry Bean
+    // 创建内部 ObservedAspectConfiguration 处理 @Observed 注解
 }
 ```
-
-3. **配置属性说明**
-
-| 配置 | 默认值 | 说明 |
-|------|--------|------|
-| `exporter.enabled` | `true` | 是否启用 OTLP 导出 |
-| `exporter.endpoint` | `http://localhost:4317` | OTLP Collector 端点 |
-| `exporter.protocol` | `grpc` | 传输协议（grpc/http） |
-| `exporter.timeout` | `10s` | 导出超时时间 |
-| `exporter.compression` | `gzip` | 压缩方式 |
 
 ### MicrometerAutoConfiguration
 
-**修改内容：**
+**职责**：Micrometer MeterFilter 配置
 
-新增 Micrometer → OpenTelemetry Bridge 依赖即可，Spring Boot 3.2+ 会自动配置：
+注册的 Bean：
+- `HighCardinalityMeterFilter` - 高基数过滤（防止 Prometheus OOM）
+- `MetricNamingMeterFilter` - 强制命名规范 `patra.{module}.{metric}`
+- `CommonTagsMeterFilter` - 添加公共标签（application、environment、region、cluster）
 
-```xml
-<!-- pom.xml 添加依赖 -->
-<dependency>
-    <groupId>io.micrometer</groupId>
-    <artifactId>micrometer-tracing-bridge-otel</artifactId>
-</dependency>
-```
+### PrometheusAutoConfiguration
 
-> [!note] Spring Boot 自动配置
-> Spring Boot 3.2+ 引入 `micrometer-tracing-bridge-otel` 依赖后，会自动配置：
-> - `io.micrometer.tracing.Tracer`（桥接 OpenTelemetry Tracer）
-> - `OtelCurrentTraceContext`（追踪上下文管理）
->
-> 无需手动创建 Bean，符合"约定优于配置"原则。
-
-## 需要新增的组件
-
-### OtelAutoConfiguration
-
-**文件路径：** `autoconfigure/OtelAutoConfiguration.java`
-
-**职责：** 配置 OpenTelemetry SDK 和 OTLP Exporter
+**职责**：Prometheus MeterRegistry 配置
 
 ```java
-package com.patra.starter.observability.autoconfigure;
-
-import com.patra.starter.observability.config.ObservabilityProperties;
-import com.patra.starter.observability.config.ObservabilityProperties.OtlpExporterConfig;
-import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.common.Attributes;
-import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.exporter.otlp.logs.OtlpGrpcLogRecordExporter;
-import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
-import io.opentelemetry.sdk.logs.SdkLoggerProvider;
-import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor;
-import io.opentelemetry.sdk.resources.Resource;
-import io.opentelemetry.sdk.trace.SdkTracerProvider;
-import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
-import io.opentelemetry.semconv.ServiceAttributes;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Bean;
-
-/// OpenTelemetry SDK 自动配置。
-///
-/// 提供以下功能：
-/// - 配置 OpenTelemetry Resource（服务标识）
-/// - 配置 OTLP Span/Log Exporter
-/// - 配置 TracerProvider 和 LoggerProvider
-///
-/// @author Jobs
-/// @since 1.0.0
 @AutoConfiguration(after = MicrometerAutoConfiguration.class)
-@ConditionalOnClass(OpenTelemetry.class)
-@ConditionalOnProperty(
-    prefix = "patra.observability.exporter",
-    name = "enabled",
-    havingValue = "true",
-    matchIfMissing = true
-)
-public class OtelAutoConfiguration {
-
-    /// 创建 OpenTelemetry Resource。
-    ///
-    /// Resource 包含服务元数据，用于标识遥测数据来源。
-    @Bean
-    @ConditionalOnMissingBean
-    public Resource otelResource(
-            @Value("${spring.application.name:unknown}") String applicationName,
-            ObservabilityProperties properties) {
-        String serviceName = properties.getApplicationName() != null
-            ? properties.getApplicationName()
-            : applicationName;
-
-        return Resource.getDefault().merge(
-            Resource.create(
-                Attributes.builder()
-                    .put(ServiceAttributes.SERVICE_NAME, serviceName)
-                    .put(ServiceAttributes.SERVICE_VERSION, "0.1.0-SNAPSHOT")
-                    .put("service.environment", properties.getEnvironment())
-                    .put("service.cluster", properties.getCluster())
-                    .build()));
-    }
-
-    /// 创建 OTLP Span Exporter。
-    @Bean
-    @ConditionalOnMissingBean
-    public OtlpGrpcSpanExporter otlpGrpcSpanExporter(ObservabilityProperties properties) {
-        OtlpExporterConfig config = properties.getExporter();
-        var builder = OtlpGrpcSpanExporter.builder()
-            .setEndpoint(config.getEndpoint())
-            .setTimeout(config.getTimeout().toMillis(), TimeUnit.MILLISECONDS);
-
-        if (config.getCompression() == OtlpExporterConfig.Compression.GZIP) {
-            builder.setCompression("gzip");
-        }
-        config.getHeaders().forEach(builder::addHeader);
-        return builder.build();
-    }
-
-    /// 创建 OTLP Log Exporter（日志启用时）。
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "patra.observability.logging", name = "enabled",
-        havingValue = "true", matchIfMissing = true)
-    public OtlpGrpcLogRecordExporter otlpGrpcLogRecordExporter(ObservabilityProperties properties) {
-        OtlpExporterConfig config = properties.getExporter();
-        var builder = OtlpGrpcLogRecordExporter.builder()
-            .setEndpoint(config.getEndpoint())
-            .setTimeout(config.getTimeout().toMillis(), TimeUnit.MILLISECONDS);
-
-        if (config.getCompression() == OtlpExporterConfig.Compression.GZIP) {
-            builder.setCompression("gzip");
-        }
-        config.getHeaders().forEach(builder::addHeader);
-        return builder.build();
-    }
-
-    /// 创建 TracerProvider。
-    @Bean
-    @ConditionalOnMissingBean
-    public SdkTracerProvider sdkTracerProvider(Resource resource, OtlpGrpcSpanExporter exporter) {
-        return SdkTracerProvider.builder()
-            .setResource(resource)
-            .addSpanProcessor(BatchSpanProcessor.builder(exporter).build())
-            .build();
-    }
-
-    /// 创建 LoggerProvider（日志启用时）。
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "patra.observability.logging", name = "enabled",
-        havingValue = "true", matchIfMissing = true)
-    public SdkLoggerProvider sdkLoggerProvider(Resource resource, OtlpGrpcLogRecordExporter logExporter) {
-        return SdkLoggerProvider.builder()
-            .setResource(resource)
-            .addLogRecordProcessor(BatchLogRecordProcessor.builder(logExporter).build())
-            .build();
-    }
-
-    /// 创建 OpenTelemetry 实例。
-    ///
-    /// 整合 TracerProvider 和 LoggerProvider，提供统一的遥测入口。
-    @Bean
-    @ConditionalOnMissingBean
-    public OpenTelemetry openTelemetry(
-            SdkTracerProvider tracerProvider,
-            ObjectProvider<SdkLoggerProvider> loggerProviderProvider) {
-        SdkLoggerProvider loggerProvider = loggerProviderProvider.getIfAvailable();
-
-        var builder = OpenTelemetrySdk.builder()
-            .setTracerProvider(tracerProvider);
-
-        if (loggerProvider != null) {
-            builder.setLoggerProvider(loggerProvider);
-        }
-        return builder.build();
-    }
-
-    /// 创建 Tracer Bean（用于手动创建 Span）。
-    @Bean
-    @ConditionalOnMissingBean
-    public Tracer otelTracer(OpenTelemetry openTelemetry) {
-        return openTelemetry.getTracer("patra-observability", "0.1.0-SNAPSHOT");
-    }
+@ConditionalOnClass(PrometheusMeterRegistry.class)
+public class PrometheusAutoConfiguration {
+    // 配置 Exemplars 支持，与 Tracing 关联
 }
 ```
 
-> [!important] 关键实现细节
-> 1. **`ServiceAttributes` 替代 `ResourceAttributes`**：后者已被 OTel 标记为废弃
-> 2. **显式加载顺序**：`@AutoConfiguration(after = MicrometerAutoConfiguration.class)` 确保 Micrometer 先初始化
-> 3. **无全局注册**：使用 `.build()` 而非 `.buildAndRegisterGlobal()`，避免全局状态污染
-> 4. **可选日志导出**：通过 `ObjectProvider<SdkLoggerProvider>` 优雅处理日志禁用场景
+### ObservationInterceptorsAutoConfiguration
 
-### OtlpLogbackAppender 配置
+**职责**：可观测性拦截器自动配置
 
-**文件路径：** `src/main/resources/logback-otel.xml`（供业务模块引用）
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<included>
-    <!-- OTLP Appender 配置 -->
-    <appender name="OTLP" class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
-        <captureExperimentalAttributes>true</captureExperimentalAttributes>
-        <captureCodeAttributes>true</captureCodeAttributes>
-        <captureMdcAttributes>*</captureMdcAttributes>
-    </appender>
-
-    <!-- 异步包装，避免阻塞业务线程 -->
-    <appender name="ASYNC_OTLP" class="ch.qos.logback.classic.AsyncAppender">
-        <appender-ref ref="OTLP"/>
-        <queueSize>1024</queueSize>
-        <discardingThreshold>0</discardingThreshold>
-        <neverBlock>true</neverBlock>
-    </appender>
-</included>
+```java
+@AutoConfiguration(after = PrometheusAutoConfiguration.class)
+public class ObservationInterceptorsAutoConfiguration {
+    // 创建 ObservationResolutionInterceptor - 错误解析流程可观测性拦截器
+}
 ```
 
-## 依赖变更
+## 自动配置加载顺序
 
-### pom.xml 修改
+```
+# META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports
+
+# 1. 主配置：可观测性核心配置和属性绑定
+com.patra.starter.observability.autoconfigure.ObservabilityAutoConfiguration
+
+# 2. Micrometer 配置：Observation API 和 MeterRegistry
+com.patra.starter.observability.autoconfigure.MicrometerAutoConfiguration
+
+# 3. Prometheus 配置：Prometheus 格式指标导出
+com.patra.starter.observability.autoconfigure.PrometheusAutoConfiguration
+
+# 4. 拦截器配置：插件式架构
+com.patra.starter.observability.autoconfigure.ObservationInterceptorsAutoConfiguration
+```
+
+## 依赖配置
+
+### pom.xml
 
 ```xml
 <dependencies>
-    <!-- ========== 保留依赖 ========== -->
+    <!-- Patra 内部依赖 -->
+    <dependency>
+        <groupId>com.patra</groupId>
+        <artifactId>patra-common-core</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>com.patra</groupId>
+        <artifactId>patra-spring-boot-starter-core</artifactId>
+    </dependency>
 
-    <!-- Micrometer 观测 API -->
+    <!-- Spring Boot -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-autoconfigure</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+
+    <!-- Micrometer (Metrics + Observations) -->
     <dependency>
         <groupId>io.micrometer</groupId>
         <artifactId>micrometer-observation</artifactId>
     </dependency>
-
-    <!-- Micrometer 指标核心 -->
     <dependency>
         <groupId>io.micrometer</groupId>
         <artifactId>micrometer-core</artifactId>
     </dependency>
 
-    <!-- Prometheus Registry -->
+    <!-- Prometheus Registry (可选) -->
     <dependency>
         <groupId>io.micrometer</groupId>
         <artifactId>micrometer-registry-prometheus</artifactId>
         <optional>true</optional>
     </dependency>
 
-    <!-- ========== OpenTelemetry 依赖 ========== -->
-
-    <!-- ✅ OpenTelemetry API -->
+    <!-- Caffeine Cache: 状态管理 -->
     <dependency>
-        <groupId>io.opentelemetry</groupId>
-        <artifactId>opentelemetry-api</artifactId>
+        <groupId>com.github.ben-manes.caffeine</groupId>
+        <artifactId>caffeine</artifactId>
     </dependency>
 
-    <!-- ✅ OpenTelemetry SDK -->
+    <!-- Jakarta Validation API -->
     <dependency>
-        <groupId>io.opentelemetry</groupId>
-        <artifactId>opentelemetry-sdk</artifactId>
+        <groupId>jakarta.validation</groupId>
+        <artifactId>jakarta.validation-api</artifactId>
     </dependency>
 
-    <!-- ✅ OTLP Exporter (gRPC) -->
+    <!-- Jakarta Servlet API (可选) -->
     <dependency>
-        <groupId>io.opentelemetry</groupId>
-        <artifactId>opentelemetry-exporter-otlp</artifactId>
-    </dependency>
-
-    <!-- ✅ Micrometer Tracing Bridge -->
-    <dependency>
-        <groupId>io.micrometer</groupId>
-        <artifactId>micrometer-tracing-bridge-otel</artifactId>
-    </dependency>
-
-    <!-- ✅ Logback OTLP Appender -->
-    <dependency>
-        <groupId>io.opentelemetry.instrumentation</groupId>
-        <artifactId>opentelemetry-logback-appender-1.0</artifactId>
-    </dependency>
-
-    <!-- ✅ OpenTelemetry Semantic Conventions -->
-    <dependency>
-        <groupId>io.opentelemetry.semconv</groupId>
-        <artifactId>opentelemetry-semconv</artifactId>
+        <groupId>jakarta.servlet</groupId>
+        <artifactId>jakarta.servlet-api</artifactId>
+        <optional>true</optional>
     </dependency>
 </dependencies>
 ```
 
-### 版本管理（patra-parent/pom.xml）
+> [!note] 无 OpenTelemetry SDK 依赖
+> Tracing 由 OTel Java Agent 通过 `-javaagent` 参数自动处理，无需在应用代码中引入 OTel SDK 依赖。
+> 这实现了**零代码侵入**的可观测性。
 
-```xml
-<properties>
-    <!-- OpenTelemetry 版本 -->
-    <opentelemetry.version>1.35.0</opentelemetry.version>
-    <opentelemetry-instrumentation.version>2.1.0</opentelemetry-instrumentation.version>
-    <opentelemetry-semconv.version>1.23.1-alpha</opentelemetry-semconv.version>
-</properties>
+## 配置属性
 
-<dependencyManagement>
-    <dependencies>
-        <!-- OpenTelemetry BOM -->
-        <dependency>
-            <groupId>io.opentelemetry</groupId>
-            <artifactId>opentelemetry-bom</artifactId>
-            <version>${opentelemetry.version}</version>
-            <type>pom</type>
-            <scope>import</scope>
-        </dependency>
+### ObservabilityProperties
 
-        <!-- OpenTelemetry Instrumentation BOM -->
-        <dependency>
-            <groupId>io.opentelemetry.instrumentation</groupId>
-            <artifactId>opentelemetry-instrumentation-bom</artifactId>
-            <version>${opentelemetry-instrumentation.version}</version>
-            <type>pom</type>
-            <scope>import</scope>
-        </dependency>
-    </dependencies>
-</dependencyManagement>
+```java
+@ConfigurationProperties(prefix = "patra.observability")
+public class ObservabilityProperties {
+    // 全局配置
+    private boolean enabled = true;
+    private String applicationName;
+    private String environment = "dev";
+    private String region;
+    private String cluster = "default";
+
+    // 主要配置块
+    private MetricsConfig metrics;
+    private LoggingConfig logging;
+}
 ```
 
-## 自动配置加载顺序
-
-### META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports
-
-```
-# 1. 核心配置（最先加载）
-com.patra.starter.observability.autoconfigure.ObservabilityAutoConfiguration
-
-# 2. Micrometer 配置
-com.patra.starter.observability.autoconfigure.MicrometerAutoConfiguration
-
-# 3. OpenTelemetry 配置（新增）
-com.patra.starter.observability.autoconfigure.OtelAutoConfiguration
-
-# 4. Prometheus 配置
-com.patra.starter.observability.autoconfigure.PrometheusAutoConfiguration
-
-# 5. 拦截器配置（最后加载）
-com.patra.starter.observability.autoconfigure.ObservationInterceptorsAutoConfiguration
-```
-
-### 加载依赖图
-
-```mermaid
-%%{init: {
-  'theme': 'base',
-  'themeVariables': {
-    'primaryColor': '#dbeafe',
-    'primaryTextColor': '#1e293b',
-    'primaryBorderColor': '#3b82f6',
-    'lineColor': '#64748b',
-    'edgeLabelBackground': '#f1f5f9'
-  }
-}}%%
-flowchart TD
-    subgraph AutoConfiguration["自动配置加载顺序"]
-        direction TB
-
-        OBS[ObservabilityAutoConfiguration]
-        MIC[MicrometerAutoConfiguration]
-        OTEL[OtelAutoConfiguration]
-        PROM[PrometheusAutoConfiguration]
-        INTER[ObservationInterceptorsAutoConfiguration]
-
-        OBS -->|@AutoConfigureBefore| MIC
-        MIC -->|@AutoConfigureBefore| OTEL
-        OTEL -->|@AutoConfigureBefore| PROM
-        PROM -->|@AutoConfigureBefore| INTER
-    end
-
-    subgraph Beans["注册的 Beans"]
-        direction TB
-
-        OBS_B[ObservationRegistry]
-        MIC_B[MeterFilter\nObservationFilter\nObservationHandler]
-        OTEL_B[OpenTelemetry\nTracer\nSpanExporter]
-        PROM_B[PrometheusMeterRegistry]
-        INTER_B[ObservationResolutionInterceptor]
-    end
-
-    OBS --> OBS_B
-    MIC --> MIC_B
-    OTEL --> OTEL_B
-    PROM --> PROM_B
-    INTER --> INTER_B
-
-    classDef default fill:#dbeafe,stroke:#3b82f6,color:#1e293b;
-    classDef bean fill:#ede9fe,stroke:#8b5cf6,color:#1e293b;
-    class OBS_B,MIC_B,OTEL_B,PROM_B,INTER_B bean;
-```
-
-## 配置属性完整结构
+### 配置属性完整结构
 
 ```yaml
 patra:
@@ -505,45 +240,32 @@ patra:
         enabled: true
         enable-exemplars: true
 
-    # OTLP 导出配置（新增）
-    exporter:
-      enabled: true
-      endpoint: http://localhost:4317
-      protocol: grpc
-      timeout: 10s
-      compression: gzip
-      headers: {}
-
-    # 追踪配置
-    tracing:
-      enabled: true
-      sampling-rate: 1.0
-      baggage-fields:
-        - X-Request-Id
-        - X-Correlation-Id
-
     # 日志配置
     logging:
       enabled: true
       include-trace-id: true
       pattern: "[%tid] [${spring.application.name},%X{traceId:-},%X{spanId:-}]"
-
-    # Handler 配置
-    handlers:
-      logging:
-        enabled: true
-        log-level: DEBUG
-      performance:
-        enabled: true
-        slow-threshold: 3s
-
-    # 安全配置
-    security:
-      mask-sensitive-data: true
-      sensitive-patterns: []
-      masking-disabled-in-environments:
-        - dev-local
 ```
+
+> [!tip] Tracing 配置
+> Tracing 相关配置（如采样率）通过 OTel Agent JVM 参数控制：
+> ```bash
+> -Dotel.traces.sampler=parentbased_traceidratio
+> -Dotel.traces.sampler.arg=1.0
+> ```
+
+## MeterFilter 详解
+
+| Filter | 职责 | 执行顺序 |
+|--------|------|----------|
+| `HighCardinalityMeterFilter` | 过滤高基数标签（userId、traceId 等），防止 Prometheus OOM | HIGHEST_PRECEDENCE |
+| `MetricNamingMeterFilter` | 强制执行命名规范 `patra.{module}.{metric}` | HIGHEST_PRECEDENCE + 1 |
+| `CommonTagsMeterFilter` | 为所有 Meter 添加公共标签（application、environment、region、cluster） | LOWEST_PRECEDENCE |
+
+> [!important] 架构简化
+> ObservationHandler 和 ObservationFilter 已移除：
+> - Tracing 由 OTel Java Agent 自动处理
+> - 公共标签由 MeterFilter 统一添加（作用于 Metrics）
 
 ## 相关链接
 
