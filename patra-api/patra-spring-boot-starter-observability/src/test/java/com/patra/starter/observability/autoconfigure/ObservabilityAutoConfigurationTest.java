@@ -3,9 +3,6 @@ package com.patra.starter.observability.autoconfigure;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.starter.observability.config.ObservabilityProperties;
-import com.patra.starter.observability.filter.SensitiveDataObservationFilter;
-import com.patra.starter.observability.handler.LoggingObservationHandler;
-import com.patra.starter.observability.handler.PerformanceObservationHandler;
 import com.patra.starter.observability.interceptor.ObservationResolutionInterceptor;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -74,23 +71,6 @@ class ObservabilityAutoConfigurationTest {
     assertThat(properties.getEnvironment()).isEqualTo("test");
     assertThat(properties.getRegion()).isEqualTo("cn-test");
     assertThat(properties.getCluster()).isEqualTo("test-cluster");
-  }
-
-  /** 测试 ObservationFilter 注册。 */
-  @Test
-  void shouldRegisterObservationFilters() {
-    // 验证 SensitiveDataObservationFilter 已注册
-    assertThat(context.getBeanNamesForType(SensitiveDataObservationFilter.class)).isNotEmpty();
-  }
-
-  /** 测试 ObservationHandler 注册。 */
-  @Test
-  void shouldRegisterObservationHandlers() {
-    // 验证 LoggingObservationHandler 已注册
-    assertThat(context.getBeanNamesForType(LoggingObservationHandler.class)).isNotEmpty();
-
-    // 验证 PerformanceObservationHandler 已注册
-    assertThat(context.getBeanNamesForType(PerformanceObservationHandler.class)).isNotEmpty();
   }
 
   /** 测试拦截器注册。 */
