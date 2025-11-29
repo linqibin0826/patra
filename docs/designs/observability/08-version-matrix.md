@@ -35,7 +35,7 @@ tags:
 | **OTel Java Agent** | 2.22.0 | N/A (JAR) | 2025-11-20 |
 | **OTel Collector** | 0.140.1 | `otel/opentelemetry-collector-contrib:0.140.1` | 2025-11-18 |
 | **Prometheus** | 3.7.3 | `prom/prometheus:v3.7.3` | 2025-10-29 |
-| **Grafana** | 12.3.1 | `grafana/grafana:12.3.1` | 2025-11-19 |
+| **Grafana** | 12.3.0 | `grafana/grafana:12.3.0` | 2025-11-13 |
 | **Loki** | 3.6.2 | `grafana/loki:3.6.2` | 2025-11-25 |
 | **Tempo** | 2.9.0 | `grafana/tempo:2.9.0` | 2025-10-13 |
 | **Alertmanager** | 0.29.0 | `prom/alertmanager:v0.29.0` | 2025-11-01 |
