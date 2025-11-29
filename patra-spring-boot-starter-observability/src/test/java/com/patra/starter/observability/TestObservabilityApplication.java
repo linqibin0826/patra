@@ -39,11 +39,6 @@ import org.springframework.test.context.TestPropertySource;
       "patra.observability.metrics.prefix=",
       "patra.observability.metrics.common-tags.team=backend",
       "patra.observability.metrics.common-tags.project=patra",
-      "patra.observability.security.mask-sensitive-data=true",
-      "patra.observability.handlers.logging.enabled=true",
-      "patra.observability.handlers.logging.log-level=DEBUG",
-      "patra.observability.handlers.performance.enabled=true",
-      "patra.observability.handlers.performance.slow-threshold=100ms",
       "management.observations.annotations.enabled=false" // 禁用 @Observed 注解支持（测试环境无 AspectJ）
     })
 class TestObservabilityApplication {
@@ -177,21 +172,20 @@ class TestObservabilityApplication {
     // 这里仅验证代码不抛出异常
   }
 
-  /** 测试敏感数据脱敏。 */
+  /** 测试包含敏感标签的 Observation 生命周期。 */
   @Test
-  void shouldMaskSensitiveData() {
-    // 创建包含敏感数据的 Observation
+  void shouldHandleObservationWithSensitiveTags() {
+    // 创建包含敏感数据标签的 Observation
+    // 注意：敏感数据脱敏由 OTel Agent 或日志框架处理，此处仅验证 Observation 生命周期
     Observation.createNotStarted("test.sensitive.operation", observationRegistry)
         .lowCardinalityKeyValue("username", "john")
-        .lowCardinalityKeyValue("password", "secret123")
+        .lowCardinalityKeyValue("operation", "login")
         .observe(
             () -> {
               // 模拟操作
             });
 
     // 验证 Observation 正常完成
-    // 实际敏感数据脱敏由 SensitiveDataObservationFilter 处理
-    // 单元测试已在 SensitiveDataObservationFilterTest 中验证
     assertThat(observationRegistry.getCurrentObservation()).isNull();
   }
 
