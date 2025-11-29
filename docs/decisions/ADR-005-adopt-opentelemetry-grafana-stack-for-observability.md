@@ -6,6 +6,8 @@ status: accepted
 date_decided: 2025-11-28
 deciders: [Qibin Lin]
 technical_debt: none
+related_designs: [designs/observability/_MOC]
+related_learning: [learning/observability/_MOC]
 tags:
   - decision/architecture
   - tech/observability
@@ -213,6 +215,32 @@ storage.tempo -> visualization.grafana: Query
 - 成本高（按数据量/主机数计费）
 - 数据外泄风险
 - 学习目的下无法深入理解原理
+
+## 相关文档
+
+### 设计文档
+
+本决策的详细实现方案请参见：
+
+- [[designs/observability/_MOC|可观测性系统设计]] - 完整的架构设计和实现方案
+  - [[designs/observability/01-overview|概述]] - 问题陈述、目标、术语表
+  - [[designs/observability/02-architecture|架构设计]] - 整体架构、数据流
+  - [[designs/observability/03-starter-module|Starter 模块]] - 模块重构、自动配置
+  - [[designs/observability/04-otel-integration|OTel 集成]] - Agent 配置、Bridge、日志集成
+  - [[designs/observability/05-infrastructure|基础设施]] - Docker Compose、Collector 配置
+  - [[designs/observability/06-grafana-visualization|Grafana 可视化]] - 仪表盘、信号关联、告警规则
+
+### 学习笔记
+
+系统学习可观测性知识体系：
+
+- [[learning/observability/_MOC|可观测性学习系列]] - 从零开始系统学习
+  - [[learning/observability/01-core-concepts|核心概念]] - 三大支柱、信号关联
+  - [[learning/observability/02-metrics|Metrics]] - 指标类型、Micrometer、Prometheus
+  - [[learning/observability/03-logs|Logs]] - 结构化日志、Loki、LogQL
+  - [[learning/observability/04-traces|Traces]] - OpenTelemetry、Span、Context Propagation
+  - [[learning/observability/05-alerting|告警]] - Prometheus Rules、Alertmanager
+  - [[learning/observability/06-grafana|Grafana]] - 可视化、仪表盘设计
 
 ## 参考资料
 

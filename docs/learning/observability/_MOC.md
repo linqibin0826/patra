@@ -2,6 +2,8 @@
 title: 可观测性学习系列
 type: learning
 date: 2025-11-28
+related_adrs: [ADR-005]
+related_designs: [designs/observability/_MOC]
 tags:
   - learning/observability
   - tech/opentelemetry
@@ -53,8 +55,24 @@ flowchart LR
 
 ## 相关资源
 
-- 架构决策：[[decisions/ADR-005-adopt-opentelemetry-grafana-stack-for-observability|ADR-005 采用 OTel + Grafana Stack]]
-- TIL 索引：[[til/2025/11/2025-11-28-observability-basics|可观测性基础 TIL]]（待创建）
+### 架构决策
+
+- [[decisions/ADR-005-adopt-opentelemetry-grafana-stack-for-observability|ADR-005 采用 OTel + Grafana Stack]] - 为什么选择这个技术栈
+- [[decisions/ADR-001-batch-native-observability|ADR-001 Batch 可观测性迁移]] - Spring Batch 原生可观测性支持
+
+### 设计文档
+
+- [[designs/observability/_MOC|可观测性系统设计]] - 完整的架构设计和实现方案
+  - [[designs/observability/01-overview|概述]] - 问题陈述、目标、术语表
+  - [[designs/observability/02-architecture|架构设计]] - 整体架构、数据流
+  - [[designs/observability/03-starter-module|Starter 模块]] - 模块重构、自动配置
+  - [[designs/observability/04-otel-integration|OTel 集成]] - Agent 配置、Bridge、日志集成
+  - [[designs/observability/05-infrastructure|基础设施]] - Docker Compose、Collector 配置
+  - [[designs/observability/06-grafana-visualization|Grafana 可视化]] - 仪表盘、信号关联、告警规则
+
+### TIL
+
+- [[til/2025/11/2025-11-29-observability-complete|可观测性体系完整学习]]
 
 ## 外部资源
 

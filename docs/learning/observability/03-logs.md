@@ -857,6 +857,11 @@ if (log.isDebugEnabled()) {
 - [Structured Logging Best Practices](https://www.baeldung.com/java-structured-logging)
 - [The Twelve-Factor App - Logs](https://12factor.net/logs)
 
+## 相关设计文档
+
+- [[designs/observability/04-otel-integration|设计文档：OTel 集成]] - Logback OTLP Appender 配置、日志与 Trace 关联
+- [[designs/observability/05-infrastructure|设计文档：基础设施]] - Loki 部署配置
+
 ---
 
 > **下一章**：[[04-traces|第四章：Traces（链路追踪）]] - 学习 OpenTelemetry 核心概念、Span 生命周期、Context Propagation

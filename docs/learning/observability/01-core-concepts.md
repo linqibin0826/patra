@@ -358,6 +358,11 @@ http_request_duration_seconds_bucket{le="0.5"} 1000 # {traceID="abc123"} 0.48
 - [Google SRE Book - Monitoring Distributed Systems](https://sre.google/sre-book/monitoring-distributed-systems/)
 - [The Future of Observability: Trends Shaping 2025](https://leapcell.medium.com/the-future-of-observability-trends-shaping-2025-427fc9d0cd34)
 
+## 相关设计文档
+
+- [[designs/observability/01-overview|设计文档：概述]] - 问题陈述、目标、术语表
+- [[decisions/ADR-005-adopt-opentelemetry-grafana-stack-for-observability|ADR-005]] - 为什么选择 OTel + Grafana Stack
+
 ---
 
 > **下一章**：[[02-metrics|第二章：Metrics（指标）]] - 深入学习指标类型、Micrometer API 和 Prometheus

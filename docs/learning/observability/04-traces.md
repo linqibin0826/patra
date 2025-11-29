@@ -1102,6 +1102,11 @@ Span span = tracer.nextSpan().start();
 - [Distributed Tracing Best Practices](https://www.datadoghq.com/blog/distributed-tracing-best-practices/)
 - [Spring Boot Observability](https://spring.io/blog/2022/10/12/observability-with-spring-boot-3/)
 
+## 相关设计文档
+
+- [[designs/observability/04-otel-integration|设计文档：OTel 集成]] - OTel Java Agent 配置、Context Propagation
+- [[designs/observability/05-infrastructure|设计文档：基础设施]] - OTel Collector、Tempo 部署配置
+
 ---
 
 > **下一章**：[[05-alerting|第五章：告警]] - 学习 Alertmanager 配置、告警规则设计、通知渠道配置
