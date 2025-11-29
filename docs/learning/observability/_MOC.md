@@ -1,7 +1,11 @@
 ---
 title: 可观测性学习系列
+type: learning
 date: 2025-11-28
-tags: [observability, learning, tutorial]
+tags:
+  - learning/observability
+  - tech/opentelemetry
+  - tech/grafana
 ---
 
 # 可观测性学习系列

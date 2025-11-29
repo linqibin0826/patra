@@ -1,9 +1,14 @@
 ---
 title: 第五章：告警
+type: learning
 series: observability
 order: 5
 date: 2025-11-29
-tags: [observability, alerting, alertmanager, prometheus, grafana, oncall]
+tags:
+  - learning/observability
+  - tech/alerting
+  - tech/alertmanager
+  - tech/prometheus
 ---
 
 # 第五章：告警

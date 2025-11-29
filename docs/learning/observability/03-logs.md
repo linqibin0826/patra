@@ -1,9 +1,14 @@
 ---
 title: 第三章：Logs（日志）
+type: learning
 series: observability
 order: 3
 date: 2025-11-28
-tags: [observability, logs, loki, logql, structured-logging, logback]
+tags:
+  - learning/observability
+  - tech/logs
+  - tech/loki
+  - tech/logback
 ---
 
 # 第三章：Logs（日志）

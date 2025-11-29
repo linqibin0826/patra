@@ -1,9 +1,14 @@
 ---
 title: 第四章：Traces（链路追踪）
+type: learning
 series: observability
 order: 4
 date: 2025-11-28
-tags: [observability, traces, opentelemetry, distributed-tracing, tempo, context-propagation]
+tags:
+  - learning/observability
+  - tech/traces
+  - tech/opentelemetry
+  - tech/tempo
 ---
 
 # 第四章：Traces（链路追踪）
