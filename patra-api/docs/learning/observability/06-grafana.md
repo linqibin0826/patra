@@ -1021,4 +1021,6 @@ evaluation_timeout = 30s
 4. **文档记录**：创建 Runbook 和操作手册
 
 > **相关资源**：
-> - [[decisions/ADR-001-adopt-opentelemetry-grafana-stack-for-observability|ADR-001: 采用 OTel + Grafana Stack]]
+> - [[decisions/ADR-005-adopt-opentelemetry-grafana-stack-for-observability|ADR-005: 采用 OTel + Grafana Stack]]
+> - [[designs/observability/06-grafana-visualization|设计文档：Grafana 可视化]] - 仪表盘设计、信号关联、Provisioning
+> - [[designs/observability/_MOC|设计文档：可观测性系统设计]] - 完整设计方案

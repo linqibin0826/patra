@@ -952,6 +952,11 @@ public class MeshImportOrchestrator {
 - [RED Method](https://grafana.com/blog/2018/08/02/the-red-method-how-to-instrument-your-services/)
 - [USE Method](https://www.brendangregg.com/usemethod.html)
 
+## 相关设计文档
+
+- [[designs/observability/02-architecture|设计文档：架构设计]] - 整体架构、数据流
+- [[designs/observability/03-starter-module|设计文档：Starter 模块]] - Micrometer 配置、MeterFilter
+
 ---
 
 > **下一章**：[[03-logs|第三章：Logs（日志）]] - 学习结构化日志、Loki 查询语言 LogQL、日志与 Trace 关联

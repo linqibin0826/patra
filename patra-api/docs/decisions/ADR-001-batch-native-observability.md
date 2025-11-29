@@ -6,6 +6,7 @@ status: accepted
 date_decided: 2025-11-26
 deciders: [Qibin Lin]
 technical_debt: none
+related_designs: [designs/observability/_MOC]
 tags:
   - decision/architecture
   - tech/spring-batch
@@ -68,6 +69,13 @@ tags:
 **缺点**：
 - 复杂度增加，需要维护两套代码
 - 可能导致指标重复
+
+## 相关设计文档
+
+本决策是整体可观测性方案的一部分：
+
+- [[designs/observability/_MOC|可观测性系统设计]] - 完整的可观测性架构设计
+- [[decisions/ADR-005-adopt-opentelemetry-grafana-stack-for-observability|ADR-005]] - 采用 OTel + Grafana Stack 的技术选型决策
 
 ## 参考资料
 

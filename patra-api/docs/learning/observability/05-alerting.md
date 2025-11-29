@@ -1140,6 +1140,11 @@ annotations:
 - [Google SRE: Alerting on SLOs](https://sre.google/workbook/alerting-on-slos/)
 - [PagerDuty Incident Response Guide](https://response.pagerduty.com/)
 
+## 相关设计文档
+
+- [[designs/observability/06-grafana-visualization|设计文档：Grafana 可视化]] - 告警规则配置、Alertmanager 集成
+- [[designs/observability/05-infrastructure|设计文档：基础设施]] - Alertmanager 部署配置
+
 ---
 
 > **下一章**：[[06-grafana|第六章：Grafana 可视化]] - 学习数据源配置、仪表盘设计、统一查询界面

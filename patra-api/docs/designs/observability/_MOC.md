@@ -4,7 +4,8 @@ type: design
 status: draft
 date: 2025-11-29
 module: patra-spring-boot-starter-observability
-related_adrs: [ADR-005]
+related_adrs: [ADR-005, ADR-001]
+related_learning: [learning/observability/_MOC]
 tags:
   - design/infrastructure
   - tech/opentelemetry
