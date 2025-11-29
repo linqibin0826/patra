@@ -6,7 +6,7 @@ version: "3.9"
 include:
   - docker-compose.core.yaml          # MySQL, Redis, Nacos
   - docker-compose.storage.yaml       # MinIO (Object Storage)
-  - docker-compose.observability.yaml # Elasticsearch, SkyWalking
+  - docker-compose.observability.yaml # OpenTelemetry + Grafana Stack
   - docker-compose.jobs.yaml          # XXL-Job, RocketMQ
 
 # This file serves as the entry point for full development environment

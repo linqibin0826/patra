@@ -14,21 +14,21 @@ tags:
 
 ## 一句话描述
 
-从 SkyWalking 迁移到 OpenTelemetry + Grafana Stack，构建统一的、厂商中立的可观测性平台。
+基于 OpenTelemetry + Grafana Stack，构建统一的、厂商中立的可观测性平台。
 
 ## 问题陈述
 
-### 现状分析
+### 设计目标
 
-当前项目使用 SkyWalking 作为可观测性解决方案，存在以下问题：
+项目采用 OpenTelemetry 作为可观测性解决方案，具有以下优势：
 
-| 问题 | 影响 | 严重程度 |
-|------|------|----------|
-| **厂商锁定** | 依赖 SkyWalking 专有 SDK（`apm-toolkit-*`），难以迁移到其他平台 | 高 |
-| **标准化程度低** | 不符合 OpenTelemetry 行业标准，与云厂商生态不兼容 | 高 |
-| **功能分离** | Metrics 与 Tracing 独立处理，缺乏信号关联能力 | 中 |
-| **日志未集成** | 仅有配置属性定义，无实际日志采集实现 | 中 |
-| **国际影响力下降** | 社区活跃度集中在中国，企业采用趋势减弱 | 低 |
+| 优势 | 描述 |
+|------|------|
+| **厂商中立** | 基于 CNCF 开放标准，避免厂商锁定 |
+| **行业标准** | 符合 OpenTelemetry 规范，与云厂商生态完全兼容 |
+| **信号统一** | Metrics、Logs、Traces 三信号通过 OTLP 统一采集和关联 |
+| **零代码侵入** | 通过 OTel Java Agent 实现自动埋点，业务代码无感知 |
+| **生态活跃** | CNCF 孵化项目，全球社区活跃 |
 
 ### 核心需求
 
@@ -74,7 +74,7 @@ mindmap
 
 | 目标 | 描述 | 验收标准 |
 |------|------|----------|
-| **G1: 完全移除 SkyWalking** | 删除所有 `apm-toolkit-*` 依赖 | 构建无 SkyWalking 相关依赖 |
+| **G1: 厂商中立** | 基于 OpenTelemetry 开放标准 | 无厂商专有 SDK 依赖 |
 | **G2: 三信号统一采集** | Metrics/Logs/Traces 通过 OTLP 统一上报 | 三种信号均可在 Grafana 查询 |
 | **G3: 本地一键启动** | Docker Compose 启动完整可观测性栈 | 单命令 `docker compose up` 完成部署 |
 | **G4: 信号关联** | Traces ↔ Logs ↔ Metrics 互相跳转 | 从 Trace 跳转到对应日志 |

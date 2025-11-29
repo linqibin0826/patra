@@ -1,5 +1,5 @@
 # 可观测性服务 - OpenTelemetry + Grafana Stack
-# 替换原有的 SkyWalking 方案
+# 统一的 Metrics/Logs/Traces 采集平台
 #
 # 版本矩阵（2025-11-29）:
 # - OTel Collector: 0.140.1

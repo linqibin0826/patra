@@ -215,7 +215,7 @@ public class ExternalApiAdapter implements ExternalApiPort {
 - `@DistributedLock` 声明式注解
 - SpEL 表达式支持（动态生成锁键）
 - 多种锁类型（可重入锁、公平锁、读写锁）
-- 可观测性集成（SkyWalking、Micrometer）
+- 可观测性集成（OpenTelemetry、Micrometer）
 
 **使用示例**:
 ```java
@@ -279,9 +279,9 @@ public class SomeService {
 **适用场景**: 可选依赖（增强可观测性）
 
 **核心功能**:
-- **Metrics**（指标）：Micrometer + Prometheus/SkyWalking
-- **Tracing**（追踪）：SkyWalking APM Toolkit
-- **Logging**（日志）：Logback + SkyWalking 插件
+- **Metrics**（指标）：Micrometer + Prometheus/OTLP
+- **Tracing**（追踪）：OpenTelemetry + Micrometer Bridge
+- **Logging**（日志）：Logback + OTLP Appender
 - **敏感数据脱敏**（P0 级别）
 - **插件式架构**：通过扩展点接口集成（`ResolutionInterceptor`、`ClientInterceptor`、`JobExecutionListener`）
 

@@ -40,7 +40,7 @@ $PROJECT_ROOT/logs/
 │                        │    │              │                                      │                      │                                  └─ 日志消息
 │                        │    │              │                                      │                      └─ Logger类名 (最多40字符)
 │                        │    │              │                                      └─ 线程名
-│                        │    │              └─ SkyWalking 追踪上下文 (traceId, segmentId, spanId)
+│                        │    │              └─ OpenTelemetry 追踪上下文 (traceId, segmentId, spanId)
 │                        │    └─ 应用名称
 │                        └─ 日志级别
 └─ 时间戳
@@ -87,7 +87,7 @@ grep ERROR logs/patra-ingest.log | \
   sort | uniq -c
 ```
 
-### SkyWalking 追踪关联
+### OpenTelemetry 追踪关联
 
 ```bash
 # 1. 通过traceId追踪完整请求链路

@@ -261,8 +261,7 @@ patra-spring-boot-starter-rest-client
 ├── patra-spring-boot-starter-core  # 核心 starter
 ├── spring-boot-autoconfigure  # 自动配置支持
 ├── spring-web                 # RestClient
-├── spring-retry (optional)    # 重试支持
-└── apm-toolkit-trace          # SkyWalking 追踪
+└── spring-retry (optional)    # 重试支持
 ```
 
 ## 与可观测性集成

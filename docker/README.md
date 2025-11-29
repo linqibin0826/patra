@@ -71,13 +71,15 @@ docker/
 **何时使用**: 使用文件上传功能时需要。包含自动创建存储桶 (`dev-ingest`),具有私有访问策略。
 
 ### 可观测性服务 (`docker-compose.observability.yaml`)
-用于分布式追踪的可选监控和 APM 栈:
+基于 OpenTelemetry + Grafana Stack 的可观测性平台:
 
-- **Elasticsearch** (端口 9200): 追踪数据的存储后端
-- **SkyWalking OAP** (端口 11800, 12800): APM 服务器
-- **SkyWalking UI** (端口 8088): Web 仪表板
+- **OTel Collector** (端口 4317, 4318): OTLP 接收器和路由
+- **Prometheus** (端口 9090): 指标存储和查询
+- **Loki** (端口 3100): 日志聚合
+- **Tempo** (端口 3200): 分布式链路追踪
+- **Grafana** (端口 3000): 统一可视化仪表盘
 
-**何时使用**: 在调试分布式追踪、性能问题或集成测试时启用。可以禁用以节省资源 (~2GB RAM)。
+**何时使用**: 在调试分布式追踪、性能问题或集成测试时启用。
 
 ### 任务服务 (`docker-compose.jobs.yaml`)
 用于批处理和事件驱动功能的异步工作负载服务:
@@ -270,7 +272,7 @@ docker compose -f docker-compose.dev.yaml down -v
 ### 重启单个服务
 ```bash
 docker compose -f docker-compose.dev.yaml restart mysql
-docker compose -f docker-compose.observability.yaml restart skywalking-oap
+docker compose -f docker-compose.observability.yaml restart otel-collector
 ```
 
 ---
@@ -287,8 +289,10 @@ docker compose -f docker-compose.observability.yaml restart skywalking-oap
 - **MinIO 控制台**: http://localhost:19001 (minioadmin/minioadmin123)
 
 ### 可观测性服务
-- **Elasticsearch**: http://localhost:9200
-- **SkyWalking UI**: http://localhost:8088
+- **Grafana**: http://localhost:3000
+- **Prometheus**: http://localhost:9090
+- **Loki**: http://localhost:3100
+- **Tempo**: http://localhost:3200
 
 ### 任务服务
 - **XXL-Job Admin**: http://localhost:7070/xxl-job-admin (admin/123456)
@@ -483,13 +487,13 @@ docker compose -f docker-compose.dev.yaml up -d
          │                    │             │
 ┌────────┴─────────┐  ┌──────┴────────┐  ┌┴────────────────────┐
 │ 任务服务          │  │ 可观测性       │  │ 存储服务            │
-│ - XXL-Job (MySQL)│  │ - ES          │  │ - MinIO             │
-│ - RocketMQ       │  │ - SkyWalking  │  │ (无依赖)            │
+│ - XXL-Job (MySQL)│  │ - OTel        │  │ - MinIO             │
+│ - RocketMQ       │  │ - Grafana     │  │ (无依赖)            │
 └──────────────────┘  └───────────────┘  └─────────────────────┘
 ```
 
 - **任务栈** 依赖 MySQL (用于 XXL-Job)
-- **可观测性栈** 有内部依赖 (SkyWalking → Elasticsearch)
+- **可观测性栈** 是自包含的 (Collector → Prometheus/Loki/Tempo → Grafana)
 - **存储栈** 是自包含的 (无外部依赖)
 - **RocketMQ** 服务是自包含的 (无外部依赖)
 
