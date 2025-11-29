@@ -1,8 +1,21 @@
 ---
+type: til
 date: 2025-11-29
-tags: [observability, metrics, logs, traces, alerting, grafana, opentelemetry, prometheus, loki, tempo]
+topics: [observability]
 learning_series: observability
 chapters_completed: [01, 02, 03, 04, 05, 06]
+tags:
+  - record/til
+  - tech/observability
+  - tech/metrics
+  - tech/logs
+  - tech/traces
+  - tech/alerting
+  - tech/grafana
+  - tech/opentelemetry
+  - tech/prometheus
+  - tech/loki
+  - tech/tempo
 ---
 
 # 今日学习：可观测性系列完结
@@ -73,24 +86,37 @@ chapters_completed: [01, 02, 03, 04, 05, 06]
 ## 技术栈总结
 
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#2d2d2d',
+    'primaryTextColor': '#ffffff',
+    'lineColor': '#888888',
+    'edgeLabelBackground': '#333333'
+  }
+}}%%
 flowchart TD
-    subgraph "采集层"
+    subgraph collection ["采集层"]
+        direction TB
         APP["Spring Boot 应用"]
         AGENT["OTel Java Agent"]
         MIC["Micrometer"]
     end
 
-    subgraph "处理层"
+    subgraph processing ["处理层"]
+        direction TB
         COLL["OTel Collector"]
     end
 
-    subgraph "存储层"
+    subgraph storage ["存储层"]
+        direction TB
         PROM["Prometheus<br/>Metrics"]
         LOKI["Loki<br/>Logs"]
         TEMPO["Tempo<br/>Traces"]
     end
 
-    subgraph "展示层"
+    subgraph visualization ["展示层"]
+        direction TB
         GRAF["Grafana"]
         AM["Alertmanager"]
     end
@@ -101,8 +127,10 @@ flowchart TD
     PROM & LOKI & TEMPO --> GRAF
     PROM --> AM
 
-    style GRAF fill:#f8a100,stroke:#c47f00
-    style COLL fill:#4dc9ff,stroke:#0097cc
+    classDef grafana fill:#f8a100,stroke:#c47f00,color:#ffffff;
+    classDef collector fill:#4dc9ff,stroke:#0097cc,color:#ffffff;
+    class GRAF grafana;
+    class COLL collector;
 ```
 
 ## 项目应用
