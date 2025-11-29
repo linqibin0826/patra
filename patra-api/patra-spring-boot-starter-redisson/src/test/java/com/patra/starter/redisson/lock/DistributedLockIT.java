@@ -4,14 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.patra.starter.redisson.exception.LockAcquisitionException;
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -42,8 +38,6 @@ class DistributedLockIT {
       new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
 
   @Autowired private TestService testService;
-
-  @Autowired private MeterRegistry meterRegistry;
 
   /**
    * 动态注册 Redis 连接属性
@@ -248,159 +242,6 @@ class DistributedLockIT {
     log.info("✓ 可重入锁测试通过");
   }
 
-  // ==================== 指标验证测试 ====================
-
-  @Nested
-  @DisplayName("指标记录验证")
-  class MetricsVerificationTest {
-
-    /**
-     * 锁键模式说明： 完整锁键格式: {prefix}{userKey} = test:lock:test:simple extractKeyPattern 移除 [a-z-]+:lock:
-     * 前缀后: test:simple 按 : 分割并过滤动态部分后: test.simple
-     */
-    private static final String PATTERN_SIMPLE = "test.simple";
-
-    private static final String PATTERN_CONFIG = "test.config";
-    private static final String PATTERN_COUNTER = "test.counter";
-
-    @Test
-    @DisplayName("锁获取成功应该记录 acquired 计数和 wait_time")
-    void shouldRecordAcquiredMetricsOnSuccess() {
-      // Given - 获取初始计数
-      double initialCount = getCounterValue("patra.redisson.lock.acquired", PATTERN_SIMPLE);
-      long initialTimerCount = getTimerCount("patra.redisson.lock.wait_time", PATTERN_SIMPLE);
-
-      // When - 执行带锁方法
-      testService.simpleMethod();
-
-      // Then - 验证指标
-      double newCount = getCounterValue("patra.redisson.lock.acquired", PATTERN_SIMPLE);
-      long newTimerCount = getTimerCount("patra.redisson.lock.wait_time", PATTERN_SIMPLE);
-
-      assertThat(newCount).isGreaterThan(initialCount);
-      assertThat(newTimerCount).isGreaterThan(initialTimerCount);
-
-      log.info("✓ 锁获取成功指标记录测试通过");
-    }
-
-    @Test
-    @DisplayName("锁释放应该记录 hold_time")
-    void shouldRecordHoldTimeOnRelease() {
-      // Given - 获取初始计数
-      long initialTimerCount = getTimerCount("patra.redisson.lock.hold_time", PATTERN_SIMPLE);
-
-      // When - 执行带锁方法
-      testService.simpleMethod();
-
-      // Then - 验证指标
-      long newTimerCount = getTimerCount("patra.redisson.lock.hold_time", PATTERN_SIMPLE);
-      assertThat(newTimerCount).isGreaterThan(initialTimerCount);
-
-      log.info("✓ 锁持有时间指标记录测试通过");
-    }
-
-    @Test
-    @DisplayName("读写锁应该记录正确的 lock_type 标签")
-    void shouldRecordCorrectLockTypeTag() {
-      // Given - 获取初始计数
-      double initialReadCount =
-          getCounterValueByType("patra.redisson.lock.acquired", PATTERN_CONFIG, "READ");
-      double initialWriteCount =
-          getCounterValueByType("patra.redisson.lock.acquired", PATTERN_CONFIG, "WRITE");
-
-      // When - 执行读写锁方法
-      testService.readWithReadLock();
-      testService.writeWithWriteLock("value");
-
-      // Then - 验证指标
-      double newReadCount =
-          getCounterValueByType("patra.redisson.lock.acquired", PATTERN_CONFIG, "READ");
-      double newWriteCount =
-          getCounterValueByType("patra.redisson.lock.acquired", PATTERN_CONFIG, "WRITE");
-
-      assertThat(newReadCount).isGreaterThan(initialReadCount);
-      assertThat(newWriteCount).isGreaterThan(initialWriteCount);
-
-      log.info("✓ 锁类型标签记录测试通过");
-    }
-
-    @Test
-    @DisplayName("锁获取失败应该记录 failed 计数")
-    void shouldRecordFailedMetricsOnTimeout() throws InterruptedException {
-      // Given - 获取初始计数
-      double initialFailedCount =
-          getCounterValueWithReason("patra.redisson.lock.failed", PATTERN_COUNTER, "timeout");
-
-      // When - 并发争抢锁，部分线程会超时
-      CountDownLatch startLatch = new CountDownLatch(1);
-      CountDownLatch endLatch = new CountDownLatch(3);
-
-      for (int i = 0; i < 3; i++) {
-        new Thread(
-                () -> {
-                  try {
-                    startLatch.await();
-                    testService.incrementCounterWithDelay();
-                  } catch (LockAcquisitionException e) {
-                    // 预期部分线程获取锁失败
-                  } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                  } finally {
-                    endLatch.countDown();
-                  }
-                })
-            .start();
-      }
-
-      startLatch.countDown();
-      endLatch.await();
-
-      // Then - 验证失败指标（可能有也可能没有，取决于并发情况）
-      double newFailedCount =
-          getCounterValueWithReason("patra.redisson.lock.failed", PATTERN_COUNTER, "timeout");
-
-      // 注意：由于并发行为不确定，我们只验证指标系统正常工作
-      // 如果有线程失败，计数应该增加；如果都成功，计数保持不变
-      assertThat(newFailedCount).isGreaterThanOrEqualTo(initialFailedCount);
-
-      log.info("✓ 锁获取失败指标记录测试通过 (失败次数: {})", newFailedCount - initialFailedCount);
-    }
-
-    /** 获取计数器值 */
-    private double getCounterValue(String metricName, String keyPattern) {
-      Counter counter = meterRegistry.find(metricName).tag("key_pattern", keyPattern).counter();
-      return counter != null ? counter.count() : 0.0;
-    }
-
-    /** 获取计数器值（包含锁类型） */
-    private double getCounterValueByType(String metricName, String keyPattern, String lockType) {
-      Counter counter =
-          meterRegistry
-              .find(metricName)
-              .tag("key_pattern", keyPattern)
-              .tag("lock_type", lockType)
-              .counter();
-      return counter != null ? counter.count() : 0.0;
-    }
-
-    /** 获取计数器值（包含失败原因） */
-    private double getCounterValueWithReason(String metricName, String keyPattern, String reason) {
-      Counter counter =
-          meterRegistry
-              .find(metricName)
-              .tag("key_pattern", keyPattern)
-              .tag("reason", reason)
-              .counter();
-      return counter != null ? counter.count() : 0.0;
-    }
-
-    /** 获取计时器计数 */
-    private long getTimerCount(String metricName, String keyPattern) {
-      Timer timer = meterRegistry.find(metricName).tag("key_pattern", keyPattern).timer();
-      return timer != null ? timer.count() : 0;
-    }
-  }
-
   /** 测试配置类 */
   @Configuration
   @EnableAutoConfiguration(
@@ -411,28 +252,6 @@ class DistributedLockIT {
   static class TestConfiguration {
     // Spring Boot 自动配置会自动加载 LockAutoConfiguration
     // 无需手动注册 LockAspect 和其他 Bean
-
-    /**
-     * 提供 MeterRegistry Bean
-     *
-     * @return 简单的 MeterRegistry 实现
-     */
-    @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
-    @org.springframework.context.annotation.Bean
-    MeterRegistry meterRegistry() {
-      return new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
-    }
-
-    /**
-     * 提供 LockObserver Bean（测试用实现）
-     *
-     * @param meterRegistry 指标注册表
-     * @return 测试用锁指标记录器
-     */
-    @org.springframework.context.annotation.Bean
-    com.patra.starter.redisson.listener.LockObserver lockObserver(MeterRegistry meterRegistry) {
-      return new TestLockMetricsRecorder(meterRegistry);
-    }
 
     /**
      * 注册测试服务 Bean

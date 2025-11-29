@@ -22,7 +22,7 @@ public class LockExecutor {
   /// Redisson 客户端
   private final RedissonClient redissonClient;
 
-  /// 锁观察者（可选，由 starter-observability 提供实现）
+  /// 锁观察者（可选）
   private final LockObserver lockObserver;
 
   /// 构造函数。
