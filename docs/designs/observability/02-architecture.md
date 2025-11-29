@@ -380,16 +380,13 @@ starter: patra-spring-boot-starter-observability {
     tracer: Tracer {class: port}
   }
 
-  # Handler/Filter 层
-  handler: Handler/Filter Layer {
+  # MeterFilter 层（ObservationHandler/Filter 已移除，由 OTel Agent 处理）
+  handler: MeterFilter Layer {
     class: layer
 
-    logging_h: LoggingObservationHandler
-    perf_h: PerformanceObservationHandler
-    sensitive_f: SensitiveDataObservationFilter
-    tags_f: CommonTagsObservationFilter
     cardinality_f: HighCardinalityMeterFilter
     naming_f: MetricNamingMeterFilter
+    tags_f: CommonTagsMeterFilter
   }
 
   # 适配器层（Adapters）
@@ -441,19 +438,18 @@ starter.core.observation -> external.spring: {style.stroke: "#64748b"; style.str
 | **Config** | `OtelExporterProperties` | OTLP 导出配置 | Spring Boot |
 | **Core** | `ObservationRegistry` | 观测注册中心 | Micrometer |
 | **Core** | `MeterRegistry` | 指标注册中心 | Micrometer |
-| **Handler** | `LoggingObservationHandler` | 日志记录 | SLF4J |
-| **Handler** | `PerformanceObservationHandler` | 慢操作检测 | Caffeine |
-| **Filter** | `SensitiveDataObservationFilter` | 敏感数据检测 | 无 |
-| **Filter** | `CommonTagsObservationFilter` | 公共标签注入 | 无 |
-| **Filter** | `HighCardinalityMeterFilter` | 高基数过滤 | 无 |
-| **Filter** | `MetricNamingMeterFilter` | 命名规范化 | 无 |
+| **MeterFilter** | `HighCardinalityMeterFilter` | 高基数过滤 | 无 |
+| **MeterFilter** | `MetricNamingMeterFilter` | 命名规范化 | 无 |
+| **MeterFilter** | `CommonTagsMeterFilter` | 公共标签注入 | 无 |
 | **Adapter** | OTel Bridge | Micrometer → OTel | OTel SDK |
 | **Adapter** | Prometheus Exporter | 指标暴露 | Micrometer |
 | **Adapter** | OTLP Exporter | 远程导出 | OTel SDK |
 | **AutoConfig** | `ObservabilityAutoConfiguration` | 核心配置 | Spring Boot |
-| **AutoConfig** | `MicrometerAutoConfiguration` | Filter/Handler 注册 | Micrometer |
+| **AutoConfig** | `MicrometerAutoConfiguration` | MeterFilter 注册 | Micrometer |
 | **AutoConfig** | `OtelAutoConfiguration` | OTel SDK 配置 | OTel SDK |
 | **AutoConfig** | `PrometheusAutoConfiguration` | Prometheus 配置 | Micrometer |
+
+> **注意**：ObservationHandler 和 ObservationFilter 已移除，Tracing 由 OTel Java Agent 自动处理。
 
 ## 网络拓扑
 
