@@ -41,6 +41,13 @@ GROUP BY module
 SORT module ASC
 ```
 
+## 模块索引
+
+| 模块 | 说明 |
+|------|------|
+| [[infrastructure/_MOC\|基础设施]] | 端口分配、网络拓扑、容器编排 |
+| [[observability/_MOC\|可观测性]] | 监控、追踪、日志 |
+
 ## 关联 ADR
 
 ```dataview
