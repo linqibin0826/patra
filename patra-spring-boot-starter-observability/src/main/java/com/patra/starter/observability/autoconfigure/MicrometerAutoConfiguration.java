@@ -2,12 +2,8 @@ package com.patra.starter.observability.autoconfigure;
 
 import com.patra.starter.observability.config.ObservabilityProperties;
 import com.patra.starter.observability.filter.CommonTagsMeterFilter;
-import com.patra.starter.observability.filter.CommonTagsObservationFilter;
 import com.patra.starter.observability.filter.HighCardinalityMeterFilter;
 import com.patra.starter.observability.filter.MetricNamingMeterFilter;
-import com.patra.starter.observability.filter.SensitiveDataObservationFilter;
-import com.patra.starter.observability.handler.LoggingObservationHandler;
-import com.patra.starter.observability.handler.PerformanceObservationHandler;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
 import org.slf4j.Logger;
@@ -24,12 +20,12 @@ import org.springframework.core.annotation.Order;
 ///
 /// 负责配置 Micrometer 相关组件：
 ///
-/// - MeterRegistry 配置
 /// - MeterFilter 注册（命名规范、公共标签、高基数过滤）
-/// - ObservationHandler 注册（日志、性能、指标）
-/// - ObservationFilter 注册（敏感数据脱敏、公共标签）
 ///
-/// 注意：具体的 Handler、Filter、MeterFilter 实现由其他配置类或任务阶段提供。
+/// 注意：
+///
+/// - Tracing 由 OTel Java Agent 自动处理，无需额外的 ObservationHandler
+/// - ObservationFilter 已移除（公共标签由 MeterFilter 统一处理）
 ///
 /// @author Jobs
 /// @since 1.0.0
@@ -54,118 +50,7 @@ public class MicrometerAutoConfiguration {
         properties.getMetrics().getPrefix().isEmpty() ? "无" : properties.getMetrics().getPrefix());
   }
 
-  // ==================== ObservationFilter（任务 2.4） ====================
-
-  /// 创建敏感数据脱敏过滤器。
-  ///
-  /// 功能：
-  ///
-  /// - 主动脱敏密码、Token、API Key、身份证号、手机号等敏感信息
-  /// - 支持自定义敏感数据模式
-  /// - 生产环境强制启用
-  ///
-  /// 注意：此方法仅创建 Bean，不手动注册到 ObservationRegistry，
-  /// 避免重复注册。ObservationRegistry 会自动收集并注册所有 ObservationFilter Bean。
-  ///
-  /// @param properties 可观测性配置属性
-  /// @return SensitiveDataObservationFilter 实例
-  @Bean
-  @Order(Ordered.HIGHEST_PRECEDENCE) // 最先执行，确保敏感数据在最早阶段被脱敏
-  @ConditionalOnProperty(
-      prefix = "patra.observability.security",
-      name = "mask-sensitive-data",
-      havingValue = "true",
-      matchIfMissing = true // 默认启用
-      )
-  public SensitiveDataObservationFilter sensitiveDataObservationFilter(
-      ObservabilityProperties properties) {
-    ObservabilityProperties.SecurityConfig config = properties.getSecurity();
-
-    // 生产环境强制启用
-    boolean enabled = config.isMaskSensitiveData();
-    if ("prod".equalsIgnoreCase(properties.getEnvironment())) {
-      enabled = true;
-      log.warn("⚠️ 生产环境检测到，敏感数据脱敏已强制启用");
-    }
-
-    return new SensitiveDataObservationFilter(enabled, config.getSensitivePatterns());
-  }
-
-  /// 创建公共标签过滤器。
-  ///
-  /// 功能：
-  ///
-  /// - 自动为所有 Observation 添加公共标签
-  /// - 添加系统标签：application、environment、region、cluster
-  /// - 添加用户自定义标签
-  ///
-  /// @param properties 可观测性配置属性
-  /// @return CommonTagsObservationFilter 实例
-  @Bean
-  @Order(Ordered.LOWEST_PRECEDENCE) // 最后执行，确保在其他 Filter 之后添加公共标签
-  public CommonTagsObservationFilter commonTagsObservationFilter(
-      ObservabilityProperties properties) {
-    return new CommonTagsObservationFilter(
-        properties.getApplicationName(),
-        properties.getEnvironment(),
-        properties.getRegion(),
-        properties.getCluster(),
-        properties.getMetrics().getCommonTags());
-  }
-
-  // ==================== ObservationHandler（任务 2.5） ====================
-
-  /// 创建日志观测处理器。
-  ///
-  /// 功能：
-  ///
-  /// - 记录 Observation 生命周期事件到日志
-  /// - 支持可配置的日志级别（DEBUG、INFO、WARN、ERROR）
-  /// - 用于开发环境调试和生产环境审计
-  ///
-  /// @param properties 可观测性配置属性
-  /// @return LoggingObservationHandler 实例
-  @Bean
-  @ConditionalOnProperty(
-      prefix = "patra.observability.handlers.logging",
-      name = "enabled",
-      havingValue = "true",
-      matchIfMissing = true // 默认启用
-      )
-  public LoggingObservationHandler loggingObservationHandler(ObservabilityProperties properties) {
-    ObservabilityProperties.LoggingHandlerConfig config = properties.getHandlers().getLogging();
-    return new LoggingObservationHandler(config.getLogLevel());
-  }
-
-  /// 创建性能观测处理器。
-  ///
-  /// 功能：
-  ///
-  /// - 记录 Observation 执行时间
-  /// - 检测慢操作并记录警告日志
-  /// - 使用 Caffeine Cache 防止内存泄漏
-  ///
-  /// @param properties 可观测性配置属性
-  /// @return PerformanceObservationHandler 实例
-  @Bean
-  @ConditionalOnProperty(
-      prefix = "patra.observability.handlers.performance",
-      name = "enabled",
-      havingValue = "true",
-      matchIfMissing = true // 默认启用
-      )
-  public PerformanceObservationHandler performanceObservationHandler(
-      ObservabilityProperties properties) {
-    ObservabilityProperties.PerformanceHandlerConfig config =
-        properties.getHandlers().getPerformance();
-    return new PerformanceObservationHandler(config.getSlowThreshold());
-  }
-
-  // 注意：不实施 MetricsObservationHandler
-  // 理由：Spring Boot 已自动配置 DefaultMeterObservationHandler，自动将 Observation 转换为 Timer 指标
-  // 重复实现会导致指标重复收集，如需自定义指标逻辑，应通过 MeterFilter 实现
-
-  // ==================== MeterFilter（任务 2.6） ====================
+  // ==================== MeterFilter ====================
 
   /// 创建高基数标签过滤器。
   ///
