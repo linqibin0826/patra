@@ -52,6 +52,12 @@
             <artifactId>patra-spring-boot-starter-observability</artifactId>
         </dependency>
 
+        <!-- Prometheus Registry: 启用 /actuator/prometheus 端点供 Prometheus 抓取指标 -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
         <!-- 测试依赖 -->
         <dependency>
             <groupId>com.patra</groupId>
