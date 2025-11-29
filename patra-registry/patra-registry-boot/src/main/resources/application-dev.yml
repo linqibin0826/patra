@@ -21,19 +21,13 @@ spring:
       url: redis://localhost:16379
 
 # 可观测性配置
+# 注意：Tracing 由 OTel Agent JVM 参数控制（-Dotel.* 参数）
+# 以下配置仅控制 Micrometer Metrics 和 Logging Handler
 patra:
   observability:
     enabled: true
     application-name: ${spring.application.name}
     environment: dev
-    exporter:
-      enabled: true
-      endpoint: http://localhost:4317
-      timeout: 10s
-      compression: gzip
-    tracing:
-      enabled: true
-      sampling-rate: 1.0
     logging:
       enabled: true
       include-trace-id: true

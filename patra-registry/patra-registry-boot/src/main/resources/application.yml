@@ -88,3 +88,18 @@ logging:
   file:
     # Centralized log directory in project root
     path: ${PATRA_LOG_DIR:/Users/linqibin/Desktop/Patra-api/logs}
+
+# ========================================
+# Actuator & Management Endpoints
+# ========================================
+management:
+  endpoints:
+    web:
+      exposure:
+        # 暴露 health 和 prometheus 端点供监控系统抓取
+        include: health,prometheus
+  prometheus:
+    metrics:
+      export:
+        # 启用 Prometheus 指标导出
+        enabled: true
