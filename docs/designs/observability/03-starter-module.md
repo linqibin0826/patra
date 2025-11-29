@@ -154,32 +154,22 @@ public static class OtlpExporterConfig {
 
 **修改内容：**
 
-新增 Micrometer → OpenTelemetry Bridge 配置：
+新增 Micrometer → OpenTelemetry Bridge 依赖即可，Spring Boot 3.2+ 会自动配置：
 
-```java
-@Configuration(proxyBeanMethods = false)
-@ConditionalOnClass(OpenTelemetry.class)
-@ConditionalOnProperty(prefix = "patra.observability", name = "enabled", havingValue = "true", matchIfMissing = true)
-public class MicrometerAutoConfiguration {
-
-    // ... 现有代码保持不变 ...
-
-    /// 配置 Micrometer Tracing Bridge。
-    ///
-    /// 将 Micrometer Observation API 桥接到 OpenTelemetry Tracer。
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnClass(name = "io.micrometer.tracing.otel.bridge.OtelTracer")
-    public io.micrometer.tracing.Tracer micrometerTracer(OpenTelemetry openTelemetry) {
-        var otelTracer = openTelemetry.getTracer("patra-observability");
-        return new OtelTracer(
-            otelTracer,
-            new OtelCurrentTraceContext(),
-            event -> { }  // Event publisher
-        );
-    }
-}
+```xml
+<!-- pom.xml 添加依赖 -->
+<dependency>
+    <groupId>io.micrometer</groupId>
+    <artifactId>micrometer-tracing-bridge-otel</artifactId>
+</dependency>
 ```
+
+> [!note] Spring Boot 自动配置
+> Spring Boot 3.2+ 引入 `micrometer-tracing-bridge-otel` 依赖后，会自动配置：
+> - `io.micrometer.tracing.Tracer`（桥接 OpenTelemetry Tracer）
+> - `OtelCurrentTraceContext`（追踪上下文管理）
+>
+> 无需手动创建 Bean，符合"约定优于配置"原则。
 
 ## 需要新增的组件
 
@@ -193,14 +183,20 @@ public class MicrometerAutoConfiguration {
 package com.patra.starter.observability.autoconfigure;
 
 import com.patra.starter.observability.config.ObservabilityProperties;
+import com.patra.starter.observability.config.ObservabilityProperties.OtlpExporterConfig;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.exporter.otlp.logs.OtlpGrpcLogRecordExporter;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.logs.SdkLoggerProvider;
+import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
-import io.opentelemetry.semconv.ResourceAttributes;
+import io.opentelemetry.semconv.ServiceAttributes;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -211,12 +207,12 @@ import org.springframework.context.annotation.Bean;
 ///
 /// 提供以下功能：
 /// - 配置 OpenTelemetry Resource（服务标识）
-/// - 配置 OTLP Span Exporter
-/// - 配置 TracerProvider
+/// - 配置 OTLP Span/Log Exporter
+/// - 配置 TracerProvider 和 LoggerProvider
 ///
 /// @author Jobs
 /// @since 1.0.0
-@AutoConfiguration
+@AutoConfiguration(after = MicrometerAutoConfiguration.class)
 @ConditionalOnClass(OpenTelemetry.class)
 @ConditionalOnProperty(
     prefix = "patra.observability.exporter",
@@ -231,65 +227,112 @@ public class OtelAutoConfiguration {
     /// Resource 包含服务元数据，用于标识遥测数据来源。
     @Bean
     @ConditionalOnMissingBean
-    public Resource otelResource(ObservabilityProperties properties) {
+    public Resource otelResource(
+            @Value("${spring.application.name:unknown}") String applicationName,
+            ObservabilityProperties properties) {
+        String serviceName = properties.getApplicationName() != null
+            ? properties.getApplicationName()
+            : applicationName;
+
         return Resource.getDefault().merge(
-            Resource.builder()
-                .put(ResourceAttributes.SERVICE_NAME, properties.getApplicationName())
-                .put(ResourceAttributes.SERVICE_VERSION, "1.0.0")
-                .put(ResourceAttributes.DEPLOYMENT_ENVIRONMENT, properties.getEnvironment())
-                .build()
-        );
+            Resource.create(
+                Attributes.builder()
+                    .put(ServiceAttributes.SERVICE_NAME, serviceName)
+                    .put(ServiceAttributes.SERVICE_VERSION, "0.1.0-SNAPSHOT")
+                    .put("service.environment", properties.getEnvironment())
+                    .put("service.cluster", properties.getCluster())
+                    .build()));
     }
 
     /// 创建 OTLP Span Exporter。
-    ///
-    /// 配置 Trace 数据导出到 OpenTelemetry Collector。
     @Bean
     @ConditionalOnMissingBean
-    public OtlpGrpcSpanExporter otlpSpanExporter(ObservabilityProperties properties) {
-        var exporterConfig = properties.getExporter();
-        return OtlpGrpcSpanExporter.builder()
-            .setEndpoint(exporterConfig.getEndpoint())
-            .setTimeout(exporterConfig.getTimeout())
-            .setCompression(exporterConfig.getCompression().name().toLowerCase())
-            .build();
+    public OtlpGrpcSpanExporter otlpGrpcSpanExporter(ObservabilityProperties properties) {
+        OtlpExporterConfig config = properties.getExporter();
+        var builder = OtlpGrpcSpanExporter.builder()
+            .setEndpoint(config.getEndpoint())
+            .setTimeout(config.getTimeout().toMillis(), TimeUnit.MILLISECONDS);
+
+        if (config.getCompression() == OtlpExporterConfig.Compression.GZIP) {
+            builder.setCompression("gzip");
+        }
+        config.getHeaders().forEach(builder::addHeader);
+        return builder.build();
+    }
+
+    /// 创建 OTLP Log Exporter（日志启用时）。
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "patra.observability.logging", name = "enabled",
+        havingValue = "true", matchIfMissing = true)
+    public OtlpGrpcLogRecordExporter otlpGrpcLogRecordExporter(ObservabilityProperties properties) {
+        OtlpExporterConfig config = properties.getExporter();
+        var builder = OtlpGrpcLogRecordExporter.builder()
+            .setEndpoint(config.getEndpoint())
+            .setTimeout(config.getTimeout().toMillis(), TimeUnit.MILLISECONDS);
+
+        if (config.getCompression() == OtlpExporterConfig.Compression.GZIP) {
+            builder.setCompression("gzip");
+        }
+        config.getHeaders().forEach(builder::addHeader);
+        return builder.build();
     }
 
     /// 创建 TracerProvider。
-    ///
-    /// 配置 Batch 处理器以优化性能。
     @Bean
     @ConditionalOnMissingBean
-    public SdkTracerProvider tracerProvider(
-            Resource resource,
-            OtlpGrpcSpanExporter spanExporter) {
+    public SdkTracerProvider sdkTracerProvider(Resource resource, OtlpGrpcSpanExporter exporter) {
         return SdkTracerProvider.builder()
             .setResource(resource)
-            .addSpanProcessor(BatchSpanProcessor.builder(spanExporter).build())
+            .addSpanProcessor(BatchSpanProcessor.builder(exporter).build())
+            .build();
+    }
+
+    /// 创建 LoggerProvider（日志启用时）。
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "patra.observability.logging", name = "enabled",
+        havingValue = "true", matchIfMissing = true)
+    public SdkLoggerProvider sdkLoggerProvider(Resource resource, OtlpGrpcLogRecordExporter logExporter) {
+        return SdkLoggerProvider.builder()
+            .setResource(resource)
+            .addLogRecordProcessor(BatchLogRecordProcessor.builder(logExporter).build())
             .build();
     }
 
     /// 创建 OpenTelemetry 实例。
     ///
-    /// 这是 OpenTelemetry API 的入口点。
+    /// 整合 TracerProvider 和 LoggerProvider，提供统一的遥测入口。
     @Bean
     @ConditionalOnMissingBean
-    public OpenTelemetry openTelemetry(SdkTracerProvider tracerProvider) {
-        return OpenTelemetrySdk.builder()
-            .setTracerProvider(tracerProvider)
-            .buildAndRegisterGlobal();
+    public OpenTelemetry openTelemetry(
+            SdkTracerProvider tracerProvider,
+            ObjectProvider<SdkLoggerProvider> loggerProviderProvider) {
+        SdkLoggerProvider loggerProvider = loggerProviderProvider.getIfAvailable();
+
+        var builder = OpenTelemetrySdk.builder()
+            .setTracerProvider(tracerProvider);
+
+        if (loggerProvider != null) {
+            builder.setLoggerProvider(loggerProvider);
+        }
+        return builder.build();
     }
 
-    /// 创建 Tracer。
-    ///
-    /// 用于手动创建 Span（一般不需要，Agent 自动处理）。
+    /// 创建 Tracer Bean（用于手动创建 Span）。
     @Bean
     @ConditionalOnMissingBean
     public Tracer otelTracer(OpenTelemetry openTelemetry) {
-        return openTelemetry.getTracer("patra-observability");
+        return openTelemetry.getTracer("patra-observability", "0.1.0-SNAPSHOT");
     }
 }
 ```
+
+> [!important] 关键实现细节
+> 1. **`ServiceAttributes` 替代 `ResourceAttributes`**：后者已被 OTel 标记为废弃
+> 2. **显式加载顺序**：`@AutoConfiguration(after = MicrometerAutoConfiguration.class)` 确保 Micrometer 先初始化
+> 3. **无全局注册**：使用 `.build()` 而非 `.buildAndRegisterGlobal()`，避免全局状态污染
+> 4. **可选日志导出**：通过 `ObjectProvider<SdkLoggerProvider>` 优雅处理日志禁用场景
 
 ### OtlpLogbackAppender 配置
 
