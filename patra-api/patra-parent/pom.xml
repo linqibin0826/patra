@@ -31,7 +31,6 @@
     <guava.version>31.1-jre</guava.version>
     <okio.version>3.6.0</okio.version>
     <resilience4j.version>2.2.0</resilience4j.version>
-    <skywalking.version>9.5.0</skywalking.version>
     <!-- OpenTelemetry Logback Appender（与 OTel Agent 版本对齐） -->
     <opentelemetry-logback-appender.version>2.22.0-alpha</opentelemetry-logback-appender.version>
     <aws.sdk.version>2.25.36</aws.sdk.version>
@@ -324,19 +323,6 @@
         <version>${okio.version}</version>
       </dependency>
 
-      <!-- SkyWalking APM Toolkit -->
-      <dependency>
-        <groupId>org.apache.skywalking</groupId>
-        <artifactId>apm-toolkit-logback-1.x</artifactId>
-        <version>${skywalking.version}</version>
-      </dependency>
-
-      <dependency>
-        <groupId>org.apache.skywalking</groupId>
-        <artifactId>apm-toolkit-trace</artifactId>
-        <version>${skywalking.version}</version>
-      </dependency>
-
       <!-- OpenTelemetry Logback Appender（日志集成，与 OTel Agent 版本对齐） -->
       <dependency>
         <groupId>io.opentelemetry.instrumentation</groupId>
@@ -551,13 +537,19 @@
           </executions>
         </plugin>
 
-        <!-- Spring Boot Maven Plugin - centralized JVM arguments -->
+        <!-- Spring Boot Maven Plugin - centralized JVM arguments with OTel Java Agent -->
         <plugin>
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-maven-plugin</artifactId>
           <version>${spring-boot.version}</version>
           <configuration>
-            <jvmArguments>-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8</jvmArguments>
+            <jvmArguments>
+              -javaagent:${maven.multiModuleProjectDirectory}/docker/opentelemetry-javaagent.jar
+              -Dotel.service.name=${project.artifactId}
+              -Dotel.exporter.otlp.endpoint=http://localhost:4317
+              -Dotel.exporter.otlp.protocol=grpc
+              -Dotel.traces.exporter=otlp
+            </jvmArguments>
           </configuration>
         </plugin>
         <!-- Maven Jar Plugin - for test-jar goal -->

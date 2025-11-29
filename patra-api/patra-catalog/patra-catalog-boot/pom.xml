@@ -36,7 +36,7 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- Patra Observability Starter (包含 Prometheus + SkyWalking + Tracing + Logging) -->
+        <!-- Patra Observability Starter (包含 OpenTelemetry + Prometheus + Tracing + Logging) -->
         <dependency>
             <groupId>com.patra</groupId>
             <artifactId>patra-spring-boot-starter-observability</artifactId>

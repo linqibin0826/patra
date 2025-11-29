@@ -21,90 +21,41 @@ tags:
 patra-spring-boot-starter-observability/
 ├── src/main/java/com/patra/starter/observability/
 │   ├── autoconfigure/
-│   │   ├── ObservabilityAutoConfiguration.java      ✅ 保留
-│   │   ├── MicrometerAutoConfiguration.java         ✅ 保留（修改）
-│   │   ├── SkyWalkingMeterAutoConfiguration.java    ❌ 删除
-│   │   ├── PrometheusAutoConfiguration.java         ✅ 保留
-│   │   └── ObservationInterceptorsAutoConfiguration.java  ✅ 保留
+│   │   ├── ObservabilityAutoConfiguration.java      # 核心配置
+│   │   ├── MicrometerAutoConfiguration.java         # Micrometer 配置
+│   │   ├── PrometheusAutoConfiguration.java         # Prometheus Registry
+│   │   └── ObservationInterceptorsAutoConfiguration.java  # 拦截器配置
 │   ├── config/
-│   │   └── ObservabilityProperties.java             ✅ 保留（修改）
+│   │   └── ObservabilityProperties.java             # 配置属性
 │   ├── handler/
-│   │   ├── LoggingObservationHandler.java           ✅ 保留
-│   │   └── PerformanceObservationHandler.java       ✅ 保留
+│   │   ├── LoggingObservationHandler.java           # 日志处理器
+│   │   └── PerformanceObservationHandler.java       # 性能处理器
 │   ├── filter/
-│   │   ├── SensitiveDataObservationFilter.java      ✅ 保留
-│   │   ├── CommonTagsObservationFilter.java         ✅ 保留
-│   │   ├── HighCardinalityMeterFilter.java          ✅ 保留
-│   │   ├── MetricNamingMeterFilter.java             ✅ 保留
-│   │   └── CommonTagsMeterFilter.java               ✅ 保留
+│   │   ├── SensitiveDataObservationFilter.java      # 敏感数据脱敏
+│   │   ├── CommonTagsObservationFilter.java         # 通用标签
+│   │   ├── HighCardinalityMeterFilter.java          # 高基数过滤
+│   │   ├── MetricNamingMeterFilter.java             # 指标命名
+│   │   └── CommonTagsMeterFilter.java               # 通用标签
 │   └── interceptor/
-│       ├── RestClientObservationInterceptor.java    ✅ 保留
-│       ├── ObservationResolutionInterceptor.java    ✅ 保留
-│       └── redisson/
-│           └── LockMetricsRecorder.java             ✅ 保留
-└── pom.xml                                          ✅ 修改
+│       └── ObservationResolutionInterceptor.java    # 观测拦截器
+└── pom.xml
 ```
 
 ### 组件状态汇总
 
-| 类别 | 保留 | 修改 | 删除 | 新增 |
-|------|------|------|------|------|
-| AutoConfiguration | 4 | 1 | 1 | 1 |
-| Properties | 1 | 1 | 0 | 1 |
-| Handler | 2 | 0 | 0 | 0 |
-| Filter | 5 | 0 | 0 | 0 |
-| Interceptor | 3 | 0 | 0 | 0 |
+| 类别 | 组件数 | 说明 |
+|------|--------|------|
+| AutoConfiguration | 4 | 核心、Micrometer、Prometheus、拦截器 |
+| Properties | 1 | ObservabilityProperties |
+| Handler | 2 | 日志、性能处理器 |
+| Filter | 5 | 观测和指标过滤器 |
+| Interceptor | 1 | 观测拦截器 |
 
-## 需要删除的组件
-
-### SkyWalkingMeterAutoConfiguration
-
-**文件路径：** `autoconfigure/SkyWalkingMeterAutoConfiguration.java`
-
-**删除原因：**
-- 依赖 `apm-toolkit-micrometer-registry`（SkyWalking 专有）
-- 与 OpenTelemetry 标准不兼容
-- 功能被 OTLP Exporter 替代
-
-**影响分析：**
-- 无其他组件依赖此类
-- 移除后指标将通过 OTLP 导出
-
-### SkyWalking 依赖
-
-**需要从 `pom.xml` 移除：**
-
-```xml
-<!-- ❌ 删除 -->
-<dependency>
-    <groupId>org.apache.skywalking</groupId>
-    <artifactId>apm-toolkit-micrometer-registry</artifactId>
-</dependency>
-<dependency>
-    <groupId>org.apache.skywalking</groupId>
-    <artifactId>apm-toolkit-trace</artifactId>
-</dependency>
-```
-
-## 需要修改的组件
+## 核心配置
 
 ### ObservabilityProperties
 
-**修改内容：**
-
-1. **移除 SkyWalking 配置**
-
-```java
-// ❌ 删除
-private SkyWalkingMeterConfig skywalking = new SkyWalkingMeterConfig();
-
-public static class SkyWalkingMeterConfig {
-    private boolean enabled = true;
-    private String oapAddress = "skywalking-oap:11800";
-}
-```
-
-2. **新增 OTLP Exporter 配置**
+**OTLP Exporter 配置**
 
 ```java
 // ✅ 新增
@@ -140,15 +91,15 @@ public static class OtlpExporterConfig {
 }
 ```
 
-3. **配置属性映射**
+3. **配置属性说明**
 
-| 旧配置 | 新配置 | 说明 |
-|--------|--------|------|
-| `metrics.skywalking.enabled` | 删除 | 不再需要 |
-| `metrics.skywalking.oap-address` | `exporter.endpoint` | 统一端点 |
-| - | `exporter.protocol` | 新增协议选择 |
-| - | `exporter.timeout` | 新增超时配置 |
-| - | `exporter.compression` | 新增压缩配置 |
+| 配置 | 默认值 | 说明 |
+|------|--------|------|
+| `exporter.enabled` | `true` | 是否启用 OTLP 导出 |
+| `exporter.endpoint` | `http://localhost:4317` | OTLP Collector 端点 |
+| `exporter.protocol` | `grpc` | 传输协议（grpc/http） |
+| `exporter.timeout` | `10s` | 导出超时时间 |
+| `exporter.compression` | `gzip` | 压缩方式 |
 
 ### MicrometerAutoConfiguration
 
@@ -385,25 +336,7 @@ public class OtelAutoConfiguration {
         <optional>true</optional>
     </dependency>
 
-    <!-- ========== 删除依赖 ========== -->
-
-    <!-- ❌ 删除 SkyWalking Meter Registry -->
-    <!--
-    <dependency>
-        <groupId>org.apache.skywalking</groupId>
-        <artifactId>apm-toolkit-micrometer-registry</artifactId>
-    </dependency>
-    -->
-
-    <!-- ❌ 删除 SkyWalking Trace API -->
-    <!--
-    <dependency>
-        <groupId>org.apache.skywalking</groupId>
-        <artifactId>apm-toolkit-trace</artifactId>
-    </dependency>
-    -->
-
-    <!-- ========== 新增依赖 ========== -->
+    <!-- ========== OpenTelemetry 依赖 ========== -->
 
     <!-- ✅ OpenTelemetry API -->
     <dependency>
@@ -533,7 +466,7 @@ flowchart TD
         MIC_B[MeterFilter\nObservationFilter\nObservationHandler]
         OTEL_B[OpenTelemetry\nTracer\nSpanExporter]
         PROM_B[PrometheusMeterRegistry]
-        INTER_B[RestClientObservationInterceptor\nObservationResolutionInterceptor]
+        INTER_B[ObservationResolutionInterceptor]
     end
 
     OBS --> OBS_B

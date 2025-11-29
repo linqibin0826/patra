@@ -53,12 +53,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- SkyWalking APM Toolkit (already in core starter) -->
-        <dependency>
-            <groupId>org.apache.skywalking</groupId>
-            <artifactId>apm-toolkit-trace</artifactId>
-        </dependency>
-
         <!-- 测试依赖 -->
         <dependency>
             <groupId>com.patra</groupId>

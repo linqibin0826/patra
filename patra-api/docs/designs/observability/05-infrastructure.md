@@ -52,7 +52,7 @@ docker/
 version: "3.9"
 
 # 可观测性服务
-# 替换原有的 SkyWalking 方案
+# OpenTelemetry + Grafana Stack
 
 services:
   # ============================================

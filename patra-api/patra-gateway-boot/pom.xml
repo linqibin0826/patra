@@ -21,7 +21,7 @@
             <artifactId>patra-spring-boot-starter-core</artifactId>
         </dependency>
 
-        <!-- logging-starter removed; rely on SkyWalking agent + Boot defaults -->
+        <!-- logging-starter removed; rely on OpenTelemetry agent + Boot defaults -->
 
         <dependency>
             <groupId>org.springframework.cloud</groupId>

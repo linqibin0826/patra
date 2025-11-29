@@ -90,3 +90,5 @@ heapdump.hprof
 
 # Backup directories
 .claude.backup-*/
+
+*.jar

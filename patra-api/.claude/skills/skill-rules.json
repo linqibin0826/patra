@@ -225,7 +225,7 @@
           "memory leak",
           "thread dump",
           "heap dump",
-          "SkyWalking",
+          "OpenTelemetry",
           "log analysis",
           "optimistic lock failure",
           "transaction rollback",

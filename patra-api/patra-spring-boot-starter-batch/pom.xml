@@ -55,8 +55,8 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- 6. SkyWalking 追踪（继承自 core starter） -->
-        <!-- 无需单独依赖，patra-spring-boot-starter-core 已提供 -->
+        <!-- 6. OpenTelemetry 追踪（由 observability starter 提供） -->
+        <!-- 需要时添加 patra-spring-boot-starter-observability 依赖 -->
 
         <!-- 7. 配置元数据（开发时） -->
         <dependency>

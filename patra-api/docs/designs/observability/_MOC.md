@@ -13,7 +13,7 @@ tags:
 
 # 可观测性系统设计
 
-> 从 SkyWalking 迁移到 OpenTelemetry + Grafana Stack 的完整系统设计。
+> 基于 OpenTelemetry + Grafana Stack 的统一可观测性平台设计。
 >
 > 本设计实现 ADR-005 决策，构建统一的可观测性平台，覆盖 Metrics、Logs、Traces 三大支柱。
 

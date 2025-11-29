@@ -1,7 +1,7 @@
 ---
 title: 可观测性系统设计 - OpenTelemetry 集成方案
 type: design
-status: draft
+status: completed
 date: 2025-11-29
 module: patra-spring-boot-starter-observability
 related_adrs: [ADR-005]
@@ -33,11 +33,88 @@ tags:
 3. **简化维护**：通过 JVM 参数配置，无需修改业务代码
 4. **官方推荐**：OpenTelemetry 官方推荐 Agent 作为首选方案
 
-> [!note] Micrometer 保留说明
-> 虽然使用 Agent，但保留 Micrometer 用于：
-> - Spring Boot Actuator 原生集成
-> - 自定义业务指标
-> - 现有 Handler/Filter 复用
+> [!note] 混合架构说明
+> 虽然使用 Agent 作为主要 tracing 方案，但保留以下组件：
+> - **Micrometer**：用于业务指标、Spring Boot Actuator 原生集成、现有 Handler/Filter 复用
+> - **OTel SDK（可选）**：用于创建自定义业务 Span，与 Agent 共享上下文
+
+## Agent + SDK 协作机制
+
+### 上下文共享原理
+
+OTel Java Agent 会**自动检测**应用中的 OpenTelemetry SDK 并与之共享上下文。这意味着：
+
+1. **无冲突共存**：Agent 和 SDK 可以同时存在于应用中
+2. **上下文统一**：Agent 创建的 Span 和应用通过 SDK 创建的 Span 在**同一个 Trace** 上下文中
+3. **自动协调**：Agent 识别应用中的 `OpenTelemetry` Bean 并复用其配置
+
+```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#dbeafe',
+    'primaryTextColor': '#1e293b',
+    'primaryBorderColor': '#3b82f6',
+    'lineColor': '#64748b',
+    'edgeLabelBackground': '#f1f5f9'
+  }
+}}%%
+flowchart TD
+    subgraph App["Spring Boot Application"]
+        direction TB
+        Agent[OTel Agent\n自动埋点]
+        SDK[OTel SDK\n自定义 Span]
+        Shared[共享 TraceContext]
+    end
+
+    subgraph Auto["Agent 自动覆盖"]
+        HTTP[HTTP Server/Client]
+        JDBC[JDBC 查询]
+        Redis[Redis 操作]
+        MQ[消息队列]
+    end
+
+    subgraph Custom["SDK 自定义"]
+        Biz[业务逻辑 Span]
+        Batch[批处理 Span]
+    end
+
+    Agent --> Shared
+    SDK --> Shared
+    Agent --> Auto
+    SDK --> Custom
+
+    classDef default fill:#dbeafe,stroke:#3b82f6,color:#1e293b;
+    classDef shared fill:#dcfce7,stroke:#22c55e,color:#1e293b;
+    class Shared shared;
+```
+
+### 使用场景
+
+| 场景 | 推荐方案 | 说明 |
+|------|----------|------|
+| HTTP 请求追踪 | **Agent 自动** | 无需任何代码 |
+| 数据库查询追踪 | **Agent 自动** | 自动采集 SQL 语句 |
+| 自定义业务逻辑 | **SDK 手动** | 使用 `@Observed` 或 Tracer API |
+| 批处理任务追踪 | **SDK 手动** | 创建 Parent Span 包裹批处理 |
+
+### SDK 模式配置
+
+当需要创建自定义业务 Span 时，保留 SDK 依赖：
+
+```xml
+<!-- pom.xml: 保留 SDK 依赖用于自定义 Span -->
+<dependency>
+    <groupId>io.micrometer</groupId>
+    <artifactId>micrometer-tracing-bridge-otel</artifactId>
+    <!-- 非 optional，与 Agent 共享上下文 -->
+</dependency>
+```
+
+> [!important] Agent + SDK 共存注意事项
+> 1. **无需禁用 SDK**：Agent 会自动检测并与 SDK 共享上下文，无需使用 `-Dpatra.observability.tracing.enabled=false`
+> 2. **避免重复导出**：如果使用 Agent 导出 Traces，应禁用 SDK 的 OTLP Exporter（`-Dpatra.observability.exporter.enabled=false`）
+> 3. **单一导出源**：Traces 只能通过 Agent **或** SDK 导出，选择一个作为导出源
 
 ## OTel Java Agent 配置
 
@@ -349,16 +426,47 @@ OTel Agent 自动将 TraceId/SpanId 注入 MDC：
 log.info("Processing journal: {}", journalId);
 
 // 输出结果（TraceId 自动注入）
-// 2025-01-15 10:30:45.123 [main] [abc123def456...,789xyz...] INFO JournalService - Processing journal: 12345
+// 2025-01-15 10:30:45.123 [main] [trace:abc123def456...,span:789xyz...] INFO JournalService - Processing journal: 12345
 ```
 
-**MDC 可用字段：**
+### MDC 键格式差异
 
-| MDC Key | 说明 | 示例 |
-|---------|------|------|
-| `traceId` | 完整 Trace ID（32 位十六进制） | `abc123def456789...` |
-| `spanId` | 当前 Span ID（16 位十六进制） | `789xyz123...` |
-| `trace_flags` | Trace Flags | `01` |
+> [!warning] Agent vs SDK/Micrometer MDC 键格式不同
+> OTel Agent 和 Micrometer Tracing 使用**不同的 MDC 键名**，Logback 转换器需要同时支持两种格式。
+
+| 来源 | Trace ID 键 | Span ID 键 | 命名风格 |
+|------|-------------|------------|----------|
+| **OTel Agent** | `trace_id` | `span_id` | snake_case |
+| **Micrometer Tracing** | `traceId` | `spanId` | camelCase |
+
+**Patra 自定义 Logback 转换器**自动处理这种差异：
+
+```xml
+<!-- logback-spring.xml -->
+<conversionRule conversionWord="traceId"
+    converterClass="com.patra.starter.core.logging.TraceIdConverter"/>
+<conversionRule conversionWord="spanId"
+    converterClass="com.patra.starter.core.logging.SpanIdConverter"/>
+<conversionRule conversionWord="segmentId"
+    converterClass="com.patra.starter.core.logging.SegmentIdConverter"/>
+```
+
+**转换器查找逻辑**（按优先级）：
+
+1. 优先尝试 OTel Agent 键（`trace_id`、`span_id`）
+2. 回退到 Micrometer 键（`traceId`、`spanId`）
+3. 备选从当前线程 MDC 读取（异步场景）
+4. 无追踪上下文时返回 `N/A`
+
+**MDC 可用字段汇总：**
+
+| MDC Key | 来源 | 说明 | 示例 |
+|---------|------|------|------|
+| `trace_id` | Agent | 完整 Trace ID（32 位） | `1d990b105aed7666951ce1520bb961a2` |
+| `span_id` | Agent | 当前 Span ID（16 位） | `141498c2e4fe4b33` |
+| `traceId` | Micrometer | 完整 Trace ID（32 位） | `1d990b105aed7666951ce1520bb961a2` |
+| `spanId` | Micrometer | 当前 Span ID（16 位） | `141498c2e4fe4b33` |
+| `trace_flags` | Agent | Trace Flags | `01` |
 
 ## Context Propagation
 

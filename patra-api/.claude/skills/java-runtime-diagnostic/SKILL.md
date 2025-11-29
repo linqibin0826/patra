@@ -1,6 +1,6 @@
 ---
 name: java-runtime-diagnostic
-description: 运行时错误诊断专家。分析日志、SkyWalking追踪、动态调整日志级别，集成故障排除指南。识别错误模式、定位根因、提供解决方案。用于调试问题、bug排查、分析运行时错误或调查性能问题。关键词：异常处理、堆栈跟踪、日志分析、性能调优、内存泄漏、线程死锁。
+description: 运行时错误诊断专家。分析日志、OpenTelemetry 追踪、动态调整日志级别，集成故障排除指南。识别错误模式、定位根因、提供解决方案。用于调试问题、bug排查、分析运行时错误或调查性能问题。关键词：异常处理、堆栈跟踪、日志分析、性能调优、内存泄漏、线程死锁。
 allowed-tools: Read, Edit, Write, Grep, Glob, Bash, Skill, mcp__sequential-thinking__sequentialthinking, mcp__mysql-mcp__mysql_query, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, WebSearch, WebFetch, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__replace_symbol_body, mcp__serena__rename_symbol, mcp__serena__activate_project, mcp__serena__get_current_config
 ---
 
@@ -227,33 +227,33 @@ log.info("处理订单",
 }
 ```
 
-## SkyWalking 链路追踪
+## OpenTelemetry 链路追踪
 
-### 配置 SkyWalking Agent
+### 配置 OpenTelemetry Agent
 
 ```bash
 # JVM 启动参数
--javaagent:/path/to/skywalking-agent.jar
--Dskywalking.agent.service_name=patra-ingest
--Dskywalking.collector.backend_service=localhost:11800
+-javaagent:/path/to/opentelemetry-javaagent.jar
+-Dotel.service.name=patra-ingest
+-Dotel.exporter.otlp.endpoint=http://localhost:4317
 ```
 
 ### 自定义追踪
 
 ```java
-@Trace
-@Tag(key = "order.id", value = "arg[0]")
+// 使用 Micrometer Observation API（推荐）
+@Observed(name = "order.process")
 public Order processOrder(Long orderId) {
-    // 方法会被追踪
+    // 方法会被自动追踪
 }
 
-// 手动创建 Span
-Span span = ContextManager.createLocalSpan("custom-operation");
-try {
-    span.tag("key", "value");
+// 手动创建 Span（通过 OpenTelemetry API）
+Span span = tracer.spanBuilder("custom-operation").startSpan();
+try (Scope scope = span.makeCurrent()) {
+    span.setAttribute("key", "value");
     // 业务逻辑
 } finally {
-    ContextManager.stopSpan();
+    span.end();
 }
 ```
 

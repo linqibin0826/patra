@@ -46,6 +46,12 @@
             <artifactId>patra-registry-infra</artifactId>
         </dependency>
 
+        <!-- 可观测性 -->
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-observability</artifactId>
+        </dependency>
+
         <!-- 测试依赖 -->
         <dependency>
             <groupId>com.patra</groupId>
