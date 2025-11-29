@@ -1,9 +1,15 @@
 ---
+type: til
 date: 2025-11-28
-category: spring
-tags: [spring-batch, batch-processing, chunk-oriented, job-monitoring]
-source: ai-suggestion
-confidence: high
+topics: [spring-batch]
+learning_series:
+chapters_completed: []
+tags:
+  - record/til
+  - tech/spring-batch
+  - tech/batch-processing
+  - tech/chunk-oriented
+  - tech/job-monitoring
 ---
 
 # Spring Batch 核心概念与监控
