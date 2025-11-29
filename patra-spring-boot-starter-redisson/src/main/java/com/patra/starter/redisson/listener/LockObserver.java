@@ -2,13 +2,13 @@ package com.patra.starter.redisson.listener;
 
 /// 分布式锁观察者接口（SPI）。
 ///
-/// 定义分布式锁生命周期事件的观察接口，用于可观测性集成。
+/// 定义分布式锁生命周期事件的观察接口，用于扩展锁的可观测性。
 /// 实现者可以记录指标、日志、追踪等。
 ///
-/// **SPI 设计说明**：
-/// - 此接口定义在 `starter-redisson` 模块
-/// - 实现类（如 `LockMetricsRecorder`）在 `starter-observability` 模块
-/// - 通过依赖倒置避免 redisson 编译期依赖 observability
+/// **使用方式**：
+/// 1. 实现此接口
+/// 2. 将实现类注册为 Spring Bean
+/// 3. LockExecutor 会自动注入并在锁生命周期事件时回调
 ///
 /// @author Patra Team
 /// @since 1.0.0

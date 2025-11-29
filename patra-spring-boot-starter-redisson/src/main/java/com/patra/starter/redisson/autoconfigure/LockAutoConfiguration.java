@@ -19,7 +19,7 @@ import org.springframework.context.annotation.Bean;
 /// 分布式锁自动配置。
 ///
 /// 配置所有锁相关的 Bean（LockKeyGenerator、LockExecutor、LockAspect）。
-/// 自动集成可观测性组件（如果已启用）。
+/// 支持通过 LockObserver SPI 扩展锁生命周期观察（可选）。
 ///
 /// @author Patra Team
 /// @since 1.0.0
@@ -47,11 +47,11 @@ public class LockAutoConfiguration {
 
   /// 配置锁执行器。
   ///
-  /// 自动注入锁观察者（如果已启用），否则为 null。
-  /// LockObserver 实现（如 LockMetricsRecorder）由 patra-spring-boot-starter-observability 提供。
+  /// 自动注入锁观察者（如果存在），否则为 null。
+  /// 用户可通过实现 LockObserver SPI 接口扩展锁生命周期观察。
   ///
   /// @param redissonClient Redisson 客户端
-  /// @param lockObserver   锁观察者（可选，由 starter-observability 提供实现）
+  /// @param lockObserver   锁观察者（可选）
   /// @return LockExecutor
   @Bean
   public LockExecutor lockExecutor(

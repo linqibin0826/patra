@@ -251,11 +251,10 @@ patra-spring-boot-starter-redisson/
 - `redisson-spring-boot-starter`：Redisson 官方 Starter
 - `spring-boot-starter-aop`：AOP 支持
 - `patra-common-core`：错误码框架
-- `patra-spring-boot-starter-observability`（可选）：可观测性基础设施，提供 `LockMetricsRecorder` 实现
 
 ## 设计原则
 
 1. **关注点分离**：锁逻辑与业务逻辑分离（AOP）
-2. **性能优先**：SpEL 缓存、静态检测、低基数标签
+2. **性能优先**：SpEL 缓存、静态检测
 3. **异常安全**：finally 释放锁，业务异常透传
-4. **可观测性**：指标、日志、追踪（预留）完整支持
+4. **可扩展性**：通过 LockObserver SPI 支持自定义生命周期观察

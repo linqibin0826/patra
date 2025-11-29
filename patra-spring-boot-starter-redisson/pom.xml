@@ -30,7 +30,7 @@
             <artifactId>redisson-spring-boot-starter</artifactId>
         </dependency>
 
-        <!-- 4. Spring Boot 依赖（必须） -->
+        <!-- 3. Spring Boot 依赖（必须） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
