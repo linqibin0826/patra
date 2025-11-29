@@ -1,91 +1,186 @@
-version: "3.9"
+# 可观测性服务 - OpenTelemetry + Grafana Stack
+# 替换原有的 SkyWalking 方案
+#
+# 版本矩阵（2025-11-29）:
+# - OTel Collector: 0.140.1
+# - Prometheus: 3.7.3
+# - Loki: 3.6.2
+# - Tempo: 2.9.0
+# - Grafana: 12.3.0
+# - Alertmanager: 0.29.0
+#
+# 端口分配:
+# - 4317: OTel Collector gRPC (OTLP)
+# - 4318: OTel Collector HTTP (OTLP)
+# - 8889: OTel Collector Prometheus metrics
+# - 9090: Prometheus Web UI
+# - 3100: Loki Push/Query API
+# - 3200: Tempo Query API
+# - 3000: Grafana Web UI
+# - 9093: Alertmanager Web UI
 
-# Observability and monitoring services
-# Optional services for APM, tracing, and performance monitoring
-# Can be disabled to save resources during development
+name: patra
 
 services:
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
-    container_name: patra-es
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - ES_JAVA_OPTS=-Xms1g -Xmx1g
-      - TZ=Asia/Shanghai
-    ports:
-      - "9200:9200"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      nofile:
-        soft: 65536
-        hard: 65536
+  # OpenTelemetry Collector - 统一接收 Traces/Metrics/Logs
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.140.1
+    container_name: patra-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
-      - ${HOME}/.patra/docker/es/data:/usr/share/elasticsearch/data
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1" ]
-      interval: 20s
-      timeout: 10s
-      retries: 10
-
-  skywalking-oap:
-    image: apache/skywalking-oap-server:10.2.0
-    container_name: patra-skywalking-oap
+      - ./otel-collector/config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8889:8889"   # Prometheus metrics 暴露
     environment:
       TZ: Asia/Shanghai
-      SW_STORAGE: elasticsearch
-      SW_STORAGE_ES_CLUSTER_NODES: elasticsearch:9200
-      SW_STORAGE_ES_HTTP_PROTOCOL: http
-      SW_STORAGE_ES_INDEX_SHARDS_NUMBER: 1
-      SW_STORAGE_ES_INDEX_REPLICAS_NUMBER: 0
-#      SW_LOGGING_LEVEL: DEBUG
-      SW_TELEMETRY: prometheus
-      SW_TELEMETRY_PROMETHEUS_HOST: 0.0.0.0
-      SW_TELEMETRY_PROMETHEUS_PORT: 1234
-      SW_HEALTH_CHECKER: default
-      SW_LOG_LAL_FILES: sw-grpc-default
-#      SW_CORE_GRPC_PORT: 11800      # gRPC/OTLP
-#      SW_CORE_REST_PORT: 12800      # REST/UI 查询
-#      SW_RECEIVER_ZIPKIN: default
-#      SW_QUERY_ZIPKIN: default
-#      SW_OTEL_RECEIVER: default
-#      SW_OTEL_RECEIVER_ENABLED_HANDLERS: otlp-traces,otlp-metrics,otlp-logs
-#      SW_OTEL_RECEIVER_ENABLED_HANDLERS: otlp-traces
-    ports:
-      - "11800:11800"   # gRPC (含 OTLP)
-      - "12800:12800"   # HTTP / GraphQL
-#    volumes:
-#      - ${HOME}/.patra/docker/oap-lal/sw-grpc-default.yaml:/skywalking/config/lal/sw-grpc-sw-grpc-default.yaml:ro
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -fsS http://127.0.0.1:12800/internal/l7check >/dev/null || exit 0" ]
-      interval: 30s
-      timeout: 10s
-      retries: 30
-      start_period: 120s
+    # 注意：otel/opentelemetry-collector-contrib 是 FROM scratch 镜像
+    # 没有 shell、curl、wget 等工具，无法使用传统 healthcheck
+    # 可通过宿主机 curl http://localhost:13133 手动验证健康状态
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     depends_on:
-      elasticsearch:
-        condition: service_healthy
+      tempo:
+        condition: service_started
+      loki:
+        condition: service_started
 
-  skywalking-ui:
-    image: apache/skywalking-ui:10.2.0
-    container_name: patra-skywalking-ui
+  # Prometheus - 指标存储与查询
+  prometheus:
+    image: prom/prometheus:v3.7.3
+    container_name: patra-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+      - "--web.enable-remote-write-receiver"
+      - "--enable-feature=exemplar-storage"
+      - "--enable-feature=native-histograms"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ${HOME}/.patra/docker/prometheus/data:/prometheus
+    ports:
+      - "9090:9090"
     environment:
       TZ: Asia/Shanghai
-      SW_OAP_ADDRESS: "http://skywalking-oap:12800"
-      SW_TIMEOUT: "30000"
-    ports:
-      - "8088:8080"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
       interval: 15s
-      timeout: 5s
-      retries: 10
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # Loki - 日志聚合存储
+  loki:
+    image: grafana/loki:3.6.2
+    container_name: patra-loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki-config.yaml"]
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - ${HOME}/.patra/docker/loki/data:/loki
+    ports:
+      - "3100:3100"
+    environment:
+      TZ: Asia/Shanghai
+    # 注意：grafana/loki 是 FROM scratch 镜像，没有 shell
+    # 可通过宿主机 curl http://localhost:3100/ready 验证
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # Tempo - 分布式链路存储
+  tempo:
+    image: grafana/tempo:2.9.0
+    container_name: patra-tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - ${HOME}/.patra/docker/tempo/data:/var/tempo
+    ports:
+      - "3200:3200"   # Tempo Query API
+      - "9095:9095"   # Tempo internal
+    environment:
+      TZ: Asia/Shanghai
+    # 注意：grafana/tempo 是 FROM scratch 镜像，没有 shell
+    # 可通过宿主机 curl http://localhost:3200/ready 验证
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # Grafana - 统一可视化
+  grafana:
+    image: grafana/grafana:12.3.0
+    container_name: patra-grafana
+    restart: unless-stopped
+    volumes:
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ${HOME}/.patra/docker/grafana/data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      TZ: Asia/Shanghai
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: patra123
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     depends_on:
-      skywalking-oap:
+      prometheus:
         condition: service_healthy
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_started
+
+  # Alertmanager - 告警路由
+  alertmanager:
+    image: prom/alertmanager:v0.29.0
+    container_name: patra-alertmanager
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ${HOME}/.patra/docker/alertmanager/data:/alertmanager
+    ports:
+      - "9093:9093"
+    environment:
+      TZ: Asia/Shanghai
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9093/-/healthy || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
 networks:
   default:
     name: patra-net
+    external: true
