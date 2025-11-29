@@ -178,31 +178,17 @@ flowchart LR
 
 **2. 自动配置**
 
-```java
-@Configuration
-@ConditionalOnClass({OpenTelemetry.class, OtelTracer.class})
-public class MicrometerOtelBridgeConfiguration {
+Spring Boot 3.2+ 引入 `micrometer-tracing-bridge-otel` 依赖后，会**自动配置**以下组件：
 
-    @Bean
-    @ConditionalOnMissingBean
-    public io.micrometer.tracing.Tracer micrometerTracer(OpenTelemetry openTelemetry) {
-        var otelTracer = openTelemetry.getTracer("patra-micrometer");
-        var otelCurrentTraceContext = new OtelCurrentTraceContext();
+| 自动配置的 Bean | 作用 |
+|-----------------|------|
+| `io.micrometer.tracing.Tracer` | 桥接 OpenTelemetry Tracer |
+| `OtelCurrentTraceContext` | 管理当前追踪上下文 |
+| `OtelPropagator` | 处理 Context Propagation |
 
-        return new OtelTracer(
-            otelTracer,
-            otelCurrentTraceContext,
-            event -> { } // SpanCustomizer event publisher
-        );
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public OtelPropagator otelPropagator(ContextPropagators propagators) {
-        return new OtelPropagator(propagators, otelTracer);
-    }
-}
-```
+> [!note] 无需手动配置
+> Spring Boot 自动配置机制会检测 `micrometer-tracing-bridge-otel` 依赖并完成 Bean 注册。
+> 开发者无需编写 `@Configuration` 类，符合"约定优于配置"原则。
 
 **3. 使用示例**
 
