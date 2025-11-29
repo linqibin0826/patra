@@ -1,9 +1,13 @@
 ---
 title: 第六章：Grafana 可视化
+type: learning
 series: observability
 order: 6
 date: 2025-11-29
-tags: [observability, grafana, dashboard, visualization, datasource]
+tags:
+  - learning/observability
+  - tech/grafana
+  - tech/visualization
 ---
 
 # 第六章：Grafana 可视化

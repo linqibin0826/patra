@@ -1,9 +1,14 @@
 ---
 title: 第二章：Metrics（指标）
+type: learning
 series: observability
 order: 2
 date: 2025-11-28
-tags: [observability, metrics, micrometer, prometheus, promql]
+tags:
+  - learning/observability
+  - tech/metrics
+  - tech/micrometer
+  - tech/prometheus
 ---
 
 # 第二章：Metrics（指标）

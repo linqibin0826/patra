@@ -1,9 +1,14 @@
 ---
 title: 第一章：可观测性核心概念
+type: learning
 series: observability
 order: 1
 date: 2025-11-28
-tags: [observability, metrics, logs, traces, monitoring]
+tags:
+  - learning/observability
+  - tech/metrics
+  - tech/logs
+  - tech/traces
 ---
 
 # 第一章：可观测性核心概念
