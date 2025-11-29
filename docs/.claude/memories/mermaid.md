@@ -239,19 +239,19 @@ erDiagram
 
 ### 初始化指令模板
 
-**必须注入**以下配置，确保 Dark/Light Mode 均可读：
+**必须注入**以下配置，确保浅色模式清晰可读：
 
 ```mermaid
 %%{init: {
   'theme': 'base',
   'themeVariables': {
-    'primaryColor': '#2d2d2d',
-    'primaryTextColor': '#ffffff',
-    'primaryBorderColor': '#555555',
-    'lineColor': '#888888',
-    'secondaryColor': '#404040',
-    'tertiaryColor': '#606060',
-    'edgeLabelBackground': '#333333',
+    'primaryColor': '#dbeafe',
+    'primaryTextColor': '#1e293b',
+    'primaryBorderColor': '#3b82f6',
+    'lineColor': '#64748b',
+    'secondaryColor': '#f1f5f9',
+    'tertiaryColor': '#e2e8f0',
+    'edgeLabelBackground': '#f1f5f9',
     'fontSize': '14px'
   }
 }}%%
@@ -259,26 +259,60 @@ flowchart TD
     A[节点] --> B[节点]
 ```
 
+**时序图专用配置**（需额外配置参与者和消息样式）：
+
+```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#dbeafe',
+    'primaryTextColor': '#1e293b',
+    'primaryBorderColor': '#3b82f6',
+    'lineColor': '#64748b',
+    'actorLineColor': '#64748b',
+    'signalColor': '#3b82f6',
+    'signalTextColor': '#1e293b',
+    'noteBkgColor': '#fef3c7',
+    'noteTextColor': '#1e293b',
+    'noteBorderColor': '#f59e0b'
+  }
+}}%%
+sequenceDiagram
+    participant A as 用户
+    participant B as 系统
+    A->>B: 请求
+```
+
 ### 主题策略选择
 
 | 策略 | 适用场景 | 说明 |
 |------|----------|------|
-| `base` + 变量覆盖 | **推荐默认** | 完全控制颜色，适配任意主题 |
-| `forest` | 快速回退 | 高对比度，明暗模式均可读 |
-| `dark` | 仅深色模式 | 不推荐，浅色模式不兼容 |
-| `default` | 避免使用 | 深色模式下文字可能不可见 |
+| `base` + 变量覆盖 | **推荐默认** | 完全控制颜色，适配浅色模式 |
+| `forest` | 快速回退 | 高对比度，但颜色较深 |
+| `dark` | **禁止** | 浅色模式下不可读 |
+| `default` | **禁止** | 颜色不可控 |
 
 ### 颜色安全映射表
 
-**使用十六进制颜色码**，避免 CSS 变量（Mermaid 解析器支持不稳定）：
+**使用 Tailwind CSS 调色板**，确保浅色模式清晰可读：
 
 | 属性 | 推荐值 | 说明 |
 |------|--------|------|
-| `primaryColor` | `#2d2d2d` | 节点背景，深色底配白字 |
-| `primaryTextColor` | `#ffffff` | 节点文字 |
-| `lineColor` | `#888888` | 连线颜色，灰色明暗均可见 |
-| `edgeLabelBackground` | `#333333` | 线条标签背景 |
-| `primaryBorderColor` | `#555555` | 节点边框 |
+| `primaryColor` | `#dbeafe` | 节点背景（浅蓝） |
+| `primaryTextColor` | `#1e293b` | 节点文字（深色） |
+| `primaryBorderColor` | `#3b82f6` | 节点边框（蓝色） |
+| `lineColor` | `#64748b` | 连线颜色（灰色） |
+| `edgeLabelBackground` | `#f1f5f9` | 线条标签背景（浅灰） |
+
+### 语义化颜色映射
+
+| 用途 | 背景色 | 边框色 | 文字色 |
+|------|--------|--------|--------|
+| **默认** | `#dbeafe` | `#3b82f6` | `#1e293b` |
+| **存储** | `#ede9fe` | `#8b5cf6` | `#1e293b` |
+| **可视化** | `#ffedd5` | `#f97316` | `#1e293b` |
+| **告警** | `#fecaca` | `#ef4444` | `#1e293b` |
+| **成功** | `#dcfce7` | `#22c55e` | `#1e293b` |
 
 ### classDef 规范
 
@@ -288,10 +322,10 @@ flowchart TD
 flowchart TD
     A[正常] --> B[警告] --> C[错误]
 
-    %% 定义样式类（三件套）
-    classDef normal fill:#333333,stroke:#555555,color:#ffffff;
-    classDef warn fill:#ff9900,stroke:#cc7700,color:#ffffff;
-    classDef err fill:#ff3333,stroke:#cc0000,color:#ffffff;
+    %% 定义样式类（三件套：浅色背景 + 深色边框 + 深色文字）
+    classDef normal fill:#dcfce7,stroke:#22c55e,color:#1e293b;
+    classDef warn fill:#fef3c7,stroke:#f59e0b,color:#1e293b;
+    classDef err fill:#fecaca,stroke:#ef4444,color:#1e293b;
 
     %% 应用样式
     class A normal;
@@ -363,10 +397,11 @@ flowchart TD
 %%{init: {
   'theme': 'base',
   'themeVariables': {
-    'primaryColor': '#2d2d2d',
-    'primaryTextColor': '#ffffff',
-    'lineColor': '#888888',
-    'edgeLabelBackground': '#333333'
+    'primaryColor': '#dbeafe',
+    'primaryTextColor': '#1e293b',
+    'primaryBorderColor': '#3b82f6',
+    'lineColor': '#64748b',
+    'edgeLabelBackground': '#f1f5f9'
   }
 }}%%
 flowchart TD
@@ -386,9 +421,9 @@ flowchart TD
     Step2 --> End
     Step3 --> End
 
-    %% 样式类
-    classDef default fill:#2d2d2d,stroke:#555,color:#fff;
-    classDef decision fill:#445566,stroke:#555,color:#fff;
+    %% 样式类（浅色背景 + 深色文字）
+    classDef default fill:#dbeafe,stroke:#3b82f6,color:#1e293b;
+    classDef decision fill:#fef3c7,stroke:#f59e0b,color:#1e293b;
     class Check decision;
 ```
 
@@ -398,10 +433,11 @@ flowchart TD
 %%{init: {
   'theme': 'base',
   'themeVariables': {
-    'primaryColor': '#202020',
-    'primaryTextColor': '#ffffff',
-    'edgeLabelBackground': '#333333',
-    'lineColor': '#aaaaaa'
+    'primaryColor': '#dbeafe',
+    'primaryTextColor': '#1e293b',
+    'primaryBorderColor': '#3b82f6',
+    'lineColor': '#64748b',
+    'edgeLabelBackground': '#f1f5f9'
   }
 }}%%
 flowchart TD
@@ -418,10 +454,10 @@ flowchart TD
     App -- 读写 --> Cache
     App -- 持久化 --> DB
 
-    %% 样式类（高对比度）
-    classDef actor fill:#005588,stroke:#ffffff,stroke-width:2px,color:#ffffff;
-    classDef service fill:#333333,stroke:#555555,color:#ffffff;
-    classDef data fill:#884400,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    %% 样式类（语义化着色）
+    classDef actor fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#1e293b;
+    classDef service fill:#dcfce7,stroke:#22c55e,color:#1e293b;
+    classDef data fill:#ede9fe,stroke:#8b5cf6,stroke-width:2px,color:#1e293b;
 
     %% 应用样式
     class User actor;
