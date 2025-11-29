@@ -1,12 +1,15 @@
 ---
-id: BUG-{{date:YYYY}}-
+type: bug
+bug_id: BUG-{{date:YYYY}}-
 date: {{date:YYYY-MM-DD}}
 severity: high
 status: open
-tags: [bug, root-cause-analysis]
-resolved_at:
+resolved_date:
 time_spent:
 module:
+tags:
+  - record/bug
+  - analysis/root-cause
 ---
 
 # {{title}}
@@ -46,8 +49,8 @@ module:
 - [ ]
 
 ## 经验教训
-- ✅ 学到:
-- ⚠️ 改进:
+- 学到:
+- 改进:
 
 ## 相关资源
 

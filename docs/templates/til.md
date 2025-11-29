@@ -1,8 +1,11 @@
 ---
+type: til
 date: {{date:YYYY-MM-DD}}
-tags: []
+topics: []
 learning_series:
 chapters_completed: []
+tags:
+  - record/til
 ---
 
 # 今日学习：{{title}}

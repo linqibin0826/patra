@@ -11,6 +11,7 @@ updated: 2025-11-27
 - [[bugs/_MOC|Bug 记录]]
 - [[til/_MOC|学习笔记 (TIL)]]
 - [[decisions/_MOC|架构决策 (ADR)]]
+- [[designs/_MOC|设计文档]]
 
 ## 最近更新
 

@@ -1,11 +1,16 @@
 ---
-id: ADR-
+type: adr
+adr_id:
 date: {{date:YYYY-MM-DD}}
 status: proposed
-tags: [architecture, decision]
+date_decided:
+deciders: []
+technical_debt: none
+tags:
+  - decision/architecture
 ---
 
-# ADR-: {{title}}
+# ADR-{{adr_id}}: {{title}}
 
 ## 状态
 

@@ -1,11 +1,15 @@
 ---
+type: devlog
+period: weekly
 week: {{week}}
-type: devlog/weekly
 date_range: "{{start_date}} ~ {{end_date}}"
 total_commits: {{total_commits}}
 total_files: {{total_files}}
 highlights: []
-tags: [sprint-review]
+tags:
+  - record/devlog
+  - period/weekly
+  - review/sprint
 ---
 
 # {{week}} 周报

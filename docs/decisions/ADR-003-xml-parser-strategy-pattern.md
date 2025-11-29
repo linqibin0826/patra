@@ -1,8 +1,15 @@
 ---
-id: ADR-003
+type: adr
+adr_id: 3
 date: 2025-11-27
 status: accepted
-tags: [architecture, decision, design-pattern, strategy, refactoring]
+date_decided: 2025-11-27
+deciders: [Qibin Lin]
+technical_debt: none
+tags:
+  - decision/architecture
+  - tech/design-pattern
+  - tech/refactoring
 ---
 
 # ADR-003: XML 解析器策略模式重构
