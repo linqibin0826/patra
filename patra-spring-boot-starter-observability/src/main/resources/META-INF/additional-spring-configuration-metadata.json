@@ -11,9 +11,9 @@
       "description": "指标（Metrics）配置"
     },
     {
-      "name": "patra.observability.metrics.skywalking",
-      "type": "com.patra.starter.observability.config.ObservabilityProperties$SkyWalkingMeterConfig",
-      "description": "SkyWalking Meter Registry 配置"
+      "name": "patra.observability.exporter",
+      "type": "com.patra.starter.observability.config.ObservabilityProperties$OtlpExporterConfig",
+      "description": "OTLP Exporter 配置（统一导出 Traces/Logs/Metrics 到 OpenTelemetry Collector）"
     },
     {
       "name": "patra.observability.metrics.prometheus",
@@ -88,16 +88,34 @@
       "defaultValue": "60s"
     },
     {
-      "name": "patra.observability.metrics.skywalking.enabled",
+      "name": "patra.observability.exporter.enabled",
       "type": "java.lang.Boolean",
-      "description": "是否启用 SkyWalking Meter Registry",
+      "description": "是否启用 OTLP 导出到 OpenTelemetry Collector",
       "defaultValue": true
     },
     {
-      "name": "patra.observability.metrics.skywalking.oap-address",
+      "name": "patra.observability.exporter.endpoint",
       "type": "java.lang.String",
-      "description": "SkyWalking OAP 服务器地址",
-      "defaultValue": "skywalking-oap:11800"
+      "description": "OTel Collector 端点地址（gRPC）",
+      "defaultValue": "http://localhost:4317"
+    },
+    {
+      "name": "patra.observability.exporter.protocol",
+      "type": "com.patra.starter.observability.config.ObservabilityProperties$OtlpExporterConfig$Protocol",
+      "description": "OTLP 协议类型（GRPC 或 HTTP_PROTOBUF）",
+      "defaultValue": "GRPC"
+    },
+    {
+      "name": "patra.observability.exporter.timeout",
+      "type": "java.time.Duration",
+      "description": "导出超时时间",
+      "defaultValue": "10s"
+    },
+    {
+      "name": "patra.observability.exporter.compression",
+      "type": "com.patra.starter.observability.config.ObservabilityProperties$OtlpExporterConfig$Compression",
+      "description": "压缩算法（NONE 或 GZIP）",
+      "defaultValue": "GZIP"
     },
     {
       "name": "patra.observability.metrics.prometheus.enabled",

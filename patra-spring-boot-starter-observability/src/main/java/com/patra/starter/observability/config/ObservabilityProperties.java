@@ -54,6 +54,9 @@ public class ObservabilityProperties {
   /// 日志配置。
   private LoggingConfig logging = new LoggingConfig();
 
+  /// OTLP Exporter 配置（统一导出 Traces/Logs/Metrics）。
+  private OtlpExporterConfig exporter = new OtlpExporterConfig();
+
   /// ObservationHandler 配置。
   private HandlersConfig handlers = new HandlersConfig();
 
@@ -85,30 +88,67 @@ public class ObservabilityProperties {
     private Duration step = Duration.ofSeconds(60);
 
     ///
-    /// SkyWalking Meter Registry 配置。
-
-    private SkyWalkingMeterConfig skywalking = new SkyWalkingMeterConfig();
-
-    ///
     /// Prometheus Registry 配置。
 
     private PrometheusConfig prometheus = new PrometheusConfig();
   }
 
   ///
-  /// SkyWalking Meter 配置。
+  /// OTLP Exporter 配置。
+  ///
+  /// 用于将 Metrics 和 Traces 通过 OTLP 协议推送到 OpenTelemetry Collector。
 
   @Data
-  public static class SkyWalkingMeterConfig {
+  public static class OtlpExporterConfig {
     ///
-    /// 是否启用。
+    /// 是否启用 OTLP 导出。
 
     private boolean enabled = true;
 
     ///
-    /// OAP 服务器地址。
+    /// OTel Collector 端点地址（gRPC）。
 
-    private String oapAddress = "skywalking-oap:11800";
+    private String endpoint = "http://localhost:4317";
+
+    ///
+    /// 协议类型（grpc 或 http）。
+
+    private Protocol protocol = Protocol.GRPC;
+
+    ///
+    /// 导出超时时间。
+
+    @NotNull(message = "导出超时时间不能为 null")
+    private Duration timeout = Duration.ofSeconds(10);
+
+    ///
+    /// 压缩算法。
+
+    private Compression compression = Compression.GZIP;
+
+    ///
+    /// 自定义 Headers（用于认证等）。
+
+    private Map<String, String> headers = new HashMap<>();
+
+    ///
+    /// OTLP 协议类型。
+    ///
+    /// - `GRPC`：gRPC 传输（默认，性能最优）
+    /// - `HTTP_PROTOBUF`：HTTP/Protobuf 传输（适用于无法使用 gRPC 的环境）
+
+    public enum Protocol {
+      GRPC,
+      HTTP_PROTOBUF
+    }
+
+    ///
+    /// 压缩算法。
+
+    public enum Compression {
+      NONE,
+      GZIP
+    }
   }
 
   ///
