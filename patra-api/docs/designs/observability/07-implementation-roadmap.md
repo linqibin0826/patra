@@ -492,5 +492,6 @@ docker compose up -d --build
 ## 相关链接
 
 - 上一章：[[06-grafana-visualization|Grafana 可视化]]
+- 下一章：[[08-version-matrix|版本矩阵]]
 - 索引：[[_MOC|可观测性系统设计]]
 - ADR：[[../../decisions/ADR-005-adopt-opentelemetry-grafana-stack-for-observability|ADR-005]]

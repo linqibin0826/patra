@@ -165,6 +165,7 @@ visualization.grafana -> visualization.alertmanager: Alert Rules {
 | [[05-infrastructure\|05. 基础设施]]               | Docker Compose、Collector 配置 | 草稿 |
 | [[06-grafana-visualization\|06. Grafana 可视化]] | 仪表盘、信号关联、告警规则               | 草稿 |
 | [[07-implementation-roadmap\|07. 实现路线图]]      | 分阶段计划、测试策略、风险               | 草稿 |
+| [[08-version-matrix\|08. 版本矩阵]]               | 组件版本、兼容性、升级策略               | 草稿 |
 
 ## 技术决策摘要
 
@@ -179,17 +180,19 @@ visualization.grafana -> visualization.alertmanager: Alert Rules {
 
 ## 技术栈
 
+> 详细版本信息和兼容性说明请参见 [[08-version-matrix|版本矩阵]]
+
 | 层级 | 组件 | 版本 | 用途 |
 |------|------|------|------|
-| **采集** | OpenTelemetry Java Agent | 2.x | Traces/Metrics 自动采集 |
-| **采集** | Micrometer | 1.13.x | Spring Boot 原生指标 API |
-| **采集** | Logback OTLP Appender | 1.x | 结构化日志输出 |
-| **处理** | OpenTelemetry Collector | 0.96.x | 接收、处理、导出 |
-| **存储** | Prometheus | 2.51.x | 指标时序存储 |
-| **存储** | Loki | 2.9.x | 日志聚合存储 |
-| **存储** | Tempo | 2.4.x | 分布式链路存储 |
-| **展示** | Grafana | 10.4.x | 统一可视化 |
-| **告警** | Alertmanager | 0.27.x | 告警路由通知 |
+| **采集** | OpenTelemetry Java Agent | 2.22.0 | Traces/Metrics 自动采集 |
+| **采集** | Micrometer | 1.15.5 | Spring Boot 原生指标 API |
+| **采集** | Logback OTLP Appender | 2.22.0-alpha | 结构化日志输出 |
+| **处理** | OpenTelemetry Collector | 0.140.1 | 接收、处理、导出 |
+| **存储** | Prometheus | 3.7.3 | 指标时序存储 |
+| **存储** | Loki | 3.6.2 | 日志聚合存储 |
+| **存储** | Tempo | 2.9.0 | 分布式链路存储 |
+| **展示** | Grafana | 12.3.1 | 统一可视化 |
+| **告警** | Alertmanager | 0.29.0 | 告警路由通知 |
 
 ## 相关资源
 
