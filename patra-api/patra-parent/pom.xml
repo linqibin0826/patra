@@ -32,6 +32,8 @@
     <okio.version>3.6.0</okio.version>
     <resilience4j.version>2.2.0</resilience4j.version>
     <skywalking.version>9.5.0</skywalking.version>
+    <!-- OpenTelemetry Logback Appender（与 OTel Agent 版本对齐） -->
+    <opentelemetry-logback-appender.version>2.22.0-alpha</opentelemetry-logback-appender.version>
     <aws.sdk.version>2.25.36</aws.sdk.version>
     <feign.version>13.1</feign.version>
     <redisson.version>3.52.0</redisson.version>
@@ -333,6 +335,13 @@
         <groupId>org.apache.skywalking</groupId>
         <artifactId>apm-toolkit-trace</artifactId>
         <version>${skywalking.version}</version>
+      </dependency>
+
+      <!-- OpenTelemetry Logback Appender（日志集成，与 OTel Agent 版本对齐） -->
+      <dependency>
+        <groupId>io.opentelemetry.instrumentation</groupId>
+        <artifactId>opentelemetry-logback-appender-1.0</artifactId>
+        <version>${opentelemetry-logback-appender.version}</version>
       </dependency>
 
       <!-- OpenFeign Core (shared by logging and expr starters) -->

@@ -4,11 +4,14 @@
 # 主配置：可观测性核心配置
 com.patra.starter.observability.autoconfigure.ObservabilityAutoConfiguration
 
+# OpenTelemetry 配置：OTel SDK 和 OTLP Exporter
+com.patra.starter.observability.autoconfigure.OtelAutoConfiguration
+
+# Logback OTLP Appender 配置：日志通过 OTLP 发送到 Collector
+com.patra.starter.observability.autoconfigure.LogbackOtlpAutoConfiguration
+
 # Micrometer 配置：Observation API 和 MeterRegistry
 com.patra.starter.observability.autoconfigure.MicrometerAutoConfiguration
-
-# SkyWalking Meter 配置（可选）
-com.patra.starter.observability.autoconfigure.SkyWalkingMeterAutoConfiguration
 
 # Prometheus 配置（可选）
 com.patra.starter.observability.autoconfigure.PrometheusAutoConfiguration

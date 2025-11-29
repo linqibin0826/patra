@@ -1,0 +1,37 @@
+<!--
+  Logback OTLP Appender 配置示例
+
+  将此文件内容合并到您的 logback-spring.xml 中，
+  即可将应用日志通过 OTLP 协议发送到 OpenTelemetry Collector。
+
+  前提条件：
+  1. 引入 patra-spring-boot-starter-observability 依赖
+  2. 配置 patra.observability.logging.enabled=true（默认）
+  3. 配置 patra.observability.exporter.endpoint=http://localhost:4317
+-->
+
+<included>
+    <!-- OpenTelemetry Logback Appender -->
+    <appender name="OpenTelemetry"
+              class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+        <!-- 捕获实验性属性（代码位置等） -->
+        <captureExperimentalAttributes>true</captureExperimentalAttributes>
+
+        <!-- 捕获所有 MDC 属性（traceId, spanId 等） -->
+        <captureMdcAttributes>*</captureMdcAttributes>
+
+        <!-- 捕获代码属性（类名、方法名、行号） -->
+        <captureCodeAttributes>true</captureCodeAttributes>
+
+        <!-- 捕获日志 Marker -->
+        <captureMarkerAttribute>true</captureMarkerAttribute>
+
+        <!-- 捕获 KeyValue 参数 -->
+        <captureKeyValuePairAttributes>true</captureKeyValuePairAttributes>
+    </appender>
+
+    <!-- 将 OpenTelemetry appender 添加到 root logger -->
+    <root level="INFO">
+        <appender-ref ref="OpenTelemetry"/>
+    </root>
+</included>
