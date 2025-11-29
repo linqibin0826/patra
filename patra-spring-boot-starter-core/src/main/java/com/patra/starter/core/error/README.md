@@ -174,11 +174,12 @@ public class DataLayerErrorMappingContributor implements ErrorMappingContributor
 
 ```java
 @Component
-public class SkyWalkingTraceProvider implements TraceProvider {
+public class OtelTraceProvider implements TraceProvider {
 
   @Override
   public Optional<String> getCurrentTraceId() {
-    return Optional.ofNullable(TraceContext.traceId());
+    // OpenTelemetry Agent 自动将 traceId 注入 MDC
+    return Optional.ofNullable(MDC.get("traceId"));
   }
 }
 ```

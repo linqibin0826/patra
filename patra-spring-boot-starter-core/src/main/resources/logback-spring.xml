@@ -11,7 +11,7 @@
     <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="logs"/>
     <property name="LOG_FILE" value="${LOG_PATH}/${appName}"/>
 
-    <!-- Register custom SkyWalking converters for separated trace info -->
+    <!-- Register custom OTel converters for separated trace info -->
     <conversionRule conversionWord="traceId"
                     converterClass="com.patra.starter.core.logging.TraceIdConverter"/>
     <conversionRule conversionWord="segmentId"

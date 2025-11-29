@@ -4,7 +4,7 @@ import java.util.Optional;
 
 /// SPI 接口,用于从执行上下文中检索当前追踪标识符。
 ///
-/// 实现类可以查询 MDC、请求 Header 或其他追踪系统(如 SkyWalking、Zipkin)。
+/// 实现类可以查询 MDC、请求 Header 或其他追踪系统(如 OpenTelemetry、Zipkin)。
 ///
 /// 使用示例:
 ///
@@ -13,8 +13,8 @@ import java.util.Optional;
 /// public class MyTraceProvider implements TraceProvider {
 ///   @Override
 ///   public Optional<String> getCurrentTraceId() {
-///     // 从 SkyWalking 提取追踪 ID
-///     return Optional.ofNullable(TraceContext.traceId());
+///     // 从 MDC 提取追踪 ID（由 OpenTelemetry Agent 自动注入）
+///     return Optional.ofNullable(MDC.get("traceId"));
 /// ```
 ///
 /// @author linqibin
