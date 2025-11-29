@@ -2,9 +2,7 @@ package com.patra.starter.observability.config;
 
 import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -17,7 +15,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /// - **Metrics**: 由 Micrometer + Prometheus Registry 处理，Prometheus 定期 Pull
 /// - **Logging**: 由 Agent 自动注入 `trace_id`/`span_id` 到 MDC
 ///
-/// 本配置仅包含应用层需要的 Metrics 和 Handlers 配置，
+/// 本配置仅包含应用层需要的 Metrics 配置，
 /// Tracing 配置由 Agent JVM 参数控制（如 `-Dotel.traces.sampler.arg=0.1`）。
 ///
 /// @author Jobs
@@ -46,12 +44,6 @@ public class ObservabilityProperties {
 
   /// 日志配置（日志关联）。
   private LoggingConfig logging = new LoggingConfig();
-
-  /// ObservationHandler 配置。
-  private HandlersConfig handlers = new HandlersConfig();
-
-  /// 安全配置（敏感数据脱敏）。
-  private SecurityConfig security = new SecurityConfig();
 
   /// 指标配置。
   @Data
@@ -118,91 +110,5 @@ public class ObservabilityProperties {
     /// 日志格式模式。
 
     private String pattern = "[%tid] [${spring.application.name},%X{traceId:-},%X{spanId:-}]";
-  }
-
-  ///
-  /// ObservationHandler 配置。
-
-  @Data
-  public static class HandlersConfig {
-    ///
-    /// 日志 Handler。
-
-    private LoggingHandlerConfig logging = new LoggingHandlerConfig();
-
-    ///
-    /// 性能 Handler。
-
-    private PerformanceHandlerConfig performance = new PerformanceHandlerConfig();
-
-    ///
-    /// 告警 Handler（未来扩展）。
-
-    private AlertingHandlerConfig alerting = new AlertingHandlerConfig();
-  }
-
-  ///
-  /// 日志 Handler 配置。
-
-  @Data
-  public static class LoggingHandlerConfig {
-    ///
-    /// 是否启用。
-
-    private boolean enabled = true;
-
-    ///
-    /// 日志级别。
-
-    private String logLevel = "DEBUG";
-  }
-
-  ///
-  /// 性能 Handler 配置。
-
-  @Data
-  public static class PerformanceHandlerConfig {
-    ///
-    /// 是否启用。
-
-    private boolean enabled = true;
-
-    ///
-    /// 慢操作阈值。
-
-    @NotNull(message = "慢操作阈值不能为 null")
-    private Duration slowThreshold = Duration.ofSeconds(3);
-  }
-
-  ///
-  /// 告警 Handler 配置（未来扩展）。
-
-  @Data
-  public static class AlertingHandlerConfig {
-    ///
-    /// 是否启用。
-
-    private boolean enabled = false;
-  }
-
-  ///
-  /// 安全配置（敏感数据脱敏）。
-
-  @Data
-  public static class SecurityConfig {
-    ///
-    /// 是否启用敏感数据脱敏（生产环境强制启用）。
-
-    private boolean maskSensitiveData = true;
-
-    ///
-    /// 自定义敏感数据模式（正则表达式）。
-
-    private List<String> sensitivePatterns = new ArrayList<>();
-
-    ///
-    /// 允许在哪些环境中禁用脱敏（仅用于调试，生产环境强制启用）。
-
-    private List<String> maskingDisabledInEnvironments = List.of("dev-local");
   }
 }

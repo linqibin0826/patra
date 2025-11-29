@@ -19,31 +19,6 @@
       "name": "patra.observability.logging",
       "type": "com.patra.starter.observability.config.ObservabilityProperties$LoggingConfig",
       "description": "日志（Logging）配置"
-    },
-    {
-      "name": "patra.observability.handlers",
-      "type": "com.patra.starter.observability.config.ObservabilityProperties$HandlersConfig",
-      "description": "ObservationHandler 配置"
-    },
-    {
-      "name": "patra.observability.handlers.logging",
-      "type": "com.patra.starter.observability.config.ObservabilityProperties$LoggingHandlerConfig",
-      "description": "日志 Handler 配置"
-    },
-    {
-      "name": "patra.observability.handlers.performance",
-      "type": "com.patra.starter.observability.config.ObservabilityProperties$PerformanceHandlerConfig",
-      "description": "性能 Handler 配置"
-    },
-    {
-      "name": "patra.observability.handlers.alerting",
-      "type": "com.patra.starter.observability.config.ObservabilityProperties$AlertingHandlerConfig",
-      "description": "告警 Handler 配置（未来扩展）"
-    },
-    {
-      "name": "patra.observability.security",
-      "type": "com.patra.starter.observability.config.ObservabilityProperties$SecurityConfig",
-      "description": "安全配置（敏感数据脱敏）"
     }
   ],
   "properties": [
@@ -54,10 +29,26 @@
       "defaultValue": true
     },
     {
+      "name": "patra.observability.application-name",
+      "type": "java.lang.String",
+      "description": "应用名称标识"
+    },
+    {
       "name": "patra.observability.environment",
       "type": "java.lang.String",
-      "description": "环境标识（dev, staging, prod）。生产环境会强制启用敏感数据脱敏",
+      "description": "环境标识（dev, staging, prod）",
       "defaultValue": "dev"
+    },
+    {
+      "name": "patra.observability.region",
+      "type": "java.lang.String",
+      "description": "区域标识"
+    },
+    {
+      "name": "patra.observability.cluster",
+      "type": "java.lang.String",
+      "description": "集群标识",
+      "defaultValue": "default"
     },
     {
       "name": "patra.observability.metrics.enabled",
@@ -70,12 +61,6 @@
       "type": "java.lang.String",
       "description": "指标前缀（可选，默认为空）",
       "defaultValue": ""
-    },
-    {
-      "name": "patra.observability.metrics.step",
-      "type": "java.time.Duration",
-      "description": "指标导出间隔",
-      "defaultValue": "60s"
     },
     {
       "name": "patra.observability.metrics.prometheus.enabled",
@@ -100,24 +85,6 @@
       "type": "java.lang.Boolean",
       "description": "是否在日志中包含 traceId",
       "defaultValue": true
-    },
-    {
-      "name": "patra.observability.handlers.performance.enabled",
-      "type": "java.lang.Boolean",
-      "description": "是否启用性能 Handler",
-      "defaultValue": true
-    },
-    {
-      "name": "patra.observability.handlers.performance.slow-threshold",
-      "type": "java.time.Duration",
-      "description": "慢操作阈值",
-      "defaultValue": "3s"
-    },
-    {
-      "name": "patra.observability.security.mask-sensitive-data",
-      "type": "java.lang.Boolean",
-      "description": "是否启用敏感数据脱敏（生产环境强制启用）",
-      "defaultValue": true
     }
   ],
   "hints": [
@@ -134,32 +101,7 @@
         },
         {
           "value": "prod",
-          "description": "生产环境（强制启用敏感数据脱敏）"
-        }
-      ]
-    },
-    {
-      "name": "patra.observability.handlers.logging.log-level",
-      "values": [
-        {
-          "value": "TRACE",
-          "description": "最详细日志"
-        },
-        {
-          "value": "DEBUG",
-          "description": "调试日志"
-        },
-        {
-          "value": "INFO",
-          "description": "信息日志"
-        },
-        {
-          "value": "WARN",
-          "description": "警告日志"
-        },
-        {
-          "value": "ERROR",
-          "description": "错误日志"
+          "description": "生产环境"
         }
       ]
     }
