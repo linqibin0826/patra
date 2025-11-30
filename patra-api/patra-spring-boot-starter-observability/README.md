@@ -4,18 +4,18 @@
 
 ## 架构说明
 
-本模块采用 **OTel Agent + Micrometer 混合架构**：
+本模块采用 **OTel Agent + Micrometer Bridge** 架构：
 
 | 支柱 | 技术方案 | 说明 |
 |------|----------|------|
 | **Tracing** | OTel Java Agent | 通过 `-javaagent` 参数启动，零代码侵入，自动 instrument HTTP/JDBC/Redis/MQ |
-| **Metrics** | Micrometer + Prometheus | 应用代码使用 Micrometer API，Prometheus 定期 Pull `/actuator/prometheus` |
+| **Metrics** | OTel Agent + Micrometer Bridge | Micrometer 指标通过 Agent 桥接，统一走 OTLP 导出到 OTel Collector |
 | **Logging** | Agent MDC 注入 | Agent 自动将 `trace_id`/`span_id` 注入日志上下文 |
 
 > **为什么选择 Agent 模式？**
 > - 零代码侵入：无需修改应用代码即可获得完整的分布式追踪
 > - 自动覆盖：HTTP、JDBC、Redis、消息队列等基础设施自动 instrument
-> - 统一标准：与 OTel Collector 原生集成，避免 SDK 版本兼容问题
+> - 统一遥测管道：Traces/Metrics/Logs 全部通过 OTLP 导出，架构简洁
 
 ## 核心功能
 
@@ -24,8 +24,7 @@
 | 配置类 | 功能 | 条件 |
 |--------|------|------|
 | `ObservabilityAutoConfiguration` | 核心配置，创建 ObservationRegistry，启用 @Observed 注解 | 默认启用 |
-| `MicrometerAutoConfiguration` | 注册 MeterFilter（命名规范、公共标签、高基数过滤） | metrics.enabled=true |
-| `PrometheusAutoConfiguration` | 配置 Prometheus Registry 和 Exemplars | prometheus.enabled=true |
+| `MicrometerAutoConfiguration` | 桥接 OTel Agent MeterRegistry，注册 MeterFilter | metrics.enabled=true |
 | `ObservationInterceptorsAutoConfiguration` | 注册拦截器（错误解析） | 默认启用 |
 
 ### MeterFilter
@@ -62,12 +61,21 @@
 
 ```bash
 java -javaagent:/path/to/opentelemetry-javaagent.jar \
+     -Dotel.javaagent.configuration-file=/path/to/otel-dev.properties \
      -Dotel.service.name=my-service \
-     -Dotel.traces.exporter=otlp \
-     -Dotel.exporter.otlp.endpoint=http://otel-collector:4317 \
-     -Dotel.traces.sampler=parentbased_traceidratio \
-     -Dotel.traces.sampler.arg=0.1 \
      -jar my-app.jar
+```
+
+关键 Agent 配置（`otel-dev.properties`）：
+
+```properties
+# 统一 OTLP 导出
+otel.exporter.otlp.endpoint=http://localhost:4317
+otel.exporter.otlp.protocol=grpc
+
+# 启用 Metrics 和 Micrometer Bridge
+otel.metrics.exporter=otlp
+otel.instrumentation.micrometer.enabled=true
 ```
 
 ### 3. 配置属性
@@ -87,14 +95,6 @@ patra:
       common-tags:
         team: platform
         version: ${project.version}
-
-      prometheus:
-        enabled: true
-        enable-exemplars: true  # 与 Tracing 关联
-
-    logging:
-      enabled: true
-      include-trace-id: true
 ```
 
 ### 4. 使用 @Observed 注解
@@ -146,25 +146,18 @@ public class OrderService {
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `patra.observability.metrics.enabled` | boolean | true | 是否启用指标收集 |
-| `patra.observability.metrics.prefix` | String | "" | 指标前缀 |
+| `patra.observability.metrics.prefix` | String | "" | 指标前缀（所有指标自动添加 `patra.` 前缀） |
 | `patra.observability.metrics.common-tags` | Map | {} | 公共标签 |
-
-### Prometheus 配置
-
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `patra.observability.metrics.prometheus.enabled` | boolean | true | 是否启用 |
-| `patra.observability.metrics.prometheus.enable-exemplars` | boolean | true | 是否启用 Exemplars（Metrics→Tracing 关联） |
 
 ### Tracing 配置（Agent JVM 参数）
 
 | JVM 参数 | 说明 | 示例 |
 |----------|------|------|
 | `-Dotel.service.name` | 服务名称 | my-service |
-| `-Dotel.traces.exporter` | 导出器类型 | otlp |
 | `-Dotel.exporter.otlp.endpoint` | OTLP 端点 | http://otel-collector:4317 |
 | `-Dotel.traces.sampler` | 采样器 | parentbased_traceidratio |
-| `-Dotel.traces.sampler.arg` | 采样率 | 0.1 |
+| `-Dotel.traces.sampler.arg` | 采样率 | 1.0 |
+| `-Dotel.instrumentation.micrometer.enabled` | 启用 Micrometer Bridge | true |
 
 ## 安全特性
 
@@ -188,9 +181,8 @@ patra-spring-boot-starter-observability
 ├── patra-spring-boot-starter-core       # 核心 Starter（ResolutionInterceptor）
 ├── micrometer-observation               # Micrometer Observation API
 ├── micrometer-core                      # Micrometer 核心
-├── micrometer-registry-prometheus       # (可选) Prometheus Registry
 ├── caffeine                             # 缓存（状态管理）
-└── spring-web                           # (可选) REST Client
+└── spring-boot-starter-actuator         # Actuator（健康检查等）
 ```
 
 ## 包结构
@@ -199,8 +191,7 @@ patra-spring-boot-starter-observability
 com.patra.starter.observability
 ├── autoconfigure/                       # 自动配置
 │   ├── ObservabilityAutoConfiguration   # 核心自动配置
-│   ├── MicrometerAutoConfiguration      # Micrometer 配置
-│   ├── PrometheusAutoConfiguration      # Prometheus 配置
+│   ├── MicrometerAutoConfiguration      # Micrometer 配置 + OTel Bridge
 │   └── ObservationInterceptorsAutoConfiguration
 ├── config/
 │   └── ObservabilityProperties          # 配置属性
@@ -215,7 +206,7 @@ com.patra.starter.observability
 ## 设计原则
 
 1. **零配置启用**：默认启用所有功能，开箱即用
-2. **Agent + SDK 分离**：Tracing 由 Agent 处理，Metrics 由 Micrometer 处理，职责清晰
+2. **统一遥测管道**：Traces/Metrics/Logs 全部通过 OTel Agent + OTLP 导出
 3. **生产环境安全**：高基数过滤等安全特性自动启用
 4. **内存安全**：使用 Caffeine Cache 管理状态，自动过期防止内存泄漏
 5. **可扩展性**：支持自定义公共标签等

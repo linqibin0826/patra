@@ -133,12 +133,6 @@ flowchart LR
         <artifactId>micrometer-tracing-bridge-otel</artifactId>
     </dependency>
 
-    <!-- Prometheus 导出器（Spring Boot 管理版本） -->
-    <dependency>
-        <groupId>io.micrometer</groupId>
-        <artifactId>micrometer-registry-prometheus</artifactId>
-    </dependency>
-
     <!-- OTLP Exporter（Spring Boot 管理版本） -->
     <dependency>
         <groupId>io.opentelemetry</groupId>
