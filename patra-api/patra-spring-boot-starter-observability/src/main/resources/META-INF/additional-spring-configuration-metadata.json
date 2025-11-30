@@ -14,11 +14,6 @@
       "name": "patra.observability.metrics.prometheus",
       "type": "com.patra.starter.observability.config.ObservabilityProperties$PrometheusConfig",
       "description": "Prometheus Registry 配置"
-    },
-    {
-      "name": "patra.observability.logging",
-      "type": "com.patra.starter.observability.config.ObservabilityProperties$LoggingConfig",
-      "description": "日志（Logging）配置"
     }
   ],
   "properties": [
@@ -31,13 +26,12 @@
     {
       "name": "patra.observability.application-name",
       "type": "java.lang.String",
-      "description": "应用名称标识"
+      "description": "应用名称标识（默认自动从 spring.application.name 获取）"
     },
     {
       "name": "patra.observability.environment",
       "type": "java.lang.String",
-      "description": "环境标识（dev, staging, prod）",
-      "defaultValue": "dev"
+      "description": "环境标识（默认自动从 spring.profiles.active 获取，\"default\" 映射为 \"dev\"）"
     },
     {
       "name": "patra.observability.region",
@@ -72,18 +66,6 @@
       "name": "patra.observability.metrics.prometheus.enable-exemplars",
       "type": "java.lang.Boolean",
       "description": "是否启用 Exemplars（与 Tracing 关联）",
-      "defaultValue": true
-    },
-    {
-      "name": "patra.observability.logging.enabled",
-      "type": "java.lang.Boolean",
-      "description": "是否启用日志关联",
-      "defaultValue": true
-    },
-    {
-      "name": "patra.observability.logging.include-trace-id",
-      "type": "java.lang.Boolean",
-      "description": "是否在日志中包含 traceId",
       "defaultValue": true
     }
   ],

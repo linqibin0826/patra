@@ -8,6 +8,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -100,14 +101,35 @@ public class MicrometerAutoConfiguration {
   ///
   /// 执行顺序：最后执行（LOWEST_PRECEDENCE），在标签和名称都规范后添加公共标签。
   ///
-  /// @param properties 可观测性配置属性
+  /// 自动获取优先级：
+  ///
+  /// - applicationName：`patra.observability.application-name` > `spring.application.name`
+  /// - environment：`patra.observability.environment` > `spring.profiles.active`（"default" 映射为
+  // "dev"）
+  ///
+  /// @param properties          可观测性配置属性
+  /// @param springAppName       Spring 应用名称（自动 fallback）
+  /// @param springActiveProfile Spring 激活的 profile（自动 fallback）
   /// @return CommonTagsMeterFilter 实例
   @Bean
   @Order(Ordered.LOWEST_PRECEDENCE) // 最后执行
-  public CommonTagsMeterFilter commonTagsMeterFilter(ObservabilityProperties properties) {
+  public CommonTagsMeterFilter commonTagsMeterFilter(
+      ObservabilityProperties properties,
+      @Value("${spring.application.name:}") String springAppName,
+      @Value("${spring.profiles.active:default}") String springActiveProfile) {
+    // applicationName 优先级：显式配置 > spring.application.name
+    String applicationName = properties.getApplicationName();
+    if (applicationName == null || applicationName.isEmpty()) {
+      applicationName = springAppName;
+    }
+    // environment 优先级：显式配置 > spring.profiles.active（"default" 映射为 "dev"）
+    String environment = properties.getEnvironment();
+    if (environment == null || environment.isEmpty()) {
+      environment = "default".equals(springActiveProfile) ? "dev" : springActiveProfile;
+    }
     return new CommonTagsMeterFilter(
-        properties.getApplicationName(),
-        properties.getEnvironment(),
+        applicationName,
+        environment,
         properties.getRegion(),
         properties.getCluster(),
         properties.getMetrics().getCommonTags());
