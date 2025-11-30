@@ -137,7 +137,7 @@ curl http://localhost:3000/api/health  # Grafana
 | 拦截器配置 | `ObservationInterceptorsAutoConfiguration.java` | ✅ |
 | 配置属性 | `ObservabilityProperties.java` | ✅ |
 | MeterFilter | `HighCardinalityMeterFilter`、`MetricNamingMeterFilter`、`CommonTagsMeterFilter` | ✅ |
-| 自定义 Logback Converter | `TraceIdConverter`、`SpanIdConverter`、`SegmentIdConverter` | ✅ |
+| 自定义 Logback Converter | `TraceIdConverter`、`SpanIdConverter` | ✅ |
 | Converter 单元测试 | `*ConverterTest.java` | ✅ |
 
 > [!note] 架构简化
@@ -311,8 +311,7 @@ flowchart TD
         direction TB
         U1[TraceIdConverter 测试]
         U2[SpanIdConverter 测试]
-        U3[SegmentIdConverter 测试]
-        U4[ObservabilityProperties 绑定]
+        U3[ObservabilityProperties 绑定]
     end
 
     subgraph Integration["集成测试"]
@@ -325,7 +324,7 @@ flowchart TD
 
     classDef done fill:#dcfce7,stroke:#22c55e,color:#1e293b;
     classDef default fill:#dbeafe,stroke:#3b82f6,color:#1e293b;
-    class U1,U2,U3,U4 done;
+    class U1,U2,U3 done;
 ```
 
 ### 已完成测试用例
@@ -334,7 +333,6 @@ flowchart TD
 |--------|--------|------|
 | `TraceIdConverterTest` | OTel/Micrometer MDC 键兼容 | ✅ |
 | `SpanIdConverterTest` | OTel/Micrometer MDC 键兼容 | ✅ |
-| `SegmentIdConverterTest` | Trace ID 前 16 位提取 | ✅ |
 
 ## 风险评估与缓解
 

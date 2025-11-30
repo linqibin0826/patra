@@ -35,12 +35,12 @@ $PROJECT_ROOT/logs/
 ### 日志格式解析
 
 ```
-2025-01-15 10:23:45.123  INFO [patra-ingest] [trace:abc123,seg:def456,span:ghi789] [http-nio-8082-exec-1] c.p.i.adapter.rest.PlanController : Plan created
-│                        │    │              │                                      │                      │                                  │
-│                        │    │              │                                      │                      │                                  └─ 日志消息
-│                        │    │              │                                      │                      └─ Logger类名 (最多40字符)
-│                        │    │              │                                      └─ 线程名
-│                        │    │              └─ OpenTelemetry 追踪上下文 (traceId, segmentId, spanId)
+2025-01-15 10:23:45.123  INFO [patra-ingest] [abc123def456789012345678901234/ghi789abcd123456] [http-nio-8082-exec-1] c.p.i.adapter.rest.PlanController : Plan created
+│                        │    │              │                                                  │                      │                                  │
+│                        │    │              │                                                  │                      │                                  └─ 日志消息
+│                        │    │              │                                                  │                      └─ Logger类名 (最多40字符)
+│                        │    │              │                                                  └─ 线程名
+│                        │    │              └─ OpenTelemetry 追踪上下文 [traceId(32位)/spanId(16位)]
 │                        │    └─ 应用名称
 │                        └─ 日志级别
 └─ 时间戳
@@ -90,22 +90,23 @@ grep ERROR logs/patra-ingest.log | \
 ### OpenTelemetry 追踪关联
 
 ```bash
-# 1. 通过traceId追踪完整请求链路
-TRACE_ID="abc123def456"
+# 1. 通过 traceId 追踪完整请求链路
+# 日志格式: [traceId(32位)/spanId(16位)]，例如 [abc123def456789012345678901234/ghi789abcd123456]
+TRACE_ID="abc123def456789012345678901234"
 for log in logs/*.log; do
     echo "=== $(basename $log) ==="
-    grep "trace:$TRACE_ID" "$log" | head -5
+    grep "$TRACE_ID" "$log" | head -5
 done
 
-# 2. 查找跨服务调用链
-grep "trace:$TRACE_ID" logs/*.log | \
-  awk -F'[][]' '{print $2, $4, $8}' | \
+# 2. 查找跨服务调用链（按时间和服务排序）
+grep "$TRACE_ID" logs/*.log | \
+  awk -F'[][]' '{print $2, $4}' | \
   sort -k1,2
 
-# 3. 提取特定请求的所有span
-grep "trace:$TRACE_ID" logs/patra-ingest.log | \
-  awk -F'span:' '{print $2}' | \
-  awk '{print $1}' | sort -u
+# 3. 提取特定请求的所有 spanId
+grep "$TRACE_ID" logs/patra-ingest.log | \
+  awk -F'/' '{print $2}' | \
+  awk -F']' '{print $1}' | sort -u
 ```
 
 ### 性能问题诊断
