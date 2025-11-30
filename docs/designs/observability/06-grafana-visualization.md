@@ -156,17 +156,10 @@ command:
   - '--enable-feature=exemplar-storage'
 ```
 
-**Spring Boot 配置：**
-
-```yaml
-management:
-  prometheus:
-    metrics:
-      export:
-        # 启用 Exemplar
-        exemplars:
-          enabled: true
-```
+> [!note] Metrics 导出方式
+> Metrics 通过 OTel Agent + Micrometer Bridge 自动导出到 OTel Collector，
+> 再由 Collector 通过 Prometheus Remote Write 导出到 Prometheus。
+> 无需配置 `/actuator/prometheus` 端点。
 
 **查询示例：**
 

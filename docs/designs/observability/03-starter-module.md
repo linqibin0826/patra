@@ -16,9 +16,9 @@ tags:
 ## 架构说明
 
 > [!important] 核心架构决策
-> 本模块采用 **OTel Java Agent + Micrometer** 混合模式：
+> 本模块采用 **OTel Java Agent + Micrometer Bridge** 模式：
 > - **Tracing**: OTel Java Agent 通过 `-javaagent` 参数自动处理（零代码侵入）
-> - **Metrics**: Micrometer + Prometheus Registry，Prometheus 定期 Pull
+> - **Metrics**: OTel Agent + Micrometer Bridge，统一走 OTLP 导出到 OTel Collector
 > - **Logging**: Agent 自动注入 `trace_id`/`span_id` 到 MDC
 
 ## 目录结构
@@ -28,8 +28,7 @@ patra-spring-boot-starter-observability/
 ├── src/main/java/com/patra/starter/observability/
 │   ├── autoconfigure/
 │   │   ├── ObservabilityAutoConfiguration.java           # 核心配置
-│   │   ├── MicrometerAutoConfiguration.java              # Micrometer 配置
-│   │   ├── PrometheusAutoConfiguration.java              # Prometheus Registry
+│   │   ├── MicrometerAutoConfiguration.java              # Micrometer + OTel Bridge
 │   │   └── ObservationInterceptorsAutoConfiguration.java # 拦截器配置
 │   ├── config/
 │   │   └── ObservabilityProperties.java                  # 配置属性
@@ -49,7 +48,7 @@ patra-spring-boot-starter-observability/
 
 | 类别 | 组件数 | 说明 |
 |------|--------|------|
-| AutoConfiguration | 4 | 核心、Micrometer、Prometheus、拦截器 |
+| AutoConfiguration | 3 | 核心、Micrometer（含 OTel Bridge）、拦截器 |
 | Properties | 1 | ObservabilityProperties |
 | MeterFilter | 3 | 高基数过滤、命名规范、公共标签 |
 | Interceptor | 1 | ObservationResolutionInterceptor |
@@ -79,31 +78,20 @@ public class ObservabilityAutoConfiguration {
 
 ### MicrometerAutoConfiguration
 
-**职责**：Micrometer MeterFilter 配置
+**职责**：Micrometer MeterFilter + OTel Bridge 配置
 
 注册的 Bean：
-- `HighCardinalityMeterFilter` - 高基数过滤（防止 Prometheus OOM）
+- `HighCardinalityMeterFilter` - 高基数过滤（防止时序爆炸）
 - `MetricNamingMeterFilter` - 强制命名规范 `patra.{module}.{metric}`
 - `CommonTagsMeterFilter` - 添加公共标签（application、environment、region、cluster）
-
-### PrometheusAutoConfiguration
-
-**职责**：Prometheus MeterRegistry 配置
-
-```java
-@AutoConfiguration(after = MicrometerAutoConfiguration.class)
-@ConditionalOnClass(PrometheusMeterRegistry.class)
-public class PrometheusAutoConfiguration {
-    // 配置 Exemplars 支持，与 Tracing 关联
-}
-```
+- `otelMeterRegistryBridge` - 将 OTel Agent 的 MeterRegistry 暴露为 Primary Bean
 
 ### ObservationInterceptorsAutoConfiguration
 
 **职责**：可观测性拦截器自动配置
 
 ```java
-@AutoConfiguration(after = PrometheusAutoConfiguration.class)
+@AutoConfiguration(after = MicrometerAutoConfiguration.class)
 public class ObservationInterceptorsAutoConfiguration {
     // 创建 ObservationResolutionInterceptor - 错误解析流程可观测性拦截器
 }
@@ -117,13 +105,10 @@ public class ObservationInterceptorsAutoConfiguration {
 # 1. 主配置：可观测性核心配置和属性绑定
 com.patra.starter.observability.autoconfigure.ObservabilityAutoConfiguration
 
-# 2. Micrometer 配置：Observation API 和 MeterRegistry
+# 2. Micrometer 配置：MeterFilter + OTel Bridge
 com.patra.starter.observability.autoconfigure.MicrometerAutoConfiguration
 
-# 3. Prometheus 配置：Prometheus 格式指标导出
-com.patra.starter.observability.autoconfigure.PrometheusAutoConfiguration
-
-# 4. 拦截器配置：插件式架构
+# 3. 拦截器配置：插件式架构
 com.patra.starter.observability.autoconfigure.ObservationInterceptorsAutoConfiguration
 ```
 
@@ -161,13 +146,6 @@ com.patra.starter.observability.autoconfigure.ObservationInterceptorsAutoConfigu
     <dependency>
         <groupId>io.micrometer</groupId>
         <artifactId>micrometer-core</artifactId>
-    </dependency>
-
-    <!-- Prometheus Registry (可选) -->
-    <dependency>
-        <groupId>io.micrometer</groupId>
-        <artifactId>micrometer-registry-prometheus</artifactId>
-        <optional>true</optional>
     </dependency>
 
     <!-- Caffeine Cache: 状态管理 -->
@@ -232,12 +210,8 @@ patra:
     metrics:
       enabled: true
       prefix: ""
-      step: 60s
       common-tags:
         team: patra
-      prometheus:
-        enabled: true
-        enable-exemplars: true
 ```
 
 > [!tip] Tracing 配置

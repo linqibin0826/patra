@@ -124,7 +124,7 @@ curl http://localhost:3000/api/health  # Grafana
 | 职责 | 方案 | 说明 |
 |------|------|------|
 | Tracing | OTel Java Agent | 通过 `-javaagent` JVM 参数注入，零代码侵入 |
-| Metrics | Micrometer + Prometheus | Prometheus 定期 Pull `/actuator/prometheus` |
+| Metrics | OTel Agent + Micrometer Bridge | Micrometer 指标通过 Agent 桥接，统一走 OTLP 导出到 OTel Collector |
 | Logging | Agent MDC 注入 + 自定义 Converter | Agent 自动注入 `trace_id`/`span_id` 到 MDC |
 
 ### 任务清单
@@ -132,8 +132,7 @@ curl http://localhost:3000/api/health  # Grafana
 | 任务 | 产出物 | 状态 |
 |------|--------|------|
 | 核心自动配置 | `ObservabilityAutoConfiguration.java` | ✅ |
-| Micrometer 配置 | `MicrometerAutoConfiguration.java` | ✅ |
-| Prometheus 配置 | `PrometheusAutoConfiguration.java` | ✅ |
+| Micrometer 配置 | `MicrometerAutoConfiguration.java`（含 OTel Bridge） | ✅ |
 | 拦截器配置 | `ObservationInterceptorsAutoConfiguration.java` | ✅ |
 | 配置属性 | `ObservabilityProperties.java` | ✅ |
 | MeterFilter | `HighCardinalityMeterFilter`、`MetricNamingMeterFilter`、`CommonTagsMeterFilter` | ✅ |
@@ -158,14 +157,17 @@ curl http://localhost:3000/api/health  # Grafana
         <artifactId>micrometer-core</artifactId>
     </dependency>
 
-    <!-- Prometheus Registry -->
+    <!-- Spring Boot Actuator -->
     <dependency>
-        <groupId>io.micrometer</groupId>
-        <artifactId>micrometer-registry-prometheus</artifactId>
-        <optional>true</optional>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
 </dependencies>
 ```
+
+> [!note] Metrics 导出架构
+> Metrics 通过 OTel Agent 的 Micrometer Bridge 自动桥接，无需 `micrometer-registry-prometheus`。
+> Agent 配置 `otel.instrumentation.micrometer.enabled=true` 后，Micrometer 指标统一走 OTLP 导出。
 
 > [!note] 零代码侵入
 > Tracing 由 OTel Java Agent 通过 `-javaagent` 参数自动处理，无需在应用代码中引入 OTel SDK 依赖。
@@ -264,8 +266,8 @@ sequenceDiagram
     Tester->>Grafana: 检查 Tempo
     Note right of Grafana: ✅ 看到完整 Trace
 
-    Tester->>Grafana: 检查 Prometheus
-    Note right of Grafana: ✅ 看到 http_server_requests
+    Tester->>Grafana: 检查 Metrics（Prometheus 数据源）
+    Note right of Grafana: ✅ 看到 patra_http_server_requests
 
     Tester->>Grafana: 检查 Loki
     Note right of Grafana: ✅ 日志带 TraceId
@@ -316,7 +318,7 @@ flowchart TD
 
     subgraph Integration["集成测试"]
         direction TB
-        I1[Prometheus Endpoint 暴露]
+        I1[Micrometer Bridge 桥接]
         I2[AutoConfiguration 条件装配]
     end
 

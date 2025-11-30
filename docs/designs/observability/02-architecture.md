@@ -393,8 +393,7 @@ starter: patra-spring-boot-starter-observability {
   adapter: Adapter Layer {
     class: layer
 
-    otel_bridge: OTel Bridge Adapter {class: adapter}
-    prometheus_exp: Prometheus Exporter {class: adapter}
+    otel_bridge: OTel Agent Micrometer Bridge {class: adapter}
     otlp_exp: OTLP Exporter {class: adapter}
   }
 
@@ -404,8 +403,7 @@ starter: patra-spring-boot-starter-observability {
 
     obs_auto: ObservabilityAutoConfiguration
     meter_auto: MicrometerAutoConfiguration
-    otel_auto: OtelAutoConfiguration
-    prom_auto: PrometheusAutoConfiguration
+    interceptor_auto: ObservationInterceptorsAutoConfiguration
   }
 
   # 依赖关系
@@ -421,13 +419,13 @@ external: 外部组件 {
 
   spring: Spring Boot Actuator
   micrometer: Micrometer Core
-  otel_sdk: OpenTelemetry SDK
+  otel_agent: OTel Java Agent
   logback: Logback Classic
 }
 
-starter.adapter.otel_bridge -> external.otel_sdk: {style.stroke: "#64748b"; style.stroke-width: 2}
-starter.adapter.prometheus_exp -> external.micrometer: {style.stroke: "#64748b"; style.stroke-width: 2}
+starter.adapter.otel_bridge -> external.otel_agent: {style.stroke: "#64748b"; style.stroke-width: 2}
 starter.core.observation -> external.spring: {style.stroke: "#64748b"; style.stroke-width: 2}
+starter.core.meter -> external.micrometer: {style.stroke: "#64748b"; style.stroke-width: 2}
 ```
 
 ### 组件职责表
@@ -441,13 +439,11 @@ starter.core.observation -> external.spring: {style.stroke: "#64748b"; style.str
 | **MeterFilter** | `HighCardinalityMeterFilter` | 高基数过滤 | 无 |
 | **MeterFilter** | `MetricNamingMeterFilter` | 命名规范化 | 无 |
 | **MeterFilter** | `CommonTagsMeterFilter` | 公共标签注入 | 无 |
-| **Adapter** | OTel Bridge | Micrometer → OTel | OTel SDK |
-| **Adapter** | Prometheus Exporter | 指标暴露 | Micrometer |
-| **Adapter** | OTLP Exporter | 远程导出 | OTel SDK |
+| **Adapter** | OTel Agent Micrometer Bridge | Micrometer → OTel Agent | OTel Agent |
+| **Adapter** | OTLP Exporter | 远程导出 | OTel Agent |
 | **AutoConfig** | `ObservabilityAutoConfiguration` | 核心配置 | Spring Boot |
-| **AutoConfig** | `MicrometerAutoConfiguration` | MeterFilter 注册 | Micrometer |
-| **AutoConfig** | `OtelAutoConfiguration` | OTel SDK 配置 | OTel SDK |
-| **AutoConfig** | `PrometheusAutoConfiguration` | Prometheus 配置 | Micrometer |
+| **AutoConfig** | `MicrometerAutoConfiguration` | MeterFilter + OTel Bridge | Micrometer |
+| **AutoConfig** | `ObservationInterceptorsAutoConfiguration` | 拦截器注册 | Micrometer |
 
 > **注意**：ObservationHandler 和 ObservationFilter 已移除，Tracing 由 OTel Java Agent 自动处理。
 
