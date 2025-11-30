@@ -44,12 +44,6 @@
       "type": "java.lang.Boolean",
       "description": "是否启用指标收集",
       "defaultValue": true
-    },
-    {
-      "name": "patra.observability.metrics.prefix",
-      "type": "java.lang.String",
-      "description": "指标前缀（可选，默认为空，所有指标自动添加 patra. 前缀）",
-      "defaultValue": ""
     }
   ],
   "hints": [

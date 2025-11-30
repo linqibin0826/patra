@@ -36,7 +36,6 @@ import org.springframework.test.context.TestPropertySource;
       "patra.observability.environment=test",
       "patra.observability.region=cn-test",
       "patra.observability.cluster=test-cluster-01",
-      "patra.observability.metrics.prefix=",
       "patra.observability.metrics.common-tags.team=backend",
       "patra.observability.metrics.common-tags.project=patra",
       "management.observations.annotations.enabled=false" // 禁用 @Observed 注解支持（测试环境无 AspectJ）

@@ -45,9 +45,6 @@ public class ObservabilityProperties {
     /// 是否启用指标收集。
     private boolean enabled = true;
 
-    /// 指标前缀（可选，默认为空，所有指标自动添加 `patra.` 前缀）。
-    private String prefix = "";
-
     /// 公共标签（自动添加到所有指标）。
     private Map<String, String> commonTags = new HashMap<>();
   }
