@@ -3,17 +3,12 @@
     {
       "name": "patra.observability",
       "type": "com.patra.starter.observability.config.ObservabilityProperties",
-      "description": "Patra 可观测性统一配置属性（Agent 模式：Tracing 由 OTel Agent 处理，Metrics 由 Prometheus Pull）"
+      "description": "Patra 可观测性统一配置属性（OTel Agent + Micrometer Bridge 模式）"
     },
     {
       "name": "patra.observability.metrics",
       "type": "com.patra.starter.observability.config.ObservabilityProperties$MetricsConfig",
       "description": "指标（Metrics）配置"
-    },
-    {
-      "name": "patra.observability.metrics.prometheus",
-      "type": "com.patra.starter.observability.config.ObservabilityProperties$PrometheusConfig",
-      "description": "Prometheus Registry 配置"
     }
   ],
   "properties": [
@@ -53,20 +48,8 @@
     {
       "name": "patra.observability.metrics.prefix",
       "type": "java.lang.String",
-      "description": "指标前缀（可选，默认为空）",
+      "description": "指标前缀（可选，默认为空，所有指标自动添加 patra. 前缀）",
       "defaultValue": ""
-    },
-    {
-      "name": "patra.observability.metrics.prometheus.enabled",
-      "type": "java.lang.Boolean",
-      "description": "是否启用 Prometheus Registry",
-      "defaultValue": true
-    },
-    {
-      "name": "patra.observability.metrics.prometheus.enable-exemplars",
-      "type": "java.lang.Boolean",
-      "description": "是否启用 Exemplars（与 Tracing 关联）",
-      "defaultValue": true
     }
   ],
   "hints": [

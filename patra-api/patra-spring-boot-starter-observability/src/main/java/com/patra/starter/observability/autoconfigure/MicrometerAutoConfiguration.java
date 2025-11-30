@@ -5,6 +5,7 @@ import com.patra.starter.observability.filter.CommonTagsMeterFilter;
 import com.patra.starter.observability.filter.HighCardinalityMeterFilter;
 import com.patra.starter.observability.filter.MetricNamingMeterFilter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
 import io.micrometer.observation.ObservationRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 
@@ -21,7 +23,16 @@ import org.springframework.core.annotation.Order;
 ///
 /// 负责配置 Micrometer 相关组件：
 ///
+/// - **OTel Agent MeterRegistry 桥接**：将 Agent 注入的 `OpenTelemetryMeterRegistry` 暴露为 Spring Bean
 /// - MeterFilter 注册（命名规范、公共标签、高基数过滤）
+///
+/// ## OTel Agent 桥接机制
+///
+/// **问题**：OTel Agent 将 `OpenTelemetryMeterRegistry` 注册到 `Metrics.globalRegistry`，
+/// 但 Spring 使用 ApplicationContext 中的 MeterRegistry Bean。这导致 Spring 组件
+/// （如 Spring Batch、HikariCP）的指标无法被 Agent 采集。
+///
+/// **解决方案**：从 `globalRegistry` 中提取 `OpenTelemetryMeterRegistry`，作为 Primary Bean 暴露。
 ///
 /// 注意：
 ///
@@ -49,6 +60,51 @@ public class MicrometerAutoConfiguration {
     log.info(
         "初始化 Micrometer 自动配置 [指标前缀: {}]",
         properties.getMetrics().getPrefix().isEmpty() ? "无" : properties.getMetrics().getPrefix());
+  }
+
+  // ==================== OTel Agent MeterRegistry 桥接 ====================
+
+  /// 桥接 OTel Agent 的 MeterRegistry 到 Spring ApplicationContext。
+  ///
+  /// **问题背景**：
+  ///
+  /// OTel Agent 将 `OpenTelemetryMeterRegistry` 注册到 `Metrics.globalRegistry`，
+  /// 但 Spring 使用 ApplicationContext 中的 MeterRegistry Bean。
+  /// 这导致 Spring 组件（如 Spring Batch、HikariCP）的指标无法被 Agent 采集。
+  ///
+  /// **解决方案**：
+  ///
+  /// 从 globalRegistry 中提取 `OpenTelemetryMeterRegistry`，作为 Primary Bean 暴露，
+  /// 覆盖 Spring Boot Actuator 默认创建的 `SimpleMeterRegistry`。
+  ///
+  /// **生效条件**：
+  ///
+  /// - 类路径中存在 OTel Java Agent（检测 `OpenTelemetryAgent` 类）
+  /// - 配置了 `otel.instrumentation.micrometer.enabled=true`
+  ///
+  /// @return OTel MeterRegistry
+  /// @throws IllegalStateException 如果 OTel Agent 已配置但找不到 OpenTelemetryMeterRegistry
+  @Bean
+  @Primary
+  @ConditionalOnClass(name = "io.opentelemetry.javaagent.OpenTelemetryAgent")
+  @ConditionalOnProperty(name = "otel.instrumentation.micrometer.enabled", havingValue = "true")
+  public MeterRegistry otelMeterRegistryBridge() {
+    MeterRegistry otelRegistry =
+        Metrics.globalRegistry.getRegistries().stream()
+            .filter(r -> r.getClass().getName().contains("OpenTelemetryMeterRegistry"))
+            .findAny()
+            .orElseThrow(
+                () ->
+                    new IllegalStateException(
+                        "OTel Agent 已配置 micrometer 桥接，但未找到 OpenTelemetryMeterRegistry。"
+                            + "请确保使用 -javaagent 参数正确加载 OTel Java Agent"));
+
+    // 从 globalRegistry 移除，避免重复计数
+    Metrics.globalRegistry.remove(otelRegistry);
+    log.info(
+        "成功桥接 OTel Agent MeterRegistry [{}] 到 Spring ApplicationContext",
+        otelRegistry.getClass().getSimpleName());
+    return otelRegistry;
   }
 
   // ==================== MeterFilter ====================
