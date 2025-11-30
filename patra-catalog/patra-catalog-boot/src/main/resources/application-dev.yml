@@ -26,8 +26,6 @@ logging:
     com.patra: DEBUG
     com.patra.catalog: DEBUG
 
-# Observability - 本地 IDE 运行时连接 Docker 内的 OTel Collector
-patra:
-  observability:
-    tracing:
-      endpoint: http://localhost:4318/v1/traces  # OTLP HTTP 端点
+# 可观测性：开箱即用（零配置）
+# - Tracing/Logging: OTel Agent 自动处理
+# - Metrics: applicationName 自动取 spring.application.name，environment 自动取 spring.profiles.active
