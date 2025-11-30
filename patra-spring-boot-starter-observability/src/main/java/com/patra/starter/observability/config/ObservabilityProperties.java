@@ -13,10 +13,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 ///
 /// - **Tracing**: 由 OTel Java Agent 通过 `-javaagent` 参数自动处理（零代码侵入）
 /// - **Metrics**: 由 Micrometer + Prometheus Registry 处理，Prometheus 定期 Pull
-/// - **Logging**: 由 Agent 自动注入 `trace_id`/`span_id` 到 MDC
+/// - **Logging**: 由 OTel Agent 自动注入 `trace_id`/`span_id` 到 MDC，Logback 自动格式化输出
 ///
-/// 本配置仅包含应用层需要的 Metrics 配置，
-/// Tracing 配置由 Agent JVM 参数控制（如 `-Dotel.traces.sampler.arg=0.1`）。
+/// 本配置仅包含 Metrics 相关配置，Tracing/Logging 由 Agent 自动处理无需配置。
 ///
 /// @author Jobs
 /// @since 1.0.0
@@ -30,8 +29,8 @@ public class ObservabilityProperties {
   /// 应用标识（建议从 spring.application.name 自动获取）。
   private String applicationName;
 
-  /// 环境标识（dev, prod）。
-  private String environment = "dev";
+  /// 环境标识（默认自动从 spring.profiles.active 获取，"default" 映射为 "dev"）。
+  private String environment;
 
   /// 区域标识（cn-east-1, us-west-2）。
   private String region;
@@ -41,9 +40,6 @@ public class ObservabilityProperties {
 
   /// 指标配置。
   private MetricsConfig metrics = new MetricsConfig();
-
-  /// 日志配置（日志关联）。
-  private LoggingConfig logging = new LoggingConfig();
 
   /// 指标配置。
   @Data
@@ -89,26 +85,5 @@ public class ObservabilityProperties {
     /// 是否启用 Exemplars（与 Tracing 关联）。
 
     private boolean enableExemplars = true;
-  }
-
-  ///
-  /// 日志配置。
-
-  @Data
-  public static class LoggingConfig {
-    ///
-    /// 是否启用日志关联。
-
-    private boolean enabled = true;
-
-    ///
-    /// 是否在日志中包含 traceId。
-
-    private boolean includeTraceId = true;
-
-    ///
-    /// 日志格式模式。
-
-    private String pattern = "[%tid] [${spring.application.name},%X{traceId:-},%X{spanId:-}]";
   }
 }
