@@ -92,24 +92,15 @@ logging:
 # ----------------------------------------------------------------------------
 # Actuator & Monitoring Configuration
 # ----------------------------------------------------------------------------
+# 注意：Metrics 通过 OTel Agent + Micrometer Bridge 导出到 OTel Collector
 management:
   endpoints:
     web:
       exposure:
-        # Expose health, info, metrics, and prometheus endpoints
-        include: health,info,metrics,prometheus
+        include: health,info,metrics
   endpoint:
     health:
-      # Show detailed health information when authorized
       show-details: when-authorized
-    prometheus:
-      # Enable Prometheus metrics endpoint at /actuator/prometheus
-      enabled: true
   metrics:
-    export:
-      prometheus:
-        # Enable Prometheus metrics export
-        enabled: true
     tags:
-      # Add application tag to all metrics for multi-service monitoring
       application: ${spring.application.name}

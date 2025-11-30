@@ -46,16 +46,10 @@
             <artifactId>patra-registry-infra</artifactId>
         </dependency>
 
-        <!-- 可观测性 -->
+        <!-- 可观测性（Metrics 通过 OTel Agent + Micrometer Bridge 导出） -->
         <dependency>
             <groupId>com.patra</groupId>
             <artifactId>patra-spring-boot-starter-observability</artifactId>
-        </dependency>
-
-        <!-- Prometheus Registry: 启用 /actuator/prometheus 端点供 Prometheus 抓取指标 -->
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
 
         <!-- 测试依赖 -->
