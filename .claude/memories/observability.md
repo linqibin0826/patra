@@ -67,14 +67,16 @@ Registry 暴露为 Primary Bean，覆盖 Spring Boot Actuator 默认的 `SimpleM
 
 ## 指标命名规范
 
-所有指标自动添加 `patra.` 前缀（由 `MetricNamingMeterFilter` 处理）：
+所有指标由 OTel Collector 统一添加 `patra_` 前缀（通过 Prometheus exporter 的 `namespace: patra` 配置）：
 
-- `patra.jvm.*` - JVM 指标
-- `patra.http.server.*` - HTTP 服务端指标
-- `patra.http.client.*` - HTTP 客户端指标
-- `patra.db.*` - 数据库指标
-- `patra.spring.batch.*` - Spring Batch 指标
-- `patra.{module}.*` - 自定义业务指标
+- `patra_jvm_*` - JVM 指标
+- `patra_http_server_*` - HTTP 服务端指标
+- `patra_http_client_*` - HTTP 客户端指标
+- `patra_db_*` - 数据库指标
+- `patra_spring_batch_*` - Spring Batch 指标
+- `patra_{module}_*` - 自定义业务指标
+
+**注意**：Prometheus 会将 `.` 转换为 `_`，所以在 PromQL 查询时使用下划线。
 
 ## 公共标签
 

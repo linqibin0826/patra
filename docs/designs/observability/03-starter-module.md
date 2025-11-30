@@ -34,7 +34,6 @@ patra-spring-boot-starter-observability/
 │   │   └── ObservabilityProperties.java                  # 配置属性
 │   ├── filter/
 │   │   ├── HighCardinalityMeterFilter.java               # 高基数过滤
-│   │   ├── MetricNamingMeterFilter.java                  # 指标命名规范
 │   │   └── CommonTagsMeterFilter.java                    # 通用标签
 │   └── interceptor/
 │       └── ObservationResolutionInterceptor.java         # 观测拦截器
@@ -50,7 +49,7 @@ patra-spring-boot-starter-observability/
 |------|--------|------|
 | AutoConfiguration | 3 | 核心、Micrometer（含 OTel Bridge）、拦截器 |
 | Properties | 1 | ObservabilityProperties |
-| MeterFilter | 3 | 高基数过滤、命名规范、公共标签 |
+| MeterFilter | 2 | 高基数过滤、公共标签（命名前缀由 OTel Collector 统一添加） |
 | Interceptor | 1 | ObservationResolutionInterceptor |
 
 > **注意**：Logback MDC 转换器（TraceId、SpanId）位于 `patra-spring-boot-starter-core` 模块。
@@ -82,9 +81,10 @@ public class ObservabilityAutoConfiguration {
 
 注册的 Bean：
 - `HighCardinalityMeterFilter` - 高基数过滤（防止时序爆炸）
-- `MetricNamingMeterFilter` - 强制命名规范 `patra.{module}.{metric}`
 - `CommonTagsMeterFilter` - 添加公共标签（application、environment、region、cluster）
 - `otelMeterRegistryBridge` - 将 OTel Agent 的 MeterRegistry 暴露为 Primary Bean
+
+> **指标前缀**：`patra_` 前缀由 OTel Collector 的 Prometheus exporter `namespace: patra` 配置统一添加。
 
 ### ObservationInterceptorsAutoConfiguration
 
@@ -226,8 +226,9 @@ patra:
 | Filter | 职责 | 执行顺序 |
 |--------|------|----------|
 | `HighCardinalityMeterFilter` | 过滤高基数标签（userId、traceId 等），防止 Prometheus OOM | HIGHEST_PRECEDENCE |
-| `MetricNamingMeterFilter` | 强制执行命名规范 `patra.{module}.{metric}` | HIGHEST_PRECEDENCE + 1 |
 | `CommonTagsMeterFilter` | 为所有 Meter 添加公共标签（application、environment、region、cluster） | LOWEST_PRECEDENCE |
+
+> **指标前缀**：`patra_` 前缀由 OTel Collector 的 Prometheus exporter `namespace: patra` 配置统一添加，无需应用层 Filter。
 
 > [!important] 架构简化
 > ObservationHandler 和 ObservationFilter 已移除：
