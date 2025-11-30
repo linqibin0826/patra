@@ -135,7 +135,7 @@ curl http://localhost:3000/api/health  # Grafana
 | Micrometer 配置 | `MicrometerAutoConfiguration.java`（含 OTel Bridge） | ✅ |
 | 拦截器配置 | `ObservationInterceptorsAutoConfiguration.java` | ✅ |
 | 配置属性 | `ObservabilityProperties.java` | ✅ |
-| MeterFilter | `HighCardinalityMeterFilter`、`MetricNamingMeterFilter`、`CommonTagsMeterFilter` | ✅ |
+| MeterFilter | `HighCardinalityMeterFilter`、`CommonTagsMeterFilter`（前缀由 Collector 添加） | ✅ |
 | 自定义 Logback Converter | `TraceIdConverter`、`SpanIdConverter` | ✅ |
 | Converter 单元测试 | `*ConverterTest.java` | ✅ |
 

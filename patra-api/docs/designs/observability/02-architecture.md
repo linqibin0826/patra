@@ -385,7 +385,6 @@ starter: patra-spring-boot-starter-observability {
     class: layer
 
     cardinality_f: HighCardinalityMeterFilter
-    naming_f: MetricNamingMeterFilter
     tags_f: CommonTagsMeterFilter
   }
 
@@ -437,7 +436,6 @@ starter.core.meter -> external.micrometer: {style.stroke: "#64748b"; style.strok
 | **Core** | `ObservationRegistry` | 观测注册中心 | Micrometer |
 | **Core** | `MeterRegistry` | 指标注册中心 | Micrometer |
 | **MeterFilter** | `HighCardinalityMeterFilter` | 高基数过滤 | 无 |
-| **MeterFilter** | `MetricNamingMeterFilter` | 命名规范化 | 无 |
 | **MeterFilter** | `CommonTagsMeterFilter` | 公共标签注入 | 无 |
 | **Adapter** | OTel Agent Micrometer Bridge | Micrometer → OTel Agent | OTel Agent |
 | **Adapter** | OTLP Exporter | 远程导出 | OTel Agent |
