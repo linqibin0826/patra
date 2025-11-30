@@ -12,10 +12,11 @@
     <property name="LOG_FILE" value="${LOG_PATH}/${appName}"/>
 
     <!-- Register custom OTel converters for trace context -->
+    <!-- Note: Logback 1.5+ uses 'class' instead of deprecated 'converterClass' -->
     <conversionRule conversionWord="traceId"
-                    converterClass="com.patra.starter.core.logging.TraceIdConverter"/>
+                    class="com.patra.starter.core.logging.TraceIdConverter"/>
     <conversionRule conversionWord="spanId"
-                    converterClass="com.patra.starter.core.logging.SpanIdConverter"/>
+                    class="com.patra.starter.core.logging.SpanIdConverter"/>
 
     <!-- Console Appender with colors and trace context -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
