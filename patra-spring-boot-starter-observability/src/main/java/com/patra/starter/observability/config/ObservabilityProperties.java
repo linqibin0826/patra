@@ -1,7 +1,5 @@
 package com.patra.starter.observability.config;
 
-import jakarta.validation.constraints.NotNull;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.Data;
@@ -12,10 +10,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /// 架构说明：
 ///
 /// - **Tracing**: 由 OTel Java Agent 通过 `-javaagent` 参数自动处理（零代码侵入）
-/// - **Metrics**: 由 Micrometer + Prometheus Registry 处理，Prometheus 定期 Pull
+/// - **Metrics**: 由 OTel Agent + Micrometer Bridge 导出到 OTel Collector
 /// - **Logging**: 由 OTel Agent 自动注入 `trace_id`/`span_id` 到 MDC，Logback 自动格式化输出
 ///
-/// 本配置仅包含 Metrics 相关配置，Tracing/Logging 由 Agent 自动处理无需配置。
+/// 本配置包含 Metrics 相关配置，Tracing/Logging 由 Agent 自动处理无需配置。
 ///
 /// @author Jobs
 /// @since 1.0.0
@@ -44,46 +42,13 @@ public class ObservabilityProperties {
   /// 指标配置。
   @Data
   public static class MetricsConfig {
-    ///
     /// 是否启用指标收集。
-
     private boolean enabled = true;
 
-    ///
-    /// 指标前缀（可选，默认为空）。
-
+    /// 指标前缀（可选，默认为空，所有指标自动添加 `patra.` 前缀）。
     private String prefix = "";
 
-    ///
     /// 公共标签（自动添加到所有指标）。
-
     private Map<String, String> commonTags = new HashMap<>();
-
-    ///
-    /// 导出间隔。
-
-    @NotNull(message = "导出间隔不能为 null")
-    private Duration step = Duration.ofSeconds(60);
-
-    ///
-    /// Prometheus Registry 配置。
-
-    private PrometheusConfig prometheus = new PrometheusConfig();
-  }
-
-  ///
-  /// Prometheus 配置。
-
-  @Data
-  public static class PrometheusConfig {
-    ///
-    /// 是否启用。
-
-    private boolean enabled = true;
-
-    ///
-    /// 是否启用 Exemplars（与 Tracing 关联）。
-
-    private boolean enableExemplars = true;
   }
 }
