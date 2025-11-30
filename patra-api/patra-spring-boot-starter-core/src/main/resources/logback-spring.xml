@@ -11,27 +11,25 @@
     <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="logs"/>
     <property name="LOG_FILE" value="${LOG_PATH}/${appName}"/>
 
-    <!-- Register custom OTel converters for separated trace info -->
+    <!-- Register custom OTel converters for trace context -->
     <conversionRule conversionWord="traceId"
                     converterClass="com.patra.starter.core.logging.TraceIdConverter"/>
-    <conversionRule conversionWord="segmentId"
-                    converterClass="com.patra.starter.core.logging.SegmentIdConverter"/>
     <conversionRule conversionWord="spanId"
                     converterClass="com.patra.starter.core.logging.SpanIdConverter"/>
 
-    <!-- Console Appender with colors and separated trace/segment/span IDs -->
+    <!-- Console Appender with colors and trace context -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-            <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr([${appName}]){blue} %clr([trace:%traceId,seg:%segmentId,span:%spanId]){magenta} %clr([%t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx</pattern>
+            <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr([${appName}]){blue} %clr([%traceId/%spanId]){magenta} %clr([%t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>
 
-    <!-- File Appender with separated trace/segment/span IDs -->
+    <!-- File Appender with trace context -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_FILE}.log</file>
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [${appName}] [trace:%traceId,seg:%segmentId,span:%spanId] [%t] %-40.40logger{39} : %m%n</pattern>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [${appName}] [%traceId/%spanId] [%t] %-40.40logger{39} : %m%n</pattern>
             <charset>UTF-8</charset>
         </encoder>
 
