@@ -54,7 +54,7 @@ patra-spring-boot-starter-observability/
 | MeterFilter | 3 | 高基数过滤、命名规范、公共标签 |
 | Interceptor | 1 | ObservationResolutionInterceptor |
 
-> **注意**：Logback MDC 转换器（TraceId、SpanId、SegmentId）位于 `patra-spring-boot-starter-core` 模块。
+> **注意**：Logback MDC 转换器（TraceId、SpanId）位于 `patra-spring-boot-starter-core` 模块。
 
 > [!note] 已移除组件
 > - **ObservationHandler**：Tracing 由 OTel Java Agent 自动处理
@@ -211,7 +211,6 @@ public class ObservabilityProperties {
 
     // 主要配置块
     private MetricsConfig metrics;
-    private LoggingConfig logging;
 }
 ```
 
@@ -239,12 +238,6 @@ patra:
       prometheus:
         enabled: true
         enable-exemplars: true
-
-    # 日志配置
-    logging:
-      enabled: true
-      include-trace-id: true
-      pattern: "[%tid] [${spring.application.name},%X{traceId:-},%X{spanId:-}]"
 ```
 
 > [!tip] Tracing 配置

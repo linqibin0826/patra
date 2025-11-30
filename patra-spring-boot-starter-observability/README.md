@@ -136,8 +136,8 @@ public class OrderService {
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `patra.observability.enabled` | boolean | true | 全局开关 |
-| `patra.observability.application-name` | String | null | 应用标识 |
-| `patra.observability.environment` | String | dev | 环境标识（dev/staging/prod） |
+| `patra.observability.application-name` | String | `${spring.application.name}` | 应用标识（自动从 Spring 获取） |
+| `patra.observability.environment` | String | `${spring.profiles.active}` | 环境标识（自动从 profile 获取，"default" 映射为 "dev"） |
 | `patra.observability.region` | String | null | 区域标识 |
 | `patra.observability.cluster` | String | default | 集群标识 |
 
@@ -155,13 +155,6 @@ public class OrderService {
 |------|------|--------|------|
 | `patra.observability.metrics.prometheus.enabled` | boolean | true | 是否启用 |
 | `patra.observability.metrics.prometheus.enable-exemplars` | boolean | true | 是否启用 Exemplars（Metrics→Tracing 关联） |
-
-### 日志配置
-
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `patra.observability.logging.enabled` | boolean | true | 是否启用日志集成 |
-| `patra.observability.logging.include-trace-id` | boolean | true | 是否在日志中包含 trace_id |
 
 ### Tracing 配置（Agent JVM 参数）
 
