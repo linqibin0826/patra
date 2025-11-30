@@ -92,14 +92,15 @@ logging:
 # ========================================
 # Actuator & Management Endpoints
 # ========================================
+# 注意：Metrics 通过 OTel Agent + Micrometer Bridge 导出到 OTel Collector
 management:
   endpoints:
     web:
       exposure:
-        # 暴露 health 和 prometheus 端点供监控系统抓取
-        include: health,prometheus
-  prometheus:
-    metrics:
-      export:
-        # 启用 Prometheus 指标导出
-        enabled: true
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}

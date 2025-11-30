@@ -31,14 +31,10 @@
             <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
         </dependency>
 
+        <!-- 可观测性（Metrics 通过 OTel Agent + Micrometer Bridge 导出） -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-registry-prometheus</artifactId>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-observability</artifactId>
         </dependency>
 
         <dependency>
