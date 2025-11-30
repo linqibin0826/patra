@@ -5,22 +5,28 @@ import lombok.Getter;
 
 /// MeSH 入口术语词法标记枚举。
 ///
-/// 字段映射：cat_mesh_entry_term.lexical_tag → NON/PEF/LAB/ABB/ACR/NAM
+/// 字段映射：cat_mesh_entry_term.lexical_tag
 ///
-/// 类型说明：
+/// 类型说明（参考 [NLM MeSH XML Data Elements](https://www.nlm.nih.gov/mesh/xml_data_elements.html)）：
 ///
 /// - **NON**：无特殊标记(None)
-///   - **PEF**：首选术语(Preferred Term)
-///   - **LAB**：实验室术语(Laboratory Term)
-///   - **ABB**：缩写(Abbreviation)
-///   - **ACR**：首字母缩写(Acronym)
-///   - **NAM**：命名(Named Entity)
+/// - **PEF**：首选术语(Preferred Term)
+/// - **LAB**：实验室编号(Lab Number)
+/// - **ABB**：缩写(Abbreviation)
+/// - **ABX**：嵌入式缩写(Embedded Abbreviation)
+/// - **ACR**：首字母缩写(Acronym)
+/// - **ACX**：嵌入式首字母缩写(Embedded Acronym)
+/// - **NAM**：专有名词(Proper Name)
+/// - **EPO**：人名术语(Eponym)
+/// - **TRD**：商标名(Trade Name)
+/// - **HIST**：历史术语(Historical Term)
 ///
 /// 业务规则：
 ///
 /// - PEF 标记的术语是该主题词的首选名称
-///   - ABB/ACR 标记的术语在检索时需要特殊处理
-///   - LAB 标记的术语常用于实验室场景
+/// - ABB/ACR/ABX/ACX 标记的术语在检索时需要特殊处理
+/// - TRD 标记的术语为商标/品牌名称
+/// - EPO 标记的术语来源于人名（如 Alzheimer）
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -43,7 +49,22 @@ public enum LexicalTag {
   ACR("ACR", "Acronym", "首字母缩写"),
 
   /// 命名实体
-  NAM("NAM", "Named Entity", "命名实体");
+  NAM("NAM", "Named Entity", "命名实体"),
+
+  /// 嵌入式缩写
+  ABX("ABX", "Embedded Abbreviation", "嵌入式缩写"),
+
+  /// 嵌入式首字母缩写
+  ACX("ACX", "Embedded Acronym", "嵌入式首字母缩写"),
+
+  /// 人名术语
+  EPO("EPO", "Eponym", "人名术语"),
+
+  /// 商标名
+  TRD("TRD", "Trade Name", "商标名"),
+
+  /// 历史术语
+  HIST("HIST", "Historical Term", "历史术语");
 
   /// 数据库存储的代码值
   private final String code;
@@ -85,8 +106,8 @@ public enum LexicalTag {
 
   /// 判断是否为缩写类型。
   ///
-  /// @return true 如果为缩写或首字母缩写
+  /// @return true 如果为缩写或首字母缩写（包括嵌入式）
   public boolean isAbbreviation() {
-    return this == ABB || this == ACR;
+    return this == ABB || this == ACR || this == ABX || this == ACX;
   }
 }

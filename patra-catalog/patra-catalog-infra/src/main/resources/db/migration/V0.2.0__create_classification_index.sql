@@ -322,7 +322,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_entry_term` (
     -- ========================================
     -- 约束
     -- ========================================
-    CONSTRAINT `chk_lexical_tag` CHECK (`lexical_tag` IN ('NON', 'PEF', 'LAB', 'ABB', 'ACR', 'NAM') OR `lexical_tag` IS NULL),
+    CONSTRAINT `chk_lexical_tag` CHECK (`lexical_tag` IN ('NON', 'PEF', 'LAB', 'ABB', 'ACR', 'NAM', 'ABX', 'ACX', 'EPO', 'TRD', 'HIST') OR `lexical_tag` IS NULL),
     CONSTRAINT `chk_record_preferred` CHECK (`record_preferred` IN ('Y', 'N') OR `record_preferred` IS NULL)
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
