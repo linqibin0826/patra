@@ -32,8 +32,9 @@
 | Filter | 功能 | 执行顺序 |
 |--------|------|----------|
 | `HighCardinalityMeterFilter` | 过滤高基数标签（userId、traceId 等），防止时序爆炸 | HIGHEST_PRECEDENCE |
-| `MetricNamingMeterFilter` | 强制执行命名规范（patra.{module}.{metric}） | HIGHEST_PRECEDENCE + 1 |
 | `CommonTagsMeterFilter` | 添加公共标签到所有 Meter | LOWEST_PRECEDENCE |
+
+> **指标命名**：`patra_` 前缀由 OTel Collector 的 Prometheus exporter `namespace: patra` 配置统一添加。
 
 ### 拦截器
 
@@ -91,7 +92,6 @@ patra:
 
     metrics:
       enabled: true
-      prefix: ""
       common-tags:
         team: platform
         version: ${project.version}
@@ -146,8 +146,9 @@ public class OrderService {
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `patra.observability.metrics.enabled` | boolean | true | 是否启用指标收集 |
-| `patra.observability.metrics.prefix` | String | "" | 指标前缀（所有指标自动添加 `patra.` 前缀） |
 | `patra.observability.metrics.common-tags` | Map | {} | 公共标签 |
+
+> **指标前缀**：`patra_` 前缀由 OTel Collector 的 Prometheus exporter 统一添加，无需应用层配置。
 
 ### Tracing 配置（Agent JVM 参数）
 
@@ -197,8 +198,7 @@ com.patra.starter.observability
 │   └── ObservabilityProperties          # 配置属性
 ├── filter/                              # MeterFilter
 │   ├── CommonTagsMeterFilter            # 公共标签
-│   ├── HighCardinalityMeterFilter       # 高基数标签过滤
-│   └── MetricNamingMeterFilter          # 指标命名规范
+│   └── HighCardinalityMeterFilter       # 高基数标签过滤
 └── interceptor/                         # 拦截器
     └── ObservationResolutionInterceptor # 错误解析拦截器
 ```

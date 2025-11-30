@@ -3,7 +3,6 @@ package com.patra.starter.observability.autoconfigure;
 import com.patra.starter.observability.config.ObservabilityProperties;
 import com.patra.starter.observability.filter.CommonTagsMeterFilter;
 import com.patra.starter.observability.filter.HighCardinalityMeterFilter;
-import com.patra.starter.observability.filter.MetricNamingMeterFilter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.observation.ObservationRegistry;
@@ -54,12 +53,8 @@ public class MicrometerAutoConfiguration {
   private static final Logger log = LoggerFactory.getLogger(MicrometerAutoConfiguration.class);
 
   /// 构造函数。
-  ///
-  /// @param properties 可观测性配置属性
-  public MicrometerAutoConfiguration(ObservabilityProperties properties) {
-    log.info(
-        "初始化 Micrometer 自动配置 [指标前缀: {}]",
-        properties.getMetrics().getPrefix().isEmpty() ? "无" : properties.getMetrics().getPrefix());
+  public MicrometerAutoConfiguration() {
+    log.info("初始化 Micrometer 自动配置");
   }
 
   // ==================== OTel Agent MeterRegistry 桥接 ====================
@@ -125,26 +120,6 @@ public class MicrometerAutoConfiguration {
   public HighCardinalityMeterFilter highCardinalityMeterFilter() {
     // Spring Boot 会自动将 MeterFilter Bean 应用到 MeterRegistry
     return new HighCardinalityMeterFilter();
-  }
-
-  /// 创建指标命名规范过滤器。
-  ///
-  /// 功能：
-  ///
-  /// - 强制执行 Patra 指标命名规范：patra.{module}.{metric}
-  /// - 自动添加 "patra." 前缀（如果缺失）
-  /// - 转换为小写，替换非法字符为下划线
-  /// - 应用可选的指标前缀配置
-  ///
-  /// 执行顺序：中间执行，在高基数过滤后、公共标签添加前规范命名。
-  ///
-  /// @param properties 可观测性配置属性
-  /// @return MetricNamingMeterFilter 实例
-  @Bean
-  @Order(Ordered.HIGHEST_PRECEDENCE + 1) // 第二执行
-  public MetricNamingMeterFilter metricNamingMeterFilter(ObservabilityProperties properties) {
-    String customPrefix = properties.getMetrics().getPrefix();
-    return new MetricNamingMeterFilter(customPrefix);
   }
 
   /// 创建公共标签过滤器。
