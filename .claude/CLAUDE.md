@@ -78,3 +78,4 @@
 4. 代码风格与命名规范 @memories/code-style.md
 5. MyBatis-Plus 使用规范 @memories/mybatis-plus.md
 6. 异常处理与错误码规范 @memories/error-handling.md
+7. 可观测性规范（Metrics/Traces/Logs） @memories/observability.md
