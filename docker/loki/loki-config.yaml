@@ -9,20 +9,20 @@ server:
   log_level: info
   # gRPC 消息大小限制（解决 OTLP 日志查询 ResourceExhausted 错误）
   # OTLP 日志携带结构化元数据，查询响应会显著膨胀（压缩存储 128KB → gRPC 响应 ~8MB）
-  grpc_server_max_recv_msg_size: 16777216  # 16MB
-  grpc_server_max_send_msg_size: 16777216  # 16MB
+  grpc_server_max_recv_msg_size: 33554432  # 32MB
+  grpc_server_max_send_msg_size: 33554432  # 32MB
 
 # 查询前端配置
 frontend:
   grpc_client_config:
-    max_recv_msg_size: 16777216  # 16MB
-    max_send_msg_size: 16777216  # 16MB
+    max_recv_msg_size: 33554432  # 32MB
+    max_send_msg_size: 33554432  # 32MB
 
 # 前端 Worker 配置
 frontend_worker:
   grpc_client_config:
-    max_recv_msg_size: 16777216  # 16MB
-    max_send_msg_size: 16777216  # 16MB
+    max_recv_msg_size: 33554432  # 32MB
+    max_send_msg_size: 33554432  # 32MB
 
 common:
   instance_addr: 127.0.0.1
