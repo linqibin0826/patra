@@ -1,1 +1,2 @@
 com.patra.starter.restclient.config.RestClientAutoConfiguration
+com.patra.starter.restclient.config.DownloadClientAutoConfiguration
