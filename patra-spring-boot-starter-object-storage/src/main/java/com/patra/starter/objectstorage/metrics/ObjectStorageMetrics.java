@@ -25,6 +25,8 @@ public class ObjectStorageMetrics {
   private static final String UPLOAD_DURATION = "patra.object_storage.upload.duration";
   private static final String UPLOAD_SIZE = "patra.object_storage.upload.size";
   private static final String DOWNLOAD_TOTAL = "patra.object_storage.download.total";
+  private static final String DOWNLOAD_DURATION = "patra.object_storage.download.duration";
+  private static final String DOWNLOAD_SIZE = "patra.object_storage.download.size";
   private static final String RETRY_COUNT = "patra.object_storage.retry.count";
 
   private final MeterRegistry meterRegistry;
@@ -80,6 +82,47 @@ public class ObjectStorageMetrics {
         .increment(retryCount);
   }
 
+  /// 记录下载成功。
+  ///
+  /// @param providerType 存储提供者类型
+  /// @param bucket 存储桶名称
+  /// @param durationNanos 下载耗时（纳秒）
+  /// @param fileSize 文件大小（字节）
+  public void recordDownloadSuccess(
+      ProviderType providerType, String bucket, long durationNanos, long fileSize) {
+    if (meterRegistry == null) {
+      return;
+    }
+    downloadCounter(providerType, bucket, "success").increment();
+    downloadTimer(providerType, bucket).record(durationNanos, TimeUnit.NANOSECONDS);
+    downloadSummary(providerType, bucket).record(Math.max(0, fileSize));
+  }
+
+  /// 记录下载失败并分类错误类型。
+  ///
+  /// @param providerType 存储提供者类型
+  /// @param bucket 存储桶名称
+  /// @param errorType 错误分类(例如 "validation"、"not_found"、"network"、"auth"、"unknown")
+  public void recordDownloadFailure(ProviderType providerType, String bucket, String errorType) {
+    if (meterRegistry == null) {
+      return;
+    }
+    Counter.builder(DOWNLOAD_TOTAL)
+        .tags(
+            "provider",
+            providerType.name().toLowerCase(),
+            "bucket",
+            bucket,
+            "status",
+            "failure",
+            "error_type",
+            errorType)
+        .register(meterRegistry)
+        .increment();
+  }
+
+  /// 记录下载操作（已废弃，请使用 recordDownloadSuccess 或 recordDownloadFailure）。
+  @Deprecated(forRemoval = true)
   public void recordDownload(ProviderType providerType, String bucket) {
     if (meterRegistry == null) {
       return;
@@ -106,6 +149,27 @@ public class ObjectStorageMetrics {
 
   private DistributionSummary summary(ProviderType providerType, String bucket) {
     return DistributionSummary.builder(UPLOAD_SIZE)
+        .tags("provider", providerType.name().toLowerCase(), "bucket", bucket)
+        .publishPercentileHistogram()
+        .register(meterRegistry);
+  }
+
+  private Counter downloadCounter(ProviderType providerType, String bucket, String status) {
+    return Counter.builder(DOWNLOAD_TOTAL)
+        .tags("provider", providerType.name().toLowerCase(), "bucket", bucket, "status", status)
+        .register(meterRegistry);
+  }
+
+  private Timer downloadTimer(ProviderType providerType, String bucket) {
+    return Timer.builder(DOWNLOAD_DURATION)
+        .tags("provider", providerType.name().toLowerCase(), "bucket", bucket)
+        .publishPercentileHistogram()
+        .publishPercentiles(0.5, 0.9, 0.99)
+        .register(meterRegistry);
+  }
+
+  private DistributionSummary downloadSummary(ProviderType providerType, String bucket) {
+    return DistributionSummary.builder(DOWNLOAD_SIZE)
         .tags("provider", providerType.name().toLowerCase(), "bucket", bucket)
         .publishPercentileHistogram()
         .register(meterRegistry);

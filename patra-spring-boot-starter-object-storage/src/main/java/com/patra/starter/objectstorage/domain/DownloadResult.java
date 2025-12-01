@@ -4,6 +4,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 /// 下载操作的结果。
@@ -21,6 +22,7 @@ import lombok.Getter;
 /// ```
 @Getter
 @Builder
+@EqualsAndHashCode(exclude = "content")
 public class DownloadResult implements Closeable {
 
   /// 对象内容流。
