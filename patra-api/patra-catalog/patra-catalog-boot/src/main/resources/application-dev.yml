@@ -20,12 +20,6 @@ spring:
     redis:
       url: redis://localhost:16379
 
-# Development logging configuration
-logging:
-  level:
-    com.patra: DEBUG
-    com.patra.catalog: DEBUG
-
 # 可观测性：开箱即用（零配置）
 # - Tracing/Logging: OTel Agent 自动处理
 # - Metrics: applicationName 自动取 spring.application.name，environment 自动取 spring.profiles.active
@@ -53,9 +47,9 @@ patra:
     active-provider: minio
     providers:
       minio:
-        endpoint: http://localhost:9000
+        endpoint: http://localhost:19000
         access-key: minioadmin
-        secret-key: minioadmin
+        secret-key: minioadmin123
         bucket: patra-catalog-cache
 
   # MeSH 文件缓存配置
