@@ -15,7 +15,6 @@ import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.PlatformTransactionManager;
 
 /// MeSH 主题词导入 Job 配置。
@@ -33,7 +32,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 ///
 /// - chunk size 默认 500（可通过 BatchProperties 调整）
 /// - 支持断点续传（MeshDescriptorItemReader 实现 ItemStream）
-/// - 支持跳过 DataIntegrityViolationException（最多 100 条）
+/// - 遇到错误立即失败（不使用 FaultTolerant 模式）
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -43,7 +42,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 public class MeshDescriptorJobConfig {
 
   private static final int DEFAULT_CHUNK_SIZE = 500;
-  private static final int SKIP_LIMIT = 100;
 
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
@@ -75,9 +73,6 @@ public class MeshDescriptorJobConfig {
         .<MeshDescriptorAggregate, MeshDescriptorAggregate>chunk(chunkSize, transactionManager)
         .reader(meshDescriptorItemReader(null, null))
         .writer(meshDescriptorItemWriter)
-        .faultTolerant()
-        .skipLimit(SKIP_LIMIT)
-        .skip(DataIntegrityViolationException.class)
         .build();
   }
 

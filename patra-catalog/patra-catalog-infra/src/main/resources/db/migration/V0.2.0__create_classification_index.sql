@@ -350,7 +350,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_concept` (
     `concept_ui` VARCHAR(10) NOT NULL COMMENT '概念唯一标识符(格式:M000001-M999999)',
     `concept_name` VARCHAR(255) NOT NULL COMMENT '概念名称',
     `is_preferred` BOOLEAN NOT NULL DEFAULT 0 COMMENT '是否首选概念(0=否,1=是)',
-    `casn1_name` VARCHAR(255) NULL DEFAULT NULL COMMENT 'CAS 类型 1 名称(化学物质专用)',
+    `casn1_name` TEXT NULL DEFAULT NULL COMMENT 'CAS 类型 1 名称(化学物质专用,IUPAC 命名可能很长)',
     `registry_numbers` JSON NULL DEFAULT NULL COMMENT '注册号列表(JSON数组,2025 DTD支持多个)',
     `related_registry_numbers` JSON NULL DEFAULT NULL COMMENT '相关注册号列表(JSON数组,RelatedRegistryNumberList)',
     `scope_note` TEXT NULL DEFAULT NULL COMMENT '范围说明',
