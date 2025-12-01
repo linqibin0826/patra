@@ -14,6 +14,8 @@ import com.patra.starter.objectstorage.MinioStorageProvider;
 import com.patra.starter.objectstorage.ObjectStorageOperations;
 import com.patra.starter.objectstorage.ObjectStorageTemplate;
 import com.patra.starter.objectstorage.metrics.ObjectStorageMetrics;
+import com.patra.starter.restclient.download.DefaultDownloadClient;
+import com.patra.starter.restclient.download.DownloadClient;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
@@ -104,7 +106,8 @@ class MeshSourceFileAdapterIT {
   void setUp() {
     // 初始化 FileDownloadPort
     RestClient restClient = RestClient.builder().build();
-    fileDownloadPort = new FileDownloadAdapter(restClient);
+    DownloadClient downloadClient = new DefaultDownloadClient(restClient);
+    fileDownloadPort = new FileDownloadAdapter(downloadClient, null);
 
     // 初始化 ObjectStorageOperations（使用 MinIO Provider）
     MinioClient testMinioClient =
