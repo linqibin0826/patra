@@ -242,8 +242,8 @@ class MeshDescriptorImportE2E {
     }
 
     @Test
-    @DisplayName("INCREMENTAL 模式 - 重复导入应该跳过已存在记录（幂等性）")
-    void shouldSkipExistingRecordsOnRerun() throws IOException {
+    @DisplayName("INCREMENTAL 模式 - 重复导入应该因唯一键冲突而失败")
+    void shouldFailOnDuplicateRecords() throws IOException {
       // Given - 执行第一次导入
       MeshDescriptorImportCommand command =
           MeshDescriptorImportCommand.of(TEST_URL, MESH_VERSION, "INCREMENTAL");
@@ -251,18 +251,16 @@ class MeshDescriptorImportE2E {
 
       // 记录第一次导入后的状态
       long firstDescriptorCount = descriptorMapper.selectCount(null);
+      assertThat(firstDescriptorCount).isEqualTo(EXPECTED_DESCRIPTOR_COUNT);
 
       // 重新准备临时文件
       prepareTempFileAndMock();
 
-      // When - 再次以 INCREMENTAL 模式导入相同数据
-      MeshDescriptorImportResult secondResult = meshImportUseCase.importDescriptors(command);
-
-      // Then - 验证 Job 成功完成（跳过了已存在的记录）
-      assertThat(secondResult.executionId()).isNotNull();
-
-      // Then - 验证记录数不变（DataIntegrityViolationException 被跳过）
-      assertThat(descriptorMapper.selectCount(null)).isEqualTo(firstDescriptorCount);
+      // When/Then - 再次以 INCREMENTAL 模式导入相同数据应该抛出异常
+      // 移除 FaultTolerant 后，重复导入会因唯一键冲突（DataIntegrityViolationException）导致 Job 失败
+      // 这是预期行为：INCREMENTAL 模式适用于导入新版本数据，不适用于重复导入相同数据
+      assertThatThrownBy(() -> meshImportUseCase.importDescriptors(command))
+          .hasMessageContaining("Duplicate entry");
     }
   }
 
