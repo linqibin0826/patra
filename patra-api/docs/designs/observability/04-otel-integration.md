@@ -121,14 +121,18 @@ curl -L -o docker/otel-agent/opentelemetry-javaagent.jar \
 -Dotel.logs.exporter=otlp
 
 # ============================================================
-# 6. 指标导出（禁用）
+# 6. 指标导出（OTLP 统一导出）
 # ============================================================
-# 禁用 Agent 的指标导出，改用 Micrometer + Prometheus Pull 模式
-# 原因：
-# - 避免重复采集（Agent 和 Micrometer 都会采集 JVM 指标）
-# - Prometheus Pull 模式更符合我们的架构
-# - 支持 PromQL 查询和 Grafana 集成
--Dotel.metrics.exporter=none
+# 启用 OTLP 指标导出，统一遥测管道
+# Traces/Metrics/Logs 全部走 OTLP → OTel Collector
+-Dotel.metrics.exporter=otlp
+
+# ============================================================
+# 7. Micrometer Bridge（启用）
+# ============================================================
+# 启用 Micrometer 桥接（Agent 2.0+ 默认禁用）
+# 将 Spring Boot/Micrometer 指标（HikariCP、Spring Batch、HTTP 等）桥接到 OTel
+-Dotel.instrumentation.micrometer.enabled=true
 ```
 
 ### 采样策略详解
@@ -272,7 +276,8 @@ java -javaagent:docker/otel-agent/opentelemetry-javaagent.jar \
      -Dotel.exporter.otlp.protocol=grpc \
      -Dotel.traces.sampler=parentbased_traceidratio \
      -Dotel.traces.sampler.arg=1.0 \
-     -Dotel.metrics.exporter=none \
+     -Dotel.metrics.exporter=otlp \
+     -Dotel.instrumentation.micrometer.enabled=true \
      -Dotel.logs.exporter=otlp \
      -jar patra-registry-boot.jar \
      --spring.profiles.active=dev
@@ -298,7 +303,8 @@ services:
       OTEL_TRACES_SAMPLER: "parentbased_traceidratio"
       OTEL_TRACES_SAMPLER_ARG: "1.0"
       # 导出器配置
-      OTEL_METRICS_EXPORTER: "none"      # 禁用 Agent 指标，使用 Micrometer
+      OTEL_METRICS_EXPORTER: "otlp"      # OTLP 统一导出
+      OTEL_INSTRUMENTATION_MICROMETER_ENABLED: "true"  # 启用 Micrometer Bridge
       OTEL_LOGS_EXPORTER: "otlp"         # 启用日志导出到 Collector
     volumes:
       - ./docker/otel-agent/opentelemetry-javaagent.jar:/opt/otel/opentelemetry-javaagent.jar:ro
@@ -352,7 +358,7 @@ agent -> mdc: 自动注入 trace_id/span_id {style.stroke: "#64748b"; style.stro
 mdc -> logback: MDC 传播 {style.stroke: "#64748b"; style.stroke-width: 2}
 logback -> converter: 格式化 {style.stroke: "#64748b"; style.stroke-width: 2}
 agent -> collector: OTLP/Logs {style.stroke: "#64748b"; style.stroke-width: 2}
-collector -> loki: Push {style.stroke: "#64748b"; style.stroke-width: 2}
+collector -> loki: OTLP/HTTP {style.stroke: "#64748b"; style.stroke-width: 2}
 ```
 
 ### Logback 配置
@@ -364,11 +370,11 @@ collector -> loki: Push {style.stroke: "#64748b"; style.stroke-width: 2}
 
     <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="application"/>
 
-    <!-- 注册自定义 Converter -->
+    <!-- 注册自定义 Converter（Logback 1.5+ 使用 class 替代 converterClass） -->
     <conversionRule conversionWord="traceId"
-                    converterClass="com.patra.starter.core.logging.TraceIdConverter"/>
+                    class="com.patra.starter.core.logging.TraceIdConverter"/>
     <conversionRule conversionWord="spanId"
-                    converterClass="com.patra.starter.core.logging.SpanIdConverter"/>
+                    class="com.patra.starter.core.logging.SpanIdConverter"/>
 
     <!-- Console Appender -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">

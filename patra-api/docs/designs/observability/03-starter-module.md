@@ -183,12 +183,12 @@ public class ObservabilityProperties {
     // 全局配置
     private boolean enabled = true;
     private String applicationName;
-    private String environment = "dev";
+    private String environment;  // 自动从 spring.profiles.active 获取，"default" 映射为 "dev"
     private String region;
     private String cluster = "default";
 
     // 主要配置块
-    private MetricsConfig metrics;
+    private MetricsConfig metrics = new MetricsConfig();
 }
 ```
 
@@ -209,10 +209,11 @@ patra:
     # 指标配置
     metrics:
       enabled: true
-      prefix: ""
       common-tags:
         team: patra
 ```
+
+> **指标前缀**：`patra_` 前缀由 OTel Collector 的 Prometheus exporter `namespace: patra` 配置统一添加，无需应用层配置。
 
 > [!tip] Tracing 配置
 > Tracing 相关配置（如采样率）通过 OTel Agent JVM 参数控制：

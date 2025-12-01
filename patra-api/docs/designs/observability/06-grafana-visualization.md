@@ -1,8 +1,8 @@
 ---
 title: 可观测性系统设计 - Grafana 可视化
 type: design
-status: draft
-date: 2025-11-29
+status: completed
+date: 2025-12-01
 module: patra-spring-boot-starter-observability
 related_adrs: [ADR-005]
 tags:
@@ -19,87 +19,145 @@ tags:
 ```
 docker/grafana/provisioning/
 ├── datasources/
-│   └── datasources.yaml      # 数据源配置
-├── dashboards/
-│   ├── dashboards.yaml       # 仪表盘加载配置
-│   ├── jvm-dashboard.json    # JVM 监控
-│   ├── http-dashboard.json   # HTTP 请求监控
-│   └── services-dashboard.json # 服务概览
-└── alerting/
-    └── alerting.yaml         # 告警规则
+│   └── datasources.yaml          # 数据源自动配置
+└── dashboards/
+    ├── dashboards.yaml           # 仪表盘加载配置
+    ├── patra/                    # 服务仪表盘
+    │   ├── http-server.json      # HTTP 服务端监控
+    │   ├── http-client.json      # HTTP 客户端监控
+    │   ├── jvm-service-health.json # JVM 健康监控
+    │   ├── hikaricp.json         # 数据库连接池监控
+    │   ├── spring-batch.json     # Spring Batch 任务监控
+    │   ├── traces.json           # 链路追踪面板
+    │   └── logs.json             # 日志查询面板
+    └── infrastructure/           # 基础设施仪表盘（预留）
 ```
+
+> [!note] 告警配置位置
+> 告警通过 Alertmanager 管理，配置在 `docker/alertmanager/alertmanager.yml`。
+> Grafana 的 Unified Alerting 已启用但主要用于可视化，实际告警路由由 Alertmanager 处理。
 
 ### datasources.yaml
 
 ```yaml
+# ============================================
+# Grafana 数据源配置
+# ============================================
+# 自动配置 Prometheus、Loki、Tempo、Alertmanager 数据源
+# 启用三信号（Metrics/Logs/Traces）之间的关联跳转
+
 apiVersion: 1
 
+# 删除旧数据源（确保配置更新生效）
+deleteDatasources:
+  - name: Prometheus
+    orgId: 1
+  - name: Loki
+    orgId: 1
+  - name: Tempo
+    orgId: 1
+
 datasources:
-  # Prometheus（指标）
+  # ----------------------------------------
+  # Prometheus - 指标数据源
+  # ----------------------------------------
   - name: Prometheus
     type: prometheus
-    uid: prometheus
     access: proxy
     url: http://prometheus:9090
     isDefault: true
+    uid: prometheus
     jsonData:
       httpMethod: POST
+      # Exemplar 配置 - 从指标跳转到链路
+      # 当指标带有 traceID 标签时，可点击跳转到 Tempo
       exemplarTraceIdDestinations:
-        - name: traceId
+        - name: traceID
           datasourceUid: tempo
-          urlDisplayLabel: "View Trace"
+          urlDisplayLabel: View Trace
+      # 增量查询优化（减少大范围查询压力）
       incrementalQuerying: true
       incrementalQueryOverlapWindow: 10m
 
-  # Loki（日志）
+  # ----------------------------------------
+  # Loki - 日志数据源
+  # ----------------------------------------
   - name: Loki
     type: loki
-    uid: loki
     access: proxy
     url: http://loki:3100
+    uid: loki
     jsonData:
       maxLines: 1000
+      # 派生字段 - 从日志跳转到链路
+      # 支持两种 TraceID 格式：JSON 格式和 OTel Key=Value 格式
       derivedFields:
-        - name: TraceId
-          matcherRegex: "traceId=([\\w]+)"
-          url: "$${__value.raw}"
+        # JSON 格式: {"traceId":"abc123"}
+        - name: TraceID
+          matcherRegex: '"traceId":"([a-f0-9]+)"'
+          url: '$${__value.raw}'
           datasourceUid: tempo
-          urlDisplayLabel: "View Trace"
+          urlDisplayLabel: View Trace
+        # OTel 格式: trace_id=abc123
+        - name: TraceID (OTel)
+          matcherRegex: 'trace_id=([a-f0-9]+)'
+          url: '$${__value.raw}'
+          datasourceUid: tempo
+          urlDisplayLabel: View Trace
 
-  # Tempo（链路）
+  # ----------------------------------------
+  # Tempo - 链路数据源
+  # ----------------------------------------
   - name: Tempo
     type: tempo
-    uid: tempo
     access: proxy
     url: http://tempo:3200
+    uid: tempo
     jsonData:
       httpMethod: GET
-      tracesToLogs:
-        datasourceUid: loki
-        filterByTraceID: true
-        filterBySpanID: false
-        mapTagNamesEnabled: true
-        mappedTags:
-          - key: service.name
-            value: app
-      tracesToMetrics:
-        datasourceUid: prometheus
-        queries:
-          - name: Request Rate
-            query: 'sum(rate(http_server_requests_seconds_count{service="$${__span.tags.service.name}"}[5m]))'
-          - name: Error Rate
-            query: 'sum(rate(http_server_requests_seconds_count{service="$${__span.tags.service.name}",status=~"5.."}[5m]))'
+      # Service Graph 配置（服务调用图）
       serviceMap:
         datasourceUid: prometheus
+      # Node Graph 启用
       nodeGraph:
         enabled: true
+      # 链路到日志关联（V2 API - Grafana 10+）
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: '-1h'      # 时间窗口向前扩展
+        spanEndTimeShift: '1h'         # 时间窗口向后扩展
+        filterByTraceID: true
+        filterBySpanID: false
+        customQuery: true
+        # 自定义 LogQL 查询：按服务名和 trace_id 过滤
+        query: '{service_name="${__span.tags.service.name}"} | json | trace_id="${__trace.traceId}"'
+      # 链路到指标关联
+      tracesToMetrics:
+        datasourceUid: prometheus
+        spanStartTimeShift: '-1h'
+        spanEndTimeShift: '1h'
+        queries:
+          # 请求速率
+          - name: Request Rate
+            query: 'sum(rate(http_server_request_duration_seconds_count{service_name="${__span.tags.service.name}"}[5m]))'
+          # 错误率
+          - name: Error Rate
+            query: 'sum(rate(http_server_request_duration_seconds_count{service_name="${__span.tags.service.name}", http_response_status_code=~"5.."}[5m])) / sum(rate(http_server_request_duration_seconds_count{service_name="${__span.tags.service.name}"}[5m]))'
+          # P95 延迟
+          - name: P95 Latency
+            query: 'histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket{service_name="${__span.tags.service.name}"}[5m])) by (le))'
+      # Loki 搜索集成
+      lokiSearch:
+        datasourceUid: loki
 
-  # Alertmanager
+  # ----------------------------------------
+  # Alertmanager - 告警数据源
+  # ----------------------------------------
   - name: Alertmanager
     type: alertmanager
-    uid: alertmanager
     access: proxy
     url: http://alertmanager:9093
+    uid: alertmanager
     jsonData:
       implementation: prometheus
 ```
@@ -120,23 +178,23 @@ datasources:
   }
 }}%%
 flowchart LR
-    subgraph Prometheus["Prometheus"]
+    subgraph Prometheus_DS["Prometheus"]
         Metrics[Metrics]
         Exemplar[Exemplar]
     end
 
-    subgraph Loki["Loki"]
+    subgraph Loki_DS["Loki"]
         Logs[Logs]
-        TraceId[TraceId Field]
+        TraceId_Field[TraceId Field]
     end
 
-    subgraph Tempo["Tempo"]
+    subgraph Tempo_DS["Tempo"]
         Traces[Traces]
         Span[Span Tags]
     end
 
-    Metrics -->|Exemplar TraceId| Traces
-    Traces -->|tracesToLogs| Logs
+    Metrics -->|exemplarTraceIdDestinations| Traces
+    Traces -->|tracesToLogsV2| Logs
     Logs -->|derivedFields| Traces
     Traces -->|tracesToMetrics| Metrics
 
@@ -145,331 +203,187 @@ flowchart LR
 
 ### Metrics → Traces（Exemplar）
 
-**Prometheus 配置要求：**
+**工作原理：**
 
-```yaml
-# prometheus.yml
-global:
-  scrape_interval: 15s
-  # 启用 Exemplar 存储
-command:
-  - '--enable-feature=exemplar-storage'
-```
+1. OTel Agent 在导出指标时，将当前 Span 的 `traceID` 附加到指标的 Exemplar 中
+2. Prometheus 启用 `--enable-feature=exemplar-storage` 存储 Exemplar
+3. Grafana 查询指标时，渲染 Exemplar 点为可点击链接
+4. 点击跳转到 Tempo 查看完整链路
 
 > [!note] Metrics 导出方式
 > Metrics 通过 OTel Agent + Micrometer Bridge 自动导出到 OTel Collector，
-> 再由 Collector 通过 Prometheus Remote Write 导出到 Prometheus。
-> 无需配置 `/actuator/prometheus` 端点。
+> 再由 **Prometheus 主动抓取 Collector 的 :8889 端口**（Pull 模式）。
+> 无需配置 `/actuator/prometheus` 端点，也无需 Remote Write。
 
-**查询示例：**
+**查询示例（带 Exemplar）：**
 
 ```promql
 # 带 Exemplar 的直方图查询
 histogram_quantile(0.99,
-  sum(rate(http_server_requests_seconds_bucket[5m])) by (le)
+  sum(rate(patra_http_server_request_duration_seconds_bucket{application="patra-catalog"}[5m])) by (le)
 )
 ```
 
 ### Traces → Logs
 
-**Tempo 数据源配置：**
+**Tempo 数据源配置（tracesToLogsV2）：**
 
 ```yaml
 jsonData:
-  tracesToLogs:
+  tracesToLogsV2:
     datasourceUid: loki
+    spanStartTimeShift: '-1h'
+    spanEndTimeShift: '1h'
     filterByTraceID: true
-    tags:
-      - service.name
-    mappedTags:
-      - key: service.name
-        value: app
-    spanStartTimeShift: -1h
-    spanEndTimeShift: 1h
+    customQuery: true
+    query: '{service_name="${__span.tags.service.name}"} | json | trace_id="${__trace.traceId}"'
 ```
 
-**效果：** 在 Tempo Trace 详情页，点击 "Logs for this span" 按钮跳转到 Loki。
+**效果：** 在 Tempo Trace 详情页，点击 "Logs for this span" 按钮跳转到 Loki，自动填充服务名和 trace_id 过滤条件。
 
 ### Logs → Traces
 
-**Loki 数据源配置：**
+**Loki 数据源配置（derivedFields）：**
 
 ```yaml
 jsonData:
   derivedFields:
-    - name: TraceId
-      matcherRegex: 'traceId=(\w+)'
+    # 匹配 JSON 格式的 traceId
+    - name: TraceID
+      matcherRegex: '"traceId":"([a-f0-9]+)"'
       url: '$${__value.raw}'
       datasourceUid: tempo
-      urlDisplayLabel: "View Trace"
+      urlDisplayLabel: View Trace
+    # 匹配 OTel 格式的 trace_id
+    - name: TraceID (OTel)
+      matcherRegex: 'trace_id=([a-f0-9]+)'
+      url: '$${__value.raw}'
+      datasourceUid: tempo
+      urlDisplayLabel: View Trace
 ```
 
-**效果：** 在日志行中，TraceId 显示为可点击链接，跳转到 Tempo。
+**效果：** 在日志行中，TraceID 显示为可点击链接（蓝色），点击跳转到 Tempo 查看完整链路。
 
 ## 仪表盘设计
 
 ### 仪表盘列表
 
-| 仪表盘 | 用途 | 数据源 |
-|--------|------|--------|
-| **Services Overview** | 服务整体健康状态 | Prometheus |
-| **JVM Metrics** | JVM 内存、GC、线程 | Prometheus |
-| **HTTP Metrics** | HTTP 请求、延迟、错误 | Prometheus |
-| **Logs Explorer** | 日志搜索和分析 | Loki |
-| **Traces Explorer** | 链路追踪分析 | Tempo |
+| 仪表盘 | 文件 | 用途 | 数据源 |
+|--------|------|------|--------|
+| **HTTP Server** | `http-server.json` | HTTP 服务端请求监控（QPS、延迟、错误率） | Prometheus |
+| **HTTP Client** | `http-client.json` | HTTP 客户端调用监控（出站请求） | Prometheus |
+| **JVM Service Health** | `jvm-service-health.json` | JVM 内存、GC、线程监控 | Prometheus |
+| **HikariCP** | `hikaricp.json` | 数据库连接池监控 | Prometheus |
+| **Spring Batch** | `spring-batch.json` | 批处理任务监控 | Prometheus |
+| **Traces** | `traces.json` | 链路追踪查询和分析 | Tempo |
+| **Logs** | `logs.json` | 日志搜索和分析 | Loki |
 
-### Services Overview Dashboard
+### 指标命名规范
+
+> [!important] OTel 语义惯例
+> 所有指标使用 OTel 语义惯例命名，并由 OTel Collector 添加 `patra_` 前缀：
+> - `patra_http_server_request_duration_seconds_*` - HTTP 服务端指标
+> - `patra_http_client_request_duration_seconds_*` - HTTP 客户端指标
+> - `patra_jvm_*` - JVM 指标
+> - `patra_hikaricp_*` - HikariCP 连接池指标
+> - `patra_spring_batch_*` - Spring Batch 指标
+
+### HTTP Server Dashboard
 
 **面板布局：**
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Services Overview                         │
-├─────────────────┬─────────────────┬─────────────────────────┤
-│  Total Services │  Healthy        │  Unhealthy              │
-│       4         │      4          │       0                 │
-├─────────────────┴─────────────────┴─────────────────────────┤
-│                    Request Rate (5m)                         │
-│  ████████████████████████████████████████████████            │
-├─────────────────────────────────────────────────────────────┤
-│                    Error Rate (5m)                           │
-│  ████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░              │
-├──────────────────────────┬──────────────────────────────────┤
-│    P50 Latency           │    P99 Latency                   │
-│      45ms                │      320ms                       │
-├──────────────────────────┴──────────────────────────────────┤
-│                  Service Dependency Graph                    │
-│              [Tempo Service Map]                             │
-└─────────────────────────────────────────────────────────────┘
-```
+| 行 | 面板 | 类型 | 说明 |
+|---|------|------|------|
+| API 概览 | QPS | Stat | 总请求速率 |
+| | P99 Latency | Stat | 99 分位延迟 |
+| | Error Rate | Stat | 5xx 错误率 |
+| | Success Rate | Gauge | 成功率仪表 |
+| 请求趋势 | Request Rate | Time Series | 按端点分组的请求速率 |
+| | Latency Percentiles | Time Series | P50/P90/P99 延迟趋势 |
+| 详细分析 | Status Codes | Pie | 状态码分布 |
+| | Top Endpoints | Table | 慢端点 Top 10 |
 
 **关键 PromQL 查询：**
 
 ```promql
-# 服务存活数
-sum(up{job="patra-services"})
-
-# 请求速率
-sum(rate(http_server_requests_seconds_count[5m])) by (service)
-
-# 错误率
-sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) by (service)
-/
-sum(rate(http_server_requests_seconds_count[5m])) by (service)
+# QPS（每秒请求数）
+sum(rate(patra_http_server_request_duration_seconds_count{application=~"$application"}[5m]))
 
 # P99 延迟
 histogram_quantile(0.99,
-  sum(rate(http_server_requests_seconds_bucket[5m])) by (le, service)
+  sum(rate(patra_http_server_request_duration_seconds_bucket{application=~"$application"}[5m])) by (le)
 )
-```
 
-### JVM Metrics Dashboard
-
-**面板布局：**
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     JVM Metrics - $service                   │
-├─────────────────┬─────────────────┬─────────────────────────┤
-│  Heap Used      │  Non-Heap Used  │  Thread Count           │
-│   512MB / 1GB   │     128MB       │      45                 │
-├─────────────────┴─────────────────┴─────────────────────────┤
-│                    Heap Memory Usage                         │
-│  [Timeseries: Used / Committed / Max]                        │
-├──────────────────────────┬──────────────────────────────────┤
-│    GC Pause Time         │    GC Count                      │
-│  [Timeseries]            │  [Timeseries]                    │
-├──────────────────────────┴──────────────────────────────────┤
-│                    Thread States                             │
-│  [Stacked Area: Runnable/Blocked/Waiting/Timed-Waiting]      │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**关键 PromQL 查询：**
-
-```promql
-# Heap 使用
-jvm_memory_used_bytes{area="heap", service="$service"}
-
-# GC 暂停时间
-rate(jvm_gc_pause_seconds_sum{service="$service"}[5m])
+# 错误率
+sum(rate(patra_http_server_request_duration_seconds_count{application=~"$application", http_response_status_code=~"5.."}[5m]))
 /
-rate(jvm_gc_pause_seconds_count{service="$service"}[5m])
+sum(rate(patra_http_server_request_duration_seconds_count{application=~"$application"}[5m]))
 
-# 线程数
-jvm_threads_states_threads{service="$service"}
-```
-
-### HTTP Metrics Dashboard
-
-**面板布局：**
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                   HTTP Metrics - $service                    │
-├─────────────────┬─────────────────┬─────────────────────────┤
-│  Requests/sec   │  Error Rate     │  Avg Latency            │
-│     125.3       │     0.5%        │      85ms               │
-├─────────────────┴─────────────────┴─────────────────────────┤
-│                    Request Rate by Endpoint                  │
-│  [Timeseries: /api/journals, /api/articles, ...]             │
-├──────────────────────────┬──────────────────────────────────┤
-│    Latency Distribution  │    Status Code Distribution      │
-│  [Heatmap]               │  [Pie: 2xx/4xx/5xx]              │
-├──────────────────────────┴──────────────────────────────────┤
-│                    Top Slow Endpoints                        │
-│  [Table: uri, count, p50, p99]                               │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**关键 PromQL 查询：**
-
-```promql
-# 请求速率（按端点）
-sum(rate(http_server_requests_seconds_count{service="$service"}[5m])) by (uri)
-
-# 延迟热力图
-sum(rate(http_server_requests_seconds_bucket{service="$service"}[5m])) by (le)
-
-# 状态码分布
-sum(rate(http_server_requests_seconds_count{service="$service"}[5m])) by (status)
+# 按端点分组的请求速率
+sum(rate(patra_http_server_request_duration_seconds_count{application=~"$application"}[5m])) by (http_route)
 
 # 慢端点 Top 10
 topk(10,
   histogram_quantile(0.99,
-    sum(rate(http_server_requests_seconds_bucket{service="$service"}[5m])) by (le, uri)
+    sum(rate(patra_http_server_request_duration_seconds_bucket{application=~"$application"}[5m])) by (le, http_route)
   )
 )
 ```
 
-## 告警规则设计
+### JVM Service Health Dashboard
 
-### Grafana Alerting 配置
+**关键 PromQL 查询：**
 
-**alerting/alerting.yaml**
+```promql
+# Heap 使用量
+patra_jvm_memory_used_bytes{application=~"$application", area="heap"}
 
-```yaml
-apiVersion: 1
+# Heap 使用率
+patra_jvm_memory_used_bytes{application=~"$application", area="heap"}
+/
+patra_jvm_memory_max_bytes{application=~"$application", area="heap"}
 
-groups:
-  - name: patra-alerts
-    folder: Patra
-    interval: 1m
-    rules:
-      # 高错误率
-      - uid: high-error-rate
-        title: High Error Rate
-        condition: C
-        data:
-          - refId: A
-            datasourceUid: prometheus
-            model:
-              expr: |
-                sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) by (service)
-                /
-                sum(rate(http_server_requests_seconds_count[5m])) by (service)
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              type: reduce
-              reducer: last
-              expression: A
-          - refId: C
-            datasourceUid: __expr__
-            model:
-              type: threshold
-              expression: B
-              conditions:
-                - evaluator:
-                    type: gt
-                    params: [0.01]  # > 1%
-        for: 5m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Service {{ $labels.service }} has high error rate"
-          description: "Error rate is {{ $values.B.Value | printf \"%.2f\" }}%"
+# GC 暂停时间（平均）
+rate(patra_jvm_gc_pause_seconds_sum{application=~"$application"}[5m])
+/
+rate(patra_jvm_gc_pause_seconds_count{application=~"$application"}[5m])
 
-      # P99 高延迟
-      - uid: high-latency
-        title: High P99 Latency
-        condition: C
-        data:
-          - refId: A
-            datasourceUid: prometheus
-            model:
-              expr: |
-                histogram_quantile(0.99,
-                  sum(rate(http_server_requests_seconds_bucket[5m])) by (le, service)
-                )
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              type: reduce
-              reducer: last
-              expression: A
-          - refId: C
-            datasourceUid: __expr__
-            model:
-              type: threshold
-              expression: B
-              conditions:
-                - evaluator:
-                    type: gt
-                    params: [1]  # > 1s
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Service {{ $labels.service }} has high latency"
-          description: "P99 latency is {{ $values.B.Value | printf \"%.3f\" }}s"
-
-      # 服务下线
-      - uid: service-down
-        title: Service Down
-        condition: C
-        data:
-          - refId: A
-            datasourceUid: prometheus
-            model:
-              expr: up{job="patra-services"}
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              type: reduce
-              reducer: last
-              expression: A
-          - refId: C
-            datasourceUid: __expr__
-            model:
-              type: threshold
-              expression: B
-              conditions:
-                - evaluator:
-                    type: lt
-                    params: [1]  # == 0
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Service {{ $labels.instance }} is down"
-
-contactPoints:
-  - name: default
-    receivers:
-      - uid: webhook
-        type: webhook
-        settings:
-          url: http://host.docker.internal:8080/api/alerts/webhook
-          httpMethod: POST
-
-policies:
-  - receiver: default
-    group_by: ['alertname', 'service']
-    group_wait: 30s
-    group_interval: 5m
-    repeat_interval: 4h
+# 线程数（按状态）
+patra_jvm_threads_states_threads{application=~"$application"}
 ```
+
+### HikariCP Dashboard
+
+**关键 PromQL 查询：**
+
+```promql
+# 活跃连接数
+patra_hikaricp_connections_active{application=~"$application"}
+
+# 连接池使用率
+patra_hikaricp_connections_active{application=~"$application"}
+/
+patra_hikaricp_connections_max{application=~"$application"}
+
+# 连接等待数
+patra_hikaricp_connections_pending{application=~"$application"}
+
+# 连接获取时间（平均）
+rate(patra_hikaricp_connections_acquire_seconds_sum{application=~"$application"}[5m])
+/
+rate(patra_hikaricp_connections_acquire_seconds_count{application=~"$application"}[5m])
+```
+
+## 告警配置
+
+### 告警架构
+
+> [!note] 告警策略
+> 当前使用 **Alertmanager** 作为主要告警路由组件，而非 Grafana Unified Alerting。
+> 原因：
+> 1. Alertmanager 是 Prometheus 生态的标准组件，与 Prometheus 告警规则无缝集成
+> 2. 支持更灵活的分组、抑制、静默规则
+> 3. 便于与现有 Prometheus 告警规则迁移
 
 ### 告警流程
 
@@ -485,40 +399,94 @@ policies:
   }
 }}%%
 flowchart TD
-    subgraph Grafana["Grafana"]
-        Rule[Alert Rule]
-        Eval[Evaluation]
-        State[Alert State]
+    subgraph Prometheus_Alert["Prometheus"]
+        Rule[Recording/Alert Rules]
+        Eval[Rule Evaluation]
     end
 
-    subgraph Alertmanager["Alertmanager"]
+    subgraph AM["Alertmanager"]
         Group[Group By]
-        Route[Route]
+        Route[Route Matching]
         Silence[Silence Check]
+        Inhibit[Inhibit Check]
         Notify[Notify]
     end
 
-    subgraph Channels["通知渠道"]
+    subgraph Channels["通知渠道（待配置）"]
         Webhook[Webhook]
         Email[Email]
-        Feishu[飞书]
+        Feishu[飞书/钉钉]
     end
 
     Rule --> Eval
-    Eval -->|Firing| State
-    State --> Alertmanager
-
+    Eval -->|Firing| AM
     Group --> Route
     Route --> Silence
-    Silence -->|Not Silenced| Notify
+    Silence --> Inhibit
+    Inhibit -->|Not Silenced/Inhibited| Notify
 
-    Notify --> Webhook
-    Notify --> Email
-    Notify --> Feishu
+    Notify -.-> Webhook
+    Notify -.-> Email
+    Notify -.-> Feishu
 
     classDef default fill:#dbeafe,stroke:#3b82f6,color:#1e293b;
     classDef alert fill:#fecaca,stroke:#ef4444,color:#1e293b;
-    class State,Notify alert;
+    classDef pending fill:#fef3c7,stroke:#f59e0b,color:#1e293b;
+    class Notify alert;
+    class Webhook,Email,Feishu pending;
+```
+
+### 建议告警规则
+
+以下告警规则可添加到 Prometheus 配置或 Alertmanager 中：
+
+```yaml
+# prometheus/alert.rules.yml（示例，当前未启用）
+groups:
+  - name: patra-http-alerts
+    rules:
+      # 高错误率告警
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(patra_http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m])) by (application)
+          /
+          sum(rate(patra_http_server_request_duration_seconds_count[5m])) by (application)
+          > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "服务 {{ $labels.application }} 错误率过高"
+          description: "错误率: {{ $value | humanizePercentage }}"
+
+      # P99 高延迟告警
+      - alert: HighP99Latency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(patra_http_server_request_duration_seconds_bucket[5m])) by (le, application)
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "服务 {{ $labels.application }} P99 延迟过高"
+          description: "P99 延迟: {{ $value | humanizeDuration }}"
+
+  - name: patra-jvm-alerts
+    rules:
+      # Heap 使用率过高
+      - alert: HighHeapUsage
+        expr: |
+          patra_jvm_memory_used_bytes{area="heap"}
+          /
+          patra_jvm_memory_max_bytes{area="heap"}
+          > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "服务 {{ $labels.application }} Heap 使用率过高"
+          description: "Heap 使用率: {{ $value | humanizePercentage }}"
 ```
 
 ## Grafana 配置
@@ -526,32 +494,65 @@ flowchart TD
 ### grafana.ini
 
 ```ini
+# ============================================
+# Grafana 配置
+# ============================================
+
+[paths]
+data = /var/lib/grafana
+logs = /var/log/grafana
+plugins = /var/lib/grafana/plugins
+provisioning = /etc/grafana/provisioning
+
 [server]
-root_url = http://localhost:3000
+protocol = http
+http_port = 3000
+domain = localhost
+root_url = %(protocol)s://%(domain)s:%(http_port)s/
+
+[database]
+type = sqlite3
+path = grafana.db
+
+[analytics]
+reporting_enabled = false
+check_for_updates = true
+check_for_plugin_updates = true
 
 [security]
 admin_user = admin
 admin_password = patra123
-allow_embedding = true
-
-[auth.anonymous]
-enabled = true
-org_role = Viewer
+disable_gravatar = true
 
 [users]
 allow_sign_up = false
+allow_org_create = false
+auto_assign_org = true
+auto_assign_org_role = Viewer
 
-[dashboards]
-default_home_dashboard_path = /etc/grafana/provisioning/dashboards/services-dashboard.json
+# 开发环境禁用匿名访问
+[auth.anonymous]
+enabled = false
 
-[alerting]
-enabled = true
+[log]
+mode = console
+level = info
 
+# 启用 Unified Alerting（用于可视化，实际路由由 Alertmanager 处理）
 [unified_alerting]
 enabled = true
 
+[alerting]
+enabled = false
+
+# Feature Toggles - 启用 Tempo 相关功能
 [feature_toggles]
-enable = traceqlEditor tempoServiceGraph tempoSearch
+tempoSearch = true           # Tempo 搜索
+tempoBackendSearch = true    # Tempo 后端搜索
+tempoServiceGraph = true     # 服务依赖图
+traceqlEditor = true         # TraceQL 编辑器
+explore = true               # Explore 面板
+correlations = true          # 信号关联功能
 ```
 
 ## 相关链接
