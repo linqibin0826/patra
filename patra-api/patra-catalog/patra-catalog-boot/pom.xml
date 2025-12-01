@@ -51,6 +51,12 @@
             <artifactId>patra-catalog-infra</artifactId>
         </dependency>
 
+        <!-- 对象存储（MeSH 文件缓存） -->
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-object-storage</artifactId>
+        </dependency>
+
         <!-- Patra Test Starter (包含 TestContainers, ArchUnit, Spring Boot Test, Awaitility 等) -->
         <dependency>
             <groupId>com.patra</groupId>

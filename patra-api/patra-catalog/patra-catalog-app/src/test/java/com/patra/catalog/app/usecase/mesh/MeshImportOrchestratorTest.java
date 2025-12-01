@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.patra.catalog.api.error.CatalogErrorCode;
 import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.command.MeshQualifierImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
@@ -16,11 +17,12 @@ import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.enums.MeshDescriptorImportMode;
 import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
-import com.patra.catalog.domain.port.FileDownloadPort;
 import com.patra.catalog.domain.port.MeshDescriptorBatchPort;
 import com.patra.catalog.domain.port.MeshDescriptorRepository;
 import com.patra.catalog.domain.port.MeshQualifierRepository;
+import com.patra.catalog.domain.port.MeshSourceFilePort;
 import com.patra.catalog.domain.port.XmlParserPort;
+import com.patra.common.error.ApplicationException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
@@ -60,7 +62,7 @@ class MeshImportOrchestratorTest {
   @Mock private MeshQualifierRepository qualifierRepository;
   @Mock private MeshDescriptorRepository descriptorRepository;
   @Mock private MeshDescriptorBatchPort meshDescriptorBatchPort;
-  @Mock private FileDownloadPort fileDownloadPort;
+  @Mock private MeshSourceFilePort meshSourceFilePort;
 
   private MeshImportOrchestrator orchestrator;
 
@@ -72,7 +74,7 @@ class MeshImportOrchestratorTest {
             qualifierRepository,
             descriptorRepository,
             meshDescriptorBatchPort,
-            fileDownloadPort);
+            meshSourceFilePort);
   }
 
   @Nested
@@ -85,14 +87,15 @@ class MeshImportOrchestratorTest {
       // Given
       MeshDescriptorImportCommand command =
           MeshDescriptorImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
+      when(meshSourceFilePort.fetchDescriptorFile(anyString(), any(URI.class)))
+          .thenReturn(TEST_LOCAL_PATH);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(12345L);
 
       // When
       MeshDescriptorImportResult result = orchestrator.importDescriptors(command);
 
       // Then
-      verify(fileDownloadPort).downloadToTemp(URI.create(TEST_URL));
+      verify(meshSourceFilePort).fetchDescriptorFile("2025", URI.create(TEST_URL));
       verify(descriptorRepository, never()).truncateAll();
       verify(meshDescriptorBatchPort).launchImport(any(MeshImportParams.class));
 
@@ -110,7 +113,8 @@ class MeshImportOrchestratorTest {
       // Given
       MeshDescriptorImportCommand command =
           MeshDescriptorImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
+      when(meshSourceFilePort.fetchDescriptorFile(anyString(), any(URI.class)))
+          .thenReturn(TEST_LOCAL_PATH);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(12345L);
 
       // When
@@ -133,14 +137,15 @@ class MeshImportOrchestratorTest {
       // Given
       MeshDescriptorImportCommand command =
           MeshDescriptorImportCommand.of(TEST_URL, "2025", "TRUNCATE_REIMPORT");
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
+      when(meshSourceFilePort.fetchDescriptorFile(anyString(), any(URI.class)))
+          .thenReturn(TEST_LOCAL_PATH);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(67890L);
 
       // When
       MeshDescriptorImportResult result = orchestrator.importDescriptors(command);
 
       // Then
-      verify(fileDownloadPort).downloadToTemp(URI.create(TEST_URL));
+      verify(meshSourceFilePort).fetchDescriptorFile("2025", URI.create(TEST_URL));
       verify(descriptorRepository).truncateAll();
       verify(meshDescriptorBatchPort).launchImport(any(MeshImportParams.class));
 
@@ -157,7 +162,8 @@ class MeshImportOrchestratorTest {
       // Given
       MeshDescriptorImportCommand command =
           MeshDescriptorImportCommand.of(TEST_URL, "2025", "TRUNCATE_REIMPORT");
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
+      when(meshSourceFilePort.fetchDescriptorFile(anyString(), any(URI.class)))
+          .thenReturn(TEST_LOCAL_PATH);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(67890L);
 
       // When
@@ -183,7 +189,8 @@ class MeshImportOrchestratorTest {
       Path localPath = Path.of("/tmp/mesh-import-param-test.xml");
       MeshDescriptorImportCommand command =
           MeshDescriptorImportCommand.of(url, meshVersion, "INCREMENTAL");
-      when(fileDownloadPort.downloadToTemp(URI.create(url))).thenReturn(localPath);
+      when(meshSourceFilePort.fetchDescriptorFile(meshVersion, URI.create(url)))
+          .thenReturn(localPath);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(99999L);
 
       // When
@@ -209,7 +216,8 @@ class MeshImportOrchestratorTest {
       Long expectedExecutionId = 1234567890L;
       MeshDescriptorImportCommand command =
           MeshDescriptorImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
+      when(meshSourceFilePort.fetchDescriptorFile(anyString(), any(URI.class)))
+          .thenReturn(TEST_LOCAL_PATH);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class)))
           .thenReturn(expectedExecutionId);
 
@@ -222,20 +230,24 @@ class MeshImportOrchestratorTest {
     }
 
     @Test
-    @DisplayName("Job 启动失败时应该清理临时文件")
+    @DisplayName("Job 启动失败时应该清理临时文件并包装为 ApplicationException")
     void shouldCleanupTempFileWhenJobLaunchFails() {
       // Given
       MeshDescriptorImportCommand command =
           MeshDescriptorImportCommand.of(TEST_URL, "2025", "INCREMENTAL");
       Path tempFile = Path.of("/tmp/mesh-import-cleanup-test.xml");
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(tempFile);
+      when(meshSourceFilePort.fetchDescriptorFile(anyString(), any(URI.class)))
+          .thenReturn(tempFile);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class)))
           .thenThrow(new RuntimeException("Job 启动失败"));
 
       // When & Then
       assertThatThrownBy(() -> orchestrator.importDescriptors(command))
-          .isInstanceOf(RuntimeException.class)
-          .hasMessage("Job 启动失败");
+          .isInstanceOf(ApplicationException.class)
+          .hasMessageContaining("MeSH 主题词导入失败")
+          .hasMessageContaining("Job 启动失败")
+          .extracting(e -> ((ApplicationException) e).getErrorCode())
+          .isEqualTo(CatalogErrorCode.CAT_1002);
 
       // 注意：由于 Files.deleteIfExists 是静态方法，无法在单元测试中验证
       // 实际清理行为需要在集成测试中验证
@@ -258,7 +270,7 @@ class MeshImportOrchestratorTest {
       List<MeshQualifierAggregate> qualifiers =
           List.of(createMockQualifier("Q000001"), createMockQualifier("Q000002"));
 
-      when(fileDownloadPort.downloadToTemp(URI.create(QUALIFIER_URL)))
+      when(meshSourceFilePort.fetchQualifierFile(anyString(), any(URI.class)))
           .thenReturn(QUALIFIER_LOCAL_PATH);
       when(xmlParserPort.parseQualifiers(any(Path.class), anyString()))
           .thenReturn(qualifiers.stream());
@@ -266,8 +278,8 @@ class MeshImportOrchestratorTest {
       // When
       MeshQualifierImportResult result = orchestrator.importQualifiers(command);
 
-      // Then - 验证调用顺序：下载 → 清空 → 解析 → 保存
-      verify(fileDownloadPort).downloadToTemp(URI.create(QUALIFIER_URL));
+      // Then - 验证调用顺序：获取文件 → 清空 → 解析 → 保存
+      verify(meshSourceFilePort).fetchQualifierFile("2025", URI.create(QUALIFIER_URL));
       verify(qualifierRepository).truncateAll();
       verify(xmlParserPort).parseQualifiers(any(Path.class), anyString());
       verify(qualifierRepository).saveBatch(qualifiers);
@@ -293,7 +305,8 @@ class MeshImportOrchestratorTest {
               createMockQualifier("Q000004"),
               createMockQualifier("Q000005"));
 
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(QUALIFIER_LOCAL_PATH);
+      when(meshSourceFilePort.fetchQualifierFile(anyString(), any(URI.class)))
+          .thenReturn(QUALIFIER_LOCAL_PATH);
       when(xmlParserPort.parseQualifiers(any(Path.class), anyString()))
           .thenReturn(qualifiers.stream());
 
@@ -309,7 +322,8 @@ class MeshImportOrchestratorTest {
     void shouldReturnZeroForEmptyXml() {
       // Given
       MeshQualifierImportCommand command = MeshQualifierImportCommand.of(QUALIFIER_URL, "2025");
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(QUALIFIER_LOCAL_PATH);
+      when(meshSourceFilePort.fetchQualifierFile(anyString(), any(URI.class)))
+          .thenReturn(QUALIFIER_LOCAL_PATH);
       when(xmlParserPort.parseQualifiers(any(Path.class), anyString())).thenReturn(Stream.empty());
 
       // When
@@ -321,18 +335,22 @@ class MeshImportOrchestratorTest {
     }
 
     @Test
-    @DisplayName("导入失败时应该清理临时文件并抛出异常")
+    @DisplayName("导入失败时应该清理临时文件并包装为 ApplicationException")
     void shouldCleanupTempFileWhenImportFails() {
       // Given
       MeshQualifierImportCommand command = MeshQualifierImportCommand.of(QUALIFIER_URL, "2025");
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(QUALIFIER_LOCAL_PATH);
+      when(meshSourceFilePort.fetchQualifierFile(anyString(), any(URI.class)))
+          .thenReturn(QUALIFIER_LOCAL_PATH);
       when(xmlParserPort.parseQualifiers(any(Path.class), anyString()))
           .thenThrow(new RuntimeException("XML 解析失败"));
 
       // When & Then
       assertThatThrownBy(() -> orchestrator.importQualifiers(command))
-          .isInstanceOf(RuntimeException.class)
-          .hasMessageContaining("XML 解析失败");
+          .isInstanceOf(ApplicationException.class)
+          .hasMessageContaining("MeSH 限定词导入失败")
+          .hasMessageContaining("XML 解析失败")
+          .extracting(e -> ((ApplicationException) e).getErrorCode())
+          .isEqualTo(CatalogErrorCode.CAT_1001);
 
       // 注意：实际文件清理行为需要在集成测试中验证
     }

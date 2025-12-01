@@ -28,19 +28,19 @@ import lombok.RequiredArgsConstructor;
 public enum MeshDataType {
 
   /** 限定词 - 用于修饰主题词的限定条件 */
-  QUALIFIER("qualifier", "限定词", 1),
+  QUALIFIER("qualifier", "限定词", 1, "qual"),
 
   /** 主题词 - MeSH 的核心概念 */
-  DESCRIPTOR("descriptor", "主题词", 2),
+  DESCRIPTOR("descriptor", "主题词", 2, "desc"),
 
   /** 树形编号 - 主题词的层次结构编码 */
-  TREE_NUMBER("tree-number", "树形编号", 3),
+  TREE_NUMBER("tree-number", "树形编号", 3, "tree"),
 
   /** 入口术语 - 主题词的同义词和变体 */
-  ENTRY_TERM("entry-term", "入口术语", 4),
+  ENTRY_TERM("entry-term", "入口术语", 4, "entr"),
 
   /** 概念 - 主题词包含的细粒度概念 */
-  CONCEPT("concept", "概念", 5);
+  CONCEPT("concept", "概念", 5, "conc");
 
   /**
    * 数据类型代码（用于配置文件、Map key、数据库表名）。
@@ -64,6 +64,13 @@ public enum MeshDataType {
    * <p>必须严格按照此顺序导入，否则会违反外键约束。
    */
   private final int importOrder;
+
+  /**
+   * 缓存文件前缀（用于构建对象存储键）。
+   *
+   * <p>4 字符短前缀，用于生成缓存键时避免运行时字符串截取。
+   */
+  private final String filePrefix;
 
   /**
    * 根据 code 查找枚举。

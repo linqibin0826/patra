@@ -15,6 +15,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 
 /// MeSH 数据源文件适配器。
@@ -43,6 +44,9 @@ public class MeshSourceFileAdapter implements MeshSourceFilePort {
 
   /// 异步线程池名称（用于缓存上传）。
   private static final String CACHE_UPLOAD_EXECUTOR = "cache-upload";
+
+  /// 缓存上传功能禁用日志标志（避免重复记录）。
+  private static final AtomicBoolean cacheUploadDisabledLogged = new AtomicBoolean(false);
 
   private final FileDownloadPort fileDownloadPort;
   private final ObjectStorageOperations objectStorage;
@@ -173,12 +177,14 @@ public class MeshSourceFileAdapter implements MeshSourceFilePort {
   private void uploadToCacheAsync(String cacheKey, Path localFile, MeshDataType dataType) {
     String displayName = dataType.getDisplayName();
 
-    // 检查线程池是否配置
+    // 检查线程池是否配置（仅首次记录日志，避免重复）
     if (!asyncExecutorRegistry.hasExecutor(CACHE_UPLOAD_EXECUTOR)) {
-      log.warn(
-          "异步线程池 '{}' 未配置，跳过缓存上传。请在配置文件中添加 patra.async.pools.{} 配置",
-          CACHE_UPLOAD_EXECUTOR,
-          CACHE_UPLOAD_EXECUTOR);
+      if (cacheUploadDisabledLogged.compareAndSet(false, true)) {
+        log.info(
+            "异步线程池 '{}' 未配置，缓存上传功能已禁用。" + "如需启用，请在配置文件中添加 patra.async.pools.{} 配置",
+            CACHE_UPLOAD_EXECUTOR,
+            CACHE_UPLOAD_EXECUTOR);
+      }
       return;
     }
 
@@ -219,12 +225,11 @@ public class MeshSourceFileAdapter implements MeshSourceFilePort {
   /// @param meshVersion MeSH 版本号
   /// @return 缓存键
   private String buildCacheKey(MeshDataType dataType, String meshVersion) {
-    String filePrefix = dataType.getCode().substring(0, 4); // desc, qual
     return String.format(
         CACHE_KEY_TEMPLATE,
         cacheProperties.keyPrefix(),
         dataType.getCode(),
-        filePrefix,
+        dataType.getFilePrefix(),
         meshVersion);
   }
 }
