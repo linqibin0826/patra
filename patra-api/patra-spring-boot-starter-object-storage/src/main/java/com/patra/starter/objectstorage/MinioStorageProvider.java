@@ -1,18 +1,30 @@
 package com.patra.starter.objectstorage;
 
+import com.patra.starter.objectstorage.domain.DownloadFailedException;
+import com.patra.starter.objectstorage.domain.DownloadResult;
+import com.patra.starter.objectstorage.domain.InvalidDownloadRequestException;
 import com.patra.starter.objectstorage.domain.InvalidUploadRequestException;
+import com.patra.starter.objectstorage.domain.ObjectInfo;
 import com.patra.starter.objectstorage.domain.ObjectMetadata;
+import com.patra.starter.objectstorage.domain.ObjectNotFoundException;
 import com.patra.starter.objectstorage.domain.UploadFailedException;
 import com.patra.starter.objectstorage.domain.UploadResult;
 import io.minio.BucketExistsArgs;
+import io.minio.DownloadObjectArgs;
+import io.minio.GetObjectArgs;
+import io.minio.GetObjectResponse;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.ObjectWriteResponse;
 import io.minio.PutObjectArgs;
+import io.minio.StatObjectArgs;
+import io.minio.StatObjectResponse;
+import io.minio.errors.ErrorResponseException;
 import java.io.InputStream;
+import java.nio.file.Path;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 
 /// MinIO 对象存储提供者实现。
@@ -26,19 +38,9 @@ import lombok.extern.slf4j.Slf4j;
 ///
 /// @see S3StorageProvider AWS S3 实现
 @Slf4j
-public class MinioStorageProvider implements ObjectStorageProvider {
-
-  /// 存储桶名称验证模式,遵循 S3 命名规则。
-  ///
-  /// **规则:** 3-63 个字符,仅小写字母/数字/点/连字符,必须以字母或数字开头和结尾。
-  private static final Pattern BUCKET_NAME_PATTERN =
-      Pattern.compile("^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$");
-
-  /// 对象键的最大长度(S3 兼容性限制)。
-  private static final int MAX_KEY_LENGTH = 1024;
+public class MinioStorageProvider extends AbstractObjectStorageProvider {
 
   private final MinioClient minioClient;
-  private final long maxFileSize;
 
   /// 已知存储桶的本地缓存,避免冗余的存在性检查。
   ///
@@ -51,8 +53,8 @@ public class MinioStorageProvider implements ObjectStorageProvider {
   /// @param minioClient 配置好的 MinIO 客户端
   /// @param maxFileSize 允许的最大文件大小(字节)
   public MinioStorageProvider(MinioClient minioClient, long maxFileSize) {
+    super(maxFileSize);
     this.minioClient = minioClient;
-    this.maxFileSize = maxFileSize;
   }
 
   @Override
@@ -77,7 +79,7 @@ public class MinioStorageProvider implements ObjectStorageProvider {
   public UploadResult upload(
       String bucket, String key, InputStream inputStream, ObjectMetadata metadata) {
     try {
-      validateArguments(bucket, key, inputStream, metadata);
+      validateUploadArguments(bucket, key, inputStream, metadata);
       ensureBucketExists(bucket);
 
       ObjectWriteResponse response =
@@ -143,64 +145,140 @@ public class MinioStorageProvider implements ObjectStorageProvider {
     knownBuckets.add(bucket);
   }
 
-  /// 验证上传参数的 null/空检查、格式合规性和大小限制。
+  /// 下载对象内容（流式）。
   ///
   /// @param bucket 存储桶名称
   /// @param key 对象键
-  /// @param inputStream 内容流
-  /// @param metadata 文件元数据
-  /// @throws InvalidUploadRequestException 如果任何验证失败
-  private void validateArguments(
-      String bucket, String key, InputStream inputStream, ObjectMetadata metadata) {
-    // Null/空检查
-    if (bucket == null || bucket.isBlank()) {
-      throw new InvalidUploadRequestException("存储桶名称不能为空");
-    }
-    if (key == null || key.isBlank()) {
-      throw new InvalidUploadRequestException("对象键不能为空");
-    }
-    if (inputStream == null) {
-      throw new InvalidUploadRequestException("输入流不能为 null");
-    }
-    if (metadata == null) {
-      throw new InvalidUploadRequestException("对象元数据是必需的");
-    }
-    if (metadata.getContentLength() <= 0) {
-      throw new InvalidUploadRequestException(
-          String.format("内容长度必须大于 0,实际为 %d", metadata.getContentLength()));
-    }
+  /// @return 下载结果,包含内容流和元数据
+  /// @throws ObjectNotFoundException 如果对象不存在
+  /// @throws InvalidDownloadRequestException 如果参数无效
+  /// @throws DownloadFailedException 如果下载失败
+  @Override
+  public DownloadResult download(String bucket, String key) {
+    try {
+      validateDownloadArguments(bucket, key);
 
-    // 存储桶格式验证
-    if (bucket.length() < 3 || bucket.length() > 63) {
-      throw new InvalidUploadRequestException(
-          String.format("存储桶名称长度必须在 3 到 63 个字符之间,实际为 %d", bucket.length()));
-    }
-    if (!BUCKET_NAME_PATTERN.matcher(bucket).matches()) {
-      throw new InvalidUploadRequestException(
-          String.format("存储桶名称 '%s' 无效。必须仅包含小写字母、数字、点和连字符,且必须以字母或数字开头和结尾", bucket));
-    }
-    if (bucket.contains("..")) {
-      throw new InvalidUploadRequestException(String.format("存储桶名称 '%s' 包含连续的点,这是不允许的", bucket));
-    }
+      GetObjectResponse response =
+          minioClient.getObject(GetObjectArgs.builder().bucket(bucket).object(key).build());
 
-    // 对象键格式验证
-    if (key.length() > MAX_KEY_LENGTH) {
-      throw new InvalidUploadRequestException(
-          String.format("对象键长度超过最大值 %d 个字符,实际为 %d", MAX_KEY_LENGTH, key.length()));
-    }
-    if (key.startsWith("/")) {
-      throw new InvalidUploadRequestException(String.format("对象键 '%s' 不能以斜杠开头", key));
-    }
-    if (key.contains("//")) {
-      throw new InvalidUploadRequestException(String.format("对象键 '%s' 包含连续的斜杠,这是不允许的", key));
-    }
+      // 获取对象信息
+      StatObjectResponse stat =
+          minioClient.statObject(StatObjectArgs.builder().bucket(bucket).object(key).build());
 
-    // 文件大小验证
-    if (metadata.getContentLength() > maxFileSize) {
-      throw new InvalidUploadRequestException(
-          String.format(
-              "文件大小 %d 字节超过了最大允许大小 %d 字节 (%.2f MB)",
-              metadata.getContentLength(), maxFileSize, maxFileSize / 1024.0 / 1024.0));
+      DownloadResult result =
+          DownloadResult.builder()
+              .content(response)
+              .bucketName(bucket)
+              .objectKey(key)
+              .contentLength(stat.size())
+              .contentType(stat.contentType())
+              .etag(stat.etag())
+              .build();
+
+      log.info("开始从 MinIO 下载对象: bucket={}, key={}, size={} 字节", bucket, key, stat.size());
+
+      return result;
+
+    } catch (InvalidDownloadRequestException ex) {
+      throw ex;
+    } catch (ErrorResponseException ex) {
+      if ("NoSuchKey".equals(ex.errorResponse().code())) {
+        throw new ObjectNotFoundException(bucket, key, ex);
+      }
+      log.error("MinIO 下载失败: bucket={}, key={}", bucket, key, ex);
+      throw new DownloadFailedException(
+          String.format("MinIO 下载失败: bucket=%s, key=%s", bucket, key), ex);
+    } catch (Exception ex) {
+      log.error("MinIO 下载失败: bucket={}, key={}", bucket, key, ex);
+      throw new DownloadFailedException(
+          String.format("MinIO 下载失败: bucket=%s, key=%s", bucket, key), ex);
+    }
+  }
+
+  /// 下载对象到指定文件路径。
+  ///
+  /// @param bucket 存储桶名称
+  /// @param key 对象键
+  /// @param targetPath 目标文件路径
+  /// @return 目标文件路径
+  /// @throws ObjectNotFoundException 如果对象不存在
+  /// @throws InvalidDownloadRequestException 如果参数无效
+  /// @throws DownloadFailedException 如果下载失败
+  @Override
+  public Path downloadToFile(String bucket, String key, Path targetPath) {
+    try {
+      validateDownloadArguments(bucket, key);
+      if (targetPath == null) {
+        throw new InvalidDownloadRequestException("目标文件路径不能为 null");
+      }
+
+      minioClient.downloadObject(
+          DownloadObjectArgs.builder()
+              .bucket(bucket)
+              .object(key)
+              .filename(targetPath.toString())
+              .build());
+
+      log.info("文件已下载到: bucket={}, key={}, path={}", bucket, key, targetPath);
+
+      return targetPath;
+
+    } catch (InvalidDownloadRequestException ex) {
+      throw ex;
+    } catch (ErrorResponseException ex) {
+      if ("NoSuchKey".equals(ex.errorResponse().code())) {
+        throw new ObjectNotFoundException(bucket, key, ex);
+      }
+      log.error("MinIO 下载到文件失败: bucket={}, key={}, path={}", bucket, key, targetPath, ex);
+      throw new DownloadFailedException(
+          String.format("MinIO 下载到文件失败: bucket=%s, key=%s, path=%s", bucket, key, targetPath), ex);
+    } catch (Exception ex) {
+      log.error("MinIO 下载到文件失败: bucket={}, key={}, path={}", bucket, key, targetPath, ex);
+      throw new DownloadFailedException(
+          String.format("MinIO 下载到文件失败: bucket=%s, key=%s, path=%s", bucket, key, targetPath), ex);
+    }
+  }
+
+  /// 获取对象元数据（HEAD 请求）。
+  ///
+  /// @param bucket 存储桶名称
+  /// @param key 对象键
+  /// @return 对象元数据,如果对象不存在则返回空 Optional
+  /// @throws InvalidDownloadRequestException 如果参数无效
+  /// @throws DownloadFailedException 如果获取元数据失败（非对象不存在的错误）
+  @Override
+  public Optional<ObjectInfo> statObject(String bucket, String key) {
+    try {
+      validateDownloadArguments(bucket, key);
+
+      StatObjectResponse stat =
+          minioClient.statObject(StatObjectArgs.builder().bucket(bucket).object(key).build());
+
+      ObjectInfo info =
+          ObjectInfo.builder()
+              .bucketName(bucket)
+              .objectKey(key)
+              .contentLength(stat.size())
+              .contentType(stat.contentType())
+              .etag(stat.etag())
+              .lastModified(stat.lastModified().toInstant())
+              .build();
+
+      return Optional.of(info);
+
+    } catch (InvalidDownloadRequestException ex) {
+      throw ex;
+    } catch (ErrorResponseException ex) {
+      if ("NoSuchKey".equals(ex.errorResponse().code())) {
+        return Optional.empty();
+      }
+      log.error("MinIO 获取对象信息失败: bucket={}, key={}", bucket, key, ex);
+      throw new DownloadFailedException(
+          String.format("MinIO 获取对象信息失败: bucket=%s, key=%s", bucket, key), ex);
+    } catch (Exception ex) {
+      log.error("MinIO 获取对象信息失败: bucket={}, key={}", bucket, key, ex);
+      throw new DownloadFailedException(
+          String.format("MinIO 获取对象信息失败: bucket=%s, key=%s", bucket, key), ex);
     }
   }
 }

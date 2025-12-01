@@ -2,6 +2,7 @@ package com.patra.starter.objectstorage.domain;
 
 import java.time.Instant;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 /// 对象元数据信息。
@@ -10,6 +11,7 @@ import lombok.Getter;
 /// 不包含对象内容本身。用于检查对象是否存在以及获取其属性。
 @Getter
 @Builder
+@EqualsAndHashCode
 public class ObjectInfo {
 
   /// 存储桶名称。

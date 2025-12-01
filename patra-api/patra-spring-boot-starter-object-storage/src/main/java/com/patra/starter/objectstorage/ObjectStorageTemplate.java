@@ -1,7 +1,12 @@
 package com.patra.starter.objectstorage;
 
+import com.patra.starter.objectstorage.domain.DownloadFailedException;
+import com.patra.starter.objectstorage.domain.DownloadResult;
+import com.patra.starter.objectstorage.domain.InvalidDownloadRequestException;
 import com.patra.starter.objectstorage.domain.InvalidUploadRequestException;
+import com.patra.starter.objectstorage.domain.ObjectInfo;
 import com.patra.starter.objectstorage.domain.ObjectMetadata;
+import com.patra.starter.objectstorage.domain.ObjectNotFoundException;
 import com.patra.starter.objectstorage.domain.UploadFailedException;
 import com.patra.starter.objectstorage.domain.UploadResult;
 import com.patra.starter.objectstorage.metrics.ObjectStorageMetrics;
@@ -9,6 +14,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.nio.file.Path;
+import java.util.Optional;
 import org.springframework.retry.support.RetryTemplate;
 
 /// 对象存储模板类,包装提供者操作并增强重试和可观测性能力。
@@ -94,6 +101,102 @@ public class ObjectStorageTemplate implements ObjectStorageOperations {
         });
   }
 
+  /// 下载对象内容（流式）。
+  ///
+  /// @param bucket 存储桶名称
+  /// @param key 对象键
+  /// @return 下载结果
+  /// @throws ObjectNotFoundException 如果对象不存在
+  /// @throws DownloadFailedException 如果下载失败
+  @Override
+  public DownloadResult download(String bucket, String key) {
+    return retryTemplate.execute(
+        context -> {
+          long start = System.nanoTime();
+          try {
+            DownloadResult result = provider.download(bucket, key);
+            metrics.recordDownloadSuccess(
+                provider.getProviderType(),
+                bucket,
+                System.nanoTime() - start,
+                result.getContentLength());
+            return result;
+          } catch (Exception ex) {
+            String errorType = classifyDownloadError(ex);
+            metrics.recordDownloadFailure(provider.getProviderType(), bucket, errorType);
+            if (ex instanceof DownloadFailedException downloadFailedException) {
+              throw downloadFailedException;
+            }
+            throw new DownloadFailedException("下载失败", ex);
+          } finally {
+            if (context.getRetryCount() > 0) {
+              metrics.recordRetry(provider.getProviderType(), bucket, context.getRetryCount());
+            }
+          }
+        });
+  }
+
+  /// 下载对象到指定文件路径。
+  ///
+  /// @param bucket 存储桶名称
+  /// @param key 对象键
+  /// @param targetPath 目标文件路径
+  /// @return 目标文件路径
+  /// @throws ObjectNotFoundException 如果对象不存在
+  /// @throws DownloadFailedException 如果下载失败
+  @Override
+  public Path downloadToFile(String bucket, String key, Path targetPath) {
+    return retryTemplate.execute(
+        context -> {
+          long start = System.nanoTime();
+          try {
+            Path result = provider.downloadToFile(bucket, key, targetPath);
+            // 获取文件大小用于指标
+            long fileSize = java.nio.file.Files.size(result);
+            metrics.recordDownloadSuccess(
+                provider.getProviderType(), bucket, System.nanoTime() - start, fileSize);
+            return result;
+          } catch (Exception ex) {
+            String errorType = classifyDownloadError(ex);
+            metrics.recordDownloadFailure(provider.getProviderType(), bucket, errorType);
+            if (ex instanceof DownloadFailedException downloadFailedException) {
+              throw downloadFailedException;
+            }
+            throw new DownloadFailedException("下载到文件失败", ex);
+          } finally {
+            if (context.getRetryCount() > 0) {
+              metrics.recordRetry(provider.getProviderType(), bucket, context.getRetryCount());
+            }
+          }
+        });
+  }
+
+  /// 获取对象元数据（HEAD 请求）。
+  ///
+  /// @param bucket 存储桶名称
+  /// @param key 对象键
+  /// @return 对象元数据,如果对象不存在则返回空 Optional
+  @Override
+  public Optional<ObjectInfo> statObject(String bucket, String key) {
+    return retryTemplate.execute(
+        context -> {
+          try {
+            return provider.statObject(bucket, key);
+          } catch (Exception ex) {
+            String errorType = classifyDownloadError(ex);
+            metrics.recordDownloadFailure(provider.getProviderType(), bucket, errorType);
+            if (ex instanceof DownloadFailedException downloadFailedException) {
+              throw downloadFailedException;
+            }
+            throw new DownloadFailedException("获取对象信息失败", ex);
+          } finally {
+            if (context.getRetryCount() > 0) {
+              metrics.recordRetry(provider.getProviderType(), bucket, context.getRetryCount());
+            }
+          }
+        });
+  }
+
   /// 将异常分类为错误类型,用于指标标签。
   ///
   /// **分类规则:**
@@ -132,5 +235,21 @@ public class ObjectStorageTemplate implements ObjectStorageOperations {
     }
 
     return "unknown";
+  }
+
+  /// 将下载相关异常分类为错误类型,用于指标标签。
+  ///
+  /// @param ex 待分类的异常
+  /// @return 错误类型字符串
+  private String classifyDownloadError(Exception ex) {
+    if (ex instanceof InvalidDownloadRequestException) {
+      return "validation";
+    }
+    if (ex instanceof ObjectNotFoundException) {
+      return "not_found";
+    }
+
+    // 复用上传的分类逻辑
+    return classifyError(ex);
   }
 }
