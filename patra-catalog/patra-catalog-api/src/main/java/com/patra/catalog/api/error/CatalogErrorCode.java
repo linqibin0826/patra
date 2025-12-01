@@ -1,0 +1,85 @@
+package com.patra.catalog.api.error;
+
+import com.patra.common.error.codes.ErrorCodeLike;
+
+/// 目录服务的错误代码目录。
+///
+/// 错误代码格式: `CAT-NNNN`,其中 CAT 是服务前缀。
+///
+/// 代码范围:
+///
+/// - 0xxx: HTTP 标准错误(使用 `HttpStdErrors.of("CAT").*` 工厂方法)
+/// - 10xx: MeSH 导入错误
+/// - 11xx: 文件下载错误
+/// - 12xx: 数据解析错误
+///
+/// @see com.patra.common.error.codes.ErrorCodeLike
+public enum CatalogErrorCode implements ErrorCodeLike {
+
+  // ===== MeSH 导入错误 (10xx) =====
+
+  /// 表示 MeSH 限定词导入失败。
+  ///
+  /// 在导入 MeSH 限定词数据时发生。可能由于 XML 解析失败、
+  /// 数据库写入错误或数据验证问题导致。请检查源文件格式和数据库连接。
+  CAT_1001("CAT-1001", 500),
+
+  /// 表示 MeSH 主题词导入失败。
+  ///
+  /// 在导入 MeSH 主题词数据时发生。由于数据量大（约 35,000 条），
+  /// 可能由于批处理作业失败、内存不足或事务超时导致。
+  /// 请检查 Spring Batch 作业状态和系统资源。
+  CAT_1002("CAT-1002", 500),
+
+  /// 表示 MeSH 数据解析失败。
+  ///
+  /// 在解析 MeSH XML 文件时发生。可能由于文件格式不正确、
+  /// 编码问题或 XML 结构与预期不符导致。请验证源文件完整性。
+  CAT_1003("CAT-1003", 422),
+
+  // ===== 文件下载错误 (11xx) =====
+
+  /// 表示远程文件下载失败。
+  ///
+  /// 在从 NLM 服务器下载 MeSH 文件时发生。可能由于网络问题、
+  /// 服务器不可达或下载超时导致。请检查网络连接和远程服务器状态。
+  CAT_1101("CAT-1101", 502),
+
+  /// 表示缓存文件下载失败。
+  ///
+  /// 在从对象存储缓存下载文件时发生。可能由于缓存文件不存在、
+  /// 对象存储服务不可用或权限问题导致。系统将回退到远程下载。
+  CAT_1102("CAT-1102", 500);
+
+  private final String code;
+  private final int httpStatus;
+
+  CatalogErrorCode(String code, int httpStatus) {
+    this.code = code;
+    this.httpStatus = httpStatus;
+  }
+
+  /// 返回错误代码字符串。
+  ///
+  /// @return 格式为 CAT-NNNN 的错误代码
+  @Override
+  public String code() {
+    return code;
+  }
+
+  /// 返回与此错误关联的 HTTP 状态码。
+  ///
+  /// @return HTTP 状态码 (400-599)
+  @Override
+  public int httpStatus() {
+    return httpStatus;
+  }
+
+  /// 返回错误代码的字符串表示形式。
+  ///
+  /// @return 格式为 CAT-NNNN 的错误代码
+  @Override
+  public String toString() {
+    return code;
+  }
+}

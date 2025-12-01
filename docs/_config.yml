@@ -1,0 +1,67 @@
+# GitHub Pages Jekyll 配置
+# 用于将 Obsidian 文档发布为静态站点
+
+title: Patra 项目文档
+description: 医学出版物数据平台技术文档
+remote_theme: pages-themes/minimal@v0.2.0
+
+# 排除不需要发布的文件
+exclude:
+  - .obsidian
+  - .claude
+  - .gitignore
+  - "*.DS_Store"
+  - templates
+  - 00-inbox
+  - attachments
+
+# 支持 Markdown 扩展
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+  syntax_highlighter: rouge
+
+# 默认布局和 Liquid 处理配置
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "default"
+  # 禁用 learning 目录的 Liquid 处理（包含 Prometheus/Grafana 模板语法）
+  - scope:
+      path: "learning"
+    values:
+      layout: "default"
+      render_with_liquid: false
+  # 禁用 designs 目录的 Liquid 处理
+  - scope:
+      path: "designs"
+    values:
+      layout: "default"
+      render_with_liquid: false
+  # 禁用 devlog 目录的 Liquid 处理
+  - scope:
+      path: "devlog"
+    values:
+      layout: "default"
+      render_with_liquid: false
+  # 禁用 bugs 目录的 Liquid 处理
+  - scope:
+      path: "bugs"
+    values:
+      layout: "default"
+      render_with_liquid: false
+  # 禁用 decisions 目录的 Liquid 处理
+  - scope:
+      path: "decisions"
+    values:
+      layout: "default"
+      render_with_liquid: false
+  # 禁用 til 目录的 Liquid 处理
+  - scope:
+      path: "til"
+    values:
+      layout: "default"
+      render_with_liquid: false
