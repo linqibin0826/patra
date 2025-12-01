@@ -1,5 +1,6 @@
 package com.patra.catalog.app.usecase.mesh;
 
+import com.patra.catalog.api.error.CatalogErrorCode;
 import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.command.MeshQualifierImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
@@ -7,11 +8,12 @@ import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.enums.MeshDescriptorImportMode;
 import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
-import com.patra.catalog.domain.port.FileDownloadPort;
 import com.patra.catalog.domain.port.MeshDescriptorBatchPort;
 import com.patra.catalog.domain.port.MeshDescriptorRepository;
 import com.patra.catalog.domain.port.MeshQualifierRepository;
+import com.patra.catalog.domain.port.MeshSourceFilePort;
 import com.patra.catalog.domain.port.XmlParserPort;
+import com.patra.common.error.ApplicationException;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
@@ -46,7 +48,7 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
   private final MeshQualifierRepository qualifierRepository;
   private final MeshDescriptorRepository descriptorRepository;
   private final MeshDescriptorBatchPort meshDescriptorBatchPort;
-  private final FileDownloadPort fileDownloadPort;
+  private final MeshSourceFilePort meshSourceFilePort;
 
   /// 导入 MeSH 限定词。
   ///
@@ -65,9 +67,10 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
   public MeshQualifierImportResult importQualifiers(MeshQualifierImportCommand command) {
     log.info("启动 MeSH 限定词导入，URL：{}，版本：{}", command.url(), command.meshVersion());
 
-    // 1. 下载文件到临时目录
-    Path localFile = fileDownloadPort.downloadToTemp(URI.create(command.url()));
-    log.info("限定词文件已下载到：{}", localFile);
+    // 1. 获取文件（优先从缓存，否则从远程下载）
+    Path localFile =
+        meshSourceFilePort.fetchQualifierFile(command.meshVersion(), URI.create(command.url()));
+    log.info("限定词文件已就绪：{}", localFile);
 
     try {
       // 2. 清空现有数据（TRUNCATE_REIMPORT 模式）
@@ -82,8 +85,17 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
       log.info("MeSH 限定词导入完成，数量：{}", qualifiers.size());
       return MeshQualifierImportResult.success(
           command.url(), command.meshVersion(), qualifiers.size());
+    } catch (ApplicationException e) {
+      // 已经是 ApplicationException，直接重新抛出
+      throw e;
+    } catch (RuntimeException e) {
+      // 包装其他运行时异常
+      throw new ApplicationException(
+          CatalogErrorCode.CAT_1001, "MeSH 限定词导入失败: " + e.getMessage(), e);
     } catch (Exception e) {
-      throw (RuntimeException) e;
+      // 包装检查异常
+      throw new ApplicationException(
+          CatalogErrorCode.CAT_1001, "MeSH 限定词导入时发生意外错误: " + e.getMessage(), e);
     } finally {
       // 无论成功或失败，都清理临时文件
       cleanupTempFile(localFile);
@@ -112,9 +124,10 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
     log.info(
         "启动 MeSH 主题词导入，URL：{}，版本：{}，模式：{}", command.url(), command.meshVersion(), command.mode());
 
-    // 1. 下载文件到临时目录
-    Path localFile = fileDownloadPort.downloadToTemp(URI.create(command.url()));
-    log.info("文件已下载到：{}", localFile);
+    // 1. 获取文件（优先从缓存，否则从远程下载）
+    Path localFile =
+        meshSourceFilePort.fetchDescriptorFile(command.meshVersion(), URI.create(command.url()));
+    log.info("主题词文件已就绪：{}", localFile);
 
     // 2. 清空数据（如果是 TRUNCATE 模式）
     if (command.mode() == MeshDescriptorImportMode.TRUNCATE_REIMPORT) {
@@ -122,7 +135,9 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
       log.info("已清空所有旧数据");
     }
 
-    // 3. 启动批处理导入（标记为临时文件，Job 完成后自动清理）
+    // 3. 启动批处理导入
+    // 注意：文件由 Job Listener（MeshImportJobExecutionListener）在 Job 结束后清理，
+    //      仅当 Job 启动失败时才在此处清理。
     try {
       boolean forceNewInstance = (command.mode() == MeshDescriptorImportMode.TRUNCATE_REIMPORT);
       MeshImportParams params =
@@ -131,10 +146,17 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
 
       return MeshDescriptorImportResult.success(
           executionId, command.url(), localFile.toString(), command.meshVersion(), command.mode());
-    } catch (Exception e) {
-      // Job 启动失败，清理临时文件
+    } catch (ApplicationException e) {
       cleanupTempFile(localFile);
       throw e;
+    } catch (RuntimeException e) {
+      cleanupTempFile(localFile);
+      throw new ApplicationException(
+          CatalogErrorCode.CAT_1002, "MeSH 主题词导入失败: " + e.getMessage(), e);
+    } catch (Exception e) {
+      cleanupTempFile(localFile);
+      throw new ApplicationException(
+          CatalogErrorCode.CAT_1002, "MeSH 主题词导入时发生意外错误: " + e.getMessage(), e);
     }
   }
 

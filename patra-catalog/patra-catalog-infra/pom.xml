@@ -60,6 +60,13 @@
             <artifactId>patra-spring-boot-starter-rest-client</artifactId>
         </dependency>
 
+        <!-- 对象存储（MeSH 文件缓存） -->
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-object-storage</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Feign 远程调用（已包含 LoadBalancer） -->
         <dependency>
             <groupId>com.patra</groupId>
@@ -100,6 +107,12 @@
             <groupId>com.patra</groupId>
             <artifactId>patra-spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+
+        <!-- Starter Core（MeshSourceFileAdapter 需要 AsyncExecutorRegistry） -->
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-core</artifactId>
         </dependency>
     </dependencies>
 

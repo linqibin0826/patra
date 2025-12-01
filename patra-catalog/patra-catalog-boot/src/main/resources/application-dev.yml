@@ -29,3 +29,38 @@ logging:
 # 可观测性：开箱即用（零配置）
 # - Tracing/Logging: OTel Agent 自动处理
 # - Metrics: applicationName 自动取 spring.application.name，environment 自动取 spring.profiles.active
+
+# Spring Batch 独立数据源（与业务数据库隔离）
+patra:
+  # 通用异步线程池配置
+  async:
+    enabled: true
+    pools:
+      cache-upload:         # MeSH 缓存上传等 I/O 操作
+        core-size: 2
+        max-size: 4
+        queue-capacity: 50
+        thread-name-prefix: cache-upload-
+
+  batch:
+    datasource:
+      url: jdbc:mysql://127.0.0.1:13306/patra_batch?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+      username: root
+      password: 123456
+
+  # 对象存储配置（MinIO）
+  object-storage:
+    active-provider: minio
+    providers:
+      minio:
+        endpoint: http://localhost:9000
+        access-key: minioadmin
+        secret-key: minioadmin
+        bucket: patra-catalog-cache
+
+  # MeSH 文件缓存配置
+  catalog:
+    mesh-cache:
+      enabled: true
+      bucket: patra-catalog-cache
+      key-prefix: mesh

@@ -245,8 +245,8 @@ class MeshSourceFileAdapterIT {
 
       // Then - 等待异步上传完成，验证缓存已更新
       await()
-          .atMost(Duration.ofSeconds(10))
-          .pollInterval(Duration.ofMillis(500))
+          .atMost(Duration.ofSeconds(5))
+          .pollInterval(Duration.ofMillis(200))
           .untilAsserted(
               () -> {
                 assertThat(objectStorage.exists(TEST_BUCKET, cacheKey)).isTrue();
