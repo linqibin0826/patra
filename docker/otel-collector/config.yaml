@@ -1,6 +1,24 @@
 # OpenTelemetry Collector 配置
 # 接收 OTLP 格式的 Traces/Metrics/Logs，路由到对应后端
 
+connectors:
+  # Span Metrics Connector - 从 traces 生成 RED 指标
+  # 生成 traces_spanmetrics_calls_total 和 traces_spanmetrics_duration_bucket
+  # namespace 确保生成的指标带 traces.spanmetrics 前缀，经 Prometheus exporter 后变成 patra_traces_spanmetrics_*
+  spanmetrics:
+    namespace: traces.spanmetrics
+    histogram:
+      explicit:
+        buckets: [5ms, 10ms, 25ms, 50ms, 100ms, 250ms, 500ms, 1s, 2.5s, 5s, 10s]
+    dimensions:
+      - name: http.method
+      - name: http.status_code
+      - name: http.route
+    exemplars:
+      enabled: true
+    dimensions_cache_size: 1000
+    aggregation_temporality: AGGREGATION_TEMPORALITY_CUMULATIVE
+
 receivers:
   # OTLP 接收器 - 接收来自应用的遥测数据
   otlp:
@@ -78,15 +96,15 @@ service:
   extensions: [health_check, pprof, zpages]
 
   pipelines:
-    # 链路管道
+    # 链路管道 - 输出到 Tempo 和 spanmetrics connector
     traces:
       receivers: [otlp]
       processors: [memory_limiter, resource, batch]
-      exporters: [otlp/tempo, debug]
+      exporters: [otlp/tempo, spanmetrics, debug]
 
-    # 指标管道
+    # 指标管道 - 接收应用指标和 spanmetrics 生成的指标
     metrics:
-      receivers: [otlp]
+      receivers: [otlp, spanmetrics]
       processors: [memory_limiter, resource, batch]
       exporters: [prometheus, debug]
 
