@@ -10,6 +10,7 @@
 - **日志拦截器**：可选记录请求/响应的 Headers 和 Body
 - **拦截器扩展**：支持注入自定义 `ClientHttpRequestInterceptor`
 - **多客户端配置**：支持按用途定义多个客户端配置
+- **文件下载进度监控**：支持进度百分比、下载速度、剩余时间估算
 
 ## 快速开始
 
@@ -89,6 +90,83 @@ patra:
       long-running:
         enabled: false
 ```
+
+### 文件下载进度监控
+
+使用 `DownloadClient` 下载大文件并监控进度：
+
+```java
+@Service
+public class FileService {
+
+    private final DownloadClient downloadClient;
+    private final ProgressListener progressListener;
+
+    public FileService(DownloadClient downloadClient, ProgressListener progressListener) {
+        this.downloadClient = downloadClient;
+        this.progressListener = progressListener;
+    }
+
+    public Path downloadFile(URI url) {
+        DownloadResult result = downloadClient.downloadToTemp(url, progressListener);
+        return result.filePath();
+    }
+}
+```
+
+**进度回调信息**（`DownloadProgress`）：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `bytesDownloaded` | long | 已下载字节数 |
+| `totalBytes` | long | 文件总大小（-1 表示未知） |
+| `percentage` | int | 下载进度百分比（0-100） |
+| `speedBytesPerSecond` | long | 当前下载速度（字节/秒） |
+| `estimatedRemainingSeconds` | long | 预计剩余时间（秒） |
+| `elapsedMillis` | long | 已用时间（毫秒） |
+
+**便捷格式化方法**：
+
+```java
+progress.formattedSpeed()           // "12.5 MB/s"
+progress.formattedRemainingTime()   // "2m 30s"
+progress.formattedSize()            // "150 MB / 300 MB (50%)"
+progress.formattedElapsedTime()     // "45.2s"
+```
+
+**自定义监听器**：
+
+```java
+@Component
+public class CustomProgressListener implements ProgressListener {
+
+    @Override
+    public void onProgress(DownloadProgress progress) {
+        System.out.printf("下载进度: %d%%, 速度: %s%n",
+            progress.percentage(), progress.formattedSpeed());
+    }
+
+    @Override
+    public void onComplete(DownloadProgress finalProgress) {
+        System.out.printf("下载完成，耗时: %s%n",
+            finalProgress.formattedElapsedTime());
+    }
+
+    @Override
+    public void onError(Exception exception, DownloadProgress lastProgress) {
+        System.err.println("下载失败: " + exception.getMessage());
+    }
+}
+```
+
+**记录的 Micrometer 指标**：
+
+| 指标名 | 类型 | 说明 |
+|--------|------|------|
+| `download.duration.seconds` | Timer | 下载耗时分布 |
+| `download.bytes.total` | Counter | 累计下载字节数 |
+| `download.count.total` | Counter | 累计下载次数（tag: `status=success/failure`） |
+| `download.failure.total` | Counter | 失败次数（tag: `error_type`） |
 
 ## 配置项
 
@@ -248,6 +326,8 @@ public RestClient customRestClient(JdkClientHttpRequestFactory factory) {
 | `defaultRestClient` | `RestClient` | 无同名 Bean | 默认客户端（read=30s） |
 | `longRunningRestClient` | `RestClient` | `clients.long-running.enabled=true` | 长时间运行客户端（read=600s） |
 | `loggingInterceptor` | `LoggingInterceptor` | `logging.enabled=true` | 日志拦截器 |
+| `downloadClient` | `DownloadClient` | 存在 `longRunningRestClient` | 支持进度监控的下载客户端 |
+| `defaultProgressListener` | `ProgressListener` | 无同名 Bean | 组合日志和指标监听器 |
 
 > **注意**: `JdkClientHttpRequestFactory` 不再作为 Bean 暴露，改为在 `defaultRestClient` 内部直接创建。
 > 这是为了避免被 Spring Cloud LoadBalancer 的 BeanPostProcessor 包装，导致调用外部 URL 时出现
@@ -261,7 +341,8 @@ patra-spring-boot-starter-rest-client
 ├── patra-spring-boot-starter-core  # 核心 starter
 ├── spring-boot-autoconfigure  # 自动配置支持
 ├── spring-web                 # RestClient
-└── spring-retry (optional)    # 重试支持
+├── spring-retry (optional)    # 重试支持
+└── micrometer-core (optional) # 下载指标支持
 ```
 
 ## 与可观测性集成

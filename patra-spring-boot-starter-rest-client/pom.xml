@@ -46,6 +46,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Micrometer: optional metrics support for download progress -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Configuration metadata (IDE hints during development; not used at runtime) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
