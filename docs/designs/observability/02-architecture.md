@@ -79,12 +79,12 @@ collection: 采集层 {
   class: layer
   agent: OTel Agent {class: component}
   micrometer: Micrometer {class: component}
-  logback: Logback OTLP {class: component}
+  logback: Logback {class: component}
 }
 
 collector: OTel Collector {class: processor}
 
-storage: 存储层 {
+backends: 存储层 {
   class: layer
   prometheus: Prometheus {class: storage}
   loki: Loki {class: storage}
@@ -93,18 +93,18 @@ storage: 存储层 {
 
 grafana: Grafana {class: viz}
 
-patra -> collection.agent
-collection.agent -> collector: Traces
-collection.micrometer -> collector: Metrics
-collection.logback -> collector: Logs
+patra -> collection.agent: 自动埋点
+collection.micrometer -> collection.agent: Bridge
+collection.logback -> collection.agent: Auto Hook
+collection.agent -> collector: OTLP
 
-collector -> storage.prometheus
-collector -> storage.loki
-collector -> storage.tempo
+backends.prometheus -> collector: Scrape
+collector -> backends.loki: OTLP/HTTP
+collector -> backends.tempo: OTLP/gRPC
 
-storage.prometheus -> grafana
-storage.loki -> grafana
-storage.tempo -> grafana
+backends.prometheus -> grafana
+backends.loki -> grafana
+backends.tempo -> grafana
 ```
 
 ## 数据流图
@@ -134,8 +134,8 @@ flowchart LR
     subgraph Collector["OTel Collector"]
         direction TB
         OTLP_R[OTLP Receiver]
+        MemLimit[Memory Limiter]
         Batch[Batch Processor]
-        TailSample[Tail Sampling]
     end
 
     subgraph Storage["存储层"]
@@ -153,19 +153,17 @@ flowchart LR
     end
 
     Code -->|自动埋点| Agent
-    Code -->|手动埋点| Micrometer
-    Code -->|日志输出| Logback
+    Micrometer -->|Bridge| Agent
+    Logback -->|Auto Hook| Agent
 
-    Agent -->|OTLP/Traces| OTLP_R
-    Micrometer -->|OTLP/Metrics| OTLP_R
-    Logback -->|OTLP/Logs| OTLP_R
+    Agent -->|OTLP| OTLP_R
 
-    OTLP_R --> Batch
-    Batch --> TailSample
+    OTLP_R --> MemLimit
+    MemLimit --> Batch
 
-    TailSample -->|Remote Write| Prometheus
-    TailSample -->|Push| Loki
-    TailSample -->|OTLP| Tempo
+    Prometheus -->|Scrape :8889| Batch
+    Batch -->|OTLP/HTTP| Loki
+    Batch -->|OTLP/gRPC| Tempo
 
     Prometheus --> Dashboard
     Loki --> Explore
@@ -226,7 +224,7 @@ sequenceDiagram
     Registry--)Collector: OTLP Batch Export
 
     Note over Collector,Tempo: 4️⃣ 处理与存储
-    Collector->>Collector: Tail Sampling Decision
+    Collector->>Collector: Batch + Memory Limit
     Collector->>Tempo: Export Trace
 
     Note over Tempo,Grafana: 5️⃣ 查询与可视化
@@ -528,9 +526,9 @@ network: patra-net (Docker Bridge) {
   apps.ingest -> observability.collector: OTLP :4317 {style.stroke: "#64748b"; style.stroke-width: 2}
   apps.catalog -> observability.collector: OTLP :4317 {style.stroke: "#64748b"; style.stroke-width: 2}
 
-  observability.collector -> observability.prometheus: Remote Write :9090 {style.stroke: "#64748b"; style.stroke-width: 2}
-  observability.collector -> observability.loki: Push :3100 {style.stroke: "#64748b"; style.stroke-width: 2}
-  observability.collector -> observability.tempo: OTLP :4317 {style.stroke: "#64748b"; style.stroke-width: 2}
+  observability.prometheus -> observability.collector: Scrape :8889 {style.stroke: "#64748b"; style.stroke-width: 2}
+  observability.collector -> observability.loki: OTLP/HTTP :3100 {style.stroke: "#64748b"; style.stroke-width: 2}
+  observability.collector -> observability.tempo: OTLP/gRPC :4317 {style.stroke: "#64748b"; style.stroke-width: 2}
 
   observability.grafana -> observability.prometheus: Query :9090 {style.stroke: "#64748b"; style.stroke-width: 2}
   observability.grafana -> observability.loki: Query :3100 {style.stroke: "#64748b"; style.stroke-width: 2}
@@ -552,6 +550,7 @@ host -> network.apps.gateway: :8080 {style.stroke: "#64748b"; style.stroke-width
 |------|----------|----------|------|------|
 | **otel-collector** | 4317 | 4317 | gRPC | OTLP 接收（应用上报） |
 | **otel-collector** | 4318 | 4318 | HTTP | OTLP 接收（备用） |
+| **otel-collector** | 8889 | 8889 | HTTP | Prometheus 抓取端点（Metrics 暴露） |
 | **prometheus** | 9090 | 9090 | HTTP | PromQL 查询 + Web UI |
 | **loki** | 3100 | 3100 | HTTP | LogQL 查询 + Push API |
 | **tempo** | 3200 | 3200 | HTTP | TraceQL 查询 |

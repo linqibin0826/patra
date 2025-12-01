@@ -36,10 +36,12 @@ processors:
     send_batch_max_size: 1500
 
   # 内存限制 - 防止 OOM
+  # limit_mib: 容器内存限制的 ~90%（2G = 2048MB，90% ≈ 1800MB）
+  # spike_limit_mib: 峰值缓冲，软限制 = limit - spike（达到软限制时开始拒绝数据）
   memory_limiter:
     check_interval: 1s
-    limit_mib: 450
-    spike_limit_mib: 100
+    limit_mib: 1800
+    spike_limit_mib: 300
 
   # 资源处理器 - 添加通用属性
   resource:
@@ -67,16 +69,36 @@ exporters:
       enabled: true
 
   # OTLP/gRPC 导出器 - 链路数据发送到 Tempo
+  # sending_queue: 异步发送，防止下游阻塞导致 Collector 内存积压
+  # retry_on_failure: 网络抖动时自动重试，避免数据丢失
   otlp/tempo:
     endpoint: tempo:4317
     tls:
       insecure: true
+    sending_queue:
+      enabled: true
+      num_consumers: 4
+      queue_size: 100
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 120s
 
   # OTLP/HTTP 导出器 - 日志发送到 Loki（Loki 3.x 原生支持 OTLP）
   otlphttp/loki:
     endpoint: http://loki:3100/otlp
     tls:
       insecure: true
+    sending_queue:
+      enabled: true
+      num_consumers: 4
+      queue_size: 100
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 120s
 
 extensions:
   # 健康检查
