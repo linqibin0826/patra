@@ -64,7 +64,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "up{application=~\"$application\"}",
+          "expr": "max by (application) (patra_jvm_info{application=~\"$application\"})",
           "legendFormat": "{{application}}",
           "refId": "A"
         }
@@ -107,7 +107,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(jvm_memory_used_bytes{application=~\"$application\", area=\"heap\"}) / sum(jvm_memory_max_bytes{application=~\"$application\", area=\"heap\"}) * 100",
+          "expr": "sum(patra_jvm_memory_used_bytes{application=~\"$application\", area=\"heap\"}) / sum(patra_jvm_memory_max_bytes{application=~\"$application\", area=\"heap\"}) * 100",
           "legendFormat": "Heap Usage",
           "refId": "A"
         }
@@ -147,7 +147,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(jvm_memory_used_bytes{application=~\"$application\", area=\"nonheap\"})",
+          "expr": "sum(patra_jvm_memory_used_bytes{application=~\"$application\", area=\"nonheap\"})",
           "legendFormat": "Non-Heap",
           "refId": "A"
         }
@@ -189,7 +189,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(jvm_threads_live_threads{application=~\"$application\"})",
+          "expr": "sum(patra_jvm_threads_live{application=~\"$application\"})",
           "legendFormat": "Live Threads",
           "refId": "A"
         }
@@ -229,8 +229,8 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "process_uptime_seconds{application=~\"$application\"}",
-          "legendFormat": "Uptime",
+          "expr": "max by (application) (patra_process_uptime_seconds{application=~\"$application\"})",
+          "legendFormat": "{{application}}",
           "refId": "A"
         }
       ],
@@ -288,19 +288,19 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(jvm_memory_used_bytes{application=~\"$application\", area=\"heap\"}) by (application)",
+          "expr": "sum(patra_jvm_memory_used_bytes{application=~\"$application\", area=\"heap\"}) by (application)",
           "legendFormat": "{{application}} - Heap Used",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(jvm_memory_max_bytes{application=~\"$application\", area=\"heap\"}) by (application)",
+          "expr": "sum(patra_jvm_memory_max_bytes{application=~\"$application\", area=\"heap\"}) by (application)",
           "legendFormat": "{{application}} - Heap Max",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(jvm_memory_committed_bytes{application=~\"$application\", area=\"heap\"}) by (application)",
+          "expr": "sum(patra_jvm_memory_committed_bytes{application=~\"$application\", area=\"heap\"}) by (application)",
           "legendFormat": "{{application}} - Heap Committed",
           "refId": "C"
         }
@@ -351,13 +351,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(jvm_memory_used_bytes{application=~\"$application\", area=\"nonheap\"}) by (application)",
+          "expr": "sum(patra_jvm_memory_used_bytes{application=~\"$application\", area=\"nonheap\"}) by (application)",
           "legendFormat": "{{application}} - Non-Heap Used",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(jvm_memory_committed_bytes{application=~\"$application\", area=\"nonheap\"}) by (application)",
+          "expr": "sum(patra_jvm_memory_committed_bytes{application=~\"$application\", area=\"nonheap\"}) by (application)",
           "legendFormat": "{{application}} - Non-Heap Committed",
           "refId": "B"
         }
@@ -408,19 +408,19 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "jvm_memory_used_bytes{application=~\"$application\", id=~\".*Eden.*\"}",
+          "expr": "sum by (application, id) (patra_jvm_memory_used_bytes{application=~\"$application\", id=~\".*Eden.*\"})",
           "legendFormat": "{{application}} - {{id}}",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "jvm_memory_used_bytes{application=~\"$application\", id=~\".*Survivor.*\"}",
+          "expr": "sum by (application, id) (patra_jvm_memory_used_bytes{application=~\"$application\", id=~\".*Survivor.*\"})",
           "legendFormat": "{{application}} - {{id}}",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "jvm_memory_used_bytes{application=~\"$application\", id=~\".*(Old|Tenured).*\"}",
+          "expr": "sum by (application, id) (patra_jvm_memory_used_bytes{application=~\"$application\", id=~\".*(Old|Tenured).*\"})",
           "legendFormat": "{{application}} - {{id}}",
           "refId": "C"
         }
@@ -479,7 +479,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "rate(jvm_gc_pause_seconds_sum{application=~\"$application\"}[5m])",
+          "expr": "sum by (application, cause, action) (rate(patra_jvm_gc_pause_seconds_sum{application=~\"$application\"}[5m]))",
           "legendFormat": "{{application}} - {{action}} ({{cause}})",
           "refId": "A"
         }
@@ -530,7 +530,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "increase(jvm_gc_pause_seconds_count{application=~\"$application\"}[1m])",
+          "expr": "sum by (application, cause, action) (increase(patra_jvm_gc_pause_seconds_count{application=~\"$application\"}[1m]))",
           "legendFormat": "{{application}} - {{action}} ({{cause}})",
           "refId": "A"
         }
@@ -589,25 +589,25 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "jvm_threads_states_threads{application=~\"$application\", state=\"runnable\"}",
+          "expr": "sum by (application) (patra_jvm_threads_states{application=~\"$application\", state=\"runnable\"})",
           "legendFormat": "{{application}} - RUNNABLE",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "jvm_threads_states_threads{application=~\"$application\", state=\"blocked\"}",
+          "expr": "sum by (application) (patra_jvm_threads_states{application=~\"$application\", state=\"blocked\"})",
           "legendFormat": "{{application}} - BLOCKED",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "jvm_threads_states_threads{application=~\"$application\", state=\"waiting\"}",
+          "expr": "sum by (application) (patra_jvm_threads_states{application=~\"$application\", state=\"waiting\"})",
           "legendFormat": "{{application}} - WAITING",
           "refId": "C"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "jvm_threads_states_threads{application=~\"$application\", state=\"timed-waiting\"}",
+          "expr": "sum by (application) (patra_jvm_threads_states{application=~\"$application\", state=\"timed-waiting\"})",
           "legendFormat": "{{application}} - TIMED_WAITING",
           "refId": "D"
         }
@@ -658,19 +658,19 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "jvm_threads_live_threads{application=~\"$application\"}",
+          "expr": "sum by (application) (patra_jvm_threads_live{application=~\"$application\"})",
           "legendFormat": "{{application}} - Live",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "jvm_threads_peak_threads{application=~\"$application\"}",
+          "expr": "sum by (application) (patra_jvm_threads_peak{application=~\"$application\"})",
           "legendFormat": "{{application}} - Peak",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "jvm_threads_daemon_threads{application=~\"$application\"}",
+          "expr": "sum by (application) (patra_jvm_threads_daemon{application=~\"$application\"})",
           "legendFormat": "{{application}} - Daemon",
           "refId": "C"
         }
@@ -686,14 +686,14 @@
       {
         "current": { "selected": true, "text": "All", "value": "$__all" },
         "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "definition": "label_values(up, application)",
+        "definition": "label_values(patra_up, application)",
         "hide": 0,
         "includeAll": true,
         "label": "Application",
         "multi": true,
         "name": "application",
         "options": [],
-        "query": { "query": "label_values(up, application)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
+        "query": { "query": "label_values(patra_jvm_info, application)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,

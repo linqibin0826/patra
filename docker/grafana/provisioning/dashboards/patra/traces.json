@@ -128,8 +128,8 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(rate(traces_spanmetrics_calls_total{service=~\"$service\"}[5m])) by (service, span_name)",
-          "legendFormat": "{{service}} - {{span_name}}",
+          "expr": "sum(rate(patra_traces_spanmetrics_calls_total{service_name=~\"$service\"}[5m])) by (service_name, span_name)",
+          "legendFormat": "{{service_name}} - {{span_name}}",
           "refId": "A"
         }
       ],
@@ -179,8 +179,8 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{service=~\"$service\"}[5m])) by (le, service, span_name))",
-          "legendFormat": "P95 - {{service}} - {{span_name}}",
+          "expr": "histogram_quantile(0.95, sum(rate(patra_traces_spanmetrics_duration_seconds_bucket{service_name=~\"$service\"}[5m])) by (le, service_name, span_name))",
+          "legendFormat": "P95 - {{service_name}} - {{span_name}}",
           "refId": "A"
         }
       ],
@@ -238,8 +238,8 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(increase(traces_spanmetrics_calls_total{service=~\"$service\", status_code=\"STATUS_CODE_ERROR\"}[1m])) by (service, span_name)",
-          "legendFormat": "{{service}} - {{span_name}}",
+          "expr": "sum(increase(patra_traces_spanmetrics_calls_total{service_name=~\"$service\", status_code=\"STATUS_CODE_ERROR\"}[1m])) by (service_name, span_name)",
+          "legendFormat": "{{service_name}} - {{span_name}}",
           "refId": "A"
         }
       ],
@@ -254,14 +254,14 @@
       {
         "current": { "selected": true, "text": "All", "value": "$__all" },
         "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "definition": "label_values(traces_spanmetrics_calls_total, service)",
+        "definition": "label_values(patra_traces_spanmetrics_calls_total, service_name)",
         "hide": 0,
         "includeAll": true,
         "label": "Service",
         "multi": true,
         "name": "service",
         "options": [],
-        "query": { "query": "label_values(traces_spanmetrics_calls_total, service)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
+        "query": { "query": "label_values(patra_traces_spanmetrics_calls_total, service_name)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,

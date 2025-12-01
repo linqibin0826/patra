@@ -56,7 +56,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(rate(http_client_request_duration_seconds_count{application=~\"$application\"}[5m]))",
+          "expr": "sum(rate(patra_http_client_request_duration_seconds_count{application=~\"$application\"}[5m]))",
           "legendFormat": "RPS",
           "refId": "A"
         }
@@ -99,7 +99,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "(sum(rate(http_client_request_duration_seconds_count{application=~\"$application\", outcome=\"SUCCESS\"}[5m])) / sum(rate(http_client_request_duration_seconds_count{application=~\"$application\"}[5m]))) * 100",
+          "expr": "(sum(rate(patra_http_client_request_duration_seconds_count{application=~\"$application\", outcome=\"SUCCESS\"}[5m])) / sum(rate(patra_http_client_request_duration_seconds_count{application=~\"$application\"}[5m]))) * 100",
           "legendFormat": "Success Rate",
           "refId": "A"
         }
@@ -141,7 +141,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.50, sum(rate(http_client_request_duration_seconds_bucket{application=~\"$application\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(patra_http_client_request_duration_seconds_bucket{application=~\"$application\"}[5m])) by (le))",
           "legendFormat": "P50",
           "refId": "A"
         }
@@ -183,7 +183,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.99, sum(rate(http_client_request_duration_seconds_bucket{application=~\"$application\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(patra_http_client_request_duration_seconds_bucket{application=~\"$application\"}[5m])) by (le))",
           "legendFormat": "P99",
           "refId": "A"
         }
@@ -242,7 +242,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(rate(http_client_request_duration_seconds_count{application=~\"$application\"}[5m])) by (uri)",
+          "expr": "sum(rate(patra_http_client_request_duration_seconds_count{application=~\"$application\"}[5m])) by (uri)",
           "legendFormat": "{{uri}}",
           "refId": "A"
         }
@@ -293,19 +293,19 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.50, sum(rate(http_client_request_duration_seconds_bucket{application=~\"$application\"}[5m])) by (le, uri))",
+          "expr": "histogram_quantile(0.50, sum(rate(patra_http_client_request_duration_seconds_bucket{application=~\"$application\"}[5m])) by (le, uri))",
           "legendFormat": "P50 - {{uri}}",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.95, sum(rate(http_client_request_duration_seconds_bucket{application=~\"$application\"}[5m])) by (le, uri))",
+          "expr": "histogram_quantile(0.95, sum(rate(patra_http_client_request_duration_seconds_bucket{application=~\"$application\"}[5m])) by (le, uri))",
           "legendFormat": "P95 - {{uri}}",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.99, sum(rate(http_client_request_duration_seconds_bucket{application=~\"$application\"}[5m])) by (le, uri))",
+          "expr": "histogram_quantile(0.99, sum(rate(patra_http_client_request_duration_seconds_bucket{application=~\"$application\"}[5m])) by (le, uri))",
           "legendFormat": "P99 - {{uri}}",
           "refId": "C"
         }
@@ -345,7 +345,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(increase(http_client_request_duration_seconds_count{application=~\"$application\"}[$__range])) by (status)",
+          "expr": "sum(increase(patra_http_client_request_duration_seconds_count{application=~\"$application\"}[$__range])) by (status)",
           "legendFormat": "HTTP {{status}}",
           "refId": "A"
         }
@@ -405,13 +405,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(increase(http_client_request_duration_seconds_count{application=~\"$application\", status=~\"4..\"}[1m])) by (status, uri)",
+          "expr": "sum(increase(patra_http_client_request_duration_seconds_count{application=~\"$application\", status=~\"4..\"}[1m])) by (status, uri)",
           "legendFormat": "{{status}} - {{uri}}",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(increase(http_client_request_duration_seconds_count{application=~\"$application\", status=~\"5..\"}[1m])) by (status, uri)",
+          "expr": "sum(increase(patra_http_client_request_duration_seconds_count{application=~\"$application\", status=~\"5..\"}[1m])) by (status, uri)",
           "legendFormat": "{{status}} - {{uri}}",
           "refId": "B"
         }
@@ -456,7 +456,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(increase(http_client_request_duration_seconds_bucket{application=~\"$application\"}[$__rate_interval])) by (le)",
+          "expr": "sum(increase(patra_http_client_request_duration_seconds_bucket{application=~\"$application\"}[$__rate_interval])) by (le)",
           "format": "heatmap",
           "legendFormat": "{{le}}",
           "refId": "A"
@@ -531,7 +531,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(rate(http_client_request_duration_seconds_count{application=~\"$application\"}[5m])) by (client_name, uri)",
+          "expr": "sum(rate(patra_http_client_request_duration_seconds_count{application=~\"$application\"}[5m])) by (client_name, uri)",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -539,7 +539,7 @@
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.99, sum(rate(http_client_request_duration_seconds_bucket{application=~\"$application\"}[5m])) by (le, client_name, uri))",
+          "expr": "histogram_quantile(0.99, sum(rate(patra_http_client_request_duration_seconds_bucket{application=~\"$application\"}[5m])) by (le, client_name, uri))",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -547,7 +547,7 @@
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "(sum(rate(http_client_request_duration_seconds_count{application=~\"$application\", outcome=\"SUCCESS\"}[5m])) by (client_name, uri) / sum(rate(http_client_request_duration_seconds_count{application=~\"$application\"}[5m])) by (client_name, uri)) * 100",
+          "expr": "(sum(rate(patra_http_client_request_duration_seconds_count{application=~\"$application\", outcome=\"SUCCESS\"}[5m])) by (client_name, uri) / sum(rate(patra_http_client_request_duration_seconds_count{application=~\"$application\"}[5m])) by (client_name, uri)) * 100",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -555,7 +555,7 @@
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(increase(http_client_request_duration_seconds_count{application=~\"$application\", status=~\"[45]..\"}[$__range])) by (client_name, uri)",
+          "expr": "sum(increase(patra_http_client_request_duration_seconds_count{application=~\"$application\", status=~\"[45]..\"}[$__range])) by (client_name, uri)",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -577,14 +577,14 @@
       {
         "current": { "selected": true, "text": "All", "value": "$__all" },
         "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "definition": "label_values(http_client_request_duration_seconds_count, application)",
+        "definition": "label_values(patra_http_client_request_duration_seconds_count, application)",
         "hide": 0,
         "includeAll": true,
         "label": "Application",
         "multi": true,
         "name": "application",
         "options": [],
-        "query": { "query": "label_values(http_client_request_duration_seconds_count, application)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
+        "query": { "query": "label_values(patra_http_client_request_duration_seconds_count, application)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
