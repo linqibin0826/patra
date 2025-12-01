@@ -11,6 +11,7 @@
 - **JSON/XML 序列化**: 基于 Jackson 的标准化序列化配置(日期格式、空值处理等)
 - **错误处理框架**: 可扩展的错误解析管道,通过 ResolutionInterceptor 扩展点支持自定义拦截器
 - **统一时间源**: 提供全局 UTC Clock,支持可测试性和时间戳一致性
+- **异步线程池管理**: 命名线程池注册表,支持配置驱动创建和 Micrometer 指标集成
 - **弹性支持**: 可选的 Resilience4j 熔断器,保护错误处理管道
 - **扩展点机制**: 提供 ResolutionInterceptor 接口,允许外部模块（如 patra-spring-boot-starter-observability）注入可观测性功能
 
@@ -42,6 +43,12 @@
 当 `resilience4j-circuitbreaker` 在 classpath 中时自动激活:
 - `CircuitBreakerInterceptor`: 熔断器拦截器,保护错误处理管道
 
+### AsyncAutoConfiguration
+异步线程池自动配置,提供:
+- `AsyncExecutorRegistry`: 命名线程池注册表,管理多个独立的线程池
+- 根据 `patra.async.pools.*` 配置自动创建线程池
+- 可选的 Micrometer 指标集成(当 MeterRegistry 可用时自动注册)
+
 ## 主要组件
 
 ### Clock (时间源)
@@ -56,6 +63,48 @@ public class MyService {
     }
 }
 ```
+
+### AsyncExecutorRegistry (异步线程池注册表)
+管理命名线程池,支持按业务场景创建独立的线程池:
+
+**核心功能**:
+- **命名管理**: 按名称注册和获取线程池,支持多个独立线程池
+- **配置驱动**: 通过 `patra.async.pools.*` 配置动态创建
+- **指标集成**: 自动注册 Micrometer 线程池指标(当 MeterRegistry 可用)
+- **优雅关闭**: 实现 `DisposableBean`,应用关闭时正确终止所有线程池
+
+**使用方式**:
+```java
+@Service
+public class MyService {
+    private final AsyncExecutorRegistry asyncExecutorRegistry;
+
+    public void doAsync() {
+        // 获取命名线程池并提交任务
+        CompletableFuture.runAsync(
+            () -> { /* 异步任务 */ },
+            asyncExecutorRegistry.getExecutor("cache-upload")
+        );
+    }
+
+    public void checkPool() {
+        // 检查线程池是否存在
+        if (asyncExecutorRegistry.hasExecutor("cache-upload")) {
+            // 执行任务
+        }
+    }
+}
+```
+
+**Micrometer 指标**(当 MeterRegistry 可用时自动注册):
+- `executor.pool.size` - 当前池大小
+- `executor.pool.core` - 核心线程数
+- `executor.pool.max` - 最大线程数
+- `executor.active` - 活跃线程数
+- `executor.queued` - 队列中等待的任务数
+- `executor.completed` - 已完成任务数
+
+标签: `name={poolName}`
 
 ### ErrorResolutionPipeline (错误解析管道)
 通过拦截器链解析异常,执行流程:
@@ -146,7 +195,36 @@ public class MyInterceptor implements ResolutionInterceptor {
 
 ## 配置属性
 
-**配置前缀**: `patra.error`, `patra.tracing`
+**配置前缀**: `patra.error`, `patra.tracing`, `patra.async`
+
+### 异步线程池配置
+```yaml
+patra:
+  async:
+    enabled: true                              # 是否启用异步线程池管理(默认 true)
+    pools:                                     # 命名线程池配置
+      cache-upload:                            # 线程池名称(自定义)
+        core-size: 2                           # 核心线程数(默认 2)
+        max-size: 4                            # 最大线程数(默认 4)
+        queue-capacity: 100                    # 队列容量(默认 100)
+        keep-alive-seconds: 60                 # 空闲线程存活时间(秒,默认 60)
+        thread-name-prefix: cache-upload-      # 线程名前缀(默认 async-{name}-)
+      data-sync:                               # 另一个线程池
+        core-size: 4
+        max-size: 8
+        queue-capacity: 200
+        thread-name-prefix: data-sync-
+```
+
+**配置属性说明**:
+| 属性 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `patra.async.enabled` | boolean | `true` | 是否启用异步线程池管理 |
+| `patra.async.pools.{name}.core-size` | int | 2 | 核心线程数 |
+| `patra.async.pools.{name}.max-size` | int | 4 | 最大线程数 |
+| `patra.async.pools.{name}.queue-capacity` | int | 100 | 任务队列容量 |
+| `patra.async.pools.{name}.keep-alive-seconds` | int | 60 | 空闲线程存活时间(秒) |
+| `patra.async.pools.{name}.thread-name-prefix` | String | `async-{name}-` | 线程名前缀 |
 
 ### 错误处理配置
 ```yaml
@@ -258,5 +336,5 @@ public class GlobalExceptionHandler {
 
 ---
 
-**最后更新**: 2025-11-24 (重构: 移除 Micrometer 依赖，可观测性功能移至 patra-spring-boot-starter-observability)
+**最后更新**: 2025-12-01 (新增: 异步线程池管理功能)
 **维护者**: Patra Team

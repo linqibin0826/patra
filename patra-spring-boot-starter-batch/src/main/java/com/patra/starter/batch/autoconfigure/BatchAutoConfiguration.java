@@ -67,13 +67,13 @@ public class BatchAutoConfiguration extends DefaultBatchConfiguration {
   /// 确保 `JobRepository` 创建前元数据表已存在。
   ///
   /// @param properties Batch 配置属性
-  /// @param primaryDataSource 主数据源（Spring Boot 自动配置）
+  /// @param primaryDataSource 主数据源（Spring Boot 自动配置，使用 `dataSource` 名称注入）
   /// @param batchDataSource 独立 Batch 数据源（可选，由 BatchDataSourceConfiguration 创建）
   /// @param batchTransactionManager 独立 Batch 事务管理器（可选）
   /// @param schemaInitializer Schema 初始化器（可选，由 BatchSchemaInitializerConfiguration 创建）
   public BatchAutoConfiguration(
       BatchProperties properties,
-      DataSource primaryDataSource,
+      @Qualifier("dataSource") DataSource primaryDataSource,
       @Autowired(required = false) @Qualifier("batchDataSource") DataSource batchDataSource,
       @Autowired(required = false) @Qualifier("batchTransactionManager")
           PlatformTransactionManager batchTransactionManager,

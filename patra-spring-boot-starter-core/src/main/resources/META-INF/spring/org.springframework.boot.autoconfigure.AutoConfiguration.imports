@@ -1,4 +1,5 @@
 com.patra.starter.core.config.CoreAutoConfiguration
+com.patra.starter.core.async.AsyncAutoConfiguration
 com.patra.starter.core.json.autoconfig.JacksonAutoConfiguration
 com.patra.starter.core.error.config.CoreErrorAutoConfiguration
 com.patra.starter.core.error.config.CircuitBreakerErrorAutoConfiguration
