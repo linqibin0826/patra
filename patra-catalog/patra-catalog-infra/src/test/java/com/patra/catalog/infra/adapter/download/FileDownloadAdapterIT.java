@@ -7,6 +7,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.common.error.trait.StandardErrorTrait;
+import com.patra.starter.restclient.download.DefaultDownloadClient;
+import com.patra.starter.restclient.download.DownloadClient;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,7 +50,8 @@ class FileDownloadAdapterIT {
   @BeforeEach
   void setUp() {
     RestClient restClient = RestClient.builder().build();
-    adapter = new FileDownloadAdapter(restClient);
+    DownloadClient downloadClient = new DefaultDownloadClient(restClient);
+    adapter = new FileDownloadAdapter(downloadClient, null);
   }
 
   @AfterEach
@@ -87,7 +90,7 @@ class FileDownloadAdapterIT {
     }
 
     @Test
-    @DisplayName("下载成功 - 文件名应该包含正确的前缀和后缀")
+    @DisplayName("下载成功 - 文件名应该是临时文件格式")
     void download_shouldUseCorrectFileNaming() throws Exception {
       // Given
       wireMock.stubFor(
@@ -98,10 +101,10 @@ class FileDownloadAdapterIT {
       // When
       downloadedFile = adapter.downloadToTemp(url);
 
-      // Then
+      // Then - 验证文件名符合 DownloadClient 的临时文件命名规范
       String fileName = downloadedFile.getFileName().toString();
-      assertThat(fileName).startsWith("mesh-import-");
-      assertThat(fileName).endsWith(".xml");
+      assertThat(fileName).startsWith("download-");
+      assertThat(fileName).endsWith(".tmp");
     }
   }
 
