@@ -343,51 +343,51 @@ classes: {
   }
 }
 
-# 节点
-patra-api: "Patra-api/docs\n(Obsidian 编辑)" {
+# 节点（ID 使用下划线，避免与箭头 -> 冲突）
+patra_api: "Patra-api/docs\n(Obsidian 编辑)" {
   class: repo
 }
 
-sync-workflow: "GitHub Actions\nsync-docs.yml" {
+sync_workflow: "GitHub Actions\nsync-docs.yml" {
   class: action
 }
 
-patra-docs: "Patra-docs/content" {
+patra_docs: "Patra-docs/content" {
   class: repo
 }
 
-deploy-workflow: "GitHub Actions\ndeploy.yml" {
+deploy_workflow: "GitHub Actions\ndeploy.yml" {
   class: action
 }
 
-steps: "D2 编译 → Quartz 构建" {
+build_steps: "D2 编译 → Quartz 构建" {
   shape: text
   style.font-size: 12
 }
 
-github-pages: "GitHub Pages" {
+github_pages: "GitHub Pages" {
   class: output
 }
 
-site: "linqibin0826.github.io/Patra-docs" {
+site_url: "linqibin0826.github.io/Patra-docs" {
   shape: text
   style.font-size: 14
   style.bold: true
 }
 
 # 连接
-patra-api -> sync-workflow: "git push\n(docs/ 变更)" {
+patra_api -> sync_workflow: "git push\n(docs/ 变更)" {
   style.stroke: "#666"
 }
-sync-workflow -> patra-docs: "复制文件" {
+sync_workflow -> patra_docs: "复制文件" {
   style.stroke: "#666"
 }
-patra-docs -> deploy-workflow: "自动触发" {
+patra_docs -> deploy_workflow: "自动触发" {
   style.stroke: "#666"
 }
-deploy-workflow -> steps
-steps -> github-pages
-github-pages -> site
+deploy_workflow -> build_steps
+build_steps -> github_pages
+github_pages -> site_url
 ```
 
 ## 参考资料
