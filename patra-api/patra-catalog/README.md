@@ -148,15 +148,17 @@ MeSH 源文件（Descriptor/Qualifier XML）支持对象存储缓存，减少从
 3. **缓存未命中**：从远程 URL 下载，并异步上传到对象存储作为缓存
 4. **静默降级**：缓存检查/下载失败时自动回退到远程下载（记录 warn 日志）
 
-### 条件装配
+### 运行时动态选择
 
-根据对象存储的可用性自动选择实现：
+使用 `ObjectProvider` 延迟注入，在运行时根据对象存储的可用性自动选择实现：
 
 ```
-ObjectStorageOperations Bean 存在?
+ObjectStorageOperations 可用?
 ├── 是 → MeshSourceFileAdapter（缓存优先策略）
 └── 否 → DefaultMeshSourceFileAdapter（直接远程下载）
 ```
+
+> **实现说明**：使用 `ObjectProvider.getIfAvailable()` 延迟获取依赖，避免对 AutoConfiguration 加载顺序的依赖。
 
 ### 缓存键格式
 
@@ -185,9 +187,9 @@ patra:
     active-provider: minio
     providers:
       minio:
-        endpoint: http://localhost:9000
+        endpoint: http://localhost:19000
         access-key: minioadmin
-        secret-key: minioadmin
+        secret-key: minioadmin123
 
   # MeSH 文件缓存配置
   catalog:
@@ -215,7 +217,7 @@ patra:
 1. v0.3.0 (2025-12-01)：MeSH 源文件缓存功能
    - 新增 `MeshSourceFileAdapter`：带对象存储缓存的文件下载
    - 新增 `DefaultMeshSourceFileAdapter`：无缓存回退实现
-   - 条件装配：根据 `ObjectStorageOperations` 可用性自动选择
+   - 运行时动态选择：使用 `ObjectProvider` 延迟注入，根据 `ObjectStorageOperations` 可用性自动选择实现
    - 异步上传：下载完成后异步上传到 MinIO，不阻塞主流程
    - 静默降级：缓存失败时自动回退到远程下载
    - 详见 [ADR-006](../docs/decisions/ADR-006-mesh-source-file-cache-strategy.md)
