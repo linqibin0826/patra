@@ -1,0 +1,50 @@
+name: Sync Docs to Patra-docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'  # 只有 docs 目录变更时触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Patra-api
+        uses: actions/checkout@v4
+        with:
+          path: patra-api
+
+      - name: Checkout Patra-docs
+        uses: actions/checkout@v4
+        with:
+          repository: linqibin0826/Patra-docs
+          token: ${{ secrets.DOCS_SYNC_TOKEN }}
+          path: patra-docs
+
+      - name: Sync docs content
+        run: |
+          # 清理目标目录（保留 Quartz 配置）
+          cd patra-docs/content
+          # 删除旧内容（保留 index.md）
+          find . -mindepth 1 -maxdepth 1 ! -name 'index.md' -exec rm -rf {} +
+
+          # 复制新内容
+          cp -r ../../patra-api/docs/* .
+
+          # 删除 Obsidian 配置文件
+          rm -rf .obsidian 2>/dev/null || true
+
+      - name: Commit and push
+        run: |
+          cd patra-docs
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "docs: 同步来自 Patra-api 的文档更新"
+            git push
+          fi
