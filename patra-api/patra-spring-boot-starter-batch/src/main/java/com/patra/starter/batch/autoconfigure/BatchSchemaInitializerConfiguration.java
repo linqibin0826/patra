@@ -53,13 +53,13 @@ public class BatchSchemaInitializerConfiguration {
   /// 优先使用独立 Batch 数据源，否则使用主数据源。
   ///
   /// @param properties Batch 配置属性
-  /// @param primaryDataSource 主数据源
+  /// @param primaryDataSource 主数据源（使用 `dataSource` 名称注入）
   /// @param batchDataSource 独立 Batch 数据源（可选）
   /// @return BatchSchemaInitializer 实例
   @Bean
   public BatchSchemaInitializer batchSchemaInitializer(
       BatchProperties properties,
-      DataSource primaryDataSource,
+      @Qualifier("dataSource") DataSource primaryDataSource,
       @Autowired(required = false) @Qualifier("batchDataSource") DataSource batchDataSource) {
 
     // 选择数据源：优先使用独立数据源
