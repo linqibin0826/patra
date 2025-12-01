@@ -107,6 +107,11 @@
             <artifactId>mysql</artifactId>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>minio</artifactId>
+            <scope>compile</scope>
+        </dependency>
 
         <!-- ==================== ArchUnit 架构测试 ==================== -->
 
