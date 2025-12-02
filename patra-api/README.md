@@ -48,8 +48,6 @@ Patra 是一个**医学出版物数据平台**,旨在:
 - **Outbox**: 事务性事件发布,用于可靠的异步通信
 - **Cursor**: 水位线跟踪,用于增量采集
 
-详见 [架构文档](./docs/ARCHITECTURE.md) 深入了解。
-
 ---
 
 ## 📦 项目结构
@@ -156,8 +154,6 @@ curl http://localhost:8082/actuator/health   # Ingest
 
 ### 核心指南
 
-- [**架构**](./docs/ARCHITECTURE.md) — 六边形架构 + DDD 原则、依赖规则、设计模式
-- [**开发指南**](./docs/DEV-GUIDE.md) — 添加用例、聚合、端点的代码示例
 - [**CLAUDE.md**](.claude/CLAUDE.md) — AI 助手使用本代码库的说明
 
 ### 模块 README
@@ -187,14 +183,6 @@ domain   →  仅 patra-common (无框架)
 ```
 
 **关键**: 领域层 = **纯 Java** (无 Spring,无 MyBatis 注解)
-
-### 代码模式
-
-**添加用例?** 参见 [DEV-GUIDE § 添加新用例](./docs/DEV-GUIDE.md#1-adding-a-new-use-case)
-
-**添加聚合?** 参见 [DEV-GUIDE § 添加新聚合](./docs/DEV-GUIDE.md#2-adding-a-new-aggregate)
-
-**添加端点?** 参见 [DEV-GUIDE § 添加新 REST 端点](./docs/DEV-GUIDE.md#5-adding-a-new-rest-endpoint)
 
 ---
 
@@ -270,9 +258,8 @@ Patra 项目遵循**测试金字塔**，各层使用不同的测试策略：
 ### 开发工作流
 
 1. **创建特性分支**: `git checkout -b feat/your-feature`
-2. **遵循 7 步流程** (参见 [DEV-GUIDE](./docs/DEV-GUIDE.md))
-3. **确保编译通过**: `./mvnw clean compile -DskipTests`
-4. **提交 PR** 保持最小差异
+2. **确保编译通过**: `./mvnw clean compile -DskipTests`
+3. **提交 PR** 保持最小差异
 
 ### 代码风格
 

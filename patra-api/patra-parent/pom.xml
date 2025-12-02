@@ -544,7 +544,7 @@
           <version>${spring-boot.version}</version>
           <configuration>
             <jvmArguments>
-              -javaagent:${maven.multiModuleProjectDirectory}/docker/opentelemetry-javaagent.jar
+              -javaagent:${maven.multiModuleProjectDirectory}/../patra-infra/docker/opentelemetry-javaagent.jar
               -Dotel.service.name=${project.artifactId}
               -Dotel.exporter.otlp.endpoint=http://localhost:4317
               -Dotel.exporter.otlp.protocol=grpc
