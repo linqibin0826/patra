@@ -4,7 +4,8 @@ import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.port.XmlParserPort;
 import com.patra.catalog.infra.batch.listener.MeshImportJobExecutionListener;
 import com.patra.starter.batch.config.BatchProperties;
-import lombok.RequiredArgsConstructor;
+import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -38,7 +39,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 /// @since 0.1.0
 @Slf4j
 @Configuration
-@RequiredArgsConstructor
 public class MeshDescriptorJobConfig {
 
   private static final int DEFAULT_CHUNK_SIZE = 500;
@@ -49,6 +49,33 @@ public class MeshDescriptorJobConfig {
   private final MeshDescriptorItemWriter meshDescriptorItemWriter;
   private final BatchProperties batchProperties;
   private final MeshImportJobExecutionListener meshImportJobExecutionListener;
+  private final BatchProgressMetricsListener batchProgressMetricsListener;
+
+  /// 构造函数。
+  ///
+  /// @param jobRepository Job 仓库
+  /// @param transactionManager 事务管理器
+  /// @param xmlParserPort XML 解析端口
+  /// @param meshDescriptorItemWriter Item 写入器
+  /// @param batchProperties 批处理属性
+  /// @param meshImportJobExecutionListener Job 执行监听器
+  /// @param batchProgressMetricsListener 进度指标监听器（可选，需要 MeterRegistry）
+  public MeshDescriptorJobConfig(
+      JobRepository jobRepository,
+      PlatformTransactionManager transactionManager,
+      XmlParserPort xmlParserPort,
+      MeshDescriptorItemWriter meshDescriptorItemWriter,
+      BatchProperties batchProperties,
+      MeshImportJobExecutionListener meshImportJobExecutionListener,
+      Optional<BatchProgressMetricsListener> batchProgressMetricsListener) {
+    this.jobRepository = jobRepository;
+    this.transactionManager = transactionManager;
+    this.xmlParserPort = xmlParserPort;
+    this.meshDescriptorItemWriter = meshDescriptorItemWriter;
+    this.batchProperties = batchProperties;
+    this.meshImportJobExecutionListener = meshImportJobExecutionListener;
+    this.batchProgressMetricsListener = batchProgressMetricsListener.orElse(null);
+  }
 
   /// 配置 MeSH 主题词导入 Job。
   ///
@@ -69,11 +96,21 @@ public class MeshDescriptorJobConfig {
     int chunkSize = getChunkSize();
     log.info("配置 meshDescriptorImportStep，chunk size: {}", chunkSize);
 
-    return new StepBuilder("meshDescriptorImportStep", jobRepository)
-        .<MeshDescriptorAggregate, MeshDescriptorAggregate>chunk(chunkSize, transactionManager)
-        .reader(meshDescriptorItemReader(null, null))
-        .writer(meshDescriptorItemWriter)
-        .build();
+    var stepBuilder =
+        new StepBuilder("meshDescriptorImportStep", jobRepository)
+            .<MeshDescriptorAggregate, MeshDescriptorAggregate>chunk(chunkSize, transactionManager)
+            .reader(meshDescriptorItemReader(null, null))
+            .writer(meshDescriptorItemWriter);
+
+    // 仅在指标监听器存在时注册（需要 MeterRegistry）
+    if (batchProgressMetricsListener != null) {
+      stepBuilder.listener(batchProgressMetricsListener);
+      log.info("已注册 BatchProgressMetricsListener");
+    } else {
+      log.info("BatchProgressMetricsListener 未配置（需要 MeterRegistry）");
+    }
+
+    return stepBuilder.build();
   }
 
   /// 创建 MeSH 主题词 ItemReader（StepScope）。
