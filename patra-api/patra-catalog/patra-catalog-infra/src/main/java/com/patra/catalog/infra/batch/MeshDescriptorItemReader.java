@@ -6,7 +6,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.NumberFormat;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.ExecutionContext;
@@ -38,6 +42,10 @@ import org.springframework.batch.item.ItemStreamReader;
 public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptorAggregate> {
 
   private static final String CURRENT_INDEX_KEY = "mesh.descriptor.current.index";
+  private static final NumberFormat NUMBER_FORMAT = NumberFormat.getNumberInstance(Locale.CHINA);
+
+  /// 进度日志输出间隔（每处理多少条记录输出一次）。
+  private static final int PROGRESS_LOG_INTERVAL = 5000;
 
   private final XmlParserPort xmlParserPort;
   private final String filePath;
@@ -48,6 +56,8 @@ public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptor
   private Iterator<MeshDescriptorAggregate> iterator;
   private int currentIndex = 0;
   private int skipCount = 0;
+  private Instant startTime;
+  private int lastLoggedIndex = 0;
 
   /// 构造函数。
   ///
@@ -65,9 +75,13 @@ public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptor
   public void open(ExecutionContext executionContext) throws ItemStreamException {
     log.info("打开 MeSH Descriptor XML 文件：{}，版本：{}", filePath, meshVersion);
 
+    // 记录开始时间（用于计算处理速率）
+    startTime = Instant.now();
+
     // 从 ExecutionContext 恢复进度
     if (executionContext.containsKey(CURRENT_INDEX_KEY)) {
       skipCount = executionContext.getInt(CURRENT_INDEX_KEY);
+      lastLoggedIndex = skipCount;
       log.info("从断点恢复，跳过前 {} 条记录", skipCount);
     }
 
@@ -105,9 +119,40 @@ public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptor
   public void update(ExecutionContext executionContext) throws ItemStreamException {
     // 每个 chunk 提交时保存进度
     executionContext.putInt(CURRENT_INDEX_KEY, currentIndex);
-    if (currentIndex % 1000 == 0) {
-      log.info("已处理 {} 条 Descriptor 记录", currentIndex);
+
+    // 每隔 PROGRESS_LOG_INTERVAL 条记录输出一次进度日志
+    if (currentIndex - lastLoggedIndex >= PROGRESS_LOG_INTERVAL) {
+      lastLoggedIndex = currentIndex;
+      logProgress();
     }
+  }
+
+  /// 输出进度日志。
+  ///
+  /// 格式：`进度: 5,000 条 | 速率: 1,234 条/秒 | 已用时: 00:00:04`
+  private void logProgress() {
+    Duration elapsed = Duration.between(startTime, Instant.now());
+    long elapsedMillis = elapsed.toMillis();
+
+    // 计算处理速率（条/秒）
+    // 注意：这里计算的是本次执行的处理速率，不包括断点恢复跳过的记录
+    int processedInThisRun = currentIndex - skipCount;
+    long rate = elapsedMillis > 0 ? (processedInThisRun * 1000L) / elapsedMillis : 0;
+
+    log.info(
+        "进度: {} 条 | 速率: {} 条/秒 | 已用时: {}",
+        NUMBER_FORMAT.format(currentIndex),
+        NUMBER_FORMAT.format(rate),
+        formatDuration(elapsed));
+  }
+
+  /// 格式化时长为 HH:mm:ss 格式。
+  ///
+  /// @param duration 时长
+  /// @return 格式化后的字符串
+  private String formatDuration(Duration duration) {
+    long seconds = duration.getSeconds();
+    return String.format("%02d:%02d:%02d", seconds / 3600, (seconds % 3600) / 60, seconds % 60);
   }
 
   @Override
