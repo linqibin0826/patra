@@ -234,6 +234,24 @@ jobLauncherHelper.findJobExecution(executionId)
 - **Step 级别 Span**：每个 Step 执行创建子 span
 - **零配置**：无需修改 Job 定义代码
 
+### 进度指标（Metrics）
+
+当 `MeterRegistry` Bean 存在时，自动注册 `BatchProgressMetricsListener`，在 Step 执行结束时记录累计统计指标：
+
+| 指标名称 | 类型 | 说明 |
+|---------|------|------|
+| `batch.step.items.read` | Counter | 累计读取数量 |
+| `batch.step.items.written` | Counter | 累计写入数量 |
+| `batch.step.items.skipped` | Counter | 累计跳过数量 |
+| `batch.step.commits` | Counter | 累计提交次数 |
+| `batch.step.rollbacks` | Counter | 累计回滚次数 |
+
+**标签**：`job.name`（Job 名称）、`step.name`（Step 名称）
+
+**与内置指标的互补关系**：
+- 内置指标（`spring.batch.*`）：Timer 类型，记录执行耗时
+- 补充指标（`batch.step.*`）：Counter 类型，记录数量统计
+
 ### 启用方式
 
 添加 observability 依赖：
@@ -299,21 +317,25 @@ try {
 ```
 patra-spring-boot-starter-batch/
 ├── autoconfigure/
-│   ├── BatchAutoConfiguration.java           # 核心自动配置
-│   ├── BatchDataSourceConfiguration.java     # 独立数据源配置
-│   └── BatchSchemaInitializerConfiguration.java # Schema 初始化配置
+│   ├── BatchAutoConfiguration.java               # 核心自动配置
+│   ├── BatchDataSourceConfiguration.java         # 独立数据源配置
+│   ├── BatchSchemaInitializerConfiguration.java  # Schema 初始化配置
+│   └── BatchProgressMetricsAutoConfiguration.java # 进度指标自动配置
 ├── config/
-│   └── BatchProperties.java                  # 配置属性
+│   └── BatchProperties.java                      # 配置属性
 ├── core/
-│   ├── JobLauncherHelper.java                # Job 启动辅助类
-│   └── JobParams.java                        # 强类型参数标记接口
+│   ├── JobLauncherHelper.java                    # Job 启动辅助类
+│   └── JobParams.java                            # 强类型参数标记接口
+├── metrics/
+│   ├── BatchProgressMetricNames.java             # 指标名称常量
+│   └── BatchProgressMetricsListener.java         # 进度指标监听器
 ├── schema/
-│   └── BatchSchemaInitializer.java           # Schema 初始化器
+│   └── BatchSchemaInitializer.java               # Schema 初始化器
 ├── exception/
-│   ├── BatchErrorCode.java                   # 错误码枚举
-│   └── BatchJobExecutionException.java       # 执行异常
+│   ├── BatchErrorCode.java                       # 错误码枚举
+│   └── BatchJobExecutionException.java           # 执行异常
 └── resources/db/batch/
-    └── schema-mysql.sql                      # MySQL Schema 脚本
+    └── schema-mysql.sql                          # MySQL Schema 脚本
 ```
 
 ## 依赖关系

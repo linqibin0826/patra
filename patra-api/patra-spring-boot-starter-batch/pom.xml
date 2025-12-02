@@ -55,7 +55,14 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- 6. OpenTelemetry 追踪（由 observability starter 提供） -->
+        <!-- 6. Micrometer Core（可选，用于 BatchProgressMetricsListener） -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 7. OpenTelemetry 追踪（由 observability starter 提供） -->
         <!-- 需要时添加 patra-spring-boot-starter-observability 依赖 -->
 
         <!-- 7. 配置元数据（开发时） -->
@@ -74,12 +81,6 @@
         <dependency>
             <groupId>org.springframework.batch</groupId>
             <artifactId>spring-batch-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <!-- MySQL 驱动（测试时需要，因为主依赖是 optional） -->
-        <dependency>
-            <groupId>com.mysql</groupId>
-            <artifactId>mysql-connector-j</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
