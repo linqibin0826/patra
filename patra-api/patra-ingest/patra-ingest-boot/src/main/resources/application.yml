@@ -51,7 +51,7 @@ xxl:
     executor:
       ip: ${XXL_JOB_EXECUTOR_IP:host.docker.internal}
       # Log directory in centralized logs folder
-      logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PATRA_LOG_DIR:/Users/linqibin/Desktop/Patra-api/logs}/xxl-job/patra-ingest}
+      logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PATRA_LOG_DIR:logs}/xxl-job/patra-ingest}
       logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}
 
 patra:
@@ -84,7 +84,7 @@ task:
 logging:
   file:
     # Centralized log directory in project root
-    path: ${PATRA_LOG_DIR:/Users/linqibin/Desktop/Patra-api/logs}
+    path: ${PATRA_LOG_DIR:logs}
 
 # ----------------------------------------------------------------------------
 # Actuator & Monitoring Configuration
