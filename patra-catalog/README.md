@@ -220,17 +220,14 @@ patra:
    - 运行时动态选择：使用 `ObjectProvider` 延迟注入，根据 `ObjectStorageOperations` 可用性自动选择实现
    - 异步上传：下载完成后异步上传到 MinIO，不阻塞主流程
    - 静默降级：缓存失败时自动回退到远程下载
-   - 详见 [ADR-006](../docs/decisions/ADR-006-mesh-source-file-cache-strategy.md)
 2. v0.2.2 (2025-11-27)：MeSH 子表关联键优化
    - 将 MeSH 子表（TreeNumber、EntryTerm、Concept 等）的关联键从数据库自增 ID 改为 MeSH 原生 UI 标识符
    - Domain 层使用 `MeshUI` 值对象，Infra 层使用 `String`
    - 简化数据导入流程，无需先查询主表获取自增 ID
-   - 详见 [ADR-004](../docs/decisions/ADR-004-mesh-ui-as-relation-key.md)
 2. v0.2.1 (2025-11-27)：XML 解析器策略模式重构
    - XmlParserAdapter 重构为门面类（1800 行 → 156 行）
    - 新增 5 个解析策略：Descriptor、Qualifier、Concept、EntryTerm、TreeNumber
    - 支持 ConceptRelation 概念关系解析和持久化
-   - 详见 [ADR-003](../docs/decisions/ADR-003-xml-parser-strategy-pattern.md)
 3. v0.2.0 (2025-11-27)：完善 MeSH 2025 DTD 支持
    - 新增 EntryCombination 组合条目值对象及数据库表
    - 增强 MeshConcept：支持 registryNumbers 多值、translator 字段
