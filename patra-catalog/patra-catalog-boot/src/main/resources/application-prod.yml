@@ -47,6 +47,7 @@ patra:
   # 对象存储配置（环境变量注入）
   object-storage:
     active-provider: ${OBJECT_STORAGE_PROVIDER:minio}
+    max-file-size: ${MAX_FILE_SIZE:5368709120}  # 默认 5GB
     providers:
       minio:
         endpoint: ${MINIO_ENDPOINT}

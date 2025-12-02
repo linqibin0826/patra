@@ -45,6 +45,7 @@ patra:
   # 对象存储配置（MinIO）
   object-storage:
     active-provider: minio
+    max-file-size: 5368709120  # 5GB（MeSH 描述符文件约 400MB）
     providers:
       minio:
         endpoint: http://localhost:19000
