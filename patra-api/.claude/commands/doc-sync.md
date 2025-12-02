@@ -38,7 +38,7 @@ argument-hint: [adr|readme|all]
 
 ## ADR 模板（≤ 300 字）
 
-位置：`docs/decisions/ADR-{NNN}-{slug}.md`
+位置：`../Patra-docs/content/decisions/ADR-{NNN}-{slug}.md`
 
 触发条件：
 - 新增/删除服务或模块
@@ -47,7 +47,7 @@ argument-hint: [adr|readme|all]
 - 核心领域模型重构
 - API 契约重大变更
 
-参考 `/Users/linqibin/Desktop/Patra-api/docs/templates/adr.md`
+参考 `../Patra-docs/content/templates/adr.md`
 
 ---
 

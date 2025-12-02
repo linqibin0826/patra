@@ -131,7 +131,7 @@ git log --after="{DATE} {TIME_START}" --before="{DATE} {TIME_END}" \
 
 ### 第六步：生成日志文件
 
-**文件路径**: `docs/devlog/daily/{YYYY-MM-DD}.md`
+**文件路径**: `../Patra-docs/content/devlog/daily/{YYYY-MM-DD}.md`
 
 **文件内容**：
 
@@ -220,7 +220,7 @@ linked_adrs: [{ADR_LINKS}]
 {SUGGESTIONS_PREVIEW}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📁 文件：docs/devlog/daily/{YYYY-MM-DD}.md
+📁 文件：../Patra-docs/content/devlog/daily/{YYYY-MM-DD}.md
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 是否需要修改明日计划？(确认/修改/取消)

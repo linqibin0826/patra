@@ -28,7 +28,7 @@ color: blue
 
 **检查现有 ADR：**
 ```bash
-ls docs/decisions/ 2>/dev/null || echo "ADR 目录不存在"
+ls ../Patra-docs/content/decisions/ 2>/dev/null || echo "ADR 目录不存在"
 ```
 
 ### 2. 服务 README 检查
@@ -53,7 +53,7 @@ find . -maxdepth 2 -name "README.md" -path "*/patra-*/*" ! -path "*/patra-*-*/*"
 🟢 一致 / 🟡 部分不一致 / 🔴 严重不一致
 
 ## 🔴 缺失文档
-- `docs/decisions/` — [描述缺失的决策记录]
+- `../Patra-docs/content/decisions/` — [描述缺失的决策记录]
 - `patra-xxx/README.md` — 服务 README 不存在
 
 ## 🟡 内容过时
