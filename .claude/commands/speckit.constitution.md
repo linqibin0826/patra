@@ -41,7 +41,7 @@ $ARGUMENTS
    - 读取 `.specify/templates/spec-template.md` 以进行范围/需求对齐 —— 如果宪章添加/删除强制性部分或约束，则更新。
    - 读取 `.specify/templates/tasks-template.md` 并确保任务分类反映新的或删除的原则驱动的任务类型（例如，可观察性、版本控制、测试纪律）。
    - 读取 `.specify/templates/commands/*.md` 中的每个命令文件（包括这个）以验证没有过时的引用（仅特定于 agent 的名称如 CLAUDE）在需要通用指导时保留。
-   - 读取任何运行时指导文档（例如，`README.md`、`docs/quickstart.md` 或 agent 特定的指导文件如果存在）。更新对已更改原则的引用。
+   - 读取任何运行时指导文档（例如，`README.md`、`../Patra-docs/content/quickstart.md` 或 agent 特定的指导文件如果存在）。更新对已更改原则的引用。
 
 5. 生成同步影响报告（在更新后作为 HTML 注释添加到宪章文件顶部）：
    - 版本更改：旧 → 新

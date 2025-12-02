@@ -29,8 +29,8 @@ argument-hint: [月份 | 空]
 
 ### 第二步：读取周报和每日日志
 
-1. 查找 `docs/devlog/weekly/` 目录下该月的所有周报
-2. 查找 `docs/devlog/daily/` 目录下该月的所有日志
+1. 查找 `../Patra-docs/content/devlog/weekly/` 目录下该月的所有周报
+2. 查找 `../Patra-docs/content/devlog/daily/` 目录下该月的所有日志
 3. 解析 frontmatter 提取统计数据
 
 ### 第三步：汇总统计
@@ -61,7 +61,7 @@ argument-hint: [月份 | 空]
 
 ### 第六步：生成月报文件
 
-**文件路径**: `docs/devlog/monthly/{YYYY-MM}.md`
+**文件路径**: `../Patra-docs/content/devlog/monthly/{YYYY-MM}.md`
 
 **文件内容**：
 
@@ -183,7 +183,7 @@ SORT date ASC
 {MILESTONES_PREVIEW}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📁 文件：docs/devlog/monthly/{YYYY-MM}.md
+📁 文件：../Patra-docs/content/devlog/monthly/{YYYY-MM}.md
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 

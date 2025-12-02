@@ -11,11 +11,11 @@ argument-hint: [bug | til | adr | learning | design | 空]
 
 | 参数值 | 记录类型 | 存放目录 | 说明 |
 |--------|----------|----------|------|
-| `bug` | Bug 记录 | `docs/bugs/YYYY/MM/` | 问题记录与解决方案 |
-| `til` / `study` / `学习` | 每日学习总结 | `docs/til/{YYYY}/{MM}/` | **一天结束后**的学习汇总 |
-| `adr` / `决策` | 架构决策 | `docs/decisions/` | 技术选型和架构决策 |
-| `learning` / `教程` | 详细学习材料 | `docs/learning/{topic}/` | 完整的教程内容 |
-| `design` / `设计` | 设计文档 | `docs/designs/{module}/` | 功能/模块的架构设计 |
+| `bug` | Bug 记录 | `../Patra-docs/content/bugs/YYYY/MM/` | 问题记录与解决方案 |
+| `til` / `study` / `学习` | 每日学习总结 | `../Patra-docs/content/til/{YYYY}/{MM}/` | **一天结束后**的学习汇总 |
+| `adr` / `决策` | 架构决策 | `../Patra-docs/content/decisions/` | 技术选型和架构决策 |
+| `learning` / `教程` | 详细学习材料 | `../Patra-docs/content/learning/{topic}/` | 完整的教程内容 |
+| `design` / `设计` | 设计文档 | `../Patra-docs/content/designs/{module}/` | 功能/模块的架构设计 |
 | 空 | **根据上下文推断** | - | - |
 
 ---
@@ -51,9 +51,9 @@ argument-hint: [bug | til | adr | learning | design | 空]
 | 严重程度 | 根据影响范围推断 | ✅ |
 | 所属模块 | 根据文件路径推断 | ✅ |
 
-**文件路径**：`docs/bugs/{YYYY}/{MM}/BUG-{NNN}-{slug}.md`
+**文件路径**：`../Patra-docs/content/bugs/{YYYY}/{MM}/BUG-{NNN}-{slug}.md`
 
-**模板**：`docs/templates/bug-simple.md` 或 `docs/templates/bug-detailed.md`
+**模板**：`../Patra-docs/content/templates/bug-simple.md` 或 `../Patra-docs/content/templates/bug-detailed.md`
 
 ---
 
@@ -75,11 +75,11 @@ argument-hint: [bug | til | adr | learning | design | 空]
 | 标题 | 章节标题 | ✅ |
 | 完整内容 | 对话中讲解的详细内容 | ✅ |
 
-**文件路径**：`docs/learning/{topic}/{NN}-{slug}.md`
+**文件路径**：`../Patra-docs/content/learning/{topic}/{NN}-{slug}.md`
 
 **目录结构示例**：
 ```
-docs/learning/
+../Patra-docs/content/learning/
 ├── observability/
 │   ├── _index.md           # 系列索引
 │   ├── 01-core-concepts.md
@@ -109,7 +109,7 @@ docs/learning/
 
 **信息来源**（按优先级）：
 1. **用户说明**：用户在调用时描述今天学了什么
-2. **Git 历史**：查询今天新增的 `docs/learning/**/*.md` 文件
+2. **Git 历史**：查询今天新增的 `../Patra-docs/content/learning/**/*.md` 文件
 3. **对话上下文**：当前对话中讨论的学习内容
 
 **需要收集的信息**：
@@ -122,11 +122,11 @@ docs/learning/
 | 关联的 Learning 文件 | 今天创建的详细学习材料 | ✅ |
 | 标签 | 涉及的技术标签 | ✅ |
 
-**文件路径**：`docs/til/{YYYY}/{MM}/{YYYY-MM-DD}-{slug}.md`
+**文件路径**：`../Patra-docs/content/til/{YYYY}/{MM}/{YYYY-MM-DD}-{slug}.md`
 
 **目录结构示例**：
 ```
-docs/til/
+../Patra-docs/content/til/
 ├── _MOC.md           # 总索引
 ├── 2025/
 │   ├── 11/
@@ -181,9 +181,9 @@ chapters_completed: [01, 02]
 1. 检查用户是否提供了学习说明
 2. 如果没有，查询 git 历史获取今天新增的 learning 文件：
    ```bash
-   git diff --name-only --diff-filter=A HEAD~10 -- 'docs/learning/**/*.md'
+   git diff --name-only --diff-filter=A HEAD~10 -- '../Patra-docs/content/learning/**/*.md'
    # 或按日期
-   git log --since="6am" --name-only --diff-filter=A -- 'docs/learning/**/*.md'
+   git log --since="6am" --name-only --diff-filter=A -- '../Patra-docs/content/learning/**/*.md'
    ```
 3. 汇总今天的学习内容
 4. 生成 TIL 文件，包含：
@@ -208,9 +208,9 @@ chapters_completed: [01, 02]
 | 负面影响 | 可能的代价 | ✅ |
 | 替代方案 | 考虑过的其他方案 | 可选 |
 
-**文件路径**：`docs/decisions/ADR-{NNN}-{slug}.md`
+**文件路径**：`../Patra-docs/content/decisions/ADR-{NNN}-{slug}.md`
 
-**模板**：`docs/templates/adr.md`
+**模板**：`../Patra-docs/content/templates/adr.md`
 
 ---
 
@@ -234,11 +234,11 @@ chapters_completed: [01, 02]
 | 架构图 | 对话中讨论的架构设计 | ✅ |
 | 关联 ADR | 相关的架构决策 | 可选 |
 
-**文件路径**：`docs/designs/{module}/{slug}.md`
+**文件路径**：`../Patra-docs/content/designs/{module}/{slug}.md`
 
 **目录结构示例**：
 ```
-docs/designs/
+../Patra-docs/content/designs/
 ├── _MOC.md              # 设计文档索引
 ├── ingest/              # 数据摄取模块
 │   ├── mesh-xml-parser.md
@@ -249,7 +249,7 @@ docs/designs/
     └── observability-integration.md
 ```
 
-**模板**：`docs/templates/design.md`
+**模板**：`../Patra-docs/content/templates/design.md`
 
 **执行流程**：
 1. 从对话上下文提取设计方案
@@ -294,7 +294,7 @@ docs/designs/
 📚 学习材料已保存
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📁 文件：docs/learning/observability/02-metrics.md
+📁 文件：../Patra-docs/content/learning/observability/02-metrics.md
 📋 系列：可观测性学习系列
 🏷️ 章节：第二章 - Metrics（指标）
 
@@ -314,7 +314,7 @@ docs/designs/
 📝 每日学习总结已创建
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📁 文件：docs/til/2025/11/2025-11-28-observability-fundamentals.md
+📁 文件：../Patra-docs/content/til/2025/11/2025-11-28-observability-fundamentals.md
 📅 日期：2025-11-28
 🏷️ 标签：#observability #metrics #logs
 
@@ -333,7 +333,7 @@ docs/designs/
 📐 设计文档已创建
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📁 文件：docs/designs/ingest/mesh-xml-parser.md
+📁 文件：../Patra-docs/content/designs/ingest/mesh-xml-parser.md
 📦 模块：ingest
 🔗 关联 ADR：ADR-003
 
@@ -366,4 +366,4 @@ docs/designs/
 
 6. **Git 历史查询**：TIL 可以通过 git 历史自动发现今天的学习内容
 
-7. **Design 模块目录**：如果模块目录不存在，自动创建（如 `docs/designs/ingest/`）
+7. **Design 模块目录**：如果模块目录不存在，自动创建（如 `../Patra-docs/content/designs/ingest/`）

@@ -52,7 +52,7 @@ argument-hint: [模块名 | committed | uncommitted | 空]
 确保审查范围内的代码变更：
 1. ✅ 符合六边形架构 + DDD 规范
 2. ✅ 代码质量达标，无反模式和安全问题
-3. ✅ 相关文档已更新（README.md、docs/adr）
+3. ✅ 相关文档已更新（README.md、../Patra-docs/content/decisions）
 4. ✅ 测试代码可以编译通过
 
 ---

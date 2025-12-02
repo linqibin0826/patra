@@ -31,7 +31,7 @@ argument-hint: [周数 | 空]
 
 ### 第二步：读取每日日志
 
-1. 查找 `docs/devlog/daily/` 目录下该周的所有日志文件
+1. 查找 `../Patra-docs/content/devlog/daily/` 目录下该周的所有日志文件
 2. 解析每个日志的 frontmatter 提取统计数据
 3. 如果某天没有日志，统计为 0
 
@@ -66,7 +66,7 @@ patra-ingest: 8 commits, 89 files
 
 ### 第六步：生成周报文件
 
-**文件路径**: `docs/devlog/weekly/{YYYY-Www}.md`
+**文件路径**: `../Patra-docs/content/devlog/weekly/{YYYY-Www}.md`
 
 **文件内容**：
 
@@ -178,7 +178,7 @@ SORT date ASC
 {HIGHLIGHTS_PREVIEW}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📁 文件：docs/devlog/weekly/{YYYY-Www}.md
+📁 文件：../Patra-docs/content/devlog/weekly/{YYYY-Www}.md
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
