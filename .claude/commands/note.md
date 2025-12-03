@@ -98,7 +98,7 @@ argument-hint: [bug | til | adr | learning | design | 空]
 
 ---
 
-### TIL 每日学习总结（修改后）
+### TIL 每日学习总结
 
 **触发时机**：一天的学习结束后，用户主动调用
 
