@@ -6,6 +6,7 @@ import com.patra.starter.batch.exception.BatchJobExecutionException;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
@@ -74,7 +75,8 @@ public class JobLauncherHelper {
   public Long launch(Job job, JobParams params, boolean addTimestamp) {
     try {
       Map<String, Object> paramsMap = convertToMap(params);
-      JobParameters jobParameters = buildJobParameters(paramsMap, addTimestamp);
+      Set<String> nonIdentifyingKeys = params.getNonIdentifyingKeys();
+      JobParameters jobParameters = buildJobParameters(paramsMap, nonIdentifyingKeys, addTimestamp);
       JobExecution execution = jobLauncher.run(job, jobParameters);
 
       log.info("Job [{}] 启动成功，执行 ID: {}", job.getName(), execution.getId());
@@ -109,24 +111,27 @@ public class JobLauncherHelper {
   /// - 其他类型 → `addString`（通过 `toString()`）
   ///
   /// @param params 参数 Map
+  /// @param nonIdentifyingKeys 非标识参数的字段名集合
   /// @param addTimestamp 是否添加时间戳（控制幂等性）
   /// @return JobParameters 实例
-  private JobParameters buildJobParameters(Map<String, Object> params, boolean addTimestamp) {
+  private JobParameters buildJobParameters(
+      Map<String, Object> params, Set<String> nonIdentifyingKeys, boolean addTimestamp) {
     JobParametersBuilder builder = new JobParametersBuilder();
 
     params.forEach(
         (key, value) -> {
+          boolean identifying = !nonIdentifyingKeys.contains(key);
           switch (value) {
             case null -> {
               // 跳过 null 值
             }
-            case String stringValue -> builder.addString(key, stringValue);
-            case Long longValue -> builder.addLong(key, longValue);
-            case Integer intValue -> builder.addLong(key, intValue.longValue());
-            case Double doubleValue -> builder.addDouble(key, doubleValue);
-            case Float floatValue -> builder.addDouble(key, floatValue.doubleValue());
-            case Date dateValue -> builder.addDate(key, dateValue);
-            default -> builder.addString(key, value.toString());
+            case String stringValue -> builder.addString(key, stringValue, identifying);
+            case Long longValue -> builder.addLong(key, longValue, identifying);
+            case Integer intValue -> builder.addLong(key, intValue.longValue(), identifying);
+            case Double doubleValue -> builder.addDouble(key, doubleValue, identifying);
+            case Float floatValue -> builder.addDouble(key, floatValue.doubleValue(), identifying);
+            case Date dateValue -> builder.addDate(key, dateValue, identifying);
+            default -> builder.addString(key, value.toString(), identifying);
           }
         });
     // timestamp 控制幂等性
