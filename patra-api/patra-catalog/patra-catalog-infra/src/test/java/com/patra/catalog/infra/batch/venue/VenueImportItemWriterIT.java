@@ -298,4 +298,111 @@ class VenueImportItemWriterIT {
       assertThat(metrics).allMatch(m -> m.getVenueId().equals(venueId));
     }
   }
+
+  @Nested
+  @DisplayName("批次内重复处理测试")
+  class DuplicateHandlingTest {
+
+    /// 创建只设置 issn_l 的 VenueAggregate（不使用基于 openalexId 生成的 issn_l）。
+    private VenueAggregate createVenueWithIssnL(
+        String openalexId, String displayName, String issnL) {
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
+      venue.withIssnL(issnL);
+      venue.withCountryCode("US");
+      venue.withOaStatus(true, false, false);
+      return venue;
+    }
+
+    @Test
+    @DisplayName("同一批次内 issn_l 重复 - 应只插入第一条并跳过后续")
+    void write_duplicateIssnLInSameBatch_shouldInsertFirstAndSkipRest() throws Exception {
+      // Given: 两条记录有相同的 issn_l
+      VenueAggregate venue1 = createVenueWithIssnL("S1001", "Journal A", "3080-1281");
+      VenueAggregate venue2 = createVenueWithIssnL("S1002", "Journal B", "3080-1281");
+
+      // When
+      writer.write(new Chunk<>(List.of(venue1, venue2)));
+
+      // Then: 只插入一条
+      long count =
+          venueMapper.selectCount(
+              Wrappers.<VenueDO>lambdaQuery().eq(VenueDO::getIssnL, "3080-1281"));
+      assertThat(count).isEqualTo(1);
+
+      // 验证插入的是第一条
+      VenueDO inserted =
+          venueMapper.selectOne(Wrappers.<VenueDO>lambdaQuery().eq(VenueDO::getIssnL, "3080-1281"));
+      assertThat(inserted.getOpenalexId()).isEqualTo("S1001");
+    }
+
+    @Test
+    @DisplayName("同一批次内三条记录共享 issn_l - 应只插入第一条")
+    void write_triplicateIssnLInSameBatch_shouldInsertOnlyFirst() throws Exception {
+      // Given: 三条记录有相同的 issn_l
+      VenueAggregate venue1 = createVenueWithIssnL("S2001", "Journal X", "9999-0001");
+      VenueAggregate venue2 = createVenueWithIssnL("S2002", "Journal Y", "9999-0001");
+      VenueAggregate venue3 = createVenueWithIssnL("S2003", "Journal Z", "9999-0001");
+
+      // When
+      writer.write(new Chunk<>(List.of(venue1, venue2, venue3)));
+
+      // Then: 只插入一条
+      long count =
+          venueMapper.selectCount(
+              Wrappers.<VenueDO>lambdaQuery().eq(VenueDO::getIssnL, "9999-0001"));
+      assertThat(count).isEqualTo(1);
+
+      // 验证插入的是第一条
+      VenueDO inserted =
+          venueMapper.selectOne(Wrappers.<VenueDO>lambdaQuery().eq(VenueDO::getIssnL, "9999-0001"));
+      assertThat(inserted.getOpenalexId()).isEqualTo("S2001");
+    }
+
+    @Test
+    @DisplayName("批次内重复 issn_l 但 DB 已存在 - 应更新已存在记录并跳过后续")
+    void write_duplicateIssnLWithExistingInDb_shouldUpdateAndSkipRest() throws Exception {
+      // Given: DB 中已存在记录
+      VenueAggregate existing = createVenueWithIssnL("S0001", "Existing Journal", "5555-1234");
+      writer.write(new Chunk<>(List.of(existing)));
+      VenueDO existingDO =
+          venueMapper.selectOne(
+              Wrappers.<VenueDO>lambdaQuery().eq(VenueDO::getOpenalexId, "S0001"));
+      Long existingId = existingDO.getId();
+
+      // Given: 两条新记录有相同的 issn_l
+      VenueAggregate venue1 = createVenueWithIssnL("S3001", "New Journal A", "5555-1234");
+      VenueAggregate venue2 = createVenueWithIssnL("S3002", "New Journal B", "5555-1234");
+
+      // When
+      writer.write(new Chunk<>(List.of(venue1, venue2)));
+
+      // Then: 仍然只有一条记录
+      long count =
+          venueMapper.selectCount(
+              Wrappers.<VenueDO>lambdaQuery().eq(VenueDO::getIssnL, "5555-1234"));
+      assertThat(count).isEqualTo(1);
+
+      // 验证记录已更新（第一条更新了已存在记录）
+      VenueDO updated = venueMapper.selectById(existingId);
+      assertThat(updated.getOpenalexId()).isEqualTo("S3001");
+      assertThat(updated.getDisplayName()).isEqualTo("New Journal A");
+    }
+
+    @Test
+    @DisplayName("批次内无重复 issn_l - 应正常插入所有记录")
+    void write_uniqueIssnLInSameBatch_shouldInsertAll() throws Exception {
+      // Given: 三条记录有不同的 issn_l
+      VenueAggregate venue1 = createVenueWithIssnL("S4001", "Journal 1", "1111-0001");
+      VenueAggregate venue2 = createVenueWithIssnL("S4002", "Journal 2", "2222-0002");
+      VenueAggregate venue3 = createVenueWithIssnL("S4003", "Journal 3", "3333-0003");
+
+      // When
+      writer.write(new Chunk<>(List.of(venue1, venue2, venue3)));
+
+      // Then: 全部插入
+      long count = venueMapper.selectCount(null);
+      assertThat(count).isEqualTo(3);
+    }
+  }
 }

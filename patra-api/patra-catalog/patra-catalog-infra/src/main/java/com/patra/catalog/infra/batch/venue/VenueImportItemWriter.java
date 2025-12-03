@@ -22,6 +22,7 @@ import com.patra.catalog.infra.persistence.mapper.VenueMetricsMapper;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,12 +43,18 @@ import org.springframework.stereotype.Component;
 ///
 /// **Upsert 流程**：
 ///
-/// 1. 提取所有 openalexId
-/// 2. 批量查询已存在记录
+/// 1. 提取所有 openalexId，批量查询已存在记录
+/// 2. 对于 openalexId 不存在的记录，再基于 issn_l 查询（支持多源数据合并）
 /// 3. 分离新增和更新列表
 /// 4. 批量 INSERT 新记录
 /// 5. 逐条 UPDATE 已存在记录
 /// 6. 子表：先删后插
+///
+/// **多源数据合并策略**：
+///
+/// - 优先基于 openalexId 匹配
+/// - 如果 openalexId 不存在，基于 issn_l 匹配
+/// - 匹配成功则更新现有记录，否则新增
 ///
 /// **性能优化**：
 ///
@@ -75,34 +82,100 @@ public class VenueImportItemWriter implements ItemWriter<VenueAggregate> {
 
     log.debug("开始写入 {} 条 Venue 记录", items.size());
 
-    // 1. 提取所有 openalexId
+    // 1. 提取所有 openalexId，批量查询已存在记录
     Set<String> openalexIds =
-        items.stream().map(VenueAggregate::getOpenalexId).collect(Collectors.toSet());
+        items.stream()
+            .map(VenueAggregate::getOpenalexId)
+            .filter(id -> id != null && !id.isBlank())
+            .collect(Collectors.toSet());
 
-    // 2. 批量查询已存在记录
-    LambdaQueryWrapper<VenueDO> queryWrapper =
-        Wrappers.<VenueDO>lambdaQuery()
-            .in(VenueDO::getOpenalexId, openalexIds)
-            .select(VenueDO::getId, VenueDO::getOpenalexId);
+    Map<String, Long> openalexIdMap = new HashMap<>();
+    if (!openalexIds.isEmpty()) {
+      LambdaQueryWrapper<VenueDO> queryWrapper =
+          Wrappers.<VenueDO>lambdaQuery()
+              .in(VenueDO::getOpenalexId, openalexIds)
+              .select(VenueDO::getId, VenueDO::getOpenalexId);
 
-    List<VenueDO> existingRecords = venueMapper.selectList(queryWrapper);
-    Map<String, Long> existingIdMap = new HashMap<>();
-    for (VenueDO record : existingRecords) {
-      existingIdMap.put(record.getOpenalexId(), record.getId());
+      List<VenueDO> existingRecords = venueMapper.selectList(queryWrapper);
+      for (VenueDO record : existingRecords) {
+        openalexIdMap.put(record.getOpenalexId(), record.getId());
+      }
     }
 
-    // 3. 分离新增和更新列表
-    List<VenueAggregate> toInsert = new ArrayList<>();
+    // 2. 分离：openalexId 匹配的 → 更新；不匹配的 → 待定（可能基于 issn_l 合并）
     List<VenueAggregate> toUpdate = new ArrayList<>();
+    List<VenueAggregate> pendingInsert = new ArrayList<>();
     Map<VenueAggregate, Long> updateIdMap = new HashMap<>();
 
     for (VenueAggregate venue : items) {
-      Long existingId = existingIdMap.get(venue.getOpenalexId());
+      Long existingId = openalexIdMap.get(venue.getOpenalexId());
       if (existingId != null) {
         toUpdate.add(venue);
         updateIdMap.put(venue, existingId);
       } else {
-        toInsert.add(venue);
+        pendingInsert.add(venue);
+      }
+    }
+
+    // 3. 对于 openalexId 不匹配的记录，基于 issn_l 查询（多源数据合并）
+    List<VenueAggregate> toInsert = new ArrayList<>();
+    if (!pendingInsert.isEmpty()) {
+      Set<String> issnLs =
+          pendingInsert.stream()
+              .map(VenueAggregate::getIssnL)
+              .filter(issnL -> issnL != null && !issnL.isBlank())
+              .collect(Collectors.toSet());
+
+      Map<String, Long> issnLIdMap = new HashMap<>();
+      if (!issnLs.isEmpty()) {
+        LambdaQueryWrapper<VenueDO> issnLQuery =
+            Wrappers.<VenueDO>lambdaQuery()
+                .in(VenueDO::getIssnL, issnLs)
+                .select(VenueDO::getId, VenueDO::getIssnL);
+
+        List<VenueDO> issnLRecords = venueMapper.selectList(issnLQuery);
+        for (VenueDO record : issnLRecords) {
+          issnLIdMap.put(record.getIssnL(), record.getId());
+        }
+      }
+
+      // 记录批次内已处理的 issn_l，用于去重（包括 DB 中已存在和新增两种情况）
+      Set<String> processedIssnLs = new HashSet<>();
+
+      // 分离：issn_l 匹配的 → 合并更新；不匹配的 → 新增
+      for (VenueAggregate venue : pendingInsert) {
+        String issnL = venue.getIssnL();
+        boolean issnLValid = issnL != null && !issnL.isBlank();
+
+        // 检查批次内是否已处理过该 issn_l（无论 DB 中存在与否）
+        if (issnLValid && processedIssnLs.contains(issnL)) {
+          log.warn(
+              "批次内 issn_l 重复，跳过记录：openalexId={}, displayName={}, issnL={}",
+              venue.getOpenalexId(),
+              venue.getDisplayName(),
+              issnL);
+          continue;
+        }
+
+        Long existingId = issnLIdMap.get(issnL);
+        if (existingId != null) {
+          // DB 中已存在该 issn_l → 更新
+          toUpdate.add(venue);
+          updateIdMap.put(venue, existingId);
+          log.debug(
+              "基于 issn_l={} 合并到现有 Venue（id={}），新 openalexId={}",
+              issnL,
+              existingId,
+              venue.getOpenalexId());
+        } else {
+          // 新增
+          toInsert.add(venue);
+        }
+
+        // 标记该 issn_l 已处理
+        if (issnLValid) {
+          processedIssnLs.add(issnL);
+        }
       }
     }
 
@@ -116,7 +189,7 @@ public class VenueImportItemWriter implements ItemWriter<VenueAggregate> {
       updateVenues(toUpdate, updateIdMap);
     }
 
-    log.debug("写入完成：新增={}，更新={}", toInsert.size(), toUpdate.size());
+    log.debug("写入完成：新增={}，更新={}（含 issn_l 合并）", toInsert.size(), toUpdate.size());
   }
 
   /// 批量插入新记录。

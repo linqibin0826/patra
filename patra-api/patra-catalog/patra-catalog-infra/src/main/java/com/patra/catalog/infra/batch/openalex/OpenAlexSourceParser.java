@@ -215,13 +215,15 @@ public class OpenAlexSourceParser {
   }
 
   /// 构建年度指标列表。
+  ///
+  /// 过滤规则：跳过年份为 null 或不在 1900-2100 范围内的记录（无效统计数据）
   private List<VenueMetrics> buildYearlyMetrics(OpenAlexSourceRecord record) {
     if (record.countsByYear() == null || record.countsByYear().isEmpty()) {
       return null;
     }
 
     return record.countsByYear().stream()
-        .filter(c -> c.year() != null)
+        .filter(c -> c.year() != null && c.year() >= 1900 && c.year() <= 2100)
         .map(
             c ->
                 VenueMetrics.create(
@@ -231,15 +233,28 @@ public class OpenAlexSourceParser {
         .toList();
   }
 
+  /// ISSN 格式正则表达式（与 VenueIdentifier 保持一致）。
+  private static final String ISSN_PATTERN = "\\d{4}-\\d{3}[\\dXx]";
+
   /// 添加 ISSN 标识符。
+  ///
+  /// 过滤规则：跳过格式不符合 `XXXX-XXXX` 的 ISSN（如含前缀 "ISSN-L: " 的脏数据）
   private void addIssnIdentifiers(VenueAggregate aggregate, OpenAlexSourceRecord record) {
     if (record.issn() != null) {
       for (String issn : record.issn()) {
-        if (issn != null && !issn.isBlank()) {
+        if (issn != null && !issn.isBlank() && isValidIssn(issn)) {
           aggregate.addIdentifier(VenueIdentifierType.ISSN, issn, issn.equals(record.issnL()));
         }
       }
     }
+  }
+
+  /// 验证 ISSN 格式是否有效。
+  ///
+  /// @param issn ISSN 值
+  /// @return true 如果格式有效
+  private boolean isValidIssn(String issn) {
+    return issn.matches(ISSN_PATTERN);
   }
 
   /// 从 OpenAlex URL 提取 ID 后缀。

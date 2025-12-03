@@ -69,19 +69,12 @@ public class VenueSourceFileAdapter implements VenueSourceFilePort {
 
   @Override
   public OpenAlexManifest fetchManifest() {
-    log.info("获取 OpenAlex Sources manifest");
+    // Manifest 是动态索引文件，始终从远程获取以确保获取最新的分区列表
+    // 缓存 manifest 会导致看不到新添加的 updated_date 分区
+    log.info("获取 OpenAlex Sources manifest: {}", cacheProperties.getManifestUrl());
 
-    Path manifestFile;
-
-    // 缓存未启用时直接从远程下载
-    if (!cacheProperties.enabled()) {
-      log.info("OpenAlex 缓存未启用，直接从远程下载 manifest: {}", cacheProperties.getManifestUrl());
-      manifestFile = fileDownloadPort.downloadToTemp(URI.create(cacheProperties.getManifestUrl()));
-    } else {
-      manifestFile =
-          fetchFromCacheOrRemote(
-              cacheProperties.getManifestCacheKey(), cacheProperties.getManifestUrl(), "manifest");
-    }
+    Path manifestFile =
+        fileDownloadPort.downloadToTemp(URI.create(cacheProperties.getManifestUrl()));
 
     try {
       return OpenAlexManifestParser.parseManifest(manifestFile);
