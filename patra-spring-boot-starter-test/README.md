@@ -4,7 +4,7 @@
 
 ## 功能概览
 
-- **TestContainers 容器初始化器**: JVM 级别单例容器，支持 MySQL、RocketMQ
+- **TestContainers 容器初始化器**: JVM 级别单例容器，支持 MySQL、RocketMQ、MinIO
 - **ArchUnit 架构规则**: 六边形架构规则、测试规范规则
 - **测试工具集成**: JUnit 5、AssertJ、Mockito、Awaitility、WireMock
 
@@ -38,6 +38,14 @@ public class IngestRocketMQContainerInitializer extends RocketMQContainerInitial
     @Override
     protected String[] getTopicsToCreate() {
         return new String[] {"INGEST_TASK_READY", "INGEST_PUBLICATION_READY"};
+    }
+}
+
+// 继承 MinIOContainerInitializer，指定存储桶名
+public class CatalogMinIOContainerInitializer extends MinIOContainerInitializer {
+    @Override
+    protected String getBucketName() {
+        return "patra-catalog-cache";
     }
 }
 ```
@@ -87,6 +95,7 @@ class CatalogArchitectureTest {
 |---|---|
 | `MySQLContainerInitializer` | MySQL 容器初始化器基类，支持 Flyway 迁移 |
 | `RocketMQContainerInitializer` | RocketMQ 容器初始化器基类，支持 Topic 自动创建 |
+| `MinIOContainerInitializer` | MinIO 容器初始化器基类，支持存储桶自动创建 |
 | `ContainerRegistry` | JVM 级别容器注册中心，确保单例 |
 | `ContainerType` | 支持的容器类型枚举 |
 
@@ -125,6 +134,7 @@ class CatalogArchitectureTest {
 |---|---|
 | MySQL | `mysql:8.0.36` |
 | RocketMQ | `apache/rocketmq:5.3.1` |
+| MinIO | `minio/minio:RELEASE.2024-01-18T22-51-28Z` |
 
 ## 设计原则
 

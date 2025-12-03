@@ -112,6 +112,19 @@
             <artifactId>minio</artifactId>
             <scope>compile</scope>
         </dependency>
+        <!-- MinIO Java Client（MinIOContainerInitializer 创建存储桶需要） -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <scope>compile</scope>
+            <exclusions>
+                <!-- 排除 Kotlin 传递的旧版 annotations，使用 TestContainers 传递的版本 -->
+                <exclusion>
+                    <groupId>org.jetbrains</groupId>
+                    <artifactId>annotations</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
 
         <!-- ==================== ArchUnit 架构测试 ==================== -->
 

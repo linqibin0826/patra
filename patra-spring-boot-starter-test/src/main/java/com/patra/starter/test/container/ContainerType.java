@@ -40,5 +40,10 @@ public enum ContainerType {
   /// Redis 缓存容器。
   ///
   /// 使用 redis:7 镜像，支持 Redisson 集成测试。
-  REDIS
+  REDIS,
+
+  /// MinIO 对象存储容器。
+  ///
+  /// 使用 minio/minio:RELEASE.2024-01-18T22-51-28Z 镜像，支持文件缓存集成测试。
+  MINIO
 }

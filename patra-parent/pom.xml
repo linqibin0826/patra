@@ -36,6 +36,7 @@
     <aws.sdk.version>2.25.36</aws.sdk.version>
     <feign.version>13.1</feign.version>
     <redisson.version>3.52.0</redisson.version>
+    <minio.version>8.5.7</minio.version>
 
     <maven.compiler.release>${java.version}</maven.compiler.release>
     <maven.enforcer.plugin.version>3.4.1</maven.enforcer.plugin.version>
@@ -441,6 +442,13 @@
         <groupId>com.alibaba.fastjson2</groupId>
         <artifactId>fastjson2</artifactId>
         <version>2.0.58</version>
+      </dependency>
+
+      <!-- MinIO Java Client - 对象存储客户端 -->
+      <dependency>
+        <groupId>io.minio</groupId>
+        <artifactId>minio</artifactId>
+        <version>${minio.version}</version>
       </dependency>
 
     </dependencies>
