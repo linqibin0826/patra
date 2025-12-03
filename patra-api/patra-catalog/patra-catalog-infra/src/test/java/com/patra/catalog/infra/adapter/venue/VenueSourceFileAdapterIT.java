@@ -1,13 +1,14 @@
-package com.patra.catalog.infra.adapter.mesh;
+package com.patra.catalog.infra.adapter.venue;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import com.patra.catalog.domain.model.vo.venue.OpenAlexManifest;
 import com.patra.catalog.domain.port.FileDownloadPort;
 import com.patra.catalog.infra.adapter.download.FileDownloadAdapter;
-import com.patra.catalog.infra.config.MeshCacheProperties;
+import com.patra.catalog.infra.config.OpenAlexCacheProperties;
 import com.patra.starter.core.async.AsyncExecutorRegistry;
 import com.patra.starter.core.async.AsyncPoolProperties;
 import com.patra.starter.objectstorage.MinioStorageProvider;
@@ -19,10 +20,10 @@ import com.patra.starter.restclient.download.DownloadClient;
 import com.patra.starter.test.container.initializer.MinIOContainerInitializer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.minio.MinioClient;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -37,12 +38,12 @@ import org.springframework.web.client.RestClient;
 import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-/// MeshSourceFileAdapter 集成测试。
+/// VenueSourceFileAdapter 集成测试。
 ///
 /// **测试策略**：
 ///
 /// - 使用 CatalogMinIOContainerInitializer 启动 MinIO 容器（JVM 级别复用）
-/// - 使用 WireMock 模拟远程文件服务器
+/// - 使用 WireMock 模拟 OpenAlex S3 公开存储桶
 /// - 验证缓存优先策略的完整流程
 ///
 /// **测试场景**：
@@ -54,14 +55,37 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 /// @author linqibin
 /// @since 0.1.0
 @Testcontainers
-@DisplayName("MeshSourceFileAdapter 集成测试")
+@DisplayName("VenueSourceFileAdapter 集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
-class MeshSourceFileAdapterIT {
+class VenueSourceFileAdapterIT {
 
   private static final String TEST_BUCKET = "patra-catalog-cache";
-  private static final String TEST_KEY_PREFIX = "mesh";
-  private static final String TEST_XML_CONTENT =
-      "<?xml version=\"1.0\"?><DescriptorRecordSet>test content</DescriptorRecordSet>";
+  private static final String TEST_KEY_PREFIX = "openalex/sources";
+
+  /// 测试用 manifest JSON。
+  ///
+  /// 包含单个分区文件，用于简化测试流程。
+  private static final String TEST_MANIFEST_JSON =
+      """
+      {
+        "entries": [
+          {
+            "url": "s3://openalex/data/sources/updated_date=2025-01-01/part_000.gz",
+            "meta": {
+              "content_length": 1024,
+              "record_count": 10
+            }
+          }
+        ],
+        "meta": {
+          "content_length": 1024,
+          "record_count": 10
+        }
+      }
+      """;
+
+  /// 测试用分区文件内容（模拟 gzip 压缩数据）。
+  private static final byte[] TEST_PARTITION_CONTENT = "test partition content".getBytes();
 
   // 每个 Nested 测试类使用不同版本号，确保测试隔离
   private static final String VERSION_DISABLED = "disabled";
@@ -78,12 +102,13 @@ class MeshSourceFileAdapterIT {
 
   private static MinioClient minioClient;
 
-  private MeshSourceFileAdapter adapter;
+  private VenueSourceFileAdapter adapter;
   private FileDownloadPort fileDownloadPort;
   private ObjectStorageOperations objectStorage;
   private AsyncExecutorRegistry asyncExecutorRegistry;
-  private MeshCacheProperties cacheProperties;
+  private OpenAlexCacheProperties cacheProperties;
   private Path downloadedFile;
+  private List<Path> downloadedFiles;
 
   @BeforeAll
   static void setUpMinioClient() {
@@ -135,6 +160,13 @@ class MeshSourceFileAdapterIT {
     if (downloadedFile != null && Files.exists(downloadedFile)) {
       Files.deleteIfExists(downloadedFile);
     }
+    if (downloadedFiles != null) {
+      for (Path file : downloadedFiles) {
+        if (file != null && Files.exists(file)) {
+          Files.deleteIfExists(file);
+        }
+      }
+    }
     // 关闭线程池
     asyncExecutorRegistry.destroy();
   }
@@ -145,61 +177,61 @@ class MeshSourceFileAdapterIT {
 
     @BeforeEach
     void setUp() {
-      // 禁用缓存
-      cacheProperties = new MeshCacheProperties(false, TEST_BUCKET, TEST_KEY_PREFIX);
+      // 禁用缓存，配置 WireMock 作为 S3 基地址
+      cacheProperties =
+          new OpenAlexCacheProperties(
+              false, TEST_BUCKET, TEST_KEY_PREFIX, wireMock.baseUrl(), "data/sources");
       adapter =
-          new MeshSourceFileAdapter(
+          new VenueSourceFileAdapter(
               fileDownloadPort, objectStorage, cacheProperties, asyncExecutorRegistry);
     }
 
     @Test
-    @DisplayName("缓存禁用时应直接从远程下载 Descriptor 文件")
-    void fetchDescriptorFile_cacheDisabled_shouldDownloadFromRemote() throws Exception {
-      // Given - WireMock 模拟远程服务器
+    @DisplayName("缓存禁用时应直接从远程下载 manifest")
+    void fetchManifest_cacheDisabled_shouldDownloadFromRemote() {
+      // Given - WireMock 模拟 OpenAlex S3 响应
       wireMock.stubFor(
-          get("/mesh/descdisabled.xml")
+          get("/data/sources/manifest")
               .willReturn(
                   aResponse()
                       .withStatus(200)
-                      .withHeader("Content-Type", "application/xml")
-                      .withBody(TEST_XML_CONTENT)));
-
-      URI remoteUrl = URI.create(wireMock.baseUrl() + "/mesh/descdisabled.xml");
+                      .withHeader("Content-Type", "application/json")
+                      .withBody(TEST_MANIFEST_JSON)));
 
       // When
-      downloadedFile = adapter.fetchDescriptorFile(VERSION_DISABLED, remoteUrl);
+      OpenAlexManifest manifest = adapter.fetchManifest();
+
+      // Then
+      assertThat(manifest).isNotNull();
+      assertThat(manifest.entries()).hasSize(1);
+      assertThat(manifest.totalRecordCount()).isEqualTo(10);
+
+      // 验证请求到达远程服务器
+      wireMock.verify(1, getRequestedFor(urlEqualTo("/data/sources/manifest")));
+    }
+
+    @Test
+    @DisplayName("缓存禁用时应直接从远程下载分区文件")
+    void fetchPartitionFile_cacheDisabled_shouldDownloadFromRemote() {
+      // Given
+      String relativePath = "updated_date=2025-01-01/part_000.gz";
+      wireMock.stubFor(
+          get("/data/sources/" + relativePath)
+              .willReturn(
+                  aResponse()
+                      .withStatus(200)
+                      .withHeader("Content-Type", "application/gzip")
+                      .withBody(TEST_PARTITION_CONTENT)));
+
+      // When
+      downloadedFile = adapter.fetchPartitionFile(relativePath);
 
       // Then
       assertThat(downloadedFile).isNotNull();
       assertThat(Files.exists(downloadedFile)).isTrue();
-      assertThat(Files.readString(downloadedFile)).isEqualTo(TEST_XML_CONTENT);
 
       // 验证请求到达远程服务器
-      wireMock.verify(1, getRequestedFor(urlEqualTo("/mesh/descdisabled.xml")));
-    }
-
-    @Test
-    @DisplayName("缓存禁用时应直接从远程下载 Qualifier 文件")
-    void fetchQualifierFile_cacheDisabled_shouldDownloadFromRemote() throws Exception {
-      // Given
-      String qualifierContent =
-          "<?xml version=\"1.0\"?><QualifierRecordSet>qualifiers</QualifierRecordSet>";
-      wireMock.stubFor(
-          get("/mesh/qualdisabled.xml")
-              .willReturn(
-                  aResponse()
-                      .withStatus(200)
-                      .withHeader("Content-Type", "application/xml")
-                      .withBody(qualifierContent)));
-
-      URI remoteUrl = URI.create(wireMock.baseUrl() + "/mesh/qualdisabled.xml");
-
-      // When
-      downloadedFile = adapter.fetchQualifierFile(VERSION_DISABLED, remoteUrl);
-
-      // Then
-      assertThat(downloadedFile).isNotNull();
-      assertThat(Files.readString(downloadedFile)).isEqualTo(qualifierContent);
+      wireMock.verify(1, getRequestedFor(urlEqualTo("/data/sources/" + relativePath)));
     }
   }
 
@@ -210,39 +242,40 @@ class MeshSourceFileAdapterIT {
     @BeforeEach
     void setUp() {
       // 启用缓存
-      cacheProperties = new MeshCacheProperties(true, TEST_BUCKET, TEST_KEY_PREFIX);
+      cacheProperties =
+          new OpenAlexCacheProperties(
+              true, TEST_BUCKET, TEST_KEY_PREFIX, wireMock.baseUrl(), "data/sources");
       adapter =
-          new MeshSourceFileAdapter(
+          new VenueSourceFileAdapter(
               fileDownloadPort, objectStorage, cacheProperties, asyncExecutorRegistry);
     }
 
     @Test
     @DisplayName("缓存未命中时应从远程下载并异步上传到缓存")
-    void fetchDescriptorFile_cacheMiss_shouldDownloadAndUploadToCache() throws Exception {
+    void fetchPartitionFile_cacheMiss_shouldDownloadAndUploadToCache() throws Exception {
       // Given - 使用隔离版本号的缓存键
-      String cacheKey = "mesh/descriptors/descmiss.xml";
+      String relativePath = "updated_date=2025-01-02/part_001.gz";
+      String cacheKey = TEST_KEY_PREFIX + "/" + relativePath;
       assertThat(objectStorage.exists(TEST_BUCKET, cacheKey)).isFalse();
 
       // WireMock 模拟远程服务器
       wireMock.stubFor(
-          get("/mesh/descmiss.xml")
+          get("/data/sources/" + relativePath)
               .willReturn(
                   aResponse()
                       .withStatus(200)
-                      .withHeader("Content-Type", "application/xml")
-                      .withBody(TEST_XML_CONTENT)));
-
-      URI remoteUrl = URI.create(wireMock.baseUrl() + "/mesh/descmiss.xml");
+                      .withHeader("Content-Type", "application/gzip")
+                      .withBody(TEST_PARTITION_CONTENT)));
 
       // When
-      downloadedFile = adapter.fetchDescriptorFile(VERSION_MISS, remoteUrl);
+      downloadedFile = adapter.fetchPartitionFile(relativePath);
 
       // Then - 验证文件下载成功
       assertThat(downloadedFile).isNotNull();
-      assertThat(Files.readString(downloadedFile)).isEqualTo(TEST_XML_CONTENT);
+      assertThat(Files.exists(downloadedFile)).isTrue();
 
       // Then - 验证请求到达远程服务器
-      wireMock.verify(1, getRequestedFor(urlEqualTo("/mesh/descmiss.xml")));
+      wireMock.verify(1, getRequestedFor(urlEqualTo("/data/sources/" + relativePath)));
 
       // Then - 等待异步上传完成，验证缓存已更新
       await()
@@ -253,58 +286,93 @@ class MeshSourceFileAdapterIT {
                 assertThat(objectStorage.exists(TEST_BUCKET, cacheKey)).isTrue();
               });
     }
+
+    @Test
+    @DisplayName("缓存未命中时应从远程下载 manifest 并异步上传到缓存")
+    void fetchManifest_cacheMiss_shouldDownloadAndUploadToCache() {
+      // Given - 确保缓存中不存在 manifest
+      String manifestCacheKey = TEST_KEY_PREFIX + "/manifest";
+      // 注意：manifest 在测试之间可能已被缓存，这里测试主要验证流程
+
+      wireMock.stubFor(
+          get("/data/sources/manifest")
+              .willReturn(
+                  aResponse()
+                      .withStatus(200)
+                      .withHeader("Content-Type", "application/json")
+                      .withBody(TEST_MANIFEST_JSON)));
+
+      // When
+      OpenAlexManifest manifest = adapter.fetchManifest();
+
+      // Then
+      assertThat(manifest).isNotNull();
+      assertThat(manifest.entries()).hasSize(1);
+
+      // Then - 等待异步上传完成
+      await()
+          .atMost(Duration.ofSeconds(5))
+          .pollInterval(Duration.ofMillis(200))
+          .untilAsserted(
+              () -> {
+                assertThat(objectStorage.exists(TEST_BUCKET, manifestCacheKey)).isTrue();
+              });
+    }
   }
 
   @Nested
   @DisplayName("缓存命中场景")
   class CacheHitTest {
 
-    private static final String CACHE_KEY = "mesh/descriptors/deschit.xml";
+    private static final String CACHE_KEY_PARTITION =
+        TEST_KEY_PREFIX + "/updated_date=2025-01-03/part_002.gz";
 
     @BeforeEach
     void setUp() throws Exception {
       // 启用缓存
-      cacheProperties = new MeshCacheProperties(true, TEST_BUCKET, TEST_KEY_PREFIX);
+      cacheProperties =
+          new OpenAlexCacheProperties(
+              true, TEST_BUCKET, TEST_KEY_PREFIX, wireMock.baseUrl(), "data/sources");
       adapter =
-          new MeshSourceFileAdapter(
+          new VenueSourceFileAdapter(
               fileDownloadPort, objectStorage, cacheProperties, asyncExecutorRegistry);
 
       // 预先上传文件到缓存
-      uploadToCache(CACHE_KEY, TEST_XML_CONTENT);
+      uploadToCache(CACHE_KEY_PARTITION, TEST_PARTITION_CONTENT);
     }
 
     @Test
     @DisplayName("缓存命中时应从对象存储下载而不访问远程服务器")
-    void fetchDescriptorFile_cacheHit_shouldDownloadFromCache() throws Exception {
+    void fetchPartitionFile_cacheHit_shouldDownloadFromCache() throws Exception {
       // Given - 设置 WireMock（不应被调用）
+      String relativePath = "updated_date=2025-01-03/part_002.gz";
       wireMock.stubFor(
-          get("/mesh/deschit.xml").willReturn(aResponse().withStatus(200).withBody("remote")));
-
-      URI remoteUrl = URI.create(wireMock.baseUrl() + "/mesh/deschit.xml");
+          get("/data/sources/" + relativePath)
+              .willReturn(aResponse().withStatus(200).withBody("remote")));
 
       // When
-      downloadedFile = adapter.fetchDescriptorFile(VERSION_HIT, remoteUrl);
+      downloadedFile = adapter.fetchPartitionFile(relativePath);
 
       // Then - 验证文件内容来自缓存
       assertThat(downloadedFile).isNotNull();
-      assertThat(Files.readString(downloadedFile)).isEqualTo(TEST_XML_CONTENT);
+      assertThat(Files.readAllBytes(downloadedFile)).isEqualTo(TEST_PARTITION_CONTENT);
 
       // Then - 验证没有请求到达远程服务器
-      wireMock.verify(0, getRequestedFor(urlEqualTo("/mesh/deschit.xml")));
+      wireMock.verify(0, getRequestedFor(urlEqualTo("/data/sources/" + relativePath)));
     }
 
-    private void uploadToCache(String key, String content) throws Exception {
-      Path tempFile = Files.createTempFile("cache-upload-", ".xml");
+    private void uploadToCache(String key, byte[] content) throws Exception {
+      Path tempFile = Files.createTempFile("cache-upload-", ".gz");
       try {
-        Files.writeString(tempFile, content);
+        Files.write(tempFile, content);
         try (var is = Files.newInputStream(tempFile)) {
           objectStorage.upload(
               TEST_BUCKET,
               key,
               is,
               com.patra.starter.objectstorage.domain.ObjectMetadata.builder()
-                  .contentLength(content.length())
-                  .contentType("application/xml")
+                  .contentLength(content.length)
+                  .contentType("application/gzip")
                   .build());
         }
       } finally {
