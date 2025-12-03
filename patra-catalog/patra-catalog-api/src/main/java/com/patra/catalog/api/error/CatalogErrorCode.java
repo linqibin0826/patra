@@ -12,6 +12,7 @@ import com.patra.common.error.codes.ErrorCodeLike;
 /// - 10xx: MeSH 导入错误
 /// - 11xx: 文件下载错误
 /// - 12xx: 数据解析错误
+/// - 13xx: Venue（期刊）导入错误
 ///
 /// @see com.patra.common.error.codes.ErrorCodeLike
 public enum CatalogErrorCode implements ErrorCodeLike {
@@ -49,7 +50,16 @@ public enum CatalogErrorCode implements ErrorCodeLike {
   ///
   /// 在从对象存储缓存下载文件时发生。可能由于缓存文件不存在、
   /// 对象存储服务不可用或权限问题导致。系统将回退到远程下载。
-  CAT_1102("CAT-1102", 500);
+  CAT_1102("CAT-1102", 500),
+
+  // ===== Venue 导入错误 (13xx) =====
+
+  /// 表示 OpenAlex Venue（期刊）导入失败。
+  ///
+  /// 在导入 OpenAlex Sources 数据时发生。可能由于 JSON 解析失败、
+  /// 批处理作业失败、数据库写入错误或系统资源不足导致。
+  /// 请检查 Spring Batch 作业状态和系统资源。
+  CAT_1301("CAT-1301", 500);
 
   private final String code;
   private final int httpStatus;

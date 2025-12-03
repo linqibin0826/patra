@@ -54,6 +54,17 @@ public interface VenueRepository {
   // 批量操作（支持大规模导入）
   // ========================================
 
+  /// 清空所有载体相关数据（主表、标识符表、指标表）。
+  ///
+  /// **警告**：此操作是 DDL（TRUNCATE），会隐式提交事务，无法回滚。
+  ///
+  /// **使用场景**：
+  ///
+  /// - TRUNCATE_REIMPORT 模式下，导入前清空所有数据
+  ///
+  /// @see com.patra.catalog.domain.model.enums.DataImportMode#TRUNCATE_REIMPORT
+  void truncateAll();
+
   /// 批量保存载体。
   ///
   /// @param venues 载体列表
