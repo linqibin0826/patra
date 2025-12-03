@@ -4,10 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.patra.catalog.domain.exception.CatalogScheduleParameterException;
-import com.patra.catalog.domain.model.enums.MeshDescriptorImportMode;
+import com.patra.catalog.domain.model.enums.DataImportMode;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -23,6 +25,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("MeshDescriptorImportCommand 单元测试")
+@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class MeshDescriptorImportCommandTest {
 
   @Nested
@@ -37,12 +40,12 @@ class MeshDescriptorImportCommandTest {
 
       // When
       MeshDescriptorImportCommand command =
-          new MeshDescriptorImportCommand(url, "2025", MeshDescriptorImportMode.INCREMENTAL);
+          new MeshDescriptorImportCommand(url, "2025", DataImportMode.INCREMENTAL);
 
       // Then
       assertThat(command.url()).isEqualTo(url);
       assertThat(command.meshVersion()).isEqualTo("2025");
-      assertThat(command.mode()).isEqualTo(MeshDescriptorImportMode.INCREMENTAL);
+      assertThat(command.mode()).isEqualTo(DataImportMode.INCREMENTAL);
     }
 
     @Test
@@ -53,11 +56,11 @@ class MeshDescriptorImportCommandTest {
 
       // When
       MeshDescriptorImportCommand command =
-          new MeshDescriptorImportCommand(url, "2025", MeshDescriptorImportMode.TRUNCATE_REIMPORT);
+          new MeshDescriptorImportCommand(url, "2025", DataImportMode.TRUNCATE_REIMPORT);
 
       // Then
       assertThat(command.url()).isEqualTo(url);
-      assertThat(command.mode()).isEqualTo(MeshDescriptorImportMode.TRUNCATE_REIMPORT);
+      assertThat(command.mode()).isEqualTo(DataImportMode.TRUNCATE_REIMPORT);
     }
 
     @ParameterizedTest
@@ -67,9 +70,7 @@ class MeshDescriptorImportCommandTest {
     void blankUrl_shouldThrowException(String url) {
       // When & Then
       assertThatThrownBy(
-              () ->
-                  new MeshDescriptorImportCommand(
-                      url, "2025", MeshDescriptorImportMode.INCREMENTAL))
+              () -> new MeshDescriptorImportCommand(url, "2025", DataImportMode.INCREMENTAL))
           .isInstanceOf(CatalogScheduleParameterException.class)
           .hasMessageContaining("url");
     }
@@ -87,9 +88,7 @@ class MeshDescriptorImportCommandTest {
     void nonHttpProtocol_shouldThrowException(String url) {
       // When & Then
       assertThatThrownBy(
-              () ->
-                  new MeshDescriptorImportCommand(
-                      url, "2025", MeshDescriptorImportMode.INCREMENTAL))
+              () -> new MeshDescriptorImportCommand(url, "2025", DataImportMode.INCREMENTAL))
           .isInstanceOf(CatalogScheduleParameterException.class)
           .hasMessageContaining("HTTP");
     }
@@ -102,9 +101,7 @@ class MeshDescriptorImportCommandTest {
 
       // When & Then
       assertThatThrownBy(
-              () ->
-                  new MeshDescriptorImportCommand(
-                      invalidUrl, "2025", MeshDescriptorImportMode.INCREMENTAL))
+              () -> new MeshDescriptorImportCommand(invalidUrl, "2025", DataImportMode.INCREMENTAL))
           .isInstanceOf(CatalogScheduleParameterException.class)
           .hasMessageContaining("url");
     }
@@ -123,9 +120,7 @@ class MeshDescriptorImportCommandTest {
       assertThatThrownBy(
               () ->
                   new MeshDescriptorImportCommand(
-                      "https://example.com/mesh.xml",
-                      meshVersion,
-                      MeshDescriptorImportMode.INCREMENTAL))
+                      "https://example.com/mesh.xml", meshVersion, DataImportMode.INCREMENTAL))
           .isInstanceOf(CatalogScheduleParameterException.class)
           .hasMessageContaining("meshVersion");
     }
@@ -165,7 +160,7 @@ class MeshDescriptorImportCommandTest {
       // Then
       assertThat(command.url()).isEqualTo(url);
       assertThat(command.meshVersion()).isEqualTo(meshVersion);
-      assertThat(command.mode()).isEqualTo(MeshDescriptorImportMode.INCREMENTAL);
+      assertThat(command.mode()).isEqualTo(DataImportMode.INCREMENTAL);
     }
 
     @Test
@@ -177,7 +172,7 @@ class MeshDescriptorImportCommandTest {
               "https://example.com/mesh.xml", "2025", "truncate_reimport");
 
       // Then
-      assertThat(command.mode()).isEqualTo(MeshDescriptorImportMode.TRUNCATE_REIMPORT);
+      assertThat(command.mode()).isEqualTo(DataImportMode.TRUNCATE_REIMPORT);
     }
 
     @ParameterizedTest

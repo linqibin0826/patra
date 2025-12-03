@@ -1,6 +1,6 @@
 package com.patra.catalog.app.usecase.mesh.dto;
 
-import com.patra.catalog.domain.model.enums.MeshDescriptorImportMode;
+import com.patra.catalog.domain.model.enums.DataImportMode;
 
 /// MeSH 主题词导入结果（Application → Adapter）。
 ///
@@ -19,7 +19,7 @@ public record MeshDescriptorImportResult(
     String sourceUrl,
     String filePath,
     String meshVersion,
-    MeshDescriptorImportMode mode,
+    DataImportMode mode,
     String message) {
 
   /// 创建成功结果。
@@ -35,7 +35,7 @@ public record MeshDescriptorImportResult(
       String sourceUrl,
       String filePath,
       String meshVersion,
-      MeshDescriptorImportMode mode) {
+      DataImportMode mode) {
     return new MeshDescriptorImportResult(
         executionId,
         sourceUrl,
