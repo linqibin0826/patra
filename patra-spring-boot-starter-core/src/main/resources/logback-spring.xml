@@ -59,7 +59,7 @@
     </root>
 
     <!-- Application Logger: DEBUG level (only for com.patra.* classes) -->
-    <logger name="com.patra" level="DEBUG" additivity="false">
+    <logger name="com.patra" level="INFO" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
     </logger>
