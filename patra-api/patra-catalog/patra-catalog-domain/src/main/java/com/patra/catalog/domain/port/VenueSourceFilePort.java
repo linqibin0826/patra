@@ -8,12 +8,16 @@ import java.util.List;
 /// OpenAlex Venue 数据源文件端口。
 ///
 /// 负责获取 OpenAlex Sources 数据文件（manifest 和 JSON Lines 分区文件）到本地临时目录。
-/// 实现可决定从对象存储缓存或 AWS S3 公开存储桶获取。
+///
+/// **缓存策略**：
+///
+/// - **Manifest**：始终从远程获取（动态索引文件，需要实时性以发现新分区）
+/// - **分区文件**：缓存优先（静态内容，一旦创建不变，缓存避免重复下载大文件）
 ///
 /// **设计原则**：
 ///
 /// - Domain 层定义接口，隐藏缓存策略实现细节
-/// - Infrastructure 层实现缓存优先策略（MinIO 缓存 → AWS S3 下载 → 异步上传缓存）
+/// - Infrastructure 层实现差异化缓存策略
 /// - 返回本地文件路径，调用方无需关心数据来源
 ///
 /// **与 MeshSourceFilePort 的差异**：
@@ -24,8 +28,9 @@ import java.util.List;
 ///
 /// **数据源格式**：
 ///
-/// - Manifest: `https://openalex.s3.amazonaws.com/data/sources/manifest`（JSON 格式）
-/// - 分区文件: `https://openalex.s3.amazonaws.com/data/sources/updated_date=YYYY-MM-DD/part_XXX.gz`
+/// - Manifest: `https://openalex.s3.amazonaws.com/data/sources/manifest`（JSON 格式，~1-5MB）
+/// - 分区文件: `https://openalex.s3.amazonaws.com/data/sources/updated_date=YYYY-MM-DD/part_XXX.gz`（数百
+// MB）
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -34,6 +39,9 @@ public interface VenueSourceFilePort {
   /// 获取 OpenAlex Sources manifest 文件。
   ///
   /// Manifest 文件包含所有分区文件的元数据（URL、大小、记录数）。
+  ///
+  /// **注意**：Manifest 始终从远程获取，不使用缓存。这是因为 manifest 是动态索引文件，
+  /// OpenAlex 会持续添加新的 `updated_date` 分区，缓存旧的 manifest 会导致看不到新数据。
   ///
   /// @return 解析后的 manifest 对象
   /// @throws FileDownloadException 获取 manifest 失败时

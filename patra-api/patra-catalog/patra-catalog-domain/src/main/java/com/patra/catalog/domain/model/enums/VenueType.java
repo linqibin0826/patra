@@ -16,6 +16,8 @@ import lombok.Getter;
 /// - **EBOOK_PLATFORM**：电子书托管平台（如 OAPEN、Project MUSE）
 /// - **BOOK_SERIES**：书系（如 Springer Lecture Notes）
 /// - **METADATA**：元数据聚合器（如 Crossref、DataCite）
+/// - **IGSN_CATALOG**：IGSN 地质样本目录（如 SESAR、Geoscience Australia）
+/// - **RAID_REGISTRY**：RAiD 研究活动标识符注册表
 /// - **OTHER**：其他类型（不适合以上分类的来源）
 ///
 /// 设计约束：
@@ -33,6 +35,7 @@ import lombok.Getter;
 ///
 /// // 从 OpenAlex type 转换
 /// VenueType type = VenueType.fromOpenAlexType("repository");
+/// VenueType type2 = VenueType.fromOpenAlexType("igsnCatalog");
 /// ```
 ///
 /// @author linqibin
@@ -58,19 +61,27 @@ public enum VenueType {
   /// 元数据聚合器（Metadata）
   METADATA("METADATA", "Metadata"),
 
+  /// IGSN 地质样本目录（IGSN Catalog）
+  IGSN_CATALOG("IGSN_CATALOG", "IGSN Catalog"),
+
+  /// RAiD 研究活动标识符注册表（RAiD Registry）
+  RAID_REGISTRY("RAID_REGISTRY", "RAiD Registry"),
+
   /// 其他类型
   OTHER("OTHER", "Other");
 
   /// OpenAlex type 到 VenueType 的映射表
   private static final Map<String, VenueType> OPENALEX_TYPE_MAP =
-      Map.of(
-          "journal", JOURNAL,
-          "repository", REPOSITORY,
-          "conference", CONFERENCE,
-          "ebook platform", EBOOK_PLATFORM,
-          "book series", BOOK_SERIES,
-          "metadata", METADATA,
-          "other", OTHER);
+      Map.ofEntries(
+          Map.entry("journal", JOURNAL),
+          Map.entry("repository", REPOSITORY),
+          Map.entry("conference", CONFERENCE),
+          Map.entry("ebook platform", EBOOK_PLATFORM),
+          Map.entry("book series", BOOK_SERIES),
+          Map.entry("metadata", METADATA),
+          Map.entry("igsncatalog", IGSN_CATALOG),
+          Map.entry("raidregistry", RAID_REGISTRY),
+          Map.entry("other", OTHER));
 
   /// 数据库存储的代码值（大写）
   private final String code;
@@ -104,17 +115,19 @@ public enum VenueType {
   /// OpenAlex 使用小写带空格的类型名（如 "ebook platform"），
   /// 此方法将其映射为对应的枚举值。
   ///
-  /// @param openAlexType OpenAlex 的 type 字段值（如 "journal", "ebook platform"）
-  /// @return 对应的 VenueType 枚举值
-  /// @throws IllegalArgumentException 如果类型值无效
+  /// **容错处理**：
+  /// - 空值或空白字符串 → 返回 `OTHER`
+  /// - 未知类型 → 返回 `OTHER`（OpenAlex 可能新增未文档化的类型）
+  ///
+  /// @param openAlexType OpenAlex 的 type 字段值（如 "journal", "ebook platform"），可为 null
+  /// @return 对应的 VenueType 枚举值，无法识别时返回 OTHER
   public static VenueType fromOpenAlexType(String openAlexType) {
-    Assert.notBlank(openAlexType, "OpenAlex 类型不能为空");
+    if (openAlexType == null || openAlexType.isBlank()) {
+      return OTHER;
+    }
     String normalized = openAlexType.trim().toLowerCase();
     VenueType type = OPENALEX_TYPE_MAP.get(normalized);
-    if (type == null) {
-      throw new IllegalArgumentException("未知的 OpenAlex 载体类型：" + openAlexType);
-    }
-    return type;
+    return type != null ? type : OTHER;
   }
 
   /// 判断是否为期刊。

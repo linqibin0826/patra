@@ -77,7 +77,7 @@ public class VenueIdentifier implements Serializable {
 
     // ISSN 格式验证
     if (type.isIssn()) {
-      Assert.isTrue(value.matches(ISSN_PATTERN), "ISSN 格式无效，必须符合 'XXXX-XXXX' 格式：%s", value);
+      Assert.isTrue(value.matches(ISSN_PATTERN), "ISSN 格式无效，必须符合 'XXXX-XXXX' 格式：{}", value);
       // 标准化为大写（X 可能是小写）
       value = value.toUpperCase();
     }
