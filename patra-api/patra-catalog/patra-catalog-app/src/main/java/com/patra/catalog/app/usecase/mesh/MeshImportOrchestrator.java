@@ -6,7 +6,7 @@ import com.patra.catalog.app.usecase.mesh.command.MeshQualifierImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
-import com.patra.catalog.domain.model.enums.MeshDescriptorImportMode;
+import com.patra.catalog.domain.model.enums.DataImportMode;
 import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
 import com.patra.catalog.domain.port.MeshDescriptorBatchPort;
 import com.patra.catalog.domain.port.MeshDescriptorRepository;
@@ -130,7 +130,7 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
     log.info("主题词文件已就绪：{}", localFile);
 
     // 2. 清空数据（如果是 TRUNCATE 模式）
-    if (command.mode() == MeshDescriptorImportMode.TRUNCATE_REIMPORT) {
+    if (command.mode() == DataImportMode.TRUNCATE_REIMPORT) {
       descriptorRepository.truncateAll();
       log.info("已清空所有旧数据");
     }
@@ -139,7 +139,7 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
     // 注意：文件由 Job Listener（MeshImportJobExecutionListener）在 Job 结束后清理，
     //      仅当 Job 启动失败时才在此处清理。
     try {
-      boolean forceNewInstance = (command.mode() == MeshDescriptorImportMode.TRUNCATE_REIMPORT);
+      boolean forceNewInstance = (command.mode() == DataImportMode.TRUNCATE_REIMPORT);
       MeshImportParams params =
           new MeshImportParams(localFile.toString(), command.meshVersion(), forceNewInstance, true);
       Long executionId = meshDescriptorBatchPort.launchImport(params);

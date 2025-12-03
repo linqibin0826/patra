@@ -2,7 +2,7 @@ package com.patra.catalog.app.usecase.mesh.command;
 
 import cn.hutool.core.text.CharSequenceUtil;
 import com.patra.catalog.domain.exception.CatalogScheduleParameterException;
-import com.patra.catalog.domain.model.enums.MeshDescriptorImportMode;
+import com.patra.catalog.domain.model.enums.DataImportMode;
 import java.net.URI;
 import java.util.Objects;
 
@@ -30,8 +30,7 @@ import java.util.Objects;
 /// @param mode 导入模式（必填）
 /// @author linqibin
 /// @since 0.1.0
-public record MeshDescriptorImportCommand(
-    String url, String meshVersion, MeshDescriptorImportMode mode) {
+public record MeshDescriptorImportCommand(String url, String meshVersion, DataImportMode mode) {
 
   /// 构造并验证命令参数。
   ///
@@ -59,7 +58,7 @@ public record MeshDescriptorImportCommand(
   /// @return 构建的命令对象
   /// @throws CatalogScheduleParameterException 当参数无效时
   public static MeshDescriptorImportCommand of(String url, String meshVersion, String modeStr) {
-    MeshDescriptorImportMode mode = parseMode(modeStr);
+    DataImportMode mode = parseMode(modeStr);
     return new MeshDescriptorImportCommand(url, meshVersion, mode);
   }
 
@@ -77,12 +76,12 @@ public record MeshDescriptorImportCommand(
   }
 
   /// 解析导入模式枚举。
-  private static MeshDescriptorImportMode parseMode(String modeStr) {
+  private static DataImportMode parseMode(String modeStr) {
     if (CharSequenceUtil.isBlank(modeStr)) {
       throw new CatalogScheduleParameterException("mode 参数不能为空");
     }
     try {
-      return MeshDescriptorImportMode.valueOf(modeStr.toUpperCase().trim());
+      return DataImportMode.valueOf(modeStr.toUpperCase().trim());
     } catch (IllegalArgumentException ex) {
       throw new CatalogScheduleParameterException(
           "非法的导入模式值：" + modeStr + "，有效值：INCREMENTAL, TRUNCATE_REIMPORT", ex);

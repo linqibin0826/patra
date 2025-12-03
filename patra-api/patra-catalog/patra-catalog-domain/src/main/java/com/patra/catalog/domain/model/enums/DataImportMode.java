@@ -1,8 +1,8 @@
 package com.patra.catalog.domain.model.enums;
 
-/// MeSH 主题词导入模式枚举。
+/// 通用数据导入模式枚举。
 ///
-/// 定义批量导入主题词时的两种执行策略：
+/// 定义批量数据导入时的两种执行策略，适用于 MeSH 主题词导入、OpenAlex 期刊导入等场景：
 ///
 /// - **INCREMENTAL**：增量导入，幂等执行，支持断点续传
 /// - **TRUNCATE_REIMPORT**：清空重导入，先清空所有数据再重新导入
@@ -14,7 +14,7 @@ package com.patra.catalog.domain.model.enums;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public enum MeshDescriptorImportMode {
+public enum DataImportMode {
 
   /// 增量导入模式：幂等执行，支持断点续传。
   ///
