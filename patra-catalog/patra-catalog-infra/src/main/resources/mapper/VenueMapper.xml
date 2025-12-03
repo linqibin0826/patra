@@ -3,4 +3,9 @@
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.patra.catalog.infra.persistence.mapper.VenueMapper">
 
+  <!-- 清空表（DDL 操作，会隐式提交事务） -->
+  <update id="truncateTable">
+    TRUNCATE TABLE cat_venue
+  </update>
+
 </mapper>

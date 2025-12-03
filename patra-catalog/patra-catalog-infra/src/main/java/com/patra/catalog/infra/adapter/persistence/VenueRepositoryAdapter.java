@@ -82,6 +82,16 @@ public class VenueRepositoryAdapter implements VenueRepository {
   // ========================================
 
   @Override
+  public void truncateAll() {
+    // 先清空子表（避免外键约束错误）
+    venueIdentifierMapper.truncateTable();
+    venueMetricsMapper.truncateTable();
+    // 再清空主表
+    venueMapper.truncateTable();
+    log.info("已清空所有载体相关数据（主表 + 子表）");
+  }
+
+  @Override
   public List<VenueData> saveAll(List<VenueData> venues) {
     List<VenueDO> entities = venueConverter.toVenueDOList(venues);
 

@@ -1,0 +1,252 @@
+package com.patra.catalog.infra.batch.openalex;
+
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.patra.catalog.domain.model.aggregate.VenueAggregate;
+import com.patra.catalog.domain.model.entity.VenueMetrics;
+import com.patra.catalog.domain.model.enums.VenueIdentifierType;
+import com.patra.catalog.domain.model.enums.VenueType;
+import com.patra.catalog.domain.model.vo.venue.ApcInfo;
+import com.patra.catalog.domain.model.vo.venue.HostOrganization;
+import com.patra.catalog.domain.model.vo.venue.Society;
+import com.patra.catalog.domain.model.vo.venue.VenueStats;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.stream.Stream;
+import java.util.zip.GZIPInputStream;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+/// OpenAlex Sources JSON Lines 解析器。
+///
+/// 从 .gz 压缩的 JSON Lines 文件解析 OpenAlex Sources 数据，
+/// 并转换为 `VenueAggregate` 领域对象。
+///
+/// **数据格式**：
+///
+/// - 输入：.gz 压缩的 JSON Lines 文件（每行一个 JSON 对象）
+/// - 输出：`Stream<VenueAggregate>` 流式处理
+///
+/// **转换规则**：
+///
+/// - `id` → 提取后缀作为 `openalexId`
+/// - `type` → 通过 `VenueType.fromOpenAlexType()` 转换
+/// - `summary_stats` → 转换为 `VenueStats`
+/// - `counts_by_year` → 转换为 `VenueMetrics` 列表
+/// - `apc_prices` + `apc_usd` → 转换为 `ApcInfo`
+/// - `societies` → 转换为 `Society` 列表
+/// - `host_organization*` → 转换为 `HostOrganization`
+///
+/// @author linqibin
+/// @since 0.1.0
+@Slf4j
+@Component
+public class OpenAlexSourceParser {
+
+  private final ObjectMapper objectMapper;
+
+  /// 创建解析器实例。
+  public OpenAlexSourceParser() {
+    this.objectMapper =
+        new ObjectMapper()
+            .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+  }
+
+  /// 解析 .gz 压缩的 JSON Lines 输入流。
+  ///
+  /// **注意**：返回的 Stream 在使用完毕后需要关闭以释放资源。
+  ///
+  /// @param gzipInputStream .gz 压缩的输入流
+  /// @return VenueAggregate 流
+  /// @throws IOException 读取或解析失败时
+  public Stream<VenueAggregate> parse(InputStream gzipInputStream) throws IOException {
+    GZIPInputStream gzis = new GZIPInputStream(gzipInputStream);
+    BufferedReader reader = new BufferedReader(new InputStreamReader(gzis, StandardCharsets.UTF_8));
+
+    return reader
+        .lines()
+        .filter(line -> line != null && !line.isBlank())
+        .map(this::parseLine)
+        .filter(record -> record != null)
+        .map(this::toVenueAggregate)
+        .onClose(
+            () -> {
+              try {
+                reader.close();
+              } catch (IOException e) {
+                log.warn("关闭 reader 失败", e);
+              }
+            });
+  }
+
+  /// 解析单行 JSON。
+  ///
+  /// @param line JSON 行
+  /// @return 解析的记录，解析失败时返回 null
+  private OpenAlexSourceRecord parseLine(String line) {
+    try {
+      return objectMapper.readValue(line, OpenAlexSourceRecord.class);
+    } catch (Exception e) {
+      log.warn(
+          "解析 JSON 行失败：{}，错误：{}", line.substring(0, Math.min(100, line.length())), e.getMessage());
+      return null;
+    }
+  }
+
+  /// 将 OpenAlexSourceRecord 转换为 VenueAggregate。
+  ///
+  /// @param record OpenAlex 源记录
+  /// @return VenueAggregate 领域对象
+  VenueAggregate toVenueAggregate(OpenAlexSourceRecord record) {
+    // 1. 提取基础字段
+    String openalexId = record.extractOpenAlexId();
+    VenueType venueType = VenueType.fromOpenAlexType(record.type());
+
+    // 2. 创建聚合根
+    VenueAggregate aggregate =
+        VenueAggregate.fromOpenAlex(openalexId, venueType, record.displayName());
+
+    // 3. 设置基础字段
+    aggregate
+        .withIssnL(record.issnL())
+        .withHomepageUrl(record.homepageUrl())
+        .withCountryCode(record.countryCode())
+        .withOaStatus(
+            record.isOa() != null ? record.isOa() : false,
+            record.isInDoaj() != null ? record.isInDoaj() : false,
+            false) // isCore 不来自 OpenAlex
+        .withAbbreviatedTitle(record.abbreviatedTitle())
+        .withAlternateTitles(record.alternateTitles());
+
+    // 4. 设置宿主机构
+    if (record.hostOrganization() != null && record.hostOrganizationName() != null) {
+      String hostId = extractOpenAlexId(record.hostOrganization());
+      HostOrganization host =
+          HostOrganization.of(
+              hostId, record.hostOrganizationName(), record.hostOrganizationLineage());
+      aggregate.withHostOrganization(host);
+    }
+
+    // 5. 设置统计快照
+    VenueStats stats = buildVenueStats(record);
+    if (stats != null) {
+      aggregate.withCurrentStats(stats);
+    }
+
+    // 6. 设置 APC 信息
+    ApcInfo apcInfo = buildApcInfo(record);
+    if (apcInfo != null) {
+      aggregate.withApcInfo(apcInfo);
+    }
+
+    // 7. 设置学会列表
+    List<Society> societies = buildSocieties(record);
+    if (societies != null && !societies.isEmpty()) {
+      aggregate.withSocieties(societies);
+    }
+
+    // 8. 设置年度指标
+    List<VenueMetrics> metrics = buildYearlyMetrics(record);
+    if (metrics != null && !metrics.isEmpty()) {
+      aggregate.setYearlyMetrics(metrics);
+    }
+
+    // 9. 添加 ISSN 标识符
+    addIssnIdentifiers(aggregate, record);
+
+    return aggregate;
+  }
+
+  /// 构建统计快照。
+  private VenueStats buildVenueStats(OpenAlexSourceRecord record) {
+    Integer hIndex = null;
+    Integer i10Index = null;
+    BigDecimal twoYrMeanCitedness = null;
+
+    if (record.summaryStats() != null) {
+      hIndex = record.summaryStats().hIndex();
+      i10Index = record.summaryStats().i10Index();
+      if (record.summaryStats().twoYrMeanCitedness() != null) {
+        twoYrMeanCitedness = BigDecimal.valueOf(record.summaryStats().twoYrMeanCitedness());
+      }
+    }
+
+    if (record.worksCount() != null || record.citedByCount() != null) {
+      return VenueStats.of(
+          record.worksCount(), record.citedByCount(), hIndex, i10Index, twoYrMeanCitedness);
+    }
+
+    return null;
+  }
+
+  /// 构建 APC 信息。
+  private ApcInfo buildApcInfo(OpenAlexSourceRecord record) {
+    if (record.apcUsd() == null && (record.apcPrices() == null || record.apcPrices().isEmpty())) {
+      return null;
+    }
+
+    List<ApcInfo.ApcPrice> prices =
+        record.apcPrices() != null
+            ? record.apcPrices().stream()
+                .map(p -> ApcInfo.ApcPrice.of(p.price(), p.currency()))
+                .toList()
+            : List.of();
+
+    return ApcInfo.of(record.apcUsd(), prices);
+  }
+
+  /// 构建学会列表。
+  private List<Society> buildSocieties(OpenAlexSourceRecord record) {
+    if (record.societies() == null || record.societies().isEmpty()) {
+      return null;
+    }
+
+    return record.societies().stream()
+        .filter(s -> s.organization() != null && !s.organization().isBlank())
+        .map(s -> Society.of(s.url(), s.organization()))
+        .toList();
+  }
+
+  /// 构建年度指标列表。
+  private List<VenueMetrics> buildYearlyMetrics(OpenAlexSourceRecord record) {
+    if (record.countsByYear() == null || record.countsByYear().isEmpty()) {
+      return null;
+    }
+
+    return record.countsByYear().stream()
+        .filter(c -> c.year() != null)
+        .map(
+            c ->
+                VenueMetrics.create(
+                    c.year(),
+                    c.worksCount() != null ? c.worksCount() : 0,
+                    c.citedByCount() != null ? c.citedByCount() : 0))
+        .toList();
+  }
+
+  /// 添加 ISSN 标识符。
+  private void addIssnIdentifiers(VenueAggregate aggregate, OpenAlexSourceRecord record) {
+    if (record.issn() != null) {
+      for (String issn : record.issn()) {
+        if (issn != null && !issn.isBlank()) {
+          aggregate.addIdentifier(VenueIdentifierType.ISSN, issn, issn.equals(record.issnL()));
+        }
+      }
+    }
+  }
+
+  /// 从 OpenAlex URL 提取 ID 后缀。
+  private String extractOpenAlexId(String url) {
+    if (url == null) {
+      return null;
+    }
+    return url.replace("https://openalex.org/", "");
+  }
+}
