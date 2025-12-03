@@ -90,7 +90,7 @@ class OpenAlexCachePropertiesTest {
   class CacheKeyTest {
 
     @Test
-    @DisplayName("getCacheKey() - 应该返回正确的缓存键")
+    @DisplayName("getCacheKey() - 应该返回正确的分区文件缓存键")
     void getCacheKey_shouldReturnCorrectKey() {
       // Given
       OpenAlexCacheProperties props = new OpenAlexCacheProperties(true, null, null, null, null);
@@ -100,19 +100,6 @@ class OpenAlexCachePropertiesTest {
 
       // Then
       assertThat(key).isEqualTo("openalex/sources/updated_date=2025-11-02/part_000.gz");
-    }
-
-    @Test
-    @DisplayName("getManifestCacheKey() - 应该返回正确的 manifest 缓存键")
-    void getManifestCacheKey_shouldReturnCorrectKey() {
-      // Given
-      OpenAlexCacheProperties props = new OpenAlexCacheProperties(true, null, null, null, null);
-
-      // When
-      String key = props.getManifestCacheKey();
-
-      // Then
-      assertThat(key).isEqualTo("openalex/sources/manifest");
     }
   }
 }

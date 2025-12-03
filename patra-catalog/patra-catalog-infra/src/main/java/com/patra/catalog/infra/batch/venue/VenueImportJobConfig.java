@@ -4,11 +4,15 @@ import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.infra.batch.openalex.OpenAlexSourceParser;
 import com.patra.starter.batch.config.BatchProperties;
 import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.core.ItemProcessListener;
+import org.springframework.batch.core.ItemReadListener;
+import org.springframework.batch.core.ItemWriteListener;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.StepScope;
@@ -57,6 +61,7 @@ public class VenueImportJobConfig {
   private final VenueImportItemWriter venueImportItemWriter;
   private final BatchProperties batchProperties;
   private final BatchProgressMetricsListener batchProgressMetricsListener;
+  private final VenueImportErrorListener venueImportErrorListener;
 
   /// 构造函数。
   ///
@@ -66,19 +71,22 @@ public class VenueImportJobConfig {
   /// @param venueImportItemWriter Item 写入器
   /// @param batchProperties 批处理属性
   /// @param batchProgressMetricsListener 进度指标监听器（可选，需要 MeterRegistry）
+  /// @param venueImportErrorListener 错误日志监听器
   public VenueImportJobConfig(
       JobRepository jobRepository,
       PlatformTransactionManager transactionManager,
       OpenAlexSourceParser openAlexSourceParser,
       VenueImportItemWriter venueImportItemWriter,
       BatchProperties batchProperties,
-      Optional<BatchProgressMetricsListener> batchProgressMetricsListener) {
+      Optional<BatchProgressMetricsListener> batchProgressMetricsListener,
+      VenueImportErrorListener venueImportErrorListener) {
     this.jobRepository = jobRepository;
     this.transactionManager = transactionManager;
     this.openAlexSourceParser = openAlexSourceParser;
     this.venueImportItemWriter = venueImportItemWriter;
     this.batchProperties = batchProperties;
     this.batchProgressMetricsListener = batchProgressMetricsListener.orElse(null);
+    this.venueImportErrorListener = venueImportErrorListener;
   }
 
   /// 配置 Venue 导入 Job。
@@ -103,6 +111,13 @@ public class VenueImportJobConfig {
             .reader(venueImportItemReader(null))
             .writer(venueImportItemWriter);
 
+    // 注册错误日志监听器（需要分别注册三个接口，避免方法重载歧义）
+    stepBuilder.listener((ItemReadListener<VenueAggregate>) venueImportErrorListener);
+    stepBuilder.listener(
+        (ItemProcessListener<VenueAggregate, VenueAggregate>) venueImportErrorListener);
+    stepBuilder.listener((ItemWriteListener<VenueAggregate>) venueImportErrorListener);
+    log.info("已注册 VenueImportErrorListener（读取/处理/写入错误监听）");
+
     // 仅在指标监听器存在时注册（需要 MeterRegistry）
     if (batchProgressMetricsListener != null) {
       stepBuilder.listener(batchProgressMetricsListener);
@@ -122,7 +137,7 @@ public class VenueImportJobConfig {
   @StepScope
   public VenueImportItemReader venueImportItemReader(
       @Value("#{jobParameters['filePaths']}") String filePaths) {
-    List<java.nio.file.Path> paths = parseFilePaths(filePaths);
+    List<Path> paths = parseFilePaths(filePaths);
     log.debug("创建 VenueImportItemReader，文件数量: {}", paths.size());
     return new VenueImportItemReader(openAlexSourceParser, paths);
   }
@@ -131,14 +146,14 @@ public class VenueImportJobConfig {
   ///
   /// @param filePaths 逗号分隔的路径字符串
   /// @return Path 列表
-  private List<java.nio.file.Path> parseFilePaths(String filePaths) {
+  private List<Path> parseFilePaths(String filePaths) {
     if (filePaths == null || filePaths.isBlank()) {
       return List.of();
     }
     return Arrays.stream(filePaths.split(","))
         .map(String::trim)
         .filter(s -> !s.isEmpty())
-        .map(java.nio.file.Path::of)
+        .map(Path::of)
         .collect(Collectors.toList());
   }
 

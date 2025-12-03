@@ -77,18 +77,11 @@ public record OpenAlexCacheProperties(
     return s3BaseUrl + "/" + s3SourcesPath + "/" + relativePath;
   }
 
-  /// 获取缓存键。
+  /// 获取分区文件缓存键。
   ///
   /// @param relativePath 相对路径（如 `updated_date=2025-11-02/part_000.gz`）
   /// @return 缓存对象键（如 `openalex/sources/updated_date=2025-11-02/part_000.gz`）
   public String getCacheKey(String relativePath) {
     return keyPrefix + "/" + relativePath;
-  }
-
-  /// 获取 manifest 缓存键。
-  ///
-  /// @return manifest 缓存键（如 `openalex/sources/manifest`）
-  public String getManifestCacheKey() {
-    return keyPrefix + "/manifest";
   }
 }

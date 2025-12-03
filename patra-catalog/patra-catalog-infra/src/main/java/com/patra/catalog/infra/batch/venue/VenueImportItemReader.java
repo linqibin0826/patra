@@ -50,7 +50,7 @@ public class VenueImportItemReader implements ItemStreamReader<VenueAggregate> {
   private static final String LINE_INDEX_KEY = "venue.import.line.index";
 
   /// 进度日志输出间隔（每处理多少条记录输出一次）。
-  private static final int PROGRESS_LOG_INTERVAL = 10000;
+  private static final int PROGRESS_LOG_INTERVAL = 2000;
 
   private final OpenAlexSourceParser parser;
   private final List<Path> filePaths;

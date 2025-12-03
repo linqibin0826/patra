@@ -44,13 +44,18 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 ///
 /// - 使用 CatalogMinIOContainerInitializer 启动 MinIO 容器（JVM 级别复用）
 /// - 使用 WireMock 模拟 OpenAlex S3 公开存储桶
-/// - 验证缓存优先策略的完整流程
+/// - 验证差异化缓存策略
+///
+/// **缓存策略**：
+///
+/// - **Manifest**：始终从远程获取（动态索引文件，需要实时性）
+/// - **分区文件**：缓存优先（静态内容，缓存避免重复下载）
 ///
 /// **测试场景**：
 ///
-/// 1. 缓存禁用时直接从远程下载
-/// 2. 缓存未命中时从远程下载并异步上传到缓存
-/// 3. 缓存命中时从对象存储下载
+/// 1. Manifest 始终从远程下载（无论缓存是否启用）
+/// 2. 分区文件缓存未命中时从远程下载并异步上传到缓存
+/// 3. 分区文件缓存命中时从对象存储下载
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -187,8 +192,8 @@ class VenueSourceFileAdapterIT {
     }
 
     @Test
-    @DisplayName("缓存禁用时应直接从远程下载 manifest")
-    void fetchManifest_cacheDisabled_shouldDownloadFromRemote() {
+    @DisplayName("manifest 应始终从远程下载（即使缓存禁用）")
+    void fetchManifest_shouldAlwaysDownloadFromRemote() {
       // Given - WireMock 模拟 OpenAlex S3 响应
       wireMock.stubFor(
           get("/data/sources/manifest")
@@ -288,12 +293,9 @@ class VenueSourceFileAdapterIT {
     }
 
     @Test
-    @DisplayName("缓存未命中时应从远程下载 manifest 并异步上传到缓存")
-    void fetchManifest_cacheMiss_shouldDownloadAndUploadToCache() {
-      // Given - 确保缓存中不存在 manifest
-      String manifestCacheKey = TEST_KEY_PREFIX + "/manifest";
-      // 注意：manifest 在测试之间可能已被缓存，这里测试主要验证流程
-
+    @DisplayName("manifest 始终从远程下载，不使用缓存")
+    void fetchManifest_shouldAlwaysDownloadFromRemote_evenWhenCacheEnabled() {
+      // Given - 即使缓存启用，manifest 也应该从远程获取
       wireMock.stubFor(
           get("/data/sources/manifest")
               .willReturn(
@@ -305,18 +307,12 @@ class VenueSourceFileAdapterIT {
       // When
       OpenAlexManifest manifest = adapter.fetchManifest();
 
-      // Then
+      // Then - 验证 manifest 解析正确
       assertThat(manifest).isNotNull();
       assertThat(manifest.entries()).hasSize(1);
 
-      // Then - 等待异步上传完成
-      await()
-          .atMost(Duration.ofSeconds(5))
-          .pollInterval(Duration.ofMillis(200))
-          .untilAsserted(
-              () -> {
-                assertThat(objectStorage.exists(TEST_BUCKET, manifestCacheKey)).isTrue();
-              });
+      // Then - 验证请求到达远程服务器（每次调用都应该访问远程）
+      wireMock.verify(1, getRequestedFor(urlEqualTo("/data/sources/manifest")));
     }
   }
 
