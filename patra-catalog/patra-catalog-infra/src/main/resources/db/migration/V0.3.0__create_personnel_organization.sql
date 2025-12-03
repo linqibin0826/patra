@@ -24,7 +24,7 @@
 -- ============================================================
 -- 执行说明
 -- ============================================================
--- 1. 确保 MySQL 版本 >= 8.0（需要 CHECK 约束和部分唯一索引支持）
+-- 1. 确保 MySQL 版本 >= 8.0（需要部分唯一索引支持）
 -- 2. 前置依赖: cat_publication 和 cat_author 表必须已存在
 -- 3. 按顺序执行表创建（考虑依赖关系）
 -- 4. 建议在测试环境先验证，再在生产环境执行
@@ -224,16 +224,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_author` (
     INDEX `idx_publication` (`publication_id`) COMMENT '出版物索引,支持查询某文献的所有作者(高频)',
     INDEX `idx_author` (`author_id`) COMMENT '作者索引,支持查询某作者的所有文献(高频)',
     INDEX `idx_first_author` (`is_first_author`) COMMENT '第一作者索引,支持筛选第一作者文献(学术评价重要指标)',
-    INDEX `idx_corresponding` (`is_corresponding_author`) COMMENT '通讯作者索引,支持筛选通讯作者文献(联系查询)',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_author_order` CHECK (`author_order` > 0),
-    CONSTRAINT `chk_first_author_consistency` CHECK (
-        (`author_order` = 1 AND `is_first_author` = 1) OR
-        (`author_order` > 1)
-    )
+    INDEX `idx_corresponding` (`is_corresponding_author`) COMMENT '通讯作者索引,支持筛选通讯作者文献(联系查询)'
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='文献-作者关联表:管理作者顺序和角色';
@@ -295,13 +286,7 @@ CREATE TABLE IF NOT EXISTS `cat_author_affiliation` (
     INDEX `idx_publication` (`publication_id`) COMMENT '文献索引,支持查询某文献的作者机构(高频)',
 
     -- 复合索引
-    INDEX `idx_author_primary` (`author_id`, `is_primary`) COMMENT '作者+主要机构复合索引,支持快速查询作者的主要机构',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_date_range` CHECK (`end_date` IS NULL OR `start_date` IS NULL OR `end_date` >= `start_date`)
-
+    INDEX `idx_author_primary` (`author_id`, `is_primary`) COMMENT '作者+主要机构复合索引,支持快速查询作者的主要机构'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='作者-机构关联表:支持时间维度追踪和文献上下文';
 

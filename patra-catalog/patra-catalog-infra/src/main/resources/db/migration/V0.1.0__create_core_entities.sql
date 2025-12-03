@@ -29,7 +29,7 @@
 -- ============================================================
 -- 执行说明
 -- ============================================================
--- 1. 确保 MySQL 版本 >= 8.0（需要 CHECK 约束和生成列支持）
+-- 1. 确保 MySQL 版本 >= 8.0（需要生成列支持）
 -- 2. 按顺序执行表创建（考虑外键依赖）
 -- 3. 全文索引需要在表创建后单独执行
 -- 4. 建议在测试环境先验证，再在生产环境执行
@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
     `display_name` VARCHAR(500) NOT NULL COMMENT '载体显示名称(主名称)',
     `abbreviated_title` VARCHAR(200) NULL DEFAULT NULL COMMENT '缩写标题(来自ISSN中心或ISO)',
     `alternate_titles` JSON NULL DEFAULT NULL COMMENT '替代名称列表(JSON数组,包含缩写和翻译名)',
-    `homepage_url` VARCHAR(500) NULL DEFAULT NULL COMMENT '载体主页URL',
+    `homepage_url` TEXT NULL DEFAULT NULL COMMENT '载体主页URL',
 
     -- ========================================
     -- 冗余标识符 (高频查询优化)
@@ -154,12 +154,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
     INDEX `idx_country` (`country_code`) COMMENT '国家代码索引',
     INDEX `idx_is_oa` (`is_oa`) COMMENT 'OA状态索引',
     INDEX `idx_is_in_doaj` (`is_in_doaj`) COMMENT 'DOAJ收录索引',
-    INDEX `idx_provenance` (`provenance_code`) COMMENT '数据来源索引',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_venue_type` CHECK (`venue_type` IN ('JOURNAL', 'REPOSITORY', 'CONFERENCE', 'EBOOK_PLATFORM', 'BOOK_SERIES', 'METADATA', 'OTHER'))
+    INDEX `idx_provenance` (`provenance_code`) COMMENT '数据来源索引'
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='出版载体表:管理期刊/仓库/会议/电子书平台等出版载体,支持OpenAlex和PubMed数据';
@@ -226,12 +221,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue_identifier` (
     INDEX `idx_type_value` (`identifier_type`, `identifier_value`) COMMENT '类型+值索引,支持按标识符反查载体',
 
     -- 普通索引
-    INDEX `idx_venue_id` (`venue_id`) COMMENT '载体索引,支持查询载体的所有标识符',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_venue_identifier_type` CHECK (`identifier_type` IN ('OPENALEX', 'ISSN', 'ISSN_L', 'ISBN', 'NLM', 'MAG', 'FATCAT', 'WIKIDATA'))
+    INDEX `idx_venue_id` (`venue_id`) COMMENT '载体索引,支持查询载体的所有标识符'
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='载体标识符表:存储载体的各类标识符,支持一对多关系';
@@ -293,12 +283,9 @@ CREATE TABLE IF NOT EXISTS `cat_venue_metrics` (
     -- 普通索引
     INDEX `idx_year` (`year`) COMMENT '年份索引,支持按年份统计',
     INDEX `idx_works_count` (`works_count`) COMMENT '发文量索引,支持排序',
-    INDEX `idx_cited_by_count` (`cited_by_count`) COMMENT '被引量索引,支持排序',
+    INDEX `idx_cited_by_count` (`cited_by_count`) COMMENT '被引量索引,支持排序'
 
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_metrics_year` CHECK (`year` BETWEEN 1900 AND 2100)
+    -- 年份约束由领域层 VenueMetrics 实体负责校验
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='载体指标表:存储载体年度统计数据,支持时序分析';
@@ -361,13 +348,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue_instance` (
     INDEX `idx_publication_year` (`publication_year`) COMMENT '出版年份索引,支持按年份筛选',
 
     -- 复合索引
-    INDEX `idx_venue_volume_issue` (`venue_id`, `volume`, `issue`) COMMENT '载体+卷+期复合索引,支持精确定位某期刊某卷某期',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_publication_month` CHECK (`publication_month` BETWEEN 1 AND 12 OR `publication_month` IS NULL),
-    CONSTRAINT `chk_publication_day` CHECK (`publication_day` BETWEEN 1 AND 31 OR `publication_day` IS NULL)
+    INDEX `idx_venue_volume_issue` (`venue_id`, `volume`, `issue`) COMMENT '载体+卷+期复合索引,支持精确定位某期刊某卷某期'
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='载体实例表:存储期刊卷期/书籍版次/会议届次等具体实例';
@@ -469,14 +450,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication` (
     INDEX `idx_is_oa` (`is_oa`) COMMENT 'OA状态索引,支持快速筛选开放获取文献',
 
     -- 复合索引（软删除 + 更新时间）
-    INDEX `idx_deleted_updated` (`deleted`, `updated_at`) COMMENT '软删除和更新时间复合索引,支持查询"未删除的最新更新记录"',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_publication_status` CHECK (`publication_status` IN ('ppublish', 'epublish', 'aheadofprint', 'pubmed', 'pubmednotmedline', 'premedline') OR `publication_status` IS NULL),
-    CONSTRAINT `chk_media_type` CHECK (`media_type` IN ('print', 'electronic', 'both') OR `media_type` IS NULL),
-    CONSTRAINT `chk_publication_oa_status` CHECK (`oa_status` IN ('gold', 'green', 'hybrid', 'bronze', 'closed') OR `oa_status` IS NULL)
+    INDEX `idx_deleted_updated` (`deleted`, `updated_at`) COMMENT '软删除和更新时间复合索引,支持查询"未删除的最新更新记录"'
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='出版物主表:存储医学文献核心元数据,系统中心表';
@@ -657,12 +631,7 @@ CREATE TABLE IF NOT EXISTS `cat_abstract` (
     PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
 
     -- 唯一索引
-    UNIQUE INDEX `uk_publication` (`publication_id`) COMMENT '出版物ID唯一索引,保证一对一关系,支持高频查询摘要(<10ms)',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_abstract_type` CHECK (`abstract_type` IN ('structured', 'unstructured', 'graphical', 'none') OR `abstract_type` IS NULL)
+    UNIQUE INDEX `uk_publication` (`publication_id`) COMMENT '出版物ID唯一索引,保证一对一关系,支持高频查询摘要(<10ms)'
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='摘要表:独立存储文献摘要,优化主表性能';

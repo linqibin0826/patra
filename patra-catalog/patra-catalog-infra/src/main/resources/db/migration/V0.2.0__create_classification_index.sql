@@ -39,7 +39,7 @@
 -- ============================================================
 -- 执行说明
 -- ============================================================
--- 1. 确保 MySQL 版本 >= 8.0 (需要 CHECK 约束支持)
+-- 1. 确保 MySQL 版本 >= 8.0 ()
 -- 2. 按顺序执行表创建 (考虑依赖关系)
 -- 3. 全文索引需要在表创建后单独执行
 -- 4. 建议在测试环境先验证,再在生产环境执行
@@ -113,13 +113,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_descriptor` (
     INDEX `idx_name` (`name`) COMMENT '主题词名称索引,支持按名称查询',
 
     -- 复合索引
-    INDEX `idx_active_version` (`active_status`, `mesh_version`) COMMENT '有效状态+版本复合索引,筛选某版本的有效主题词',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_descriptor_class` CHECK (`descriptor_class` IN ('1', '2', '3', '4') OR `descriptor_class` IS NULL),
-    CONSTRAINT `chk_mesh_version` CHECK (`mesh_version` REGEXP '^[0-9]{4}$' OR `mesh_version` IS NULL)
+    INDEX `idx_active_version` (`active_status`, `mesh_version`) COMMENT '有效状态+版本复合索引,筛选某版本的有效主题词'
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='MeSH 主题词表:存储 NLM MeSH 主题词核心信息,医学文献标引权威词表';
@@ -182,13 +176,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_qualifier` (
     UNIQUE INDEX `uk_qualifier_ui` (`ui`) COMMENT '限定词 UI 唯一索引,支持精确查询(<5ms)',
 
     -- 普通索引
-    INDEX `idx_name` (`name`) COMMENT '限定词名称索引,支持按名称查询',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_qualifier_mesh_version` CHECK (`mesh_version` REGEXP '^[0-9]{4}$' OR `mesh_version` IS NULL)
-
+    INDEX `idx_name` (`name`) COMMENT '限定词名称索引,支持按名称查询'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='MeSH 限定词表:存储 MeSH 限定词,用于修饰主题词';
 
@@ -248,13 +236,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_tree_number` (
     INDEX `idx_tree_prefix` (`tree_number`(20)) COMMENT '树形编号前缀索引,支持层次查询(LIKE "D12.%")',
 
     -- 复合索引
-    INDEX `idx_tree_level` (`tree_level`, `descriptor_ui`) COMMENT '层级+主题词UI复合索引,支持按层级筛选',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_tree_level` CHECK (`tree_level` BETWEEN 1 AND 15)
-
+    INDEX `idx_tree_level` (`tree_level`, `descriptor_ui`) COMMENT '层级+主题词UI复合索引,支持按层级筛选'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='MeSH 树形编号表:存储主题词树形编号,支持多位置和层次查询';
 
@@ -317,14 +299,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_entry_term` (
 
     -- 普通索引
     INDEX `idx_descriptor_ui` (`descriptor_ui`) COMMENT '主题词UI索引,支持查询某主题词的所有入口术语',
-    INDEX `idx_concept_ui` (`concept_ui`) COMMENT '概念UI索引,支持按概念查询入口术语',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_lexical_tag` CHECK (`lexical_tag` IN ('NON', 'PEF', 'LAB', 'ABB', 'ACR', 'NAM', 'ABX', 'ACX', 'EPO', 'TRD', 'HIST') OR `lexical_tag` IS NULL),
-    CONSTRAINT `chk_record_preferred` CHECK (`record_preferred` IN ('Y', 'N') OR `record_preferred` IS NULL)
-
+    INDEX `idx_concept_ui` (`concept_ui`) COMMENT '概念UI索引,支持按概念查询入口术语'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='MeSH 入口术语表:存储主题词同义词和入口术语,支持模糊检索';
 
@@ -435,13 +410,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_concept_relation` (
 
     -- 普通索引
     INDEX `idx_descriptor_ui` (`descriptor_ui`) COMMENT '主题词UI索引,支持查询某主题词的所有概念关系',
-    INDEX `idx_concept` (`concept_ui`) COMMENT '概念索引,支持查询某概念的所有关系',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_relation_name` CHECK (`relation_name` IN ('NRW', 'BRD', 'REL') OR `relation_name` IS NULL)
-
+    INDEX `idx_concept` (`concept_ui`) COMMENT '概念索引,支持查询某概念的所有关系'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='MeSH 概念关系表:存储概念关系(ConceptRelationList),记录同一主题词内不同概念之间的语义关系';
 
@@ -550,13 +519,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_mesh` (
     INDEX `idx_major_topic` (`descriptor_ui`, `is_major_topic`) COMMENT '主题词UI+主/副主题复合索引,筛选主要主题文献',
 
     -- 普通索引
-    INDEX `idx_qualifier_ui` (`qualifier_ui`) COMMENT '限定词UI索引,支持按限定词筛选文献',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_indexing_method` CHECK (`indexing_method` IN ('Manual', 'Automatic', 'Hybrid') OR `indexing_method` IS NULL)
-
+    INDEX `idx_qualifier_ui` (`qualifier_ui`) COMMENT '限定词UI索引,支持按限定词筛选文献'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='文献-MeSH 关联表:存储文献 MeSH 标引,支持主/副主题标记';
 
@@ -614,13 +577,7 @@ CREATE TABLE IF NOT EXISTS `cat_keyword` (
     INDEX `idx_frequency` (`frequency` DESC) COMMENT '频次索引,支持热门关键词排序',
 
     -- 复合索引
-    INDEX `idx_source_lang` (`source`, `language`) COMMENT '来源+语言复合索引,支持按来源和语言筛选',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_source` CHECK (`source` IN ('author', 'editor', 'indexer', 'pubmed') OR `source` IS NULL)
-
+    INDEX `idx_source_lang` (`source`, `language`) COMMENT '来源+语言复合索引,支持按来源和语言筛选'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='关键词表:存储自由关键词,支持规范化去重和频次统计';
 
@@ -674,13 +631,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_keyword` (
     -- 复合索引(核心查询)
     INDEX `idx_pub_keyword` (`publication_id`, `keyword_id`) COMMENT '文献+关键词复合索引,支持查询文献的关键词(<20ms)',
     INDEX `idx_keyword_pub` (`keyword_id`, `publication_id`) COMMENT '关键词+文献复合索引,支持查询关键词的文献(<50ms)',
-    INDEX `idx_major` (`keyword_id`, `is_major`) COMMENT '关键词+主/副标记复合索引,筛选主要关键词文献',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_keyword_set` CHECK (`keyword_set` IN ('author', 'editor', 'pubmed') OR `keyword_set` IS NULL)
-
+    INDEX `idx_major` (`keyword_id`, `is_major`) COMMENT '关键词+主/副标记复合索引,筛选主要关键词文献'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='文献-关键词关联表:存储文献关键词标注,支持主/副关键词标记';
 
@@ -738,13 +689,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_type` (
 
     -- 普通索引
     INDEX `idx_parent` (`parent_type`) COMMENT '父类型索引,支持查询子类型(递归查询)',
-    INDEX `idx_active` (`is_active`) COMMENT '有效状态索引,筛选有效类型',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_vocabulary_source` CHECK (`vocabulary_source` IN ('MEDLINE', 'EMBASE', 'CUSTOM') OR `vocabulary_source` IS NULL)
-
+    INDEX `idx_active` (`is_active`) COMMENT '有效状态索引,筛选有效类型'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='出版类型表:存储文献类型,支持层次结构(自引用)';
 
@@ -855,14 +800,7 @@ CREATE TABLE IF NOT EXISTS `cat_substance` (
 
     -- 普通索引
     INDEX `idx_name` (`name`) COMMENT '物质名称索引,支持按名称查询',
-    INDEX `idx_class` (`substance_class`) COMMENT '物质分类索引,支持按分类筛选',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_vocabulary_source_substance` CHECK (`vocabulary_source` IN ('CAS', 'EC', 'UNII', 'ChEBI', 'PubChem') OR `vocabulary_source` IS NULL),
-    CONSTRAINT `chk_substance_class` CHECK (`substance_class` IN ('chemical', 'drug', 'biological', 'enzyme', 'antibody', 'protein') OR `substance_class` IS NULL)
-
+    INDEX `idx_class` (`substance_class`) COMMENT '物质分类索引,支持按分类筛选'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='物质表:存储化学物质/药物/生物制品,支持 CAS 号等注册号检索';
 
@@ -916,13 +854,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_substance` (
     -- 复合索引(核心查询)
     INDEX `idx_pub_substance` (`publication_id`, `substance_id`) COMMENT '文献+物质复合索引,支持查询文献的物质(<20ms)',
     INDEX `idx_substance_pub` (`substance_id`, `publication_id`) COMMENT '物质+文献复合索引,支持查询物质的文献(<50ms)',
-    INDEX `idx_major_role` (`substance_id`, `is_major`, `role`) COMMENT '物质+主/副标记+角色复合索引,支持多条件筛选',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_role` CHECK (`role` IN ('therapeutic', 'diagnostic', 'research_tool', 'adverse_effect', 'target', 'metabolite') OR `role` IS NULL)
-
+    INDEX `idx_major_role` (`substance_id`, `is_major`, `role`) COMMENT '物质+主/副标记+角色复合索引,支持多条件筛选'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='文献-物质关联表:存储文献物质标注,支持主/副物质标记和角色';
 
