@@ -25,7 +25,7 @@
 -- ============================================================
 -- 执行说明
 -- ============================================================
--- 1. 确保 MySQL 版本 >= 8.0（需要 CHECK 约束支持）
+-- 1. 确保 MySQL 版本 >= 8.0（）
 -- 2. 确保核心实体表(cat_publication)已创建
 -- 3. 按顺序执行表创建（考虑外键依赖）
 -- 4. 建议在测试环境先验证，再在生产环境执行
@@ -97,13 +97,7 @@ CREATE TABLE IF NOT EXISTS `cat_funding` (
     INDEX `idx_grant_id` (`grant_id`) COMMENT '项目编号索引,支持按项目编号查询',
     INDEX `idx_funder_id` (`funder_id`) COMMENT 'Crossref Funder ID 索引,支持标准化查询',
     INDEX `idx_ror` (`ror_id`) COMMENT 'ROR 标识符索引,支持机构标识符查询',
-    INDEX `idx_funding_type` (`funding_type`) COMMENT '资助类型索引,支持按类型筛选',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_funding_type` CHECK (`funding_type` IN ('Government', 'Foundation', 'Corporate', 'University', 'Non-profit', 'Other') OR `funding_type` IS NULL)
-
+    INDEX `idx_funding_type` (`funding_type`) COMMENT '资助类型索引,支持按类型筛选'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='资助信息表:管理研究资金来源和项目信息,支持去重策略';
 
@@ -234,13 +228,7 @@ CREATE TABLE IF NOT EXISTS `cat_reference` (
     INDEX `idx_cited_pmid` (`cited_pmid`) COMMENT '被引PMID索引,支持按PMID查询引用(高频)',
     INDEX `idx_cited_doi` (`cited_doi`) COMMENT '被引DOI索引,支持按DOI查询引用(中频)',
     INDEX `idx_year` (`year`) COMMENT '年份索引,支持按年份统计引用趋势',
-    INDEX `idx_retracted` (`is_retracted`) COMMENT '撤稿索引,支持筛选撤稿文献引用',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_reference_type` CHECK (`reference_type` IN ('Journal Article', 'Book', 'Book Chapter', 'Conference Paper', 'Thesis', 'Report', 'Preprint', 'Web Page', 'Other') OR `reference_type` IS NULL)
-
+    INDEX `idx_retracted` (`is_retracted`) COMMENT '撤稿索引,支持筛选撤稿文献引用'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='参考文献表:管理文献引用关系,支持库内外引用';
 
@@ -366,15 +354,7 @@ CREATE TABLE IF NOT EXISTS `cat_related_item` (
     INDEX `idx_related_pub` (`related_publication_id`) COMMENT '相关文献ID索引,支持反向查询相关文献(中频)',
     INDEX `idx_relationship` (`relationship_type`) COMMENT '关系类型索引,支持按类型筛选(如查询所有撤稿文献)',
     INDEX `idx_status` (`status`) COMMENT '状态索引,支持按状态筛选',
-    INDEX `idx_date` (`relationship_date`) COMMENT '日期索引,支持按时间排序和统计',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_relationship_type` CHECK (`relationship_type` IN ('Retraction', 'Partial Retraction', 'Expression of Concern', 'Withdrawn', 'Erratum', 'Correction', 'Comment', 'Response', 'Update', 'Republication', 'Superseded', 'Duplicate')),
-    CONSTRAINT `chk_initiated_by` CHECK (`initiated_by` IN ('Author', 'Editor', 'Publisher', 'Institution', 'Third Party') OR `initiated_by` IS NULL),
-    CONSTRAINT `chk_status` CHECK (`status` IN ('Active', 'Resolved', 'Under Investigation', 'Pending') OR `status` IS NULL)
-
+    INDEX `idx_date` (`relationship_date`) COMMENT '日期索引,支持按时间排序和统计'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='相关项目表:管理文献的相关项(撤稿、勘误、评论等)';
 
@@ -439,13 +419,7 @@ CREATE TABLE IF NOT EXISTS `cat_supplemental_object` (
     INDEX `idx_object_type` (`object_type`) COMMENT '对象类型索引,支持按类型筛选(中频)',
     INDEX `idx_public` (`is_public`) COMMENT '公开标志索引,支持筛选公开材料',
     INDEX `idx_doi` (`doi`) COMMENT 'DOI索引,支持按DOI查询补充材料',
-    INDEX `idx_available_date` (`available_date`) COMMENT '可用日期索引,支持按可用日期筛选',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_object_type` CHECK (`object_type` IN ('Figure', 'Table', 'Dataset', 'Code', 'Video', 'Audio', 'Document', 'Presentation', 'Other'))
-
+    INDEX `idx_available_date` (`available_date`) COMMENT '可用日期索引,支持按可用日期筛选'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='补充对象表:管理补充材料(图表、数据集、代码等)';
 
@@ -510,13 +484,6 @@ CREATE TABLE IF NOT EXISTS `cat_publication_history` (
     INDEX `idx_event_date` (`event_date`) COMMENT '事件日期索引,支持按日期排序和统计',
 
     -- 复合索引
-    INDEX `idx_pub_date` (`publication_id`, `event_date`, `order_num`) COMMENT '文献+日期+顺序号复合索引,优化时间线查询',
-
-    -- ========================================
-    -- 约束
-    -- ========================================
-    CONSTRAINT `chk_event_type` CHECK (`event_type` IN ('Submitted', 'Received', 'Revised', 'Accepted', 'Rejected', 'Published Online', 'Published Print', 'Corrected', 'Retracted', 'Reinstated', 'Updated', 'Indexed', 'Archived')),
-    CONSTRAINT `chk_history_date_precision` CHECK (`date_precision` IN ('day', 'month', 'year') OR `date_precision` IS NULL)
-
+    INDEX `idx_pub_date` (`publication_id`, `event_date`, `order_num`) COMMENT '文献+日期+顺序号复合索引,优化时间线查询'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='发布历史表:记录文献生命周期事件,支持时序性保障';
