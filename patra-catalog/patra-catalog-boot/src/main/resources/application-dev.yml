@@ -59,3 +59,9 @@ patra:
       enabled: true
       bucket: patra-catalog-cache
       key-prefix: mesh
+
+    # OpenAlex 数据缓存配置
+    openalex-cache:
+      enabled: true
+      bucket: patra-catalog-cache
+      key-prefix: openalex/sources
