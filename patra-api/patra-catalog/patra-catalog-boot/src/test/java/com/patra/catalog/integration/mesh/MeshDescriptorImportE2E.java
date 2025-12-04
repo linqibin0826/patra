@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import com.patra.catalog.app.usecase.mesh.MeshImportUseCase;
 import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
+import com.patra.catalog.domain.exception.DataAlreadyExistsException;
 import com.patra.catalog.domain.port.FileDownloadPort;
 import com.patra.catalog.infra.persistence.mapper.MeshConceptMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshConceptRelationMapper;
@@ -57,9 +58,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 ///
 /// ### 测试场景
 ///
-/// - TRUNCATE_REIMPORT 模式：完整导入流程
-/// - INCREMENTAL 模式：增量导入、幂等性
-/// - 断点续传：Job 失败后重启继续
+/// - 一次性初始化：首次导入应成功
+/// - 数据存在性检查：表中有数据时应拒绝导入
+/// - 临时文件清理：Job 完成后应清理临时文件
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -156,22 +157,21 @@ class MeshDescriptorImportE2E {
     jdbcTemplate.execute("UPDATE BATCH_JOB_SEQ SET ID = 0");
   }
 
-  // ========== TRUNCATE_REIMPORT 模式测试 ==========
+  // ========== 一次性初始化测试 ==========
 
   @Nested
-  @Order(2)
-  @DisplayName("TRUNCATE_REIMPORT 模式测试")
-  class TruncateReimportModeTest {
+  @Order(1)
+  @DisplayName("一次性初始化测试")
+  class OneTimeInitializationTest {
 
     /// 此 nested class 专用的 URL，与其他 nested class 区分避免 Job 参数冲突。
-    private static final String TEST_URL = BASE_URL_TEMPLATE.formatted("truncate");
+    private static final String TEST_URL = BASE_URL_TEMPLATE.formatted("init");
 
     @Test
-    @DisplayName("应该完成 TRUNCATE_REIMPORT 模式的完整导入流程")
-    void shouldCompleteFullImportWithTruncateReimportMode() {
+    @DisplayName("首次导入应该成功完成")
+    void shouldCompleteFirstImport() {
       // Given
-      MeshDescriptorImportCommand command =
-          MeshDescriptorImportCommand.of(TEST_URL, MESH_VERSION, "TRUNCATE_REIMPORT");
+      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, MESH_VERSION);
 
       // When
       MeshDescriptorImportResult result = meshImportUseCase.importDescriptors(command);
@@ -185,82 +185,35 @@ class MeshDescriptorImportE2E {
       // Then - 验证数据库状态
       verifyDatabaseState(EXPECTED_DESCRIPTOR_COUNT);
     }
+  }
+
+  // ========== 数据存在性检查测试 ==========
+
+  @Nested
+  @Order(2)
+  @DisplayName("数据存在性检查测试")
+  class DataExistenceCheckTest {
+
+    /// 此 nested class 专用的 URL，与其他 nested class 区分避免 Job 参数冲突。
+    private static final String TEST_URL = BASE_URL_TEMPLATE.formatted("existence");
 
     @Test
-    @DisplayName("TRUNCATE_REIMPORT 模式重复执行应该幂等")
-    void shouldBeIdempotentWithTruncateReimport() throws IOException {
-      // Given - 执行第一次导入
-      MeshDescriptorImportCommand command =
-          MeshDescriptorImportCommand.of(TEST_URL, MESH_VERSION, "TRUNCATE_REIMPORT");
+    @DisplayName("表中已有数据时应该抛出 DataAlreadyExistsException")
+    void shouldThrowExceptionWhenDataAlreadyExists() throws IOException {
+      // Given - 先执行第一次导入
+      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, MESH_VERSION);
       meshImportUseCase.importDescriptors(command);
 
-      // 记录第一次导入后的状态
-      long firstDescriptorCount = descriptorMapper.selectCount(null);
-      long firstTreeNumberCount = treeNumberMapper.selectCount(null);
+      // 验证数据已导入
+      assertThat(descriptorMapper.selectCount(null)).isEqualTo(EXPECTED_DESCRIPTOR_COUNT);
 
       // 重新准备临时文件（因为第一次执行后被清理）
       prepareTempFileAndMock();
 
-      // When - 执行第二次导入
-      MeshDescriptorImportResult secondResult = meshImportUseCase.importDescriptors(command);
-
-      // Then - 验证第二次导入成功
-      assertThat(secondResult.executionId()).isNotNull();
-
-      // Then - 验证数据库状态与第一次一致（幂等性）
-      assertThat(descriptorMapper.selectCount(null)).isEqualTo(firstDescriptorCount);
-      assertThat(treeNumberMapper.selectCount(null)).isEqualTo(firstTreeNumberCount);
-    }
-  }
-
-  // ========== INCREMENTAL 模式测试 ==========
-
-  @Nested
-  @Order(1)
-  @DisplayName("INCREMENTAL 模式测试")
-  class IncrementalModeTest {
-
-    /// 此 nested class 专用的 URL，与其他 nested class 区分避免 Job 参数冲突。
-    private static final String TEST_URL = BASE_URL_TEMPLATE.formatted("incremental");
-
-    @Test
-    @DisplayName("INCREMENTAL 模式 - 首次导入应该成功")
-    void shouldImportSuccessfullyOnFirstRun() {
-      // Given
-      MeshDescriptorImportCommand command =
-          MeshDescriptorImportCommand.of(TEST_URL, MESH_VERSION, "INCREMENTAL");
-
-      // When
-      MeshDescriptorImportResult result = meshImportUseCase.importDescriptors(command);
-
-      // Then - 验证 Job 启动成功
-      assertThat(result).isNotNull();
-      assertThat(result.executionId()).isNotNull();
-
-      // Then - 验证所有记录都被导入
-      verifyDatabaseState(EXPECTED_DESCRIPTOR_COUNT);
-    }
-
-    @Test
-    @DisplayName("INCREMENTAL 模式 - 重复导入应该因唯一键冲突而失败")
-    void shouldFailOnDuplicateRecords() throws IOException {
-      // Given - 执行第一次导入
-      MeshDescriptorImportCommand command =
-          MeshDescriptorImportCommand.of(TEST_URL, MESH_VERSION, "INCREMENTAL");
-      meshImportUseCase.importDescriptors(command);
-
-      // 记录第一次导入后的状态
-      long firstDescriptorCount = descriptorMapper.selectCount(null);
-      assertThat(firstDescriptorCount).isEqualTo(EXPECTED_DESCRIPTOR_COUNT);
-
-      // 重新准备临时文件
-      prepareTempFileAndMock();
-
-      // When/Then - 再次以 INCREMENTAL 模式导入相同数据应该抛出异常
-      // 移除 FaultTolerant 后，重复导入会因唯一键冲突（DataIntegrityViolationException）导致 Job 失败
-      // 这是预期行为：INCREMENTAL 模式适用于导入新版本数据，不适用于重复导入相同数据
+      // When/Then - 再次导入应该抛出 DataAlreadyExistsException
       assertThatThrownBy(() -> meshImportUseCase.importDescriptors(command))
-          .hasMessageContaining("Duplicate entry");
+          .isInstanceOf(DataAlreadyExistsException.class)
+          .hasMessageContaining("MeSH Descriptor");
     }
   }
 
@@ -278,8 +231,7 @@ class MeshDescriptorImportE2E {
     @DisplayName("Job 完成后应该清理临时文件")
     void shouldCleanupTempFileAfterJobCompletion() {
       // Given
-      MeshDescriptorImportCommand command =
-          MeshDescriptorImportCommand.of(TEST_URL, MESH_VERSION, "TRUNCATE_REIMPORT");
+      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, MESH_VERSION);
 
       // When
       meshImportUseCase.importDescriptors(command);

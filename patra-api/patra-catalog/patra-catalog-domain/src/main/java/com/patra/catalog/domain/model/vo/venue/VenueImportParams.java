@@ -9,25 +9,20 @@ import java.util.List;
 /// **参数说明**：
 ///
 /// - `filePaths`：JSON Lines 文件路径列表（.gz 压缩），至少包含一个文件
-/// - `forceNewInstance`：是否强制创建新实例
-///   - `false`：幂等执行，相同参数复用 Job 实例，支持断点续传
-///   - `true`：强制创建新实例，每次执行都创建新的任务实例
 /// - `tempFiles`：是否为临时文件（Job 完成后需要清理）
 ///
-/// **与 MeshImportParams 的差异**：
+/// **设计说明**：
 ///
-/// - MeSH 使用单个 XML 文件路径，Venue 使用多个 .gz 文件路径列表
-/// - Venue 无需版本号（OpenAlex 通过 updated_date 分区管理版本）
+/// 导入操作设计为「一次性初始化」语义，不支持增量或覆盖模式。
+/// 每次导入都创建新的 Job 实例，相同参数不会复用旧实例。
 ///
 /// @author linqibin
 /// @since 0.1.0
-public record VenueImportParams(
-    List<String> filePaths, boolean forceNewInstance, boolean tempFiles) {
+public record VenueImportParams(List<String> filePaths, boolean tempFiles) {
 
   /// 创建导入参数。
   ///
   /// @param filePaths JSON Lines 文件路径列表
-  /// @param forceNewInstance 是否强制创建新实例
   /// @param tempFiles 是否为临时文件
   public VenueImportParams {
     if (filePaths == null || filePaths.isEmpty()) {
@@ -35,29 +30,20 @@ public record VenueImportParams(
     }
   }
 
-  /// 创建增量导入参数（幂等执行，支持断点续传，非临时文件）。
+  /// 创建导入参数（非临时文件）。
   ///
   /// @param filePaths 文件路径列表
   /// @return 导入参数
-  public static VenueImportParams incremental(List<String> filePaths) {
-    return new VenueImportParams(filePaths, false, false);
-  }
-
-  /// 创建全量重导入参数（强制创建新实例，非临时文件）。
-  ///
-  /// @param filePaths 文件路径列表
-  /// @return 导入参数
-  public static VenueImportParams forceNew(List<String> filePaths) {
-    return new VenueImportParams(filePaths, true, false);
+  public static VenueImportParams of(List<String> filePaths) {
+    return new VenueImportParams(filePaths, false);
   }
 
   /// 创建带临时文件标记的导入参数。
   ///
   /// @param filePaths 文件路径列表
-  /// @param forceNewInstance 是否强制创建新实例
   /// @return 导入参数
-  public static VenueImportParams withTempFiles(List<String> filePaths, boolean forceNewInstance) {
-    return new VenueImportParams(filePaths, forceNewInstance, true);
+  public static VenueImportParams withTempFiles(List<String> filePaths) {
+    return new VenueImportParams(filePaths, true);
   }
 
   /// 获取文件路径的逗号分隔字符串。

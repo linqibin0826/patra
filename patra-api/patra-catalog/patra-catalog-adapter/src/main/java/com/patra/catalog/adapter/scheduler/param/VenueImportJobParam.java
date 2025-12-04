@@ -9,36 +9,24 @@ package com.patra.catalog.adapter.scheduler.param;
 /// - Venue 不需要 URL（从 OpenAlex S3 Manifest 动态获取分区文件列表）
 /// - Venue 不需要版本号（OpenAlex 使用 updated_date 分区管理版本）
 ///
+/// **导入策略**：
+///
+/// 纯 INSERT 策略，用于一次性数据初始化。如果表中已有数据，导入会失败。
+///
 /// JSON 格式示例：
-///
-/// ```json
-/// {
-///   "mode": "INCREMENTAL"
-/// }
-/// ```
-///
-/// 或者使用空参数（默认使用 INCREMENTAL 模式）：
 ///
 /// ```json
 /// {}
 /// ```
 ///
-/// @param mode 导入模式（可选，默认 INCREMENTAL）- INCREMENTAL 或 TRUNCATE_REIMPORT
 /// @author linqibin
 /// @since 0.1.0
-public record VenueImportJobParam(String mode) {
+public record VenueImportJobParam() {
 
-  /// 创建默认参数（INCREMENTAL 模式）。
+  /// 创建默认参数。
   ///
   /// @return 默认参数实例
   public static VenueImportJobParam defaults() {
-    return new VenueImportJobParam("INCREMENTAL");
-  }
-
-  /// 获取模式字符串，如果为空则返回默认值。
-  ///
-  /// @return 模式字符串
-  public String modeOrDefault() {
-    return mode == null || mode.isBlank() ? "INCREMENTAL" : mode;
+    return new VenueImportJobParam();
   }
 }

@@ -3,7 +3,7 @@ package com.patra.catalog.app.usecase.venue;
 import com.patra.catalog.api.error.CatalogErrorCode;
 import com.patra.catalog.app.usecase.venue.command.VenueImportCommand;
 import com.patra.catalog.app.usecase.venue.dto.VenueImportResult;
-import com.patra.catalog.domain.model.enums.DataImportMode;
+import com.patra.catalog.domain.exception.DataAlreadyExistsException;
 import com.patra.catalog.domain.model.vo.venue.OpenAlexManifest;
 import com.patra.catalog.domain.model.vo.venue.VenueImportParams;
 import com.patra.catalog.domain.port.VenueImportBatchPort;
@@ -23,21 +23,23 @@ import org.springframework.stereotype.Service;
 /// **职责**：
 ///
 /// - 编排 OpenAlex Venue 数据导入流程
-/// - 协调领域端口完成数据获取、清空、批量导入
+/// - 协调领域端口完成数据获取、检查、批量导入
 /// - 不管理事务边界（批量导入由 Spring Batch 管理）
 ///
 /// **导入流程**：
 ///
-/// 1. 获取 manifest 文件（获取分区文件列表）
-/// 2. 下载所有分区文件到本地临时目录
-/// 3. 可选：清空现有数据（TRUNCATE_REIMPORT 模式）
+/// 1. 检查数据库是否已有数据（如有则拒绝导入）
+/// 2. 获取 manifest 文件（获取分区文件列表）
+/// 3. 下载所有分区文件到本地临时目录
 /// 4. 启动 Spring Batch Job 进行批量导入
 ///
-/// **与 MeshImportOrchestrator 的差异**：
+/// **设计说明**：
 ///
-/// - MeSH 使用单个大文件，Venue 使用 manifest + 多个分区文件
-/// - MeSH 导入 Qualifier 和 Descriptor 分两步，Venue 一步完成
-/// - Venue 写入策略为 Upsert（增量更新），MeSH 为纯新增
+/// 导入操作设计为「一次性初始化」语义：
+///
+/// - 不支持增量或覆盖模式
+/// - 如果表中已有数据，直接抛出 `DataAlreadyExistsException`
+/// - 如需重新导入，必须先手动清空数据库
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -52,49 +54,45 @@ public class VenueImportOrchestrator implements VenueImportUseCase {
 
   /// 执行 OpenAlex Venue 导入。
   ///
-  /// **导入模式**：
+  /// **前置条件**：
   ///
-  /// - `INCREMENTAL`：增量导入（Upsert），支持断点续传
-  /// - `TRUNCATE_REIMPORT`：清空重导入，先 TRUNCATE 所有表再重新导入
+  /// - 数据库中不存在任何 Venue 数据
   ///
-  /// **注意**（TRUNCATE_REIMPORT 模式）：
+  /// **异常情况**：
   ///
-  /// - TRUNCATE 是 DDL 操作，会隐式提交事务，无法回滚
-  /// - 如果清空成功但导入失败，需要重新执行此方法
+  /// - 如果数据库中已有数据，抛出 `DataAlreadyExistsException`
   ///
-  /// @param command 导入命令（包含导入模式）
+  /// @param command 导入命令
   /// @return 导入结果摘要
+  /// @throws DataAlreadyExistsException 当表中已有数据时
   @Override
   public VenueImportResult importVenues(VenueImportCommand command) {
-    DataImportMode mode = command.mode();
-    log.info("启动 OpenAlex Venue 导入，模式：{}", mode);
+    log.info("启动 OpenAlex Venue 导入");
+
+    // 1. 检查数据是否已存在
+    if (venueRepository.hasAnyData()) {
+      throw new DataAlreadyExistsException("Venue");
+    }
 
     List<Path> localFiles = null;
     try {
-      // 1. 获取 manifest 文件
+      // 2. 获取 manifest 文件
       OpenAlexManifest manifest = venueSourceFilePort.fetchManifest();
       log.info(
           "获取 manifest 成功，分区数：{}，总记录数：{}", manifest.entries().size(), manifest.totalRecordCount());
 
-      // 2. 下载所有分区文件到本地临时目录
+      // 3. 下载所有分区文件到本地临时目录
       localFiles = venueSourceFilePort.fetchAllPartitionFiles(manifest);
       log.info("所有分区文件已下载到本地，文件数：{}", localFiles.size());
 
-      // 3. 清空数据（如果是 TRUNCATE 模式）
-      if (mode == DataImportMode.TRUNCATE_REIMPORT) {
-        venueRepository.truncateAll();
-        log.info("已清空所有 Venue 旧数据");
-      }
-
       // 4. 启动批处理导入
-      boolean forceNewInstance = (mode == DataImportMode.TRUNCATE_REIMPORT);
       List<String> filePaths = localFiles.stream().map(Path::toString).toList();
-      VenueImportParams params = VenueImportParams.withTempFiles(filePaths, forceNewInstance);
+      VenueImportParams params = VenueImportParams.withTempFiles(filePaths);
       Long executionId = venueImportBatchPort.launchImport(params);
 
-      log.info("OpenAlex Venue 导入任务已启动，executionId：{}，模式：{}", executionId, mode);
+      log.info("OpenAlex Venue 导入任务已启动，executionId：{}", executionId);
       return VenueImportResult.success(
-          executionId, manifest.entries().size(), manifest.totalRecordCount(), mode);
+          executionId, manifest.entries().size(), manifest.totalRecordCount());
 
     } catch (ApplicationException e) {
       // 已经是 ApplicationException，清理后重新抛出

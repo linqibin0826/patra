@@ -4,9 +4,9 @@ package com.patra.catalog.adapter.scheduler.param;
 ///
 /// 通过 XXL-Job 调度器以 JSON 格式传递的任务参数。所有字段均为必填。
 ///
-/// **导入模式**：
+/// **导入策略**：
 ///
-/// 限定词仅支持 TRUNCATE_REIMPORT 模式，每次导入前会清空所有现有数据。
+/// 纯 INSERT 策略，用于一次性数据初始化。如果表中已有数据，导入会失败。
 ///
 /// JSON 格式示例：
 ///

@@ -7,7 +7,6 @@ package com.patra.catalog.app.usecase.mesh.dto;
 /// **设计说明**：
 ///
 /// - 限定词导入不使用 Spring Batch（数据量小，约 80 条）
-/// - 仅支持 TRUNCATE_REIMPORT 模式，因此不需要 mode 字段
 /// - 同步执行，直接返回导入数量
 ///
 /// @param sourceUrl 原始数据源 URL

@@ -9,7 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.patra.catalog.app.usecase.venue.command.VenueImportCommand;
 import com.patra.catalog.app.usecase.venue.dto.VenueImportResult;
-import com.patra.catalog.domain.model.enums.DataImportMode;
+import com.patra.catalog.domain.exception.DataAlreadyExistsException;
 import com.patra.catalog.domain.model.vo.venue.OpenAlexManifest;
 import com.patra.catalog.domain.model.vo.venue.VenueImportParams;
 import com.patra.catalog.domain.port.VenueImportBatchPort;
@@ -39,8 +39,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///
 /// **重点测试场景**：
 ///
-/// - importVenues() INCREMENTAL 模式：不清空表，幂等执行
-/// - importVenues() TRUNCATE_REIMPORT 模式：先清空再导入
+/// - 数据存在性检查：表中有数据时应拒绝导入
+/// - 正常导入流程：获取 manifest → 下载文件 → 启动批处理
 /// - 参数传递正确性验证
 /// - 失败时临时文件清理
 ///
@@ -83,17 +83,35 @@ class VenueImportOrchestratorTest {
   }
 
   @Nested
-  @DisplayName("importVenues() 方法测试")
-  class ImportVenuesTest {
+  @DisplayName("数据存在性检查测试")
+  class DataExistenceCheckTest {
 
     @Test
-    @DisplayName("INCREMENTAL 模式 - 不应该清空表")
-    void incrementalMode_shouldNotTruncateTable() {
+    @DisplayName("表中已有数据时 - 应该抛出 DataAlreadyExistsException")
+    void shouldThrowException_whenDataAlreadyExists() {
       // Given
-      VenueImportCommand command = VenueImportCommand.incremental();
+      VenueImportCommand command = VenueImportCommand.create();
+      when(venueRepository.hasAnyData()).thenReturn(true);
+
+      // When & Then
+      assertThatThrownBy(() -> orchestrator.importVenues(command))
+          .isInstanceOf(DataAlreadyExistsException.class)
+          .hasMessageContaining("Venue");
+
+      // 验证没有进行后续操作
+      verify(venueSourceFilePort, never()).fetchManifest();
+      verify(venueImportBatchPort, never()).launchImport(any());
+    }
+
+    @Test
+    @DisplayName("表中无数据时 - 应该正常执行导入")
+    void shouldProceed_whenNoDataExists() {
+      // Given
+      VenueImportCommand command = VenueImportCommand.create();
       OpenAlexManifest manifest = createTestManifest();
       List<Path> localFiles = List.of(TEST_FILE_1, TEST_FILE_2);
 
+      when(venueRepository.hasAnyData()).thenReturn(false);
       when(venueSourceFilePort.fetchManifest()).thenReturn(manifest);
       when(venueSourceFilePort.fetchAllPartitionFiles(manifest)).thenReturn(localFiles);
       when(venueImportBatchPort.launchImport(any(VenueImportParams.class))).thenReturn(12345L);
@@ -102,24 +120,29 @@ class VenueImportOrchestratorTest {
       VenueImportResult result = orchestrator.importVenues(command);
 
       // Then
+      verify(venueRepository).hasAnyData();
       verify(venueSourceFilePort).fetchManifest();
       verify(venueSourceFilePort).fetchAllPartitionFiles(manifest);
-      verify(venueRepository, never()).truncateAll();
       verify(venueImportBatchPort).launchImport(any(VenueImportParams.class));
 
       assertThat(result).isNotNull();
       assertThat(result.executionId()).isEqualTo(12345L);
-      assertThat(result.mode()).isEqualTo(DataImportMode.INCREMENTAL);
     }
+  }
+
+  @Nested
+  @DisplayName("importVenues() 方法测试")
+  class ImportVenuesTest {
 
     @Test
-    @DisplayName("INCREMENTAL 模式 - forceNewInstance 应该为 false")
-    void incrementalMode_shouldSetForceNewInstanceFalse() {
+    @DisplayName("正常导入 - 应该正确传递参数到 BatchPort")
+    void shouldPassCorrectParamsToBatchPort() {
       // Given
-      VenueImportCommand command = VenueImportCommand.incremental();
+      VenueImportCommand command = VenueImportCommand.create();
       OpenAlexManifest manifest = createTestManifest();
       List<Path> localFiles = List.of(TEST_FILE_1, TEST_FILE_2);
 
+      when(venueRepository.hasAnyData()).thenReturn(false);
       when(venueSourceFilePort.fetchManifest()).thenReturn(manifest);
       when(venueSourceFilePort.fetchAllPartitionFiles(manifest)).thenReturn(localFiles);
       when(venueImportBatchPort.launchImport(any(VenueImportParams.class))).thenReturn(12345L);
@@ -132,58 +155,7 @@ class VenueImportOrchestratorTest {
       verify(venueImportBatchPort).launchImport(captor.capture());
 
       VenueImportParams params = captor.getValue();
-      assertThat(params.forceNewInstance()).isFalse();
-      assertThat(params.filePaths())
-          .containsExactly(TEST_FILE_1.toString(), TEST_FILE_2.toString());
-    }
-
-    @Test
-    @DisplayName("TRUNCATE_REIMPORT 模式 - 应该先清空表再导入")
-    void truncateReimportMode_shouldTruncateBeforeImport() {
-      // Given
-      VenueImportCommand command = VenueImportCommand.truncateReimport();
-      OpenAlexManifest manifest = createTestManifest();
-      List<Path> localFiles = List.of(TEST_FILE_1, TEST_FILE_2);
-
-      when(venueSourceFilePort.fetchManifest()).thenReturn(manifest);
-      when(venueSourceFilePort.fetchAllPartitionFiles(manifest)).thenReturn(localFiles);
-      when(venueImportBatchPort.launchImport(any(VenueImportParams.class))).thenReturn(67890L);
-
-      // When
-      VenueImportResult result = orchestrator.importVenues(command);
-
-      // Then
-      verify(venueSourceFilePort).fetchManifest();
-      verify(venueSourceFilePort).fetchAllPartitionFiles(manifest);
-      verify(venueRepository).truncateAll();
-      verify(venueImportBatchPort).launchImport(any(VenueImportParams.class));
-
-      assertThat(result).isNotNull();
-      assertThat(result.executionId()).isEqualTo(67890L);
-      assertThat(result.mode()).isEqualTo(DataImportMode.TRUNCATE_REIMPORT);
-    }
-
-    @Test
-    @DisplayName("TRUNCATE_REIMPORT 模式 - forceNewInstance 应该为 true")
-    void truncateReimportMode_shouldSetForceNewInstanceTrue() {
-      // Given
-      VenueImportCommand command = VenueImportCommand.truncateReimport();
-      OpenAlexManifest manifest = createTestManifest();
-      List<Path> localFiles = List.of(TEST_FILE_1, TEST_FILE_2);
-
-      when(venueSourceFilePort.fetchManifest()).thenReturn(manifest);
-      when(venueSourceFilePort.fetchAllPartitionFiles(manifest)).thenReturn(localFiles);
-      when(venueImportBatchPort.launchImport(any(VenueImportParams.class))).thenReturn(67890L);
-
-      // When
-      orchestrator.importVenues(command);
-
-      // Then
-      ArgumentCaptor<VenueImportParams> captor = ArgumentCaptor.forClass(VenueImportParams.class);
-      verify(venueImportBatchPort).launchImport(captor.capture());
-
-      VenueImportParams params = captor.getValue();
-      assertThat(params.forceNewInstance()).isTrue();
+      assertThat(params.tempFiles()).isTrue();
       assertThat(params.filePaths())
           .containsExactly(TEST_FILE_1.toString(), TEST_FILE_2.toString());
     }
@@ -192,10 +164,11 @@ class VenueImportOrchestratorTest {
     @DisplayName("返回结果应该包含正确的分区数和记录数")
     void shouldReturnCorrectPartitionAndRecordCount() {
       // Given
-      VenueImportCommand command = VenueImportCommand.incremental();
+      VenueImportCommand command = VenueImportCommand.create();
       OpenAlexManifest manifest = createTestManifest();
       List<Path> localFiles = List.of(TEST_FILE_1, TEST_FILE_2);
 
+      when(venueRepository.hasAnyData()).thenReturn(false);
       when(venueSourceFilePort.fetchManifest()).thenReturn(manifest);
       when(venueSourceFilePort.fetchAllPartitionFiles(manifest)).thenReturn(localFiles);
       when(venueImportBatchPort.launchImport(any(VenueImportParams.class))).thenReturn(12345L);
@@ -213,7 +186,8 @@ class VenueImportOrchestratorTest {
     @DisplayName("fetchManifest 失败时应该抛出 ApplicationException")
     void shouldThrowExceptionWhenFetchManifestFails() {
       // Given
-      VenueImportCommand command = VenueImportCommand.incremental();
+      VenueImportCommand command = VenueImportCommand.create();
+      when(venueRepository.hasAnyData()).thenReturn(false);
       when(venueSourceFilePort.fetchManifest()).thenThrow(new RuntimeException("网络连接失败"));
 
       // When & Then
@@ -227,9 +201,10 @@ class VenueImportOrchestratorTest {
     @DisplayName("fetchAllPartitionFiles 失败时应该抛出 ApplicationException")
     void shouldThrowExceptionWhenFetchPartitionFilesFails() {
       // Given
-      VenueImportCommand command = VenueImportCommand.incremental();
+      VenueImportCommand command = VenueImportCommand.create();
       OpenAlexManifest manifest = createTestManifest();
 
+      when(venueRepository.hasAnyData()).thenReturn(false);
       when(venueSourceFilePort.fetchManifest()).thenReturn(manifest);
       when(venueSourceFilePort.fetchAllPartitionFiles(manifest))
           .thenThrow(new RuntimeException("下载分区文件失败"));
@@ -245,10 +220,11 @@ class VenueImportOrchestratorTest {
     @DisplayName("launchImport 失败时应该抛出 ApplicationException")
     void shouldThrowExceptionWhenLaunchImportFails() {
       // Given
-      VenueImportCommand command = VenueImportCommand.incremental();
+      VenueImportCommand command = VenueImportCommand.create();
       OpenAlexManifest manifest = createTestManifest();
       List<Path> localFiles = List.of(TEST_FILE_1, TEST_FILE_2);
 
+      when(venueRepository.hasAnyData()).thenReturn(false);
       when(venueSourceFilePort.fetchManifest()).thenReturn(manifest);
       when(venueSourceFilePort.fetchAllPartitionFiles(manifest)).thenReturn(localFiles);
       when(venueImportBatchPort.launchImport(any(VenueImportParams.class)))
@@ -268,7 +244,7 @@ class VenueImportOrchestratorTest {
     @DisplayName("ApplicationException 应该直接抛出，不重复包装")
     void shouldRethrowApplicationExceptionWithoutWrapping() {
       // Given
-      VenueImportCommand command = VenueImportCommand.incremental();
+      VenueImportCommand command = VenueImportCommand.create();
       // 使用匿名 ErrorCodeLike 避免依赖 api 模块
       ApplicationException originalException =
           new ApplicationException(
@@ -285,6 +261,7 @@ class VenueImportOrchestratorTest {
               },
               "原始错误");
 
+      when(venueRepository.hasAnyData()).thenReturn(false);
       when(venueSourceFilePort.fetchManifest()).thenThrow(originalException);
 
       // When & Then

@@ -22,9 +22,12 @@ public interface MeshImportUseCase {
   /// 执行 MeSH 限定词导入。
   ///
   /// 限定词数据量小（约 80 条），不使用 Spring Batch，直接在事务内批量保存。
-  /// 每次导入前会清空所有现有限定词数据（TRUNCATE_REIMPORT 模式）。
+  ///
+  /// **一次性初始化语义**：表中已有数据时抛出 `DataAlreadyExistsException`，
+  /// 需重新导入时由用户手动清空数据库后再执行。
   ///
   /// @param command 导入命令
   /// @return 导入结果摘要
+  /// @throws DataAlreadyExistsException 表中已存在数据时抛出
   MeshQualifierImportResult importQualifiers(MeshQualifierImportCommand command);
 }

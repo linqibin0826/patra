@@ -64,15 +64,11 @@ public interface MeshDescriptorRepository {
   /// @param concepts 概念实体列表
   void saveConceptsBatch(List<MeshConcept> concepts);
 
-  /// 清空所有 MeSH 主题词数据（TRUNCATE TABLE）。
+  /// 检查是否存在任何 MeSH 主题词数据。
   ///
-  /// 实现说明：
+  /// 用于「一次性初始化」导入前的数据存在性检查。
+  /// 如果表中已有数据，导入操作应拒绝执行。
   ///
-  /// - 使用 TRUNCATE TABLE 清空所有 MeSH 相关表
-  ///   - 执行顺序：先清空子表（TreeNumber、EntryTerm、Concept），再清空主表（Descriptor）
-  ///   - 用于全量重导入场景（先清空旧数据，再导入新数据）
-  ///   - TRUNCATE 是 DDL 操作，会隐式提交事务
-  ///
-  /// **注意**：此操作会清空所有版本的数据，不可逆。
-  void truncateAll();
+  /// @return 如果存在任何主题词数据返回 true，否则返回 false
+  boolean hasAnyData();
 }

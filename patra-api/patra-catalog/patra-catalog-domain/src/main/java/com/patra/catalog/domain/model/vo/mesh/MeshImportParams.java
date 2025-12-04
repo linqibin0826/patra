@@ -8,21 +8,21 @@ package com.patra.catalog.domain.model.vo.mesh;
 ///
 /// - `filePath`：XML 文件路径，不能为空
 /// - `meshVersion`：MeSH 版本（如 "2025"），不能为空
-/// - `forceNewInstance`：是否强制创建新实例
-///   - `false`：幂等执行，相同参数复用 Job 实例，支持断点续传
-///   - `true`：强制创建新实例，每次执行都创建新的任务实例
 /// - `tempFile`：是否为临时文件（Job 完成后需要清理）
+///
+/// **设计说明**：
+///
+/// 导入操作设计为「一次性初始化」语义，不支持增量或覆盖模式。
+/// 每次导入都创建新的 Job 实例，相同参数不会复用旧实例。
 ///
 /// @author linqibin
 /// @since 0.1.0
-public record MeshImportParams(
-    String filePath, String meshVersion, boolean forceNewInstance, boolean tempFile) {
+public record MeshImportParams(String filePath, String meshVersion, boolean tempFile) {
 
   /// 创建导入参数。
   ///
   /// @param filePath XML 文件路径
   /// @param meshVersion MeSH 版本
-  /// @param forceNewInstance 是否强制创建新实例
   /// @param tempFile 是否为临时文件
   public MeshImportParams {
     if (filePath == null || filePath.isBlank()) {
@@ -37,26 +37,17 @@ public record MeshImportParams(
   ///
   /// @param filePath XML 文件路径
   /// @param meshVersion MeSH 版本
-  /// @param forceNewInstance 是否强制创建新实例
-  public MeshImportParams(String filePath, String meshVersion, boolean forceNewInstance) {
-    this(filePath, meshVersion, forceNewInstance, false);
+  /// @return 导入参数
+  public static MeshImportParams of(String filePath, String meshVersion) {
+    return new MeshImportParams(filePath, meshVersion, false);
   }
 
-  /// 创建增量导入参数（幂等执行，支持断点续传，非临时文件）。
+  /// 创建带临时文件标记的导入参数。
   ///
   /// @param filePath XML 文件路径
   /// @param meshVersion MeSH 版本
   /// @return 导入参数
-  public static MeshImportParams incremental(String filePath, String meshVersion) {
-    return new MeshImportParams(filePath, meshVersion, false, false);
-  }
-
-  /// 创建全量重导入参数（强制创建新实例，非临时文件）。
-  ///
-  /// @param filePath XML 文件路径
-  /// @param meshVersion MeSH 版本
-  /// @return 导入参数
-  public static MeshImportParams forceNew(String filePath, String meshVersion) {
-    return new MeshImportParams(filePath, meshVersion, true, false);
+  public static MeshImportParams withTempFile(String filePath, String meshVersion) {
+    return new MeshImportParams(filePath, meshVersion, true);
   }
 }

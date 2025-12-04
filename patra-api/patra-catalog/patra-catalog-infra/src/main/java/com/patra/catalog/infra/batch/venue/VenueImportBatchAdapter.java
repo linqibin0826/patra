@@ -38,11 +38,7 @@ public class VenueImportBatchAdapter implements VenueImportBatchPort {
 
   @Override
   public Long launchImport(VenueImportParams params) {
-    log.info(
-        "启动 OpenAlex Venue 导入 Job，文件数量：{}，强制新实例：{}，临时文件：{}",
-        params.getFileCount(),
-        params.forceNewInstance(),
-        params.tempFiles());
+    log.info("启动 OpenAlex Venue 导入 Job，文件数量：{}，临时文件：{}", params.getFileCount(), params.tempFiles());
 
     VenueImportJobParams jobParams =
         VenueImportJobParams.builder()
@@ -51,6 +47,7 @@ public class VenueImportBatchAdapter implements VenueImportBatchPort {
             .tempFiles(String.valueOf(params.tempFiles()))
             .build();
 
-    return jobLauncherHelper.launch(venueImportJob, jobParams, params.forceNewInstance());
+    // 不添加时间戳，相同参数的 Job 只执行一次（支持断点续传）
+    return jobLauncherHelper.launch(venueImportJob, jobParams, false);
   }
 }
