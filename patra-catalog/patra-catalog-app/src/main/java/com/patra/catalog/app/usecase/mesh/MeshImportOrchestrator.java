@@ -83,7 +83,7 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
       throw new DataAlreadyExistsException("MeSH Qualifier");
     }
 
-    // 2. 获取文件（优先从缓存，否则从远程下载）
+    // 2. 从远程下载文件
     Path localFile =
         meshSourceFilePort.fetchQualifierFile(command.meshVersion(), URI.create(command.url()));
     log.info("限定词文件已就绪：{}", localFile);
@@ -138,7 +138,7 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
       throw new DataAlreadyExistsException("MeSH Descriptor");
     }
 
-    // 2. 获取文件（优先从缓存，否则从远程下载）
+    // 2. 从远程下载文件
     Path localFile =
         meshSourceFilePort.fetchDescriptorFile(command.meshVersion(), URI.create(command.url()));
     log.info("主题词文件已就绪：{}", localFile);

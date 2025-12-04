@@ -17,7 +17,7 @@ import java.util.Objects;
 ///
 /// - S3: `s3://openalex/data/sources/updated_date=2025-11-02/part_000.gz`
 /// - HTTP: `https://openalex.s3.amazonaws.com/data/sources/updated_date=2025-11-02/part_000.gz`
-/// - 相对路径: `updated_date=2025-11-02/part_000.gz`（用于缓存键）
+/// - 相对路径: `updated_date=2025-11-02/part_000.gz`
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -44,7 +44,7 @@ public record OpenAlexManifest(List<Entry> entries, Long totalContentLength, int
     return entries.stream().map(Entry::toHttpUrl).toList();
   }
 
-  /// 获取所有相对路径（用于缓存键）。
+  /// 获取所有相对路径。
   ///
   /// 提取 `/sources/` 之后的路径部分，格式如 `updated_date=2025-11-02/part_000.gz`。
   ///
@@ -64,7 +64,7 @@ public record OpenAlexManifest(List<Entry> entries, Long totalContentLength, int
     private static final String HTTP_PREFIX = "https://openalex.s3.amazonaws.com/";
     private static final String SOURCES_PATH_MARKER = "/sources/";
 
-    /// 获取相对路径（用于缓存键）。
+    /// 获取相对路径。
     ///
     /// 从 S3 URL 中提取 `/sources/` 之后的部分。
     ///

@@ -28,16 +28,6 @@ logging:
 
 # Spring Batch 独立数据源（与业务数据库隔离）
 patra:
-  # 通用异步线程池配置
-  async:
-    enabled: true
-    pools:
-      cache-upload:         # MeSH 缓存上传等 I/O 操作
-        core-size: 2
-        max-size: 4
-        queue-capacity: 50
-        thread-name-prefix: cache-upload-
-
   batch:
     datasource:
       url: ${BATCH_DB_URL}
@@ -54,10 +44,3 @@ patra:
         access-key: ${MINIO_ACCESS_KEY}
         secret-key: ${MINIO_SECRET_KEY}
         bucket: ${MINIO_BUCKET:patra-catalog-cache}
-
-  # MeSH 文件缓存配置（生产环境默认禁用，按需启用）
-  catalog:
-    mesh-cache:
-      enabled: ${MESH_CACHE_ENABLED:false}
-      bucket: ${MESH_CACHE_BUCKET:patra-catalog-cache}
-      key-prefix: ${MESH_CACHE_KEY_PREFIX:mesh}
