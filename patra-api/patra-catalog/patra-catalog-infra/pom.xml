@@ -60,7 +60,7 @@
             <artifactId>patra-spring-boot-starter-rest-client</artifactId>
         </dependency>
 
-        <!-- 对象存储（MeSH 文件缓存） -->
+        <!-- 对象存储 -->
         <dependency>
             <groupId>com.patra</groupId>
             <artifactId>patra-spring-boot-starter-object-storage</artifactId>
@@ -109,7 +109,7 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Starter Core（MeshSourceFileAdapter 需要 AsyncExecutorRegistry） -->
+        <!-- Starter Core -->
         <dependency>
             <groupId>com.patra</groupId>
             <artifactId>patra-spring-boot-starter-core</artifactId>

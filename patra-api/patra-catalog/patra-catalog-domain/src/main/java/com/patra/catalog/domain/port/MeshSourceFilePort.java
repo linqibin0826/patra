@@ -6,20 +6,17 @@ import java.nio.file.Path;
 
 /// MeSH 数据源文件端口。
 ///
-/// 负责获取 MeSH 数据源文件（Descriptor/Qualifier XML）到本地临时目录。
-/// 实现可决定从对象存储缓存或远程 NLM 服务器获取。
+/// 负责从 NLM（美国国家医学图书馆）远程服务器获取 MeSH 数据源文件到本地临时目录。
+///
+/// **数据源**：
+///
+/// - Descriptor（主题词）：`https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc{year}.xml`
+/// - Qualifier（限定词）：`https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual{year}.xml`
 ///
 /// **设计原则**：
 ///
-/// - Domain 层定义接口，隐藏缓存策略实现细节
-/// - Infrastructure 层实现缓存优先策略（对象存储 → 远程下载）
-/// - 返回本地文件路径，调用方无需关心数据来源
-///
-/// **缓存策略**（由实现类决定）：
-///
-/// 1. 检查对象存储中是否存在缓存文件
-/// 2. 存在则从对象存储下载到本地
-/// 3. 不存在则从远程 URL 下载，并异步上传到对象存储
+/// - Domain 层定义接口，Infrastructure 层提供实现
+/// - 返回本地临时文件路径，调用方负责使用完毕后清理
 ///
 /// **使用场景**：
 ///
@@ -32,8 +29,7 @@ public interface MeshSourceFilePort {
 
   /// 获取 MeSH Descriptor 源文件到本地临时目录。
   ///
-  /// 优先从对象存储缓存获取，如果缓存不存在则从远程 URL 下载。
-  /// 下载后会异步上传到对象存储作为缓存。
+  /// 从指定的远程 URL 下载文件到本地临时目录。
   ///
   /// **注意**：调用方负责在使用完毕后清理临时文件。
   ///
@@ -45,8 +41,7 @@ public interface MeshSourceFilePort {
 
   /// 获取 MeSH Qualifier 源文件到本地临时目录。
   ///
-  /// 优先从对象存储缓存获取，如果缓存不存在则从远程 URL 下载。
-  /// 下载后会异步上传到对象存储作为缓存。
+  /// 从指定的远程 URL 下载文件到本地临时目录。
   ///
   /// **注意**：调用方负责在使用完毕后清理临时文件。
   ///

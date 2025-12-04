@@ -11,7 +11,7 @@ import com.patra.catalog.app.usecase.venue.dto.VenueImportResult;
 ///
 /// 1. 检查数据存在性（表中已有数据时拒绝导入）
 /// 2. 获取 OpenAlex Sources manifest（获取分区文件列表）
-/// 3. 下载所有分区文件到本地临时目录（支持 MinIO 缓存）
+/// 3. 下载所有分区文件到本地临时目录
 /// 4. 启动 Spring Batch Job 进行批量导入（纯 INSERT）
 ///
 /// **一次性初始化语义**：

@@ -14,7 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/// DefaultMeshSourceFileAdapter 单元测试。
+/// MeshSourceFileAdapter 单元测试。
 ///
 /// **测试策略**：
 ///
@@ -24,8 +24,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
-@DisplayName("DefaultMeshSourceFileAdapter 单元测试")
-class DefaultMeshSourceFileAdapterTest {
+@DisplayName("MeshSourceFileAdapter 单元测试")
+class MeshSourceFileAdapterTest {
 
   private static final String MESH_VERSION = "2025";
   private static final URI DESCRIPTOR_URL =
@@ -36,11 +36,11 @@ class DefaultMeshSourceFileAdapterTest {
 
   @Mock private FileDownloadPort fileDownloadPort;
 
-  private DefaultMeshSourceFileAdapter adapter;
+  private MeshSourceFileAdapter adapter;
 
   @BeforeEach
   void setUp() {
-    adapter = new DefaultMeshSourceFileAdapter(fileDownloadPort);
+    adapter = new MeshSourceFileAdapter(fileDownloadPort);
   }
 
   @Test

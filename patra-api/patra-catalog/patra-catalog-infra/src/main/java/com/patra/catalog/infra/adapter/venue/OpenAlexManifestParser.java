@@ -15,7 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 /// OpenAlex Manifest 解析器。
 ///
 /// 提供 manifest JSON 解析和临时文件清理的公共方法，
-/// 供 {@link VenueSourceFileAdapter} 和 {@link DefaultVenueSourceFileAdapter} 共享使用。
+/// 供 {@link VenueSourceFileAdapter} 使用。
 ///
 /// @author linqibin
 /// @since 0.1.0
