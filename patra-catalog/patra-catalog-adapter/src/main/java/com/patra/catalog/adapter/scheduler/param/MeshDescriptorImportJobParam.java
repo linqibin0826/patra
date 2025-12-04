@@ -4,19 +4,21 @@ package com.patra.catalog.adapter.scheduler.param;
 ///
 /// 通过 XXL-Job 调度器以 JSON 格式传递的任务参数。所有字段均为必填。
 ///
+/// **导入策略**：
+///
+/// 纯 INSERT 策略，用于一次性数据初始化。如果表中已有数据，导入会失败。
+///
 /// JSON 格式示例：
 ///
 /// ```json
 /// {
 ///   "url": "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-///   "meshVersion": "2025",
-///   "mode": "INCREMENTAL"
+///   "meshVersion": "2025"
 /// }
 /// ```
 ///
 /// @param url XML 文件 URL（必填）- MeSH 主题词（Descriptor）XML 文件的 HTTP/HTTPS URL
 /// @param meshVersion MeSH 版本（必填）- 如 "2025"
-/// @param mode 导入模式（必填）- INCREMENTAL 或 TRUNCATE_REIMPORT
 /// @author linqibin
 /// @since 0.1.0
-public record MeshDescriptorImportJobParam(String url, String meshVersion, String mode) {}
+public record MeshDescriptorImportJobParam(String url, String meshVersion) {}

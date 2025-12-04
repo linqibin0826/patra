@@ -1,8 +1,6 @@
 package com.patra.catalog.infra.batch.venue;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -21,45 +19,32 @@ import com.patra.catalog.infra.persistence.mapper.VenueMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueMetricsMapper;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.stereotype.Component;
 
-/// OpenAlex Venue 批量写入器（Upsert 策略）。
+/// OpenAlex Venue 批量写入器（纯 INSERT 策略）。
 ///
 /// **职责**：
 ///
 /// - 将 VenueAggregate 转换为 DO 并持久化
-/// - 实现 Upsert 策略：已存在则更新，不存在则新增
+/// - 纯 INSERT 策略：所有记录作为新记录插入
 /// - 处理子表数据：VenueIdentifier、VenueMetrics
 ///
-/// **Upsert 流程**：
+/// **设计说明**：
 ///
-/// 1. 提取所有 openalexId，批量查询已存在记录
-/// 2. 对于 openalexId 不存在的记录，再基于 issn_l 查询（支持多源数据合并）
-/// 3. 分离新增和更新列表
-/// 4. 批量 INSERT 新记录
-/// 5. 逐条 UPDATE 已存在记录
-/// 6. 子表：先删后插
+/// 导入操作设计为「一次性初始化」语义：
 ///
-/// **多源数据合并策略**：
-///
-/// - 优先基于 openalexId 匹配
-/// - 如果 openalexId 不存在，基于 issn_l 匹配
-/// - 匹配成功则更新现有记录，否则新增
+/// - 不支持 Upsert（更新已存在记录）
+/// - 如果存在主键冲突，批处理会失败
+/// - 数据库应该在导入前为空表状态
 ///
 /// **性能优化**：
 ///
 /// - 使用单条 SQL 批量插入（`INSERT INTO ... VALUES (...), (...), ...`）
-/// - 批量查询减少数据库往返
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -81,115 +66,8 @@ public class VenueImportItemWriter implements ItemWriter<VenueAggregate> {
     }
 
     log.debug("开始写入 {} 条 Venue 记录", items.size());
-
-    // 1. 提取所有 openalexId，批量查询已存在记录
-    Set<String> openalexIds =
-        items.stream()
-            .map(VenueAggregate::getOpenalexId)
-            .filter(id -> id != null && !id.isBlank())
-            .collect(Collectors.toSet());
-
-    Map<String, Long> openalexIdMap = new HashMap<>();
-    if (!openalexIds.isEmpty()) {
-      LambdaQueryWrapper<VenueDO> queryWrapper =
-          Wrappers.<VenueDO>lambdaQuery()
-              .in(VenueDO::getOpenalexId, openalexIds)
-              .select(VenueDO::getId, VenueDO::getOpenalexId);
-
-      List<VenueDO> existingRecords = venueMapper.selectList(queryWrapper);
-      for (VenueDO record : existingRecords) {
-        openalexIdMap.put(record.getOpenalexId(), record.getId());
-      }
-    }
-
-    // 2. 分离：openalexId 匹配的 → 更新；不匹配的 → 待定（可能基于 issn_l 合并）
-    List<VenueAggregate> toUpdate = new ArrayList<>();
-    List<VenueAggregate> pendingInsert = new ArrayList<>();
-    Map<VenueAggregate, Long> updateIdMap = new HashMap<>();
-
-    for (VenueAggregate venue : items) {
-      Long existingId = openalexIdMap.get(venue.getOpenalexId());
-      if (existingId != null) {
-        toUpdate.add(venue);
-        updateIdMap.put(venue, existingId);
-      } else {
-        pendingInsert.add(venue);
-      }
-    }
-
-    // 3. 对于 openalexId 不匹配的记录，基于 issn_l 查询（多源数据合并）
-    List<VenueAggregate> toInsert = new ArrayList<>();
-    if (!pendingInsert.isEmpty()) {
-      Set<String> issnLs =
-          pendingInsert.stream()
-              .map(VenueAggregate::getIssnL)
-              .filter(issnL -> issnL != null && !issnL.isBlank())
-              .collect(Collectors.toSet());
-
-      Map<String, Long> issnLIdMap = new HashMap<>();
-      if (!issnLs.isEmpty()) {
-        LambdaQueryWrapper<VenueDO> issnLQuery =
-            Wrappers.<VenueDO>lambdaQuery()
-                .in(VenueDO::getIssnL, issnLs)
-                .select(VenueDO::getId, VenueDO::getIssnL);
-
-        List<VenueDO> issnLRecords = venueMapper.selectList(issnLQuery);
-        for (VenueDO record : issnLRecords) {
-          issnLIdMap.put(record.getIssnL(), record.getId());
-        }
-      }
-
-      // 记录批次内已处理的 issn_l，用于去重（包括 DB 中已存在和新增两种情况）
-      Set<String> processedIssnLs = new HashSet<>();
-
-      // 分离：issn_l 匹配的 → 合并更新；不匹配的 → 新增
-      for (VenueAggregate venue : pendingInsert) {
-        String issnL = venue.getIssnL();
-        boolean issnLValid = issnL != null && !issnL.isBlank();
-
-        // 检查批次内是否已处理过该 issn_l（无论 DB 中存在与否）
-        if (issnLValid && processedIssnLs.contains(issnL)) {
-          log.warn(
-              "批次内 issn_l 重复，跳过记录：openalexId={}, displayName={}, issnL={}",
-              venue.getOpenalexId(),
-              venue.getDisplayName(),
-              issnL);
-          continue;
-        }
-
-        Long existingId = issnLIdMap.get(issnL);
-        if (existingId != null) {
-          // DB 中已存在该 issn_l → 更新
-          toUpdate.add(venue);
-          updateIdMap.put(venue, existingId);
-          log.debug(
-              "基于 issn_l={} 合并到现有 Venue（id={}），新 openalexId={}",
-              issnL,
-              existingId,
-              venue.getOpenalexId());
-        } else {
-          // 新增
-          toInsert.add(venue);
-        }
-
-        // 标记该 issn_l 已处理
-        if (issnLValid) {
-          processedIssnLs.add(issnL);
-        }
-      }
-    }
-
-    // 4. 批量 INSERT 新记录
-    if (!toInsert.isEmpty()) {
-      insertVenues(toInsert);
-    }
-
-    // 5. 逐条 UPDATE 已存在记录
-    if (!toUpdate.isEmpty()) {
-      updateVenues(toUpdate, updateIdMap);
-    }
-
-    log.debug("写入完成：新增={}，更新={}（含 issn_l 合并）", toInsert.size(), toUpdate.size());
+    insertVenues(new ArrayList<>(items));
+    log.debug("写入完成：新增={}", items.size());
   }
 
   /// 批量插入新记录。
@@ -215,40 +93,6 @@ public class VenueImportItemWriter implements ItemWriter<VenueAggregate> {
     venueMapper.insertBatchSomeColumn(venueDOs);
 
     // 批量插入子表
-    if (!identifierDOs.isEmpty()) {
-      identifierMapper.insertBatchSomeColumn(identifierDOs);
-    }
-    if (!metricsDOs.isEmpty()) {
-      metricsMapper.insertBatchSomeColumn(metricsDOs);
-    }
-  }
-
-  /// 逐条更新已存在记录。
-  private void updateVenues(List<VenueAggregate> venues, Map<VenueAggregate, Long> idMap) {
-    List<Long> venueIds = new ArrayList<>(venues.size());
-    List<VenueIdentifierDO> identifierDOs = new ArrayList<>();
-    List<VenueMetricsDO> metricsDOs = new ArrayList<>();
-
-    for (VenueAggregate venue : venues) {
-      Long venueId = idMap.get(venue);
-      venueIds.add(venueId);
-
-      // 更新主表
-      VenueDO venueDO = toVenueDO(venue);
-      venueDO.setId(venueId);
-      venueMapper.updateById(venueDO);
-
-      // 收集子表数据
-      collectChildData(venue, venueId, identifierDOs, metricsDOs);
-    }
-
-    // 物理删除旧的子表数据（绕过 @TableLogic，避免唯一索引冲突）
-    if (!venueIds.isEmpty()) {
-      identifierMapper.physicalDeleteByVenueIds(venueIds);
-      metricsMapper.physicalDeleteByVenueIds(venueIds);
-    }
-
-    // 批量插入新的子表数据
     if (!identifierDOs.isEmpty()) {
       identifierMapper.insertBatchSomeColumn(identifierDOs);
     }

@@ -56,9 +56,7 @@ public class MeshQualifierRepositoryAdapter implements MeshQualifierRepository {
   }
 
   @Override
-  public void truncateAll() {
-    log.info("开始清空限定词表");
-    meshQualifierMapper.truncateTable();
-    log.info("限定词表已清空");
+  public boolean hasAnyData() {
+    return meshQualifierMapper.selectCount(null) > 0;
   }
 }

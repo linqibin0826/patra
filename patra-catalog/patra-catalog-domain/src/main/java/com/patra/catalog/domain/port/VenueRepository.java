@@ -54,16 +54,13 @@ public interface VenueRepository {
   // 批量操作（支持大规模导入）
   // ========================================
 
-  /// 清空所有载体相关数据（主表、标识符表、指标表）。
+  /// 检查是否存在任何载体数据。
   ///
-  /// **警告**：此操作是 DDL（TRUNCATE），会隐式提交事务，无法回滚。
+  /// 用于「一次性初始化」导入前的数据存在性检查。
+  /// 如果表中已有数据，导入操作应拒绝执行。
   ///
-  /// **使用场景**：
-  ///
-  /// - TRUNCATE_REIMPORT 模式下，导入前清空所有数据
-  ///
-  /// @see com.patra.catalog.domain.model.enums.DataImportMode#TRUNCATE_REIMPORT
-  void truncateAll();
+  /// @return 如果存在任何载体数据返回 true，否则返回 false
+  boolean hasAnyData();
 
   /// 批量保存载体。
   ///

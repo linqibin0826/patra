@@ -31,6 +31,10 @@ import org.springframework.stereotype.Component;
 /// - 日志记录：记录任务开始、结束和错误信息
 /// - 结果报告：向 XXL-Job 控制台报告执行状态
 ///
+/// **导入策略**：
+///
+/// 纯 INSERT 策略，用于一次性数据初始化。如果表中已有数据，导入会失败。
+///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
@@ -50,15 +54,9 @@ public class MeshImportScheduleJob {
   /// ```json
   /// {
   ///   "url": "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-  ///   "meshVersion": "2025",
-  ///   "mode": "INCREMENTAL"
+  ///   "meshVersion": "2025"
   /// }
   /// ```
-  ///
-  /// **导入模式**：
-  ///
-  /// - `INCREMENTAL`：增量导入，幂等执行，支持断点续传
-  /// - `TRUNCATE_REIMPORT`：清空重导入，先清空所有数据再重新导入
   @XxlJob("meshDescriptorImportJob")
   public void executeDescriptorImport() {
     String rawParam = XxlJobHelper.getJobParam();
@@ -66,11 +64,7 @@ public class MeshImportScheduleJob {
 
     try {
       MeshDescriptorImportCommand command = parseJobParam(rawParam);
-      log.debug(
-          "已解析 MeSH 导入命令：URL [{}]，版本 [{}]，模式 [{}]",
-          command.url(),
-          command.meshVersion(),
-          command.mode());
+      log.debug("已解析 MeSH 导入命令：URL [{}]，版本 [{}]", command.url(), command.meshVersion());
 
       MeshDescriptorImportResult result = meshImportUseCase.importDescriptors(command);
       handleSuccess(result.message());
@@ -103,8 +97,8 @@ public class MeshImportScheduleJob {
       throw new CatalogScheduleParameterException("MeSH 导入参数解析失败：" + ex.getMessage(), ex);
     }
 
-    // 委托给 Command 进行参数验证和枚举转换
-    return MeshDescriptorImportCommand.of(param.url(), param.meshVersion(), param.mode());
+    // 委托给 Command 进行参数验证
+    return MeshDescriptorImportCommand.of(param.url(), param.meshVersion());
   }
 
   /// 处理参数错误。
@@ -131,10 +125,6 @@ public class MeshImportScheduleJob {
   ///   "meshVersion": "2025"
   /// }
   /// ```
-  ///
-  /// **导入模式**：
-  ///
-  /// 限定词仅支持 TRUNCATE_REIMPORT 模式，每次导入前会清空所有现有数据。
   @XxlJob("meshQualifierImportJob")
   public void executeQualifierImport() {
     String rawParam = XxlJobHelper.getJobParam();

@@ -474,157 +474,51 @@ class MeshDescriptorRepositoryAdapterIT {
     }
   }
 
-  // ==================== truncateAll 测试 ====================
+  // ==================== hasAnyData 测试 ====================
 
   @Nested
-  @DisplayName("truncateAll() 测试")
-  class TruncateAllTest {
+  @DisplayName("hasAnyData() 测试")
+  class HasAnyDataTest {
 
     @Test
-    @DisplayName("空表 - 应该不抛出异常")
-    void truncateAll_emptyTables_shouldNotThrowException() {
+    @DisplayName("空表 - 应该返回 false")
+    void hasAnyData_emptyTable_shouldReturnFalse() {
       // Given: 所有表都是空的
       assertThat(meshDescriptorMapper.selectCount(null)).isEqualTo(0);
-      assertThat(meshTreeNumberMapper.selectCount(null)).isEqualTo(0);
-      assertThat(meshEntryTermMapper.selectCount(null)).isEqualTo(0);
-      assertThat(meshConceptMapper.selectCount(null)).isEqualTo(0);
-      assertThat(meshConceptRelationMapper.selectCount(null)).isEqualTo(0);
-      assertThat(meshEntryCombinationMapper.selectCount(null)).isEqualTo(0);
 
-      // When: 清空空表
-      repository.truncateAll();
-
-      // Then: 不抛出异常，所有表仍然为空
-      assertThat(meshDescriptorMapper.selectCount(null)).isEqualTo(0);
-      assertThat(meshTreeNumberMapper.selectCount(null)).isEqualTo(0);
-      assertThat(meshEntryTermMapper.selectCount(null)).isEqualTo(0);
-      assertThat(meshConceptMapper.selectCount(null)).isEqualTo(0);
-      assertThat(meshConceptRelationMapper.selectCount(null)).isEqualTo(0);
-      assertThat(meshEntryCombinationMapper.selectCount(null)).isEqualTo(0);
+      // When & Then
+      assertThat(repository.hasAnyData()).isFalse();
     }
 
     @Test
-    @DisplayName("有数据 - 应该清空所有关联表")
-    void truncateAll_withData_shouldDeleteAllRecords() {
-      // Given: 插入测试数据到各表
-      // 1. 先插入主表数据（Descriptor）
+    @DisplayName("有单条数据 - 应该返回 true")
+    void hasAnyData_withSingleRecord_shouldReturnTrue() {
+      // Given: 插入单条数据
+      MeshDescriptorAggregate descriptor =
+          MeshDescriptorAggregate.create(
+              MeshUI.descriptorOf(1), "Test Descriptor", DescriptorClass.TOPICAL, "2025");
+      repository.saveBatch(List.of(descriptor));
+
+      // When & Then
+      assertThat(repository.hasAnyData()).isTrue();
+    }
+
+    @Test
+    @DisplayName("有多条数据 - 应该返回 true")
+    void hasAnyData_withMultipleRecords_shouldReturnTrue() {
+      // Given: 插入多条数据
       List<MeshDescriptorAggregate> descriptors =
           List.of(
               MeshDescriptorAggregate.create(
                   MeshUI.descriptorOf(1), "Descriptor 1", DescriptorClass.TOPICAL, "2025"),
               MeshDescriptorAggregate.create(
-                  MeshUI.descriptorOf(2), "Descriptor 2", DescriptorClass.TOPICAL, "2025"));
+                  MeshUI.descriptorOf(2), "Descriptor 2", DescriptorClass.TOPICAL, "2025"),
+              MeshDescriptorAggregate.create(
+                  MeshUI.descriptorOf(3), "Descriptor 3", DescriptorClass.TOPICAL, "2025"));
       repository.saveBatch(descriptors);
 
-      // 2. 插入子表数据
-      List<MeshTreeNumber> treeNumbers =
-          List.of(
-              MeshTreeNumber.create(MeshUI.descriptorOf(1), "C04.557.337", true),
-              MeshTreeNumber.create(MeshUI.descriptorOf(2), "A01.236.500", true));
-      repository.saveTreeNumbersBatch(treeNumbers);
-
-      List<MeshEntryTerm> entryTerms =
-          List.of(
-              MeshEntryTerm.create(
-                  MeshUI.descriptorOf(1),
-                  MeshUI.termOf(1),
-                  "Entry Term 1",
-                  LexicalTag.PEF,
-                  false,
-                  false,
-                  false,
-                  false),
-              MeshEntryTerm.create(
-                  MeshUI.descriptorOf(2),
-                  MeshUI.termOf(2),
-                  "Entry Term 2",
-                  LexicalTag.NON,
-                  false,
-                  false,
-                  false,
-                  false));
-      repository.saveEntryTermsBatch(entryTerms);
-
-      List<MeshConcept> concepts =
-          List.of(
-              MeshConcept.create(MeshUI.descriptorOf(1), MeshUI.conceptOf(1), "Concept 1", true),
-              MeshConcept.create(MeshUI.descriptorOf(2), MeshUI.conceptOf(2), "Concept 2", true));
-      repository.saveConceptsBatch(concepts);
-
-      // 验证数据已插入
-      assertThat(meshDescriptorMapper.selectCount(null)).isEqualTo(2);
-      assertThat(meshTreeNumberMapper.selectCount(null)).isEqualTo(2);
-      assertThat(meshEntryTermMapper.selectCount(null)).isEqualTo(2);
-      assertThat(meshConceptMapper.selectCount(null)).isEqualTo(2);
-
-      // When: 清空所有表
-      repository.truncateAll();
-
-      // Then: 所有表都应该为空
-      assertThat(meshDescriptorMapper.selectCount(null)).isEqualTo(0);
-      assertThat(meshTreeNumberMapper.selectCount(null)).isEqualTo(0);
-      assertThat(meshEntryTermMapper.selectCount(null)).isEqualTo(0);
-      assertThat(meshConceptMapper.selectCount(null)).isEqualTo(0);
-      assertThat(meshConceptRelationMapper.selectCount(null)).isEqualTo(0);
-      assertThat(meshEntryCombinationMapper.selectCount(null)).isEqualTo(0);
-    }
-
-    @Test
-    @DisplayName("清空后重新插入 - 应该能正常保存新数据")
-    void truncateAll_thenSaveBatch_shouldSaveNewDataSuccessfully() {
-      // Given: 插入初始数据
-      List<MeshDescriptorAggregate> oldDescriptors =
-          List.of(
-              MeshDescriptorAggregate.create(
-                  MeshUI.descriptorOf(1), "Old Descriptor 1", DescriptorClass.TOPICAL, "2024"),
-              MeshDescriptorAggregate.create(
-                  MeshUI.descriptorOf(2), "Old Descriptor 2", DescriptorClass.TOPICAL, "2024"));
-      repository.saveBatch(oldDescriptors);
-
-      List<MeshTreeNumber> oldTreeNumbers =
-          List.of(MeshTreeNumber.create(MeshUI.descriptorOf(1), "C04.557.337", true));
-      repository.saveTreeNumbersBatch(oldTreeNumbers);
-
-      // 验证数据已插入
-      assertThat(meshDescriptorMapper.selectCount(null)).isEqualTo(2);
-      assertThat(meshTreeNumberMapper.selectCount(null)).isEqualTo(1);
-
-      // When: 清空所有表后插入新数据
-      repository.truncateAll();
-
-      List<MeshDescriptorAggregate> newDescriptors =
-          List.of(
-              MeshDescriptorAggregate.create(
-                  MeshUI.descriptorOf(10), "New Descriptor 1", DescriptorClass.TOPICAL, "2025"),
-              MeshDescriptorAggregate.create(
-                  MeshUI.descriptorOf(20),
-                  "New Descriptor 2",
-                  DescriptorClass.GEOGRAPHICALS,
-                  "2025"),
-              MeshDescriptorAggregate.create(
-                  MeshUI.descriptorOf(30), "New Descriptor 3", DescriptorClass.TOPICAL, "2025"));
-      repository.saveBatch(newDescriptors);
-
-      List<MeshTreeNumber> newTreeNumbers =
-          List.of(
-              MeshTreeNumber.create(MeshUI.descriptorOf(10), "A01.236.500", true),
-              MeshTreeNumber.create(MeshUI.descriptorOf(20), "B01.050.150", false));
-      repository.saveTreeNumbersBatch(newTreeNumbers);
-
-      // Then: 应该只有新数据
-      assertThat(meshDescriptorMapper.selectCount(null)).isEqualTo(3);
-      assertThat(meshTreeNumberMapper.selectCount(null)).isEqualTo(2);
-
-      List<MeshDescriptorDO> savedDescriptors = meshDescriptorMapper.selectList(null);
-      assertThat(savedDescriptors)
-          .extracting(MeshDescriptorDO::getName)
-          .containsExactlyInAnyOrder("New Descriptor 1", "New Descriptor 2", "New Descriptor 3");
-      assertThat(savedDescriptors).allMatch(d -> "2025".equals(d.getMeshVersion()));
-
-      List<MeshTreeNumberDO> savedTreeNumbers = meshTreeNumberMapper.selectList(null);
-      assertThat(savedTreeNumbers)
-          .extracting(MeshTreeNumberDO::getTreeNumber)
-          .containsExactlyInAnyOrder("A01.236.500", "B01.050.150");
+      // When & Then
+      assertThat(repository.hasAnyData()).isTrue();
     }
   }
 }

@@ -512,4 +512,106 @@ class VenueRepositoryAdapterIT {
       assertThat(metrics).isEmpty();
     }
   }
+
+  // ========== hasAnyData() 测试 ==========
+
+  @Nested
+  @DisplayName("hasAnyData() 测试")
+  class HasAnyDataTests {
+
+    @Test
+    @DisplayName("空表 - 应该返回 false")
+    void hasAnyData_emptyTable_shouldReturnFalse() {
+      // Given: 空表
+      long count = venueMapper.selectCount(null);
+      assertThat(count).isEqualTo(0);
+
+      // When & Then
+      assertThat(repository.hasAnyData()).isFalse();
+    }
+
+    @Test
+    @DisplayName("有单条数据 - 应该返回 true")
+    void hasAnyData_withSingleRecord_shouldReturnTrue() {
+      // Given: 插入单条数据
+      VenueData venue = createTestVenueData();
+      repository.save(venue);
+
+      // When & Then
+      assertThat(repository.hasAnyData()).isTrue();
+    }
+
+    @Test
+    @DisplayName("有多条数据 - 应该返回 true")
+    void hasAnyData_withMultipleRecords_shouldReturnTrue() {
+      // Given: 插入多条数据
+      VenueData venue1 =
+          new VenueData(
+              null,
+              "JOURNAL",
+              "Journal A",
+              null,
+              null,
+              "S0000000001",
+              null,
+              null,
+              null,
+              null,
+              true,
+              true,
+              true,
+              100,
+              1000,
+              10,
+              5,
+              "OPENALEX",
+              null);
+      VenueData venue2 =
+          new VenueData(
+              null,
+              "REPOSITORY",
+              "Repository B",
+              null,
+              null,
+              "S0000000002",
+              null,
+              null,
+              null,
+              null,
+              false,
+              false,
+              false,
+              50,
+              500,
+              5,
+              2,
+              "OPENALEX",
+              null);
+      VenueData venue3 =
+          new VenueData(
+              null,
+              "CONFERENCE",
+              "Conference C",
+              null,
+              null,
+              "S0000000003",
+              null,
+              null,
+              null,
+              null,
+              false,
+              false,
+              false,
+              30,
+              300,
+              3,
+              1,
+              "OPENALEX",
+              null);
+      repository.saveAll(List.of(venue1, venue2, venue3));
+
+      // When & Then
+      assertThat(repository.hasAnyData()).isTrue();
+    }
+  }
 }

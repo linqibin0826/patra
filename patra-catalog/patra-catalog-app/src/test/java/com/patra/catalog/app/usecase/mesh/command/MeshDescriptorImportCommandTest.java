@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.patra.catalog.domain.exception.CatalogScheduleParameterException;
-import com.patra.catalog.domain.model.enums.DataImportMode;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -20,7 +19,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 ///
 /// - 验证 URL 格式（必须是 HTTP/HTTPS 协议）
 /// - 验证必填字段约束
-/// - 验证枚举转换
+/// - 验证工厂方法
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -39,13 +38,11 @@ class MeshDescriptorImportCommandTest {
       String url = "http://example.com/mesh/desc2025.xml";
 
       // When
-      MeshDescriptorImportCommand command =
-          new MeshDescriptorImportCommand(url, "2025", DataImportMode.INCREMENTAL);
+      MeshDescriptorImportCommand command = new MeshDescriptorImportCommand(url, "2025");
 
       // Then
       assertThat(command.url()).isEqualTo(url);
       assertThat(command.meshVersion()).isEqualTo("2025");
-      assertThat(command.mode()).isEqualTo(DataImportMode.INCREMENTAL);
     }
 
     @Test
@@ -55,12 +52,11 @@ class MeshDescriptorImportCommandTest {
       String url = "https://nlmpubs.nlm.nih.gov/projects/mesh/2025/xmlmesh/desc2025.xml";
 
       // When
-      MeshDescriptorImportCommand command =
-          new MeshDescriptorImportCommand(url, "2025", DataImportMode.TRUNCATE_REIMPORT);
+      MeshDescriptorImportCommand command = new MeshDescriptorImportCommand(url, "2025");
 
       // Then
       assertThat(command.url()).isEqualTo(url);
-      assertThat(command.mode()).isEqualTo(DataImportMode.TRUNCATE_REIMPORT);
+      assertThat(command.meshVersion()).isEqualTo("2025");
     }
 
     @ParameterizedTest
@@ -69,8 +65,7 @@ class MeshDescriptorImportCommandTest {
     @DisplayName("空白 URL - 应该抛出 CatalogScheduleParameterException")
     void blankUrl_shouldThrowException(String url) {
       // When & Then
-      assertThatThrownBy(
-              () -> new MeshDescriptorImportCommand(url, "2025", DataImportMode.INCREMENTAL))
+      assertThatThrownBy(() -> new MeshDescriptorImportCommand(url, "2025"))
           .isInstanceOf(CatalogScheduleParameterException.class)
           .hasMessageContaining("url");
     }
@@ -87,8 +82,7 @@ class MeshDescriptorImportCommandTest {
     @DisplayName("非 HTTP/HTTPS 协议 - 应该抛出 CatalogScheduleParameterException")
     void nonHttpProtocol_shouldThrowException(String url) {
       // When & Then
-      assertThatThrownBy(
-              () -> new MeshDescriptorImportCommand(url, "2025", DataImportMode.INCREMENTAL))
+      assertThatThrownBy(() -> new MeshDescriptorImportCommand(url, "2025"))
           .isInstanceOf(CatalogScheduleParameterException.class)
           .hasMessageContaining("HTTP");
     }
@@ -100,8 +94,7 @@ class MeshDescriptorImportCommandTest {
       String invalidUrl = "http://[invalid";
 
       // When & Then
-      assertThatThrownBy(
-              () -> new MeshDescriptorImportCommand(invalidUrl, "2025", DataImportMode.INCREMENTAL))
+      assertThatThrownBy(() -> new MeshDescriptorImportCommand(invalidUrl, "2025"))
           .isInstanceOf(CatalogScheduleParameterException.class)
           .hasMessageContaining("url");
     }
@@ -118,26 +111,9 @@ class MeshDescriptorImportCommandTest {
     void blankMeshVersion_shouldThrowException(String meshVersion) {
       // When & Then
       assertThatThrownBy(
-              () ->
-                  new MeshDescriptorImportCommand(
-                      "https://example.com/mesh.xml", meshVersion, DataImportMode.INCREMENTAL))
+              () -> new MeshDescriptorImportCommand("https://example.com/mesh.xml", meshVersion))
           .isInstanceOf(CatalogScheduleParameterException.class)
           .hasMessageContaining("meshVersion");
-    }
-  }
-
-  @Nested
-  @DisplayName("mode 验证测试")
-  class ModeValidationTest {
-
-    @Test
-    @DisplayName("null mode - 应该抛出 NullPointerException")
-    void nullMode_shouldThrowException() {
-      // When & Then
-      assertThatThrownBy(
-              () -> new MeshDescriptorImportCommand("https://example.com/mesh.xml", "2025", null))
-          .isInstanceOf(NullPointerException.class)
-          .hasMessageContaining("mode");
     }
   }
 
@@ -151,39 +127,31 @@ class MeshDescriptorImportCommandTest {
       // Given
       String url = "https://example.com/mesh.xml";
       String meshVersion = "2025";
-      String modeStr = "INCREMENTAL";
 
       // When
-      MeshDescriptorImportCommand command =
-          MeshDescriptorImportCommand.of(url, meshVersion, modeStr);
+      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(url, meshVersion);
 
       // Then
       assertThat(command.url()).isEqualTo(url);
       assertThat(command.meshVersion()).isEqualTo(meshVersion);
-      assertThat(command.mode()).isEqualTo(DataImportMode.INCREMENTAL);
     }
 
     @Test
-    @DisplayName("小写 mode 字符串 - 应该正确转换")
-    void lowercaseModeString_shouldConvert() {
-      // When
-      MeshDescriptorImportCommand command =
-          MeshDescriptorImportCommand.of(
-              "https://example.com/mesh.xml", "2025", "truncate_reimport");
-
-      // Then
-      assertThat(command.mode()).isEqualTo(DataImportMode.TRUNCATE_REIMPORT);
+    @DisplayName("of() 应该验证 URL")
+    void of_shouldValidateUrl() {
+      // When & Then
+      assertThatThrownBy(() -> MeshDescriptorImportCommand.of(null, "2025"))
+          .isInstanceOf(CatalogScheduleParameterException.class)
+          .hasMessageContaining("url");
     }
 
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {"  ", "INVALID_MODE"})
-    @DisplayName("无效 mode 字符串 - 应该抛出 CatalogScheduleParameterException")
-    void invalidModeString_shouldThrowException(String modeStr) {
+    @Test
+    @DisplayName("of() 应该验证 meshVersion")
+    void of_shouldValidateMeshVersion() {
       // When & Then
-      assertThatThrownBy(
-              () -> MeshDescriptorImportCommand.of("https://example.com/mesh.xml", "2025", modeStr))
-          .isInstanceOf(CatalogScheduleParameterException.class);
+      assertThatThrownBy(() -> MeshDescriptorImportCommand.of("https://example.com/mesh.xml", ""))
+          .isInstanceOf(CatalogScheduleParameterException.class)
+          .hasMessageContaining("meshVersion");
     }
   }
 }

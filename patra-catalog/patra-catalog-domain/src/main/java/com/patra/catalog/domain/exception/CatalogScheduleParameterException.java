@@ -6,8 +6,8 @@ import com.patra.common.error.trait.StandardErrorTrait;
 ///
 /// 触发场景：XXL-Job 调度器调用处理器时，传入的 JSON 参数存在以下问题：
 ///
-/// - 缺少必填字段（如 `filePath`、`meshVersion`、`mode` 等）
-/// - 违反格式约束（如枚举值非法、路径格式错误）
+/// - 缺少必填字段（如 `url`、`meshVersion` 等）
+/// - 违反格式约束（如 URL 格式错误、版本号为空）
 /// - JSON 解析失败
 ///
 /// 此错误归因于调用方输入问题，应立即返回并记录警告日志，**不应重试**。
