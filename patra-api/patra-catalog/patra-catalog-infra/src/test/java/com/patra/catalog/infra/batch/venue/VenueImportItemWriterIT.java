@@ -4,17 +4,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
-import com.patra.catalog.domain.model.entity.VenueMetrics;
+import com.patra.catalog.domain.model.entity.VenuePublicationStats;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.infra.adapter.persistence.VenueRepositoryAdapter;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.catalog.infra.persistence.entity.VenueDO;
 import com.patra.catalog.infra.persistence.entity.VenueIdentifierDO;
-import com.patra.catalog.infra.persistence.entity.VenueMetricsDO;
+import com.patra.catalog.infra.persistence.entity.VenuePublicationStatsDO;
 import com.patra.catalog.infra.persistence.mapper.VenueIdentifierMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueMapper;
-import com.patra.catalog.infra.persistence.mapper.VenueMetricsMapper;
+import com.patra.catalog.infra.persistence.mapper.VenuePublicationStatsMapper;
 import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -72,7 +72,7 @@ class VenueImportItemWriterIT {
 
   @Autowired private VenueMapper venueMapper;
   @Autowired private VenueIdentifierMapper identifierMapper;
-  @Autowired private VenueMetricsMapper metricsMapper;
+  @Autowired private VenuePublicationStatsMapper metricsMapper;
 
   /// 创建测试用的 VenueAggregate。
   ///
@@ -90,7 +90,9 @@ class VenueImportItemWriterIT {
   private VenueAggregate createVenueWithMetrics(String openalexId, String displayName) {
     VenueAggregate venue = createVenueAggregate(openalexId, displayName);
     venue.setYearlyMetrics(
-        List.of(VenueMetrics.create(2024, 100, 500), VenueMetrics.create(2023, 90, 400)));
+        List.of(
+            VenuePublicationStats.create(2024, 100, 500),
+            VenuePublicationStats.create(2023, 90, 400)));
     return venue;
   }
 
@@ -179,12 +181,12 @@ class VenueImportItemWriterIT {
       long metricsCount = metricsMapper.selectCount(null);
       assertThat(metricsCount).isEqualTo(2);
 
-      List<VenueMetricsDO> metrics = metricsMapper.selectList(null);
+      List<VenuePublicationStatsDO> metrics = metricsMapper.selectList(null);
       assertThat(metrics)
-          .extracting(VenueMetricsDO::getYear)
+          .extracting(VenuePublicationStatsDO::getYear)
           .containsExactlyInAnyOrder((short) 2024, (short) 2023);
       assertThat(metrics)
-          .extracting(VenueMetricsDO::getWorksCount)
+          .extracting(VenuePublicationStatsDO::getWorksCount)
           .containsExactlyInAnyOrder(100, 90);
     }
   }
@@ -211,7 +213,7 @@ class VenueImportItemWriterIT {
       List<VenueIdentifierDO> identifiers = identifierMapper.selectList(null);
       assertThat(identifiers).allMatch(i -> i.getVenueId().equals(venueId));
 
-      List<VenueMetricsDO> metrics = metricsMapper.selectList(null);
+      List<VenuePublicationStatsDO> metrics = metricsMapper.selectList(null);
       assertThat(metrics).allMatch(m -> m.getVenueId().equals(venueId));
     }
   }

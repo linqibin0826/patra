@@ -4,17 +4,17 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.entity.VenueIdentifier;
-import com.patra.catalog.domain.model.entity.VenueMetrics;
+import com.patra.catalog.domain.model.entity.VenuePublicationStats;
 import com.patra.catalog.domain.port.VenueRepository;
 import com.patra.catalog.infra.persistence.converter.VenueConverter;
 import com.patra.catalog.infra.persistence.converter.VenueIdentifierConverter;
-import com.patra.catalog.infra.persistence.converter.VenueMetricsConverter;
+import com.patra.catalog.infra.persistence.converter.VenuePublicationStatsConverter;
 import com.patra.catalog.infra.persistence.entity.VenueDO;
 import com.patra.catalog.infra.persistence.entity.VenueIdentifierDO;
-import com.patra.catalog.infra.persistence.entity.VenueMetricsDO;
+import com.patra.catalog.infra.persistence.entity.VenuePublicationStatsDO;
 import com.patra.catalog.infra.persistence.mapper.VenueIdentifierMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueMapper;
-import com.patra.catalog.infra.persistence.mapper.VenueMetricsMapper;
+import com.patra.catalog.infra.persistence.mapper.VenuePublicationStatsMapper;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -45,10 +45,10 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
   private final VenueMapper venueMapper;
   private final VenueIdentifierMapper venueIdentifierMapper;
-  private final VenueMetricsMapper venueMetricsMapper;
+  private final VenuePublicationStatsMapper venuePublicationStatsMapper;
   private final VenueConverter venueConverter;
   private final VenueIdentifierConverter identifierConverter;
-  private final VenueMetricsConverter metricsConverter;
+  private final VenuePublicationStatsConverter metricsConverter;
 
   @Override
   public boolean hasAnyData() {
@@ -63,7 +63,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     List<VenueDO> venueDOs = new ArrayList<>(aggregates.size());
     List<VenueIdentifierDO> identifierDOs = new ArrayList<>();
-    List<VenueMetricsDO> metricsDOs = new ArrayList<>();
+    List<VenuePublicationStatsDO> metricsDOs = new ArrayList<>();
 
     for (VenueAggregate aggregate : aggregates) {
       // 生成 ID
@@ -88,7 +88,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
       log.debug("批量插入载体标识符 {} 条", identifierDOs.size());
     }
     if (!metricsDOs.isEmpty()) {
-      venueMetricsMapper.insertBatchSomeColumn(metricsDOs);
+      venuePublicationStatsMapper.insertBatchSomeColumn(metricsDOs);
       log.debug("批量插入载体年度指标 {} 条", metricsDOs.size());
     }
   }
@@ -103,7 +103,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
       VenueAggregate aggregate,
       Long venueId,
       List<VenueIdentifierDO> identifierDOs,
-      List<VenueMetricsDO> metricsDOs) {
+      List<VenuePublicationStatsDO> metricsDOs) {
     // 收集标识符
     for (VenueIdentifier identifier : aggregate.getIdentifiers()) {
       VenueIdentifierDO identifierDO = identifierConverter.toDO(identifier);
@@ -113,8 +113,8 @@ public class VenueRepositoryAdapter implements VenueRepository {
     }
 
     // 收集年度指标
-    for (VenueMetrics metrics : aggregate.getYearlyMetrics()) {
-      VenueMetricsDO metricsDO = metricsConverter.toDO(metrics);
+    for (VenuePublicationStats metrics : aggregate.getYearlyMetrics()) {
+      VenuePublicationStatsDO metricsDO = metricsConverter.toDO(metrics);
       metricsDO.setId(IdWorker.getId());
       metricsDO.setVenueId(venueId);
       metricsDOs.add(metricsDO);

@@ -26,6 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 ///
 /// - 使用 abstract class 而非 interface，因为需要 `ObjectMapper` 进行 JSON 字段序列化
 /// - 使用 `unmappedTargetPolicy = IGNORE` 忽略未映射的目标字段
+/// - 支持多数据源扩展字段（PubMed、DOAJ、JCR 等）
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -41,6 +42,10 @@ public abstract class VenueConverter {
   /// - `venueType`：通过 `getCode()` 获取枚举编码
   /// - `hostOrganization`：展开为 `hostOrganizationId`、`hostOrganizationName`、`hostOrganizationLineage`
   /// - `currentStats`：展开为统计字段，null 时使用默认值
+  /// - `publicationHistory`：展开为 `publicationStartYear`、`publicationEndYear`、`ceased`
+  /// - `indexingInfo`：展开为 `indexingStatus`、`medlineTa`、`isoAbbreviation`
+  /// - `latestRating`：展开为
+  // `latestImpactScore`、`latestQuartile`、`latestRatingSystem`、`latestRatingYear`
   /// - `apcInfo`：展开为 `apcUsd` 和 `apcPrices`（JSON）
   /// - `societies`：转换为 JSON
   /// - `provenance`：展开为 `provenanceCode`、`sourceCreatedDate`、`sourceUpdatedDate`
@@ -52,27 +57,42 @@ public abstract class VenueConverter {
   /// @return 数据库实体
   @Mapping(target = "id", ignore = true)
   @Mapping(target = "venueType", expression = "java(aggregate.getVenueType().getCode())")
+  // 宿主机构
   @Mapping(target = "hostOrganizationId", source = "hostOrganization.id")
   @Mapping(target = "hostOrganizationName", source = "hostOrganization.name")
   @Mapping(target = "hostOrganizationLineage", source = "hostOrganization.lineage")
+  // 统计快照
   @Mapping(target = "worksCount", source = "currentStats", qualifiedByName = "extractWorksCount")
   @Mapping(
       target = "citedByCount",
       source = "currentStats",
       qualifiedByName = "extractCitedByCount")
-  @Mapping(target = "HIndex", source = "currentStats.hIndex")
-  @Mapping(target = "i10Index", source = "currentStats.i10Index")
-  @Mapping(target = "twoYearMeanCitedness", source = "currentStats.twoYearMeanCitedness")
+  // 出版历史（来自 PubMed）
+  @Mapping(target = "publicationStartYear", source = "publicationHistory.startYear")
+  @Mapping(target = "publicationEndYear", source = "publicationHistory.endYear")
+  @Mapping(target = "ceased", source = "publicationHistory.ceased")
+  // 索引收录信息（来自 PubMed）
+  @Mapping(target = "indexingStatus", source = "indexingInfo.status")
+  @Mapping(target = "medlineTa", source = "indexingInfo.medlineTa")
+  @Mapping(target = "isoAbbreviation", source = "indexingInfo.isoAbbreviation")
+  // 最新评级快照
+  @Mapping(target = "latestImpactScore", source = "latestRating.impactScore")
+  @Mapping(target = "latestQuartile", source = "latestRating.quartile")
+  @Mapping(target = "latestRatingSystem", source = "latestRating.ratingSystem")
+  @Mapping(target = "latestRatingYear", source = "latestRating.year")
+  // APC 信息
   @Mapping(target = "apcUsd", source = "apcInfo.usd")
   @Mapping(target = "apcPrices", source = "apcInfo.prices", qualifiedByName = "apcPricesToJson")
+  // 学会
   @Mapping(target = "societies", source = "societies", qualifiedByName = "societiesToJson")
+  // 数据来源
   @Mapping(target = "provenanceCode", source = "provenance.code")
   @Mapping(target = "sourceCreatedDate", source = "provenance.sourceCreatedDate")
   @Mapping(target = "sourceUpdatedDate", source = "provenance.sourceUpdatedDate")
   @Mapping(target = "lastSyncedAt", expression = "java(java.time.Instant.now())")
+  // OA 状态
   @Mapping(target = "isOa", source = "oa")
   @Mapping(target = "isInDoaj", source = "inDoaj")
-  @Mapping(target = "isCore", source = "core")
   public abstract VenueDO toDO(VenueAggregate aggregate);
 
   // ========================================

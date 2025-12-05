@@ -15,23 +15,29 @@ import lombok.EqualsAndHashCode;
 /// 出版载体数据库实体，映射到表 `cat_venue`。
 ///
 /// 表结构：管理期刊、仓库、会议、电子书平台等出版载体的基本信息。
-/// 支持 OpenAlex Sources 和 PubMed Journal 数据导入。
+/// 支持多数据源导入（OpenAlex、PubMed Catalog、DOAJ、Crossref、JCR）。
 ///
 /// 关键字段说明：
 ///
 /// - `venue_type` 载体类型：JOURNAL/REPOSITORY/CONFERENCE/EBOOK_PLATFORM/BOOK_SERIES/METADATA/OTHER
-/// - `openalex_id` OpenAlex ID（冗余，高频查询优化）
-/// - `issn_l` Linking ISSN（冗余，高频查询优化）
+/// - `openalex_id` / `issn_l` / `nlm_id` 冗余标识符（高频查询优化）
+/// - `publication_start_year` / `publication_end_year` / `ceased` 出版历史（来自 PubMed）
+/// - `indexing_status` / `medline_ta` / `iso_abbreviation` 索引收录信息（来自 PubMed）
+/// - `latest_impact_score` / `latest_quartile` 最新评级快照（冗余，来自 JCR/CAS/Scopus）
 /// - `alternate_titles` 替代名称列表（JSON 数组）
 /// - `apc_prices` APC 费用列表（JSON 数组，含不同货币价格）
 /// - `societies` 关联学术组织（JSON 数组）
 /// - `host_organization_lineage` 机构所有权链（JSON 数组）
+/// - `ext_data` 扩展数据（h_index、i10_index 等来源特定字段）
 ///
 /// 索引说明：
 ///
 /// - 唯一索引 `uk_openalex_id`: OpenAlex ID 唯一
 /// - 唯一索引 `uk_issn_l`: ISSN-L 唯一
+/// - 唯一索引 `uk_nlm_id`: NLM ID 唯一
 /// - 普通索引 `idx_venue_type`: 载体类型
+/// - 普通索引 `idx_indexing_status`: MEDLINE 收录状态
+/// - 普通索引 `idx_latest_quartile`: 最新分区
 /// - 全文索引 `ft_display_name`: 名称全文检索
 ///
 /// @author linqibin
@@ -77,6 +83,22 @@ public class VenueDO extends BaseDO {
   @TableField("issn_l")
   private String issnL;
 
+  /// NLM 唯一标识符（冗余，来自 PubMed Catalog）
+  @TableField("nlm_id")
+  private String nlmId;
+
+  /// DOI 前缀（来自 Crossref）
+  @TableField("doi_prefix")
+  private String doiPrefix;
+
+  // ========================================
+  // 出版商信息
+  // ========================================
+
+  /// 出版商名称（来自 Crossref/DOAJ）
+  @TableField("publisher")
+  private String publisher;
+
   // ========================================
   // 宿主机构信息
   // ========================================
@@ -102,7 +124,39 @@ public class VenueDO extends BaseDO {
   private String countryCode;
 
   // ========================================
-  // OA 状态和质量指标
+  // 出版历史（来自 PubMed Catalog）
+  // ========================================
+
+  /// 创刊年份
+  @TableField("publication_start_year")
+  private Short publicationStartYear;
+
+  /// 停刊年份（期刊已停刊时设置）
+  @TableField("publication_end_year")
+  private Short publicationEndYear;
+
+  /// 是否已停刊
+  @TableField("ceased")
+  private Boolean ceased;
+
+  // ========================================
+  // 索引收录信息（来自 PubMed Catalog）
+  // ========================================
+
+  /// MEDLINE 收录状态：MEDLINE/PUBMED/IN_PROCESS/NOT_INDEXED
+  @TableField("indexing_status")
+  private String indexingStatus;
+
+  /// MEDLINE 缩写标题
+  @TableField("medline_ta")
+  private String medlineTa;
+
+  /// ISO 缩写标题
+  @TableField("iso_abbreviation")
+  private String isoAbbreviation;
+
+  // ========================================
+  // OA 状态
   // ========================================
 
   /// 是否为开放获取来源
@@ -113,9 +167,9 @@ public class VenueDO extends BaseDO {
   @TableField("is_in_doaj")
   private Boolean isInDoaj;
 
-  /// 是否为核心来源（CWTS 标准）
-  @TableField("is_core")
-  private Boolean isCore;
+  /// OA 类型：GOLD/DIAMOND/HYBRID/BRONZE（来自 DOAJ）
+  @TableField("oa_type")
+  private String oaType;
 
   // ========================================
   // 统计指标（当前快照）
@@ -129,17 +183,25 @@ public class VenueDO extends BaseDO {
   @TableField("cited_by_count")
   private Integer citedByCount;
 
-  /// H-Index 指数
-  @TableField("h_index")
-  private Integer hIndex;
+  // ========================================
+  // 最新评级快照（冗余，高频查询优化）
+  // ========================================
 
-  /// i10-Index 指数（被引 ≥10 次的论文数）
-  @TableField("i10_index")
-  private Integer i10Index;
+  /// 最新影响力分数（JIF/CiteScore 等）
+  @TableField("latest_impact_score")
+  private BigDecimal latestImpactScore;
 
-  /// 两年平均被引率（类似影响因子）
-  @TableField("two_year_mean_citedness")
-  private BigDecimal twoYearMeanCitedness;
+  /// 最新分区（Q1-Q4 或 1区-4区）
+  @TableField("latest_quartile")
+  private String latestQuartile;
+
+  /// 最新评级来源：JCR/CAS/SCOPUS
+  @TableField("latest_rating_system")
+  private String latestRatingSystem;
+
+  /// 最新评级年份
+  @TableField("latest_rating_year")
+  private Short latestRatingYear;
 
   // ========================================
   // APC 信息（文章处理费）
