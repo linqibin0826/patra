@@ -1,19 +1,19 @@
 package com.patra.catalog.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
-import com.patra.catalog.domain.port.VenueRepository.VenueData;
-import com.patra.catalog.domain.port.VenueRepository.VenueIdentifierData;
-import com.patra.catalog.domain.port.VenueRepository.VenueMetricsData;
+import com.patra.catalog.domain.model.aggregate.VenueAggregate;
+import com.patra.catalog.domain.model.entity.VenueMetrics;
+import com.patra.catalog.domain.model.enums.VenueIdentifierType;
+import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.catalog.infra.persistence.mapper.VenueIdentifierMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueMetricsMapper;
 import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -36,7 +36,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// - 集成测试：使用真实 MySQL 数据库
 /// - 测试隔离：每个测试方法独立
 /// - TestContainers：自动启动和停止 MySQL 容器
-/// - 测试覆盖：CRUD、批量操作、标识符查询、指标查询
+/// - 测试覆盖：hasAnyData、insertAll（聚合根批量插入）
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -57,462 +57,6 @@ class VenueRepositoryAdapterIT {
   @Autowired private VenueIdentifierMapper venueIdentifierMapper;
   @Autowired private VenueMetricsMapper venueMetricsMapper;
 
-  // ========== 测试数据 ==========
-
-  private static final String OPENALEX_ID = "S1234567890";
-  private static final String DISPLAY_NAME = "Nature";
-  private static final String ISSN_L = "0028-0836";
-  private static final String ISSN = "1476-4687";
-  private static final String NLM_ID = "0410462";
-
-  /// 创建测试用的 VenueData。
-  private VenueData createTestVenueData() {
-    return new VenueData(
-        null, // id
-        "JOURNAL", // venueType
-        DISPLAY_NAME,
-        "Nat.", // abbreviatedTitle
-        "https://nature.com", // homepageUrl
-        OPENALEX_ID,
-        ISSN_L,
-        null, // hostOrganizationId
-        null, // hostOrganizationName
-        "GB", // countryCode
-        true, // isOa
-        true, // isInDoaj
-        true, // isCore
-        1500, // worksCount
-        25000, // citedByCount
-        100, // hIndex
-        50, // i10Index
-        "OPENALEX", // provenanceCode
-        null // version
-        );
-  }
-
-  // ========== save() 测试 ==========
-
-  @Nested
-  @DisplayName("save() 测试")
-  class SaveTests {
-
-    @Test
-    @DisplayName("应该正确保存新的载体并返回包含 ID 的数据")
-    void saveShouldInsertAndReturnWithId() {
-      // Given
-      VenueData venue = createTestVenueData();
-      assertThat(venue.id()).isNull();
-
-      // When
-      VenueData saved = repository.save(venue);
-
-      // Then
-      assertThat(saved.id()).isNotNull().isPositive();
-      assertThat(saved.displayName()).isEqualTo(DISPLAY_NAME);
-
-      // 验证数据库记录
-      long count = venueMapper.selectCount(null);
-      assertThat(count).isEqualTo(1);
-    }
-
-    @Test
-    @DisplayName("保存时应该正确写入所有字段")
-    void saveShouldPersistAllFields() {
-      // Given
-      VenueData venue = createTestVenueData();
-
-      // When
-      VenueData saved = repository.save(venue);
-
-      // Then - 通过 findById 验证
-      Optional<VenueData> found = repository.findById(saved.id());
-      assertThat(found).isPresent();
-
-      VenueData loaded = found.get();
-      assertThat(loaded.openalexId()).isEqualTo(OPENALEX_ID);
-      assertThat(loaded.displayName()).isEqualTo(DISPLAY_NAME);
-      assertThat(loaded.venueType()).isEqualTo("JOURNAL");
-      assertThat(loaded.issnL()).isEqualTo(ISSN_L);
-      assertThat(loaded.countryCode()).isEqualTo("GB");
-      assertThat(loaded.isOa()).isTrue();
-      assertThat(loaded.isInDoaj()).isTrue();
-      assertThat(loaded.isCore()).isTrue();
-    }
-  }
-
-  // ========== findById() 测试 ==========
-
-  @Nested
-  @DisplayName("findById() 测试")
-  class FindByIdTests {
-
-    @Test
-    @DisplayName("存在时应该返回载体")
-    void findByIdShouldReturnWhenExists() {
-      // Given
-      VenueData venue = createTestVenueData();
-      VenueData saved = repository.save(venue);
-
-      // When
-      Optional<VenueData> found = repository.findById(saved.id());
-
-      // Then
-      assertThat(found).isPresent();
-      assertThat(found.get().id()).isEqualTo(saved.id());
-    }
-
-    @Test
-    @DisplayName("不存在时应该返回空")
-    void findByIdShouldReturnEmptyWhenNotExists() {
-      // When
-      Optional<VenueData> found = repository.findById(999999L);
-
-      // Then
-      assertThat(found).isEmpty();
-    }
-  }
-
-  // ========== findByOpenalexId() 测试 ==========
-
-  @Nested
-  @DisplayName("findByOpenalexId() 测试")
-  class FindByOpenalexIdTests {
-
-    @Test
-    @DisplayName("存在时应该返回载体")
-    void findByOpenalexIdShouldReturnWhenExists() {
-      // Given
-      VenueData venue = createTestVenueData();
-      repository.save(venue);
-
-      // When
-      Optional<VenueData> found = repository.findByOpenalexId(OPENALEX_ID);
-
-      // Then
-      assertThat(found).isPresent();
-      assertThat(found.get().openalexId()).isEqualTo(OPENALEX_ID);
-    }
-
-    @Test
-    @DisplayName("不存在时应该返回空")
-    void findByOpenalexIdShouldReturnEmptyWhenNotExists() {
-      // When
-      Optional<VenueData> found = repository.findByOpenalexId("S9999999999");
-
-      // Then
-      assertThat(found).isEmpty();
-    }
-  }
-
-  // ========== findByIssnL() 测试 ==========
-
-  @Nested
-  @DisplayName("findByIssnL() 测试")
-  class FindByIssnLTests {
-
-    @Test
-    @DisplayName("存在时应该返回载体")
-    void findByIssnLShouldReturnWhenExists() {
-      // Given
-      VenueData venue = createTestVenueData();
-      repository.save(venue);
-
-      // When
-      Optional<VenueData> found = repository.findByIssnL(ISSN_L);
-
-      // Then
-      assertThat(found).isPresent();
-      assertThat(found.get().issnL()).isEqualTo(ISSN_L);
-    }
-
-    @Test
-    @DisplayName("不存在时应该返回空")
-    void findByIssnLShouldReturnEmptyWhenNotExists() {
-      // When
-      Optional<VenueData> found = repository.findByIssnL("9999-9999");
-
-      // Then
-      assertThat(found).isEmpty();
-    }
-  }
-
-  // ========== saveAll() 测试 ==========
-
-  @Nested
-  @DisplayName("saveAll() 测试")
-  class SaveAllTests {
-
-    @Test
-    @DisplayName("应该批量保存多个载体")
-    void saveAllShouldInsertMultiple() {
-      // Given
-      VenueData venue1 =
-          new VenueData(
-              null,
-              "JOURNAL",
-              "Journal A",
-              null,
-              null,
-              "S0000000001",
-              null,
-              null,
-              null,
-              null,
-              true,
-              true,
-              true,
-              100,
-              1000,
-              10,
-              5,
-              "OPENALEX",
-              null);
-      VenueData venue2 =
-          new VenueData(
-              null,
-              "REPOSITORY",
-              "Repository B",
-              null,
-              null,
-              "S0000000002",
-              null,
-              null,
-              null,
-              null,
-              false,
-              false,
-              false,
-              50,
-              500,
-              5,
-              2,
-              "OPENALEX",
-              null);
-      VenueData venue3 =
-          new VenueData(
-              null,
-              "CONFERENCE",
-              "Conference C",
-              null,
-              null,
-              "S0000000003",
-              null,
-              null,
-              null,
-              null,
-              false,
-              false,
-              false,
-              30,
-              300,
-              3,
-              1,
-              "OPENALEX",
-              null);
-
-      // When
-      List<VenueData> saved = repository.saveAll(List.of(venue1, venue2, venue3));
-
-      // Then
-      assertThat(saved).hasSize(3);
-      assertThat(saved).allMatch(v -> v.id() != null && v.id() > 0);
-
-      // 验证数据库记录
-      long count = venueMapper.selectCount(null);
-      assertThat(count).isEqualTo(3);
-    }
-
-    @Test
-    @DisplayName("空列表应该返回空结果")
-    void saveAllShouldReturnEmptyForEmptyList() {
-      // When
-      List<VenueData> saved = repository.saveAll(List.of());
-
-      // Then
-      assertThat(saved).isEmpty();
-    }
-
-    @Test
-    @DisplayName("null 列表应该抛出 NullPointerException")
-    void saveAllShouldThrowForNullList() {
-      // When & Then
-      assertThatNullPointerException().isThrownBy(() -> repository.saveAll(null));
-    }
-  }
-
-  // ========== saveIdentifiers() 测试 ==========
-
-  @Nested
-  @DisplayName("saveIdentifiers() 测试")
-  class SaveIdentifiersTests {
-
-    @Test
-    @DisplayName("应该正确保存标识符")
-    void saveIdentifiersShouldInsert() {
-      // Given - 先保存载体
-      VenueData venue = createTestVenueData();
-      VenueData saved = repository.save(venue);
-      Long venueId = saved.id();
-
-      // 创建标识符
-      VenueIdentifierData issn = new VenueIdentifierData(null, venueId, "ISSN", ISSN, true);
-      VenueIdentifierData nlm = new VenueIdentifierData(null, venueId, "NLM", NLM_ID, false);
-
-      // When
-      repository.saveIdentifiers(List.of(issn, nlm));
-
-      // Then
-      List<VenueIdentifierData> identifiers = repository.findIdentifiersByVenueId(venueId);
-      assertThat(identifiers).hasSize(2);
-
-      // 验证 ISSN
-      Optional<VenueIdentifierData> savedIssn =
-          identifiers.stream().filter(i -> "ISSN".equals(i.identifierType())).findFirst();
-      assertThat(savedIssn).isPresent();
-      assertThat(savedIssn.get().identifierValue()).isEqualTo(ISSN);
-      assertThat(savedIssn.get().isPrimary()).isTrue();
-
-      // 验证 NLM
-      Optional<VenueIdentifierData> savedNlm =
-          identifiers.stream().filter(i -> "NLM".equals(i.identifierType())).findFirst();
-      assertThat(savedNlm).isPresent();
-      assertThat(savedNlm.get().identifierValue()).isEqualTo(NLM_ID);
-    }
-
-    @Test
-    @DisplayName("空列表应该不抛出异常")
-    void saveIdentifiersShouldNotThrowForEmptyList() {
-      // When & Then - 不应抛出异常
-      repository.saveIdentifiers(List.of());
-
-      long count = venueIdentifierMapper.selectCount(null);
-      assertThat(count).isZero();
-    }
-  }
-
-  // ========== saveMetrics() 测试 ==========
-
-  @Nested
-  @DisplayName("saveMetrics() 测试")
-  class SaveMetricsTests {
-
-    @Test
-    @DisplayName("应该正确保存年度指标")
-    void saveMetricsShouldInsert() {
-      // Given - 先保存载体
-      VenueData venue = createTestVenueData();
-      VenueData saved = repository.save(venue);
-      Long venueId = saved.id();
-
-      // 创建年度指标
-      VenueMetricsData m2024 = new VenueMetricsData(null, venueId, 2024, 1500, 25000, 800);
-      VenueMetricsData m2023 = new VenueMetricsData(null, venueId, 2023, 1400, 22000, 700);
-
-      // When
-      repository.saveMetrics(List.of(m2024, m2023));
-
-      // Then
-      List<VenueMetricsData> metrics = repository.findMetricsByVenueId(venueId);
-      assertThat(metrics).hasSize(2);
-
-      // 验证 2024 年指标
-      Optional<VenueMetricsData> saved2024 =
-          metrics.stream().filter(m -> m.year() == 2024).findFirst();
-      assertThat(saved2024).isPresent();
-      assertThat(saved2024.get().worksCount()).isEqualTo(1500);
-      assertThat(saved2024.get().citedByCount()).isEqualTo(25000);
-      assertThat(saved2024.get().oaWorksCount()).isEqualTo(800);
-    }
-
-    @Test
-    @DisplayName("空列表应该不抛出异常")
-    void saveMetricsShouldNotThrowForEmptyList() {
-      // When & Then - 不应抛出异常
-      repository.saveMetrics(List.of());
-
-      long count = venueMetricsMapper.selectCount(null);
-      assertThat(count).isZero();
-    }
-  }
-
-  // ========== findVenueIdByIdentifier() 测试 ==========
-
-  @Nested
-  @DisplayName("findVenueIdByIdentifier() 测试")
-  class FindVenueIdByIdentifierTests {
-
-    @Test
-    @DisplayName("应该通过标识符查找载体 ID")
-    void findVenueIdByIdentifierShouldReturnId() {
-      // Given
-      VenueData venue = createTestVenueData();
-      VenueData saved = repository.save(venue);
-      Long venueId = saved.id();
-      repository.saveIdentifiers(
-          List.of(new VenueIdentifierData(null, venueId, "ISSN", ISSN, true)));
-
-      // When
-      Optional<Long> foundId = repository.findVenueIdByIdentifier("ISSN", ISSN);
-
-      // Then
-      assertThat(foundId).contains(venueId);
-    }
-
-    @Test
-    @DisplayName("不存在时应该返回空")
-    void findVenueIdByIdentifierShouldReturnEmptyWhenNotExists() {
-      // When
-      Optional<Long> foundId = repository.findVenueIdByIdentifier("ISSN", "9999-9999");
-
-      // Then
-      assertThat(foundId).isEmpty();
-    }
-  }
-
-  // ========== findMetricsByVenueIdAndYear() 测试 ==========
-
-  @Nested
-  @DisplayName("findMetricsByVenueIdAndYear() 测试")
-  class FindMetricsByVenueIdAndYearTests {
-
-    @Test
-    @DisplayName("应该返回指定年份的指标")
-    void findMetricsByVenueIdAndYearShouldReturnForYear() {
-      // Given
-      VenueData venue = createTestVenueData();
-      VenueData saved = repository.save(venue);
-      Long venueId = saved.id();
-      repository.saveMetrics(
-          List.of(
-              new VenueMetricsData(null, venueId, 2024, 1500, 25000, null),
-              new VenueMetricsData(null, venueId, 2023, 1400, 22000, null)));
-
-      // When
-      Optional<VenueMetricsData> metrics = repository.findMetricsByVenueIdAndYear(venueId, 2024);
-
-      // Then
-      assertThat(metrics).isPresent();
-      assertThat(metrics.get().year()).isEqualTo(2024);
-      assertThat(metrics.get().worksCount()).isEqualTo(1500);
-    }
-
-    @Test
-    @DisplayName("年份不存在时应该返回空")
-    void findMetricsByVenueIdAndYearShouldReturnEmptyWhenYearNotExists() {
-      // Given
-      VenueData venue = createTestVenueData();
-      VenueData saved = repository.save(venue);
-      Long venueId = saved.id();
-      repository.saveMetrics(List.of(new VenueMetricsData(null, venueId, 2024, 1500, 25000, null)));
-
-      // When
-      Optional<VenueMetricsData> metrics = repository.findMetricsByVenueIdAndYear(venueId, 2020);
-
-      // Then
-      assertThat(metrics).isEmpty();
-    }
-  }
-
   // ========== hasAnyData() 测试 ==========
 
   @Nested
@@ -531,87 +75,108 @@ class VenueRepositoryAdapterIT {
     }
 
     @Test
-    @DisplayName("有单条数据 - 应该返回 true")
-    void hasAnyData_withSingleRecord_shouldReturnTrue() {
-      // Given: 插入单条数据
-      VenueData venue = createTestVenueData();
-      repository.save(venue);
+    @DisplayName("有数据 - 应该返回 true")
+    void hasAnyData_withData_shouldReturnTrue() {
+      // Given: 通过 insertAll 插入数据
+      VenueAggregate venue = createVenueAggregate("S1", "Journal A");
+      repository.insertAll(List.of(venue));
 
       // When & Then
       assertThat(repository.hasAnyData()).isTrue();
+    }
+  }
+
+  // ========== insertAll() 测试 ==========
+
+  @Nested
+  @DisplayName("insertAll() 测试")
+  class InsertAllTests {
+
+    @Test
+    @DisplayName("应该正确插入多个聚合根（含子表）")
+    void insertAll_shouldInsertAggregatesWithChildren() {
+      // Given
+      VenueAggregate venue1 = createVenueAggregate("S1", "Journal A");
+      venue1.setYearlyMetrics(List.of(VenueMetrics.create(2024, 100, 500)));
+
+      VenueAggregate venue2 = createVenueAggregate("S2", "Journal B");
+      venue2.setYearlyMetrics(List.of(VenueMetrics.create(2023, 50, 200)));
+
+      // When
+      repository.insertAll(List.of(venue1, venue2));
+
+      // Then: 验证主表
+      assertThat(venueMapper.selectCount(null)).isEqualTo(2);
+
+      // Then: 验证标识符子表（每个 Venue 有 1 个 OpenAlex 标识符）
+      assertThat(venueIdentifierMapper.selectCount(null)).isEqualTo(2);
+
+      // Then: 验证年度指标子表
+      assertThat(venueMetricsMapper.selectCount(null)).isEqualTo(2);
     }
 
     @Test
-    @DisplayName("有多条数据 - 应该返回 true")
-    void hasAnyData_withMultipleRecords_shouldReturnTrue() {
-      // Given: 插入多条数据
-      VenueData venue1 =
-          new VenueData(
-              null,
-              "JOURNAL",
-              "Journal A",
-              null,
-              null,
-              "S0000000001",
-              null,
-              null,
-              null,
-              null,
-              true,
-              true,
-              true,
-              100,
-              1000,
-              10,
-              5,
-              "OPENALEX",
-              null);
-      VenueData venue2 =
-          new VenueData(
-              null,
-              "REPOSITORY",
-              "Repository B",
-              null,
-              null,
-              "S0000000002",
-              null,
-              null,
-              null,
-              null,
-              false,
-              false,
-              false,
-              50,
-              500,
-              5,
-              2,
-              "OPENALEX",
-              null);
-      VenueData venue3 =
-          new VenueData(
-              null,
-              "CONFERENCE",
-              "Conference C",
-              null,
-              null,
-              "S0000000003",
-              null,
-              null,
-              null,
-              null,
-              false,
-              false,
-              false,
-              30,
-              300,
-              3,
-              1,
-              "OPENALEX",
-              null);
-      repository.saveAll(List.of(venue1, venue2, venue3));
-
+    @DisplayName("空列表不应抛出异常")
+    void insertAll_emptyList_shouldNotThrow() {
       // When & Then
-      assertThat(repository.hasAnyData()).isTrue();
+      assertThatCode(() -> repository.insertAll(List.of())).doesNotThrowAnyException();
+
+      // 验证没有数据插入
+      assertThat(venueMapper.selectCount(null)).isZero();
     }
+
+    @Test
+    @DisplayName("子表应正确关联到主表")
+    void insertAll_shouldSetCorrectVenueId() {
+      // Given
+      VenueAggregate venue = createVenueAggregate("S1", "Journal A");
+      venue.addIdentifier(VenueIdentifierType.ISSN, "1234-5678", true);
+      venue.setYearlyMetrics(List.of(VenueMetrics.create(2024, 100, 500)));
+
+      // When
+      repository.insertAll(List.of(venue));
+
+      // Then: 获取主表 ID
+      var savedVenue = venueMapper.selectList(null).get(0);
+      Long venueId = savedVenue.getId();
+      assertThat(venueId).isNotNull();
+
+      // Then: 验证标识符子表的外键
+      var identifiers = venueIdentifierMapper.selectList(null);
+      assertThat(identifiers).allMatch(i -> i.getVenueId().equals(venueId));
+
+      // Then: 验证年度指标子表的外键
+      var metrics = venueMetricsMapper.selectList(null);
+      assertThat(metrics).allMatch(m -> m.getVenueId().equals(venueId));
+    }
+
+    @Test
+    @DisplayName("应该正确处理没有子表数据的聚合根")
+    void insertAll_aggregateWithoutChildren_shouldInsertOnlyMain() {
+      // Given: 创建没有额外标识符和指标的聚合根
+      VenueAggregate venue = VenueAggregate.fromOpenAlex("S1", VenueType.JOURNAL, "Journal A");
+      venue.withIssnL("1234-S1");
+
+      // When
+      repository.insertAll(List.of(venue));
+
+      // Then: 主表有 1 条记录
+      assertThat(venueMapper.selectCount(null)).isEqualTo(1);
+
+      // Then: 标识符只有 1 个（OpenAlex ID 由 fromOpenAlex 自动添加）
+      assertThat(venueIdentifierMapper.selectCount(null)).isEqualTo(1);
+
+      // Then: 年度指标为空
+      assertThat(venueMetricsMapper.selectCount(null)).isZero();
+    }
+  }
+
+  /// 创建测试用的 VenueAggregate。
+  private VenueAggregate createVenueAggregate(String openalexId, String displayName) {
+    VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
+    venue.withIssnL("1234-" + openalexId);
+    venue.withCountryCode("US");
+    venue.withOaStatus(true, false, false);
+    return venue;
   }
 }

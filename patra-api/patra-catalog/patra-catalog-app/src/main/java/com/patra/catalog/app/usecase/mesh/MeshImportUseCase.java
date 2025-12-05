@@ -4,6 +4,7 @@ import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.command.MeshQualifierImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
+import com.patra.catalog.domain.exception.DataAlreadyExistsException;
 
 /// MeSH 导入用例接口，定义调度入口契约。
 ///

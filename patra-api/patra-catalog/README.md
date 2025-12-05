@@ -142,7 +142,7 @@ patra:
 ### Infrastructure 层
 - `MeshDescriptorRepositoryAdapter`：主题词仓储适配器
 - `MeshQualifierRepositoryAdapter`：限定词仓储适配器
-- `VenueRepositoryAdapter`：载体仓储适配器（含标识符和指标管理）
+- `VenueRepositoryAdapter`：载体聚合根仓储适配器（批量导入）
 - `MeshDescriptorConverter`：主题词对象转换器
 - `MeshQualifierConverter`：限定词对象转换器
 - `MeshSourceFileAdapter`：MeSH 源文件下载适配器（直接从 NLM 下载）
@@ -176,7 +176,14 @@ patra:
 | Boot | E2E 测试 | 核心流程 |
 
 ## 📝 变更日志
-1. v0.6.1 (2025-12-05)：MeSH 导入配置驱动简化
+1. v0.6.2 (2025-12-05)：Repository 接口简化与依赖倒置
+   - **Breaking Change**：Repository 接口改为以聚合根为操作单位
+     - `VenueRepository`：删除 `saveBatch`/`saveIdentifiers`/`saveMetrics` 等方法，统一为 `insertAll(List<VenueAggregate>)`
+     - `MeshDescriptorRepository`：删除 `saveBatch`/`saveTreeNumbersBatch`/`saveConceptsBatch`/`saveEntryTermsBatch` 等方法，统一为 `insertAll(List<MeshDescriptorAggregate>)`
+   - 移除 Repository 内部 Record DTO 模式（`VenueData`、`VenueIdentifierData`、`VenueMetricsData`），直接操作领域聚合根
+   - ItemWriter 改为依赖 Repository 接口（而非 Mapper），遵循依赖倒置原则（DIP）
+   - 净删除约 1,200 行死代码
+2. v0.6.1 (2025-12-05)：MeSH 导入配置驱动简化
    - **Breaking Change**：移除 XXL-Job 参数传递，改为配置文件驱动
      - URL 从 `patra.catalog.mesh.descriptor-url` / `qualifier-url` 配置读取
      - 版本号从文件名自动推断（`desc2025.xml` → `2025`）
@@ -206,7 +213,7 @@ patra:
    - 新增 `VenueMetrics` 实体：支持年度发表量、被引量、OA 比例时序分析
    - 新增值对象：`HostOrganization`、`VenueStats`、`ApcInfo`、`Society`、`ProvenanceInfo`
    - 新增枚举：`VenueType`、`VenueIdentifierType`
-   - Repository 使用内部 Record DTO 模式，解耦领域对象与持久化
+   - Repository 以聚合根为操作单位，保持 DDD 一致性边界
    - 新增数据库表：`cat_venue_identifier`、`cat_venue_metrics`
 2. v0.3.0 (2025-12-01)：MeSH 源文件下载适配器
    - 新增 `MeshSourceFileAdapter`：从 NLM 官方服务器下载 MeSH XML 文件
