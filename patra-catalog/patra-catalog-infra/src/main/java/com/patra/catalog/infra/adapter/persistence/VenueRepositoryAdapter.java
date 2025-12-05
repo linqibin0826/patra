@@ -1,5 +1,6 @@
 package com.patra.catalog.infra.adapter.persistence;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.entity.VenueIdentifier;
@@ -15,7 +16,10 @@ import com.patra.catalog.infra.persistence.mapper.VenueIdentifierMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueMetricsMapper;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -115,5 +119,21 @@ public class VenueRepositoryAdapter implements VenueRepository {
       metricsDO.setVenueId(venueId);
       metricsDOs.add(metricsDO);
     }
+  }
+
+  @Override
+  public Set<String> findExistingIssnLs(Collection<String> issnLs) {
+    if (issnLs == null || issnLs.isEmpty()) {
+      return Set.of();
+    }
+
+    return venueMapper
+        .selectList(
+            new LambdaQueryWrapper<VenueDO>()
+                .select(VenueDO::getIssnL)
+                .in(VenueDO::getIssnL, issnLs))
+        .stream()
+        .map(VenueDO::getIssnL)
+        .collect(Collectors.toSet());
   }
 }
