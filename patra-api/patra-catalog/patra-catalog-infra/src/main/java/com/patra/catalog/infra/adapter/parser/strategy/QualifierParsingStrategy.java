@@ -5,6 +5,7 @@ import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.infra.adapter.parser.MeshXmlElements;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingContext;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingHelper;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import javax.xml.stream.XMLStreamConstants;
@@ -82,9 +83,9 @@ public final class QualifierParsingStrategy
     String name = null;
     String abbreviation = null;
     String annotation = null;
-    String dateCreated = null;
-    String dateRevised = null;
-    String dateEstablished = null;
+    LocalDate dateCreated = null;
+    LocalDate dateRevised = null;
+    LocalDate dateEstablished = null;
     String historyNote = null;
     String onlineNote = null;
     List<String> treeNumbers = new ArrayList<>();
@@ -145,7 +146,6 @@ public final class QualifierParsingStrategy
         .withHistoryNote(historyNote)
         .withOnlineNote(onlineNote)
         .withTreeNumbers(treeNumbers)
-        .withActiveStatus(true) // 默认为有效
         .withMeshVersion(context.meshVersion());
   }
 

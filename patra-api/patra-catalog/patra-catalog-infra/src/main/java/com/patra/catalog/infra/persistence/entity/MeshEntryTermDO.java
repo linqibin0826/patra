@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.patra.starter.mybatis.entity.BaseDO;
+import java.time.LocalDate;
 import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -83,9 +84,9 @@ public class MeshEntryTermDO extends BaseDO {
   @TableField("term_note")
   private String termNote;
 
-  /// 创建日期（格式：YYYYMMDD）
+  /// 创建日期
   @TableField("date_created")
-  private String dateCreated;
+  private LocalDate dateCreated;
 
   /// 来源词库 ID 列表（JSON 数组）
   @TableField(value = "thesaurus_ids", typeHandler = JacksonTypeHandler.class)

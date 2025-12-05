@@ -1,5 +1,6 @@
 package com.patra.catalog.infra.adapter.parser.support;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import javax.xml.stream.XMLStreamConstants;
@@ -36,9 +37,9 @@ public final class XmlParsingHelper {
   ///
   /// @param reader XML 读取器（已定位到日期元素）
   /// @param elementName 日期元素名称（如 "DateCreated"）
-  /// @return 格式化的日期字符串（YYYYMMDD），缺少任何组件时返回 `null`
+  /// @return 解析后的 LocalDate，缺少任何组件时返回 `null`
   /// @throws XMLStreamException XML 解析异常
-  public static String parseDate(XMLStreamReader reader, String elementName)
+  public static LocalDate parseDate(XMLStreamReader reader, String elementName)
       throws XMLStreamException {
     String year = null;
     String month = null;
@@ -59,11 +60,9 @@ public final class XmlParsingHelper {
       }
     }
 
-    // 组装日期字符串（YYYYMMDD 格式）
+    // 构造 LocalDate 对象
     if (year != null && month != null && day != null) {
-      return String.format(
-          "%s%s%s",
-          year, month.length() == 1 ? "0" + month : month, day.length() == 1 ? "0" + day : day);
+      return LocalDate.of(Integer.parseInt(year), Integer.parseInt(month), Integer.parseInt(day));
     }
     return null;
   }

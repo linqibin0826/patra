@@ -13,6 +13,7 @@ import com.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
 import com.patra.catalog.domain.model.vo.mesh.SeeRelatedDescriptor;
 import com.patra.common.domain.AggregateRoot;
 import java.io.Serial;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -98,14 +99,14 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
 
   // ========== 日期信息 ==========
 
-  /// 创建日期(格式：YYYYMMDD)
-  private String dateCreated;
+  /// 创建日期
+  private LocalDate dateCreated;
 
-  /// 修订日期(格式：YYYYMMDD)
-  private String dateRevised;
+  /// 修订日期
+  private LocalDate dateRevised;
 
-  /// 确立日期(格式：YYYYMMDD)
-  private String dateEstablished;
+  /// 确立日期
+  private LocalDate dateEstablished;
 
   // ========== 聚合内实体集合 ==========
 
@@ -234,9 +235,9 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
       String previousIndexing,
       String publicMeshNote,
       String considerAlso,
-      String dateCreated,
-      String dateRevised,
-      String dateEstablished,
+      LocalDate dateCreated,
+      LocalDate dateRevised,
+      LocalDate dateEstablished,
       Long version) {
     MeshDescriptorAggregate aggregate =
         new MeshDescriptorAggregate(id, ui, name, descriptorClass, activeStatus, meshVersion);

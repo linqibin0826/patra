@@ -5,6 +5,7 @@ import com.patra.catalog.domain.model.enums.LexicalTag;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import java.io.Serial;
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -88,8 +89,8 @@ public class MeshEntryTerm implements Serializable {
   /// 是否概念首选术语(区别于记录首选术语)
   private final boolean isConceptPreferred;
 
-  /// 术语创建日期(格式：YYYYMMDD)
-  private String dateCreated;
+  /// 术语创建日期
+  private LocalDate dateCreated;
 
   /// 来源词库列表(如 ["FDA SRS (2014)", "NLM (1975)"])
   private final List<String> thesaurusIds;
@@ -276,9 +277,9 @@ public class MeshEntryTerm implements Serializable {
 
   /// 设置术语创建日期。
   ///
-  /// @param dateCreated 术语创建日期(格式：YYYYMMDD)
+  /// @param dateCreated 术语创建日期
   /// @return 当前对象(支持链式调用)
-  public MeshEntryTerm withDateCreated(String dateCreated) {
+  public MeshEntryTerm withDateCreated(LocalDate dateCreated) {
     this.dateCreated = dateCreated;
     return this;
   }

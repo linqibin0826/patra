@@ -6,6 +6,7 @@ import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.infra.adapter.parser.MeshXmlElements;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingContext;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingHelper;
+import java.time.LocalDate;
 import java.util.List;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
@@ -83,7 +84,7 @@ public final class EntryTermParsingStrategy implements RecordParsingStrategy<Mes
     // 子元素字段
     String termUI = null;
     String termText = null;
-    String dateCreated = null;
+    LocalDate dateCreated = null;
     String entryVersion = null;
     String abbreviation = null;
     String sortVersion = null;

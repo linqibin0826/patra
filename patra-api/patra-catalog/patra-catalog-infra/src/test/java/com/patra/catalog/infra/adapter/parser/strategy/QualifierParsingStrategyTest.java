@@ -10,6 +10,7 @@ import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.infra.adapter.parser.MeshXmlElements;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingContext;
 import java.io.StringReader;
+import java.time.LocalDate;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
@@ -195,9 +196,9 @@ class QualifierParsingStrategyTest {
 
       MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
-      assertEquals("19660101", result.getDateCreated());
-      assertEquals("20200615", result.getDateRevised());
-      assertEquals("19660101", result.getDateEstablished());
+      assertEquals(LocalDate.of(1966, 1, 1), result.getDateCreated());
+      assertEquals(LocalDate.of(2020, 6, 15), result.getDateRevised());
+      assertEquals(LocalDate.of(1966, 1, 1), result.getDateEstablished());
     }
 
     @Test
@@ -478,9 +479,9 @@ class QualifierParsingStrategyTest {
       assertEquals("diagnosis", result.getName());
       assertEquals("DI", result.getAbbreviation());
       assertEquals("Used with diseases for diagnostic procedures", result.getAnnotation());
-      assertEquals("19660101", result.getDateCreated());
-      assertEquals("20200615", result.getDateRevised());
-      assertEquals("19660101", result.getDateEstablished());
+      assertEquals(LocalDate.of(1966, 1, 1), result.getDateCreated());
+      assertEquals(LocalDate.of(2020, 6, 15), result.getDateRevised());
+      assertEquals(LocalDate.of(1966, 1, 1), result.getDateEstablished());
       assertEquals("66; used with Category A-D 1966-74", result.getHistoryNote());
       assertEquals("search policy: Online Manual", result.getOnlineNote());
       assertThat(result.getTreeNumbers()).containsExactly("Y01.060");

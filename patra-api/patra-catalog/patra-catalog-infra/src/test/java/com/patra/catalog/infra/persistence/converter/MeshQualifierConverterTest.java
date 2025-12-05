@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.infra.persistence.entity.MeshQualifierDO;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
@@ -37,9 +38,9 @@ class MeshQualifierConverterTest {
     MeshQualifierAggregate aggregate =
         MeshQualifierAggregate.create(MeshUI.qualifierOf(1), "immunology", "IM")
             .withAnnotation("Used with organs, animals, and diseases for immunologic")
-            .withDateCreated("19990101")
-            .withDateRevised("20250101")
-            .withDateEstablished("19990101")
+            .withDateCreated(LocalDate.of(1999, 1, 1))
+            .withDateRevised(LocalDate.of(2025, 1, 1))
+            .withDateEstablished(LocalDate.of(1999, 1, 1))
             .withActiveStatus(true)
             .withMeshVersion("2025");
 
@@ -54,9 +55,9 @@ class MeshQualifierConverterTest {
     assertThat(dataObject.getAbbreviation()).isEqualTo("IM");
     assertThat(dataObject.getAnnotation())
         .isEqualTo("Used with organs, animals, and diseases for immunologic");
-    assertThat(dataObject.getDateCreated()).isEqualTo("19990101");
-    assertThat(dataObject.getDateRevised()).isEqualTo("20250101");
-    assertThat(dataObject.getDateEstablished()).isEqualTo("19990101");
+    assertThat(dataObject.getDateCreated()).isEqualTo(LocalDate.of(1999, 1, 1));
+    assertThat(dataObject.getDateRevised()).isEqualTo(LocalDate.of(2025, 1, 1));
+    assertThat(dataObject.getDateEstablished()).isEqualTo(LocalDate.of(1999, 1, 1));
     assertThat(dataObject.getActiveStatus()).isTrue();
     assertThat(dataObject.getMeshVersion()).isEqualTo("2025");
   }
@@ -72,9 +73,9 @@ class MeshQualifierConverterTest {
             "immunology",
             "IM",
             "Test annotation",
-            "19990101",
-            "20250101",
-            "19990101",
+            LocalDate.of(1999, 1, 1),
+            LocalDate.of(2025, 1, 1),
+            LocalDate.of(1999, 1, 1),
             true,
             "2025",
             null, // historyNote
@@ -110,9 +111,9 @@ class MeshQualifierConverterTest {
     dataObject.setName("immunology");
     dataObject.setAbbreviation("IM");
     dataObject.setAnnotation("Used with organs, animals, and diseases for immunologic");
-    dataObject.setDateCreated("19990101");
-    dataObject.setDateRevised("20250101");
-    dataObject.setDateEstablished("19990101");
+    dataObject.setDateCreated(LocalDate.of(1999, 1, 1));
+    dataObject.setDateRevised(LocalDate.of(2025, 1, 1));
+    dataObject.setDateEstablished(LocalDate.of(1999, 1, 1));
     dataObject.setActiveStatus(true);
     dataObject.setMeshVersion("2025");
 
@@ -128,9 +129,9 @@ class MeshQualifierConverterTest {
     assertThat(aggregate.getAbbreviation()).isEqualTo("IM");
     assertThat(aggregate.getAnnotation())
         .isEqualTo("Used with organs, animals, and diseases for immunologic");
-    assertThat(aggregate.getDateCreated()).isEqualTo("19990101");
-    assertThat(aggregate.getDateRevised()).isEqualTo("20250101");
-    assertThat(aggregate.getDateEstablished()).isEqualTo("19990101");
+    assertThat(aggregate.getDateCreated()).isEqualTo(LocalDate.of(1999, 1, 1));
+    assertThat(aggregate.getDateRevised()).isEqualTo(LocalDate.of(2025, 1, 1));
+    assertThat(aggregate.getDateEstablished()).isEqualTo(LocalDate.of(1999, 1, 1));
     assertThat(aggregate.getActiveStatus()).isTrue();
     assertThat(aggregate.getMeshVersion()).isEqualTo("2025");
     assertThat(aggregate.isActive()).isTrue();
@@ -185,9 +186,9 @@ class MeshQualifierConverterTest {
     originalDO.setName("immunology");
     originalDO.setAbbreviation("IM");
     originalDO.setAnnotation("Test annotation");
-    originalDO.setDateCreated("19990101");
-    originalDO.setDateRevised("20250101");
-    originalDO.setDateEstablished("19990101");
+    originalDO.setDateCreated(LocalDate.of(1999, 1, 1));
+    originalDO.setDateRevised(LocalDate.of(2025, 1, 1));
+    originalDO.setDateEstablished(LocalDate.of(1999, 1, 1));
     originalDO.setActiveStatus(true);
     originalDO.setMeshVersion("2025");
 
