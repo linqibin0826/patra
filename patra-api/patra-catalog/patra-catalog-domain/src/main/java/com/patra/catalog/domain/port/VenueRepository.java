@@ -1,7 +1,9 @@
 package com.patra.catalog.domain.port;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
+import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 /// 载体聚合根仓储接口（领域层定义，基础设施层实现）。
 ///
@@ -46,4 +48,12 @@ public interface VenueRepository {
   ///
   /// @param aggregates 聚合根列表（不能为 null，可以为空）
   void insertAll(List<VenueAggregate> aggregates);
+
+  /// 批量查询已存在的 ISSN-L。
+  ///
+  /// 用于 ISSN-L 唯一约束冲突时的去重处理，过滤数据源中与数据库重复的记录。
+  ///
+  /// @param issnLs 待检查的 ISSN-L 集合（不能为 null，可以为空）
+  /// @return 数据库中已存在的 ISSN-L 集合（永不为 null）
+  Set<String> findExistingIssnLs(Collection<String> issnLs);
 }
