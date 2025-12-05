@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO;
+import java.time.LocalDate;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -78,17 +79,17 @@ public class MeshDescriptorDO extends BaseDO {
   @TableField("nlm_classification_number")
   private String nlmClassificationNumber;
 
-  /// 创建日期（格式：YYYYMMDD，如 20230115）
+  /// 创建日期
   @TableField("date_created")
-  private String dateCreated;
+  private LocalDate dateCreated;
 
-  /// 修订日期（格式：YYYYMMDD）
+  /// 修订日期
   @TableField("date_revised")
-  private String dateRevised;
+  private LocalDate dateRevised;
 
-  /// 确立日期（格式：YYYYMMDD）
+  /// 确立日期
   @TableField("date_established")
-  private String dateEstablished;
+  private LocalDate dateEstablished;
 
   /// 是否有效（0=已废弃，1=有效）
   @TableField("active_status")

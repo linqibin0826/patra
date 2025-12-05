@@ -12,6 +12,7 @@ import com.patra.catalog.domain.model.enums.LexicalTag;
 import com.patra.catalog.infra.adapter.parser.MeshXmlElements;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingContext;
 import java.io.StringReader;
+import java.time.LocalDate;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
@@ -200,7 +201,7 @@ class EntryTermParsingStrategyTest {
 
       MeshEntryTerm result = strategy.parseRecord(reader, XmlParsingContext.empty());
 
-      assertEquals("20200115", result.getDateCreated());
+      assertEquals(LocalDate.of(2020, 1, 15), result.getDateCreated());
     }
 
     @Test

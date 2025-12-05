@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.StringReader;
+import java.time.LocalDate;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
@@ -35,18 +36,18 @@ class XmlParsingHelperTest {
 
       var result = XmlParsingHelper.parseDate(reader, "DateCreated");
 
-      assertEquals("20250105", result);
+      assertEquals(LocalDate.of(2025, 1, 5), result);
     }
 
     @Test
-    @DisplayName("应补零单位数月份和日期")
-    void shouldPadSingleDigitMonthAndDay() throws Exception {
+    @DisplayName("应正确解析单位数月份和日期")
+    void shouldParseSingleDigitMonthAndDay() throws Exception {
       var xml = "<DateCreated><Year>2025</Year><Month>3</Month><Day>9</Day></DateCreated>";
       var reader = createReaderAtStartElement(xml);
 
       var result = XmlParsingHelper.parseDate(reader, "DateCreated");
 
-      assertEquals("20250309", result);
+      assertEquals(LocalDate.of(2025, 3, 9), result);
     }
 
     @Test
@@ -68,7 +69,7 @@ class XmlParsingHelperTest {
 
       var result = XmlParsingHelper.parseDate(reader, "DateCreated");
 
-      assertEquals("20251225", result);
+      assertEquals(LocalDate.of(2025, 12, 25), result);
     }
   }
 

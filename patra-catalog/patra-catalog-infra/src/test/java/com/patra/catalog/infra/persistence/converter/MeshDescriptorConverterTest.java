@@ -17,6 +17,7 @@ import com.patra.catalog.infra.persistence.entity.MeshDescriptorDO;
 import com.patra.catalog.infra.persistence.entity.MeshEntryCombinationDO;
 import com.patra.catalog.infra.persistence.entity.MeshEntryTermDO;
 import com.patra.catalog.infra.persistence.entity.MeshTreeNumberDO;
+import java.time.LocalDate;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -186,7 +187,7 @@ class MeshDescriptorConverterTest {
                   MeshUI.of("T000001"), "Test Term", LexicalTag.PEF, true, true, true, false)
               .withConceptUi(MeshUI.of("M0000001"))
               .withAbbreviation("TT")
-              .withDateCreated("20240101");
+              .withDateCreated(LocalDate.of(2024, 1, 1));
 
       // When
       MeshEntryTermDO result = converter.toEntryTermDO(entryTerm, DESCRIPTOR_UI_STR);
@@ -203,7 +204,7 @@ class MeshDescriptorConverterTest {
       assertThat(result.getIsConceptPreferred()).isTrue();
       assertThat(result.getIsPermutedTerm()).isFalse();
       assertThat(result.getAbbreviation()).isEqualTo("TT");
-      assertThat(result.getDateCreated()).isEqualTo("20240101");
+      assertThat(result.getDateCreated()).isEqualTo(LocalDate.of(2024, 1, 1));
     }
 
     @Test

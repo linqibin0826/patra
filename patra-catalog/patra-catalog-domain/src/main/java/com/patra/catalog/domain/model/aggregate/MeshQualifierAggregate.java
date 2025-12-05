@@ -5,6 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.common.domain.AggregateRoot;
 import java.io.Serial;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
@@ -69,14 +70,14 @@ public class MeshQualifierAggregate extends AggregateRoot<Long> {
   /// 注释说明
   private String annotation;
 
-  /// 创建日期(格式：YYYYMMDD)
-  private String dateCreated;
+  /// 创建日期
+  private LocalDate dateCreated;
 
-  /// 修订日期(格式：YYYYMMDD)
-  private String dateRevised;
+  /// 修订日期
+  private LocalDate dateRevised;
 
-  /// 确立日期(格式：YYYYMMDD)
-  private String dateEstablished;
+  /// 确立日期
+  private LocalDate dateEstablished;
 
   /// 是否有效(false=已废弃, true=有效)
   private Boolean activeStatus;
@@ -126,13 +127,16 @@ public class MeshQualifierAggregate extends AggregateRoot<Long> {
 
   /// 创建限定词聚合根。
   ///
+  /// 新创建的限定词默认为有效状态（activeStatus = true）。
+  ///
   /// @param qualifierUi 限定词UI
   /// @param name 限定词名称
   /// @param abbreviation 限定词缩写
   /// @return 限定词聚合根
   public static MeshQualifierAggregate create(
       MeshUI qualifierUi, String name, String abbreviation) {
-    return new MeshQualifierAggregate(null, qualifierUi, name, abbreviation);
+    return new MeshQualifierAggregate(null, qualifierUi, name, abbreviation)
+        .withActiveStatus(true); // 默认有效
   }
 
   /// 从持久化状态重建聚合根(由Repository使用)。
@@ -157,9 +161,9 @@ public class MeshQualifierAggregate extends AggregateRoot<Long> {
       String name,
       String abbreviation,
       String annotation,
-      String dateCreated,
-      String dateRevised,
-      String dateEstablished,
+      LocalDate dateCreated,
+      LocalDate dateRevised,
+      LocalDate dateEstablished,
       Boolean activeStatus,
       String meshVersion,
       String historyNote,
@@ -192,27 +196,27 @@ public class MeshQualifierAggregate extends AggregateRoot<Long> {
 
   /// 设置创建日期。
   ///
-  /// @param dateCreated 创建日期(格式：YYYYMMDD)
+  /// @param dateCreated 创建日期
   /// @return 当前对象(支持链式调用)
-  public MeshQualifierAggregate withDateCreated(String dateCreated) {
+  public MeshQualifierAggregate withDateCreated(LocalDate dateCreated) {
     this.dateCreated = dateCreated;
     return this;
   }
 
   /// 设置修订日期。
   ///
-  /// @param dateRevised 修订日期(格式：YYYYMMDD)
+  /// @param dateRevised 修订日期
   /// @return 当前对象(支持链式调用)
-  public MeshQualifierAggregate withDateRevised(String dateRevised) {
+  public MeshQualifierAggregate withDateRevised(LocalDate dateRevised) {
     this.dateRevised = dateRevised;
     return this;
   }
 
   /// 设置确立日期。
   ///
-  /// @param dateEstablished 确立日期(格式：YYYYMMDD)
+  /// @param dateEstablished 确立日期
   /// @return 当前对象(支持链式调用)
-  public MeshQualifierAggregate withDateEstablished(String dateEstablished) {
+  public MeshQualifierAggregate withDateEstablished(LocalDate dateEstablished) {
     this.dateEstablished = dateEstablished;
     return this;
   }

@@ -10,6 +10,7 @@ import com.patra.catalog.infra.persistence.converter.MeshQualifierConverter;
 import com.patra.catalog.infra.persistence.entity.MeshQualifierDO;
 import com.patra.catalog.infra.persistence.mapper.MeshQualifierMapper;
 import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -99,9 +100,9 @@ class MeshQualifierRepositoryAdapterIT {
       MeshQualifierAggregate qualifier =
           MeshQualifierAggregate.create(MeshUI.qualifierOf(1), "immunology", "IM")
               .withAnnotation("Used with organs, animals, and diseases for immunologic")
-              .withDateCreated("19990101")
-              .withDateRevised("20250101")
-              .withDateEstablished("19990101")
+              .withDateCreated(LocalDate.of(1999, 1, 1))
+              .withDateRevised(LocalDate.of(2025, 1, 1))
+              .withDateEstablished(LocalDate.of(1999, 1, 1))
               .withActiveStatus(true)
               .withMeshVersion("2025");
 
@@ -185,7 +186,7 @@ class MeshQualifierRepositoryAdapterIT {
             MeshQualifierAggregate.create(
                     MeshUI.qualifierOf(i), "qualifier_" + i, "Q" + String.format("%02d", i))
                 .withAnnotation("Test annotation for qualifier " + i)
-                .withDateCreated("20250101")
+                .withDateCreated(LocalDate.of(2025, 1, 1))
                 .withActiveStatus(true)
                 .withMeshVersion("2025"));
       }

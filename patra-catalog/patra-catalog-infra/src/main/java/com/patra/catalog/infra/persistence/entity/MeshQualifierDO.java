@@ -3,6 +3,7 @@ package com.patra.catalog.infra.persistence.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.patra.starter.mybatis.entity.BaseDO;
+import java.time.LocalDate;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -49,17 +50,17 @@ public class MeshQualifierDO extends BaseDO {
   @TableField("annotation")
   private String annotation;
 
-  /// 创建日期（格式：YYYYMMDD）
+  /// 创建日期
   @TableField("date_created")
-  private String dateCreated;
+  private LocalDate dateCreated;
 
-  /// 修订日期（格式：YYYYMMDD）
+  /// 修订日期
   @TableField("date_revised")
-  private String dateRevised;
+  private LocalDate dateRevised;
 
-  /// 确立日期（格式：YYYYMMDD）
+  /// 确立日期
   @TableField("date_established")
-  private String dateEstablished;
+  private LocalDate dateEstablished;
 
   /// 是否有效（0=已废弃，1=有效）
   @TableField("active_status")

@@ -13,6 +13,7 @@ import com.patra.catalog.domain.model.vo.mesh.SeeRelatedDescriptor;
 import com.patra.catalog.infra.adapter.parser.MeshXmlElements;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingContext;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingHelper;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import javax.xml.stream.XMLStreamConstants;
@@ -92,9 +93,9 @@ public final class DescriptorParsingStrategy
     String descriptorName = null;
 
     // 日期字段
-    String dateCreated = null;
-    String dateRevised = null;
-    String dateEstablished = null;
+    LocalDate dateCreated = null;
+    LocalDate dateRevised = null;
+    LocalDate dateEstablished = null;
 
     // 文本字段
     String historyNote = null;
