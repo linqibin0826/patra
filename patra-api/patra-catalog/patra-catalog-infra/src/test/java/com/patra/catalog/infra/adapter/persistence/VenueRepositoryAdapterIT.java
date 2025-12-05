@@ -14,6 +14,7 @@ import com.patra.catalog.infra.persistence.mapper.VenueMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueMetricsMapper;
 import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -171,10 +172,105 @@ class VenueRepositoryAdapterIT {
     }
   }
 
+  // ========== findExistingIssnLs() 测试 ==========
+
+  @Nested
+  @DisplayName("findExistingIssnLs() 测试")
+  class FindExistingIssnLsTests {
+
+    @Test
+    @DisplayName("空集合输入 - 应该返回空集合")
+    void findExistingIssnLs_emptyInput_shouldReturnEmptySet() {
+      // When
+      Set<String> result = repository.findExistingIssnLs(Set.of());
+
+      // Then
+      assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("null 输入 - 应该返回空集合")
+    void findExistingIssnLs_nullInput_shouldReturnEmptySet() {
+      // When
+      Set<String> result = repository.findExistingIssnLs(null);
+
+      // Then
+      assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("数据库为空 - 应该返回空集合")
+    void findExistingIssnLs_emptyDatabase_shouldReturnEmptySet() {
+      // Given: 数据库为空
+      assertThat(venueMapper.selectCount(null)).isZero();
+
+      // When
+      Set<String> result = repository.findExistingIssnLs(Set.of("1234-5678", "2345-6789"));
+
+      // Then
+      assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("部分匹配 - 应该只返回存在的 ISSN-L")
+    void findExistingIssnLs_partialMatch_shouldReturnOnlyExisting() {
+      // Given: 插入两条记录
+      VenueAggregate venue1 = createVenueAggregateWithIssnL("S1", "Journal A", "1111-1111");
+      VenueAggregate venue2 = createVenueAggregateWithIssnL("S2", "Journal B", "2222-2222");
+      repository.insertAll(List.of(venue1, venue2));
+
+      // When: 查询 3 个 ISSN-L，其中 2 个存在
+      Set<String> result =
+          repository.findExistingIssnLs(Set.of("1111-1111", "2222-2222", "3333-3333"));
+
+      // Then: 只返回存在的 2 个
+      assertThat(result).containsExactlyInAnyOrder("1111-1111", "2222-2222");
+    }
+
+    @Test
+    @DisplayName("全匹配 - 应该返回所有查询的 ISSN-L")
+    void findExistingIssnLs_allMatch_shouldReturnAll() {
+      // Given
+      VenueAggregate venue1 = createVenueAggregateWithIssnL("S1", "Journal A", "1111-1111");
+      VenueAggregate venue2 = createVenueAggregateWithIssnL("S2", "Journal B", "2222-2222");
+      repository.insertAll(List.of(venue1, venue2));
+
+      // When
+      Set<String> result = repository.findExistingIssnLs(Set.of("1111-1111", "2222-2222"));
+
+      // Then
+      assertThat(result).containsExactlyInAnyOrder("1111-1111", "2222-2222");
+    }
+
+    @Test
+    @DisplayName("无匹配 - 应该返回空集合")
+    void findExistingIssnLs_noMatch_shouldReturnEmptySet() {
+      // Given: 插入数据
+      VenueAggregate venue = createVenueAggregateWithIssnL("S1", "Journal A", "1111-1111");
+      repository.insertAll(List.of(venue));
+
+      // When: 查询不存在的 ISSN-L
+      Set<String> result = repository.findExistingIssnLs(Set.of("9999-9999", "8888-8888"));
+
+      // Then
+      assertThat(result).isEmpty();
+    }
+  }
+
   /// 创建测试用的 VenueAggregate。
   private VenueAggregate createVenueAggregate(String openalexId, String displayName) {
     VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
     venue.withIssnL("1234-" + openalexId);
+    venue.withCountryCode("US");
+    venue.withOaStatus(true, false, false);
+    return venue;
+  }
+
+  /// 创建测试用的 VenueAggregate（指定 ISSN-L）。
+  private VenueAggregate createVenueAggregateWithIssnL(
+      String openalexId, String displayName, String issnL) {
+    VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
+    venue.withIssnL(issnL);
     venue.withCountryCode("US");
     venue.withOaStatus(true, false, false);
     return venue;
