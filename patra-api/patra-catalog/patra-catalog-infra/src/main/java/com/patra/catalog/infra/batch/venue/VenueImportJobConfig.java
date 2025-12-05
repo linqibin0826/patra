@@ -1,7 +1,6 @@
 package com.patra.catalog.infra.batch.venue;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
-import com.patra.catalog.infra.batch.openalex.OpenAlexSourceParser;
 import com.patra.starter.batch.config.BatchProperties;
 import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
 import java.nio.file.Path;

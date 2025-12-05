@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.adapter.mesh;
+package com.patra.catalog.infra.adapter.source;
 
 import com.patra.catalog.domain.port.FileDownloadPort;
 import com.patra.catalog.domain.port.MeshSourceFilePort;

@@ -1,7 +1,6 @@
 package com.patra.catalog.infra.batch.venue;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
-import com.patra.catalog.infra.batch.openalex.OpenAlexSourceParser;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;

@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.batch;
+package com.patra.catalog.infra.batch.mesh;
 
 import com.patra.starter.batch.core.JobParams;
 import lombok.AllArgsConstructor;

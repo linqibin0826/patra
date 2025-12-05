@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.batch.openalex;
+package com.patra.catalog.infra.batch.venue;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;

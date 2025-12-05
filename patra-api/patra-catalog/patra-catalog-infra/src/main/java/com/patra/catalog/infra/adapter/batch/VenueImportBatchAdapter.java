@@ -1,7 +1,8 @@
-package com.patra.catalog.infra.batch.venue;
+package com.patra.catalog.infra.adapter.batch;
 
 import com.patra.catalog.domain.model.vo.venue.VenueImportParams;
 import com.patra.catalog.domain.port.VenueImportBatchPort;
+import com.patra.catalog.infra.batch.venue.VenueImportJobParams;
 import com.patra.starter.batch.core.JobLauncherHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

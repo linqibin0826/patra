@@ -1,8 +1,7 @@
-package com.patra.catalog.infra.batch;
+package com.patra.catalog.infra.batch.mesh;
 
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.port.XmlParserPort;
-import com.patra.catalog.infra.batch.listener.MeshImportJobExecutionListener;
 import com.patra.starter.batch.config.BatchProperties;
 import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
 import java.util.Optional;
