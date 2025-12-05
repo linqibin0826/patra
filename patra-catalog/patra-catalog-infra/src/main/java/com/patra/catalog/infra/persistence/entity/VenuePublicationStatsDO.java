@@ -6,9 +6,9 @@ import com.patra.starter.mybatis.entity.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/// 载体年度指标数据库实体，映射到表 `cat_venue_metrics`。
+/// 载体年度发文统计数据库实体，映射到表 `cat_venue_publication_stats`。
 ///
-/// 表结构：存储载体的年度统计数据，支持时序分析和趋势查询。
+/// 表结构：存储载体的年度发文量和引用量统计数据，支持时序分析。
 ///
 /// 关键字段说明：
 ///
@@ -39,8 +39,8 @@ import lombok.EqualsAndHashCode;
 /// @since 0.1.0
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName(value = "cat_venue_metrics")
-public class VenueMetricsDO extends BaseDO {
+@TableName(value = "cat_venue_publication_stats")
+public class VenuePublicationStatsDO extends BaseDO {
 
   /// 载体 ID（外键：cat_venue.id）
   @TableField("venue_id")
