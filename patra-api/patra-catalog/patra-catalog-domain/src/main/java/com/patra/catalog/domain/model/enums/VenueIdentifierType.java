@@ -17,6 +17,9 @@ import lombok.Getter;
 /// - **MAG**：Microsoft Academic Graph ID（已停止更新）
 /// - **FATCAT**：Internet Archive Fatcat ID
 /// - **WIKIDATA**：Wikidata 实体 ID（格式：Q1234567）
+/// - **DOAJ**：DOAJ 期刊 ID
+/// - **CROSSREF**：Crossref DOI 前缀（出版商级别）
+/// - **JCR**：JCR 期刊 ID
 ///
 /// 使用示例：
 ///
@@ -54,7 +57,16 @@ public enum VenueIdentifierType {
   FATCAT("FATCAT", "Fatcat ID"),
 
   /// Wikidata 实体 ID
-  WIKIDATA("WIKIDATA", "Wikidata ID");
+  WIKIDATA("WIKIDATA", "Wikidata ID"),
+
+  /// DOAJ 期刊 ID
+  DOAJ("DOAJ", "DOAJ ID"),
+
+  /// Crossref DOI 前缀（出版商级别）
+  CROSSREF("CROSSREF", "Crossref DOI Prefix"),
+
+  /// JCR 期刊 ID
+  JCR("JCR", "JCR ID");
 
   /// 数据库存储的代码值
   private final String code;
@@ -111,11 +123,17 @@ public enum VenueIdentifierType {
     return this == NLM;
   }
 
-  /// 判断是否为外部数据源 ID（OpenAlex/MAG/Fatcat/Wikidata）。
+  /// 判断是否为外部数据源 ID（OpenAlex/MAG/Fatcat/Wikidata/DOAJ/Crossref/JCR）。
   ///
   /// @return true 如果为外部数据源 ID
   public boolean isExternalSourceId() {
-    return this == OPENALEX || this == MAG || this == FATCAT || this == WIKIDATA;
+    return this == OPENALEX
+        || this == MAG
+        || this == FATCAT
+        || this == WIKIDATA
+        || this == DOAJ
+        || this == CROSSREF
+        || this == JCR;
   }
 
   /// 判断是否为标准出版标识符（ISSN/ISBN）。
@@ -123,5 +141,33 @@ public enum VenueIdentifierType {
   /// @return true 如果为标准出版标识符
   public boolean isStandardPublishingId() {
     return this == ISSN || this == ISSN_L || this == ISBN;
+  }
+
+  /// 判断是否为 DOAJ ID。
+  ///
+  /// @return true 如果为 DOAJ ID 类型
+  public boolean isDoaj() {
+    return this == DOAJ;
+  }
+
+  /// 判断是否为 Crossref ID。
+  ///
+  /// @return true 如果为 Crossref ID 类型
+  public boolean isCrossref() {
+    return this == CROSSREF;
+  }
+
+  /// 判断是否为 JCR ID。
+  ///
+  /// @return true 如果为 JCR ID 类型
+  public boolean isJcr() {
+    return this == JCR;
+  }
+
+  /// 判断是否为评价体系相关 ID（JCR）。
+  ///
+  /// @return true 如果为评价体系相关 ID
+  public boolean isRatingSystemId() {
+    return this == JCR;
   }
 }
