@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.batch;
+package com.patra.catalog.infra.batch.mesh;
 
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.port.MeshDescriptorRepository;

@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.adapter.mesh;
+package com.patra.catalog.infra.adapter.source;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;

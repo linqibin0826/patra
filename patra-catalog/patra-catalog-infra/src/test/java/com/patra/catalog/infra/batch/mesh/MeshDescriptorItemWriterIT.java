@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.batch;
+package com.patra.catalog.infra.batch.mesh;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

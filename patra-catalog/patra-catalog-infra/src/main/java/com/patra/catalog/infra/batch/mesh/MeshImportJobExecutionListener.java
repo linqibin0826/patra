@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.batch.listener;
+package com.patra.catalog.infra.batch.mesh;
 
 import java.io.IOException;
 import java.nio.file.Files;

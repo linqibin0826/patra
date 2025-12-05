@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.batch.openalex;
+package com.patra.catalog.infra.batch.venue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

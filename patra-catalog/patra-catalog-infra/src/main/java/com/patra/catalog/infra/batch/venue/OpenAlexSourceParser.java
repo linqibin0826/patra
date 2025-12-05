@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.batch.openalex;
+package com.patra.catalog.infra.batch.venue;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.adapter.venue;
+package com.patra.catalog.infra.adapter.source;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;

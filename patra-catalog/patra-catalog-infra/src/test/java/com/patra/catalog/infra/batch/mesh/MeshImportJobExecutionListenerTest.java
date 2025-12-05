@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.batch.listener;
+package com.patra.catalog.infra.batch.mesh;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
