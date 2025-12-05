@@ -5,13 +5,13 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
-import com.patra.catalog.domain.model.entity.VenueMetrics;
+import com.patra.catalog.domain.model.entity.VenuePublicationStats;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.catalog.infra.persistence.mapper.VenueIdentifierMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueMapper;
-import com.patra.catalog.infra.persistence.mapper.VenueMetricsMapper;
+import com.patra.catalog.infra.persistence.mapper.VenuePublicationStatsMapper;
 import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
 import java.util.List;
 import java.util.Set;
@@ -56,7 +56,7 @@ class VenueRepositoryAdapterIT {
 
   @Autowired private VenueMapper venueMapper;
   @Autowired private VenueIdentifierMapper venueIdentifierMapper;
-  @Autowired private VenueMetricsMapper venueMetricsMapper;
+  @Autowired private VenuePublicationStatsMapper venuePublicationStatsMapper;
 
   // ========== hasAnyData() 测试 ==========
 
@@ -98,10 +98,10 @@ class VenueRepositoryAdapterIT {
     void insertAll_shouldInsertAggregatesWithChildren() {
       // Given
       VenueAggregate venue1 = createVenueAggregate("S1", "Journal A");
-      venue1.setYearlyMetrics(List.of(VenueMetrics.create(2024, 100, 500)));
+      venue1.setYearlyMetrics(List.of(VenuePublicationStats.create(2024, 100, 500)));
 
       VenueAggregate venue2 = createVenueAggregate("S2", "Journal B");
-      venue2.setYearlyMetrics(List.of(VenueMetrics.create(2023, 50, 200)));
+      venue2.setYearlyMetrics(List.of(VenuePublicationStats.create(2023, 50, 200)));
 
       // When
       repository.insertAll(List.of(venue1, venue2));
@@ -113,7 +113,7 @@ class VenueRepositoryAdapterIT {
       assertThat(venueIdentifierMapper.selectCount(null)).isEqualTo(2);
 
       // Then: 验证年度指标子表
-      assertThat(venueMetricsMapper.selectCount(null)).isEqualTo(2);
+      assertThat(venuePublicationStatsMapper.selectCount(null)).isEqualTo(2);
     }
 
     @Test
@@ -132,7 +132,7 @@ class VenueRepositoryAdapterIT {
       // Given
       VenueAggregate venue = createVenueAggregate("S1", "Journal A");
       venue.addIdentifier(VenueIdentifierType.ISSN, "1234-5678", true);
-      venue.setYearlyMetrics(List.of(VenueMetrics.create(2024, 100, 500)));
+      venue.setYearlyMetrics(List.of(VenuePublicationStats.create(2024, 100, 500)));
 
       // When
       repository.insertAll(List.of(venue));
@@ -147,7 +147,7 @@ class VenueRepositoryAdapterIT {
       assertThat(identifiers).allMatch(i -> i.getVenueId().equals(venueId));
 
       // Then: 验证年度指标子表的外键
-      var metrics = venueMetricsMapper.selectList(null);
+      var metrics = venuePublicationStatsMapper.selectList(null);
       assertThat(metrics).allMatch(m -> m.getVenueId().equals(venueId));
     }
 
@@ -168,7 +168,7 @@ class VenueRepositoryAdapterIT {
       assertThat(venueIdentifierMapper.selectCount(null)).isEqualTo(1);
 
       // Then: 年度指标为空
-      assertThat(venueMetricsMapper.selectCount(null)).isZero();
+      assertThat(venuePublicationStatsMapper.selectCount(null)).isZero();
     }
   }
 

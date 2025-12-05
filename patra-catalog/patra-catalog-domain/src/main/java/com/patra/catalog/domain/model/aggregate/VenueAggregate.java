@@ -3,12 +3,15 @@ package com.patra.catalog.domain.model.aggregate;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.entity.VenueIdentifier;
-import com.patra.catalog.domain.model.entity.VenueMetrics;
+import com.patra.catalog.domain.model.entity.VenuePublicationStats;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.ApcInfo;
 import com.patra.catalog.domain.model.vo.venue.HostOrganization;
+import com.patra.catalog.domain.model.vo.venue.IndexingInfo;
+import com.patra.catalog.domain.model.vo.venue.LatestRating;
 import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
+import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
 import com.patra.catalog.domain.model.vo.venue.Society;
 import com.patra.catalog.domain.model.vo.venue.VenueStats;
 import com.patra.common.domain.AggregateRoot;
@@ -26,7 +29,7 @@ import lombok.Getter;
 /// **聚合边界**：
 ///
 /// - VenueIdentifier（实体，1:N）：标识符集合，与 Venue 生命周期一致
-/// - VenueMetrics（实体，1:N）：年度指标集合，与 Venue 生命周期一致
+/// - VenuePublicationStats（实体，1:N）：年度指标集合，与 Venue 生命周期一致
 /// - VenueInstance 保持独立（通过 Repository 按需加载）
 ///
 /// **验证规则**：
@@ -74,6 +77,27 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// Linking ISSN
   private String issnL;
 
+  /// NLM 唯一标识符（冗余，来自 PubMed Catalog）
+  private String nlmId;
+
+  /// DOI 前缀（来自 Crossref）
+  private String doiPrefix;
+
+  // ========== 出版商信息 ==========
+
+  /// 出版商名称（来自 Crossref/DOAJ）
+  private String publisher;
+
+  // ========== 出版历史 ==========
+
+  /// 出版历史（创刊/停刊年份）
+  private PublicationHistory publicationHistory;
+
+  // ========== 索引收录信息 ==========
+
+  /// MEDLINE 索引收录信息
+  private IndexingInfo indexingInfo;
+
   // ========== 宿主机构 ==========
 
   /// 宿主机构信息
@@ -94,6 +118,14 @@ public class VenueAggregate extends AggregateRoot<Long> {
 
   /// 是否为核心期刊
   private boolean isCore;
+
+  /// OA 类型（GOLD/DIAMOND/HYBRID/BRONZE）
+  private String oaType;
+
+  // ========== 评级信息 ==========
+
+  /// 最新评级快照（冗余，高频查询优化）
+  private LatestRating latestRating;
 
   // ========== 统计快照 ==========
 
@@ -121,7 +153,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   private final List<VenueIdentifier> identifiers;
 
   /// 年度指标集合
-  private final List<VenueMetrics> yearlyMetrics;
+  private final List<VenuePublicationStats> yearlyMetrics;
 
   /// 私有构造函数（通过工厂方法创建）。
   ///
@@ -179,8 +211,9 @@ public class VenueAggregate extends AggregateRoot<Long> {
 
     VenueAggregate aggregate = new VenueAggregate(null, VenueType.JOURNAL, displayName);
 
-    // 添加标识符
+    // 添加标识符并设置冗余字段
     if (StrUtil.isNotBlank(nlmId)) {
+      aggregate.nlmId = nlmId;
       aggregate.addIdentifier(VenueIdentifier.forNlm(nlmId));
     }
     if (StrUtil.isNotBlank(issnL)) {
@@ -256,6 +289,51 @@ public class VenueAggregate extends AggregateRoot<Long> {
     return this;
   }
 
+  /// 设置 NLM 唯一标识符。
+  ///
+  /// @param nlmId NLM ID
+  /// @return 当前对象
+  public VenueAggregate withNlmId(String nlmId) {
+    this.nlmId = nlmId;
+    return this;
+  }
+
+  /// 设置 DOI 前缀。
+  ///
+  /// @param doiPrefix DOI 前缀
+  /// @return 当前对象
+  public VenueAggregate withDoiPrefix(String doiPrefix) {
+    this.doiPrefix = doiPrefix;
+    return this;
+  }
+
+  /// 设置出版商名称。
+  ///
+  /// @param publisher 出版商名称
+  /// @return 当前对象
+  public VenueAggregate withPublisher(String publisher) {
+    this.publisher = publisher;
+    return this;
+  }
+
+  /// 设置出版历史。
+  ///
+  /// @param publicationHistory 出版历史
+  /// @return 当前对象
+  public VenueAggregate withPublicationHistory(PublicationHistory publicationHistory) {
+    this.publicationHistory = publicationHistory;
+    return this;
+  }
+
+  /// 设置索引收录信息。
+  ///
+  /// @param indexingInfo 索引收录信息
+  /// @return 当前对象
+  public VenueAggregate withIndexingInfo(IndexingInfo indexingInfo) {
+    this.indexingInfo = indexingInfo;
+    return this;
+  }
+
   /// 设置宿主机构。
   ///
   /// @param hostOrganization 宿主机构
@@ -284,6 +362,24 @@ public class VenueAggregate extends AggregateRoot<Long> {
     this.isOa = isOa;
     this.isInDoaj = isInDoaj;
     this.isCore = isCore;
+    return this;
+  }
+
+  /// 设置 OA 类型。
+  ///
+  /// @param oaType OA 类型（GOLD/DIAMOND/HYBRID/BRONZE）
+  /// @return 当前对象
+  public VenueAggregate withOaType(String oaType) {
+    this.oaType = oaType;
+    return this;
+  }
+
+  /// 设置最新评级快照。
+  ///
+  /// @param latestRating 最新评级快照
+  /// @return 当前对象
+  public VenueAggregate withLatestRating(LatestRating latestRating) {
+    this.latestRating = latestRating;
     return this;
   }
 
@@ -460,26 +556,26 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @param citedByCount 被引用次数
   /// @param oaWorksCount OA 作品数
   public void setMetrics(int year, int worksCount, int citedByCount, Integer oaWorksCount) {
-    Optional<VenueMetrics> existing =
+    Optional<VenuePublicationStats> existing =
         yearlyMetrics.stream().filter(m -> m.getYear() == year).findFirst();
 
     if (existing.isPresent()) {
       // 更新现有记录
-      VenueMetrics metrics = existing.get();
+      VenuePublicationStats metrics = existing.get();
       metrics.updateCounts(worksCount, citedByCount);
       if (oaWorksCount != null) {
         metrics.withOaWorksCount(oaWorksCount);
       }
     } else {
       // 添加新记录
-      yearlyMetrics.add(VenueMetrics.create(year, worksCount, citedByCount, oaWorksCount));
+      yearlyMetrics.add(VenuePublicationStats.create(year, worksCount, citedByCount, oaWorksCount));
     }
   }
 
   /// 添加年度指标实体。
   ///
   /// @param metrics 年度指标
-  public void addMetrics(VenueMetrics metrics) {
+  public void addMetrics(VenuePublicationStats metrics) {
     Assert.notNull(metrics, "年度指标不能为空");
 
     // 检查是否已存在同年份记录
@@ -495,30 +591,30 @@ public class VenueAggregate extends AggregateRoot<Long> {
   ///
   /// @param year 年份
   /// @return 年度指标
-  public Optional<VenueMetrics> getMetrics(int year) {
+  public Optional<VenuePublicationStats> getMetrics(int year) {
     return yearlyMetrics.stream().filter(m -> m.getYear() == year).findFirst();
   }
 
   /// 获取所有年度指标（按年份降序排列）。
   ///
   /// @return 年度指标列表
-  public List<VenueMetrics> getAllMetrics() {
+  public List<VenuePublicationStats> getAllMetrics() {
     return yearlyMetrics.stream()
-        .sorted(Comparator.comparingInt(VenueMetrics::getYear).reversed())
+        .sorted(Comparator.comparingInt(VenuePublicationStats::getYear).reversed())
         .toList();
   }
 
   /// 获取年度指标（不可变视图）。
   ///
   /// @return 年度指标列表
-  public List<VenueMetrics> getYearlyMetrics() {
+  public List<VenuePublicationStats> getYearlyMetrics() {
     return Collections.unmodifiableList(yearlyMetrics);
   }
 
   /// 批量设置年度指标（清空现有并添加新的）。
   ///
   /// @param newMetrics 新年度指标列表
-  public void setYearlyMetrics(List<VenueMetrics> newMetrics) {
+  public void setYearlyMetrics(List<VenuePublicationStats> newMetrics) {
     yearlyMetrics.clear();
     if (newMetrics != null) {
       newMetrics.forEach(this::addMetrics);
@@ -574,6 +670,55 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return true 如果来自 PubMed
   public boolean isFromPubMed() {
     return provenance != null && provenance.isFromPubMed();
+  }
+
+  /// 判断是否有出版商信息。
+  ///
+  /// @return true 如果有出版商
+  public boolean hasPublisher() {
+    return StrUtil.isNotBlank(publisher);
+  }
+
+  /// 判断是否有出版历史信息。
+  ///
+  /// @return true 如果有出版历史
+  public boolean hasPublicationHistory() {
+    return publicationHistory != null;
+  }
+
+  /// 判断是否有索引收录信息。
+  ///
+  /// @return true 如果有索引收录信息
+  public boolean hasIndexingInfo() {
+    return indexingInfo != null;
+  }
+
+  /// 判断期刊是否被 MEDLINE 收录。
+  ///
+  /// @return true 如果被 MEDLINE 收录
+  public boolean isIndexedInMedline() {
+    return indexingInfo != null && indexingInfo.isCurrentlyIndexed();
+  }
+
+  /// 判断是否有评级信息。
+  ///
+  /// @return true 如果有最新评级
+  public boolean hasRating() {
+    return latestRating != null && latestRating.hasRating();
+  }
+
+  /// 判断是否为顶级分区期刊（Q1 或 1区）。
+  ///
+  /// @return true 如果为顶级分区
+  public boolean isTopQuartile() {
+    return latestRating != null && latestRating.isTopQuartile();
+  }
+
+  /// 判断期刊是否已停刊。
+  ///
+  /// @return true 如果已停刊
+  public boolean isCeased() {
+    return publicationHistory != null && publicationHistory.ceased();
   }
 
   // ========== 不变量验证 ==========

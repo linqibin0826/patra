@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
-import com.patra.catalog.domain.model.entity.VenueMetrics;
+import com.patra.catalog.domain.model.entity.VenuePublicationStats;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.ApcInfo;
@@ -38,7 +38,7 @@ import org.springframework.stereotype.Component;
 /// - `id` → 提取后缀作为 `openalexId`
 /// - `type` → 通过 `VenueType.fromOpenAlexType()` 转换
 /// - `summary_stats` → 转换为 `VenueStats`
-/// - `counts_by_year` → 转换为 `VenueMetrics` 列表
+/// - `counts_by_year` → 转换为 `VenuePublicationStats` 列表
 /// - `apc_prices` + `apc_usd` → 转换为 `ApcInfo`
 /// - `societies` → 转换为 `Society` 列表
 /// - `host_organization*` → 转换为 `HostOrganization`
@@ -153,7 +153,7 @@ public class OpenAlexSourceParser {
     }
 
     // 8. 设置年度指标
-    List<VenueMetrics> metrics = buildYearlyMetrics(record);
+    List<VenuePublicationStats> metrics = buildYearlyMetrics(record);
     if (metrics != null && !metrics.isEmpty()) {
       aggregate.setYearlyMetrics(metrics);
     }
@@ -217,7 +217,7 @@ public class OpenAlexSourceParser {
   /// 构建年度指标列表。
   ///
   /// 过滤规则：跳过年份为 null 或不在 1900-2100 范围内的记录（无效统计数据）
-  private List<VenueMetrics> buildYearlyMetrics(OpenAlexSourceRecord record) {
+  private List<VenuePublicationStats> buildYearlyMetrics(OpenAlexSourceRecord record) {
     if (record.countsByYear() == null || record.countsByYear().isEmpty()) {
       return null;
     }
@@ -226,7 +226,7 @@ public class OpenAlexSourceParser {
         .filter(c -> c.year() != null && c.year() >= 1900 && c.year() <= 2100)
         .map(
             c ->
-                VenueMetrics.create(
+                VenuePublicationStats.create(
                     c.year(),
                     c.worksCount() != null ? c.worksCount() : 0,
                     c.citedByCount() != null ? c.citedByCount() : 0))
