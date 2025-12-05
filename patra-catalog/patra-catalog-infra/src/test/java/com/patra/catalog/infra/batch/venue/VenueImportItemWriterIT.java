@@ -2,12 +2,12 @@ package com.patra.catalog.infra.batch.venue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.entity.VenueMetrics;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
+import com.patra.catalog.infra.adapter.persistence.VenueRepositoryAdapter;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.catalog.infra.persistence.entity.VenueDO;
 import com.patra.catalog.infra.persistence.entity.VenueIdentifierDO;
@@ -26,13 +26,14 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.batch.item.Chunk;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
 /// VenueImportItemWriter 集成测试。
 ///
-/// 使用 Testcontainers + MySQL 8 测试 Upsert 操作。
+/// 使用 Testcontainers + MySQL 8 测试批量写入操作。
 ///
 /// **测试策略**：
 ///
@@ -42,17 +43,25 @@ import org.springframework.test.context.ContextConfiguration;
 ///
 /// **重点测试场景**：
 ///
-/// - 新增场景：全部为新记录
-/// - 更新场景：全部为已存在记录
-/// - 混合场景：部分新增部分更新
-/// - 子表处理：标识符和年度指标
+/// - 新增场景：全部为新记录（纯 INSERT 语义）
+/// - 子表处理：标识符和年度指标的插入
+/// - 子表关联：外键正确性验证
+///
+/// **注意**：
+///
+/// 本测试类仅覆盖纯 INSERT 场景。不支持 Upsert（更新已存在记录）。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @MybatisPlusTest
 @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({VenueImportItemWriter.class, TestMybatisPlusAutoConfiguration.class})
+@Import({
+  VenueImportItemWriter.class,
+  VenueRepositoryAdapter.class,
+  TestMybatisPlusAutoConfiguration.class
+})
+@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.converter")
 @MapperScan("com.patra.catalog.infra.persistence.mapper")
 @ActiveProfiles("test")
 @DisplayName("VenueImportItemWriter 集成测试")
@@ -135,66 +144,6 @@ class VenueImportItemWriterIT {
   }
 
   @Nested
-  @DisplayName("更新场景测试")
-  class UpdateTest {
-
-    @Test
-    @DisplayName("全部为已存在记录 - 应该更新记录")
-    void write_allExisting_shouldUpdate() throws Exception {
-      // Given: 先插入记录
-      VenueAggregate venue1 = createVenueAggregate("S1", "Journal A Original");
-      VenueAggregate venue2 = createVenueAggregate("S2", "Journal B Original");
-      writer.write(new Chunk<>(List.of(venue1, venue2)));
-
-      // When: 更新记录
-      VenueAggregate updated1 = createVenueAggregate("S1", "Journal A Updated");
-      VenueAggregate updated2 = createVenueAggregate("S2", "Journal B Updated");
-      writer.write(new Chunk<>(List.of(updated1, updated2)));
-
-      // Then: 验证记录数不变
-      long venueCount = venueMapper.selectCount(null);
-      assertThat(venueCount).isEqualTo(2);
-
-      // Then: 验证名称已更新
-      List<VenueDO> venues = venueMapper.selectList(null);
-      assertThat(venues)
-          .extracting(VenueDO::getDisplayName)
-          .containsExactlyInAnyOrder("Journal A Updated", "Journal B Updated");
-    }
-  }
-
-  @Nested
-  @DisplayName("混合场景测试")
-  class MixedTest {
-
-    @Test
-    @DisplayName("部分新增部分更新 - 应该分别处理")
-    void write_mixedNewAndExisting_shouldHandleBoth() throws Exception {
-      // Given: 先插入 S1
-      VenueAggregate venue1 = createVenueAggregate("S1", "Journal A Original");
-      writer.write(new Chunk<>(List.of(venue1)));
-
-      // When: S1 更新，S2 新增
-      VenueAggregate updated1 = createVenueAggregate("S1", "Journal A Updated");
-      VenueAggregate newVenue2 = createVenueAggregate("S2", "Journal B New");
-      writer.write(new Chunk<>(List.of(updated1, newVenue2)));
-
-      // Then: 验证记录数
-      long venueCount = venueMapper.selectCount(null);
-      assertThat(venueCount).isEqualTo(2);
-
-      // Then: 验证内容
-      VenueDO s1 =
-          venueMapper.selectOne(Wrappers.<VenueDO>lambdaQuery().eq(VenueDO::getOpenalexId, "S1"));
-      assertThat(s1.getDisplayName()).isEqualTo("Journal A Updated");
-
-      VenueDO s2 =
-          venueMapper.selectOne(Wrappers.<VenueDO>lambdaQuery().eq(VenueDO::getOpenalexId, "S2"));
-      assertThat(s2.getDisplayName()).isEqualTo("Journal B New");
-    }
-  }
-
-  @Nested
   @DisplayName("子表处理测试")
   class ChildTableTest {
 
@@ -238,38 +187,6 @@ class VenueImportItemWriterIT {
           .extracting(VenueMetricsDO::getWorksCount)
           .containsExactlyInAnyOrder(100, 90);
     }
-
-    @Test
-    @DisplayName("更新记录 - 应该先删后插子表")
-    void write_existingWithChildData_shouldDeleteThenInsert() throws Exception {
-      // Given: 先插入记录
-      VenueAggregate venue = createVenueWithMetrics("S1", "Journal A");
-      venue.addIdentifier(VenueIdentifierType.ISSN, "1111-2222", true);
-      writer.write(new Chunk<>(List.of(venue)));
-
-      // When: 更新记录（指标和标识符都变化）
-      VenueAggregate updatedVenue = createVenueAggregate("S1", "Journal A Updated");
-      updatedVenue.setYearlyMetrics(List.of(VenueMetrics.create(2025, 200, 1000)));
-      updatedVenue.addIdentifier(VenueIdentifierType.ISSN, "3333-4444", true);
-      writer.write(new Chunk<>(List.of(updatedVenue)));
-
-      // Then: 验证标识符（旧的被删除，新的被插入）
-      List<VenueIdentifierDO> identifiers = identifierMapper.selectList(null);
-      // 应该有 OpenAlex + 1 个新 ISSN = 2
-      assertThat(identifiers).hasSize(2);
-      assertThat(identifiers)
-          .extracting(VenueIdentifierDO::getIdentifierValue)
-          .contains("3333-4444");
-      assertThat(identifiers)
-          .extracting(VenueIdentifierDO::getIdentifierValue)
-          .doesNotContain("1111-2222");
-
-      // Then: 验证年度指标（旧的被删除，新的被插入）
-      List<VenueMetricsDO> metrics = metricsMapper.selectList(null);
-      assertThat(metrics).hasSize(1);
-      assertThat(metrics.get(0).getYear()).isEqualTo((short) 2025);
-      assertThat(metrics.get(0).getWorksCount()).isEqualTo(200);
-    }
   }
 
   @Nested
@@ -296,113 +213,6 @@ class VenueImportItemWriterIT {
 
       List<VenueMetricsDO> metrics = metricsMapper.selectList(null);
       assertThat(metrics).allMatch(m -> m.getVenueId().equals(venueId));
-    }
-  }
-
-  @Nested
-  @DisplayName("批次内重复处理测试")
-  class DuplicateHandlingTest {
-
-    /// 创建只设置 issn_l 的 VenueAggregate（不使用基于 openalexId 生成的 issn_l）。
-    private VenueAggregate createVenueWithIssnL(
-        String openalexId, String displayName, String issnL) {
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
-      venue.withIssnL(issnL);
-      venue.withCountryCode("US");
-      venue.withOaStatus(true, false, false);
-      return venue;
-    }
-
-    @Test
-    @DisplayName("同一批次内 issn_l 重复 - 应只插入第一条并跳过后续")
-    void write_duplicateIssnLInSameBatch_shouldInsertFirstAndSkipRest() throws Exception {
-      // Given: 两条记录有相同的 issn_l
-      VenueAggregate venue1 = createVenueWithIssnL("S1001", "Journal A", "3080-1281");
-      VenueAggregate venue2 = createVenueWithIssnL("S1002", "Journal B", "3080-1281");
-
-      // When
-      writer.write(new Chunk<>(List.of(venue1, venue2)));
-
-      // Then: 只插入一条
-      long count =
-          venueMapper.selectCount(
-              Wrappers.<VenueDO>lambdaQuery().eq(VenueDO::getIssnL, "3080-1281"));
-      assertThat(count).isEqualTo(1);
-
-      // 验证插入的是第一条
-      VenueDO inserted =
-          venueMapper.selectOne(Wrappers.<VenueDO>lambdaQuery().eq(VenueDO::getIssnL, "3080-1281"));
-      assertThat(inserted.getOpenalexId()).isEqualTo("S1001");
-    }
-
-    @Test
-    @DisplayName("同一批次内三条记录共享 issn_l - 应只插入第一条")
-    void write_triplicateIssnLInSameBatch_shouldInsertOnlyFirst() throws Exception {
-      // Given: 三条记录有相同的 issn_l
-      VenueAggregate venue1 = createVenueWithIssnL("S2001", "Journal X", "9999-0001");
-      VenueAggregate venue2 = createVenueWithIssnL("S2002", "Journal Y", "9999-0001");
-      VenueAggregate venue3 = createVenueWithIssnL("S2003", "Journal Z", "9999-0001");
-
-      // When
-      writer.write(new Chunk<>(List.of(venue1, venue2, venue3)));
-
-      // Then: 只插入一条
-      long count =
-          venueMapper.selectCount(
-              Wrappers.<VenueDO>lambdaQuery().eq(VenueDO::getIssnL, "9999-0001"));
-      assertThat(count).isEqualTo(1);
-
-      // 验证插入的是第一条
-      VenueDO inserted =
-          venueMapper.selectOne(Wrappers.<VenueDO>lambdaQuery().eq(VenueDO::getIssnL, "9999-0001"));
-      assertThat(inserted.getOpenalexId()).isEqualTo("S2001");
-    }
-
-    @Test
-    @DisplayName("批次内重复 issn_l 但 DB 已存在 - 应更新已存在记录并跳过后续")
-    void write_duplicateIssnLWithExistingInDb_shouldUpdateAndSkipRest() throws Exception {
-      // Given: DB 中已存在记录
-      VenueAggregate existing = createVenueWithIssnL("S0001", "Existing Journal", "5555-1234");
-      writer.write(new Chunk<>(List.of(existing)));
-      VenueDO existingDO =
-          venueMapper.selectOne(
-              Wrappers.<VenueDO>lambdaQuery().eq(VenueDO::getOpenalexId, "S0001"));
-      Long existingId = existingDO.getId();
-
-      // Given: 两条新记录有相同的 issn_l
-      VenueAggregate venue1 = createVenueWithIssnL("S3001", "New Journal A", "5555-1234");
-      VenueAggregate venue2 = createVenueWithIssnL("S3002", "New Journal B", "5555-1234");
-
-      // When
-      writer.write(new Chunk<>(List.of(venue1, venue2)));
-
-      // Then: 仍然只有一条记录
-      long count =
-          venueMapper.selectCount(
-              Wrappers.<VenueDO>lambdaQuery().eq(VenueDO::getIssnL, "5555-1234"));
-      assertThat(count).isEqualTo(1);
-
-      // 验证记录已更新（第一条更新了已存在记录）
-      VenueDO updated = venueMapper.selectById(existingId);
-      assertThat(updated.getOpenalexId()).isEqualTo("S3001");
-      assertThat(updated.getDisplayName()).isEqualTo("New Journal A");
-    }
-
-    @Test
-    @DisplayName("批次内无重复 issn_l - 应正常插入所有记录")
-    void write_uniqueIssnLInSameBatch_shouldInsertAll() throws Exception {
-      // Given: 三条记录有不同的 issn_l
-      VenueAggregate venue1 = createVenueWithIssnL("S4001", "Journal 1", "1111-0001");
-      VenueAggregate venue2 = createVenueWithIssnL("S4002", "Journal 2", "2222-0002");
-      VenueAggregate venue3 = createVenueWithIssnL("S4003", "Journal 3", "3333-0003");
-
-      // When
-      writer.write(new Chunk<>(List.of(venue1, venue2, venue3)));
-
-      // Then: 全部插入
-      long count = venueMapper.selectCount(null);
-      assertThat(count).isEqualTo(3);
     }
   }
 }
