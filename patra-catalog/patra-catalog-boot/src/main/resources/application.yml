@@ -82,6 +82,17 @@ xxl:
       logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}
 
 # ----------------------------------------------------------------------------
+# Patra Catalog Service Configuration
+# ----------------------------------------------------------------------------
+patra:
+  catalog:
+    mesh:
+      # MeSH Descriptor（主题词）XML 文件 URL - 版本号从文件名自动推断
+      descriptor-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml
+      # MeSH Qualifier（限定词）XML 文件 URL - 版本号从文件名自动推断
+      qualifier-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml
+
+# ----------------------------------------------------------------------------
 # Logging Configuration
 # ----------------------------------------------------------------------------
 logging:
