@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-/// VenueMetrics 实体单元测试。
+/// VenuePublicationStats 实体单元测试。
 ///
 /// **测试策略**：
 ///
@@ -18,9 +18,9 @@ import org.junit.jupiter.api.Timeout;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@DisplayName("VenueMetrics 单元测试")
+@DisplayName("VenuePublicationStats 单元测试")
 @Timeout(2)
-class VenueMetricsTest {
+class VenuePublicationStatsTest {
 
   // ========== 测试数据 ==========
 
@@ -34,42 +34,43 @@ class VenueMetricsTest {
   class CreateTests {
 
     @Test
-    @DisplayName("应该正确创建年度指标（含 OA 作品数）")
-    void shouldCreateMetricsWithOaWorksCount() {
+    @DisplayName("应该正确创建年度统计（含 OA 作品数）")
+    void shouldCreateStatsWithOaWorksCount() {
       // When
-      VenueMetrics metrics =
-          VenueMetrics.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, OA_WORKS_COUNT);
+      VenuePublicationStats stats =
+          VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, OA_WORKS_COUNT);
 
       // Then
-      assertThat(metrics.getId()).isNull(); // 新建时无 ID
-      assertThat(metrics.getYear()).isEqualTo(VALID_YEAR);
-      assertThat(metrics.getWorksCount()).isEqualTo(WORKS_COUNT);
-      assertThat(metrics.getCitedByCount()).isEqualTo(CITED_BY_COUNT);
-      assertThat(metrics.getOaWorksCount()).isEqualTo(OA_WORKS_COUNT);
+      assertThat(stats.getId()).isNull(); // 新建时无 ID
+      assertThat(stats.getYear()).isEqualTo(VALID_YEAR);
+      assertThat(stats.getWorksCount()).isEqualTo(WORKS_COUNT);
+      assertThat(stats.getCitedByCount()).isEqualTo(CITED_BY_COUNT);
+      assertThat(stats.getOaWorksCount()).isEqualTo(OA_WORKS_COUNT);
     }
 
     @Test
-    @DisplayName("应该正确创建年度指标（不含 OA 作品数）")
-    void shouldCreateMetricsWithoutOaWorksCount() {
+    @DisplayName("应该正确创建年度统计（不含 OA 作品数）")
+    void shouldCreateStatsWithoutOaWorksCount() {
       // When
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT);
+      VenuePublicationStats stats =
+          VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT);
 
       // Then
-      assertThat(metrics.getOaWorksCount()).isNull();
-      assertThat(metrics.hasOaWorksCount()).isFalse();
+      assertThat(stats.getOaWorksCount()).isNull();
+      assertThat(stats.hasOaWorksCount()).isFalse();
     }
 
     @Test
-    @DisplayName("应该正确创建空年度指标")
-    void shouldCreateEmptyMetrics() {
+    @DisplayName("应该正确创建空年度统计")
+    void shouldCreateEmptyStats() {
       // When
-      VenueMetrics metrics = VenueMetrics.empty(VALID_YEAR);
+      VenuePublicationStats stats = VenuePublicationStats.empty(VALID_YEAR);
 
       // Then
-      assertThat(metrics.getYear()).isEqualTo(VALID_YEAR);
-      assertThat(metrics.getWorksCount()).isZero();
-      assertThat(metrics.getCitedByCount()).isZero();
-      assertThat(metrics.getOaWorksCount()).isNull();
+      assertThat(stats.getYear()).isEqualTo(VALID_YEAR);
+      assertThat(stats.getWorksCount()).isZero();
+      assertThat(stats.getCitedByCount()).isZero();
+      assertThat(stats.getOaWorksCount()).isNull();
     }
   }
 
@@ -81,15 +82,15 @@ class VenueMetricsTest {
     @DisplayName("年份在有效范围内应该通过")
     void shouldAcceptValidYearRange() {
       // 边界值测试
-      assertThat(VenueMetrics.create(1900, 100, 500).getYear()).isEqualTo(1900);
-      assertThat(VenueMetrics.create(2100, 100, 500).getYear()).isEqualTo(2100);
-      assertThat(VenueMetrics.create(2024, 100, 500).getYear()).isEqualTo(2024);
+      assertThat(VenuePublicationStats.create(1900, 100, 500).getYear()).isEqualTo(1900);
+      assertThat(VenuePublicationStats.create(2100, 100, 500).getYear()).isEqualTo(2100);
+      assertThat(VenuePublicationStats.create(2024, 100, 500).getYear()).isEqualTo(2024);
     }
 
     @Test
     @DisplayName("年份小于 1900 应该抛出异常")
     void shouldRejectYearBefore1900() {
-      assertThatThrownBy(() -> VenueMetrics.create(1899, 100, 500))
+      assertThatThrownBy(() -> VenuePublicationStats.create(1899, 100, 500))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("年份必须在 1900-2100 之间");
     }
@@ -97,7 +98,7 @@ class VenueMetricsTest {
     @Test
     @DisplayName("年份大于 2100 应该抛出异常")
     void shouldRejectYearAfter2100() {
-      assertThatThrownBy(() -> VenueMetrics.create(2101, 100, 500))
+      assertThatThrownBy(() -> VenuePublicationStats.create(2101, 100, 500))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("年份必须在 1900-2100 之间");
     }
@@ -110,14 +111,14 @@ class VenueMetricsTest {
     @Test
     @DisplayName("作品数可以为 0")
     void shouldAcceptZeroWorksCount() {
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, 0, 0);
-      assertThat(metrics.getWorksCount()).isZero();
+      VenuePublicationStats stats = VenuePublicationStats.create(VALID_YEAR, 0, 0);
+      assertThat(stats.getWorksCount()).isZero();
     }
 
     @Test
     @DisplayName("作品数为负数应该抛出异常")
     void shouldRejectNegativeWorksCount() {
-      assertThatThrownBy(() -> VenueMetrics.create(VALID_YEAR, -1, 500))
+      assertThatThrownBy(() -> VenuePublicationStats.create(VALID_YEAR, -1, 500))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("发表作品数不能为负数");
     }
@@ -125,7 +126,7 @@ class VenueMetricsTest {
     @Test
     @DisplayName("被引次数为负数应该抛出异常")
     void shouldRejectNegativeCitedByCount() {
-      assertThatThrownBy(() -> VenueMetrics.create(VALID_YEAR, 100, -1))
+      assertThatThrownBy(() -> VenuePublicationStats.create(VALID_YEAR, 100, -1))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("被引用次数不能为负数");
     }
@@ -138,21 +139,24 @@ class VenueMetricsTest {
     @Test
     @DisplayName("OA 作品数可以为 null")
     void shouldAcceptNullOaWorksCount() {
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, null);
-      assertThat(metrics.getOaWorksCount()).isNull();
+      VenuePublicationStats stats =
+          VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, null);
+      assertThat(stats.getOaWorksCount()).isNull();
     }
 
     @Test
     @DisplayName("OA 作品数可以为 0")
     void shouldAcceptZeroOaWorksCount() {
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, 0);
-      assertThat(metrics.getOaWorksCount()).isZero();
+      VenuePublicationStats stats =
+          VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, 0);
+      assertThat(stats.getOaWorksCount()).isZero();
     }
 
     @Test
     @DisplayName("OA 作品数为负数应该抛出异常")
     void shouldRejectNegativeOaWorksCount() {
-      assertThatThrownBy(() -> VenueMetrics.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, -1))
+      assertThatThrownBy(
+              () -> VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, -1))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("OA 作品数不能为负数");
     }
@@ -160,7 +164,7 @@ class VenueMetricsTest {
     @Test
     @DisplayName("OA 作品数超过总作品数应该抛出异常")
     void shouldRejectOaWorksCountExceedingTotal() {
-      assertThatThrownBy(() -> VenueMetrics.create(VALID_YEAR, 100, CITED_BY_COUNT, 150))
+      assertThatThrownBy(() -> VenuePublicationStats.create(VALID_YEAR, 100, CITED_BY_COUNT, 150))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("OA 作品数不能超过总作品数");
     }
@@ -168,8 +172,9 @@ class VenueMetricsTest {
     @Test
     @DisplayName("OA 作品数等于总作品数应该通过")
     void shouldAcceptOaWorksCountEqualToTotal() {
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, 100, CITED_BY_COUNT, 100);
-      assertThat(metrics.getOaWorksCount()).isEqualTo(100);
+      VenuePublicationStats stats =
+          VenuePublicationStats.create(VALID_YEAR, 100, CITED_BY_COUNT, 100);
+      assertThat(stats.getOaWorksCount()).isEqualTo(100);
     }
   }
 
@@ -184,15 +189,16 @@ class VenueMetricsTest {
       Long id = 123L;
 
       // When
-      VenueMetrics metrics =
-          VenueMetrics.restore(id, VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, OA_WORKS_COUNT);
+      VenuePublicationStats stats =
+          VenuePublicationStats.restore(
+              id, VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, OA_WORKS_COUNT);
 
       // Then
-      assertThat(metrics.getId()).isEqualTo(id);
-      assertThat(metrics.getYear()).isEqualTo(VALID_YEAR);
-      assertThat(metrics.getWorksCount()).isEqualTo(WORKS_COUNT);
-      assertThat(metrics.getCitedByCount()).isEqualTo(CITED_BY_COUNT);
-      assertThat(metrics.getOaWorksCount()).isEqualTo(OA_WORKS_COUNT);
+      assertThat(stats.getId()).isEqualTo(id);
+      assertThat(stats.getYear()).isEqualTo(VALID_YEAR);
+      assertThat(stats.getWorksCount()).isEqualTo(WORKS_COUNT);
+      assertThat(stats.getCitedByCount()).isEqualTo(CITED_BY_COUNT);
+      assertThat(stats.getOaWorksCount()).isEqualTo(OA_WORKS_COUNT);
     }
   }
 
@@ -204,40 +210,41 @@ class VenueMetricsTest {
     @DisplayName("assignId() 应该设置 ID")
     void assignIdShouldSetId() {
       // Given
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT);
-      assertThat(metrics.getId()).isNull();
+      VenuePublicationStats stats =
+          VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT);
+      assertThat(stats.getId()).isNull();
 
       // When
-      metrics.assignId(456L);
+      stats.assignId(456L);
 
       // Then
-      assertThat(metrics.getId()).isEqualTo(456L);
+      assertThat(stats.getId()).isEqualTo(456L);
     }
 
     @Test
     @DisplayName("updateCounts() 应该更新计数")
     void updateCountsShouldUpdateValues() {
       // Given
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, 100, 500);
+      VenuePublicationStats stats = VenuePublicationStats.create(VALID_YEAR, 100, 500);
 
       // When
-      metrics.updateCounts(200, 1000);
+      stats.updateCounts(200, 1000);
 
       // Then
-      assertThat(metrics.getWorksCount()).isEqualTo(200);
-      assertThat(metrics.getCitedByCount()).isEqualTo(1000);
+      assertThat(stats.getWorksCount()).isEqualTo(200);
+      assertThat(stats.getCitedByCount()).isEqualTo(1000);
     }
 
     @Test
     @DisplayName("updateCounts() 验证负数")
     void updateCountsShouldValidateNegativeValues() {
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, 100, 500);
+      VenuePublicationStats stats = VenuePublicationStats.create(VALID_YEAR, 100, 500);
 
-      assertThatThrownBy(() -> metrics.updateCounts(-1, 500))
+      assertThatThrownBy(() -> stats.updateCounts(-1, 500))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("发表作品数不能为负数");
 
-      assertThatThrownBy(() -> metrics.updateCounts(100, -1))
+      assertThatThrownBy(() -> stats.updateCounts(100, -1))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("被引用次数不能为负数");
     }
@@ -246,41 +253,43 @@ class VenueMetricsTest {
     @DisplayName("withOaWorksCount() 应该设置 OA 作品数")
     void withOaWorksCountShouldSetValue() {
       // Given
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT);
+      VenuePublicationStats stats =
+          VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT);
 
       // When
-      VenueMetrics result = metrics.withOaWorksCount(500);
+      VenuePublicationStats result = stats.withOaWorksCount(500);
 
       // Then
-      assertThat(result).isSameAs(metrics); // 链式调用
-      assertThat(metrics.getOaWorksCount()).isEqualTo(500);
-      assertThat(metrics.hasOaWorksCount()).isTrue();
+      assertThat(result).isSameAs(stats); // 链式调用
+      assertThat(stats.getOaWorksCount()).isEqualTo(500);
+      assertThat(stats.hasOaWorksCount()).isTrue();
     }
 
     @Test
     @DisplayName("withOaWorksCount() 可以设置为 null")
     void withOaWorksCountCanSetNull() {
       // Given
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, 500);
+      VenuePublicationStats stats =
+          VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, 500);
 
       // When
-      metrics.withOaWorksCount(null);
+      stats.withOaWorksCount(null);
 
       // Then
-      assertThat(metrics.getOaWorksCount()).isNull();
-      assertThat(metrics.hasOaWorksCount()).isFalse();
+      assertThat(stats.getOaWorksCount()).isNull();
+      assertThat(stats.hasOaWorksCount()).isFalse();
     }
 
     @Test
     @DisplayName("withOaWorksCount() 验证约束")
     void withOaWorksCountShouldValidate() {
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, 100, CITED_BY_COUNT);
+      VenuePublicationStats stats = VenuePublicationStats.create(VALID_YEAR, 100, CITED_BY_COUNT);
 
-      assertThatThrownBy(() -> metrics.withOaWorksCount(-1))
+      assertThatThrownBy(() -> stats.withOaWorksCount(-1))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("OA 作品数不能为负数");
 
-      assertThatThrownBy(() -> metrics.withOaWorksCount(150))
+      assertThatThrownBy(() -> stats.withOaWorksCount(150))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("OA 作品数不能超过总作品数");
     }
@@ -294,10 +303,10 @@ class VenueMetricsTest {
     @DisplayName("getAverageCitations() 应该正确计算平均被引次数")
     void getAverageCitationsShouldCalculateCorrectly() {
       // Given - 1500 篇作品，25000 次引用
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, 1500, 25000);
+      VenuePublicationStats stats = VenuePublicationStats.create(VALID_YEAR, 1500, 25000);
 
       // When
-      BigDecimal average = metrics.getAverageCitations();
+      BigDecimal average = stats.getAverageCitations();
 
       // Then - 25000 / 1500 = 16.67
       assertThat(average).isEqualByComparingTo("16.67");
@@ -307,10 +316,10 @@ class VenueMetricsTest {
     @DisplayName("getAverageCitations() 作品数为 0 时返回 0")
     void getAverageCitationsShouldReturnZeroWhenNoWorks() {
       // Given
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, 0, 0);
+      VenuePublicationStats stats = VenuePublicationStats.create(VALID_YEAR, 0, 0);
 
       // When
-      BigDecimal average = metrics.getAverageCitations();
+      BigDecimal average = stats.getAverageCitations();
 
       // Then
       assertThat(average).isEqualByComparingTo(BigDecimal.ZERO);
@@ -320,10 +329,11 @@ class VenueMetricsTest {
     @DisplayName("getOaRatio() 应该正确计算 OA 比例")
     void getOaRatioShouldCalculateCorrectly() {
       // Given - 1500 篇作品，800 篇 OA
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, 1500, CITED_BY_COUNT, 800);
+      VenuePublicationStats stats =
+          VenuePublicationStats.create(VALID_YEAR, 1500, CITED_BY_COUNT, 800);
 
       // When
-      BigDecimal ratio = metrics.getOaRatio();
+      BigDecimal ratio = stats.getOaRatio();
 
       // Then - 800 / 1500 = 0.5333
       assertThat(ratio).isEqualByComparingTo("0.5333");
@@ -333,10 +343,10 @@ class VenueMetricsTest {
     @DisplayName("getOaRatio() 作品数为 0 时返回 null")
     void getOaRatioShouldReturnNullWhenNoWorks() {
       // Given
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, 0, 0, 0);
+      VenuePublicationStats stats = VenuePublicationStats.create(VALID_YEAR, 0, 0, 0);
 
       // When
-      BigDecimal ratio = metrics.getOaRatio();
+      BigDecimal ratio = stats.getOaRatio();
 
       // Then
       assertThat(ratio).isNull();
@@ -346,10 +356,11 @@ class VenueMetricsTest {
     @DisplayName("getOaRatio() 无 OA 数据时返回 null")
     void getOaRatioShouldReturnNullWhenNoOaData() {
       // Given
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT);
+      VenuePublicationStats stats =
+          VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT);
 
       // When
-      BigDecimal ratio = metrics.getOaRatio();
+      BigDecimal ratio = stats.getOaRatio();
 
       // Then
       assertThat(ratio).isNull();
@@ -359,10 +370,11 @@ class VenueMetricsTest {
     @DisplayName("getOaRatio() 全部为 OA 时返回 1")
     void getOaRatioShouldReturnOneWhenAllOa() {
       // Given
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, 100, CITED_BY_COUNT, 100);
+      VenuePublicationStats stats =
+          VenuePublicationStats.create(VALID_YEAR, 100, CITED_BY_COUNT, 100);
 
       // When
-      BigDecimal ratio = metrics.getOaRatio();
+      BigDecimal ratio = stats.getOaRatio();
 
       // Then
       assertThat(ratio).isEqualByComparingTo("1.0000");
@@ -377,8 +389,8 @@ class VenueMetricsTest {
     @DisplayName("相同年份应该相等（业务相等性）")
     void shouldBeEqualForSameYear() {
       // Given - 不同的计数，相同年份
-      VenueMetrics m1 = VenueMetrics.create(2024, 100, 500);
-      VenueMetrics m2 = VenueMetrics.create(2024, 200, 1000);
+      VenuePublicationStats m1 = VenuePublicationStats.create(2024, 100, 500);
+      VenuePublicationStats m2 = VenuePublicationStats.create(2024, 200, 1000);
 
       // Then - 年份相同则相等
       assertThat(m1).isEqualTo(m2);
@@ -389,8 +401,8 @@ class VenueMetricsTest {
     @DisplayName("不同年份应该不相等")
     void shouldNotBeEqualForDifferentYear() {
       // Given
-      VenueMetrics m1 = VenueMetrics.create(2023, 100, 500);
-      VenueMetrics m2 = VenueMetrics.create(2024, 100, 500);
+      VenuePublicationStats m1 = VenuePublicationStats.create(2023, 100, 500);
+      VenuePublicationStats m2 = VenuePublicationStats.create(2024, 100, 500);
 
       // Then
       assertThat(m1).isNotEqualTo(m2);
@@ -399,22 +411,25 @@ class VenueMetricsTest {
     @Test
     @DisplayName("与 null 比较应该返回 false")
     void shouldNotBeEqualToNull() {
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT);
-      assertThat(metrics).isNotEqualTo(null);
+      VenuePublicationStats stats =
+          VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT);
+      assertThat(stats).isNotEqualTo(null);
     }
 
     @Test
     @DisplayName("与不同类型对象比较应该返回 false")
     void shouldNotBeEqualToDifferentType() {
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT);
-      assertThat(metrics).isNotEqualTo("not a metrics");
+      VenuePublicationStats stats =
+          VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT);
+      assertThat(stats).isNotEqualTo("not a stats");
     }
 
     @Test
     @DisplayName("自反性：对象应该等于自身")
     void shouldBeEqualToItself() {
-      VenueMetrics metrics = VenueMetrics.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT);
-      assertThat(metrics).isEqualTo(metrics);
+      VenuePublicationStats stats =
+          VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT);
+      assertThat(stats).isEqualTo(stats);
     }
   }
 
@@ -426,11 +441,11 @@ class VenueMetricsTest {
     @DisplayName("toString() 应该包含关键信息")
     void toStringShouldContainKeyInfo() {
       // Given
-      VenueMetrics metrics =
-          VenueMetrics.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, OA_WORKS_COUNT);
+      VenuePublicationStats stats =
+          VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, OA_WORKS_COUNT);
 
       // When
-      String result = metrics.toString();
+      String result = stats.toString();
 
       // Then
       assertThat(result).contains(String.valueOf(VALID_YEAR));

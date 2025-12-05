@@ -8,13 +8,14 @@ import java.math.RoundingMode;
 import java.util.Objects;
 import lombok.Getter;
 
-/// 载体年度指标实体（聚合内实体，不是聚合根）。
+/// 载体年度发文统计实体（聚合内实体，不是聚合根）。
 ///
 /// 设计说明：
 ///
 /// - 作为 VenueAggregate 的聚合内实体存在
 /// - 与 Venue 具有相同的生命周期
 /// - 每年一条记录，支持时序分析
+/// - 专注于发文量和引用量统计（评级数据存储在 VenueRating 中）
 ///
 /// 业务规则：
 ///
@@ -29,17 +30,17 @@ import lombok.Getter;
 /// 使用示例：
 ///
 /// ```java
-/// // 创建年度指标
-/// VenueMetrics metrics = VenueMetrics.create(2024, 1500, 25000);
+/// // 创建年度统计
+/// VenuePublicationStats stats = VenuePublicationStats.create(2024, 1500, 25000);
 ///
-/// // 创建含 OA 作品数的年度指标
-/// VenueMetrics metrics = VenueMetrics.create(2024, 1500, 25000, 800);
+/// // 创建含 OA 作品数的年度统计
+/// VenuePublicationStats stats = VenuePublicationStats.create(2024, 1500, 25000, 800);
 /// ```
 ///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
-public class VenueMetrics implements Serializable {
+public class VenuePublicationStats implements Serializable {
 
   @Serial private static final long serialVersionUID = 1L;
 
@@ -75,7 +76,8 @@ public class VenueMetrics implements Serializable {
   /// @param worksCount 发表作品数
   /// @param citedByCount 被引用次数
   /// @param oaWorksCount OA 作品数（可选）
-  private VenueMetrics(Long id, int year, int worksCount, int citedByCount, Integer oaWorksCount) {
+  private VenuePublicationStats(
+      Long id, int year, int worksCount, int citedByCount, Integer oaWorksCount) {
     Assert.isTrue(
         year >= MIN_YEAR && year <= MAX_YEAR, "年份必须在 {}-{} 之间：{}", MIN_YEAR, MAX_YEAR, year);
     Assert.isTrue(worksCount >= 0, "发表作品数不能为负数：{}", worksCount);
@@ -94,34 +96,34 @@ public class VenueMetrics implements Serializable {
 
   // ========== 工厂方法 ==========
 
-  /// 创建年度指标（含 OA 作品数）。
+  /// 创建年度统计（含 OA 作品数）。
   ///
   /// @param year 统计年份
   /// @param worksCount 发表作品数
   /// @param citedByCount 被引用次数
   /// @param oaWorksCount OA 作品数
-  /// @return 年度指标实体
-  public static VenueMetrics create(
+  /// @return 年度统计实体
+  public static VenuePublicationStats create(
       int year, int worksCount, int citedByCount, Integer oaWorksCount) {
-    return new VenueMetrics(null, year, worksCount, citedByCount, oaWorksCount);
+    return new VenuePublicationStats(null, year, worksCount, citedByCount, oaWorksCount);
   }
 
-  /// 创建年度指标（不含 OA 作品数）。
+  /// 创建年度统计（不含 OA 作品数）。
   ///
   /// @param year 统计年份
   /// @param worksCount 发表作品数
   /// @param citedByCount 被引用次数
-  /// @return 年度指标实体
-  public static VenueMetrics create(int year, int worksCount, int citedByCount) {
-    return new VenueMetrics(null, year, worksCount, citedByCount, null);
+  /// @return 年度统计实体
+  public static VenuePublicationStats create(int year, int worksCount, int citedByCount) {
+    return new VenuePublicationStats(null, year, worksCount, citedByCount, null);
   }
 
-  /// 创建空年度指标。
+  /// 创建空年度统计。
   ///
   /// @param year 统计年份
-  /// @return 年度指标实体
-  public static VenueMetrics empty(int year) {
-    return new VenueMetrics(null, year, 0, 0, null);
+  /// @return 年度统计实体
+  public static VenuePublicationStats empty(int year) {
+    return new VenuePublicationStats(null, year, 0, 0, null);
   }
 
   /// 从持久化状态重建实体（由 Repository 使用）。
@@ -132,9 +134,9 @@ public class VenueMetrics implements Serializable {
   /// @param citedByCount 被引用次数
   /// @param oaWorksCount OA 作品数
   /// @return 重建的实体
-  public static VenueMetrics restore(
+  public static VenuePublicationStats restore(
       Long id, int year, int worksCount, int citedByCount, Integer oaWorksCount) {
-    return new VenueMetrics(id, year, worksCount, citedByCount, oaWorksCount);
+    return new VenuePublicationStats(id, year, worksCount, citedByCount, oaWorksCount);
   }
 
   // ========== 业务方法 ==========
@@ -146,7 +148,7 @@ public class VenueMetrics implements Serializable {
     this.id = id;
   }
 
-  /// 更新指标数据。
+  /// 更新统计数据。
   ///
   /// @param worksCount 发表作品数
   /// @param citedByCount 被引用次数
@@ -162,7 +164,7 @@ public class VenueMetrics implements Serializable {
   ///
   /// @param oaWorksCount OA 作品数
   /// @return 当前对象（支持链式调用）
-  public VenueMetrics withOaWorksCount(Integer oaWorksCount) {
+  public VenuePublicationStats withOaWorksCount(Integer oaWorksCount) {
     if (oaWorksCount != null) {
       Assert.isTrue(oaWorksCount >= 0, "OA 作品数不能为负数：{}", oaWorksCount);
       Assert.isTrue(oaWorksCount <= worksCount, "OA 作品数不能超过总作品数：{} > {}", oaWorksCount, worksCount);
@@ -203,7 +205,7 @@ public class VenueMetrics implements Serializable {
   @Override
   public String toString() {
     return String.format(
-        "VenueMetrics[year=%d, works=%d, cited=%d, oa=%s]",
+        "VenuePublicationStats[year=%d, works=%d, cited=%d, oa=%s]",
         year, worksCount, citedByCount, oaWorksCount);
   }
 
@@ -212,7 +214,7 @@ public class VenueMetrics implements Serializable {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof VenueMetrics that)) {
+    if (!(o instanceof VenuePublicationStats that)) {
       return false;
     }
     // 业务相等性：年份

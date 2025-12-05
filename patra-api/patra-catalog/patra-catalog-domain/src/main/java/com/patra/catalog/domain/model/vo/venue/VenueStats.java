@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 ///
 /// - 不可变性：Record 自动提供
 /// - 时点快照：表示某一时刻的累计统计数据
-/// - 与年度指标区分：VenueStats 是当前快照，VenueMetrics 是年度时序数据
+/// - 与年度指标区分：VenueStats 是当前快照，VenuePublicationStats 是年度时序数据
 ///
 /// 数据来源：
 ///
