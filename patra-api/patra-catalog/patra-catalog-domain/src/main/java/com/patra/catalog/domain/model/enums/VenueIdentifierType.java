@@ -66,7 +66,10 @@ public enum VenueIdentifierType {
   CROSSREF("CROSSREF", "Crossref DOI Prefix"),
 
   /// JCR 期刊 ID
-  JCR("JCR", "JCR ID");
+  JCR("JCR", "JCR ID"),
+
+  /// CODEN 编码（6字符期刊标识符，来自 Serfile）
+  CODEN("CODEN", "CODEN Code");
 
   /// 数据库存储的代码值
   private final String code;
@@ -169,5 +172,12 @@ public enum VenueIdentifierType {
   /// @return true 如果为评价体系相关 ID
   public boolean isRatingSystemId() {
     return this == JCR;
+  }
+
+  /// 判断是否为 CODEN。
+  ///
+  /// @return true 如果为 CODEN 类型
+  public boolean isCoden() {
+    return this == CODEN;
   }
 }
