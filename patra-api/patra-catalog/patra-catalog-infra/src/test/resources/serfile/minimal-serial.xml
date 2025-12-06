@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE SerialsSet SYSTEM "nlmserials_230101.dtd">
+<!-- 最小必填字段测试用例 -->
+<SerialsSet>
+  <Serial Status="NLMCollection">
+    <NlmWorkID>1234567</NlmWorkID>
+    <NlmUniqueID>0001234</NlmUniqueID>
+    <Title>Journal of Minimal Test</Title>
+    <SortSerialName>JOURNAL OF MINIMAL TEST</SortSerialName>
+    <ReportedMedlineYN>Y</ReportedMedlineYN>
+  </Serial>
+</SerialsSet>

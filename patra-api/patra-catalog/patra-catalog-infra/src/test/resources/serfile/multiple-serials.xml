@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE SerialsSet SYSTEM "nlmserials_230101.dtd">
+<!-- 多条记录测试用例 -->
+<SerialsSet>
+  <Serial Status="NLMCollection">
+    <NlmWorkID>1111111</NlmWorkID>
+    <NlmUniqueID>0000001</NlmUniqueID>
+    <Title>First Journal</Title>
+    <MedlineTA>First J</MedlineTA>
+    <ISSN IssnType="Print">1111-1111</ISSN>
+    <ISSNLinking>1111-1111</ISSNLinking>
+    <SortSerialName>FIRST JOURNAL</SortSerialName>
+    <ReportedMedlineYN>Y</ReportedMedlineYN>
+  </Serial>
+  <Serial Status="NLMCollection">
+    <NlmWorkID>2222222</NlmWorkID>
+    <NlmUniqueID>0000002</NlmUniqueID>
+    <Title>Second Journal</Title>
+    <MedlineTA>Second J</MedlineTA>
+    <ISSN IssnType="Electronic">2222-2222</ISSN>
+    <ISSNLinking>2222-2222</ISSNLinking>
+    <Coden>SECJOU</Coden>
+    <SortSerialName>SECOND JOURNAL</SortSerialName>
+    <ReportedMedlineYN>N</ReportedMedlineYN>
+  </Serial>
+  <Serial Status="NotNLMCollection">
+    <NlmWorkID>3333333</NlmWorkID>
+    <NlmUniqueID>0000003</NlmUniqueID>
+    <Title>Third Journal</Title>
+    <SortSerialName>THIRD JOURNAL</SortSerialName>
+    <ReportedMedlineYN>N</ReportedMedlineYN>
+  </Serial>
+</SerialsSet>
