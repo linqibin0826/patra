@@ -13,6 +13,7 @@ import com.patra.common.error.ApplicationException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -82,7 +83,7 @@ public class VenueImportOrchestrator implements VenueImportUseCase {
           "获取 manifest 成功，分区数：{}，总记录数：{}", manifest.entries().size(), manifest.totalRecordCount());
 
       // 3. 下载所有分区文件到本地临时目录
-      localFiles = venueSourceFilePort.fetchAllPartitionFiles(manifest);
+      localFiles = fetchAllPartitionFiles(manifest);
       log.info("所有分区文件已下载到本地，文件数：{}", localFiles.size());
 
       // 4. 启动批处理导入
@@ -110,6 +111,31 @@ public class VenueImportOrchestrator implements VenueImportUseCase {
           CatalogErrorCode.CAT_1301, "OpenAlex Venue 导入时发生意外错误: " + e.getMessage(), e);
     }
     // 注意：成功启动 Job 后，临时文件由 Job Listener 在 Job 结束后清理
+  }
+
+  /// 批量获取所有分区文件到本地临时目录。
+  ///
+  /// @param manifest 包含分区信息的 manifest
+  /// @return 本地临时文件路径列表（与 manifest 中的顺序一致）
+  private List<Path> fetchAllPartitionFiles(OpenAlexManifest manifest) {
+    log.info("开始获取所有分区文件，共 {} 个", manifest.entries().size());
+
+    List<Path> localFiles = new ArrayList<>();
+    int total = manifest.entries().size();
+    int current = 0;
+
+    for (String relativePath : manifest.getRelativePaths()) {
+      current++;
+      if (current % 10 == 0 || current == total) {
+        log.info("下载进度: {}/{}", current, total);
+      }
+
+      Path localFile = venueSourceFilePort.fetchPartitionFile(relativePath);
+      localFiles.add(localFile);
+    }
+
+    log.info("所有分区文件获取完成，共 {} 个", localFiles.size());
+    return localFiles;
   }
 
   /// 清理临时文件。

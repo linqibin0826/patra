@@ -1,5 +1,6 @@
 package com.patra.catalog.infra.adapter.source;
 
+import com.patra.catalog.domain.model.enums.MeshFileType;
 import com.patra.catalog.domain.port.source.FileDownloadPort;
 import com.patra.catalog.domain.port.source.MeshSourceFilePort;
 import java.net.URI;
@@ -10,7 +11,7 @@ import org.springframework.stereotype.Component;
 
 /// MeSH 数据源文件适配器。
 ///
-/// 直接从 NLM（美国国家医学图书馆）远程服务器下载 MeSH XML 文件。
+/// 委托 {@link FileDownloadPort} 从 NLM（美国国家医学图书馆）远程服务器下载 MeSH XML 文件。
 ///
 /// **数据源**：
 ///
@@ -27,14 +28,8 @@ public class MeshSourceFileAdapter implements MeshSourceFilePort {
   private final FileDownloadPort fileDownloadPort;
 
   @Override
-  public Path fetchDescriptorFile(String meshVersion, URI remoteUrl) {
-    log.info("从远程下载 MeSH Descriptor 文件: {}", remoteUrl);
-    return fileDownloadPort.downloadToTemp(remoteUrl);
-  }
-
-  @Override
-  public Path fetchQualifierFile(String meshVersion, URI remoteUrl) {
-    log.info("从远程下载 MeSH Qualifier 文件: {}", remoteUrl);
+  public Path fetchFile(MeshFileType type, String meshVersion, URI remoteUrl) {
+    log.info("从远程下载 MeSH {} 文件: {}", type.getDescription(), remoteUrl);
     return fileDownloadPort.downloadToTemp(remoteUrl);
   }
 }

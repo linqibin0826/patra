@@ -3,7 +3,6 @@ package com.patra.catalog.domain.port.source;
 import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.model.vo.venue.OpenAlexManifest;
 import java.nio.file.Path;
-import java.util.List;
 
 /// OpenAlex Venue 数据源文件端口。
 ///
@@ -48,13 +47,4 @@ public interface VenueSourceFilePort {
   /// @return 本地临时文件路径
   /// @throws FileDownloadException 获取文件失败时
   Path fetchPartitionFile(String relativePath);
-
-  /// 批量获取所有分区文件到本地临时目录。
-  ///
-  /// 根据 manifest 中的分区列表，依次下载所有 .gz 文件。
-  ///
-  /// @param manifest 包含分区信息的 manifest
-  /// @return 本地临时文件路径列表（与 manifest 中的顺序一致）
-  /// @throws FileDownloadException 获取任何文件失败时
-  List<Path> fetchAllPartitionFiles(OpenAlexManifest manifest);
 }

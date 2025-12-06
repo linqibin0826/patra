@@ -7,6 +7,7 @@ import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
 import com.patra.catalog.domain.exception.DataAlreadyExistsException;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
+import com.patra.catalog.domain.model.enums.MeshFileType;
 import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
 import com.patra.catalog.domain.port.batch.MeshDescriptorBatchPort;
 import com.patra.catalog.domain.port.parser.XmlParserPort;
@@ -85,7 +86,8 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
 
     // 2. 从远程下载文件
     Path localFile =
-        meshSourceFilePort.fetchQualifierFile(command.meshVersion(), URI.create(command.url()));
+        meshSourceFilePort.fetchFile(
+            MeshFileType.QUALIFIER, command.meshVersion(), URI.create(command.url()));
     log.info("限定词文件已就绪：{}", localFile);
 
     try {
@@ -140,7 +142,8 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
 
     // 2. 从远程下载文件
     Path localFile =
-        meshSourceFilePort.fetchDescriptorFile(command.meshVersion(), URI.create(command.url()));
+        meshSourceFilePort.fetchFile(
+            MeshFileType.DESCRIPTOR, command.meshVersion(), URI.create(command.url()));
     log.info("主题词文件已就绪：{}", localFile);
 
     // 3. 启动批处理导入

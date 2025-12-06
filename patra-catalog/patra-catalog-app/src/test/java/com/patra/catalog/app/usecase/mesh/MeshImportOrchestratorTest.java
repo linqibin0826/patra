@@ -14,6 +14,7 @@ import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
 import com.patra.catalog.domain.exception.DataAlreadyExistsException;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
+import com.patra.catalog.domain.model.enums.MeshFileType;
 import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.domain.port.batch.MeshDescriptorBatchPort;
@@ -101,7 +102,8 @@ class MeshImportOrchestratorTest {
             .hasMessageContaining("MeSH Descriptor");
 
         // 验证没有进行后续操作
-        verify(meshSourceFilePort, never()).fetchDescriptorFile(anyString(), any(URI.class));
+        verify(meshSourceFilePort, never())
+            .fetchFile(any(MeshFileType.class), anyString(), any(URI.class));
         verify(meshDescriptorBatchPort, never()).launchImport(any());
       }
 
@@ -111,7 +113,7 @@ class MeshImportOrchestratorTest {
         // Given
         MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, "2025");
         when(descriptorRepository.hasAnyData()).thenReturn(false);
-        when(meshSourceFilePort.fetchDescriptorFile(anyString(), any(URI.class)))
+        when(meshSourceFilePort.fetchFile(any(MeshFileType.class), anyString(), any(URI.class)))
             .thenReturn(TEST_LOCAL_PATH);
         when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(12345L);
 
@@ -120,7 +122,7 @@ class MeshImportOrchestratorTest {
 
         // Then
         verify(descriptorRepository).hasAnyData();
-        verify(meshSourceFilePort).fetchDescriptorFile("2025", URI.create(TEST_URL));
+        verify(meshSourceFilePort).fetchFile(MeshFileType.DESCRIPTOR, "2025", URI.create(TEST_URL));
         verify(meshDescriptorBatchPort).launchImport(any(MeshImportParams.class));
 
         assertThat(result).isNotNull();
@@ -134,7 +136,7 @@ class MeshImportOrchestratorTest {
       // Given
       MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, "2025");
       when(descriptorRepository.hasAnyData()).thenReturn(false);
-      when(meshSourceFilePort.fetchDescriptorFile(anyString(), any(URI.class)))
+      when(meshSourceFilePort.fetchFile(any(MeshFileType.class), anyString(), any(URI.class)))
           .thenReturn(TEST_LOCAL_PATH);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(12345L);
 
@@ -161,7 +163,7 @@ class MeshImportOrchestratorTest {
       MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(url, meshVersion);
 
       when(descriptorRepository.hasAnyData()).thenReturn(false);
-      when(meshSourceFilePort.fetchDescriptorFile(meshVersion, URI.create(url)))
+      when(meshSourceFilePort.fetchFile(MeshFileType.DESCRIPTOR, meshVersion, URI.create(url)))
           .thenReturn(localPath);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class))).thenReturn(99999L);
 
@@ -189,7 +191,7 @@ class MeshImportOrchestratorTest {
       MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, "2025");
 
       when(descriptorRepository.hasAnyData()).thenReturn(false);
-      when(meshSourceFilePort.fetchDescriptorFile(anyString(), any(URI.class)))
+      when(meshSourceFilePort.fetchFile(any(MeshFileType.class), anyString(), any(URI.class)))
           .thenReturn(TEST_LOCAL_PATH);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class)))
           .thenReturn(expectedExecutionId);
@@ -210,7 +212,7 @@ class MeshImportOrchestratorTest {
       Path tempFile = Path.of("/tmp/mesh-import-cleanup-test.xml");
 
       when(descriptorRepository.hasAnyData()).thenReturn(false);
-      when(meshSourceFilePort.fetchDescriptorFile(anyString(), any(URI.class)))
+      when(meshSourceFilePort.fetchFile(any(MeshFileType.class), anyString(), any(URI.class)))
           .thenReturn(tempFile);
       when(meshDescriptorBatchPort.launchImport(any(MeshImportParams.class)))
           .thenThrow(new RuntimeException("Job 启动失败"));
@@ -251,7 +253,8 @@ class MeshImportOrchestratorTest {
             .hasMessageContaining("MeSH Qualifier");
 
         // 验证没有进行后续操作
-        verify(meshSourceFilePort, never()).fetchQualifierFile(anyString(), any(URI.class));
+        verify(meshSourceFilePort, never())
+            .fetchFile(any(MeshFileType.class), anyString(), any(URI.class));
         verify(xmlParserPort, never()).parseQualifiers(any(Path.class), anyString());
       }
     }
@@ -265,7 +268,7 @@ class MeshImportOrchestratorTest {
           List.of(createMockQualifier("Q000001"), createMockQualifier("Q000002"));
 
       when(qualifierRepository.hasAnyData()).thenReturn(false);
-      when(meshSourceFilePort.fetchQualifierFile(anyString(), any(URI.class)))
+      when(meshSourceFilePort.fetchFile(any(MeshFileType.class), anyString(), any(URI.class)))
           .thenReturn(QUALIFIER_LOCAL_PATH);
       when(xmlParserPort.parseQualifiers(any(Path.class), anyString()))
           .thenReturn(qualifiers.stream());
@@ -275,7 +278,8 @@ class MeshImportOrchestratorTest {
 
       // Then - 验证调用顺序：检查数据 → 获取文件 → 解析 → 保存
       verify(qualifierRepository).hasAnyData();
-      verify(meshSourceFilePort).fetchQualifierFile("2025", URI.create(QUALIFIER_URL));
+      verify(meshSourceFilePort)
+          .fetchFile(MeshFileType.QUALIFIER, "2025", URI.create(QUALIFIER_URL));
       verify(xmlParserPort).parseQualifiers(any(Path.class), anyString());
       verify(qualifierRepository).saveBatch(qualifiers);
 
@@ -301,7 +305,7 @@ class MeshImportOrchestratorTest {
               createMockQualifier("Q000005"));
 
       when(qualifierRepository.hasAnyData()).thenReturn(false);
-      when(meshSourceFilePort.fetchQualifierFile(anyString(), any(URI.class)))
+      when(meshSourceFilePort.fetchFile(any(MeshFileType.class), anyString(), any(URI.class)))
           .thenReturn(QUALIFIER_LOCAL_PATH);
       when(xmlParserPort.parseQualifiers(any(Path.class), anyString()))
           .thenReturn(qualifiers.stream());
@@ -320,7 +324,7 @@ class MeshImportOrchestratorTest {
       MeshQualifierImportCommand command = MeshQualifierImportCommand.of(QUALIFIER_URL, "2025");
 
       when(qualifierRepository.hasAnyData()).thenReturn(false);
-      when(meshSourceFilePort.fetchQualifierFile(anyString(), any(URI.class)))
+      when(meshSourceFilePort.fetchFile(any(MeshFileType.class), anyString(), any(URI.class)))
           .thenReturn(QUALIFIER_LOCAL_PATH);
       when(xmlParserPort.parseQualifiers(any(Path.class), anyString())).thenReturn(Stream.empty());
 
@@ -339,7 +343,7 @@ class MeshImportOrchestratorTest {
       MeshQualifierImportCommand command = MeshQualifierImportCommand.of(QUALIFIER_URL, "2025");
 
       when(qualifierRepository.hasAnyData()).thenReturn(false);
-      when(meshSourceFilePort.fetchQualifierFile(anyString(), any(URI.class)))
+      when(meshSourceFilePort.fetchFile(any(MeshFileType.class), anyString(), any(URI.class)))
           .thenReturn(QUALIFIER_LOCAL_PATH);
       when(xmlParserPort.parseQualifiers(any(Path.class), anyString()))
           .thenThrow(new RuntimeException("XML 解析失败"));

@@ -19,7 +19,7 @@ import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
 import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
 import com.patra.catalog.domain.port.parser.SerfileParserPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
-import com.patra.catalog.domain.port.source.SerfileSourceFilePort;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
 import com.patra.common.error.ApplicationException;
 import java.io.IOException;
 import java.net.URI;
@@ -69,7 +69,7 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
   /// 批处理大小
   private static final int BATCH_SIZE = 500;
 
-  private final SerfileSourceFilePort sourceFilePort;
+  private final FileDownloadPort fileDownloadPort;
   private final SerfileParserPort parserPort;
   private final VenueRepository venueRepository;
   private final TransactionTemplate transactionTemplate;
@@ -89,7 +89,7 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
     Path localFile = null;
     try {
       // 1. 下载文件
-      localFile = sourceFilePort.fetch(URI.create(command.url()));
+      localFile = fileDownloadPort.downloadToTemp(URI.create(command.url()));
       log.info("Serfile 文件已就绪：{}", localFile);
 
       // 2. 解析并处理记录
