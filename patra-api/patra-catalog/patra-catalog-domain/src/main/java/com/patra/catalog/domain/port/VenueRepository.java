@@ -3,6 +3,7 @@ package com.patra.catalog.domain.port;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /// 载体聚合根仓储接口（领域层定义，基础设施层实现）。
@@ -56,4 +57,51 @@ public interface VenueRepository {
   /// @param issnLs 待检查的 ISSN-L 集合（不能为 null，可以为空）
   /// @return 数据库中已存在的 ISSN-L 集合（永不为 null）
   Set<String> findExistingIssnLs(Collection<String> issnLs);
+
+  // ========== Serfile 导入相关方法 ==========
+
+  /// 根据 ISSN-L 批量查找载体聚合根。
+  ///
+  /// 用于 Serfile 导入时的匹配查询（优先级最高）。
+  /// 返回的聚合根包含完整的子实体（标识符、MeSH、关联、索引历史）。
+  ///
+  /// @param issnLs ISSN-L 集合（不能为 null，可以为空）
+  /// @return ISSN-L 到聚合根的映射（永不为 null）
+  Map<String, VenueAggregate> findByIssnLs(Collection<String> issnLs);
+
+  /// 根据 NLM ID 批量查找载体聚合根。
+  ///
+  /// 用于 Serfile 导入时的匹配查询（优先级次高）。
+  /// 返回的聚合根包含完整的子实体。
+  ///
+  /// @param nlmIds NLM ID 集合（不能为 null，可以为空）
+  /// @return NLM ID 到聚合根的映射（永不为 null）
+  Map<String, VenueAggregate> findByNlmIds(Collection<String> nlmIds);
+
+  /// 根据 ISSN（Print 或 Electronic）批量查找载体聚合根。
+  ///
+  /// 用于 Serfile 导入时的匹配查询（优先级最低）。
+  /// 从 `cat_venue_identifier` 表反查，返回完整的聚合根。
+  ///
+  /// @param issns ISSN 集合（不能为 null，可以为空）
+  /// @return ISSN 到聚合根的映射（永不为 null）
+  Map<String, VenueAggregate> findByIssns(Collection<String> issns);
+
+  /// 批量更新载体聚合根（含子实体）。
+  ///
+  /// **适用场景**：Serfile 导入时覆盖已有数据
+  ///
+  /// **更新策略**：
+  ///
+  /// - 主表字段：直接更新
+  /// - 子实体（MeSH、关联、索引历史）：删除旧记录，插入新记录
+  /// - 标识符：合并（不删除已有，只添加新的）
+  ///
+  /// **事务说明**：
+  ///
+  /// - 方法本身不管理事务，由调用方控制事务边界
+  /// - 建议按批次调用（如每 500 条一批）
+  ///
+  /// @param aggregates 聚合根列表（不能为 null，可以为空）
+  void updateBatch(List<VenueAggregate> aggregates);
 }

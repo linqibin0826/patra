@@ -142,6 +142,16 @@ public class VenueIdentifier implements Serializable {
     return create(VenueIdentifierType.NLM, nlmId, true);
   }
 
+  /// 创建 CODEN 标识符。
+  ///
+  /// CODEN 是一种 6 字符的期刊标识符，来源于 NLM Serfile。
+  ///
+  /// @param coden CODEN 编码（6字符）
+  /// @return 标识符实体
+  public static VenueIdentifier forCoden(String coden) {
+    return create(VenueIdentifierType.CODEN, coden, true);
+  }
+
   /// 从持久化状态重建实体（由 Repository 使用）。
   ///
   /// @param id 主键 ID
