@@ -5,7 +5,7 @@ import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
-import com.patra.catalog.domain.port.XmlParserPort;
+import com.patra.catalog.domain.port.parser.XmlParserPort;
 import com.patra.catalog.infra.adapter.parser.strategy.ConceptParsingStrategy;
 import com.patra.catalog.infra.adapter.parser.strategy.DescriptorParsingStrategy;
 import com.patra.catalog.infra.adapter.parser.strategy.EntryTermParsingStrategy;

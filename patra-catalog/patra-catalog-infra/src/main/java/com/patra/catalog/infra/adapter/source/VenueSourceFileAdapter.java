@@ -1,8 +1,8 @@
 package com.patra.catalog.infra.adapter.source;
 
 import com.patra.catalog.domain.model.vo.venue.OpenAlexManifest;
-import com.patra.catalog.domain.port.FileDownloadPort;
-import com.patra.catalog.domain.port.VenueSourceFilePort;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
+import com.patra.catalog.domain.port.source.VenueSourceFilePort;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;

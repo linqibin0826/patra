@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.catalog.domain.port.FileDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
 import java.net.URI;
 import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;

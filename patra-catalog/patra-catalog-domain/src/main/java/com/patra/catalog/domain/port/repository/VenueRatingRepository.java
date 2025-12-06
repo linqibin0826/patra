@@ -1,4 +1,4 @@
-package com.patra.catalog.domain.port;
+package com.patra.catalog.domain.port.repository;
 
 import com.patra.catalog.domain.model.entity.VenueRating;
 import com.patra.catalog.domain.model.enums.RatingSystem;

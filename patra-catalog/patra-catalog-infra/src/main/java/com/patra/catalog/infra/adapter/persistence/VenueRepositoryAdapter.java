@@ -13,7 +13,7 @@ import com.patra.catalog.domain.model.enums.IndexingTreatment;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueRelationType;
 import com.patra.catalog.domain.model.enums.VenueType;
-import com.patra.catalog.domain.port.VenueRepository;
+import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.infra.persistence.converter.VenueConverter;
 import com.patra.catalog.infra.persistence.converter.VenueIdentifierConverter;
 import com.patra.catalog.infra.persistence.converter.VenuePublicationStatsConverter;

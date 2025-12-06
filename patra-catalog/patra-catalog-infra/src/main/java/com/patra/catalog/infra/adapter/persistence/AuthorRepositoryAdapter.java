@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.adapter.persistence;
 
-import com.patra.catalog.domain.port.AuthorRepository;
+import com.patra.catalog.domain.port.repository.AuthorRepository;
 import com.patra.catalog.infra.persistence.converter.AuthorConverter;
 import com.patra.catalog.infra.persistence.mapper.AuthorMapper;
 import lombok.RequiredArgsConstructor;

@@ -1,4 +1,4 @@
-package com.patra.catalog.domain.port;
+package com.patra.catalog.domain.port.batch;
 
 import com.patra.catalog.domain.model.vo.venue.VenueImportParams;
 

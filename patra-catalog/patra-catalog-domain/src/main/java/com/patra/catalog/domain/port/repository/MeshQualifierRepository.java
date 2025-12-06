@@ -1,4 +1,4 @@
-package com.patra.catalog.domain.port;
+package com.patra.catalog.domain.port.repository;
 
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import java.util.List;

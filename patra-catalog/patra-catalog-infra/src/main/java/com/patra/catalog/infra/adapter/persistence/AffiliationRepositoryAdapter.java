@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.adapter.persistence;
 
-import com.patra.catalog.domain.port.AffiliationRepository;
+import com.patra.catalog.domain.port.repository.AffiliationRepository;
 import com.patra.catalog.infra.persistence.converter.AffiliationConverter;
 import com.patra.catalog.infra.persistence.mapper.AffiliationMapper;
 import lombok.RequiredArgsConstructor;

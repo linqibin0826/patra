@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.adapter.source;
 
 import com.patra.catalog.domain.exception.SerfileDownloadException;
-import com.patra.catalog.domain.port.SerfileSourceFilePort;
+import com.patra.catalog.domain.port.source.SerfileSourceFilePort;
 import com.patra.starter.restclient.download.DownloadClient;
 import com.patra.starter.restclient.download.DownloadException;
 import com.patra.starter.restclient.download.DownloadResult;

@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.batch.venue;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
-import com.patra.catalog.domain.port.VenueRepository;
+import com.patra.catalog.domain.port.repository.VenueRepository;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
