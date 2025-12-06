@@ -123,6 +123,9 @@ patra:
   - `VenuePublicationStats`：载体年度发文统计实体（发表量/被引量/OA 比例）
   - `VenueSourceData`：载体数据源实体（存储各数据源原始/提取数据）
   - `VenueRating`：载体评级实体（支持 JCR/中科院分区/Scopus 等多评价体系）
+  - `VenueMesh`：载体 MeSH 主题词实体（MeSH 主题分类，来源 Serfile）
+  - `VenueRelation`：载体关联实体（期刊演变关系：前刊/后刊/合并/分拆）
+  - `VenueIndexingHistory`：载体索引历史实体（MEDLINE/PMC 索引收录变迁）
   - `Author`：作者实体
   - `Affiliation`：机构实体
 
@@ -143,15 +146,19 @@ patra:
   - `IndexingInfo`：MEDLINE 索引收录信息
   - `LatestRating`：最新评级快照（冗余，高频查询优化）
   - `OaStatus`：开放获取状态
+  - `VenueLanguages`：期刊语言信息（主要语言 + 摘要语言列表，来源 Serfile）
 
 - **枚举**
   - `MeshDataType`：MeSH 数据类型（QUALIFIER、DESCRIPTOR、TREE_NUMBER、ENTRY_TERM、CONCEPT）
   - `DescriptorClass`：主题词分类
   - `LexicalTag`：词汇标记
   - `VenueType`：载体类型（JOURNAL、REPOSITORY、CONFERENCE、EBOOK_PLATFORM、BOOK_SERIES）
-  - `VenueIdentifierType`：标识符类型（ISSN、OPENALEX、NLM、MAG、FATCAT、WIKIDATA、DOAJ、CROSSREF_MEMBER、JCR）
+  - `VenueIdentifierType`：标识符类型（ISSN、OPENALEX、NLM、MAG、FATCAT、WIKIDATA、DOAJ、CROSSREF_MEMBER、JCR、CODEN）
   - `DataSourceCode`：数据源代码（OPENALEX、PUBMED、DOAJ、CROSSREF、JCR）
   - `RatingSystem`：评价体系（JCR、CAS、SCOPUS）
+  - `VenueRelationType`：载体关联类型（PRECEDING、SUCCEEDING、ABSORBED、ABSORBED_BY、MERGED、SPLIT_FROM、CONTINUED_BY、CONTINUES）
+  - `CitationSubset`：引用子集（IM、AIM、N、D、H、K、T、E、S、X、B、C、F、Q）
+  - `IndexingTreatment`：索引处理方式（FULL、SELECTIVE）
 
 ### Infrastructure 层
 - `MeshDescriptorRepositoryAdapter`：主题词仓储适配器
@@ -180,6 +187,9 @@ patra:
   - `cat_venue_publication_stats`：载体年度发文统计表（发表量/被引量/OA 发文量）
   - `cat_venue_source_data`：载体数据源表（各数据源原始 JSON 和提取字段）
   - `cat_venue_rating`：载体评级表（JCR/中科院分区/Scopus 等多评价体系年度评级）
+  - `cat_venue_mesh`：载体 MeSH 主题表（MeSH 主题词分类，与 cat_publication_mesh 命名风格一致）
+  - `cat_venue_relation`：载体关联表（期刊演变关系：前刊/后刊/合并/分拆）
+  - `cat_venue_indexing_history`：载体索引历史表（MEDLINE/PMC 索引收录变迁）
 
 ## 🧪 测试覆盖
 
@@ -192,7 +202,17 @@ patra:
 | Boot | E2E 测试 | 核心流程 |
 
 ## 📝 变更日志
-1. v0.7.0 (2025-12-06)：Venue 多数据源表结构重设计
+1. v0.8.0 (2025-12-06)：NLM Serfile 数据扩展
+   - 新增 3 个实体：`VenueMesh`（MeSH 主题词）、`VenueRelation`（期刊关联）、`VenueIndexingHistory`（索引历史）
+   - 新增值对象：`VenueLanguages`（期刊语言信息，含主要语言和摘要语言）
+   - 新增枚举：`VenueRelationType`（期刊关联类型）、`CitationSubset`（引用子集）、`IndexingTreatment`（索引处理方式）
+   - `VenueIdentifierType` 扩展：新增 `CODEN`（6 字符标识符）
+   - `VenueAggregate` 扩展：新增 `coden`、`frequency`、`languages`、`meshTerms`、`relations`、`indexingHistories` 字段
+   - 新增数据库表：`cat_venue_mesh`（与 cat_publication_mesh 命名风格一致）、`cat_venue_relation`、`cat_venue_indexing_history`
+   - `cat_venue` 扩展字段：`coden`、`frequency`、`languages`（JSON）
+   - `VenueMesh` / `cat_venue_mesh` 新增 `qualifier_ui` 字段支持 MeSH 限定符精确关联
+
+2. v0.7.0 (2025-12-06)：Venue 多数据源表结构重设计
    - **Breaking Change**：`cat_venue_metrics` 重命名为 `cat_venue_publication_stats`
    - **架构决策**：[[ADR-011]] Venue 多数据源架构设计
    - 新增 `cat_venue_source_data` 表：存储各数据源原始 JSON 和提取字段
