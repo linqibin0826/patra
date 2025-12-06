@@ -8,7 +8,7 @@ import com.patra.catalog.app.usecase.mesh.MeshImportUseCase;
 import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.domain.exception.DataAlreadyExistsException;
-import com.patra.catalog.domain.port.FileDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
 import com.patra.catalog.infra.persistence.mapper.MeshConceptMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshConceptRelationMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshDescriptorMapper;

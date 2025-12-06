@@ -1,4 +1,4 @@
-package com.patra.catalog.domain.port;
+package com.patra.catalog.domain.port.source;
 
 import java.net.URI;
 import java.nio.file.Path;

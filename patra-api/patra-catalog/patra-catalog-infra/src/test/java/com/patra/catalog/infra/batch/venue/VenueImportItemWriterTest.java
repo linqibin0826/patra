@@ -12,7 +12,7 @@ import static org.mockito.Mockito.when;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueType;
-import com.patra.catalog.domain.port.VenueRepository;
+import com.patra.catalog.domain.port.repository.VenueRepository;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;

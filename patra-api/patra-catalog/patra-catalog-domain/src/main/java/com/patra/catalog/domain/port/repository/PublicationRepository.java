@@ -1,4 +1,4 @@
-package com.patra.catalog.domain.port;
+package com.patra.catalog.domain.port.repository;
 
 /// 文献聚合根仓储接口（领域层定义，基础设施层实现）。
 ///

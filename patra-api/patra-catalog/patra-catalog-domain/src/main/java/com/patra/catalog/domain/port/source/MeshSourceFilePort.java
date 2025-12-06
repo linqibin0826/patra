@@ -1,4 +1,4 @@
-package com.patra.catalog.domain.port;
+package com.patra.catalog.domain.port.source;
 
 import com.patra.catalog.domain.exception.FileDownloadException;
 import java.net.URI;

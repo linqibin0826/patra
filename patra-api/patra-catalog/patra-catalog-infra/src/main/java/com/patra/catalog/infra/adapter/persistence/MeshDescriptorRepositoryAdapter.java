@@ -3,7 +3,7 @@ package com.patra.catalog.infra.adapter.persistence;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
-import com.patra.catalog.domain.port.MeshDescriptorRepository;
+import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
 import com.patra.catalog.infra.persistence.converter.MeshDescriptorConverter;
 import com.patra.catalog.infra.persistence.entity.MeshConceptDO;
 import com.patra.catalog.infra.persistence.entity.MeshConceptRelationDO;

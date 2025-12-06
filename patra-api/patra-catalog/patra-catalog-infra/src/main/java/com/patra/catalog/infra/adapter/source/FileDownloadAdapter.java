@@ -1,7 +1,7 @@
-package com.patra.catalog.infra.adapter.download;
+package com.patra.catalog.infra.adapter.source;
 
 import com.patra.catalog.domain.exception.FileDownloadException;
-import com.patra.catalog.domain.port.FileDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
 import com.patra.starter.restclient.download.DownloadClient;
 import com.patra.starter.restclient.download.DownloadException;
 import com.patra.starter.restclient.download.DownloadResult;

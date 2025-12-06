@@ -2,7 +2,7 @@ package com.patra.catalog.infra.adapter.persistence;
 
 import com.patra.catalog.domain.exception.MeshPersistenceException;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
-import com.patra.catalog.domain.port.MeshQualifierRepository;
+import com.patra.catalog.domain.port.repository.MeshQualifierRepository;
 import com.patra.catalog.infra.persistence.converter.MeshQualifierConverter;
 import com.patra.catalog.infra.persistence.entity.MeshQualifierDO;
 import com.patra.catalog.infra.persistence.mapper.MeshQualifierMapper;

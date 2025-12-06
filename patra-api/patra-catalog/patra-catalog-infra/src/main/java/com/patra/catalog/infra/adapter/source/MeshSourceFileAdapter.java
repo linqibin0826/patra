@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.adapter.source;
 
-import com.patra.catalog.domain.port.FileDownloadPort;
-import com.patra.catalog.domain.port.MeshSourceFilePort;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
+import com.patra.catalog.domain.port.source.MeshSourceFilePort;
 import java.net.URI;
 import java.nio.file.Path;
 import lombok.RequiredArgsConstructor;

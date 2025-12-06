@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.adapter.batch;
 
 import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
-import com.patra.catalog.domain.port.MeshDescriptorBatchPort;
+import com.patra.catalog.domain.port.batch.MeshDescriptorBatchPort;
 import com.patra.catalog.infra.batch.mesh.MeshImportJobParams;
 import com.patra.starter.batch.core.JobLauncherHelper;
 import lombok.RequiredArgsConstructor;

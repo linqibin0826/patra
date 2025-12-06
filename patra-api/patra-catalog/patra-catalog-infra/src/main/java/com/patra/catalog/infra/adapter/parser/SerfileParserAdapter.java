@@ -2,7 +2,7 @@ package com.patra.catalog.infra.adapter.parser;
 
 import com.patra.catalog.domain.exception.SerfileParseException;
 import com.patra.catalog.domain.model.dto.serfile.SerialRecord;
-import com.patra.catalog.domain.port.SerfileParserPort;
+import com.patra.catalog.domain.port.parser.SerfileParserPort;
 import com.patra.catalog.infra.adapter.parser.strategy.SerialParsingStrategy;
 import com.patra.catalog.infra.adapter.parser.support.RecordSpliterator;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingContext;

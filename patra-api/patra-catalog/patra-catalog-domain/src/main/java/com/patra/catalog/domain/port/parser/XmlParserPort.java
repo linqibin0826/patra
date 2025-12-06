@@ -1,4 +1,4 @@
-package com.patra.catalog.domain.port;
+package com.patra.catalog.domain.port.parser;
 
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;

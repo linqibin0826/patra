@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.batch.mesh;
 
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
-import com.patra.catalog.domain.port.MeshDescriptorRepository;
+import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

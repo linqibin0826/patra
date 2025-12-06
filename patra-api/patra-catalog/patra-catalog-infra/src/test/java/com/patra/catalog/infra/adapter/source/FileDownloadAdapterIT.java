@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.adapter.download;
+package com.patra.catalog.infra.adapter.source;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
