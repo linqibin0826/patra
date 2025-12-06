@@ -1,9 +1,9 @@
 -- ============================================================
--- Patra Catalog 数据库 - 人员机构模块表 DDL
+-- Patra Catalog 数据库 - 机构与研究者表 DDL
 -- ============================================================
 -- 设计阶段: 阶段 3 - SQL DDL 生成
 -- 创建日期: 2025-01-18
--- 设计范围: patra_catalog 人员机构模块（6张表）
+-- 设计范围: 机构、研究者及关联表（4张表）
 -- 作者: Patra Lin
 -- MySQL 版本: 8.0+
 -- 字符集: utf8mb4 (支持完整Unicode)
@@ -15,20 +15,8 @@
 -- ============================================================
 -- 1. cat_affiliation (机构表) - 无依赖（独立表）
 -- 2. cat_investigator (研究者表) - 无依赖（独立表）
--- 3. cat_publication_author (文献-作者关联表) - 依赖 cat_publication, cat_author
--- 4. cat_author_affiliation (作者-机构关联表) - 依赖 cat_author, cat_affiliation, cat_publication(可选)
--- 5. cat_publication_investigator (文献-研究者关联表) - 依赖 cat_publication, cat_investigator
--- 6. cat_personal_name_subject (人物主题表) - 依赖 cat_publication
--- ============================================================
-
--- ============================================================
--- 执行说明
--- ============================================================
--- 1. 确保 MySQL 版本 >= 8.0（需要部分唯一索引支持）
--- 2. 前置依赖: cat_publication 和 cat_author 表必须已存在
--- 3. 按顺序执行表创建（考虑依赖关系）
--- 4. 建议在测试环境先验证，再在生产环境执行
--- 5. 执行前备份现有数据（如果有）
+-- 3. cat_publication_investigator (文献-研究者关联表) - 依赖 cat_publication, cat_investigator
+-- 4. cat_personal_name_subject (人物主题表) - 依赖 cat_publication
 -- ============================================================
 
 
@@ -70,7 +58,6 @@ CREATE TABLE IF NOT EXISTS `cat_affiliation` (
     `metadata` JSON NULL DEFAULT NULL COMMENT '机构元数据(灵活扩展)',
 
     -- ========================================
-    -- ========================================
     -- 审计字段（完整版）
     -- ========================================
     `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
@@ -83,8 +70,6 @@ CREATE TABLE IF NOT EXISTS `cat_affiliation` (
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
     `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志(0=正常,1=已删除)',
-
-
 
     -- ========================================
     -- 主键和索引
@@ -135,7 +120,6 @@ CREATE TABLE IF NOT EXISTS `cat_investigator` (
     `metadata` JSON NULL DEFAULT NULL COMMENT '研究者元数据(灵活扩展)',
 
     -- ========================================
-    -- ========================================
     -- 审计字段（完整版）
     -- ========================================
     `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
@@ -148,8 +132,6 @@ CREATE TABLE IF NOT EXISTS `cat_investigator` (
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
     `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志(0=正常,1=已删除)',
-
-
 
     -- ========================================
     -- 主键和索引
@@ -166,133 +148,7 @@ COMMENT='研究者表:存储非作者的研究人员信息(如临床试验PI)';
 
 
 -- ============================================================
--- 表 3: cat_publication_author (文献-作者关联表)
--- ============================================================
--- 表说明: 管理文献与作者的多对多关系,记录作者顺序、角色和贡献类型
--- 记录数预估: 初始 3000万 / 年增长 2200万 / 5年规模 1.4亿
--- 主要查询场景:
---   1. 查询某文献的所有作者(按顺序)(>5000次/天,高频)
---   2. 查询某作者的所有文献(>3000次/天,高频)
---   3. 筛选第一作者文献(>1000次/天,高频)
---   4. 筛选通讯作者文献(>800次/天,中频)
---   5. 按 CRediT 贡献类型筛选(<100次/天,低频)
--- ============================================================
-
-
-CREATE TABLE IF NOT EXISTS `cat_publication_author` (
-    -- ========================================
-    -- 业务字段
-    -- ========================================
-    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键,雪花算法生成',
-    `publication_id` BIGINT UNSIGNED NOT NULL COMMENT '出版物ID(外键:cat_publication.id)',
-    `author_id` BIGINT UNSIGNED NOT NULL COMMENT '作者ID(外键:cat_author.id)',
-    `author_order` INT UNSIGNED NOT NULL DEFAULT 1 COMMENT '作者顺序(1=第一作者,2=第二作者...)',
-    `is_first_author` BOOLEAN NOT NULL DEFAULT 0 COMMENT '是否第一作者(0=否,1=是)',
-    `is_corresponding_author` BOOLEAN NOT NULL DEFAULT 0 COMMENT '是否通讯作者(0=否,1=是)',
-    `is_equal_contribution` BOOLEAN NOT NULL DEFAULT 0 COMMENT '是否同等贡献作者(0=否,1=是)',
-    `contribution_type` VARCHAR(50) NULL DEFAULT NULL COMMENT '贡献类型(CRediT分类,如"Conceptualization")',
-    `affiliation_string` VARCHAR(1000) NULL DEFAULT NULL COMMENT '原始机构字符串(外部采集,未标准化)',
-    `author_metadata` JSON NULL DEFAULT NULL COMMENT '作者元数据(灵活扩展)',
-
-    -- ========================================
-    -- ========================================
-    -- 审计字段（完整版）
-    -- ========================================
-    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
-    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
-    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
-    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
-    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
-    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志(0=正常,1=已删除)',
-
-
-
-    -- ========================================
-    -- 主键和索引
-    -- ========================================
-    PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
-
-    -- 唯一索引
-    UNIQUE INDEX `uk_pub_author` (`publication_id`, `author_id`) COMMENT '防止同一作者在同一文献重复关联',
-    UNIQUE INDEX `uk_author_order` (`publication_id`, `author_order`) COMMENT '防止同一文献的作者顺序重复,保证学术顺序正确性',
-
-    -- 普通索引
-    INDEX `idx_publication` (`publication_id`) COMMENT '出版物索引,支持查询某文献的所有作者(高频)',
-    INDEX `idx_author` (`author_id`) COMMENT '作者索引,支持查询某作者的所有文献(高频)',
-    INDEX `idx_first_author` (`is_first_author`) COMMENT '第一作者索引,支持筛选第一作者文献(学术评价重要指标)',
-    INDEX `idx_corresponding` (`is_corresponding_author`) COMMENT '通讯作者索引,支持筛选通讯作者文献(联系查询)'
-
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-COMMENT='文献-作者关联表:管理作者顺序和角色';
-
-
--- ============================================================
--- 表 4: cat_author_affiliation (作者-机构关联表)
--- ============================================================
--- 表说明: 管理作者与机构的多对多关系,支持时间维度追踪和特定文献上下文
--- 记录数预估: 初始 5000万 / 年增长 2500万 / 5年规模 1.75亿
--- 主要查询场景:
---   1. 查询某作者的所有机构(按时间排序)(>1000次/天,高频)
---   2. 查询某机构的所有作者(>800次/天,中频)
---   3. 查询某文献的作者机构(>2000次/天,高频)
---   4. 查询作者的主要机构(>500次/天,中频)
--- ============================================================
-
-
-CREATE TABLE IF NOT EXISTS `cat_author_affiliation` (
-    -- ========================================
-    -- 业务字段
-    -- ========================================
-    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键,雪花算法生成',
-    `author_id` BIGINT UNSIGNED NOT NULL COMMENT '作者ID(外键:cat_author.id)',
-    `affiliation_id` BIGINT UNSIGNED NOT NULL COMMENT '机构ID(外键:cat_affiliation.id)',
-    `publication_id` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '文献ID(外键:cat_publication.id,可选)',
-    `start_date` DATE NULL DEFAULT NULL COMMENT '开始日期(作者加入机构日期)',
-    `end_date` DATE NULL DEFAULT NULL COMMENT '结束日期(作者离开机构日期)',
-    `affiliation_type` VARCHAR(50) NULL DEFAULT NULL COMMENT '关联类型(如"current","past","visiting")',
-    `is_primary` BOOLEAN NOT NULL DEFAULT 0 COMMENT '是否主要机构(0=否,1=是)',
-    `order_num` INT UNSIGNED NULL DEFAULT NULL COMMENT '机构顺序(作者有多个机构时排序)',
-    `metadata` JSON NULL DEFAULT NULL COMMENT '关联元数据(灵活扩展)',
-
-    -- ========================================
-    -- ========================================
-    -- 审计字段（完整版）
-    -- ========================================
-    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
-    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
-    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
-    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
-    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
-    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志(0=正常,1=已删除)',
-
-
-
-    -- ========================================
-    -- 主键和索引
-    -- ========================================
-    PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
-
-    -- 普通索引
-    INDEX `idx_author` (`author_id`) COMMENT '作者索引,支持查询某作者的所有机构(高频)',
-    INDEX `idx_affiliation` (`affiliation_id`) COMMENT '机构索引,支持查询某机构的所有作者(中频)',
-    INDEX `idx_publication` (`publication_id`) COMMENT '文献索引,支持查询某文献的作者机构(高频)',
-
-    -- 复合索引
-    INDEX `idx_author_primary` (`author_id`, `is_primary`) COMMENT '作者+主要机构复合索引,支持快速查询作者的主要机构'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-COMMENT='作者-机构关联表:支持时间维度追踪和文献上下文';
-
-
--- ============================================================
--- 表 5: cat_publication_investigator (文献-研究者关联表)
+-- 表 3: cat_publication_investigator (文献-研究者关联表)
 -- ============================================================
 -- 表说明: 管理文献与研究者的多对多关系,记录研究者角色和职责
 -- 记录数预估: 初始 50万 / 年增长 20万 / 5年规模 150万
@@ -317,7 +173,6 @@ CREATE TABLE IF NOT EXISTS `cat_publication_investigator` (
     `metadata` JSON NULL DEFAULT NULL COMMENT '关联元数据(灵活扩展)',
 
     -- ========================================
-    -- ========================================
     -- 审计字段（完整版）
     -- ========================================
     `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
@@ -330,8 +185,6 @@ CREATE TABLE IF NOT EXISTS `cat_publication_investigator` (
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
     `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志(0=正常,1=已删除)',
-
-
 
     -- ========================================
     -- 主键和索引
@@ -351,7 +204,7 @@ COMMENT='文献-研究者关联表:管理研究者角色和职责';
 
 
 -- ============================================================
--- 表 6: cat_personal_name_subject (人物主题表)
+-- 表 4: cat_personal_name_subject (人物主题表)
 -- ============================================================
 -- 表说明: 存储文献的主题人物信息(传记类、历史类、纪念类文献)
 -- 记录数预估: 初始 2万 / 年增长 0.6万 / 5年规模 5万
@@ -380,7 +233,6 @@ CREATE TABLE IF NOT EXISTS `cat_personal_name_subject` (
     `metadata` JSON NULL DEFAULT NULL COMMENT '人物元数据(灵活扩展)',
 
     -- ========================================
-    -- ========================================
     -- 审计字段（完整版）
     -- ========================================
     `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
@@ -393,8 +245,6 @@ CREATE TABLE IF NOT EXISTS `cat_personal_name_subject` (
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
     `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志(0=正常,1=已删除)',
-
-
 
     -- ========================================
     -- 主键和索引
