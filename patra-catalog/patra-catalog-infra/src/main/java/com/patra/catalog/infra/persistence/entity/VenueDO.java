@@ -91,6 +91,10 @@ public class VenueDO extends BaseDO {
   @TableField("doi_prefix")
   private String doiPrefix;
 
+  /// CODEN 编码（6字符标识符，来自 Serfile）
+  @TableField("coden")
+  private String coden;
+
   // ========================================
   // 出版商信息
   // ========================================
@@ -138,6 +142,24 @@ public class VenueDO extends BaseDO {
   /// 是否已停刊
   @TableField("ceased")
   private Boolean ceased;
+
+  /// 出版频率（来自 Serfile，如 Weekly/Monthly/Quarterly）
+  @TableField("frequency")
+  private String frequency;
+
+  // ========================================
+  // 语言信息（来自 Serfile）
+  // ========================================
+
+  /// 主要语言代码（ISO 639-3，冗余字段便于查询）
+  @TableField("primary_language")
+  private String primaryLanguage;
+
+  /// 期刊语言信息（JSON 对象，含 primary 和 summary 数组）
+  ///
+  /// 格式示例：`{"primary": ["eng"], "summary": ["fre", "ger"]}`
+  @TableField(value = "languages", typeHandler = JacksonTypeHandler.class)
+  private JsonNode languages;
 
   // ========================================
   // 索引收录信息（来自 PubMed Catalog）

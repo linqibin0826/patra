@@ -3,8 +3,12 @@ package com.patra.catalog.domain.model.aggregate;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.entity.VenueIdentifier;
+import com.patra.catalog.domain.model.entity.VenueIndexingHistory;
+import com.patra.catalog.domain.model.entity.VenueMesh;
 import com.patra.catalog.domain.model.entity.VenuePublicationStats;
+import com.patra.catalog.domain.model.entity.VenueRelation;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
+import com.patra.catalog.domain.model.enums.VenueRelationType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.ApcInfo;
 import com.patra.catalog.domain.model.vo.venue.HostOrganization;
@@ -13,6 +17,7 @@ import com.patra.catalog.domain.model.vo.venue.LatestRating;
 import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
 import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
 import com.patra.catalog.domain.model.vo.venue.Society;
+import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
 import com.patra.catalog.domain.model.vo.venue.VenueStats;
 import com.patra.common.domain.AggregateRoot;
 import java.io.Serial;
@@ -30,6 +35,9 @@ import lombok.Getter;
 ///
 /// - VenueIdentifier（实体，1:N）：标识符集合，与 Venue 生命周期一致
 /// - VenuePublicationStats（实体，1:N）：年度指标集合，与 Venue 生命周期一致
+/// - VenueMesh（实体，1:N）：MeSH 主题词集合，来自 Serfile
+/// - VenueRelation（实体，1:N）：期刊关联关系集合（前身/后继等），来自 Serfile
+/// - VenueIndexingHistory（实体，1:N）：索引历史记录集合，来自 Serfile
 /// - VenueInstance 保持独立（通过 Repository 按需加载）
 ///
 /// **验证规则**：
@@ -41,9 +49,12 @@ import lombok.Getter;
 /// **设计说明**：
 ///
 /// - 支持 OpenAlex 的 7 种载体类型（journal/repository/conference 等）
-/// - 标识符统一管理（ISSN/ISBN/OpenAlex/NLM/MAG/FATCAT/WIKIDATA）
+/// - 标识符统一管理（ISSN/ISBN/OpenAlex/NLM/MAG/FATCAT/WIKIDATA/CODEN）
 /// - 年度指标支持时序分析
 /// - OA 状态和 APC 信息用于开放获取分析
+/// - 语言信息支持多语言期刊和摘要语言追踪
+/// - MeSH 主题词用于期刊学科分类
+/// - 索引历史记录 MEDLINE/PMC 等数据库的索引状态变化
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -82,6 +93,22 @@ public class VenueAggregate extends AggregateRoot<Long> {
 
   /// DOI 前缀（来自 Crossref）
   private String doiPrefix;
+
+  /// CODEN 编码（6字符标识符，来自 Serfile）
+  private String coden;
+
+  // ========== 出版信息 ==========
+
+  /// 出版频率（来自 Serfile，如 Weekly/Monthly/Quarterly）
+  private String frequency;
+
+  // ========== 语言信息 ==========
+
+  /// 主要语言代码（ISO 639-3，冗余字段便于查询）
+  private String primaryLanguage;
+
+  /// 期刊语言信息（包含主语言和摘要语言列表）
+  private VenueLanguages languages;
 
   // ========== 出版商信息 ==========
 
@@ -155,6 +182,15 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// 年度指标集合
   private final List<VenuePublicationStats> yearlyMetrics;
 
+  /// MeSH 主题词集合（来自 Serfile）
+  private final List<VenueMesh> meshTerms;
+
+  /// 期刊关联关系集合（前身/后继等，来自 Serfile）
+  private final List<VenueRelation> relations;
+
+  /// 索引历史集合（MEDLINE/PMC 索引记录，来自 Serfile）
+  private final List<VenueIndexingHistory> indexingHistories;
+
   /// 私有构造函数（通过工厂方法创建）。
   ///
   /// @param id 主键 ID（新建时为 null）
@@ -172,6 +208,9 @@ public class VenueAggregate extends AggregateRoot<Long> {
     this.yearlyMetrics = new ArrayList<>();
     this.alternateTitles = new ArrayList<>();
     this.societies = new ArrayList<>();
+    this.meshTerms = new ArrayList<>();
+    this.relations = new ArrayList<>();
+    this.indexingHistories = new ArrayList<>();
   }
 
   // ========== 工厂方法 ==========
@@ -430,6 +469,46 @@ public class VenueAggregate extends AggregateRoot<Long> {
     return this;
   }
 
+  /// 设置 CODEN 编码。
+  ///
+  /// @param coden CODEN 编码（6字符）
+  /// @return 当前对象
+  public VenueAggregate withCoden(String coden) {
+    this.coden = coden;
+    return this;
+  }
+
+  /// 设置出版频率。
+  ///
+  /// @param frequency 出版频率（如 Weekly/Monthly/Quarterly）
+  /// @return 当前对象
+  public VenueAggregate withFrequency(String frequency) {
+    this.frequency = frequency;
+    return this;
+  }
+
+  /// 设置主要语言。
+  ///
+  /// @param primaryLanguage 主要语言代码（ISO 639-3）
+  /// @return 当前对象
+  public VenueAggregate withPrimaryLanguage(String primaryLanguage) {
+    this.primaryLanguage = primaryLanguage;
+    return this;
+  }
+
+  /// 设置语言信息。
+  ///
+  /// @param languages 语言信息值对象
+  /// @return 当前对象
+  public VenueAggregate withLanguages(VenueLanguages languages) {
+    this.languages = languages;
+    // 同步更新冗余字段
+    if (languages != null && languages.hasPrimaryLanguages()) {
+      this.primaryLanguage = languages.getMainLanguage();
+    }
+    return this;
+  }
+
   // ========== 标识符管理方法 ==========
 
   /// 添加标识符。
@@ -621,6 +700,154 @@ public class VenueAggregate extends AggregateRoot<Long> {
     }
   }
 
+  // ========== MeSH 主题词管理方法 ==========
+
+  /// 添加 MeSH 主题词。
+  ///
+  /// @param meshTerm 主题词实体
+  public void addMeshTerm(VenueMesh meshTerm) {
+    Assert.notNull(meshTerm, "主题词不能为空");
+    // 检查是否已存在（基于业务相等性）
+    if (!meshTerms.contains(meshTerm)) {
+      meshTerms.add(meshTerm);
+    }
+  }
+
+  /// 移除 MeSH 主题词。
+  ///
+  /// @param descriptorName 描述符名称
+  public void removeMeshTerm(String descriptorName) {
+    meshTerms.removeIf(m -> m.getDescriptorName().equals(descriptorName));
+  }
+
+  /// 获取所有主题词（不可变视图）。
+  ///
+  /// @return 主题词列表
+  public List<VenueMesh> getMeshTerms() {
+    return Collections.unmodifiableList(meshTerms);
+  }
+
+  /// 获取主要主题词列表。
+  ///
+  /// @return 主要主题词列表
+  public List<VenueMesh> getMajorMeshTerms() {
+    return meshTerms.stream().filter(VenueMesh::isMajorTopic).toList();
+  }
+
+  /// 批量设置主题词（清空现有并添加新的）。
+  ///
+  /// @param newMeshTerms 新主题词列表
+  public void setMeshTerms(List<VenueMesh> newMeshTerms) {
+    meshTerms.clear();
+    if (newMeshTerms != null) {
+      newMeshTerms.forEach(this::addMeshTerm);
+    }
+  }
+
+  // ========== 期刊关联关系管理方法 ==========
+
+  /// 添加期刊关联关系。
+  ///
+  /// @param relation 关联关系实体
+  public void addRelation(VenueRelation relation) {
+    Assert.notNull(relation, "关联关系不能为空");
+    // 检查是否已存在（基于业务相等性）
+    if (!relations.contains(relation)) {
+      relations.add(relation);
+    }
+  }
+
+  /// 移除期刊关联关系。
+  ///
+  /// @param relatedTitle 关联期刊标题
+  /// @param relationType 关系类型
+  public void removeRelation(String relatedTitle, VenueRelationType relationType) {
+    relations.removeIf(
+        r -> r.getRelatedTitle().equals(relatedTitle) && r.getRelationType() == relationType);
+  }
+
+  /// 获取所有关联关系（不可变视图）。
+  ///
+  /// @return 关联关系列表
+  public List<VenueRelation> getRelations() {
+    return Collections.unmodifiableList(relations);
+  }
+
+  /// 获取前身期刊列表。
+  ///
+  /// @return 前身期刊关联列表
+  public List<VenueRelation> getPrecedingRelations() {
+    return relations.stream().filter(VenueRelation::isPreceding).toList();
+  }
+
+  /// 获取后继期刊列表。
+  ///
+  /// @return 后继期刊关联列表
+  public List<VenueRelation> getSucceedingRelations() {
+    return relations.stream().filter(VenueRelation::isSucceeding).toList();
+  }
+
+  /// 批量设置关联关系（清空现有并添加新的）。
+  ///
+  /// @param newRelations 新关联关系列表
+  public void setRelations(List<VenueRelation> newRelations) {
+    relations.clear();
+    if (newRelations != null) {
+      newRelations.forEach(this::addRelation);
+    }
+  }
+
+  // ========== 索引历史管理方法 ==========
+
+  /// 添加索引历史记录。
+  ///
+  /// @param history 索引历史实体
+  public void addIndexingHistory(VenueIndexingHistory history) {
+    Assert.notNull(history, "索引历史不能为空");
+    // 检查是否已存在（基于业务相等性）
+    if (!indexingHistories.contains(history)) {
+      indexingHistories.add(history);
+    }
+  }
+
+  /// 获取所有索引历史（不可变视图）。
+  ///
+  /// @return 索引历史列表
+  public List<VenueIndexingHistory> getIndexingHistories() {
+    return Collections.unmodifiableList(indexingHistories);
+  }
+
+  /// 获取当前正在索引的历史记录。
+  ///
+  /// @return 当前索引记录列表
+  public List<VenueIndexingHistory> getCurrentIndexings() {
+    return indexingHistories.stream().filter(VenueIndexingHistory::isCurrentlyIndexed).toList();
+  }
+
+  /// 获取 MEDLINE 索引历史。
+  ///
+  /// @return MEDLINE 索引历史列表
+  public List<VenueIndexingHistory> getMedlineIndexingHistories() {
+    return indexingHistories.stream().filter(VenueIndexingHistory::isMedline).toList();
+  }
+
+  /// 判断当前是否被 MEDLINE 索引（基于索引历史）。
+  ///
+  /// @return true 如果当前被 MEDLINE 索引
+  public boolean isCurrentlyIndexedInMedline() {
+    return indexingHistories.stream().anyMatch(h -> h.isMedline() && h.isCurrentlyIndexed());
+  }
+
+  /// 批量设置索引历史（清空现有并添加新的）。
+  ///
+  /// @param newHistories 新索引历史列表
+  public void setIndexingHistories(List<VenueIndexingHistory> newHistories) {
+    indexingHistories.clear();
+    if (newHistories != null) {
+      newHistories.forEach(this::addIndexingHistory);
+    }
+  }
+
   // ========== 便捷判断方法 ==========
 
   /// 判断是否为期刊。
@@ -719,6 +946,55 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return true 如果已停刊
   public boolean isCeased() {
     return publicationHistory != null && publicationHistory.ceased();
+  }
+
+  /// 判断是否有 CODEN 编码。
+  ///
+  /// @return true 如果有 CODEN
+  public boolean hasCoden() {
+    return StrUtil.isNotBlank(coden);
+  }
+
+  /// 判断是否有语言信息。
+  ///
+  /// @return true 如果有语言信息
+  public boolean hasLanguages() {
+    return languages != null && !languages.isEmpty();
+  }
+
+  /// 判断是否为英语期刊。
+  ///
+  /// @return true 如果主语言为英语
+  public boolean isEnglishJournal() {
+    return languages != null && languages.isEnglish();
+  }
+
+  /// 判断是否为中文期刊。
+  ///
+  /// @return true 如果主语言为中文
+  public boolean isChineseJournal() {
+    return languages != null && languages.isChinese();
+  }
+
+  /// 判断是否有 MeSH 主题词。
+  ///
+  /// @return true 如果有主题词
+  public boolean hasMeshTerms() {
+    return !meshTerms.isEmpty();
+  }
+
+  /// 判断是否有期刊关联关系。
+  ///
+  /// @return true 如果有关联关系
+  public boolean hasRelations() {
+    return !relations.isEmpty();
+  }
+
+  /// 判断是否有索引历史。
+  ///
+  /// @return true 如果有索引历史
+  public boolean hasIndexingHistories() {
+    return !indexingHistories.isEmpty();
   }
 
   // ========== 不变量验证 ==========

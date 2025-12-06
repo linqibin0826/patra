@@ -22,6 +22,9 @@
 -- 4. cat_venue_rating (载体评级表) - 依赖 cat_venue
 -- 5. cat_venue_source_data (数据源表) - 依赖 cat_venue
 -- 6. cat_venue_instance (载体实例表) - 依赖 cat_venue
+-- 7. cat_venue_mesh (期刊MeSH主题表) - 依赖 cat_venue [Serfile扩展]
+-- 8. cat_venue_relation (期刊关联表) - 依赖 cat_venue [Serfile扩展]
+-- 9. cat_venue_indexing_history (索引历史表) - 依赖 cat_venue [Serfile扩展]
 -- ============================================================
 
 
@@ -61,6 +64,14 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
     `issn_l` VARCHAR(20) NULL DEFAULT NULL COMMENT 'Linking ISSN(冗余,关联纸质版和电子版)',
     `nlm_id` VARCHAR(20) NULL DEFAULT NULL COMMENT 'NLM唯一标识符(冗余,PubMed Catalog)',
     `doi_prefix` VARCHAR(50) NULL DEFAULT NULL COMMENT 'DOI前缀(来自Crossref)',
+    `coden` VARCHAR(10) NULL DEFAULT NULL COMMENT 'CODEN编码(6字符标识符,来自Serfile)',
+
+    -- ========================================
+    -- 出版属性 (来自 Serfile)
+    -- ========================================
+    `frequency` VARCHAR(50) NULL DEFAULT NULL COMMENT '出版频率(Weekly/Monthly/Quarterly等,来自Serfile)',
+    `primary_language` VARCHAR(10) NULL DEFAULT NULL COMMENT '主要语言代码(ISO 639-3,冗余字段)',
+    `languages` JSON NULL DEFAULT NULL COMMENT '期刊语言(JSON对象,含primary和summary数组)',
 
     -- ========================================
     -- 出版商信息
@@ -157,6 +168,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
     UNIQUE INDEX `uk_openalex_id` (`openalex_id`) COMMENT 'OpenAlex ID唯一索引',
     UNIQUE INDEX `uk_issn_l` (`issn_l`) COMMENT 'ISSN-L唯一索引',
     UNIQUE INDEX `uk_nlm_id` (`nlm_id`) COMMENT 'NLM ID唯一索引',
+    UNIQUE INDEX `uk_coden` (`coden`) COMMENT 'CODEN唯一索引',
 
     -- 普通索引
     INDEX `idx_venue_type` (`venue_type`) COMMENT '载体类型索引',
@@ -507,3 +519,208 @@ CREATE TABLE IF NOT EXISTS `cat_venue_instance` (
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='载体实例表:存储期刊卷期/书籍版次/会议届次等具体实例';
+
+
+-- ============================================================
+-- 表 7: cat_venue_mesh (期刊MeSH主题表)
+-- ============================================================
+-- 表说明: 存储期刊的MeSH主题词分类,来源Serfile
+-- 命名说明: 与 cat_publication_mesh 保持一致的命名风格
+-- 记录数预估: 初始 100万 / 年增长 10万 / 5年规模 150万 (平均每venue 4个主题)
+-- 主要查询场景:
+--   1. 按 venue_id 查询所有主题(>1000次/天,高频)
+--   2. 按主题筛选期刊(500-1000次/天,中频)
+-- ============================================================
+
+
+CREATE TABLE IF NOT EXISTS `cat_venue_mesh` (
+    -- ========================================
+    -- 主键
+    -- ========================================
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键,雪花算法生成',
+
+    -- ========================================
+    -- 关联信息
+    -- ========================================
+    `venue_id` BIGINT UNSIGNED NOT NULL COMMENT '载体ID(外键:cat_venue.id)',
+
+    -- ========================================
+    -- MeSH 描述符信息
+    -- ========================================
+    `descriptor_name` VARCHAR(255) NOT NULL COMMENT 'MeSH描述符名称',
+    `descriptor_ui` VARCHAR(20) NULL DEFAULT NULL COMMENT 'MeSH描述符唯一标识符(格式:D000001)',
+    `is_major_topic` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否主要主题(0=否,1=是)',
+
+    -- ========================================
+    -- MeSH 限定符信息
+    -- ========================================
+    `qualifier_name` VARCHAR(100) NULL DEFAULT NULL COMMENT 'MeSH限定符名称(可选)',
+    `qualifier_ui` VARCHAR(20) NULL DEFAULT NULL COMMENT 'MeSH限定符唯一标识符(格式:Q000001)',
+
+    -- ========================================
+    -- 审计字段
+    -- ========================================
+    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
+    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP',
+    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
+    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名',
+    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
+    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名',
+    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志',
+
+    -- ========================================
+    -- 主键和索引
+    -- ========================================
+    PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
+
+    -- 唯一索引 (使用 descriptor_name 而非 descriptor_ui,因为 descriptor_ui 可为 NULL)
+    UNIQUE INDEX `uk_venue_mesh` (`venue_id`, `descriptor_name`(100))
+        COMMENT '载体+描述符名称唯一索引',
+
+    -- 普通索引
+    INDEX `idx_venue_id` (`venue_id`) COMMENT '载体索引',
+    INDEX `idx_descriptor_ui` (`descriptor_ui`) COMMENT '描述符UI索引(用于MeSH关联查询)',
+    INDEX `idx_qualifier_ui` (`qualifier_ui`) COMMENT '限定符UI索引(用于MeSH关联查询)',
+    INDEX `idx_is_major` (`is_major_topic`) COMMENT '主要主题索引'
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='期刊MeSH主题表:存储期刊的MeSH主题词分类,来源Serfile,与cat_publication_mesh命名风格一致';
+
+
+-- ============================================================
+-- 表 8: cat_venue_relation (期刊关联表)
+-- ============================================================
+-- 表说明: 存储期刊之间的关联关系(前刊/后刊/合并/分拆等),来源Serfile
+-- 记录数预估: 初始 5万 / 年增长 1万 / 5年规模 10万 (约20%期刊有关联)
+-- 主要查询场景:
+--   1. 按 venue_id 查询所有关联(>500次/天,中频)
+--   2. 追踪期刊演变历史(<200次/天,低频)
+-- ============================================================
+
+
+CREATE TABLE IF NOT EXISTS `cat_venue_relation` (
+    -- ========================================
+    -- 主键
+    -- ========================================
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键,雪花算法生成',
+
+    -- ========================================
+    -- 关联信息
+    -- ========================================
+    `venue_id` BIGINT UNSIGNED NOT NULL COMMENT '当前载体ID(外键:cat_venue.id)',
+    `related_venue_id` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '关联载体ID(系统内关联,可为空)',
+    `related_nlm_id` VARCHAR(20) NULL DEFAULT NULL COMMENT '关联期刊NLM ID(系统外关联)',
+    `related_title` VARCHAR(500) NOT NULL COMMENT '关联期刊标题(冗余,便于展示)',
+
+    -- ========================================
+    -- 关联属性
+    -- ========================================
+    `relation_type` VARCHAR(32) NOT NULL COMMENT '关联类型:PRECEDING/SUCCEEDING/ABSORBED/ABSORBED_BY/MERGED/SPLIT_FROM/CONTINUED_BY/CONTINUES',
+    `effective_date` DATE NULL DEFAULT NULL COMMENT '关联生效日期',
+    `notes` VARCHAR(500) NULL DEFAULT NULL COMMENT '关联说明备注',
+
+    -- ========================================
+    -- 审计字段
+    -- ========================================
+    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
+    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP',
+    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
+    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名',
+    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
+    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名',
+    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志',
+
+    -- ========================================
+    -- 主键和索引
+    -- ========================================
+    PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
+
+    -- 唯一索引 (防止重复关联)
+    UNIQUE INDEX `uk_venue_related_type` (`venue_id`, `related_nlm_id`, `relation_type`)
+        COMMENT '载体+关联NLM ID+类型唯一索引',
+
+    -- 普通索引
+    INDEX `idx_venue_id` (`venue_id`) COMMENT '载体索引',
+    INDEX `idx_relation_type` (`relation_type`) COMMENT '关联类型索引',
+    INDEX `idx_related_venue` (`related_venue_id`) COMMENT '关联载体索引'
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='期刊关联表:存储期刊间的演变关系(前刊/后刊/合并/分拆),来源Serfile';
+
+
+-- ============================================================
+-- 表 9: cat_venue_indexing_history (索引历史表)
+-- ============================================================
+-- 表说明: 存储期刊在MEDLINE/PubMed的索引历史变迁,来源Serfile
+-- 记录数预估: 初始 30万 / 年增长 3万 / 5年规模 45万 (平均每venue 1.2条记录)
+-- 主要查询场景:
+--   1. 按 venue_id 查询索引历史(>500次/天,中频)
+--   2. 统计各时期收录期刊数(<100次/天,低频)
+-- ============================================================
+
+
+CREATE TABLE IF NOT EXISTS `cat_venue_indexing_history` (
+    -- ========================================
+    -- 主键
+    -- ========================================
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键,雪花算法生成',
+
+    -- ========================================
+    -- 关联信息
+    -- ========================================
+    `venue_id` BIGINT UNSIGNED NOT NULL COMMENT '载体ID(外键:cat_venue.id)',
+
+    -- ========================================
+    -- 索引来源与状态
+    -- ========================================
+    `indexing_source` VARCHAR(32) NOT NULL COMMENT '索引来源:MEDLINE/PMC等',
+    `currently_indexed` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '当前是否被索引(0=否,1=是)',
+    `indexing_treatment` VARCHAR(20) NULL DEFAULT NULL COMMENT '索引处理方式:FULL/SELECTIVE',
+    `citation_subset` VARCHAR(20) NULL DEFAULT NULL COMMENT '引用子集:IM(Index Medicus)/AIM(Abridged IM)/N/D/H/K/T/E/S/X/B/C/F/Q等',
+
+    -- ========================================
+    -- 索引范围(年/卷/期)
+    -- ========================================
+    `start_year` SMALLINT NULL DEFAULT NULL COMMENT '索引开始年份',
+    `start_volume` VARCHAR(20) NULL DEFAULT NULL COMMENT '索引开始卷号',
+    `start_issue` VARCHAR(20) NULL DEFAULT NULL COMMENT '索引开始期号',
+    `end_year` SMALLINT NULL DEFAULT NULL COMMENT '索引结束年份(NULL=持续收录中)',
+    `end_volume` VARCHAR(20) NULL DEFAULT NULL COMMENT '索引结束卷号',
+    `end_issue` VARCHAR(20) NULL DEFAULT NULL COMMENT '索引结束期号',
+
+    -- ========================================
+    -- 审计字段
+    -- ========================================
+    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
+    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP',
+    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
+    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名',
+    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
+    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名',
+    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志',
+
+    -- ========================================
+    -- 主键和索引
+    -- ========================================
+    PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
+
+    -- 唯一索引
+    UNIQUE INDEX `uk_venue_source_start` (`venue_id`, `indexing_source`, `start_year`)
+        COMMENT '载体+来源+开始年份唯一索引',
+
+    -- 普通索引
+    INDEX `idx_venue_id` (`venue_id`) COMMENT '载体索引',
+    INDEX `idx_source_indexed` (`indexing_source`, `currently_indexed`) COMMENT '来源+索引状态复合索引',
+    INDEX `idx_citation_subset` (`citation_subset`) COMMENT '引用子集索引'
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='索引历史表:存储期刊在MEDLINE/PubMed的收录历史变迁,来源Serfile';

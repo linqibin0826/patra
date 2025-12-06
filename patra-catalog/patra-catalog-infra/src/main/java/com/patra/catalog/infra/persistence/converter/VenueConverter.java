@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.vo.venue.ApcInfo;
 import com.patra.catalog.domain.model.vo.venue.Society;
+import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
 import com.patra.catalog.domain.model.vo.venue.VenueStats;
 import com.patra.catalog.infra.persistence.entity.VenueDO;
 import java.util.List;
@@ -93,6 +94,8 @@ public abstract class VenueConverter {
   // OA 状态
   @Mapping(target = "isOa", source = "oa")
   @Mapping(target = "isInDoaj", source = "inDoaj")
+  // 语言信息（来自 Serfile）
+  @Mapping(target = "languages", source = "languages", qualifiedByName = "languagesToJson")
   public abstract VenueDO toDO(VenueAggregate aggregate);
 
   // ========================================
@@ -155,5 +158,31 @@ public abstract class VenueConverter {
       arrayNode.add(node);
     }
     return arrayNode;
+  }
+
+  /// 将语言信息转换为 JSON。
+  ///
+  /// JSON 结构：`{"primary": ["eng"], "summary": ["fre", "ger"]}`
+  @Named("languagesToJson")
+  protected JsonNode languagesToJson(VenueLanguages languages) {
+    if (languages == null || languages.isEmpty()) {
+      return null;
+    }
+
+    ObjectNode node = objectMapper.createObjectNode();
+
+    if (languages.hasPrimaryLanguages()) {
+      ArrayNode primaryArray = objectMapper.createArrayNode();
+      languages.primary().forEach(primaryArray::add);
+      node.set("primary", primaryArray);
+    }
+
+    if (languages.hasSummaryLanguages()) {
+      ArrayNode summaryArray = objectMapper.createArrayNode();
+      languages.summary().forEach(summaryArray::add);
+      node.set("summary", summaryArray);
+    }
+
+    return node;
   }
 }
