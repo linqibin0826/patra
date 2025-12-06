@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.batch.mesh;
 
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
-import com.patra.catalog.domain.port.parser.XmlParserPort;
+import com.patra.catalog.domain.port.parser.MeshDescriptorParserPort;
 import com.patra.starter.batch.config.BatchProperties;
 import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
 import java.util.Optional;
@@ -44,7 +44,7 @@ public class MeshDescriptorJobConfig {
 
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
-  private final XmlParserPort xmlParserPort;
+  private final MeshDescriptorParserPort descriptorParserPort;
   private final MeshDescriptorItemWriter meshDescriptorItemWriter;
   private final BatchProperties batchProperties;
   private final MeshImportJobExecutionListener meshImportJobExecutionListener;
@@ -54,7 +54,7 @@ public class MeshDescriptorJobConfig {
   ///
   /// @param jobRepository Job 仓库
   /// @param transactionManager 事务管理器
-  /// @param xmlParserPort XML 解析端口
+  /// @param descriptorParserPort 主题词解析端口
   /// @param meshDescriptorItemWriter Item 写入器
   /// @param batchProperties 批处理属性
   /// @param meshImportJobExecutionListener Job 执行监听器
@@ -62,14 +62,14 @@ public class MeshDescriptorJobConfig {
   public MeshDescriptorJobConfig(
       JobRepository jobRepository,
       PlatformTransactionManager transactionManager,
-      XmlParserPort xmlParserPort,
+      MeshDescriptorParserPort descriptorParserPort,
       MeshDescriptorItemWriter meshDescriptorItemWriter,
       BatchProperties batchProperties,
       MeshImportJobExecutionListener meshImportJobExecutionListener,
       Optional<BatchProgressMetricsListener> batchProgressMetricsListener) {
     this.jobRepository = jobRepository;
     this.transactionManager = transactionManager;
-    this.xmlParserPort = xmlParserPort;
+    this.descriptorParserPort = descriptorParserPort;
     this.meshDescriptorItemWriter = meshDescriptorItemWriter;
     this.batchProperties = batchProperties;
     this.meshImportJobExecutionListener = meshImportJobExecutionListener;
@@ -122,7 +122,7 @@ public class MeshDescriptorJobConfig {
   public MeshDescriptorItemReader meshDescriptorItemReader(
       @Value("#{jobParameters['filePath']}") String filePath,
       @Value("#{jobParameters['meshVersion']}") String meshVersion) {
-    return new MeshDescriptorItemReader(xmlParserPort, filePath, meshVersion);
+    return new MeshDescriptorItemReader(descriptorParserPort, filePath, meshVersion);
   }
 
   /// 获取 chunk size。

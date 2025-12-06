@@ -10,7 +10,7 @@ import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.enums.MeshFileType;
 import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
 import com.patra.catalog.domain.port.batch.MeshDescriptorBatchPort;
-import com.patra.catalog.domain.port.parser.XmlParserPort;
+import com.patra.catalog.domain.port.parser.MeshQualifierParserPort;
 import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
 import com.patra.catalog.domain.port.repository.MeshQualifierRepository;
 import com.patra.catalog.domain.port.source.MeshSourceFilePort;
@@ -53,7 +53,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MeshImportOrchestrator implements MeshImportUseCase {
 
-  private final XmlParserPort xmlParserPort;
+  private final MeshQualifierParserPort qualifierParserPort;
   private final MeshQualifierRepository qualifierRepository;
   private final MeshDescriptorRepository descriptorRepository;
   private final MeshDescriptorBatchPort meshDescriptorBatchPort;
@@ -91,9 +91,9 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
     log.info("限定词文件已就绪：{}", localFile);
 
     try {
-      // 3. 解析 XML 并批量保存（使用 Path 重载方法，由 Infra 层负责文件 I/O）
+      // 3. 解析 XML 并批量保存（由 Infra 层负责文件 I/O）
       List<MeshQualifierAggregate> qualifiers =
-          xmlParserPort.parseQualifiers(localFile, command.meshVersion()).toList();
+          qualifierParserPort.parse(localFile, command.meshVersion()).toList();
       qualifierRepository.saveBatch(qualifiers);
 
       log.info("MeSH 限定词导入完成，数量：{}", qualifiers.size());

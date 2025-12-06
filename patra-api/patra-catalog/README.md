@@ -264,24 +264,31 @@ patra:
    - 新增枚举：`VenueType`、`VenueIdentifierType`
    - Repository 以聚合根为操作单位，保持 DDD 一致性边界
    - 新增数据库表：`cat_venue_identifier`、`cat_venue_metrics`
-2. v0.3.0 (2025-12-01)：MeSH 源文件下载适配器
+2. v0.3.1 (2025-12-06)：Parser Port 单一职责重构
+   - 删除 `XmlParserPort`/`XmlParserAdapter` 通用接口
+   - 新增 `MeshDescriptorParserPort`/`MeshDescriptorParserAdapter` 专用主题词解析
+   - 新增 `MeshQualifierParserPort`/`MeshQualifierParserAdapter` 专用限定词解析
+   - 删除死代码：`ConceptParsingStrategy`、`TreeNumberParsingStrategy`
+   - 重构 `DescriptorParsingStrategy` 提取 `DescriptorListParsers` 工具类
+   - 新增 `ReferredTo` record 替代 `String[]` 提供类型安全
+3. v0.3.0 (2025-12-01)：MeSH 源文件下载适配器
    - 新增 `MeshSourceFileAdapter`：从 NLM 官方服务器下载 MeSH XML 文件
    - 新增 `MeshSourceFilePort`：定义源文件获取端口接口
-2. v0.2.2 (2025-11-27)：MeSH 子表关联键优化
+4. v0.2.2 (2025-11-27)：MeSH 子表关联键优化
    - 将 MeSH 子表（TreeNumber、EntryTerm、Concept 等）的关联键从数据库自增 ID 改为 MeSH 原生 UI 标识符
    - Domain 层使用 `MeshUI` 值对象，Infra 层使用 `String`
    - 简化数据导入流程，无需先查询主表获取自增 ID
-2. v0.2.1 (2025-11-27)：XML 解析器策略模式重构
+5. v0.2.1 (2025-11-27)：XML 解析器策略模式重构（已被 v0.3.1 演进）
    - XmlParserAdapter 重构为门面类（1800 行 → 156 行）
    - 新增 5 个解析策略：Descriptor、Qualifier、Concept、EntryTerm、TreeNumber
    - 支持 ConceptRelation 概念关系解析和持久化
-3. v0.2.0 (2025-11-27)：完善 MeSH 2025 DTD 支持
+6. v0.2.0 (2025-11-27)：完善 MeSH 2025 DTD 支持
    - 新增 EntryCombination 组合条目值对象及数据库表
    - 增强 MeshConcept：支持 registryNumbers 多值、translator 字段
    - 增强 MeshEntryTerm：新增 termUi、conceptUi 等 9 个字段
    - 增强 MeshDescriptor：新增 historyNote、onlineNote、nlmClassificationNumber 字段
    - 修复 ConceptList 解析被跳过的问题（P0 Bug）
-4. v0.1.0 (2025-11-27)：初始版本，完成 MeSH 主题词和限定词的导入功能。
+7. v0.1.0 (2025-11-27)：初始版本，完成 MeSH 主题词和限定词的导入功能。
 
 ## 📖 相关文档
 
