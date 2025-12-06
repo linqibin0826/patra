@@ -1,0 +1,149 @@
+<!-- NLM Serials DTD
+                  
+       Comments and suggestions are welcome.
+
+    **This is the 2023 NLM Serials DTD in use as of January 2023.
+    This DTD was written by the National Library of Medicine 
+    for internal and external use.
+                
+        * = 0 or more occurrences (optional element, repeatable)
+        ? = 0 or 1 occurrences (optional element, at most 1)
+        + = 1 or more occurrences (required element, repeatable)
+        | = choice, one or the other but not both 
+        no symbol = required element
+
+-->
+<!-- ================================================================= -->
+<!--   Revision Notes Section 
+
+  The following changes were made from the nlmserials_220101.dtd. 
+       a. Changed nlmserials_220101.dtd to nlmserials_230101.dtd.       
+      
+-->
+<!-- ================================================================= -->
+<!ELEMENT SerialsSet (Serial+)>
+<!ELEMENT Serial (NlmWorkID, NlmUniqueID, Title, MedlineTA?, PublicationInfo?, ISSN*, 
+ISSNLinking?, Language*, 
+Coden?, TitleContinuationYN?, GeneralNote*, TitleRelated*,
+MinorTitleChangeYN?, IndexingStartDate?,
+ProcessingCode?, IndexingHistoryList?, 
+CurrentlyIndexedYN?, CurrentlyIndexedForSubset*, 
+IndexOnlineYN?, IndexingSubset?, IndexingSelectedURL?,
+ReportedMedlineYN, BroadJournalHeadingList?, 
+MeshHeadingList?, CrossReferenceList?, SortSerialName,
+IlsCreatedTimestamp?, IlsUpdatedTimestamp?, 
+DeletedTimestamp?,
+MedlineDataUpdatedTimestamp?,
+SEFCreatedTimestamp?, SEFUpdatedTimestamp?)>
+<!ATTLIST Serial
+DataCreationMethod (P | K | O) #IMPLIED
+MedPrintYN (Y | N) #IMPLIED
+PMC (Yes | Forthcoming | InProcess | Inactive) #IMPLIED
+Status (NLMCollection | NotNLMCollection) #REQUIRED
+>
+<!ELEMENT BroadJournalHeading (#PCDATA)>
+<!ELEMENT BroadJournalHeadingList (BroadJournalHeading+)>
+<!ELEMENT Coden (#PCDATA)>
+<!ELEMENT Country (#PCDATA)>
+<!ELEMENT Coverage (#PCDATA)>
+<!ELEMENT CoverageNote (#PCDATA)>
+<!ELEMENT CrossReference (XrTitle)>
+<!ATTLIST CrossReference
+XrType (A | X | S) #REQUIRED
+>
+<!ELEMENT CrossReferenceList (CrossReference+)>
+<!ELEMENT CurrentlyIndexedForSubset (#PCDATA)>
+<!ATTLIST CurrentlyIndexedForSubset
+CurrentSubset (AIM | D | E | H | IM | K | N | Q | QIS | S | T | X) #REQUIRED
+CurrentIndexingTreatment (Full | Selective | Unknown) #REQUIRED
+>
+<!ELEMENT CurrentlyIndexedYN (#PCDATA)>
+<!ELEMENT DateOfAction (Year, Month, Day, (Hour, (Minute, Second?)?)?)>
+<!ELEMENT DatesOfSerialPublication (#PCDATA)>
+<!ELEMENT Day (#PCDATA)>
+<!ELEMENT DeletedTimestamp (Year, Month, Day, (Hour, (Minute, Second?)?)?)>
+<!ELEMENT DescriptorName (#PCDATA)>
+<!ATTLIST DescriptorName
+MajorTopicYN (Y | N) "N"
+Type (Geographic) #IMPLIED
+>
+<!ELEMENT Frequency (#PCDATA)>
+<!ATTLIST Frequency
+FrequencyType (Current | Former) "Current"
+>
+<!ELEMENT GeneralNote (#PCDATA)>
+<!ATTLIST GeneralNote
+NoteType (LinkComplexNote) #IMPLIED
+>
+<!ELEMENT Hour (#PCDATA)>
+<!ELEMENT IlsCreatedTimestamp (Year, Month, Day, (Hour, (Minute, Second?)?)?)>
+<!ELEMENT IlsUpdatedTimestamp (Year, Month, Day, (Hour, (Minute, Second?)?)?)>
+<!ELEMENT IndexOnlineYN (#PCDATA)>
+<!ELEMENT IndexingHistory (DateOfAction, Coverage?, CoverageNote?)>
+<!ATTLIST IndexingHistory
+CitationSubset (AIM | B | C | D | E | F | H | IM | J | K | N | 
+OM | P | Q | QIS | R | S | T | X) #REQUIRED
+IndexingTreatment (Unknown | Full | Selective | ReferencedIn |
+ReferencedInNoDetails) #IMPLIED
+IndexingStatus (Ceased-publication | Continued-by-another-title | 
+Currently-indexed | Deselected) #IMPLIED
+>
+<!ELEMENT IndexingHistoryList (IndexingHistory+)>
+<!ELEMENT IndexingSelectedURL (#PCDATA)>
+<!ELEMENT IndexingStartDate (#PCDATA)>
+<!ELEMENT IndexingSubset (#PCDATA)>
+<!ELEMENT ISSN  (#PCDATA) >
+<!ATTLIST ISSN 
+CreatedTimestamp     CDATA   #IMPLIED
+UpdatedTimestamp    CDATA   #IMPLIED
+IssnType (Electronic | Print | Undetermined) #REQUIRED
+>
+<!ELEMENT ISSNLinking (#PCDATA)>
+<!ELEMENT Language (#PCDATA)>
+<!ATTLIST Language
+LangType (Primary | Summary) #REQUIRED
+>
+<!--  NOTE:  The use of "Medline" in the MedlineTA element name does not mean the data
+             represents a MEDLINE-selected journal.  -->
+<!ELEMENT MedlineTA (#PCDATA)>
+<!ELEMENT MedlineDataUpdatedTimestamp (Year, Month, Day, (Hour, (Minute, Second?)?)?)>
+<!ELEMENT MeshHeading (DescriptorName, QualifierName*)>
+<!ELEMENT MeshHeadingList (MeshHeading+)>
+<!ELEMENT MinorTitleChangeYN (#PCDATA)>
+<!ELEMENT Minute (#PCDATA)>
+<!ELEMENT Month (#PCDATA)>
+<!ELEMENT NlmUniqueID (#PCDATA)>
+<!ELEMENT NlmWorkID (#PCDATA)>
+<!ELEMENT Place (#PCDATA)>
+<!ELEMENT ProcessingCode (#PCDATA)>
+<!ELEMENT PublicationEndYear (#PCDATA)>
+<!ELEMENT PublicationFirstYear (#PCDATA)>
+<!ELEMENT PublicationInfo (Country?, Place*, Publisher*, PublicationFirstYear?, 
+PublicationEndYear?, Frequency*)>
+<!ELEMENT Publisher (#PCDATA)>
+<!ELEMENT QualifierName (#PCDATA)>
+<!ATTLIST QualifierName
+MajorTopicYN (Y | N) "N"
+>
+<!ELEMENT RecordID (#PCDATA)>
+<!ATTLIST RecordID
+Source (NLM | LC | OCLC) #REQUIRED
+>
+<!ELEMENT ReportedMedlineYN (#PCDATA)>
+<!ELEMENT Second (#PCDATA)>
+<!ELEMENT SEFCreatedTimestamp (Year, Month, Day, (Hour, (Minute, Second?)?)?)>
+<!ELEMENT SEFUpdatedTimestamp (Year, Month, Day, (Hour, (Minute, Second?)?)?)>
+<!ELEMENT SortSerialName (#PCDATA)>
+<!ELEMENT Title (#PCDATA)>
+<!ELEMENT TitleContinuationYN (#PCDATA)>
+<!ELEMENT TitleRelated (Title, RecordID*,ISSN?)>
+<!ATTLIST TitleRelated
+TitleType (Absorbed | AbsorbedBy | AbsorbedInPart | AbsorbedInPartBy | 
+Analytic | MergedTo | MergerOf | Other | Preceding | PrecedingInPart | 
+Related | Reversion | Series | SeriesAuthority | SplitFrom | SplitTo | Succeeding |
+SucceedingInPart | SupersededBy | SupersededInPartBy | 
+Supersedes | SupersedesInPart | Translated | Undetermined) "Undetermined"
+>
+<!ELEMENT XrTitle (#PCDATA)>
+<!ELEMENT Year (#PCDATA)>
+

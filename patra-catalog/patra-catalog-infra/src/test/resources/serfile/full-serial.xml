@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE SerialsSet SYSTEM "nlmserials_230101.dtd">
+<!-- 完整字段测试用例 -->
+<SerialsSet>
+  <Serial Status="NLMCollection" PMC="Yes">
+    <NlmWorkID>9876543</NlmWorkID>
+    <NlmUniqueID>0123456</NlmUniqueID>
+    <Title>Journal of Full Test Medicine</Title>
+    <MedlineTA>J Full Test Med</MedlineTA>
+    <PublicationInfo>
+      <Country>United States</Country>
+      <Place>New York</Place>
+      <Publisher>Test Publisher Inc.</Publisher>
+      <PublicationFirstYear>1990</PublicationFirstYear>
+      <PublicationEndYear>2020</PublicationEndYear>
+      <Frequency FrequencyType="Current">Monthly</Frequency>
+    </PublicationInfo>
+    <ISSN IssnType="Print">1234-5678</ISSN>
+    <ISSN IssnType="Electronic">1234-5679</ISSN>
+    <ISSNLinking>1234-5678</ISSNLinking>
+    <Language LangType="Primary">eng</Language>
+    <Language LangType="Summary">fre</Language>
+    <Coden>JFTMED</Coden>
+    <IndexingHistoryList>
+      <IndexingHistory CitationSubset="IM" IndexingTreatment="Full" IndexingStatus="Currently-indexed">
+        <DateOfAction>
+          <Year>2010</Year>
+          <Month>01</Month>
+          <Day>15</Day>
+        </DateOfAction>
+        <Coverage>v1n1, 1990-</Coverage>
+        <CoverageNote>Indexed from volume 1 issue 1</CoverageNote>
+      </IndexingHistory>
+      <IndexingHistory CitationSubset="AIM" IndexingTreatment="Selective" IndexingStatus="Deselected">
+        <DateOfAction>
+          <Year>2005</Year>
+          <Month>06</Month>
+          <Day>01</Day>
+        </DateOfAction>
+      </IndexingHistory>
+    </IndexingHistoryList>
+    <CurrentlyIndexedYN>Y</CurrentlyIndexedYN>
+    <ReportedMedlineYN>Y</ReportedMedlineYN>
+    <MeshHeadingList>
+      <MeshHeading>
+        <DescriptorName MajorTopicYN="Y">Cardiology</DescriptorName>
+      </MeshHeading>
+      <MeshHeading>
+        <DescriptorName MajorTopicYN="N">Medicine</DescriptorName>
+        <QualifierName MajorTopicYN="N">methods</QualifierName>
+      </MeshHeading>
+    </MeshHeadingList>
+    <TitleRelated TitleType="Preceding">
+      <Title>Old Journal of Test</Title>
+      <ISSN IssnType="Print">0000-1111</ISSN>
+    </TitleRelated>
+    <TitleRelated TitleType="Succeeding">
+      <Title>New Journal of Test</Title>
+    </TitleRelated>
+    <SortSerialName>JOURNAL OF FULL TEST MEDICINE</SortSerialName>
+  </Serial>
+</SerialsSet>
