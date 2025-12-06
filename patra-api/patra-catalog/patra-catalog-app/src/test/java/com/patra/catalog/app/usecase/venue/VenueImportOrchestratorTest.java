@@ -3,7 +3,9 @@ package com.patra.catalog.app.usecase.venue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -109,11 +111,14 @@ class VenueImportOrchestratorTest {
       // Given
       VenueImportCommand command = VenueImportCommand.create();
       OpenAlexManifest manifest = createTestManifest();
-      List<Path> localFiles = List.of(TEST_FILE_1, TEST_FILE_2);
 
       when(venueRepository.hasAnyData()).thenReturn(false);
       when(venueSourceFilePort.fetchManifest()).thenReturn(manifest);
-      when(venueSourceFilePort.fetchAllPartitionFiles(manifest)).thenReturn(localFiles);
+      // Mock fetchPartitionFile 为每个分区文件返回对应的本地路径
+      when(venueSourceFilePort.fetchPartitionFile("updated_date=2024-01-01/part_000.gz"))
+          .thenReturn(TEST_FILE_1);
+      when(venueSourceFilePort.fetchPartitionFile("updated_date=2024-01-02/part_000.gz"))
+          .thenReturn(TEST_FILE_2);
       when(venueImportBatchPort.launchImport(any(VenueImportParams.class))).thenReturn(12345L);
 
       // When
@@ -122,7 +127,7 @@ class VenueImportOrchestratorTest {
       // Then
       verify(venueRepository).hasAnyData();
       verify(venueSourceFilePort).fetchManifest();
-      verify(venueSourceFilePort).fetchAllPartitionFiles(manifest);
+      verify(venueSourceFilePort, times(2)).fetchPartitionFile(anyString());
       verify(venueImportBatchPort).launchImport(any(VenueImportParams.class));
 
       assertThat(result).isNotNull();
@@ -140,11 +145,13 @@ class VenueImportOrchestratorTest {
       // Given
       VenueImportCommand command = VenueImportCommand.create();
       OpenAlexManifest manifest = createTestManifest();
-      List<Path> localFiles = List.of(TEST_FILE_1, TEST_FILE_2);
 
       when(venueRepository.hasAnyData()).thenReturn(false);
       when(venueSourceFilePort.fetchManifest()).thenReturn(manifest);
-      when(venueSourceFilePort.fetchAllPartitionFiles(manifest)).thenReturn(localFiles);
+      when(venueSourceFilePort.fetchPartitionFile("updated_date=2024-01-01/part_000.gz"))
+          .thenReturn(TEST_FILE_1);
+      when(venueSourceFilePort.fetchPartitionFile("updated_date=2024-01-02/part_000.gz"))
+          .thenReturn(TEST_FILE_2);
       when(venueImportBatchPort.launchImport(any(VenueImportParams.class))).thenReturn(12345L);
 
       // When
@@ -166,11 +173,13 @@ class VenueImportOrchestratorTest {
       // Given
       VenueImportCommand command = VenueImportCommand.create();
       OpenAlexManifest manifest = createTestManifest();
-      List<Path> localFiles = List.of(TEST_FILE_1, TEST_FILE_2);
 
       when(venueRepository.hasAnyData()).thenReturn(false);
       when(venueSourceFilePort.fetchManifest()).thenReturn(manifest);
-      when(venueSourceFilePort.fetchAllPartitionFiles(manifest)).thenReturn(localFiles);
+      when(venueSourceFilePort.fetchPartitionFile("updated_date=2024-01-01/part_000.gz"))
+          .thenReturn(TEST_FILE_1);
+      when(venueSourceFilePort.fetchPartitionFile("updated_date=2024-01-02/part_000.gz"))
+          .thenReturn(TEST_FILE_2);
       when(venueImportBatchPort.launchImport(any(VenueImportParams.class))).thenReturn(12345L);
 
       // When
@@ -198,15 +207,15 @@ class VenueImportOrchestratorTest {
     }
 
     @Test
-    @DisplayName("fetchAllPartitionFiles 失败时应该抛出 ApplicationException")
-    void shouldThrowExceptionWhenFetchPartitionFilesFails() {
+    @DisplayName("fetchPartitionFile 失败时应该抛出 ApplicationException")
+    void shouldThrowExceptionWhenFetchPartitionFileFails() {
       // Given
       VenueImportCommand command = VenueImportCommand.create();
       OpenAlexManifest manifest = createTestManifest();
 
       when(venueRepository.hasAnyData()).thenReturn(false);
       when(venueSourceFilePort.fetchManifest()).thenReturn(manifest);
-      when(venueSourceFilePort.fetchAllPartitionFiles(manifest))
+      when(venueSourceFilePort.fetchPartitionFile(anyString()))
           .thenThrow(new RuntimeException("下载分区文件失败"));
 
       // When & Then
@@ -222,11 +231,13 @@ class VenueImportOrchestratorTest {
       // Given
       VenueImportCommand command = VenueImportCommand.create();
       OpenAlexManifest manifest = createTestManifest();
-      List<Path> localFiles = List.of(TEST_FILE_1, TEST_FILE_2);
 
       when(venueRepository.hasAnyData()).thenReturn(false);
       when(venueSourceFilePort.fetchManifest()).thenReturn(manifest);
-      when(venueSourceFilePort.fetchAllPartitionFiles(manifest)).thenReturn(localFiles);
+      when(venueSourceFilePort.fetchPartitionFile("updated_date=2024-01-01/part_000.gz"))
+          .thenReturn(TEST_FILE_1);
+      when(venueSourceFilePort.fetchPartitionFile("updated_date=2024-01-02/part_000.gz"))
+          .thenReturn(TEST_FILE_2);
       when(venueImportBatchPort.launchImport(any(VenueImportParams.class)))
           .thenThrow(new RuntimeException("Job 启动失败"));
 

@@ -5,8 +5,6 @@ import com.patra.catalog.domain.port.source.FileDownloadPort;
 import com.patra.catalog.domain.port.source.VenueSourceFilePort;
 import java.net.URI;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -61,28 +59,6 @@ public class VenueSourceFileAdapter implements VenueSourceFilePort {
     String url = getPartitionUrl(relativePath);
     log.debug("从远程下载 OpenAlex 分区文件: {}", url);
     return fileDownloadPort.downloadToTemp(URI.create(url));
-  }
-
-  @Override
-  public List<Path> fetchAllPartitionFiles(OpenAlexManifest manifest) {
-    log.info("开始获取所有分区文件，共 {} 个", manifest.entries().size());
-
-    List<Path> localFiles = new ArrayList<>();
-    int total = manifest.entries().size();
-    int current = 0;
-
-    for (String relativePath : manifest.getRelativePaths()) {
-      current++;
-      if (current % 10 == 0 || current == total) {
-        log.info("下载进度: {}/{}", current, total);
-      }
-
-      Path localFile = fetchPartitionFile(relativePath);
-      localFiles.add(localFile);
-    }
-
-    log.info("所有分区文件获取完成，共 {} 个", localFiles.size());
-    return localFiles;
   }
 
   /// 获取 manifest 文件的完整 URL。

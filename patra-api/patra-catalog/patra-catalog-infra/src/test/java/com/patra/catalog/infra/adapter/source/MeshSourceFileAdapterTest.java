@@ -4,12 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.patra.catalog.domain.model.enums.MeshFileType;
 import com.patra.catalog.domain.port.source.FileDownloadPort;
 import java.net.URI;
 import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -25,6 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MeshSourceFileAdapter 单元测试")
+@Timeout(2)
 class MeshSourceFileAdapterTest {
 
   private static final String MESH_VERSION = "2025";
@@ -44,13 +47,13 @@ class MeshSourceFileAdapterTest {
   }
 
   @Test
-  @DisplayName("fetchDescriptorFile - 应委托给 FileDownloadPort.downloadToTemp")
-  void fetchDescriptorFile_shouldDelegateToFileDownloadPort() {
+  @DisplayName("fetchFile(DESCRIPTOR) - 应委托给 FileDownloadPort.downloadToTemp")
+  void fetchFile_descriptor_shouldDelegateToFileDownloadPort() {
     // Arrange
     when(fileDownloadPort.downloadToTemp(DESCRIPTOR_URL)).thenReturn(TEMP_FILE_PATH);
 
     // Act
-    Path result = adapter.fetchDescriptorFile(MESH_VERSION, DESCRIPTOR_URL);
+    Path result = adapter.fetchFile(MeshFileType.DESCRIPTOR, MESH_VERSION, DESCRIPTOR_URL);
 
     // Assert
     assertThat(result).isEqualTo(TEMP_FILE_PATH);
@@ -58,13 +61,13 @@ class MeshSourceFileAdapterTest {
   }
 
   @Test
-  @DisplayName("fetchQualifierFile - 应委托给 FileDownloadPort.downloadToTemp")
-  void fetchQualifierFile_shouldDelegateToFileDownloadPort() {
+  @DisplayName("fetchFile(QUALIFIER) - 应委托给 FileDownloadPort.downloadToTemp")
+  void fetchFile_qualifier_shouldDelegateToFileDownloadPort() {
     // Arrange
     when(fileDownloadPort.downloadToTemp(QUALIFIER_URL)).thenReturn(TEMP_FILE_PATH);
 
     // Act
-    Path result = adapter.fetchQualifierFile(MESH_VERSION, QUALIFIER_URL);
+    Path result = adapter.fetchFile(MeshFileType.QUALIFIER, MESH_VERSION, QUALIFIER_URL);
 
     // Assert
     assertThat(result).isEqualTo(TEMP_FILE_PATH);
@@ -72,14 +75,14 @@ class MeshSourceFileAdapterTest {
   }
 
   @Test
-  @DisplayName("fetchDescriptorFile - meshVersion 参数不影响委托行为")
-  void fetchDescriptorFile_meshVersionShouldNotAffectDelegation() {
+  @DisplayName("fetchFile - meshVersion 参数不影响委托行为")
+  void fetchFile_meshVersionShouldNotAffectDelegation() {
     // Arrange
     String differentVersion = "2024";
     when(fileDownloadPort.downloadToTemp(DESCRIPTOR_URL)).thenReturn(TEMP_FILE_PATH);
 
     // Act
-    Path result = adapter.fetchDescriptorFile(differentVersion, DESCRIPTOR_URL);
+    Path result = adapter.fetchFile(MeshFileType.DESCRIPTOR, differentVersion, DESCRIPTOR_URL);
 
     // Assert - meshVersion 不影响委托，只使用 remoteUrl
     assertThat(result).isEqualTo(TEMP_FILE_PATH);
@@ -87,17 +90,16 @@ class MeshSourceFileAdapterTest {
   }
 
   @Test
-  @DisplayName("fetchQualifierFile - meshVersion 参数不影响委托行为")
-  void fetchQualifierFile_meshVersionShouldNotAffectDelegation() {
+  @DisplayName("fetchFile - type 参数不影响委托行为，仅用于日志")
+  void fetchFile_typeShouldNotAffectDelegation() {
     // Arrange
-    String differentVersion = "2024";
-    when(fileDownloadPort.downloadToTemp(QUALIFIER_URL)).thenReturn(TEMP_FILE_PATH);
+    when(fileDownloadPort.downloadToTemp(DESCRIPTOR_URL)).thenReturn(TEMP_FILE_PATH);
 
-    // Act
-    Path result = adapter.fetchQualifierFile(differentVersion, QUALIFIER_URL);
+    // Act - 使用 QUALIFIER 类型但传入 DESCRIPTOR URL
+    Path result = adapter.fetchFile(MeshFileType.QUALIFIER, MESH_VERSION, DESCRIPTOR_URL);
 
-    // Assert - meshVersion 不影响委托，只使用 remoteUrl
+    // Assert - type 不影响委托，只使用 remoteUrl
     assertThat(result).isEqualTo(TEMP_FILE_PATH);
-    verify(fileDownloadPort).downloadToTemp(QUALIFIER_URL);
+    verify(fileDownloadPort).downloadToTemp(DESCRIPTOR_URL);
   }
 }

@@ -166,8 +166,9 @@ patra:
 - `VenueRepositoryAdapter`：载体聚合根仓储适配器（批量导入）
 - `MeshDescriptorConverter`：主题词对象转换器
 - `MeshQualifierConverter`：限定词对象转换器
-- `MeshSourceFileAdapter`：MeSH 源文件下载适配器（直接从 NLM 下载）
-- `VenueSourceFileAdapter`：OpenAlex Venue 源文件下载适配器（直接从 S3 下载）
+- `FileDownloadAdapter`：通用文件下载适配器（HTTP → 本地临时文件，被 MeSH/Venue/Serfile 共享）
+- `MeshSourceFileAdapter`：MeSH 源文件下载适配器（封装 MeshFileType 参数，委托 FileDownloadPort）
+- `VenueSourceFileAdapter`：OpenAlex Venue 源文件下载适配器（封装 manifest 解析，委托 FileDownloadPort）
 
 ## 📊 数据模型
 

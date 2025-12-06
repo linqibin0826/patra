@@ -1,6 +1,7 @@
 package com.patra.catalog.domain.port.source;
 
 import com.patra.catalog.domain.exception.FileDownloadException;
+import com.patra.catalog.domain.model.enums.MeshFileType;
 import java.net.URI;
 import java.nio.file.Path;
 
@@ -27,27 +28,16 @@ import java.nio.file.Path;
 /// @since 0.1.0
 public interface MeshSourceFilePort {
 
-  /// 获取 MeSH Descriptor 源文件到本地临时目录。
+  /// 获取 MeSH 数据文件到本地临时目录。
   ///
-  /// 从指定的远程 URL 下载文件到本地临时目录。
+  /// 从指定的远程 URL 下载 MeSH 文件（Descriptor 或 Qualifier）。
   ///
   /// **注意**：调用方负责在使用完毕后清理临时文件。
   ///
+  /// @param type MeSH 文件类型（DESCRIPTOR 或 QUALIFIER）
   /// @param meshVersion MeSH 版本号（如 "2025"）
   /// @param remoteUrl 远程文件 URL（如 NLM 官方下载地址）
   /// @return 本地临时文件路径
   /// @throws FileDownloadException 获取文件失败时
-  Path fetchDescriptorFile(String meshVersion, URI remoteUrl);
-
-  /// 获取 MeSH Qualifier 源文件到本地临时目录。
-  ///
-  /// 从指定的远程 URL 下载文件到本地临时目录。
-  ///
-  /// **注意**：调用方负责在使用完毕后清理临时文件。
-  ///
-  /// @param meshVersion MeSH 版本号（如 "2025"）
-  /// @param remoteUrl 远程文件 URL（如 NLM 官方下载地址）
-  /// @return 本地临时文件路径
-  /// @throws FileDownloadException 获取文件失败时
-  Path fetchQualifierFile(String meshVersion, URI remoteUrl);
+  Path fetchFile(MeshFileType type, String meshVersion, URI remoteUrl);
 }
