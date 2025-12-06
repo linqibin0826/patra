@@ -1,10 +1,7 @@
 package com.patra.catalog.infra.batch.mesh;
 
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
-import com.patra.catalog.domain.port.parser.XmlParserPort;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
+import com.patra.catalog.domain.port.parser.MeshDescriptorParserPort;
 import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.time.Duration;
@@ -22,14 +19,19 @@ import org.springframework.batch.item.ItemStreamReader;
 /// **职责**：
 ///
 /// - 读取 MeSH 主题词 XML 文件并逐条返回聚合根
-///   - 支持断点续传（通过 ExecutionContext 保存/恢复进度）
-///   - 委托 XmlParserPort 进行流式解析
+/// - 支持断点续传（通过 ExecutionContext 保存/恢复进度）
+/// - 委托 MeshDescriptorParserPort 进行流式解析
 ///
 /// **断点续传实现**：
 ///
 /// - 在 `open()` 中从 ExecutionContext 恢复 `currentIndex`，跳过已处理记录
 /// - 在 `update()` 中保存 `currentIndex` 到 ExecutionContext
 /// - chunk size 决定断点精度（如 chunk=500，最多重复处理 499 条）
+///
+/// **资源管理**：
+///
+/// 文件 I/O 由 MeshDescriptorParserPort 内部管理。
+/// 调用 `stream.close()` 时会自动触发 Adapter 中注册的 onClose 回调，释放所有资源。
 ///
 /// **Bean 注册**：
 ///
@@ -47,11 +49,10 @@ public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptor
   /// 进度日志输出间隔（每处理多少条记录输出一次）。
   private static final int PROGRESS_LOG_INTERVAL = 5000;
 
-  private final XmlParserPort xmlParserPort;
+  private final MeshDescriptorParserPort descriptorParserPort;
   private final String filePath;
   private final String meshVersion;
 
-  private InputStream inputStream;
   private Stream<MeshDescriptorAggregate> stream;
   private Iterator<MeshDescriptorAggregate> iterator;
   private int currentIndex = 0;
@@ -61,12 +62,12 @@ public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptor
 
   /// 构造函数。
   ///
-  /// @param xmlParserPort XML 解析端口
+  /// @param descriptorParserPort 主题词解析端口
   /// @param filePath XML 文件路径
   /// @param meshVersion MeSH 版本号
   public MeshDescriptorItemReader(
-      XmlParserPort xmlParserPort, String filePath, String meshVersion) {
-    this.xmlParserPort = xmlParserPort;
+      MeshDescriptorParserPort descriptorParserPort, String filePath, String meshVersion) {
+    this.descriptorParserPort = descriptorParserPort;
     this.filePath = filePath;
     this.meshVersion = meshVersion;
   }
@@ -85,25 +86,17 @@ public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptor
       log.info("从断点恢复，跳过前 {} 条记录", skipCount);
     }
 
-    try {
-      // 打开文件流
-      inputStream = Files.newInputStream(Path.of(filePath));
+    // 委托 MeshDescriptorParserPort 解析（Adapter 内部管理 InputStream）
+    stream = descriptorParserPort.parse(Path.of(filePath), meshVersion);
+    iterator = stream.iterator();
 
-      // 委托 XmlParserPort 解析
-      stream = xmlParserPort.parseDescriptors(inputStream, meshVersion);
-      iterator = stream.iterator();
-
-      // 跳过已处理的记录
-      for (int i = 0; i < skipCount && iterator.hasNext(); i++) {
-        iterator.next();
-        currentIndex++;
-      }
-
-      log.info("跳过完成，当前索引：{}", currentIndex);
-
-    } catch (IOException e) {
-      throw new ItemStreamException("无法打开文件：" + filePath, e);
+    // 跳过已处理的记录
+    for (int i = 0; i < skipCount && iterator.hasNext(); i++) {
+      iterator.next();
+      currentIndex++;
     }
+
+    log.info("跳过完成，当前索引：{}", currentIndex);
   }
 
   @Override
@@ -159,21 +152,12 @@ public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptor
   public void close() throws ItemStreamException {
     log.info("关闭 MeSH Descriptor XML 文件，共处理 {} 条记录", currentIndex);
 
-    // 关闭 Stream
+    // 关闭 Stream（会自动触发 Adapter 中注册的 onClose 回调，释放 InputStream 和 XMLStreamReader）
     if (stream != null) {
       try {
         stream.close();
       } catch (Exception e) {
         log.warn("关闭 Stream 时发生异常", e);
-      }
-    }
-
-    // 关闭 InputStream
-    if (inputStream != null) {
-      try {
-        inputStream.close();
-      } catch (IOException e) {
-        log.warn("关闭 InputStream 时发生异常", e);
       }
     }
   }

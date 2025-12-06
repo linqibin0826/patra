@@ -11,6 +11,8 @@ import com.patra.catalog.domain.model.enums.DescriptorClass;
 import com.patra.catalog.infra.adapter.parser.MeshXmlElements;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingContext;
 import java.io.StringReader;
+import java.time.LocalDate;
+import java.util.concurrent.TimeUnit;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
@@ -18,11 +20,13 @@ import javax.xml.stream.XMLStreamReader;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /// DescriptorParsingStrategy 单元测试。
 ///
 /// 验证主题词解析策略的正确性。
 @DisplayName("DescriptorParsingStrategy 策略")
+@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class DescriptorParsingStrategyTest {
 
   private static final XMLInputFactory XML_INPUT_FACTORY = XMLInputFactory.newInstance();
@@ -156,9 +160,9 @@ class DescriptorParsingStrategyTest {
 
       MeshDescriptorAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
 
-      assertEquals("19741119", result.getDateCreated());
-      assertEquals("20230615", result.getDateRevised());
-      assertEquals("19840101", result.getDateEstablished());
+      assertEquals(LocalDate.of(1974, 11, 19), result.getDateCreated());
+      assertEquals(LocalDate.of(2023, 6, 15), result.getDateRevised());
+      assertEquals(LocalDate.of(1984, 1, 1), result.getDateEstablished());
     }
   }
 

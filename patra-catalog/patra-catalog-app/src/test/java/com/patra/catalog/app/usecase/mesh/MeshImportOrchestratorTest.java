@@ -18,7 +18,7 @@ import com.patra.catalog.domain.model.enums.MeshFileType;
 import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.domain.port.batch.MeshDescriptorBatchPort;
-import com.patra.catalog.domain.port.parser.XmlParserPort;
+import com.patra.catalog.domain.port.parser.MeshQualifierParserPort;
 import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
 import com.patra.catalog.domain.port.repository.MeshQualifierRepository;
 import com.patra.catalog.domain.port.source.MeshSourceFilePort;
@@ -62,7 +62,7 @@ class MeshImportOrchestratorTest {
   private static final String TEST_URL = "https://example.com/mesh.xml";
   private static final Path TEST_LOCAL_PATH = Path.of("/tmp/mesh-import-12345.xml");
 
-  @Mock private XmlParserPort xmlParserPort;
+  @Mock private MeshQualifierParserPort qualifierParserPort;
   @Mock private MeshQualifierRepository qualifierRepository;
   @Mock private MeshDescriptorRepository descriptorRepository;
   @Mock private MeshDescriptorBatchPort meshDescriptorBatchPort;
@@ -74,7 +74,7 @@ class MeshImportOrchestratorTest {
   void setUp() {
     orchestrator =
         new MeshImportOrchestrator(
-            xmlParserPort,
+            qualifierParserPort,
             qualifierRepository,
             descriptorRepository,
             meshDescriptorBatchPort,
@@ -255,7 +255,7 @@ class MeshImportOrchestratorTest {
         // 验证没有进行后续操作
         verify(meshSourceFilePort, never())
             .fetchFile(any(MeshFileType.class), anyString(), any(URI.class));
-        verify(xmlParserPort, never()).parseQualifiers(any(Path.class), anyString());
+        verify(qualifierParserPort, never()).parse(any(Path.class), anyString());
       }
     }
 
@@ -270,8 +270,7 @@ class MeshImportOrchestratorTest {
       when(qualifierRepository.hasAnyData()).thenReturn(false);
       when(meshSourceFilePort.fetchFile(any(MeshFileType.class), anyString(), any(URI.class)))
           .thenReturn(QUALIFIER_LOCAL_PATH);
-      when(xmlParserPort.parseQualifiers(any(Path.class), anyString()))
-          .thenReturn(qualifiers.stream());
+      when(qualifierParserPort.parse(any(Path.class), anyString())).thenReturn(qualifiers.stream());
 
       // When
       MeshQualifierImportResult result = orchestrator.importQualifiers(command);
@@ -280,7 +279,7 @@ class MeshImportOrchestratorTest {
       verify(qualifierRepository).hasAnyData();
       verify(meshSourceFilePort)
           .fetchFile(MeshFileType.QUALIFIER, "2025", URI.create(QUALIFIER_URL));
-      verify(xmlParserPort).parseQualifiers(any(Path.class), anyString());
+      verify(qualifierParserPort).parse(any(Path.class), anyString());
       verify(qualifierRepository).saveBatch(qualifiers);
 
       // Then - 验证结果
@@ -307,8 +306,7 @@ class MeshImportOrchestratorTest {
       when(qualifierRepository.hasAnyData()).thenReturn(false);
       when(meshSourceFilePort.fetchFile(any(MeshFileType.class), anyString(), any(URI.class)))
           .thenReturn(QUALIFIER_LOCAL_PATH);
-      when(xmlParserPort.parseQualifiers(any(Path.class), anyString()))
-          .thenReturn(qualifiers.stream());
+      when(qualifierParserPort.parse(any(Path.class), anyString())).thenReturn(qualifiers.stream());
 
       // When
       MeshQualifierImportResult result = orchestrator.importQualifiers(command);
@@ -326,7 +324,7 @@ class MeshImportOrchestratorTest {
       when(qualifierRepository.hasAnyData()).thenReturn(false);
       when(meshSourceFilePort.fetchFile(any(MeshFileType.class), anyString(), any(URI.class)))
           .thenReturn(QUALIFIER_LOCAL_PATH);
-      when(xmlParserPort.parseQualifiers(any(Path.class), anyString())).thenReturn(Stream.empty());
+      when(qualifierParserPort.parse(any(Path.class), anyString())).thenReturn(Stream.empty());
 
       // When
       MeshQualifierImportResult result = orchestrator.importQualifiers(command);
@@ -345,7 +343,7 @@ class MeshImportOrchestratorTest {
       when(qualifierRepository.hasAnyData()).thenReturn(false);
       when(meshSourceFilePort.fetchFile(any(MeshFileType.class), anyString(), any(URI.class)))
           .thenReturn(QUALIFIER_LOCAL_PATH);
-      when(xmlParserPort.parseQualifiers(any(Path.class), anyString()))
+      when(qualifierParserPort.parse(any(Path.class), anyString()))
           .thenThrow(new RuntimeException("XML 解析失败"));
 
       // When & Then
