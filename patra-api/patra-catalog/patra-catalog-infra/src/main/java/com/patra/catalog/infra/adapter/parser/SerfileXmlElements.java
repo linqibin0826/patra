@@ -258,6 +258,8 @@ public final class SerfileXmlElements {
     public static final String CURRENT_INDEXING_TREATMENT = "CurrentIndexingTreatment";
     /// 描述符类型（Geographic）
     public static final String TYPE = "Type";
+    /// 描述符 UI（唯一标识符）
+    public static final String UI = "UI";
 
     private Attribute() {}
   }

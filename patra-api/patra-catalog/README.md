@@ -203,7 +203,24 @@ patra:
 | Boot | E2E 测试 | 核心流程 |
 
 ## 📝 变更日志
-1. v0.8.0 (2025-12-06)：NLM Serfile 数据扩展
+1. v0.8.1 (2025-12-07)：NLM Serfile DTD 完整支持
+   - **SerialRecord 字段扩展**：从 15 个字段扩展到 44 个字段，完整覆盖 NLM Serfile DTD (nlmserials_230101.dtd)
+   - **新增 6 个 DTO 类**：
+     - `SerialLanguage`：语言信息（含 LangType 属性：Primary/Summary）
+     - `SerialBroadHeading`：广泛期刊分类
+     - `SerialCrossReference`：交叉引用（XrType: A/X/S）
+     - `SerialGeneralNote`：通用备注（含 NoteType 属性）
+     - `SerialCurrentlyIndexedForSubset`：当前索引子集信息
+     - `SerialRecordId`：记录 ID（含 Source 属性：NLM/LC/OCLC）
+   - **DTO 修改**：
+     - `SerialMeshHeading`：新增 `descriptorUi`、`descriptorType` 属性
+     - `SerialTitleRelated`：新增 `recordIds` 列表
+   - **解析器增强**：
+     - `SerialParsingStrategy`：支持所有 Serial 元素属性和子元素解析
+     - `XmlParsingHelper`：新增 `parseTimestamp()`、`parseYesNoAttributeNullable()` 方法
+   - **编排器适配**：`SerfileImportOrchestrator` 新增 `toVenueLanguages()` 转换方法
+
+2. v0.8.0 (2025-12-06)：NLM Serfile 数据扩展
    - 新增 3 个实体：`VenueMesh`（MeSH 主题词）、`VenueRelation`（期刊关联）、`VenueIndexingHistory`（索引历史）
    - 新增值对象：`VenueLanguages`（期刊语言信息，含主要语言和摘要语言）
    - 新增枚举：`VenueRelationType`（期刊关联类型）、`CitationSubset`（引用子集）、`IndexingTreatment`（索引处理方式）
@@ -213,7 +230,7 @@ patra:
    - `cat_venue` 扩展字段：`coden`、`frequency`、`languages`（JSON）
    - `VenueMesh` / `cat_venue_mesh` 新增 `qualifier_ui` 字段支持 MeSH 限定符精确关联
 
-2. v0.7.0 (2025-12-06)：Venue 多数据源表结构重设计
+3. v0.7.0 (2025-12-06)：Venue 多数据源表结构重设计
    - **Breaking Change**：`cat_venue_metrics` 重命名为 `cat_venue_publication_stats`
    - **架构决策**：[[ADR-011]] Venue 多数据源架构设计
    - 新增 `cat_venue_source_data` 表：存储各数据源原始 JSON 和提取字段
@@ -225,14 +242,14 @@ patra:
    - `VenueIdentifierType` 扩展：新增 DOAJ、CROSSREF_MEMBER、JCR
    - 重命名 `VenueMetrics` → `VenuePublicationStats`
 
-2. v0.6.2 (2025-12-05)：Repository 接口简化与依赖倒置
+4. v0.6.2 (2025-12-05)：Repository 接口简化与依赖倒置
    - **Breaking Change**：Repository 接口改为以聚合根为操作单位
      - `VenueRepository`：删除 `saveBatch`/`saveIdentifiers`/`saveMetrics` 等方法，统一为 `insertAll(List<VenueAggregate>)`
      - `MeshDescriptorRepository`：删除 `saveBatch`/`saveTreeNumbersBatch`/`saveConceptsBatch`/`saveEntryTermsBatch` 等方法，统一为 `insertAll(List<MeshDescriptorAggregate>)`
    - 移除 Repository 内部 Record DTO 模式（`VenueData`、`VenueIdentifierData`、`VenueMetricsData`），直接操作领域聚合根
    - ItemWriter 改为依赖 Repository 接口（而非 Mapper），遵循依赖倒置原则（DIP）
    - 净删除约 1,200 行死代码
-2. v0.6.1 (2025-12-05)：MeSH 导入配置驱动简化
+5. v0.6.1 (2025-12-05)：MeSH 导入配置驱动简化
    - **Breaking Change**：移除 XXL-Job 参数传递，改为配置文件驱动
      - URL 从 `patra.catalog.mesh.descriptor-url` / `qualifier-url` 配置读取
      - 版本号从文件名自动推断（`desc2025.xml` → `2025`）
@@ -240,7 +257,7 @@ patra:
    - 新增 `MeshFileNameParser`：MeSH 文件名解析工具
    - 新增 `MeshConfigurationException`：Adapter 层配置异常（替代 Domain 层异常）
 
-2. v0.6.0 (2025-12-04)：简化导入语义为一次性初始化
+6. v0.6.0 (2025-12-04)：简化导入语义为一次性初始化
    - **Breaking Change**：删除 `DataImportMode` 枚举（INCREMENTAL/TRUNCATE_REIMPORT 模式）
    - **Breaking Change**：移除对象存储缓存机制，改为直接从源站下载
      - 删除 `MeshCacheProperties`、`OpenAlexCacheProperties` 配置类
@@ -251,12 +268,12 @@ patra:
    - Venue 导入策略变更：从 Upsert 改为纯 INSERT
    - 设计理念：数据导入为一次性初始化操作，需重新导入时由用户手动清空数据库
 
-2. v0.5.0 (2025-12-03)：OpenAlex Venue 批量导入
+7. v0.5.0 (2025-12-03)：OpenAlex Venue 批量导入
    - 新增 `VenueImportOrchestrator`：Venue 导入用例编排
    - 新增 `VenueImportScheduleJob`：XXL-Job 调度入口（`venueImportJob`）
    - 新增 `OpenAlexSourceParser`：OpenAlex JSONL 数据解析
    - 新增 `VenueSourceFilePort`/`VenueImportBatchPort`：源文件和批处理端口
-2. v0.4.0 (2025-12-02)：Venue 聚合重构
+8. v0.4.0 (2025-12-02)：Venue 聚合重构
    - **架构决策**：[[ADR-010]] 分离标识符和年度指标为独立实体
    - 新增 `VenueIdentifier` 实体：支持多种标识符类型（ISSN/OpenAlex/NLM/MAG 等）
    - 新增 `VenueMetrics` 实体：支持年度发表量、被引量、OA 比例时序分析
@@ -264,31 +281,31 @@ patra:
    - 新增枚举：`VenueType`、`VenueIdentifierType`
    - Repository 以聚合根为操作单位，保持 DDD 一致性边界
    - 新增数据库表：`cat_venue_identifier`、`cat_venue_metrics`
-2. v0.3.1 (2025-12-06)：Parser Port 单一职责重构
+9. v0.3.1 (2025-12-06)：Parser Port 单一职责重构
    - 删除 `XmlParserPort`/`XmlParserAdapter` 通用接口
    - 新增 `MeshDescriptorParserPort`/`MeshDescriptorParserAdapter` 专用主题词解析
    - 新增 `MeshQualifierParserPort`/`MeshQualifierParserAdapter` 专用限定词解析
    - 删除死代码：`ConceptParsingStrategy`、`TreeNumberParsingStrategy`
    - 重构 `DescriptorParsingStrategy` 提取 `DescriptorListParsers` 工具类
    - 新增 `ReferredTo` record 替代 `String[]` 提供类型安全
-3. v0.3.0 (2025-12-01)：MeSH 源文件下载适配器
+10. v0.3.0 (2025-12-01)：MeSH 源文件下载适配器
    - 新增 `MeshSourceFileAdapter`：从 NLM 官方服务器下载 MeSH XML 文件
    - 新增 `MeshSourceFilePort`：定义源文件获取端口接口
-4. v0.2.2 (2025-11-27)：MeSH 子表关联键优化
+11. v0.2.2 (2025-11-27)：MeSH 子表关联键优化
    - 将 MeSH 子表（TreeNumber、EntryTerm、Concept 等）的关联键从数据库自增 ID 改为 MeSH 原生 UI 标识符
    - Domain 层使用 `MeshUI` 值对象，Infra 层使用 `String`
    - 简化数据导入流程，无需先查询主表获取自增 ID
-5. v0.2.1 (2025-11-27)：XML 解析器策略模式重构（已被 v0.3.1 演进）
+12. v0.2.1 (2025-11-27)：XML 解析器策略模式重构（已被 v0.3.1 演进）
    - XmlParserAdapter 重构为门面类（1800 行 → 156 行）
    - 新增 5 个解析策略：Descriptor、Qualifier、Concept、EntryTerm、TreeNumber
    - 支持 ConceptRelation 概念关系解析和持久化
-6. v0.2.0 (2025-11-27)：完善 MeSH 2025 DTD 支持
+13. v0.2.0 (2025-11-27)：完善 MeSH 2025 DTD 支持
    - 新增 EntryCombination 组合条目值对象及数据库表
    - 增强 MeshConcept：支持 registryNumbers 多值、translator 字段
    - 增强 MeshEntryTerm：新增 termUi、conceptUi 等 9 个字段
    - 增强 MeshDescriptor：新增 historyNote、onlineNote、nlmClassificationNumber 字段
    - 修复 ConceptList 解析被跳过的问题（P0 Bug）
-7. v0.1.0 (2025-11-27)：初始版本，完成 MeSH 主题词和限定词的导入功能。
+14. v0.1.0 (2025-11-27)：初始版本，完成 MeSH 主题词和限定词的导入功能。
 
 ## 📖 相关文档
 

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.patra.catalog.domain.exception.XmlParseException;
+import com.patra.catalog.domain.model.dto.serfile.SerialLanguage;
 import com.patra.catalog.domain.model.dto.serfile.SerialRecord;
 import java.nio.file.Path;
 import java.util.List;
@@ -108,7 +109,7 @@ class SerfileParserAdapterIT {
 
       // Then
       SerialRecord first = serials.get(0);
-      assertThat(first.languages()).containsExactly("eng", "chi");
+      assertThat(first.languages()).extracting(SerialLanguage::code).containsExactly("eng", "chi");
     }
 
     @Test

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.StringReader;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
@@ -20,7 +21,7 @@ import org.junit.jupiter.api.Test;
 @DisplayName("XmlParsingHelper 辅助方法")
 class XmlParsingHelperTest {
 
-  private static final XMLInputFactory XML_INPUT_FACTORY = XMLInputFactory.newInstance();
+  private static final XMLInputFactory XML_INPUT_FACTORY = SecureXmlInputFactory.getInstance();
 
   // ========== parseDate 测试 ==========
 
@@ -288,6 +289,68 @@ class XmlParsingHelperTest {
     }
   }
 
+  // ========== parseYesNoAttributeNullable 测试 ==========
+
+  @Nested
+  @DisplayName("parseYesNoAttributeNullable() 可空 Y/N 属性解析")
+  class ParseYesNoAttributeNullable {
+
+    @Test
+    @DisplayName("Y 应返回 Boolean.TRUE")
+    void shouldReturnTrueForY() throws Exception {
+      var xml = "<Element MedPrintYN=\"Y\"/>";
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.parseYesNoAttributeNullable(reader, "MedPrintYN");
+
+      assertThat(result).isTrue();
+    }
+
+    @Test
+    @DisplayName("N 应返回 Boolean.FALSE")
+    void shouldReturnFalseForN() throws Exception {
+      var xml = "<Element MedPrintYN=\"N\"/>";
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.parseYesNoAttributeNullable(reader, "MedPrintYN");
+
+      assertThat(result).isFalse();
+    }
+
+    @Test
+    @DisplayName("属性不存在时应返回 null")
+    void shouldReturnNullWhenAttributeMissing() throws Exception {
+      var xml = "<Element/>";
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.parseYesNoAttributeNullable(reader, "MedPrintYN");
+
+      assertThat(result).isNull();
+    }
+
+    @Test
+    @DisplayName("应忽略大小写（y 返回 true）")
+    void shouldBeCaseInsensitive() throws Exception {
+      var xml = "<Element Attr=\"y\"/>";
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.parseYesNoAttributeNullable(reader, "Attr");
+
+      assertThat(result).isTrue();
+    }
+
+    @Test
+    @DisplayName("n 应返回 false")
+    void shouldReturnFalseForLowercaseN() throws Exception {
+      var xml = "<Element Attr=\"n\"/>";
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.parseYesNoAttributeNullable(reader, "Attr");
+
+      assertThat(result).isFalse();
+    }
+  }
+
   // ========== getAttributeOrDefault 测试 ==========
 
   @Nested
@@ -314,6 +377,104 @@ class XmlParsingHelperTest {
       var result = XmlParsingHelper.getAttributeOrDefault(reader, "LexicalTag", "NON");
 
       assertEquals("NON", result);
+    }
+  }
+
+  // ========== parseTimestamp 测试 ==========
+
+  @Nested
+  @DisplayName("parseTimestamp() 时间戳解析")
+  class ParseTimestamp {
+
+    @Test
+    @DisplayName("应正确解析完整时间戳（年月日时分秒）")
+    void shouldParseFullTimestamp() throws Exception {
+      var xml =
+          """
+          <IlsCreatedTimestamp>
+            <Year>2020</Year>
+            <Month>01</Month>
+            <Day>15</Day>
+            <Hour>10</Hour>
+            <Minute>30</Minute>
+            <Second>45</Second>
+          </IlsCreatedTimestamp>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.parseTimestamp(reader, "IlsCreatedTimestamp");
+
+      assertEquals(LocalDateTime.of(2020, 1, 15, 10, 30, 45), result);
+    }
+
+    @Test
+    @DisplayName("应正确解析仅日期的时间戳（时分秒默认为0）")
+    void shouldParseDateOnlyTimestamp() throws Exception {
+      var xml =
+          """
+          <MedlineDataUpdatedTimestamp>
+            <Year>2024</Year>
+            <Month>11</Month>
+            <Day>15</Day>
+          </MedlineDataUpdatedTimestamp>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.parseTimestamp(reader, "MedlineDataUpdatedTimestamp");
+
+      assertEquals(LocalDateTime.of(2024, 11, 15, 0, 0, 0), result);
+    }
+
+    @Test
+    @DisplayName("应正确解析部分时间（仅时分，秒默认为0）")
+    void shouldParsePartialTime() throws Exception {
+      var xml =
+          """
+          <IlsUpdatedTimestamp>
+            <Year>2024</Year>
+            <Month>12</Month>
+            <Day>01</Day>
+            <Hour>14</Hour>
+            <Minute>00</Minute>
+          </IlsUpdatedTimestamp>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.parseTimestamp(reader, "IlsUpdatedTimestamp");
+
+      assertEquals(LocalDateTime.of(2024, 12, 1, 14, 0, 0), result);
+    }
+
+    @Test
+    @DisplayName("缺少年月日时应返回 null")
+    void shouldReturnNullWhenMissingDateComponents() throws Exception {
+      var xml = "<Timestamp><Hour>10</Hour></Timestamp>";
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.parseTimestamp(reader, "Timestamp");
+
+      assertNull(result);
+    }
+
+    @Test
+    @DisplayName("应正确解析单位数月日时分秒")
+    void shouldParseSingleDigitValues() throws Exception {
+      var xml =
+          """
+          <Timestamp>
+            <Year>2020</Year>
+            <Month>3</Month>
+            <Day>5</Day>
+            <Hour>9</Hour>
+            <Minute>5</Minute>
+            <Second>1</Second>
+          </Timestamp>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.parseTimestamp(reader, "Timestamp");
+
+      assertEquals(LocalDateTime.of(2020, 3, 5, 9, 5, 1), result);
     }
   }
 

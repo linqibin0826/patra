@@ -1,6 +1,14 @@
 package com.patra.catalog.infra.adapter.parser.support;
 
+import static com.patra.catalog.infra.adapter.parser.SerfileXmlElements.Date.DAY;
+import static com.patra.catalog.infra.adapter.parser.SerfileXmlElements.Date.HOUR;
+import static com.patra.catalog.infra.adapter.parser.SerfileXmlElements.Date.MINUTE;
+import static com.patra.catalog.infra.adapter.parser.SerfileXmlElements.Date.MONTH;
+import static com.patra.catalog.infra.adapter.parser.SerfileXmlElements.Date.SECOND;
+import static com.patra.catalog.infra.adapter.parser.SerfileXmlElements.Date.YEAR;
+
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import javax.xml.stream.XMLStreamConstants;
@@ -50,9 +58,12 @@ public final class XmlParsingHelper {
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case "Year" -> year = reader.getElementText();
-          case "Month" -> month = reader.getElementText();
-          case "Day" -> day = reader.getElementText();
+          case YEAR -> year = reader.getElementText();
+          case MONTH -> month = reader.getElementText();
+          case DAY -> day = reader.getElementText();
+          default -> {
+            /* ignore other elements */
+          }
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && elementName.equals(reader.getLocalName())) {
@@ -167,6 +178,19 @@ public final class XmlParsingHelper {
     return "Y".equalsIgnoreCase(value);
   }
 
+  /// 解析 Y/N 属性为可空 Boolean。
+  ///
+  /// @param reader XML 读取器（已定位到包含属性的元素）
+  /// @param attributeName 属性名称
+  /// @return Y → true，N → false，null → null
+  public static Boolean parseYesNoAttributeNullable(XMLStreamReader reader, String attributeName) {
+    String value = reader.getAttributeValue(null, attributeName);
+    if (value == null) {
+      return null;
+    }
+    return "Y".equalsIgnoreCase(value);
+  }
+
   /// 获取属性值或默认值。
   ///
   /// @param reader XML 读取器（已定位到包含属性的元素）
@@ -177,5 +201,84 @@ public final class XmlParsingHelper {
       XMLStreamReader reader, String attributeName, String defaultValue) {
     String value = reader.getAttributeValue(null, attributeName);
     return value != null ? value : defaultValue;
+  }
+
+  /// 解析时间戳元素（Year/Month/Day/Hour/Minute/Second 结构）。
+  ///
+  /// 支持 NLM Serfile XML 中的时间戳格式：
+  /// ```xml
+  /// <IlsCreatedTimestamp>
+  ///   <Year>2020</Year>
+  ///   <Month>01</Month>
+  ///   <Day>15</Day>
+  ///   <Hour>10</Hour>
+  ///   <Minute>30</Minute>
+  ///   <Second>45</Second>
+  /// </IlsCreatedTimestamp>
+  /// ```
+  ///
+  /// 时分秒为可选组件，缺少时默认为 0。
+  ///
+  /// @param reader XML 读取器（已定位到时间戳元素）
+  /// @param elementName 时间戳元素名称（如 "IlsCreatedTimestamp"）
+  /// @return 解析后的 LocalDateTime，缺少年/月/日时返回 `null`
+  /// @throws XMLStreamException XML 解析异常
+  public static LocalDateTime parseTimestamp(XMLStreamReader reader, String elementName)
+      throws XMLStreamException {
+    String year = null;
+    String month = null;
+    String day = null;
+    int hour = 0;
+    int minute = 0;
+    int second = 0;
+
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT) {
+        String localName = reader.getLocalName();
+        switch (localName) {
+          case YEAR -> year = reader.getElementText();
+          case MONTH -> month = reader.getElementText();
+          case DAY -> day = reader.getElementText();
+          case HOUR -> hour = parseIntSafe(reader.getElementText(), 0);
+          case MINUTE -> minute = parseIntSafe(reader.getElementText(), 0);
+          case SECOND -> second = parseIntSafe(reader.getElementText(), 0);
+          default -> {
+            /* ignore other elements */
+          }
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && elementName.equals(reader.getLocalName())) {
+        break;
+      }
+    }
+
+    // 年月日为必需，时分秒可选（默认 0）
+    if (year != null && month != null && day != null) {
+      return LocalDateTime.of(
+          Integer.parseInt(year.trim()),
+          Integer.parseInt(month.trim()),
+          Integer.parseInt(day.trim()),
+          hour,
+          minute,
+          second);
+    }
+    return null;
+  }
+
+  /// 安全解析整数，解析失败时返回默认值。
+  ///
+  /// @param value 要解析的字符串
+  /// @param defaultValue 解析失败时的默认值
+  /// @return 解析后的整数值，失败时返回默认值
+  private static int parseIntSafe(String value, int defaultValue) {
+    if (value == null || value.isBlank()) {
+      return defaultValue;
+    }
+    try {
+      return Integer.parseInt(value.trim());
+    } catch (NumberFormatException e) {
+      return defaultValue;
+    }
   }
 }

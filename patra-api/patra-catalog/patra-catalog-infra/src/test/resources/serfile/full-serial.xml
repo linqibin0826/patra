@@ -1,26 +1,68 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE SerialsSet SYSTEM "nlmserials_230101.dtd">
-<!-- 完整字段测试用例 -->
+<!-- 完整字段测试用例 - 包含所有 NLM Serfile DTD 定义的字段 -->
 <SerialsSet>
-  <Serial Status="NLMCollection" PMC="Yes">
+  <Serial Status="NLMCollection" PMC="Yes" MedPrintYN="N" DataCreationMethod="P">
+    <!-- 标识符 -->
     <NlmWorkID>9876543</NlmWorkID>
     <NlmUniqueID>0123456</NlmUniqueID>
     <Title>Journal of Full Test Medicine</Title>
     <MedlineTA>J Full Test Med</MedlineTA>
+    <SortSerialName>JOURNAL OF FULL TEST MEDICINE</SortSerialName>
+
+    <!-- 出版信息 -->
     <PublicationInfo>
       <Country>United States</Country>
       <Place>New York</Place>
+      <Place>Boston</Place>
       <Publisher>Test Publisher Inc.</Publisher>
+      <Publisher>Academic Press</Publisher>
       <PublicationFirstYear>1990</PublicationFirstYear>
       <PublicationEndYear>2020</PublicationEndYear>
       <Frequency FrequencyType="Current">Monthly</Frequency>
+      <DatesOfSerialPublication>1990-2020</DatesOfSerialPublication>
     </PublicationInfo>
+
+    <!-- ISSN -->
     <ISSN IssnType="Print">1234-5678</ISSN>
     <ISSN IssnType="Electronic">1234-5679</ISSN>
     <ISSNLinking>1234-5678</ISSNLinking>
+
+    <!-- 语言 -->
     <Language LangType="Primary">eng</Language>
     <Language LangType="Summary">fre</Language>
+
+    <!-- 其他标识符 -->
     <Coden>JFTMED</Coden>
+
+    <!-- 索引信息 -->
+    <CurrentlyIndexedYN>Y</CurrentlyIndexedYN>
+    <CurrentlyIndexedForSubset CurrentSubset="IM" CurrentIndexingTreatment="Full">Currently indexed for MEDLINE</CurrentlyIndexedForSubset>
+    <CurrentlyIndexedForSubset CurrentSubset="AIM" CurrentIndexingTreatment="Selective">Abridged Index Medicus</CurrentlyIndexedForSubset>
+    <IndexingSubset>IM</IndexingSubset>
+    <IndexingStartDate>1990</IndexingStartDate>
+    <IndexOnlineYN>Y</IndexOnlineYN>
+    <IndexingSelectedURL>https://www.ncbi.nlm.nih.gov/journals/123</IndexingSelectedURL>
+    <ReportedMedlineYN>Y</ReportedMedlineYN>
+    <ProcessingCode>A</ProcessingCode>
+
+    <!-- 广泛期刊分类 -->
+    <BroadJournalHeadingList>
+      <BroadJournalHeading>Medicine</BroadJournalHeading>
+      <BroadJournalHeading>Cardiology</BroadJournalHeading>
+    </BroadJournalHeadingList>
+
+    <!-- 交叉引用 -->
+    <CrossReferenceList>
+      <CrossReference XrType="A">
+        <XrTitle>JFTM</XrTitle>
+      </CrossReference>
+      <CrossReference XrType="X">
+        <XrTitle>J Full Test Med</XrTitle>
+      </CrossReference>
+    </CrossReferenceList>
+
+    <!-- 索引历史 -->
     <IndexingHistoryList>
       <IndexingHistory CitationSubset="IM" IndexingTreatment="Full" IndexingStatus="Currently-indexed">
         <DateOfAction>
@@ -39,24 +81,53 @@
         </DateOfAction>
       </IndexingHistory>
     </IndexingHistoryList>
-    <CurrentlyIndexedYN>Y</CurrentlyIndexedYN>
-    <ReportedMedlineYN>Y</ReportedMedlineYN>
+
+    <!-- MeSH 主题词 -->
     <MeshHeadingList>
       <MeshHeading>
-        <DescriptorName MajorTopicYN="Y">Cardiology</DescriptorName>
+        <DescriptorName MajorTopicYN="Y" UI="D002309" Type="Geographic">Cardiology</DescriptorName>
       </MeshHeading>
       <MeshHeading>
         <DescriptorName MajorTopicYN="N">Medicine</DescriptorName>
         <QualifierName MajorTopicYN="N">methods</QualifierName>
       </MeshHeading>
     </MeshHeadingList>
+
+    <!-- 期刊关联 -->
     <TitleRelated TitleType="Preceding">
       <Title>Old Journal of Test</Title>
       <ISSN IssnType="Print">0000-1111</ISSN>
+      <RecordID Source="NLM">12345678</RecordID>
+      <RecordID Source="OCLC">98765432</RecordID>
     </TitleRelated>
     <TitleRelated TitleType="Succeeding">
       <Title>New Journal of Test</Title>
     </TitleRelated>
-    <SortSerialName>JOURNAL OF FULL TEST MEDICINE</SortSerialName>
+
+    <!-- 备注 -->
+    <GeneralNote NoteType="LinkComplexNote">This is a complex link note</GeneralNote>
+    <GeneralNote>This is a general note without type</GeneralNote>
+
+    <!-- 标题变更标记 -->
+    <TitleContinuationYN>N</TitleContinuationYN>
+    <MinorTitleChangeYN>Y</MinorTitleChangeYN>
+
+    <!-- 时间戳 -->
+    <IlsCreatedTimestamp>
+      <Year>2020</Year>
+      <Month>01</Month>
+      <Day>15</Day>
+      <Hour>10</Hour>
+      <Minute>30</Minute>
+      <Second>45</Second>
+    </IlsCreatedTimestamp>
+    <IlsUpdatedTimestamp>
+      <Year>2023</Year>
+      <Month>12</Month>
+      <Day>25</Day>
+      <Hour>14</Hour>
+      <Minute>20</Minute>
+      <Second>00</Second>
+    </IlsUpdatedTimestamp>
   </Serial>
 </SerialsSet>
