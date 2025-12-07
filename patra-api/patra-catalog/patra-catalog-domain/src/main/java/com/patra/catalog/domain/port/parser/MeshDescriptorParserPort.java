@@ -41,5 +41,6 @@ public interface MeshDescriptorParserPort {
   ///
   /// @param filePath XML 文件路径
   /// @return 主题词聚合根流（调用方负责关闭）
+  /// @throws com.patra.catalog.domain.exception.XmlParseException 解析失败时抛出
   Stream<MeshDescriptorAggregate> parse(Path filePath);
 }
