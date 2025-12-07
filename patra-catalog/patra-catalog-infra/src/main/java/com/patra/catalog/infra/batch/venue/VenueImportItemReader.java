@@ -1,10 +1,9 @@
 package com.patra.catalog.infra.batch.venue;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.domain.port.source.StreamingDownloadResult;
+import java.net.URI;
 import java.text.NumberFormat;
 import java.time.Duration;
 import java.time.Instant;
@@ -17,13 +16,18 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamReader;
 
-/// OpenAlex Venue 多文件 JSON Lines 读取器。
+/// OpenAlex Venue 流式多文件 JSON Lines 读取器。
 ///
 /// **职责**：
 ///
-/// - 顺序读取多个 .gz 压缩的 JSON Lines 文件
+/// - 按需流式下载并顺序读取多个 .gz 压缩的 JSON Lines 文件
 /// - 支持断点续传（通过 ExecutionContext 保存/恢复 fileIndex 和 lineIndex）
 /// - 委托 OpenAlexSourceParser 进行解析
+///
+/// **流式处理特性**：
+///
+/// - 无磁盘落盘，每个分区文件按需从远程 URL 流式下载
+/// - 切换文件时自动关闭当前 HTTP 连接，打开下一个
 ///
 /// **断点续传实现**：
 ///
@@ -31,10 +35,11 @@ import org.springframework.batch.item.ItemStreamReader;
 /// - 在 `open()` 中从 ExecutionContext 恢复进度，跳过已处理文件和行
 /// - 在 `update()` 中保存当前进度到 ExecutionContext
 /// - chunk size 决定断点精度
+/// - 恢复时需要重新下载当前文件（用户已确认可接受）
 ///
 /// **文件切换逻辑**：
 ///
-/// 当当前文件读取完毕时，自动切换到下一个文件，直到所有文件处理完成。
+/// 当当前文件读取完毕时，关闭当前 HTTP 连接，打开下一个 URL 的连接。
 ///
 /// **Bean 注册**：
 ///
@@ -51,8 +56,9 @@ public class VenueImportItemReader implements ItemStreamReader<VenueAggregate> {
   /// 进度日志输出间隔（每处理多少条记录输出一次）。
   private static final int PROGRESS_LOG_INTERVAL = 2000;
 
+  private final StreamingDownloadPort streamingDownloadPort;
   private final OpenAlexSourceParser parser;
-  private final List<Path> filePaths;
+  private final List<String> partitionUrls;
 
   /// 当前文件索引（0-based）。
   private int currentFileIndex = 0;
@@ -63,8 +69,8 @@ public class VenueImportItemReader implements ItemStreamReader<VenueAggregate> {
   /// 需要跳过的行数（断点恢复时使用）。
   private int skipLineCount = 0;
 
-  /// 当前文件的输入流。
-  private InputStream currentInputStream;
+  /// 当前文件的 HTTP 下载结果（持有连接）。
+  private StreamingDownloadResult currentDownloadResult;
 
   /// 当前文件的记录流。
   private Stream<VenueAggregate> currentStream;
@@ -83,37 +89,42 @@ public class VenueImportItemReader implements ItemStreamReader<VenueAggregate> {
 
   /// 构造函数。
   ///
+  /// @param streamingDownloadPort 流式下载端口
   /// @param parser OpenAlex Source 解析器
-  /// @param filePaths 待处理的文件路径列表
-  public VenueImportItemReader(OpenAlexSourceParser parser, List<Path> filePaths) {
+  /// @param partitionUrls 待处理的分区 URL 列表
+  public VenueImportItemReader(
+      StreamingDownloadPort streamingDownloadPort,
+      OpenAlexSourceParser parser,
+      List<String> partitionUrls) {
+    this.streamingDownloadPort = streamingDownloadPort;
     this.parser = parser;
-    this.filePaths = filePaths;
+    this.partitionUrls = partitionUrls;
   }
 
   @Override
   public void open(ExecutionContext executionContext) throws ItemStreamException {
-    log.info("打开 VenueImportItemReader，共 {} 个文件", filePaths.size());
+    log.info("打开 VenueImportItemReader，共 {} 个分区 URL", partitionUrls.size());
     startTime = Instant.now();
 
     // 从 ExecutionContext 恢复进度
     if (executionContext.containsKey(FILE_INDEX_KEY)) {
       currentFileIndex = executionContext.getInt(FILE_INDEX_KEY);
       skipLineCount = executionContext.getInt(LINE_INDEX_KEY);
-      log.info("从断点恢复：文件索引={}，行索引={}", currentFileIndex, skipLineCount);
+      log.info("从断点恢复：文件索引={}，行索引={}（需重新下载当前文件）", currentFileIndex, skipLineCount);
     }
 
-    // 如果文件列表为空，直接返回
-    if (filePaths.isEmpty()) {
-      log.info("文件列表为空，无需处理");
+    // 如果 URL 列表为空，直接返回
+    if (partitionUrls.isEmpty()) {
+      log.info("分区 URL 列表为空，无需处理");
       return;
     }
 
     // 打开初始文件
-    if (currentFileIndex < filePaths.size()) {
+    if (currentFileIndex < partitionUrls.size()) {
       try {
         openCurrentFile();
       } catch (Exception e) {
-        throw new ItemStreamException("无法打开文件：" + filePaths.get(currentFileIndex), e);
+        throw new ItemStreamException("无法下载分区文件：" + partitionUrls.get(currentFileIndex), e);
       }
     }
   }
@@ -128,13 +139,13 @@ public class VenueImportItemReader implements ItemStreamReader<VenueAggregate> {
         return currentIterator.next();
       }
 
-      // 当前文件读完，尝试切换到下一个文件
+      // 当前文件读完，关闭 HTTP 连接，切换到下一个文件
       closeCurrentFile();
       currentFileIndex++;
       currentLineIndex = 0;
       skipLineCount = 0;
 
-      if (currentFileIndex >= filePaths.size()) {
+      if (currentFileIndex >= partitionUrls.size()) {
         // 所有文件处理完成
         log.info("所有文件处理完成，共处理 {} 条记录", totalProcessedCount);
         return null;
@@ -143,7 +154,7 @@ public class VenueImportItemReader implements ItemStreamReader<VenueAggregate> {
       try {
         openCurrentFile();
       } catch (Exception e) {
-        throw new ItemStreamException("无法打开文件：" + filePaths.get(currentFileIndex), e);
+        throw new ItemStreamException("无法下载分区文件：" + partitionUrls.get(currentFileIndex), e);
       }
     }
   }
@@ -167,16 +178,21 @@ public class VenueImportItemReader implements ItemStreamReader<VenueAggregate> {
     closeCurrentFile();
   }
 
-  /// 打开当前索引指向的文件。
-  private void openCurrentFile() throws IOException {
-    Path filePath = filePaths.get(currentFileIndex);
-    log.debug("打开文件 [{}/{}]: {}", currentFileIndex + 1, filePaths.size(), filePath.getFileName());
+  /// 流式下载并打开当前索引指向的分区文件。
+  ///
+  /// 建立 HTTP 连接，获取输入流并开始解析。
+  ///
+  /// @throws java.io.IOException 下载或解析失败时
+  private void openCurrentFile() throws java.io.IOException {
+    String url = partitionUrls.get(currentFileIndex);
+    log.debug("流式下载分区文件 [{}/{}]: {}", currentFileIndex + 1, partitionUrls.size(), url);
 
-    currentInputStream = Files.newInputStream(filePath);
-    currentStream = parser.parse(currentInputStream);
+    // 流式下载（建立 HTTP 连接）
+    currentDownloadResult = streamingDownloadPort.download(URI.create(url));
+    currentStream = parser.parse(currentDownloadResult.inputStream());
     currentIterator = currentStream.iterator();
 
-    // 跳过已处理的行
+    // 跳过已处理的行（断点续传）
     for (int i = 0; i < skipLineCount && currentIterator.hasNext(); i++) {
       currentIterator.next();
       currentLineIndex++;
@@ -187,8 +203,9 @@ public class VenueImportItemReader implements ItemStreamReader<VenueAggregate> {
     }
   }
 
-  /// 关闭当前文件。
+  /// 关闭当前文件（释放 HTTP 连接）。
   private void closeCurrentFile() {
+    // 先关闭 Stream（释放解析器资源）
     if (currentStream != null) {
       try {
         currentStream.close();
@@ -198,13 +215,14 @@ public class VenueImportItemReader implements ItemStreamReader<VenueAggregate> {
       currentStream = null;
     }
 
-    if (currentInputStream != null) {
+    // 再关闭 HTTP 连接
+    if (currentDownloadResult != null) {
       try {
-        currentInputStream.close();
-      } catch (IOException e) {
-        log.warn("关闭 InputStream 失败", e);
+        currentDownloadResult.close();
+      } catch (Exception e) {
+        log.warn("关闭 HTTP 连接失败", e);
       }
-      currentInputStream = null;
+      currentDownloadResult = null;
     }
 
     currentIterator = null;
@@ -217,10 +235,10 @@ public class VenueImportItemReader implements ItemStreamReader<VenueAggregate> {
     long rate = elapsedMillis > 0 ? (totalProcessedCount * 1000L) / elapsedMillis : 0;
 
     log.info(
-        "进度: {} 条 | 文件 [{}/{}] | 速率: {} 条/秒 | 已用时: {}",
+        "进度: {} 条 | 分区 [{}/{}] | 速率: {} 条/秒 | 已用时: {}",
         formatNumber(totalProcessedCount),
         currentFileIndex + 1,
-        filePaths.size(),
+        partitionUrls.size(),
         formatNumber(rate),
         formatDuration(elapsed));
   }

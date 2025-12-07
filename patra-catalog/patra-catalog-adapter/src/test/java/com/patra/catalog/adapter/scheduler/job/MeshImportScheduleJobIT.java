@@ -73,7 +73,6 @@ class MeshImportScheduleJobIT {
             MeshDescriptorImportResult.success(
                 1001L,
                 "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-                "/tmp/mesh-import-12345.xml",
                 "2025");
 
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);

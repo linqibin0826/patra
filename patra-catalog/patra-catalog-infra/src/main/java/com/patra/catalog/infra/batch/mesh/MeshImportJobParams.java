@@ -10,6 +10,12 @@ import lombok.NoArgsConstructor;
 ///
 /// 用于 MeSH Descriptor 批量导入任务的强类型参数。
 ///
+/// **流式处理特性**：
+///
+/// - 使用 `downloadUrl` 存储 XML 文件下载 URL
+/// - ItemReader 在 open() 时建立 HTTP 连接，流式下载并解析
+/// - 无临时文件清理逻辑
+///
 /// @author linqibin
 /// @since 0.1.0
 @Data
@@ -18,12 +24,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MeshImportJobParams implements JobParams {
 
-  /// MeSH XML 文件路径
-  private String filePath;
+  /// MeSH XML 文件下载 URL
+  private String downloadUrl;
 
   /// MeSH 版本号（如 "2025"）
   private String meshVersion;
-
-  /// 是否为临时文件（Job 完成后需要清理）
-  private String tempFile;
 }

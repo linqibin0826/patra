@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -15,10 +16,12 @@ import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.dto.serfile.SerialRecord;
 import com.patra.catalog.domain.port.parser.SerfileParserPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
-import com.patra.catalog.domain.port.source.FileDownloadPort;
+import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.common.error.ApplicationException;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.net.URI;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -48,9 +51,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 ///
 /// **重点测试场景**：
 ///
-/// - 正常导入流程：下载 → 解析 → 匹配 → 更新/创建
+/// - 正常导入流程：流式下载 → 解析 → 匹配 → 更新/创建
 /// - 匹配优先级：ISSN-L → NLM ID → ISSN
-/// - 异常处理和临时文件清理
+/// - 异常处理
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -63,13 +66,13 @@ class SerfileImportOrchestratorTest {
   private static final String TEST_URL =
       "https://ftp.ncbi.nlm.nih.gov/pubmed/Serfile/serfilebase2025.xml";
   private static final String TEST_VERSION = "2025";
-  private static final Path TEST_LOCAL_PATH = Path.of("/tmp/serfile-import-12345.xml");
 
-  @Mock private FileDownloadPort fileDownloadPort;
+  @Mock private StreamingDownloadPort streamingDownloadPort;
   @Mock private SerfileParserPort parserPort;
   @Mock private VenueRepository venueRepository;
   @Mock private TransactionTemplate transactionTemplate;
   @Mock private TransactionStatus transactionStatus;
+  @Mock private StreamingDownloadResult downloadResult;
 
   @Captor private ArgumentCaptor<List<VenueAggregate>> updateBatchCaptor;
   @Captor private ArgumentCaptor<List<VenueAggregate>> insertAllCaptor;
@@ -81,7 +84,7 @@ class SerfileImportOrchestratorTest {
   void setUp() {
     orchestrator =
         new SerfileImportOrchestrator(
-            fileDownloadPort, parserPort, venueRepository, transactionTemplate);
+            streamingDownloadPort, parserPort, venueRepository, transactionTemplate);
 
     // 配置 TransactionTemplate：直接执行回调，模拟事务行为
     org.mockito.Mockito.doAnswer(
@@ -92,6 +95,9 @@ class SerfileImportOrchestratorTest {
             })
         .when(transactionTemplate)
         .executeWithoutResult(any());
+
+    // 配置 downloadResult 的默认行为（用于 try-with-resources）
+    lenient().when(downloadResult.inputStream()).thenReturn(new ByteArrayInputStream(new byte[0]));
   }
 
   @Nested
@@ -99,7 +105,7 @@ class SerfileImportOrchestratorTest {
   class NormalImportFlowTest {
 
     @Test
-    @DisplayName("应该正确执行完整导入流程：下载 → 解析 → 匹配 → 更新/创建")
+    @DisplayName("应该正确执行完整导入流程：流式下载 → 解析 → 匹配 → 更新/创建")
     void shouldExecuteCompleteImportFlow() {
       // Given
       SerfileImportCommand command = SerfileImportCommand.of(TEST_URL, TEST_VERSION);
@@ -109,8 +115,8 @@ class SerfileImportOrchestratorTest {
       VenueAggregate existingVenue =
           VenueAggregate.fromPubMed("Existing Journal", null, "1111-1111");
 
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.of(record1, record2));
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record1, record2));
       when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("1111-1111", existingVenue));
       when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
@@ -119,8 +125,8 @@ class SerfileImportOrchestratorTest {
       SerfileImportResult result = orchestrator.importSerfile(command);
 
       // Then - 验证调用顺序
-      verify(fileDownloadPort).downloadToTemp(URI.create(TEST_URL));
-      verify(parserPort).parse(TEST_LOCAL_PATH);
+      verify(streamingDownloadPort).download(URI.create(TEST_URL));
+      verify(parserPort).parse(any(InputStream.class));
       verify(venueRepository).findByIssnLs(any());
       verify(venueRepository).findByNlmIds(any());
       verify(venueRepository).findByIssns(any());
@@ -140,8 +146,8 @@ class SerfileImportOrchestratorTest {
       // Given
       SerfileImportCommand command = SerfileImportCommand.of(TEST_URL, TEST_VERSION);
 
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.empty());
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.empty());
 
       // When
       SerfileImportResult result = orchestrator.importSerfile(command);
@@ -174,8 +180,8 @@ class SerfileImportOrchestratorTest {
       VenueAggregate issnLMatch = VenueAggregate.fromPubMed("ISSN-L Matched", null, "1111-1111");
       VenueAggregate nlmIdMatch = VenueAggregate.fromPubMed("NLM ID Matched", "0000001", null);
 
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.of(record));
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
       when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("1111-1111", issnLMatch));
       when(venueRepository.findByNlmIds(any())).thenReturn(Map.of("0000001", nlmIdMatch));
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
@@ -199,8 +205,8 @@ class SerfileImportOrchestratorTest {
 
       VenueAggregate nlmIdMatch = VenueAggregate.fromPubMed("NLM ID Matched", "0000001", null);
 
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.of(record));
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
       when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
       when(venueRepository.findByNlmIds(any())).thenReturn(Map.of("0000001", nlmIdMatch));
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
@@ -224,8 +230,8 @@ class SerfileImportOrchestratorTest {
 
       VenueAggregate issnMatch = VenueAggregate.fromPubMed("ISSN Matched", null, "9999-9999");
 
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.of(record));
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
       when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
       when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
       when(venueRepository.findByIssns(any())).thenReturn(Map.of("2222-2222", issnMatch));
@@ -246,8 +252,8 @@ class SerfileImportOrchestratorTest {
       SerfileImportCommand command = SerfileImportCommand.of(TEST_URL, TEST_VERSION);
       SerialRecord record = createSerialRecord("0000001", "New Journal", "1111-1111", null, null);
 
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.of(record));
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
       when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
       when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
@@ -283,8 +289,8 @@ class SerfileImportOrchestratorTest {
 
       VenueAggregate existingVenue = VenueAggregate.fromPubMed("Existing", null, "1111-1111");
 
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.of(matched, new1, new2));
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(matched, new1, new2));
       when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("1111-1111", existingVenue));
       when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
@@ -306,8 +312,8 @@ class SerfileImportOrchestratorTest {
       // Given
       SerfileImportCommand command = SerfileImportCommand.of(TEST_URL, TEST_VERSION);
 
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.empty());
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.empty());
 
       // When
       SerfileImportResult result = orchestrator.importSerfile(command);
@@ -327,7 +333,7 @@ class SerfileImportOrchestratorTest {
       // Given
       SerfileImportCommand command = SerfileImportCommand.of(TEST_URL, TEST_VERSION);
 
-      when(fileDownloadPort.downloadToTemp(any(URI.class)))
+      when(streamingDownloadPort.download(any(URI.class)))
           .thenThrow(new RuntimeException("Network error"));
 
       // When & Then
@@ -340,13 +346,14 @@ class SerfileImportOrchestratorTest {
     }
 
     @Test
-    @DisplayName("解析失败时应该清理临时文件并包装为 ApplicationException")
-    void shouldCleanupTempFileWhenParsingFails() {
+    @DisplayName("解析失败时应该包装为 ApplicationException")
+    void shouldWrapParsingException() {
       // Given
       SerfileImportCommand command = SerfileImportCommand.of(TEST_URL, TEST_VERSION);
 
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parse(TEST_LOCAL_PATH)).thenThrow(new RuntimeException("XML parse error"));
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class)))
+          .thenThrow(new RuntimeException("XML parse error"));
 
       // When & Then
       assertThatThrownBy(() -> orchestrator.importSerfile(command))
@@ -355,14 +362,14 @@ class SerfileImportOrchestratorTest {
     }
 
     @Test
-    @DisplayName("Repository 操作失败时应该清理临时文件")
-    void shouldCleanupTempFileWhenRepositoryFails() {
+    @DisplayName("Repository 操作失败时应该包装为 ApplicationException")
+    void shouldWrapRepositoryException() {
       // Given
       SerfileImportCommand command = SerfileImportCommand.of(TEST_URL, TEST_VERSION);
       SerialRecord record = createSerialRecord("0000001", "Journal", "1111-1111", null, null);
 
-      when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.of(record));
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
       when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
       when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());

@@ -2,7 +2,9 @@ package com.patra.catalog.infra.batch.mesh;
 
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.port.parser.MeshDescriptorParserPort;
-import java.nio.file.Path;
+import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.domain.port.source.StreamingDownloadResult;
+import java.net.URI;
 import java.text.NumberFormat;
 import java.time.Duration;
 import java.time.Instant;
@@ -14,13 +16,18 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamReader;
 
-/// MeSH 主题词 XML 文件读取器。
+/// MeSH 主题词流式读取器。
 ///
 /// **职责**：
 ///
-/// - 读取 MeSH 主题词 XML 文件并逐条返回聚合根
+/// - 从远程 URL 流式下载并解析 MeSH 主题词 XML
 /// - 支持断点续传（通过 ExecutionContext 保存/恢复进度）
-/// - 委托 MeshDescriptorParserPort 进行流式解析
+/// - 委托 StreamingDownloadPort 下载，MeshDescriptorParserPort 解析
+///
+/// **流式处理特性**：
+///
+/// - 无磁盘落盘，HTTP 响应体直接传递给 Parser
+/// - 失败时需重新下载（用户已确认可接受）
 ///
 /// **断点续传实现**：
 ///
@@ -30,13 +37,13 @@ import org.springframework.batch.item.ItemStreamReader;
 ///
 /// **资源管理**：
 ///
-/// 文件 I/O 由 MeshDescriptorParserPort 内部管理。
-/// 调用 `stream.close()` 时会自动触发 Adapter 中注册的 onClose 回调，释放所有资源。
+/// - StreamingDownloadResult 持有 HTTP 连接，在 `close()` 中释放
+/// - Stream.close() 释放 XMLStreamReader
 ///
 /// **Bean 注册**：
 ///
 /// 通过 [MeshDescriptorJobConfig#meshDescriptorItemReader] 方法注册为 `@StepScope` Bean，
-/// 支持 Job 参数注入（filePath、meshVersion）。
+/// 支持 Job 参数注入（downloadUrl、meshVersion）。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -44,15 +51,16 @@ import org.springframework.batch.item.ItemStreamReader;
 public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptorAggregate> {
 
   private static final String CURRENT_INDEX_KEY = "mesh.descriptor.current.index";
-  private static final NumberFormat NUMBER_FORMAT = NumberFormat.getNumberInstance(Locale.CHINA);
 
   /// 进度日志输出间隔（每处理多少条记录输出一次）。
   private static final int PROGRESS_LOG_INTERVAL = 5000;
 
+  private final StreamingDownloadPort streamingDownloadPort;
   private final MeshDescriptorParserPort descriptorParserPort;
-  private final String filePath;
+  private final String downloadUrl;
   private final String meshVersion;
 
+  private StreamingDownloadResult downloadResult;
   private Stream<MeshDescriptorAggregate> stream;
   private Iterator<MeshDescriptorAggregate> iterator;
   private int currentIndex = 0;
@@ -62,19 +70,24 @@ public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptor
 
   /// 构造函数。
   ///
+  /// @param streamingDownloadPort 流式下载端口
   /// @param descriptorParserPort 主题词解析端口
-  /// @param filePath XML 文件路径
+  /// @param downloadUrl XML 文件下载 URL
   /// @param meshVersion MeSH 版本号
   public MeshDescriptorItemReader(
-      MeshDescriptorParserPort descriptorParserPort, String filePath, String meshVersion) {
+      StreamingDownloadPort streamingDownloadPort,
+      MeshDescriptorParserPort descriptorParserPort,
+      String downloadUrl,
+      String meshVersion) {
+    this.streamingDownloadPort = streamingDownloadPort;
     this.descriptorParserPort = descriptorParserPort;
-    this.filePath = filePath;
+    this.downloadUrl = downloadUrl;
     this.meshVersion = meshVersion;
   }
 
   @Override
   public void open(ExecutionContext executionContext) throws ItemStreamException {
-    log.info("打开 MeSH Descriptor XML 文件：{}，版本：{}", filePath, meshVersion);
+    log.info("开始流式下载 MeSH Descriptor XML：{}，版本：{}", downloadUrl, meshVersion);
 
     // 记录开始时间（用于计算处理速率）
     startTime = Instant.now();
@@ -83,15 +96,24 @@ public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptor
     if (executionContext.containsKey(CURRENT_INDEX_KEY)) {
       skipCount = executionContext.getInt(CURRENT_INDEX_KEY);
       lastLoggedIndex = skipCount;
-      log.info("从断点恢复，跳过前 {} 条记录", skipCount);
+      log.info("从断点恢复，将跳过前 {} 条记录（需重新下载文件）", skipCount);
     }
 
-    // 委托 MeshDescriptorParserPort 解析（Adapter 内部管理 InputStream）
+    // 流式下载（无磁盘落盘）
+    downloadResult = streamingDownloadPort.download(URI.create(downloadUrl));
+    log.info(
+        "HTTP 连接建立成功，Content-Length：{}，开始解析",
+        downloadResult.contentLength() > 0 ? downloadResult.contentLength() : "未知");
+
+    // 委托 MeshDescriptorParserPort 解析
     // Parser 返回不含版本的聚合根，在流转换时设置版本号
-    stream = descriptorParserPort.parse(Path.of(filePath)).map(d -> d.withMeshVersion(meshVersion));
+    stream =
+        descriptorParserPort
+            .parse(downloadResult.inputStream())
+            .map(d -> d.withMeshVersion(meshVersion));
     iterator = stream.iterator();
 
-    // 跳过已处理的记录
+    // 跳过已处理的记录（断点续传）
     for (int i = 0; i < skipCount && iterator.hasNext(); i++) {
       iterator.next();
       currentIndex++;
@@ -135,9 +157,19 @@ public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptor
 
     log.info(
         "进度: {} 条 | 速率: {} 条/秒 | 已用时: {}",
-        NUMBER_FORMAT.format(currentIndex),
-        NUMBER_FORMAT.format(rate),
+        formatNumber(currentIndex),
+        formatNumber(rate),
         formatDuration(elapsed));
+  }
+
+  /// 格式化数字为千分位格式。
+  ///
+  /// 使用方法级别创建 NumberFormat 以确保线程安全。
+  ///
+  /// @param value 数值
+  /// @return 格式化后的字符串（如 `1,234`）
+  private String formatNumber(long value) {
+    return NumberFormat.getNumberInstance(Locale.CHINA).format(value);
   }
 
   /// 格式化时长为 HH:mm:ss 格式。
@@ -151,14 +183,23 @@ public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptor
 
   @Override
   public void close() throws ItemStreamException {
-    log.info("关闭 MeSH Descriptor XML 文件，共处理 {} 条记录", currentIndex);
+    log.info("关闭 MeSH Descriptor 读取器，共处理 {} 条记录", currentIndex);
 
-    // 关闭 Stream（会自动触发 Adapter 中注册的 onClose 回调，释放 InputStream 和 XMLStreamReader）
+    // 关闭 Stream（释放 XMLStreamReader）
     if (stream != null) {
       try {
         stream.close();
       } catch (Exception e) {
         log.warn("关闭 Stream 时发生异常", e);
+      }
+    }
+
+    // 关闭 HTTP 连接
+    if (downloadResult != null) {
+      try {
+        downloadResult.close();
+      } catch (Exception e) {
+        log.warn("关闭 HTTP 连接时发生异常", e);
       }
     }
   }

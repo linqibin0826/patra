@@ -2,13 +2,20 @@ package com.patra.catalog.infra.batch.venue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.when;
 
+import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
+import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.domain.port.source.StreamingDownloadResult;
+import com.patra.common.error.trait.StandardErrorTrait;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -18,18 +25,20 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 
 /// VenueImportItemReader 集成测试。
 ///
-/// 测试 Spring Batch ItemStreamReader 的多文件读取和断点续传功能。
+/// 测试 Spring Batch ItemStreamReader 的流式多文件读取和断点续传功能。
 ///
 /// **测试策略**：
 ///
+/// - Mock StreamingDownloadPort 返回 GZIP 压缩的 JSON Lines 数据
 /// - 使用真实的 OpenAlexSourceParser 进行解析
-/// - 创建临时 .gz 文件模拟真实数据
 /// - 测试生命周期：open()、read()、update()、close()
 ///
 /// **重点测试场景**：
@@ -38,9 +47,11 @@ import org.springframework.batch.item.ItemStreamException;
 /// - 多文件顺序读取
 /// - 断点续传（文件内和跨文件）
 /// - 空文件处理
+/// - 下载失败处理
 ///
 /// @author linqibin
 /// @since 0.1.0
+@ExtendWith(MockitoExtension.class)
 @DisplayName("VenueImportItemReader 集成测试")
 @Timeout(value = 5, unit = TimeUnit.SECONDS)
 class VenueImportItemReaderIT {
@@ -48,7 +59,11 @@ class VenueImportItemReaderIT {
   private static final String FILE_INDEX_KEY = "venue.import.file.index";
   private static final String LINE_INDEX_KEY = "venue.import.line.index";
 
-  @TempDir Path tempDir;
+  private static final String URL_1 = "https://openalex.s3.amazonaws.com/data/sources/part_000.gz";
+  private static final String URL_2 = "https://openalex.s3.amazonaws.com/data/sources/part_001.gz";
+  private static final String URL_3 = "https://openalex.s3.amazonaws.com/data/sources/part_002.gz";
+
+  @Mock private StreamingDownloadPort streamingDownloadPort;
 
   private OpenAlexSourceParser parser;
   private ExecutionContext executionContext;
@@ -59,17 +74,20 @@ class VenueImportItemReaderIT {
     executionContext = new ExecutionContext();
   }
 
-  /// 创建 GZIP 压缩的 JSON Lines 文件。
-  private Path createGzipJsonLinesFile(String fileName, String... jsonLines) throws IOException {
-    Path file = tempDir.resolve(fileName);
+  /// 创建 GZIP 压缩的 JSON Lines 输入流。
+  private InputStream createGzipJsonLinesStream(String... jsonLines) throws Exception {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     try (GZIPOutputStream gzos = new GZIPOutputStream(baos)) {
       for (String line : jsonLines) {
         gzos.write((line + "\n").getBytes(StandardCharsets.UTF_8));
       }
     }
-    Files.write(file, baos.toByteArray());
-    return file;
+    return new ByteArrayInputStream(baos.toByteArray());
+  }
+
+  /// 创建 StreamingDownloadResult（模拟 HTTP 响应）。
+  private StreamingDownloadResult createDownloadResult(String... jsonLines) throws Exception {
+    return StreamingDownloadResult.of(createGzipJsonLinesStream(jsonLines));
   }
 
   /// 创建测试用的 OpenAlex Source JSON。
@@ -87,15 +105,16 @@ class VenueImportItemReaderIT {
     @Test
     @DisplayName("读取单个文件 - 应该返回所有记录")
     void read_singleFile_shouldReturnAllRecords() throws Exception {
-      // Given: 创建包含 3 条记录的文件
-      Path file =
-          createGzipJsonLinesFile(
-              "part_000.gz",
-              createSourceJson("S1", "Journal A"),
-              createSourceJson("S2", "Journal B"),
-              createSourceJson("S3", "Journal C"));
+      // Given: 配置 Mock 返回 3 条记录
+      when(streamingDownloadPort.download(URI.create(URL_1)))
+          .thenReturn(
+              createDownloadResult(
+                  createSourceJson("S1", "Journal A"),
+                  createSourceJson("S2", "Journal B"),
+                  createSourceJson("S3", "Journal C")));
 
-      VenueImportItemReader reader = new VenueImportItemReader(parser, List.of(file));
+      VenueImportItemReader reader =
+          new VenueImportItemReader(streamingDownloadPort, parser, List.of(URL_1));
       reader.open(executionContext);
 
       // When: 读取所有记录
@@ -116,10 +135,11 @@ class VenueImportItemReaderIT {
     }
 
     @Test
-    @DisplayName("空文件列表 - read() 应该立即返回 null")
-    void read_emptyFileList_shouldReturnNull() throws Exception {
-      // Given: 空文件列表
-      VenueImportItemReader reader = new VenueImportItemReader(parser, List.of());
+    @DisplayName("空 URL 列表 - read() 应该立即返回 null")
+    void read_emptyUrlList_shouldReturnNull() throws Exception {
+      // Given: 空 URL 列表
+      VenueImportItemReader reader =
+          new VenueImportItemReader(streamingDownloadPort, parser, List.of());
       reader.open(executionContext);
 
       // When & Then: 应该立即返回 null
@@ -136,19 +156,18 @@ class VenueImportItemReaderIT {
     @Test
     @DisplayName("顺序读取多个文件 - 应该返回所有文件的记录")
     void read_multipleFiles_shouldReturnAllRecordsInOrder() throws Exception {
-      // Given: 创建 2 个文件
-      Path file1 =
-          createGzipJsonLinesFile(
-              "part_000.gz",
-              createSourceJson("S1", "Journal A"),
-              createSourceJson("S2", "Journal B"));
-      Path file2 =
-          createGzipJsonLinesFile(
-              "part_001.gz",
-              createSourceJson("S3", "Journal C"),
-              createSourceJson("S4", "Journal D"));
+      // Given: 配置 Mock 为每个 URL 返回数据
+      when(streamingDownloadPort.download(URI.create(URL_1)))
+          .thenReturn(
+              createDownloadResult(
+                  createSourceJson("S1", "Journal A"), createSourceJson("S2", "Journal B")));
+      when(streamingDownloadPort.download(URI.create(URL_2)))
+          .thenReturn(
+              createDownloadResult(
+                  createSourceJson("S3", "Journal C"), createSourceJson("S4", "Journal D")));
 
-      VenueImportItemReader reader = new VenueImportItemReader(parser, List.of(file1, file2));
+      VenueImportItemReader reader =
+          new VenueImportItemReader(streamingDownloadPort, parser, List.of(URL_1, URL_2));
       reader.open(executionContext);
 
       // When: 读取所有记录
@@ -171,13 +190,16 @@ class VenueImportItemReaderIT {
     @Test
     @DisplayName("包含空文件 - 应该跳过空文件继续读取")
     void read_withEmptyFile_shouldSkipAndContinue() throws Exception {
-      // Given: 创建包含空文件的列表
-      Path file1 = createGzipJsonLinesFile("part_000.gz", createSourceJson("S1", "Journal A"));
-      Path emptyFile = createGzipJsonLinesFile("part_001.gz"); // 空文件
-      Path file3 = createGzipJsonLinesFile("part_002.gz", createSourceJson("S2", "Journal B"));
+      // Given: 中间有一个空文件
+      when(streamingDownloadPort.download(URI.create(URL_1)))
+          .thenReturn(createDownloadResult(createSourceJson("S1", "Journal A")));
+      when(streamingDownloadPort.download(URI.create(URL_2)))
+          .thenReturn(createDownloadResult()); // 空文件
+      when(streamingDownloadPort.download(URI.create(URL_3)))
+          .thenReturn(createDownloadResult(createSourceJson("S2", "Journal B")));
 
       VenueImportItemReader reader =
-          new VenueImportItemReader(parser, List.of(file1, emptyFile, file3));
+          new VenueImportItemReader(streamingDownloadPort, parser, List.of(URL_1, URL_2, URL_3));
       reader.open(executionContext);
 
       // When: 读取所有记录
@@ -203,15 +225,16 @@ class VenueImportItemReaderIT {
     @Test
     @DisplayName("update() - 应该保存文件索引和行索引")
     void update_shouldSaveFileAndLineIndex() throws Exception {
-      // Given: 创建包含多条记录的文件
-      Path file =
-          createGzipJsonLinesFile(
-              "part_000.gz",
-              createSourceJson("S1", "Journal A"),
-              createSourceJson("S2", "Journal B"),
-              createSourceJson("S3", "Journal C"));
+      // Given: 配置 Mock 返回多条记录
+      when(streamingDownloadPort.download(URI.create(URL_1)))
+          .thenReturn(
+              createDownloadResult(
+                  createSourceJson("S1", "Journal A"),
+                  createSourceJson("S2", "Journal B"),
+                  createSourceJson("S3", "Journal C")));
 
-      VenueImportItemReader reader = new VenueImportItemReader(parser, List.of(file));
+      VenueImportItemReader reader =
+          new VenueImportItemReader(streamingDownloadPort, parser, List.of(URL_1));
       reader.open(executionContext);
 
       // When: 读取 2 条后保存进度
@@ -229,19 +252,20 @@ class VenueImportItemReaderIT {
     @Test
     @DisplayName("从断点恢复（文件内） - 应该跳过已处理记录")
     void resume_withinFile_shouldSkipProcessedRecords() throws Exception {
-      // Given: 创建文件
-      Path file =
-          createGzipJsonLinesFile(
-              "part_000.gz",
-              createSourceJson("S1", "Journal A"),
-              createSourceJson("S2", "Journal B"),
-              createSourceJson("S3", "Journal C"));
+      // Given: 配置 Mock 返回数据
+      when(streamingDownloadPort.download(URI.create(URL_1)))
+          .thenReturn(
+              createDownloadResult(
+                  createSourceJson("S1", "Journal A"),
+                  createSourceJson("S2", "Journal B"),
+                  createSourceJson("S3", "Journal C")));
 
       // 模拟已处理 2 条
       executionContext.putInt(FILE_INDEX_KEY, 0);
       executionContext.putInt(LINE_INDEX_KEY, 2);
 
-      VenueImportItemReader reader = new VenueImportItemReader(parser, List.of(file));
+      VenueImportItemReader reader =
+          new VenueImportItemReader(streamingDownloadPort, parser, List.of(URL_1));
       reader.open(executionContext);
 
       // When: 读取第一条
@@ -260,23 +284,23 @@ class VenueImportItemReaderIT {
     @Test
     @DisplayName("从断点恢复（跨文件） - 应该从正确的文件和行开始")
     void resume_acrossFiles_shouldStartFromCorrectPosition() throws Exception {
-      // Given: 创建 2 个文件
-      Path file1 =
-          createGzipJsonLinesFile(
-              "part_000.gz",
-              createSourceJson("S1", "Journal A"),
-              createSourceJson("S2", "Journal B"));
-      Path file2 =
-          createGzipJsonLinesFile(
-              "part_001.gz",
-              createSourceJson("S3", "Journal C"),
-              createSourceJson("S4", "Journal D"));
+      // Given: 配置 Mock（注意：第一个文件不会被访问）
+      lenient()
+          .when(streamingDownloadPort.download(URI.create(URL_1)))
+          .thenReturn(
+              createDownloadResult(
+                  createSourceJson("S1", "Journal A"), createSourceJson("S2", "Journal B")));
+      when(streamingDownloadPort.download(URI.create(URL_2)))
+          .thenReturn(
+              createDownloadResult(
+                  createSourceJson("S3", "Journal C"), createSourceJson("S4", "Journal D")));
 
       // 模拟已完成第一个文件，第二个文件处理了 1 条
       executionContext.putInt(FILE_INDEX_KEY, 1);
       executionContext.putInt(LINE_INDEX_KEY, 1);
 
-      VenueImportItemReader reader = new VenueImportItemReader(parser, List.of(file1, file2));
+      VenueImportItemReader reader =
+          new VenueImportItemReader(streamingDownloadPort, parser, List.of(URL_1, URL_2));
       reader.open(executionContext);
 
       // When: 读取
@@ -295,23 +319,23 @@ class VenueImportItemReaderIT {
     @Test
     @DisplayName("完整断点续传流程 - 模拟中断恢复")
     void fullCheckpointResumeWorkflow() throws Exception {
-      // Given: 创建 2 个文件
-      Path file1 =
-          createGzipJsonLinesFile(
-              "part_000.gz",
-              createSourceJson("S1", "Journal A"),
-              createSourceJson("S2", "Journal B"));
-      Path file2 =
-          createGzipJsonLinesFile(
-              "part_001.gz",
-              createSourceJson("S3", "Journal C"),
-              createSourceJson("S4", "Journal D"));
+      // Given: 配置 Mock
+      List<String> urls = List.of(URL_1, URL_2);
 
-      List<Path> files = List.of(file1, file2);
+      // 第一阶段使用的 Mock
+      when(streamingDownloadPort.download(URI.create(URL_1)))
+          .thenReturn(
+              createDownloadResult(
+                  createSourceJson("S1", "Journal A"), createSourceJson("S2", "Journal B")));
+      when(streamingDownloadPort.download(URI.create(URL_2)))
+          .thenReturn(
+              createDownloadResult(
+                  createSourceJson("S3", "Journal C"), createSourceJson("S4", "Journal D")));
 
       // === 第一阶段：处理 3 条后"中断" ===
       ExecutionContext context1 = new ExecutionContext();
-      VenueImportItemReader reader1 = new VenueImportItemReader(parser, files);
+      VenueImportItemReader reader1 =
+          new VenueImportItemReader(streamingDownloadPort, parser, urls);
       reader1.open(context1);
 
       reader1.read(); // S1
@@ -325,7 +349,14 @@ class VenueImportItemReaderIT {
       assertThat(context1.getInt(LINE_INDEX_KEY)).isEqualTo(1);
 
       // === 第二阶段：从断点恢复 ===
-      VenueImportItemReader reader2 = new VenueImportItemReader(parser, files);
+      // 重新配置 Mock（因为 InputStream 只能读取一次）
+      when(streamingDownloadPort.download(URI.create(URL_2)))
+          .thenReturn(
+              createDownloadResult(
+                  createSourceJson("S3", "Journal C"), createSourceJson("S4", "Journal D")));
+
+      VenueImportItemReader reader2 =
+          new VenueImportItemReader(streamingDownloadPort, parser, urls);
       reader2.open(context1);
 
       // Then: 应该从 S4 开始
@@ -345,17 +376,21 @@ class VenueImportItemReaderIT {
   class ErrorHandlingTest {
 
     @Test
-    @DisplayName("文件不存在 - 应该抛出 ItemStreamException")
-    void open_fileNotExists_shouldThrowItemStreamException() {
-      // Given: 不存在的文件
-      Path nonExistent = tempDir.resolve("non-existent.gz");
+    @DisplayName("下载失败 - 应该抛出 ItemStreamException")
+    void open_downloadFails_shouldThrowItemStreamException() {
+      // Given: Mock 下载失败
+      when(streamingDownloadPort.download(any(URI.class)))
+          .thenThrow(
+              new FileDownloadException(
+                  "网络连接失败", new RuntimeException("Timeout"), StandardErrorTrait.TIMEOUT));
 
-      VenueImportItemReader reader = new VenueImportItemReader(parser, List.of(nonExistent));
+      VenueImportItemReader reader =
+          new VenueImportItemReader(streamingDownloadPort, parser, List.of(URL_1));
 
       // When & Then: 应该抛出异常
       assertThatThrownBy(() -> reader.open(executionContext))
           .isInstanceOf(ItemStreamException.class)
-          .hasMessageContaining("无法打开文件");
+          .hasMessageContaining("无法下载分区文件");
     }
   }
 
@@ -367,8 +402,11 @@ class VenueImportItemReaderIT {
     @DisplayName("正常关闭 - 不应该抛出异常")
     void close_afterOpen_shouldNotThrowException() throws Exception {
       // Given
-      Path file = createGzipJsonLinesFile("part_000.gz", createSourceJson("S1", "Journal A"));
-      VenueImportItemReader reader = new VenueImportItemReader(parser, List.of(file));
+      when(streamingDownloadPort.download(URI.create(URL_1)))
+          .thenReturn(createDownloadResult(createSourceJson("S1", "Journal A")));
+
+      VenueImportItemReader reader =
+          new VenueImportItemReader(streamingDownloadPort, parser, List.of(URL_1));
       reader.open(executionContext);
 
       // When & Then
@@ -379,8 +417,11 @@ class VenueImportItemReaderIT {
     @DisplayName("重复关闭 - 不应该抛出异常")
     void close_calledTwice_shouldNotThrowException() throws Exception {
       // Given
-      Path file = createGzipJsonLinesFile("part_000.gz", createSourceJson("S1", "Journal A"));
-      VenueImportItemReader reader = new VenueImportItemReader(parser, List.of(file));
+      when(streamingDownloadPort.download(URI.create(URL_1)))
+          .thenReturn(createDownloadResult(createSourceJson("S1", "Journal A")));
+
+      VenueImportItemReader reader =
+          new VenueImportItemReader(streamingDownloadPort, parser, List.of(URL_1));
       reader.open(executionContext);
 
       // When & Then

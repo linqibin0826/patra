@@ -1,8 +1,5 @@
 package com.patra.catalog.infra.batch.mesh;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -21,20 +18,13 @@ import org.springframework.stereotype.Component;
 ///
 /// **职责**：
 ///
-/// 1. 输出结构化的 Job 启动/完成/失败日志
-/// 2. 在 Job 完成后清理临时文件
+/// - 输出结构化的 Job 启动/完成/失败日志
 ///
 /// **日志格式**：
 ///
 /// - 启动时：显示 Job 名称、Execution ID、启动时间、参数
 /// - 完成时：显示状态、执行时间、读取/写入数量、速率
 /// - 失败时：显示失败 Step 和原因
-///
-/// **清理策略**：
-///
-/// - COMPLETED：删除临时文件（导入成功，文件不再需要）
-/// - STOPPED：删除临时文件（用户手动停止，文件不再需要）
-/// - FAILED：保留临时文件（支持断点续传，下次启动可继续）
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -45,7 +35,6 @@ public class MeshImportJobExecutionListener implements JobExecutionListener {
   private static final String SEPARATOR = "=".repeat(50);
   private static final DateTimeFormatter TIME_FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-  private static final NumberFormat NUMBER_FORMAT = NumberFormat.getNumberInstance(Locale.CHINA);
 
   @Override
   public void beforeJob(JobExecution jobExecution) {
@@ -55,7 +44,6 @@ public class MeshImportJobExecutionListener implements JobExecutionListener {
   @Override
   public void afterJob(JobExecution jobExecution) {
     logJobEnd(jobExecution);
-    cleanupTempFileIfNeeded(jobExecution);
   }
 
   // ==================== 日志输出方法 ====================
@@ -129,10 +117,10 @@ public class MeshImportJobExecutionListener implements JobExecutionListener {
         jobName,
         status,
         formatDuration(duration),
-        NUMBER_FORMAT.format(totalReadCount),
-        NUMBER_FORMAT.format(totalWriteCount),
-        NUMBER_FORMAT.format(totalCommitCount),
-        NUMBER_FORMAT.format((long) rate),
+        formatNumber(totalReadCount),
+        formatNumber(totalWriteCount),
+        formatNumber(totalCommitCount),
+        formatNumber((long) rate),
         SEPARATOR);
   }
 
@@ -170,7 +158,7 @@ public class MeshImportJobExecutionListener implements JobExecutionListener {
         SEPARATOR,
         jobName,
         formatDuration(duration),
-        NUMBER_FORMAT.format(readCount),
+        formatNumber(readCount),
         failedStepName,
         failureReason,
         SEPARATOR);
@@ -178,7 +166,17 @@ public class MeshImportJobExecutionListener implements JobExecutionListener {
 
   // ==================== 工具方法 ====================
 
-  /// 格式化 Job 参数（隐藏敏感路径，只显示文件名）。
+  /// 格式化数字为千分位格式。
+  ///
+  /// 使用方法级别创建 NumberFormat 以确保线程安全。
+  ///
+  /// @param value 数值
+  /// @return 格式化后的字符串（如 `1,234`）
+  private String formatNumber(long value) {
+    return NumberFormat.getNumberInstance(Locale.CHINA).format(value);
+  }
+
+  /// 格式化 Job 参数（对 URL 只显示文件名部分）。
   private String formatJobParameters(JobParameters params) {
     if (params == null || params.isEmpty()) {
       return "无";
@@ -189,8 +187,8 @@ public class MeshImportJobExecutionListener implements JobExecutionListener {
             entry -> {
               String key = entry.getKey();
               String value = String.valueOf(entry.getValue().getValue());
-              // 对 filePath 只显示文件名
-              if ("filePath".equals(key) && value.contains("/")) {
+              // 对 downloadUrl 只显示文件名
+              if ("downloadUrl".equals(key) && value.contains("/")) {
                 value = value.substring(value.lastIndexOf('/') + 1);
               }
               return key + "=" + value;
@@ -216,34 +214,5 @@ public class MeshImportJobExecutionListener implements JobExecutionListener {
     }
     double seconds = totalMillis / 1000.0;
     return String.format("%.1f 秒", seconds);
-  }
-
-  // ==================== 原有的临时文件清理逻辑 ====================
-
-  /// 清理临时文件（如果需要）。
-  private void cleanupTempFileIfNeeded(JobExecution jobExecution) {
-    JobParameters params = jobExecution.getJobParameters();
-    String filePath = params.getString("filePath");
-    String tempFileStr = params.getString("tempFile");
-
-    // 如果 filePath 缺失或 tempFile 不是 true，直接返回
-    if (filePath == null || !"true".equalsIgnoreCase(tempFileStr)) {
-      return;
-    }
-
-    BatchStatus status = jobExecution.getStatus();
-    if (status == BatchStatus.COMPLETED || status == BatchStatus.STOPPED) {
-      try {
-        Path path = Path.of(filePath);
-        boolean deleted = Files.deleteIfExists(path);
-        if (deleted) {
-          log.info("Job 完成，已清理临时文件：{}，状态：{}", filePath, status);
-        }
-      } catch (IOException e) {
-        log.warn("清理临时文件失败：{}，原因：{}", filePath, e.getMessage());
-      }
-    } else {
-      log.info("Job 状态为 {}，保留临时文件以支持续传：{}", status, filePath);
-    }
   }
 }

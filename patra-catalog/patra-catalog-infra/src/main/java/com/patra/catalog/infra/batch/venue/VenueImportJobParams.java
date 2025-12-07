@@ -1,7 +1,6 @@
 package com.patra.catalog.infra.batch.venue;
 
 import com.patra.starter.batch.core.JobParams;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -14,16 +13,22 @@ import lombok.NoArgsConstructor;
 ///
 /// 用于 OpenAlex Venue 批量导入任务的强类型参数。
 ///
+/// **流式处理特性**：
+///
+/// - 使用 `partitionUrls` 存储分区文件 HTTP URL 列表
+/// - ItemReader 按需从远程 URL 流式下载每个分区文件
+/// - 无临时文件清理逻辑
+///
 /// **与 MeshImportJobParams 的差异**：
 ///
-/// - 使用 `filePaths` 字符串（逗号分隔）代替单文件路径
+/// - 使用 `partitionUrls` 字符串（逗号分隔）代替单文件 URL
 /// - 无需版本号（OpenAlex 通过 updated_date 分区管理版本）
-/// - 新增 `fileCount` 用于 Job 参数展示
+/// - 新增 `partitionCount` 用于 Job 参数展示
 ///
 /// **断点续传支持**：
 ///
-/// - `fileCount` 作为标识参数，相同文件数量视为同一 JobInstance
-/// - `filePaths` 和 `tempFiles` 为非标识参数，临时路径变化不影响续传
+/// - `partitionCount` 作为标识参数，相同分区数量视为同一 JobInstance
+/// - `partitionUrls` 为非标识参数，URL 变化不影响 JobInstance 标识
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -34,44 +39,31 @@ import lombok.NoArgsConstructor;
 public class VenueImportJobParams implements JobParams {
 
   /// 非标识参数字段名（不参与 JobInstance 标识）。
-  private static final Set<String> NON_IDENTIFYING_KEYS = Set.of("filePaths", "tempFiles");
+  private static final Set<String> NON_IDENTIFYING_KEYS = Set.of("partitionUrls");
 
-  /// 分区文件路径列表（逗号分隔的字符串）。
+  /// 分区文件 URL 列表（逗号分隔的字符串）。
   ///
-  /// 存储格式：`"/path/to/part_000.gz,/path/to/part_001.gz,..."`
-  ///
-  /// **注意**：此字段为非标识参数，路径变化不影响 JobInstance 标识。
-  private String filePaths;
-
-  /// 文件数量（用于 Job 参数展示和日志）。
-  ///
-  /// **注意**：此字段为标识参数，作为 JobInstance 的唯一标识依据。
-  private Integer fileCount;
-
-  /// 是否为临时文件（Job 完成后需要清理）。
+  /// 存储格式：`"https://openalex.s3.amazonaws.com/.../part_000.gz,..."`
   ///
   /// **注意**：此字段为非标识参数。
-  private String tempFiles;
+  private String partitionUrls;
 
-  /// 从逗号分隔的路径字符串解析为 Path 列表。
+  /// 分区数量（用于 Job 参数展示和日志）。
   ///
-  /// @return Path 列表
-  public List<Path> parseFilePaths() {
-    if (filePaths == null || filePaths.isBlank()) {
+  /// **注意**：此字段为标识参数，作为 JobInstance 的唯一标识依据。
+  private Integer partitionCount;
+
+  /// 从逗号分隔的 URL 字符串解析为列表。
+  ///
+  /// @return URL 列表
+  public List<String> parsePartitionUrls() {
+    if (partitionUrls == null || partitionUrls.isBlank()) {
       return List.of();
     }
-    return Arrays.stream(filePaths.split(","))
+    return Arrays.stream(partitionUrls.split(","))
         .map(String::trim)
         .filter(s -> !s.isEmpty())
-        .map(Path::of)
         .toList();
-  }
-
-  /// 检查是否为临时文件。
-  ///
-  /// @return 如果是临时文件返回 true
-  public boolean isTempFiles() {
-    return "true".equalsIgnoreCase(tempFiles);
   }
 
   @Override

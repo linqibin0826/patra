@@ -29,52 +29,51 @@ class VenueImportParamsTest {
   class ConstructorTest {
 
     @Test
-    @DisplayName("有效参数（临时文件）- 应该成功创建")
-    void validParamsWithTempFiles_shouldCreateSuccessfully() {
+    @DisplayName("有效参数 - 应该成功创建")
+    void validParams_shouldCreateSuccessfully() {
       // Given
-      List<String> filePaths =
+      List<String> partitionUrls =
           List.of(
-              "/tmp/openalex/updated_date=2025-11-02/part_000.gz",
-              "/tmp/openalex/updated_date=2025-10-27/part_000.gz");
+              "https://openalex.s3.amazonaws.com/data/sources/updated_date=2025-11-02/part_000.gz",
+              "https://openalex.s3.amazonaws.com/data/sources/updated_date=2025-10-27/part_000.gz");
 
       // When
-      VenueImportParams params = new VenueImportParams(filePaths, true);
+      VenueImportParams params = new VenueImportParams(partitionUrls);
 
       // Then
-      assertThat(params.filePaths()).hasSize(2);
-      assertThat(params.tempFiles()).isTrue();
+      assertThat(params.partitionUrls()).hasSize(2);
     }
 
     @Test
-    @DisplayName("有效参数（非临时文件）- 应该成功创建")
-    void validParamsWithNonTempFiles_shouldCreateSuccessfully() {
+    @DisplayName("单个 URL - 应该成功创建")
+    void singleUrl_shouldCreateSuccessfully() {
       // Given
-      List<String> filePaths = List.of("/tmp/openalex/part_000.gz");
+      List<String> partitionUrls =
+          List.of("https://openalex.s3.amazonaws.com/data/sources/part_000.gz");
 
       // When
-      VenueImportParams params = new VenueImportParams(filePaths, false);
+      VenueImportParams params = new VenueImportParams(partitionUrls);
 
       // Then
-      assertThat(params.filePaths()).hasSize(1);
-      assertThat(params.tempFiles()).isFalse();
+      assertThat(params.partitionUrls()).hasSize(1);
     }
 
     @Test
-    @DisplayName("null filePaths - 应该抛出 IllegalArgumentException")
-    void nullFilePaths_shouldThrowException() {
+    @DisplayName("null partitionUrls - 应该抛出 IllegalArgumentException")
+    void nullPartitionUrls_shouldThrowException() {
       // When & Then
-      assertThatThrownBy(() -> new VenueImportParams(null, false))
+      assertThatThrownBy(() -> new VenueImportParams(null))
           .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("filePaths");
+          .hasMessageContaining("partitionUrls");
     }
 
     @Test
-    @DisplayName("空 filePaths 列表 - 应该抛出 IllegalArgumentException")
-    void emptyFilePaths_shouldThrowException() {
+    @DisplayName("空 partitionUrls 列表 - 应该抛出 IllegalArgumentException")
+    void emptyPartitionUrls_shouldThrowException() {
       // When & Then
-      assertThatThrownBy(() -> new VenueImportParams(List.of(), false))
+      assertThatThrownBy(() -> new VenueImportParams(List.of()))
           .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("filePaths");
+          .hasMessageContaining("partitionUrls");
     }
   }
 
@@ -83,31 +82,17 @@ class VenueImportParamsTest {
   class FactoryMethodTest {
 
     @Test
-    @DisplayName("of() - 应该创建非临时文件参数")
-    void of_shouldCreateNonTempFilesParams() {
+    @DisplayName("of() - 应该创建导入参数")
+    void of_shouldCreateParams() {
       // Given
-      List<String> filePaths = List.of("/tmp/openalex/part_000.gz");
+      List<String> partitionUrls =
+          List.of("https://openalex.s3.amazonaws.com/data/sources/part_000.gz");
 
       // When
-      VenueImportParams params = VenueImportParams.of(filePaths);
+      VenueImportParams params = VenueImportParams.of(partitionUrls);
 
       // Then
-      assertThat(params.filePaths()).isEqualTo(filePaths);
-      assertThat(params.tempFiles()).isFalse();
-    }
-
-    @Test
-    @DisplayName("withTempFiles() - 应该创建临时文件参数")
-    void withTempFiles_shouldCreateTempFilesParams() {
-      // Given
-      List<String> filePaths = List.of("/tmp/openalex/part_000.gz");
-
-      // When
-      VenueImportParams params = VenueImportParams.withTempFiles(filePaths);
-
-      // Then
-      assertThat(params.filePaths()).isEqualTo(filePaths);
-      assertThat(params.tempFiles()).isTrue();
+      assertThat(params.partitionUrls()).isEqualTo(partitionUrls);
     }
 
     @Test
@@ -116,16 +101,16 @@ class VenueImportParamsTest {
       // When & Then
       assertThatThrownBy(() -> VenueImportParams.of(null))
           .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("filePaths");
+          .hasMessageContaining("partitionUrls");
     }
 
     @Test
-    @DisplayName("withTempFiles() - 应该验证参数")
-    void withTempFiles_shouldValidateParams() {
+    @DisplayName("of() - 空列表应该抛出异常")
+    void of_emptyList_shouldThrowException() {
       // When & Then
-      assertThatThrownBy(() -> VenueImportParams.withTempFiles(List.of()))
+      assertThatThrownBy(() -> VenueImportParams.of(List.of()))
           .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("filePaths");
+          .hasMessageContaining("partitionUrls");
     }
   }
 
@@ -134,28 +119,31 @@ class VenueImportParamsTest {
   class HelperMethodTest {
 
     @Test
-    @DisplayName("getFilePathsAsString() - 应该返回逗号分隔的路径")
-    void getFilePathsAsString_shouldReturnCommaSeparatedPaths() {
+    @DisplayName("getPartitionUrlsAsString() - 应该返回逗号分隔的 URL")
+    void getPartitionUrlsAsString_shouldReturnCommaSeparatedUrls() {
       // Given
-      List<String> filePaths = List.of("/tmp/a.gz", "/tmp/b.gz", "/tmp/c.gz");
-      VenueImportParams params = new VenueImportParams(filePaths, false);
+      List<String> partitionUrls =
+          List.of(
+              "https://example.com/a.gz", "https://example.com/b.gz", "https://example.com/c.gz");
+      VenueImportParams params = new VenueImportParams(partitionUrls);
 
       // When
-      String pathsStr = params.getFilePathsAsString();
+      String urlsStr = params.getPartitionUrlsAsString();
 
       // Then
-      assertThat(pathsStr).isEqualTo("/tmp/a.gz,/tmp/b.gz,/tmp/c.gz");
+      assertThat(urlsStr)
+          .isEqualTo("https://example.com/a.gz,https://example.com/b.gz,https://example.com/c.gz");
     }
 
     @Test
-    @DisplayName("getFileCount() - 应该返回文件数量")
-    void getFileCount_shouldReturnFileCount() {
+    @DisplayName("getPartitionCount() - 应该返回分区数量")
+    void getPartitionCount_shouldReturnPartitionCount() {
       // Given
-      List<String> filePaths = List.of("/tmp/a.gz", "/tmp/b.gz");
-      VenueImportParams params = new VenueImportParams(filePaths, false);
+      List<String> partitionUrls = List.of("https://example.com/a.gz", "https://example.com/b.gz");
+      VenueImportParams params = new VenueImportParams(partitionUrls);
 
       // When
-      int count = params.getFileCount();
+      int count = params.getPartitionCount();
 
       // Then
       assertThat(count).isEqualTo(2);

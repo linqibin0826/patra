@@ -5,7 +5,7 @@ import com.patra.catalog.domain.model.dto.serfile.SerialRecord;
 import com.patra.catalog.domain.port.parser.SerfileParserPort;
 import com.patra.catalog.infra.adapter.parser.strategy.SerialParsingStrategy;
 import com.patra.catalog.infra.adapter.parser.support.AbstractStaxParserAdapter;
-import java.nio.file.Path;
+import java.io.InputStream;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
@@ -34,11 +34,11 @@ public class SerfileParserAdapter extends AbstractStaxParserAdapter<SerialRecord
     implements SerfileParserPort {
 
   @Override
-  public Stream<SerialRecord> parse(Path filePath) {
+  public Stream<SerialRecord> parse(InputStream inputStream) {
     return doParse(
-        filePath,
+        inputStream,
         SerialParsingStrategy.INSTANCE,
-        "开始解析 NLM Serfile XML 文件：{}",
+        "开始解析 NLM Serfile XML 输入流",
         XmlParseException::new);
   }
 }

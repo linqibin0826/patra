@@ -1,22 +1,27 @@
 package com.patra.catalog.infra.adapter.source;
 
 import com.patra.catalog.domain.model.vo.venue.OpenAlexManifest;
-import com.patra.catalog.domain.port.source.FileDownloadPort;
+import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.catalog.domain.port.source.VenueSourceFilePort;
 import java.net.URI;
-import java.nio.file.Path;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /// OpenAlex Venue 数据源文件适配器。
 ///
-/// 直接从 OpenAlex AWS S3 公开存储桶下载 Sources 数据文件。
+/// 直接从 OpenAlex AWS S3 公开存储桶获取 Sources 数据。
 ///
 /// **数据源**：
 ///
 /// - Manifest：`https://openalex.s3.amazonaws.com/data/sources/manifest`
-/// - 分区文件：`https://openalex.s3.amazonaws.com/data/sources/updated_date=YYYY-MM-DD/part_XXX.gz`
+/// - 分区文件 URL 已包含在 Manifest 中
+///
+/// **流式处理特性**：
+///
+/// - Manifest 解析：无磁盘落盘，HTTP 响应体直接传递给 JSON 解析器
+/// - 分区文件：通过 Manifest 获取 URL 列表，由 ItemReader 按需流式下载
 ///
 /// **说明**：
 ///
@@ -38,27 +43,30 @@ public class VenueSourceFileAdapter implements VenueSourceFilePort {
   /// Sources 数据路径。
   private static final String S3_SOURCES_PATH = "data/sources";
 
-  private final FileDownloadPort fileDownloadPort;
+  private final StreamingDownloadPort streamingDownloadPort;
 
+  /// 流式获取并解析 OpenAlex Sources manifest。
+  ///
+  /// **流式处理特性**：
+  ///
+  /// - 无磁盘落盘，HTTP 响应体直接传递给 JSON 解析器
+  /// - 使用 try-with-resources 自动管理 HTTP 连接
+  ///
+  /// @return 解析后的 manifest 对象
   @Override
   public OpenAlexManifest fetchManifest() {
     String manifestUrl = getManifestUrl();
-    log.info("从远程下载 OpenAlex Sources manifest: {}", manifestUrl);
+    log.info("流式获取 OpenAlex Sources manifest: {}", manifestUrl);
 
-    Path manifestFile = fileDownloadPort.downloadToTemp(URI.create(manifestUrl));
+    try (StreamingDownloadResult downloadResult =
+        streamingDownloadPort.download(URI.create(manifestUrl))) {
 
-    try {
-      return OpenAlexManifestParser.parseManifest(manifestFile);
-    } finally {
-      OpenAlexManifestParser.cleanupTempFile(manifestFile);
+      log.debug("HTTP 连接建立成功，开始解析 manifest JSON");
+      return OpenAlexManifestParser.parseManifest(downloadResult.inputStream());
+
+    } catch (Exception e) {
+      throw new RuntimeException("获取 OpenAlex manifest 失败: " + e.getMessage(), e);
     }
-  }
-
-  @Override
-  public Path fetchPartitionFile(String relativePath) {
-    String url = getPartitionUrl(relativePath);
-    log.debug("从远程下载 OpenAlex 分区文件: {}", url);
-    return fileDownloadPort.downloadToTemp(URI.create(url));
   }
 
   /// 获取 manifest 文件的完整 URL。
@@ -66,13 +74,5 @@ public class VenueSourceFileAdapter implements VenueSourceFilePort {
   /// @return manifest URL（如 `https://openalex.s3.amazonaws.com/data/sources/manifest`）
   private String getManifestUrl() {
     return S3_BASE_URL + "/" + S3_SOURCES_PATH + "/manifest";
-  }
-
-  /// 获取分区文件的完整 URL。
-  ///
-  /// @param relativePath 相对路径（如 `updated_date=2025-11-02/part_000.gz`）
-  /// @return 完整 URL
-  private String getPartitionUrl(String relativePath) {
-    return S3_BASE_URL + "/" + S3_SOURCES_PATH + "/" + relativePath;
   }
 }

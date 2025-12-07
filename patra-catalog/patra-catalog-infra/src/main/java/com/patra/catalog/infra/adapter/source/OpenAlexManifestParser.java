@@ -7,15 +7,18 @@ import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.model.vo.venue.OpenAlexManifest;
 import com.patra.common.error.trait.StandardErrorTrait;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.InputStream;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 /// OpenAlex Manifest 解析器。
 ///
-/// 提供 manifest JSON 解析和临时文件清理的公共方法，
-/// 供 {@link VenueSourceFileAdapter} 使用。
+/// 提供 manifest JSON 解析方法，供 {@link VenueSourceFileAdapter} 使用。
+///
+/// **流式处理特性**：
+///
+/// - 直接从 InputStream 解析 JSON，无磁盘落盘
+/// - 调用方负责管理 InputStream 生命周期
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -31,14 +34,16 @@ public final class OpenAlexManifestParser {
     // 工具类禁止实例化
   }
 
-  /// 解析 manifest JSON 文件。
+  /// 解析 manifest JSON 输入流。
   ///
-  /// @param manifestFile manifest 文件路径
+  /// **注意**：此方法不关闭 InputStream，调用方负责管理流的生命周期。
+  ///
+  /// @param inputStream manifest JSON 输入流
   /// @return 解析后的 OpenAlexManifest 对象
   /// @throws FileDownloadException 当解析失败时
-  public static OpenAlexManifest parseManifest(Path manifestFile) {
+  public static OpenAlexManifest parseManifest(InputStream inputStream) {
     try {
-      ManifestDto dto = OBJECT_MAPPER.readValue(manifestFile.toFile(), ManifestDto.class);
+      ManifestDto dto = OBJECT_MAPPER.readValue(inputStream, ManifestDto.class);
       OpenAlexManifest manifest = toOpenAlexManifest(dto);
       log.info(
           "解析 manifest 完成: {} 个分区文件，共 {} 条记录",
@@ -47,7 +52,7 @@ public final class OpenAlexManifestParser {
       return manifest;
     } catch (IOException e) {
       throw new FileDownloadException(
-          "解析 manifest 文件失败: " + e.getMessage(), e, StandardErrorTrait.DEP_UNAVAILABLE);
+          "解析 manifest 输入流失败: " + e.getMessage(), e, StandardErrorTrait.DEP_UNAVAILABLE);
     }
   }
 
@@ -77,17 +82,4 @@ public final class OpenAlexManifestParser {
 
   /// 元数据 DTO。
   private record MetaDto(Long contentLength, int recordCount) {}
-
-  /// 清理临时文件。
-  ///
-  /// 静默处理删除失败的情况（仅记录警告日志）。
-  ///
-  /// @param file 要删除的临时文件路径
-  public static void cleanupTempFile(Path file) {
-    try {
-      Files.deleteIfExists(file);
-    } catch (IOException e) {
-      log.warn("清理临时文件失败: {}", file);
-    }
-  }
 }

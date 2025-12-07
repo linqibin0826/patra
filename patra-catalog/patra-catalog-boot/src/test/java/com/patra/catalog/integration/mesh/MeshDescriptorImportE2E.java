@@ -8,7 +8,8 @@ import com.patra.catalog.app.usecase.mesh.MeshImportUseCase;
 import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.domain.exception.DataAlreadyExistsException;
-import com.patra.catalog.domain.port.source.FileDownloadPort;
+import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.catalog.infra.persistence.mapper.MeshConceptMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshConceptRelationMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshDescriptorMapper;
@@ -16,11 +17,8 @@ import com.patra.catalog.infra.persistence.mapper.MeshEntryCombinationMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshEntryTermMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshTreeNumberMapper;
 import com.patra.catalog.integration.config.CatalogMySQLContainerInitializer;
-import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.ClassOrderer;
@@ -43,12 +41,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 ///
 /// ```
 /// MeshImportOrchestrator.importDescriptors()
-///   → FileDownloadPort.downloadToTemp()
 ///   → MeshDescriptorBatchAdapter.launchImport()
 ///     → Spring Batch Job
-///       → MeshDescriptorItemReader (XML 解析)
+///       → MeshDescriptorItemReader (流式下载 + XML 解析)
 ///       → MeshDescriptorItemWriter (批量写入 6 张表)
-///   → MeshImportJobExecutionListener (清理临时文件)
 /// ```
 ///
 /// ### 测试数据
@@ -60,7 +56,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 ///
 /// - 一次性初始化：首次导入应成功
 /// - 数据存在性检查：表中有数据时应拒绝导入
-/// - 临时文件清理：Job 完成后应清理临时文件
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -102,35 +97,33 @@ class MeshDescriptorImportE2E {
   @Autowired private MeshEntryCombinationMapper entryCombinationMapper;
   @Autowired private JdbcTemplate jdbcTemplate;
 
-  /// Mock FileDownloadPort，返回本地测试文件路径。
-  @MockitoBean private FileDownloadPort fileDownloadPort;
-
-  private Path tempFile;
+  /// Mock StreamingDownloadPort，返回测试资源文件的 InputStream。
+  @MockitoBean private StreamingDownloadPort streamingDownloadPort;
 
   // ========== Setup & Teardown ==========
 
   @BeforeEach
-  void setUp() throws IOException {
+  void setUp() {
     // 清空所有 MeSH 表（注意顺序：先子表后主表）
     cleanupAllTables();
 
-    // 复制测试文件到临时目录并配置 Mock
-    prepareTempFileAndMock();
+    // 配置 Mock：每次调用都返回新的 InputStream
+    configureStreamingDownloadMock();
   }
 
-  /// 复制测试资源到临时文件并配置 Mock。
+  /// 配置流式下载 Mock。
   ///
-  /// 使用 ClassLoader 资源加载方式，避免依赖工作目录。
-  /// 临时文件会被 `MeshImportJobExecutionListener` 在 Job 完成后清理。
-  private void prepareTempFileAndMock() throws IOException {
-    tempFile = Files.createTempFile("mesh-e2e-", ".xml");
-    try (var inputStream = getClass().getResourceAsStream(TEST_RESOURCE_PATH)) {
-      if (inputStream == null) {
-        throw new IllegalStateException("测试资源文件不存在: " + TEST_RESOURCE_PATH);
-      }
-      Files.copy(inputStream, tempFile, StandardCopyOption.REPLACE_EXISTING);
-    }
-    when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(tempFile);
+  /// 每次调用 download() 都返回新的 StreamingDownloadResult，包含测试 XML 的 InputStream。
+  private void configureStreamingDownloadMock() {
+    when(streamingDownloadPort.download(any(URI.class)))
+        .thenAnswer(
+            invocation -> {
+              InputStream testInputStream = getClass().getResourceAsStream(TEST_RESOURCE_PATH);
+              if (testInputStream == null) {
+                throw new IllegalStateException("测试资源文件不存在: " + TEST_RESOURCE_PATH);
+              }
+              return StreamingDownloadResult.of(testInputStream);
+            });
   }
 
   /// 清空所有 MeSH 相关表。
@@ -199,7 +192,7 @@ class MeshDescriptorImportE2E {
 
     @Test
     @DisplayName("表中已有数据时应该抛出 DataAlreadyExistsException")
-    void shouldThrowExceptionWhenDataAlreadyExists() throws IOException {
+    void shouldThrowExceptionWhenDataAlreadyExists() {
       // Given - 先执行第一次导入
       MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, MESH_VERSION);
       meshImportUseCase.importDescriptors(command);
@@ -207,37 +200,10 @@ class MeshDescriptorImportE2E {
       // 验证数据已导入
       assertThat(descriptorMapper.selectCount(null)).isEqualTo(EXPECTED_DESCRIPTOR_COUNT);
 
-      // 重新准备临时文件（因为第一次执行后被清理）
-      prepareTempFileAndMock();
-
       // When/Then - 再次导入应该抛出 DataAlreadyExistsException
       assertThatThrownBy(() -> meshImportUseCase.importDescriptors(command))
           .isInstanceOf(DataAlreadyExistsException.class)
           .hasMessageContaining("MeSH Descriptor");
-    }
-  }
-
-  // ========== 临时文件清理测试 ==========
-
-  @Nested
-  @Order(3)
-  @DisplayName("临时文件清理测试")
-  class TempFileCleanupTest {
-
-    /// 此 nested class 专用的 URL，与其他 nested class 区分避免 Job 参数冲突。
-    private static final String TEST_URL = BASE_URL_TEMPLATE.formatted("cleanup");
-
-    @Test
-    @DisplayName("Job 完成后应该清理临时文件")
-    void shouldCleanupTempFileAfterJobCompletion() {
-      // Given
-      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, MESH_VERSION);
-
-      // When
-      meshImportUseCase.importDescriptors(command);
-
-      // Then - 验证临时文件已被清理
-      assertThat(Files.exists(tempFile)).isFalse();
     }
   }
 
