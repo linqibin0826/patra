@@ -1,7 +1,7 @@
 package com.patra.catalog.domain.port.parser;
 
 import com.patra.catalog.domain.model.dto.serfile.SerialRecord;
-import java.nio.file.Path;
+import java.io.InputStream;
 import java.util.stream.Stream;
 
 /// NLM Serfile XML 解析端口（领域层定义，基础设施层实现）。
@@ -20,21 +20,23 @@ import java.util.stream.Stream;
 /// @since 0.1.0
 public interface SerfileParserPort {
 
-  /// 解析 Serfile XML，返回 Serial 记录流。
+  /// 解析 Serfile XML 输入流，返回 Serial 记录流。
   ///
   /// 使用 StAX 流式解析，避免将整个文件加载到内存。
   /// 调用方负责关闭返回的 Stream（推荐使用 try-with-resources）。
   ///
+  /// **注意**：此方法**不关闭**传入的 InputStream，由调用方负责管理。
+  ///
   /// **使用示例**：
   ///
   /// ```java
-  /// try (Stream<SerialRecord> stream = serfileParserPort.parseSerials(filePath)) {
-  ///     stream.forEach(record -> processRecord(record));
+  /// try (StreamingDownloadResult result = downloadPort.download(uri)) {
+  ///     result.inputStream().forEach(record -> processRecord(record));
   /// }
   /// ```
   ///
-  /// @param filePath XML 文件路径
+  /// @param inputStream XML 输入流（调用方负责关闭）
   /// @return Serial 记录流（调用方负责关闭）
   /// @throws com.patra.catalog.domain.exception.XmlParseException 解析失败时抛出
-  Stream<SerialRecord> parse(Path filePath);
+  Stream<SerialRecord> parse(InputStream inputStream);
 }

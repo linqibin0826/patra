@@ -10,10 +10,6 @@ import com.patra.catalog.domain.port.batch.VenueImportBatchPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.domain.port.source.VenueSourceFilePort;
 import com.patra.common.error.ApplicationException;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,9 +26,14 @@ import org.springframework.stereotype.Service;
 /// **导入流程**：
 ///
 /// 1. 检查数据库是否已有数据（如有则拒绝导入）
-/// 2. 获取 manifest 文件（获取分区文件列表）
-/// 3. 下载所有分区文件到本地临时目录
-/// 4. 启动 Spring Batch Job 进行批量导入
+/// 2. 流式获取 manifest（获取分区文件 URL 列表）
+/// 3. 传递分区 URL 列表给 Spring Batch Job
+/// 4. ItemReader 按需流式下载每个分区文件
+///
+/// **流式处理特性**：
+///
+/// - 无磁盘落盘，Manifest 直接从 HTTP 响应解析
+/// - 分区文件由 ItemReader 按需下载，切换文件时关闭当前 HTTP 连接
 ///
 /// **设计说明**：
 ///
@@ -55,6 +56,11 @@ public class VenueImportOrchestrator implements VenueImportUseCase {
 
   /// 执行 OpenAlex Venue 导入。
   ///
+  /// **流式处理特性**：
+  ///
+  /// - Manifest 直接从 HTTP 响应解析，无磁盘落盘
+  /// - 分区 URL 列表传递给 Job，由 ItemReader 按需流式下载
+  ///
   /// **前置条件**：
   ///
   /// - 数据库中不存在任何 Venue 数据
@@ -75,20 +81,18 @@ public class VenueImportOrchestrator implements VenueImportUseCase {
       throw new DataAlreadyExistsException("Venue");
     }
 
-    List<Path> localFiles = null;
     try {
-      // 2. 获取 manifest 文件
+      // 2. 流式获取 manifest（无磁盘落盘）
       OpenAlexManifest manifest = venueSourceFilePort.fetchManifest();
       log.info(
           "获取 manifest 成功，分区数：{}，总记录数：{}", manifest.entries().size(), manifest.totalRecordCount());
 
-      // 3. 下载所有分区文件到本地临时目录
-      localFiles = fetchAllPartitionFiles(manifest);
-      log.info("所有分区文件已下载到本地，文件数：{}", localFiles.size());
+      // 3. 提取分区 HTTP URL 列表（由 ItemReader 按需下载）
+      List<String> partitionUrls = manifest.getAllHttpPaths();
+      log.info("准备启动导入任务，分区 URL 数量：{}", partitionUrls.size());
 
-      // 4. 启动批处理导入
-      List<String> filePaths = localFiles.stream().map(Path::toString).toList();
-      VenueImportParams params = VenueImportParams.withTempFiles(filePaths);
+      // 4. 启动批处理导入（传递 URL 列表，由 ItemReader 负责流式下载）
+      VenueImportParams params = VenueImportParams.of(partitionUrls);
       Long executionId = venueImportBatchPort.launchImport(params);
 
       log.info("OpenAlex Venue 导入任务已启动，executionId：{}", executionId);
@@ -96,61 +100,14 @@ public class VenueImportOrchestrator implements VenueImportUseCase {
           executionId, manifest.entries().size(), manifest.totalRecordCount());
 
     } catch (ApplicationException e) {
-      // 已经是 ApplicationException，清理后重新抛出
-      cleanupTempFiles(localFiles);
       throw e;
     } catch (RuntimeException e) {
-      // 包装其他运行时异常
-      cleanupTempFiles(localFiles);
       throw new ApplicationException(
           CatalogErrorCode.CAT_1301, "OpenAlex Venue 导入失败: " + e.getMessage(), e);
     } catch (Exception e) {
-      // 包装检查异常
-      cleanupTempFiles(localFiles);
       throw new ApplicationException(
           CatalogErrorCode.CAT_1301, "OpenAlex Venue 导入时发生意外错误: " + e.getMessage(), e);
     }
-    // 注意：成功启动 Job 后，临时文件由 Job Listener 在 Job 结束后清理
-  }
-
-  /// 批量获取所有分区文件到本地临时目录。
-  ///
-  /// @param manifest 包含分区信息的 manifest
-  /// @return 本地临时文件路径列表（与 manifest 中的顺序一致）
-  private List<Path> fetchAllPartitionFiles(OpenAlexManifest manifest) {
-    log.info("开始获取所有分区文件，共 {} 个", manifest.entries().size());
-
-    List<Path> localFiles = new ArrayList<>();
-    int total = manifest.entries().size();
-    int current = 0;
-
-    for (String relativePath : manifest.getRelativePaths()) {
-      current++;
-      if (current % 10 == 0 || current == total) {
-        log.info("下载进度: {}/{}", current, total);
-      }
-
-      Path localFile = venueSourceFilePort.fetchPartitionFile(relativePath);
-      localFiles.add(localFile);
-    }
-
-    log.info("所有分区文件获取完成，共 {} 个", localFiles.size());
-    return localFiles;
-  }
-
-  /// 清理临时文件。
-  private void cleanupTempFiles(List<Path> files) {
-    if (files == null || files.isEmpty()) {
-      return;
-    }
-    for (Path file : files) {
-      try {
-        Files.deleteIfExists(file);
-        log.debug("已清理临时文件：{}", file);
-      } catch (IOException e) {
-        log.warn("清理临时文件失败：{}，原因：{}", file, e.getMessage());
-      }
-    }
-    log.info("已清理 {} 个临时文件", files.size());
+    // 无需清理临时文件，ItemReader 使用流式下载
   }
 }

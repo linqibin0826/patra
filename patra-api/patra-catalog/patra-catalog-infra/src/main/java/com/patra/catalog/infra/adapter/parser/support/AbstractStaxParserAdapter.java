@@ -88,6 +88,47 @@ public abstract class AbstractStaxParserAdapter<T> {
     }
   }
 
+  /// 解析 XML 输入流，返回惰性求值的 Stream。
+  ///
+  /// **与 `doParse(Path, ...)` 的区别**：
+  ///
+  /// - 此方法**不关闭**传入的 InputStream，由调用方负责管理
+  /// - 适用于流式下载场景，与 `StreamingDownloadResult` 配合使用
+  ///
+  /// **使用示例**：
+  ///
+  /// ```java
+  /// try (StreamingDownloadResult result = downloadPort.download(uri)) {
+  ///     return doParse(result.inputStream(), strategy, "解析中", MyException::new);
+  /// }
+  /// ```
+  ///
+  /// @param inputStream 输入流（调用方负责关闭）
+  /// @param strategy 解析策略
+  /// @param logMessage 日志消息模板
+  /// @param exceptionFactory 异常工厂
+  /// @return 解析结果流（惰性求值）
+  protected Stream<T> doParse(
+      InputStream inputStream,
+      RecordParsingStrategy<T> strategy,
+      String logMessage,
+      BiFunction<String, Throwable, RuntimeException> exceptionFactory) {
+
+    log.info(logMessage);
+
+    try {
+      XMLStreamReader reader =
+          SecureXmlInputFactory.getInstance().createXMLStreamReader(inputStream);
+      var spliterator = new RecordSpliterator<>(reader, strategy, XmlParsingContext.empty());
+
+      // 注意：不关闭 inputStream，由调用方管理（StreamingDownloadResult.close()）
+      return StreamSupport.stream(spliterator, false).onClose(() -> closeReader(reader));
+    } catch (XMLStreamException e) {
+      log.error("创建 XML 读取器失败", e);
+      throw exceptionFactory.apply("XML 解析失败", e);
+    }
+  }
+
   /// 关闭 XMLStreamReader。
   private void closeReader(XMLStreamReader reader) {
     try {

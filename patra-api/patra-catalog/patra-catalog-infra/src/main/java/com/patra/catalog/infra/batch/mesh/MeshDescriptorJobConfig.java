@@ -2,6 +2,7 @@ package com.patra.catalog.infra.batch.mesh;
 
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.port.parser.MeshDescriptorParserPort;
+import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.starter.batch.config.BatchProperties;
 import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
 import java.util.Optional;
@@ -44,6 +45,7 @@ public class MeshDescriptorJobConfig {
 
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
+  private final StreamingDownloadPort streamingDownloadPort;
   private final MeshDescriptorParserPort descriptorParserPort;
   private final MeshDescriptorItemWriter meshDescriptorItemWriter;
   private final BatchProperties batchProperties;
@@ -54,6 +56,7 @@ public class MeshDescriptorJobConfig {
   ///
   /// @param jobRepository Job 仓库
   /// @param transactionManager 事务管理器
+  /// @param streamingDownloadPort 流式下载端口
   /// @param descriptorParserPort 主题词解析端口
   /// @param meshDescriptorItemWriter Item 写入器
   /// @param batchProperties 批处理属性
@@ -62,6 +65,7 @@ public class MeshDescriptorJobConfig {
   public MeshDescriptorJobConfig(
       JobRepository jobRepository,
       PlatformTransactionManager transactionManager,
+      StreamingDownloadPort streamingDownloadPort,
       MeshDescriptorParserPort descriptorParserPort,
       MeshDescriptorItemWriter meshDescriptorItemWriter,
       BatchProperties batchProperties,
@@ -69,6 +73,7 @@ public class MeshDescriptorJobConfig {
       Optional<BatchProgressMetricsListener> batchProgressMetricsListener) {
     this.jobRepository = jobRepository;
     this.transactionManager = transactionManager;
+    this.streamingDownloadPort = streamingDownloadPort;
     this.descriptorParserPort = descriptorParserPort;
     this.meshDescriptorItemWriter = meshDescriptorItemWriter;
     this.batchProperties = batchProperties;
@@ -114,15 +119,16 @@ public class MeshDescriptorJobConfig {
 
   /// 创建 MeSH 主题词 ItemReader（StepScope）。
   ///
-  /// @param filePath XML 文件路径（从 Job 参数注入）
+  /// @param downloadUrl XML 文件下载 URL（从 Job 参数注入）
   /// @param meshVersion MeSH 版本号（从 Job 参数注入）
   /// @return ItemReader 实例
   @Bean
   @StepScope
   public MeshDescriptorItemReader meshDescriptorItemReader(
-      @Value("#{jobParameters['filePath']}") String filePath,
+      @Value("#{jobParameters['downloadUrl']}") String downloadUrl,
       @Value("#{jobParameters['meshVersion']}") String meshVersion) {
-    return new MeshDescriptorItemReader(descriptorParserPort, filePath, meshVersion);
+    return new MeshDescriptorItemReader(
+        streamingDownloadPort, descriptorParserPort, downloadUrl, meshVersion);
   }
 
   /// 获取 chunk size。

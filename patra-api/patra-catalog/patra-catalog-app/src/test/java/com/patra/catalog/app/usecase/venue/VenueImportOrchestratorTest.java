@@ -3,9 +3,7 @@ package com.patra.catalog.app.usecase.venue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,7 +17,6 @@ import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.domain.port.source.VenueSourceFilePort;
 import com.patra.common.error.ApplicationException;
 import com.patra.common.error.codes.ErrorCodeLike;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,9 +39,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// **重点测试场景**：
 ///
 /// - 数据存在性检查：表中有数据时应拒绝导入
-/// - 正常导入流程：获取 manifest → 下载文件 → 启动批处理
+/// - 正常导入流程：获取 manifest → 传递 URL 列表 → 启动批处理
 /// - 参数传递正确性验证
-/// - 失败时临时文件清理
+///
+/// **流式下载架构**：
+///
+/// Orchestrator 只负责获取 manifest 并提取分区 URL 列表，
+/// 实际的分区文件下载由 ItemReader 按需完成。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -53,8 +54,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @Timeout(value = 2, unit = TimeUnit.SECONDS)
 class VenueImportOrchestratorTest {
 
-  private static final Path TEST_FILE_1 = Path.of("/tmp/openalex-venue-part-001.gz");
-  private static final Path TEST_FILE_2 = Path.of("/tmp/openalex-venue-part-002.gz");
+  private static final String PARTITION_URL_1 =
+      "https://openalex.s3.amazonaws.com/data/sources/updated_date=2024-01-01/part_000.gz";
+  private static final String PARTITION_URL_2 =
+      "https://openalex.s3.amazonaws.com/data/sources/updated_date=2024-01-02/part_000.gz";
 
   @Mock private VenueSourceFilePort venueSourceFilePort;
   @Mock private VenueImportBatchPort venueImportBatchPort;
@@ -72,14 +75,8 @@ class VenueImportOrchestratorTest {
   private OpenAlexManifest createTestManifest() {
     return new OpenAlexManifest(
         List.of(
-            new OpenAlexManifest.Entry(
-                "https://openalex.s3.amazonaws.com/data/sources/updated_date=2024-01-01/part_000.gz",
-                1024L,
-                100),
-            new OpenAlexManifest.Entry(
-                "https://openalex.s3.amazonaws.com/data/sources/updated_date=2024-01-02/part_000.gz",
-                2048L,
-                200)),
+            new OpenAlexManifest.Entry(PARTITION_URL_1, 1024L, 100),
+            new OpenAlexManifest.Entry(PARTITION_URL_2, 2048L, 200)),
         3072L,
         300);
   }
@@ -114,11 +111,6 @@ class VenueImportOrchestratorTest {
 
       when(venueRepository.hasAnyData()).thenReturn(false);
       when(venueSourceFilePort.fetchManifest()).thenReturn(manifest);
-      // Mock fetchPartitionFile 为每个分区文件返回对应的本地路径
-      when(venueSourceFilePort.fetchPartitionFile("updated_date=2024-01-01/part_000.gz"))
-          .thenReturn(TEST_FILE_1);
-      when(venueSourceFilePort.fetchPartitionFile("updated_date=2024-01-02/part_000.gz"))
-          .thenReturn(TEST_FILE_2);
       when(venueImportBatchPort.launchImport(any(VenueImportParams.class))).thenReturn(12345L);
 
       // When
@@ -127,7 +119,6 @@ class VenueImportOrchestratorTest {
       // Then
       verify(venueRepository).hasAnyData();
       verify(venueSourceFilePort).fetchManifest();
-      verify(venueSourceFilePort, times(2)).fetchPartitionFile(anyString());
       verify(venueImportBatchPort).launchImport(any(VenueImportParams.class));
 
       assertThat(result).isNotNull();
@@ -140,7 +131,7 @@ class VenueImportOrchestratorTest {
   class ImportVenuesTest {
 
     @Test
-    @DisplayName("正常导入 - 应该正确传递参数到 BatchPort")
+    @DisplayName("正常导入 - 应该正确传递分区 URL 到 BatchPort")
     void shouldPassCorrectParamsToBatchPort() {
       // Given
       VenueImportCommand command = VenueImportCommand.create();
@@ -148,10 +139,6 @@ class VenueImportOrchestratorTest {
 
       when(venueRepository.hasAnyData()).thenReturn(false);
       when(venueSourceFilePort.fetchManifest()).thenReturn(manifest);
-      when(venueSourceFilePort.fetchPartitionFile("updated_date=2024-01-01/part_000.gz"))
-          .thenReturn(TEST_FILE_1);
-      when(venueSourceFilePort.fetchPartitionFile("updated_date=2024-01-02/part_000.gz"))
-          .thenReturn(TEST_FILE_2);
       when(venueImportBatchPort.launchImport(any(VenueImportParams.class))).thenReturn(12345L);
 
       // When
@@ -162,9 +149,8 @@ class VenueImportOrchestratorTest {
       verify(venueImportBatchPort).launchImport(captor.capture());
 
       VenueImportParams params = captor.getValue();
-      assertThat(params.tempFiles()).isTrue();
-      assertThat(params.filePaths())
-          .containsExactly(TEST_FILE_1.toString(), TEST_FILE_2.toString());
+      assertThat(params.partitionUrls()).containsExactly(PARTITION_URL_1, PARTITION_URL_2);
+      assertThat(params.getPartitionCount()).isEqualTo(2);
     }
 
     @Test
@@ -176,10 +162,6 @@ class VenueImportOrchestratorTest {
 
       when(venueRepository.hasAnyData()).thenReturn(false);
       when(venueSourceFilePort.fetchManifest()).thenReturn(manifest);
-      when(venueSourceFilePort.fetchPartitionFile("updated_date=2024-01-01/part_000.gz"))
-          .thenReturn(TEST_FILE_1);
-      when(venueSourceFilePort.fetchPartitionFile("updated_date=2024-01-02/part_000.gz"))
-          .thenReturn(TEST_FILE_2);
       when(venueImportBatchPort.launchImport(any(VenueImportParams.class))).thenReturn(12345L);
 
       // When
@@ -207,25 +189,6 @@ class VenueImportOrchestratorTest {
     }
 
     @Test
-    @DisplayName("fetchPartitionFile 失败时应该抛出 ApplicationException")
-    void shouldThrowExceptionWhenFetchPartitionFileFails() {
-      // Given
-      VenueImportCommand command = VenueImportCommand.create();
-      OpenAlexManifest manifest = createTestManifest();
-
-      when(venueRepository.hasAnyData()).thenReturn(false);
-      when(venueSourceFilePort.fetchManifest()).thenReturn(manifest);
-      when(venueSourceFilePort.fetchPartitionFile(anyString()))
-          .thenThrow(new RuntimeException("下载分区文件失败"));
-
-      // When & Then
-      assertThatThrownBy(() -> orchestrator.importVenues(command))
-          .isInstanceOf(ApplicationException.class)
-          .hasMessageContaining("OpenAlex Venue 导入失败")
-          .hasMessageContaining("下载分区文件失败");
-    }
-
-    @Test
     @DisplayName("launchImport 失败时应该抛出 ApplicationException")
     void shouldThrowExceptionWhenLaunchImportFails() {
       // Given
@@ -234,10 +197,6 @@ class VenueImportOrchestratorTest {
 
       when(venueRepository.hasAnyData()).thenReturn(false);
       when(venueSourceFilePort.fetchManifest()).thenReturn(manifest);
-      when(venueSourceFilePort.fetchPartitionFile("updated_date=2024-01-01/part_000.gz"))
-          .thenReturn(TEST_FILE_1);
-      when(venueSourceFilePort.fetchPartitionFile("updated_date=2024-01-02/part_000.gz"))
-          .thenReturn(TEST_FILE_2);
       when(venueImportBatchPort.launchImport(any(VenueImportParams.class)))
           .thenThrow(new RuntimeException("Job 启动失败"));
 
@@ -246,9 +205,6 @@ class VenueImportOrchestratorTest {
           .isInstanceOf(ApplicationException.class)
           .hasMessageContaining("OpenAlex Venue 导入失败")
           .hasMessageContaining("Job 启动失败");
-
-      // 注意：临时文件清理是静态方法调用，无法在单元测试中验证
-      // 实际清理行为需要在集成测试中验证
     }
 
     @Test

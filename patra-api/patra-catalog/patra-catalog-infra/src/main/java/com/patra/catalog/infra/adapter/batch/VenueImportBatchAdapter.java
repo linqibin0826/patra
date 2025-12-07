@@ -17,6 +17,12 @@ import org.springframework.stereotype.Component;
 /// - 封装 Spring Batch 框架细节，对上层透明
 /// - 使用 `JobLauncherHelper` 启动批处理任务
 ///
+/// **流式处理特性**：
+///
+/// - 传递分区 URL 列表给 Job
+/// - ItemReader 按需从远程 URL 流式下载
+/// - 无临时文件清理逻辑
+///
 /// **设计说明**：
 ///
 /// - 此类位于 Infrastructure 层，是六边形架构中的 Driven Adapter
@@ -24,8 +30,8 @@ import org.springframework.stereotype.Component;
 ///
 /// **与 MeshDescriptorBatchAdapter 的差异**：
 ///
-/// - 参数类型为 `VenueImportParams`（包含多文件路径列表）
-/// - Job 参数包含 `filePaths`（逗号分隔）和 `fileCount`
+/// - 参数类型为 `VenueImportParams`（包含多分区 URL 列表）
+/// - Job 参数包含 `partitionUrls`（逗号分隔）和 `partitionCount`
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -39,13 +45,12 @@ public class VenueImportBatchAdapter implements VenueImportBatchPort {
 
   @Override
   public Long launchImport(VenueImportParams params) {
-    log.info("启动 OpenAlex Venue 导入 Job，文件数量：{}，临时文件：{}", params.getFileCount(), params.tempFiles());
+    log.info("启动 OpenAlex Venue 导入 Job，分区数量：{}", params.getPartitionCount());
 
     VenueImportJobParams jobParams =
         VenueImportJobParams.builder()
-            .filePaths(params.getFilePathsAsString())
-            .fileCount(params.getFileCount())
-            .tempFiles(String.valueOf(params.tempFiles()))
+            .partitionUrls(params.getPartitionUrlsAsString())
+            .partitionCount(params.getPartitionCount())
             .build();
 
     // 不添加时间戳，相同参数的 Job 只执行一次（支持断点续传）

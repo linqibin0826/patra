@@ -5,7 +5,7 @@ import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.port.parser.MeshDescriptorParserPort;
 import com.patra.catalog.infra.adapter.parser.strategy.DescriptorParsingStrategy;
 import com.patra.catalog.infra.adapter.parser.support.AbstractStaxParserAdapter;
-import java.nio.file.Path;
+import java.io.InputStream;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
@@ -32,11 +32,11 @@ public class MeshDescriptorParserAdapter extends AbstractStaxParserAdapter<MeshD
     implements MeshDescriptorParserPort {
 
   @Override
-  public Stream<MeshDescriptorAggregate> parse(Path filePath) {
+  public Stream<MeshDescriptorAggregate> parse(InputStream inputStream) {
     return doParse(
-        filePath,
+        inputStream,
         DescriptorParsingStrategy.INSTANCE,
-        "开始解析 MeSH Descriptor XML 文件：{}",
+        "开始解析 MeSH Descriptor XML 输入流",
         XmlParseException::new);
   }
 }

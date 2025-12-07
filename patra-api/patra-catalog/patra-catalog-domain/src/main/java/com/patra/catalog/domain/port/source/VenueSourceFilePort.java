@@ -2,27 +2,25 @@ package com.patra.catalog.domain.port.source;
 
 import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.model.vo.venue.OpenAlexManifest;
-import java.nio.file.Path;
 
-/// OpenAlex Venue 数据源文件端口。
+/// OpenAlex Venue 数据源端口。
 ///
-/// 负责从 OpenAlex AWS S3 公开存储桶获取 Sources 数据文件（manifest 和 JSON Lines 分区文件）到本地临时目录。
+/// 负责从 OpenAlex AWS S3 公开存储桶获取 Sources manifest 索引文件。
 ///
 /// **数据源**：
 ///
 /// - Manifest：`https://openalex.s3.amazonaws.com/data/sources/manifest`（JSON 格式，动态索引）
-/// - 分区文件：`https://openalex.s3.amazonaws.com/data/sources/updated_date=YYYY-MM-DD/part_XXX.gz`
+/// - 分区文件 URL 已包含在 Manifest 的 entries 中
+///
+/// **流式处理特性**：
+///
+/// - Manifest 解析：无磁盘落盘，HTTP 响应体直接传递给 JSON 解析器
+/// - 分区文件：通过 Manifest 获取 URL 列表，由 ItemReader 按需流式下载
 ///
 /// **设计原则**：
 ///
 /// - Domain 层定义接口，Infrastructure 层提供实现
-/// - 返回本地临时文件路径，调用方负责使用完毕后清理
-///
-/// **与 MeshSourceFilePort 的差异**：
-///
-/// - MeSH 使用单个 XML 文件，Venue 使用 manifest + 多个 .gz 分区文件
-/// - MeSH 使用版本号区分，OpenAlex 使用 updated_date 分区
-/// - Venue 需要先获取 manifest 解析分区列表，再批量下载分区文件
+/// - 分区文件的下载由批处理 ItemReader 按需完成，不在此端口处理
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -30,21 +28,14 @@ import java.nio.file.Path;
 // Snapshot</a>
 public interface VenueSourceFilePort {
 
-  /// 获取 OpenAlex Sources manifest 文件。
+  /// 流式获取并解析 OpenAlex Sources manifest。
   ///
   /// Manifest 文件包含所有分区文件的元数据（URL、大小、记录数）。
   /// 每次导入时从远程获取以确保获取最新的分区列表。
   ///
+  /// **流式处理**：无磁盘落盘，HTTP 响应体直接传递给 JSON 解析器。
+  ///
   /// @return 解析后的 manifest 对象
   /// @throws FileDownloadException 获取 manifest 失败时
   OpenAlexManifest fetchManifest();
-
-  /// 获取指定分区文件到本地临时目录。
-  ///
-  /// 从 OpenAlex S3 公开存储桶下载指定的分区文件。
-  ///
-  /// @param relativePath 相对路径（如 `updated_date=2025-11-02/part_000.gz`）
-  /// @return 本地临时文件路径
-  /// @throws FileDownloadException 获取文件失败时
-  Path fetchPartitionFile(String relativePath);
 }

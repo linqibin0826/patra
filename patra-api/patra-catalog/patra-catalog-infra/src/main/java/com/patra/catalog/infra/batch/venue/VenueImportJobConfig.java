@@ -1,13 +1,12 @@
 package com.patra.catalog.infra.batch.venue;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
+import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.starter.batch.config.BatchProperties;
 import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.ItemProcessListener;
 import org.springframework.batch.core.ItemReadListener;
@@ -30,19 +29,25 @@ import org.springframework.transaction.PlatformTransactionManager;
 /// ```
 /// venueImportJob
 ///   └── venueImportStep (chunk-oriented)
-///         ├── reader: VenueImportItemReader (多文件顺序读取)
+///         ├── reader: VenueImportItemReader (流式多文件顺序读取)
 ///         └── writer: VenueImportItemWriter (Upsert 策略)
 /// ```
+///
+/// **流式处理特性**：
+///
+/// - 无磁盘落盘，ItemReader 按需从远程 URL 流式下载每个分区文件
+/// - 切换文件时自动关闭当前 HTTP 连接，打开下一个
 ///
 /// **配置说明**：
 ///
 /// - chunk size 默认 500（可通过 BatchProperties 调整）
 /// - 支持断点续传（VenueImportItemReader 实现 ItemStream，记录 fileIndex + lineIndex）
+/// - 恢复时需要重新下载当前分区文件
 /// - 遇到错误立即失败（不使用 FaultTolerant 模式）
 ///
 /// **与 MeshDescriptorJobConfig 的差异**：
 ///
-/// - Reader 使用多文件路径列表（逗号分隔字符串解析）
+/// - Reader 使用多分区 URL 列表（逗号分隔字符串解析）
 /// - 无版本号参数（OpenAlex 使用 updated_date 分区）
 /// - Writer 使用 Upsert 策略（MeSH 使用纯新增）
 ///
@@ -56,6 +61,7 @@ public class VenueImportJobConfig {
 
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
+  private final StreamingDownloadPort streamingDownloadPort;
   private final OpenAlexSourceParser openAlexSourceParser;
   private final VenueImportItemWriter venueImportItemWriter;
   private final BatchProperties batchProperties;
@@ -66,6 +72,7 @@ public class VenueImportJobConfig {
   ///
   /// @param jobRepository Job 仓库
   /// @param transactionManager 事务管理器
+  /// @param streamingDownloadPort 流式下载端口
   /// @param openAlexSourceParser OpenAlex Source 解析器
   /// @param venueImportItemWriter Item 写入器
   /// @param batchProperties 批处理属性
@@ -74,6 +81,7 @@ public class VenueImportJobConfig {
   public VenueImportJobConfig(
       JobRepository jobRepository,
       PlatformTransactionManager transactionManager,
+      StreamingDownloadPort streamingDownloadPort,
       OpenAlexSourceParser openAlexSourceParser,
       VenueImportItemWriter venueImportItemWriter,
       BatchProperties batchProperties,
@@ -81,6 +89,7 @@ public class VenueImportJobConfig {
       VenueImportErrorListener venueImportErrorListener) {
     this.jobRepository = jobRepository;
     this.transactionManager = transactionManager;
+    this.streamingDownloadPort = streamingDownloadPort;
     this.openAlexSourceParser = openAlexSourceParser;
     this.venueImportItemWriter = venueImportItemWriter;
     this.batchProperties = batchProperties;
@@ -130,30 +139,29 @@ public class VenueImportJobConfig {
 
   /// 创建 Venue ItemReader（StepScope）。
   ///
-  /// @param filePaths 文件路径列表（逗号分隔，从 Job 参数注入）
+  /// @param partitionUrls 分区 URL 列表（逗号分隔，从 Job 参数注入）
   /// @return ItemReader 实例
   @Bean
   @StepScope
   public VenueImportItemReader venueImportItemReader(
-      @Value("#{jobParameters['filePaths']}") String filePaths) {
-    List<Path> paths = parseFilePaths(filePaths);
-    log.debug("创建 VenueImportItemReader，文件数量: {}", paths.size());
-    return new VenueImportItemReader(openAlexSourceParser, paths);
+      @Value("#{jobParameters['partitionUrls']}") String partitionUrls) {
+    List<String> urls = parsePartitionUrls(partitionUrls);
+    log.debug("创建 VenueImportItemReader，分区 URL 数量: {}", urls.size());
+    return new VenueImportItemReader(streamingDownloadPort, openAlexSourceParser, urls);
   }
 
-  /// 解析逗号分隔的文件路径字符串为 Path 列表。
+  /// 解析逗号分隔的分区 URL 字符串。
   ///
-  /// @param filePaths 逗号分隔的路径字符串
-  /// @return Path 列表
-  private List<Path> parseFilePaths(String filePaths) {
-    if (filePaths == null || filePaths.isBlank()) {
+  /// @param partitionUrls 逗号分隔的 URL 字符串
+  /// @return URL 列表
+  private List<String> parsePartitionUrls(String partitionUrls) {
+    if (partitionUrls == null || partitionUrls.isBlank()) {
       return List.of();
     }
-    return Arrays.stream(filePaths.split(","))
+    return Arrays.stream(partitionUrls.split(","))
         .map(String::trim)
         .filter(s -> !s.isEmpty())
-        .map(Path::of)
-        .collect(Collectors.toList());
+        .toList();
   }
 
   /// 获取 chunk size。

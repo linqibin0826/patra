@@ -7,18 +7,15 @@ import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
 import com.patra.catalog.domain.exception.DataAlreadyExistsException;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
-import com.patra.catalog.domain.model.enums.MeshFileType;
 import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
 import com.patra.catalog.domain.port.batch.MeshDescriptorBatchPort;
 import com.patra.catalog.domain.port.parser.MeshQualifierParserPort;
 import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
 import com.patra.catalog.domain.port.repository.MeshQualifierRepository;
-import com.patra.catalog.domain.port.source.MeshSourceFilePort;
+import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.common.error.ApplicationException;
-import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,15 +50,20 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MeshImportOrchestrator implements MeshImportUseCase {
 
+  private final StreamingDownloadPort streamingDownloadPort;
   private final MeshQualifierParserPort qualifierParserPort;
   private final MeshQualifierRepository qualifierRepository;
   private final MeshDescriptorRepository descriptorRepository;
   private final MeshDescriptorBatchPort meshDescriptorBatchPort;
-  private final MeshSourceFilePort meshSourceFilePort;
 
   /// 导入 MeSH 限定词。
   ///
-  /// 从远程 URL 下载 XML 文件，解析并批量保存。
+  /// 从远程 URL 流式下载并解析 XML，批量保存到数据库。
+  ///
+  /// **流式处理特性**：
+  ///
+  /// - 无磁盘落盘，HTTP 响应体直接传递给 Parser
+  /// - 使用 try-with-resources 自动管理 HTTP 连接
   ///
   /// **前置条件**：
   ///
@@ -84,17 +86,16 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
       throw new DataAlreadyExistsException("MeSH Qualifier");
     }
 
-    // 2. 从远程下载文件
-    Path localFile =
-        meshSourceFilePort.fetchFile(
-            MeshFileType.QUALIFIER, command.meshVersion(), URI.create(command.url()));
-    log.info("限定词文件已就绪：{}", localFile);
+    // 2. 流式下载并解析（无磁盘落盘）
+    try (StreamingDownloadResult downloadResult =
+        streamingDownloadPort.download(URI.create(command.url()))) {
 
-    try {
+      log.info("HTTP 连接建立成功，开始流式解析");
+
       // 3. 解析 XML 并设置版本号
       List<MeshQualifierAggregate> qualifiers =
           qualifierParserPort
-              .parse(localFile)
+              .parse(downloadResult.inputStream())
               .map(q -> q.withMeshVersion(command.meshVersion()))
               .toList();
 
@@ -104,6 +105,7 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
       log.info("MeSH 限定词导入完成，数量：{}", qualifiers.size());
       return MeshQualifierImportResult.success(
           command.url(), command.meshVersion(), qualifiers.size());
+
     } catch (ApplicationException e) {
       // 已经是 ApplicationException，直接重新抛出
       throw e;
@@ -115,15 +117,18 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
       // 包装检查异常
       throw new ApplicationException(
           CatalogErrorCode.CAT_1001, "MeSH 限定词导入时发生意外错误: " + e.getMessage(), e);
-    } finally {
-      // 无论成功或失败，都清理临时文件
-      cleanupTempFile(localFile);
     }
+    // 无需 finally 清理临时文件，try-with-resources 自动关闭 HTTP 连接
   }
 
   /// 导入 MeSH 主题词。
   ///
   /// 大数据量（约 35,000 条），使用批处理进行导入。
+  ///
+  /// **流式处理特性**：
+  ///
+  /// - 无磁盘落盘，ItemReader 在 open() 时建立 HTTP 连接
+  /// - 传递 downloadUrl 给 Job，由 ItemReader 负责流式下载
   ///
   /// **前置条件**：
   ///
@@ -145,43 +150,24 @@ public class MeshImportOrchestrator implements MeshImportUseCase {
       throw new DataAlreadyExistsException("MeSH Descriptor");
     }
 
-    // 2. 从远程下载文件
-    Path localFile =
-        meshSourceFilePort.fetchFile(
-            MeshFileType.DESCRIPTOR, command.meshVersion(), URI.create(command.url()));
-    log.info("主题词文件已就绪：{}", localFile);
-
-    // 3. 启动批处理导入
-    // 注意：文件由 Job Listener（MeshImportJobExecutionListener）在 Job 结束后清理，
-    //      仅当 Job 启动失败时才在此处清理。
+    // 2. 启动批处理导入（传递 downloadUrl，由 ItemReader 负责流式下载）
     try {
       MeshImportParams params =
-          MeshImportParams.withTempFile(localFile.toString(), command.meshVersion());
+          MeshImportParams.withDownloadUrl(command.url(), command.meshVersion());
       Long executionId = meshDescriptorBatchPort.launchImport(params);
 
-      return MeshDescriptorImportResult.success(
-          executionId, command.url(), localFile.toString(), command.meshVersion());
+      log.info("MeSH 主题词导入任务已启动，executionId：{}", executionId);
+      return MeshDescriptorImportResult.success(executionId, command.url(), command.meshVersion());
+
     } catch (ApplicationException e) {
-      cleanupTempFile(localFile);
       throw e;
     } catch (RuntimeException e) {
-      cleanupTempFile(localFile);
       throw new ApplicationException(
           CatalogErrorCode.CAT_1002, "MeSH 主题词导入失败: " + e.getMessage(), e);
     } catch (Exception e) {
-      cleanupTempFile(localFile);
       throw new ApplicationException(
           CatalogErrorCode.CAT_1002, "MeSH 主题词导入时发生意外错误: " + e.getMessage(), e);
     }
-  }
-
-  /// 清理临时文件。
-  private void cleanupTempFile(Path file) {
-    try {
-      Files.deleteIfExists(file);
-      log.info("已清理临时文件：{}", file);
-    } catch (IOException e) {
-      log.warn("清理临时文件失败：{}，原因：{}", file, e.getMessage());
-    }
+    // 无需清理临时文件，ItemReader 在 close() 时自动关闭 HTTP 连接
   }
 }

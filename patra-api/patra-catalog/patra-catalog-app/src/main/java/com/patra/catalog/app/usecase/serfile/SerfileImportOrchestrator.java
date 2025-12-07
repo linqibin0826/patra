@@ -20,12 +20,10 @@ import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
 import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
 import com.patra.catalog.domain.port.parser.SerfileParserPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
-import com.patra.catalog.domain.port.source.FileDownloadPort;
+import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.common.error.ApplicationException;
-import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -70,7 +68,7 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
   /// 批处理大小
   private static final int BATCH_SIZE = 500;
 
-  private final FileDownloadPort fileDownloadPort;
+  private final StreamingDownloadPort streamingDownloadPort;
   private final SerfileParserPort parserPort;
   private final VenueRepository venueRepository;
   private final TransactionTemplate transactionTemplate;
@@ -80,6 +78,11 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
   /// **事务策略**：批次级别事务，每 500 条记录独立提交。
   /// 失败时仅回滚当前批次，已完成批次不受影响。
   ///
+  /// **流式处理特性**：
+  ///
+  /// - 无磁盘落盘，HTTP 响应体直接传递给 Parser
+  /// - 使用 try-with-resources 自动管理 HTTP 连接
+  ///
   /// @param command 导入命令（包含 URL 和版本号）
   /// @return 导入结果摘要
   @Override
@@ -87,14 +90,14 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
     long startTime = System.currentTimeMillis();
     log.info("启动 Serfile 导入，URL：{}，版本：{}", command.url(), command.serfileVersion());
 
-    Path localFile = null;
-    try {
-      // 1. 下载文件
-      localFile = fileDownloadPort.downloadToTemp(URI.create(command.url()));
-      log.info("Serfile 文件已就绪：{}", localFile);
+    // 流式下载并解析（无磁盘落盘）
+    try (StreamingDownloadResult downloadResult =
+        streamingDownloadPort.download(URI.create(command.url()))) {
 
-      // 2. 解析并处理记录
-      List<SerialRecord> allRecords = parserPort.parse(localFile).toList();
+      log.info("HTTP 连接建立成功，开始流式解析");
+
+      // 解析并处理记录
+      List<SerialRecord> allRecords = parserPort.parse(downloadResult.inputStream()).toList();
       log.info("解析完成，记录数：{}", allRecords.size());
 
       if (allRecords.isEmpty()) {
@@ -103,7 +106,7 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
             0, 0, 0, 0, command.serfileVersion(), command.url(), duration);
       }
 
-      // 3. 按批次处理（每批次独立事务）
+      // 按批次处理（每批次独立事务）
       AtomicInteger updatedCount = new AtomicInteger(0);
       AtomicInteger createdCount = new AtomicInteger(0);
       AtomicInteger skippedCount = new AtomicInteger(0);
@@ -143,9 +146,12 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
       log.error("Serfile 导入失败：{}", command.url(), e);
       throw new ApplicationException(
           CatalogErrorCode.CAT_1003, "Serfile 导入失败: " + e.getMessage(), e);
-    } finally {
-      cleanupTempFile(localFile);
+    } catch (Exception e) {
+      log.error("Serfile 导入时发生意外错误：{}", command.url(), e);
+      throw new ApplicationException(
+          CatalogErrorCode.CAT_1003, "Serfile 导入时发生意外错误: " + e.getMessage(), e);
     }
+    // 无需 finally 清理临时文件，try-with-resources 自动关闭 HTTP 连接
   }
 
   /// 处理一个批次的记录。
@@ -422,19 +428,6 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
     } catch (IllegalArgumentException e) {
       log.warn("无法识别的 CitationSubset 值：{}", value);
       return null;
-    }
-  }
-
-  /// 清理临时文件。
-  private void cleanupTempFile(Path file) {
-    if (file == null) {
-      return;
-    }
-    try {
-      Files.deleteIfExists(file);
-      log.info("已清理临时文件：{}", file);
-    } catch (IOException e) {
-      log.warn("清理临时文件失败：{}，原因：{}", file, e.getMessage());
     }
   }
 }

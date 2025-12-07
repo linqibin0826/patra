@@ -5,7 +5,7 @@ import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.port.parser.MeshQualifierParserPort;
 import com.patra.catalog.infra.adapter.parser.strategy.QualifierParsingStrategy;
 import com.patra.catalog.infra.adapter.parser.support.AbstractStaxParserAdapter;
-import java.nio.file.Path;
+import java.io.InputStream;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
@@ -32,11 +32,11 @@ public class MeshQualifierParserAdapter extends AbstractStaxParserAdapter<MeshQu
     implements MeshQualifierParserPort {
 
   @Override
-  public Stream<MeshQualifierAggregate> parse(Path filePath) {
+  public Stream<MeshQualifierAggregate> parse(InputStream inputStream) {
     return doParse(
-        filePath,
+        inputStream,
         QualifierParsingStrategy.INSTANCE,
-        "开始解析 MeSH Qualifier XML 文件：{}",
+        "开始解析 MeSH Qualifier XML 输入流",
         XmlParseException::new);
   }
 }

@@ -6,6 +6,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.patra.catalog.domain.exception.XmlParseException;
 import com.patra.catalog.domain.model.dto.serfile.SerialLanguage;
 import com.patra.catalog.domain.model.dto.serfile.SerialRecord;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -20,6 +25,10 @@ import org.junit.jupiter.api.Timeout;
 ///
 /// 使用测试 XML 文件验证 NLM Serfile 解析逻辑的正确性。
 ///
+/// **流式处理**：
+///
+/// 解析器现在接收 `InputStream` 而非 `Path`，测试使用 `Files.newInputStream()` 读取文件。
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("SerfileParserAdapter 集成测试")
@@ -27,7 +36,6 @@ import org.junit.jupiter.api.Timeout;
 class SerfileParserAdapterIT {
 
   private static final Path TEST_SERIALS_PATH = Path.of("src/test/resources/xml/test-serials.xml");
-  private static final Path NON_EXISTENT_PATH = Path.of("src/test/resources/xml/non-existent.xml");
 
   private SerfileParserAdapter parser;
 
@@ -36,146 +44,153 @@ class SerfileParserAdapterIT {
     parser = new SerfileParserAdapter();
   }
 
+  /// 打开测试 XML 文件的输入流。
+  private InputStream openTestXmlStream() throws IOException {
+    return Files.newInputStream(TEST_SERIALS_PATH);
+  }
+
   @Nested
   @DisplayName("parse() 正常场景测试")
   class ParseTest {
 
     @Test
     @DisplayName("解析测试 XML - 应该返回 3 条期刊记录")
-    void parse_testXml_shouldReturnThreeSerials() {
+    void parse_testXml_shouldReturnThreeSerials() throws IOException {
       // Given
-      Path xmlPath = TEST_SERIALS_PATH;
+      try (InputStream inputStream = openTestXmlStream()) {
+        // When
+        List<SerialRecord> serials;
+        try (Stream<SerialRecord> stream = parser.parse(inputStream)) {
+          serials = stream.toList();
+        }
 
-      // When
-      List<SerialRecord> serials;
-      try (Stream<SerialRecord> stream = parser.parse(xmlPath)) {
-        serials = stream.toList();
+        // Then
+        assertThat(serials).hasSize(3);
       }
-
-      // Then
-      assertThat(serials).hasSize(3);
     }
 
     @Test
     @DisplayName("解析期刊 - 应该正确解析基本信息")
-    void parse_shouldParseBasicInfoCorrectly() {
+    void parse_shouldParseBasicInfoCorrectly() throws IOException {
       // Given
-      Path xmlPath = TEST_SERIALS_PATH;
+      try (InputStream inputStream = openTestXmlStream()) {
+        // When
+        List<SerialRecord> serials;
+        try (Stream<SerialRecord> stream = parser.parse(inputStream)) {
+          serials = stream.toList();
+        }
 
-      // When
-      List<SerialRecord> serials;
-      try (Stream<SerialRecord> stream = parser.parse(xmlPath)) {
-        serials = stream.toList();
+        // Then: 验证第一条记录的基本信息
+        SerialRecord first = serials.get(0);
+        assertThat(first.nlmUniqueId()).isEqualTo("0123456");
+        assertThat(first.title()).isEqualTo("Journal of Test Medicine");
+        assertThat(first.medlineTA()).isEqualTo("J Test Med");
+        assertThat(first.coden()).isEqualTo("JTMED1");
       }
-
-      // Then: 验证第一条记录的基本信息
-      SerialRecord first = serials.get(0);
-      assertThat(first.nlmUniqueId()).isEqualTo("0123456");
-      assertThat(first.title()).isEqualTo("Journal of Test Medicine");
-      assertThat(first.medlineTA()).isEqualTo("J Test Med");
-      assertThat(first.coden()).isEqualTo("JTMED1");
     }
 
     @Test
     @DisplayName("解析期刊 - 应该正确解析 ISSN 信息")
-    void parse_shouldParseIssnCorrectly() {
+    void parse_shouldParseIssnCorrectly() throws IOException {
       // Given
-      Path xmlPath = TEST_SERIALS_PATH;
+      try (InputStream inputStream = openTestXmlStream()) {
+        // When
+        List<SerialRecord> serials;
+        try (Stream<SerialRecord> stream = parser.parse(inputStream)) {
+          serials = stream.toList();
+        }
 
-      // When
-      List<SerialRecord> serials;
-      try (Stream<SerialRecord> stream = parser.parse(xmlPath)) {
-        serials = stream.toList();
+        // Then
+        SerialRecord first = serials.get(0);
+        assertThat(first.issnL()).isEqualTo("1234-5678");
+        assertThat(first.issnPrint()).isEqualTo("1234-5678");
+        assertThat(first.issnElectronic()).isEqualTo("1234-5679");
       }
-
-      // Then
-      SerialRecord first = serials.get(0);
-      assertThat(first.issnL()).isEqualTo("1234-5678");
-      assertThat(first.issnPrint()).isEqualTo("1234-5678");
-      assertThat(first.issnElectronic()).isEqualTo("1234-5679");
     }
 
     @Test
     @DisplayName("解析期刊 - 应该正确解析语言列表")
-    void parse_shouldParseLanguagesCorrectly() {
+    void parse_shouldParseLanguagesCorrectly() throws IOException {
       // Given
-      Path xmlPath = TEST_SERIALS_PATH;
+      try (InputStream inputStream = openTestXmlStream()) {
+        // When
+        List<SerialRecord> serials;
+        try (Stream<SerialRecord> stream = parser.parse(inputStream)) {
+          serials = stream.toList();
+        }
 
-      // When
-      List<SerialRecord> serials;
-      try (Stream<SerialRecord> stream = parser.parse(xmlPath)) {
-        serials = stream.toList();
+        // Then
+        SerialRecord first = serials.get(0);
+        assertThat(first.languages())
+            .extracting(SerialLanguage::code)
+            .containsExactly("eng", "chi");
       }
-
-      // Then
-      SerialRecord first = serials.get(0);
-      assertThat(first.languages()).extracting(SerialLanguage::code).containsExactly("eng", "chi");
     }
 
     @Test
     @DisplayName("解析期刊 - 应该正确解析出版信息")
-    void parse_shouldParsePublicationInfoCorrectly() {
+    void parse_shouldParsePublicationInfoCorrectly() throws IOException {
       // Given
-      Path xmlPath = TEST_SERIALS_PATH;
+      try (InputStream inputStream = openTestXmlStream()) {
+        // When
+        List<SerialRecord> serials;
+        try (Stream<SerialRecord> stream = parser.parse(inputStream)) {
+          serials = stream.toList();
+        }
 
-      // When
-      List<SerialRecord> serials;
-      try (Stream<SerialRecord> stream = parser.parse(xmlPath)) {
-        serials = stream.toList();
+        // Then: 第一条记录
+        SerialRecord first = serials.get(0);
+        assertThat(first.country()).isEqualTo("United States");
+        assertThat(first.frequency()).isEqualTo("Monthly");
+        assertThat(first.publicationFirstYear()).isEqualTo(2000);
+        assertThat(first.publicationEndYear()).isNull();
+
+        // 第二条记录（已停刊）
+        SerialRecord second = serials.get(1);
+        assertThat(second.country()).isEqualTo("China");
+        assertThat(second.publicationFirstYear()).isEqualTo(1990);
+        assertThat(second.publicationEndYear()).isEqualTo(2020);
       }
-
-      // Then: 第一条记录
-      SerialRecord first = serials.get(0);
-      assertThat(first.country()).isEqualTo("United States");
-      assertThat(first.frequency()).isEqualTo("Monthly");
-      assertThat(first.publicationFirstYear()).isEqualTo(2000);
-      assertThat(first.publicationEndYear()).isNull();
-
-      // 第二条记录（已停刊）
-      SerialRecord second = serials.get(1);
-      assertThat(second.country()).isEqualTo("China");
-      assertThat(second.publicationFirstYear()).isEqualTo(1990);
-      assertThat(second.publicationEndYear()).isEqualTo(2020);
     }
 
     @Test
     @DisplayName("解析期刊 - 应该正确解析 MeSH 主题词")
-    void parse_shouldParseMeshHeadingsCorrectly() {
+    void parse_shouldParseMeshHeadingsCorrectly() throws IOException {
       // Given
-      Path xmlPath = TEST_SERIALS_PATH;
+      try (InputStream inputStream = openTestXmlStream()) {
+        // When
+        List<SerialRecord> serials;
+        try (Stream<SerialRecord> stream = parser.parse(inputStream)) {
+          serials = stream.toList();
+        }
 
-      // When
-      List<SerialRecord> serials;
-      try (Stream<SerialRecord> stream = parser.parse(xmlPath)) {
-        serials = stream.toList();
+        // Then
+        SerialRecord first = serials.get(0);
+        assertThat(first.meshHeadings()).hasSize(2);
+        assertThat(first.meshHeadings().get(0).descriptorName()).isEqualTo("Medicine");
+        assertThat(first.meshHeadings().get(0).isMajorTopic()).isTrue();
+        assertThat(first.meshHeadings().get(1).qualifierName()).isEqualTo("methods");
       }
-
-      // Then
-      SerialRecord first = serials.get(0);
-      assertThat(first.meshHeadings()).hasSize(2);
-      assertThat(first.meshHeadings().get(0).descriptorName()).isEqualTo("Medicine");
-      assertThat(first.meshHeadings().get(0).isMajorTopic()).isTrue();
-      assertThat(first.meshHeadings().get(1).qualifierName()).isEqualTo("methods");
     }
 
     @Test
     @DisplayName("解析期刊 - 应该正确解析期刊关联")
-    void parse_shouldParseTitleRelationsCorrectly() {
+    void parse_shouldParseTitleRelationsCorrectly() throws IOException {
       // Given
-      Path xmlPath = TEST_SERIALS_PATH;
+      try (InputStream inputStream = openTestXmlStream()) {
+        // When
+        List<SerialRecord> serials;
+        try (Stream<SerialRecord> stream = parser.parse(inputStream)) {
+          serials = stream.toList();
+        }
 
-      // When
-      List<SerialRecord> serials;
-      try (Stream<SerialRecord> stream = parser.parse(xmlPath)) {
-        serials = stream.toList();
+        // Then: 第三条记录有 2 个关联
+        SerialRecord third = serials.get(2);
+        assertThat(third.titleRelations()).hasSize(2);
+        assertThat(third.titleRelations().get(0).titleType()).isEqualTo("Continues");
+        assertThat(third.titleRelations().get(0).relatedTitle()).isEqualTo("Old Test Journal");
+        assertThat(third.titleRelations().get(1).titleType()).isEqualTo("ContinuedBy");
       }
-
-      // Then: 第三条记录有 2 个关联
-      SerialRecord third = serials.get(2);
-      assertThat(third.titleRelations()).hasSize(2);
-      assertThat(third.titleRelations().get(0).titleType()).isEqualTo("Continues");
-      assertThat(third.titleRelations().get(0).relatedTitle()).isEqualTo("Old Test Journal");
-      assertThat(third.titleRelations().get(1).titleType()).isEqualTo("ContinuedBy");
     }
   }
 
@@ -184,15 +199,22 @@ class SerfileParserAdapterIT {
   class ExceptionTest {
 
     @Test
-    @DisplayName("文件不存在时 - 应该抛出 XmlParseException")
-    void parse_nonExistentFile_shouldThrowXmlParseException() {
-      // Given
-      Path nonExistentPath = NON_EXISTENT_PATH;
+    @DisplayName("无效 XML 格式 - 应该抛出 XmlParseException")
+    void parse_invalidXml_shouldThrowXmlParseException() {
+      // Given: 无效的 XML 内容
+      String invalidXml = "Not valid XML content <<>>";
+      InputStream invalidStream =
+          new ByteArrayInputStream(invalidXml.getBytes(StandardCharsets.UTF_8));
 
-      // When & Then
-      assertThatThrownBy(() -> parser.parse(nonExistentPath))
+      // When & Then: 异常在消费 Stream 时抛出（StAX 惰性解析）
+      assertThatThrownBy(
+              () -> {
+                try (Stream<SerialRecord> stream = parser.parse(invalidStream)) {
+                  stream.findFirst(); // 触发实际解析
+                }
+              })
           .isInstanceOf(XmlParseException.class)
-          .hasMessageContaining("打开 XML 文件失败");
+          .hasMessageContaining("XML 解析失败");
     }
   }
 
@@ -202,22 +224,23 @@ class SerfileParserAdapterIT {
 
     @Test
     @DisplayName("Stream 关闭后 - 不应该抛出异常")
-    void streamClose_shouldNotThrowException() {
+    void streamClose_shouldNotThrowException() throws IOException {
       // Given
-      Path xmlPath = TEST_SERIALS_PATH;
+      try (InputStream inputStream = openTestXmlStream()) {
+        // When: 打开并关闭 Stream
+        Stream<SerialRecord> stream = parser.parse(inputStream);
+        stream.close();
 
-      // When: 打开并关闭 Stream
-      Stream<SerialRecord> stream = parser.parse(xmlPath);
-      stream.close();
-
-      // Then: 不应该抛出异常
+        // Then: 不应该抛出异常
+      }
     }
 
     @Test
     @DisplayName("try-with-resources - 应该正确释放资源")
-    void tryWithResources_shouldReleaseResourcesCorrectly() {
+    void tryWithResources_shouldReleaseResourcesCorrectly() throws IOException {
       // Given & When & Then: 使用 try-with-resources 自动关闭
-      try (Stream<SerialRecord> stream = parser.parse(TEST_SERIALS_PATH)) {
+      try (InputStream inputStream = openTestXmlStream();
+          Stream<SerialRecord> stream = parser.parse(inputStream)) {
         // 只读取第一个元素
         SerialRecord first = stream.findFirst().orElse(null);
         assertThat(first).isNotNull();

@@ -19,7 +19,8 @@ import org.junit.jupiter.api.Test;
 @DisplayName("MeshImportParams 单元测试")
 class MeshImportParamsTest {
 
-  private static final String VALID_FILE_PATH = "/tmp/mesh-import.xml";
+  private static final String VALID_DOWNLOAD_URL =
+      "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml";
   private static final String VALID_MESH_VERSION = "2025";
 
   @Nested
@@ -27,33 +28,33 @@ class MeshImportParamsTest {
   class ValidationTests {
 
     @Test
-    @DisplayName("应该在 filePath 为 null 时抛出 IllegalArgumentException")
-    void shouldThrowWhenFilePathIsNull() {
-      assertThatThrownBy(() -> new MeshImportParams(null, VALID_MESH_VERSION, false))
+    @DisplayName("应该在 downloadUrl 为 null 时抛出 IllegalArgumentException")
+    void shouldThrowWhenDownloadUrlIsNull() {
+      assertThatThrownBy(() -> new MeshImportParams(null, VALID_MESH_VERSION))
           .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("filePath 不能为空");
+          .hasMessageContaining("downloadUrl 不能为空");
     }
 
     @Test
-    @DisplayName("应该在 filePath 为空字符串时抛出 IllegalArgumentException")
-    void shouldThrowWhenFilePathIsEmpty() {
-      assertThatThrownBy(() -> new MeshImportParams("", VALID_MESH_VERSION, false))
+    @DisplayName("应该在 downloadUrl 为空字符串时抛出 IllegalArgumentException")
+    void shouldThrowWhenDownloadUrlIsEmpty() {
+      assertThatThrownBy(() -> new MeshImportParams("", VALID_MESH_VERSION))
           .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("filePath 不能为空");
+          .hasMessageContaining("downloadUrl 不能为空");
     }
 
     @Test
-    @DisplayName("应该在 filePath 为空白字符串时抛出 IllegalArgumentException")
-    void shouldThrowWhenFilePathIsBlank() {
-      assertThatThrownBy(() -> new MeshImportParams("   ", VALID_MESH_VERSION, false))
+    @DisplayName("应该在 downloadUrl 为空白字符串时抛出 IllegalArgumentException")
+    void shouldThrowWhenDownloadUrlIsBlank() {
+      assertThatThrownBy(() -> new MeshImportParams("   ", VALID_MESH_VERSION))
           .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("filePath 不能为空");
+          .hasMessageContaining("downloadUrl 不能为空");
     }
 
     @Test
     @DisplayName("应该在 meshVersion 为 null 时抛出 IllegalArgumentException")
     void shouldThrowWhenMeshVersionIsNull() {
-      assertThatThrownBy(() -> new MeshImportParams(VALID_FILE_PATH, null, false))
+      assertThatThrownBy(() -> new MeshImportParams(VALID_DOWNLOAD_URL, null))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("meshVersion 不能为空");
     }
@@ -61,7 +62,7 @@ class MeshImportParamsTest {
     @Test
     @DisplayName("应该在 meshVersion 为空字符串时抛出 IllegalArgumentException")
     void shouldThrowWhenMeshVersionIsEmpty() {
-      assertThatThrownBy(() -> new MeshImportParams(VALID_FILE_PATH, "", false))
+      assertThatThrownBy(() -> new MeshImportParams(VALID_DOWNLOAD_URL, ""))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("meshVersion 不能为空");
     }
@@ -69,7 +70,7 @@ class MeshImportParamsTest {
     @Test
     @DisplayName("应该在 meshVersion 为空白字符串时抛出 IllegalArgumentException")
     void shouldThrowWhenMeshVersionIsBlank() {
-      assertThatThrownBy(() -> new MeshImportParams(VALID_FILE_PATH, "   ", false))
+      assertThatThrownBy(() -> new MeshImportParams(VALID_DOWNLOAD_URL, "   "))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("meshVersion 不能为空");
     }
@@ -83,24 +84,11 @@ class MeshImportParamsTest {
     @DisplayName("构造函数应该正确设置所有字段")
     void constructorShouldSetAllFields() {
       // When
-      MeshImportParams params = new MeshImportParams(VALID_FILE_PATH, VALID_MESH_VERSION, true);
+      MeshImportParams params = new MeshImportParams(VALID_DOWNLOAD_URL, VALID_MESH_VERSION);
 
       // Then
-      assertThat(params.filePath()).isEqualTo(VALID_FILE_PATH);
+      assertThat(params.downloadUrl()).isEqualTo(VALID_DOWNLOAD_URL);
       assertThat(params.meshVersion()).isEqualTo(VALID_MESH_VERSION);
-      assertThat(params.tempFile()).isTrue();
-    }
-
-    @Test
-    @DisplayName("构造函数应该支持非临时文件")
-    void constructorShouldSupportNonTempFile() {
-      // When
-      MeshImportParams params = new MeshImportParams(VALID_FILE_PATH, VALID_MESH_VERSION, false);
-
-      // Then
-      assertThat(params.filePath()).isEqualTo(VALID_FILE_PATH);
-      assertThat(params.meshVersion()).isEqualTo(VALID_MESH_VERSION);
-      assertThat(params.tempFile()).isFalse();
     }
   }
 
@@ -109,41 +97,29 @@ class MeshImportParamsTest {
   class FactoryMethodTests {
 
     @Test
-    @DisplayName("of() 应该创建非临时文件参数")
-    void ofShouldCreateNonTempFileParams() {
+    @DisplayName("withDownloadUrl() 应该创建导入参数")
+    void withDownloadUrlShouldCreateParams() {
       // When
-      MeshImportParams params = MeshImportParams.of(VALID_FILE_PATH, VALID_MESH_VERSION);
+      MeshImportParams params =
+          MeshImportParams.withDownloadUrl(VALID_DOWNLOAD_URL, VALID_MESH_VERSION);
 
       // Then
-      assertThat(params.filePath()).isEqualTo(VALID_FILE_PATH);
+      assertThat(params.downloadUrl()).isEqualTo(VALID_DOWNLOAD_URL);
       assertThat(params.meshVersion()).isEqualTo(VALID_MESH_VERSION);
-      assertThat(params.tempFile()).isFalse();
     }
 
     @Test
-    @DisplayName("withTempFile() 应该创建临时文件参数")
-    void withTempFileShouldCreateTempFileParams() {
-      // When
-      MeshImportParams params = MeshImportParams.withTempFile(VALID_FILE_PATH, VALID_MESH_VERSION);
-
-      // Then
-      assertThat(params.filePath()).isEqualTo(VALID_FILE_PATH);
-      assertThat(params.meshVersion()).isEqualTo(VALID_MESH_VERSION);
-      assertThat(params.tempFile()).isTrue();
-    }
-
-    @Test
-    @DisplayName("of() 应该验证参数")
-    void ofShouldValidateParams() {
-      assertThatThrownBy(() -> MeshImportParams.of(null, VALID_MESH_VERSION))
+    @DisplayName("withDownloadUrl() 应该验证 downloadUrl")
+    void withDownloadUrlShouldValidateDownloadUrl() {
+      assertThatThrownBy(() -> MeshImportParams.withDownloadUrl(null, VALID_MESH_VERSION))
           .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("filePath 不能为空");
+          .hasMessageContaining("downloadUrl 不能为空");
     }
 
     @Test
-    @DisplayName("withTempFile() 应该验证参数")
-    void withTempFileShouldValidateParams() {
-      assertThatThrownBy(() -> MeshImportParams.withTempFile(VALID_FILE_PATH, null))
+    @DisplayName("withDownloadUrl() 应该验证 meshVersion")
+    void withDownloadUrlShouldValidateMeshVersion() {
+      assertThatThrownBy(() -> MeshImportParams.withDownloadUrl(VALID_DOWNLOAD_URL, null))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("meshVersion 不能为空");
     }

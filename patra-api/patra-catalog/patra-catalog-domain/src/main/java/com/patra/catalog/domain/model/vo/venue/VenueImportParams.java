@@ -8,8 +8,12 @@ import java.util.List;
 ///
 /// **参数说明**：
 ///
-/// - `filePaths`：JSON Lines 文件路径列表（.gz 压缩），至少包含一个文件
-/// - `tempFiles`：是否为临时文件（Job 完成后需要清理）
+/// - `partitionUrls`：分区文件 URL 列表（.gz 压缩），至少包含一个 URL
+///
+/// **流式处理特性**：
+///
+/// - 无磁盘落盘，ItemReader 在切换文件时按需建立 HTTP 连接
+/// - 传递 URL 列表给 Job，由 ItemReader 负责流式下载
 ///
 /// **设计说明**：
 ///
@@ -18,47 +22,38 @@ import java.util.List;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public record VenueImportParams(List<String> filePaths, boolean tempFiles) {
+public record VenueImportParams(List<String> partitionUrls) {
 
   /// 创建导入参数。
   ///
-  /// @param filePaths JSON Lines 文件路径列表
-  /// @param tempFiles 是否为临时文件
+  /// @param partitionUrls 分区文件 URL 列表
   public VenueImportParams {
-    if (filePaths == null || filePaths.isEmpty()) {
-      throw new IllegalArgumentException("filePaths 不能为空");
+    if (partitionUrls == null || partitionUrls.isEmpty()) {
+      throw new IllegalArgumentException("partitionUrls 不能为空");
     }
   }
 
-  /// 创建导入参数（非临时文件）。
+  /// 创建导入参数。
   ///
-  /// @param filePaths 文件路径列表
+  /// @param partitionUrls 分区文件 URL 列表
   /// @return 导入参数
-  public static VenueImportParams of(List<String> filePaths) {
-    return new VenueImportParams(filePaths, false);
+  public static VenueImportParams of(List<String> partitionUrls) {
+    return new VenueImportParams(partitionUrls);
   }
 
-  /// 创建带临时文件标记的导入参数。
-  ///
-  /// @param filePaths 文件路径列表
-  /// @return 导入参数
-  public static VenueImportParams withTempFiles(List<String> filePaths) {
-    return new VenueImportParams(filePaths, true);
-  }
-
-  /// 获取文件路径的逗号分隔字符串。
+  /// 获取分区 URL 的逗号分隔字符串。
   ///
   /// 用于 Spring Batch Job 参数序列化。
   ///
-  /// @return 逗号分隔的路径字符串
-  public String getFilePathsAsString() {
-    return String.join(",", filePaths);
+  /// @return 逗号分隔的 URL 字符串
+  public String getPartitionUrlsAsString() {
+    return String.join(",", partitionUrls);
   }
 
-  /// 获取文件数量。
+  /// 获取分区数量。
   ///
-  /// @return 文件数量
-  public int getFileCount() {
-    return filePaths.size();
+  /// @return 分区数量
+  public int getPartitionCount() {
+    return partitionUrls.size();
   }
 }
