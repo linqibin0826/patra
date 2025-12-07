@@ -1,36 +1,26 @@
 package com.patra.catalog.infra.adapter.parser.support;
 
-/// XML 解析上下文。
+/// XML 解析上下文（扩展点）。
 ///
-/// 封装解析过程中传递的上下文信息，如 MeSH 版本号等。
-/// 使用 record 确保不可变性和值语义。
+/// 当前为空实现，保留接口设计以便未来扩展。
+/// 使用单例模式避免不必要的对象创建。
 ///
-/// **使用示例**：
-/// ```java
-/// // 解析特定版本
-/// var context = XmlParsingContext.of("2025");
+/// **设计说明**：
 ///
-/// // 无版本号场景
-/// var context = XmlParsingContext.empty();
-/// ```
+/// - 版本信息（如 meshVersion）由 Application 层在解析后通过
+///   `withMeshVersion()` 方法设置，不再通过 Context 传递
+/// - 保留 Context 接口是为了支持未来可能的扩展需求
 ///
-/// @param meshVersion MeSH 版本号（如 "2025"），可为 null
 /// @author linqibin
 /// @since 0.1.0
-public record XmlParsingContext(String meshVersion) {
+public record XmlParsingContext() {
 
-  /// 创建包含版本号的解析上下文。
-  ///
-  /// @param meshVersion MeSH 版本号
-  /// @return 解析上下文实例
-  public static XmlParsingContext of(String meshVersion) {
-    return new XmlParsingContext(meshVersion);
-  }
+  private static final XmlParsingContext EMPTY = new XmlParsingContext();
 
-  /// 创建空的解析上下文（无版本号）。
+  /// 获取空的解析上下文单例。
   ///
-  /// @return 版本号为 null 的解析上下文
+  /// @return 解析上下文单例
   public static XmlParsingContext empty() {
-    return new XmlParsingContext(null);
+    return EMPTY;
   }
 }

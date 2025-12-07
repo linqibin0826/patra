@@ -187,7 +187,20 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
 
   // ========== 工厂方法 ==========
 
-  /// 创建主题词聚合根。
+  /// 创建主题词聚合根（不含版本号）。
+  ///
+  /// 返回的聚合根不包含 meshVersion，调用方需通过 `withMeshVersion()` 设置。
+  ///
+  /// @param ui MeSH 唯一标识符
+  /// @param name 主题词名称
+  /// @param descriptorClass 主题词类型
+  /// @return 主题词聚合根
+  public static MeshDescriptorAggregate create(
+      MeshUI ui, String name, DescriptorClass descriptorClass) {
+    return create(ui, name, descriptorClass, null);
+  }
+
+  /// 创建主题词聚合根（含版本号）。
   ///
   /// @param ui MeSH 唯一标识符
   /// @param name 主题词名称
@@ -440,13 +453,16 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
     this.activeStatus = true;
   }
 
-  /// 更新版本。
+  /// 设置 MeSH 版本。
   ///
-  /// @param newVersion 新版本(如"2026")
-  public void updateMeshVersion(String newVersion) {
-    Assert.notBlank(newVersion, "版本不能为空");
-    Assert.isTrue(newVersion.matches("^\\d{4}$"), "版本格式无效,必须为4位年份：%s", newVersion);
-    this.meshVersion = newVersion;
+  /// @param meshVersion MeSH 版本年份（如 "2025"）
+  /// @return 当前聚合根（支持链式调用）
+  public MeshDescriptorAggregate withMeshVersion(String meshVersion) {
+    if (StrUtil.isNotBlank(meshVersion)) {
+      Assert.isTrue(meshVersion.matches("^\\d{4}$"), "MeSH 版本格式无效，必须为 4 位年份：%s", meshVersion);
+    }
+    this.meshVersion = meshVersion;
+    return this;
   }
 
   // ========== 允许的限定词管理 ==========

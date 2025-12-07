@@ -47,7 +47,7 @@ class MeshQualifierParserAdapterIT {
 
       // When: 解析限定词
       List<MeshQualifierAggregate> qualifiers;
-      try (Stream<MeshQualifierAggregate> stream = parser.parse(xmlPath, TEST_MESH_VERSION)) {
+      try (Stream<MeshQualifierAggregate> stream = parser.parse(xmlPath)) {
         qualifiers = stream.toList();
       }
 
@@ -58,7 +58,8 @@ class MeshQualifierParserAdapterIT {
       MeshQualifierAggregate qualifier1 = qualifiers.get(0);
       assertThat(qualifier1.getQualifierUi().ui()).isEqualTo("Q000001");
       assertThat(qualifier1.getName()).isEqualTo("test qualifier 1");
-      assertThat(qualifier1.getMeshVersion()).isEqualTo(TEST_MESH_VERSION);
+      // meshVersion 由调用方设置，Parser 不再设置
+      assertThat(qualifier1.getMeshVersion()).isNull();
       assertThat(qualifier1.getAbbreviation()).isEqualTo("TQ1");
 
       // 验证第二个限定词（7 位 UI 格式）
@@ -82,7 +83,7 @@ class MeshQualifierParserAdapterIT {
 
       // When
       List<MeshQualifierAggregate> qualifiers;
-      try (Stream<MeshQualifierAggregate> stream = parser.parse(xmlPath, TEST_MESH_VERSION)) {
+      try (Stream<MeshQualifierAggregate> stream = parser.parse(xmlPath)) {
         qualifiers = stream.toList();
       }
 
@@ -100,7 +101,7 @@ class MeshQualifierParserAdapterIT {
 
       // When
       List<MeshQualifierAggregate> qualifiers;
-      try (Stream<MeshQualifierAggregate> stream = parser.parse(xmlPath, TEST_MESH_VERSION)) {
+      try (Stream<MeshQualifierAggregate> stream = parser.parse(xmlPath)) {
         qualifiers = stream.toList();
       }
 
@@ -132,7 +133,7 @@ class MeshQualifierParserAdapterIT {
 
       // When
       List<MeshQualifierAggregate> qualifiers;
-      try (Stream<MeshQualifierAggregate> stream = parser.parse(xmlPath, TEST_MESH_VERSION)) {
+      try (Stream<MeshQualifierAggregate> stream = parser.parse(xmlPath)) {
         qualifiers = stream.toList();
       }
 
@@ -163,7 +164,7 @@ class MeshQualifierParserAdapterIT {
       Path xmlPath = TEST_QUALIFIERS_PATH;
 
       // When: 打开并关闭 Stream
-      Stream<MeshQualifierAggregate> stream = parser.parse(xmlPath, TEST_MESH_VERSION);
+      Stream<MeshQualifierAggregate> stream = parser.parse(xmlPath);
       stream.close();
 
       // Then: 不应该抛出异常
@@ -173,8 +174,7 @@ class MeshQualifierParserAdapterIT {
     @DisplayName("try-with-resources - 应该正确释放资源")
     void tryWithResources_shouldReleaseResourcesCorrectly() {
       // Given & When & Then: 使用 try-with-resources 自动关闭
-      try (Stream<MeshQualifierAggregate> stream =
-          parser.parse(TEST_QUALIFIERS_PATH, TEST_MESH_VERSION)) {
+      try (Stream<MeshQualifierAggregate> stream = parser.parse(TEST_QUALIFIERS_PATH)) {
         // 只读取第一个元素
         MeshQualifierAggregate first = stream.findFirst().orElse(null);
         assertThat(first).isNotNull();

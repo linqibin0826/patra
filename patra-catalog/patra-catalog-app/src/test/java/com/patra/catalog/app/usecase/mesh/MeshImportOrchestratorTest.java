@@ -255,7 +255,7 @@ class MeshImportOrchestratorTest {
         // 验证没有进行后续操作
         verify(meshSourceFilePort, never())
             .fetchFile(any(MeshFileType.class), anyString(), any(URI.class));
-        verify(qualifierParserPort, never()).parse(any(Path.class), anyString());
+        verify(qualifierParserPort, never()).parse(any(Path.class));
       }
     }
 
@@ -270,7 +270,7 @@ class MeshImportOrchestratorTest {
       when(qualifierRepository.hasAnyData()).thenReturn(false);
       when(meshSourceFilePort.fetchFile(any(MeshFileType.class), anyString(), any(URI.class)))
           .thenReturn(QUALIFIER_LOCAL_PATH);
-      when(qualifierParserPort.parse(any(Path.class), anyString())).thenReturn(qualifiers.stream());
+      when(qualifierParserPort.parse(any(Path.class))).thenReturn(qualifiers.stream());
 
       // When
       MeshQualifierImportResult result = orchestrator.importQualifiers(command);
@@ -279,7 +279,7 @@ class MeshImportOrchestratorTest {
       verify(qualifierRepository).hasAnyData();
       verify(meshSourceFilePort)
           .fetchFile(MeshFileType.QUALIFIER, "2025", URI.create(QUALIFIER_URL));
-      verify(qualifierParserPort).parse(any(Path.class), anyString());
+      verify(qualifierParserPort).parse(any(Path.class));
       verify(qualifierRepository).saveBatch(qualifiers);
 
       // Then - 验证结果
@@ -306,7 +306,7 @@ class MeshImportOrchestratorTest {
       when(qualifierRepository.hasAnyData()).thenReturn(false);
       when(meshSourceFilePort.fetchFile(any(MeshFileType.class), anyString(), any(URI.class)))
           .thenReturn(QUALIFIER_LOCAL_PATH);
-      when(qualifierParserPort.parse(any(Path.class), anyString())).thenReturn(qualifiers.stream());
+      when(qualifierParserPort.parse(any(Path.class))).thenReturn(qualifiers.stream());
 
       // When
       MeshQualifierImportResult result = orchestrator.importQualifiers(command);
@@ -324,7 +324,7 @@ class MeshImportOrchestratorTest {
       when(qualifierRepository.hasAnyData()).thenReturn(false);
       when(meshSourceFilePort.fetchFile(any(MeshFileType.class), anyString(), any(URI.class)))
           .thenReturn(QUALIFIER_LOCAL_PATH);
-      when(qualifierParserPort.parse(any(Path.class), anyString())).thenReturn(Stream.empty());
+      when(qualifierParserPort.parse(any(Path.class))).thenReturn(Stream.empty());
 
       // When
       MeshQualifierImportResult result = orchestrator.importQualifiers(command);
@@ -343,8 +343,7 @@ class MeshImportOrchestratorTest {
       when(qualifierRepository.hasAnyData()).thenReturn(false);
       when(meshSourceFilePort.fetchFile(any(MeshFileType.class), anyString(), any(URI.class)))
           .thenReturn(QUALIFIER_LOCAL_PATH);
-      when(qualifierParserPort.parse(any(Path.class), anyString()))
-          .thenThrow(new RuntimeException("XML 解析失败"));
+      when(qualifierParserPort.parse(any(Path.class))).thenThrow(new RuntimeException("XML 解析失败"));
 
       // When & Then
       assertThatThrownBy(() -> orchestrator.importQualifiers(command))

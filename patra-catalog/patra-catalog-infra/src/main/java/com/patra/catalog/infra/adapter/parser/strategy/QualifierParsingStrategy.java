@@ -137,7 +137,7 @@ public final class QualifierParsingStrategy
       return null;
     }
 
-    // 创建聚合根
+    // 创建聚合根（不含版本号，由调用方设置）
     return MeshQualifierAggregate.create(MeshUI.of(qualifierUi), name, abbreviation)
         .withAnnotation(annotation)
         .withDateCreated(dateCreated)
@@ -145,8 +145,7 @@ public final class QualifierParsingStrategy
         .withDateEstablished(dateEstablished)
         .withHistoryNote(historyNote)
         .withOnlineNote(onlineNote)
-        .withTreeNumbers(treeNumbers)
-        .withMeshVersion(context.meshVersion());
+        .withTreeNumbers(treeNumbers);
   }
 
   // ========== 私有解析方法 ==========

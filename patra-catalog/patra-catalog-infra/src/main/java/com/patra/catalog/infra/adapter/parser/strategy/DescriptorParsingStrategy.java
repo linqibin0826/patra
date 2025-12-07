@@ -110,8 +110,8 @@ public final class DescriptorParsingStrategy
       return null;
     }
 
-    // 4. 组装聚合根
-    return buildAggregate(fields, descriptorClass, context.meshVersion());
+    // 4. 组装聚合根（不含版本号，由调用方设置）
+    return buildAggregate(fields, descriptorClass);
   }
 
   // ========== 属性解析 ==========
@@ -227,19 +227,19 @@ public final class DescriptorParsingStrategy
 
   // ========== 聚合根组装 ==========
 
-  /// 构建聚合根对象。
+  /// 构建聚合根对象（不含版本号）。
+  ///
+  /// 返回的聚合根不包含 meshVersion，由调用方通过 `withMeshVersion()` 设置。
   ///
   /// @param fields 已解析的字段
   /// @param descriptorClass 主题词分类
-  /// @param meshVersion MeSH 版本
   /// @return 聚合根对象
   private MeshDescriptorAggregate buildAggregate(
-      ParsedFields fields, DescriptorClass descriptorClass, String meshVersion) {
-
-    // 创建聚合根
+      ParsedFields fields, DescriptorClass descriptorClass) {
+    // 创建聚合根（不含版本号）
     MeshDescriptorAggregate aggregate =
         MeshDescriptorAggregate.create(
-            MeshUI.of(fields.descriptorUI), fields.descriptorName, descriptorClass, meshVersion);
+            MeshUI.of(fields.descriptorUI), fields.descriptorName, descriptorClass);
 
     // 设置日期字段
     setDateFields(aggregate, fields);

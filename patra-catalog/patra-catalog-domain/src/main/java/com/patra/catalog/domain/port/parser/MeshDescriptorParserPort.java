@@ -27,17 +27,19 @@ public interface MeshDescriptorParserPort {
   /// 使用 StAX 流式解析，避免将整个文件加载到内存。
   /// 调用方负责关闭返回的 Stream（推荐使用 try-with-resources）。
   ///
+  /// **注意**：返回的聚合根不包含 meshVersion，调用方需通过
+  /// `withMeshVersion()` 方法设置版本号。
+  ///
   /// **使用示例**：
   ///
   /// ```java
-  /// try (Stream<MeshDescriptorAggregate> stream = port.parse(filePath, "2025")) {
-  ///     stream.forEach(descriptor -> processDescriptor(descriptor));
+  /// try (Stream<MeshDescriptorAggregate> stream = port.parse(filePath)) {
+  ///     stream.map(d -> d.withMeshVersion("2025"))
+  ///           .forEach(descriptor -> processDescriptor(descriptor));
   /// }
   /// ```
   ///
   /// @param filePath XML 文件路径
-  /// @param meshVersion MeSH 版本号（如 "2025"）
   /// @return 主题词聚合根流（调用方负责关闭）
-  /// @throws com.patra.catalog.domain.exception.MeshParseException 解析失败时抛出
-  Stream<MeshDescriptorAggregate> parse(Path filePath, String meshVersion);
+  Stream<MeshDescriptorAggregate> parse(Path filePath);
 }
