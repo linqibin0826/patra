@@ -48,7 +48,7 @@ class MeshDescriptorParserAdapterIT {
 
       // When: 解析主题词
       List<MeshDescriptorAggregate> descriptors;
-      try (Stream<MeshDescriptorAggregate> stream = parser.parse(xmlPath, TEST_MESH_VERSION)) {
+      try (Stream<MeshDescriptorAggregate> stream = parser.parse(xmlPath)) {
         descriptors = stream.toList();
       }
 
@@ -59,7 +59,8 @@ class MeshDescriptorParserAdapterIT {
       MeshDescriptorAggregate descriptor1 = descriptors.get(0);
       assertThat(descriptor1.getUi().ui()).isEqualTo("D000001");
       assertThat(descriptor1.getName()).isEqualTo("Test Descriptor 1");
-      assertThat(descriptor1.getMeshVersion()).isEqualTo(TEST_MESH_VERSION);
+      // meshVersion 由调用方设置，Parser 不再设置
+      assertThat(descriptor1.getMeshVersion()).isNull();
       assertThat(descriptor1.getDescriptorClass().getCode()).isEqualTo("1");
 
       // 验证第二个主题词
@@ -77,7 +78,7 @@ class MeshDescriptorParserAdapterIT {
 
       // When
       List<MeshDescriptorAggregate> descriptors;
-      try (Stream<MeshDescriptorAggregate> stream = parser.parse(xmlPath, TEST_MESH_VERSION)) {
+      try (Stream<MeshDescriptorAggregate> stream = parser.parse(xmlPath)) {
         descriptors = stream.toList();
       }
 
@@ -102,7 +103,7 @@ class MeshDescriptorParserAdapterIT {
 
       // When
       List<MeshDescriptorAggregate> descriptors;
-      try (Stream<MeshDescriptorAggregate> stream = parser.parse(xmlPath, TEST_MESH_VERSION)) {
+      try (Stream<MeshDescriptorAggregate> stream = parser.parse(xmlPath)) {
         descriptors = stream.toList();
       }
 
@@ -127,7 +128,7 @@ class MeshDescriptorParserAdapterIT {
 
       // When
       List<MeshDescriptorAggregate> descriptors;
-      try (Stream<MeshDescriptorAggregate> stream = parser.parse(xmlPath, TEST_MESH_VERSION)) {
+      try (Stream<MeshDescriptorAggregate> stream = parser.parse(xmlPath)) {
         descriptors = stream.toList();
       }
 
@@ -153,7 +154,7 @@ class MeshDescriptorParserAdapterIT {
 
       // When
       List<MeshDescriptorAggregate> descriptors;
-      try (Stream<MeshDescriptorAggregate> stream = parser.parse(xmlPath, TEST_MESH_VERSION)) {
+      try (Stream<MeshDescriptorAggregate> stream = parser.parse(xmlPath)) {
         descriptors = stream.toList();
       }
 
@@ -194,7 +195,7 @@ class MeshDescriptorParserAdapterIT {
       Path xmlPath = TEST_DESCRIPTORS_PATH;
 
       // When: 打开并关闭 Stream
-      Stream<MeshDescriptorAggregate> stream = parser.parse(xmlPath, TEST_MESH_VERSION);
+      Stream<MeshDescriptorAggregate> stream = parser.parse(xmlPath);
       stream.close();
 
       // Then: 不应该抛出异常
@@ -204,8 +205,7 @@ class MeshDescriptorParserAdapterIT {
     @DisplayName("try-with-resources - 应该正确释放资源")
     void tryWithResources_shouldReleaseResourcesCorrectly() {
       // Given & When & Then: 使用 try-with-resources 自动关闭
-      try (Stream<MeshDescriptorAggregate> stream =
-          parser.parse(TEST_DESCRIPTORS_PATH, TEST_MESH_VERSION)) {
+      try (Stream<MeshDescriptorAggregate> stream = parser.parse(TEST_DESCRIPTORS_PATH)) {
         // 只读取第一个元素
         MeshDescriptorAggregate first = stream.findFirst().orElse(null);
         assertThat(first).isNotNull();

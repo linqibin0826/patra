@@ -110,7 +110,7 @@ class SerfileImportOrchestratorTest {
           VenueAggregate.fromPubMed("Existing Journal", null, "1111-1111");
 
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parseSerials(TEST_LOCAL_PATH)).thenReturn(Stream.of(record1, record2));
+      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.of(record1, record2));
       when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("1111-1111", existingVenue));
       when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
@@ -120,7 +120,7 @@ class SerfileImportOrchestratorTest {
 
       // Then - 验证调用顺序
       verify(fileDownloadPort).downloadToTemp(URI.create(TEST_URL));
-      verify(parserPort).parseSerials(TEST_LOCAL_PATH);
+      verify(parserPort).parse(TEST_LOCAL_PATH);
       verify(venueRepository).findByIssnLs(any());
       verify(venueRepository).findByNlmIds(any());
       verify(venueRepository).findByIssns(any());
@@ -141,7 +141,7 @@ class SerfileImportOrchestratorTest {
       SerfileImportCommand command = SerfileImportCommand.of(TEST_URL, TEST_VERSION);
 
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parseSerials(TEST_LOCAL_PATH)).thenReturn(Stream.empty());
+      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.empty());
 
       // When
       SerfileImportResult result = orchestrator.importSerfile(command);
@@ -175,7 +175,7 @@ class SerfileImportOrchestratorTest {
       VenueAggregate nlmIdMatch = VenueAggregate.fromPubMed("NLM ID Matched", "0000001", null);
 
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parseSerials(TEST_LOCAL_PATH)).thenReturn(Stream.of(record));
+      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.of(record));
       when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("1111-1111", issnLMatch));
       when(venueRepository.findByNlmIds(any())).thenReturn(Map.of("0000001", nlmIdMatch));
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
@@ -200,7 +200,7 @@ class SerfileImportOrchestratorTest {
       VenueAggregate nlmIdMatch = VenueAggregate.fromPubMed("NLM ID Matched", "0000001", null);
 
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parseSerials(TEST_LOCAL_PATH)).thenReturn(Stream.of(record));
+      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.of(record));
       when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
       when(venueRepository.findByNlmIds(any())).thenReturn(Map.of("0000001", nlmIdMatch));
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
@@ -225,7 +225,7 @@ class SerfileImportOrchestratorTest {
       VenueAggregate issnMatch = VenueAggregate.fromPubMed("ISSN Matched", null, "9999-9999");
 
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parseSerials(TEST_LOCAL_PATH)).thenReturn(Stream.of(record));
+      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.of(record));
       when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
       when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
       when(venueRepository.findByIssns(any())).thenReturn(Map.of("2222-2222", issnMatch));
@@ -247,7 +247,7 @@ class SerfileImportOrchestratorTest {
       SerialRecord record = createSerialRecord("0000001", "New Journal", "1111-1111", null, null);
 
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parseSerials(TEST_LOCAL_PATH)).thenReturn(Stream.of(record));
+      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.of(record));
       when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
       when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
@@ -284,7 +284,7 @@ class SerfileImportOrchestratorTest {
       VenueAggregate existingVenue = VenueAggregate.fromPubMed("Existing", null, "1111-1111");
 
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parseSerials(TEST_LOCAL_PATH)).thenReturn(Stream.of(matched, new1, new2));
+      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.of(matched, new1, new2));
       when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("1111-1111", existingVenue));
       when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
@@ -307,7 +307,7 @@ class SerfileImportOrchestratorTest {
       SerfileImportCommand command = SerfileImportCommand.of(TEST_URL, TEST_VERSION);
 
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parseSerials(TEST_LOCAL_PATH)).thenReturn(Stream.empty());
+      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.empty());
 
       // When
       SerfileImportResult result = orchestrator.importSerfile(command);
@@ -336,7 +336,7 @@ class SerfileImportOrchestratorTest {
           .hasMessageContaining("Serfile 导入失败");
 
       // 不应该调用后续操作
-      verify(parserPort, never()).parseSerials(any());
+      verify(parserPort, never()).parse(any());
     }
 
     @Test
@@ -346,8 +346,7 @@ class SerfileImportOrchestratorTest {
       SerfileImportCommand command = SerfileImportCommand.of(TEST_URL, TEST_VERSION);
 
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parseSerials(TEST_LOCAL_PATH))
-          .thenThrow(new RuntimeException("XML parse error"));
+      when(parserPort.parse(TEST_LOCAL_PATH)).thenThrow(new RuntimeException("XML parse error"));
 
       // When & Then
       assertThatThrownBy(() -> orchestrator.importSerfile(command))
@@ -363,7 +362,7 @@ class SerfileImportOrchestratorTest {
       SerialRecord record = createSerialRecord("0000001", "Journal", "1111-1111", null, null);
 
       when(fileDownloadPort.downloadToTemp(any(URI.class))).thenReturn(TEST_LOCAL_PATH);
-      when(parserPort.parseSerials(TEST_LOCAL_PATH)).thenReturn(Stream.of(record));
+      when(parserPort.parse(TEST_LOCAL_PATH)).thenReturn(Stream.of(record));
       when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
       when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());

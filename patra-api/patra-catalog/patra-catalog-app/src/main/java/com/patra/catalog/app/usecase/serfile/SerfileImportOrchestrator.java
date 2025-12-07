@@ -93,7 +93,7 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
       log.info("Serfile 文件已就绪：{}", localFile);
 
       // 2. 解析并处理记录
-      List<SerialRecord> allRecords = parserPort.parseSerials(localFile).toList();
+      List<SerialRecord> allRecords = parserPort.parse(localFile).toList();
       log.info("解析完成，记录数：{}", allRecords.size());
 
       if (allRecords.isEmpty()) {

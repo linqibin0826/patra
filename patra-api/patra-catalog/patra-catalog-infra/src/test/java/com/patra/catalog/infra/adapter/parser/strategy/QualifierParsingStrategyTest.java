@@ -81,13 +81,14 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.empty());
 
       assertNotNull(result);
       assertEquals("Q000001", result.getQualifierUi().ui());
       assertEquals("diagnosis", result.getName());
       assertEquals("DI", result.getAbbreviation());
-      assertEquals("2025", result.getMeshVersion());
+      // meshVersion 由调用方设置，Strategy 不再从 context 获取
+      assertNull(result.getMeshVersion());
       assertTrue(result.isActive());
     }
 
@@ -114,7 +115,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.empty());
 
       assertNotNull(result);
       assertEquals("Q000000981", result.getQualifierUi().ui());
@@ -151,7 +152,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.empty());
 
       assertEquals("Used with diseases for diagnostic procedures", result.getAnnotation());
     }
@@ -194,7 +195,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.empty());
 
       assertEquals(LocalDate.of(1966, 1, 1), result.getDateCreated());
       assertEquals(LocalDate.of(2020, 6, 15), result.getDateRevised());
@@ -226,7 +227,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.empty());
 
       assertEquals("66; used with Category A-D 1966-74", result.getHistoryNote());
       assertEquals("search policy: Online Manual", result.getOnlineNote());
@@ -259,7 +260,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.empty());
 
       assertThat(result.getTreeNumbers()).containsExactly("Y01.060", "Y02.060");
     }
@@ -304,7 +305,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.empty());
 
       assertEquals("DI", result.getAbbreviation());
     }
@@ -338,7 +339,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.empty());
 
       assertNull(result);
     }
@@ -363,7 +364,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.empty());
 
       assertNull(result);
     }
@@ -391,7 +392,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.empty());
 
       assertNull(result);
     }
@@ -472,7 +473,7 @@ class QualifierParsingStrategyTest {
           """;
       var reader = createReaderAtStartElement(xml);
 
-      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.of("2025"));
+      MeshQualifierAggregate result = strategy.parseRecord(reader, XmlParsingContext.empty());
 
       assertNotNull(result);
       assertEquals("Q000001", result.getQualifierUi().ui());
@@ -485,7 +486,8 @@ class QualifierParsingStrategyTest {
       assertEquals("66; used with Category A-D 1966-74", result.getHistoryNote());
       assertEquals("search policy: Online Manual", result.getOnlineNote());
       assertThat(result.getTreeNumbers()).containsExactly("Y01.060");
-      assertEquals("2025", result.getMeshVersion());
+      // meshVersion 由调用方设置，Strategy 不再从 context 获取
+      assertNull(result.getMeshVersion());
       assertTrue(result.isActive());
     }
   }

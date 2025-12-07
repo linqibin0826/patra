@@ -2,7 +2,6 @@ package com.patra.catalog.infra.batch.mesh;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
@@ -96,8 +95,7 @@ class MeshDescriptorItemReaderTest {
     @DisplayName("正常打开文件 - 应该成功初始化")
     void open_validFile_shouldInitializeSuccessfully() {
       // Given: Mock 解析器返回空流
-      when(descriptorParserPort.parse(any(Path.class), eq(TEST_MESH_VERSION)))
-          .thenReturn(Stream.empty());
+      when(descriptorParserPort.parse(any(Path.class))).thenReturn(Stream.empty());
 
       itemReader =
           new MeshDescriptorItemReader(
@@ -125,8 +123,7 @@ class MeshDescriptorItemReaderTest {
               createTestDescriptor("D000004", "Descriptor 4"),
               createTestDescriptor("D000005", "Descriptor 5"));
 
-      when(descriptorParserPort.parse(any(Path.class), eq(TEST_MESH_VERSION)))
-          .thenReturn(mockStream);
+      when(descriptorParserPort.parse(any(Path.class))).thenReturn(mockStream);
 
       itemReader =
           new MeshDescriptorItemReader(
@@ -158,8 +155,7 @@ class MeshDescriptorItemReaderTest {
               createTestDescriptor("D000002", "Descriptor 2"),
               createTestDescriptor("D000003", "Descriptor 3"));
 
-      when(descriptorParserPort.parse(any(Path.class), eq(TEST_MESH_VERSION)))
-          .thenReturn(mockStream);
+      when(descriptorParserPort.parse(any(Path.class))).thenReturn(mockStream);
 
       itemReader =
           new MeshDescriptorItemReader(
@@ -179,8 +175,7 @@ class MeshDescriptorItemReaderTest {
     @DisplayName("空流 - 应该立即返回 null")
     void read_emptyStream_shouldReturnNull() {
       // Given: Mock 返回空流
-      when(descriptorParserPort.parse(any(Path.class), eq(TEST_MESH_VERSION)))
-          .thenReturn(Stream.empty());
+      when(descriptorParserPort.parse(any(Path.class))).thenReturn(Stream.empty());
 
       itemReader =
           new MeshDescriptorItemReader(
@@ -208,8 +203,7 @@ class MeshDescriptorItemReaderTest {
               createTestDescriptor("D000002", "Descriptor 2"),
               createTestDescriptor("D000003", "Descriptor 3"));
 
-      when(descriptorParserPort.parse(any(Path.class), eq(TEST_MESH_VERSION)))
-          .thenReturn(mockStream);
+      when(descriptorParserPort.parse(any(Path.class))).thenReturn(mockStream);
 
       itemReader =
           new MeshDescriptorItemReader(
@@ -236,8 +230,7 @@ class MeshDescriptorItemReaderTest {
     @DisplayName("关闭 Reader - 应该释放资源")
     void close_afterOpen_shouldReleaseResources() {
       // Given: Mock 返回空流
-      when(descriptorParserPort.parse(any(Path.class), eq(TEST_MESH_VERSION)))
-          .thenReturn(Stream.empty());
+      when(descriptorParserPort.parse(any(Path.class))).thenReturn(Stream.empty());
 
       itemReader =
           new MeshDescriptorItemReader(
@@ -252,8 +245,7 @@ class MeshDescriptorItemReaderTest {
     @DisplayName("重复关闭 - 不应该抛出异常")
     void close_calledTwice_shouldNotThrowException() {
       // Given: Mock 返回空流
-      when(descriptorParserPort.parse(any(Path.class), eq(TEST_MESH_VERSION)))
-          .thenReturn(Stream.empty());
+      when(descriptorParserPort.parse(any(Path.class))).thenReturn(Stream.empty());
 
       itemReader =
           new MeshDescriptorItemReader(
@@ -284,8 +276,7 @@ class MeshDescriptorItemReaderTest {
               createTestDescriptor("D000004", "Descriptor 4"),
               createTestDescriptor("D000005", "Descriptor 5"));
 
-      when(descriptorParserPort.parse(any(Path.class), eq(TEST_MESH_VERSION)))
-          .thenReturn(mockStream1);
+      when(descriptorParserPort.parse(any(Path.class))).thenReturn(mockStream1);
 
       ExecutionContext context1 = new ExecutionContext();
       MeshDescriptorItemReader reader1 =
@@ -314,8 +305,7 @@ class MeshDescriptorItemReaderTest {
               createTestDescriptor("D000004", "Descriptor 4"),
               createTestDescriptor("D000005", "Descriptor 5"));
 
-      when(descriptorParserPort.parse(any(Path.class), eq(TEST_MESH_VERSION)))
-          .thenReturn(mockStream2);
+      when(descriptorParserPort.parse(any(Path.class))).thenReturn(mockStream2);
 
       MeshDescriptorItemReader reader2 =
           new MeshDescriptorItemReader(

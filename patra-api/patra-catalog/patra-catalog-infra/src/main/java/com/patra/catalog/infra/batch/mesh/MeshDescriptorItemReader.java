@@ -87,7 +87,8 @@ public class MeshDescriptorItemReader implements ItemStreamReader<MeshDescriptor
     }
 
     // 委托 MeshDescriptorParserPort 解析（Adapter 内部管理 InputStream）
-    stream = descriptorParserPort.parse(Path.of(filePath), meshVersion);
+    // Parser 返回不含版本的聚合根，在流转换时设置版本号
+    stream = descriptorParserPort.parse(Path.of(filePath)).map(d -> d.withMeshVersion(meshVersion));
     iterator = stream.iterator();
 
     // 跳过已处理的记录
