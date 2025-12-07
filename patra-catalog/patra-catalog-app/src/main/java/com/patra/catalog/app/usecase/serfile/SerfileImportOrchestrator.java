@@ -6,6 +6,7 @@ import com.patra.catalog.app.usecase.serfile.command.SerfileImportCommand;
 import com.patra.catalog.app.usecase.serfile.dto.SerfileImportResult;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.dto.serfile.SerialIndexingHistory;
+import com.patra.catalog.domain.model.dto.serfile.SerialLanguage;
 import com.patra.catalog.domain.model.dto.serfile.SerialMeshHeading;
 import com.patra.catalog.domain.model.dto.serfile.SerialRecord;
 import com.patra.catalog.domain.model.dto.serfile.SerialTitleRelated;
@@ -268,7 +269,7 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
     // 覆盖语言信息
     if (!record.languages().isEmpty()) {
       venue.withPrimaryLanguage(record.getPrimaryLanguage());
-      venue.withLanguages(VenueLanguages.of(record.languages(), null));
+      venue.withLanguages(toVenueLanguages(record.languages()));
     }
 
     // 覆盖出版历史
@@ -299,7 +300,7 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
     // 设置语言信息
     if (!record.languages().isEmpty()) {
       venue.withPrimaryLanguage(record.getPrimaryLanguage());
-      venue.withLanguages(VenueLanguages.of(record.languages(), null));
+      venue.withLanguages(toVenueLanguages(record.languages()));
     }
 
     // 设置出版历史
@@ -321,6 +322,20 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
     }
 
     return venue;
+  }
+
+  /// 转换语言列表为 VenueLanguages。
+  ///
+  /// 根据 LangType 将语言分类为主语言（Primary）和摘要语言（Summary）。
+  private VenueLanguages toVenueLanguages(List<SerialLanguage> languages) {
+    if (languages == null || languages.isEmpty()) {
+      return VenueLanguages.empty();
+    }
+    List<String> primary =
+        languages.stream().filter(SerialLanguage::isPrimary).map(SerialLanguage::code).toList();
+    List<String> summary =
+        languages.stream().filter(l -> !l.isPrimary()).map(SerialLanguage::code).toList();
+    return VenueLanguages.of(primary, summary);
   }
 
   /// 转换 MeSH 主题词列表。
