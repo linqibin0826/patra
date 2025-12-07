@@ -1,7 +1,9 @@
 package com.patra.catalog.infra.adapter.parser;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.patra.catalog.domain.exception.XmlParseException;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
 import com.patra.catalog.domain.model.vo.mesh.EntryCombination;
@@ -212,6 +214,26 @@ class MeshDescriptorParserAdapterIT {
         assertThat(first.getUi().ui()).isEqualTo("D000001");
       }
       // 资源应该在这里被正确释放
+    }
+  }
+
+  @Nested
+  @DisplayName("异常场景测试")
+  class ExceptionTest {
+
+    private static final Path NON_EXISTENT_PATH =
+        Path.of("src/test/resources/xml/non-existent-descriptor.xml");
+
+    @Test
+    @DisplayName("文件不存在时 - 应该抛出 XmlParseException")
+    void parse_nonExistentFile_shouldThrowXmlParseException() {
+      // Given
+      Path nonExistentPath = NON_EXISTENT_PATH;
+
+      // When & Then
+      assertThatThrownBy(() -> parser.parse(nonExistentPath))
+          .isInstanceOf(XmlParseException.class)
+          .hasMessageContaining("打开 XML 文件失败");
     }
   }
 }

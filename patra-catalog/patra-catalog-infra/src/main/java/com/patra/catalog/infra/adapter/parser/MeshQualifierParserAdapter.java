@@ -1,5 +1,6 @@
 package com.patra.catalog.infra.adapter.parser;
 
+import com.patra.catalog.domain.exception.XmlParseException;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.port.parser.MeshQualifierParserPort;
 import com.patra.catalog.infra.adapter.parser.strategy.QualifierParsingStrategy;
@@ -36,6 +37,6 @@ public class MeshQualifierParserAdapter extends AbstractStaxParserAdapter<MeshQu
         filePath,
         QualifierParsingStrategy.INSTANCE,
         "开始解析 MeSH Qualifier XML 文件：{}",
-        XmlParsingException::new);
+        XmlParseException::new);
   }
 }

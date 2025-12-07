@@ -1,5 +1,6 @@
 package com.patra.catalog.infra.adapter.parser;
 
+import com.patra.catalog.domain.exception.XmlParseException;
 import com.patra.catalog.domain.model.dto.serfile.SerialRecord;
 import com.patra.catalog.domain.port.parser.SerfileParserPort;
 import com.patra.catalog.infra.adapter.parser.strategy.SerialParsingStrategy;
@@ -38,6 +39,6 @@ public class SerfileParserAdapter extends AbstractStaxParserAdapter<SerialRecord
         filePath,
         SerialParsingStrategy.INSTANCE,
         "开始解析 NLM Serfile XML 文件：{}",
-        XmlParsingException::new);
+        XmlParseException::new);
   }
 }

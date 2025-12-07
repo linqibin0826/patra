@@ -1,11 +1,13 @@
 package com.patra.catalog.infra.adapter.parser.support;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.patra.catalog.domain.exception.XmlParseException;
 import com.patra.catalog.infra.adapter.parser.strategy.RecordParsingStrategy;
 import java.io.StringReader;
 import java.util.ArrayList;
@@ -157,6 +159,44 @@ class AbstractRecordSpliteratorTest {
     }
   }
 
+  // ========== 异常处理测试 ==========
+
+  @Nested
+  @DisplayName("异常处理")
+  class ExceptionHandling {
+
+    @Test
+    @DisplayName("策略抛出 XMLStreamException 时应转换为 XmlParseException")
+    void shouldConvertXmlStreamExceptionToXmlParseException() throws Exception {
+      // Given
+      var xml = "<Root><Record>value</Record></Root>";
+      var throwingStrategy = new ThrowingStrategy();
+      var spliterator = createSpliteratorWithStrategy(xml, throwingStrategy);
+
+      // When & Then
+      assertThatThrownBy(() -> spliterator.tryAdvance(s -> {}))
+          .isInstanceOf(XmlParseException.class)
+          .hasMessage("XML 解析失败")
+          .hasCauseInstanceOf(XMLStreamException.class);
+    }
+
+    @Test
+    @DisplayName("异常应保留原始异常链")
+    void shouldPreserveExceptionChain() throws Exception {
+      // Given
+      var xml = "<Root><Record>value</Record></Root>";
+      var throwingStrategy = new ThrowingStrategy();
+      var spliterator = createSpliteratorWithStrategy(xml, throwingStrategy);
+
+      // When & Then
+      assertThatThrownBy(() -> spliterator.tryAdvance(s -> {}))
+          .isInstanceOf(XmlParseException.class)
+          .cause()
+          .isInstanceOf(XMLStreamException.class)
+          .hasMessage("模拟解析错误");
+    }
+  }
+
   // ========== 辅助方法和测试策略 ==========
 
   /// 创建使用默认策略的测试 Spliterator。
@@ -213,6 +253,21 @@ class AbstractRecordSpliteratorTest {
         return null; // 返回 null 表示跳过此记录
       }
       return "parsed:" + text;
+    }
+  }
+
+  /// 抛出异常的策略：模拟解析错误。
+  static class ThrowingStrategy implements RecordParsingStrategy<String> {
+
+    @Override
+    public String rootElementName() {
+      return "Record";
+    }
+
+    @Override
+    public String parseRecord(XMLStreamReader reader, XmlParsingContext context)
+        throws XMLStreamException {
+      throw new XMLStreamException("模拟解析错误");
     }
   }
 }

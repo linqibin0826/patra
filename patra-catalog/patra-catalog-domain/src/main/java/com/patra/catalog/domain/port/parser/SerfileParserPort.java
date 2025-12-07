@@ -35,6 +35,6 @@ public interface SerfileParserPort {
   ///
   /// @param filePath XML 文件路径
   /// @return Serial 记录流（调用方负责关闭）
-  /// @throws com.patra.catalog.domain.exception.SerfileParseException 解析失败时抛出
+  /// @throws com.patra.catalog.domain.exception.XmlParseException 解析失败时抛出
   Stream<SerialRecord> parse(Path filePath);
 }

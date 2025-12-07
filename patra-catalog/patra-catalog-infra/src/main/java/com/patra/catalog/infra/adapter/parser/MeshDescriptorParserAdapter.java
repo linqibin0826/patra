@@ -1,5 +1,6 @@
 package com.patra.catalog.infra.adapter.parser;
 
+import com.patra.catalog.domain.exception.XmlParseException;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.port.parser.MeshDescriptorParserPort;
 import com.patra.catalog.infra.adapter.parser.strategy.DescriptorParsingStrategy;
@@ -36,6 +37,6 @@ public class MeshDescriptorParserAdapter extends AbstractStaxParserAdapter<MeshD
         filePath,
         DescriptorParsingStrategy.INSTANCE,
         "开始解析 MeSH Descriptor XML 文件：{}",
-        XmlParsingException::new);
+        XmlParseException::new);
   }
 }

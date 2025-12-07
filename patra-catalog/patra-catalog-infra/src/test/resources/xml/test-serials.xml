@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE SerfileRecordSet SYSTEM "serfile.dtd">
+<SerfileRecordSet>
+  <!-- 第一条记录：完整的期刊信息 -->
+  <Serial Status="NLMCollection" PMC="Yes">
+    <NlmUniqueID>0123456</NlmUniqueID>
+    <Title>Journal of Test Medicine</Title>
+    <MedlineTA>J Test Med</MedlineTA>
+    <ISSNLinking>1234-5678</ISSNLinking>
+    <ISSN IssnType="Print">1234-5678</ISSN>
+    <ISSN IssnType="Electronic">1234-5679</ISSN>
+    <Coden>JTMED1</Coden>
+    <Language LangType="Primary">eng</Language>
+    <Language>chi</Language>
+    <PublicationInfo>
+      <Country>United States</Country>
+      <Frequency>Monthly</Frequency>
+      <PublicationFirstYear>2000</PublicationFirstYear>
+    </PublicationInfo>
+    <MeshHeadingList>
+      <MeshHeading>
+        <DescriptorName MajorTopicYN="Y">Medicine</DescriptorName>
+      </MeshHeading>
+      <MeshHeading>
+        <DescriptorName MajorTopicYN="N">Research</DescriptorName>
+        <QualifierName MajorTopicYN="Y">methods</QualifierName>
+      </MeshHeading>
+    </MeshHeadingList>
+  </Serial>
+
+  <!-- 第二条记录：最小必填字段 -->
+  <Serial Status="Ceased" PMC="No">
+    <NlmUniqueID>9876543</NlmUniqueID>
+    <Title>Ceased Medical Journal</Title>
+    <PublicationInfo>
+      <Country>China</Country>
+      <PublicationFirstYear>1990</PublicationFirstYear>
+      <PublicationEndYear>2020</PublicationEndYear>
+    </PublicationInfo>
+  </Serial>
+
+  <!-- 第三条记录：带有期刊关联信息 -->
+  <Serial Status="NLMCollection">
+    <NlmUniqueID>1111111</NlmUniqueID>
+    <Title>Test Journal with Relations</Title>
+    <MedlineTA>Test J Rel</MedlineTA>
+    <TitleRelated TitleType="Continues">
+      <Title>Old Test Journal</Title>
+      <ISSN>0000-0001</ISSN>
+    </TitleRelated>
+    <TitleRelated TitleType="ContinuedBy">
+      <Title>New Test Journal</Title>
+      <ISSN>0000-0002</ISSN>
+    </TitleRelated>
+  </Serial>
+</SerfileRecordSet>
