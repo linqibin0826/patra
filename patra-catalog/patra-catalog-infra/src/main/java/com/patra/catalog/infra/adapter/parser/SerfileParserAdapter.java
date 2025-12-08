@@ -1,8 +1,10 @@
 package com.patra.catalog.infra.adapter.parser;
 
 import com.patra.catalog.domain.exception.XmlParseException;
-import com.patra.catalog.domain.model.dto.serfile.SerialRecord;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.port.parser.SerfileParserPort;
+import com.patra.catalog.infra.adapter.parser.converter.PubmedSerialConverter;
+import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialRecord;
 import com.patra.catalog.infra.adapter.parser.strategy.SerialParsingStrategy;
 import com.patra.catalog.infra.adapter.parser.support.AbstractStaxParserAdapter;
 import java.io.InputStream;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Component;
 /// - **资源管理**：继承 {@link AbstractStaxParserAdapter} 统一管理资源生命周期
 /// - **流式处理**：使用 {@link java.util.stream.Stream} 逐元素读取，内存占用可控
 /// - **惰性求值**：返回 Stream，由调用方控制处理速度
+/// - **领域隔离**：通过 {@link PubmedSerialConverter} 将 DTO 转换为领域模型
 ///
 /// **性能特征**：
 ///
@@ -33,12 +36,24 @@ import org.springframework.stereotype.Component;
 public class SerfileParserAdapter extends AbstractStaxParserAdapter<SerialRecord>
     implements SerfileParserPort {
 
+  private final PubmedSerialConverter converter;
+
+  /// 构造函数。
+  ///
+  /// @param converter DTO 到领域模型的转换器
+  public SerfileParserAdapter(PubmedSerialConverter converter) {
+    this.converter = converter;
+  }
+
   @Override
-  public Stream<SerialRecord> parse(InputStream inputStream) {
-    return doParse(
-        inputStream,
-        SerialParsingStrategy.INSTANCE,
-        "开始解析 NLM Serfile XML 输入流",
-        XmlParseException::new);
+  public Stream<PubmedSerialData> parse(InputStream inputStream) {
+    // 先解析 XML 得到 DTO 流，再通过转换器转换为领域模型
+    Stream<SerialRecord> dtoStream =
+        doParse(
+            inputStream,
+            SerialParsingStrategy.INSTANCE,
+            "开始解析 NLM Serfile XML 输入流",
+            XmlParseException::new);
+    return dtoStream.map(converter::toDomainModel);
   }
 }

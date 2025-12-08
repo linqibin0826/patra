@@ -14,7 +14,7 @@ import java.util.List;
 /// **使用场景**：
 ///
 /// - `OpenAlexSourceParser` 返回此类型
-/// - `VenueImportItemReader` 传递此类型给 ItemWriter
+/// - `VenueInitializeItemReader` 传递此类型给 ItemWriter
 /// - Application 层分别处理聚合根和年度指标
 ///
 /// @param aggregate 解析后的 VenueAggregate 聚合根
