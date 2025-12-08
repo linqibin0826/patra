@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.persistence.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.catalog.infra.persistence.entity.PublicationSubstanceDO;
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 
-public interface PublicationSubstanceMapper extends PatraBaseMapper<PublicationSubstanceDO> {}
+public interface PublicationSubstanceMapper extends BaseMapper<PublicationSubstanceDO> {}

@@ -126,7 +126,7 @@ plan.md 中计划使用 Spring Data JPA 作为数据访问层：
 #### 🔍 影响范围
 
 - **代码影响**:
-  - `ArticleRepositoryAdapter.java` 需要使用 MyBatis-Plus PatraBaseMapper
+  - `ArticleRepositoryAdapter.java` 需要使用 MyBatis-Plus BaseMapper
   - 增加 `ArticleMapper.xml` 和 `ArticleConverter.java`
 - **测试影响**: Repository IT 测试需要使用 @MybatisPlusTest 而非 @DataJpaTest
 - **文档影响**: plan.md 技术栈章节

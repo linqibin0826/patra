@@ -34,6 +34,14 @@ mybatis-plus:
     map-underscore-to-camel-case: true
 ```
 
+**重要**: 数据库连接 URL 必须包含 `rewriteBatchedStatements=true` 以启用高效批量插入：
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/patra?rewriteBatchedStatements=true
+```
+
 ## 核心组件
 
 ### BaseDO - 数据对象基类
@@ -105,55 +113,49 @@ public class MetadataDO extends BaseDO {
 }
 ```
 
-### PatraBaseMapper - Mapper 基类
+### Mapper 接口
 
-所有 Mapper 接口必须继承此基类（而非 `BaseMapper`），以获得批量插入能力：
+所有 Mapper 接口继承 MyBatis-Plus 的 `BaseMapper`：
 
 ```java
-public interface UserMapper extends PatraBaseMapper<UserDO> {
+public interface UserMapper extends BaseMapper<UserDO> {
     // 自定义查询方法
 }
 ```
 
-**扩展方法:**
+### 批量插入 - Db.saveBatch()
 
-| 方法 | 说明 |
-|------|------|
-| `insertBatchSomeColumn(List<T>)` | 批量插入，生成单条 INSERT 语句多行 VALUES |
-
-### BatchInsertHelper - 批量插入工具
-
-分片批量插入工具，自动将大数据集拆分为多个批次：
+使用 MyBatis-Plus 3.5.3+ 提供的 `Db.saveBatch()` 静态方法进行批量插入：
 
 ```java
-// 推荐：简化版（默认 1000 条/批）
-BatchInsertHelper.batchInsert(dataList, mapper::insertBatchSomeColumn);
+import com.baomidou.mybatisplus.extension.toolkit.Db;
 
-// 自定义批次大小
-BatchInsertHelper.batchInsert(dataList, 500, mapper::insertBatchSomeColumn);
+// 批量插入（ID 和审计字段自动填充）
+List<UserDO> users = createUsers();
+Db.saveBatch(users);  // ID 自动回填到 DO 对象
 
-// 小数据量可直接调用（确定 < 1000 条时）
-mapper.insertBatchSomeColumn(dataList);
+// 回填 ID 到领域对象
+for (int i = 0; i < aggregates.size(); i++) {
+    aggregates.get(i).assignId(users.get(i).getId());
+}
 ```
 
-**返回值 `BatchInsertResult<T>`:**
+**特性:**
 
-| 方法 | 说明 |
+| 特性 | 说明 |
 |------|------|
-| `totalCount()` | 待插入的总记录数 |
-| `successCount()` | 成功插入的记录数 |
-| `getFailedCount()` | 插入失败的记录数 |
-| `isAllSuccess()` | 是否全部批次成功 |
-| `hasErrors()` | 是否存在失败批次 |
-| `errors()` | 失败批次的异常列表 |
+| ID 自动生成 | 无需手动调用 `IdWorker.getId()` |
+| ID 自动回填 | 插入后 DO 对象的 `id` 字段自动填充 |
+| 审计字段填充 | 自动触发 `MetaObjectHandler.insertFill()` |
+| 高效批量 SQL | 配合 `rewriteBatchedStatements=true` 生成单条 INSERT 多行 VALUES |
 
-**分片策略:**
+**批量大小建议:**
 
-| 数据量 | 批次大小 | 说明 |
-|--------|----------|------|
-| < 1000 | 不分片 | 直接调用 `insertBatchSomeColumn` |
-| 1K-10K | 1000/批 | 使用 `BatchInsertHelper` 自动分片 |
-| 10K-100K | 5000/批 | 需确保 `max_allowed_packet >= 64MB` |
+| 数据量 | 建议 |
+|--------|------|
+| < 1000 | 直接调用 `Db.saveBatch()` |
+| 1K-10K | 分批调用，每批 1000 条 |
+| > 10K | 分批调用，需确保 `max_allowed_packet >= 64MB` |
 
 ### MybatisPlusInterceptor - 拦截器配置
 
@@ -269,6 +271,7 @@ mybatis-plus:
 2. **主键生成**: 默认使用 `IdType.ASSIGN_ID`（雪花算法），需确保已正确配置
 3. **软删除**: 使用 `@TableLogic` 注解的 `deleted` 字段，查询时自动过滤已删除记录
 4. **乐观锁**: 更新时需确保实体包含 `version` 字段值，否则乐观锁不生效
+5. **批量插入**: 必须配置 `rewriteBatchedStatements=true` 才能生成高效的批量 SQL
 
 ## 版本信息
 

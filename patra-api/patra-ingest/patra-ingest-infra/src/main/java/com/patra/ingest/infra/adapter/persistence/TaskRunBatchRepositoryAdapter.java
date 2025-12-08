@@ -1,14 +1,13 @@
 package com.patra.ingest.infra.adapter.persistence;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.patra.ingest.domain.exception.TaskPersistenceException;
+import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.patra.ingest.domain.model.entity.TaskRunBatch;
 import com.patra.ingest.domain.model.enums.BatchStatus;
 import com.patra.ingest.domain.port.TaskRunBatchRepository;
 import com.patra.ingest.infra.persistence.converter.TaskRunBatchConverter;
 import com.patra.ingest.infra.persistence.entity.TaskRunBatchDO;
 import com.patra.ingest.infra.persistence.mapper.TaskRunBatchMapper;
-import com.patra.starter.mybatis.batch.BatchInsertHelper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -51,7 +50,7 @@ public class TaskRunBatchRepositoryAdapter implements TaskRunBatchRepository {
   /// 批量保存任务执行批次。
   ///
   /// 分离新增和更新操作：
-  /// - 新增: 使用 `insertBatchSomeColumn` 批量插入
+  /// - 新增: 使用 `Db.saveBatch()` 批量插入
   /// - 更新: 逐条更新（保持乐观锁语义）
   ///
   /// @param batches 批次实体集合
@@ -76,13 +75,7 @@ public class TaskRunBatchRepositoryAdapter implements TaskRunBatchRepository {
 
     // 批量插入新批次
     if (!toInsert.isEmpty()) {
-      var result = BatchInsertHelper.batchInsert(toInsert, mapper::insertBatchSomeColumn);
-      if (result.hasErrors()) {
-        log.error(
-            "TaskRunBatch 批量插入部分失败：成功 {} / 总计 {}", result.successCount(), result.totalCount());
-        throw new TaskPersistenceException(
-            "TaskRunBatch 批量插入部分失败，失败批次数: " + result.errors().size());
-      }
+      Db.saveBatch(toInsert);
       if (log.isDebugEnabled()) {
         log.debug("Batch inserted {} TaskRunBatch records", toInsert.size());
       }

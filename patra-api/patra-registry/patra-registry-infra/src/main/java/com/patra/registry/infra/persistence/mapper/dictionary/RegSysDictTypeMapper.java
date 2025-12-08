@@ -1,7 +1,7 @@
 package com.patra.registry.infra.persistence.mapper.dictionary;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.registry.infra.persistence.entity.dictionary.RegSysDictTypeDO;
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.util.List;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
@@ -14,7 +14,7 @@ import org.apache.ibatis.annotations.Param;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface RegSysDictTypeMapper extends PatraBaseMapper<RegSysDictTypeDO> {
+public interface RegSysDictTypeMapper extends BaseMapper<RegSysDictTypeDO> {
 
   /// 通过稳定的业务代码查询字典类型。
   ///

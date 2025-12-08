@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.adapter.persistence;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.entity.VenueIdentifier;
 import com.patra.catalog.domain.model.entity.VenueIndexingHistory;
@@ -55,7 +55,7 @@ import org.springframework.stereotype.Repository;
 ///
 /// **性能优化**：
 ///
-/// - 批量操作使用 `insertBatchSomeColumn` 提升写入效率
+/// - 批量操作使用 `Db.saveBatch()` 配合 `rewriteBatchedStatements=true` 提升写入效率
 /// - 批量查询时一次性加载所有子实体，避免 N+1 问题
 ///
 /// @author linqibin
@@ -85,30 +85,29 @@ public class VenueRepositoryAdapter implements VenueRepository {
       return;
     }
 
+    // 1. 转换主表 DO（不设置 ID，由 MyBatis-Plus 自动生成）
     List<VenueDO> venueDOs = new ArrayList<>(aggregates.size());
-    List<VenueIdentifierDO> identifierDOs = new ArrayList<>();
-
     for (VenueAggregate aggregate : aggregates) {
-      // 生成 ID 并回填到聚合根
-      Long venueId = IdWorker.getId();
-      aggregate.assignId(venueId);
-
-      // 转换主表
       VenueDO venueDO = venueConverter.toDO(aggregate);
-      venueDO.setId(venueId);
       venueDOs.add(venueDO);
+    }
 
-      // 收集标识符数据
+    // 2. 批量插入主表（ID 自动回填到 DO）
+    Db.saveBatch(venueDOs);
+    log.debug("批量插入载体 {} 条", venueDOs.size());
+
+    // 3. 从 DO 回填 ID 到聚合根，并收集子表数据
+    List<VenueIdentifierDO> identifierDOs = new ArrayList<>();
+    for (int i = 0; i < aggregates.size(); i++) {
+      VenueAggregate aggregate = aggregates.get(i);
+      Long venueId = venueDOs.get(i).getId();
+      aggregate.assignId(venueId);
       collectIdentifiers(aggregate, venueId, identifierDOs);
     }
 
-    // 批量插入主表
-    venueMapper.insertBatchSomeColumn(venueDOs);
-    log.debug("批量插入载体 {} 条", venueDOs.size());
-
-    // 批量插入标识符
+    // 4. 批量插入标识符
     if (!identifierDOs.isEmpty()) {
-      venueIdentifierMapper.insertBatchSomeColumn(identifierDOs);
+      Db.saveBatch(identifierDOs);
       log.debug("批量插入载体标识符 {} 条", identifierDOs.size());
     }
   }
@@ -258,7 +257,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 批量插入新的标识符
     if (!identifierDOs.isEmpty()) {
-      venueIdentifierMapper.insertBatchSomeColumn(identifierDOs);
+      Db.saveBatch(identifierDOs);
       log.debug("批量插入载体标识符 {} 条", identifierDOs.size());
     }
   }
@@ -274,7 +273,6 @@ public class VenueRepositoryAdapter implements VenueRepository {
       VenueAggregate aggregate, Long venueId, List<VenueIdentifierDO> identifierDOs) {
     for (VenueIdentifier identifier : aggregate.getIdentifiers()) {
       VenueIdentifierDO identifierDO = identifierConverter.toDO(identifier);
-      identifierDO.setId(IdWorker.getId());
       identifierDO.setVenueId(venueId);
       identifierDOs.add(identifierDO);
     }
@@ -405,7 +403,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 批量插入
     if (!doList.isEmpty()) {
-      publicationStatsMapper.insertBatchSomeColumn(doList);
+      Db.saveBatch(doList);
       log.debug("批量插入年度指标 {} 条", doList.size());
     }
   }
@@ -450,7 +448,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 批量插入
     if (!doList.isEmpty()) {
-      meshMapper.insertBatchSomeColumn(doList);
+      Db.saveBatch(doList);
       log.debug("批量插入 MeSH 主题词 {} 条", doList.size());
     }
   }
@@ -497,7 +495,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 批量插入
     if (!doList.isEmpty()) {
-      relationMapper.insertBatchSomeColumn(doList);
+      Db.saveBatch(doList);
       log.debug("批量插入关联关系 {} 条", doList.size());
     }
   }
@@ -548,7 +546,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 批量插入
     if (!doList.isEmpty()) {
-      indexingHistoryMapper.insertBatchSomeColumn(doList);
+      Db.saveBatch(doList);
       log.debug("批量插入索引历史 {} 条", doList.size());
     }
   }
@@ -626,7 +624,6 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
   private VenuePublicationStatsDO toPublicationStatsDO(VenuePublicationStats entity, Long venueId) {
     VenuePublicationStatsDO doEntity = new VenuePublicationStatsDO();
-    doEntity.setId(IdWorker.getId());
     doEntity.setVenueId(venueId);
     doEntity.setYear((short) entity.year());
     doEntity.setWorksCount(entity.worksCount());
@@ -637,7 +634,6 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
   private VenueMeshDO toMeshDO(VenueMesh entity, Long venueId) {
     VenueMeshDO doEntity = new VenueMeshDO();
-    doEntity.setId(IdWorker.getId());
     doEntity.setVenueId(venueId);
     doEntity.setDescriptorName(entity.descriptorName());
     doEntity.setDescriptorUi(entity.descriptorUi());
@@ -649,7 +645,6 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
   private VenueRelationDO toRelationDO(VenueRelation entity, Long venueId) {
     VenueRelationDO doEntity = new VenueRelationDO();
-    doEntity.setId(IdWorker.getId());
     doEntity.setVenueId(venueId);
     doEntity.setRelatedVenueId(entity.relatedVenueId());
     doEntity.setRelatedNlmId(entity.relatedNlmId());
@@ -662,7 +657,6 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
   private VenueIndexingHistoryDO toIndexingHistoryDO(VenueIndexingHistory entity, Long venueId) {
     VenueIndexingHistoryDO doEntity = new VenueIndexingHistoryDO();
-    doEntity.setId(IdWorker.getId());
     doEntity.setVenueId(venueId);
     doEntity.setIndexingSource(entity.indexingSource());
     doEntity.setCurrentlyIndexed(entity.currentlyIndexed());

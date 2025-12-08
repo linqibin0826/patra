@@ -1,7 +1,7 @@
 package com.patra.ingest.infra.persistence.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.ingest.infra.persistence.entity.ScheduleInstanceDO;
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 
 /// 调度实例 Mapper 接口 — 对调度实例表的数据访问操作。
@@ -12,4 +12,4 @@ import org.apache.ibatis.annotations.Mapper;
 /// @author linqibin
 /// @since 0.1.0
 @Mapper
-public interface ScheduleInstanceMapper extends PatraBaseMapper<ScheduleInstanceDO> {}
+public interface ScheduleInstanceMapper extends BaseMapper<ScheduleInstanceDO> {}

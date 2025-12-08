@@ -1,12 +1,11 @@
 package com.patra.catalog.infra.adapter.persistence;
 
-import com.patra.catalog.domain.exception.MeshPersistenceException;
+import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.port.repository.MeshQualifierRepository;
 import com.patra.catalog.infra.persistence.converter.MeshQualifierConverter;
 import com.patra.catalog.infra.persistence.entity.MeshQualifierDO;
 import com.patra.catalog.infra.persistence.mapper.MeshQualifierMapper;
-import com.patra.starter.mybatis.batch.BatchInsertHelper;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,16 +42,10 @@ public class MeshQualifierRepositoryAdapter implements MeshQualifierRepository {
     List<MeshQualifierDO> dataObjects =
         qualifiers.stream().map(meshQualifierConverter::toDataObject).toList();
 
-    // 使用 BatchInsertHelper 批量插入（自动分片）
-    var result =
-        BatchInsertHelper.batchInsert(dataObjects, meshQualifierMapper::insertBatchSomeColumn);
+    // 批量插入（ID 和审计字段由 MyBatis-Plus 自动填充）
+    Db.saveBatch(dataObjects);
 
-    if (result.hasErrors()) {
-      log.error("限定词批量保存部分失败：成功 {} / 总计 {}", result.successCount(), result.totalCount());
-      throw new MeshPersistenceException("限定词批量插入部分失败，失败批次数: " + result.errors().size());
-    }
-
-    log.info("限定词批量保存完成，共 {} 条", result.successCount());
+    log.info("限定词批量保存完成，共 {} 条", dataObjects.size());
   }
 
   @Override

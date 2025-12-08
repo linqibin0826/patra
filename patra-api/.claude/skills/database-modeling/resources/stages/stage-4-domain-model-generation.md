@@ -286,8 +286,9 @@ public class {EntityName}Converter {
 **必需元素**：
 ```java
 @Mapper
-public interface {EntityName}Mapper extends PatraBaseMapper<{EntityName}DO> {
-    // PatraBaseMapper 已提供基础 CRUD 和批量插入能力
+public interface {EntityName}Mapper extends BaseMapper<{EntityName}DO> {
+    // BaseMapper 已提供基础 CRUD 能力
+    // 批量插入使用 Db.saveBatch()
     // 复杂查询可在此添加自定义方法
 }
 ```

@@ -1,7 +1,7 @@
 package com.patra.registry.infra.persistence.mapper.provenance;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvPaginationCfgDO;
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.time.Instant;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
@@ -12,7 +12,7 @@ import org.apache.ibatis.annotations.Param;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface RegProvPaginationCfgMapper extends PatraBaseMapper<RegProvPaginationCfgDO> {
+public interface RegProvPaginationCfgMapper extends BaseMapper<RegProvPaginationCfgDO> {
 
   /// 返回指定作用域的有效分页配置,回退到 `ALL`。
   ///

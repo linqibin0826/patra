@@ -1,17 +1,17 @@
 package com.patra.catalog.infra.persistence.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.catalog.infra.persistence.entity.VenueMeshDO;
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.util.Collection;
 import org.apache.ibatis.annotations.Param;
 
 /// 载体 MeSH 主题词 Mapper 接口 — 对载体主题词表的数据访问操作。
 ///
-/// 继承 `PatraBaseMapper` 以获得批量插入能力（`insertBatchSomeColumn`）。
+/// 继承 `BaseMapper` 提供标准 CRUD，批量插入请使用 `Db.saveBatch()`。
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface VenueMeshMapper extends PatraBaseMapper<VenueMeshDO> {
+public interface VenueMeshMapper extends BaseMapper<VenueMeshDO> {
 
   /// 物理删除指定 venue 的所有主题词。
   ///

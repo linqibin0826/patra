@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.adapter.persistence;
 
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
@@ -33,7 +33,7 @@ import org.springframework.stereotype.Repository;
 ///
 /// **性能优化**：
 ///
-/// 批量操作使用 `insertBatchSomeColumn` 提升写入效率
+/// 批量操作使用 `Db.saveBatch()` 配合 `rewriteBatchedStatements=true` 提升写入效率
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -61,11 +61,10 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
       return;
     }
 
-    // 1. 转换 Descriptor 并预先生成 ID
+    // 1. 转换 Descriptor（不设置 ID，由 MyBatis-Plus 自动生成）
     List<MeshDescriptorDO> descriptorDOs = new ArrayList<>(aggregates.size());
     for (MeshDescriptorAggregate aggregate : aggregates) {
       MeshDescriptorDO dataObject = converter.toDescriptorDO(aggregate);
-      dataObject.setId(IdWorker.getId());
       descriptorDOs.add(dataObject);
     }
 
@@ -88,29 +87,29 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
           entryCombinationDOs);
     }
 
-    // 3. 批量插入主表
-    descriptorMapper.insertBatchSomeColumn(descriptorDOs);
+    // 3. 批量插入主表（ID 自动回填到 DO）
+    Db.saveBatch(descriptorDOs);
     log.debug("批量插入主题词 {} 条", descriptorDOs.size());
 
     // 4. 批量插入子表
     if (!treeNumberDOs.isEmpty()) {
-      treeNumberMapper.insertBatchSomeColumn(treeNumberDOs);
+      Db.saveBatch(treeNumberDOs);
       log.debug("批量插入树形编号 {} 条", treeNumberDOs.size());
     }
     if (!conceptDOs.isEmpty()) {
-      conceptMapper.insertBatchSomeColumn(conceptDOs);
+      Db.saveBatch(conceptDOs);
       log.debug("批量插入概念 {} 条", conceptDOs.size());
     }
     if (!conceptRelationDOs.isEmpty()) {
-      conceptRelationMapper.insertBatchSomeColumn(conceptRelationDOs);
+      Db.saveBatch(conceptRelationDOs);
       log.debug("批量插入概念关系 {} 条", conceptRelationDOs.size());
     }
     if (!entryTermDOs.isEmpty()) {
-      entryTermMapper.insertBatchSomeColumn(entryTermDOs);
+      Db.saveBatch(entryTermDOs);
       log.debug("批量插入入口术语 {} 条", entryTermDOs.size());
     }
     if (!entryCombinationDOs.isEmpty()) {
-      entryCombinationMapper.insertBatchSomeColumn(entryCombinationDOs);
+      Db.saveBatch(entryCombinationDOs);
       log.debug("批量插入入口组合 {} 条", entryCombinationDOs.size());
     }
   }
@@ -139,7 +138,6 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
         .forEach(
             tn -> {
               MeshTreeNumberDO treeNumberDO = converter.toTreeNumberDO(tn, descriptorUi);
-              treeNumberDO.setId(IdWorker.getId());
               treeNumberDOs.add(treeNumberDO);
             });
 
@@ -149,7 +147,6 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
         .forEach(
             concept -> {
               MeshConceptDO conceptDO = converter.toConceptDO(concept, descriptorUi);
-              conceptDO.setId(IdWorker.getId());
               conceptDOs.add(conceptDO);
 
               // 收集概念的 ConceptRelation
@@ -162,7 +159,6 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
         .forEach(
             et -> {
               MeshEntryTermDO entryTermDO = converter.toEntryTermDO(et, descriptorUi);
-              entryTermDO.setId(IdWorker.getId());
               entryTermDOs.add(entryTermDO);
             });
 
@@ -173,7 +169,6 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
             ec -> {
               MeshEntryCombinationDO entryCombinationDO =
                   converter.toEntryCombinationDO(ec, descriptorUi);
-              entryCombinationDO.setId(IdWorker.getId());
               entryCombinationDOs.add(entryCombinationDO);
             });
   }
@@ -192,7 +187,6 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
               MeshConceptRelationDO conceptRelationDO =
                   converter.toConceptRelationDO(
                       cr, concept.getConceptUi(), concept.isPreferred(), descriptorUi);
-              conceptRelationDO.setId(IdWorker.getId());
               conceptRelationDOs.add(conceptRelationDO);
             });
   }
