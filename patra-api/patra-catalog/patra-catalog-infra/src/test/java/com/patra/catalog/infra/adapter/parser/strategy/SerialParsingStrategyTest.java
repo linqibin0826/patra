@@ -2,16 +2,16 @@ package com.patra.catalog.infra.adapter.parser.strategy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.catalog.domain.model.dto.serfile.SerialBroadHeading;
-import com.patra.catalog.domain.model.dto.serfile.SerialCrossReference;
-import com.patra.catalog.domain.model.dto.serfile.SerialCurrentlyIndexedForSubset;
-import com.patra.catalog.domain.model.dto.serfile.SerialGeneralNote;
-import com.patra.catalog.domain.model.dto.serfile.SerialIndexingHistory;
-import com.patra.catalog.domain.model.dto.serfile.SerialLanguage;
-import com.patra.catalog.domain.model.dto.serfile.SerialMeshHeading;
-import com.patra.catalog.domain.model.dto.serfile.SerialRecord;
-import com.patra.catalog.domain.model.dto.serfile.SerialRecordId;
-import com.patra.catalog.domain.model.dto.serfile.SerialTitleRelated;
+import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialBroadHeading;
+import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialCrossReference;
+import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialCurrentlyIndexedForSubset;
+import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialGeneralNote;
+import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialIndexingHistory;
+import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialLanguage;
+import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialMeshHeading;
+import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialRecord;
+import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialRecordId;
+import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialTitleRelated;
 import com.patra.catalog.infra.adapter.parser.support.SecureXmlInputFactory;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingContext;
 import java.io.InputStream;

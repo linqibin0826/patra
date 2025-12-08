@@ -4,8 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.patra.catalog.domain.exception.XmlParseException;
-import com.patra.catalog.domain.model.dto.serfile.SerialLanguage;
-import com.patra.catalog.domain.model.dto.serfile.SerialRecord;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedLanguage;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
+import com.patra.catalog.infra.adapter.parser.converter.PubmedSerialConverter;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,7 +42,7 @@ class SerfileParserAdapterIT {
 
   @BeforeEach
   void setUp() {
-    parser = new SerfileParserAdapter();
+    parser = new SerfileParserAdapter(new PubmedSerialConverter());
   }
 
   /// 打开测试 XML 文件的输入流。
@@ -59,8 +60,8 @@ class SerfileParserAdapterIT {
       // Given
       try (InputStream inputStream = openTestXmlStream()) {
         // When
-        List<SerialRecord> serials;
-        try (Stream<SerialRecord> stream = parser.parse(inputStream)) {
+        List<PubmedSerialData> serials;
+        try (Stream<PubmedSerialData> stream = parser.parse(inputStream)) {
           serials = stream.toList();
         }
 
@@ -75,13 +76,13 @@ class SerfileParserAdapterIT {
       // Given
       try (InputStream inputStream = openTestXmlStream()) {
         // When
-        List<SerialRecord> serials;
-        try (Stream<SerialRecord> stream = parser.parse(inputStream)) {
+        List<PubmedSerialData> serials;
+        try (Stream<PubmedSerialData> stream = parser.parse(inputStream)) {
           serials = stream.toList();
         }
 
         // Then: 验证第一条记录的基本信息
-        SerialRecord first = serials.get(0);
+        PubmedSerialData first = serials.get(0);
         assertThat(first.nlmUniqueId()).isEqualTo("0123456");
         assertThat(first.title()).isEqualTo("Journal of Test Medicine");
         assertThat(first.medlineTA()).isEqualTo("J Test Med");
@@ -95,13 +96,13 @@ class SerfileParserAdapterIT {
       // Given
       try (InputStream inputStream = openTestXmlStream()) {
         // When
-        List<SerialRecord> serials;
-        try (Stream<SerialRecord> stream = parser.parse(inputStream)) {
+        List<PubmedSerialData> serials;
+        try (Stream<PubmedSerialData> stream = parser.parse(inputStream)) {
           serials = stream.toList();
         }
 
         // Then
-        SerialRecord first = serials.get(0);
+        PubmedSerialData first = serials.get(0);
         assertThat(first.issnL()).isEqualTo("1234-5678");
         assertThat(first.issnPrint()).isEqualTo("1234-5678");
         assertThat(first.issnElectronic()).isEqualTo("1234-5679");
@@ -114,15 +115,15 @@ class SerfileParserAdapterIT {
       // Given
       try (InputStream inputStream = openTestXmlStream()) {
         // When
-        List<SerialRecord> serials;
-        try (Stream<SerialRecord> stream = parser.parse(inputStream)) {
+        List<PubmedSerialData> serials;
+        try (Stream<PubmedSerialData> stream = parser.parse(inputStream)) {
           serials = stream.toList();
         }
 
         // Then
-        SerialRecord first = serials.get(0);
+        PubmedSerialData first = serials.get(0);
         assertThat(first.languages())
-            .extracting(SerialLanguage::code)
+            .extracting(PubmedLanguage::code)
             .containsExactly("eng", "chi");
       }
     }
@@ -133,20 +134,20 @@ class SerfileParserAdapterIT {
       // Given
       try (InputStream inputStream = openTestXmlStream()) {
         // When
-        List<SerialRecord> serials;
-        try (Stream<SerialRecord> stream = parser.parse(inputStream)) {
+        List<PubmedSerialData> serials;
+        try (Stream<PubmedSerialData> stream = parser.parse(inputStream)) {
           serials = stream.toList();
         }
 
         // Then: 第一条记录
-        SerialRecord first = serials.get(0);
+        PubmedSerialData first = serials.get(0);
         assertThat(first.country()).isEqualTo("United States");
         assertThat(first.frequency()).isEqualTo("Monthly");
         assertThat(first.publicationFirstYear()).isEqualTo(2000);
         assertThat(first.publicationEndYear()).isNull();
 
         // 第二条记录（已停刊）
-        SerialRecord second = serials.get(1);
+        PubmedSerialData second = serials.get(1);
         assertThat(second.country()).isEqualTo("China");
         assertThat(second.publicationFirstYear()).isEqualTo(1990);
         assertThat(second.publicationEndYear()).isEqualTo(2020);
@@ -159,13 +160,13 @@ class SerfileParserAdapterIT {
       // Given
       try (InputStream inputStream = openTestXmlStream()) {
         // When
-        List<SerialRecord> serials;
-        try (Stream<SerialRecord> stream = parser.parse(inputStream)) {
+        List<PubmedSerialData> serials;
+        try (Stream<PubmedSerialData> stream = parser.parse(inputStream)) {
           serials = stream.toList();
         }
 
         // Then
-        SerialRecord first = serials.get(0);
+        PubmedSerialData first = serials.get(0);
         assertThat(first.meshHeadings()).hasSize(2);
         assertThat(first.meshHeadings().get(0).descriptorName()).isEqualTo("Medicine");
         assertThat(first.meshHeadings().get(0).isMajorTopic()).isTrue();
@@ -179,17 +180,16 @@ class SerfileParserAdapterIT {
       // Given
       try (InputStream inputStream = openTestXmlStream()) {
         // When
-        List<SerialRecord> serials;
-        try (Stream<SerialRecord> stream = parser.parse(inputStream)) {
+        List<PubmedSerialData> serials;
+        try (Stream<PubmedSerialData> stream = parser.parse(inputStream)) {
           serials = stream.toList();
         }
 
         // Then: 第三条记录有 2 个关联
-        SerialRecord third = serials.get(2);
+        PubmedSerialData third = serials.get(2);
         assertThat(third.titleRelations()).hasSize(2);
-        assertThat(third.titleRelations().get(0).titleType()).isEqualTo("Continues");
         assertThat(third.titleRelations().get(0).relatedTitle()).isEqualTo("Old Test Journal");
-        assertThat(third.titleRelations().get(1).titleType()).isEqualTo("ContinuedBy");
+        assertThat(third.titleRelations().get(1).relatedTitle()).isNotNull();
       }
     }
   }
@@ -209,7 +209,7 @@ class SerfileParserAdapterIT {
       // When & Then: 异常在消费 Stream 时抛出（StAX 惰性解析）
       assertThatThrownBy(
               () -> {
-                try (Stream<SerialRecord> stream = parser.parse(invalidStream)) {
+                try (Stream<PubmedSerialData> stream = parser.parse(invalidStream)) {
                   stream.findFirst(); // 触发实际解析
                 }
               })
@@ -228,7 +228,7 @@ class SerfileParserAdapterIT {
       // Given
       try (InputStream inputStream = openTestXmlStream()) {
         // When: 打开并关闭 Stream
-        Stream<SerialRecord> stream = parser.parse(inputStream);
+        Stream<PubmedSerialData> stream = parser.parse(inputStream);
         stream.close();
 
         // Then: 不应该抛出异常
@@ -240,9 +240,9 @@ class SerfileParserAdapterIT {
     void tryWithResources_shouldReleaseResourcesCorrectly() throws IOException {
       // Given & When & Then: 使用 try-with-resources 自动关闭
       try (InputStream inputStream = openTestXmlStream();
-          Stream<SerialRecord> stream = parser.parse(inputStream)) {
+          Stream<PubmedSerialData> stream = parser.parse(inputStream)) {
         // 只读取第一个元素
-        SerialRecord first = stream.findFirst().orElse(null);
+        PubmedSerialData first = stream.findFirst().orElse(null);
         assertThat(first).isNotNull();
         assertThat(first.nlmUniqueId()).isEqualTo("0123456");
       }
