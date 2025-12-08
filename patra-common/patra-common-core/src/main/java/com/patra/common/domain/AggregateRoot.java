@@ -35,6 +35,20 @@ public abstract class AggregateRoot<ID> implements Serializable {
   /// 待应用层收集的挂起领域事件。
   private final transient List<DomainEvent> domainEvents = new ArrayList<>();
 
+  // ========== 脏标记：追踪聚合根字段更新 ==========
+
+  /// 聚合根是否被修改。
+  ///
+  /// 在业务方法中修改字段后调用 `markDirty()`，Repository 据此决定是否执行 UPDATE。
+  private transient boolean dirty = false;
+
+  // ========== 子实体变更事件：追踪子实体集合增删改 ==========
+
+  /// 子实体变更事件列表。
+  ///
+  /// 记录子实体集合的增删改操作，供 Repository 生成增量 SQL。
+  private final transient List<ChildEntityChange> childChanges = new ArrayList<>();
+
   /// 默认构造函数,用于反序列化或仓储重建。
   protected AggregateRoot() {}
 
@@ -118,5 +132,85 @@ public abstract class AggregateRoot<ID> implements Serializable {
   /// @return 如果 t 为 null 则返回当前时间,否则返回 t
   protected static Instant nowIfNull(Instant t) {
     return (t == null) ? Instant.now() : t;
+  }
+
+  // ========== 脏标记方法 ==========
+
+  /// 标记聚合根已被修改。
+  ///
+  /// 在任何修改字段的业务方法中调用此方法。多次调用不会产生额外开销。
+  protected void markDirty() {
+    this.dirty = true;
+  }
+
+  /// 检查聚合根是否被修改。
+  ///
+  /// @return 如果调用过 `markDirty()` 则返回 `true`
+  public boolean isDirty() {
+    return dirty;
+  }
+
+  /// 清除脏标记。
+  ///
+  /// Repository 持久化成功后调用。
+  public void clearDirty() {
+    this.dirty = false;
+  }
+
+  // ========== 子实体变更追踪方法 ==========
+
+  /// 记录子实体新增。
+  ///
+  /// @param type 子实体类型
+  /// @param entity 新增的子实体实例
+  /// @param <E> 子实体类型参数
+  protected <E> void trackChildAdded(Class<E> type, E entity) {
+    childChanges.add(new ChildEntityChange.Added<>(type, entity));
+  }
+
+  /// 记录子实体更新。
+  ///
+  /// @param type 子实体类型
+  /// @param entity 更新后的子实体实例
+  /// @param <E> 子实体类型参数
+  protected <E> void trackChildUpdated(Class<E> type, E entity) {
+    childChanges.add(new ChildEntityChange.Updated<>(type, entity));
+  }
+
+  /// 记录子实体删除。
+  ///
+  /// @param type 子实体类型
+  /// @param entityId 被删除实体的 ID
+  /// @param <E> 子实体类型参数
+  protected <E> void trackChildRemoved(Class<E> type, Object entityId) {
+    childChanges.add(new ChildEntityChange.Removed<>(type, entityId));
+  }
+
+  /// 提取并清空子实体变更事件。
+  ///
+  /// Repository 应在持久化时调用此方法获取所有变更。
+  ///
+  /// @return 子实体变更事件列表的副本，如果没有变更则返回空列表
+  public List<ChildEntityChange> pullChildChanges() {
+    if (childChanges.isEmpty()) {
+      return Collections.emptyList();
+    }
+    List<ChildEntityChange> snapshot = List.copyOf(childChanges);
+    childChanges.clear();
+    return snapshot;
+  }
+
+  /// 返回子实体变更事件的不可变视图（用于调试或测试）。
+  ///
+  /// @return 当前子实体变更事件的不可变列表视图
+  public List<ChildEntityChange> peekChildChanges() {
+    return Collections.unmodifiableList(childChanges);
+  }
+
+  /// 检查是否有未处理的子实体变更。
+  ///
+  /// @return 如果有子实体变更则返回 `true`
+  public boolean hasChildChanges() {
+    return !childChanges.isEmpty();
   }
 }
