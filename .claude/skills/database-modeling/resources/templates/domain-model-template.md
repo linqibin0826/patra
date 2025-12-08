@@ -552,16 +552,17 @@ public class {{EntityName}}DO extends BaseDO {
 ```java
 package com.patra.{{module}}.infra.persistence.mapper;
 
-import com.patra.starter.mybatis.core.mapper.PatraBaseMapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.{{module}}.infra.persistence.entity.{{EntityName}}DO;
 import org.apache.ibatis.annotations.Mapper;
 
 /// {{entity_description}} MyBatis Mapper。
-/// 必须继承 PatraBaseMapper（而非 BaseMapper），获得 insertBatchSomeColumn 批量插入能力。
+/// 继承 BaseMapper，批量插入使用 Db.saveBatch()。
 @Mapper
-public interface {{EntityName}}Mapper extends PatraBaseMapper<{{EntityName}}DO> {
+public interface {{EntityName}}Mapper extends BaseMapper<{{EntityName}}DO> {
 
-  // 继承 PatraBaseMapper 的 CRUD 方法和批量插入能力
+  // 继承 BaseMapper 的 CRUD 方法
+  // 批量插入使用 Db.saveBatch()
   // 如需自定义 SQL，在此添加方法并在 XML 中实现
 }
 ```

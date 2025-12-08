@@ -1,7 +1,7 @@
 package com.patra.registry.infra.persistence.mapper.expr;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.registry.infra.persistence.entity.expr.RegProvApiParamMapDO;
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -13,7 +13,7 @@ import org.apache.ibatis.annotations.Param;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface RegProvApiParamMapMapper extends PatraBaseMapper<RegProvApiParamMapDO> {
+public interface RegProvApiParamMapMapper extends BaseMapper<RegProvApiParamMapDO> {
 
   /// 获取指定数据源、端点和标准键的最具体激活映射。
   ///

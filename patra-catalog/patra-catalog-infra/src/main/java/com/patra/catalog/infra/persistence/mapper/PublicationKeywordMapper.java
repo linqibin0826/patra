@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.persistence.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.catalog.infra.persistence.entity.PublicationKeywordDO;
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 
-public interface PublicationKeywordMapper extends PatraBaseMapper<PublicationKeywordDO> {}
+public interface PublicationKeywordMapper extends BaseMapper<PublicationKeywordDO> {}

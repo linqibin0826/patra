@@ -1,5 +1,6 @@
 package com.patra.ingest.infra.adapter.persistence;
 
+import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.patra.ingest.domain.model.entity.OutboxRelayLog;
 import com.patra.ingest.domain.port.OutboxRelayLogRepository;
 import com.patra.ingest.infra.persistence.converter.OutboxRelayLogConverter;
@@ -87,12 +88,11 @@ public class OutboxRelayLogRepositoryAdapter implements OutboxRelayLogRepository
     }
 
     List<OutboxRelayLogDO> entities = converter.toEntities(logs);
-    int rows = mapper.insertBatchSomeColumn(entities);
+    Db.saveBatch(entities);
 
     log.debug(
-        "Batch saved relay logs: batchSize={}, affectedRows={}, batchIds={}",
+        "Batch saved relay logs: batchSize={}, batchIds={}",
         logs.size(),
-        rows,
         logs.stream().map(OutboxRelayLog::getRelayBatchId).distinct().toList());
   }
 

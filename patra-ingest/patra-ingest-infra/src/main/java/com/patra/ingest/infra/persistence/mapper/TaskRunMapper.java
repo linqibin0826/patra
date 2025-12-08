@@ -1,7 +1,7 @@
 package com.patra.ingest.infra.persistence.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.ingest.infra.persistence.entity.TaskRunDO;
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.time.Instant;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -19,7 +19,7 @@ import org.apache.ibatis.annotations.Param;
 /// @author linqibin
 /// @since 0.1.0
 @Mapper
-public interface TaskRunMapper extends PatraBaseMapper<TaskRunDO> {
+public interface TaskRunMapper extends BaseMapper<TaskRunDO> {
 
   /// 获取任务的最新尝试编号。
   ///

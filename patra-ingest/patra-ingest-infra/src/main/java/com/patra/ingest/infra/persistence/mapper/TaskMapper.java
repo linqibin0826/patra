@@ -1,7 +1,7 @@
 package com.patra.ingest.infra.persistence.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.ingest.infra.persistence.entity.TaskDO;
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.time.Instant;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -22,7 +22,7 @@ import org.apache.ibatis.annotations.Param;
 /// @author linqibin
 /// @since 0.1.0
 @Mapper
-public interface TaskMapper extends PatraBaseMapper<TaskDO> {
+public interface TaskMapper extends BaseMapper<TaskDO> {
 
   /// CAS 租约获取(步骤 0)。
   ///

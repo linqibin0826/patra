@@ -11,8 +11,8 @@ import com.tngtech.archunit.lang.ArchRule;
 ///
 /// ### 规则概要
 ///
-/// 1. **禁止 ServiceImpl 继承**：RepositoryAdapter 不应继承 ServiceImpl，应使用 Mapper 的 `insertBatchSomeColumn`
-/// 2. **批量插入规范**：数据量 > 100 条必须使用批量插入，禁止循环 insert
+/// 1. **禁止 ServiceImpl 继承**：RepositoryAdapter 不应继承 ServiceImpl，应使用 `Db.saveBatch()`
+/// 2. **批量插入规范**：数据量 > 100 条必须使用 `Db.saveBatch()` 批量插入，禁止循环 insert
 ///
 /// ### 使用方式
 ///
@@ -36,7 +36,7 @@ public final class MyBatisArchRules {
   /// 禁止 RepositoryAdapter 继承 ServiceImpl。
   ///
   /// ServiceImpl 的 saveBatch() 方法底层是循环 INSERT，性能较差。
-  /// 应使用 PatraBaseMapper 的 `insertBatchSomeColumn()` 方法进行批量插入。
+  /// 应使用 `Db.saveBatch()` 静态方法进行批量插入，配合 `rewriteBatchedStatements=true` JDBC 参数。
   ///
   /// ### 违规示例
   ///
@@ -55,14 +55,15 @@ public final class MyBatisArchRules {
   /// ### 正确示例
   ///
   /// ```java
-  /// // ✅ 正确：直接注入 Mapper，使用 insertBatchSomeColumn
+  /// // ✅ 正确：使用 Db.saveBatch() 进行批量插入
   /// @RequiredArgsConstructor
   /// public class MeshQualifierRepositoryAdapter implements MeshQualifierRepository {
   ///
-  ///     private final MeshQualifierMapper mapper;
-  ///
   ///     public void saveBatch(List<MeshQualifierAggregate> qualifiers) {
-  ///         BatchInsertHelper.batchInsert(dataObjects, mapper::insertBatchSomeColumn);
+  ///         List<MeshQualifierDO> dataObjects = qualifiers.stream()
+  ///             .map(converter::toDataObject)
+  ///             .toList();
+  ///         Db.saveBatch(dataObjects);  // 自动 ID 回填和审计字段填充
   ///     }
   /// }
   /// ```
@@ -77,7 +78,7 @@ public final class MyBatisArchRules {
         .as("RepositoryAdapter 禁止继承 ServiceImpl")
         .because(
             "ServiceImpl.saveBatch() 底层是循环 INSERT，性能差。"
-                + "应使用 PatraBaseMapper.insertBatchSomeColumn() + BatchInsertHelper 进行批量插入");
+                + "应使用 Db.saveBatch() 进行批量插入，配合 rewriteBatchedStatements=true 实现高效批量操作");
   }
 
   /// 禁止 infra 层类继承 ServiceImpl。

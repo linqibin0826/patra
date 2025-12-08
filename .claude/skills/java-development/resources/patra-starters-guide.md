@@ -68,9 +68,9 @@ public class UserDO extends BaseDO {
     private String phone;
 }
 
-/// Mapper 定义（必须继承 PatraBaseMapper）
+/// Mapper 定义（继承 BaseMapper）
 @Mapper
-public interface UserMapper extends PatraBaseMapper<UserDO> {}
+public interface UserMapper extends BaseMapper<UserDO> {}
 
 /// Repository 实现
 @Repository

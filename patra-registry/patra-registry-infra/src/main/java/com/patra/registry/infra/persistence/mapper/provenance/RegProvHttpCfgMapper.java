@@ -1,7 +1,7 @@
 package com.patra.registry.infra.persistence.mapper.provenance;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvHttpCfgDO;
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.time.Instant;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
@@ -12,7 +12,7 @@ import org.apache.ibatis.annotations.Param;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface RegProvHttpCfgMapper extends PatraBaseMapper<RegProvHttpCfgDO> {
+public interface RegProvHttpCfgMapper extends BaseMapper<RegProvHttpCfgDO> {
 
   /// 查询指定数据源和操作作用域的有效 HTTP 配置。
   ///

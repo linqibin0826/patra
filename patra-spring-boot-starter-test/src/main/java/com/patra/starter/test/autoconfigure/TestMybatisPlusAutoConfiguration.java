@@ -3,7 +3,6 @@ package com.patra.starter.test.autoconfigure;
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.autoconfigure.ConfigurationCustomizer;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
-import com.baomidou.mybatisplus.core.injector.ISqlInjector;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
@@ -141,25 +140,6 @@ public class TestMybatisPlusAutoConfiguration {
           handlerClass.getConstructor(java.time.Clock.class).newInstance((Object) null);
     } catch (ReflectiveOperationException e) {
       throw new IllegalStateException("无法创建 AuditMetaObjectHandler", e);
-    }
-  }
-
-  /// 配置 SQL 注入器。
-  ///
-  /// 注入 `insertBatchSomeColumn` 等批量操作方法到 Mapper 接口。
-  /// 通过反射创建 `PatraSqlInjector` 实例以避免编译时依赖。
-  /// 仅当 `PatraSqlInjector` 类存在时才激活。
-  ///
-  /// @return SQL 注入器
-  @Bean
-  @ConditionalOnClass(name = "com.patra.starter.mybatis.injector.PatraSqlInjector")
-  @ConditionalOnMissingBean(ISqlInjector.class)
-  ISqlInjector testSqlInjector() {
-    try {
-      Class<?> injectorClass = Class.forName("com.patra.starter.mybatis.injector.PatraSqlInjector");
-      return (ISqlInjector) injectorClass.getDeclaredConstructor().newInstance();
-    } catch (ReflectiveOperationException e) {
-      throw new IllegalStateException("无法创建 PatraSqlInjector", e);
     }
   }
 }

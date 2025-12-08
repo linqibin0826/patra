@@ -1,7 +1,7 @@
 package com.patra.ingest.infra.persistence.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.ingest.infra.persistence.entity.OutboxRelayLogDO;
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.time.Instant;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
@@ -26,7 +26,7 @@ import org.apache.ibatis.annotations.Param;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface OutboxRelayLogMapper extends PatraBaseMapper<OutboxRelayLogDO> {
+public interface OutboxRelayLogMapper extends BaseMapper<OutboxRelayLogDO> {
 
   /// 查询特定发件箱消息的所有中继日志(按 started_at 降序排列)。
   ///

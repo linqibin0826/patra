@@ -46,7 +46,7 @@ public interface OutboxRelayLogConverter {
 
   /// 为批量插入初始化审计字段默认值。
   ///
-  /// 虽然 `insertBatchSomeColumn` 会触发 `MetaObjectHandler.insertFill()`，
+  /// 虽然 `Db.saveBatch()` 会触发 `MetaObjectHandler.insertFill()`，
   /// 但在 Converter 阶段预设值可以确保：
   /// 1. 批量操作中所有记录的时间戳一致性（同一批次使用相同时间）
   /// 2. 避免依赖 MetaObjectHandler 的隐式行为

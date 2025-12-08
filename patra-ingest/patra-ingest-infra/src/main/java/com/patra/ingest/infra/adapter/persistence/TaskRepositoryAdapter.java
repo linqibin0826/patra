@@ -2,14 +2,13 @@ package com.patra.ingest.infra.adapter.persistence;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.domain.exception.TaskPersistenceException;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.port.TaskRepository;
 import com.patra.ingest.infra.persistence.converter.TaskConverter;
 import com.patra.ingest.infra.persistence.entity.TaskDO;
 import com.patra.ingest.infra.persistence.mapper.TaskMapper;
-import com.patra.starter.mybatis.batch.BatchInsertHelper;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -79,7 +78,7 @@ public class TaskRepositoryAdapter implements TaskRepository {
 
   /// 批量保存任务。
   ///
-  /// 对新增任务使用批量插入（`insertBatchSomeColumn`），对已有任务逐条更新（保持乐观锁语义）。
+  /// 对新增任务使用 `Db.saveBatch()` 批量插入，对已有任务逐条更新（保持乐观锁语义）。
   /// 确保 version 和 ID 回写一致性。
   ///
   /// @param tasks 任务列表
@@ -106,12 +105,7 @@ public class TaskRepositoryAdapter implements TaskRepository {
     if (!toInsert.isEmpty()) {
       List<TaskDO> insertEntities = toInsert.stream().map(converter::toEntity).toList();
 
-      var result = BatchInsertHelper.batchInsert(insertEntities, mapper::insertBatchSomeColumn);
-
-      if (result.hasErrors()) {
-        log.error("任务批量插入部分失败：成功 {} / 总计 {}", result.successCount(), result.totalCount());
-        throw new TaskPersistenceException("任务批量插入部分失败，失败批次数: " + result.errors().size());
-      }
+      Db.saveBatch(insertEntities);
 
       // 回写 ID 和 version
       for (int i = 0; i < toInsert.size(); i++) {

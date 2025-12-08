@@ -1,17 +1,17 @@
 package com.patra.catalog.infra.persistence.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.catalog.infra.persistence.entity.VenueIndexingHistoryDO;
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.util.Collection;
 import org.apache.ibatis.annotations.Param;
 
 /// 载体索引历史 Mapper 接口 — 对载体索引历史表的数据访问操作。
 ///
-/// 继承 `PatraBaseMapper` 以获得批量插入能力（`insertBatchSomeColumn`）。
+/// 继承 `BaseMapper` 提供标准 CRUD，批量插入请使用 `Db.saveBatch()`。
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface VenueIndexingHistoryMapper extends PatraBaseMapper<VenueIndexingHistoryDO> {
+public interface VenueIndexingHistoryMapper extends BaseMapper<VenueIndexingHistoryDO> {
 
   /// 物理删除指定 venue 的所有索引历史。
   ///

@@ -1,7 +1,7 @@
 package com.patra.registry.infra.persistence.mapper.provenance;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvRateLimitCfgDO;
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.time.Instant;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
@@ -12,7 +12,7 @@ import org.apache.ibatis.annotations.Param;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface RegProvRateLimitCfgMapper extends PatraBaseMapper<RegProvRateLimitCfgDO> {
+public interface RegProvRateLimitCfgMapper extends BaseMapper<RegProvRateLimitCfgDO> {
 
   /// 查询按数据源和操作作用域限定的有效速率限制配置。
   ///

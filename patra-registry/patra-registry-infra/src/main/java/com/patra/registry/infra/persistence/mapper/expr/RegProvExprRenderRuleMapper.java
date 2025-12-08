@@ -1,7 +1,7 @@
 package com.patra.registry.infra.persistence.mapper.expr;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.registry.infra.persistence.entity.expr.RegProvExprRenderRuleDO;
-import com.patra.starter.mybatis.mapper.PatraBaseMapper;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -13,7 +13,7 @@ import org.apache.ibatis.annotations.Param;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface RegProvExprRenderRuleMapper extends PatraBaseMapper<RegProvExprRenderRuleDO> {
+public interface RegProvExprRenderRuleMapper extends BaseMapper<RegProvExprRenderRuleDO> {
 
   /// 查询匹配指定维度的最具体激活渲染规则。
   ///
