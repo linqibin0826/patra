@@ -16,7 +16,6 @@ import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.port.parser.SerfileParserPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
-import com.patra.catalog.domain.port.repository.VenueSupplementRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.common.error.ApplicationException;
@@ -71,7 +70,6 @@ class VenuePubmedEnrichOrchestratorTest {
   @Mock private StreamingDownloadPort streamingDownloadPort;
   @Mock private SerfileParserPort parserPort;
   @Mock private VenueRepository venueRepository;
-  @Mock private VenueSupplementRepository supplementRepository;
   @Mock private TransactionTemplate transactionTemplate;
   @Mock private TransactionStatus transactionStatus;
   @Mock private StreamingDownloadResult downloadResult;
@@ -86,11 +84,7 @@ class VenuePubmedEnrichOrchestratorTest {
   void setUp() {
     orchestrator =
         new VenuePubmedEnrichOrchestrator(
-            streamingDownloadPort,
-            parserPort,
-            venueRepository,
-            supplementRepository,
-            transactionTemplate);
+            streamingDownloadPort, parserPort, venueRepository, transactionTemplate);
 
     // 配置 TransactionTemplate：直接执行回调，模拟事务行为
     org.mockito.Mockito.doAnswer(

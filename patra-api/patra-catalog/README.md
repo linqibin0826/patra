@@ -123,7 +123,7 @@ patra:
   - `Author`：作者实体
   - `Affiliation`：机构实体
 
-- **Record 值对象**（不可变，通过 `VenueSupplementRepository` 独立管理）
+- **Record 值对象**（不可变，通过 `VenueRepository` 统一管理）
   - `VenueIdentifier`：载体标识符（ISSN/OpenAlex ID/NLM ID 等，保留在聚合内）
   - `VenuePublicationStats`：载体年度发文统计（发表量/被引量/OA 比例）
   - `VenueMesh`：载体 MeSH 主题词（MeSH 主题分类，来源 Serfile）
@@ -171,8 +171,7 @@ patra:
 ### Infrastructure 层
 - `MeshDescriptorRepositoryAdapter`：主题词仓储适配器
 - `MeshQualifierRepositoryAdapter`：限定词仓储适配器
-- `VenueRepositoryAdapter`：载体聚合根仓储适配器（仅含 identifiers）
-- `VenueSupplementRepositoryAdapter`：载体补充数据仓储适配器（年度指标/MeSH/关联/索引历史）
+- `VenueRepositoryAdapter`：载体聚合根仓储适配器（含 identifiers 和补充数据）
 - `MeshDescriptorConverter`：主题词对象转换器
 - `MeshQualifierConverter`：限定词对象转换器
 - `StreamingDownloadAdapter`：流式下载适配器（HTTP 响应体直接返回 InputStream，无磁盘落盘）
@@ -215,7 +214,7 @@ patra:
    - **架构决策**：[[ADR-014]] 基于 Vaughn Vernon 聚合设计规则，将无聚合级不变量的子实体移出聚合边界
    - **Breaking Change**：5 个实体类（VenueIdentifier、VenuePublicationStats、VenueMesh、VenueRelation、VenueIndexingHistory）从 Class 改为 Record
    - **Breaking Change**：yearlyMetrics、meshTerms、relations、indexingHistories 从 VenueAggregate 移出
-   - 新增 `VenueSupplementRepository` 端口及 `VenueSupplementRepositoryAdapter` 实现
+   - `VenueRepository` 扩展：合并补充数据管理方法（年度指标/MeSH/关联/索引历史）
    - 新增 `VenueParseResult` record：封装 OpenAlex 解析结果（聚合根 + 年度指标）
    - VenueAggregate 从约 1030 行精简至约 720 行
    - 保留 identifiers 在聚合内（有 ISSN-L 唯一性不变量需要保护）

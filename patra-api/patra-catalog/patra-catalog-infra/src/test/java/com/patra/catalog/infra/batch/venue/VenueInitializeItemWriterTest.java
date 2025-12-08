@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -16,7 +15,6 @@ import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.entity.VenuePublicationStats;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.port.repository.VenueRepository;
-import com.patra.catalog.domain.port.repository.VenueSupplementRepository;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -38,7 +36,7 @@ import org.springframework.dao.DuplicateKeyException;
 ///
 /// **测试策略**：
 ///
-/// - 单元测试：Mock VenueRepository 和 VenueSupplementRepository 依赖
+/// - 单元测试：Mock VenueRepository 依赖
 /// - 测试乐观插入策略：正常插入和异常降级处理
 /// - 测试 Chunk 内去重逻辑
 /// - 测试年度指标写入逻辑
@@ -51,7 +49,6 @@ import org.springframework.dao.DuplicateKeyException;
 class VenueInitializeItemWriterTest {
 
   @Mock private VenueRepository venueRepository;
-  @Mock private VenueSupplementRepository venueSupplementRepository;
 
   @Captor private ArgumentCaptor<List<VenueAggregate>> aggregatesCaptor;
 
@@ -59,7 +56,7 @@ class VenueInitializeItemWriterTest {
 
   @BeforeEach
   void setUp() {
-    writer = new VenueInitializeItemWriter(venueRepository, venueSupplementRepository);
+    writer = new VenueInitializeItemWriter(venueRepository);
   }
 
   // ========== 正常写入测试 ==========
@@ -76,7 +73,7 @@ class VenueInitializeItemWriterTest {
 
       // Then
       verify(venueRepository, never()).insertAll(anyList());
-      verify(venueSupplementRepository, never()).replaceYearlyMetricsBatch(anyMap());
+      verify(venueRepository, never()).replaceYearlyMetricsBatch(any());
     }
 
     @Test
@@ -88,7 +85,7 @@ class VenueInitializeItemWriterTest {
       Chunk<VenueParseResult> chunk = Chunk.of(result1, result2);
 
       doNothing().when(venueRepository).insertAll(anyList());
-      doNothing().when(venueSupplementRepository).replaceYearlyMetricsBatch(anyMap());
+      doNothing().when(venueRepository).replaceYearlyMetricsBatch(any());
 
       // When
       writer.write(chunk);
@@ -99,12 +96,12 @@ class VenueInitializeItemWriterTest {
       assertThatListContainsOpenalexIds(inserted, "S1", "S2");
 
       // Then: 验证年度指标插入
-      verify(venueSupplementRepository, times(1)).replaceYearlyMetricsBatch(anyMap());
+      verify(venueRepository, times(1)).replaceYearlyMetricsBatch(any());
     }
 
     @Test
-    @DisplayName("无年度指标 - 不应调用 supplementRepository")
-    void write_noMetrics_shouldNotCallSupplementRepository() throws Exception {
+    @DisplayName("无年度指标 - 不应调用 replaceYearlyMetricsBatch")
+    void write_noMetrics_shouldNotCallReplaceYearlyMetricsBatch() throws Exception {
       // Given
       VenueParseResult result1 = createParseResult("S1", "1111-1111", false);
       VenueParseResult result2 = createParseResult("S2", "2222-2222", false);
@@ -117,7 +114,7 @@ class VenueInitializeItemWriterTest {
 
       // Then
       verify(venueRepository, times(1)).insertAll(anyList());
-      verify(venueSupplementRepository, never()).replaceYearlyMetricsBatch(anyMap());
+      verify(venueRepository, never()).replaceYearlyMetricsBatch(any());
     }
   }
 
@@ -128,8 +125,8 @@ class VenueInitializeItemWriterTest {
   class ChunkDeduplicationTests {
 
     @Test
-    @DisplayName("Chunk 内 ISSN-L 重复 - 应该跳过重复记录")
-    void write_duplicateIssnLInChunk_shouldSkipDuplicates() throws Exception {
+    @DisplayName("Chunk 内 ISSN-L 重复 - 应该使用后者覆盖")
+    void write_duplicateIssnLInChunk_shouldUseLatest() throws Exception {
       // Given: 两条记录有相同的 ISSN-L
       VenueParseResult result1 = createParseResult("S1", "1111-1111", false);
       VenueParseResult result2 = createParseResult("S2", "1111-1111", false); // 重复的 ISSN-L
@@ -141,10 +138,10 @@ class VenueInitializeItemWriterTest {
       // When
       writer.write(chunk);
 
-      // Then: 只插入 2 条（S1 和 S3）
+      // Then: 只插入 2 条（S2 覆盖 S1，保留 S3）
       verify(venueRepository, times(1)).insertAll(aggregatesCaptor.capture());
       List<VenueAggregate> inserted = aggregatesCaptor.getValue();
-      assertThatListContainsOpenalexIds(inserted, "S1", "S3");
+      assertThatListContainsOpenalexIds(inserted, "S2", "S3");
     }
 
     @Test

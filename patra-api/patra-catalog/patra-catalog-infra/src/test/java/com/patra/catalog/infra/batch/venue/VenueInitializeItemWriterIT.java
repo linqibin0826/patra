@@ -10,7 +10,6 @@ import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
 import com.patra.catalog.infra.adapter.persistence.VenueRepositoryAdapter;
-import com.patra.catalog.infra.adapter.persistence.VenueSupplementRepositoryAdapter;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.catalog.infra.persistence.entity.VenueDO;
 import com.patra.catalog.infra.persistence.entity.VenueIdentifierDO;
@@ -62,7 +61,6 @@ import org.springframework.test.context.ContextConfiguration;
 @Import({
   VenueInitializeItemWriter.class,
   VenueRepositoryAdapter.class,
-  VenueSupplementRepositoryAdapter.class,
   TestMybatisPlusAutoConfiguration.class
 })
 @ComponentScan(basePackages = "com.patra.catalog.infra.persistence.converter")

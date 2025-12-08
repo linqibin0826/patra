@@ -13,7 +13,7 @@ import java.util.Objects;
 ///
 /// - 作为值对象存在（不是实体）
 /// - 使用 Record 实现不可变性
-/// - 通过 `VenueSupplementRepository` 单独管理
+/// - 通过 `VenueRepository` 统一管理
 /// - 记录期刊在各索引数据库（MEDLINE、PMC 等）的索引历史
 /// - 数据主要来源于 NLM Serfile 的 IndexingHistoryList 元素
 ///

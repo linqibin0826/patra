@@ -29,7 +29,7 @@ import lombok.Getter;
 ///
 /// - VenueIdentifier（值对象，1:N）：标识符集合，保护 ISSN-L 唯一性不变量
 ///
-/// **补充数据（通过 VenueSupplementRepository 单独管理）**：
+/// **补充数据（通过 VenueRepository 统一管理）**：
 ///
 /// - VenuePublicationStats：年度指标集合（来自 OpenAlex）
 /// - VenueMesh：MeSH 主题词集合（来自 Serfile）

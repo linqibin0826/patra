@@ -20,7 +20,6 @@ import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedTitleRelation;
 import com.patra.catalog.domain.port.parser.SerfileParserPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
-import com.patra.catalog.domain.port.repository.VenueSupplementRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.common.error.ApplicationException;
@@ -73,7 +72,6 @@ public class VenuePubmedEnrichOrchestrator implements VenuePubmedEnrichUseCase {
   private final StreamingDownloadPort streamingDownloadPort;
   private final SerfileParserPort parserPort;
   private final VenueRepository venueRepository;
-  private final VenueSupplementRepository supplementRepository;
   private final TransactionTemplate transactionTemplate;
 
   /// 执行 PubMed Venue 数据富化。
@@ -266,8 +264,7 @@ public class VenuePubmedEnrichOrchestrator implements VenuePubmedEnrichUseCase {
     }
 
     // 批量保存子实体
-    supplementRepository.replaceSerfileDataBatch(
-        meshByVenueId, relationsByVenueId, historiesByVenueId);
+    venueRepository.replaceSerfileDataBatch(meshByVenueId, relationsByVenueId, historiesByVenueId);
     log.debug(
         "批量保存子实体：MeSH {} 组，关系 {} 组，索引历史 {} 组",
         meshByVenueId.size(),
@@ -310,7 +307,7 @@ public class VenuePubmedEnrichOrchestrator implements VenuePubmedEnrichUseCase {
   /// 从 PubmedSerialData 更新 VenueAggregate。
   ///
   /// PubMed 数据完全覆盖现有数据。
-  /// **注意**：子实体（MeSH、关系、索引历史）通过 VenueSupplementRepository 单独保存。
+  /// **注意**：子实体（MeSH、关系、索引历史）通过 VenueRepository 的补充数据方法单独保存。
   private void updateVenueFromRecord(VenueAggregate venue, PubmedSerialData record) {
     // 覆盖主表字段
     venue
@@ -342,7 +339,7 @@ public class VenuePubmedEnrichOrchestrator implements VenuePubmedEnrichUseCase {
 
   /// 从 PubmedSerialData 创建新 VenueAggregate。
   ///
-  /// **注意**：子实体（MeSH、关系、索引历史）通过 VenueSupplementRepository 单独保存。
+  /// **注意**：子实体（MeSH、关系、索引历史）通过 VenueRepository 的补充数据方法单独保存。
   private VenueAggregate createVenueFromRecord(PubmedSerialData record) {
     VenueAggregate venue =
         VenueAggregate.fromPubMed(record.title(), record.nlmUniqueId(), record.issnL());

@@ -13,7 +13,7 @@ import java.util.Objects;
 ///
 /// - 作为值对象存在（不是实体）
 /// - 使用 Record 实现不可变性
-/// - 通过 `VenueSupplementRepository` 单独管理
+/// - 通过 `VenueRepository` 统一管理
 /// - 存储期刊之间的历史关系（前身、后继、合并、拆分等）
 /// - 数据主要来源于 NLM Serfile 的 TitleRelated 元素
 ///
