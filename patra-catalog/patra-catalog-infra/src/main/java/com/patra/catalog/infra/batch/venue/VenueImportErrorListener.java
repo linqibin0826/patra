@@ -25,9 +25,9 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 public class VenueImportErrorListener
-    implements ItemReadListener<VenueAggregate>,
-        ItemProcessListener<VenueAggregate, VenueAggregate>,
-        ItemWriteListener<VenueAggregate> {
+    implements ItemReadListener<VenueParseResult>,
+        ItemProcessListener<VenueParseResult, VenueParseResult>,
+        ItemWriteListener<VenueParseResult> {
 
   /// 最大打印记录数（避免 Chunk 过大时日志爆炸）。
   private static final int MAX_ITEMS_TO_LOG = 20;
@@ -47,7 +47,7 @@ public class VenueImportErrorListener
   // ========== ItemProcessListener ==========
 
   @Override
-  public void onProcessError(VenueAggregate item, Exception ex) {
+  public void onProcessError(VenueParseResult item, Exception ex) {
     log.error("[处理错误] 数据转换/验证失败");
     log.error("失败数据: {}", formatItem(item));
     log.error("异常类型: {}", ex.getClass().getSimpleName());
@@ -57,14 +57,14 @@ public class VenueImportErrorListener
   // ========== ItemWriteListener ==========
 
   @Override
-  public void onWriteError(Exception ex, Chunk<? extends VenueAggregate> items) {
+  public void onWriteError(Exception ex, Chunk<? extends VenueParseResult> items) {
     log.error("[写入错误] 数据库操作失败");
     log.error("异常类型: {}", ex.getClass().getSimpleName());
     log.error("异常信息: {}", ex.getMessage());
     log.error("失败 Chunk 包含 {} 条记录:", items.size());
 
     int count = 0;
-    for (VenueAggregate item : items) {
+    for (VenueParseResult item : items) {
       if (count >= MAX_ITEMS_TO_LOG) {
         log.error("  ... 省略剩余 {} 条记录", items.size() - MAX_ITEMS_TO_LOG);
         break;
@@ -76,20 +76,22 @@ public class VenueImportErrorListener
 
   // ========== 辅助方法 ==========
 
-  /// 格式化 VenueAggregate 关键字段用于日志输出。
+  /// 格式化 VenueParseResult 关键字段用于日志输出。
   ///
-  /// @param item VenueAggregate 实例
+  /// @param item VenueParseResult 实例
   /// @return 格式化的字符串
-  private String formatItem(VenueAggregate item) {
+  private String formatItem(VenueParseResult item) {
     if (item == null) {
       return "null";
     }
+    VenueAggregate aggregate = item.aggregate();
     return String.format(
-        "openalexId=%s, displayName=%s, issnL=%s, type=%s",
-        item.getOpenalexId(),
-        truncate(item.getDisplayName(), 50),
-        item.getIssnL(),
-        item.getVenueType());
+        "openalexId=%s, displayName=%s, issnL=%s, type=%s, metrics=%d",
+        aggregate.getOpenalexId(),
+        truncate(aggregate.getDisplayName(), 50),
+        aggregate.getIssnL(),
+        aggregate.getVenueType(),
+        item.yearlyMetrics().size());
   }
 
   /// 截断字符串（避免日志过长）。

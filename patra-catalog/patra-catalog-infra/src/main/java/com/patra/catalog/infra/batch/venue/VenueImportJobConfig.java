@@ -1,6 +1,5 @@
 package com.patra.catalog.infra.batch.venue;
 
-import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.starter.batch.config.BatchProperties;
 import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
@@ -115,15 +114,15 @@ public class VenueImportJobConfig {
 
     var stepBuilder =
         new StepBuilder("venueImportStep", jobRepository)
-            .<VenueAggregate, VenueAggregate>chunk(chunkSize, transactionManager)
+            .<VenueParseResult, VenueParseResult>chunk(chunkSize, transactionManager)
             .reader(venueImportItemReader(null))
             .writer(venueImportItemWriter);
 
     // 注册错误日志监听器（需要分别注册三个接口，避免方法重载歧义）
-    stepBuilder.listener((ItemReadListener<VenueAggregate>) venueImportErrorListener);
+    stepBuilder.listener((ItemReadListener<VenueParseResult>) venueImportErrorListener);
     stepBuilder.listener(
-        (ItemProcessListener<VenueAggregate, VenueAggregate>) venueImportErrorListener);
-    stepBuilder.listener((ItemWriteListener<VenueAggregate>) venueImportErrorListener);
+        (ItemProcessListener<VenueParseResult, VenueParseResult>) venueImportErrorListener);
+    stepBuilder.listener((ItemWriteListener<VenueParseResult>) venueImportErrorListener);
     log.info("已注册 VenueImportErrorListener（读取/处理/写入错误监听）");
 
     // 仅在指标监听器存在时注册（需要 MeterRegistry）

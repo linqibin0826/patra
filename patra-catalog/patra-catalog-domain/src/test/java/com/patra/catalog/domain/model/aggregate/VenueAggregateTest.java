@@ -4,13 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.patra.catalog.domain.model.entity.VenueIdentifier;
-import com.patra.catalog.domain.model.entity.VenuePublicationStats;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.IndexingInfo;
 import com.patra.catalog.domain.model.vo.venue.LatestRating;
 import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
 import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
+import com.patra.catalog.domain.model.vo.venue.VenueStats;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -179,7 +179,7 @@ class VenueAggregateTest {
       int initialSize = venue.getIdentifiers().size();
 
       // When
-      venue.addIdentifier(VenueIdentifier.forIssn(ISSN, false));
+      venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
 
       // Then
       assertThat(venue.getIdentifiers()).hasSize(initialSize + 1);
@@ -187,48 +187,30 @@ class VenueAggregateTest {
     }
 
     @Test
-    @DisplayName("addIdentifier() 应该忽略重复标识符")
+    @DisplayName("addIdentifier() 应该忽略重复标识符（基于 Record equals）")
     void addIdentifierShouldIgnoreDuplicate() {
       // Given
       VenueAggregate venue =
           VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      venue.addIdentifier(VenueIdentifier.forIssn(ISSN, false));
+      venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
       int sizeAfterFirst = venue.getIdentifiers().size();
 
       // When - 添加相同的标识符
-      venue.addIdentifier(VenueIdentifier.forIssn(ISSN, true));
+      venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
 
       // Then - 数量不变
       assertThat(venue.getIdentifiers()).hasSize(sizeAfterFirst);
     }
 
     @Test
-    @DisplayName("addIdentifier() 首选标识符应该取消同类型其他首选")
-    void addPrimaryIdentifierShouldUnmarkOthers() {
-      // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      VenueIdentifier issn1 = VenueIdentifier.forIssn("1111-1111", true);
-      VenueIdentifier issn2 = VenueIdentifier.forIssn("2222-2222", true);
-      venue.addIdentifier(issn1);
-
-      // When
-      venue.addIdentifier(issn2);
-
-      // Then - issn1 应该不再是首选
-      assertThat(issn1.isPrimary()).isFalse();
-      assertThat(issn2.isPrimary()).isTrue();
-    }
-
-    @Test
-    @DisplayName("addIdentifier(type, value, isPrimary) 便捷方法应该正常工作")
+    @DisplayName("addIdentifier(type, value) 便捷方法应该正常工作")
     void addIdentifierConvenienceMethodShouldWork() {
       // Given
       VenueAggregate venue =
           VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
 
       // When
-      venue.addIdentifier(VenueIdentifierType.MAG, "12345", false);
+      venue.addIdentifier(VenueIdentifierType.MAG, "12345");
 
       // Then
       assertThat(venue.getIdentifier(VenueIdentifierType.MAG)).contains("12345");
@@ -240,7 +222,7 @@ class VenueAggregateTest {
       // Given
       VenueAggregate venue =
           VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      venue.addIdentifier(VenueIdentifier.forIssn(ISSN, false));
+      venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
 
       // When
       venue.removeIdentifier(VenueIdentifierType.ISSN, ISSN);
@@ -250,19 +232,19 @@ class VenueAggregateTest {
     }
 
     @Test
-    @DisplayName("setPrimaryIdentifier() 应该设置首选标识符")
-    void setPrimaryIdentifierShouldSetPrimary() {
+    @DisplayName("getIdentifier(type) 应该返回第一个匹配的标识符")
+    void getIdentifierShouldReturnFirst() {
       // Given
       VenueAggregate venue =
           VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      venue.addIdentifier(VenueIdentifier.forIssn("1111-1111", true));
-      venue.addIdentifier(VenueIdentifier.forIssn("2222-2222", false));
+      venue.addIdentifier(VenueIdentifier.forIssn("1111-1111"));
+      venue.addIdentifier(VenueIdentifier.forIssn("2222-2222"));
 
       // When
-      venue.setPrimaryIdentifier(VenueIdentifierType.ISSN, "2222-2222");
+      Optional<String> result = venue.getIdentifier(VenueIdentifierType.ISSN);
 
-      // Then - 通过 getIdentifier 返回首选
-      assertThat(venue.getIdentifier(VenueIdentifierType.ISSN)).contains("2222-2222");
+      // Then - 返回第一个添加的
+      assertThat(result).contains("1111-1111");
     }
 
     @Test
@@ -271,8 +253,8 @@ class VenueAggregateTest {
       // Given
       VenueAggregate venue =
           VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      venue.addIdentifier(VenueIdentifier.forIssn("1111-1111", true));
-      venue.addIdentifier(VenueIdentifier.forIssn("2222-2222", false));
+      venue.addIdentifier(VenueIdentifier.forIssn("1111-1111"));
+      venue.addIdentifier(VenueIdentifier.forIssn("2222-2222"));
 
       // When
       List<String> issns = venue.getIdentifiers(VenueIdentifierType.ISSN);
@@ -302,7 +284,7 @@ class VenueAggregateTest {
       // Given
       VenueAggregate venue =
           VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      venue.addIdentifier(VenueIdentifier.forIssn(ISSN, true));
+      venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
 
       // When
       venue.setIdentifiers(List.of(VenueIdentifier.forNlm(NLM_ID)));
@@ -311,134 +293,6 @@ class VenueAggregateTest {
       assertThat(venue.getIdentifiers()).hasSize(1);
       assertThat(venue.getIdentifier(VenueIdentifierType.NLM)).contains(NLM_ID);
       assertThat(venue.getIdentifier(VenueIdentifierType.ISSN)).isEmpty();
-    }
-  }
-
-  @Nested
-  @DisplayName("年度指标管理测试")
-  class MetricsManagementTests {
-
-    @Test
-    @DisplayName("setMetrics() 应该添加新的年度指标")
-    void setMetricsShouldAddNew() {
-      // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-
-      // When
-      venue.setMetrics(2024, 1500, 25000);
-
-      // Then
-      Optional<VenuePublicationStats> metrics = venue.getMetrics(2024);
-      assertThat(metrics).isPresent();
-      assertThat(metrics.get().getWorksCount()).isEqualTo(1500);
-      assertThat(metrics.get().getCitedByCount()).isEqualTo(25000);
-    }
-
-    @Test
-    @DisplayName("setMetrics() 含 OA 作品数应该正常工作")
-    void setMetricsWithOaWorksCountShouldWork() {
-      // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-
-      // When
-      venue.setMetrics(2024, 1500, 25000, 800);
-
-      // Then
-      Optional<VenuePublicationStats> metrics = venue.getMetrics(2024);
-      assertThat(metrics).isPresent();
-      assertThat(metrics.get().getOaWorksCount()).isEqualTo(800);
-    }
-
-    @Test
-    @DisplayName("setMetrics() 应该更新已存在的年度指标")
-    void setMetricsShouldUpdateExisting() {
-      // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      venue.setMetrics(2024, 100, 500);
-
-      // When
-      venue.setMetrics(2024, 200, 1000);
-
-      // Then
-      Optional<VenuePublicationStats> metrics = venue.getMetrics(2024);
-      assertThat(metrics).isPresent();
-      assertThat(metrics.get().getWorksCount()).isEqualTo(200);
-      assertThat(metrics.get().getCitedByCount()).isEqualTo(1000);
-      // 应该只有一条记录
-      assertThat(venue.getAllMetrics()).hasSize(1);
-    }
-
-    @Test
-    @DisplayName("addMetrics() 应该添加/替换年度指标")
-    void addMetricsShouldAddOrReplace() {
-      // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      venue.addMetrics(VenuePublicationStats.create(2024, 100, 500));
-
-      // When - 添加同年份新记录（会替换）
-      venue.addMetrics(VenuePublicationStats.create(2024, 200, 1000));
-
-      // Then
-      assertThat(venue.getAllMetrics()).hasSize(1);
-      assertThat(venue.getMetrics(2024).get().getWorksCount()).isEqualTo(200);
-    }
-
-    @Test
-    @DisplayName("getAllMetrics() 应该按年份降序排列")
-    void getAllMetricsShouldSortByYearDesc() {
-      // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      venue.setMetrics(2022, 100, 500);
-      venue.setMetrics(2024, 300, 1500);
-      venue.setMetrics(2023, 200, 1000);
-
-      // When
-      List<VenuePublicationStats> allMetrics = venue.getAllMetrics();
-
-      // Then
-      assertThat(allMetrics).hasSize(3);
-      assertThat(allMetrics.get(0).getYear()).isEqualTo(2024);
-      assertThat(allMetrics.get(1).getYear()).isEqualTo(2023);
-      assertThat(allMetrics.get(2).getYear()).isEqualTo(2022);
-    }
-
-    @Test
-    @DisplayName("getYearlyMetrics() 应该返回不可变列表")
-    void getYearlyMetricsShouldReturnUnmodifiableList() {
-      // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      venue.setMetrics(2024, 100, 500);
-
-      // When
-      List<VenuePublicationStats> metrics = venue.getYearlyMetrics();
-
-      // Then
-      assertThatThrownBy(() -> metrics.add(VenuePublicationStats.create(2023, 50, 200)))
-          .isInstanceOf(UnsupportedOperationException.class);
-    }
-
-    @Test
-    @DisplayName("setYearlyMetrics() 应该替换所有年度指标")
-    void setYearlyMetricsShouldReplaceAll() {
-      // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      venue.setMetrics(2022, 100, 500);
-      venue.setMetrics(2023, 200, 1000);
-
-      // When
-      venue.setYearlyMetrics(List.of(VenuePublicationStats.create(2024, 300, 1500)));
-
-      // Then
-      assertThat(venue.getAllMetrics()).hasSize(1);
-      assertThat(venue.getMetrics(2024)).isPresent();
-      assertThat(venue.getMetrics(2022)).isEmpty();
     }
   }
 
@@ -526,7 +380,7 @@ class VenueAggregateTest {
           VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
       assertThat(venue.hasStats()).isFalse();
 
-      venue.setMetrics(2024, 100, 500);
+      venue.withCurrentStats(VenueStats.of(1500, 25000, 50, 100, new BigDecimal("42.5")));
       assertThat(venue.hasStats()).isTrue();
     }
 

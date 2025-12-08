@@ -1,8 +1,10 @@
 package com.patra.catalog.infra.batch.venue;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -11,8 +13,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
+import com.patra.catalog.domain.model.entity.VenuePublicationStats;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.port.repository.VenueRepository;
+import com.patra.catalog.domain.port.repository.VenueSupplementRepository;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -34,9 +38,10 @@ import org.springframework.dao.DuplicateKeyException;
 ///
 /// **测试策略**：
 ///
-/// - 单元测试：Mock VenueRepository 依赖
+/// - 单元测试：Mock VenueRepository 和 VenueSupplementRepository 依赖
 /// - 测试乐观插入策略：正常插入和异常降级处理
 /// - 测试 Chunk 内去重逻辑
+/// - 测试年度指标写入逻辑
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -46,6 +51,7 @@ import org.springframework.dao.DuplicateKeyException;
 class VenueImportItemWriterTest {
 
   @Mock private VenueRepository venueRepository;
+  @Mock private VenueSupplementRepository venueSupplementRepository;
 
   @Captor private ArgumentCaptor<List<VenueAggregate>> aggregatesCaptor;
 
@@ -53,7 +59,7 @@ class VenueImportItemWriterTest {
 
   @BeforeEach
   void setUp() {
-    writer = new VenueImportItemWriter(venueRepository);
+    writer = new VenueImportItemWriter(venueRepository, venueSupplementRepository);
   }
 
   // ========== 正常写入测试 ==========
@@ -70,15 +76,39 @@ class VenueImportItemWriterTest {
 
       // Then
       verify(venueRepository, never()).insertAll(anyList());
+      verify(venueSupplementRepository, never()).replaceYearlyMetricsBatch(anyMap());
     }
 
     @Test
-    @DisplayName("正常数据 - 应该直接插入")
-    void write_normalData_shouldInsertDirectly() throws Exception {
+    @DisplayName("正常数据 - 应该插入聚合根和年度指标")
+    void write_normalData_shouldInsertAggregatesAndMetrics() throws Exception {
       // Given
-      VenueAggregate venue1 = createVenue("S1", "1111-1111");
-      VenueAggregate venue2 = createVenue("S2", "2222-2222");
-      Chunk<VenueAggregate> chunk = Chunk.of(venue1, venue2);
+      VenueParseResult result1 = createParseResult("S1", "1111-1111", true);
+      VenueParseResult result2 = createParseResult("S2", "2222-2222", true);
+      Chunk<VenueParseResult> chunk = Chunk.of(result1, result2);
+
+      doNothing().when(venueRepository).insertAll(anyList());
+      doNothing().when(venueSupplementRepository).replaceYearlyMetricsBatch(anyMap());
+
+      // When
+      writer.write(chunk);
+
+      // Then: 验证聚合根插入
+      verify(venueRepository, times(1)).insertAll(aggregatesCaptor.capture());
+      List<VenueAggregate> inserted = aggregatesCaptor.getValue();
+      assertThatListContainsOpenalexIds(inserted, "S1", "S2");
+
+      // Then: 验证年度指标插入
+      verify(venueSupplementRepository, times(1)).replaceYearlyMetricsBatch(anyMap());
+    }
+
+    @Test
+    @DisplayName("无年度指标 - 不应调用 supplementRepository")
+    void write_noMetrics_shouldNotCallSupplementRepository() throws Exception {
+      // Given
+      VenueParseResult result1 = createParseResult("S1", "1111-1111", false);
+      VenueParseResult result2 = createParseResult("S2", "2222-2222", false);
+      Chunk<VenueParseResult> chunk = Chunk.of(result1, result2);
 
       doNothing().when(venueRepository).insertAll(anyList());
 
@@ -86,9 +116,8 @@ class VenueImportItemWriterTest {
       writer.write(chunk);
 
       // Then
-      verify(venueRepository, times(1)).insertAll(aggregatesCaptor.capture());
-      List<VenueAggregate> inserted = aggregatesCaptor.getValue();
-      assertThatListContainsOpenalexIds(inserted, "S1", "S2");
+      verify(venueRepository, times(1)).insertAll(anyList());
+      verify(venueSupplementRepository, never()).replaceYearlyMetricsBatch(anyMap());
     }
   }
 
@@ -102,10 +131,10 @@ class VenueImportItemWriterTest {
     @DisplayName("Chunk 内 ISSN-L 重复 - 应该跳过重复记录")
     void write_duplicateIssnLInChunk_shouldSkipDuplicates() throws Exception {
       // Given: 两条记录有相同的 ISSN-L
-      VenueAggregate venue1 = createVenue("S1", "1111-1111");
-      VenueAggregate venue2 = createVenue("S2", "1111-1111"); // 重复的 ISSN-L
-      VenueAggregate venue3 = createVenue("S3", "3333-3333");
-      Chunk<VenueAggregate> chunk = Chunk.of(venue1, venue2, venue3);
+      VenueParseResult result1 = createParseResult("S1", "1111-1111", false);
+      VenueParseResult result2 = createParseResult("S2", "1111-1111", false); // 重复的 ISSN-L
+      VenueParseResult result3 = createParseResult("S3", "3333-3333", false);
+      Chunk<VenueParseResult> chunk = Chunk.of(result1, result2, result3);
 
       doNothing().when(venueRepository).insertAll(anyList());
 
@@ -122,10 +151,10 @@ class VenueImportItemWriterTest {
     @DisplayName("ISSN-L 为 null - 不应被去重")
     void write_nullIssnL_shouldNotBeAffectedByDeduplication() throws Exception {
       // Given: 两条记录都没有 ISSN-L
-      VenueAggregate venue1 = createVenueWithoutIssnL("S1");
-      VenueAggregate venue2 = createVenueWithoutIssnL("S2");
-      VenueAggregate venue3 = createVenue("S3", "3333-3333");
-      Chunk<VenueAggregate> chunk = Chunk.of(venue1, venue2, venue3);
+      VenueParseResult result1 = createParseResultWithoutIssnL("S1");
+      VenueParseResult result2 = createParseResultWithoutIssnL("S2");
+      VenueParseResult result3 = createParseResult("S3", "3333-3333", false);
+      Chunk<VenueParseResult> chunk = Chunk.of(result1, result2, result3);
 
       doNothing().when(venueRepository).insertAll(anyList());
 
@@ -149,9 +178,9 @@ class VenueImportItemWriterTest {
     @DisplayName("DuplicateKeyException - 应该触发降级处理")
     void write_duplicateKeyException_shouldTriggerFallback() throws Exception {
       // Given
-      VenueAggregate venue1 = createVenue("S1", "1111-1111");
-      VenueAggregate venue2 = createVenue("S2", "2222-2222");
-      Chunk<VenueAggregate> chunk = Chunk.of(venue1, venue2);
+      VenueParseResult result1 = createParseResult("S1", "1111-1111", false);
+      VenueParseResult result2 = createParseResult("S2", "2222-2222", false);
+      Chunk<VenueParseResult> chunk = Chunk.of(result1, result2);
 
       // 第一次插入抛出 DuplicateKeyException
       doThrow(new DuplicateKeyException("Duplicate entry '1111-1111' for key 'uk_issn_l'"))
@@ -177,9 +206,9 @@ class VenueImportItemWriterTest {
     @DisplayName("DataIntegrityViolationException（唯一键冲突）- 应该触发降级处理")
     void write_dataIntegrityViolationWithDuplicateEntry_shouldTriggerFallback() throws Exception {
       // Given
-      VenueAggregate venue1 = createVenue("S1", "1111-1111");
-      VenueAggregate venue2 = createVenue("S2", "2222-2222");
-      Chunk<VenueAggregate> chunk = Chunk.of(venue1, venue2);
+      VenueParseResult result1 = createParseResult("S1", "1111-1111", false);
+      VenueParseResult result2 = createParseResult("S2", "2222-2222", false);
+      Chunk<VenueParseResult> chunk = Chunk.of(result1, result2);
 
       // 抛出 DataIntegrityViolationException，消息包含 "Duplicate entry"
       doThrow(
@@ -203,8 +232,8 @@ class VenueImportItemWriterTest {
     @DisplayName("DataIntegrityViolationException（非唯一键冲突）- 应该抛出异常")
     void write_dataIntegrityViolationWithOtherError_shouldThrowException() {
       // Given
-      VenueAggregate venue = createVenue("S1", "1111-1111");
-      Chunk<VenueAggregate> chunk = Chunk.of(venue);
+      VenueParseResult result = createParseResult("S1", "1111-1111", false);
+      Chunk<VenueParseResult> chunk = Chunk.of(result);
 
       // 抛出非唯一键冲突的 DataIntegrityViolationException
       doThrow(new DataIntegrityViolationException("Cannot add or update a child row: foreign key"))
@@ -221,8 +250,8 @@ class VenueImportItemWriterTest {
     @DisplayName("降级处理后全部重复 - 不应再次调用 insertAll")
     void write_allDuplicatesAfterFallback_shouldNotInsertAgain() throws Exception {
       // Given: 只有一条记录，且与数据库重复
-      VenueAggregate venue = createVenue("S1", "1111-1111");
-      Chunk<VenueAggregate> chunk = Chunk.of(venue);
+      VenueParseResult result = createParseResult("S1", "1111-1111", false);
+      Chunk<VenueParseResult> chunk = Chunk.of(result);
 
       doThrow(new DuplicateKeyException("Duplicate entry '1111-1111' for key 'uk_issn_l'"))
           .when(venueRepository)
@@ -240,19 +269,25 @@ class VenueImportItemWriterTest {
 
   // ========== 辅助方法 ==========
 
-  private VenueAggregate createVenue(String openalexId, String issnL) {
+  private VenueParseResult createParseResult(String openalexId, String issnL, boolean withMetrics) {
     VenueAggregate venue =
         VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, "Journal " + openalexId);
     venue.withIssnL(issnL);
-    return venue;
+
+    List<VenuePublicationStats> metrics =
+        withMetrics ? List.of(VenuePublicationStats.create(2024, 100, 500)) : List.of();
+
+    return new VenueParseResult(venue, metrics);
   }
 
-  private VenueAggregate createVenueWithoutIssnL(String openalexId) {
-    return VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, "Journal " + openalexId);
+  private VenueParseResult createParseResultWithoutIssnL(String openalexId) {
+    VenueAggregate venue =
+        VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, "Journal " + openalexId);
+    return new VenueParseResult(venue, List.of());
   }
 
   private void assertThatListContainsOpenalexIds(List<VenueAggregate> list, String... expectedIds) {
     List<String> actualIds = list.stream().map(VenueAggregate::getOpenalexId).toList();
-    org.assertj.core.api.Assertions.assertThat(actualIds).containsExactlyInAnyOrder(expectedIds);
+    assertThat(actualIds).containsExactlyInAnyOrder(expectedIds);
   }
 }

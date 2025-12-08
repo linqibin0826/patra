@@ -6,29 +6,30 @@ import com.patra.catalog.domain.model.enums.IndexingTreatment;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.Objects;
-import lombok.Getter;
 
-/// 期刊索引历史实体（聚合内实体，不是聚合根）。
+/// 期刊索引历史值对象（不可变）。
 ///
-/// 设计说明：
+/// **设计说明**：
 ///
-/// - 作为 VenueAggregate 的聚合内实体存在
+/// - 作为值对象存在（不是实体）
+/// - 使用 Record 实现不可变性
+/// - 通过 `VenueSupplementRepository` 单独管理
 /// - 记录期刊在各索引数据库（MEDLINE、PMC 等）的索引历史
 /// - 数据主要来源于 NLM Serfile 的 IndexingHistoryList 元素
 ///
-/// 索引状态说明：
+/// **索引状态说明**：
 ///
 /// | 状态 | 含义 |
 /// |------|------|
 /// | currentlyIndexed=true | 期刊当前正在被索引 |
 /// | currentlyIndexed=false | 期刊曾被索引但已停止 |
 ///
-/// 索引处理方式（IndexingTreatment）：
+/// **索引处理方式（IndexingTreatment）**：
 ///
 /// - **FULL**：全文索引，期刊的所有文章都被索引
 /// - **SELECTIVE**：选择性索引，只有部分文章被索引
 ///
-/// 使用示例：
+/// **示例**：
 ///
 /// ```java
 /// // 创建当前 MEDLINE 索引记录
@@ -49,77 +50,37 @@ import lombok.Getter;
 /// );
 /// ```
 ///
+/// @param indexingSource 索引来源（MEDLINE、PMC 等，必填）
+/// @param currentlyIndexed 当前是否被索引
+/// @param indexingTreatment 索引处理方式（可选）
+/// @param citationSubset 引用子集（可选）
+/// @param startYear 索引开始年份（可选）
+/// @param startVolume 索引开始卷号（可选）
+/// @param startIssue 索引开始期号（可选）
+/// @param endYear 索引结束年份（仍在索引则为 null）
+/// @param endVolume 索引结束卷号（可选）
+/// @param endIssue 索引结束期号（可选）
 /// @author linqibin
 /// @since 0.1.0
-@Getter
-public class VenueIndexingHistory implements Serializable {
+@SuppressWarnings("java:S6218") // Record 有自定义 equals/hashCode，已实现正确的业务相等性
+public record VenueIndexingHistory(
+    String indexingSource,
+    boolean currentlyIndexed,
+    IndexingTreatment indexingTreatment,
+    CitationSubset citationSubset,
+    Integer startYear,
+    String startVolume,
+    String startIssue,
+    Integer endYear,
+    String endVolume,
+    String endIssue)
+    implements Serializable {
 
   @Serial private static final long serialVersionUID = 1L;
 
-  // ========== 标识符 ==========
-
-  /// 主键 ID（由 Repository 在持久化时分配）
-  private Long id;
-
-  // ========== 业务字段 ==========
-
-  /// 索引来源（MEDLINE、PMC 等）
-  private final String indexingSource;
-
-  /// 当前是否被索引
-  private final boolean currentlyIndexed;
-
-  /// 索引处理方式
-  private final IndexingTreatment indexingTreatment;
-
-  /// 引用子集
-  private final CitationSubset citationSubset;
-
-  /// 索引开始年份
-  private final Integer startYear;
-
-  /// 索引开始卷号
-  private final String startVolume;
-
-  /// 索引开始期号
-  private final String startIssue;
-
-  /// 索引结束年份（仍在索引则为 null）
-  private final Integer endYear;
-
-  /// 索引结束卷号
-  private final String endVolume;
-
-  /// 索引结束期号
-  private final String endIssue;
-
-  /// 私有构造函数。
-  @SuppressWarnings("java:S107") // 参数数量多是必要的，因为实体字段多
-  private VenueIndexingHistory(
-      Long id,
-      String indexingSource,
-      boolean currentlyIndexed,
-      IndexingTreatment indexingTreatment,
-      CitationSubset citationSubset,
-      Integer startYear,
-      String startVolume,
-      String startIssue,
-      Integer endYear,
-      String endVolume,
-      String endIssue) {
+  /// 紧凑构造器：验证参数。
+  public VenueIndexingHistory {
     Assert.notBlank(indexingSource, "索引来源不能为空");
-
-    this.id = id;
-    this.indexingSource = indexingSource;
-    this.currentlyIndexed = currentlyIndexed;
-    this.indexingTreatment = indexingTreatment;
-    this.citationSubset = citationSubset;
-    this.startYear = startYear;
-    this.startVolume = startVolume;
-    this.startIssue = startIssue;
-    this.endYear = endYear;
-    this.endVolume = endVolume;
-    this.endIssue = endIssue;
   }
 
   // ========== 工厂方法 ==========
@@ -132,7 +93,7 @@ public class VenueIndexingHistory implements Serializable {
   /// @param startYear 索引开始年份
   /// @param startVolume 索引开始卷号
   /// @param startIssue 索引开始期号
-  /// @return 索引历史实体
+  /// @return 索引历史值对象
   public static VenueIndexingHistory createCurrentIndexing(
       String indexingSource,
       IndexingTreatment indexingTreatment,
@@ -141,7 +102,6 @@ public class VenueIndexingHistory implements Serializable {
       String startVolume,
       String startIssue) {
     return new VenueIndexingHistory(
-        null,
         indexingSource,
         true,
         indexingTreatment,
@@ -163,7 +123,7 @@ public class VenueIndexingHistory implements Serializable {
   /// @param endYear 索引结束年份
   /// @param endVolume 索引结束卷号
   /// @param endIssue 索引结束期号
-  /// @return 索引历史实体
+  /// @return 索引历史值对象
   public static VenueIndexingHistory createHistoricalIndexing(
       String indexingSource,
       Integer startYear,
@@ -173,7 +133,6 @@ public class VenueIndexingHistory implements Serializable {
       String endVolume,
       String endIssue) {
     return new VenueIndexingHistory(
-        null,
         indexingSource,
         false,
         null,
@@ -189,48 +148,13 @@ public class VenueIndexingHistory implements Serializable {
   /// 创建简单的当前索引记录。
   ///
   /// @param indexingSource 索引来源
-  /// @return 索引历史实体
+  /// @return 索引历史值对象
   public static VenueIndexingHistory createSimpleCurrentIndexing(String indexingSource) {
     return new VenueIndexingHistory(
-        null, indexingSource, true, null, null, null, null, null, null, null, null);
+        indexingSource, true, null, null, null, null, null, null, null, null);
   }
 
-  /// 从持久化状态重建实体（由 Repository 使用）。
-  @SuppressWarnings("java:S107")
-  public static VenueIndexingHistory restore(
-      Long id,
-      String indexingSource,
-      boolean currentlyIndexed,
-      IndexingTreatment indexingTreatment,
-      CitationSubset citationSubset,
-      Integer startYear,
-      String startVolume,
-      String startIssue,
-      Integer endYear,
-      String endVolume,
-      String endIssue) {
-    return new VenueIndexingHistory(
-        id,
-        indexingSource,
-        currentlyIndexed,
-        indexingTreatment,
-        citationSubset,
-        startYear,
-        startVolume,
-        startIssue,
-        endYear,
-        endVolume,
-        endIssue);
-  }
-
-  // ========== 业务方法 ==========
-
-  /// 设置 ID（由 Repository 在持久化后回写）。
-  ///
-  /// @param id 主键 ID
-  public void assignId(Long id) {
-    this.id = id;
-  }
+  // ========== 查询方法 ==========
 
   /// 判断是否为 MEDLINE 索引。
   ///
@@ -319,6 +243,7 @@ public class VenueIndexingHistory implements Serializable {
         indexingSource, currentlyIndexed, getYearRange());
   }
 
+  /// 业务相等性：索引来源 + 开始年份。
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -327,7 +252,6 @@ public class VenueIndexingHistory implements Serializable {
     if (!(o instanceof VenueIndexingHistory that)) {
       return false;
     }
-    // 业务相等性：索引来源 + 开始年份
     return Objects.equals(indexingSource, that.indexingSource)
         && Objects.equals(startYear, that.startYear);
   }

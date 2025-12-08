@@ -215,12 +215,13 @@ class MeshQualifierConverterTest {
     // Given: 只设置必填字段的聚合根
     MeshQualifierAggregate aggregate =
         MeshQualifierAggregate.create(MeshUI.qualifierOf(1), "immunology", "IM");
-    // 不设置可选字段（annotation、dates、activeStatus、meshVersion）
+    // 不设置可选字段（annotation、dates、meshVersion）
+    // 注意：activeStatus 由 create() 工厂方法设置默认值 true（业务规则：新创建的限定词默认有效）
 
     // When: 转换为数据库实体
     MeshQualifierDO dataObject = converter.toDataObject(aggregate);
 
-    // Then: 应该正确处理null值
+    // Then: 应该正确处理null值，activeStatus 应为默认值 true
     assertThat(dataObject).isNotNull();
     assertThat(dataObject.getUi()).isEqualTo("Q000001");
     assertThat(dataObject.getName()).isEqualTo("immunology");
@@ -229,7 +230,7 @@ class MeshQualifierConverterTest {
     assertThat(dataObject.getDateCreated()).isNull();
     assertThat(dataObject.getDateRevised()).isNull();
     assertThat(dataObject.getDateEstablished()).isNull();
-    assertThat(dataObject.getActiveStatus()).isNull();
+    assertThat(dataObject.getActiveStatus()).isTrue(); // create() 默认设置为 true
     assertThat(dataObject.getMeshVersion()).isNull();
   }
 

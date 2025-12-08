@@ -16,6 +16,7 @@ import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.dto.serfile.SerialRecord;
 import com.patra.catalog.domain.port.parser.SerfileParserPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
+import com.patra.catalog.domain.port.repository.VenueSupplementRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.common.error.ApplicationException;
@@ -70,6 +71,7 @@ class SerfileImportOrchestratorTest {
   @Mock private StreamingDownloadPort streamingDownloadPort;
   @Mock private SerfileParserPort parserPort;
   @Mock private VenueRepository venueRepository;
+  @Mock private VenueSupplementRepository supplementRepository;
   @Mock private TransactionTemplate transactionTemplate;
   @Mock private TransactionStatus transactionStatus;
   @Mock private StreamingDownloadResult downloadResult;
@@ -84,7 +86,11 @@ class SerfileImportOrchestratorTest {
   void setUp() {
     orchestrator =
         new SerfileImportOrchestrator(
-            streamingDownloadPort, parserPort, venueRepository, transactionTemplate);
+            streamingDownloadPort,
+            parserPort,
+            venueRepository,
+            supplementRepository,
+            transactionTemplate);
 
     // 配置 TransactionTemplate：直接执行回调，模拟事务行为
     org.mockito.Mockito.doAnswer(

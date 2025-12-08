@@ -9,12 +9,12 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-/// VenueIdentifier 实体单元测试。
+/// VenueIdentifier 值对象单元测试。
 ///
 /// **测试策略**：
 ///
 /// - 纯单元测试，无 Mock
-/// - 覆盖工厂方法、ISSN 格式验证、业务方法和 equals/hashCode
+/// - 覆盖构造器验证、ISSN 格式验证、工厂方法和 equals/hashCode
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -33,37 +33,24 @@ class VenueIdentifierTest {
   private static final String NLM_ID = "0376374";
 
   @Nested
-  @DisplayName("create() 工厂方法测试")
-  class CreateTests {
+  @DisplayName("构造器验证测试")
+  class ConstructorTests {
 
     @Test
-    @DisplayName("应该正确创建标识符（含首选标记）")
-    void shouldCreateIdentifierWithPrimary() {
+    @DisplayName("应该正确创建标识符")
+    void shouldCreateIdentifier() {
       // When
-      VenueIdentifier identifier =
-          VenueIdentifier.create(VenueIdentifierType.OPENALEX, OPENALEX_ID, true);
+      VenueIdentifier identifier = new VenueIdentifier(VenueIdentifierType.OPENALEX, OPENALEX_ID);
 
       // Then
-      assertThat(identifier.getId()).isNull(); // 新建时无 ID
-      assertThat(identifier.getType()).isEqualTo(VenueIdentifierType.OPENALEX);
-      assertThat(identifier.getValue()).isEqualTo(OPENALEX_ID);
-      assertThat(identifier.isPrimary()).isTrue();
-    }
-
-    @Test
-    @DisplayName("应该正确创建标识符（非首选）")
-    void shouldCreateNonPrimaryIdentifier() {
-      // When
-      VenueIdentifier identifier = VenueIdentifier.create(VenueIdentifierType.MAG, "12345");
-
-      // Then
-      assertThat(identifier.isPrimary()).isFalse();
+      assertThat(identifier.type()).isEqualTo(VenueIdentifierType.OPENALEX);
+      assertThat(identifier.value()).isEqualTo(OPENALEX_ID);
     }
 
     @Test
     @DisplayName("类型为 null 时应该抛出异常")
     void shouldThrowWhenTypeIsNull() {
-      assertThatThrownBy(() -> VenueIdentifier.create(null, "value", false))
+      assertThatThrownBy(() -> new VenueIdentifier(null, "value"))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("标识符类型不能为空");
     }
@@ -71,11 +58,11 @@ class VenueIdentifierTest {
     @Test
     @DisplayName("值为空时应该抛出异常")
     void shouldThrowWhenValueIsBlank() {
-      assertThatThrownBy(() -> VenueIdentifier.create(VenueIdentifierType.OPENALEX, "", false))
+      assertThatThrownBy(() -> new VenueIdentifier(VenueIdentifierType.OPENALEX, ""))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("标识符值不能为空");
 
-      assertThatThrownBy(() -> VenueIdentifier.create(VenueIdentifierType.OPENALEX, "  ", false))
+      assertThatThrownBy(() -> new VenueIdentifier(VenueIdentifierType.OPENALEX, "  "))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("标识符值不能为空");
     }
@@ -89,22 +76,20 @@ class VenueIdentifierTest {
     @DisplayName("有效 ISSN 格式应该通过验证")
     void shouldAcceptValidIssnFormat() {
       // When
-      VenueIdentifier identifier =
-          VenueIdentifier.create(VenueIdentifierType.ISSN, VALID_ISSN, false);
+      VenueIdentifier identifier = new VenueIdentifier(VenueIdentifierType.ISSN, VALID_ISSN);
 
       // Then
-      assertThat(identifier.getValue()).isEqualTo(VALID_ISSN);
+      assertThat(identifier.value()).isEqualTo(VALID_ISSN);
     }
 
     @Test
     @DisplayName("ISSN 带 X 校验位应该通过验证")
     void shouldAcceptIssnWithCheckDigitX() {
       // When
-      VenueIdentifier identifier =
-          VenueIdentifier.create(VenueIdentifierType.ISSN, VALID_ISSN_WITH_X, false);
+      VenueIdentifier identifier = new VenueIdentifier(VenueIdentifierType.ISSN, VALID_ISSN_WITH_X);
 
       // Then
-      assertThat(identifier.getValue()).isEqualTo(VALID_ISSN_WITH_X);
+      assertThat(identifier.value()).isEqualTo(VALID_ISSN_WITH_X);
     }
 
     @Test
@@ -112,17 +97,16 @@ class VenueIdentifierTest {
     void shouldNormalizeLowercaseXToUppercase() {
       // When
       VenueIdentifier identifier =
-          VenueIdentifier.create(VenueIdentifierType.ISSN, VALID_ISSN_LOWERCASE_X, false);
+          new VenueIdentifier(VenueIdentifierType.ISSN, VALID_ISSN_LOWERCASE_X);
 
       // Then
-      assertThat(identifier.getValue()).isEqualTo("1234-567X");
+      assertThat(identifier.value()).isEqualTo("1234-567X");
     }
 
     @Test
     @DisplayName("无效 ISSN 格式应该抛出异常（缺少连字符）")
     void shouldRejectInvalidIssnWithoutHyphen() {
-      assertThatThrownBy(
-              () -> VenueIdentifier.create(VenueIdentifierType.ISSN, INVALID_ISSN_FORMAT, false))
+      assertThatThrownBy(() -> new VenueIdentifier(VenueIdentifierType.ISSN, INVALID_ISSN_FORMAT))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("ISSN 格式无效");
     }
@@ -130,8 +114,7 @@ class VenueIdentifierTest {
     @Test
     @DisplayName("无效 ISSN 格式应该抛出异常（含字母）")
     void shouldRejectInvalidIssnWithLetters() {
-      assertThatThrownBy(
-              () -> VenueIdentifier.create(VenueIdentifierType.ISSN, INVALID_ISSN_LETTERS, false))
+      assertThatThrownBy(() -> new VenueIdentifier(VenueIdentifierType.ISSN, INVALID_ISSN_LETTERS))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("ISSN 格式无效");
     }
@@ -140,13 +123,11 @@ class VenueIdentifierTest {
     @DisplayName("ISSN_L 类型也应该验证 ISSN 格式")
     void shouldValidateIssnFormatForIssnLType() {
       // When - 有效格式
-      VenueIdentifier identifier =
-          VenueIdentifier.create(VenueIdentifierType.ISSN_L, VALID_ISSN, true);
-      assertThat(identifier.getValue()).isEqualTo(VALID_ISSN);
+      VenueIdentifier identifier = new VenueIdentifier(VenueIdentifierType.ISSN_L, VALID_ISSN);
+      assertThat(identifier.value()).isEqualTo(VALID_ISSN);
 
       // Then - 无效格式
-      assertThatThrownBy(
-              () -> VenueIdentifier.create(VenueIdentifierType.ISSN_L, INVALID_ISSN_FORMAT, false))
+      assertThatThrownBy(() -> new VenueIdentifier(VenueIdentifierType.ISSN_L, INVALID_ISSN_FORMAT))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("ISSN 格式无效");
     }
@@ -156,149 +137,80 @@ class VenueIdentifierTest {
     void shouldNotValidateIssnFormatForNonIssnTypes() {
       // 应该允许任意格式
       VenueIdentifier identifier =
-          VenueIdentifier.create(VenueIdentifierType.OPENALEX, INVALID_ISSN_FORMAT, false);
-      assertThat(identifier.getValue()).isEqualTo(INVALID_ISSN_FORMAT);
+          new VenueIdentifier(VenueIdentifierType.OPENALEX, INVALID_ISSN_FORMAT);
+      assertThat(identifier.value()).isEqualTo(INVALID_ISSN_FORMAT);
     }
   }
 
   @Nested
-  @DisplayName("便捷工厂方法测试")
-  class ConvenienceFactoryMethodTests {
+  @DisplayName("工厂方法测试")
+  class FactoryMethodTests {
 
     @Test
-    @DisplayName("forOpenAlex() 应该创建首选 OpenAlex 标识符")
-    void forOpenAlexShouldCreatePrimaryIdentifier() {
+    @DisplayName("forOpenAlex() 应该创建 OpenAlex 标识符")
+    void forOpenAlexShouldCreateIdentifier() {
       // When
       VenueIdentifier identifier = VenueIdentifier.forOpenAlex(OPENALEX_ID);
 
       // Then
-      assertThat(identifier.getType()).isEqualTo(VenueIdentifierType.OPENALEX);
-      assertThat(identifier.getValue()).isEqualTo(OPENALEX_ID);
-      assertThat(identifier.isPrimary()).isTrue();
+      assertThat(identifier.type()).isEqualTo(VenueIdentifierType.OPENALEX);
+      assertThat(identifier.value()).isEqualTo(OPENALEX_ID);
     }
 
     @Test
     @DisplayName("forIssn() 应该创建 ISSN 标识符")
     void forIssnShouldCreateIdentifier() {
       // When
-      VenueIdentifier primary = VenueIdentifier.forIssn(VALID_ISSN, true);
-      VenueIdentifier nonPrimary = VenueIdentifier.forIssn(VALID_ISSN_WITH_X, false);
+      VenueIdentifier identifier = VenueIdentifier.forIssn(VALID_ISSN);
 
       // Then
-      assertThat(primary.getType()).isEqualTo(VenueIdentifierType.ISSN);
-      assertThat(primary.isPrimary()).isTrue();
-      assertThat(nonPrimary.isPrimary()).isFalse();
+      assertThat(identifier.type()).isEqualTo(VenueIdentifierType.ISSN);
+      assertThat(identifier.value()).isEqualTo(VALID_ISSN);
     }
 
     @Test
-    @DisplayName("forIssnL() 应该创建首选 Linking ISSN 标识符")
-    void forIssnLShouldCreatePrimaryIdentifier() {
+    @DisplayName("forIssnL() 应该创建 Linking ISSN 标识符")
+    void forIssnLShouldCreateIdentifier() {
       // When
       VenueIdentifier identifier = VenueIdentifier.forIssnL(VALID_ISSN);
 
       // Then
-      assertThat(identifier.getType()).isEqualTo(VenueIdentifierType.ISSN_L);
-      assertThat(identifier.getValue()).isEqualTo(VALID_ISSN);
-      assertThat(identifier.isPrimary()).isTrue();
+      assertThat(identifier.type()).isEqualTo(VenueIdentifierType.ISSN_L);
+      assertThat(identifier.value()).isEqualTo(VALID_ISSN);
     }
 
     @Test
-    @DisplayName("forNlm() 应该创建首选 NLM 标识符")
-    void forNlmShouldCreatePrimaryIdentifier() {
+    @DisplayName("forNlm() 应该创建 NLM 标识符")
+    void forNlmShouldCreateIdentifier() {
       // When
       VenueIdentifier identifier = VenueIdentifier.forNlm(NLM_ID);
 
       // Then
-      assertThat(identifier.getType()).isEqualTo(VenueIdentifierType.NLM);
-      assertThat(identifier.getValue()).isEqualTo(NLM_ID);
-      assertThat(identifier.isPrimary()).isTrue();
+      assertThat(identifier.type()).isEqualTo(VenueIdentifierType.NLM);
+      assertThat(identifier.value()).isEqualTo(NLM_ID);
+    }
+
+    @Test
+    @DisplayName("forCoden() 应该创建 CODEN 标识符")
+    void forCodenShouldCreateIdentifier() {
+      // When
+      VenueIdentifier identifier = VenueIdentifier.forCoden("NATUAS");
+
+      // Then
+      assertThat(identifier.type()).isEqualTo(VenueIdentifierType.CODEN);
+      assertThat(identifier.value()).isEqualTo("NATUAS");
     }
   }
 
   @Nested
-  @DisplayName("restore() 方法测试")
-  class RestoreTests {
-
-    @Test
-    @DisplayName("应该正确从持久化状态重建实体")
-    void shouldRestoreFromPersistedState() {
-      // Given
-      Long id = 123L;
-
-      // When
-      VenueIdentifier identifier =
-          VenueIdentifier.restore(id, VenueIdentifierType.OPENALEX, OPENALEX_ID, true);
-
-      // Then
-      assertThat(identifier.getId()).isEqualTo(id);
-      assertThat(identifier.getType()).isEqualTo(VenueIdentifierType.OPENALEX);
-      assertThat(identifier.getValue()).isEqualTo(OPENALEX_ID);
-      assertThat(identifier.isPrimary()).isTrue();
-    }
-
-    @Test
-    @DisplayName("restore 时也应验证 ISSN 格式")
-    void shouldValidateIssnFormatOnRestore() {
-      assertThatThrownBy(
-              () ->
-                  VenueIdentifier.restore(1L, VenueIdentifierType.ISSN, INVALID_ISSN_FORMAT, false))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("ISSN 格式无效");
-    }
-  }
-
-  @Nested
-  @DisplayName("业务方法测试")
-  class BusinessMethodTests {
-
-    @Test
-    @DisplayName("assignId() 应该设置 ID")
-    void assignIdShouldSetId() {
-      // Given
-      VenueIdentifier identifier = VenueIdentifier.forOpenAlex(OPENALEX_ID);
-      assertThat(identifier.getId()).isNull();
-
-      // When
-      identifier.assignId(456L);
-
-      // Then
-      assertThat(identifier.getId()).isEqualTo(456L);
-    }
-
-    @Test
-    @DisplayName("markAsPrimary() 应该设置为首选")
-    void markAsPrimaryShouldSetPrimaryTrue() {
-      // Given
-      VenueIdentifier identifier =
-          VenueIdentifier.create(VenueIdentifierType.ISSN, VALID_ISSN, false);
-      assertThat(identifier.isPrimary()).isFalse();
-
-      // When
-      identifier.markAsPrimary();
-
-      // Then
-      assertThat(identifier.isPrimary()).isTrue();
-    }
-
-    @Test
-    @DisplayName("unmarkAsPrimary() 应该取消首选")
-    void unmarkAsPrimaryShouldSetPrimaryFalse() {
-      // Given
-      VenueIdentifier identifier = VenueIdentifier.forOpenAlex(OPENALEX_ID);
-      assertThat(identifier.isPrimary()).isTrue();
-
-      // When
-      identifier.unmarkAsPrimary();
-
-      // Then
-      assertThat(identifier.isPrimary()).isFalse();
-    }
+  @DisplayName("便捷判断方法测试")
+  class ConvenienceMethodTests {
 
     @Test
     @DisplayName("isOpenAlexId() 应该返回正确结果")
     void isOpenAlexIdShouldReturnCorrectly() {
       VenueIdentifier openalex = VenueIdentifier.forOpenAlex(OPENALEX_ID);
-      VenueIdentifier issn = VenueIdentifier.forIssn(VALID_ISSN, true);
+      VenueIdentifier issn = VenueIdentifier.forIssn(VALID_ISSN);
 
       assertThat(openalex.isOpenAlexId()).isTrue();
       assertThat(issn.isOpenAlexId()).isFalse();
@@ -307,7 +219,7 @@ class VenueIdentifierTest {
     @Test
     @DisplayName("isIssnId() 应该返回正确结果")
     void isIssnIdShouldReturnCorrectly() {
-      VenueIdentifier issn = VenueIdentifier.forIssn(VALID_ISSN, true);
+      VenueIdentifier issn = VenueIdentifier.forIssn(VALID_ISSN);
       VenueIdentifier issnL = VenueIdentifier.forIssnL(VALID_ISSN);
       VenueIdentifier openalex = VenueIdentifier.forOpenAlex(OPENALEX_ID);
 
@@ -319,9 +231,8 @@ class VenueIdentifierTest {
     @Test
     @DisplayName("isStandardPublishingId() 应该返回正确结果")
     void isStandardPublishingIdShouldReturnCorrectly() {
-      VenueIdentifier issn = VenueIdentifier.forIssn(VALID_ISSN, true);
-      VenueIdentifier isbn =
-          VenueIdentifier.create(VenueIdentifierType.ISBN, "978-3-16-148410-0", false);
+      VenueIdentifier issn = VenueIdentifier.forIssn(VALID_ISSN);
+      VenueIdentifier isbn = new VenueIdentifier(VenueIdentifierType.ISBN, "978-3-16-148410-0");
       VenueIdentifier openalex = VenueIdentifier.forOpenAlex(OPENALEX_ID);
 
       assertThat(issn.isStandardPublishingId()).isTrue();
@@ -335,14 +246,13 @@ class VenueIdentifierTest {
   class EqualsAndHashCodeTests {
 
     @Test
-    @DisplayName("相同类型和值应该相等")
+    @DisplayName("相同类型和值应该相等（Record 自动生成）")
     void shouldBeEqualForSameTypeAndValue() {
       // Given
-      VenueIdentifier id1 = VenueIdentifier.create(VenueIdentifierType.OPENALEX, OPENALEX_ID, true);
-      VenueIdentifier id2 =
-          VenueIdentifier.create(VenueIdentifierType.OPENALEX, OPENALEX_ID, false);
+      VenueIdentifier id1 = new VenueIdentifier(VenueIdentifierType.OPENALEX, OPENALEX_ID);
+      VenueIdentifier id2 = new VenueIdentifier(VenueIdentifierType.OPENALEX, OPENALEX_ID);
 
-      // Then - isPrimary 不影响相等性
+      // Then
       assertThat(id1).isEqualTo(id2);
       assertThat(id1.hashCode()).isEqualTo(id2.hashCode());
     }
@@ -351,8 +261,8 @@ class VenueIdentifierTest {
     @DisplayName("不同类型应该不相等")
     void shouldNotBeEqualForDifferentType() {
       // Given
-      VenueIdentifier id1 = VenueIdentifier.create(VenueIdentifierType.MAG, "12345", false);
-      VenueIdentifier id2 = VenueIdentifier.create(VenueIdentifierType.FATCAT, "12345", false);
+      VenueIdentifier id1 = new VenueIdentifier(VenueIdentifierType.MAG, "12345");
+      VenueIdentifier id2 = new VenueIdentifier(VenueIdentifierType.FATCAT, "12345");
 
       // Then
       assertThat(id1).isNotEqualTo(id2);
@@ -362,8 +272,8 @@ class VenueIdentifierTest {
     @DisplayName("不同值应该不相等")
     void shouldNotBeEqualForDifferentValue() {
       // Given
-      VenueIdentifier id1 = VenueIdentifier.create(VenueIdentifierType.OPENALEX, "S111", false);
-      VenueIdentifier id2 = VenueIdentifier.create(VenueIdentifierType.OPENALEX, "S222", false);
+      VenueIdentifier id1 = new VenueIdentifier(VenueIdentifierType.OPENALEX, "S111");
+      VenueIdentifier id2 = new VenueIdentifier(VenueIdentifierType.OPENALEX, "S222");
 
       // Then
       assertThat(id1).isNotEqualTo(id2);
@@ -407,7 +317,6 @@ class VenueIdentifierTest {
       // Then
       assertThat(result).contains("OPENALEX");
       assertThat(result).contains(OPENALEX_ID);
-      assertThat(result).contains("primary=true");
     }
   }
 }

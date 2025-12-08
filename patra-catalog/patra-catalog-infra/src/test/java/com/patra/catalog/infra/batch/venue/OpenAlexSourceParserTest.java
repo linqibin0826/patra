@@ -1,7 +1,6 @@
 package com.patra.catalog.infra.batch.venue;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueType;
@@ -23,7 +22,7 @@ import org.junit.jupiter.api.Test;
 ///
 /// - 验证 JSON Lines 解析
 /// - 验证 .gz 解压缩
-/// - 验证 VenueAggregate 转换
+/// - 验证 VenueParseResult 转换（包含聚合根和年度指标）
 /// - 验证错误处理
 ///
 /// @author linqibin
@@ -43,8 +42,8 @@ class OpenAlexSourceParserTest {
   class ParseTest {
 
     @Test
-    @DisplayName("解析单条 JSON Lines 记录 - 应该正确转换为 VenueAggregate")
-    void parseSingleRecord_shouldConvertToVenueAggregate() throws Exception {
+    @DisplayName("解析单条 JSON Lines 记录 - 应该正确转换为 VenueParseResult")
+    void parseSingleRecord_shouldConvertToVenueParseResult() throws Exception {
       // Given
       String jsonLine =
           """
@@ -53,11 +52,11 @@ class OpenAlexSourceParserTest {
       InputStream input = gzipCompress(jsonLine);
 
       // When
-      List<VenueAggregate> venues = parser.parse(input).toList();
+      List<VenueParseResult> results = parser.parse(input).toList();
 
       // Then
-      assertThat(venues).hasSize(1);
-      VenueAggregate venue = venues.getFirst();
+      assertThat(results).hasSize(1);
+      VenueAggregate venue = results.getFirst().aggregate();
       assertThat(venue.getOpenalexId()).isEqualTo("S137773608");
       assertThat(venue.getDisplayName()).isEqualTo("Nature");
       assertThat(venue.getIssnL()).isEqualTo("0028-0836");
@@ -68,8 +67,8 @@ class OpenAlexSourceParserTest {
     }
 
     @Test
-    @DisplayName("解析多条 JSON Lines 记录 - 应该返回多个 VenueAggregate")
-    void parseMultipleRecords_shouldReturnMultipleVenues() throws Exception {
+    @DisplayName("解析多条 JSON Lines 记录 - 应该返回多个 VenueParseResult")
+    void parseMultipleRecords_shouldReturnMultipleResults() throws Exception {
       // Given
       String jsonLines =
           """
@@ -80,16 +79,16 @@ class OpenAlexSourceParserTest {
       InputStream input = gzipCompress(jsonLines);
 
       // When
-      List<VenueAggregate> venues = parser.parse(input).toList();
+      List<VenueParseResult> results = parser.parse(input).toList();
 
       // Then
-      assertThat(venues).hasSize(3);
-      assertThat(venues.get(0).getDisplayName()).isEqualTo("Journal A");
-      assertThat(venues.get(0).getVenueType()).isEqualTo(VenueType.JOURNAL);
-      assertThat(venues.get(1).getDisplayName()).isEqualTo("Journal B");
-      assertThat(venues.get(1).getVenueType()).isEqualTo(VenueType.REPOSITORY);
-      assertThat(venues.get(2).getDisplayName()).isEqualTo("Journal C");
-      assertThat(venues.get(2).getVenueType()).isEqualTo(VenueType.CONFERENCE);
+      assertThat(results).hasSize(3);
+      assertThat(results.get(0).aggregate().getDisplayName()).isEqualTo("Journal A");
+      assertThat(results.get(0).aggregate().getVenueType()).isEqualTo(VenueType.JOURNAL);
+      assertThat(results.get(1).aggregate().getDisplayName()).isEqualTo("Journal B");
+      assertThat(results.get(1).aggregate().getVenueType()).isEqualTo(VenueType.REPOSITORY);
+      assertThat(results.get(2).aggregate().getDisplayName()).isEqualTo("Journal C");
+      assertThat(results.get(2).aggregate().getVenueType()).isEqualTo(VenueType.CONFERENCE);
     }
 
     @Test
@@ -105,15 +104,15 @@ class OpenAlexSourceParserTest {
       InputStream input = gzipCompress(jsonLines);
 
       // When
-      List<VenueAggregate> venues = parser.parse(input).toList();
+      List<VenueParseResult> results = parser.parse(input).toList();
 
       // Then
-      assertThat(venues).hasSize(2);
+      assertThat(results).hasSize(2);
     }
 
     @Test
-    @DisplayName("解析完整记录 - 应该正确填充所有字段")
-    void parseFullRecord_shouldPopulateAllFields() throws Exception {
+    @DisplayName("解析完整记录 - 应该正确填充所有字段和年度指标")
+    void parseFullRecord_shouldPopulateAllFieldsAndMetrics() throws Exception {
       // Given
       String jsonLine =
           """
@@ -122,11 +121,12 @@ class OpenAlexSourceParserTest {
       InputStream input = gzipCompress(jsonLine);
 
       // When
-      List<VenueAggregate> venues = parser.parse(input).toList();
+      List<VenueParseResult> results = parser.parse(input).toList();
 
       // Then
-      assertThat(venues).hasSize(1);
-      VenueAggregate venue = venues.getFirst();
+      assertThat(results).hasSize(1);
+      VenueParseResult result = results.getFirst();
+      VenueAggregate venue = result.aggregate();
 
       // 基础字段
       assertThat(venue.getOpenalexId()).isEqualTo("S137773608");
@@ -157,18 +157,22 @@ class OpenAlexSourceParserTest {
       assertThat(venue.getSocieties()).hasSize(1);
       assertThat(venue.getSocieties().getFirst().organization()).isEqualTo("Nature Research");
 
-      // 年度指标
-      assertThat(venue.getYearlyMetrics()).hasSize(2);
+      // 年度指标（从 VenueParseResult 获取，而非聚合根）
+      assertThat(result.hasYearlyMetrics()).isTrue();
+      assertThat(result.yearlyMetrics()).hasSize(2);
+      assertThat(result.yearlyMetrics().get(0).year()).isEqualTo(2024);
+      assertThat(result.yearlyMetrics().get(0).worksCount()).isEqualTo(5000);
+      assertThat(result.yearlyMetrics().get(1).year()).isEqualTo(2023);
     }
   }
 
   @Nested
-  @DisplayName("parseRecord() 方法测试")
-  class ParseRecordTest {
+  @DisplayName("toParseResult() 方法测试")
+  class ToParseResultTest {
 
     @Test
-    @DisplayName("转换记录时无 type 字段 - 应该抛出异常")
-    void convertWithoutType_shouldThrowException() {
+    @DisplayName("转换记录时无 type 字段 - 应该使用 OTHER 类型")
+    void convertWithoutType_shouldUseOtherType() {
       // Given
       OpenAlexSourceRecord record =
           new OpenAlexSourceRecord(
@@ -199,9 +203,11 @@ class OpenAlexSourceParserTest {
               null,
               null);
 
-      // When & Then
-      assertThatThrownBy(() -> parser.toVenueAggregate(record))
-          .isInstanceOf(IllegalArgumentException.class);
+      // When
+      VenueParseResult result = parser.toParseResult(record);
+
+      // Then: type 为 null 时应该使用 OTHER 类型（容错处理）
+      assertThat(result.aggregate().getVenueType()).isEqualTo(VenueType.OTHER);
     }
   }
 

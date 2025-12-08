@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-/// VenuePublicationStats 实体单元测试。
+/// VenuePublicationStats 值对象单元测试。
 ///
 /// **测试策略**：
 ///
@@ -41,11 +41,10 @@ class VenuePublicationStatsTest {
           VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, OA_WORKS_COUNT);
 
       // Then
-      assertThat(stats.getId()).isNull(); // 新建时无 ID
-      assertThat(stats.getYear()).isEqualTo(VALID_YEAR);
-      assertThat(stats.getWorksCount()).isEqualTo(WORKS_COUNT);
-      assertThat(stats.getCitedByCount()).isEqualTo(CITED_BY_COUNT);
-      assertThat(stats.getOaWorksCount()).isEqualTo(OA_WORKS_COUNT);
+      assertThat(stats.year()).isEqualTo(VALID_YEAR);
+      assertThat(stats.worksCount()).isEqualTo(WORKS_COUNT);
+      assertThat(stats.citedByCount()).isEqualTo(CITED_BY_COUNT);
+      assertThat(stats.oaWorksCount()).isEqualTo(OA_WORKS_COUNT);
     }
 
     @Test
@@ -56,7 +55,7 @@ class VenuePublicationStatsTest {
           VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT);
 
       // Then
-      assertThat(stats.getOaWorksCount()).isNull();
+      assertThat(stats.oaWorksCount()).isNull();
       assertThat(stats.hasOaWorksCount()).isFalse();
     }
 
@@ -67,10 +66,10 @@ class VenuePublicationStatsTest {
       VenuePublicationStats stats = VenuePublicationStats.empty(VALID_YEAR);
 
       // Then
-      assertThat(stats.getYear()).isEqualTo(VALID_YEAR);
-      assertThat(stats.getWorksCount()).isZero();
-      assertThat(stats.getCitedByCount()).isZero();
-      assertThat(stats.getOaWorksCount()).isNull();
+      assertThat(stats.year()).isEqualTo(VALID_YEAR);
+      assertThat(stats.worksCount()).isZero();
+      assertThat(stats.citedByCount()).isZero();
+      assertThat(stats.oaWorksCount()).isNull();
     }
   }
 
@@ -82,9 +81,9 @@ class VenuePublicationStatsTest {
     @DisplayName("年份在有效范围内应该通过")
     void shouldAcceptValidYearRange() {
       // 边界值测试
-      assertThat(VenuePublicationStats.create(1900, 100, 500).getYear()).isEqualTo(1900);
-      assertThat(VenuePublicationStats.create(2100, 100, 500).getYear()).isEqualTo(2100);
-      assertThat(VenuePublicationStats.create(2024, 100, 500).getYear()).isEqualTo(2024);
+      assertThat(VenuePublicationStats.create(1900, 100, 500).year()).isEqualTo(1900);
+      assertThat(VenuePublicationStats.create(2100, 100, 500).year()).isEqualTo(2100);
+      assertThat(VenuePublicationStats.create(2024, 100, 500).year()).isEqualTo(2024);
     }
 
     @Test
@@ -112,7 +111,7 @@ class VenuePublicationStatsTest {
     @DisplayName("作品数可以为 0")
     void shouldAcceptZeroWorksCount() {
       VenuePublicationStats stats = VenuePublicationStats.create(VALID_YEAR, 0, 0);
-      assertThat(stats.getWorksCount()).isZero();
+      assertThat(stats.worksCount()).isZero();
     }
 
     @Test
@@ -141,7 +140,7 @@ class VenuePublicationStatsTest {
     void shouldAcceptNullOaWorksCount() {
       VenuePublicationStats stats =
           VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, null);
-      assertThat(stats.getOaWorksCount()).isNull();
+      assertThat(stats.oaWorksCount()).isNull();
     }
 
     @Test
@@ -149,7 +148,7 @@ class VenuePublicationStatsTest {
     void shouldAcceptZeroOaWorksCount() {
       VenuePublicationStats stats =
           VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, 0);
-      assertThat(stats.getOaWorksCount()).isZero();
+      assertThat(stats.oaWorksCount()).isZero();
     }
 
     @Test
@@ -174,95 +173,65 @@ class VenuePublicationStatsTest {
     void shouldAcceptOaWorksCountEqualToTotal() {
       VenuePublicationStats stats =
           VenuePublicationStats.create(VALID_YEAR, 100, CITED_BY_COUNT, 100);
-      assertThat(stats.getOaWorksCount()).isEqualTo(100);
+      assertThat(stats.oaWorksCount()).isEqualTo(100);
     }
   }
 
   @Nested
-  @DisplayName("restore() 方法测试")
-  class RestoreTests {
+  @DisplayName("with-style 方法测试")
+  class WithStyleMethodTests {
 
     @Test
-    @DisplayName("应该正确从持久化状态重建实体")
-    void shouldRestoreFromPersistedState() {
-      // Given
-      Long id = 123L;
-
-      // When
-      VenuePublicationStats stats =
-          VenuePublicationStats.restore(
-              id, VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, OA_WORKS_COUNT);
-
-      // Then
-      assertThat(stats.getId()).isEqualTo(id);
-      assertThat(stats.getYear()).isEqualTo(VALID_YEAR);
-      assertThat(stats.getWorksCount()).isEqualTo(WORKS_COUNT);
-      assertThat(stats.getCitedByCount()).isEqualTo(CITED_BY_COUNT);
-      assertThat(stats.getOaWorksCount()).isEqualTo(OA_WORKS_COUNT);
-    }
-  }
-
-  @Nested
-  @DisplayName("业务方法测试")
-  class BusinessMethodTests {
-
-    @Test
-    @DisplayName("assignId() 应该设置 ID")
-    void assignIdShouldSetId() {
-      // Given
-      VenuePublicationStats stats =
-          VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT);
-      assertThat(stats.getId()).isNull();
-
-      // When
-      stats.assignId(456L);
-
-      // Then
-      assertThat(stats.getId()).isEqualTo(456L);
-    }
-
-    @Test
-    @DisplayName("updateCounts() 应该更新计数")
-    void updateCountsShouldUpdateValues() {
+    @DisplayName("withCounts() 应该返回新实例并更新计数")
+    void withCountsShouldReturnNewInstanceWithUpdatedValues() {
       // Given
       VenuePublicationStats stats = VenuePublicationStats.create(VALID_YEAR, 100, 500);
 
       // When
-      stats.updateCounts(200, 1000);
+      VenuePublicationStats updated = stats.withCounts(200, 1000);
 
-      // Then
-      assertThat(stats.getWorksCount()).isEqualTo(200);
-      assertThat(stats.getCitedByCount()).isEqualTo(1000);
+      // Then - 返回新实例
+      assertThat(updated).isNotSameAs(stats);
+      assertThat(updated.worksCount()).isEqualTo(200);
+      assertThat(updated.citedByCount()).isEqualTo(1000);
+      assertThat(updated.year()).isEqualTo(VALID_YEAR); // 年份不变
+
+      // 原实例不变
+      assertThat(stats.worksCount()).isEqualTo(100);
+      assertThat(stats.citedByCount()).isEqualTo(500);
     }
 
     @Test
-    @DisplayName("updateCounts() 验证负数")
-    void updateCountsShouldValidateNegativeValues() {
+    @DisplayName("withCounts() 验证负数")
+    void withCountsShouldValidateNegativeValues() {
       VenuePublicationStats stats = VenuePublicationStats.create(VALID_YEAR, 100, 500);
 
-      assertThatThrownBy(() -> stats.updateCounts(-1, 500))
+      assertThatThrownBy(() -> stats.withCounts(-1, 500))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("发表作品数不能为负数");
 
-      assertThatThrownBy(() -> stats.updateCounts(100, -1))
+      assertThatThrownBy(() -> stats.withCounts(100, -1))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("被引用次数不能为负数");
     }
 
     @Test
-    @DisplayName("withOaWorksCount() 应该设置 OA 作品数")
-    void withOaWorksCountShouldSetValue() {
+    @DisplayName("withOaWorksCount() 应该返回新实例并设置 OA 作品数")
+    void withOaWorksCountShouldReturnNewInstanceWithValue() {
       // Given
       VenuePublicationStats stats =
           VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT);
 
       // When
-      VenuePublicationStats result = stats.withOaWorksCount(500);
+      VenuePublicationStats updated = stats.withOaWorksCount(500);
 
-      // Then
-      assertThat(result).isSameAs(stats); // 链式调用
-      assertThat(stats.getOaWorksCount()).isEqualTo(500);
-      assertThat(stats.hasOaWorksCount()).isTrue();
+      // Then - 返回新实例
+      assertThat(updated).isNotSameAs(stats);
+      assertThat(updated.oaWorksCount()).isEqualTo(500);
+      assertThat(updated.hasOaWorksCount()).isTrue();
+
+      // 原实例不变
+      assertThat(stats.oaWorksCount()).isNull();
     }
 
     @Test
@@ -273,11 +242,11 @@ class VenuePublicationStatsTest {
           VenuePublicationStats.create(VALID_YEAR, WORKS_COUNT, CITED_BY_COUNT, 500);
 
       // When
-      stats.withOaWorksCount(null);
+      VenuePublicationStats updated = stats.withOaWorksCount(null);
 
       // Then
-      assertThat(stats.getOaWorksCount()).isNull();
-      assertThat(stats.hasOaWorksCount()).isFalse();
+      assertThat(updated.oaWorksCount()).isNull();
+      assertThat(updated.hasOaWorksCount()).isFalse();
     }
 
     @Test
@@ -386,13 +355,13 @@ class VenuePublicationStatsTest {
   class EqualsAndHashCodeTests {
 
     @Test
-    @DisplayName("相同年份应该相等（业务相等性）")
-    void shouldBeEqualForSameYear() {
-      // Given - 不同的计数，相同年份
-      VenuePublicationStats m1 = VenuePublicationStats.create(2024, 100, 500);
-      VenuePublicationStats m2 = VenuePublicationStats.create(2024, 200, 1000);
+    @DisplayName("相同所有字段应该相等（Record 默认相等性）")
+    void shouldBeEqualForSameFields() {
+      // Given
+      VenuePublicationStats m1 = VenuePublicationStats.create(2024, 100, 500, 50);
+      VenuePublicationStats m2 = VenuePublicationStats.create(2024, 100, 500, 50);
 
-      // Then - 年份相同则相等
+      // Then
       assertThat(m1).isEqualTo(m2);
       assertThat(m1.hashCode()).isEqualTo(m2.hashCode());
     }
@@ -403,6 +372,17 @@ class VenuePublicationStatsTest {
       // Given
       VenuePublicationStats m1 = VenuePublicationStats.create(2023, 100, 500);
       VenuePublicationStats m2 = VenuePublicationStats.create(2024, 100, 500);
+
+      // Then
+      assertThat(m1).isNotEqualTo(m2);
+    }
+
+    @Test
+    @DisplayName("不同作品数应该不相等")
+    void shouldNotBeEqualForDifferentWorksCount() {
+      // Given
+      VenuePublicationStats m1 = VenuePublicationStats.create(2024, 100, 500);
+      VenuePublicationStats m2 = VenuePublicationStats.create(2024, 200, 500);
 
       // Then
       assertThat(m1).isNotEqualTo(m2);
