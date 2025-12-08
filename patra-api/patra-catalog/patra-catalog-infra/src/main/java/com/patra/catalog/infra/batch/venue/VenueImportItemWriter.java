@@ -1,8 +1,11 @@
 package com.patra.catalog.infra.batch.venue;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
+import com.patra.catalog.domain.model.entity.VenuePublicationStats;
 import com.patra.catalog.domain.port.repository.VenueRepository;
+import com.patra.catalog.domain.port.repository.VenueSupplementRepository;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +24,9 @@ import org.springframework.stereotype.Component;
 ///
 /// **职责**：
 ///
-/// - 将 VenueAggregate 批量持久化
+/// - 将 VenueParseResult 解析为聚合根和年度指标，分别持久化
+/// - 聚合根通过 VenueRepository 持久化
+/// - 年度指标通过 VenueSupplementRepository 持久化
 /// - Chunk 内 ISSN-L 去重：同一批次内的重复记录在内存中过滤
 /// - 乐观插入：正常情况直接插入，唯一约束冲突时降级处理
 ///
@@ -43,34 +48,87 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class VenueImportItemWriter implements ItemWriter<VenueAggregate> {
+public class VenueImportItemWriter implements ItemWriter<VenueParseResult> {
 
   private final VenueRepository venueRepository;
+  private final VenueSupplementRepository venueSupplementRepository;
 
   @Override
-  public void write(Chunk<? extends VenueAggregate> chunk) throws Exception {
-    List<? extends VenueAggregate> items = chunk.getItems();
+  public void write(Chunk<? extends VenueParseResult> chunk) throws Exception {
+    List<? extends VenueParseResult> items = chunk.getItems();
     if (items.isEmpty()) {
       return;
     }
 
     // Step 1: Chunk 内去重（必须保留，否则同批次内重复也会导致插入失败）
-    List<VenueAggregate> deduplicatedInChunk = deduplicateWithinChunk(items);
+    List<VenueParseResult> deduplicatedInChunk = deduplicateWithinChunk(items);
 
-    // Step 2: 乐观插入
+    // Step 2: 提取聚合根和年度指标
+    List<VenueAggregate> aggregates =
+        deduplicatedInChunk.stream().map(VenueParseResult::aggregate).toList();
+    Map<String, List<VenuePublicationStats>> metricsByOpenalexId =
+        extractMetrics(deduplicatedInChunk);
+
+    // Step 3: 乐观插入聚合根
+    List<VenueAggregate> insertedAggregates;
     try {
-      venueRepository.insertAll(deduplicatedInChunk);
-      log.debug("写入完成：新增={}", deduplicatedInChunk.size());
+      venueRepository.insertAll(aggregates);
+      insertedAggregates = aggregates;
+      log.debug("写入完成：新增={}", aggregates.size());
     } catch (DuplicateKeyException e) {
       // 明确的唯一键冲突
-      handleDuplicateKeyException(deduplicatedInChunk);
+      insertedAggregates = handleDuplicateKeyException(aggregates);
     } catch (DataIntegrityViolationException e) {
       // 其他数据完整性冲突，检查是否为唯一键冲突
       if (isDuplicateKeyViolation(e)) {
-        handleDuplicateKeyException(deduplicatedInChunk);
+        insertedAggregates = handleDuplicateKeyException(aggregates);
       } else {
         throw e; // 其他约束冲突，向上抛出
       }
+    }
+
+    // Step 4: 插入年度指标（仅针对成功插入的聚合根）
+    insertYearlyMetrics(insertedAggregates, metricsByOpenalexId);
+  }
+
+  /// 提取年度指标，按 OpenAlex ID 分组。
+  ///
+  /// @param items 解析结果列表
+  /// @return 按 OpenAlex ID 分组的年度指标
+  private Map<String, List<VenuePublicationStats>> extractMetrics(List<VenueParseResult> items) {
+    Map<String, List<VenuePublicationStats>> result = new HashMap<>();
+    for (VenueParseResult item : items) {
+      if (item.hasYearlyMetrics()) {
+        result.put(item.aggregate().getOpenalexId(), item.yearlyMetrics());
+      }
+    }
+    return result;
+  }
+
+  /// 插入年度指标。
+  ///
+  /// 根据成功插入的聚合根，将对应的年度指标写入数据库。
+  ///
+  /// @param insertedAggregates 成功插入的聚合根列表
+  /// @param metricsByOpenalexId 按 OpenAlex ID 分组的年度指标
+  private void insertYearlyMetrics(
+      List<VenueAggregate> insertedAggregates,
+      Map<String, List<VenuePublicationStats>> metricsByOpenalexId) {
+    if (metricsByOpenalexId.isEmpty() || insertedAggregates.isEmpty()) {
+      return;
+    }
+
+    Map<Long, List<VenuePublicationStats>> metricsByVenueId = new HashMap<>();
+    for (VenueAggregate aggregate : insertedAggregates) {
+      List<VenuePublicationStats> metrics = metricsByOpenalexId.get(aggregate.getOpenalexId());
+      if (metrics != null && !metrics.isEmpty()) {
+        metricsByVenueId.put(aggregate.getId(), metrics);
+      }
+    }
+
+    if (!metricsByVenueId.isEmpty()) {
+      venueSupplementRepository.replaceYearlyMetricsBatch(metricsByVenueId);
+      log.debug("写入年度指标：{} 个 Venue", metricsByVenueId.size());
     }
   }
 
@@ -80,16 +138,22 @@ public class VenueImportItemWriter implements ItemWriter<VenueAggregate> {
   ///
   /// @param items 原始数据列表
   /// @return 去重后的数据列表
-  private List<VenueAggregate> deduplicateWithinChunk(List<? extends VenueAggregate> items) {
-    Map<String, VenueAggregate> uniqueMap = new LinkedHashMap<>();
+  private List<VenueParseResult> deduplicateWithinChunk(List<? extends VenueParseResult> items) {
+    Map<String, VenueParseResult> uniqueMap = new LinkedHashMap<>();
     int duplicateCount = 0;
 
-    for (VenueAggregate item : items) {
-      String key = item.getIssnL() != null ? item.getIssnL() : ("_oa:" + item.getOpenalexId());
+    for (VenueParseResult item : items) {
+      VenueAggregate aggregate = item.aggregate();
+      String key =
+          aggregate.getIssnL() != null
+              ? aggregate.getIssnL()
+              : ("_oa:" + aggregate.getOpenalexId());
 
-      if (uniqueMap.containsKey(key) && item.getIssnL() != null) {
+      if (uniqueMap.containsKey(key) && aggregate.getIssnL() != null) {
         log.warn(
-            "Chunk 内 ISSN-L 重复，跳过: issnL={}, openalexId={}", item.getIssnL(), item.getOpenalexId());
+            "Chunk 内 ISSN-L 重复，跳过: issnL={}, openalexId={}",
+            aggregate.getIssnL(),
+            aggregate.getOpenalexId());
         duplicateCount++;
       } else {
         uniqueMap.put(key, item);
@@ -120,13 +184,14 @@ public class VenueImportItemWriter implements ItemWriter<VenueAggregate> {
   ///
   /// 查询数据库已存在的 ISSN-L，过滤后重新插入。
   ///
-  /// @param items 原始数据列表（已经过 Chunk 内去重）
-  private void handleDuplicateKeyException(List<VenueAggregate> items) {
+  /// @param aggregates 原始数据列表（已经过 Chunk 内去重）
+  /// @return 成功插入的聚合根列表
+  private List<VenueAggregate> handleDuplicateKeyException(List<VenueAggregate> aggregates) {
     log.info("检测到 ISSN-L 唯一约束冲突，开始降级处理...");
 
     // 提取非空 ISSN-L
     Set<String> issnLs =
-        items.stream()
+        aggregates.stream()
             .map(VenueAggregate::getIssnL)
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
@@ -136,7 +201,7 @@ public class VenueImportItemWriter implements ItemWriter<VenueAggregate> {
 
     // 过滤并记录日志
     List<VenueAggregate> toInsert = new ArrayList<>();
-    for (VenueAggregate item : items) {
+    for (VenueAggregate item : aggregates) {
       if (item.getIssnL() != null && existingIssnLs.contains(item.getIssnL())) {
         log.warn(
             "数据库已存在 ISSN-L，跳过: issnL={}, openalexId={}", item.getIssnL(), item.getOpenalexId());
@@ -146,12 +211,17 @@ public class VenueImportItemWriter implements ItemWriter<VenueAggregate> {
     }
 
     log.info(
-        "数据库去重完成：输入={}，输出={}，跳过={}", items.size(), toInsert.size(), items.size() - toInsert.size());
+        "数据库去重完成：输入={}，输出={}，跳过={}",
+        aggregates.size(),
+        toInsert.size(),
+        aggregates.size() - toInsert.size());
 
     // 重新插入
     if (!toInsert.isEmpty()) {
       venueRepository.insertAll(toInsert);
       log.debug("降级写入完成：新增={}", toInsert.size());
     }
+
+    return toInsert;
   }
 }

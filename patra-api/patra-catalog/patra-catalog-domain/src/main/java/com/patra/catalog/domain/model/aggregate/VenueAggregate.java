@@ -3,12 +3,7 @@ package com.patra.catalog.domain.model.aggregate;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.entity.VenueIdentifier;
-import com.patra.catalog.domain.model.entity.VenueIndexingHistory;
-import com.patra.catalog.domain.model.entity.VenueMesh;
-import com.patra.catalog.domain.model.entity.VenuePublicationStats;
-import com.patra.catalog.domain.model.entity.VenueRelation;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
-import com.patra.catalog.domain.model.enums.VenueRelationType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.ApcInfo;
 import com.patra.catalog.domain.model.vo.venue.HostOrganization;
@@ -24,7 +19,6 @@ import java.io.Serial;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import lombok.Getter;
@@ -33,12 +27,14 @@ import lombok.Getter;
 ///
 /// **聚合边界**：
 ///
-/// - VenueIdentifier（实体，1:N）：标识符集合，与 Venue 生命周期一致
-/// - VenuePublicationStats（实体，1:N）：年度指标集合，与 Venue 生命周期一致
-/// - VenueMesh（实体，1:N）：MeSH 主题词集合，来自 Serfile
-/// - VenueRelation（实体，1:N）：期刊关联关系集合（前身/后继等），来自 Serfile
-/// - VenueIndexingHistory（实体，1:N）：索引历史记录集合，来自 Serfile
-/// - VenueInstance 保持独立（通过 Repository 按需加载）
+/// - VenueIdentifier（值对象，1:N）：标识符集合，保护 ISSN-L 唯一性不变量
+///
+/// **补充数据（通过 VenueSupplementRepository 单独管理）**：
+///
+/// - VenuePublicationStats：年度指标集合（来自 OpenAlex）
+/// - VenueMesh：MeSH 主题词集合（来自 Serfile）
+/// - VenueRelation：期刊关联关系集合（来自 Serfile）
+/// - VenueIndexingHistory：索引历史记录集合（来自 Serfile）
 ///
 /// **验证规则**：
 ///
@@ -50,11 +46,8 @@ import lombok.Getter;
 ///
 /// - 支持 OpenAlex 的 7 种载体类型（journal/repository/conference 等）
 /// - 标识符统一管理（ISSN/ISBN/OpenAlex/NLM/MAG/FATCAT/WIKIDATA/CODEN）
-/// - 年度指标支持时序分析
 /// - OA 状态和 APC 信息用于开放获取分析
 /// - 语言信息支持多语言期刊和摘要语言追踪
-/// - MeSH 主题词用于期刊学科分类
-/// - 索引历史记录 MEDLINE/PMC 等数据库的索引状态变化
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -174,22 +167,10 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// 数据来源信息
   private ProvenanceInfo provenance;
 
-  // ========== 聚合内实体 ==========
+  // ========== 聚合内值对象 ==========
 
   /// 标识符集合
   private final List<VenueIdentifier> identifiers;
-
-  /// 年度指标集合
-  private final List<VenuePublicationStats> yearlyMetrics;
-
-  /// MeSH 主题词集合（来自 Serfile）
-  private final List<VenueMesh> meshTerms;
-
-  /// 期刊关联关系集合（前身/后继等，来自 Serfile）
-  private final List<VenueRelation> relations;
-
-  /// 索引历史集合（MEDLINE/PMC 索引记录，来自 Serfile）
-  private final List<VenueIndexingHistory> indexingHistories;
 
   /// 私有构造函数（通过工厂方法创建）。
   ///
@@ -205,12 +186,8 @@ public class VenueAggregate extends AggregateRoot<Long> {
     this.venueType = venueType;
     this.displayName = displayName;
     this.identifiers = new ArrayList<>();
-    this.yearlyMetrics = new ArrayList<>();
     this.alternateTitles = new ArrayList<>();
     this.societies = new ArrayList<>();
-    this.meshTerms = new ArrayList<>();
-    this.relations = new ArrayList<>();
-    this.indexingHistories = new ArrayList<>();
   }
 
   // ========== 工厂方法 ==========
@@ -513,27 +490,15 @@ public class VenueAggregate extends AggregateRoot<Long> {
 
   /// 添加标识符。
   ///
+  /// 如果已存在相同类型和值的标识符，则忽略。
+  ///
   /// @param identifier 标识符
   public void addIdentifier(VenueIdentifier identifier) {
     Assert.notNull(identifier, "标识符不能为空");
 
-    // 检查是否已存在相同的标识符
-    boolean exists =
-        identifiers.stream()
-            .anyMatch(
-                i ->
-                    i.getType() == identifier.getType()
-                        && i.getValue().equals(identifier.getValue()));
-
-    if (!exists) {
+    // 检查是否已存在相同的标识符（基于 Record 的 equals）
+    if (!identifiers.contains(identifier)) {
       identifiers.add(identifier);
-
-      // 如果是首选标识符，取消同类型其他首选
-      if (identifier.isPrimary()) {
-        identifiers.stream()
-            .filter(i -> i.getType() == identifier.getType() && i != identifier)
-            .forEach(VenueIdentifier::unmarkAsPrimary);
-      }
     }
   }
 
@@ -541,9 +506,8 @@ public class VenueAggregate extends AggregateRoot<Long> {
   ///
   /// @param type 标识符类型
   /// @param value 标识符值
-  /// @param isPrimary 是否首选
-  public void addIdentifier(VenueIdentifierType type, String value, boolean isPrimary) {
-    addIdentifier(VenueIdentifier.create(type, value, isPrimary));
+  public void addIdentifier(VenueIdentifierType type, String value) {
+    addIdentifier(new VenueIdentifier(type, value));
   }
 
   /// 移除标识符。
@@ -551,42 +515,18 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @param type 标识符类型
   /// @param value 标识符值
   public void removeIdentifier(VenueIdentifierType type, String value) {
-    identifiers.removeIf(i -> i.getType() == type && i.getValue().equals(value));
+    identifiers.removeIf(i -> i.type() == type && i.value().equals(value));
   }
 
-  /// 设置首选标识符。
+  /// 获取特定类型的标识符值（返回第一个匹配）。
   ///
   /// @param type 标识符类型
-  /// @param value 标识符值
-  public void setPrimaryIdentifier(VenueIdentifierType type, String value) {
-    identifiers.stream()
-        .filter(i -> i.getType() == type)
-        .forEach(
-            i -> {
-              if (i.getValue().equals(value)) {
-                i.markAsPrimary();
-              } else {
-                i.unmarkAsPrimary();
-              }
-            });
-  }
-
-  /// 获取特定类型的标识符值（首选）。
-  ///
-  /// @param type 标识符类型
-  /// @return 首选标识符值，如果不存在则返回第一个同类型标识符
+  /// @return 标识符值，如果不存在则返回 empty
   public Optional<String> getIdentifier(VenueIdentifierType type) {
-    // 优先返回首选
     return identifiers.stream()
-        .filter(i -> i.getType() == type && i.isPrimary())
-        .map(VenueIdentifier::getValue)
-        .findFirst()
-        .or(
-            () ->
-                identifiers.stream()
-                    .filter(i -> i.getType() == type)
-                    .map(VenueIdentifier::getValue)
-                    .findFirst());
+        .filter(i -> i.type() == type)
+        .map(VenueIdentifier::value)
+        .findFirst();
   }
 
   /// 获取特定类型的所有标识符值。
@@ -594,10 +534,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @param type 标识符类型
   /// @return 标识符值列表
   public List<String> getIdentifiers(VenueIdentifierType type) {
-    return identifiers.stream()
-        .filter(i -> i.getType() == type)
-        .map(VenueIdentifier::getValue)
-        .toList();
+    return identifiers.stream().filter(i -> i.type() == type).map(VenueIdentifier::value).toList();
   }
 
   /// 获取所有标识符（不可变视图）。
@@ -614,237 +551,6 @@ public class VenueAggregate extends AggregateRoot<Long> {
     identifiers.clear();
     if (newIdentifiers != null) {
       newIdentifiers.forEach(this::addIdentifier);
-    }
-  }
-
-  // ========== 年度指标管理方法 ==========
-
-  /// 添加/更新年度指标。
-  ///
-  /// @param year 年份
-  /// @param worksCount 发表作品数
-  /// @param citedByCount 被引用次数
-  public void setMetrics(int year, int worksCount, int citedByCount) {
-    setMetrics(year, worksCount, citedByCount, null);
-  }
-
-  /// 添加/更新年度指标（含 OA 作品数）。
-  ///
-  /// @param year 年份
-  /// @param worksCount 发表作品数
-  /// @param citedByCount 被引用次数
-  /// @param oaWorksCount OA 作品数
-  public void setMetrics(int year, int worksCount, int citedByCount, Integer oaWorksCount) {
-    Optional<VenuePublicationStats> existing =
-        yearlyMetrics.stream().filter(m -> m.getYear() == year).findFirst();
-
-    if (existing.isPresent()) {
-      // 更新现有记录
-      VenuePublicationStats metrics = existing.get();
-      metrics.updateCounts(worksCount, citedByCount);
-      if (oaWorksCount != null) {
-        metrics.withOaWorksCount(oaWorksCount);
-      }
-    } else {
-      // 添加新记录
-      yearlyMetrics.add(VenuePublicationStats.create(year, worksCount, citedByCount, oaWorksCount));
-    }
-  }
-
-  /// 添加年度指标实体。
-  ///
-  /// @param metrics 年度指标
-  public void addMetrics(VenuePublicationStats metrics) {
-    Assert.notNull(metrics, "年度指标不能为空");
-
-    // 检查是否已存在同年份记录
-    boolean exists = yearlyMetrics.stream().anyMatch(m -> m.getYear() == metrics.getYear());
-    if (exists) {
-      // 移除旧记录
-      yearlyMetrics.removeIf(m -> m.getYear() == metrics.getYear());
-    }
-    yearlyMetrics.add(metrics);
-  }
-
-  /// 获取特定年份的指标。
-  ///
-  /// @param year 年份
-  /// @return 年度指标
-  public Optional<VenuePublicationStats> getMetrics(int year) {
-    return yearlyMetrics.stream().filter(m -> m.getYear() == year).findFirst();
-  }
-
-  /// 获取所有年度指标（按年份降序排列）。
-  ///
-  /// @return 年度指标列表
-  public List<VenuePublicationStats> getAllMetrics() {
-    return yearlyMetrics.stream()
-        .sorted(Comparator.comparingInt(VenuePublicationStats::getYear).reversed())
-        .toList();
-  }
-
-  /// 获取年度指标（不可变视图）。
-  ///
-  /// @return 年度指标列表
-  public List<VenuePublicationStats> getYearlyMetrics() {
-    return Collections.unmodifiableList(yearlyMetrics);
-  }
-
-  /// 批量设置年度指标（清空现有并添加新的）。
-  ///
-  /// @param newMetrics 新年度指标列表
-  public void setYearlyMetrics(List<VenuePublicationStats> newMetrics) {
-    yearlyMetrics.clear();
-    if (newMetrics != null) {
-      newMetrics.forEach(this::addMetrics);
-    }
-  }
-
-  // ========== MeSH 主题词管理方法 ==========
-
-  /// 添加 MeSH 主题词。
-  ///
-  /// @param meshTerm 主题词实体
-  public void addMeshTerm(VenueMesh meshTerm) {
-    Assert.notNull(meshTerm, "主题词不能为空");
-    // 检查是否已存在（基于业务相等性）
-    if (!meshTerms.contains(meshTerm)) {
-      meshTerms.add(meshTerm);
-    }
-  }
-
-  /// 移除 MeSH 主题词。
-  ///
-  /// @param descriptorName 描述符名称
-  public void removeMeshTerm(String descriptorName) {
-    meshTerms.removeIf(m -> m.getDescriptorName().equals(descriptorName));
-  }
-
-  /// 获取所有主题词（不可变视图）。
-  ///
-  /// @return 主题词列表
-  public List<VenueMesh> getMeshTerms() {
-    return Collections.unmodifiableList(meshTerms);
-  }
-
-  /// 获取主要主题词列表。
-  ///
-  /// @return 主要主题词列表
-  public List<VenueMesh> getMajorMeshTerms() {
-    return meshTerms.stream().filter(VenueMesh::isMajorTopic).toList();
-  }
-
-  /// 批量设置主题词（清空现有并添加新的）。
-  ///
-  /// @param newMeshTerms 新主题词列表
-  public void setMeshTerms(List<VenueMesh> newMeshTerms) {
-    meshTerms.clear();
-    if (newMeshTerms != null) {
-      newMeshTerms.forEach(this::addMeshTerm);
-    }
-  }
-
-  // ========== 期刊关联关系管理方法 ==========
-
-  /// 添加期刊关联关系。
-  ///
-  /// @param relation 关联关系实体
-  public void addRelation(VenueRelation relation) {
-    Assert.notNull(relation, "关联关系不能为空");
-    // 检查是否已存在（基于业务相等性）
-    if (!relations.contains(relation)) {
-      relations.add(relation);
-    }
-  }
-
-  /// 移除期刊关联关系。
-  ///
-  /// @param relatedTitle 关联期刊标题
-  /// @param relationType 关系类型
-  public void removeRelation(String relatedTitle, VenueRelationType relationType) {
-    relations.removeIf(
-        r -> r.getRelatedTitle().equals(relatedTitle) && r.getRelationType() == relationType);
-  }
-
-  /// 获取所有关联关系（不可变视图）。
-  ///
-  /// @return 关联关系列表
-  public List<VenueRelation> getRelations() {
-    return Collections.unmodifiableList(relations);
-  }
-
-  /// 获取前身期刊列表。
-  ///
-  /// @return 前身期刊关联列表
-  public List<VenueRelation> getPrecedingRelations() {
-    return relations.stream().filter(VenueRelation::isPreceding).toList();
-  }
-
-  /// 获取后继期刊列表。
-  ///
-  /// @return 后继期刊关联列表
-  public List<VenueRelation> getSucceedingRelations() {
-    return relations.stream().filter(VenueRelation::isSucceeding).toList();
-  }
-
-  /// 批量设置关联关系（清空现有并添加新的）。
-  ///
-  /// @param newRelations 新关联关系列表
-  public void setRelations(List<VenueRelation> newRelations) {
-    relations.clear();
-    if (newRelations != null) {
-      newRelations.forEach(this::addRelation);
-    }
-  }
-
-  // ========== 索引历史管理方法 ==========
-
-  /// 添加索引历史记录。
-  ///
-  /// @param history 索引历史实体
-  public void addIndexingHistory(VenueIndexingHistory history) {
-    Assert.notNull(history, "索引历史不能为空");
-    // 检查是否已存在（基于业务相等性）
-    if (!indexingHistories.contains(history)) {
-      indexingHistories.add(history);
-    }
-  }
-
-  /// 获取所有索引历史（不可变视图）。
-  ///
-  /// @return 索引历史列表
-  public List<VenueIndexingHistory> getIndexingHistories() {
-    return Collections.unmodifiableList(indexingHistories);
-  }
-
-  /// 获取当前正在索引的历史记录。
-  ///
-  /// @return 当前索引记录列表
-  public List<VenueIndexingHistory> getCurrentIndexings() {
-    return indexingHistories.stream().filter(VenueIndexingHistory::isCurrentlyIndexed).toList();
-  }
-
-  /// 获取 MEDLINE 索引历史。
-  ///
-  /// @return MEDLINE 索引历史列表
-  public List<VenueIndexingHistory> getMedlineIndexingHistories() {
-    return indexingHistories.stream().filter(VenueIndexingHistory::isMedline).toList();
-  }
-
-  /// 判断当前是否被 MEDLINE 索引（基于索引历史）。
-  ///
-  /// @return true 如果当前被 MEDLINE 索引
-  public boolean isCurrentlyIndexedInMedline() {
-    return indexingHistories.stream().anyMatch(h -> h.isMedline() && h.isCurrentlyIndexed());
-  }
-
-  /// 批量设置索引历史（清空现有并添加新的）。
-  ///
-  /// @param newHistories 新索引历史列表
-  public void setIndexingHistories(List<VenueIndexingHistory> newHistories) {
-    indexingHistories.clear();
-    if (newHistories != null) {
-      newHistories.forEach(this::addIndexingHistory);
     }
   }
 
@@ -878,11 +584,11 @@ public class VenueAggregate extends AggregateRoot<Long> {
     return hostOrganization != null;
   }
 
-  /// 判断是否有统计信息。
+  /// 判断是否有统计快照。
   ///
-  /// @return true 如果有当前统计或年度指标
+  /// @return true 如果有当前统计快照
   public boolean hasStats() {
-    return currentStats != null || !yearlyMetrics.isEmpty();
+    return currentStats != null;
   }
 
   /// 判断是否来自 OpenAlex。
@@ -974,27 +680,6 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return true 如果主语言为中文
   public boolean isChineseJournal() {
     return languages != null && languages.isChinese();
-  }
-
-  /// 判断是否有 MeSH 主题词。
-  ///
-  /// @return true 如果有主题词
-  public boolean hasMeshTerms() {
-    return !meshTerms.isEmpty();
-  }
-
-  /// 判断是否有期刊关联关系。
-  ///
-  /// @return true 如果有关联关系
-  public boolean hasRelations() {
-    return !relations.isEmpty();
-  }
-
-  /// 判断是否有索引历史。
-  ///
-  /// @return true 如果有索引历史
-  public boolean hasIndexingHistories() {
-    return !indexingHistories.isEmpty();
   }
 
   // ========== 不变量验证 ==========

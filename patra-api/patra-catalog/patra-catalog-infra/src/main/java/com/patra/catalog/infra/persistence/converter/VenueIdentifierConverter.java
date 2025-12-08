@@ -25,8 +25,8 @@ public interface VenueIdentifierConverter {
   /// @return 数据库实体
   @Mapping(target = "id", ignore = true)
   @Mapping(target = "venueId", ignore = true)
-  @Mapping(target = "identifierType", expression = "java(identifier.getType().name())")
+  @Mapping(target = "identifierType", expression = "java(identifier.type().name())")
   @Mapping(target = "identifierValue", source = "value")
-  @Mapping(target = "isPrimary", source = "primary")
+  @Mapping(target = "isPrimary", constant = "false")
   VenueIdentifierDO toDO(VenueIdentifier identifier);
 }

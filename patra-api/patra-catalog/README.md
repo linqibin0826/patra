@@ -118,15 +118,17 @@ patra:
   - `MeshConcept`：MeSH 概念实体
   - `MeshEntryTerm`：MeSH 入口术语实体
   - `MeshTreeNumber`：MeSH 树形编号实体
-  - `VenueIdentifier`：载体标识符实体（ISSN/OpenAlex ID/NLM ID 等）
-  - `VenuePublicationStats`：载体年度发文统计实体（发表量/被引量/OA 比例）
   - `VenueSourceData`：载体数据源实体（存储各数据源原始/提取数据）
   - `VenueRating`：载体评级实体（支持 JCR/中科院分区/Scopus 等多评价体系）
-  - `VenueMesh`：载体 MeSH 主题词实体（MeSH 主题分类，来源 Serfile）
-  - `VenueRelation`：载体关联实体（期刊演变关系：前刊/后刊/合并/分拆）
-  - `VenueIndexingHistory`：载体索引历史实体（MEDLINE/PMC 索引收录变迁）
   - `Author`：作者实体
   - `Affiliation`：机构实体
+
+- **Record 值对象**（不可变，通过 `VenueSupplementRepository` 独立管理）
+  - `VenueIdentifier`：载体标识符（ISSN/OpenAlex ID/NLM ID 等，保留在聚合内）
+  - `VenuePublicationStats`：载体年度发文统计（发表量/被引量/OA 比例）
+  - `VenueMesh`：载体 MeSH 主题词（MeSH 主题分类，来源 Serfile）
+  - `VenueRelation`：载体关联关系（期刊演变关系：前刊/后刊/合并/分拆）
+  - `VenueIndexingHistory`：载体索引历史（MEDLINE/PMC 索引收录变迁）
 
 - **值对象**
   - `MeshUI`：MeSH 唯一标识符
@@ -162,7 +164,8 @@ patra:
 ### Infrastructure 层
 - `MeshDescriptorRepositoryAdapter`：主题词仓储适配器
 - `MeshQualifierRepositoryAdapter`：限定词仓储适配器
-- `VenueRepositoryAdapter`：载体聚合根仓储适配器（批量导入）
+- `VenueRepositoryAdapter`：载体聚合根仓储适配器（仅含 identifiers）
+- `VenueSupplementRepositoryAdapter`：载体补充数据仓储适配器（年度指标/MeSH/关联/索引历史）
 - `MeshDescriptorConverter`：主题词对象转换器
 - `MeshQualifierConverter`：限定词对象转换器
 - `StreamingDownloadAdapter`：流式下载适配器（HTTP 响应体直接返回 InputStream，无磁盘落盘）
@@ -201,7 +204,16 @@ patra:
 | Boot | E2E 测试 | 核心流程 |
 
 ## 📝 变更日志
-1. v0.9.0 (2025-12-07)：流式下载架构优化
+1. v0.9.1 (2025-12-08)：VenueAggregate 聚合拆分重构
+   - **架构决策**：[[ADR-014]] 基于 Vaughn Vernon 聚合设计规则，将无聚合级不变量的子实体移出聚合边界
+   - **Breaking Change**：5 个实体类（VenueIdentifier、VenuePublicationStats、VenueMesh、VenueRelation、VenueIndexingHistory）从 Class 改为 Record
+   - **Breaking Change**：yearlyMetrics、meshTerms、relations、indexingHistories 从 VenueAggregate 移出
+   - 新增 `VenueSupplementRepository` 端口及 `VenueSupplementRepositoryAdapter` 实现
+   - 新增 `VenueParseResult` record：封装 OpenAlex 解析结果（聚合根 + 年度指标）
+   - VenueAggregate 从约 1030 行精简至约 720 行
+   - 保留 identifiers 在聚合内（有 ISSN-L 唯一性不变量需要保护）
+
+2. v0.9.0 (2025-12-07)：流式下载架构优化
    - **Breaking Change**：删除 `FileDownloadPort`、`MeshSourceFilePort` 及其实现
    - 新增 `StreamingDownloadPort` 和 `StreamingDownloadResult`（Domain 层端口）
    - 新增 `StreamingDownloadAdapter`（Infra 层实现）

@@ -4,24 +4,24 @@ import cn.hutool.core.lang.Assert;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.Objects;
-import lombok.Getter;
 
-/// 期刊 MeSH 主题词实体（聚合内实体，不是聚合根）。
+/// 期刊 MeSH 主题词值对象（不可变）。
 ///
-/// 设计说明：
+/// **设计说明**：
 ///
-/// - 作为 VenueAggregate 的聚合内实体存在
+/// - 作为值对象存在（不是实体）
+/// - 使用 Record 实现不可变性
+/// - 通过 `VenueSupplementRepository` 单独管理
 /// - 存储期刊的 MeSH 主题词分类
 /// - 数据主要来源于 NLM Serfile 的 MeshHeadingList
-/// - 与 cat_publication_mesh 表命名风格一致
 ///
-/// MeSH 主题词说明：
+/// **MeSH 主题词说明**：
 ///
 /// - **Descriptor（描述符）**：MeSH 主题词的主体，如 "Medicine"、"Cardiology"
 /// - **Qualifier（限定符）**：可选的限定符，如 "methods"、"diagnosis"
 /// - **Major Topic**：标记为主要主题的词条会在检索时被优先考虑
 ///
-/// 使用示例：
+/// **示例**：
 ///
 /// ```java
 /// // 创建主要主题
@@ -33,58 +33,27 @@ import lombok.Getter;
 /// );
 /// ```
 ///
+/// @param descriptorName MeSH 描述符名称（必填）
+/// @param descriptorUi MeSH 描述符唯一标识符（格式：D000001，可选）
+/// @param isMajorTopic 是否主要主题
+/// @param qualifierName MeSH 限定符名称（可选）
+/// @param qualifierUi MeSH 限定符唯一标识符（格式：Q000001，可选）
 /// @author linqibin
 /// @since 0.1.0
-@Getter
-public class VenueMesh implements Serializable {
+@SuppressWarnings("java:S6218") // 自定义 equals/hashCode 基于业务语义（描述符 UI 或名称）
+public record VenueMesh(
+    String descriptorName,
+    String descriptorUi,
+    boolean isMajorTopic,
+    String qualifierName,
+    String qualifierUi)
+    implements Serializable {
 
   @Serial private static final long serialVersionUID = 1L;
 
-  // ========== 标识符 ==========
-
-  /// 主键 ID（由 Repository 在持久化时分配）
-  private Long id;
-
-  // ========== 业务字段 ==========
-
-  /// MeSH 描述符名称
-  private final String descriptorName;
-
-  /// MeSH 描述符唯一标识符（格式：D000001）
-  private final String descriptorUi;
-
-  /// 是否主要主题
-  private final boolean isMajorTopic;
-
-  /// MeSH 限定符名称（可选）
-  private final String qualifierName;
-
-  /// MeSH 限定符唯一标识符（格式：Q000001，可选）
-  private final String qualifierUi;
-
-  /// 私有构造函数。
-  ///
-  /// @param id 主键 ID（新建时为 null）
-  /// @param descriptorName MeSH 描述符名称
-  /// @param descriptorUi MeSH 描述符唯一标识符
-  /// @param isMajorTopic 是否主要主题
-  /// @param qualifierName 限定符名称
-  /// @param qualifierUi 限定符唯一标识符
-  private VenueMesh(
-      Long id,
-      String descriptorName,
-      String descriptorUi,
-      boolean isMajorTopic,
-      String qualifierName,
-      String qualifierUi) {
+  /// 紧凑构造器：验证参数。
+  public VenueMesh {
     Assert.notBlank(descriptorName, "描述符名称不能为空");
-
-    this.id = id;
-    this.descriptorName = descriptorName;
-    this.descriptorUi = descriptorUi;
-    this.isMajorTopic = isMajorTopic;
-    this.qualifierName = qualifierName;
-    this.qualifierUi = qualifierUi;
   }
 
   // ========== 工厂方法 ==========
@@ -94,9 +63,9 @@ public class VenueMesh implements Serializable {
   /// @param descriptorName MeSH 描述符名称
   /// @param descriptorUi MeSH 描述符唯一标识符
   /// @param isMajorTopic 是否主要主题
-  /// @return 主题实体
+  /// @return 主题值对象
   public static VenueMesh create(String descriptorName, String descriptorUi, boolean isMajorTopic) {
-    return new VenueMesh(null, descriptorName, descriptorUi, isMajorTopic, null, null);
+    return new VenueMesh(descriptorName, descriptorUi, isMajorTopic, null, null);
   }
 
   /// 创建带限定符的主题（仅限定符名称）。
@@ -105,10 +74,10 @@ public class VenueMesh implements Serializable {
   /// @param descriptorUi MeSH 描述符唯一标识符
   /// @param isMajorTopic 是否主要主题
   /// @param qualifierName 限定符名称
-  /// @return 主题实体
+  /// @return 主题值对象
   public static VenueMesh create(
       String descriptorName, String descriptorUi, boolean isMajorTopic, String qualifierName) {
-    return new VenueMesh(null, descriptorName, descriptorUi, isMajorTopic, qualifierName, null);
+    return new VenueMesh(descriptorName, descriptorUi, isMajorTopic, qualifierName, null);
   }
 
   /// 创建带限定符的主题（完整信息）。
@@ -118,22 +87,21 @@ public class VenueMesh implements Serializable {
   /// @param isMajorTopic 是否主要主题
   /// @param qualifierName 限定符名称
   /// @param qualifierUi 限定符唯一标识符
-  /// @return 主题实体
+  /// @return 主题值对象
   public static VenueMesh create(
       String descriptorName,
       String descriptorUi,
       boolean isMajorTopic,
       String qualifierName,
       String qualifierUi) {
-    return new VenueMesh(
-        null, descriptorName, descriptorUi, isMajorTopic, qualifierName, qualifierUi);
+    return new VenueMesh(descriptorName, descriptorUi, isMajorTopic, qualifierName, qualifierUi);
   }
 
   /// 创建主要主题。
   ///
   /// @param descriptorName MeSH 描述符名称
   /// @param descriptorUi MeSH 描述符唯一标识符
-  /// @return 主题实体
+  /// @return 主题值对象
   public static VenueMesh major(String descriptorName, String descriptorUi) {
     return create(descriptorName, descriptorUi, true);
   }
@@ -142,39 +110,12 @@ public class VenueMesh implements Serializable {
   ///
   /// @param descriptorName MeSH 描述符名称
   /// @param descriptorUi MeSH 描述符唯一标识符
-  /// @return 主题实体
+  /// @return 主题值对象
   public static VenueMesh minor(String descriptorName, String descriptorUi) {
     return create(descriptorName, descriptorUi, false);
   }
 
-  /// 从持久化状态重建实体（由 Repository 使用）。
-  ///
-  /// @param id 主键 ID
-  /// @param descriptorName MeSH 描述符名称
-  /// @param descriptorUi MeSH 描述符唯一标识符
-  /// @param isMajorTopic 是否主要主题
-  /// @param qualifierName 限定符名称
-  /// @param qualifierUi 限定符唯一标识符
-  /// @return 重建的实体
-  public static VenueMesh restore(
-      Long id,
-      String descriptorName,
-      String descriptorUi,
-      boolean isMajorTopic,
-      String qualifierName,
-      String qualifierUi) {
-    return new VenueMesh(
-        id, descriptorName, descriptorUi, isMajorTopic, qualifierName, qualifierUi);
-  }
-
-  // ========== 业务方法 ==========
-
-  /// 设置 ID（由 Repository 在持久化后回写）。
-  ///
-  /// @param id 主键 ID
-  public void assignId(Long id) {
-    this.id = id;
-  }
+  // ========== 查询方法 ==========
 
   /// 判断是否有 MeSH 描述符 UI。
   ///
@@ -213,6 +154,7 @@ public class VenueMesh implements Serializable {
         "VenueMesh[name=%s, ui=%s, major=%b]", descriptorName, descriptorUi, isMajorTopic);
   }
 
+  /// 业务相等性：描述符 UI（如果有）或描述符名称。
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -221,7 +163,6 @@ public class VenueMesh implements Serializable {
     if (!(o instanceof VenueMesh that)) {
       return false;
     }
-    // 业务相等性：描述符 UI（如果有）或描述符名称
     if (hasDescriptorUi() && that.hasDescriptorUi()) {
       return Objects.equals(descriptorUi, that.descriptorUi);
     }

@@ -7,7 +7,6 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import com.patra.catalog.domain.exception.FileDownloadException;
-import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.common.error.trait.StandardErrorTrait;
@@ -118,18 +117,18 @@ class VenueImportItemReaderIT {
       reader.open(executionContext);
 
       // When: 读取所有记录
-      List<VenueAggregate> results = new ArrayList<>();
-      VenueAggregate item;
+      List<VenueParseResult> results = new ArrayList<>();
+      VenueParseResult item;
       while ((item = reader.read()) != null) {
         results.add(item);
       }
 
       // Then: 应该返回 3 条记录
       assertThat(results).hasSize(3);
-      assertThat(results.get(0).getOpenalexId()).isEqualTo("S1");
-      assertThat(results.get(0).getDisplayName()).isEqualTo("Journal A");
-      assertThat(results.get(1).getOpenalexId()).isEqualTo("S2");
-      assertThat(results.get(2).getOpenalexId()).isEqualTo("S3");
+      assertThat(results.get(0).aggregate().getOpenalexId()).isEqualTo("S1");
+      assertThat(results.get(0).aggregate().getDisplayName()).isEqualTo("Journal A");
+      assertThat(results.get(1).aggregate().getOpenalexId()).isEqualTo("S2");
+      assertThat(results.get(2).aggregate().getOpenalexId()).isEqualTo("S3");
 
       reader.close();
     }
@@ -171,18 +170,18 @@ class VenueImportItemReaderIT {
       reader.open(executionContext);
 
       // When: 读取所有记录
-      List<VenueAggregate> results = new ArrayList<>();
-      VenueAggregate item;
+      List<VenueParseResult> results = new ArrayList<>();
+      VenueParseResult item;
       while ((item = reader.read()) != null) {
         results.add(item);
       }
 
       // Then: 应该返回 4 条记录，顺序正确
       assertThat(results).hasSize(4);
-      assertThat(results.get(0).getOpenalexId()).isEqualTo("S1");
-      assertThat(results.get(1).getOpenalexId()).isEqualTo("S2");
-      assertThat(results.get(2).getOpenalexId()).isEqualTo("S3");
-      assertThat(results.get(3).getOpenalexId()).isEqualTo("S4");
+      assertThat(results.get(0).aggregate().getOpenalexId()).isEqualTo("S1");
+      assertThat(results.get(1).aggregate().getOpenalexId()).isEqualTo("S2");
+      assertThat(results.get(2).aggregate().getOpenalexId()).isEqualTo("S3");
+      assertThat(results.get(3).aggregate().getOpenalexId()).isEqualTo("S4");
 
       reader.close();
     }
@@ -203,16 +202,16 @@ class VenueImportItemReaderIT {
       reader.open(executionContext);
 
       // When: 读取所有记录
-      List<VenueAggregate> results = new ArrayList<>();
-      VenueAggregate item;
+      List<VenueParseResult> results = new ArrayList<>();
+      VenueParseResult item;
       while ((item = reader.read()) != null) {
         results.add(item);
       }
 
       // Then: 应该返回 2 条记录
       assertThat(results).hasSize(2);
-      assertThat(results.get(0).getOpenalexId()).isEqualTo("S1");
-      assertThat(results.get(1).getOpenalexId()).isEqualTo("S2");
+      assertThat(results.get(0).aggregate().getOpenalexId()).isEqualTo("S1");
+      assertThat(results.get(1).aggregate().getOpenalexId()).isEqualTo("S2");
 
       reader.close();
     }
@@ -269,11 +268,11 @@ class VenueImportItemReaderIT {
       reader.open(executionContext);
 
       // When: 读取第一条
-      VenueAggregate result = reader.read();
+      VenueParseResult result = reader.read();
 
       // Then: 应该是第 3 条记录
       assertThat(result).isNotNull();
-      assertThat(result.getOpenalexId()).isEqualTo("S3");
+      assertThat(result.aggregate().getOpenalexId()).isEqualTo("S3");
 
       // 读取完成
       assertThat(reader.read()).isNull();
@@ -304,11 +303,11 @@ class VenueImportItemReaderIT {
       reader.open(executionContext);
 
       // When: 读取
-      VenueAggregate result = reader.read();
+      VenueParseResult result = reader.read();
 
       // Then: 应该是第二个文件的第 2 条记录（S4）
       assertThat(result).isNotNull();
-      assertThat(result.getOpenalexId()).isEqualTo("S4");
+      assertThat(result.aggregate().getOpenalexId()).isEqualTo("S4");
 
       // 读取完成
       assertThat(reader.read()).isNull();
@@ -360,9 +359,9 @@ class VenueImportItemReaderIT {
       reader2.open(context1);
 
       // Then: 应该从 S4 开始
-      VenueAggregate result = reader2.read();
+      VenueParseResult result = reader2.read();
       assertThat(result).isNotNull();
-      assertThat(result.getOpenalexId()).isEqualTo("S4");
+      assertThat(result.aggregate().getOpenalexId()).isEqualTo("S4");
 
       // 读取完成
       assertThat(reader2.read()).isNull();

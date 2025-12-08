@@ -4,10 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
+import com.patra.catalog.domain.model.entity.VenueIdentifier;
 import com.patra.catalog.domain.model.entity.VenuePublicationStats;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
+import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
 import com.patra.catalog.infra.adapter.persistence.VenueRepositoryAdapter;
+import com.patra.catalog.infra.adapter.persistence.VenueSupplementRepositoryAdapter;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.catalog.infra.persistence.entity.VenueDO;
 import com.patra.catalog.infra.persistence.entity.VenueIdentifierDO;
@@ -59,6 +62,7 @@ import org.springframework.test.context.ContextConfiguration;
 @Import({
   VenueImportItemWriter.class,
   VenueRepositoryAdapter.class,
+  VenueSupplementRepositoryAdapter.class,
   TestMybatisPlusAutoConfiguration.class
 })
 @ComponentScan(basePackages = "com.patra.catalog.infra.persistence.converter")
@@ -74,34 +78,43 @@ class VenueImportItemWriterIT {
   @Autowired private VenueIdentifierMapper identifierMapper;
   @Autowired private VenuePublicationStatsMapper metricsMapper;
 
-  /// 创建测试用的 VenueAggregate。
+  /// 创建测试用的 VenueParseResult（无年度指标）。
   ///
   /// 注意：issnL 使用 openalexId 后缀生成，确保唯一性（数据库有 uk_issn_l 唯一索引）。
-  private VenueAggregate createVenueAggregate(String openalexId, String displayName) {
+  private VenueParseResult createParseResult(String openalexId, String displayName) {
     VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
     // 使用 openalexId 生成唯一的 issnL，避免唯一索引冲突
     venue.withIssnL("1234-" + openalexId);
     venue.withCountryCode("US");
     venue.withOaStatus(true, false, false);
-    return venue;
+    venue.withPublicationHistory(PublicationHistory.active(2000));
+    return new VenueParseResult(venue, List.of());
   }
 
-  /// 创建带年度指标的 VenueAggregate。
-  private VenueAggregate createVenueWithMetrics(String openalexId, String displayName) {
-    VenueAggregate venue = createVenueAggregate(openalexId, displayName);
-    venue.setYearlyMetrics(
+  /// 创建带年度指标的 VenueParseResult。
+  private VenueParseResult createParseResultWithMetrics(String openalexId, String displayName) {
+    VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
+    venue.withIssnL("1234-" + openalexId);
+    venue.withCountryCode("US");
+    venue.withOaStatus(true, false, false);
+    venue.withPublicationHistory(PublicationHistory.active(2000));
+    List<VenuePublicationStats> metrics =
         List.of(
             VenuePublicationStats.create(2024, 100, 500),
-            VenuePublicationStats.create(2023, 90, 400)));
-    return venue;
+            VenuePublicationStats.create(2023, 90, 400));
+    return new VenueParseResult(venue, metrics);
   }
 
-  /// 创建带标识符的 VenueAggregate。
-  private VenueAggregate createVenueWithIdentifiers(String openalexId, String displayName) {
-    VenueAggregate venue = createVenueAggregate(openalexId, displayName);
-    venue.addIdentifier(VenueIdentifierType.ISSN, "1234-5678", true);
-    venue.addIdentifier(VenueIdentifierType.ISSN, "5678-1234", false);
-    return venue;
+  /// 创建带标识符的 VenueParseResult（无年度指标）。
+  private VenueParseResult createParseResultWithIdentifiers(String openalexId, String displayName) {
+    VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
+    venue.withIssnL("1234-" + openalexId);
+    venue.withCountryCode("US");
+    venue.withOaStatus(true, false, false);
+    venue.withPublicationHistory(PublicationHistory.active(2000));
+    venue.addIdentifier(new VenueIdentifier(VenueIdentifierType.ISSN, "1234-5678"));
+    venue.addIdentifier(new VenueIdentifier(VenueIdentifierType.ISSN, "5678-1234"));
+    return new VenueParseResult(venue, List.of());
   }
 
   @Nested
@@ -112,11 +125,11 @@ class VenueImportItemWriterIT {
     @DisplayName("全部为新记录 - 应该正确插入主表和子表")
     void write_allNew_shouldInsert() throws Exception {
       // Given
-      VenueAggregate venue1 = createVenueAggregate("S1", "Journal A");
-      VenueAggregate venue2 = createVenueAggregate("S2", "Journal B");
+      VenueParseResult result1 = createParseResult("S1", "Journal A");
+      VenueParseResult result2 = createParseResult("S2", "Journal B");
 
       // When
-      writer.write(new Chunk<>(List.of(venue1, venue2)));
+      writer.write(new Chunk<>(List.of(result1, result2)));
 
       // Then: 验证主表
       long venueCount = venueMapper.selectCount(null);
@@ -153,10 +166,10 @@ class VenueImportItemWriterIT {
     @DisplayName("新增记录 - 应该插入标识符")
     void write_newWithIdentifiers_shouldInsertIdentifiers() throws Exception {
       // Given
-      VenueAggregate venue = createVenueWithIdentifiers("S1", "Journal A");
+      VenueParseResult result = createParseResultWithIdentifiers("S1", "Journal A");
 
       // When
-      writer.write(new Chunk<>(List.of(venue)));
+      writer.write(new Chunk<>(List.of(result)));
 
       // Then: 应该插入标识符（OpenAlex + 2 ISSN = 3）
       long identifierCount = identifierMapper.selectCount(null);
@@ -172,10 +185,10 @@ class VenueImportItemWriterIT {
     @DisplayName("新增记录 - 应该插入年度指标")
     void write_newWithMetrics_shouldInsertMetrics() throws Exception {
       // Given
-      VenueAggregate venue = createVenueWithMetrics("S1", "Journal A");
+      VenueParseResult result = createParseResultWithMetrics("S1", "Journal A");
 
       // When
-      writer.write(new Chunk<>(List.of(venue)));
+      writer.write(new Chunk<>(List.of(result)));
 
       // Then: 应该插入年度指标
       long metricsCount = metricsMapper.selectCount(null);
@@ -199,10 +212,10 @@ class VenueImportItemWriterIT {
     @DisplayName("子表应该正确关联到主表")
     void write_shouldSetCorrectVenueId() throws Exception {
       // Given
-      VenueAggregate venue = createVenueWithMetrics("S1", "Journal A");
+      VenueParseResult result = createParseResultWithMetrics("S1", "Journal A");
 
       // When
-      writer.write(new Chunk<>(List.of(venue)));
+      writer.write(new Chunk<>(List.of(result)));
 
       // Then: 获取主表 ID
       VenueDO savedVenue = venueMapper.selectList(null).get(0);

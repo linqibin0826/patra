@@ -1,6 +1,5 @@
 package com.patra.catalog.infra.batch.venue;
 
-import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import java.net.URI;
@@ -48,7 +47,7 @@ import org.springframework.batch.item.ItemStreamReader;
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
-public class VenueImportItemReader implements ItemStreamReader<VenueAggregate> {
+public class VenueImportItemReader implements ItemStreamReader<VenueParseResult> {
 
   private static final String FILE_INDEX_KEY = "venue.import.file.index";
   private static final String LINE_INDEX_KEY = "venue.import.line.index";
@@ -73,10 +72,10 @@ public class VenueImportItemReader implements ItemStreamReader<VenueAggregate> {
   private StreamingDownloadResult currentDownloadResult;
 
   /// 当前文件的记录流。
-  private Stream<VenueAggregate> currentStream;
+  private Stream<VenueParseResult> currentStream;
 
   /// 当前文件的迭代器。
-  private Iterator<VenueAggregate> currentIterator;
+  private Iterator<VenueParseResult> currentIterator;
 
   /// 已处理的总记录数。
   private int totalProcessedCount = 0;
@@ -130,7 +129,7 @@ public class VenueImportItemReader implements ItemStreamReader<VenueAggregate> {
   }
 
   @Override
-  public VenueAggregate read() {
+  public VenueParseResult read() {
     // 尝试从当前迭代器读取
     while (true) {
       if (currentIterator != null && currentIterator.hasNext()) {

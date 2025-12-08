@@ -5,13 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
-import com.patra.catalog.domain.model.entity.VenuePublicationStats;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
+import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.catalog.infra.persistence.mapper.VenueIdentifierMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueMapper;
-import com.patra.catalog.infra.persistence.mapper.VenuePublicationStatsMapper;
 import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
 import java.util.List;
 import java.util.Set;
@@ -56,7 +55,6 @@ class VenueRepositoryAdapterIT {
 
   @Autowired private VenueMapper venueMapper;
   @Autowired private VenueIdentifierMapper venueIdentifierMapper;
-  @Autowired private VenuePublicationStatsMapper venuePublicationStatsMapper;
 
   // ========== hasAnyData() 测试 ==========
 
@@ -94,14 +92,14 @@ class VenueRepositoryAdapterIT {
   class InsertAllTests {
 
     @Test
-    @DisplayName("应该正确插入多个聚合根（含子表）")
-    void insertAll_shouldInsertAggregatesWithChildren() {
+    @DisplayName("应该正确插入多个聚合根（含标识符）")
+    void insertAll_shouldInsertAggregatesWithIdentifiers() {
       // Given
       VenueAggregate venue1 = createVenueAggregate("S1", "Journal A");
-      venue1.setYearlyMetrics(List.of(VenuePublicationStats.create(2024, 100, 500)));
+      venue1.addIdentifier(VenueIdentifierType.ISSN, "1111-1111");
 
       VenueAggregate venue2 = createVenueAggregate("S2", "Journal B");
-      venue2.setYearlyMetrics(List.of(VenuePublicationStats.create(2023, 50, 200)));
+      venue2.addIdentifier(VenueIdentifierType.ISSN, "2222-2222");
 
       // When
       repository.insertAll(List.of(venue1, venue2));
@@ -109,11 +107,8 @@ class VenueRepositoryAdapterIT {
       // Then: 验证主表
       assertThat(venueMapper.selectCount(null)).isEqualTo(2);
 
-      // Then: 验证标识符子表（每个 Venue 有 1 个 OpenAlex 标识符）
-      assertThat(venueIdentifierMapper.selectCount(null)).isEqualTo(2);
-
-      // Then: 验证年度指标子表
-      assertThat(venuePublicationStatsMapper.selectCount(null)).isEqualTo(2);
+      // Then: 验证标识符子表（每个 Venue 有 1 个 OpenAlex + 1 个 ISSN = 2）
+      assertThat(venueIdentifierMapper.selectCount(null)).isEqualTo(4);
     }
 
     @Test
@@ -127,12 +122,11 @@ class VenueRepositoryAdapterIT {
     }
 
     @Test
-    @DisplayName("子表应正确关联到主表")
-    void insertAll_shouldSetCorrectVenueId() {
+    @DisplayName("标识符子表应正确关联到主表")
+    void insertAll_shouldSetCorrectVenueIdForIdentifiers() {
       // Given
       VenueAggregate venue = createVenueAggregate("S1", "Journal A");
-      venue.addIdentifier(VenueIdentifierType.ISSN, "1234-5678", true);
-      venue.setYearlyMetrics(List.of(VenuePublicationStats.create(2024, 100, 500)));
+      venue.addIdentifier(VenueIdentifierType.ISSN, "1234-5678");
 
       // When
       repository.insertAll(List.of(venue));
@@ -145,18 +139,15 @@ class VenueRepositoryAdapterIT {
       // Then: 验证标识符子表的外键
       var identifiers = venueIdentifierMapper.selectList(null);
       assertThat(identifiers).allMatch(i -> i.getVenueId().equals(venueId));
-
-      // Then: 验证年度指标子表的外键
-      var metrics = venuePublicationStatsMapper.selectList(null);
-      assertThat(metrics).allMatch(m -> m.getVenueId().equals(venueId));
     }
 
     @Test
-    @DisplayName("应该正确处理没有子表数据的聚合根")
-    void insertAll_aggregateWithoutChildren_shouldInsertOnlyMain() {
-      // Given: 创建没有额外标识符和指标的聚合根
+    @DisplayName("应该正确处理只有默认标识符的聚合根")
+    void insertAll_aggregateWithDefaultIdentifier_shouldInsertCorrectly() {
+      // Given: 创建没有额外标识符的聚合根
       VenueAggregate venue = VenueAggregate.fromOpenAlex("S1", VenueType.JOURNAL, "Journal A");
       venue.withIssnL("1234-S1");
+      venue.withPublicationHistory(PublicationHistory.active(2000));
 
       // When
       repository.insertAll(List.of(venue));
@@ -166,9 +157,6 @@ class VenueRepositoryAdapterIT {
 
       // Then: 标识符只有 1 个（OpenAlex ID 由 fromOpenAlex 自动添加）
       assertThat(venueIdentifierMapper.selectCount(null)).isEqualTo(1);
-
-      // Then: 年度指标为空
-      assertThat(venuePublicationStatsMapper.selectCount(null)).isZero();
     }
   }
 
@@ -263,6 +251,7 @@ class VenueRepositoryAdapterIT {
     venue.withIssnL("1234-" + openalexId);
     venue.withCountryCode("US");
     venue.withOaStatus(true, false, false);
+    venue.withPublicationHistory(PublicationHistory.active(2000));
     return venue;
   }
 
@@ -273,6 +262,7 @@ class VenueRepositoryAdapterIT {
     venue.withIssnL(issnL);
     venue.withCountryCode("US");
     venue.withOaStatus(true, false, false);
+    venue.withPublicationHistory(PublicationHistory.active(2000));
     return venue;
   }
 }

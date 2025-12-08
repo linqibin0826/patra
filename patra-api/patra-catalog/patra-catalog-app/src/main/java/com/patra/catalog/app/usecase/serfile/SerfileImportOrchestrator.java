@@ -20,11 +20,13 @@ import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
 import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
 import com.patra.catalog.domain.port.parser.SerfileParserPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
+import com.patra.catalog.domain.port.repository.VenueSupplementRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.common.error.ApplicationException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +73,7 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
   private final StreamingDownloadPort streamingDownloadPort;
   private final SerfileParserPort parserPort;
   private final VenueRepository venueRepository;
+  private final VenueSupplementRepository supplementRepository;
   private final TransactionTemplate transactionTemplate;
 
   /// 执行 NLM Serfile 期刊数据导入。
@@ -186,10 +189,15 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
     Map<String, VenueAggregate> byNlmId = venueRepository.findByNlmIds(nlmIds);
     Map<String, VenueAggregate> byIssn = venueRepository.findByIssns(issns);
 
-    // 3. 匹配并分类
+    // 3. 匹配并分类，同时收集子实体数据
     List<VenueAggregate> toUpdate = new ArrayList<>();
     List<VenueAggregate> toCreate = new ArrayList<>();
     Set<Long> processedVenueIds = new HashSet<>(); // 避免同一期刊被多次更新
+
+    // 收集子实体数据（以聚合根为键，待持久化后转换为 venueId）
+    Map<VenueAggregate, List<VenueMesh>> meshByAggregate = new HashMap<>();
+    Map<VenueAggregate, List<VenueRelation>> relationsByAggregate = new HashMap<>();
+    Map<VenueAggregate, List<VenueIndexingHistory>> historiesByAggregate = new HashMap<>();
 
     for (SerialRecord record : batch) {
       Optional<VenueAggregate> matched = findMatch(record, byIssnL, byNlmId, byIssn);
@@ -202,6 +210,11 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
           toUpdate.add(venue);
           processedVenueIds.add(venue.getId());
           updatedCount.incrementAndGet();
+
+          // 收集子实体数据
+          meshByAggregate.put(venue, toVenueMeshList(record.meshHeadings()));
+          relationsByAggregate.put(venue, toVenueRelationList(record.titleRelations()));
+          historiesByAggregate.put(venue, toVenueIndexingHistoryList(record.indexingHistories()));
         } else {
           skippedCount.incrementAndGet();
         }
@@ -209,18 +222,57 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
         VenueAggregate newVenue = createVenueFromRecord(record);
         toCreate.add(newVenue);
         createdCount.incrementAndGet();
+
+        // 收集子实体数据
+        meshByAggregate.put(newVenue, toVenueMeshList(record.meshHeadings()));
+        relationsByAggregate.put(newVenue, toVenueRelationList(record.titleRelations()));
+        historiesByAggregate.put(newVenue, toVenueIndexingHistoryList(record.indexingHistories()));
       }
     }
 
-    // 4. 批量持久化
+    // 4. 批量持久化聚合根
     if (!toUpdate.isEmpty()) {
       venueRepository.updateBatch(toUpdate);
       log.debug("批量更新 {} 条记录", toUpdate.size());
     }
     if (!toCreate.isEmpty()) {
-      venueRepository.insertAll(toCreate);
+      venueRepository.insertAll(toCreate); // insertAll 会通过 assignId() 回填 ID
       log.debug("批量创建 {} 条记录", toCreate.size());
     }
+
+    // 5. 构建 venueId -> 子实体列表 的映射并批量保存
+    Map<Long, List<VenueMesh>> meshByVenueId = new HashMap<>();
+    Map<Long, List<VenueRelation>> relationsByVenueId = new HashMap<>();
+    Map<Long, List<VenueIndexingHistory>> historiesByVenueId = new HashMap<>();
+
+    for (Map.Entry<VenueAggregate, List<VenueMesh>> entry : meshByAggregate.entrySet()) {
+      Long venueId = entry.getKey().getId();
+      if (venueId != null && !entry.getValue().isEmpty()) {
+        meshByVenueId.put(venueId, entry.getValue());
+      }
+    }
+    for (Map.Entry<VenueAggregate, List<VenueRelation>> entry : relationsByAggregate.entrySet()) {
+      Long venueId = entry.getKey().getId();
+      if (venueId != null && !entry.getValue().isEmpty()) {
+        relationsByVenueId.put(venueId, entry.getValue());
+      }
+    }
+    for (Map.Entry<VenueAggregate, List<VenueIndexingHistory>> entry :
+        historiesByAggregate.entrySet()) {
+      Long venueId = entry.getKey().getId();
+      if (venueId != null && !entry.getValue().isEmpty()) {
+        historiesByVenueId.put(venueId, entry.getValue());
+      }
+    }
+
+    // 批量保存子实体
+    supplementRepository.replaceSerfileDataBatch(
+        meshByVenueId, relationsByVenueId, historiesByVenueId);
+    log.debug(
+        "批量保存子实体：MeSH {} 组，关系 {} 组，索引历史 {} 组",
+        meshByVenueId.size(),
+        relationsByVenueId.size(),
+        historiesByVenueId.size());
   }
 
   /// 按优先级匹配期刊。
@@ -258,6 +310,7 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
   /// 从 SerialRecord 更新 VenueAggregate。
   ///
   /// PubMed 数据完全覆盖现有数据。
+  /// **注意**：子实体（MeSH、关系、索引历史）通过 VenueSupplementRepository 单独保存。
   private void updateVenueFromRecord(VenueAggregate venue, SerialRecord record) {
     // 覆盖主表字段
     venue
@@ -284,14 +337,12 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
           PublicationHistory.of(
               record.publicationFirstYear(), record.publicationEndYear(), record.isCeased()));
     }
-
-    // 完全替换子实体
-    venue.setMeshTerms(toVenueMeshList(record.meshHeadings()));
-    venue.setRelations(toVenueRelationList(record.titleRelations()));
-    venue.setIndexingHistories(toVenueIndexingHistoryList(record.indexingHistories()));
+    // 子实体（meshTerms, relations, indexingHistories）在 processBatch() 中单独收集并保存
   }
 
   /// 从 SerialRecord 创建新 VenueAggregate。
+  ///
+  /// **注意**：子实体（MeSH、关系、索引历史）通过 VenueSupplementRepository 单独保存。
   private VenueAggregate createVenueFromRecord(SerialRecord record) {
     VenueAggregate venue =
         VenueAggregate.fromPubMed(record.title(), record.nlmUniqueId(), record.issnL());
@@ -315,17 +366,7 @@ public class SerfileImportOrchestrator implements SerfileImportUseCase {
           PublicationHistory.of(
               record.publicationFirstYear(), record.publicationEndYear(), record.isCeased()));
     }
-
-    // 添加子实体
-    for (VenueMesh mesh : toVenueMeshList(record.meshHeadings())) {
-      venue.addMeshTerm(mesh);
-    }
-    for (VenueRelation relation : toVenueRelationList(record.titleRelations())) {
-      venue.addRelation(relation);
-    }
-    for (VenueIndexingHistory history : toVenueIndexingHistoryList(record.indexingHistories())) {
-      venue.addIndexingHistory(history);
-    }
+    // 子实体（meshTerms, relations, indexingHistories）在 processBatch() 中单独收集并保存
 
     return venue;
   }

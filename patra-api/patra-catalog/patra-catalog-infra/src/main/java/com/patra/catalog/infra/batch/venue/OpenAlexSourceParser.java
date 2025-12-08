@@ -26,19 +26,19 @@ import org.springframework.stereotype.Component;
 /// OpenAlex Sources JSON Lines 解析器。
 ///
 /// 从 .gz 压缩的 JSON Lines 文件解析 OpenAlex Sources 数据，
-/// 并转换为 `VenueAggregate` 领域对象。
+/// 并转换为 `VenueParseResult`（包含 `VenueAggregate` 和年度指标）。
 ///
 /// **数据格式**：
 ///
 /// - 输入：.gz 压缩的 JSON Lines 文件（每行一个 JSON 对象）
-/// - 输出：`Stream<VenueAggregate>` 流式处理
+/// - 输出：`Stream<VenueParseResult>` 流式处理
 ///
 /// **转换规则**：
 ///
 /// - `id` → 提取后缀作为 `openalexId`
 /// - `type` → 通过 `VenueType.fromOpenAlexType()` 转换
 /// - `summary_stats` → 转换为 `VenueStats`
-/// - `counts_by_year` → 转换为 `VenuePublicationStats` 列表
+/// - `counts_by_year` → 转换为 `VenuePublicationStats` 列表（独立于聚合根）
 /// - `apc_prices` + `apc_usd` → 转换为 `ApcInfo`
 /// - `societies` → 转换为 `Society` 列表
 /// - `host_organization*` → 转换为 `HostOrganization`
@@ -64,9 +64,9 @@ public class OpenAlexSourceParser {
   /// **注意**：返回的 Stream 在使用完毕后需要关闭以释放资源。
   ///
   /// @param gzipInputStream .gz 压缩的输入流
-  /// @return VenueAggregate 流
+  /// @return VenueParseResult 流（包含聚合根和年度指标）
   /// @throws IOException 读取或解析失败时
-  public Stream<VenueAggregate> parse(InputStream gzipInputStream) throws IOException {
+  public Stream<VenueParseResult> parse(InputStream gzipInputStream) throws IOException {
     GZIPInputStream gzis = new GZIPInputStream(gzipInputStream);
     BufferedReader reader = new BufferedReader(new InputStreamReader(gzis, StandardCharsets.UTF_8));
 
@@ -75,7 +75,7 @@ public class OpenAlexSourceParser {
         .filter(line -> line != null && !line.isBlank())
         .map(this::parseLine)
         .filter(record -> record != null)
-        .map(this::toVenueAggregate)
+        .map(this::toParseResult)
         .onClose(
             () -> {
               try {
@@ -100,11 +100,11 @@ public class OpenAlexSourceParser {
     }
   }
 
-  /// 将 OpenAlexSourceRecord 转换为 VenueAggregate。
+  /// 将 OpenAlexSourceRecord 转换为 VenueParseResult。
   ///
   /// @param record OpenAlex 源记录
-  /// @return VenueAggregate 领域对象
-  VenueAggregate toVenueAggregate(OpenAlexSourceRecord record) {
+  /// @return VenueParseResult（包含聚合根和年度指标）
+  VenueParseResult toParseResult(OpenAlexSourceRecord record) {
     // 1. 提取基础字段
     String openalexId = record.extractOpenAlexId();
     VenueType venueType = VenueType.fromOpenAlexType(record.type());
@@ -152,16 +152,13 @@ public class OpenAlexSourceParser {
       aggregate.withSocieties(societies);
     }
 
-    // 8. 设置年度指标
-    List<VenuePublicationStats> metrics = buildYearlyMetrics(record);
-    if (metrics != null && !metrics.isEmpty()) {
-      aggregate.setYearlyMetrics(metrics);
-    }
-
-    // 9. 添加 ISSN 标识符
+    // 8. 添加 ISSN 标识符
     addIssnIdentifiers(aggregate, record);
 
-    return aggregate;
+    // 9. 构建年度指标（独立于聚合根返回）
+    List<VenuePublicationStats> yearlyMetrics = buildYearlyMetrics(record);
+
+    return new VenueParseResult(aggregate, yearlyMetrics);
   }
 
   /// 构建统计快照。
@@ -243,7 +240,7 @@ public class OpenAlexSourceParser {
     if (record.issn() != null) {
       for (String issn : record.issn()) {
         if (issn != null && !issn.isBlank() && isValidIssn(issn)) {
-          aggregate.addIdentifier(VenueIdentifierType.ISSN, issn, issn.equals(record.issnL()));
+          aggregate.addIdentifier(VenueIdentifierType.ISSN, issn);
         }
       }
     }
