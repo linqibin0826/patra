@@ -1,6 +1,10 @@
 package com.patra.catalog.domain.port.repository;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
+import com.patra.catalog.domain.model.entity.VenueIndexingHistory;
+import com.patra.catalog.domain.model.entity.VenueMesh;
+import com.patra.catalog.domain.model.entity.VenuePublicationStats;
+import com.patra.catalog.domain.model.entity.VenueRelation;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -8,15 +12,31 @@ import java.util.Set;
 
 /// 载体聚合根仓储接口（领域层定义，基础设施层实现）。
 ///
+/// **聚合边界**：
+///
+/// - VenueAggregate：聚合根
+/// - VenueIdentifier：值对象集合（保护 ISSN-L 唯一性不变量）
+///
 /// **设计原则**：
 ///
 /// - 接口在 Domain 层定义，确保领域层独立
 /// - 实现在 Infrastructure 层，遵循依赖倒置原则（DIP）
 /// - 以聚合根为操作单位，保持一致性边界
+/// - 聚合相关的所有数据通过此 Repository 统一维护
+///
+/// **补充数据管理**：
+///
+/// 此 Repository 同时管理与聚合关联的补充数据：
+///
+/// - **yearlyMetrics**：年度发文统计（来自 OpenAlex）
+/// - **meshTerms**：MeSH 主题词（来自 NLM Serfile）
+/// - **relations**：期刊关联关系（来自 NLM Serfile）
+/// - **indexingHistories**：索引历史（来自 NLM Serfile）
 ///
 /// **主要使用场景**：
 ///
-/// OpenAlex Sources S3 数据初始化导入（批量写入）
+/// - OpenAlex Sources S3 数据初始化导入（批量写入）
+/// - PubMed Serfile 数据富化导入（批量更新）
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -104,4 +124,72 @@ public interface VenueRepository {
   ///
   /// @param aggregates 聚合根列表（不能为 null，可以为空）
   void updateBatch(List<VenueAggregate> aggregates);
+
+  // ========== 补充数据管理（年度指标、MeSH、关联关系、索引历史） ==========
+
+  // --- 年度指标（OpenAlex 数据） ---
+
+  /// 批量查询年度指标。
+  ///
+  /// @param venueIds Venue ID 集合
+  /// @return Map，key 为 venueId，value 为该 Venue 的年度指标列表
+  Map<Long, List<VenuePublicationStats>> findYearlyMetricsByVenueIds(Collection<Long> venueIds);
+
+  /// 批量替换年度指标（删除旧数据后插入新数据）。
+  ///
+  /// @param metricsByVenueId Map，key 为 venueId，value 为要设置的年度指标列表
+  void replaceYearlyMetricsBatch(Map<Long, List<VenuePublicationStats>> metricsByVenueId);
+
+  // --- MeSH 主题词（Serfile 数据） ---
+
+  /// 批量查询 MeSH 主题词。
+  ///
+  /// @param venueIds Venue ID 集合
+  /// @return Map，key 为 venueId，value 为该 Venue 的 MeSH 主题词列表
+  Map<Long, List<VenueMesh>> findMeshTermsByVenueIds(Collection<Long> venueIds);
+
+  /// 批量替换 MeSH 主题词（删除旧数据后插入新数据）。
+  ///
+  /// @param meshTermsByVenueId Map，key 为 venueId，value 为要设置的 MeSH 主题词列表
+  void replaceMeshTermsBatch(Map<Long, List<VenueMesh>> meshTermsByVenueId);
+
+  // --- 期刊关联关系（Serfile 数据） ---
+
+  /// 批量查询期刊关联关系。
+  ///
+  /// @param venueIds Venue ID 集合
+  /// @return Map，key 为 venueId，value 为该 Venue 的关联关系列表
+  Map<Long, List<VenueRelation>> findRelationsByVenueIds(Collection<Long> venueIds);
+
+  /// 批量替换期刊关联关系（删除旧数据后插入新数据）。
+  ///
+  /// @param relationsByVenueId Map，key 为 venueId，value 为要设置的关联关系列表
+  void replaceRelationsBatch(Map<Long, List<VenueRelation>> relationsByVenueId);
+
+  // --- 索引历史（Serfile 数据） ---
+
+  /// 批量查询索引历史。
+  ///
+  /// @param venueIds Venue ID 集合
+  /// @return Map，key 为 venueId，value 为该 Venue 的索引历史列表
+  Map<Long, List<VenueIndexingHistory>> findIndexingHistoriesByVenueIds(Collection<Long> venueIds);
+
+  /// 批量替换索引历史（删除旧数据后插入新数据）。
+  ///
+  /// @param historiesByVenueId Map，key 为 venueId，value 为要设置的索引历史列表
+  void replaceIndexingHistoriesBatch(Map<Long, List<VenueIndexingHistory>> historiesByVenueId);
+
+  // --- 便捷方法：Serfile 数据批量替换 ---
+
+  /// 批量替换 Serfile 相关数据（MeSH、关联关系、索引历史）。
+  ///
+  /// 用于 Serfile 导入场景，在同一次调用中更新所有 Serfile 相关数据。
+  ///
+  /// @param meshTermsByVenueId MeSH 主题词
+  /// @param relationsByVenueId 关联关系
+  /// @param historiesByVenueId 索引历史
+  void replaceSerfileDataBatch(
+      Map<Long, List<VenueMesh>> meshTermsByVenueId,
+      Map<Long, List<VenueRelation>> relationsByVenueId,
+      Map<Long, List<VenueIndexingHistory>> historiesByVenueId);
 }

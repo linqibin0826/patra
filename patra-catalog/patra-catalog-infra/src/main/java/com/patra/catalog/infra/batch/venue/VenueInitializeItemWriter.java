@@ -3,7 +3,6 @@ package com.patra.catalog.infra.batch.venue;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.entity.VenuePublicationStats;
 import com.patra.catalog.domain.port.repository.VenueRepository;
-import com.patra.catalog.domain.port.repository.VenueSupplementRepository;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -25,8 +24,7 @@ import org.springframework.stereotype.Component;
 /// **职责**：
 ///
 /// - 将 VenueParseResult 解析为聚合根和年度指标，分别持久化
-/// - 聚合根通过 VenueRepository 持久化
-/// - 年度指标通过 VenueSupplementRepository 持久化
+/// - 聚合根和年度指标通过 VenueRepository 统一持久化
 /// - Chunk 内 ISSN-L 去重：同一批次内的重复记录在内存中过滤
 /// - 乐观插入：正常情况直接插入，唯一约束冲突时降级处理
 ///
@@ -51,7 +49,6 @@ import org.springframework.stereotype.Component;
 public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
 
   private final VenueRepository venueRepository;
-  private final VenueSupplementRepository venueSupplementRepository;
 
   @Override
   public void write(Chunk<? extends VenueParseResult> chunk) throws Exception {
@@ -127,7 +124,7 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
     }
 
     if (!metricsByVenueId.isEmpty()) {
-      venueSupplementRepository.replaceYearlyMetricsBatch(metricsByVenueId);
+      venueRepository.replaceYearlyMetricsBatch(metricsByVenueId);
       log.debug("写入年度指标：{} 个 Venue", metricsByVenueId.size());
     }
   }
@@ -151,17 +148,16 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
 
       if (uniqueMap.containsKey(key) && aggregate.getIssnL() != null) {
         log.warn(
-            "Chunk 内 ISSN-L 重复，跳过: issnL={}, openalexId={}",
+            "Chunk 内 ISSN-L 重复，使用后者覆盖: issnL={}, openalexId={}",
             aggregate.getIssnL(),
             aggregate.getOpenalexId());
         duplicateCount++;
-      } else {
-        uniqueMap.put(key, item);
       }
+      uniqueMap.put(key, item);
     }
 
     if (duplicateCount > 0) {
-      log.info("Chunk 内去重完成：原始={}，去重后={}，跳过={}", items.size(), uniqueMap.size(), duplicateCount);
+      log.info("Chunk 内去重完成：原始={}，去重后={}，覆盖={}", items.size(), uniqueMap.size(), duplicateCount);
     }
 
     return new ArrayList<>(uniqueMap.values());
