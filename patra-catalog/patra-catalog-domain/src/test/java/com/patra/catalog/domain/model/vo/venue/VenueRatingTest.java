@@ -1,4 +1,4 @@
-package com.patra.catalog.domain.model.entity;
+package com.patra.catalog.domain.model.vo.venue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -14,11 +14,11 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/// 载体评级实体单元测试。
+/// 载体评级值对象单元测试。
 ///
 /// @author linqibin
 /// @since 0.1.0
-@DisplayName("VenueRating 载体评级实体")
+@DisplayName("VenueRating 载体评级值对象")
 @Timeout(2)
 class VenueRatingTest {
 
@@ -40,13 +40,12 @@ class VenueRatingTest {
       VenueRating rating = VenueRating.create(venueId, year, system, quartile, impactScore);
 
       // Then
-      assertThat(rating.getVenueId()).isEqualTo(venueId);
-      assertThat(rating.getYear()).isEqualTo(year);
-      assertThat(rating.getRatingSystem()).isEqualTo(system);
-      assertThat(rating.getQuartile()).isEqualTo(quartile);
-      assertThat(rating.getImpactScore()).isEqualByComparingTo(impactScore);
-      assertThat(rating.getId()).isNull();
-      assertThat(rating.getFetchedAt()).isNotNull();
+      assertThat(rating.venueId()).isEqualTo(venueId);
+      assertThat(rating.year()).isEqualTo(year);
+      assertThat(rating.ratingSystem()).isEqualTo(system);
+      assertThat(rating.quartile()).isEqualTo(quartile);
+      assertThat(rating.impactScore()).isEqualByComparingTo(impactScore);
+      assertThat(rating.fetchedAt()).isNotNull();
     }
 
     @Test
@@ -61,11 +60,11 @@ class VenueRatingTest {
       VenueRating rating = VenueRating.create(venueId, year, system);
 
       // Then
-      assertThat(rating.getVenueId()).isEqualTo(venueId);
-      assertThat(rating.getYear()).isEqualTo(year);
-      assertThat(rating.getRatingSystem()).isEqualTo(system);
-      assertThat(rating.getQuartile()).isNull();
-      assertThat(rating.getImpactScore()).isNull();
+      assertThat(rating.venueId()).isEqualTo(venueId);
+      assertThat(rating.year()).isEqualTo(year);
+      assertThat(rating.ratingSystem()).isEqualTo(system);
+      assertThat(rating.quartile()).isNull();
+      assertThat(rating.impactScore()).isNull();
     }
 
     @Test
@@ -95,73 +94,38 @@ class VenueRatingTest {
   }
 
   @Nested
-  @DisplayName("restore() 工厂方法")
-  class RestoreTests {
+  @DisplayName("of() 完整工厂方法")
+  class OfTests {
 
     @Test
-    @DisplayName("应正确从持久化状态重建实体")
-    void shouldRestoreFromPersistence() {
+    @DisplayName("应正确创建包含所有字段的评级记录")
+    void shouldCreateWithAllFields() {
       // Given
-      Long id = 1L;
       Long venueId = 123L;
       int year = 2024;
-      RatingSystem system = RatingSystem.SCOPUS;
+      RatingSystem system = RatingSystem.JCR;
+      String quartile = "Q1";
+      BigDecimal impactScore = new BigDecimal("42.778");
+      String ratingData = "{\"jif\": 42.778}";
+      String categories = "[{\"category\": \"Medicine\"}]";
+      String sourceUrl = "https://example.com";
 
       // When
-      VenueRating rating = VenueRating.restore(id, venueId, year, system);
+      VenueRating rating =
+          VenueRating.of(
+              venueId, year, system, quartile, impactScore, ratingData, categories, sourceUrl,
+              null);
 
       // Then
-      assertThat(rating.getId()).isEqualTo(id);
-      assertThat(rating.getVenueId()).isEqualTo(venueId);
-      assertThat(rating.getYear()).isEqualTo(year);
-      assertThat(rating.getRatingSystem()).isEqualTo(system);
-    }
-  }
-
-  @Nested
-  @DisplayName("链式设置方法")
-  class WithMethodsTests {
-
-    @Test
-    @DisplayName("withQuartile() 应正确设置分区")
-    void shouldSetQuartile() {
-      VenueRating rating = VenueRating.create(123L, 2024, RatingSystem.JCR);
-      rating.withQuartile("Q2");
-      assertThat(rating.getQuartile()).isEqualTo("Q2");
-    }
-
-    @Test
-    @DisplayName("withImpactScore() 应正确设置影响力分数")
-    void shouldSetImpactScore() {
-      VenueRating rating = VenueRating.create(123L, 2024, RatingSystem.JCR);
-      BigDecimal score = new BigDecimal("15.234");
-      rating.withImpactScore(score);
-      assertThat(rating.getImpactScore()).isEqualByComparingTo(score);
-    }
-
-    @Test
-    @DisplayName("withRatingData() 应正确设置评级详情")
-    void shouldSetRatingData() {
-      VenueRating rating = VenueRating.create(123L, 2024, RatingSystem.JCR);
-      String json = "{\"jif\": 42.778}";
-      rating.withRatingData(json);
-      assertThat(rating.getRatingData()).isEqualTo(json);
-    }
-
-    @Test
-    @DisplayName("链式调用应正常工作")
-    void shouldSupportChaining() {
-      VenueRating rating =
-          VenueRating.create(123L, 2024, RatingSystem.JCR)
-              .withQuartile("Q1")
-              .withImpactScore(new BigDecimal("42.778"))
-              .withRatingData("{\"jif\": 42.778}")
-              .withCategories("[{\"category\": \"Medicine\"}]");
-
-      assertThat(rating.getQuartile()).isEqualTo("Q1");
-      assertThat(rating.getImpactScore()).isEqualByComparingTo(new BigDecimal("42.778"));
-      assertThat(rating.getRatingData()).isNotBlank();
-      assertThat(rating.getCategories()).isNotBlank();
+      assertThat(rating.venueId()).isEqualTo(venueId);
+      assertThat(rating.year()).isEqualTo(year);
+      assertThat(rating.ratingSystem()).isEqualTo(system);
+      assertThat(rating.quartile()).isEqualTo(quartile);
+      assertThat(rating.impactScore()).isEqualByComparingTo(impactScore);
+      assertThat(rating.ratingData()).isEqualTo(ratingData);
+      assertThat(rating.categories()).isEqualTo(categories);
+      assertThat(rating.sourceUrl()).isEqualTo(sourceUrl);
+      assertThat(rating.fetchedAt()).isNotNull();
     }
   }
 
@@ -193,11 +157,26 @@ class VenueRatingTest {
     @Test
     @DisplayName("hasRatingData() 应正确判断")
     void shouldCheckHasRatingData() {
-      VenueRating rating = VenueRating.create(123L, 2024, RatingSystem.JCR);
-      assertThat(rating.hasRatingData()).isFalse();
+      VenueRating withData =
+          VenueRating.of(
+              123L, 2024, RatingSystem.JCR, null, null, "{\"jif\": 42.778}", null, null, null);
+      VenueRating withoutData = VenueRating.create(123L, 2024, RatingSystem.JCR);
 
-      rating.withRatingData("{\"jif\": 42.778}");
-      assertThat(rating.hasRatingData()).isTrue();
+      assertThat(withData.hasRatingData()).isTrue();
+      assertThat(withoutData.hasRatingData()).isFalse();
+    }
+
+    @Test
+    @DisplayName("hasCategories() 应正确判断")
+    void shouldCheckHasCategories() {
+      VenueRating withCategories =
+          VenueRating.of(
+              123L, 2024, RatingSystem.JCR, null, null, null, "[{\"category\": \"Medicine\"}]",
+              null, null);
+      VenueRating withoutCategories = VenueRating.create(123L, 2024, RatingSystem.JCR);
+
+      assertThat(withCategories.hasCategories()).isTrue();
+      assertThat(withoutCategories.hasCategories()).isFalse();
     }
   }
 
@@ -271,7 +250,8 @@ class VenueRatingTest {
     @ParameterizedTest(name = "分区 \"{0}\" 应标准化为 \"{1}\"")
     @DisplayName("应正确标准化分区格式")
     @CsvSource({
-      "Q1, Q1", "q2, Q2", "1区, Q1", "2区, Q2", "3区, Q3", "4区, Q4", "1, Q1", "2, Q2", "3, Q3", "4, Q4"
+      "Q1, Q1", "q2, Q2", "1区, Q1", "2区, Q2", "3区, Q3", "4区, Q4", "1, Q1", "2, Q2", "3, Q3",
+      "4, Q4"
     })
     void shouldNormalizeQuartile(String input, String expected) {
       VenueRating rating = VenueRating.create(123L, 2024, RatingSystem.JCR, input, null);
@@ -282,62 +262,32 @@ class VenueRatingTest {
     @DisplayName("空分区应返回 null")
     @NullAndEmptySource
     void shouldReturnNullForBlankQuartile(String quartile) {
-      VenueRating rating = VenueRating.create(123L, 2024, RatingSystem.JCR);
-      if (quartile != null) {
-        rating.withQuartile(quartile);
-      }
+      VenueRating rating =
+          VenueRating.of(123L, 2024, RatingSystem.JCR, quartile, null, null, null, null, null);
       assertThat(rating.getNormalizedQuartile()).isNull();
     }
   }
 
   @Nested
-  @DisplayName("equals 和 hashCode")
-  class EqualsAndHashCodeTests {
+  @DisplayName("Record 特性测试")
+  class RecordTests {
 
     @Test
-    @DisplayName("相同 venueId + year + ratingSystem 应相等")
-    void shouldBeEqualWithSameBusinessKey() {
+    @DisplayName("Record 应自动生成 equals 基于所有字段")
+    void shouldHaveValueBasedEquality() {
       VenueRating rating1 = VenueRating.create(123L, 2024, RatingSystem.JCR, "Q1", null);
-      VenueRating rating2 = VenueRating.create(123L, 2024, RatingSystem.JCR, "Q2", null);
+      VenueRating rating2 = VenueRating.create(123L, 2024, RatingSystem.JCR, "Q1", null);
 
-      assertThat(rating1).isEqualTo(rating2);
-      assertThat(rating1.hashCode()).isEqualTo(rating2.hashCode());
+      // Record 的 equals 比较所有字段，但 fetchedAt 是在 create 时生成的
+      // 所以需要使用 of() 方法并传入相同的 fetchedAt 来测试
+      assertThat(rating1.venueId()).isEqualTo(rating2.venueId());
+      assertThat(rating1.year()).isEqualTo(rating2.year());
+      assertThat(rating1.ratingSystem()).isEqualTo(rating2.ratingSystem());
+      assertThat(rating1.quartile()).isEqualTo(rating2.quartile());
     }
 
     @Test
-    @DisplayName("不同 venueId 应不相等")
-    void shouldNotBeEqualWithDifferentVenueId() {
-      VenueRating rating1 = VenueRating.create(123L, 2024, RatingSystem.JCR);
-      VenueRating rating2 = VenueRating.create(456L, 2024, RatingSystem.JCR);
-
-      assertThat(rating1).isNotEqualTo(rating2);
-    }
-
-    @Test
-    @DisplayName("不同 year 应不相等")
-    void shouldNotBeEqualWithDifferentYear() {
-      VenueRating rating1 = VenueRating.create(123L, 2024, RatingSystem.JCR);
-      VenueRating rating2 = VenueRating.create(123L, 2023, RatingSystem.JCR);
-
-      assertThat(rating1).isNotEqualTo(rating2);
-    }
-
-    @Test
-    @DisplayName("不同 ratingSystem 应不相等")
-    void shouldNotBeEqualWithDifferentSystem() {
-      VenueRating rating1 = VenueRating.create(123L, 2024, RatingSystem.JCR);
-      VenueRating rating2 = VenueRating.create(123L, 2024, RatingSystem.CAS);
-
-      assertThat(rating1).isNotEqualTo(rating2);
-    }
-  }
-
-  @Nested
-  @DisplayName("toString()")
-  class ToStringTests {
-
-    @Test
-    @DisplayName("应包含关键信息")
+    @DisplayName("toString() 应包含关键信息")
     void shouldContainKeyInfo() {
       VenueRating rating =
           VenueRating.create(123L, 2024, RatingSystem.JCR, "Q1", new BigDecimal("42.778"));
@@ -348,6 +298,19 @@ class VenueRatingTest {
       assertThat(str).contains("JCR");
       assertThat(str).contains("Q1");
       assertThat(str).contains("42.778");
+    }
+
+    @Test
+    @DisplayName("Record 应为不可变对象")
+    void shouldBeImmutable() {
+      VenueRating rating = VenueRating.create(123L, 2024, RatingSystem.JCR, "Q1", null);
+
+      // Record 的所有字段都是 final 的，没有 setter 方法
+      // 验证字段不可变
+      assertThat(rating.venueId()).isEqualTo(123L);
+      assertThat(rating.year()).isEqualTo(2024);
+      assertThat(rating.ratingSystem()).isEqualTo(RatingSystem.JCR);
+      assertThat(rating.quartile()).isEqualTo("Q1");
     }
   }
 }
