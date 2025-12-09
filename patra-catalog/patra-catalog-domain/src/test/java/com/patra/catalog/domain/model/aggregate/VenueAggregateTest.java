@@ -3,13 +3,13 @@ package com.patra.catalog.domain.model.aggregate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.patra.catalog.domain.model.entity.VenueIdentifier;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.IndexingInfo;
 import com.patra.catalog.domain.model.vo.venue.LatestRating;
 import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
 import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
+import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenueStats;
 import java.math.BigDecimal;
 import java.util.List;

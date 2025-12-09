@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
-import com.patra.catalog.domain.model.entity.VenueIdentifier;
-import com.patra.catalog.domain.model.entity.VenuePublicationStats;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
+import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
+import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
 import com.patra.catalog.infra.adapter.persistence.VenueRepositoryAdapter;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.catalog.infra.persistence.entity.VenueDO;
