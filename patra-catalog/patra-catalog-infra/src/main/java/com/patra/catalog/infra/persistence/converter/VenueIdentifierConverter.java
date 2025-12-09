@@ -1,6 +1,7 @@
 package com.patra.catalog.infra.persistence.converter;
 
-import com.patra.catalog.domain.model.entity.VenueIdentifier;
+import com.patra.catalog.domain.model.enums.VenueIdentifierType;
+import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.infra.persistence.entity.VenueIdentifierDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -10,7 +11,7 @@ import org.mapstruct.ReportingPolicy;
 ///
 /// **职责**：
 ///
-/// 将 `VenueIdentifier` 领域实体转换为 `VenueIdentifierDO` 数据库实体（批量导入场景）。
+/// 在 `VenueIdentifier` 领域实体和 `VenueIdentifierDO` 数据库实体之间转换。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -29,4 +30,16 @@ public interface VenueIdentifierConverter {
   @Mapping(target = "identifierValue", source = "value")
   @Mapping(target = "isPrimary", constant = "false")
   VenueIdentifierDO toDO(VenueIdentifier identifier);
+
+  /// 将数据库实体转换为领域实体。
+  ///
+  /// @param doEntity 数据库实体
+  /// @return 领域实体，如果 doEntity 为 null 则返回 null
+  default VenueIdentifier toEntity(VenueIdentifierDO doEntity) {
+    if (doEntity == null) {
+      return null;
+    }
+    return new VenueIdentifier(
+        VenueIdentifierType.valueOf(doEntity.getIdentifierType()), doEntity.getIdentifierValue());
+  }
 }
