@@ -1,4 +1,4 @@
-package com.patra.catalog.domain.model.entity;
+package com.patra.catalog.domain.model.vo.venue;
 
 import cn.hutool.core.lang.Assert;
 import com.patra.catalog.domain.model.enums.CitationSubset;

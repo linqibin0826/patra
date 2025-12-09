@@ -1,18 +1,20 @@
 package com.patra.catalog.app.usecase.venue.pubmed;
 
 import cn.hutool.core.collection.ListUtil;
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.date.TimeInterval;
 import com.patra.catalog.api.error.CatalogErrorCode;
 import com.patra.catalog.app.usecase.venue.pubmed.command.VenuePubmedEnrichCommand;
 import com.patra.catalog.app.usecase.venue.pubmed.dto.VenuePubmedEnrichResult;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
-import com.patra.catalog.domain.model.entity.VenueIndexingHistory;
-import com.patra.catalog.domain.model.entity.VenueMesh;
-import com.patra.catalog.domain.model.entity.VenueRelation;
 import com.patra.catalog.domain.model.enums.CitationSubset;
 import com.patra.catalog.domain.model.enums.IndexingTreatment;
 import com.patra.catalog.domain.model.enums.VenueRelationType;
 import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
+import com.patra.catalog.domain.model.vo.venue.VenueIndexingHistory;
 import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
+import com.patra.catalog.domain.model.vo.venue.VenueMesh;
+import com.patra.catalog.domain.model.vo.venue.VenueRelation;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedIndexingHistory;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedLanguage;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedMeshHeading;
@@ -88,7 +90,7 @@ public class VenuePubmedEnrichOrchestrator implements VenuePubmedEnrichUseCase {
   /// @return 富化结果摘要
   @Override
   public VenuePubmedEnrichResult enrichFromPubmed(VenuePubmedEnrichCommand command) {
-    long startTime = System.currentTimeMillis();
+    TimeInterval timer = DateUtil.timer();
     log.info("启动 PubMed Venue 富化，URL：{}，版本：{}", command.url(), command.serfileVersion());
 
     // 流式下载并解析（无磁盘落盘）
@@ -102,9 +104,8 @@ public class VenuePubmedEnrichOrchestrator implements VenuePubmedEnrichUseCase {
       log.info("解析完成，记录数：{}", allRecords.size());
 
       if (allRecords.isEmpty()) {
-        long duration = System.currentTimeMillis() - startTime;
         return VenuePubmedEnrichResult.success(
-            0, 0, 0, 0, command.serfileVersion(), command.url(), duration);
+            0, 0, 0, 0, command.serfileVersion(), command.url(), timer.interval());
       }
 
       // 按批次处理（每批次独立事务）
@@ -123,7 +124,7 @@ public class VenuePubmedEnrichOrchestrator implements VenuePubmedEnrichUseCase {
             });
       }
 
-      long duration = System.currentTimeMillis() - startTime;
+      long duration = timer.interval();
       log.info(
           "PubMed Venue 富化完成：解析 {} 条，更新 {} 条，新建 {} 条，跳过 {} 条，耗时 {} ms",
           allRecords.size(),

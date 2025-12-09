@@ -38,12 +38,16 @@ public class MeshDataSourceProperties {
   /// MeSH Descriptor（主题词）XML 文件 URL。
   ///
   /// 文件名格式必须为 `desc{year}.xml`，如 `desc2025.xml`。
+  /// 默认使用 2025 年版本。
   @NotBlank(message = "patra.catalog.mesh.descriptor-url 不能为空")
-  private String descriptorUrl;
+  private String descriptorUrl =
+      "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml";
 
   /// MeSH Qualifier（限定词）XML 文件 URL。
   ///
   /// 文件名格式必须为 `qual{year}.xml`，如 `qual2025.xml`。
+  /// 默认使用 2025 年版本。
   @NotBlank(message = "patra.catalog.mesh.qualifier-url 不能为空")
-  private String qualifierUrl;
+  private String qualifierUrl =
+      "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml";
 }
