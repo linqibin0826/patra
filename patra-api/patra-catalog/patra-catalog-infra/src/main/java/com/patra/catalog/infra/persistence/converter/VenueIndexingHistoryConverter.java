@@ -44,6 +44,9 @@ public interface VenueIndexingHistoryConverter {
   /// @param doEntity 数据库实体
   /// @return 领域实体
   default VenueIndexingHistory toEntity(VenueIndexingHistoryDO doEntity) {
+    if (doEntity == null) {
+      return null;
+    }
     IndexingTreatment treatment =
         doEntity.getIndexingTreatment() != null
             ? IndexingTreatment.fromCodeOrNull(doEntity.getIndexingTreatment())
