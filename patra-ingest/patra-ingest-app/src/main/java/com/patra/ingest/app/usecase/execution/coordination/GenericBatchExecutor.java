@@ -1,5 +1,7 @@
 package com.patra.ingest.app.usecase.execution.coordination;
 
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.date.TimeInterval;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
@@ -50,7 +52,7 @@ public class GenericBatchExecutor {
     Objects.requireNonNull(context, "执行上下文不能为空");
     Objects.requireNonNull(batch, "批次定义不能为空");
 
-    long startAt = System.currentTimeMillis();
+    TimeInterval timer = DateUtil.timer();
     int batchNo = batch.batchNo();
     ProvenanceCode provenanceCode = context.provenanceCode();
     String operationCode = context.operationCode();
@@ -71,33 +73,31 @@ public class GenericBatchExecutor {
           provenanceDataPort.fetchData(context, dataType, typeRef, batch, querySession);
 
       if (!fetchResult.success()) {
-        return handleFailure(context, batch, fetchResult, System.currentTimeMillis() - startAt);
+        return handleFailure(context, batch, fetchResult, timer.interval());
       }
 
       PublicationPublisherOrchestrator.PublishResult publishResult =
           publishPublication(context, batchNo, fetchResult.data());
       logDataFetchWarnings(fetchResult, provenanceCode, batchNo);
 
-      long duration = System.currentTimeMillis() - startAt;
       log.info(
           "批次执行成功 provenanceCode={} operationCode={} batchNo={} fetchedCount={} duration={}ms",
           provenanceCode,
           operationCode,
           batchNo,
           fetchResult.fetchedCount(),
-          duration);
+          timer.interval());
 
       int publishedCount = publishResult.publishedCount();
       return BatchResult.success(
           batchNo, publishedCount, fetchResult.nextCursorToken(), publishResult.storageKey());
 
     } catch (Exception ex) {
-      long duration = System.currentTimeMillis() - startAt;
       log.error(
           "批次执行意外失败 provenanceCode={} batchNo={} duration={}ms",
           provenanceCode,
           batchNo,
-          duration,
+          timer.interval(),
           ex);
       return BatchResult.failure(batchNo, safeMessage(ex.getMessage()));
     }

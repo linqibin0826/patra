@@ -122,6 +122,34 @@ logging:
     org.springframework.cloud.loadbalancer: DEBUG
 ```
 
+### Actuator 监控配置
+
+网关集成了 Spring Boot Actuator 提供健康检查和指标监控：
+
+```yaml
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+```
+
+**端点说明**：
+
+| 端点 | URL | 说明 |
+|------|-----|------|
+| Health | `/actuator/health` | 健康检查（认证后显示详情） |
+| Info | `/actuator/info` | 应用信息 |
+| Metrics | `/actuator/metrics` | 性能指标 |
+
+**Metrics 导出**：通过 OTel Agent + Micrometer Bridge 导出到 OTel Collector，无需额外配置。
+
 ## 技术栈
 
 | 组件 | 版本/说明 |

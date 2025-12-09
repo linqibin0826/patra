@@ -1,5 +1,7 @@
 package com.patra.ingest.infra.integration.registry;
 
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.date.TimeInterval;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.exception.IngestConfigurationException;
 import com.patra.ingest.domain.model.enums.OperationCode;
@@ -53,16 +55,15 @@ public class PatraRegistryAdapter implements PatraRegistryPort {
 
   /// 调用注册服务检索配置。
   private ProvenanceConfigResp callRegistry(ProvenanceCode provenanceCode, String operationType) {
-    long startTime = System.currentTimeMillis();
+    TimeInterval timer = DateUtil.timer();
     ProvenanceConfigResp resp =
         provenanceClient.getConfiguration(provenanceCode, operationType, Instant.now());
-    long duration = System.currentTimeMillis() - startTime;
     if (log.isDebugEnabled()) {
       log.debug(
           "已加载溯源配置 code [{}] operation [{}] in {}ms",
           provenanceCode.getCode(),
           operationType,
-          duration);
+          timer.interval());
     }
     return resp;
   }

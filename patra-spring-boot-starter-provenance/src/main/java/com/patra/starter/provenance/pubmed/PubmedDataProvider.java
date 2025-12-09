@@ -1,5 +1,7 @@
 package com.patra.starter.provenance.pubmed;
 
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.date.TimeInterval;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalPublication;
@@ -93,7 +95,7 @@ public class PubmedDataProvider implements ProvenanceDataProvider {
   @Override
   public <T> ProviderResult<T> fetchData(
       ProviderRequest request, DataType dataType, Class<T> targetClass) {
-    long start = System.currentTimeMillis();
+    TimeInterval timer = DateUtil.timer();
 
     log.info("PubMed provider start: dataType={}", dataType);
 
@@ -116,16 +118,16 @@ public class PubmedDataProvider implements ProvenanceDataProvider {
         ProviderResult<CanonicalPublication> result =
             convertToProviderResult(processResult, dataType);
 
-        long duration = System.currentTimeMillis() - start;
         log.info(
-            "PubMed provider completed: fetched={} duration={}ms", result.fetchedCount(), duration);
+            "PubMed provider completed: fetched={} duration={}ms",
+            result.fetchedCount(),
+            timer.interval());
 
         @SuppressWarnings("unchecked")
         ProviderResult<T> typedResult = (ProviderResult<T>) result;
         return typedResult;
       } catch (Exception ex) {
-        long duration = System.currentTimeMillis() - start;
-        log.error("PubMed provider error: duration={}ms", duration, ex);
+        log.error("PubMed provider error: duration={}ms", timer.interval(), ex);
         return ProviderResult.nonRetriableFailure(
             dataType, "PubMed provider error: " + ex.getMessage());
       }

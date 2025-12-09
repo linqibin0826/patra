@@ -1,5 +1,7 @@
 package com.patra.ingest.app.usecase.relay;
 
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.date.TimeInterval;
 import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
 import com.patra.ingest.app.usecase.relay.config.OutboxRelayProperties;
 import com.patra.ingest.app.usecase.relay.dto.RelayReport;
@@ -44,7 +46,7 @@ public class OutboxRelayOrchestrator implements OutboxRelayUseCase {
       return RelayReport.empty(channelKey);
     }
     // 记录开始时间戳以计算延迟指标
-    long start = System.currentTimeMillis();
+    TimeInterval timer = DateUtil.timer();
 
     RelayPlan plan = planBuilder.build(instruction);
     if (log.isDebugEnabled()) {
@@ -60,7 +62,6 @@ public class OutboxRelayOrchestrator implements OutboxRelayUseCase {
     RelayBatchResult result = relayExecutor.execute(plan);
     eventPublisher.publish(result.events());
 
-    long elapsed = System.currentTimeMillis() - start;
     String channelDesc = result.channel() != null ? result.channel().channel() : "ALL_CHANNELS";
     log.info(
         "中继完成 通道={} 获取={} 已发布={} 已重试={} 失败={} 租约丢失={} 耗时毫秒={}",
@@ -70,7 +71,7 @@ public class OutboxRelayOrchestrator implements OutboxRelayUseCase {
         result.retried(),
         result.failed(),
         result.leaseMissed(),
-        elapsed);
+        timer.interval());
     return new RelayReport(
         result.channel(),
         result.fetched(),

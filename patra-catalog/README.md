@@ -210,7 +210,19 @@ patra:
 | Boot | E2E 测试 | 核心流程 |
 
 ## 📝 变更日志
-1. v0.9.1 (2025-12-08)：VenueAggregate 聚合拆分重构 + DTO 层级迁移
+1. v0.9.2 (2025-12-09)：Venue Converter 提取 + 时间统计优化
+   - **Converter 提取**：将 `VenueRepositoryAdapter` 内联转换逻辑提取为独立的 MapStruct Converter
+     - 新增 `VenueIdentifierConverter`：标识符领域实体 ↔ DO 转换
+     - 新增 `VenueIndexingHistoryConverter`：索引历史 ↔ DO 转换（含枚举值防御处理）
+     - 新增 `VenueMeshConverter`：MeSH 主题词 ↔ DO 转换（含 Boolean 包装类型处理）
+     - 新增 `VenuePublicationStatsConverter`：年度统计 ↔ DO 转换（含类型转换和默认值）
+     - 新增 `VenueRelationConverter`：关联关系 ↔ DO 转换（无效枚举值降级为 PRECEDING）
+   - **Repository 删除**：移除 `VenueRatingRepository` 和 `VenueSourceDataRepository`（功能已合并到 `VenueRepository`）
+   - **时间统计优化**：使用 Hutool `TimeInterval` 替换 `System.currentTimeMillis()` 手动计时
+     - `VenuePubmedEnrichOrchestrator`：3 处计时点优化
+   - **测试补充**：5 个 Converter 新增单元测试
+
+2. v0.9.1 (2025-12-08)：VenueAggregate 聚合拆分重构 + DTO 层级迁移
    - **架构决策**：[[ADR-014]] 基于 Vaughn Vernon 聚合设计规则，将无聚合级不变量的子实体移出聚合边界
    - **Breaking Change**：5 个实体类（VenueIdentifier、VenuePublicationStats、VenueMesh、VenueRelation、VenueIndexingHistory）从 Class 改为 Record
    - **Breaking Change**：yearlyMetrics、meshTerms、relations、indexingHistories 从 VenueAggregate 移出

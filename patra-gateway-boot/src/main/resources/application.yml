@@ -71,3 +71,19 @@ logging:
   level:
     org.springframework.cloud.gateway: INFO
     org.springframework.cloud.loadbalancer: INFO
+
+# ----------------------------------------------------------------------------
+# Actuator & Monitoring Configuration
+# ----------------------------------------------------------------------------
+# 注意：Metrics 通过 OTel Agent + Micrometer Bridge 导出到 OTel Collector
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}

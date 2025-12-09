@@ -1,5 +1,7 @@
 package com.patra.starter.restclient.interceptor;
 
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.date.TimeInterval;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import org.slf4j.Logger;
@@ -65,12 +67,11 @@ public class LoggingInterceptor implements ClientHttpRequestInterceptor {
       HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
 
     logRequest(request, body);
-    long startTime = System.currentTimeMillis();
+    TimeInterval timer = DateUtil.timer();
 
     ClientHttpResponse response = execution.execute(request, body);
 
-    long duration = System.currentTimeMillis() - startTime;
-    logResponse(request, response, duration);
+    logResponse(request, response, timer.interval());
 
     return response;
   }
