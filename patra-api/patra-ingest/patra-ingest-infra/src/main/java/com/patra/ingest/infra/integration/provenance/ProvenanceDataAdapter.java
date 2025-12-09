@@ -1,5 +1,7 @@
 package com.patra.ingest.infra.integration.provenance;
 
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.date.TimeInterval;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
@@ -296,7 +298,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
       Batch batch,
       QuerySession querySession) {
 
-    long startTime = System.currentTimeMillis();
+    TimeInterval timer = DateUtil.timer();
     ProvenanceCode provenanceCode = context.provenanceCode();
 
     log.debug(
@@ -323,13 +325,12 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
       // 5. 转换结果
       DataFetchResult<T> result = convertToDataFetchResult(providerResult);
 
-      long duration = System.currentTimeMillis() - startTime;
       log.info(
           "数据获取完成: provenance={}, dataType={}, count={}, duration={}ms",
           provenanceCode.getCode(),
           dataType,
           result.fetchedCount(),
-          duration);
+          timer.interval());
 
       return result;
 
@@ -340,12 +341,11 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
       log.error("类型不匹配: dataType={}, typeRef={}", dataType, typeRef, ex);
       throw ex;
     } catch (Exception ex) {
-      long duration = System.currentTimeMillis() - startTime;
       log.error(
           "数据获取异常: provenance={}, dataType={}, duration={}ms",
           provenanceCode.getCode(),
           dataType,
-          duration,
+          timer.interval(),
           ex);
 
       return DataFetchResult.failure(
