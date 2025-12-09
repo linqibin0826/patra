@@ -118,12 +118,12 @@ patra:
   - `MeshConcept`：MeSH 概念实体
   - `MeshEntryTerm`：MeSH 入口术语实体
   - `MeshTreeNumber`：MeSH 树形编号实体
-  - `VenueSourceData`：载体数据源实体（存储各数据源原始/提取数据）
-  - `VenueRating`：载体评级实体（支持 JCR/中科院分区/Scopus 等多评价体系）
   - `Author`：作者实体
   - `Affiliation`：机构实体
 
 - **Record 值对象**（不可变，通过 `VenueRepository` 统一管理）
+  - `VenueSourceData`：载体数据源溯源（存储各数据源原始/提取数据）
+  - `VenueRating`：载体评级记录（支持 JCR/中科院分区/Scopus 等多评价体系）
   - `VenueIdentifier`：载体标识符（ISSN/OpenAlex ID/NLM ID 等，保留在聚合内）
   - `VenuePublicationStats`：载体年度发文统计（发表量/被引量/OA 比例）
   - `VenueMesh`：载体 MeSH 主题词（MeSH 主题分类，来源 Serfile）
@@ -210,7 +210,20 @@ patra:
 | Boot | E2E 测试 | 核心流程 |
 
 ## 📝 变更日志
-1. v0.9.2 (2025-12-09)：Venue Converter 提取 + 时间统计优化
+1. v0.9.3 (2025-12-09)：VenueRating/VenueSourceData 重构为 Record 值对象
+   - **重构**：`VenueRating` 和 `VenueSourceData` 从实体（Class）改为不可变值对象（Record）
+     - 移动位置：`entity/` → `vo/venue/`
+     - 移除 `Long id` 技术 ID 字段（值对象无独立身份标识）
+     - 移除所有 setter 方法（Record 天然不可变）
+   - **新增 Converter**：
+     - `VenueRatingConverter`：评级值对象 ↔ DO 转换（含枚举降级和 JSON 解析日志）
+     - `VenueSourceDataConverter`：数据源值对象 ↔ DO 转换（含枚举降级和 JSON 解析日志）
+   - **Converter 健壮性增强**：
+     - `VenueIndexingHistoryConverter.toEntity()` 添加 null 检查
+     - `VenueRatingConverter` / `VenueSourceDataConverter` 添加 `@Slf4j` 日志记录
+   - **测试补充**：新增 `VenueRatingConverterTest`、`VenueSourceDataConverterTest`
+
+2. v0.9.2 (2025-12-09)：Venue Converter 提取 + 时间统计优化
    - **Converter 提取**：将 `VenueRepositoryAdapter` 内联转换逻辑提取为独立的 MapStruct Converter
      - 新增 `VenueIdentifierConverter`：标识符领域实体 ↔ DO 转换
      - 新增 `VenueIndexingHistoryConverter`：索引历史 ↔ DO 转换（含枚举值防御处理）
