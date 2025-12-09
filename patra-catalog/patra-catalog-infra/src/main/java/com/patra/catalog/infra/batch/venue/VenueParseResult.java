@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.batch.venue;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
-import com.patra.catalog.domain.model.entity.VenuePublicationStats;
+import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
 import java.util.List;
 
 /// OpenAlex Source 解析结果。

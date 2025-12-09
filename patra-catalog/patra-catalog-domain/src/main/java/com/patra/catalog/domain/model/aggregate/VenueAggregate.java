@@ -2,7 +2,6 @@ package com.patra.catalog.domain.model.aggregate;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
-import com.patra.catalog.domain.model.entity.VenueIdentifier;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.ApcInfo;
@@ -12,6 +11,7 @@ import com.patra.catalog.domain.model.vo.venue.LatestRating;
 import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
 import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
 import com.patra.catalog.domain.model.vo.venue.Society;
+import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
 import com.patra.catalog.domain.model.vo.venue.VenueStats;
 import com.patra.common.domain.AggregateRoot;

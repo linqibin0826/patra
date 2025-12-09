@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.batch.venue;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
-import com.patra.catalog.domain.model.entity.VenuePublicationStats;
+import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -60,11 +60,11 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
     // Step 1: Chunk 内去重（必须保留，否则同批次内重复也会导致插入失败）
     List<VenueParseResult> deduplicatedInChunk = deduplicateWithinChunk(items);
 
-    // Step 2: 提取聚合根和年度指标
+    // Step 2: 提取聚合根和发文统计
     List<VenueAggregate> aggregates =
         deduplicatedInChunk.stream().map(VenueParseResult::aggregate).toList();
-    Map<String, List<VenuePublicationStats>> metricsByOpenalexId =
-        extractMetrics(deduplicatedInChunk);
+    Map<String, List<VenuePublicationStats>> statsByOpenalexId =
+        extractPublicationStats(deduplicatedInChunk);
 
     // Step 3: 乐观插入聚合根
     List<VenueAggregate> insertedAggregates;
@@ -84,15 +84,16 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
       }
     }
 
-    // Step 4: 插入年度指标（仅针对成功插入的聚合根）
-    insertYearlyMetrics(insertedAggregates, metricsByOpenalexId);
+    // Step 4: 插入发文统计（仅针对成功插入的聚合根）
+    insertPublicationStats(insertedAggregates, statsByOpenalexId);
   }
 
-  /// 提取年度指标，按 OpenAlex ID 分组。
+  /// 提取发文统计数据，按 OpenAlex ID 分组。
   ///
   /// @param items 解析结果列表
-  /// @return 按 OpenAlex ID 分组的年度指标
-  private Map<String, List<VenuePublicationStats>> extractMetrics(List<VenueParseResult> items) {
+  /// @return 按 OpenAlex ID 分组的发文统计数据
+  private Map<String, List<VenuePublicationStats>> extractPublicationStats(
+      List<VenueParseResult> items) {
     Map<String, List<VenuePublicationStats>> result = new HashMap<>();
     for (VenueParseResult item : items) {
       if (item.hasYearlyMetrics()) {
@@ -102,30 +103,30 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
     return result;
   }
 
-  /// 插入年度指标。
+  /// 插入发文统计数据到 `cat_venue_publication_stats` 表。
   ///
-  /// 根据成功插入的聚合根，将对应的年度指标写入数据库。
+  /// 根据成功插入的聚合根，将对应的年度发文统计写入数据库。
   ///
   /// @param insertedAggregates 成功插入的聚合根列表
-  /// @param metricsByOpenalexId 按 OpenAlex ID 分组的年度指标
-  private void insertYearlyMetrics(
+  /// @param statsByOpenalexId 按 OpenAlex ID 分组的发文统计数据
+  private void insertPublicationStats(
       List<VenueAggregate> insertedAggregates,
-      Map<String, List<VenuePublicationStats>> metricsByOpenalexId) {
-    if (metricsByOpenalexId.isEmpty() || insertedAggregates.isEmpty()) {
+      Map<String, List<VenuePublicationStats>> statsByOpenalexId) {
+    if (statsByOpenalexId.isEmpty() || insertedAggregates.isEmpty()) {
       return;
     }
 
-    Map<Long, List<VenuePublicationStats>> metricsByVenueId = new HashMap<>();
+    Map<Long, List<VenuePublicationStats>> statsByVenueId = new HashMap<>();
     for (VenueAggregate aggregate : insertedAggregates) {
-      List<VenuePublicationStats> metrics = metricsByOpenalexId.get(aggregate.getOpenalexId());
-      if (metrics != null && !metrics.isEmpty()) {
-        metricsByVenueId.put(aggregate.getId(), metrics);
+      List<VenuePublicationStats> stats = statsByOpenalexId.get(aggregate.getOpenalexId());
+      if (stats != null && !stats.isEmpty()) {
+        statsByVenueId.put(aggregate.getId(), stats);
       }
     }
 
-    if (!metricsByVenueId.isEmpty()) {
-      venueRepository.replaceYearlyMetricsBatch(metricsByVenueId);
-      log.debug("写入年度指标：{} 个 Venue", metricsByVenueId.size());
+    if (!statsByVenueId.isEmpty()) {
+      venueRepository.replaceYearlyMetricsBatch(statsByVenueId);
+      log.debug("写入发文统计：{} 个 Venue", statsByVenueId.size());
     }
   }
 

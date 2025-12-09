@@ -1,10 +1,10 @@
 package com.patra.catalog.domain.port.repository;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
-import com.patra.catalog.domain.model.entity.VenueIndexingHistory;
-import com.patra.catalog.domain.model.entity.VenueMesh;
-import com.patra.catalog.domain.model.entity.VenuePublicationStats;
-import com.patra.catalog.domain.model.entity.VenueRelation;
+import com.patra.catalog.domain.model.vo.venue.VenueIndexingHistory;
+import com.patra.catalog.domain.model.vo.venue.VenueMesh;
+import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
+import com.patra.catalog.domain.model.vo.venue.VenueRelation;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;

@@ -3,19 +3,20 @@ package com.patra.catalog.infra.adapter.persistence;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
-import com.patra.catalog.domain.model.entity.VenueIdentifier;
-import com.patra.catalog.domain.model.entity.VenueIndexingHistory;
-import com.patra.catalog.domain.model.entity.VenueMesh;
-import com.patra.catalog.domain.model.entity.VenuePublicationStats;
-import com.patra.catalog.domain.model.entity.VenueRelation;
-import com.patra.catalog.domain.model.enums.CitationSubset;
-import com.patra.catalog.domain.model.enums.IndexingTreatment;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
-import com.patra.catalog.domain.model.enums.VenueRelationType;
 import com.patra.catalog.domain.model.enums.VenueType;
+import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
+import com.patra.catalog.domain.model.vo.venue.VenueIndexingHistory;
+import com.patra.catalog.domain.model.vo.venue.VenueMesh;
+import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
+import com.patra.catalog.domain.model.vo.venue.VenueRelation;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.infra.persistence.converter.VenueConverter;
 import com.patra.catalog.infra.persistence.converter.VenueIdentifierConverter;
+import com.patra.catalog.infra.persistence.converter.VenueIndexingHistoryConverter;
+import com.patra.catalog.infra.persistence.converter.VenueMeshConverter;
+import com.patra.catalog.infra.persistence.converter.VenuePublicationStatsConverter;
+import com.patra.catalog.infra.persistence.converter.VenueRelationConverter;
 import com.patra.catalog.infra.persistence.entity.VenueDO;
 import com.patra.catalog.infra.persistence.entity.VenueIdentifierDO;
 import com.patra.catalog.infra.persistence.entity.VenueIndexingHistoryDO;
@@ -73,6 +74,10 @@ public class VenueRepositoryAdapter implements VenueRepository {
   private final VenueIndexingHistoryMapper indexingHistoryMapper;
   private final VenueConverter venueConverter;
   private final VenueIdentifierConverter identifierConverter;
+  private final VenuePublicationStatsConverter publicationStatsConverter;
+  private final VenueMeshConverter meshConverter;
+  private final VenueRelationConverter relationConverter;
+  private final VenueIndexingHistoryConverter indexingHistoryConverter;
 
   @Override
   public boolean hasAnyData() {
@@ -240,20 +245,23 @@ public class VenueRepositoryAdapter implements VenueRepository {
     venueIdentifierMapper.delete(
         new LambdaQueryWrapper<VenueIdentifierDO>().in(VenueIdentifierDO::getVenueId, venueIds));
 
-    // 收集新的标识符数据
+    // 收集新的标识符数据和主表 DO
     List<VenueIdentifierDO> identifierDOs = new ArrayList<>();
+    List<VenueDO> venueDOs = new ArrayList<>(aggregates.size());
 
     for (VenueAggregate aggregate : aggregates) {
-      // 更新主表
+      // 转换主表 DO
       VenueDO venueDO = venueConverter.toDO(aggregate);
       venueDO.setId(aggregate.getId());
-      venueMapper.updateById(venueDO);
+      venueDOs.add(venueDO);
 
       // 收集标识符数据
       collectIdentifiers(aggregate, aggregate.getId(), identifierDOs);
     }
 
-    log.debug("批量更新载体 {} 条", aggregates.size());
+    // 批量更新主表
+    Db.updateBatchById(venueDOs);
+    log.debug("批量更新载体 {} 条", venueDOs.size());
 
     // 批量插入新的标识符
     if (!identifierDOs.isEmpty()) {
@@ -332,7 +340,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 添加标识符
     for (VenueIdentifierDO identifierDO : identifierDOs) {
-      VenueIdentifier identifier = toIdentifierEntity(identifierDO);
+      VenueIdentifier identifier = identifierConverter.toEntity(identifierDO);
       aggregate.addIdentifier(identifier);
     }
 
@@ -347,13 +355,6 @@ public class VenueRepositoryAdapter implements VenueRepository {
             new LambdaQueryWrapper<VenueIdentifierDO>()
                 .in(VenueIdentifierDO::getVenueId, venueIds));
     return all.stream().collect(Collectors.groupingBy(VenueIdentifierDO::getVenueId));
-  }
-
-  // ========== DO → Entity 转换方法 ==========
-
-  private VenueIdentifier toIdentifierEntity(VenueIdentifierDO doEntity) {
-    return new VenueIdentifier(
-        VenueIdentifierType.valueOf(doEntity.getIdentifierType()), doEntity.getIdentifierValue());
   }
 
   // ========== 补充数据管理（年度指标、MeSH、关联关系、索引历史） ==========
@@ -376,7 +377,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
         .collect(
             Collectors.groupingBy(
                 VenuePublicationStatsDO::getVenueId,
-                Collectors.mapping(this::toPublicationStats, Collectors.toList())));
+                Collectors.mapping(publicationStatsConverter::toEntity, Collectors.toList())));
   }
 
   @Override
@@ -397,7 +398,9 @@ public class VenueRepositoryAdapter implements VenueRepository {
     for (Map.Entry<Long, List<VenuePublicationStats>> entry : metricsByVenueId.entrySet()) {
       Long venueId = entry.getKey();
       for (VenuePublicationStats stats : entry.getValue()) {
-        doList.add(toPublicationStatsDO(stats, venueId));
+        VenuePublicationStatsDO statsDO = publicationStatsConverter.toDO(stats);
+        statsDO.setVenueId(venueId);
+        doList.add(statsDO);
       }
     }
 
@@ -423,7 +426,8 @@ public class VenueRepositoryAdapter implements VenueRepository {
     return doList.stream()
         .collect(
             Collectors.groupingBy(
-                VenueMeshDO::getVenueId, Collectors.mapping(this::toMesh, Collectors.toList())));
+                VenueMeshDO::getVenueId,
+                Collectors.mapping(meshConverter::toEntity, Collectors.toList())));
   }
 
   @Override
@@ -442,7 +446,9 @@ public class VenueRepositoryAdapter implements VenueRepository {
     for (Map.Entry<Long, List<VenueMesh>> entry : meshTermsByVenueId.entrySet()) {
       Long venueId = entry.getKey();
       for (VenueMesh mesh : entry.getValue()) {
-        doList.add(toMeshDO(mesh, venueId));
+        VenueMeshDO meshDO = meshConverter.toDO(mesh);
+        meshDO.setVenueId(venueId);
+        doList.add(meshDO);
       }
     }
 
@@ -469,7 +475,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
         .collect(
             Collectors.groupingBy(
                 VenueRelationDO::getVenueId,
-                Collectors.mapping(this::toRelation, Collectors.toList())));
+                Collectors.mapping(relationConverter::toEntity, Collectors.toList())));
   }
 
   @Override
@@ -489,7 +495,9 @@ public class VenueRepositoryAdapter implements VenueRepository {
     for (Map.Entry<Long, List<VenueRelation>> entry : relationsByVenueId.entrySet()) {
       Long venueId = entry.getKey();
       for (VenueRelation relation : entry.getValue()) {
-        doList.add(toRelationDO(relation, venueId));
+        VenueRelationDO relationDO = relationConverter.toDO(relation);
+        relationDO.setVenueId(venueId);
+        doList.add(relationDO);
       }
     }
 
@@ -518,7 +526,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
         .collect(
             Collectors.groupingBy(
                 VenueIndexingHistoryDO::getVenueId,
-                Collectors.mapping(this::toIndexingHistory, Collectors.toList())));
+                Collectors.mapping(indexingHistoryConverter::toEntity, Collectors.toList())));
   }
 
   @Override
@@ -540,7 +548,9 @@ public class VenueRepositoryAdapter implements VenueRepository {
     for (Map.Entry<Long, List<VenueIndexingHistory>> entry : historiesByVenueId.entrySet()) {
       Long venueId = entry.getKey();
       for (VenueIndexingHistory history : entry.getValue()) {
-        doList.add(toIndexingHistoryDO(history, venueId));
+        VenueIndexingHistoryDO historyDO = indexingHistoryConverter.toDO(history);
+        historyDO.setVenueId(venueId);
+        doList.add(historyDO);
       }
     }
 
@@ -561,115 +571,5 @@ public class VenueRepositoryAdapter implements VenueRepository {
     replaceMeshTermsBatch(meshTermsByVenueId);
     replaceRelationsBatch(relationsByVenueId);
     replaceIndexingHistoriesBatch(historiesByVenueId);
-  }
-
-  // ========== 补充数据 DO → Entity 转换方法 ==========
-
-  private VenuePublicationStats toPublicationStats(VenuePublicationStatsDO doEntity) {
-    return VenuePublicationStats.create(
-        doEntity.getYear().intValue(),
-        doEntity.getWorksCount() != null ? doEntity.getWorksCount() : 0,
-        doEntity.getCitedByCount() != null ? doEntity.getCitedByCount() : 0,
-        doEntity.getOaWorksCount());
-  }
-
-  private VenueMesh toMesh(VenueMeshDO doEntity) {
-    return new VenueMesh(
-        doEntity.getDescriptorName(),
-        doEntity.getDescriptorUi(),
-        Boolean.TRUE.equals(doEntity.getIsMajorTopic()),
-        doEntity.getQualifierName(),
-        doEntity.getQualifierUi());
-  }
-
-  private VenueRelation toRelation(VenueRelationDO doEntity) {
-    VenueRelationType relationType = VenueRelationType.fromCodeOrNull(doEntity.getRelationType());
-    if (relationType == null) {
-      relationType = VenueRelationType.PRECEDING;
-    }
-
-    return new VenueRelation(
-        doEntity.getRelatedVenueId(),
-        doEntity.getRelatedNlmId(),
-        doEntity.getRelatedTitle(),
-        relationType,
-        doEntity.getEffectiveDate(),
-        doEntity.getNotes());
-  }
-
-  private VenueIndexingHistory toIndexingHistory(VenueIndexingHistoryDO doEntity) {
-    IndexingTreatment treatment =
-        doEntity.getIndexingTreatment() != null
-            ? IndexingTreatment.fromCodeOrNull(doEntity.getIndexingTreatment())
-            : null;
-    CitationSubset subset =
-        doEntity.getCitationSubset() != null
-            ? CitationSubset.fromCodeOrNull(doEntity.getCitationSubset())
-            : null;
-
-    return new VenueIndexingHistory(
-        doEntity.getIndexingSource(),
-        Boolean.TRUE.equals(doEntity.getCurrentlyIndexed()),
-        treatment,
-        subset,
-        doEntity.getStartYear(),
-        doEntity.getStartVolume(),
-        doEntity.getStartIssue(),
-        doEntity.getEndYear(),
-        doEntity.getEndVolume(),
-        doEntity.getEndIssue());
-  }
-
-  // ========== 补充数据 Entity → DO 转换方法 ==========
-
-  private VenuePublicationStatsDO toPublicationStatsDO(VenuePublicationStats entity, Long venueId) {
-    VenuePublicationStatsDO doEntity = new VenuePublicationStatsDO();
-    doEntity.setVenueId(venueId);
-    doEntity.setYear((short) entity.year());
-    doEntity.setWorksCount(entity.worksCount());
-    doEntity.setCitedByCount(entity.citedByCount());
-    doEntity.setOaWorksCount(entity.oaWorksCount());
-    return doEntity;
-  }
-
-  private VenueMeshDO toMeshDO(VenueMesh entity, Long venueId) {
-    VenueMeshDO doEntity = new VenueMeshDO();
-    doEntity.setVenueId(venueId);
-    doEntity.setDescriptorName(entity.descriptorName());
-    doEntity.setDescriptorUi(entity.descriptorUi());
-    doEntity.setIsMajorTopic(entity.isMajorTopic());
-    doEntity.setQualifierName(entity.qualifierName());
-    doEntity.setQualifierUi(entity.qualifierUi());
-    return doEntity;
-  }
-
-  private VenueRelationDO toRelationDO(VenueRelation entity, Long venueId) {
-    VenueRelationDO doEntity = new VenueRelationDO();
-    doEntity.setVenueId(venueId);
-    doEntity.setRelatedVenueId(entity.relatedVenueId());
-    doEntity.setRelatedNlmId(entity.relatedNlmId());
-    doEntity.setRelatedTitle(entity.relatedTitle());
-    doEntity.setRelationType(entity.relationType().getCode());
-    doEntity.setEffectiveDate(entity.effectiveDate());
-    doEntity.setNotes(entity.notes());
-    return doEntity;
-  }
-
-  private VenueIndexingHistoryDO toIndexingHistoryDO(VenueIndexingHistory entity, Long venueId) {
-    VenueIndexingHistoryDO doEntity = new VenueIndexingHistoryDO();
-    doEntity.setVenueId(venueId);
-    doEntity.setIndexingSource(entity.indexingSource());
-    doEntity.setCurrentlyIndexed(entity.currentlyIndexed());
-    doEntity.setIndexingTreatment(
-        entity.indexingTreatment() != null ? entity.indexingTreatment().getCode() : null);
-    doEntity.setCitationSubset(
-        entity.citationSubset() != null ? entity.citationSubset().getCode() : null);
-    doEntity.setStartYear(entity.startYear());
-    doEntity.setStartVolume(entity.startVolume());
-    doEntity.setStartIssue(entity.startIssue());
-    doEntity.setEndYear(entity.endYear());
-    doEntity.setEndVolume(entity.endVolume());
-    doEntity.setEndIssue(entity.endIssue());
-    return doEntity;
   }
 }

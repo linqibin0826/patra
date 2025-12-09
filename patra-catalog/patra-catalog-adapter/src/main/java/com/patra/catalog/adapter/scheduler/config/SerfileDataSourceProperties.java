@@ -42,6 +42,7 @@ public class SerfileDataSourceProperties {
   /// NLM Serfile XML 文件 URL。
   ///
   /// 文件名格式必须为 `serfilebase{year}.xml`，如 `serfilebase2025.xml`。
+  /// 默认使用 2025 年版本。
   @NotBlank(message = "patra.catalog.serfile.serfile-url 不能为空")
-  private String serfileUrl;
+  private String serfileUrl = "https://ftp.ncbi.nlm.nih.gov/pubmed/Serfile/serfilebase2025.xml";
 }
