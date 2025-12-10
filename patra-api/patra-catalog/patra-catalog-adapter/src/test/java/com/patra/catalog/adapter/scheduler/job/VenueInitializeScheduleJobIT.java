@@ -6,9 +6,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.catalog.app.usecase.venue.initialize.VenueInitializeUseCase;
 import com.patra.catalog.app.usecase.venue.initialize.command.VenueInitializeCommand;
 import com.patra.catalog.app.usecase.venue.initialize.dto.VenueInitializeResult;
+import com.patra.common.cqrs.CommandBus;
 import com.xxl.job.core.context.XxlJobHelper;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
@@ -26,7 +26,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 /// 测试策略：
 ///
 /// - 使用最小化 Spring 上下文加载被测 Job
-/// - Mock VenueInitializeUseCase 依赖
+/// - Mock CommandBus 依赖
 /// - Mock 静态方法 XxlJobHelper（框架限制，无法避免）
 ///
 /// **设计说明**：
@@ -44,7 +44,7 @@ class VenueInitializeScheduleJobIT {
 
   @Autowired private VenueInitializeScheduleJob venueInitializeScheduleJob;
 
-  @MockitoBean private VenueInitializeUseCase venueInitializeUseCase;
+  @MockitoBean private CommandBus commandBus;
 
   @Nested
   @DisplayName("executeVenueInitialize 方法测试")
@@ -59,14 +59,13 @@ class VenueInitializeScheduleJobIT {
 
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
-        when(venueInitializeUseCase.importVenues(any(VenueInitializeCommand.class)))
-            .thenReturn(result);
+        when(commandBus.handle(any(VenueInitializeCommand.class))).thenReturn(result);
 
         // When
         venueInitializeScheduleJob.executeVenueInitialize();
 
         // Then
-        verify(venueInitializeUseCase).importVenues(any(VenueInitializeCommand.class));
+        verify(commandBus).handle(any(VenueInitializeCommand.class));
         xxlJobHelper.verify(() -> XxlJobHelper.handleSuccess(any(String.class)), times(1));
       }
     }
@@ -80,14 +79,13 @@ class VenueInitializeScheduleJobIT {
 
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
-        when(venueInitializeUseCase.importVenues(any(VenueInitializeCommand.class)))
-            .thenReturn(result);
+        when(commandBus.handle(any(VenueInitializeCommand.class))).thenReturn(result);
 
         // When
         venueInitializeScheduleJob.executeVenueInitialize();
 
         // Then
-        verify(venueInitializeUseCase).importVenues(any(VenueInitializeCommand.class));
+        verify(commandBus).handle(any(VenueInitializeCommand.class));
         xxlJobHelper.verify(() -> XxlJobHelper.handleSuccess(any(String.class)), times(1));
       }
     }
@@ -105,8 +103,7 @@ class VenueInitializeScheduleJobIT {
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
         RuntimeException cause = new RuntimeException("数据库连接失败");
-        when(venueInitializeUseCase.importVenues(any(VenueInitializeCommand.class)))
-            .thenThrow(cause);
+        when(commandBus.handle(any(VenueInitializeCommand.class))).thenThrow(cause);
 
         // When
         venueInitializeScheduleJob.executeVenueInitialize();
@@ -124,8 +121,7 @@ class VenueInitializeScheduleJobIT {
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
         RuntimeException cause = new RuntimeException("无法连接到 OpenAlex S3");
-        when(venueInitializeUseCase.importVenues(any(VenueInitializeCommand.class)))
-            .thenThrow(cause);
+        when(commandBus.handle(any(VenueInitializeCommand.class))).thenThrow(cause);
 
         // When
         venueInitializeScheduleJob.executeVenueInitialize();
@@ -143,8 +139,7 @@ class VenueInitializeScheduleJobIT {
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
         RuntimeException cause = new RuntimeException("表中已存在 Venue 数据，请先手动清空数据库后再执行初始化");
-        when(venueInitializeUseCase.importVenues(any(VenueInitializeCommand.class)))
-            .thenThrow(cause);
+        when(commandBus.handle(any(VenueInitializeCommand.class))).thenThrow(cause);
 
         // When
         venueInitializeScheduleJob.executeVenueInitialize();

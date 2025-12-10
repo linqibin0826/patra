@@ -9,11 +9,12 @@ import com.patra.catalog.domain.model.vo.venue.VenueInitializeParams;
 import com.patra.catalog.domain.port.batch.VenueInitializeBatchPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.domain.port.source.VenueSourceFilePort;
+import com.patra.common.cqrs.CommandHandler;
 import com.patra.common.error.ApplicationException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 /// OpenAlex Venue 数据导入编排器。
 ///
@@ -46,9 +47,10 @@ import org.springframework.stereotype.Service;
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
-@Service
+@Component
 @RequiredArgsConstructor
-public class VenueInitializeOrchestrator implements VenueInitializeUseCase {
+public class VenueInitializeHandler
+    implements CommandHandler<VenueInitializeCommand, VenueInitializeResult> {
 
   private final VenueSourceFilePort venueSourceFilePort;
   private final VenueInitializeBatchPort venueImportBatchPort;
@@ -73,7 +75,7 @@ public class VenueInitializeOrchestrator implements VenueInitializeUseCase {
   /// @return 导入结果摘要
   /// @throws DataAlreadyExistsException 当表中已有数据时
   @Override
-  public VenueInitializeResult importVenues(VenueInitializeCommand command) {
+  public VenueInitializeResult handle(VenueInitializeCommand command) {
     log.info("启动 OpenAlex Venue 导入");
 
     // 1. 检查数据是否已存在

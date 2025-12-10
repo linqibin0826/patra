@@ -42,7 +42,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/// PubMed Venue 数据富化编排器单元测试。
+/// PubMed Venue 数据富化命令处理器单元测试。
 ///
 /// **测试策略**：
 ///
@@ -59,9 +59,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-@DisplayName("VenuePubmedEnrichOrchestrator 单元测试")
+@DisplayName("VenuePubmedEnrichHandler 单元测试")
 @Timeout(value = 2, unit = TimeUnit.SECONDS)
-class VenuePubmedEnrichOrchestratorTest {
+class VenuePubmedEnrichHandlerTest {
 
   private static final String TEST_URL =
       "https://ftp.ncbi.nlm.nih.gov/pubmed/Serfile/serfilebase2025.xml";
@@ -77,13 +77,13 @@ class VenuePubmedEnrichOrchestratorTest {
   @Captor private ArgumentCaptor<List<VenueAggregate>> updateBatchCaptor;
   @Captor private ArgumentCaptor<List<VenueAggregate>> insertAllCaptor;
 
-  private VenuePubmedEnrichOrchestrator orchestrator;
+  private VenuePubmedEnrichHandler handler;
 
   @BeforeEach
   @SuppressWarnings("unchecked")
   void setUp() {
-    orchestrator =
-        new VenuePubmedEnrichOrchestrator(
+    handler =
+        new VenuePubmedEnrichHandler(
             streamingDownloadPort, parserPort, venueRepository, transactionTemplate);
 
     // 配置 TransactionTemplate：直接执行回调，模拟事务行为
@@ -124,7 +124,7 @@ class VenuePubmedEnrichOrchestratorTest {
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
 
       // When
-      VenuePubmedEnrichResult result = orchestrator.enrichFromPubmed(command);
+      VenuePubmedEnrichResult result = handler.handle(command);
 
       // Then - 验证调用顺序
       verify(streamingDownloadPort).download(URI.create(TEST_URL));
@@ -152,7 +152,7 @@ class VenuePubmedEnrichOrchestratorTest {
       when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.empty());
 
       // When
-      VenuePubmedEnrichResult result = orchestrator.enrichFromPubmed(command);
+      VenuePubmedEnrichResult result = handler.handle(command);
 
       // Then
       assertThat(result.totalParsed()).isZero();
@@ -189,7 +189,7 @@ class VenuePubmedEnrichOrchestratorTest {
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
 
       // When
-      orchestrator.enrichFromPubmed(command);
+      handler.handle(command);
 
       // Then - 验证更新的是 ISSN-L 匹配的期刊
       verify(venueRepository).updateBatch(updateBatchCaptor.capture());
@@ -215,7 +215,7 @@ class VenuePubmedEnrichOrchestratorTest {
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
 
       // When
-      orchestrator.enrichFromPubmed(command);
+      handler.handle(command);
 
       // Then - 验证更新的是 NLM ID 匹配的期刊
       verify(venueRepository).updateBatch(updateBatchCaptor.capture());
@@ -241,7 +241,7 @@ class VenuePubmedEnrichOrchestratorTest {
       when(venueRepository.findByIssns(any())).thenReturn(Map.of("2222-2222", issnMatch));
 
       // When
-      orchestrator.enrichFromPubmed(command);
+      handler.handle(command);
 
       // Then
       verify(venueRepository).updateBatch(updateBatchCaptor.capture());
@@ -263,7 +263,7 @@ class VenuePubmedEnrichOrchestratorTest {
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
 
       // When
-      VenuePubmedEnrichResult result = orchestrator.enrichFromPubmed(command);
+      VenuePubmedEnrichResult result = handler.handle(command);
 
       // Then
       verify(venueRepository).insertAll(insertAllCaptor.capture());
@@ -300,7 +300,7 @@ class VenuePubmedEnrichOrchestratorTest {
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
 
       // When
-      VenuePubmedEnrichResult result = orchestrator.enrichFromPubmed(command);
+      VenuePubmedEnrichResult result = handler.handle(command);
 
       // Then
       assertThat(result.totalParsed()).isEqualTo(3);
@@ -320,7 +320,7 @@ class VenuePubmedEnrichOrchestratorTest {
       when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.empty());
 
       // When
-      VenuePubmedEnrichResult result = orchestrator.enrichFromPubmed(command);
+      VenuePubmedEnrichResult result = handler.handle(command);
 
       // Then - 耗时应该大于等于 0
       assertThat(result.durationMillis()).isGreaterThanOrEqualTo(0);
@@ -341,7 +341,7 @@ class VenuePubmedEnrichOrchestratorTest {
           .thenThrow(new RuntimeException("Network error"));
 
       // When & Then
-      assertThatThrownBy(() -> orchestrator.enrichFromPubmed(command))
+      assertThatThrownBy(() -> handler.handle(command))
           .isInstanceOf(ApplicationException.class)
           .hasMessageContaining("PubMed Venue 富化失败");
 
@@ -360,7 +360,7 @@ class VenuePubmedEnrichOrchestratorTest {
           .thenThrow(new RuntimeException("XML parse error"));
 
       // When & Then
-      assertThatThrownBy(() -> orchestrator.enrichFromPubmed(command))
+      assertThatThrownBy(() -> handler.handle(command))
           .isInstanceOf(ApplicationException.class)
           .hasMessageContaining("PubMed Venue 富化失败");
     }
@@ -380,7 +380,7 @@ class VenuePubmedEnrichOrchestratorTest {
       doThrow(new RuntimeException("Database error")).when(venueRepository).insertAll(anyList());
 
       // When & Then
-      assertThatThrownBy(() -> orchestrator.enrichFromPubmed(command))
+      assertThatThrownBy(() -> handler.handle(command))
           .isInstanceOf(ApplicationException.class)
           .hasMessageContaining("PubMed Venue 富化失败");
     }

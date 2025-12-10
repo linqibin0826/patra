@@ -24,6 +24,7 @@ import com.patra.catalog.domain.port.parser.SerfileParserPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
+import com.patra.common.cqrs.CommandHandler;
 import com.patra.common.error.ApplicationException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -34,9 +35,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /// PubMed Venue 数据富化编排器。
@@ -64,9 +66,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
-@Service
+@Component
 @RequiredArgsConstructor
-public class VenuePubmedEnrichOrchestrator implements VenuePubmedEnrichUseCase {
+public class VenuePubmedEnrichHandler
+    implements CommandHandler<VenuePubmedEnrichCommand, VenuePubmedEnrichResult> {
 
   /// 批处理大小
   private static final int BATCH_SIZE = 500;
@@ -89,7 +92,7 @@ public class VenuePubmedEnrichOrchestrator implements VenuePubmedEnrichUseCase {
   /// @param command 富化命令（包含 URL 和版本号）
   /// @return 富化结果摘要
   @Override
-  public VenuePubmedEnrichResult enrichFromPubmed(VenuePubmedEnrichCommand command) {
+  public VenuePubmedEnrichResult handle(VenuePubmedEnrichCommand command) {
     TimeInterval timer = DateUtil.timer();
     log.info("启动 PubMed Venue 富化，URL：{}，版本：{}", command.url(), command.serfileVersion());
 
@@ -157,6 +160,13 @@ public class VenuePubmedEnrichOrchestrator implements VenuePubmedEnrichUseCase {
   }
 
   /// 处理一个批次的记录。
+  ///
+  /// 流程：收集标识符 → 批量查询 → 匹配分类 → 持久化聚合根 → 持久化子实体
+  ///
+  /// @param batch 待处理的记录批次
+  /// @param updatedCount 更新计数器
+  /// @param createdCount 新建计数器
+  /// @param skippedCount 跳过计数器
   private void processBatch(
       List<PubmedSerialData> batch,
       AtomicInteger updatedCount,
@@ -164,6 +174,35 @@ public class VenuePubmedEnrichOrchestrator implements VenuePubmedEnrichUseCase {
       AtomicInteger skippedCount) {
 
     // 1. 收集所有标识符
+    IdentifierSets identifiers = collectIdentifiers(batch);
+
+    // 2. 批量查询现有记录
+    ExistingVenuesLookup existingVenues =
+        new ExistingVenuesLookup(
+            venueRepository.findByIssnLs(identifiers.issnLs()),
+            venueRepository.findByNlmIds(identifiers.nlmIds()),
+            venueRepository.findByIssns(identifiers.issns()));
+
+    // 3. 匹配并分类
+    BatchProcessingResult result = matchAndClassifyRecords(batch, existingVenues);
+
+    // 4. 批量持久化聚合根
+    persistAggregates(result);
+
+    // 5. 批量持久化子实体
+    persistChildEntities(result);
+
+    // 6. 更新计数器
+    updatedCount.addAndGet(result.getToUpdate().size());
+    createdCount.addAndGet(result.getToCreate().size());
+    skippedCount.addAndGet(result.getSkippedCount());
+  }
+
+  /// 从批次中收集所有标识符。
+  ///
+  /// @param batch 待处理的记录批次
+  /// @return 标识符集合（ISSN-L、NLM ID、ISSN）
+  private IdentifierSets collectIdentifiers(List<PubmedSerialData> batch) {
     Set<String> issnLs = new HashSet<>();
     Set<String> nlmIds = new HashSet<>();
     Set<String> issns = new HashSet<>();
@@ -182,90 +221,81 @@ public class VenuePubmedEnrichOrchestrator implements VenuePubmedEnrichUseCase {
         issns.add(record.issnElectronic());
       }
     }
+    return new IdentifierSets(issnLs, nlmIds, issns);
+  }
 
-    // 2. 批量查询现有记录
-    Map<String, VenueAggregate> byIssnL = venueRepository.findByIssnLs(issnLs);
-    Map<String, VenueAggregate> byNlmId = venueRepository.findByNlmIds(nlmIds);
-    Map<String, VenueAggregate> byIssn = venueRepository.findByIssns(issns);
+  /// 匹配并分类记录。
+  ///
+  /// 根据标识符匹配现有期刊，将记录分为更新和新建两类。
+  ///
+  /// @param batch 待处理的记录批次
+  /// @param existingVenues 现有期刊的查询结果
+  /// @return 批次处理结果（包含分类和子实体数据）
+  private BatchProcessingResult matchAndClassifyRecords(
+      List<PubmedSerialData> batch, ExistingVenuesLookup existingVenues) {
 
-    // 3. 匹配并分类，同时收集子实体数据
-    List<VenueAggregate> toUpdate = new ArrayList<>();
-    List<VenueAggregate> toCreate = new ArrayList<>();
-    Set<Long> processedVenueIds = new HashSet<>(); // 避免同一期刊被多次更新
-
-    // 收集子实体数据（以聚合根为键，待持久化后转换为 venueId）
-    Map<VenueAggregate, List<VenueMesh>> meshByAggregate = new HashMap<>();
-    Map<VenueAggregate, List<VenueRelation>> relationsByAggregate = new HashMap<>();
-    Map<VenueAggregate, List<VenueIndexingHistory>> historiesByAggregate = new HashMap<>();
+    BatchProcessingResult result = new BatchProcessingResult();
+    Set<Long> processedVenueIds = new HashSet<>();
 
     for (PubmedSerialData record : batch) {
-      Optional<VenueAggregate> matched = findMatch(record, byIssnL, byNlmId, byIssn);
+      Optional<VenueAggregate> matched = findMatch(record, existingVenues);
 
       if (matched.isPresent()) {
         VenueAggregate venue = matched.get();
         // 避免同一期刊被多条记录更新
         if (!processedVenueIds.contains(venue.getId())) {
           updateVenueFromRecord(venue, record);
-          toUpdate.add(venue);
+          result.addUpdate(venue);
           processedVenueIds.add(venue.getId());
-          updatedCount.incrementAndGet();
-
-          // 收集子实体数据
-          meshByAggregate.put(venue, toVenueMeshList(record.meshHeadings()));
-          relationsByAggregate.put(venue, toVenueRelationList(record.titleRelations()));
-          historiesByAggregate.put(venue, toVenueIndexingHistoryList(record.indexingHistories()));
+          result.collectChildEntities(
+              venue,
+              toVenueMeshList(record.meshHeadings()),
+              toVenueRelationList(record.titleRelations()),
+              toVenueIndexingHistoryList(record.indexingHistories()));
         } else {
-          skippedCount.incrementAndGet();
+          result.markSkipped();
         }
       } else {
         VenueAggregate newVenue = createVenueFromRecord(record);
-        toCreate.add(newVenue);
-        createdCount.incrementAndGet();
-
-        // 收集子实体数据
-        meshByAggregate.put(newVenue, toVenueMeshList(record.meshHeadings()));
-        relationsByAggregate.put(newVenue, toVenueRelationList(record.titleRelations()));
-        historiesByAggregate.put(newVenue, toVenueIndexingHistoryList(record.indexingHistories()));
+        result.addCreate(newVenue);
+        result.collectChildEntities(
+            newVenue,
+            toVenueMeshList(record.meshHeadings()),
+            toVenueRelationList(record.titleRelations()),
+            toVenueIndexingHistoryList(record.indexingHistories()));
       }
     }
+    return result;
+  }
 
-    // 4. 批量持久化聚合根
-    if (!toUpdate.isEmpty()) {
-      venueRepository.updateBatch(toUpdate);
-      log.debug("批量更新 {} 条记录", toUpdate.size());
+  /// 批量持久化聚合根。
+  ///
+  /// @param result 批次处理结果
+  private void persistAggregates(BatchProcessingResult result) {
+    if (!result.getToUpdate().isEmpty()) {
+      venueRepository.updateBatch(result.getToUpdate());
+      log.debug("批量更新 {} 条记录", result.getToUpdate().size());
     }
-    if (!toCreate.isEmpty()) {
-      venueRepository.insertAll(toCreate); // insertAll 会通过 assignId() 回填 ID
-      log.debug("批量创建 {} 条记录", toCreate.size());
+    if (!result.getToCreate().isEmpty()) {
+      venueRepository.insertAll(result.getToCreate());
+      log.debug("批量创建 {} 条记录", result.getToCreate().size());
     }
+  }
 
-    // 5. 构建 venueId -> 子实体列表 的映射并批量保存
-    Map<Long, List<VenueMesh>> meshByVenueId = new HashMap<>();
-    Map<Long, List<VenueRelation>> relationsByVenueId = new HashMap<>();
-    Map<Long, List<VenueIndexingHistory>> historiesByVenueId = new HashMap<>();
+  /// 批量持久化子实体。
+  ///
+  /// 将 `Map<VenueAggregate, List<?>>` 转换为 `Map<Long, List<?>>` 并保存。
+  ///
+  /// @param result 批次处理结果（包含聚合根已回填 ID）
+  private void persistChildEntities(BatchProcessingResult result) {
+    Map<Long, List<VenueMesh>> meshByVenueId = toVenueIdMap(result.getMeshByAggregate());
+    Map<Long, List<VenueRelation>> relationsByVenueId =
+        toVenueIdMap(result.getRelationsByAggregate());
+    Map<Long, List<VenueIndexingHistory>> historiesByVenueId =
+        toVenueIdMap(result.getHistoriesByAggregate());
 
-    for (Map.Entry<VenueAggregate, List<VenueMesh>> entry : meshByAggregate.entrySet()) {
-      Long venueId = entry.getKey().getId();
-      if (venueId != null && !entry.getValue().isEmpty()) {
-        meshByVenueId.put(venueId, entry.getValue());
-      }
-    }
-    for (Map.Entry<VenueAggregate, List<VenueRelation>> entry : relationsByAggregate.entrySet()) {
-      Long venueId = entry.getKey().getId();
-      if (venueId != null && !entry.getValue().isEmpty()) {
-        relationsByVenueId.put(venueId, entry.getValue());
-      }
-    }
-    for (Map.Entry<VenueAggregate, List<VenueIndexingHistory>> entry :
-        historiesByAggregate.entrySet()) {
-      Long venueId = entry.getKey().getId();
-      if (venueId != null && !entry.getValue().isEmpty()) {
-        historiesByVenueId.put(venueId, entry.getValue());
-      }
-    }
-
-    // 批量保存子实体
     venueRepository.replaceSerfileDataBatch(meshByVenueId, relationsByVenueId, historiesByVenueId);
+
     log.debug(
         "批量保存子实体：MeSH {} 组，关系 {} 组，索引历史 {} 组",
         meshByVenueId.size(),
@@ -273,33 +303,50 @@ public class VenuePubmedEnrichOrchestrator implements VenuePubmedEnrichUseCase {
         historiesByVenueId.size());
   }
 
+  /// 将聚合根映射转换为 venueId 映射。
+  ///
+  /// 通用方法消除三处重复代码。
+  ///
+  /// @param aggregateMap 以聚合根为键的映射
+  /// @return 以 venueId 为键的映射
+  private <T> Map<Long, List<T>> toVenueIdMap(Map<VenueAggregate, List<T>> aggregateMap) {
+    Map<Long, List<T>> result = new HashMap<>();
+    for (Map.Entry<VenueAggregate, List<T>> entry : aggregateMap.entrySet()) {
+      Long venueId = entry.getKey().getId();
+      if (venueId != null && !entry.getValue().isEmpty()) {
+        result.put(venueId, entry.getValue());
+      }
+    }
+    return result;
+  }
+
   /// 按优先级匹配期刊。
   ///
   /// 优先级：ISSN-L → NLM ID → ISSN
-  private Optional<VenueAggregate> findMatch(
-      PubmedSerialData record,
-      Map<String, VenueAggregate> byIssnL,
-      Map<String, VenueAggregate> byNlmId,
-      Map<String, VenueAggregate> byIssn) {
+  ///
+  /// @param record 待匹配的 PubMed 记录
+  /// @param lookup 现有期刊查询结果
+  /// @return 匹配到的期刊聚合根
+  private Optional<VenueAggregate> findMatch(PubmedSerialData record, ExistingVenuesLookup lookup) {
 
     // 优先级 1: ISSN-L
-    if (record.hasIssnL() && byIssnL.containsKey(record.issnL())) {
-      return Optional.of(byIssnL.get(record.issnL()));
+    if (record.hasIssnL() && lookup.byIssnL().containsKey(record.issnL())) {
+      return Optional.of(lookup.byIssnL().get(record.issnL()));
     }
 
     // 优先级 2: NLM ID
-    if (record.hasNlmId() && byNlmId.containsKey(record.nlmUniqueId())) {
-      return Optional.of(byNlmId.get(record.nlmUniqueId()));
+    if (record.hasNlmId() && lookup.byNlmId().containsKey(record.nlmUniqueId())) {
+      return Optional.of(lookup.byNlmId().get(record.nlmUniqueId()));
     }
 
     // 优先级 3: ISSN (Print)
-    if (record.issnPrint() != null && byIssn.containsKey(record.issnPrint())) {
-      return Optional.of(byIssn.get(record.issnPrint()));
+    if (record.issnPrint() != null && lookup.byIssn().containsKey(record.issnPrint())) {
+      return Optional.of(lookup.byIssn().get(record.issnPrint()));
     }
 
     // 优先级 3: ISSN (Electronic)
-    if (record.issnElectronic() != null && byIssn.containsKey(record.issnElectronic())) {
-      return Optional.of(byIssn.get(record.issnElectronic()));
+    if (record.issnElectronic() != null && lookup.byIssn().containsKey(record.issnElectronic())) {
+      return Optional.of(lookup.byIssn().get(record.issnElectronic()));
     }
 
     return Optional.empty();
@@ -465,6 +512,59 @@ public class VenuePubmedEnrichOrchestrator implements VenuePubmedEnrichUseCase {
     } catch (IllegalArgumentException e) {
       log.warn("无法识别的 CitationSubset 值：{}", value);
       return null;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // 内部辅助类型
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  /// 标识符集合。
+  ///
+  /// 封装从批次中收集的所有期刊标识符。
+  private record IdentifierSets(Set<String> issnLs, Set<String> nlmIds, Set<String> issns) {}
+
+  /// 现有期刊查询结果。
+  ///
+  /// 封装按不同标识符查询的结果，简化 findMatch 方法签名。
+  private record ExistingVenuesLookup(
+      Map<String, VenueAggregate> byIssnL,
+      Map<String, VenueAggregate> byNlmId,
+      Map<String, VenueAggregate> byIssn) {}
+
+  /// 批次处理结果。
+  ///
+  /// 封装单批次处理的所有输出数据，避免多参数传递。
+  @Getter
+  private static class BatchProcessingResult {
+    private final List<VenueAggregate> toUpdate = new ArrayList<>();
+    private final List<VenueAggregate> toCreate = new ArrayList<>();
+    private final Map<VenueAggregate, List<VenueMesh>> meshByAggregate = new HashMap<>();
+    private final Map<VenueAggregate, List<VenueRelation>> relationsByAggregate = new HashMap<>();
+    private final Map<VenueAggregate, List<VenueIndexingHistory>> historiesByAggregate =
+        new HashMap<>();
+    private int skippedCount = 0;
+
+    void markSkipped() {
+      skippedCount++;
+    }
+
+    void addUpdate(VenueAggregate venue) {
+      toUpdate.add(venue);
+    }
+
+    void addCreate(VenueAggregate venue) {
+      toCreate.add(venue);
+    }
+
+    void collectChildEntities(
+        VenueAggregate venue,
+        List<VenueMesh> meshList,
+        List<VenueRelation> relationList,
+        List<VenueIndexingHistory> historyList) {
+      meshByAggregate.put(venue, meshList);
+      relationsByAggregate.put(venue, relationList);
+      historiesByAggregate.put(venue, historyList);
     }
   }
 }

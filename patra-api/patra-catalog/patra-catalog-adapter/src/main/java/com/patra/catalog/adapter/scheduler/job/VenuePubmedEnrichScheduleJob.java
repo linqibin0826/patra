@@ -3,9 +3,9 @@ package com.patra.catalog.adapter.scheduler.job;
 import com.patra.catalog.adapter.scheduler.config.SerfileDataSourceProperties;
 import com.patra.catalog.adapter.scheduler.exception.SerfileConfigurationException;
 import com.patra.catalog.adapter.scheduler.util.SerfileFileNameParser;
-import com.patra.catalog.app.usecase.venue.pubmed.VenuePubmedEnrichUseCase;
 import com.patra.catalog.app.usecase.venue.pubmed.command.VenuePubmedEnrichCommand;
 import com.patra.catalog.app.usecase.venue.pubmed.dto.VenuePubmedEnrichResult;
+import com.patra.common.cqrs.CommandBus;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.RequiredArgsConstructor;
@@ -49,7 +49,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class VenuePubmedEnrichScheduleJob {
 
-  private final VenuePubmedEnrichUseCase venuePubmedEnrichUseCase;
+  private final CommandBus commandBus;
   private final SerfileDataSourceProperties serfileDataSourceProperties;
 
   /// 执行 PubMed Venue 数据富化任务。
@@ -66,8 +66,8 @@ public class VenuePubmedEnrichScheduleJob {
       String serfileVersion = SerfileFileNameParser.extractVersion(url);
       log.info("Serfile 配置：URL [{}]，版本 [{}]（从文件名推断）", url, serfileVersion);
 
-      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(url, serfileVersion);
-      VenuePubmedEnrichResult result = venuePubmedEnrichUseCase.enrichFromPubmed(command);
+      VenuePubmedEnrichResult result =
+          commandBus.handle(VenuePubmedEnrichCommand.of(url, serfileVersion));
       handleSuccess(result);
 
     } catch (SerfileConfigurationException ex) {

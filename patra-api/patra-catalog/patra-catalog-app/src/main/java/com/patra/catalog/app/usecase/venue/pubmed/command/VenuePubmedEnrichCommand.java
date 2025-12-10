@@ -1,7 +1,9 @@
 package com.patra.catalog.app.usecase.venue.pubmed.command;
 
 import cn.hutool.core.text.CharSequenceUtil;
+import com.patra.catalog.app.usecase.venue.pubmed.dto.VenuePubmedEnrichResult;
 import com.patra.catalog.domain.exception.CatalogScheduleParameterException;
+import com.patra.common.cqrs.Command;
 import java.net.URI;
 
 /// PubMed Venue 数据富化命令（Adapter → Application）。
@@ -34,7 +36,8 @@ import java.net.URI;
 /// @param serfileVersion Serfile 版本号（必填）
 /// @author linqibin
 /// @since 0.1.0
-public record VenuePubmedEnrichCommand(String url, String serfileVersion) {
+public record VenuePubmedEnrichCommand(String url, String serfileVersion)
+    implements Command<VenuePubmedEnrichResult> {
 
   /// 构造并验证命令参数。
   ///

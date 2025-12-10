@@ -1,5 +1,8 @@
 package com.patra.catalog.app.usecase.venue.initialize.command;
 
+import com.patra.catalog.app.usecase.venue.initialize.dto.VenueInitializeResult;
+import com.patra.common.cqrs.Command;
+
 /// OpenAlex Venue 导入命令（Adapter → Application）。
 ///
 /// 由调度任务或外部调用方构建，经 Adapter 层协议转换后传递到应用层执行 Venue 导入。
@@ -23,7 +26,7 @@ package com.patra.catalog.app.usecase.venue.initialize.command;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public record VenueInitializeCommand() {
+public record VenueInitializeCommand() implements Command<VenueInitializeResult> {
 
   /// 创建导入命令。
   ///

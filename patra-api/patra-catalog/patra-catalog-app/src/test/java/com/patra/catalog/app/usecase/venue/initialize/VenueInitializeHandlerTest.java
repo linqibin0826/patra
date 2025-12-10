@@ -29,7 +29,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/// OpenAlex Venue 导入编排器单元测试。
+/// OpenAlex Venue 导入命令处理器单元测试。
 ///
 /// **测试策略**：
 ///
@@ -44,15 +44,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///
 /// **流式下载架构**：
 ///
-/// Orchestrator 只负责获取 manifest 并提取分区 URL 列表，
+/// Handler 只负责获取 manifest 并提取分区 URL 列表，
 /// 实际的分区文件下载由 ItemReader 按需完成。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
-@DisplayName("VenueInitializeOrchestrator 单元测试")
+@DisplayName("VenueInitializeHandler 单元测试")
 @Timeout(value = 2, unit = TimeUnit.SECONDS)
-class VenueInitializeOrchestratorTest {
+class VenueInitializeHandlerTest {
 
   private static final String PARTITION_URL_1 =
       "https://openalex.s3.amazonaws.com/data/sources/updated_date=2024-01-01/part_000.gz";
@@ -63,12 +63,12 @@ class VenueInitializeOrchestratorTest {
   @Mock private VenueInitializeBatchPort venueImportBatchPort;
   @Mock private VenueRepository venueRepository;
 
-  private VenueInitializeOrchestrator orchestrator;
+  private VenueInitializeHandler handler;
 
   @BeforeEach
   void setUp() {
-    orchestrator =
-        new VenueInitializeOrchestrator(venueSourceFilePort, venueImportBatchPort, venueRepository);
+    handler =
+        new VenueInitializeHandler(venueSourceFilePort, venueImportBatchPort, venueRepository);
   }
 
   /// 创建测试用的 OpenAlexManifest。
@@ -93,7 +93,7 @@ class VenueInitializeOrchestratorTest {
       when(venueRepository.hasAnyData()).thenReturn(true);
 
       // When & Then
-      assertThatThrownBy(() -> orchestrator.importVenues(command))
+      assertThatThrownBy(() -> handler.handle(command))
           .isInstanceOf(DataAlreadyExistsException.class)
           .hasMessageContaining("Venue");
 
@@ -114,7 +114,7 @@ class VenueInitializeOrchestratorTest {
       when(venueImportBatchPort.launchImport(any(VenueInitializeParams.class))).thenReturn(12345L);
 
       // When
-      VenueInitializeResult result = orchestrator.importVenues(command);
+      VenueInitializeResult result = handler.handle(command);
 
       // Then
       verify(venueRepository).hasAnyData();
@@ -142,7 +142,7 @@ class VenueInitializeOrchestratorTest {
       when(venueImportBatchPort.launchImport(any(VenueInitializeParams.class))).thenReturn(12345L);
 
       // When
-      orchestrator.importVenues(command);
+      handler.handle(command);
 
       // Then
       ArgumentCaptor<VenueInitializeParams> captor =
@@ -166,7 +166,7 @@ class VenueInitializeOrchestratorTest {
       when(venueImportBatchPort.launchImport(any(VenueInitializeParams.class))).thenReturn(12345L);
 
       // When
-      VenueInitializeResult result = orchestrator.importVenues(command);
+      VenueInitializeResult result = handler.handle(command);
 
       // Then
       assertThat(result.fileCount()).isEqualTo(2);
@@ -183,7 +183,7 @@ class VenueInitializeOrchestratorTest {
       when(venueSourceFilePort.fetchManifest()).thenThrow(new RuntimeException("网络连接失败"));
 
       // When & Then
-      assertThatThrownBy(() -> orchestrator.importVenues(command))
+      assertThatThrownBy(() -> handler.handle(command))
           .isInstanceOf(ApplicationException.class)
           .hasMessageContaining("OpenAlex Venue 导入失败")
           .hasMessageContaining("网络连接失败");
@@ -202,7 +202,7 @@ class VenueInitializeOrchestratorTest {
           .thenThrow(new RuntimeException("Job 启动失败"));
 
       // When & Then
-      assertThatThrownBy(() -> orchestrator.importVenues(command))
+      assertThatThrownBy(() -> handler.handle(command))
           .isInstanceOf(ApplicationException.class)
           .hasMessageContaining("OpenAlex Venue 导入失败")
           .hasMessageContaining("Job 启动失败");
@@ -233,7 +233,7 @@ class VenueInitializeOrchestratorTest {
       when(venueSourceFilePort.fetchManifest()).thenThrow(originalException);
 
       // When & Then
-      assertThatThrownBy(() -> orchestrator.importVenues(command))
+      assertThatThrownBy(() -> handler.handle(command))
           .isInstanceOf(ApplicationException.class)
           .isSameAs(originalException);
     }
