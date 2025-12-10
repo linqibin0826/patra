@@ -8,6 +8,7 @@
 
 ## 核心功能
 
+- **CommandBus 命令总线**: CQRS 命令分发基础设施,自动发现 Handler,支持拦截器链
 - **JSON/XML 序列化**: 基于 Jackson 的标准化序列化配置(日期格式、空值处理等)
 - **错误处理框架**: 可扩展的错误解析管道,通过 ResolutionInterceptor 扩展点支持自定义拦截器
 - **统一时间源**: 提供全局 UTC Clock,支持可测试性和时间戳一致性
@@ -16,6 +17,16 @@
 - **扩展点机制**: 提供 ResolutionInterceptor 接口,允许外部模块（如 patra-spring-boot-starter-observability）注入可观测性功能
 
 ## 自动配置内容
+
+### CommandBusAutoConfiguration
+CQRS 命令总线自动配置:
+- `CommandBus`: 命令分发接口（来自 patra-common-core）
+- `SimpleCommandBus`: 默认实现,启动时自动发现并注册所有 CommandHandler
+- 内置拦截器（条件装配）:
+  - `TracingCommandInterceptor` (Order=50): 基于 Micrometer Observation API
+  - `LoggingCommandInterceptor` (Order=100): 执行日志和耗时记录
+  - `MetricsCommandInterceptor` (Order=200): Micrometer 指标收集
+- 可配置的异步执行线程池
 
 ### CoreAutoConfiguration
 提供核心基础设施 Bean:
@@ -50,6 +61,64 @@
 - 可选的 Micrometer 指标集成(当 MeterRegistry 可用时自动注册)
 
 ## 主要组件
+
+### CommandBus (命令总线)
+CQRS 写操作入口,Adapter 层统一通过 CommandBus 调用业务逻辑:
+
+**核心特性**:
+- **类型安全**: 通过泛型自动路由到正确的 Handler
+- **拦截器链**: 支持 Logging/Metrics/Tracing 横切关注点
+- **异步执行**: `handleAsync()` 返回 CompletableFuture
+- **自动发现**: 启动时扫描并注册所有 `CommandHandler` 实现
+
+**Adapter 层使用**:
+```java
+@RestController
+@RequiredArgsConstructor
+public class TaskController {
+    private final CommandBus commandBus;
+
+    @PostMapping("/tasks")
+    public TaskResponse createTask(@RequestBody TaskRequest request) {
+        // 构造 Command 并通过 CommandBus 分发
+        CreateTaskCommand command = new CreateTaskCommand(request.name());
+        TaskResult result = commandBus.handle(command);
+        return TaskResponse.from(result);
+    }
+
+    @PostMapping("/tasks/async")
+    public CompletableFuture<TaskResponse> createTaskAsync(@RequestBody TaskRequest request) {
+        // 异步执行
+        CreateTaskCommand command = new CreateTaskCommand(request.name());
+        return commandBus.handleAsync(command)
+            .thenApply(TaskResponse::from);
+    }
+}
+```
+
+**实现 CommandHandler**:
+```java
+@Component
+public class CreateTaskHandler implements CommandHandler<CreateTaskCommand, TaskResult> {
+
+    private final TaskRepository taskRepository;
+    private final Clock clock;
+
+    @Override
+    @Transactional
+    public TaskResult handle(CreateTaskCommand command) {
+        Task task = Task.create(command.name(), Instant.now(clock));
+        taskRepository.save(task);
+        return new TaskResult(task.getId());
+    }
+}
+```
+
+**定义 Command**:
+```java
+// Command 必须实现 Command<R> 接口,R 为返回类型
+public record CreateTaskCommand(String name) implements Command<TaskResult> {}
+```
 
 ### Clock (时间源)
 统一的 UTC 时钟,便于测试和时间戳一致性:
@@ -195,7 +264,33 @@ public class MyInterceptor implements ResolutionInterceptor {
 
 ## 配置属性
 
-**配置前缀**: `patra.error`, `patra.tracing`, `patra.async`
+**配置前缀**: `patra.command-bus`, `patra.error`, `patra.tracing`, `patra.async`
+
+### CommandBus 配置
+```yaml
+patra:
+  command-bus:
+    async:
+      core-pool-size: 4                # 核心线程数(默认 4)
+      max-pool-size: 16                # 最大线程数(默认 16)
+      queue-capacity: 100              # 队列容量(默认 100)
+      thread-name-prefix: cmd-bus-     # 线程名前缀(默认 cmd-bus-)
+    interceptors:
+      logging: true                    # 启用日志拦截器(默认 true)
+      metrics: true                    # 启用指标拦截器(默认 true)
+      tracing: true                    # 启用追踪拦截器(默认 true)
+```
+
+**配置属性说明**:
+| 属性 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `patra.command-bus.async.core-pool-size` | int | 4 | 异步执行核心线程数 |
+| `patra.command-bus.async.max-pool-size` | int | 16 | 异步执行最大线程数 |
+| `patra.command-bus.async.queue-capacity` | int | 100 | 异步任务队列容量 |
+| `patra.command-bus.async.thread-name-prefix` | String | `cmd-bus-` | 线程名前缀 |
+| `patra.command-bus.interceptors.logging` | boolean | true | 启用执行日志和耗时记录 |
+| `patra.command-bus.interceptors.metrics` | boolean | true | 启用 Micrometer 指标收集 |
+| `patra.command-bus.interceptors.tracing` | boolean | true | 启用 Observation API 追踪 |
 
 ### 异步线程池配置
 ```yaml
@@ -269,7 +364,7 @@ patra:
 ```
 
 **传递依赖**(自动包含):
-- `patra-common-core`: 领域基础类和工具
+- `patra-common-core`: 领域基础类和工具,包含 `Command`/`CommandBus`/`CommandHandler` 接口
 - `spring-boot-starter-json`: Jackson JSON 支持
 - `resilience4j-circuitbreaker`: 熔断器(可选)
 
@@ -302,12 +397,12 @@ patra:
 **使用统一时钟**:
 ```java
 @Service
-public class PlanIngestionOrchestrator {
+public class PlanIngestionHandler {
     private final Clock clock;
 
-    public void processPlan(PlanAggregate plan) {
+    public void handle(PlanIngestionCommand command) {
         Instant ingestedAt = Instant.now(clock);
-        plan.recordIngestion(ingestedAt);
+        // 处理命令...
     }
 }
 ```
@@ -336,5 +431,5 @@ public class GlobalExceptionHandler {
 
 ---
 
-**最后更新**: 2025-12-01 (新增: 异步线程池管理功能)
+**最后更新**: 2025-12-10 (新增: CommandBus 命令总线文档)
 **维护者**: Patra Team
