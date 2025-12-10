@@ -7,3 +7,4 @@
 5. 禁止使用 `ServiceImpl.saveBatch()`（底层是循环 INSERT）和继承 `ServiceImpl`
 6. `Db.saveBatch()` 自动触发 ID 回填和审计字段填充，无需手动设置
 7. 数据库连接 URL 必须包含 `rewriteBatchedStatements=true`
+8. `Db.saveBatch()` 会参与已存在的 Spring 事务，Application 层需用 `@Transactional` 或 `TransactionTemplate` 包裹以确保原子性

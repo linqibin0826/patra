@@ -36,3 +36,4 @@
 4. 切片测试仅测试 Adapter 层，禁止跨层调用
 5. E2E 测试覆盖核心业务流程，避免冗余测试场景
 6. 集成测试统一使用 `patra-spring-boot-starter-test` 提供的 `TestMybatisPlusAutoConfiguration`，禁止在各服务中重复定义测试配置
+7. `@MybatisPlusTest` 切片测试中 `Db.saveBatch()` 与测试事务隔离，验证批量操作需使用 E2E 测试
