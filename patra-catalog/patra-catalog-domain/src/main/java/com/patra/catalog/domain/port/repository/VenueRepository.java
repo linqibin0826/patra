@@ -22,16 +22,15 @@ import java.util.Set;
 /// - 接口在 Domain 层定义，确保领域层独立
 /// - 实现在 Infrastructure 层，遵循依赖倒置原则（DIP）
 /// - 以聚合根为操作单位，保持一致性边界
-/// - 聚合相关的所有数据通过此 Repository 统一维护
 ///
 /// **补充数据管理**：
 ///
-/// 此 Repository 同时管理与聚合关联的补充数据：
+/// 本接口同时管理与载体关联的补充数据（不属于聚合边界，但通过 Repository 统一访问）：
 ///
-/// - **yearlyMetrics**：年度发文统计（来自 OpenAlex）
-/// - **meshTerms**：MeSH 主题词（来自 NLM Serfile）
-/// - **relations**：期刊关联关系（来自 NLM Serfile）
-/// - **indexingHistories**：索引历史（来自 NLM Serfile）
+/// - VenuePublicationStats：年度发文统计（来自 OpenAlex）
+/// - VenueMesh：MeSH 主题词（来自 NLM Serfile）
+/// - VenueRelation：期刊关联关系（来自 NLM Serfile）
+/// - VenueIndexingHistory：索引历史（来自 NLM Serfile）
 ///
 /// **主要使用场景**：
 ///
@@ -107,45 +106,40 @@ public interface VenueRepository {
   /// @return ISSN 到聚合根的映射（永不为 null）
   Map<String, VenueAggregate> findByIssns(Collection<String> issns);
 
-  /// 批量更新载体聚合根（含子实体）。
+  /// 批量增量更新载体聚合根。
   ///
-  /// **适用场景**：Serfile 导入时覆盖已有数据
+  /// 基于聚合根的脏标记和标识符差异，执行精准的增量更新，避免全量覆盖。
   ///
   /// **更新策略**：
   ///
-  /// - 主表字段：直接更新
-  /// - 子实体（MeSH、关联、索引历史）：删除旧记录，插入新记录
-  /// - 标识符：合并（不删除已有，只添加新的）
+  /// - **主表**：仅更新 `isDirty() == true` 的聚合根，更新后自动清除脏标记
+  /// - **标识符**：基于集合差异计算，删除已移除的、插入新增的（真正的增量更新）
   ///
   /// **事务说明**：
   ///
-  /// - 方法本身不管理事务，由调用方控制事务边界
-  /// - 建议按批次调用（如每 500 条一批）
+  /// - 方法本身不管理事务，由调用方（Application 层）控制事务边界
+  /// - 建议按批次调用（如每 500 条一批），避免长事务
   ///
-  /// @param aggregates 聚合根列表（不能为 null，可以为空）
+  /// @param aggregates 聚合根列表（可以为 null 或空，直接返回）
   void updateBatch(List<VenueAggregate> aggregates);
 
-  // ========== 补充数据管理（年度指标、MeSH、关联关系、索引历史） ==========
+  // ========== 补充数据管理（关联数据，不属于聚合边界） ==========
 
-  // --- 年度指标（OpenAlex 数据） ---
-
-  /// 批量查询年度指标。
+  /// 批量查询年度发文统计。
   ///
-  /// @param venueIds Venue ID 集合
-  /// @return Map，key 为 venueId，value 为该 Venue 的年度指标列表
+  /// @param venueIds Venue ID 集合（不能为 null，可以为空）
+  /// @return Map，key 为 venueId，value 为该 Venue 的年度统计列表（永不为 null）
   Map<Long, List<VenuePublicationStats>> findYearlyMetricsByVenueIds(Collection<Long> venueIds);
 
-  /// 批量替换年度指标（删除旧数据后插入新数据）。
+  /// 批量替换年度发文统计（删除旧数据后插入新数据）。
   ///
-  /// @param metricsByVenueId Map，key 为 venueId，value 为要设置的年度指标列表
+  /// @param metricsByVenueId Map，key 为 venueId，value 为要设置的年度统计列表
   void replaceYearlyMetricsBatch(Map<Long, List<VenuePublicationStats>> metricsByVenueId);
-
-  // --- MeSH 主题词（Serfile 数据） ---
 
   /// 批量查询 MeSH 主题词。
   ///
-  /// @param venueIds Venue ID 集合
-  /// @return Map，key 为 venueId，value 为该 Venue 的 MeSH 主题词列表
+  /// @param venueIds Venue ID 集合（不能为 null，可以为空）
+  /// @return Map，key 为 venueId，value 为该 Venue 的 MeSH 主题词列表（永不为 null）
   Map<Long, List<VenueMesh>> findMeshTermsByVenueIds(Collection<Long> venueIds);
 
   /// 批量替换 MeSH 主题词（删除旧数据后插入新数据）。
@@ -153,12 +147,10 @@ public interface VenueRepository {
   /// @param meshTermsByVenueId Map，key 为 venueId，value 为要设置的 MeSH 主题词列表
   void replaceMeshTermsBatch(Map<Long, List<VenueMesh>> meshTermsByVenueId);
 
-  // --- 期刊关联关系（Serfile 数据） ---
-
   /// 批量查询期刊关联关系。
   ///
-  /// @param venueIds Venue ID 集合
-  /// @return Map，key 为 venueId，value 为该 Venue 的关联关系列表
+  /// @param venueIds Venue ID 集合（不能为 null，可以为空）
+  /// @return Map，key 为 venueId，value 为该 Venue 的关联关系列表（永不为 null）
   Map<Long, List<VenueRelation>> findRelationsByVenueIds(Collection<Long> venueIds);
 
   /// 批量替换期刊关联关系（删除旧数据后插入新数据）。
@@ -166,12 +158,10 @@ public interface VenueRepository {
   /// @param relationsByVenueId Map，key 为 venueId，value 为要设置的关联关系列表
   void replaceRelationsBatch(Map<Long, List<VenueRelation>> relationsByVenueId);
 
-  // --- 索引历史（Serfile 数据） ---
-
   /// 批量查询索引历史。
   ///
-  /// @param venueIds Venue ID 集合
-  /// @return Map，key 为 venueId，value 为该 Venue 的索引历史列表
+  /// @param venueIds Venue ID 集合（不能为 null，可以为空）
+  /// @return Map，key 为 venueId，value 为该 Venue 的索引历史列表（永不为 null）
   Map<Long, List<VenueIndexingHistory>> findIndexingHistoriesByVenueIds(Collection<Long> venueIds);
 
   /// 批量替换索引历史（删除旧数据后插入新数据）。
@@ -179,17 +169,20 @@ public interface VenueRepository {
   /// @param historiesByVenueId Map，key 为 venueId，value 为要设置的索引历史列表
   void replaceIndexingHistoriesBatch(Map<Long, List<VenueIndexingHistory>> historiesByVenueId);
 
-  // --- 便捷方法：Serfile 数据批量替换 ---
-
   /// 批量替换 Serfile 相关数据（MeSH、关联关系、索引历史）。
   ///
   /// 用于 Serfile 导入场景，在同一次调用中更新所有 Serfile 相关数据。
+  /// 内部实现依次调用各个 replace 方法。
   ///
   /// @param meshTermsByVenueId MeSH 主题词
   /// @param relationsByVenueId 关联关系
   /// @param historiesByVenueId 索引历史
-  void replaceSerfileDataBatch(
+  default void replaceSerfileDataBatch(
       Map<Long, List<VenueMesh>> meshTermsByVenueId,
       Map<Long, List<VenueRelation>> relationsByVenueId,
-      Map<Long, List<VenueIndexingHistory>> historiesByVenueId);
+      Map<Long, List<VenueIndexingHistory>> historiesByVenueId) {
+    replaceMeshTermsBatch(meshTermsByVenueId);
+    replaceRelationsBatch(relationsByVenueId);
+    replaceIndexingHistoriesBatch(historiesByVenueId);
+  }
 }

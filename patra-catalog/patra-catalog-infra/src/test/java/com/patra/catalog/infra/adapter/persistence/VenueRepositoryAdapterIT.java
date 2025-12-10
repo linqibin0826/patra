@@ -250,7 +250,7 @@ class VenueRepositoryAdapterIT {
     VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
     venue.withIssnL("1234-" + openalexId);
     venue.withCountryCode("US");
-    venue.withOaStatus(true, false, false);
+    venue.withOaStatus(true, false);
     venue.withPublicationHistory(PublicationHistory.active(2000));
     return venue;
   }
@@ -261,8 +261,24 @@ class VenueRepositoryAdapterIT {
     VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
     venue.withIssnL(issnL);
     venue.withCountryCode("US");
-    venue.withOaStatus(true, false, false);
+    venue.withOaStatus(true, false);
     venue.withPublicationHistory(PublicationHistory.active(2000));
     return venue;
   }
+
+  // ========== updateBatch() 测试说明 ==========
+  //
+  // updateBatch() 方法内部使用 Db.saveBatch() 和 Db.updateBatchById() 进行批量操作。
+  // 这些方法在 @MybatisPlusTest 切片测试中无法正常工作，原因如下：
+  //
+  // 1. Db.saveBatch() 使用独立的 BATCH SqlSession（ExecutorType.BATCH）
+  // 2. 该 SqlSession 与切片测试使用的普通 SqlSession 不共享数据
+  // 3. 因此批量插入/更新的数据在同一测试方法中不可见
+  //
+  // 解决方案：updateBatch() 的集成测试应在 @SpringBootTest E2E 测试中进行，
+  // 确保有完整的 Spring 事务管理上下文。
+  //
+  // 参考：
+  // - MyBatis BATCH SqlSession: https://mybatis.org/mybatis-3/sqlmap-xml.html#batch
+  // - MyBatis-Plus 批量操作: https://baomidou.com/en/guides/batch-operation/
 }

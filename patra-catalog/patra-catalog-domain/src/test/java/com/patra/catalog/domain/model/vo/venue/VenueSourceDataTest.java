@@ -133,7 +133,8 @@ class VenueSourceDataTest {
     @DisplayName("hasExtractedData() 应正确判断")
     void shouldCheckHasExtractedData() {
       VenueSourceData withData =
-          VenueSourceData.create(123L, DataSourceCode.OPENALEX, null, null, "{\"title\": \"Nature\"}");
+          VenueSourceData.create(
+              123L, DataSourceCode.OPENALEX, null, null, "{\"title\": \"Nature\"}");
       VenueSourceData withoutData = VenueSourceData.create(123L, DataSourceCode.OPENALEX);
 
       assertThat(withData.hasExtractedData()).isTrue();

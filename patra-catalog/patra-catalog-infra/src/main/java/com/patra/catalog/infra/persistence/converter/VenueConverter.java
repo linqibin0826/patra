@@ -72,15 +72,15 @@ public abstract class VenueConverter {
   @Mapping(target = "publicationStartYear", source = "publicationHistory.startYear")
   @Mapping(target = "publicationEndYear", source = "publicationHistory.endYear")
   @Mapping(target = "ceased", source = "publicationHistory.ceased")
-  // 索引收录信息（来自 PubMed）
-  @Mapping(target = "indexingStatus", source = "indexingInfo.status")
-  @Mapping(target = "medlineTa", source = "indexingInfo.medlineTa")
-  @Mapping(target = "isoAbbreviation", source = "indexingInfo.isoAbbreviation")
-  // 最新评级快照
-  @Mapping(target = "latestImpactScore", source = "latestRating.impactScore")
-  @Mapping(target = "latestQuartile", source = "latestRating.quartile")
-  @Mapping(target = "latestRatingSystem", source = "latestRating.ratingSystem")
-  @Mapping(target = "latestRatingYear", source = "latestRating.year")
+  // 索引收录信息（暂未实现，保留 DO 字段但不映射）
+  @Mapping(target = "indexingStatus", ignore = true)
+  @Mapping(target = "medlineTa", ignore = true)
+  @Mapping(target = "isoAbbreviation", ignore = true)
+  // 最新评级快照（暂未实现，保留 DO 字段但不映射）
+  @Mapping(target = "latestImpactScore", ignore = true)
+  @Mapping(target = "latestQuartile", ignore = true)
+  @Mapping(target = "latestRatingSystem", ignore = true)
+  @Mapping(target = "latestRatingYear", ignore = true)
   // APC 信息
   @Mapping(target = "apcUsd", source = "apcInfo.usd")
   @Mapping(target = "apcPrices", source = "apcInfo.prices", qualifiedByName = "apcPricesToJson")
@@ -95,6 +95,10 @@ public abstract class VenueConverter {
   @Mapping(target = "isOa", source = "oa")
   @Mapping(target = "isInDoaj", source = "inDoaj")
   // 语言信息（来自 Serfile）
+  @Mapping(
+      target = "primaryLanguage",
+      source = "languages",
+      qualifiedByName = "extractPrimaryLanguage")
   @Mapping(target = "languages", source = "languages", qualifiedByName = "languagesToJson")
   public abstract VenueDO toDO(VenueAggregate aggregate);
 
@@ -158,6 +162,18 @@ public abstract class VenueConverter {
       arrayNode.add(node);
     }
     return arrayNode;
+  }
+
+  /// 从语言信息中提取主要语言代码。
+  ///
+  /// @param languages 语言信息
+  /// @return 主要语言代码（ISO 639-3），无主语言时返回 null
+  @Named("extractPrimaryLanguage")
+  protected String extractPrimaryLanguage(VenueLanguages languages) {
+    if (languages == null || !languages.hasPrimaryLanguages()) {
+      return null;
+    }
+    return languages.getMainLanguage();
   }
 
   /// 将语言信息转换为 JSON。

@@ -325,7 +325,6 @@ public class VenuePubmedEnrichOrchestrator implements VenuePubmedEnrichUseCase {
 
     // 覆盖语言信息
     if (!record.languages().isEmpty()) {
-      venue.withPrimaryLanguage(record.getPrimaryLanguage());
       venue.withLanguages(toVenueLanguages(record.languages()));
     }
 
@@ -354,7 +353,6 @@ public class VenuePubmedEnrichOrchestrator implements VenuePubmedEnrichUseCase {
 
     // 设置语言信息
     if (!record.languages().isEmpty()) {
-      venue.withPrimaryLanguage(record.getPrimaryLanguage());
       venue.withLanguages(toVenueLanguages(record.languages()));
     }
 

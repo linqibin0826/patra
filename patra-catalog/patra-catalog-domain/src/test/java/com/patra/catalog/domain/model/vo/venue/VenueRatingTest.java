@@ -113,7 +113,14 @@ class VenueRatingTest {
       // When
       VenueRating rating =
           VenueRating.of(
-              venueId, year, system, quartile, impactScore, ratingData, categories, sourceUrl,
+              venueId,
+              year,
+              system,
+              quartile,
+              impactScore,
+              ratingData,
+              categories,
+              sourceUrl,
               null);
 
       // Then
@@ -171,8 +178,15 @@ class VenueRatingTest {
     void shouldCheckHasCategories() {
       VenueRating withCategories =
           VenueRating.of(
-              123L, 2024, RatingSystem.JCR, null, null, null, "[{\"category\": \"Medicine\"}]",
-              null, null);
+              123L,
+              2024,
+              RatingSystem.JCR,
+              null,
+              null,
+              null,
+              "[{\"category\": \"Medicine\"}]",
+              null,
+              null);
       VenueRating withoutCategories = VenueRating.create(123L, 2024, RatingSystem.JCR);
 
       assertThat(withCategories.hasCategories()).isTrue();
@@ -250,8 +264,7 @@ class VenueRatingTest {
     @ParameterizedTest(name = "分区 \"{0}\" 应标准化为 \"{1}\"")
     @DisplayName("应正确标准化分区格式")
     @CsvSource({
-      "Q1, Q1", "q2, Q2", "1区, Q1", "2区, Q2", "3区, Q3", "4区, Q4", "1, Q1", "2, Q2", "3, Q3",
-      "4, Q4"
+      "Q1, Q1", "q2, Q2", "1区, Q1", "2区, Q2", "3区, Q3", "4区, Q4", "1, Q1", "2, Q2", "3, Q3", "4, Q4"
     })
     void shouldNormalizeQuartile(String input, String expected) {
       VenueRating rating = VenueRating.create(123L, 2024, RatingSystem.JCR, input, null);
