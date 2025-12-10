@@ -1,6 +1,19 @@
 # 聚合设计规则
 
-本文档基于 Vaughn Vernon 的《Implementing Domain-Driven Design》（红皮书）总结聚合设计的核心规则。
+本文档基于 Vaughn Vernon 的《Implementing Domain-Driven Design》（红皮书）总结聚合设计的核心规则，并扩展了值对象归属判断、逻辑分组重构和性能优化策略。
+
+## 核心矛盾：业务完整性 vs 系统性能
+
+聚合设计的核心挑战是平衡：
+- **业务完整性（Consistency）**：确保不变量规则在任何时候都成立
+- **系统性能（Performance）**：避免加载过多数据、减少事务锁定时间
+
+**解决路径**：
+1. 通过**不变性检查**判断值对象是否真的属于该聚合
+2. 通过**逻辑分组**减少聚合根的认知负担
+3. 通过**技术手段**（懒加载/CQRS）解决"大聚合"性能问题
+
+---
 
 ## Vaughn Vernon 的聚合设计四规则
 
@@ -197,3 +210,263 @@ public void handleOrderCompleted(OrderCompletedEvent event) {
 | VenuePublicationStats | ✅ 年度指标与期刊绑定 | 聚合内实体 |
 | VenueRating (JCR/CAS) | ❌ 有独立来源和更新周期 | 独立聚合 |
 | Publication 列表 | ❌ 数量巨大 | 通过 venueId 反向查询 |
+
+---
+
+## 值对象归属判断：不变性检查（Invariant Check）
+
+### 核心问题
+
+> **当我修改"值对象 A"时，是否需要立即检查聚合根或其他属性的状态，以确保业务合法？**
+
+这是判断值对象是否应该属于某个聚合的**黄金法则**。
+
+### 三种场景分类
+
+#### Case 1：强一致性（必须在一起）
+
+**特征**：修改该值对象时，必须立即验证/更新聚合的其他状态。
+
+**示例**：
+- `OrderItems`（订单项）：删除一个 Item，必须立即重算 `TotalAmount`
+- `VenueIdentifier`（期刊标识符）：ISSN 变更必须与 Venue 基本信息保持一致
+
+**结论**：**必须作为聚合根的属性，由同一个 Repository 管理。**
+
+```java
+// ✅ 正确：OrderItem 属于 Order 聚合
+public class Order {
+    private List<OrderItem> items;
+    private Money totalAmount;
+
+    public void removeItem(Long itemId) {
+        items.removeIf(i -> i.getId().equals(itemId));
+        this.totalAmount = calculateTotal();  // 必须立即重算
+    }
+}
+```
+
+#### Case 2：弱一致性（可以分离）
+
+**特征**：修改该数据不影响聚合根或其他属性的业务合法性。
+
+**示例**：
+- `ProductReviews`（商品评价）：新增评价不影响商品的价格、库存、状态
+- `VenueRating`（期刊评级）：JCR 分区更新不影响期刊基本信息的合法性
+
+**结论**：**应该拆分为独立的聚合，拥有自己的 Repository。**
+
+```java
+// ✅ 正确：Review 是独立聚合，通过 productId 关联
+public class Review {
+    private Long id;
+    private Long productId;  // 通过 ID 引用 Product
+    private String content;
+    private Integer rating;
+}
+```
+
+#### Case 3：纯信息流（边缘数据）
+
+**特征**：这些数据仅用于展示，修改它们通常不涉及复杂的业务校验。
+
+**示例**：
+- `ChangeLogs`（操作日志）：仅记录历史，不参与业务校验
+- `RichTextDescription`（富文本描述）：纯展示内容
+
+**结论**：**属于聚合的一部分，但是"边缘数据"，可以懒加载。**
+
+### 不变性检查清单
+
+对聚合的每个候选值对象/实体，执行以下检查：
+
+| 检查项 | 判断 |
+|--------|------|
+| 修改它时，是否必须校验聚合根状态？ | 是 → Case 1 |
+| 修改它时，是否需要更新聚合的其他属性？ | 是 → Case 1 |
+| 它有独立的数据来源和更新周期吗？ | 是 → Case 2 |
+| 它只用于展示，不参与业务规则？ | 是 → Case 3 |
+
+---
+
+## 逻辑分组重构：防止聚合根代码爆炸
+
+### 问题场景
+
+当聚合有 10+ 个值对象时，聚合根类会变得臃肿难维护：
+
+```java
+// ❌ 问题：扁平且乱，10+ 个零散字段
+class User {
+    String province;
+    String city;
+    String street;     // --- 地址相关
+    String bankName;
+    String accountNo;  // --- 银行相关
+    String wechatId;
+    String alipayId;   // --- 社交相关
+    // ... 更多字段
+}
+```
+
+### 解决方案：语义分组
+
+将相关字段打包成更大的值对象，按业务含义归类：
+
+```java
+// ✅ 正确：结构清晰，聚合根只管理 3 个大对象
+class User {
+    Address address;       // 值对象组 A
+    BankAccount account;   // 值对象组 B
+    SocialProfile social;  // 值对象组 C
+}
+
+// 值对象组定义
+record Address(String province, String city, String street) {}
+record BankAccount(String bankName, String accountNo) {}
+record SocialProfile(String wechatId, String alipayId) {}
+```
+
+### 分组原则
+
+1. **业务内聚**：同一业务概念的属性放在一起
+2. **变更频率**：经常一起变更的属性放在一起
+3. **访问模式**：经常一起读取的属性放在一起
+
+### 医学领域示例
+
+```java
+// ✅ Venue 聚合的逻辑分组
+class VenueAggregate {
+    // 核心身份信息
+    VenueIdentity identity;        // name, abbreviation, type
+
+    // 外部标识符集合
+    List<VenueIdentifier> identifiers;  // ISSN, NLM ID, OpenAlex ID
+
+    // 数据来源追踪
+    VenueSourceData sourceData;    // provenance info, raw data
+
+    // 评级信息（如果属于聚合）
+    VenueRating rating;            // JCR, CAS 分区
+}
+```
+
+---
+
+## 性能优化：懒加载与 CQRS
+
+### ⚠️ 反模式警示
+
+**绝对不要**通过"两个不同的 Repository"来管理属于同一个聚合的数据：
+
+```java
+// ❌ 严重错误！违反 DDD 原则
+class OrderService {
+    OrderCoreRepository coreRepo;      // 管理订单核心数据
+    OrderExtraRepository extraRepo;    // 管理订单附加数据
+
+    public void updateOrder(Order order) {
+        coreRepo.save(order.getCore());
+        extraRepo.save(order.getExtra());  // 如果忘了调用？数据就丢了！
+    }
+}
+```
+
+**后果**：
+1. **事务一致性崩溃**：必须记得同时调用两个 save，新人容易遗漏
+2. **领域逻辑泄漏**：业务校验散落在 Service 层，聚合根变得"残缺不全"
+
+### 正确方案 1：Repository 层懒加载
+
+在 **Infrastructure 层**实现按需加载，对 **Domain 层**透明：
+
+```java
+// Infrastructure Layer - Repository 实现
+public class VenueRepositoryAdapter implements VenueRepository {
+
+    public VenueAggregate findById(Long id) {
+        // 1. 查主表 -> 核心数据
+        VenueDO venueDO = venueMapper.selectById(id);
+
+        // 2. 构建聚合根（核心数据）
+        VenueAggregate venue = VenueConverter.toDomain(venueDO);
+
+        // 3. 对于"边缘数据"（Case 3），暂时不加载
+        //    只有当业务真正需要时，才通过专门的方法加载
+        return venue;
+    }
+
+    /// 按需加载边缘数据
+    public void loadRichDescription(VenueAggregate venue) {
+        VenueDescriptionDO desc = descMapper.selectByVenueId(venue.getId());
+        venue.setRichDescription(desc.getContent());
+    }
+}
+```
+
+### 正确方案 2：CQRS 读写分离
+
+**核心思想**：写操作走聚合根，读操作直接走 DTO。
+
+```
+写操作（Command）                读操作（Query）
+     ↓                              ↓
+Application Layer              Application Layer
+     ↓                              ↓
+聚合根（只加载校验需要的数据）    Mapper（直接查 DTO）
+     ↓                              ↓
+Repository                     VenueQueryMapper
+```
+
+**实现示例**：
+
+```java
+// 写操作：通过聚合根，只加载业务校验需要的数据
+public class VenueUpdateOrchestrator {
+    public void updateVenueName(Long venueId, String newName) {
+        // Repository 不加载 RichDescription（不参与校验）
+        VenueAggregate venue = venueRepository.findById(venueId);
+        venue.rename(newName);  // 业务校验在聚合内
+        venueRepository.save(venue);
+    }
+}
+
+// 读操作：绕过 Repository，直接查 DTO
+public class VenueQueryService {
+    public VenueDetailDTO getVenueDetail(Long venueId) {
+        // 直接用 Mapper 联表查询，返回 DTO
+        return venueQueryMapper.selectDetailById(venueId);
+    }
+}
+```
+
+### 策略选择指南
+
+| 场景 | 推荐策略 |
+|------|----------|
+| 写操作涉及复杂业务校验 | 通过聚合根 + 懒加载 |
+| 读操作需要展示详情（99% 流量） | CQRS - 直接查 DTO |
+| 边缘数据（Case 3）按需使用 | Repository 懒加载方法 |
+| 性能敏感的列表查询 | 绕过 Repository，用 Mapper |
+
+---
+
+## 最佳实践路线图
+
+当面对"大聚合"性能问题时，按以下步骤处理：
+
+```
+1. 清洗模型
+   └── 对每个值对象执行"不变性检查"
+   └── 识别 Case 2（可拆分为独立聚合）
+
+2. 逻辑分组
+   └── 剩余的值对象按业务含义归类
+   └── 封装成 3-4 个语义值对象组
+
+3. CQRS 分离
+   └── 查询（99%流量）：直接写 SQL 查 DTO
+   └── 修改（1%流量）：Repository 只加载核心字段
+   └── 边缘数据：懒加载或按需加载
+```
