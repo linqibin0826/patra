@@ -84,7 +84,7 @@ class VenueInitializeItemWriterIT {
     // 使用 openalexId 生成唯一的 issnL，避免唯一索引冲突
     venue.withIssnL("1234-" + openalexId);
     venue.withCountryCode("US");
-    venue.withOaStatus(true, false, false);
+    venue.withOaStatus(true, false);
     venue.withPublicationHistory(PublicationHistory.active(2000));
     return new VenueParseResult(venue, List.of());
   }
@@ -94,7 +94,7 @@ class VenueInitializeItemWriterIT {
     VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
     venue.withIssnL("1234-" + openalexId);
     venue.withCountryCode("US");
-    venue.withOaStatus(true, false, false);
+    venue.withOaStatus(true, false);
     venue.withPublicationHistory(PublicationHistory.active(2000));
     List<VenuePublicationStats> metrics =
         List.of(
@@ -108,7 +108,7 @@ class VenueInitializeItemWriterIT {
     VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
     venue.withIssnL("1234-" + openalexId);
     venue.withCountryCode("US");
-    venue.withOaStatus(true, false, false);
+    venue.withOaStatus(true, false);
     venue.withPublicationHistory(PublicationHistory.active(2000));
     venue.addIdentifier(new VenueIdentifier(VenueIdentifierType.ISSN, "1234-5678"));
     venue.addIdentifier(new VenueIdentifier(VenueIdentifierType.ISSN, "5678-1234"));

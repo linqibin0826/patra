@@ -29,9 +29,11 @@ import com.patra.catalog.infra.persistence.mapper.VenueMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueMeshMapper;
 import com.patra.catalog.infra.persistence.mapper.VenuePublicationStatsMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueRelationMapper;
+import com.patra.common.domain.AggregateRoot;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -50,7 +52,7 @@ import org.springframework.stereotype.Repository;
 /// **职责**：
 ///
 /// - 管理 VenueAggregate（载体聚合根）的持久化
-/// - 管理与聚合关联的补充数据（年度指标、MeSH、关联关系、索引历史）
+/// - 管理与载体关联的补充数据（年度统计、MeSH、关联关系、索引历史）
 /// - 支持 OpenAlex Sources 和 NLM Serfile 批量数据导入
 /// - 以聚合根为单位保证数据一致性
 ///
@@ -66,14 +68,17 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class VenueRepositoryAdapter implements VenueRepository {
 
+  // ========== 聚合根相关 Mapper & Converter ==========
   private final VenueMapper venueMapper;
   private final VenueIdentifierMapper venueIdentifierMapper;
+  private final VenueConverter venueConverter;
+  private final VenueIdentifierConverter identifierConverter;
+
+  // ========== 补充数据相关 Mapper & Converter ==========
   private final VenuePublicationStatsMapper publicationStatsMapper;
   private final VenueMeshMapper meshMapper;
   private final VenueRelationMapper relationMapper;
   private final VenueIndexingHistoryMapper indexingHistoryMapper;
-  private final VenueConverter venueConverter;
-  private final VenueIdentifierConverter identifierConverter;
   private final VenuePublicationStatsConverter publicationStatsConverter;
   private final VenueMeshConverter meshConverter;
   private final VenueRelationConverter relationConverter;
@@ -108,6 +113,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
       Long venueId = venueDOs.get(i).getId();
       aggregate.assignId(venueId);
       collectIdentifiers(aggregate, venueId, identifierDOs);
+      aggregate.pullChildChanges();
     }
 
     // 4. 批量插入标识符
@@ -207,7 +213,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
         identifierDOs.stream().map(VenueIdentifierDO::getVenueId).collect(Collectors.toSet());
 
     // 查询主表
-    List<VenueDO> venueDOs = venueMapper.selectBatchIds(venueIds);
+    List<VenueDO> venueDOs = venueMapper.selectByIds(venueIds);
 
     if (venueDOs.isEmpty()) {
       return Map.of();
@@ -219,7 +225,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
     // 构建 ISSN -> Aggregate 的映射
     // 一个 Aggregate 可能有多个 ISSN，需要建立多对一关系
     Map<Long, VenueAggregate> venueIdToAggregate =
-        aggregates.stream().collect(Collectors.toMap(a -> a.getId(), a -> a, (a1, a2) -> a1));
+        aggregates.stream().collect(Collectors.toMap(AggregateRoot::getId, a -> a, (a1, a2) -> a1));
 
     Map<String, VenueAggregate> result = new HashMap<>();
     for (VenueIdentifierDO identifierDO : identifierDOs) {
@@ -233,40 +239,111 @@ public class VenueRepositoryAdapter implements VenueRepository {
     return result;
   }
 
+  /// {@inheritDoc}
+  ///
+  /// **实现细节**：
+  ///
+  /// 1. 遍历聚合根，对每个聚合根计算标识符差异（通过数据库查询对比）
+  /// 2. 收集脏标记的聚合根，准备主表更新
+  /// 3. 批量执行：先删除标识符、再插入标识符、最后更新主表
+  /// 4. 所有批量操作成功后，统一清除脏标记
+  ///
+  /// **使用的批量操作**：
+  ///
+  /// - `Db.saveBatch()` - 标识符批量插入
+  /// - `Db.updateBatchById()` - 主表批量更新
+  /// - `Mapper.deleteByIds()` - 标识符批量删除
   @Override
   public void updateBatch(List<VenueAggregate> aggregates) {
     if (aggregates == null || aggregates.isEmpty()) {
       return;
     }
 
-    List<Long> venueIds = aggregates.stream().map(VenueAggregate::getId).toList();
-
-    // 删除旧的标识符
-    venueIdentifierMapper.delete(
-        new LambdaQueryWrapper<VenueIdentifierDO>().in(VenueIdentifierDO::getVenueId, venueIds));
-
-    // 收集新的标识符数据和主表 DO
-    List<VenueIdentifierDO> identifierDOs = new ArrayList<>();
-    List<VenueDO> venueDOs = new ArrayList<>(aggregates.size());
+    List<VenueIdentifierDO> identifiersToInsert = new ArrayList<>();
+    List<Long> identifierIdsToDelete = new ArrayList<>();
+    List<VenueDO> venuesToUpdate = new ArrayList<>();
+    List<VenueAggregate> dirtyAggregates = new ArrayList<>();
 
     for (VenueAggregate aggregate : aggregates) {
-      // 转换主表 DO
-      VenueDO venueDO = venueConverter.toDO(aggregate);
-      venueDO.setId(aggregate.getId());
-      venueDOs.add(venueDO);
+      Long venueId = aggregate.getId();
 
-      // 收集标识符数据
-      collectIdentifiers(aggregate, aggregate.getId(), identifierDOs);
+      // 计算标识符差异（基于值对象 hashCode/equals 比较）
+      computeIdentifierDiff(venueId, aggregate, identifiersToInsert, identifierIdsToDelete);
+
+      // 主表脏标记检查
+      if (aggregate.isDirty()) {
+        VenueDO venueDO = venueConverter.toDO(aggregate);
+        venueDO.setId(venueId);
+        venuesToUpdate.add(venueDO);
+        dirtyAggregates.add(aggregate);
+      }
     }
 
-    // 批量更新主表
-    Db.updateBatchById(venueDOs);
-    log.debug("批量更新载体 {} 条", venueDOs.size());
+    // 批量操作：标识符删除
+    if (!identifierIdsToDelete.isEmpty()) {
+      venueIdentifierMapper.deleteByIds(identifierIdsToDelete);
+    }
+    // 批量操作：标识符插入
+    if (!identifiersToInsert.isEmpty()) {
+      Db.saveBatch(identifiersToInsert);
+    }
+    // 批量操作：主表更新
+    if (!venuesToUpdate.isEmpty()) {
+      Db.updateBatchById(venuesToUpdate);
+    }
 
-    // 批量插入新的标识符
-    if (!identifierDOs.isEmpty()) {
-      Db.saveBatch(identifierDOs);
-      log.debug("批量插入载体标识符 {} 条", identifierDOs.size());
+    log.debug(
+        "批量更新载体完成: 聚合根 {} 个, 主表更新 {} 条, 标识符新增 {} 条, 标识符删除 {} 条",
+        aggregates.size(),
+        venuesToUpdate.size(),
+        identifiersToInsert.size(),
+        identifierIdsToDelete.size());
+
+    // 所有批量操作成功后，统一清除脏标记
+    dirtyAggregates.forEach(VenueAggregate::clearDirty);
+  }
+
+  /// 计算标识符差异（基于数据库查询）。
+  ///
+  /// 从数据库加载当前标识符，与聚合根中的标识符集合对比，计算出需要插入和删除的标识符。
+  /// 使用值对象的 `hashCode/equals`（Record 自动实现）进行集合比较，
+  /// 并保留 DO 的主键 id，以便通过主键高效删除。
+  ///
+  /// @param venueId 载体 ID
+  /// @param aggregate 当前聚合根
+  /// @param identifiersToInsert 待插入的标识符列表（输出参数）
+  /// @param identifierIdsToDelete 待删除的标识符主键 ID 列表（输出参数）
+  private void computeIdentifierDiff(
+      Long venueId,
+      VenueAggregate aggregate,
+      List<VenueIdentifierDO> identifiersToInsert,
+      List<Long> identifierIdsToDelete) {
+
+    // 从数据库加载当前标识符，构建 值对象 -> 主键ID 的映射
+    List<VenueIdentifierDO> existingIdentifierDOs =
+        venueIdentifierMapper.selectList(
+            new LambdaQueryWrapper<VenueIdentifierDO>().eq(VenueIdentifierDO::getVenueId, venueId));
+    Map<VenueIdentifier, Long> existingIdentifierMap =
+        existingIdentifierDOs.stream()
+            .collect(Collectors.toMap(identifierConverter::toEntity, VenueIdentifierDO::getId));
+
+    Set<VenueIdentifier> persistedIdentifiers = existingIdentifierMap.keySet();
+    Set<VenueIdentifier> currentIdentifiers = new HashSet<>(aggregate.getIdentifiers());
+
+    // 计算需要删除的标识符（已持久化但不在当前集合），直接获取主键 id
+    for (VenueIdentifier persisted : persistedIdentifiers) {
+      if (!currentIdentifiers.contains(persisted)) {
+        identifierIdsToDelete.add(existingIdentifierMap.get(persisted));
+      }
+    }
+
+    // 计算需要新增的标识符（在当前集合但未持久化）
+    for (VenueIdentifier current : currentIdentifiers) {
+      if (!persistedIdentifiers.contains(current)) {
+        VenueIdentifierDO identifierDO = identifierConverter.toDO(current);
+        identifierDO.setVenueId(venueId);
+        identifiersToInsert.add(identifierDO);
+      }
     }
   }
 
@@ -311,6 +388,9 @@ public class VenueRepositoryAdapter implements VenueRepository {
   }
 
   /// 重建单个聚合根。
+  ///
+  /// **注意**：重建完成后会清空变更追踪状态（dirty 标记和 partChanges 列表），
+  /// 确保只有后续的业务操作才会被追踪。
   private VenueAggregate reconstructAggregate(
       VenueDO venueDO, List<VenueIdentifierDO> identifierDOs) {
 
@@ -326,23 +406,23 @@ public class VenueRepositoryAdapter implements VenueRepository {
         .withOpenalexId(venueDO.getOpenalexId())
         .withIssnL(venueDO.getIssnL())
         .withNlmId(venueDO.getNlmId())
-        .withDoiPrefix(venueDO.getDoiPrefix())
         .withCoden(venueDO.getCoden())
         .withFrequency(venueDO.getFrequency())
-        .withPrimaryLanguage(venueDO.getPrimaryLanguage())
-        .withPublisher(venueDO.getPublisher())
-        .withCountryCode(venueDO.getCountryCode())
-        .withOaType(venueDO.getOaType());
+        .withCountryCode(venueDO.getCountryCode());
 
     // 设置 OA 状态
     aggregate.withOaStatus(
-        Boolean.TRUE.equals(venueDO.getIsOa()), Boolean.TRUE.equals(venueDO.getIsInDoaj()), false);
+        Boolean.TRUE.equals(venueDO.getIsOa()), Boolean.TRUE.equals(venueDO.getIsInDoaj()));
 
     // 添加标识符
     for (VenueIdentifierDO identifierDO : identifierDOs) {
       VenueIdentifier identifier = identifierConverter.toEntity(identifierDO);
       aggregate.addIdentifier(identifier);
     }
+
+    // 清空变更追踪状态（恢复操作不应被追踪）
+    aggregate.pullChildChanges();
+    aggregate.clearDirty();
 
     return aggregate;
   }
@@ -357,9 +437,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
     return all.stream().collect(Collectors.groupingBy(VenueIdentifierDO::getVenueId));
   }
 
-  // ========== 补充数据管理（年度指标、MeSH、关联关系、索引历史） ==========
-
-  // --- 年度指标（OpenAlex 数据） ---
+  // ========== 补充数据管理（关联数据，不属于聚合边界） ==========
 
   @Override
   public Map<Long, List<VenuePublicationStats>> findYearlyMetricsByVenueIds(
@@ -411,8 +489,6 @@ public class VenueRepositoryAdapter implements VenueRepository {
     }
   }
 
-  // --- MeSH 主题词（Serfile 数据） ---
-
   @Override
   public Map<Long, List<VenueMesh>> findMeshTermsByVenueIds(Collection<Long> venueIds) {
     if (venueIds == null || venueIds.isEmpty()) {
@@ -458,8 +534,6 @@ public class VenueRepositoryAdapter implements VenueRepository {
       log.debug("批量插入 MeSH 主题词 {} 条", doList.size());
     }
   }
-
-  // --- 期刊关联关系（Serfile 数据） ---
 
   @Override
   public Map<Long, List<VenueRelation>> findRelationsByVenueIds(Collection<Long> venueIds) {
@@ -507,8 +581,6 @@ public class VenueRepositoryAdapter implements VenueRepository {
       log.debug("批量插入关联关系 {} 条", doList.size());
     }
   }
-
-  // --- 索引历史（Serfile 数据） ---
 
   @Override
   public Map<Long, List<VenueIndexingHistory>> findIndexingHistoriesByVenueIds(
@@ -559,17 +631,5 @@ public class VenueRepositoryAdapter implements VenueRepository {
       Db.saveBatch(doList);
       log.debug("批量插入索引历史 {} 条", doList.size());
     }
-  }
-
-  // --- 便捷方法：Serfile 数据批量替换 ---
-
-  @Override
-  public void replaceSerfileDataBatch(
-      Map<Long, List<VenueMesh>> meshTermsByVenueId,
-      Map<Long, List<VenueRelation>> relationsByVenueId,
-      Map<Long, List<VenueIndexingHistory>> historiesByVenueId) {
-    replaceMeshTermsBatch(meshTermsByVenueId);
-    replaceRelationsBatch(relationsByVenueId);
-    replaceIndexingHistoriesBatch(historiesByVenueId);
   }
 }

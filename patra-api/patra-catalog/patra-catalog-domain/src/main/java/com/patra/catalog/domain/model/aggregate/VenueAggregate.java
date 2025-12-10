@@ -6,8 +6,6 @@ import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.ApcInfo;
 import com.patra.catalog.domain.model.vo.venue.HostOrganization;
-import com.patra.catalog.domain.model.vo.venue.IndexingInfo;
-import com.patra.catalog.domain.model.vo.venue.LatestRating;
 import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
 import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
 import com.patra.catalog.domain.model.vo.venue.Society;
@@ -24,6 +22,14 @@ import java.util.Optional;
 import lombok.Getter;
 
 /// 出版载体聚合根。管理期刊、仓库、会议等出版载体的完整信息。
+///
+/// **CQRS 设计**：
+///
+/// 本聚合根遵循 CQRS 模式，**仅用于写入侧**（数据采集、更新）：
+///
+/// - 数据从外部源（OpenAlex/PubMed）流入，经聚合根验证后持久化
+/// - 读取场景通过 DO 或专门的读模型实现，不经过聚合根重建
+/// - 部分字段（如 `currentStats`、`apcInfo`）当前无业务读取逻辑，但会持久化供查询使用
 ///
 /// **聚合边界**：
 ///
@@ -84,10 +90,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// NLM 唯一标识符（冗余，来自 PubMed Catalog）
   private String nlmId;
 
-  /// DOI 前缀（来自 Crossref）
-  private String doiPrefix;
-
-  /// CODEN 编码（6字符标识符，来自 Serfile）
+  /// CODEN 编码（6字符标识符号）
   private String coden;
 
   // ========== 出版信息 ==========
@@ -97,26 +100,13 @@ public class VenueAggregate extends AggregateRoot<Long> {
 
   // ========== 语言信息 ==========
 
-  /// 主要语言代码（ISO 639-3，冗余字段便于查询）
-  private String primaryLanguage;
-
   /// 期刊语言信息（包含主语言和摘要语言列表）
   private VenueLanguages languages;
-
-  // ========== 出版商信息 ==========
-
-  /// 出版商名称（来自 Crossref/DOAJ）
-  private String publisher;
 
   // ========== 出版历史 ==========
 
   /// 出版历史（创刊/停刊年份）
   private PublicationHistory publicationHistory;
-
-  // ========== 索引收录信息 ==========
-
-  /// MEDLINE 索引收录信息
-  private IndexingInfo indexingInfo;
 
   // ========== 宿主机构 ==========
 
@@ -135,17 +125,6 @@ public class VenueAggregate extends AggregateRoot<Long> {
 
   /// 是否在 DOAJ 中
   private boolean isInDoaj;
-
-  /// 是否为核心期刊
-  private boolean isCore;
-
-  /// OA 类型（GOLD/DIAMOND/HYBRID/BRONZE）
-  private String oaType;
-
-  // ========== 评级信息 ==========
-
-  /// 最新评级快照（冗余，高频查询优化）
-  private LatestRating latestRating;
 
   // ========== 统计快照 ==========
 
@@ -265,6 +244,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return 当前对象
   public VenueAggregate withAbbreviatedTitle(String abbreviatedTitle) {
     this.abbreviatedTitle = abbreviatedTitle;
+    markDirty();
     return this;
   }
 
@@ -275,6 +255,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   public VenueAggregate withAlternateTitles(List<String> alternateTitles) {
     this.alternateTitles =
         alternateTitles != null ? new ArrayList<>(alternateTitles) : new ArrayList<>();
+    markDirty();
     return this;
   }
 
@@ -284,6 +265,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return 当前对象
   public VenueAggregate withHomepageUrl(String homepageUrl) {
     this.homepageUrl = homepageUrl;
+    markDirty();
     return this;
   }
 
@@ -293,6 +275,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return 当前对象
   public VenueAggregate withOpenalexId(String openalexId) {
     this.openalexId = openalexId;
+    markDirty();
     return this;
   }
 
@@ -302,6 +285,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return 当前对象
   public VenueAggregate withIssnL(String issnL) {
     this.issnL = issnL;
+    markDirty();
     return this;
   }
 
@@ -311,24 +295,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return 当前对象
   public VenueAggregate withNlmId(String nlmId) {
     this.nlmId = nlmId;
-    return this;
-  }
-
-  /// 设置 DOI 前缀。
-  ///
-  /// @param doiPrefix DOI 前缀
-  /// @return 当前对象
-  public VenueAggregate withDoiPrefix(String doiPrefix) {
-    this.doiPrefix = doiPrefix;
-    return this;
-  }
-
-  /// 设置出版商名称。
-  ///
-  /// @param publisher 出版商名称
-  /// @return 当前对象
-  public VenueAggregate withPublisher(String publisher) {
-    this.publisher = publisher;
+    markDirty();
     return this;
   }
 
@@ -338,15 +305,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return 当前对象
   public VenueAggregate withPublicationHistory(PublicationHistory publicationHistory) {
     this.publicationHistory = publicationHistory;
-    return this;
-  }
-
-  /// 设置索引收录信息。
-  ///
-  /// @param indexingInfo 索引收录信息
-  /// @return 当前对象
-  public VenueAggregate withIndexingInfo(IndexingInfo indexingInfo) {
-    this.indexingInfo = indexingInfo;
+    markDirty();
     return this;
   }
 
@@ -356,6 +315,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return 当前对象
   public VenueAggregate withHostOrganization(HostOrganization hostOrganization) {
     this.hostOrganization = hostOrganization;
+    markDirty();
     return this;
   }
 
@@ -365,6 +325,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return 当前对象
   public VenueAggregate withCountryCode(String countryCode) {
     this.countryCode = countryCode;
+    markDirty();
     return this;
   }
 
@@ -372,30 +333,11 @@ public class VenueAggregate extends AggregateRoot<Long> {
   ///
   /// @param isOa 是否开放获取
   /// @param isInDoaj 是否在 DOAJ 中
-  /// @param isCore 是否为核心期刊
   /// @return 当前对象
-  public VenueAggregate withOaStatus(boolean isOa, boolean isInDoaj, boolean isCore) {
+  public VenueAggregate withOaStatus(boolean isOa, boolean isInDoaj) {
     this.isOa = isOa;
     this.isInDoaj = isInDoaj;
-    this.isCore = isCore;
-    return this;
-  }
-
-  /// 设置 OA 类型。
-  ///
-  /// @param oaType OA 类型（GOLD/DIAMOND/HYBRID/BRONZE）
-  /// @return 当前对象
-  public VenueAggregate withOaType(String oaType) {
-    this.oaType = oaType;
-    return this;
-  }
-
-  /// 设置最新评级快照。
-  ///
-  /// @param latestRating 最新评级快照
-  /// @return 当前对象
-  public VenueAggregate withLatestRating(LatestRating latestRating) {
-    this.latestRating = latestRating;
+    markDirty();
     return this;
   }
 
@@ -405,6 +347,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return 当前对象
   public VenueAggregate withCurrentStats(VenueStats currentStats) {
     this.currentStats = currentStats;
+    markDirty();
     return this;
   }
 
@@ -414,6 +357,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return 当前对象
   public VenueAggregate withApcInfo(ApcInfo apcInfo) {
     this.apcInfo = apcInfo;
+    markDirty();
     return this;
   }
 
@@ -423,6 +367,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return 当前对象
   public VenueAggregate withSocieties(List<Society> societies) {
     this.societies = societies != null ? new ArrayList<>(societies) : new ArrayList<>();
+    markDirty();
     return this;
   }
 
@@ -432,6 +377,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return 当前对象
   public VenueAggregate withProvenance(ProvenanceInfo provenance) {
     this.provenance = provenance;
+    markDirty();
     return this;
   }
 
@@ -443,6 +389,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   public VenueAggregate withOpenAlexProvenance(
       LocalDate sourceCreatedDate, LocalDate sourceUpdatedDate) {
     this.provenance = ProvenanceInfo.forOpenAlex(sourceCreatedDate, sourceUpdatedDate);
+    markDirty();
     return this;
   }
 
@@ -452,6 +399,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return 当前对象
   public VenueAggregate withCoden(String coden) {
     this.coden = coden;
+    markDirty();
     return this;
   }
 
@@ -461,15 +409,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return 当前对象
   public VenueAggregate withFrequency(String frequency) {
     this.frequency = frequency;
-    return this;
-  }
-
-  /// 设置主要语言。
-  ///
-  /// @param primaryLanguage 主要语言代码（ISO 639-3）
-  /// @return 当前对象
-  public VenueAggregate withPrimaryLanguage(String primaryLanguage) {
-    this.primaryLanguage = primaryLanguage;
+    markDirty();
     return this;
   }
 
@@ -479,10 +419,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return 当前对象
   public VenueAggregate withLanguages(VenueLanguages languages) {
     this.languages = languages;
-    // 同步更新冗余字段
-    if (languages != null && languages.hasPrimaryLanguages()) {
-      this.primaryLanguage = languages.getMainLanguage();
-    }
+    markDirty();
     return this;
   }
 
@@ -491,6 +428,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// 添加标识符。
   ///
   /// 如果已存在相同类型和值的标识符，则忽略。
+  /// 成功添加后会将聚合根标记为脏，触发版本号递增。
   ///
   /// @param identifier 标识符
   public void addIdentifier(VenueIdentifier identifier) {
@@ -499,6 +437,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
     // 检查是否已存在相同的标识符（基于 Record 的 equals）
     if (!identifiers.contains(identifier)) {
       identifiers.add(identifier);
+      markDirty();
     }
   }
 
@@ -512,10 +451,18 @@ public class VenueAggregate extends AggregateRoot<Long> {
 
   /// 移除标识符。
   ///
+  /// 成功移除后会将聚合根标记为脏，触发版本号递增。
+  ///
   /// @param type 标识符类型
   /// @param value 标识符值
-  public void removeIdentifier(VenueIdentifierType type, String value) {
-    identifiers.removeIf(i -> i.type() == type && i.value().equals(value));
+  /// @return 是否成功移除
+  public boolean removeIdentifier(VenueIdentifierType type, String value) {
+    VenueIdentifier target = new VenueIdentifier(type, value);
+    boolean removed = identifiers.remove(target);
+    if (removed) {
+      markDirty();
+    }
+    return removed;
   }
 
   /// 获取特定类型的标识符值（返回第一个匹配）。
@@ -542,16 +489,6 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return 标识符列表
   public List<VenueIdentifier> getIdentifiers() {
     return Collections.unmodifiableList(identifiers);
-  }
-
-  /// 批量设置标识符（清空现有并添加新的）。
-  ///
-  /// @param newIdentifiers 新标识符列表
-  public void setIdentifiers(List<VenueIdentifier> newIdentifiers) {
-    identifiers.clear();
-    if (newIdentifiers != null) {
-      newIdentifiers.forEach(this::addIdentifier);
-    }
   }
 
   // ========== 便捷判断方法 ==========
@@ -605,46 +542,11 @@ public class VenueAggregate extends AggregateRoot<Long> {
     return provenance != null && provenance.isFromPubMed();
   }
 
-  /// 判断是否有出版商信息。
-  ///
-  /// @return true 如果有出版商
-  public boolean hasPublisher() {
-    return StrUtil.isNotBlank(publisher);
-  }
-
   /// 判断是否有出版历史信息。
   ///
   /// @return true 如果有出版历史
   public boolean hasPublicationHistory() {
     return publicationHistory != null;
-  }
-
-  /// 判断是否有索引收录信息。
-  ///
-  /// @return true 如果有索引收录信息
-  public boolean hasIndexingInfo() {
-    return indexingInfo != null;
-  }
-
-  /// 判断期刊是否被 MEDLINE 收录。
-  ///
-  /// @return true 如果被 MEDLINE 收录
-  public boolean isIndexedInMedline() {
-    return indexingInfo != null && indexingInfo.isCurrentlyIndexed();
-  }
-
-  /// 判断是否有评级信息。
-  ///
-  /// @return true 如果有最新评级
-  public boolean hasRating() {
-    return latestRating != null && latestRating.hasRating();
-  }
-
-  /// 判断是否为顶级分区期刊（Q1 或 1区）。
-  ///
-  /// @return true 如果为顶级分区
-  public boolean isTopQuartile() {
-    return latestRating != null && latestRating.isTopQuartile();
   }
 
   /// 判断期刊是否已停刊。

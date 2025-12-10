@@ -120,8 +120,7 @@ public class OpenAlexSourceParser {
         .withCountryCode(record.countryCode())
         .withOaStatus(
             record.isOa() != null ? record.isOa() : false,
-            record.isInDoaj() != null ? record.isInDoaj() : false,
-            false) // isCore 不来自 OpenAlex
+            record.isInDoaj() != null ? record.isInDoaj() : false)
         .withAbbreviatedTitle(record.abbreviatedTitle())
         .withAlternateTitles(record.alternateTitles());
 

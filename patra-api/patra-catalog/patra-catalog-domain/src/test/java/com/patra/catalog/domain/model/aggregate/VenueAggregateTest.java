@@ -5,8 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
-import com.patra.catalog.domain.model.vo.venue.IndexingInfo;
-import com.patra.catalog.domain.model.vo.venue.LatestRating;
 import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
 import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
@@ -225,10 +223,77 @@ class VenueAggregateTest {
       venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
 
       // When
+      boolean removed = venue.removeIdentifier(VenueIdentifierType.ISSN, ISSN);
+
+      // Then
+      assertThat(removed).isTrue();
+      assertThat(venue.getIdentifier(VenueIdentifierType.ISSN)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("removeIdentifier() 移除不存在的标识符应该返回 false")
+    void removeIdentifierShouldReturnFalseWhenNotExists() {
+      // Given
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      venue.clearDirty();
+
+      // When
+      boolean removed = venue.removeIdentifier(VenueIdentifierType.ISSN, "9999-9999");
+
+      // Then
+      assertThat(removed).isFalse();
+      assertThat(venue.isDirty()).isFalse();
+    }
+
+    @Test
+    @DisplayName("addIdentifier() 应该将聚合根标记为脏")
+    void addIdentifierShouldMarkDirty() {
+      // Given
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      venue.clearDirty();
+      assertThat(venue.isDirty()).isFalse();
+
+      // When
+      venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
+
+      // Then
+      assertThat(venue.isDirty()).isTrue();
+    }
+
+    @Test
+    @DisplayName("addIdentifier() 添加重复标识符不应该标记为脏")
+    void addIdentifierDuplicateShouldNotMarkDirty() {
+      // Given
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
+      venue.clearDirty();
+      assertThat(venue.isDirty()).isFalse();
+
+      // When - 添加相同的标识符
+      venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
+
+      // Then - 不应该标记为脏
+      assertThat(venue.isDirty()).isFalse();
+    }
+
+    @Test
+    @DisplayName("removeIdentifier() 应该将聚合根标记为脏")
+    void removeIdentifierShouldMarkDirty() {
+      // Given
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
+      venue.clearDirty();
+      assertThat(venue.isDirty()).isFalse();
+
+      // When
       venue.removeIdentifier(VenueIdentifierType.ISSN, ISSN);
 
       // Then
-      assertThat(venue.getIdentifier(VenueIdentifierType.ISSN)).isEmpty();
+      assertThat(venue.isDirty()).isTrue();
     }
 
     @Test
@@ -277,23 +342,6 @@ class VenueAggregateTest {
       assertThatThrownBy(() -> identifiers.add(VenueIdentifier.forNlm(NLM_ID)))
           .isInstanceOf(UnsupportedOperationException.class);
     }
-
-    @Test
-    @DisplayName("setIdentifiers() 应该替换所有标识符")
-    void setIdentifiersShouldReplaceAll() {
-      // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
-
-      // When
-      venue.setIdentifiers(List.of(VenueIdentifier.forNlm(NLM_ID)));
-
-      // Then
-      assertThat(venue.getIdentifiers()).hasSize(1);
-      assertThat(venue.getIdentifier(VenueIdentifierType.NLM)).contains(NLM_ID);
-      assertThat(venue.getIdentifier(VenueIdentifierType.ISSN)).isEmpty();
-    }
   }
 
   @Nested
@@ -309,7 +357,7 @@ class VenueAggregateTest {
               .withAbbreviatedTitle("Nat.")
               .withHomepageUrl("https://nature.com")
               .withCountryCode("GB")
-              .withOaStatus(true, true, true)
+              .withOaStatus(true, true)
               .withIssnL(ISSN_L);
 
       // Then
@@ -318,7 +366,6 @@ class VenueAggregateTest {
       assertThat(venue.getCountryCode()).isEqualTo("GB");
       assertThat(venue.isOa()).isTrue();
       assertThat(venue.isInDoaj()).isTrue();
-      assertThat(venue.isCore()).isTrue();
       assertThat(venue.getIssnL()).isEqualTo(ISSN_L);
     }
 
@@ -461,35 +508,6 @@ class VenueAggregateTest {
     }
 
     @Test
-    @DisplayName("withDoiPrefix() 应正确设置 DOI 前缀")
-    void withDoiPrefixShouldWork() {
-      // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-
-      // When
-      venue.withDoiPrefix("10.1038");
-
-      // Then
-      assertThat(venue.getDoiPrefix()).isEqualTo("10.1038");
-    }
-
-    @Test
-    @DisplayName("withPublisher() 应正确设置出版商")
-    void withPublisherShouldWork() {
-      // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-
-      // When
-      venue.withPublisher("Nature Publishing Group");
-
-      // Then
-      assertThat(venue.getPublisher()).isEqualTo("Nature Publishing Group");
-      assertThat(venue.hasPublisher()).isTrue();
-    }
-
-    @Test
     @DisplayName("withPublicationHistory() 应正确设置出版历史")
     void withPublicationHistoryShouldWork() {
       // Given
@@ -504,151 +522,6 @@ class VenueAggregateTest {
       assertThat(venue.getPublicationHistory()).isEqualTo(history);
       assertThat(venue.hasPublicationHistory()).isTrue();
       assertThat(venue.isCeased()).isFalse();
-    }
-
-    @Test
-    @DisplayName("withIndexingInfo() 应正确设置索引收录信息")
-    void withIndexingInfoShouldWork() {
-      // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      IndexingInfo indexing = IndexingInfo.of("C", "Nature", "Nature");
-
-      // When
-      venue.withIndexingInfo(indexing);
-
-      // Then
-      assertThat(venue.getIndexingInfo()).isEqualTo(indexing);
-      assertThat(venue.hasIndexingInfo()).isTrue();
-      assertThat(venue.isIndexedInMedline()).isTrue();
-    }
-
-    @Test
-    @DisplayName("withOaType() 应正确设置 OA 类型")
-    void withOaTypeShouldWork() {
-      // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-
-      // When
-      venue.withOaType("GOLD");
-
-      // Then
-      assertThat(venue.getOaType()).isEqualTo("GOLD");
-    }
-
-    @Test
-    @DisplayName("withLatestRating() 应正确设置最新评级快照")
-    void withLatestRatingShouldWork() {
-      // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      LatestRating rating = LatestRating.of(new BigDecimal("42.778"), "Q1", "JCR", 2023);
-
-      // When
-      venue.withLatestRating(rating);
-
-      // Then
-      assertThat(venue.getLatestRating()).isEqualTo(rating);
-      assertThat(venue.hasRating()).isTrue();
-      assertThat(venue.isTopQuartile()).isTrue();
-    }
-  }
-
-  @Nested
-  @DisplayName("索引收录判断方法测试")
-  class IndexingStatusTests {
-
-    @Test
-    @DisplayName("isIndexedInMedline() 无索引信息应返回 false")
-    void isIndexedInMedlineShouldReturnFalseWhenNoIndexingInfo() {
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-
-      assertThat(venue.isIndexedInMedline()).isFalse();
-    }
-
-    @Test
-    @DisplayName("isIndexedInMedline() 状态为 N 应返回 false")
-    void isIndexedInMedlineShouldReturnFalseWhenNotIndexed() {
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME)
-              .withIndexingInfo(IndexingInfo.ofStatus("N"));
-
-      assertThat(venue.isIndexedInMedline()).isFalse();
-    }
-
-    @Test
-    @DisplayName("isIndexedInMedline() 状态为 C 应返回 true")
-    void isIndexedInMedlineShouldReturnTrueWhenCurrentlyIndexed() {
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME)
-              .withIndexingInfo(IndexingInfo.ofStatus("C"));
-
-      assertThat(venue.isIndexedInMedline()).isTrue();
-    }
-  }
-
-  @Nested
-  @DisplayName("评级判断方法测试")
-  class RatingStatusTests {
-
-    @Test
-    @DisplayName("hasRating() 无评级应返回 false")
-    void hasRatingShouldReturnFalseWhenNoRating() {
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-
-      assertThat(venue.hasRating()).isFalse();
-    }
-
-    @Test
-    @DisplayName("hasRating() 空评级应返回 false")
-    void hasRatingShouldReturnFalseWhenEmptyRating() {
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME)
-              .withLatestRating(LatestRating.empty());
-
-      assertThat(venue.hasRating()).isFalse();
-    }
-
-    @Test
-    @DisplayName("hasRating() 有评级应返回 true")
-    void hasRatingShouldReturnTrueWhenHasRating() {
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME)
-              .withLatestRating(LatestRating.of(null, "Q2", "JCR", 2023));
-
-      assertThat(venue.hasRating()).isTrue();
-    }
-
-    @Test
-    @DisplayName("isTopQuartile() 无评级应返回 false")
-    void isTopQuartileShouldReturnFalseWhenNoRating() {
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-
-      assertThat(venue.isTopQuartile()).isFalse();
-    }
-
-    @Test
-    @DisplayName("isTopQuartile() Q2 应返回 false")
-    void isTopQuartileShouldReturnFalseWhenNotQ1() {
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME)
-              .withLatestRating(LatestRating.of(null, "Q2", "JCR", 2023));
-
-      assertThat(venue.isTopQuartile()).isFalse();
-    }
-
-    @Test
-    @DisplayName("isTopQuartile() Q1 应返回 true")
-    void isTopQuartileShouldReturnTrueWhenQ1() {
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME)
-              .withLatestRating(LatestRating.of(null, "Q1", "JCR", 2023));
-
-      assertThat(venue.isTopQuartile()).isTrue();
     }
   }
 
