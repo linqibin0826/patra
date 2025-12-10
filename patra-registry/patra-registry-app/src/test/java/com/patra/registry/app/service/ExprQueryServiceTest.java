@@ -22,7 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/// ExprQueryOrchestrator 单元测试。
+/// ExprQueryService 单元测试。
 ///
 /// 测试覆盖:
 ///
@@ -38,8 +38,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
-@DisplayName("ExprQueryOrchestrator 单元测试")
-class ExprQueryOrchestratorTest {
+@DisplayName("ExprQueryService 单元测试")
+class ExprQueryServiceTest {
 
   @Mock private ExprRepository exprRepository;
 
@@ -49,11 +49,11 @@ class ExprQueryOrchestratorTest {
 
   @Mock private ExprSnapshotQuery snapshotQuery;
 
-  private ExprQueryOrchestrator orchestrator;
+  private ExprQueryService queryService;
 
   @BeforeEach
   void setUp() {
-    orchestrator = new ExprQueryOrchestrator(exprRepository, assembler);
+    queryService = new ExprQueryService(exprRepository, assembler);
   }
 
   @Nested
@@ -80,7 +80,7 @@ class ExprQueryOrchestratorTest {
 
       // When: 执行方法
       ExprSnapshotQuery result =
-          orchestrator.loadSnapshot(provenanceCodeStr, operationType, endpointName, at);
+          queryService.loadSnapshot(provenanceCodeStr, operationType, endpointName, at);
 
       // Then: 验证结果
       assertThat(result).isNotNull();
@@ -110,7 +110,7 @@ class ExprQueryOrchestratorTest {
       when(snapshotQuery.apiParamMappings()).thenReturn(List.of());
 
       // When: 执行方法 (所有可选参数为 null)
-      ExprSnapshotQuery result = orchestrator.loadSnapshot(provenanceCodeStr, null, null, null);
+      ExprSnapshotQuery result = queryService.loadSnapshot(provenanceCodeStr, null, null, null);
 
       // Then: 验证结果
       assertThat(result).isNotNull();
@@ -141,7 +141,7 @@ class ExprQueryOrchestratorTest {
 
       // When: 执行方法
       ExprSnapshotQuery result =
-          orchestrator.loadSnapshot(provenanceCodeStr, operationType, null, null);
+          queryService.loadSnapshot(provenanceCodeStr, operationType, null, null);
 
       // Then: 验证结果
       assertThat(result).isNotNull();
@@ -168,7 +168,7 @@ class ExprQueryOrchestratorTest {
 
       // When: 执行方法
       ExprSnapshotQuery result =
-          orchestrator.loadSnapshot(provenanceCodeStr, null, endpointName, null);
+          queryService.loadSnapshot(provenanceCodeStr, null, endpointName, null);
 
       // Then: 验证结果
       assertThat(result).isNotNull();
@@ -187,7 +187,7 @@ class ExprQueryOrchestratorTest {
 
       // When & Then: 验证异常
       assertThatThrownBy(
-              () -> orchestrator.loadSnapshot("PUBMED", "HARVEST", "SEARCH", Instant.now()))
+              () -> queryService.loadSnapshot("PUBMED", "HARVEST", "SEARCH", Instant.now()))
           .isInstanceOf(RuntimeException.class)
           .hasMessage("Database connection failed");
     }
@@ -202,7 +202,7 @@ class ExprQueryOrchestratorTest {
           .thenThrow(new RuntimeException("Mapping conversion failed"));
 
       // When & Then: 验证异常
-      assertThatThrownBy(() -> orchestrator.loadSnapshot("PUBMED", null, null, null))
+      assertThatThrownBy(() -> queryService.loadSnapshot("PUBMED", null, null, null))
           .isInstanceOf(RuntimeException.class)
           .hasMessage("Mapping conversion failed");
     }
@@ -211,7 +211,7 @@ class ExprQueryOrchestratorTest {
     @DisplayName("当数据源代码无效时应该抛出异常")
     void shouldThrowExceptionForInvalidProvenanceCode() {
       // When & Then: 验证异常
-      assertThatThrownBy(() -> orchestrator.loadSnapshot("INVALID_CODE", null, null, null))
+      assertThatThrownBy(() -> queryService.loadSnapshot("INVALID_CODE", null, null, null))
           .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -231,7 +231,7 @@ class ExprQueryOrchestratorTest {
       when(assembler.toQuery(domainSnapshot)).thenReturn(snapshotQuery);
 
       // When: 执行方法
-      orchestrator.loadSnapshot(provenanceCodeStr, null, null, specificTime);
+      queryService.loadSnapshot(provenanceCodeStr, null, null, specificTime);
 
       // Then: 验证 Repository 调用时使用了指定的时间点
       verify(exprRepository).loadSnapshot(provenanceCode, null, null, specificTime);
@@ -255,7 +255,7 @@ class ExprQueryOrchestratorTest {
 
       // When: 执行方法
       ExprSnapshotQuery result =
-          orchestrator.loadSnapshot(provenanceCodeStr, operationType, endpointName, null);
+          queryService.loadSnapshot(provenanceCodeStr, operationType, endpointName, null);
 
       // Then: 验证结果
       assertThat(result).isNotNull();
@@ -278,7 +278,7 @@ class ExprQueryOrchestratorTest {
         when(assembler.toQuery(domainSnapshot)).thenReturn(snapshotQuery);
 
         // When: 执行方法
-        ExprSnapshotQuery result = orchestrator.loadSnapshot(code, null, null, null);
+        ExprSnapshotQuery result = queryService.loadSnapshot(code, null, null, null);
 
         // Then: 验证结果
         assertThat(result).isNotNull();

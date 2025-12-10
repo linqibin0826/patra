@@ -10,7 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.patra.registry.adapter.rest.converter.ExprApiConverter;
 import com.patra.registry.api.dto.expr.ExprSnapshotResp;
-import com.patra.registry.app.service.ExprQueryOrchestrator;
+import com.patra.registry.app.service.ExprQueryService;
 import com.patra.registry.domain.exception.DomainValidationException;
 import com.patra.registry.domain.exception.RegistryConflict;
 import com.patra.registry.domain.exception.RegistryQuotaExceeded;
@@ -30,8 +30,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///
 /// 测试策略：
 ///
-/// - 使用 Mockito Mock Orchestrator 和 Converter
-///   - 验证 Controller 正确调用 Orchestrator
+/// - 使用 Mockito Mock QueryService 和 Converter
+///   - 验证 Controller 正确调用 QueryService
 ///   - 验证 Controller 正确使用 Converter 转换响应
 ///   - 验证参数正确传递
 ///   - 验证异常正确传播
@@ -42,7 +42,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @DisplayName("ExprEndpointImpl 单元测试")
 class ExprEndpointImplTest {
 
-  @Mock private ExprQueryOrchestrator orchestrator;
+  @Mock private ExprQueryService queryService;
 
   @Mock private ExprApiConverter converter;
 
@@ -62,7 +62,7 @@ class ExprEndpointImplTest {
       Instant at = Instant.parse("2024-01-01T00:00:00Z");
 
       ExprSnapshotQuery queryResult = createMockQuery();
-      when(orchestrator.loadSnapshot(provenanceCode, operationType, endpointName, at))
+      when(queryService.loadSnapshot(provenanceCode, operationType, endpointName, at))
           .thenReturn(queryResult);
 
       ExprSnapshotResp expectedResp = createMockResponse();
@@ -77,7 +77,7 @@ class ExprEndpointImplTest {
       assertThat(result).isEqualTo(expectedResp);
 
       // 验证调用
-      verify(orchestrator).loadSnapshot(provenanceCode, operationType, endpointName, at);
+      verify(queryService).loadSnapshot(provenanceCode, operationType, endpointName, at);
       verify(converter).toResp(queryResult);
     }
 
@@ -88,7 +88,7 @@ class ExprEndpointImplTest {
       String provenanceCode = "EPMC";
 
       ExprSnapshotQuery queryResult = createMockQuery();
-      when(orchestrator.loadSnapshot(eq(provenanceCode), isNull(), isNull(), isNull()))
+      when(queryService.loadSnapshot(eq(provenanceCode), isNull(), isNull(), isNull()))
           .thenReturn(queryResult);
 
       ExprSnapshotResp expectedResp = createMockResponse();
@@ -101,7 +101,7 @@ class ExprEndpointImplTest {
       assertThat(result).isNotNull();
       assertThat(result).isEqualTo(expectedResp);
 
-      verify(orchestrator).loadSnapshot(provenanceCode, null, null, null);
+      verify(queryService).loadSnapshot(provenanceCode, null, null, null);
     }
 
     @Test
@@ -111,7 +111,7 @@ class ExprEndpointImplTest {
       String provenanceCode = "ARXIV";
 
       ExprSnapshotQuery queryResult = createMockQuery();
-      when(orchestrator.loadSnapshot(provenanceCode, null, null, null)).thenReturn(queryResult);
+      when(queryService.loadSnapshot(provenanceCode, null, null, null)).thenReturn(queryResult);
 
       ExprSnapshotResp expectedResp = createMockResponse();
       when(converter.toResp(queryResult)).thenReturn(expectedResp);
@@ -121,7 +121,7 @@ class ExprEndpointImplTest {
 
       // Then: 验证结果
       assertThat(result).isNotNull();
-      verify(orchestrator).loadSnapshot(provenanceCode, null, null, null);
+      verify(queryService).loadSnapshot(provenanceCode, null, null, null);
       verify(converter).toResp(queryResult);
     }
 
@@ -129,7 +129,7 @@ class ExprEndpointImplTest {
     @DisplayName("当 Orchestrator 抛出异常时应该传播异常")
     void shouldPropagateOrchestratorException() {
       // Given: Orchestrator 抛出异常
-      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+      when(queryService.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(new RuntimeException("Provenance not found"));
 
       // When & Then: 验证异常传播
@@ -143,7 +143,7 @@ class ExprEndpointImplTest {
     void shouldPropagateConverterException() {
       // Given: Orchestrator 成功,但 Converter 抛出异常
       ExprSnapshotQuery queryResult = createMockQuery();
-      when(orchestrator.loadSnapshot(any(), any(), any(), any())).thenReturn(queryResult);
+      when(queryService.loadSnapshot(any(), any(), any(), any())).thenReturn(queryResult);
       when(converter.toResp(queryResult)).thenThrow(new RuntimeException("Conversion error"));
 
       // When & Then: 验证异常传播
@@ -160,7 +160,7 @@ class ExprEndpointImplTest {
       Instant historicalTime = Instant.parse("2023-01-01T00:00:00Z");
 
       ExprSnapshotQuery queryResult = createMockQuery();
-      when(orchestrator.loadSnapshot(provenanceCode, null, null, historicalTime))
+      when(queryService.loadSnapshot(provenanceCode, null, null, historicalTime))
           .thenReturn(queryResult);
 
       ExprSnapshotResp expectedResp = createMockResponse();
@@ -171,7 +171,7 @@ class ExprEndpointImplTest {
 
       // Then: 验证时态参数正确传递
       assertThat(result).isNotNull();
-      verify(orchestrator).loadSnapshot(provenanceCode, null, null, historicalTime);
+      verify(queryService).loadSnapshot(provenanceCode, null, null, historicalTime);
     }
 
     @Test
@@ -183,7 +183,7 @@ class ExprEndpointImplTest {
       String endpointName = "search";
 
       ExprSnapshotQuery queryResult = createMockQuery();
-      when(orchestrator.loadSnapshot(provenanceCode, operationType, endpointName, null))
+      when(queryService.loadSnapshot(provenanceCode, operationType, endpointName, null))
           .thenReturn(queryResult);
 
       ExprSnapshotResp expectedResp = createMockResponse();
@@ -195,7 +195,7 @@ class ExprEndpointImplTest {
 
       // Then: 验证过滤参数正确传递
       assertThat(result).isNotNull();
-      verify(orchestrator).loadSnapshot(provenanceCode, operationType, endpointName, null);
+      verify(queryService).loadSnapshot(provenanceCode, operationType, endpointName, null);
     }
   }
 
@@ -211,7 +211,7 @@ class ExprEndpointImplTest {
 
       // When & Then: 验证 IllegalArgumentException 被传播
       // ProvenanceCode.parse() 会在 Orchestrator 内部抛出此异常
-      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+      when(queryService.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(new IllegalArgumentException("未知的数据源: " + invalidProvenanceCode));
 
       assertThatThrownBy(() -> endpoint.getSnapshot(invalidProvenanceCode, null, null, null))
@@ -223,7 +223,7 @@ class ExprEndpointImplTest {
     @DisplayName("当 provenanceCode 为 null 时应该抛出 IllegalArgumentException")
     void shouldThrowIllegalArgumentExceptionWhenProvenanceCodeNull() {
       // Given: null provenanceCode
-      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+      when(queryService.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(new IllegalArgumentException("数据源标识符不能为 null"));
 
       // When & Then: 验证异常传播
@@ -237,7 +237,7 @@ class ExprEndpointImplTest {
     void shouldThrowDomainValidationExceptionWhenValidationFails() {
       // Given: Orchestrator 抛出领域验证异常
       String provenanceCode = "PUBMED";
-      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+      when(queryService.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(new DomainValidationException("operationType 不能为空白"));
 
       // When & Then: 验证 DomainValidationException 被传播
@@ -252,7 +252,7 @@ class ExprEndpointImplTest {
       // Given: 参数验证失败（例如时间点在未来）
       String provenanceCode = "EPMC";
       Instant futureTime = Instant.parse("2099-01-01T00:00:00Z");
-      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+      when(queryService.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(new DomainValidationException("at 必须在过去或现在"));
 
       // When & Then: 验证异常传播
@@ -266,7 +266,7 @@ class ExprEndpointImplTest {
     void shouldThrowRegistryNotFoundWhenProvenanceConfigNotFound() {
       // Given: 数据源配置不存在
       String provenanceCode = "ARXIV";
-      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+      when(queryService.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(new ProvenanceNotFoundException("数据源配置未找到: " + provenanceCode));
 
       // When & Then: 验证 RegistryNotFound 异常被传播
@@ -281,7 +281,7 @@ class ExprEndpointImplTest {
       // Given: 特定操作类型的配置不存在
       String provenanceCode = "PUBMED";
       String operationType = "UNKNOWN_OPERATION";
-      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+      when(queryService.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(new ProvenanceNotFoundException("未找到操作类型 " + operationType + " 的配置"));
 
       // When & Then: 验证异常传播
@@ -297,7 +297,7 @@ class ExprEndpointImplTest {
       String provenanceCode = "EPMC";
       String operationType = "HARVEST";
       String endpointName = "unknown_endpoint";
-      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+      when(queryService.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(new ProvenanceNotFoundException("未找到端点 " + endpointName + " 的配置"));
 
       // When & Then: 验证异常传播
@@ -313,7 +313,7 @@ class ExprEndpointImplTest {
       // Given: 指定时间点没有有效配置
       String provenanceCode = "PUBMED";
       Instant historicalTime = Instant.parse("2000-01-01T00:00:00Z");
-      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+      when(queryService.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(new ProvenanceNotFoundException("在时间点 " + historicalTime + " 未找到有效配置"));
 
       // When & Then: 验证异常传播
@@ -335,7 +335,7 @@ class ExprEndpointImplTest {
         }
       }
 
-      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+      when(queryService.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(new ConcurrentQueryQuotaExceeded("并发查询数超出配额限制"));
 
       // When & Then: 验证 RegistryQuotaExceeded 异常被传播
@@ -356,7 +356,7 @@ class ExprEndpointImplTest {
         }
       }
 
-      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+      when(queryService.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(new ResultSizeQuotaExceeded("查询结果大小超出限制: 最大 10MB"));
 
       // When & Then: 验证异常传播
@@ -377,7 +377,7 @@ class ExprEndpointImplTest {
         }
       }
 
-      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+      when(queryService.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(new VersionConflictException("配置版本冲突,请重试"));
 
       // When & Then: 验证 RegistryConflict 异常被传播
@@ -399,7 +399,7 @@ class ExprEndpointImplTest {
         }
       }
 
-      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+      when(queryService.loadSnapshot(any(), any(), any(), any()))
           .thenThrow(new TemporalSliceConflictException("时态切片状态冲突"));
 
       // When & Then: 验证异常传播

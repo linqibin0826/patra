@@ -10,11 +10,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/// 表达式配置查询编排器。
+/// 表达式配置查询服务。
 ///
 /// 职责：
 ///
-/// - 编排表达式快照的查询用例
+/// - 提供表达式快照的查询能力
 ///   - 协调领域仓储检索表达式元数据
 ///   - 将领域对象转换为查询 DTO 供外部消费
 ///
@@ -24,14 +24,14 @@ import org.springframework.stereotype.Service;
 ///   - 支持按操作类型和端点名称过滤
 ///   - 支持时态切片查询
 ///
-/// 设计模式：应用服务编排,不包含业务逻辑,仅负责用例协调和对象转换。
+/// 设计模式：查询服务,不包含业务逻辑,仅负责用例协调和对象转换。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ExprQueryOrchestrator {
+public class ExprQueryService {
 
   private final ExprRepository exprRepository;
   private final ExprQueryAssembler assembler;
