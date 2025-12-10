@@ -5,7 +5,7 @@ import com.patra.registry.adapter.rest.converter.ProvenanceApiConverter;
 import com.patra.registry.api.dto.provenance.ProvenanceConfigResp;
 import com.patra.registry.api.dto.provenance.ProvenanceResp;
 import com.patra.registry.api.endpoint.ProvenanceEndpoint;
-import com.patra.registry.app.service.ProvenanceConfigOrchestrator;
+import com.patra.registry.app.service.ProvenanceQueryService;
 import com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException;
 import java.time.Instant;
 import java.util.List;
@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 /// 职责:
 ///
 /// - 接收 HTTP 请求参数并验证
-///   - 调用 {@link ProvenanceConfigOrchestrator} 执行用例
+///   - 调用 {@link ProvenanceQueryService} 执行查询
 ///   - 通过 {@link ProvenanceApiConverter} 转换为 API 响应 DTO
 ///   - 处理异常并抛出 {@link ProvenanceNotFoundException}
 ///
@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
 
-  private final ProvenanceConfigOrchestrator orchestrator;
+  private final ProvenanceQueryService queryService;
   private final ProvenanceApiConverter converter;
 
   /// 列出所有可用数据源。
@@ -47,7 +47,7 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
   public List<ProvenanceResp> listProvenances() {
     log.debug("Received request to list all provenances");
 
-    List<ProvenanceResp> response = converter.toResp(orchestrator.listProvenances());
+    List<ProvenanceResp> response = converter.toResp(queryService.listProvenances());
 
     return response;
   }
@@ -62,7 +62,7 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
     log.debug("Received request to get provenance for code [{}]", code.getCode());
 
     ProvenanceResp response =
-        orchestrator
+        queryService
             .findProvenance(code)
             .map(converter::toResp)
             .orElseThrow(
@@ -95,7 +95,7 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
         at);
 
     ProvenanceConfigResp response =
-        orchestrator
+        queryService
             .loadConfiguration(code, operationType, at)
             .map(converter::toResp)
             .orElseThrow(

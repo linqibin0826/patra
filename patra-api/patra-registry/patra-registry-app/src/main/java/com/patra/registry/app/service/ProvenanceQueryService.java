@@ -12,11 +12,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/// 数据源配置查询编排器。
+/// 数据源配置查询服务。
 ///
 /// 职责：
 ///
-/// - 编排数据源元数据和配置的查询用例
+/// - 提供数据源元数据和配置的查询能力
 ///   - 协调领域仓储完成数据检索
 ///   - 将领域对象转换为查询 DTO 供外部客户端消费
 ///
@@ -26,14 +26,14 @@ import org.springframework.stereotype.Service;
 ///   - 查询单个数据源的元数据
 ///   - 加载指定时间点的完整配置聚合(支持时态切片)
 ///
-/// 设计模式：应用服务编排,不包含业务逻辑,仅负责用例协调和对象转换。
+/// 设计模式：查询服务,不包含业务逻辑,仅负责用例协调和对象转换。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ProvenanceConfigOrchestrator {
+public class ProvenanceQueryService {
 
   private final ProvenanceConfigRepository repository;
   private final ProvenanceQueryAssembler assembler;

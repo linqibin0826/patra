@@ -25,7 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/// ProvenanceConfigOrchestrator 单元测试。
+/// ProvenanceQueryService 单元测试。
 ///
 /// 测试覆盖:
 ///
@@ -43,8 +43,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
-@DisplayName("ProvenanceConfigOrchestrator 单元测试")
-class ProvenanceConfigOrchestratorTest {
+@DisplayName("ProvenanceQueryService 单元测试")
+class ProvenanceQueryServiceTest {
 
   @Mock private ProvenanceConfigRepository repository;
 
@@ -54,11 +54,11 @@ class ProvenanceConfigOrchestratorTest {
 
   @Mock private ProvenanceConfigQuery configQuery;
 
-  private ProvenanceConfigOrchestrator orchestrator;
+  private ProvenanceQueryService queryService;
 
   @BeforeEach
   void setUp() {
-    orchestrator = new ProvenanceConfigOrchestrator(repository, assembler);
+    queryService = new ProvenanceQueryService(repository, assembler);
   }
 
   @Nested
@@ -83,7 +83,7 @@ class ProvenanceConfigOrchestratorTest {
       when(assembler.toQuery(provenance2)).thenReturn(query2);
 
       // When: 执行方法
-      List<ProvenanceQuery> result = orchestrator.listProvenances();
+      List<ProvenanceQuery> result = queryService.listProvenances();
 
       // Then: 验证结果
       assertThat(result).hasSize(2);
@@ -102,7 +102,7 @@ class ProvenanceConfigOrchestratorTest {
       when(repository.findAllProvenances()).thenReturn(List.of());
 
       // When: 执行方法
-      List<ProvenanceQuery> result = orchestrator.listProvenances();
+      List<ProvenanceQuery> result = queryService.listProvenances();
 
       // Then: 验证结果
       assertThat(result).isEmpty();
@@ -119,7 +119,7 @@ class ProvenanceConfigOrchestratorTest {
           .thenThrow(new RuntimeException("Database connection failed"));
 
       // When & Then: 验证异常
-      assertThatThrownBy(() -> orchestrator.listProvenances())
+      assertThatThrownBy(() -> queryService.listProvenances())
           .isInstanceOf(RuntimeException.class)
           .hasMessage("Database connection failed");
     }
@@ -145,7 +145,7 @@ class ProvenanceConfigOrchestratorTest {
                   .thenReturn(createMockProvenanceQuery(p.id(), p.code(), p.name())));
 
       // When: 执行方法
-      List<ProvenanceQuery> result = orchestrator.listProvenances();
+      List<ProvenanceQuery> result = queryService.listProvenances();
 
       // Then: 验证结果
       assertThat(result).hasSize(5);
@@ -171,7 +171,7 @@ class ProvenanceConfigOrchestratorTest {
       when(assembler.toQuery(provenance)).thenReturn(query);
 
       // When: 执行方法
-      Optional<ProvenanceQuery> result = orchestrator.findProvenance(code);
+      Optional<ProvenanceQuery> result = queryService.findProvenance(code);
 
       // Then: 验证结果
       assertThat(result).isPresent();
@@ -190,7 +190,7 @@ class ProvenanceConfigOrchestratorTest {
       when(repository.findProvenanceByCode(code)).thenReturn(Optional.empty());
 
       // When: 执行方法
-      Optional<ProvenanceQuery> result = orchestrator.findProvenance(code);
+      Optional<ProvenanceQuery> result = queryService.findProvenance(code);
 
       // Then: 验证结果
       assertThat(result).isEmpty();
@@ -208,7 +208,7 @@ class ProvenanceConfigOrchestratorTest {
           .thenThrow(new RuntimeException("Database query failed"));
 
       // When & Then: 验证异常
-      assertThatThrownBy(() -> orchestrator.findProvenance(code))
+      assertThatThrownBy(() -> queryService.findProvenance(code))
           .isInstanceOf(RuntimeException.class)
           .hasMessage("Database query failed");
     }
@@ -229,7 +229,7 @@ class ProvenanceConfigOrchestratorTest {
         when(assembler.toQuery(provenance)).thenReturn(query);
 
         // When: 执行方法
-        Optional<ProvenanceQuery> result = orchestrator.findProvenance(code);
+        Optional<ProvenanceQuery> result = queryService.findProvenance(code);
 
         // Then: 验证结果
         assertThat(result).isPresent();
@@ -262,7 +262,7 @@ class ProvenanceConfigOrchestratorTest {
 
       // When: 执行方法
       Optional<ProvenanceConfigQuery> result =
-          orchestrator.loadConfiguration(code, operationType, at);
+          queryService.loadConfiguration(code, operationType, at);
 
       // Then: 验证结果
       assertThat(result).isPresent();
@@ -293,7 +293,7 @@ class ProvenanceConfigOrchestratorTest {
 
       // When: 执行方法 (at = null)
       Optional<ProvenanceConfigQuery> result =
-          orchestrator.loadConfiguration(code, operationType, null);
+          queryService.loadConfiguration(code, operationType, null);
 
       // Then: 验证结果
       assertThat(result).isPresent();
@@ -319,7 +319,7 @@ class ProvenanceConfigOrchestratorTest {
       when(assembler.toQuery(configuration)).thenReturn(configQuery);
 
       // When: 执行方法 (operationType = null)
-      Optional<ProvenanceConfigQuery> result = orchestrator.loadConfiguration(code, null, at);
+      Optional<ProvenanceConfigQuery> result = queryService.loadConfiguration(code, null, at);
 
       // Then: 验证结果
       assertThat(result).isPresent();
@@ -337,7 +337,7 @@ class ProvenanceConfigOrchestratorTest {
 
       // When: 执行方法
       Optional<ProvenanceConfigQuery> result =
-          orchestrator.loadConfiguration(code, "HARVEST", Instant.now());
+          queryService.loadConfiguration(code, "HARVEST", Instant.now());
 
       // Then: 验证结果
       assertThat(result).isEmpty();
@@ -360,7 +360,7 @@ class ProvenanceConfigOrchestratorTest {
       when(repository.loadConfiguration(1L, null, at)).thenReturn(Optional.empty());
 
       // When: 执行方法
-      Optional<ProvenanceConfigQuery> result = orchestrator.loadConfiguration(code, null, at);
+      Optional<ProvenanceConfigQuery> result = queryService.loadConfiguration(code, null, at);
 
       // Then: 验证结果
       assertThat(result).isEmpty();
@@ -379,7 +379,7 @@ class ProvenanceConfigOrchestratorTest {
           .thenThrow(new RuntimeException("Database connection failed"));
 
       // When & Then: 验证异常
-      assertThatThrownBy(() -> orchestrator.loadConfiguration(code, "HARVEST", Instant.now()))
+      assertThatThrownBy(() -> queryService.loadConfiguration(code, "HARVEST", Instant.now()))
           .isInstanceOf(RuntimeException.class)
           .hasMessage("Database connection failed");
     }

@@ -3,7 +3,7 @@ package com.patra.registry.adapter.rest;
 import com.patra.registry.adapter.rest.converter.ExprApiConverter;
 import com.patra.registry.api.dto.expr.ExprSnapshotResp;
 import com.patra.registry.api.endpoint.ExprEndpoint;
-import com.patra.registry.app.service.ExprQueryOrchestrator;
+import com.patra.registry.app.service.ExprQueryService;
 import com.patra.registry.domain.model.read.expr.ExprSnapshotQuery;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 /// 职责:
 ///
 /// - 接收 HTTP 请求参数并验证
-///   - 调用 {@link ExprQueryOrchestrator} 执行用例
+///   - 调用 {@link ExprQueryService} 执行查询
 ///   - 通过 {@link ExprApiConverter} 转换为 API 响应 DTO
 ///
 /// 权限: 内部服务间调用(/_internal 路径)
@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ExprEndpointImpl implements ExprEndpoint {
 
-  private final ExprQueryOrchestrator orchestrator;
+  private final ExprQueryService queryService;
   private final ExprApiConverter converter;
 
   /// 获取表达式快照(支持时态切片)。
@@ -59,7 +59,7 @@ public class ExprEndpointImpl implements ExprEndpoint {
         at);
 
     ExprSnapshotQuery snapshot =
-        orchestrator.loadSnapshot(provenanceCode, operationType, endpointName, at);
+        queryService.loadSnapshot(provenanceCode, operationType, endpointName, at);
 
     return converter.toResp(snapshot);
   }
