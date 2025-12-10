@@ -8,7 +8,7 @@ import com.patra.ingest.app.usecase.execution.cursor.CursorAdvancer;
 import com.patra.ingest.app.usecase.execution.lease.LeaseManagementService;
 import com.patra.ingest.app.usecase.execution.publisher.PublicationEventPublisher;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
-import com.patra.ingest.app.usecase.execution.strategy.ExecuteTaskBatchesUseCase;
+import com.patra.ingest.app.usecase.execution.strategy.BatchExecutionPhase;
 import com.patra.ingest.domain.event.PublicationDataReadyEvent;
 import com.patra.ingest.domain.event.TaskCompletedEvent;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
@@ -41,7 +41,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
 
-/// CompleteTaskExecutionUseCaseImpl 单元测试
+/// DefaultTaskCompletionPhase 单元测试
 ///
 /// 测试范围:
 ///
@@ -55,10 +55,10 @@ import org.springframework.dao.OptimisticLockingFailureException;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@DisplayName("CompleteTaskExecutionUseCaseImpl 单元测试")
+@DisplayName("DefaultTaskCompletionPhase 单元测试")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class CompleteTaskExecutionUseCaseImplTest {
+class DefaultTaskCompletionPhaseTest {
 
   @Mock private TaskRepository taskRepository;
   @Mock private TaskRunRepository taskRunRepository;
@@ -69,7 +69,7 @@ class CompleteTaskExecutionUseCaseImplTest {
   @Mock private ApplicationEventPublisher applicationEventPublisher;
   @Mock private Clock clock;
 
-  @InjectMocks private CompleteTaskExecutionUseCaseImpl completeUseCase;
+  @InjectMocks private DefaultTaskCompletionPhase completePhase;
 
   private ExecutionSession mockSession;
   private ExecutionContext mockContext;
@@ -102,8 +102,8 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("全部批次成功且游标推进成功时应该标记为 SUCCEEDED")
     void shouldMarkAsSucceededWhenAllBatchesSucceedAndCursorAdvances() {
       // Given: 全部批次成功
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(10, 10, 0);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(10, 10, 0);
       when(cursorAdvancer.advance(eq(mockContext), anyLong(), anyLong(), anyLong()))
           .thenReturn(true);
       when(taskRunBatchRepository.findLastSucceededBatchId(mockSession.runId()))
@@ -112,7 +112,7 @@ class CompleteTaskExecutionUseCaseImplTest {
           .thenReturn(Collections.emptyList());
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: Task 和 TaskRun 应该被标记为 SUCCEEDED
       verify(mockTask).markSucceeded(fixedNow);
@@ -125,8 +125,8 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("全部成功时应该推进游标")
     void shouldAdvanceCursorWhenAllBatchesSucceed() {
       // Given: 全部批次成功
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(10, 10, 0);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(10, 10, 0);
       when(cursorAdvancer.advance(eq(mockContext), anyLong(), anyLong(), anyLong()))
           .thenReturn(true);
       when(taskRunBatchRepository.findLastSucceededBatchId(mockSession.runId()))
@@ -135,7 +135,7 @@ class CompleteTaskExecutionUseCaseImplTest {
           .thenReturn(Collections.emptyList());
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: 应该调用游标推进
       verify(cursorAdvancer).advance(mockContext, mockSession.taskId(), mockSession.runId(), 9001L);
@@ -145,8 +145,8 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("全部成功但游标推进失败时应该标记 Task 为 FAILED，TaskRun 为 PARTIAL")
     void shouldMarkAsFailedAndPartialWhenCursorAdvancementFails() {
       // Given: 全部批次成功，但游标推进失败
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(10, 10, 0);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(10, 10, 0);
       when(cursorAdvancer.advance(eq(mockContext), anyLong(), anyLong(), anyLong()))
           .thenReturn(false);
       when(taskRunBatchRepository.findLastSucceededBatchId(mockSession.runId()))
@@ -155,7 +155,7 @@ class CompleteTaskExecutionUseCaseImplTest {
           .thenReturn(Collections.emptyList());
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: Task: FAILED, TaskRun: PARTIAL
       verify(mockTask).markFailed(fixedNow);
@@ -168,8 +168,8 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("游标推进遇到乐观锁冲突时应该标记 Task 为 FAILED，TaskRun 为 PARTIAL")
     void shouldMarkAsFailedAndPartialWhenOptimisticLockConflict() {
       // Given: 游标推进遇到乐观锁冲突
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(10, 10, 0);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(10, 10, 0);
       when(taskRunBatchRepository.findLastSucceededBatchId(mockSession.runId()))
           .thenReturn(Optional.of(9001L));
       when(cursorAdvancer.advance(eq(mockContext), anyLong(), anyLong(), anyLong()))
@@ -178,7 +178,7 @@ class CompleteTaskExecutionUseCaseImplTest {
           .thenReturn(Collections.emptyList());
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: Task: FAILED, TaskRun: PARTIAL (可重试)
       verify(mockTask).markFailed(fixedNow);
@@ -196,13 +196,13 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("部分批次成功时应该标记 Task 为 FAILED，TaskRun 为 PARTIAL")
     void shouldMarkAsFailedAndPartialWhenPartialSuccess() {
       // Given: 部分批次成功
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(10, 7, 3);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(10, 7, 3);
       when(taskRunBatchRepository.findByRunId(mockSession.runId()))
           .thenReturn(Collections.emptyList());
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: Task: FAILED, TaskRun: PARTIAL
       verify(mockTask).markFailed(fixedNow);
@@ -215,13 +215,13 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("部分成功时不应该推进游标")
     void shouldNotAdvanceCursorWhenPartialSuccess() {
       // Given: 部分批次成功
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(10, 7, 3);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(10, 7, 3);
       when(taskRunBatchRepository.findByRunId(mockSession.runId()))
           .thenReturn(Collections.emptyList());
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: 不应该调用游标推进
       verifyNoInteractions(cursorAdvancer);
@@ -231,14 +231,14 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("部分成功时应该发布出版物数据就绪事件")
     void shouldPublishPublicationEventWhenPartialSuccess() {
       // Given: 部分批次成功，有成功的批次
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(5, 3, 2);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(5, 3, 2);
 
       List<TaskRunBatch> batches = createMockBatches(3, 2);
       when(taskRunBatchRepository.findByRunId(mockSession.runId())).thenReturn(batches);
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: 应该发布出版物数据就绪事件
       ArgumentCaptor<PublicationDataReadyEvent> eventCaptor =
@@ -263,13 +263,13 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("全部批次失败时应该标记 Task 和 TaskRun 为 FAILED")
     void shouldMarkAsFailedWhenAllBatchesFail() {
       // Given: 全部批次失败
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(5, 0, 5);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(5, 0, 5);
       when(taskRunBatchRepository.findByRunId(mockSession.runId()))
           .thenReturn(Collections.emptyList());
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: Task 和 TaskRun 都应该为 FAILED
       verify(mockTask).markFailed(fixedNow);
@@ -282,13 +282,13 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("无批次执行时应该标记 Task 和 TaskRun 为 FAILED")
     void shouldMarkAsFailedWhenNoBatchesExecuted() {
       // Given: 无批次执行
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(0, 0, 0);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(0, 0, 0);
       when(taskRunBatchRepository.findByRunId(mockSession.runId()))
           .thenReturn(Collections.emptyList());
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: Task 和 TaskRun 都应该为 FAILED
       verify(mockTask).markFailed(fixedNow);
@@ -299,13 +299,13 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("全部失败时不应该推进游标")
     void shouldNotAdvanceCursorWhenAllBatchesFail() {
       // Given: 全部批次失败
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(5, 0, 5);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(5, 0, 5);
       when(taskRunBatchRepository.findByRunId(mockSession.runId()))
           .thenReturn(Collections.emptyList());
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: 不应该调用游标推进
       verifyNoInteractions(cursorAdvancer);
@@ -315,13 +315,13 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("全部失败时不应该发布出版物数据就绪事件")
     void shouldNotPublishPublicationEventWhenAllBatchesFail() {
       // Given: 全部批次失败
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(5, 0, 5);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(5, 0, 5);
       when(taskRunBatchRepository.findByRunId(mockSession.runId()))
           .thenReturn(Collections.emptyList());
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: 不应该发布出版物数据就绪事件
       verifyNoInteractions(publicationEventPublisher);
@@ -338,8 +338,8 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("完成后应该停止心跳并释放租约")
     void shouldStopHeartbeatAndReleaseLeaseAfterCompletion() {
       // Given: 成功场景
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(10, 10, 0);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(10, 10, 0);
       when(cursorAdvancer.advance(eq(mockContext), anyLong(), anyLong(), anyLong()))
           .thenReturn(true);
       when(taskRunBatchRepository.findLastSucceededBatchId(mockSession.runId()))
@@ -348,7 +348,7 @@ class CompleteTaskExecutionUseCaseImplTest {
           .thenReturn(Collections.emptyList());
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: 应该清理资源
       verify(mockSession).cleanup();
@@ -359,13 +359,13 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("失败场景也应该清理资源")
     void shouldCleanupResourcesEvenWhenFailed() {
       // Given: 失败场景
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(5, 0, 5);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(5, 0, 5);
       when(taskRunBatchRepository.findByRunId(mockSession.runId()))
           .thenReturn(Collections.emptyList());
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: 应该清理资源
       verify(mockSession).cleanup();
@@ -376,8 +376,8 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("资源清理失败时不应该影响完成流程")
     void shouldNotAffectCompletionWhenCleanupFails() {
       // Given: 资源清理失败
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(10, 10, 0);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(10, 10, 0);
       when(cursorAdvancer.advance(eq(mockContext), anyLong(), anyLong(), anyLong()))
           .thenReturn(true);
       when(taskRunBatchRepository.findLastSucceededBatchId(mockSession.runId()))
@@ -388,7 +388,7 @@ class CompleteTaskExecutionUseCaseImplTest {
       doThrow(new RuntimeException("cleanup failed")).when(mockSession).cleanup();
 
       // When: 完成任务（不应该抛出异常）
-      assertThatCode(() -> completeUseCase.complete(mockSession, mockContext, executeResult))
+      assertThatCode(() -> completePhase.complete(mockSession, mockContext, executeResult))
           .doesNotThrowAnyException();
 
       // Then: Task 和 TaskRun 仍应该被保存
@@ -400,13 +400,13 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("应该在最后清理资源（finally 块）")
     void shouldCleanupResourcesInFinallyBlock() {
       // Given: 完成阶段抛出异常
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(10, 10, 0);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(10, 10, 0);
       when(taskRepository.findById(mockSession.taskId()))
           .thenThrow(new RuntimeException("repository error"));
 
       // When: 完成任务（会抛出异常）
-      assertThatThrownBy(() -> completeUseCase.complete(mockSession, mockContext, executeResult))
+      assertThatThrownBy(() -> completePhase.complete(mockSession, mockContext, executeResult))
           .isInstanceOf(RuntimeException.class);
 
       // Then: 资源清理仍应该被调用
@@ -425,8 +425,8 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("Task 成功时应该发布 TaskCompletedEvent")
     void shouldPublishTaskCompletedEventWhenTaskSucceeds() {
       // Given: 成功场景
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(10, 10, 0);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(10, 10, 0);
       when(cursorAdvancer.advance(eq(mockContext), anyLong(), anyLong(), anyLong()))
           .thenReturn(true);
       when(taskRunBatchRepository.findLastSucceededBatchId(mockSession.runId()))
@@ -438,7 +438,7 @@ class CompleteTaskExecutionUseCaseImplTest {
       when(mockTask.pullDomainEvents()).thenReturn(List.of(domainEvent));
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: 应该发布领域事件
       verify(applicationEventPublisher).publishEvent(domainEvent);
@@ -448,8 +448,8 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("有成功批次时应该发布 PublicationDataReadyEvent")
     void shouldPublishPublicationDataReadyEventWhenBatchesSucceed() {
       // Given: 有成功批次
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(10, 10, 0);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(10, 10, 0);
       when(cursorAdvancer.advance(eq(mockContext), anyLong(), anyLong(), anyLong()))
           .thenReturn(true);
       when(taskRunBatchRepository.findLastSucceededBatchId(mockSession.runId()))
@@ -459,7 +459,7 @@ class CompleteTaskExecutionUseCaseImplTest {
       when(taskRunBatchRepository.findByRunId(mockSession.runId())).thenReturn(batches);
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: 应该发布出版物数据就绪事件
       verify(publicationEventPublisher).publish(any(PublicationDataReadyEvent.class));
@@ -469,8 +469,8 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("PublicationDataReadyEvent 应该包含正确的统计信息")
     void shouldIncludeCorrectStatsInPublicationDataReadyEvent() {
       // Given: 成功场景
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(10, 10, 0);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(10, 10, 0);
       when(cursorAdvancer.advance(eq(mockContext), anyLong(), anyLong(), anyLong()))
           .thenReturn(true);
       when(taskRunBatchRepository.findLastSucceededBatchId(mockSession.runId()))
@@ -480,7 +480,7 @@ class CompleteTaskExecutionUseCaseImplTest {
       when(taskRunBatchRepository.findByRunId(mockSession.runId())).thenReturn(batches);
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: 验证事件内容
       ArgumentCaptor<PublicationDataReadyEvent> eventCaptor =
@@ -507,14 +507,14 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("应该聚合批次统计到 TaskRun")
     void shouldAggregateBatchStatsToTaskRun() {
       // Given: 有批次数据
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(5, 4, 1);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(5, 4, 1);
 
       List<TaskRunBatch> batches = createMockBatches(4, 1);
       when(taskRunBatchRepository.findByRunId(mockSession.runId())).thenReturn(batches);
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: 应该调用 appendStats
       verify(mockTaskRun)
@@ -525,13 +525,13 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("无批次时不应该聚合统计")
     void shouldNotAggregateStatsWhenNoBatches() {
       // Given: 无批次
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(0, 0, 0);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(0, 0, 0);
       when(taskRunBatchRepository.findByRunId(mockSession.runId()))
           .thenReturn(Collections.emptyList());
 
       // When: 完成任务
-      completeUseCase.complete(mockSession, mockContext, executeResult);
+      completePhase.complete(mockSession, mockContext, executeResult);
 
       // Then: 不应该调用 appendStats
       verify(mockTaskRun, never()).appendStats(any());
@@ -548,12 +548,12 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("当 Task 未找到时应该抛出异常")
     void shouldThrowExceptionWhenTaskNotFound() {
       // Given: Task 不存在
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(10, 10, 0);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(10, 10, 0);
       when(taskRepository.findById(mockSession.taskId())).thenReturn(Optional.empty());
 
       // When & Then: 应该抛出异常
-      assertThatThrownBy(() -> completeUseCase.complete(mockSession, mockContext, executeResult))
+      assertThatThrownBy(() -> completePhase.complete(mockSession, mockContext, executeResult))
           .isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Task not found");
 
@@ -566,12 +566,12 @@ class CompleteTaskExecutionUseCaseImplTest {
     @DisplayName("当 TaskRun 未找到时应该抛出异常")
     void shouldThrowExceptionWhenTaskRunNotFound() {
       // Given: TaskRun 不存在
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          new ExecuteTaskBatchesUseCase.ExecuteResult(10, 10, 0);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(10, 10, 0);
       when(taskRunRepository.findById(mockSession.runId())).thenReturn(Optional.empty());
 
       // When & Then: 应该抛出异常
-      assertThatThrownBy(() -> completeUseCase.complete(mockSession, mockContext, executeResult))
+      assertThatThrownBy(() -> completePhase.complete(mockSession, mockContext, executeResult))
           .isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Run record not found");
 

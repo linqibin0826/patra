@@ -30,7 +30,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
-/// ExecuteTaskBatchesUseCaseImpl 单元测试
+/// DefaultBatchExecutionPhase 单元测试
 ///
 /// 测试范围:
 ///
@@ -46,17 +46,17 @@ import org.springframework.test.util.ReflectionTestUtils;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@DisplayName("ExecuteTaskBatchesUseCaseImpl 单元测试")
+@DisplayName("DefaultBatchExecutionPhase 单元测试")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class ExecuteTaskBatchesUseCaseImplTest {
+class DefaultBatchExecutionPhaseTest {
 
   @Mock private BatchScheduleBuilder batchScheduleBuilder;
   @Mock private GenericBatchExecutor batchExecutor;
   @Mock private TaskRunBatchRepository batchRepository;
   @Mock private TaskRunRepository taskRunRepository;
 
-  @InjectMocks private ExecuteTaskBatchesUseCaseImpl executeUseCase;
+  @InjectMocks private DefaultBatchExecutionPhase executePhase;
 
   private ExecutionSession mockSession;
   private ExecutionContext mockContext;
@@ -71,7 +71,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
     mockQuerySession = mock(QuerySession.class);
 
     // 默认配置：非快速失败模式
-    ReflectionTestUtils.setField(executeUseCase, "failFast", false);
+    ReflectionTestUtils.setField(executePhase, "failFast", false);
   }
 
   // ========== 正常流程测试 ==========
@@ -97,8 +97,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
           .thenReturn(true);
 
       // When: 执行批次
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          executeUseCase.execute(mockSession, mockContext);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          executePhase.execute(mockSession, mockContext);
 
       // Then: 验证结果统计
       assertThat(executeResult.totalBatches()).isEqualTo(1);
@@ -134,8 +134,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(taskRunRepository.touchHeartbeat(anyLong(), any(Instant.class))).thenReturn(true);
 
       // When: 执行批次
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          executeUseCase.execute(mockSession, mockContext);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          executePhase.execute(mockSession, mockContext);
 
       // Then: 验证结果统计
       assertThat(executeResult.totalBatches()).isEqualTo(3);
@@ -183,8 +183,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(taskRunRepository.touchHeartbeat(anyLong(), any(Instant.class))).thenReturn(true);
 
       // When: 执行批次
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          executeUseCase.execute(mockSession, mockContext);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          executePhase.execute(mockSession, mockContext);
 
       // Then: 验证结果统计
       assertThat(executeResult.totalBatches()).isEqualTo(3);
@@ -216,8 +216,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(taskRunRepository.touchHeartbeat(anyLong(), any(Instant.class))).thenReturn(true);
 
       // When: 执行批次
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          executeUseCase.execute(mockSession, mockContext);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          executePhase.execute(mockSession, mockContext);
 
       // Then: 验证结果统计
       assertThat(executeResult.totalBatches()).isEqualTo(2);
@@ -232,7 +232,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
     @DisplayName("快速失败模式下第一个批次失败应该中止后续执行")
     void shouldAbortOnFirstFailureWhenFailFastEnabled() {
       // Given: 启用快速失败模式
-      ReflectionTestUtils.setField(executeUseCase, "failFast", true);
+      ReflectionTestUtils.setField(executePhase, "failFast", true);
 
       Batch batch1 = createBatch(1, 3);
       Batch batch2 = createBatch(2, 3);
@@ -247,8 +247,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(taskRunRepository.touchHeartbeat(anyLong(), any(Instant.class))).thenReturn(true);
 
       // When: 执行批次
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          executeUseCase.execute(mockSession, mockContext);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          executePhase.execute(mockSession, mockContext);
 
       // Then: 验证只执行了第一个批次
       assertThat(executeResult.totalBatches()).isEqualTo(3);
@@ -278,8 +278,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(batchScheduleBuilder.build(mockContext)).thenReturn(plan);
 
       // When: 执行批次
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          executeUseCase.execute(mockSession, mockContext);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          executePhase.execute(mockSession, mockContext);
 
       // Then: 验证结果为零
       assertThat(executeResult.totalBatches()).isEqualTo(0);
@@ -301,8 +301,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(batchScheduleBuilder.build(mockContext)).thenReturn(plan);
 
       // When & Then: 执行批次应该抛出异常
-      assertThatThrownBy(() -> executeUseCase.execute(mockSession, mockContext))
-          .isInstanceOf(ExecuteTaskBatchesUseCaseImpl.BatchLimitExceededException.class)
+      assertThatThrownBy(() -> executePhase.execute(mockSession, mockContext))
+          .isInstanceOf(DefaultBatchExecutionPhase.BatchLimitExceededException.class)
           .hasMessageContaining("批次数量超过限制")
           .hasMessageContaining("taskId=" + mockSession.taskId())
           .hasMessageContaining("totalBatches=10000");
@@ -339,8 +339,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(taskRunRepository.touchHeartbeat(anyLong(), any(Instant.class))).thenReturn(true);
 
       // When: 执行批次
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          executeUseCase.execute(mockSession, mockContext);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          executePhase.execute(mockSession, mockContext);
 
       // Then: 只执行了第一个批次
       assertThat(executeResult.totalBatches()).isEqualTo(3);
@@ -374,8 +374,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(taskRunRepository.touchHeartbeat(anyLong(), any(Instant.class))).thenReturn(true);
 
       // When: 执行批次
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          executeUseCase.execute(sessionWithoutHeartbeat, mockContext);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          executePhase.execute(sessionWithoutHeartbeat, mockContext);
 
       // Then: 验证所有批次都执行
       assertThat(executeResult.totalBatches()).isEqualTo(2);
@@ -407,7 +407,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
           .thenReturn(true);
 
       // When: 执行批次
-      executeUseCase.execute(mockSession, mockContext);
+      executePhase.execute(mockSession, mockContext);
 
       // Then: 验证心跳更新被调用
       ArgumentCaptor<Instant> instantCaptor = ArgumentCaptor.forClass(Instant.class);
@@ -433,8 +433,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
           .thenThrow(new RuntimeException("数据库连接失败"));
 
       // When: 执行批次（不应该抛出异常）
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          executeUseCase.execute(mockSession, mockContext);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          executePhase.execute(mockSession, mockContext);
 
       // Then: 批次仍然成功
       assertThat(executeResult.succeededBatches()).isEqualTo(1);
@@ -473,8 +473,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(taskRunRepository.touchHeartbeat(anyLong(), any(Instant.class))).thenReturn(true);
 
       // When: 执行批次
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          executeUseCase.execute(mockSession, mockContext);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          executePhase.execute(mockSession, mockContext);
 
       // Then: 验证所有批次都执行
       assertThat(executeResult.totalBatches()).isEqualTo(100);
@@ -509,8 +509,8 @@ class ExecuteTaskBatchesUseCaseImplTest {
       when(taskRunRepository.touchHeartbeat(anyLong(), any(Instant.class))).thenReturn(true);
 
       // When: 执行批次
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          executeUseCase.execute(mockSession, mockContext);
+      BatchExecutionPhase.ExecuteResult executeResult =
+          executePhase.execute(mockSession, mockContext);
 
       // Then: 验证统计正确
       assertThat(executeResult.totalBatches()).isEqualTo(5);

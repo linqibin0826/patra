@@ -26,34 +26,34 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-/// 准备阶段实现。
+/// 任务准备阶段默认实现。
 ///
-/// 职责:幂等性检查 → 租约获取 → 会话初始化 → 上下文加载。
+/// 职责: 幂等性检查 → 租约获取 → 会话初始化 → 上下文加载。
 ///
 /// 设计要点:
 ///
-/// - 幂等性:调用 IdempotencyChecker.isAlreadySucceeded();如果已完成则抛出异常跳过
-///   - 租约:调用 LeaseManagementService.tryAcquireLease();获取失败时抛出异常
-///   - 会话:调用 ExecutionSessionManager.createSession() 创建 TaskRun 并启动心跳
-///   - 上下文:调用 ExecutionContextLoader.loadContext() 恢复配置并编译表达式
+/// - 幂等性: 调用 IdempotencyChecker.isAlreadySucceeded(); 如果已完成则抛出异常跳过
+/// - 租约: 调用 LeaseManagementService.tryAcquireLease(); 获取失败时抛出异常
+/// - 会话: 调用 ExecutionSessionManager.createSession() 创建 TaskRun 并启动心跳
+/// - 上下文: 调用 ExecutionContextLoader.loadContext() 恢复配置并编译表达式
 ///
 /// 错误处理:
 ///
 /// - TaskAlreadySucceededException 用于幂等跳过
-///   - LeaseAcquisitionFailedException 当租约获取失败时
-///   - 传播 IllegalStateException 用于上下文加载失败
+/// - LeaseAcquisitionFailedException 当租约获取失败时
+/// - 传播 IllegalStateException 用于上下文加载失败
 ///
 /// 日志记录:
 ///
 /// - INFO: 关键步骤(幂等性、租约、会话、上下文)
-///   - WARN: 幂等跳过、租约失败
+/// - WARN: 幂等跳过、租约失败
 ///
 /// @author linqibin
 /// @since 0.1.0
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseCase {
+public class DefaultTaskPreparationPhase implements TaskPreparationPhase {
 
   private final TaskRepository taskRepository;
   private final PlanSliceRepository planSliceRepository;

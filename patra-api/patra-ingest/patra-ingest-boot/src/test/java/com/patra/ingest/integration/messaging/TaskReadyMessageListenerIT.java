@@ -7,7 +7,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.patra.ingest.app.usecase.execution.TaskExecutionUseCase;
+import com.patra.common.cqrs.CommandBus;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
 import com.patra.ingest.integration.config.IngestMySQLContainerInitializer;
 import com.patra.ingest.integration.config.IngestRocketMQContainerInitializer;
@@ -44,7 +44,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 /// 遵循 testing-guide.md §7 集成测试模式：
 ///
 /// - **真实依赖**: 使用 RocketMQ Testcontainers (由 RocketMQContainerInitializer 提供)
-///   - **Mock 业务用例**: 使用 @MockitoBean Mock {@link TaskExecutionUseCase}，避免执行真实业务逻辑
+///   - **Mock CommandBus**: 使用 @MockitoBean Mock {@link CommandBus}，避免执行真实业务逻辑
 ///   - **异步断言**: 使用 Awaitility 等待消息消费完成
 ///   - **参数捕获**: 使用 Mockito ArgumentCaptor 验证传递给用例的 Command 对象
 ///
@@ -65,7 +65,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 /// @since 0.1.0
 /// @see RocketMQContainerInitializer
 /// @see MySQLContainerInitializer
-/// @see TaskExecutionUseCase
+/// @see CommandBus
 @Slf4j
 @SpringBootTest(
     properties = {
@@ -92,8 +92,8 @@ class TaskReadyMessageListenerIT {
 
   @Autowired private RocketMQTemplate rocketMQTemplate;
 
-  /// Mock 业务用例，避免执行真实业务逻辑
-  @MockitoBean private TaskExecutionUseCase taskExecutionUseCase;
+  /// Mock CommandBus，避免执行真实业务逻辑
+  @MockitoBean private CommandBus commandBus;
 
   @Autowired private ObjectMapper objectMapper;
 
@@ -103,7 +103,7 @@ class TaskReadyMessageListenerIT {
   @BeforeEach
   void setUp() {
     // 重置 Mock 对象
-    reset(taskExecutionUseCase);
+    reset(commandBus);
   }
 
   @Test
@@ -128,13 +128,12 @@ class TaskReadyMessageListenerIT {
     SendResult sendResult = rocketMQTemplate.syncSend(destination, message);
     log.info("消息已发送, msgId={}", sendResult.getMsgId());
 
-    // 断言：等待 TaskExecutionUseCase.execute() 被调用 (最多 10 秒)
+    // 断言：等待 CommandBus.handle() 被调用 (最多 10 秒)
     ArgumentCaptor<TaskReadyCommand> commandCaptor =
         ArgumentCaptor.forClass(TaskReadyCommand.class);
     await()
         .atMost(10, SECONDS)
-        .untilAsserted(
-            () -> verify(taskExecutionUseCase, times(1)).execute(commandCaptor.capture()));
+        .untilAsserted(() -> verify(commandBus, times(1)).handle(commandCaptor.capture()));
 
     // 验证：Command 对象的字段
     TaskReadyCommand capturedCommand = commandCaptor.getValue();
@@ -172,13 +171,12 @@ class TaskReadyMessageListenerIT {
     String destination = TOPIC + ":UPDATE"; // destination 格式：topic:tags
     rocketMQTemplate.syncSend(destination, message);
 
-    // 断言：等待用例被调用
+    // 断言：等待 CommandBus 被调用
     ArgumentCaptor<TaskReadyCommand> commandCaptor =
         ArgumentCaptor.forClass(TaskReadyCommand.class);
     await()
         .atMost(10, SECONDS)
-        .untilAsserted(
-            () -> verify(taskExecutionUseCase, times(1)).execute(commandCaptor.capture()));
+        .untilAsserted(() -> verify(commandBus, times(1)).handle(commandCaptor.capture()));
 
     // 验证：Command 中的 headers 包含所有元数据
     TaskReadyCommand capturedCommand = commandCaptor.getValue();
@@ -212,14 +210,14 @@ class TaskReadyMessageListenerIT {
     // 执行：发送消息
     rocketMQTemplate.syncSend(TOPIC, message);
 
-    // 断言：等待一段时间，确保 TaskExecutionUseCase 不会被调用
+    // 断言：等待一段时间，确保 CommandBus 不会被调用
     await()
         .pollDelay(2, SECONDS) // 等待 2 秒
         .atMost(5, SECONDS)
-        .untilAsserted(() -> verify(taskExecutionUseCase, never()).execute(any()));
+        .untilAsserted(() -> verify(commandBus, never()).handle(any()));
 
     // 说明：由于消息解析失败，Listener 会抛出异常，RocketMQ 会重试
-    // 在测试中，我们验证用例不会被调用（因为验证失败在用例调用之前）
+    // 在测试中，我们验证 Handler 不会被调用（因为验证失败在调用之前）
   }
 
   @Test
@@ -239,22 +237,20 @@ class TaskReadyMessageListenerIT {
     // 执行：发送消息
     rocketMQTemplate.syncSend(TOPIC, message);
 
-    // 断言：等待一段时间，确保 TaskExecutionUseCase 不会被调用
+    // 断言：等待一段时间，确保 CommandBus 不会被调用
     await()
         .pollDelay(2, SECONDS)
         .atMost(5, SECONDS)
-        .untilAsserted(() -> verify(taskExecutionUseCase, never()).execute(any()));
+        .untilAsserted(() -> verify(commandBus, never()).handle(any()));
 
     // 说明：由于验证失败，Listener 会抛出异常，RocketMQ 会重试
   }
 
   @Test
-  @DisplayName("应该处理用例执行失败（异常传播触发 RocketMQ 重试）")
+  @DisplayName("应该处理 Handler 执行失败（异常传播触发 RocketMQ 重试）")
   void shouldHandleUseCaseExecutionFailure() throws Exception {
-    // 准备：Mock TaskExecutionUseCase 抛出异常
-    doThrow(new RuntimeException("模拟业务执行失败"))
-        .when(taskExecutionUseCase)
-        .execute(any(TaskReadyCommand.class));
+    // 准备：Mock CommandBus 抛出异常
+    doThrow(new RuntimeException("模拟业务执行失败")).when(commandBus).handle(any(TaskReadyCommand.class));
 
     // 准备：构建消息负载
     Map<String, Object> payload = new HashMap<>();
@@ -270,14 +266,14 @@ class TaskReadyMessageListenerIT {
     // 执行：发送消息
     rocketMQTemplate.syncSend(TOPIC, message);
 
-    // 断言：等待 TaskExecutionUseCase.execute() 被调用
+    // 断言：等待 CommandBus.handle() 被调用
     await()
         .atMost(10, SECONDS)
-        .untilAsserted(() -> verify(taskExecutionUseCase, atLeastOnce()).execute(any()));
+        .untilAsserted(() -> verify(commandBus, atLeastOnce()).handle(any()));
 
-    // 说明：由于用例抛出异常，Listener 会传播异常给 RocketMQ，触发重试
-    // 在测试中，我们验证用例至少被调用 1 次（可能因为重试被调用多次）
-    log.info("用例执行失败，RocketMQ 将触发重试机制");
+    // 说明：由于 Handler 抛出异常，Listener 会传播异常给 RocketMQ，触发重试
+    // 在测试中，我们验证 Handler 至少被调用 1 次（可能因为重试被调用多次）
+    log.info("Handler 执行失败，RocketMQ 将触发重试机制");
   }
 
   @Test
@@ -304,13 +300,12 @@ class TaskReadyMessageListenerIT {
     String destination = TOPIC + ":EXECUTE"; // destination 格式：topic:tags
     rocketMQTemplate.syncSend(destination, message);
 
-    // 断言：等待用例被调用
+    // 断言：等待 CommandBus 被调用
     ArgumentCaptor<TaskReadyCommand> commandCaptor =
         ArgumentCaptor.forClass(TaskReadyCommand.class);
     await()
         .atMost(10, SECONDS)
-        .untilAsserted(
-            () -> verify(taskExecutionUseCase, times(1)).execute(commandCaptor.capture()));
+        .untilAsserted(() -> verify(commandBus, times(1)).handle(commandCaptor.capture()));
 
     // 验证：Command 对象包含所有字段
     TaskReadyCommand capturedCommand = commandCaptor.getValue();

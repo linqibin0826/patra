@@ -4,9 +4,9 @@ import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.IdUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.cqrs.CommandBus;
 import com.patra.common.messaging.ChannelKey;
 import com.patra.ingest.adapter.scheduler.param.OutboxRelayJobParam;
-import com.patra.ingest.app.usecase.relay.OutboxRelayUseCase;
 import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
 import com.patra.ingest.app.usecase.relay.config.OutboxRelayProperties;
 import com.patra.ingest.app.usecase.relay.dto.RelayReport;
@@ -45,7 +45,7 @@ import org.springframework.stereotype.Component;
 public class OutboxRelayJob {
 
   private final ObjectMapper objectMapper;
-  private final OutboxRelayUseCase relayUseCase;
+  private final CommandBus commandBus;
   private final OutboxRelayProperties relayProperties;
   private final Clock clock;
 
@@ -71,7 +71,7 @@ public class OutboxRelayJob {
       OutboxRelayCommand command = buildInstruction(jobParam, now);
       log.debug("已构建 relay 命令,租约所有者 [{}],时间 {}", command.leaseOwner(), now);
 
-      RelayReport report = relayUseCase.relay(command);
+      RelayReport report = commandBus.handle(command);
       handleRelaySuccess(report);
     } catch (OutboxRelayExecutionException ex) {
       handleRelayFailure(ex);

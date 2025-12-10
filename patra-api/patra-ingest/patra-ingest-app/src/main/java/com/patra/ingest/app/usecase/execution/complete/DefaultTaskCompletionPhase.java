@@ -4,7 +4,7 @@ import com.patra.ingest.app.usecase.execution.cursor.CursorAdvancer;
 import com.patra.ingest.app.usecase.execution.lease.LeaseManagementService;
 import com.patra.ingest.app.usecase.execution.publisher.PublicationEventPublisher;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
-import com.patra.ingest.app.usecase.execution.strategy.ExecuteTaskBatchesUseCase;
+import com.patra.ingest.app.usecase.execution.strategy.BatchExecutionPhase;
 import com.patra.ingest.domain.event.PublicationDataReadyEvent;
 import com.patra.ingest.domain.event.TaskCompletedEvent;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
@@ -28,36 +28,34 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-/// 完成阶段用例实现
+/// 任务完成阶段默认实现。
 ///
-/// 在六边形架构+DDD中的角色:应用层用例实现,负责任务执行完成阶段的完整流程。
+/// 在六边形架构+DDD中的角色: Handler 内部执行阶段，负责任务执行完成的完整流程。
 ///
-/// 主要职责:游标推进 → 状态决策 → Task/TaskRun更新 → 资源清理(心跳/租约)
+/// 主要职责: 游标推进 → 状态决策 → Task/TaskRun更新 → 资源清理（心跳/租约）
 ///
 /// 设计要点:
 ///
 /// - 状态决策逻辑:
-///
-/// - 全部成功 + 游标推进成功 → Task: SUCCEEDED, TaskRun: SUCCEEDED
-///         - 全部成功 + 游标推进失败 → Task: FAILED, TaskRun: PARTIAL (可重试检查点)
-///         - 部分成功 (failed > 0 且 succeeded > 0) → Task: FAILED, TaskRun: PARTIAL
-///         - 全部失败 (succeeded == 0) → Task: FAILED, TaskRun: FAILED
-///
-///   - 仅当所有批次成功时才推进游标;失败时记录原因
-///   - 乐观锁冲突或游标失败时,将TaskRun标记为PARTIAL(可重试)
-///   - 清理:无论结果如何都停止心跳并释放租约
+///   - 全部成功 + 游标推进成功 → Task: SUCCEEDED, TaskRun: SUCCEEDED
+///   - 全部成功 + 游标推进失败 → Task: FAILED, TaskRun: PARTIAL（可重试检查点）
+///   - 部分成功（failed > 0 且 succeeded > 0）→ Task: FAILED, TaskRun: PARTIAL
+///   - 全部失败（succeeded == 0）→ Task: FAILED, TaskRun: FAILED
+/// - 仅当所有批次成功时才推进游标；失败时记录原因
+/// - 乐观锁冲突或游标失败时，将 TaskRun 标记为 PARTIAL（可重试）
+/// - 清理：无论结果如何都停止心跳并释放租约
 ///
 /// 日志策略:
 ///
-/// - INFO: 游标推进、任务完成(SUCCEEDED状态)
-///   - WARN: 游标失败、部分成功或全部失败状态
+/// - INFO: 游标推进、任务完成（SUCCEEDED 状态）
+/// - WARN: 游标失败、部分成功或全部失败状态
 ///
 /// @author linqibin
 /// @since 0.1.0
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUseCase {
+public class DefaultTaskCompletionPhase implements TaskCompletionPhase {
 
   private final TaskRepository taskRepository;
   private final TaskRunRepository taskRunRepository;
@@ -74,7 +72,7 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
   public void complete(
       ExecutionSession session,
       ExecutionContext context,
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult) {
+      BatchExecutionPhase.ExecuteResult executeResult) {
     Long taskId = session.taskId();
     Long runId = session.runId();
     Instant now = clock.instant();

@@ -27,22 +27,22 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/// OutboxRelayOrchestrator 单元测试
+/// OutboxRelayHandler 单元测试
 ///
 /// 测试覆盖:
 ///
 /// - ✅ 功能开关禁用场景
-///   - ✅ 正常中继流程 (规划 → 执行 → 发布事件)
-///   - ✅ 调用顺序验证 (planBuilder → executor → eventPublisher)
-///   - ✅ 单通道和全通道场景
-///   - ✅ 空结果和批量结果场景
-///   - ✅ 报告生成验证
+/// - ✅ 正常中继流程 (规划 → 执行 → 发布事件)
+/// - ✅ 调用顺序验证 (planBuilder → executor → eventPublisher)
+/// - ✅ 单通道和全通道场景
+/// - ✅ 空结果和批量结果场景
+/// - ✅ 报告生成验证
 ///
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
-@DisplayName("OutboxRelayOrchestrator 单元测试")
-class OutboxRelayOrchestratorTest {
+@DisplayName("OutboxRelayHandler 单元测试")
+class OutboxRelayHandlerTest {
 
   @Mock private OutboxRelayProperties properties;
 
@@ -52,7 +52,7 @@ class OutboxRelayOrchestratorTest {
 
   @Mock private RelayEventPublisher eventPublisher;
 
-  @InjectMocks private OutboxRelayOrchestrator orchestrator;
+  @InjectMocks private OutboxRelayHandler handler;
 
   private OutboxRelayCommand testCommand;
   private RelayPlan testPlan;
@@ -91,7 +91,7 @@ class OutboxRelayOrchestratorTest {
       when(properties.isEnabled()).thenReturn(false);
 
       // When: 执行中继
-      RelayReport report = orchestrator.relay(testCommand);
+      RelayReport report = handler.handle(testCommand);
 
       // Then: 返回空报告
       assertThat(report).isNotNull();
@@ -119,7 +119,7 @@ class OutboxRelayOrchestratorTest {
       when(properties.isEnabled()).thenReturn(false);
 
       // When
-      RelayReport report = orchestrator.relay(command);
+      RelayReport report = handler.handle(command);
 
       // Then: 返回带通道的空报告
       assertThat(report.channel()).isEqualTo(channel);
@@ -145,7 +145,7 @@ class OutboxRelayOrchestratorTest {
       when(relayExecutor.execute(testPlan)).thenReturn(batchResult);
 
       // When
-      orchestrator.relay(testCommand);
+      handler.handle(testCommand);
 
       // Then: 验证调用顺序
       InOrder inOrder = inOrder(planBuilder, relayExecutor, eventPublisher);
@@ -167,7 +167,7 @@ class OutboxRelayOrchestratorTest {
       when(relayExecutor.execute(testPlan)).thenReturn(batchResult);
 
       // When
-      RelayReport report = orchestrator.relay(testCommand);
+      RelayReport report = handler.handle(testCommand);
 
       // Then: 验证报告包含所有指标
       assertThat(report.channel()).isEqualTo(channel);
@@ -189,7 +189,7 @@ class OutboxRelayOrchestratorTest {
       when(relayExecutor.execute(testPlan)).thenReturn(batchResult);
 
       // When
-      RelayReport report = orchestrator.relay(testCommand);
+      RelayReport report = handler.handle(testCommand);
 
       // Then
       assertThat(report.channel()).isNull();
@@ -225,7 +225,7 @@ class OutboxRelayOrchestratorTest {
       when(relayExecutor.execute(channelPlan)).thenReturn(batchResult);
 
       // When
-      RelayReport report = orchestrator.relay(command);
+      RelayReport report = handler.handle(command);
 
       // Then
       assertThat(report.channel()).isEqualTo(channel);
@@ -249,7 +249,7 @@ class OutboxRelayOrchestratorTest {
       when(relayExecutor.execute(testPlan)).thenReturn(emptyResult);
 
       // When
-      RelayReport report = orchestrator.relay(testCommand);
+      RelayReport report = handler.handle(testCommand);
 
       // Then: 所有指标为零
       assertThat(report.fetched()).isZero();
@@ -273,7 +273,7 @@ class OutboxRelayOrchestratorTest {
       when(relayExecutor.execute(testPlan)).thenReturn(result);
 
       // When
-      RelayReport report = orchestrator.relay(testCommand);
+      RelayReport report = handler.handle(testCommand);
 
       // Then
       assertThat(report.fetched()).isEqualTo(10);
@@ -292,7 +292,7 @@ class OutboxRelayOrchestratorTest {
       when(relayExecutor.execute(testPlan)).thenReturn(result);
 
       // When
-      RelayReport report = orchestrator.relay(testCommand);
+      RelayReport report = handler.handle(testCommand);
 
       // Then
       assertThat(report.fetched()).isEqualTo(5);
@@ -313,7 +313,7 @@ class OutboxRelayOrchestratorTest {
       when(relayExecutor.execute(testPlan)).thenReturn(result);
 
       // When
-      RelayReport report = orchestrator.relay(testCommand);
+      RelayReport report = handler.handle(testCommand);
 
       // Then: 验证指标加总正确
       assertThat(report.fetched()).isEqualTo(100);
@@ -345,7 +345,7 @@ class OutboxRelayOrchestratorTest {
       when(relayExecutor.execute(testPlan)).thenReturn(result);
 
       // When
-      orchestrator.relay(testCommand);
+      handler.handle(testCommand);
 
       // Then: 验证事件发布器被调用
       verify(eventPublisher).publish(Collections.singletonList(mockEvent));
@@ -362,7 +362,7 @@ class OutboxRelayOrchestratorTest {
       when(relayExecutor.execute(testPlan)).thenReturn(result);
 
       // When
-      orchestrator.relay(testCommand);
+      handler.handle(testCommand);
 
       // Then: 仍然调用,但传入空列表
       verify(eventPublisher).publish(Collections.emptyList());

@@ -1,58 +1,58 @@
 package com.patra.ingest.app.usecase.execution;
 
+import com.patra.common.cqrs.CommandHandler;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
-import com.patra.ingest.app.usecase.execution.complete.CompleteTaskExecutionUseCase;
-import com.patra.ingest.app.usecase.execution.prepare.PrepareTaskExecutionUseCase;
+import com.patra.ingest.app.usecase.execution.complete.TaskCompletionPhase;
+import com.patra.ingest.app.usecase.execution.prepare.TaskPreparationPhase;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
-import com.patra.ingest.app.usecase.execution.strategy.ExecuteTaskBatchesUseCase;
+import com.patra.ingest.app.usecase.execution.strategy.BatchExecutionPhase;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-/// 任务执行用例实现(顶层编排器)
+/// 任务执行处理器（顶层编排器）。
 ///
-/// 在六边形架构+DDD中的角色:应用层用例实现,负责编排任务执行的完整流程。
+/// 在六边形架构+DDD中的角色：应用层命令处理器，负责编排任务执行的完整流程。
 ///
-/// 主要职责:
+/// 主要职责：
 ///
 /// - 编排准备 → 执行 → 完成三个阶段的子用例
-///   - 处理顶层异常并确保资源清理(心跳/租约)
-///   - 提供任务执行的容错和可观测性
+/// - 处理顶层异常并确保资源清理（心跳/租约）
+/// - 提供任务执行的容错和可观测性
 ///
-/// 设计要点:
+/// 设计要点：
 ///
-/// - 三阶段编排模式(按照ADR-001架构决策)
-///   - 捕获所有异常并确保清理资源(心跳/租约)
-///   - 幂等跳过:准备用例抛出TaskAlreadySucceededException时立即返回
-///   - 租约获取失败:准备用例抛出LeaseAcquisitionFailedException时立即返回
-///   - 执行/完成阶段的失败不会阻止资源清理
+/// - 三阶段编排模式（按照ADR-001架构决策）
+/// - 捕获所有异常并确保清理资源（心跳/租约）
+/// - 幂等跳过：准备用例抛出 TaskAlreadySucceededException 时立即返回
+/// - 租约获取失败：准备用例抛出 LeaseAcquisitionFailedException 时立即返回
+/// - 执行/完成阶段的失败不会阻止资源清理
 ///
-/// 日志策略:
+/// 日志策略：
 ///
-/// - INFO: 开始、各阶段完成、结束
-///   - WARN: 幂等跳过、租约获取失败
-///   - ERROR: 执行失败、清理失败
+/// - INFO：开始、各阶段完成、结束
+/// - WARN：幂等跳过、租约获取失败
+/// - ERROR：执行失败、清理失败
 ///
 /// @author linqibin
 /// @since 0.1.0
-@Service
+@Component
 @RequiredArgsConstructor
 @Slf4j
-public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
+public class TaskExecutionHandler implements CommandHandler<TaskReadyCommand, Void> {
 
-  private final PrepareTaskExecutionUseCase prepareUseCase;
-  private final ExecuteTaskBatchesUseCase executeUseCase;
-  private final CompleteTaskExecutionUseCase completeUseCase;
+  private final TaskPreparationPhase preparePhase;
+  private final BatchExecutionPhase executePhase;
+  private final TaskCompletionPhase completePhase;
 
-  /// 执行任务(准备 → 执行 → 完成)
-  ///
-  /// 业务流程:
+  /// 执行任务（准备 → 执行 → 完成）。
   ///
   /// @param command 任务就绪命令
+  /// @return null（Void 返回类型）
   /// @throws TaskExecutionException 任务执行失败时抛出
   @Override
-  public void execute(TaskReadyCommand command) {
+  public Void handle(TaskReadyCommand command) {
     long taskId = command.taskId();
     String idempotentKey = command.idempotentKey();
 
@@ -64,9 +64,9 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
     try {
       // ========== 阶段0: 准备 ==========
       log.debug("进入准备阶段 taskId={} idemKey={}", taskId, idempotentKey);
-      PrepareTaskExecutionUseCase.PrepareResult prepareResult;
+      TaskPreparationPhase.PrepareResult prepareResult;
       try {
-        prepareResult = prepareUseCase.prepare(command);
+        prepareResult = preparePhase.prepare(command);
         session = prepareResult.session();
         context = prepareResult.context();
 
@@ -77,21 +77,20 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
             context.provenanceCode(),
             context.operationCode());
 
-      } catch (PrepareTaskExecutionUseCase.TaskAlreadySucceededException e) {
-        // 幂等跳过:任务已成功
-        log.warn("任务已成功执行,跳过 taskId={} idemKey={}", taskId, idempotentKey);
-        return;
+      } catch (TaskPreparationPhase.TaskAlreadySucceededException e) {
+        // 幂等跳过：任务已成功
+        log.warn("任务已成功执行，跳过 taskId={} idemKey={}", taskId, idempotentKey);
+        return null;
 
-      } catch (PrepareTaskExecutionUseCase.LeaseAcquisitionFailedException e) {
-        // 租约获取失败(被其他工作节点持有)
-        log.warn("租约获取失败,跳过执行 taskId={}", taskId);
-        return;
+      } catch (TaskPreparationPhase.LeaseAcquisitionFailedException e) {
+        // 租约获取失败（被其他工作节点持有）
+        log.warn("租约获取失败，跳过执行 taskId={}", taskId);
+        return null;
       }
 
       // ========== 阶段1: 执行 ==========
       log.debug("进入执行阶段 taskId={} runId={}", taskId, session.runId());
-      ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
-          executeUseCase.execute(session, context);
+      BatchExecutionPhase.ExecuteResult executeResult = executePhase.execute(session, context);
 
       log.info(
           "执行阶段完成 taskId={} runId={} total={} succeeded={} failed={}",
@@ -103,9 +102,10 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
 
       // ========== 阶段2: 完成 ==========
       log.debug("进入完成阶段 taskId={} runId={}", taskId, session.runId());
-      completeUseCase.complete(session, context, executeResult);
+      completePhase.complete(session, context, executeResult);
 
       log.info("任务执行完成 taskId={} runId={}", taskId, session.runId());
+      return null;
 
     } catch (Exception e) {
       log.error("任务执行失败 taskId={} idemKey={}", taskId, idempotentKey, e);

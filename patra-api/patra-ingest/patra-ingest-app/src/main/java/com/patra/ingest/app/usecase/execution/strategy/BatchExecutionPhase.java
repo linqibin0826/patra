@@ -3,15 +3,15 @@ package com.patra.ingest.app.usecase.execution.strategy;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 
-/// 批次执行用例(执行阶段)
+/// 批次执行阶段。
 ///
-/// 在六边形架构+DDD中的角色:应用层用例,负责任务执行阶段的批次处理。
+/// 在六边形架构+DDD中的角色: Handler 内部执行阶段，负责批次处理。
 ///
-/// 主要职责:批次调度 + 批次执行(支持并发/幂等)
+/// 主要职责: 批次调度 + 批次执行(支持并发/幂等)
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface ExecuteTaskBatchesUseCase {
+public interface BatchExecutionPhase {
 
   /// 执行批次(规划 + 执行)
   ///

@@ -5,8 +5,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.cqrs.CommandBus;
 import com.patra.ingest.adapter.rocketmq.dto.TaskReadyPayload;
-import com.patra.ingest.app.usecase.execution.TaskExecutionUseCase;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CountDownLatch;
@@ -32,10 +32,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// 测试覆盖：
 ///
 /// - 边界条件：空消息、超大消息、编码异常、格式错误
-///   - 并发消费：多消息并发处理
-///   - 重试机制：消费失败后的异常抛出
-///   - 幂等性：重复消息处理验证 (通过 idempotentKey)
-///   - 元数据验证：UserProperties 各种组合
+/// - 并发消费：多消息并发处理
+/// - 重试机制：消费失败后的异常抛出
+/// - 幂等性：重复消息处理验证（通过 idempotentKey）
+/// - 元数据验证：UserProperties 各种组合
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -43,7 +43,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @DisplayName("TaskReadyMessageListener 增强测试")
 class TaskReadyMessageListenerEnhancedTest {
 
-  @Mock private TaskExecutionUseCase taskExecutionUseCase;
+  @Mock private CommandBus commandBus;
   @Mock private ObjectMapper objectMapper;
 
   @Captor private ArgumentCaptor<TaskReadyCommand> commandCaptor;
@@ -52,7 +52,7 @@ class TaskReadyMessageListenerEnhancedTest {
 
   @BeforeEach
   void setUp() {
-    listener = new TaskReadyMessageListener(taskExecutionUseCase, objectMapper);
+    listener = new TaskReadyMessageListener(commandBus, objectMapper);
   }
 
   @Nested
@@ -73,7 +73,7 @@ class TaskReadyMessageListenerEnhancedTest {
           .isInstanceOf(RuntimeException.class)
           .hasMessageContaining("消息消费失败");
 
-      verify(taskExecutionUseCase, never()).execute(any(TaskReadyCommand.class));
+      verify(commandBus, never()).handle(any(TaskReadyCommand.class));
     }
 
     @Test
@@ -111,7 +111,7 @@ class TaskReadyMessageListenerEnhancedTest {
       listener.onMessage(message);
 
       // Then: 应成功消费大消息
-      verify(taskExecutionUseCase).execute(commandCaptor.capture());
+      verify(commandBus).handle(commandCaptor.capture());
       TaskReadyCommand command = commandCaptor.getValue();
       assertThat(command.taskId()).isEqualTo(taskId);
       assertThat(command.idempotentKey()).isEqualTo(idempotentKey);
@@ -136,7 +136,7 @@ class TaskReadyMessageListenerEnhancedTest {
           .hasMessageContaining("消息消费失败")
           .hasCauseInstanceOf(com.fasterxml.jackson.core.JsonParseException.class);
 
-      verify(taskExecutionUseCase, never()).execute(any(TaskReadyCommand.class));
+      verify(commandBus, never()).handle(any(TaskReadyCommand.class));
     }
 
     @Test
@@ -167,7 +167,7 @@ class TaskReadyMessageListenerEnhancedTest {
           .isInstanceOf(RuntimeException.class)
           .hasMessageContaining("消息消费失败");
 
-      verify(taskExecutionUseCase, never()).execute(any(TaskReadyCommand.class));
+      verify(commandBus, never()).handle(any(TaskReadyCommand.class));
     }
 
     @Test
@@ -191,7 +191,7 @@ class TaskReadyMessageListenerEnhancedTest {
           .isInstanceOf(RuntimeException.class)
           .hasMessageContaining("消息消费失败");
 
-      verify(taskExecutionUseCase, never()).execute(any(TaskReadyCommand.class));
+      verify(commandBus, never()).handle(any(TaskReadyCommand.class));
     }
 
     @Test
@@ -216,7 +216,7 @@ class TaskReadyMessageListenerEnhancedTest {
       listener.onMessage(message);
 
       // Then: 应成功消费，headers 中 KEYS 为 null
-      verify(taskExecutionUseCase).execute(commandCaptor.capture());
+      verify(commandBus).handle(commandCaptor.capture());
       TaskReadyCommand command = commandCaptor.getValue();
       assertThat(command.headers().get("KEYS")).isNull();
     }
@@ -244,7 +244,7 @@ class TaskReadyMessageListenerEnhancedTest {
       listener.onMessage(message);
 
       // Then: 应成功消费，headers 中 TAGS 为 null
-      verify(taskExecutionUseCase).execute(commandCaptor.capture());
+      verify(commandBus).handle(commandCaptor.capture());
       TaskReadyCommand command = commandCaptor.getValue();
       assertThat(command.headers().get("TAGS")).isNull();
     }
@@ -283,8 +283,8 @@ class TaskReadyMessageListenerEnhancedTest {
                 successCount.incrementAndGet();
                 return null;
               })
-          .when(taskExecutionUseCase)
-          .execute(any(TaskReadyCommand.class));
+          .when(commandBus)
+          .handle(any(TaskReadyCommand.class));
 
       // When: 并发消费消息
       for (int i = 0; i < messageCount; i++) {
@@ -335,7 +335,7 @@ class TaskReadyMessageListenerEnhancedTest {
       when(objectMapper.readValue(eq(payloadJson), eq(TaskReadyPayload.class))).thenReturn(payload);
 
       RuntimeException useCaseError = new RuntimeException("任务执行失败，需要重试");
-      doThrow(useCaseError).when(taskExecutionUseCase).execute(any(TaskReadyCommand.class));
+      doThrow(useCaseError).when(commandBus).handle(any(TaskReadyCommand.class));
 
       // When & Then: 应抛出 RuntimeException
       assertThatThrownBy(() -> listener.onMessage(message))
@@ -343,8 +343,8 @@ class TaskReadyMessageListenerEnhancedTest {
           .hasMessageContaining("消息消费失败")
           .hasCause(useCaseError);
 
-      // 验证 UseCase 被调用一次
-      verify(taskExecutionUseCase, times(1)).execute(any(TaskReadyCommand.class));
+      // 验证 CommandBus 被调用一次
+      verify(commandBus, times(1)).handle(any(TaskReadyCommand.class));
     }
 
     @Test
@@ -364,7 +364,7 @@ class TaskReadyMessageListenerEnhancedTest {
           .hasMessageContaining("消息消费失败")
           .hasCauseInstanceOf(com.fasterxml.jackson.databind.JsonMappingException.class);
 
-      verify(taskExecutionUseCase, never()).execute(any(TaskReadyCommand.class));
+      verify(commandBus, never()).handle(any(TaskReadyCommand.class));
     }
   }
 
@@ -393,8 +393,8 @@ class TaskReadyMessageListenerEnhancedTest {
       listener.onMessage(message1);
       listener.onMessage(message2);
 
-      // Then: UseCase 应被调用两次 (幂等性由 UseCase 层处理)
-      verify(taskExecutionUseCase, times(2)).execute(commandCaptor.capture());
+      // Then: CommandBus 应被调用两次 (幂等性由 Handler 层处理)
+      verify(commandBus, times(2)).handle(commandCaptor.capture());
 
       // 验证两次调用的 idempotentKey 相同
       assertThat(commandCaptor.getAllValues())
@@ -426,8 +426,8 @@ class TaskReadyMessageListenerEnhancedTest {
       listener.onMessage(message1);
       listener.onMessage(message2);
 
-      // Then: UseCase 应被调用两次，taskId 不同
-      verify(taskExecutionUseCase, times(2)).execute(commandCaptor.capture());
+      // Then: CommandBus 应被调用两次，taskId 不同
+      verify(commandBus, times(2)).handle(commandCaptor.capture());
 
       assertThat(commandCaptor.getAllValues())
           .extracting(TaskReadyCommand::taskId)
@@ -461,7 +461,7 @@ class TaskReadyMessageListenerEnhancedTest {
       listener.onMessage(message);
 
       // Then: 所有 UserProperties 应在 headers 中
-      verify(taskExecutionUseCase).execute(commandCaptor.capture());
+      verify(commandBus).handle(commandCaptor.capture());
       TaskReadyCommand command = commandCaptor.getValue();
 
       assertThat(command.headers())
@@ -490,7 +490,7 @@ class TaskReadyMessageListenerEnhancedTest {
       listener.onMessage(message);
 
       // Then: headers 应包含 RocketMQ 基础元数据
-      verify(taskExecutionUseCase).execute(commandCaptor.capture());
+      verify(commandBus).handle(commandCaptor.capture());
       TaskReadyCommand command = commandCaptor.getValue();
 
       assertThat(command.headers())

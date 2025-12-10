@@ -18,34 +18,34 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-/// 执行任务批次用例的实现。
+/// 批次执行阶段默认实现。
 ///
 /// 核心职责: 批次调度构建 → 批次执行 → 持久化结果 → 返回统计信息。
 ///
 /// 设计要点:
 ///
-/// - 通过 BatchScheduleBuilder 进行批次调度构建,构建批次列表
-///   - 强制执行批次限制,超出时抛出异常
-///   - 批次执行委托给 GenericBatchExecutor,由适配器注册表支持
-///   - 通过 TaskRunBatchRepository 立即持久化每个批次结果
-///   - 每个批次执行前检查租约;租约被撤销时中止执行
-///   - 错误处理:记录失败并继续(可配置快速失败)
+/// - 通过 BatchScheduleBuilder 进行批次调度构建，构建批次列表
+/// - 强制执行批次限制，超出时抛出异常
+/// - 批次执行委托给 GenericBatchExecutor，由适配器注册表支持
+/// - 通过 TaskRunBatchRepository 立即持久化每个批次结果
+/// - 每个批次执行前检查租约；租约被撤销时中止执行
+/// - 错误处理：记录失败并继续（可配置快速失败）
 ///
 /// 配置项:
 ///
-/// - task.execution.fail-fast: 默认 false(继续执行)
+/// - task.execution.fail-fast: 默认 false（继续执行）
 ///
 /// 日志策略:
 ///
 /// - INFO: 计划创建、批次开始/完成、统计信息
-///   - WARN: 超出限制、租约撤销、批次失败
+/// - WARN: 超出限制、租约撤销、批次失败
 ///
 /// @author linqibin
 /// @since 0.1.0
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase {
+public class DefaultBatchExecutionPhase implements BatchExecutionPhase {
 
   private final BatchScheduleBuilder batchScheduleBuilder;
   private final GenericBatchExecutor batchExecutor;

@@ -1,7 +1,9 @@
 package com.patra.ingest.app.usecase.plan.command;
 
+import com.patra.common.cqrs.Command;
 import com.patra.common.enums.Priority;
 import com.patra.common.enums.ProvenanceCode;
+import com.patra.ingest.app.usecase.plan.dto.PlanIngestionResult;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
@@ -70,7 +72,8 @@ public record PlanIngestionCommand(
     Instant windowTo,
     Priority priority,
     Instant triggeredAt,
-    Map<String, Object> triggerParams) {
+    Map<String, Object> triggerParams)
+    implements Command<PlanIngestionResult> {
   public PlanIngestionCommand {
     Objects.requireNonNull(provenanceCode, "provenanceCode must not be null");
     Objects.requireNonNull(operationCode, "endpointName must not be null");

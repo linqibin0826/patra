@@ -1,5 +1,6 @@
 package com.patra.ingest.app.usecase.execution.command;
 
+import com.patra.common.cqrs.Command;
 import java.util.Map;
 
 /// 任务就绪命令(简化版)
@@ -19,7 +20,8 @@ import java.util.Map;
 /// @param headers MQ消息头(用于链路追踪和审计)
 /// @author linqibin
 /// @since 0.1.0
-public record TaskReadyCommand(long taskId, String idempotentKey, Map<String, Object> headers) {
+public record TaskReadyCommand(long taskId, String idempotentKey, Map<String, Object> headers)
+    implements Command<Void> {
   public TaskReadyCommand {
     if (idempotentKey == null || idempotentKey.isBlank()) {
       throw new IllegalArgumentException("幂等键不能为空");

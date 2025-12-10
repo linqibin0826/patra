@@ -18,27 +18,27 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
-/// 出版物发布编排器
+/// 出版物发布器。
 ///
-/// 在六边形架构+DDD中的角色:应用层编排器,负责协调出版物发布工作流。
+/// 在六边形架构+DDD中的角色: Handler 内部协调组件，负责协调出版物发布工作流。
 ///
-/// 设计理念:通过在应用层显式编排两个不同的操作,使跨服务集成变得清晰:
+/// 设计理念: 通过在应用层显式编排两个不同的操作，使跨服务集成变得清晰:
 ///
-/// - 通过{@link PublicationStoragePort}上传到对象存储(技术基础设施)
-///   - 通过{@link StorageMetadataPort}记录元数据(与patra-object-storage服务的业务集成)
+/// - 通过 {@link PublicationStoragePort} 上传到对象存储（技术基础设施）
+/// - 通过 {@link StorageMetadataPort} 记录元数据（与 patra-object-storage 服务的业务集成）
 ///
 /// 主要职责:
 ///
 /// - 编排存储和元数据记录的顺序
-///   - 处理跨服务集成失败
-///   - 将失败的元数据记录委托给重试机制
-///   - 为应用层调用者提供统一的发布结果
+/// - 处理跨服务集成失败
+/// - 将失败的元数据记录委托给重试机制
+/// - 为应用层调用者提供统一的发布结果
 ///
-/// 这种设计遵循六边形架构原则,在应用层显式编排,而不是隐藏在基础设施适配器中。
+/// 这种设计遵循六边形架构原则，在应用层显式编排，而不是隐藏在基础设施适配器中。
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class PublicationPublisherOrchestrator {
+public class PublicationPublisher {
 
   private static final String BUSINESS_TYPE = "publication-batch";
 

@@ -38,10 +38,10 @@
 └─────────────────┬───────────────────────────────────────┘
                   │
 ┌─────────────────▼───────────────────────────────────────┐
-│  patra-ingest-app (应用层 - 用例编排)                    │
-│  ├─ usecase/plan/        - PlanIngestionOrchestrator   │
-│  ├─ usecase/execution/   - TaskExecutionUseCase        │
-│  └─ usecase/relay/       - OutboxRelayOrchestrator     │
+│  patra-ingest-app (应用层 - 命令处理器)                  │
+│  ├─ usecase/plan/        - PlanIngestionHandler        │
+│  ├─ usecase/execution/   - TaskExecutionHandler        │
+│  └─ usecase/relay/       - OutboxRelayHandler          │
 └─────────────────┬───────────────────────────────────────┘
                   │
 ┌─────────────────▼───────────────────────────────────────┐
@@ -65,7 +65,7 @@
 |------|------|--------|
 | **patra-ingest-boot** | Spring Boot 启动入口 | `PatraIngestApplication` |
 | **patra-ingest-adapter** | 驱动适配器(定时任务、MQ 消费者) | `PubmedHarvestJob`, `TaskReadyMessageListener` |
-| **patra-ingest-app** | 应用层编排器(事务边界) | `PlanIngestionOrchestrator`, `TaskExecutionUseCase` |
+| **patra-ingest-app** | 应用层 Handler (事务边界) | `PlanIngestionHandler`, `TaskExecutionHandler` |
 | **patra-ingest-domain** | 领域模型(纯 Java,无框架依赖) | `PlanAggregate`, `TaskAggregate`, `WindowSpec` |
 | **patra-ingest-infra** | 基础设施实现(数据库、RPC、MQ) | `PlanRepositoryAdapter`, `PatraRegistryAdapter` |
 | **patra-ingest-api** | 外部 API 契约(错误码、Future APIs) | `IngestErrorCode` |
@@ -137,7 +137,7 @@ public sealed interface WindowSpec {
 ```
 1. Scheduler 触发(Cron 或手动)
    ↓
-2. PlanIngestionOrchestrator.ingestPlan(command)
+2. PlanIngestionHandler.handle(command)
    ↓
 3. Phase 1: 持久化调度实例 + 加载 Provenance 配置快照
    ↓
@@ -160,9 +160,9 @@ public sealed interface WindowSpec {
 
 ### 代码入口
 
-- **Plan 摄入**: [`PlanIngestionOrchestrator.java`](patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanIngestionOrchestrator.java)
-- **Outbox 中继**: [`OutboxRelayOrchestrator.java`](patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/relay/OutboxRelayOrchestrator.java)
-- **任务执行**: [`TaskExecutionUseCaseImpl.java`](patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/execution/TaskExecutionUseCaseImpl.java)
+- **Plan 摄入**: [`PlanIngestionHandler.java`](patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanIngestionHandler.java)
+- **Outbox 中继**: [`OutboxRelayHandler.java`](patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/relay/OutboxRelayHandler.java)
+- **任务执行**: [`TaskExecutionHandler.java`](patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/execution/TaskExecutionHandler.java)
 
 ---
 
@@ -284,7 +284,7 @@ curl http://localhost:8082/actuator/metrics/patra.outbox.publish.total
 |---------|-------|------|
 | **层依赖方向** | 5 | 验证 Adapter → App → Domain ← Infra 依赖方向 |
 | **Domain 纯净性** | 3 | 验证 Domain 层零 Spring 依赖、允许 Jackson |
-| **命名约定** | 5 | 验证 Port/DO/Aggregate/Orchestrator 命名和位置 |
+| **命名约定** | 5 | 验证 Port/DO/Aggregate/Handler 命名和位置 |
 | **封装规则** | 3 | 验证 DO 不泄露、Port 可见性、Event 位置 |
 | **事务边界** | 2 | 验证 @Transactional 仅在 App 层 |
 | **测试规范** | 6 | 验证测试命名规范、测试独立性、分层测试策略 |
@@ -341,14 +341,14 @@ public class PlanService { }  // ✅ 纯 Java
 ```java
 // ❌ 错误
 import com.patra.ingest.infra.persistence.entity.PlanDO;  // ❌
-public class Orchestrator {
-    void process(PlanDO plan) { }
+public class PlanIngestionHandler {
+    void handle(PlanDO plan) { }
 }
 
 // ✅ 正确
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;  // ✅
-public class Orchestrator {
-    void process(PlanAggregate plan) { }
+public class PlanIngestionHandler {
+    void handle(PlanAggregate plan) { }
 }
 ```
 

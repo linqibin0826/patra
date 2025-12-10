@@ -1,8 +1,8 @@
 package com.patra.ingest.adapter.rocketmq;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.cqrs.CommandBus;
 import com.patra.ingest.adapter.rocketmq.dto.TaskReadyPayload;
-import com.patra.ingest.app.usecase.execution.TaskExecutionUseCase;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -45,7 +45,6 @@ import org.springframework.stereotype.Component;
 ///
 /// @author linqibin
 /// @since 0.1.0
-/// @see TaskExecutionUseCase
 /// @see TaskReadyCommand
 @Slf4j
 @Component
@@ -62,7 +61,7 @@ import org.springframework.stereotype.Component;
     )
 public class TaskReadyMessageListener implements RocketMQListener<MessageExt> {
 
-  private final TaskExecutionUseCase taskExecutionUseCase;
+  private final CommandBus commandBus;
   private final ObjectMapper objectMapper;
 
   @Override
@@ -74,8 +73,8 @@ public class TaskReadyMessageListener implements RocketMQListener<MessageExt> {
       // 2. 解析消息体并构建命令
       TaskReadyCommand command = parseMessage(message);
 
-      // 3. 委托给应用层用例执行任务
-      taskExecutionUseCase.execute(command);
+      // 3. 通过 CommandBus 委托给应用层处理器执行任务
+      commandBus.handle(command);
 
       log.info("任务就绪消息消费成功, taskId={} msgId={}", command.taskId(), message.getMsgId());
 

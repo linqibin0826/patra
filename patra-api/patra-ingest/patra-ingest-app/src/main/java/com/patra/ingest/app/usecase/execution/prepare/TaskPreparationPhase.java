@@ -4,15 +4,15 @@ import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 
-/// 准备阶段用例
+/// 任务准备阶段。
 ///
-/// 在六边形架构+DDD中的角色:应用层用例,负责任务执行准备阶段的处理。
+/// 在六边形架构+DDD中的角色: Handler 内部执行阶段，负责任务执行准备。
 ///
-/// 主要职责:幂等检查、租约获取、会话初始化、上下文加载
+/// 主要职责: 幂等检查、租约获取、会话初始化、上下文加载
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface PrepareTaskExecutionUseCase {
+public interface TaskPreparationPhase {
 
   /// 执行准备(幂等检查、租约获取、会话创建、上下文加载)
   ///

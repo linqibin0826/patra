@@ -8,7 +8,7 @@ import java.util.Objects;
 
 /// 应用层 DTO，描述计划组装结果。将组装期间生成的聚合根（Plan、Slice、Task）与总体状态组合。
 ///
-/// 这不是领域聚合根本身；而是在 `PlanAssembler` 和 `PlanIngestionOrchestrator` 之间传递的复合视图。
+/// 这不是领域聚合根本身；而是在 `PlanAssembler` 和 `PlanIngestionHandler` 之间传递的复合视图。
 ///
 /// @param plan 已组装的计划聚合根
 /// @param slices 已组装的切片聚合根

@@ -38,7 +38,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
-/// PrepareTaskExecutionUseCaseImpl 单元测试
+/// DefaultTaskPreparationPhase 单元测试
 ///
 /// 测试范围:
 ///
@@ -51,10 +51,10 @@ import org.springframework.test.util.ReflectionTestUtils;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@DisplayName("PrepareTaskExecutionUseCaseImpl 单元测试")
+@DisplayName("DefaultTaskPreparationPhase 单元测试")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class PrepareTaskExecutionUseCaseImplTest {
+class DefaultTaskPreparationPhaseTest {
 
   @Mock private TaskRepository taskRepository;
   @Mock private PlanSliceRepository planSliceRepository;
@@ -65,7 +65,7 @@ class PrepareTaskExecutionUseCaseImplTest {
   @Mock private TaskRunRepository taskRunRepository;
   @Mock private Clock clock;
 
-  @InjectMocks private PrepareTaskExecutionUseCaseImpl prepareUseCase;
+  @InjectMocks private DefaultTaskPreparationPhase preparePhase;
 
   private TaskReadyCommand command;
   private TaskAggregate mockTask;
@@ -82,7 +82,7 @@ class PrepareTaskExecutionUseCaseImplTest {
     when(clock.getZone()).thenReturn(ZoneId.systemDefault());
 
     // 设置租约持续时间配置
-    ReflectionTestUtils.setField(prepareUseCase, "leaseDurationSeconds", 60);
+    ReflectionTestUtils.setField(preparePhase, "leaseDurationSeconds", 60);
 
     command = createTestCommand();
     mockTask = createMockTask();
@@ -115,7 +115,7 @@ class PrepareTaskExecutionUseCaseImplTest {
       when(taskRunRepository.findById(mockSession.runId())).thenReturn(Optional.of(mockTaskRun));
 
       // When: 执行准备
-      PrepareTaskExecutionUseCase.PrepareResult result = prepareUseCase.prepare(command);
+      TaskPreparationPhase.PrepareResult result = preparePhase.prepare(command);
 
       // Then: 验证返回结果
       assertThat(result).isNotNull();
@@ -162,7 +162,7 @@ class PrepareTaskExecutionUseCaseImplTest {
       when(taskRunRepository.findById(anyLong())).thenReturn(Optional.of(mockTaskRun));
 
       // When: 执行准备
-      prepareUseCase.prepare(command);
+      preparePhase.prepare(command);
 
       // Then: Slice 应该被标记为 ASSIGNED 并保存
       verify(mockSlice).markAssigned();
@@ -184,7 +184,7 @@ class PrepareTaskExecutionUseCaseImplTest {
       when(taskRunRepository.findById(anyLong())).thenReturn(Optional.of(mockTaskRun));
 
       // When: 执行准备
-      prepareUseCase.prepare(command);
+      preparePhase.prepare(command);
 
       // Then: 不应该调用 markAssigned 和 save
       verify(mockSlice, never()).markAssigned();
@@ -205,7 +205,7 @@ class PrepareTaskExecutionUseCaseImplTest {
       when(taskRunRepository.findById(anyLong())).thenReturn(Optional.of(mockTaskRun));
 
       // When: 执行准备
-      prepareUseCase.prepare(command);
+      preparePhase.prepare(command);
 
       // Then: TaskRun 和 Task 应该被标记为 RUNNING
       verify(mockTaskRun).bindRunContext(command.getCorrelationId());
@@ -230,8 +230,8 @@ class PrepareTaskExecutionUseCaseImplTest {
           .thenReturn(true);
 
       // When & Then: 应该抛出异常
-      assertThatThrownBy(() -> prepareUseCase.prepare(command))
-          .isInstanceOf(PrepareTaskExecutionUseCase.TaskAlreadySucceededException.class)
+      assertThatThrownBy(() -> preparePhase.prepare(command))
+          .isInstanceOf(TaskPreparationPhase.TaskAlreadySucceededException.class)
           .hasMessageContaining("任务已成功")
           .hasMessageContaining("taskId=" + command.taskId());
     }
@@ -245,8 +245,8 @@ class PrepareTaskExecutionUseCaseImplTest {
 
       // When: 尝试准备（会抛出异常）
       try {
-        prepareUseCase.prepare(command);
-      } catch (PrepareTaskExecutionUseCase.TaskAlreadySucceededException e) {
+        preparePhase.prepare(command);
+      } catch (TaskPreparationPhase.TaskAlreadySucceededException e) {
         // 忽略异常
       }
 
@@ -272,8 +272,8 @@ class PrepareTaskExecutionUseCaseImplTest {
           .thenReturn(false);
 
       // When & Then: 应该抛出异常
-      assertThatThrownBy(() -> prepareUseCase.prepare(command))
-          .isInstanceOf(PrepareTaskExecutionUseCase.LeaseAcquisitionFailedException.class)
+      assertThatThrownBy(() -> preparePhase.prepare(command))
+          .isInstanceOf(TaskPreparationPhase.LeaseAcquisitionFailedException.class)
           .hasMessageContaining("租约获取失败")
           .hasMessageContaining("taskId=" + command.taskId());
     }
@@ -287,8 +287,8 @@ class PrepareTaskExecutionUseCaseImplTest {
 
       // When: 尝试准备（会抛出异常）
       try {
-        prepareUseCase.prepare(command);
-      } catch (PrepareTaskExecutionUseCase.LeaseAcquisitionFailedException e) {
+        preparePhase.prepare(command);
+      } catch (TaskPreparationPhase.LeaseAcquisitionFailedException e) {
         // 忽略异常
       }
 
@@ -300,14 +300,14 @@ class PrepareTaskExecutionUseCaseImplTest {
     @DisplayName("应该使用配置的租约持续时间")
     void shouldUseConfiguredLeaseDuration() {
       // Given: 设置租约持续时间为 120 秒
-      ReflectionTestUtils.setField(prepareUseCase, "leaseDurationSeconds", 120);
+      ReflectionTestUtils.setField(preparePhase, "leaseDurationSeconds", 120);
       when(idempotencyChecker.isAlreadySucceeded(anyLong(), anyString())).thenReturn(false);
       when(leaseManagementService.tryAcquireLease(anyLong(), anyString(), any())).thenReturn(false);
 
       // When: 尝试准备（会抛出异常）
       try {
-        prepareUseCase.prepare(command);
-      } catch (PrepareTaskExecutionUseCase.LeaseAcquisitionFailedException e) {
+        preparePhase.prepare(command);
+      } catch (TaskPreparationPhase.LeaseAcquisitionFailedException e) {
         // 忽略异常
       }
 
@@ -335,7 +335,7 @@ class PrepareTaskExecutionUseCaseImplTest {
           .thenThrow(new RuntimeException("会话创建失败"));
 
       // When & Then: 应该抛出异常
-      assertThatThrownBy(() -> prepareUseCase.prepare(command))
+      assertThatThrownBy(() -> preparePhase.prepare(command))
           .isInstanceOf(RuntimeException.class)
           .hasMessageContaining("会话创建失败");
 
@@ -361,7 +361,7 @@ class PrepareTaskExecutionUseCaseImplTest {
       when(mockSession.heartbeatHandle()).thenReturn(heartbeatHandle);
 
       // When & Then: 应该抛出异常
-      assertThatThrownBy(() -> prepareUseCase.prepare(command))
+      assertThatThrownBy(() -> preparePhase.prepare(command))
           .isInstanceOf(RuntimeException.class)
           .hasMessageContaining("上下文加载失败");
 
@@ -388,7 +388,7 @@ class PrepareTaskExecutionUseCaseImplTest {
       when(mockSession.heartbeatHandle()).thenReturn(heartbeatHandle);
 
       // When & Then: 应该抛出异常
-      assertThatThrownBy(() -> prepareUseCase.prepare(command))
+      assertThatThrownBy(() -> preparePhase.prepare(command))
           .isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("未找到 TaskRun");
 
@@ -416,7 +416,7 @@ class PrepareTaskExecutionUseCaseImplTest {
       doThrow(new RuntimeException("心跳停止失败")).when(heartbeatHandle).stop();
 
       // When & Then: 应该抛出原始异常
-      assertThatThrownBy(() -> prepareUseCase.prepare(command))
+      assertThatThrownBy(() -> preparePhase.prepare(command))
           .isInstanceOf(RuntimeException.class)
           .hasMessageContaining("上下文加载失败");
     }
@@ -437,7 +437,7 @@ class PrepareTaskExecutionUseCaseImplTest {
       when(taskRepository.findById(command.taskId())).thenReturn(Optional.empty());
 
       // When & Then: 应该抛出异常
-      assertThatThrownBy(() -> prepareUseCase.prepare(command))
+      assertThatThrownBy(() -> preparePhase.prepare(command))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("未找到任务")
           .hasMessageContaining("taskId=" + command.taskId());
@@ -453,7 +453,7 @@ class PrepareTaskExecutionUseCaseImplTest {
       when(planSliceRepository.findById(mockTask.getSliceId())).thenReturn(Optional.empty());
 
       // When & Then: 应该抛出异常
-      assertThatThrownBy(() -> prepareUseCase.prepare(command))
+      assertThatThrownBy(() -> preparePhase.prepare(command))
           .isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("未找到切片")
           .hasMessageContaining("sliceId=" + mockTask.getSliceId());

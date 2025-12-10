@@ -4,7 +4,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.*;
 import static org.awaitility.Awaitility.await;
 
-import com.patra.ingest.app.usecase.relay.OutboxRelayOrchestrator;
+import com.patra.common.cqrs.CommandBus;
 import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
 import com.patra.ingest.app.usecase.relay.dto.RelayReport;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
@@ -131,7 +131,7 @@ class OutboxPatternE2E {
 
   @Autowired private OutboxMessageRepository outboxRepository;
   @Autowired private OutboxRelayRepository relayStore;
-  @Autowired private OutboxRelayOrchestrator relayOrchestrator;
+  @Autowired private CommandBus commandBus;
   @Autowired private RocketMqOutboxPublisher publisher;
 
   private RocketMQMessageCollector messageCollector;
@@ -199,7 +199,7 @@ class OutboxPatternE2E {
 
       // 步骤 2-5: Outbox 扫描器执行中继 (发现 → 获取租约 → 发送 → 标记已发送)
       OutboxRelayCommand command = new OutboxRelayCommand(null, null, null, null, null, null, null);
-      RelayReport report = relayOrchestrator.relay(command);
+      RelayReport report = commandBus.handle(command);
 
       // 验证: Relay 报告显示成功发布
       assertThat(report.fetched()).isGreaterThanOrEqualTo(1);
@@ -240,7 +240,7 @@ class OutboxPatternE2E {
 
       // 执行: Relay 批量发布
       OutboxRelayCommand command = new OutboxRelayCommand(null, null, null, null, null, null, null);
-      RelayReport report = relayOrchestrator.relay(command);
+      RelayReport report = commandBus.handle(command);
 
       // 验证: 所有消息都已发布
       assertThat(report.fetched()).isGreaterThanOrEqualTo(5);
@@ -269,7 +269,7 @@ class OutboxPatternE2E {
 
       // 第一次 Relay
       OutboxRelayCommand command = new OutboxRelayCommand(null, null, null, null, null, null, null);
-      relayOrchestrator.relay(command);
+      commandBus.handle(command);
 
       // 验证: 消息已标记为 PUBLISHED
       var publishedMsg =
@@ -277,7 +277,7 @@ class OutboxPatternE2E {
       assertThat(publishedMsg.getStatusCode()).isEqualTo("PUBLISHED");
 
       // 第二次 Relay (模拟重复扫描)
-      RelayReport secondReport = relayOrchestrator.relay(command);
+      RelayReport secondReport = commandBus.handle(command);
 
       // 验证: 没有新消息被发布
       assertThat(secondReport.published()).isEqualTo(0);
@@ -581,7 +581,7 @@ class OutboxPatternE2E {
       // 注意: 需要构建带 channel 过滤的 RelayCommand
       // 由于 OutboxRelayCommand 构造函数参数可能不同,这里展示逻辑
       OutboxRelayCommand command = new OutboxRelayCommand(null, null, null, null, null, null, null);
-      RelayReport report = relayOrchestrator.relay(command);
+      RelayReport report = commandBus.handle(command);
 
       // 验证: 两条消息都被处理 (如果不指定 channel,处理所有)
       assertThat(report.fetched()).isGreaterThanOrEqualTo(2);
