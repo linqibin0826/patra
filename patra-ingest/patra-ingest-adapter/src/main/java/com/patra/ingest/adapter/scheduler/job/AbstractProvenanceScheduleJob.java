@@ -3,10 +3,10 @@ package com.patra.ingest.adapter.scheduler.job;
 import cn.hutool.core.text.CharSequenceUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.cqrs.CommandBus;
 import com.patra.common.enums.Priority;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.adapter.scheduler.param.ProvenanceScheduleJobParam;
-import com.patra.ingest.app.usecase.plan.PlanIngestionUseCase;
 import com.patra.ingest.app.usecase.plan.command.PlanIngestionCommand;
 import com.patra.ingest.app.usecase.plan.dto.PlanIngestionResult;
 import com.patra.ingest.domain.exception.IngestScheduleParameterException;
@@ -49,11 +49,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Slf4j
 public abstract class AbstractProvenanceScheduleJob {
 
-  private static final String DEFAULT_STEP = "P1D"; // 默认为 1 天,用于基于日期的切片(例如 PubMed)
+  private static final String DEFAULT_STEP = "P1D"; // 默认为 1 天，用于基于日期的切片（例如 PubMed）
   private static final String DEFAULT_SCHEDULER_LOG_ID = "0";
 
-  /// 计划采集用例应用服务(应用层入口)。
-  @Autowired private PlanIngestionUseCase planIngestionUseCase;
+  /// 命令总线（应用层入口）。
+  @Autowired private CommandBus commandBus;
 
   /// JSON 对象映射器。
   @Autowired private ObjectMapper objectMapper;
@@ -187,7 +187,7 @@ public abstract class AbstractProvenanceScheduleJob {
 
     try {
       PlanIngestionCommand command = parseJobParam(paramStr);
-      PlanIngestionResult result = planIngestionUseCase.ingestPlan(command);
+      PlanIngestionResult result = commandBus.handle(command);
       handleJobSuccess(result, startTime);
     } catch (Exception e) {
       handleJobFailure(e, startTime);

@@ -59,25 +59,25 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-/// PlanIngestionOrchestrator 单元测试。
+/// PlanIngestionHandler 单元测试。
 ///
 /// 测试覆盖:
 ///
-/// - ✅ ingestPlan() - 正常流程，创建新计划
-///   - ✅ ingestPlan() - 幂等性场景，复用现有计划
-///   - ✅ ingestPlan() - 游标水位查询失败
-///   - ✅ ingestPlan() - 窗口解析失败
-///   - ✅ ingestPlan() - 预验证失败
-///   - ✅ ingestPlan() - 组装失败
-///   - ✅ ingestPlan() - 持久化失败
-///   - ✅ 调用顺序验证
+/// - ✅ handle() - 正常流程，创建新计划
+/// - ✅ handle() - 幂等性场景，复用现有计划
+/// - ✅ handle() - 游标水位查询失败
+/// - ✅ handle() - 窗口解析失败
+/// - ✅ handle() - 预验证失败
+/// - ✅ handle() - 组装失败
+/// - ✅ handle() - 持久化失败
+/// - ✅ 调用顺序验证
 ///
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-@DisplayName("PlanIngestionOrchestrator 单元测试")
-class PlanIngestionOrchestratorTest {
+@DisplayName("PlanIngestionHandler 单元测试")
+class PlanIngestionHandlerTest {
 
   @Mock private PatraRegistryPort patraRegistryPort;
   @Mock private CursorRepository cursorRepository;
@@ -101,12 +101,12 @@ class PlanIngestionOrchestratorTest {
 
   @Captor private ArgumentCaptor<PlanAssemblyRequest> assemblyRequestCaptor;
 
-  private PlanIngestionOrchestrator orchestrator;
+  private PlanIngestionHandler handler;
 
   @BeforeEach
   void setUp() {
-    orchestrator =
-        new PlanIngestionOrchestrator(
+    handler =
+        new PlanIngestionHandler(
             patraRegistryPort,
             cursorRepository,
             taskRepository,
@@ -170,7 +170,7 @@ class PlanIngestionOrchestratorTest {
           .thenReturn(expectedResult);
 
       // When: 执行编排
-      PlanIngestionResult result = orchestrator.ingestPlan(command);
+      PlanIngestionResult result = handler.handle(command);
 
       // Then: 验证结果
       assertThat(result).isNotNull();
@@ -243,7 +243,7 @@ class PlanIngestionOrchestratorTest {
       setupPersistenceMocks();
 
       // When
-      orchestrator.ingestPlan(command);
+      handler.handle(command);
 
       // Then: 验证 PlanAssemblyRequest 的构建
       verify(planAssembler).assemble(assemblyRequestCaptor.capture());
@@ -291,7 +291,7 @@ class PlanIngestionOrchestratorTest {
           .thenReturn(expectedResult);
 
       // When
-      PlanIngestionResult result = orchestrator.ingestPlan(command);
+      PlanIngestionResult result = handler.handle(command);
 
       // Then
       assertThat(result).isEqualTo(expectedResult);
@@ -322,7 +322,7 @@ class PlanIngestionOrchestratorTest {
           .thenThrow(new RuntimeException("Database connection failed"));
 
       // When & Then
-      assertThatThrownBy(() -> orchestrator.ingestPlan(command))
+      assertThatThrownBy(() -> handler.handle(command))
           .isInstanceOf(PlanPersistenceException.class)
           .hasMessageContaining("加载游标水位失败");
 
@@ -344,7 +344,7 @@ class PlanIngestionOrchestratorTest {
           .thenThrow(new RuntimeException("Invalid window configuration"));
 
       // When & Then
-      assertThatThrownBy(() -> orchestrator.ingestPlan(command))
+      assertThatThrownBy(() -> handler.handle(command))
           .isInstanceOf(PlanValidationException.class)
           .hasMessageContaining("解析计划窗口失败");
     }
@@ -375,7 +375,7 @@ class PlanIngestionOrchestratorTest {
               any(PlanTriggerNorm.class), any(), any(PlannerWindow.class), eq(1000L));
 
       // When & Then
-      assertThatThrownBy(() -> orchestrator.ingestPlan(command))
+      assertThatThrownBy(() -> handler.handle(command))
           .isInstanceOf(PlanValidationException.class)
           .hasMessageContaining("背压超过阈值");
 
@@ -411,7 +411,7 @@ class PlanIngestionOrchestratorTest {
       when(planAssembler.assemble(any())).thenReturn(failedResult);
 
       // When & Then
-      assertThatThrownBy(() -> orchestrator.ingestPlan(command))
+      assertThatThrownBy(() -> handler.handle(command))
           .isInstanceOf(PlanAssemblyException.class)
           .hasMessageContaining("计划组装未生成可执行单元");
     }
@@ -437,7 +437,7 @@ class PlanIngestionOrchestratorTest {
       when(planAssembler.assemble(any())).thenReturn(null);
 
       // When & Then
-      assertThatThrownBy(() -> orchestrator.ingestPlan(command))
+      assertThatThrownBy(() -> handler.handle(command))
           .isInstanceOf(PlanAssemblyException.class)
           .hasMessageContaining("计划组装未生成可执行单元");
     }
@@ -472,7 +472,7 @@ class PlanIngestionOrchestratorTest {
       when(persistenceCoordinator.savePlan(plan)).thenThrow(persistenceException);
 
       // When & Then
-      assertThatThrownBy(() -> orchestrator.ingestPlan(command))
+      assertThatThrownBy(() -> handler.handle(command))
           .isInstanceOf(PlanPersistenceException.class)
           .hasMessageContaining("持久化计划失败");
     }
@@ -508,7 +508,7 @@ class PlanIngestionOrchestratorTest {
       setupPersistenceMocks();
 
       // When
-      PlanIngestionResult result = orchestrator.ingestPlan(command);
+      PlanIngestionResult result = handler.handle(command);
 
       // Then
       assertThat(result).isNotNull();
@@ -540,7 +540,7 @@ class PlanIngestionOrchestratorTest {
       setupPersistenceMocks();
 
       // When
-      orchestrator.ingestPlan(command);
+      handler.handle(command);
 
       // Then
       verify(plannerValidator).validateBeforeAssemble(any(), any(), any(), eq(0L));

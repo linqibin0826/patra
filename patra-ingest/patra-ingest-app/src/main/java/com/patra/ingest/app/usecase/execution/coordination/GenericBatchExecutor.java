@@ -20,25 +20,25 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-/// 通用批次执行器
+/// 通用批次执行器。
 ///
-/// 在六边形架构+DDD中的角色:应用层编排器,负责协调批次执行流程。
+/// 在六边形架构+DDD中的角色: Handler 内部协调组件，负责协调批次执行流程。
 ///
 /// 主要职责:
 ///
-/// - 通过{@link ProvenanceDataPort}获取出版物数据
-///   - 通过{@link PublicationPublisherOrchestrator}发布标准化出版物
-///   - 将数据获取结果转换为领域层{@link BatchResult}实例
-///   - 处理失败情况和异常
+/// - 通过 {@link ProvenanceDataPort} 获取出版物数据
+/// - 通过 {@link PublicationPublisher} 发布标准化出版物
+/// - 将数据获取结果转换为领域层 {@link BatchResult} 实例
+/// - 处理失败情况和异常
 ///
-/// 注意:重试逻辑、配置转换等技术细节已在基础设施层处理,本执行器聚焦于业务流程编排。
+/// 注意: 重试逻辑、配置转换等技术细节已在基础设施层处理，本执行器聚焦于业务流程编排。
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class GenericBatchExecutor {
 
   private final ProvenanceDataPort provenanceDataPort;
-  private final PublicationPublisherOrchestrator publicationPublisherOrchestrator;
+  private final PublicationPublisher publicationPublisher;
 
   /// 执行单个批次
   ///
@@ -76,7 +76,7 @@ public class GenericBatchExecutor {
         return handleFailure(context, batch, fetchResult, timer.interval());
       }
 
-      PublicationPublisherOrchestrator.PublishResult publishResult =
+      PublicationPublisher.PublishResult publishResult =
           publishPublication(context, batchNo, fetchResult.data());
       logDataFetchWarnings(fetchResult, provenanceCode, batchNo);
 
@@ -149,24 +149,24 @@ public class GenericBatchExecutor {
   /// @param batchNo 批次编号
   /// @param publications 出版物列表
   /// @return 发布结果
-  private PublicationPublisherOrchestrator.PublishResult publishPublication(
+  private PublicationPublisher.PublishResult publishPublication(
       ExecutionContext context, int batchNo, List<CanonicalPublication> publications) {
     List<CanonicalPublication> payload =
         publications == null ? List.of() : List.copyOf(publications);
     if (payload.isEmpty()) {
-      return PublicationPublisherOrchestrator.PublishResult.builder()
+      return PublicationPublisher.PublishResult.builder()
           .publishedCount(0)
           .storageKey(null)
           .build();
     }
     ProvenanceCode provenanceCode = context.provenanceCode();
-    PublicationPublisherOrchestrator.PublishContext publishContext =
-        PublicationPublisherOrchestrator.PublishContext.builder()
+    PublicationPublisher.PublishContext publishContext =
+        PublicationPublisher.PublishContext.builder()
             .runId(context.runId())
             .batchNo(batchNo)
             .provenanceCode(provenanceCode)
             .build();
-    return publicationPublisherOrchestrator.publish(payload, publishContext);
+    return publicationPublisher.publish(payload, publishContext);
   }
 
   /// 构建失败消息

@@ -51,7 +51,7 @@ import org.mockito.quality.Strictness;
 class GenericBatchExecutorTest {
 
   @Mock private ProvenanceDataPort provenanceDataPort;
-  @Mock private PublicationPublisherOrchestrator publicationPublisherOrchestrator;
+  @Mock private PublicationPublisher publicationPublisher;
 
   @InjectMocks private GenericBatchExecutor executor;
 
@@ -125,12 +125,12 @@ class GenericBatchExecutorTest {
           .thenReturn(fetchResult);
 
       // Mock 出版物发布
-      PublicationPublisherOrchestrator.PublishResult publishResult =
-          PublicationPublisherOrchestrator.PublishResult.builder()
+      PublicationPublisher.PublishResult publishResult =
+          PublicationPublisher.PublishResult.builder()
               .publishedCount(5)
               .storageKey("s3://bucket/pubmed/run-1/batch-1.json")
               .build();
-      when(publicationPublisherOrchestrator.publish(any(), any())).thenReturn(publishResult);
+      when(publicationPublisher.publish(any(), any())).thenReturn(publishResult);
 
       // When: 执行批次
       BatchResult result = executor.execute(context, batch, querySession);
@@ -151,7 +151,7 @@ class GenericBatchExecutorTest {
               any(TypeReference.class),
               eq(batch),
               eq(querySession));
-      verify(publicationPublisherOrchestrator).publish(eq(publications), any());
+      verify(publicationPublisher).publish(eq(publications), any());
     }
 
     @Test
@@ -177,7 +177,7 @@ class GenericBatchExecutorTest {
       assertThat(result.storageKey()).isNull();
 
       // 验证不调用发布器（因为出版物列表为空）
-      verifyNoInteractions(publicationPublisherOrchestrator);
+      verifyNoInteractions(publicationPublisher);
     }
 
     @Test
@@ -202,7 +202,7 @@ class GenericBatchExecutorTest {
       assertThat(result.fetchedCount()).isZero();
 
       // 验证不调用发布器
-      verifyNoInteractions(publicationPublisherOrchestrator);
+      verifyNoInteractions(publicationPublisher);
     }
   }
 
@@ -236,7 +236,7 @@ class GenericBatchExecutorTest {
       assertThat(result.errorMessage()).contains("RETRIABLE").contains("网络超时");
 
       // 验证没有发布出版物
-      verifyNoInteractions(publicationPublisherOrchestrator);
+      verifyNoInteractions(publicationPublisher);
     }
 
     @Test
@@ -262,7 +262,7 @@ class GenericBatchExecutorTest {
       assertThat(result.errorMessage()).contains("API 密钥无效");
 
       // 验证没有发布出版物
-      verifyNoInteractions(publicationPublisherOrchestrator);
+      verifyNoInteractions(publicationPublisher);
     }
   }
 
@@ -390,11 +390,11 @@ class GenericBatchExecutorTest {
   }
 
   private void mockPublish(int count, String storageKey) {
-    PublicationPublisherOrchestrator.PublishResult publishResult =
-        PublicationPublisherOrchestrator.PublishResult.builder()
+    PublicationPublisher.PublishResult publishResult =
+        PublicationPublisher.PublishResult.builder()
             .publishedCount(count)
             .storageKey(storageKey)
             .build();
-    when(publicationPublisherOrchestrator.publish(any(), any())).thenReturn(publishResult);
+    when(publicationPublisher.publish(any(), any())).thenReturn(publishResult);
   }
 }

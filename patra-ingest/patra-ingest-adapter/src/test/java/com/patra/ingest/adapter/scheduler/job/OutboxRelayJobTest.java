@@ -10,8 +10,8 @@ import static org.mockito.Mockito.when;
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.IdUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.cqrs.CommandBus;
 import com.patra.ingest.adapter.scheduler.param.OutboxRelayJobParam;
-import com.patra.ingest.app.usecase.relay.OutboxRelayUseCase;
 import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
 import com.patra.ingest.app.usecase.relay.config.OutboxRelayProperties;
 import com.patra.ingest.app.usecase.relay.dto.RelayReport;
@@ -33,16 +33,19 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 /// OutboxRelayJob 单元测试。
 ///
-/// 测试策略: - Mock 所有依赖(ObjectMapper, OutboxRelayUseCase, OutboxRelayProperties, Clock) - Mock 静态方法
-/// XxlJobHelper, NetUtil, IdUtil - 测试参数解析、命令构建、成功/失败场景 - 验证异常处理和日志记录
+/// 测试策略：
+/// - Mock 所有依赖（ObjectMapper, CommandBus, OutboxRelayProperties, Clock）
+/// - Mock 静态方法 XxlJobHelper, NetUtil, IdUtil
+/// - 测试参数解析、命令构建、成功/失败场景
+/// - 验证异常处理和日志记录
 ///
-/// 不使用 @SpringBootTest - 纯单元测试,不依赖 Spring 容器
+/// 不使用 @SpringBootTest - 纯单元测试，不依赖 Spring 容器。
 @ExtendWith(MockitoExtension.class)
 @DisplayName("OutboxRelayJob 单元测试")
 class OutboxRelayJobTest {
 
   @Mock private ObjectMapper objectMapper;
-  @Mock private OutboxRelayUseCase relayUseCase;
+  @Mock private CommandBus commandBus;
   @Mock private OutboxRelayProperties relayProperties;
   @Mock private Clock clock;
 
@@ -74,13 +77,13 @@ class OutboxRelayJobTest {
         idUtil.when(IdUtil::fastSimpleUUID).thenReturn("uuid-12345");
 
         RelayReport mockReport = new RelayReport(IngestPublishingChannels.TASK, 10, 8, 1, 1, 0);
-        when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenReturn(mockReport);
+        when(commandBus.handle(any(OutboxRelayCommand.class))).thenReturn(mockReport);
 
         // When
         outboxRelayJob.execute();
 
         // Then
-        verify(relayUseCase, times(1)).relay(any(OutboxRelayCommand.class));
+        verify(commandBus, times(1)).handle(any(OutboxRelayCommand.class));
         xxlJobHelper.verify(() -> XxlJobHelper.handleSuccess(any(String.class)), times(1));
       }
     }
@@ -105,14 +108,14 @@ class OutboxRelayJobTest {
         when(objectMapper.readValue(jsonParam, OutboxRelayJobParam.class)).thenReturn(param);
 
         RelayReport mockReport = new RelayReport(IngestPublishingChannels.TASK, 50, 45, 3, 2, 0);
-        when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenReturn(mockReport);
+        when(commandBus.handle(any(OutboxRelayCommand.class))).thenReturn(mockReport);
 
         // When
         outboxRelayJob.execute();
 
         // Then
         verify(objectMapper).readValue(jsonParam, OutboxRelayJobParam.class);
-        verify(relayUseCase, times(1)).relay(any(OutboxRelayCommand.class));
+        verify(commandBus, times(1)).handle(any(OutboxRelayCommand.class));
         xxlJobHelper.verify(() -> XxlJobHelper.handleSuccess(any(String.class)), times(1));
       }
     }
@@ -153,7 +156,7 @@ class OutboxRelayJobTest {
 
         OutboxRelayExecutionException expectedException =
             new OutboxRelayExecutionException("Relay 执行失败", new RuntimeException("底层错误"));
-        when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenThrow(expectedException);
+        when(commandBus.handle(any(OutboxRelayCommand.class))).thenThrow(expectedException);
 
         // When
         outboxRelayJob.execute();
@@ -177,7 +180,7 @@ class OutboxRelayJobTest {
         idUtil.when(IdUtil::fastSimpleUUID).thenReturn("uuid-12345");
 
         RuntimeException cause = new RuntimeException("数据库连接失败");
-        when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenThrow(cause);
+        when(commandBus.handle(any(OutboxRelayCommand.class))).thenThrow(cause);
 
         // When
         outboxRelayJob.execute();
@@ -211,13 +214,13 @@ class OutboxRelayJobTest {
         when(objectMapper.readValue(jsonParam, OutboxRelayJobParam.class)).thenReturn(param);
 
         RelayReport mockReport = new RelayReport(IngestPublishingChannels.TASK, 10, 8, 1, 1, 0);
-        when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenReturn(mockReport);
+        when(commandBus.handle(any(OutboxRelayCommand.class))).thenReturn(mockReport);
 
         // When
         outboxRelayJob.execute();
 
         // Then
-        verify(relayUseCase).relay(any(OutboxRelayCommand.class));
+        verify(commandBus).handle(any(OutboxRelayCommand.class));
       }
     }
 
@@ -263,13 +266,13 @@ class OutboxRelayJobTest {
         when(objectMapper.readValue(jsonParam, OutboxRelayJobParam.class)).thenReturn(param);
 
         RelayReport mockReport = new RelayReport(null, 10, 8, 1, 1, 0);
-        when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenReturn(mockReport);
+        when(commandBus.handle(any(OutboxRelayCommand.class))).thenReturn(mockReport);
 
         // When
         outboxRelayJob.execute();
 
         // Then
-        verify(relayUseCase).relay(any(OutboxRelayCommand.class));
+        verify(commandBus).handle(any(OutboxRelayCommand.class));
       }
     }
 
@@ -292,13 +295,13 @@ class OutboxRelayJobTest {
         when(objectMapper.readValue(jsonParam, OutboxRelayJobParam.class)).thenReturn(param);
 
         RelayReport mockReport = new RelayReport(null, 10, 8, 1, 1, 0);
-        when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenReturn(mockReport);
+        when(commandBus.handle(any(OutboxRelayCommand.class))).thenReturn(mockReport);
 
         // When
         outboxRelayJob.execute();
 
         // Then
-        verify(relayUseCase).relay(any(OutboxRelayCommand.class));
+        verify(commandBus).handle(any(OutboxRelayCommand.class));
       }
     }
 
@@ -343,13 +346,13 @@ class OutboxRelayJobTest {
         idUtil.when(IdUtil::fastSimpleUUID).thenReturn("abc123");
 
         RelayReport mockReport = new RelayReport(null, 0, 0, 0, 0, 0);
-        when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenReturn(mockReport);
+        when(commandBus.handle(any(OutboxRelayCommand.class))).thenReturn(mockReport);
 
         // When
         outboxRelayJob.execute();
 
         // Then
-        verify(relayUseCase).relay(any(OutboxRelayCommand.class));
+        verify(commandBus).handle(any(OutboxRelayCommand.class));
         netUtil.verify(NetUtil::getLocalHostName, times(1));
         xxlJobHelper.verify(XxlJobHelper::getJobId, atLeastOnce());
         idUtil.verify(IdUtil::fastSimpleUUID, times(1));
@@ -370,13 +373,13 @@ class OutboxRelayJobTest {
         idUtil.when(IdUtil::fastSimpleUUID).thenReturn("xyz789");
 
         RelayReport mockReport = new RelayReport(null, 0, 0, 0, 0, 0);
-        when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenReturn(mockReport);
+        when(commandBus.handle(any(OutboxRelayCommand.class))).thenReturn(mockReport);
 
         // When
         outboxRelayJob.execute();
 
         // Then
-        verify(relayUseCase).relay(any(OutboxRelayCommand.class));
+        verify(commandBus).handle(any(OutboxRelayCommand.class));
       }
     }
   }
@@ -399,13 +402,13 @@ class OutboxRelayJobTest {
         idUtil.when(IdUtil::fastSimpleUUID).thenReturn("uuid-12345");
 
         RelayReport mockReport = new RelayReport(IngestPublishingChannels.TASK, 100, 95, 3, 2, 1);
-        when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenReturn(mockReport);
+        when(commandBus.handle(any(OutboxRelayCommand.class))).thenReturn(mockReport);
 
         // When
         outboxRelayJob.execute();
 
         // Then
-        verify(relayUseCase).relay(any(OutboxRelayCommand.class));
+        verify(commandBus).handle(any(OutboxRelayCommand.class));
         xxlJobHelper.verify(
             () ->
                 XxlJobHelper.handleSuccess(
@@ -428,7 +431,7 @@ class OutboxRelayJobTest {
         idUtil.when(IdUtil::fastSimpleUUID).thenReturn("uuid-12345");
 
         RelayReport mockReport = new RelayReport(null, 50, 48, 1, 1, 0);
-        when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenReturn(mockReport);
+        when(commandBus.handle(any(OutboxRelayCommand.class))).thenReturn(mockReport);
 
         // When
         outboxRelayJob.execute();

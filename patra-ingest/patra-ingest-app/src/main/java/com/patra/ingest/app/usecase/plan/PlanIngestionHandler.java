@@ -1,5 +1,6 @@
 package com.patra.ingest.app.usecase.plan;
 
+import com.patra.common.cqrs.CommandHandler;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.plan.assembler.PlanAssembler;
 import com.patra.ingest.app.usecase.plan.assembler.PlanAssemblyRequest;
@@ -30,30 +31,31 @@ import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/// 计划接入编排器。
+/// 计划接入处理器。
 ///
 /// 职责：
 ///
 /// - 持久化调度实例并加载数据源配置快照
-///   - 查询游标水位并解析执行窗口
-///   - 构建计划表达式并执行预验证
-///   - 组装并持久化 Plan/Slice/Task（包含幂等性和补偿逻辑）
-///   - 收集任务入队事件并通过 Outbox 模式发布
+/// - 查询游标水位并解析执行窗口
+/// - 构建计划表达式并执行预验证
+/// - 组装并持久化 Plan/Slice/Task（包含幂等性和补偿逻辑）
+/// - 收集任务入队事件并通过 Outbox 模式发布
 ///
-/// 该编排器将持久化操作委托给 {@link PlanPersistenceCoordinator}，幂等性处理委托给 {@link
+/// 该处理器将持久化操作委托给 {@link PlanPersistenceCoordinator}，幂等性处理委托给 {@link
 /// PlanIdempotencyCoordinator}，发布操作委托给 {@link PlanPublishingCoordinator}。
 ///
-/// 注意：该编排器维护 `@Transactional` 事务边界，确保持久化和事件发布的原子性（Outbox 模式）。
+/// 注意：该处理器维护 `@Transactional` 事务边界，确保持久化和事件发布的原子性（Outbox 模式）。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
-@Service
+@Component
 @RequiredArgsConstructor
-public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
+public class PlanIngestionHandler
+    implements CommandHandler<PlanIngestionCommand, PlanIngestionResult> {
 
   private final PatraRegistryPort patraRegistryPort;
   private final CursorRepository cursorRepository;
@@ -73,14 +75,14 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   ///
   /// 协调六个阶段：
   ///
-  /// @param request 调度请求
+  /// @param command 计划接入命令
   /// @return 计划执行摘要
   @Override
   @Transactional
-  public PlanIngestionResult ingestPlan(PlanIngestionCommand request) {
-    logPlanIngestionStart(request);
+  public PlanIngestionResult handle(PlanIngestionCommand command) {
+    logPlanIngestionStart(command);
 
-    PlanningContext context = preparePlanningContext(request);
+    PlanningContext context = preparePlanningContext(command);
     PlanExpressionDescriptor expressionDescriptor = buildPlanExpression(context);
     performPreValidation(context);
 

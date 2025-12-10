@@ -43,7 +43,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///
 @ExtendWith(MockitoExtension.class)
 @DisplayName("出版物发布编排器测试")
-class PublicationPublisherOrchestratorTest {
+class PublicationPublisherTest {
 
   @Mock private PublicationStoragePort publicationStoragePort;
 
@@ -51,7 +51,7 @@ class PublicationPublisherOrchestratorTest {
 
   @Mock private TechnicalRetryPort technicalRetryPort;
 
-  @InjectMocks private PublicationPublisherOrchestrator orchestrator;
+  @InjectMocks private PublicationPublisher orchestrator;
 
   private static final Long RUN_ID = 100L;
   private static final int BATCH_NO = 1;
@@ -63,14 +63,14 @@ class PublicationPublisherOrchestratorTest {
   private static final String MD5 = "abc123";
   private static final String SHA256 = "def456";
 
-  private PublicationPublisherOrchestrator.PublishContext publishContext;
+  private PublicationPublisher.PublishContext publishContext;
   private List<CanonicalPublication> publications;
   private PublicationStoragePort.StorageResult storageResult;
 
   @BeforeEach
   void setUp() {
     publishContext =
-        PublicationPublisherOrchestrator.PublishContext.builder()
+        PublicationPublisher.PublishContext.builder()
             .runId(RUN_ID)
             .batchNo(BATCH_NO)
             .provenanceCode(ProvenanceCode.PUBMED)
@@ -105,7 +105,7 @@ class PublicationPublisherOrchestratorTest {
       when(storageMetadataPort.recordUpload(any())).thenReturn(metadataResult);
 
       // Act
-      PublicationPublisherOrchestrator.PublishResult result =
+      PublicationPublisher.PublishResult result =
           orchestrator.publish(publications, publishContext);
 
       // Assert
@@ -139,8 +139,7 @@ class PublicationPublisherOrchestratorTest {
       when(storageMetadataPort.recordUpload(any())).thenReturn(metadataResult);
 
       // Act
-      PublicationPublisherOrchestrator.PublishResult result =
-          orchestrator.publish(emptyList, publishContext);
+      PublicationPublisher.PublishResult result = orchestrator.publish(emptyList, publishContext);
 
       // Assert
       assertThat(result).isNotNull();
@@ -163,8 +162,7 @@ class PublicationPublisherOrchestratorTest {
       when(publicationStoragePort.store(any(), any())).thenReturn(emptyResult);
 
       // Act
-      PublicationPublisherOrchestrator.PublishResult result =
-          orchestrator.publish(null, publishContext);
+      PublicationPublisher.PublishResult result = orchestrator.publish(null, publishContext);
 
       // Assert
       assertThat(result).isNotNull();
@@ -250,7 +248,7 @@ class PublicationPublisherOrchestratorTest {
       when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
 
       // Act
-      PublicationPublisherOrchestrator.PublishResult result =
+      PublicationPublisher.PublishResult result =
           orchestrator.publish(publications, publishContext);
 
       // Assert
@@ -287,7 +285,7 @@ class PublicationPublisherOrchestratorTest {
       when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
 
       // Act
-      PublicationPublisherOrchestrator.PublishResult result =
+      PublicationPublisher.PublishResult result =
           orchestrator.publish(publications, publishContext);
 
       // Assert
@@ -401,8 +399,8 @@ class PublicationPublisherOrchestratorTest {
     @DisplayName("runId 为 null 时使用默认值 0")
     void shouldUseDefaultAggregateIdWhenRunIdIsNull() {
       // Arrange
-      PublicationPublisherOrchestrator.PublishContext contextWithoutRunId =
-          PublicationPublisherOrchestrator.PublishContext.builder()
+      PublicationPublisher.PublishContext contextWithoutRunId =
+          PublicationPublisher.PublishContext.builder()
               .runId(null)
               .batchNo(BATCH_NO)
               .provenanceCode(ProvenanceCode.PUBMED)
@@ -433,8 +431,8 @@ class PublicationPublisherOrchestratorTest {
     @DisplayName("provenanceCode 为 null 时使用 'unknown'")
     void shouldUseUnknownForNullProvenanceCode() {
       // Arrange
-      PublicationPublisherOrchestrator.PublishContext contextWithNullProvenance =
-          PublicationPublisherOrchestrator.PublishContext.builder()
+      PublicationPublisher.PublishContext contextWithNullProvenance =
+          PublicationPublisher.PublishContext.builder()
               .runId(RUN_ID)
               .batchNo(BATCH_NO)
               .provenanceCode(null)
@@ -462,8 +460,8 @@ class PublicationPublisherOrchestratorTest {
     @DisplayName("provenanceCode 为空字符串时使用 'unknown'")
     void shouldUseUnknownForEmptyProvenanceCode() {
       // Arrange
-      PublicationPublisherOrchestrator.PublishContext contextWithEmptyProvenance =
-          PublicationPublisherOrchestrator.PublishContext.builder()
+      PublicationPublisher.PublishContext contextWithEmptyProvenance =
+          PublicationPublisher.PublishContext.builder()
               .runId(RUN_ID)
               .batchNo(BATCH_NO)
               .provenanceCode(null) // 注意：空字符串测试需要调整为 null，因为 ProvenanceCode 是枚举类型
@@ -491,8 +489,8 @@ class PublicationPublisherOrchestratorTest {
     @DisplayName("provenanceCode 转换为小写")
     void shouldConvertProvenanceCodeToLowerCase() {
       // Arrange
-      PublicationPublisherOrchestrator.PublishContext contextWithUpperCase =
-          PublicationPublisherOrchestrator.PublishContext.builder()
+      PublicationPublisher.PublishContext contextWithUpperCase =
+          PublicationPublisher.PublishContext.builder()
               .runId(RUN_ID)
               .batchNo(BATCH_NO)
               .provenanceCode(ProvenanceCode.PUBMED) // 注意：枚举已经定义为 PUBMED，无需测试大小写转换

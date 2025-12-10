@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 /// 主要配置项:
 ///
 /// - 应用层组件自动扫描(@Component/@Service)
-///   - 编排器(Orchestrator)、事件处理器(EventHandler)、用例(UseCase)等组件的注册
+///   - 命令处理器(Handler)、事件处理器(EventHandler) 等组件的注册
 ///
 /// 注意: 组件扫描会自动注册标注了 @Component/@Service 的实现类,无需在此显式定义 Bean
 ///

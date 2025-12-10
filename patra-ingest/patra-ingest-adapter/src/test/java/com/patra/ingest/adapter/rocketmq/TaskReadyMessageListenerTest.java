@@ -5,8 +5,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.cqrs.CommandBus;
 import com.patra.ingest.adapter.rocketmq.dto.TaskReadyPayload;
-import com.patra.ingest.app.usecase.execution.TaskExecutionUseCase;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -26,9 +26,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// 测试覆盖:
 ///
 /// - 正常消息消费流程
-///   - 消息元数据提取(KEYS, TAGS, UserProperties)
-///   - TaskReadyCommand 组装
-///   - 异常处理和日志记录
+/// - 消息元数据提取（KEYS, TAGS, UserProperties）
+/// - TaskReadyCommand 组装
+/// - 异常处理和日志记录
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -36,7 +36,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @DisplayName("TaskReadyMessageListener 单元测试")
 class TaskReadyMessageListenerTest {
 
-  @Mock private TaskExecutionUseCase taskExecutionUseCase;
+  @Mock private CommandBus commandBus;
 
   @Mock private ObjectMapper objectMapper;
 
@@ -46,7 +46,7 @@ class TaskReadyMessageListenerTest {
 
   @BeforeEach
   void setUp() {
-    listener = new TaskReadyMessageListener(taskExecutionUseCase, objectMapper);
+    listener = new TaskReadyMessageListener(commandBus, objectMapper);
   }
 
   @Nested
@@ -78,7 +78,7 @@ class TaskReadyMessageListenerTest {
       listener.onMessage(message);
 
       // Then
-      verify(taskExecutionUseCase).execute(commandCaptor.capture());
+      verify(commandBus).handle(commandCaptor.capture());
 
       TaskReadyCommand command = commandCaptor.getValue();
       assertThat(command.taskId()).isEqualTo(taskId);
@@ -116,7 +116,7 @@ class TaskReadyMessageListenerTest {
       listener.onMessage(message);
 
       // Then
-      verify(taskExecutionUseCase).execute(commandCaptor.capture());
+      verify(commandBus).handle(commandCaptor.capture());
 
       TaskReadyCommand command = commandCaptor.getValue();
       Map<String, Object> headers = command.headers();
@@ -149,11 +149,11 @@ class TaskReadyMessageListenerTest {
           .hasCauseInstanceOf(com.fasterxml.jackson.core.JsonParseException.class);
 
       // 验证没有调用 UseCase
-      verify(taskExecutionUseCase, never()).execute(any(TaskReadyCommand.class));
+      verify(commandBus, never()).handle(any(TaskReadyCommand.class));
     }
 
     @Test
-    @DisplayName("TaskExecutionUseCase 抛出异常应传播为 RuntimeException")
+    @DisplayName("CommandBus 抛出异常应传播为 RuntimeException")
     void shouldPropagateUseCaseException() throws Exception {
       // Given
       TaskReadyPayload payload = new TaskReadyPayload();
@@ -167,7 +167,7 @@ class TaskReadyMessageListenerTest {
       when(objectMapper.readValue(eq(payloadJson), eq(TaskReadyPayload.class))).thenReturn(payload);
 
       RuntimeException useCaseException = new RuntimeException("任务执行失败");
-      doThrow(useCaseException).when(taskExecutionUseCase).execute(any(TaskReadyCommand.class));
+      doThrow(useCaseException).when(commandBus).handle(any(TaskReadyCommand.class));
 
       // When & Then
       assertThatThrownBy(() -> listener.onMessage(message))
@@ -197,7 +197,7 @@ class TaskReadyMessageListenerTest {
           .hasMessageContaining("消息消费失败");
 
       // 验证没有调用 UseCase
-      verify(taskExecutionUseCase, never()).execute(any(TaskReadyCommand.class));
+      verify(commandBus, never()).handle(any(TaskReadyCommand.class));
     }
   }
 
@@ -224,7 +224,7 @@ class TaskReadyMessageListenerTest {
       listener.onMessage(message);
 
       // Then
-      verify(taskExecutionUseCase).execute(commandCaptor.capture());
+      verify(commandBus).handle(commandCaptor.capture());
 
       TaskReadyCommand command = commandCaptor.getValue();
       assertThat(command.headers().get("KEYS")).isEqualTo(dedupKey);
@@ -248,7 +248,7 @@ class TaskReadyMessageListenerTest {
       listener.onMessage(message);
 
       // Then
-      verify(taskExecutionUseCase).execute(commandCaptor.capture());
+      verify(commandBus).handle(commandCaptor.capture());
 
       TaskReadyCommand command = commandCaptor.getValue();
       assertThat(command.headers().get("TAGS")).isEqualTo(tags);
@@ -274,7 +274,7 @@ class TaskReadyMessageListenerTest {
       listener.onMessage(message);
 
       // Then
-      verify(taskExecutionUseCase).execute(commandCaptor.capture());
+      verify(commandBus).handle(commandCaptor.capture());
 
       TaskReadyCommand command = commandCaptor.getValue();
       assertThat(command.headers().get("partitionKey")).isEqualTo(partitionKey);
