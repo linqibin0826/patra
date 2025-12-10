@@ -42,11 +42,11 @@ public abstract class AggregateRoot<ID> implements Serializable {
   /// 在业务方法中修改字段后调用 `markDirty()`，Repository 据此决定是否执行 UPDATE。
   private transient boolean dirty = false;
 
-  // ========== 子实体变更事件：追踪子实体集合增删改 ==========
+  // ========== 子实体变更事件：追踪集合成员增删改 ==========
 
   /// 子实体变更事件列表。
   ///
-  /// 记录子实体集合的增删改操作，供 Repository 生成增量 SQL。
+  /// 记录聚合内部集合成员（子实体或值对象）的增删改操作，供 Repository 生成增量 SQL。
   private final transient List<ChildEntityChange> childChanges = new ArrayList<>();
 
   /// 默认构造函数,用于反序列化或仓储重建。
@@ -161,7 +161,7 @@ public abstract class AggregateRoot<ID> implements Serializable {
 
   /// 记录子实体新增。
   ///
-  /// @param type 子实体类型
+  /// @param type 子实体类型（子实体或值对象）
   /// @param entity 新增的子实体实例
   /// @param <E> 子实体类型参数
   protected <E> void trackChildAdded(Class<E> type, E entity) {
@@ -170,7 +170,7 @@ public abstract class AggregateRoot<ID> implements Serializable {
 
   /// 记录子实体更新。
   ///
-  /// @param type 子实体类型
+  /// @param type 子实体类型（子实体或值对象）
   /// @param entity 更新后的子实体实例
   /// @param <E> 子实体类型参数
   protected <E> void trackChildUpdated(Class<E> type, E entity) {
@@ -179,8 +179,8 @@ public abstract class AggregateRoot<ID> implements Serializable {
 
   /// 记录子实体删除。
   ///
-  /// @param type 子实体类型
-  /// @param entityId 被删除实体的 ID
+  /// @param type 子实体类型（子实体或值对象）
+  /// @param entityId 被删除子实体的标识（可以是 ID 或值对象实例本身）
   /// @param <E> 子实体类型参数
   protected <E> void trackChildRemoved(Class<E> type, Object entityId) {
     childChanges.add(new ChildEntityChange.Removed<>(type, entityId));
