@@ -17,7 +17,7 @@
     <!-- Align versions with Spring Cloud Alibaba by importing the BOM; choose specific versions according to the compatibility matrix. -->
     <spring-cloud.version>2025.0.0</spring-cloud.version>
     <spring-cloud-alibaba.version>2025.0.0.0</spring-cloud-alibaba.version>
-    <mybatis-plus.version>3.5.12</mybatis-plus.version>
+    <mybatis-plus.version>3.5.14</mybatis-plus.version>
     <mybatis-spring-boot.version>3.0.4</mybatis-spring-boot.version>
 
     <lombok.version>1.18.40</lombok.version>
