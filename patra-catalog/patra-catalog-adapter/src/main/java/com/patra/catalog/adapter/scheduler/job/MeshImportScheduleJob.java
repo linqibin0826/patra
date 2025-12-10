@@ -3,11 +3,11 @@ package com.patra.catalog.adapter.scheduler.job;
 import com.patra.catalog.adapter.scheduler.config.MeshDataSourceProperties;
 import com.patra.catalog.adapter.scheduler.exception.MeshConfigurationException;
 import com.patra.catalog.adapter.scheduler.util.MeshFileNameParser;
-import com.patra.catalog.app.usecase.mesh.MeshImportUseCase;
 import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.command.MeshQualifierImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
+import com.patra.common.cqrs.CommandBus;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.RequiredArgsConstructor;
@@ -45,7 +45,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MeshImportScheduleJob {
 
-  private final MeshImportUseCase meshImportUseCase;
+  private final CommandBus commandBus;
   private final MeshDataSourceProperties meshDataSourceProperties;
 
   /// 执行 MeSH 主题词导入任务。
@@ -62,8 +62,8 @@ public class MeshImportScheduleJob {
       String meshVersion = MeshFileNameParser.extractVersion(url);
       log.info("MeSH Descriptor 配置：URL [{}]，版本 [{}]（从文件名推断）", url, meshVersion);
 
-      MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(url, meshVersion);
-      MeshDescriptorImportResult result = meshImportUseCase.importDescriptors(command);
+      MeshDescriptorImportResult result =
+          commandBus.handle(MeshDescriptorImportCommand.of(url, meshVersion));
       handleSuccess(result.message());
 
     } catch (MeshConfigurationException ex) {
@@ -87,8 +87,8 @@ public class MeshImportScheduleJob {
       String meshVersion = MeshFileNameParser.extractVersion(url);
       log.info("MeSH Qualifier 配置：URL [{}]，版本 [{}]（从文件名推断）", url, meshVersion);
 
-      MeshQualifierImportCommand command = MeshQualifierImportCommand.of(url, meshVersion);
-      MeshQualifierImportResult result = meshImportUseCase.importQualifiers(command);
+      MeshQualifierImportResult result =
+          commandBus.handle(MeshQualifierImportCommand.of(url, meshVersion));
       handleSuccess(result.message());
 
     } catch (MeshConfigurationException ex) {

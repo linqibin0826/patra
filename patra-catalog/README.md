@@ -232,7 +232,7 @@ patra:
      - 新增 `VenueRelationConverter`：关联关系 ↔ DO 转换（无效枚举值降级为 PRECEDING）
    - **Repository 删除**：移除 `VenueRatingRepository` 和 `VenueSourceDataRepository`（功能已合并到 `VenueRepository`）
    - **时间统计优化**：使用 Hutool `TimeInterval` 替换 `System.currentTimeMillis()` 手动计时
-     - `VenuePubmedEnrichOrchestrator`：3 处计时点优化
+     - `VenuePubmedEnrichHandler`：3 处计时点优化
    - **测试补充**：5 个 Converter 新增单元测试
 
 2. v0.9.1 (2025-12-08)：VenueAggregate 聚合拆分重构 + DTO 层级迁移
@@ -275,7 +275,7 @@ patra:
    - **解析器增强**：
      - `SerialParsingStrategy`：支持所有 Serial 元素属性和子元素解析
      - `XmlParsingHelper`：新增 `parseTimestamp()`、`parseYesNoAttributeNullable()` 方法
-   - **编排器适配**：`VenuePubmedEnrichOrchestrator` 新增 `toVenueLanguages()` 转换方法
+   - **Handler 适配**：`VenuePubmedEnrichHandler` 新增 `toVenueLanguages()` 转换方法
 
 3. v0.8.0 (2025-12-06)：NLM Serfile 数据扩展
    - 新增 3 个实体：`VenueMesh`（MeSH 主题词）、`VenueRelation`（期刊关联）、`VenueIndexingHistory`（索引历史）
@@ -326,7 +326,7 @@ patra:
    - 设计理念：数据导入为一次性初始化操作，需重新导入时由用户手动清空数据库
 
 8. v0.5.0 (2025-12-03)：OpenAlex Venue 批量导入
-   - 新增 `VenueInitializeOrchestrator`：Venue 初始化用例编排
+   - 新增 `VenueInitializeHandler`：Venue 初始化命令处理器
    - 新增 `VenueInitializeScheduleJob`：XXL-Job 调度入口（`venueInitializeJob`）
    - 新增 `OpenAlexSourceParser`：OpenAlex JSONL 数据解析
    - 新增 `VenueSourceFilePort`/`VenueInitializeBatchPort`：源文件和批处理端口
@@ -366,5 +366,4 @@ patra:
 
 ## 📖 相关文档
 
-- [项目架构宪章](../.specify/memory/constitution.md)
 - [patra-spring-boot-starter-batch](../patra-spring-boot-starter-batch/README.md)

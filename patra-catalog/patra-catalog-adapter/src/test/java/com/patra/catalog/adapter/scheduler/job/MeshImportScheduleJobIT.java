@@ -8,11 +8,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.patra.catalog.adapter.scheduler.config.MeshDataSourceAutoConfiguration;
-import com.patra.catalog.app.usecase.mesh.MeshImportUseCase;
 import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.command.MeshQualifierImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
+import com.patra.common.cqrs.CommandBus;
 import com.xxl.job.core.context.XxlJobHelper;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
@@ -31,7 +31,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 /// **测试策略**：
 ///
 /// - 使用最小化 Spring 上下文加载被测 Job
-/// - Mock MeshImportUseCase 依赖
+/// - Mock CommandBus 依赖
 /// - 使用真实配置属性验证 URL 读取和版本号推断
 /// - Mock 静态方法 XxlJobHelper（框架限制，无法避免）
 ///
@@ -56,7 +56,7 @@ class MeshImportScheduleJobIT {
 
   @Autowired private MeshImportScheduleJob meshImportScheduleJob;
 
-  @MockitoBean private MeshImportUseCase meshImportUseCase;
+  @MockitoBean private CommandBus commandBus;
 
   // ==================== Descriptor 导入测试 ====================
 
@@ -77,17 +77,16 @@ class MeshImportScheduleJobIT {
 
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
-        when(meshImportUseCase.importDescriptors(any(MeshDescriptorImportCommand.class)))
-            .thenReturn(result);
+        when(commandBus.handle(any(MeshDescriptorImportCommand.class))).thenReturn(result);
 
         // When
         meshImportScheduleJob.executeDescriptorImport();
 
         // Then - 验证从配置读取的 URL 和自动推断的版本号
-        verify(meshImportUseCase)
-            .importDescriptors(
+        verify(commandBus)
+            .handle(
                 argThat(
-                    cmd ->
+                    (MeshDescriptorImportCommand cmd) ->
                         cmd.url()
                                 .equals(
                                     "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml")
@@ -104,8 +103,7 @@ class MeshImportScheduleJobIT {
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
         RuntimeException cause = new RuntimeException("数据库连接失败");
-        when(meshImportUseCase.importDescriptors(any(MeshDescriptorImportCommand.class)))
-            .thenThrow(cause);
+        when(commandBus.handle(any(MeshDescriptorImportCommand.class))).thenThrow(cause);
 
         // When
         meshImportScheduleJob.executeDescriptorImport();
@@ -135,17 +133,16 @@ class MeshImportScheduleJobIT {
 
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
-        when(meshImportUseCase.importQualifiers(any(MeshQualifierImportCommand.class)))
-            .thenReturn(result);
+        when(commandBus.handle(any(MeshQualifierImportCommand.class))).thenReturn(result);
 
         // When
         meshImportScheduleJob.executeQualifierImport();
 
         // Then - 验证从配置读取的 URL 和自动推断的版本号
-        verify(meshImportUseCase)
-            .importQualifiers(
+        verify(commandBus)
+            .handle(
                 argThat(
-                    cmd ->
+                    (MeshQualifierImportCommand cmd) ->
                         cmd.url()
                                 .equals(
                                     "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml")
@@ -162,8 +159,7 @@ class MeshImportScheduleJobIT {
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
 
         RuntimeException cause = new RuntimeException("XML 解析失败");
-        when(meshImportUseCase.importQualifiers(any(MeshQualifierImportCommand.class)))
-            .thenThrow(cause);
+        when(commandBus.handle(any(MeshQualifierImportCommand.class))).thenThrow(cause);
 
         // When
         meshImportScheduleJob.executeQualifierImport();

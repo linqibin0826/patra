@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import com.patra.catalog.app.usecase.mesh.MeshImportUseCase;
 import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.domain.exception.DataAlreadyExistsException;
@@ -17,6 +16,7 @@ import com.patra.catalog.infra.persistence.mapper.MeshEntryCombinationMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshEntryTermMapper;
 import com.patra.catalog.infra.persistence.mapper.MeshTreeNumberMapper;
 import com.patra.catalog.integration.config.CatalogMySQLContainerInitializer;
+import com.patra.common.cqrs.CommandBus;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
@@ -40,11 +40,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 /// 测试完整的 MeSH 主题词导入流程：
 ///
 /// ```
-/// MeshImportOrchestrator.importDescriptors()
-///   → MeshDescriptorBatchAdapter.launchImport()
-///     → Spring Batch Job
-///       → MeshDescriptorItemReader (流式下载 + XML 解析)
-///       → MeshDescriptorItemWriter (批量写入 6 张表)
+/// commandBus.handle(MeshDescriptorImportCommand)
+///   → MeshDescriptorImportHandler.handle()
+///     → MeshDescriptorBatchAdapter.launchImport()
+///       → Spring Batch Job
+///         → MeshDescriptorItemReader (流式下载 + XML 解析)
+///         → MeshDescriptorItemWriter (批量写入 6 张表)
 /// ```
 ///
 /// ### 测试数据
@@ -87,7 +88,7 @@ class MeshDescriptorImportE2E {
 
   // ========== Test Dependencies ==========
 
-  @Autowired private MeshImportUseCase meshImportUseCase;
+  @Autowired private CommandBus commandBus;
 
   @Autowired private MeshDescriptorMapper descriptorMapper;
   @Autowired private MeshTreeNumberMapper treeNumberMapper;
@@ -167,7 +168,7 @@ class MeshDescriptorImportE2E {
       MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, MESH_VERSION);
 
       // When
-      MeshDescriptorImportResult result = meshImportUseCase.importDescriptors(command);
+      MeshDescriptorImportResult result = commandBus.handle(command);
 
       // Then - 验证 Job 启动成功
       assertThat(result).isNotNull();
@@ -195,13 +196,13 @@ class MeshDescriptorImportE2E {
     void shouldThrowExceptionWhenDataAlreadyExists() {
       // Given - 先执行第一次导入
       MeshDescriptorImportCommand command = MeshDescriptorImportCommand.of(TEST_URL, MESH_VERSION);
-      meshImportUseCase.importDescriptors(command);
+      commandBus.handle(command);
 
       // 验证数据已导入
       assertThat(descriptorMapper.selectCount(null)).isEqualTo(EXPECTED_DESCRIPTOR_COUNT);
 
       // When/Then - 再次导入应该抛出 DataAlreadyExistsException
-      assertThatThrownBy(() -> meshImportUseCase.importDescriptors(command))
+      assertThatThrownBy(() -> commandBus.handle(command))
           .isInstanceOf(DataAlreadyExistsException.class)
           .hasMessageContaining("MeSH Descriptor");
     }

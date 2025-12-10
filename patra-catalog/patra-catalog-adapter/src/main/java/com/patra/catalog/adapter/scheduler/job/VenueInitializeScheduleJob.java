@@ -1,8 +1,8 @@
 package com.patra.catalog.adapter.scheduler.job;
 
-import com.patra.catalog.app.usecase.venue.initialize.VenueInitializeUseCase;
 import com.patra.catalog.app.usecase.venue.initialize.command.VenueInitializeCommand;
 import com.patra.catalog.app.usecase.venue.initialize.dto.VenueInitializeResult;
+import com.patra.common.cqrs.CommandBus;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +37,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class VenueInitializeScheduleJob {
 
-  private final VenueInitializeUseCase venueInitializeUseCase;
+  private final CommandBus commandBus;
 
   /// 执行 OpenAlex Venue 初始化任务。
   ///
@@ -49,8 +49,7 @@ public class VenueInitializeScheduleJob {
     log.info("OpenAlex Venue 初始化任务已触发，jobId [{}]", XxlJobHelper.getJobId());
 
     try {
-      VenueInitializeCommand command = VenueInitializeCommand.create();
-      VenueInitializeResult result = venueInitializeUseCase.importVenues(command);
+      VenueInitializeResult result = commandBus.handle(VenueInitializeCommand.create());
       handleSuccess(result.message());
 
     } catch (Exception ex) {
