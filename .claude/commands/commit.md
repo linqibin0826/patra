@@ -111,10 +111,10 @@ OptimisticLockerInterceptor 在批量更新时未触发版本递增，
 ```
 
 ```
-refactor(catalog): 将 JournalService 拆分为领域服务和应用服务
+refactor(catalog): 将 JournalService 拆分为领域服务和命令处理器
 
 遵循六边形架构原则，将业务逻辑从 Application 层下沉到 Domain 层。
-JournalDomainService 负责核心业务规则，JournalOrchestrator 负责编排。
+JournalDomainService 负责核心业务规则，JournalHandler 负责命令处理。
 ```
 
 ---

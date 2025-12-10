@@ -381,9 +381,5 @@ for (int i = 0; i < aggregates.size(); i++) {
 ## 📚 相关文档
 
 ### 核心概念
-- [architecture-overview.md](architecture-overview.md) - 六边形架构概览
-- [domain-modeling-patterns.md](domain-modeling-patterns.md) - 领域建模模式
-
-### 测试指南
-- [testing-guide.md](testing-guide.md) - 完整测试策略
-- [test-templates-infrastructure.md](test-templates-infrastructure.md) - 基础设施层测试模板
+- [commandbus.md](../../rules/tech/commandbus.md) - CommandBus 应用层模式
+- [adapter-layer-patterns.md](adapter-layer-patterns.md) - 适配层模式

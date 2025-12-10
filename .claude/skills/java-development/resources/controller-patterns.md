@@ -5,13 +5,13 @@
 ### ✅ Controller 的唯一职责
 1. **接收 HTTP 请求**并验证格式（`@Valid`）
 2. **通过 Converter 转换** Request → Command（反腐层）
-3. **调用 Orchestrator** 执行业务逻辑
+3. **调用 CommandBus**（写操作）或 **QueryService**（查询操作）
 4. **通过 Converter 转换** Result → Response
 5. **返回业务数据**（不使用 ResponseEntity）
 6. **异常由全局处理器处理**（不在 Controller 层 try-catch）
 
 ### ❌ Controller 禁止做的事
-- ❌ 包含业务逻辑（留给 Orchestrator/Service）
+- ❌ 包含业务逻辑（留给 Handler/QueryService）
 - ❌ 直接调用 Repository
 - ❌ 直接返回领域对象（使用 Response DTO）
 - ❌ 使用 ResponseEntity 包装（直接返回业务数据）
@@ -36,7 +36,7 @@
 │ - CreateResourceCommand  (用例输入)                          │
 │ - ResourceResult         (用例输出)                          │
 └─────────────────────────────────────────────────────────────┘
-                              ↓ Service/Orchestrator
+                              ↓ Handler / QueryService
 ┌─────────────────────────────────────────────────────────────┐
 │ Domain 层 (业务逻辑)                                          │
 │ - Resource               (聚合根)                            │
@@ -77,8 +77,9 @@
 @Validated
 public class ResourceController {
 
-  private final ResourceOrchestrator orchestrator;
-  private final ResourceApiConverter converter;  // MapStruct 转换器
+  private final CommandBus commandBus;              // 写操作
+  private final ResourceQueryService queryService;  // 查询操作
+  private final ResourceApiConverter converter;     // MapStruct 转换器
 
   /// 方法的注释
   @PostMapping
@@ -88,8 +89,8 @@ public class ResourceController {
     // 1. Request → Command（反腐层）
     CreateResourceCommand command = converter.toCommand(request);
 
-    // 2. 调用 Orchestrator
-    ResourceResult result = orchestrator.create(command);
+    // 2. 调用 CommandBus（写操作）
+    ResourceResult result = commandBus.handle(command);
 
     // 3. Result → Response
     return converter.toResponse(result);
@@ -100,7 +101,7 @@ public class ResourceController {
   public ResourceResponse getById(@PathVariable @NotNull Long id) {
     log.info("查询资源，ID：{}", id);
 
-    ResourceResult result = orchestrator.findById(id);
+    ResourceQuery result = queryService.findById(id);
 
     return converter.toResponse(result);
   }
@@ -113,7 +114,7 @@ public class ResourceController {
     log.info("更新资源，ID：{}", id);
 
     UpdateResourceCommand command = converter.toCommand(id, request);
-    ResourceResult result = orchestrator.update(command);
+    ResourceResult result = commandBus.handle(command);
 
     return converter.toResponse(result);
   }
@@ -122,7 +123,7 @@ public class ResourceController {
   @DeleteMapping("/{id}")
   public void delete(@PathVariable @NotNull Long id) {
     log.info("删除资源，ID：{}", id);
-    orchestrator.delete(id);
+    commandBus.handle(new DeleteResourceCommand(id));
   }
 
   /// 内部 DTO（使用 record）
@@ -217,7 +218,7 @@ public ResourceResponse create(@Valid @RequestBody CreateResourceRequest request
   // ✅ 通过 Converter 转换
   CreateResourceCommand command = converter.toCommand(request);
 
-  ResourceResult result = orchestrator.create(command);
+  ResourceResult result = commandBus.handle(command);
 
   // ✅ 通过 Converter 转换
   return converter.toResponse(result);
@@ -234,7 +235,7 @@ public ResourceResponse create(@Valid @RequestBody CreateResourceRequest request
 /// 路径参数校验
 @GetMapping("/{id}")
 public ResourceResponse getById(@PathVariable @NotNull Long id) {
-  ResourceResult result = orchestrator.findById(id);
+  ResourceQuery result = queryService.findById(id);
   return converter.toResponse(result);
 }
 
@@ -242,14 +243,14 @@ public ResourceResponse getById(@PathVariable @NotNull Long id) {
 @PostMapping
 public ResourceResponse create(@Valid @RequestBody CreateResourceRequest request) {
   CreateResourceCommand command = converter.toCommand(request);
-  ResourceResult result = orchestrator.create(command);
+  ResourceResult result = commandBus.handle(command);
   return converter.toResponse(result);
 }
 
 /// 查询参数校验
 @GetMapping
-public List<ResourceResponse> search(@Valid ResourceQuery query) {
-  List<ResourceResult> results = orchestrator.search(query);
+public List<ResourceResponse> search(@Valid ResourceSearchQuery query) {
+  List<ResourceQuery> results = queryService.search(query);
   return converter.toResponse(results);
 }
 ```
@@ -293,7 +294,7 @@ public UploadResponse upload(@RequestParam("file") MultipartFile file) {
   }
 
   UploadCommand command = converter.toCommand(file);
-  UploadResult result = orchestrator.uploadFile(command);
+  UploadResult result = commandBus.handle(command);
 
   return converter.toResponse(result);
 }
@@ -307,13 +308,13 @@ public List<ResourceResponse> batchCreate(
     @Valid @RequestBody @Size(min = 1, max = 100) List<CreateResourceRequest> requests
 ) {
   List<CreateResourceCommand> commands = converter.toCommands(requests);
-  List<ResourceResult> results = orchestrator.batchCreate(commands);
+  List<ResourceResult> results = commandBus.handle(new BatchCreateResourceCommand(commands));
   return converter.toResponse(results);
 }
 
 @DeleteMapping("/batch")
 public void batchDelete(@RequestParam("ids") @NotEmpty Set<Long> ids) {
-  orchestrator.batchDelete(ids);
+  commandBus.handle(new BatchDeleteResourceCommand(ids));
 }
 ```
 
@@ -332,7 +333,7 @@ public TaskResponse startTask(@Valid @RequestBody StartTaskRequest request) {
   }
 
   StartTaskCommand command = converter.toCommand(request);
-  TaskResult result = orchestrator.startTask(command);
+  TaskResult result = commandBus.handle(command);
 
   return converter.toResponse(result);
 }
@@ -346,7 +347,7 @@ public TaskResponse startTask(@Valid @RequestBody StartTaskRequest request) {
   // ❌ 不要在 Controller 捕获异常
   try {
     StartTaskCommand command = converter.toCommand(request);
-    TaskResult result = orchestrator.startTask(command);
+    TaskResult result = commandBus.handle(command);
     return converter.toResponse(result);
   } catch (Exception e) {
     log.error("任务启动失败", e);
@@ -376,7 +377,7 @@ DomainException               → 422 Unprocessable Entity
 // ✅ 成功：200 + 业务数据
 @GetMapping("/{id}")
 public ResourceResponse getById(@PathVariable Long id) {
-  ResourceResult result = orchestrator.findById(id);
+  ResourceQuery result = queryService.findById(id);
   return converter.toResponse(result);  // 200 OK
 }
 
@@ -413,7 +414,7 @@ async function getResource(id: number): Promise<ResourceResponse> {
 @PostMapping
 public ResourceResponse create(@Valid @RequestBody CreateResourceRequest request) {
   // ❌ Request 属于 Adapter 层，不应该传入 Application 层
-  ResourceResult result = orchestrator.create(request);
+  ResourceResult result = commandBus.handle(request);  // 错误！
   return converter.toResponse(result);
 }
 
@@ -422,7 +423,7 @@ public ResourceResponse create(@Valid @RequestBody CreateResourceRequest request
 public ResourceResponse create(@Valid @RequestBody CreateResourceRequest request) {
   // ✅ 通过反腐层转换
   CreateResourceCommand command = converter.toCommand(request);
-  ResourceResult result = orchestrator.create(command);
+  ResourceResult result = commandBus.handle(command);
   return converter.toResponse(result);
 }
 ```
@@ -442,11 +443,11 @@ public ResourceResponse create(@RequestBody CreateResourceRequest request) {
   return converter.toResponse(entity);
 }
 
-// ✅ 正确：委托给 Orchestrator
+// ✅ 正确：委托给 CommandBus
 @PostMapping
 public ResourceResponse create(@Valid @RequestBody CreateResourceRequest request) {
   CreateResourceCommand command = converter.toCommand(request);
-  ResourceResult result = orchestrator.create(command);
+  ResourceResult result = commandBus.handle(command);
   return converter.toResponse(result);
 }
 ```
@@ -463,7 +464,7 @@ public Resource getById(@PathVariable Long id) {
 // ✅ 正确：返回 Response DTO
 @GetMapping("/{id}")
 public ResourceResponse getById(@PathVariable Long id) {
-  ResourceResult result = orchestrator.findById(id);
+  ResourceQuery result = queryService.findById(id);
   return converter.toResponse(result);
 }
 ```
@@ -474,7 +475,7 @@ public ResourceResponse getById(@PathVariable Long id) {
 // ❌ 错误：使用 ResponseEntity 包装
 @GetMapping("/{id}")
 public ResponseEntity<ResourceResponse> getById(@PathVariable Long id) {
-  ResourceResult result = orchestrator.findById(id);
+  ResourceQuery result = queryService.findById(id);
   ResourceResponse response = converter.toResponse(result);
   return ResponseEntity.ok(response);
 }
@@ -482,7 +483,7 @@ public ResponseEntity<ResourceResponse> getById(@PathVariable Long id) {
 // ✅ 正确：直接返回业务数据
 @GetMapping("/{id}")
 public ResourceResponse getById(@PathVariable Long id) {
-  ResourceResult result = orchestrator.findById(id);
+  ResourceQuery result = queryService.findById(id);
   return converter.toResponse(result);
 }
 ```

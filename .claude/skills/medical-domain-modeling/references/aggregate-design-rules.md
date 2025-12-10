@@ -423,12 +423,17 @@ Repository                     VenueQueryMapper
 
 ```java
 // 写操作：通过聚合根，只加载业务校验需要的数据
-public class VenueUpdateOrchestrator {
-    public void updateVenueName(Long venueId, String newName) {
+@Component
+public class VenueUpdateHandler implements CommandHandler<UpdateVenueNameCommand, Void> {
+
+    @Override
+    @Transactional
+    public Void handle(UpdateVenueNameCommand command) {
         // Repository 不加载 RichDescription（不参与校验）
-        VenueAggregate venue = venueRepository.findById(venueId);
-        venue.rename(newName);  // 业务校验在聚合内
+        VenueAggregate venue = venueRepository.findById(command.venueId());
+        venue.rename(command.newName());  // 业务校验在聚合内
         venueRepository.save(venue);
+        return null;
     }
 }
 

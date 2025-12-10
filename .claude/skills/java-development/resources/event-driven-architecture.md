@@ -433,5 +433,4 @@ public void completeTask(Long taskId) {
 
 **相关文档**:
 - [outbox-pattern.md](outbox-pattern.md) - 外部事件发布
-- [domain-modeling-patterns.md](domain-modeling-patterns.md) - 领域事件示例
-- [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md) - 编排器事件发布
+- [commandbus.md](../../rules/tech/commandbus.md) - CommandHandler 事件发布

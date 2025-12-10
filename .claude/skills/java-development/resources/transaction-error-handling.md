@@ -5,16 +5,16 @@
 ### 事务管理模板
 
 ```java
-@Service
+@Component
 @RequiredArgsConstructor
-public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
+public class CreatePlanHandler implements CommandHandler<CreatePlanCommand, PlanCreationResult> {
 
     private final PlanRepository planRepository;
     private final OutboxMessageRepository outboxRepository;
 
     @Override
-    @Transactional  // ✅ 事务边界在编排者层
-    public PlanCreationResult createPlan(CreatePlanCommand command) {
+    @Transactional  // ✅ 事务边界在 Handler 层
+    public PlanCreationResult handle(CreatePlanCommand command) {
         // 业务数据 + Outbox 消息原子提交
         PlanAggregate plan = assemblePlan(command);
         planRepository.save(plan);
@@ -53,8 +53,8 @@ public ProblemDetail handleInvalidPlan(InvalidPlanException ex) {
 
 | 场景 | 是否使用 @Transactional | 位置 |
 |------|------------------------|------|
-| 编排多个仓储操作 | ✅ 是 | Orchestrator |
-| 单个查询操作 | ✅ 是 (readOnly=true) | Orchestrator |
+| 编排多个仓储操作 | ✅ 是 | Handler |
+| 单个查询操作 | ✅ 是 (readOnly=true) | Handler / QueryService |
 | 调用外部 API | ❌ 否 | 独立方法 |
 | 仓储实现方法 | ❌ 否 | 太细粒度 |
 | 领域方法 | ❌ 否 | 领域是纯 Java |
@@ -68,14 +68,14 @@ public ProblemDetail handleInvalidPlan(InvalidPlanException ex) {
   ├─ 总是新建独立事务 → REQUIRES_NEW
   │   └─ 用例: 审计日志、独立操作
   ├─ 必须在事务内调用 → MANDATORY
-  │   └─ 用例: 内部 Coordinator
+  │   └─ 用例: 内部 Phase 组件
   └─ 不需要事务 → NOT_SUPPORTED
       └─ 用例: 只读查询、报表
 ```
 
 ## 核心概念
 
-### 为什么事务边界在 Orchestrator?
+### 为什么事务边界在 Handler?
 
 **❌ 错误：在 Repository 层**
 ```java
@@ -94,12 +94,12 @@ public class PlanAggregate {
 }
 ```
 
-**✅ 正确：在 Orchestrator 层**
+**✅ 正确：在 Handler 层**
 ```java
-@Service
-public class PlanIngestionOrchestrator {
+@Component
+public class CreatePlanHandler implements CommandHandler<CreatePlanCommand, PlanCreationResult> {
     @Transactional  // ✅ 协调多个操作，自然的事务边界
-    public PlanCreationResult createPlan(CreatePlanCommand command) {
+    public PlanCreationResult handle(CreatePlanCommand command) {
         planRepository.save(plan);
         sliceRepository.saveAll(slices);
         outboxRepository.save(message);
@@ -108,7 +108,7 @@ public class PlanIngestionOrchestrator {
 ```
 
 **原因**：
-1. Orchestrator 协调用例 → 自然的事务边界
+1. Handler 协调用例 → 自然的事务边界
 2. Domain 层是纯 Java → 不能使用 Spring 注解
 3. Infrastructure 层方法太细粒度 → 无法协调多个操作
 
@@ -116,17 +116,18 @@ public class PlanIngestionOrchestrator {
 
 ### 模式 1: 标准事务 (REQUIRED)
 
-**使用场景**: 大多数编排者，需要加入现有事务或新建事务
+**使用场景**: 大多数 Handler，需要加入现有事务或新建事务
 
 ```java
-@Service
+@Component
 @RequiredArgsConstructor
-public class PlanIngestionOrchestrator {
+public class CreatePlanHandler implements CommandHandler<CreatePlanCommand, PlanCreationResult> {
     private final PlanRepository planRepository;
     private final SliceRepository sliceRepository;
 
+    @Override
     @Transactional  // 默认 Propagation.REQUIRED
-    public PlanCreationResult createPlan(CreatePlanCommand command) {
+    public PlanCreationResult handle(CreatePlanCommand command) {
         PlanAggregate plan = assemblePlan(command);
         planRepository.save(plan);
 
@@ -202,27 +203,38 @@ public void harvestData(HarvestCommand command) {
 
 **✅ 正确：外部 API 在事务外**
 ```java
-@Service
+@Component
 @RequiredArgsConstructor
-public class HarvestOrchestrator {
+public class HarvestHandler implements CommandHandler<HarvestCommand, HarvestResult> {
 
-    // 事务 1: 创建计划
+    private final PlanRepository planRepository;
+    private final PublicationRepository publicationRepository;
+    private final PubmedSearchPort pubmedSearchPort;
+
+    @Override
+    public HarvestResult handle(HarvestCommand command) {
+        // 事务 1: 创建计划
+        PlanAggregate plan = createPlan(command);
+
+        // 无事务: 调用外部 API
+        SearchResult results = pubmedSearchPort.search(plan.getQuery());
+
+        // 事务 2: 保存结果
+        saveResults(results);
+
+        return new HarvestResult(plan.getId());
+    }
+
     @Transactional
-    public PlanAggregate createPlan(CreatePlanCommand command) {
+    protected PlanAggregate createPlan(HarvestCommand command) {
         PlanAggregate plan = assemblePlan(command);
         planRepository.save(plan);
         return plan;
     }
 
-    // 无事务: 调用外部 API
-    public SearchResult fetchFromExternalApi(PlanAggregate plan) {
-        return pubmedSearchPort.search(plan.getQuery());
-    }
-
-    // 事务 2: 保存结果
     @Transactional
-    public void savePublication(SearchResult results) {
-        publicationStoragePort.save(results);
+    protected void saveResults(SearchResult results) {
+        publicationRepository.saveAll(results.publications());
     }
 }
 ```
@@ -240,7 +252,7 @@ Exception
     │   └── BusinessKeyDuplicateException
     ├── ApplicationException (abstract)
     │   ├── ProvenanceConfigNotFoundException
-    │   └── OrchestrationException
+    │   └── HandlerException
     └── InfrastructureException (abstract)
         ├── RepositoryException
         └── ExternalApiException
@@ -398,10 +410,10 @@ GET /api/v1/provenances/UNKNOWN
 
 | 传播行为 | 行为 | 使用场景 |
 |---------|------|---------|
-| **REQUIRED** | 加入或新建 | 大多数编排者 (默认) |
+| **REQUIRED** | 加入或新建 | 大多数 Handler (默认) |
 | **REQUIRES_NEW** | 总是新建 | 审计日志、独立操作 |
 | **NOT_SUPPORTED** | 无事务执行 | 只读查询、报表 |
-| **MANDATORY** | 必须在事务内 | 内部 Coordinator |
+| **MANDATORY** | 必须在事务内 | 内部 Phase 组件 |
 
 ### 异常到 HTTP 状态码映射
 
@@ -409,7 +421,7 @@ GET /api/v1/provenances/UNKNOWN
 |---------|------------|---------|
 | `DomainException` (NotFound) | 404 | 资源不存在 |
 | `DomainException` (Invalid) | 422 | 业务规则违反 |
-| `ApplicationException` | 422 | 编排失败 |
+| `ApplicationException` | 422 | Handler 执行失败 |
 | `MethodArgumentNotValidException` | 400 | 参数验证失败 |
 | `Exception` | 500 | 未知错误 |
 
@@ -502,14 +514,15 @@ public void updatePlanWithRetry(UpdatePlanCommand command) {
 
 **实现**：
 ```java
-@Service
+@Component
 @RequiredArgsConstructor
-public class PlanIngestionOrchestrator {
+public class CreatePlanHandler implements CommandHandler<CreatePlanCommand, PlanCreationResult> {
     private final PlanRepository planRepository;
     private final OutboxMessageRepository outboxRepository;
 
+    @Override
     @Transactional
-    public void createPlan(CreatePlanCommand command) {
+    public PlanCreationResult handle(CreatePlanCommand command) {
         // 1. 保存业务数据
         BatchPlan plan = assemblePlan(command);
         planRepository.save(plan);
@@ -525,6 +538,7 @@ public class PlanIngestionOrchestrator {
         outboxRepository.save(message);
 
         // ✅ 业务数据和 Outbox 消息原子提交
+        return new PlanCreationResult(plan.getId());
     }
 }
 ```
@@ -534,7 +548,7 @@ public class PlanIngestionOrchestrator {
 ## 最佳实践检查清单
 
 ### 事务管理
-- [ ] `@Transactional` 仅在 Orchestrator 层使用
+- [ ] `@Transactional` 仅在 Handler / QueryService 层使用
 - [ ] 保持事务简短 (< 1 秒)
 - [ ] 绝不在事务内调用外部 API
 - [ ] 使用适当的传播行为
@@ -542,7 +556,7 @@ public class PlanIngestionOrchestrator {
 
 ### 错误处理
 - [ ] 领域异常表示业务规则违反
-- [ ] 应用异常表示编排失败
+- [ ] 应用异常表示 Handler 执行失败
 - [ ] 在 GlobalExceptionHandler 映射到 ProblemDetail
 - [ ] 记录错误日志并包含上下文
 - [ ] 不泄露敏感信息到客户端

@@ -12,14 +12,14 @@
 
 ## 核心原则
 
-### 原则 1: 薄适配器，委托给编排者
+### 原则 1: 薄适配器，委托给 CommandBus
 
 ```java
 // ✅ 良好：薄适配器
 @XxlJob("outboxRelay")
 public void execute() {
   OutboxRelayCommand command = buildCommand(parseParam(XxlJobHelper.getJobParam()));
-  RelayReport report = relayUseCase.relay(command);
+  RelayReport report = commandBus.handle(command);
   XxlJobHelper.handleSuccess(formatReport(report));
 }
 ```
@@ -43,7 +43,7 @@ public void execute() {
 - 接收外部请求（HTTP、作业、MQ）
 - 验证输入参数（`@Valid`、`@NotNull` 等）
 - **通过 Converter 转换**：Request → Command（反腐层）
-- 委托给用例编排者（Orchestrator/UseCase）
+- 委托给 CommandBus（写操作）或 QueryService（查询操作）
 - **通过 Converter 转换**：Result → Response（反腐层）
 - 处理适配器特定错误报告（如 XXL-Job 状态）
 
@@ -51,7 +51,7 @@ public void execute() {
 - 包含业务逻辑
 - 直接访问领域仓储
 - 直接调用基础设施层
-- 实现重试逻辑（委托给编排者）
+- 实现重试逻辑（委托给 Handler）
 - **直接传递 Request/Response 给 Application 层**（必须通过 Converter 转换）
 
 ## XXL-Job 模式
@@ -92,16 +92,16 @@ public class PubmedHarvestJob extends AbstractProvenanceScheduleJob {
 @Slf4j
 public abstract class AbstractProvenanceScheduleJob {
 
-  @Autowired private PlanIngestionUseCase planIngestionUseCase;
+  @Autowired private CommandBus commandBus;
 
   protected abstract ProvenanceCode getProvenanceCode();
   protected abstract OperationCode getOperationCode();
 
-  /// 通用作业执行流程: 解析参数 → 调用编排者 → 报告结果
+  /// 通用作业执行流程: 解析参数 → 调用 CommandBus → 报告结果
   protected void executeScheduleJob(String paramStr) {
     try {
       PlanIngestionCommand command = parseJobParam(paramStr);
-      PlanIngestionResult result = planIngestionUseCase.ingestPlan(command);
+      PlanIngestionResult result = commandBus.handle(command);
 
       // 成功：记录日志并报告
       log.info("作业完成: provenance={} planId={}", getProvenanceCode(), result.planId());
@@ -133,8 +133,9 @@ public abstract class AbstractProvenanceScheduleJob {
 @Validated
 public class ProvenanceController {
 
-    private final ProvenanceManagementUseCase useCase;
-    private final ProvenanceApiConverter converter;  // MapStruct 转换器
+    private final CommandBus commandBus;              // 写操作
+    private final ProvenanceQueryService queryService; // 查询操作
+    private final ProvenanceApiConverter converter;    // MapStruct 转换器
 
     /// 创建 Provenance 配置
     @PostMapping
@@ -144,8 +145,8 @@ public class ProvenanceController {
         // 1. Request → Command（反腐层）
         CreateProvenanceCommand command = converter.toCommand(request);
 
-        // 2. 调用 Orchestrator
-        ProvenanceResult result = useCase.create(command);
+        // 2. 调用 CommandBus（写操作）
+        ProvenanceResult result = commandBus.handle(command);
 
         // 3. Result → Response
         return converter.toResponse(result);
@@ -154,7 +155,7 @@ public class ProvenanceController {
     /// 查询 Provenance 配置
     @GetMapping("/{code}")
     public ProvenanceResponse getByCode(@PathVariable @NotNull String code) {
-        ProvenanceResult result = useCase.findByCode(code);
+        ProvenanceQuery result = queryService.findByCode(code);
         return converter.toResponse(result);
     }
 
@@ -214,7 +215,7 @@ public interface ProvenanceApiConverter {
 ```java
 // ✅ 良好：向调度器报告错误，不再抛出异常
 try {
-  RelayReport report = relayUseCase.relay(command);
+  RelayReport report = commandBus.handle(command);
   XxlJobHelper.handleSuccess("成功中继 " + report.count() + " 条消息");
 } catch (Exception ex) {
   log.error("中继失败", ex);
@@ -227,7 +228,7 @@ try {
 ```java
 // ❌ 错误：既不报告也不记录
 try {
-  relayUseCase.relay(command);
+  commandBus.handle(command);
 } catch (Exception ex) {
   // ❌ 不向调度器报告，作业看起来成功了！
   // ❌ 不记录日志，无法排查问题！
@@ -241,7 +242,7 @@ try {
 @RequiredArgsConstructor
 public class OutboxRelayJob {
   private final OutboxRelayProperties properties;  // 来自 Nacos
-  private final OutboxRelayUseCase relayUseCase;
+  private final CommandBus commandBus;
 
   @XxlJob("outboxRelay")
   public void execute() {
@@ -251,7 +252,7 @@ public class OutboxRelayJob {
     }
 
     OutboxRelayCommand command = buildCommandFromProperties(properties);
-    RelayReport report = relayUseCase.relay(command);
+    RelayReport report = commandBus.handle(command);
     XxlJobHelper.handleSuccess("成功中继 " + report.count() + " 条消息");
   }
 }
@@ -273,11 +274,11 @@ public void execute() {
   }
 }
 
-// ✅ 正确：委托给编排者
+// ✅ 正确：委托给 CommandBus
 @XxlJob("taskExecution")
 public void execute() {
   TaskExecutionCommand command = parseCommand(XxlJobHelper.getJobParam());
-  TaskExecutionResult result = taskExecutionUseCase.execute(command);
+  TaskExecutionResult result = commandBus.handle(command);
   XxlJobHelper.handleSuccess(formatResult(result));
 }
 ```
@@ -291,11 +292,11 @@ public void execute() {
   outboxRepository.deleteOlderThan(cutoff);  // ❌ 直接访问基础设施层
 }
 
-// ✅ 正确：使用清理编排者
+// ✅ 正确：使用 CommandBus
 @XxlJob("cleanupOldData")
 public void execute() {
   CleanupCommand command = new CleanupCommand(Instant.now().minus(Duration.ofDays(90)));
-  CleanupResult result = cleanupUseCase.cleanup(command);
+  CleanupResult result = commandBus.handle(command);
   XxlJobHelper.handleSuccess("已清理 " + result.count() + " 条记录");
 }
 ```
@@ -336,7 +337,7 @@ public ProvenanceResponse create(@Valid @RequestBody CreateProvenanceRequest req
 
 | 实践 | 原因 | 适用 |
 |------|------|------|
-| **委托给编排者** | 保持适配器薄，业务逻辑在应用层 | 全部 |
+| **委托给 CommandBus/QueryService** | 保持适配器薄，业务逻辑在应用层 | 全部 |
 | **使用 Converter 转换** | Request → Command → Result → Response（反腐层） | Controller |
 | **直接返回业务数据** | 不使用 ResponseEntity 包装 | Controller |
 | **向调度器报告** | 使用 `XxlJobHelper.handleSuccess/Fail()` 提高可见性 | XXL-Job |

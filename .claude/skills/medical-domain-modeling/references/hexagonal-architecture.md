@@ -106,30 +106,34 @@ public interface MeshParserPort {
 
 | 类型 | 命名 | 说明 |
 |------|------|------|
-| 用例接口 | `{Feature}UseCase` | 定义业务能力 |
-| 用例实现 | `{Feature}Orchestrator` | 编排实现 |
-| 输入参数 | `{Feature}Command` | 命令对象，含验证 |
-| 输出结果 | `{Feature}Result` | 结果对象 |
+| 命令 | `{Action}{Entity}Command` | 命令对象，含验证 |
+| 处理器 | `{Action}{Entity}Handler` | CommandHandler 实现 |
+| 结果 | `{Action}{Entity}Result` | 结果对象 |
 
 ### 示例
 
 ```java
-// 用例接口
-public interface ImportVenueUseCase {
-    ImportVenueResult execute(ImportVenueCommand command);
+// 命令对象（实现 Command 接口）
+public record ImportVenueCommand(
+    String issnL,
+    String title
+) implements Command<ImportVenueResult> {
+    public ImportVenueCommand {
+        Objects.requireNonNull(issnL, "issnL must not be null");
+    }
 }
 
-// 编排实现
-@Service
+// CommandHandler 实现
+@Component
 @RequiredArgsConstructor
-public class ImportVenueOrchestrator implements ImportVenueUseCase {
+public class ImportVenueHandler implements CommandHandler<ImportVenueCommand, ImportVenueResult> {
 
     private final VenueRepository venueRepository;
     private final VenueDeduplicationService deduplicationService;
 
     @Override
     @Transactional
-    public ImportVenueResult execute(ImportVenueCommand command) {
+    public ImportVenueResult handle(ImportVenueCommand command) {
         // 1. 检查重复
         Optional<VenueAggregate> existing = deduplicationService.findDuplicate(command);
 
@@ -205,7 +209,8 @@ public class VenueRepositoryAdapter implements VenueRepository {
 - ❌ 禁止业务逻辑
 - ❌ 禁止直接调用 Repository
 - ❌ 禁止调用 Domain 层
-- ✅ 只能调用 Application 层 UseCase
+- ❌ 禁止直接注入 Handler
+- ✅ 通过 CommandBus 调度命令
 
 ### 示例
 
@@ -215,16 +220,19 @@ public class VenueRepositoryAdapter implements VenueRepository {
 @RequiredArgsConstructor
 public class VenueController {
 
-    private final ImportVenueUseCase importVenueUseCase;
+    private final CommandBus commandBus;  // 唯一注入
 
     @PostMapping
     public ResponseEntity<VenueResponse> importVenue(
             @Valid @RequestBody VenueRequest request) {
         // 1. 转换为 Command
-        ImportVenueCommand command = VenueAssembler.toCommand(request);
+        var command = new ImportVenueCommand(
+            request.issnL(),
+            request.title()
+        );
 
-        // 2. 调用用例
-        ImportVenueResult result = importVenueUseCase.execute(command);
+        // 2. 通过 CommandBus 调度
+        ImportVenueResult result = commandBus.handle(command);
 
         // 3. 转换为 Response
         return ResponseEntity.ok(VenueAssembler.toResponse(result));
@@ -242,7 +250,7 @@ public class VenueController {
 | 仓储接口 | Domain 层 `port/repository/` |
 | 仓储实现 | Infrastructure 层 `adapter/persistence/` |
 | 领域服务 | Domain 层 `service/` |
-| 应用服务 | Application 层 `*Orchestrator` |
+| 应用服务 | Application 层 `*Handler`（CommandHandler） |
 | 领域事件 | Domain 层 `event/` |
 
 ### 关键设计决策
@@ -280,12 +288,17 @@ public class VenueDeduplicationService {
 **A**: 在 Application 层编排，不在 Domain 层直接查询。
 
 ```java
-// Application 层编排
-public class ProcessPublicationOrchestrator {
-    public void execute(ProcessPublicationCommand cmd) {
+// Application 层编排（CommandHandler）
+@Component
+public class ProcessPublicationHandler implements CommandHandler<ProcessPublicationCommand, Void> {
+
+    @Override
+    @Transactional
+    public Void handle(ProcessPublicationCommand cmd) {
         Publication pub = publicationRepository.findById(cmd.pubId());
         Venue venue = venueRepository.findById(pub.getVenueId());
         // 编排逻辑
+        return null;
     }
 }
 ```
