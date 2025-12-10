@@ -1,7 +1,5 @@
 # CLAUDE.md
 
-查看 @memories/project-info.md 了解项目概览和技术栈。
-
 ## 项目背景
 
 本项目是全新代码库（Greenfield Project），由单人开发，无时间压力。
@@ -69,14 +67,14 @@
 1. 主动使用 MCP 工具（serena、sequential-thinking、context7）
 
 ## 开发规范
-> **项目开发规范非常重要，你必须严格遵守以下规范!!!**
-> **项目开发规范非常重要，你必须严格遵守以下规范!!!**
+
 > **项目开发规范非常重要，你必须严格遵守以下规范!!!**
 
-1. 测试策略与注意事项 @memories/testing.md
-2. 六边形架构依赖规则与模块职责 @memories/architecture.md
-3. 开发最佳实践 @memories/best-practices.md
-4. 代码风格与命名规范 @memories/code-style.md
-5. MyBatis-Plus 使用规范 @memories/mybatis-plus.md
-6. 异常处理与错误码规范 @memories/error-handling.md
-7. 可观测性规范（Metrics/Traces/Logs） @memories/observability.md
+| 目录 | 规则内容 |
+|------|----------|
+| `rules/layers/` | 六边形架构各层规范（domain/app/infra/adapter/api/boot） |
+| `rules/tech/` | 技术栈规范（mybatis-plus/error-handling/observability） |
+| `rules/testing/` | 测试规范（unit-test/integration-test/e2e-test） |
+| `rules/code-style.md` | 代码风格与命名规范 |
+| `rules/project-info.md` | 项目概览与技术栈 |
+

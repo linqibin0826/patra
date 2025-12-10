@@ -1,0 +1,29 @@
+---
+paths: patra-*/*-infra/**/src/test/**/*IT.java, patra-*/*-adapter/**/src/test/**/*IT.java
+---
+
+# 集成测试规范
+
+## 适用范围
+
+- Infrastructure 层：集成测试优先，使用 TestContainers/WireMock
+- Adapter 层：切片测试，使用 `@MockitoBean`
+
+## 文件命名
+
+`*IT.java`
+
+## 超时限制
+
+`@Timeout` ≤ 30s（TestContainers 启动需要时间）
+
+## 注意事项
+
+1. Spring Boot 3.4+ 使用 `@MockitoBean`，禁止废弃的 `@MockBean`
+2. 统一使用 `patra-spring-boot-starter-test` 提供的 `TestMybatisPlusAutoConfiguration`
+3. 使用 TestContainers 模拟真实中间件，避免使用内存数据库
+4. `@MybatisPlusTest` 中 `Db.saveBatch()` 与测试事务隔离
+
+## 测试比例
+
+切片测试 ~20%

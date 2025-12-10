@@ -31,17 +31,7 @@ patra-{service}/
 - `patra-common-core` - DDD 基类、异常体系、共享枚举、工具类
 - `patra-common-model` - Shared Kernel 数据模型
 - `patra-common-storage` - 对象存储键生成模板
-- `patra-common-provenance-api` - Provenance API 定义
 
 **Starter 模块**:
-- `patra-spring-boot-starter-core` - 核心基础设施 (JSON/时间/观测性/错误处理)
-- `patra-spring-boot-starter-web` - Web 层 (全局异常、参数验证、统一响应)
-- `patra-spring-boot-starter-mybatis` - 数据访问 (MyBatis-Plus + Flyway)
-- `patra-spring-boot-starter-batch` - 批处理 (Spring Batch + 断点续传)
-- `patra-spring-boot-starter-rest-client` - RestClient 统一配置 (超时/重试/追踪)
-- `patra-spring-boot-starter-object-storage` - 对象存储 (MinIO/S3 抽象)
-- `patra-spring-boot-starter-observability` - 可观测性 (Metrics/Tracing/Logging)
-- `patra-spring-boot-starter-redisson` - 分布式锁/Redis (Redisson + @DistributedLock)
-- `patra-spring-boot-starter-provenance` - PubMed/EPMC HTTP 客户端
-- `patra-spring-boot-starter-test` - 测试基础设施 (TestContainers/ArchUnit/测试工具集)
-- `patra-spring-cloud-starter-feign` - Feign 客户端自动配置
+- `patra-spring-boot-starter-core/web/mybatis/batch/rest-client/object-storage/observability/redisson/provenance/test`
+- `patra-spring-cloud-starter-feign`
