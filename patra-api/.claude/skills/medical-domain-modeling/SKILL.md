@@ -100,6 +100,17 @@ created: {YYYY-MM-DD}
 - 是否可替换（同值即相等）？→ 值对象
 - 是否有独立生命周期？→ 独立聚合 vs 聚合内实体
 
+**不变性检查（Invariant Check）**：
+
+对每个候选值对象/实体，问自己：
+> **当我修改它时，是否需要立即检查聚合根或其他属性的状态？**
+
+- **Case 1 强一致性**（是）→ 必须在聚合内
+- **Case 2 弱一致性**（否，且有独立来源）→ 拆分为独立聚合
+- **Case 3 纯信息流**（仅展示）→ 聚合内，但可懒加载
+
+**参考**：[aggregate-design-rules.md](references/aggregate-design-rules.md) - 值对象归属判断详解
+
 **D2 图中的表示**：
 - 实体：`shape: class`，标注 `(实体)`
 - 值对象：`shape: class`，标注 `(值对象)`，使用 `style.fill: "#e1f5fe"`
@@ -185,18 +196,28 @@ created: {YYYY-MM-DD}
 
 ### 阶段 2：聚合边界识别
 
-确定聚合根和聚合边界：
+确定聚合根和聚合边界，使用**不变性检查（Invariant Check）**：
 
 ```
-判断标准：
+核心问题：修改值对象 A 时，是否需要立即检查聚合根状态？
+
+三种场景分类：
+├── Case 1 强一致性 → 必须在聚合内（如 OrderItems）
+├── Case 2 弱一致性 → 拆分为独立聚合（如 ProductReviews）
+└── Case 3 纯信息流 → 聚合内但可懒加载（如 ChangeLogs）
+
+其他判断标准：
 - 哪些实体必须在同一事务中保持一致？
-- 哪些实体有独立的生命周期？
+- 哪些实体有独立的数据来源和更新周期？
 - 删除聚合根时，哪些实体应级联删除？
 ```
 
 **示例**：
-- VenueAggregate 包含 VenueIdentifier、VenuePublicationStats（生命周期一致）
-- VenueRating 独立管理（有独立来源和更新周期）
+- VenueAggregate 仅包含 VenueIdentifier（Case 1 强一致性 - 必须同步）
+- VenuePublicationStats、VenueRating 独立管理（Case 2 弱一致性 - 有独立来源和更新周期，见 ADR-014）
+- VenueDescription 可懒加载（Case 3 纯信息流 - 仅用于展示）
+
+**详细指南**：[aggregate-design-rules.md](references/aggregate-design-rules.md) - 值对象归属判断详解
 
 ### 阶段 3：输出设计文档
 
@@ -300,7 +321,11 @@ stateDiagram-v2
 
 #### DDD 理论基础
 
-- [aggregate-design-rules.md](references/aggregate-design-rules.md) - **Vaughn Vernon 聚合设计四规则**（边界决策核心）
+- [aggregate-design-rules.md](references/aggregate-design-rules.md) - **聚合设计核心规则**
+  - Vaughn Vernon 四规则（边界决策核心）
+  - **值对象归属判断**（不变性检查三种场景）
+  - **逻辑分组重构**（防止聚合根代码爆炸）
+  - **性能优化策略**（懒加载/CQRS 读写分离）
 - [ddd-tactical-patterns.md](references/ddd-tactical-patterns.md) - 战术模式（聚合、实体、值对象、仓储、领域服务）
 - [ddd-strategic-patterns.md](references/ddd-strategic-patterns.md) - 战略模式（限界上下文、上下文映射）
 - [hexagonal-architecture.md](references/hexagonal-architecture.md) - 六边形架构与整洁架构
