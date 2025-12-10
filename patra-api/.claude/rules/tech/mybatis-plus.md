@@ -1,3 +1,7 @@
+---
+paths: patra-*/*-infra/**/*.java, patra-spring-boot-starter-mybatis/**/*.java
+---
+
 # MyBatis-Plus 使用规范
 
 1. 禁止在 Mapper 接口中使用 `@Select` 等注解编写 SQL，简单查询使用 `LambdaQueryWrapper`，复杂查询使用 XML
