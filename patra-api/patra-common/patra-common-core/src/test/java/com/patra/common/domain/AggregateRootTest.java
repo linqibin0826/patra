@@ -35,17 +35,17 @@ class AggregateRootTest {
       markDirty();
     }
 
-    /// 模拟业务方法：添加子实体
+    /// 模拟业务方法：添加组成部分
     void addChild(TestChildEntity child) {
       trackChildAdded(TestChildEntity.class, child);
     }
 
-    /// 模拟业务方法：更新子实体
+    /// 模拟业务方法：更新组成部分
     void updateChild(TestChildEntity child) {
       trackChildUpdated(TestChildEntity.class, child);
     }
 
-    /// 模拟业务方法：删除子实体
+    /// 模拟业务方法：删除组成部分
     void removeChild(Long childId) {
       trackChildRemoved(TestChildEntity.class, childId);
     }
