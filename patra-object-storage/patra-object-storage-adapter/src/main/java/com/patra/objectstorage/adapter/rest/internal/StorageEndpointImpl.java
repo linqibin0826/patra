@@ -1,10 +1,10 @@
 package com.patra.objectstorage.adapter.rest.internal;
 
+import com.patra.common.cqrs.CommandBus;
 import com.patra.objectstorage.api.dto.RecordUploadResponse;
 import com.patra.objectstorage.api.dto.UploadRecordRequest;
 import com.patra.objectstorage.api.endpoint.StorageEndpoint;
 import com.patra.objectstorage.app.recordupload.RecordUploadCommand;
-import com.patra.objectstorage.app.recordupload.RecordUploadOrchestrator;
 import com.patra.objectstorage.app.recordupload.RecordUploadResult;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -28,7 +28,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 ///   - 验证请求DTO
 ///   - 提取HTTP上下文信息(如客户端IP)
 ///   - 构建应用层命令对象
-///   - 委托给编排器执行用例
+///   - 通过 CommandBus 分发命令
 ///   - 转换结果为响应DTO
 ///
 @Slf4j
@@ -37,11 +37,11 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @RequiredArgsConstructor
 public class StorageEndpointImpl implements StorageEndpoint {
 
-  private final RecordUploadOrchestrator orchestrator;
+  private final CommandBus commandBus;
 
   /// 持久化描述成功上传对象的元数据。
   ///
-  /// 接收来自其他微服务的文件上传记录请求,提取HTTP请求上下文, 构建命令对象并委托给编排器执行持久化操作。
+  /// 接收来自其他微服务的文件上传记录请求,提取HTTP请求上下文, 构建命令对象并通过 CommandBus 分发执行。
   ///
   /// @param request 已验证的上传载荷
   /// @return 201 Created,包含元数据ID
@@ -49,7 +49,7 @@ public class StorageEndpointImpl implements StorageEndpoint {
   public RecordUploadResponse recordUpload(@RequestBody @Valid UploadRecordRequest request) {
     HttpServletRequest httpRequest = getCurrentRequest();
     RecordUploadCommand command = buildCommand(request, httpRequest);
-    RecordUploadResult result = orchestrator.execute(command);
+    RecordUploadResult result = commandBus.handle(command);
     return new RecordUploadResponse(result.metadataId(), result.recordedAt());
   }
 
