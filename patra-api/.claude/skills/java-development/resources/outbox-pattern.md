@@ -297,7 +297,7 @@ create index idx_publishing_lease
 <summary>查看中继执行器实现框架</summary>
 
 **职责分离**:
-- `OutboxRelayOrchestrator`: 应用层编排器
+- `OutboxRelayHandler`: 应用层命令处理器
 - `OutboxRelayExecutor`: 批量执行器
 - `RelayLeaseCoordinator`: 租约协调器
 - `RelayPublishCoordinator`: 发布协调器
@@ -712,13 +712,9 @@ public void archiveFailedMessages() {
 ## 📚 相关文档
 
 ### 核心概念
-- [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md) - 应用层编排
+- [commandbus.md](../../rules/tech/commandbus.md) - CommandBus 应用层模式
 - [event-driven-architecture.md](event-driven-architecture.md) - 事件驱动架构
 - [mybatis-plus-patterns.md](mybatis-plus-patterns.md) - 持久化实现
-
-### 测试指南
-- [testing-guide.md](testing-guide.md) - 完整测试策略
-- [test-templates-infrastructure.md](test-templates-infrastructure.md) - 基础设施层测试
 
 ### 代码参考
 - **领域模型**: `patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/entity/OutboxMessage.java`

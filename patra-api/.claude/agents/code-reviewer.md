@@ -37,23 +37,32 @@ color: green
 
 ### Adapter 层入口
 
-**UseCase 模式检查**:
+**CommandBus 模式检查**（写操作）:
 
 | 检查项 | ✅ 正确 | ❌ 错误 |
 |--------|--------|--------|
-| 依赖方向 | 依赖 `UseCase` 接口 | 依赖 `Orchestrator` 实现 |
-| 参数传递 | `execute(Command cmd)` | `execute(String a, String b, Mode c)` |
+| 依赖方向 | 注入 `CommandBus` | 直接注入 Handler 或 Orchestrator |
+| 调用方式 | `commandBus.handle(command)` | `handler.execute(a, b, c)` |
 | 入口职责 | 协议转换、日志、响应封装 | 包含业务逻辑、复杂验证 |
-| 参数验证 | 在 `Command` 构造函数中 | 在 Controller/Job/Listener 中 |
+| 参数验证 | 在 `Command` compact constructor 中 | 在 Controller/Job/Listener 中 |
+
+**QueryService 模式检查**（查询操作）:
+
+| 检查项 | ✅ 正确 | ❌ 错误 |
+|--------|--------|--------|
+| 依赖方向 | 注入 `*QueryService` | 直接注入 Repository |
+| 方法命名 | `findById()` / `loadSnapshot()` | `getById()` / `query()` |
 
 **包结构检查**:
 
 ```
-patra-{service}-app/usecase/{feature}/
-├── {Feature}UseCase.java           # 必须：接口
-├── {Feature}Orchestrator.java      # 必须：实现 UseCase
-├── command/{Feature}Command.java   # 必须：参数验证在此
-└── dto/{Feature}Result.java        # 必须：返回结果
+patra-{service}-app/
+├── usecase/{feature}/
+│   ├── {Feature}Handler.java           # 写操作：implements CommandHandler
+│   ├── command/{Feature}Command.java   # 必须：参数验证在 compact constructor
+│   └── dto/{Feature}Result.java        # 必须：返回结果
+└── service/
+    └── {Feature}QueryService.java      # 查询操作：简单服务类
 
 patra-{service}-adapter/
 ├── rest/{Feature}Controller.java   # HTTP 入口
@@ -62,7 +71,8 @@ patra-{service}-adapter/
 ```
 
 **常见违规**:
-- ❌ Adapter 直接调用 Orchestrator 而非 UseCase 接口
+- ❌ Adapter 直接调用 Handler 而非 CommandBus
+- ❌ 仍使用 Orchestrator/UseCase 命名（应使用 Handler/QueryService）
 - ❌ 方法签名使用多个简单类型参数而非 Command 对象
 - ❌ 在 Controller/Job/Listener 中进行业务验证或枚举转换
 - ❌ 返回简单类型而非 Result 对象

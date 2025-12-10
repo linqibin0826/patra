@@ -169,7 +169,7 @@ public interface VenueRepository {
 | **需要多个聚合数据** | **Application 层编排** | 聚合间解耦 |
 | **跨聚合事务协调** | **Application 层编排** | 事务边界在 Application 层 |
 
-> ⚠️ **重要区分**：领域服务不应该注入多个仓储来协调多个聚合。跨聚合的协调是 Application 层（Orchestrator）的职责。领域服务应该专注于**单一职责的业务逻辑**。
+> ⚠️ **重要区分**：领域服务不应该注入多个仓储来协调多个聚合。跨聚合的协调是 Application 层（CommandHandler）的职责。领域服务应该专注于**单一职责的业务逻辑**。
 
 ### 示例
 
@@ -184,16 +184,17 @@ public class VenueMergeService {
     }
 }
 
-// ✅ 正确：Application 层负责协调
-@Service
-public class VenueMergeOrchestrator {
+// ✅ 正确：Application 层负责协调（CommandHandler）
+@Component
+public class VenueMergeHandler implements CommandHandler<MergeVenueCommand, Void> {
     private final VenueRepository venueRepository;
     private final VenueMergeService mergeService;
 
+    @Override
     @Transactional
-    public void execute(Long primaryId, Long duplicateId) {
-        VenueAggregate primary = venueRepository.findById(primaryId).orElseThrow();
-        VenueAggregate duplicate = venueRepository.findById(duplicateId).orElseThrow();
+    public Void handle(MergeVenueCommand command) {
+        VenueAggregate primary = venueRepository.findById(command.primaryId()).orElseThrow();
+        VenueAggregate duplicate = venueRepository.findById(command.duplicateId()).orElseThrow();
 
         VenueAggregate merged = mergeService.merge(primary, duplicate);
 

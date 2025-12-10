@@ -35,27 +35,29 @@ Q: 什么类型的事件？
 
 ## 🔍 日志模式速查
 
-### Orchestrator 日志模式
+### CommandHandler 日志模式
 
 ```java
 @Slf4j
-public class MyOrchestrator {
+@Component
+public class MyHandler implements CommandHandler<MyCommand, Result> {
 
-    public Result orchestrate(Command cmd) {
+    @Override
+    public Result handle(MyCommand cmd) {
         // 入口日志 (DEBUG)
-        log.debug("Starting orchestration: param={}", cmd.getId());
+        log.debug("Starting handler: param={}", cmd.getId());
 
         try {
             // 关键步骤 (INFO)
             log.info("Phase 1 completed: id={} status={}", id, status);
 
             // 成功完成 (INFO + 指标)
-            log.info("Orchestration completed: id={} duration={}ms",
+            log.info("Handler completed: id={} duration={}ms",
                 id, duration);
 
         } catch (Exception e) {
             // 错误处理 (ERROR + 堆栈)
-            log.error("Orchestration failed: id={} reason={}",
+            log.error("Handler failed: id={} reason={}",
                 id, e.getMessage(), e);
         }
     }
@@ -214,12 +216,6 @@ void shouldLogError() {
 
 ### 专项指南
 - **[error-diagnosis-guide.md](error-diagnosis-guide.md)** - 错误诊断详细流程
-- **[logging-patterns.md](logging-patterns.md)** - 各层日志模式详解
-- **[metrics-monitoring.md](metrics-monitoring.md)** - 指标监控配置
-
-### 故障排查
-- **[troubleshooting-guide.md](troubleshooting-guide.md)** - 常见问题解决方案
-- **[performance-tuning.md](performance-tuning.md)** - 性能调优指南
 
 ## ⚡ 快速诊断命令
 

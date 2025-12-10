@@ -24,21 +24,21 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__serena__get_symbols_ove
 **核心原则**：
 - Controller 只负责协议转换，不包含业务逻辑
 - 使用 DTO 作为请求响应对象，不暴露领域对象
-- 依赖编排层（Orchestrator）处理业务
+- 只注入 `CommandBus`，通过 `commandBus.handle(command)` 调用业务逻辑
 
-### 2. 实现编排层（Orchestrator/Coordinator）
+### 2. 实现 CommandHandler（应用层命令处理器）
 
-编排层负责协调业务流程：
+CommandHandler 负责协调业务流程：
 1. 位于 `patra-{service}-app` 模块
-2. 使用 `@Service` 和 `@Transactional` 注解
-3. 参考 [orchestrator-coordinator-patterns.md](resources/orchestrator-coordinator-patterns.md) 获取模式详情
-4. 遵循事务边界管理原则
+2. 实现 `CommandHandler<C, R>` 接口
+3. 使用 `@Component` 和 `@Transactional` 注解
+4. 参考 `.claude/rules/tech/commandbus.md` 获取详细规范
 
 **核心职责**：
-- 组装领域对象
+- 接收并验证 Command
 - 编排业务流程
 - 管理事务边界
-- 发布领域事件
+- 返回处理结果
 
 ### 3. 数据访问层开发（MyBatis-Plus）
 
@@ -107,7 +107,7 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__serena__get_symbols_ove
 
 ### 核心模式
 - [Controller 开发模式](resources/controller-patterns.md)
-- [编排器和协调器模式](resources/orchestrator-coordinator-patterns.md)
+- [CommandBus 使用规范](../../rules/tech/commandbus.md)
 - [MyBatis-Plus 数据访问模式](resources/mybatis-plus-patterns.md)
 - [适配层模式](resources/adapter-layer-patterns.md)
 
@@ -131,7 +131,7 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__serena__get_symbols_ove
 **A: BaseDO 提供**：雪花 ID、10 个审计字段、自动填充功能。
 
 ### Q: 事务注解应该加在哪一层？
-**A: 只在 Application 层**（Orchestrator/Coordinator）使用 @Transactional。
+**A: 只在 Application 层**（CommandHandler）使用 @Transactional。
 
 ### Q: 如何选择正确的 Starter？
 **A: 查看** [Starter 快速选择](#starter-快速选择) 或 [patra-starters-guide.md](resources/patra-starters-guide.md)
