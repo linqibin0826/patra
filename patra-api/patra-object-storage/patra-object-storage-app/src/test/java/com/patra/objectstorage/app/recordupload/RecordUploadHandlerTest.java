@@ -25,25 +25,27 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/// RecordUploadOrchestrator 单元测试。
+/// RecordUploadHandler 单元测试。
 ///
 /// 测试策略：纯单元测试，使用 Mockito Mock {@link FileMetadataRepository}。
 ///
 /// 测试覆盖：
 ///
-/// - 核心功能：命令执行、聚合根创建、仓储保存
-///   - 可选字段：contentType、expiresAt、ipAddress、recordRemarks、correlationData
-///   - 存储提供商：MINIO、S3、OSS、COS
-///   - 异常处理：null 命令
-///   - 集成场景：完整字段、最小字段
+/// - 核心功能：命令处理、聚合根创建、仓储保存
+/// - 可选字段：contentType、expiresAt、ipAddress、recordRemarks、correlationData
+/// - 存储提供商：MINIO、S3、OSS、COS
+/// - 异常处理：null 命令
+/// - 集成场景：完整字段、最小字段
 ///
+/// @author linqibin
+/// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
-@DisplayName("RecordUploadOrchestrator 单元测试")
-class RecordUploadOrchestratorTest {
+@DisplayName("RecordUploadHandler 单元测试")
+class RecordUploadHandlerTest {
 
   @Mock private FileMetadataRepository repository;
 
-  @InjectMocks private RecordUploadOrchestrator orchestrator;
+  @InjectMocks private RecordUploadHandler handler;
 
   /// 配置 Repository Mock 的默认行为。
   ///
@@ -79,13 +81,13 @@ class RecordUploadOrchestratorTest {
   class CoreFunctionalityTests {
 
     @Test
-    @DisplayName("execute - 有效命令应创建聚合根并保存")
-    void execute_有效命令_应创建聚合根并保存() {
+    @DisplayName("handle - 有效命令应创建聚合根并保存")
+    void handle_withValidCommand_shouldCreateAndSaveAggregate() {
       // Given
       RecordUploadCommand command = createFullCommand();
 
       // When
-      RecordUploadResult result = orchestrator.execute(command);
+      RecordUploadResult result = handler.handle(command);
 
       // Then
       assertThat(result).isNotNull();
@@ -97,13 +99,13 @@ class RecordUploadOrchestratorTest {
     }
 
     @Test
-    @DisplayName("execute - 仓储保存成功应返回正确的元数据ID")
-    void execute_仓储保存成功_应返回正确的元数据ID() {
+    @DisplayName("handle - 仓储保存成功应返回正确的元数据ID")
+    void handle_whenRepositorySaveSucceeds_shouldReturnCorrectMetadataId() {
       // Given
       RecordUploadCommand command = createMinimalCommand();
 
       // When
-      RecordUploadResult result = orchestrator.execute(command);
+      RecordUploadResult result = handler.handle(command);
 
       // Then
       assertThat(result.metadataId()).isEqualTo(123L);
@@ -111,8 +113,8 @@ class RecordUploadOrchestratorTest {
     }
 
     @Test
-    @DisplayName("execute - 应正确传递命令参数到聚合根")
-    void execute_应正确传递命令参数到聚合根() {
+    @DisplayName("handle - 应正确传递命令参数到聚合根")
+    void handle_shouldPassCommandParametersToAggregate() {
       // Given
       RecordUploadCommand command =
           new RecordUploadCommand(
@@ -132,7 +134,7 @@ class RecordUploadOrchestratorTest {
               "测试上传");
 
       // When
-      orchestrator.execute(command);
+      handler.handle(command);
 
       // Then - 使用 ArgumentCaptor 捕获传递给 Repository 的聚合根
       ArgumentCaptor<FileMetadata> captor = ArgumentCaptor.forClass(FileMetadata.class);
@@ -159,13 +161,13 @@ class RecordUploadOrchestratorTest {
   class OptionalFieldsTests {
 
     @Test
-    @DisplayName("execute - 包含ContentType应配置到聚合根")
-    void execute_包含ContentType_应配置到聚合根() {
+    @DisplayName("handle - 包含 ContentType 应配置到聚合根")
+    void handle_withContentType_shouldConfigureToAggregate() {
       // Given
       RecordUploadCommand command = createFullCommand();
 
       // When
-      orchestrator.execute(command);
+      handler.handle(command);
 
       // Then
       ArgumentCaptor<FileMetadata> captor = ArgumentCaptor.forClass(FileMetadata.class);
@@ -176,8 +178,8 @@ class RecordUploadOrchestratorTest {
     }
 
     @Test
-    @DisplayName("execute - 包含过期时间应配置到聚合根")
-    void execute_包含过期时间_应配置到聚合根() {
+    @DisplayName("handle - 包含过期时间应配置到聚合根")
+    void handle_withExpiresAt_shouldConfigureToAggregate() {
       // Given
       Instant expectedExpiry = Instant.now().plus(30, ChronoUnit.DAYS);
       RecordUploadCommand command =
@@ -198,7 +200,7 @@ class RecordUploadOrchestratorTest {
               null);
 
       // When
-      orchestrator.execute(command);
+      handler.handle(command);
 
       // Then
       ArgumentCaptor<FileMetadata> captor = ArgumentCaptor.forClass(FileMetadata.class);
@@ -209,8 +211,8 @@ class RecordUploadOrchestratorTest {
     }
 
     @Test
-    @DisplayName("execute - 包含IP地址应配置到聚合根")
-    void execute_包含IP地址_应配置到聚合根() {
+    @DisplayName("handle - 包含 IP 地址应配置到聚合根")
+    void handle_withIpAddress_shouldConfigureToAggregate() {
       // Given
       byte[] ipAddress = {127, 0, 0, 1}; // 127.0.0.1
       RecordUploadCommand command =
@@ -231,7 +233,7 @@ class RecordUploadOrchestratorTest {
               null);
 
       // When
-      orchestrator.execute(command);
+      handler.handle(command);
 
       // Then
       ArgumentCaptor<FileMetadata> captor = ArgumentCaptor.forClass(FileMetadata.class);
@@ -242,8 +244,8 @@ class RecordUploadOrchestratorTest {
     }
 
     @Test
-    @DisplayName("execute - 包含备注应配置到聚合根")
-    void execute_包含备注_应配置到聚合根() {
+    @DisplayName("handle - 包含备注应配置到聚合根")
+    void handle_withRemarks_shouldConfigureToAggregate() {
       // Given
       String remarks = "{\"source\":\"api\",\"version\":\"v1\"}";
       RecordUploadCommand command =
@@ -264,7 +266,7 @@ class RecordUploadOrchestratorTest {
               remarks);
 
       // When
-      orchestrator.execute(command);
+      handler.handle(command);
 
       // Then
       ArgumentCaptor<FileMetadata> captor = ArgumentCaptor.forClass(FileMetadata.class);
@@ -275,8 +277,8 @@ class RecordUploadOrchestratorTest {
     }
 
     @Test
-    @DisplayName("execute - 包含关联数据应传递给业务上下文")
-    void execute_包含关联数据_应传递给业务上下文() {
+    @DisplayName("handle - 包含关联数据应传递给业务上下文")
+    void handle_withCorrelationData_shouldPassToBusinessContext() {
       // Given
       Map<String, Object> correlationData =
           Map.of(
@@ -302,7 +304,7 @@ class RecordUploadOrchestratorTest {
               null);
 
       // When
-      orchestrator.execute(command);
+      handler.handle(command);
 
       // Then
       ArgumentCaptor<FileMetadata> captor = ArgumentCaptor.forClass(FileMetadata.class);
@@ -316,13 +318,13 @@ class RecordUploadOrchestratorTest {
     }
 
     @Test
-    @DisplayName("execute - 可选字段为null应正确处理")
-    void execute_可选字段为null_应正确处理() {
+    @DisplayName("handle - 可选字段为 null 应正确处理")
+    void handle_withNullOptionalFields_shouldHandleCorrectly() {
       // Given
       RecordUploadCommand command = createMinimalCommand();
 
       // When
-      orchestrator.execute(command);
+      handler.handle(command);
 
       // Then
       ArgumentCaptor<FileMetadata> captor = ArgumentCaptor.forClass(FileMetadata.class);
@@ -342,8 +344,8 @@ class RecordUploadOrchestratorTest {
   class StorageProviderTests {
 
     @Test
-    @DisplayName("execute - MINIO提供商应正确映射")
-    void execute_MINIO提供商_应正确映射() {
+    @DisplayName("handle - MINIO 提供商应正确映射")
+    void handle_withMinioProvider_shouldMapCorrectly() {
       // Given
       RecordUploadCommand command =
           new RecordUploadCommand(
@@ -363,7 +365,7 @@ class RecordUploadOrchestratorTest {
               null);
 
       // When
-      orchestrator.execute(command);
+      handler.handle(command);
 
       // Then
       ArgumentCaptor<FileMetadata> captor = ArgumentCaptor.forClass(FileMetadata.class);
@@ -374,8 +376,8 @@ class RecordUploadOrchestratorTest {
     }
 
     @Test
-    @DisplayName("execute - S3提供商应正确映射")
-    void execute_S3提供商_应正确映射() {
+    @DisplayName("handle - S3 提供商应正确映射")
+    void handle_withS3Provider_shouldMapCorrectly() {
       // Given
       RecordUploadCommand command =
           new RecordUploadCommand(
@@ -395,7 +397,7 @@ class RecordUploadOrchestratorTest {
               null);
 
       // When
-      orchestrator.execute(command);
+      handler.handle(command);
 
       // Then
       ArgumentCaptor<FileMetadata> captor = ArgumentCaptor.forClass(FileMetadata.class);
@@ -406,8 +408,8 @@ class RecordUploadOrchestratorTest {
     }
 
     @Test
-    @DisplayName("execute - OSS提供商应正确映射")
-    void execute_OSS提供商_应正确映射() {
+    @DisplayName("handle - OSS 提供商应正确映射")
+    void handle_withOssProvider_shouldMapCorrectly() {
       // Given
       RecordUploadCommand command =
           new RecordUploadCommand(
@@ -427,7 +429,7 @@ class RecordUploadOrchestratorTest {
               null);
 
       // When
-      orchestrator.execute(command);
+      handler.handle(command);
 
       // Then
       ArgumentCaptor<FileMetadata> captor = ArgumentCaptor.forClass(FileMetadata.class);
@@ -438,8 +440,8 @@ class RecordUploadOrchestratorTest {
     }
 
     @Test
-    @DisplayName("execute - COS提供商应正确映射")
-    void execute_COS提供商_应正确映射() {
+    @DisplayName("handle - COS 提供商应正确映射")
+    void handle_withCosProvider_shouldMapCorrectly() {
       // Given
       RecordUploadCommand command =
           new RecordUploadCommand(
@@ -459,7 +461,7 @@ class RecordUploadOrchestratorTest {
               null);
 
       // When
-      orchestrator.execute(command);
+      handler.handle(command);
 
       // Then
       ArgumentCaptor<FileMetadata> captor = ArgumentCaptor.forClass(FileMetadata.class);
@@ -475,11 +477,11 @@ class RecordUploadOrchestratorTest {
   class ExceptionHandlingTests {
 
     @Test
-    @DisplayName("execute - null命令应抛出NullPointerException")
-    void execute_null命令_应抛出NullPointerException() {
+    @DisplayName("handle - null 命令应抛出 NullPointerException")
+    void handle_withNullCommand_shouldThrowNullPointerException() {
       // When & Then
       assertThatNullPointerException()
-          .isThrownBy(() -> orchestrator.execute(null))
+          .isThrownBy(() -> handler.handle(null))
           .withMessage("command 不能为 null");
 
       // 验证 repository.save() 未被调用
@@ -492,8 +494,8 @@ class RecordUploadOrchestratorTest {
   class IntegrationScenarioTests {
 
     @Test
-    @DisplayName("execute - 文学批次上传场景完整字段测试")
-    void execute_文学批次上传场景_完整字段测试() {
+    @DisplayName("handle - 文献批次上传场景完整字段测试")
+    void handle_publicationBatchUpload_fullFieldsTest() {
       // Given - 模拟真实的文学批次上传场景
       Instant expiryDate = Instant.now().plus(90, ChronoUnit.DAYS);
       RecordUploadCommand command =
@@ -518,7 +520,7 @@ class RecordUploadOrchestratorTest {
               "{\"source\":\"pubmed_api\",\"retry_count\":0,\"upload_duration_ms\":1234}");
 
       // When
-      RecordUploadResult result = orchestrator.execute(command);
+      RecordUploadResult result = handler.handle(command);
 
       // Then - 验证返回结果
       assertThat(result).isNotNull();
@@ -552,8 +554,8 @@ class RecordUploadOrchestratorTest {
     }
 
     @Test
-    @DisplayName("execute - 临时文件上传场景最小字段测试")
-    void execute_临时文件上传场景_最小字段测试() {
+    @DisplayName("handle - 临时文件上传场景最小字段测试")
+    void handle_tempFileUpload_minimalFieldsTest() {
       // Given - 模拟临时文件上传（只有必需字段）
       RecordUploadCommand command =
           new RecordUploadCommand(
@@ -573,7 +575,7 @@ class RecordUploadOrchestratorTest {
               null); // 无备注
 
       // When
-      RecordUploadResult result = orchestrator.execute(command);
+      RecordUploadResult result = handler.handle(command);
 
       // Then
       assertThat(result).isNotNull();
