@@ -1,9 +1,8 @@
-package com.patra.catalog.infra.adapter.parser.dto.serfile;
+package com.patra.catalog.domain.model.vo.venue.pubmed;
 
-/// Serfile 记录 ID 解析结果。
+/// PubMed 记录 ID。
 ///
-/// 从 Serfile XML 的 `RecordID` 元素解析出的数据传输对象。
-/// 表示关联记录的标识符，用于 `TitleRelated` 元素内。
+/// 表示关联记录的标识符，用于 `TitleRelation` 中标识关联期刊。
 ///
 /// **XML 结构示例**：
 ///
@@ -28,15 +27,15 @@ package com.patra.catalog.infra.adapter.parser.dto.serfile;
 /// @param source 记录来源（NLM/LC/OCLC）
 /// @author linqibin
 /// @since 0.1.0
-public record SerialRecordId(String id, String source) {
+public record PubmedRecordId(String id, String source) {
 
   /// 创建记录 ID。
   ///
   /// @param id 记录 ID 值
   /// @param source 记录来源
-  /// @return 记录 ID 解析结果
-  public static SerialRecordId of(String id, String source) {
-    return new SerialRecordId(id, source);
+  /// @return 记录 ID
+  public static PubmedRecordId of(String id, String source) {
+    return new PubmedRecordId(id, source);
   }
 
   /// 判断是否来自 NLM。
