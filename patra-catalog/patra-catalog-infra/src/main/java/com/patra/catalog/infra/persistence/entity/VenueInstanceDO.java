@@ -5,23 +5,30 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO;
-import java.time.Instant;
+import java.time.LocalDate;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/// 载体实例数据库实体,映射到表 `cat_venue_instance`。
+/// 载体实例数据库实体（独立聚合根），映射到表 `cat_venue_instance`。
 ///
-/// 表结构: 存储载体的具体实例(期刊的卷期、书籍的版次、会议的届次)。
+/// **设计说明**：
 ///
-/// 关键字段说明:
+/// VenueInstance 已提升为独立聚合根，通过 `venue_id` 外键关联 VenueAggregate。
+/// 存储载体的具体实例（期刊的卷期、书籍的版次、会议的届次）。
 ///
-/// - `venue_id` 载体 ID,外键关联 cat_venue.id
-///   - `volume` 卷号(期刊专用)
-///   - `issue` 期号(期刊专用)
-///   - `edition` 版次(书籍专用)
-///   - `publication_year` 出版年份(必填,用于冗余到主表)
-///   - `conference_name` 会议名称(会议专用)
-///   - `instance_metadata` JSON 扩展数据字段
+/// **实例类型**：
+///
+/// | 类型 | 关键字段 | 示例 |
+/// |------|----------|------|
+/// | 期刊 | volume, issue | Nature Vol.612, No.5 |
+/// | 书籍 | edition | 2nd Edition |
+/// | 会议 | conferenceName, conferenceStartDate | AAAI 2024, Vancouver |
+///
+/// **索引说明**：
+///
+/// - 复合索引 `idx_venue_volume_issue`: 期刊实例查询
+/// - 普通索引 `idx_publication_year`: 按年份筛选
+/// - 普通索引 `idx_venue_id`: 按载体查询所有实例
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -61,13 +68,13 @@ public class VenueInstanceDO extends BaseDO {
   @TableField("conference_name")
   private String conferenceName;
 
-  /// 会议开始日期(会议专用)
+  /// 会议开始日期（会议专用）
   @TableField("conference_start_date")
-  private Instant conferenceStartDate;
+  private LocalDate conferenceStartDate;
 
-  /// 会议结束日期(会议专用)
+  /// 会议结束日期（会议专用）
   @TableField("conference_end_date")
-  private Instant conferenceEndDate;
+  private LocalDate conferenceEndDate;
 
   /// 会议地点(会议专用)
   @TableField("conference_location")

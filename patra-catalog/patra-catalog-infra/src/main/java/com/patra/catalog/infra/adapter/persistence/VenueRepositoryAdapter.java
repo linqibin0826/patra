@@ -5,30 +5,47 @@ import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
+import com.patra.catalog.domain.model.vo.venue.ApcInfo;
+import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
+import com.patra.catalog.domain.model.vo.venue.Society;
+import com.patra.catalog.domain.model.vo.venue.VenueDetail;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenueIndexingHistory;
 import com.patra.catalog.domain.model.vo.venue.VenueMesh;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
 import com.patra.catalog.domain.model.vo.venue.VenueRelation;
+import com.patra.catalog.domain.model.vo.venue.VenueStats;
 import com.patra.catalog.domain.port.repository.VenueRepository;
+import com.patra.catalog.infra.persistence.converter.VenueApcConverter;
 import com.patra.catalog.infra.persistence.converter.VenueConverter;
+import com.patra.catalog.infra.persistence.converter.VenueDetailConverter;
 import com.patra.catalog.infra.persistence.converter.VenueIdentifierConverter;
 import com.patra.catalog.infra.persistence.converter.VenueIndexingHistoryConverter;
 import com.patra.catalog.infra.persistence.converter.VenueMeshConverter;
 import com.patra.catalog.infra.persistence.converter.VenuePublicationStatsConverter;
 import com.patra.catalog.infra.persistence.converter.VenueRelationConverter;
+import com.patra.catalog.infra.persistence.converter.VenueSocietyConverter;
+import com.patra.catalog.infra.persistence.converter.VenueStatsConverter;
+import com.patra.catalog.infra.persistence.entity.VenueApcDO;
 import com.patra.catalog.infra.persistence.entity.VenueDO;
+import com.patra.catalog.infra.persistence.entity.VenueDetailDO;
 import com.patra.catalog.infra.persistence.entity.VenueIdentifierDO;
 import com.patra.catalog.infra.persistence.entity.VenueIndexingHistoryDO;
 import com.patra.catalog.infra.persistence.entity.VenueMeshDO;
 import com.patra.catalog.infra.persistence.entity.VenuePublicationStatsDO;
 import com.patra.catalog.infra.persistence.entity.VenueRelationDO;
+import com.patra.catalog.infra.persistence.entity.VenueSocietyDO;
+import com.patra.catalog.infra.persistence.entity.VenueStatsDO;
+import com.patra.catalog.infra.persistence.mapper.VenueApcMapper;
+import com.patra.catalog.infra.persistence.mapper.VenueDetailMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueIdentifierMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueIndexingHistoryMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueMeshMapper;
 import com.patra.catalog.infra.persistence.mapper.VenuePublicationStatsMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueRelationMapper;
+import com.patra.catalog.infra.persistence.mapper.VenueSocietyMapper;
+import com.patra.catalog.infra.persistence.mapper.VenueStatsMapper;
 import com.patra.common.domain.AggregateRoot;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,22 +61,35 @@ import org.springframework.stereotype.Repository;
 
 /// 出版载体聚合根仓储实现。
 ///
-/// **聚合边界**：
+/// **聚合边界**（CQRS 最小聚合）：
 ///
-/// - VenueAggregate：聚合根
+/// - VenueAggregate：聚合根（仅含 venueType/displayName/identifiers/provenance）
 /// - VenueIdentifier：值对象集合（保护 ISSN-L 唯一性不变量）
 ///
 /// **职责**：
 ///
 /// - 管理 VenueAggregate（载体聚合根）的持久化
-/// - 管理与载体关联的补充数据（年度统计、MeSH、关联关系、索引历史）
+/// - 管理 CQRS 补充数据表（detail/stats/apc/societies）
+/// - 管理 Serfile 相关数据（年度统计、MeSH、关联关系、索引历史）
 /// - 支持 OpenAlex Sources 和 NLM Serfile 批量数据导入
 /// - 以聚合根为单位保证数据一致性
+///
+/// **CQRS 设计说明**：
+///
+/// 聚合根已精简为最小化，补充数据通过独立方法管理：
+///
+/// | 数据类型 | 表名 | 关系 | 管理方法 |
+/// |----------|------|------|----------|
+/// | 详情 | cat_venue_detail | 1:1 | findDetailsByVenueIds / replaceDetailsBatch |
+/// | 统计 | cat_venue_stats | 1:1 | findStatsByVenueIds / replaceStatsBatch |
+/// | APC | cat_venue_apc | 1:1 | findApcByVenueIds / replaceApcBatch |
+/// | 学会 | cat_venue_society | 1:N | findSocietiesByVenueIds / replaceSocietiesBatch |
 ///
 /// **性能优化**：
 ///
 /// - 批量操作使用 `Db.saveBatch()` 配合 `rewriteBatchedStatements=true` 提升写入效率
 /// - 批量查询时一次性加载所有子实体，避免 N+1 问题
+/// - 标识符查询通过 cat_venue_identifier 表反查（无冗余字段）
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -74,7 +104,17 @@ public class VenueRepositoryAdapter implements VenueRepository {
   private final VenueConverter venueConverter;
   private final VenueIdentifierConverter identifierConverter;
 
-  // ========== 补充数据相关 Mapper & Converter ==========
+  // ========== CQRS 补充数据相关 Mapper & Converter ==========
+  private final VenueDetailMapper detailMapper;
+  private final VenueStatsMapper statsMapper;
+  private final VenueApcMapper apcMapper;
+  private final VenueSocietyMapper societyMapper;
+  private final VenueDetailConverter detailConverter;
+  private final VenueStatsConverter statsConverter;
+  private final VenueApcConverter apcConverter;
+  private final VenueSocietyConverter societyConverter;
+
+  // ========== Serfile 补充数据相关 Mapper & Converter ==========
   private final VenuePublicationStatsMapper publicationStatsMapper;
   private final VenueMeshMapper meshMapper;
   private final VenueRelationMapper relationMapper;
@@ -129,13 +169,16 @@ public class VenueRepositoryAdapter implements VenueRepository {
       return Set.of();
     }
 
-    return venueMapper
-        .selectList(
-            new LambdaQueryWrapper<VenueDO>()
-                .select(VenueDO::getIssnL)
-                .in(VenueDO::getIssnL, issnLs))
-        .stream()
-        .map(VenueDO::getIssnL)
+    // 通过标识符表查询 ISSN-L（无冗余字段）
+    List<VenueIdentifierDO> identifierDOs =
+        venueIdentifierMapper.selectList(
+            new LambdaQueryWrapper<VenueIdentifierDO>()
+                .select(VenueIdentifierDO::getIdentifierValue)
+                .eq(VenueIdentifierDO::getIdentifierType, VenueIdentifierType.ISSN_L.name())
+                .in(VenueIdentifierDO::getIdentifierValue, issnLs));
+
+    return identifierDOs.stream()
+        .map(VenueIdentifierDO::getIdentifierValue)
         .collect(Collectors.toSet());
   }
 
@@ -147,10 +190,27 @@ public class VenueRepositoryAdapter implements VenueRepository {
       return Map.of();
     }
 
-    // 查询主表
-    List<VenueDO> venueDOs =
-        venueMapper.selectList(new LambdaQueryWrapper<VenueDO>().in(VenueDO::getIssnL, issnLs));
+    // 通过标识符表查找 ISSN-L 类型的记录
+    List<VenueIdentifierDO> identifierDOs =
+        venueIdentifierMapper.selectList(
+            new LambdaQueryWrapper<VenueIdentifierDO>()
+                .eq(VenueIdentifierDO::getIdentifierType, VenueIdentifierType.ISSN_L.name())
+                .in(VenueIdentifierDO::getIdentifierValue, issnLs));
 
+    if (identifierDOs.isEmpty()) {
+      return Map.of();
+    }
+
+    // 获取 venue IDs 并构建 ISSN-L -> venueId 的映射
+    Map<Long, String> venueIdToIssnL = new HashMap<>();
+    Set<Long> venueIds = new HashSet<>();
+    for (VenueIdentifierDO idDO : identifierDOs) {
+      venueIds.add(idDO.getVenueId());
+      venueIdToIssnL.put(idDO.getVenueId(), idDO.getIdentifierValue());
+    }
+
+    // 查询主表
+    List<VenueDO> venueDOs = venueMapper.selectByIds(venueIds);
     if (venueDOs.isEmpty()) {
       return Map.of();
     }
@@ -159,9 +219,18 @@ public class VenueRepositoryAdapter implements VenueRepository {
     List<VenueAggregate> aggregates = reconstructAggregates(venueDOs);
 
     // 按 ISSN-L 构建 Map
-    return aggregates.stream()
-        .filter(a -> a.getIssnL() != null)
-        .collect(Collectors.toMap(VenueAggregate::getIssnL, a -> a, (a1, a2) -> a1));
+    Map<Long, VenueAggregate> venueIdToAggregate =
+        aggregates.stream().collect(Collectors.toMap(AggregateRoot::getId, a -> a, (a1, a2) -> a1));
+
+    Map<String, VenueAggregate> result = new HashMap<>();
+    for (Map.Entry<Long, String> entry : venueIdToIssnL.entrySet()) {
+      VenueAggregate aggregate = venueIdToAggregate.get(entry.getKey());
+      if (aggregate != null) {
+        result.put(entry.getValue(), aggregate);
+      }
+    }
+
+    return result;
   }
 
   @Override
@@ -170,10 +239,27 @@ public class VenueRepositoryAdapter implements VenueRepository {
       return Map.of();
     }
 
-    // 查询主表
-    List<VenueDO> venueDOs =
-        venueMapper.selectList(new LambdaQueryWrapper<VenueDO>().in(VenueDO::getNlmId, nlmIds));
+    // 通过标识符表查找 NLM 类型的记录
+    List<VenueIdentifierDO> identifierDOs =
+        venueIdentifierMapper.selectList(
+            new LambdaQueryWrapper<VenueIdentifierDO>()
+                .eq(VenueIdentifierDO::getIdentifierType, VenueIdentifierType.NLM.name())
+                .in(VenueIdentifierDO::getIdentifierValue, nlmIds));
 
+    if (identifierDOs.isEmpty()) {
+      return Map.of();
+    }
+
+    // 获取 venue IDs 并构建 NLM ID -> venueId 的映射
+    Map<Long, String> venueIdToNlmId = new HashMap<>();
+    Set<Long> venueIds = new HashSet<>();
+    for (VenueIdentifierDO idDO : identifierDOs) {
+      venueIds.add(idDO.getVenueId());
+      venueIdToNlmId.put(idDO.getVenueId(), idDO.getIdentifierValue());
+    }
+
+    // 查询主表
+    List<VenueDO> venueDOs = venueMapper.selectByIds(venueIds);
     if (venueDOs.isEmpty()) {
       return Map.of();
     }
@@ -182,9 +268,18 @@ public class VenueRepositoryAdapter implements VenueRepository {
     List<VenueAggregate> aggregates = reconstructAggregates(venueDOs);
 
     // 按 NLM ID 构建 Map
-    return aggregates.stream()
-        .filter(a -> a.getNlmId() != null)
-        .collect(Collectors.toMap(VenueAggregate::getNlmId, a -> a, (a1, a2) -> a1));
+    Map<Long, VenueAggregate> venueIdToAggregate =
+        aggregates.stream().collect(Collectors.toMap(AggregateRoot::getId, a -> a, (a1, a2) -> a1));
+
+    Map<String, VenueAggregate> result = new HashMap<>();
+    for (Map.Entry<Long, String> entry : venueIdToNlmId.entrySet()) {
+      VenueAggregate aggregate = venueIdToAggregate.get(entry.getKey());
+      if (aggregate != null) {
+        result.put(entry.getValue(), aggregate);
+      }
+    }
+
+    return result;
   }
 
   @Override
@@ -387,7 +482,12 @@ public class VenueRepositoryAdapter implements VenueRepository {
     return aggregates;
   }
 
-  /// 重建单个聚合根。
+  /// 重建单个聚合根（最小聚合版本）。
+  ///
+  /// **CQRS 设计**：
+  ///
+  /// 聚合根只包含核心身份数据：venueType、displayName、identifiers、provenance。
+  /// 补充数据（detail/stats/apc/societies）不属于聚合边界，通过独立方法获取。
   ///
   /// **注意**：重建完成后会清空变更追踪状态（dirty 标记和 partChanges 列表），
   /// 确保只有后续的业务操作才会被追踪。
@@ -399,20 +499,16 @@ public class VenueRepositoryAdapter implements VenueRepository {
         VenueAggregate.restore(
             venueDO.getId(), venueType, venueDO.getDisplayName(), venueDO.getVersion());
 
-    // 设置基本属性
-    aggregate
-        .withAbbreviatedTitle(venueDO.getAbbreviatedTitle())
-        .withHomepageUrl(venueDO.getHomepageUrl())
-        .withOpenalexId(venueDO.getOpenalexId())
-        .withIssnL(venueDO.getIssnL())
-        .withNlmId(venueDO.getNlmId())
-        .withCoden(venueDO.getCoden())
-        .withFrequency(venueDO.getFrequency())
-        .withCountryCode(venueDO.getCountryCode());
-
-    // 设置 OA 状态
-    aggregate.withOaStatus(
-        Boolean.TRUE.equals(venueDO.getIsOa()), Boolean.TRUE.equals(venueDO.getIsInDoaj()));
+    // 设置来源追踪信息
+    if (venueDO.getProvenanceCode() != null) {
+      ProvenanceInfo provenance =
+          ProvenanceInfo.of(
+              venueDO.getProvenanceCode(),
+              venueDO.getSourceCreatedDate(),
+              venueDO.getSourceUpdatedDate(),
+              venueDO.getLastSyncedAt());
+      aggregate.withProvenance(provenance);
+    }
 
     // 添加标识符
     for (VenueIdentifierDO identifierDO : identifierDOs) {
@@ -437,7 +533,193 @@ public class VenueRepositoryAdapter implements VenueRepository {
     return all.stream().collect(Collectors.groupingBy(VenueIdentifierDO::getVenueId));
   }
 
-  // ========== 补充数据管理（关联数据，不属于聚合边界） ==========
+  // ========== CQRS 补充数据管理（独立表数据） ==========
+
+  @Override
+  public Map<Long, VenueDetail> findDetailsByVenueIds(Collection<Long> venueIds) {
+    if (venueIds == null || venueIds.isEmpty()) {
+      return Map.of();
+    }
+
+    List<VenueDetailDO> doList =
+        detailMapper.selectList(
+            new LambdaQueryWrapper<VenueDetailDO>().in(VenueDetailDO::getVenueId, venueIds));
+
+    return doList.stream()
+        .collect(Collectors.toMap(VenueDetailDO::getVenueId, detailConverter::toEntity));
+  }
+
+  @Override
+  public void replaceDetailsBatch(Map<Long, VenueDetail> detailsByVenueId) {
+    if (detailsByVenueId == null || detailsByVenueId.isEmpty()) {
+      return;
+    }
+
+    List<Long> venueIds = new ArrayList<>(detailsByVenueId.keySet());
+
+    // 删除旧数据
+    detailMapper.delete(
+        new LambdaQueryWrapper<VenueDetailDO>().in(VenueDetailDO::getVenueId, venueIds));
+
+    // 收集新数据
+    List<VenueDetailDO> doList = new ArrayList<>();
+    for (Map.Entry<Long, VenueDetail> entry : detailsByVenueId.entrySet()) {
+      Long venueId = entry.getKey();
+      VenueDetail detail = entry.getValue();
+      if (detail != null) {
+        VenueDetailDO detailDO = detailConverter.toDO(detail);
+        detailDO.setVenueId(venueId);
+        doList.add(detailDO);
+      }
+    }
+
+    // 批量插入
+    if (!doList.isEmpty()) {
+      Db.saveBatch(doList);
+      log.debug("批量插入载体详情 {} 条", doList.size());
+    }
+  }
+
+  @Override
+  public Map<Long, VenueStats> findStatsByVenueIds(Collection<Long> venueIds) {
+    if (venueIds == null || venueIds.isEmpty()) {
+      return Map.of();
+    }
+
+    List<VenueStatsDO> doList =
+        statsMapper.selectList(
+            new LambdaQueryWrapper<VenueStatsDO>().in(VenueStatsDO::getVenueId, venueIds));
+
+    return doList.stream()
+        .collect(Collectors.toMap(VenueStatsDO::getVenueId, statsConverter::toEntity));
+  }
+
+  @Override
+  public void replaceStatsBatch(Map<Long, VenueStats> statsByVenueId) {
+    if (statsByVenueId == null || statsByVenueId.isEmpty()) {
+      return;
+    }
+
+    List<Long> venueIds = new ArrayList<>(statsByVenueId.keySet());
+
+    // 删除旧数据
+    statsMapper.delete(
+        new LambdaQueryWrapper<VenueStatsDO>().in(VenueStatsDO::getVenueId, venueIds));
+
+    // 收集新数据
+    List<VenueStatsDO> doList = new ArrayList<>();
+    for (Map.Entry<Long, VenueStats> entry : statsByVenueId.entrySet()) {
+      Long venueId = entry.getKey();
+      VenueStats stats = entry.getValue();
+      if (stats != null) {
+        VenueStatsDO statsDO = statsConverter.toDO(stats);
+        statsDO.setVenueId(venueId);
+        doList.add(statsDO);
+      }
+    }
+
+    // 批量插入
+    if (!doList.isEmpty()) {
+      Db.saveBatch(doList);
+      log.debug("批量插入统计快照 {} 条", doList.size());
+    }
+  }
+
+  @Override
+  public Map<Long, ApcInfo> findApcByVenueIds(Collection<Long> venueIds) {
+    if (venueIds == null || venueIds.isEmpty()) {
+      return Map.of();
+    }
+
+    List<VenueApcDO> doList =
+        apcMapper.selectList(
+            new LambdaQueryWrapper<VenueApcDO>().in(VenueApcDO::getVenueId, venueIds));
+
+    return doList.stream()
+        .collect(Collectors.toMap(VenueApcDO::getVenueId, apcConverter::toEntity));
+  }
+
+  @Override
+  public void replaceApcBatch(Map<Long, ApcInfo> apcByVenueId) {
+    if (apcByVenueId == null || apcByVenueId.isEmpty()) {
+      return;
+    }
+
+    List<Long> venueIds = new ArrayList<>(apcByVenueId.keySet());
+
+    // 删除旧数据
+    apcMapper.delete(new LambdaQueryWrapper<VenueApcDO>().in(VenueApcDO::getVenueId, venueIds));
+
+    // 收集新数据
+    List<VenueApcDO> doList = new ArrayList<>();
+    for (Map.Entry<Long, ApcInfo> entry : apcByVenueId.entrySet()) {
+      Long venueId = entry.getKey();
+      ApcInfo apc = entry.getValue();
+      if (apc != null) {
+        VenueApcDO apcDO = apcConverter.toDO(apc);
+        apcDO.setVenueId(venueId);
+        doList.add(apcDO);
+      }
+    }
+
+    // 批量插入
+    if (!doList.isEmpty()) {
+      Db.saveBatch(doList);
+      log.debug("批量插入 APC 信息 {} 条", doList.size());
+    }
+  }
+
+  @Override
+  public Map<Long, List<Society>> findSocietiesByVenueIds(Collection<Long> venueIds) {
+    if (venueIds == null || venueIds.isEmpty()) {
+      return Map.of();
+    }
+
+    List<VenueSocietyDO> doList =
+        societyMapper.selectList(
+            new LambdaQueryWrapper<VenueSocietyDO>().in(VenueSocietyDO::getVenueId, venueIds));
+
+    return doList.stream()
+        .collect(
+            Collectors.groupingBy(
+                VenueSocietyDO::getVenueId,
+                Collectors.mapping(societyConverter::toEntity, Collectors.toList())));
+  }
+
+  @Override
+  public void replaceSocietiesBatch(Map<Long, List<Society>> societiesByVenueId) {
+    if (societiesByVenueId == null || societiesByVenueId.isEmpty()) {
+      return;
+    }
+
+    List<Long> venueIds = new ArrayList<>(societiesByVenueId.keySet());
+
+    // 删除旧数据
+    societyMapper.delete(
+        new LambdaQueryWrapper<VenueSocietyDO>().in(VenueSocietyDO::getVenueId, venueIds));
+
+    // 收集新数据
+    List<VenueSocietyDO> doList = new ArrayList<>();
+    for (Map.Entry<Long, List<Society>> entry : societiesByVenueId.entrySet()) {
+      Long venueId = entry.getKey();
+      List<Society> societies = entry.getValue();
+      if (societies != null) {
+        for (Society society : societies) {
+          VenueSocietyDO societyDO = societyConverter.toDO(society);
+          societyDO.setVenueId(venueId);
+          doList.add(societyDO);
+        }
+      }
+    }
+
+    // 批量插入
+    if (!doList.isEmpty()) {
+      Db.saveBatch(doList);
+      log.debug("批量插入关联学会 {} 条", doList.size());
+    }
+  }
+
+  // ========== Serfile 补充数据管理（关联数据，不属于聚合边界） ==========
 
   @Override
   public Map<Long, List<VenuePublicationStats>> findYearlyMetricsByVenueIds(
