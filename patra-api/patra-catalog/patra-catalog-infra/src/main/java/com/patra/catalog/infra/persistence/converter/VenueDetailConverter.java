@@ -24,19 +24,16 @@ import org.mapstruct.ReportingPolicy;
 ///
 /// | VenueDetail 字段 | VenueDetailDO 字段 | 说明 |
 /// |------------------|-------------------|------|
-/// | abbreviatedTitle | abbreviated_title | 直接映射 |
 /// | alternateTitles | alternate_titles | List → JSON |
 /// | homepageUrl | homepage_url | 直接映射 |
 /// | frequency | frequency | 直接映射 |
 /// | publicationHistory.startYear | publication_start_year | 嵌套展平 |
 /// | publicationHistory.endYear | publication_end_year | 嵌套展平 |
 /// | publicationHistory.ceased | ceased | 嵌套展平 |
-/// | languages.getMainLanguage() | primary_language | 提取主语言 |
 /// | languages | languages | 完整 JSON |
 /// | hostOrganization.id | host_organization_id | 嵌套展平 |
 /// | hostOrganization.name | host_organization_name | 嵌套展平 |
 /// | hostOrganization.lineage | host_organization_lineage | List → JSON |
-/// | countryCode | country_code | 直接映射 |
 /// | indexingInfo.status | indexing_status | 嵌套展平 |
 /// | indexingInfo.medlineTa | medline_ta | 嵌套展平 |
 /// | indexingInfo.isoAbbreviation | iso_abbreviation | 嵌套展平 |
@@ -63,7 +60,6 @@ public interface VenueDetailConverter {
   @Mapping(target = "publicationStartYear", expression = "java(getStartYear(detail))")
   @Mapping(target = "publicationEndYear", expression = "java(getEndYear(detail))")
   @Mapping(target = "ceased", expression = "java(getCeased(detail))")
-  @Mapping(target = "primaryLanguage", expression = "java(getPrimaryLanguage(detail))")
   @Mapping(target = "languages", expression = "java(languagesToJson(detail.languages()))")
   @Mapping(target = "hostOrganizationId", expression = "java(getHostOrgId(detail))")
   @Mapping(target = "hostOrganizationName", expression = "java(getHostOrgName(detail))")
@@ -83,14 +79,12 @@ public interface VenueDetailConverter {
     }
 
     return VenueDetail.builder()
-        .abbreviatedTitle(doEntity.getAbbreviatedTitle())
         .alternateTitles(doEntity.getAlternateTitles())
         .homepageUrl(doEntity.getHomepageUrl())
         .frequency(doEntity.getFrequency())
         .publicationHistory(buildPublicationHistory(doEntity))
         .languages(buildLanguages(doEntity))
         .hostOrganization(buildHostOrganization(doEntity))
-        .countryCode(doEntity.getCountryCode())
         .indexingInfo(buildIndexingInfo(doEntity))
         .isOa(Boolean.TRUE.equals(doEntity.getIsOa()))
         .isInDoaj(Boolean.TRUE.equals(doEntity.getIsInDoaj()))
@@ -123,14 +117,6 @@ public interface VenueDetailConverter {
       return null;
     }
     return detail.publicationHistory().ceased();
-  }
-
-  /// 获取主语言。
-  default String getPrimaryLanguage(VenueDetail detail) {
-    if (detail.languages() == null) {
-      return null;
-    }
-    return detail.languages().getMainLanguage();
   }
 
   /// 将语言信息转换为 JSON。
@@ -206,10 +192,6 @@ public interface VenueDetailConverter {
   default VenueLanguages buildLanguages(VenueDetailDO doEntity) {
     JsonNode json = doEntity.getLanguages();
     if (json == null || json.isNull()) {
-      // 如果只有主语言字段但没有完整 JSON
-      if (doEntity.getPrimaryLanguage() != null) {
-        return VenueLanguages.ofSingleLanguage(doEntity.getPrimaryLanguage());
-      }
       return null;
     }
 

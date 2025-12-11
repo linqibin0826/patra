@@ -6,12 +6,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
+import com.patra.catalog.domain.model.vo.venue.VenueDetail;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
+import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
 import com.patra.catalog.domain.port.repository.VenueRepository;
+import com.patra.catalog.infra.persistence.entity.VenueDO;
 import com.patra.catalog.infra.persistence.mapper.VenueIdentifierMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueMapper;
 import com.patra.catalog.integration.config.CatalogMySQLContainerInitializer;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
@@ -113,13 +117,13 @@ class VenueRepositoryUpdateBatchE2E {
       venueRepository.insertAll(List.of(venue));
 
       // When：重新加载并添加新标识符
-      var loaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
+      var loaded = venueRepository.findByIssnLs(Set.of("1234-5001")).get("1234-5001");
       int initialCount = loaded.getIdentifiers().size();
       loaded.addIdentifier(VenueIdentifier.forIssn("9999-9999"));
       venueRepository.updateBatch(List.of(loaded));
 
       // Then：重新加载聚合根，验证标识符已持久化
-      var reloaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
+      var reloaded = venueRepository.findByIssnLs(Set.of("1234-5001")).get("1234-5001");
       assertThat(reloaded.getIdentifiers()).hasSize(initialCount + 1);
       assertThat(reloaded.getIdentifiers(VenueIdentifierType.ISSN)).contains("9999-9999");
     }
@@ -132,7 +136,7 @@ class VenueRepositoryUpdateBatchE2E {
       venueRepository.insertAll(List.of(venue));
 
       // When：重新加载并添加多个标识符
-      var loaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
+      var loaded = venueRepository.findByIssnLs(Set.of("1234-5001")).get("1234-5001");
       int initialCount = loaded.getIdentifiers().size();
       loaded.addIdentifier(VenueIdentifier.forIssn("1111-1111"));
       loaded.addIdentifier(VenueIdentifier.forIssn("2222-2222"));
@@ -140,7 +144,7 @@ class VenueRepositoryUpdateBatchE2E {
       venueRepository.updateBatch(List.of(loaded));
 
       // Then：验证所有标识符已持久化
-      var reloaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
+      var reloaded = venueRepository.findByIssnLs(Set.of("1234-5001")).get("1234-5001");
       assertThat(reloaded.getIdentifiers()).hasSize(initialCount + 3);
       assertThat(reloaded.getIdentifiers(VenueIdentifierType.ISSN))
           .containsExactlyInAnyOrder("1111-1111", "2222-2222", "3333-3333");
@@ -163,13 +167,13 @@ class VenueRepositoryUpdateBatchE2E {
       venueRepository.insertAll(List.of(venue));
 
       // When：重新加载并删除一个标识符
-      var loaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
+      var loaded = venueRepository.findByIssnLs(Set.of("1234-5001")).get("1234-5001");
       int initialCount = loaded.getIdentifiers().size();
       loaded.removeIdentifier(VenueIdentifierType.ISSN, "1111-1111");
       venueRepository.updateBatch(List.of(loaded));
 
       // Then：验证标识符已删除
-      var reloaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
+      var reloaded = venueRepository.findByIssnLs(Set.of("1234-5001")).get("1234-5001");
       assertThat(reloaded.getIdentifiers()).hasSize(initialCount - 1);
       assertThat(reloaded.getIdentifiers(VenueIdentifierType.ISSN))
           .contains("2222-2222")
@@ -193,7 +197,7 @@ class VenueRepositoryUpdateBatchE2E {
       venueRepository.insertAll(List.of(venue));
 
       // When：执行混合操作（CQRS 最小聚合：只测试标识符变更）
-      var loaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
+      var loaded = venueRepository.findByIssnLs(Set.of("1234-5001")).get("1234-5001");
       // 删除一个标识符
       loaded.removeIdentifier(VenueIdentifierType.ISSN, "1111-1111");
       // 添加一个新标识符
@@ -201,7 +205,7 @@ class VenueRepositoryUpdateBatchE2E {
       venueRepository.updateBatch(List.of(loaded));
 
       // Then：验证标识符变更
-      var reloaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
+      var reloaded = venueRepository.findByIssnLs(Set.of("1234-5001")).get("1234-5001");
       List<String> issns = reloaded.getIdentifiers(VenueIdentifierType.ISSN);
       assertThat(issns).containsExactlyInAnyOrder("2222-2222", "3333-3333");
       assertThat(issns).doesNotContain("1111-1111");
@@ -224,9 +228,9 @@ class VenueRepositoryUpdateBatchE2E {
       venueRepository.insertAll(List.of(venue1, venue2, venue3));
 
       // When：分别修改三个聚合根的标识符
-      var loaded1 = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
-      var loaded2 = venueRepository.findByIssnLs(Set.of("1234-S2")).get("1234-S2");
-      var loaded3 = venueRepository.findByIssnLs(Set.of("1234-S3")).get("1234-S3");
+      var loaded1 = venueRepository.findByIssnLs(Set.of("1234-5001")).get("1234-5001");
+      var loaded2 = venueRepository.findByIssnLs(Set.of("1234-5002")).get("1234-5002");
+      var loaded3 = venueRepository.findByIssnLs(Set.of("1234-5003")).get("1234-5003");
 
       loaded1.addIdentifier(VenueIdentifier.forIssn("1111-1111"));
       loaded2.addIdentifier(VenueIdentifier.forIssn("2222-2222"));
@@ -236,13 +240,13 @@ class VenueRepositoryUpdateBatchE2E {
       venueRepository.updateBatch(List.of(loaded1, loaded2, loaded3));
 
       // Then：验证标识符变更
-      var results = venueRepository.findByIssnLs(Set.of("1234-S1", "1234-S2", "1234-S3"));
+      var results = venueRepository.findByIssnLs(Set.of("1234-5001", "1234-5002", "1234-5003"));
 
-      assertThat(results.get("1234-S1").getIdentifiers(VenueIdentifierType.ISSN))
+      assertThat(results.get("1234-5001").getIdentifiers(VenueIdentifierType.ISSN))
           .contains("1111-1111");
-      assertThat(results.get("1234-S2").getIdentifiers(VenueIdentifierType.ISSN))
+      assertThat(results.get("1234-5002").getIdentifiers(VenueIdentifierType.ISSN))
           .contains("2222-2222");
-      assertThat(results.get("1234-S3").getIdentifiers(VenueIdentifierType.ISSN))
+      assertThat(results.get("1234-5003").getIdentifiers(VenueIdentifierType.ISSN))
           .contains("3333-3333");
     }
 
@@ -254,14 +258,14 @@ class VenueRepositoryUpdateBatchE2E {
       venueRepository.insertAll(List.of(venue));
 
       // When：重新加载但不做任何修改
-      var loaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
+      var loaded = venueRepository.findByIssnLs(Set.of("1234-5001")).get("1234-5001");
       int initialCount = loaded.getIdentifiers().size();
       String initialDisplayName = loaded.getDisplayName();
       // 不调用任何修改方法
       venueRepository.updateBatch(List.of(loaded));
 
       // Then：验证数据未变
-      var reloaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
+      var reloaded = venueRepository.findByIssnLs(Set.of("1234-5001")).get("1234-5001");
       assertThat(reloaded.getIdentifiers()).hasSize(initialCount);
       assertThat(reloaded.getDisplayName()).isEqualTo(initialDisplayName);
     }
@@ -299,7 +303,8 @@ class VenueRepositoryUpdateBatchE2E {
               () ->
                   transactionTemplate.executeWithoutResult(
                       status -> {
-                        var loaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
+                        var loaded =
+                            venueRepository.findByIssnLs(Set.of("1234-5001")).get("1234-5001");
                         loaded.addIdentifier(VenueIdentifier.forIssn("9999-9999"));
                         venueRepository.updateBatch(List.of(loaded));
 
@@ -350,7 +355,8 @@ class VenueRepositoryUpdateBatchE2E {
               () ->
                   transactionTemplate.executeWithoutResult(
                       status -> {
-                        var loaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
+                        var loaded =
+                            venueRepository.findByIssnLs(Set.of("1234-5001")).get("1234-5001");
                         loaded.removeIdentifier(VenueIdentifierType.ISSN, "1111-1111");
                         venueRepository.updateBatch(List.of(loaded));
 
@@ -400,7 +406,8 @@ class VenueRepositoryUpdateBatchE2E {
               () ->
                   transactionTemplate.executeWithoutResult(
                       status -> {
-                        var loaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
+                        var loaded =
+                            venueRepository.findByIssnLs(Set.of("1234-5001")).get("1234-5001");
                         // 删除标识符
                         loaded.removeIdentifier(VenueIdentifierType.ISSN, "1111-1111");
                         // 添加新标识符
@@ -437,13 +444,131 @@ class VenueRepositoryUpdateBatchE2E {
     }
   }
 
+  // ========== 快速访问字段测试 ==========
+
+  @Nested
+  @DisplayName("快速访问字段同步测试")
+  class QuickAccessFieldsTests {
+
+    @Test
+    @DisplayName("insertAll 应该正确设置标识符冗余字段")
+    void insertAll_shouldSetIdentifierRedundantFields() {
+      // Given: 创建带有多种标识符的 VenueAggregate
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex("S123456", VenueType.JOURNAL, "Test Journal");
+      venue.addIdentifier(VenueIdentifier.forIssnL("1234-5678"));
+      venue.addIdentifier(VenueIdentifier.forNlm("NLM001"));
+
+      // When
+      venueRepository.insertAll(List.of(venue));
+
+      // Then: 验证主表的冗余字段已正确设置
+      VenueDO saved = venueMapper.selectById(venue.getId());
+      assertThat(saved.getOpenalexId()).isEqualTo("S123456");
+      assertThat(saved.getIssnL()).isEqualTo("1234-5678");
+      assertThat(saved.getNlmId()).isEqualTo("NLM001");
+    }
+
+    @Test
+    @DisplayName("insertAll 标识符冗余字段应为 null 当聚合根没有对应标识符时")
+    void insertAll_shouldSetNullWhenNoIdentifier() {
+      // Given: 只有 OpenAlex ID 的 VenueAggregate
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex("S999", VenueType.JOURNAL, "Simple Journal");
+
+      // When
+      venueRepository.insertAll(List.of(venue));
+
+      // Then: NLM 和 ISSN-L 冗余字段应为 null
+      VenueDO saved = venueMapper.selectById(venue.getId());
+      assertThat(saved.getOpenalexId()).isEqualTo("S999");
+      assertThat(saved.getIssnL()).isNull();
+      assertThat(saved.getNlmId()).isNull();
+    }
+
+    @Test
+    @DisplayName("replaceDetailsBatch 应该同步快速访问字段到主表")
+    void replaceDetailsBatch_shouldSyncQuickAccessFieldsToVenue() {
+      // Given: 插入一个载体
+      VenueAggregate venue = createVenueAggregate("S1", "Journal A");
+      venueRepository.insertAll(List.of(venue));
+
+      // When: 保存 VenueDetail
+      VenueDetail detail =
+          VenueDetail.builder()
+              .abbreviatedTitle("J. A.")
+              .countryCode("US")
+              .languages(VenueLanguages.ofSingleLanguage("eng"))
+              .build();
+      venueRepository.replaceDetailsBatch(Map.of(venue.getId(), detail));
+
+      // Then: 验证主表的快速访问字段已同步
+      VenueDO saved = venueMapper.selectById(venue.getId());
+      assertThat(saved.getAbbreviatedTitle()).isEqualTo("J. A.");
+      assertThat(saved.getCountryCode()).isEqualTo("US");
+      assertThat(saved.getPrimaryLanguage()).isEqualTo("eng");
+    }
+
+    @Test
+    @DisplayName("replaceDetailsBatch 应该正确处理空 Detail（快速访问字段不变）")
+    void replaceDetailsBatch_shouldHandleEmptyDetail() {
+      // Given: 插入一个载体
+      VenueAggregate venue = createVenueAggregate("S1", "Journal A");
+      venueRepository.insertAll(List.of(venue));
+
+      // When: 保存一个空的 VenueDetail（所有字段为 null）
+      VenueDetail emptyDetail = VenueDetail.builder().build();
+      venueRepository.replaceDetailsBatch(Map.of(venue.getId(), emptyDetail));
+
+      // Then: 快速访问字段应被设置为 null（因为 Detail 中没有这些值）
+      VenueDO saved = venueMapper.selectById(venue.getId());
+      assertThat(saved.getAbbreviatedTitle()).isNull();
+      assertThat(saved.getCountryCode()).isNull();
+      assertThat(saved.getPrimaryLanguage()).isNull();
+    }
+
+    @Test
+    @DisplayName("updateBatch 应该更新标识符冗余字段当标识符变更时")
+    void updateBatch_shouldUpdateIdentifierFieldsWhenIdentifiersChange() {
+      // Given: 插入一个载体
+      VenueAggregate venue = createVenueAggregate("S1", "Journal A");
+      venueRepository.insertAll(List.of(venue));
+
+      // When: 加载聚合根，添加 NLM 标识符，然后更新
+      var loaded = venueRepository.findByIssnLs(Set.of("1234-5001")).get("1234-5001");
+      loaded.addIdentifier(VenueIdentifier.forNlm("NLM999"));
+      venueRepository.updateBatch(List.of(loaded));
+
+      // Then: 验证 NLM 冗余字段已更新
+      VenueDO saved = venueMapper.selectById(venue.getId());
+      assertThat(saved.getNlmId()).isEqualTo("NLM999");
+    }
+  }
+
   // ========== 辅助方法 ==========
 
   /// 创建测试用的 VenueAggregate。
+  ///
+  /// @param openalexId OpenAlex ID（如 "S1"、"S2"）
+  /// @param displayName 显示名称
+  /// @return 创建的聚合根
   private VenueAggregate createVenueAggregate(String openalexId, String displayName) {
     VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
-    // ISSN-L 通过标识符添加
-    venue.addIdentifier(VenueIdentifier.forIssnL("1234-" + openalexId));
+    // ISSN-L 通过标识符添加（使用有效的 ISSN 格式）
+    venue.addIdentifier(VenueIdentifier.forIssnL(generateIssnL(openalexId)));
     return venue;
+  }
+
+  /// 根据 OpenAlex ID 生成符合格式的 ISSN-L。
+  ///
+  /// 将 "S1" -> "1234-5001"，"S2" -> "1234-5002"，以此类推。
+  ///
+  /// @param openalexId OpenAlex ID（如 "S1"）
+  /// @return 有效的 ISSN-L 格式
+  private String generateIssnL(String openalexId) {
+    // 从 openalexId 中提取数字部分（假设格式为 "S" + 数字）
+    String numPart = openalexId.replaceAll("[^0-9]", "");
+    int num = numPart.isEmpty() ? 0 : Integer.parseInt(numPart);
+    return String.format("1234-%04d", 5000 + num);
   }
 }

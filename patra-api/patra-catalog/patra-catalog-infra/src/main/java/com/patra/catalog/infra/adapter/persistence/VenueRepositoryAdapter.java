@@ -557,11 +557,14 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     List<Long> venueIds = new ArrayList<>(detailsByVenueId.keySet());
 
-    // 删除旧数据
+    // Step 1: 同步快速访问字段到 cat_venue 主表
+    syncVenueQuickAccessFields(detailsByVenueId);
+
+    // Step 2: 删除旧的 detail 数据
     detailMapper.delete(
         new LambdaQueryWrapper<VenueDetailDO>().in(VenueDetailDO::getVenueId, venueIds));
 
-    // 收集新数据
+    // Step 3: 收集新的 detail 数据
     List<VenueDetailDO> doList = new ArrayList<>();
     for (Map.Entry<Long, VenueDetail> entry : detailsByVenueId.entrySet()) {
       Long venueId = entry.getKey();
@@ -573,10 +576,41 @@ public class VenueRepositoryAdapter implements VenueRepository {
       }
     }
 
-    // 批量插入
+    // Step 4: 批量插入 detail 数据
     if (!doList.isEmpty()) {
       Db.saveBatch(doList);
       log.debug("批量插入载体详情 {} 条", doList.size());
+    }
+  }
+
+  /// 同步 VenueDetail 中的快速访问字段到 cat_venue 主表。
+  ///
+  /// 以下字段从 VenueDetail 同步到 VenueDO：
+  /// - abbreviatedTitle
+  /// - primaryLanguage（从 VenueLanguages 提取）
+  /// - countryCode
+  ///
+  /// @param detailsByVenueId 详情数据映射
+  private void syncVenueQuickAccessFields(Map<Long, VenueDetail> detailsByVenueId) {
+    List<VenueDO> updateList = new ArrayList<>();
+
+    for (Map.Entry<Long, VenueDetail> entry : detailsByVenueId.entrySet()) {
+      VenueDO venueDO = new VenueDO();
+      venueDO.setId(entry.getKey());
+
+      VenueDetail detail = entry.getValue();
+      if (detail != null) {
+        venueDO.setAbbreviatedTitle(detail.abbreviatedTitle());
+        venueDO.setPrimaryLanguage(detail.getMainLanguage());
+        venueDO.setCountryCode(detail.countryCode());
+      }
+      // 即使 detail 为 null，也要更新（清空旧数据）
+      updateList.add(venueDO);
+    }
+
+    if (!updateList.isEmpty()) {
+      Db.updateBatchById(updateList);
+      log.debug("同步载体快速访问字段 {} 条", updateList.size());
     }
   }
 
