@@ -149,12 +149,17 @@ patra:
   - `OaStatus`：开放获取状态
   - `VenueLanguages`：期刊语言信息（主要语言 + 摘要语言列表，来源 Serfile）
 
-- **值对象（venue/pubmed 子包）**：PubMed Serfile 解析结果的精简领域模型
-  - `PubmedSerialData`：PubMed 期刊解析数据（精简版，15 字段，替代 Infra 层 38 字段 DTO）
+- **值对象（venue/pubmed 子包）**：PubMed Serfile 解析结果的完整领域模型（解析器直接产出）
+  - `PubmedSerialData`：PubMed 期刊解析数据（完整版，44 字段，解析器直接产出 Domain 模型）
   - `PubmedLanguage`：PubMed 期刊语言信息（主要/次要语言）
-  - `PubmedMeshHeading`：PubMed 期刊 MeSH 主题词（含限定符）
-  - `PubmedTitleRelation`：PubMed 期刊关联关系（前刊/后刊）
-  - `PubmedIndexingHistory`：PubMed 期刊索引历史（当前/历史索引状态）
+  - `PubmedMeshHeading`：PubMed 期刊 MeSH 主题词（含限定符、UI、类型）
+  - `PubmedTitleRelation`：PubMed 期刊关联关系（前刊/后刊，含 ISSN 和 RecordIds）
+  - `PubmedIndexingHistory`：PubMed 期刊索引历史（含日期、覆盖范围、索引状态）
+  - `PubmedCurrentIndexing`：PubMed 期刊当前索引子集信息（含子集内容）
+  - `PubmedBroadHeading`：PubMed 广泛期刊分类
+  - `PubmedCrossReference`：PubMed 交叉引用（XrType: A/X/S）
+  - `PubmedGeneralNote`：PubMed 通用备注（含 NoteType 属性）
+  - `PubmedRecordId`：PubMed 记录 ID（含 Source 属性：NLM/LC/OCLC）
 
 - **枚举**
   - `MeshDataType`：MeSH 数据类型（QUALIFIER、DESCRIPTOR、TREE_NUMBER、ENTRY_TERM、CONCEPT）
@@ -210,7 +215,16 @@ patra:
 | Boot | E2E 测试 | 核心流程 |
 
 ## 📝 变更日志
-1. v0.9.3 (2025-12-09)：VenueRating/VenueSourceData 重构为 Record 值对象
+1. v0.9.4 (2025-12-11)：PubMed Serfile 解析架构优化 - 删除 DTO 层
+   - **架构决策**：基于务实六边形架构原则（Victor Rentea），删除冗余 DTO 层，解析器直接产出 Domain 模型
+   - **删除文件**：`dto/serfile/` 目录（10 个 DTO 类）+ `PubmedSerialConverter.java`
+   - **代码精简**：净删除约 500 行代码，减少 53% 的类数量
+   - **信息完整**：Domain 模型扩展至完整 44 字段，不再有信息丢失
+   - **解析器更新**：`SerialParsingStrategy` 直接构建 `PubmedSerialData` 及其嵌套值对象
+   - **值对象扩展**：新增 5 个值对象（BroadHeading、CrossReference、CurrentIndexing、GeneralNote、RecordId）
+   - **测试更新**：24 个单元测试 + 10 个集成测试全部通过
+
+2. v0.9.3 (2025-12-09)：VenueRating/VenueSourceData 重构为 Record 值对象
    - **重构**：`VenueRating` 和 `VenueSourceData` 从实体（Class）改为不可变值对象（Record）
      - 移动位置：`entity/` → `vo/venue/`
      - 移除 `Long id` 技术 ID 字段（值对象无独立身份标识）
