@@ -96,13 +96,21 @@ public class VenuePubmedEnrichHandler
     TimeInterval timer = DateUtil.timer();
     log.info("启动 PubMed Venue 富化，URL：{}，版本：{}", command.url(), command.serfileVersion());
 
-    // 流式下载并解析（无磁盘落盘）
+    // ────────────────────────────────────────────────────────────────────────────
+    // 阶段 1：流式下载
+    // - 使用 try-with-resources 管理 HTTP 连接生命周期
+    // - 无磁盘落盘，HTTP 响应体直接传递给 Parser
+    // ────────────────────────────────────────────────────────────────────────────
     try (StreamingDownloadResult downloadResult =
         streamingDownloadPort.download(URI.create(command.url()))) {
 
       log.info("HTTP 连接建立成功，开始流式解析");
 
-      // 解析并处理记录
+      // ────────────────────────────────────────────────────────────────────────────
+      // 阶段 2：XML 解析
+      // - 将 NLM Serfile XML 解析为 PubmedSerialData 领域对象
+      // - 一次性加载所有记录到内存（Serfile 约 3-4 万条，可承受）
+      // ────────────────────────────────────────────────────────────────────────────
       List<PubmedSerialData> allRecords = parserPort.parse(downloadResult.inputStream()).toList();
       log.info("解析完成，记录数：{}", allRecords.size());
 
@@ -111,7 +119,13 @@ public class VenuePubmedEnrichHandler
             0, 0, 0, 0, command.serfileVersion(), command.url(), timer.interval());
       }
 
-      // 按批次处理（每批次独立事务）
+      // ────────────────────────────────────────────────────────────────────────────
+      // 阶段 3：分批事务处理
+      // - 将全量记录切分为 500 条/批
+      // - 每批次独立事务：批次内原子提交，批次间隔离
+      // - 失败时仅回滚当前批次，已完成批次不受影响
+      // - 使用 AtomicInteger 跨批次累计统计（Lambda 内需要原子操作）
+      // ────────────────────────────────────────────────────────────────────────────
       AtomicInteger updatedCount = new AtomicInteger(0);
       AtomicInteger createdCount = new AtomicInteger(0);
       AtomicInteger skippedCount = new AtomicInteger(0);
@@ -120,6 +134,7 @@ public class VenuePubmedEnrichHandler
       int batchIndex = 0;
       for (List<PubmedSerialData> batch : batches) {
         int currentBatch = ++batchIndex;
+        // TransactionTemplate.executeWithoutResult() 确保每个批次独立事务
         transactionTemplate.executeWithoutResult(
             status -> {
               log.debug("处理批次 {}/{}，记录数：{}", currentBatch, batches.size(), batch.size());
@@ -127,6 +142,9 @@ public class VenuePubmedEnrichHandler
             });
       }
 
+      // ────────────────────────────────────────────────────────────────────────────
+      // 阶段 4：汇总结果
+      // ────────────────────────────────────────────────────────────────────────────
       long duration = timer.interval();
       log.info(
           "PubMed Venue 富化完成：解析 {} 条，更新 {} 条，新建 {} 条，跳过 {} 条，耗时 {} ms",
@@ -146,12 +164,15 @@ public class VenuePubmedEnrichHandler
           duration);
 
     } catch (ApplicationException e) {
+      // 应用层异常直接抛出，保留原始错误码
       throw e;
     } catch (RuntimeException e) {
+      // 运行时异常（如网络超时、解析错误）包装为统一错误码
       log.error("PubMed Venue 富化失败：{}", command.url(), e);
       throw new ApplicationException(
           CatalogErrorCode.CAT_1003, "PubMed Venue 富化失败: " + e.getMessage(), e);
     } catch (Exception e) {
+      // 受检异常（如 IOException）包装为统一错误码
       log.error("PubMed Venue 富化时发生意外错误：{}", command.url(), e);
       throw new ApplicationException(
           CatalogErrorCode.CAT_1003, "PubMed Venue 富化时发生意外错误: " + e.getMessage(), e);
@@ -235,27 +256,37 @@ public class VenuePubmedEnrichHandler
       List<PubmedSerialData> batch, ExistingVenuesLookup existingVenues) {
 
     BatchProcessingResult result = new BatchProcessingResult();
+    // 防重集合：避免同一期刊被多条 PubMed 记录更新（例如同一期刊有多个 ISSN 条目）
     Set<Long> processedVenueIds = new HashSet<>();
 
     for (PubmedSerialData record : batch) {
+      // 按优先级匹配：ISSN-L → NLM ID → ISSN（详见 findMatch 方法）
       Optional<VenueAggregate> matched = findMatch(record, existingVenues);
 
       if (matched.isPresent()) {
+        // ═══════════════════════════════════════════════════════════════════════
+        // 情况 A：匹配到已有期刊 → 富化更新
+        // ═══════════════════════════════════════════════════════════════════════
         VenueAggregate venue = matched.get();
-        // 避免同一期刊被多条记录更新
         if (!processedVenueIds.contains(venue.getId())) {
+          // 首次处理该期刊：用 PubMed 数据覆盖聚合根字段
           updateVenueFromRecord(venue, record);
           result.addUpdate(venue);
           processedVenueIds.add(venue.getId());
+          // 收集子实体（MeSH、关系、索引历史），稍后批量持久化
           result.collectChildEntities(
               venue,
               toVenueMeshList(record.meshHeadings()),
               toVenueRelationList(record.titleRelations()),
               toVenueIndexingHistoryList(record.indexingHistories()));
         } else {
+          // 重复记录：同一期刊已被处理，跳过（可能是 ISSN 重复匹配）
           result.markSkipped();
         }
       } else {
+        // ═══════════════════════════════════════════════════════════════════════
+        // 情况 B：无匹配 → 创建新期刊（PubMed 独有数据）
+        // ═══════════════════════════════════════════════════════════════════════
         VenueAggregate newVenue = createVenueFromRecord(record);
         result.addCreate(newVenue);
         result.collectChildEntities(
@@ -288,12 +319,19 @@ public class VenuePubmedEnrichHandler
   ///
   /// @param result 批次处理结果（包含聚合根已回填 ID）
   private void persistChildEntities(BatchProcessingResult result) {
+    // ────────────────────────────────────────────────────────────────────────────
+    // 为什么需要 Aggregate → VenueId 的转换？
+    // 1. persistAggregates() 已执行 insertAll()，新建的聚合根此时 ID 已回填
+    // 2. 子实体表需要 venue_id 外键，必须用 Long 类型的 ID
+    // 3. 使用 toVenueIdMap() 完成 Map<VenueAggregate, List<?>> → Map<Long, List<?>> 转换
+    // ────────────────────────────────────────────────────────────────────────────
     Map<Long, List<VenueMesh>> meshByVenueId = toVenueIdMap(result.getMeshByAggregate());
     Map<Long, List<VenueRelation>> relationsByVenueId =
         toVenueIdMap(result.getRelationsByAggregate());
     Map<Long, List<VenueIndexingHistory>> historiesByVenueId =
         toVenueIdMap(result.getHistoriesByAggregate());
 
+    // replaceSerfileDataBatch：先删除旧的 Serfile 数据，再插入新数据（全量覆盖策略）
     venueRepository.replaceSerfileDataBatch(meshByVenueId, relationsByVenueId, historiesByVenueId);
 
     log.debug(
@@ -328,27 +366,35 @@ public class VenuePubmedEnrichHandler
   /// @param lookup 现有期刊查询结果
   /// @return 匹配到的期刊聚合根
   private Optional<VenueAggregate> findMatch(PubmedSerialData record, ExistingVenuesLookup lookup) {
+    // ────────────────────────────────────────────────────────────────────────────
+    // 匹配优先级设计说明：
+    // - ISSN-L (Linking ISSN)：国际标准，一个期刊只有一个 ISSN-L，唯一性最高
+    // - NLM ID：NLM 内部标识符，在 PubMed 体系内唯一
+    // - ISSN (Print/Electronic)：同一期刊可能有多个 ISSN，唯一性较低
+    //
+    // 优先使用唯一性高的标识符，可减少误匹配风险
+    // ────────────────────────────────────────────────────────────────────────────
 
-    // 优先级 1: ISSN-L
+    // 优先级 1: ISSN-L（唯一性最高）
     if (record.hasIssnL() && lookup.byIssnL().containsKey(record.issnL())) {
       return Optional.of(lookup.byIssnL().get(record.issnL()));
     }
 
-    // 优先级 2: NLM ID
+    // 优先级 2: NLM ID（PubMed 体系内唯一）
     if (record.hasNlmId() && lookup.byNlmId().containsKey(record.nlmUniqueId())) {
       return Optional.of(lookup.byNlmId().get(record.nlmUniqueId()));
     }
 
-    // 优先级 3: ISSN (Print)
+    // 优先级 3: ISSN（降级匹配，Print 优先于 Electronic）
     if (record.issnPrint() != null && lookup.byIssn().containsKey(record.issnPrint())) {
       return Optional.of(lookup.byIssn().get(record.issnPrint()));
     }
 
-    // 优先级 3: ISSN (Electronic)
     if (record.issnElectronic() != null && lookup.byIssn().containsKey(record.issnElectronic())) {
       return Optional.of(lookup.byIssn().get(record.issnElectronic()));
     }
 
+    // 无匹配：该记录将创建新的 VenueAggregate
     return Optional.empty();
   }
 
