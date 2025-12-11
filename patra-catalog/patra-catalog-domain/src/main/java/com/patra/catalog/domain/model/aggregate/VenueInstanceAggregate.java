@@ -1,48 +1,50 @@
-package com.patra.catalog.domain.model.entity;
+package com.patra.catalog.domain.model.aggregate;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
+import com.patra.common.domain.AggregateRoot;
 import java.io.Serial;
-import java.io.Serializable;
 import java.time.LocalDate;
 import lombok.Getter;
 
-/// 载体实例实体（Aggregate内实体，不是聚合根）。
+/// 载体实例聚合根。表示出版载体的具体实例。
 ///
-/// 表示出版载体的具体实例：
+/// **实例类型**：
 ///
-/// - **期刊**：某卷某期（Volume 29, Issue 3）
-///   - **书籍**：某版次（2nd Edition）
-///   - **会议**：某届会议（AAAI 2024, San Francisco）
+/// | 类型 | 示例 | 关键字段 |
+/// |------|------|----------|
+/// | 期刊 | Nature Vol.612, No.5 | volume, issue |
+/// | 书籍 | 2nd Edition | edition |
+/// | 会议 | AAAI 2024, Vancouver | conferenceName, conferenceStartDate |
 ///
-/// **业务规则**：
+/// **聚合边界**：
 ///
-/// - 同一Venue的volume+issue组合必须唯一（期刊）
-///   - 同一Venue的edition必须唯一（书籍）
-///   - 会议实例必须有会议名称和日期
-///   - publication_year必填，用于冗余到Publication表优化查询
+/// 独立聚合根，通过 `venueId` 外键关联 VenueAggregate。
+/// 与 VenueAggregate 解耦，支持独立查询和更新。
 ///
 /// **不变量**：
 ///
-/// - venueId不能为空（必须属于某个Venue）
-///   - publicationYear必填且在合理范围内（1800-2100）
-///   - 会议结束日期不能早于开始日期
+/// - venueId 不能为空（必须属于某个 Venue）
+/// - publicationYear 必填且在 1800-2100 范围内
+/// - publicationMonth 必须在 1-12 范围内（如果有）
+/// - publicationDay 必须在 1-31 范围内（如果有）
+/// - 会议结束日期不能早于开始日期
 ///
-/// 使用示例：
+/// **使用示例**：
 ///
 /// ```java
 /// // 创建期刊实例：Nature Vol.612, No.5
-/// VenueInstance journalInstance = VenueInstance.forJournal(
+/// VenueInstanceAggregate journalInstance = VenueInstanceAggregate.forJournal(
 ///     venueId, "612", "5", 2024, 1, 15
 /// );
 ///
 /// // 创建书籍实例：第3版
-/// VenueInstance bookInstance = VenueInstance.forBook(
+/// VenueInstanceAggregate bookInstance = VenueInstanceAggregate.forBook(
 ///     venueId, "3rd Edition", 2024
 /// );
 ///
 /// // 创建会议实例：AAAI 2024
-/// VenueInstance confInstance = VenueInstance.forConference(
+/// VenueInstanceAggregate confInstance = VenueInstanceAggregate.forConference(
 ///     venueId, "AAAI 2024",
 ///     LocalDate.of(2024, 2, 20),
 ///     LocalDate.of(2024, 2, 27),
@@ -54,16 +56,13 @@ import lombok.Getter;
 /// @author linqibin
 /// @since 0.1.0
 @Getter
-public class VenueInstance implements Serializable {
+public class VenueInstanceAggregate extends AggregateRoot<Long> {
 
   @Serial private static final long serialVersionUID = 1L;
 
-  // ========== 标识符 ==========
+  // ========== 关联引用 ==========
 
-  /// 主键ID（由Repository在持久化时分配）
-  private Long id;
-
-  /// 关联的载体ID（外键）
+  /// 关联的载体 ID（外键，不可变）
   private final Long venueId;
 
   // ========== 期刊字段 ==========
@@ -81,7 +80,7 @@ public class VenueInstance implements Serializable {
 
   // ========== 出版日期 ==========
 
-  /// 出版年份（必填，用于冗余到Publication表）
+  /// 出版年份（必填，用于冗余到 Publication 表）
   private final Integer publicationYear;
 
   /// 出版月份（1-12，可选）
@@ -111,8 +110,8 @@ public class VenueInstance implements Serializable {
 
   /// 私有构造函数。
   ///
-  /// @param id 主键ID（新建时为null）
-  /// @param venueId 载体ID
+  /// @param id 主键 ID（新建时为 null）
+  /// @param venueId 载体 ID
   /// @param volume 卷号
   /// @param issue 期号
   /// @param edition 版次
@@ -123,7 +122,7 @@ public class VenueInstance implements Serializable {
   /// @param conferenceStartDate 会议开始日期
   /// @param conferenceEndDate 会议结束日期
   /// @param conferenceLocation 会议地点
-  private VenueInstance(
+  private VenueInstanceAggregate(
       Long id,
       Long venueId,
       String volume,
@@ -136,6 +135,8 @@ public class VenueInstance implements Serializable {
       LocalDate conferenceStartDate,
       LocalDate conferenceEndDate,
       String conferenceLocation) {
+    super(id);
+
     // 必填字段验证
     Assert.notNull(venueId, "载体ID不能为空");
     Assert.notNull(publicationYear, "出版年份不能为空");
@@ -164,7 +165,6 @@ public class VenueInstance implements Serializable {
     }
 
     // 赋值
-    this.id = id;
     this.venueId = venueId;
     this.volume = volume;
     this.issue = issue;
@@ -182,30 +182,30 @@ public class VenueInstance implements Serializable {
 
   /// 创建期刊实例（卷期）。
   ///
-  /// @param venueId 载体ID
+  /// @param venueId 载体 ID
   /// @param volume 卷号
   /// @param issue 期号
   /// @param publicationYear 出版年份
   /// @param publicationMonth 出版月份（可选）
   /// @param publicationDay 出版日期（可选）
-  /// @return 期刊实例
-  public static VenueInstance forJournal(
+  /// @return 期刊实例聚合根
+  public static VenueInstanceAggregate forJournal(
       Long venueId,
       String volume,
       String issue,
       Integer publicationYear,
       Integer publicationMonth,
       Integer publicationDay) {
-    return new VenueInstance(
-        null, // 新建时ID为null
+    return new VenueInstanceAggregate(
+        null,
         venueId,
         volume,
         issue,
-        null, // edition仅书籍使用
+        null,
         publicationYear,
         publicationMonth,
         publicationDay,
-        null, // 会议字段为null
+        null,
         null,
         null,
         null);
@@ -213,50 +213,40 @@ public class VenueInstance implements Serializable {
 
   /// 创建书籍实例（版次）。
   ///
-  /// @param venueId 载体ID
+  /// @param venueId 载体 ID
   /// @param edition 版次
   /// @param publicationYear 出版年份
-  /// @return 书籍实例
-  public static VenueInstance forBook(Long venueId, String edition, Integer publicationYear) {
-    return new VenueInstance(
-        null,
-        venueId,
-        null, // volume/issue仅期刊使用
-        null,
-        edition,
-        publicationYear,
-        null, // 书籍通常只有年份
-        null,
-        null, // 会议字段为null
-        null,
-        null,
-        null);
+  /// @return 书籍实例聚合根
+  public static VenueInstanceAggregate forBook(
+      Long venueId, String edition, Integer publicationYear) {
+    return new VenueInstanceAggregate(
+        null, venueId, null, null, edition, publicationYear, null, null, null, null, null, null);
   }
 
   /// 创建会议实例。
   ///
-  /// @param venueId 载体ID
+  /// @param venueId 载体 ID
   /// @param conferenceName 会议名称
   /// @param conferenceStartDate 会议开始日期
   /// @param conferenceEndDate 会议结束日期
   /// @param conferenceLocation 会议地点
   /// @param publicationYear 出版年份
-  /// @return 会议实例
-  public static VenueInstance forConference(
+  /// @return 会议实例聚合根
+  public static VenueInstanceAggregate forConference(
       Long venueId,
       String conferenceName,
       LocalDate conferenceStartDate,
       LocalDate conferenceEndDate,
       String conferenceLocation,
       Integer publicationYear) {
-    return new VenueInstance(
+    return new VenueInstanceAggregate(
         null,
         venueId,
-        null, // volume/issue/edition不适用
+        null,
         null,
         null,
         publicationYear,
-        null, // 会议日期用专门字段
+        null,
         null,
         conferenceName,
         conferenceStartDate,
@@ -264,10 +254,10 @@ public class VenueInstance implements Serializable {
         conferenceLocation);
   }
 
-  /// 从持久化状态重建实例（由Repository使用）。
+  /// 从持久化状态重建聚合根（由 Repository 使用）。
   ///
-  /// @param id 主键ID
-  /// @param venueId 载体ID
+  /// @param id 主键 ID
+  /// @param venueId 载体 ID
   /// @param volume 卷号
   /// @param issue 期号
   /// @param edition 版次
@@ -278,8 +268,9 @@ public class VenueInstance implements Serializable {
   /// @param conferenceStartDate 会议开始日期
   /// @param conferenceEndDate 会议结束日期
   /// @param conferenceLocation 会议地点
-  /// @return 重建的实例
-  public static VenueInstance restore(
+  /// @param version 乐观锁版本
+  /// @return 重建的聚合根
+  public static VenueInstanceAggregate restore(
       Long id,
       Long venueId,
       String volume,
@@ -291,36 +282,34 @@ public class VenueInstance implements Serializable {
       String conferenceName,
       LocalDate conferenceStartDate,
       LocalDate conferenceEndDate,
-      String conferenceLocation) {
-    return new VenueInstance(
-        id,
-        venueId,
-        volume,
-        issue,
-        edition,
-        publicationYear,
-        publicationMonth,
-        publicationDay,
-        conferenceName,
-        conferenceStartDate,
-        conferenceEndDate,
-        conferenceLocation);
+      String conferenceLocation,
+      Long version) {
+    VenueInstanceAggregate aggregate =
+        new VenueInstanceAggregate(
+            id,
+            venueId,
+            volume,
+            issue,
+            edition,
+            publicationYear,
+            publicationMonth,
+            publicationDay,
+            conferenceName,
+            conferenceStartDate,
+            conferenceEndDate,
+            conferenceLocation);
+    aggregate.assignVersion(version);
+    return aggregate;
   }
 
   // ========== 业务方法 ==========
 
-  /// 设置ID（由Repository在持久化后回写）。
+  /// 设置实例元数据 JSON。
   ///
-  /// @param id 主键ID
-  public void assignId(Long id) {
-    this.id = id;
-  }
-
-  /// 设置实例元数据JSON。
-  ///
-  /// @param json 元数据JSON字符串
+  /// @param json 元数据 JSON 字符串
   public void setInstanceMetadataJson(String json) {
     this.instanceMetadataJson = json;
+    markDirty();
   }
 
   // ========== 便捷判断方法 ==========
@@ -358,7 +347,7 @@ public class VenueInstance implements Serializable {
       sb.append("Vol.").append(volume);
     }
     if (StrUtil.isNotBlank(issue)) {
-      if (sb.length() > 0) {
+      if (!sb.isEmpty()) {
         sb.append(", ");
       }
       sb.append("No.").append(issue);
@@ -379,6 +368,24 @@ public class VenueInstance implements Serializable {
     return conferenceStartDate != null
         ? conferenceStartDate.toString()
         : conferenceEndDate.toString();
+  }
+
+  // ========== 不变量验证 ==========
+
+  /// 验证聚合根的业务不变量。
+  ///
+  /// @throws IllegalStateException 如果不变量被违反
+  @Override
+  protected void assertInvariants() {
+    if (venueId == null) {
+      throw new IllegalStateException("载体ID不能为空");
+    }
+    if (publicationYear == null) {
+      throw new IllegalStateException("出版年份不能为空");
+    }
+    if (publicationYear < 1800 || publicationYear > 2100) {
+      throw new IllegalStateException("出版年份必须在1800-2100范围内");
+    }
   }
 
   @Override
