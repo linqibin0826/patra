@@ -147,19 +147,6 @@ class VenueRepositoryUpdateBatchE2E {
     }
   }
 
-  // ========== Db.updateBatchById 测试 ==========
-  //
-  // **注意**：CQRS 最小聚合设计下，以下测试暂时禁用。
-  //
-  // 原因：abbreviatedTitle、homepageUrl 等字段已移至 VenueDetail 值对象。
-  // 聚合根只包含核心字段（id/venueType/displayName/identifiers/provenance）。
-  //
-  // 如需测试 VenueDetail 更新，请使用 VenueRepository.replaceDetailsBatch() 方法。
-  //
-  // @Nested
-  // @DisplayName("Db.updateBatchById 事务测试")
-  // class DbUpdateBatchByIdTests { ... }
-
   // ========== 增量删除测试 ==========
 
   @Nested
@@ -453,9 +440,6 @@ class VenueRepositoryUpdateBatchE2E {
   // ========== 辅助方法 ==========
 
   /// 创建测试用的 VenueAggregate。
-  ///
-  /// **注意**：CQRS 最小聚合设计下，聚合根只包含核心字段。
-  /// countryCode、isOa、publicationHistory 等已移至 VenueDetail，不再在聚合根中设置。
   private VenueAggregate createVenueAggregate(String openalexId, String displayName) {
     VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
     // ISSN-L 通过标识符添加

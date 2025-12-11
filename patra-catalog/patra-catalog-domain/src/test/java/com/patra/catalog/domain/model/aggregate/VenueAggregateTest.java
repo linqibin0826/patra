@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Timeout;
 ///
 /// - 纯单元测试，无 Mock
 /// - 覆盖工厂方法、标识符管理和不变量验证
-/// - 不测试非核心属性（已移至 VenueDetail）
 ///
 /// **核心不变量**：
 ///

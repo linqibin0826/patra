@@ -13,7 +13,7 @@ import lombok.EqualsAndHashCode;
 /// **CQRS 设计**：
 ///
 /// 遵循 CQRS 原则，聚合根只包含核心身份标识和来源追踪字段。
-/// 所有非核心属性已移至独立的补充数据表：
+/// 非核心属性存储在独立的补充数据表：
 ///
 /// - `cat_venue_detail` - 出版信息、索引信息、OA 状态
 /// - `cat_venue_stats` - 统计快照（发文量、引用量等）
