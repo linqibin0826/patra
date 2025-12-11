@@ -6,10 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
-import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
-import com.patra.catalog.domain.model.vo.venue.VenueStats;
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -17,16 +14,25 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-/// VenueAggregate 聚合根单元测试。
+/// VenueAggregate 聚合根单元测试（最小聚合版本）。
+///
+/// **CQRS 模式**：聚合根只负责写入，验证核心不变量。
 ///
 /// **测试策略**：
 ///
 /// - 纯单元测试，无 Mock
-/// - 覆盖工厂方法、标识符管理、年度指标管理和不变量验证
+/// - 覆盖工厂方法、标识符管理和不变量验证
+/// - 不测试非核心属性（已移至 VenueDetail）
+///
+/// **核心不变量**：
+///
+/// - venueType 必填
+/// - displayName 必填
+/// - identifiers 管理 ISSN-L 唯一性
 ///
 /// @author linqibin
 /// @since 0.1.0
-@DisplayName("VenueAggregate 单元测试")
+@DisplayName("VenueAggregate 单元测试（最小聚合）")
 @Timeout(2)
 class VenueAggregateTest {
 
@@ -53,7 +59,6 @@ class VenueAggregateTest {
       assertThat(venue.getId()).isNull(); // 新建时无 ID
       assertThat(venue.getVenueType()).isEqualTo(VenueType.JOURNAL);
       assertThat(venue.getDisplayName()).isEqualTo(DISPLAY_NAME);
-      assertThat(venue.getOpenalexId()).isEqualTo(OPENALEX_ID);
 
       // 应该自动添加 OpenAlex 标识符
       assertThat(venue.getIdentifiers()).hasSize(1);
@@ -116,7 +121,6 @@ class VenueAggregateTest {
       VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, null, ISSN_L);
 
       // Then
-      assertThat(venue.getIssnL()).isEqualTo(ISSN_L);
       assertThat(venue.getIdentifier(VenueIdentifierType.ISSN_L)).contains(ISSN_L);
     }
 
@@ -345,44 +349,39 @@ class VenueAggregateTest {
   }
 
   @Nested
-  @DisplayName("链式设置方法测试")
-  class FluentSetterTests {
+  @DisplayName("Provenance 设置方法测试")
+  class ProvenanceSetterTests {
 
     @Test
-    @DisplayName("with*() 方法应该返回自身支持链式调用")
-    void withMethodsShouldReturnSelf() {
-      // When
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME)
-              .withAbbreviatedTitle("Nat.")
-              .withHomepageUrl("https://nature.com")
-              .withCountryCode("GB")
-              .withOaStatus(true, true)
-              .withIssnL(ISSN_L);
-
-      // Then
-      assertThat(venue.getAbbreviatedTitle()).isEqualTo("Nat.");
-      assertThat(venue.getHomepageUrl()).isEqualTo("https://nature.com");
-      assertThat(venue.getCountryCode()).isEqualTo("GB");
-      assertThat(venue.isOa()).isTrue();
-      assertThat(venue.isInDoaj()).isTrue();
-      assertThat(venue.getIssnL()).isEqualTo(ISSN_L);
-    }
-
-    @Test
-    @DisplayName("withAlternateTitles() 应该防御性复制")
-    void withAlternateTitlesShouldDefensiveCopy() {
+    @DisplayName("withProvenance() 应该正确设置来源信息")
+    void withProvenanceShouldWork() {
       // Given
       VenueAggregate venue =
           VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      List<String> titles = new java.util.ArrayList<>(List.of("Nature Journal"));
-      venue.withAlternateTitles(titles);
+      ProvenanceInfo newProvenance = ProvenanceInfo.forPubMed();
 
-      // When - 修改原始列表
-      titles.add("Modified");
+      // When
+      venue.withProvenance(newProvenance);
 
-      // Then - venue 内部列表不受影响
-      assertThat(venue.getAlternateTitles()).containsExactly("Nature Journal");
+      // Then
+      assertThat(venue.getProvenance()).isEqualTo(newProvenance);
+      assertThat(venue.isFromPubMed()).isTrue();
+    }
+
+    @Test
+    @DisplayName("withProvenance() 应该将聚合根标记为脏")
+    void withProvenanceShouldMarkDirty() {
+      // Given
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      venue.clearDirty();
+      assertThat(venue.isDirty()).isFalse();
+
+      // When
+      venue.withProvenance(ProvenanceInfo.forPubMed());
+
+      // Then
+      assertThat(venue.isDirty()).isTrue();
     }
   }
 
@@ -421,17 +420,6 @@ class VenueAggregateTest {
     }
 
     @Test
-    @DisplayName("hasStats() 应该正确判断")
-    void hasStatsShouldWork() {
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      assertThat(venue.hasStats()).isFalse();
-
-      venue.withCurrentStats(VenueStats.of(1500, 25000, 50, 100, new BigDecimal("42.5")));
-      assertThat(venue.hasStats()).isTrue();
-    }
-
-    @Test
     @DisplayName("isFromOpenAlex() 和 isFromPubMed() 应该正确判断")
     void provenanceMethodsShouldWork() {
       VenueAggregate openalexVenue =
@@ -447,26 +435,6 @@ class VenueAggregateTest {
   }
 
   @Nested
-  @DisplayName("不变量验证测试")
-  class InvariantTests {
-
-    @Test
-    @DisplayName("来自 OpenAlex 但缺少 openalexId 时应该抛出异常")
-    void shouldThrowWhenOpenAlexVenueWithoutOpenAlexId() {
-      // Given - 通过 restore 创建，然后设置来源为 OpenAlex 但不设置 openalexId
-      VenueAggregate venue = VenueAggregate.restore(1L, VenueType.JOURNAL, DISPLAY_NAME, 1L);
-      venue.withProvenance(ProvenanceInfo.forOpenAlex(null, null));
-
-      // When & Then - 调用 assertInvariants 时应该失败
-      // 注意：assertInvariants 是 protected 方法，通常由 Repository 在保存前调用
-      // 这里我们通过尝试访问时触发验证来测试
-      // 由于 assertInvariants 是保护方法，我们无法直接测试
-      // 实际上，这个验证在工厂方法中已经处理了
-      assertThat(venue.getOpenalexId()).isNull();
-    }
-  }
-
-  @Nested
   @DisplayName("toString() 测试")
   class ToStringTests {
 
@@ -475,8 +443,7 @@ class VenueAggregateTest {
     void toStringShouldContainKeyInfo() {
       // Given
       VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME)
-              .withIssnL(ISSN_L);
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
 
       // When
       String result = venue.toString();
@@ -484,78 +451,6 @@ class VenueAggregateTest {
       // Then
       assertThat(result).contains("JOURNAL");
       assertThat(result).contains(DISPLAY_NAME);
-      assertThat(result).contains(OPENALEX_ID);
-      assertThat(result).contains(ISSN_L);
-    }
-  }
-
-  @Nested
-  @DisplayName("多数据源扩展方法测试")
-  class MultiSourceExtensionTests {
-
-    @Test
-    @DisplayName("withNlmId() 应正确设置 NLM ID")
-    void withNlmIdShouldWork() {
-      // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-
-      // When
-      venue.withNlmId(NLM_ID);
-
-      // Then
-      assertThat(venue.getNlmId()).isEqualTo(NLM_ID);
-    }
-
-    @Test
-    @DisplayName("withPublicationHistory() 应正确设置出版历史")
-    void withPublicationHistoryShouldWork() {
-      // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      PublicationHistory history = PublicationHistory.active(1869);
-
-      // When
-      venue.withPublicationHistory(history);
-
-      // Then
-      assertThat(venue.getPublicationHistory()).isEqualTo(history);
-      assertThat(venue.hasPublicationHistory()).isTrue();
-      assertThat(venue.isCeased()).isFalse();
-    }
-  }
-
-  @Nested
-  @DisplayName("出版历史判断方法测试")
-  class PublicationHistoryStatusTests {
-
-    @Test
-    @DisplayName("isCeased() 无出版历史应返回 false")
-    void isCeasedShouldReturnFalseWhenNoHistory() {
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-
-      assertThat(venue.isCeased()).isFalse();
-    }
-
-    @Test
-    @DisplayName("isCeased() 活跃期刊应返回 false")
-    void isCeasedShouldReturnFalseWhenActive() {
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME)
-              .withPublicationHistory(PublicationHistory.active(1990));
-
-      assertThat(venue.isCeased()).isFalse();
-    }
-
-    @Test
-    @DisplayName("isCeased() 已停刊期刊应返回 true")
-    void isCeasedShouldReturnTrueWhenCeased() {
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME)
-              .withPublicationHistory(PublicationHistory.ceased(1950, 2010));
-
-      assertThat(venue.isCeased()).isTrue();
     }
   }
 }
