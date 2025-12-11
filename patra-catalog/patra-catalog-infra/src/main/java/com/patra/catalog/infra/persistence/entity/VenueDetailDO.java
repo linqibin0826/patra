@@ -15,7 +15,7 @@ import lombok.EqualsAndHashCode;
 /// **设计说明**：
 ///
 /// 与 `cat_venue` 表为 1:1 关系，通过 `venue_id` 唯一索引保证。
-/// 合并了出版信息、索引信息、OA 状态、宿主机构和国家等非核心属性。
+/// 合并了出版信息、索引信息、OA 状态、宿主机构等非核心属性。
 ///
 /// **数据来源**：
 ///
@@ -26,11 +26,10 @@ import lombok.EqualsAndHashCode;
 ///
 /// | 分组 | 字段 |
 /// |------|------|
-/// | 出版信息 | abbreviated_title, alternate_titles, homepage_url, frequency |
+/// | 出版信息 | alternate_titles, homepage_url, frequency |
 /// | 出版历史 | publication_start_year, publication_end_year, ceased |
-/// | 语言信息 | primary_language, languages |
+/// | 语言信息 | languages |
 /// | 宿主机构 | host_organization_id, host_organization_name, host_organization_lineage |
-/// | 地理信息 | country_code |
 /// | 索引信息 | indexing_status, medline_ta, iso_abbreviation |
 /// | OA 状态 | is_oa, is_in_doaj, oa_type |
 ///
@@ -52,10 +51,6 @@ public class VenueDetailDO extends BaseDO {
   // ========================================
   // 出版信息（来自 OpenAlex）
   // ========================================
-
-  /// 缩写标题（来自 ISSN 中心或 ISO）
-  @TableField("abbreviated_title")
-  private String abbreviatedTitle;
 
   /// 替代名称列表（JSON 数组）
   @TableField(value = "alternate_titles", typeHandler = JacksonTypeHandler.class)
@@ -89,10 +84,6 @@ public class VenueDetailDO extends BaseDO {
   // 语言信息（来自 Serfile）
   // ========================================
 
-  /// 主要语言代码（ISO 639-3）
-  @TableField("primary_language")
-  private String primaryLanguage;
-
   /// 期刊语言信息（JSON 对象，含 primary 和 summary 数组）
   ///
   /// 格式示例：`{"primary": ["eng"], "summary": ["fre", "ger"]}`
@@ -114,14 +105,6 @@ public class VenueDetailDO extends BaseDO {
   /// 机构所有权链（JSON 数组，从直接母公司到顶层）
   @TableField(value = "host_organization_lineage", typeHandler = JacksonTypeHandler.class)
   private List<String> hostOrganizationLineage;
-
-  // ========================================
-  // 地理信息（来自 OpenAlex）
-  // ========================================
-
-  /// 国家代码（ISO 3166-1 alpha-2，如 US/CN）
-  @TableField("country_code")
-  private String countryCode;
 
   // ========================================
   // 索引信息（来自 PubMed Catalog）

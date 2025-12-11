@@ -62,6 +62,16 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
     `last_synced_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '最后同步时间(UTC,微秒精度)',
 
     -- ========================================
+    -- 快速访问字段（优化列表展示和搜索查询）
+    -- ========================================
+    `nlm_id` VARCHAR(20) NULL DEFAULT NULL COMMENT 'NLM唯一标识符',
+    `issn_l` VARCHAR(10) NULL DEFAULT NULL COMMENT 'Linking ISSN',
+    `openalex_id` VARCHAR(50) NULL DEFAULT NULL COMMENT 'OpenAlex Source ID',
+    `abbreviated_title` VARCHAR(200) NULL DEFAULT NULL COMMENT '缩写标题',
+    `primary_language` VARCHAR(10) NULL DEFAULT NULL COMMENT '主要语言代码(ISO 639-3)',
+    `country_code` VARCHAR(10) NULL DEFAULT NULL COMMENT '国家代码(ISO 3166-1 alpha-2)',
+
+    -- ========================================
     -- 审计字段
     -- ========================================
     `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
@@ -172,7 +182,6 @@ CREATE TABLE IF NOT EXISTS `cat_venue_detail` (
     -- ========================================
     -- 出版信息 (来自 OpenAlex)
     -- ========================================
-    `abbreviated_title` VARCHAR(200) NULL DEFAULT NULL COMMENT '缩写标题(来自ISSN中心或ISO)',
     `alternate_titles` JSON NULL DEFAULT NULL COMMENT '替代名称列表(JSON数组)',
     `homepage_url` TEXT NULL DEFAULT NULL COMMENT '载体主页URL',
     `frequency` VARCHAR(50) NULL DEFAULT NULL COMMENT '出版频率(Weekly/Monthly/Quarterly等)',
@@ -187,7 +196,6 @@ CREATE TABLE IF NOT EXISTS `cat_venue_detail` (
     -- ========================================
     -- 语言信息 (来自 Serfile)
     -- ========================================
-    `primary_language` VARCHAR(10) NULL DEFAULT NULL COMMENT '主要语言代码(ISO 639-3)',
     `languages` JSON NULL DEFAULT NULL COMMENT '期刊语言(JSON对象,含primary和summary数组)',
 
     -- ========================================
@@ -196,11 +204,6 @@ CREATE TABLE IF NOT EXISTS `cat_venue_detail` (
     `host_organization_id` VARCHAR(100) NULL DEFAULT NULL COMMENT '宿主机构OpenAlex ID',
     `host_organization_name` VARCHAR(500) NULL DEFAULT NULL COMMENT '宿主机构名称(出版商/机构)',
     `host_organization_lineage` JSON NULL DEFAULT NULL COMMENT '机构所有权链(JSON数组)',
-
-    -- ========================================
-    -- 地理信息 (来自 OpenAlex)
-    -- ========================================
-    `country_code` VARCHAR(10) NULL DEFAULT NULL COMMENT '国家代码(ISO 3166-1 alpha-2)',
 
     -- ========================================
     -- 索引信息 (来自 PubMed Catalog)
@@ -245,7 +248,6 @@ CREATE TABLE IF NOT EXISTS `cat_venue_detail` (
 
     -- 普通索引 (查询优化)
     INDEX `idx_host_org` (`host_organization_id`) COMMENT '宿主机构索引',
-    INDEX `idx_country` (`country_code`) COMMENT '国家代码索引',
     INDEX `idx_indexing_status` (`indexing_status`) COMMENT 'MEDLINE收录状态索引',
     INDEX `idx_is_oa` (`is_oa`) COMMENT 'OA状态索引',
     INDEX `idx_is_in_doaj` (`is_in_doaj`) COMMENT 'DOAJ收录索引'

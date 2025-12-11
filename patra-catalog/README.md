@@ -129,6 +129,7 @@ patra:
   - `VenueMesh`：载体 MeSH 主题词（MeSH 主题分类，来源 Serfile）
   - `VenueRelation`：载体关联关系（期刊演变关系：前刊/后刊/合并/分拆）
   - `VenueIndexingHistory`：载体索引历史（MEDLINE/PMC 索引收录变迁）
+  - `VenueDetail`：载体详情（出版信息、语言信息、宿主机构、OA 状态，CQRS 补充数据）
 
 - **值对象**
   - `MeshUI`：MeSH 唯一标识符
@@ -179,6 +180,8 @@ patra:
 - `VenueRepositoryAdapter`：载体聚合根仓储适配器（含 identifiers 和补充数据）
 - `MeshDescriptorConverter`：主题词对象转换器
 - `MeshQualifierConverter`：限定词对象转换器
+- `VenueConverter`：载体聚合根 ↔ DO 转换器（含快速访问字段提取）
+- `VenueDetailConverter`：载体详情值对象 ↔ DO 转换器
 - `StreamingDownloadAdapter`：流式下载适配器（HTTP 响应体直接返回 InputStream，无磁盘落盘）
 - `VenueSourceFileAdapter`：OpenAlex Venue 源文件适配器（封装 manifest 解析）
 
@@ -195,14 +198,17 @@ patra:
   - `cat_publication_mesh`：文献-MeSH 关联表
 
 - **Venue（载体）相关表**
-  - `cat_venue`：载体主表（期刊/仓储/会议，包含多数据源扩展字段）
+  - `cat_venue`：载体主表（CQRS 最小聚合根，含快速访问字段优化列表查询）
   - `cat_venue_identifier`：载体标识符表（ISSN/OpenAlex ID/NLM ID/DOAJ/JCR 等）
+  - `cat_venue_detail`：载体详情表（CQRS 补充数据：出版信息、语言、宿主机构、OA 状态）
   - `cat_venue_publication_stats`：载体年度发文统计表（发表量/被引量/OA 发文量）
   - `cat_venue_source_data`：载体数据源表（各数据源原始 JSON 和提取字段）
   - `cat_venue_rating`：载体评级表（JCR/中科院分区/Scopus 等多评价体系年度评级）
   - `cat_venue_mesh`：载体 MeSH 主题表（MeSH 主题词分类，与 cat_publication_mesh 命名风格一致）
   - `cat_venue_relation`：载体关联表（期刊演变关系：前刊/后刊/合并/分拆）
   - `cat_venue_indexing_history`：载体索引历史表（MEDLINE/PMC 索引收录变迁）
+  - `cat_venue_apc`：载体 APC 表（文章处理费信息）
+  - `cat_venue_society`：载体学会关联表（关联学术组织）
 
 ## 🧪 测试覆盖
 
@@ -215,7 +221,17 @@ patra:
 | Boot | E2E 测试 | 核心流程 |
 
 ## 📝 变更日志
-1. v0.9.4 (2025-12-11)：PubMed Serfile 解析架构优化 - 删除 DTO 层
+1. v0.9.5 (2025-12-12)：Venue 快速访问字段优化
+   - **CQRS 设计优化**：在 `cat_venue` 主表添加 6 个快速访问字段，优化列表展示和搜索查询性能
+   - **冗余字段**（3 个）：`nlm_id`、`issn_l`、`openalex_id` 从 `cat_venue_identifier` 冗余
+   - **快照字段**（3 个）：`abbreviated_title`、`primary_language`、`country_code` 从 `cat_venue_detail` 同步
+   - **新增值对象**：`VenueDetail`（出版信息、语言信息、宿主机构、OA 状态）
+   - **新增数据表**：`cat_venue_detail`（CQRS 补充数据表，1:1 关系）
+   - **Converter 增强**：`VenueConverter` 新增 `extractIdentifier()` 方法提取标识符快速访问字段
+   - **Repository 增强**：`VenueRepositoryAdapter` 新增 `syncVenueQuickAccessFields()` 同步详情快照字段
+   - **字段更新策略**：快速访问字段使用 `FieldStrategy.ALWAYS` 确保 null 值正确更新
+
+2. v0.9.4 (2025-12-11)：PubMed Serfile 解析架构优化 - 删除 DTO 层
    - **架构决策**：基于务实六边形架构原则（Victor Rentea），删除冗余 DTO 层，解析器直接产出 Domain 模型
    - **删除文件**：`dto/serfile/` 目录（10 个 DTO 类）+ `PubmedSerialConverter.java`
    - **代码精简**：净删除约 500 行代码，减少 53% 的类数量

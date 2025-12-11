@@ -1,5 +1,6 @@
 package com.patra.catalog.infra.persistence.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.patra.starter.mybatis.entity.BaseDO;
@@ -27,6 +28,17 @@ import lombok.EqualsAndHashCode;
 /// | venue_type | 载体类型 | 必填，创建后不可变 |
 /// | display_name | 显示名称 | 必填 |
 /// | provenance_code | 数据来源 | 必填，追踪首次导入来源 |
+///
+/// **快速访问字段**（优化查询性能）：
+///
+/// | 字段 | 来源 | 策略 |
+/// |------|------|------|
+/// | nlm_id | cat_venue_identifier | 冗余 |
+/// | issn_l | cat_venue_identifier | 冗余 |
+/// | openalex_id | cat_venue_identifier | 冗余 |
+/// | abbreviated_title | VenueDetail | 快照 |
+/// | primary_language | VenueDetail | 快照 |
+/// | country_code | VenueDetail | 快照 |
 ///
 /// **索引说明**：
 ///
@@ -61,6 +73,34 @@ public class VenueDO extends BaseDO {
   /// 数据来源代码：OPENALEX/PUBMED/CROSSREF/DOAJ/MANUAL
   @TableField("provenance_code")
   private String provenanceCode;
+
+  // ========================================
+  // 快速访问字段
+  // ========================================
+
+  /// NLM 唯一标识符。
+  @TableField(value = "nlm_id", updateStrategy = FieldStrategy.ALWAYS)
+  private String nlmId;
+
+  /// Linking ISSN。
+  @TableField(value = "issn_l", updateStrategy = FieldStrategy.ALWAYS)
+  private String issnL;
+
+  /// OpenAlex Source ID。
+  @TableField(value = "openalex_id", updateStrategy = FieldStrategy.ALWAYS)
+  private String openalexId;
+
+  /// 缩写标题。
+  @TableField(value = "abbreviated_title", updateStrategy = FieldStrategy.ALWAYS)
+  private String abbreviatedTitle;
+
+  /// 主要语言代码（ISO 639-3）。
+  @TableField(value = "primary_language", updateStrategy = FieldStrategy.ALWAYS)
+  private String primaryLanguage;
+
+  /// 国家代码（ISO 3166-1 alpha-2）。
+  @TableField(value = "country_code", updateStrategy = FieldStrategy.ALWAYS)
+  private String countryCode;
 
   /// 来源系统创建日期
   @TableField("source_created_date")
