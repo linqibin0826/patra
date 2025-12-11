@@ -10,6 +10,15 @@ package com.patra.catalog.domain.model.vo.venue.pubmed;
 /// @since 0.1.0
 public record PubmedLanguage(String code, boolean isPrimary) {
 
+  /// 创建语言对象。
+  ///
+  /// @param code 语言代码
+  /// @param isPrimary 是否为主语言
+  /// @return 语言对象
+  public static PubmedLanguage of(String code, boolean isPrimary) {
+    return new PubmedLanguage(code, isPrimary);
+  }
+
   /// 创建主语言。
   public static PubmedLanguage primary(String code) {
     return new PubmedLanguage(code, true);

@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.patra.catalog.domain.exception.XmlParseException;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedLanguage;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
-import com.patra.catalog.infra.adapter.parser.converter.PubmedSerialConverter;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,7 +41,7 @@ class SerfileParserAdapterIT {
 
   @BeforeEach
   void setUp() {
-    parser = new SerfileParserAdapter(new PubmedSerialConverter());
+    parser = new SerfileParserAdapter();
   }
 
   /// 打开测试 XML 文件的输入流。

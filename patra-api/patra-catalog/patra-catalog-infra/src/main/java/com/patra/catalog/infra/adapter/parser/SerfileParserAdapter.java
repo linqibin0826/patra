@@ -3,8 +3,6 @@ package com.patra.catalog.infra.adapter.parser;
 import com.patra.catalog.domain.exception.XmlParseException;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.port.parser.SerfileParserPort;
-import com.patra.catalog.infra.adapter.parser.converter.PubmedSerialConverter;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialRecord;
 import com.patra.catalog.infra.adapter.parser.strategy.SerialParsingStrategy;
 import com.patra.catalog.infra.adapter.parser.support.AbstractStaxParserAdapter;
 import java.io.InputStream;
@@ -22,7 +20,14 @@ import org.springframework.stereotype.Component;
 /// - **资源管理**：继承 {@link AbstractStaxParserAdapter} 统一管理资源生命周期
 /// - **流式处理**：使用 {@link java.util.stream.Stream} 逐元素读取，内存占用可控
 /// - **惰性求值**：返回 Stream，由调用方控制处理速度
-/// - **领域隔离**：通过 {@link PubmedSerialConverter} 将 DTO 转换为领域模型
+/// - **直接产出 Domain**：解析器直接产出领域模型，无需中间 DTO 转换
+///
+/// **架构说明**：
+///
+/// 此适配器采用「务实六边形架构」原则，直接产出 Domain 模型：
+/// - 单向只读数据流（XML → Domain），无需中间 DTO 层
+/// - 减少模型重复和转换开销
+/// - 参考：Victor Rentea「仅在多通道暴露时才需 DTO」
 ///
 /// **性能特征**：
 ///
@@ -33,27 +38,16 @@ import org.springframework.stereotype.Component;
 /// @author linqibin
 /// @since 0.1.0
 @Component
-public class SerfileParserAdapter extends AbstractStaxParserAdapter<SerialRecord>
+public class SerfileParserAdapter extends AbstractStaxParserAdapter<PubmedSerialData>
     implements SerfileParserPort {
-
-  private final PubmedSerialConverter converter;
-
-  /// 构造函数。
-  ///
-  /// @param converter DTO 到领域模型的转换器
-  public SerfileParserAdapter(PubmedSerialConverter converter) {
-    this.converter = converter;
-  }
 
   @Override
   public Stream<PubmedSerialData> parse(InputStream inputStream) {
-    // 先解析 XML 得到 DTO 流，再通过转换器转换为领域模型
-    Stream<SerialRecord> dtoStream =
-        doParse(
-            inputStream,
-            SerialParsingStrategy.INSTANCE,
-            "开始解析 NLM Serfile XML 输入流",
-            XmlParseException::new);
-    return dtoStream.map(converter::toDomainModel);
+    // 解析器直接产出领域模型，无需转换
+    return doParse(
+        inputStream,
+        SerialParsingStrategy.INSTANCE,
+        "开始解析 NLM Serfile XML 输入流",
+        XmlParseException::new);
   }
 }

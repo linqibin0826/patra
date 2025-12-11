@@ -2,16 +2,16 @@ package com.patra.catalog.infra.adapter.parser.strategy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialBroadHeading;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialCrossReference;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialCurrentlyIndexedForSubset;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialGeneralNote;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialIndexingHistory;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialLanguage;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialMeshHeading;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialRecord;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialRecordId;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialTitleRelated;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedBroadHeading;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedCrossReference;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedCurrentIndexing;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedGeneralNote;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedIndexingHistory;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedLanguage;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedMeshHeading;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedRecordId;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedTitleRelation;
 import com.patra.catalog.infra.adapter.parser.support.SecureXmlInputFactory;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingContext;
 import java.io.InputStream;
@@ -65,7 +65,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析最小必填字段")
     void shouldParseMinimalRequiredFields() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/minimal-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/minimal-serial.xml");
 
       // Then
       assertThat(record).isNotNull();
@@ -82,7 +82,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析所有基本字段")
     void shouldParseAllBasicFields() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then - 基本标识符
       assertThat(record.nlmUniqueId()).isEqualTo("0123456");
@@ -95,7 +95,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析 ISSN 信息")
     void shouldParseIssnInfo() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
       assertThat(record.issnL()).isEqualTo("1234-5678");
@@ -107,7 +107,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析出版信息")
     void shouldParsePublicationInfo() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
       assertThat(record.country()).isEqualTo("United States");
@@ -120,35 +120,35 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析语言列表")
     void shouldParseLanguages() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
       assertThat(record.languages()).hasSize(2);
       assertThat(record.getPrimaryLanguage()).isEqualTo("eng");
-      assertThat(record.languages()).extracting(SerialLanguage::code).containsExactly("eng", "fre");
+      assertThat(record.languages()).extracting(PubmedLanguage::code).containsExactly("eng", "fre");
       assertThat(record.languages())
-          .extracting(SerialLanguage::langType)
-          .containsExactly("Primary", "Summary");
+          .extracting(PubmedLanguage::isPrimary)
+          .containsExactly(true, false);
     }
 
     @Test
     @DisplayName("应正确解析 MeSH 主题词列表")
     void shouldParseMeshHeadings() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
-      List<SerialMeshHeading> meshHeadings = record.meshHeadings();
+      List<PubmedMeshHeading> meshHeadings = record.meshHeadings();
       assertThat(meshHeadings).hasSize(2);
 
       // 第一个：主要主题，无限定符
-      SerialMeshHeading first = meshHeadings.getFirst();
+      PubmedMeshHeading first = meshHeadings.getFirst();
       assertThat(first.descriptorName()).isEqualTo("Cardiology");
       assertThat(first.isMajorTopic()).isTrue();
       assertThat(first.hasQualifier()).isFalse();
 
       // 第二个：非主要主题，有限定符
-      SerialMeshHeading second = meshHeadings.get(1);
+      PubmedMeshHeading second = meshHeadings.get(1);
       assertThat(second.descriptorName()).isEqualTo("Medicine");
       assertThat(second.isMajorTopic()).isFalse();
       assertThat(second.hasQualifier()).isTrue();
@@ -159,21 +159,21 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析期刊关联关系")
     void shouldParseTitleRelations() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
-      List<SerialTitleRelated> relations = record.titleRelations();
+      List<PubmedTitleRelation> relations = record.titleRelations();
       assertThat(relations).hasSize(2);
 
       // 前身期刊（带 ISSN）
-      SerialTitleRelated preceding = relations.getFirst();
+      PubmedTitleRelation preceding = relations.getFirst();
       assertThat(preceding.titleType()).isEqualTo("Preceding");
       assertThat(preceding.relatedTitle()).isEqualTo("Old Journal of Test");
       assertThat(preceding.hasIssn()).isTrue();
       assertThat(preceding.relatedIssn()).isEqualTo("0000-1111");
 
       // 后继期刊（无 ISSN）
-      SerialTitleRelated succeeding = relations.get(1);
+      PubmedTitleRelation succeeding = relations.get(1);
       assertThat(succeeding.titleType()).isEqualTo("Succeeding");
       assertThat(succeeding.relatedTitle()).isEqualTo("New Journal of Test");
       assertThat(succeeding.hasIssn()).isFalse();
@@ -183,14 +183,14 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析索引历史列表")
     void shouldParseIndexingHistories() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
-      List<SerialIndexingHistory> histories = record.indexingHistories();
+      List<PubmedIndexingHistory> histories = record.indexingHistories();
       assertThat(histories).hasSize(2);
 
       // 第一条：当前正在索引
-      SerialIndexingHistory first = histories.getFirst();
+      PubmedIndexingHistory first = histories.getFirst();
       assertThat(first.citationSubset()).isEqualTo("IM");
       assertThat(first.indexingTreatment()).isEqualTo("Full");
       assertThat(first.indexingStatus()).isEqualTo("Currently-indexed");
@@ -201,7 +201,7 @@ class SerialParsingStrategyTest {
       assertThat(first.coverageNote()).isEqualTo("Indexed from volume 1 issue 1");
 
       // 第二条：已取消选择
-      SerialIndexingHistory second = histories.get(1);
+      PubmedIndexingHistory second = histories.get(1);
       assertThat(second.citationSubset()).isEqualTo("AIM");
       assertThat(second.indexingStatus()).isEqualTo("Deselected");
       assertThat(second.isCurrentlyIndexed()).isFalse();
@@ -211,7 +211,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析 Serial 元素属性")
     void shouldParseSerialAttributes() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
       assertThat(record.status()).isEqualTo("NLMCollection");
@@ -224,7 +224,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析扩展标识符")
     void shouldParseExtendedIdentifiers() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
       assertThat(record.nlmWorkId()).isEqualTo("9876543");
@@ -235,7 +235,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析扩展出版信息")
     void shouldParseExtendedPublicationInfo() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
       assertThat(record.places()).containsExactly("New York", "Boston");
@@ -248,7 +248,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析索引相关字段")
     void shouldParseIndexingFields() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
       assertThat(record.currentlyIndexedYN()).isTrue();
@@ -265,33 +265,33 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析 CurrentlyIndexedForSubset 列表")
     void shouldParseCurrentlyIndexedForSubsets() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
-      List<SerialCurrentlyIndexedForSubset> subsets = record.currentlyIndexedForSubsets();
+      List<PubmedCurrentIndexing> subsets = record.currentIndexings();
       assertThat(subsets).hasSize(2);
 
-      SerialCurrentlyIndexedForSubset first = subsets.getFirst();
-      assertThat(first.currentSubset()).isEqualTo("IM");
-      assertThat(first.currentIndexingTreatment()).isEqualTo("Full");
+      PubmedCurrentIndexing first = subsets.getFirst();
+      assertThat(first.subset()).isEqualTo("IM");
+      assertThat(first.indexingTreatment()).isEqualTo("Full");
       assertThat(first.content()).isEqualTo("Currently indexed for MEDLINE");
 
-      SerialCurrentlyIndexedForSubset second = subsets.get(1);
-      assertThat(second.currentSubset()).isEqualTo("AIM");
-      assertThat(second.currentIndexingTreatment()).isEqualTo("Selective");
+      PubmedCurrentIndexing second = subsets.get(1);
+      assertThat(second.subset()).isEqualTo("AIM");
+      assertThat(second.indexingTreatment()).isEqualTo("Selective");
     }
 
     @Test
     @DisplayName("应正确解析广泛期刊标题列表")
     void shouldParseBroadJournalHeadings() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
-      List<SerialBroadHeading> headings = record.broadJournalHeadings();
+      List<PubmedBroadHeading> headings = record.broadJournalHeadings();
       assertThat(headings).hasSize(2);
       assertThat(headings)
-          .extracting(SerialBroadHeading::heading)
+          .extracting(PubmedBroadHeading::heading)
           .containsExactly("Medicine", "Cardiology");
     }
 
@@ -299,17 +299,17 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析交叉引用列表")
     void shouldParseCrossReferences() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
-      List<SerialCrossReference> crossRefs = record.crossReferences();
+      List<PubmedCrossReference> crossRefs = record.crossReferences();
       assertThat(crossRefs).hasSize(2);
 
-      SerialCrossReference first = crossRefs.getFirst();
+      PubmedCrossReference first = crossRefs.getFirst();
       assertThat(first.xrType()).isEqualTo("A");
       assertThat(first.xrTitle()).isEqualTo("JFTM");
 
-      SerialCrossReference second = crossRefs.get(1);
+      PubmedCrossReference second = crossRefs.get(1);
       assertThat(second.xrType()).isEqualTo("X");
       assertThat(second.xrTitle()).isEqualTo("J Full Test Med");
     }
@@ -318,17 +318,17 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析通用备注列表")
     void shouldParseGeneralNotes() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
-      List<SerialGeneralNote> notes = record.generalNotes();
+      List<PubmedGeneralNote> notes = record.generalNotes();
       assertThat(notes).hasSize(2);
 
-      SerialGeneralNote first = notes.getFirst();
+      PubmedGeneralNote first = notes.getFirst();
       assertThat(first.noteType()).isEqualTo("LinkComplexNote");
       assertThat(first.content()).isEqualTo("This is a complex link note");
 
-      SerialGeneralNote second = notes.get(1);
+      PubmedGeneralNote second = notes.get(1);
       assertThat(second.noteType()).isNull();
       assertThat(second.content()).isEqualTo("This is a general note without type");
     }
@@ -337,7 +337,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析标题变更标记")
     void shouldParseTitleChangeMarkers() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
       assertThat(record.titleContinuationYN()).isFalse();
@@ -348,7 +348,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析时间戳")
     void shouldParseTimestamps() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
       assertThat(record.ilsCreatedTimestamp()).isEqualTo(LocalDateTime.of(2020, 1, 15, 10, 30, 45));
@@ -359,11 +359,11 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析 MeSH 描述符的 UI 和 Type 属性")
     void shouldParseMeshDescriptorAttributes() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
-      List<SerialMeshHeading> meshHeadings = record.meshHeadings();
-      SerialMeshHeading first = meshHeadings.getFirst();
+      List<PubmedMeshHeading> meshHeadings = record.meshHeadings();
+      PubmedMeshHeading first = meshHeadings.getFirst();
       assertThat(first.descriptorUi()).isEqualTo("D002309");
       assertThat(first.descriptorType()).isEqualTo("Geographic");
     }
@@ -372,16 +372,16 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析 TitleRelated 的 RecordID 列表")
     void shouldParseTitleRelatedRecordIds() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
-      List<SerialTitleRelated> relations = record.titleRelations();
-      SerialTitleRelated first = relations.getFirst();
+      List<PubmedTitleRelation> relations = record.titleRelations();
+      PubmedTitleRelation first = relations.getFirst();
 
-      List<SerialRecordId> recordIds = first.recordIds();
+      List<PubmedRecordId> recordIds = first.recordIds();
       assertThat(recordIds).hasSize(2);
       assertThat(recordIds)
-          .extracting(SerialRecordId::source, SerialRecordId::id)
+          .extracting(PubmedRecordId::source, PubmedRecordId::id)
           .containsExactly(
               org.assertj.core.groups.Tuple.tuple("NLM", "12345678"),
               org.assertj.core.groups.Tuple.tuple("OCLC", "98765432"));
@@ -396,7 +396,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析多条记录")
     void shouldParseMultipleRecords() throws Exception {
       // Given
-      List<SerialRecord> records = parseAllSerials("/serfile/multiple-serials.xml");
+      List<PubmedSerialData> records = parseAllSerials("/serfile/multiple-serials.xml");
 
       // Then
       assertThat(records).hasSize(3);
@@ -426,7 +426,7 @@ class SerialParsingStrategyTest {
     @DisplayName("停刊期刊应正确识别")
     void shouldIdentifyCeasedJournal() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
       assertThat(record.isCeased()).isTrue();
@@ -436,7 +436,7 @@ class SerialParsingStrategyTest {
     @DisplayName("hasIssnL 应正确判断")
     void shouldCheckHasIssnL() throws Exception {
       // Given
-      SerialRecord record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
 
       // Then
       assertThat(record.hasIssnL()).isTrue();
@@ -451,7 +451,7 @@ class SerialParsingStrategyTest {
   // ========== 辅助方法 ==========
 
   /// 解析 XML 文件中的第一条 Serial 记录。
-  private SerialRecord parseFirstSerial(String resourcePath) throws Exception {
+  private PubmedSerialData parseFirstSerial(String resourcePath) throws Exception {
     try (InputStream is = getClass().getResourceAsStream(resourcePath)) {
       XMLInputFactory factory = SecureXmlInputFactory.getInstance();
       XMLStreamReader reader = factory.createXMLStreamReader(is);
@@ -468,16 +468,16 @@ class SerialParsingStrategyTest {
   }
 
   /// 解析 XML 文件中的所有 Serial 记录。
-  private List<SerialRecord> parseAllSerials(String resourcePath) throws Exception {
+  private List<PubmedSerialData> parseAllSerials(String resourcePath) throws Exception {
     try (InputStream is = getClass().getResourceAsStream(resourcePath)) {
       XMLInputFactory factory = SecureXmlInputFactory.getInstance();
       XMLStreamReader reader = factory.createXMLStreamReader(is);
 
-      java.util.ArrayList<SerialRecord> records = new java.util.ArrayList<>();
+      java.util.ArrayList<PubmedSerialData> records = new java.util.ArrayList<>();
       while (reader.hasNext()) {
         if (reader.next() == XMLStreamConstants.START_ELEMENT
             && "Serial".equals(reader.getLocalName())) {
-          SerialRecord record = strategy.parseRecord(reader, context);
+          PubmedSerialData record = strategy.parseRecord(reader, context);
           if (record != null) {
             records.add(record);
           }

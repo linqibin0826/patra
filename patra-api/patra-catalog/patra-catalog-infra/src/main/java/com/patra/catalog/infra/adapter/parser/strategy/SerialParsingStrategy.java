@@ -1,16 +1,16 @@
 package com.patra.catalog.infra.adapter.parser.strategy;
 
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedBroadHeading;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedCrossReference;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedCurrentIndexing;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedGeneralNote;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedIndexingHistory;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedLanguage;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedMeshHeading;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedRecordId;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedTitleRelation;
 import com.patra.catalog.infra.adapter.parser.SerfileXmlElements;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialBroadHeading;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialCrossReference;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialCurrentlyIndexedForSubset;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialGeneralNote;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialIndexingHistory;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialLanguage;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialMeshHeading;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialRecord;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialRecordId;
-import com.patra.catalog.infra.adapter.parser.dto.serfile.SerialTitleRelated;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingContext;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingHelper;
 import java.time.LocalDate;
@@ -22,10 +22,17 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import lombok.extern.slf4j.Slf4j;
 
-/// SerialRecord 解析策略。
+/// PubmedSerialData 解析策略。
 ///
-/// 解析 NLM Serfile XML 中的 `<Serial>` 元素，创建 `SerialRecord` DTO。
+/// 解析 NLM Serfile XML 中的 `<Serial>` 元素，直接创建 Domain 层的 `PubmedSerialData`。
 /// 处理期刊基本信息、ISSN、出版信息、MeSH 主题词、期刊关联、索引信息等。
+///
+/// **架构说明**：
+///
+/// 此策略直接产出 Domain 模型，遵循「务实六边形架构」原则：
+/// - 单向只读数据流（XML → Domain），无需中间 DTO 层
+/// - 减少模型重复和转换开销
+/// - 参考：Victor Rentea「仅在多通道暴露时才需 DTO」
 ///
 /// **XML 结构**：
 /// ```xml
@@ -33,30 +40,14 @@ import lombok.extern.slf4j.Slf4j;
 ///   <NlmWorkID>9876543</NlmWorkID>
 ///   <NlmUniqueID>0123456</NlmUniqueID>
 ///   <Title>Journal of Test Medicine</Title>
-///   <MedlineTA>J Test Med</MedlineTA>
-///   <SortSerialName>JOURNAL OF TEST MEDICINE</SortSerialName>
-///   <PublicationInfo>...</PublicationInfo>
-///   <ISSN IssnType="Print">1234-5678</ISSN>
-///   <ISSNLinking>1234-5678</ISSNLinking>
-///   <Language LangType="Primary">eng</Language>
-///   <Coden>JTMED1</Coden>
-///   <CurrentlyIndexedYN>Y</CurrentlyIndexedYN>
-///   <CurrentlyIndexedForSubset CurrentSubset="IM" CurrentIndexingTreatment="Full"/>
-///   <IndexingSubset>IM</IndexingSubset>
-///   <BroadJournalHeadingList>...</BroadJournalHeadingList>
-///   <CrossReferenceList>...</CrossReferenceList>
-///   <MeshHeadingList>...</MeshHeadingList>
-///   <TitleRelated>...</TitleRelated>
-///   <IndexingHistoryList>...</IndexingHistoryList>
-///   <GeneralNote>...</GeneralNote>
-///   <IlsCreatedTimestamp>...</IlsCreatedTimestamp>
+///   ...
 /// </Serial>
 /// ```
 ///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
-public final class SerialParsingStrategy implements RecordParsingStrategy<SerialRecord> {
+public final class SerialParsingStrategy implements RecordParsingStrategy<PubmedSerialData> {
 
   /// 单例实例。
   public static final SerialParsingStrategy INSTANCE = new SerialParsingStrategy();
@@ -72,10 +63,10 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
   ///
   /// @param reader XML 流读取器（已定位到 Serial 元素）
   /// @param context 解析上下文
-  /// @return SerialRecord DTO，缺少必填字段时返回 null
+  /// @return PubmedSerialData 领域模型，缺少必填字段时返回 null
   /// @throws XMLStreamException XML 解析异常
   @Override
-  public SerialRecord parseRecord(XMLStreamReader reader, XmlParsingContext context)
+  public PubmedSerialData parseRecord(XMLStreamReader reader, XmlParsingContext context)
       throws XMLStreamException {
     // === 1. 读取 Serial 元素属性（必须在进入子元素前读取） ===
     String status = reader.getAttributeValue(null, SerfileXmlElements.Attribute.STATUS);
@@ -111,7 +102,7 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
 
     // === 5. 索引相关 ===
     Boolean currentlyIndexedYN = null;
-    List<SerialCurrentlyIndexedForSubset> currentlyIndexedForSubsets = new ArrayList<>();
+    List<PubmedCurrentIndexing> currentIndexings = new ArrayList<>();
     String indexingSubset = null;
     String indexingStartDate = null;
     Boolean indexOnlineYN = null;
@@ -132,13 +123,13 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
     LocalDateTime sefUpdatedTimestamp = null;
 
     // === 8. 集合字段 ===
-    List<SerialLanguage> languages = new ArrayList<>();
-    List<SerialBroadHeading> broadJournalHeadings = new ArrayList<>();
-    List<SerialCrossReference> crossReferences = new ArrayList<>();
-    List<SerialMeshHeading> meshHeadings = new ArrayList<>();
-    List<SerialTitleRelated> titleRelations = new ArrayList<>();
-    List<SerialIndexingHistory> indexingHistories = new ArrayList<>();
-    List<SerialGeneralNote> generalNotes = new ArrayList<>();
+    List<PubmedLanguage> languages = new ArrayList<>();
+    List<PubmedBroadHeading> broadJournalHeadings = new ArrayList<>();
+    List<PubmedCrossReference> crossReferences = new ArrayList<>();
+    List<PubmedMeshHeading> meshHeadings = new ArrayList<>();
+    List<PubmedTitleRelation> titleRelations = new ArrayList<>();
+    List<PubmedIndexingHistory> indexingHistories = new ArrayList<>();
+    List<PubmedGeneralNote> generalNotes = new ArrayList<>();
 
     // === 解析子元素 ===
     while (reader.hasNext()) {
@@ -191,7 +182,8 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
                 reader.getAttributeValue(null, SerfileXmlElements.Attribute.LANG_TYPE);
             String langText = reader.getElementText().trim();
             if (!langText.isEmpty()) {
-              languages.add(SerialLanguage.of(langText, langType));
+              boolean isPrimary = "Primary".equalsIgnoreCase(langType);
+              languages.add(PubmedLanguage.of(langText, isPrimary));
             }
           }
 
@@ -199,9 +191,9 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
           case SerfileXmlElements.Indexing.CURRENTLY_INDEXED_YN ->
               currentlyIndexedYN = parseYesNo(reader.getElementText());
           case SerfileXmlElements.Indexing.CURRENTLY_INDEXED_FOR_SUBSET -> {
-            SerialCurrentlyIndexedForSubset subset = parseCurrentlyIndexedForSubset(reader);
-            if (subset != null) {
-              currentlyIndexedForSubsets.add(subset);
+            PubmedCurrentIndexing indexing = parseCurrentlyIndexedForSubset(reader);
+            if (indexing != null) {
+              currentIndexings.add(indexing);
             }
           }
           case SerfileXmlElements.Indexing.INDEXING_SUBSET ->
@@ -229,7 +221,7 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
 
           // --- 期刊关联 ---
           case SerfileXmlElements.Relation.TITLE_RELATED -> {
-            SerialTitleRelated relation = parseTitleRelated(reader);
+            PubmedTitleRelation relation = parseTitleRelated(reader);
             if (relation != null) {
               titleRelations.add(relation);
             }
@@ -237,7 +229,7 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
 
           // --- 备注 ---
           case SerfileXmlElements.Relation.GENERAL_NOTE -> {
-            SerialGeneralNote note = parseGeneralNote(reader);
+            PubmedGeneralNote note = parseGeneralNote(reader);
             if (note != null) {
               generalNotes.add(note);
             }
@@ -291,8 +283,8 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
       return null;
     }
 
-    // 构建 SerialRecord
-    return SerialRecord.builder()
+    // 构建 PubmedSerialData（直接使用 Domain Builder）
+    return PubmedSerialData.builder()
         // 基本标识符
         .nlmUniqueId(nlmUniqueId)
         .nlmWorkId(nlmWorkId)
@@ -322,7 +314,7 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
         .languages(languages)
         // 索引相关
         .currentlyIndexedYN(currentlyIndexedYN)
-        .currentlyIndexedForSubsets(currentlyIndexedForSubsets)
+        .currentIndexings(currentIndexings)
         .indexingSubset(indexingSubset)
         .indexingStartDate(indexingStartDate)
         .indexOnlineYN(indexOnlineYN)
@@ -416,7 +408,7 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
   // ========== 索引子集解析 ==========
 
   /// 解析 CurrentlyIndexedForSubset 元素。
-  private SerialCurrentlyIndexedForSubset parseCurrentlyIndexedForSubset(XMLStreamReader reader)
+  private PubmedCurrentIndexing parseCurrentlyIndexedForSubset(XMLStreamReader reader)
       throws XMLStreamException {
     String currentSubset =
         reader.getAttributeValue(null, SerfileXmlElements.Attribute.CURRENT_SUBSET);
@@ -424,15 +416,15 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
         reader.getAttributeValue(null, SerfileXmlElements.Attribute.CURRENT_INDEXING_TREATMENT);
     String content = reader.getElementText().trim();
 
-    return SerialCurrentlyIndexedForSubset.of(content, currentSubset, currentIndexingTreatment);
+    return PubmedCurrentIndexing.of(currentSubset, currentIndexingTreatment, content);
   }
 
   // ========== 广泛期刊分类解析 ==========
 
   /// 解析 BroadJournalHeadingList 元素。
-  private List<SerialBroadHeading> parseBroadJournalHeadingList(XMLStreamReader reader)
+  private List<PubmedBroadHeading> parseBroadJournalHeadingList(XMLStreamReader reader)
       throws XMLStreamException {
-    List<SerialBroadHeading> headings = new ArrayList<>();
+    List<PubmedBroadHeading> headings = new ArrayList<>();
 
     while (reader.hasNext()) {
       int event = reader.next();
@@ -440,7 +432,7 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
           && SerfileXmlElements.MeSH.BROAD_JOURNAL_HEADING.equals(reader.getLocalName())) {
         String heading = reader.getElementText().trim();
         if (!heading.isEmpty()) {
-          headings.add(SerialBroadHeading.of(heading));
+          headings.add(PubmedBroadHeading.of(heading));
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && SerfileXmlElements.MeSH.BROAD_JOURNAL_HEADING_LIST.equals(reader.getLocalName())) {
@@ -454,15 +446,15 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
   // ========== 交叉引用解析 ==========
 
   /// 解析 CrossReferenceList 元素。
-  private List<SerialCrossReference> parseCrossReferenceList(XMLStreamReader reader)
+  private List<PubmedCrossReference> parseCrossReferenceList(XMLStreamReader reader)
       throws XMLStreamException {
-    List<SerialCrossReference> references = new ArrayList<>();
+    List<PubmedCrossReference> references = new ArrayList<>();
 
     while (reader.hasNext()) {
       int event = reader.next();
       if (event == XMLStreamConstants.START_ELEMENT
           && SerfileXmlElements.Relation.CROSS_REFERENCE.equals(reader.getLocalName())) {
-        SerialCrossReference ref = parseCrossReference(reader);
+        PubmedCrossReference ref = parseCrossReference(reader);
         if (ref != null) {
           references.add(ref);
         }
@@ -476,7 +468,7 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
   }
 
   /// 解析单个 CrossReference 元素。
-  private SerialCrossReference parseCrossReference(XMLStreamReader reader)
+  private PubmedCrossReference parseCrossReference(XMLStreamReader reader)
       throws XMLStreamException {
     String xrType = reader.getAttributeValue(null, SerfileXmlElements.Attribute.XR_TYPE);
     String xrTitle = null;
@@ -496,13 +488,13 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
       return null;
     }
 
-    return SerialCrossReference.of(xrType, xrTitle);
+    return PubmedCrossReference.of(xrType, xrTitle);
   }
 
   // ========== 备注解析 ==========
 
   /// 解析 GeneralNote 元素。
-  private SerialGeneralNote parseGeneralNote(XMLStreamReader reader) throws XMLStreamException {
+  private PubmedGeneralNote parseGeneralNote(XMLStreamReader reader) throws XMLStreamException {
     String noteType = reader.getAttributeValue(null, SerfileXmlElements.Attribute.NOTE_TYPE);
     String content = reader.getElementText().trim();
 
@@ -510,21 +502,21 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
       return null;
     }
 
-    return SerialGeneralNote.of(noteType, content);
+    return PubmedGeneralNote.of(noteType, content);
   }
 
   // ========== MeSH 主题词解析 ==========
 
   /// 解析 MeshHeadingList 元素。
-  private List<SerialMeshHeading> parseMeshHeadingList(XMLStreamReader reader)
+  private List<PubmedMeshHeading> parseMeshHeadingList(XMLStreamReader reader)
       throws XMLStreamException {
-    List<SerialMeshHeading> headings = new ArrayList<>();
+    List<PubmedMeshHeading> headings = new ArrayList<>();
 
     while (reader.hasNext()) {
       int event = reader.next();
       if (event == XMLStreamConstants.START_ELEMENT
           && SerfileXmlElements.MeSH.MESH_HEADING.equals(reader.getLocalName())) {
-        SerialMeshHeading heading = parseMeshHeading(reader);
+        PubmedMeshHeading heading = parseMeshHeading(reader);
         if (heading != null) {
           headings.add(heading);
         }
@@ -538,7 +530,7 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
   }
 
   /// 解析单个 MeshHeading 元素。
-  private SerialMeshHeading parseMeshHeading(XMLStreamReader reader) throws XMLStreamException {
+  private PubmedMeshHeading parseMeshHeading(XMLStreamReader reader) throws XMLStreamException {
     String descriptorName = null;
     boolean descriptorMajorTopic = false;
     String descriptorUi = null;
@@ -576,11 +568,11 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
       return null;
     }
 
-    return SerialMeshHeading.ofFull(
+    return PubmedMeshHeading.ofFull(
         descriptorName,
-        descriptorMajorTopic,
         descriptorUi,
         descriptorType,
+        descriptorMajorTopic,
         qualifierName,
         qualifierMajorTopic);
   }
@@ -588,11 +580,11 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
   // ========== 期刊关联解析 ==========
 
   /// 解析单个 TitleRelated 元素。
-  private SerialTitleRelated parseTitleRelated(XMLStreamReader reader) throws XMLStreamException {
+  private PubmedTitleRelation parseTitleRelated(XMLStreamReader reader) throws XMLStreamException {
     String titleType = reader.getAttributeValue(null, SerfileXmlElements.Attribute.TITLE_TYPE);
     String relatedTitle = null;
     String relatedIssn = null;
-    List<SerialRecordId> recordIds = new ArrayList<>();
+    List<PubmedRecordId> recordIds = new ArrayList<>();
 
     while (reader.hasNext()) {
       int event = reader.next();
@@ -605,7 +597,7 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
             String source = reader.getAttributeValue(null, SerfileXmlElements.Attribute.SOURCE);
             String id = reader.getElementText().trim();
             if (!id.isEmpty()) {
-              recordIds.add(SerialRecordId.of(id, source));
+              recordIds.add(PubmedRecordId.of(id, source));
             }
           }
         }
@@ -619,21 +611,21 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
       return null;
     }
 
-    return SerialTitleRelated.ofFull(titleType, relatedTitle, relatedIssn, recordIds);
+    return PubmedTitleRelation.ofFull(titleType, relatedTitle, relatedIssn, recordIds);
   }
 
   // ========== 索引历史解析 ==========
 
   /// 解析 IndexingHistoryList 元素。
-  private List<SerialIndexingHistory> parseIndexingHistoryList(XMLStreamReader reader)
+  private List<PubmedIndexingHistory> parseIndexingHistoryList(XMLStreamReader reader)
       throws XMLStreamException {
-    List<SerialIndexingHistory> histories = new ArrayList<>();
+    List<PubmedIndexingHistory> histories = new ArrayList<>();
 
     while (reader.hasNext()) {
       int event = reader.next();
       if (event == XMLStreamConstants.START_ELEMENT
           && SerfileXmlElements.Indexing.INDEXING_HISTORY.equals(reader.getLocalName())) {
-        SerialIndexingHistory history = parseIndexingHistory(reader);
+        PubmedIndexingHistory history = parseIndexingHistory(reader);
         if (history != null) {
           histories.add(history);
         }
@@ -647,7 +639,7 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
   }
 
   /// 解析单个 IndexingHistory 元素。
-  private SerialIndexingHistory parseIndexingHistory(XMLStreamReader reader)
+  private PubmedIndexingHistory parseIndexingHistory(XMLStreamReader reader)
       throws XMLStreamException {
     // 从属性获取信息
     String citationSubset =
@@ -679,7 +671,7 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Serial
       }
     }
 
-    return new SerialIndexingHistory(
+    return PubmedIndexingHistory.ofFull(
         citationSubset, indexingTreatment, indexingStatus, dateOfAction, coverage, coverageNote);
   }
 
