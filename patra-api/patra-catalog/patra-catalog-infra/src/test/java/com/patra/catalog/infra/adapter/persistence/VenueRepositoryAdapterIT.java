@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
-import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
+import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.catalog.infra.persistence.mapper.VenueIdentifierMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueMapper;
@@ -144,10 +144,9 @@ class VenueRepositoryAdapterIT {
     @Test
     @DisplayName("应该正确处理只有默认标识符的聚合根")
     void insertAll_aggregateWithDefaultIdentifier_shouldInsertCorrectly() {
-      // Given: 创建没有额外标识符的聚合根
+      // Given: 创建只有 OpenAlex ID 标识符的聚合根（fromOpenAlex 会自动添加）
       VenueAggregate venue = VenueAggregate.fromOpenAlex("S1", VenueType.JOURNAL, "Journal A");
-      venue.withIssnL("1234-S1");
-      venue.withPublicationHistory(PublicationHistory.active(2000));
+      // 注意：publicationHistory 等字段已移至 VenueDetail，此处不再设置
 
       // When
       repository.insertAll(List.of(venue));
@@ -246,12 +245,13 @@ class VenueRepositoryAdapterIT {
   }
 
   /// 创建测试用的 VenueAggregate。
+  ///
+  /// **注意**：CQRS 最小聚合设计下，聚合根只包含核心字段。
+  /// countryCode、isOa、isInDoaj、publicationHistory 等已移至 VenueDetail。
   private VenueAggregate createVenueAggregate(String openalexId, String displayName) {
     VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
-    venue.withIssnL("1234-" + openalexId);
-    venue.withCountryCode("US");
-    venue.withOaStatus(true, false);
-    venue.withPublicationHistory(PublicationHistory.active(2000));
+    // ISSN-L 通过标识符添加
+    venue.addIdentifier(VenueIdentifier.forIssnL("1234-" + openalexId));
     return venue;
   }
 
@@ -259,10 +259,7 @@ class VenueRepositoryAdapterIT {
   private VenueAggregate createVenueAggregateWithIssnL(
       String openalexId, String displayName, String issnL) {
     VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
-    venue.withIssnL(issnL);
-    venue.withCountryCode("US");
-    venue.withOaStatus(true, false);
-    venue.withPublicationHistory(PublicationHistory.active(2000));
+    venue.addIdentifier(VenueIdentifier.forIssnL(issnL));
     return venue;
   }
 
