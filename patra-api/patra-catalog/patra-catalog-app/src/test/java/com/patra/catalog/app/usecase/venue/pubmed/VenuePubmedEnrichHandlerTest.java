@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 import com.patra.catalog.app.usecase.venue.pubmed.command.VenuePubmedEnrichCommand;
 import com.patra.catalog.app.usecase.venue.pubmed.dto.VenuePubmedEnrichResult;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
+import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.port.parser.SerfileParserPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
@@ -195,7 +196,8 @@ class VenuePubmedEnrichHandlerTest {
       verify(venueRepository).updateBatch(updateBatchCaptor.capture());
       List<VenueAggregate> updated = updateBatchCaptor.getValue();
       assertThat(updated).hasSize(1);
-      assertThat(updated.getFirst().getIssnL()).isEqualTo("1111-1111");
+      assertThat(updated.getFirst().getIdentifier(VenueIdentifierType.ISSN_L))
+          .hasValue("1111-1111");
     }
 
     @Test
@@ -221,7 +223,7 @@ class VenuePubmedEnrichHandlerTest {
       verify(venueRepository).updateBatch(updateBatchCaptor.capture());
       List<VenueAggregate> updated = updateBatchCaptor.getValue();
       assertThat(updated).hasSize(1);
-      assertThat(updated.getFirst().getNlmId()).isEqualTo("0000001");
+      assertThat(updated.getFirst().getIdentifier(VenueIdentifierType.NLM)).hasValue("0000001");
     }
 
     @Test

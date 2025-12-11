@@ -1,7 +1,12 @@
 package com.patra.catalog.infra.batch.venue;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
+import com.patra.catalog.domain.model.enums.VenueIdentifierType;
+import com.patra.catalog.domain.model.vo.venue.ApcInfo;
+import com.patra.catalog.domain.model.vo.venue.Society;
+import com.patra.catalog.domain.model.vo.venue.VenueDetail;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
+import com.patra.catalog.domain.model.vo.venue.VenueStats;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,8 +28,10 @@ import org.springframework.stereotype.Component;
 ///
 /// **职责**：
 ///
-/// - 将 VenueParseResult 解析为聚合根和年度指标，分别持久化
-/// - 聚合根和年度指标通过 VenueRepository 统一持久化
+/// - 将 VenueParseResult 解析为聚合根和补充数据，分别持久化
+/// - 聚合根保存到 cat_venue + cat_venue_identifier
+/// - 补充数据分别保存到：cat_venue_detail, cat_venue_stats, cat_venue_apc, cat_venue_society
+/// - 年度指标保存到 cat_venue_publication_stats
 /// - Chunk 内 ISSN-L 去重：同一批次内的重复记录在内存中过滤
 /// - 乐观插入：正常情况直接插入，唯一约束冲突时降级处理
 ///
@@ -60,18 +67,16 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
     // Step 1: Chunk 内去重（必须保留，否则同批次内重复也会导致插入失败）
     List<VenueParseResult> deduplicatedInChunk = deduplicateWithinChunk(items);
 
-    // Step 2: 提取聚合根和发文统计
+    // Step 2: 提取聚合根
     List<VenueAggregate> aggregates =
         deduplicatedInChunk.stream().map(VenueParseResult::aggregate).toList();
-    Map<String, List<VenuePublicationStats>> statsByOpenalexId =
-        extractPublicationStats(deduplicatedInChunk);
 
     // Step 3: 乐观插入聚合根
     List<VenueAggregate> insertedAggregates;
     try {
       venueRepository.insertAll(aggregates);
       insertedAggregates = aggregates;
-      log.debug("写入完成：新增={}", aggregates.size());
+      log.debug("写入聚合根完成：新增={}", aggregates.size());
     } catch (DuplicateKeyException e) {
       // 明确的唯一键冲突
       insertedAggregates = handleDuplicateKeyException(aggregates);
@@ -84,49 +89,95 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
       }
     }
 
-    // Step 4: 插入发文统计（仅针对成功插入的聚合根）
-    insertPublicationStats(insertedAggregates, statsByOpenalexId);
+    // Step 4: 保存补充数据（仅针对成功插入的聚合根）
+    saveSupplementaryData(insertedAggregates, deduplicatedInChunk);
   }
 
-  /// 提取发文统计数据，按 OpenAlex ID 分组。
-  ///
-  /// @param items 解析结果列表
-  /// @return 按 OpenAlex ID 分组的发文统计数据
-  private Map<String, List<VenuePublicationStats>> extractPublicationStats(
-      List<VenueParseResult> items) {
-    Map<String, List<VenuePublicationStats>> result = new HashMap<>();
-    for (VenueParseResult item : items) {
-      if (item.hasYearlyMetrics()) {
-        result.put(item.aggregate().getOpenalexId(), item.yearlyMetrics());
-      }
-    }
-    return result;
-  }
-
-  /// 插入发文统计数据到 `cat_venue_publication_stats` 表。
-  ///
-  /// 根据成功插入的聚合根，将对应的年度发文统计写入数据库。
+  /// 保存补充数据（detail, stats, apc, societies, yearlyMetrics）。
   ///
   /// @param insertedAggregates 成功插入的聚合根列表
-  /// @param statsByOpenalexId 按 OpenAlex ID 分组的发文统计数据
-  private void insertPublicationStats(
-      List<VenueAggregate> insertedAggregates,
-      Map<String, List<VenuePublicationStats>> statsByOpenalexId) {
-    if (statsByOpenalexId.isEmpty() || insertedAggregates.isEmpty()) {
+  /// @param items 原始解析结果（用于提取补充数据）
+  private void saveSupplementaryData(
+      List<VenueAggregate> insertedAggregates, List<VenueParseResult> items) {
+    if (insertedAggregates.isEmpty()) {
       return;
     }
 
-    Map<Long, List<VenuePublicationStats>> statsByVenueId = new HashMap<>();
-    for (VenueAggregate aggregate : insertedAggregates) {
-      List<VenuePublicationStats> stats = statsByOpenalexId.get(aggregate.getOpenalexId());
-      if (stats != null && !stats.isEmpty()) {
-        statsByVenueId.put(aggregate.getId(), stats);
+    // 构建 OpenAlex ID → VenueParseResult 映射
+    Map<String, VenueParseResult> itemByOpenalexId = new HashMap<>();
+    for (VenueParseResult item : items) {
+      String openalexId = getOpenalexId(item.aggregate());
+      if (openalexId != null) {
+        itemByOpenalexId.put(openalexId, item);
       }
     }
 
+    // 构建各类补充数据的 venueId 映射
+    Map<Long, VenueDetail> detailsByVenueId = new HashMap<>();
+    Map<Long, VenueStats> statsByVenueId = new HashMap<>();
+    Map<Long, ApcInfo> apcByVenueId = new HashMap<>();
+    Map<Long, List<Society>> societiesByVenueId = new HashMap<>();
+    Map<Long, List<VenuePublicationStats>> yearlyMetricsByVenueId = new HashMap<>();
+
+    for (VenueAggregate aggregate : insertedAggregates) {
+      String openalexId = getOpenalexId(aggregate);
+      VenueParseResult item = itemByOpenalexId.get(openalexId);
+      if (item == null) {
+        continue;
+      }
+
+      Long venueId = aggregate.getId();
+
+      // 详情
+      if (item.hasDetail()) {
+        detailsByVenueId.put(venueId, item.detail());
+      }
+
+      // 统计快照
+      if (item.hasStats()) {
+        statsByVenueId.put(venueId, item.stats());
+      }
+
+      // APC 信息
+      if (item.hasApcInfo()) {
+        apcByVenueId.put(venueId, item.apcInfo());
+      }
+
+      // 关联学会
+      if (item.hasSocieties()) {
+        societiesByVenueId.put(venueId, item.societies());
+      }
+
+      // 年度指标
+      if (item.hasYearlyMetrics()) {
+        yearlyMetricsByVenueId.put(venueId, item.yearlyMetrics());
+      }
+    }
+
+    // 批量保存各类补充数据
+    if (!detailsByVenueId.isEmpty()) {
+      venueRepository.replaceDetailsBatch(detailsByVenueId);
+      log.debug("写入详情完成：{} 条", detailsByVenueId.size());
+    }
+
     if (!statsByVenueId.isEmpty()) {
-      venueRepository.replaceYearlyMetricsBatch(statsByVenueId);
-      log.debug("写入发文统计：{} 个 Venue", statsByVenueId.size());
+      venueRepository.replaceStatsBatch(statsByVenueId);
+      log.debug("写入统计快照完成：{} 条", statsByVenueId.size());
+    }
+
+    if (!apcByVenueId.isEmpty()) {
+      venueRepository.replaceApcBatch(apcByVenueId);
+      log.debug("写入 APC 信息完成：{} 条", apcByVenueId.size());
+    }
+
+    if (!societiesByVenueId.isEmpty()) {
+      venueRepository.replaceSocietiesBatch(societiesByVenueId);
+      log.debug("写入关联学会完成：{} 条", societiesByVenueId.size());
+    }
+
+    if (!yearlyMetricsByVenueId.isEmpty()) {
+      venueRepository.replaceYearlyMetricsBatch(yearlyMetricsByVenueId);
+      log.debug("写入年度指标完成：{} 个 Venue", yearlyMetricsByVenueId.size());
     }
   }
 
@@ -142,16 +193,12 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
 
     for (VenueParseResult item : items) {
       VenueAggregate aggregate = item.aggregate();
-      String key =
-          aggregate.getIssnL() != null
-              ? aggregate.getIssnL()
-              : ("_oa:" + aggregate.getOpenalexId());
+      String issnL = getIssnL(aggregate);
+      String openalexId = getOpenalexId(aggregate);
+      String key = issnL != null ? issnL : ("_oa:" + openalexId);
 
-      if (uniqueMap.containsKey(key) && aggregate.getIssnL() != null) {
-        log.warn(
-            "Chunk 内 ISSN-L 重复，使用后者覆盖: issnL={}, openalexId={}",
-            aggregate.getIssnL(),
-            aggregate.getOpenalexId());
+      if (uniqueMap.containsKey(key) && issnL != null) {
+        log.warn("Chunk 内 ISSN-L 重复，使用后者覆盖: issnL={}, openalexId={}", issnL, openalexId);
         duplicateCount++;
       }
       uniqueMap.put(key, item);
@@ -189,7 +236,7 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
     // 提取非空 ISSN-L
     Set<String> issnLs =
         aggregates.stream()
-            .map(VenueAggregate::getIssnL)
+            .map(this::getIssnL)
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
 
@@ -199,9 +246,9 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
     // 过滤并记录日志
     List<VenueAggregate> toInsert = new ArrayList<>();
     for (VenueAggregate item : aggregates) {
-      if (item.getIssnL() != null && existingIssnLs.contains(item.getIssnL())) {
-        log.warn(
-            "数据库已存在 ISSN-L，跳过: issnL={}, openalexId={}", item.getIssnL(), item.getOpenalexId());
+      String issnL = getIssnL(item);
+      if (issnL != null && existingIssnLs.contains(issnL)) {
+        log.warn("数据库已存在 ISSN-L，跳过: issnL={}, openalexId={}", issnL, getOpenalexId(item));
       } else {
         toInsert.add(item);
       }
@@ -220,5 +267,23 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
     }
 
     return toInsert;
+  }
+
+  // ========== 标识符访问辅助方法 ==========
+
+  /// 获取聚合根的 OpenAlex ID。
+  ///
+  /// @param aggregate 聚合根
+  /// @return OpenAlex ID，不存在时返回 null
+  private String getOpenalexId(VenueAggregate aggregate) {
+    return aggregate.getIdentifier(VenueIdentifierType.OPENALEX).orElse(null);
+  }
+
+  /// 获取聚合根的 ISSN-L。
+  ///
+  /// @param aggregate 聚合根
+  /// @return ISSN-L，不存在时返回 null
+  private String getIssnL(VenueAggregate aggregate) {
+    return aggregate.getIdentifier(VenueIdentifierType.ISSN_L).orElse(null);
   }
 }

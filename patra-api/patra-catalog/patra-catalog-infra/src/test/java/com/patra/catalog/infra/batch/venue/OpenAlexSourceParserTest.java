@@ -3,7 +3,10 @@ package com.patra.catalog.infra.batch.venue;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
+import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
+import com.patra.catalog.domain.model.vo.venue.VenueDetail;
+import com.patra.catalog.domain.model.vo.venue.VenueStats;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -56,14 +59,20 @@ class OpenAlexSourceParserTest {
 
       // Then
       assertThat(results).hasSize(1);
-      VenueAggregate venue = results.getFirst().aggregate();
-      assertThat(venue.getOpenalexId()).isEqualTo("S137773608");
+      VenueParseResult result = results.getFirst();
+      VenueAggregate venue = result.aggregate();
+      VenueDetail detail = result.detail();
+
+      // CQRS 最小聚合设计：核心字段在聚合根中
+      assertThat(venue.getIdentifier(VenueIdentifierType.OPENALEX)).hasValue("S137773608");
       assertThat(venue.getDisplayName()).isEqualTo("Nature");
-      assertThat(venue.getIssnL()).isEqualTo("0028-0836");
+      assertThat(venue.getIdentifier(VenueIdentifierType.ISSN_L)).hasValue("0028-0836");
       assertThat(venue.getVenueType()).isEqualTo(VenueType.JOURNAL);
-      assertThat(venue.getCountryCode()).isEqualTo("GB");
-      assertThat(venue.isOa()).isFalse();
-      assertThat(venue.isInDoaj()).isFalse();
+
+      // 非核心字段在 VenueDetail 中
+      assertThat(detail.countryCode()).isEqualTo("GB");
+      assertThat(detail.isOa()).isFalse();
+      assertThat(detail.isInDoaj()).isFalse();
     }
 
     @Test
@@ -127,35 +136,39 @@ class OpenAlexSourceParserTest {
       assertThat(results).hasSize(1);
       VenueParseResult result = results.getFirst();
       VenueAggregate venue = result.aggregate();
+      VenueDetail detail = result.detail();
+      VenueStats stats = result.stats();
 
-      // 基础字段
-      assertThat(venue.getOpenalexId()).isEqualTo("S137773608");
+      // 基础字段（在聚合根中）
+      assertThat(venue.getIdentifier(VenueIdentifierType.OPENALEX)).hasValue("S137773608");
       assertThat(venue.getDisplayName()).isEqualTo("Nature");
-      assertThat(venue.getIssnL()).isEqualTo("0028-0836");
-      assertThat(venue.getHomepageUrl()).isEqualTo("https://www.nature.com/nature/");
-      assertThat(venue.getAbbreviatedTitle()).isEqualTo("Nature");
-      assertThat(venue.getAlternateTitles()).contains("Nature (London)");
+      assertThat(venue.getIdentifier(VenueIdentifierType.ISSN_L)).hasValue("0028-0836");
 
-      // 宿主机构
-      assertThat(venue.getHostOrganization()).isNotNull();
-      assertThat(venue.getHostOrganization().id()).isEqualTo("P4310319965");
-      assertThat(venue.getHostOrganization().name()).isEqualTo("Nature Portfolio");
+      // 详情字段（在 VenueDetail 中）
+      assertThat(detail.homepageUrl()).isEqualTo("https://www.nature.com/nature/");
+      assertThat(detail.abbreviatedTitle()).isEqualTo("Nature");
+      assertThat(detail.alternateTitles()).contains("Nature (London)");
 
-      // 统计快照
-      assertThat(venue.getCurrentStats()).isNotNull();
-      assertThat(venue.getCurrentStats().worksCount()).isEqualTo(500000);
-      assertThat(venue.getCurrentStats().citedByCount()).isEqualTo(10000000);
-      assertThat(venue.getCurrentStats().hIndex()).isEqualTo(1200);
-      assertThat(venue.getCurrentStats().i10Index()).isEqualTo(50000);
+      // 宿主机构（在 VenueDetail 中）
+      assertThat(detail.hostOrganization()).isNotNull();
+      assertThat(detail.hostOrganization().id()).isEqualTo("P4310319965");
+      assertThat(detail.hostOrganization().name()).isEqualTo("Nature Portfolio");
 
-      // APC 信息
-      assertThat(venue.getApcInfo()).isNotNull();
-      assertThat(venue.getApcInfo().usd()).isEqualTo(11390);
-      assertThat(venue.getApcInfo().prices()).hasSize(1);
+      // 统计快照（在 VenueStats 中）
+      assertThat(stats).isNotNull();
+      assertThat(stats.worksCount()).isEqualTo(500000);
+      assertThat(stats.citedByCount()).isEqualTo(10000000);
+      assertThat(stats.hIndex()).isEqualTo(1200);
+      assertThat(stats.i10Index()).isEqualTo(50000);
 
-      // 学会列表
-      assertThat(venue.getSocieties()).hasSize(1);
-      assertThat(venue.getSocieties().getFirst().organization()).isEqualTo("Nature Research");
+      // APC 信息（在 VenueParseResult 中）
+      assertThat(result.apcInfo()).isNotNull();
+      assertThat(result.apcInfo().usd()).isEqualTo(11390);
+      assertThat(result.apcInfo().prices()).hasSize(1);
+
+      // 学会列表（在 VenueParseResult 中）
+      assertThat(result.societies()).hasSize(1);
+      assertThat(result.societies().getFirst().organization()).isEqualTo("Nature Research");
 
       // 年度指标（从 VenueParseResult 获取，而非聚合根）
       assertThat(result.hasYearlyMetrics()).isTrue();

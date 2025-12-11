@@ -1,6 +1,7 @@
 package com.patra.catalog.infra.batch.venue;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
+import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.ItemProcessListener;
 import org.springframework.batch.core.ItemReadListener;
@@ -85,11 +86,13 @@ public class VenueInitializeErrorListener
       return "null";
     }
     VenueAggregate aggregate = item.aggregate();
+    String openalexId = aggregate.getIdentifier(VenueIdentifierType.OPENALEX).orElse(null);
+    String issnL = aggregate.getIdentifier(VenueIdentifierType.ISSN_L).orElse(null);
     return String.format(
         "openalexId=%s, displayName=%s, issnL=%s, type=%s, metrics=%d",
-        aggregate.getOpenalexId(),
+        openalexId,
         truncate(aggregate.getDisplayName(), 50),
-        aggregate.getIssnL(),
+        issnL,
         aggregate.getVenueType(),
         item.yearlyMetrics().size());
   }

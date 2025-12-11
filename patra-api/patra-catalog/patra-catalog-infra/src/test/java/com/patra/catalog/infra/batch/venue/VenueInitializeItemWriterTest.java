@@ -12,8 +12,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
+import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
+import com.patra.catalog.domain.model.vo.venue.VenueDetail;
+import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
+import com.patra.catalog.domain.model.vo.venue.VenueStats;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import java.util.List;
 import java.util.Set;
@@ -269,22 +273,27 @@ class VenueInitializeItemWriterTest {
   private VenueParseResult createParseResult(String openalexId, String issnL, boolean withMetrics) {
     VenueAggregate venue =
         VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, "Journal " + openalexId);
-    venue.withIssnL(issnL);
+    // 添加 ISSN-L 标识符（新的 CQRS 最小聚合设计）
+    venue.addIdentifier(VenueIdentifier.forIssnL(issnL));
 
     List<VenuePublicationStats> metrics =
         withMetrics ? List.of(VenuePublicationStats.create(2024, 100, 500)) : List.of();
 
-    return new VenueParseResult(venue, metrics);
+    // 使用新的 6 参数构造函数
+    VenueStats stats = withMetrics ? VenueStats.ofBasic(100, 500) : null;
+    return new VenueParseResult(venue, VenueDetail.empty(), stats, null, List.of(), metrics);
   }
 
   private VenueParseResult createParseResultWithoutIssnL(String openalexId) {
     VenueAggregate venue =
         VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, "Journal " + openalexId);
-    return new VenueParseResult(venue, List.of());
+    return new VenueParseResult(venue, VenueDetail.empty(), null, null, List.of(), List.of());
   }
 
   private void assertThatListContainsOpenalexIds(List<VenueAggregate> list, String... expectedIds) {
-    List<String> actualIds = list.stream().map(VenueAggregate::getOpenalexId).toList();
+    // 使用新的 getIdentifier() 方法访问 OpenAlex ID
+    List<String> actualIds =
+        list.stream().map(v -> v.getIdentifier(VenueIdentifierType.OPENALEX).orElse(null)).toList();
     assertThat(actualIds).containsExactlyInAnyOrder(expectedIds);
   }
 }

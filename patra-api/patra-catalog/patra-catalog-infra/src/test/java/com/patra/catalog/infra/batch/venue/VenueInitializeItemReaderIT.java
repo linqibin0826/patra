@@ -7,6 +7,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import com.patra.catalog.domain.exception.FileDownloadException;
+import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.common.error.trait.StandardErrorTrait;
@@ -125,10 +126,14 @@ class VenueInitializeItemReaderIT {
 
       // Then: 应该返回 3 条记录
       assertThat(results).hasSize(3);
-      assertThat(results.get(0).aggregate().getOpenalexId()).isEqualTo("S1");
+      // CQRS 最小聚合设计：openalexId 现在存储在 identifiers 中
+      assertThat(results.get(0).aggregate().getIdentifier(VenueIdentifierType.OPENALEX))
+          .hasValue("S1");
       assertThat(results.get(0).aggregate().getDisplayName()).isEqualTo("Journal A");
-      assertThat(results.get(1).aggregate().getOpenalexId()).isEqualTo("S2");
-      assertThat(results.get(2).aggregate().getOpenalexId()).isEqualTo("S3");
+      assertThat(results.get(1).aggregate().getIdentifier(VenueIdentifierType.OPENALEX))
+          .hasValue("S2");
+      assertThat(results.get(2).aggregate().getIdentifier(VenueIdentifierType.OPENALEX))
+          .hasValue("S3");
 
       reader.close();
     }
@@ -178,10 +183,14 @@ class VenueInitializeItemReaderIT {
 
       // Then: 应该返回 4 条记录，顺序正确
       assertThat(results).hasSize(4);
-      assertThat(results.get(0).aggregate().getOpenalexId()).isEqualTo("S1");
-      assertThat(results.get(1).aggregate().getOpenalexId()).isEqualTo("S2");
-      assertThat(results.get(2).aggregate().getOpenalexId()).isEqualTo("S3");
-      assertThat(results.get(3).aggregate().getOpenalexId()).isEqualTo("S4");
+      assertThat(results.get(0).aggregate().getIdentifier(VenueIdentifierType.OPENALEX))
+          .hasValue("S1");
+      assertThat(results.get(1).aggregate().getIdentifier(VenueIdentifierType.OPENALEX))
+          .hasValue("S2");
+      assertThat(results.get(2).aggregate().getIdentifier(VenueIdentifierType.OPENALEX))
+          .hasValue("S3");
+      assertThat(results.get(3).aggregate().getIdentifier(VenueIdentifierType.OPENALEX))
+          .hasValue("S4");
 
       reader.close();
     }
@@ -211,8 +220,10 @@ class VenueInitializeItemReaderIT {
 
       // Then: 应该返回 2 条记录
       assertThat(results).hasSize(2);
-      assertThat(results.get(0).aggregate().getOpenalexId()).isEqualTo("S1");
-      assertThat(results.get(1).aggregate().getOpenalexId()).isEqualTo("S2");
+      assertThat(results.get(0).aggregate().getIdentifier(VenueIdentifierType.OPENALEX))
+          .hasValue("S1");
+      assertThat(results.get(1).aggregate().getIdentifier(VenueIdentifierType.OPENALEX))
+          .hasValue("S2");
 
       reader.close();
     }
@@ -273,7 +284,7 @@ class VenueInitializeItemReaderIT {
 
       // Then: 应该是第 3 条记录
       assertThat(result).isNotNull();
-      assertThat(result.aggregate().getOpenalexId()).isEqualTo("S3");
+      assertThat(result.aggregate().getIdentifier(VenueIdentifierType.OPENALEX)).hasValue("S3");
 
       // 读取完成
       assertThat(reader.read()).isNull();
@@ -308,7 +319,7 @@ class VenueInitializeItemReaderIT {
 
       // Then: 应该是第二个文件的第 2 条记录（S4）
       assertThat(result).isNotNull();
-      assertThat(result.aggregate().getOpenalexId()).isEqualTo("S4");
+      assertThat(result.aggregate().getIdentifier(VenueIdentifierType.OPENALEX)).hasValue("S4");
 
       // 读取完成
       assertThat(reader.read()).isNull();
@@ -362,7 +373,7 @@ class VenueInitializeItemReaderIT {
       // Then: 应该从 S4 开始
       VenueParseResult result = reader2.read();
       assertThat(result).isNotNull();
-      assertThat(result.aggregate().getOpenalexId()).isEqualTo("S4");
+      assertThat(result.aggregate().getIdentifier(VenueIdentifierType.OPENALEX)).hasValue("S4");
 
       // 读取完成
       assertThat(reader2.read()).isNull();
