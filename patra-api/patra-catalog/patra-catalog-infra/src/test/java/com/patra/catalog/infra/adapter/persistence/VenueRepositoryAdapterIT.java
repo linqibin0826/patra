@@ -146,7 +146,6 @@ class VenueRepositoryAdapterIT {
     void insertAll_aggregateWithDefaultIdentifier_shouldInsertCorrectly() {
       // Given: 创建只有 OpenAlex ID 标识符的聚合根（fromOpenAlex 会自动添加）
       VenueAggregate venue = VenueAggregate.fromOpenAlex("S1", VenueType.JOURNAL, "Journal A");
-      // 注意：publicationHistory 等字段已移至 VenueDetail，此处不再设置
 
       // When
       repository.insertAll(List.of(venue));
@@ -245,9 +244,6 @@ class VenueRepositoryAdapterIT {
   }
 
   /// 创建测试用的 VenueAggregate。
-  ///
-  /// **注意**：CQRS 最小聚合设计下，聚合根只包含核心字段。
-  /// countryCode、isOa、isInDoaj、publicationHistory 等已移至 VenueDetail。
   private VenueAggregate createVenueAggregate(String openalexId, String displayName) {
     VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
     // ISSN-L 通过标识符添加
