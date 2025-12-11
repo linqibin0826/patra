@@ -9,6 +9,7 @@ import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.ApcInfo;
 import com.patra.catalog.domain.model.vo.venue.HostOrganization;
 import com.patra.catalog.domain.model.vo.venue.Society;
+import com.patra.catalog.domain.model.vo.venue.VenueDetail;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
 import com.patra.catalog.domain.model.vo.venue.VenueStats;
 import java.io.BufferedReader;
@@ -18,6 +19,7 @@ import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 import lombok.extern.slf4j.Slf4j;
@@ -74,7 +76,7 @@ public class OpenAlexSourceParser {
         .lines()
         .filter(line -> line != null && !line.isBlank())
         .map(this::parseLine)
-        .filter(record -> record != null)
+        .filter(Objects::nonNull)
         .map(this::toParseResult)
         .onClose(
             () -> {
@@ -102,62 +104,84 @@ public class OpenAlexSourceParser {
 
   /// 将 OpenAlexSourceRecord 转换为 VenueParseResult。
   ///
+  /// **CQRS 最小聚合设计**：
+  ///
+  /// - 聚合根只包含核心字段：id, venueType, displayName, identifiers, provenance
+  /// - 补充数据（detail, stats, apc, societies）独立返回，由调用方分别保存
+  ///
   /// @param record OpenAlex 源记录
-  /// @return VenueParseResult（包含聚合根和年度指标）
+  /// @return VenueParseResult（包含聚合根和所有补充数据）
   VenueParseResult toParseResult(OpenAlexSourceRecord record) {
     // 1. 提取基础字段
     String openalexId = record.extractOpenAlexId();
     VenueType venueType = VenueType.fromOpenAlexType(record.type());
 
-    // 2. 创建聚合根
+    // 2. 创建聚合根（只包含核心字段）
     VenueAggregate aggregate =
         VenueAggregate.fromOpenAlex(openalexId, venueType, record.displayName());
 
-    // 3. 设置基础字段
-    aggregate
-        .withIssnL(record.issnL())
-        .withHomepageUrl(record.homepageUrl())
-        .withCountryCode(record.countryCode())
-        .withOaStatus(
-            record.isOa() != null ? record.isOa() : false,
-            record.isInDoaj() != null ? record.isInDoaj() : false)
-        .withAbbreviatedTitle(record.abbreviatedTitle())
-        .withAlternateTitles(record.alternateTitles());
+    // 3. 添加标识符（ISSN + ISSN-L）
+    addIdentifiers(aggregate, record);
 
-    // 4. 设置宿主机构
-    if (record.hostOrganization() != null && record.hostOrganizationName() != null) {
-      String hostId = extractOpenAlexId(record.hostOrganization());
-      HostOrganization host =
-          HostOrganization.of(
-              hostId, record.hostOrganizationName(), record.hostOrganizationLineage());
-      aggregate.withHostOrganization(host);
-    }
+    // 4. 构建详情值对象（包含所有非核心属性）
+    VenueDetail detail = buildVenueDetail(record);
 
-    // 5. 设置统计快照
+    // 5. 构建统计快照
     VenueStats stats = buildVenueStats(record);
-    if (stats != null) {
-      aggregate.withCurrentStats(stats);
-    }
 
-    // 6. 设置 APC 信息
+    // 6. 构建 APC 信息
     ApcInfo apcInfo = buildApcInfo(record);
-    if (apcInfo != null) {
-      aggregate.withApcInfo(apcInfo);
-    }
 
-    // 7. 设置学会列表
+    // 7. 构建学会列表
     List<Society> societies = buildSocieties(record);
-    if (societies != null && !societies.isEmpty()) {
-      aggregate.withSocieties(societies);
-    }
 
-    // 8. 添加 ISSN 标识符
-    addIssnIdentifiers(aggregate, record);
-
-    // 9. 构建年度指标（独立于聚合根返回）
+    // 8. 构建年度指标
     List<VenuePublicationStats> yearlyMetrics = buildYearlyMetrics(record);
 
-    return new VenueParseResult(aggregate, yearlyMetrics);
+    return new VenueParseResult(aggregate, detail, stats, apcInfo, societies, yearlyMetrics);
+  }
+
+  /// 构建详情值对象。
+  ///
+  /// 将原聚合根的非核心字段封装到 VenueDetail 中。
+  private VenueDetail buildVenueDetail(OpenAlexSourceRecord record) {
+    // 构建宿主机构
+    HostOrganization hostOrganization = null;
+    if (record.hostOrganization() != null && record.hostOrganizationName() != null) {
+      String hostId = extractOpenAlexId(record.hostOrganization());
+      hostOrganization =
+          HostOrganization.of(
+              hostId, record.hostOrganizationName(), record.hostOrganizationLineage());
+    }
+
+    return VenueDetail.builder()
+        .abbreviatedTitle(record.abbreviatedTitle())
+        .alternateTitles(record.alternateTitles())
+        .homepageUrl(record.homepageUrl())
+        .hostOrganization(hostOrganization)
+        .countryCode(record.countryCode())
+        .isOa(record.isOa() != null ? record.isOa() : false)
+        .isInDoaj(record.isInDoaj() != null ? record.isInDoaj() : false)
+        .build();
+  }
+
+  /// 添加标识符（ISSN + ISSN-L）。
+  ///
+  /// 将 ISSN-L 和 ISSN 列表作为标识符添加到聚合根。
+  private void addIdentifiers(VenueAggregate aggregate, OpenAlexSourceRecord record) {
+    // 添加 ISSN-L 标识符
+    if (record.issnL() != null && !record.issnL().isBlank() && isValidIssn(record.issnL())) {
+      aggregate.addIdentifier(VenueIdentifierType.ISSN_L, record.issnL());
+    }
+
+    // 添加 ISSN 标识符
+    if (record.issn() != null) {
+      for (String issn : record.issn()) {
+        if (issn != null && !issn.isBlank() && isValidIssn(issn)) {
+          aggregate.addIdentifier(VenueIdentifierType.ISSN, issn);
+        }
+      }
+    }
   }
 
   /// 构建统计快照。
@@ -231,19 +255,6 @@ public class OpenAlexSourceParser {
 
   /// ISSN 格式正则表达式（与 VenueIdentifier 保持一致）。
   private static final String ISSN_PATTERN = "\\d{4}-\\d{3}[\\dXx]";
-
-  /// 添加 ISSN 标识符。
-  ///
-  /// 过滤规则：跳过格式不符合 `XXXX-XXXX` 的 ISSN（如含前缀 "ISSN-L: " 的脏数据）
-  private void addIssnIdentifiers(VenueAggregate aggregate, OpenAlexSourceRecord record) {
-    if (record.issn() != null) {
-      for (String issn : record.issn()) {
-        if (issn != null && !issn.isBlank() && isValidIssn(issn)) {
-          aggregate.addIdentifier(VenueIdentifierType.ISSN, issn);
-        }
-      }
-    }
-  }
 
   /// 验证 ISSN 格式是否有效。
   ///

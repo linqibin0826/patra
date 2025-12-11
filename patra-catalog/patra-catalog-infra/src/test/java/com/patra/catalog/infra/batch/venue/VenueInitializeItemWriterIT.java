@@ -6,9 +6,10 @@ import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
-import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
+import com.patra.catalog.domain.model.vo.venue.VenueDetail;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
+import com.patra.catalog.domain.model.vo.venue.VenueStats;
 import com.patra.catalog.infra.adapter.persistence.VenueRepositoryAdapter;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.catalog.infra.persistence.entity.VenueDO;
@@ -78,41 +79,36 @@ class VenueInitializeItemWriterIT {
 
   /// 创建测试用的 VenueParseResult（无年度指标）。
   ///
+  /// **CQRS 最小聚合设计**：聚合根只包含核心字段，其他数据通过 VenueDetail 传递。
+  ///
   /// 注意：issnL 使用 openalexId 后缀生成，确保唯一性（数据库有 uk_issn_l 唯一索引）。
   private VenueParseResult createParseResult(String openalexId, String displayName) {
     VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
-    // 使用 openalexId 生成唯一的 issnL，避免唯一索引冲突
-    venue.withIssnL("1234-" + openalexId);
-    venue.withCountryCode("US");
-    venue.withOaStatus(true, false);
-    venue.withPublicationHistory(PublicationHistory.active(2000));
-    return new VenueParseResult(venue, List.of());
+    // 使用 openalexId 生成唯一的 issnL（通过标识符添加）
+    venue.addIdentifier(VenueIdentifier.forIssnL("1234-" + openalexId));
+    // 非核心字段通过 VenueDetail 传递
+    return new VenueParseResult(venue, VenueDetail.empty(), null, null, List.of(), List.of());
   }
 
   /// 创建带年度指标的 VenueParseResult。
   private VenueParseResult createParseResultWithMetrics(String openalexId, String displayName) {
     VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
-    venue.withIssnL("1234-" + openalexId);
-    venue.withCountryCode("US");
-    venue.withOaStatus(true, false);
-    venue.withPublicationHistory(PublicationHistory.active(2000));
+    venue.addIdentifier(VenueIdentifier.forIssnL("1234-" + openalexId));
     List<VenuePublicationStats> metrics =
         List.of(
             VenuePublicationStats.create(2024, 100, 500),
             VenuePublicationStats.create(2023, 90, 400));
-    return new VenueParseResult(venue, metrics);
+    VenueStats stats = VenueStats.ofBasic(190, 900);
+    return new VenueParseResult(venue, VenueDetail.empty(), stats, null, List.of(), metrics);
   }
 
   /// 创建带标识符的 VenueParseResult（无年度指标）。
   private VenueParseResult createParseResultWithIdentifiers(String openalexId, String displayName) {
     VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
-    venue.withIssnL("1234-" + openalexId);
-    venue.withCountryCode("US");
-    venue.withOaStatus(true, false);
-    venue.withPublicationHistory(PublicationHistory.active(2000));
+    venue.addIdentifier(VenueIdentifier.forIssnL("1234-" + openalexId));
     venue.addIdentifier(new VenueIdentifier(VenueIdentifierType.ISSN, "1234-5678"));
     venue.addIdentifier(new VenueIdentifier(VenueIdentifierType.ISSN, "5678-1234"));
-    return new VenueParseResult(venue, List.of());
+    return new VenueParseResult(venue, VenueDetail.empty(), null, null, List.of(), List.of());
   }
 
   @Nested
@@ -134,14 +130,21 @@ class VenueInitializeItemWriterIT {
       assertThat(venueCount).isEqualTo(2);
 
       List<VenueDO> venues = venueMapper.selectList(null);
-      assertThat(venues).extracting(VenueDO::getOpenalexId).containsExactlyInAnyOrder("S1", "S2");
+      // CQRS 最小聚合设计：openalexId 现在存储在标识符表中
       assertThat(venues)
           .extracting(VenueDO::getDisplayName)
           .containsExactlyInAnyOrder("Journal A", "Journal B");
 
-      // Then: 验证标识符子表（每个 Venue 有 1 个 OpenAlex 标识符）
+      // Then: 验证标识符子表（每个 Venue 有 OpenAlex + ISSN-L 共 2 个标识符）
       long identifierCount = identifierMapper.selectCount(null);
-      assertThat(identifierCount).isEqualTo(2);
+      assertThat(identifierCount).isEqualTo(4);
+
+      // 验证 OpenAlex ID 标识符存在
+      List<VenueIdentifierDO> identifiers = identifierMapper.selectList(null);
+      assertThat(identifiers)
+          .filteredOn(id -> id.getIdentifierType().equals(VenueIdentifierType.OPENALEX.name()))
+          .extracting(VenueIdentifierDO::getIdentifierValue)
+          .containsExactlyInAnyOrder("S1", "S2");
     }
 
     @Test
