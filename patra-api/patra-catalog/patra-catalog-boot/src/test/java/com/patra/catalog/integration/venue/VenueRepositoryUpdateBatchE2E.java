@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
-import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.infra.persistence.mapper.VenueIdentifierMapper;
@@ -149,30 +148,17 @@ class VenueRepositoryUpdateBatchE2E {
   }
 
   // ========== Db.updateBatchById 测试 ==========
-
-  @Nested
-  @DisplayName("Db.updateBatchById 事务测试")
-  class DbUpdateBatchByIdTests {
-
-    @Test
-    @DisplayName("应该正确持久化主表字段更新")
-    void shouldPersistMainTableUpdate() {
-      // Given：插入一个载体
-      VenueAggregate venue = createVenueAggregate("S1", "Journal A");
-      venueRepository.insertAll(List.of(venue));
-
-      // When：重新加载并修改主表字段
-      var loaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
-      loaded.withAbbreviatedTitle("J.A.");
-      loaded.withHomepageUrl("https://example.com/journal-a");
-      venueRepository.updateBatch(List.of(loaded));
-
-      // Then：验证主表字段已更新
-      var reloaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
-      assertThat(reloaded.getAbbreviatedTitle()).isEqualTo("J.A.");
-      assertThat(reloaded.getHomepageUrl()).isEqualTo("https://example.com/journal-a");
-    }
-  }
+  //
+  // **注意**：CQRS 最小聚合设计下，以下测试暂时禁用。
+  //
+  // 原因：abbreviatedTitle、homepageUrl 等字段已移至 VenueDetail 值对象。
+  // 聚合根只包含核心字段（id/venueType/displayName/identifiers/provenance）。
+  //
+  // 如需测试 VenueDetail 更新，请使用 VenueRepository.replaceDetailsBatch() 方法。
+  //
+  // @Nested
+  // @DisplayName("Db.updateBatchById 事务测试")
+  // class DbUpdateBatchByIdTests { ... }
 
   // ========== 增量删除测试 ==========
 
@@ -211,7 +197,7 @@ class VenueRepositoryUpdateBatchE2E {
   class MixedChangesTests {
 
     @Test
-    @DisplayName("应该正确处理添加、删除和更新的混合操作")
+    @DisplayName("应该正确处理添加和删除标识符的混合操作")
     void shouldHandleMixedChanges() {
       // Given：插入一个带标识符的载体
       VenueAggregate venue = createVenueAggregate("S1", "Journal A");
@@ -219,24 +205,19 @@ class VenueRepositoryUpdateBatchE2E {
       venue.addIdentifier(VenueIdentifier.forIssn("2222-2222"));
       venueRepository.insertAll(List.of(venue));
 
-      // When：执行混合操作
+      // When：执行混合操作（CQRS 最小聚合：只测试标识符变更）
       var loaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
       // 删除一个标识符
       loaded.removeIdentifier(VenueIdentifierType.ISSN, "1111-1111");
       // 添加一个新标识符
       loaded.addIdentifier(VenueIdentifier.forIssn("3333-3333"));
-      // 更新主表字段
-      loaded.withAbbreviatedTitle("Updated Title");
       venueRepository.updateBatch(List.of(loaded));
 
-      // Then：验证所有变更
+      // Then：验证标识符变更
       var reloaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
-      // 验证标识符变更
       List<String> issns = reloaded.getIdentifiers(VenueIdentifierType.ISSN);
       assertThat(issns).containsExactlyInAnyOrder("2222-2222", "3333-3333");
       assertThat(issns).doesNotContain("1111-1111");
-      // 验证主表字段更新
-      assertThat(reloaded.getAbbreviatedTitle()).isEqualTo("Updated Title");
     }
   }
 
@@ -247,7 +228,7 @@ class VenueRepositoryUpdateBatchE2E {
   class MultipleAggregatesTests {
 
     @Test
-    @DisplayName("多个聚合根的批量操作应该全部成功")
+    @DisplayName("多个聚合根的批量标识符操作应该全部成功")
     void shouldHandleMultipleAggregates() {
       // Given：插入多个载体
       VenueAggregate venue1 = createVenueAggregate("S1", "Journal A");
@@ -255,35 +236,25 @@ class VenueRepositoryUpdateBatchE2E {
       VenueAggregate venue3 = createVenueAggregate("S3", "Journal C");
       venueRepository.insertAll(List.of(venue1, venue2, venue3));
 
-      // When：分别修改三个聚合根
+      // When：分别修改三个聚合根的标识符
       var loaded1 = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
       var loaded2 = venueRepository.findByIssnLs(Set.of("1234-S2")).get("1234-S2");
       var loaded3 = venueRepository.findByIssnLs(Set.of("1234-S3")).get("1234-S3");
 
       loaded1.addIdentifier(VenueIdentifier.forIssn("1111-1111"));
-      loaded1.withAbbreviatedTitle("Title A");
-
       loaded2.addIdentifier(VenueIdentifier.forIssn("2222-2222"));
-      loaded2.withAbbreviatedTitle("Title B");
-
       loaded3.addIdentifier(VenueIdentifier.forIssn("3333-3333"));
-      loaded3.withAbbreviatedTitle("Title C");
 
       // 批量更新
       venueRepository.updateBatch(List.of(loaded1, loaded2, loaded3));
 
-      // Then：验证所有变更
+      // Then：验证标识符变更
       var results = venueRepository.findByIssnLs(Set.of("1234-S1", "1234-S2", "1234-S3"));
 
-      assertThat(results.get("1234-S1").getAbbreviatedTitle()).isEqualTo("Title A");
       assertThat(results.get("1234-S1").getIdentifiers(VenueIdentifierType.ISSN))
           .contains("1111-1111");
-
-      assertThat(results.get("1234-S2").getAbbreviatedTitle()).isEqualTo("Title B");
       assertThat(results.get("1234-S2").getIdentifiers(VenueIdentifierType.ISSN))
           .contains("2222-2222");
-
-      assertThat(results.get("1234-S3").getAbbreviatedTitle()).isEqualTo("Title C");
       assertThat(results.get("1234-S3").getIdentifiers(VenueIdentifierType.ISSN))
           .contains("3333-3333");
     }
@@ -298,14 +269,14 @@ class VenueRepositoryUpdateBatchE2E {
       // When：重新加载但不做任何修改
       var loaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
       int initialCount = loaded.getIdentifiers().size();
-      String initialTitle = loaded.getAbbreviatedTitle();
+      String initialDisplayName = loaded.getDisplayName();
       // 不调用任何修改方法
       venueRepository.updateBatch(List.of(loaded));
 
       // Then：验证数据未变
       var reloaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
       assertThat(reloaded.getIdentifiers()).hasSize(initialCount);
-      assertThat(reloaded.getAbbreviatedTitle()).isEqualTo(initialTitle);
+      assertThat(reloaded.getDisplayName()).isEqualTo(initialDisplayName);
     }
   }
 
@@ -373,29 +344,38 @@ class VenueRepositoryUpdateBatchE2E {
     }
 
     @Test
-    @DisplayName("Spring 事务内抛出异常时，Db.updateBatchById() 的数据应该回滚")
-    void shouldRollbackUpdateBatchByIdWhenExceptionThrown() {
-      // Given：插入一个载体
+    @DisplayName("Spring 事务内抛出异常时，标识符删除操作应该回滚")
+    void shouldRollbackIdentifierDeletionWhenExceptionThrown() {
+      // Given：插入一个带多个标识符的载体
       VenueAggregate venue = createVenueAggregate("S1", "Journal A");
-      venue.withAbbreviatedTitle("Original Title");
+      venue.addIdentifier(VenueIdentifier.forIssn("1111-1111"));
+      venue.addIdentifier(VenueIdentifier.forIssn("2222-2222"));
       venueRepository.insertAll(List.of(venue));
 
-      // When：在事务内更新主表字段，然后抛出异常
+      int initialIdentifierCount =
+          jdbcTemplate.queryForObject(
+              "SELECT COUNT(*) FROM cat_venue_identifier WHERE venue_id = ?",
+              Integer.class,
+              venue.getId());
+
+      // When：在事务内删除标识符，然后抛出异常
       assertThatThrownBy(
               () ->
                   transactionTemplate.executeWithoutResult(
                       status -> {
                         var loaded = venueRepository.findByIssnLs(Set.of("1234-S1")).get("1234-S1");
-                        loaded.withAbbreviatedTitle("Updated Title");
+                        loaded.removeIdentifier(VenueIdentifierType.ISSN, "1111-1111");
                         venueRepository.updateBatch(List.of(loaded));
 
-                        // 验证数据已更新（在事务提交前）
-                        String titleAfterUpdate =
+                        // 验证数据已删除（在事务提交前）
+                        int countAfterDelete =
                             jdbcTemplate.queryForObject(
-                                "SELECT abbreviated_title FROM cat_venue WHERE id = ?",
-                                String.class,
+                                "SELECT COUNT(*) FROM cat_venue_identifier WHERE venue_id = ?",
+                                Integer.class,
                                 loaded.getId());
-                        assertThat(titleAfterUpdate).as("事务内应能看到更新的标题").isEqualTo("Updated Title");
+                        assertThat(countAfterDelete)
+                            .as("事务内应能看到标识符已删除")
+                            .isEqualTo(initialIdentifierCount - 1);
 
                         // 故意抛出异常触发回滚
                         throw new RuntimeException("故意抛出异常以测试回滚");
@@ -404,20 +384,21 @@ class VenueRepositoryUpdateBatchE2E {
           .hasMessage("故意抛出异常以测试回滚");
 
       // Then：验证数据已回滚
-      String finalTitle =
+      int finalCount =
           jdbcTemplate.queryForObject(
-              "SELECT abbreviated_title FROM cat_venue WHERE id = ?", String.class, venue.getId());
-      assertThat(finalTitle)
-          .as("事务回滚后，标题应恢复到初始值（如果此断言失败，说明 Db.updateBatchById() 未参与 Spring 事务）")
-          .isEqualTo("Original Title");
+              "SELECT COUNT(*) FROM cat_venue_identifier WHERE venue_id = ?",
+              Integer.class,
+              venue.getId());
+      assertThat(finalCount)
+          .as("事务回滚后，标识符数量应恢复到初始值（如果此断言失败，说明 deleteByBusinessKeys 未参与 Spring 事务）")
+          .isEqualTo(initialIdentifierCount);
     }
 
     @Test
-    @DisplayName("混合操作在异常时应全部回滚")
-    void shouldRollbackAllOperationsWhenExceptionThrown() {
+    @DisplayName("标识符添加和删除混合操作在异常时应全部回滚")
+    void shouldRollbackAllIdentifierOperationsWhenExceptionThrown() {
       // Given：插入一个带标识符的载体
       VenueAggregate venue = createVenueAggregate("S1", "Journal A");
-      venue.withAbbreviatedTitle("Original Title");
       venue.addIdentifier(VenueIdentifier.forIssn("1111-1111"));
       venueRepository.insertAll(List.of(venue));
 
@@ -427,7 +408,7 @@ class VenueRepositoryUpdateBatchE2E {
               Integer.class,
               venue.getId());
 
-      // When：在事务内执行混合操作（删除 + 添加 + 更新），然后抛出异常
+      // When：在事务内执行混合操作（标识符删除 + 标识符添加），然后抛出异常
       assertThatThrownBy(
               () ->
                   transactionTemplate.executeWithoutResult(
@@ -437,8 +418,6 @@ class VenueRepositoryUpdateBatchE2E {
                         loaded.removeIdentifier(VenueIdentifierType.ISSN, "1111-1111");
                         // 添加新标识符
                         loaded.addIdentifier(VenueIdentifier.forIssn("2222-2222"));
-                        // 更新主表
-                        loaded.withAbbreviatedTitle("Updated Title");
                         venueRepository.updateBatch(List.of(loaded));
 
                         // 故意抛出异常触发回滚
@@ -452,31 +431,35 @@ class VenueRepositoryUpdateBatchE2E {
               "SELECT COUNT(*) FROM cat_venue_identifier WHERE venue_id = ?",
               Integer.class,
               venue.getId());
-      String finalTitle =
-          jdbcTemplate.queryForObject(
-              "SELECT abbreviated_title FROM cat_venue WHERE id = ?", String.class, venue.getId());
       boolean has1111 =
           jdbcTemplate.queryForObject(
                   "SELECT COUNT(*) FROM cat_venue_identifier WHERE venue_id = ? AND identifier_value = '1111-1111'",
                   Integer.class,
                   venue.getId())
               > 0;
+      boolean has2222 =
+          jdbcTemplate.queryForObject(
+                  "SELECT COUNT(*) FROM cat_venue_identifier WHERE venue_id = ? AND identifier_value = '2222-2222'",
+                  Integer.class,
+                  venue.getId())
+              > 0;
 
       assertThat(finalIdentifierCount).as("标识符数量应恢复到初始值").isEqualTo(initialIdentifierCount);
-      assertThat(finalTitle).as("标题应恢复到初始值").isEqualTo("Original Title");
       assertThat(has1111).as("被删除的标识符应恢复").isTrue();
+      assertThat(has2222).as("新增的标识符不应存在").isFalse();
     }
   }
 
   // ========== 辅助方法 ==========
 
   /// 创建测试用的 VenueAggregate。
+  ///
+  /// **注意**：CQRS 最小聚合设计下，聚合根只包含核心字段。
+  /// countryCode、isOa、publicationHistory 等已移至 VenueDetail，不再在聚合根中设置。
   private VenueAggregate createVenueAggregate(String openalexId, String displayName) {
     VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
-    venue.withIssnL("1234-" + openalexId);
-    venue.withCountryCode("US");
-    venue.withOaStatus(true, false);
-    venue.withPublicationHistory(PublicationHistory.active(2000));
+    // ISSN-L 通过标识符添加
+    venue.addIdentifier(VenueIdentifier.forIssnL("1234-" + openalexId));
     return venue;
   }
 }
