@@ -4,14 +4,8 @@ import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
-import com.patra.catalog.domain.model.vo.venue.ApcInfo;
-import com.patra.catalog.domain.model.vo.venue.HostOrganization;
 import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
-import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
-import com.patra.catalog.domain.model.vo.venue.Society;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
-import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
-import com.patra.catalog.domain.model.vo.venue.VenueStats;
 import com.patra.common.domain.AggregateRoot;
 import java.io.Serial;
 import java.time.LocalDate;
@@ -21,22 +15,26 @@ import java.util.List;
 import java.util.Optional;
 import lombok.Getter;
 
-/// 出版载体聚合根。管理期刊、仓库、会议等出版载体的完整信息。
+/// 出版载体聚合根（最小聚合）。
 ///
 /// **CQRS 设计**：
 ///
 /// 本聚合根遵循 CQRS 模式，**仅用于写入侧**（数据采集、更新）：
 ///
+/// - 只包含验证不变量所需的最小属性集
 /// - 数据从外部源（OpenAlex/PubMed）流入，经聚合根验证后持久化
 /// - 读取场景通过 DO 或专门的读模型实现，不经过聚合根重建
-/// - 部分字段（如 `currentStats`、`apcInfo`）当前无业务读取逻辑，但会持久化供查询使用
 ///
 /// **聚合边界**：
 ///
 /// - VenueIdentifier（值对象，1:N）：标识符集合，保护 ISSN-L 唯一性不变量
 ///
-/// **补充数据（通过 VenueRepository 统一管理）**：
+/// **补充数据（通过 VenueRepository 独立管理，不属于聚合边界）**：
 ///
+/// - VenueDetail：详情信息（出版信息、索引状态、OA 状态、宿主机构等）
+/// - VenueStats：统计快照（works_count、cited_by_count 等）
+/// - ApcInfo：APC 信息
+/// - Society：关联学会列表
 /// - VenuePublicationStats：年度指标集合（来自 OpenAlex）
 /// - VenueMesh：MeSH 主题词集合（来自 Serfile）
 /// - VenueRelation：期刊关联关系集合（来自 Serfile）
@@ -45,15 +43,8 @@ import lombok.Getter;
 /// **验证规则**：
 ///
 /// - 所有类型：displayName 和 venueType 必填
-/// - 来自 OpenAlex：openalexId 必填
-/// - 来自 PubMed：nlmId 或 issnL 至少一个
-///
-/// **设计说明**：
-///
-/// - 支持 OpenAlex 的 7 种载体类型（journal/repository/conference 等）
-/// - 标识符统一管理（ISSN/ISBN/OpenAlex/NLM/MAG/FATCAT/WIKIDATA/CODEN）
-/// - OA 状态和 APC 信息用于开放获取分析
-/// - 语言信息支持多语言期刊和摘要语言追踪
+/// - 来自 OpenAlex：必须包含 OPENALEX 类型的标识符
+/// - 来自 PubMed：必须包含 NLM 或 ISSN_L 类型的标识符
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -62,94 +53,19 @@ public class VenueAggregate extends AggregateRoot<Long> {
 
   @Serial private static final long serialVersionUID = 1L;
 
-  // ========== 核心属性 ==========
+  // ========== 核心属性（最小集） ==========
 
-  /// 载体类型（必填）
+  /// 载体类型（必填，不变量）
   private final VenueType venueType;
 
-  /// 显示名称（必填）
+  /// 显示名称（必填，不变量）
   private final String displayName;
 
-  /// 缩写标题（ISO 缩写）
-  private String abbreviatedTitle;
-
-  /// 替代名称列表
-  private List<String> alternateTitles;
-
-  /// 主页 URL
-  private String homepageUrl;
-
-  // ========== 冗余标识符（高频查询优化） ==========
-
-  /// OpenAlex ID（格式：S1234567890）
-  private String openalexId;
-
-  /// Linking ISSN
-  private String issnL;
-
-  /// NLM 唯一标识符（冗余，来自 PubMed Catalog）
-  private String nlmId;
-
-  /// CODEN 编码（6字符标识符号）
-  private String coden;
-
-  // ========== 出版信息 ==========
-
-  /// 出版频率（来自 Serfile，如 Weekly/Monthly/Quarterly）
-  private String frequency;
-
-  // ========== 语言信息 ==========
-
-  /// 期刊语言信息（包含主语言和摘要语言列表）
-  private VenueLanguages languages;
-
-  // ========== 出版历史 ==========
-
-  /// 出版历史（创刊/停刊年份）
-  private PublicationHistory publicationHistory;
-
-  // ========== 宿主机构 ==========
-
-  /// 宿主机构信息
-  private HostOrganization hostOrganization;
-
-  // ========== 地理信息 ==========
-
-  /// 国家代码（ISO 3166-1 alpha-2）
-  private String countryCode;
-
-  // ========== OA 状态 ==========
-
-  /// 是否开放获取
-  private boolean isOa;
-
-  /// 是否在 DOAJ 中
-  private boolean isInDoaj;
-
-  // ========== 统计快照 ==========
-
-  /// 当前统计快照
-  private VenueStats currentStats;
-
-  // ========== APC 信息 ==========
-
-  /// APC（文章处理费）信息
-  private ApcInfo apcInfo;
-
-  // ========== 关联学会 ==========
-
-  /// 关联学会列表
-  private List<Society> societies;
-
-  // ========== 数据来源 ==========
+  /// 标识符集合（聚合边界内值对象）
+  private final List<VenueIdentifier> identifiers;
 
   /// 数据来源信息
   private ProvenanceInfo provenance;
-
-  // ========== 聚合内值对象 ==========
-
-  /// 标识符集合
-  private final List<VenueIdentifier> identifiers;
 
   /// 私有构造函数（通过工厂方法创建）。
   ///
@@ -165,8 +81,6 @@ public class VenueAggregate extends AggregateRoot<Long> {
     this.venueType = venueType;
     this.displayName = displayName;
     this.identifiers = new ArrayList<>();
-    this.alternateTitles = new ArrayList<>();
-    this.societies = new ArrayList<>();
   }
 
   // ========== 工厂方法 ==========
@@ -182,9 +96,8 @@ public class VenueAggregate extends AggregateRoot<Long> {
     Assert.notBlank(openalexId, "OpenAlex ID 不能为空");
 
     VenueAggregate aggregate = new VenueAggregate(null, venueType, displayName);
-    aggregate.openalexId = openalexId;
 
-    // 自动添加 OpenAlex 标识符
+    // 添加 OpenAlex 标识符
     aggregate.addIdentifier(VenueIdentifier.forOpenAlex(openalexId));
 
     // 设置来源信息
@@ -206,13 +119,11 @@ public class VenueAggregate extends AggregateRoot<Long> {
 
     VenueAggregate aggregate = new VenueAggregate(null, VenueType.JOURNAL, displayName);
 
-    // 添加标识符并设置冗余字段
+    // 添加标识符
     if (StrUtil.isNotBlank(nlmId)) {
-      aggregate.nlmId = nlmId;
       aggregate.addIdentifier(VenueIdentifier.forNlm(nlmId));
     }
     if (StrUtil.isNotBlank(issnL)) {
-      aggregate.issnL = issnL;
       aggregate.addIdentifier(VenueIdentifier.forIssnL(issnL));
     }
 
@@ -236,140 +147,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
     return aggregate;
   }
 
-  // ========== 属性设置方法（链式调用） ==========
-
-  /// 设置缩写标题。
-  ///
-  /// @param abbreviatedTitle 缩写标题
-  /// @return 当前对象
-  public VenueAggregate withAbbreviatedTitle(String abbreviatedTitle) {
-    this.abbreviatedTitle = abbreviatedTitle;
-    markDirty();
-    return this;
-  }
-
-  /// 设置替代名称列表。
-  ///
-  /// @param alternateTitles 替代名称列表
-  /// @return 当前对象
-  public VenueAggregate withAlternateTitles(List<String> alternateTitles) {
-    this.alternateTitles =
-        alternateTitles != null ? new ArrayList<>(alternateTitles) : new ArrayList<>();
-    markDirty();
-    return this;
-  }
-
-  /// 设置主页 URL。
-  ///
-  /// @param homepageUrl 主页 URL
-  /// @return 当前对象
-  public VenueAggregate withHomepageUrl(String homepageUrl) {
-    this.homepageUrl = homepageUrl;
-    markDirty();
-    return this;
-  }
-
-  /// 设置 OpenAlex ID。
-  ///
-  /// @param openalexId OpenAlex ID
-  /// @return 当前对象
-  public VenueAggregate withOpenalexId(String openalexId) {
-    this.openalexId = openalexId;
-    markDirty();
-    return this;
-  }
-
-  /// 设置 Linking ISSN。
-  ///
-  /// @param issnL Linking ISSN
-  /// @return 当前对象
-  public VenueAggregate withIssnL(String issnL) {
-    this.issnL = issnL;
-    markDirty();
-    return this;
-  }
-
-  /// 设置 NLM 唯一标识符。
-  ///
-  /// @param nlmId NLM ID
-  /// @return 当前对象
-  public VenueAggregate withNlmId(String nlmId) {
-    this.nlmId = nlmId;
-    markDirty();
-    return this;
-  }
-
-  /// 设置出版历史。
-  ///
-  /// @param publicationHistory 出版历史
-  /// @return 当前对象
-  public VenueAggregate withPublicationHistory(PublicationHistory publicationHistory) {
-    this.publicationHistory = publicationHistory;
-    markDirty();
-    return this;
-  }
-
-  /// 设置宿主机构。
-  ///
-  /// @param hostOrganization 宿主机构
-  /// @return 当前对象
-  public VenueAggregate withHostOrganization(HostOrganization hostOrganization) {
-    this.hostOrganization = hostOrganization;
-    markDirty();
-    return this;
-  }
-
-  /// 设置国家代码。
-  ///
-  /// @param countryCode 国家代码（ISO 3166-1 alpha-2）
-  /// @return 当前对象
-  public VenueAggregate withCountryCode(String countryCode) {
-    this.countryCode = countryCode;
-    markDirty();
-    return this;
-  }
-
-  /// 设置 OA 状态。
-  ///
-  /// @param isOa 是否开放获取
-  /// @param isInDoaj 是否在 DOAJ 中
-  /// @return 当前对象
-  public VenueAggregate withOaStatus(boolean isOa, boolean isInDoaj) {
-    this.isOa = isOa;
-    this.isInDoaj = isInDoaj;
-    markDirty();
-    return this;
-  }
-
-  /// 设置当前统计快照。
-  ///
-  /// @param currentStats 统计快照
-  /// @return 当前对象
-  public VenueAggregate withCurrentStats(VenueStats currentStats) {
-    this.currentStats = currentStats;
-    markDirty();
-    return this;
-  }
-
-  /// 设置 APC 信息。
-  ///
-  /// @param apcInfo APC 信息
-  /// @return 当前对象
-  public VenueAggregate withApcInfo(ApcInfo apcInfo) {
-    this.apcInfo = apcInfo;
-    markDirty();
-    return this;
-  }
-
-  /// 设置关联学会列表。
-  ///
-  /// @param societies 学会列表
-  /// @return 当前对象
-  public VenueAggregate withSocieties(List<Society> societies) {
-    this.societies = societies != null ? new ArrayList<>(societies) : new ArrayList<>();
-    markDirty();
-    return this;
-  }
+  // ========== 属性设置方法 ==========
 
   /// 设置数据来源信息。
   ///
@@ -389,36 +167,6 @@ public class VenueAggregate extends AggregateRoot<Long> {
   public VenueAggregate withOpenAlexProvenance(
       LocalDate sourceCreatedDate, LocalDate sourceUpdatedDate) {
     this.provenance = ProvenanceInfo.forOpenAlex(sourceCreatedDate, sourceUpdatedDate);
-    markDirty();
-    return this;
-  }
-
-  /// 设置 CODEN 编码。
-  ///
-  /// @param coden CODEN 编码（6字符）
-  /// @return 当前对象
-  public VenueAggregate withCoden(String coden) {
-    this.coden = coden;
-    markDirty();
-    return this;
-  }
-
-  /// 设置出版频率。
-  ///
-  /// @param frequency 出版频率（如 Weekly/Monthly/Quarterly）
-  /// @return 当前对象
-  public VenueAggregate withFrequency(String frequency) {
-    this.frequency = frequency;
-    markDirty();
-    return this;
-  }
-
-  /// 设置语言信息。
-  ///
-  /// @param languages 语言信息值对象
-  /// @return 当前对象
-  public VenueAggregate withLanguages(VenueLanguages languages) {
-    this.languages = languages;
     markDirty();
     return this;
   }
@@ -514,20 +262,6 @@ public class VenueAggregate extends AggregateRoot<Long> {
     return venueType.isConference();
   }
 
-  /// 判断是否有宿主机构。
-  ///
-  /// @return true 如果有宿主机构
-  public boolean hasHostOrganization() {
-    return hostOrganization != null;
-  }
-
-  /// 判断是否有统计快照。
-  ///
-  /// @return true 如果有当前统计快照
-  public boolean hasStats() {
-    return currentStats != null;
-  }
-
   /// 判断是否来自 OpenAlex。
   ///
   /// @return true 如果来自 OpenAlex
@@ -540,48 +274,6 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @return true 如果来自 PubMed
   public boolean isFromPubMed() {
     return provenance != null && provenance.isFromPubMed();
-  }
-
-  /// 判断是否有出版历史信息。
-  ///
-  /// @return true 如果有出版历史
-  public boolean hasPublicationHistory() {
-    return publicationHistory != null;
-  }
-
-  /// 判断期刊是否已停刊。
-  ///
-  /// @return true 如果已停刊
-  public boolean isCeased() {
-    return publicationHistory != null && publicationHistory.ceased();
-  }
-
-  /// 判断是否有 CODEN 编码。
-  ///
-  /// @return true 如果有 CODEN
-  public boolean hasCoden() {
-    return StrUtil.isNotBlank(coden);
-  }
-
-  /// 判断是否有语言信息。
-  ///
-  /// @return true 如果有语言信息
-  public boolean hasLanguages() {
-    return languages != null && !languages.isEmpty();
-  }
-
-  /// 判断是否为英语期刊。
-  ///
-  /// @return true 如果主语言为英语
-  public boolean isEnglishJournal() {
-    return languages != null && languages.isEnglish();
-  }
-
-  /// 判断是否为中文期刊。
-  ///
-  /// @return true 如果主语言为中文
-  public boolean isChineseJournal() {
-    return languages != null && languages.isChinese();
   }
 
   // ========== 不变量验证 ==========
@@ -601,14 +293,20 @@ public class VenueAggregate extends AggregateRoot<Long> {
       throw new IllegalStateException("显示名称不能为空");
     }
 
-    // 来自 OpenAlex 的载体必须有 OpenAlex ID
-    if (provenance != null && provenance.isFromOpenAlex() && StrUtil.isBlank(openalexId)) {
-      throw new IllegalStateException("来自 OpenAlex 的载体必须提供 OpenAlex ID");
+    // 来自 OpenAlex 的载体必须有 OPENALEX 类型的标识符
+    if (provenance != null && provenance.isFromOpenAlex()) {
+      boolean hasOpenAlexId =
+          identifiers.stream().anyMatch(i -> i.type() == VenueIdentifierType.OPENALEX);
+      if (!hasOpenAlexId) {
+        throw new IllegalStateException("来自 OpenAlex 的载体必须提供 OpenAlex 标识符");
+      }
     }
   }
 
   @Override
   public String toString() {
+    String openalexId = getIdentifier(VenueIdentifierType.OPENALEX).orElse(null);
+    String issnL = getIdentifier(VenueIdentifierType.ISSN_L).orElse(null);
     return String.format(
         "VenueAggregate[id=%d, type=%s, name=%s, openalexId=%s, issnL=%s]",
         getId(), venueType.getCode(), displayName, openalexId, issnL);
