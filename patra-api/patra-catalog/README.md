@@ -112,6 +112,7 @@ patra:
   - `MeshDescriptorAggregate`：MeSH 主题词聚合根
   - `MeshQualifierAggregate`：MeSH 限定词聚合根
   - `VenueAggregate`：载体（期刊/仓储/会议）聚合根
+  - `VenueRatingAggregate`：载体评级聚合根（独立聚合，支持 JCR/CAS/Scopus）
   - `PublicationAggregate`：文献聚合根（规划中）
 
 - **实体**
@@ -123,7 +124,6 @@ patra:
 
 - **Record 值对象**（不可变，通过 `VenueRepository` 统一管理）
   - `VenueSourceData`：载体数据源溯源（存储各数据源原始/提取数据）
-  - `VenueRating`：载体评级记录（支持 JCR/中科院分区/Scopus 等多评价体系）
   - `VenueIdentifier`：载体标识符（ISSN/OpenAlex ID/NLM ID 等，保留在聚合内）
   - `VenuePublicationStats`：载体年度发文统计（发表量/被引量/OA 比例）
   - `VenueMesh`：载体 MeSH 主题词（MeSH 主题分类，来源 Serfile）
@@ -134,6 +134,7 @@ patra:
 - **值对象**
   - `MeshUI`：MeSH 唯一标识符
   - `DescriptorId`：主题词强类型 ID
+  - `VenueRatingId`：载体评级强类型 ID
   - `EntryCombination`：MeSH 组合条目（ECIN/ECOUT 映射）
   - `AllowableQualifier`：允许的限定词
   - `PharmacologicalAction`：药理作用
@@ -221,7 +222,21 @@ patra:
 | Boot | E2E 测试 | 核心流程 |
 
 ## 📝 变更日志
-1. v0.9.5 (2025-12-12)：Venue 快速访问字段优化
+1. v0.9.6 (2025-12-12)：VenueRating 升级为独立聚合根
+   - **架构决策**：将 `VenueRating` 从值对象升级为独立聚合根 `VenueRatingAggregate`
+   - **设计原则**：
+     - 独立生命周期：评级数据有独立的创建/更新/删除周期
+     - 独立一致性边界：通过 `venue_id` 逻辑关联，无物理外键
+     - 业务唯一键：`(venueId, year, ratingSystem)` 由数据库唯一索引保证
+   - **新增文件**：
+     - `VenueRatingAggregate`：载体评级聚合根（支持 JCR/CAS/Scopus 三种评价体系）
+     - `VenueRatingId`：强类型 ID 值对象（封装数据库主键）
+     - `VenueRatingRepository`：仓储接口（Domain 层端口）
+     - `VenueRatingRepositoryAdapter`：仓储实现（MyBatis-Plus）
+   - **Converter 重构**：`VenueRatingConverter` 从值对象转换改为聚合根转换
+   - **测试覆盖**：54 个聚合根单元测试 + 12 个 Converter 测试 + 27 个仓储集成测试
+
+2. v0.9.5 (2025-12-12)：Venue 快速访问字段优化
    - **CQRS 设计优化**：在 `cat_venue` 主表添加 6 个快速访问字段，优化列表展示和搜索查询性能
    - **冗余字段**（3 个）：`nlm_id`、`issn_l`、`openalex_id` 从 `cat_venue_identifier` 冗余
    - **快照字段**（3 个）：`abbreviated_title`、`primary_language`、`country_code` 从 `cat_venue_detail` 同步
