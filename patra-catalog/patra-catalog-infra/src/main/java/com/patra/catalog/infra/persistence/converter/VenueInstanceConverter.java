@@ -4,11 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;
+import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.catalog.infra.persistence.entity.VenueInstanceDO;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
 /// VenueInstanceDO 转换器。
@@ -41,8 +43,18 @@ public interface VenueInstanceConverter {
   ///
   /// @param aggregate 聚合根
   /// @return 数据库实体
+  @Mapping(target = "id", source = "id", qualifiedByName = "venueInstanceIdToLong")
   @Mapping(target = "instanceMetadata", ignore = true)
   VenueInstanceDO toDO(VenueInstanceAggregate aggregate);
+
+  /// 将 VenueInstanceId 值对象转换为 Long。
+  ///
+  /// @param id VenueInstanceId 值对象
+  /// @return Long 值，或 null
+  @Named("venueInstanceIdToLong")
+  default Long venueInstanceIdToLong(VenueInstanceId id) {
+    return id != null ? id.value() : null;
+  }
 
   /// 在 MapStruct 映射完成后，处理 instanceMetadataJson → instanceMetadata 转换。
   @AfterMapping
@@ -73,7 +85,7 @@ public interface VenueInstanceConverter {
     }
     VenueInstanceAggregate aggregate =
         VenueInstanceAggregate.restore(
-            doEntity.getId(),
+            VenueInstanceId.of(doEntity.getId()),
             doEntity.getVenueId(),
             doEntity.getVolume(),
             doEntity.getIssue(),

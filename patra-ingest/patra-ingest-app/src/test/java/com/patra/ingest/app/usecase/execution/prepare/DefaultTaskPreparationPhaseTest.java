@@ -16,6 +16,8 @@ import com.patra.ingest.domain.model.entity.TaskRun;
 import com.patra.ingest.domain.model.enums.SliceStatus;
 import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
+import com.patra.ingest.domain.model.vo.task.TaskId;
 import com.patra.ingest.domain.port.PlanSliceRepository;
 import com.patra.ingest.domain.port.TaskRepository;
 import com.patra.ingest.domain.port.TaskRunRepository;
@@ -473,7 +475,7 @@ class DefaultTaskPreparationPhaseTest {
 
   private TaskAggregate createMockTask() {
     TaskAggregate task = mock(TaskAggregate.class);
-    when(task.getId()).thenReturn(1001L);
+    when(task.getId()).thenReturn(TaskId.of(1001L));
     when(task.getSliceId()).thenReturn(3001L);
     when(task.getStatus()).thenReturn(TaskStatus.QUEUED);
     doNothing().when(task).markRunning(any(Instant.class), anyString());
@@ -482,7 +484,7 @@ class DefaultTaskPreparationPhaseTest {
 
   private PlanSliceAggregate createMockSlice() {
     PlanSliceAggregate slice = mock(PlanSliceAggregate.class);
-    when(slice.getId()).thenReturn(3001L);
+    when(slice.getId()).thenReturn(PlanSliceId.of(3001L));
     when(slice.getStatus()).thenReturn(SliceStatus.PENDING);
     doNothing().when(slice).markAssigned();
     return slice;

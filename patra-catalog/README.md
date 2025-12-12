@@ -131,10 +131,18 @@ patra:
   - `VenueIndexingHistory`：载体索引历史（MEDLINE/PMC 索引收录变迁）
   - `VenueDetail`：载体详情（出版信息、语言信息、宿主机构、OA 状态，CQRS 补充数据）
 
+- **聚合根 ID 值对象**（编译时类型安全，防止 ID 混淆）
+  - `VenueId`：载体聚合根 ID
+  - `VenueInstanceId`：载体实例聚合根 ID
+  - `MeshDescriptorId`：MeSH 主题词聚合根 ID
+  - `MeshQualifierId`：MeSH 限定词聚合根 ID
+  - `AffiliationId`：机构聚合根 ID
+  - `AuthorId`：作者聚合根 ID
+  - `PublicationId`：出版物聚合根 ID
+  - `VenueRatingId`：载体评级聚合根 ID
+
 - **值对象**
   - `MeshUI`：MeSH 唯一标识符
-  - `DescriptorId`：主题词强类型 ID
-  - `VenueRatingId`：载体评级强类型 ID
   - `EntryCombination`：MeSH 组合条目（ECIN/ECOUT 映射）
   - `AllowableQualifier`：允许的限定词
   - `PharmacologicalAction`：药理作用

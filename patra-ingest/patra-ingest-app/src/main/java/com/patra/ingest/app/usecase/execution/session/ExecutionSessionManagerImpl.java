@@ -64,7 +64,7 @@ public class ExecutionSessionManagerImpl implements ExecutionSessionManager {
   @Override
   public ExecutionSession createSession(
       TaskAggregate task, String leaseOwner, String correlationId) {
-    Long taskId = task.getId();
+    Long taskId = task.getId().value();
 
     // 1) 获取最新 attemptNo 并计算下一个
     int latestAttemptNo = taskRunRepository.getLatestAttemptNo(taskId);

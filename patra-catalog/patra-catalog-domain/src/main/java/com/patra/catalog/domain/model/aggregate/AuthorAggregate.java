@@ -2,6 +2,7 @@ package com.patra.catalog.domain.model.aggregate;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
+import com.patra.catalog.domain.model.vo.author.AuthorId;
 import com.patra.catalog.domain.model.vo.author.AuthorName;
 import com.patra.catalog.domain.model.vo.author.Orcid;
 import com.patra.catalog.domain.model.vo.common.DedupKey;
@@ -38,7 +39,7 @@ import lombok.Setter;
 /// @author linqibin
 /// @since 0.1.0
 @Getter
-public class AuthorAggregate extends AggregateRoot<Long> {
+public class AuthorAggregate extends AggregateRoot<AuthorId> {
 
   @Serial private static final long serialVersionUID = 1L;
 
@@ -100,7 +101,7 @@ public class AuthorAggregate extends AggregateRoot<Long> {
   /// @param equalContribution 同等贡献标志
   /// @param valid 信息是否有效
   private AuthorAggregate(
-      Long id,
+      AuthorId id,
       AuthorName name,
       String organizationName,
       Orcid orcid,
@@ -179,7 +180,7 @@ public class AuthorAggregate extends AggregateRoot<Long> {
   /// @param version 乐观锁版本
   /// @return 重建的聚合根
   public static AuthorAggregate restore(
-      Long id,
+      AuthorId id,
       AuthorName name,
       String organizationName,
       Orcid orcid,
@@ -333,7 +334,7 @@ public class AuthorAggregate extends AggregateRoot<Long> {
   @Override
   public String toString() {
     return String.format(
-        "AuthorAggregate[id=%d, name=%s, orcid=%s, valid=%b]",
+        "AuthorAggregate[id=%s, name=%s, orcid=%s, valid=%b]",
         getId(), getDisplayName(), hasOrcid() ? orcid.value() : "null", valid);
   }
 }

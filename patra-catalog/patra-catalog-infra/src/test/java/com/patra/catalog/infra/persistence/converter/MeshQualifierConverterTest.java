@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
+import com.patra.catalog.domain.model.vo.mesh.MeshQualifierId;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.infra.persistence.entity.MeshQualifierDO;
 import java.time.LocalDate;
@@ -68,7 +69,7 @@ class MeshQualifierConverterTest {
     // Given: 从数据库恢复的聚合根（带ID）
     MeshQualifierAggregate aggregate =
         MeshQualifierAggregate.restore(
-            12345678L, // 已存在的ID
+            MeshQualifierId.of(12345678L), // 已存在的ID
             MeshUI.qualifierOf(1),
             "immunology",
             "IM",
@@ -122,7 +123,7 @@ class MeshQualifierConverterTest {
 
     // Then: 应该正确转换所有字段
     assertThat(aggregate).isNotNull();
-    assertThat(aggregate.getId()).isEqualTo(12345678L);
+    assertThat(aggregate.getId().value()).isEqualTo(12345678L);
     assertThat(aggregate.getQualifierUi()).isEqualTo(MeshUI.qualifierOf(1));
     assertThat(aggregate.getQualifierUi().ui()).isEqualTo("Q000001");
     assertThat(aggregate.getName()).isEqualTo("immunology");

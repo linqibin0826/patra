@@ -7,6 +7,7 @@ import com.patra.common.json.JsonNodeMappings;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
+import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import com.patra.ingest.infra.persistence.entity.ScheduleInstanceDO;
 import java.time.Instant;
 import java.util.Map;
@@ -52,7 +53,7 @@ class ScheduleInstanceConverterTest {
       // Given: 创建 XXL + SCHEDULE 触发类型的 ScheduleInstanceAggregate
       ScheduleInstanceAggregate aggregate =
           ScheduleInstanceAggregate.restore(
-              100L,
+              ScheduleInstanceId.of(100L),
               Scheduler.XXL,
               SCHEDULER_JOB_ID,
               SCHEDULER_LOG_ID,
@@ -89,7 +90,7 @@ class ScheduleInstanceConverterTest {
       // Given: 创建 SPRING + MANUAL 触发类型的 ScheduleInstanceAggregate
       ScheduleInstanceAggregate aggregate =
           ScheduleInstanceAggregate.restore(
-              200L,
+              ScheduleInstanceId.of(200L),
               Scheduler.SPRING,
               SCHEDULER_JOB_ID,
               SCHEDULER_LOG_ID,
@@ -113,7 +114,7 @@ class ScheduleInstanceConverterTest {
       // Given: 创建 QUARTZ + API 触发类型的 ScheduleInstanceAggregate
       ScheduleInstanceAggregate aggregate =
           ScheduleInstanceAggregate.restore(
-              300L,
+              ScheduleInstanceId.of(300L),
               Scheduler.QUARTZ,
               SCHEDULER_JOB_ID,
               SCHEDULER_LOG_ID,
@@ -137,7 +138,7 @@ class ScheduleInstanceConverterTest {
       // XXL
       ScheduleInstanceAggregate xxl =
           ScheduleInstanceAggregate.restore(
-              1L,
+              ScheduleInstanceId.of(1L),
               Scheduler.XXL,
               SCHEDULER_JOB_ID,
               SCHEDULER_LOG_ID,
@@ -151,7 +152,7 @@ class ScheduleInstanceConverterTest {
       // SPRING
       ScheduleInstanceAggregate spring =
           ScheduleInstanceAggregate.restore(
-              2L,
+              ScheduleInstanceId.of(2L),
               Scheduler.SPRING,
               SCHEDULER_JOB_ID,
               SCHEDULER_LOG_ID,
@@ -165,7 +166,7 @@ class ScheduleInstanceConverterTest {
       // QUARTZ
       ScheduleInstanceAggregate quartz =
           ScheduleInstanceAggregate.restore(
-              3L,
+              ScheduleInstanceId.of(3L),
               Scheduler.QUARTZ,
               SCHEDULER_JOB_ID,
               SCHEDULER_LOG_ID,
@@ -183,7 +184,7 @@ class ScheduleInstanceConverterTest {
       // SCHEDULE
       ScheduleInstanceAggregate schedule =
           ScheduleInstanceAggregate.restore(
-              1L,
+              ScheduleInstanceId.of(1L),
               Scheduler.XXL,
               SCHEDULER_JOB_ID,
               SCHEDULER_LOG_ID,
@@ -197,7 +198,7 @@ class ScheduleInstanceConverterTest {
       // MANUAL
       ScheduleInstanceAggregate manual =
           ScheduleInstanceAggregate.restore(
-              2L,
+              ScheduleInstanceId.of(2L),
               Scheduler.XXL,
               SCHEDULER_JOB_ID,
               SCHEDULER_LOG_ID,
@@ -211,7 +212,7 @@ class ScheduleInstanceConverterTest {
       // API
       ScheduleInstanceAggregate api =
           ScheduleInstanceAggregate.restore(
-              3L,
+              ScheduleInstanceId.of(3L),
               Scheduler.XXL,
               SCHEDULER_JOB_ID,
               SCHEDULER_LOG_ID,
@@ -229,7 +230,7 @@ class ScheduleInstanceConverterTest {
       // Given: triggerParams 为空 Map 的 ScheduleInstanceAggregate
       ScheduleInstanceAggregate aggregate =
           ScheduleInstanceAggregate.restore(
-              400L,
+              ScheduleInstanceId.of(400L),
               Scheduler.XXL,
               SCHEDULER_JOB_ID,
               SCHEDULER_LOG_ID,
@@ -277,7 +278,7 @@ class ScheduleInstanceConverterTest {
 
       // Then: 验证转换结果
       assertThat(result).isNotNull();
-      assertThat(result.getId()).isEqualTo(100L);
+      assertThat(result.getId().value()).isEqualTo(100L);
       assertThat(result.getScheduler()).isEqualTo(Scheduler.XXL);
       assertThat(result.getSchedulerJobId()).isEqualTo(SCHEDULER_JOB_ID);
       assertThat(result.getSchedulerLogId()).isEqualTo(SCHEDULER_LOG_ID);
@@ -433,7 +434,7 @@ class ScheduleInstanceConverterTest {
       // Given: 原始 Aggregate
       ScheduleInstanceAggregate original =
           ScheduleInstanceAggregate.restore(
-              100L,
+              ScheduleInstanceId.of(100L),
               Scheduler.XXL,
               SCHEDULER_JOB_ID,
               SCHEDULER_LOG_ID,
@@ -448,7 +449,7 @@ class ScheduleInstanceConverterTest {
       ScheduleInstanceAggregate restored = converter.toDomain(entity);
 
       // Then: 验证一致性
-      assertThat(restored.getId()).isEqualTo(original.getId());
+      assertThat(restored.getId().value()).isEqualTo(original.getId().value());
       assertThat(restored.getScheduler()).isEqualTo(original.getScheduler());
       assertThat(restored.getSchedulerJobId()).isEqualTo(original.getSchedulerJobId());
       assertThat(restored.getSchedulerLogId()).isEqualTo(original.getSchedulerLogId());
@@ -466,7 +467,7 @@ class ScheduleInstanceConverterTest {
       // Given: 原始 Aggregate
       ScheduleInstanceAggregate original =
           ScheduleInstanceAggregate.restore(
-              200L,
+              ScheduleInstanceId.of(200L),
               Scheduler.SPRING,
               SCHEDULER_JOB_ID,
               SCHEDULER_LOG_ID,

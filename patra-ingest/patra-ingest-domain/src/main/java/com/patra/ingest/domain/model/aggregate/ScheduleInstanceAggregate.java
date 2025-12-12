@@ -4,6 +4,7 @@ import com.patra.common.domain.AggregateRoot;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
+import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
@@ -33,7 +34,7 @@ import lombok.EqualsAndHashCode;
 /// @since 0.1.0
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
+public class ScheduleInstanceAggregate extends AggregateRoot<ScheduleInstanceId> {
 
   /// 调度器类型（如：XXL_JOB、SPRING_SCHEDULER）。
   private final Scheduler scheduler;
@@ -57,7 +58,7 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
   private final Map<String, Object> triggerParams;
 
   private ScheduleInstanceAggregate(
-      Long id,
+      ScheduleInstanceId id,
       Scheduler scheduler,
       String schedulerJobId,
       String schedulerLogId,
@@ -97,7 +98,7 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
   }
 
   public static ScheduleInstanceAggregate restore(
-      Long id,
+      ScheduleInstanceId id,
       Scheduler scheduler,
       String schedulerJobId,
       String schedulerLogId,

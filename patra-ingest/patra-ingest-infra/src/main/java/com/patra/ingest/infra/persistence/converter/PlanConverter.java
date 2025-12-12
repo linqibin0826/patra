@@ -8,6 +8,7 @@ import com.patra.ingest.domain.exception.InfrastructureException;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.PlanStatus;
+import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import com.patra.ingest.infra.persistence.entity.PlanDO;
 import java.util.Map;
@@ -28,6 +29,7 @@ import org.mapstruct.ReportingPolicy;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface PlanConverter {
 
+  @Mapping(target = "id", source = "id", qualifiedByName = "planIdToLong")
   @Mapping(
       target = "exprProtoSnapshot",
       expression =
@@ -77,7 +79,7 @@ public interface PlanConverter {
     long version = entity.getVersion() == null ? 0L : entity.getVersion();
     WindowSpec windowSpec = jsonToWindowSpec(entity.getWindowSpec());
     return PlanAggregate.restore(
-        entity.getId(),
+        PlanId.of(entity.getId()),
         entity.getScheduleInstanceId(),
         entity.getPlanKey(),
         ProvenanceCode.parse(entity.getProvenanceCode()),
@@ -91,6 +93,11 @@ public interface PlanConverter {
         JsonNodeMappings.jsonNodeToString(entity.getSliceParams()),
         status,
         version);
+  }
+
+  @Named("planIdToLong")
+  static Long planIdToLong(PlanId id) {
+    return id != null ? id.value() : null;
   }
 
   @Named("planStatusToCode")

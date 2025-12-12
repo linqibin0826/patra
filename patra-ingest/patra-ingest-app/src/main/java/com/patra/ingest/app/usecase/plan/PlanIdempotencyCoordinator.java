@@ -50,8 +50,8 @@ public class PlanIdempotencyCoordinator {
     logDuplicatePlanDetection(existingPlan, planKey);
 
     List<PlanSliceAggregate> existingSlices =
-        planSliceRepository.findByPlanId(existingPlan.getId());
-    List<TaskAggregate> existingTasks = taskRepository.findByPlanId(existingPlan.getId());
+        planSliceRepository.findByPlanId(existingPlan.getId().value());
+    List<TaskAggregate> existingTasks = taskRepository.findByPlanId(existingPlan.getId().value());
     List<TaskAggregate> retryTasks = prepareTasksForRetry(existingTasks);
 
     if (!retryTasks.isEmpty()) {

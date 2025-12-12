@@ -40,7 +40,7 @@ public class MeshDescriptorConverter {
     }
 
     MeshDescriptorDO dataObject = new MeshDescriptorDO();
-    dataObject.setId(aggregate.getId());
+    dataObject.setId(aggregate.getId() != null ? aggregate.getId().value() : null);
     dataObject.setUi(aggregate.getUi().ui());
     dataObject.setName(aggregate.getName());
     dataObject.setDescriptorClass(aggregate.getDescriptorClass().getCode());

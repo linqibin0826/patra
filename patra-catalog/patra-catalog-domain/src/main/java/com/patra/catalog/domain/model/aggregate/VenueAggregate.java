@@ -5,6 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
+import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.common.domain.AggregateRoot;
 import java.io.Serial;
@@ -49,7 +50,7 @@ import lombok.Getter;
 /// @author linqibin
 /// @since 0.1.0
 @Getter
-public class VenueAggregate extends AggregateRoot<Long> {
+public class VenueAggregate extends AggregateRoot<VenueId> {
 
   @Serial private static final long serialVersionUID = 1L;
 
@@ -72,7 +73,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
   /// @param id 主键 ID（新建时为 null）
   /// @param venueType 载体类型
   /// @param displayName 显示名称
-  private VenueAggregate(Long id, VenueType venueType, String displayName) {
+  private VenueAggregate(VenueId id, VenueType venueType, String displayName) {
     super(id);
 
     Assert.notNull(venueType, "载体类型不能为空");
@@ -135,13 +136,13 @@ public class VenueAggregate extends AggregateRoot<Long> {
 
   /// 从持久化状态重建聚合根（由 Repository 使用）。
   ///
-  /// @param id 主键 ID
+  /// @param id 主键 ID（VenueId 值对象）
   /// @param venueType 载体类型
   /// @param displayName 显示名称
   /// @param version 乐观锁版本
   /// @return 重建的聚合根
   public static VenueAggregate restore(
-      Long id, VenueType venueType, String displayName, Long version) {
+      VenueId id, VenueType venueType, String displayName, Long version) {
     VenueAggregate aggregate = new VenueAggregate(id, venueType, displayName);
     aggregate.assignVersion(version);
     return aggregate;
@@ -308,7 +309,7 @@ public class VenueAggregate extends AggregateRoot<Long> {
     String openalexId = getIdentifier(VenueIdentifierType.OPENALEX).orElse(null);
     String issnL = getIdentifier(VenueIdentifierType.ISSN_L).orElse(null);
     return String.format(
-        "VenueAggregate[id=%d, type=%s, name=%s, openalexId=%s, issnL=%s]",
+        "VenueAggregate[id=%s, type=%s, name=%s, openalexId=%s, issnL=%s]",
         getId(), venueType.getCode(), displayName, openalexId, issnL);
   }
 }

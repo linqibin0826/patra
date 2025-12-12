@@ -35,8 +35,12 @@ import com.patra.ingest.domain.model.enums.PlanStatus;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
+import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.plan.PlanTriggerNorm;
 import com.patra.ingest.domain.model.vo.plan.PlannerWindow;
+import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
+import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
+import com.patra.ingest.domain.model.vo.task.TaskId;
 import com.patra.ingest.domain.port.CursorRepository;
 import com.patra.ingest.domain.port.PatraRegistryPort;
 import com.patra.ingest.domain.port.PlanRepository;
@@ -134,9 +138,9 @@ class PlanIngestionHandlerTest {
       PlanIngestionResult expectedResult = createIngestionResult();
 
       // Mock 依赖
-      when(schedule.getId()).thenReturn(1L);
+      when(schedule.getId()).thenReturn(ScheduleInstanceId.of(1L));
       when(plan.getPlanKey()).thenReturn("plan-key-001");
-      when(plan.getId()).thenReturn(100L);
+      when(plan.getId()).thenReturn(PlanId.of(100L));
       when(plan.getProvenanceCode()).thenReturn(ProvenanceCode.PUBMED);
       when(plan.getOperationCode()).thenReturn(OperationCode.HARVEST.getCode());
       when(plan.getStatus()).thenReturn(PlanStatus.READY);
@@ -270,7 +274,7 @@ class PlanIngestionHandlerTest {
       PlanAggregate existingPlan = plan;
       PlanIngestionResult expectedResult = createIngestionResult();
 
-      when(schedule.getId()).thenReturn(1L);
+      when(schedule.getId()).thenReturn(ScheduleInstanceId.of(1L));
       when(persistenceCoordinator.persistScheduleInstance(command)).thenReturn(schedule);
       when(patraRegistryPort.fetchConfig(ProvenanceCode.PUBMED, OperationCode.HARVEST))
           .thenReturn(configSnapshot);
@@ -315,7 +319,7 @@ class PlanIngestionHandlerTest {
       // Given
       PlanIngestionCommand command = createValidCommand();
 
-      when(schedule.getId()).thenReturn(1L);
+      when(schedule.getId()).thenReturn(ScheduleInstanceId.of(1L));
       when(persistenceCoordinator.persistScheduleInstance(command)).thenReturn(schedule);
       when(patraRegistryPort.fetchConfig(any(), any())).thenReturn(configSnapshot);
       when(cursorRepository.findLatestGlobalTimeWatermark(any(ProvenanceCode.class), anyString()))
@@ -335,7 +339,7 @@ class PlanIngestionHandlerTest {
       // Given
       PlanIngestionCommand command = createValidCommand();
 
-      when(schedule.getId()).thenReturn(1L);
+      when(schedule.getId()).thenReturn(ScheduleInstanceId.of(1L));
       when(persistenceCoordinator.persistScheduleInstance(command)).thenReturn(schedule);
       when(patraRegistryPort.fetchConfig(any(), any())).thenReturn(configSnapshot);
       when(cursorRepository.findLatestGlobalTimeWatermark(any(ProvenanceCode.class), anyString()))
@@ -357,7 +361,7 @@ class PlanIngestionHandlerTest {
       PlanValidationException validationException =
           new PlanValidationException("背压超过阈值", PlanValidationException.Reason.QUEUE_BACKPRESSURE);
 
-      when(schedule.getId()).thenReturn(1L);
+      when(schedule.getId()).thenReturn(ScheduleInstanceId.of(1L));
       when(persistenceCoordinator.persistScheduleInstance(command)).thenReturn(schedule);
       when(patraRegistryPort.fetchConfig(any(), any())).thenReturn(configSnapshot);
       when(cursorRepository.findLatestGlobalTimeWatermark(
@@ -396,7 +400,7 @@ class PlanIngestionHandlerTest {
               Collections.emptyList(),
               PlanAssemblyResult.AssemblyStatus.FAILED);
 
-      when(schedule.getId()).thenReturn(1L);
+      when(schedule.getId()).thenReturn(ScheduleInstanceId.of(1L));
       when(persistenceCoordinator.persistScheduleInstance(command)).thenReturn(schedule);
       when(patraRegistryPort.fetchConfig(any(), any())).thenReturn(configSnapshot);
       when(cursorRepository.findLatestGlobalTimeWatermark(
@@ -422,7 +426,7 @@ class PlanIngestionHandlerTest {
       // Given
       PlanIngestionCommand command = createValidCommand();
 
-      when(schedule.getId()).thenReturn(1L);
+      when(schedule.getId()).thenReturn(ScheduleInstanceId.of(1L));
       when(persistenceCoordinator.persistScheduleInstance(command)).thenReturn(schedule);
       when(patraRegistryPort.fetchConfig(any(), any())).thenReturn(configSnapshot);
       when(cursorRepository.findLatestGlobalTimeWatermark(
@@ -451,7 +455,7 @@ class PlanIngestionHandlerTest {
       PlanPersistenceException persistenceException =
           new PlanPersistenceException(PlanPersistenceException.Stage.PLAN, "持久化计划失败", null);
 
-      when(schedule.getId()).thenReturn(1L);
+      when(schedule.getId()).thenReturn(ScheduleInstanceId.of(1L));
       when(persistenceCoordinator.persistScheduleInstance(command)).thenReturn(schedule);
       when(patraRegistryPort.fetchConfig(any(), any())).thenReturn(configSnapshot);
       when(cursorRepository.findLatestGlobalTimeWatermark(
@@ -466,7 +470,7 @@ class PlanIngestionHandlerTest {
       when(planAssembler.assemble(any())).thenReturn(assemblyResult);
       when(plan.getPlanKey()).thenReturn("plan-key-001");
       when(planRepository.findByPlanKey(anyString())).thenReturn(Optional.empty());
-      when(plan.getId()).thenReturn(100L);
+      when(plan.getId()).thenReturn(PlanId.of(100L));
       when(plan.getProvenanceCode()).thenReturn(ProvenanceCode.PUBMED);
       when(plan.getOperationCode()).thenReturn(OperationCode.HARVEST.getCode());
       when(persistenceCoordinator.savePlan(plan)).thenThrow(persistenceException);
@@ -594,13 +598,13 @@ class PlanIngestionHandlerTest {
 
   /// 设置持久化相关的 Mocks。
   private void setupPersistenceMocks() {
-    when(schedule.getId()).thenReturn(1L);
-    when(plan.getId()).thenReturn(100L);
+    when(schedule.getId()).thenReturn(ScheduleInstanceId.of(1L));
+    when(plan.getId()).thenReturn(PlanId.of(100L));
     when(plan.getProvenanceCode()).thenReturn(ProvenanceCode.PUBMED);
     when(plan.getOperationCode()).thenReturn(OperationCode.HARVEST.getCode());
     when(plan.getStatus()).thenReturn(PlanStatus.READY);
-    when(slice.getId()).thenReturn(10L);
-    when(task.getId()).thenReturn(1L);
+    when(slice.getId()).thenReturn(PlanSliceId.of(10L));
+    when(task.getId()).thenReturn(TaskId.of(1L));
 
     when(persistenceCoordinator.savePlan(plan)).thenReturn(plan);
     when(persistenceCoordinator.persistSlices(eq(plan), any())).thenReturn(List.of(slice));

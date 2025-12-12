@@ -272,11 +272,11 @@ public class VenuePubmedEnrichHandler
         // 情况 A：匹配到已有期刊 → 富化更新
         // ═══════════════════════════════════════════════════════════════════════
         VenueAggregate venue = matched.get();
-        if (!processedVenueIds.contains(venue.getId())) {
+        if (!processedVenueIds.contains(venue.getId().value())) {
           // 首次处理该期刊：更新标识符（CQRS 最小聚合）
           updateVenueIdentifiers(venue, record);
           result.addUpdate(venue);
-          processedVenueIds.add(venue.getId());
+          processedVenueIds.add(venue.getId().value());
           // 构建 VenueDetail（非核心字段存储在独立表）
           VenueDetail detail = buildVenueDetailFromRecord(record);
           // 收集子实体（Detail、MeSH、关系、索引历史），稍后批量持久化
@@ -372,7 +372,7 @@ public class VenuePubmedEnrichHandler
   private <T> Map<Long, List<T>> toVenueIdMap(Map<VenueAggregate, List<T>> aggregateMap) {
     Map<Long, List<T>> result = new HashMap<>();
     for (Map.Entry<VenueAggregate, List<T>> entry : aggregateMap.entrySet()) {
-      Long venueId = entry.getKey().getId();
+      Long venueId = entry.getKey().getId() != null ? entry.getKey().getId().value() : null;
       if (venueId != null && !entry.getValue().isEmpty()) {
         result.put(venueId, entry.getValue());
       }
@@ -389,7 +389,7 @@ public class VenuePubmedEnrichHandler
   private <T> Map<Long, T> toVenueIdDetailMap(Map<VenueAggregate, T> aggregateMap) {
     Map<Long, T> result = new HashMap<>();
     for (Map.Entry<VenueAggregate, T> entry : aggregateMap.entrySet()) {
-      Long venueId = entry.getKey().getId();
+      Long venueId = entry.getKey().getId() != null ? entry.getKey().getId().value() : null;
       if (venueId != null && entry.getValue() != null) {
         result.put(venueId, entry.getValue());
       }

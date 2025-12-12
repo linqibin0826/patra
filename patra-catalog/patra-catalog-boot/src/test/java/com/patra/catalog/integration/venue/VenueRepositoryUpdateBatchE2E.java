@@ -500,10 +500,10 @@ class VenueRepositoryUpdateBatchE2E {
               .countryCode("US")
               .languages(VenueLanguages.ofSingleLanguage("eng"))
               .build();
-      venueRepository.replaceDetailsBatch(Map.of(venue.getId(), detail));
+      venueRepository.replaceDetailsBatch(Map.of(venue.getId().value(), detail));
 
       // Then: 验证主表的快速访问字段已同步
-      VenueDO saved = venueMapper.selectById(venue.getId());
+      VenueDO saved = venueMapper.selectById(venue.getId().value());
       assertThat(saved.getAbbreviatedTitle()).isEqualTo("J. A.");
       assertThat(saved.getCountryCode()).isEqualTo("US");
       assertThat(saved.getPrimaryLanguage()).isEqualTo("eng");
@@ -518,10 +518,10 @@ class VenueRepositoryUpdateBatchE2E {
 
       // When: 保存一个空的 VenueDetail（所有字段为 null）
       VenueDetail emptyDetail = VenueDetail.builder().build();
-      venueRepository.replaceDetailsBatch(Map.of(venue.getId(), emptyDetail));
+      venueRepository.replaceDetailsBatch(Map.of(venue.getId().value(), emptyDetail));
 
       // Then: 快速访问字段应被设置为 null（因为 Detail 中没有这些值）
-      VenueDO saved = venueMapper.selectById(venue.getId());
+      VenueDO saved = venueMapper.selectById(venue.getId().value());
       assertThat(saved.getAbbreviatedTitle()).isNull();
       assertThat(saved.getCountryCode()).isNull();
       assertThat(saved.getPrimaryLanguage()).isNull();

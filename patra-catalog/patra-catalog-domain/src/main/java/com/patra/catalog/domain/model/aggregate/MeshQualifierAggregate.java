@@ -2,6 +2,7 @@ package com.patra.catalog.domain.model.aggregate;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
+import com.patra.catalog.domain.model.vo.mesh.MeshQualifierId;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.common.domain.AggregateRoot;
 import java.io.Serial;
@@ -50,7 +51,7 @@ import lombok.Getter;
 /// @author linqibin
 /// @since 0.1.0
 @Getter
-public class MeshQualifierAggregate extends AggregateRoot<Long> {
+public class MeshQualifierAggregate extends AggregateRoot<MeshQualifierId> {
 
   @Serial private static final long serialVersionUID = 1L;
 
@@ -100,7 +101,8 @@ public class MeshQualifierAggregate extends AggregateRoot<Long> {
   /// @param qualifierUi 限定词UI
   /// @param name 限定词名称
   /// @param abbreviation 限定词缩写
-  private MeshQualifierAggregate(Long id, MeshUI qualifierUi, String name, String abbreviation) {
+  private MeshQualifierAggregate(
+      MeshQualifierId id, MeshUI qualifierUi, String name, String abbreviation) {
     super(id);
 
     // 必填字段验证
@@ -156,7 +158,7 @@ public class MeshQualifierAggregate extends AggregateRoot<Long> {
   /// @param treeNumbers 树形编号列表
   /// @return 重建的聚合根
   public static MeshQualifierAggregate restore(
-      Long id,
+      MeshQualifierId id,
       MeshUI qualifierUi,
       String name,
       String abbreviation,

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
+import com.patra.ingest.domain.model.vo.task.TaskId;
 import com.patra.ingest.domain.port.TaskRepository;
 import com.patra.ingest.infra.persistence.converter.TaskConverter;
 import com.patra.ingest.infra.persistence.entity.TaskDO;
@@ -60,7 +61,7 @@ public class TaskRepositoryAdapter implements TaskRepository {
             "task insert planId={} idemKey={}", entity.getPlanId(), entity.getIdempotentKey());
       }
       mapper.insert(entity);
-      task.assignId(entity.getId());
+      task.assignId(TaskId.of(entity.getId()));
     } else {
       if (log.isDebugEnabled()) {
         log.debug(
@@ -111,7 +112,7 @@ public class TaskRepositoryAdapter implements TaskRepository {
       for (int i = 0; i < toInsert.size(); i++) {
         TaskAggregate task = toInsert.get(i);
         TaskDO entity = insertEntities.get(i);
-        task.assignId(entity.getId());
+        task.assignId(TaskId.of(entity.getId()));
         task.assignVersion(entity.getVersion() != null ? entity.getVersion() : 0L);
       }
 

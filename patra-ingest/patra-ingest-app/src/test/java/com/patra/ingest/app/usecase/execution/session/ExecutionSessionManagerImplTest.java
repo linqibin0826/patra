@@ -12,6 +12,7 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.execution.lease.HeartbeatRenewalService;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.entity.TaskRun;
+import com.patra.ingest.domain.model.vo.task.TaskId;
 import com.patra.ingest.domain.port.TaskRepository;
 import com.patra.ingest.domain.port.TaskRunRepository;
 import java.time.Duration;
@@ -259,7 +260,7 @@ class ExecutionSessionManagerImplTest {
   private TaskAggregate createTask() {
     // 使用静态工厂方法 restore() 创建测试用的 TaskAggregate
     return TaskAggregate.restore(
-        TASK_ID,
+        TaskId.of(TASK_ID),
         null, // scheduleInstanceId
         null, // planId
         null, // sliceId

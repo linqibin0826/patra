@@ -17,6 +17,8 @@ import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.TaskStatus;
+import com.patra.ingest.domain.model.vo.plan.PlanId;
+import com.patra.ingest.domain.model.vo.task.TaskId;
 import com.patra.ingest.domain.port.PlanSliceRepository;
 import com.patra.ingest.domain.port.TaskRepository;
 import java.time.Instant;
@@ -89,7 +91,7 @@ class PlanIdempotencyCoordinatorTest {
       TaskQueuedEvent queuedEvent = createTaskQueuedEvent(1L);
       PlanIngestionResult expectedResult = createIngestionResult();
 
-      when(existingPlan.getId()).thenReturn(planId);
+      when(existingPlan.getId()).thenReturn(PlanId.of(planId));
       when(existingPlan.getProvenanceCode()).thenReturn(ProvenanceCode.PUBMED);
       when(existingPlan.getOperationCode()).thenReturn(OperationCode.HARVEST.getCode());
       when(planSliceRepository.findByPlanId(planId)).thenReturn(slices);
@@ -129,7 +131,7 @@ class PlanIdempotencyCoordinatorTest {
 
       PlanIngestionResult expectedResult = createIngestionResult();
 
-      when(existingPlan.getId()).thenReturn(planId);
+      when(existingPlan.getId()).thenReturn(PlanId.of(planId));
       when(existingPlan.getProvenanceCode()).thenReturn(ProvenanceCode.PUBMED);
       when(existingPlan.getOperationCode()).thenReturn(OperationCode.HARVEST.getCode());
       when(planSliceRepository.findByPlanId(planId)).thenReturn(slices);
@@ -168,7 +170,7 @@ class PlanIdempotencyCoordinatorTest {
       TaskQueuedEvent event2 = createTaskQueuedEvent(2L);
       PlanIngestionResult expectedResult = createIngestionResult();
 
-      when(existingPlan.getId()).thenReturn(planId);
+      when(existingPlan.getId()).thenReturn(PlanId.of(planId));
       when(existingPlan.getProvenanceCode()).thenReturn(ProvenanceCode.PUBMED);
       when(existingPlan.getOperationCode()).thenReturn(OperationCode.HARVEST.getCode());
       when(planSliceRepository.findByPlanId(planId)).thenReturn(slices);
@@ -221,7 +223,7 @@ class PlanIdempotencyCoordinatorTest {
       List<TaskAggregate> tasks =
           List.of(failedTask, successTask, runningTask, queuedTask, pendingTask);
 
-      when(existingPlan.getId()).thenReturn(planId);
+      when(existingPlan.getId()).thenReturn(PlanId.of(planId));
       when(planSliceRepository.findByPlanId(planId)).thenReturn(Collections.emptyList());
       when(taskRepository.findByPlanId(planId)).thenReturn(tasks);
       when(publishingCoordinator.collectQueuedEvents(List.of(failedTask)))
@@ -258,7 +260,7 @@ class PlanIdempotencyCoordinatorTest {
 
       List<TaskAggregate> tasks = List.of(failedTask1, failedTask2, failedTask3);
 
-      when(existingPlan.getId()).thenReturn(planId);
+      when(existingPlan.getId()).thenReturn(PlanId.of(planId));
       when(planSliceRepository.findByPlanId(planId)).thenReturn(Collections.emptyList());
       when(taskRepository.findByPlanId(planId)).thenReturn(tasks);
       when(publishingCoordinator.collectQueuedEvents(any())).thenReturn(Collections.emptyList());
@@ -287,7 +289,7 @@ class PlanIdempotencyCoordinatorTest {
       Long planId = 100L;
       String planKey = "plan-key-001";
 
-      when(existingPlan.getId()).thenReturn(planId);
+      when(existingPlan.getId()).thenReturn(PlanId.of(planId));
       when(planSliceRepository.findByPlanId(planId)).thenReturn(Collections.emptyList());
       when(taskRepository.findByPlanId(planId)).thenReturn(Collections.emptyList());
       when(publishingCoordinator.buildIngestionResult(
@@ -314,7 +316,7 @@ class PlanIdempotencyCoordinatorTest {
 
       TaskAggregate task = createMockTask(1L, TaskStatus.SUCCEEDED);
 
-      when(existingPlan.getId()).thenReturn(planId);
+      when(existingPlan.getId()).thenReturn(PlanId.of(planId));
       when(planSliceRepository.findByPlanId(planId)).thenReturn(Collections.emptyList());
       when(taskRepository.findByPlanId(planId)).thenReturn(List.of(task));
       when(publishingCoordinator.buildIngestionResult(
@@ -340,7 +342,7 @@ class PlanIdempotencyCoordinatorTest {
       // Given
       Long planId = 100L;
 
-      when(existingPlan.getId()).thenReturn(planId);
+      when(existingPlan.getId()).thenReturn(PlanId.of(planId));
       when(planSliceRepository.findByPlanId(planId)).thenReturn(Collections.emptyList());
       when(taskRepository.findByPlanId(planId)).thenReturn(Collections.emptyList());
       when(publishingCoordinator.buildIngestionResult(any(), any(), any(), any()))
@@ -363,7 +365,7 @@ class PlanIdempotencyCoordinatorTest {
       TaskAggregate task1 = createMockTask(1L, TaskStatus.FAILED);
       TaskAggregate task2 = createMockTask(2L, TaskStatus.FAILED);
 
-      when(existingPlan.getId()).thenReturn(planId);
+      when(existingPlan.getId()).thenReturn(PlanId.of(planId));
       when(planSliceRepository.findByPlanId(planId)).thenReturn(Collections.emptyList());
       when(taskRepository.findByPlanId(planId)).thenReturn(List.of(task1, task2));
       when(publishingCoordinator.collectQueuedEvents(any())).thenReturn(Collections.emptyList());
@@ -384,7 +386,7 @@ class PlanIdempotencyCoordinatorTest {
   /// 创建 Mock TaskAggregate。
   private TaskAggregate createMockTask(Long id, TaskStatus status) {
     TaskAggregate task = org.mockito.Mockito.mock(TaskAggregate.class);
-    when(task.getId()).thenReturn(id);
+    when(task.getId()).thenReturn(TaskId.of(id));
     when(task.getStatus()).thenReturn(status);
     return task;
   }

@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
+import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import java.util.List;
 import java.util.Optional;
@@ -152,7 +153,7 @@ class VenueAggregateTest {
     @DisplayName("应该正确从持久化状态重建聚合根")
     void shouldRestoreFromPersistedState() {
       // Given
-      Long id = 123L;
+      VenueId id = VenueId.of(123L);
       Long version = 5L;
 
       // When

@@ -155,9 +155,9 @@ public class PubmedDataAdapter {
 
 **API 常量来源**: 所有参数键、端点路径和参数值枚举统一维护在 **`patra-common-provenance-api`** 模块：
 - 参数键常量: `PubMedParamKeys`、`EpmcParamKeys`、`CrossrefParamKeys`
-- 端点路径常量: `PubMedEndpoints`（已废弃，推荐使用 `PubMedOperation`）、`EpmcEndpoints`、`CrossrefEndpoints`
+- 端点路径常量: `CrossrefEndpoints`
 - 参数值枚举: `RetMode`、`RetType`、`UseHistory`、`DateType`、`Format`、`ResultType` 等
-- 操作枚举: `PubMedOperation`、`EpmcOperation`（推荐使用，封装操作名称+端点+描述）
+- 操作枚举: `PubMedOperation`、`EpmcOperation`（封装操作名称+端点+描述）
 
 参考 [patra-common-provenance-api/README.md](../patra-common/patra-common-provenance-api/README.md) 了解完整的 API 常量使用指南。
 
@@ -764,20 +764,9 @@ public class CustomProvenanceDataProvider implements ProvenanceDataProvider {
 6. `convertReferences()` - 参考文献列表
 7. `convertRelatedItems()` - 相关条目
 
-**影响范围**：
-- ✅ 使用 `PubmedPublicationConverter.toCanonicalPublication()` 的代码无需修改
-- ⚠️ 访问 `publication.getSubjects()` 的代码需要更新为 `publication.getMeshHeadings()`
-- ⚠️ 访问 `publication.getPagination()` 的代码需要更新为访问结构化对象字段
-- ✅ 新增字段向后兼容（可选字段，返回 null 时不影响现有逻辑）
-
-**迁移指南**：
+**使用示例**：
 
 ```java
-// 旧代码（已废弃）
-List<Subject> subjects = publication.getSubjects();
-String pagination = publication.getPagination();
-
-// 新代码（推荐）
 // 1. 使用 MeSH 特定字段
 List<MeshHeading> meshHeadings = publication.getMeshHeadings();
 List<SupplMeshName> supplMeshNames = publication.getSupplMeshNames();
@@ -790,7 +779,7 @@ if (pagination != null) {
     String medlinePgn = pagination.getMedlinePgn();
 }
 
-// 3. 使用新增的医学领域字段
+// 3. 使用医学领域字段
 List<Investigator> investigators = publication.getInvestigators();
 List<PersonalNameSubject> personalNameSubjects = publication.getPersonalNameSubjects();
 List<Reference> references = publication.getReferences();
@@ -868,26 +857,21 @@ PubMedClient client = new PubMedClientAdapter(
    - 新位置: `com.patra.common.provenance.api.params.EpmcParamKeys`
 
 2. **新增功能**:
-   - 端点路径常量: `PubMedEndpoints`、`EpmcEndpoints`、`CrossrefEndpoints`（已废弃）
-   - 操作枚举: `PubMedOperation`、`EpmcOperation`（推荐使用，封装操作名称+端点+描述）
+   - 端点路径常量: `CrossrefEndpoints`
+   - 操作枚举: `PubMedOperation`、`EpmcOperation`（封装操作名称+端点+描述）
    - 参数值枚举: `RetMode`、`RetType`、`UseHistory`、`DateType`、`Format`、`ResultType`
 
-3. **兼容性**:
+3. **依赖关系**:
    - ✅ `patra-spring-boot-starter-provenance` 自动依赖 `patra-common-provenance-api`
-   - ✅ 旧代码无需修改，但建议更新导入语句
 
-**迁移指南**:
+**使用示例**:
 
 ```java
-// 旧导入（已废弃，但仍兼容）
-import com.patra.starter.provenance.pubmed.request.PubMedParamKeys;
-
-// 新导入（推荐）
 import com.patra.common.provenance.api.params.PubMedParamKeys;
 import com.patra.common.provenance.api.values.pubmed.RetMode;
 import com.patra.common.provenance.api.constants.PubMedOperation;
 
-// 使用类型安全的枚举（推荐）
+// 使用类型安全的枚举
 params.put(PubMedParamKeys.RETMODE, RetMode.JSON.value());
 ```
 

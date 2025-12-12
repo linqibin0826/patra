@@ -89,9 +89,9 @@ public class PlanPublishingCoordinator {
       List<PlanSliceAggregate> slices,
       List<TaskAggregate> tasks) {
     return new PlanIngestionResult(
-        schedule.getId(),
-        plan.getId(),
-        slices.stream().map(PlanSliceAggregate::getId).collect(Collectors.toList()),
+        schedule.getId().value(),
+        plan.getId().value(),
+        slices.stream().map(s -> s.getId().value()).collect(Collectors.toList()),
         tasks.size(),
         plan.getStatus().name());
   }
@@ -111,9 +111,9 @@ public class PlanPublishingCoordinator {
       int tasksCount,
       String statusName) {
     return new PlanIngestionResult(
-        schedule.getId(),
-        plan.getId(),
-        slices.stream().map(PlanSliceAggregate::getId).collect(Collectors.toList()),
+        schedule.getId().value(),
+        plan.getId().value(),
+        slices.stream().map(s -> s.getId().value()).collect(Collectors.toList()),
         tasksCount,
         statusName);
   }

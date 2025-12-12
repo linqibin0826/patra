@@ -3,6 +3,7 @@ package com.patra.ingest.domain.model.aggregate;
 import com.patra.common.domain.AggregateRoot;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.SliceStatus;
+import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import java.util.Objects;
 import lombok.Getter;
 
@@ -32,7 +33,7 @@ import lombok.Getter;
 /// @author linqibin
 /// @since 0.1.0
 @Getter
-public class PlanSliceAggregate extends AggregateRoot<Long> {
+public class PlanSliceAggregate extends AggregateRoot<PlanSliceId> {
 
   /// 此切片所属计划的标识。
   private Long planId;
@@ -59,7 +60,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
   private SliceStatus status;
 
   private PlanSliceAggregate(
-      Long id,
+      PlanSliceId id,
       Long planId,
       ProvenanceCode provenanceCode,
       int sliceNo,
@@ -101,7 +102,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
   }
 
   public static PlanSliceAggregate restore(
-      Long id,
+      PlanSliceId id,
       Long planId,
       ProvenanceCode provenanceCode,
       int sequence,

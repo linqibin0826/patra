@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.*;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.PlanStatus;
+import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
@@ -173,7 +174,7 @@ class PlanAggregateTest {
     @DisplayName("应该从持久化状态成功重建计划")
     void shouldRestorePlanFromPersistentState() {
       // Given
-      Long id = 100L;
+      PlanId id = PlanId.of(100L);
       Long scheduleInstanceId = 1001L;
       String planKey = "pubmed_harvest_2024-01-01_2024-12-31";
       ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
@@ -229,7 +230,7 @@ class PlanAggregateTest {
       // When
       PlanAggregate plan =
           PlanAggregate.restore(
-              100L,
+              PlanId.of(100L),
               1001L,
               "planKey",
               ProvenanceCode.PUBMED,
@@ -695,7 +696,7 @@ class PlanAggregateTest {
       assertThat(plan.isTransient()).isTrue();
 
       // When - 分配 ID（模拟仓储保存后）
-      Long assignedId = 100L;
+      PlanId assignedId = PlanId.of(100L);
       plan.assignId(assignedId);
 
       // Then
@@ -749,7 +750,7 @@ class PlanAggregateTest {
   ///
   /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
   static class PlanAggregateTestDataBuilder {
-    private Long id = null; // 默认为 null（新创建的聚合根）
+    private PlanId id = null; // 默认为 null（新创建的聚合根）
     private Long scheduleInstanceId = 1001L;
     private String planKey = "pubmed_harvest_2024-01-01_2024-12-31";
     private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
@@ -770,7 +771,7 @@ class PlanAggregateTest {
       return new PlanAggregateTestDataBuilder();
     }
 
-    public PlanAggregateTestDataBuilder id(Long id) {
+    public PlanAggregateTestDataBuilder id(PlanId id) {
       this.id = id;
       return this;
     }
@@ -864,7 +865,7 @@ class PlanAggregateTest {
 
     /// 构建从持久化重建的计划（使用 restore() 工厂方法）。
     public PlanAggregate buildRestored() {
-      Long restoredId = (id != null) ? id : 100L; // 默认 ID
+      PlanId restoredId = (id != null) ? id : PlanId.of(100L); // 默认 ID
       return PlanAggregate.restore(
           restoredId,
           scheduleInstanceId,

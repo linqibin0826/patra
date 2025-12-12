@@ -9,6 +9,7 @@ import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.vo.execution.ExecutionTimeline;
 import com.patra.ingest.domain.model.vo.plan.TaskSchedulerContext;
 import com.patra.ingest.domain.model.vo.shared.LeaseInfo;
+import com.patra.ingest.domain.model.vo.task.TaskId;
 import com.patra.ingest.infra.persistence.entity.TaskDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -24,6 +25,7 @@ import org.mapstruct.ReportingPolicy;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface TaskConverter {
 
+  @Mapping(target = "id", source = "id", qualifiedByName = "taskIdToLong")
   @Mapping(
       target = "params",
       expression =
@@ -55,7 +57,7 @@ public interface TaskConverter {
         new ExecutionTimeline(entity.getStartedAt(), entity.getFinishedAt());
     TaskSchedulerContext schedulerContext = new TaskSchedulerContext(entity.getCorrelationId());
     return TaskAggregate.restore(
-        entity.getId(),
+        TaskId.of(entity.getId()),
         entity.getScheduleInstanceId(),
         entity.getPlanId(),
         entity.getSliceId(),
@@ -75,6 +77,11 @@ public interface TaskConverter {
         timeline,
         schedulerContext,
         version);
+  }
+
+  @Named("taskIdToLong")
+  static Long taskIdToLong(TaskId id) {
+    return id != null ? id.value() : null;
   }
 
   @Named("taskStatusToCode")

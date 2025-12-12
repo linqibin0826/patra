@@ -6,6 +6,7 @@ import com.patra.catalog.domain.model.enums.MediaType;
 import com.patra.catalog.domain.model.enums.OaStatus;
 import com.patra.catalog.domain.model.enums.PublicationStatus;
 import com.patra.catalog.domain.model.vo.publication.LanguageInfo;
+import com.patra.catalog.domain.model.vo.publication.PublicationId;
 import com.patra.catalog.domain.model.vo.publication.PublicationIdentifiers;
 import com.patra.common.domain.AggregateRoot;
 import com.patra.common.enums.ProvenanceCode;
@@ -47,7 +48,7 @@ import lombok.Getter;
 /// @author linqibin
 /// @since 0.1.0
 @Getter
-public class PublicationAggregate extends AggregateRoot<Long> {
+public class PublicationAggregate extends AggregateRoot<PublicationId> {
 
   @Serial private static final long serialVersionUID = 1L;
 
@@ -139,7 +140,7 @@ public class PublicationAggregate extends AggregateRoot<Long> {
   /// @param conflictOfInterest 利益冲突
   /// @param lastSyncedAt 最后同步时间
   private PublicationAggregate(
-      Long id,
+      PublicationId id,
       ProvenanceCode provenanceCode,
       PublicationIdentifiers identifiers,
       Long venueId,
@@ -269,7 +270,7 @@ public class PublicationAggregate extends AggregateRoot<Long> {
   /// @param version 乐观锁版本
   /// @return 从持久化重建的文献聚合根
   public static PublicationAggregate restore(
-      Long id,
+      PublicationId id,
       ProvenanceCode provenanceCode,
       PublicationIdentifiers identifiers,
       Long venueId,

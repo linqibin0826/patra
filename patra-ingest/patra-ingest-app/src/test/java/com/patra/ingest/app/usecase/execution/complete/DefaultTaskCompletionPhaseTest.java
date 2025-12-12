@@ -18,6 +18,7 @@ import com.patra.ingest.domain.model.enums.BatchStatus;
 import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.vo.batch.BatchStats;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import com.patra.ingest.domain.model.vo.task.TaskId;
 import com.patra.ingest.domain.port.TaskRepository;
 import com.patra.ingest.domain.port.TaskRunBatchRepository;
 import com.patra.ingest.domain.port.TaskRunRepository;
@@ -607,7 +608,7 @@ class DefaultTaskCompletionPhaseTest {
 
   private TaskAggregate createMockTask() {
     TaskAggregate task = mock(TaskAggregate.class);
-    when(task.getId()).thenReturn(1001L);
+    when(task.getId()).thenReturn(TaskId.of(1001L));
     when(task.getStatus()).thenReturn(TaskStatus.RUNNING);
     when(task.pullDomainEvents()).thenReturn(Collections.emptyList());
     doNothing().when(task).markSucceeded(any(Instant.class));

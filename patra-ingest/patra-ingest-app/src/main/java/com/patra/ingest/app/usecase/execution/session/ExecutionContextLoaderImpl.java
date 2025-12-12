@@ -82,7 +82,7 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
   /// @throws IllegalStateException 如果表达式编译失败或哈希不匹配
   @Override
   public ExecutionContext loadContext(TaskAggregate task, Long runId) {
-    Long taskId = task.getId();
+    Long taskId = task.getId().value();
 
     // 步骤1: 读取 Slice
     log.debug("为任务加载执行上下文 taskId={} sliceId={}", taskId, task.getSliceId());
@@ -156,8 +156,8 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
     return new ExecutionContext(
         taskId,
         runId,
-        plan.getId(),
-        slice.getId(),
+        plan.getId().value(),
+        slice.getId().value(),
         task.getScheduleInstanceId(), // 来自 TaskAggregate
         task.getProvenanceCode(),
         task.getOperationCode(),
