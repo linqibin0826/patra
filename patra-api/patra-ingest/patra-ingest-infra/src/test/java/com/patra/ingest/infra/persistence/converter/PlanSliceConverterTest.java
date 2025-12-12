@@ -6,6 +6,7 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonNodeMappings;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.enums.SliceStatus;
+import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import com.patra.ingest.infra.persistence.entity.PlanSliceDO;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -52,7 +53,7 @@ class PlanSliceConverterTest {
       // Given: 创建 PENDING 状态的 PlanSliceAggregate
       PlanSliceAggregate aggregate =
           PlanSliceAggregate.restore(
-              100L,
+              PlanSliceId.of(100L),
               PLAN_ID,
               PROVENANCE_CODE,
               SLICE_NO,
@@ -90,7 +91,7 @@ class PlanSliceConverterTest {
       // Given: 创建 ASSIGNED 状态的 PlanSliceAggregate
       PlanSliceAggregate aggregate =
           PlanSliceAggregate.restore(
-              200L,
+              PlanSliceId.of(200L),
               PLAN_ID,
               PROVENANCE_CODE,
               SLICE_NO,
@@ -114,7 +115,7 @@ class PlanSliceConverterTest {
       // Given: 创建 FINISHED 状态的 PlanSliceAggregate
       PlanSliceAggregate aggregate =
           PlanSliceAggregate.restore(
-              300L,
+              PlanSliceId.of(300L),
               PLAN_ID,
               PROVENANCE_CODE,
               SLICE_NO,
@@ -138,7 +139,7 @@ class PlanSliceConverterTest {
       // Given: 创建 sliceNo 为 0 的 PlanSliceAggregate
       PlanSliceAggregate aggregate =
           PlanSliceAggregate.restore(
-              400L,
+              PlanSliceId.of(400L),
               PLAN_ID,
               PROVENANCE_CODE,
               0, // sliceNo = 0
@@ -162,7 +163,7 @@ class PlanSliceConverterTest {
       // PENDING
       PlanSliceAggregate pending =
           PlanSliceAggregate.restore(
-              1L,
+              PlanSliceId.of(1L),
               PLAN_ID,
               PROVENANCE_CODE,
               SLICE_NO,
@@ -177,7 +178,7 @@ class PlanSliceConverterTest {
       // ASSIGNED
       PlanSliceAggregate assigned =
           PlanSliceAggregate.restore(
-              2L,
+              PlanSliceId.of(2L),
               PLAN_ID,
               PROVENANCE_CODE,
               SLICE_NO,
@@ -192,7 +193,7 @@ class PlanSliceConverterTest {
       // FINISHED
       PlanSliceAggregate finished =
           PlanSliceAggregate.restore(
-              3L,
+              PlanSliceId.of(3L),
               PLAN_ID,
               PROVENANCE_CODE,
               SLICE_NO,
@@ -233,7 +234,7 @@ class PlanSliceConverterTest {
 
       // Then: 验证转换结果
       assertThat(result).isNotNull();
-      assertThat(result.getId()).isEqualTo(100L);
+      assertThat(result.getId().value()).isEqualTo(100L);
       assertThat(result.getPlanId()).isEqualTo(PLAN_ID);
       assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE);
       assertThat(result.getSliceNo()).isEqualTo(SLICE_NO);
@@ -388,7 +389,7 @@ class PlanSliceConverterTest {
       // Given: 原始 Aggregate
       PlanSliceAggregate original =
           PlanSliceAggregate.restore(
-              100L,
+              PlanSliceId.of(100L),
               PLAN_ID,
               PROVENANCE_CODE,
               SLICE_NO,
@@ -421,7 +422,7 @@ class PlanSliceConverterTest {
       // Given: 原始 Aggregate
       PlanSliceAggregate original =
           PlanSliceAggregate.restore(
-              200L,
+              PlanSliceId.of(200L),
               PLAN_ID,
               PROVENANCE_CODE,
               SLICE_NO,

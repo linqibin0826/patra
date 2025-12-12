@@ -3,6 +3,7 @@ package com.patra.catalog.domain.model.aggregate;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.enums.AffiliationType;
+import com.patra.catalog.domain.model.vo.affiliation.AffiliationId;
 import com.patra.catalog.domain.model.vo.affiliation.GridId;
 import com.patra.catalog.domain.model.vo.affiliation.RorId;
 import com.patra.catalog.domain.model.vo.common.DedupKey;
@@ -40,7 +41,7 @@ import lombok.Setter;
 /// @author linqibin
 /// @since 0.1.0
 @Getter
-public class AffiliationAggregate extends AggregateRoot<Long> {
+public class AffiliationAggregate extends AggregateRoot<AffiliationId> {
 
   @Serial private static final long serialVersionUID = 1L;
 
@@ -137,7 +138,7 @@ public class AffiliationAggregate extends AggregateRoot<Long> {
   /// @param affiliationType 机构类型
   /// @param dedupKey 去重键
   private AffiliationAggregate(
-      Long id,
+      AffiliationId id,
       String name,
       String originalName,
       String department,
@@ -236,7 +237,7 @@ public class AffiliationAggregate extends AggregateRoot<Long> {
   /// @param version 乐观锁版本
   /// @return 重建的聚合根
   public static AffiliationAggregate restore(
-      Long id,
+      AffiliationId id,
       String name,
       String originalName,
       String department,

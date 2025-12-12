@@ -10,6 +10,7 @@ import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.vo.execution.ExecutionTimeline;
 import com.patra.ingest.domain.model.vo.plan.TaskSchedulerContext;
 import com.patra.ingest.domain.model.vo.shared.LeaseInfo;
+import com.patra.ingest.domain.model.vo.task.TaskId;
 import com.patra.ingest.infra.persistence.entity.TaskDO;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
@@ -50,7 +51,7 @@ class TaskConverterTest {
 
     TaskAggregate aggregate =
         TaskAggregate.restore(
-            1001L,
+            TaskId.of(1001L),
             2001L,
             3001L,
             4001L,
@@ -155,7 +156,7 @@ class TaskConverterTest {
 
     // Then: 验证所有字段正确映射
     assertThat(aggregate).isNotNull();
-    assertThat(aggregate.getId()).isEqualTo(1001L);
+    assertThat(aggregate.getId().value()).isEqualTo(1001L);
     assertThat(aggregate.getScheduleInstanceId()).isEqualTo(2001L);
     assertThat(aggregate.getPlanId()).isEqualTo(3001L);
     assertThat(aggregate.getSliceId()).isEqualTo(4001L);
@@ -206,7 +207,7 @@ class TaskConverterTest {
 
     TaskAggregate original =
         TaskAggregate.restore(
-            1L,
+            TaskId.of(1L),
             2L,
             3L,
             4L,
@@ -233,7 +234,7 @@ class TaskConverterTest {
     TaskAggregate restored = converter.toAggregate(entity);
 
     // Then: 关键字段应保持一致
-    assertThat(restored.getId()).isEqualTo(original.getId());
+    assertThat(restored.getId().value()).isEqualTo(original.getId().value());
     assertThat(restored.getProvenanceCode()).isEqualTo(original.getProvenanceCode());
     assertThat(restored.getOperationCode()).isEqualTo(original.getOperationCode());
     assertThat(restored.getStatus()).isEqualTo(original.getStatus());

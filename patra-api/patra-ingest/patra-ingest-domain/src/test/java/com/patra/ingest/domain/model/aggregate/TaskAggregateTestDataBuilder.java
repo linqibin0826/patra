@@ -5,6 +5,7 @@ import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.vo.execution.ExecutionTimeline;
 import com.patra.ingest.domain.model.vo.plan.TaskSchedulerContext;
 import com.patra.ingest.domain.model.vo.shared.LeaseInfo;
+import com.patra.ingest.domain.model.vo.task.TaskId;
 import java.time.Instant;
 
 /// TaskAggregate 测试数据构建器。
@@ -38,7 +39,7 @@ import java.time.Instant;
 public class TaskAggregateTestDataBuilder {
 
   // ========== 基础字段 ==========
-  private Long id;
+  private TaskId id;
   private Long scheduleInstanceId = 1001L;
   private Long planId = 2001L;
   private Long sliceId = 3001L;
@@ -141,7 +142,7 @@ public class TaskAggregateTestDataBuilder {
 
   // ========== Builder 方法 ==========
 
-  public TaskAggregateTestDataBuilder id(Long id) {
+  public TaskAggregateTestDataBuilder id(TaskId id) {
     this.id = id;
     return this;
   }

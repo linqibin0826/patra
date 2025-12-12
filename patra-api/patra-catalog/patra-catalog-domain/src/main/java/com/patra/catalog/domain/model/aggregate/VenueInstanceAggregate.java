@@ -2,6 +2,7 @@ package com.patra.catalog.domain.model.aggregate;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
+import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.common.domain.AggregateRoot;
 import java.io.Serial;
 import java.time.LocalDate;
@@ -56,7 +57,7 @@ import lombok.Getter;
 /// @author linqibin
 /// @since 0.1.0
 @Getter
-public class VenueInstanceAggregate extends AggregateRoot<Long> {
+public class VenueInstanceAggregate extends AggregateRoot<VenueInstanceId> {
 
   @Serial private static final long serialVersionUID = 1L;
 
@@ -123,7 +124,7 @@ public class VenueInstanceAggregate extends AggregateRoot<Long> {
   /// @param conferenceEndDate 会议结束日期
   /// @param conferenceLocation 会议地点
   private VenueInstanceAggregate(
-      Long id,
+      VenueInstanceId id,
       Long venueId,
       String volume,
       String issue,
@@ -256,7 +257,7 @@ public class VenueInstanceAggregate extends AggregateRoot<Long> {
 
   /// 从持久化状态重建聚合根（由 Repository 使用）。
   ///
-  /// @param id 主键 ID
+  /// @param id 主键 ID（VenueInstanceId 值对象）
   /// @param venueId 载体 ID
   /// @param volume 卷号
   /// @param issue 期号
@@ -271,7 +272,7 @@ public class VenueInstanceAggregate extends AggregateRoot<Long> {
   /// @param version 乐观锁版本
   /// @return 重建的聚合根
   public static VenueInstanceAggregate restore(
-      Long id,
+      VenueInstanceId id,
       Long venueId,
       String volume,
       String issue,

@@ -143,7 +143,7 @@ public class TaskOutboxPublisher
     ScheduleInstanceAggregate schedule = ctx.get("schedule", ScheduleInstanceAggregate.class);
 
     return new TaskHeaders(
-        schedule.getId(),
+        schedule.getId().value(),
         schedule.getScheduler().name(),
         schedule.getSchedulerJobId(),
         schedule.getTriggeredAt(),

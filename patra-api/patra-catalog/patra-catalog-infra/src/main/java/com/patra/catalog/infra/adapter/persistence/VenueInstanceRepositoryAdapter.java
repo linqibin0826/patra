@@ -3,6 +3,7 @@ package com.patra.catalog.infra.adapter.persistence;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;
+import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.catalog.domain.port.repository.VenueInstanceRepository;
 import com.patra.catalog.infra.persistence.converter.VenueInstanceConverter;
 import com.patra.catalog.infra.persistence.entity.VenueInstanceDO;
@@ -131,7 +132,7 @@ public class VenueInstanceRepositoryAdapter implements VenueInstanceRepository {
     if (instance.getId() == null) {
       // 新建
       venueInstanceMapper.insert(doEntity);
-      instance.assignId(doEntity.getId());
+      instance.assignId(VenueInstanceId.of(doEntity.getId()));
     } else {
       // 更新
       venueInstanceMapper.updateById(doEntity);
@@ -150,7 +151,7 @@ public class VenueInstanceRepositoryAdapter implements VenueInstanceRepository {
 
     // ID 回填
     for (int i = 0; i < instances.size(); i++) {
-      instances.get(i).assignId(doList.get(i).getId());
+      instances.get(i).assignId(VenueInstanceId.of(doList.get(i).getId()));
     }
 
     log.debug("批量插入载体实例完成：{} 条", instances.size());

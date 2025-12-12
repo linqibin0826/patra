@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.vo.shared.LeaseInfo;
+import com.patra.ingest.domain.model.vo.task.TaskId;
 import com.patra.ingest.domain.port.TaskRepository;
 import java.time.Clock;
 import java.time.Duration;
@@ -450,7 +451,7 @@ class LeaseManagementServiceImplTest {
 
   private TaskAggregate createMockTask(Long taskId, String idempotentKey, String leaseOwner) {
     TaskAggregate task = mock(TaskAggregate.class);
-    when(task.getId()).thenReturn(taskId);
+    when(task.getId()).thenReturn(TaskId.of(taskId));
     when(task.getIdempotentKey()).thenReturn(idempotentKey);
 
     LeaseInfo leaseInfo = createLeaseInfo(leaseOwner, leaseOwner != null);
@@ -461,7 +462,7 @@ class LeaseManagementServiceImplTest {
 
   private TaskAggregate createMockTaskWithLease(Long taskId, LeaseInfo leaseInfo) {
     TaskAggregate task = mock(TaskAggregate.class);
-    when(task.getId()).thenReturn(taskId);
+    when(task.getId()).thenReturn(TaskId.of(taskId));
     when(task.getLeaseInfo()).thenReturn(leaseInfo);
     return task;
   }

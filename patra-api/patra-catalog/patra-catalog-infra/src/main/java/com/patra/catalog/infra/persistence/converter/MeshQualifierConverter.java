@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
+import com.patra.catalog.domain.model.vo.mesh.MeshQualifierId;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.infra.persistence.entity.MeshQualifierDO;
 import java.util.ArrayList;
@@ -38,7 +39,7 @@ public class MeshQualifierConverter {
     }
 
     MeshQualifierDO dataObject = new MeshQualifierDO();
-    dataObject.setId(aggregate.getId());
+    dataObject.setId(aggregate.getId() != null ? aggregate.getId().value() : null);
     dataObject.setUi(aggregate.getQualifierUi().ui());
     dataObject.setName(aggregate.getName());
     dataObject.setAbbreviation(aggregate.getAbbreviation());
@@ -68,7 +69,7 @@ public class MeshQualifierConverter {
     MeshUI qualifierUi = MeshUI.of(dataObject.getUi());
 
     return MeshQualifierAggregate.restore(
-        dataObject.getId(),
+        MeshQualifierId.of(dataObject.getId()),
         qualifierUi,
         dataObject.getName(),
         dataObject.getAbbreviation(),

@@ -8,6 +8,7 @@ import com.patra.catalog.domain.model.entity.MeshTreeNumber;
 import com.patra.catalog.domain.model.enums.DescriptorClass;
 import com.patra.catalog.domain.model.vo.mesh.AllowableQualifier;
 import com.patra.catalog.domain.model.vo.mesh.EntryCombination;
+import com.patra.catalog.domain.model.vo.mesh.MeshDescriptorId;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
 import com.patra.catalog.domain.model.vo.mesh.SeeRelatedDescriptor;
@@ -50,7 +51,7 @@ import lombok.Setter;
 /// @since 0.1.0
 @Getter
 @Setter
-public class MeshDescriptorAggregate extends AggregateRoot<Long> {
+public class MeshDescriptorAggregate extends AggregateRoot<MeshDescriptorId> {
 
   @Serial private static final long serialVersionUID = 1L;
 
@@ -148,7 +149,7 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
   /// @param activeStatus 是否有效
   /// @param meshVersion MeSH 版本
   private MeshDescriptorAggregate(
-      Long id,
+      MeshDescriptorId id,
       MeshUI ui,
       String name,
       DescriptorClass descriptorClass,
@@ -237,7 +238,7 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
   /// @param version 乐观锁版本
   /// @return 重建的聚合根
   public static MeshDescriptorAggregate restore(
-      Long id,
+      MeshDescriptorId id,
       MeshUI ui,
       String name,
       DescriptorClass descriptorClass,
@@ -726,7 +727,7 @@ public class MeshDescriptorAggregate extends AggregateRoot<Long> {
   @Override
   public String toString() {
     return String.format(
-        "MeshDescriptorAggregate[id=%d, ui=%s, name=%s, type=%s, active=%b, version=%s]",
+        "MeshDescriptorAggregate[id=%s, ui=%s, name=%s, type=%s, active=%b, version=%s]",
         getId(), ui.ui(), name, descriptorClass.getCode(), activeStatus, meshVersion);
   }
 }

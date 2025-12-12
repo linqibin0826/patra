@@ -9,6 +9,7 @@ import com.patra.catalog.domain.model.vo.venue.ApcInfo;
 import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
 import com.patra.catalog.domain.model.vo.venue.Society;
 import com.patra.catalog.domain.model.vo.venue.VenueDetail;
+import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenueIndexingHistory;
 import com.patra.catalog.domain.model.vo.venue.VenueMesh;
@@ -46,7 +47,6 @@ import com.patra.catalog.infra.persistence.mapper.VenuePublicationStatsMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueRelationMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueSocietyMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueStatsMapper;
-import com.patra.common.domain.AggregateRoot;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -151,7 +151,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
     for (int i = 0; i < aggregates.size(); i++) {
       VenueAggregate aggregate = aggregates.get(i);
       Long venueId = venueDOs.get(i).getId();
-      aggregate.assignId(venueId);
+      aggregate.assignId(VenueId.of(venueId));
       collectIdentifiers(aggregate, venueId, identifierDOs);
       aggregate.pullChildChanges();
     }
@@ -220,7 +220,8 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 按 ISSN-L 构建 Map
     Map<Long, VenueAggregate> venueIdToAggregate =
-        aggregates.stream().collect(Collectors.toMap(AggregateRoot::getId, a -> a, (a1, a2) -> a1));
+        aggregates.stream()
+            .collect(Collectors.toMap(a -> a.getId().value(), a -> a, (a1, a2) -> a1));
 
     Map<String, VenueAggregate> result = new HashMap<>();
     for (Map.Entry<Long, String> entry : venueIdToIssnL.entrySet()) {
@@ -269,7 +270,8 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 按 NLM ID 构建 Map
     Map<Long, VenueAggregate> venueIdToAggregate =
-        aggregates.stream().collect(Collectors.toMap(AggregateRoot::getId, a -> a, (a1, a2) -> a1));
+        aggregates.stream()
+            .collect(Collectors.toMap(a -> a.getId().value(), a -> a, (a1, a2) -> a1));
 
     Map<String, VenueAggregate> result = new HashMap<>();
     for (Map.Entry<Long, String> entry : venueIdToNlmId.entrySet()) {
@@ -320,7 +322,8 @@ public class VenueRepositoryAdapter implements VenueRepository {
     // 构建 ISSN -> Aggregate 的映射
     // 一个 Aggregate 可能有多个 ISSN，需要建立多对一关系
     Map<Long, VenueAggregate> venueIdToAggregate =
-        aggregates.stream().collect(Collectors.toMap(AggregateRoot::getId, a -> a, (a1, a2) -> a1));
+        aggregates.stream()
+            .collect(Collectors.toMap(a -> a.getId().value(), a -> a, (a1, a2) -> a1));
 
     Map<String, VenueAggregate> result = new HashMap<>();
     for (VenueIdentifierDO identifierDO : identifierDOs) {
@@ -360,7 +363,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
     List<VenueAggregate> dirtyAggregates = new ArrayList<>();
 
     for (VenueAggregate aggregate : aggregates) {
-      Long venueId = aggregate.getId();
+      Long venueId = aggregate.getId().value();
 
       // 计算标识符差异（基于值对象 hashCode/equals 比较）
       computeIdentifierDiff(venueId, aggregate, identifiersToInsert, identifierIdsToDelete);
@@ -497,7 +500,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
     VenueType venueType = VenueType.fromCode(venueDO.getVenueType());
     VenueAggregate aggregate =
         VenueAggregate.restore(
-            venueDO.getId(), venueType, venueDO.getDisplayName(), venueDO.getVersion());
+            VenueId.of(venueDO.getId()), venueType, venueDO.getDisplayName(), venueDO.getVersion());
 
     // 设置来源追踪信息
     if (venueDO.getProvenanceCode() != null) {

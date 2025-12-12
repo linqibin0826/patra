@@ -7,6 +7,7 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonNodeMappings;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.enums.PlanStatus;
+import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import com.patra.ingest.infra.persistence.entity.PlanDO;
 import java.time.Instant;
@@ -63,7 +64,7 @@ class PlanConverterTest {
 
       PlanAggregate aggregate =
           PlanAggregate.restore(
-              100L,
+              PlanId.of(100L),
               SCHEDULE_INSTANCE_ID,
               PLAN_KEY,
               PROVENANCE_CODE,
@@ -119,7 +120,7 @@ class PlanConverterTest {
 
       PlanAggregate aggregate =
           PlanAggregate.restore(
-              200L,
+              PlanId.of(200L),
               SCHEDULE_INSTANCE_ID,
               PLAN_KEY,
               PROVENANCE_CODE,
@@ -151,7 +152,7 @@ class PlanConverterTest {
 
       PlanAggregate aggregate =
           PlanAggregate.restore(
-              300L,
+              PlanId.of(300L),
               SCHEDULE_INSTANCE_ID,
               PLAN_KEY,
               PROVENANCE_CODE,
@@ -183,7 +184,7 @@ class PlanConverterTest {
       // DRAFT
       PlanAggregate draft =
           PlanAggregate.restore(
-              1L,
+              PlanId.of(1L),
               SCHEDULE_INSTANCE_ID,
               PLAN_KEY,
               PROVENANCE_CODE,
@@ -202,7 +203,7 @@ class PlanConverterTest {
       // SLICING
       PlanAggregate slicing =
           PlanAggregate.restore(
-              2L,
+              PlanId.of(2L),
               SCHEDULE_INSTANCE_ID,
               PLAN_KEY,
               PROVENANCE_CODE,
@@ -221,7 +222,7 @@ class PlanConverterTest {
       // READY
       PlanAggregate ready =
           PlanAggregate.restore(
-              3L,
+              PlanId.of(3L),
               SCHEDULE_INSTANCE_ID,
               PLAN_KEY,
               PROVENANCE_CODE,
@@ -240,7 +241,7 @@ class PlanConverterTest {
       // ARCHIVED
       PlanAggregate archived =
           PlanAggregate.restore(
-              4L,
+              PlanId.of(4L),
               SCHEDULE_INSTANCE_ID,
               PLAN_KEY,
               PROVENANCE_CODE,
@@ -298,7 +299,7 @@ class PlanConverterTest {
 
       // Then: 验证转换结果
       assertThat(result).isNotNull();
-      assertThat(result.getId()).isEqualTo(100L);
+      assertThat(result.getId().value()).isEqualTo(100L);
       assertThat(result.getScheduleInstanceId()).isEqualTo(SCHEDULE_INSTANCE_ID);
       assertThat(result.getPlanKey()).isEqualTo(PLAN_KEY);
       assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE);
@@ -601,7 +602,7 @@ class PlanConverterTest {
 
       PlanAggregate original =
           PlanAggregate.restore(
-              100L,
+              PlanId.of(100L),
               SCHEDULE_INSTANCE_ID,
               PLAN_KEY,
               PROVENANCE_CODE,
@@ -647,7 +648,7 @@ class PlanConverterTest {
 
       PlanAggregate original =
           PlanAggregate.restore(
-              200L,
+              PlanId.of(200L),
               SCHEDULE_INSTANCE_ID,
               PLAN_KEY,
               PROVENANCE_CODE,

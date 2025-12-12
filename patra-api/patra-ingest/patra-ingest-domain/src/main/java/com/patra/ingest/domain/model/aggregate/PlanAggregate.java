@@ -4,6 +4,7 @@ import com.patra.common.domain.AggregateRoot;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.PlanStatus;
+import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import java.util.Objects;
 import lombok.Getter;
@@ -39,7 +40,7 @@ import lombok.Getter;
 /// @author linqibin
 /// @since 0.1.0
 @Getter
-public class PlanAggregate extends AggregateRoot<Long> {
+public class PlanAggregate extends AggregateRoot<PlanId> {
 
   /// 关联的调度实例标识（外部触发源）。
   private final Long scheduleInstanceId;
@@ -78,7 +79,7 @@ public class PlanAggregate extends AggregateRoot<Long> {
   private PlanStatus status;
 
   private PlanAggregate(
-      Long id,
+      PlanId id,
       Long scheduleInstanceId,
       String planKey,
       ProvenanceCode provenanceCode,
@@ -169,7 +170,7 @@ public class PlanAggregate extends AggregateRoot<Long> {
   /// @param version 乐观锁版本
   /// @return 从持久化重建的计划聚合根
   public static PlanAggregate restore(
-      Long id,
+      PlanId id,
       Long scheduleInstanceId,
       String planKey,
       ProvenanceCode provenanceCode,

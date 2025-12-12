@@ -20,6 +20,8 @@ import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
+import com.patra.ingest.domain.model.vo.plan.PlanId;
+import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import com.patra.ingest.domain.port.PlanRepository;
 import com.patra.ingest.domain.port.PlanSliceRepository;
 import com.patra.ingest.domain.port.ScheduleInstanceRepository;
@@ -199,7 +201,7 @@ class PlanPersistenceCoordinatorTest {
     @DisplayName("应成功批量持久化切片")
     void shouldPersistSlicesSuccessfully() {
       // Given
-      Long planId = 100L;
+      PlanId planId = PlanId.of(100L);
       when(plan.getId()).thenReturn(planId);
 
       List<PlanSliceAggregate> slices = List.of(slice1, slice2);
@@ -215,8 +217,8 @@ class PlanPersistenceCoordinatorTest {
       assertThat(result).isEqualTo(persistedSlices);
 
       // 验证切片绑定了计划 ID
-      verify(slice1).bindPlan(planId);
-      verify(slice2).bindPlan(planId);
+      verify(slice1).bindPlan(planId.value());
+      verify(slice2).bindPlan(planId.value());
       verify(planSliceRepository).saveAll(slices);
     }
 
@@ -252,7 +254,7 @@ class PlanPersistenceCoordinatorTest {
     @DisplayName("当持久化失败时应抛出 PlanPersistenceException")
     void shouldThrowPlanPersistenceExceptionWhenPersistenceFails() {
       // Given
-      Long planId = 100L;
+      PlanId planId = PlanId.of(100L);
       when(plan.getId()).thenReturn(planId);
 
       List<PlanSliceAggregate> slices = List.of(slice1);
@@ -275,7 +277,7 @@ class PlanPersistenceCoordinatorTest {
     @DisplayName("应正确处理多个切片的批量持久化")
     void shouldHandleMultipleSlicesPersistence() {
       // Given
-      Long planId = 100L;
+      PlanId planId = PlanId.of(100L);
       when(plan.getId()).thenReturn(planId);
 
       PlanSliceAggregate slice3 = org.mockito.Mockito.mock(PlanSliceAggregate.class);
@@ -289,10 +291,10 @@ class PlanPersistenceCoordinatorTest {
 
       // Then
       assertThat(result).hasSize(4);
-      verify(slice1).bindPlan(planId);
-      verify(slice2).bindPlan(planId);
-      verify(slice3).bindPlan(planId);
-      verify(slice4).bindPlan(planId);
+      verify(slice1).bindPlan(planId.value());
+      verify(slice2).bindPlan(planId.value());
+      verify(slice3).bindPlan(planId.value());
+      verify(slice4).bindPlan(planId.value());
     }
   }
 
@@ -304,9 +306,9 @@ class PlanPersistenceCoordinatorTest {
     @DisplayName("应成功批量持久化任务并绑定计划和切片 ID")
     void shouldPersistTasksSuccessfully() {
       // Given
-      Long planId = 100L;
-      Long sliceId1 = 10L;
-      Long sliceId2 = 20L;
+      PlanId planId = PlanId.of(100L);
+      PlanSliceId sliceId1 = PlanSliceId.of(10L);
+      PlanSliceId sliceId2 = PlanSliceId.of(20L);
 
       when(plan.getId()).thenReturn(planId);
       when(slice1.getId()).thenReturn(sliceId1);
@@ -332,8 +334,8 @@ class PlanPersistenceCoordinatorTest {
       assertThat(result).isEqualTo(persistedTasks);
 
       // 验证任务绑定了计划 ID 和切片 ID
-      verify(task1).bindPlanAndSlice(planId, sliceId1);
-      verify(task2).bindPlanAndSlice(planId, sliceId2);
+      verify(task1).bindPlanAndSlice(planId.value(), sliceId1.value());
+      verify(task2).bindPlanAndSlice(planId.value(), sliceId2.value());
       verify(taskRepository).saveAll(tasks);
     }
 
@@ -371,8 +373,8 @@ class PlanPersistenceCoordinatorTest {
     @DisplayName("当持久化失败时应抛出 PlanPersistenceException")
     void shouldThrowPlanPersistenceExceptionWhenPersistenceFails() {
       // Given
-      Long planId = 100L;
-      Long sliceId = 10L;
+      PlanId planId = PlanId.of(100L);
+      PlanSliceId sliceId = PlanSliceId.of(10L);
 
       when(plan.getId()).thenReturn(planId);
       when(slice1.getId()).thenReturn(sliceId);
@@ -400,9 +402,9 @@ class PlanPersistenceCoordinatorTest {
     @DisplayName("应正确处理任务的切片序号映射")
     void shouldHandleSliceSequenceMapping() {
       // Given
-      Long planId = 100L;
-      Long sliceId1 = 10L;
-      Long sliceId2 = 20L;
+      PlanId planId = PlanId.of(100L);
+      PlanSliceId sliceId1 = PlanSliceId.of(10L);
+      PlanSliceId sliceId2 = PlanSliceId.of(20L);
 
       when(plan.getId()).thenReturn(planId);
       when(slice1.getId()).thenReturn(sliceId1);
@@ -423,15 +425,15 @@ class PlanPersistenceCoordinatorTest {
       coordinator.persistTasks(plan, slices, tasks);
 
       // Then
-      verify(task1).bindPlanAndSlice(planId, sliceId1);
-      verify(task2).bindPlanAndSlice(planId, sliceId1);
+      verify(task1).bindPlanAndSlice(planId.value(), sliceId1.value());
+      verify(task2).bindPlanAndSlice(planId.value(), sliceId1.value());
     }
 
     @Test
     @DisplayName("应处理任务没有关联切片的情况")
     void shouldHandleTasksWithoutSlice() {
       // Given
-      Long planId = 100L;
+      PlanId planId = PlanId.of(100L);
 
       when(plan.getId()).thenReturn(planId);
       when(task1.getSliceId()).thenReturn(null); // 无关联切片
@@ -445,7 +447,7 @@ class PlanPersistenceCoordinatorTest {
       coordinator.persistTasks(plan, slices, tasks);
 
       // Then
-      verify(task1).bindPlanAndSlice(planId, null);
+      verify(task1).bindPlanAndSlice(planId.value(), null);
     }
   }
 
@@ -527,7 +529,7 @@ class PlanPersistenceCoordinatorTest {
     @DisplayName("应正确处理大批量切片持久化")
     void shouldHandleLargeBatchOfSlices() {
       // Given
-      Long planId = 100L;
+      PlanId planId = PlanId.of(100L);
       when(plan.getId()).thenReturn(planId);
 
       List<PlanSliceAggregate> largeSliceList = new java.util.ArrayList<>();
@@ -551,8 +553,8 @@ class PlanPersistenceCoordinatorTest {
     @DisplayName("应正确处理大批量任务持久化")
     void shouldHandleLargeBatchOfTasks() {
       // Given
-      Long planId = 100L;
-      Long sliceId = 10L;
+      PlanId planId = PlanId.of(100L);
+      PlanSliceId sliceId = PlanSliceId.of(10L);
 
       when(plan.getId()).thenReturn(planId);
       when(slice1.getId()).thenReturn(sliceId);

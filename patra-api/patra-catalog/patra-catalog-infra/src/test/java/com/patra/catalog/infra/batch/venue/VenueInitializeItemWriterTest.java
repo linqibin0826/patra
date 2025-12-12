@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -15,6 +16,7 @@ import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.VenueDetail;
+import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
 import com.patra.catalog.domain.model.vo.venue.VenueStats;
@@ -88,7 +90,18 @@ class VenueInitializeItemWriterTest {
       VenueParseResult result2 = createParseResult("S2", "2222-2222", true);
       Chunk<VenueParseResult> chunk = Chunk.of(result1, result2);
 
-      doNothing().when(venueRepository).insertAll(anyList());
+      // 模拟 insertAll 后的 ID 回填（真实场景由 MyBatis 完成）
+      doAnswer(
+              invocation -> {
+                List<VenueAggregate> aggregates = invocation.getArgument(0);
+                long idCounter = 100L;
+                for (VenueAggregate aggregate : aggregates) {
+                  aggregate.assignId(VenueId.of(idCounter++));
+                }
+                return null;
+              })
+          .when(venueRepository)
+          .insertAll(anyList());
       doNothing().when(venueRepository).replaceYearlyMetricsBatch(any());
 
       // When

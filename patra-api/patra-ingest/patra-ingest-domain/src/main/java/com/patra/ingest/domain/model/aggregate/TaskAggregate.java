@@ -8,6 +8,7 @@ import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.vo.execution.ExecutionTimeline;
 import com.patra.ingest.domain.model.vo.plan.TaskSchedulerContext;
 import com.patra.ingest.domain.model.vo.shared.LeaseInfo;
+import com.patra.ingest.domain.model.vo.task.TaskId;
 import java.time.Instant;
 import java.util.Objects;
 import lombok.Getter;
@@ -44,7 +45,7 @@ import lombok.Getter;
 /// @author linqibin
 /// @since 0.1.0
 @Getter
-public class TaskAggregate extends AggregateRoot<Long> {
+public class TaskAggregate extends AggregateRoot<TaskId> {
 
   /// 调度实例标识。
   private Long scheduleInstanceId;
@@ -124,7 +125,7 @@ public class TaskAggregate extends AggregateRoot<Long> {
   /// @param executionTimeline 执行时间线
   /// @param schedulerContext 调度器上下文
   private TaskAggregate(
-      Long id,
+      TaskId id,
       Long scheduleInstanceId,
       Long planId,
       Long sliceId,
@@ -236,7 +237,7 @@ public class TaskAggregate extends AggregateRoot<Long> {
   /// @param version 乐观锁版本
   /// @return 从持久化重建的任务聚合根
   public static TaskAggregate restore(
-      Long id,
+      TaskId id,
       Long scheduleInstanceId,
       Long planId,
       Long sliceId,
@@ -306,7 +307,7 @@ public class TaskAggregate extends AggregateRoot<Long> {
   /// @param schedulerContext 调度器上下文
   /// @return 重建的任务实例（不含版本）
   private static TaskAggregate createRestoredInstance(
-      Long id,
+      TaskId id,
       Long scheduleInstanceId,
       Long planId,
       Long sliceId,
@@ -364,7 +365,7 @@ public class TaskAggregate extends AggregateRoot<Long> {
   public TaskQueuedEvent raiseQueuedEvent() {
     TaskQueuedEvent event =
         TaskQueuedEvent.of(
-            getId(),
+            getId() != null ? getId().value() : null,
             this.planId,
             this.sliceId,
             this.scheduleInstanceId,
@@ -410,7 +411,11 @@ public class TaskAggregate extends AggregateRoot<Long> {
     // 发布领域事件以触发切片和计划状态聚合
     addDomainEvent(
         TaskCompletedEvent.of(
-            this.getId(), this.sliceId, this.planId, TaskStatus.SUCCEEDED.getCode(), finishedAt));
+            getId() != null ? getId().value() : null,
+            this.sliceId,
+            this.planId,
+            TaskStatus.SUCCEEDED.getCode(),
+            finishedAt));
   }
 
   /// 将任务标记为执行失败。
@@ -423,7 +428,7 @@ public class TaskAggregate extends AggregateRoot<Long> {
     // 发布领域事件以触发切片和计划状态聚合
     addDomainEvent(
         TaskCompletedEvent.ofFailure(
-            this.getId(),
+            getId() != null ? getId().value() : null,
             this.sliceId,
             this.planId,
             TaskStatus.FAILED.getCode(),

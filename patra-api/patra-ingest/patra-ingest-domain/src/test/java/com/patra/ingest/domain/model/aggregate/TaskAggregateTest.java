@@ -6,6 +6,7 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.event.TaskCompletedEvent;
 import com.patra.ingest.domain.event.TaskQueuedEvent;
 import com.patra.ingest.domain.model.enums.TaskStatus;
+import com.patra.ingest.domain.model.vo.task.TaskId;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -93,7 +94,7 @@ class TaskAggregateTest {
       // When: 从持久化恢复
       TaskAggregate task =
           TaskAggregateTestDataBuilder.aRunningTask()
-              .id(5001L)
+              .id(TaskId.of(5001L))
               .scheduleInstanceId(1001L)
               .planId(2001L)
               .sliceId(3001L)
@@ -117,7 +118,7 @@ class TaskAggregateTest {
               .build();
 
       // Then: 验证所有状态都被正确恢复
-      assertThat(task.getId()).isEqualTo(5001L);
+      assertThat(task.getId().value()).isEqualTo(5001L);
       assertThat(task.getStatus()).isEqualTo(TaskStatus.RUNNING);
       assertThat(task.getScheduleInstanceId()).isEqualTo(1001L);
       assertThat(task.getPlanId()).isEqualTo(2001L);
@@ -731,7 +732,7 @@ class TaskAggregateTest {
       // Given: 新创建的任务
       TaskAggregate task =
           TaskAggregateTestDataBuilder.aQueuedTask()
-              .id(1001L)
+              .id(TaskId.of(1001L))
               .planId(2001L)
               .sliceId(3001L)
               .scheduleInstanceId(4001L)
@@ -770,7 +771,7 @@ class TaskAggregateTest {
       // Given: 运行中的任务
       TaskAggregate task =
           TaskAggregateTestDataBuilder.aRunningTask()
-              .id(1001L)
+              .id(TaskId.of(1001L))
               .sliceId(3001L)
               .planId(2001L)
               .startedAt(Instant.parse("2025-01-01T10:00:00Z"))
@@ -798,7 +799,7 @@ class TaskAggregateTest {
       // Given: 运行中的任务，包含错误信息
       TaskAggregate task =
           TaskAggregateTestDataBuilder.aRunningTask()
-              .id(1001L)
+              .id(TaskId.of(1001L))
               .sliceId(3001L)
               .planId(2001L)
               .startedAt(Instant.parse("2025-01-01T10:00:00Z"))

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.SliceStatus;
+import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -139,7 +140,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该从持久化状态成功重建切片")
     void shouldRestoreSliceFromPersistentState() {
       // Given: 持久化状态
-      Long id = 100L;
+      PlanSliceId id = PlanSliceId.of(100L);
       Long planId = 1001L;
       ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       int sliceNo = 5;
@@ -188,7 +189,7 @@ class PlanSliceAggregateTest {
       // When: 从持久化恢复
       PlanSliceAggregate slice =
           PlanSliceAggregate.restore(
-              100L,
+              PlanSliceId.of(100L),
               1001L,
               ProvenanceCode.PUBMED,
               1,
@@ -589,7 +590,7 @@ class PlanSliceAggregateTest {
       assertThat(slice.isTransient()).isTrue();
 
       // When: 分配 ID（模拟仓储保存后）
-      Long assignedId = 100L;
+      PlanSliceId assignedId = PlanSliceId.of(100L);
       slice.assignId(assignedId);
 
       // Then: ID 应该被正确分配
@@ -643,7 +644,7 @@ class PlanSliceAggregateTest {
   ///
   /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
   static class PlanSliceAggregateTestDataBuilder {
-    private Long id = null; // 默认为 null（新创建的聚合根）
+    private PlanSliceId id = null; // 默认为 null（新创建的聚合根）
     private Long planId = 1001L;
     private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
     private int sliceNo = 1;
@@ -658,7 +659,7 @@ class PlanSliceAggregateTest {
       return new PlanSliceAggregateTestDataBuilder();
     }
 
-    public PlanSliceAggregateTestDataBuilder id(Long id) {
+    public PlanSliceAggregateTestDataBuilder id(PlanSliceId id) {
       this.id = id;
       return this;
     }
@@ -722,7 +723,7 @@ class PlanSliceAggregateTest {
 
     /// 构建从持久化重建的切片（使用 restore() 工厂方法）。
     public PlanSliceAggregate buildRestored() {
-      Long restoredId = (id != null) ? id : 100L; // 默认 ID
+      PlanSliceId restoredId = (id != null) ? id : PlanSliceId.of(100L); // 默认 ID
       return PlanSliceAggregate.restore(
           restoredId,
           planId,

@@ -15,6 +15,10 @@ import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.enums.PlanStatus;
+import com.patra.ingest.domain.model.vo.plan.PlanId;
+import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
+import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
+import com.patra.ingest.domain.model.vo.task.TaskId;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -80,7 +84,7 @@ class PlanPublishingCoordinatorTest {
       TaskQueuedEvent event2 = createTaskQueuedEvent(2L);
       List<TaskQueuedEvent> events = List.of(event1, event2);
 
-      when(plan.getId()).thenReturn(100L);
+      when(plan.getId()).thenReturn(PlanId.of(100L));
 
       // When
       coordinator.publishNewPlanEvents(events, plan, schedule);
@@ -111,7 +115,7 @@ class PlanPublishingCoordinatorTest {
         events.add(createTaskQueuedEvent((long) i));
       }
 
-      when(plan.getId()).thenReturn(100L);
+      when(plan.getId()).thenReturn(PlanId.of(100L));
 
       // When
       coordinator.publishNewPlanEvents(events, plan, schedule);
@@ -134,7 +138,7 @@ class PlanPublishingCoordinatorTest {
       TaskQueuedEvent event2 = createTaskQueuedEvent(2L);
       List<TaskQueuedEvent> retryEvents = List.of(event1, event2);
 
-      when(plan.getId()).thenReturn(100L);
+      when(plan.getId()).thenReturn(PlanId.of(100L));
 
       // When
       coordinator.publishRetryEvents(retryEvents, plan, schedule);
@@ -165,7 +169,7 @@ class PlanPublishingCoordinatorTest {
         retryEvents.add(createTaskQueuedEvent((long) i));
       }
 
-      when(plan.getId()).thenReturn(100L);
+      when(plan.getId()).thenReturn(PlanId.of(100L));
 
       // When
       coordinator.publishRetryEvents(retryEvents, plan, schedule);
@@ -312,13 +316,13 @@ class PlanPublishingCoordinatorTest {
       Long taskId1 = 1L;
       Long taskId2 = 2L;
 
-      when(schedule.getId()).thenReturn(scheduleId);
-      when(plan.getId()).thenReturn(planId);
+      when(schedule.getId()).thenReturn(ScheduleInstanceId.of(scheduleId));
+      when(plan.getId()).thenReturn(PlanId.of(planId));
       when(plan.getStatus()).thenReturn(PlanStatus.READY);
-      when(slice1.getId()).thenReturn(sliceId1);
-      when(slice2.getId()).thenReturn(sliceId2);
-      when(task1.getId()).thenReturn(taskId1);
-      when(task2.getId()).thenReturn(taskId2);
+      when(slice1.getId()).thenReturn(PlanSliceId.of(sliceId1));
+      when(slice2.getId()).thenReturn(PlanSliceId.of(sliceId2));
+      when(task1.getId()).thenReturn(TaskId.of(taskId1));
+      when(task2.getId()).thenReturn(TaskId.of(taskId2));
 
       List<PlanSliceAggregate> slices = List.of(slice1, slice2);
       List<TaskAggregate> tasks = List.of(task1, task2);
@@ -346,10 +350,10 @@ class PlanPublishingCoordinatorTest {
       int taskCount = 5;
       String statusName = "SUCCESS";
 
-      when(schedule.getId()).thenReturn(scheduleId);
-      when(plan.getId()).thenReturn(planId);
-      when(slice1.getId()).thenReturn(sliceId1);
-      when(slice2.getId()).thenReturn(sliceId2);
+      when(schedule.getId()).thenReturn(ScheduleInstanceId.of(scheduleId));
+      when(plan.getId()).thenReturn(PlanId.of(planId));
+      when(slice1.getId()).thenReturn(PlanSliceId.of(sliceId1));
+      when(slice2.getId()).thenReturn(PlanSliceId.of(sliceId2));
 
       List<PlanSliceAggregate> slices = List.of(slice1, slice2);
 
@@ -370,8 +374,8 @@ class PlanPublishingCoordinatorTest {
     @DisplayName("应处理空切片列表")
     void shouldHandleEmptySliceList() {
       // Given
-      when(schedule.getId()).thenReturn(1L);
-      when(plan.getId()).thenReturn(100L);
+      when(schedule.getId()).thenReturn(ScheduleInstanceId.of(1L));
+      when(plan.getId()).thenReturn(PlanId.of(100L));
       when(plan.getStatus()).thenReturn(PlanStatus.READY);
 
       List<PlanSliceAggregate> emptySlices = Collections.emptyList();
@@ -391,10 +395,10 @@ class PlanPublishingCoordinatorTest {
     @DisplayName("应处理空任务列表")
     void shouldHandleEmptyTaskList() {
       // Given
-      when(schedule.getId()).thenReturn(1L);
-      when(plan.getId()).thenReturn(100L);
+      when(schedule.getId()).thenReturn(ScheduleInstanceId.of(1L));
+      when(plan.getId()).thenReturn(PlanId.of(100L));
       when(plan.getStatus()).thenReturn(PlanStatus.READY);
-      when(slice1.getId()).thenReturn(10L);
+      when(slice1.getId()).thenReturn(PlanSliceId.of(10L));
 
       List<PlanSliceAggregate> slices = List.of(slice1);
       List<TaskAggregate> emptyTasks = Collections.emptyList();
@@ -413,8 +417,8 @@ class PlanPublishingCoordinatorTest {
     @DisplayName("应正确映射计划状态到结果状态")
     void shouldMapPlanStatusToFinalStatus() {
       // Given
-      when(schedule.getId()).thenReturn(1L);
-      when(plan.getId()).thenReturn(100L);
+      when(schedule.getId()).thenReturn(ScheduleInstanceId.of(1L));
+      when(plan.getId()).thenReturn(PlanId.of(100L));
       when(plan.getStatus()).thenReturn(PlanStatus.ARCHIVED);
 
       List<PlanSliceAggregate> slices = Collections.emptyList();
@@ -441,10 +445,10 @@ class PlanPublishingCoordinatorTest {
 
       when(task1.pullDomainEvents()).thenReturn(List.of(event1));
       when(task2.pullDomainEvents()).thenReturn(List.of(event2));
-      when(plan.getId()).thenReturn(100L);
-      when(schedule.getId()).thenReturn(1L);
+      when(plan.getId()).thenReturn(PlanId.of(100L));
+      when(schedule.getId()).thenReturn(ScheduleInstanceId.of(1L));
       when(plan.getStatus()).thenReturn(PlanStatus.READY);
-      when(slice1.getId()).thenReturn(10L);
+      when(slice1.getId()).thenReturn(PlanSliceId.of(10L));
 
       List<TaskAggregate> tasks = List.of(task1, task2);
       List<PlanSliceAggregate> slices = List.of(slice1);
@@ -476,10 +480,10 @@ class PlanPublishingCoordinatorTest {
       TaskQueuedEvent event1 = createTaskQueuedEvent(1L);
 
       when(task1.pullDomainEvents()).thenReturn(List.of(event1));
-      when(plan.getId()).thenReturn(100L);
-      when(schedule.getId()).thenReturn(1L);
+      when(plan.getId()).thenReturn(PlanId.of(100L));
+      when(schedule.getId()).thenReturn(ScheduleInstanceId.of(1L));
       when(plan.getStatus()).thenReturn(PlanStatus.READY);
-      when(slice1.getId()).thenReturn(10L);
+      when(slice1.getId()).thenReturn(PlanSliceId.of(10L));
 
       List<TaskAggregate> tasks = List.of(task1);
       List<PlanSliceAggregate> slices = List.of(slice1);

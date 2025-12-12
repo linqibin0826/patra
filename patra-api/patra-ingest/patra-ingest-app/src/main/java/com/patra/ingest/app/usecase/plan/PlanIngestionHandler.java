@@ -387,7 +387,7 @@ public class PlanIngestionHandler
   private PlanTriggerNorm buildTriggerNorm(
       ScheduleInstanceAggregate schedule, PlanIngestionCommand request) {
     return new PlanTriggerNorm(
-        schedule.getId(),
+        schedule.getId().value(),
         request.provenanceCode(),
         request.operationCode(),
         request.step(),

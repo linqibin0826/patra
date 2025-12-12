@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.*;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
+import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -162,7 +163,7 @@ class ScheduleInstanceAggregateTest {
     @DisplayName("应该从持久化状态成功重建调度实例")
     void shouldRestoreScheduleInstanceFromPersistentState() {
       // Given
-      Long id = 100L;
+      ScheduleInstanceId id = ScheduleInstanceId.of(100L);
       Scheduler scheduler = Scheduler.SPRING;
       String schedulerJobId = "spring-job-001";
       String schedulerLogId = "spring-log-001";
@@ -211,7 +212,7 @@ class ScheduleInstanceAggregateTest {
       // When
       ScheduleInstanceAggregate instance =
           ScheduleInstanceAggregate.restore(
-              100L,
+              ScheduleInstanceId.of(100L),
               Scheduler.XXL,
               "job-001",
               "log-001",
@@ -490,7 +491,7 @@ class ScheduleInstanceAggregateTest {
       assertThat(instance.isTransient()).isTrue();
 
       // When - 分配 ID（模拟仓储保存后）
-      Long assignedId = 100L;
+      ScheduleInstanceId assignedId = ScheduleInstanceId.of(100L);
       instance.assignId(assignedId);
 
       // Then
@@ -545,7 +546,10 @@ class ScheduleInstanceAggregateTest {
     void shouldHandleVersionIncrement() {
       // Given - 从持久化恢复的调度实例
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder().id(100L).version(5L).buildRestored();
+          ScheduleInstanceAggregateTestDataBuilder.builder()
+              .id(ScheduleInstanceId.of(100L))
+              .version(5L)
+              .buildRestored();
 
       assertThat(instance.getVersion()).isEqualTo(5L);
 
@@ -728,14 +732,16 @@ class ScheduleInstanceAggregateTest {
     void shouldSupportOneToManyRelationshipWithPlanAggregate() {
       // Given - 一个调度实例可以产生多个计划
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder().id(1001L).buildRestored();
+          ScheduleInstanceAggregateTestDataBuilder.builder()
+              .id(ScheduleInstanceId.of(1001L))
+              .buildRestored();
 
       // 模拟：这个调度实例 ID 会被多个计划引用
-      Long scheduleInstanceId = instance.getId();
+      ScheduleInstanceId scheduleInstanceId = instance.getId();
 
       // Then - 调度实例 ID 可以被多个计划使用
       assertThat(scheduleInstanceId).isNotNull();
-      assertThat(scheduleInstanceId).isEqualTo(1001L);
+      assertThat(scheduleInstanceId.value()).isEqualTo(1001L);
 
       // 注意：实际的 1:N 关系验证需要在仓储层或应用服务层测试
     }
@@ -747,7 +753,7 @@ class ScheduleInstanceAggregateTest {
   ///
   /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
   static class ScheduleInstanceAggregateTestDataBuilder {
-    private Long id = null; // 默认为 null（新创建的聚合根）
+    private ScheduleInstanceId id = null; // 默认为 null（新创建的聚合根）
     private Scheduler scheduler = Scheduler.XXL;
     private String schedulerJobId = "default-job-001";
     private String schedulerLogId = "default-log-12345";
@@ -765,7 +771,7 @@ class ScheduleInstanceAggregateTest {
       return builder;
     }
 
-    public ScheduleInstanceAggregateTestDataBuilder id(Long id) {
+    public ScheduleInstanceAggregateTestDataBuilder id(ScheduleInstanceId id) {
       this.id = id;
       return this;
     }
@@ -825,7 +831,7 @@ class ScheduleInstanceAggregateTest {
 
     /// 构建从持久化重建的调度实例（使用 restore() 工厂方法）。
     public ScheduleInstanceAggregate buildRestored() {
-      Long restoredId = (id != null) ? id : 100L; // 默认 ID
+      ScheduleInstanceId restoredId = (id != null) ? id : ScheduleInstanceId.of(100L); // 默认 ID
       ScheduleInstanceAggregate instance =
           ScheduleInstanceAggregate.restore(
               restoredId,

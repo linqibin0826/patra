@@ -89,7 +89,7 @@ public class PlanPersistenceCoordinator {
     if (CollUtil.isEmpty(slices)) {
       return List.of();
     }
-    slices.forEach(slice -> slice.bindPlan(plan.getId()));
+    slices.forEach(slice -> slice.bindPlan(plan.getId().value()));
     try {
       return planSliceRepository.saveAll(slices);
     } catch (RuntimeException ex) {
@@ -120,7 +120,7 @@ public class PlanPersistenceCoordinator {
           ObjectUtil.isNull(placeholderSequence)
               ? null
               : sliceBySeq.get(placeholderSequence.intValue());
-      task.bindPlanAndSlice(plan.getId(), slice == null ? null : slice.getId());
+      task.bindPlanAndSlice(plan.getId().value(), slice == null ? null : slice.getId().value());
     }
     try {
       return taskRepository.saveAll(tasks);

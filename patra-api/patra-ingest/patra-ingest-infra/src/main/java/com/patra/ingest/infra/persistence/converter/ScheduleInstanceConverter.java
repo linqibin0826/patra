@@ -7,6 +7,7 @@ import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
+import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import com.patra.ingest.infra.persistence.entity.ScheduleInstanceDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -17,6 +18,7 @@ import org.mapstruct.ReportingPolicy;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ScheduleInstanceConverter {
 
+  @Mapping(target = "id", source = "id", qualifiedByName = "scheduleInstanceIdToLong")
   @Mapping(target = "schedulerCode", source = "scheduler", qualifiedByName = "schedulerToCode")
   @Mapping(
       target = "triggerTypeCode",
@@ -38,7 +40,7 @@ public interface ScheduleInstanceConverter {
     }
     long version = entity.getVersion() == null ? 0L : entity.getVersion();
     return ScheduleInstanceAggregate.restore(
-        entity.getId(),
+        ScheduleInstanceId.of(entity.getId()),
         schedulerFromCode(entity.getSchedulerCode()),
         entity.getSchedulerJobId(),
         entity.getSchedulerLogId(),
@@ -47,6 +49,11 @@ public interface ScheduleInstanceConverter {
         JsonNodeMappings.jsonNodeToMap(entity.getTriggerParams()),
         ProvenanceCode.parse(entity.getProvenanceCode()),
         version);
+  }
+
+  @Named("scheduleInstanceIdToLong")
+  static Long scheduleInstanceIdToLong(ScheduleInstanceId id) {
+    return id != null ? id.value() : null;
   }
 
   @Named("schedulerToCode")

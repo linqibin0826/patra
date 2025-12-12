@@ -126,7 +126,10 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
         continue;
       }
 
-      Long venueId = aggregate.getId();
+      Long venueId = aggregate.getId() != null ? aggregate.getId().value() : null;
+      if (venueId == null) {
+        continue; // 未持久化的聚合根，跳过
+      }
 
       // 详情
       if (item.hasDetail()) {

@@ -2,6 +2,7 @@ package com.patra.catalog.domain.model.aggregate;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -196,7 +197,7 @@ class VenueInstanceAggregateTest {
     @DisplayName("从持久化状态重建聚合根")
     void restore_success() {
       // given
-      Long id = 999L;
+      VenueInstanceId id = VenueInstanceId.of(999L);
       Long version = 5L;
 
       // when

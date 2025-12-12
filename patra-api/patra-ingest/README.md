@@ -74,6 +74,17 @@
 
 ## 🔑 核心领域概念
 
+### 聚合根 ID 值对象
+
+所有聚合根使用强类型 ID 值对象，提供编译时类型安全：
+
+| ID 值对象 | 聚合根 | 说明 |
+|----------|--------|------|
+| `ScheduleInstanceId` | `ScheduleInstanceAggregate` | 调度实例 ID |
+| `PlanId` | `PlanAggregate` | 计划 ID |
+| `PlanSliceId` | `PlanSliceAggregate` | 计划切片 ID |
+| `TaskId` | `TaskAggregate` | 任务 ID |
+
 ### 1. Plan (计划聚合根)
 
 **定义**: 数据采集任务的蓝图,包含窗口规范、表达式快照和配置快照。
