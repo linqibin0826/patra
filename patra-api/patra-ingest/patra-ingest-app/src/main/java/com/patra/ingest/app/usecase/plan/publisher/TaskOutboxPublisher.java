@@ -21,7 +21,7 @@ import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/// Task Outbox 发布器(重构为使用统一框架)
+/// Task Outbox 发布器
 ///
 /// 将任务排队事件发布为 Outbox 消息,确保可靠的 MQ 投递。
 ///

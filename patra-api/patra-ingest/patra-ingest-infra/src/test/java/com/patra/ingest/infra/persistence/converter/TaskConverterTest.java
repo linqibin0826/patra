@@ -8,8 +8,11 @@ import com.patra.common.json.JsonMapperHolder;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.vo.execution.ExecutionTimeline;
+import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.plan.TaskSchedulerContext;
+import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import com.patra.ingest.domain.model.vo.shared.LeaseInfo;
+import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import com.patra.ingest.domain.model.vo.task.TaskId;
 import com.patra.ingest.infra.persistence.entity.TaskDO;
 import java.time.Instant;
@@ -52,9 +55,9 @@ class TaskConverterTest {
     TaskAggregate aggregate =
         TaskAggregate.restore(
             TaskId.of(1001L),
-            2001L,
-            3001L,
-            4001L,
+            ScheduleInstanceId.of(2001L),
+            PlanId.of(3001L),
+            PlanSliceId.of(4001L),
             ProvenanceCode.PUBMED,
             "HARVEST",
             paramsJson,
@@ -157,9 +160,9 @@ class TaskConverterTest {
     // Then: 验证所有字段正确映射
     assertThat(aggregate).isNotNull();
     assertThat(aggregate.getId().value()).isEqualTo(1001L);
-    assertThat(aggregate.getScheduleInstanceId()).isEqualTo(2001L);
-    assertThat(aggregate.getPlanId()).isEqualTo(3001L);
-    assertThat(aggregate.getSliceId()).isEqualTo(4001L);
+    assertThat(aggregate.getScheduleInstanceId()).isEqualTo(ScheduleInstanceId.of(2001L));
+    assertThat(aggregate.getPlanId()).isEqualTo(PlanId.of(3001L));
+    assertThat(aggregate.getSliceId()).isEqualTo(PlanSliceId.of(4001L));
     assertThat(aggregate.getProvenanceCode()).isEqualTo(ProvenanceCode.PUBMED);
     assertThat(aggregate.getOperationCode()).isEqualTo("HARVEST");
     assertThat(aggregate.getIdempotentKey()).isEqualTo("idem-key-001");
@@ -208,9 +211,9 @@ class TaskConverterTest {
     TaskAggregate original =
         TaskAggregate.restore(
             TaskId.of(1L),
-            2L,
-            3L,
-            4L,
+            ScheduleInstanceId.of(2L),
+            PlanId.of(3L),
+            PlanSliceId.of(4L),
             ProvenanceCode.PUBMED,
             "HARVEST",
             paramsJson,

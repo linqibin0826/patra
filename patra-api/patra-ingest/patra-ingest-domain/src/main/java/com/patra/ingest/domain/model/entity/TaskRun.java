@@ -25,7 +25,7 @@ import lombok.Getter;
 ///   - 部分成功状态 (PARTIAL) 携带检查点信息，支持断点续传
 ///   - 统计信息 (RunStats) 记录抓取、解析、保存的记录数
 ///
-/// 注意：重构后 CURSOR_PENDING 状态已合并到 PARTIAL 并支持检查点。
+/// PARTIAL 状态携带检查点信息，支持断点续传。
 @SuppressWarnings("unused")
 @Getter
 public class TaskRun {
@@ -52,7 +52,7 @@ public class TaskRun {
         attemptNo,
         provenanceCode,
         operationCode,
-        TaskRunStatus.PENDING, // After refactoring: PLANNED → PENDING
+        TaskRunStatus.PENDING,
         RunStats.empty(),
         TaskRunCheckpoint.empty(),
         null,

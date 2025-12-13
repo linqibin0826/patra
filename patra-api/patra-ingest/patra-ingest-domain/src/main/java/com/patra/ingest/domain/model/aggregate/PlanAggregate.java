@@ -6,6 +6,7 @@ import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.PlanStatus;
 import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
+import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import java.util.Objects;
 import lombok.Getter;
 
@@ -43,7 +44,7 @@ import lombok.Getter;
 public class PlanAggregate extends AggregateRoot<PlanId> {
 
   /// 关联的调度实例标识（外部触发源）。
-  private final Long scheduleInstanceId;
+  private final ScheduleInstanceId scheduleInstanceId;
 
   /// 业务幂等键，用于计划去重（hash(provenance + operation + window + strategy)）。
   private final String planKey;
@@ -80,7 +81,7 @@ public class PlanAggregate extends AggregateRoot<PlanId> {
 
   private PlanAggregate(
       PlanId id,
-      Long scheduleInstanceId,
+      ScheduleInstanceId scheduleInstanceId,
       String planKey,
       ProvenanceCode provenanceCode,
       OperationCode operationCode,
@@ -123,7 +124,7 @@ public class PlanAggregate extends AggregateRoot<PlanId> {
   /// @param sliceParamsJson 切片策略参数 JSON
   /// @return 新创建的计划聚合根
   public static PlanAggregate create(
-      Long scheduleInstanceId,
+      ScheduleInstanceId scheduleInstanceId,
       String planKey,
       ProvenanceCode provenanceCode,
       String operationCode,
@@ -171,7 +172,7 @@ public class PlanAggregate extends AggregateRoot<PlanId> {
   /// @return 从持久化重建的计划聚合根
   public static PlanAggregate restore(
       PlanId id,
-      Long scheduleInstanceId,
+      ScheduleInstanceId scheduleInstanceId,
       String planKey,
       ProvenanceCode provenanceCode,
       String operationCode,

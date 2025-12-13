@@ -6,8 +6,11 @@ import com.patra.ingest.domain.event.TaskCompletedEvent;
 import com.patra.ingest.domain.event.TaskQueuedEvent;
 import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.vo.execution.ExecutionTimeline;
+import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.plan.TaskSchedulerContext;
+import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import com.patra.ingest.domain.model.vo.shared.LeaseInfo;
+import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import com.patra.ingest.domain.model.vo.task.TaskId;
 import java.time.Instant;
 import java.util.Objects;
@@ -48,13 +51,13 @@ import lombok.Getter;
 public class TaskAggregate extends AggregateRoot<TaskId> {
 
   /// 调度实例标识。
-  private Long scheduleInstanceId;
+  private ScheduleInstanceId scheduleInstanceId;
 
   /// 所属计划标识。
-  private Long planId;
+  private PlanId planId;
 
   /// 所属切片标识。
-  private Long sliceId;
+  private PlanSliceId sliceId;
 
   /// 数据来源代码（如：pubmed）。
   private final ProvenanceCode provenanceCode;
@@ -126,9 +129,9 @@ public class TaskAggregate extends AggregateRoot<TaskId> {
   /// @param schedulerContext 调度器上下文
   private TaskAggregate(
       TaskId id,
-      Long scheduleInstanceId,
-      Long planId,
-      Long sliceId,
+      ScheduleInstanceId scheduleInstanceId,
+      PlanId planId,
+      PlanSliceId sliceId,
       ProvenanceCode provenanceCode,
       String operationCode,
       String paramsJson,
@@ -181,9 +184,9 @@ public class TaskAggregate extends AggregateRoot<TaskId> {
   /// @param scheduledAt 计划执行时间
   /// @return 新创建的任务聚合根，准备持久化
   public static TaskAggregate create(
-      Long scheduleInstanceId,
-      Long planId,
-      Long sliceId,
+      ScheduleInstanceId scheduleInstanceId,
+      PlanId planId,
+      PlanSliceId sliceId,
       ProvenanceCode provenanceCode,
       String operationCode,
       String paramsJson,
@@ -238,9 +241,9 @@ public class TaskAggregate extends AggregateRoot<TaskId> {
   /// @return 从持久化重建的任务聚合根
   public static TaskAggregate restore(
       TaskId id,
-      Long scheduleInstanceId,
-      Long planId,
-      Long sliceId,
+      ScheduleInstanceId scheduleInstanceId,
+      PlanId planId,
+      PlanSliceId sliceId,
       ProvenanceCode provenanceCode,
       String operationCode,
       String paramsJson,
@@ -308,9 +311,9 @@ public class TaskAggregate extends AggregateRoot<TaskId> {
   /// @return 重建的任务实例（不含版本）
   private static TaskAggregate createRestoredInstance(
       TaskId id,
-      Long scheduleInstanceId,
-      Long planId,
-      Long sliceId,
+      ScheduleInstanceId scheduleInstanceId,
+      PlanId planId,
+      PlanSliceId sliceId,
       ProvenanceCode provenanceCode,
       String operationCode,
       String paramsJson,
@@ -352,7 +355,7 @@ public class TaskAggregate extends AggregateRoot<TaskId> {
   ///
   /// @param planId 计划标识
   /// @param sliceId 切片标识
-  public void bindPlanAndSlice(Long planId, Long sliceId) {
+  public void bindPlanAndSlice(PlanId planId, PlanSliceId sliceId) {
     this.planId = planId;
     this.sliceId = sliceId;
   }
@@ -366,9 +369,9 @@ public class TaskAggregate extends AggregateRoot<TaskId> {
     TaskQueuedEvent event =
         TaskQueuedEvent.of(
             getId() != null ? getId().value() : null,
-            this.planId,
-            this.sliceId,
-            this.scheduleInstanceId,
+            this.planId != null ? this.planId.value() : null,
+            this.sliceId != null ? this.sliceId.value() : null,
+            this.scheduleInstanceId != null ? this.scheduleInstanceId.value() : null,
             this.provenanceCode,
             this.operationCode,
             this.idempotentKey,
@@ -412,8 +415,8 @@ public class TaskAggregate extends AggregateRoot<TaskId> {
     addDomainEvent(
         TaskCompletedEvent.of(
             getId() != null ? getId().value() : null,
-            this.sliceId,
-            this.planId,
+            this.sliceId != null ? this.sliceId.value() : null,
+            this.planId != null ? this.planId.value() : null,
             TaskStatus.SUCCEEDED.getCode(),
             finishedAt));
   }
@@ -429,18 +432,13 @@ public class TaskAggregate extends AggregateRoot<TaskId> {
     addDomainEvent(
         TaskCompletedEvent.ofFailure(
             getId() != null ? getId().value() : null,
-            this.sliceId,
-            this.planId,
+            this.sliceId != null ? this.sliceId.value() : null,
+            this.planId != null ? this.planId.value() : null,
             TaskStatus.FAILED.getCode(),
             this.lastErrorCode,
             this.lastErrorMsg,
             finishedAt));
   }
-
-  // 注意：markPartial()、markCursorPending()、markCancelled() 方法已在重构后移除
-  // - PARTIAL 状态已移至 TaskRun 层用于可恢复执行跟踪
-  // - CURSOR_PENDING 状态已合并到 TaskRun.PARTIAL 并支持检查点
-  // - CANCELLED 状态已移除（当前设计不支持取消操作）
 
   /// 为此任务获取租约。
   ///

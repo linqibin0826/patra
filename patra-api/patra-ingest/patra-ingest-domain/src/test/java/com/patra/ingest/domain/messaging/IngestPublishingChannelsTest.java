@@ -8,7 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-@DisplayName("IngestPublishingChannels 枚举测试（重构为两段式 Channel）")
+@DisplayName("IngestPublishingChannels 枚举测试")
 class IngestPublishingChannelsTest {
 
   @Nested

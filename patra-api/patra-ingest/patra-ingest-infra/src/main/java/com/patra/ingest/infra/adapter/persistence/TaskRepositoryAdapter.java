@@ -158,8 +158,7 @@ public class TaskRepositoryAdapter implements TaskRepository {
 
   /// Finds the task associated with a specific slice (enforces 1:1 relationship).
   ///
-  /// **Note:** After refactoring, Slice:Task is a 1:1 relationship protected by database
-  /// unique constraint `uk_task_slice`. This method returns at most one task.
+  /// Slice:Task 是 1:1 关系，由数据库唯一约束 `uk_task_slice` 保护。
   ///
   /// @param sliceId slice ID
   /// @return task aggregate if exists, or {@link Optional#empty()}

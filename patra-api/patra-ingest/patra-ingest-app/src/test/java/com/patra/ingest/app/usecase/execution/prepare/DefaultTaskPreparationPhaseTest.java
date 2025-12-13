@@ -110,7 +110,8 @@ class DefaultTaskPreparationPhaseTest {
               eq(command.taskId()), anyString(), any(Duration.class)))
           .thenReturn(true);
       when(taskRepository.findById(command.taskId())).thenReturn(Optional.of(mockTask));
-      when(planSliceRepository.findById(mockTask.getSliceId())).thenReturn(Optional.of(mockSlice));
+      when(planSliceRepository.findById(mockTask.getSliceId().value()))
+          .thenReturn(Optional.of(mockSlice));
       when(sessionManager.createSession(eq(mockTask), anyString(), eq(command.getCorrelationId())))
           .thenReturn(mockSession);
       when(contextLoader.loadContext(any(TaskAggregate.class), anyLong())).thenReturn(mockContext);
@@ -141,7 +142,7 @@ class DefaultTaskPreparationPhaseTest {
           .verify(leaseManagementService)
           .tryAcquireLease(eq(command.taskId()), anyString(), any(Duration.class));
       inOrder.verify(taskRepository).findById(command.taskId());
-      inOrder.verify(planSliceRepository).findById(mockTask.getSliceId());
+      inOrder.verify(planSliceRepository).findById(mockTask.getSliceId().value());
       inOrder
           .verify(sessionManager)
           .createSession(eq(mockTask), anyString(), eq(command.getCorrelationId()));
@@ -452,7 +453,8 @@ class DefaultTaskPreparationPhaseTest {
       when(idempotencyChecker.isAlreadySucceeded(anyLong(), anyString())).thenReturn(false);
       when(leaseManagementService.tryAcquireLease(anyLong(), anyString(), any())).thenReturn(true);
       when(taskRepository.findById(anyLong())).thenReturn(Optional.of(mockTask));
-      when(planSliceRepository.findById(mockTask.getSliceId())).thenReturn(Optional.empty());
+      when(planSliceRepository.findById(mockTask.getSliceId().value()))
+          .thenReturn(Optional.empty());
 
       // When & Then: 应该抛出异常
       assertThatThrownBy(() -> preparePhase.prepare(command))
@@ -476,7 +478,7 @@ class DefaultTaskPreparationPhaseTest {
   private TaskAggregate createMockTask() {
     TaskAggregate task = mock(TaskAggregate.class);
     when(task.getId()).thenReturn(TaskId.of(1001L));
-    when(task.getSliceId()).thenReturn(3001L);
+    when(task.getSliceId()).thenReturn(PlanSliceId.of(3001L));
     when(task.getStatus()).thenReturn(TaskStatus.QUEUED);
     doNothing().when(task).markRunning(any(Instant.class), anyString());
     return task;

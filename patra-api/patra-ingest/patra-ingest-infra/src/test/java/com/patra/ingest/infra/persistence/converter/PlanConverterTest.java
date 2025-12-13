@@ -9,6 +9,7 @@ import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.enums.PlanStatus;
 import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
+import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import com.patra.ingest.infra.persistence.entity.PlanDO;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
@@ -35,7 +36,7 @@ class PlanConverterTest {
 
   private final PlanConverter converter = new PlanConverterImpl();
 
-  private static final Long SCHEDULE_INSTANCE_ID = 1001L;
+  private static final ScheduleInstanceId SCHEDULE_INSTANCE_ID = ScheduleInstanceId.of(1001L);
   private static final String PLAN_KEY = "PUBMED:QUERY_SESSION:2025-01-01:2025-01-31";
   private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final String OPERATION_CODE = "HARVEST";
@@ -84,7 +85,7 @@ class PlanConverterTest {
 
       // Then: 验证基本字段
       assertThat(result).isNotNull();
-      assertThat(result.getScheduleInstanceId()).isEqualTo(SCHEDULE_INSTANCE_ID);
+      assertThat(result.getScheduleInstanceId()).isEqualTo(SCHEDULE_INSTANCE_ID.value());
       assertThat(result.getPlanKey()).isEqualTo(PLAN_KEY);
       assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE.getCode());
       assertThat(result.getOperationCode()).isEqualTo(OPERATION_CODE);
@@ -274,7 +275,7 @@ class PlanConverterTest {
 
       PlanDO planDO = new PlanDO();
       planDO.setId(100L);
-      planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID);
+      planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID.value());
       planDO.setPlanKey(PLAN_KEY);
       planDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       planDO.setOperationCode(OPERATION_CODE);
@@ -329,7 +330,7 @@ class PlanConverterTest {
 
       PlanDO planDO = new PlanDO();
       planDO.setId(200L);
-      planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID);
+      planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID.value());
       planDO.setPlanKey(PLAN_KEY);
       planDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       planDO.setOperationCode(OPERATION_CODE);
@@ -363,7 +364,7 @@ class PlanConverterTest {
 
       PlanDO planDO = new PlanDO();
       planDO.setId(300L);
-      planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID);
+      planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID.value());
       planDO.setPlanKey(PLAN_KEY);
       planDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       planDO.setOperationCode(OPERATION_CODE);
@@ -397,7 +398,7 @@ class PlanConverterTest {
 
       PlanDO planDO = new PlanDO();
       planDO.setId(400L);
-      planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID);
+      planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID.value());
       planDO.setPlanKey(PLAN_KEY);
       planDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       planDO.setOperationCode(OPERATION_CODE);
@@ -431,7 +432,7 @@ class PlanConverterTest {
 
       PlanDO planDO = new PlanDO();
       planDO.setId(500L);
-      planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID);
+      planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID.value());
       planDO.setPlanKey(PLAN_KEY);
       planDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       planDO.setOperationCode(OPERATION_CODE);
@@ -472,7 +473,7 @@ class PlanConverterTest {
 
       PlanDO planDO = new PlanDO();
       planDO.setId(600L);
-      planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID);
+      planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID.value());
       planDO.setPlanKey(PLAN_KEY);
       planDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       planDO.setOperationCode(OPERATION_CODE);

@@ -3,6 +3,7 @@ package com.patra.ingest.domain.model.aggregate;
 import com.patra.common.domain.AggregateRoot;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.SliceStatus;
+import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import java.util.Objects;
 import lombok.Getter;
@@ -13,7 +14,7 @@ import lombok.Getter;
 ///
 /// - 切片的窗口规范、表达式快照在整个生命周期中保持不可变
 ///   - 切片签名哈希用于去重和幂等性保证
-///   - 切片与任务维持 1:1 关系（重构后简化）
+///   - 切片与任务维持 1:1 关系
 ///
 /// 业务规则：
 ///
@@ -36,7 +37,7 @@ import lombok.Getter;
 public class PlanSliceAggregate extends AggregateRoot<PlanSliceId> {
 
   /// 此切片所属计划的标识。
-  private Long planId;
+  private PlanId planId;
 
   /// 数据来源代码（如：pubmed）。
   private final ProvenanceCode provenanceCode;
@@ -61,7 +62,7 @@ public class PlanSliceAggregate extends AggregateRoot<PlanSliceId> {
 
   private PlanSliceAggregate(
       PlanSliceId id,
-      Long planId,
+      PlanId planId,
       ProvenanceCode provenanceCode,
       int sliceNo,
       String sliceSignatureHash,
@@ -81,7 +82,7 @@ public class PlanSliceAggregate extends AggregateRoot<PlanSliceId> {
   }
 
   public static PlanSliceAggregate create(
-      Long planId,
+      PlanId planId,
       ProvenanceCode provenanceCode,
       int sliceNo,
       String sliceSignatureHash,
@@ -103,7 +104,7 @@ public class PlanSliceAggregate extends AggregateRoot<PlanSliceId> {
 
   public static PlanSliceAggregate restore(
       PlanSliceId id,
-      Long planId,
+      PlanId planId,
       ProvenanceCode provenanceCode,
       int sequence,
       String sliceSignatureHash,
@@ -131,7 +132,7 @@ public class PlanSliceAggregate extends AggregateRoot<PlanSliceId> {
   ///
   /// @param planId 计划标识
   /// @throws IllegalArgumentException 如果 planId 为 null
-  public void bindPlan(Long planId) {
+  public void bindPlan(PlanId planId) {
     if (planId == null) {
       throw new IllegalArgumentException("planId 不能为 null");
     }
@@ -140,7 +141,7 @@ public class PlanSliceAggregate extends AggregateRoot<PlanSliceId> {
 
   /// 将切片标记为已分配（对应的任务已创建）。
   ///
-  /// **注意：**重构后强制执行 1:1 切片-任务关系。
+  /// 强制执行 1:1 切片-任务关系。
   public void markAssigned() {
     this.status = SliceStatus.ASSIGNED;
   }

@@ -3,8 +3,11 @@ package com.patra.ingest.domain.model.aggregate;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.vo.execution.ExecutionTimeline;
+import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.plan.TaskSchedulerContext;
+import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import com.patra.ingest.domain.model.vo.shared.LeaseInfo;
+import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import com.patra.ingest.domain.model.vo.task.TaskId;
 import java.time.Instant;
 
@@ -40,9 +43,9 @@ public class TaskAggregateTestDataBuilder {
 
   // ========== 基础字段 ==========
   private TaskId id;
-  private Long scheduleInstanceId = 1001L;
-  private Long planId = 2001L;
-  private Long sliceId = 3001L;
+  private ScheduleInstanceId scheduleInstanceId = ScheduleInstanceId.of(1001L);
+  private PlanId planId = PlanId.of(2001L);
+  private PlanSliceId sliceId = PlanSliceId.of(3001L);
   private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
   private String operationCode = "harvest";
   private String paramsJson = "{\"batchSize\":100}";
@@ -147,18 +150,34 @@ public class TaskAggregateTestDataBuilder {
     return this;
   }
 
-  public TaskAggregateTestDataBuilder scheduleInstanceId(Long scheduleInstanceId) {
+  public TaskAggregateTestDataBuilder scheduleInstanceId(ScheduleInstanceId scheduleInstanceId) {
     this.scheduleInstanceId = scheduleInstanceId;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder planId(Long planId) {
+  public TaskAggregateTestDataBuilder scheduleInstanceId(Long scheduleInstanceId) {
+    this.scheduleInstanceId =
+        scheduleInstanceId != null ? ScheduleInstanceId.of(scheduleInstanceId) : null;
+    return this;
+  }
+
+  public TaskAggregateTestDataBuilder planId(PlanId planId) {
     this.planId = planId;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder sliceId(Long sliceId) {
+  public TaskAggregateTestDataBuilder planId(Long planId) {
+    this.planId = planId != null ? PlanId.of(planId) : null;
+    return this;
+  }
+
+  public TaskAggregateTestDataBuilder sliceId(PlanSliceId sliceId) {
     this.sliceId = sliceId;
+    return this;
+  }
+
+  public TaskAggregateTestDataBuilder sliceId(Long sliceId) {
+    this.sliceId = sliceId != null ? PlanSliceId.of(sliceId) : null;
     return this;
   }
 

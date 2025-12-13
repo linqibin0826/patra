@@ -2,7 +2,6 @@ package com.patra.ingest.app.usecase.plan;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.map.MapUtil;
-import cn.hutool.core.util.ObjectUtil;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.plan.command.PlanIngestionCommand;
 import com.patra.ingest.domain.exception.PlanPersistenceException;
@@ -89,7 +88,7 @@ public class PlanPersistenceCoordinator {
     if (CollUtil.isEmpty(slices)) {
       return List.of();
     }
-    slices.forEach(slice -> slice.bindPlan(plan.getId().value()));
+    slices.forEach(slice -> slice.bindPlan(plan.getId()));
     try {
       return planSliceRepository.saveAll(slices);
     } catch (RuntimeException ex) {
@@ -99,6 +98,10 @@ public class PlanPersistenceCoordinator {
   }
 
   /// 批量持久化任务聚合根并绑定计划和切片 ID。
+  ///
+  /// 任务与切片的匹配策略：从任务的 paramsJson 中解析 sliceNo，然后根据 sliceNo 找到对应的切片。
+  /// 这是因为任务创建时 sliceId 为 null（真正的 sliceId 在切片持久化后才知道），但 paramsJson 中
+  /// 已经存储了 sliceNo 用于匹配。
   ///
   /// @param plan 计划聚合根
   /// @param persistedSlices 已持久化的切片
@@ -115,18 +118,31 @@ public class PlanPersistenceCoordinator {
       sliceBySeq.putIfAbsent(slice.getSliceNo(), slice);
     }
     for (TaskAggregate task : tasks) {
-      Long placeholderSequence = task.getSliceId();
-      PlanSliceAggregate slice =
-          ObjectUtil.isNull(placeholderSequence)
-              ? null
-              : sliceBySeq.get(placeholderSequence.intValue());
-      task.bindPlanAndSlice(plan.getId().value(), slice == null ? null : slice.getId().value());
+      Integer sliceNo = extractSliceNoFromParams(task.getParamsJson());
+      PlanSliceAggregate slice = sliceNo != null ? sliceBySeq.get(sliceNo) : null;
+      task.bindPlanAndSlice(plan.getId(), slice != null ? slice.getId() : null);
     }
     try {
       return taskRepository.saveAll(tasks);
     } catch (RuntimeException ex) {
       throw new PlanPersistenceException(PlanPersistenceException.Stage.TASK, "持久化任务失败", ex);
     }
+  }
+
+  /// 从任务参数 JSON 中提取 sliceNo。
+  ///
+  /// paramsJson 格式为规范化的 JSON，如 `{"sliceNo":1}`。
+  ///
+  /// @param paramsJson 任务参数 JSON 字符串
+  /// @return sliceNo 值，如果解析失败或不存在则返回 null
+  private Integer extractSliceNoFromParams(String paramsJson) {
+    if (paramsJson == null || paramsJson.isBlank()) {
+      return null;
+    }
+    // 使用正则从规范化 JSON 中提取 sliceNo 值
+    java.util.regex.Matcher matcher =
+        java.util.regex.Pattern.compile("\"sliceNo\":(\\d+)").matcher(paramsJson);
+    return matcher.find() ? Integer.parseInt(matcher.group(1)) : null;
   }
 
   /// 持久化任务重试状态。

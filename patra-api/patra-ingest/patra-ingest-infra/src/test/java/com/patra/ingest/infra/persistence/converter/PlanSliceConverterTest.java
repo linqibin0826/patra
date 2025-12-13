@@ -6,6 +6,7 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonNodeMappings;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.enums.SliceStatus;
+import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import com.patra.ingest.infra.persistence.entity.PlanSliceDO;
 import org.junit.jupiter.api.DisplayName;
@@ -31,7 +32,7 @@ class PlanSliceConverterTest {
 
   private final PlanSliceConverter converter = new PlanSliceConverterImpl();
 
-  private static final Long PLAN_ID = 2001L;
+  private static final PlanId PLAN_ID = PlanId.of(2001L);
   private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final int SLICE_NO = 5;
   private static final String SLICE_SIGNATURE_HASH = "slice-hash-abc123";
@@ -69,7 +70,7 @@ class PlanSliceConverterTest {
 
       // Then: 验证基本字段
       assertThat(result).isNotNull();
-      assertThat(result.getPlanId()).isEqualTo(PLAN_ID);
+      assertThat(result.getPlanId()).isEqualTo(PLAN_ID.value());
       assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE.getCode());
       assertThat(result.getSliceNo()).isEqualTo(SLICE_NO);
       assertThat(result.getSliceSignatureHash()).isEqualTo(SLICE_SIGNATURE_HASH);
@@ -219,7 +220,7 @@ class PlanSliceConverterTest {
       // Given: 创建完整的 PlanSliceDO
       PlanSliceDO sliceDO = new PlanSliceDO();
       sliceDO.setId(100L);
-      sliceDO.setPlanId(PLAN_ID);
+      sliceDO.setPlanId(PLAN_ID.value());
       sliceDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       sliceDO.setSliceNo(SLICE_NO);
       sliceDO.setSliceSignatureHash(SLICE_SIGNATURE_HASH);
@@ -252,7 +253,7 @@ class PlanSliceConverterTest {
       // Given: 创建 PENDING 状态的 PlanSliceDO
       PlanSliceDO sliceDO = new PlanSliceDO();
       sliceDO.setId(200L);
-      sliceDO.setPlanId(PLAN_ID);
+      sliceDO.setPlanId(PLAN_ID.value());
       sliceDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       sliceDO.setSliceNo(SLICE_NO);
       sliceDO.setSliceSignatureHash(SLICE_SIGNATURE_HASH);
@@ -275,7 +276,7 @@ class PlanSliceConverterTest {
       // Given: 创建 FINISHED 状态的 PlanSliceDO
       PlanSliceDO sliceDO = new PlanSliceDO();
       sliceDO.setId(300L);
-      sliceDO.setPlanId(PLAN_ID);
+      sliceDO.setPlanId(PLAN_ID.value());
       sliceDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       sliceDO.setSliceNo(SLICE_NO);
       sliceDO.setSliceSignatureHash(SLICE_SIGNATURE_HASH);
@@ -298,7 +299,7 @@ class PlanSliceConverterTest {
       // Given: sliceNo 为 null 的 PlanSliceDO
       PlanSliceDO sliceDO = new PlanSliceDO();
       sliceDO.setId(400L);
-      sliceDO.setPlanId(PLAN_ID);
+      sliceDO.setPlanId(PLAN_ID.value());
       sliceDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       sliceDO.setSliceNo(null); // null sliceNo
       sliceDO.setSliceSignatureHash(SLICE_SIGNATURE_HASH);
@@ -321,7 +322,7 @@ class PlanSliceConverterTest {
       // Given: statusCode 为 null 的 PlanSliceDO
       PlanSliceDO sliceDO = new PlanSliceDO();
       sliceDO.setId(500L);
-      sliceDO.setPlanId(PLAN_ID);
+      sliceDO.setPlanId(PLAN_ID.value());
       sliceDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       sliceDO.setSliceNo(SLICE_NO);
       sliceDO.setSliceSignatureHash(SLICE_SIGNATURE_HASH);

@@ -217,8 +217,8 @@ class PlanPersistenceCoordinatorTest {
       assertThat(result).isEqualTo(persistedSlices);
 
       // 验证切片绑定了计划 ID
-      verify(slice1).bindPlan(planId.value());
-      verify(slice2).bindPlan(planId.value());
+      verify(slice1).bindPlan(planId);
+      verify(slice2).bindPlan(planId);
       verify(planSliceRepository).saveAll(slices);
     }
 
@@ -291,10 +291,10 @@ class PlanPersistenceCoordinatorTest {
 
       // Then
       assertThat(result).hasSize(4);
-      verify(slice1).bindPlan(planId.value());
-      verify(slice2).bindPlan(planId.value());
-      verify(slice3).bindPlan(planId.value());
-      verify(slice4).bindPlan(planId.value());
+      verify(slice1).bindPlan(planId);
+      verify(slice2).bindPlan(planId);
+      verify(slice3).bindPlan(planId);
+      verify(slice4).bindPlan(planId);
     }
   }
 
@@ -316,9 +316,9 @@ class PlanPersistenceCoordinatorTest {
       when(slice2.getId()).thenReturn(sliceId2);
       when(slice2.getSliceNo()).thenReturn(2);
 
-      // 任务的 sliceId 在组装时暂存为 sliceNo (占位符)
-      when(task1.getSliceId()).thenReturn(1L); // 对应 slice1
-      when(task2.getSliceId()).thenReturn(2L); // 对应 slice2
+      // 任务的 sliceNo 通过 paramsJson 传递
+      when(task1.getParamsJson()).thenReturn("{\"sliceNo\":1}"); // 对应 slice1
+      when(task2.getParamsJson()).thenReturn("{\"sliceNo\":2}"); // 对应 slice2
 
       List<PlanSliceAggregate> persistedSlices = List.of(slice1, slice2);
       List<TaskAggregate> tasks = List.of(task1, task2);
@@ -334,8 +334,8 @@ class PlanPersistenceCoordinatorTest {
       assertThat(result).isEqualTo(persistedTasks);
 
       // 验证任务绑定了计划 ID 和切片 ID
-      verify(task1).bindPlanAndSlice(planId.value(), sliceId1.value());
-      verify(task2).bindPlanAndSlice(planId.value(), sliceId2.value());
+      verify(task1).bindPlanAndSlice(planId, sliceId1);
+      verify(task2).bindPlanAndSlice(planId, sliceId2);
       verify(taskRepository).saveAll(tasks);
     }
 
@@ -379,7 +379,7 @@ class PlanPersistenceCoordinatorTest {
       when(plan.getId()).thenReturn(planId);
       when(slice1.getId()).thenReturn(sliceId);
       when(slice1.getSliceNo()).thenReturn(1);
-      when(task1.getSliceId()).thenReturn(1L);
+      when(task1.getParamsJson()).thenReturn("{\"sliceNo\":1}");
 
       List<PlanSliceAggregate> slices = List.of(slice1);
       List<TaskAggregate> tasks = List.of(task1);
@@ -413,8 +413,8 @@ class PlanPersistenceCoordinatorTest {
       when(slice2.getSliceNo()).thenReturn(2);
 
       // 任务 1 和 2 都关联到 slice1 (序号 1)
-      when(task1.getSliceId()).thenReturn(1L);
-      when(task2.getSliceId()).thenReturn(1L);
+      when(task1.getParamsJson()).thenReturn("{\"sliceNo\":1}");
+      when(task2.getParamsJson()).thenReturn("{\"sliceNo\":1}");
 
       List<PlanSliceAggregate> slices = List.of(slice1, slice2);
       List<TaskAggregate> tasks = List.of(task1, task2);
@@ -425,8 +425,8 @@ class PlanPersistenceCoordinatorTest {
       coordinator.persistTasks(plan, slices, tasks);
 
       // Then
-      verify(task1).bindPlanAndSlice(planId.value(), sliceId1.value());
-      verify(task2).bindPlanAndSlice(planId.value(), sliceId1.value());
+      verify(task1).bindPlanAndSlice(planId, sliceId1);
+      verify(task2).bindPlanAndSlice(planId, sliceId1);
     }
 
     @Test
@@ -436,7 +436,7 @@ class PlanPersistenceCoordinatorTest {
       PlanId planId = PlanId.of(100L);
 
       when(plan.getId()).thenReturn(planId);
-      when(task1.getSliceId()).thenReturn(null); // 无关联切片
+      when(task1.getParamsJson()).thenReturn(null); // 无 paramsJson，无法解析 sliceNo
 
       List<PlanSliceAggregate> slices = List.of(slice1);
       List<TaskAggregate> tasks = List.of(task1);
@@ -447,7 +447,7 @@ class PlanPersistenceCoordinatorTest {
       coordinator.persistTasks(plan, slices, tasks);
 
       // Then
-      verify(task1).bindPlanAndSlice(planId.value(), null);
+      verify(task1).bindPlanAndSlice(planId, null);
     }
   }
 
@@ -563,7 +563,7 @@ class PlanPersistenceCoordinatorTest {
       List<TaskAggregate> largeTaskList = new java.util.ArrayList<>();
       for (int i = 0; i < 100; i++) {
         TaskAggregate task = org.mockito.Mockito.mock(TaskAggregate.class);
-        when(task.getSliceId()).thenReturn(1L);
+        when(task.getParamsJson()).thenReturn("{\"sliceNo\":1}");
         largeTaskList.add(task);
       }
 

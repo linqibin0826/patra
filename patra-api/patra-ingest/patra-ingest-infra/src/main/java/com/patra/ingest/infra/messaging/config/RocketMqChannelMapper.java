@@ -33,7 +33,7 @@ public class RocketMqChannelMapper {
 
   /// 默认业务通道到 RocketMQ Topic 的映射表。
   ///
-  /// 重构后使用粗粒度 Channel 模式：
+  /// 使用粗粒度 Channel 模式：
   ///
   /// - INGEST_TASK → INGEST_TASK (资源级别 Topic)
   ///   - INGEST_PUBLICATION → INGEST_PUBLICATION (资源级别 Topic)

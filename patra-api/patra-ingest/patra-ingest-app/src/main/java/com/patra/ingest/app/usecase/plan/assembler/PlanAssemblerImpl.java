@@ -24,6 +24,7 @@ import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.plan.PlanTriggerNorm;
 import com.patra.ingest.domain.model.vo.plan.PlannerWindow;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
+import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -121,8 +122,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
         norm.operationCode());
 
     if (slices.isEmpty() || tasks.isEmpty()) {
-      // Note: After refactoring, Plan remains in SLICING status when assembly fails.
-      // No explicit failure status exists; the Plan will not progress to READY.
+      // 组装失败时 Plan 保持 SLICING 状态，不会进入 READY
       log.warn(
           "Plan assembly failed for provenance [{}] operation [{}]: no slices or tasks generated. "
               + "Plan remains in SLICING status.",
@@ -159,7 +159,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
     String operationCodeStr = oc != null ? oc.getCode() : null;
 
     return PlanAggregate.create(
-        norm.scheduleInstanceId(),
+        ScheduleInstanceId.of(norm.scheduleInstanceId()),
         planKey,
         pc,
         operationCodeStr,
@@ -299,9 +299,9 @@ public class PlanAssemblerImpl implements PlanAssembler {
 
       tasks.add(
           TaskAggregate.create(
-              norm.scheduleInstanceId(),
+              ScheduleInstanceId.of(norm.scheduleInstanceId()),
               null,
-              (long) slice.getSliceNo(),
+              null, // sliceId 由 PlanPersistenceCoordinator 根据 sliceNo 绑定
               pc,
               oc != null ? oc.getCode() : null,
               buildTaskParamsJson(slice.getSliceNo()),

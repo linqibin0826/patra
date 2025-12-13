@@ -31,7 +31,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 /// 状态流转规则: 当 Slice 状态变化 (PENDING → ASSIGNED → FINISHED) 时,聚合所有 Slice 状态 来更新 Plan 状态 (READY →
 /// ARCHIVED)
 ///
-/// 重构说明: Plan 状态仅反映生命周期状态。如果所有 Slice 均为 FINISHED,则 Plan 变为 ARCHIVED, 不考虑单个 Task 的成功/失败
+/// Plan 状态仅反映生命周期，不区分 Task 成功/失败。所有 Slice 为 FINISHED 时，Plan 变为 ARCHIVED。
 ///
 /// 并发处理: 使用乐观锁防止并发冲突,发生冲突时跳过本次更新
 @Component

@@ -31,7 +31,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 ///   - 更新 Slice 状态
 ///   - 如果 Slice 状态变化,发布 {@link SliceStatusChangedEvent} 触发 Plan 状态更新
 ///
-/// 重构说明: Slice:Task 为 1:1 关系。当 Task 完成 (SUCCEEDED/FAILED) 时,直接映射 Task 状态到 Slice 状态
+/// Slice:Task 为 1:1 关系。Task 完成时（SUCCEEDED/FAILED）直接映射到 Slice 状态。
 ///
 /// 事件流转: TaskCompletedEvent → SliceStatusChangedEvent → Plan 状态更新
 ///

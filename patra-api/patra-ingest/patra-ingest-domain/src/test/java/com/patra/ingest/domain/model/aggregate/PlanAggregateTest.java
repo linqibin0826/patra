@@ -7,6 +7,7 @@ import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.PlanStatus;
 import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
+import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -36,7 +37,7 @@ class PlanAggregateTest {
     @DisplayName("应该成功创建新计划并初始化为 DRAFT 状态")
     void shouldCreateNewPlanWithDraftStatus() {
       // Given
-      Long scheduleInstanceId = 1001L;
+      ScheduleInstanceId scheduleInstanceId = ScheduleInstanceId.of(1001L);
       String planKey = "pubmed_harvest_2024-01-01_2024-12-31";
       ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       String operationCode = "HARVEST";
@@ -69,6 +70,7 @@ class PlanAggregateTest {
       assertThat(plan).isNotNull();
       assertThat(plan.getId()).isNull(); // 新创建的聚合根 ID 为 null
       assertThat(plan.getScheduleInstanceId()).isEqualTo(scheduleInstanceId);
+      assertThat(plan.getScheduleInstanceId().value()).isEqualTo(1001L);
       assertThat(plan.getPlanKey()).isEqualTo(planKey);
       assertThat(plan.getProvenanceCode()).isEqualTo(provenanceCode);
       assertThat(plan.getOperationCode()).isEqualTo("HARVEST");
@@ -115,7 +117,7 @@ class PlanAggregateTest {
     @DisplayName("应该抛出异常当 scheduleInstanceId 为 null")
     void shouldThrowExceptionWhenScheduleInstanceIdIsNull() {
       // Given
-      Long scheduleInstanceId = null;
+      ScheduleInstanceId scheduleInstanceId = null;
 
       // When & Then
       assertThatThrownBy(
@@ -175,7 +177,7 @@ class PlanAggregateTest {
     void shouldRestorePlanFromPersistentState() {
       // Given
       PlanId id = PlanId.of(100L);
-      Long scheduleInstanceId = 1001L;
+      ScheduleInstanceId scheduleInstanceId = ScheduleInstanceId.of(1001L);
       String planKey = "pubmed_harvest_2024-01-01_2024-12-31";
       ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       String operationCode = "HARVEST";
@@ -213,6 +215,7 @@ class PlanAggregateTest {
       assertThat(plan).isNotNull();
       assertThat(plan.getId()).isEqualTo(id);
       assertThat(plan.getScheduleInstanceId()).isEqualTo(scheduleInstanceId);
+      assertThat(plan.getScheduleInstanceId().value()).isEqualTo(1001L);
       assertThat(plan.getPlanKey()).isEqualTo(planKey);
       assertThat(plan.getProvenanceCode()).isEqualTo(provenanceCode);
       assertThat(plan.getOperationCode()).isEqualTo("HARVEST");
@@ -231,7 +234,7 @@ class PlanAggregateTest {
       PlanAggregate plan =
           PlanAggregate.restore(
               PlanId.of(100L),
-              1001L,
+              ScheduleInstanceId.of(1001L),
               "planKey",
               ProvenanceCode.PUBMED,
               "HARVEST",
@@ -751,7 +754,7 @@ class PlanAggregateTest {
   /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
   static class PlanAggregateTestDataBuilder {
     private PlanId id = null; // 默认为 null（新创建的聚合根）
-    private Long scheduleInstanceId = 1001L;
+    private ScheduleInstanceId scheduleInstanceId = ScheduleInstanceId.of(1001L);
     private String planKey = "pubmed_harvest_2024-01-01_2024-12-31";
     private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
     private String operationCode = "HARVEST";
@@ -776,7 +779,7 @@ class PlanAggregateTest {
       return this;
     }
 
-    public PlanAggregateTestDataBuilder scheduleInstanceId(Long scheduleInstanceId) {
+    public PlanAggregateTestDataBuilder scheduleInstanceId(ScheduleInstanceId scheduleInstanceId) {
       this.scheduleInstanceId = scheduleInstanceId;
       return this;
     }

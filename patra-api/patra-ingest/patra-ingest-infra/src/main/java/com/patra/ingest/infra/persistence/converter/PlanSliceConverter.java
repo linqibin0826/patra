@@ -6,6 +6,7 @@ import com.patra.ingest.domain.exception.InfrastructureException;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.SliceStatus;
+import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import com.patra.ingest.infra.persistence.entity.PlanSliceDO;
 import org.mapstruct.Mapper;
@@ -18,6 +19,7 @@ import org.mapstruct.ReportingPolicy;
 public interface PlanSliceConverter {
 
   @Mapping(target = "id", source = "id", qualifiedByName = "planSliceIdToLong")
+  @Mapping(target = "planId", source = "planId", qualifiedByName = "planIdToLong")
   @Mapping(
       target = "windowSpec",
       expression =
@@ -39,9 +41,10 @@ public interface PlanSliceConverter {
     }
     SliceStatus status = sliceStatusFromCode(entity.getStatusCode());
     long version = entity.getVersion() == null ? 0L : entity.getVersion();
+    PlanId planId = entity.getPlanId() != null ? PlanId.of(entity.getPlanId()) : null;
     return PlanSliceAggregate.restore(
         PlanSliceId.of(entity.getId()),
-        entity.getPlanId(),
+        planId,
         ProvenanceCode.parse(entity.getProvenanceCode()),
         entity.getSliceNo() == null ? 0 : entity.getSliceNo(),
         entity.getSliceSignatureHash(),
@@ -54,6 +57,11 @@ public interface PlanSliceConverter {
 
   @Named("planSliceIdToLong")
   static Long planSliceIdToLong(PlanSliceId id) {
+    return id != null ? id.value() : null;
+  }
+
+  @Named("planIdToLong")
+  static Long planIdToLong(PlanId id) {
     return id != null ? id.value() : null;
   }
 
