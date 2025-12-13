@@ -4,7 +4,11 @@ import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
+import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
+import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
 import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
+import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
+import com.patra.catalog.domain.model.vo.venue.Society;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.common.domain.AggregateRoot;
@@ -16,7 +20,7 @@ import java.util.List;
 import java.util.Optional;
 import lombok.Getter;
 
-/// 出版载体聚合根（最小聚合）。
+/// 出版载体聚合根。
 ///
 /// **CQRS 设计**：
 ///
@@ -30,12 +34,15 @@ import lombok.Getter;
 ///
 /// - VenueIdentifier（值对象，1:N）：标识符集合，保护 ISSN-L 唯一性不变量
 ///
-/// **补充数据（通过 VenueRepository 独立管理，不属于聚合边界）**：
+/// **嵌入式值对象**（作为 JSON 字段存储在主表）：
 ///
-/// - VenueDetail：详情信息（出版信息、索引状态、OA 状态、宿主机构等）
-/// - VenueStats：统计快照（works_count、cited_by_count 等）
-/// - ApcInfo：APC 信息
+/// - PublicationProfile：出版概况（出版信息、索引状态、宿主机构等）
+/// - CitationMetrics：引用指标（works_count、cited_by_count 等）
+/// - OpenAccessInfo：开放获取信息（OA 状态 + APC 定价）
 /// - Society：关联学会列表
+///
+/// **关联数据**（通过 VenueRepository 独立管理，不属于聚合边界）：
+///
 /// - VenuePublicationStats：年度指标集合（来自 OpenAlex）
 /// - VenueMesh：MeSH 主题词集合（来自 Serfile）
 /// - VenueRelation：期刊关联关系集合（来自 Serfile）
@@ -68,6 +75,20 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// 数据来源信息
   private ProvenanceInfo provenance;
 
+  // ========== 嵌入式值对象 ==========
+
+  /// 出版概况（出版信息、索引状态、宿主机构等）
+  private PublicationProfile publicationProfile;
+
+  /// 引用指标（works_count、cited_by_count 等）
+  private CitationMetrics citationMetrics;
+
+  /// 开放获取信息（OA 状态 + APC 定价）
+  private OpenAccessInfo openAccess;
+
+  /// 关联学会列表
+  private List<Society> affiliatedSocieties;
+
   /// 私有构造函数（通过工厂方法创建）。
   ///
   /// @param id 主键 ID（新建时为 null）
@@ -82,6 +103,7 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
     this.venueType = venueType;
     this.displayName = displayName;
     this.identifiers = new ArrayList<>();
+    this.affiliatedSocieties = new ArrayList<>();
   }
 
   // ========== 工厂方法 ==========
@@ -170,6 +192,56 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
     this.provenance = ProvenanceInfo.forOpenAlex(sourceCreatedDate, sourceUpdatedDate);
     markDirty();
     return this;
+  }
+
+  // ========== 嵌入式值对象设置方法 ==========
+
+  /// 设置出版概况。
+  ///
+  /// @param publicationProfile 出版概况
+  /// @return 当前对象
+  public VenueAggregate withPublicationProfile(PublicationProfile publicationProfile) {
+    this.publicationProfile = publicationProfile;
+    markDirty();
+    return this;
+  }
+
+  /// 设置引用指标。
+  ///
+  /// @param citationMetrics 引用指标
+  /// @return 当前对象
+  public VenueAggregate withCitationMetrics(CitationMetrics citationMetrics) {
+    this.citationMetrics = citationMetrics;
+    markDirty();
+    return this;
+  }
+
+  /// 设置开放获取信息。
+  ///
+  /// @param openAccess 开放获取信息
+  /// @return 当前对象
+  public VenueAggregate withOpenAccess(OpenAccessInfo openAccess) {
+    this.openAccess = openAccess;
+    markDirty();
+    return this;
+  }
+
+  /// 设置关联学会列表。
+  ///
+  /// @param affiliatedSocieties 关联学会列表
+  /// @return 当前对象
+  public VenueAggregate withAffiliatedSocieties(List<Society> affiliatedSocieties) {
+    this.affiliatedSocieties =
+        affiliatedSocieties != null ? new ArrayList<>(affiliatedSocieties) : new ArrayList<>();
+    markDirty();
+    return this;
+  }
+
+  /// 获取关联学会列表（不可变视图）。
+  ///
+  /// @return 关联学会列表
+  public List<Society> getAffiliatedSocieties() {
+    return Collections.unmodifiableList(affiliatedSocieties);
   }
 
   // ========== 标识符管理方法 ==========
@@ -275,6 +347,50 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// @return true 如果来自 PubMed
   public boolean isFromPubMed() {
     return provenance != null && provenance.isFromPubMed();
+  }
+
+  // ========== 嵌入式值对象代理方法 ==========
+
+  /// 判断是否为开放获取期刊。
+  ///
+  /// @return true 如果是 OA 期刊
+  public boolean isOa() {
+    return openAccess != null && openAccess.isOa();
+  }
+
+  /// 获取作品总数。
+  ///
+  /// @return 作品总数，如果无引用指标则返回 null
+  public Integer getWorksCount() {
+    return citationMetrics != null ? citationMetrics.worksCount() : null;
+  }
+
+  /// 获取被引用总次数。
+  ///
+  /// @return 被引用总次数，如果无引用指标则返回 null
+  public Integer getCitedByCount() {
+    return citationMetrics != null ? citationMetrics.citedByCount() : null;
+  }
+
+  /// 获取 APC 美元价格。
+  ///
+  /// @return APC 美元价格，如果无开放获取信息则返回 null
+  public Integer getApcUsd() {
+    return openAccess != null ? openAccess.apcUsd() : null;
+  }
+
+  /// 判断期刊是否已停刊。
+  ///
+  /// @return true 如果已停刊
+  public boolean isCeased() {
+    return publicationProfile != null && publicationProfile.isCeased();
+  }
+
+  /// 判断期刊是否当前被 MEDLINE 收录。
+  ///
+  /// @return true 如果当前被 MEDLINE 索引
+  public boolean isCurrentlyIndexed() {
+    return publicationProfile != null && publicationProfile.isCurrentlyIndexed();
   }
 
   // ========== 不变量验证 ==========
