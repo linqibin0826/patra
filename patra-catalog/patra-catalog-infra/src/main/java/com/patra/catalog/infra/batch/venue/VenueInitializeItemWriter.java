@@ -2,11 +2,7 @@ package com.patra.catalog.infra.batch.venue;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
-import com.patra.catalog.domain.model.vo.venue.ApcInfo;
-import com.patra.catalog.domain.model.vo.venue.Society;
-import com.patra.catalog.domain.model.vo.venue.VenueDetail;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
-import com.patra.catalog.domain.model.vo.venue.VenueStats;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,12 +24,19 @@ import org.springframework.stereotype.Component;
 ///
 /// **职责**：
 ///
-/// - 将 VenueParseResult 解析为聚合根和补充数据，分别持久化
-/// - 聚合根保存到 cat_venue + cat_venue_identifier
-/// - 补充数据分别保存到：cat_venue_detail, cat_venue_stats, cat_venue_apc, cat_venue_society
+/// - 将 VenueParseResult 解析为聚合根，持久化到 cat_venue + cat_venue_identifier
+/// - 嵌入式值对象（publicationProfile, citationMetrics, openAccess, affiliatedSocieties）作为 JSON 随聚合根一起保存
 /// - 年度指标保存到 cat_venue_publication_stats
 /// - Chunk 内 ISSN-L 去重：同一批次内的重复记录在内存中过滤
 /// - 乐观插入：正常情况直接插入，唯一约束冲突时降级处理
+///
+/// **DDD 嵌入式值对象设计**：
+///
+/// 聚合根（VenueAggregate）已包含所有嵌入式值对象，不再需要分别保存：
+/// - publicationProfile → cat_venue.publication_profile (JSON)
+/// - citationMetrics → cat_venue.citation_metrics (JSON)
+/// - openAccess → cat_venue.open_access (JSON)
+/// - affiliatedSocieties → cat_venue.affiliated_societies (JSON)
 ///
 /// **乐观插入策略**：
 ///
@@ -67,11 +70,11 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
     // Step 1: Chunk 内去重（必须保留，否则同批次内重复也会导致插入失败）
     List<VenueParseResult> deduplicatedInChunk = deduplicateWithinChunk(items);
 
-    // Step 2: 提取聚合根
+    // Step 2: 提取聚合根（已包含嵌入式值对象）
     List<VenueAggregate> aggregates =
         deduplicatedInChunk.stream().map(VenueParseResult::aggregate).toList();
 
-    // Step 3: 乐观插入聚合根
+    // Step 3: 乐观插入聚合根（嵌入式值对象随聚合根一起保存为 JSON）
     List<VenueAggregate> insertedAggregates;
     try {
       venueRepository.insertAll(aggregates);
@@ -89,15 +92,15 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
       }
     }
 
-    // Step 4: 保存补充数据（仅针对成功插入的聚合根）
-    saveSupplementaryData(insertedAggregates, deduplicatedInChunk);
+    // Step 4: 保存年度指标（唯一仍需独立保存的 1:N 数据）
+    saveYearlyMetrics(insertedAggregates, deduplicatedInChunk);
   }
 
-  /// 保存补充数据（detail, stats, apc, societies, yearlyMetrics）。
+  /// 保存年度指标（cat_venue_publication_stats）。
   ///
   /// @param insertedAggregates 成功插入的聚合根列表
-  /// @param items 原始解析结果（用于提取补充数据）
-  private void saveSupplementaryData(
+  /// @param items 原始解析结果（用于提取年度指标）
+  private void saveYearlyMetrics(
       List<VenueAggregate> insertedAggregates, List<VenueParseResult> items) {
     if (insertedAggregates.isEmpty()) {
       return;
@@ -112,11 +115,7 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
       }
     }
 
-    // 构建各类补充数据的 venueId 映射
-    Map<Long, VenueDetail> detailsByVenueId = new HashMap<>();
-    Map<Long, VenueStats> statsByVenueId = new HashMap<>();
-    Map<Long, ApcInfo> apcByVenueId = new HashMap<>();
-    Map<Long, List<Society>> societiesByVenueId = new HashMap<>();
+    // 构建 venueId → 年度指标列表映射
     Map<Long, List<VenuePublicationStats>> yearlyMetricsByVenueId = new HashMap<>();
 
     for (VenueAggregate aggregate : insertedAggregates) {
@@ -131,53 +130,13 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
         continue; // 未持久化的聚合根，跳过
       }
 
-      // 详情
-      if (item.hasDetail()) {
-        detailsByVenueId.put(venueId, item.detail());
-      }
-
-      // 统计快照
-      if (item.hasStats()) {
-        statsByVenueId.put(venueId, item.stats());
-      }
-
-      // APC 信息
-      if (item.hasApcInfo()) {
-        apcByVenueId.put(venueId, item.apcInfo());
-      }
-
-      // 关联学会
-      if (item.hasSocieties()) {
-        societiesByVenueId.put(venueId, item.societies());
-      }
-
       // 年度指标
       if (item.hasYearlyMetrics()) {
         yearlyMetricsByVenueId.put(venueId, item.yearlyMetrics());
       }
     }
 
-    // 批量保存各类补充数据
-    if (!detailsByVenueId.isEmpty()) {
-      venueRepository.replaceDetailsBatch(detailsByVenueId);
-      log.debug("写入详情完成：{} 条", detailsByVenueId.size());
-    }
-
-    if (!statsByVenueId.isEmpty()) {
-      venueRepository.replaceStatsBatch(statsByVenueId);
-      log.debug("写入统计快照完成：{} 条", statsByVenueId.size());
-    }
-
-    if (!apcByVenueId.isEmpty()) {
-      venueRepository.replaceApcBatch(apcByVenueId);
-      log.debug("写入 APC 信息完成：{} 条", apcByVenueId.size());
-    }
-
-    if (!societiesByVenueId.isEmpty()) {
-      venueRepository.replaceSocietiesBatch(societiesByVenueId);
-      log.debug("写入关联学会完成：{} 条", societiesByVenueId.size());
-    }
-
+    // 批量保存年度指标
     if (!yearlyMetricsByVenueId.isEmpty()) {
       venueRepository.replaceYearlyMetricsBatch(yearlyMetricsByVenueId);
       log.debug("写入年度指标完成：{} 个 Venue", yearlyMetricsByVenueId.size());

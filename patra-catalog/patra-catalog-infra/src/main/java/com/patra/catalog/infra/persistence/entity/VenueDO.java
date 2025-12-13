@@ -3,23 +3,31 @@ package com.patra.catalog.infra.persistence.entity;
 import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
+import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
+import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
+import com.patra.catalog.domain.model.vo.venue.Society;
+import com.patra.catalog.infra.persistence.typehandler.SocietyListTypeHandler;
 import com.patra.starter.mybatis.entity.BaseDO;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/// 出版载体数据库实体（最小聚合根），映射到表 `cat_venue`。
+/// 出版载体数据库实体（聚合根），映射到表 `cat_venue`。
 ///
-/// **CQRS 设计**：
+/// **DDD 嵌入式值对象设计**：
 ///
-/// 遵循 CQRS 原则，聚合根只包含核心身份标识和来源追踪字段。
-/// 非核心属性存储在独立的补充数据表：
+/// 遵循 DDD 原则，聚合根包含核心身份标识、来源追踪和嵌入式值对象（JSON 字段）。
 ///
-/// - `cat_venue_detail` - 出版信息、索引信息、OA 状态
-/// - `cat_venue_stats` - 统计快照（发文量、引用量等）
-/// - `cat_venue_apc` - 文章处理费信息
-/// - `cat_venue_society` - 关联学术组织
+/// **嵌入式值对象**（JSON 字段）：
+///
+/// - `publication_profile` - 出版概况（出版历史、语言、宿主机构、索引信息等）
+/// - `citation_metrics` - 引用指标（works_count、cited_by_count、h_index 等）
+/// - `open_access` - 开放获取信息（OA 状态 + APC 定价）
+/// - `affiliated_societies` - 关联学会列表
 ///
 /// **核心字段**：
 ///
@@ -36,9 +44,9 @@ import lombok.EqualsAndHashCode;
 /// | nlm_id | cat_venue_identifier | 冗余 |
 /// | issn_l | cat_venue_identifier | 冗余 |
 /// | openalex_id | cat_venue_identifier | 冗余 |
-/// | abbreviated_title | VenueDetail | 快照 |
-/// | primary_language | VenueDetail | 快照 |
-/// | country_code | VenueDetail | 快照 |
+/// | abbreviated_title | PublicationProfile | 快照 |
+/// | primary_language | PublicationProfile | 快照 |
+/// | country_code | PublicationProfile | 快照 |
 ///
 /// **索引说明**：
 ///
@@ -113,4 +121,24 @@ public class VenueDO extends BaseDO {
   /// 最后同步时间（UTC）
   @TableField("last_synced_at")
   private Instant lastSyncedAt;
+
+  // ========================================
+  // 嵌入式值对象（JSON 字段）
+  // ========================================
+
+  /// 出版概况（出版历史、语言、宿主机构、索引信息等）。
+  @TableField(value = "publication_profile", typeHandler = JacksonTypeHandler.class)
+  private PublicationProfile publicationProfile;
+
+  /// 引用指标（works_count、cited_by_count、h_index 等）。
+  @TableField(value = "citation_metrics", typeHandler = JacksonTypeHandler.class)
+  private CitationMetrics citationMetrics;
+
+  /// 开放获取信息（OA 状态 + APC 定价）。
+  @TableField(value = "open_access", typeHandler = JacksonTypeHandler.class)
+  private OpenAccessInfo openAccess;
+
+  /// 关联学会列表。
+  @TableField(value = "affiliated_societies", typeHandler = SocietyListTypeHandler.class)
+  private List<Society> affiliatedSocieties;
 }

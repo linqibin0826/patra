@@ -5,8 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
-import com.patra.catalog.domain.model.vo.venue.VenueDetail;
-import com.patra.catalog.domain.model.vo.venue.VenueStats;
+import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
+import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
+import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -27,6 +28,14 @@ import org.junit.jupiter.api.Test;
 /// - 验证 .gz 解压缩
 /// - 验证 VenueParseResult 转换（包含聚合根和年度指标）
 /// - 验证错误处理
+///
+/// **DDD 嵌入式值对象设计**：
+///
+/// 聚合根（VenueAggregate）已包含所有嵌入式值对象：
+/// - publicationProfile - 出版概况
+/// - citationMetrics - 引用指标
+/// - openAccess - 开放获取信息
+/// - affiliatedSocieties - 关联学会
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -61,18 +70,23 @@ class OpenAlexSourceParserTest {
       assertThat(results).hasSize(1);
       VenueParseResult result = results.getFirst();
       VenueAggregate venue = result.aggregate();
-      VenueDetail detail = result.detail();
 
-      // CQRS 最小聚合设计：核心字段在聚合根中
+      // 核心字段在聚合根中
       assertThat(venue.getIdentifier(VenueIdentifierType.OPENALEX)).hasValue("S137773608");
       assertThat(venue.getDisplayName()).isEqualTo("Nature");
       assertThat(venue.getIdentifier(VenueIdentifierType.ISSN_L)).hasValue("0028-0836");
       assertThat(venue.getVenueType()).isEqualTo(VenueType.JOURNAL);
 
-      // 非核心字段在 VenueDetail 中
-      assertThat(detail.countryCode()).isEqualTo("GB");
-      assertThat(detail.isOa()).isFalse();
-      assertThat(detail.isInDoaj()).isFalse();
+      // 嵌入式值对象在聚合根中
+      PublicationProfile profile = venue.getPublicationProfile();
+      assertThat(profile).isNotNull();
+      assertThat(profile.countryCode()).isEqualTo("GB");
+
+      // 开放获取信息在聚合根中
+      OpenAccessInfo openAccess = venue.getOpenAccess();
+      assertThat(openAccess).isNotNull();
+      assertThat(openAccess.isOa()).isFalse();
+      assertThat(openAccess.isInDoaj()).isFalse();
     }
 
     @Test
@@ -120,8 +134,8 @@ class OpenAlexSourceParserTest {
     }
 
     @Test
-    @DisplayName("解析完整记录 - 应该正确填充所有字段和年度指标")
-    void parseFullRecord_shouldPopulateAllFieldsAndMetrics() throws Exception {
+    @DisplayName("解析完整记录 - 应该正确填充所有嵌入式值对象和年度指标")
+    void parseFullRecord_shouldPopulateAllEmbeddedValueObjectsAndMetrics() throws Exception {
       // Given
       String jsonLine =
           """
@@ -136,41 +150,46 @@ class OpenAlexSourceParserTest {
       assertThat(results).hasSize(1);
       VenueParseResult result = results.getFirst();
       VenueAggregate venue = result.aggregate();
-      VenueDetail detail = result.detail();
-      VenueStats stats = result.stats();
 
       // 基础字段（在聚合根中）
       assertThat(venue.getIdentifier(VenueIdentifierType.OPENALEX)).hasValue("S137773608");
       assertThat(venue.getDisplayName()).isEqualTo("Nature");
       assertThat(venue.getIdentifier(VenueIdentifierType.ISSN_L)).hasValue("0028-0836");
 
-      // 详情字段（在 VenueDetail 中）
-      assertThat(detail.homepageUrl()).isEqualTo("https://www.nature.com/nature/");
-      assertThat(detail.abbreviatedTitle()).isEqualTo("Nature");
-      assertThat(detail.alternateTitles()).contains("Nature (London)");
+      // 出版概况（嵌入式值对象）
+      PublicationProfile profile = venue.getPublicationProfile();
+      assertThat(profile).isNotNull();
+      assertThat(profile.homepageUrl()).isEqualTo("https://www.nature.com/nature/");
+      assertThat(profile.abbreviatedTitle()).isEqualTo("Nature");
+      assertThat(profile.alternateTitles()).contains("Nature (London)");
 
-      // 宿主机构（在 VenueDetail 中）
-      assertThat(detail.hostOrganization()).isNotNull();
-      assertThat(detail.hostOrganization().id()).isEqualTo("P4310319965");
-      assertThat(detail.hostOrganization().name()).isEqualTo("Nature Portfolio");
+      // 宿主机构（在 PublicationProfile 中）
+      assertThat(profile.hostOrganization()).isNotNull();
+      assertThat(profile.hostOrganization().id()).isEqualTo("P4310319965");
+      assertThat(profile.hostOrganization().name()).isEqualTo("Nature Portfolio");
 
-      // 统计快照（在 VenueStats 中）
-      assertThat(stats).isNotNull();
-      assertThat(stats.worksCount()).isEqualTo(500000);
-      assertThat(stats.citedByCount()).isEqualTo(10000000);
-      assertThat(stats.hIndex()).isEqualTo(1200);
-      assertThat(stats.i10Index()).isEqualTo(50000);
+      // 引用指标（嵌入式值对象）
+      CitationMetrics metrics = venue.getCitationMetrics();
+      assertThat(metrics).isNotNull();
+      assertThat(metrics.worksCount()).isEqualTo(500000);
+      assertThat(metrics.citedByCount()).isEqualTo(10000000);
+      assertThat(metrics.hIndex()).isEqualTo(1200);
+      assertThat(metrics.i10Index()).isEqualTo(50000);
 
-      // APC 信息（在 VenueParseResult 中）
-      assertThat(result.apcInfo()).isNotNull();
-      assertThat(result.apcInfo().usd()).isEqualTo(11390);
-      assertThat(result.apcInfo().prices()).hasSize(1);
+      // 开放获取信息（嵌入式值对象，合并 OA 状态 + APC）
+      OpenAccessInfo openAccess = venue.getOpenAccess();
+      assertThat(openAccess).isNotNull();
+      assertThat(openAccess.isOa()).isFalse();
+      assertThat(openAccess.isInDoaj()).isFalse();
+      assertThat(openAccess.apcUsd()).isEqualTo(11390);
+      assertThat(openAccess.apcPrices()).hasSize(1);
 
-      // 学会列表（在 VenueParseResult 中）
-      assertThat(result.societies()).hasSize(1);
-      assertThat(result.societies().getFirst().organization()).isEqualTo("Nature Research");
+      // 关联学会（嵌入式值对象）
+      assertThat(venue.getAffiliatedSocieties()).hasSize(1);
+      assertThat(venue.getAffiliatedSocieties().getFirst().organization())
+          .isEqualTo("Nature Research");
 
-      // 年度指标（从 VenueParseResult 获取，而非聚合根）
+      // 年度指标（从 VenueParseResult 获取，独立存储）
       assertThat(result.hasYearlyMetrics()).isTrue();
       assertThat(result.yearlyMetrics()).hasSize(2);
       assertThat(result.yearlyMetrics().get(0).year()).isEqualTo(2024);
