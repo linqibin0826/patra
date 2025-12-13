@@ -15,11 +15,10 @@ import static org.mockito.Mockito.when;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
-import com.patra.catalog.domain.model.vo.venue.VenueDetail;
+import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
-import com.patra.catalog.domain.model.vo.venue.VenueStats;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import java.util.List;
 import java.util.Set;
@@ -46,6 +45,14 @@ import org.springframework.dao.DuplicateKeyException;
 /// - 测试乐观插入策略：正常插入和异常降级处理
 /// - 测试 Chunk 内去重逻辑
 /// - 测试年度指标写入逻辑
+///
+/// **DDD 嵌入式值对象设计**：
+///
+/// 聚合根（VenueAggregate）已包含所有嵌入式值对象，不再需要分别保存：
+/// - publicationProfile → cat_venue.publication_profile (JSON)
+/// - citationMetrics → cat_venue.citation_metrics (JSON)
+/// - openAccess → cat_venue.open_access (JSON)
+/// - affiliatedSocieties → cat_venue.affiliated_societies (JSON)
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -286,25 +293,29 @@ class VenueInitializeItemWriterTest {
   private VenueParseResult createParseResult(String openalexId, String issnL, boolean withMetrics) {
     VenueAggregate venue =
         VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, "Journal " + openalexId);
-    // 添加 ISSN-L 标识符（新的 CQRS 最小聚合设计）
+    // 添加 ISSN-L 标识符
     venue.addIdentifier(VenueIdentifier.forIssnL(issnL));
 
     List<VenuePublicationStats> metrics =
         withMetrics ? List.of(VenuePublicationStats.create(2024, 100, 500)) : List.of();
 
-    // 使用新的 6 参数构造函数
-    VenueStats stats = withMetrics ? VenueStats.ofBasic(100, 500) : null;
-    return new VenueParseResult(venue, VenueDetail.empty(), stats, null, List.of(), metrics);
+    // 嵌入引用指标到聚合根（如果有年度指标）
+    if (withMetrics) {
+      venue.withCitationMetrics(CitationMetrics.ofBasic(100, 500));
+    }
+
+    // 使用新的简化构造函数（只有 aggregate 和 yearlyMetrics）
+    return new VenueParseResult(venue, metrics);
   }
 
   private VenueParseResult createParseResultWithoutIssnL(String openalexId) {
     VenueAggregate venue =
         VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, "Journal " + openalexId);
-    return new VenueParseResult(venue, VenueDetail.empty(), null, null, List.of(), List.of());
+    return new VenueParseResult(venue, List.of());
   }
 
   private void assertThatListContainsOpenalexIds(List<VenueAggregate> list, String... expectedIds) {
-    // 使用新的 getIdentifier() 方法访问 OpenAlex ID
+    // 使用 getIdentifier() 方法访问 OpenAlex ID
     List<String> actualIds =
         list.stream().map(v -> v.getIdentifier(VenueIdentifierType.OPENALEX).orElse(null)).toList();
     assertThat(actualIds).containsExactlyInAnyOrder(expectedIds);

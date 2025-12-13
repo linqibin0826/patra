@@ -6,12 +6,12 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
-import com.patra.catalog.domain.model.vo.venue.ApcInfo;
+import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
 import com.patra.catalog.domain.model.vo.venue.HostOrganization;
+import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
+import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import com.patra.catalog.domain.model.vo.venue.Society;
-import com.patra.catalog.domain.model.vo.venue.VenueDetail;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
-import com.patra.catalog.domain.model.vo.venue.VenueStats;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,6 +30,14 @@ import org.springframework.stereotype.Component;
 /// 从 .gz 压缩的 JSON Lines 文件解析 OpenAlex Sources 数据，
 /// 并转换为 `VenueParseResult`（包含 `VenueAggregate` 和年度指标）。
 ///
+/// **DDD 嵌入式值对象设计**：
+///
+/// 解析器直接将值对象嵌入到聚合根中：
+/// - `PublicationProfile` - 出版概况
+/// - `CitationMetrics` - 引用指标
+/// - `OpenAccessInfo` - 开放获取信息（合并 OA 状态 + APC 定价）
+/// - `List<Society>` - 关联学会
+///
 /// **数据格式**：
 ///
 /// - 输入：.gz 压缩的 JSON Lines 文件（每行一个 JSON 对象）
@@ -39,9 +47,9 @@ import org.springframework.stereotype.Component;
 ///
 /// - `id` → 提取后缀作为 `openalexId`
 /// - `type` → 通过 `VenueType.fromOpenAlexType()` 转换
-/// - `summary_stats` → 转换为 `VenueStats`
+/// - `summary_stats` + `works_count` + `cited_by_count` → 转换为 `CitationMetrics`
 /// - `counts_by_year` → 转换为 `VenuePublicationStats` 列表（独立于聚合根）
-/// - `apc_prices` + `apc_usd` → 转换为 `ApcInfo`
+/// - `is_oa` + `is_in_doaj` + `apc_prices` + `apc_usd` → 转换为 `OpenAccessInfo`
 /// - `societies` → 转换为 `Society` 列表
 /// - `host_organization*` → 转换为 `HostOrganization`
 ///
@@ -104,47 +112,62 @@ public class OpenAlexSourceParser {
 
   /// 将 OpenAlexSourceRecord 转换为 VenueParseResult。
   ///
-  /// **CQRS 最小聚合设计**：
+  /// **DDD 嵌入式值对象设计**：
   ///
-  /// - 聚合根只包含核心字段：id, venueType, displayName, identifiers, provenance
-  /// - 补充数据（detail, stats, apc, societies）独立返回，由调用方分别保存
+  /// 聚合根通过 `with*` 方法嵌入所有值对象：
+  /// - publicationProfile: 出版概况
+  /// - citationMetrics: 引用指标
+  /// - openAccess: 开放获取信息
+  /// - affiliatedSocieties: 关联学会
   ///
   /// @param record OpenAlex 源记录
-  /// @return VenueParseResult（包含聚合根和所有补充数据）
+  /// @return VenueParseResult（包含聚合根和年度指标）
   VenueParseResult toParseResult(OpenAlexSourceRecord record) {
     // 1. 提取基础字段
     String openalexId = record.extractOpenAlexId();
     VenueType venueType = VenueType.fromOpenAlexType(record.type());
 
-    // 2. 创建聚合根（只包含核心字段）
+    // 2. 创建聚合根
     VenueAggregate aggregate =
         VenueAggregate.fromOpenAlex(openalexId, venueType, record.displayName());
 
     // 3. 添加标识符（ISSN + ISSN-L）
     addIdentifiers(aggregate, record);
 
-    // 4. 构建详情值对象（包含所有非核心属性）
-    VenueDetail detail = buildVenueDetail(record);
+    // 4. 嵌入出版概况
+    PublicationProfile profile = buildPublicationProfile(record);
+    if (profile != null) {
+      aggregate.withPublicationProfile(profile);
+    }
 
-    // 5. 构建统计快照
-    VenueStats stats = buildVenueStats(record);
+    // 5. 嵌入引用指标
+    CitationMetrics metrics = buildCitationMetrics(record);
+    if (metrics != null) {
+      aggregate.withCitationMetrics(metrics);
+    }
 
-    // 6. 构建 APC 信息
-    ApcInfo apcInfo = buildApcInfo(record);
+    // 6. 嵌入开放获取信息（合并 OA 状态 + APC）
+    OpenAccessInfo openAccessInfo = buildOpenAccessInfo(record);
+    if (openAccessInfo != null) {
+      aggregate.withOpenAccess(openAccessInfo);
+    }
 
-    // 7. 构建学会列表
+    // 7. 嵌入关联学会
     List<Society> societies = buildSocieties(record);
+    if (societies != null && !societies.isEmpty()) {
+      aggregate.withAffiliatedSocieties(societies);
+    }
 
-    // 8. 构建年度指标
+    // 8. 构建年度指标（独立存储，非嵌入式）
     List<VenuePublicationStats> yearlyMetrics = buildYearlyMetrics(record);
 
-    return new VenueParseResult(aggregate, detail, stats, apcInfo, societies, yearlyMetrics);
+    return new VenueParseResult(aggregate, yearlyMetrics);
   }
 
-  /// 构建详情值对象。
+  /// 构建出版概况值对象。
   ///
-  /// 将原聚合根的非核心字段封装到 VenueDetail 中。
-  private VenueDetail buildVenueDetail(OpenAlexSourceRecord record) {
+  /// 将 OpenAlex 记录中的出版相关字段封装到 PublicationProfile 中。
+  private PublicationProfile buildPublicationProfile(OpenAlexSourceRecord record) {
     // 构建宿主机构
     HostOrganization hostOrganization = null;
     if (record.hostOrganization() != null && record.hostOrganizationName() != null) {
@@ -154,14 +177,21 @@ public class OpenAlexSourceParser {
               hostId, record.hostOrganizationName(), record.hostOrganizationLineage());
     }
 
-    return VenueDetail.builder()
+    // 如果没有任何数据，返回 null
+    if (record.abbreviatedTitle() == null
+        && (record.alternateTitles() == null || record.alternateTitles().isEmpty())
+        && record.homepageUrl() == null
+        && hostOrganization == null
+        && record.countryCode() == null) {
+      return null;
+    }
+
+    return PublicationProfile.builder()
         .abbreviatedTitle(record.abbreviatedTitle())
         .alternateTitles(record.alternateTitles())
         .homepageUrl(record.homepageUrl())
         .hostOrganization(hostOrganization)
         .countryCode(record.countryCode())
-        .isOa(record.isOa() != null ? record.isOa() : false)
-        .isInDoaj(record.isInDoaj() != null ? record.isInDoaj() : false)
         .build();
   }
 
@@ -184,8 +214,8 @@ public class OpenAlexSourceParser {
     }
   }
 
-  /// 构建统计快照。
-  private VenueStats buildVenueStats(OpenAlexSourceRecord record) {
+  /// 构建引用指标值对象。
+  private CitationMetrics buildCitationMetrics(OpenAlexSourceRecord record) {
     Integer hIndex = null;
     Integer i10Index = null;
     BigDecimal twoYrMeanCitedness = null;
@@ -199,27 +229,43 @@ public class OpenAlexSourceParser {
     }
 
     if (record.worksCount() != null || record.citedByCount() != null) {
-      return VenueStats.of(
+      return CitationMetrics.of(
           record.worksCount(), record.citedByCount(), hIndex, i10Index, twoYrMeanCitedness);
     }
 
     return null;
   }
 
-  /// 构建 APC 信息。
-  private ApcInfo buildApcInfo(OpenAlexSourceRecord record) {
-    if (record.apcUsd() == null && (record.apcPrices() == null || record.apcPrices().isEmpty())) {
+  /// 构建开放获取信息值对象。
+  ///
+  /// 合并 OA 状态（isOa、isInDoaj）和 APC 定价信息到统一的 OpenAccessInfo。
+  ///
+  /// **注意**：当源数据明确提供了 isOa 或 isInDoaj 字段（即使值为 false）时，
+  /// 也会创建 OpenAccessInfo 对象，因为 false 表示"确认不是 OA"，与"未知"是不同的。
+  private OpenAccessInfo buildOpenAccessInfo(OpenAlexSourceRecord record) {
+    Boolean isOaRaw = record.isOa();
+    Boolean isInDoajRaw = record.isInDoaj();
+    Integer apcUsd = record.apcUsd();
+    List<OpenAccessInfo.ApcPrice> apcPrices = null;
+
+    if (record.apcPrices() != null && !record.apcPrices().isEmpty()) {
+      apcPrices =
+          record.apcPrices().stream()
+              .map(p -> OpenAccessInfo.ApcPrice.of(p.price(), p.currency()))
+              .toList();
+    }
+
+    // 如果所有 OA 相关字段都是 null（未提供），返回 null
+    // 注意：isOa=false 或 isInDoaj=false 也是有意义的信息，需要保留
+    boolean hasOaData =
+        isOaRaw != null || isInDoajRaw != null || apcUsd != null || apcPrices != null;
+    if (!hasOaData) {
       return null;
     }
 
-    List<ApcInfo.ApcPrice> prices =
-        record.apcPrices() != null
-            ? record.apcPrices().stream()
-                .map(p -> ApcInfo.ApcPrice.of(p.price(), p.currency()))
-                .toList()
-            : List.of();
-
-    return ApcInfo.of(record.apcUsd(), prices);
+    boolean isOa = isOaRaw != null && isOaRaw;
+    boolean isInDoaj = isInDoajRaw != null && isInDoajRaw;
+    return OpenAccessInfo.of(isOa, isInDoaj, null, apcUsd, apcPrices);
   }
 
   /// 构建学会列表。
