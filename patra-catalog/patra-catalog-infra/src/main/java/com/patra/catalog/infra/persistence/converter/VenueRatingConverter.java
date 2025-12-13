@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.catalog.domain.model.aggregate.VenueRatingAggregate;
 import com.patra.catalog.domain.model.enums.RatingSystem;
+import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueRatingId;
 import com.patra.catalog.infra.persistence.entity.VenueRatingDO;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,7 @@ public abstract class VenueRatingConverter {
   /// @param aggregate 聚合根
   /// @return 数据库实体
   @Mapping(target = "id", source = "id", qualifiedByName = "venueRatingIdToLong")
+  @Mapping(target = "venueId", source = "venueId", qualifiedByName = "venueIdToLong")
   @Mapping(target = "year", expression = "java((short) aggregate.getYear())")
   @Mapping(target = "ratingSystem", expression = "java(aggregate.getRatingSystem().getCode())")
   @Mapping(target = "ratingData", source = "ratingData", qualifiedByName = "stringToJsonNode")
@@ -68,10 +70,11 @@ public abstract class VenueRatingConverter {
     }
 
     // Step 1: 恢复聚合根身份
+    VenueId venueId = doEntity.getVenueId() != null ? VenueId.of(doEntity.getVenueId()) : null;
     VenueRatingAggregate aggregate =
         VenueRatingAggregate.restore(
             VenueRatingId.of(doEntity.getId()),
-            doEntity.getVenueId(),
+            venueId,
             doEntity.getYear().intValue(),
             ratingSystem,
             doEntity.getVersion());
@@ -91,6 +94,12 @@ public abstract class VenueRatingConverter {
   /// 将 VenueRatingId 转换为 Long。
   @Named("venueRatingIdToLong")
   protected Long venueRatingIdToLong(VenueRatingId id) {
+    return id != null ? id.value() : null;
+  }
+
+  /// 将 VenueId 转换为 Long。
+  @Named("venueIdToLong")
+  protected Long venueIdToLong(VenueId id) {
     return id != null ? id.value() : null;
   }
 

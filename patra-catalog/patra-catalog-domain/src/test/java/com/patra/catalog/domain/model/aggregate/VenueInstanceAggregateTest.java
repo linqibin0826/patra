@@ -2,6 +2,7 @@ package com.patra.catalog.domain.model.aggregate;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
@@ -19,7 +20,7 @@ class VenueInstanceAggregateTest {
 
   // ========== 测试数据常量 ==========
 
-  private static final Long VENUE_ID = 123456789L;
+  private static final VenueId VENUE_ID = VenueId.of(123456789L);
   private static final String VOLUME = "45";
   private static final String ISSUE = "3";
   private static final Integer PUBLICATION_YEAR = 2024;

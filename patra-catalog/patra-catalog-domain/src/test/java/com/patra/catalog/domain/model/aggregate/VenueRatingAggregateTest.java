@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.patra.catalog.domain.model.enums.RatingSystem;
+import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueRatingId;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -75,7 +76,7 @@ class VenueRatingAggregateTest {
     @DisplayName("应正确创建评级聚合根")
     void shouldCreateAggregate() {
       // Given
-      Long venueId = 123L;
+      VenueId venueId = VenueId.of(123L);
       int year = 2024;
       RatingSystem system = RatingSystem.JCR;
       String quartile = "Q1";
@@ -108,7 +109,8 @@ class VenueRatingAggregateTest {
     @Test
     @DisplayName("ratingSystem 为 null 应抛出异常")
     void shouldThrowWhenRatingSystemIsNull() {
-      assertThatThrownBy(() -> VenueRatingAggregate.create(123L, 2024, null, "Q1", null))
+      assertThatThrownBy(
+              () -> VenueRatingAggregate.create(VenueId.of(123L), 2024, null, "Q1", null))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("评价体系不能为空");
     }
@@ -118,7 +120,8 @@ class VenueRatingAggregateTest {
     @ValueSource(ints = {1999, 2101, 0, -1})
     void shouldThrowWhenYearOutOfRange(int year) {
       assertThatThrownBy(
-              () -> VenueRatingAggregate.create(123L, year, RatingSystem.JCR, null, null))
+              () ->
+                  VenueRatingAggregate.create(VenueId.of(123L), year, RatingSystem.JCR, null, null))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("年份必须在 2000-2100 范围内");
     }
@@ -128,7 +131,7 @@ class VenueRatingAggregateTest {
     @ValueSource(ints = {2000, 2100})
     void shouldCreateWithBoundaryYears(int year) {
       VenueRatingAggregate aggregate =
-          VenueRatingAggregate.create(123L, year, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), year, RatingSystem.JCR, null, null);
 
       assertThat(aggregate.getYear()).isEqualTo(year);
     }
@@ -143,7 +146,7 @@ class VenueRatingAggregateTest {
     void shouldRestoreFromPersistence() {
       // Given
       VenueRatingId id = VenueRatingId.of(999L);
-      Long venueId = 123L;
+      VenueId venueId = VenueId.of(123L);
       int year = 2024;
       RatingSystem system = RatingSystem.JCR;
       Long version = 5L;
@@ -166,7 +169,8 @@ class VenueRatingAggregateTest {
     void shouldRestoreState() {
       // Given
       VenueRatingAggregate aggregate =
-          VenueRatingAggregate.restore(VenueRatingId.of(999L), 123L, 2024, RatingSystem.JCR, 1L);
+          VenueRatingAggregate.restore(
+              VenueRatingId.of(999L), VenueId.of(123L), 2024, RatingSystem.JCR, 1L);
       String quartile = "Q1";
       BigDecimal impactScore = new BigDecimal("42.778");
       String ratingData = "{\"jif\": 42.778}";
@@ -198,7 +202,7 @@ class VenueRatingAggregateTest {
     void shouldUpdateRatingDetails() {
       // Given
       VenueRatingAggregate aggregate =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
       String ratingData = "{\"jif\": 42.778}";
       String categories = "[{\"category\": \"Medicine\"}]";
 
@@ -216,7 +220,7 @@ class VenueRatingAggregateTest {
     void shouldUpdateQuartileAndScore() {
       // Given
       VenueRatingAggregate aggregate =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
       String quartile = "Q1";
       BigDecimal impactScore = new BigDecimal("42.778");
 
@@ -234,7 +238,7 @@ class VenueRatingAggregateTest {
     void shouldRecordSource() {
       // Given
       VenueRatingAggregate aggregate =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
       String sourceUrl = "https://jcr.clarivate.com";
       Instant fetchedAt = Instant.parse("2024-01-15T10:30:00Z");
 
@@ -252,7 +256,7 @@ class VenueRatingAggregateTest {
     void shouldUseCurrentTimeWhenFetchedAtIsNull() {
       // Given
       VenueRatingAggregate aggregate =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
       Instant before = Instant.now();
 
       // When
@@ -272,9 +276,9 @@ class VenueRatingAggregateTest {
     @DisplayName("hasQuartile() 应正确判断")
     void shouldCheckHasQuartile() {
       VenueRatingAggregate withQuartile =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, "Q1", null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, "Q1", null);
       VenueRatingAggregate withoutQuartile =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
 
       assertThat(withQuartile.hasQuartile()).isTrue();
       assertThat(withoutQuartile.hasQuartile()).isFalse();
@@ -284,9 +288,10 @@ class VenueRatingAggregateTest {
     @DisplayName("hasImpactScore() 应正确判断")
     void shouldCheckHasImpactScore() {
       VenueRatingAggregate withScore =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, new BigDecimal("42.778"));
+          VenueRatingAggregate.create(
+              VenueId.of(123L), 2024, RatingSystem.JCR, null, new BigDecimal("42.778"));
       VenueRatingAggregate withoutScore =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
 
       assertThat(withScore.hasImpactScore()).isTrue();
       assertThat(withoutScore.hasImpactScore()).isFalse();
@@ -297,18 +302,18 @@ class VenueRatingAggregateTest {
     void shouldCheckHasRatingData() {
       // Given
       VenueRatingAggregate withRatingData =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
       withRatingData.updateRatingDetails("{\"jif\": 42.778}", null);
 
       VenueRatingAggregate withoutRatingData =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
 
       VenueRatingAggregate withEmptyRatingData =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
       withEmptyRatingData.updateRatingDetails("", null);
 
       VenueRatingAggregate withBlankRatingData =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
       withBlankRatingData.updateRatingDetails("   ", null);
 
       // Then
@@ -323,18 +328,18 @@ class VenueRatingAggregateTest {
     void shouldCheckHasCategories() {
       // Given
       VenueRatingAggregate withCategories =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
       withCategories.updateRatingDetails(null, "[{\"category\": \"Medicine\"}]");
 
       VenueRatingAggregate withoutCategories =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
 
       VenueRatingAggregate withEmptyCategories =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
       withEmptyCategories.updateRatingDetails(null, "");
 
       VenueRatingAggregate withBlankCategories =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
       withBlankCategories.updateRatingDetails(null, "   ");
 
       // Then
@@ -348,9 +353,9 @@ class VenueRatingAggregateTest {
     @DisplayName("isJcrRating() 应正确判断")
     void shouldIdentifyJcrRating() {
       VenueRatingAggregate jcr =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
       VenueRatingAggregate cas =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.CAS, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.CAS, null, null);
 
       assertThat(jcr.isJcrRating()).isTrue();
       assertThat(cas.isJcrRating()).isFalse();
@@ -360,9 +365,9 @@ class VenueRatingAggregateTest {
     @DisplayName("isCasRating() 应正确判断")
     void shouldIdentifyCasRating() {
       VenueRatingAggregate cas =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.CAS, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.CAS, null, null);
       VenueRatingAggregate jcr =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
 
       assertThat(cas.isCasRating()).isTrue();
       assertThat(jcr.isCasRating()).isFalse();
@@ -372,9 +377,9 @@ class VenueRatingAggregateTest {
     @DisplayName("isScopusRating() 应正确判断")
     void shouldIdentifyScopusRating() {
       VenueRatingAggregate scopus =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.SCOPUS, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.SCOPUS, null, null);
       VenueRatingAggregate jcr =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
 
       assertThat(scopus.isScopusRating()).isTrue();
       assertThat(jcr.isScopusRating()).isFalse();
@@ -390,7 +395,7 @@ class VenueRatingAggregateTest {
     @ValueSource(strings = {"Q1", "q1", "1区", "1"})
     void shouldIdentifyTopQuartile(String quartile) {
       VenueRatingAggregate aggregate =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, quartile, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, quartile, null);
       assertThat(aggregate.isTopQuartile()).isTrue();
     }
 
@@ -399,7 +404,7 @@ class VenueRatingAggregateTest {
     @ValueSource(strings = {"Q2", "Q3", "Q4", "2区", "3区", "4区", "2", "3", "4"})
     void shouldIdentifyNonTopQuartile(String quartile) {
       VenueRatingAggregate aggregate =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, quartile, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, quartile, null);
       assertThat(aggregate.isTopQuartile()).isFalse();
     }
 
@@ -407,7 +412,7 @@ class VenueRatingAggregateTest {
     @DisplayName("空分区应返回 false")
     void shouldReturnFalseForNullQuartile() {
       VenueRatingAggregate aggregate =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
       assertThat(aggregate.isTopQuartile()).isFalse();
     }
   }
@@ -423,7 +428,7 @@ class VenueRatingAggregateTest {
     })
     void shouldNormalizeQuartile(String input, String expected) {
       VenueRatingAggregate aggregate =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, input, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, input, null);
       assertThat(aggregate.getNormalizedQuartile()).isEqualTo(expected);
     }
 
@@ -432,7 +437,7 @@ class VenueRatingAggregateTest {
     @NullAndEmptySource
     void shouldReturnNullForBlankQuartile(String quartile) {
       VenueRatingAggregate aggregate =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, quartile, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, quartile, null);
       assertThat(aggregate.getNormalizedQuartile()).isNull();
     }
   }
@@ -446,7 +451,7 @@ class VenueRatingAggregateTest {
     void shouldAssignId() {
       // Given
       VenueRatingAggregate aggregate =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
       VenueRatingId id = VenueRatingId.of(999L);
 
       // When
@@ -462,7 +467,7 @@ class VenueRatingAggregateTest {
     void shouldClearDirtyFlag() {
       // Given
       VenueRatingAggregate aggregate =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
       aggregate.updateQuartileAndScore("Q1", new BigDecimal("42.778"));
       assertThat(aggregate.isDirty()).isTrue();
 

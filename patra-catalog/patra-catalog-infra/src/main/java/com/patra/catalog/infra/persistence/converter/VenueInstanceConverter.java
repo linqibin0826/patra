@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;
+import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.catalog.infra.persistence.entity.VenueInstanceDO;
 import org.mapstruct.AfterMapping;
@@ -44,6 +45,7 @@ public interface VenueInstanceConverter {
   /// @param aggregate 聚合根
   /// @return 数据库实体
   @Mapping(target = "id", source = "id", qualifiedByName = "venueInstanceIdToLong")
+  @Mapping(target = "venueId", source = "venueId", qualifiedByName = "venueIdToLong")
   @Mapping(target = "instanceMetadata", ignore = true)
   VenueInstanceDO toDO(VenueInstanceAggregate aggregate);
 
@@ -53,6 +55,15 @@ public interface VenueInstanceConverter {
   /// @return Long 值，或 null
   @Named("venueInstanceIdToLong")
   default Long venueInstanceIdToLong(VenueInstanceId id) {
+    return id != null ? id.value() : null;
+  }
+
+  /// 将 VenueId 值对象转换为 Long。
+  ///
+  /// @param id VenueId 值对象
+  /// @return Long 值，或 null
+  @Named("venueIdToLong")
+  default Long venueIdToLong(VenueId id) {
     return id != null ? id.value() : null;
   }
 
@@ -83,10 +94,11 @@ public interface VenueInstanceConverter {
     if (doEntity == null) {
       return null;
     }
+    VenueId venueId = doEntity.getVenueId() != null ? VenueId.of(doEntity.getVenueId()) : null;
     VenueInstanceAggregate aggregate =
         VenueInstanceAggregate.restore(
             VenueInstanceId.of(doEntity.getId()),
-            doEntity.getVenueId(),
+            venueId,
             doEntity.getVolume(),
             doEntity.getIssue(),
             doEntity.getEdition(),
