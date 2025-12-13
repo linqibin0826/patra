@@ -48,7 +48,7 @@ public interface TaskRepository {
 
   /// 查询指定切片关联的任务(强制 1:1 关系)。
   ///
-  /// **注意**: 重构后,Slice:Task 为 1:1 关系,由数据库唯一约束 `uk_task_slice` 保护。此方法最多返回一个任务。
+  /// Slice:Task 为 1:1 关系，由数据库唯一约束 `uk_task_slice` 保护。
   ///
   /// @param sliceId 切片标识符
   /// @return 任务聚合根,或 {@link Optional#empty()}

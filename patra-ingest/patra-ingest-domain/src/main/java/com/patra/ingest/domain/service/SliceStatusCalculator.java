@@ -7,7 +7,7 @@ import com.patra.ingest.domain.model.enums.TaskStatus;
 ///
 /// 这是一个无状态纯函数,直接将任务状态映射到切片状态。
 ///
-/// 重构后,切片:任务是 1:1 关系,因此无需聚合。映射规则为：
+/// 切片:任务是 1:1 关系，直接映射无需聚合。映射规则：
 ///
 /// - TaskStatus.PENDING 或 QUEUED → SliceStatus.PENDING（等待任务生成/执行）
 ///   - TaskStatus.RUNNING → SliceStatus.ASSIGNED（任务执行中）

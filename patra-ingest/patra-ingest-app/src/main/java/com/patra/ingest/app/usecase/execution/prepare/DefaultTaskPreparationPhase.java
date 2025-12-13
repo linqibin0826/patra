@@ -110,7 +110,7 @@ public class DefaultTaskPreparationPhase implements TaskPreparationPhase {
     // 标记 Slice 为 EXECUTING(如果仍为 PENDING)
     PlanSliceAggregate slice =
         planSliceRepository
-            .findById(task.getSliceId())
+            .findById(task.getSliceId().value())
             .orElseThrow(() -> new IllegalStateException("未找到切片: sliceId=" + task.getSliceId()));
 
     if (slice.getStatus() == SliceStatus.PENDING) {

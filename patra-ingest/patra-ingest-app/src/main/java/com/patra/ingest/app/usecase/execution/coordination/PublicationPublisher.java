@@ -188,7 +188,7 @@ public class PublicationPublisher {
   private void delegateToRetry(
       PublicationStoragePort.StorageResult storageResult, PublishContext context, Exception error) {
     try {
-      // 重构元数据请求用于重试
+      // 构建元数据请求用于重试
       StorageMetadataPort.MetadataRequest metadataRequest =
           buildMetadataRequest(storageResult, context);
 

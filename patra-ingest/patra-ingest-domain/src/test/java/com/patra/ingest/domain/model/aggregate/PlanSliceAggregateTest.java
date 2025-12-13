@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.SliceStatus;
+import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -42,7 +43,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该成功创建新切片并初始化为 PENDING 状态")
     void shouldCreateNewSliceWithPendingStatus() {
       // Given: 切片创建参数
-      Long planId = 1001L;
+      PlanId planId = PlanId.of(1001L);
       ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       int sliceNo = 1;
       String sliceSignatureHash = "hash-slice-001";
@@ -141,7 +142,7 @@ class PlanSliceAggregateTest {
     void shouldRestoreSliceFromPersistentState() {
       // Given: 持久化状态
       PlanSliceId id = PlanSliceId.of(100L);
-      Long planId = 1001L;
+      PlanId planId = PlanId.of(1001L);
       ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       int sliceNo = 5;
       String sliceSignatureHash = "hash-slice-restored";
@@ -190,7 +191,7 @@ class PlanSliceAggregateTest {
       PlanSliceAggregate slice =
           PlanSliceAggregate.restore(
               PlanSliceId.of(100L),
-              1001L,
+              PlanId.of(1001L),
               ProvenanceCode.PUBMED,
               1,
               "hash-slice-001",
@@ -317,11 +318,12 @@ class PlanSliceAggregateTest {
     @DisplayName("应该成功绑定计划")
     void shouldBindPlanSuccessfully() {
       // Given: 未绑定计划的切片
-      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().planId(null).build();
+      PlanSliceAggregate slice =
+          PlanSliceAggregateTestDataBuilder.builder().planId((PlanId) null).build();
       assertThat(slice.getPlanId()).isNull();
 
       // When: 绑定计划
-      Long planId = 2001L;
+      PlanId planId = PlanId.of(2001L);
       slice.bindPlan(planId);
 
       // Then: 应该成功绑定
@@ -332,10 +334,11 @@ class PlanSliceAggregateTest {
     @DisplayName("应该抛出异常当 bindPlan() 参数为 null")
     void shouldThrowExceptionWhenBindPlanWithNull() {
       // Given: 未绑定计划的切片
-      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().planId(null).build();
+      PlanSliceAggregate slice =
+          PlanSliceAggregateTestDataBuilder.builder().planId((PlanId) null).build();
 
       // When & Then: 使用 null 绑定计划应该失败
-      assertThatThrownBy(() -> slice.bindPlan(null))
+      assertThatThrownBy(() -> slice.bindPlan((PlanId) null))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("planId 不能为 null");
     }
@@ -345,10 +348,10 @@ class PlanSliceAggregateTest {
     void shouldAllowRebindingPlan() {
       // Given: 已绑定计划的切片
       PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().planId(1001L).build();
-      assertThat(slice.getPlanId()).isEqualTo(1001L);
+      assertThat(slice.getPlanId()).isEqualTo(PlanId.of(1001L));
 
       // When: 重新绑定到新计划
-      Long newPlanId = 2001L;
+      PlanId newPlanId = PlanId.of(2001L);
       slice.bindPlan(newPlanId);
 
       // Then: 应该更新为新计划 ID
@@ -425,7 +428,7 @@ class PlanSliceAggregateTest {
       // When: 执行状态转换操作
       slice.markAssigned();
       slice.updateStatus(SliceStatus.FINISHED);
-      slice.bindPlan(2001L); // 绑定计划
+      slice.bindPlan(PlanId.of(2001L)); // 绑定计划
 
       // Then: 不可变字段应该保持不变
       assertThat(slice.getProvenanceCode()).isEqualTo(originalProvenanceCode);
@@ -455,13 +458,14 @@ class PlanSliceAggregateTest {
     @DisplayName("应该允许 planId 字段发生变化")
     void shouldAllowPlanIdFieldToChange() {
       // Given: 未绑定计划的切片
-      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().planId(null).build();
+      PlanSliceAggregate slice =
+          PlanSliceAggregateTestDataBuilder.builder().planId((PlanId) null).build();
 
       // When: 绑定计划
-      slice.bindPlan(3001L);
+      slice.bindPlan(PlanId.of(3001L));
 
       // Then: planId 应该发生变化
-      assertThat(slice.getPlanId()).isEqualTo(3001L);
+      assertThat(slice.getPlanId()).isEqualTo(PlanId.of(3001L));
     }
   }
 
@@ -645,7 +649,7 @@ class PlanSliceAggregateTest {
   /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
   static class PlanSliceAggregateTestDataBuilder {
     private PlanSliceId id = null; // 默认为 null（新创建的聚合根）
-    private Long planId = 1001L;
+    private PlanId planId = PlanId.of(1001L);
     private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
     private int sliceNo = 1;
     private String sliceSignatureHash = "hash-slice-default";
@@ -664,8 +668,13 @@ class PlanSliceAggregateTest {
       return this;
     }
 
-    public PlanSliceAggregateTestDataBuilder planId(Long planId) {
+    public PlanSliceAggregateTestDataBuilder planId(PlanId planId) {
       this.planId = planId;
+      return this;
+    }
+
+    public PlanSliceAggregateTestDataBuilder planId(Long planId) {
+      this.planId = planId != null ? PlanId.of(planId) : null;
       return this;
     }
 

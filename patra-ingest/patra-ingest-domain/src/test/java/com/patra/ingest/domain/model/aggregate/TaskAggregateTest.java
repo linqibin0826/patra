@@ -6,6 +6,9 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.event.TaskCompletedEvent;
 import com.patra.ingest.domain.event.TaskQueuedEvent;
 import com.patra.ingest.domain.model.enums.TaskStatus;
+import com.patra.ingest.domain.model.vo.plan.PlanId;
+import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
+import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import com.patra.ingest.domain.model.vo.task.TaskId;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
@@ -43,9 +46,9 @@ class TaskAggregateTest {
       // When: 创建新任务
       TaskAggregate task =
           TaskAggregate.create(
-              1001L, // scheduleInstanceId
-              2001L, // planId
-              3001L, // sliceId
+              ScheduleInstanceId.of(1001L), // scheduleInstanceId
+              PlanId.of(2001L), // planId
+              PlanSliceId.of(3001L), // sliceId
               ProvenanceCode.PUBMED, // provenanceCode
               "harvest", // operationCode
               "{\"batchSize\":100}", // paramsJson
@@ -57,9 +60,9 @@ class TaskAggregateTest {
       // Then: 验证初始状态
       assertThat(task.getId()).isNull(); // 未持久化
       assertThat(task.getStatus()).isEqualTo(TaskStatus.QUEUED);
-      assertThat(task.getScheduleInstanceId()).isEqualTo(1001L);
-      assertThat(task.getPlanId()).isEqualTo(2001L);
-      assertThat(task.getSliceId()).isEqualTo(3001L);
+      assertThat(task.getScheduleInstanceId()).isEqualTo(ScheduleInstanceId.of(1001L));
+      assertThat(task.getPlanId()).isEqualTo(PlanId.of(2001L));
+      assertThat(task.getSliceId()).isEqualTo(PlanSliceId.of(3001L));
       assertThat(task.getProvenanceCode()).isEqualTo(ProvenanceCode.PUBMED);
       assertThat(task.getOperationCode()).isEqualTo("harvest");
       assertThat(task.getParamsJson()).isEqualTo("{\"batchSize\":100}");
@@ -120,9 +123,9 @@ class TaskAggregateTest {
       // Then: 验证所有状态都被正确恢复
       assertThat(task.getId().value()).isEqualTo(5001L);
       assertThat(task.getStatus()).isEqualTo(TaskStatus.RUNNING);
-      assertThat(task.getScheduleInstanceId()).isEqualTo(1001L);
-      assertThat(task.getPlanId()).isEqualTo(2001L);
-      assertThat(task.getSliceId()).isEqualTo(3001L);
+      assertThat(task.getScheduleInstanceId()).isEqualTo(ScheduleInstanceId.of(1001L));
+      assertThat(task.getPlanId()).isEqualTo(PlanId.of(2001L));
+      assertThat(task.getSliceId()).isEqualTo(PlanSliceId.of(3001L));
       assertThat(task.getProvenanceCode()).isEqualTo(ProvenanceCode.PUBMED);
       assertThat(task.getOperationCode()).isEqualTo("harvest");
       assertThat(task.getParamsJson()).isEqualTo("{\"test\":true}");
@@ -835,17 +838,20 @@ class TaskAggregateTest {
     void shouldSupportBindingPlanAndSlice() {
       // Given: 创建的任务
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aQueuedTask().planId(null).sliceId(null).build();
+          TaskAggregateTestDataBuilder.aQueuedTask()
+              .planId((PlanId) null)
+              .sliceId((PlanSliceId) null)
+              .build();
 
       assertThat(task.getPlanId()).isNull();
       assertThat(task.getSliceId()).isNull();
 
       // When: 绑定计划和切片
-      task.bindPlanAndSlice(5001L, 6001L);
+      task.bindPlanAndSlice(PlanId.of(5001L), PlanSliceId.of(6001L));
 
       // Then: 应该成功绑定
-      assertThat(task.getPlanId()).isEqualTo(5001L);
-      assertThat(task.getSliceId()).isEqualTo(6001L);
+      assertThat(task.getPlanId()).isEqualTo(PlanId.of(5001L));
+      assertThat(task.getSliceId()).isEqualTo(PlanSliceId.of(6001L));
     }
 
     @Test

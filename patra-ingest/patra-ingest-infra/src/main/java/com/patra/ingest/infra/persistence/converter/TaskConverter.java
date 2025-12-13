@@ -7,8 +7,11 @@ import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.vo.execution.ExecutionTimeline;
+import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.plan.TaskSchedulerContext;
+import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import com.patra.ingest.domain.model.vo.shared.LeaseInfo;
+import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import com.patra.ingest.domain.model.vo.task.TaskId;
 import com.patra.ingest.infra.persistence.entity.TaskDO;
 import org.mapstruct.Mapper;
@@ -26,6 +29,12 @@ import org.mapstruct.ReportingPolicy;
 public interface TaskConverter {
 
   @Mapping(target = "id", source = "id", qualifiedByName = "taskIdToLong")
+  @Mapping(
+      target = "scheduleInstanceId",
+      source = "scheduleInstanceId",
+      qualifiedByName = "scheduleInstanceIdToLong")
+  @Mapping(target = "planId", source = "planId", qualifiedByName = "planIdToLong")
+  @Mapping(target = "sliceId", source = "sliceId", qualifiedByName = "planSliceIdToLong")
   @Mapping(
       target = "params",
       expression =
@@ -56,11 +65,17 @@ public interface TaskConverter {
     ExecutionTimeline timeline =
         new ExecutionTimeline(entity.getStartedAt(), entity.getFinishedAt());
     TaskSchedulerContext schedulerContext = new TaskSchedulerContext(entity.getCorrelationId());
+    ScheduleInstanceId scheduleInstanceId =
+        entity.getScheduleInstanceId() != null
+            ? ScheduleInstanceId.of(entity.getScheduleInstanceId())
+            : null;
+    PlanId planId = entity.getPlanId() != null ? PlanId.of(entity.getPlanId()) : null;
+    PlanSliceId sliceId = entity.getSliceId() != null ? PlanSliceId.of(entity.getSliceId()) : null;
     return TaskAggregate.restore(
         TaskId.of(entity.getId()),
-        entity.getScheduleInstanceId(),
-        entity.getPlanId(),
-        entity.getSliceId(),
+        scheduleInstanceId,
+        planId,
+        sliceId,
         ProvenanceCode.parse(entity.getProvenanceCode()),
         entity.getOperationCode(),
         paramsJson,
@@ -81,6 +96,21 @@ public interface TaskConverter {
 
   @Named("taskIdToLong")
   static Long taskIdToLong(TaskId id) {
+    return id != null ? id.value() : null;
+  }
+
+  @Named("scheduleInstanceIdToLong")
+  static Long scheduleInstanceIdToLong(ScheduleInstanceId id) {
+    return id != null ? id.value() : null;
+  }
+
+  @Named("planIdToLong")
+  static Long planIdToLong(PlanId id) {
+    return id != null ? id.value() : null;
+  }
+
+  @Named("planSliceIdToLong")
+  static Long planSliceIdToLong(PlanSliceId id) {
     return id != null ? id.value() : null;
   }
 

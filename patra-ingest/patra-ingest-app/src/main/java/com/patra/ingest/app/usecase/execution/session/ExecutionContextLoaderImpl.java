@@ -88,14 +88,14 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
     log.debug("为任务加载执行上下文 taskId={} sliceId={}", taskId, task.getSliceId());
     PlanSliceAggregate slice =
         sliceRepository
-            .findById(task.getSliceId())
+            .findById(task.getSliceId().value())
             .orElseThrow(() -> new IllegalArgumentException("切片未找到 sliceId=" + task.getSliceId()));
 
     // 步骤2: 读取 Plan
     log.debug("为切片加载计划 sliceId={} planId={}", slice.getId(), slice.getPlanId());
     PlanAggregate plan =
         planRepository
-            .findById(slice.getPlanId())
+            .findById(slice.getPlanId().value())
             .orElseThrow(() -> new IllegalArgumentException("计划未找到 planId=" + slice.getPlanId()));
 
     // 步骤3: 解析配置快照为 ProvenanceConfigSnapshot
@@ -158,7 +158,7 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
         runId,
         plan.getId().value(),
         slice.getId().value(),
-        task.getScheduleInstanceId(), // 来自 TaskAggregate
+        task.getScheduleInstanceId().value(), // 来自 TaskAggregate
         task.getProvenanceCode(),
         task.getOperationCode(),
         dataType,

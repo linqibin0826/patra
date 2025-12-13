@@ -79,7 +79,7 @@ public class PlanIdempotencyCoordinator {
 
   /// 通过发布重试事件处理重试任务。
   ///
-  /// 注意：重构后，Plan 状态在重试期间不变。Plan 保持当前状态（通常为 READY），而失败任务被重新入队。
+  /// Plan 状态在重试期间不变，保持当前状态（通常为 READY），失败任务被重新入队。
   ///
   /// @param existingPlan 现有计划聚合根
   /// @param schedule 调度实例
@@ -111,7 +111,7 @@ public class PlanIdempotencyCoordinator {
 
   /// 判断任务是否符合补偿重试条件。
   ///
-  /// 注意：重构后仅检查 FAILED 状态。
+  /// 仅检查 FAILED 状态的任务。
   ///
   /// @param task 任务聚合根
   /// @return 如需重试则返回 true（仅 FAILED 状态）

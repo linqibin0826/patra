@@ -209,7 +209,7 @@ public class TaskRunBatch {
         context.provenanceCode(),
         context.operationCode(),
         batch.batchNo(),
-        null, // pageNo - 已废弃，统一使用 offset/limit
+        null, // pageNo - 使用 offset/limit 分页
         batch.limit(), // pageSize - 使用 Batch.limit()
         null, // beforeToken
         result.nextCursorToken(), // afterToken - 保留用于下次批次

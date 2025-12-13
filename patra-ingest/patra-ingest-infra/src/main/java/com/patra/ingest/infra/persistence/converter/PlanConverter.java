@@ -10,6 +10,7 @@ import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.PlanStatus;
 import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
+import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import com.patra.ingest.infra.persistence.entity.PlanDO;
 import java.util.Map;
 import org.mapstruct.AfterMapping;
@@ -30,6 +31,10 @@ import org.mapstruct.ReportingPolicy;
 public interface PlanConverter {
 
   @Mapping(target = "id", source = "id", qualifiedByName = "planIdToLong")
+  @Mapping(
+      target = "scheduleInstanceId",
+      source = "scheduleInstanceId",
+      qualifiedByName = "scheduleInstanceIdToLong")
   @Mapping(
       target = "exprProtoSnapshot",
       expression =
@@ -80,7 +85,7 @@ public interface PlanConverter {
     WindowSpec windowSpec = jsonToWindowSpec(entity.getWindowSpec());
     return PlanAggregate.restore(
         PlanId.of(entity.getId()),
-        entity.getScheduleInstanceId(),
+        ScheduleInstanceId.of(entity.getScheduleInstanceId()),
         entity.getPlanKey(),
         ProvenanceCode.parse(entity.getProvenanceCode()),
         entity.getOperationCode(),
@@ -97,6 +102,11 @@ public interface PlanConverter {
 
   @Named("planIdToLong")
   static Long planIdToLong(PlanId id) {
+    return id != null ? id.value() : null;
+  }
+
+  @Named("scheduleInstanceIdToLong")
+  static Long scheduleInstanceIdToLong(ScheduleInstanceId id) {
     return id != null ? id.value() : null;
   }
 
