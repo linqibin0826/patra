@@ -129,7 +129,12 @@ patra:
   - `VenueMesh`：载体 MeSH 主题词（MeSH 主题分类，来源 Serfile）
   - `VenueRelation`：载体关联关系（期刊演变关系：前刊/后刊/合并/分拆）
   - `VenueIndexingHistory`：载体索引历史（MEDLINE/PMC 索引收录变迁）
-  - `VenueDetail`：载体详情（出版信息、语言信息、宿主机构、OA 状态，CQRS 补充数据）
+
+- **嵌入式值对象**（JSON 存储，随聚合根一起保存）
+  - `PublicationProfile`：出版概况（缩写标题、备选标题、主页 URL、宿主机构、国家代码）
+  - `CitationMetrics`：引用指标（作品数、被引数、H 指数、i10 指数、两年平均被引）
+  - `OpenAccessInfo`：开放获取信息（OA 状态 + APC 定价合并）
+  - `Society`：关联学会（学会名称、URL）
 
 - **聚合根 ID 值对象**（编译时类型安全，防止 ID 混淆）
   - `VenueId`：载体聚合根 ID
@@ -149,9 +154,6 @@ patra:
   - `SeeRelatedDescriptor`：相关主题词引用
   - `ConceptRelation`：概念关系
   - `HostOrganization`：主办机构信息
-  - `VenueStats`：载体统计摘要
-  - `ApcInfo`：APC（文章处理费）信息
-  - `Society`：学会信息
   - `ProvenanceInfo`：数据来源信息
   - `PublicationHistory`：出版历史（创刊/停刊年份）
   - `IndexingInfo`：MEDLINE 索引收录信息
@@ -207,17 +209,14 @@ patra:
   - `cat_publication_mesh`：文献-MeSH 关联表
 
 - **Venue（载体）相关表**
-  - `cat_venue`：载体主表（CQRS 最小聚合根，含快速访问字段优化列表查询）
+  - `cat_venue`：载体主表（含 4 个 JSON 嵌入式值对象：publication_profile、citation_metrics、open_access、affiliated_societies）
   - `cat_venue_identifier`：载体标识符表（ISSN/OpenAlex ID/NLM ID/DOAJ/JCR 等）
-  - `cat_venue_detail`：载体详情表（CQRS 补充数据：出版信息、语言、宿主机构、OA 状态）
   - `cat_venue_publication_stats`：载体年度发文统计表（发表量/被引量/OA 发文量）
   - `cat_venue_source_data`：载体数据源表（各数据源原始 JSON 和提取字段）
   - `cat_venue_rating`：载体评级表（JCR/中科院分区/Scopus 等多评价体系年度评级）
   - `cat_venue_mesh`：载体 MeSH 主题表（MeSH 主题词分类，与 cat_publication_mesh 命名风格一致）
   - `cat_venue_relation`：载体关联表（期刊演变关系：前刊/后刊/合并/分拆）
   - `cat_venue_indexing_history`：载体索引历史表（MEDLINE/PMC 索引收录变迁）
-  - `cat_venue_apc`：载体 APC 表（文章处理费信息）
-  - `cat_venue_society`：载体学会关联表（关联学术组织）
 
 ## 🧪 测试覆盖
 
@@ -230,8 +229,17 @@ patra:
 | Boot | E2E 测试 | 核心流程 |
 
 ## 📝 变更日志
-1. v0.9.6 (2025-12-12)：VenueRating 升级为独立聚合根
-   - **架构决策**：将 `VenueRating` 从值对象升级为独立聚合根 `VenueRatingAggregate`
+1. v0.9.7 (2025-12-13)：Venue 嵌入式值对象设计
+   - **架构决策**：[[ADR-019]] 使用 JSON 字段存储嵌入式值对象，实现 DDD 聚合设计
+   - **嵌入式值对象**（4 个 JSON 字段）：
+     - `PublicationProfile`：出版概况（缩写标题、备选标题、主页 URL、宿主机构）
+     - `CitationMetrics`：引用指标（作品数、被引数、H 指数、i10 指数）
+     - `OpenAccessInfo`：开放获取信息（OA 状态 + APC 定价）
+     - `Society`：关联学会（学会名称、URL）
+   - **设计优势**：单表查询、无 JOIN、嵌入式值对象随聚合根一起保存
+
+2. v0.9.6 (2025-12-12)：VenueRating 独立聚合根设计
+   - **架构决策**：[[ADR-018]] `VenueRatingAggregate` 作为独立聚合根设计
    - **设计原则**：
      - 独立生命周期：评级数据有独立的创建/更新/删除周期
      - 独立一致性边界：通过 `venue_id` 逻辑关联，无物理外键
@@ -241,7 +249,7 @@ patra:
      - `VenueRatingId`：强类型 ID 值对象（封装数据库主键）
      - `VenueRatingRepository`：仓储接口（Domain 层端口）
      - `VenueRatingRepositoryAdapter`：仓储实现（MyBatis-Plus）
-   - **Converter 重构**：`VenueRatingConverter` 从值对象转换改为聚合根转换
+   - **Converter 设计**：`VenueRatingConverter` 实现聚合根与 DO 双向转换
    - **测试覆盖**：54 个聚合根单元测试 + 12 个 Converter 测试 + 27 个仓储集成测试
 
 2. v0.9.5 (2025-12-12)：Venue 快速访问字段优化
@@ -263,11 +271,11 @@ patra:
    - **值对象扩展**：新增 5 个值对象（BroadHeading、CrossReference、CurrentIndexing、GeneralNote、RecordId）
    - **测试更新**：24 个单元测试 + 10 个集成测试全部通过
 
-2. v0.9.3 (2025-12-09)：VenueRating/VenueSourceData 重构为 Record 值对象
-   - **重构**：`VenueRating` 和 `VenueSourceData` 从实体（Class）改为不可变值对象（Record）
-     - 移动位置：`entity/` → `vo/venue/`
-     - 移除 `Long id` 技术 ID 字段（值对象无独立身份标识）
-     - 移除所有 setter 方法（Record 天然不可变）
+2. v0.9.3 (2025-12-09)：VenueRating/VenueSourceData Record 值对象设计
+   - **值对象设计**：`VenueRating` 和 `VenueSourceData` 采用不可变 Record 实现
+     - 位置：`vo/venue/` 包
+     - 无技术 ID 字段（值对象无独立身份标识）
+     - Record 天然不可变
    - **新增 Converter**：
      - `VenueRatingConverter`：评级值对象 ↔ DO 转换（含枚举降级和 JSON 解析日志）
      - `VenueSourceDataConverter`：数据源值对象 ↔ DO 转换（含枚举降级和 JSON 解析日志）
@@ -288,7 +296,7 @@ patra:
      - `VenuePubmedEnrichHandler`：3 处计时点优化
    - **测试补充**：5 个 Converter 新增单元测试
 
-2. v0.9.1 (2025-12-08)：VenueAggregate 聚合拆分重构 + DTO 层级迁移
+2. v0.9.1 (2025-12-08)：VenueAggregate 聚合边界设计 + DTO 层级优化
    - **架构决策**：[[ADR-014]] 基于 Vaughn Vernon 聚合设计规则，将无聚合级不变量的子实体移出聚合边界
    - **Breaking Change**：5 个实体类（VenueIdentifier、VenuePublicationStats、VenueMesh、VenueRelation、VenueIndexingHistory）从 Class 改为 Record
    - **Breaking Change**：yearlyMetrics、meshTerms、relations、indexingHistories 从 VenueAggregate 移出
@@ -383,7 +391,7 @@ patra:
    - 新增 `VenueInitializeScheduleJob`：XXL-Job 调度入口（`venueInitializeJob`）
    - 新增 `OpenAlexSourceParser`：OpenAlex JSONL 数据解析
    - 新增 `VenueSourceFilePort`/`VenueInitializeBatchPort`：源文件和批处理端口
-9. v0.4.0 (2025-12-02)：Venue 聚合重构
+9. v0.4.0 (2025-12-02)：Venue 聚合设计
    - **架构决策**：[[ADR-010]] 分离标识符和年度指标为独立实体
    - 新增 `VenueIdentifier` 实体：支持多种标识符类型（ISSN/OpenAlex/NLM/MAG 等）
    - 新增 `VenueMetrics` 实体：支持年度发表量、被引量、OA 比例时序分析
@@ -391,13 +399,11 @@ patra:
    - 新增枚举：`VenueType`、`VenueIdentifierType`
    - Repository 以聚合根为操作单位，保持 DDD 一致性边界
    - 新增数据库表：`cat_venue_identifier`、`cat_venue_metrics`
-10. v0.3.1 (2025-12-06)：Parser Port 单一职责重构
-   - 删除 `XmlParserPort`/`XmlParserAdapter` 通用接口
-   - 新增 `MeshDescriptorParserPort`/`MeshDescriptorParserAdapter` 专用主题词解析
-   - 新增 `MeshQualifierParserPort`/`MeshQualifierParserAdapter` 专用限定词解析
-   - 删除死代码：`ConceptParsingStrategy`、`TreeNumberParsingStrategy`
-   - 重构 `DescriptorParsingStrategy` 提取 `DescriptorListParsers` 工具类
-   - 新增 `ReferredTo` record 替代 `String[]` 提供类型安全
+10. v0.3.1 (2025-12-06)：Parser Port 单一职责设计
+   - `MeshDescriptorParserPort`/`MeshDescriptorParserAdapter` 专用主题词解析
+   - `MeshQualifierParserPort`/`MeshQualifierParserAdapter` 专用限定词解析
+   - `DescriptorListParsers` 工具类封装列表解析逻辑
+   - `ReferredTo` record 提供类型安全
 11. v0.3.0 (2025-12-01)：MeSH 源文件下载适配器
    - 新增 `MeshSourceFileAdapter`：从 NLM 官方服务器下载 MeSH XML 文件
    - 新增 `MeshSourceFilePort`：定义源文件获取端口接口
@@ -405,9 +411,9 @@ patra:
    - 将 MeSH 子表（TreeNumber、EntryTerm、Concept 等）的关联键从数据库自增 ID 改为 MeSH 原生 UI 标识符
    - Domain 层使用 `MeshUI` 值对象，Infra 层使用 `String`
    - 简化数据导入流程，无需先查询主表获取自增 ID
-13. v0.2.1 (2025-11-27)：XML 解析器策略模式重构（已被 v0.3.1 演进）
-   - XmlParserAdapter 重构为门面类（1800 行 → 156 行）
-   - 新增 5 个解析策略：Descriptor、Qualifier、Concept、EntryTerm、TreeNumber
+13. v0.2.1 (2025-11-27)：XML 解析器策略模式设计
+   - XmlParserAdapter 门面类设计
+   - 5 个解析策略：Descriptor、Qualifier、Concept、EntryTerm、TreeNumber
    - 支持 ConceptRelation 概念关系解析和持久化
 14. v0.2.0 (2025-11-27)：完善 MeSH 2025 DTD 支持
    - 新增 EntryCombination 组合条目值对象及数据库表
