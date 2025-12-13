@@ -1,14 +1,10 @@
 package com.patra.catalog.domain.port.repository;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
-import com.patra.catalog.domain.model.vo.venue.ApcInfo;
-import com.patra.catalog.domain.model.vo.venue.Society;
-import com.patra.catalog.domain.model.vo.venue.VenueDetail;
 import com.patra.catalog.domain.model.vo.venue.VenueIndexingHistory;
 import com.patra.catalog.domain.model.vo.venue.VenueMesh;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
 import com.patra.catalog.domain.model.vo.venue.VenueRelation;
-import com.patra.catalog.domain.model.vo.venue.VenueStats;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -188,70 +184,5 @@ public interface VenueRepository {
     replaceMeshTermsBatch(meshTermsByVenueId);
     replaceRelationsBatch(relationsByVenueId);
     replaceIndexingHistoriesBatch(historiesByVenueId);
-  }
-
-  // ========== 补充数据管理（CQRS 拆分后的独立表数据） ==========
-
-  /// 批量查询载体详情。
-  ///
-  /// @param venueIds Venue ID 集合（不能为 null，可以为空）
-  /// @return Map，key 为 venueId，value 为该 Venue 的详情（永不为 null）
-  Map<Long, VenueDetail> findDetailsByVenueIds(Collection<Long> venueIds);
-
-  /// 批量替换载体详情（删除旧数据后插入新数据）。
-  ///
-  /// @param detailsByVenueId Map，key 为 venueId，value 为要设置的详情
-  void replaceDetailsBatch(Map<Long, VenueDetail> detailsByVenueId);
-
-  /// 批量查询统计快照。
-  ///
-  /// @param venueIds Venue ID 集合（不能为 null，可以为空）
-  /// @return Map，key 为 venueId，value 为该 Venue 的统计快照（永不为 null）
-  Map<Long, VenueStats> findStatsByVenueIds(Collection<Long> venueIds);
-
-  /// 批量替换统计快照（删除旧数据后插入新数据）。
-  ///
-  /// @param statsByVenueId Map，key 为 venueId，value 为要设置的统计快照
-  void replaceStatsBatch(Map<Long, VenueStats> statsByVenueId);
-
-  /// 批量查询 APC 信息。
-  ///
-  /// @param venueIds Venue ID 集合（不能为 null，可以为空）
-  /// @return Map，key 为 venueId，value 为该 Venue 的 APC 信息（永不为 null）
-  Map<Long, ApcInfo> findApcByVenueIds(Collection<Long> venueIds);
-
-  /// 批量替换 APC 信息（删除旧数据后插入新数据）。
-  ///
-  /// @param apcByVenueId Map，key 为 venueId，value 为要设置的 APC 信息
-  void replaceApcBatch(Map<Long, ApcInfo> apcByVenueId);
-
-  /// 批量查询关联学会。
-  ///
-  /// @param venueIds Venue ID 集合（不能为 null，可以为空）
-  /// @return Map，key 为 venueId，value 为该 Venue 的关联学会列表（永不为 null）
-  Map<Long, List<Society>> findSocietiesByVenueIds(Collection<Long> venueIds);
-
-  /// 批量替换关联学会（删除旧数据后插入新数据）。
-  ///
-  /// @param societiesByVenueId Map，key 为 venueId，value 为要设置的关联学会列表
-  void replaceSocietiesBatch(Map<Long, List<Society>> societiesByVenueId);
-
-  /// 批量替换所有补充数据（详情、统计、APC、学会）。
-  ///
-  /// 用于 OpenAlex 导入场景，在同一次调用中更新所有补充数据。
-  ///
-  /// @param detailsByVenueId 详情数据
-  /// @param statsByVenueId 统计快照数据
-  /// @param apcByVenueId APC 信息数据
-  /// @param societiesByVenueId 关联学会数据
-  default void replaceSupplementaryDataBatch(
-      Map<Long, VenueDetail> detailsByVenueId,
-      Map<Long, VenueStats> statsByVenueId,
-      Map<Long, ApcInfo> apcByVenueId,
-      Map<Long, List<Society>> societiesByVenueId) {
-    replaceDetailsBatch(detailsByVenueId);
-    replaceStatsBatch(statsByVenueId);
-    replaceApcBatch(apcByVenueId);
-    replaceSocietiesBatch(societiesByVenueId);
   }
 }
