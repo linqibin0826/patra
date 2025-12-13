@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.catalog.domain.model.aggregate.VenueRatingAggregate;
 import com.patra.catalog.domain.model.enums.RatingSystem;
+import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueRatingId;
 import com.patra.catalog.infra.persistence.entity.VenueRatingDO;
 import java.math.BigDecimal;
@@ -49,7 +50,8 @@ class VenueRatingConverterTest {
       Instant fetchedAt = Instant.now();
 
       VenueRatingAggregate aggregate =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, "Q1", new BigDecimal("42.778"));
+          VenueRatingAggregate.create(
+              VenueId.of(123L), 2024, RatingSystem.JCR, "Q1", new BigDecimal("42.778"));
       aggregate.updateRatingDetails(ratingData, categories);
       aggregate.recordSource("https://example.com", fetchedAt);
 
@@ -86,7 +88,7 @@ class VenueRatingConverterTest {
     void shouldHandleNullJsonFields() {
       // Given: 创建不带 JSON 字段的聚合根
       VenueRatingAggregate aggregate =
-          VenueRatingAggregate.create(123L, 2024, RatingSystem.JCR, null, null);
+          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
 
       // When
       VenueRatingDO doEntity = converter.toDO(aggregate);
@@ -101,7 +103,8 @@ class VenueRatingConverterTest {
     void shouldConvertPersistedAggregateToDO() {
       // Given: 模拟从数据库恢复的聚合根
       VenueRatingAggregate aggregate =
-          VenueRatingAggregate.restore(VenueRatingId.of(999L), 123L, 2024, RatingSystem.JCR, 5L);
+          VenueRatingAggregate.restore(
+              VenueRatingId.of(999L), VenueId.of(123L), 2024, RatingSystem.JCR, 5L);
       aggregate.restoreState("Q1", new BigDecimal("42.778"), null, null, null, null);
 
       // When
@@ -140,7 +143,7 @@ class VenueRatingConverterTest {
       // Then
       assertThat(aggregate).isNotNull();
       assertThat(aggregate.getId()).isEqualTo(VenueRatingId.of(1L));
-      assertThat(aggregate.getVenueId()).isEqualTo(123L);
+      assertThat(aggregate.getVenueId()).isEqualTo(VenueId.of(123L));
       assertThat(aggregate.getYear()).isEqualTo(2024);
       assertThat(aggregate.getRatingSystem()).isEqualTo(RatingSystem.JCR);
       assertThat(aggregate.getQuartile()).isEqualTo("Q1");

@@ -8,6 +8,8 @@ import com.patra.catalog.domain.model.enums.PublicationStatus;
 import com.patra.catalog.domain.model.vo.publication.LanguageInfo;
 import com.patra.catalog.domain.model.vo.publication.PublicationId;
 import com.patra.catalog.domain.model.vo.publication.PublicationIdentifiers;
+import com.patra.catalog.domain.model.vo.venue.VenueId;
+import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.common.domain.AggregateRoot;
 import com.patra.common.enums.ProvenanceCode;
 import java.io.Serial;
@@ -68,10 +70,10 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   // ========== 关联关系（含冗余） ==========
 
   /// 关联的出版载体 ID（冗余优化 - 避免二级 JOIN）
-  private final Long venueId;
+  private final VenueId venueId;
 
   /// 关联的载体实例 ID（外键：cat_venue_instance.id）
-  private final Long venueInstanceId;
+  private final VenueInstanceId venueInstanceId;
 
   // ========== 标题和语言 ==========
 
@@ -143,8 +145,8 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
       PublicationId id,
       ProvenanceCode provenanceCode,
       PublicationIdentifiers identifiers,
-      Long venueId,
-      Long venueInstanceId,
+      VenueId venueId,
+      VenueInstanceId venueInstanceId,
       String title,
       String originalTitle,
       LanguageInfo languageInfo,
@@ -214,8 +216,8 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   public static PublicationAggregate create(
       ProvenanceCode provenanceCode,
       PublicationIdentifiers identifiers,
-      Long venueId,
-      Long venueInstanceId,
+      VenueId venueId,
+      VenueInstanceId venueInstanceId,
       String title,
       String originalTitle,
       LanguageInfo languageInfo,
@@ -273,8 +275,8 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
       PublicationId id,
       ProvenanceCode provenanceCode,
       PublicationIdentifiers identifiers,
-      Long venueId,
-      Long venueInstanceId,
+      VenueId venueId,
+      VenueInstanceId venueInstanceId,
       String title,
       String originalTitle,
       LanguageInfo languageInfo,
@@ -468,7 +470,7 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   @Override
   public String toString() {
     return String.format(
-        "PublicationAggregate[id=%d, provenance=%s, pmid=%s, doi=%s, title=%s, year=%d]",
+        "PublicationAggregate[id=%s, provenance=%s, pmid=%s, doi=%s, title=%s, year=%d]",
         getId(),
         provenanceCode,
         getPmid(),

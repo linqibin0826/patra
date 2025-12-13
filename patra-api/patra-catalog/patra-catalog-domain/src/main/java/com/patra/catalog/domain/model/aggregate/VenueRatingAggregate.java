@@ -3,6 +3,7 @@ package com.patra.catalog.domain.model.aggregate;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.enums.RatingSystem;
+import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueRatingId;
 import com.patra.common.domain.AggregateRoot;
 import java.math.BigDecimal;
@@ -78,7 +79,7 @@ public class VenueRatingAggregate extends AggregateRoot<VenueRatingId> {
   // ========== 核心属性（不变量） ==========
 
   /// 关联的 Venue ID（逻辑外键）
-  private final Long venueId;
+  private final VenueId venueId;
 
   /// 评级年份（2000-2100）
   private final int year;
@@ -115,7 +116,7 @@ public class VenueRatingAggregate extends AggregateRoot<VenueRatingId> {
   /// @param year 评级年份
   /// @param ratingSystem 评价体系
   private VenueRatingAggregate(
-      VenueRatingId id, Long venueId, int year, RatingSystem ratingSystem) {
+      VenueRatingId id, VenueId venueId, int year, RatingSystem ratingSystem) {
     super(id);
     Assert.notNull(venueId, "Venue ID 不能为空");
     Assert.notNull(ratingSystem, "评价体系不能为空");
@@ -139,7 +140,11 @@ public class VenueRatingAggregate extends AggregateRoot<VenueRatingId> {
   /// @param impactScore 影响力分数（可选）
   /// @return 新的评级聚合根
   public static VenueRatingAggregate create(
-      Long venueId, int year, RatingSystem ratingSystem, String quartile, BigDecimal impactScore) {
+      VenueId venueId,
+      int year,
+      RatingSystem ratingSystem,
+      String quartile,
+      BigDecimal impactScore) {
     VenueRatingAggregate aggregate = new VenueRatingAggregate(null, venueId, year, ratingSystem);
     aggregate.quartile = quartile;
     aggregate.impactScore = impactScore;
@@ -156,7 +161,7 @@ public class VenueRatingAggregate extends AggregateRoot<VenueRatingId> {
   /// @param version 乐观锁版本
   /// @return 恢复的评级聚合根
   public static VenueRatingAggregate restore(
-      VenueRatingId id, Long venueId, int year, RatingSystem ratingSystem, Long version) {
+      VenueRatingId id, VenueId venueId, int year, RatingSystem ratingSystem, Long version) {
     VenueRatingAggregate aggregate = new VenueRatingAggregate(id, venueId, year, ratingSystem);
     aggregate.assignVersion(version);
     return aggregate;

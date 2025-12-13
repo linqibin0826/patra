@@ -2,6 +2,7 @@ package com.patra.catalog.domain.model.aggregate;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
+import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.common.domain.AggregateRoot;
 import java.io.Serial;
@@ -64,7 +65,7 @@ public class VenueInstanceAggregate extends AggregateRoot<VenueInstanceId> {
   // ========== 关联引用 ==========
 
   /// 关联的载体 ID（外键，不可变）
-  private final Long venueId;
+  private final VenueId venueId;
 
   // ========== 期刊字段 ==========
 
@@ -125,7 +126,7 @@ public class VenueInstanceAggregate extends AggregateRoot<VenueInstanceId> {
   /// @param conferenceLocation 会议地点
   private VenueInstanceAggregate(
       VenueInstanceId id,
-      Long venueId,
+      VenueId venueId,
       String volume,
       String issue,
       String edition,
@@ -191,7 +192,7 @@ public class VenueInstanceAggregate extends AggregateRoot<VenueInstanceId> {
   /// @param publicationDay 出版日期（可选）
   /// @return 期刊实例聚合根
   public static VenueInstanceAggregate forJournal(
-      Long venueId,
+      VenueId venueId,
       String volume,
       String issue,
       Integer publicationYear,
@@ -219,7 +220,7 @@ public class VenueInstanceAggregate extends AggregateRoot<VenueInstanceId> {
   /// @param publicationYear 出版年份
   /// @return 书籍实例聚合根
   public static VenueInstanceAggregate forBook(
-      Long venueId, String edition, Integer publicationYear) {
+      VenueId venueId, String edition, Integer publicationYear) {
     return new VenueInstanceAggregate(
         null, venueId, null, null, edition, publicationYear, null, null, null, null, null, null);
   }
@@ -234,7 +235,7 @@ public class VenueInstanceAggregate extends AggregateRoot<VenueInstanceId> {
   /// @param publicationYear 出版年份
   /// @return 会议实例聚合根
   public static VenueInstanceAggregate forConference(
-      Long venueId,
+      VenueId venueId,
       String conferenceName,
       LocalDate conferenceStartDate,
       LocalDate conferenceEndDate,
@@ -273,7 +274,7 @@ public class VenueInstanceAggregate extends AggregateRoot<VenueInstanceId> {
   /// @return 重建的聚合根
   public static VenueInstanceAggregate restore(
       VenueInstanceId id,
-      Long venueId,
+      VenueId venueId,
       String volume,
       String issue,
       String edition,

@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.patra.catalog.domain.model.aggregate.VenueRatingAggregate;
 import com.patra.catalog.domain.model.enums.RatingSystem;
+import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueRatingId;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.catalog.infra.persistence.mapper.VenueRatingMapper;
@@ -92,7 +93,8 @@ class VenueRatingRepositoryAdapterIT {
     @DisplayName("ID 存在 - 应该返回聚合根")
     void findById_found_shouldReturnAggregate() {
       // Given: 插入一条记录
-      VenueRatingAggregate rating = createJcrRating(1001L, 2024, "Q1", new BigDecimal("42.778"));
+      VenueRatingAggregate rating =
+          createJcrRating(VenueId.of(1001L), 2024, "Q1", new BigDecimal("42.778"));
       VenueRatingAggregate saved = repository.save(rating);
 
       // When
@@ -100,7 +102,7 @@ class VenueRatingRepositoryAdapterIT {
 
       // Then
       assertThat(result).isPresent();
-      assertThat(result.get().getVenueId()).isEqualTo(1001L);
+      assertThat(result.get().getVenueId()).isEqualTo(VenueId.of(1001L));
       assertThat(result.get().getYear()).isEqualTo(2024);
       assertThat(result.get().getRatingSystem()).isEqualTo(RatingSystem.JCR);
       assertThat(result.get().getQuartile()).isEqualTo("Q1");
@@ -118,7 +120,8 @@ class VenueRatingRepositoryAdapterIT {
     @DisplayName("业务唯一键存在 - 应该返回聚合根")
     void findByBusinessKey_found_shouldReturnAggregate() {
       // Given
-      VenueRatingAggregate rating = createJcrRating(1001L, 2024, "Q1", new BigDecimal("42.778"));
+      VenueRatingAggregate rating =
+          createJcrRating(VenueId.of(1001L), 2024, "Q1", new BigDecimal("42.778"));
       repository.save(rating);
 
       // When
@@ -127,7 +130,7 @@ class VenueRatingRepositoryAdapterIT {
 
       // Then
       assertThat(result).isPresent();
-      assertThat(result.get().getVenueId()).isEqualTo(1001L);
+      assertThat(result.get().getVenueId()).isEqualTo(VenueId.of(1001L));
       assertThat(result.get().getYear()).isEqualTo(2024);
       assertThat(result.get().getRatingSystem()).isEqualTo(RatingSystem.JCR);
     }
@@ -176,16 +179,16 @@ class VenueRatingRepositoryAdapterIT {
     @DisplayName("有评级数据 - 应该返回所有评级")
     void findByVenueId_found_shouldReturnAllRatings() {
       // Given: 同一 Venue 的多条评级
-      repository.save(createJcrRating(1001L, 2024, "Q1", new BigDecimal("42.0")));
-      repository.save(createJcrRating(1001L, 2023, "Q2", new BigDecimal("38.0")));
-      repository.save(createCasRating(1001L, 2024, "1区", new BigDecimal("45.0")));
+      repository.save(createJcrRating(VenueId.of(1001L), 2024, "Q1", new BigDecimal("42.0")));
+      repository.save(createJcrRating(VenueId.of(1001L), 2023, "Q2", new BigDecimal("38.0")));
+      repository.save(createCasRating(VenueId.of(1001L), 2024, "1区", new BigDecimal("45.0")));
 
       // When
       List<VenueRatingAggregate> result = repository.findByVenueId(1001L);
 
       // Then
       assertThat(result).hasSize(3);
-      assertThat(result).allMatch(r -> r.getVenueId().equals(1001L));
+      assertThat(result).allMatch(r -> r.getVenueId().equals(VenueId.of(1001L)));
     }
 
     @Test
@@ -219,9 +222,9 @@ class VenueRatingRepositoryAdapterIT {
     @DisplayName("有匹配数据 - 应该返回指定评价体系的评级")
     void findByVenueIdAndRatingSystem_found_shouldReturnMatchingRatings() {
       // Given
-      repository.save(createJcrRating(1001L, 2024, "Q1", new BigDecimal("42.0")));
-      repository.save(createJcrRating(1001L, 2023, "Q2", new BigDecimal("38.0")));
-      repository.save(createCasRating(1001L, 2024, "1区", new BigDecimal("45.0")));
+      repository.save(createJcrRating(VenueId.of(1001L), 2024, "Q1", new BigDecimal("42.0")));
+      repository.save(createJcrRating(VenueId.of(1001L), 2023, "Q2", new BigDecimal("38.0")));
+      repository.save(createCasRating(VenueId.of(1001L), 2024, "1区", new BigDecimal("45.0")));
 
       // When
       List<VenueRatingAggregate> result =
@@ -254,9 +257,9 @@ class VenueRatingRepositoryAdapterIT {
     @DisplayName("有匹配数据 - 应该返回指定年份的评级")
     void findByVenueIdAndYear_found_shouldReturnMatchingRatings() {
       // Given
-      repository.save(createJcrRating(1001L, 2024, "Q1", new BigDecimal("42.0")));
-      repository.save(createCasRating(1001L, 2024, "1区", new BigDecimal("45.0")));
-      repository.save(createJcrRating(1001L, 2023, "Q2", new BigDecimal("38.0")));
+      repository.save(createJcrRating(VenueId.of(1001L), 2024, "Q1", new BigDecimal("42.0")));
+      repository.save(createCasRating(VenueId.of(1001L), 2024, "1区", new BigDecimal("45.0")));
+      repository.save(createJcrRating(VenueId.of(1001L), 2023, "Q2", new BigDecimal("38.0")));
 
       // When
       List<VenueRatingAggregate> result = repository.findByVenueIdAndYear(1001L, 2024);
@@ -287,9 +290,9 @@ class VenueRatingRepositoryAdapterIT {
     @DisplayName("有匹配数据 - 应该返回按 venueId 分组的评级")
     void findByVenueIds_found_shouldReturnGroupedRatings() {
       // Given
-      repository.save(createJcrRating(1001L, 2024, "Q1", new BigDecimal("42.0")));
-      repository.save(createJcrRating(1002L, 2024, "Q2", new BigDecimal("35.0")));
-      repository.save(createJcrRating(1003L, 2024, "Q3", new BigDecimal("25.0")));
+      repository.save(createJcrRating(VenueId.of(1001L), 2024, "Q1", new BigDecimal("42.0")));
+      repository.save(createJcrRating(VenueId.of(1002L), 2024, "Q2", new BigDecimal("35.0")));
+      repository.save(createJcrRating(VenueId.of(1003L), 2024, "Q3", new BigDecimal("25.0")));
 
       // When
       Map<Long, List<VenueRatingAggregate>> result =
@@ -333,7 +336,8 @@ class VenueRatingRepositoryAdapterIT {
     @DisplayName("新建聚合根 - 应该插入并分配 ID")
     void save_newAggregate_shouldInsertAndAssignId() {
       // Given
-      VenueRatingAggregate rating = createJcrRating(1001L, 2024, "Q1", new BigDecimal("42.778"));
+      VenueRatingAggregate rating =
+          createJcrRating(VenueId.of(1001L), 2024, "Q1", new BigDecimal("42.778"));
       assertThat(rating.isTransient()).isTrue();
 
       // When
@@ -349,7 +353,8 @@ class VenueRatingRepositoryAdapterIT {
     @DisplayName("更新聚合根 - 应该更新数据并清除脏标记")
     void save_dirtyAggregate_shouldUpdateAndClearDirty() {
       // Given: 先插入
-      VenueRatingAggregate rating = createJcrRating(1001L, 2024, "Q1", new BigDecimal("42.778"));
+      VenueRatingAggregate rating =
+          createJcrRating(VenueId.of(1001L), 2024, "Q1", new BigDecimal("42.778"));
       repository.save(rating);
 
       // Given: 修改
@@ -372,7 +377,8 @@ class VenueRatingRepositoryAdapterIT {
     @DisplayName("未修改的聚合根 - 不应该更新")
     void save_notDirtyAggregate_shouldNotUpdate() {
       // Given: 先插入
-      VenueRatingAggregate rating = createJcrRating(1001L, 2024, "Q1", new BigDecimal("42.778"));
+      VenueRatingAggregate rating =
+          createJcrRating(VenueId.of(1001L), 2024, "Q1", new BigDecimal("42.778"));
       repository.save(rating);
       Long originalVersion = rating.getVersion();
 
@@ -408,7 +414,8 @@ class VenueRatingRepositoryAdapterIT {
     @DisplayName("ID 存在 - 应该删除记录")
     void deleteById_found_shouldDelete() {
       // Given
-      VenueRatingAggregate rating = createJcrRating(1001L, 2024, "Q1", new BigDecimal("42.778"));
+      VenueRatingAggregate rating =
+          createJcrRating(VenueId.of(1001L), 2024, "Q1", new BigDecimal("42.778"));
       repository.save(rating);
       assertThat(venueRatingMapper.selectCount(null)).isEqualTo(1);
 
@@ -445,9 +452,9 @@ class VenueRatingRepositoryAdapterIT {
     @DisplayName("有匹配数据 - 应该删除所有匹配记录")
     void deleteByVenueId_found_shouldDeleteAll() {
       // Given
-      repository.save(createJcrRating(1001L, 2024, "Q1", new BigDecimal("42.0")));
-      repository.save(createJcrRating(1001L, 2023, "Q2", new BigDecimal("38.0")));
-      repository.save(createJcrRating(1002L, 2024, "Q3", new BigDecimal("25.0")));
+      repository.save(createJcrRating(VenueId.of(1001L), 2024, "Q1", new BigDecimal("42.0")));
+      repository.save(createJcrRating(VenueId.of(1001L), 2023, "Q2", new BigDecimal("38.0")));
+      repository.save(createJcrRating(VenueId.of(1002L), 2024, "Q3", new BigDecimal("25.0")));
       assertThat(venueRatingMapper.selectCount(null)).isEqualTo(3);
 
       // When
@@ -478,13 +485,13 @@ class VenueRatingRepositoryAdapterIT {
 
   /// 创建 JCR 评级聚合根。
   private VenueRatingAggregate createJcrRating(
-      Long venueId, int year, String quartile, BigDecimal impactFactor) {
+      VenueId venueId, int year, String quartile, BigDecimal impactFactor) {
     return VenueRatingAggregate.create(venueId, year, RatingSystem.JCR, quartile, impactFactor);
   }
 
   /// 创建中科院分区评级聚合根。
   private VenueRatingAggregate createCasRating(
-      Long venueId, int year, String partition, BigDecimal compositeIf) {
+      VenueId venueId, int year, String partition, BigDecimal compositeIf) {
     return VenueRatingAggregate.create(venueId, year, RatingSystem.CAS, partition, compositeIf);
   }
 
