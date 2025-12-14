@@ -71,7 +71,7 @@ public class UserDO extends BaseDO {
 | `updatedByName` | String | 更新人名称 |
 | `version` | Long | 乐观锁版本号 |
 | `ipAddress` | byte[] | 客户端IP地址（二进制存储） |
-| `deleted` | Boolean | 软删除标志 |
+| `deletedAt` | Instant | 软删除时间戳（`null` = 活动，有值 = 删除时间） |
 | `recordRemarks` | String | 备注信息（JSON格式） |
 
 ### AuditMetaObjectHandler - 审计字段处理器
@@ -205,6 +205,9 @@ public InnerInterceptor myCustomInterceptor() {
 
 - 配置 MyBatis-Plus 拦截器链
 - 注册审计元数据处理器
+- 配置逻辑删除策略（时间戳模式）：
+  - `deleted_at IS NULL` = 活动记录
+  - `deleted_at = NOW()` = 已删除记录（自动记录删除时间）
 
 ## 数据库表设计建议
 
@@ -226,7 +229,7 @@ CREATE TABLE example (
     -- 控制字段
     version BIGINT DEFAULT 0,
     ip_address VARBINARY(16),
-    deleted TINYINT(1) DEFAULT 0,
+    deleted_at TIMESTAMP(6) NULL,
     record_remarks JSON
 );
 ```
@@ -269,7 +272,7 @@ mybatis-plus:
 
 1. **事务配置**: 此 Starter 不处理事务或数据源配置，应在业务模块的 `infra/config` 层配置
 2. **主键生成**: 默认使用 `IdType.ASSIGN_ID`（雪花算法），需确保已正确配置
-3. **软删除**: 使用 `@TableLogic` 注解的 `deleted` 字段，查询时自动过滤已删除记录
+3. **软删除**: 使用 `@TableLogic` 注解的 `deletedAt` 时间戳字段，`NULL` 表示活动记录，有值表示删除时间，查询时自动过滤已删除记录
 4. **乐观锁**: 更新时需确保实体包含 `version` 字段值，否则乐观锁不生效
 5. **批量插入**: 必须配置 `rewriteBatchedStatements=true` 才能生成高效的批量 SQL
 

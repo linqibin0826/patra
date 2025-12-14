@@ -89,11 +89,12 @@ public abstract class BaseDO implements Serializable {
   @TableField(value = "ip_address")
   private byte[] ipAddress;
 
-  /// 指示实体是否已被逻辑删除的标志。
+  /// 实体逻辑删除的时间戳。
   ///
-  /// 此字段启用软删除功能。值为 `true`（或 1）表示实体已删除，
-  /// `false`（或 0）表示实体处于活动状态。MyBatis-Plus 查询将自动过滤已删除的记录。
+  /// 此字段实现软删除功能。`null` 表示实体处于活动状态，
+  /// 有时间戳值表示实体已在该时刻被删除。
+  /// MyBatis-Plus 查询将自动过滤 `deleted_at IS NOT NULL` 的记录。
   @TableLogic
-  @TableField(value = "deleted")
-  private Boolean deleted;
+  @TableField(value = "deleted_at")
+  private Instant deletedAt;
 }
