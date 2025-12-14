@@ -1,6 +1,7 @@
 package com.patra.starter.mybatis.autoconfig;
 
 import com.baomidou.mybatisplus.annotation.DbType;
+import com.baomidou.mybatisplus.autoconfigure.MybatisPlusPropertiesCustomizer;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
@@ -44,6 +45,24 @@ public class MybatisPluginAutoConfig {
   public MetaObjectHandler metaObjectHandler(@Nullable Clock clock) {
     log.info("初始化 MyBatis-Plus 审计元数据处理器");
     return new AuditMetaObjectHandler(clock);
+  }
+
+  /// 配置 MyBatis-Plus 全局属性，包括逻辑删除策略。
+  ///
+  /// 逻辑删除采用时间戳方式：
+  /// - `deleted_at IS NULL` 表示记录活动
+  /// - `deleted_at = NOW()` 表示记录已删除（记录删除时间）
+  ///
+  /// @return 属性定制器
+  @Bean
+  public MybatisPlusPropertiesCustomizer mybatisPlusPropertiesCustomizer() {
+    log.info("配置 MyBatis-Plus 逻辑删除策略: 时间戳模式 (deleted_at)");
+    return properties -> {
+      var dbConfig = properties.getGlobalConfig().getDbConfig();
+      dbConfig.setLogicDeleteField("deletedAt");
+      dbConfig.setLogicDeleteValue("NOW()");
+      dbConfig.setLogicNotDeleteValue("NULL");
+    };
   }
 
   /// 创建包含分页、乐观锁和攻击防护的标准拦截器。
