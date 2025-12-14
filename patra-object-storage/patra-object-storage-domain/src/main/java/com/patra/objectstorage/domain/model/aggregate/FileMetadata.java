@@ -82,9 +82,6 @@ public class FileMetadata {
   /// 更新人姓名
   private String updatedByName;
 
-  /// 软删除标志
-  private Boolean deleted;
-
   /// 私有构造函数,强制使用工厂方法。
   private FileMetadata() {
     // 使用静态工厂方法创建实例
@@ -121,7 +118,6 @@ public class FileMetadata {
     metadata.status = FileStatus.ACTIVE;
     metadata.uploadedAt = Instant.now();
     metadata.version = 0L;
-    metadata.deleted = Boolean.FALSE;
     metadata.createdAt = metadata.uploadedAt;
     metadata.updatedAt = metadata.uploadedAt;
     return metadata;
@@ -129,7 +125,8 @@ public class FileMetadata {
 
   /// 从现有的持久化快照恢复聚合根。
   ///
-  /// 工厂方法用于从数据库加载已存在的元数据记录,重建完整的聚合根状态。 此方法用于仓储实现将数据实体转换为领域对象。
+  /// 工厂方法用于从数据库加载已存在的元数据记录,重建完整的聚合根状态。
+  /// 此方法用于仓储实现将数据实体转换为领域对象。
   ///
   /// @param id 主键
   /// @param storageKey 持久化的存储键
@@ -141,7 +138,7 @@ public class FileMetadata {
   /// @param status 文件生命周期状态
   /// @param uploadedAt 上传时间戳
   /// @param expiresAt 过期时间戳
-  /// @param deletedAt 删除时间戳
+  /// @param deletedAt 逻辑删除时间戳（null 表示未删除）
   /// @param recordRemarks 审计备注载荷
   /// @param version 乐观锁版本
   /// @param ipAddress 以二进制存储的请求者IP
@@ -151,7 +148,6 @@ public class FileMetadata {
   /// @param updatedAt 最后更新时间
   /// @param updatedBy 更新人ID
   /// @param updatedByName 更新人显示名称
-  /// @param deleted 逻辑删除标记
   /// @return 完全物化的聚合根
   public static FileMetadata restore(
       Long id,
@@ -173,8 +169,7 @@ public class FileMetadata {
       String createdByName,
       Instant updatedAt,
       Long updatedBy,
-      String updatedByName,
-      Boolean deleted) {
+      String updatedByName) {
     FileMetadata metadata = new FileMetadata();
     metadata.id = id;
     metadata.storageKey = storageKey;
@@ -196,7 +191,6 @@ public class FileMetadata {
     metadata.updatedAt = updatedAt;
     metadata.updatedBy = updatedBy;
     metadata.updatedByName = updatedByName;
-    metadata.deleted = deleted;
     return metadata;
   }
 
@@ -260,7 +254,8 @@ public class FileMetadata {
 
   /// 将文件标记为已删除,同时保留审计追踪。
   ///
-  /// 软删除操作,将状态更新为DELETED,设置删除标志和删除时间,并更新审计信息。
+  /// 软删除操作,将状态更新为 DELETED,设置删除时间戳,并更新审计信息。
+  /// `deletedAt` 时间戳同时用作逻辑删除标记（null = 未删除）。
   ///
   /// @param operatorId 执行删除的操作员标识符
   /// @param operatorName 操作员显示名称
@@ -270,7 +265,6 @@ public class FileMetadata {
       throw new IllegalStateException("文件已被删除");
     }
     this.status = FileStatus.DELETED;
-    this.deleted = Boolean.TRUE;
     this.deletedAt = Instant.now();
     touchAudit(operatorId, operatorName);
   }

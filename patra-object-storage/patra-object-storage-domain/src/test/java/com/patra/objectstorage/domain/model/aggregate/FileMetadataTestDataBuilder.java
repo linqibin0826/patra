@@ -63,7 +63,6 @@ public class FileMetadataTestDataBuilder {
   private Instant updatedAt = Instant.parse("2024-01-01T10:00:00Z");
   private Long updatedBy = 1001L;
   private String updatedByName = "张三";
-  private Boolean deleted = Boolean.FALSE;
 
   // ========== 构造函数（私有） ==========
 
@@ -85,7 +84,7 @@ public class FileMetadataTestDataBuilder {
   ///
   /// @return 文件元数据构建器
   public static FileMetadataTestDataBuilder anActiveFile() {
-    return new FileMetadataTestDataBuilder().status(FileStatus.ACTIVE).deleted(Boolean.FALSE);
+    return new FileMetadataTestDataBuilder().status(FileStatus.ACTIVE);
   }
 
   /// 创建默认的已删除文件构建器。
@@ -93,16 +92,12 @@ public class FileMetadataTestDataBuilder {
   /// 包含以下默认配置：
   ///
   /// - 状态: DELETED
-  ///   - 软删除标志: true
-  ///   - 删除时间: 当前时间
+  ///   - 删除时间: 当前时间（deletedAt 非空表示已删除）
   ///   - 其他字段同 {@link #anActiveFile()}
   ///
   /// @return 文件元数据构建器
   public static FileMetadataTestDataBuilder aDeletedFile() {
-    return new FileMetadataTestDataBuilder()
-        .status(FileStatus.DELETED)
-        .deleted(Boolean.TRUE)
-        .deletedAt(Instant.now());
+    return new FileMetadataTestDataBuilder().status(FileStatus.DELETED).deletedAt(Instant.now());
   }
 
   /// 创建默认的已过期文件构建器。
@@ -222,11 +217,6 @@ public class FileMetadataTestDataBuilder {
     return this;
   }
 
-  public FileMetadataTestDataBuilder deleted(Boolean deleted) {
-    this.deleted = deleted;
-    return this;
-  }
-
   // ========== 便捷配置方法 ==========
 
   /// 配置完整的业务上下文，包含关联数据。
@@ -284,7 +274,7 @@ public class FileMetadataTestDataBuilder {
   ///   - 状态自动设置为 ACTIVE
   ///   - 上传时间、创建时间、更新时间自动设置为当前时间
   ///   - 版本号为 0
-  ///   - deleted 标志为 false
+  ///   - deletedAt 为 null（表示未删除）
   ///
   /// @return FileMetadata 实例
   public FileMetadata build() {
@@ -338,7 +328,6 @@ public class FileMetadataTestDataBuilder {
         createdByName,
         updatedAt,
         updatedBy,
-        updatedByName,
-        deleted);
+        updatedByName);
   }
 }
