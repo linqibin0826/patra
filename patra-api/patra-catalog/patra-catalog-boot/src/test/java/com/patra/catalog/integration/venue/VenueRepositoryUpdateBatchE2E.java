@@ -6,16 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
-import com.patra.catalog.domain.model.vo.venue.VenueDetail;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
-import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.infra.persistence.entity.VenueDO;
 import com.patra.catalog.infra.persistence.mapper.VenueIdentifierMapper;
 import com.patra.catalog.infra.persistence.mapper.VenueMapper;
 import com.patra.catalog.integration.config.CatalogMySQLContainerInitializer;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
@@ -484,47 +481,6 @@ class VenueRepositoryUpdateBatchE2E {
       assertThat(saved.getOpenalexId()).isEqualTo("S999");
       assertThat(saved.getIssnL()).isNull();
       assertThat(saved.getNlmId()).isNull();
-    }
-
-    @Test
-    @DisplayName("replaceDetailsBatch 应该同步快速访问字段到主表")
-    void replaceDetailsBatch_shouldSyncQuickAccessFieldsToVenue() {
-      // Given: 插入一个载体
-      VenueAggregate venue = createVenueAggregate("S1", "Journal A");
-      venueRepository.insertAll(List.of(venue));
-
-      // When: 保存 VenueDetail
-      VenueDetail detail =
-          VenueDetail.builder()
-              .abbreviatedTitle("J. A.")
-              .countryCode("US")
-              .languages(VenueLanguages.ofSingleLanguage("eng"))
-              .build();
-      venueRepository.replaceDetailsBatch(Map.of(venue.getId().value(), detail));
-
-      // Then: 验证主表的快速访问字段已同步
-      VenueDO saved = venueMapper.selectById(venue.getId().value());
-      assertThat(saved.getAbbreviatedTitle()).isEqualTo("J. A.");
-      assertThat(saved.getCountryCode()).isEqualTo("US");
-      assertThat(saved.getPrimaryLanguage()).isEqualTo("eng");
-    }
-
-    @Test
-    @DisplayName("replaceDetailsBatch 应该正确处理空 Detail（快速访问字段不变）")
-    void replaceDetailsBatch_shouldHandleEmptyDetail() {
-      // Given: 插入一个载体
-      VenueAggregate venue = createVenueAggregate("S1", "Journal A");
-      venueRepository.insertAll(List.of(venue));
-
-      // When: 保存一个空的 VenueDetail（所有字段为 null）
-      VenueDetail emptyDetail = VenueDetail.builder().build();
-      venueRepository.replaceDetailsBatch(Map.of(venue.getId().value(), emptyDetail));
-
-      // Then: 快速访问字段应被设置为 null（因为 Detail 中没有这些值）
-      VenueDO saved = venueMapper.selectById(venue.getId().value());
-      assertThat(saved.getAbbreviatedTitle()).isNull();
-      assertThat(saved.getCountryCode()).isNull();
-      assertThat(saved.getPrimaryLanguage()).isNull();
     }
 
     @Test

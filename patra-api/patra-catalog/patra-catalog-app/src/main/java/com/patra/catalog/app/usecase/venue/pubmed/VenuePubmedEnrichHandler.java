@@ -13,7 +13,7 @@ import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueRelationType;
 import com.patra.catalog.domain.model.vo.venue.IndexingInfo;
 import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
-import com.patra.catalog.domain.model.vo.venue.VenueDetail;
+import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenueIndexingHistory;
 import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
@@ -275,14 +275,14 @@ public class VenuePubmedEnrichHandler
         if (!processedVenueIds.contains(venue.getId().value())) {
           // 首次处理该期刊：更新标识符（CQRS 最小聚合）
           updateVenueIdentifiers(venue, record);
+          // 构建并附加 PublicationProfile（嵌入式值对象）
+          PublicationProfile profile = buildPublicationProfileFromRecord(record);
+          venue.withPublicationProfile(profile);
           result.addUpdate(venue);
           processedVenueIds.add(venue.getId().value());
-          // 构建 VenueDetail（非核心字段存储在独立表）
-          VenueDetail detail = buildVenueDetailFromRecord(record);
-          // 收集子实体（Detail、MeSH、关系、索引历史），稍后批量持久化
-          result.collectChildEntities(
+          // 收集 Serfile 子实体（MeSH、关系、索引历史），稍后批量持久化
+          result.collectSerfileEntities(
               venue,
-              detail,
               toVenueMeshList(record.meshHeadings()),
               toVenueRelationList(record.titleRelations()),
               toVenueIndexingHistoryList(record.indexingHistories()));
@@ -295,13 +295,13 @@ public class VenuePubmedEnrichHandler
         // 情况 B：无匹配 → 创建新期刊（PubMed 独有数据）
         // ═══════════════════════════════════════════════════════════════════════
         VenueAggregate newVenue = createVenueFromRecord(record);
+        // 构建并附加 PublicationProfile（嵌入式值对象）
+        PublicationProfile profile = buildPublicationProfileFromRecord(record);
+        newVenue.withPublicationProfile(profile);
         result.addCreate(newVenue);
-        // 构建 VenueDetail（非核心字段存储在独立表）
-        VenueDetail detail = buildVenueDetailFromRecord(record);
-        // 收集子实体（Detail、MeSH、关系、索引历史），稍后批量持久化
-        result.collectChildEntities(
+        // 收集 Serfile 子实体（MeSH、关系、索引历史），稍后批量持久化
+        result.collectSerfileEntities(
             newVenue,
-            detail,
             toVenueMeshList(record.meshHeadings()),
             toVenueRelationList(record.titleRelations()),
             toVenueIndexingHistoryList(record.indexingHistories()));
@@ -324,11 +324,12 @@ public class VenuePubmedEnrichHandler
     }
   }
 
-  /// 批量持久化子实体。
+  /// 批量持久化 Serfile 子实体。
   ///
-  /// 将 `Map<VenueAggregate, ?>` 转换为 `Map<Long, ?>` 并保存。
+  /// 将 `Map<VenueAggregate, List<?>>` 转换为 `Map<Long, List<?>>` 并保存。
   ///
-  /// **CQRS 最小聚合设计**：VenueDetail 作为非核心字段独立持久化到 cat_venue_detail 表。
+  /// **嵌入式值对象设计**：`PublicationProfile` 已嵌入聚合根，随聚合根一起持久化。
+  /// 此方法仅处理独立存储的 Serfile 子实体（MeSH、关系、索引历史）。
   ///
   /// @param result 批次处理结果（包含聚合根已回填 ID）
   private void persistChildEntities(BatchProcessingResult result) {
@@ -336,17 +337,10 @@ public class VenuePubmedEnrichHandler
     // 为什么需要 Aggregate → VenueId 的转换？
     // 1. persistAggregates() 已执行 insertAll()，新建的聚合根此时 ID 已回填
     // 2. 子实体表需要 venue_id 外键，必须用 Long 类型的 ID
-    // 3. 使用 toVenueIdMap() 和 toVenueIdDetailMap() 完成转换
+    // 3. 使用 toVenueIdMap() 完成转换
     // ────────────────────────────────────────────────────────────────────────────
 
-    // 1. 保存 VenueDetail（非核心字段）
-    Map<Long, VenueDetail> detailsByVenueId = toVenueIdDetailMap(result.getDetailsByAggregate());
-    if (!detailsByVenueId.isEmpty()) {
-      venueRepository.replaceDetailsBatch(detailsByVenueId);
-      log.debug("批量保存 VenueDetail：{} 条", detailsByVenueId.size());
-    }
-
-    // 2. 保存 Serfile 相关子实体（MeSH、关系、索引历史）
+    // 保存 Serfile 相关子实体（MeSH、关系、索引历史）
     Map<Long, List<VenueMesh>> meshByVenueId = toVenueIdMap(result.getMeshByAggregate());
     Map<Long, List<VenueRelation>> relationsByVenueId =
         toVenueIdMap(result.getRelationsByAggregate());
@@ -374,23 +368,6 @@ public class VenuePubmedEnrichHandler
     for (Map.Entry<VenueAggregate, List<T>> entry : aggregateMap.entrySet()) {
       Long venueId = entry.getKey().getId() != null ? entry.getKey().getId().value() : null;
       if (venueId != null && !entry.getValue().isEmpty()) {
-        result.put(venueId, entry.getValue());
-      }
-    }
-    return result;
-  }
-
-  /// 将聚合根映射转换为 venueId 映射（单值版本）。
-  ///
-  /// 专用于 VenueDetail 等 1:1 关系的转换。
-  ///
-  /// @param aggregateMap 以聚合根为键的映射
-  /// @return 以 venueId 为键的映射
-  private <T> Map<Long, T> toVenueIdDetailMap(Map<VenueAggregate, T> aggregateMap) {
-    Map<Long, T> result = new HashMap<>();
-    for (Map.Entry<VenueAggregate, T> entry : aggregateMap.entrySet()) {
-      Long venueId = entry.getKey().getId() != null ? entry.getKey().getId().value() : null;
-      if (venueId != null && entry.getValue() != null) {
         result.put(venueId, entry.getValue());
       }
     }
@@ -439,7 +416,7 @@ public class VenuePubmedEnrichHandler
 
   /// 从 PubmedSerialData 更新 VenueAggregate 的标识符。
   ///
-  /// **CQRS 最小聚合设计**：聚合根只更新标识符，其他字段通过 VenueDetail 保存。
+  /// **嵌入式值对象设计**：聚合根包含嵌入式值对象（PublicationProfile），一起持久化。
   ///
   /// @param venue 待更新的聚合根
   /// @param record PubMed 数据记录
@@ -462,13 +439,13 @@ public class VenuePubmedEnrichHandler
     }
   }
 
-  /// 从 PubmedSerialData 构建 VenueDetail。
+  /// 从 PubmedSerialData 构建 PublicationProfile。
   ///
-  /// 封装所有 PubMed 提供的非核心字段。
+  /// 封装所有 PubMed 提供的出版相关字段，作为嵌入式值对象存储在聚合根中。
   ///
   /// @param record PubMed 数据记录
-  /// @return VenueDetail 值对象
-  private VenueDetail buildVenueDetailFromRecord(PubmedSerialData record) {
+  /// @return PublicationProfile 嵌入式值对象
+  private PublicationProfile buildPublicationProfileFromRecord(PubmedSerialData record) {
     // 构建语言信息
     VenueLanguages languages =
         !record.languages().isEmpty() ? toVenueLanguages(record.languages()) : null;
@@ -485,7 +462,7 @@ public class VenuePubmedEnrichHandler
     IndexingInfo indexingInfo =
         IndexingInfo.of(record.isCurrentlyIndexed() ? "MEDLINE" : null, record.medlineTA(), null);
 
-    return VenueDetail.builder()
+    return PublicationProfile.builder()
         .abbreviatedTitle(record.medlineTA())
         .frequency(record.frequency())
         .publicationHistory(publicationHistory)
@@ -497,10 +474,10 @@ public class VenuePubmedEnrichHandler
 
   /// 从 PubmedSerialData 创建新 VenueAggregate。
   ///
-  /// **CQRS 最小聚合设计**：聚合根只包含核心字段，其他字段通过 VenueDetail 保存。
+  /// **嵌入式值对象设计**：聚合根包含核心字段和嵌入式值对象（PublicationProfile 等）。
   ///
   /// @param record PubMed 数据记录
-  /// @return 新创建的聚合根（只含标识符和来源信息）
+  /// @return 新创建的聚合根（只含标识符和来源信息，profile 在调用处附加）
   private VenueAggregate createVenueFromRecord(PubmedSerialData record) {
     VenueAggregate venue =
         VenueAggregate.fromPubMed(record.title(), record.nlmUniqueId(), record.issnL());
@@ -510,7 +487,7 @@ public class VenuePubmedEnrichHandler
       venue.addIdentifier(VenueIdentifierType.CODEN, record.coden());
     }
 
-    // 其他字段（frequency, country, languages 等）通过 VenueDetail 保存
+    // 其他字段（frequency, country, languages 等）通过 PublicationProfile 嵌入式值对象保存
     return venue;
   }
 
@@ -636,13 +613,12 @@ public class VenuePubmedEnrichHandler
   ///
   /// 封装单批次处理的所有输出数据，避免多参数传递。
   ///
-  /// **CQRS 最小聚合设计**：聚合根只包含核心字段，非核心字段通过
-  /// `detailsByAggregate` 收集并独立持久化到 cat_venue_detail 表。
+  /// **嵌入式值对象设计**：`PublicationProfile` 已嵌入聚合根，随聚合根一起持久化。
+  /// 此类仅收集独立存储的 Serfile 子实体（MeSH、关系、索引历史）。
   @Getter
   private static class BatchProcessingResult {
     private final List<VenueAggregate> toUpdate = new ArrayList<>();
     private final List<VenueAggregate> toCreate = new ArrayList<>();
-    private final Map<VenueAggregate, VenueDetail> detailsByAggregate = new HashMap<>();
     private final Map<VenueAggregate, List<VenueMesh>> meshByAggregate = new HashMap<>();
     private final Map<VenueAggregate, List<VenueRelation>> relationsByAggregate = new HashMap<>();
     private final Map<VenueAggregate, List<VenueIndexingHistory>> historiesByAggregate =
@@ -661,24 +637,19 @@ public class VenuePubmedEnrichHandler
       toCreate.add(venue);
     }
 
-    /// 收集子实体数据。
+    /// 收集 Serfile 子实体数据。
     ///
-    /// 将 VenueDetail 和其他子实体关联到聚合根，稍后批量持久化。
+    /// 将 MeSH、关联关系、索引历史等 Serfile 子实体关联到聚合根，稍后批量持久化。
     ///
     /// @param venue 聚合根
-    /// @param detail VenueDetail（非核心字段）
     /// @param meshList MeSH 主题词列表
     /// @param relationList 期刊关联关系列表
     /// @param historyList 索引历史列表
-    void collectChildEntities(
+    void collectSerfileEntities(
         VenueAggregate venue,
-        VenueDetail detail,
         List<VenueMesh> meshList,
         List<VenueRelation> relationList,
         List<VenueIndexingHistory> historyList) {
-      if (detail != null) {
-        detailsByAggregate.put(venue, detail);
-      }
       meshByAggregate.put(venue, meshList);
       relationsByAggregate.put(venue, relationList);
       historiesByAggregate.put(venue, historyList);
