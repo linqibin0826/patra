@@ -1,8 +1,8 @@
 package com.patra.catalog.infra.persistence.typehandler;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.catalog.domain.model.vo.venue.Society;
+import com.patra.common.json.JsonMapperHolder;
 import java.sql.CallableStatement;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -41,13 +41,12 @@ import org.apache.ibatis.type.MappedTypes;
 public class SocietyListTypeHandler extends BaseTypeHandler<List<Society>> {
 
   private static final TypeReference<List<Society>> TYPE_REF = new TypeReference<>() {};
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   @Override
   public void setNonNullParameter(
       PreparedStatement ps, int i, List<Society> parameter, JdbcType jdbcType) throws SQLException {
     try {
-      String json = OBJECT_MAPPER.writeValueAsString(parameter);
+      String json = JsonMapperHolder.getObjectMapper().writeValueAsString(parameter);
       ps.setString(i, json);
     } catch (Exception e) {
       throw new SQLException("序列化 List<Society> 为 JSON 失败", e);
@@ -80,7 +79,7 @@ public class SocietyListTypeHandler extends BaseTypeHandler<List<Society>> {
       return List.of();
     }
     try {
-      return OBJECT_MAPPER.readValue(json, TYPE_REF);
+      return JsonMapperHolder.getObjectMapper().readValue(json, TYPE_REF);
     } catch (Exception e) {
       throw new SQLException("解析 JSON 为 List<Society> 失败: " + preview(json), e);
     }
