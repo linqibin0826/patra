@@ -27,11 +27,10 @@ CREATE TABLE IF NOT EXISTS `storage_file_metadata`
     `updated_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Last update time (UTC)',
     `updated_by`       BIGINT UNSIGNED NULL COMMENT 'Updater ID',
     `updated_by_name`  VARCHAR(100)    NULL COMMENT 'Updater name',
-    `deleted`          TINYINT(1)      NOT NULL DEFAULT 0 COMMENT 'Soft delete flag',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_storage_key` (`storage_key`),
     KEY `idx_uploaded_at` (`uploaded_at`),
-    KEY `idx_deleted` (`deleted`)
+    KEY `idx_deleted_at` (`deleted_at`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci
