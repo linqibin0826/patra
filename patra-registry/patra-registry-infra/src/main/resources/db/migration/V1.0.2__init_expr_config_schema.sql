@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS `reg_expr_field_dict`
     `updated_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '最后更新时间 (UTC, 微秒精度)',
     `updated_by`       BIGINT          NULL COMMENT '最后更新人ID (逻辑外键)',
     `updated_by_name`  VARCHAR(64)     NULL COMMENT '最后更新人姓名/登录名快照',
-    `deleted`          TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除标志: 0=活动, 1=已删除; 读侧过滤 deleted=0',
+    `deleted_at`       TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_expr_field_key` (`field_key`) COMMENT '确保统一字段键全局唯一'
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS `reg_prov_api_param_map`
     `updated_at`          TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '最后更新时间 (UTC)',
     `updated_by`          BIGINT          NULL COMMENT '最后更新人ID',
     `updated_by_name`     VARCHAR(64)     NULL COMMENT '最后更新人姓名/登录名快照',
-    `deleted`             TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除; 读侧过滤',
+    `deleted_at`          TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_param_map__dim_from`
@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS `reg_prov_expr_capability`
     `updated_at`                  TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '最后更新时间 (UTC)',
     `updated_by`                  BIGINT          NULL COMMENT '最后更新人ID',
     `updated_by_name`             VARCHAR(64)     NULL COMMENT '最后更新人姓名',
-    `deleted`                     TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
+    `deleted_at`                  TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_cap__dim_from`
@@ -199,7 +199,7 @@ CREATE TABLE IF NOT EXISTS `reg_prov_expr_render_rule`
     `updated_at`      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '最后更新时间 (UTC)',
     `updated_by`      BIGINT          NULL COMMENT '最后更新人ID',
     `updated_by_name` VARCHAR(64)     NULL COMMENT '最后更新人姓名',
-    `deleted`         TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
+    `deleted_at`      TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_render__dim_from`

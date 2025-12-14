@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志(0=正常,1=已删除)',
+    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -108,10 +108,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication` (
     INDEX `idx_venue_instance` (`venue_instance_id`) COMMENT '载体实例索引,支持按卷期查询',
     INDEX `idx_publication_year` (`publication_year`) COMMENT '出版年份索引,最高频查询(>60%查询包含年份条件)',
     INDEX `idx_language_base` (`language_base`) COMMENT '基础语种索引,支持按语言筛选(如查询所有中文文献)',
-    INDEX `idx_is_oa` (`is_oa`) COMMENT 'OA状态索引,支持快速筛选开放获取文献',
-
-    -- 复合索引（软删除 + 更新时间）
-    INDEX `idx_deleted_updated` (`deleted`, `updated_at`) COMMENT '软删除和更新时间复合索引,支持查询"未删除的最新更新记录"'
+    INDEX `idx_is_oa` (`is_oa`) COMMENT 'OA状态索引,支持快速筛选开放获取文献'
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='出版物主表:存储医学文献核心元数据,系统中心表';
@@ -151,7 +148,7 @@ CREATE TABLE IF NOT EXISTS `cat_identifier` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志(0=正常,1=已删除)',
+    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -201,7 +198,7 @@ CREATE TABLE IF NOT EXISTS `cat_abstract` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志(0=正常,1=已删除)',
+    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引

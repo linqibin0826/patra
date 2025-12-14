@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名',
-    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志',
+    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue_identifier` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名',
-    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志',
+    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -210,7 +210,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue_publication_stats` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名',
-    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志',
+    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -290,7 +290,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue_instance` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名',
-    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志',
+    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -350,7 +350,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue_mesh` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名',
-    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志',
+    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -409,7 +409,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue_relation` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名',
-    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志',
+    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -476,7 +476,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue_indexing_history` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名',
-    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '软删除标志',
+    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引

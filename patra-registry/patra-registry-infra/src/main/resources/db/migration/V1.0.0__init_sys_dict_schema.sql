@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS sys_dict_type
     updated_by_name    VARCHAR(100)    NULL COMMENT '最后更新人姓名/登录名快照',
     version            BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本 (CAS)',
     ip_address         VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
-    deleted            TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除 (读侧过滤)',
+    deleted_at         TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (id),
     UNIQUE KEY uk_sys_dict_type__code (type_code) COMMENT '确保 type_code 唯一',
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS sys_dict_type
  * 语义: 字典类型下的具体值 (例如: http_method 的 GET/POST)
  * 要点:
  *  - item_code 采用大写下划线格式作为稳定键
- *  - default_key 是生成列: 仅当 default AND enabled AND not deleted 时等于 type_id; 强制每类型一个默认值
+ *  - default_key 是生成列: 仅当 default AND enabled AND deleted_at IS NULL 时等于 type_id; 强制每类型一个默认值
  *  - enabled 控制在业务逻辑中是否可选
  *  - attributes_json 用于扩展性 (新属性无需DDL)
  * ==================================================================== */
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS sys_dict_item
     -- 生成列: 仅当 default AND enabled AND not deleted 时等于 type_id; 否则为 NULL
     default_key     BIGINT UNSIGNED GENERATED ALWAYS AS
         (CASE
-             WHEN (is_default = 1 AND enabled = 1 AND deleted = 0) THEN type_id
+             WHEN (is_default = 1 AND enabled = 1 AND deleted_at IS NULL) THEN type_id
              ELSE NULL END) STORED COMMENT '生成列,用于唯一键以强制每类型一个默认值',
 
     -- 审计与治理
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS sys_dict_item
     updated_by_name VARCHAR(100)    NULL COMMENT '最后更新人姓名/登录名快照',
     version         BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本 (CAS)',
     ip_address      VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
-    deleted         TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
+    deleted_at      TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (id),
     UNIQUE KEY uk_sys_dict_item__type_code (type_id, item_code) COMMENT 'item_code 在同一类型内必须唯一',
@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS sys_dict_item_alias
     updated_by_name VARCHAR(100)    NULL COMMENT '最后更新人姓名/登录名快照',
     version         BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本 (CAS)',
     ip_address      VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
-    deleted         TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
+    deleted_at      TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (id),
     UNIQUE KEY uk_dict_alias__src_code (source_system, external_code) COMMENT 'external_code 在同一 source_system 内必须唯一',

@@ -34,11 +34,11 @@ CREATE TABLE IF NOT EXISTS `ing_schedule_instance`
     `updated_at`        TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
     `updated_by`        BIGINT UNSIGNED NULL COMMENT '更新人ID',
     `updated_by_name`   VARCHAR(100)    NULL COMMENT '更新人姓名',
-    `deleted`           TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
+    `deleted_at`        TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
     KEY `idx_sched_src` (`scheduler_code`, `scheduler_job_id`, `scheduler_log_id`),
-    KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
+    KEY `idx_deleted_at` (`deleted_at`),
     KEY `idx_audit_created_by` (`created_by`),
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     `updated_at`                 TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
     `updated_by`                 BIGINT UNSIGNED NULL COMMENT '更新人ID',
     `updated_by_name`            VARCHAR(100)    NULL COMMENT '更新人姓名',
-    `deleted`                    TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
+    `deleted_at`                 TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_plan_key` (`plan_key`),
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     KEY `idx_plan_expr` (`expr_proto_hash`),
     KEY `idx_plan_prov_config_hash` (`provenance_config_hash`),
     KEY `idx_window_time_range` (`window_from_ts`, `window_to_ts`),
-    KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
+    KEY `idx_deleted_at` (`deleted_at`),
     KEY `idx_audit_created_by` (`created_by`),
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
@@ -144,7 +144,7 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
     `updated_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
     `updated_by`           BIGINT UNSIGNED NULL COMMENT '更新人ID',
     `updated_by_name`      VARCHAR(100)    NULL COMMENT '更新人姓名',
-    `deleted`              TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
+    `deleted_at`           TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_slice_unique` (`plan_id`, `slice_no`),
@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
     KEY `idx_slice_prov_status` (`provenance_code`, `status_code`),
     KEY `idx_slice_status` (`status_code`),
     KEY `idx_slice_expr` (`expr_hash`),
-    KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
+    KEY `idx_deleted_at` (`deleted_at`),
     KEY `idx_audit_created_by` (`created_by`),
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
@@ -216,7 +216,7 @@ CREATE TABLE IF NOT EXISTS `ing_task`
     `updated_at`           TIMESTAMP(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
     `updated_by`           BIGINT UNSIGNED  NULL COMMENT '更新人ID',
     `updated_by_name`      VARCHAR(100)     NULL COMMENT '更新人姓名',
-    `deleted`              TINYINT(1)       NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
+    `deleted_at`           TIMESTAMP(6)     NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
 
@@ -233,7 +233,7 @@ CREATE TABLE IF NOT EXISTS `ing_task`
     KEY `idx_task_queue` (`status_code`, `leased_until`, `priority`, `scheduled_at`, `id`),
 
     -- 审计辅助索引
-    KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
+    KEY `idx_deleted_at` (`deleted_at`),
     KEY `idx_audit_created_by` (`created_by`),
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
@@ -280,13 +280,13 @@ CREATE TABLE IF NOT EXISTS `ing_task_run`
     `updated_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
     `updated_by`       BIGINT UNSIGNED NULL COMMENT '更新人ID',
     `updated_by_name`  VARCHAR(100)    NULL COMMENT '更新人姓名',
-    `deleted`          TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
+    `deleted_at`       TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_run_attempt` (`task_id`, `attempt_no`),
     KEY `idx_run_prov_op_status` (`provenance_code`, `operation_code`, `status_code`),
     KEY `idx_run_task_status` (`task_id`, `status_code`, `started_at`),
-    KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
+    KEY `idx_deleted_at` (`deleted_at`),
     KEY `idx_audit_created_by` (`created_by`),
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
@@ -343,7 +343,7 @@ CREATE TABLE IF NOT EXISTS `ing_task_run_batch`
     `updated_at`      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
     `updated_by`      BIGINT UNSIGNED NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100)    NULL COMMENT '更新人姓名',
-    `deleted`         TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
+    `deleted_at`      TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
 
@@ -358,7 +358,7 @@ CREATE TABLE IF NOT EXISTS `ing_task_run_batch`
     KEY `idx_batch_slice` (`slice_id`, `status_code`, `committed_at`),
     KEY `idx_batch_plan` (`plan_id`, `status_code`, `committed_at`),
     KEY `idx_batch_expr` (`expr_hash`),
-    KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
+    KEY `idx_deleted_at` (`deleted_at`),
     KEY `idx_audit_created_by` (`created_by`),
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
@@ -415,7 +415,7 @@ CREATE TABLE IF NOT EXISTS `ing_cursor`
     `updated_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
     `updated_by`           BIGINT UNSIGNED NULL COMMENT '更新人ID',
     `updated_by_name`      VARCHAR(100)    NULL COMMENT '更新人姓名',
-    `deleted`              TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
+    `deleted_at`           TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
 
@@ -425,7 +425,7 @@ CREATE TABLE IF NOT EXISTS `ing_cursor`
     KEY `idx_cursor_sort_time` (`cursor_type_code`, `normalized_instant`),
     KEY `idx_cursor_sort_id` (`cursor_type_code`, `normalized_numeric`),
     KEY `idx_cursor_lineage` (`schedule_instance_id`, `plan_id`, `slice_id`, `task_id`, `last_run_id`, `last_batch_id`),
-    KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
+    KEY `idx_deleted_at` (`deleted_at`),
     KEY `idx_audit_created_by` (`created_by`),
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
@@ -489,7 +489,7 @@ CREATE TABLE IF NOT EXISTS `ing_cursor_event`
     `updated_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
     `updated_by`           BIGINT UNSIGNED NULL COMMENT '更新人ID',
     `updated_by_name`      VARCHAR(100)    NULL COMMENT '更新人姓名',
-    `deleted`              TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
+    `deleted_at`           TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
 
@@ -500,7 +500,7 @@ CREATE TABLE IF NOT EXISTS `ing_cursor_event`
     KEY `idx_cur_evt_instant` (`cursor_type_code`, `new_instant`),
     KEY `idx_cur_evt_numeric` (`cursor_type_code`, `new_numeric`),
     KEY `idx_cur_evt_lineage` (`schedule_instance_id`, `plan_id`, `slice_id`, `task_id`, `run_id`, `batch_id`),
-    KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
+    KEY `idx_deleted_at` (`deleted_at`),
     KEY `idx_audit_created_by` (`created_by`),
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
@@ -549,7 +549,7 @@ CREATE TABLE IF NOT EXISTS `ing_outbox_message`
     `updated_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
     `updated_by`       BIGINT UNSIGNED NULL COMMENT '更新人ID',
     `updated_by_name`  VARCHAR(100)    NULL COMMENT '更新人姓名',
-    `deleted`          TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
+    `deleted_at`       TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
 
@@ -566,7 +566,7 @@ CREATE TABLE IF NOT EXISTS `ing_outbox_message`
     KEY `idx_publishing_lease` (`channel`, `status_code`, `pub_leased_until`, `id`) COMMENT '优化 PUBLISHING 过期租约消息查询 (UNION ALL 第二子查询)',
     -- 归档/对账便利
     KEY `idx_outbox_created` (`created_at`),
-    KEY `idx_outbox_deleted_upd` (`deleted`, `updated_at`)
+    KEY `idx_deleted_at` (`deleted_at`)
 )
     ENGINE = InnoDB COMMENT ='发件箱: 通用出站消息表 (统一管理任务调度/集成事件; 与业务写入同一事务; 由 Relay 扫描并投递到 MQ)';
 
@@ -618,7 +618,7 @@ CREATE TABLE IF NOT EXISTS `ing_outbox_relay_log`
     `updated_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
     `updated_by`       BIGINT UNSIGNED NULL COMMENT '更新人ID',
     `updated_by_name`  VARCHAR(100)    NULL COMMENT '更新人姓名',
-    `deleted`          TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除: 0=活动, 1=已删除',
+    `deleted_at`       TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
 
@@ -642,7 +642,7 @@ CREATE TABLE IF NOT EXISTS `ing_outbox_relay_log`
     INDEX `idx_created_at` (`created_at`)
         COMMENT '按创建时间归档旧日志',
 
-    INDEX `idx_deleted_upd` (`deleted`, `updated_at`)
+    INDEX `idx_deleted_at` (`deleted_at`)
         COMMENT '软删除支持'
 
     -- 注意: 故意省略外键约束以提高性能

@@ -146,10 +146,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_metadata`
     INDEX `idx_indexing_status` (`indexing_status`) COMMENT '索引状态索引,支持按状态查询(中频)',
     INDEX `idx_data_source` (`data_source`) COMMENT '数据来源索引,支持按来源查询(中频)',
     INDEX `idx_import_batch` (`import_batch`) COMMENT '导入批次索引,支持批次查询和回滚(低频)',
-    INDEX `idx_review_status` (`review_status`) COMMENT '审核状态索引,支持审核工作流查询(低频)',
-
-    -- 复合索引(软删除 + 更新时间)
-    INDEX `idx_deleted_updated` (`deleted`, `updated_at`) COMMENT '软删除和更新时间复合索引,支持查询"未删除的最新更新记录"'
+    INDEX `idx_review_status` (`review_status`) COMMENT '审核状态索引,支持审核工作流查询(低频)'
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci
