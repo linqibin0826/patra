@@ -79,8 +79,4 @@ public class FileMetadataDO extends BaseDO {
   /// 可选的过期时间
   @TableField("expires_at")
   private Instant expiresAt;
-
-  /// 文件软删除时的时间戳
-  @TableField("deleted_at")
-  private Instant deletedAt;
 }

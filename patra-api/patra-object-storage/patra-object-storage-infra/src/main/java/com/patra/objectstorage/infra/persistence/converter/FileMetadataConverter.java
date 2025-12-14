@@ -99,8 +99,7 @@ public interface FileMetadataConverter {
             dataObject.getCreatedByName(),
             dataObject.getUpdatedAt(),
             dataObject.getUpdatedBy(),
-            dataObject.getUpdatedByName(),
-            dataObject.getDeleted());
+            dataObject.getUpdatedByName());
     return metadata;
   }
 

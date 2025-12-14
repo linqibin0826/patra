@@ -69,7 +69,7 @@ class FileMetadataTest {
       assertThat(metadata.getStatus()).isEqualTo(FileStatus.ACTIVE);
       assertThat(metadata.getUploadedAt()).isNotNull();
       assertThat(metadata.getVersion()).isEqualTo(0L);
-      assertThat(metadata.getDeleted()).isFalse();
+      assertThat(metadata.getDeletedAt()).isNull();
       assertThat(metadata.getCreatedAt()).isNotNull();
       assertThat(metadata.getUpdatedAt()).isNotNull();
       assertThat(metadata.getCreatedAt()).isEqualTo(metadata.getUploadedAt());
@@ -208,7 +208,6 @@ class FileMetadataTest {
       Instant updatedAt = Instant.parse("2024-01-01T10:05:00Z");
       Long updatedBy = 1002L;
       String updatedByName = "李四";
-      Boolean deleted = Boolean.FALSE;
 
       // When
       FileMetadata metadata =
@@ -232,8 +231,7 @@ class FileMetadataTest {
               createdByName,
               updatedAt,
               updatedBy,
-              updatedByName,
-              deleted);
+              updatedByName);
 
       // Then
       assertThat(metadata).isNotNull();
@@ -257,7 +255,7 @@ class FileMetadataTest {
       assertThat(metadata.getUpdatedAt()).isEqualTo(updatedAt);
       assertThat(metadata.getUpdatedBy()).isEqualTo(updatedBy);
       assertThat(metadata.getUpdatedByName()).isEqualTo(updatedByName);
-      assertThat(metadata.getDeleted()).isFalse();
+      assertThat(metadata.getDeletedAt()).isNull();
     }
 
     @Test
@@ -296,8 +294,7 @@ class FileMetadataTest {
               createdByName,
               Instant.now(),
               updatedBy,
-              updatedByName,
-              Boolean.FALSE);
+              updatedByName);
 
       // Then - 应该成功恢复
       assertThat(metadata).isNotNull();
@@ -509,7 +506,7 @@ class FileMetadataTest {
       FileMetadata metadata =
           FileMetadataTestDataBuilder.anActiveFile().status(FileStatus.ACTIVE).buildRestored();
       assertThat(metadata.getStatus()).isEqualTo(FileStatus.ACTIVE);
-      assertThat(metadata.getDeleted()).isFalse();
+      assertThat(metadata.getDeletedAt()).isNull();
       assertThat(metadata.getDeletedAt()).isNull();
 
       // When - 标记为已删除
@@ -519,7 +516,7 @@ class FileMetadataTest {
 
       // Then
       assertThat(metadata.getStatus()).isEqualTo(FileStatus.DELETED);
-      assertThat(metadata.getDeleted()).isTrue();
+      assertThat(metadata.getDeletedAt()).isNotNull();
       assertThat(metadata.getDeletedAt()).isNotNull();
       assertThat(metadata.getUpdatedBy()).isEqualTo(operatorId);
       assertThat(metadata.getUpdatedByName()).isEqualTo(operatorName);
@@ -857,7 +854,7 @@ class FileMetadataTest {
 
       // Then - 验证最终状态
       assertThat(metadata.getStatus()).isEqualTo(FileStatus.DELETED);
-      assertThat(metadata.getDeleted()).isTrue();
+      assertThat(metadata.getDeletedAt()).isNotNull();
       assertThat(metadata.getDeletedAt()).isNotNull();
       assertThat(metadata.getUpdatedBy()).isEqualTo(1002L);
       assertThat(metadata.getUpdatedByName()).isEqualTo("李四");
