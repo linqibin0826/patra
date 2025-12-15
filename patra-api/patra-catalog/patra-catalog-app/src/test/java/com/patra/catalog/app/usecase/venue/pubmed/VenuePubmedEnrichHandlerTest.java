@@ -14,6 +14,9 @@ import com.patra.catalog.app.usecase.venue.pubmed.command.VenuePubmedEnrichComma
 import com.patra.catalog.app.usecase.venue.pubmed.dto.VenuePubmedEnrichResult;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
+import com.patra.catalog.domain.model.enums.VenueType;
+import com.patra.catalog.domain.model.vo.venue.VenueId;
+import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.port.parser.SerfileParserPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
@@ -115,8 +118,7 @@ class VenuePubmedEnrichHandlerTest {
       PubmedSerialData record2 =
           createSerialData("0000002", "Journal Two", null, "2222-2222", null);
 
-      VenueAggregate existingVenue =
-          VenueAggregate.fromPubMed("Existing Journal", null, "1111-1111");
+      VenueAggregate existingVenue = createExistingVenue("Existing Journal", null, "1111-1111");
 
       when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
       when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record1, record2));
@@ -180,8 +182,8 @@ class VenuePubmedEnrichHandlerTest {
       PubmedSerialData record =
           createSerialData("0000001", "Test Journal", "1111-1111", "2222-2222", "3333-3333");
 
-      VenueAggregate issnLMatch = VenueAggregate.fromPubMed("ISSN-L Matched", null, "1111-1111");
-      VenueAggregate nlmIdMatch = VenueAggregate.fromPubMed("NLM ID Matched", "0000001", null);
+      VenueAggregate issnLMatch = createExistingVenue("ISSN-L Matched", null, "1111-1111");
+      VenueAggregate nlmIdMatch = createExistingVenue("NLM ID Matched", "0000001", null);
 
       when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
       when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
@@ -208,7 +210,7 @@ class VenuePubmedEnrichHandlerTest {
       PubmedSerialData record =
           createSerialData("0000001", "Test Journal", null, "2222-2222", null);
 
-      VenueAggregate nlmIdMatch = VenueAggregate.fromPubMed("NLM ID Matched", "0000001", null);
+      VenueAggregate nlmIdMatch = createExistingVenue("NLM ID Matched", "0000001", null);
 
       when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
       when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
@@ -234,7 +236,7 @@ class VenuePubmedEnrichHandlerTest {
       PubmedSerialData record =
           createSerialData("0000001", "Test Journal", null, "2222-2222", null);
 
-      VenueAggregate issnMatch = VenueAggregate.fromPubMed("ISSN Matched", null, "9999-9999");
+      VenueAggregate issnMatch = createExistingVenue("ISSN Matched", null, "9999-9999");
 
       when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
       when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
@@ -293,7 +295,7 @@ class VenuePubmedEnrichHandlerTest {
       PubmedSerialData new1 = createSerialData("0000002", "New One", "2222-2222", null, null);
       PubmedSerialData new2 = createSerialData("0000003", "New Two", "3333-3333", null, null);
 
-      VenueAggregate existingVenue = VenueAggregate.fromPubMed("Existing", null, "1111-1111");
+      VenueAggregate existingVenue = createExistingVenue("Existing", null, "1111-1111");
 
       when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
       when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(matched, new1, new2));
@@ -400,5 +402,25 @@ class VenuePubmedEnrichHandlerTest {
         .issnPrint(issnPrint)
         .issnElectronic(issnElectronic)
         .build();
+  }
+
+  private static long venueIdCounter = 1L;
+
+  /// 创建模拟已存在的 VenueAggregate（带 ID，模拟从数据库查询返回）。
+  ///
+  /// @param displayName 期刊名称
+  /// @param nlmId NLM 唯一标识符（可为 null）
+  /// @param issnL Linking ISSN（可为 null）
+  /// @return 带 ID 的 VenueAggregate
+  private VenueAggregate createExistingVenue(String displayName, String nlmId, String issnL) {
+    VenueAggregate venue =
+        VenueAggregate.restore(VenueId.of(venueIdCounter++), VenueType.JOURNAL, displayName, 0L);
+    if (nlmId != null) {
+      venue.addIdentifier(VenueIdentifier.forNlm(nlmId));
+    }
+    if (issnL != null) {
+      venue.addIdentifier(VenueIdentifier.forIssnL(issnL));
+    }
+    return venue;
   }
 }

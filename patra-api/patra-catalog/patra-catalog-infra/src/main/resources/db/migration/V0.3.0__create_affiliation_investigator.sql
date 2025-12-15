@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS `cat_affiliation` (
     `ringgold_id` VARCHAR(50) NULL DEFAULT NULL COMMENT 'Ringgold ID(如"1812")',
     `parent_affiliation` VARCHAR(200) NULL DEFAULT NULL COMMENT '上级机构(如"Harvard University")',
     `affiliation_type` VARCHAR(50) NULL DEFAULT NULL COMMENT '机构类型(如"Education","Healthcare","Company")',
-    `dedup_key` VARCHAR(255) NOT NULL COMMENT '复合去重键(应用层计算,MD5哈希)',
+    `dedup_key` VARCHAR(255) NULL DEFAULT NULL COMMENT '复合去重键(应用层计算,MD5哈希,可选)',
     `metadata` JSON NULL DEFAULT NULL COMMENT '机构元数据(灵活扩展)',
 
     -- ========================================
@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS `cat_investigator` (
     `investigator_type` VARCHAR(100) NULL DEFAULT NULL COMMENT '研究者类型(如"PI","CoI","Collaborator")',
     `affiliation_name` VARCHAR(500) NULL DEFAULT NULL COMMENT '机构名称(文本,不关联 affiliation 表)',
     `email` VARCHAR(255) NULL DEFAULT NULL COMMENT '邮箱地址',
-    `dedup_key` VARCHAR(255) NOT NULL COMMENT '复合去重键(应用层计算,MD5哈希)',
+    `dedup_key` VARCHAR(255) NULL DEFAULT NULL COMMENT '复合去重键(应用层计算,MD5哈希,可选)',
     `metadata` JSON NULL DEFAULT NULL COMMENT '研究者元数据(灵活扩展)',
 
     -- ========================================
