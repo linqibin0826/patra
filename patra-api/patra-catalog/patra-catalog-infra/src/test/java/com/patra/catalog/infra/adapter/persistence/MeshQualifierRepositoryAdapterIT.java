@@ -2,14 +2,12 @@ package com.patra.catalog.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
-import com.patra.catalog.infra.persistence.converter.MeshQualifierConverter;
-import com.patra.catalog.infra.persistence.entity.MeshQualifierDO;
-import com.patra.catalog.infra.persistence.mapper.MeshQualifierMapper;
-import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
+import com.patra.catalog.infra.persistence.jpa.MeshQualifierJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.entity.MeshQualifierEntity;
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,23 +16,24 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
-/// MeSH 限定词仓储实现集成测试。
+/// MeSH 限定词仓储实现集成测试（JPA 版本）。
 ///
 /// 使用 Testcontainers + MySQL 8 测试批量保存操作。
 ///
 /// **测试策略**：
 ///
 /// - 集成测试：使用真实 MySQL 数据库
-///   - 测试隔离：每个测试方法独立，使用 @Transactional 自动回滚
-///   - TestContainers：自动启动和停止 MySQL 容器
-///   - 测试覆盖：saveBatch() 和 hasAnyData() 的各种场景
+/// - 测试隔离：每个测试方法独立，使用 @Transactional 自动回滚
+/// - TestContainers：自动启动和停止 MySQL 容器
+/// - 测试覆盖：saveBatch() 和 hasAnyData() 的各种场景
 ///
 /// **重点测试场景**：
 ///
@@ -43,23 +42,19 @@ import org.springframework.test.context.ContextConfiguration;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@MybatisPlusTest
+@DataJpaTest
 @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({
-  MeshQualifierRepositoryAdapter.class,
-  MeshQualifierConverter.class,
-  TestMybatisPlusAutoConfiguration.class
-})
-@MapperScan("com.patra.catalog.infra.persistence.mapper")
+@Import({MeshQualifierRepositoryAdapter.class, JpaAuditingConfig.class})
+@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.jpa.converter")
 @ActiveProfiles("test")
-@DisplayName("MeshQualifierRepositoryAdapter 集成测试")
+@DisplayName("MeshQualifierRepositoryAdapter 集成测试（JPA）")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
 class MeshQualifierRepositoryAdapterIT {
 
   @Autowired private MeshQualifierRepositoryAdapter meshQualifierRepository;
 
-  @Autowired private MeshQualifierMapper meshQualifierMapper;
+  @Autowired private MeshQualifierJpaRepository jpaRepository;
 
   @Nested
   @DisplayName("saveBatch() 方法测试")
@@ -75,7 +70,7 @@ class MeshQualifierRepositoryAdapterIT {
       meshQualifierRepository.saveBatch(emptyList);
 
       // Then: 不抛出异常，数据库应该没有记录
-      long count = meshQualifierMapper.selectCount(null);
+      long count = jpaRepository.count();
       assertThat(count).isEqualTo(0);
     }
 
@@ -89,7 +84,7 @@ class MeshQualifierRepositoryAdapterIT {
       meshQualifierRepository.saveBatch(nullList);
 
       // Then: 不抛出异常，数据库应该没有记录
-      long count = meshQualifierMapper.selectCount(null);
+      long count = jpaRepository.count();
       assertThat(count).isEqualTo(0);
     }
 
@@ -110,14 +105,14 @@ class MeshQualifierRepositoryAdapterIT {
       meshQualifierRepository.saveBatch(List.of(qualifier));
 
       // Then: 数据库应该有1条记录
-      long count = meshQualifierMapper.selectCount(null);
+      long count = jpaRepository.count();
       assertThat(count).isEqualTo(1);
 
       // Then: 验证保存的数据
-      List<MeshQualifierDO> savedQualifiers = meshQualifierMapper.selectList(null);
+      List<MeshQualifierEntity> savedQualifiers = jpaRepository.findAll();
       assertThat(savedQualifiers).hasSize(1);
 
-      MeshQualifierDO saved = savedQualifiers.get(0);
+      MeshQualifierEntity saved = savedQualifiers.get(0);
       assertThat(saved.getId()).isNotNull(); // 应该自动分配ID
       assertThat(saved.getUi()).isEqualTo("Q000001");
       assertThat(saved.getName()).isEqualTo("immunology");
@@ -154,21 +149,21 @@ class MeshQualifierRepositoryAdapterIT {
       meshQualifierRepository.saveBatch(qualifiers);
 
       // Then: 数据库应该有5条记录
-      long count = meshQualifierMapper.selectCount(null);
+      long count = jpaRepository.count();
       assertThat(count).isEqualTo(5);
 
       // Then: 验证所有记录都正确保存
-      List<MeshQualifierDO> savedQualifiers = meshQualifierMapper.selectList(null);
+      List<MeshQualifierEntity> savedQualifiers = jpaRepository.findAll();
       assertThat(savedQualifiers).hasSize(5);
 
       // 验证UI的唯一性
       assertThat(savedQualifiers)
-          .extracting(MeshQualifierDO::getUi)
+          .extracting(MeshQualifierEntity::getUi)
           .containsExactlyInAnyOrder("Q000001", "Q000002", "Q000003", "Q000004", "Q000005");
 
       // 验证名称
       assertThat(savedQualifiers)
-          .extracting(MeshQualifierDO::getName)
+          .extracting(MeshQualifierEntity::getName)
           .containsExactlyInAnyOrder(
               "immunology", "genetics", "diagnosis", "therapy", "pharmacology");
 
@@ -195,11 +190,11 @@ class MeshQualifierRepositoryAdapterIT {
       meshQualifierRepository.saveBatch(qualifiers);
 
       // Then: 数据库应该有80条记录
-      long count = meshQualifierMapper.selectCount(null);
+      long count = jpaRepository.count();
       assertThat(count).isEqualTo(80);
 
       // Then: 验证第一个和最后一个
-      List<MeshQualifierDO> savedQualifiers = meshQualifierMapper.selectList(null);
+      List<MeshQualifierEntity> savedQualifiers = jpaRepository.findAll();
       assertThat(savedQualifiers).hasSize(80);
       assertThat(savedQualifiers).allMatch(q -> q.getId() != null);
       assertThat(savedQualifiers).allMatch(q -> q.getMeshVersion().equals("2025"));
@@ -217,17 +212,17 @@ class MeshQualifierRepositoryAdapterIT {
       meshQualifierRepository.saveBatch(List.of(minimalQualifier));
 
       // Then: 数据库应该有1条记录
-      long count = meshQualifierMapper.selectCount(null);
+      long count = jpaRepository.count();
       assertThat(count).isEqualTo(1);
 
       // Then: 验证可选字段
-      MeshQualifierDO saved = meshQualifierMapper.selectList(null).get(0);
+      MeshQualifierEntity saved = jpaRepository.findAll().get(0);
       assertThat(saved.getUi()).isEqualTo("Q000001");
       assertThat(saved.getName()).isEqualTo("immunology");
       assertThat(saved.getAbbreviation()).isEqualTo("IM");
       assertThat(saved.getAnnotation()).isNull();
       assertThat(saved.getDateCreated()).isNull();
-      // activeStatus 使用数据库默认值(DEFAULT 1)
+      // activeStatus 默认为 true（由 create() 方法设置）
       assertThat(saved.getActiveStatus()).isTrue();
       assertThat(saved.getMeshVersion()).isNull();
     }
@@ -245,7 +240,7 @@ class MeshQualifierRepositoryAdapterIT {
       meshQualifierRepository.saveBatch(List.of(deprecatedQualifier));
 
       // Then: 验证activeStatus为false
-      MeshQualifierDO saved = meshQualifierMapper.selectList(null).get(0);
+      MeshQualifierEntity saved = jpaRepository.findAll().get(0);
       assertThat(saved.getActiveStatus()).isFalse();
       assertThat(saved.getMeshVersion()).isEqualTo("2024");
     }
@@ -270,16 +265,35 @@ class MeshQualifierRepositoryAdapterIT {
       meshQualifierRepository.saveBatch(qualifiers);
 
       // Then: 数据库应该有3条记录
-      long count = meshQualifierMapper.selectCount(null);
+      long count = jpaRepository.count();
       assertThat(count).isEqualTo(3);
 
       // Then: 验证不同状态
-      List<MeshQualifierDO> savedQualifiers = meshQualifierMapper.selectList(null);
-      long activeCount = savedQualifiers.stream().filter(MeshQualifierDO::getActiveStatus).count();
+      List<MeshQualifierEntity> savedQualifiers = jpaRepository.findAll();
+      long activeCount =
+          savedQualifiers.stream().filter(MeshQualifierEntity::getActiveStatus).count();
       long inactiveCount = savedQualifiers.stream().filter(q -> !q.getActiveStatus()).count();
 
       assertThat(activeCount).isEqualTo(2);
       assertThat(inactiveCount).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("包含树形编号的限定词 - 应该正确保存 JSON 列表")
+    void saveBatch_qualifierWithTreeNumbers_shouldSaveJsonList() {
+      // Given: 包含树形编号的限定词
+      MeshQualifierAggregate qualifier =
+          MeshQualifierAggregate.create(MeshUI.qualifierOf(1), "immunology", "IM")
+              .withTreeNumbers(List.of("Y01.002", "Y02.003", "Y03.004"))
+              .withActiveStatus(true)
+              .withMeshVersion("2025");
+
+      // When: 批量保存
+      meshQualifierRepository.saveBatch(List.of(qualifier));
+
+      // Then: 验证树形编号列表正确保存
+      MeshQualifierEntity saved = jpaRepository.findAll().get(0);
+      assertThat(saved.getTreeNumbers()).containsExactlyInAnyOrder("Y01.002", "Y02.003", "Y03.004");
     }
   }
 
@@ -291,7 +305,7 @@ class MeshQualifierRepositoryAdapterIT {
     @DisplayName("空表 - 应该返回 false")
     void hasAnyData_emptyTable_shouldReturnFalse() {
       // Given: 空表
-      long count = meshQualifierMapper.selectCount(null);
+      long count = jpaRepository.count();
       assertThat(count).isEqualTo(0);
 
       // When & Then
