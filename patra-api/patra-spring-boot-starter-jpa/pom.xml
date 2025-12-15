@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.patra</groupId>
+        <artifactId>patra-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../patra-parent/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>patra-spring-boot-starter-jpa</artifactId>
+    <packaging>jar</packaging>
+    <name>Patra Spring Boot Starter - JPA</name>
+    <description>
+        Spring Data JPA Starter with Hibernate 6.6 features:
+        - BaseJpaEntity with @SoftDelete (timestamp-based soft delete)
+        - JPA Auditing integration
+        - Error mapping via ErrorMappingContributor SPI
+        - Batch processing support
+    </description>
+
+    <dependencies>
+        <!-- Patra 核心依赖 -->
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-common-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-core</artifactId>
+        </dependency>
+
+        <!-- Spring Data JPA (包含 Hibernate 6.6) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- Spring Boot 自动配置支持 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <!-- Jackson for JSON type handling -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- Flyway 数据库迁移 -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>
+
+        <!-- MySQL 驱动 -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+        </dependency>
+
+        <!-- Lombok（provided scope 不传递，必须显式声明；版本必须与 parent 的注解处理器一致） -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- IDE 配置元数据生成（可选，仅编译时使用） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 测试依赖 -->
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
