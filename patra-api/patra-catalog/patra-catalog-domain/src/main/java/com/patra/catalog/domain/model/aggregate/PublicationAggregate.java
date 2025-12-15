@@ -311,7 +311,7 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
             numberOfReferences,
             conflictOfInterest,
             lastSyncedAt);
-    aggregate.assignVersion(version);
+    aggregate.assignVersion(version != null ? version : 0L);
     return aggregate;
   }
 

@@ -270,7 +270,7 @@ public class MeshDescriptorAggregate extends AggregateRoot<MeshDescriptorId> {
     // 以及新增的集合（allowableQualifiers, pharmacologicalActions, etc.）
     // 在 restore 后通过 setter 方法设置
 
-    aggregate.assignVersion(version);
+    aggregate.assignVersion(version != null ? version : 0L);
     return aggregate;
   }
 

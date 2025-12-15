@@ -163,7 +163,7 @@ public class VenueRatingAggregate extends AggregateRoot<VenueRatingId> {
   public static VenueRatingAggregate restore(
       VenueRatingId id, VenueId venueId, int year, RatingSystem ratingSystem, Long version) {
     VenueRatingAggregate aggregate = new VenueRatingAggregate(id, venueId, year, ratingSystem);
-    aggregate.assignVersion(version);
+    aggregate.assignVersion(version != null ? version : 0L);
     return aggregate;
   }
 

@@ -274,7 +274,7 @@ public class AffiliationAggregate extends AggregateRoot<AffiliationId> {
             parentAffiliation,
             affiliationType,
             dedupKey);
-    aggregate.assignVersion(version);
+    aggregate.assignVersion(version != null ? version : 0L);
     return aggregate;
   }
 

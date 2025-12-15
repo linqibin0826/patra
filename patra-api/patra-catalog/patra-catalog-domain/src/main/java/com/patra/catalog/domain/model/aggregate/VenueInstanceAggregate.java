@@ -300,7 +300,7 @@ public class VenueInstanceAggregate extends AggregateRoot<VenueInstanceId> {
             conferenceStartDate,
             conferenceEndDate,
             conferenceLocation);
-    aggregate.assignVersion(version);
+    aggregate.assignVersion(version != null ? version : 0L);
     return aggregate;
   }
 
