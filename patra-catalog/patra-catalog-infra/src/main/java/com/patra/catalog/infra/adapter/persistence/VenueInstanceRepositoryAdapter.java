@@ -1,13 +1,13 @@
 package com.patra.catalog.infra.adapter.persistence;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.toolkit.Db;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.catalog.domain.port.repository.VenueInstanceRepository;
-import com.patra.catalog.infra.persistence.converter.VenueInstanceConverter;
-import com.patra.catalog.infra.persistence.entity.VenueInstanceDO;
-import com.patra.catalog.infra.persistence.mapper.VenueInstanceMapper;
+import com.patra.catalog.infra.persistence.jpa.VenueInstanceJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.converter.VenueInstanceJpaConverter;
+import com.patra.catalog.infra.persistence.jpa.entity.VenueInstanceEntity;
+import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -18,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-/// 载体实例聚合根仓储实现。
+/// 载体实例聚合根仓储实现（JPA 版本）。
 ///
 /// **职责**：
 ///
@@ -26,9 +26,15 @@ import org.springframework.stereotype.Repository;
 ///
 /// **数据访问**：
 ///
-/// - 使用 MyBatis-Plus 进行数据库操作
-/// - 批量插入使用 `Db.saveBatch()` 优化性能
-/// - 使用 `VenueInstanceConverter` 进行 DO ↔ 聚合根转换
+/// - 使用 Spring Data JPA 进行数据库操作
+/// - 批量插入使用 `saveAll()` 优化性能
+/// - 使用 `VenueInstanceJpaConverter` 进行 Entity ↔ 聚合根转换
+///
+/// **JPA 批量写入说明**：
+///
+/// - 使用 Spring Data JPA 的 `saveAll()` 进行批量保存
+/// - ID 由 `IdWorker` 雪花算法生成（与 MyBatis-Plus 保持一致）
+/// - 审计字段由 JPA Auditing 自动填充
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -37,13 +43,16 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class VenueInstanceRepositoryAdapter implements VenueInstanceRepository {
 
-  private final VenueInstanceMapper venueInstanceMapper;
-  private final VenueInstanceConverter venueInstanceConverter;
+  private final VenueInstanceJpaRepository jpaRepository;
+  private final VenueInstanceJpaConverter jpaConverter;
+  private final EntityManager entityManager;
 
   @Override
   public Optional<VenueInstanceAggregate> findById(Long id) {
-    VenueInstanceDO doEntity = venueInstanceMapper.selectById(id);
-    return Optional.ofNullable(venueInstanceConverter.toAggregate(doEntity));
+    if (id == null) {
+      return Optional.empty();
+    }
+    return jpaRepository.findById(id).map(jpaConverter::toAggregate);
   }
 
   @Override
@@ -52,14 +61,12 @@ public class VenueInstanceRepositoryAdapter implements VenueInstanceRepository {
       return Map.of();
     }
 
-    List<VenueInstanceDO> doList =
-        venueInstanceMapper.selectList(
-            new LambdaQueryWrapper<VenueInstanceDO>().in(VenueInstanceDO::getVenueId, venueIds));
+    List<VenueInstanceEntity> entities = jpaRepository.findByVenueIdIn(venueIds);
 
     Map<Long, List<VenueInstanceAggregate>> result = new HashMap<>();
-    for (VenueInstanceDO doEntity : doList) {
-      VenueInstanceAggregate aggregate = venueInstanceConverter.toAggregate(doEntity);
-      result.computeIfAbsent(doEntity.getVenueId(), k -> new ArrayList<>()).add(aggregate);
+    for (VenueInstanceEntity entity : entities) {
+      VenueInstanceAggregate aggregate = jpaConverter.toAggregate(entity);
+      result.computeIfAbsent(entity.getVenueId(), k -> new ArrayList<>()).add(aggregate);
     }
     return result;
   }
@@ -67,76 +74,67 @@ public class VenueInstanceRepositoryAdapter implements VenueInstanceRepository {
   @Override
   public Optional<VenueInstanceAggregate> findJournalInstance(
       Long venueId, String volume, String issue, Integer publicationYear) {
-    LambdaQueryWrapper<VenueInstanceDO> query =
-        new LambdaQueryWrapper<VenueInstanceDO>()
-            .eq(VenueInstanceDO::getVenueId, venueId)
-            .eq(VenueInstanceDO::getPublicationYear, publicationYear);
-
-    // volume 和 issue 可能为 null，需要特殊处理
-    if (volume != null) {
-      query.eq(VenueInstanceDO::getVolume, volume);
-    } else {
-      query.isNull(VenueInstanceDO::getVolume);
+    if (venueId == null || publicationYear == null) {
+      return Optional.empty();
     }
-
-    if (issue != null) {
-      query.eq(VenueInstanceDO::getIssue, issue);
-    } else {
-      query.isNull(VenueInstanceDO::getIssue);
-    }
-
-    VenueInstanceDO doEntity = venueInstanceMapper.selectOne(query);
-    return Optional.ofNullable(venueInstanceConverter.toAggregate(doEntity));
+    return jpaRepository
+        .findJournalInstance(venueId, volume, issue, publicationYear)
+        .map(jpaConverter::toAggregate);
   }
 
   @Override
   public Optional<VenueInstanceAggregate> findBookInstance(
       Long venueId, String edition, Integer publicationYear) {
-    LambdaQueryWrapper<VenueInstanceDO> query =
-        new LambdaQueryWrapper<VenueInstanceDO>()
-            .eq(VenueInstanceDO::getVenueId, venueId)
-            .eq(VenueInstanceDO::getPublicationYear, publicationYear);
-
-    if (edition != null) {
-      query.eq(VenueInstanceDO::getEdition, edition);
-    } else {
-      query.isNull(VenueInstanceDO::getEdition);
+    if (venueId == null || publicationYear == null) {
+      return Optional.empty();
     }
-
-    VenueInstanceDO doEntity = venueInstanceMapper.selectOne(query);
-    return Optional.ofNullable(venueInstanceConverter.toAggregate(doEntity));
+    return jpaRepository
+        .findBookInstance(venueId, edition, publicationYear)
+        .map(jpaConverter::toAggregate);
   }
 
   @Override
   public Optional<VenueInstanceAggregate> findConferenceInstance(
       Long venueId, String conferenceName, Integer publicationYear) {
-    LambdaQueryWrapper<VenueInstanceDO> query =
-        new LambdaQueryWrapper<VenueInstanceDO>()
-            .eq(VenueInstanceDO::getVenueId, venueId)
-            .eq(VenueInstanceDO::getPublicationYear, publicationYear);
-
-    if (conferenceName != null) {
-      query.eq(VenueInstanceDO::getConferenceName, conferenceName);
-    } else {
-      query.isNull(VenueInstanceDO::getConferenceName);
+    if (venueId == null || publicationYear == null) {
+      return Optional.empty();
     }
-
-    VenueInstanceDO doEntity = venueInstanceMapper.selectOne(query);
-    return Optional.ofNullable(venueInstanceConverter.toAggregate(doEntity));
+    return jpaRepository
+        .findConferenceInstance(venueId, conferenceName, publicationYear)
+        .map(jpaConverter::toAggregate);
   }
 
   @Override
   public void save(VenueInstanceAggregate instance) {
-    VenueInstanceDO doEntity = venueInstanceConverter.toDO(instance);
-
-    if (instance.getId() == null) {
-      // 新建
-      venueInstanceMapper.insert(doEntity);
-      instance.assignId(VenueInstanceId.of(doEntity.getId()));
-    } else {
-      // 更新
-      venueInstanceMapper.updateById(doEntity);
+    if (instance == null) {
+      throw new IllegalArgumentException("实例不能为 null");
     }
+
+    VenueInstanceEntity saved;
+
+    if (instance.isTransient()) {
+      // 新增：创建实体并持久化
+      VenueInstanceEntity entity = jpaConverter.toEntity(instance);
+      assignIdIfMissing(entity);
+      saved = jpaRepository.save(entity);
+      // 回填 ID
+      instance.assignId(VenueInstanceId.of(saved.getId()));
+    } else {
+      // 更新：查找托管实体并原地更新
+      VenueInstanceEntity managed =
+          entityManager.find(VenueInstanceEntity.class, instance.getId().value());
+      if (managed == null) {
+        throw new IllegalStateException("实体不存在：id=" + instance.getId());
+      }
+      jpaConverter.updateEntity(managed, instance);
+      saved = managed; // 托管实体会在事务提交时自动 flush
+    }
+
+    log.debug(
+        "保存载体实例：id={}, venueId={}, year={}",
+        saved.getId(),
+        instance.getVenueId(),
+        instance.getPublicationYear());
   }
 
   @Override
@@ -145,16 +143,20 @@ public class VenueInstanceRepositoryAdapter implements VenueInstanceRepository {
       return;
     }
 
-    List<VenueInstanceDO> doList = instances.stream().map(venueInstanceConverter::toDO).toList();
+    List<VenueInstanceEntity> entities =
+        instances.stream().map(jpaConverter::toEntity).peek(this::assignIdIfMissing).toList();
 
-    Db.saveBatch(doList);
+    List<VenueInstanceEntity> savedEntities = jpaRepository.saveAll(entities);
 
-    // ID 回填
+    // 回填 ID 和版本
     for (int i = 0; i < instances.size(); i++) {
-      instances.get(i).assignId(VenueInstanceId.of(doList.get(i).getId()));
+      VenueInstanceAggregate instance = instances.get(i);
+      VenueInstanceEntity saved = savedEntities.get(i);
+      instance.assignId(VenueInstanceId.of(saved.getId()));
+      instance.assignVersion(saved.getVersion());
     }
 
-    log.debug("批量插入载体实例完成：{} 条", instances.size());
+    log.info("批量插入载体实例完成：{} 条", instances.size());
   }
 
   @Override
@@ -163,21 +165,49 @@ public class VenueInstanceRepositoryAdapter implements VenueInstanceRepository {
       return;
     }
 
-    List<VenueInstanceDO> doList = instances.stream().map(venueInstanceConverter::toDO).toList();
+    for (VenueInstanceAggregate instance : instances) {
+      if (instance.getId() == null) {
+        throw new IllegalArgumentException("批量更新时实例 ID 不能为 null");
+      }
+      VenueInstanceEntity managed =
+          entityManager.find(VenueInstanceEntity.class, instance.getId().value());
+      if (managed != null) {
+        jpaConverter.updateEntity(managed, instance);
+      }
+    }
 
-    Db.updateBatchById(doList);
-    log.debug("批量更新载体实例完成：{} 条", instances.size());
+    log.info("批量更新载体实例完成：{} 条", instances.size());
   }
 
   @Override
   public boolean deleteById(Long id) {
-    int deleted = venueInstanceMapper.deleteById(id);
-    return deleted > 0;
+    if (id == null) {
+      return false;
+    }
+    if (jpaRepository.existsById(id)) {
+      jpaRepository.deleteById(id);
+      log.debug("删除载体实例：id={}", id);
+      return true;
+    }
+    return false;
   }
 
   @Override
   public int deleteByVenueId(Long venueId) {
-    return venueInstanceMapper.delete(
-        new LambdaQueryWrapper<VenueInstanceDO>().eq(VenueInstanceDO::getVenueId, venueId));
+    if (venueId == null) {
+      return 0;
+    }
+    int deleted = jpaRepository.deleteByVenueId(venueId);
+    log.debug("根据 venueId={} 删除载体实例：{} 条", venueId, deleted);
+    return deleted;
+  }
+
+  /// 为没有 ID 的实体分配雪花 ID。
+  ///
+  /// @param entity JPA 实体
+  private void assignIdIfMissing(VenueInstanceEntity entity) {
+    if (entity.getId() == null) {
+      entity.setId(IdWorker.getId());
+    }
   }
 }
