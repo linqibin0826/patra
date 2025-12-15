@@ -203,7 +203,7 @@ public class AuthorAggregate extends AggregateRoot<AuthorId> {
             dedupKey,
             equalContribution,
             valid);
-    aggregate.assignVersion(version);
+    aggregate.assignVersion(version != null ? version : 0L);
     return aggregate;
   }
 

@@ -166,7 +166,7 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   public static VenueAggregate restore(
       VenueId id, VenueType venueType, String displayName, Long version) {
     VenueAggregate aggregate = new VenueAggregate(id, venueType, displayName);
-    aggregate.assignVersion(version);
+    aggregate.assignVersion(version != null ? version : 0L);
     return aggregate;
   }
 
