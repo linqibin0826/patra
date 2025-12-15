@@ -1,14 +1,14 @@
 package com.patra.catalog.infra.adapter.persistence;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.toolkit.Db;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.patra.catalog.domain.model.aggregate.VenueRatingAggregate;
 import com.patra.catalog.domain.model.enums.RatingSystem;
 import com.patra.catalog.domain.model.vo.venue.VenueRatingId;
 import com.patra.catalog.domain.port.repository.VenueRatingRepository;
-import com.patra.catalog.infra.persistence.converter.VenueRatingConverter;
-import com.patra.catalog.infra.persistence.entity.VenueRatingDO;
-import com.patra.catalog.infra.persistence.mapper.VenueRatingMapper;
+import com.patra.catalog.infra.persistence.jpa.VenueRatingJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.converter.VenueRatingJpaConverter;
+import com.patra.catalog.infra.persistence.jpa.entity.VenueRatingEntity;
+import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -19,7 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-/// 载体评级聚合根仓储实现。
+/// 载体评级聚合根仓储实现（JPA 版本）。
 ///
 /// **职责**：
 ///
@@ -27,27 +27,33 @@ import org.springframework.stereotype.Repository;
 ///
 /// **数据访问**：
 ///
-/// - 使用 MyBatis-Plus 进行数据库操作
-/// - 批量插入使用 `Db.saveBatch()` 优化性能
-/// - 使用 `VenueRatingConverter` 进行 DO ↔ 聚合根转换
+/// - 使用 Spring Data JPA 进行数据库操作
+/// - 批量插入使用 `saveAll()` 优化性能
+/// - 使用 `VenueRatingJpaConverter` 进行 Entity ↔ 聚合根转换
 ///
-/// @author Patra Lin
-/// @since 0.6.0
+/// **JPA 批量写入说明**：
+///
+/// - 使用 Spring Data JPA 的 `saveAll()` 进行批量保存
+/// - ID 由 `IdWorker` 雪花算法生成（与 MyBatis-Plus 保持一致）
+/// - 审计字段由 JPA Auditing 自动填充
+///
+/// @author linqibin
+/// @since 0.1.0
 @Slf4j
 @Repository
 @RequiredArgsConstructor
 public class VenueRatingRepositoryAdapter implements VenueRatingRepository {
 
-  private final VenueRatingMapper venueRatingMapper;
-  private final VenueRatingConverter venueRatingConverter;
+  private final VenueRatingJpaRepository jpaRepository;
+  private final VenueRatingJpaConverter jpaConverter;
+  private final EntityManager entityManager;
 
   @Override
   public Optional<VenueRatingAggregate> findById(VenueRatingId id) {
     if (id == null) {
       return Optional.empty();
     }
-    VenueRatingDO doEntity = venueRatingMapper.selectById(id.value());
-    return Optional.ofNullable(venueRatingConverter.toAggregate(doEntity));
+    return jpaRepository.findById(id.value()).map(jpaConverter::toAggregate);
   }
 
   @Override
@@ -56,15 +62,9 @@ public class VenueRatingRepositoryAdapter implements VenueRatingRepository {
     if (venueId == null || ratingSystem == null) {
       return Optional.empty();
     }
-
-    LambdaQueryWrapper<VenueRatingDO> query =
-        new LambdaQueryWrapper<VenueRatingDO>()
-            .eq(VenueRatingDO::getVenueId, venueId)
-            .eq(VenueRatingDO::getYear, (short) year)
-            .eq(VenueRatingDO::getRatingSystem, ratingSystem.getCode());
-
-    VenueRatingDO doEntity = venueRatingMapper.selectOne(query);
-    return Optional.ofNullable(venueRatingConverter.toAggregate(doEntity));
+    return jpaRepository
+        .findByVenueIdAndYearAndRatingSystem(venueId, (short) year, ratingSystem)
+        .map(jpaConverter::toAggregate);
   }
 
   @Override
@@ -72,12 +72,7 @@ public class VenueRatingRepositoryAdapter implements VenueRatingRepository {
     if (venueId == null) {
       return List.of();
     }
-
-    List<VenueRatingDO> doList =
-        venueRatingMapper.selectList(
-            new LambdaQueryWrapper<VenueRatingDO>().eq(VenueRatingDO::getVenueId, venueId));
-
-    return doList.stream().map(venueRatingConverter::toAggregate).toList();
+    return jpaRepository.findByVenueId(venueId).stream().map(jpaConverter::toAggregate).toList();
   }
 
   @Override
@@ -86,14 +81,9 @@ public class VenueRatingRepositoryAdapter implements VenueRatingRepository {
     if (venueId == null || ratingSystem == null) {
       return List.of();
     }
-
-    List<VenueRatingDO> doList =
-        venueRatingMapper.selectList(
-            new LambdaQueryWrapper<VenueRatingDO>()
-                .eq(VenueRatingDO::getVenueId, venueId)
-                .eq(VenueRatingDO::getRatingSystem, ratingSystem.getCode()));
-
-    return doList.stream().map(venueRatingConverter::toAggregate).toList();
+    return jpaRepository.findByVenueIdAndRatingSystem(venueId, ratingSystem).stream()
+        .map(jpaConverter::toAggregate)
+        .toList();
   }
 
   @Override
@@ -101,14 +91,9 @@ public class VenueRatingRepositoryAdapter implements VenueRatingRepository {
     if (venueId == null) {
       return List.of();
     }
-
-    List<VenueRatingDO> doList =
-        venueRatingMapper.selectList(
-            new LambdaQueryWrapper<VenueRatingDO>()
-                .eq(VenueRatingDO::getVenueId, venueId)
-                .eq(VenueRatingDO::getYear, (short) year));
-
-    return doList.stream().map(venueRatingConverter::toAggregate).toList();
+    return jpaRepository.findByVenueIdAndYear(venueId, (short) year).stream()
+        .map(jpaConverter::toAggregate)
+        .toList();
   }
 
   @Override
@@ -117,14 +102,12 @@ public class VenueRatingRepositoryAdapter implements VenueRatingRepository {
       return Map.of();
     }
 
-    List<VenueRatingDO> doList =
-        venueRatingMapper.selectList(
-            new LambdaQueryWrapper<VenueRatingDO>().in(VenueRatingDO::getVenueId, venueIds));
+    List<VenueRatingEntity> entities = jpaRepository.findByVenueIdIn(venueIds);
 
     Map<Long, List<VenueRatingAggregate>> result = new HashMap<>();
-    for (VenueRatingDO doEntity : doList) {
-      VenueRatingAggregate aggregate = venueRatingConverter.toAggregate(doEntity);
-      result.computeIfAbsent(doEntity.getVenueId(), k -> new ArrayList<>()).add(aggregate);
+    for (VenueRatingEntity entity : entities) {
+      VenueRatingAggregate aggregate = jpaConverter.toAggregate(entity);
+      result.computeIfAbsent(entity.getVenueId(), k -> new ArrayList<>()).add(aggregate);
     }
     return result;
   }
@@ -135,27 +118,32 @@ public class VenueRatingRepositoryAdapter implements VenueRatingRepository {
       throw new IllegalArgumentException("聚合根不能为 null");
     }
 
-    VenueRatingDO doEntity = venueRatingConverter.toDO(aggregate);
+    VenueRatingEntity saved;
 
     if (aggregate.isTransient()) {
-      // 新建
-      venueRatingMapper.insert(doEntity);
-      aggregate.assignId(VenueRatingId.of(doEntity.getId()));
-      log.debug(
-          "插入载体评级：venueId={}, year={}, system={}",
-          aggregate.getVenueId(),
-          aggregate.getYear(),
-          aggregate.getRatingSystem());
-    } else if (aggregate.isDirty()) {
-      // 更新
-      venueRatingMapper.updateById(doEntity);
-      aggregate.clearDirty();
-      log.debug("更新载体评级：id={}", aggregate.getId());
+      // 新增：创建实体并持久化
+      VenueRatingEntity entity = jpaConverter.toEntity(aggregate);
+      assignIdIfMissing(entity);
+      saved = jpaRepository.save(entity);
+    } else {
+      // 更新：查找托管实体并原地更新
+      VenueRatingEntity managed =
+          entityManager.find(VenueRatingEntity.class, aggregate.getId().value());
+      if (managed == null) {
+        throw new IllegalStateException("实体不存在：id=" + aggregate.getId());
+      }
+      jpaConverter.updateEntity(managed, aggregate);
+      saved = managed; // 托管实体会在事务提交时自动 flush
     }
 
-    // 更新版本号（从 DO 回填）
-    aggregate.assignVersion(doEntity.getVersion());
-    return aggregate;
+    log.debug(
+        "保存载体评级：id={}, venueId={}, year={}, system={}",
+        saved.getId(),
+        aggregate.getVenueId(),
+        aggregate.getYear(),
+        aggregate.getRatingSystem());
+
+    return jpaConverter.toAggregate(saved);
   }
 
   @Override
@@ -164,51 +152,21 @@ public class VenueRatingRepositoryAdapter implements VenueRatingRepository {
       return;
     }
 
-    // 区分新增和更新
-    List<VenueRatingAggregate> toInsert = new ArrayList<>();
-    List<VenueRatingAggregate> toUpdate = new ArrayList<>();
+    List<VenueRatingEntity> entities =
+        aggregates.stream().map(jpaConverter::toEntity).peek(this::assignIdIfMissing).toList();
 
-    for (VenueRatingAggregate aggregate : aggregates) {
-      if (aggregate.isTransient()) {
-        toInsert.add(aggregate);
-      } else if (aggregate.isDirty()) {
-        toUpdate.add(aggregate);
-      }
+    List<VenueRatingEntity> savedEntities = jpaRepository.saveAll(entities);
+
+    // 回填 ID 和版本
+    for (int i = 0; i < aggregates.size(); i++) {
+      VenueRatingAggregate aggregate = aggregates.get(i);
+      VenueRatingEntity saved = savedEntities.get(i);
+      aggregate.assignId(VenueRatingId.of(saved.getId()));
+      aggregate.assignVersion(saved.getVersion());
+      aggregate.clearDirty();
     }
 
-    // 批量新增
-    if (!toInsert.isEmpty()) {
-      List<VenueRatingDO> insertDoList = toInsert.stream().map(venueRatingConverter::toDO).toList();
-
-      Db.saveBatch(insertDoList);
-
-      // ID 回填
-      for (int i = 0; i < toInsert.size(); i++) {
-        VenueRatingDO doEntity = insertDoList.get(i);
-        VenueRatingAggregate aggregate = toInsert.get(i);
-        aggregate.assignId(VenueRatingId.of(doEntity.getId()));
-        aggregate.assignVersion(doEntity.getVersion());
-      }
-
-      log.debug("批量插入载体评级完成：{} 条", toInsert.size());
-    }
-
-    // 批量更新
-    if (!toUpdate.isEmpty()) {
-      List<VenueRatingDO> updateDoList = toUpdate.stream().map(venueRatingConverter::toDO).toList();
-
-      Db.updateBatchById(updateDoList);
-
-      // 清除脏标记并更新版本
-      for (int i = 0; i < toUpdate.size(); i++) {
-        VenueRatingDO doEntity = updateDoList.get(i);
-        VenueRatingAggregate aggregate = toUpdate.get(i);
-        aggregate.clearDirty();
-        aggregate.assignVersion(doEntity.getVersion());
-      }
-
-      log.debug("批量更新载体评级完成：{} 条", toUpdate.size());
-    }
+    log.info("批量保存载体评级完成：{} 条", aggregates.size());
   }
 
   @Override
@@ -216,7 +174,7 @@ public class VenueRatingRepositoryAdapter implements VenueRatingRepository {
     if (id == null) {
       return;
     }
-    venueRatingMapper.deleteById(id.value());
+    jpaRepository.deleteById(id.value());
     log.debug("删除载体评级：id={}", id);
   }
 
@@ -225,9 +183,16 @@ public class VenueRatingRepositoryAdapter implements VenueRatingRepository {
     if (venueId == null) {
       return;
     }
-    int deleted =
-        venueRatingMapper.delete(
-            new LambdaQueryWrapper<VenueRatingDO>().eq(VenueRatingDO::getVenueId, venueId));
-    log.debug("根据 venueId={} 删除载体评级：{} 条", venueId, deleted);
+    jpaRepository.deleteByVenueId(venueId);
+    log.debug("根据 venueId={} 删除载体评级", venueId);
+  }
+
+  /// 为没有 ID 的实体分配雪花 ID。
+  ///
+  /// @param entity JPA 实体
+  private void assignIdIfMissing(VenueRatingEntity entity) {
+    if (entity.getId() == null) {
+      entity.setId(IdWorker.getId());
+    }
   }
 }

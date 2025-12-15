@@ -1,29 +1,30 @@
 package com.patra.catalog.infra.adapter.persistence;
 
-import com.baomidou.mybatisplus.extension.toolkit.Db;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
-import com.patra.catalog.infra.persistence.converter.MeshDescriptorConverter;
-import com.patra.catalog.infra.persistence.entity.MeshConceptDO;
-import com.patra.catalog.infra.persistence.entity.MeshConceptRelationDO;
-import com.patra.catalog.infra.persistence.entity.MeshDescriptorDO;
-import com.patra.catalog.infra.persistence.entity.MeshEntryCombinationDO;
-import com.patra.catalog.infra.persistence.entity.MeshEntryTermDO;
-import com.patra.catalog.infra.persistence.entity.MeshTreeNumberDO;
-import com.patra.catalog.infra.persistence.mapper.MeshConceptMapper;
-import com.patra.catalog.infra.persistence.mapper.MeshConceptRelationMapper;
-import com.patra.catalog.infra.persistence.mapper.MeshDescriptorMapper;
-import com.patra.catalog.infra.persistence.mapper.MeshEntryCombinationMapper;
-import com.patra.catalog.infra.persistence.mapper.MeshEntryTermMapper;
-import com.patra.catalog.infra.persistence.mapper.MeshTreeNumberMapper;
+import com.patra.catalog.infra.persistence.jpa.MeshConceptJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.MeshConceptRelationJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.MeshDescriptorJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.MeshEntryCombinationJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.MeshEntryTermJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.MeshTreeNumberJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.converter.MeshDescriptorJpaConverter;
+import com.patra.catalog.infra.persistence.jpa.entity.MeshConceptEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.MeshConceptRelationEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.MeshDescriptorEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.MeshEntryCombinationEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.MeshEntryTermEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.MeshTreeNumberEntity;
+import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-/// MeSH 主题词聚合根仓储实现。
+/// MeSH 主题词聚合根仓储实现（JPA 版本）。
 ///
 /// **职责**：
 ///
@@ -33,7 +34,9 @@ import org.springframework.stereotype.Repository;
 ///
 /// **性能优化**：
 ///
-/// 批量操作使用 `Db.saveBatch()` 配合 `rewriteBatchedStatements=true` 提升写入效率
+/// - 使用 JPA `saveAll()` 配合 Hibernate 批量配置
+/// - 定期 flush + clear 防止大批量操作内存溢出
+/// - 子表通过 `descriptorUi` 业务键关联，无需等待主表 ID 回填
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -42,17 +45,20 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository {
 
-  private final MeshDescriptorMapper descriptorMapper;
-  private final MeshTreeNumberMapper treeNumberMapper;
-  private final MeshConceptMapper conceptMapper;
-  private final MeshConceptRelationMapper conceptRelationMapper;
-  private final MeshEntryTermMapper entryTermMapper;
-  private final MeshEntryCombinationMapper entryCombinationMapper;
-  private final MeshDescriptorConverter converter;
+  private static final int FLUSH_INTERVAL = 50;
+
+  private final MeshDescriptorJpaRepository descriptorJpaRepository;
+  private final MeshTreeNumberJpaRepository treeNumberJpaRepository;
+  private final MeshConceptJpaRepository conceptJpaRepository;
+  private final MeshConceptRelationJpaRepository conceptRelationJpaRepository;
+  private final MeshEntryTermJpaRepository entryTermJpaRepository;
+  private final MeshEntryCombinationJpaRepository entryCombinationJpaRepository;
+  private final MeshDescriptorJpaConverter converter;
+  private final EntityManager entityManager;
 
   @Override
   public boolean hasAnyData() {
-    return descriptorMapper.selectCount(null) > 0;
+    return descriptorJpaRepository.hasAnyData();
   }
 
   @Override
@@ -61,84 +67,80 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
       return;
     }
 
-    // 1. 转换 Descriptor（不设置 ID，由 MyBatis-Plus 自动生成）
-    List<MeshDescriptorDO> descriptorDOs = new ArrayList<>(aggregates.size());
+    // 1. 转换主表实体并分配 ID
+    List<MeshDescriptorEntity> descriptorEntities = new ArrayList<>(aggregates.size());
     for (MeshDescriptorAggregate aggregate : aggregates) {
-      MeshDescriptorDO dataObject = converter.toDescriptorDO(aggregate);
-      descriptorDOs.add(dataObject);
+      MeshDescriptorEntity entity = converter.toEntity(aggregate);
+      assignIdIfMissing(entity);
+      descriptorEntities.add(entity);
     }
 
     // 2. 收集子表数据
-    List<MeshTreeNumberDO> treeNumberDOs = new ArrayList<>();
-    List<MeshConceptDO> conceptDOs = new ArrayList<>();
-    List<MeshConceptRelationDO> conceptRelationDOs = new ArrayList<>();
-    List<MeshEntryTermDO> entryTermDOs = new ArrayList<>();
-    List<MeshEntryCombinationDO> entryCombinationDOs = new ArrayList<>();
+    List<MeshTreeNumberEntity> treeNumberEntities = new ArrayList<>();
+    List<MeshConceptEntity> conceptEntities = new ArrayList<>();
+    List<MeshConceptRelationEntity> conceptRelationEntities = new ArrayList<>();
+    List<MeshEntryTermEntity> entryTermEntities = new ArrayList<>();
+    List<MeshEntryCombinationEntity> entryCombinationEntities = new ArrayList<>();
 
     for (MeshDescriptorAggregate aggregate : aggregates) {
       String descriptorUi = aggregate.getUi().ui();
       collectChildData(
           aggregate,
           descriptorUi,
-          treeNumberDOs,
-          conceptDOs,
-          conceptRelationDOs,
-          entryTermDOs,
-          entryCombinationDOs);
+          treeNumberEntities,
+          conceptEntities,
+          conceptRelationEntities,
+          entryTermEntities,
+          entryCombinationEntities);
     }
 
-    // 3. 批量插入主表（ID 自动回填到 DO）
-    Db.saveBatch(descriptorDOs);
-    log.debug("批量插入主题词 {} 条", descriptorDOs.size());
+    // 3. 批量插入主表
+    saveBatchWithFlush(descriptorEntities, "主题词");
 
     // 4. 批量插入子表
-    if (!treeNumberDOs.isEmpty()) {
-      Db.saveBatch(treeNumberDOs);
-      log.debug("批量插入树形编号 {} 条", treeNumberDOs.size());
+    if (!treeNumberEntities.isEmpty()) {
+      saveBatchWithFlush(treeNumberEntities, "树形编号");
     }
-    if (!conceptDOs.isEmpty()) {
-      Db.saveBatch(conceptDOs);
-      log.debug("批量插入概念 {} 条", conceptDOs.size());
+    if (!conceptEntities.isEmpty()) {
+      saveBatchWithFlush(conceptEntities, "概念");
     }
-    if (!conceptRelationDOs.isEmpty()) {
-      Db.saveBatch(conceptRelationDOs);
-      log.debug("批量插入概念关系 {} 条", conceptRelationDOs.size());
+    if (!conceptRelationEntities.isEmpty()) {
+      saveBatchWithFlush(conceptRelationEntities, "概念关系");
     }
-    if (!entryTermDOs.isEmpty()) {
-      Db.saveBatch(entryTermDOs);
-      log.debug("批量插入入口术语 {} 条", entryTermDOs.size());
+    if (!entryTermEntities.isEmpty()) {
+      saveBatchWithFlush(entryTermEntities, "入口术语");
     }
-    if (!entryCombinationDOs.isEmpty()) {
-      Db.saveBatch(entryCombinationDOs);
-      log.debug("批量插入入口组合 {} 条", entryCombinationDOs.size());
+    if (!entryCombinationEntities.isEmpty()) {
+      saveBatchWithFlush(entryCombinationEntities, "入口组合");
     }
   }
 
   /// 收集聚合根的子表数据。
   ///
   /// @param aggregate 聚合根
-  /// @param descriptorUi 主题词 UI（用于子表外键关联）
-  /// @param treeNumberDOs 树形编号 DO 列表（输出参数）
-  /// @param conceptDOs 概念 DO 列表（输出参数）
-  /// @param conceptRelationDOs 概念关系 DO 列表（输出参数）
-  /// @param entryTermDOs 入口术语 DO 列表（输出参数）
-  /// @param entryCombinationDOs 入口组合 DO 列表（输出参数）
+  /// @param descriptorUi 主题词 UI（用于子表关联）
+  /// @param treeNumberEntities 树形编号实体列表（输出参数）
+  /// @param conceptEntities 概念实体列表（输出参数）
+  /// @param conceptRelationEntities 概念关系实体列表（输出参数）
+  /// @param entryTermEntities 入口术语实体列表（输出参数）
+  /// @param entryCombinationEntities 入口组合实体列表（输出参数）
   private void collectChildData(
       MeshDescriptorAggregate aggregate,
       String descriptorUi,
-      List<MeshTreeNumberDO> treeNumberDOs,
-      List<MeshConceptDO> conceptDOs,
-      List<MeshConceptRelationDO> conceptRelationDOs,
-      List<MeshEntryTermDO> entryTermDOs,
-      List<MeshEntryCombinationDO> entryCombinationDOs) {
+      List<MeshTreeNumberEntity> treeNumberEntities,
+      List<MeshConceptEntity> conceptEntities,
+      List<MeshConceptRelationEntity> conceptRelationEntities,
+      List<MeshEntryTermEntity> entryTermEntities,
+      List<MeshEntryCombinationEntity> entryCombinationEntities) {
 
     // 收集 TreeNumber
     aggregate
         .getTreeNumbers()
         .forEach(
             tn -> {
-              MeshTreeNumberDO treeNumberDO = converter.toTreeNumberDO(tn, descriptorUi);
-              treeNumberDOs.add(treeNumberDO);
+              MeshTreeNumberEntity entity = converter.toTreeNumberEntity(tn, descriptorUi);
+              assignIdIfMissing(entity);
+              treeNumberEntities.add(entity);
             });
 
     // 收集 Concept 和 ConceptRelation
@@ -146,11 +148,12 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
         .getConcepts()
         .forEach(
             concept -> {
-              MeshConceptDO conceptDO = converter.toConceptDO(concept, descriptorUi);
-              conceptDOs.add(conceptDO);
+              MeshConceptEntity entity = converter.toConceptEntity(concept, descriptorUi);
+              assignIdIfMissing(entity);
+              conceptEntities.add(entity);
 
               // 收集概念的 ConceptRelation
-              collectConceptRelations(concept, descriptorUi, conceptRelationDOs);
+              collectConceptRelations(concept, descriptorUi, conceptRelationEntities);
             });
 
     // 收集 EntryTerm
@@ -158,8 +161,9 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
         .getEntryTerms()
         .forEach(
             et -> {
-              MeshEntryTermDO entryTermDO = converter.toEntryTermDO(et, descriptorUi);
-              entryTermDOs.add(entryTermDO);
+              MeshEntryTermEntity entity = converter.toEntryTermEntity(et, descriptorUi);
+              assignIdIfMissing(entity);
+              entryTermEntities.add(entity);
             });
 
     // 收集 EntryCombination
@@ -167,9 +171,10 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
         .getEntryCombinations()
         .forEach(
             ec -> {
-              MeshEntryCombinationDO entryCombinationDO =
-                  converter.toEntryCombinationDO(ec, descriptorUi);
-              entryCombinationDOs.add(entryCombinationDO);
+              MeshEntryCombinationEntity entity =
+                  converter.toEntryCombinationEntity(ec, descriptorUi);
+              assignIdIfMissing(entity);
+              entryCombinationEntities.add(entity);
             });
   }
 
@@ -177,17 +182,92 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
   ///
   /// @param concept 概念实体
   /// @param descriptorUi 主题词 UI
-  /// @param conceptRelationDOs 概念关系 DO 列表（输出参数）
+  /// @param conceptRelationEntities 概念关系实体列表（输出参数）
   private void collectConceptRelations(
-      MeshConcept concept, String descriptorUi, List<MeshConceptRelationDO> conceptRelationDOs) {
+      MeshConcept concept,
+      String descriptorUi,
+      List<MeshConceptRelationEntity> conceptRelationEntities) {
     concept
         .getConceptRelations()
         .forEach(
             cr -> {
-              MeshConceptRelationDO conceptRelationDO =
-                  converter.toConceptRelationDO(
-                      cr, concept.getConceptUi(), concept.isPreferred(), descriptorUi);
-              conceptRelationDOs.add(conceptRelationDO);
+              MeshConceptRelationEntity entity =
+                  converter.toConceptRelationEntity(cr, descriptorUi, concept.getConceptUi().ui());
+              assignIdIfMissing(entity);
+              conceptRelationEntities.add(entity);
             });
+  }
+
+  /// 批量保存实体，并定期 flush + clear 以防内存溢出。
+  ///
+  /// @param entities 实体列表
+  /// @param entityName 实体名称（用于日志）
+  /// @param <T> 实体类型
+  private <T> void saveBatchWithFlush(List<T> entities, String entityName) {
+    int count = 0;
+    for (T entity : entities) {
+      entityManager.persist(entity);
+      if (++count % FLUSH_INTERVAL == 0) {
+        entityManager.flush();
+        entityManager.clear();
+      }
+    }
+    entityManager.flush();
+    entityManager.clear();
+    log.debug("批量插入{} {} 条", entityName, entities.size());
+  }
+
+  /// 为没有 ID 的实体分配雪花 ID。
+  ///
+  /// @param entity JPA 实体
+  private void assignIdIfMissing(MeshDescriptorEntity entity) {
+    if (entity.getId() == null) {
+      entity.setId(IdWorker.getId());
+    }
+  }
+
+  /// 为没有 ID 的实体分配雪花 ID。
+  ///
+  /// @param entity JPA 实体
+  private void assignIdIfMissing(MeshTreeNumberEntity entity) {
+    if (entity.getId() == null) {
+      entity.setId(IdWorker.getId());
+    }
+  }
+
+  /// 为没有 ID 的实体分配雪花 ID。
+  ///
+  /// @param entity JPA 实体
+  private void assignIdIfMissing(MeshConceptEntity entity) {
+    if (entity.getId() == null) {
+      entity.setId(IdWorker.getId());
+    }
+  }
+
+  /// 为没有 ID 的实体分配雪花 ID。
+  ///
+  /// @param entity JPA 实体
+  private void assignIdIfMissing(MeshConceptRelationEntity entity) {
+    if (entity.getId() == null) {
+      entity.setId(IdWorker.getId());
+    }
+  }
+
+  /// 为没有 ID 的实体分配雪花 ID。
+  ///
+  /// @param entity JPA 实体
+  private void assignIdIfMissing(MeshEntryTermEntity entity) {
+    if (entity.getId() == null) {
+      entity.setId(IdWorker.getId());
+    }
+  }
+
+  /// 为没有 ID 的实体分配雪花 ID。
+  ///
+  /// @param entity JPA 实体
+  private void assignIdIfMissing(MeshEntryCombinationEntity entity) {
+    if (entity.getId() == null) {
+      entity.setId(IdWorker.getId());
+    }
   }
 }

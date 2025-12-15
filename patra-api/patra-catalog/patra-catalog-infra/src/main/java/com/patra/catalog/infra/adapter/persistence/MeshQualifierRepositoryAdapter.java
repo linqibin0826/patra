@@ -1,23 +1,30 @@
 package com.patra.catalog.infra.adapter.persistence;
 
-import com.baomidou.mybatisplus.extension.toolkit.Db;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.port.repository.MeshQualifierRepository;
-import com.patra.catalog.infra.persistence.converter.MeshQualifierConverter;
-import com.patra.catalog.infra.persistence.entity.MeshQualifierDO;
-import com.patra.catalog.infra.persistence.mapper.MeshQualifierMapper;
+import com.patra.catalog.infra.persistence.jpa.MeshQualifierJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.converter.MeshQualifierJpaConverter;
+import com.patra.catalog.infra.persistence.jpa.entity.MeshQualifierEntity;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-/// MeSH 限定词聚合根仓储实现。
+/// MeSH 限定词聚合根仓储实现（JPA 版本）。
 ///
 /// **职责**：
 ///
 /// - 管理 MeSH 限定词聚合根的持久化
-///   - 批量保存限定词到数据库
-///   - 聚合根与DO实体的转换
+/// - 批量保存限定词到数据库
+/// - 聚合根与 JPA Entity 的转换
+///
+/// **JPA 批量写入说明**：
+///
+/// - 使用 Spring Data JPA 的 `saveAll()` 进行批量保存
+/// - Hibernate 配置了 `batch_size=500`、`order_inserts=true` 优化批量性能
+/// - ID 由 `IdWorker` 雪花算法生成（与 MyBatis-Plus 保持一致）
+/// - 审计字段（createdAt 等）由 JPA Auditing 自动填充
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -26,8 +33,8 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class MeshQualifierRepositoryAdapter implements MeshQualifierRepository {
 
-  private final MeshQualifierMapper meshQualifierMapper;
-  private final MeshQualifierConverter meshQualifierConverter;
+  private final MeshQualifierJpaRepository jpaRepository;
+  private final MeshQualifierJpaConverter jpaConverter;
 
   @Override
   public void saveBatch(List<MeshQualifierAggregate> qualifiers) {
@@ -38,18 +45,30 @@ public class MeshQualifierRepositoryAdapter implements MeshQualifierRepository {
 
     log.info("批量保存限定词，数量：{}", qualifiers.size());
 
-    // 转换为 DO 列表
-    List<MeshQualifierDO> dataObjects =
-        qualifiers.stream().map(meshQualifierConverter::toDataObject).toList();
+    // 转换为 JPA Entity 列表，并为没有 ID 的实体分配雪花 ID
+    List<MeshQualifierEntity> entities =
+        qualifiers.stream().map(jpaConverter::toEntity).peek(this::assignIdIfMissing).toList();
 
-    // 批量插入（ID 和审计字段由 MyBatis-Plus 自动填充）
-    Db.saveBatch(dataObjects);
+    // 批量保存（审计字段由 JPA Auditing 自动填充）
+    jpaRepository.saveAll(entities);
 
-    log.info("限定词批量保存完成，共 {} 条", dataObjects.size());
+    log.info("限定词批量保存完成，共 {} 条", entities.size());
+  }
+
+  /// 为没有 ID 的实体分配雪花 ID。
+  ///
+  /// 由于 JPA 不像 MyBatis-Plus 自动分配 ID，
+  /// 需要在持久化前手动为新实体分配 ID。
+  ///
+  /// @param entity JPA 实体
+  private void assignIdIfMissing(MeshQualifierEntity entity) {
+    if (entity.getId() == null) {
+      entity.setId(IdWorker.getId());
+    }
   }
 
   @Override
   public boolean hasAnyData() {
-    return meshQualifierMapper.selectCount(null) > 0;
+    return jpaRepository.hasAnyData();
   }
 }
