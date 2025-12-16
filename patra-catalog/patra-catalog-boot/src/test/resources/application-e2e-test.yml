@@ -16,8 +16,6 @@ spring:
       - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
       - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchClientAutoConfiguration
       - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchRestClientAutoConfiguration
-      # 排除生产 MyBatis 配置（使用 TestMybatisPlusAutoConfiguration 以禁用 BlockAttackInnerInterceptor）
-      - com.patra.starter.mybatis.autoconfig.MybatisPluginAutoConfig
       # 排除对象存储配置（E2E 测试不需要 MinIO）
       - com.patra.starter.objectstorage.ObjectStorageAutoConfiguration
       - com.patra.starter.objectstorage.S3StorageAutoConfiguration

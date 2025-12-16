@@ -2,7 +2,6 @@ package com.patra.catalog.infra.batch.mesh;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.model.entity.MeshEntryTerm;
@@ -12,88 +11,91 @@ import com.patra.catalog.domain.model.enums.LexicalTag;
 import com.patra.catalog.domain.model.vo.mesh.ConceptRelation;
 import com.patra.catalog.domain.model.vo.mesh.EntryCombination;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
+import com.patra.catalog.infra.adapter.persistence.MeshDescriptorRepositoryAdapter;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
-import com.patra.catalog.infra.persistence.converter.MeshDescriptorConverter;
-import com.patra.catalog.infra.persistence.entity.MeshConceptDO;
-import com.patra.catalog.infra.persistence.entity.MeshConceptRelationDO;
-import com.patra.catalog.infra.persistence.entity.MeshDescriptorDO;
-import com.patra.catalog.infra.persistence.entity.MeshEntryCombinationDO;
-import com.patra.catalog.infra.persistence.entity.MeshEntryTermDO;
-import com.patra.catalog.infra.persistence.entity.MeshTreeNumberDO;
-import com.patra.catalog.infra.persistence.mapper.MeshConceptMapper;
-import com.patra.catalog.infra.persistence.mapper.MeshConceptRelationMapper;
-import com.patra.catalog.infra.persistence.mapper.MeshDescriptorMapper;
-import com.patra.catalog.infra.persistence.mapper.MeshEntryCombinationMapper;
-import com.patra.catalog.infra.persistence.mapper.MeshEntryTermMapper;
-import com.patra.catalog.infra.persistence.mapper.MeshTreeNumberMapper;
-import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
+import com.patra.catalog.infra.persistence.jpa.MeshConceptJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.MeshConceptRelationJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.MeshDescriptorJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.MeshEntryCombinationJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.MeshEntryTermJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.MeshTreeNumberJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.entity.MeshConceptEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.MeshConceptRelationEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.MeshDescriptorEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.MeshEntryCombinationEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.MeshEntryTermEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.MeshTreeNumberEntity;
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mybatis.spring.annotation.MapperScan;
-import org.springframework.batch.item.Chunk;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
-/// MeSH 主题词批量写入器集成测试。
+/// MeSH 主题词批量写入器集成测试（JPA 版本）。
 ///
 /// 使用 Testcontainers + MySQL 8 测试批量写入操作。
 ///
 /// **测试策略**：
 ///
 /// - 集成测试：使用真实 MySQL 数据库
-///   - 测试隔离：每个测试方法独立
-///   - TestContainers：自动启动和停止 MySQL 容器
-///   - 测试覆盖：write() 的各种场景
+/// - 测试隔离：每个测试方法独立，使用 @Transactional 自动回滚
+/// - TestContainers：自动启动和停止 MySQL 容器
+/// - 测试覆盖：write() 的各种场景
 ///
 /// **重点测试场景**：
 ///
 /// - write() 单个 Descriptor：验证主表和子表数据正确写入
-///   - write() 批量 Descriptor：验证批量写入正确性
-///   - write() 空 Chunk：验证空数据处理
-///   - write() 含全部关联实体：验证 TreeNumber/Concept/EntryTerm 完整写入
+/// - write() 批量 Descriptor：验证批量写入正确性
+/// - write() 空 Chunk：验证空数据处理
+/// - write() 含全部关联实体：验证 TreeNumber/Concept/EntryTerm 完整写入
 ///
 /// @author linqibin
 /// @since 0.1.0
-@MybatisPlusTest
+@DataJpaTest
 @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   MeshDescriptorItemWriter.class,
-  MeshDescriptorConverter.class,
-  TestMybatisPlusAutoConfiguration.class
+  MeshDescriptorRepositoryAdapter.class,
+  JpaAuditingConfig.class,
+  JacksonAutoConfiguration.class
 })
-@MapperScan("com.patra.catalog.infra.persistence.mapper")
+@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.jpa.converter")
 @ActiveProfiles("test")
-@DisplayName("MeshDescriptorItemWriter 集成测试")
+@DisplayName("MeshDescriptorItemWriter 集成测试（JPA）")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
 class MeshDescriptorItemWriterIT {
 
   @Autowired private MeshDescriptorItemWriter meshDescriptorItemWriter;
 
-  @Autowired private MeshDescriptorMapper descriptorMapper;
-  @Autowired private MeshTreeNumberMapper treeNumberMapper;
-  @Autowired private MeshConceptMapper conceptMapper;
-  @Autowired private MeshConceptRelationMapper conceptRelationMapper;
-  @Autowired private MeshEntryTermMapper entryTermMapper;
-  @Autowired private MeshEntryCombinationMapper entryCombinationMapper;
+  @Autowired private MeshDescriptorJpaRepository descriptorJpaRepository;
+  @Autowired private MeshTreeNumberJpaRepository treeNumberJpaRepository;
+  @Autowired private MeshConceptJpaRepository conceptJpaRepository;
+  @Autowired private MeshConceptRelationJpaRepository conceptRelationJpaRepository;
+  @Autowired private MeshEntryTermJpaRepository entryTermJpaRepository;
+  @Autowired private MeshEntryCombinationJpaRepository entryCombinationJpaRepository;
 
   @Test
   @DisplayName("write() 空 Chunk - 应该不抛出异常，直接返回")
   void write_emptyChunk_shouldReturnWithoutError() throws Exception {
     // Given: 空 Chunk
-    Chunk<MeshDescriptorAggregate> emptyChunk = new Chunk<>();
+    org.springframework.batch.item.Chunk<MeshDescriptorAggregate> emptyChunk =
+        new org.springframework.batch.item.Chunk<>();
 
     // When: 写入空 Chunk
     meshDescriptorItemWriter.write(emptyChunk);
 
     // Then: 不抛出异常，数据库应该没有记录
-    long count = descriptorMapper.selectCount(null);
+    long count = descriptorJpaRepository.count();
     assertThat(count).isEqualTo(0);
   }
 
@@ -103,35 +105,36 @@ class MeshDescriptorItemWriterIT {
     // Given: 创建包含所有关联实体的 Descriptor
     MeshDescriptorAggregate descriptor = createTestDescriptor(1);
 
-    Chunk<MeshDescriptorAggregate> chunk = new Chunk<>(List.of(descriptor));
+    org.springframework.batch.item.Chunk<MeshDescriptorAggregate> chunk =
+        new org.springframework.batch.item.Chunk<>(List.of(descriptor));
 
     // When: 写入 Chunk
     meshDescriptorItemWriter.write(chunk);
 
     // Then: 验证主表数据
-    long descriptorCount = descriptorMapper.selectCount(null);
+    long descriptorCount = descriptorJpaRepository.count();
     assertThat(descriptorCount).isEqualTo(1);
 
-    MeshDescriptorDO savedDescriptor = descriptorMapper.selectList(null).get(0);
+    MeshDescriptorEntity savedDescriptor = descriptorJpaRepository.findAll().get(0);
     assertThat(savedDescriptor.getUi()).isEqualTo("D000001");
     assertThat(savedDescriptor.getName()).isEqualTo("Test Descriptor 1");
     assertThat(savedDescriptor.getDescriptorClass()).isEqualTo("1");
     assertThat(savedDescriptor.getMeshVersion()).isEqualTo("2025");
 
     // Then: 验证 TreeNumber 子表
-    long treeNumberCount = treeNumberMapper.selectCount(null);
+    long treeNumberCount = treeNumberJpaRepository.count();
     assertThat(treeNumberCount).isEqualTo(2);
 
-    List<MeshTreeNumberDO> treeNumbers = treeNumberMapper.selectList(null);
+    List<MeshTreeNumberEntity> treeNumbers = treeNumberJpaRepository.findAll();
     assertThat(treeNumbers)
-        .extracting(MeshTreeNumberDO::getTreeNumber)
+        .extracting(MeshTreeNumberEntity::getTreeNumber)
         .containsExactlyInAnyOrder("C01.001", "D01.001");
 
     // Then: 验证 Concept 子表
-    long conceptCount = conceptMapper.selectCount(null);
+    long conceptCount = conceptJpaRepository.count();
     assertThat(conceptCount).isEqualTo(1);
 
-    MeshConceptDO concept = conceptMapper.selectList(null).get(0);
+    MeshConceptEntity concept = conceptJpaRepository.findAll().get(0);
     assertThat(concept.getConceptUi()).isEqualTo("M0000001");
     assertThat(concept.getIsPreferred()).isTrue();
     // 验证 RelatedRegistryNumbers 被正确持久化
@@ -139,21 +142,21 @@ class MeshDescriptorItemWriterIT {
         .containsExactlyInAnyOrder("EC 1.1.1.1", "EC 2.2.2.1");
 
     // Then: 验证 EntryTerm 子表
-    long entryTermCount = entryTermMapper.selectCount(null);
+    long entryTermCount = entryTermJpaRepository.count();
     assertThat(entryTermCount).isEqualTo(2);
 
-    List<MeshEntryTermDO> entryTerms = entryTermMapper.selectList(null);
+    List<MeshEntryTermEntity> entryTerms = entryTermJpaRepository.findAll();
     assertThat(entryTerms)
-        .extracting(MeshEntryTermDO::getTerm)
+        .extracting(MeshEntryTermEntity::getTerm)
         .containsExactlyInAnyOrder("Synonym 1", "Synonym 2");
 
     // Then: 验证 EntryCombination 子表
-    long entryCombinationCount = entryCombinationMapper.selectCount(null);
+    long entryCombinationCount = entryCombinationJpaRepository.count();
     assertThat(entryCombinationCount).isEqualTo(2);
 
-    List<MeshEntryCombinationDO> entryCombinations = entryCombinationMapper.selectList(null);
+    List<MeshEntryCombinationEntity> entryCombinations = entryCombinationJpaRepository.findAll();
     // 验证第一个 EntryCombination（有 ECOUT Qualifier）
-    MeshEntryCombinationDO ec1 =
+    MeshEntryCombinationEntity ec1 =
         entryCombinations.stream()
             .filter(ec -> ec.getEcinQualifierUi().equals("Q000188"))
             .findFirst()
@@ -163,7 +166,7 @@ class MeshDescriptorItemWriterIT {
     assertThat(ec1.getEcoutQualifierUi()).isEqualTo("Q000628");
 
     // 验证第二个 EntryCombination（无 ECOUT Qualifier）
-    MeshEntryCombinationDO ec2 =
+    MeshEntryCombinationEntity ec2 =
         entryCombinations.stream()
             .filter(ec -> ec.getEcinQualifierUi().equals("Q000175"))
             .findFirst()
@@ -173,12 +176,12 @@ class MeshDescriptorItemWriterIT {
     assertThat(ec2.getEcoutQualifierUi()).isNull();
 
     // Then: 验证 ConceptRelation 子表
-    long conceptRelationCount = conceptRelationMapper.selectCount(null);
+    long conceptRelationCount = conceptRelationJpaRepository.count();
     assertThat(conceptRelationCount).isEqualTo(2);
 
-    List<MeshConceptRelationDO> conceptRelations = conceptRelationMapper.selectList(null);
+    List<MeshConceptRelationEntity> conceptRelations = conceptRelationJpaRepository.findAll();
     // 验证首选概念的关系（relationName = NRW）
-    MeshConceptRelationDO cr1 =
+    MeshConceptRelationEntity cr1 =
         conceptRelations.stream()
             .filter(cr -> "NRW".equals(cr.getRelationName()))
             .findFirst()
@@ -189,7 +192,7 @@ class MeshDescriptorItemWriterIT {
     assertThat(cr1.getConcept2Ui()).isEqualTo("M0000002");
 
     // 验证 relationName 为 null 的关系
-    MeshConceptRelationDO cr2 =
+    MeshConceptRelationEntity cr2 =
         conceptRelations.stream()
             .filter(cr -> cr.getRelationName() == null)
             .findFirst()
@@ -206,38 +209,39 @@ class MeshDescriptorItemWriterIT {
     List<MeshDescriptorAggregate> descriptors =
         List.of(createTestDescriptor(1), createTestDescriptor(2), createTestDescriptor(3));
 
-    Chunk<MeshDescriptorAggregate> chunk = new Chunk<>(descriptors);
+    org.springframework.batch.item.Chunk<MeshDescriptorAggregate> chunk =
+        new org.springframework.batch.item.Chunk<>(descriptors);
 
     // When: 批量写入
     meshDescriptorItemWriter.write(chunk);
 
     // Then: 验证主表数据
-    long descriptorCount = descriptorMapper.selectCount(null);
+    long descriptorCount = descriptorJpaRepository.count();
     assertThat(descriptorCount).isEqualTo(3);
 
-    List<MeshDescriptorDO> savedDescriptors = descriptorMapper.selectList(null);
+    List<MeshDescriptorEntity> savedDescriptors = descriptorJpaRepository.findAll();
     assertThat(savedDescriptors)
-        .extracting(MeshDescriptorDO::getUi)
+        .extracting(MeshDescriptorEntity::getUi)
         .containsExactlyInAnyOrder("D000001", "D000002", "D000003");
 
     // Then: 验证子表数据（每个 Descriptor 2 个 TreeNumber）
-    long treeNumberCount = treeNumberMapper.selectCount(null);
+    long treeNumberCount = treeNumberJpaRepository.count();
     assertThat(treeNumberCount).isEqualTo(6);
 
     // Then: 验证子表数据（每个 Descriptor 1 个 Concept）
-    long conceptCount = conceptMapper.selectCount(null);
+    long conceptCount = conceptJpaRepository.count();
     assertThat(conceptCount).isEqualTo(3);
 
     // Then: 验证子表数据（每个 Descriptor 2 个 EntryTerm）
-    long entryTermCount = entryTermMapper.selectCount(null);
+    long entryTermCount = entryTermJpaRepository.count();
     assertThat(entryTermCount).isEqualTo(6);
 
     // Then: 验证子表数据（每个 Descriptor 2 个 EntryCombination）
-    long entryCombinationCount = entryCombinationMapper.selectCount(null);
+    long entryCombinationCount = entryCombinationJpaRepository.count();
     assertThat(entryCombinationCount).isEqualTo(6);
 
     // Then: 验证子表数据（每个 Descriptor 2 个 ConceptRelation）
-    long conceptRelationCount = conceptRelationMapper.selectCount(null);
+    long conceptRelationCount = conceptRelationJpaRepository.count();
     assertThat(conceptRelationCount).isEqualTo(6);
   }
 
@@ -250,34 +254,35 @@ class MeshDescriptorItemWriterIT {
                 MeshUI.descriptorOf(99), "Minimal Descriptor", DescriptorClass.TOPICAL, "2025")
             .addTreeNumber(MeshTreeNumber.create("A01.001", true));
 
-    Chunk<MeshDescriptorAggregate> chunk = new Chunk<>(List.of(descriptor));
+    org.springframework.batch.item.Chunk<MeshDescriptorAggregate> chunk =
+        new org.springframework.batch.item.Chunk<>(List.of(descriptor));
 
     // When: 写入
     meshDescriptorItemWriter.write(chunk);
 
     // Then: 验证主表数据
-    long descriptorCount = descriptorMapper.selectCount(null);
+    long descriptorCount = descriptorJpaRepository.count();
     assertThat(descriptorCount).isEqualTo(1);
 
-    MeshDescriptorDO savedDescriptor = descriptorMapper.selectList(null).get(0);
+    MeshDescriptorEntity savedDescriptor = descriptorJpaRepository.findAll().get(0);
     assertThat(savedDescriptor.getUi()).isEqualTo("D000099");
     assertThat(savedDescriptor.getScopeNote()).isNull();
 
     // Then: 验证 TreeNumber
-    long treeNumberCount = treeNumberMapper.selectCount(null);
+    long treeNumberCount = treeNumberJpaRepository.count();
     assertThat(treeNumberCount).isEqualTo(1);
 
     // Then: 验证无 Concept、ConceptRelation、EntryTerm 和 EntryCombination
-    long conceptCount = conceptMapper.selectCount(null);
+    long conceptCount = conceptJpaRepository.count();
     assertThat(conceptCount).isEqualTo(0);
 
-    long conceptRelationCount = conceptRelationMapper.selectCount(null);
+    long conceptRelationCount = conceptRelationJpaRepository.count();
     assertThat(conceptRelationCount).isEqualTo(0);
 
-    long entryTermCount = entryTermMapper.selectCount(null);
+    long entryTermCount = entryTermJpaRepository.count();
     assertThat(entryTermCount).isEqualTo(0);
 
-    long entryCombinationCount = entryCombinationMapper.selectCount(null);
+    long entryCombinationCount = entryCombinationJpaRepository.count();
     assertThat(entryCombinationCount).isEqualTo(0);
   }
 
@@ -287,30 +292,31 @@ class MeshDescriptorItemWriterIT {
     // Given: 创建一个 Descriptor
     MeshDescriptorAggregate descriptor = createTestDescriptor(1);
 
-    Chunk<MeshDescriptorAggregate> chunk = new Chunk<>(List.of(descriptor));
+    org.springframework.batch.item.Chunk<MeshDescriptorAggregate> chunk =
+        new org.springframework.batch.item.Chunk<>(List.of(descriptor));
 
     // When: 写入
     meshDescriptorItemWriter.write(chunk);
 
     // Then: 获取主表 UI
-    MeshDescriptorDO savedDescriptor = descriptorMapper.selectList(null).get(0);
+    MeshDescriptorEntity savedDescriptor = descriptorJpaRepository.findAll().get(0);
     String descriptorUi = savedDescriptor.getUi();
     assertThat(descriptorUi).isNotNull();
 
     // Then: 验证所有子表的 descriptorUi 关联键
-    List<MeshTreeNumberDO> treeNumbers = treeNumberMapper.selectList(null);
+    List<MeshTreeNumberEntity> treeNumbers = treeNumberJpaRepository.findAll();
     assertThat(treeNumbers).allMatch(tn -> tn.getDescriptorUi().equals(descriptorUi));
 
-    List<MeshConceptDO> concepts = conceptMapper.selectList(null);
+    List<MeshConceptEntity> concepts = conceptJpaRepository.findAll();
     assertThat(concepts).allMatch(c -> c.getDescriptorUi().equals(descriptorUi));
 
-    List<MeshEntryTermDO> entryTerms = entryTermMapper.selectList(null);
+    List<MeshEntryTermEntity> entryTerms = entryTermJpaRepository.findAll();
     assertThat(entryTerms).allMatch(et -> et.getDescriptorUi().equals(descriptorUi));
 
-    List<MeshEntryCombinationDO> entryCombinations = entryCombinationMapper.selectList(null);
+    List<MeshEntryCombinationEntity> entryCombinations = entryCombinationJpaRepository.findAll();
     assertThat(entryCombinations).allMatch(ec -> ec.getDescriptorUi().equals(descriptorUi));
 
-    List<MeshConceptRelationDO> conceptRelations = conceptRelationMapper.selectList(null);
+    List<MeshConceptRelationEntity> conceptRelations = conceptRelationJpaRepository.findAll();
     assertThat(conceptRelations).allMatch(cr -> cr.getDescriptorUi().equals(descriptorUi));
   }
 
@@ -348,7 +354,7 @@ class MeshDescriptorItemWriterIT {
             .addRelatedRegistryNumber("EC 2.2.2." + index);
     descriptor.addConcept(concept);
 
-    // 添加 EntryTerm（每个 Descriptor 2 个）π
+    // 添加 EntryTerm（每个 Descriptor 2 个）
     descriptor.addEntryTerm(
         MeshEntryTerm.create(
             MeshUI.termOf(index * 10 + 1), "Synonym 1", LexicalTag.PEF, true, true, true, false));

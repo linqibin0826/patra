@@ -39,12 +39,6 @@
             <artifactId>patra-spring-boot-starter-jpa</artifactId>
         </dependency>
 
-        <!-- MyBatis 持久化（MySQL）- 迁移过渡期保留 -->
-        <dependency>
-            <groupId>com.patra</groupId>
-            <artifactId>patra-spring-boot-starter-mybatis</artifactId>
-        </dependency>
-
         <!-- Spring Batch 批处理 -->
         <dependency>
             <groupId>com.patra</groupId>

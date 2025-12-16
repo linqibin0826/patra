@@ -233,9 +233,10 @@ public abstract class MeshDescriptorJpaConverter {
   /// @param relation 概念关系值对象
   /// @param descriptorUi 主题词 UI
   /// @param conceptUi 所属概念 UI
+  /// @param isPreferred 所属概念是否为首选概念
   /// @return JPA 实体
   public MeshConceptRelationEntity toConceptRelationEntity(
-      ConceptRelation relation, String descriptorUi, String conceptUi) {
+      ConceptRelation relation, String descriptorUi, String conceptUi, boolean isPreferred) {
     if (relation == null) {
       return null;
     }
@@ -245,6 +246,7 @@ public abstract class MeshDescriptorJpaConverter {
     entity.setRelationName(relation.relationName());
     entity.setConcept1Ui(relation.concept1Ui().ui());
     entity.setConcept2Ui(relation.concept2Ui().ui());
+    entity.setIsPreferred(isPreferred);
     return entity;
   }
 

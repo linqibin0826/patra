@@ -8,9 +8,8 @@ import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.port.repository.VenueRepository;
-import com.patra.catalog.infra.persistence.entity.VenueDO;
-import com.patra.catalog.infra.persistence.mapper.VenueIdentifierMapper;
-import com.patra.catalog.infra.persistence.mapper.VenueMapper;
+import com.patra.catalog.infra.persistence.jpa.VenueJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.entity.VenueEntity;
 import com.patra.catalog.integration.config.CatalogMySQLContainerInitializer;
 import java.util.List;
 import java.util.Set;
@@ -30,11 +29,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /// VenueRepository.updateBatch() E2E 测试。
 ///
-/// 验证 `Db.saveBatch()` 和 `Db.updateBatchById()` 在完整 Spring Boot 环境下的事务行为。
+/// 验证 JPA `saveAll()` 在完整 Spring Boot 环境下的事务行为。
 ///
 /// ### 测试目的
 ///
-/// 验证 MyBatis-Plus 的 `Db.saveBatch()` 和 `Db.updateBatchById()` 在 Spring 事务管理下的行为：
+/// 验证 JPA 的 `saveAll()` 在 Spring 事务管理下的行为：
 ///
 /// 1. **数据持久化**：批量操作能正确写入数据库
 /// 2. **事务参与性**：在 `TransactionTemplate` 内执行时，批量操作参与 Spring 事务
@@ -42,25 +41,18 @@ import org.springframework.transaction.support.TransactionTemplate;
 ///
 /// ### 技术说明
 ///
-/// **关于 `@MybatisPlusTest` 切片测试的限制**：
+/// **JPA 事务行为**：
 ///
-/// 在 `@MybatisPlusTest` 切片测试中，测试方法的 `@Transactional` 注解创建的事务
-/// 与 `Db.saveBatch()` 内部的 BATCH SqlSession 之间存在隔离问题，导致：
-/// - 批量插入的数据在事务提交前不可见
-/// - 测试结束时的自动回滚无法清理批量操作的数据
-///
-/// **E2E 测试中的正确行为**：
-///
-/// 在完整 Spring Boot 环境下，当使用 `TransactionTemplate` 或 `@Transactional`
-/// 包裹业务代码时，`Db.saveBatch()` 会参与该事务，因为：
-/// - MyBatis-Spring 的 `SqlSessionTemplate` 会复用当前事务的 Connection
+/// Spring Data JPA 的 `saveAll()` 会自动参与当前 Spring 事务，
+/// 使用 `TransactionTemplate` 或 `@Transactional` 包裹时：
+/// - EntityManager 会复用当前事务的 Connection
 /// - 这确保了批量操作与其他数据库操作在同一个事务边界内
 ///
 /// ### 测试场景
 ///
-/// - 增量添加标识符（Db.saveBatch）
-/// - 增量删除标识符（deleteByBusinessKeys）
-/// - 更新主表字段（Db.updateBatchById）
+/// - 增量添加标识符（saveAll）
+/// - 增量删除标识符（deleteAllByIdInBatch）
+/// - 更新主表字段
 /// - 混合变更（添加 + 删除 + 更新）
 /// - 多聚合根批量操作
 /// - **事务回滚**（验证异常时数据回滚）
@@ -83,8 +75,7 @@ class VenueRepositoryUpdateBatchE2E {
 
   @Autowired private VenueRepository venueRepository;
 
-  @Autowired private VenueMapper venueMapper;
-  @Autowired private VenueIdentifierMapper venueIdentifierMapper;
+  @Autowired private VenueJpaRepository venueJpaRepository;
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private TransactionTemplate transactionTemplate;
 
@@ -100,11 +91,11 @@ class VenueRepositoryUpdateBatchE2E {
     jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS=1");
   }
 
-  // ========== Db.saveBatch 测试 ==========
+  // ========== JPA saveAll 测试 ==========
 
   @Nested
-  @DisplayName("Db.saveBatch 事务测试")
-  class DbSaveBatchTests {
+  @DisplayName("JPA saveAll 事务测试")
+  class JpaSaveAllTests {
 
     @Test
     @DisplayName("应该正确持久化新增的标识符")
@@ -272,8 +263,7 @@ class VenueRepositoryUpdateBatchE2E {
 
   /// 事务回滚测试。
   ///
-  /// **核心问题验证**：`Db.saveBatch()` 使用独立的 BATCH SqlSession，
-  /// 根据 MyBatis-Plus 官方文档，默认不参与 Spring 事务管理。
+  /// **核心问题验证**：JPA 的 `saveAll()` 在 Spring 事务管理下的行为。
   ///
   /// 本测试验证：在 Spring 事务内执行 `updateBatch()` 后抛出异常，
   /// 数据是否正确回滚。
@@ -282,7 +272,7 @@ class VenueRepositoryUpdateBatchE2E {
   class TransactionRollbackTests {
 
     @Test
-    @DisplayName("Spring 事务内抛出异常时，Db.saveBatch() 的数据应该回滚")
+    @DisplayName("Spring 事务内抛出异常时，JPA saveAll() 的数据应该回滚")
     void shouldRollbackSaveBatchWhenExceptionThrown() {
       // Given：插入一个载体
       VenueAggregate venue = createVenueAggregate("S1", "Journal A");
@@ -328,7 +318,7 @@ class VenueRepositoryUpdateBatchE2E {
               Integer.class,
               venue.getId());
       assertThat(finalCount)
-          .as("事务回滚后，标识符数量应恢复到初始值（如果此断言失败，说明 Db.saveBatch() 未参与 Spring 事务）")
+          .as("事务回滚后，标识符数量应恢复到初始值（如果此断言失败，说明 JPA saveAll() 未参与 Spring 事务）")
           .isEqualTo(initialIdentifierCount);
     }
 
@@ -380,7 +370,7 @@ class VenueRepositoryUpdateBatchE2E {
               Integer.class,
               venue.getId());
       assertThat(finalCount)
-          .as("事务回滚后，标识符数量应恢复到初始值（如果此断言失败，说明 deleteByBusinessKeys 未参与 Spring 事务）")
+          .as("事务回滚后，标识符数量应恢复到初始值（如果此断言失败，说明 JPA 删除操作未参与 Spring 事务）")
           .isEqualTo(initialIdentifierCount);
     }
 
@@ -460,7 +450,8 @@ class VenueRepositoryUpdateBatchE2E {
       venueRepository.insertAll(List.of(venue));
 
       // Then: 验证主表的冗余字段已正确设置
-      VenueDO saved = venueMapper.selectById(venue.getId());
+      VenueEntity saved = venueJpaRepository.findById(venue.getId().value()).orElse(null);
+      assertThat(saved).isNotNull();
       assertThat(saved.getOpenalexId()).isEqualTo("S123456");
       assertThat(saved.getIssnL()).isEqualTo("1234-5678");
       assertThat(saved.getNlmId()).isEqualTo("NLM001");
@@ -477,7 +468,8 @@ class VenueRepositoryUpdateBatchE2E {
       venueRepository.insertAll(List.of(venue));
 
       // Then: NLM 和 ISSN-L 冗余字段应为 null
-      VenueDO saved = venueMapper.selectById(venue.getId());
+      VenueEntity saved = venueJpaRepository.findById(venue.getId().value()).orElse(null);
+      assertThat(saved).isNotNull();
       assertThat(saved.getOpenalexId()).isEqualTo("S999");
       assertThat(saved.getIssnL()).isNull();
       assertThat(saved.getNlmId()).isNull();
@@ -496,7 +488,8 @@ class VenueRepositoryUpdateBatchE2E {
       venueRepository.updateBatch(List.of(loaded));
 
       // Then: 验证 NLM 冗余字段已更新
-      VenueDO saved = venueMapper.selectById(venue.getId());
+      VenueEntity saved = venueJpaRepository.findById(venue.getId().value()).orElse(null);
+      assertThat(saved).isNotNull();
       assertThat(saved.getNlmId()).isEqualTo("NLM999");
     }
   }

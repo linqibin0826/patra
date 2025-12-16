@@ -2,7 +2,6 @@ package com.patra.catalog.infra.batch.venue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
@@ -11,29 +10,29 @@ import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
 import com.patra.catalog.infra.adapter.persistence.VenueRepositoryAdapter;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
-import com.patra.catalog.infra.persistence.entity.VenueDO;
-import com.patra.catalog.infra.persistence.entity.VenueIdentifierDO;
-import com.patra.catalog.infra.persistence.entity.VenuePublicationStatsDO;
-import com.patra.catalog.infra.persistence.mapper.VenueIdentifierMapper;
-import com.patra.catalog.infra.persistence.mapper.VenueMapper;
-import com.patra.catalog.infra.persistence.mapper.VenuePublicationStatsMapper;
-import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
+import com.patra.catalog.infra.persistence.jpa.VenueIdentifierJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.VenueJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.VenuePublicationStatsJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.entity.VenueEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.VenueIdentifierEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.VenuePublicationStatsEntity;
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mybatis.spring.annotation.MapperScan;
-import org.springframework.batch.item.Chunk;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
-/// VenueInitializeItemWriter 集成测试。
+/// VenueInitializeItemWriter 集成测试（纯 JPA 版本）。
 ///
 /// 使用 Testcontainers + MySQL 8 测试批量写入操作。
 ///
@@ -63,26 +62,26 @@ import org.springframework.test.context.ContextConfiguration;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@MybatisPlusTest
+@DataJpaTest
 @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   VenueInitializeItemWriter.class,
   VenueRepositoryAdapter.class,
-  TestMybatisPlusAutoConfiguration.class
+  JpaAuditingConfig.class,
+  JacksonAutoConfiguration.class
 })
-@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.converter")
-@MapperScan("com.patra.catalog.infra.persistence.mapper")
+@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.jpa.converter")
 @ActiveProfiles("test")
-@DisplayName("VenueInitializeItemWriter 集成测试")
+@DisplayName("VenueInitializeItemWriter 集成测试（JPA）")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
 class VenueInitializeItemWriterIT {
 
   @Autowired private VenueInitializeItemWriter writer;
 
-  @Autowired private VenueMapper venueMapper;
-  @Autowired private VenueIdentifierMapper identifierMapper;
-  @Autowired private VenuePublicationStatsMapper metricsMapper;
+  @Autowired private VenueJpaRepository venueJpaRepository;
+  @Autowired private VenueIdentifierJpaRepository identifierJpaRepository;
+  @Autowired private VenuePublicationStatsJpaRepository metricsRepository;
 
   /// 创建测试用的 VenueParseResult（无年度指标）。
   ///
@@ -133,26 +132,26 @@ class VenueInitializeItemWriterIT {
       VenueParseResult result2 = createParseResult("S2", "Journal B", "2222-2222");
 
       // When
-      writer.write(new Chunk<>(List.of(result1, result2)));
+      writer.write(new org.springframework.batch.item.Chunk<>(List.of(result1, result2)));
 
       // Then: 验证主表
-      long venueCount = venueMapper.selectCount(null);
+      long venueCount = venueJpaRepository.count();
       assertThat(venueCount).isEqualTo(2);
 
-      List<VenueDO> venues = venueMapper.selectList(null);
+      List<VenueEntity> venues = venueJpaRepository.findAll();
       assertThat(venues)
-          .extracting(VenueDO::getDisplayName)
+          .extracting(VenueEntity::getDisplayName)
           .containsExactlyInAnyOrder("Journal A", "Journal B");
 
       // Then: 验证标识符子表（每个 Venue 有 OpenAlex + ISSN-L 共 2 个标识符）
-      long identifierCount = identifierMapper.selectCount(null);
+      long identifierCount = identifierJpaRepository.count();
       assertThat(identifierCount).isEqualTo(4);
 
       // 验证 OpenAlex ID 标识符存在
-      List<VenueIdentifierDO> identifiers = identifierMapper.selectList(null);
+      List<VenueIdentifierEntity> identifiers = identifierJpaRepository.findAll();
       assertThat(identifiers)
           .filteredOn(id -> id.getIdentifierType().equals(VenueIdentifierType.OPENALEX.name()))
-          .extracting(VenueIdentifierDO::getIdentifierValue)
+          .extracting(VenueIdentifierEntity::getIdentifierValue)
           .containsExactlyInAnyOrder("S1", "S2");
     }
 
@@ -160,10 +159,10 @@ class VenueInitializeItemWriterIT {
     @DisplayName("空 Chunk - 不应该执行任何操作")
     void write_emptyChunk_shouldDoNothing() throws Exception {
       // When
-      writer.write(new Chunk<>());
+      writer.write(new org.springframework.batch.item.Chunk<>());
 
       // Then
-      long venueCount = venueMapper.selectCount(null);
+      long venueCount = venueJpaRepository.count();
       assertThat(venueCount).isEqualTo(0);
     }
   }
@@ -179,15 +178,15 @@ class VenueInitializeItemWriterIT {
       VenueParseResult result = createParseResultWithIdentifiers("S1", "Journal A", "3333-3333");
 
       // When
-      writer.write(new Chunk<>(List.of(result)));
+      writer.write(new org.springframework.batch.item.Chunk<>(List.of(result)));
 
       // Then: 应该插入标识符（OpenAlex + ISSN-L + 2 ISSN = 4）
-      long identifierCount = identifierMapper.selectCount(null);
+      long identifierCount = identifierJpaRepository.count();
       assertThat(identifierCount).isEqualTo(4);
 
-      List<VenueIdentifierDO> identifiers = identifierMapper.selectList(null);
+      List<VenueIdentifierEntity> identifiers = identifierJpaRepository.findAll();
       assertThat(identifiers)
-          .extracting(VenueIdentifierDO::getIdentifierType)
+          .extracting(VenueIdentifierEntity::getIdentifierType)
           .containsExactlyInAnyOrder("OPENALEX", "ISSN_L", "ISSN", "ISSN");
     }
 
@@ -198,18 +197,18 @@ class VenueInitializeItemWriterIT {
       VenueParseResult result = createParseResultWithMetrics("S1", "Journal A", "4444-4444");
 
       // When
-      writer.write(new Chunk<>(List.of(result)));
+      writer.write(new org.springframework.batch.item.Chunk<>(List.of(result)));
 
       // Then: 应该插入年度指标
-      long metricsCount = metricsMapper.selectCount(null);
+      long metricsCount = metricsRepository.count();
       assertThat(metricsCount).isEqualTo(2);
 
-      List<VenuePublicationStatsDO> metrics = metricsMapper.selectList(null);
+      List<VenuePublicationStatsEntity> metrics = metricsRepository.findAll();
       assertThat(metrics)
-          .extracting(VenuePublicationStatsDO::getYear)
+          .extracting(VenuePublicationStatsEntity::getYear)
           .containsExactlyInAnyOrder((short) 2024, (short) 2023);
       assertThat(metrics)
-          .extracting(VenuePublicationStatsDO::getWorksCount)
+          .extracting(VenuePublicationStatsEntity::getWorksCount)
           .containsExactlyInAnyOrder(100, 90);
     }
   }
@@ -225,18 +224,18 @@ class VenueInitializeItemWriterIT {
       VenueParseResult result = createParseResultWithMetrics("S1", "Journal A", "5555-5555");
 
       // When
-      writer.write(new Chunk<>(List.of(result)));
+      writer.write(new org.springframework.batch.item.Chunk<>(List.of(result)));
 
       // Then: 获取主表 ID
-      VenueDO savedVenue = venueMapper.selectList(null).get(0);
+      VenueEntity savedVenue = venueJpaRepository.findAll().get(0);
       Long venueId = savedVenue.getId();
       assertThat(venueId).isNotNull();
 
       // Then: 验证子表的外键
-      List<VenueIdentifierDO> identifiers = identifierMapper.selectList(null);
+      List<VenueIdentifierEntity> identifiers = identifierJpaRepository.findAll();
       assertThat(identifiers).allMatch(i -> i.getVenueId().equals(venueId));
 
-      List<VenuePublicationStatsDO> metrics = metricsMapper.selectList(null);
+      List<VenuePublicationStatsEntity> metrics = metricsRepository.findAll();
       assertThat(metrics).allMatch(m -> m.getVenueId().equals(venueId));
     }
   }
