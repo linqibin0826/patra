@@ -15,16 +15,8 @@ import com.patra.catalog.domain.model.vo.venue.Society;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
-import com.patra.catalog.infra.persistence.converter.VenueIndexingHistoryConverter;
-import com.patra.catalog.infra.persistence.converter.VenueMeshConverter;
-import com.patra.catalog.infra.persistence.converter.VenuePublicationStatsConverter;
-import com.patra.catalog.infra.persistence.converter.VenueRelationConverter;
 import com.patra.catalog.infra.persistence.jpa.VenueIdentifierJpaRepository;
 import com.patra.catalog.infra.persistence.jpa.VenueJpaRepository;
-import com.patra.catalog.infra.persistence.mapper.VenueIndexingHistoryMapper;
-import com.patra.catalog.infra.persistence.mapper.VenueMeshMapper;
-import com.patra.catalog.infra.persistence.mapper.VenuePublicationStatsMapper;
-import com.patra.catalog.infra.persistence.mapper.VenueRelationMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.math.BigDecimal;
@@ -46,9 +38,8 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-/// VenueRepositoryAdapter 集成测试（JPA 版本）。
+/// VenueRepositoryAdapter 集成测试（纯 JPA 版本）。
 ///
 /// 使用 Testcontainers + MySQL 8 测试 Venue 仓储操作。
 ///
@@ -58,11 +49,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 /// - 测试隔离：每个测试方法独立，使用 @Transactional 自动回滚
 /// - TestContainers：自动启动和停止 MySQL 容器
 /// - 测试覆盖：hasAnyData、insertAll（聚合根批量插入）、findExistingIssnLs、findByIssnLs、findByNlmIds、updateBatch
-///
-/// **混合架构说明**：
-///
-/// - 核心聚合（VenueAggregate、VenueIdentifier）使用 JPA
-/// - 补充数据（VenuePublicationStats、VenueMesh 等）暂保留 MyBatis，本测试使用 Mock
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -80,16 +66,6 @@ class VenueRepositoryAdapterIT {
 
   @Autowired private VenueJpaRepository venueJpaRepository;
   @Autowired private VenueIdentifierJpaRepository identifierJpaRepository;
-
-  // ========== MyBatis 组件 Mock（补充数据功能暂不测试） ==========
-  @MockitoBean private VenuePublicationStatsMapper publicationStatsMapper;
-  @MockitoBean private VenueMeshMapper meshMapper;
-  @MockitoBean private VenueRelationMapper relationMapper;
-  @MockitoBean private VenueIndexingHistoryMapper indexingHistoryMapper;
-  @MockitoBean private VenuePublicationStatsConverter publicationStatsConverter;
-  @MockitoBean private VenueMeshConverter meshConverter;
-  @MockitoBean private VenueRelationConverter relationConverter;
-  @MockitoBean private VenueIndexingHistoryConverter indexingHistoryConverter;
 
   // ========== hasAnyData() 测试 ==========
 

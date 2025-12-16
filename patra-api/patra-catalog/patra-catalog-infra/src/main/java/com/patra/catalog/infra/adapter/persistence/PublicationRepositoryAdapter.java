@@ -1,12 +1,12 @@
 package com.patra.catalog.infra.adapter.persistence;
 
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import com.patra.catalog.domain.model.vo.publication.PublicationId;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.infra.persistence.jpa.PublicationJpaRepository;
 import com.patra.catalog.infra.persistence.jpa.converter.PublicationJpaConverter;
 import com.patra.catalog.infra.persistence.jpa.entity.PublicationEntity;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Optional;
@@ -232,7 +232,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
   /// @param entity JPA 实体
   private void assignIdIfMissing(PublicationEntity entity) {
     if (entity.getId() == null) {
-      entity.setId(IdWorker.getId());
+      entity.setId(SnowflakeIdGenerator.getId());
     }
   }
 }

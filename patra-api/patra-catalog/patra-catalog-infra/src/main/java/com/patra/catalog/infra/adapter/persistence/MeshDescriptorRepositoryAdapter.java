@@ -1,6 +1,5 @@
 package com.patra.catalog.infra.adapter.persistence;
 
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
@@ -17,6 +16,7 @@ import com.patra.catalog.infra.persistence.jpa.entity.MeshDescriptorEntity;
 import com.patra.catalog.infra.persistence.jpa.entity.MeshEntryCombinationEntity;
 import com.patra.catalog.infra.persistence.jpa.entity.MeshEntryTermEntity;
 import com.patra.catalog.infra.persistence.jpa.entity.MeshTreeNumberEntity;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.List;
@@ -192,7 +192,8 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
         .forEach(
             cr -> {
               MeshConceptRelationEntity entity =
-                  converter.toConceptRelationEntity(cr, descriptorUi, concept.getConceptUi().ui());
+                  converter.toConceptRelationEntity(
+                      cr, descriptorUi, concept.getConceptUi().ui(), concept.isPreferred());
               assignIdIfMissing(entity);
               conceptRelationEntities.add(entity);
             });
@@ -222,7 +223,7 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
   /// @param entity JPA 实体
   private void assignIdIfMissing(MeshDescriptorEntity entity) {
     if (entity.getId() == null) {
-      entity.setId(IdWorker.getId());
+      entity.setId(SnowflakeIdGenerator.getId());
     }
   }
 
@@ -231,7 +232,7 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
   /// @param entity JPA 实体
   private void assignIdIfMissing(MeshTreeNumberEntity entity) {
     if (entity.getId() == null) {
-      entity.setId(IdWorker.getId());
+      entity.setId(SnowflakeIdGenerator.getId());
     }
   }
 
@@ -240,7 +241,7 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
   /// @param entity JPA 实体
   private void assignIdIfMissing(MeshConceptEntity entity) {
     if (entity.getId() == null) {
-      entity.setId(IdWorker.getId());
+      entity.setId(SnowflakeIdGenerator.getId());
     }
   }
 
@@ -249,7 +250,7 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
   /// @param entity JPA 实体
   private void assignIdIfMissing(MeshConceptRelationEntity entity) {
     if (entity.getId() == null) {
-      entity.setId(IdWorker.getId());
+      entity.setId(SnowflakeIdGenerator.getId());
     }
   }
 
@@ -258,7 +259,7 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
   /// @param entity JPA 实体
   private void assignIdIfMissing(MeshEntryTermEntity entity) {
     if (entity.getId() == null) {
-      entity.setId(IdWorker.getId());
+      entity.setId(SnowflakeIdGenerator.getId());
     }
   }
 
@@ -267,7 +268,7 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
   /// @param entity JPA 实体
   private void assignIdIfMissing(MeshEntryCombinationEntity entity) {
     if (entity.getId() == null) {
-      entity.setId(IdWorker.getId());
+      entity.setId(SnowflakeIdGenerator.getId());
     }
   }
 }

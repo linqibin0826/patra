@@ -76,8 +76,6 @@
                                         <exclude>jakarta.servlet:*</exclude>
 
                                         <!-- Ban persistence frameworks -->
-                                        <exclude>com.baomidou:*</exclude>
-                                        <exclude>org.mybatis:*</exclude>
                                         <exclude>org.hibernate:*</exclude>
 
                                         <!-- Ban web/servlet -->

@@ -9,7 +9,7 @@ import com.patra.starter.test.container.initializer.MySQLContainerInitializer;
 /// ### 使用方式
 ///
 /// ```java
-/// @MybatisPlusTest
+/// @DataJpaTest
 /// @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 /// class SomeRepositoryIT {
 ///     // ...

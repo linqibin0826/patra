@@ -1,11 +1,11 @@
 package com.patra.catalog.infra.adapter.persistence;
 
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.port.repository.MeshQualifierRepository;
 import com.patra.catalog.infra.persistence.jpa.MeshQualifierJpaRepository;
 import com.patra.catalog.infra.persistence.jpa.converter.MeshQualifierJpaConverter;
 import com.patra.catalog.infra.persistence.jpa.entity.MeshQualifierEntity;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +23,7 @@ import org.springframework.stereotype.Repository;
 ///
 /// - 使用 Spring Data JPA 的 `saveAll()` 进行批量保存
 /// - Hibernate 配置了 `batch_size=500`、`order_inserts=true` 优化批量性能
-/// - ID 由 `IdWorker` 雪花算法生成（与 MyBatis-Plus 保持一致）
+/// - ID 由 `SnowflakeIdGenerator` 雪花算法生成
 /// - 审计字段（createdAt 等）由 JPA Auditing 自动填充
 ///
 /// @author linqibin
@@ -57,13 +57,13 @@ public class MeshQualifierRepositoryAdapter implements MeshQualifierRepository {
 
   /// 为没有 ID 的实体分配雪花 ID。
   ///
-  /// 由于 JPA 不像 MyBatis-Plus 自动分配 ID，
+  /// JPA 不使用数据库自增 ID（为保证批量插入性能），
   /// 需要在持久化前手动为新实体分配 ID。
   ///
   /// @param entity JPA 实体
   private void assignIdIfMissing(MeshQualifierEntity entity) {
     if (entity.getId() == null) {
-      entity.setId(IdWorker.getId());
+      entity.setId(SnowflakeIdGenerator.getId());
     }
   }
 

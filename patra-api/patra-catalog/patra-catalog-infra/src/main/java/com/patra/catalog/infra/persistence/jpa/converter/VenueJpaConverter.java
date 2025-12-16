@@ -1,17 +1,30 @@
 package com.patra.catalog.infra.persistence.jpa.converter;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
+import com.patra.catalog.domain.model.enums.CitationSubset;
+import com.patra.catalog.domain.model.enums.IndexingTreatment;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
+import com.patra.catalog.domain.model.enums.VenueRelationType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
+import com.patra.catalog.domain.model.vo.venue.VenueIndexingHistory;
+import com.patra.catalog.domain.model.vo.venue.VenueMesh;
+import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
+import com.patra.catalog.domain.model.vo.venue.VenueRelation;
 import com.patra.catalog.infra.persistence.jpa.entity.VenueEntity;
 import com.patra.catalog.infra.persistence.jpa.entity.VenueIdentifierEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.VenueIndexingHistoryEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.VenueMeshEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.VenuePublicationStatsEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.VenueRelationEntity;
 import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /// 载体 JPA 实体转换器。
 ///
@@ -258,5 +271,185 @@ public abstract class VenueJpaConverter {
   /// 将 String 转换为 VenueIdentifierType 枚举。
   VenueIdentifierType stringToIdentifierType(String type) {
     return type != null ? VenueIdentifierType.fromCode(type) : null;
+  }
+
+  // ========== 年度发文统计转换 ==========
+
+  private static final Logger log = LoggerFactory.getLogger(VenueJpaConverter.class);
+
+  /// 将年度发文统计值对象转换为 JPA 实体。
+  ///
+  /// @param stats 年度发文统计值对象
+  /// @param venueId 载体 ID
+  /// @return JPA 实体
+  public VenuePublicationStatsEntity toPublicationStatsEntity(
+      VenuePublicationStats stats, Long venueId) {
+    if (stats == null) {
+      return null;
+    }
+    VenuePublicationStatsEntity entity = new VenuePublicationStatsEntity();
+    entity.setVenueId(venueId);
+    entity.setYear((short) stats.year());
+    entity.setWorksCount(stats.worksCount());
+    entity.setCitedByCount(stats.citedByCount());
+    entity.setOaWorksCount(stats.oaWorksCount());
+    return entity;
+  }
+
+  /// 将 JPA 实体转换为年度发文统计值对象。
+  ///
+  /// @param entity JPA 实体
+  /// @return 年度发文统计值对象
+  public VenuePublicationStats toPublicationStats(VenuePublicationStatsEntity entity) {
+    if (entity == null) {
+      return null;
+    }
+    return VenuePublicationStats.create(
+        entity.getYear().intValue(),
+        entity.getWorksCount() != null ? entity.getWorksCount() : 0,
+        entity.getCitedByCount() != null ? entity.getCitedByCount() : 0,
+        entity.getOaWorksCount());
+  }
+
+  // ========== MeSH 主题词转换 ==========
+
+  /// 将 MeSH 主题词值对象转换为 JPA 实体。
+  ///
+  /// @param mesh MeSH 主题词值对象
+  /// @param venueId 载体 ID
+  /// @return JPA 实体
+  public VenueMeshEntity toMeshEntity(VenueMesh mesh, Long venueId) {
+    if (mesh == null) {
+      return null;
+    }
+    VenueMeshEntity entity = new VenueMeshEntity();
+    entity.setVenueId(venueId);
+    entity.setDescriptorName(mesh.descriptorName());
+    entity.setDescriptorUi(mesh.descriptorUi());
+    entity.setIsMajorTopic(mesh.isMajorTopic());
+    entity.setQualifierName(mesh.qualifierName());
+    entity.setQualifierUi(mesh.qualifierUi());
+    return entity;
+  }
+
+  /// 将 JPA 实体转换为 MeSH 主题词值对象。
+  ///
+  /// @param entity JPA 实体
+  /// @return MeSH 主题词值对象
+  public VenueMesh toMesh(VenueMeshEntity entity) {
+    if (entity == null) {
+      return null;
+    }
+    return new VenueMesh(
+        entity.getDescriptorName(),
+        entity.getDescriptorUi(),
+        Boolean.TRUE.equals(entity.getIsMajorTopic()),
+        entity.getQualifierName(),
+        entity.getQualifierUi());
+  }
+
+  // ========== 关联关系转换 ==========
+
+  /// 将关联关系值对象转换为 JPA 实体。
+  ///
+  /// @param relation 关联关系值对象
+  /// @param venueId 载体 ID
+  /// @return JPA 实体
+  public VenueRelationEntity toRelationEntity(VenueRelation relation, Long venueId) {
+    if (relation == null) {
+      return null;
+    }
+    VenueRelationEntity entity = new VenueRelationEntity();
+    entity.setVenueId(venueId);
+    entity.setRelatedVenueId(relation.relatedVenueId());
+    entity.setRelatedNlmId(relation.relatedNlmId());
+    entity.setRelatedTitle(relation.relatedTitle());
+    entity.setRelationType(relation.relationType().getCode());
+    entity.setEffectiveDate(relation.effectiveDate());
+    entity.setNotes(relation.notes());
+    return entity;
+  }
+
+  /// 将 JPA 实体转换为关联关系值对象。
+  ///
+  /// @param entity JPA 实体
+  /// @return 关联关系值对象
+  public VenueRelation toRelation(VenueRelationEntity entity) {
+    if (entity == null) {
+      return null;
+    }
+    VenueRelationType relationType = VenueRelationType.fromCodeOrNull(entity.getRelationType());
+    if (relationType == null) {
+      log.warn(
+          "无效的关系类型代码 '{}' (relatedTitle='{}')，使用默认值 PRECEDING",
+          entity.getRelationType(),
+          entity.getRelatedTitle());
+      relationType = VenueRelationType.PRECEDING;
+    }
+    return new VenueRelation(
+        entity.getRelatedVenueId(),
+        entity.getRelatedNlmId(),
+        entity.getRelatedTitle(),
+        relationType,
+        entity.getEffectiveDate(),
+        entity.getNotes());
+  }
+
+  // ========== 索引历史转换 ==========
+
+  /// 将索引历史值对象转换为 JPA 实体。
+  ///
+  /// @param history 索引历史值对象
+  /// @param venueId 载体 ID
+  /// @return JPA 实体
+  public VenueIndexingHistoryEntity toIndexingHistoryEntity(
+      VenueIndexingHistory history, Long venueId) {
+    if (history == null) {
+      return null;
+    }
+    VenueIndexingHistoryEntity entity = new VenueIndexingHistoryEntity();
+    entity.setVenueId(venueId);
+    entity.setIndexingSource(history.indexingSource());
+    entity.setCurrentlyIndexed(history.currentlyIndexed());
+    entity.setIndexingTreatment(
+        history.indexingTreatment() != null ? history.indexingTreatment().getCode() : null);
+    entity.setCitationSubset(
+        history.citationSubset() != null ? history.citationSubset().getCode() : null);
+    entity.setStartYear(history.startYear());
+    entity.setStartVolume(history.startVolume());
+    entity.setStartIssue(history.startIssue());
+    entity.setEndYear(history.endYear());
+    entity.setEndVolume(history.endVolume());
+    entity.setEndIssue(history.endIssue());
+    return entity;
+  }
+
+  /// 将 JPA 实体转换为索引历史值对象。
+  ///
+  /// @param entity JPA 实体
+  /// @return 索引历史值对象
+  public VenueIndexingHistory toIndexingHistory(VenueIndexingHistoryEntity entity) {
+    if (entity == null) {
+      return null;
+    }
+    IndexingTreatment treatment =
+        entity.getIndexingTreatment() != null
+            ? IndexingTreatment.fromCodeOrNull(entity.getIndexingTreatment())
+            : null;
+    CitationSubset subset =
+        entity.getCitationSubset() != null
+            ? CitationSubset.fromCodeOrNull(entity.getCitationSubset())
+            : null;
+    return new VenueIndexingHistory(
+        entity.getIndexingSource(),
+        Boolean.TRUE.equals(entity.getCurrentlyIndexed()),
+        treatment,
+        subset,
+        entity.getStartYear(),
+        entity.getStartVolume(),
+        entity.getStartIssue(),
+        entity.getEndYear(),
+        entity.getEndVolume(),
+        entity.getEndIssue());
   }
 }

@@ -1,6 +1,5 @@
 package com.patra.catalog.infra.adapter.persistence;
 
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.patra.catalog.domain.model.aggregate.VenueRatingAggregate;
 import com.patra.catalog.domain.model.enums.RatingSystem;
 import com.patra.catalog.domain.model.vo.venue.VenueRatingId;
@@ -8,6 +7,7 @@ import com.patra.catalog.domain.port.repository.VenueRatingRepository;
 import com.patra.catalog.infra.persistence.jpa.VenueRatingJpaRepository;
 import com.patra.catalog.infra.persistence.jpa.converter.VenueRatingJpaConverter;
 import com.patra.catalog.infra.persistence.jpa.entity.VenueRatingEntity;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,7 +34,7 @@ import org.springframework.stereotype.Repository;
 /// **JPA 批量写入说明**：
 ///
 /// - 使用 Spring Data JPA 的 `saveAll()` 进行批量保存
-/// - ID 由 `IdWorker` 雪花算法生成（与 MyBatis-Plus 保持一致）
+/// - ID 由 `SnowflakeIdGenerator` 雪花算法生成
 /// - 审计字段由 JPA Auditing 自动填充
 ///
 /// @author linqibin
@@ -192,7 +192,7 @@ public class VenueRatingRepositoryAdapter implements VenueRatingRepository {
   /// @param entity JPA 实体
   private void assignIdIfMissing(VenueRatingEntity entity) {
     if (entity.getId() == null) {
-      entity.setId(IdWorker.getId());
+      entity.setId(SnowflakeIdGenerator.getId());
     }
   }
 }

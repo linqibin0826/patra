@@ -9,12 +9,12 @@ import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.domain.exception.DataAlreadyExistsException;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
-import com.patra.catalog.infra.persistence.mapper.MeshConceptMapper;
-import com.patra.catalog.infra.persistence.mapper.MeshConceptRelationMapper;
-import com.patra.catalog.infra.persistence.mapper.MeshDescriptorMapper;
-import com.patra.catalog.infra.persistence.mapper.MeshEntryCombinationMapper;
-import com.patra.catalog.infra.persistence.mapper.MeshEntryTermMapper;
-import com.patra.catalog.infra.persistence.mapper.MeshTreeNumberMapper;
+import com.patra.catalog.infra.persistence.jpa.MeshConceptJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.MeshConceptRelationJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.MeshDescriptorJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.MeshEntryCombinationJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.MeshEntryTermJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.MeshTreeNumberJpaRepository;
 import com.patra.catalog.integration.config.CatalogMySQLContainerInitializer;
 import com.patra.common.cqrs.CommandBus;
 import java.io.InputStream;
@@ -90,12 +90,12 @@ class MeshDescriptorImportE2E {
 
   @Autowired private CommandBus commandBus;
 
-  @Autowired private MeshDescriptorMapper descriptorMapper;
-  @Autowired private MeshTreeNumberMapper treeNumberMapper;
-  @Autowired private MeshConceptMapper conceptMapper;
-  @Autowired private MeshConceptRelationMapper conceptRelationMapper;
-  @Autowired private MeshEntryTermMapper entryTermMapper;
-  @Autowired private MeshEntryCombinationMapper entryCombinationMapper;
+  @Autowired private MeshDescriptorJpaRepository descriptorRepository;
+  @Autowired private MeshTreeNumberJpaRepository treeNumberRepository;
+  @Autowired private MeshConceptJpaRepository conceptRepository;
+  @Autowired private MeshConceptRelationJpaRepository conceptRelationRepository;
+  @Autowired private MeshEntryTermJpaRepository entryTermRepository;
+  @Autowired private MeshEntryCombinationJpaRepository entryCombinationRepository;
   @Autowired private JdbcTemplate jdbcTemplate;
 
   /// Mock StreamingDownloadPort，返回测试资源文件的 InputStream。
@@ -130,12 +130,12 @@ class MeshDescriptorImportE2E {
   /// 清空所有 MeSH 相关表。
   private void cleanupAllTables() {
     // 清空业务表（注意顺序：先子表后主表）
-    entryCombinationMapper.delete(null);
-    conceptRelationMapper.delete(null);
-    entryTermMapper.delete(null);
-    conceptMapper.delete(null);
-    treeNumberMapper.delete(null);
-    descriptorMapper.delete(null);
+    entryCombinationRepository.deleteAllInBatch();
+    conceptRelationRepository.deleteAllInBatch();
+    entryTermRepository.deleteAllInBatch();
+    conceptRepository.deleteAllInBatch();
+    treeNumberRepository.deleteAllInBatch();
+    descriptorRepository.deleteAllInBatch();
 
     // 清空 Spring Batch 元数据表（确保重试时可以重新执行 Job）
     // 按外键依赖顺序删除
@@ -199,7 +199,7 @@ class MeshDescriptorImportE2E {
       commandBus.handle(command);
 
       // 验证数据已导入
-      assertThat(descriptorMapper.selectCount(null)).isEqualTo(EXPECTED_DESCRIPTOR_COUNT);
+      assertThat(descriptorRepository.count()).isEqualTo(EXPECTED_DESCRIPTOR_COUNT);
 
       // When/Then - 再次导入应该抛出 DataAlreadyExistsException
       assertThatThrownBy(() -> commandBus.handle(command))
@@ -215,16 +215,16 @@ class MeshDescriptorImportE2E {
   /// @param expectedDescriptorCount 预期的 Descriptor 记录数
   private void verifyDatabaseState(int expectedDescriptorCount) {
     // 验证主表记录数
-    assertThat(descriptorMapper.selectCount(null))
+    assertThat(descriptorRepository.count())
         .as("Descriptor 记录数")
         .isEqualTo(expectedDescriptorCount);
 
     // 验证子表有数据
-    assertThat(treeNumberMapper.selectCount(null)).as("TreeNumber 记录数").isGreaterThan(0);
+    assertThat(treeNumberRepository.count()).as("TreeNumber 记录数").isGreaterThan(0);
 
-    assertThat(conceptMapper.selectCount(null)).as("Concept 记录数").isGreaterThan(0);
+    assertThat(conceptRepository.count()).as("Concept 记录数").isGreaterThan(0);
 
-    assertThat(entryTermMapper.selectCount(null)).as("EntryTerm 记录数").isGreaterThan(0);
+    assertThat(entryTermRepository.count()).as("EntryTerm 记录数").isGreaterThan(0);
 
     // 注：conceptRelation 和 entryCombination 可能为空（取决于测试数据）
   }

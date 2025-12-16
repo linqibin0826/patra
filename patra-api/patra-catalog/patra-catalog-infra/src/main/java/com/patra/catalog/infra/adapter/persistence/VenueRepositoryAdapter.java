@@ -1,8 +1,5 @@
 package com.patra.catalog.infra.adapter.persistence;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
-import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
@@ -12,23 +9,20 @@ import com.patra.catalog.domain.model.vo.venue.VenueMesh;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
 import com.patra.catalog.domain.model.vo.venue.VenueRelation;
 import com.patra.catalog.domain.port.repository.VenueRepository;
-import com.patra.catalog.infra.persistence.converter.VenueIndexingHistoryConverter;
-import com.patra.catalog.infra.persistence.converter.VenueMeshConverter;
-import com.patra.catalog.infra.persistence.converter.VenuePublicationStatsConverter;
-import com.patra.catalog.infra.persistence.converter.VenueRelationConverter;
-import com.patra.catalog.infra.persistence.entity.VenueIndexingHistoryDO;
-import com.patra.catalog.infra.persistence.entity.VenueMeshDO;
-import com.patra.catalog.infra.persistence.entity.VenuePublicationStatsDO;
-import com.patra.catalog.infra.persistence.entity.VenueRelationDO;
 import com.patra.catalog.infra.persistence.jpa.VenueIdentifierJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.VenueIndexingHistoryJpaRepository;
 import com.patra.catalog.infra.persistence.jpa.VenueJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.VenueMeshJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.VenuePublicationStatsJpaRepository;
+import com.patra.catalog.infra.persistence.jpa.VenueRelationJpaRepository;
 import com.patra.catalog.infra.persistence.jpa.converter.VenueJpaConverter;
 import com.patra.catalog.infra.persistence.jpa.entity.VenueEntity;
 import com.patra.catalog.infra.persistence.jpa.entity.VenueIdentifierEntity;
-import com.patra.catalog.infra.persistence.mapper.VenueIndexingHistoryMapper;
-import com.patra.catalog.infra.persistence.mapper.VenueMeshMapper;
-import com.patra.catalog.infra.persistence.mapper.VenuePublicationStatsMapper;
-import com.patra.catalog.infra.persistence.mapper.VenueRelationMapper;
+import com.patra.catalog.infra.persistence.jpa.entity.VenueIndexingHistoryEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.VenueMeshEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.VenuePublicationStatsEntity;
+import com.patra.catalog.infra.persistence.jpa.entity.VenueRelationEntity;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -42,12 +36,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-/// 出版载体聚合根仓储实现（JPA + MyBatis 混合版本）。
-///
-/// **JPA 迁移说明**：
-///
-/// - 核心聚合（VenueAggregate、VenueIdentifier）已迁移至 JPA
-/// - 补充数据（VenuePublicationStats、VenueMesh、VenueRelation、VenueIndexingHistory）暂时保留 MyBatis
+/// 出版载体聚合根仓储实现（纯 JPA 版本）。
 ///
 /// **DDD 嵌入式值对象设计**：
 ///
@@ -72,18 +61,15 @@ public class VenueRepositoryAdapter implements VenueRepository {
   // ========== JPA 组件 ==========
   private final VenueJpaRepository venueJpaRepository;
   private final VenueIdentifierJpaRepository identifierJpaRepository;
+  private final VenuePublicationStatsJpaRepository publicationStatsJpaRepository;
+  private final VenueMeshJpaRepository meshJpaRepository;
+  private final VenueRelationJpaRepository relationJpaRepository;
+  private final VenueIndexingHistoryJpaRepository indexingHistoryJpaRepository;
   private final VenueJpaConverter jpaConverter;
   private final EntityManager entityManager;
 
-  // ========== Serfile 补充数据相关（暂保留 MyBatis） ==========
-  private final VenuePublicationStatsMapper publicationStatsMapper;
-  private final VenueMeshMapper meshMapper;
-  private final VenueRelationMapper relationMapper;
-  private final VenueIndexingHistoryMapper indexingHistoryMapper;
-  private final VenuePublicationStatsConverter publicationStatsConverter;
-  private final VenueMeshConverter meshConverter;
-  private final VenueRelationConverter relationConverter;
-  private final VenueIndexingHistoryConverter indexingHistoryConverter;
+  /// 批量操作时的 flush 阈值。
+  private static final int BATCH_FLUSH_SIZE = 500;
 
   @Override
   public boolean hasAnyData() {
@@ -407,18 +393,18 @@ public class VenueRepositoryAdapter implements VenueRepository {
   /// 为没有 ID 的实体分配雪花 ID。
   private void assignIdIfMissing(VenueEntity entity) {
     if (entity.getId() == null) {
-      entity.setId(IdWorker.getId());
+      entity.setId(SnowflakeIdGenerator.getId());
     }
   }
 
   /// 为没有 ID 的标识符实体分配雪花 ID。
   private void assignIdIfMissing(VenueIdentifierEntity entity) {
     if (entity.getId() == null) {
-      entity.setId(IdWorker.getId());
+      entity.setId(SnowflakeIdGenerator.getId());
     }
   }
 
-  // ========== Serfile 补充数据管理（暂保留 MyBatis） ==========
+  // ========== Serfile 补充数据管理（已迁移至 JPA） ==========
 
   @Override
   public Map<Long, List<VenuePublicationStats>> findYearlyMetricsByVenueIds(
@@ -427,16 +413,14 @@ public class VenueRepositoryAdapter implements VenueRepository {
       return Map.of();
     }
 
-    List<VenuePublicationStatsDO> doList =
-        publicationStatsMapper.selectList(
-            new LambdaQueryWrapper<VenuePublicationStatsDO>()
-                .in(VenuePublicationStatsDO::getVenueId, venueIds));
+    List<VenuePublicationStatsEntity> entities =
+        publicationStatsJpaRepository.findByVenueIdIn(venueIds);
 
-    return doList.stream()
+    return entities.stream()
         .collect(
             Collectors.groupingBy(
-                VenuePublicationStatsDO::getVenueId,
-                Collectors.mapping(publicationStatsConverter::toEntity, Collectors.toList())));
+                VenuePublicationStatsEntity::getVenueId,
+                Collectors.mapping(jpaConverter::toPublicationStats, Collectors.toList())));
   }
 
   @Override
@@ -448,25 +432,24 @@ public class VenueRepositoryAdapter implements VenueRepository {
     List<Long> venueIds = new ArrayList<>(metricsByVenueId.keySet());
 
     // 删除旧数据
-    publicationStatsMapper.delete(
-        new LambdaQueryWrapper<VenuePublicationStatsDO>()
-            .in(VenuePublicationStatsDO::getVenueId, venueIds));
+    publicationStatsJpaRepository.deleteByVenueIdIn(venueIds);
+    entityManager.flush();
 
     // 收集新数据
-    List<VenuePublicationStatsDO> doList = new ArrayList<>();
+    List<VenuePublicationStatsEntity> entities = new ArrayList<>();
     for (Map.Entry<Long, List<VenuePublicationStats>> entry : metricsByVenueId.entrySet()) {
       Long venueId = entry.getKey();
       for (VenuePublicationStats stats : entry.getValue()) {
-        VenuePublicationStatsDO statsDO = publicationStatsConverter.toDO(stats);
-        statsDO.setVenueId(venueId);
-        doList.add(statsDO);
+        VenuePublicationStatsEntity entity = jpaConverter.toPublicationStatsEntity(stats, venueId);
+        entity.setId(SnowflakeIdGenerator.getId());
+        entities.add(entity);
       }
     }
 
-    // 批量插入
-    if (!doList.isEmpty()) {
-      Db.saveBatch(doList);
-      log.debug("批量插入年度指标 {} 条", doList.size());
+    // 批量插入（带 flush）
+    if (!entities.isEmpty()) {
+      batchSaveWithFlush(entities, publicationStatsJpaRepository);
+      log.debug("批量插入年度指标 {} 条", entities.size());
     }
   }
 
@@ -476,15 +459,13 @@ public class VenueRepositoryAdapter implements VenueRepository {
       return Map.of();
     }
 
-    List<VenueMeshDO> doList =
-        meshMapper.selectList(
-            new LambdaQueryWrapper<VenueMeshDO>().in(VenueMeshDO::getVenueId, venueIds));
+    List<VenueMeshEntity> entities = meshJpaRepository.findByVenueIdIn(venueIds);
 
-    return doList.stream()
+    return entities.stream()
         .collect(
             Collectors.groupingBy(
-                VenueMeshDO::getVenueId,
-                Collectors.mapping(meshConverter::toEntity, Collectors.toList())));
+                VenueMeshEntity::getVenueId,
+                Collectors.mapping(jpaConverter::toMesh, Collectors.toList())));
   }
 
   @Override
@@ -496,23 +477,24 @@ public class VenueRepositoryAdapter implements VenueRepository {
     List<Long> venueIds = new ArrayList<>(meshTermsByVenueId.keySet());
 
     // 删除旧数据
-    meshMapper.delete(new LambdaQueryWrapper<VenueMeshDO>().in(VenueMeshDO::getVenueId, venueIds));
+    meshJpaRepository.deleteByVenueIdIn(venueIds);
+    entityManager.flush();
 
     // 收集新数据
-    List<VenueMeshDO> doList = new ArrayList<>();
+    List<VenueMeshEntity> entities = new ArrayList<>();
     for (Map.Entry<Long, List<VenueMesh>> entry : meshTermsByVenueId.entrySet()) {
       Long venueId = entry.getKey();
       for (VenueMesh mesh : entry.getValue()) {
-        VenueMeshDO meshDO = meshConverter.toDO(mesh);
-        meshDO.setVenueId(venueId);
-        doList.add(meshDO);
+        VenueMeshEntity entity = jpaConverter.toMeshEntity(mesh, venueId);
+        entity.setId(SnowflakeIdGenerator.getId());
+        entities.add(entity);
       }
     }
 
-    // 批量插入
-    if (!doList.isEmpty()) {
-      Db.saveBatch(doList);
-      log.debug("批量插入 MeSH 主题词 {} 条", doList.size());
+    // 批量插入（带 flush）
+    if (!entities.isEmpty()) {
+      batchSaveWithFlush(entities, meshJpaRepository);
+      log.debug("批量插入 MeSH 主题词 {} 条", entities.size());
     }
   }
 
@@ -522,15 +504,13 @@ public class VenueRepositoryAdapter implements VenueRepository {
       return Map.of();
     }
 
-    List<VenueRelationDO> doList =
-        relationMapper.selectList(
-            new LambdaQueryWrapper<VenueRelationDO>().in(VenueRelationDO::getVenueId, venueIds));
+    List<VenueRelationEntity> entities = relationJpaRepository.findByVenueIdIn(venueIds);
 
-    return doList.stream()
+    return entities.stream()
         .collect(
             Collectors.groupingBy(
-                VenueRelationDO::getVenueId,
-                Collectors.mapping(relationConverter::toEntity, Collectors.toList())));
+                VenueRelationEntity::getVenueId,
+                Collectors.mapping(jpaConverter::toRelation, Collectors.toList())));
   }
 
   @Override
@@ -542,24 +522,24 @@ public class VenueRepositoryAdapter implements VenueRepository {
     List<Long> venueIds = new ArrayList<>(relationsByVenueId.keySet());
 
     // 删除旧数据
-    relationMapper.delete(
-        new LambdaQueryWrapper<VenueRelationDO>().in(VenueRelationDO::getVenueId, venueIds));
+    relationJpaRepository.deleteByVenueIdIn(venueIds);
+    entityManager.flush();
 
     // 收集新数据
-    List<VenueRelationDO> doList = new ArrayList<>();
+    List<VenueRelationEntity> entities = new ArrayList<>();
     for (Map.Entry<Long, List<VenueRelation>> entry : relationsByVenueId.entrySet()) {
       Long venueId = entry.getKey();
       for (VenueRelation relation : entry.getValue()) {
-        VenueRelationDO relationDO = relationConverter.toDO(relation);
-        relationDO.setVenueId(venueId);
-        doList.add(relationDO);
+        VenueRelationEntity entity = jpaConverter.toRelationEntity(relation, venueId);
+        entity.setId(SnowflakeIdGenerator.getId());
+        entities.add(entity);
       }
     }
 
-    // 批量插入
-    if (!doList.isEmpty()) {
-      Db.saveBatch(doList);
-      log.debug("批量插入关联关系 {} 条", doList.size());
+    // 批量插入（带 flush）
+    if (!entities.isEmpty()) {
+      batchSaveWithFlush(entities, relationJpaRepository);
+      log.debug("批量插入关联关系 {} 条", entities.size());
     }
   }
 
@@ -570,16 +550,14 @@ public class VenueRepositoryAdapter implements VenueRepository {
       return Map.of();
     }
 
-    List<VenueIndexingHistoryDO> doList =
-        indexingHistoryMapper.selectList(
-            new LambdaQueryWrapper<VenueIndexingHistoryDO>()
-                .in(VenueIndexingHistoryDO::getVenueId, venueIds));
+    List<VenueIndexingHistoryEntity> entities =
+        indexingHistoryJpaRepository.findByVenueIdIn(venueIds);
 
-    return doList.stream()
+    return entities.stream()
         .collect(
             Collectors.groupingBy(
-                VenueIndexingHistoryDO::getVenueId,
-                Collectors.mapping(indexingHistoryConverter::toEntity, Collectors.toList())));
+                VenueIndexingHistoryEntity::getVenueId,
+                Collectors.mapping(jpaConverter::toIndexingHistory, Collectors.toList())));
   }
 
   @Override
@@ -592,25 +570,46 @@ public class VenueRepositoryAdapter implements VenueRepository {
     List<Long> venueIds = new ArrayList<>(historiesByVenueId.keySet());
 
     // 删除旧数据
-    indexingHistoryMapper.delete(
-        new LambdaQueryWrapper<VenueIndexingHistoryDO>()
-            .in(VenueIndexingHistoryDO::getVenueId, venueIds));
+    indexingHistoryJpaRepository.deleteByVenueIdIn(venueIds);
+    entityManager.flush();
 
     // 收集新数据
-    List<VenueIndexingHistoryDO> doList = new ArrayList<>();
+    List<VenueIndexingHistoryEntity> entities = new ArrayList<>();
     for (Map.Entry<Long, List<VenueIndexingHistory>> entry : historiesByVenueId.entrySet()) {
       Long venueId = entry.getKey();
       for (VenueIndexingHistory history : entry.getValue()) {
-        VenueIndexingHistoryDO historyDO = indexingHistoryConverter.toDO(history);
-        historyDO.setVenueId(venueId);
-        doList.add(historyDO);
+        VenueIndexingHistoryEntity entity = jpaConverter.toIndexingHistoryEntity(history, venueId);
+        entity.setId(SnowflakeIdGenerator.getId());
+        entities.add(entity);
       }
     }
 
-    // 批量插入
-    if (!doList.isEmpty()) {
-      Db.saveBatch(doList);
-      log.debug("批量插入索引历史 {} 条", doList.size());
+    // 批量插入（带 flush）
+    if (!entities.isEmpty()) {
+      batchSaveWithFlush(entities, indexingHistoryJpaRepository);
+      log.debug("批量插入索引历史 {} 条", entities.size());
+    }
+  }
+
+  // ========== 批量操作辅助方法 ==========
+
+  /// 批量保存实体，定期 flush 以防内存溢出。
+  ///
+  /// @param entities 实体列表
+  /// @param repository JPA Repository
+  /// @param <T> 实体类型
+  private <T> void batchSaveWithFlush(
+      List<T> entities, org.springframework.data.jpa.repository.JpaRepository<T, Long> repository) {
+    for (int i = 0; i < entities.size(); i++) {
+      repository.save(entities.get(i));
+      if ((i + 1) % BATCH_FLUSH_SIZE == 0) {
+        entityManager.flush();
+        entityManager.clear();
+      }
+    }
+    // 处理剩余的实体
+    if (entities.size() % BATCH_FLUSH_SIZE != 0) {
+      entityManager.flush();
     }
   }
 }

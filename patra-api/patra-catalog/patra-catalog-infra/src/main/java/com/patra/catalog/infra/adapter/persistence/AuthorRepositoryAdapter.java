@@ -1,11 +1,11 @@
 package com.patra.catalog.infra.adapter.persistence;
 
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.patra.catalog.domain.model.aggregate.AuthorAggregate;
 import com.patra.catalog.domain.port.repository.AuthorRepository;
 import com.patra.catalog.infra.persistence.jpa.AuthorJpaRepository;
 import com.patra.catalog.infra.persistence.jpa.converter.AuthorJpaConverter;
 import com.patra.catalog.infra.persistence.jpa.entity.AuthorEntity;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,7 @@ import org.springframework.stereotype.Repository;
 /// **JPA 批量写入说明**：
 ///
 /// - 使用 Spring Data JPA 的 `saveAll()` 进行批量保存
-/// - ID 由 `IdWorker` 雪花算法生成（与 MyBatis-Plus 保持一致）
+/// - ID 由 `SnowflakeIdGenerator` 雪花算法生成
 /// - 审计字段由 JPA Auditing 自动填充
 ///
 /// @author linqibin
@@ -129,7 +129,7 @@ public class AuthorRepositoryAdapter implements AuthorRepository {
   /// @param entity JPA 实体
   private void assignIdIfMissing(AuthorEntity entity) {
     if (entity.getId() == null) {
-      entity.setId(IdWorker.getId());
+      entity.setId(SnowflakeIdGenerator.getId());
     }
   }
 }

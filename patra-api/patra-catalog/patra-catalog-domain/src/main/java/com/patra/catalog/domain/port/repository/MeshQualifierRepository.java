@@ -21,7 +21,7 @@ public interface MeshQualifierRepository {
   /// 实现说明：
   ///
   /// - 保存完整的限定词聚合根(约 80 条记录)
-  ///   - 使用 MyBatis-Plus 的 saveBatch 方法进行批量插入
+  ///   - 使用 JPA 的 saveAll 方法进行批量插入
   ///   - 限定词是独立的主数据,必须先于主题词导入
   ///   - 事务由调用方(Application 层)管理
   ///
