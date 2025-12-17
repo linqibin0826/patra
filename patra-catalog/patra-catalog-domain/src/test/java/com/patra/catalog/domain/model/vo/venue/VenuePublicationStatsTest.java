@@ -269,26 +269,26 @@ class VenuePublicationStatsTest {
   class CalculationMethodTests {
 
     @Test
-    @DisplayName("getAverageCitations() 应该正确计算平均被引次数")
-    void getAverageCitationsShouldCalculateCorrectly() {
+    @DisplayName("calculateAverageCitations() 应该正确计算平均被引次数")
+    void calculateAverageCitationsShouldCalculateCorrectly() {
       // Given - 1500 篇作品，25000 次引用
       VenuePublicationStats stats = VenuePublicationStats.create(VALID_YEAR, 1500, 25000);
 
       // When
-      BigDecimal average = stats.getAverageCitations();
+      BigDecimal average = stats.calculateAverageCitations();
 
       // Then - 25000 / 1500 = 16.67
       assertThat(average).isEqualByComparingTo("16.67");
     }
 
     @Test
-    @DisplayName("getAverageCitations() 作品数为 0 时返回 0")
-    void getAverageCitationsShouldReturnZeroWhenNoWorks() {
+    @DisplayName("calculateAverageCitations() 作品数为 0 时返回 0")
+    void calculateAverageCitationsShouldReturnZeroWhenNoWorks() {
       // Given
       VenuePublicationStats stats = VenuePublicationStats.create(VALID_YEAR, 0, 0);
 
       // When
-      BigDecimal average = stats.getAverageCitations();
+      BigDecimal average = stats.calculateAverageCitations();
 
       // Then
       assertThat(average).isEqualByComparingTo(BigDecimal.ZERO);

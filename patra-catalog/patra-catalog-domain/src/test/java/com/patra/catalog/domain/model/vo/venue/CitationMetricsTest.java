@@ -104,39 +104,39 @@ class CitationMetricsTest {
   class CalculationMethodTests {
 
     @Test
-    @DisplayName("getAverageCitations() 应计算平均被引次数")
+    @DisplayName("calculateAverageCitations() 应计算平均被引次数")
     void shouldCalculateAverageCitations() {
       CitationMetrics metrics = CitationMetrics.ofBasic(100, 500);
 
-      BigDecimal average = metrics.getAverageCitations();
+      BigDecimal average = metrics.calculateAverageCitations();
 
       assertThat(average).isEqualByComparingTo("5.00");
     }
 
     @Test
-    @DisplayName("getAverageCitations() 当无作品时应返回 0")
+    @DisplayName("calculateAverageCitations() 当无作品时应返回 0")
     void shouldReturnZeroWhenNoWorks() {
       CitationMetrics noWorks = CitationMetrics.ofBasic(0, 500);
       CitationMetrics nullWorks = CitationMetrics.of(null, 500, null, null, null);
 
-      assertThat(noWorks.getAverageCitations()).isEqualByComparingTo("0");
-      assertThat(nullWorks.getAverageCitations()).isEqualByComparingTo("0");
+      assertThat(noWorks.calculateAverageCitations()).isEqualByComparingTo("0");
+      assertThat(nullWorks.calculateAverageCitations()).isEqualByComparingTo("0");
     }
 
     @Test
-    @DisplayName("getAverageCitations() 当无被引次数时应返回 0")
+    @DisplayName("calculateAverageCitations() 当无被引次数时应返回 0")
     void shouldReturnZeroWhenNoCitations() {
       CitationMetrics noCitations = CitationMetrics.of(100, null, null, null, null);
 
-      assertThat(noCitations.getAverageCitations()).isEqualByComparingTo("0");
+      assertThat(noCitations.calculateAverageCitations()).isEqualByComparingTo("0");
     }
 
     @Test
-    @DisplayName("getAverageCitations() 应正确处理小数")
+    @DisplayName("calculateAverageCitations() 应正确处理小数")
     void shouldHandleDecimalAverages() {
       CitationMetrics metrics = CitationMetrics.ofBasic(3, 10);
 
-      BigDecimal average = metrics.getAverageCitations();
+      BigDecimal average = metrics.calculateAverageCitations();
 
       assertThat(average).isEqualByComparingTo("3.33");
     }

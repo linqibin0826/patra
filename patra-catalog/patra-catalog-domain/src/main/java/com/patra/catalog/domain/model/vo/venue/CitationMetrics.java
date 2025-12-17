@@ -1,6 +1,5 @@
 package com.patra.catalog.domain.model.vo.venue;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -38,7 +37,7 @@ import java.math.RoundingMode;
 /// CitationMetrics basic = CitationMetrics.ofBasic(150000, 2500000);
 ///
 /// // 计算平均被引
-/// BigDecimal avgCitations = metrics.getAverageCitations();
+/// BigDecimal avgCitations = metrics.calculateAverageCitations();
 /// ```
 ///
 /// @param worksCount 发表作品总数
@@ -114,11 +113,8 @@ public record CitationMetrics(
 
   /// 计算平均每篇被引次数。
   ///
-  /// **注意**：这是计算属性，不参与 JSON 序列化。
-  ///
   /// @return 平均被引次数，如果无作品则返回 0
-  @JsonIgnore
-  public BigDecimal getAverageCitations() {
+  public BigDecimal calculateAverageCitations() {
     if (worksCount == null || worksCount == 0 || citedByCount == null) {
       return BigDecimal.ZERO;
     }
