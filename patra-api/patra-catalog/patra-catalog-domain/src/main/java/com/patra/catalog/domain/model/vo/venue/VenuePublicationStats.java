@@ -131,7 +131,7 @@ public record VenuePublicationStats(
   /// 计算平均每篇被引次数。
   ///
   /// @return 平均被引次数，如果无作品则返回 0
-  public BigDecimal getAverageCitations() {
+  public BigDecimal calculateAverageCitations() {
     if (worksCount == 0) {
       return BigDecimal.ZERO;
     }
