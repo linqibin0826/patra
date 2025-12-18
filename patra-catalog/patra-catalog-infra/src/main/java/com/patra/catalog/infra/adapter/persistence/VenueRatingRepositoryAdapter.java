@@ -4,7 +4,7 @@ import com.patra.catalog.domain.model.aggregate.VenueRatingAggregate;
 import com.patra.catalog.domain.model.enums.RatingSystem;
 import com.patra.catalog.domain.model.vo.venue.VenueRatingId;
 import com.patra.catalog.domain.port.repository.VenueRatingRepository;
-import com.patra.catalog.infra.adapter.persistence.converter.VenueRatingJpaConverter;
+import com.patra.catalog.infra.adapter.persistence.converter.mapper.VenueRatingJpaMapper;
 import com.patra.catalog.infra.adapter.persistence.dao.VenueRatingDao;
 import com.patra.catalog.infra.adapter.persistence.entity.VenueRatingEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
@@ -29,7 +29,7 @@ import org.springframework.stereotype.Repository;
 ///
 /// - 使用 Spring Data JPA 进行数据库操作
 /// - 批量插入使用 `saveAll()` 优化性能
-/// - 使用 `VenueRatingJpaConverter` 进行 Entity ↔ 聚合根转换
+/// - 使用 `VenueRatingJpaMapper` 进行 Entity ↔ 聚合根转换
 ///
 /// **JPA 批量写入说明**：
 ///
@@ -45,7 +45,7 @@ import org.springframework.stereotype.Repository;
 public class VenueRatingRepositoryAdapter implements VenueRatingRepository {
 
   private final VenueRatingDao jpaRepository;
-  private final VenueRatingJpaConverter jpaConverter;
+  private final VenueRatingJpaMapper jpaConverter;
   private final EntityManager entityManager;
 
   @Override

@@ -3,7 +3,7 @@ package com.patra.catalog.infra.adapter.persistence;
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import com.patra.catalog.domain.model.vo.publication.PublicationId;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
-import com.patra.catalog.infra.adapter.persistence.converter.PublicationJpaConverter;
+import com.patra.catalog.infra.adapter.persistence.converter.mapper.PublicationJpaMapper;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDao;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
@@ -26,7 +26,7 @@ import org.springframework.stereotype.Repository;
 ///
 /// - 使用 Spring Data JPA 进行数据库操作
 /// - 批量插入使用 `saveAll()` 优化性能
-/// - 使用 `PublicationJpaConverter` 进行 Entity ↔ 聚合根转换
+/// - 使用 `PublicationJpaMapper` 进行 Entity ↔ 聚合根转换
 ///
 /// **JPA 更新模式**：
 ///
@@ -41,7 +41,7 @@ import org.springframework.stereotype.Repository;
 public class PublicationRepositoryAdapter implements PublicationRepository {
 
   private final PublicationDao jpaRepository;
-  private final PublicationJpaConverter jpaConverter;
+  private final PublicationJpaMapper jpaConverter;
   private final EntityManager entityManager;
 
   @Override
