@@ -209,51 +209,6 @@
         ]
       }
     },
-    "java-runtime-diagnostic": {
-      "type": "domain",
-      "enforcement": "suggest",
-      "priority": "high",
-      "description": "Runtime error diagnosis and performance analysis expert",
-      "promptTriggers": {
-        "keywords": [
-          "error",
-          "exception",
-          "stack trace",
-          "debug",
-          "troubleshoot",
-          "performance",
-          "memory leak",
-          "thread dump",
-          "heap dump",
-          "OpenTelemetry",
-          "log analysis",
-          "optimistic lock failure",
-          "transaction rollback",
-          "NullPointerException",
-          "OutOfMemoryError",
-          "错误",
-          "异常",
-          "堆栈跟踪",
-          "调试",
-          "故障排查",
-          "性能",
-          "内存泄漏",
-          "线程转储",
-          "堆转储",
-          "日志分析",
-          "乐观锁失败",
-          "事务回滚"
-        ],
-        "intentPatterns": [
-          "(fix|debug|troubleshoot|diagnose).*?(error|exception|issue|problem)",
-          "(analyze|investigate).*?(performance|memory|thread)",
-          "(why|what causes).*?(error|exception|failure)",
-          "(修复|调试|排查|诊断).*(错误|异常|问题)",
-          "(分析|调查).*(性能|内存|线程)",
-          "(为什么|什么原因).*(错误|异常|失败)"
-        ]
-      }
-    },
     "database-modeling": {
       "type": "domain",
       "enforcement": "suggest",
