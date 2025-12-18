@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.task.SyncTaskExecutor;
@@ -53,7 +54,7 @@ import org.springframework.transaction.PlatformTransactionManager;
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
-@AutoConfiguration(after = BatchDataSourceConfiguration.class)
+@AutoConfiguration(after = {DataSourceAutoConfiguration.class, BatchDataSourceConfiguration.class})
 @EnableConfigurationProperties(BatchProperties.class)
 public class BatchAutoConfiguration extends DefaultBatchConfiguration {
 
