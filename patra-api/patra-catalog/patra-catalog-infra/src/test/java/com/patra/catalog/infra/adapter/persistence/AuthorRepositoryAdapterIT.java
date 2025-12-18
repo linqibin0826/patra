@@ -5,9 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.patra.catalog.domain.model.aggregate.AuthorAggregate;
 import com.patra.catalog.domain.model.vo.author.AuthorName;
 import com.patra.catalog.domain.model.vo.author.Orcid;
+import com.patra.catalog.infra.adapter.persistence.dao.AuthorDao;
+import com.patra.catalog.infra.adapter.persistence.entity.AuthorEntity;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
-import com.patra.catalog.infra.persistence.jpa.AuthorJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.entity.AuthorEntity;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,7 +48,7 @@ import org.springframework.test.context.ContextConfiguration;
 @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({AuthorRepositoryAdapter.class, JpaAuditingConfig.class})
-@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.jpa.converter")
+@ComponentScan(basePackages = "com.patra.catalog.infra.adapter.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("AuthorRepositoryAdapter 集成测试（JPA）")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -56,7 +56,7 @@ class AuthorRepositoryAdapterIT {
 
   @Autowired private AuthorRepositoryAdapter authorRepository;
 
-  @Autowired private AuthorJpaRepository jpaRepository;
+  @Autowired private AuthorDao jpaRepository;
 
   @Nested
   @DisplayName("save() 方法测试")

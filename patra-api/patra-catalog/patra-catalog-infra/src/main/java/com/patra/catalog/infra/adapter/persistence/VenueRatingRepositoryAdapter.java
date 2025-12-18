@@ -4,9 +4,9 @@ import com.patra.catalog.domain.model.aggregate.VenueRatingAggregate;
 import com.patra.catalog.domain.model.enums.RatingSystem;
 import com.patra.catalog.domain.model.vo.venue.VenueRatingId;
 import com.patra.catalog.domain.port.repository.VenueRatingRepository;
-import com.patra.catalog.infra.persistence.jpa.VenueRatingJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.converter.VenueRatingJpaConverter;
-import com.patra.catalog.infra.persistence.jpa.entity.VenueRatingEntity;
+import com.patra.catalog.infra.adapter.persistence.converter.VenueRatingJpaConverter;
+import com.patra.catalog.infra.adapter.persistence.dao.VenueRatingDao;
+import com.patra.catalog.infra.adapter.persistence.entity.VenueRatingEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
@@ -44,7 +44,7 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class VenueRatingRepositoryAdapter implements VenueRatingRepository {
 
-  private final VenueRatingJpaRepository jpaRepository;
+  private final VenueRatingDao jpaRepository;
   private final VenueRatingJpaConverter jpaConverter;
   private final EntityManager entityManager;
 

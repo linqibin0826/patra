@@ -14,9 +14,9 @@ import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import com.patra.catalog.domain.model.vo.venue.Society;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
+import com.patra.catalog.infra.adapter.persistence.dao.VenueDao;
+import com.patra.catalog.infra.adapter.persistence.dao.VenueIdentifierDao;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
-import com.patra.catalog.infra.persistence.jpa.VenueIdentifierJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.VenueJpaRepository;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.math.BigDecimal;
@@ -56,7 +56,7 @@ import org.springframework.test.context.ContextConfiguration;
 @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({VenueRepositoryAdapter.class, JpaAuditingConfig.class, JacksonAutoConfiguration.class})
-@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.jpa.converter")
+@ComponentScan(basePackages = "com.patra.catalog.infra.adapter.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("VenueRepositoryAdapter 集成测试（JPA）")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -64,8 +64,8 @@ class VenueRepositoryAdapterIT {
 
   @Autowired private VenueRepositoryAdapter repository;
 
-  @Autowired private VenueJpaRepository venueJpaRepository;
-  @Autowired private VenueIdentifierJpaRepository identifierJpaRepository;
+  @Autowired private VenueDao venueDao;
+  @Autowired private VenueIdentifierDao identifierDao;
 
   // ========== hasAnyData() 测试 ==========
 
@@ -77,7 +77,7 @@ class VenueRepositoryAdapterIT {
     @DisplayName("空表 - 应该返回 false")
     void hasAnyData_emptyTable_shouldReturnFalse() {
       // Given: 空表
-      long count = venueJpaRepository.count();
+      long count = venueDao.count();
       assertThat(count).isEqualTo(0);
 
       // When & Then
@@ -116,10 +116,10 @@ class VenueRepositoryAdapterIT {
       repository.insertAll(List.of(venue1, venue2));
 
       // Then: 验证主表
-      assertThat(venueJpaRepository.count()).isEqualTo(2);
+      assertThat(venueDao.count()).isEqualTo(2);
 
       // Then: 验证标识符子表（每个 Venue 有 1 个 OpenAlex + 1 个 ISSN-L + 1 个 ISSN = 3）
-      assertThat(identifierJpaRepository.count()).isEqualTo(6);
+      assertThat(identifierDao.count()).isEqualTo(6);
     }
 
     @Test
@@ -129,7 +129,7 @@ class VenueRepositoryAdapterIT {
       assertThatCode(() -> repository.insertAll(List.of())).doesNotThrowAnyException();
 
       // 验证没有数据插入
-      assertThat(venueJpaRepository.count()).isZero();
+      assertThat(venueDao.count()).isZero();
     }
 
     @Test
@@ -143,12 +143,12 @@ class VenueRepositoryAdapterIT {
       repository.insertAll(List.of(venue));
 
       // Then: 获取主表 ID
-      var savedVenue = venueJpaRepository.findAll().get(0);
+      var savedVenue = venueDao.findAll().get(0);
       Long venueId = savedVenue.getId();
       assertThat(venueId).isNotNull();
 
       // Then: 验证标识符子表的外键
-      var identifiers = identifierJpaRepository.findAll();
+      var identifiers = identifierDao.findAll();
       assertThat(identifiers).allMatch(i -> i.getVenueId().equals(venueId));
     }
 
@@ -162,10 +162,10 @@ class VenueRepositoryAdapterIT {
       repository.insertAll(List.of(venue));
 
       // Then: 主表有 1 条记录
-      assertThat(venueJpaRepository.count()).isEqualTo(1);
+      assertThat(venueDao.count()).isEqualTo(1);
 
       // Then: 标识符只有 1 个（OpenAlex ID 由 fromOpenAlex 自动添加）
-      assertThat(identifierJpaRepository.count()).isEqualTo(1);
+      assertThat(identifierDao.count()).isEqualTo(1);
     }
 
     @Test
@@ -214,7 +214,7 @@ class VenueRepositoryAdapterIT {
     @DisplayName("数据库为空 - 应该返回空集合")
     void findExistingIssnLs_emptyDatabase_shouldReturnEmptySet() {
       // Given: 数据库为空
-      assertThat(venueJpaRepository.count()).isZero();
+      assertThat(venueDao.count()).isZero();
 
       // When
       Set<String> result = repository.findExistingIssnLs(Set.of("1234-5678", "2345-6789"));
@@ -471,7 +471,7 @@ class VenueRepositoryAdapterIT {
       VenueAggregate venue = createVenueAggregateWithIssnL("S1", "Journal A", "1111-1111");
       repository.insertAll(List.of(venue));
 
-      int initialCount = (int) identifierJpaRepository.count();
+      int initialCount = (int) identifierDao.count();
 
       // 重新查询
       Map<String, VenueAggregate> found = repository.findByIssnLs(Set.of("1111-1111"));
@@ -483,7 +483,7 @@ class VenueRepositoryAdapterIT {
       repository.updateBatch(List.of(retrievedVenue));
 
       // Then: 验证标识符被添加
-      assertThat(identifierJpaRepository.count()).isEqualTo(initialCount + 1);
+      assertThat(identifierDao.count()).isEqualTo(initialCount + 1);
 
       Map<String, VenueAggregate> updatedResult = repository.findByIssnLs(Set.of("1111-1111"));
       VenueAggregate updatedVenue = updatedResult.get("1111-1111");
@@ -498,7 +498,7 @@ class VenueRepositoryAdapterIT {
       venue.addIdentifier(VenueIdentifierType.NLM, "NLM123");
       repository.insertAll(List.of(venue));
 
-      int initialCount = (int) identifierJpaRepository.count();
+      int initialCount = (int) identifierDao.count();
 
       // 重新查询
       Map<String, VenueAggregate> found = repository.findByIssnLs(Set.of("1111-1111"));
@@ -510,7 +510,7 @@ class VenueRepositoryAdapterIT {
       repository.updateBatch(List.of(retrievedVenue));
 
       // Then: 验证标识符被删除
-      assertThat(identifierJpaRepository.count()).isEqualTo(initialCount - 1);
+      assertThat(identifierDao.count()).isEqualTo(initialCount - 1);
 
       Map<String, VenueAggregate> updatedResult = repository.findByIssnLs(Set.of("1111-1111"));
       VenueAggregate updatedVenue = updatedResult.get("1111-1111");

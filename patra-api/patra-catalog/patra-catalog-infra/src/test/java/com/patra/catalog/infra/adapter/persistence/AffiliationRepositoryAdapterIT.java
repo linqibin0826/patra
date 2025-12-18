@@ -6,9 +6,9 @@ import com.patra.catalog.domain.model.aggregate.AffiliationAggregate;
 import com.patra.catalog.domain.model.enums.AffiliationType;
 import com.patra.catalog.domain.model.vo.affiliation.GridId;
 import com.patra.catalog.domain.model.vo.affiliation.RorId;
+import com.patra.catalog.infra.adapter.persistence.dao.AffiliationDao;
+import com.patra.catalog.infra.adapter.persistence.entity.AffiliationEntity;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
-import com.patra.catalog.infra.persistence.jpa.AffiliationJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.entity.AffiliationEntity;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +50,7 @@ import org.springframework.test.context.ContextConfiguration;
 @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({AffiliationRepositoryAdapter.class, JpaAuditingConfig.class})
-@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.jpa.converter")
+@ComponentScan(basePackages = "com.patra.catalog.infra.adapter.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("AffiliationRepositoryAdapter 集成测试（JPA）")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -58,7 +58,7 @@ class AffiliationRepositoryAdapterIT {
 
   @Autowired private AffiliationRepositoryAdapter affiliationRepository;
 
-  @Autowired private AffiliationJpaRepository jpaRepository;
+  @Autowired private AffiliationDao jpaRepository;
 
   @Nested
   @DisplayName("save() 方法测试")
