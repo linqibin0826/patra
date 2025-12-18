@@ -189,10 +189,9 @@ patra:
 - `MeshDescriptorRepositoryAdapter`：主题词仓储适配器
 - `MeshQualifierRepositoryAdapter`：限定词仓储适配器
 - `VenueRepositoryAdapter`：载体聚合根仓储适配器（含 identifiers 和补充数据）
-- `MeshDescriptorConverter`：主题词对象转换器
-- `MeshQualifierConverter`：限定词对象转换器
-- `VenueConverter`：载体聚合根 ↔ DO 转换器（含快速访问字段提取）
-- `VenueDetailConverter`：载体详情值对象 ↔ DO 转换器
+- `MeshDescriptorJpaMapper`：主题词 Entity ↔ Aggregate 映射器（MapStruct）
+- `MeshQualifierJpaMapper`：限定词 Entity ↔ Aggregate 映射器（MapStruct）
+- `VenueJpaMapper`：载体聚合根 Entity ↔ Aggregate 映射器（含快速访问字段提取）
 - `StreamingDownloadAdapter`：流式下载适配器（HTTP 响应体直接返回 InputStream，无磁盘落盘）
 - `VenueSourceFileAdapter`：OpenAlex Venue 源文件适配器（封装 manifest 解析）
 
@@ -229,7 +228,19 @@ patra:
 | Boot | E2E 测试 | 核心流程 |
 
 ## 📝 变更日志
-1. v0.9.7 (2025-12-13)：Venue 嵌入式值对象设计
+1. v0.9.8 (2025-12-18)：patra-catalog-infra 包结构重构
+   - **包结构整合**：将 `infra/batch/` 目录整合到 `infra/adapter/batch/` 下
+     - `batch/mesh/*` → `adapter/batch/mesh/*`（MeSH 批处理组件）
+     - `batch/venue/*` → `adapter/batch/venue/*`（Venue 批处理组件）
+   - **Converter 重命名**：MapStruct 映射器统一命名为 `*JpaMapper`（区分 JPA AttributeConverter）
+     - `*JpaConverter.java` → `converter/mapper/*JpaMapper.java`
+     - JPA AttributeConverter 移至 `converter/attribute/` 子包
+   - **设计说明**：
+     - `adapter/batch/{usecase}/` 结构使 Port 适配器与其支撑组件（JobConfig/ItemReader/ItemWriter）共存
+     - `converter/mapper/` 与 `converter/attribute/` 分离明确两种转换器的职责
+   - 作为 JPA 模块包结构规范示例，供其他模块迁移参考
+
+2. v0.9.7 (2025-12-13)：Venue 嵌入式值对象设计
    - **架构决策**：[[ADR-019]] 使用 JSON 字段存储嵌入式值对象，实现 DDD 聚合设计
    - **嵌入式值对象**（4 个 JSON 字段）：
      - `PublicationProfile`：出版概况（缩写标题、备选标题、主页 URL、宿主机构）

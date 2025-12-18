@@ -9,7 +9,7 @@ import com.patra.catalog.domain.model.vo.venue.VenueMesh;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
 import com.patra.catalog.domain.model.vo.venue.VenueRelation;
 import com.patra.catalog.domain.port.repository.VenueRepository;
-import com.patra.catalog.infra.adapter.persistence.converter.VenueJpaConverter;
+import com.patra.catalog.infra.adapter.persistence.converter.mapper.VenueJpaMapper;
 import com.patra.catalog.infra.adapter.persistence.dao.VenueDao;
 import com.patra.catalog.infra.adapter.persistence.dao.VenueIdentifierDao;
 import com.patra.catalog.infra.adapter.persistence.dao.VenueIndexingHistoryDao;
@@ -65,7 +65,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
   private final VenueMeshDao meshDao;
   private final VenueRelationDao relationDao;
   private final VenueIndexingHistoryDao indexingHistoryDao;
-  private final VenueJpaConverter jpaConverter;
+  private final VenueJpaMapper jpaConverter;
   private final EntityManager entityManager;
 
   /// 批量操作时的 flush 阈值。

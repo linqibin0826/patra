@@ -25,7 +25,7 @@ import org.hibernate.type.SqlTypes;
 /// - 继承 `BaseJpaEntity` 获得审计、乐观锁、软删除功能
 /// - 业务唯一键：`(venue_id, year, rating_system)` 由唯一约束保证
 /// - 使用 Hibernate 6.6 的 `@JdbcTypeCode(SqlTypes.JSON)` 处理 JSON 字段
-/// - `RatingSystem` 枚举通过 `RatingSystemConverter` 自动转换
+/// - `RatingSystem` 枚举通过 `RatingSystemAttributeConverter` 自动转换
 ///
 /// **索引设计**：
 ///
@@ -70,7 +70,7 @@ public class VenueRatingEntity extends BaseJpaEntity {
   @Column(name = "year", nullable = false)
   private Short year;
 
-  /// 评价体系：JCR/CAS/SCOPUS（通过 RatingSystemConverter 自动转换）
+  /// 评价体系：JCR/CAS/SCOPUS（通过 RatingSystemAttributeConverter 自动转换）
   @Column(name = "rating_system", nullable = false, length = 32)
   private RatingSystem ratingSystem;
 

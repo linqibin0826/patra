@@ -21,7 +21,7 @@ import org.hibernate.type.SqlTypes;
 ///
 /// - 继承 `BaseJpaEntity` 获得审计、乐观锁、软删除功能
 /// - 使用 Hibernate 6.6 的 `@JdbcTypeCode(SqlTypes.JSON)` 处理 JSON 字段
-/// - `AffiliationType` 枚举通过 `AffiliationTypeConverter` 自动转换
+/// - `AffiliationType` 枚举通过 `AffiliationTypeAttributeConverter` 自动转换
 ///
 /// **索引设计**：
 ///
@@ -116,7 +116,7 @@ public class AffiliationEntity extends BaseJpaEntity {
   @Column(name = "parent_affiliation", length = 200)
   private String parentAffiliation;
 
-  /// 机构类型（通过 AffiliationTypeConverter 自动转换）
+  /// 机构类型（通过 AffiliationTypeAttributeConverter 自动转换）
   @Column(name = "affiliation_type", length = 50)
   private AffiliationType affiliationType;
 

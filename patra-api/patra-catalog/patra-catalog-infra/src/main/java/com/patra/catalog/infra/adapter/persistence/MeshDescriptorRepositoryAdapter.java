@@ -3,7 +3,7 @@ package com.patra.catalog.infra.adapter.persistence;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
-import com.patra.catalog.infra.adapter.persistence.converter.MeshDescriptorJpaConverter;
+import com.patra.catalog.infra.adapter.persistence.converter.mapper.MeshDescriptorJpaMapper;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshConceptDao;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshConceptRelationDao;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshDescriptorDao;
@@ -53,7 +53,7 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
   private final MeshConceptRelationDao conceptRelationDao;
   private final MeshEntryTermDao entryTermDao;
   private final MeshEntryCombinationDao entryCombinationDao;
-  private final MeshDescriptorJpaConverter converter;
+  private final MeshDescriptorJpaMapper converter;
   private final EntityManager entityManager;
 
   @Override

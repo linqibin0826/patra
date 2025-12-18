@@ -3,7 +3,7 @@ package com.patra.catalog.infra.adapter.persistence;
 import com.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.catalog.domain.port.repository.VenueInstanceRepository;
-import com.patra.catalog.infra.adapter.persistence.converter.VenueInstanceJpaConverter;
+import com.patra.catalog.infra.adapter.persistence.converter.mapper.VenueInstanceJpaMapper;
 import com.patra.catalog.infra.adapter.persistence.dao.VenueInstanceDao;
 import com.patra.catalog.infra.adapter.persistence.entity.VenueInstanceEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
@@ -28,7 +28,7 @@ import org.springframework.stereotype.Repository;
 ///
 /// - 使用 Spring Data JPA 进行数据库操作
 /// - 批量插入使用 `saveAll()` 优化性能
-/// - 使用 `VenueInstanceJpaConverter` 进行 Entity ↔ 聚合根转换
+/// - 使用 `VenueInstanceJpaMapper` 进行 Entity ↔ 聚合根转换
 ///
 /// **JPA 批量写入说明**：
 ///
@@ -44,7 +44,7 @@ import org.springframework.stereotype.Repository;
 public class VenueInstanceRepositoryAdapter implements VenueInstanceRepository {
 
   private final VenueInstanceDao jpaRepository;
-  private final VenueInstanceJpaConverter jpaConverter;
+  private final VenueInstanceJpaMapper jpaConverter;
   private final EntityManager entityManager;
 
   @Override
