@@ -3,19 +3,19 @@ package com.patra.catalog.infra.adapter.persistence;
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
 import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
-import com.patra.catalog.infra.persistence.jpa.MeshConceptJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.MeshConceptRelationJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.MeshDescriptorJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.MeshEntryCombinationJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.MeshEntryTermJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.MeshTreeNumberJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.converter.MeshDescriptorJpaConverter;
-import com.patra.catalog.infra.persistence.jpa.entity.MeshConceptEntity;
-import com.patra.catalog.infra.persistence.jpa.entity.MeshConceptRelationEntity;
-import com.patra.catalog.infra.persistence.jpa.entity.MeshDescriptorEntity;
-import com.patra.catalog.infra.persistence.jpa.entity.MeshEntryCombinationEntity;
-import com.patra.catalog.infra.persistence.jpa.entity.MeshEntryTermEntity;
-import com.patra.catalog.infra.persistence.jpa.entity.MeshTreeNumberEntity;
+import com.patra.catalog.infra.adapter.persistence.converter.MeshDescriptorJpaConverter;
+import com.patra.catalog.infra.adapter.persistence.dao.MeshConceptDao;
+import com.patra.catalog.infra.adapter.persistence.dao.MeshConceptRelationDao;
+import com.patra.catalog.infra.adapter.persistence.dao.MeshDescriptorDao;
+import com.patra.catalog.infra.adapter.persistence.dao.MeshEntryCombinationDao;
+import com.patra.catalog.infra.adapter.persistence.dao.MeshEntryTermDao;
+import com.patra.catalog.infra.adapter.persistence.dao.MeshTreeNumberDao;
+import com.patra.catalog.infra.adapter.persistence.entity.MeshConceptEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.MeshConceptRelationEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.MeshDescriptorEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.MeshEntryCombinationEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.MeshEntryTermEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.MeshTreeNumberEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
@@ -47,18 +47,18 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
 
   private static final int FLUSH_INTERVAL = 50;
 
-  private final MeshDescriptorJpaRepository descriptorJpaRepository;
-  private final MeshTreeNumberJpaRepository treeNumberJpaRepository;
-  private final MeshConceptJpaRepository conceptJpaRepository;
-  private final MeshConceptRelationJpaRepository conceptRelationJpaRepository;
-  private final MeshEntryTermJpaRepository entryTermJpaRepository;
-  private final MeshEntryCombinationJpaRepository entryCombinationJpaRepository;
+  private final MeshDescriptorDao descriptorDao;
+  private final MeshTreeNumberDao treeNumberDao;
+  private final MeshConceptDao conceptDao;
+  private final MeshConceptRelationDao conceptRelationDao;
+  private final MeshEntryTermDao entryTermDao;
+  private final MeshEntryCombinationDao entryCombinationDao;
   private final MeshDescriptorJpaConverter converter;
   private final EntityManager entityManager;
 
   @Override
   public boolean hasAnyData() {
-    return descriptorJpaRepository.hasAnyData();
+    return descriptorDao.hasAnyData();
   }
 
   @Override

@@ -9,19 +9,19 @@ import com.patra.catalog.domain.model.vo.venue.VenueMesh;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
 import com.patra.catalog.domain.model.vo.venue.VenueRelation;
 import com.patra.catalog.domain.port.repository.VenueRepository;
-import com.patra.catalog.infra.persistence.jpa.VenueIdentifierJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.VenueIndexingHistoryJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.VenueJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.VenueMeshJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.VenuePublicationStatsJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.VenueRelationJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.converter.VenueJpaConverter;
-import com.patra.catalog.infra.persistence.jpa.entity.VenueEntity;
-import com.patra.catalog.infra.persistence.jpa.entity.VenueIdentifierEntity;
-import com.patra.catalog.infra.persistence.jpa.entity.VenueIndexingHistoryEntity;
-import com.patra.catalog.infra.persistence.jpa.entity.VenueMeshEntity;
-import com.patra.catalog.infra.persistence.jpa.entity.VenuePublicationStatsEntity;
-import com.patra.catalog.infra.persistence.jpa.entity.VenueRelationEntity;
+import com.patra.catalog.infra.adapter.persistence.converter.VenueJpaConverter;
+import com.patra.catalog.infra.adapter.persistence.dao.VenueDao;
+import com.patra.catalog.infra.adapter.persistence.dao.VenueIdentifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.VenueIndexingHistoryDao;
+import com.patra.catalog.infra.adapter.persistence.dao.VenueMeshDao;
+import com.patra.catalog.infra.adapter.persistence.dao.VenuePublicationStatsDao;
+import com.patra.catalog.infra.adapter.persistence.dao.VenueRelationDao;
+import com.patra.catalog.infra.adapter.persistence.entity.VenueEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.VenueIdentifierEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.VenueIndexingHistoryEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.VenueMeshEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.VenuePublicationStatsEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.VenueRelationEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
@@ -59,12 +59,12 @@ import org.springframework.stereotype.Repository;
 public class VenueRepositoryAdapter implements VenueRepository {
 
   // ========== JPA 组件 ==========
-  private final VenueJpaRepository venueJpaRepository;
-  private final VenueIdentifierJpaRepository identifierJpaRepository;
-  private final VenuePublicationStatsJpaRepository publicationStatsJpaRepository;
-  private final VenueMeshJpaRepository meshJpaRepository;
-  private final VenueRelationJpaRepository relationJpaRepository;
-  private final VenueIndexingHistoryJpaRepository indexingHistoryJpaRepository;
+  private final VenueDao venueDao;
+  private final VenueIdentifierDao identifierDao;
+  private final VenuePublicationStatsDao publicationStatsDao;
+  private final VenueMeshDao meshDao;
+  private final VenueRelationDao relationDao;
+  private final VenueIndexingHistoryDao indexingHistoryDao;
   private final VenueJpaConverter jpaConverter;
   private final EntityManager entityManager;
 
@@ -73,7 +73,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
   @Override
   public boolean hasAnyData() {
-    return venueJpaRepository.hasAnyData();
+    return venueDao.hasAnyData();
   }
 
   @Override
@@ -91,7 +91,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
     }
 
     // 2. 批量插入主表
-    List<VenueEntity> savedEntities = venueJpaRepository.saveAll(venueEntities);
+    List<VenueEntity> savedEntities = venueDao.saveAll(venueEntities);
     log.debug("批量插入载体 {} 条", savedEntities.size());
 
     // 3. 从实体回填 ID 到聚合根，并收集子表数据
@@ -114,7 +114,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 4. 批量插入标识符
     if (!identifierEntities.isEmpty()) {
-      identifierJpaRepository.saveAll(identifierEntities);
+      identifierDao.saveAll(identifierEntities);
       log.debug("批量插入载体标识符 {} 条", identifierEntities.size());
     }
   }
@@ -127,7 +127,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 通过标识符表查找 ISSN-L 类型的记录
     List<VenueIdentifierEntity> identifierEntities =
-        identifierJpaRepository.findByIdentifierTypeAndIdentifierValueIn(
+        identifierDao.findByIdentifierTypeAndIdentifierValueIn(
             VenueIdentifierType.ISSN_L.name(), issnLs);
 
     // 提取存在的 ISSN-L 值
@@ -146,7 +146,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 通过标识符表查找 ISSN-L 类型的记录
     List<VenueIdentifierEntity> identifierEntities =
-        identifierJpaRepository.findByIdentifierTypeAndIdentifierValueIn(
+        identifierDao.findByIdentifierTypeAndIdentifierValueIn(
             VenueIdentifierType.ISSN_L.name(), issnLs);
 
     if (identifierEntities.isEmpty()) {
@@ -188,7 +188,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 通过标识符表查找 NLM 类型的记录
     List<VenueIdentifierEntity> identifierEntities =
-        identifierJpaRepository.findByIdentifierTypeAndIdentifierValueIn(
+        identifierDao.findByIdentifierTypeAndIdentifierValueIn(
             VenueIdentifierType.NLM.name(), nlmIds);
 
     if (identifierEntities.isEmpty()) {
@@ -230,7 +230,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 通过标识符表查找 ISSN 和 ISSN_L 类型的记录
     List<VenueIdentifierEntity> identifierEntities =
-        identifierJpaRepository.findByTypesAndValues(
+        identifierDao.findByTypesAndValues(
             List.of(VenueIdentifierType.ISSN.name(), VenueIdentifierType.ISSN_L.name()), issns);
 
     if (identifierEntities.isEmpty()) {
@@ -292,7 +292,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 批量操作：标识符删除
     if (!identifierIdsToDelete.isEmpty()) {
-      identifierJpaRepository.deleteAllByIdInBatch(identifierIdsToDelete);
+      identifierDao.deleteAllByIdInBatch(identifierIdsToDelete);
     }
 
     // 批量操作：标识符插入
@@ -300,7 +300,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
       for (VenueIdentifierEntity entity : identifiersToInsert) {
         assignIdIfMissing(entity);
       }
-      identifierJpaRepository.saveAll(identifiersToInsert);
+      identifierDao.saveAll(identifiersToInsert);
     }
 
     log.debug(
@@ -324,7 +324,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
       List<Long> identifierIdsToDelete) {
 
     // 从数据库加载当前标识符，构建 值对象 -> 主键ID 的映射
-    List<VenueIdentifierEntity> existingEntities = identifierJpaRepository.findByVenueId(venueId);
+    List<VenueIdentifierEntity> existingEntities = identifierDao.findByVenueId(venueId);
     Map<VenueIdentifier, Long> existingIdentifierMap =
         existingEntities.stream()
             .collect(
@@ -357,7 +357,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
     }
 
     // 查询主表
-    List<VenueEntity> venueEntities = venueJpaRepository.findByIdIn(venueIds);
+    List<VenueEntity> venueEntities = venueDao.findByIdIn(venueIds);
     if (venueEntities.isEmpty()) {
       return List.of();
     }
@@ -387,7 +387,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
   /// 批量加载标识符。
   private Map<Long, List<VenueIdentifierEntity>> loadIdentifiers(Collection<Long> venueIds) {
-    List<VenueIdentifierEntity> all = identifierJpaRepository.findByVenueIdIn(venueIds);
+    List<VenueIdentifierEntity> all = identifierDao.findByVenueIdIn(venueIds);
     return all.stream().collect(Collectors.groupingBy(VenueIdentifierEntity::getVenueId));
   }
 
@@ -417,7 +417,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
     List<Long> venueIds = new ArrayList<>(yearlyMetricsByVenueId.keySet());
 
     // 删除旧数据
-    publicationStatsJpaRepository.deleteByVenueIdIn(venueIds);
+    publicationStatsDao.deleteByVenueIdIn(venueIds);
     entityManager.flush();
 
     // 收集新数据
@@ -433,7 +433,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 批量插入（带 flush）
     if (!entities.isEmpty()) {
-      batchSaveWithFlush(entities, publicationStatsJpaRepository);
+      batchSaveWithFlush(entities, publicationStatsDao);
       log.debug("批量插入年度指标 {} 条", entities.size());
     }
   }
@@ -447,7 +447,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
     List<Long> venueIds = new ArrayList<>(meshTermsByVenueId.keySet());
 
     // 删除旧数据
-    meshJpaRepository.deleteByVenueIdIn(venueIds);
+    meshDao.deleteByVenueIdIn(venueIds);
     entityManager.flush();
 
     // 收集新数据
@@ -463,7 +463,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 批量插入（带 flush）
     if (!entities.isEmpty()) {
-      batchSaveWithFlush(entities, meshJpaRepository);
+      batchSaveWithFlush(entities, meshDao);
       log.debug("批量插入 MeSH 主题词 {} 条", entities.size());
     }
   }
@@ -477,7 +477,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
     List<Long> venueIds = new ArrayList<>(relationsByVenueId.keySet());
 
     // 删除旧数据
-    relationJpaRepository.deleteByVenueIdIn(venueIds);
+    relationDao.deleteByVenueIdIn(venueIds);
     entityManager.flush();
 
     // 收集新数据
@@ -493,7 +493,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 批量插入（带 flush）
     if (!entities.isEmpty()) {
-      batchSaveWithFlush(entities, relationJpaRepository);
+      batchSaveWithFlush(entities, relationDao);
       log.debug("批量插入关联关系 {} 条", entities.size());
     }
   }
@@ -508,7 +508,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
     List<Long> venueIds = new ArrayList<>(historiesByVenueId.keySet());
 
     // 删除旧数据
-    indexingHistoryJpaRepository.deleteByVenueIdIn(venueIds);
+    indexingHistoryDao.deleteByVenueIdIn(venueIds);
     entityManager.flush();
 
     // 收集新数据
@@ -524,7 +524,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 批量插入（带 flush）
     if (!entities.isEmpty()) {
-      batchSaveWithFlush(entities, indexingHistoryJpaRepository);
+      batchSaveWithFlush(entities, indexingHistoryDao);
       log.debug("批量插入索引历史 {} 条", entities.size());
     }
   }

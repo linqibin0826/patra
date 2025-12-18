@@ -9,12 +9,12 @@ import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.domain.exception.DataAlreadyExistsException;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
-import com.patra.catalog.infra.persistence.jpa.MeshConceptJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.MeshConceptRelationJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.MeshDescriptorJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.MeshEntryCombinationJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.MeshEntryTermJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.MeshTreeNumberJpaRepository;
+import com.patra.catalog.infra.adapter.persistence.dao.MeshConceptDao;
+import com.patra.catalog.infra.adapter.persistence.dao.MeshConceptRelationDao;
+import com.patra.catalog.infra.adapter.persistence.dao.MeshDescriptorDao;
+import com.patra.catalog.infra.adapter.persistence.dao.MeshEntryCombinationDao;
+import com.patra.catalog.infra.adapter.persistence.dao.MeshEntryTermDao;
+import com.patra.catalog.infra.adapter.persistence.dao.MeshTreeNumberDao;
 import com.patra.catalog.integration.config.CatalogMySQLContainerInitializer;
 import com.patra.common.cqrs.CommandBus;
 import java.io.InputStream;
@@ -90,12 +90,12 @@ class MeshDescriptorImportE2E {
 
   @Autowired private CommandBus commandBus;
 
-  @Autowired private MeshDescriptorJpaRepository descriptorRepository;
-  @Autowired private MeshTreeNumberJpaRepository treeNumberRepository;
-  @Autowired private MeshConceptJpaRepository conceptRepository;
-  @Autowired private MeshConceptRelationJpaRepository conceptRelationRepository;
-  @Autowired private MeshEntryTermJpaRepository entryTermRepository;
-  @Autowired private MeshEntryCombinationJpaRepository entryCombinationRepository;
+  @Autowired private MeshDescriptorDao descriptorRepository;
+  @Autowired private MeshTreeNumberDao treeNumberRepository;
+  @Autowired private MeshConceptDao conceptRepository;
+  @Autowired private MeshConceptRelationDao conceptRelationRepository;
+  @Autowired private MeshEntryTermDao entryTermRepository;
+  @Autowired private MeshEntryCombinationDao entryCombinationRepository;
   @Autowired private JdbcTemplate jdbcTemplate;
 
   /// Mock StreamingDownloadPort，返回测试资源文件的 InputStream。

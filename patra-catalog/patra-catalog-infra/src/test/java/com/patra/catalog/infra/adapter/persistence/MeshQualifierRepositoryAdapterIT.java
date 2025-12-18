@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
+import com.patra.catalog.infra.adapter.persistence.dao.MeshQualifierDao;
+import com.patra.catalog.infra.adapter.persistence.entity.MeshQualifierEntity;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
-import com.patra.catalog.infra.persistence.jpa.MeshQualifierJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.entity.MeshQualifierEntity;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -46,7 +46,7 @@ import org.springframework.test.context.ContextConfiguration;
 @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({MeshQualifierRepositoryAdapter.class, JpaAuditingConfig.class})
-@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.jpa.converter")
+@ComponentScan(basePackages = "com.patra.catalog.infra.adapter.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("MeshQualifierRepositoryAdapter 集成测试（JPA）")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -54,7 +54,7 @@ class MeshQualifierRepositoryAdapterIT {
 
   @Autowired private MeshQualifierRepositoryAdapter meshQualifierRepository;
 
-  @Autowired private MeshQualifierJpaRepository jpaRepository;
+  @Autowired private MeshQualifierDao jpaRepository;
 
   @Nested
   @DisplayName("saveBatch() 方法测试")

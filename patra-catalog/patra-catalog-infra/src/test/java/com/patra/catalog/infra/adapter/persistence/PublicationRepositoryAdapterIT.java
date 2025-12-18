@@ -11,8 +11,8 @@ import com.patra.catalog.domain.model.vo.publication.LanguageInfo;
 import com.patra.catalog.domain.model.vo.publication.PublicationIdentifiers;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationDao;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
-import com.patra.catalog.infra.persistence.jpa.PublicationJpaRepository;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.util.List;
@@ -52,7 +52,7 @@ import org.springframework.test.context.ContextConfiguration;
   JpaAuditingConfig.class,
   JacksonAutoConfiguration.class
 })
-@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.jpa.converter")
+@ComponentScan(basePackages = "com.patra.catalog.infra.adapter.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("PublicationRepositoryAdapter 集成测试（JPA）")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -60,7 +60,7 @@ class PublicationRepositoryAdapterIT {
 
   @Autowired private PublicationRepositoryAdapter repository;
 
-  @Autowired private PublicationJpaRepository jpaRepository;
+  @Autowired private PublicationDao jpaRepository;
 
   // ========== 工厂方法 ==========
 

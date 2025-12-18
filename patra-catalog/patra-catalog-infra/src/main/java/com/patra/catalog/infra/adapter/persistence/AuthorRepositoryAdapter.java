@@ -2,9 +2,9 @@ package com.patra.catalog.infra.adapter.persistence;
 
 import com.patra.catalog.domain.model.aggregate.AuthorAggregate;
 import com.patra.catalog.domain.port.repository.AuthorRepository;
-import com.patra.catalog.infra.persistence.jpa.AuthorJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.converter.AuthorJpaConverter;
-import com.patra.catalog.infra.persistence.jpa.entity.AuthorEntity;
+import com.patra.catalog.infra.adapter.persistence.converter.AuthorJpaConverter;
+import com.patra.catalog.infra.adapter.persistence.dao.AuthorDao;
+import com.patra.catalog.infra.adapter.persistence.entity.AuthorEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.util.List;
 import java.util.Optional;
@@ -34,7 +34,7 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class AuthorRepositoryAdapter implements AuthorRepository {
 
-  private final AuthorJpaRepository jpaRepository;
+  private final AuthorDao jpaRepository;
   private final AuthorJpaConverter jpaConverter;
 
   /// 保存单个作者聚合根。

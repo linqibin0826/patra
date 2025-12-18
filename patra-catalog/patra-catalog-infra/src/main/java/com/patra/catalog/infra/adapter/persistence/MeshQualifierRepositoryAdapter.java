@@ -2,9 +2,9 @@ package com.patra.catalog.infra.adapter.persistence;
 
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.port.repository.MeshQualifierRepository;
-import com.patra.catalog.infra.persistence.jpa.MeshQualifierJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.converter.MeshQualifierJpaConverter;
-import com.patra.catalog.infra.persistence.jpa.entity.MeshQualifierEntity;
+import com.patra.catalog.infra.adapter.persistence.converter.MeshQualifierJpaConverter;
+import com.patra.catalog.infra.adapter.persistence.dao.MeshQualifierDao;
+import com.patra.catalog.infra.adapter.persistence.entity.MeshQualifierEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +33,7 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class MeshQualifierRepositoryAdapter implements MeshQualifierRepository {
 
-  private final MeshQualifierJpaRepository jpaRepository;
+  private final MeshQualifierDao jpaRepository;
   private final MeshQualifierJpaConverter jpaConverter;
 
   @Override

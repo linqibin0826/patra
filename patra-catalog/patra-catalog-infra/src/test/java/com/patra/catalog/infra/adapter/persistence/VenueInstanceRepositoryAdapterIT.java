@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
+import com.patra.catalog.infra.adapter.persistence.dao.VenueInstanceDao;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
-import com.patra.catalog.infra.persistence.jpa.VenueInstanceJpaRepository;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.time.LocalDate;
 import java.util.List;
@@ -48,7 +48,7 @@ import org.springframework.test.context.ContextConfiguration;
   JpaAuditingConfig.class,
   JacksonAutoConfiguration.class
 })
-@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.jpa.converter")
+@ComponentScan(basePackages = "com.patra.catalog.infra.adapter.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("VenueInstanceRepositoryAdapter 集成测试（JPA）")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -56,7 +56,7 @@ class VenueInstanceRepositoryAdapterIT {
 
   @Autowired private VenueInstanceRepositoryAdapter repository;
 
-  @Autowired private VenueInstanceJpaRepository jpaRepository;
+  @Autowired private VenueInstanceDao jpaRepository;
 
   // ========== 期刊实例工厂方法 ==========
 

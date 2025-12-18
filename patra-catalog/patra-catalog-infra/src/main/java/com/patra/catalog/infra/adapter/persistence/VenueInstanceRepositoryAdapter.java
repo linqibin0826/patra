@@ -3,9 +3,9 @@ package com.patra.catalog.infra.adapter.persistence;
 import com.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.catalog.domain.port.repository.VenueInstanceRepository;
-import com.patra.catalog.infra.persistence.jpa.VenueInstanceJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.converter.VenueInstanceJpaConverter;
-import com.patra.catalog.infra.persistence.jpa.entity.VenueInstanceEntity;
+import com.patra.catalog.infra.adapter.persistence.converter.VenueInstanceJpaConverter;
+import com.patra.catalog.infra.adapter.persistence.dao.VenueInstanceDao;
+import com.patra.catalog.infra.adapter.persistence.entity.VenueInstanceEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
@@ -43,7 +43,7 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class VenueInstanceRepositoryAdapter implements VenueInstanceRepository {
 
-  private final VenueInstanceJpaRepository jpaRepository;
+  private final VenueInstanceDao jpaRepository;
   private final VenueInstanceJpaConverter jpaConverter;
   private final EntityManager entityManager;
 

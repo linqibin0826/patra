@@ -2,9 +2,9 @@ package com.patra.catalog.infra.adapter.persistence;
 
 import com.patra.catalog.domain.model.aggregate.AffiliationAggregate;
 import com.patra.catalog.domain.port.repository.AffiliationRepository;
-import com.patra.catalog.infra.persistence.jpa.AffiliationJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.converter.AffiliationJpaConverter;
-import com.patra.catalog.infra.persistence.jpa.entity.AffiliationEntity;
+import com.patra.catalog.infra.adapter.persistence.converter.AffiliationJpaConverter;
+import com.patra.catalog.infra.adapter.persistence.dao.AffiliationDao;
+import com.patra.catalog.infra.adapter.persistence.entity.AffiliationEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.util.List;
 import java.util.Optional;
@@ -34,7 +34,7 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class AffiliationRepositoryAdapter implements AffiliationRepository {
 
-  private final AffiliationJpaRepository jpaRepository;
+  private final AffiliationDao jpaRepository;
   private final AffiliationJpaConverter jpaConverter;
 
   /// 保存单个机构聚合根。

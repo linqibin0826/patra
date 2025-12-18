@@ -3,9 +3,9 @@ package com.patra.catalog.infra.adapter.persistence;
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import com.patra.catalog.domain.model.vo.publication.PublicationId;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
-import com.patra.catalog.infra.persistence.jpa.PublicationJpaRepository;
-import com.patra.catalog.infra.persistence.jpa.converter.PublicationJpaConverter;
-import com.patra.catalog.infra.persistence.jpa.entity.PublicationEntity;
+import com.patra.catalog.infra.adapter.persistence.converter.PublicationJpaConverter;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationDao;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.List;
@@ -40,7 +40,7 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class PublicationRepositoryAdapter implements PublicationRepository {
 
-  private final PublicationJpaRepository jpaRepository;
+  private final PublicationDao jpaRepository;
   private final PublicationJpaConverter jpaConverter;
   private final EntityManager entityManager;
 
