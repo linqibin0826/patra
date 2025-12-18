@@ -47,7 +47,7 @@ import org.springframework.stereotype.Repository;
 /// **职责**：
 ///
 /// - 管理 VenueAggregate（载体聚合根）的持久化
-/// - 管理 Serfile 相关数据（年度统计、MeSH、关联关系、索引历史）
+/// - 管理 Serfile 相关数据（MeSH、关联关系、索引历史）
 /// - 支持 OpenAlex Sources 和 NLM Serfile 批量数据导入
 /// - 以聚合根为单位保证数据一致性
 ///
@@ -125,11 +125,12 @@ public class VenueRepositoryAdapter implements VenueRepository {
       return Set.of();
     }
 
-    // 通过标识符表查询 ISSN-L
+    // 通过标识符表查找 ISSN-L 类型的记录
     List<VenueIdentifierEntity> identifierEntities =
         identifierJpaRepository.findByIdentifierTypeAndIdentifierValueIn(
             VenueIdentifierType.ISSN_L.name(), issnLs);
 
+    // 提取存在的 ISSN-L 值
     return identifierEntities.stream()
         .map(VenueIdentifierEntity::getIdentifierValue)
         .collect(Collectors.toSet());
@@ -404,32 +405,16 @@ public class VenueRepositoryAdapter implements VenueRepository {
     }
   }
 
-  // ========== Serfile 补充数据管理（已迁移至 JPA） ==========
+  // ========== Serfile 补充数据管理 ==========
 
   @Override
-  public Map<Long, List<VenuePublicationStats>> findYearlyMetricsByVenueIds(
-      Collection<Long> venueIds) {
-    if (venueIds == null || venueIds.isEmpty()) {
-      return Map.of();
-    }
-
-    List<VenuePublicationStatsEntity> entities =
-        publicationStatsJpaRepository.findByVenueIdIn(venueIds);
-
-    return entities.stream()
-        .collect(
-            Collectors.groupingBy(
-                VenuePublicationStatsEntity::getVenueId,
-                Collectors.mapping(jpaConverter::toPublicationStats, Collectors.toList())));
-  }
-
-  @Override
-  public void replaceYearlyMetricsBatch(Map<Long, List<VenuePublicationStats>> metricsByVenueId) {
-    if (metricsByVenueId == null || metricsByVenueId.isEmpty()) {
+  public void replaceYearlyMetricsBatch(
+      Map<Long, List<VenuePublicationStats>> yearlyMetricsByVenueId) {
+    if (yearlyMetricsByVenueId == null || yearlyMetricsByVenueId.isEmpty()) {
       return;
     }
 
-    List<Long> venueIds = new ArrayList<>(metricsByVenueId.keySet());
+    List<Long> venueIds = new ArrayList<>(yearlyMetricsByVenueId.keySet());
 
     // 删除旧数据
     publicationStatsJpaRepository.deleteByVenueIdIn(venueIds);
@@ -437,7 +422,7 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     // 收集新数据
     List<VenuePublicationStatsEntity> entities = new ArrayList<>();
-    for (Map.Entry<Long, List<VenuePublicationStats>> entry : metricsByVenueId.entrySet()) {
+    for (Map.Entry<Long, List<VenuePublicationStats>> entry : yearlyMetricsByVenueId.entrySet()) {
       Long venueId = entry.getKey();
       for (VenuePublicationStats stats : entry.getValue()) {
         VenuePublicationStatsEntity entity = jpaConverter.toPublicationStatsEntity(stats, venueId);
@@ -451,21 +436,6 @@ public class VenueRepositoryAdapter implements VenueRepository {
       batchSaveWithFlush(entities, publicationStatsJpaRepository);
       log.debug("批量插入年度指标 {} 条", entities.size());
     }
-  }
-
-  @Override
-  public Map<Long, List<VenueMesh>> findMeshTermsByVenueIds(Collection<Long> venueIds) {
-    if (venueIds == null || venueIds.isEmpty()) {
-      return Map.of();
-    }
-
-    List<VenueMeshEntity> entities = meshJpaRepository.findByVenueIdIn(venueIds);
-
-    return entities.stream()
-        .collect(
-            Collectors.groupingBy(
-                VenueMeshEntity::getVenueId,
-                Collectors.mapping(jpaConverter::toMesh, Collectors.toList())));
   }
 
   @Override
@@ -499,21 +469,6 @@ public class VenueRepositoryAdapter implements VenueRepository {
   }
 
   @Override
-  public Map<Long, List<VenueRelation>> findRelationsByVenueIds(Collection<Long> venueIds) {
-    if (venueIds == null || venueIds.isEmpty()) {
-      return Map.of();
-    }
-
-    List<VenueRelationEntity> entities = relationJpaRepository.findByVenueIdIn(venueIds);
-
-    return entities.stream()
-        .collect(
-            Collectors.groupingBy(
-                VenueRelationEntity::getVenueId,
-                Collectors.mapping(jpaConverter::toRelation, Collectors.toList())));
-  }
-
-  @Override
   public void replaceRelationsBatch(Map<Long, List<VenueRelation>> relationsByVenueId) {
     if (relationsByVenueId == null || relationsByVenueId.isEmpty()) {
       return;
@@ -541,23 +496,6 @@ public class VenueRepositoryAdapter implements VenueRepository {
       batchSaveWithFlush(entities, relationJpaRepository);
       log.debug("批量插入关联关系 {} 条", entities.size());
     }
-  }
-
-  @Override
-  public Map<Long, List<VenueIndexingHistory>> findIndexingHistoriesByVenueIds(
-      Collection<Long> venueIds) {
-    if (venueIds == null || venueIds.isEmpty()) {
-      return Map.of();
-    }
-
-    List<VenueIndexingHistoryEntity> entities =
-        indexingHistoryJpaRepository.findByVenueIdIn(venueIds);
-
-    return entities.stream()
-        .collect(
-            Collectors.groupingBy(
-                VenueIndexingHistoryEntity::getVenueId,
-                Collectors.mapping(jpaConverter::toIndexingHistory, Collectors.toList())));
   }
 
   @Override
