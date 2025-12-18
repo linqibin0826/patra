@@ -27,7 +27,7 @@ import java.util.Set;
 ///
 /// 本接口同时管理与载体关联的补充数据（不属于聚合边界，但通过 Repository 统一访问）：
 ///
-/// - VenuePublicationStats：年度发文统计（来自 OpenAlex）
+/// - VenuePublicationStats：年度发文统计（来自 OpenAlex Sources）
 /// - VenueMesh：MeSH 主题词（来自 NLM Serfile）
 /// - VenueRelation：期刊关联关系（来自 NLM Serfile）
 /// - VenueIndexingHistory：索引历史（来自 NLM Serfile）
@@ -71,7 +71,8 @@ public interface VenueRepository {
 
   /// 批量查询已存在的 ISSN-L。
   ///
-  /// 用于 ISSN-L 唯一约束冲突时的去重处理，过滤数据源中与数据库重复的记录。
+  /// 用于「乐观插入」场景中的降级处理：当批量插入因 ISSN-L 唯一约束冲突失败时，
+  /// 调用此方法查询已存在的 ISSN-L，然后过滤重复数据后重新插入。
   ///
   /// @param issnLs 待检查的 ISSN-L 集合（不能为 null，可以为空）
   /// @return 数据库中已存在的 ISSN-L 集合（永不为 null）
@@ -125,44 +126,23 @@ public interface VenueRepository {
 
   // ========== 补充数据管理（关联数据，不属于聚合边界） ==========
 
-  /// 批量查询年度发文统计。
+  /// 批量替换年度指标（删除旧数据后插入新数据）。
   ///
-  /// @param venueIds Venue ID 集合（不能为 null，可以为空）
-  /// @return Map，key 为 venueId，value 为该 Venue 的年度统计列表（永不为 null）
-  Map<Long, List<VenuePublicationStats>> findYearlyMetricsByVenueIds(Collection<Long> venueIds);
-
-  /// 批量替换年度发文统计（删除旧数据后插入新数据）。
+  /// 用于 OpenAlex Sources 初始化导入时保存年度发文统计数据。
+  /// 年度指标包含每年的发文数量等统计信息。
   ///
-  /// @param metricsByVenueId Map，key 为 venueId，value 为要设置的年度统计列表
-  void replaceYearlyMetricsBatch(Map<Long, List<VenuePublicationStats>> metricsByVenueId);
-
-  /// 批量查询 MeSH 主题词。
-  ///
-  /// @param venueIds Venue ID 集合（不能为 null，可以为空）
-  /// @return Map，key 为 venueId，value 为该 Venue 的 MeSH 主题词列表（永不为 null）
-  Map<Long, List<VenueMesh>> findMeshTermsByVenueIds(Collection<Long> venueIds);
+  /// @param yearlyMetricsByVenueId Map，key 为 venueId，value 为要设置的年度指标列表
+  void replaceYearlyMetricsBatch(Map<Long, List<VenuePublicationStats>> yearlyMetricsByVenueId);
 
   /// 批量替换 MeSH 主题词（删除旧数据后插入新数据）。
   ///
   /// @param meshTermsByVenueId Map，key 为 venueId，value 为要设置的 MeSH 主题词列表
   void replaceMeshTermsBatch(Map<Long, List<VenueMesh>> meshTermsByVenueId);
 
-  /// 批量查询期刊关联关系。
-  ///
-  /// @param venueIds Venue ID 集合（不能为 null，可以为空）
-  /// @return Map，key 为 venueId，value 为该 Venue 的关联关系列表（永不为 null）
-  Map<Long, List<VenueRelation>> findRelationsByVenueIds(Collection<Long> venueIds);
-
   /// 批量替换期刊关联关系（删除旧数据后插入新数据）。
   ///
   /// @param relationsByVenueId Map，key 为 venueId，value 为要设置的关联关系列表
   void replaceRelationsBatch(Map<Long, List<VenueRelation>> relationsByVenueId);
-
-  /// 批量查询索引历史。
-  ///
-  /// @param venueIds Venue ID 集合（不能为 null，可以为空）
-  /// @return Map，key 为 venueId，value 为该 Venue 的索引历史列表（永不为 null）
-  Map<Long, List<VenueIndexingHistory>> findIndexingHistoriesByVenueIds(Collection<Long> venueIds);
 
   /// 批量替换索引历史（删除旧数据后插入新数据）。
   ///
