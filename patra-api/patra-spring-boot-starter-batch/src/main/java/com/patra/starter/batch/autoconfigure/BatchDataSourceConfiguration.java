@@ -27,11 +27,22 @@ import org.springframework.util.StringUtils;
 ///
 /// ## 创建的 Bean
 ///
-/// - `batchDataSource` - HikariCP 数据源
-/// - `batchTransactionManager` - JDBC 事务管理器
+/// - `batchDataSource` - HikariCP 数据源（`defaultCandidate=false`）
+/// - `batchTransactionManager` - JDBC 事务管理器（`defaultCandidate=false`）
+///
+/// ## 多数据源兼容性
+///
+/// 使用 Spring Boot 3.x 的 `@Bean(defaultCandidate = false)` 特性：
+///
+/// - Batch 数据源不参与自动装配候选
+/// - 不影响 JPA 的 `@ConditionalOnSingleCandidate(DataSource.class)` 检查
+/// - 主数据源的自动配置正常工作
+/// - 需要 Batch 数据源的地方通过 `@Qualifier("batchDataSource")` 显式注入
 ///
 /// @author Patra Team
 /// @since 0.1.0
+/// @see <a href="https://docs.spring.io/spring-boot/how-to/data-access.html">Spring Boot Data
+// Access</a>
 @AutoConfiguration(after = DataSourceAutoConfiguration.class)
 @ConditionalOnClass(HikariDataSource.class)
 @ConditionalOnProperty(prefix = "patra.batch.datasource", name = "url")
@@ -42,9 +53,12 @@ public class BatchDataSourceConfiguration {
   ///
   /// 使用 HikariCP 连接池，配置来自 `patra.batch.datasource.*`。
   ///
+  /// **注意**：`defaultCandidate = false` 确保此数据源不参与自动装配候选，
+  /// 避免干扰 JPA 的 `@ConditionalOnSingleCandidate(DataSource.class)` 检查。
+  ///
   /// @param properties Batch 配置属性
   /// @return HikariDataSource 实例
-  @Bean
+  @Bean(defaultCandidate = false)
   @ConditionalOnMissingBean(name = "batchDataSource")
   public DataSource batchDataSource(BatchProperties properties) {
     var dsProps = properties.getDatasource();
@@ -73,9 +87,12 @@ public class BatchDataSourceConfiguration {
   ///
   /// 与 `batchDataSource` 绑定，用于管理 Spring Batch 元数据表的事务。
   ///
+  /// **注意**：`defaultCandidate = false` 确保此事务管理器不参与自动装配候选，
+  /// 避免干扰 JPA 的事务管理器自动配置。
+  ///
   /// @param batchDataSource Batch 专用数据源
   /// @return JdbcTransactionManager 实例
-  @Bean
+  @Bean(defaultCandidate = false)
   @ConditionalOnMissingBean(name = "batchTransactionManager")
   public PlatformTransactionManager batchTransactionManager(
       @Qualifier("batchDataSource") DataSource batchDataSource) {
