@@ -5,9 +5,9 @@ import com.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
 import com.patra.registry.domain.model.vo.provenance.*;
 import com.patra.registry.domain.port.ProvenanceConfigRepository;
 import com.patra.registry.domain.support.RegistryKeyStandardizer;
-import com.patra.registry.infra.persistence.converter.ProvenanceEntityConverter;
-import com.patra.registry.infra.persistence.entity.provenance.RegProvenanceDO;
-import com.patra.registry.infra.persistence.mapper.provenance.*;
+import com.patra.registry.infra.adapter.persistence.converter.mapper.ProvenanceJpaMapper;
+import com.patra.registry.infra.adapter.persistence.dao.provenance.*;
+import com.patra.registry.infra.adapter.persistence.entity.provenance.ProvenanceEntity;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -17,18 +17,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-/// 数据源配置仓储实现,基于 MyBatis-Plus。
+/// 数据源配置仓储实现，基于 JPA。
 ///
-/// 实现策略:
+/// 实现策略：
 ///
 /// - 应用操作级优先于数据源级的配置优先级层次
-///   - 当操作特定配置缺失时回退到数据源级默认值
-///   - 统一规范化作用域键,避免跨组件的字符串漂移
+/// - 当操作特定配置缺失时回退到数据源级默认值
+/// - 统一规范化作用域键，避免跨组件的字符串漂移
 ///
-/// 日志策略:
+/// 日志策略：
 ///
 /// - DEBUG 级别记录配置查询和聚合过程
-///   - WARN 级别记录数据源未找到等异常情况
+/// - WARN 级别记录数据源未找到等异常情况
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -37,14 +37,14 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class ProvenanceConfigRepositoryAdapter implements ProvenanceConfigRepository {
 
-  private final RegProvenanceMapper provenanceMapper;
-  private final RegProvWindowOffsetCfgMapper windowOffsetCfgMapper;
-  private final RegProvPaginationCfgMapper paginationCfgMapper;
-  private final RegProvHttpCfgMapper httpCfgMapper;
-  private final RegProvBatchingCfgMapper batchingCfgMapper;
-  private final RegProvRetryCfgMapper retryCfgMapper;
-  private final RegProvRateLimitCfgMapper rateLimitCfgMapper;
-  private final ProvenanceEntityConverter converter;
+  private final ProvenanceDao provenanceDao;
+  private final ProvWindowOffsetCfgDao windowOffsetCfgDao;
+  private final ProvPaginationCfgDao paginationCfgDao;
+  private final ProvHttpCfgDao httpCfgDao;
+  private final ProvBatchingCfgDao batchingCfgDao;
+  private final ProvRetryCfgDao retryCfgDao;
+  private final ProvRateLimitCfgDao rateLimitCfgDao;
+  private final ProvenanceJpaMapper mapper;
 
   /// 根据业务代码查询数据源。
   ///
@@ -53,7 +53,7 @@ public class ProvenanceConfigRepositoryAdapter implements ProvenanceConfigReposi
   @Override
   public Optional<Provenance> findProvenanceByCode(ProvenanceCode provenanceCode) {
     String code = provenanceCode.getCode();
-    Optional<Provenance> result = provenanceMapper.selectByCode(code).map(converter::toDomain);
+    Optional<Provenance> result = provenanceDao.findByCode(code).map(mapper::toDomain);
     if (log.isDebugEnabled()) {
       log.debug(
           "Provenance lookup for code [{}]: {}", code, result.isPresent() ? "found" : "not found");
@@ -68,9 +68,9 @@ public class ProvenanceConfigRepositoryAdapter implements ProvenanceConfigReposi
   public List<Provenance> findAllProvenances() {
     log.debug("Querying all active provenances from database");
     List<Provenance> provenances =
-        provenanceMapper.selectAllActive().stream().map(converter::toDomain).toList();
+        provenanceDao.findAllActive().stream().map(mapper::toDomain).toList();
     log.debug(
-        "Converting {} ProvenanceDO entities to domain models, codes: {}",
+        "Converting {} ProvenanceEntity to domain models, codes: {}",
         provenances.size(),
         provenances.stream().map(Provenance::code).toList());
     return provenances;
@@ -90,8 +90,8 @@ public class ProvenanceConfigRepositoryAdapter implements ProvenanceConfigReposi
         operationType,
         at,
         "window offset",
-        windowOffsetCfgMapper::selectActiveMerged,
-        converter::toDomain);
+        windowOffsetCfgDao::findActiveMerged,
+        mapper::toDomain);
   }
 
   /// 查询指定数据源和操作的激活分页配置。
@@ -108,8 +108,8 @@ public class ProvenanceConfigRepositoryAdapter implements ProvenanceConfigReposi
         operationType,
         at,
         "pagination",
-        paginationCfgMapper::selectActiveMerged,
-        converter::toDomain);
+        paginationCfgDao::findActiveMerged,
+        mapper::toDomain);
   }
 
   /// 查询指定数据源和操作的激活 HTTP 配置。
@@ -122,12 +122,7 @@ public class ProvenanceConfigRepositoryAdapter implements ProvenanceConfigReposi
   public Optional<HttpConfig> findActiveHttpConfig(
       Long provenanceId, String operationType, Instant at) {
     return findActiveConfig(
-        provenanceId,
-        operationType,
-        at,
-        "HTTP",
-        httpCfgMapper::selectActiveMerged,
-        converter::toDomain);
+        provenanceId, operationType, at, "HTTP", httpCfgDao::findActiveMerged, mapper::toDomain);
   }
 
   /// 查询指定数据源和操作的激活批处理配置。
@@ -144,8 +139,8 @@ public class ProvenanceConfigRepositoryAdapter implements ProvenanceConfigReposi
         operationType,
         at,
         "batching",
-        batchingCfgMapper::selectActiveMerged,
-        converter::toDomain);
+        batchingCfgDao::findActiveMerged,
+        mapper::toDomain);
   }
 
   /// 查询指定数据源和操作的激活重试配置。
@@ -158,12 +153,7 @@ public class ProvenanceConfigRepositoryAdapter implements ProvenanceConfigReposi
   public Optional<RetryConfig> findActiveRetry(
       Long provenanceId, String operationType, Instant at) {
     return findActiveConfig(
-        provenanceId,
-        operationType,
-        at,
-        "retry",
-        retryCfgMapper::selectActiveMerged,
-        converter::toDomain);
+        provenanceId, operationType, at, "retry", retryCfgDao::findActiveMerged, mapper::toDomain);
   }
 
   /// 查询指定数据源和操作的激活速率限制配置。
@@ -180,13 +170,13 @@ public class ProvenanceConfigRepositoryAdapter implements ProvenanceConfigReposi
         operationType,
         at,
         "rate limit",
-        rateLimitCfgMapper::selectActiveMerged,
-        converter::toDomain);
+        rateLimitCfgDao::findActiveMerged,
+        mapper::toDomain);
   }
 
   /// 加载指定操作的完整数据源配置聚合。
   ///
-  /// 将所有配置切片(窗口、分页、HTTP、批处理、重试、速率限制)组装为单个聚合, 在可用时应用操作特定的覆盖配置。
+  /// 将所有配置切片(窗口、分页、HTTP、批处理、重试、速率限制)组装为单个聚合，在可用时应用操作特定的覆盖配置。
   ///
   /// @param provenanceId 数据源标识
   /// @param operationType 操作类型键
@@ -262,28 +252,28 @@ public class ProvenanceConfigRepositoryAdapter implements ProvenanceConfigReposi
             .count();
   }
 
-  /// 通用辅助方法,查找具有时态切片和操作作用域合并的激活配置。
+  /// 通用辅助方法，查找具有时态切片和操作作用域合并的激活配置。
   ///
   /// @param provenanceId 数据源标识
   /// @param operationType 操作类型键
   /// @param at 查询时间戳(null 表示当前时间)
   /// @param configName 配置类型名称(用于日志)
-  /// @param selector Mapper 选择函数
-  /// @param converter DO 到领域对象的转换函数
-  /// @param <DO> 数据库对象类型
-  /// @param <DOMAIN> 领域对象类型
+  /// @param selector Dao 选择函数
+  /// @param converter Entity 到领域对象的转换函数
+  /// @param <E> JPA 实体类型
+  /// @param <D> 领域对象类型
   /// @return 领域配置对象(可选)
-  private <DO, DOMAIN> Optional<DOMAIN> findActiveConfig(
+  private <E, D> Optional<D> findActiveConfig(
       Long provenanceId,
       String operationType,
       Instant at,
       String configName,
-      ConfigSelector<DO> selector,
-      java.util.function.Function<DO, DOMAIN> converter) {
+      ConfigSelector<E> selector,
+      java.util.function.Function<E, D> converter) {
     Instant timestamp = atOrNow(at);
     String operationKey = RegistryKeyStandardizer.toOperationKeyOrAll(operationType);
 
-    Optional<DOMAIN> result = selector.select(provenanceId, operationKey, timestamp).map(converter);
+    Optional<D> result = selector.select(provenanceId, operationKey, timestamp).map(converter);
 
     if (log.isDebugEnabled()) {
       log.debug(
@@ -306,19 +296,20 @@ public class ProvenanceConfigRepositoryAdapter implements ProvenanceConfigReposi
       return Optional.empty();
     }
     log.debug("Querying provenance by ID [{}] from database", provenanceId);
-    RegProvenanceDO entity = provenanceMapper.selectById(provenanceId);
-    if (entity == null) {
+    Optional<ProvenanceEntity> entityOpt = provenanceDao.findById(provenanceId);
+    if (entityOpt.isEmpty()) {
       log.debug("Provenance entity not found for ID [{}]", provenanceId);
       return Optional.empty();
     }
+    ProvenanceEntity entity = entityOpt.get();
     log.debug(
-        "Converting ProvenanceDO to domain model for ID [{}], code [{}]",
+        "Converting ProvenanceEntity to domain model for ID [{}], code [{}]",
         provenanceId,
         entity.getProvenanceCode());
-    return Optional.of(converter.toDomain(entity));
+    return Optional.of(mapper.toDomain(entity));
   }
 
-  /// 返回提供的时间戳,如果为 null 则返回当前时间。
+  /// 返回提供的时间戳，如果为 null 则返回当前时间。
   ///
   /// @param at 要检查的时间戳
   /// @return 时间戳或当前时间
@@ -328,15 +319,15 @@ public class ProvenanceConfigRepositoryAdapter implements ProvenanceConfigReposi
 
   /// 配置选择器操作的函数式接口。
   ///
-  /// @param <DO> 数据库对象类型
+  /// @param <E> JPA 实体类型
   @FunctionalInterface
-  private interface ConfigSelector<DO> {
+  private interface ConfigSelector<E> {
     /// 从数据库选择激活的配置。
     ///
     /// @param provenanceId 数据源标识
     /// @param operationKey 规范化的操作键
     /// @param timestamp 生效时间戳
-    /// @return 数据库对象(可选)
-    Optional<DO> select(Long provenanceId, String operationKey, Instant timestamp);
+    /// @return JPA 实体(可选)
+    Optional<E> select(Long provenanceId, String operationKey, Instant timestamp);
   }
 }

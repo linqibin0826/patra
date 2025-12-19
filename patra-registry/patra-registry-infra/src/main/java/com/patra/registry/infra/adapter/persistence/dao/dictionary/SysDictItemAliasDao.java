@@ -1,0 +1,48 @@
+package com.patra.registry.infra.adapter.persistence.dao.dictionary;
+
+import com.patra.registry.infra.adapter.persistence.entity.dictionary.SysDictItemAliasEntity;
+import java.util.List;
+import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+/// 系统字典项别名 JPA Repository。
+///
+/// **职责**：
+///
+/// - 提供 SysDictItemAliasEntity 的 CRUD 操作
+/// - 通过外部系统和外部代码查询别名
+///
+/// @author linqibin
+/// @since 0.1.0
+public interface SysDictItemAliasDao extends JpaRepository<SysDictItemAliasEntity, Long> {
+
+  /// 通过外部系统和外部代码查询别名。
+  ///
+  /// @param sourceSystem 外部系统标识符
+  /// @param externalCode 外部代码
+  /// @return 可选的别名实体
+  @Query(
+      """
+      SELECT a FROM SysDictItemAliasEntity a
+      WHERE a.sourceSystem = :sourceSystem
+        AND a.externalCode = :externalCode
+        AND a.deletedAt IS NULL
+      """)
+  Optional<SysDictItemAliasEntity> findBySourceSystemAndExternalCode(
+      @Param("sourceSystem") String sourceSystem, @Param("externalCode") String externalCode);
+
+  /// 通过字典项 ID 查询所有别名。
+  ///
+  /// @param itemId 字典项 ID
+  /// @return 别名列表
+  @Query(
+      """
+      SELECT a FROM SysDictItemAliasEntity a
+      WHERE a.itemId = :itemId
+        AND a.deletedAt IS NULL
+      ORDER BY a.sourceSystem, a.externalCode
+      """)
+  List<SysDictItemAliasEntity> findByItemId(@Param("itemId") Long itemId);
+}

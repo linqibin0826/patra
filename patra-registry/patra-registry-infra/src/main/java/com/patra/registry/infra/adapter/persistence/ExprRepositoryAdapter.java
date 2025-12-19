@@ -5,29 +5,29 @@ import com.patra.registry.domain.exception.provenance.ProvenanceNotFoundExceptio
 import com.patra.registry.domain.model.vo.expr.*;
 import com.patra.registry.domain.port.ExprRepository;
 import com.patra.registry.domain.support.RegistryKeyStandardizer;
-import com.patra.registry.infra.persistence.converter.ExprEntityConverter;
-import com.patra.registry.infra.persistence.mapper.expr.RegExprFieldDictMapper;
-import com.patra.registry.infra.persistence.mapper.expr.RegProvApiParamMapMapper;
-import com.patra.registry.infra.persistence.mapper.expr.RegProvExprCapabilityMapper;
-import com.patra.registry.infra.persistence.mapper.expr.RegProvExprRenderRuleMapper;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvenanceMapper;
+import com.patra.registry.infra.adapter.persistence.converter.mapper.ExprJpaMapper;
+import com.patra.registry.infra.adapter.persistence.dao.expr.ExprFieldDictDao;
+import com.patra.registry.infra.adapter.persistence.dao.expr.ProvApiParamMapDao;
+import com.patra.registry.infra.adapter.persistence.dao.expr.ProvExprCapabilityDao;
+import com.patra.registry.infra.adapter.persistence.dao.expr.ProvExprRenderRuleDao;
+import com.patra.registry.infra.adapter.persistence.dao.provenance.ProvenanceDao;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-/// 表达式元数据仓储实现,基于 MyBatis-Plus。
+/// 表达式元数据仓储实现，基于 JPA。
 ///
-/// 实现策略:
+/// 实现策略：
 ///
 /// - 聚合字段字典、能力、渲染规则和 API 参数映射以构建领域快照
-///   - 优先使用操作特定配置,当专用切片不可用时回退到 `ALL`
+/// - 优先使用操作特定配置，当专用切片不可用时回退到 `ALL`
 ///
-/// 日志策略:
+/// 日志策略：
 ///
 /// - DEBUG 级别记录所有查询操作和转换过程
-///   - WARN 级别记录数据源代码未找到等异常情况
+/// - WARN 级别记录数据源代码未找到等异常情况
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -36,12 +36,12 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class ExprRepositoryAdapter implements ExprRepository {
 
-  private final RegExprFieldDictMapper fieldDictMapper;
-  private final RegProvApiParamMapMapper apiParamMapMapper;
-  private final RegProvExprCapabilityMapper capabilityMapper;
-  private final RegProvExprRenderRuleMapper renderRuleMapper;
-  private final RegProvenanceMapper provenanceMapper;
-  private final ExprEntityConverter converter;
+  private final ExprFieldDictDao fieldDictDao;
+  private final ProvApiParamMapDao apiParamMapDao;
+  private final ProvExprCapabilityDao capabilityDao;
+  private final ProvExprRenderRuleDao renderRuleDao;
+  private final ProvenanceDao provenanceDao;
+  private final ExprJpaMapper mapper;
 
   /// 加载指定数据源和操作的表达式元数据快照。
   ///
@@ -78,10 +78,9 @@ public class ExprRepositoryAdapter implements ExprRepository {
   /// @return 激活的表达式字段列表
   private List<ExprField> loadFields() {
     log.debug("Querying all active expression fields from field dictionary");
-    List<ExprField> fields =
-        fieldDictMapper.selectAllActive().stream().map(converter::toDomain).toList();
+    List<ExprField> fields = fieldDictDao.findAllActive().stream().map(mapper::toDomain).toList();
     log.debug(
-        "Converting {} ExprFieldDictDO entities to domain models, field keys: {}",
+        "Converting {} ExprFieldDictEntity to domain models, field keys: {}",
         fields.size(),
         fields.stream().map(ExprField::fieldKey).limit(10).toList()
             + (fields.size() > 10 ? "..." : ""));
@@ -102,11 +101,11 @@ public class ExprRepositoryAdapter implements ExprRepository {
         operationKey,
         timestamp);
     List<ExprCapability> capabilities =
-        capabilityMapper.selectActiveByTask(provenanceId, operationKey, timestamp).stream()
-            .map(converter::toDomain)
+        capabilityDao.findActiveByTask(provenanceId, operationKey, timestamp).stream()
+            .map(mapper::toDomain)
             .toList();
     log.debug(
-        "Converting {} ExprCapabilityDO entities to domain models, field keys: {}",
+        "Converting {} ProvExprCapabilityEntity to domain models, field keys: {}",
         capabilities.size(),
         capabilities.stream().map(ExprCapability::fieldKey).toList());
     return capabilities;
@@ -126,11 +125,11 @@ public class ExprRepositoryAdapter implements ExprRepository {
         operationKey,
         timestamp);
     List<ExprRenderRule> renderRules =
-        renderRuleMapper.selectActiveByTask(provenanceId, operationKey, timestamp).stream()
-            .map(converter::toDomain)
+        renderRuleDao.findActiveByTask(provenanceId, operationKey, timestamp).stream()
+            .map(mapper::toDomain)
             .toList();
     log.debug(
-        "Converting {} ExprRenderRuleDO entities to domain models for {} unique fields",
+        "Converting {} ProvExprRenderRuleEntity to domain models for {} unique fields",
         renderRules.size(),
         renderRules.stream().map(ExprRenderRule::fieldKey).distinct().count());
     return renderRules;
@@ -152,19 +151,19 @@ public class ExprRepositoryAdapter implements ExprRepository {
         normalizedEndpoint,
         timestamp);
     List<ApiParamMapping> apiParams =
-        apiParamMapMapper
-            .selectActiveByTask(provenanceId, operationKey, normalizedEndpoint, timestamp)
+        apiParamMapDao
+            .findActiveByTask(provenanceId, operationKey, normalizedEndpoint, timestamp)
             .stream()
-            .map(converter::toDomain)
+            .map(mapper::toDomain)
             .toList();
     log.debug(
-        "Converting {} ApiParamMapDO entities to domain models, standard keys: {}",
+        "Converting {} ProvApiParamMapEntity to domain models, standard keys: {}",
         apiParams.size(),
         apiParams.stream().map(ApiParamMapping::stdKey).toList());
     return apiParams;
   }
 
-  /// 返回提供的时间戳,如果为 null 则返回当前时间。
+  /// 返回提供的时间戳，如果为 null 则返回当前时间。
   ///
   /// @param at 要检查的时间戳
   /// @return 时间戳或当前时间
@@ -180,8 +179,8 @@ public class ExprRepositoryAdapter implements ExprRepository {
   private Long resolveProvenanceId(ProvenanceCode provenanceCode) {
     String code = provenanceCode.getCode();
     log.debug("Querying provenance ID for code [{}] from database", code);
-    return provenanceMapper
-        .selectByCode(code)
+    return provenanceDao
+        .findByCode(code)
         .map(
             entity -> {
               log.debug("Resolved provenance code [{}] to ID [{}]", code, entity.getId());
