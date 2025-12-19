@@ -11,7 +11,6 @@ import org.springframework.context.annotation.Import;
 /// ### 包含的配置
 ///
 /// - {@link TestMeterRegistryAutoConfiguration} - SimpleMeterRegistry 自动配置
-/// - {@link TestMybatisPlusAutoConfiguration} - MyBatis-Plus 测试配置（条件激活）
 ///
 /// ### 使用方式
 ///
@@ -28,9 +27,8 @@ import org.springframework.context.annotation.Import;
 /// @author linqibin
 /// @since 0.1.0
 /// @see TestMeterRegistryAutoConfiguration
-/// @see TestMybatisPlusAutoConfiguration
 @AutoConfiguration
-@Import({TestMeterRegistryAutoConfiguration.class, TestMybatisPlusAutoConfiguration.class})
+@Import({TestMeterRegistryAutoConfiguration.class})
 public class TestAutoConfiguration {
   // 入口配置类，通过 @Import 导入其他配置
 }
