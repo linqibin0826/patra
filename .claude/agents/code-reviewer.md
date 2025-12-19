@@ -23,7 +23,7 @@ color: green
 
 | 层级 | 允许依赖 | 禁止依赖 |
 |------|---------|---------|
-| **Domain** | 无框架依赖 | Spring、MyBatis |
+| **Domain** | 无框架依赖 | Spring、JPA |
 | **Application** | Domain | Infrastructure、Adapter |
 | **Infrastructure** | Domain | Application、Adapter |
 | **Adapter** | Application | Domain 直接调用 |
@@ -32,7 +32,7 @@ color: green
 
 - **端口命名**: Repository（本地持久化）、Port（外部服务）
 - **JavaDoc**: `///` 风格 + Markdown 语法
-- **MyBatis-Plus**: 禁止 @Select 注解，DO 继承 BaseDO
+- **JPA**: Entity 继承 BaseJpaEntity，使用 Spring Data JPA 规范
 - **Starter**: 使用项目 Starter，禁止重复实现
 
 ### Adapter 层入口
@@ -108,7 +108,7 @@ patra-{service}-adapter/
 - **版本管理**: 新增依赖禁止硬编码版本号，必须在 `patra-parent` 的 `<dependencyManagement>` 统一管理
 - **测试依赖**: 新增 test scope 依赖时，评估是否应添加到 `patra-spring-boot-starter-test` 成为通用依赖
   - ✅ 适合添加：通用测试工具（断言库、Mock 框架、容器支持）
-  - ❌ 不适合添加：特定层/技术的测试依赖（如 `@MybatisPlusTest` 仅 infra 层需要）
+  - ❌ 不适合添加：特定层/技术的测试依赖（如 `@DataJpaTest` 仅 infra 层需要）
 
 ### 代码质量
 

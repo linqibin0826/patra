@@ -72,8 +72,8 @@ grep "abc123def456" /Users/linqibin/Desktop/Patra/patra-api/logs/*.log
     <appender-ref ref="CONSOLE"/>
 </logger>
 
-<!-- 临时开启 MyBatis DEBUG -->
-<logger name="org.mybatis" level="DEBUG" additivity="false">
+<!-- 临时开启 JPA/Hibernate DEBUG -->
+<logger name="org.hibernate" level="DEBUG" additivity="false">
     <appender-ref ref="CONSOLE"/>
 </logger>
 

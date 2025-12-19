@@ -6,7 +6,7 @@ paths: patra-*/*-domain/**/*.java
 
 ## 核心原则
 
-- **纯 Java 实现**：禁止依赖任何框架（Spring、MyBatis 等），Lombok 除外
+- **纯 Java 实现**：禁止依赖任何框架（Spring、JPA 等），Lombok 除外
 - **业务逻辑内聚**：所有业务规则封装在领域对象内部
 - **依赖倒置**：通过 Port/Repository 接口定义外部依赖
 

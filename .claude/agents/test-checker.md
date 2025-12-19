@@ -16,7 +16,7 @@ color: yellow
 |------|---------|---------|---------|
 | Domain | `patra-{service}-domain/src/test/` | 纯单元测试（无 Mock、无 Spring） | `*Test.java` |
 | Application | `patra-{service}-app/src/test/` | 单元测试（Mock Ports） | `*Test.java` |
-| Infrastructure | `patra-{service}-infra/src/test/` | 集成测试（@MybatisPlusTest / WireMock） | `*IT.java` |
+| Infrastructure | `patra-{service}-infra/src/test/` | 集成测试（@DataJpaTest / WireMock） | `*IT.java` |
 | Adapter | `patra-{service}-adapter/src/test/` | 切片测试（@WebMvcTest） | `*IT.java` |
 | Boot | `patra-{service}-boot/src/test/` | E2E 测试（@SpringBootTest） | `*E2E.java` |
 

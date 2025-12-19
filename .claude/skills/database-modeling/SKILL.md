@@ -15,7 +15,7 @@ description: |
   ALTER TABLE、索引、审计字段、数据库建模、范式、外键、唯一约束、乐观锁、
   软删除、TIMESTAMP、BIGINT、VARCHAR、MySQL、数据库优化、索引选择性、ADR。
 
-  **技术栈**：MySQL 8.0+、Mermaid、MyBatis-Plus 3.5.x、InnoDB 引擎。
+  **技术栈**：MySQL 8.0+、Mermaid、Spring Data JPA、InnoDB 引擎。
 
 allowed-tools: Read, Edit, Write, Grep, Glob, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__sequential-thinking__sequentialthinking
 ---

@@ -5,7 +5,7 @@
 | 模块层 | Starters |
 |-------|----------|
 | **adapter** | `patra-spring-boot-starter-web` |
-| **infra（数据库）** | `patra-spring-boot-starter-mybatis` |
+| **infra（数据库）** | `patra-spring-boot-starter-jpa` |
 | **infra（服务调用）** | `patra-spring-cloud-starter-feign` |
 | **infra（对象存储）** | `patra-spring-boot-starter-object-storage` |
 | **infra（REST 调用）** | `patra-spring-boot-starter-rest-client` |
@@ -44,44 +44,46 @@ public class UserController {
 
 ---
 
-## 2. patra-spring-boot-starter-mybatis
+## 2. patra-spring-boot-starter-jpa
 
-**Maven 坐标**: `com.patra:patra-spring-boot-starter-mybatis`
+**Maven 坐标**: `com.patra:patra-spring-boot-starter-jpa`
 
 **适用场景**: `patra-{service}-infra` 模块（涉及数据库）
 
 **核心功能**:
-- MyBatis-Plus 自动配置
-- `BaseDO` 基类（雪花 ID + 10 个审计字段）
-- 分页插件、乐观锁插件
+- Spring Data JPA 自动配置
+- `BaseJpaEntity` 基类（雪花 ID + 审计字段 + 乐观锁 + 软删除）
+- 批量操作优化
 - Flyway 数据库迁移
 
 **使用示例**:
 ```java
-/// DO 定义
-@TableName("t_user")
-@Data
-@EqualsAndHashCode(callSuper = true)
-public class UserDO extends BaseDO {
-    ///  用户手机号
-    @TableField("phone")
+/// Entity 定义
+@Entity
+@Table(name = "t_user")
+@Getter
+@Setter
+public class UserEntity extends BaseJpaEntity {
+    /// 用户手机号
+    @Column(name = "phone")
     private String phone;
 }
 
-/// Mapper 定义（继承 BaseMapper）
-@Mapper
-public interface UserMapper extends BaseMapper<UserDO> {}
+/// Dao 定义（继承 JpaRepository）
+public interface UserDao extends JpaRepository<UserEntity, Long> {
+    Optional<UserEntity> findByPhone(String phone);
+}
 
 /// Repository 实现
 @Repository
 @RequiredArgsConstructor
 public class UserRepositoryAdapter implements UserRepository {
-    private final UserMapper mapper;
+    private final UserDao dao;
+    private final UserJpaMapper mapper;
 
     @Override
     public Optional<User> findById(Long id) {
-        return Optional.ofNullable(mapper.selectById(id))
-            .map(converter::toDomain);
+        return dao.findById(id).map(mapper::toDomain);
     }
 }
 ```
@@ -317,8 +319,8 @@ public class CustomHandler implements ObservationHandler<Observation.Context> {
 新建功能时，按以下顺序检查：
 
 1. ✅ **Adapter 层** → 添加 `patra-spring-boot-starter-web`
-2. ✅ **Infra 层（数据库）** → 添加 `patra-spring-boot-starter-mybatis`
-   - 确认 DO 继承 `BaseDO`
+2. ✅ **Infra 层（数据库）** → 添加 `patra-spring-boot-starter-jpa`
+   - 确认 Entity 继承 `BaseJpaEntity`
 3. ✅ **Infra 层（服务调用）** → 添加 `patra-spring-cloud-starter-feign`(可选)
    - 在 `-api` 模块定义 FeignClient
    - 在 `-infra` 模块实现 Adapter

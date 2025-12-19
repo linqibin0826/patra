@@ -6,7 +6,7 @@
       "type": "domain",
       "enforcement": "required",
       "priority": "critical",
-      "description": "Java 开发指南。用于创建 DDD 组件、Spring 组件，配置 MyBatis-Plus、Feign、Nacos，管理 Patra 自定义 Starter 依赖。涵盖六边形架构下的 Spring Boot 3.5.7 开发模式和最佳实践。",
+      "description": "Java 开发指南。用于创建 DDD 组件、Spring 组件，配置 Spring Data JPA、Feign、Nacos，管理 Patra 自定义 Starter 依赖。涵盖六边形架构下的 Spring Boot 3.5.7 开发模式和最佳实践。",
       "promptTriggers": {
         "keywords": [
           "controller",
@@ -17,8 +17,9 @@
           "usecase",
           "use case",
           "mapper",
-          "MyBatis",
-          "MyBatis-Plus",
+          "JPA",
+          "Spring Data",
+          "@Entity",
           "Feign",
           "RestClient",
           "Spring Boot",
@@ -37,8 +38,8 @@
           "domain event",
           "transaction",
           "Transactional",
-          "BaseDO",
-          "DO",
+          "BaseJpaEntity",
+          "Entity",
           "DTO",
           "converter",
           "MapStruct",
@@ -162,11 +163,11 @@
         "intentPatterns": [
           "(create|implement|add|build|write).*?(controller|service|repository|mapper|adapter|port)",
           "(develop|code|implement).*?(feature|functionality|module|api|endpoint)",
-          "(add|create|configure).*?(spring|mybatis|feign|nacos|starter)",
+          "(add|create|configure).*?(spring|jpa|feign|nacos|starter)",
           "(implement|create).*?(orchestrator|coordinator|usecase|use case)",
           "(创建|实现|添加|编写).*(控制器|服务|仓储|映射器|适配器|端口)",
           "(开发|编码|实现).*(功能|模块|接口|端点)",
-          "(添加|创建|配置).*(spring|mybatis|feign|nacos|starter)",
+          "(添加|创建|配置).*(spring|jpa|feign|nacos|starter)",
           "(实现|创建).*(编排器|协调器|用例)",
           "如何.*?(开发|实现|创建).*(接口|服务|功能)",
           "(新增|修改|重构).*(类|方法|接口)"
@@ -198,13 +199,13 @@
           "@Component",
           "@Transactional",
           "@FeignClient",
-          "extends BaseDO",
-          "extends BaseMapper",
+          "extends BaseJpaEntity",
+          "extends JpaRepository",
           "implements.*Repository",
           "implements.*Port",
-          "@TableName",
-          "@Mapper",
-          "LambdaQueryWrapper",
+          "@Entity",
+          "@Table",
+          "JpaRepository",
           "MapStruct"
         ]
       }
@@ -213,7 +214,7 @@
       "type": "domain",
       "enforcement": "suggest",
       "priority": "high",
-      "description": "MySQL database design expert with progressive disclosure approach. Supports ER diagram, table design, SQL DDL generation, domain model mapping, and design decision records. Specialized for MySQL 8.0 + MyBatis-Plus + Hexagonal Architecture + DDD.",
+      "description": "MySQL database design expert with progressive disclosure approach. Supports ER diagram, table design, SQL DDL generation, domain model mapping, and design decision records. Specialized for MySQL 8.0 + Spring Data JPA + Hexagonal Architecture + DDD.",
       "promptTriggers": {
         "keywords": [
           "database design",
@@ -257,8 +258,8 @@
           "数据库优化",
           "索引选择性",
           "领域模型映射",
-          "DO mapping",
-          "MyBatis-Plus",
+          "Entity mapping",
+          "Spring Data JPA",
           "field design",
           "字段设计",
           "column design",
@@ -288,8 +289,8 @@
           "**/ddl/**/*.sql",
           "**/database/**/*.md",
           "**/db-design/**/*.md",
-          "**/*DO.java",
-          "**/entity/*DO.java",
+          "**/*Entity.java",
+          "**/entity/*Entity.java",
           "**/persistence/entity/**/*.java"
         ],
         "contentPatterns": [
@@ -298,11 +299,11 @@
           "DROP TABLE",
           "ADD INDEX",
           "ADD CONSTRAINT",
-          "@TableName",
-          "@TableId",
-          "@TableField",
-          "@TableLogic",
-          "extends BaseDO",
+          "@Entity",
+          "@Table",
+          "@Column",
+          "@Id",
+          "extends BaseJpaEntity",
           "erDiagram"
         ]
       }
