@@ -1,12 +1,12 @@
 ---
 name: java-development
-description: 在编写代码时，你必须使用这个技能，java 开发指南。用于创建DDD组件，Spring组件，配置 MyBatis-Plus、Feign、Nacos，管理 Patra 自定义 Starter 依赖。涵盖六边形架构下的 Spring Boot 3.5.7 开发模式和最佳实践。
+description: 在编写代码时，你必须使用这个技能，java 开发指南。用于创建DDD组件，Spring组件，配置 JPA、Feign、Nacos，管理 Patra 自定义 Starter 依赖。涵盖六边形架构下的 Spring Boot 3.5.7 开发模式和最佳实践。
 allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__replace_symbol_body, mcp__serena__rename_symbol, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__ide__getDiagnostics
 ---
 
 # Spring Boot 微服务开发专家
 
-自动为 Spring Boot 开发任务提供指导：Controller、Service、Repository 开发，MyBatis-Plus 配置，Patra Starter 依赖管理等。
+自动为 Spring Boot 开发任务提供指导：Controller、Service、Repository 开发，JPA 配置，Patra Starter 依赖管理等。
 
 ## 核心工作流
 
@@ -40,17 +40,17 @@ CommandHandler 负责协调业务流程：
 - 管理事务边界
 - 返回处理结果
 
-### 3. 数据访问层开发（MyBatis-Plus）
+### 3. 数据访问层开发（JPA）
 
-使用 MyBatis-Plus 进行数据访问：
+使用 Spring Data JPA 进行数据访问：
 1. 位于 `patra-{service}-infra` 模块
-2. 必须使用 `patra-spring-boot-starter-mybatis`
-3. 参考 [mybatis-plus-patterns.md](resources/mybatis-plus-patterns.md) 获取详细实现
-4. **所有 DO 必须继承 BaseDO**
+2. 必须使用 `patra-spring-boot-starter-jpa`
+3. 参考 [jpa-patterns.md](resources/jpa-patterns.md) 获取详细实现
+4. **所有 Entity 必须继承 BaseJpaEntity**
 
 **开发流程**：
 ```
-创建 DO（继承 BaseDO）→ 创建 Mapper（继承 BaseMapper）→ 实现 Repository
+创建 Entity（继承 BaseJpaEntity）→ 创建 Dao（继承 JpaRepository）→ 创建 JpaMapper → 实现 RepositoryAdapter
 ```
 
 ### 4. 事务和错误处理
@@ -80,7 +80,7 @@ CommandHandler 负责协调业务流程：
 判断模块类型：
 ├── adapter 层 → patra-spring-boot-starter-web
 ├── infra 层
-│   ├── 需要数据库 → patra-spring-boot-starter-mybatis
+│   ├── 需要数据库 → patra-spring-boot-starter-jpa
 │   ├── 需要调用服务 → patra-spring-cloud-starter-feign
 │   └── 需要对象存储 → patra-spring-boot-starter-object-storage
 ├── domain 层 → ❌ 不能添加任何 Starter
@@ -108,7 +108,7 @@ CommandHandler 负责协调业务流程：
 ### 核心模式
 - [Controller 开发模式](resources/controller-patterns.md)
 - [CommandBus 使用规范](../../rules/tech/commandbus.md)
-- [MyBatis-Plus 数据访问模式](resources/mybatis-plus-patterns.md)
+- [JPA 数据访问模式](resources/jpa-patterns.md)
 - [适配层模式](resources/adapter-layer-patterns.md)
 
 ### Patra 特定
@@ -127,8 +127,8 @@ CommandHandler 负责协调业务流程：
 ### Q: Domain 层能否使用 Spring 注解？
 **A: 不能**。Domain 层必须保持纯 Java，不依赖任何框架。
 
-### Q: 为什么 DO 必须继承 BaseDO？
-**A: BaseDO 提供**：雪花 ID、10 个审计字段、自动填充功能。
+### Q: 为什么 Entity 必须继承 BaseJpaEntity？
+**A: BaseJpaEntity 提供**：雪花 ID、审计字段、乐观锁、软删除支持。
 
 ### Q: 事务注解应该加在哪一层？
 **A: 只在 Application 层**（CommandHandler）使用 @Transactional。
@@ -136,8 +136,8 @@ CommandHandler 负责协调业务流程：
 ### Q: 如何选择正确的 Starter？
 **A: 查看** [Starter 快速选择](#starter-快速选择) 或 [patra-starters-guide.md](resources/patra-starters-guide.md)
 
-### Q: Mapper 接口能否写 SQL？
-**A: 不推荐**。简单查询用 LambdaQueryWrapper，复杂查询用 XML。
+### Q: Dao 接口如何编写查询？
+**A: 简单查询**用方法命名约定（`findByXxx`），**复杂查询**用 `@Query` + JPQL。
 
 ## 工作检查清单
 
@@ -152,7 +152,7 @@ CommandHandler 负责协调业务流程：
 ```
 [ ] Controller 不包含业务逻辑
 [ ] 事务只在 Application 层
-[ ] DO 继承 BaseDO
+[ ] Entity 继承 BaseJpaEntity
 [ ] 使用 MapStruct 进行对象转换
 ```
 
