@@ -1,11 +1,13 @@
 package com.patra.starter.test.archunit.testfixtures.infra;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.transaction.annotation.Transactional;
 
-/// 测试夹具：infra 包下继承 ServiceImpl 的违规类。
+/// 测试夹具：infra 包下使用 @Transactional 的违规类。
+///
+/// 根据六边形架构规则，@Transactional 应该只在 app 层使用。
+/// 此类用于测试 ArchUnit 能正确检测 infra 层的事务注解违规。
 @SuppressWarnings("unused")
-public class InfraViolatingClass extends ServiceImpl<InfraViolatingClass.TestMapper, Object> {
-
-  interface TestMapper extends BaseMapper<Object> {}
+@Transactional
+public class InfraViolatingClass {
+  // 违规：infra 层不应使用 @Transactional
 }
