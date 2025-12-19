@@ -2,7 +2,6 @@ package com.patra.registry.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
 import com.patra.registry.domain.model.vo.provenance.BatchingConfig;
@@ -12,22 +11,23 @@ import com.patra.registry.domain.model.vo.provenance.Provenance;
 import com.patra.registry.domain.model.vo.provenance.RateLimitConfig;
 import com.patra.registry.domain.model.vo.provenance.RetryConfig;
 import com.patra.registry.domain.model.vo.provenance.WindowOffsetConfig;
+import com.patra.registry.infra.adapter.persistence.dao.provenance.ProvBatchingCfgDao;
+import com.patra.registry.infra.adapter.persistence.dao.provenance.ProvHttpCfgDao;
+import com.patra.registry.infra.adapter.persistence.dao.provenance.ProvPaginationCfgDao;
+import com.patra.registry.infra.adapter.persistence.dao.provenance.ProvRateLimitCfgDao;
+import com.patra.registry.infra.adapter.persistence.dao.provenance.ProvRetryCfgDao;
+import com.patra.registry.infra.adapter.persistence.dao.provenance.ProvWindowOffsetCfgDao;
+import com.patra.registry.infra.adapter.persistence.dao.provenance.ProvenanceDao;
+import com.patra.registry.infra.adapter.persistence.entity.provenance.ProvBatchingCfgEntity;
+import com.patra.registry.infra.adapter.persistence.entity.provenance.ProvHttpCfgEntity;
+import com.patra.registry.infra.adapter.persistence.entity.provenance.ProvPaginationCfgEntity;
+import com.patra.registry.infra.adapter.persistence.entity.provenance.ProvRateLimitCfgEntity;
+import com.patra.registry.infra.adapter.persistence.entity.provenance.ProvRetryCfgEntity;
+import com.patra.registry.infra.adapter.persistence.entity.provenance.ProvWindowOffsetCfgEntity;
+import com.patra.registry.infra.adapter.persistence.entity.provenance.ProvenanceEntity;
 import com.patra.registry.infra.config.RegistryMySQLContainerInitializer;
-import com.patra.registry.infra.persistence.entity.provenance.RegProvBatchingCfgDO;
-import com.patra.registry.infra.persistence.entity.provenance.RegProvHttpCfgDO;
-import com.patra.registry.infra.persistence.entity.provenance.RegProvPaginationCfgDO;
-import com.patra.registry.infra.persistence.entity.provenance.RegProvRateLimitCfgDO;
-import com.patra.registry.infra.persistence.entity.provenance.RegProvRetryCfgDO;
-import com.patra.registry.infra.persistence.entity.provenance.RegProvWindowOffsetCfgDO;
-import com.patra.registry.infra.persistence.entity.provenance.RegProvenanceDO;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvBatchingCfgMapper;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvHttpCfgMapper;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvPaginationCfgMapper;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvRateLimitCfgMapper;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvRetryCfgMapper;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvWindowOffsetCfgMapper;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvenanceMapper;
-import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -38,9 +38,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
@@ -68,12 +68,11 @@ import org.springframework.test.context.ContextConfiguration;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@MybatisPlusTest
+@DataJpaTest
 @ContextConfiguration(initializers = RegistryMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({ProvenanceConfigRepositoryAdapter.class, TestMybatisPlusAutoConfiguration.class})
-@MapperScan("com.patra.registry.infra.persistence.mapper")
-@ComponentScan("com.patra.registry.infra.persistence.converter")
+@Import({ProvenanceConfigRepositoryAdapter.class, JpaAuditingConfig.class})
+@ComponentScan(basePackages = "com.patra.registry.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("ProvenanceConfigRepositoryAdapter 集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -81,13 +80,13 @@ class ProvenanceConfigRepositoryAdapterIT {
 
   @Autowired private ProvenanceConfigRepositoryAdapter repository;
 
-  @Autowired private RegProvenanceMapper provenanceMapper;
-  @Autowired private RegProvWindowOffsetCfgMapper windowOffsetCfgMapper;
-  @Autowired private RegProvPaginationCfgMapper paginationCfgMapper;
-  @Autowired private RegProvHttpCfgMapper httpCfgMapper;
-  @Autowired private RegProvBatchingCfgMapper batchingCfgMapper;
-  @Autowired private RegProvRetryCfgMapper retryCfgMapper;
-  @Autowired private RegProvRateLimitCfgMapper rateLimitCfgMapper;
+  @Autowired private ProvenanceDao provenanceDao;
+  @Autowired private ProvWindowOffsetCfgDao windowOffsetCfgDao;
+  @Autowired private ProvPaginationCfgDao paginationCfgDao;
+  @Autowired private ProvHttpCfgDao httpCfgDao;
+  @Autowired private ProvBatchingCfgDao batchingCfgDao;
+  @Autowired private ProvRetryCfgDao retryCfgDao;
+  @Autowired private ProvRateLimitCfgDao rateLimitCfgDao;
 
   private static final String TEST_OPERATION_TYPE = "SEARCH";
   private static final Instant TEST_TIMESTAMP = Instant.parse("2025-01-15T00:00:00Z");
@@ -98,13 +97,13 @@ class ProvenanceConfigRepositoryAdapterIT {
   @BeforeEach
   void setUp() {
     // 清理现有数据（按外键依赖顺序）
-    rateLimitCfgMapper.delete(null);
-    retryCfgMapper.delete(null);
-    batchingCfgMapper.delete(null);
-    httpCfgMapper.delete(null);
-    paginationCfgMapper.delete(null);
-    windowOffsetCfgMapper.delete(null);
-    provenanceMapper.delete(null);
+    rateLimitCfgDao.deleteAllInBatch();
+    retryCfgDao.deleteAllInBatch();
+    batchingCfgDao.deleteAllInBatch();
+    httpCfgDao.deleteAllInBatch();
+    paginationCfgDao.deleteAllInBatch();
+    windowOffsetCfgDao.deleteAllInBatch();
+    provenanceDao.deleteAllInBatch();
   }
 
   @Nested
@@ -469,12 +468,14 @@ class ProvenanceConfigRepositoryAdapterIT {
   // ==================== 辅助方法 ====================
 
   private Long insertProvenance(String code, String name, boolean isActive) {
-    RegProvenanceDO provenance = new RegProvenanceDO();
+    ProvenanceEntity provenance = new ProvenanceEntity();
+    provenance.setId(SnowflakeIdGenerator.getId());
     provenance.setProvenanceCode(code);
     provenance.setProvenanceName(name);
+    provenance.setTimezoneDefault("UTC");
     provenance.setIsActive(isActive);
     provenance.setLifecycleStatusCode("ACTIVE");
-    provenanceMapper.insert(provenance);
+    provenanceDao.saveAndFlush(provenance);
     return provenance.getId();
   }
 
@@ -484,7 +485,8 @@ class ProvenanceConfigRepositoryAdapterIT {
 
   private void insertWindowOffsetConfigWithExpiry(
       Long provenanceId, String operationType, Instant effectiveFrom, Instant effectiveTo) {
-    RegProvWindowOffsetCfgDO cfg = new RegProvWindowOffsetCfgDO();
+    ProvWindowOffsetCfgEntity cfg = new ProvWindowOffsetCfgEntity();
+    cfg.setId(SnowflakeIdGenerator.getId());
     cfg.setProvenanceId(provenanceId);
     cfg.setOperationType(operationType);
     cfg.setEffectiveFrom(effectiveFrom);
@@ -495,12 +497,14 @@ class ProvenanceConfigRepositoryAdapterIT {
     cfg.setLookbackValue(7);
     cfg.setLookbackUnitCode("DAY");
     cfg.setOffsetTypeCode("DATE");
+    cfg.setOffsetFieldKey("PDAT"); // DATE 类型必须提供 offsetFieldKey 或 windowDateFieldKey
     cfg.setLifecycleStatusCode("ACTIVE");
-    windowOffsetCfgMapper.insert(cfg);
+    windowOffsetCfgDao.saveAndFlush(cfg);
   }
 
   private void insertPaginationConfig(Long provenanceId, String operationType) {
-    RegProvPaginationCfgDO cfg = new RegProvPaginationCfgDO();
+    ProvPaginationCfgEntity cfg = new ProvPaginationCfgEntity();
+    cfg.setId(SnowflakeIdGenerator.getId());
     cfg.setProvenanceId(provenanceId);
     cfg.setOperationType(operationType);
     cfg.setEffectiveFrom(EFFECTIVE_FROM);
@@ -510,11 +514,12 @@ class ProvenanceConfigRepositoryAdapterIT {
     cfg.setMaxPagesPerExecution(1000);
     cfg.setSortingDirection(1);
     cfg.setLifecycleStatusCode("ACTIVE");
-    paginationCfgMapper.insert(cfg);
+    paginationCfgDao.saveAndFlush(cfg);
   }
 
   private void insertHttpConfig(Long provenanceId, String operationType) {
-    RegProvHttpCfgDO cfg = new RegProvHttpCfgDO();
+    ProvHttpCfgEntity cfg = new ProvHttpCfgEntity();
+    cfg.setId(SnowflakeIdGenerator.getId());
     cfg.setProvenanceId(provenanceId);
     cfg.setOperationType(operationType);
     cfg.setEffectiveFrom(EFFECTIVE_FROM);
@@ -525,11 +530,12 @@ class ProvenanceConfigRepositoryAdapterIT {
     cfg.setTlsVerifyEnabled(true);
     cfg.setRetryAfterPolicyCode("RESPECT");
     cfg.setLifecycleStatusCode("ACTIVE");
-    httpCfgMapper.insert(cfg);
+    httpCfgDao.saveAndFlush(cfg);
   }
 
   private void insertBatchingConfig(Long provenanceId, String operationType) {
-    RegProvBatchingCfgDO cfg = new RegProvBatchingCfgDO();
+    ProvBatchingCfgEntity cfg = new ProvBatchingCfgEntity();
+    cfg.setId(SnowflakeIdGenerator.getId());
     cfg.setProvenanceId(provenanceId);
     cfg.setOperationType(operationType);
     cfg.setEffectiveFrom(EFFECTIVE_FROM);
@@ -539,11 +545,12 @@ class ProvenanceConfigRepositoryAdapterIT {
     cfg.setIdsJoinDelimiter(",");
     cfg.setMaxIdsPerRequest(200);
     cfg.setLifecycleStatusCode("ACTIVE");
-    batchingCfgMapper.insert(cfg);
+    batchingCfgDao.saveAndFlush(cfg);
   }
 
   private void insertRetryConfig(Long provenanceId, String operationType) {
-    RegProvRetryCfgDO cfg = new RegProvRetryCfgDO();
+    ProvRetryCfgEntity cfg = new ProvRetryCfgEntity();
+    cfg.setId(SnowflakeIdGenerator.getId());
     cfg.setProvenanceId(provenanceId);
     cfg.setOperationType(operationType);
     cfg.setEffectiveFrom(EFFECTIVE_FROM);
@@ -555,11 +562,12 @@ class ProvenanceConfigRepositoryAdapterIT {
     cfg.setExpMultiplierValue(2.0);
     cfg.setRetryOnNetworkError(true);
     cfg.setLifecycleStatusCode("ACTIVE");
-    retryCfgMapper.insert(cfg);
+    retryCfgDao.saveAndFlush(cfg);
   }
 
   private void insertRateLimitConfig(Long provenanceId, String operationType) {
-    RegProvRateLimitCfgDO cfg = new RegProvRateLimitCfgDO();
+    ProvRateLimitCfgEntity cfg = new ProvRateLimitCfgEntity();
+    cfg.setId(SnowflakeIdGenerator.getId());
     cfg.setProvenanceId(provenanceId);
     cfg.setOperationType(operationType);
     cfg.setEffectiveFrom(EFFECTIVE_FROM);
@@ -567,6 +575,6 @@ class ProvenanceConfigRepositoryAdapterIT {
     cfg.setMaxConcurrentRequests(10);
     cfg.setPerCredentialQpsLimit(3);
     cfg.setLifecycleStatusCode("ACTIVE");
-    rateLimitCfgMapper.insert(cfg);
+    rateLimitCfgDao.saveAndFlush(cfg);
   }
 }

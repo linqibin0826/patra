@@ -3,7 +3,6 @@ package com.patra.registry.infra.adapter.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
@@ -13,18 +12,19 @@ import com.patra.registry.domain.model.vo.expr.ExprCapability;
 import com.patra.registry.domain.model.vo.expr.ExprField;
 import com.patra.registry.domain.model.vo.expr.ExprRenderRule;
 import com.patra.registry.domain.model.vo.expr.ExprSnapshot;
+import com.patra.registry.infra.adapter.persistence.dao.expr.ExprFieldDictDao;
+import com.patra.registry.infra.adapter.persistence.dao.expr.ProvApiParamMapDao;
+import com.patra.registry.infra.adapter.persistence.dao.expr.ProvExprCapabilityDao;
+import com.patra.registry.infra.adapter.persistence.dao.expr.ProvExprRenderRuleDao;
+import com.patra.registry.infra.adapter.persistence.dao.provenance.ProvenanceDao;
+import com.patra.registry.infra.adapter.persistence.entity.expr.ExprFieldDictEntity;
+import com.patra.registry.infra.adapter.persistence.entity.expr.ProvApiParamMapEntity;
+import com.patra.registry.infra.adapter.persistence.entity.expr.ProvExprCapabilityEntity;
+import com.patra.registry.infra.adapter.persistence.entity.expr.ProvExprRenderRuleEntity;
+import com.patra.registry.infra.adapter.persistence.entity.provenance.ProvenanceEntity;
 import com.patra.registry.infra.config.RegistryMySQLContainerInitializer;
-import com.patra.registry.infra.persistence.entity.expr.RegExprFieldDictDO;
-import com.patra.registry.infra.persistence.entity.expr.RegProvApiParamMapDO;
-import com.patra.registry.infra.persistence.entity.expr.RegProvExprCapabilityDO;
-import com.patra.registry.infra.persistence.entity.expr.RegProvExprRenderRuleDO;
-import com.patra.registry.infra.persistence.entity.provenance.RegProvenanceDO;
-import com.patra.registry.infra.persistence.mapper.expr.RegExprFieldDictMapper;
-import com.patra.registry.infra.persistence.mapper.expr.RegProvApiParamMapMapper;
-import com.patra.registry.infra.persistence.mapper.expr.RegProvExprCapabilityMapper;
-import com.patra.registry.infra.persistence.mapper.expr.RegProvExprRenderRuleMapper;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvenanceMapper;
-import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.TimeUnit;
@@ -33,9 +33,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
@@ -63,12 +63,11 @@ import org.springframework.test.context.ContextConfiguration;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@MybatisPlusTest
+@DataJpaTest
 @ContextConfiguration(initializers = RegistryMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({ExprRepositoryAdapter.class, TestMybatisPlusAutoConfiguration.class})
-@MapperScan("com.patra.registry.infra.persistence.mapper")
-@ComponentScan("com.patra.registry.infra.persistence.converter")
+@Import({ExprRepositoryAdapter.class, JpaAuditingConfig.class})
+@ComponentScan(basePackages = "com.patra.registry.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("ExprRepositoryAdapter 集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -76,11 +75,11 @@ class ExprRepositoryAdapterIT {
 
   @Autowired private ExprRepositoryAdapter repository;
 
-  @Autowired private RegProvenanceMapper provenanceMapper;
-  @Autowired private RegExprFieldDictMapper fieldDictMapper;
-  @Autowired private RegProvExprCapabilityMapper capabilityMapper;
-  @Autowired private RegProvExprRenderRuleMapper renderRuleMapper;
-  @Autowired private RegProvApiParamMapMapper apiParamMapMapper;
+  @Autowired private ProvenanceDao provenanceDao;
+  @Autowired private ExprFieldDictDao fieldDictDao;
+  @Autowired private ProvExprCapabilityDao capabilityDao;
+  @Autowired private ProvExprRenderRuleDao renderRuleDao;
+  @Autowired private ProvApiParamMapDao apiParamMapDao;
 
   private static final String TEST_PROVENANCE_CODE = "PUBMED";
   private static final String TEST_OPERATION_TYPE = "SEARCH";
@@ -94,11 +93,11 @@ class ExprRepositoryAdapterIT {
   @BeforeEach
   void setUp() {
     // 清理现有数据（按外键依赖顺序）
-    apiParamMapMapper.delete(null);
-    renderRuleMapper.delete(null);
-    capabilityMapper.delete(null);
-    fieldDictMapper.delete(null);
-    provenanceMapper.delete(null);
+    apiParamMapDao.deleteAllInBatch();
+    renderRuleDao.deleteAllInBatch();
+    capabilityDao.deleteAllInBatch();
+    fieldDictDao.deleteAllInBatch();
+    provenanceDao.deleteAllInBatch();
   }
 
   @Nested
@@ -383,17 +382,20 @@ class ExprRepositoryAdapterIT {
   // ==================== 辅助方法 ====================
 
   private Long insertProvenance(String code) {
-    RegProvenanceDO provenance = new RegProvenanceDO();
+    ProvenanceEntity provenance = new ProvenanceEntity();
+    provenance.setId(SnowflakeIdGenerator.getId());
     provenance.setProvenanceCode(code);
     provenance.setProvenanceName("Test Provenance - " + code);
+    provenance.setTimezoneDefault("UTC");
     provenance.setIsActive(true);
     provenance.setLifecycleStatusCode("ACTIVE");
-    provenanceMapper.insert(provenance);
+    provenanceDao.saveAndFlush(provenance);
     return provenance.getId();
   }
 
   private void insertFieldDict(String fieldKey, String displayName) {
-    RegExprFieldDictDO field = new RegExprFieldDictDO();
+    ExprFieldDictEntity field = new ExprFieldDictEntity();
+    field.setId(SnowflakeIdGenerator.getId());
     field.setFieldKey(fieldKey);
     field.setDisplayName(displayName);
     field.setDescription("Test field: " + fieldKey);
@@ -401,11 +403,12 @@ class ExprRepositoryAdapterIT {
     field.setCardinalityCode("SINGLE");
     field.setExposable(true);
     field.setDateField(false);
-    fieldDictMapper.insert(field);
+    fieldDictDao.saveAndFlush(field);
   }
 
   private void insertCapability(Long provenanceId, String operationType, String fieldKey) {
-    RegProvExprCapabilityDO capability = new RegProvExprCapabilityDO();
+    ProvExprCapabilityEntity capability = new ProvExprCapabilityEntity();
+    capability.setId(SnowflakeIdGenerator.getId());
     capability.setProvenanceId(provenanceId);
     capability.setOperationType(operationType);
     capability.setFieldKey(fieldKey);
@@ -425,7 +428,7 @@ class ExprRepositoryAdapterIT {
     capability.setRangeAllowOpenEnd(true);
     capability.setRangeAllowClosedAtInfty(false);
     capability.setExistsSupported(false);
-    capabilityMapper.insert(capability);
+    capabilityDao.saveAndFlush(capability);
   }
 
   /// 解析 JSON 字符串为 JsonNode。
@@ -439,7 +442,8 @@ class ExprRepositoryAdapterIT {
 
   private void insertRenderRule(
       Long provenanceId, String operationType, String fieldKey, String opCode, String template) {
-    RegProvExprRenderRuleDO renderRule = new RegProvExprRenderRuleDO();
+    ProvExprRenderRuleEntity renderRule = new ProvExprRenderRuleEntity();
+    renderRule.setId(SnowflakeIdGenerator.getId());
     renderRule.setProvenanceId(provenanceId);
     renderRule.setOperationType(operationType);
     renderRule.setFieldKey(fieldKey);
@@ -450,12 +454,13 @@ class ExprRepositoryAdapterIT {
     renderRule.setTemplate(template);
     renderRule.setEmitTypeCode("QUERY");
     renderRule.setWrapGroup(false);
-    renderRuleMapper.insert(renderRule);
+    renderRuleDao.saveAndFlush(renderRule);
   }
 
   private void insertApiParamMapping(
       Long provenanceId, String operationType, String endpointName, String stdKey) {
-    RegProvApiParamMapDO apiParam = new RegProvApiParamMapDO();
+    ProvApiParamMapEntity apiParam = new ProvApiParamMapEntity();
+    apiParam.setId(SnowflakeIdGenerator.getId());
     apiParam.setProvenanceId(provenanceId);
     apiParam.setOperationType(operationType);
     apiParam.setEndpointName(endpointName);
@@ -464,12 +469,13 @@ class ExprRepositoryAdapterIT {
     apiParam.setLifecycleStatusCode("ACTIVE");
     apiParam.setEffectiveFrom(EFFECTIVE_FROM);
     apiParam.setEffectiveTo(null);
-    apiParamMapMapper.insert(apiParam);
+    apiParamMapDao.saveAndFlush(apiParam);
   }
 
   private void insertApiParamMappingWithNullEndpoint(
       Long provenanceId, String operationType, String stdKey) {
-    RegProvApiParamMapDO apiParam = new RegProvApiParamMapDO();
+    ProvApiParamMapEntity apiParam = new ProvApiParamMapEntity();
+    apiParam.setId(SnowflakeIdGenerator.getId());
     apiParam.setProvenanceId(provenanceId);
     apiParam.setOperationType(operationType);
     apiParam.setEndpointName(null);
@@ -478,6 +484,6 @@ class ExprRepositoryAdapterIT {
     apiParam.setLifecycleStatusCode("ACTIVE");
     apiParam.setEffectiveFrom(EFFECTIVE_FROM);
     apiParam.setEffectiveTo(null);
-    apiParamMapMapper.insert(apiParam);
+    apiParamMapDao.saveAndFlush(apiParam);
   }
 }

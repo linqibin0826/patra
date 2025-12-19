@@ -7,6 +7,7 @@ import com.patra.ingest.infra.adapter.persistence.converter.mapper.TaskRunBatchJ
 import com.patra.ingest.infra.adapter.persistence.dao.TaskRunBatchDao;
 import com.patra.ingest.infra.adapter.persistence.entity.TaskRunBatchEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
+import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -33,6 +34,9 @@ public class TaskRunBatchRepositoryAdapter implements TaskRunBatchRepository {
   /// 领域实体与 JPA 实体转换器
   private final TaskRunBatchJpaMapper taskRunBatchJpaMapper;
 
+  /// JPA EntityManager，用于 merge 操作
+  private final EntityManager entityManager;
+
   /// 保存单个任务执行批次并返回持久化后的实体。
   ///
   /// @param batch 批次实体
@@ -41,15 +45,20 @@ public class TaskRunBatchRepositoryAdapter implements TaskRunBatchRepository {
   public TaskRunBatch save(TaskRunBatch batch) {
     TaskRunBatchEntity entity = taskRunBatchJpaMapper.toEntity(batch);
 
+    TaskRunBatchEntity saved;
     if (batch.getId() == null) {
       // 新增：预分配雪花 ID
       entity.setId(SnowflakeIdGenerator.getId());
+      saved = taskRunBatchDao.save(entity);
     } else {
-      // 更新：使用现有 ID
+      // 更新：先获取当前记录的 version（领域对象不持有 version）
       entity.setId(batch.getId());
+      TaskRunBatchEntity existing = taskRunBatchDao.findById(batch.getId()).orElseThrow();
+      entity.setVersion(existing.getVersion());
+      // 使用 merge 处理可能存在的托管实体冲突
+      saved = entityManager.merge(entity);
     }
 
-    TaskRunBatchEntity saved = taskRunBatchDao.save(entity);
     return taskRunBatchJpaMapper.toAggregate(saved);
   }
 

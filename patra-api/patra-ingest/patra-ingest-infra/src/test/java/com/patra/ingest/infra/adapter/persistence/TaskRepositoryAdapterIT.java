@@ -2,22 +2,21 @@ package com.patra.ingest.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
+import com.patra.ingest.infra.adapter.persistence.dao.PlanDao;
+import com.patra.ingest.infra.adapter.persistence.dao.PlanSliceDao;
+import com.patra.ingest.infra.adapter.persistence.dao.ScheduleInstanceDao;
+import com.patra.ingest.infra.adapter.persistence.dao.TaskDao;
+import com.patra.ingest.infra.adapter.persistence.entity.PlanEntity;
+import com.patra.ingest.infra.adapter.persistence.entity.PlanSliceEntity;
+import com.patra.ingest.infra.adapter.persistence.entity.ScheduleInstanceEntity;
+import com.patra.ingest.infra.adapter.persistence.entity.TaskEntity;
 import com.patra.ingest.infra.config.IngestMySQLContainerInitializer;
-import com.patra.ingest.infra.persistence.entity.PlanDO;
-import com.patra.ingest.infra.persistence.entity.PlanSliceDO;
-import com.patra.ingest.infra.persistence.entity.ScheduleInstanceDO;
-import com.patra.ingest.infra.persistence.entity.TaskDO;
-import com.patra.ingest.infra.persistence.mapper.PlanMapper;
-import com.patra.ingest.infra.persistence.mapper.PlanSliceMapper;
-import com.patra.ingest.infra.persistence.mapper.ScheduleInstanceMapper;
-import com.patra.ingest.infra.persistence.mapper.TaskMapper;
-import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -27,10 +26,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
@@ -50,16 +49,11 @@ import org.springframework.test.context.ContextConfiguration;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@MybatisPlusTest
+@DataJpaTest
 @ContextConfiguration(initializers = IngestMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({
-  TaskRepositoryAdapter.class,
-  TestMybatisPlusAutoConfiguration.class,
-  JacksonAutoConfiguration.class
-})
-@ComponentScan("com.patra.ingest.infra.persistence.converter")
-@MapperScan("com.patra.ingest.infra.persistence.mapper")
+@Import({TaskRepositoryAdapter.class, JacksonAutoConfiguration.class, JpaAuditingConfig.class})
+@ComponentScan(basePackages = "com.patra.ingest.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("TaskRepositoryAdapter 集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -67,10 +61,10 @@ class TaskRepositoryAdapterIT {
 
   @Autowired private TaskRepositoryAdapter repository;
 
-  @Autowired private TaskMapper taskMapper;
-  @Autowired private PlanMapper planMapper;
-  @Autowired private PlanSliceMapper planSliceMapper;
-  @Autowired private ScheduleInstanceMapper scheduleInstanceMapper;
+  @Autowired private TaskDao taskDao;
+  @Autowired private PlanDao planDao;
+  @Autowired private PlanSliceDao planSliceDao;
+  @Autowired private ScheduleInstanceDao scheduleInstanceDao;
   @Autowired private ObjectMapper objectMapper;
 
   private static final String TEST_PROVENANCE_CODE = "PUBMED";
@@ -84,11 +78,10 @@ class TaskRepositoryAdapterIT {
   @BeforeEach
   void setUp() {
     // 清理现有数据（按外键依赖顺序）
-    taskMapper.delete(Wrappers.<TaskDO>lambdaQuery().ne(TaskDO::getId, 0L));
-    planSliceMapper.delete(Wrappers.<PlanSliceDO>lambdaQuery().ne(PlanSliceDO::getId, 0L));
-    planMapper.delete(Wrappers.<PlanDO>lambdaQuery().ne(PlanDO::getId, 0L));
-    scheduleInstanceMapper.delete(
-        Wrappers.<ScheduleInstanceDO>lambdaQuery().ne(ScheduleInstanceDO::getId, 0L));
+    taskDao.deleteAllInBatch();
+    planSliceDao.deleteAllInBatch();
+    planDao.deleteAllInBatch();
+    scheduleInstanceDao.deleteAllInBatch();
 
     // 创建依赖数据
     testScheduleInstanceId = insertScheduleInstance();
@@ -101,14 +94,14 @@ class TaskRepositoryAdapterIT {
   class SaveTests {
 
     @Test
-    @DisplayName("应在通过 Mapper 插入后通过 findById 查询到任务")
-    void shouldFindTaskAfterMapperInsert() {
-      // Given: 通过 Mapper 直接插入测试数据
-      TaskDO taskDO = createTestTaskDO("task-001");
-      taskMapper.insert(taskDO);
+    @DisplayName("应在通过 Dao 插入后通过 findById 查询到任务")
+    void shouldFindTaskAfterDaoInsert() {
+      // Given: 通过 Dao 直接插入测试数据
+      TaskEntity entity = createTestTaskEntity("task-001");
+      taskDao.saveAndFlush(entity);
 
       // When
-      Optional<TaskAggregate> result = repository.findById(taskDO.getId());
+      Optional<TaskAggregate> result = repository.findById(entity.getId());
 
       // Then
       assertThat(result).isPresent();
@@ -125,15 +118,15 @@ class TaskRepositoryAdapterIT {
     @DisplayName("应按 planId 查询任务列表")
     void shouldFindTasksByPlanId() {
       // Given
-      TaskDO taskDO = createTestTaskDO("task-001");
-      taskMapper.insert(taskDO);
+      TaskEntity entity = createTestTaskEntity("task-001");
+      taskDao.saveAndFlush(entity);
 
       // When
       List<TaskAggregate> result = repository.findByPlanId(testPlanId);
 
       // Then
       assertThat(result).hasSize(1);
-      assertThat(result.get(0).getPlanId()).isEqualTo(testPlanId);
+      assertThat(result.get(0).getPlanId().value()).isEqualTo(testPlanId);
     }
 
     @Test
@@ -150,26 +143,26 @@ class TaskRepositoryAdapterIT {
     @DisplayName("应按 sliceId 查询任务")
     void shouldFindTaskBySliceId() {
       // Given
-      TaskDO taskDO = createTestTaskDO("task-001");
-      taskMapper.insert(taskDO);
+      TaskEntity entity = createTestTaskEntity("task-001");
+      taskDao.saveAndFlush(entity);
 
       // When
       Optional<TaskAggregate> result = repository.findBySliceId(testSliceId);
 
       // Then
       assertThat(result).isPresent();
-      assertThat(result.get().getSliceId()).isEqualTo(testSliceId);
+      assertThat(result.get().getSliceId().value()).isEqualTo(testSliceId);
     }
 
     @Test
     @DisplayName("应按 ID 查询任务")
     void shouldFindTaskById() {
       // Given
-      TaskDO taskDO = createTestTaskDO("task-001");
-      taskMapper.insert(taskDO);
+      TaskEntity entity = createTestTaskEntity("task-001");
+      taskDao.saveAndFlush(entity);
 
       // When
-      Optional<TaskAggregate> result = repository.findById(taskDO.getId());
+      Optional<TaskAggregate> result = repository.findById(entity.getId());
 
       // Then
       assertThat(result).isPresent();
@@ -197,9 +190,9 @@ class TaskRepositoryAdapterIT {
     @DisplayName("应统计队列中的任务数量")
     void shouldCountQueuedTasks() {
       // Given
-      TaskDO taskDO = createTestTaskDO("task-001");
-      taskDO.setStatusCode("QUEUED");
-      taskMapper.insert(taskDO);
+      TaskEntity entity = createTestTaskEntity("task-001");
+      entity.setStatusCode("QUEUED");
+      taskDao.saveAndFlush(entity);
 
       // When
       long count =
@@ -214,9 +207,9 @@ class TaskRepositoryAdapterIT {
     @DisplayName("应支持 null 参数统计所有队列任务")
     void shouldCountAllQueuedTasksWhenParametersAreNull() {
       // Given
-      TaskDO taskDO = createTestTaskDO("task-001");
-      taskDO.setStatusCode("QUEUED");
-      taskMapper.insert(taskDO);
+      TaskEntity entity = createTestTaskEntity("task-001");
+      entity.setStatusCode("QUEUED");
+      taskDao.saveAndFlush(entity);
 
       // When
       long count = repository.countQueuedTasks(null, null);
@@ -234,16 +227,16 @@ class TaskRepositoryAdapterIT {
     @DisplayName("应成功获取租约")
     void shouldAcquireLeaseSuccessfully() {
       // Given
-      TaskDO taskDO = createTestTaskDO("task-001");
-      taskDO.setStatusCode("QUEUED");
-      taskMapper.insert(taskDO);
+      TaskEntity entity = createTestTaskEntity("task-001");
+      entity.setStatusCode("QUEUED");
+      taskDao.saveAndFlush(entity);
 
       Instant now = Instant.now();
       int ttlSeconds = 300;
 
       // When
       boolean result =
-          repository.tryAcquireLease(taskDO.getId(), TEST_OWNER, now, ttlSeconds, "task-001");
+          repository.tryAcquireLease(entity.getId(), TEST_OWNER, now, ttlSeconds, "task-001");
 
       // Then
       assertThat(result).isTrue();
@@ -253,16 +246,16 @@ class TaskRepositoryAdapterIT {
     @DisplayName("应成功续约租约")
     void shouldRenewLeaseSuccessfully() {
       // Given: 先获取租约
-      TaskDO taskDO = createTestTaskDO("task-001");
-      taskDO.setStatusCode("QUEUED");
-      taskMapper.insert(taskDO);
+      TaskEntity entity = createTestTaskEntity("task-001");
+      entity.setStatusCode("QUEUED");
+      taskDao.saveAndFlush(entity);
 
       Instant now = Instant.now();
       int ttlSeconds = 300;
-      repository.tryAcquireLease(taskDO.getId(), TEST_OWNER, now, ttlSeconds, "task-001");
+      repository.tryAcquireLease(entity.getId(), TEST_OWNER, now, ttlSeconds, "task-001");
 
       // When
-      boolean result = repository.renewLease(taskDO.getId(), TEST_OWNER, now, ttlSeconds);
+      boolean result = repository.renewLease(entity.getId(), TEST_OWNER, now, ttlSeconds);
 
       // Then
       assertThat(result).isTrue();
@@ -274,13 +267,13 @@ class TaskRepositoryAdapterIT {
       // Given
       Long sliceId2 = insertPlanSlice();
 
-      TaskDO task1 = createTestTaskDO("task-001");
+      TaskEntity task1 = createTestTaskEntity("task-001");
       task1.setStatusCode("QUEUED");
-      taskMapper.insert(task1);
+      taskDao.saveAndFlush(task1);
 
-      TaskDO task2 = createTestTaskDOWithSlice("task-002", sliceId2);
+      TaskEntity task2 = createTestTaskEntityWithSlice("task-002", sliceId2);
       task2.setStatusCode("QUEUED");
-      taskMapper.insert(task2);
+      taskDao.saveAndFlush(task2);
 
       Instant now = Instant.now();
       int ttlSeconds = 300;
@@ -310,17 +303,19 @@ class TaskRepositoryAdapterIT {
   // ==================== 辅助方法 ====================
 
   private Long insertScheduleInstance() {
-    ScheduleInstanceDO instance = new ScheduleInstanceDO();
+    ScheduleInstanceEntity instance = new ScheduleInstanceEntity();
+    instance.setId(SnowflakeIdGenerator.getId());
     instance.setSchedulerCode("XXL");
     instance.setTriggerTypeCode("SCHEDULE");
     instance.setTriggeredAt(Instant.now());
     instance.setProvenanceCode(TEST_PROVENANCE_CODE);
-    scheduleInstanceMapper.insert(instance);
+    scheduleInstanceDao.saveAndFlush(instance);
     return instance.getId();
   }
 
   private Long insertPlan() {
-    PlanDO plan = new PlanDO();
+    PlanEntity plan = new PlanEntity();
+    plan.setId(SnowflakeIdGenerator.getId());
     plan.setScheduleInstanceId(testScheduleInstanceId);
     plan.setPlanKey("PUBMED-HARVEST-2025-01-01");
     plan.setProvenanceCode(TEST_PROVENANCE_CODE);
@@ -329,20 +324,21 @@ class TaskRepositoryAdapterIT {
     plan.setExprProtoHash("test-expr-hash-001");
     plan.setWindowSpec(createSingleWindowSpec());
     plan.setStatusCode("READY");
-    planMapper.insert(plan);
+    planDao.saveAndFlush(plan);
     return plan.getId();
   }
 
   private Long insertPlanSlice() {
-    PlanSliceDO slice = new PlanSliceDO();
+    PlanSliceEntity slice = new PlanSliceEntity();
+    slice.setId(SnowflakeIdGenerator.getId());
     slice.setPlanId(testPlanId);
     slice.setProvenanceCode(TEST_PROVENANCE_CODE);
-    slice.setSliceNo(planSliceMapper.selectCount(null).intValue());
+    slice.setSliceNo((int) planSliceDao.count());
     slice.setSliceSignatureHash("slice-sig-hash-" + System.nanoTime());
     slice.setWindowSpec(createSingleWindowSpec());
     slice.setExprHash("expr-hash-001");
     slice.setStatusCode("PENDING");
-    planSliceMapper.insert(slice);
+    planSliceDao.saveAndFlush(slice);
     return slice.getId();
   }
 
@@ -352,12 +348,13 @@ class TaskRepositoryAdapterIT {
     return windowSpec;
   }
 
-  private TaskDO createTestTaskDO(String idempotentKey) {
-    return createTestTaskDOWithSlice(idempotentKey, testSliceId);
+  private TaskEntity createTestTaskEntity(String idempotentKey) {
+    return createTestTaskEntityWithSlice(idempotentKey, testSliceId);
   }
 
-  private TaskDO createTestTaskDOWithSlice(String idempotentKey, Long sliceId) {
-    TaskDO task = new TaskDO();
+  private TaskEntity createTestTaskEntityWithSlice(String idempotentKey, Long sliceId) {
+    TaskEntity task = new TaskEntity();
+    task.setId(SnowflakeIdGenerator.getId());
     task.setScheduleInstanceId(testScheduleInstanceId);
     task.setPlanId(testPlanId);
     task.setSliceId(sliceId);

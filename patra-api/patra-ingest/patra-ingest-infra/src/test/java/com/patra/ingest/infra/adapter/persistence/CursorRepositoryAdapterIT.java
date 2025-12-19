@@ -2,14 +2,13 @@ package com.patra.ingest.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.entity.Cursor;
+import com.patra.ingest.infra.adapter.persistence.dao.CursorDao;
+import com.patra.ingest.infra.adapter.persistence.entity.CursorEntity;
 import com.patra.ingest.infra.config.IngestMySQLContainerInitializer;
-import com.patra.ingest.infra.persistence.entity.CursorDO;
-import com.patra.ingest.infra.persistence.mapper.CursorMapper;
-import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -18,10 +17,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
@@ -41,16 +40,11 @@ import org.springframework.test.context.ContextConfiguration;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@MybatisPlusTest
+@DataJpaTest
 @ContextConfiguration(initializers = IngestMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({
-  CursorRepositoryAdapter.class,
-  TestMybatisPlusAutoConfiguration.class,
-  JacksonAutoConfiguration.class
-})
-@ComponentScan("com.patra.ingest.infra.persistence.converter")
-@MapperScan("com.patra.ingest.infra.persistence.mapper")
+@Import({CursorRepositoryAdapter.class, JacksonAutoConfiguration.class, JpaAuditingConfig.class})
+@ComponentScan(basePackages = "com.patra.ingest.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("CursorRepositoryAdapter 集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -58,7 +52,7 @@ class CursorRepositoryAdapterIT {
 
   @Autowired private CursorRepositoryAdapter repository;
 
-  @Autowired private CursorMapper cursorMapper;
+  @Autowired private CursorDao cursorDao;
 
   private static final String TEST_PROVENANCE_CODE = "PUBMED";
   private static final String TEST_OPERATION_CODE = "HARVEST";
@@ -70,8 +64,7 @@ class CursorRepositoryAdapterIT {
 
   @BeforeEach
   void setUp() {
-    // 清理现有数据（使用 ne(id, 0) 条件绕过全表操作禁止）
-    cursorMapper.delete(Wrappers.<CursorDO>lambdaQuery().ne(CursorDO::getId, 0L));
+    cursorDao.deleteAllInBatch();
   }
 
   @Nested
@@ -79,11 +72,11 @@ class CursorRepositoryAdapterIT {
   class SaveTests {
 
     @Test
-    @DisplayName("应在通过 Mapper 插入后通过 find 查询到游标")
-    void shouldFindCursorAfterMapperInsert() {
-      // Given: 通过 Mapper 直接插入测试数据
-      CursorDO cursorDO = createTestCursorDO();
-      cursorMapper.insert(cursorDO);
+    @DisplayName("应在通过 Dao 插入后通过 find 查询到游标")
+    void shouldFindCursorAfterDaoInsert() {
+      // Given: 通过 Dao 直接插入测试数据
+      CursorEntity entity = createTestCursorEntity();
+      cursorDao.saveAndFlush(entity);
 
       // When
       Optional<Cursor> result =
@@ -104,9 +97,9 @@ class CursorRepositoryAdapterIT {
     @DisplayName("应正确映射游标类型")
     void shouldMapCursorTypeCorrectly() {
       // Given
-      CursorDO cursorDO = createTestCursorDO();
-      cursorDO.setCursorTypeCode("TIME");
-      cursorMapper.insert(cursorDO);
+      CursorEntity entity = createTestCursorEntity();
+      entity.setCursorTypeCode("TIME");
+      cursorDao.saveAndFlush(entity);
 
       // When
       Optional<Cursor> result =
@@ -131,8 +124,8 @@ class CursorRepositoryAdapterIT {
     @DisplayName("应按复合键查找游标")
     void shouldFindByCompositeKey() {
       // Given
-      CursorDO cursorDO = createTestCursorDO();
-      cursorMapper.insert(cursorDO);
+      CursorEntity entity = createTestCursorEntity();
+      cursorDao.saveAndFlush(entity);
 
       // When
       Optional<Cursor> result =
@@ -176,9 +169,9 @@ class CursorRepositoryAdapterIT {
     @DisplayName("应查询最新全局时间水位")
     void shouldFindLatestGlobalTimeWatermark() {
       // Given
-      CursorDO cursorDO = createTestCursorDO();
-      cursorDO.setNormalizedInstant(TEST_WATERMARK);
-      cursorMapper.insert(cursorDO);
+      CursorEntity entity = createTestCursorEntity();
+      entity.setNormalizedInstant(TEST_WATERMARK);
+      cursorDao.saveAndFlush(entity);
 
       // When
       Optional<Instant> result =
@@ -208,9 +201,9 @@ class CursorRepositoryAdapterIT {
     @DisplayName("应支持 operationCode 为 null")
     void shouldSupportNullOperationCode() {
       // Given
-      CursorDO cursorDO = createTestCursorDO();
-      cursorDO.setNormalizedInstant(TEST_WATERMARK);
-      cursorMapper.insert(cursorDO);
+      CursorEntity entity = createTestCursorEntity();
+      entity.setNormalizedInstant(TEST_WATERMARK);
+      cursorDao.saveAndFlush(entity);
 
       // When
       Optional<Instant> result =
@@ -225,16 +218,17 @@ class CursorRepositoryAdapterIT {
 
   // ==================== 辅助方法 ====================
 
-  private CursorDO createTestCursorDO() {
-    CursorDO cursor = new CursorDO();
-    cursor.setProvenanceCode(TEST_PROVENANCE_CODE);
-    cursor.setOperationCode(TEST_OPERATION_CODE);
-    cursor.setCursorKey(TEST_CURSOR_KEY);
-    cursor.setNamespaceScopeCode(TEST_NAMESPACE_SCOPE_CODE);
-    cursor.setNamespaceKey(TEST_NAMESPACE_KEY);
-    cursor.setCursorTypeCode("TIME");
-    cursor.setCursorValue(TEST_WATERMARK.toString());
-    cursor.setNormalizedInstant(TEST_WATERMARK);
-    return cursor;
+  private CursorEntity createTestCursorEntity() {
+    CursorEntity entity = new CursorEntity();
+    entity.setId(SnowflakeIdGenerator.getId());
+    entity.setProvenanceCode(TEST_PROVENANCE_CODE);
+    entity.setOperationCode(TEST_OPERATION_CODE);
+    entity.setCursorKey(TEST_CURSOR_KEY);
+    entity.setNamespaceScopeCode(TEST_NAMESPACE_SCOPE_CODE);
+    entity.setNamespaceKey(TEST_NAMESPACE_KEY);
+    entity.setCursorTypeCode("TIME");
+    entity.setCursorValue(TEST_WATERMARK.toString());
+    entity.setNormalizedInstant(TEST_WATERMARK);
+    return entity;
   }
 }

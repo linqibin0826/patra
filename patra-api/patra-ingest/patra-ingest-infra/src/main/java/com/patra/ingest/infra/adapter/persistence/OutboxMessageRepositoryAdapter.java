@@ -293,7 +293,7 @@ public class OutboxMessageRepositoryAdapter
       Long id, Long expectedVersion, int retryCount, String errorCode, String errorMessage) {
     int affectedRows =
         outboxMessageDao.markFailed(
-            id, expectedVersion, retryCount, errorCode, errorMessage, "FAILED");
+            id, expectedVersion, retryCount, errorCode, errorMessage, "DEAD");
     if (affectedRows != 1) {
       throw new OutboxPersistenceException(
           OutboxPersistenceException.Stage.MARK_DEAD, "Failed to mark Outbox as DEAD, id=" + id);

@@ -3,18 +3,17 @@ package com.patra.ingest.infra.adapter.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.ingest.domain.model.entity.OutboxRelayLog;
 import com.patra.ingest.domain.model.enums.RelayStatus;
+import com.patra.ingest.infra.adapter.persistence.dao.OutboxMessageDao;
+import com.patra.ingest.infra.adapter.persistence.dao.OutboxRelayLogDao;
+import com.patra.ingest.infra.adapter.persistence.entity.OutboxMessageEntity;
+import com.patra.ingest.infra.adapter.persistence.entity.OutboxRelayLogEntity;
 import com.patra.ingest.infra.config.IngestMySQLContainerInitializer;
-import com.patra.ingest.infra.persistence.entity.OutboxMessageDO;
-import com.patra.ingest.infra.persistence.entity.OutboxRelayLogDO;
-import com.patra.ingest.infra.persistence.mapper.OutboxMessageMapper;
-import com.patra.ingest.infra.persistence.mapper.OutboxRelayLogMapper;
-import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -24,10 +23,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
@@ -48,16 +47,15 @@ import org.springframework.test.context.ContextConfiguration;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@MybatisPlusTest
+@DataJpaTest
 @ContextConfiguration(initializers = IngestMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   OutboxRelayLogRepositoryAdapter.class,
-  TestMybatisPlusAutoConfiguration.class,
-  JacksonAutoConfiguration.class
+  JacksonAutoConfiguration.class,
+  JpaAuditingConfig.class
 })
-@ComponentScan("com.patra.ingest.infra.persistence.converter")
-@MapperScan("com.patra.ingest.infra.persistence.mapper")
+@ComponentScan(basePackages = "com.patra.ingest.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("OutboxRelayLogRepositoryAdapter 集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -65,8 +63,8 @@ class OutboxRelayLogRepositoryAdapterIT {
 
   @Autowired private OutboxRelayLogRepositoryAdapter repository;
 
-  @Autowired private OutboxRelayLogMapper logMapper;
-  @Autowired private OutboxMessageMapper messageMapper;
+  @Autowired private OutboxRelayLogDao logDao;
+  @Autowired private OutboxMessageDao messageDao;
   @Autowired private ObjectMapper objectMapper;
 
   private static final String TEST_CHANNEL = "INGEST_TASK";
@@ -81,8 +79,8 @@ class OutboxRelayLogRepositoryAdapterIT {
   @BeforeEach
   void setUp() {
     // 清理现有数据（按外键依赖顺序）
-    logMapper.delete(Wrappers.<OutboxRelayLogDO>lambdaQuery().ne(OutboxRelayLogDO::getId, 0L));
-    messageMapper.delete(Wrappers.<OutboxMessageDO>lambdaQuery().ne(OutboxMessageDO::getId, 0L));
+    logDao.deleteAllInBatch();
+    messageDao.deleteAllInBatch();
 
     // 创建测试用的发件箱消息
     testMessageId = insertOutboxMessage("dedup-key-1");
@@ -103,7 +101,7 @@ class OutboxRelayLogRepositoryAdapterIT {
       repository.save(log);
 
       // Then
-      List<OutboxRelayLogDO> fromDb = logMapper.findByMessageId(testMessageId);
+      List<OutboxRelayLogEntity> fromDb = logDao.findByMessageIdOrderByStartedAtDesc(testMessageId);
       assertThat(fromDb).hasSize(1);
       assertThat(fromDb.get(0).getChannel()).isEqualTo(TEST_CHANNEL);
       assertThat(fromDb.get(0).getRelayStatus()).isEqualTo(RelayStatus.PUBLISHED.getCode());
@@ -153,10 +151,8 @@ class OutboxRelayLogRepositoryAdapterIT {
       repository.saveBatch(logs);
 
       // Then
-      List<OutboxRelayLogDO> fromDb =
-          logMapper.selectList(
-              Wrappers.<OutboxRelayLogDO>lambdaQuery()
-                  .eq(OutboxRelayLogDO::getRelayBatchId, TEST_BATCH_ID));
+      List<OutboxRelayLogEntity> fromDb =
+          logDao.findByRelayBatchIdOrderByStartedAtAsc(TEST_BATCH_ID);
       assertThat(fromDb).hasSize(3);
     }
   }
@@ -169,8 +165,8 @@ class OutboxRelayLogRepositoryAdapterIT {
     @DisplayName("应按消息 ID 查询所有中继日志")
     void shouldFindAllLogsByMessageId() {
       // Given：为同一消息创建多个中继尝试
-      insertRelayLogDO(testMessageId, TEST_BATCH_ID, RelayStatus.DEFERRED.getCode(), 1);
-      insertRelayLogDO(testMessageId, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 2);
+      insertRelayLogEntity(testMessageId, TEST_BATCH_ID, RelayStatus.DEFERRED.getCode(), 1);
+      insertRelayLogEntity(testMessageId, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 2);
 
       // When
       List<OutboxRelayLog> result = repository.findByOutboxMessageId(testMessageId);
@@ -207,9 +203,9 @@ class OutboxRelayLogRepositoryAdapterIT {
     @DisplayName("应按批次 ID 查询所有中继日志")
     void shouldFindAllLogsByBatchId() {
       // Given
-      insertRelayLogDO(testMessageId, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 1);
-      insertRelayLogDO(testMessageId2, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 1);
-      insertRelayLogDO(testMessageId, TEST_BATCH_ID_2, RelayStatus.PUBLISHED.getCode(), 1);
+      insertRelayLogEntity(testMessageId, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 1);
+      insertRelayLogEntity(testMessageId2, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 1);
+      insertRelayLogEntity(testMessageId, TEST_BATCH_ID_2, RelayStatus.PUBLISHED.getCode(), 1);
 
       // When
       List<OutboxRelayLog> result = repository.findByBatchId(TEST_BATCH_ID);
@@ -247,9 +243,9 @@ class OutboxRelayLogRepositoryAdapterIT {
     void shouldCountByChannelAndStatus() {
       // Given
       Instant now = Instant.now();
-      insertRelayLogDO(testMessageId, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 1, now);
-      insertRelayLogDO(testMessageId2, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 1, now);
-      insertRelayLogDO(testMessageId, TEST_BATCH_ID, RelayStatus.FAILED.getCode(), 2, now);
+      insertRelayLogEntity(testMessageId, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 1, now);
+      insertRelayLogEntity(testMessageId2, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 1, now);
+      insertRelayLogEntity(testMessageId, TEST_BATCH_ID, RelayStatus.FAILED.getCode(), 2, now);
 
       // When
       long publishedCount =
@@ -276,7 +272,7 @@ class OutboxRelayLogRepositoryAdapterIT {
     void shouldSupportNullChannel() {
       // Given
       Instant now = Instant.now();
-      insertRelayLogDO(testMessageId, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 1, now);
+      insertRelayLogEntity(testMessageId, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 1, now);
 
       // When
       long count =
@@ -314,9 +310,9 @@ class OutboxRelayLogRepositoryAdapterIT {
     @DisplayName("应查询最近失败的中继日志")
     void shouldFindRecentFailed() {
       // Given
-      insertRelayLogDO(testMessageId, TEST_BATCH_ID, RelayStatus.FAILED.getCode(), 1);
-      insertRelayLogDO(testMessageId2, TEST_BATCH_ID, RelayStatus.FAILED.getCode(), 1);
-      insertRelayLogDO(testMessageId, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 2);
+      insertRelayLogEntity(testMessageId, TEST_BATCH_ID, RelayStatus.FAILED.getCode(), 1);
+      insertRelayLogEntity(testMessageId2, TEST_BATCH_ID, RelayStatus.FAILED.getCode(), 1);
+      insertRelayLogEntity(testMessageId, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 2);
 
       // When
       List<OutboxRelayLog> result = repository.findRecentFailed(TEST_CHANNEL, 10);
@@ -330,7 +326,7 @@ class OutboxRelayLogRepositoryAdapterIT {
     @DisplayName("应支持 null 通道（查询所有通道）")
     void shouldSupportNullChannel() {
       // Given
-      insertRelayLogDO(testMessageId, TEST_BATCH_ID, RelayStatus.FAILED.getCode(), 1);
+      insertRelayLogEntity(testMessageId, TEST_BATCH_ID, RelayStatus.FAILED.getCode(), 1);
 
       // When
       List<OutboxRelayLog> result = repository.findRecentFailed(null, 10);
@@ -345,7 +341,7 @@ class OutboxRelayLogRepositoryAdapterIT {
       // Given
       for (int i = 0; i < 5; i++) {
         Long msgId = insertOutboxMessage("dedup-key-limit-" + i);
-        insertRelayLogDO(msgId, TEST_BATCH_ID, RelayStatus.FAILED.getCode(), 1);
+        insertRelayLogEntity(msgId, TEST_BATCH_ID, RelayStatus.FAILED.getCode(), 1);
       }
 
       // When
@@ -378,8 +374,8 @@ class OutboxRelayLogRepositoryAdapterIT {
     void shouldFindByChannelAndTimeRange() {
       // Given
       Instant now = Instant.now();
-      insertRelayLogDO(testMessageId, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 1, now);
-      insertRelayLogDO(testMessageId2, TEST_BATCH_ID, RelayStatus.DEFERRED.getCode(), 1, now);
+      insertRelayLogEntity(testMessageId, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 1, now);
+      insertRelayLogEntity(testMessageId2, TEST_BATCH_ID, RelayStatus.DEFERRED.getCode(), 1, now);
 
       // When
       List<OutboxRelayLog> result =
@@ -395,7 +391,7 @@ class OutboxRelayLogRepositoryAdapterIT {
     void shouldSupportNullChannel() {
       // Given
       Instant now = Instant.now();
-      insertRelayLogDO(testMessageId, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 1, now);
+      insertRelayLogEntity(testMessageId, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 1, now);
 
       // When
       List<OutboxRelayLog> result =
@@ -413,7 +409,7 @@ class OutboxRelayLogRepositoryAdapterIT {
       Instant now = Instant.now();
       for (int i = 0; i < 5; i++) {
         Long msgId = insertOutboxMessage("dedup-key-range-" + i);
-        insertRelayLogDO(msgId, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 1, now);
+        insertRelayLogEntity(msgId, TEST_BATCH_ID, RelayStatus.PUBLISHED.getCode(), 1, now);
       }
 
       // When
@@ -456,7 +452,8 @@ class OutboxRelayLogRepositoryAdapterIT {
   // ==================== 辅助方法 ====================
 
   private Long insertOutboxMessage(String dedupKey) {
-    OutboxMessageDO message = new OutboxMessageDO();
+    OutboxMessageEntity message = new OutboxMessageEntity();
+    message.setId(SnowflakeIdGenerator.getId());
     message.setAggregateType("TASK");
     message.setAggregateId(1L);
     message.setChannel(TEST_CHANNEL);
@@ -466,7 +463,7 @@ class OutboxRelayLogRepositoryAdapterIT {
     message.setPayloadJson(createTestPayload());
     message.setStatusCode("PENDING");
     message.setRetryCount(0);
-    messageMapper.insert(message);
+    messageDao.saveAndFlush(message);
     return message.getId();
   }
 
@@ -478,13 +475,14 @@ class OutboxRelayLogRepositoryAdapterIT {
     return payload;
   }
 
-  private void insertRelayLogDO(Long messageId, String batchId, String status, int attemptNo) {
-    insertRelayLogDO(messageId, batchId, status, attemptNo, Instant.now());
+  private void insertRelayLogEntity(Long messageId, String batchId, String status, int attemptNo) {
+    insertRelayLogEntity(messageId, batchId, status, attemptNo, Instant.now());
   }
 
-  private void insertRelayLogDO(
+  private void insertRelayLogEntity(
       Long messageId, String batchId, String status, int attemptNo, Instant startedAt) {
-    OutboxRelayLogDO log = new OutboxRelayLogDO();
+    OutboxRelayLogEntity log = new OutboxRelayLogEntity();
+    log.setId(SnowflakeIdGenerator.getId());
     log.setMessageId(messageId);
     log.setRelayBatchId(batchId);
     log.setChannel(TEST_CHANNEL);
@@ -500,7 +498,7 @@ class OutboxRelayLogRepositoryAdapterIT {
       log.setErrorMessage("Test error message");
       log.setErrorKind("TRANSIENT");
     }
-    logMapper.insert(log);
+    logDao.saveAndFlush(log);
   }
 
   private OutboxRelayLog createRelayLog(
