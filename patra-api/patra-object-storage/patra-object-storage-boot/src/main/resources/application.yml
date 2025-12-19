@@ -32,9 +32,6 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0.1.0
 
-mybatis-plus:
-  mapper-locations: classpath*:mapper/*.xml
-
 logging:
   file:
     # Centralized log directory in project root

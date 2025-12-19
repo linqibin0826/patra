@@ -75,7 +75,7 @@ jobs:
           MODULE_MAP["patra-object-storage"]="patra-object-storage"
           MODULE_MAP["patra-spring-boot-starter-core"]="patra-spring-boot-starter-core"
           MODULE_MAP["patra-spring-boot-starter-web"]="patra-spring-boot-starter-web"
-          MODULE_MAP["patra-spring-boot-starter-mybatis"]="patra-spring-boot-starter-mybatis"
+          MODULE_MAP["patra-spring-boot-starter-jpa"]="patra-spring-boot-starter-jpa"
           MODULE_MAP["patra-spring-boot-starter-expr"]="patra-spring-boot-starter-expr"
           MODULE_MAP["patra-spring-boot-starter-provenance"]="patra-spring-boot-starter-provenance"
           MODULE_MAP["patra-spring-boot-starter-object-storage"]="patra-spring-boot-starter-object-storage"
