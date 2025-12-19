@@ -25,7 +25,7 @@ paths: patra-*/*-infra/**/*.java
 
 ## Starter 依赖
 
-- 数据库：`starter-mybatis`
+- 数据库：`starter-jpa`
 - 对象存储：`starter-object-storage`
 - REST 调用：`starter-rest-client`
 - Feign 调用：`cloud-starter-feign`
