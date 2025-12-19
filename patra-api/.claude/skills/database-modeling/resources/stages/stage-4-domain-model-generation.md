@@ -8,7 +8,7 @@
 
 根据 SQL DDL，生成：
 1. **Domain 层代码**：聚合根、值对象、枚举、仓储接口
-2. **Infra 层代码**：DO、Mapper、Converter、Repository 实现
+2. **Infra 层代码**：Entity、Dao、JpaMapper、Repository 实现
 3. **架构分层图**：展示依赖关系
 4. **代码结构说明**：包结构和文件组织
 
@@ -79,7 +79,7 @@ public class {EntityName} {
     private {ValueObject} {fieldName};
     private {Enum} {fieldName};
 
-    // 审计字段（匹配 BaseDO）
+    // 审计字段（匹配 BaseJpaEntity）
     private JsonNode recordRemarks;
     private Long version;
     @Getter(AccessLevel.NONE)
@@ -212,84 +212,97 @@ public interface {EntityName}Repository {
 
 ### 步骤 5：生成 Infra 层代码
 
-#### 5.1 DO 代码生成
+#### 5.1 JPA Entity 代码生成
 
 **命名规则**：
-- 文件路径：`infra/persistence/entity/{EntityName}DO.java`
-- 类名：`{EntityName}DO`
+- 文件路径：`infra/persistence/entity/{EntityName}Entity.java`
+- 类名：`{EntityName}Entity`
 
 **必需元素**：
 ```java
-@Data
-@EqualsAndHashCode(callSuper = true)
-@TableName(value = "{table_name}", autoResultMap = true)
-public class {EntityName}DO extends BaseDO {
+@Entity
+@Table(name = "{table_name}")
+@Getter
+@Setter
+public class {EntityName}Entity extends BaseJpaEntity {
 
-    @TableField("{column_name}")
+    @Column(name = "{column_name}")
     private {Type} {fieldName};
 
     // 枚举存储为 String
-    @TableField("{enum_column}")
+    @Column(name = "{enum_column}")
     private String {enumField};
 
     // JSON 字段
-    @TableField(value = "{json_column}", typeHandler = JacksonTypeHandler.class)
-    private JsonNode {jsonField};
+    @Type(JsonType.class)
+    @Column(name = "{json_column}", columnDefinition = "json")
+    private {JsonJavaType} {jsonField};
 }
 ```
 
 **字段映射**：
 - SQL 列名（snake_case）→ Java 字段名（camelCase）
-- 使用 `@TableField` 明确映射
+- 使用 `@Column` 明确映射
 
-#### 5.2 Converter 代码生成
+#### 5.2 JpaMapper 代码生成（MapStruct）
 
 **命名规则**：
-- 文件路径：`infra/persistence/converter/{EntityName}Converter.java`
-- 类名：`{EntityName}Converter`
+- 文件路径：`infra/persistence/mapper/{EntityName}JpaMapper.java`
+- 接口名：`{EntityName}JpaMapper`
 
 **必需元素**：
 ```java
-@Component
-public class {EntityName}Converter {
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
+public interface {EntityName}JpaMapper {
 
-    // Entity → DO
-    public {EntityName}DO toDO({EntityName} entity) {
+    // 聚合根 → JPA Entity
+    @Mapping(target = "{targetField}", source = "{sourceExpression}")
+    {EntityName}Entity toEntity({EntityName} aggregate);
+
+    // JPA Entity → 聚合根
+    default {EntityName} toDomain({EntityName}Entity entity) {
         if (entity == null) return null;
 
-        {EntityName}DO dobj = new {EntityName}DO();
-        // 映射字段
-        // 枚举 → String: dobj.setXxx(entity.getXxx().getCode())
-        // 值对象 → 基本类型
-        return dobj;
-    }
-
-    // DO → Entity
-    public {EntityName} toAggregate({EntityName}DO dobj) {
-        if (dobj == null) return null;
-
-        // String → 枚举: Enum.fromCode(dobj.getXxx())
+        // String → 枚举: Enum.fromCode(entity.getXxx())
         // 基本类型 → 值对象
 
         // 使用 restore 工厂方法
         return {EntityName}.restore(...);
     }
+
+    // 枚举转换辅助方法
+    default String enumToCode({EnumType} value) {
+        return value != null ? value.getCode() : null;
+    }
+
+    default {EnumType} codeToEnum(String code) {
+        return code != null ? {EnumType}.fromCode(code) : null;
+    }
 }
 ```
 
-#### 5.3 Mapper 代码生成
+#### 5.3 Dao 代码生成（Spring Data JPA）
 
 **命名规则**：
-- 文件路径：`infra/persistence/mapper/{EntityName}Mapper.java`
-- 接口名：`{EntityName}Mapper`
+- 文件路径：`infra/persistence/dao/{EntityName}Dao.java`
+- 接口名：`{EntityName}Dao`
 
 **必需元素**：
 ```java
-@Mapper
-public interface {EntityName}Mapper extends BaseMapper<{EntityName}DO> {
-    // BaseMapper 已提供基础 CRUD 能力
-    // 批量插入使用 Db.saveBatch()
-    // 复杂查询可在此添加自定义方法
+public interface {EntityName}Dao extends JpaRepository<{EntityName}Entity, Long> {
+
+    // 简单查询使用方法命名约定
+    Optional<{EntityName}Entity> findByUniqueKey(String key);
+
+    // 复杂查询使用 @Query + JPQL
+    @Query("SELECT e FROM {EntityName}Entity e WHERE e.status = :status")
+    List<{EntityName}Entity> findByStatus(@Param("status") String status);
+
+    // JpaRepository 已提供基础 CRUD：
+    // - save(): 保存或更新
+    // - findById(): 按 ID 查询
+    // - saveAll(): 批量保存
+    // - deleteById(): 按 ID 删除
 }
 ```
 
@@ -297,7 +310,7 @@ public interface {EntityName}Mapper extends BaseMapper<{EntityName}DO> {
 
 **命名规则**：
 - 文件路径：`infra/persistence/repository/{EntityName}RepositoryAdapter.java`
-- 类名：`{EntityName}RepositoryAdapter`（Mp = MyBatis-Plus）
+- 类名：`{EntityName}RepositoryAdapter`
 
 **必需元素**：
 ```java
@@ -305,30 +318,31 @@ public interface {EntityName}Mapper extends BaseMapper<{EntityName}DO> {
 @RequiredArgsConstructor
 public class {EntityName}RepositoryAdapter implements {EntityName}Repository {
 
-    private final {EntityName}Mapper mapper;
-    private final {EntityName}Converter converter;
+    private final {EntityName}Dao dao;
+    private final {EntityName}JpaMapper mapper;
 
     @Override
-    public {EntityName} save({EntityName} entity) {
-        {EntityName}DO dobj = converter.toDO(entity);
+    public {EntityName} save({EntityName} aggregate) {
+        {EntityName}Entity entity = mapper.toEntity(aggregate);
 
-        if (dobj.getId() == null) {
-            mapper.insert(dobj);
-            entity.assignId(dobj.getId());
-        } else {
-            entity.updateAuditFields(Instant.now(), null, null);
-            dobj = converter.toDO(entity);
-            mapper.updateById(dobj);
+        // JPA 的 save() 自动处理 insert/update
+        // 乐观锁由 @Version 注解自动管理
+        {EntityName}Entity saved = dao.save(entity);
+
+        // 回写 ID（新增时）
+        if (aggregate.getId() == null) {
+            aggregate.assignId(saved.getId());
         }
 
-        entity.updateVersion(dobj.getVersion());
-        return entity;
+        // 更新版本号
+        aggregate.updateVersion(saved.getVersion());
+        return aggregate;
     }
 
     @Override
     public Optional<{EntityName}> findById(Long id) {
-        {EntityName}DO dobj = mapper.selectById(id);
-        return Optional.ofNullable(converter.toAggregate(dobj));
+        return dao.findById(id)
+            .map(mapper::toDomain);
     }
 
     // 实现其他方法...
@@ -343,13 +357,13 @@ public class {EntityName}RepositoryAdapter implements {EntityName}Repository {
 
 | 对象类型 | Domain 层 | Infra 层 |
 |---------|----------|----------|
-| 聚合根 | `Publication` | `PublicationDO` |
+| 聚合根 | `Publication` | `PublicationEntity` |
 | 值对象 | `PublicationIdentifier` | - |
 | 枚举 | `PublicationType` | - |
 | 仓储接口 | `PublicationRepository` | - |
 | 仓储实现 | - | `PublicationRepositoryAdapter` |
-| Mapper | - | `PublicationMapper` |
-| Converter | - | `PublicationConverter` |
+| JPA Dao | - | `PublicationDao` |
+| MapStruct 转换器 | - | `PublicationJpaMapper` |
 
 ### 2. 包结构规范
 
@@ -369,9 +383,9 @@ public class {EntityName}RepositoryAdapter implements {EntityName}Repository {
 {module}-infra/
 └── src/main/java/com/patra/{module}/infra/
     └── persistence/
-        ├── entity/       # DO（Data Object）
-        ├── mapper/       # MyBatis-Plus Mapper
-        ├── converter/    # Entity ↔ DO 转换器
+        ├── entity/       # JPA 实体
+        ├── dao/          # Spring Data JPA Dao
+        ├── mapper/       # MapStruct 转换器
         └── repository/   # 仓储实现（适配器）
 ```
 
@@ -387,7 +401,7 @@ Infra 层（依赖 Domain 层，实现端口接口）
 
 - ✅ Infra 层可以导入 Domain 层的类
 - ❌ Domain 层不能导入 Infra 层的类
-- ❌ Domain 层不能有任何框架注解（JPA、MyBatis 等）
+- ❌ Domain 层不能有任何框架注解（Spring、JPA 等）
 
 ---
 
@@ -395,16 +409,16 @@ Infra 层（依赖 Domain 层，实现端口接口）
 
 ### 强制规范
 - ✅ **时间类型**：使用 `Instant`（不是 `LocalDateTime`）
-- ✅ **DO 命名**：使用 `DO` 后缀（不是 `PO`）
-- ✅ **BaseDO 继承**：所有 DO 必须继承 `BaseDO`
-- ✅ **转换器方法**：使用 `toDO()` 和 `toAggregate()`（不是 `toPO()` 和 `toDomain()`）
+- ✅ **Entity 命名**：使用 `Entity` 后缀（不是 `DO` 或 `PO`）
+- ✅ **BaseJpaEntity 继承**：所有 JPA 实体必须继承 `BaseJpaEntity`
+- ✅ **转换器方法**：使用 `toEntity()` 和 `toDomain()`
 - ✅ **工厂方法**：使用 `create()` 和 `restore()`
 
 ### 设计原则
 - ✅ **聚合根不变量**：在构造函数/工厂方法中验证
 - ✅ **值对象不可变**：所有字段 `final`
 - ✅ **枚举从代码恢复**：提供 `fromCode()` 方法
-- ✅ **仓储操作聚合**：不暴露 DO 给外层
+- ✅ **仓储操作聚合**：不暴露 Entity 给外层
 
 ---
 
@@ -437,9 +451,9 @@ Infra 层（依赖 Domain 层，实现端口接口）
 ...
 
 ## 💻 Infra 层代码生成
-### 1. DO：{EntityName}DO.java
-### 2. Converter：{EntityName}Converter.java
-### 3. Mapper：{EntityName}Mapper.java
+### 1. Entity：{EntityName}Entity.java
+### 2. Dao：{EntityName}Dao.java
+### 3. JpaMapper：{EntityName}JpaMapper.java
 ### 4. Repository 实现：{EntityName}RepositoryAdapter.java
 
 ## ✅ 设计验证
@@ -453,8 +467,8 @@ Infra 层（依赖 Domain 层，实现端口接口）
 - **模板文件**：[domain-model-template.md](../templates/domain-model-template.md)
 - **实际代码参考**：
   - FileMetadata.java（聚合根示例）
-  - FileMetadataDO.java（DO 示例）
-  - BaseDO.java（审计字段基类）
+  - FileMetadataEntity.java（JPA 实体示例）
+  - BaseJpaEntity.java（审计字段基类）
 
 ---
 

@@ -714,7 +714,7 @@ public void archiveFailedMessages() {
 ### 核心概念
 - [commandbus.md](../../rules/tech/commandbus.md) - CommandBus 应用层模式
 - [event-driven-architecture.md](event-driven-architecture.md) - 事件驱动架构
-- [mybatis-plus-patterns.md](mybatis-plus-patterns.md) - 持久化实现
+- [jpa-patterns.md](jpa-patterns.md) - 持久化实现
 
 ### 代码参考
 - **领域模型**: `patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/entity/OutboxMessage.java`
