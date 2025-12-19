@@ -11,7 +11,8 @@ import jakarta.persistence.Converter;
 /// @author linqibin
 /// @since 0.1.0
 @Converter(autoApply = true)
-public class AffiliationTypeAttributeConverter implements AttributeConverter<AffiliationType, String> {
+public class AffiliationTypeAttributeConverter
+    implements AttributeConverter<AffiliationType, String> {
 
   @Override
   public String convertToDatabaseColumn(AffiliationType attribute) {
