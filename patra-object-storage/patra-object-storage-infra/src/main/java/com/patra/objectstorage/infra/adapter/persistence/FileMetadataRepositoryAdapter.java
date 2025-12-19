@@ -3,59 +3,61 @@ package com.patra.objectstorage.infra.adapter.persistence;
 import com.patra.objectstorage.domain.model.aggregate.FileMetadata;
 import com.patra.objectstorage.domain.model.vo.StorageKey;
 import com.patra.objectstorage.domain.port.FileMetadataRepository;
-import com.patra.objectstorage.infra.persistence.converter.FileMetadataConverter;
-import com.patra.objectstorage.infra.persistence.entity.FileMetadataDO;
-import com.patra.objectstorage.infra.persistence.mapper.FileMetadataMapper;
+import com.patra.objectstorage.infra.adapter.persistence.converter.mapper.FileMetadataJpaMapper;
+import com.patra.objectstorage.infra.adapter.persistence.dao.FileMetadataDao;
+import com.patra.objectstorage.infra.adapter.persistence.entity.FileMetadataEntity;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 /// 文件元数据仓储实现。
 ///
-/// 基础设施层的仓储实现,使用MyBatis-Plus作为ORM框架,实现领域层定义的 {@link FileMetadataRepository}
-/// 端口。负责聚合根的持久化、查询和领域对象与数据对象之间的转换。
+/// 基础设施层的仓储实现，使用 Spring Data JPA 作为 ORM 框架，实现领域层定义的 {@link FileMetadataRepository}
+/// 端口。负责聚合根的持久化、查询和领域对象与 JPA 实体之间的转换。
 ///
-/// 实现要点:
+/// 实现要点：
 ///
-/// - 使用转换器({@link FileMetadataConverter})在领域模型和数据模型之间进行双向转换
-///   - 保存操作根据聚合根是否有ID判断执行insert还是update
-///   - 保存后重新查询以获取数据库生成的字段(如ID、version、审计时间戳)
-///   - 查询操作通过唯一的storage_key字段实现幂等性检查
-///
+/// - 使用转换器（{@link FileMetadataJpaMapper}）在领域模型和 JPA 实体之间进行双向转换
+/// - 新建实体时使用雪花 ID 预分配，保持与六边形架构设计一致
+/// - JPA 自动管理审计字段（createdAt、updatedAt 等）和乐观锁版本号
+/// - 查询操作通过唯一的 storage_key 字段实现幂等性检查
 @Repository
 @RequiredArgsConstructor
 public class FileMetadataRepositoryAdapter implements FileMetadataRepository {
 
-  private final FileMetadataMapper mapper;
-  private final FileMetadataConverter converter;
+  private final FileMetadataDao dao;
+  private final FileMetadataJpaMapper mapper;
 
   /// 保存文件元数据聚合根。
   ///
-  /// 根据聚合根是否有ID判断执行insert还是update操作,保存后重新查询以获取数据库生成的字段。
+  /// 新建实体时预分配雪花 ID，JPA 自动管理审计字段和版本号。
+  /// 保存后返回包含数据库生成字段的聚合根。
   ///
   /// @param metadata 文件元数据聚合根
-  /// @return 保存后的聚合根,包含数据库生成的字段
+  /// @return 保存后的聚合根，包含数据库生成的字段
   @Override
   public FileMetadata save(FileMetadata metadata) {
-    FileMetadataDO dataObject = converter.toDO(metadata);
+    FileMetadataEntity entity = mapper.toEntity(metadata);
+    // 新建实体时预分配雪花 ID
     if (metadata.getId() == null) {
-      mapper.insert(dataObject);
+      entity.setId(SnowflakeIdGenerator.getId());
     } else {
-      mapper.updateById(dataObject);
+      entity.setId(metadata.getId());
+      entity.setVersion(metadata.getVersion());
     }
-    FileMetadataDO persisted = mapper.selectById(dataObject.getId());
-    return converter.toAggregate(persisted);
+    FileMetadataEntity saved = dao.save(entity);
+    return mapper.toAggregate(saved);
   }
 
   /// 通过存储键查找文件元数据。
   ///
-  /// 使用唯一的storage_key字段查找文件元数据记录,实现幂等性检查。
+  /// 使用唯一的 storage_key 字段查找文件元数据记录，实现幂等性检查。
   ///
   /// @param storageKey 存储键
-  /// @return 文件元数据聚合根的Optional包装
+  /// @return 文件元数据聚合根的 Optional 包装
   @Override
   public Optional<FileMetadata> findByStorageKey(StorageKey storageKey) {
-    FileMetadataDO dataObject = mapper.findByStorageKey(storageKey.fullKey());
-    return Optional.ofNullable(converter.toAggregate(dataObject));
+    return dao.findByStorageKey(storageKey.fullKey()).map(mapper::toAggregate);
   }
 }
