@@ -8,7 +8,9 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.Generated;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.generator.EventType;
 import org.hibernate.type.SqlTypes;
 
 /// 表达式渲染规则 JPA 实体，映射到表 `reg_prov_expr_render_rule`。
@@ -60,15 +62,24 @@ public class ProvExprRenderRuleEntity extends BaseJpaEntity {
   private String emitTypeCode;
 
   /// 规范化的匹配类型键（未指定时为 `ANY`）。
-  @Column(name = "match_type_key", length = 20)
+  ///
+  /// MySQL 生成列，由数据库自动计算：`IFNULL(match_type_code, 'ANY')`。
+  @Generated(event = EventType.INSERT)
+  @Column(name = "match_type_key", length = 20, insertable = false, updatable = false)
   private String matchTypeKey;
 
   /// 规范化的否定键 (T/F/ANY)。
-  @Column(name = "negated_key", length = 5)
+  ///
+  /// MySQL 生成列，由数据库自动计算：`IFNULL(IF(negated = 1, 'T', 'F'), 'ANY')`。
+  @Generated(event = EventType.INSERT)
+  @Column(name = "negated_key", length = 5, insertable = false, updatable = false)
   private String negatedKey;
 
   /// 规范化的值类型键（未指定时为 `ANY`）。
-  @Column(name = "value_type_key", length = 20)
+  ///
+  /// MySQL 生成列，由数据库自动计算：`IFNULL(value_type_code, 'ANY')`。
+  @Generated(event = EventType.INSERT)
+  @Column(name = "value_type_key", length = 20, insertable = false, updatable = false)
   private String valueTypeKey;
 
   /// 包含时间戳，渲染规则生效时间。

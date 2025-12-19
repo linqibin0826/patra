@@ -58,7 +58,7 @@ public interface OutboxMessageDao extends JpaRepository<OutboxMessageEntity, Lon
   /// @param leaseOwner 租约拥有者
   /// @param leaseExpireAt 租约过期时间
   /// @return 受影响行数
-  @Modifying
+  @Modifying(clearAutomatically = true)
   @Query(
       """
       UPDATE OutboxMessageEntity m
@@ -82,7 +82,7 @@ public interface OutboxMessageDao extends JpaRepository<OutboxMessageEntity, Lon
   /// @param expectedVersion 预期版本号
   /// @param now 当前时间
   /// @return 受影响行数
-  @Modifying
+  @Modifying(clearAutomatically = true)
   @Query(
       """
       UPDATE OutboxMessageEntity m
@@ -108,7 +108,7 @@ public interface OutboxMessageDao extends JpaRepository<OutboxMessageEntity, Lon
   /// @param errorCode 错误代码
   /// @param errorMsg 错误消息
   /// @return 受影响行数
-  @Modifying
+  @Modifying(clearAutomatically = true)
   @Query(
       """
       UPDATE OutboxMessageEntity m
@@ -141,7 +141,7 @@ public interface OutboxMessageDao extends JpaRepository<OutboxMessageEntity, Lon
   /// @param errorMsg 错误消息
   /// @param statusCode 目标状态（FAILED 或 DEAD）
   /// @return 受影响行数
-  @Modifying
+  @Modifying(clearAutomatically = true)
   @Query(
       """
       UPDATE OutboxMessageEntity m

@@ -36,7 +36,8 @@ public interface ProvenanceDao extends JpaRepository<ProvenanceEntity, Long> {
   @Query(
       """
       SELECT p FROM ProvenanceEntity p
-      WHERE p.deletedAt IS NULL
+      WHERE p.isActive = true
+        AND p.deletedAt IS NULL
       ORDER BY p.provenanceCode
       """)
   List<ProvenanceEntity> findAllActive();

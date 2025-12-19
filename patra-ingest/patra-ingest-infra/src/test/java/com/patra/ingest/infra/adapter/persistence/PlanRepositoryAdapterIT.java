@@ -2,17 +2,16 @@ package com.patra.ingest.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
+import com.patra.ingest.infra.adapter.persistence.dao.PlanDao;
+import com.patra.ingest.infra.adapter.persistence.dao.ScheduleInstanceDao;
+import com.patra.ingest.infra.adapter.persistence.entity.PlanEntity;
+import com.patra.ingest.infra.adapter.persistence.entity.ScheduleInstanceEntity;
 import com.patra.ingest.infra.config.IngestMySQLContainerInitializer;
-import com.patra.ingest.infra.persistence.entity.PlanDO;
-import com.patra.ingest.infra.persistence.entity.ScheduleInstanceDO;
-import com.patra.ingest.infra.persistence.mapper.PlanMapper;
-import com.patra.ingest.infra.persistence.mapper.ScheduleInstanceMapper;
-import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -21,10 +20,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
@@ -44,16 +43,11 @@ import org.springframework.test.context.ContextConfiguration;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@MybatisPlusTest
+@DataJpaTest
 @ContextConfiguration(initializers = IngestMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({
-  PlanRepositoryAdapter.class,
-  TestMybatisPlusAutoConfiguration.class,
-  JacksonAutoConfiguration.class
-})
-@ComponentScan("com.patra.ingest.infra.persistence.converter")
-@MapperScan("com.patra.ingest.infra.persistence.mapper")
+@Import({PlanRepositoryAdapter.class, JacksonAutoConfiguration.class, JpaAuditingConfig.class})
+@ComponentScan(basePackages = "com.patra.ingest.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("PlanRepositoryAdapter 集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -61,8 +55,8 @@ class PlanRepositoryAdapterIT {
 
   @Autowired private PlanRepositoryAdapter repository;
 
-  @Autowired private PlanMapper planMapper;
-  @Autowired private ScheduleInstanceMapper scheduleInstanceMapper;
+  @Autowired private PlanDao planDao;
+  @Autowired private ScheduleInstanceDao scheduleInstanceDao;
   @Autowired private ObjectMapper objectMapper;
 
   private static final String TEST_PLAN_KEY = "PUBMED-HARVEST-2025-01-01";
@@ -73,10 +67,9 @@ class PlanRepositoryAdapterIT {
 
   @BeforeEach
   void setUp() {
-    // 清理现有数据
-    planMapper.delete(Wrappers.<PlanDO>lambdaQuery().ne(PlanDO::getId, 0L));
-    scheduleInstanceMapper.delete(
-        Wrappers.<ScheduleInstanceDO>lambdaQuery().ne(ScheduleInstanceDO::getId, 0L));
+    // 清理现有数据（按外键依赖顺序）
+    planDao.deleteAllInBatch();
+    scheduleInstanceDao.deleteAllInBatch();
 
     // 创建依赖的调度实例
     testScheduleInstanceId = insertScheduleInstance();
@@ -87,14 +80,14 @@ class PlanRepositoryAdapterIT {
   class SaveTests {
 
     @Test
-    @DisplayName("应在通过 Mapper 插入后通过 findById 查询到计划")
-    void shouldFindPlanAfterMapperInsert() {
-      // Given: 通过 Mapper 直接插入测试数据
-      PlanDO planDO = createTestPlanDO();
-      planMapper.insert(planDO);
+    @DisplayName("应在通过 Dao 插入后通过 findById 查询到计划")
+    void shouldFindPlanAfterDaoInsert() {
+      // Given: 通过 Dao 直接插入测试数据
+      PlanEntity entity = createTestPlanEntity();
+      planDao.saveAndFlush(entity);
 
       // When
-      Optional<PlanAggregate> result = repository.findById(planDO.getId());
+      Optional<PlanAggregate> result = repository.findById(entity.getId());
 
       // Then
       assertThat(result).isPresent();
@@ -105,18 +98,19 @@ class PlanRepositoryAdapterIT {
     @DisplayName("应正确映射状态字段")
     void shouldMapStatusFieldCorrectly() {
       // Given
-      PlanDO planDO = createTestPlanDO();
-      planDO.setStatusCode("SLICING");
-      planMapper.insert(planDO);
+      PlanEntity entity = createTestPlanEntity();
+      entity.setStatusCode("SLICING");
+      planDao.saveAndFlush(entity);
 
       // When
-      Optional<PlanAggregate> result = repository.findById(planDO.getId());
+      Optional<PlanAggregate> result = repository.findById(entity.getId());
 
       // Then
       assertThat(result).isPresent();
       // 验证数据库记录
-      PlanDO entity = planMapper.selectById(result.get().getId());
-      assertThat(entity.getStatusCode()).isEqualTo("SLICING");
+      PlanEntity fromDb = planDao.findById(result.get().getId().value()).orElse(null);
+      assertThat(fromDb).isNotNull();
+      assertThat(fromDb.getStatusCode()).isEqualTo("SLICING");
     }
   }
 
@@ -128,8 +122,8 @@ class PlanRepositoryAdapterIT {
     @DisplayName("应在 planKey 存在时返回计划")
     void shouldReturnPlanWhenPlanKeyExists() {
       // Given
-      PlanDO planDO = createTestPlanDO();
-      planMapper.insert(planDO);
+      PlanEntity entity = createTestPlanEntity();
+      planDao.saveAndFlush(entity);
 
       // When
       Optional<PlanAggregate> result = repository.findByPlanKey(TEST_PLAN_KEY);
@@ -180,8 +174,8 @@ class PlanRepositoryAdapterIT {
     @DisplayName("应在 planKey 存在时返回 true")
     void shouldReturnTrueWhenPlanKeyExists() {
       // Given
-      PlanDO planDO = createTestPlanDO();
-      planMapper.insert(planDO);
+      PlanEntity entity = createTestPlanEntity();
+      planDao.saveAndFlush(entity);
 
       // When
       boolean result = repository.existsByPlanKey(TEST_PLAN_KEY);
@@ -221,11 +215,11 @@ class PlanRepositoryAdapterIT {
     @DisplayName("应在 ID 存在时返回计划")
     void shouldReturnPlanWhenIdExists() {
       // Given
-      PlanDO planDO = createTestPlanDO();
-      planMapper.insert(planDO);
+      PlanEntity entity = createTestPlanEntity();
+      planDao.saveAndFlush(entity);
 
       // When
-      Optional<PlanAggregate> result = repository.findById(planDO.getId());
+      Optional<PlanAggregate> result = repository.findById(entity.getId());
 
       // Then
       assertThat(result).isPresent();
@@ -258,17 +252,19 @@ class PlanRepositoryAdapterIT {
   // ==================== 辅助方法 ====================
 
   private Long insertScheduleInstance() {
-    ScheduleInstanceDO instance = new ScheduleInstanceDO();
+    ScheduleInstanceEntity instance = new ScheduleInstanceEntity();
+    instance.setId(SnowflakeIdGenerator.getId());
     instance.setSchedulerCode("XXL");
     instance.setTriggerTypeCode("SCHEDULE");
     instance.setTriggeredAt(Instant.now());
     instance.setProvenanceCode(TEST_PROVENANCE_CODE);
-    scheduleInstanceMapper.insert(instance);
+    scheduleInstanceDao.saveAndFlush(instance);
     return instance.getId();
   }
 
-  private PlanDO createTestPlanDO() {
-    PlanDO plan = new PlanDO();
+  private PlanEntity createTestPlanEntity() {
+    PlanEntity plan = new PlanEntity();
+    plan.setId(SnowflakeIdGenerator.getId());
     plan.setScheduleInstanceId(testScheduleInstanceId);
     plan.setPlanKey(TEST_PLAN_KEY);
     plan.setProvenanceCode(TEST_PROVENANCE_CODE);

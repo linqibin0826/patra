@@ -2,28 +2,27 @@ package com.patra.ingest.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.entity.TaskRunBatch;
 import com.patra.ingest.domain.model.enums.BatchStatus;
 import com.patra.ingest.domain.model.vo.shared.IdempotentKey;
+import com.patra.ingest.infra.adapter.persistence.dao.PlanDao;
+import com.patra.ingest.infra.adapter.persistence.dao.PlanSliceDao;
+import com.patra.ingest.infra.adapter.persistence.dao.ScheduleInstanceDao;
+import com.patra.ingest.infra.adapter.persistence.dao.TaskDao;
+import com.patra.ingest.infra.adapter.persistence.dao.TaskRunBatchDao;
+import com.patra.ingest.infra.adapter.persistence.dao.TaskRunDao;
+import com.patra.ingest.infra.adapter.persistence.entity.PlanEntity;
+import com.patra.ingest.infra.adapter.persistence.entity.PlanSliceEntity;
+import com.patra.ingest.infra.adapter.persistence.entity.ScheduleInstanceEntity;
+import com.patra.ingest.infra.adapter.persistence.entity.TaskEntity;
+import com.patra.ingest.infra.adapter.persistence.entity.TaskRunBatchEntity;
+import com.patra.ingest.infra.adapter.persistence.entity.TaskRunEntity;
 import com.patra.ingest.infra.config.IngestMySQLContainerInitializer;
-import com.patra.ingest.infra.persistence.entity.PlanDO;
-import com.patra.ingest.infra.persistence.entity.PlanSliceDO;
-import com.patra.ingest.infra.persistence.entity.ScheduleInstanceDO;
-import com.patra.ingest.infra.persistence.entity.TaskDO;
-import com.patra.ingest.infra.persistence.entity.TaskRunBatchDO;
-import com.patra.ingest.infra.persistence.entity.TaskRunDO;
-import com.patra.ingest.infra.persistence.mapper.PlanMapper;
-import com.patra.ingest.infra.persistence.mapper.PlanSliceMapper;
-import com.patra.ingest.infra.persistence.mapper.ScheduleInstanceMapper;
-import com.patra.ingest.infra.persistence.mapper.TaskMapper;
-import com.patra.ingest.infra.persistence.mapper.TaskRunBatchMapper;
-import com.patra.ingest.infra.persistence.mapper.TaskRunMapper;
-import com.patra.starter.test.autoconfigure.TestMybatisPlusAutoConfiguration;
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -33,10 +32,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
@@ -56,16 +55,15 @@ import org.springframework.test.context.ContextConfiguration;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@MybatisPlusTest
+@DataJpaTest
 @ContextConfiguration(initializers = IngestMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   TaskRunBatchRepositoryAdapter.class,
-  TestMybatisPlusAutoConfiguration.class,
-  JacksonAutoConfiguration.class
+  JacksonAutoConfiguration.class,
+  JpaAuditingConfig.class
 })
-@ComponentScan("com.patra.ingest.infra.persistence.converter")
-@MapperScan("com.patra.ingest.infra.persistence.mapper")
+@ComponentScan(basePackages = "com.patra.ingest.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("TaskRunBatchRepositoryAdapter 集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -73,12 +71,12 @@ class TaskRunBatchRepositoryAdapterIT {
 
   @Autowired private TaskRunBatchRepositoryAdapter repository;
 
-  @Autowired private TaskRunBatchMapper batchMapper;
-  @Autowired private TaskRunMapper runMapper;
-  @Autowired private TaskMapper taskMapper;
-  @Autowired private PlanSliceMapper planSliceMapper;
-  @Autowired private PlanMapper planMapper;
-  @Autowired private ScheduleInstanceMapper scheduleInstanceMapper;
+  @Autowired private TaskRunBatchDao batchDao;
+  @Autowired private TaskRunDao runDao;
+  @Autowired private TaskDao taskDao;
+  @Autowired private PlanSliceDao planSliceDao;
+  @Autowired private PlanDao planDao;
+  @Autowired private ScheduleInstanceDao scheduleInstanceDao;
   @Autowired private ObjectMapper objectMapper;
 
   private static final String TEST_PROVENANCE_CODE = "PUBMED";
@@ -102,13 +100,12 @@ class TaskRunBatchRepositoryAdapterIT {
   @BeforeEach
   void setUp() {
     // 清理现有数据（按外键依赖顺序）
-    batchMapper.delete(Wrappers.<TaskRunBatchDO>lambdaQuery().ne(TaskRunBatchDO::getId, 0L));
-    runMapper.delete(Wrappers.<TaskRunDO>lambdaQuery().ne(TaskRunDO::getId, 0L));
-    taskMapper.delete(Wrappers.<TaskDO>lambdaQuery().ne(TaskDO::getId, 0L));
-    planSliceMapper.delete(Wrappers.<PlanSliceDO>lambdaQuery().ne(PlanSliceDO::getId, 0L));
-    planMapper.delete(Wrappers.<PlanDO>lambdaQuery().ne(PlanDO::getId, 0L));
-    scheduleInstanceMapper.delete(
-        Wrappers.<ScheduleInstanceDO>lambdaQuery().ne(ScheduleInstanceDO::getId, 0L));
+    batchDao.deleteAllInBatch();
+    runDao.deleteAllInBatch();
+    taskDao.deleteAllInBatch();
+    planSliceDao.deleteAllInBatch();
+    planDao.deleteAllInBatch();
+    scheduleInstanceDao.deleteAllInBatch();
 
     // 创建依赖数据
     testScheduleInstanceId = insertScheduleInstance();
@@ -142,14 +139,14 @@ class TaskRunBatchRepositoryAdapterIT {
     @DisplayName("应更新已有批次")
     void shouldUpdateExistingBatch() {
       // Given：先插入一个批次
-      TaskRunBatchDO existingDO = createTestBatchDO(1, VALID_IDEM_KEY_1);
-      existingDO.setStatusCode(BatchStatus.RUNNING.getCode());
-      batchMapper.insert(existingDO);
+      TaskRunBatchEntity existingEntity = createTestBatchEntity(1, VALID_IDEM_KEY_1);
+      existingEntity.setStatusCode(BatchStatus.RUNNING.getCode());
+      batchDao.saveAndFlush(existingEntity);
 
       // 创建领域对象用于更新
       TaskRunBatch batchToUpdate =
           TaskRunBatch.restore(
-              existingDO.getId(),
+              existingEntity.getId(),
               testRunId,
               testTaskId,
               testSliceId,
@@ -173,7 +170,8 @@ class TaskRunBatchRepositoryAdapterIT {
       TaskRunBatch updated = repository.save(batchToUpdate);
 
       // Then
-      TaskRunBatchDO fromDb = batchMapper.selectById(existingDO.getId());
+      TaskRunBatchEntity fromDb = batchDao.findById(existingEntity.getId()).orElse(null);
+      assertThat(fromDb).isNotNull();
       assertThat(fromDb.getStatusCode()).isEqualTo(BatchStatus.SUCCEEDED.getCode());
       assertThat(fromDb.getAfterToken()).isEqualTo("next-token");
     }
@@ -205,9 +203,7 @@ class TaskRunBatchRepositoryAdapterIT {
       repository.saveAll(batches);
 
       // Then
-      List<TaskRunBatchDO> fromDb =
-          batchMapper.selectList(
-              Wrappers.<TaskRunBatchDO>lambdaQuery().eq(TaskRunBatchDO::getRunId, testRunId));
+      List<TaskRunBatchEntity> fromDb = batchDao.findByRunId(testRunId);
       assertThat(fromDb).hasSize(3);
     }
 
@@ -215,10 +211,10 @@ class TaskRunBatchRepositoryAdapterIT {
     @DisplayName("应批量更新所有已有批次")
     void shouldBatchUpdateAllExistingBatches() {
       // Given：先插入批次
-      TaskRunBatchDO batch1 = createTestBatchDO(1, VALID_IDEM_KEY_1);
-      TaskRunBatchDO batch2 = createTestBatchDO(2, VALID_IDEM_KEY_2);
-      batchMapper.insert(batch1);
-      batchMapper.insert(batch2);
+      TaskRunBatchEntity batch1 = createTestBatchEntity(1, VALID_IDEM_KEY_1);
+      TaskRunBatchEntity batch2 = createTestBatchEntity(2, VALID_IDEM_KEY_2);
+      batchDao.saveAndFlush(batch1);
+      batchDao.saveAndFlush(batch2);
 
       // 创建更新对象
       List<TaskRunBatch> toUpdate =
@@ -230,8 +226,10 @@ class TaskRunBatchRepositoryAdapterIT {
       repository.saveAll(toUpdate);
 
       // Then
-      TaskRunBatchDO updated1 = batchMapper.selectById(batch1.getId());
-      TaskRunBatchDO updated2 = batchMapper.selectById(batch2.getId());
+      TaskRunBatchEntity updated1 = batchDao.findById(batch1.getId()).orElse(null);
+      TaskRunBatchEntity updated2 = batchDao.findById(batch2.getId()).orElse(null);
+      assertThat(updated1).isNotNull();
+      assertThat(updated2).isNotNull();
       assertThat(updated1.getStatusCode()).isEqualTo(BatchStatus.SUCCEEDED.getCode());
       assertThat(updated2.getStatusCode()).isEqualTo(BatchStatus.FAILED.getCode());
     }
@@ -240,8 +238,8 @@ class TaskRunBatchRepositoryAdapterIT {
     @DisplayName("应混合处理新增和更新")
     void shouldHandleMixedInsertAndUpdate() {
       // Given：先插入一个批次
-      TaskRunBatchDO existing = createTestBatchDO(1, VALID_IDEM_KEY_1);
-      batchMapper.insert(existing);
+      TaskRunBatchEntity existing = createTestBatchEntity(1, VALID_IDEM_KEY_1);
+      batchDao.saveAndFlush(existing);
 
       // 准备混合列表：一个更新 + 一个新增
       List<TaskRunBatch> mixed =
@@ -253,12 +251,11 @@ class TaskRunBatchRepositoryAdapterIT {
       repository.saveAll(mixed);
 
       // Then
-      List<TaskRunBatchDO> fromDb =
-          batchMapper.selectList(
-              Wrappers.<TaskRunBatchDO>lambdaQuery().eq(TaskRunBatchDO::getRunId, testRunId));
+      List<TaskRunBatchEntity> fromDb = batchDao.findByRunId(testRunId);
       assertThat(fromDb).hasSize(2);
 
-      TaskRunBatchDO updated = batchMapper.selectById(existing.getId());
+      TaskRunBatchEntity updated = batchDao.findById(existing.getId()).orElse(null);
+      assertThat(updated).isNotNull();
       assertThat(updated.getStatusCode()).isEqualTo(BatchStatus.SUCCEEDED.getCode());
     }
   }
@@ -271,9 +268,9 @@ class TaskRunBatchRepositoryAdapterIT {
     @DisplayName("应按 runId 查询所有批次")
     void shouldFindAllBatchesByRunId() {
       // Given
-      batchMapper.insert(createTestBatchDO(1, VALID_IDEM_KEY_1));
-      batchMapper.insert(createTestBatchDO(2, VALID_IDEM_KEY_2));
-      batchMapper.insert(createTestBatchDO(3, VALID_IDEM_KEY_3));
+      batchDao.saveAndFlush(createTestBatchEntity(1, VALID_IDEM_KEY_1));
+      batchDao.saveAndFlush(createTestBatchEntity(2, VALID_IDEM_KEY_2));
+      batchDao.saveAndFlush(createTestBatchEntity(3, VALID_IDEM_KEY_3));
 
       // When
       List<TaskRunBatch> result = repository.findByRunId(testRunId);
@@ -302,17 +299,17 @@ class TaskRunBatchRepositoryAdapterIT {
     @DisplayName("应返回最后成功批次的 ID")
     void shouldReturnLastSucceededBatchId() {
       // Given：插入多个批次，有不同状态
-      TaskRunBatchDO batch1 = createTestBatchDO(1, VALID_IDEM_KEY_1);
+      TaskRunBatchEntity batch1 = createTestBatchEntity(1, VALID_IDEM_KEY_1);
       batch1.setStatusCode(BatchStatus.SUCCEEDED.getCode());
-      batchMapper.insert(batch1);
+      batchDao.saveAndFlush(batch1);
 
-      TaskRunBatchDO batch2 = createTestBatchDO(2, VALID_IDEM_KEY_2);
+      TaskRunBatchEntity batch2 = createTestBatchEntity(2, VALID_IDEM_KEY_2);
       batch2.setStatusCode(BatchStatus.SUCCEEDED.getCode());
-      batchMapper.insert(batch2);
+      batchDao.saveAndFlush(batch2);
 
-      TaskRunBatchDO batch3 = createTestBatchDO(3, VALID_IDEM_KEY_3);
+      TaskRunBatchEntity batch3 = createTestBatchEntity(3, VALID_IDEM_KEY_3);
       batch3.setStatusCode(BatchStatus.FAILED.getCode());
-      batchMapper.insert(batch3);
+      batchDao.saveAndFlush(batch3);
 
       // When
       Optional<Long> result = repository.findLastSucceededBatchId(testRunId);
@@ -326,9 +323,9 @@ class TaskRunBatchRepositoryAdapterIT {
     @DisplayName("应在无成功批次时返回空 Optional")
     void shouldReturnEmptyWhenNoSucceededBatch() {
       // Given：只有失败的批次
-      TaskRunBatchDO batch1 = createTestBatchDO(1, VALID_IDEM_KEY_1);
+      TaskRunBatchEntity batch1 = createTestBatchEntity(1, VALID_IDEM_KEY_1);
       batch1.setStatusCode(BatchStatus.FAILED.getCode());
-      batchMapper.insert(batch1);
+      batchDao.saveAndFlush(batch1);
 
       // When
       Optional<Long> result = repository.findLastSucceededBatchId(testRunId);
@@ -351,17 +348,19 @@ class TaskRunBatchRepositoryAdapterIT {
   // ==================== 辅助方法 ====================
 
   private Long insertScheduleInstance() {
-    ScheduleInstanceDO instance = new ScheduleInstanceDO();
+    ScheduleInstanceEntity instance = new ScheduleInstanceEntity();
+    instance.setId(SnowflakeIdGenerator.getId());
     instance.setSchedulerCode("XXL");
     instance.setTriggerTypeCode("SCHEDULE");
     instance.setTriggeredAt(Instant.now());
     instance.setProvenanceCode(TEST_PROVENANCE_CODE);
-    scheduleInstanceMapper.insert(instance);
+    scheduleInstanceDao.saveAndFlush(instance);
     return instance.getId();
   }
 
   private Long insertPlan() {
-    PlanDO plan = new PlanDO();
+    PlanEntity plan = new PlanEntity();
+    plan.setId(SnowflakeIdGenerator.getId());
     plan.setScheduleInstanceId(testScheduleInstanceId);
     plan.setPlanKey("PUBMED-HARVEST-2025-01-01");
     plan.setProvenanceCode(TEST_PROVENANCE_CODE);
@@ -370,12 +369,13 @@ class TaskRunBatchRepositoryAdapterIT {
     plan.setExprProtoHash("test-expr-hash-001");
     plan.setWindowSpec(createSingleWindowSpec());
     plan.setStatusCode("READY");
-    planMapper.insert(plan);
+    planDao.saveAndFlush(plan);
     return plan.getId();
   }
 
   private Long insertPlanSlice() {
-    PlanSliceDO slice = new PlanSliceDO();
+    PlanSliceEntity slice = new PlanSliceEntity();
+    slice.setId(SnowflakeIdGenerator.getId());
     slice.setPlanId(testPlanId);
     slice.setProvenanceCode(TEST_PROVENANCE_CODE);
     slice.setSliceNo(0);
@@ -383,12 +383,13 @@ class TaskRunBatchRepositoryAdapterIT {
     slice.setWindowSpec(createSingleWindowSpec());
     slice.setExprHash(TEST_EXPR_HASH);
     slice.setStatusCode("PENDING");
-    planSliceMapper.insert(slice);
+    planSliceDao.saveAndFlush(slice);
     return slice.getId();
   }
 
   private Long insertTask() {
-    TaskDO task = new TaskDO();
+    TaskEntity task = new TaskEntity();
+    task.setId(SnowflakeIdGenerator.getId());
     task.setScheduleInstanceId(testScheduleInstanceId);
     task.setPlanId(testPlanId);
     task.setSliceId(testSliceId);
@@ -400,19 +401,20 @@ class TaskRunBatchRepositoryAdapterIT {
     task.setRetryCount(0);
     task.setLeaseCount(0);
     task.setStatusCode("PENDING");
-    taskMapper.insert(task);
+    taskDao.saveAndFlush(task);
     return task.getId();
   }
 
   private Long insertTaskRun() {
-    TaskRunDO run = new TaskRunDO();
+    TaskRunEntity run = new TaskRunEntity();
+    run.setId(SnowflakeIdGenerator.getId());
     run.setTaskId(testTaskId);
     run.setAttemptNo(1);
     run.setProvenanceCode(TEST_PROVENANCE_CODE);
     run.setOperationCode(TEST_OPERATION_CODE);
     run.setStatusCode("RUNNING");
     run.setStartedAt(Instant.now());
-    runMapper.insert(run);
+    runDao.saveAndFlush(run);
     return run.getId();
   }
 
@@ -463,8 +465,9 @@ class TaskRunBatchRepositoryAdapterIT {
         null);
   }
 
-  private TaskRunBatchDO createTestBatchDO(int batchNo, String idempotentKey) {
-    TaskRunBatchDO batch = new TaskRunBatchDO();
+  private TaskRunBatchEntity createTestBatchEntity(int batchNo, String idempotentKey) {
+    TaskRunBatchEntity batch = new TaskRunBatchEntity();
+    batch.setId(SnowflakeIdGenerator.getId());
     batch.setRunId(testRunId);
     batch.setTaskId(testTaskId);
     batch.setSliceId(testSliceId);
