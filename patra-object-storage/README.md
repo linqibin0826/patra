@@ -39,7 +39,7 @@
 ┌───────▼──────────┐                    ┌───────────▼─────────┐
 │  adapter (入站)   │                    │   infra (出站)      │
 │  REST 控制器      │                    │   仓储实现          │
-│  实现 API 契约    │                    │   MyBatis Mapper   │
+│  实现 API 契约    │                    │   JPA Repository   │
 └───────┬──────────┘                    └───────────▲─────────┘
         │                                           │
         │         ┌──────────────────┐              │
@@ -71,13 +71,13 @@ patra-object-storage/
 ├── patra-object-storage-api/        # 外部契约层 - Feign 客户端接口 + DTO
 ├── patra-object-storage-domain/     # 领域层 - 聚合根、值对象、仓储端口(纯 Java)
 ├── patra-object-storage-app/        # 应用层 - 用例编排器、事务管理
-├── patra-object-storage-infra/      # 基础设施层 - MyBatis 仓储实现 + Flyway 迁移
+├── patra-object-storage-infra/      # 基础设施层 - JPA 仓储实现 + Flyway 迁移
 ├── patra-object-storage-adapter/    # 适配器层 - REST 控制器、端点实现
 └── patra-object-storage-boot/       # 启动模块 - Spring Boot 应用入口
 ```
 
 **架构约束**:
-- **domain 层**: 禁止依赖 Spring/MyBatis 等框架,仅允许 `patra-common-core` + Lombok/Hutool
+- **domain 层**: 禁止依赖 Spring/JPA 等框架,仅允许 `patra-common-core` + Lombok/Hutool
 - **Maven Enforcer**: 通过 `maven-enforcer-plugin` 强制检查 domain 层纯净性
 - **依赖方向**: 所有模块均指向 domain,确保业务逻辑独立于框架
 
@@ -251,14 +251,14 @@ spring:
         namespace: ${NACOS_NAMESPACE:dev}
         file-extension: yaml
 
-mybatis-plus:
-  configuration:
-    map-underscore-to-camel-case: true
-  global-config:
-    db-config:
-      logic-delete-field: deleted
-      logic-delete-value: 1
-      logic-not-delete-value: 0
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 50
 ```
 
 ## 技术栈
@@ -268,7 +268,7 @@ mybatis-plus:
 | Java | 25 | 语言版本 |
 | Spring Boot | 3.5.7 | 应用框架 |
 | Spring Cloud | 2025.0.0 | 微服务框架 |
-| MyBatis-Plus | 3.5.9+ | ORM 框架 |
+| Spring Data JPA | (Spring Boot 管理) | ORM 框架 |
 | MapStruct | 1.6.5+ | 对象映射 |
 | Nacos | 2025.0.0.0 | 服务注册与配置中心 |
 | MySQL | 8.0+ | 数据库 |
