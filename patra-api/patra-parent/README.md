@@ -8,7 +8,7 @@
 
 ## 核心职责
 
-- **依赖版本管理**: 统一管理 Spring Boot、Spring Cloud、MyBatis-Plus 等核心框架版本
+- **依赖版本管理**: 统一管理 Spring Boot、Spring Cloud、Spring Data JPA 等核心框架版本
 - **插件配置**: 配置编译器、测试、代码覆盖率、静态分析等插件
 - **版本强制**: 强制使用 Java 25 和 Maven 3.8.1+
 - **编码规范**: 统一 UTF-8 编码和 Google Java Format 代码风格
@@ -28,7 +28,7 @@
 
 | 依赖 | 版本 | 说明 |
 |------|------|------|
-| **MyBatis-Plus** | 3.5.14 | 增强版 MyBatis ORM 框架 |
+| **Spring Data JPA** | (Spring Boot 管理) | Spring Data JPA 数据访问框架 |
 | **MapStruct** | 1.6.3 | 对象映射工具 |
 
 ### 工具库

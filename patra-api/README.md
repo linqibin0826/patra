@@ -2,7 +2,7 @@
 
 > **状态**: 🚧 引导阶段 (v0.1.0-SNAPSHOT)
 > **架构**: 微服务 + 六边形架构 + DDD + 事件驱动
-> **技术栈**: Java 25, Spring Boot 3.5.7, MyBatis-Plus, MySQL 8.x
+> **技术栈**: Java 25, Spring Boot 3.5.7, Spring Data JPA, MySQL 8.x
 
 ---
 
@@ -69,7 +69,7 @@ Patra 是一个**医学出版物数据平台**,旨在:
 | **patra-expr-kernel** | 表达式引擎,用于动态 API 参数映射 |
 | **patra-spring-boot-starter-core** | 核心自动配置 (Jackson, 错误处理) |
 | **patra-spring-boot-starter-web** | Web 自动配置 (REST, Feign, 追踪) |
-| **patra-spring-boot-starter-mybatis** | MyBatis-Plus 自动配置 |
+| **patra-spring-boot-starter-jpa** | Spring Data JPA 自动配置 |
 | **patra-spring-boot-starter-provenance** | Provenance 配置集成 |
 | **patra-spring-cloud-starter-feign** | Feign 客户端增强 |
 
@@ -182,7 +182,7 @@ infra    →  domain
 domain   →  仅 patra-common (无框架)
 ```
 
-**关键**: 领域层 = **纯 Java** (无 Spring,无 MyBatis 注解)
+**关键**: 领域层 = **纯 Java** (无 Spring,无 JPA 注解)
 
 ---
 
@@ -201,7 +201,7 @@ Patra 项目遵循**测试金字塔**，各层使用不同的测试策略：
 
 # 3. Infrastructure 层：单元测试 + 集成测试
 ./mvnw test -pl patra-{service}-infra           # 单元测试（Converter、Feign Client Mock）
-./mvnw verify -pl patra-{service}-infra         # 集成测试（@MybatisPlusTest + TestContainers）
+./mvnw verify -pl patra-{service}-infra         # 集成测试（@DataJpaTest + TestContainers）
 
 # 4. Adapter 层：单元测试 + 切片测试
 ./mvnw test -pl patra-{service}-adapter         # 单元测试（Listener、Job）+ @WebMvcTest（Controller）
@@ -287,7 +287,7 @@ Patra 项目遵循**测试金字塔**，各层使用不同的测试策略：
 ## 🙏 致谢
 
 - **Spring 团队** — 提供卓越的 Spring Boot/Cloud 生态系统
-- **MyBatis 团队** — 提供灵活的 SQL 映射
+- **Spring Data 团队** — 提供优雅的数据访问抽象
 - **DDD 社区** — 提供永恒的架构模式
 
 ---
