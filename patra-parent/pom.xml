@@ -17,8 +17,6 @@
     <!-- Align versions with Spring Cloud Alibaba by importing the BOM; choose specific versions according to the compatibility matrix. -->
     <spring-cloud.version>2025.0.0</spring-cloud.version>
     <spring-cloud-alibaba.version>2025.0.0.0</spring-cloud-alibaba.version>
-    <mybatis-plus.version>3.5.14</mybatis-plus.version>
-    <mybatis-spring-boot.version>3.0.4</mybatis-spring-boot.version>
 
     <lombok.version>1.18.40</lombok.version>
     <mapstruct.version>1.6.3</mapstruct.version>
@@ -148,28 +146,6 @@
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpclient</artifactId>
         <version>4.5.14</version>
-      </dependency>
-
-      <dependency>
-        <groupId>com.baomidou</groupId>
-        <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
-        <version>${mybatis-plus.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.baomidou</groupId>
-        <artifactId>mybatis-plus-boot-starter-test</artifactId>
-        <version>${mybatis-plus.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.baomidou</groupId>
-        <artifactId>mybatis-plus-jsqlparser</artifactId>
-        <version>${mybatis-plus.version}</version>
-      </dependency>
-
-      <dependency>
-        <groupId>org.mybatis.spring.boot</groupId>
-        <artifactId>mybatis-spring-boot-starter-test</artifactId>
-        <version>${mybatis-spring-boot.version}</version>
       </dependency>
 
       <dependency>
