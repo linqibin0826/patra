@@ -545,7 +545,7 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   ///
   /// - 数据库异常（java.sql.*）
   /// - Spring 数据访问异常（org.springframework.dao.*）
-  /// - MyBatis-Plus 异常（com.baomidou.mybatisplus.*）
+  /// - JPA/Hibernate 异常（jakarta.persistence.*、org.hibernate.*）
   /// - 自定义基础设施异常
   ///
   /// @param exception 待检查的异常
@@ -554,7 +554,8 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
     String className = exception.getClass().getName();
     return className.startsWith("java.sql.")
         || className.startsWith("org.springframework.dao.")
-        || className.startsWith("com.baomidou.mybatisplus.core.exceptions.")
+        || className.startsWith("jakarta.persistence.")
+        || className.startsWith("org.hibernate.")
         || exception.getClass().getSimpleName().equals("InfrastructureException");
   }
 
