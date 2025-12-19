@@ -8,7 +8,7 @@ paths: patra-*/*-infra/**/*.java
 
 - 实现端口接口（Repository/Port）
 - 技术适配：数据库、消息队列、外部 API
-- 数据转换：DO ↔ Domain Entity
+- 数据转换：JpaEntity ↔ Domain Entity
 
 ## 被动适配器命名
 
