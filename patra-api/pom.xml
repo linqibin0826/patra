@@ -24,7 +24,6 @@
         <module>patra-spring-boot-starter-core</module>
         <module>patra-spring-boot-starter-web</module>
         <module>patra-spring-boot-starter-rest-client</module>
-        <module>patra-spring-boot-starter-mybatis</module>
         <module>patra-spring-boot-starter-jpa</module>
         <module>patra-spring-boot-starter-provenance</module>
         <module>patra-spring-boot-starter-object-storage</module>
