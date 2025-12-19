@@ -1,37 +1,36 @@
 package com.patra.ingest.infra.adapter.persistence;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.port.PlanSliceRepository;
-import com.patra.ingest.infra.persistence.converter.PlanSliceConverter;
-import com.patra.ingest.infra.persistence.entity.PlanSliceDO;
-import com.patra.ingest.infra.persistence.mapper.PlanSliceMapper;
+import com.patra.ingest.infra.adapter.persistence.converter.mapper.PlanSliceJpaMapper;
+import com.patra.ingest.infra.adapter.persistence.dao.PlanSliceDao;
+import com.patra.ingest.infra.adapter.persistence.entity.PlanSliceEntity;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-/// 计划切片（PlanSlice）仓储实现,基于 MyBatis-Plus。
+/// 计划切片（PlanSlice）仓储实现，基于 JPA。
 ///
-/// 职责:
+/// 职责：
 ///
 /// - 根据 ID 是否存在插入或更新切片聚合根
-///   - 批量保存,顺序调用以保持输入顺序
-///   - 按 planId 查询所有切片,用于调度和重放
+/// - 批量保存，顺序调用以保持输入顺序
+/// - 按 planId 查询所有切片，用于调度和重放
 ///
-/// 设计与约束:
+/// 设计与约束：
 ///
-/// - 仓储层不进行复杂状态机验证;状态转换由应用服务控制
-///   - 乐观锁: 如 DO 包含 version 字段,由 MyBatis-Plus 自动处理更新;可扩展条件更新以应对未来并发场景
-///   - 幂等性: 调用方确保不重复创建相同业务语义的切片(如 sliceSignatureHash)
+/// - 仓储层不进行复杂状态机验证；状态转换由应用服务控制
+/// - 乐观锁：通过 JPA `@Version` 字段自动处理更新冲突
+/// - 幂等性：调用方确保不重复创建相同业务语义的切片（如 sliceSignatureHash）
 ///
-/// 日志策略:
+/// 日志策略：
 ///
-/// - DEBUG: insert/update 记录 planId 和 hash (exprHash 表示表达式指纹)
-///   - 无 INFO: 避免高频路径产生噪音;错误由上层处理
+/// - DEBUG：insert/update 记录 planId 和 hash（exprHash 表示表达式指纹）
+/// - 无 INFO：避免高频路径产生噪音；错误由上层处理
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -40,22 +39,30 @@ import org.springframework.stereotype.Repository;
 @Slf4j
 public class PlanSliceRepositoryAdapter implements PlanSliceRepository {
 
-  private final PlanSliceMapper mapper;
-  private final PlanSliceConverter converter;
+  /// PlanSlice JPA Repository
+  private final PlanSliceDao planSliceDao;
+
+  /// 聚合根与 JPA 实体转换器
+  private final PlanSliceJpaMapper planSliceJpaMapper;
 
   /// 保存单个切片。
   ///
   /// @param slice 切片聚合根
-  /// @return 持久化后的聚合根,重新映射以包含生成的字段
+  /// @return 持久化后的聚合根，重新映射以包含生成的字段
   @Override
   public PlanSliceAggregate save(PlanSliceAggregate slice) {
-    PlanSliceDO entity = converter.toEntity(slice);
-    if (entity.getId() == null) {
+    PlanSliceEntity entity = planSliceJpaMapper.toEntity(slice);
+
+    if (slice.getId() == null) {
+      // 新增：预分配雪花 ID
+      entity.setId(SnowflakeIdGenerator.getId());
       if (log.isDebugEnabled()) {
         log.debug("slice insert planId={} hash={}", entity.getPlanId(), entity.getExprHash());
       }
-      mapper.insert(entity);
     } else {
+      // 更新：使用现有 ID 和 version
+      entity.setId(slice.getId().value());
+      entity.setVersion(slice.getVersion());
       if (log.isDebugEnabled()) {
         log.debug(
             "slice update id={} planId={} hash={}",
@@ -63,17 +70,18 @@ public class PlanSliceRepositoryAdapter implements PlanSliceRepository {
             entity.getPlanId(),
             entity.getExprHash());
       }
-      mapper.updateById(entity);
     }
-    return converter.toAggregate(entity);
+
+    PlanSliceEntity saved = planSliceDao.save(entity);
+    return planSliceJpaMapper.toAggregate(saved);
   }
 
   /// 批量保存切片。
   ///
-  /// 顺序调用 {@link #save(PlanSliceAggregate)},保持输入顺序。
+  /// 顺序调用 {@link #save(PlanSliceAggregate)}，保持输入顺序。
   ///
   /// @param slices 切片集合
-  /// @return 持久化结果,保持输入顺序
+  /// @return 持久化结果，保持输入顺序
   @Override
   public List<PlanSliceAggregate> saveAll(List<PlanSliceAggregate> slices) {
     List<PlanSliceAggregate> persisted = new ArrayList<>(slices.size());
@@ -86,24 +94,22 @@ public class PlanSliceRepositoryAdapter implements PlanSliceRepository {
   /// 根据计划 ID 查找切片。
   ///
   /// @param planId 计划 ID
-  /// @return 切片列表,可能为空
+  /// @return 切片列表，可能为空
   @Override
   public List<PlanSliceAggregate> findByPlanId(Long planId) {
-    return mapper.selectList(new QueryWrapper<PlanSliceDO>().eq("plan_id", planId)).stream()
-        .map(converter::toAggregate)
-        .collect(Collectors.toList());
+    List<PlanSliceEntity> entities = planSliceDao.findByPlanId(planId);
+    return entities.stream().map(planSliceJpaMapper::toAggregate).toList();
   }
 
   /// 根据切片 ID 查找切片。
   ///
   /// @param sliceId 切片 ID
-  /// @return 切片聚合根(可选)
+  /// @return 切片聚合根（可选）
   @Override
   public Optional<PlanSliceAggregate> findById(Long sliceId) {
     if (sliceId == null) {
       return Optional.empty();
     }
-    PlanSliceDO entity = mapper.selectById(sliceId);
-    return Optional.ofNullable(entity).map(converter::toAggregate);
+    return planSliceDao.findById(sliceId).map(planSliceJpaMapper::toAggregate);
   }
 }
