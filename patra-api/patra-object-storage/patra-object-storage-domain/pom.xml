@@ -69,8 +69,6 @@
                                         <exclude>jakarta.validation:*</exclude>
                                         <exclude>jakarta.annotation:*</exclude>
                                         <exclude>jakarta.servlet:*</exclude>
-                                        <exclude>com.baomidou:*</exclude>
-                                        <exclude>org.mybatis:*</exclude>
                                         <exclude>org.hibernate:*</exclude>
                                         <exclude>org.apache.tomcat:*</exclude>
                                         <exclude>io.netty:*</exclude>
