@@ -25,7 +25,7 @@
 
 **依赖说明**：
 - Domain 层默认依赖 `patra-common-core`，可使用 Hutool-Core 和 Jackson
-- 禁止依赖基础设施框架（Spring、MyBatis、Redis 等）
+- 禁止依赖基础设施框架（Spring、JPA、Redis 等）
 - Hutool 用于工具方法，Jackson 用于序列化
 
 ---
@@ -660,7 +660,7 @@ public enum ProvenanceCode {
 ## ✅ 设计验证
 
 ### 1. 依赖方向检查 ✅
-- ✅ Domain 层无基础设施框架依赖（禁止 Spring、MyBatis 等）
+- ✅ Domain 层无基础设施框架依赖（禁止 Spring、JPA 等）
 - ✅ 允许使用工具库：Hutool-Core、Jackson、Lombok
 - ✅ 使用 Sealed Interface 和 Record 实现不可变值对象
 - ✅ 聚合根封装业务规则和状态转换逻辑

@@ -17,9 +17,9 @@ import org.mapstruct.Named;
 /// - `MeshQualifierAggregate` ↔ `MeshQualifierEntity` 双向转换
 /// - 值对象（`MeshUI`、`MeshQualifierId`）与基本类型的映射
 ///
-/// **与 MyBatis 转换器的区别**：
+/// **JPA 特性**：
 ///
-/// - JPA Entity 的 `treeNumbers` 是 `List<String>`，由 Hibernate 6.6 原生支持 JSON 映射
+/// - `treeNumbers` 字段由 Hibernate 6.6 原生支持 JSON 映射（`List<String>` → JSON 列）
 /// - 无需手动处理 JSON 序列化/反序列化
 ///
 /// @author linqibin

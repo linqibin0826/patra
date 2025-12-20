@@ -97,7 +97,7 @@ class VenueInitializeItemWriterTest {
       VenueParseResult result2 = createParseResult("S2", "2222-2222", true);
       Chunk<VenueParseResult> chunk = Chunk.of(result1, result2);
 
-      // 模拟 insertAll 后的 ID 回填（真实场景由 MyBatis 完成）
+      // 模拟 insertAll 后的 ID 回填（真实场景由应用层预分配雪花 ID）
       doAnswer(
               invocation -> {
                 List<VenueAggregate> aggregates = invocation.getArgument(0);

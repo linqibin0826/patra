@@ -73,7 +73,7 @@
 | 目录 | 规则内容 |
 |------|----------|
 | `rules/layers/` | 六边形架构各层规范（domain/app/infra/adapter/api/boot） |
-| `rules/tech/` | 技术栈规范（mybatis-plus/error-handling/observability） |
+| `rules/tech/` | 技术栈规范（jpa/error-handling/observability/commandbus） |
 | `rules/testing/` | 测试规范（unit-test/integration-test/e2e-test） |
 | `rules/code-style.md` | 代码风格与命名规范 |
 | `rules/project-info.md` | 项目概览与技术栈 |

@@ -52,11 +52,11 @@
 --   - 插入时: SET record_remarks = '[]'
 --   - 更新时: JSON_ARRAY_APPEND(record_remarks, '$', JSON_OBJECT(...))
 
--- 2. version (BIGINT UNSIGNED)
+-- 2. version (BIGINT)
 -- ============================================================
 -- 用途: 乐观锁版本控制，防止并发更新冲突
 -- 机制: 每次更新时版本号 +1
--- MyBatis-Plus 集成: @Version 注解
+-- JPA 集成: @Version 注解
 --
 -- 更新语句示例:
 --   UPDATE user
@@ -94,9 +94,10 @@
 -- 更新时自动更新:
 --   DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
 --
--- MyBatis-Plus 集成:
---   @TableField(value = "created_at", fill = FieldFill.INSERT)
---   private LocalDateTime createdAt;
+-- JPA 集成:
+--   @CreatedDate
+--   @Column(name = "created_at", updatable = false)
+--   private Instant createdAt;
 --
 -- 时区处理:
 --   - 数据库服务器时区: SET GLOBAL time_zone = '+00:00';
@@ -108,18 +109,15 @@
 -- 用途: 记录操作者的用户 ID
 -- 允许 NULL: 系统自动导入的数据可以为 NULL
 --
--- MyBatis-Plus 自动填充:
---   @TableField(value = "created_by", fill = FieldFill.INSERT)
+-- JPA 自动填充:
+--   @CreatedBy
+--   @Column(name = "created_by", updatable = false)
 --   private Long createdBy;
 --
 -- 实现方式:
---   @Component
---   public class AuditMetaObjectHandler implements MetaObjectHandler {
---       @Override
---       public void insertFill(MetaObject metaObject) {
---           Long userId = SecurityContextHolder.getCurrentUserId();
---           this.strictInsertFill(metaObject, "createdBy", Long.class, userId);
---       }
+--   @Bean
+--   public AuditorAware<Long> auditorProvider() {
+--       return () -> Optional.ofNullable(SecurityContextHolder.getCurrentUserId());
 --   }
 
 -- 6. created_by_name / updated_by_name (VARCHAR(100))
@@ -135,20 +133,21 @@
 --   - 优点: 查询性能高，保留历史操作者姓名
 --   - 缺点: 数据冗余，如果用户改名，历史记录显示旧名字
 
--- 7. deleted (TINYINT(1))
+-- 7. deleted_at (TIMESTAMP(6))
 -- ============================================================
--- 用途: 软删除标志
--- 取值: 0 = 活动记录, 1 = 已删除
+-- 用途: 软删除时间戳
+-- 取值: NULL = 活动记录, 非 NULL = 已删除（值为删除时间）
 --
--- MyBatis-Plus 逻辑删除:
---   @TableLogic
---   @TableField("deleted")
---   private Boolean deleted;
+-- JPA 软删除:
+--   @Column(name = "deleted_at")
+--   private Instant deletedAt;
+--
+--   // 在 Entity 类上添加
+--   @SQLRestriction("deleted_at IS NULL")
 --
 -- 索引设计注意事项:
---   - deleted 字段区分度极低（< 0.1），不应该单独建索引
---   - 如需同时过滤 deleted=0 和其他条件，将 deleted 放在组合索引末尾:
---     KEY `idx_username_deleted` (`username`, `deleted`)
+--   - deleted_at 字段区分度极低，不应该单独建索引
+--   - 如需同时过滤 deleted_at IS NULL 和其他条件，将其放在组合索引末尾
 
 -- ============================================================
 -- 完整示例：用户表
