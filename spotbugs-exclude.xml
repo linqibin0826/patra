@@ -197,10 +197,10 @@
   </Match>
 
   <!-- ========================================================================
-       MYBATIS-PLUS AND PERSISTENCE
+       JPA AND PERSISTENCE
        ======================================================================== -->
 
-  <!-- MyBatis-Plus entity fields are accessed via reflection -->
+  <!-- JPA entity fields are accessed via reflection -->
   <Match>
     <Class name="~.*DO$"/>
     <Or>
@@ -232,7 +232,7 @@
        SECURITY: INTENTIONAL EXCLUSIONS
        ======================================================================== -->
 
-  <!-- Exclude SQL injection warnings for MyBatis-Plus (uses parameterized queries) -->
+  <!-- Exclude SQL injection warnings for JPA/Hibernate (uses parameterized queries) -->
   <Match>
     <Class name="~.*RepositoryAdapter$"/>
     <Bug pattern="SQL_INJECTION_HIBERNATE"/>

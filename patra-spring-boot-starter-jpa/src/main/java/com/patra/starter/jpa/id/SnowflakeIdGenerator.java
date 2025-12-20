@@ -20,9 +20,9 @@ import java.util.concurrent.ThreadLocalRandom;
 /// - **序列号**：每毫秒 4096 个 ID，单节点 QPS 约 400 万
 /// - **线程安全**：通过 synchronized 保证并发安全
 ///
-/// **兼容性**：
+/// **使用方式**：
 ///
-/// 此类设计为 MyBatis-Plus `IdWorker` 的替代品，提供相同的 API。
+/// 在应用层预分配 ID，避免依赖数据库自增，保证 JPA 批量插入性能。
 ///
 /// 使用示例：
 ///

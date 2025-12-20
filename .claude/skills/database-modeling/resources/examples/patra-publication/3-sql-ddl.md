@@ -319,22 +319,26 @@ ORDER BY p.publication_date DESC;
   - 避免锁竞争
   - 提高并发性能
   - 由应用层保证参照完整性
-- **MyBatis-Plus 处理**：Repository 层校验关联关系
+- **JPA 处理**：Repository 层校验关联关系
 
 ### 4. 软删除
-- **查询时必须加 `WHERE deleted = 0`**
-- **MyBatis-Plus 配置**：
+- **查询时自动过滤 `deleted_at IS NULL`**
+- **JPA 配置**：
   ```java
-  @TableLogic
-  private Boolean deleted;
+  @Column(name = "deleted_at")
+  private Instant deletedAt;
+
+  // Entity 类上添加
+  @SQLRestriction("deleted_at IS NULL")
   ```
-- **自动处理**：MyBatis-Plus 自动在查询中添加 `deleted = 0` 条件
+- **自动处理**：JPA 自动在查询中添加 `deleted_at IS NULL` 条件
 
 ### 5. 乐观锁
 - **更新时检查 `version` 字段**
-- **MyBatis-Plus 配置**：
+- **JPA 配置**：
   ```java
   @Version
+  @Column(name = "version")
   private Long version;
   ```
 - **冲突处理**：

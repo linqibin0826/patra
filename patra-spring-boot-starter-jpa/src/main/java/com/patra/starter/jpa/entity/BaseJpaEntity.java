@@ -24,7 +24,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 ///
 /// **功能特性**：
 ///
-/// - **雪花 ID**：应用层预分配，保持与现有 MyBatis-Plus 设计一致
+/// - **雪花 ID**：应用层预分配，避免数据库自增以优化批量插入性能
 /// - **审计字段**：自动填充 createdAt/createdBy/updatedAt/updatedBy
 /// - **乐观锁**：通过 `@Version` 防止并发更新冲突
 /// - **软删除**：使用 `@SQLRestriction` 自动过滤已删除记录
@@ -33,7 +33,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 ///
 /// - 使用 `@SQLRestriction("deleted_at IS NULL")` 自动过滤已删除记录
 /// - 应用层通过设置 `deletedAt = Instant.now()` 实现软删除
-/// - 与现有 MyBatis-Plus 的 `deleted_at` 列完全兼容
+/// - 通过 `@SQLRestriction` 自动过滤，无需手动添加查询条件
 /// - 需要查询已删除记录时，使用 Native Query 或自定义 Repository 方法
 ///
 /// **为什么不用 @SoftDelete**：
@@ -79,7 +79,7 @@ public abstract class BaseJpaEntity implements Serializable {
 
   /// 实体的主键 ID。
   ///
-  /// 使用应用层预分配的雪花 ID，保持与现有 MyBatis-Plus 设计一致。
+  /// 使用应用层预分配的雪花 ID（`SnowflakeIdGenerator.getId()`）。
   /// 不使用 `@GeneratedValue`，因为数据库自增会破坏 JPA 批量插入优化。
   @Id
   @Column(name = "id")

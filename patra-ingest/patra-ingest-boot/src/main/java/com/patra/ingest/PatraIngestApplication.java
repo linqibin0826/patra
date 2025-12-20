@@ -18,10 +18,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /// 技术栈集成:
 ///
 /// - Spring Cloud - 微服务基础设施和服务发现
-///   - Feign 客户端 - 通过 `patra-spring-cloud-starter-feign` 自动扫描 `com.patra.*.api.rpc.client` 包下的接口
-///   - RocketMQ - 消息队列(通过 RocketMQ 官方 Spring Boot Starter)
-///   - XXL-Job - 分布式任务调度
-///   - MyBatis-Plus - 数据持久化
+/// - Feign 客户端 - 通过 `patra-spring-cloud-starter-feign` 自动扫描 `com.patra.*.api.rpc.client` 包下的接口
+/// - RocketMQ - 消息队列（通过 RocketMQ 官方 Spring Boot Starter）
+/// - XXL-Job - 分布式任务调度
+/// - Spring Data JPA - 数据持久化
 ///
 /// 启动配置: 未指定 profile 时默认使用 'dev' 环境配置。
 ///

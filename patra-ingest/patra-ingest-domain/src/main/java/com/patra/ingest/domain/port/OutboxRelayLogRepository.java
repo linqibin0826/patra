@@ -14,9 +14,9 @@ import java.util.List;
 ///
 /// **设计原则**:
 ///
-/// - 端口定义在 Domain 层(无基础设施依赖)
-///   - 实现在 Infrastructure 层(MyBatis-Plus 仓储)
-///   - 领域中心签名(使用领域实体,而非 DO)
+/// - 端口定义在 Domain 层（无基础设施依赖）
+/// - 实现在 Infrastructure 层（JPA 仓储）
+/// - 领域中心签名（使用领域实体，而非 Entity）
 ///
 /// **端口语义**: 此接口是六边形架构中的 **仓储端口(Repository Port)**,定义在 Domain
 /// 层,由基础设施层(Infrastructure)实现,确保领域逻辑与持久化技术解耦。

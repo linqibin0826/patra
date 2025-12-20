@@ -111,7 +111,7 @@
 
 **确定的技术栈（Patra 项目标准）：**
 - ✅ **数据库**：MySQL 8.0+（InnoDB 引擎）
-- ✅ **持久化框架**：MyBatis-Plus 3.5.x
+- ✅ **持久化框架**：Spring Data JPA + Hibernate 6.6
 - ✅ **架构风格**：六边形架构 + DDD
 - ✅ **Spring Boot**：3.5.7
 - ✅ **Java 版本**：Java 25
@@ -119,10 +119,10 @@
 **强制规范：**
 - **字符集**：`utf8mb4` + `utf8mb4_unicode_ci` 排序规则
 - **时区**：所有 TIMESTAMP 字段使用 UTC
-- **主键**：BIGINT UNSIGNED AUTO_INCREMENT
-- **软删除**：使用 `deleted` 字段（TINYINT(1)），配合 MyBatis-Plus `@TableLogic`
-- **乐观锁**：使用 `version` 字段（BIGINT UNSIGNED），配合 MyBatis-Plus `@Version`
-- **审计字段**：标准 9 个字段（id, version, created_at, created_by, created_by_name, updated_at, updated_by, updated_by_name, deleted）
+- **主键**：BIGINT（应用层雪花 ID 预分配）
+- **软删除**：使用 `deleted_at` 字段（TIMESTAMP），配合 JPA `@SQLRestriction`
+- **乐观锁**：使用 `version` 字段（BIGINT），配合 JPA `@Version`
+- **审计字段**：标准审计字段（id, version, created_at, created_by, created_by_name, updated_at, updated_by, updated_by_name, deleted_at）
 
 ---
 

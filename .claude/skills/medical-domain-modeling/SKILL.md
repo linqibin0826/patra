@@ -312,7 +312,7 @@ stateDiagram-v2
 
 ### 领域层约束
 
-- **纯 Java**：禁止 Spring、MyBatis 等框架注解
+- **纯 Java**：禁止 Spring、JPA 等框架注解
 - **不可变集合**：对外暴露使用 `Collections.unmodifiableList()`
 - **工厂方法**：使用静态工厂方法创建，禁止 public 构造函数
 - **不变量**：重写 `assertInvariants()` 验证业务规则

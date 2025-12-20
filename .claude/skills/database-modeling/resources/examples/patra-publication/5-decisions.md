@@ -211,7 +211,7 @@ CREATE TABLE publication (
 
 ### 影响
 - ✅ **正面**：存储空间节省显著（260万条记录约节省 200MB）
-- ⚠️ **负面**：查询时需要转换函数（但 MyBatis-Plus 可自动处理）
+- ⚠️ **负面**：查询时需要转换函数（但 JPA AttributeConverter 可自动处理）
 
 ### 实施细节
 
@@ -231,21 +231,23 @@ VALUES (INET6_ATON('192.168.1.1'));
 SELECT INET6_NTOA(ip_address) AS ip FROM publication;
 ```
 
-**MyBatis-Plus 自动转换**：
+**JPA 自动转换**：
 ```java
-@TableField(typeHandler = IpAddressTypeHandler.class)
+@Column(name = "ip_address")
+@Convert(converter = IpAddressConverter.class)
 private String ipAddress;
 
-// 自定义 TypeHandler
-public class IpAddressTypeHandler extends BaseTypeHandler<String> {
+// 自定义 AttributeConverter
+@Converter
+public class IpAddressConverter implements AttributeConverter<String, byte[]> {
     @Override
-    public void setNonNullParameter(PreparedStatement ps, int i, String parameter, JdbcType jdbcType) throws SQLException {
-        // 调用 INET6_ATON()
+    public byte[] convertToDatabaseColumn(String attribute) {
+        // 转换为二进制（使用 InetAddress）
     }
 
     @Override
-    public String getNullableResult(ResultSet rs, String columnName) throws SQLException {
-        // 调用 INET6_NTOA()
+    public String convertToEntityAttribute(byte[] dbData) {
+        // 转换回字符串
     }
 }
 ```
@@ -357,7 +359,7 @@ FROM publication;
    - 便于未来分库分表
    - 跨库关联更灵活
 3. **行业实践**：大多数互联网公司不使用物理外键
-4. **MyBatis-Plus 支持**：Repository 层可自动校验关联
+4. **JPA 支持**：Repository 层可自动校验关联
 
 ### 影响
 - ✅ **正面**：高并发性能，易于扩展
@@ -501,7 +503,7 @@ ALTER TABLE publication ADD FULLTEXT INDEX ft_title_abstract (title, abstract);
 ### 规范性验证
 - [x] 符合 Patra 项目规范
 - [x] 符合六边形架构 + DDD
-- [x] 符合 MyBatis-Plus 最佳实践
+- [x] 符合 Spring Data JPA 最佳实践
 
 ---
 

@@ -283,7 +283,7 @@ String rendered = query.accept(new SimpleStringRenderer());
 - **JUnit 5**: 单元测试框架
 - **AssertJ**: 流畅的断言库
 
-**特点**: 无 Spring 依赖,无 MyBatis 依赖,纯 Java 库,可在任何 Java 环境中使用。
+**特点**: 无 Spring 依赖，无 JPA 依赖，纯 Java 库，可在任何 Java 环境中使用。
 
 ---
 
