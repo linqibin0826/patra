@@ -60,6 +60,18 @@
             <artifactId>patra-spring-boot-starter-rest-client</artifactId>
         </dependency>
 
+        <!-- WebFlux：WebClient 流式下载（解决 RestClient.exchange InputStream 关闭问题） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webflux</artifactId>
+        </dependency>
+
+        <!-- Reactor Netty：WebClient 底层 HTTP 客户端 -->
+        <dependency>
+            <groupId>io.projectreactor.netty</groupId>
+            <artifactId>reactor-netty-http</artifactId>
+        </dependency>
+
         <!-- 对象存储 -->
         <dependency>
             <groupId>com.patra</groupId>
