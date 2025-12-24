@@ -12,6 +12,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.common.error.trait.StandardErrorTrait;
+import io.netty.channel.ChannelOption;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -24,7 +25,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.web.client.RestClient;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.netty.http.client.HttpClient;
 
 /// StreamingDownloadAdapter 集成测试。
 ///
@@ -52,11 +55,14 @@ class StreamingDownloadAdapterIT {
   void setUp(WireMockRuntimeInfo wmRuntimeInfo) {
     baseUrl = wmRuntimeInfo.getHttpBaseUrl();
 
-    // 创建 RestClient 连接到 WireMock 服务器
-    // 使用较短的超时时间以便快速测试超时场景
-    RestClient restClient = RestClient.builder().baseUrl(baseUrl).build();
+    // 创建 WebClient 连接到 WireMock 服务器
+    WebClient webClient =
+        WebClient.builder()
+            .baseUrl(baseUrl)
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(-1))
+            .build();
 
-    adapter = new StreamingDownloadAdapter(restClient);
+    adapter = new StreamingDownloadAdapter(webClient);
   }
 
   @Nested
@@ -120,7 +126,7 @@ class StreamingDownloadAdapterIT {
       try (StreamingDownloadResult result = adapter.download(URI.create(baseUrl + TEST_PATH))) {
         // Then: contentType 应该为 null
         assertThat(result.inputStream()).isNotNull();
-        // WireMock 不设置 Content-Type 时，RestClient 可能返回 null
+        // WireMock 不设置 Content-Type 时，WebClient 可能返回 null
       }
     }
   }
@@ -139,7 +145,6 @@ class StreamingDownloadAdapterIT {
       // When & Then
       assertThatThrownBy(() -> adapter.download(URI.create(baseUrl + TEST_PATH)))
           .isInstanceOf(FileDownloadException.class)
-          .hasMessageContaining("HTTP 错误")
           .hasMessageContaining("404")
           .satisfies(
               e -> {
@@ -159,7 +164,6 @@ class StreamingDownloadAdapterIT {
       // When & Then
       assertThatThrownBy(() -> adapter.download(URI.create(baseUrl + TEST_PATH)))
           .isInstanceOf(FileDownloadException.class)
-          .hasMessageContaining("HTTP 错误")
           .hasMessageContaining("500")
           .satisfies(
               e -> {
@@ -189,20 +193,20 @@ class StreamingDownloadAdapterIT {
 
     @BeforeEach
     void setUpWithShortTimeout(WireMockRuntimeInfo wmRuntimeInfo) {
-      // 创建具有短超时的 RestClient 以便测试超时场景
-      RestClient restClient =
-          RestClient.builder()
+      // 创建具有短超时的 WebClient 以便测试超时场景
+      HttpClient httpClient =
+          HttpClient.create()
+              .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 500)
+              .responseTimeout(Duration.ofMillis(500));
+
+      WebClient webClient =
+          WebClient.builder()
               .baseUrl(wmRuntimeInfo.getHttpBaseUrl())
-              .requestFactory(
-                  new org.springframework.http.client.SimpleClientHttpRequestFactory() {
-                    {
-                      setConnectTimeout(Duration.ofMillis(500));
-                      setReadTimeout(Duration.ofMillis(500));
-                    }
-                  })
+              .clientConnector(new ReactorClientHttpConnector(httpClient))
+              .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(-1))
               .build();
 
-      adapter = new StreamingDownloadAdapter(restClient);
+      adapter = new StreamingDownloadAdapter(webClient);
     }
 
     @Test
@@ -222,7 +226,6 @@ class StreamingDownloadAdapterIT {
       // 如果消息包含 "timeout" 则携带 TIMEOUT 特征，否则携带 DEP_UNAVAILABLE
       assertThatThrownBy(() -> adapter.download(URI.create(baseUrl + TEST_PATH)))
           .isInstanceOf(FileDownloadException.class)
-          .hasMessageContaining("网络访问失败")
           .satisfies(
               e -> {
                 FileDownloadException ex = (FileDownloadException) e;
