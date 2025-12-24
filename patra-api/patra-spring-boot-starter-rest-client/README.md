@@ -11,6 +11,7 @@
 - **拦截器扩展**：支持注入自定义 `ClientHttpRequestInterceptor`
 - **多客户端配置**：支持按用途定义多个客户端配置
 - **文件下载进度监控**：支持进度百分比、下载速度、剩余时间估算
+- **流式下载支持**：提供基于 WebClient 的流式下载能力，解决长时间传输问题
 
 ## 快速开始
 
@@ -89,6 +90,55 @@ patra:
     clients:
       long-running:
         enabled: false
+```
+
+### 流式下载 WebClient
+
+对于需要流式读取响应体的场景（如大文件流式处理、边下载边解析），使用 `streamingWebClient`：
+
+```java
+@Service
+public class StreamingService {
+
+    private final WebClient webClient;
+
+    /// 通过 @Qualifier 注入流式下载客户端
+    public StreamingService(
+            @Qualifier("streamingWebClient") WebClient webClient) {
+        this.webClient = webClient;
+    }
+
+    public Flux<DataBuffer> streamDownload(URI url) {
+        return webClient.get()
+            .uri(url)
+            .retrieve()
+            .bodyToFlux(DataBuffer.class);
+    }
+}
+```
+
+**为什么需要 WebClient？**
+
+`RestClient.exchange(close=false)` 在长时间流式传输过程中可能意外关闭 InputStream，
+导致 `IOException: closed` 异常。WebClient + Reactor Netty 原生支持 Reactive Streams 背压机制，
+连接生命周期由响应式订阅控制，更适合流式下载场景。
+
+**默认配置**：
+- 连接超时：30 秒
+- 响应超时：600 秒（10 分钟，与 `longRunningRestClient` 一致）
+- 内存限制：-1（不限制，使用流式处理）
+
+**启用条件**：
+- 需要 `spring-webflux` 和 `reactor-netty-http` 依赖
+- `patra.rest-client.streaming.enabled=true`（默认启用）
+
+**禁用方式**：
+
+```yaml
+patra:
+  rest-client:
+    streaming:
+      enabled: false
 ```
 
 ### 文件下载进度监控
@@ -252,6 +302,7 @@ patra:
 | `clients.*.timeout.connect` | Duration | - | 客户端级连接超时（覆盖全局） |
 | `clients.*.timeout.read` | Duration | - | 客户端级读取超时（覆盖全局） |
 | `clients.long-running.timeout.read` | Duration | `600s` | 长时间运行客户端读取超时 |
+| `streaming.enabled` | boolean | `true` | 是否启用流式 WebClient（需 spring-webflux 依赖） |
 
 ## 日志输出
 
@@ -325,6 +376,7 @@ public RestClient customRestClient(JdkClientHttpRequestFactory factory) {
 |-----------|------|------|------|
 | `defaultRestClient` | `RestClient` | 无同名 Bean | 默认客户端（read=30s） |
 | `longRunningRestClient` | `RestClient` | `clients.long-running.enabled=true` | 长时间运行客户端（read=600s） |
+| `streamingWebClient` | `WebClient` | `streaming.enabled=true` + `WebClient` 类存在 | 流式下载专用 WebClient（响应超时 600s） |
 | `loggingInterceptor` | `LoggingInterceptor` | `logging.enabled=true` | 日志拦截器 |
 | `downloadClient` | `DownloadClient` | 存在 `longRunningRestClient` | 支持进度监控的下载客户端 |
 | `defaultProgressListener` | `ProgressListener` | 无同名 Bean | 组合日志和指标监听器 |
@@ -342,7 +394,9 @@ patra-spring-boot-starter-rest-client
 ├── spring-boot-autoconfigure  # 自动配置支持
 ├── spring-web                 # RestClient
 ├── spring-retry (optional)    # 重试支持
-└── micrometer-core (optional) # 下载指标支持
+├── micrometer-core (optional) # 下载指标支持
+├── spring-webflux (optional)  # 流式下载 WebClient 支持
+└── reactor-netty-http (optional) # WebClient 底层 HTTP 客户端
 ```
 
 ## 与可观测性集成
