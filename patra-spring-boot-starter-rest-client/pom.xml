@@ -53,6 +53,20 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- WebFlux: optional WebClient support for streaming downloads -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webflux</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Reactor Netty: WebClient underlying HTTP client -->
+        <dependency>
+            <groupId>io.projectreactor.netty</groupId>
+            <artifactId>reactor-netty-http</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Configuration metadata (IDE hints during development; not used at runtime) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
