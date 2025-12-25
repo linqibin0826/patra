@@ -19,6 +19,7 @@ import com.patra.catalog.infra.adapter.persistence.entity.VenueIndexingHistoryEn
 import com.patra.catalog.infra.adapter.persistence.entity.VenueMeshEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.VenuePublicationStatsEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.VenueRelationEntity;
+import com.patra.common.enums.ProvenanceCode;
 import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -57,9 +58,10 @@ public abstract class VenueJpaMapper {
   /// @return JPA 实体
   @Mapping(target = "id", source = "id", qualifiedByName = "venueIdToLong")
   @Mapping(target = "venueType", source = "venueType", qualifiedByName = "venueTypeToString")
-  @Mapping(target = "provenanceCode", source = "provenance.code")
-  @Mapping(target = "sourceCreatedDate", source = "provenance.sourceCreatedDate")
-  @Mapping(target = "sourceUpdatedDate", source = "provenance.sourceUpdatedDate")
+  @Mapping(
+      target = "provenanceCode",
+      source = "provenance.code",
+      qualifiedByName = "provenanceCodeToString")
   @Mapping(target = "lastSyncedAt", source = "provenance.lastSyncedAt")
   // 快速访问字段需要后处理设置
   @Mapping(target = "nlmId", ignore = true)
@@ -117,10 +119,7 @@ public abstract class VenueJpaMapper {
     if (entity.getProvenanceCode() != null) {
       ProvenanceInfo provenance =
           ProvenanceInfo.of(
-              entity.getProvenanceCode(),
-              entity.getSourceCreatedDate(),
-              entity.getSourceUpdatedDate(),
-              entity.getLastSyncedAt());
+              ProvenanceCode.parse(entity.getProvenanceCode()), entity.getLastSyncedAt());
       aggregate.withProvenance(provenance);
     }
 
@@ -211,9 +210,7 @@ public abstract class VenueJpaMapper {
 
     // 更新来源信息
     if (aggregate.getProvenance() != null) {
-      entity.setProvenanceCode(aggregate.getProvenance().code());
-      entity.setSourceCreatedDate(aggregate.getProvenance().sourceCreatedDate());
-      entity.setSourceUpdatedDate(aggregate.getProvenance().sourceUpdatedDate());
+      entity.setProvenanceCode(aggregate.getProvenance().codeAsString());
       entity.setLastSyncedAt(aggregate.getProvenance().lastSyncedAt());
     }
 
@@ -271,6 +268,12 @@ public abstract class VenueJpaMapper {
   /// 将 String 转换为 VenueIdentifierType 枚举。
   VenueIdentifierType stringToIdentifierType(String type) {
     return type != null ? VenueIdentifierType.fromCode(type) : null;
+  }
+
+  /// 将 ProvenanceCode 枚举转换为 String。
+  @Named("provenanceCodeToString")
+  String provenanceCodeToString(ProvenanceCode code) {
+    return code != null ? code.getCode() : null;
   }
 
   // ========== 年度发文统计转换 ==========

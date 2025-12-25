@@ -26,7 +26,8 @@ public enum ProvenanceCode {
   THE_LENS("THE_LENS", "The Lens"),
   LITCOVID("LITCOVID", "LitCovid"),
   CORD19("CORD19", "CORD-19"),
-  GIM("GIM", "WHO GIM");
+  GIM("GIM", "WHO GIM"),
+  MANUAL("MANUAL", "手动录入");
 
   /// 用于持久化和交换的大写代码(例如 `PUBMED`)。
   private final String code;
@@ -72,6 +73,7 @@ public enum ProvenanceCode {
       case "litcovid" -> LITCOVID;
       case "cord19", "cord-19" -> CORD19;
       case "gim", "who_gim" -> GIM;
+      case "manual" -> MANUAL;
       default -> throw new IllegalArgumentException("未知的数据源: " + s);
     };
   }

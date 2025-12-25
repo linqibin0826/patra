@@ -21,7 +21,6 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -632,13 +631,9 @@ class VenueRepositoryAdapterIT {
     void provenanceInfo_shouldPersistAndReconstruct() {
       // Given
       VenueAggregate venue = createVenueAggregateWithIssnL("S1", "Journal A", "1111-1111");
-      LocalDate now = LocalDate.now();
       venue.withProvenance(
           ProvenanceInfo.of(
-              ProvenanceCode.OPENALEX.name(),
-              now.minusDays(30), // sourceCreatedDate
-              now.minusDays(1), // sourceUpdatedDate
-              Instant.now() // lastSyncedAt
+              ProvenanceCode.OPENALEX, Instant.now() // lastSyncedAt
               ));
       repository.insertAll(List.of(venue));
 
@@ -648,8 +643,7 @@ class VenueRepositoryAdapterIT {
       // Then
       VenueAggregate found = result.get("1111-1111");
       assertThat(found.getProvenance()).isNotNull();
-      assertThat(found.getProvenance().code()).isEqualTo(ProvenanceCode.OPENALEX.name());
-      assertThat(found.getProvenance().sourceCreatedDate()).isNotNull();
+      assertThat(found.getProvenance().code()).isEqualTo(ProvenanceCode.OPENALEX);
       assertThat(found.getProvenance().lastSyncedAt()).isNotNull();
     }
   }
