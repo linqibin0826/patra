@@ -10,7 +10,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
@@ -105,14 +104,6 @@ public class VenueEntity extends BaseJpaEntity {
   /// 国家代码（ISO 3166-1 alpha-2）。
   @Column(name = "country_code", length = 5)
   private String countryCode;
-
-  /// 来源系统创建日期
-  @Column(name = "source_created_date")
-  private LocalDate sourceCreatedDate;
-
-  /// 来源系统更新日期
-  @Column(name = "source_updated_date")
-  private LocalDate sourceUpdatedDate;
 
   /// 最后同步时间（UTC）
   @Column(name = "last_synced_at")

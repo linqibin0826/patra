@@ -12,8 +12,8 @@ import com.patra.catalog.domain.model.vo.venue.Society;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.common.domain.AggregateRoot;
+import com.patra.common.enums.ProvenanceCode;
 import java.io.Serial;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -124,7 +124,7 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
     aggregate.addIdentifier(VenueIdentifier.forOpenAlex(openalexId));
 
     // 设置来源信息
-    aggregate.provenance = ProvenanceInfo.ofCode(ProvenanceInfo.CODE_OPENALEX);
+    aggregate.provenance = ProvenanceInfo.ofCode(ProvenanceCode.OPENALEX);
 
     return aggregate;
   }
@@ -184,12 +184,9 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
 
   /// 设置 OpenAlex 来源信息。
   ///
-  /// @param sourceCreatedDate 源数据创建日期
-  /// @param sourceUpdatedDate 源数据更新日期
   /// @return 当前对象
-  public VenueAggregate withOpenAlexProvenance(
-      LocalDate sourceCreatedDate, LocalDate sourceUpdatedDate) {
-    this.provenance = ProvenanceInfo.forOpenAlex(sourceCreatedDate, sourceUpdatedDate);
+  public VenueAggregate withOpenAlexProvenance() {
+    this.provenance = ProvenanceInfo.forOpenAlex();
     markDirty();
     return this;
   }

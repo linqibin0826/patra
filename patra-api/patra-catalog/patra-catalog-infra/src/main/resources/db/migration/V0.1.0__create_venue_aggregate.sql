@@ -60,8 +60,6 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
     -- 来源追踪（Provenance）
     -- ========================================
     `provenance_code` VARCHAR(32) NOT NULL COMMENT '首次导入来源代码:OPENALEX/PUBMED/CROSSREF/DOAJ/MANUAL',
-    `source_created_date` DATE NULL DEFAULT NULL COMMENT '来源系统创建日期',
-    `source_updated_date` DATE NULL DEFAULT NULL COMMENT '来源系统更新日期',
     `last_synced_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '最后同步时间(UTC,微秒精度)',
 
     -- ========================================
