@@ -2,17 +2,17 @@ package com.patra.catalog.infra.adapter.parser;
 
 import com.patra.catalog.domain.exception.XmlParseException;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
-import com.patra.catalog.domain.port.parser.SerfileParserPort;
+import com.patra.catalog.domain.port.parser.LsiouParserPort;
 import com.patra.catalog.infra.adapter.parser.strategy.SerialParsingStrategy;
 import com.patra.catalog.infra.adapter.parser.support.AbstractStaxParserAdapter;
 import java.io.InputStream;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
-/// NLM Serfile XML 解析器实现。
+/// NLM LSIOU XML 解析器实现。
 ///
-/// 使用 StAX（Streaming API for XML）实现流式解析 NLM Serfile 文件。
-/// 支持处理约 35,000 条期刊记录的大型 XML 文件。
+/// 使用 StAX（Streaming API for XML）实现流式解析 NLM LSIOU 文件。
+/// 支持处理约 15,000 条期刊记录的大型 XML 文件。
 ///
 /// **设计原则**：
 ///
@@ -33,13 +33,13 @@ import org.springframework.stereotype.Component;
 ///
 /// - 内存占用：<1GB（流式处理，不一次性加载整个 XML）
 /// - 处理速度：约 1000 条/秒
-/// - 文件大小：支持 SerfileBase 2025（约 35,000 条记录）
+/// - 文件大小：支持 LSIOU 2025（约 15,000 条记录）
 ///
 /// @author linqibin
 /// @since 0.1.0
 @Component
-public class SerfileParserAdapter extends AbstractStaxParserAdapter<PubmedSerialData>
-    implements SerfileParserPort {
+public class LsiouParserAdapter extends AbstractStaxParserAdapter<PubmedSerialData>
+    implements LsiouParserPort {
 
   @Override
   public Stream<PubmedSerialData> parse(InputStream inputStream) {
@@ -47,7 +47,7 @@ public class SerfileParserAdapter extends AbstractStaxParserAdapter<PubmedSerial
     return doParse(
         inputStream,
         SerialParsingStrategy.INSTANCE,
-        "开始解析 NLM Serfile XML 输入流",
+        "开始解析 NLM LSIOU XML 输入流",
         XmlParseException::new);
   }
 }

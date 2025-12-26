@@ -4,7 +4,7 @@ import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import java.io.InputStream;
 import java.util.stream.Stream;
 
-/// NLM Serfile XML 解析端口（领域层定义，基础设施层实现）。
+/// NLM LSIOU XML 解析端口（领域层定义，基础设施层实现）。
 ///
 /// **设计原则**：
 ///
@@ -15,13 +15,13 @@ import java.util.stream.Stream;
 ///
 /// **主要使用场景**：
 ///
-/// NLM SerfileBase 数据导入，解析约 35,000 条期刊记录
+/// NLM LSIOU 数据导入，解析约 15,000 条期刊记录
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface SerfileParserPort {
+public interface LsiouParserPort {
 
-  /// 解析 Serfile XML 输入流，返回 PubMed 期刊数据流。
+  /// 解析 LSIOU XML 输入流，返回 PubMed 期刊数据流。
   ///
   /// 使用 StAX 流式解析，避免将整个文件加载到内存。
   /// 调用方负责关闭返回的 Stream（推荐使用 try-with-resources）。

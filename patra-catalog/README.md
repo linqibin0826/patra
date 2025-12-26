@@ -105,6 +105,26 @@ patra:
 - `desc{year}.xml`（如 `desc2025.xml` → 版本 `2025`）
 - `qual{year}.xml`（如 `qual2025.xml` → 版本 `2025`）
 
+### LSIOU 数据源配置
+
+```yaml
+patra:
+  catalog:
+    lsiou:
+      url: ftp://ftp.nlm.nih.gov/online/journals/lsi2025.xml
+```
+
+| 配置项 | 说明 | 示例 |
+|--------|------|------|
+| `url` | NLM LSIOU XML 文件 URL（支持 FTP/HTTP/HTTPS） | `lsi2025.xml` |
+
+**版本号推断规则**：从文件名自动提取 4 位年份，支持格式：
+- `lsi{year}.xml`（如 `lsi2025.xml` → 版本 `2025`）
+
+**LSIOU vs SerfileBase**：
+- LSIOU（List of Serials Indexed for Online Users）：约 15,000 条 MEDLINE 索引期刊
+- SerfileBase：约 35,000 条 NLM Catalog 完整记录（包含未被 MEDLINE 索引的期刊）
+
 ## 🎯 核心类说明
 
 ### Domain 层
@@ -161,7 +181,7 @@ patra:
   - `OaStatus`：开放获取状态
   - `VenueLanguages`：期刊语言信息（主要语言 + 摘要语言列表，来源 Serfile）
 
-- **值对象（venue/pubmed 子包）**：PubMed Serfile 解析结果的完整领域模型（解析器直接产出）
+- **值对象（venue/pubmed 子包）**：NLM LSIOU 解析结果的完整领域模型（解析器直接产出）
   - `PubmedSerialData`：PubMed 期刊解析数据（完整版，44 字段，解析器直接产出 Domain 模型）
   - `PubmedLanguage`：PubMed 期刊语言信息（主要/次要语言）
   - `PubmedMeshHeading`：PubMed 期刊 MeSH 主题词（含限定符、UI、类型）
@@ -273,7 +293,7 @@ patra:
    - **Repository 增强**：`VenueRepositoryAdapter` 新增 `syncVenueQuickAccessFields()` 同步详情快照字段
    - **字段更新策略**：快速访问字段使用 `FieldStrategy.ALWAYS` 确保 null 值正确更新
 
-2. v0.9.4 (2025-12-11)：PubMed Serfile 解析架构优化 - 删除 DTO 层
+2. v0.9.4 (2025-12-11)：NLM LSIOU 解析架构优化 - 删除 DTO 层
    - **架构决策**：基于务实六边形架构原则（Victor Rentea），删除冗余 DTO 层，解析器直接产出 Domain 模型
    - **删除文件**：`dto/serfile/` 目录（10 个 DTO 类）+ `PubmedSerialConverter.java`
    - **代码精简**：净删除约 500 行代码，减少 53% 的类数量

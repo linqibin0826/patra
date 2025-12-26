@@ -10,7 +10,7 @@ import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedMeshHeading;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedRecordId;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedTitleRelation;
-import com.patra.catalog.infra.adapter.parser.SerfileXmlElements;
+import com.patra.catalog.infra.adapter.parser.LsiouXmlElements;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingContext;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingHelper;
 import java.time.LocalDate;
@@ -56,7 +56,7 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
 
   @Override
   public String rootElementName() {
-    return SerfileXmlElements.Record.SERIAL;
+    return LsiouXmlElements.Record.SERIAL;
   }
 
   /// 解析单个 Serial 元素。
@@ -69,13 +69,13 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
   public PubmedSerialData parseRecord(XMLStreamReader reader, XmlParsingContext context)
       throws XMLStreamException {
     // === 1. 读取 Serial 元素属性（必须在进入子元素前读取） ===
-    String status = reader.getAttributeValue(null, SerfileXmlElements.Attribute.STATUS);
-    String pmc = reader.getAttributeValue(null, SerfileXmlElements.Attribute.PMC);
+    String status = reader.getAttributeValue(null, LsiouXmlElements.Attribute.STATUS);
+    String pmc = reader.getAttributeValue(null, LsiouXmlElements.Attribute.PMC);
     Boolean medPrintYN =
         XmlParsingHelper.parseYesNoAttributeNullable(
-            reader, SerfileXmlElements.Attribute.MED_PRINT_YN);
+            reader, LsiouXmlElements.Attribute.MED_PRINT_YN);
     String dataCreationMethod =
-        reader.getAttributeValue(null, SerfileXmlElements.Attribute.DATA_CREATION_METHOD);
+        reader.getAttributeValue(null, LsiouXmlElements.Attribute.DATA_CREATION_METHOD);
 
     // === 2. 基本标识符 ===
     String nlmUniqueId = null;
@@ -138,33 +138,32 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
         String localName = reader.getLocalName();
         switch (localName) {
           // --- 标识符 ---
-          case SerfileXmlElements.Identifier.NLM_UNIQUE_ID ->
+          case LsiouXmlElements.Identifier.NLM_UNIQUE_ID ->
               nlmUniqueId = reader.getElementText().trim();
-          case SerfileXmlElements.Identifier.NLM_WORK_ID ->
+          case LsiouXmlElements.Identifier.NLM_WORK_ID ->
               nlmWorkId = reader.getElementText().trim();
-          case SerfileXmlElements.Identifier.CODEN -> coden = reader.getElementText().trim();
+          case LsiouXmlElements.Identifier.CODEN -> coden = reader.getElementText().trim();
 
           // --- 名称 ---
-          case SerfileXmlElements.Name.TITLE -> title = reader.getElementText().trim();
-          case SerfileXmlElements.Name.MEDLINE_TA -> medlineTA = reader.getElementText().trim();
-          case SerfileXmlElements.Name.SORT_SERIAL_NAME ->
+          case LsiouXmlElements.Name.TITLE -> title = reader.getElementText().trim();
+          case LsiouXmlElements.Name.MEDLINE_TA -> medlineTA = reader.getElementText().trim();
+          case LsiouXmlElements.Name.SORT_SERIAL_NAME ->
               sortSerialName = reader.getElementText().trim();
 
           // --- ISSN ---
-          case SerfileXmlElements.Issn.ISSN_LINKING -> issnL = reader.getElementText().trim();
-          case SerfileXmlElements.Issn.ISSN -> {
-            String issnType =
-                reader.getAttributeValue(null, SerfileXmlElements.Attribute.ISSN_TYPE);
+          case LsiouXmlElements.Issn.ISSN_LINKING -> issnL = reader.getElementText().trim();
+          case LsiouXmlElements.Issn.ISSN -> {
+            String issnType = reader.getAttributeValue(null, LsiouXmlElements.Attribute.ISSN_TYPE);
             String issnValue = reader.getElementText().trim();
-            if (SerfileXmlElements.Value.ISSN_TYPE_PRINT.equals(issnType)) {
+            if (LsiouXmlElements.Value.ISSN_TYPE_PRINT.equals(issnType)) {
               issnPrint = issnValue;
-            } else if (SerfileXmlElements.Value.ISSN_TYPE_ELECTRONIC.equals(issnType)) {
+            } else if (LsiouXmlElements.Value.ISSN_TYPE_ELECTRONIC.equals(issnType)) {
               issnElectronic = issnValue;
             }
           }
 
           // --- 出版信息 ---
-          case SerfileXmlElements.Publication.PUBLICATION_INFO -> {
+          case LsiouXmlElements.Publication.PUBLICATION_INFO -> {
             var pubInfo = parsePublicationInfo(reader);
             country = pubInfo.country();
             frequency = pubInfo.frequency();
@@ -177,9 +176,8 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
           }
 
           // --- 语言 ---
-          case SerfileXmlElements.Language.LANGUAGE -> {
-            String langType =
-                reader.getAttributeValue(null, SerfileXmlElements.Attribute.LANG_TYPE);
+          case LsiouXmlElements.Language.LANGUAGE -> {
+            String langType = reader.getAttributeValue(null, LsiouXmlElements.Attribute.LANG_TYPE);
             String langText = reader.getElementText().trim();
             if (!langText.isEmpty()) {
               boolean isPrimary = "Primary".equalsIgnoreCase(langType);
@@ -188,39 +186,39 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
           }
 
           // --- 索引相关 ---
-          case SerfileXmlElements.Indexing.CURRENTLY_INDEXED_YN ->
+          case LsiouXmlElements.Indexing.CURRENTLY_INDEXED_YN ->
               currentlyIndexedYN = parseYesNo(reader.getElementText());
-          case SerfileXmlElements.Indexing.CURRENTLY_INDEXED_FOR_SUBSET -> {
+          case LsiouXmlElements.Indexing.CURRENTLY_INDEXED_FOR_SUBSET -> {
             PubmedCurrentIndexing indexing = parseCurrentlyIndexedForSubset(reader);
             if (indexing != null) {
               currentIndexings.add(indexing);
             }
           }
-          case SerfileXmlElements.Indexing.INDEXING_SUBSET ->
+          case LsiouXmlElements.Indexing.INDEXING_SUBSET ->
               indexingSubset = reader.getElementText().trim();
-          case SerfileXmlElements.Indexing.INDEXING_START_DATE ->
+          case LsiouXmlElements.Indexing.INDEXING_START_DATE ->
               indexingStartDate = reader.getElementText().trim();
-          case SerfileXmlElements.Indexing.INDEX_ONLINE_YN ->
+          case LsiouXmlElements.Indexing.INDEX_ONLINE_YN ->
               indexOnlineYN = parseYesNo(reader.getElementText());
-          case SerfileXmlElements.Indexing.INDEXING_SELECTED_URL ->
+          case LsiouXmlElements.Indexing.INDEXING_SELECTED_URL ->
               indexingSelectedURL = reader.getElementText().trim();
-          case SerfileXmlElements.Indexing.REPORTED_MEDLINE_YN ->
+          case LsiouXmlElements.Indexing.REPORTED_MEDLINE_YN ->
               reportedMedlineYN = parseYesNo(reader.getElementText());
-          case SerfileXmlElements.Indexing.PROCESSING_CODE ->
+          case LsiouXmlElements.Indexing.PROCESSING_CODE ->
               processingCode = reader.getElementText().trim();
-          case SerfileXmlElements.Indexing.INDEXING_HISTORY_LIST ->
+          case LsiouXmlElements.Indexing.INDEXING_HISTORY_LIST ->
               indexingHistories = parseIndexingHistoryList(reader);
 
           // --- 分类和交叉引用 ---
-          case SerfileXmlElements.MeSH.BROAD_JOURNAL_HEADING_LIST ->
+          case LsiouXmlElements.MeSH.BROAD_JOURNAL_HEADING_LIST ->
               broadJournalHeadings = parseBroadJournalHeadingList(reader);
-          case SerfileXmlElements.Relation.CROSS_REFERENCE_LIST ->
+          case LsiouXmlElements.Relation.CROSS_REFERENCE_LIST ->
               crossReferences = parseCrossReferenceList(reader);
-          case SerfileXmlElements.MeSH.MESH_HEADING_LIST ->
+          case LsiouXmlElements.MeSH.MESH_HEADING_LIST ->
               meshHeadings = parseMeshHeadingList(reader);
 
           // --- 期刊关联 ---
-          case SerfileXmlElements.Relation.TITLE_RELATED -> {
+          case LsiouXmlElements.Relation.TITLE_RELATED -> {
             PubmedTitleRelation relation = parseTitleRelated(reader);
             if (relation != null) {
               titleRelations.add(relation);
@@ -228,7 +226,7 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
           }
 
           // --- 备注 ---
-          case SerfileXmlElements.Relation.GENERAL_NOTE -> {
+          case LsiouXmlElements.Relation.GENERAL_NOTE -> {
             PubmedGeneralNote note = parseGeneralNote(reader);
             if (note != null) {
               generalNotes.add(note);
@@ -236,43 +234,42 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
           }
 
           // --- 标记字段 ---
-          case SerfileXmlElements.Relation.TITLE_CONTINUATION_YN ->
+          case LsiouXmlElements.Relation.TITLE_CONTINUATION_YN ->
               titleContinuationYN = parseYesNo(reader.getElementText());
-          case SerfileXmlElements.Relation.MINOR_TITLE_CHANGE_YN ->
+          case LsiouXmlElements.Relation.MINOR_TITLE_CHANGE_YN ->
               minorTitleChangeYN = parseYesNo(reader.getElementText());
 
           // --- 时间戳 ---
-          case SerfileXmlElements.Date.ILS_CREATED_TIMESTAMP ->
+          case LsiouXmlElements.Date.ILS_CREATED_TIMESTAMP ->
               ilsCreatedTimestamp =
                   XmlParsingHelper.parseTimestamp(
-                      reader, SerfileXmlElements.Date.ILS_CREATED_TIMESTAMP);
-          case SerfileXmlElements.Date.ILS_UPDATED_TIMESTAMP ->
+                      reader, LsiouXmlElements.Date.ILS_CREATED_TIMESTAMP);
+          case LsiouXmlElements.Date.ILS_UPDATED_TIMESTAMP ->
               ilsUpdatedTimestamp =
                   XmlParsingHelper.parseTimestamp(
-                      reader, SerfileXmlElements.Date.ILS_UPDATED_TIMESTAMP);
-          case SerfileXmlElements.Date.DELETED_TIMESTAMP ->
+                      reader, LsiouXmlElements.Date.ILS_UPDATED_TIMESTAMP);
+          case LsiouXmlElements.Date.DELETED_TIMESTAMP ->
               deletedTimestamp =
-                  XmlParsingHelper.parseTimestamp(
-                      reader, SerfileXmlElements.Date.DELETED_TIMESTAMP);
-          case SerfileXmlElements.Date.MEDLINE_DATA_UPDATED_TIMESTAMP ->
+                  XmlParsingHelper.parseTimestamp(reader, LsiouXmlElements.Date.DELETED_TIMESTAMP);
+          case LsiouXmlElements.Date.MEDLINE_DATA_UPDATED_TIMESTAMP ->
               medlineDataUpdatedTimestamp =
                   XmlParsingHelper.parseTimestamp(
-                      reader, SerfileXmlElements.Date.MEDLINE_DATA_UPDATED_TIMESTAMP);
-          case SerfileXmlElements.Date.SEF_CREATED_TIMESTAMP ->
+                      reader, LsiouXmlElements.Date.MEDLINE_DATA_UPDATED_TIMESTAMP);
+          case LsiouXmlElements.Date.SEF_CREATED_TIMESTAMP ->
               sefCreatedTimestamp =
                   XmlParsingHelper.parseTimestamp(
-                      reader, SerfileXmlElements.Date.SEF_CREATED_TIMESTAMP);
-          case SerfileXmlElements.Date.SEF_UPDATED_TIMESTAMP ->
+                      reader, LsiouXmlElements.Date.SEF_CREATED_TIMESTAMP);
+          case LsiouXmlElements.Date.SEF_UPDATED_TIMESTAMP ->
               sefUpdatedTimestamp =
                   XmlParsingHelper.parseTimestamp(
-                      reader, SerfileXmlElements.Date.SEF_UPDATED_TIMESTAMP);
+                      reader, LsiouXmlElements.Date.SEF_UPDATED_TIMESTAMP);
 
           default -> {
             // 忽略未处理的元素
           }
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
-          && SerfileXmlElements.Record.SERIAL.equals(reader.getLocalName())) {
+          && LsiouXmlElements.Record.SERIAL.equals(reader.getLocalName())) {
         break;
       }
     }
@@ -361,24 +358,24 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case SerfileXmlElements.Publication.COUNTRY -> country = reader.getElementText().trim();
-          case SerfileXmlElements.Publication.PLACE -> places.add(reader.getElementText().trim());
-          case SerfileXmlElements.Publication.PUBLISHER ->
+          case LsiouXmlElements.Publication.COUNTRY -> country = reader.getElementText().trim();
+          case LsiouXmlElements.Publication.PLACE -> places.add(reader.getElementText().trim());
+          case LsiouXmlElements.Publication.PUBLISHER ->
               publishers.add(reader.getElementText().trim());
-          case SerfileXmlElements.Publication.FREQUENCY -> {
+          case LsiouXmlElements.Publication.FREQUENCY -> {
             frequencyType =
-                reader.getAttributeValue(null, SerfileXmlElements.Attribute.FREQUENCY_TYPE);
+                reader.getAttributeValue(null, LsiouXmlElements.Attribute.FREQUENCY_TYPE);
             frequency = reader.getElementText().trim();
           }
-          case SerfileXmlElements.Publication.PUBLICATION_FIRST_YEAR ->
+          case LsiouXmlElements.Publication.PUBLICATION_FIRST_YEAR ->
               firstYear = parseIntSafe(reader.getElementText());
-          case SerfileXmlElements.Publication.PUBLICATION_END_YEAR ->
+          case LsiouXmlElements.Publication.PUBLICATION_END_YEAR ->
               endYear = parseIntSafe(reader.getElementText());
-          case SerfileXmlElements.Publication.DATES_OF_SERIAL_PUBLICATION ->
+          case LsiouXmlElements.Publication.DATES_OF_SERIAL_PUBLICATION ->
               datesOfSerialPublication = reader.getElementText().trim();
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
-          && SerfileXmlElements.Publication.PUBLICATION_INFO.equals(reader.getLocalName())) {
+          && LsiouXmlElements.Publication.PUBLICATION_INFO.equals(reader.getLocalName())) {
         break;
       }
     }
@@ -411,9 +408,9 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
   private PubmedCurrentIndexing parseCurrentlyIndexedForSubset(XMLStreamReader reader)
       throws XMLStreamException {
     String currentSubset =
-        reader.getAttributeValue(null, SerfileXmlElements.Attribute.CURRENT_SUBSET);
+        reader.getAttributeValue(null, LsiouXmlElements.Attribute.CURRENT_SUBSET);
     String currentIndexingTreatment =
-        reader.getAttributeValue(null, SerfileXmlElements.Attribute.CURRENT_INDEXING_TREATMENT);
+        reader.getAttributeValue(null, LsiouXmlElements.Attribute.CURRENT_INDEXING_TREATMENT);
     String content = reader.getElementText().trim();
 
     return PubmedCurrentIndexing.of(currentSubset, currentIndexingTreatment, content);
@@ -429,13 +426,13 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
     while (reader.hasNext()) {
       int event = reader.next();
       if (event == XMLStreamConstants.START_ELEMENT
-          && SerfileXmlElements.MeSH.BROAD_JOURNAL_HEADING.equals(reader.getLocalName())) {
+          && LsiouXmlElements.MeSH.BROAD_JOURNAL_HEADING.equals(reader.getLocalName())) {
         String heading = reader.getElementText().trim();
         if (!heading.isEmpty()) {
           headings.add(PubmedBroadHeading.of(heading));
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
-          && SerfileXmlElements.MeSH.BROAD_JOURNAL_HEADING_LIST.equals(reader.getLocalName())) {
+          && LsiouXmlElements.MeSH.BROAD_JOURNAL_HEADING_LIST.equals(reader.getLocalName())) {
         break;
       }
     }
@@ -453,13 +450,13 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
     while (reader.hasNext()) {
       int event = reader.next();
       if (event == XMLStreamConstants.START_ELEMENT
-          && SerfileXmlElements.Relation.CROSS_REFERENCE.equals(reader.getLocalName())) {
+          && LsiouXmlElements.Relation.CROSS_REFERENCE.equals(reader.getLocalName())) {
         PubmedCrossReference ref = parseCrossReference(reader);
         if (ref != null) {
           references.add(ref);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
-          && SerfileXmlElements.Relation.CROSS_REFERENCE_LIST.equals(reader.getLocalName())) {
+          && LsiouXmlElements.Relation.CROSS_REFERENCE_LIST.equals(reader.getLocalName())) {
         break;
       }
     }
@@ -470,16 +467,16 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
   /// 解析单个 CrossReference 元素。
   private PubmedCrossReference parseCrossReference(XMLStreamReader reader)
       throws XMLStreamException {
-    String xrType = reader.getAttributeValue(null, SerfileXmlElements.Attribute.XR_TYPE);
+    String xrType = reader.getAttributeValue(null, LsiouXmlElements.Attribute.XR_TYPE);
     String xrTitle = null;
 
     while (reader.hasNext()) {
       int event = reader.next();
       if (event == XMLStreamConstants.START_ELEMENT
-          && SerfileXmlElements.Name.XR_TITLE.equals(reader.getLocalName())) {
+          && LsiouXmlElements.Name.XR_TITLE.equals(reader.getLocalName())) {
         xrTitle = reader.getElementText().trim();
       } else if (event == XMLStreamConstants.END_ELEMENT
-          && SerfileXmlElements.Relation.CROSS_REFERENCE.equals(reader.getLocalName())) {
+          && LsiouXmlElements.Relation.CROSS_REFERENCE.equals(reader.getLocalName())) {
         break;
       }
     }
@@ -495,7 +492,7 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
 
   /// 解析 GeneralNote 元素。
   private PubmedGeneralNote parseGeneralNote(XMLStreamReader reader) throws XMLStreamException {
-    String noteType = reader.getAttributeValue(null, SerfileXmlElements.Attribute.NOTE_TYPE);
+    String noteType = reader.getAttributeValue(null, LsiouXmlElements.Attribute.NOTE_TYPE);
     String content = reader.getElementText().trim();
 
     if (content.isEmpty()) {
@@ -515,13 +512,13 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
     while (reader.hasNext()) {
       int event = reader.next();
       if (event == XMLStreamConstants.START_ELEMENT
-          && SerfileXmlElements.MeSH.MESH_HEADING.equals(reader.getLocalName())) {
+          && LsiouXmlElements.MeSH.MESH_HEADING.equals(reader.getLocalName())) {
         PubmedMeshHeading heading = parseMeshHeading(reader);
         if (heading != null) {
           headings.add(heading);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
-          && SerfileXmlElements.MeSH.MESH_HEADING_LIST.equals(reader.getLocalName())) {
+          && LsiouXmlElements.MeSH.MESH_HEADING_LIST.equals(reader.getLocalName())) {
         break;
       }
     }
@@ -543,23 +540,23 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case SerfileXmlElements.MeSH.DESCRIPTOR_NAME -> {
+          case LsiouXmlElements.MeSH.DESCRIPTOR_NAME -> {
             descriptorMajorTopic =
                 XmlParsingHelper.parseYesNoAttribute(
-                    reader, SerfileXmlElements.Attribute.MAJOR_TOPIC_YN, false);
-            descriptorUi = reader.getAttributeValue(null, SerfileXmlElements.Attribute.UI);
-            descriptorType = reader.getAttributeValue(null, SerfileXmlElements.Attribute.TYPE);
+                    reader, LsiouXmlElements.Attribute.MAJOR_TOPIC_YN, false);
+            descriptorUi = reader.getAttributeValue(null, LsiouXmlElements.Attribute.UI);
+            descriptorType = reader.getAttributeValue(null, LsiouXmlElements.Attribute.TYPE);
             descriptorName = reader.getElementText().trim();
           }
-          case SerfileXmlElements.MeSH.QUALIFIER_NAME -> {
+          case LsiouXmlElements.MeSH.QUALIFIER_NAME -> {
             qualifierMajorTopic =
                 XmlParsingHelper.parseYesNoAttribute(
-                    reader, SerfileXmlElements.Attribute.MAJOR_TOPIC_YN, false);
+                    reader, LsiouXmlElements.Attribute.MAJOR_TOPIC_YN, false);
             qualifierName = reader.getElementText().trim();
           }
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
-          && SerfileXmlElements.MeSH.MESH_HEADING.equals(reader.getLocalName())) {
+          && LsiouXmlElements.MeSH.MESH_HEADING.equals(reader.getLocalName())) {
         break;
       }
     }
@@ -581,7 +578,7 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
 
   /// 解析单个 TitleRelated 元素。
   private PubmedTitleRelation parseTitleRelated(XMLStreamReader reader) throws XMLStreamException {
-    String titleType = reader.getAttributeValue(null, SerfileXmlElements.Attribute.TITLE_TYPE);
+    String titleType = reader.getAttributeValue(null, LsiouXmlElements.Attribute.TITLE_TYPE);
     String relatedTitle = null;
     String relatedIssn = null;
     List<PubmedRecordId> recordIds = new ArrayList<>();
@@ -591,10 +588,10 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case SerfileXmlElements.Name.TITLE -> relatedTitle = reader.getElementText().trim();
-          case SerfileXmlElements.Issn.ISSN -> relatedIssn = reader.getElementText().trim();
-          case SerfileXmlElements.Identifier.RECORD_ID -> {
-            String source = reader.getAttributeValue(null, SerfileXmlElements.Attribute.SOURCE);
+          case LsiouXmlElements.Name.TITLE -> relatedTitle = reader.getElementText().trim();
+          case LsiouXmlElements.Issn.ISSN -> relatedIssn = reader.getElementText().trim();
+          case LsiouXmlElements.Identifier.RECORD_ID -> {
+            String source = reader.getAttributeValue(null, LsiouXmlElements.Attribute.SOURCE);
             String id = reader.getElementText().trim();
             if (!id.isEmpty()) {
               recordIds.add(PubmedRecordId.of(id, source));
@@ -602,7 +599,7 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
           }
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
-          && SerfileXmlElements.Relation.TITLE_RELATED.equals(reader.getLocalName())) {
+          && LsiouXmlElements.Relation.TITLE_RELATED.equals(reader.getLocalName())) {
         break;
       }
     }
@@ -624,13 +621,13 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
     while (reader.hasNext()) {
       int event = reader.next();
       if (event == XMLStreamConstants.START_ELEMENT
-          && SerfileXmlElements.Indexing.INDEXING_HISTORY.equals(reader.getLocalName())) {
+          && LsiouXmlElements.Indexing.INDEXING_HISTORY.equals(reader.getLocalName())) {
         PubmedIndexingHistory history = parseIndexingHistory(reader);
         if (history != null) {
           histories.add(history);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
-          && SerfileXmlElements.Indexing.INDEXING_HISTORY_LIST.equals(reader.getLocalName())) {
+          && LsiouXmlElements.Indexing.INDEXING_HISTORY_LIST.equals(reader.getLocalName())) {
         break;
       }
     }
@@ -643,11 +640,11 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
       throws XMLStreamException {
     // 从属性获取信息
     String citationSubset =
-        reader.getAttributeValue(null, SerfileXmlElements.Attribute.CITATION_SUBSET);
+        reader.getAttributeValue(null, LsiouXmlElements.Attribute.CITATION_SUBSET);
     String indexingTreatment =
-        reader.getAttributeValue(null, SerfileXmlElements.Attribute.INDEXING_TREATMENT);
+        reader.getAttributeValue(null, LsiouXmlElements.Attribute.INDEXING_TREATMENT);
     String indexingStatus =
-        reader.getAttributeValue(null, SerfileXmlElements.Attribute.INDEXING_STATUS);
+        reader.getAttributeValue(null, LsiouXmlElements.Attribute.INDEXING_STATUS);
 
     LocalDate dateOfAction = null;
     String coverage = null;
@@ -658,15 +655,15 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case SerfileXmlElements.Indexing.DATE_OF_ACTION ->
+          case LsiouXmlElements.Indexing.DATE_OF_ACTION ->
               dateOfAction =
-                  XmlParsingHelper.parseDate(reader, SerfileXmlElements.Indexing.DATE_OF_ACTION);
-          case SerfileXmlElements.Indexing.COVERAGE -> coverage = reader.getElementText().trim();
-          case SerfileXmlElements.Indexing.COVERAGE_NOTE ->
+                  XmlParsingHelper.parseDate(reader, LsiouXmlElements.Indexing.DATE_OF_ACTION);
+          case LsiouXmlElements.Indexing.COVERAGE -> coverage = reader.getElementText().trim();
+          case LsiouXmlElements.Indexing.COVERAGE_NOTE ->
               coverageNote = reader.getElementText().trim();
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
-          && SerfileXmlElements.Indexing.INDEXING_HISTORY.equals(reader.getLocalName())) {
+          && LsiouXmlElements.Indexing.INDEXING_HISTORY.equals(reader.getLocalName())) {
         break;
       }
     }

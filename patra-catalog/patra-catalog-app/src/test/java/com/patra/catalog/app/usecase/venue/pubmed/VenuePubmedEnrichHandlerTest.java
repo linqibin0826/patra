@@ -18,7 +18,7 @@ import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
-import com.patra.catalog.domain.port.parser.SerfileParserPort;
+import com.patra.catalog.domain.port.parser.LsiouParserPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
@@ -67,12 +67,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Timeout(value = 2, unit = TimeUnit.SECONDS)
 class VenuePubmedEnrichHandlerTest {
 
-  private static final String TEST_URL =
-      "https://ftp.nlm.nih.gov/projects/serfilelease/serfilebase.2025.xml";
+  private static final String TEST_URL = "ftp://ftp.nlm.nih.gov/online/journals/lsi2025.xml";
   private static final String TEST_VERSION = "2025";
 
   @Mock private StreamingDownloadPort streamingDownloadPort;
-  @Mock private SerfileParserPort parserPort;
+  @Mock private LsiouParserPort parserPort;
   @Mock private VenueRepository venueRepository;
   @Mock private TransactionTemplate transactionTemplate;
   @Mock private TransactionStatus transactionStatus;
@@ -142,7 +141,7 @@ class VenuePubmedEnrichHandlerTest {
       assertThat(result).isNotNull();
       assertThat(result.totalParsed()).isEqualTo(2);
       assertThat(result.sourceUrl()).isEqualTo(TEST_URL);
-      assertThat(result.serfileVersion()).isEqualTo(TEST_VERSION);
+      assertThat(result.lsiouVersion()).isEqualTo(TEST_VERSION);
     }
 
     @Test

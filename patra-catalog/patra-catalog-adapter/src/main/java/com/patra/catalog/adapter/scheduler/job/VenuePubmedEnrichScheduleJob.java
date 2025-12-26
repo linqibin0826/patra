@@ -1,8 +1,8 @@
 package com.patra.catalog.adapter.scheduler.job;
 
-import com.patra.catalog.adapter.scheduler.config.SerfileDataSourceProperties;
-import com.patra.catalog.adapter.scheduler.exception.SerfileConfigurationException;
-import com.patra.catalog.adapter.scheduler.util.SerfileFileNameParser;
+import com.patra.catalog.adapter.scheduler.config.LsiouDataSourceProperties;
+import com.patra.catalog.adapter.scheduler.exception.LsiouConfigurationException;
+import com.patra.catalog.adapter.scheduler.util.LsiouFileNameParser;
 import com.patra.catalog.app.usecase.venue.pubmed.command.VenuePubmedEnrichCommand;
 import com.patra.catalog.app.usecase.venue.pubmed.dto.VenuePubmedEnrichResult;
 import com.patra.common.cqrs.CommandBus;
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 
 /// PubMed Venue 数据富化定时任务。
 ///
-/// 通过 XXL-Job 控制台手动触发，执行 NLM SerfileBase 期刊数据的富化。
+/// 通过 XXL-Job 控制台手动触发，执行 NLM LSIOU 期刊数据的富化。
 /// URL 从配置文件读取，版本号从文件名自动推断。
 ///
 /// **JobHandler 名称**: `venuePubmedEnrichJob`
@@ -24,8 +24,8 @@ import org.springframework.stereotype.Component;
 /// ```yaml
 /// patra:
 ///   catalog:
-///     serfile:
-///       serfile-url: https://ftp.ncbi.nlm.nih.gov/pubmed/Serfile/serfilebase2025.xml
+///     lsiou:
+///       url: ftp://ftp.nlm.nih.gov/online/journals/lsi2025.xml
 /// ```
 ///
 /// **富化策略**：
@@ -50,7 +50,7 @@ import org.springframework.stereotype.Component;
 public class VenuePubmedEnrichScheduleJob {
 
   private final CommandBus commandBus;
-  private final SerfileDataSourceProperties serfileDataSourceProperties;
+  private final LsiouDataSourceProperties lsiouDataSourceProperties;
 
   /// 执行 PubMed Venue 数据富化任务。
   ///
@@ -62,15 +62,15 @@ public class VenuePubmedEnrichScheduleJob {
     log.info("PubMed Venue 富化任务已触发，jobId [{}]", XxlJobHelper.getJobId());
 
     try {
-      String url = serfileDataSourceProperties.getSerfileUrl();
-      String serfileVersion = SerfileFileNameParser.extractVersion(url);
-      log.info("Serfile 配置：URL [{}]，版本 [{}]（从文件名推断）", url, serfileVersion);
+      String url = lsiouDataSourceProperties.getUrl();
+      String lsiouVersion = LsiouFileNameParser.extractVersion(url);
+      log.info("LSIOU 配置：URL [{}]，版本 [{}]（从文件名推断）", url, lsiouVersion);
 
       VenuePubmedEnrichResult result =
-          commandBus.handle(VenuePubmedEnrichCommand.of(url, serfileVersion));
+          commandBus.handle(VenuePubmedEnrichCommand.of(url, lsiouVersion));
       handleSuccess(result);
 
-    } catch (SerfileConfigurationException ex) {
+    } catch (LsiouConfigurationException ex) {
       handleConfigurationError(ex);
     } catch (Exception ex) {
       handleExecutionError(ex);
@@ -78,7 +78,7 @@ public class VenuePubmedEnrichScheduleJob {
   }
 
   /// 处理配置错误。
-  private void handleConfigurationError(SerfileConfigurationException ex) {
+  private void handleConfigurationError(LsiouConfigurationException ex) {
     log.warn("PubMed Venue 富化任务配置错误：{}", ex.getMessage());
     XxlJobHelper.handleFail("配置错误：" + ex.getMessage());
   }

@@ -21,9 +21,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-/// SerfileParserAdapter 集成测试。
+/// LsiouParserAdapter 集成测试。
 ///
-/// 使用测试 XML 文件验证 NLM Serfile 解析逻辑的正确性。
+/// 使用测试 XML 文件验证 NLM LSIOU 解析逻辑的正确性。
 ///
 /// **流式处理**：
 ///
@@ -31,17 +31,17 @@ import org.junit.jupiter.api.Timeout;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@DisplayName("SerfileParserAdapter 集成测试")
+@DisplayName("LsiouParserAdapter 集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
-class SerfileParserAdapterIT {
+class LsiouParserAdapterIT {
 
   private static final Path TEST_SERIALS_PATH = Path.of("src/test/resources/xml/test-serials.xml");
 
-  private SerfileParserAdapter parser;
+  private LsiouParserAdapter parser;
 
   @BeforeEach
   void setUp() {
-    parser = new SerfileParserAdapter();
+    parser = new LsiouParserAdapter();
   }
 
   /// 打开测试 XML 文件的输入流。
