@@ -1,8 +1,6 @@
 ---
 name: test-checker
-description: |
-  Patra 测试质量检查专家（测试分层/命名/Mock 策略/覆盖率）。
-  当你需要审查变更对应的测试是否充分、是否遵循项目测试规范时使用。
+description: Patra 测试质量检查专家（测试分层/命名/Mock 策略/覆盖率），用于审查变更对应的测试是否充分、是否遵循项目测试规范。
 metadata:
   short-description: 测试策略与质量检查
 ---
