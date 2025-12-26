@@ -11,18 +11,18 @@ import java.util.regex.Pattern;
 /// 从 Serfile 数据文件的 URL 中提取版本号。
 ///
 /// **支持的文件名格式**：
-/// - SerfileBase: `serfilebase{year}.xml`（如 `serfilebase2025.xml`）
+/// - SerfileBase: `serfilebase.{year}.xml`（如 `serfilebase.2025.xml`）
 /// - Serfile 更新: `serfile{yymmdd}.xml`（如 `serfile250101.xml`，表示 2025-01-01）
 ///
 /// **使用示例**：
 ///
 /// ```java
 /// String version = SerfileFileNameParser.extractVersion(
-///     "https://ftp.ncbi.nlm.nih.gov/pubmed/Serfile/serfilebase2025.xml");
+///     "https://ftp.nlm.nih.gov/projects/serfilelease/serfilebase.2025.xml");
 /// // 返回 "2025"
 ///
 /// String updateVersion = SerfileFileNameParser.extractVersion(
-///     "https://ftp.ncbi.nlm.nih.gov/pubmed/Serfile/serfile250101.xml");
+///     "https://ftp.nlm.nih.gov/projects/serfilelease/serfile250101.xml");
 /// // 返回 "250101"
 /// ```
 ///
@@ -30,8 +30,8 @@ import java.util.regex.Pattern;
 /// @since 0.1.0
 public final class SerfileFileNameParser {
 
-  /// SerfileBase 文件名正则模式：serfilebase{4位年份}.xml
-  private static final Pattern SERFILEBASE_PATTERN = Pattern.compile("serfilebase(\\d{4})\\.xml");
+  /// SerfileBase 文件名正则模式：serfilebase.{4位年份}.xml
+  private static final Pattern SERFILEBASE_PATTERN = Pattern.compile("serfilebase\\.(\\d{4})\\.xml");
 
   /// Serfile 更新文件名正则模式：serfile{6位日期 yymmdd}.xml
   private static final Pattern SERFILE_UPDATE_PATTERN = Pattern.compile("serfile(\\d{6})\\.xml");
@@ -75,7 +75,7 @@ public final class SerfileFileNameParser {
 
   /// 从文件名解析版本号。
   ///
-  /// @param fileName 文件名（如 serfilebase2025.xml 或 serfile250101.xml）
+  /// @param fileName 文件名（如 serfilebase.2025.xml 或 serfile250101.xml）
   /// @return 版本号
   /// @throws SerfileConfigurationException 当文件名不符合规范时
   private static String parseVersionFromFileName(String fileName) {
@@ -92,6 +92,6 @@ public final class SerfileFileNameParser {
     }
 
     throw new SerfileConfigurationException(
-        "无法从文件名解析 Serfile 版本号，期望格式为 serfilebase{year}.xml 或 serfile{yymmdd}.xml，实际：" + fileName);
+        "无法从文件名解析 Serfile 版本号，期望格式为 serfilebase.{year}.xml 或 serfile{yymmdd}.xml，实际：" + fileName);
   }
 }

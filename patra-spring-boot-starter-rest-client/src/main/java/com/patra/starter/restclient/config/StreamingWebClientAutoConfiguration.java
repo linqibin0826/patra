@@ -1,7 +1,9 @@
 package com.patra.starter.restclient.config;
 
 import io.netty.channel.ChannelOption;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -68,14 +70,19 @@ public class StreamingWebClientAutoConfiguration {
   /// 默认连接超时（30 秒）。
   private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(30);
 
-  /// 默认响应超时（10 分钟，与 longRunningRestClient 一致）。
-  private static final Duration DEFAULT_RESPONSE_TIMEOUT = Duration.ofMinutes(10);
+  /// 默认响应超时（30 分钟，适合大文件流式下载）。
+  private static final Duration DEFAULT_RESPONSE_TIMEOUT = Duration.ofMinutes(30);
+
+  /// 默认读取超时（5 分钟，单次数据读取的最大等待时间）。
+  private static final Duration DEFAULT_READ_TIMEOUT = Duration.ofMinutes(5);
 
   /// 创建流式下载专用的 WebClient。
   ///
   /// 配置：
   /// - 连接超时：30 秒
-  /// - 响应超时：10 分钟
+  /// - 响应超时：30 分钟（整个响应的最大时间）
+  /// - 读取超时：5 分钟（单次数据块读取的最大等待时间）
+  /// - TCP Keep-Alive：启用，防止空闲连接被中间设备关闭
   /// - 内存限制：-1（不限制，使用流式处理）
   ///
   /// @param properties REST 客户端配置属性
@@ -85,6 +92,7 @@ public class StreamingWebClientAutoConfiguration {
   public WebClient streamingWebClient(RestClientProperties properties) {
     Duration connectTimeout = DEFAULT_CONNECT_TIMEOUT;
     Duration responseTimeout = DEFAULT_RESPONSE_TIMEOUT;
+    Duration readTimeout = DEFAULT_READ_TIMEOUT;
 
     // 如果配置了 long-running 客户端的超时，使用相同配置
     var longRunningConfig = properties.getClients().get("long-running");
@@ -95,19 +103,29 @@ public class StreamingWebClientAutoConfiguration {
       }
       if (timeout.read() != null) {
         responseTimeout = timeout.read();
+        // 读取超时设置为响应超时的 1/6，至少 1 分钟
+        readTimeout = Duration.ofMillis(Math.max(timeout.read().toMillis() / 6, 60_000));
       }
     }
 
     log.info(
-        "创建 streamingWebClient，connectTimeout={}s，responseTimeout={}s",
+        "创建 streamingWebClient，connectTimeout={}s，responseTimeout={}s，readTimeout={}s，keepAlive=true",
         connectTimeout.toSeconds(),
-        responseTimeout.toSeconds());
+        responseTimeout.toSeconds(),
+        readTimeout.toSeconds());
 
-    // 创建 Reactor Netty HttpClient
+    final Duration finalReadTimeout = readTimeout;
+
+    // 创建 Reactor Netty HttpClient，添加 TCP Keep-Alive 和读取超时
     HttpClient httpClient =
         HttpClient.create()
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) connectTimeout.toMillis())
-            .responseTimeout(responseTimeout);
+            .option(ChannelOption.SO_KEEPALIVE, true) // 启用 TCP Keep-Alive
+            .responseTimeout(responseTimeout)
+            .doOnConnected(
+                conn ->
+                    conn.addHandlerLast(
+                        new ReadTimeoutHandler(finalReadTimeout.toMillis(), TimeUnit.MILLISECONDS)));
 
     return WebClient.builder()
         .clientConnector(new ReactorClientHttpConnector(httpClient))
