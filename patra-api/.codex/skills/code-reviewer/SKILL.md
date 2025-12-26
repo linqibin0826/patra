@@ -1,8 +1,6 @@
 ---
 name: code-reviewer
-description: |
-  Patra 代码审查专家（六边形架构合规 + 代码质量 + 安全）。
-  当你需要对本仓库变更进行 code review（尤其是 Java 代码、架构分层、异常/事务/依赖、敏感信息风险）时使用。
+description: Patra 代码审查专家（六边形架构合规 + 代码质量 + 安全），用于对本仓库变更进行 code review（尤其是 Java 代码、架构分层、异常/事务/依赖、敏感信息风险）。
 metadata:
   short-description: 代码质量与架构合规性审查
 ---

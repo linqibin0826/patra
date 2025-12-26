@@ -1,8 +1,6 @@
 ---
 name: doc-checker
-description: |
-  Patra 文档一致性检查专家（只检查、只报告）。
-  当你需要确认代码变更是否同步更新了 README/ADR/配置说明等文档时使用。
+description: Patra 文档一致性检查专家（只检查、只报告），用于确认代码变更是否同步更新 README/ADR/配置说明等文档。
 metadata:
   short-description: 文档一致性检查（只检查）
 ---

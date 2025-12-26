@@ -1,8 +1,6 @@
 ---
 name: java-development
-description: |
-  Patra Java/Spring Boot 开发指南（六边形架构 + DDD + TDD）。
-  当你需要在本仓库编写/修改/重构任何 Java 代码（Controller/Handler/Repository、CommandBus、JPA、Feign、Nacos、Starter 依赖、测试）时使用。
+description: Patra Java/Spring Boot 开发指南（六边形架构 + DDD + TDD），用于本仓库 Java 代码编写/修改/重构（Controller/Handler/Repository、CommandBus、JPA、Feign、Nacos、Starter 依赖、测试）。
 metadata:
   short-description: Patra Java 开发规范与模板
 ---

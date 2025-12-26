@@ -1,8 +1,6 @@
 ---
 name: app-troubleshooter
-description: |
-  Patra 应用错误排查专家。
-  用于分析 Java 异常堆栈、Spring/JPA/Feign 等框架错误、以及本仓库 logs 目录日志，定位根因并给出修复与验证步骤。
+description: Patra 应用错误排查专家：分析 Java 异常堆栈、Spring/JPA/Feign 等框架错误，以及本仓库 logs 目录日志，定位根因并给出修复与验证步骤。
 metadata:
   short-description: 运行时错误定位与修复流程
 ---
