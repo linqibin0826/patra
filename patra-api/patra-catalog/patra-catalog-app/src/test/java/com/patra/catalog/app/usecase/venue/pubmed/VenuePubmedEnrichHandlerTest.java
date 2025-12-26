@@ -68,7 +68,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 class VenuePubmedEnrichHandlerTest {
 
   private static final String TEST_URL =
-      "https://ftp.ncbi.nlm.nih.gov/pubmed/Serfile/serfilebase2025.xml";
+      "https://ftp.nlm.nih.gov/projects/serfilelease/serfilebase.2025.xml";
   private static final String TEST_VERSION = "2025";
 
   @Mock private StreamingDownloadPort streamingDownloadPort;

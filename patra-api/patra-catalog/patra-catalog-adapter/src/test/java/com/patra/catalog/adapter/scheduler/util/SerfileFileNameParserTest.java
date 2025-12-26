@@ -25,10 +25,10 @@ class SerfileFileNameParserTest {
 
     @ParameterizedTest
     @CsvSource({
-      "https://ftp.ncbi.nlm.nih.gov/pubmed/Serfile/serfilebase2025.xml, 2025",
-      "https://nlmpubs.nlm.nih.gov/projects/serials/Serfiles/serfilebase2024.xml, 2024",
-      "http://example.com/data/serfilebase2023.xml, 2023",
-      "https://example.com/serfilebase2000.xml, 2000"
+      "https://ftp.nlm.nih.gov/projects/serfilelease/serfilebase.2025.xml, 2025",
+      "https://ftp.nlm.nih.gov/projects/serfilelease/serfilebase.2024.xml, 2024",
+      "http://example.com/data/serfilebase.2023.xml, 2023",
+      "https://example.com/serfilebase.2000.xml, 2000"
     })
     @DisplayName("应从 SerfileBase URL 正确提取年份版本号")
     void shouldExtractYearFromSerfileBaseUrl(String url, String expectedVersion) {
@@ -75,9 +75,10 @@ class SerfileFileNameParserTest {
           "https://example.com/serfile.xml",
           "https://example.com/serfilebase.xml",
           "https://example.com/serfilebase25.xml",
-          "https://example.com/serfilebase12345.xml",
+          "https://example.com/serfilebase.12345.xml",
           "https://example.com/serfile12345.xml",
-          "https://example.com/serfile25.xml"
+          "https://example.com/serfile25.xml",
+          "https://example.com/serfilebase2025.xml"
         })
     @DisplayName("不符合规范的文件名应抛出 SerfileConfigurationException")
     void shouldThrowExceptionForInvalidFileName(String url) {

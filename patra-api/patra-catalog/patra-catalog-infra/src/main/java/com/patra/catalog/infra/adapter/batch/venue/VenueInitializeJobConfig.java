@@ -56,7 +56,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 @Configuration
 public class VenueInitializeJobConfig {
 
-  private static final int DEFAULT_CHUNK_SIZE = 500;
+  private static final int DEFAULT_CHUNK_SIZE = 2000;
 
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
