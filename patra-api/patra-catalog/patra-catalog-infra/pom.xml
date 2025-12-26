@@ -72,6 +72,13 @@
             <artifactId>reactor-netty-http</artifactId>
         </dependency>
 
+        <!-- Apache Commons Net：FTP 客户端（用于下载 NLM LSIOU 数据） -->
+        <dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+            <version>3.11.1</version>
+        </dependency>
+
         <!-- 对象存储 -->
         <dependency>
             <groupId>com.patra</groupId>
@@ -118,6 +125,14 @@
         <dependency>
             <groupId>com.patra</groupId>
             <artifactId>patra-spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- MockFtpServer：FTP 集成测试 -->
+        <dependency>
+            <groupId>org.mockftpserver</groupId>
+            <artifactId>MockFtpServer</artifactId>
+            <version>3.2.0</version>
             <scope>test</scope>
         </dependency>
 

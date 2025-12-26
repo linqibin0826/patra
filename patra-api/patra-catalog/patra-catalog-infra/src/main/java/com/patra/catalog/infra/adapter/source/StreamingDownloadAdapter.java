@@ -15,6 +15,9 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.net.ftp.FTP;
+import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPReply;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
@@ -33,16 +36,20 @@ import reactor.util.retry.Retry;
 
 /// 流式下载端口适配器。
 ///
+/// 支持 HTTP/HTTPS 和 FTP 协议的流式下载，根据 URL scheme 自动选择下载方式。
+///
+/// ## HTTP/HTTPS 下载
+///
 /// 使用 WebClient + Reactor Netty 实现流式下载，解决 RestClient.exchange()
 /// 在长时间流式传输过程中意外关闭 InputStream 的问题。
 ///
 /// **超时配置**：使用 `streamingWebClient`（默认 30 分钟响应超时），
 /// 适合大文件流式读取场景，可通过 `patra.rest-client.clients.long-running.timeout` 配置调整。
 ///
-/// ## 实现原理
+/// ## FTP 下载
 ///
-/// WebClient 返回 `Flux<DataBuffer>` 响应式流，通过 `PipedInputStream/PipedOutputStream`
-/// 桥接转换为传统阻塞式 `InputStream`，供调用方同步读取。
+/// 使用 Apache Commons Net FTPClient 实现，用于下载 NLM LSIOU 数据。
+/// 采用被动模式（Passive Mode）和二进制传输，适合防火墙环境。
 ///
 /// ## 重试机制
 ///
@@ -64,6 +71,12 @@ public class StreamingDownloadAdapter implements StreamingDownloadPort {
   /// 最大重试延迟。
   private static final Duration MAX_BACKOFF = Duration.ofSeconds(30);
 
+  /// FTP 连接超时（毫秒）。
+  private static final int FTP_CONNECT_TIMEOUT = 30_000;
+
+  /// FTP 数据传输超时（毫秒）。
+  private static final int FTP_DATA_TIMEOUT = 30 * 60_000;
+
   private final WebClient webClient;
 
   /// 构造流式下载适配器。
@@ -76,7 +89,163 @@ public class StreamingDownloadAdapter implements StreamingDownloadPort {
   @Override
   public StreamingDownloadResult download(URI url) {
     Objects.requireNonNull(url, "下载 URL 不能为 null");
-    log.info("开始流式下载：{}", url);
+
+    String scheme = url.getScheme();
+    if (scheme == null) {
+      throw new FileDownloadException("URL 缺少协议：" + url, StandardErrorTrait.RULE_VIOLATION);
+    }
+
+    return switch (scheme.toLowerCase()) {
+      case "ftp" -> downloadViaFtp(url);
+      case "http", "https" -> downloadViaHttp(url);
+      default ->
+          throw new FileDownloadException(
+              "不支持的协议：" + scheme + "，仅支持 http/https/ftp", StandardErrorTrait.RULE_VIOLATION);
+    };
+  }
+
+  // ========== FTP 下载 ==========
+
+  /// 通过 FTP 协议下载文件。
+  ///
+  /// 使用 Apache Commons Net FTPClient，采用：
+  /// - 被动模式（Passive Mode）：适合 NAT/防火墙环境
+  /// - 二进制传输模式：确保数据完整性
+  /// - 匿名登录：NLM FTP 服务器要求
+  ///
+  /// @param url FTP URL
+  /// @return 流式下载结果
+  private StreamingDownloadResult downloadViaFtp(URI url) {
+    log.info("开始 FTP 下载：{}", url);
+
+    FTPClient ftpClient = new FTPClient();
+    ftpClient.setConnectTimeout(FTP_CONNECT_TIMEOUT);
+    ftpClient.setDataTimeout(Duration.ofMillis(FTP_DATA_TIMEOUT));
+
+    try {
+      // 连接 FTP 服务器
+      String host = url.getHost();
+      int port = url.getPort() > 0 ? url.getPort() : 21;
+      ftpClient.connect(host, port);
+
+      int replyCode = ftpClient.getReplyCode();
+      if (!FTPReply.isPositiveCompletion(replyCode)) {
+        throw new FileDownloadException(
+            "FTP 连接被拒绝，响应码：" + replyCode, StandardErrorTrait.DEP_UNAVAILABLE);
+      }
+
+      // 匿名登录（NLM FTP 服务器要求）
+      if (!ftpClient.login("anonymous", "patra@example.com")) {
+        throw new FileDownloadException("FTP 登录失败", StandardErrorTrait.DEP_UNAVAILABLE);
+      }
+
+      // 设置被动模式和二进制传输
+      ftpClient.enterLocalPassiveMode();
+      ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
+
+      // 获取文件路径
+      String remotePath = url.getPath();
+      log.debug("FTP 连接成功：{}，下载路径：{}", host, remotePath);
+
+      // 获取文件大小（可能返回 -1 表示未知）
+      var ftpFile = ftpClient.mlistFile(remotePath);
+      long fileSize = ftpFile != null ? ftpFile.getSize() : -1;
+
+      // 获取输入流
+      InputStream ftpInputStream = ftpClient.retrieveFileStream(remotePath);
+      if (ftpInputStream == null) {
+        throw new FileDownloadException(
+            "无法获取 FTP 文件流：" + remotePath + "，响应：" + ftpClient.getReplyString(),
+            StandardErrorTrait.DEP_UNAVAILABLE);
+      }
+
+      log.debug("FTP 文件流获取成功，文件大小：{}", fileSize > 0 ? fileSize + " bytes" : "未知");
+
+      // 包装 InputStream，确保关闭时同时关闭 FTP 连接
+      InputStream wrappedStream = new FtpInputStreamWrapper(ftpInputStream, ftpClient);
+
+      return new StreamingDownloadResult(wrappedStream, fileSize, "application/xml");
+
+    } catch (FileDownloadException e) {
+      disconnectFtpQuietly(ftpClient);
+      throw e;
+    } catch (IOException e) {
+      disconnectFtpQuietly(ftpClient);
+      log.error("FTP 下载 IO 错误：{}", url, e);
+      throw new FileDownloadException(
+          "FTP 下载失败：" + e.getMessage(), e, StandardErrorTrait.DEP_UNAVAILABLE);
+    } catch (Exception e) {
+      disconnectFtpQuietly(ftpClient);
+      log.error("FTP 下载未知错误：{}", url, e);
+      throw new FileDownloadException(
+          "FTP 下载失败：" + e.getMessage(), e, StandardErrorTrait.DEP_UNAVAILABLE);
+    }
+  }
+
+  /// FTP InputStream 包装器。
+  ///
+  /// 确保关闭 InputStream 时同时完成 FTP 传输并断开连接。
+  private static class FtpInputStreamWrapper extends InputStream {
+    private final InputStream delegate;
+    private final FTPClient ftpClient;
+
+    FtpInputStreamWrapper(InputStream delegate, FTPClient ftpClient) {
+      this.delegate = delegate;
+      this.ftpClient = ftpClient;
+    }
+
+    @Override
+    public int read() throws IOException {
+      return delegate.read();
+    }
+
+    @Override
+    public int read(byte[] b, int off, int len) throws IOException {
+      return delegate.read(b, off, len);
+    }
+
+    @Override
+    public void close() throws IOException {
+      try {
+        delegate.close();
+        // 完成 FTP 传输
+        if (!ftpClient.completePendingCommand()) {
+          log.warn("FTP completePendingCommand 失败");
+        }
+      } finally {
+        // 断开 FTP 连接
+        if (ftpClient.isConnected()) {
+          try {
+            ftpClient.logout();
+            ftpClient.disconnect();
+          } catch (IOException e) {
+            log.warn("断开 FTP 连接失败", e);
+          }
+        }
+      }
+    }
+  }
+
+  /// 静默断开 FTP 连接。
+  private void disconnectFtpQuietly(FTPClient ftpClient) {
+    if (ftpClient.isConnected()) {
+      try {
+        ftpClient.logout();
+        ftpClient.disconnect();
+      } catch (IOException e) {
+        log.warn("断开 FTP 连接失败", e);
+      }
+    }
+  }
+
+  // ========== HTTP/HTTPS 下载 ==========
+
+  /// 通过 HTTP/HTTPS 协议下载文件。
+  ///
+  /// @param url HTTP/HTTPS URL
+  /// @return 流式下载结果
+  private StreamingDownloadResult downloadViaHttp(URI url) {
+    log.info("开始 HTTP 下载：{}", url);
 
     AtomicInteger attemptCount = new AtomicInteger(0);
 
@@ -92,7 +261,7 @@ public class StreamingDownloadAdapter implements StreamingDownloadPort {
                           signal -> {
                             int attempt = attemptCount.incrementAndGet();
                             log.warn(
-                                "流式下载失败，准备第 {} 次重试：{}，错误：{}",
+                                "HTTP 下载失败，准备第 {} 次重试：{}，错误：{}",
                                 attempt,
                                 url,
                                 signal.failure().getMessage());
@@ -113,10 +282,7 @@ public class StreamingDownloadAdapter implements StreamingDownloadPort {
       }
 
       log.debug(
-          "流式下载连接建立成功：{}，Content-Length：{}，Content-Type：{}",
-          url,
-          contentLength,
-          contentType);
+          "HTTP 下载连接建立成功：{}，Content-Length：{}，Content-Type：{}", url, contentLength, contentType);
 
       // 将 Flux<DataBuffer> 转换为阻塞式 InputStream
       InputStream inputStream = fluxToInputStream(bodyFlux, url);
@@ -125,12 +291,12 @@ public class StreamingDownloadAdapter implements StreamingDownloadPort {
           inputStream, contentLength, contentType != null ? contentType.toString() : null);
 
     } catch (WebClientResponseException e) {
-      log.error("流式下载 HTTP 错误：{}，状态码：{}", url, e.getStatusCode(), e);
+      log.error("HTTP 下载错误：{}，状态码：{}", url, e.getStatusCode(), e);
       throw new FileDownloadException(
           "下载失败，HTTP 状态码：" + e.getStatusCode().value(), e, StandardErrorTrait.DEP_UNAVAILABLE);
 
     } catch (WebClientRequestException e) {
-      log.error("流式下载网络错误：{}", url, e);
+      log.error("HTTP 下载网络错误：{}", url, e);
       StandardErrorTrait trait =
           e.getMessage() != null && e.getMessage().contains("timeout")
               ? StandardErrorTrait.TIMEOUT
@@ -141,8 +307,9 @@ public class StreamingDownloadAdapter implements StreamingDownloadPort {
       throw e;
 
     } catch (Exception e) {
-      log.error("流式下载未知错误：{}", url, e);
-      throw new FileDownloadException("下载失败：" + e.getMessage(), e);
+      log.error("HTTP 下载未知错误：{}", url, e);
+      throw new FileDownloadException(
+          "下载失败：" + e.getMessage(), e, StandardErrorTrait.DEP_UNAVAILABLE);
     }
   }
 
@@ -234,8 +401,8 @@ public class StreamingDownloadAdapter implements StreamingDownloadPort {
           .doFinally(signal -> closeQuietly(outputStream))
           .subscribe(
               DataBufferUtils.releaseConsumer(),
-              error -> log.error("流式下载数据传输错误：{}", url, error),
-              () -> log.debug("流式下载数据传输完成：{}", url));
+              error -> log.error("HTTP 下载数据传输错误：{}", url, error),
+              () -> log.debug("HTTP 下载数据传输完成：{}", url));
 
       return inputStream;
 
