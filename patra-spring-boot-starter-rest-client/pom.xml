@@ -67,6 +67,12 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Apache Commons Net: FTP client for LSIOU data source -->
+        <dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+        </dependency>
+
         <!-- Configuration metadata (IDE hints during development; not used at runtime) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
