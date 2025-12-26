@@ -125,7 +125,8 @@ public class StreamingWebClientAutoConfiguration {
             .doOnConnected(
                 conn ->
                     conn.addHandlerLast(
-                        new ReadTimeoutHandler(finalReadTimeout.toMillis(), TimeUnit.MILLISECONDS)));
+                        new ReadTimeoutHandler(
+                            finalReadTimeout.toMillis(), TimeUnit.MILLISECONDS)));
 
     return WebClient.builder()
         .clientConnector(new ReactorClientHttpConnector(httpClient))
