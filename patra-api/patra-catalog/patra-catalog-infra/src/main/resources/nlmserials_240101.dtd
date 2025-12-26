@@ -2,7 +2,7 @@
                   
        Comments and suggestions are welcome.
 
-    **This is the 2023 NLM Serials DTD in use as of January 2023.
+    **This is the 2024 NLM Serials DTD in use as of January 2024.
     This DTD was written by the National Library of Medicine 
     for internal and external use.
                 
@@ -16,8 +16,8 @@
 <!-- ================================================================= -->
 <!--   Revision Notes Section 
 
-  The following changes were made from the nlmserials_220101.dtd. 
-       a. Changed nlmserials_220101.dtd to nlmserials_230101.dtd.       
+  The following changes were made from the nlmserials_230101.dtd. 
+       a. Changed nlmserials_230101.dtd to nlmserials_240101.dtd.       
       
 -->
 <!-- ================================================================= -->
@@ -146,4 +146,5 @@ Supersedes | SupersedesInPart | Translated | Undetermined) "Undetermined"
 >
 <!ELEMENT XrTitle (#PCDATA)>
 <!ELEMENT Year (#PCDATA)>
+
 

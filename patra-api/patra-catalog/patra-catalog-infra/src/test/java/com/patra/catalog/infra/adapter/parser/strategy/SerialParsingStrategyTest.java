@@ -65,7 +65,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析最小必填字段")
     void shouldParseMinimalRequiredFields() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/minimal-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/minimal-serial.xml");
 
       // Then
       assertThat(record).isNotNull();
@@ -82,7 +82,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析所有基本字段")
     void shouldParseAllBasicFields() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then - 基本标识符
       assertThat(record.nlmUniqueId()).isEqualTo("0123456");
@@ -95,7 +95,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析 ISSN 信息")
     void shouldParseIssnInfo() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       assertThat(record.issnL()).isEqualTo("1234-5678");
@@ -107,7 +107,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析出版信息")
     void shouldParsePublicationInfo() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       assertThat(record.country()).isEqualTo("United States");
@@ -120,7 +120,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析语言列表")
     void shouldParseLanguages() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       assertThat(record.languages()).hasSize(2);
@@ -135,7 +135,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析 MeSH 主题词列表")
     void shouldParseMeshHeadings() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       List<PubmedMeshHeading> meshHeadings = record.meshHeadings();
@@ -159,7 +159,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析期刊关联关系")
     void shouldParseTitleRelations() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       List<PubmedTitleRelation> relations = record.titleRelations();
@@ -183,7 +183,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析索引历史列表")
     void shouldParseIndexingHistories() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       List<PubmedIndexingHistory> histories = record.indexingHistories();
@@ -211,7 +211,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析 Serial 元素属性")
     void shouldParseSerialAttributes() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       assertThat(record.status()).isEqualTo("NLMCollection");
@@ -224,7 +224,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析扩展标识符")
     void shouldParseExtendedIdentifiers() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       assertThat(record.nlmWorkId()).isEqualTo("9876543");
@@ -235,7 +235,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析扩展出版信息")
     void shouldParseExtendedPublicationInfo() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       assertThat(record.places()).containsExactly("New York", "Boston");
@@ -248,7 +248,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析索引相关字段")
     void shouldParseIndexingFields() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       assertThat(record.currentlyIndexedYN()).isTrue();
@@ -265,7 +265,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析 CurrentlyIndexedForSubset 列表")
     void shouldParseCurrentlyIndexedForSubsets() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       List<PubmedCurrentIndexing> subsets = record.currentIndexings();
@@ -285,7 +285,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析广泛期刊标题列表")
     void shouldParseBroadJournalHeadings() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       List<PubmedBroadHeading> headings = record.broadJournalHeadings();
@@ -299,7 +299,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析交叉引用列表")
     void shouldParseCrossReferences() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       List<PubmedCrossReference> crossRefs = record.crossReferences();
@@ -318,7 +318,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析通用备注列表")
     void shouldParseGeneralNotes() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       List<PubmedGeneralNote> notes = record.generalNotes();
@@ -337,7 +337,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析标题变更标记")
     void shouldParseTitleChangeMarkers() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       assertThat(record.titleContinuationYN()).isFalse();
@@ -348,7 +348,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析时间戳")
     void shouldParseTimestamps() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       assertThat(record.ilsCreatedTimestamp()).isEqualTo(LocalDateTime.of(2020, 1, 15, 10, 30, 45));
@@ -359,7 +359,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析 MeSH 描述符的 UI 和 Type 属性")
     void shouldParseMeshDescriptorAttributes() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       List<PubmedMeshHeading> meshHeadings = record.meshHeadings();
@@ -372,7 +372,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析 TitleRelated 的 RecordID 列表")
     void shouldParseTitleRelatedRecordIds() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       List<PubmedTitleRelation> relations = record.titleRelations();
@@ -396,7 +396,7 @@ class SerialParsingStrategyTest {
     @DisplayName("应正确解析多条记录")
     void shouldParseMultipleRecords() throws Exception {
       // Given
-      List<PubmedSerialData> records = parseAllSerials("/serfile/multiple-serials.xml");
+      List<PubmedSerialData> records = parseAllSerials("/lsiou/multiple-serials.xml");
 
       // Then
       assertThat(records).hasSize(3);
@@ -426,7 +426,7 @@ class SerialParsingStrategyTest {
     @DisplayName("停刊期刊应正确识别")
     void shouldIdentifyCeasedJournal() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       assertThat(record.isCeased()).isTrue();
@@ -436,7 +436,7 @@ class SerialParsingStrategyTest {
     @DisplayName("hasIssnL 应正确判断")
     void shouldCheckHasIssnL() throws Exception {
       // Given
-      PubmedSerialData record = parseFirstSerial("/serfile/full-serial.xml");
+      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
 
       // Then
       assertThat(record.hasIssnL()).isTrue();

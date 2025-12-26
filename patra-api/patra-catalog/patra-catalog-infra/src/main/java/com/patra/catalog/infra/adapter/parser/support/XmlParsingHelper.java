@@ -1,11 +1,11 @@
 package com.patra.catalog.infra.adapter.parser.support;
 
-import static com.patra.catalog.infra.adapter.parser.SerfileXmlElements.Date.DAY;
-import static com.patra.catalog.infra.adapter.parser.SerfileXmlElements.Date.HOUR;
-import static com.patra.catalog.infra.adapter.parser.SerfileXmlElements.Date.MINUTE;
-import static com.patra.catalog.infra.adapter.parser.SerfileXmlElements.Date.MONTH;
-import static com.patra.catalog.infra.adapter.parser.SerfileXmlElements.Date.SECOND;
-import static com.patra.catalog.infra.adapter.parser.SerfileXmlElements.Date.YEAR;
+import static com.patra.catalog.infra.adapter.parser.LsiouXmlElements.Date.DAY;
+import static com.patra.catalog.infra.adapter.parser.LsiouXmlElements.Date.HOUR;
+import static com.patra.catalog.infra.adapter.parser.LsiouXmlElements.Date.MINUTE;
+import static com.patra.catalog.infra.adapter.parser.LsiouXmlElements.Date.MONTH;
+import static com.patra.catalog.infra.adapter.parser.LsiouXmlElements.Date.SECOND;
+import static com.patra.catalog.infra.adapter.parser.LsiouXmlElements.Date.YEAR;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

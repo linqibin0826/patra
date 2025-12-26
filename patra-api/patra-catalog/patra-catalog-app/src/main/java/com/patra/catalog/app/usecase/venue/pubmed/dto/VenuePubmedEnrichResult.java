@@ -8,7 +8,7 @@ package com.patra.catalog.app.usecase.venue.pubmed.dto;
 /// @param updatedCount 更新的现有期刊数量（匹配到 OpenAlex 记录）
 /// @param createdCount 新创建的期刊数量（PubMed 独有）
 /// @param skippedCount 跳过的记录数量（匹配失败或数据异常）
-/// @param serfileVersion Serfile 版本号
+/// @param lsiouVersion LSIOU 版本号
 /// @param sourceUrl 原始数据源 URL
 /// @param durationMillis 富化耗时（毫秒）
 /// @param message 人类可读的状态摘要
@@ -19,7 +19,7 @@ public record VenuePubmedEnrichResult(
     int updatedCount,
     int createdCount,
     int skippedCount,
-    String serfileVersion,
+    String lsiouVersion,
     String sourceUrl,
     long durationMillis,
     String message) {
@@ -30,7 +30,7 @@ public record VenuePubmedEnrichResult(
   /// @param updatedCount 更新的记录数
   /// @param createdCount 新创建的记录数
   /// @param skippedCount 跳过的记录数
-  /// @param serfileVersion Serfile 版本号
+  /// @param lsiouVersion LSIOU 版本号
   /// @param sourceUrl 原始数据源 URL
   /// @param durationMillis 富化耗时（毫秒）
   /// @return 成功结果对象
@@ -39,7 +39,7 @@ public record VenuePubmedEnrichResult(
       int updatedCount,
       int createdCount,
       int skippedCount,
-      String serfileVersion,
+      String lsiouVersion,
       String sourceUrl,
       long durationMillis) {
     return new VenuePubmedEnrichResult(
@@ -47,7 +47,7 @@ public record VenuePubmedEnrichResult(
         updatedCount,
         createdCount,
         skippedCount,
-        serfileVersion,
+        lsiouVersion,
         sourceUrl,
         durationMillis,
         String.format(
@@ -58,17 +58,17 @@ public record VenuePubmedEnrichResult(
   /// 创建失败结果。
   ///
   /// @param errorMessage 错误信息
-  /// @param serfileVersion Serfile 版本号
+  /// @param lsiouVersion LSIOU 版本号
   /// @param sourceUrl 原始数据源 URL
   /// @return 失败结果对象
   public static VenuePubmedEnrichResult failure(
-      String errorMessage, String serfileVersion, String sourceUrl) {
+      String errorMessage, String lsiouVersion, String sourceUrl) {
     return new VenuePubmedEnrichResult(
         0,
         0,
         0,
         0,
-        serfileVersion,
+        lsiouVersion,
         sourceUrl,
         0,
         String.format("PubMed Venue 富化失败：%s", errorMessage));

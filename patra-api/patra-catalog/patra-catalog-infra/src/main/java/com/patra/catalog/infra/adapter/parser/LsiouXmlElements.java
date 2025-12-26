@@ -1,11 +1,11 @@
 package com.patra.catalog.infra.adapter.parser;
 
-/// NLM Serfile XML 元素名称常量。
+/// NLM LSIOU/Serfile XML 元素名称常量。
 ///
-/// 集中管理所有 Serfile XML 元素名称，避免硬编码字符串分散在代码各处。
+/// 集中管理所有 NLM Serial XML 元素名称，避免硬编码字符串分散在代码各处。
 /// 按语义分组组织常量，修改 DTD 时只需更新此类。
 ///
-/// **DTD 版本**：nlmserials_230101.dtd
+/// **DTD 版本**：nlmserials_240101.dtd
 ///
 /// **组织结构**：
 /// - `Record`: 记录根元素（SerialsSet、Serial）
@@ -22,9 +22,9 @@ package com.patra.catalog.infra.adapter.parser;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public final class SerfileXmlElements {
+public final class LsiouXmlElements {
 
-  private SerfileXmlElements() {
+  private LsiouXmlElements() {
     throw new UnsupportedOperationException("常量类禁止实例化");
   }
 

@@ -28,14 +28,14 @@ import java.util.Set;
 /// 本接口同时管理与载体关联的补充数据（不属于聚合边界，但通过 Repository 统一访问）：
 ///
 /// - VenuePublicationStats：年度发文统计（来自 OpenAlex Sources）
-/// - VenueMesh：MeSH 主题词（来自 NLM Serfile）
-/// - VenueRelation：期刊关联关系（来自 NLM Serfile）
-/// - VenueIndexingHistory：索引历史（来自 NLM Serfile）
+/// - VenueMesh：MeSH 主题词（来自 NLM LSIOU）
+/// - VenueRelation：期刊关联关系（来自 NLM LSIOU）
+/// - VenueIndexingHistory：索引历史（来自 NLM LSIOU）
 ///
 /// **主要使用场景**：
 ///
 /// - OpenAlex Sources S3 数据初始化导入（批量写入）
-/// - PubMed Serfile 数据富化导入（批量更新）
+/// - PubMed LSIOU 数据富化导入（批量更新）
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -78,11 +78,11 @@ public interface VenueRepository {
   /// @return 数据库中已存在的 ISSN-L 集合（永不为 null）
   Set<String> findExistingIssnLs(Collection<String> issnLs);
 
-  // ========== Serfile 导入相关方法 ==========
+  // ========== LSIOU 导入相关方法 ==========
 
   /// 根据 ISSN-L 批量查找载体聚合根。
   ///
-  /// 用于 Serfile 导入时的匹配查询（优先级最高）。
+  /// 用于 LSIOU 导入时的匹配查询（优先级最高）。
   /// 返回的聚合根包含完整的子实体（标识符、MeSH、关联、索引历史）。
   ///
   /// @param issnLs ISSN-L 集合（不能为 null，可以为空）
@@ -91,7 +91,7 @@ public interface VenueRepository {
 
   /// 根据 NLM ID 批量查找载体聚合根。
   ///
-  /// 用于 Serfile 导入时的匹配查询（优先级次高）。
+  /// 用于 LSIOU 导入时的匹配查询（优先级次高）。
   /// 返回的聚合根包含完整的子实体。
   ///
   /// @param nlmIds NLM ID 集合（不能为 null，可以为空）
@@ -100,7 +100,7 @@ public interface VenueRepository {
 
   /// 根据 ISSN（Print 或 Electronic）批量查找载体聚合根。
   ///
-  /// 用于 Serfile 导入时的匹配查询（优先级最低）。
+  /// 用于 LSIOU 导入时的匹配查询（优先级最低）。
   /// 从 `cat_venue_identifier` 表反查，返回完整的聚合根。
   ///
   /// @param issns ISSN 集合（不能为 null，可以为空）
@@ -149,15 +149,15 @@ public interface VenueRepository {
   /// @param historiesByVenueId Map，key 为 venueId，value 为要设置的索引历史列表
   void replaceIndexingHistoriesBatch(Map<Long, List<VenueIndexingHistory>> historiesByVenueId);
 
-  /// 批量替换 Serfile 相关数据（MeSH、关联关系、索引历史）。
+  /// 批量替换 PubMed 相关数据（MeSH、关联关系、索引历史）。
   ///
-  /// 用于 Serfile 导入场景，在同一次调用中更新所有 Serfile 相关数据。
+  /// 用于 LSIOU 导入场景，在同一次调用中更新所有 PubMed 相关数据。
   /// 内部实现依次调用各个 replace 方法。
   ///
   /// @param meshTermsByVenueId MeSH 主题词
   /// @param relationsByVenueId 关联关系
   /// @param historiesByVenueId 索引历史
-  default void replaceSerfileDataBatch(
+  default void replacePubmedDataBatch(
       Map<Long, List<VenueMesh>> meshTermsByVenueId,
       Map<Long, List<VenueRelation>> relationsByVenueId,
       Map<Long, List<VenueIndexingHistory>> historiesByVenueId) {

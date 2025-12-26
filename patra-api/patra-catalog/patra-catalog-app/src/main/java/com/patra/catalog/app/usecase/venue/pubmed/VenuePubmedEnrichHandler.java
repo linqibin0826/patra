@@ -24,7 +24,7 @@ import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedLanguage;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedMeshHeading;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedTitleRelation;
-import com.patra.catalog.domain.port.parser.SerfileParserPort;
+import com.patra.catalog.domain.port.parser.LsiouParserPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
@@ -49,7 +49,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 ///
 /// **职责**：
 ///
-/// - 编排 PubMed 数据富化流程（基于 NLM Serfile）
+/// - 编排 PubMed 数据富化流程（基于 NLM LSIOU）
 /// - 管理事务边界（批量操作）
 /// - 委派具体任务给领域端口
 ///
@@ -79,7 +79,7 @@ public class VenuePubmedEnrichHandler
   private static final int BATCH_SIZE = 500;
 
   private final StreamingDownloadPort streamingDownloadPort;
-  private final SerfileParserPort parserPort;
+  private final LsiouParserPort parserPort;
   private final VenueRepository venueRepository;
   private final TransactionTemplate transactionTemplate;
 
@@ -98,7 +98,7 @@ public class VenuePubmedEnrichHandler
   @Override
   public VenuePubmedEnrichResult handle(VenuePubmedEnrichCommand command) {
     TimeInterval timer = DateUtil.timer();
-    log.info("启动 PubMed Venue 富化，URL：{}，版本：{}", command.url(), command.serfileVersion());
+    log.info("启动 PubMed Venue 富化，URL：{}，版本：{}", command.url(), command.lsiouVersion());
 
     // ────────────────────────────────────────────────────────────────────────────
     // 阶段 1：流式下载
@@ -112,15 +112,15 @@ public class VenuePubmedEnrichHandler
 
       // ────────────────────────────────────────────────────────────────────────────
       // 阶段 2：XML 解析
-      // - 将 NLM Serfile XML 解析为 PubmedSerialData 领域对象
-      // - 一次性加载所有记录到内存（Serfile 约 3-4 万条，可承受）
+      // - 将 NLM LSIOU XML 解析为 PubmedSerialData 领域对象
+      // - 一次性加载所有记录到内存（LSIOU 约 1.5 万条，可承受）
       // ────────────────────────────────────────────────────────────────────────────
       List<PubmedSerialData> allRecords = parserPort.parse(downloadResult.inputStream()).toList();
       log.info("解析完成，记录数：{}", allRecords.size());
 
       if (allRecords.isEmpty()) {
         return VenuePubmedEnrichResult.success(
-            0, 0, 0, 0, command.serfileVersion(), command.url(), timer.interval());
+            0, 0, 0, 0, command.lsiouVersion(), command.url(), timer.interval());
       }
 
       // ────────────────────────────────────────────────────────────────────────────
@@ -163,7 +163,7 @@ public class VenuePubmedEnrichHandler
           updatedCount.get(),
           createdCount.get(),
           skippedCount.get(),
-          command.serfileVersion(),
+          command.lsiouVersion(),
           command.url(),
           duration);
 
@@ -280,8 +280,8 @@ public class VenuePubmedEnrichHandler
           venue.withPublicationProfile(profile);
           result.addUpdate(venue);
           processedVenueIds.add(venue.getId().value());
-          // 收集 Serfile 子实体（MeSH、关系、索引历史），稍后批量持久化
-          result.collectSerfileEntities(
+          // 收集 PubMed 子实体（MeSH、关系、索引历史），稍后批量持久化
+          result.collectPubmedEntities(
               venue,
               toVenueMeshList(record.meshHeadings()),
               toVenueRelationList(record.titleRelations()),
@@ -299,8 +299,8 @@ public class VenuePubmedEnrichHandler
         PublicationProfile profile = buildPublicationProfileFromRecord(record);
         newVenue.withPublicationProfile(profile);
         result.addCreate(newVenue);
-        // 收集 Serfile 子实体（MeSH、关系、索引历史），稍后批量持久化
-        result.collectSerfileEntities(
+        // 收集 PubMed 子实体（MeSH、关系、索引历史），稍后批量持久化
+        result.collectPubmedEntities(
             newVenue,
             toVenueMeshList(record.meshHeadings()),
             toVenueRelationList(record.titleRelations()),
@@ -324,12 +324,12 @@ public class VenuePubmedEnrichHandler
     }
   }
 
-  /// 批量持久化 Serfile 子实体。
+  /// 批量持久化 PubMed 子实体。
   ///
   /// 将 `Map<VenueAggregate, List<?>>` 转换为 `Map<Long, List<?>>` 并保存。
   ///
   /// **嵌入式值对象设计**：`PublicationProfile` 已嵌入聚合根，随聚合根一起持久化。
-  /// 此方法仅处理独立存储的 Serfile 子实体（MeSH、关系、索引历史）。
+  /// 此方法仅处理独立存储的 PubMed 子实体（MeSH、关系、索引历史）。
   ///
   /// @param result 批次处理结果（包含聚合根已回填 ID）
   private void persistChildEntities(BatchProcessingResult result) {
@@ -340,18 +340,18 @@ public class VenuePubmedEnrichHandler
     // 3. 使用 toVenueIdMap() 完成转换
     // ────────────────────────────────────────────────────────────────────────────
 
-    // 保存 Serfile 相关子实体（MeSH、关系、索引历史）
+    // 保存 PubMed 相关子实体（MeSH、关系、索引历史）
     Map<Long, List<VenueMesh>> meshByVenueId = toVenueIdMap(result.getMeshByAggregate());
     Map<Long, List<VenueRelation>> relationsByVenueId =
         toVenueIdMap(result.getRelationsByAggregate());
     Map<Long, List<VenueIndexingHistory>> historiesByVenueId =
         toVenueIdMap(result.getHistoriesByAggregate());
 
-    // replaceSerfileDataBatch：先删除旧的 Serfile 数据，再插入新数据（全量覆盖策略）
-    venueRepository.replaceSerfileDataBatch(meshByVenueId, relationsByVenueId, historiesByVenueId);
+    // replacePubmedDataBatch：先删除旧的 PubMed 数据，再插入新数据（全量覆盖策略）
+    venueRepository.replacePubmedDataBatch(meshByVenueId, relationsByVenueId, historiesByVenueId);
 
     log.debug(
-        "批量保存 Serfile 子实体：MeSH {} 组，关系 {} 组，索引历史 {} 组",
+        "批量保存 PubMed 子实体：MeSH {} 组，关系 {} 组，索引历史 {} 组",
         meshByVenueId.size(),
         relationsByVenueId.size(),
         historiesByVenueId.size());
@@ -458,7 +458,7 @@ public class VenuePubmedEnrichHandler
               record.publicationFirstYear(), record.publicationEndYear(), record.isCeased());
     }
 
-    // 构建索引信息（PubMed Serfile 没有 ISO Abbreviation 字段，置为 null）
+    // 构建索引信息（PubMed LSIOU 没有 ISO Abbreviation 字段，置为 null）
     IndexingInfo indexingInfo =
         IndexingInfo.of(record.isCurrentlyIndexed() ? "MEDLINE" : null, record.medlineTA(), null);
 
@@ -532,7 +532,7 @@ public class VenuePubmedEnrichHandler
         .filter(PubmedTitleRelation::hasValidTitle)
         .map(
             r -> {
-              VenueRelationType type = VenueRelationType.fromSerfileTitleType(r.titleType());
+              VenueRelationType type = VenueRelationType.fromLsiouTitleType(r.titleType());
               // 如果无法识别类型，默认使用 PRECEDING（最常见的关系类型）
               if (type == null) {
                 type = VenueRelationType.PRECEDING;
@@ -614,7 +614,7 @@ public class VenuePubmedEnrichHandler
   /// 封装单批次处理的所有输出数据，避免多参数传递。
   ///
   /// **嵌入式值对象设计**：`PublicationProfile` 已嵌入聚合根，随聚合根一起持久化。
-  /// 此类仅收集独立存储的 Serfile 子实体（MeSH、关系、索引历史）。
+  /// 此类仅收集独立存储的 PubMed 子实体（MeSH、关系、索引历史）。
   @Getter
   private static class BatchProcessingResult {
     private final List<VenueAggregate> toUpdate = new ArrayList<>();
@@ -637,15 +637,15 @@ public class VenuePubmedEnrichHandler
       toCreate.add(venue);
     }
 
-    /// 收集 Serfile 子实体数据。
+    /// 收集 PubMed 子实体数据。
     ///
-    /// 将 MeSH、关联关系、索引历史等 Serfile 子实体关联到聚合根，稍后批量持久化。
+    /// 将 MeSH、关联关系、索引历史等 PubMed 子实体关联到聚合根，稍后批量持久化。
     ///
     /// @param venue 聚合根
     /// @param meshList MeSH 主题词列表
     /// @param relationList 期刊关联关系列表
     /// @param historyList 索引历史列表
-    void collectSerfileEntities(
+    void collectPubmedEntities(
         VenueAggregate venue,
         List<VenueMesh> meshList,
         List<VenueRelation> relationList,

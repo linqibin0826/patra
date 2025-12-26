@@ -7,7 +7,7 @@ import lombok.Getter;
 ///
 /// 字段映射：cat_venue_indexing_history.indexing_treatment
 ///
-/// 定义 MEDLINE 对期刊文章的索引处理方式，来源于 NLM Serfile 的 IndexingTreatment 属性。
+/// 定义 MEDLINE 对期刊文章的索引处理方式，来源于 NLM LSIOU 的 IndexingTreatment 属性。
 ///
 /// 处理方式说明：
 ///
@@ -85,15 +85,15 @@ public enum IndexingTreatment {
     return null;
   }
 
-  /// 从 Serfile IndexingTreatment 属性值转换。
+  /// 从 LSIOU IndexingTreatment 属性值转换。
   ///
-  /// @param serfileValue Serfile 中的值（如 "Full"、"Selective"）
+  /// @param lsiouValue LSIOU 中的值（如 "Full"、"Selective"）
   /// @return 对应的枚举值，无法识别则返回 null
-  public static IndexingTreatment fromSerfileValue(String serfileValue) {
-    if (serfileValue == null || serfileValue.isBlank()) {
+  public static IndexingTreatment fromLsiouValue(String lsiouValue) {
+    if (lsiouValue == null || lsiouValue.isBlank()) {
       return null;
     }
-    return switch (serfileValue.trim().toLowerCase()) {
+    return switch (lsiouValue.trim().toLowerCase()) {
       case "full" -> FULL;
       case "selective" -> SELECTIVE;
       default -> null;

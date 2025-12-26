@@ -7,7 +7,7 @@ import lombok.Getter;
 ///
 /// 字段映射：cat_venue_relation.relation_type
 ///
-/// 定义期刊之间的演变关系，主要来源于 NLM Serfile 的 TitleRelated 字段。
+/// 定义期刊之间的演变关系，主要来源于 NLM LSIOU 的 TitleRelated 字段。
 ///
 /// 关联类型说明：
 ///
@@ -104,9 +104,9 @@ public enum VenueRelationType {
     return null;
   }
 
-  /// 从 Serfile TitleType 属性值转换。
+  /// 从 LSIOU TitleType 属性值转换。
   ///
-  /// Serfile 中的 TitleType 属性值与本枚举的映射关系：
+  /// LSIOU 中的 TitleType 属性值与本枚举的映射关系：
   /// - Preceding → PRECEDING
   /// - Succeeding → SUCCEEDING
   /// - Absorbed → ABSORBED
@@ -116,9 +116,9 @@ public enum VenueRelationType {
   /// - ContinuedBy → CONTINUED_BY
   /// - Continues → CONTINUES
   ///
-  /// @param titleType Serfile 中的 TitleType 值
+  /// @param titleType LSIOU 中的 TitleType 值
   /// @return 对应的枚举值，无法识别则返回 null
-  public static VenueRelationType fromSerfileTitleType(String titleType) {
+  public static VenueRelationType fromLsiouTitleType(String titleType) {
     if (titleType == null || titleType.isBlank()) {
       return null;
     }
