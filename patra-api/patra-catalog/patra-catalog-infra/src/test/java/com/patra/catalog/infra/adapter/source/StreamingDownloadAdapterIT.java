@@ -390,6 +390,8 @@ class StreamingDownloadAdapterIT {
       ftpPort = ftpServer.getServerControlPort();
 
       DownloadProperties properties = new DownloadProperties();
+      properties.getFtp().setUsername("anonymous");
+      properties.getFtp().setPassword("patra@example.com");
       DownloadClient downloadClient =
           new DefaultDownloadClient(List.of(new FtpStreamingDownloader(properties)), properties);
       ftpAdapter = new StreamingDownloadAdapter(downloadClient);
