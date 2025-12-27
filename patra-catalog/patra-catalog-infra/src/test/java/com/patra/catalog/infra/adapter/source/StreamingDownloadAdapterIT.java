@@ -12,11 +12,17 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.common.error.trait.StandardErrorTrait;
+import com.patra.starter.restclient.config.DownloadProperties;
+import com.patra.starter.restclient.download.DefaultDownloadClient;
+import com.patra.starter.restclient.download.DownloadClient;
+import com.patra.starter.restclient.download.strategy.FtpStreamingDownloader;
+import com.patra.starter.restclient.download.strategy.HttpStreamingDownloader;
 import io.netty.channel.ChannelOption;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,7 +74,14 @@ class StreamingDownloadAdapterIT {
             .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(-1))
             .build();
 
-    adapter = new StreamingDownloadAdapter(webClient);
+    DownloadProperties properties = new DownloadProperties();
+    DownloadClient downloadClient =
+        new DefaultDownloadClient(
+            List.of(
+                new HttpStreamingDownloader(webClient, properties),
+                new FtpStreamingDownloader(properties)),
+            properties);
+    adapter = new StreamingDownloadAdapter(downloadClient);
   }
 
   @Nested
@@ -212,7 +225,15 @@ class StreamingDownloadAdapterIT {
               .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(-1))
               .build();
 
-      adapter = new StreamingDownloadAdapter(webClient);
+      DownloadProperties properties = new DownloadProperties();
+      properties.getRetry().setEnabled(false);
+      DownloadClient downloadClient =
+          new DefaultDownloadClient(
+              List.of(
+                  new HttpStreamingDownloader(webClient, properties),
+                  new FtpStreamingDownloader(properties)),
+              properties);
+      adapter = new StreamingDownloadAdapter(downloadClient);
     }
 
     @Test
@@ -368,9 +389,10 @@ class StreamingDownloadAdapterIT {
       ftpServer.start();
       ftpPort = ftpServer.getServerControlPort();
 
-      // 创建测试用 adapter（使用空的 WebClient，FTP 不需要）
-      WebClient dummyWebClient = WebClient.builder().build();
-      ftpAdapter = new StreamingDownloadAdapter(dummyWebClient);
+      DownloadProperties properties = new DownloadProperties();
+      DownloadClient downloadClient =
+          new DefaultDownloadClient(List.of(new FtpStreamingDownloader(properties)), properties);
+      ftpAdapter = new StreamingDownloadAdapter(downloadClient);
     }
 
     @AfterEach
