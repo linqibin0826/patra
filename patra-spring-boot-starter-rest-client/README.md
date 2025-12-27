@@ -125,7 +125,7 @@ public class StreamingService {
 
 **默认配置**：
 - 连接超时：30 秒
-- 响应超时：600 秒（10 分钟，与 `longRunningRestClient` 一致）
+- 响应超时：30 分钟（适合大文件流式下载）
 - 内存限制：-1（不限制，使用流式处理）
 
 **启用条件**：
@@ -141,7 +141,7 @@ patra:
       enabled: false
 ```
 
-### 文件下载进度监控
+### 文件下载与进度监控
 
 使用 `DownloadClient` 下载大文件并监控进度：
 
@@ -158,10 +158,49 @@ public class FileService {
     }
 
     public Path downloadFile(URI url) {
-        DownloadResult result = downloadClient.downloadToTemp(url, progressListener);
+        DownloadResult result =
+            downloadClient.downloadToTemp(
+                url,
+                DownloadOptions.withProgressListener(progressListener));
         return result.filePath();
     }
 }
+```
+
+**流式下载示例**：
+
+```java
+try (StreamingDownloadResponse result = downloadClient.openStream(url)) {
+    String content = new String(result.inputStream().readAllBytes(), StandardCharsets.UTF_8);
+}
+```
+
+**可选配置**（全局默认 + 单次覆盖）：
+
+```yaml
+patra:
+  rest-client:
+    download:
+      enabled: true
+      base-dir: /data/patra/downloads
+      temp-dir: /data/patra/tmp
+      write-strategy: OVERWRITE
+      create-dirs: true
+      cleanup-on-failure: true
+      buffer-size: 65536
+      retry:
+        enabled: true
+        max-attempts: 3
+        initial-backoff: 2s
+        max-backoff: 30s
+      ftp:
+        enabled: true
+        username: anonymous
+        password: patra@example.com
+        connect-timeout: 30s
+        data-timeout: 30m
+        passive-mode: true
+        default-content-type: application/xml
 ```
 
 **进度回调信息**（`DownloadProgress`）：
@@ -376,9 +415,9 @@ public RestClient customRestClient(JdkClientHttpRequestFactory factory) {
 |-----------|------|------|------|
 | `defaultRestClient` | `RestClient` | 无同名 Bean | 默认客户端（read=30s） |
 | `longRunningRestClient` | `RestClient` | `clients.long-running.enabled=true` | 长时间运行客户端（read=600s） |
-| `streamingWebClient` | `WebClient` | `streaming.enabled=true` + `WebClient` 类存在 | 流式下载专用 WebClient（响应超时 600s） |
+| `streamingWebClient` | `WebClient` | `streaming.enabled=true` + `WebClient` 类存在 | 流式下载专用 WebClient（响应超时 30 分钟） |
 | `loggingInterceptor` | `LoggingInterceptor` | `logging.enabled=true` | 日志拦截器 |
-| `downloadClient` | `DownloadClient` | 存在 `longRunningRestClient` | 支持进度监控的下载客户端 |
+| `downloadClient` | `DownloadClient` | 存在任一流式下载策略 | 统一下载客户端（流式 + 落盘） |
 | `defaultProgressListener` | `ProgressListener` | 无同名 Bean | 组合日志和指标监听器 |
 
 > **注意**: `JdkClientHttpRequestFactory` 不再作为 Bean 暴露，改为在 `defaultRestClient` 内部直接创建。

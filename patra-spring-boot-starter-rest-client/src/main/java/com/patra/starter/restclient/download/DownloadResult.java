@@ -2,7 +2,7 @@ package com.patra.starter.restclient.download;
 
 import java.nio.file.Path;
 
-/// 下载结果。
+/// 落盘下载结果。
 ///
 /// 包含下载完成后的文件信息和最终进度数据。
 ///
