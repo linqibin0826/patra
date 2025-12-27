@@ -157,8 +157,10 @@ public class DownloadProperties {
   /// FTP 配置。
   public static class FtpConfig {
     private boolean enabled = true;
-    private String username = "anonymous";
-    private String password = "patra@example.com";
+    /// FTP 用户名（默认不提供，必须显式配置或在调用时传入）。
+    private String username;
+    /// FTP 密码（默认不提供，必须显式配置或在调用时传入）。
+    private String password;
     private Duration connectTimeout = Duration.ofSeconds(30);
     private Duration dataTimeout = Duration.ofMinutes(30);
     private boolean passiveMode = true;

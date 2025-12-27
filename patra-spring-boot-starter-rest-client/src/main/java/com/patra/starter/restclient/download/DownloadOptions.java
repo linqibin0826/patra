@@ -36,4 +36,22 @@ public record DownloadOptions(
   public static DownloadOptions withProgressListener(ProgressListener listener) {
     return new DownloadOptions(null, null, null, null, null, listener);
   }
+
+  /// 使用 FTP 账号密码创建下载选项。
+  ///
+  /// @param username FTP 用户名
+  /// @param password FTP 密码
+  /// @return 下载选项
+  public static DownloadOptions withFtpCredentials(String username, String password) {
+    return new DownloadOptions(
+        null, null, null, null, new FtpCredentials(username, password), null);
+  }
+
+  /// 使用 FTP 账号密码创建下载选项。
+  ///
+  /// @param credentials FTP 账号密码
+  /// @return 下载选项
+  public static DownloadOptions withFtpCredentials(FtpCredentials credentials) {
+    return new DownloadOptions(null, null, null, null, credentials, null);
+  }
 }
