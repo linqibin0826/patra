@@ -8,6 +8,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import com.patra.starter.restclient.config.DownloadProperties;
+import com.patra.starter.restclient.download.strategy.HttpStreamingDownloader;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,7 +21,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
-import org.springframework.web.client.RestClient;
+import org.springframework.web.reactive.function.client.WebClient;
 
 /// DownloadClient 集成测试。
 ///
@@ -37,8 +39,17 @@ class DownloadClientIT {
 
   @BeforeEach
   void setUp(WireMockRuntimeInfo wmRuntimeInfo) {
-    RestClient restClient = RestClient.builder().baseUrl(wmRuntimeInfo.getHttpBaseUrl()).build();
-    downloadClient = new DefaultDownloadClient(restClient);
+    WebClient webClient =
+        WebClient.builder()
+            .baseUrl(wmRuntimeInfo.getHttpBaseUrl())
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(-1))
+            .build();
+    DownloadProperties properties = new DownloadProperties();
+    properties.setBaseDir(tempDir);
+    properties.setTempDir(tempDir);
+    downloadClient =
+        new DefaultDownloadClient(
+            List.of(new HttpStreamingDownloader(webClient, properties)), properties);
   }
 
   @Nested
@@ -64,7 +75,9 @@ class DownloadClientIT {
       Path targetPath = tempDir.resolve("test.txt");
       DownloadResult result =
           downloadClient.download(
-              URI.create(wmRuntimeInfo.getHttpBaseUrl() + "/test.txt"), targetPath, null);
+              URI.create(wmRuntimeInfo.getHttpBaseUrl() + "/test.txt"),
+              targetPath,
+              DownloadOptions.defaultOptions());
 
       // 验证结果
       assertThat(result.filePath()).isEqualTo(targetPath);
@@ -110,7 +123,9 @@ class DownloadClientIT {
       Path targetPath = tempDir.resolve("large.bin");
       DownloadResult result =
           downloadClient.download(
-              URI.create(wmRuntimeInfo.getHttpBaseUrl() + "/large.bin"), targetPath, listener);
+              URI.create(wmRuntimeInfo.getHttpBaseUrl() + "/large.bin"),
+              targetPath,
+              DownloadOptions.withProgressListener(listener));
 
       // 验证结果
       assertThat(result.fileSize()).isEqualTo(content.length);
@@ -134,7 +149,7 @@ class DownloadClientIT {
       assertThatThrownBy(
               () ->
                   downloadClient.download(
-                      URI.create(wmRuntimeInfo.getHttpBaseUrl() + "/not-found"), targetPath, null))
+                      URI.create(wmRuntimeInfo.getHttpBaseUrl() + "/not-found"), targetPath))
           .isInstanceOf(DownloadException.class)
           .hasMessageContaining("404");
     }
@@ -162,10 +177,104 @@ class DownloadClientIT {
           downloadClient.download(
               URI.create(wmRuntimeInfo.getHttpBaseUrl() + "/unknown-size.txt"),
               targetPath,
-              listener);
+              DownloadOptions.withProgressListener(listener));
 
       assertThat(result.fileSize()).isEqualTo(content.length);
       assertThat(Files.readString(targetPath)).isEqualTo("Unknown size content");
+    }
+
+    @Test
+    @DisplayName("写入策略 SKIP - 已存在文件应直接返回并触发完成回调")
+    void shouldSkipExistingFileAndNotifyComplete() throws Exception {
+      Path targetPath = tempDir.resolve("skip.txt");
+      Files.writeString(targetPath, "cached");
+
+      List<DownloadProgress> updates = new ArrayList<>();
+      ProgressListener listener =
+          new ProgressListener() {
+            @Override
+            public void onProgress(DownloadProgress progress) {
+              updates.add(progress);
+            }
+
+            @Override
+            public void onComplete(DownloadProgress finalProgress) {
+              updates.add(finalProgress);
+            }
+          };
+
+      DownloadOptions options =
+          new DownloadOptions(WriteStrategy.SKIP, null, null, null, null, listener);
+
+      DownloadResult result =
+          downloadClient.download(
+              new DownloadRequest(URI.create("http://localhost/skip.txt"), targetPath, options));
+
+      assertThat(result.filePath()).isEqualTo(targetPath);
+      assertThat(Files.readString(targetPath)).isEqualTo("cached");
+      assertThat(updates).isNotEmpty();
+      assertThat(updates.get(updates.size() - 1).percentage()).isEqualTo(100);
+    }
+
+    @Test
+    @DisplayName("写入策略 FAIL - 已存在文件应抛出异常")
+    void shouldFailWhenFileAlreadyExists() throws Exception {
+      Path targetPath = tempDir.resolve("fail.txt");
+      Files.writeString(targetPath, "cached");
+
+      DownloadOptions options =
+          new DownloadOptions(WriteStrategy.FAIL, null, null, null, null, null);
+
+      assertThatThrownBy(
+              () ->
+                  downloadClient.download(
+                      new DownloadRequest(
+                          URI.create("http://localhost/fail.txt"), targetPath, options)))
+          .isInstanceOf(DownloadException.class)
+          .hasMessageContaining("目标文件已存在");
+    }
+
+    @Test
+    @DisplayName("未指定目标路径 - 应使用 baseDir 生成文件名")
+    void shouldUseBaseDirWhenTargetPathMissing(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+      byte[] content = "base-dir".getBytes();
+      wmRuntimeInfo
+          .getWireMock()
+          .register(
+              get(urlEqualTo("/base-dir.txt"))
+                  .willReturn(
+                      aResponse()
+                          .withStatus(200)
+                          .withHeader("Content-Length", String.valueOf(content.length))
+                          .withBody(content)));
+
+      DownloadResult result =
+          downloadClient.download(URI.create(wmRuntimeInfo.getHttpBaseUrl() + "/base-dir.txt"));
+
+      assertThat(result.filePath()).isEqualTo(tempDir.resolve("base-dir.txt"));
+      assertThat(Files.readString(result.filePath())).isEqualTo("base-dir");
+    }
+  }
+
+  @Nested
+  @DisplayName("openStream 方法")
+  class OpenStreamTests {
+
+    @Test
+    @DisplayName("应返回可读取的 InputStream")
+    void shouldOpenStream(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+      byte[] content = "stream-content".getBytes();
+      wmRuntimeInfo
+          .getWireMock()
+          .register(
+              get(urlEqualTo("/stream.txt"))
+                  .willReturn(aResponse().withStatus(200).withBody(content)));
+
+      try (StreamingDownloadResponse result =
+          downloadClient.openStream(
+              URI.create(wmRuntimeInfo.getHttpBaseUrl() + "/stream.txt"), null)) {
+        assertThat(new String(result.inputStream().readAllBytes())).isEqualTo("stream-content");
+      }
     }
   }
 
@@ -229,7 +338,9 @@ class DownloadClientIT {
       assertThatThrownBy(
           () ->
               downloadClient.download(
-                  URI.create(wmRuntimeInfo.getHttpBaseUrl() + "/error"), targetPath, listener));
+                  URI.create(wmRuntimeInfo.getHttpBaseUrl() + "/error"),
+                  targetPath,
+                  DownloadOptions.withProgressListener(listener)));
 
       assertThat(errors).hasSize(1);
       assertThat(errors.get(0)).isInstanceOf(DownloadException.class);

@@ -73,4 +73,43 @@ public class DownloadException extends RuntimeException implements HasErrorTrait
     return new DownloadException(
         "下载文件时 IO 错误: " + cause.getMessage(), cause, StandardErrorTrait.DEP_UNAVAILABLE);
   }
+
+  /// 创建不支持的协议异常。
+  ///
+  /// @param scheme 协议
+  /// @return 下载异常
+  public static DownloadException unsupportedScheme(String scheme) {
+    return new DownloadException("不支持的协议: " + scheme, StandardErrorTrait.RULE_VIOLATION);
+  }
+
+  /// 创建 URL 非法异常。
+  ///
+  /// @param url 下载地址
+  /// @return 下载异常
+  public static DownloadException invalidUrl(String url) {
+    return new DownloadException("下载地址无效: " + url, StandardErrorTrait.RULE_VIOLATION);
+  }
+
+  /// 创建文件已存在异常。
+  ///
+  /// @param path 文件路径
+  /// @return 下载异常
+  public static DownloadException fileAlreadyExists(String path) {
+    return new DownloadException("目标文件已存在: " + path, StandardErrorTrait.RULE_VIOLATION);
+  }
+
+  /// 创建目标路径不是常规文件异常。
+  ///
+  /// @param path 文件路径
+  /// @return 下载异常
+  public static DownloadException targetNotRegularFile(String path) {
+    return new DownloadException("目标路径不是文件: " + path, StandardErrorTrait.RULE_VIOLATION);
+  }
+
+  /// 创建缺少目标路径异常。
+  ///
+  /// @return 下载异常
+  public static DownloadException targetPathMissing() {
+    return new DownloadException("下载目标路径缺失，请指定路径或配置默认目录", StandardErrorTrait.RULE_VIOLATION);
+  }
 }

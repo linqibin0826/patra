@@ -4,24 +4,27 @@ import java.net.URI;
 import java.nio.file.Path;
 import org.springframework.lang.Nullable;
 
-/// 支持进度监控的下载客户端。
+/// 统一下载客户端（流式 + 落盘）。
 ///
-/// 提供带进度回调的文件下载能力，支持下载到指定路径或临时目录。
+/// 提供两类能力：
+/// - **流式下载**：返回 `InputStream` 供调用方自行消费
+/// - **落盘下载**：根据策略将文件保存到本地路径
 ///
 /// **使用示例**：
 /// ```java
-/// // 下载到指定路径
-/// DownloadResult result = downloadClient.download(
-///     URI.create("https://example.com/file.zip"),
-///     Path.of("/tmp/file.zip"),
-///     progress -> log.info("进度: {}%", progress.percentage())
-/// );
+/// // 流式下载
+/// try (StreamingDownloadResponse result =
+///     downloadClient.openStream(URI.create("https://example.com/a.xml"), null)) {
+///   String content = new String(result.inputStream().readAllBytes(), StandardCharsets.UTF_8);
+/// }
 ///
-/// // 下载到临时目录
-/// DownloadResult result = downloadClient.downloadToTemp(
-///     URI.create("https://example.com/file.zip"),
-///     null  // 不需要进度监控
-/// );
+/// // 落盘下载
+/// DownloadResult result =
+///     downloadClient.download(
+///         new DownloadRequest(
+///             URI.create("https://example.com/file.zip"),
+///             Path.of("/tmp/file.zip"),
+///             DownloadOptions.defaultOptions()));
 /// ```
 ///
 /// **默认实现**：{@link DefaultDownloadClient}
@@ -32,44 +35,72 @@ import org.springframework.lang.Nullable;
 /// @see ProgressListener
 public interface DownloadClient {
 
-  /// 下载文件到指定路径。
+  /// 打开远程资源的流式下载输入流。
+  ///
+  /// 调用方必须在使用完毕后关闭返回的结果（建议 try-with-resources）。
   ///
   /// @param url 下载地址
-  /// @param targetPath 目标文件路径（如果文件已存在将被覆盖）
-  /// @param listener 进度监听器（可选，传 null 则不监控进度）
+  /// @param options 下载选项（可选，传 null 使用默认配置）
+  /// @return 流式下载结果
+  /// @throws DownloadException 下载过程中发生错误（网络错误、IO 错误等）
+  StreamingDownloadResponse openStream(URI url, @Nullable DownloadOptions options);
+
+  /// 打开远程资源的流式下载输入流（使用默认选项）。
+  ///
+  /// @param url 下载地址
+  /// @return 流式下载结果
+  default StreamingDownloadResponse openStream(URI url) {
+    return openStream(url, null);
+  }
+
+  /// 下载文件到指定路径或默认目录。
+  ///
+  /// @param request 下载请求
   /// @return 下载结果，包含文件路径、大小和最终进度
   /// @throws DownloadException 下载过程中发生错误（网络错误、IO 错误等）
-  DownloadResult download(URI url, Path targetPath, @Nullable ProgressListener listener);
+  DownloadResult download(DownloadRequest request);
 
   /// 下载文件到系统临时目录。
   ///
   /// 临时文件命名格式：`download-{uuid}.tmp`
   ///
   /// @param url 下载地址
-  /// @param listener 进度监听器（可选，传 null 则不监控进度）
+  /// @param options 下载选项（可选，传 null 使用默认配置）
   /// @return 下载结果，包含临时文件路径、大小和最终进度
   /// @throws DownloadException 下载过程中发生错误（网络错误、IO 错误等）
-  DownloadResult downloadToTemp(URI url, @Nullable ProgressListener listener);
+  DownloadResult downloadToTemp(URI url, @Nullable DownloadOptions options);
 
-  /// 下载文件到指定路径（无进度监控）。
-  ///
-  /// 便捷方法，等价于 `download(url, targetPath, null)`。
+  /// 下载文件到指定路径（便捷方法）。
   ///
   /// @param url 下载地址
   /// @param targetPath 目标文件路径
   /// @return 下载结果
-  /// @throws DownloadException 下载过程中发生错误
   default DownloadResult download(URI url, Path targetPath) {
-    return download(url, targetPath, null);
+    return download(new DownloadRequest(url, targetPath, null));
   }
 
-  /// 下载文件到系统临时目录（无进度监控）。
-  ///
-  /// 便捷方法，等价于 `downloadToTemp(url, null)`。
+  /// 下载文件到默认目录（使用全局配置）。
   ///
   /// @param url 下载地址
   /// @return 下载结果
-  /// @throws DownloadException 下载过程中发生错误
+  default DownloadResult download(URI url) {
+    return download(new DownloadRequest(url, null, null));
+  }
+
+  /// 下载文件到指定路径（带选项）。
+  ///
+  /// @param url 下载地址
+  /// @param targetPath 目标文件路径
+  /// @param options 下载选项（可选）
+  /// @return 下载结果
+  default DownloadResult download(URI url, Path targetPath, @Nullable DownloadOptions options) {
+    return download(new DownloadRequest(url, targetPath, options));
+  }
+
+  /// 下载文件到系统临时目录（便捷方法）。
+  ///
+  /// @param url 下载地址
+  /// @return 下载结果
   default DownloadResult downloadToTemp(URI url) {
     return downloadToTemp(url, null);
   }
