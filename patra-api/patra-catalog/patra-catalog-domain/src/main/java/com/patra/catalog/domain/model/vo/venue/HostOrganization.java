@@ -1,6 +1,8 @@
 package com.patra.catalog.domain.model.vo.venue;
 
 import cn.hutool.core.lang.Assert;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
@@ -37,6 +39,7 @@ import java.util.List;
 /// @param lineage 所有权链（从当前机构到顶层母公司的 ID 列表，可选）
 /// @author linqibin
 /// @since 0.1.0
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record HostOrganization(String id, String name, List<String> lineage)
     implements Serializable {
 
@@ -82,6 +85,7 @@ public record HostOrganization(String id, String name, List<String> lineage)
   /// 获取顶层母公司 ID。
   ///
   /// @return 顶层母公司 ID，如果无所有权链则返回当前机构 ID
+  @JsonIgnore
   public String getTopParentId() {
     return hasLineage() ? lineage.getLast() : id;
   }

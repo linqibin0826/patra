@@ -1,5 +1,7 @@
 package com.patra.catalog.domain.model.vo.venue;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.Serial;
 import java.io.Serializable;
 
@@ -33,6 +35,7 @@ import java.io.Serializable;
 /// @param ceased 是否已停刊
 /// @author linqibin
 /// @since 0.1.0
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record PublicationHistory(Integer startYear, Integer endYear, boolean ceased)
     implements Serializable {
 
@@ -81,6 +84,7 @@ public record PublicationHistory(Integer startYear, Integer endYear, boolean cea
   /// 判断期刊是否仍在出版。
   ///
   /// @return true 如果期刊仍在出版
+  @JsonIgnore
   public boolean isActive() {
     return !ceased;
   }

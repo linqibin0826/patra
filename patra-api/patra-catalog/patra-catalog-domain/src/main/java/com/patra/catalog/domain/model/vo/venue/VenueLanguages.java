@@ -1,5 +1,7 @@
 package com.patra.catalog.domain.model.vo.venue;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -58,6 +60,7 @@ import java.util.List;
 /// @param summary 摘要语言列表（摘要可用的语言）
 /// @author linqibin
 /// @since 0.1.0
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record VenueLanguages(List<String> primary, List<String> summary) implements Serializable {
 
   @Serial private static final long serialVersionUID = 1L;
@@ -103,6 +106,7 @@ public record VenueLanguages(List<String> primary, List<String> summary) impleme
   /// 获取主要语言（第一个主语言）。
   ///
   /// @return 主要语言代码，如果没有则返回 null
+  @JsonIgnore
   public String getMainLanguage() {
     return primary.isEmpty() ? null : primary.get(0);
   }
@@ -140,6 +144,7 @@ public record VenueLanguages(List<String> primary, List<String> summary) impleme
   /// 判断是否为空（无任何语言信息）。
   ///
   /// @return true 如果主语言和摘要语言都为空
+  @JsonIgnore
   public boolean isEmpty() {
     return primary.isEmpty() && summary.isEmpty();
   }
@@ -147,6 +152,7 @@ public record VenueLanguages(List<String> primary, List<String> summary) impleme
   /// 判断是否为英语期刊（主语言为英语）。
   ///
   /// @return true 如果主语言包含英语
+  @JsonIgnore
   public boolean isEnglish() {
     return hasPrimaryLanguage("eng");
   }
@@ -154,6 +160,7 @@ public record VenueLanguages(List<String> primary, List<String> summary) impleme
   /// 判断是否为中文期刊（主语言为中文）。
   ///
   /// @return true 如果主语言包含中文
+  @JsonIgnore
   public boolean isChinese() {
     return hasPrimaryLanguage("chi") || hasPrimaryLanguage("zho");
   }
@@ -161,6 +168,7 @@ public record VenueLanguages(List<String> primary, List<String> summary) impleme
   /// 获取所有语言代码（去重）。
   ///
   /// @return 所有语言代码列表
+  @JsonIgnore
   public List<String> getAllLanguages() {
     List<String> all = new ArrayList<>(primary);
     for (String lang : summary) {
