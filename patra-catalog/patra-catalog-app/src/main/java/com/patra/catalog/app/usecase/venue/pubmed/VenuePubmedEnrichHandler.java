@@ -6,6 +6,7 @@ import cn.hutool.core.date.TimeInterval;
 import com.patra.catalog.api.error.CatalogErrorCode;
 import com.patra.catalog.app.usecase.venue.pubmed.command.VenuePubmedEnrichCommand;
 import com.patra.catalog.app.usecase.venue.pubmed.dto.VenuePubmedEnrichResult;
+import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.CitationSubset;
 import com.patra.catalog.domain.model.enums.IndexingTreatment;
@@ -30,6 +31,7 @@ import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.common.cqrs.CommandHandler;
 import com.patra.common.error.ApplicationException;
+import com.patra.common.error.trait.StandardErrorTrait;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -77,6 +79,9 @@ public class VenuePubmedEnrichHandler
 
   /// 批处理大小
   private static final int BATCH_SIZE = 500;
+  private static final String NLM_FTP_HOST = "ftp.nlm.nih.gov";
+  private static final String LSIOU_PATH_PREFIX = "/online/journals/";
+  private static final String LSIOU_ARCHIVE_PREFIX = "/online/journals/archive/";
 
   private final StreamingDownloadPort streamingDownloadPort;
   private final LsiouParserPort parserPort;
@@ -105,10 +110,11 @@ public class VenuePubmedEnrichHandler
     // - 使用 try-with-resources 管理 HTTP 连接生命周期
     // - 无磁盘落盘，HTTP 响应体直接传递给 Parser
     // ────────────────────────────────────────────────────────────────────────────
-    try (StreamingDownloadResult downloadResult =
-        streamingDownloadPort.download(URI.create(command.url()))) {
+    try (DownloadContext context = openDownloadContext(command.url())) {
+      StreamingDownloadResult downloadResult = context.result();
+      String sourceUrl = context.sourceUrl();
 
-      log.info("HTTP 连接建立成功，开始流式解析");
+      log.info("HTTP 连接建立成功，开始流式解析，实际来源：{}", sourceUrl);
 
       // ────────────────────────────────────────────────────────────────────────────
       // 阶段 2：XML 解析
@@ -120,7 +126,7 @@ public class VenuePubmedEnrichHandler
 
       if (allRecords.isEmpty()) {
         return VenuePubmedEnrichResult.success(
-            0, 0, 0, 0, command.lsiouVersion(), command.url(), timer.interval());
+            0, 0, 0, 0, command.lsiouVersion(), sourceUrl, timer.interval());
       }
 
       // ────────────────────────────────────────────────────────────────────────────
@@ -164,7 +170,7 @@ public class VenuePubmedEnrichHandler
           createdCount.get(),
           skippedCount.get(),
           command.lsiouVersion(),
-          command.url(),
+          sourceUrl,
           duration);
 
     } catch (ApplicationException e) {
@@ -182,6 +188,106 @@ public class VenuePubmedEnrichHandler
           CatalogErrorCode.CAT_1003, "PubMed Venue 富化时发生意外错误: " + e.getMessage(), e);
     }
     // 无需 finally 清理临时文件，try-with-resources 自动关闭 HTTP 连接
+  }
+
+  /// 获取流式下载结果，若主目录不存在则回退到 archive 目录。
+  ///
+  /// @param urlString 下载 URL
+  /// @return 下载上下文（包含实际来源 URL）
+  private DownloadContext openDownloadContext(String urlString) {
+    URI primaryUrl = URI.create(urlString);
+    try {
+      return new DownloadContext(streamingDownloadPort.download(primaryUrl), primaryUrl.toString());
+    } catch (FileDownloadException ex) {
+      if (shouldTryArchive(primaryUrl, ex)) {
+        URI archiveUrl = toArchiveUrl(primaryUrl);
+        log.warn("LSIOU 主目录文件不存在，尝试 archive 目录：{}", archiveUrl);
+        return new DownloadContext(
+            streamingDownloadPort.download(archiveUrl), archiveUrl.toString());
+      }
+      throw ex;
+    }
+  }
+
+  /// 判断是否需要回退到 archive 目录。
+  ///
+  /// @param url 原始下载 URL
+  /// @param exception 下载异常
+  /// @return 是否需要回退
+  private boolean shouldTryArchive(URI url, FileDownloadException exception) {
+    if (url == null || exception == null) {
+      return false;
+    }
+    if (!isNlmFtpUrl(url) || isArchivePath(url)) {
+      return false;
+    }
+    return exception.getErrorTraits().contains(StandardErrorTrait.NOT_FOUND);
+  }
+
+  /// 构建 archive 目录的 URL。
+  ///
+  /// @param url 原始下载 URL
+  /// @return archive 目录 URL
+  private URI toArchiveUrl(URI url) {
+    String path = url.getPath();
+    if (path == null) {
+      return url;
+    }
+    String normalizedPath = path.startsWith("/") ? path : "/" + path;
+    if (!normalizedPath.startsWith(LSIOU_PATH_PREFIX)
+        || normalizedPath.startsWith(LSIOU_ARCHIVE_PREFIX)) {
+      return url;
+    }
+    String archivePath =
+        LSIOU_ARCHIVE_PREFIX + normalizedPath.substring(LSIOU_PATH_PREFIX.length());
+    String authority = url.getAuthority();
+    StringBuilder builder = new StringBuilder();
+    builder.append(url.getScheme()).append("://").append(authority).append(archivePath);
+    if (url.getQuery() != null && !url.getQuery().isBlank()) {
+      builder.append("?").append(url.getQuery());
+    }
+    if (url.getFragment() != null && !url.getFragment().isBlank()) {
+      builder.append("#").append(url.getFragment());
+    }
+    return URI.create(builder.toString());
+  }
+
+  /// 判断是否为 NLM FTP 的 LSIOU 路径。
+  ///
+  /// @param url 下载 URL
+  /// @return 是否为 NLM FTP LSIOU 路径
+  private boolean isNlmFtpUrl(URI url) {
+    if (url == null) {
+      return false;
+    }
+    String host = url.getHost();
+    String path = url.getPath();
+    return "ftp".equalsIgnoreCase(url.getScheme())
+        && NLM_FTP_HOST.equalsIgnoreCase(host)
+        && path != null
+        && path.startsWith(LSIOU_PATH_PREFIX);
+  }
+
+  /// 判断 URL 是否已指向 archive 目录。
+  ///
+  /// @param url 下载 URL
+  /// @return 是否为 archive 目录
+  private boolean isArchivePath(URI url) {
+    String path = url.getPath();
+    return path != null && path.startsWith(LSIOU_ARCHIVE_PREFIX);
+  }
+
+  /// 下载上下文（携带实际来源 URL）。
+  ///
+  /// @param result 下载结果
+  /// @param sourceUrl 实际来源 URL
+  private record DownloadContext(StreamingDownloadResult result, String sourceUrl)
+      implements AutoCloseable {
+
+    @Override
+    public void close() throws Exception {
+      result.close();
+    }
   }
 
   /// 处理一个批次的记录。
