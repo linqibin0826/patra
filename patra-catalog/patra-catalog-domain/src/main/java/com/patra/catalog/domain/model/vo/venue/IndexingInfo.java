@@ -1,5 +1,7 @@
 package com.patra.catalog.domain.model.vo.venue;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.Serial;
 import java.io.Serializable;
 
@@ -42,6 +44,7 @@ import java.io.Serializable;
 /// @param isoAbbreviation ISO 缩写标题
 /// @author linqibin
 /// @since 0.1.0
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record IndexingInfo(String status, String medlineTa, String isoAbbreviation)
     implements Serializable {
 
@@ -80,6 +83,7 @@ public record IndexingInfo(String status, String medlineTa, String isoAbbreviati
   /// 判断期刊是否当前被 MEDLINE 收录。
   ///
   /// @return true 如果当前被 MEDLINE 索引（状态为 C 或 Y）
+  @JsonIgnore
   public boolean isCurrentlyIndexed() {
     return STATUS_CURRENTLY_INDEXED.equals(status) || STATUS_INDEXED_SUBSET.equals(status);
   }
@@ -87,6 +91,7 @@ public record IndexingInfo(String status, String medlineTa, String isoAbbreviati
   /// 判断期刊是否曾被 MEDLINE 收录但已停止。
   ///
   /// @return true 如果状态为已停止收录
+  @JsonIgnore
   public boolean isDiscontinued() {
     return STATUS_DISCONTINUED.equals(status);
   }
@@ -94,6 +99,7 @@ public record IndexingInfo(String status, String medlineTa, String isoAbbreviati
   /// 判断期刊是否从未被 MEDLINE 收录。
   ///
   /// @return true 如果从未被收录
+  @JsonIgnore
   public boolean isNeverIndexed() {
     return STATUS_NOT_INDEXED.equals(status);
   }
@@ -115,6 +121,7 @@ public record IndexingInfo(String status, String medlineTa, String isoAbbreviati
   /// 获取首选缩写标题（优先 MEDLINE，其次 ISO）。
   ///
   /// @return 首选缩写标题，如果都没有则返回 null
+  @JsonIgnore
   public String getPreferredAbbreviation() {
     if (hasMedlineTa()) {
       return medlineTa;

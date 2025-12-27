@@ -1,5 +1,7 @@
 package com.patra.catalog.domain.model.vo.venue;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
@@ -47,6 +49,7 @@ import lombok.Builder;
 /// @author linqibin
 /// @since 0.7.0
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record OpenAccessInfo(
     boolean isOa, boolean isInDoaj, String oaType, Integer apcUsd, List<ApcPrice> apcPrices)
     implements Serializable {
@@ -111,6 +114,7 @@ public record OpenAccessInfo(
   /// Gold OA 指文章在发表时即完全开放获取，通常需要支付 APC。
   ///
   /// @return true 如果是 Gold OA
+  @JsonIgnore
   public boolean isGoldOa() {
     return "gold".equalsIgnoreCase(oaType);
   }
@@ -120,6 +124,7 @@ public record OpenAccessInfo(
   /// Green OA 指作者可以在机构库或预印本服务器上自行存档。
   ///
   /// @return true 如果是 Green OA
+  @JsonIgnore
   public boolean isGreenOa() {
     return "green".equalsIgnoreCase(oaType);
   }
@@ -129,6 +134,7 @@ public record OpenAccessInfo(
   /// Hybrid OA 指订阅型期刊中提供开放获取选项的文章。
   ///
   /// @return true 如果是 Hybrid OA
+  @JsonIgnore
   public boolean isHybridOa() {
     return "hybrid".equalsIgnoreCase(oaType);
   }
@@ -138,6 +144,7 @@ public record OpenAccessInfo(
   /// Bronze OA 指文章可免费阅读但无明确许可证。
   ///
   /// @return true 如果是 Bronze OA
+  @JsonIgnore
   public boolean isBronzeOa() {
     return "bronze".equalsIgnoreCase(oaType);
   }
@@ -147,6 +154,7 @@ public record OpenAccessInfo(
   /// Diamond OA 指既不向作者收费也不向读者收费的开放获取。
   ///
   /// @return true 如果是 Diamond OA
+  @JsonIgnore
   public boolean isDiamondOa() {
     return "diamond".equalsIgnoreCase(oaType);
   }

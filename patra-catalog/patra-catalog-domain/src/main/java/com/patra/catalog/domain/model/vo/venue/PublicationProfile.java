@@ -1,5 +1,7 @@
 package com.patra.catalog.domain.model.vo.venue;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
@@ -53,6 +55,7 @@ import lombok.Builder;
 /// @author linqibin
 /// @since 0.7.0
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record PublicationProfile(
     String abbreviatedTitle,
     List<String> alternateTitles,
@@ -158,6 +161,7 @@ public record PublicationProfile(
   /// 判断期刊是否已停刊。
   ///
   /// @return true 如果已停刊
+  @JsonIgnore
   public boolean isCeased() {
     return publicationHistory != null && publicationHistory.ceased();
   }
@@ -165,6 +169,7 @@ public record PublicationProfile(
   /// 判断期刊是否当前被 MEDLINE 收录。
   ///
   /// @return true 如果当前被 MEDLINE 索引
+  @JsonIgnore
   public boolean isCurrentlyIndexed() {
     return indexingInfo != null && indexingInfo.isCurrentlyIndexed();
   }
@@ -172,6 +177,7 @@ public record PublicationProfile(
   /// 判断是否为英语期刊。
   ///
   /// @return true 如果主语言为英语
+  @JsonIgnore
   public boolean isEnglishJournal() {
     return languages != null && languages.isEnglish();
   }
@@ -179,6 +185,7 @@ public record PublicationProfile(
   /// 判断是否为中文期刊。
   ///
   /// @return true 如果主语言为中文
+  @JsonIgnore
   public boolean isChineseJournal() {
     return languages != null && languages.isChinese();
   }
@@ -186,6 +193,7 @@ public record PublicationProfile(
   /// 获取创刊年份。
   ///
   /// @return 创刊年份，如果无出版历史则返回 null
+  @JsonIgnore
   public Integer getStartYear() {
     return publicationHistory != null ? publicationHistory.startYear() : null;
   }
@@ -193,6 +201,7 @@ public record PublicationProfile(
   /// 获取停刊年份。
   ///
   /// @return 停刊年份，如果未停刊或无出版历史则返回 null
+  @JsonIgnore
   public Integer getEndYear() {
     return publicationHistory != null ? publicationHistory.endYear() : null;
   }
@@ -200,6 +209,7 @@ public record PublicationProfile(
   /// 获取 MEDLINE 缩写标题。
   ///
   /// @return MEDLINE 缩写标题，如果无索引信息则返回 null
+  @JsonIgnore
   public String getMedlineTa() {
     return indexingInfo != null ? indexingInfo.medlineTa() : null;
   }
@@ -207,6 +217,7 @@ public record PublicationProfile(
   /// 获取 ISO 缩写标题。
   ///
   /// @return ISO 缩写标题，如果无索引信息则返回 null
+  @JsonIgnore
   public String getIsoAbbreviation() {
     return indexingInfo != null ? indexingInfo.isoAbbreviation() : null;
   }
@@ -214,6 +225,7 @@ public record PublicationProfile(
   /// 获取主要语言。
   ///
   /// @return 主要语言代码，如果无语言信息则返回 null
+  @JsonIgnore
   public String getMainLanguage() {
     return languages != null ? languages.getMainLanguage() : null;
   }
@@ -221,6 +233,7 @@ public record PublicationProfile(
   /// 获取宿主机构名称。
   ///
   /// @return 宿主机构名称，如果无宿主机构则返回 null
+  @JsonIgnore
   public String getHostOrganizationName() {
     return hostOrganization != null ? hostOrganization.name() : null;
   }
@@ -228,6 +241,7 @@ public record PublicationProfile(
   /// 获取宿主机构 ID。
   ///
   /// @return 宿主机构 ID，如果无宿主机构则返回 null
+  @JsonIgnore
   public String getHostOrganizationId() {
     return hostOrganization != null ? hostOrganization.id() : null;
   }
