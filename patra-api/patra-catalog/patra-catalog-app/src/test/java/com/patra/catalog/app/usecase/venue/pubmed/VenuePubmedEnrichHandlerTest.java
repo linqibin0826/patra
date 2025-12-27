@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import com.patra.catalog.app.usecase.venue.pubmed.command.VenuePubmedEnrichCommand;
 import com.patra.catalog.app.usecase.venue.pubmed.dto.VenuePubmedEnrichResult;
+import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
@@ -23,6 +24,7 @@ import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.common.error.ApplicationException;
+import com.patra.common.error.trait.StandardErrorTrait;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URI;
@@ -67,7 +69,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Timeout(value = 2, unit = TimeUnit.SECONDS)
 class VenuePubmedEnrichHandlerTest {
 
-  private static final String TEST_URL = "ftp://ftp.nlm.nih.gov/online/journals/lsi2025.xml";
+  private static final String TEST_URL = "ftp://ftp.nlm.nih.gov/online/journals/lsi2024.xml";
   private static final String TEST_VERSION = "2025";
 
   @Mock private StreamingDownloadPort streamingDownloadPort;
@@ -327,6 +329,33 @@ class VenuePubmedEnrichHandlerTest {
 
       // Then - 耗时应该大于等于 0
       assertThat(result.durationMillis()).isGreaterThanOrEqualTo(0);
+    }
+  }
+
+  @Nested
+  @DisplayName("归档回退测试")
+  class ArchiveFallbackTest {
+
+    @Test
+    @DisplayName("主目录文件不存在时应回退到 archive 目录")
+    void shouldFallbackToArchiveWhenFileNotFound() {
+      // Given
+      String primaryUrl = "ftp://ftp.nlm.nih.gov/online/journals/lsi2023.xml";
+      String archiveUrl = "ftp://ftp.nlm.nih.gov/online/journals/archive/lsi2023.xml";
+      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(primaryUrl, TEST_VERSION);
+
+      when(streamingDownloadPort.download(URI.create(primaryUrl)))
+          .thenThrow(new FileDownloadException("not found", StandardErrorTrait.NOT_FOUND));
+      when(streamingDownloadPort.download(URI.create(archiveUrl))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.empty());
+
+      // When
+      VenuePubmedEnrichResult result = handler.handle(command);
+
+      // Then
+      verify(streamingDownloadPort).download(URI.create(primaryUrl));
+      verify(streamingDownloadPort).download(URI.create(archiveUrl));
+      assertThat(result.sourceUrl()).isEqualTo(archiveUrl);
     }
   }
 

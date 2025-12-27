@@ -362,7 +362,7 @@ class StreamingDownloadAdapterIT {
   class FtpDownloadTest {
 
     private static final String FTP_TEST_CONTENT = "<root><data>FTP Test Content</data></root>";
-    private static final String FTP_FILE_PATH = "/online/journals/lsi2025.xml";
+    private static final String FTP_FILE_PATH = "/online/journals/lsi2024.xml";
 
     private FakeFtpServer ftpServer;
     private StreamingDownloadAdapter ftpAdapter;
@@ -448,7 +448,7 @@ class StreamingDownloadAdapterIT {
           .satisfies(
               e -> {
                 FileDownloadException ex = (FileDownloadException) e;
-                assertThat(ex.getErrorTraits()).contains(StandardErrorTrait.DEP_UNAVAILABLE);
+                assertThat(ex.getErrorTraits()).contains(StandardErrorTrait.NOT_FOUND);
               });
     }
 

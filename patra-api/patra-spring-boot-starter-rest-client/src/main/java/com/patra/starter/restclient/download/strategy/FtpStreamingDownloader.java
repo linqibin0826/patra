@@ -25,6 +25,8 @@ import org.apache.commons.net.ftp.FTPReply;
 public class FtpStreamingDownloader implements StreamingDownloader {
 
   private final DownloadProperties properties;
+  // FTP 文件不存在的响应码（RFC 959）
+  private static final int FTP_FILE_UNAVAILABLE = 550;
 
   /// 创建 FTP 流式下载策略。
   ///
@@ -80,9 +82,13 @@ public class FtpStreamingDownloader implements StreamingDownloader {
 
       InputStream ftpInputStream = ftpClient.retrieveFileStream(remotePath);
       if (ftpInputStream == null) {
+        int fileReplyCode = ftpClient.getReplyCode();
+        StandardErrorTrait trait =
+            fileReplyCode == FTP_FILE_UNAVAILABLE
+                ? StandardErrorTrait.NOT_FOUND
+                : StandardErrorTrait.DEP_UNAVAILABLE;
         throw new DownloadException(
-            "无法获取 FTP 文件流：" + remotePath + "，响应：" + ftpClient.getReplyString(),
-            StandardErrorTrait.DEP_UNAVAILABLE);
+            "无法获取 FTP 文件流：" + remotePath + "，响应：" + ftpClient.getReplyString(), trait);
       }
 
       InputStream wrappedStream = new FtpInputStreamWrapper(ftpInputStream, ftpClient);
