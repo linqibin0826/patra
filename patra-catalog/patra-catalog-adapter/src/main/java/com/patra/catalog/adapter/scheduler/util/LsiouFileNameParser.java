@@ -11,14 +11,14 @@ import java.util.regex.Pattern;
 /// 从 LSIOU (List of Serials Indexed for Online Users) 数据文件的 URL 中提取版本号。
 ///
 /// **支持的文件名格式**：
-/// - LSIOU: `lsi{year}.xml`（如 `lsi2025.xml`）
+/// - LSIOU: `lsi{year}.xml`（如 `lsi2024.xml`）
 ///
 /// **使用示例**：
 ///
 /// ```java
 /// String version = LsiouFileNameParser.extractVersion(
-///     "ftp://ftp.nlm.nih.gov/online/journals/lsi2025.xml");
-/// // 返回 "2025"
+///     "ftp://ftp.nlm.nih.gov/online/journals/lsi2024.xml");
+/// // 返回 "2024"
 /// ```
 ///
 /// @author linqibin
@@ -35,7 +35,7 @@ public final class LsiouFileNameParser {
   /// 从 URL 提取 LSIOU 版本号。
   ///
   /// @param url LSIOU 数据文件的 URL
-  /// @return 版本号（4 位年份字符串，如 "2025"）
+  /// @return 版本号（4 位年份字符串，如 "2024"）
   /// @throws LsiouConfigurationException 当 URL 为空、格式无效或文件名不符合规范时
   public static String extractVersion(String url) {
     if (CharSequenceUtil.isBlank(url)) {
@@ -67,7 +67,7 @@ public final class LsiouFileNameParser {
 
   /// 从文件名解析版本号。
   ///
-  /// @param fileName 文件名（如 lsi2025.xml）
+  /// @param fileName 文件名（如 lsi2024.xml）
   /// @return 版本号（4 位年份）
   /// @throws LsiouConfigurationException 当文件名不符合规范时
   private static String parseVersionFromFileName(String fileName) {

@@ -13,7 +13,7 @@ import java.net.URI;
 /// **字段语义与约束**：
 ///
 /// - **url**：远程 NLM LSIOU XML 文件 URL，必填，必须是 FTP/HTTP/HTTPS 协议
-/// - **lsiouVersion**：LSIOU 版本号（如 "2025"），必填，不能为空白
+/// - **lsiouVersion**：LSIOU 版本号（如 "2024"），必填，不能为空白
 ///
 /// **设计说明**：
 ///
