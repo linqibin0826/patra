@@ -25,7 +25,7 @@ class LsiouFileNameParserTest {
 
     @ParameterizedTest
     @CsvSource({
-      "ftp://ftp.nlm.nih.gov/online/journals/lsi2025.xml, 2025",
+      "ftp://ftp.nlm.nih.gov/online/journals/lsi2022.xml, 2022",
       "ftp://ftp.nlm.nih.gov/online/journals/lsi2024.xml, 2024",
       "http://example.com/data/lsi2023.xml, 2023",
       "https://example.com/lsi2000.xml, 2000"

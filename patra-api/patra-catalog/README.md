@@ -111,15 +111,18 @@ patra:
 patra:
   catalog:
     lsiou:
-      url: ftp://ftp.nlm.nih.gov/online/journals/lsi2025.xml
+      url: ftp://ftp.nlm.nih.gov/online/journals/lsi2024.xml
 ```
 
 | 配置项 | 说明 | 示例 |
 |--------|------|------|
-| `url` | NLM LSIOU XML 文件 URL（支持 FTP/HTTP/HTTPS） | `lsi2025.xml` |
+| `url` | NLM LSIOU XML 文件 URL（支持 FTP/HTTP/HTTPS） | `lsi2024.xml` |
 
 **版本号推断规则**：从文件名自动提取 4 位年份，支持格式：
-- `lsi{year}.xml`（如 `lsi2025.xml` → 版本 `2025`）
+- `lsi{year}.xml`（如 `lsi2024.xml` → 版本 `2024`）
+
+**回退规则**：
+- 若主目录文件不存在，将自动回退到 `ftp://ftp.nlm.nih.gov/online/journals/archive`
 
 **LSIOU vs SerfileBase**：
 - LSIOU（List of Serials Indexed for Online Users）：约 15,000 条 MEDLINE 索引期刊

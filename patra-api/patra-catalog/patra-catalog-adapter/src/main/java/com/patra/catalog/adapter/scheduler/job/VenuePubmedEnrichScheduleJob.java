@@ -25,8 +25,12 @@ import org.springframework.stereotype.Component;
 /// patra:
 ///   catalog:
 ///     lsiou:
-///       url: ftp://ftp.nlm.nih.gov/online/journals/lsi2025.xml
+///       url: ftp://ftp.nlm.nih.gov/online/journals/lsi2024.xml
 /// ```
+///
+/// **回退规则**：
+///
+/// - 若主目录文件不存在，将自动回退到 `/online/journals/archive`
 ///
 /// **富化策略**：
 ///

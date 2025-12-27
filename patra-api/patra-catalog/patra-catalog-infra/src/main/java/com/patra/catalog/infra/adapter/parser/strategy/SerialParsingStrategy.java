@@ -682,7 +682,9 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
     try {
       return Integer.parseInt(text.trim());
     } catch (NumberFormatException e) {
-      log.warn("解析整数失败: {}", text);
+      if (log.isDebugEnabled()) {
+        log.debug("解析整数失败: {}", text);
+      }
       return null;
     }
   }
