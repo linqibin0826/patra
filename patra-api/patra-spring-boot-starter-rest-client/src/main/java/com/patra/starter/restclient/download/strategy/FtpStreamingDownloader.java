@@ -107,10 +107,19 @@ public class FtpStreamingDownloader implements StreamingDownloader {
 
   private FtpCredentials resolveCredentials(
       DownloadOptions options, DownloadProperties.FtpConfig ftpConfig) {
-    if (options != null && options.ftpCredentials() != null) {
-      return options.ftpCredentials();
+    FtpCredentials credentials = options != null ? options.ftpCredentials() : null;
+    if (credentials == null) {
+      credentials = new FtpCredentials(ftpConfig.getUsername(), ftpConfig.getPassword());
     }
-    return new FtpCredentials(ftpConfig.getUsername(), ftpConfig.getPassword());
+    if (credentials.username() == null
+        || credentials.username().isBlank()
+        || credentials.password() == null
+        || credentials.password().isBlank()) {
+      throw new DownloadException(
+          "FTP 账号密码未配置，请在 patra.rest-client.download.ftp.* 或 DownloadOptions 中提供",
+          StandardErrorTrait.RULE_VIOLATION);
+    }
+    return credentials;
   }
 
   private void disconnectFtpQuietly(FTPClient ftpClient) {

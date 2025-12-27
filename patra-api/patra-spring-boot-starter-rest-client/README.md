@@ -195,8 +195,9 @@ patra:
         max-backoff: 30s
       ftp:
         enabled: true
-        username: anonymous
-        password: patra@example.com
+        # FTP 账号密码无默认值，必须显式配置或在 DownloadOptions 中传入
+        username: YOUR_FTP_USERNAME
+        password: YOUR_FTP_PASSWORD
         connect-timeout: 30s
         data-timeout: 30m
         passive-mode: true
