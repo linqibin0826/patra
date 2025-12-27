@@ -4,6 +4,7 @@ import com.patra.starter.restclient.download.WriteStrategy;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /// 下载配置属性。
@@ -13,6 +14,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /// @author linqibin
 /// @since 0.1.0
 @ConfigurationProperties(prefix = "patra.rest-client.download")
+@Data
 public class DownloadProperties {
 
   /// 是否启用下载能力（默认 true）。
@@ -42,184 +44,46 @@ public class DownloadProperties {
   /// FTP 配置。
   private FtpConfig ftp = new FtpConfig();
 
-  public boolean isEnabled() {
-    return enabled;
-  }
-
-  public void setEnabled(boolean enabled) {
-    this.enabled = enabled;
-  }
-
-  public Path getBaseDir() {
-    return baseDir;
-  }
-
-  public void setBaseDir(Path baseDir) {
-    this.baseDir = baseDir;
-  }
-
-  public Path getTempDir() {
-    return tempDir;
-  }
-
-  public void setTempDir(Path tempDir) {
-    this.tempDir = tempDir;
-  }
-
-  public WriteStrategy getWriteStrategy() {
-    return writeStrategy;
-  }
-
-  public void setWriteStrategy(WriteStrategy writeStrategy) {
-    this.writeStrategy = writeStrategy;
-  }
-
-  public boolean isCreateDirs() {
-    return createDirs;
-  }
-
-  public void setCreateDirs(boolean createDirs) {
-    this.createDirs = createDirs;
-  }
-
-  public boolean isCleanupOnFailure() {
-    return cleanupOnFailure;
-  }
-
-  public void setCleanupOnFailure(boolean cleanupOnFailure) {
-    this.cleanupOnFailure = cleanupOnFailure;
-  }
-
-  public int getBufferSize() {
-    return bufferSize;
-  }
-
-  public void setBufferSize(int bufferSize) {
-    this.bufferSize = bufferSize;
-  }
-
-  public RetryConfig getRetry() {
-    return retry;
-  }
-
-  public void setRetry(RetryConfig retry) {
-    this.retry = retry;
-  }
-
-  public FtpConfig getFtp() {
-    return ftp;
-  }
-
-  public void setFtp(FtpConfig ftp) {
-    this.ftp = ftp;
-  }
-
   /// 重试配置。
+  @Data
   public static class RetryConfig {
+
+    /// 是否启用重试（默认 true）。
     private boolean enabled = true;
+
+    /// 最大重试次数（默认 3）。
     private int maxAttempts = 3;
+
+    /// 初始退避时间（默认 2 秒）。
     private Duration initialBackoff = Duration.ofSeconds(2);
+
+    /// 最大退避时间（默认 30 秒）。
     private Duration maxBackoff = Duration.ofSeconds(30);
-
-    public boolean isEnabled() {
-      return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-      this.enabled = enabled;
-    }
-
-    public int getMaxAttempts() {
-      return maxAttempts;
-    }
-
-    public void setMaxAttempts(int maxAttempts) {
-      this.maxAttempts = maxAttempts;
-    }
-
-    public Duration getInitialBackoff() {
-      return initialBackoff;
-    }
-
-    public void setInitialBackoff(Duration initialBackoff) {
-      this.initialBackoff = initialBackoff;
-    }
-
-    public Duration getMaxBackoff() {
-      return maxBackoff;
-    }
-
-    public void setMaxBackoff(Duration maxBackoff) {
-      this.maxBackoff = maxBackoff;
-    }
   }
 
   /// FTP 配置。
+  @Data
   public static class FtpConfig {
+
+    /// 是否启用 FTP 下载（默认 true）。
     private boolean enabled = true;
+
     /// FTP 用户名（默认不提供，必须显式配置或在调用时传入）。
     private String username;
+
     /// FTP 密码（默认不提供，必须显式配置或在调用时传入）。
     private String password;
+
+    /// 连接超时时间（默认 30 秒）。
     private Duration connectTimeout = Duration.ofSeconds(30);
+
+    /// 数据传输超时时间（默认 30 分钟）。
     private Duration dataTimeout = Duration.ofMinutes(30);
+
+    /// 是否使用被动模式（默认 true）。
     private boolean passiveMode = true;
+
+    /// 默认内容类型（默认 application/xml）。
     private String defaultContentType = "application/xml";
-
-    public boolean isEnabled() {
-      return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-      this.enabled = enabled;
-    }
-
-    public String getUsername() {
-      return username;
-    }
-
-    public void setUsername(String username) {
-      this.username = username;
-    }
-
-    public String getPassword() {
-      return password;
-    }
-
-    public void setPassword(String password) {
-      this.password = password;
-    }
-
-    public Duration getConnectTimeout() {
-      return connectTimeout;
-    }
-
-    public void setConnectTimeout(Duration connectTimeout) {
-      this.connectTimeout = connectTimeout;
-    }
-
-    public Duration getDataTimeout() {
-      return dataTimeout;
-    }
-
-    public void setDataTimeout(Duration dataTimeout) {
-      this.dataTimeout = dataTimeout;
-    }
-
-    public boolean isPassiveMode() {
-      return passiveMode;
-    }
-
-    public void setPassiveMode(boolean passiveMode) {
-      this.passiveMode = passiveMode;
-    }
-
-    public String getDefaultContentType() {
-      return defaultContentType;
-    }
-
-    public void setDefaultContentType(String defaultContentType) {
-      this.defaultContentType = defaultContentType;
-    }
   }
 }
