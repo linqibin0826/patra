@@ -175,6 +175,27 @@ try (StreamingDownloadResponse result = downloadClient.openStream(url)) {
 }
 ```
 
+**FTP 下载示例**：
+
+```java
+// 方式 1：使用全局配置的 FTP 账号（需在 application.yml 中配置）
+DownloadResult result = downloadClient.downloadToTemp(
+    URI.create("ftp://ftp.example.com/data/file.xml"), null);
+
+// 方式 2：调用时指定 FTP 账号（覆盖全局配置）
+DownloadResult result = downloadClient.downloadToTemp(
+    URI.create("ftp://ftp.example.com/data/file.xml"),
+    DownloadOptions.withFtpCredentials("username", "password"));
+
+// 方式 3：使用 FtpCredentials 对象
+FtpCredentials credentials = new FtpCredentials("username", "password");
+DownloadResult result = downloadClient.downloadToTemp(
+    URI.create("ftp://ftp.example.com/data/file.xml"),
+    DownloadOptions.withFtpCredentials(credentials));
+```
+
+> **注意**：FTP 账号密码无默认值。匿名 FTP 可不填；私有 FTP 必须通过全局配置或 `DownloadOptions` 显式传入。
+
 **可选配置**（全局默认 + 单次覆盖）：
 
 ```yaml
@@ -195,9 +216,9 @@ patra:
         max-backoff: 30s
       ftp:
         enabled: true
-        # FTP 账号密码无默认值，必须显式配置或在 DownloadOptions 中传入
-        username: YOUR_FTP_USERNAME
-        password: YOUR_FTP_PASSWORD
+        # FTP 账号密码无默认值，匿名 FTP 可不填，私有 FTP 必须配置或在 DownloadOptions 中传入
+        # username: YOUR_FTP_USERNAME
+        # password: YOUR_FTP_PASSWORD
         connect-timeout: 30s
         data-timeout: 30m
         passive-mode: true
