@@ -70,7 +70,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 class VenuePubmedEnrichHandlerTest {
 
   private static final String TEST_URL = "ftp://ftp.nlm.nih.gov/online/journals/lsi2024.xml";
-  private static final String TEST_VERSION = "2025";
+  private static final String TEST_VERSION = "2024";
 
   @Mock private StreamingDownloadPort streamingDownloadPort;
   @Mock private LsiouParserPort parserPort;
