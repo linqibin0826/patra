@@ -27,6 +27,11 @@ import lombok.Getter;
 /// | C | Communication Disorders | 沟通障碍期刊 |
 /// | F | History of Medicine | 医学史期刊 |
 /// | Q | Toxicology | 毒理学期刊 |
+/// | J | Japanese Science Literature | 日本科学文献 |
+/// | OM | Old MEDLINE | 1950-1965 年历史文献 |
+/// | P | Population Information | 人口信息 |
+/// | QIS | Quality Improvement Studies | 质量改进研究 |
+/// | R | Research Support | 研究支持 |
 ///
 /// 使用示例：
 ///
@@ -82,7 +87,22 @@ public enum CitationSubset {
   F("F", "History of Medicine", false),
 
   /// Toxicology（毒理学期刊）
-  Q("Q", "Toxicology", false);
+  Q("Q", "Toxicology", false),
+
+  /// 日本科学文献（Japanese Science Literature）
+  J("J", "Japanese Science Literature", false),
+
+  /// Old MEDLINE（1950-1965 年历史文献）
+  OM("OM", "Old MEDLINE", false),
+
+  /// Population Information（人口信息）
+  P("P", "Population Information", false),
+
+  /// Quality Improvement Studies（质量改进研究）
+  QIS("QIS", "Quality Improvement Studies", false),
+
+  /// Research Support（研究支持）
+  R("R", "Research Support", false);
 
   /// 数据库存储的代码值
   private final String code;

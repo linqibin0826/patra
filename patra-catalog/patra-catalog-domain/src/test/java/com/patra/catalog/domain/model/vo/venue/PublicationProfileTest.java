@@ -78,6 +78,22 @@ class PublicationProfileTest {
       assertThat(profile.indexingInfo()).isNull();
       assertThat(profile.extData()).isEmpty();
     }
+
+    @Test
+    @DisplayName("countryCode 应规范化为大写并过滤非法值")
+    void shouldNormalizeCountryCode() {
+      PublicationProfile lowerCase = PublicationProfile.builder().countryCode("us").build();
+      PublicationProfile iso3 = PublicationProfile.builder().countryCode("USA").build();
+      PublicationProfile name = PublicationProfile.builder().countryCode("United States").build();
+      PublicationProfile invalid = PublicationProfile.builder().countryCode("Unknownland").build();
+      PublicationProfile blank = PublicationProfile.builder().countryCode(" ").build();
+
+      assertThat(lowerCase.countryCode()).isEqualTo("US");
+      assertThat(iso3.countryCode()).isEqualTo("US");
+      assertThat(name.countryCode()).isEqualTo("US");
+      assertThat(invalid.countryCode()).isNull();
+      assertThat(blank.countryCode()).isNull();
+    }
   }
 
   @Nested

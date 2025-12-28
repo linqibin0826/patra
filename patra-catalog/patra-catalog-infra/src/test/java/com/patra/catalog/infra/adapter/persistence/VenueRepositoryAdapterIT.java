@@ -441,7 +441,7 @@ class VenueRepositoryAdapterIT {
           PublicationProfile.builder()
               .abbreviatedTitle("J A")
               .alternateTitles(List.of("Alternate Title"))
-              .countryCode("US")
+              .countryCode("USA")
               .frequency("Monthly")
               .publicationHistory(PublicationHistory.active(1990))
               .build());
@@ -533,7 +533,7 @@ class VenueRepositoryAdapterIT {
               .abbreviatedTitle("J A")
               .alternateTitles(List.of("Journal Alpha", "J. A."))
               .languages(VenueLanguages.ofSingleLanguage("eng"))
-              .countryCode("USA")
+              .countryCode("US")
               .frequency("Monthly")
               .publicationHistory(PublicationHistory.active(1990))
               .build());
@@ -548,7 +548,7 @@ class VenueRepositoryAdapterIT {
       assertThat(found.getPublicationProfile().abbreviatedTitle()).isEqualTo("J A");
       assertThat(found.getPublicationProfile().alternateTitles())
           .containsExactly("Journal Alpha", "J. A.");
-      assertThat(found.getPublicationProfile().countryCode()).isEqualTo("USA");
+      assertThat(found.getPublicationProfile().countryCode()).isEqualTo("US");
     }
 
     @Test

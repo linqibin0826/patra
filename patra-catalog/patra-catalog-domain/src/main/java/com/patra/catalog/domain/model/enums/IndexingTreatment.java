@@ -15,6 +15,9 @@ import lombok.Getter;
 /// |------|------|
 /// | FULL | 全文索引 - 期刊的所有文章都被索引 |
 /// | SELECTIVE | 选择性索引 - 只有部分文章被索引 |
+/// | UNKNOWN | 未知 - 索引方式未指定 |
+/// | REFERENCED_IN | 被引用 - 在其他已索引期刊的引用中出现 |
+/// | REFERENCED_IN_NO_DETAILS | 被引用（无详情） - 引用信息不完整 |
 ///
 /// 对于科研人员的意义：
 ///
@@ -39,7 +42,16 @@ public enum IndexingTreatment {
   FULL("FULL", "全文索引"),
 
   /// 选择性索引（只有部分文章被索引）
-  SELECTIVE("SELECTIVE", "选择性索引");
+  SELECTIVE("SELECTIVE", "选择性索引"),
+
+  /// 未知或未指定
+  UNKNOWN("UNKNOWN", "未知"),
+
+  /// 被引用（在其他已索引期刊的引用中出现）
+  REFERENCED_IN("REFERENCED_IN", "被引用"),
+
+  /// 被引用但无详情（引用信息不完整）
+  REFERENCED_IN_NO_DETAILS("REFERENCED_IN_NO_DETAILS", "被引用（无详情）");
 
   /// 数据库存储的代码值
   private final String code;
@@ -87,7 +99,7 @@ public enum IndexingTreatment {
 
   /// 从 LSIOU IndexingTreatment 属性值转换。
   ///
-  /// @param lsiouValue LSIOU 中的值（如 "Full"、"Selective"）
+  /// @param lsiouValue LSIOU 中的值（如 "Full"、"Selective"、"Unknown" 等）
   /// @return 对应的枚举值，无法识别则返回 null
   public static IndexingTreatment fromLsiouValue(String lsiouValue) {
     if (lsiouValue == null || lsiouValue.isBlank()) {
@@ -96,6 +108,9 @@ public enum IndexingTreatment {
     return switch (lsiouValue.trim().toLowerCase()) {
       case "full" -> FULL;
       case "selective" -> SELECTIVE;
+      case "unknown" -> UNKNOWN;
+      case "referencedin" -> REFERENCED_IN;
+      case "referencedinnodetails" -> REFERENCED_IN_NO_DETAILS;
       default -> null;
     };
   }

@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
     `openalex_id` VARCHAR(50) NULL DEFAULT NULL COMMENT 'OpenAlex Source ID',
     `abbreviated_title` VARCHAR(200) NULL DEFAULT NULL COMMENT '缩写标题',
     `primary_language` VARCHAR(10) NULL DEFAULT NULL COMMENT '主要语言代码(ISO 639-3)',
-    `country_code` VARCHAR(10) NULL DEFAULT NULL COMMENT '国家代码(ISO 3166-1 alpha-2)',
+    `country_code` VARCHAR(2) NULL DEFAULT NULL COMMENT '国家代码(ISO 3166-1 alpha-2)',
 
     -- ========================================
     -- 嵌入式值对象（JSON 字段）
@@ -102,7 +102,11 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
     -- 普通索引
     INDEX `idx_venue_type` (`venue_type`) COMMENT '载体类型索引',
     INDEX `idx_display_name` (`display_name`(100)) COMMENT '名称前缀索引',
-    INDEX `idx_provenance` (`provenance_code`) COMMENT '数据来源索引'
+    INDEX `idx_provenance` (`provenance_code`) COMMENT '数据来源索引',
+
+    CONSTRAINT chk_venue_country_code CHECK (
+        `country_code` IS NULL OR REGEXP_LIKE(`country_code`, '^[A-Z]{2}$')
+    )
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='出版载体表(最小聚合根):仅含核心身份标识和来源追踪,遵循CQRS原则';
