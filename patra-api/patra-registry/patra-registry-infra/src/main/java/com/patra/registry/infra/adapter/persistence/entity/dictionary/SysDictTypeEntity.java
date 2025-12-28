@@ -29,11 +29,11 @@ import org.hibernate.type.SqlTypes;
 public class SysDictTypeEntity extends BaseJpaEntity {
 
   /// 字典类型的稳定业务键(例如，`http_method`)。预期格式为小写蛇形命名。
-  @Column(name = "type_code", nullable = false, length = 50)
+  @Column(name = "type_code", nullable = false, length = 64)
   private String typeCode;
 
   /// 供 UI 组件使用的可读显示名称。
-  @Column(name = "type_name", length = 100)
+  @Column(name = "type_name", length = 200)
   private String typeName;
 
   /// 可选的自由格式描述，记录使用指南。

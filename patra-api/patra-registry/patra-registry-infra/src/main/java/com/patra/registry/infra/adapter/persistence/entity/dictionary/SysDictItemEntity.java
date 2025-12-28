@@ -33,15 +33,15 @@ public class SysDictItemEntity extends BaseJpaEntity {
   private Long typeId;
 
   /// 在所属类型内稳定的项目代码。
-  @Column(name = "item_code", nullable = false, length = 50)
+  @Column(name = "item_code", nullable = false, length = 64)
   private String itemCode;
 
   /// 向最终用户展示的可读项目名称。
-  @Column(name = "item_name", length = 100)
+  @Column(name = "item_name", length = 200)
   private String itemName;
 
   /// 可选的短名称或缩写，用于紧凑的 UI 布局。
-  @Column(name = "short_name", length = 50)
+  @Column(name = "short_name", length = 64)
   private String shortName;
 
   /// 可选的描述，记录语义和使用提示。
@@ -61,11 +61,11 @@ public class SysDictItemEntity extends BaseJpaEntity {
   private Boolean enabled;
 
   /// 可选的标签颜色(十六进制如 `#AABBCC` 或语义名称)。
-  @Column(name = "label_color", length = 20)
+  @Column(name = "label_color", length = 32)
   private String labelColor;
 
   /// 可选的图标引用，供 UI 表面使用。
-  @Column(name = "icon_name", length = 50)
+  @Column(name = "icon_name", length = 64)
   private String iconName;
 
   /// 可扩展的 JSON 载荷，用于附加业务属性。
