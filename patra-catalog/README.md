@@ -204,9 +204,9 @@ patra:
   - `VenueIdentifierType`：标识符类型（ISSN、OPENALEX、NLM、MAG、FATCAT、WIKIDATA、DOAJ、CROSSREF_MEMBER、JCR、CODEN）
   - `DataSourceCode`：数据源代码（OPENALEX、PUBMED、DOAJ、CROSSREF、JCR）
   - `RatingSystem`：评价体系（JCR、CAS、SCOPUS）
-  - `VenueRelationType`：载体关联类型（PRECEDING、SUCCEEDING、ABSORBED、ABSORBED_BY、MERGED、SPLIT_FROM、CONTINUED_BY、CONTINUES）
-  - `CitationSubset`：引用子集（IM、AIM、N、D、H、K、T、E、S、X、B、C、F、Q）
-  - `IndexingTreatment`：索引处理方式（FULL、SELECTIVE）
+  - `VenueRelationType`：载体关联类型（PRECEDING、PRECEDING_IN_PART、SUCCEEDING、SUCCEEDING_IN_PART、ABSORBED、ABSORBED_BY、ABSORBED_IN_PART、ABSORBED_IN_PART_BY、MERGED_TO、MERGER_OF、SPLIT_FROM、SPLIT_TO、SUPERSEDES、SUPERSEDED_BY、SUPERSEDES_IN_PART、SUPERSEDED_IN_PART_BY、ANALYTIC、RELATED、REVERSION、SERIES、SERIES_AUTHORITY、TRANSLATED、OTHER、UNDETERMINED）
+  - `CitationSubset`：引用子集（IM、AIM、N、D、H、K、T、E、S、X、B、C、F、Q、J、OM、P、QIS、R）
+  - `IndexingTreatment`：索引处理方式（FULL、SELECTIVE、UNKNOWN、REFERENCED_IN、REFERENCED_IN_NO_DETAILS）
 
 ### Infrastructure 层
 - `MeshDescriptorRepositoryAdapter`：主题词仓储适配器
@@ -290,6 +290,7 @@ patra:
    - **CQRS 设计优化**：在 `cat_venue` 主表添加 6 个快速访问字段，优化列表展示和搜索查询性能
    - **冗余字段**（3 个）：`nlm_id`、`issn_l`、`openalex_id` 从 `cat_venue_identifier` 冗余
    - **快照字段**（3 个）：`abbreviated_title`、`primary_language`、`country_code` 从 `cat_venue_detail` 同步
+     - `country_code` 统一存储 ISO 3166-1 alpha-2 规范码（支持 ISO3/英文名称自动归一）
    - **新增值对象**：`VenueDetail`（出版信息、语言信息、宿主机构、OA 状态）
    - **新增数据表**：`cat_venue_detail`（CQRS 补充数据表，1:1 关系）
    - **Converter 增强**：`VenueConverter` 新增 `extractIdentifier()` 方法提取标识符快速访问字段
