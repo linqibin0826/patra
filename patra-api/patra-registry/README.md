@@ -12,7 +12,7 @@
 - **运营配置**: 管理 HTTP 策略、重试策略、速率限制、分页规则、批处理配置、时间窗口偏移等运营参数
 - **表达式元数据**: 提供 API 参数映射、字段定义、渲染规则,支持 `patra-expr-kernel` 动态表达式编译
 - **时态切片**: 通过 `effectiveFrom` 和 `effectiveUntil` 实现配置的时间有效性管理,支持安全的配置更新和审计
-- **系统字典**: 管理统一的枚举代码和业务字典项
+- **系统字典**: 管理统一的枚举代码、业务字典项及来源标准目录
 
 ## 模块结构
 
@@ -69,6 +69,30 @@ patra-registry/
 - **ExprField**: 字段定义(数据类型、约束、语义键)
 - **ExprRenderRule**: 表达式渲染为 API 查询的转换规则
 
+### 5. Dictionary（字典）
+
+提供字典值的统一解析服务，支持将外部系统的代码映射到内部标准代码:
+
+- **DictionaryType**: 字典类型(如 `country`、`language`)
+- **DictionaryItem**: 字典项(如 `CN=中国`、`US=美国`)
+- **DictionaryItemAlias**: 字典项别名，实现外部代码到内部代码的映射
+
+**解析策略**（按优先级）:
+1. 直接匹配: `rawValue` 作为 `itemCode` 直接查询
+2. 别名匹配: 通过 `sourceStandard` + `externalCode` 查询别名表
+
+**领域异常**:
+- `DictionaryTypeNotFoundException`: 字典类型不存在
+- `DictionaryStandardNotFoundException`: 来源标准不存在
+- `DictionaryStandardDisabledException`: 来源标准已禁用
+
+### 6. ReferenceStandard（来源标准）
+
+管理外部值遵循的格式规范:
+- **ReferenceStandard**: 来源标准值对象(如 `ISO_3166_1_ALPHA2`、`NAME_EN`)
+- 支持启用/禁用状态管理
+- 通过 `DictionaryItemAlias.sourceStandard` 关联字典项
+
 ## 主要 API 契约
 
 ### ProvenanceEndpoint (内部 RPC)
@@ -86,6 +110,13 @@ patra-registry/
 
 **核心端点**:
 - `GET /_internal/expr/snapshot` - 获取完整表达式快照(支持时态切片)
+
+### DictionaryEndpoint (内部 RPC)
+
+**基础路径**: `/_internal/dictionaries`
+
+**核心端点**:
+- `POST /_internal/dictionaries/resolve` - 批量解析字典值(支持 `sourceStandard` 可选,缺省使用 `GLOBAL`)
 
 ## 依赖关系
 
@@ -154,6 +185,7 @@ Flyway 自动执行数据库迁移,种子数据包括:
 - 数据源元数据
 - 表达式配置(字段、能力、映射、规则)
 - 系统字典
+- 来源标准目录
 
 ## 扩展指南
 
