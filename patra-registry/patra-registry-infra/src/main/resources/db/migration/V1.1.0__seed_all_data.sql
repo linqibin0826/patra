@@ -11,6 +11,7 @@
  *   - 集成新增自: V1.1.6 (分页配置)
  *
  * 结构:
+ *   第0部分: 来源标准目录 (sys_reference_standard)
  *   第1部分: Provenance 基础数据 (reg_provenance, 窗口, 分页配置)
  *   第2部分: 统一字段字典 (reg_expr_field_dict)
  *   第3部分: PubMed 表达式配置
@@ -23,6 +24,65 @@
  *   - 生效时间 = 2025-09-01 / 2025-10-14 (UTC)
  *   - lifecycle_status_code = 'ACTIVE'
  * ==================================================================== */
+
+
+/* ====================================================================
+ * 第0部分: 来源标准目录
+ * ==================================================================== */
+
+INSERT INTO patra_registry.sys_reference_standard
+(id, standard_code, standard_name, description, display_order, enabled,
+ created_at, updated_at, version)
+SELECT
+  900000000000000001,
+  'GLOBAL',
+  'Global',
+  '全局默认标准(未指定来源标准时使用)',
+  1,
+  1,
+  NOW(6),
+  NOW(6),
+  0
+WHERE NOT EXISTS (
+  SELECT 1 FROM patra_registry.sys_reference_standard
+  WHERE standard_code = 'GLOBAL' AND deleted_at IS NULL
+);
+
+INSERT INTO patra_registry.sys_reference_standard
+(id, standard_code, standard_name, description, display_order, enabled,
+ created_at, updated_at, version)
+SELECT
+  900000000000000002,
+  'ISO_3166_1_ALPHA2',
+  'ISO 3166-1 alpha-2',
+  '国家代码两字母标准',
+  10,
+  1,
+  NOW(6),
+  NOW(6),
+  0
+WHERE NOT EXISTS (
+  SELECT 1 FROM patra_registry.sys_reference_standard
+  WHERE standard_code = 'ISO_3166_1_ALPHA2' AND deleted_at IS NULL
+);
+
+INSERT INTO patra_registry.sys_reference_standard
+(id, standard_code, standard_name, description, display_order, enabled,
+ created_at, updated_at, version)
+SELECT
+  900000000000000003,
+  'NAME_EN',
+  'English Name',
+  '英文名称标准(用于名称型输入)',
+  20,
+  1,
+  NOW(6),
+  NOW(6),
+  0
+WHERE NOT EXISTS (
+  SELECT 1 FROM patra_registry.sys_reference_standard
+  WHERE standard_code = 'NAME_EN' AND deleted_at IS NULL
+);
 
 
 /* ====================================================================

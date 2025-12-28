@@ -9,11 +9,11 @@ import lombok.Setter;
 
 /// 系统字典项别名 JPA 实体，映射到表 `sys_dict_item_alias`。
 ///
-/// 提供外部别名，使合作伙伴系统可以引用内部字典项。
+/// 提供外部别名，使上游标准或外部系统可以引用内部字典项。
 ///
 /// 数据库规则：
 ///
-/// - `(source_system, external_code)` 全局唯一。
+/// - `(source_standard, external_code)` 全局唯一。
 /// - 别名可软删除，可能与禁用的字典项共存。
 ///
 /// @author linqibin
@@ -28,12 +28,12 @@ public class SysDictItemAliasEntity extends BaseJpaEntity {
   @Column(name = "item_id", nullable = false)
   private Long itemId;
 
-  /// 外部系统标识符(例如，`pubmed`，`crossref`)。
-  @Column(name = "source_system", nullable = false, length = 50)
-  private String sourceSystem;
+  /// 来源标准标识符(例如，`iso_3166_1_alpha2`，`global`)。
+  @Column(name = "source_standard", nullable = false, length = 64)
+  private String sourceStandard;
 
   /// 上游系统为引用项提供的外部代码。
-  @Column(name = "external_code", nullable = false, length = 100)
+  @Column(name = "external_code", nullable = false, length = 128)
   private String externalCode;
 
   /// 可选的来自上游系统的可读标签。

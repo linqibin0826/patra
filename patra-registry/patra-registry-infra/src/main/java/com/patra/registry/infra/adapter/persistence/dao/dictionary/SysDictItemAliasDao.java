@@ -12,26 +12,42 @@ import org.springframework.data.repository.query.Param;
 /// **职责**：
 ///
 /// - 提供 SysDictItemAliasEntity 的 CRUD 操作
-/// - 通过外部系统和外部代码查询别名
+/// - 通过来源标准和外部代码查询别名
 ///
 /// @author linqibin
 /// @since 0.1.0
 public interface SysDictItemAliasDao extends JpaRepository<SysDictItemAliasEntity, Long> {
 
-  /// 通过外部系统和外部代码查询别名。
+  /// 通过来源标准和外部代码查询别名。
   ///
-  /// @param sourceSystem 外部系统标识符
+  /// @param sourceStandard 来源标准标识符
   /// @param externalCode 外部代码
   /// @return 可选的别名实体
   @Query(
       """
       SELECT a FROM SysDictItemAliasEntity a
-      WHERE a.sourceSystem = :sourceSystem
+      WHERE a.sourceStandard = :sourceStandard
         AND a.externalCode = :externalCode
         AND a.deletedAt IS NULL
       """)
-  Optional<SysDictItemAliasEntity> findBySourceSystemAndExternalCode(
-      @Param("sourceSystem") String sourceSystem, @Param("externalCode") String externalCode);
+  Optional<SysDictItemAliasEntity> findBySourceStandardAndExternalCode(
+      @Param("sourceStandard") String sourceStandard, @Param("externalCode") String externalCode);
+
+  /// 批量查询外部别名。
+  ///
+  /// @param sourceStandard 来源标准标识符
+  /// @param externalCodes 外部代码集合
+  /// @return 别名实体列表
+  @Query(
+      """
+      SELECT a FROM SysDictItemAliasEntity a
+      WHERE a.sourceStandard = :sourceStandard
+        AND a.externalCode IN :externalCodes
+        AND a.deletedAt IS NULL
+      """)
+  List<SysDictItemAliasEntity> findBySourceStandardAndExternalCodeIn(
+      @Param("sourceStandard") String sourceStandard,
+      @Param("externalCodes") Iterable<String> externalCodes);
 
   /// 通过字典项 ID 查询所有别名。
   ///
@@ -42,7 +58,7 @@ public interface SysDictItemAliasDao extends JpaRepository<SysDictItemAliasEntit
       SELECT a FROM SysDictItemAliasEntity a
       WHERE a.itemId = :itemId
         AND a.deletedAt IS NULL
-      ORDER BY a.sourceSystem, a.externalCode
+      ORDER BY a.sourceStandard, a.externalCode
       """)
   List<SysDictItemAliasEntity> findByItemId(@Param("itemId") Long itemId);
 }

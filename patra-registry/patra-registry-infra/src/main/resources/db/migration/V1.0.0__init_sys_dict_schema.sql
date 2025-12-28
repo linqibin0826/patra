@@ -17,7 +17,7 @@
  * ==================================================================== */
 CREATE TABLE IF NOT EXISTS sys_dict_type
 (
-    id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键;内部唯一标识符',
+    id                 BIGINT UNSIGNED NOT NULL COMMENT '主键;内部唯一标识符(雪花ID)',
     type_code          VARCHAR(64)     NOT NULL COMMENT '类型编码: 小写下划线格式,例如 http_method (跨环境稳定键)',
     type_name          VARCHAR(200)    NOT NULL COMMENT '类型显示名称 (人类可读)',
     description        VARCHAR(500)    NULL COMMENT '描述 (用途、边界、备注)',
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS sys_dict_type
  * ==================================================================== */
 CREATE TABLE IF NOT EXISTS sys_dict_item
 (
-    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键;内部唯一标识符',
+    id              BIGINT UNSIGNED NOT NULL COMMENT '主键;内部唯一标识符(雪花ID)',
     type_id         BIGINT UNSIGNED NOT NULL COMMENT '父类型ID (逻辑外键 -> sys_dict_type.id)',
     item_code       VARCHAR(64)     NOT NULL COMMENT '条目编码: 稳定键 (大写下划线格式), 例如 GET / PAGE_NUMBER',
     item_name       VARCHAR(200)    NOT NULL COMMENT '条目显示名称 (默认语言)',
@@ -98,17 +98,17 @@ CREATE TABLE IF NOT EXISTS sys_dict_item
 
 /* ====================================================================
  * 表: sys_dict_item_alias - 字典条目外部映射
- * 语义: 来自其他系统/供应商/遗留系统的条目外部别名/编码,用于集成
+ * 语义: 来自外部标准或遗留系统的条目别名/编码,用于解析与集成
  * 要点:
- *  - (source_system, external_code) 必须全局唯一以避免冲突
+ *  - (source_standard, external_code) 必须全局唯一以避免冲突
  *  - 可选的 external_label 存储外部显示名称
- *  - 典型 source_system 示例: pubmed/crossref/legacy_v1 (推荐小写)
+ *  - 典型 source_standard 示例: iso_3166_1_alpha2、global (推荐小写)
  * ==================================================================== */
 CREATE TABLE IF NOT EXISTS sys_dict_item_alias
 (
-    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键;内部唯一标识符',
+    id              BIGINT UNSIGNED NOT NULL COMMENT '主键;内部唯一标识符(雪花ID)',
     item_id         BIGINT UNSIGNED NOT NULL COMMENT '条目ID (逻辑外键 -> sys_dict_item.id)',
-    source_system   VARCHAR(64)     NOT NULL COMMENT '来源系统标识符, 例如 pubmed/crossref/legacy_v1 (推荐小写下划线或短横线格式)',
+    source_standard VARCHAR(64)     NOT NULL COMMENT '来源标准标识符, 例如 iso_3166_1_alpha2 或 global (推荐小写下划线或短横线格式)',
     external_code   VARCHAR(128)    NOT NULL COMMENT '外部编码/值 (作为映射键)',
     external_label  VARCHAR(200)    NULL COMMENT '外部显示名称 (可选)',
     notes           VARCHAR(500)    NULL COMMENT '备注/映射说明 (差异、兼容性、来源链接等)',
@@ -126,11 +126,46 @@ CREATE TABLE IF NOT EXISTS sys_dict_item_alias
     deleted_at      TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (id),
-    UNIQUE KEY uk_dict_alias__src_code (source_system, external_code) COMMENT 'external_code 在同一 source_system 内必须唯一',
-    CONSTRAINT chk_dict_alias__src_format CHECK (REGEXP_LIKE(source_system, '^[a-z0-9_\-]{1,64}$'))
+    UNIQUE KEY uk_dict_alias__std_code (source_standard, external_code) COMMENT 'external_code 在同一 source_standard 内必须唯一',
+    CONSTRAINT chk_dict_alias__std_format CHECK (REGEXP_LIKE(source_standard, '^[a-z0-9_\-]{1,64}$'))
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='系统字典 - 外部映射';
+
+/* ====================================================================
+ * 表: sys_reference_standard - 来源标准目录
+ * 语义: 维护系统允许的来源标准,用于校验与治理
+ * 要点:
+ *  - 标准代码固定为大写下划线格式
+ *  - 仅维护标准目录,不承载具体标准值
+ * ==================================================================== */
+CREATE TABLE IF NOT EXISTS sys_reference_standard
+(
+    id            BIGINT UNSIGNED NOT NULL COMMENT '主键;内部唯一标识符(雪花ID)',
+    standard_code VARCHAR(64)     NOT NULL COMMENT '标准代码(如 ISO_3166_1_ALPHA2 或 GLOBAL)',
+    standard_name VARCHAR(200)    NOT NULL COMMENT '标准名称',
+    description   VARCHAR(500)    NULL COMMENT '描述',
+    display_order INT UNSIGNED    NOT NULL DEFAULT 100 COMMENT '显示顺序',
+    enabled       TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否启用: 1=启用, 0=禁用',
+
+    -- 审计与治理
+    record_remarks  JSON            NULL COMMENT '变更备注: JSON数组',
+    created_at      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
+    created_by      BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    created_by_name VARCHAR(100)    NULL COMMENT '创建人姓名/登录名快照',
+    updated_at      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '最后更新时间 (UTC)',
+    updated_by      BIGINT UNSIGNED NULL COMMENT '最后更新人ID',
+    updated_by_name VARCHAR(100)    NULL COMMENT '最后更新人姓名/登录名快照',
+    version         BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本 (CAS)',
+    ip_address      VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
+    deleted_at      TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_ref_standard__code (standard_code) COMMENT '标准代码唯一',
+    CONSTRAINT chk_ref_standard__code_format CHECK (REGEXP_LIKE(standard_code, '^[A-Z0-9_]{1,64}$'))
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci COMMENT ='系统参考标准';
 
 -- =====================================================================
 -- 结束

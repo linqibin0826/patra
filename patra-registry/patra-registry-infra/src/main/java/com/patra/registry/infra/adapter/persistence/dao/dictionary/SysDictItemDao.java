@@ -47,6 +47,33 @@ public interface SysDictItemDao extends JpaRepository<SysDictItemEntity, Long> {
   Optional<SysDictItemEntity> findByTypeIdAndItemCode(
       @Param("typeId") Long typeId, @Param("itemCode") String itemCode);
 
+  /// 批量查询类型内的字典项。
+  ///
+  /// @param typeId 类型 ID
+  /// @param itemCodes 项目代码集合
+  /// @return 匹配的字典项实体列表
+  @Query(
+      """
+      SELECT i FROM SysDictItemEntity i
+      WHERE i.typeId = :typeId
+        AND i.itemCode IN :itemCodes
+        AND i.deletedAt IS NULL
+      """)
+  List<SysDictItemEntity> findByTypeIdAndItemCodeIn(
+      @Param("typeId") Long typeId, @Param("itemCodes") Iterable<String> itemCodes);
+
+  /// 批量查询字典项(过滤已删除)。
+  ///
+  /// @param itemIds 字典项 ID 集合
+  /// @return 匹配的字典项实体列表
+  @Query(
+      """
+      SELECT i FROM SysDictItemEntity i
+      WHERE i.id IN :itemIds
+        AND i.deletedAt IS NULL
+      """)
+  List<SysDictItemEntity> findByIdIn(@Param("itemIds") Iterable<Long> itemIds);
+
   /// 查询类型的默认字典项。
   ///
   /// @param typeId 类型 ID
