@@ -102,7 +102,7 @@ public class VenueEntity extends BaseJpaEntity {
   private String primaryLanguage;
 
   /// 国家代码（ISO 3166-1 alpha-2）。
-  @Column(name = "country_code", length = 5)
+  @Column(name = "country_code", length = 2)
   private String countryCode;
 
   /// 最后同步时间（UTC）

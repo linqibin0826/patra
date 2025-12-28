@@ -34,6 +34,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public abstract class AbstractRecordSpliterator<T> implements Spliterator<T> {
 
+  /// 进度日志汇报间隔（每解析多少条记录汇报一次）。
+  private static final long LOG_INTERVAL = 1000;
+
   /// XML 流读取器。
   protected final XMLStreamReader reader;
 
@@ -45,6 +48,9 @@ public abstract class AbstractRecordSpliterator<T> implements Spliterator<T> {
 
   /// 是否已完成（流已耗尽）。
   protected boolean finished = false;
+
+  /// 已解析的记录数量。
+  private long parsedCount = 0;
 
   /// 构造 Spliterator。
   ///
@@ -71,6 +77,8 @@ public abstract class AbstractRecordSpliterator<T> implements Spliterator<T> {
           // 找到匹配的元素，委托策略解析
           T record = strategy.parseRecord(reader, context);
           if (record != null) {
+            parsedCount++;
+            logProgressIfNeeded();
             action.accept(record);
             return true;
           }
@@ -79,11 +87,24 @@ public abstract class AbstractRecordSpliterator<T> implements Spliterator<T> {
       }
       // 流已耗尽
       finished = true;
+      logCompletion();
       return false;
     } catch (XMLStreamException e) {
       log.error("解析 {} 记录失败", strategy.rootElementName(), e);
       throw new XmlParseException("XML 解析失败", e);
     }
+  }
+
+  /// 按间隔汇报解析进度。
+  private void logProgressIfNeeded() {
+    if (parsedCount % LOG_INTERVAL == 0) {
+      log.info("正在解析 {} 记录，已完成 {} 条", strategy.rootElementName(), parsedCount);
+    }
+  }
+
+  /// 解析完成时输出总结日志。
+  private void logCompletion() {
+    log.info("{} 解析完成，共 {} 条记录", strategy.rootElementName(), parsedCount);
   }
 
   /// 不支持并行拆分。
