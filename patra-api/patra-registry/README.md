@@ -126,6 +126,7 @@ patra-registry/
 
 **下游消费者**:
 - `patra-ingest`: 通过 Feign 客户端查询数据源配置
+- `patra-catalog`: 通过 `DictionaryClient` 解析国家编码（ISO 3166-1 alpha-2 标准化）
 - 其他微服务: 通过 `patra-registry-api` 模块引入客户端
 
 ## 技术栈
@@ -212,4 +213,4 @@ Flyway 自动执行数据库迁移,种子数据包括:
 
 ---
 
-**最后更新**: 2025-01-12
+**最后更新**: 2025-12-29

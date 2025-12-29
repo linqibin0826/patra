@@ -20,6 +20,7 @@ import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.port.parser.LsiouParserPort;
+import com.patra.catalog.domain.port.registry.CountryCodeResolverPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
@@ -78,6 +79,7 @@ class VenuePubmedEnrichHandlerTest {
   @Mock private TransactionTemplate transactionTemplate;
   @Mock private TransactionStatus transactionStatus;
   @Mock private StreamingDownloadResult downloadResult;
+  @Mock private CountryCodeResolverPort countryCodeResolverPort;
 
   @Captor private ArgumentCaptor<List<VenueAggregate>> updateBatchCaptor;
   @Captor private ArgumentCaptor<List<VenueAggregate>> insertAllCaptor;
@@ -89,7 +91,11 @@ class VenuePubmedEnrichHandlerTest {
   void setUp() {
     handler =
         new VenuePubmedEnrichHandler(
-            streamingDownloadPort, parserPort, venueRepository, transactionTemplate);
+            streamingDownloadPort,
+            parserPort,
+            venueRepository,
+            transactionTemplate,
+            countryCodeResolverPort);
 
     // 配置 TransactionTemplate：直接执行回调，模拟事务行为
     org.mockito.Mockito.doAnswer(
@@ -103,6 +109,9 @@ class VenuePubmedEnrichHandlerTest {
 
     // 配置 downloadResult 的默认行为（用于 try-with-resources）
     lenient().when(downloadResult.inputStream()).thenReturn(new ByteArrayInputStream(new byte[0]));
+
+    // 配置 countryCodeResolverPort 默认返回空 Map（测试不关心国家编码解析）
+    lenient().when(countryCodeResolverPort.resolveCountryCodes(any())).thenReturn(Map.of());
   }
 
   @Nested
