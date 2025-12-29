@@ -1,6 +1,7 @@
 package com.patra.registry.api.dto.dict;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -9,28 +10,26 @@ import java.util.List;
 ///
 /// 由调用方提供字典类型、来源标准以及待解析的原始值列表。
 ///
-/// 来源标准来自注册中心 `sys_reference_standard` 表,为空时使用默认 GLOBAL。
+/// 来源标准（必填）来自注册中心 `sys_reference_standard` 表。
 ///
 /// @author linqibin
 /// @since 0.1.0
 public record DictionaryResolveReq(
-    String typeCode, @JsonAlias("sourceSystem") String sourceStandard, List<String> rawValues) {
+    @NotBlank(message = "字典类型代码不能为空") String typeCode,
+    @NotBlank(message = "来源标准不能为空") String sourceStandard,
+    @NotNull(message = "原始值列表不能为null") List<String> rawValues) {
 
-  /// 规范构造器,执行非空/空白验证并修剪空格。
+  /// 规范构造器，执行数据规范化（trim、不可变列表）。
+  ///
+  /// 验证由 Jakarta Validation 注解处理，Controller 层需使用 `@Valid` 触发。
   ///
   /// @param typeCode 字典类型代码
-  /// @param sourceStandard 来源标准(可为空,为空时使用默认全局标准)
+  /// @param sourceStandard 来源标准（必填）
   /// @param rawValues 原始值列表
   public DictionaryResolveReq {
-    if (typeCode == null || typeCode.trim().isEmpty()) {
-      throw new IllegalArgumentException("字典类型代码不能为null或空字符串");
-    }
-    if (rawValues == null) {
-      throw new IllegalArgumentException("原始值列表不能为null");
-    }
-    typeCode = typeCode.trim();
-    sourceStandard =
-        (sourceStandard == null || sourceStandard.trim().isEmpty()) ? null : sourceStandard.trim();
-    rawValues = Collections.unmodifiableList(new ArrayList<>(rawValues));
+    // 数据规范化（验证由 Jakarta Validation 注解处理）
+    typeCode = typeCode != null ? typeCode.trim() : null;
+    sourceStandard = sourceStandard != null ? sourceStandard.trim() : null;
+    rawValues = rawValues != null ? Collections.unmodifiableList(new ArrayList<>(rawValues)) : null;
   }
 }

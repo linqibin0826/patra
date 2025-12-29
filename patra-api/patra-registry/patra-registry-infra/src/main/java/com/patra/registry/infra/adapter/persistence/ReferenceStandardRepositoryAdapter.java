@@ -8,7 +8,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-/// 来源标准查询仓储实现,基于 JPA。
+/// 来源标准查询仓储实现，基于 JPA。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -19,15 +19,23 @@ public class ReferenceStandardRepositoryAdapter implements ReferenceStandardRepo
   private final ReferenceStandardDao dao;
   private final ReferenceStandardJpaMapper mapper;
 
-  /// 通过标准代码查询来源标准。
-  ///
-  /// @param standardCode 标准代码
-  /// @return 可选的来源标准
   @Override
-  public Optional<ReferenceStandard> findByCode(String standardCode) {
-    if (standardCode == null || standardCode.isBlank()) {
+  public Optional<ReferenceStandard> findByDictTypeCodeAndStandardCode(
+      String dictTypeCode, String standardCode) {
+    if (dictTypeCode == null
+        || dictTypeCode.isBlank()
+        || standardCode == null
+        || standardCode.isBlank()) {
       return Optional.empty();
     }
-    return dao.findByStandardCode(standardCode).map(mapper::toDomain);
+    return dao.findByDictTypeCodeAndStandardCode(dictTypeCode, standardCode).map(mapper::toDomain);
+  }
+
+  @Override
+  public Optional<ReferenceStandard> findCanonicalByDictTypeCode(String dictTypeCode) {
+    if (dictTypeCode == null || dictTypeCode.isBlank()) {
+      return Optional.empty();
+    }
+    return dao.findCanonicalByDictTypeCode(dictTypeCode).map(mapper::toDomain);
   }
 }

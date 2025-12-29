@@ -17,6 +17,7 @@ public interface ReferenceStandardJpaMapper {
   ///
   /// @param entity JPA 实体
   /// @return 来源标准领域对象
+  @Mapping(target = "canonical", expression = "java(Boolean.TRUE.equals(entity.getCanonical()))")
   @Mapping(target = "enabled", expression = "java(Boolean.TRUE.equals(entity.getEnabled()))")
   ReferenceStandard toDomain(ReferenceStandardEntity entity);
 }

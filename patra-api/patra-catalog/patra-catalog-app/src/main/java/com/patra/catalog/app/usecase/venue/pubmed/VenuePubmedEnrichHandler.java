@@ -9,9 +9,11 @@ import com.patra.catalog.app.usecase.venue.pubmed.dto.VenuePubmedEnrichResult;
 import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.CitationSubset;
+import com.patra.catalog.domain.model.enums.DictionaryType;
 import com.patra.catalog.domain.model.enums.IndexingTreatment;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueRelationType;
+import com.patra.catalog.domain.model.vo.common.SourceStandard;
 import com.patra.catalog.domain.model.vo.venue.IndexingInfo;
 import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
 import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
@@ -26,7 +28,7 @@ import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedMeshHeading;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedTitleRelation;
 import com.patra.catalog.domain.port.parser.LsiouParserPort;
-import com.patra.catalog.domain.port.registry.CountryCodeResolverPort;
+import com.patra.catalog.domain.port.registry.DictionaryResolverPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
@@ -88,7 +90,7 @@ public class VenuePubmedEnrichHandler
   private final LsiouParserPort parserPort;
   private final VenueRepository venueRepository;
   private final TransactionTemplate transactionTemplate;
-  private final CountryCodeResolverPort countryCodeResolverPort;
+  private final DictionaryResolverPort dictionaryResolverPort;
 
   /// 执行 PubMed Venue 数据富化。
   ///
@@ -317,9 +319,11 @@ public class VenuePubmedEnrichHandler
             venueRepository.findByIssns(identifiers.issns()));
 
     // 3. 收集并解析国家编码（每批次一次 RPC 调用）
+    // PubMed LSIOU Country 字段使用英文全名（NAME_EN 标准）
     Set<String> rawCountryCodes = collectCountryCodes(batch);
     Map<String, String> countryCodeMap =
-        countryCodeResolverPort.resolveCountryCodes(rawCountryCodes);
+        dictionaryResolverPort.resolve(
+            DictionaryType.COUNTRY, SourceStandard.NAME_EN, rawCountryCodes);
 
     // 4. 匹配并分类
     BatchProcessingResult result = matchAndClassifyRecords(batch, existingVenues, countryCodeMap);

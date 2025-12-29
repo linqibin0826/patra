@@ -16,15 +16,33 @@ import org.springframework.data.repository.query.Param;
 /// @since 0.1.0
 public interface ReferenceStandardDao extends JpaRepository<ReferenceStandardEntity, Long> {
 
-  /// 通过标准代码查询来源标准。
+  /// 通过字典类型代码和标准代码查询来源标准。
   ///
+  /// @param dictTypeCode 字典类型代码
   /// @param standardCode 标准代码
   /// @return 可选的来源标准实体
   @Query(
       """
       SELECT s FROM ReferenceStandardEntity s
-      WHERE s.standardCode = :standardCode
+      WHERE s.dictTypeCode = :dictTypeCode
+        AND s.standardCode = :standardCode
         AND s.deletedAt IS NULL
       """)
-  Optional<ReferenceStandardEntity> findByStandardCode(@Param("standardCode") String standardCode);
+  Optional<ReferenceStandardEntity> findByDictTypeCodeAndStandardCode(
+      @Param("dictTypeCode") String dictTypeCode, @Param("standardCode") String standardCode);
+
+  /// 查询指定字典类型的规范标准。
+  ///
+  /// @param dictTypeCode 字典类型代码
+  /// @return 可选的规范标准实体
+  @Query(
+      """
+      SELECT s FROM ReferenceStandardEntity s
+      WHERE s.dictTypeCode = :dictTypeCode
+        AND s.canonical = true
+        AND s.enabled = true
+        AND s.deletedAt IS NULL
+      """)
+  Optional<ReferenceStandardEntity> findCanonicalByDictTypeCode(
+      @Param("dictTypeCode") String dictTypeCode);
 }

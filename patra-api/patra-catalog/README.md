@@ -219,7 +219,7 @@ patra:
 - `VenueJpaMapper`：载体聚合根 Entity ↔ Aggregate 映射器（含快速访问字段提取）
 - `StreamingDownloadAdapter`：流式下载适配器（HTTP 响应体直接返回 InputStream，无磁盘落盘）
 - `VenueSourceFileAdapter`：OpenAlex Venue 源文件适配器（封装 manifest 解析）
-- `CountryCodeResolverAdapter`：国家编码解析适配器（调用 patra-registry 字典服务，批量解析 PubMed 国家编码为 ISO 3166-1 alpha-2）
+- `DictionaryResolverAdapter`：字典解析适配器（调用 patra-registry 字典服务，支持国家、语言等多种字典类型的批量解析）
 
 ## 📊 数据模型
 
@@ -254,7 +254,16 @@ patra:
 | Boot | E2E 测试 | 核心流程 |
 
 ## 📝 变更日志
-1. v0.9.9 (2025-12-29)：国家编码标准化服务集成
+1. v0.9.10 (2025-12-29)：通用字典解析服务重构
+   - **架构决策**：[[ADR-021]] 将专用 `CountryCodeResolverPort` 泛化为通用 `DictionaryResolverPort`
+   - **新增值对象**：`SourceStandard`（来源标准，如 NAME_EN、ISO_3166_1_ALPHA2）
+   - **新增枚举**：`DictionaryType`（字典类型：COUNTRY、LANGUAGE、SUBJECT）
+   - **重构端口**：`CountryCodeResolverPort` → `DictionaryResolverPort`（支持多字典类型）
+   - **重构适配器**：`CountryCodeResolverAdapter` → `DictionaryResolverAdapter`
+   - **设计原则**：调用方显式指定 `DictionaryType` 和 `SourceStandard`，无配置化默认值
+   - **扩展性**：新增字典类型只需在枚举中添加值，无需创建新接口
+
+2. v0.9.9 (2025-12-29)：国家编码标准化服务集成
    - **架构决策**：[[ADR-020]] 国家编码标准化从本地逻辑迁移至 patra-registry 字典服务
    - **新增端口**：`CountryCodeResolverPort`（Domain 层端口，批量解析国家编码）
    - **新增适配器**：`CountryCodeResolverAdapter`（Infra 层，调用 `DictionaryClient.resolve()`）
@@ -262,6 +271,7 @@ patra:
    - **移除代码**：`PublicationProfile.normalizeCountryCode()` 及相关常量（ISO3_TO_ISO2、NAME_TO_ISO2）
    - **Handler 优化**：`VenuePubmedEnrichHandler` 每批次（500 条）仅调用一次 RPC，优化网络开销
    - **错误处理**：远程服务不可用时返回空 Map，国家编码设为 null（优雅降级）
+   - **注意**：本版本已被 v0.9.10 取代（见 [[ADR-021]]）
 
 2. v0.9.8 (2025-12-18)：patra-catalog-infra 包结构重构
    - **包结构整合**：将 `infra/batch/` 目录整合到 `infra/adapter/batch/` 下
