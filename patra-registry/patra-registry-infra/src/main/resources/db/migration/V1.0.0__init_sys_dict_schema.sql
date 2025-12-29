@@ -134,19 +134,29 @@ CREATE TABLE IF NOT EXISTS sys_dict_item_alias
 
 /* ====================================================================
  * 表: sys_reference_standard - 来源标准目录
- * 语义: 维护系统允许的来源标准,用于校验与治理
+ * 语义: 维护某字典类型下允许的来源标准,用于校验与治理
  * 要点:
  *  - 标准代码固定为大写下划线格式
- *  - 仅维护标准目录,不承载具体标准值
+ *  - dict_type_code 关联字典类型
+ *  - is_canonical 标记该类型的规范标准（item_code 遵循的格式）
+ *  - 每个字典类型只能有一个规范标准（通过生成列约束）
  * ==================================================================== */
 CREATE TABLE IF NOT EXISTS sys_reference_standard
 (
-    id            BIGINT UNSIGNED NOT NULL COMMENT '主键;内部唯一标识符(雪花ID)',
-    standard_code VARCHAR(64)     NOT NULL COMMENT '标准代码(如 ISO_3166_1_ALPHA2 或 GLOBAL)',
-    standard_name VARCHAR(200)    NOT NULL COMMENT '标准名称',
-    description   VARCHAR(500)    NULL COMMENT '描述',
-    display_order INT UNSIGNED    NOT NULL DEFAULT 100 COMMENT '显示顺序',
-    enabled       TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否启用: 1=启用, 0=禁用',
+    id              BIGINT UNSIGNED NOT NULL COMMENT '主键;内部唯一标识符(雪花ID)',
+    dict_type_code  VARCHAR(64)     NOT NULL COMMENT '所属字典类型代码 (逻辑外键 -> sys_dict_type.type_code)',
+    standard_code   VARCHAR(64)     NOT NULL COMMENT '标准代码(如 ISO_3166_1_ALPHA2 或 NAME_EN)',
+    standard_name   VARCHAR(200)    NOT NULL COMMENT '标准名称',
+    description     VARCHAR(500)    NULL COMMENT '描述',
+    display_order   INT UNSIGNED    NOT NULL DEFAULT 100 COMMENT '显示顺序',
+    is_canonical    TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '是否为该类型的规范标准: 1=是, 0=否 (每类型最多一个)',
+    enabled         TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否启用: 1=启用, 0=禁用',
+
+    -- 生成列: 仅当 is_canonical AND enabled AND not deleted 时等于 dict_type_code; 否则为 NULL
+    canonical_key   VARCHAR(64) GENERATED ALWAYS AS
+        (CASE
+             WHEN (is_canonical = 1 AND enabled = 1 AND deleted_at IS NULL) THEN dict_type_code
+             ELSE NULL END) STORED COMMENT '生成列,用于唯一键以强制每类型一个规范标准',
 
     -- 审计与治理
     record_remarks  JSON            NULL COMMENT '变更备注: JSON数组',
@@ -161,8 +171,10 @@ CREATE TABLE IF NOT EXISTS sys_reference_standard
     deleted_at      TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (id),
-    UNIQUE KEY uk_ref_standard__code (standard_code) COMMENT '标准代码唯一',
-    CONSTRAINT chk_ref_standard__code_format CHECK (REGEXP_LIKE(standard_code, '^[A-Z0-9_]{1,64}$'))
+    UNIQUE KEY uk_ref_standard__type_code (dict_type_code, standard_code) COMMENT '同一字典类型下标准代码唯一',
+    UNIQUE KEY uk_ref_standard__canonical_per_type (canonical_key) COMMENT '通过生成列确保每类型一个规范标准',
+    CONSTRAINT chk_ref_standard__code_format CHECK (REGEXP_LIKE(standard_code, '^[A-Z0-9_]{1,64}$')),
+    CONSTRAINT chk_ref_standard__type_format CHECK (REGEXP_LIKE(dict_type_code, '^[a-z0-9_]{1,64}$'))
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='系统参考标准';

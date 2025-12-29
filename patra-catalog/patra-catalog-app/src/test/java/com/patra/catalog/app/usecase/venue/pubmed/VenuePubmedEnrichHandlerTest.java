@@ -20,7 +20,7 @@ import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.port.parser.LsiouParserPort;
-import com.patra.catalog.domain.port.registry.CountryCodeResolverPort;
+import com.patra.catalog.domain.port.registry.DictionaryResolverPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
@@ -44,8 +44,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -65,7 +63,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("VenuePubmedEnrichHandler 单元测试")
 @Timeout(value = 2, unit = TimeUnit.SECONDS)
 class VenuePubmedEnrichHandlerTest {
@@ -79,7 +76,7 @@ class VenuePubmedEnrichHandlerTest {
   @Mock private TransactionTemplate transactionTemplate;
   @Mock private TransactionStatus transactionStatus;
   @Mock private StreamingDownloadResult downloadResult;
-  @Mock private CountryCodeResolverPort countryCodeResolverPort;
+  @Mock private DictionaryResolverPort dictionaryResolverPort;
 
   @Captor private ArgumentCaptor<List<VenueAggregate>> updateBatchCaptor;
   @Captor private ArgumentCaptor<List<VenueAggregate>> insertAllCaptor;
@@ -95,10 +92,12 @@ class VenuePubmedEnrichHandlerTest {
             parserPort,
             venueRepository,
             transactionTemplate,
-            countryCodeResolverPort);
+            dictionaryResolverPort);
 
     // 配置 TransactionTemplate：直接执行回调，模拟事务行为
-    org.mockito.Mockito.doAnswer(
+    // 使用 lenient() 因为异常测试可能在到达事务逻辑前就失败
+    lenient()
+        .doAnswer(
             invocation -> {
               Consumer<TransactionStatus> callback = invocation.getArgument(0);
               callback.accept(transactionStatus);
@@ -110,8 +109,8 @@ class VenuePubmedEnrichHandlerTest {
     // 配置 downloadResult 的默认行为（用于 try-with-resources）
     lenient().when(downloadResult.inputStream()).thenReturn(new ByteArrayInputStream(new byte[0]));
 
-    // 配置 countryCodeResolverPort 默认返回空 Map（测试不关心国家编码解析）
-    lenient().when(countryCodeResolverPort.resolveCountryCodes(any())).thenReturn(Map.of());
+    // 配置 dictionaryResolverPort 默认返回空 Map（测试不关心国家编码解析）
+    lenient().when(dictionaryResolverPort.resolve(any(), any(), any())).thenReturn(Map.of());
   }
 
   @Nested

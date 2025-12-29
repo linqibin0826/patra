@@ -1,6 +1,8 @@
 package com.patra.catalog.infra.adapter.integration.registry;
 
-import com.patra.catalog.domain.port.registry.CountryCodeResolverPort;
+import com.patra.catalog.domain.model.enums.DictionaryType;
+import com.patra.catalog.domain.model.vo.common.SourceStandard;
+import com.patra.catalog.domain.port.registry.DictionaryResolverPort;
 import com.patra.registry.api.client.DictionaryClient;
 import com.patra.registry.api.dto.dict.DictionaryResolveItemResp;
 import com.patra.registry.api.dto.dict.DictionaryResolveReq;
@@ -14,55 +16,56 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/// 国家编码解析适配器。
+/// 字典解析适配器。
 ///
-/// 通过调用 patra-registry 服务的字典解析 API 实现国家编码标准化。
+/// 通过调用 patra-registry 服务的字典解析 API 实现字典值标准化。
 ///
 /// **错误处理策略**：
 ///
 /// - 远程服务不可用时返回空 Map，不影响主流程
-/// - 国家编码是可选字段，解析失败不应阻断 venue enrich 流程
+/// - 字典解析通常是可选的增强操作，失败不应阻断业务流程
 ///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class CountryCodeResolverAdapter implements CountryCodeResolverPort {
+public class DictionaryResolverAdapter implements DictionaryResolverPort {
 
-  private static final String DICTIONARY_TYPE_COUNTRY = "country";
-  /// NLM LSIOU Country 字段使用 MARC Country Code Name List（英文国家全名）。
-  ///
-  /// @see <a href="https://www.nlm.nih.gov/bsd/licensee/catrecordxml_element_desc2.html">NLM
-  // Catalog Record XML Elements</a>
-  private static final String SOURCE_STANDARD_NAME_EN = "NAME_EN";
   private static final String STATUS_RESOLVED = "RESOLVED";
 
   private final DictionaryClient dictionaryClient;
 
   @Override
-  public Map<String, String> resolveCountryCodes(Set<String> rawCodes) {
-    if (rawCodes == null || rawCodes.isEmpty()) {
+  public Map<String, String> resolve(
+      DictionaryType dictionaryType, SourceStandard sourceStandard, Set<String> rawValues) {
+    if (rawValues == null || rawValues.isEmpty()) {
       return Map.of();
     }
 
     try {
       DictionaryResolveReq request =
           new DictionaryResolveReq(
-              DICTIONARY_TYPE_COUNTRY, SOURCE_STANDARD_NAME_EN, List.copyOf(rawCodes));
+              dictionaryType.getTypeCode(), sourceStandard.code(), List.copyOf(rawValues));
 
       DictionaryResolveResp response = dictionaryClient.resolve(request);
       return extractResolvedCodes(response);
 
     } catch (RemoteCallException ex) {
       log.warn(
-          "国家编码解析失败，registry 服务调用异常: httpStatus={}, errorCode={}, traceId={}",
+          "字典解析失败，registry 服务调用异常: type={}, standard={}, httpStatus={}, errorCode={}, traceId={}",
+          dictionaryType.getTypeCode(),
+          sourceStandard.code(),
           ex.getHttpStatus(),
           ex.getErrorCode(),
           ex.getTraceId());
       return Map.of();
     } catch (Exception ex) {
-      log.warn("国家编码解析失败，发生意外异常", ex);
+      log.warn(
+          "字典解析失败，发生意外异常: type={}, standard={}",
+          dictionaryType.getTypeCode(),
+          sourceStandard.code(),
+          ex);
       return Map.of();
     }
   }

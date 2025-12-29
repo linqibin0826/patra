@@ -28,60 +28,50 @@
 
 /* ====================================================================
  * 第0部分: 来源标准目录
+ * 说明:
+ *   - dict_type_code: 所属字典类型
+ *   - is_canonical: 是否为该类型的规范标准（item_code 遵循的格式）
+ *   - 每个字典类型只能有一个规范标准（通过 canonical_key 生成列约束）
  * ==================================================================== */
 
 INSERT INTO patra_registry.sys_reference_standard
-(id, standard_code, standard_name, description, display_order, enabled,
- created_at, updated_at, version)
-SELECT
-  900000000000000001,
-  'GLOBAL',
-  'Global',
-  '全局默认标准(未指定来源标准时使用)',
-  1,
-  1,
-  NOW(6),
-  NOW(6),
-  0
-WHERE NOT EXISTS (
-  SELECT 1 FROM patra_registry.sys_reference_standard
-  WHERE standard_code = 'GLOBAL' AND deleted_at IS NULL
-);
-
-INSERT INTO patra_registry.sys_reference_standard
-(id, standard_code, standard_name, description, display_order, enabled,
+(id, dict_type_code, standard_code, standard_name, description, display_order, is_canonical, enabled,
  created_at, updated_at, version)
 SELECT
   900000000000000002,
+  'country',
   'ISO_3166_1_ALPHA2',
   'ISO 3166-1 alpha-2',
-  '国家代码两字母标准',
+  '国家代码两字母标准（平台规范标准，item_code 采用此格式）',
   10,
+  1,
   1,
   NOW(6),
   NOW(6),
   0
 WHERE NOT EXISTS (
   SELECT 1 FROM patra_registry.sys_reference_standard
-  WHERE standard_code = 'ISO_3166_1_ALPHA2' AND deleted_at IS NULL
+  WHERE dict_type_code = 'country' AND standard_code = 'ISO_3166_1_ALPHA2' AND deleted_at IS NULL
 );
 
 INSERT INTO patra_registry.sys_reference_standard
-(id, standard_code, standard_name, description, display_order, enabled,
+(id, dict_type_code, standard_code, standard_name, description, display_order, is_canonical, enabled,
  created_at, updated_at, version)
 SELECT
   900000000000000003,
+  'country',
   'NAME_EN',
   'English Name',
-  '英文名称标准(用于名称型输入)',
+  '英文名称标准（用于名称型输入，需转换为 ISO 代码）',
   20,
+  0,
   1,
   NOW(6),
   NOW(6),
   0
 WHERE NOT EXISTS (
   SELECT 1 FROM patra_registry.sys_reference_standard
-  WHERE standard_code = 'NAME_EN' AND deleted_at IS NULL
+  WHERE dict_type_code = 'country' AND standard_code = 'NAME_EN' AND deleted_at IS NULL
 );
 
 

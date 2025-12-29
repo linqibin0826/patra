@@ -116,7 +116,7 @@ patra-registry/
 **基础路径**: `/_internal/dictionaries`
 
 **核心端点**:
-- `POST /_internal/dictionaries/resolve` - 批量解析字典值(支持 `sourceStandard` 可选,缺省使用 `GLOBAL`)
+- `POST /_internal/dictionaries/resolve` - 批量解析字典值（`sourceStandard` 必填）
 
 ## 依赖关系
 
@@ -126,7 +126,7 @@ patra-registry/
 
 **下游消费者**:
 - `patra-ingest`: 通过 Feign 客户端查询数据源配置
-- `patra-catalog`: 通过 `DictionaryClient` 解析国家编码（ISO 3166-1 alpha-2 标准化）
+- `patra-catalog`: 通过 `DictionaryClient` 解析字典值（国家、语言等多种类型标准化）
 - 其他微服务: 通过 `patra-registry-api` 模块引入客户端
 
 ## 技术栈
