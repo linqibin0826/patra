@@ -4,12 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.MissingResourceException;
-import java.util.regex.Pattern;
 import lombok.Builder;
 
 /// 出版概况值对象。封装期刊的出版相关元数据。
@@ -62,7 +58,7 @@ import lombok.Builder;
 /// @param publicationHistory 出版历史（创刊/停刊年份）
 /// @param languages 语言信息（主语言和摘要语言）
 /// @param hostOrganization 宿主机构信息
-/// @param countryCode 国家代码（ISO 3166-1 alpha-2，支持 ISO3/英文名称自动归一）
+/// @param countryCode 国家代码（ISO 3166-1 alpha-2，由 registry 服务标准化）
 /// @param indexingInfo MEDLINE 索引收录信息
 /// @param extData 扩展数据（JSON 存储的其他字段）
 /// @author linqibin
@@ -87,7 +83,6 @@ public record PublicationProfile(
   /// 规范化构造函数，确保集合类型不可变。
   public PublicationProfile {
     alternateTitles = alternateTitles != null ? List.copyOf(alternateTitles) : List.of();
-    countryCode = normalizeCountryCode(countryCode);
     extData = extData != null ? Map.copyOf(extData) : Map.of();
   }
 
@@ -120,57 +115,6 @@ public record PublicationProfile(
   public boolean hasHomepageUrl() {
     return homepageUrl != null && !homepageUrl.isBlank();
   }
-
-  private static String normalizeCountryCode(String countryCode) {
-    if (countryCode == null) {
-      return null;
-    }
-    String trimmed = countryCode.trim();
-    if (trimmed.isBlank()) {
-      return null;
-    }
-    String upper = trimmed.toUpperCase(Locale.ROOT);
-    if (ISO2_PATTERN.matcher(upper).matches()) {
-      return upper;
-    }
-    if (ISO3_PATTERN.matcher(upper).matches()) {
-      return ISO3_TO_ISO2.get(upper);
-    }
-    return NAME_TO_ISO2.get(trimmed.toLowerCase(Locale.ROOT));
-  }
-
-  private static Map<String, String> buildIso3ToIso2() {
-    Map<String, String> mapping = new HashMap<>();
-    for (String iso2 : Locale.getISOCountries(Locale.IsoCountryCode.PART1_ALPHA2)) {
-      Locale locale = new Locale("", iso2);
-      try {
-        String iso3 = locale.getISO3Country();
-        if (!iso3.isBlank()) {
-          mapping.put(iso3.toUpperCase(Locale.ROOT), iso2);
-        }
-      } catch (MissingResourceException ignored) {
-        // ignore invalid locale entries
-      }
-    }
-    return Map.copyOf(mapping);
-  }
-
-  private static Map<String, String> buildNameToIso2() {
-    Map<String, String> mapping = new HashMap<>();
-    for (String iso2 : Locale.getISOCountries(Locale.IsoCountryCode.PART1_ALPHA2)) {
-      Locale locale = new Locale("", iso2);
-      String name = locale.getDisplayCountry(Locale.ENGLISH);
-      if (!name.isBlank()) {
-        mapping.put(name.toLowerCase(Locale.ROOT), iso2);
-      }
-    }
-    return Map.copyOf(mapping);
-  }
-
-  private static final Pattern ISO2_PATTERN = Pattern.compile("^[A-Z]{2}$");
-  private static final Pattern ISO3_PATTERN = Pattern.compile("^[A-Z]{3}$");
-  private static final Map<String, String> ISO3_TO_ISO2 = buildIso3ToIso2();
-  private static final Map<String, String> NAME_TO_ISO2 = buildNameToIso2();
 
   /// 判断是否有出版频率。
   ///

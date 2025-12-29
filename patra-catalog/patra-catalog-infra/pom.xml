@@ -92,6 +92,12 @@
             <artifactId>patra-spring-cloud-starter-feign</artifactId>
         </dependency>
 
+        <!-- Registry 服务 API（DictionaryClient） -->
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-registry-api</artifactId>
+        </dependency>
+
         <!-- ================================ -->
         <!-- 事件发布 -->
         <!-- ================================ -->

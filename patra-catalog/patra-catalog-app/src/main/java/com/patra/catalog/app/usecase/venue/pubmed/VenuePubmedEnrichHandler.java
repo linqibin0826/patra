@@ -26,6 +26,7 @@ import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedMeshHeading;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedTitleRelation;
 import com.patra.catalog.domain.port.parser.LsiouParserPort;
+import com.patra.catalog.domain.port.registry.CountryCodeResolverPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
@@ -87,6 +88,7 @@ public class VenuePubmedEnrichHandler
   private final LsiouParserPort parserPort;
   private final VenueRepository venueRepository;
   private final TransactionTemplate transactionTemplate;
+  private final CountryCodeResolverPort countryCodeResolverPort;
 
   /// 执行 PubMed Venue 数据富化。
   ///
@@ -292,7 +294,7 @@ public class VenuePubmedEnrichHandler
 
   /// 处理一个批次的记录。
   ///
-  /// 流程：收集标识符 → 批量查询 → 匹配分类 → 持久化聚合根 → 持久化子实体
+  /// 流程：收集标识符 → 批量查询 → 解析国家编码 → 匹配分类 → 持久化聚合根 → 持久化子实体
   ///
   /// @param batch 待处理的记录批次
   /// @param updatedCount 更新计数器
@@ -314,16 +316,21 @@ public class VenuePubmedEnrichHandler
             venueRepository.findByNlmIds(identifiers.nlmIds()),
             venueRepository.findByIssns(identifiers.issns()));
 
-    // 3. 匹配并分类
-    BatchProcessingResult result = matchAndClassifyRecords(batch, existingVenues);
+    // 3. 收集并解析国家编码（每批次一次 RPC 调用）
+    Set<String> rawCountryCodes = collectCountryCodes(batch);
+    Map<String, String> countryCodeMap =
+        countryCodeResolverPort.resolveCountryCodes(rawCountryCodes);
 
-    // 4. 批量持久化聚合根
+    // 4. 匹配并分类
+    BatchProcessingResult result = matchAndClassifyRecords(batch, existingVenues, countryCodeMap);
+
+    // 5. 批量持久化聚合根
     persistAggregates(result);
 
-    // 5. 批量持久化子实体
+    // 6. 批量持久化子实体
     persistChildEntities(result);
 
-    // 6. 更新计数器
+    // 7. 更新计数器
     updatedCount.addAndGet(result.getToUpdate().size());
     createdCount.addAndGet(result.getToCreate().size());
     skippedCount.addAndGet(result.getSkippedCount());
@@ -355,15 +362,34 @@ public class VenuePubmedEnrichHandler
     return new IdentifierSets(issnLs, nlmIds, issns);
   }
 
+  /// 从批次中收集所有国家编码。
+  ///
+  /// 收集所有非空的国家编码，用于批量解析成 ISO 3166-1 alpha-2 标准编码。
+  ///
+  /// @param batch 待处理的记录批次
+  /// @return 国家编码集合
+  private Set<String> collectCountryCodes(List<PubmedSerialData> batch) {
+    Set<String> countryCodes = new HashSet<>();
+    for (PubmedSerialData record : batch) {
+      if (record.country() != null && !record.country().isBlank()) {
+        countryCodes.add(record.country());
+      }
+    }
+    return countryCodes;
+  }
+
   /// 匹配并分类记录。
   ///
   /// 根据标识符匹配现有期刊，将记录分为更新和新建两类。
   ///
   /// @param batch 待处理的记录批次
   /// @param existingVenues 现有期刊的查询结果
+  /// @param countryCodeMap 国家编码映射（原始值 → ISO 3166-1 alpha-2）
   /// @return 批次处理结果（包含分类和子实体数据）
   private BatchProcessingResult matchAndClassifyRecords(
-      List<PubmedSerialData> batch, ExistingVenuesLookup existingVenues) {
+      List<PubmedSerialData> batch,
+      ExistingVenuesLookup existingVenues,
+      Map<String, String> countryCodeMap) {
 
     BatchProcessingResult result = new BatchProcessingResult();
     // 防重集合：避免同一期刊被多条 PubMed 记录更新（例如同一期刊有多个 ISSN 条目）
@@ -382,7 +408,7 @@ public class VenuePubmedEnrichHandler
           // 首次处理该期刊：更新标识符（CQRS 最小聚合）
           updateVenueIdentifiers(venue, record);
           // 构建并附加 PublicationProfile（嵌入式值对象）
-          PublicationProfile profile = buildPublicationProfileFromRecord(record);
+          PublicationProfile profile = buildPublicationProfileFromRecord(record, countryCodeMap);
           venue.withPublicationProfile(profile);
           result.addUpdate(venue);
           processedVenueIds.add(venue.getId().value());
@@ -402,7 +428,7 @@ public class VenuePubmedEnrichHandler
         // ═══════════════════════════════════════════════════════════════════════
         VenueAggregate newVenue = createVenueFromRecord(record);
         // 构建并附加 PublicationProfile（嵌入式值对象）
-        PublicationProfile profile = buildPublicationProfileFromRecord(record);
+        PublicationProfile profile = buildPublicationProfileFromRecord(record, countryCodeMap);
         newVenue.withPublicationProfile(profile);
         result.addCreate(newVenue);
         // 收集 PubMed 子实体（MeSH、关系、索引历史），稍后批量持久化
@@ -550,8 +576,10 @@ public class VenuePubmedEnrichHandler
   /// 封装所有 PubMed 提供的出版相关字段，作为嵌入式值对象存储在聚合根中。
   ///
   /// @param record PubMed 数据记录
+  /// @param countryCodeMap 国家编码映射（原始值 → ISO 3166-1 alpha-2）
   /// @return PublicationProfile 嵌入式值对象
-  private PublicationProfile buildPublicationProfileFromRecord(PubmedSerialData record) {
+  private PublicationProfile buildPublicationProfileFromRecord(
+      PubmedSerialData record, Map<String, String> countryCodeMap) {
     // 构建语言信息
     VenueLanguages languages =
         !record.languages().isEmpty() ? toVenueLanguages(record.languages()) : null;
@@ -568,12 +596,17 @@ public class VenuePubmedEnrichHandler
     IndexingInfo indexingInfo =
         IndexingInfo.of(record.isCurrentlyIndexed() ? "MEDLINE" : null, record.medlineTA(), null);
 
+    // 获取标准化的国家编码（通过 registry 服务解析）
+    String rawCountry = record.country();
+    String resolvedCountryCode =
+        (rawCountry != null && !rawCountry.isBlank()) ? countryCodeMap.get(rawCountry) : null;
+
     return PublicationProfile.builder()
         .abbreviatedTitle(record.medlineTA())
         .frequency(record.frequency())
         .publicationHistory(publicationHistory)
         .languages(languages)
-        .countryCode(record.country())
+        .countryCode(resolvedCountryCode)
         .indexingInfo(indexingInfo)
         .build();
   }
