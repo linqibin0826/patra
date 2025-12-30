@@ -13,33 +13,23 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.SQLRestriction;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-/// JPA 实体基类，提供审计、乐观锁和软删除功能。
+/// JPA 实体基类，提供审计和乐观锁功能。
 ///
 /// **功能特性**：
 ///
 /// - **雪花 ID**：应用层预分配，避免数据库自增以优化批量插入性能
 /// - **审计字段**：自动填充 createdAt/createdBy/updatedAt/updatedBy
 /// - **乐观锁**：通过 `@Version` 防止并发更新冲突
-/// - **软删除**：使用 `@SQLRestriction` 自动过滤已删除记录
 ///
-/// **软删除实现**（时间戳策略）：
+/// **软删除（可选）**：
 ///
-/// - 使用 `@SQLRestriction("deleted_at IS NULL")` 自动过滤已删除记录
-/// - 应用层通过设置 `deletedAt = Instant.now()` 实现软删除
-/// - 通过 `@SQLRestriction` 自动过滤，无需手动添加查询条件
-/// - 需要查询已删除记录时，使用 Native Query 或自定义 Repository 方法
-///
-/// **为什么不用 @SoftDelete**：
-///
-/// Hibernate 6.6 的 `@SoftDelete` 设计为布尔型策略（`0/1`、`Y/N`），
-/// 不原生支持时间戳策略。对于时间戳软删除，`@SQLRestriction` 是更好的选择。
+/// 如需软删除功能，请继承 `SoftDeletableJpaEntity` 而非此类。
 ///
 /// 使用示例：
 ///
@@ -52,19 +42,12 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 ///
 ///     @Column(name = "name", nullable = false)
 ///     private String name;
-///     // ...
 /// }
-///
-/// // 软删除实体
-/// entity.setDeletedAt(Instant.now());
-/// repository.save(entity);
-///
-/// // 查询自动排除已删除记录
-/// repository.findAll(); // WHERE deleted_at IS NULL
 /// ```
 ///
 /// @author linqibin
 /// @since 0.1.0
+/// @see SoftDeletableJpaEntity
 @Data
 @SuperBuilder
 @NoArgsConstructor
@@ -72,7 +55,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @EqualsAndHashCode
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
-@SQLRestriction("deleted_at IS NULL")
 public abstract class BaseJpaEntity implements Serializable {
 
   @Serial private static final long serialVersionUID = 1L;
@@ -134,16 +116,6 @@ public abstract class BaseJpaEntity implements Serializable {
   @Column(name = "updated_by_name")
   private String updatedByName;
 
-  /// 实体软删除时间戳。
-  ///
-  /// - `null`：记录未删除（活跃状态）
-  /// - 非 `null`：记录已删除，值为删除时间
-  ///
-  /// 通过 `@SQLRestriction("deleted_at IS NULL")` 自动过滤已删除记录。
-  /// 应用层执行软删除时，设置此字段为 `Instant.now()` 并调用 `save()`。
-  @Column(name = "deleted_at")
-  private Instant deletedAt;
-
   /// 用于乐观锁的版本号。
   ///
   /// 此字段由 JPA 自动管理，防止并发更新冲突。
@@ -157,19 +129,4 @@ public abstract class BaseJpaEntity implements Serializable {
   /// 将 IP 地址存储为字节数组，可以高效地存储 IPv4 和 IPv6 地址。
   @Column(name = "ip_address")
   private byte[] ipAddress;
-
-  /// 执行软删除。
-  ///
-  /// 设置 `deletedAt` 为当前时间戳，标记记录为已删除。
-  /// 调用此方法后，需要调用 `repository.save(entity)` 持久化更改。
-  public void softDelete() {
-    this.deletedAt = Instant.now();
-  }
-
-  /// 检查实体是否已被软删除。
-  ///
-  /// @return 如果 `deletedAt` 不为 null，返回 `true`
-  public boolean isDeleted() {
-    return this.deletedAt != null;
-  }
 }
