@@ -11,14 +11,18 @@ import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import com.patra.catalog.domain.model.vo.venue.Society;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
+import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
 import com.patra.common.domain.AggregateRoot;
 import com.patra.common.enums.ProvenanceCode;
 import java.io.Serial;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.Getter;
 
 /// 出版载体聚合根。
@@ -227,6 +231,64 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
 
     // 使用 toBuilder 保留其他字段，只更新 countryCode
     this.publicationProfile = publicationProfile.toBuilder().countryCode(validatedCode).build();
+    markDirty();
+  }
+
+  /// 标准化语言代码。
+  ///
+  /// 用于数据导入时验证和转换语言代码。调用者先通过 registry 服务批量验证原始语言代码，
+  /// 然后将验证映射结果（原始代码 → BCP 47 标准代码）传入此方法。
+  ///
+  /// **处理逻辑**：
+  ///
+  /// - 遍历 primary 和 summary 列表中的每个语言代码
+  /// - 使用映射表将有效代码转换为 BCP 47 格式
+  /// - 无效代码（不在映射表中）被过滤掉
+  /// - 对结果列表去重（因为多个 ISO 639-3 代码可能映射到同一个 BCP 47 代码）
+  /// - 保持原始顺序（使用 LinkedHashSet）
+  ///
+  /// **设计原则**：
+  ///
+  /// - 聚合根内部封装状态变更逻辑
+  /// - Infrastructure 层只负责获取验证结果，不直接修改聚合状态
+  ///
+  /// @param validatedMappings 经过 registry 服务验证后的映射（原始代码 → BCP 47 代码）
+  public void normalizeLanguages(Map<String, String> validatedMappings) {
+    if (publicationProfile == null) {
+      return;
+    }
+
+    VenueLanguages currentLanguages = publicationProfile.languages();
+    if (currentLanguages == null || currentLanguages.isEmpty()) {
+      return;
+    }
+
+    // 转换并去重 primary 列表
+    List<String> normalizedPrimary =
+        currentLanguages.primary().stream()
+            .map(validatedMappings::get)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toCollection(LinkedHashSet::new))
+            .stream()
+            .toList();
+
+    // 转换并去重 summary 列表
+    List<String> normalizedSummary =
+        currentLanguages.summary().stream()
+            .map(validatedMappings::get)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toCollection(LinkedHashSet::new))
+            .stream()
+            .toList();
+
+    VenueLanguages normalizedLanguages = VenueLanguages.of(normalizedPrimary, normalizedSummary);
+
+    // 只有当语言发生变化时才更新
+    if (Objects.equals(currentLanguages, normalizedLanguages)) {
+      return;
+    }
+
+    this.publicationProfile = publicationProfile.toBuilder().languages(normalizedLanguages).build();
     markDirty();
   }
 

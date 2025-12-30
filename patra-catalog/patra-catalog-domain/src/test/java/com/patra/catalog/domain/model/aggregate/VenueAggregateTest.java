@@ -9,7 +9,9 @@ import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
 import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
+import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -550,6 +552,211 @@ class VenueAggregateTest {
       assertThat(updated.abbreviatedTitle()).isEqualTo("Nat. Med.");
       assertThat(updated.homepageUrl()).isEqualTo("https://example.com");
       assertThat(updated.frequency()).isEqualTo("Monthly");
+    }
+  }
+
+  @Nested
+  @DisplayName("normalizeLanguages() 语言标准化测试")
+  class NormalizeLanguagesTests {
+
+    /// 测试用验证映射：ISO 639-3 → BCP 47
+    private static final Map<String, String> VALID_MAPPINGS =
+        Map.of(
+            "eng", "en",
+            "chi", "zh",
+            "zho", "zh", // chi 和 zho 都映射到 zh
+            "jpn", "ja",
+            "fre", "fr",
+            "fra", "fr", // fre 和 fra 都映射到 fr
+            "ger", "de",
+            "deu", "de" // ger 和 deu 都映射到 de
+            );
+
+    @Test
+    @DisplayName("应该将 ISO 639-3 代码转换为 BCP 47")
+    void shouldConvertIso639ToBcp47() {
+      // Given
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      PublicationProfile profile =
+          PublicationProfile.builder()
+              .languages(VenueLanguages.of(List.of("eng", "chi"), List.of("fre", "ger")))
+              .build();
+      venue.withPublicationProfile(profile);
+      venue.clearDirty();
+
+      // When
+      venue.normalizeLanguages(VALID_MAPPINGS);
+
+      // Then
+      VenueLanguages languages = venue.getPublicationProfile().languages();
+      assertThat(languages.primary()).containsExactly("en", "zh");
+      assertThat(languages.summary()).containsExactly("fr", "de");
+      assertThat(venue.isDirty()).isTrue();
+    }
+
+    @Test
+    @DisplayName("应该移除无效的语言代码")
+    void shouldRemoveInvalidLanguageCodes() {
+      // Given
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      PublicationProfile profile =
+          PublicationProfile.builder()
+              .languages(VenueLanguages.of(List.of("eng", "xxx"), List.of("yyy", "fre")))
+              .build();
+      venue.withPublicationProfile(profile);
+      venue.clearDirty();
+
+      // When
+      venue.normalizeLanguages(VALID_MAPPINGS);
+
+      // Then - 无效代码被移除
+      VenueLanguages languages = venue.getPublicationProfile().languages();
+      assertThat(languages.primary()).containsExactly("en");
+      assertThat(languages.summary()).containsExactly("fr");
+    }
+
+    @Test
+    @DisplayName("应该对多映射代码去重")
+    void shouldDeduplicateMultiMappedCodes() {
+      // Given - chi 和 zho 都映射到 zh
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      PublicationProfile profile =
+          PublicationProfile.builder()
+              .languages(VenueLanguages.of(List.of("chi", "zho"), List.of("fre", "fra")))
+              .build();
+      venue.withPublicationProfile(profile);
+      venue.clearDirty();
+
+      // When
+      venue.normalizeLanguages(VALID_MAPPINGS);
+
+      // Then - 去重后只保留一个
+      VenueLanguages languages = venue.getPublicationProfile().languages();
+      assertThat(languages.primary()).containsExactly("zh");
+      assertThat(languages.summary()).containsExactly("fr");
+    }
+
+    @Test
+    @DisplayName("publicationProfile 为 null 时不应该抛出异常")
+    void shouldNotThrowWhenPublicationProfileIsNull() {
+      // Given
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      // publicationProfile 默认为 null
+
+      // When & Then - 不应该抛出异常
+      venue.normalizeLanguages(VALID_MAPPINGS);
+      assertThat(venue.getPublicationProfile()).isNull();
+    }
+
+    @Test
+    @DisplayName("languages 为 null 时不应该抛出异常")
+    void shouldNotThrowWhenLanguagesIsNull() {
+      // Given
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      PublicationProfile profile = PublicationProfile.builder().countryCode("US").build();
+      venue.withPublicationProfile(profile);
+      venue.clearDirty();
+
+      // When & Then - 不应该抛出异常
+      venue.normalizeLanguages(VALID_MAPPINGS);
+      assertThat(venue.getPublicationProfile().languages()).isNull();
+      assertThat(venue.isDirty()).isFalse();
+    }
+
+    @Test
+    @DisplayName("空语言列表时不应该更新")
+    void shouldNotUpdateWhenLanguagesAreEmpty() {
+      // Given
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      PublicationProfile profile =
+          PublicationProfile.builder().languages(VenueLanguages.empty()).build();
+      venue.withPublicationProfile(profile);
+      venue.clearDirty();
+
+      // When
+      venue.normalizeLanguages(VALID_MAPPINGS);
+
+      // Then - 不应该标记为脏
+      assertThat(venue.isDirty()).isFalse();
+    }
+
+    @Test
+    @DisplayName("语言已经是 BCP 47 格式且无变化时不应该更新")
+    void shouldNotUpdateWhenNoChange() {
+      // Given - 假设已经标准化过，现在代码已经是 BCP 47 格式
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      // 但我们的映射是 ISO 639-3 → BCP 47，如果输入就是 BCP 47，不在映射中会被过滤
+      // 这个测试场景是：输入 ISO 639-3，映射结果与之前相同
+      Map<String, String> mappingWithBcp47 = Map.of("en", "en", "zh", "zh"); // 假设已经是 BCP 47
+      PublicationProfile profile =
+          PublicationProfile.builder()
+              .languages(VenueLanguages.of(List.of("en"), List.of("zh")))
+              .build();
+      venue.withPublicationProfile(profile);
+      venue.clearDirty();
+
+      // When
+      venue.normalizeLanguages(mappingWithBcp47);
+
+      // Then - 结果相同，不应该标记为脏
+      assertThat(venue.isDirty()).isFalse();
+    }
+
+    @Test
+    @DisplayName("更新语言时应该保留其他字段")
+    void shouldPreserveOtherFieldsWhenUpdating() {
+      // Given
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      PublicationProfile profile =
+          PublicationProfile.builder()
+              .countryCode("US")
+              .abbreviatedTitle("Nat. Med.")
+              .homepageUrl("https://example.com")
+              .languages(VenueLanguages.of(List.of("eng"), List.of()))
+              .build();
+      venue.withPublicationProfile(profile);
+      venue.clearDirty();
+
+      // When
+      venue.normalizeLanguages(VALID_MAPPINGS);
+
+      // Then - 其他字段应该保持不变
+      PublicationProfile updated = venue.getPublicationProfile();
+      assertThat(updated.countryCode()).isEqualTo("US");
+      assertThat(updated.abbreviatedTitle()).isEqualTo("Nat. Med.");
+      assertThat(updated.homepageUrl()).isEqualTo("https://example.com");
+      assertThat(updated.languages().primary()).containsExactly("en");
+    }
+
+    @Test
+    @DisplayName("映射表为空时应该清空所有语言代码")
+    void shouldClearAllLanguagesWhenMappingIsEmpty() {
+      // Given
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      PublicationProfile profile =
+          PublicationProfile.builder()
+              .languages(VenueLanguages.of(List.of("eng"), List.of("fre")))
+              .build();
+      venue.withPublicationProfile(profile);
+      venue.clearDirty();
+
+      // When - 空映射表意味着所有代码都无效
+      venue.normalizeLanguages(Map.of());
+
+      // Then - 所有代码被清空
+      VenueLanguages languages = venue.getPublicationProfile().languages();
+      assertThat(languages.primary()).isEmpty();
+      assertThat(languages.summary()).isEmpty();
+      assertThat(venue.isDirty()).isTrue();
     }
   }
 }
