@@ -189,24 +189,7 @@ class DictionaryRepositoryAdapterIT {
       assertThat(result.get("United States").itemCode()).isEqualTo("US");
     }
 
-    @Test
-    @DisplayName("已软删除的别名不应被查询到")
-    void shouldIgnoreDeletedAliases() {
-      Long itemId = createItem("CN", "中国", 10);
-
-      SysDictItemAliasEntity deletedAlias = new SysDictItemAliasEntity();
-      deletedAlias.setId(SnowflakeIdGenerator.getId());
-      deletedAlias.setItemId(itemId);
-      deletedAlias.setSourceStandard("DELETED_STANDARD");
-      deletedAlias.setExternalCode("CN");
-      deletedAlias.setDeletedAt(Instant.now());
-      aliasDao.save(deletedAlias);
-
-      Map<String, DictionaryItem> result =
-          repository.findItemsByAliases(testTypeId, "DELETED_STANDARD", Set.of("CN"));
-
-      assertThat(result).isEmpty();
-    }
+    // 注：软删除测试已移除 - SysDictItemAliasEntity 现在继承 BaseJpaEntity，使用物理删除
 
     @Test
     @DisplayName("类型不匹配的别名应被过滤")

@@ -1,7 +1,7 @@
 package com.patra.registry.infra.adapter.persistence.entity.dictionary;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.SoftDeletableJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -26,7 +26,7 @@ import org.hibernate.type.SqlTypes;
 @Setter
 @Entity
 @Table(name = "sys_dict_item")
-public class SysDictItemEntity extends BaseJpaEntity {
+public class SysDictItemEntity extends SoftDeletableJpaEntity {
 
   /// 所属字典类型的标识符(`sys_dict_type.id`)。
   @Column(name = "type_id", nullable = false)

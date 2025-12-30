@@ -65,7 +65,6 @@ public abstract class MeshDescriptorJpaMapper {
   @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
-  @Mapping(target = "deletedAt", ignore = true)
   public abstract MeshDescriptorEntity toEntity(MeshDescriptorAggregate aggregate);
 
   /// 将 JPA 实体转换为聚合根。

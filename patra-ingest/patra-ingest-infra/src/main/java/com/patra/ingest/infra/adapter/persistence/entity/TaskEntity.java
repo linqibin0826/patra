@@ -1,7 +1,7 @@
 package com.patra.ingest.infra.adapter.persistence.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.SoftDeletableJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -39,7 +39,7 @@ import org.hibernate.type.SqlTypes;
       @Index(name = "idx_task_prov_op", columnList = "provenance_code, operation_code"),
       @Index(name = "idx_task_lease", columnList = "lease_owner, leased_until")
     })
-public class TaskEntity extends BaseJpaEntity {
+public class TaskEntity extends SoftDeletableJpaEntity {
 
   /// 调度实例 ID（冗余）
   @Column(name = "schedule_instance_id")

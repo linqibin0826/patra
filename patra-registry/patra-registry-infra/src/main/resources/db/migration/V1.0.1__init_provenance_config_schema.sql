@@ -94,7 +94,6 @@ CREATE TABLE `reg_prov_window_offset_cfg`
     `updated_by_name`         VARCHAR(100)    NULL COMMENT '最后更新人姓名',
     `version`                 BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
     `ip_address`              VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
-    `deleted_at`              TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_window_offset_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
@@ -141,7 +140,6 @@ CREATE TABLE `reg_prov_pagination_cfg`
     `updated_by_name`         VARCHAR(100)    NULL COMMENT '最后更新人姓名',
     `version`                 BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
     `ip_address`              VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
-    `deleted_at`              TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_pagination_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
@@ -194,7 +192,6 @@ CREATE TABLE `reg_prov_http_cfg`
     `updated_by_name`         VARCHAR(100)    NULL COMMENT '最后更新人姓名',
     `version`                 BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
     `ip_address`              VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
-    `deleted_at`              TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_http_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
@@ -241,7 +238,6 @@ CREATE TABLE `reg_prov_batching_cfg`
     `updated_by_name`                VARCHAR(100)    NULL COMMENT '最后更新人姓名',
     `version`                        BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
     `ip_address`                     VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
-    `deleted_at`                     TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_batching_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
@@ -295,7 +291,6 @@ CREATE TABLE `reg_prov_retry_cfg`
     `updated_by_name`          VARCHAR(100)    NULL COMMENT '最后更新人姓名',
     `version`                  BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
     `ip_address`               VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
-    `deleted_at`               TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_retry_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
@@ -337,7 +332,6 @@ CREATE TABLE `reg_prov_rate_limit_cfg`
     `updated_by_name`               VARCHAR(100)    NULL COMMENT '最后更新人姓名',
     `version`                       BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
     `ip_address`                    VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
-    `deleted_at`                    TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_rate_limit_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),

@@ -32,7 +32,6 @@ public interface OutboxRelayLogJpaMapper {
   @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
-  @Mapping(target = "deletedAt", ignore = true)
   OutboxRelayLogEntity toEntity(OutboxRelayLog log);
 
   /// 将 JPA 实体转换为领域实体（用于查询结果映射）。

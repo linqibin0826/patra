@@ -42,7 +42,6 @@ public interface PlanSliceJpaMapper {
   @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
-  @Mapping(target = "deletedAt", ignore = true)
   PlanSliceEntity toEntity(PlanSliceAggregate aggregate);
 
   default PlanSliceAggregate toAggregate(PlanSliceEntity entity) {

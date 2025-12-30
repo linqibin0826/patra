@@ -17,7 +17,6 @@ CREATE TABLE IF NOT EXISTS `storage_file_metadata`
     `file_status`      VARCHAR(32)     NOT NULL COMMENT 'Lifecycle status',
     `uploaded_at`      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Upload completion time (UTC)',
     `expires_at`       TIMESTAMP(6)    NULL COMMENT 'Optional expiration time',
-    `deleted_at`       TIMESTAMP(6)    NULL COMMENT 'Soft delete timestamp',
     `record_remarks`   JSON            NULL COMMENT 'Audit remarks log',
     `version`          BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version number',
     `ip_address`       VARBINARY(16)   NULL COMMENT 'Requester IP (IPv4/IPv6)',
@@ -29,8 +28,7 @@ CREATE TABLE IF NOT EXISTS `storage_file_metadata`
     `updated_by_name`  VARCHAR(100)    NULL COMMENT 'Updater name',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_storage_key` (`storage_key`),
-    KEY `idx_uploaded_at` (`uploaded_at`),
-    KEY `idx_deleted_at` (`deleted_at`)
+    KEY `idx_uploaded_at` (`uploaded_at`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci
