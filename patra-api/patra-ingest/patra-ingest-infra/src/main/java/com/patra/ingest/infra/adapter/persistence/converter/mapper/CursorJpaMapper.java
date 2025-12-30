@@ -55,7 +55,6 @@ public interface CursorJpaMapper {
   @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
-  @Mapping(target = "deletedAt", ignore = true)
   CursorEntity toEntity(Cursor source);
 
   default Cursor toAggregate(CursorEntity entity) {

@@ -46,7 +46,6 @@ public abstract class VenueInstanceJpaMapper {
   @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
-  @Mapping(target = "deletedAt", ignore = true)
   public abstract VenueInstanceEntity toEntity(VenueInstanceAggregate aggregate);
 
   /// 将 JPA 实体转换为聚合根。

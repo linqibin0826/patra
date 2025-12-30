@@ -47,7 +47,6 @@ public interface AuthorJpaMapper {
   @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
-  @Mapping(target = "deletedAt", ignore = true)
   AuthorEntity toEntity(AuthorAggregate aggregate);
 
   /// 将 JPA 实体转换为聚合根。

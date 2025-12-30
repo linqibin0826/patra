@@ -123,7 +123,6 @@ CREATE TABLE IF NOT EXISTS sys_dict_item_alias
     updated_by_name VARCHAR(100)    NULL COMMENT '最后更新人姓名/登录名快照',
     version         BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本 (CAS)',
     ip_address      VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
-    deleted_at      TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (id),
     UNIQUE KEY uk_dict_alias__std_code (source_standard, external_code) COMMENT 'external_code 在同一 source_standard 内必须唯一',
@@ -152,10 +151,10 @@ CREATE TABLE IF NOT EXISTS sys_reference_standard
     is_canonical    TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '是否为该类型的规范标准: 1=是, 0=否 (每类型最多一个)',
     enabled         TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否启用: 1=启用, 0=禁用',
 
-    -- 生成列: 仅当 is_canonical AND enabled AND not deleted 时等于 dict_type_code; 否则为 NULL
+    -- 生成列: 仅当 is_canonical AND enabled 时等于 dict_type_code; 否则为 NULL
     canonical_key   VARCHAR(64) GENERATED ALWAYS AS
         (CASE
-             WHEN (is_canonical = 1 AND enabled = 1 AND deleted_at IS NULL) THEN dict_type_code
+             WHEN (is_canonical = 1 AND enabled = 1) THEN dict_type_code
              ELSE NULL END) STORED COMMENT '生成列,用于唯一键以强制每类型一个规范标准',
 
     -- 审计与治理
@@ -168,7 +167,6 @@ CREATE TABLE IF NOT EXISTS sys_reference_standard
     updated_by_name VARCHAR(100)    NULL COMMENT '最后更新人姓名/登录名快照',
     version         BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本 (CAS)',
     ip_address      VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
-    deleted_at      TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     PRIMARY KEY (id),
     UNIQUE KEY uk_ref_standard__type_code (dict_type_code, standard_code) COMMENT '同一字典类型下标准代码唯一',

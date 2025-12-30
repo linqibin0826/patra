@@ -73,7 +73,6 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_descriptor` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -135,7 +134,6 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_qualifier` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -185,7 +183,6 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_tree_number` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -252,7 +249,6 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_entry_term` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -307,7 +303,6 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_concept` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -359,7 +354,6 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_concept_relation` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -407,7 +401,6 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_entry_combination` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -460,7 +453,6 @@ CREATE TABLE IF NOT EXISTS `cat_publication_mesh` (
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
     `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `deleted_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引

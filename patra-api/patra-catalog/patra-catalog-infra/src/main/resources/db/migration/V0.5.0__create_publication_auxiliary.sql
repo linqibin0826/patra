@@ -63,7 +63,6 @@ CREATE TABLE IF NOT EXISTS `cat_publication_date`
     `updated_at`      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
     `updated_by`      BIGINT UNSIGNED NULL     DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100)    NULL     DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `deleted_at`      TIMESTAMP(6)    NULL DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -132,7 +131,6 @@ CREATE TABLE IF NOT EXISTS `cat_publication_metadata`
     `updated_at`         TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
     `updated_by`         BIGINT UNSIGNED NULL     DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name`    VARCHAR(100)    NULL     DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `deleted_at`         TIMESTAMP(6)    NULL     DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -197,7 +195,6 @@ CREATE TABLE IF NOT EXISTS `cat_alternative_abstract`
     `updated_at`          TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
     `updated_by`          BIGINT UNSIGNED NULL     DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name`     VARCHAR(100)    NULL     DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `deleted_at`          TIMESTAMP(6)    NULL     DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引
@@ -267,7 +264,6 @@ CREATE TABLE IF NOT EXISTS `cat_oa_location`
     `updated_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
     `updated_by`       BIGINT UNSIGNED NULL     DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name`  VARCHAR(100)    NULL     DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `deleted_at`       TIMESTAMP(6)    NULL     DEFAULT NULL COMMENT '逻辑删除时间戳: NULL=活动, 有值=删除时间(UTC)',
 
     -- ========================================
     -- 主键和索引

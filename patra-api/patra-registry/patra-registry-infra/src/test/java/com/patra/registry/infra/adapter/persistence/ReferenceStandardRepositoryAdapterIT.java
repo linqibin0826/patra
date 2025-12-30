@@ -8,7 +8,6 @@ import com.patra.registry.infra.adapter.persistence.entity.reference.ReferenceSt
 import com.patra.registry.infra.config.RegistryMySQLContainerInitializer;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
-import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,18 +67,7 @@ class ReferenceStandardRepositoryAdapterIT {
       assertThat(result.orElseThrow().enabled()).isTrue();
     }
 
-    @Test
-    @DisplayName("已软删除的来源标准不应被查询到")
-    void shouldIgnoreDeletedStandard() {
-      ReferenceStandardEntity entity = createEntity("country", "NAME_EN", false, true);
-      entity.setDeletedAt(Instant.now());
-      dao.save(entity);
-
-      Optional<ReferenceStandard> result =
-          repository.findByDictTypeCodeAndStandardCode("country", "NAME_EN");
-
-      assertThat(result).isEmpty();
-    }
+    // 注：软删除测试已移除 - ReferenceStandardEntity 现在继承 BaseJpaEntity，使用物理删除
 
     @Test
     @DisplayName("不同字典类型的同名标准不应混淆")

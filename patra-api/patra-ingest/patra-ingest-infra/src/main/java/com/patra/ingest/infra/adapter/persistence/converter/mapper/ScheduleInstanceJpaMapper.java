@@ -41,7 +41,6 @@ public interface ScheduleInstanceJpaMapper {
   @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
-  @Mapping(target = "deletedAt", ignore = true)
   ScheduleInstanceEntity toEntity(ScheduleInstanceAggregate aggregate);
 
   default ScheduleInstanceAggregate toAggregate(ScheduleInstanceEntity entity) {

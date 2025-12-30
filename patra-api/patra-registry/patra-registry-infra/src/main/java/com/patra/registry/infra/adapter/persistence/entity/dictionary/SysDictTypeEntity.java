@@ -1,7 +1,7 @@
 package com.patra.registry.infra.adapter.persistence.entity.dictionary;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.SoftDeletableJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -26,7 +26,7 @@ import org.hibernate.type.SqlTypes;
 @Setter
 @Entity
 @Table(name = "sys_dict_type")
-public class SysDictTypeEntity extends BaseJpaEntity {
+public class SysDictTypeEntity extends SoftDeletableJpaEntity {
 
   /// 字典类型的稳定业务键(例如，`http_method`)。预期格式为小写蛇形命名。
   @Column(name = "type_code", nullable = false, length = 64)

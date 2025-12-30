@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.adapter.persistence.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.SoftDeletableJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -51,7 +51,7 @@ import org.hibernate.type.SqlTypes;
       @Index(name = "idx_publication_year", columnList = "publication_year"),
       @Index(name = "idx_language_base", columnList = "language_base")
     })
-public class PublicationEntity extends BaseJpaEntity {
+public class PublicationEntity extends SoftDeletableJpaEntity {
 
   // ========== 数据来源追踪 ==========
 

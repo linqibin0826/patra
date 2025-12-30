@@ -41,7 +41,6 @@ public interface TaskRunBatchJpaMapper {
   @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
-  @Mapping(target = "deletedAt", ignore = true)
   TaskRunBatchEntity toEntity(TaskRunBatch source);
 
   default TaskRunBatch toAggregate(TaskRunBatchEntity entity) {

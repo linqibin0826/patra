@@ -4,7 +4,7 @@ import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
 import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
 import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import com.patra.catalog.domain.model.vo.venue.Society;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.SoftDeletableJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -55,7 +55,7 @@ import org.hibernate.type.SqlTypes;
       @Index(name = "idx_nlm_id", columnList = "nlm_id"),
       @Index(name = "idx_openalex_id", columnList = "openalex_id")
     })
-public class VenueEntity extends BaseJpaEntity {
+public class VenueEntity extends SoftDeletableJpaEntity {
 
   // ========================================
   // 核心属性（不变量验证所需）

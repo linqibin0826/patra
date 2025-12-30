@@ -100,7 +100,7 @@ public interface FileMetadataJpaMapper {
         status,
         entity.getUploadedAt(),
         entity.getExpiresAt(),
-        entity.getDeletedAt(),
+        null, // deletedAt - 该表不使用软删除
         entity.getRecordRemarks(),
         entity.getVersion(),
         entity.getIpAddress(),

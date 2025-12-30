@@ -41,7 +41,6 @@ public interface CursorEventJpaMapper {
   @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
-  @Mapping(target = "deletedAt", ignore = true)
   CursorEventEntity toEntity(CursorEvent source);
 
   default CursorEvent toAggregate(CursorEventEntity entity) {

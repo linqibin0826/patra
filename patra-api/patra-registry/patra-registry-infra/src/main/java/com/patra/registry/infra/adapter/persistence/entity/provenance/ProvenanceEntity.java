@@ -1,6 +1,6 @@
 package com.patra.registry.infra.adapter.persistence.entity.provenance;
 
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.SoftDeletableJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -17,7 +17,7 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "reg_provenance")
-public class ProvenanceEntity extends BaseJpaEntity {
+public class ProvenanceEntity extends SoftDeletableJpaEntity {
 
   /// 用作业务标识符的稳定数据源代码。
   @Column(name = "provenance_code", nullable = false, length = 20)
