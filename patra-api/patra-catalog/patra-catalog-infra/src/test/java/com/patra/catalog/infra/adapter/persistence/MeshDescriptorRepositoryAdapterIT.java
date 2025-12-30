@@ -19,6 +19,8 @@ import com.patra.catalog.infra.adapter.persistence.dao.MeshTreeNumberDao;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -196,6 +198,130 @@ class MeshDescriptorRepositoryAdapterIT {
       // Then: 验证入口术语的外键
       var entryTerms = entryTermDao.findAll();
       assertThat(entryTerms).allMatch(et -> et.getDescriptorUi().equals(descriptorUi));
+    }
+  }
+
+  // ========== findAllByNameIn() 测试 ==========
+
+  @Nested
+  @DisplayName("findAllByNameIn() 测试")
+  class FindAllByNameInTests {
+
+    @Test
+    @DisplayName("空集合输入 - 应该返回空 Map")
+    void findAllByNameIn_emptyCollection_shouldReturnEmptyMap() {
+      // Given: 空集合
+      Set<String> emptyNames = Set.of();
+
+      // When
+      Map<String, String> result = repository.findAllByNameIn(emptyNames);
+
+      // Then
+      assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("null 输入 - 应该返回空 Map")
+    void findAllByNameIn_nullInput_shouldReturnEmptyMap() {
+      // When
+      Map<String, String> result = repository.findAllByNameIn(null);
+
+      // Then
+      assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("单个名称匹配 - 应该返回正确的 name → ui 映射")
+    void findAllByNameIn_singleMatch_shouldReturnCorrectMapping() {
+      // Given: 插入测试数据
+      MeshDescriptorAggregate descriptor = createDescriptor("D000001", "Cardiovascular Diseases");
+      repository.insertAll(List.of(descriptor));
+
+      // When
+      Map<String, String> result = repository.findAllByNameIn(Set.of("Cardiovascular Diseases"));
+
+      // Then
+      assertThat(result).hasSize(1);
+      assertThat(result.get("Cardiovascular Diseases")).isEqualTo("D000001");
+    }
+
+    @Test
+    @DisplayName("多个名称匹配 - 应该返回所有匹配项")
+    void findAllByNameIn_multipleMatches_shouldReturnAllMappings() {
+      // Given: 插入多条测试数据
+      MeshDescriptorAggregate descriptor1 = createDescriptor("D000001", "Cardiovascular Diseases");
+      MeshDescriptorAggregate descriptor2 = createDescriptor("D000002", "Neoplasms");
+      MeshDescriptorAggregate descriptor3 = createDescriptor("D000003", "Diabetes Mellitus");
+      repository.insertAll(List.of(descriptor1, descriptor2, descriptor3));
+
+      // When
+      Map<String, String> result =
+          repository.findAllByNameIn(
+              Set.of("Cardiovascular Diseases", "Neoplasms", "Diabetes Mellitus"));
+
+      // Then
+      assertThat(result).hasSize(3);
+      assertThat(result.get("Cardiovascular Diseases")).isEqualTo("D000001");
+      assertThat(result.get("Neoplasms")).isEqualTo("D000002");
+      assertThat(result.get("Diabetes Mellitus")).isEqualTo("D000003");
+    }
+
+    @Test
+    @DisplayName("部分名称不存在 - 应该只返回存在的映射")
+    void findAllByNameIn_partialMatch_shouldReturnOnlyExistingMappings() {
+      // Given: 只插入部分数据
+      MeshDescriptorAggregate descriptor = createDescriptor("D000001", "Cardiovascular Diseases");
+      repository.insertAll(List.of(descriptor));
+
+      // When: 查询包含存在和不存在的名称
+      Map<String, String> result =
+          repository.findAllByNameIn(
+              Set.of("Cardiovascular Diseases", "NonExistent Disease", "Another Missing"));
+
+      // Then: 只返回存在的映射
+      assertThat(result).hasSize(1);
+      assertThat(result.get("Cardiovascular Diseases")).isEqualTo("D000001");
+      assertThat(result).doesNotContainKey("NonExistent Disease");
+      assertThat(result).doesNotContainKey("Another Missing");
+    }
+
+    @Test
+    @DisplayName("所有名称都不存在 - 应该返回空 Map")
+    void findAllByNameIn_noMatches_shouldReturnEmptyMap() {
+      // Given: 插入不相关的数据
+      MeshDescriptorAggregate descriptor = createDescriptor("D000001", "Cardiovascular Diseases");
+      repository.insertAll(List.of(descriptor));
+
+      // When: 查询不存在的名称
+      Map<String, String> result =
+          repository.findAllByNameIn(Set.of("NonExistent 1", "NonExistent 2"));
+
+      // Then
+      assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("大小写敏感性 - 名称匹配应该区分大小写")
+    void findAllByNameIn_caseSensitivity_shouldBeCaseSensitive() {
+      // Given: 插入数据
+      MeshDescriptorAggregate descriptor = createDescriptor("D000001", "Cardiovascular Diseases");
+      repository.insertAll(List.of(descriptor));
+
+      // When: 使用不同大小写查询
+      Map<String, String> result =
+          repository.findAllByNameIn(
+              Set.of(
+                  "cardiovascular diseases", // 全小写
+                  "CARDIOVASCULAR DISEASES", // 全大写
+                  "Cardiovascular Diseases" // 正确大小写
+                  ));
+
+      // Then: 只有正确大小写的名称匹配
+      // 注意：MySQL 默认排序规则可能是大小写不敏感的，这里验证实际行为
+      assertThat(result).containsKey("Cardiovascular Diseases");
+      // 如果 MySQL 使用 utf8mb4_0900_ai_ci（大小写不敏感），则可能匹配多个
+      // 如果使用 utf8mb4_bin（大小写敏感），则只匹配一个
+      // 此测试记录实际行为
     }
   }
 

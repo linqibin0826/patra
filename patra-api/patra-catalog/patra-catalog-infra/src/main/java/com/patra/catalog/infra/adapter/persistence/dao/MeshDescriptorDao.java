@@ -32,4 +32,10 @@ public interface MeshDescriptorDao extends JpaRepository<MeshDescriptorEntity, L
   /// @param uis UI 列表
   /// @return 主题词实体列表
   List<MeshDescriptorEntity> findAllByUiIn(Collection<String> uis);
+
+  /// 按名称列表批量查询主题词。
+  ///
+  /// @param names 主题词名称列表
+  /// @return 主题词实体列表
+  List<MeshDescriptorEntity> findAllByNameIn(Collection<String> names);
 }

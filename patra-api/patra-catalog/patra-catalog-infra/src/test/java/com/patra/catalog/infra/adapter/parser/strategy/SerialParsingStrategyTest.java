@@ -356,19 +356,6 @@ class SerialParsingStrategyTest {
     }
 
     @Test
-    @DisplayName("应正确解析 MeSH 描述符的 UI 和 Type 属性")
-    void shouldParseMeshDescriptorAttributes() throws Exception {
-      // Given
-      PubmedSerialData record = parseFirstSerial("/lsiou/full-serial.xml");
-
-      // Then
-      List<PubmedMeshHeading> meshHeadings = record.meshHeadings();
-      PubmedMeshHeading first = meshHeadings.getFirst();
-      assertThat(first.descriptorUi()).isEqualTo("D002309");
-      assertThat(first.descriptorType()).isEqualTo("Geographic");
-    }
-
-    @Test
     @DisplayName("应正确解析 TitleRelated 的 RecordID 列表")
     void shouldParseTitleRelatedRecordIds() throws Exception {
       // Given

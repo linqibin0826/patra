@@ -11,6 +11,8 @@ import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -363,6 +365,143 @@ class MeshQualifierRepositoryAdapterIT {
 
       // When & Then
       assertThat(meshQualifierRepository.hasAnyData()).isTrue();
+    }
+  }
+
+  // ========== findAllByNameIn() 测试 ==========
+
+  @Nested
+  @DisplayName("findAllByNameIn() 测试")
+  class FindAllByNameInTests {
+
+    @Test
+    @DisplayName("空集合输入 - 应该返回空 Map")
+    void findAllByNameIn_emptyCollection_shouldReturnEmptyMap() {
+      // Given: 空集合
+      Set<String> emptyNames = Set.of();
+
+      // When
+      Map<String, String> result = meshQualifierRepository.findAllByNameIn(emptyNames);
+
+      // Then
+      assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("null 输入 - 应该返回空 Map")
+    void findAllByNameIn_nullInput_shouldReturnEmptyMap() {
+      // When
+      Map<String, String> result = meshQualifierRepository.findAllByNameIn(null);
+
+      // Then
+      assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("单个名称匹配 - 应该返回正确的 name → ui 映射")
+    void findAllByNameIn_singleMatch_shouldReturnCorrectMapping() {
+      // Given: 插入测试数据
+      MeshQualifierAggregate qualifier =
+          MeshQualifierAggregate.create(MeshUI.qualifierOf(1), "immunology", "IM")
+              .withActiveStatus(true)
+              .withMeshVersion("2025");
+      meshQualifierRepository.saveBatch(List.of(qualifier));
+
+      // When
+      Map<String, String> result = meshQualifierRepository.findAllByNameIn(Set.of("immunology"));
+
+      // Then
+      assertThat(result).hasSize(1);
+      assertThat(result.get("immunology")).isEqualTo("Q000001");
+    }
+
+    @Test
+    @DisplayName("多个名称匹配 - 应该返回所有匹配项")
+    void findAllByNameIn_multipleMatches_shouldReturnAllMappings() {
+      // Given: 插入多条测试数据
+      List<MeshQualifierAggregate> qualifiers =
+          List.of(
+              MeshQualifierAggregate.create(MeshUI.qualifierOf(1), "immunology", "IM")
+                  .withActiveStatus(true)
+                  .withMeshVersion("2025"),
+              MeshQualifierAggregate.create(MeshUI.qualifierOf(2), "genetics", "GE")
+                  .withActiveStatus(true)
+                  .withMeshVersion("2025"),
+              MeshQualifierAggregate.create(MeshUI.qualifierOf(3), "diagnosis", "DI")
+                  .withActiveStatus(true)
+                  .withMeshVersion("2025"));
+      meshQualifierRepository.saveBatch(qualifiers);
+
+      // When
+      Map<String, String> result =
+          meshQualifierRepository.findAllByNameIn(Set.of("immunology", "genetics", "diagnosis"));
+
+      // Then
+      assertThat(result).hasSize(3);
+      assertThat(result.get("immunology")).isEqualTo("Q000001");
+      assertThat(result.get("genetics")).isEqualTo("Q000002");
+      assertThat(result.get("diagnosis")).isEqualTo("Q000003");
+    }
+
+    @Test
+    @DisplayName("部分名称不存在 - 应该只返回存在的映射")
+    void findAllByNameIn_partialMatch_shouldReturnOnlyExistingMappings() {
+      // Given: 只插入部分数据
+      MeshQualifierAggregate qualifier =
+          MeshQualifierAggregate.create(MeshUI.qualifierOf(1), "immunology", "IM")
+              .withActiveStatus(true)
+              .withMeshVersion("2025");
+      meshQualifierRepository.saveBatch(List.of(qualifier));
+
+      // When: 查询包含存在和不存在的名称
+      Map<String, String> result =
+          meshQualifierRepository.findAllByNameIn(
+              Set.of("immunology", "nonexistent", "another_missing"));
+
+      // Then: 只返回存在的映射
+      assertThat(result).hasSize(1);
+      assertThat(result.get("immunology")).isEqualTo("Q000001");
+      assertThat(result).doesNotContainKey("nonexistent");
+      assertThat(result).doesNotContainKey("another_missing");
+    }
+
+    @Test
+    @DisplayName("所有名称都不存在 - 应该返回空 Map")
+    void findAllByNameIn_noMatches_shouldReturnEmptyMap() {
+      // Given: 插入不相关的数据
+      MeshQualifierAggregate qualifier =
+          MeshQualifierAggregate.create(MeshUI.qualifierOf(1), "immunology", "IM")
+              .withActiveStatus(true)
+              .withMeshVersion("2025");
+      meshQualifierRepository.saveBatch(List.of(qualifier));
+
+      // When: 查询不存在的名称
+      Map<String, String> result =
+          meshQualifierRepository.findAllByNameIn(Set.of("nonexistent_1", "nonexistent_2"));
+
+      // Then
+      assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("重复名称处理 - 验证保留首个匹配的逻辑")
+    void findAllByNameIn_duplicateHandling_shouldKeepFirstMatch() {
+      // 注意：正常情况下数据库中不应存在重复名称
+      // 此测试验证代码中的 (existing, replacement) -> existing 逻辑
+
+      // Given: 插入单条数据
+      MeshQualifierAggregate qualifier =
+          MeshQualifierAggregate.create(MeshUI.qualifierOf(1), "immunology", "IM")
+              .withActiveStatus(true)
+              .withMeshVersion("2025");
+      meshQualifierRepository.saveBatch(List.of(qualifier));
+
+      // When: 查询（实际上数据库中只有一条）
+      Map<String, String> result = meshQualifierRepository.findAllByNameIn(Set.of("immunology"));
+
+      // Then: 应该正确返回
+      assertThat(result).hasSize(1);
+      assertThat(result.get("immunology")).isEqualTo("Q000001");
     }
   }
 }

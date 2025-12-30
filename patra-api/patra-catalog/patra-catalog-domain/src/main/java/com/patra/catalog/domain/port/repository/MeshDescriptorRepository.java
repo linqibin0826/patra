@@ -1,7 +1,9 @@
 package com.patra.catalog.domain.port.repository;
 
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /// MeSH 主题词聚合根仓储接口（领域层定义，基础设施层实现）。
 ///
@@ -46,4 +48,14 @@ public interface MeshDescriptorRepository {
   ///
   /// @param aggregates 聚合根列表（不能为 null，可以为空）
   void insertAll(List<MeshDescriptorAggregate> aggregates);
+
+  /// 按名称批量查询主题词，返回名称到 UI 的映射。
+  ///
+  /// **使用场景**：为期刊 MeSH 主题词补充 UI 字段
+  ///
+  /// **匹配规则**：精确匹配（大小写敏感）
+  ///
+  /// @param names 主题词名称集合（如 "Cardiology", "Medicine"）
+  /// @return 名称 → UI 映射表（如 "Cardiology" → "D002309"），未匹配的名称不在返回结果中
+  Map<String, String> findAllByNameIn(Collection<String> names);
 }
