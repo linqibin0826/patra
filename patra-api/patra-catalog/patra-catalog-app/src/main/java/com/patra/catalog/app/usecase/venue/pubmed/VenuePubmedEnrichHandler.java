@@ -325,8 +325,18 @@ public class VenuePubmedEnrichHandler
         dictionaryResolverPort.resolve(
             DictionaryType.COUNTRY, SourceStandard.NAME_EN, rawCountryCodes);
 
+    // 3.5. 收集并解析语言代码（每批次一次 RPC 调用）
+    // PubMed LSIOU Language 字段使用 ISO 639-3 三字母代码（如 eng, chi, jpn）
+    // 转换为平台标准 BCP 47 格式（如 en, zh, ja）
+    Set<String> rawLanguageCodes = collectLanguageCodes(batch);
+    Map<String, String> languageCodeMap =
+        dictionaryResolverPort.resolve(
+            DictionaryType.LANGUAGE, SourceStandard.ISO_639_3, rawLanguageCodes);
+    log.debug("语言代码解析完成：原始 {} 个，有效映射 {} 个", rawLanguageCodes.size(), languageCodeMap.size());
+
     // 4. 匹配并分类
-    BatchProcessingResult result = matchAndClassifyRecords(batch, existingVenues, countryCodeMap);
+    BatchProcessingResult result =
+        matchAndClassifyRecords(batch, existingVenues, countryCodeMap, languageCodeMap);
 
     // 5. 批量持久化聚合根
     persistAggregates(result);
@@ -382,6 +392,24 @@ public class VenuePubmedEnrichHandler
     return countryCodes;
   }
 
+  /// 从批次中收集所有语言代码。
+  ///
+  /// 收集所有非空的语言代码（ISO 639-3 格式），用于批量解析成 BCP 47 标准编码。
+  ///
+  /// @param batch 待处理的记录批次
+  /// @return 语言代码集合
+  private Set<String> collectLanguageCodes(List<PubmedSerialData> batch) {
+    Set<String> languageCodes = new HashSet<>();
+    for (PubmedSerialData record : batch) {
+      for (PubmedLanguage language : record.languages()) {
+        if (language.code() != null && !language.code().isBlank()) {
+          languageCodes.add(language.code());
+        }
+      }
+    }
+    return languageCodes;
+  }
+
   /// 匹配并分类记录。
   ///
   /// 根据标识符匹配现有期刊，将记录分为更新和新建两类。
@@ -389,11 +417,13 @@ public class VenuePubmedEnrichHandler
   /// @param batch 待处理的记录批次
   /// @param existingVenues 现有期刊的查询结果
   /// @param countryCodeMap 国家编码映射（原始值 → ISO 3166-1 alpha-2）
+  /// @param languageCodeMap 语言代码映射（ISO 639-3 → BCP 47）
   /// @return 批次处理结果（包含分类和子实体数据）
   private BatchProcessingResult matchAndClassifyRecords(
       List<PubmedSerialData> batch,
       ExistingVenuesLookup existingVenues,
-      Map<String, String> countryCodeMap) {
+      Map<String, String> countryCodeMap,
+      Map<String, String> languageCodeMap) {
 
     BatchProcessingResult result = new BatchProcessingResult();
     // 防重集合：避免同一期刊被多条 PubMed 记录更新（例如同一期刊有多个 ISSN 条目）
@@ -414,6 +444,8 @@ public class VenuePubmedEnrichHandler
           // 构建并附加 PublicationProfile（嵌入式值对象）
           PublicationProfile profile = buildPublicationProfileFromRecord(record, countryCodeMap);
           venue.withPublicationProfile(profile);
+          // 标准化语言代码：ISO 639-3 → BCP 47
+          venue.normalizeLanguages(languageCodeMap);
           result.addUpdate(venue);
           processedVenueIds.add(venue.getId().value());
           // 收集 PubMed 子实体（MeSH、关系、索引历史），稍后批量持久化
@@ -434,6 +466,8 @@ public class VenuePubmedEnrichHandler
         // 构建并附加 PublicationProfile（嵌入式值对象）
         PublicationProfile profile = buildPublicationProfileFromRecord(record, countryCodeMap);
         newVenue.withPublicationProfile(profile);
+        // 标准化语言代码：ISO 639-3 → BCP 47
+        newVenue.normalizeLanguages(languageCodeMap);
         result.addCreate(newVenue);
         // 收集 PubMed 子实体（MeSH、关系、索引历史），稍后批量持久化
         result.collectPubmedEntities(

@@ -13,28 +13,34 @@ import java.util.List;
 /// 设计原则：
 ///
 /// - 不可变性：Record 自动提供
-/// - 来源：主要来自 NLM Serfile 的 Language 元素
+/// - 来源：主要来自 NLM Serfile 的 Language 元素（经过标准化转换）
 /// - JSON 存储：在数据库中以 JSON 格式存储
 ///
-/// 语言代码：使用 ISO 639-3 三字母代码
+/// **语言代码标准**：使用 BCP 47 格式（优先采用 ISO 639-1 两字母代码）
 ///
-/// | 代码 | 语言 |
-/// |------|------|
-/// | eng | 英语 |
-/// | chi | 中文 |
-/// | fre | 法语 |
-/// | ger | 德语 |
-/// | jpn | 日语 |
-/// | spa | 西班牙语 |
-/// | por | 葡萄牙语 |
-/// | rus | 俄语 |
+/// **标准化流程**：
+///
+/// - 原始数据：PubMed 使用 ISO 639-3 三字母代码（如 eng, chi, jpn）
+/// - 存储格式：转换为 BCP 47 标准（如 en, zh, ja）
+/// - 转换方式：通过 Registry 服务的语言字典解析
+///
+/// | BCP 47 | 语言 | ISO 639-3 原始代码 |
+/// |--------|------|-------------------|
+/// | en | 英语 | eng |
+/// | zh | 中文 | chi, zho |
+/// | fr | 法语 | fre, fra |
+/// | de | 德语 | ger, deu |
+/// | ja | 日语 | jpn |
+/// | es | 西班牙语 | spa |
+/// | pt | 葡萄牙语 | por |
+/// | ru | 俄语 | rus |
 ///
 /// JSON 结构示例：
 ///
 /// ```json
 /// {
-///   "primary": ["eng"],
-///   "summary": ["fre", "ger"]
+///   "primary": ["en"],
+///   "summary": ["fr", "de"]
 /// }
 /// ```
 ///
@@ -43,21 +49,21 @@ import java.util.List;
 /// ```java
 /// // 创建英语期刊，带法语摘要
 /// VenueLanguages languages = VenueLanguages.of(
-///     List.of("eng"),
-///     List.of("fre")
+///     List.of("en"),
+///     List.of("fr")
 /// );
 ///
 /// // 检查主语言
-/// if (languages.hasPrimaryLanguage("eng")) {
+/// if (languages.hasPrimaryLanguage("en")) {
 ///     // 英语期刊
 /// }
 ///
 /// // 获取主要语言
-/// String mainLang = languages.getMainLanguage(); // "eng"
+/// String mainLang = languages.getMainLanguage(); // "en"
 /// ```
 ///
-/// @param primary 主语言列表（期刊内容的语言）
-/// @param summary 摘要语言列表（摘要可用的语言）
+/// @param primary 主语言列表（期刊内容的语言，BCP 47 格式）
+/// @param summary 摘要语言列表（摘要可用的语言，BCP 47 格式）
 /// @author linqibin
 /// @since 0.1.0
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -154,7 +160,7 @@ public record VenueLanguages(List<String> primary, List<String> summary) impleme
   /// @return true 如果主语言包含英语
   @JsonIgnore
   public boolean isEnglish() {
-    return hasPrimaryLanguage("eng");
+    return hasPrimaryLanguage("en");
   }
 
   /// 判断是否为中文期刊（主语言为中文）。
@@ -162,7 +168,7 @@ public record VenueLanguages(List<String> primary, List<String> summary) impleme
   /// @return true 如果主语言包含中文
   @JsonIgnore
   public boolean isChinese() {
-    return hasPrimaryLanguage("chi") || hasPrimaryLanguage("zho");
+    return hasPrimaryLanguage("zh");
   }
 
   /// 获取所有语言代码（去重）。
