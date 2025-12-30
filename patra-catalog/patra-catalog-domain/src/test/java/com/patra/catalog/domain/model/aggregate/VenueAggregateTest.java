@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
+import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import java.util.List;
@@ -451,6 +452,104 @@ class VenueAggregateTest {
       // Then
       assertThat(result).contains("JOURNAL");
       assertThat(result).contains(DISPLAY_NAME);
+    }
+  }
+
+  @Nested
+  @DisplayName("normalizeCountryCode() 国家编码标准化测试")
+  class NormalizeCountryCodeTests {
+
+    @Test
+    @DisplayName("有效国家编码应该保持不变")
+    void shouldKeepValidCountryCode() {
+      // Given
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      PublicationProfile profile = PublicationProfile.builder().countryCode("US").build();
+      venue.withPublicationProfile(profile);
+      venue.clearDirty();
+
+      // When - 验证结果为 "US"（有效）
+      venue.normalizeCountryCode("US");
+
+      // Then - 编码不变，不标记为脏
+      assertThat(venue.getPublicationProfile().countryCode()).isEqualTo("US");
+      assertThat(venue.isDirty()).isFalse();
+    }
+
+    @Test
+    @DisplayName("无效国家编码应该被清除为 null")
+    void shouldClearInvalidCountryCode() {
+      // Given
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      PublicationProfile profile = PublicationProfile.builder().countryCode("XX").build();
+      venue.withPublicationProfile(profile);
+      venue.clearDirty();
+
+      // When - 验证结果为 null（无效）
+      venue.normalizeCountryCode(null);
+
+      // Then - 编码被清除，标记为脏
+      assertThat(venue.getPublicationProfile().countryCode()).isNull();
+      assertThat(venue.isDirty()).isTrue();
+    }
+
+    @Test
+    @DisplayName("publicationProfile 为 null 时不应该抛出异常")
+    void shouldNotThrowWhenPublicationProfileIsNull() {
+      // Given
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      // publicationProfile 默认为 null
+
+      // When & Then - 不应该抛出异常
+      venue.normalizeCountryCode("US");
+      assertThat(venue.getPublicationProfile()).isNull();
+    }
+
+    @Test
+    @DisplayName("countryCode 本身为 null 时传入 null 不应该更新")
+    void shouldNotUpdateWhenBothAreNull() {
+      // Given
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      PublicationProfile profile = PublicationProfile.builder().countryCode(null).build();
+      venue.withPublicationProfile(profile);
+      venue.clearDirty();
+
+      // When
+      venue.normalizeCountryCode(null);
+
+      // Then - 不应该标记为脏
+      assertThat(venue.isDirty()).isFalse();
+    }
+
+    @Test
+    @DisplayName("更新国家编码时应该保留其他字段")
+    void shouldPreserveOtherFieldsWhenUpdating() {
+      // Given
+      VenueAggregate venue =
+          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      PublicationProfile profile =
+          PublicationProfile.builder()
+              .countryCode("XX")
+              .abbreviatedTitle("Nat. Med.")
+              .homepageUrl("https://example.com")
+              .frequency("Monthly")
+              .build();
+      venue.withPublicationProfile(profile);
+      venue.clearDirty();
+
+      // When
+      venue.normalizeCountryCode(null);
+
+      // Then - 其他字段应该保持不变
+      PublicationProfile updated = venue.getPublicationProfile();
+      assertThat(updated.countryCode()).isNull();
+      assertThat(updated.abbreviatedTitle()).isEqualTo("Nat. Med.");
+      assertThat(updated.homepageUrl()).isEqualTo("https://example.com");
+      assertThat(updated.frequency()).isEqualTo("Monthly");
     }
   }
 }

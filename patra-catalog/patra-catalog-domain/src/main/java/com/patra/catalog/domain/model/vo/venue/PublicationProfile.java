@@ -63,7 +63,7 @@ import lombok.Builder;
 /// @param extData 扩展数据（JSON 存储的其他字段）
 /// @author linqibin
 /// @since 0.7.0
-@Builder
+@Builder(toBuilder = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record PublicationProfile(
     String abbreviatedTitle,

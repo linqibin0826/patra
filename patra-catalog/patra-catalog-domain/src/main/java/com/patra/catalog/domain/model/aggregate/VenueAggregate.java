@@ -17,6 +17,7 @@ import java.io.Serial;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.Getter;
 
@@ -201,6 +202,32 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
     this.publicationProfile = publicationProfile;
     markDirty();
     return this;
+  }
+
+  /// 标准化国家编码。
+  ///
+  /// 用于数据导入时验证和更新国家编码。调用者先通过 registry 服务验证原始编码，
+  /// 然后将验证结果传入此方法。如果验证结果与当前编码不同，则更新。
+  ///
+  /// **设计原则**：
+  ///
+  /// - 聚合根内部封装状态变更逻辑
+  /// - Infrastructure 层只负责获取验证结果，不直接修改聚合状态
+  ///
+  /// @param validatedCode 经过 registry 服务验证后的国家编码，null 表示原编码无效
+  public void normalizeCountryCode(String validatedCode) {
+    if (publicationProfile == null) {
+      return;
+    }
+
+    String currentCode = publicationProfile.countryCode();
+    if (Objects.equals(currentCode, validatedCode)) {
+      return; // 无需更新
+    }
+
+    // 使用 toBuilder 保留其他字段，只更新 countryCode
+    this.publicationProfile = publicationProfile.toBuilder().countryCode(validatedCode).build();
+    markDirty();
   }
 
   /// 设置引用指标。

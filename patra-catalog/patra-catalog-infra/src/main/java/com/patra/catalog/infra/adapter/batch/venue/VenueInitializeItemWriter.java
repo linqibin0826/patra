@@ -1,8 +1,12 @@
 package com.patra.catalog.infra.adapter.batch.venue;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
+import com.patra.catalog.domain.model.enums.DictionaryType;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
+import com.patra.catalog.domain.model.vo.common.SourceStandard;
+import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
+import com.patra.catalog.domain.port.registry.DictionaryResolverPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,6 +33,7 @@ import org.springframework.stereotype.Component;
 /// - 年度指标保存到 cat_venue_publication_stats
 /// - Chunk 内 ISSN-L 去重：同一批次内的重复记录在内存中过滤
 /// - 乐观插入：正常情况直接插入，唯一约束冲突时降级处理
+/// - 国家编码验证：通过 patra-registry 服务验证 ISO 3166-1 alpha-2 编码
 ///
 /// **DDD 嵌入式值对象设计**：
 ///
@@ -59,6 +64,7 @@ import org.springframework.stereotype.Component;
 public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
 
   private final VenueRepository venueRepository;
+  private final DictionaryResolverPort dictionaryResolverPort;
 
   @Override
   public void write(Chunk<? extends VenueParseResult> chunk) throws Exception {
@@ -70,11 +76,14 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
     // Step 1: Chunk 内去重（必须保留，否则同批次内重复也会导致插入失败）
     List<VenueParseResult> deduplicatedInChunk = deduplicateWithinChunk(items);
 
-    // Step 2: 提取聚合根（已包含嵌入式值对象）
+    // Step 2: 验证并标准化国家编码（通过 patra-registry 服务）
+    normalizeCountryCodes(deduplicatedInChunk);
+
+    // Step 3: 提取聚合根（已包含嵌入式值对象）
     List<VenueAggregate> aggregates =
         deduplicatedInChunk.stream().map(VenueParseResult::aggregate).toList();
 
-    // Step 3: 乐观插入聚合根（嵌入式值对象随聚合根一起保存为 JSON）
+    // Step 4: 乐观插入聚合根（嵌入式值对象随聚合根一起保存为 JSON）
     List<VenueAggregate> insertedAggregates;
     try {
       venueRepository.insertAll(aggregates);
@@ -92,7 +101,7 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
       }
     }
 
-    // Step 4: 保存年度指标（唯一仍需独立保存的 1:N 数据）
+    // Step 5: 保存年度指标（唯一仍需独立保存的 1:N 数据）
     saveYearlyMetrics(insertedAggregates, deduplicatedInChunk);
   }
 
@@ -140,6 +149,71 @@ public class VenueInitializeItemWriter implements ItemWriter<VenueParseResult> {
     if (!yearlyMetricsByVenueId.isEmpty()) {
       venueRepository.replaceYearlyMetricsBatch(yearlyMetricsByVenueId);
       log.debug("写入年度指标完成：{} 个 Venue", yearlyMetricsByVenueId.size());
+    }
+  }
+
+  /// 验证并标准化国家编码。
+  ///
+  /// 收集所有非空的 countryCode，通过 patra-registry 服务验证是否为有效的 ISO 3166-1 alpha-2 编码。
+  /// 无效的编码会被置为 null，有效的编码保持不变。
+  ///
+  /// **设计说明**：
+  ///
+  /// - OpenAlex 数据声称使用 ISO 3166-1 alpha-2 格式，但需要验证
+  /// - 批量调用 registry 服务，减少 RPC 次数
+  /// - 无效编码不抛出异常，仅清除并记录日志
+  /// - 状态变更通过聚合根方法 `normalizeCountryCode()` 完成（保持六边形架构原则）
+  ///
+  /// @param items 待处理的解析结果列表
+  private void normalizeCountryCodes(List<VenueParseResult> items) {
+    // 1. 收集所有非空的 countryCode
+    Set<String> rawCountryCodes =
+        items.stream()
+            .map(VenueParseResult::aggregate)
+            .map(VenueAggregate::getPublicationProfile)
+            .filter(Objects::nonNull)
+            .map(PublicationProfile::countryCode)
+            .filter(code -> code != null && !code.isBlank())
+            .collect(Collectors.toSet());
+
+    if (rawCountryCodes.isEmpty()) {
+      return; // 没有国家编码需要验证
+    }
+
+    // 2. 批量调用 registry 服务验证（使用 ISO_3166_1_ALPHA2 标准）
+    Map<String, String> validatedCodes =
+        dictionaryResolverPort.resolve(
+            DictionaryType.COUNTRY, SourceStandard.ISO_3166_1_ALPHA2, rawCountryCodes);
+
+    // 3. 通过聚合根方法标准化国家编码
+    int invalidCount = 0;
+    for (VenueParseResult item : items) {
+      VenueAggregate aggregate = item.aggregate();
+      PublicationProfile profile = aggregate.getPublicationProfile();
+
+      if (profile == null || profile.countryCode() == null || profile.countryCode().isBlank()) {
+        continue;
+      }
+
+      String originalCode = profile.countryCode();
+      String validatedCode = validatedCodes.get(originalCode);
+
+      // 调用聚合根方法完成状态变更（而非直接修改聚合状态）
+      aggregate.normalizeCountryCode(validatedCode);
+
+      if (validatedCode == null) {
+        invalidCount++;
+        log.debug(
+            "无效国家编码已清除: openalexId={}, invalidCode={}", getOpenalexId(aggregate), originalCode);
+      }
+    }
+
+    if (invalidCount > 0) {
+      log.info(
+          "国家编码验证完成：总数={}，有效={}，无效={}",
+          rawCountryCodes.size(),
+          rawCountryCodes.size() - invalidCount,
+          invalidCount);
     }
   }
 

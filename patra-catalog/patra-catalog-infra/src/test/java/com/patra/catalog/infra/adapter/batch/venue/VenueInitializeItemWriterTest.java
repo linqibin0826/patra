@@ -13,14 +13,19 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
+import com.patra.catalog.domain.model.enums.DictionaryType;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
+import com.patra.catalog.domain.model.vo.common.SourceStandard;
 import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
+import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
+import com.patra.catalog.domain.port.registry.DictionaryResolverPort;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,13 +68,15 @@ class VenueInitializeItemWriterTest {
 
   @Mock private VenueRepository venueRepository;
 
+  @Mock private DictionaryResolverPort dictionaryResolverPort;
+
   @Captor private ArgumentCaptor<List<VenueAggregate>> aggregatesCaptor;
 
   private VenueInitializeItemWriter writer;
 
   @BeforeEach
   void setUp() {
-    writer = new VenueInitializeItemWriter(venueRepository);
+    writer = new VenueInitializeItemWriter(venueRepository, dictionaryResolverPort);
   }
 
   // ========== 正常写入测试 ==========
@@ -288,6 +295,148 @@ class VenueInitializeItemWriterTest {
     }
   }
 
+  // ========== 国家编码标准化测试 ==========
+
+  @Nested
+  @DisplayName("国家编码标准化测试")
+  class CountryCodeNormalizationTests {
+
+    @Test
+    @DisplayName("有效国家编码 - 应该通过验证保持不变")
+    void write_validCountryCode_shouldKeepOriginal() throws Exception {
+      // Given: 创建带有有效国家编码的记录
+      VenueParseResult result = createParseResultWithCountryCode("S1", "1111-1111", "GB");
+      Chunk<VenueParseResult> chunk = Chunk.of(result);
+
+      // Mock: 字典解析返回有效映射（ISO_3166_1_ALPHA2 标准验证）
+      when(dictionaryResolverPort.resolve(
+              DictionaryType.COUNTRY, SourceStandard.ISO_3166_1_ALPHA2, Set.of("GB")))
+          .thenReturn(Map.of("GB", "GB"));
+
+      doNothing().when(venueRepository).insertAll(anyList());
+
+      // When
+      writer.write(chunk);
+
+      // Then: 验证国家编码保持不变
+      verify(venueRepository, times(1)).insertAll(aggregatesCaptor.capture());
+      VenueAggregate inserted = aggregatesCaptor.getValue().get(0);
+      assertThat(inserted.getPublicationProfile()).isNotNull();
+      assertThat(inserted.getPublicationProfile().countryCode()).isEqualTo("GB");
+    }
+
+    @Test
+    @DisplayName("无效国家编码 - 应该被置为 null")
+    void write_invalidCountryCode_shouldBeSetToNull() throws Exception {
+      // Given: 创建带有无效国家编码的记录
+      VenueParseResult result = createParseResultWithCountryCode("S1", "1111-1111", "XX");
+      Chunk<VenueParseResult> chunk = Chunk.of(result);
+
+      // Mock: 字典解析返回空映射（表示 XX 不是有效的 ISO 国家编码）
+      when(dictionaryResolverPort.resolve(
+              DictionaryType.COUNTRY, SourceStandard.ISO_3166_1_ALPHA2, Set.of("XX")))
+          .thenReturn(Map.of());
+
+      doNothing().when(venueRepository).insertAll(anyList());
+
+      // When
+      writer.write(chunk);
+
+      // Then: 验证国家编码被置为 null
+      verify(venueRepository, times(1)).insertAll(aggregatesCaptor.capture());
+      VenueAggregate inserted = aggregatesCaptor.getValue().get(0);
+      assertThat(inserted.getPublicationProfile()).isNotNull();
+      assertThat(inserted.getPublicationProfile().countryCode()).isNull();
+    }
+
+    @Test
+    @DisplayName("混合有效和无效国家编码 - 批量处理应正确")
+    void write_mixedCountryCodes_shouldProcessCorrectly() throws Exception {
+      // Given: 创建多条记录，包含有效和无效的国家编码
+      VenueParseResult result1 = createParseResultWithCountryCode("S1", "1111-1111", "US");
+      VenueParseResult result2 = createParseResultWithCountryCode("S2", "2222-2222", "INVALID");
+      VenueParseResult result3 = createParseResultWithCountryCode("S3", "3333-3333", "CN");
+      Chunk<VenueParseResult> chunk = Chunk.of(result1, result2, result3);
+
+      // Mock: 字典解析批量返回结果（只有 US 和 CN 有效）
+      when(dictionaryResolverPort.resolve(
+              DictionaryType.COUNTRY,
+              SourceStandard.ISO_3166_1_ALPHA2,
+              Set.of("US", "INVALID", "CN")))
+          .thenReturn(Map.of("US", "US", "CN", "CN"));
+
+      doNothing().when(venueRepository).insertAll(anyList());
+
+      // When
+      writer.write(chunk);
+
+      // Then: 验证国家编码处理结果
+      verify(venueRepository, times(1)).insertAll(aggregatesCaptor.capture());
+      List<VenueAggregate> insertedList = aggregatesCaptor.getValue();
+      assertThat(insertedList).hasSize(3);
+
+      // 验证各记录的国家编码
+      VenueAggregate venue1 =
+          insertedList.stream()
+              .filter(v -> "S1".equals(v.getIdentifier(VenueIdentifierType.OPENALEX).orElse(null)))
+              .findFirst()
+              .orElseThrow();
+      VenueAggregate venue2 =
+          insertedList.stream()
+              .filter(v -> "S2".equals(v.getIdentifier(VenueIdentifierType.OPENALEX).orElse(null)))
+              .findFirst()
+              .orElseThrow();
+      VenueAggregate venue3 =
+          insertedList.stream()
+              .filter(v -> "S3".equals(v.getIdentifier(VenueIdentifierType.OPENALEX).orElse(null)))
+              .findFirst()
+              .orElseThrow();
+
+      assertThat(venue1.getPublicationProfile().countryCode()).isEqualTo("US");
+      assertThat(venue2.getPublicationProfile().countryCode()).isNull(); // 无效编码被清除
+      assertThat(venue3.getPublicationProfile().countryCode()).isEqualTo("CN");
+    }
+
+    @Test
+    @DisplayName("无 PublicationProfile - 不应调用字典解析")
+    void write_noPublicationProfile_shouldNotCallDictionaryResolver() throws Exception {
+      // Given: 创建没有 PublicationProfile 的记录
+      VenueParseResult result = createParseResult("S1", "1111-1111", false);
+      Chunk<VenueParseResult> chunk = Chunk.of(result);
+
+      doNothing().when(venueRepository).insertAll(anyList());
+
+      // When
+      writer.write(chunk);
+
+      // Then: 不应调用字典解析（因为没有国家编码需要验证）
+      verify(dictionaryResolverPort, never()).resolve(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("countryCode 为 null - 不应包含在字典解析请求中")
+    void write_nullCountryCode_shouldNotBeIncludedInResolveRequest() throws Exception {
+      // Given: 一条有国家编码，一条没有
+      VenueParseResult result1 = createParseResultWithCountryCode("S1", "1111-1111", "GB");
+      VenueParseResult result2 = createParseResultWithNullCountryCode("S2", "2222-2222");
+      Chunk<VenueParseResult> chunk = Chunk.of(result1, result2);
+
+      // Mock: 只有 GB 应该被解析
+      when(dictionaryResolverPort.resolve(
+              DictionaryType.COUNTRY, SourceStandard.ISO_3166_1_ALPHA2, Set.of("GB")))
+          .thenReturn(Map.of("GB", "GB"));
+
+      doNothing().when(venueRepository).insertAll(anyList());
+
+      // When
+      writer.write(chunk);
+
+      // Then: 验证只解析了非空的国家编码
+      verify(dictionaryResolverPort, times(1))
+          .resolve(DictionaryType.COUNTRY, SourceStandard.ISO_3166_1_ALPHA2, Set.of("GB"));
+    }
+  }
+
   // ========== 辅助方法 ==========
 
   private VenueParseResult createParseResult(String openalexId, String issnL, boolean withMetrics) {
@@ -311,6 +460,32 @@ class VenueInitializeItemWriterTest {
   private VenueParseResult createParseResultWithoutIssnL(String openalexId) {
     VenueAggregate venue =
         VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, "Journal " + openalexId);
+    return new VenueParseResult(venue, List.of());
+  }
+
+  private VenueParseResult createParseResultWithCountryCode(
+      String openalexId, String issnL, String countryCode) {
+    VenueAggregate venue =
+        VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, "Journal " + openalexId);
+    venue.addIdentifier(VenueIdentifier.forIssnL(issnL));
+
+    // 嵌入 PublicationProfile 包含国家编码
+    PublicationProfile profile = PublicationProfile.builder().countryCode(countryCode).build();
+    venue.withPublicationProfile(profile);
+
+    return new VenueParseResult(venue, List.of());
+  }
+
+  private VenueParseResult createParseResultWithNullCountryCode(String openalexId, String issnL) {
+    VenueAggregate venue =
+        VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, "Journal " + openalexId);
+    venue.addIdentifier(VenueIdentifier.forIssnL(issnL));
+
+    // 嵌入 PublicationProfile 但国家编码为 null
+    PublicationProfile profile =
+        PublicationProfile.builder().abbreviatedTitle("Abbr " + openalexId).build();
+    venue.withPublicationProfile(profile);
+
     return new VenueParseResult(venue, List.of());
   }
 
