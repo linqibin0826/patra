@@ -165,18 +165,33 @@ public class FtpStreamingDownloader implements StreamingDownloader {
     public void close() throws IOException {
       try {
         delegate.close();
-        if (!ftpClient.completePendingCommand()) {
-          log.warn("FTP completePendingCommand 失败");
-        }
-      } finally {
-        if (ftpClient.isConnected()) {
-          try {
-            ftpClient.logout();
-            ftpClient.disconnect();
-          } catch (IOException e) {
-            log.warn("断开 FTP 连接失败", e);
+        // 检查控制连接是否仍然有效，避免 NPE
+        // 长时间数据传输可能导致服务器端超时关闭控制连接
+        if (ftpClient.isConnected() && ftpClient.isAvailable()) {
+          if (!ftpClient.completePendingCommand()) {
+            log.warn("FTP completePendingCommand 失败");
           }
+        } else {
+          log.debug("FTP 控制连接已断开，跳过 completePendingCommand");
         }
+      } catch (NullPointerException e) {
+        // FTPClient 内部状态异常（如 _controlInput_ 为 null）
+        // 这通常发生在长时间数据传输后，服务器端关闭了控制连接
+        log.debug("FTP 控制连接已关闭，跳过 completePendingCommand: {}", e.getMessage());
+      } finally {
+        disconnectQuietly();
+      }
+    }
+
+    /// 静默断开 FTP 连接。
+    private void disconnectQuietly() {
+      try {
+        if (ftpClient.isConnected()) {
+          ftpClient.logout();
+          ftpClient.disconnect();
+        }
+      } catch (Exception e) {
+        log.debug("断开 FTP 连接时发生异常（已忽略）: {}", e.getMessage());
       }
     }
   }
