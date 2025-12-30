@@ -85,7 +85,7 @@
     <!-- MeSH 主题词 -->
     <MeshHeadingList>
       <MeshHeading>
-        <DescriptorName MajorTopicYN="Y" UI="D002309" Type="Geographic">Cardiology</DescriptorName>
+        <DescriptorName MajorTopicYN="Y" Type="Geographic">Cardiology</DescriptorName>
       </MeshHeading>
       <MeshHeading>
         <DescriptorName MajorTopicYN="N">Medicine</DescriptorName>

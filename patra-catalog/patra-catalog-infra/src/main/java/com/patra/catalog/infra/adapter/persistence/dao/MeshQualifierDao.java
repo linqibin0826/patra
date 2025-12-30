@@ -1,6 +1,8 @@
 package com.patra.catalog.infra.adapter.persistence.dao;
 
 import com.patra.catalog.infra.adapter.persistence.entity.MeshQualifierEntity;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -49,4 +51,10 @@ public interface MeshQualifierDao extends JpaRepository<MeshQualifierEntity, Lon
   /// @param ui 限定词唯一标识符
   /// @return 如果存在返回 true
   boolean existsByUi(String ui);
+
+  /// 按名称列表批量查询限定词。
+  ///
+  /// @param names 限定词名称列表
+  /// @return 限定词实体列表
+  List<MeshQualifierEntity> findAllByNameIn(Collection<String> names);
 }

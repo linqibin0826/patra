@@ -29,6 +29,8 @@ import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedTitleRelation;
 import com.patra.catalog.domain.port.parser.LsiouParserPort;
 import com.patra.catalog.domain.port.registry.DictionaryResolverPort;
+import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
+import com.patra.catalog.domain.port.repository.MeshQualifierRepository;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
@@ -91,6 +93,22 @@ public class VenuePubmedEnrichHandler
   private final VenueRepository venueRepository;
   private final TransactionTemplate transactionTemplate;
   private final DictionaryResolverPort dictionaryResolverPort;
+  private final MeshDescriptorRepository meshDescriptorRepository;
+  private final MeshQualifierRepository meshQualifierRepository;
+
+  /// 富化上下文：封装批次级别的查询映射结果。
+  ///
+  /// 用于减少方法签名中的参数数量，提升代码可读性。
+  ///
+  /// @param countryCodeMap 国家编码映射（原始值 → ISO 3166-1 alpha-2）
+  /// @param languageCodeMap 语言代码映射（ISO 639-3 → BCP 47）
+  /// @param descriptorUiMap MeSH 描述符名称 → UI 映射
+  /// @param qualifierUiMap MeSH 限定词名称 → UI 映射
+  private record EnrichmentContext(
+      Map<String, String> countryCodeMap,
+      Map<String, String> languageCodeMap,
+      Map<String, String> descriptorUiMap,
+      Map<String, String> qualifierUiMap) {}
 
   /// 执行 PubMed Venue 数据富化。
   ///
@@ -334,9 +352,24 @@ public class VenuePubmedEnrichHandler
             DictionaryType.LANGUAGE, SourceStandard.ISO_639_3, rawLanguageCodes);
     log.debug("语言代码解析完成：原始 {} 个，有效映射 {} 个", rawLanguageCodes.size(), languageCodeMap.size());
 
-    // 4. 匹配并分类
-    BatchProcessingResult result =
-        matchAndClassifyRecords(batch, existingVenues, countryCodeMap, languageCodeMap);
+    // 3.6. 收集并查询 MeSH 主题词 UI（每批次两次数据库查询）
+    Set<String> meshDescriptorNames = collectMeshDescriptorNames(batch);
+    Set<String> meshQualifierNames = collectMeshQualifierNames(batch);
+    Map<String, String> descriptorUiMap =
+        meshDescriptorRepository.findAllByNameIn(meshDescriptorNames);
+    Map<String, String> qualifierUiMap =
+        meshQualifierRepository.findAllByNameIn(meshQualifierNames);
+    log.debug(
+        "MeSH UI 查询完成：描述符原始 {} 个/匹配 {} 个，限定词原始 {} 个/匹配 {} 个",
+        meshDescriptorNames.size(),
+        descriptorUiMap.size(),
+        meshQualifierNames.size(),
+        qualifierUiMap.size());
+
+    // 4. 封装富化上下文并匹配分类
+    EnrichmentContext context =
+        new EnrichmentContext(countryCodeMap, languageCodeMap, descriptorUiMap, qualifierUiMap);
+    BatchProcessingResult result = matchAndClassifyRecords(batch, existingVenues, context);
 
     // 5. 批量持久化聚合根
     persistAggregates(result);
@@ -410,20 +443,56 @@ public class VenuePubmedEnrichHandler
     return languageCodes;
   }
 
+  /// 从批次中收集所有 MeSH 描述符名称。
+  ///
+  /// 收集所有非空的 MeSH 描述符名称，用于批量查询 UI。
+  ///
+  /// @param batch 待处理的记录批次
+  /// @return MeSH 描述符名称集合
+  private Set<String> collectMeshDescriptorNames(List<PubmedSerialData> batch) {
+    Set<String> descriptorNames = new HashSet<>();
+    for (PubmedSerialData record : batch) {
+      for (PubmedMeshHeading heading : record.meshHeadings()) {
+        if (heading.descriptorName() != null && !heading.descriptorName().isBlank()) {
+          descriptorNames.add(heading.descriptorName());
+        }
+      }
+    }
+    return descriptorNames;
+  }
+
+  /// 从批次中收集所有 MeSH 限定词名称。
+  ///
+  /// 收集所有非空的 MeSH 限定词名称，用于批量查询 UI。
+  ///
+  /// @param batch 待处理的记录批次
+  /// @return MeSH 限定词名称集合
+  private Set<String> collectMeshQualifierNames(List<PubmedSerialData> batch) {
+    Set<String> qualifierNames = new HashSet<>();
+    for (PubmedSerialData record : batch) {
+      for (PubmedMeshHeading heading : record.meshHeadings()) {
+        if (heading.hasQualifier()
+            && heading.qualifierName() != null
+            && !heading.qualifierName().isBlank()) {
+          qualifierNames.add(heading.qualifierName());
+        }
+      }
+    }
+    return qualifierNames;
+  }
+
   /// 匹配并分类记录。
   ///
   /// 根据标识符匹配现有期刊，将记录分为更新和新建两类。
   ///
   /// @param batch 待处理的记录批次
   /// @param existingVenues 现有期刊的查询结果
-  /// @param countryCodeMap 国家编码映射（原始值 → ISO 3166-1 alpha-2）
-  /// @param languageCodeMap 语言代码映射（ISO 639-3 → BCP 47）
+  /// @param context 富化上下文（包含国家/语言/MeSH 映射）
   /// @return 批次处理结果（包含分类和子实体数据）
   private BatchProcessingResult matchAndClassifyRecords(
       List<PubmedSerialData> batch,
       ExistingVenuesLookup existingVenues,
-      Map<String, String> countryCodeMap,
-      Map<String, String> languageCodeMap) {
+      EnrichmentContext context) {
 
     BatchProcessingResult result = new BatchProcessingResult();
     // 防重集合：避免同一期刊被多条 PubMed 记录更新（例如同一期刊有多个 ISSN 条目）
@@ -442,16 +511,18 @@ public class VenuePubmedEnrichHandler
           // 首次处理该期刊：更新标识符（CQRS 最小聚合）
           updateVenueIdentifiers(venue, record);
           // 构建并附加 PublicationProfile（嵌入式值对象）
-          PublicationProfile profile = buildPublicationProfileFromRecord(record, countryCodeMap);
+          PublicationProfile profile =
+              buildPublicationProfileFromRecord(record, context.countryCodeMap());
           venue.withPublicationProfile(profile);
           // 标准化语言代码：ISO 639-3 → BCP 47
-          venue.normalizeLanguages(languageCodeMap);
+          venue.normalizeLanguages(context.languageCodeMap());
           result.addUpdate(venue);
           processedVenueIds.add(venue.getId().value());
           // 收集 PubMed 子实体（MeSH、关系、索引历史），稍后批量持久化
           result.collectPubmedEntities(
               venue,
-              toVenueMeshList(record.meshHeadings()),
+              toVenueMeshList(
+                  record.meshHeadings(), context.descriptorUiMap(), context.qualifierUiMap()),
               toVenueRelationList(record.titleRelations()),
               toVenueIndexingHistoryList(record.indexingHistories()));
         } else {
@@ -464,15 +535,17 @@ public class VenuePubmedEnrichHandler
         // ═══════════════════════════════════════════════════════════════════════
         VenueAggregate newVenue = createVenueFromRecord(record);
         // 构建并附加 PublicationProfile（嵌入式值对象）
-        PublicationProfile profile = buildPublicationProfileFromRecord(record, countryCodeMap);
+        PublicationProfile profile =
+            buildPublicationProfileFromRecord(record, context.countryCodeMap());
         newVenue.withPublicationProfile(profile);
         // 标准化语言代码：ISO 639-3 → BCP 47
-        newVenue.normalizeLanguages(languageCodeMap);
+        newVenue.normalizeLanguages(context.languageCodeMap());
         result.addCreate(newVenue);
         // 收集 PubMed 子实体（MeSH、关系、索引历史），稍后批量持久化
         result.collectPubmedEntities(
             newVenue,
-            toVenueMeshList(record.meshHeadings()),
+            toVenueMeshList(
+                record.meshHeadings(), context.descriptorUiMap(), context.qualifierUiMap()),
             toVenueRelationList(record.titleRelations()),
             toVenueIndexingHistoryList(record.indexingHistories()));
       }
@@ -683,18 +756,35 @@ public class VenuePubmedEnrichHandler
   }
 
   /// 转换 MeSH 主题词列表。
-  private List<VenueMesh> toVenueMeshList(List<PubmedMeshHeading> headings) {
+  ///
+  /// @param headings PubMed MeSH 主题词列表
+  /// @param descriptorUiMap 描述符名称 → UI 映射表
+  /// @param qualifierUiMap 限定词名称 → UI 映射表
+  /// @return VenueMesh 列表
+  private List<VenueMesh> toVenueMeshList(
+      List<PubmedMeshHeading> headings,
+      Map<String, String> descriptorUiMap,
+      Map<String, String> qualifierUiMap) {
     if (headings == null || headings.isEmpty()) {
       return List.of();
     }
     return headings.stream()
         .map(
             h -> {
+              // 查询描述符 UI（匹配失败返回 null）
+              String descriptorUi = descriptorUiMap.get(h.descriptorName());
+
               if (h.hasQualifier()) {
+                // 查询限定词 UI（匹配失败返回 null）
+                String qualifierUi = qualifierUiMap.get(h.qualifierName());
                 return VenueMesh.create(
-                    h.descriptorName(), null, h.isMajorTopic(), h.qualifierName());
+                    h.descriptorName(),
+                    descriptorUi,
+                    h.isMajorTopic(),
+                    h.qualifierName(),
+                    qualifierUi);
               } else {
-                return VenueMesh.create(h.descriptorName(), null, h.isMajorTopic());
+                return VenueMesh.create(h.descriptorName(), descriptorUi, h.isMajorTopic());
               }
             })
         .toList();

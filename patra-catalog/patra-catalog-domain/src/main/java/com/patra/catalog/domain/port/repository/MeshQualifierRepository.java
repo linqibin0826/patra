@@ -1,7 +1,9 @@
 package com.patra.catalog.domain.port.repository;
 
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /// MeSH 限定词聚合根仓储接口(领域层定义,基础设施层实现)。
 ///
@@ -35,4 +37,14 @@ public interface MeshQualifierRepository {
   ///
   /// @return 如果存在任何限定词数据返回 true，否则返回 false
   boolean hasAnyData();
+
+  /// 按名称批量查询限定词，返回名称到 UI 的映射。
+  ///
+  /// **使用场景**：为期刊 MeSH 主题词补充限定词 UI 字段
+  ///
+  /// **匹配规则**：精确匹配（大小写敏感）
+  ///
+  /// @param names 限定词名称集合（如 "methods", "diagnosis"）
+  /// @return 名称 → UI 映射表（如 "methods" → "Q000379"），未匹配的名称不在返回结果中
+  Map<String, String> findAllByNameIn(Collection<String> names);
 }

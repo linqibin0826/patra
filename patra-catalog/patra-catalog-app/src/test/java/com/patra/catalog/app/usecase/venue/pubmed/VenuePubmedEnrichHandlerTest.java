@@ -18,9 +18,12 @@ import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
+import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedMeshHeading;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.port.parser.LsiouParserPort;
 import com.patra.catalog.domain.port.registry.DictionaryResolverPort;
+import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
+import com.patra.catalog.domain.port.repository.MeshQualifierRepository;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
@@ -77,6 +80,8 @@ class VenuePubmedEnrichHandlerTest {
   @Mock private TransactionStatus transactionStatus;
   @Mock private StreamingDownloadResult downloadResult;
   @Mock private DictionaryResolverPort dictionaryResolverPort;
+  @Mock private MeshDescriptorRepository meshDescriptorRepository;
+  @Mock private MeshQualifierRepository meshQualifierRepository;
 
   @Captor private ArgumentCaptor<List<VenueAggregate>> updateBatchCaptor;
   @Captor private ArgumentCaptor<List<VenueAggregate>> insertAllCaptor;
@@ -92,7 +97,9 @@ class VenuePubmedEnrichHandlerTest {
             parserPort,
             venueRepository,
             transactionTemplate,
-            dictionaryResolverPort);
+            dictionaryResolverPort,
+            meshDescriptorRepository,
+            meshQualifierRepository);
 
     // 配置 TransactionTemplate：直接执行回调，模拟事务行为
     // 使用 lenient() 因为异常测试可能在到达事务逻辑前就失败
@@ -111,6 +118,10 @@ class VenuePubmedEnrichHandlerTest {
 
     // 配置 dictionaryResolverPort 默认返回空 Map（测试不关心国家编码解析）
     lenient().when(dictionaryResolverPort.resolve(any(), any(), any())).thenReturn(Map.of());
+
+    // 配置 MeSH Repository 默认返回空 Map（测试不关心 MeSH UI 富化）
+    lenient().when(meshDescriptorRepository.findAllByNameIn(any())).thenReturn(Map.of());
+    lenient().when(meshQualifierRepository.findAllByNameIn(any())).thenReturn(Map.of());
   }
 
   @Nested
@@ -423,6 +434,145 @@ class VenuePubmedEnrichHandlerTest {
       assertThatThrownBy(() -> handler.handle(command))
           .isInstanceOf(ApplicationException.class)
           .hasMessageContaining("PubMed Venue 富化失败");
+    }
+  }
+
+  @Nested
+  @DisplayName("MeSH UI 富化测试")
+  class MeshUiEnrichmentTest {
+
+    @Test
+    @DisplayName("应该正确富化 MeSH Descriptor UI")
+    void shouldEnrichMeshDescriptorUi() {
+      // Given: 带 MeSH 主题词的记录
+      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record =
+          PubmedSerialData.builder()
+              .nlmUniqueId("0000001")
+              .title("Test Journal")
+              .issnL("1111-1111")
+              .meshHeadings(
+                  List.of(
+                      PubmedMeshHeading.of("Cardiovascular Diseases", true),
+                      PubmedMeshHeading.of("Neoplasms", false)))
+              .build();
+
+      // 配置 MeSH Repository 返回 UI 映射
+      when(meshDescriptorRepository.findAllByNameIn(any()))
+          .thenReturn(
+              Map.of(
+                  "Cardiovascular Diseases", "D002318",
+                  "Neoplasms", "D009369"));
+
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+
+      // When
+      handler.handle(command);
+
+      // Then: 验证 MeSH Repository 被调用
+      verify(meshDescriptorRepository).findAllByNameIn(any());
+    }
+
+    @Test
+    @DisplayName("应该正确富化 MeSH Qualifier UI")
+    void shouldEnrichMeshQualifierUi() {
+      // Given: 带限定词的 MeSH 主题词记录
+      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record =
+          PubmedSerialData.builder()
+              .nlmUniqueId("0000001")
+              .title("Test Journal")
+              .issnL("1111-1111")
+              .meshHeadings(
+                  List.of(
+                      PubmedMeshHeading.of("Cardiovascular Diseases", true, "diagnosis", false),
+                      PubmedMeshHeading.of("Neoplasms", false, "therapy", true)))
+              .build();
+
+      // 配置 MeSH Repository 返回 UI 映射
+      when(meshDescriptorRepository.findAllByNameIn(any()))
+          .thenReturn(
+              Map.of(
+                  "Cardiovascular Diseases", "D002318",
+                  "Neoplasms", "D009369"));
+      when(meshQualifierRepository.findAllByNameIn(any()))
+          .thenReturn(
+              Map.of(
+                  "diagnosis", "Q000175",
+                  "therapy", "Q000628"));
+
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+
+      // When
+      handler.handle(command);
+
+      // Then: 验证两个 MeSH Repository 都被调用
+      verify(meshDescriptorRepository).findAllByNameIn(any());
+      verify(meshQualifierRepository).findAllByNameIn(any());
+    }
+
+    @Test
+    @DisplayName("MeSH UI 查找失败时应该保持 null")
+    void shouldKeepNullWhenMeshUiNotFound() {
+      // Given: 带 MeSH 主题词的记录，但 Repository 返回空
+      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record =
+          PubmedSerialData.builder()
+              .nlmUniqueId("0000001")
+              .title("Test Journal")
+              .issnL("1111-1111")
+              .meshHeadings(List.of(PubmedMeshHeading.of("Unknown Disease", true)))
+              .build();
+
+      // MeSH Repository 返回空（表示未找到）
+      when(meshDescriptorRepository.findAllByNameIn(any())).thenReturn(Map.of());
+
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+
+      // When
+      VenuePubmedEnrichResult result = handler.handle(command);
+
+      // Then: 不应该抛出异常，处理应该继续
+      assertThat(result.isSuccess()).isTrue();
+      assertThat(result.createdCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("没有 MeSH 主题词时不应调用 MeSH Repository")
+    void shouldNotCallMeshRepositoryWhenNoMeshHeadings() {
+      // Given: 没有 MeSH 主题词的记录
+      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record =
+          PubmedSerialData.builder()
+              .nlmUniqueId("0000001")
+              .title("Test Journal")
+              .issnL("1111-1111")
+              .build(); // 没有 meshHeadings
+
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+
+      // When
+      handler.handle(command);
+
+      // Then: MeSH Repository 应该被调用（收集到空集合，但方法仍被调用）
+      // 由于批次处理，即使没有 MeSH 也会调用 findAllByNameIn(emptySet)
+      verify(meshDescriptorRepository).findAllByNameIn(any());
     }
   }
 

@@ -16,10 +16,14 @@ import com.patra.catalog.infra.adapter.persistence.entity.MeshDescriptorEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.MeshEntryCombinationEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.MeshEntryTermEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.MeshTreeNumberEntity;
+import com.patra.starter.jpa.entity.BaseJpaEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -220,55 +224,30 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
 
   /// 为没有 ID 的实体分配雪花 ID。
   ///
-  /// @param entity JPA 实体
-  private void assignIdIfMissing(MeshDescriptorEntity entity) {
+  /// 所有 MeSH 实体均继承 BaseJpaEntity，使用统一方法避免代码重复。
+  ///
+  /// @param entity JPA 实体（继承自 BaseJpaEntity）
+  private void assignIdIfMissing(BaseJpaEntity entity) {
     if (entity.getId() == null) {
       entity.setId(SnowflakeIdGenerator.getId());
     }
   }
 
-  /// 为没有 ID 的实体分配雪花 ID。
-  ///
-  /// @param entity JPA 实体
-  private void assignIdIfMissing(MeshTreeNumberEntity entity) {
-    if (entity.getId() == null) {
-      entity.setId(SnowflakeIdGenerator.getId());
+  @Override
+  public Map<String, String> findAllByNameIn(Collection<String> names) {
+    if (names == null || names.isEmpty()) {
+      return Map.of();
     }
-  }
 
-  /// 为没有 ID 的实体分配雪花 ID。
-  ///
-  /// @param entity JPA 实体
-  private void assignIdIfMissing(MeshConceptEntity entity) {
-    if (entity.getId() == null) {
-      entity.setId(SnowflakeIdGenerator.getId());
-    }
-  }
+    List<MeshDescriptorEntity> entities = descriptorDao.findAllByNameIn(names);
 
-  /// 为没有 ID 的实体分配雪花 ID。
-  ///
-  /// @param entity JPA 实体
-  private void assignIdIfMissing(MeshConceptRelationEntity entity) {
-    if (entity.getId() == null) {
-      entity.setId(SnowflakeIdGenerator.getId());
-    }
-  }
-
-  /// 为没有 ID 的实体分配雪花 ID。
-  ///
-  /// @param entity JPA 实体
-  private void assignIdIfMissing(MeshEntryTermEntity entity) {
-    if (entity.getId() == null) {
-      entity.setId(SnowflakeIdGenerator.getId());
-    }
-  }
-
-  /// 为没有 ID 的实体分配雪花 ID。
-  ///
-  /// @param entity JPA 实体
-  private void assignIdIfMissing(MeshEntryCombinationEntity entity) {
-    if (entity.getId() == null) {
-      entity.setId(SnowflakeIdGenerator.getId());
-    }
+    // 转换为 name → ui 映射
+    return entities.stream()
+        .collect(
+            Collectors.toMap(
+                MeshDescriptorEntity::getName,
+                MeshDescriptorEntity::getUi,
+                (existing, replacement) -> existing // 保留首个匹配
+                ));
   }
 }
