@@ -1,12 +1,13 @@
 # Patra Spring Boot Starter - JPA
 
-Spring Data JPA Starter，提供基于 Hibernate 6.6 的数据持久化支持，包含雪花 ID 生成、审计、软删除和批量写入优化。
+Spring Data JPA Starter，提供基于 Hibernate 6.6 的数据持久化支持，包含雪花 ID 生成、审计、可选软删除和批量写入优化。
 
 ## 模块概述
 
 本模块提供 JPA 数据访问层基础设施，支持：
 
-- **BaseJpaEntity 实体基类**：统一的审计字段、乐观锁、软删除支持
+- **BaseJpaEntity 实体基类**：统一的审计字段、乐观锁支持
+- **SoftDeletableJpaEntity 软删除基类**：可选的时间戳软删除支持（继承自 BaseJpaEntity）
 - **雪花 ID 生成器**：应用层预分配 ID，优化批量插入性能
 - **JPA 审计集成**：自动填充 createdAt/createdBy/updatedAt/updatedBy
 - **Hibernate 批量写入优化**：开箱即用的批量插入/更新配置
@@ -27,7 +28,9 @@ Spring Data JPA Starter，提供基于 Hibernate 6.6 的数据持久化支持，
 
 | 组件 | 职责 |
 |------|------|
-| `BaseJpaEntity` | JPA 实体基类，提供 ID、审计字段、乐观锁、软删除 |
+| `BaseJpaEntity` | JPA 实体基类，提供 ID、审计字段、乐观锁 |
+| `SoftDeletable` | 软删除能力接口，定义 `softDelete()` 和 `isDeleted()` 方法 |
+| `SoftDeletableJpaEntity` | 软删除实体基类，继承 BaseJpaEntity 并实现 SoftDeletable |
 | `SnowflakeIdGenerator` | 雪花算法 ID 生成器，单例模式，线程安全 |
 | `JpaErrorMappingContributor` | JPA/Hibernate/SQL 异常到标准错误码的映射 |
 | `JpaAuditingConfig` | Spring Data JPA 审计配置 |
@@ -35,7 +38,7 @@ Spring Data JPA Starter，提供基于 Hibernate 6.6 的数据持久化支持，
 
 ## BaseJpaEntity 实体基类
 
-所有 JPA Entity **必须**继承 `BaseJpaEntity`，它提供以下字段：
+所有 JPA Entity **必须**继承 `BaseJpaEntity`（或其子类 `SoftDeletableJpaEntity`），它提供以下字段：
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -46,17 +49,24 @@ Spring Data JPA Starter，提供基于 Hibernate 6.6 的数据持久化支持，
 | `updatedAt` | Instant | 更新时间，自动填充 |
 | `updatedBy` | Long | 更新人 ID，自动填充 |
 | `updatedByName` | String | 更新人名称，需手动或回调填充 |
-| `deletedAt` | Instant | 软删除时间戳，null 表示未删除 |
 | `version` | Long | 乐观锁版本号，自动管理 |
 | `recordRemarks` | String | 备注/审计追踪（JSON 格式） |
 | `ipAddress` | byte[] | 请求来源 IP（二进制存储） |
+
+## SoftDeletableJpaEntity 软删除基类
+
+需要软删除功能的实体应继承 `SoftDeletableJpaEntity`，它在 `BaseJpaEntity` 基础上额外提供：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `deletedAt` | Instant | 软删除时间戳，null 表示未删除 |
 
 ### 软删除机制
 
 使用时间戳策略实现软删除，通过 `@SQLRestriction("deleted_at IS NULL")` 自动过滤：
 
 ```java
-// 执行软删除
+// 执行软删除（仅 SoftDeletableJpaEntity 子类可用）
 entity.softDelete();  // 或 entity.setDeletedAt(Instant.now());
 repository.save(entity);
 
@@ -67,12 +77,22 @@ repository.findAll();  // WHERE deleted_at IS NULL
 boolean deleted = entity.isDeleted();
 ```
 
+### 何时使用软删除？
+
+| 场景 | 推荐基类 | 说明 |
+|------|---------|------|
+| 聚合根（如 Venue、Publication、Plan、Task） | `SoftDeletableJpaEntity` | 需要保护数据完整性 |
+| 被引用的配置数据（如 Provenance、SysDictType） | `SoftDeletableJpaEntity` | 可能被外键引用 |
+| 子表/外部数据快照（如 VenueMesh、TaskRun） | `BaseJpaEntity` | 使用物理删除，简化逻辑 |
+
 > **为什么不用 @SoftDelete？**
 >
 > Hibernate 6.6 的 `@SoftDelete` 设计为布尔型策略（`0/1`、`Y/N`），不原生支持时间戳策略。
 > 对于时间戳软删除，`@SQLRestriction` 是更好的选择。
 
 ### Entity 示例
+
+**普通实体（无软删除）**：
 
 ```java
 @Entity
@@ -84,8 +104,22 @@ public class MeshQualifierEntity extends BaseJpaEntity {
 
     @Column(name = "name", nullable = false)
     private String name;
+}
+```
 
-    // ...
+**聚合根实体（需要软删除）**：
+
+```java
+@Entity
+@Table(name = "cat_venue")
+public class VenueEntity extends SoftDeletableJpaEntity {
+
+    @Column(name = "title", nullable = false)
+    private String title;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "venue_type", nullable = false)
+    private VenueType venueType;
 }
 ```
 
@@ -347,7 +381,9 @@ com.patra.starter.jpa
 │   ├── JpaAuditingConfig               # JPA 审计配置
 │   └── HibernatePropertiesCustomizer   # Hibernate 属性定制器
 ├── entity/
-│   └── BaseJpaEntity                   # JPA 实体基类
+│   ├── BaseJpaEntity                   # JPA 实体基类（审计 + 乐观锁）
+│   ├── SoftDeletable                   # 软删除能力接口
+│   └── SoftDeletableJpaEntity          # 软删除实体基类
 ├── error/
 │   └── contributor/
 │       └── JpaErrorMappingContributor  # JPA 异常映射贡献器
@@ -358,7 +394,7 @@ com.patra.starter.jpa
 ## 设计原则
 
 1. **应用层 ID 预分配**：使用雪花 ID，保证批量插入性能
-2. **时间戳软删除**：通过 `@SQLRestriction` 自动过滤，保留删除时间
+2. **可选软删除**：通过继承 `SoftDeletableJpaEntity` 按需启用软删除
 3. **统一审计**：所有实体自动记录创建/更新时间和操作人
 4. **乐观锁保护**：防止并发更新冲突
 5. **批量优化**：默认配置 Hibernate 批量写入，与 Spring Batch 对齐
@@ -371,16 +407,19 @@ com.patra.starter.jpa
 - 雪花 ID（避免自增破坏批量插入）
 - 审计字段（自动填充创建/更新时间和操作人）
 - 乐观锁（防止并发更新冲突）
-- 软删除（时间戳策略，自动过滤）
+
+### Q: 何时使用 SoftDeletableJpaEntity？
+
+**A**: 聚合根和被外键引用的配置数据应使用 `SoftDeletableJpaEntity`，子表和外部数据快照使用 `BaseJpaEntity`（物理删除）。
 
 ### Q: 如何查询已删除的记录？
 
 **A**: 使用 Native Query 绕过 `@SQLRestriction`：
 
 ```java
-@Query(value = "SELECT * FROM cat_mesh_qualifier WHERE deleted_at IS NOT NULL",
+@Query(value = "SELECT * FROM cat_venue WHERE deleted_at IS NOT NULL",
        nativeQuery = true)
-List<MeshQualifierEntity> findDeleted();
+List<VenueEntity> findDeleted();
 ```
 
 ### Q: 批量插入性能不佳？
