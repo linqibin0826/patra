@@ -1,8 +1,11 @@
 package com.patra.catalog.infra.adapter.persistence.entity;
 
+import com.patra.catalog.domain.model.enums.MeshRecordType;
 import com.patra.starter.jpa.entity.BaseJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
@@ -14,13 +17,14 @@ import org.hibernate.type.SqlTypes;
 
 /// MeSH 入口术语 JPA 实体，映射到表 `cat_mesh_entry_term`。
 ///
-/// **表结构**：存储 MeSH 主题词的同义词和入口术语，支持模糊检索。
+/// **表结构**：存储 MeSH 主题词和 SCR 的同义词和入口术语，支持模糊检索。
 ///
-/// **数据规模**：约 25 万条（一个主题词平均 7-8 个入口术语）
+/// **数据规模**：Descriptor 约 25 万条 + SCR 约 320 万条
 ///
 /// **关键字段说明**：
 ///
-/// - `descriptor_ui` 主题词 UI（关联 cat_mesh_descriptor.ui）
+/// - `record_type` 记录类型（DESCRIPTOR=主题词，SCR=补充概念）
+/// - `owner_ui` 所有者 UI（Descriptor: D开头，SCR: C开头）
 /// - `term_ui` 术语 UI
 /// - `concept_ui` 所属概念 UI
 /// - `term` 入口术语/同义词
@@ -29,7 +33,7 @@ import org.hibernate.type.SqlTypes;
 ///
 /// **索引说明**：
 ///
-/// - 普通索引 `idx_descriptor_ui`: 支持查询某主题词的所有入口术语
+/// - 复合索引 `idx_record_type_owner`: 支持按类型和所有者查询
 /// - 普通索引 `idx_concept_ui`: 支持按概念查询入口术语
 ///
 /// @author linqibin
@@ -40,14 +44,19 @@ import org.hibernate.type.SqlTypes;
 @Table(
     name = "cat_mesh_entry_term",
     indexes = {
-      @Index(name = "idx_descriptor_ui", columnList = "descriptor_ui"),
+      @Index(name = "idx_record_type_owner", columnList = "record_type, owner_ui"),
       @Index(name = "idx_concept_ui", columnList = "concept_ui")
     })
 public class MeshEntryTermEntity extends BaseJpaEntity {
 
-  /// 主题词 UI（关联：cat_mesh_descriptor.ui）
-  @Column(name = "descriptor_ui", nullable = false, length = 10)
-  private String descriptorUi;
+  /// 记录类型（DESCRIPTOR=主题词，SCR=补充概念）
+  @Enumerated(EnumType.STRING)
+  @Column(name = "record_type", nullable = false, length = 20)
+  private MeshRecordType recordType;
+
+  /// 所有者 UI（Descriptor: D开头，SCR: C开头）
+  @Column(name = "owner_ui", nullable = false, length = 10)
+  private String ownerUi;
 
   /// 术语 UI
   @Column(name = "term_ui", length = 10)

@@ -193,11 +193,11 @@ class MeshDescriptorRepositoryAdapterIT {
 
       // Then: 验证概念的外键
       var concepts = conceptDao.findAll();
-      assertThat(concepts).allMatch(c -> c.getDescriptorUi().equals(descriptorUi));
+      assertThat(concepts).allMatch(c -> c.getOwnerUi().equals(descriptorUi));
 
       // Then: 验证入口术语的外键
       var entryTerms = entryTermDao.findAll();
-      assertThat(entryTerms).allMatch(et -> et.getDescriptorUi().equals(descriptorUi));
+      assertThat(entryTerms).allMatch(et -> et.getOwnerUi().equals(descriptorUi));
     }
   }
 
