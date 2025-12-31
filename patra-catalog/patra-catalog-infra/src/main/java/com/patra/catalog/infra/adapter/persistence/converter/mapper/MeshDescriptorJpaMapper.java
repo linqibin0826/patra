@@ -6,6 +6,7 @@ import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
 import com.patra.catalog.domain.model.enums.DescriptorClass;
 import com.patra.catalog.domain.model.enums.LexicalTag;
+import com.patra.catalog.domain.model.enums.MeshRecordType;
 import com.patra.catalog.domain.model.vo.mesh.ConceptRelation;
 import com.patra.catalog.domain.model.vo.mesh.EntryCombination;
 import com.patra.catalog.domain.model.vo.mesh.MeshDescriptorId;
@@ -172,7 +173,8 @@ public abstract class MeshDescriptorJpaMapper {
     }
     MeshConceptEntity entity = new MeshConceptEntity();
     entity.setId(concept.getId());
-    entity.setDescriptorUi(descriptorUi);
+    entity.setRecordType(MeshRecordType.DESCRIPTOR);
+    entity.setOwnerUi(descriptorUi);
     entity.setConceptUi(concept.getConceptUi().ui());
     entity.setConceptName(concept.getConceptName());
     entity.setIsPreferred(concept.isPreferred());
@@ -196,7 +198,7 @@ public abstract class MeshDescriptorJpaMapper {
     }
     return MeshConcept.restore(
         entity.getId(),
-        entity.getDescriptorUi() != null ? MeshUI.of(entity.getDescriptorUi()) : null,
+        entity.getOwnerUi() != null ? MeshUI.of(entity.getOwnerUi()) : null,
         MeshUI.of(entity.getConceptUi()),
         entity.getConceptName(),
         entity.getIsPreferred(),
@@ -296,7 +298,8 @@ public abstract class MeshDescriptorJpaMapper {
     }
     MeshEntryTermEntity entity = new MeshEntryTermEntity();
     entity.setId(entryTerm.getId());
-    entity.setDescriptorUi(descriptorUi);
+    entity.setRecordType(MeshRecordType.DESCRIPTOR);
+    entity.setOwnerUi(descriptorUi);
     entity.setTermUi(entryTerm.getTermUi() != null ? entryTerm.getTermUi().ui() : null);
     entity.setConceptUi(entryTerm.getConceptUi() != null ? entryTerm.getConceptUi().ui() : null);
     entity.setTerm(entryTerm.getTerm());
@@ -327,7 +330,7 @@ public abstract class MeshDescriptorJpaMapper {
     MeshEntryTerm entryTerm =
         MeshEntryTerm.restore(
             entity.getId(),
-            entity.getDescriptorUi() != null ? MeshUI.of(entity.getDescriptorUi()) : null,
+            entity.getOwnerUi() != null ? MeshUI.of(entity.getOwnerUi()) : null,
             entity.getTermUi() != null ? MeshUI.of(entity.getTermUi()) : null,
             entity.getTerm(),
             stringToLexicalTag(entity.getLexicalTag()),

@@ -308,10 +308,10 @@ class MeshDescriptorItemWriterIT {
     assertThat(treeNumbers).allMatch(tn -> tn.getDescriptorUi().equals(descriptorUi));
 
     List<MeshConceptEntity> concepts = conceptDao.findAll();
-    assertThat(concepts).allMatch(c -> c.getDescriptorUi().equals(descriptorUi));
+    assertThat(concepts).allMatch(c -> c.getOwnerUi().equals(descriptorUi));
 
     List<MeshEntryTermEntity> entryTerms = entryTermDao.findAll();
-    assertThat(entryTerms).allMatch(et -> et.getDescriptorUi().equals(descriptorUi));
+    assertThat(entryTerms).allMatch(et -> et.getOwnerUi().equals(descriptorUi));
 
     List<MeshEntryCombinationEntity> entryCombinations = entryCombinationDao.findAll();
     assertThat(entryCombinations).allMatch(ec -> ec.getDescriptorUi().equals(descriptorUi));
