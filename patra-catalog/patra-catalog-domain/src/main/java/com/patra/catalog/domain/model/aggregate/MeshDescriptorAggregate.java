@@ -266,9 +266,8 @@ public class MeshDescriptorAggregate extends AggregateRoot<MeshDescriptorId> {
     aggregate.dateRevised = dateRevised;
     aggregate.dateEstablished = dateEstablished;
 
-    // 注意：新增的字段（historyNote, onlineNote, nlmClassificationNumber）
-    // 以及新增的集合（allowableQualifiers, pharmacologicalActions, etc.）
-    // 在 restore 后通过 setter 方法设置
+    // 扩展字段和集合通过 setter 方法设置
+    // （historyNote, onlineNote, nlmClassificationNumber, allowableQualifiers, etc.）
 
     aggregate.assignVersion(version != null ? version : 0L);
     return aggregate;

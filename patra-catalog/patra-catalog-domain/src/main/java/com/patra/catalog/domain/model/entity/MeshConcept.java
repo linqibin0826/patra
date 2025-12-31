@@ -2,6 +2,7 @@ package com.patra.catalog.domain.model.entity;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
+import com.patra.catalog.domain.model.enums.MeshRecordType;
 import com.patra.catalog.domain.model.vo.mesh.ConceptRelation;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import java.io.Serial;
@@ -57,8 +58,16 @@ public class MeshConcept implements Serializable {
   /// 主键ID(由Repository在持久化时分配)
   private Long id;
 
-  /// 关联的主题词UI(格式:D000001)
-  private final MeshUI descriptorUi;
+  /// 所属记录的UI(Descriptor: D000001, SCR: C000001)。
+  ///
+  /// 概念可以属于 Descriptor 或 SCR，通过 ownerUi 关联。
+  private final MeshUI ownerUi;
+
+  /// 记录类型（DESCRIPTOR 或 SCR）。
+  ///
+  /// 根据 ownerUi 前缀自动推断：D→DESCRIPTOR，C→SCR。
+  /// 如果 ownerUi 为 null，则 recordType 也为 null。
+  private final MeshRecordType recordType;
 
   /// 概念唯一标识符(格式：M000001-M999999)
   private final MeshUI conceptUi;
@@ -98,13 +107,13 @@ public class MeshConcept implements Serializable {
   /// 私有构造函数。
   ///
   /// @param id 主键ID(新建时为null)
-  /// @param descriptorUi 主题词UI
+  /// @param ownerUi 所属记录UI（Descriptor 或 SCR）
   /// @param conceptUi 概念UI
   /// @param conceptName 概念名称
   /// @param isPreferred 是否首选概念
   private MeshConcept(
-      Long id, MeshUI descriptorUi, MeshUI conceptUi, String conceptName, boolean isPreferred) {
-    // 必填字段验证（descriptorUi 在解析阶段可以为 null，后续由聚合根设置）
+      Long id, MeshUI ownerUi, MeshUI conceptUi, String conceptName, boolean isPreferred) {
+    // 必填字段验证（ownerUi 在解析阶段可以为 null，后续由聚合根设置）
     Assert.notNull(conceptUi, "概念UI不能为空");
     Assert.notBlank(conceptName, "概念名称不能为空");
 
@@ -116,10 +125,23 @@ public class MeshConcept implements Serializable {
 
     // 赋值
     this.id = id;
-    this.descriptorUi = descriptorUi;
+    this.ownerUi = ownerUi;
     this.conceptUi = conceptUi;
     this.conceptName = conceptName;
     this.isPreferred = isPreferred;
+
+    // 根据 ownerUi 推断 recordType
+    if (ownerUi != null) {
+      if (ownerUi.isDescriptor()) {
+        this.recordType = MeshRecordType.DESCRIPTOR;
+      } else if (ownerUi.isScr()) {
+        this.recordType = MeshRecordType.SCR;
+      } else {
+        this.recordType = null;
+      }
+    } else {
+      this.recordType = null;
+    }
 
     // 初始化集合
     this.registryNumbers = new ArrayList<>();
@@ -139,22 +161,22 @@ public class MeshConcept implements Serializable {
     return new MeshConcept(null, null, conceptUi, conceptName, isPreferred);
   }
 
-  /// 创建概念(指定主题词UI)。
+  /// 创建概念(指定所属记录UI)。
   ///
-  /// @param descriptorUi 主题词UI
+  /// @param ownerUi 所属记录UI（Descriptor 或 SCR）
   /// @param conceptUi 概念UI
   /// @param conceptName 概念名称
   /// @param isPreferred 是否首选概念
   /// @return 概念实体
   public static MeshConcept create(
-      MeshUI descriptorUi, MeshUI conceptUi, String conceptName, boolean isPreferred) {
-    return new MeshConcept(null, descriptorUi, conceptUi, conceptName, isPreferred);
+      MeshUI ownerUi, MeshUI conceptUi, String conceptName, boolean isPreferred) {
+    return new MeshConcept(null, ownerUi, conceptUi, conceptName, isPreferred);
   }
 
   /// 从持久化状态重建实体(由Repository使用)。
   ///
   /// @param id 主键ID
-  /// @param descriptorUi 主题词UI
+  /// @param ownerUi 所属记录UI（Descriptor 或 SCR）
   /// @param conceptUi 概念UI
   /// @param conceptName 概念名称
   /// @param isPreferred 是否首选概念
@@ -167,7 +189,7 @@ public class MeshConcept implements Serializable {
   /// @return 重建的实体
   public static MeshConcept restore(
       Long id,
-      MeshUI descriptorUi,
+      MeshUI ownerUi,
       MeshUI conceptUi,
       String conceptName,
       boolean isPreferred,
@@ -177,7 +199,7 @@ public class MeshConcept implements Serializable {
       String translatorsEnglishScopeNote,
       String translatorsScopeNote,
       String conceptStatus) {
-    MeshConcept concept = new MeshConcept(id, descriptorUi, conceptUi, conceptName, isPreferred);
+    MeshConcept concept = new MeshConcept(id, ownerUi, conceptUi, conceptName, isPreferred);
     concept.casn1Name = casn1Name;
     if (registryNumbers != null) {
       concept.registryNumbers.addAll(registryNumbers);
@@ -190,6 +212,14 @@ public class MeshConcept implements Serializable {
   }
 
   // ========== 业务方法 ==========
+
+  /// 获取所属主题词UI（向后兼容别名）。
+  ///
+  /// @return 所属记录UI
+  /// @deprecated 请使用 {@link #getOwnerUi()} 代替
+  public MeshUI getDescriptorUi() {
+    return ownerUi;
+  }
 
   /// 设置ID(由Repository在持久化后回写)。
   ///
