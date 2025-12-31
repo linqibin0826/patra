@@ -3,6 +3,7 @@ package com.patra.catalog.domain.model.entity;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.patra.catalog.domain.model.enums.MeshRecordType;
 import com.patra.catalog.domain.model.vo.mesh.ConceptRelation;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import java.util.Arrays;
@@ -218,6 +219,92 @@ class MeshConceptTest {
     @DisplayName("初始状态应该返回空列表")
     void shouldReturnEmptyListInitially() {
       assertThat(concept.getConceptRelations()).isEmpty();
+    }
+  }
+
+  @Nested
+  @DisplayName("recordType 和 ownerUi 字段测试")
+  class RecordTypeAndOwnerUiTests {
+
+    @Test
+    @DisplayName("为 Descriptor 创建概念时应设置正确的 recordType")
+    void shouldSetDescriptorRecordType() {
+      // given
+      MeshUI descriptorUi = MeshUI.of("D000001");
+      MeshUI conceptUi = MeshUI.of("M0000001");
+
+      // when
+      MeshConcept concept = MeshConcept.create(descriptorUi, conceptUi, "Test Concept", true);
+
+      // then
+      assertThat(concept.getOwnerUi()).isEqualTo(descriptorUi);
+      assertThat(concept.getRecordType()).isEqualTo(MeshRecordType.DESCRIPTOR);
+    }
+
+    @Test
+    @DisplayName("为 SCR 创建概念时应设置正确的 recordType")
+    void shouldSetScrRecordType() {
+      // given
+      MeshUI scrUi = MeshUI.of("C000001");
+      MeshUI conceptUi = MeshUI.of("M0000001");
+
+      // when
+      MeshConcept concept = MeshConcept.create(scrUi, conceptUi, "Test Concept", true);
+
+      // then
+      assertThat(concept.getOwnerUi()).isEqualTo(scrUi);
+      assertThat(concept.getRecordType()).isEqualTo(MeshRecordType.SCR);
+    }
+
+    @Test
+    @DisplayName("不指定 ownerUi 创建概念时 recordType 应为 null")
+    void shouldHaveNullRecordTypeWhenNoOwnerUi() {
+      // when
+      MeshConcept concept = MeshConcept.create(CONCEPT_UI, CONCEPT_NAME, IS_PREFERRED);
+
+      // then
+      assertThat(concept.getOwnerUi()).isNull();
+      assertThat(concept.getRecordType()).isNull();
+    }
+
+    @Test
+    @DisplayName("restore 应该正确设置 recordType")
+    void restoreShouldSetRecordType() {
+      // given
+      MeshUI descriptorUi = MeshUI.of("D000001");
+      MeshUI conceptUi = MeshUI.of("M0000001");
+
+      // when
+      MeshConcept concept =
+          MeshConcept.restore(
+              1L, // id
+              descriptorUi,
+              conceptUi,
+              "Test Concept",
+              true,
+              null, // casn1Name
+              null, // registryNumbers
+              null, // scopeNote
+              null, // translatorsEnglishScopeNote
+              null, // translatorsScopeNote
+              null // conceptStatus
+              );
+
+      // then
+      assertThat(concept.getOwnerUi()).isEqualTo(descriptorUi);
+      assertThat(concept.getRecordType()).isEqualTo(MeshRecordType.DESCRIPTOR);
+    }
+
+    @Test
+    @DisplayName("通过 getDescriptorUi 向后兼容获取 ownerUi")
+    void getDescriptorUiShouldReturnOwnerUi() {
+      // given
+      MeshUI descriptorUi = MeshUI.of("D000001");
+      MeshUI conceptUi = MeshUI.of("M0000001");
+      MeshConcept concept = MeshConcept.create(descriptorUi, conceptUi, "Test", true);
+
+      // when & then - getDescriptorUi() 应该与 getOwnerUi() 返回相同值
+      assertThat(concept.getDescriptorUi()).isEqualTo(concept.getOwnerUi());
     }
   }
 }
