@@ -15,6 +15,7 @@ import javax.xml.stream.XMLStreamReader;
 ///
 /// - `DescriptorReferredTo` - 引用的主题词
 /// - `QualifierReferredTo` - 引用的限定词
+/// - `SupplementalRecordReferredTo` - 引用的补充概念记录（SCR）
 ///
 /// **XML 结构示例**：
 ///
@@ -27,7 +28,7 @@ import javax.xml.stream.XMLStreamReader;
 /// </DescriptorReferredTo>
 /// ```
 ///
-/// @param ui 实体唯一标识符（如 D000001、Q000001）
+/// @param ui 实体唯一标识符（如 D000001、Q000001、C000001）
 /// @param name 实体名称
 /// @author linqibin
 /// @since 0.1.0
@@ -97,6 +98,23 @@ public record ReferredTo(String ui, String name) {
         MeshXmlElements.Referred.QUALIFIER_REFERRED_TO,
         MeshXmlElements.Identifier.QUALIFIER_UI,
         MeshXmlElements.Name.QUALIFIER_NAME);
+  }
+
+  /// 解析 SupplementalRecordReferredTo 元素（SCR 引用）。
+  ///
+  /// **前置条件**：`reader` 已定位到 `SupplementalRecordReferredTo` 的 START_ELEMENT。
+  ///
+  /// **后置条件**：`reader` 定位到 `SupplementalRecordReferredTo` 的 END_ELEMENT 之后。
+  ///
+  /// @param reader XML 流读取器
+  /// @return 解析结果
+  /// @throws XMLStreamException XML 解析异常
+  public static ReferredTo parseSupplemental(XMLStreamReader reader) throws XMLStreamException {
+    return parse(
+        reader,
+        MeshXmlElements.Referred.SUPPLEMENTAL_RECORD_REFERRED_TO,
+        MeshXmlElements.Identifier.SUPPLEMENTAL_RECORD_UI,
+        MeshXmlElements.Name.SUPPLEMENTAL_RECORD_NAME);
   }
 
   /// 通用解析方法。

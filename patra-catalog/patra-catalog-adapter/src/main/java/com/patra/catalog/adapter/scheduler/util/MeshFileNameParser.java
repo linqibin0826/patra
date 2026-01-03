@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 /// **支持的文件名格式**：
 /// - Descriptor: `desc{year}.xml`（如 `desc2025.xml`）
 /// - Qualifier: `qual{year}.xml`（如 `qual2025.xml`）
+/// - Supplemental (SCR): `supp{year}.xml`（如 `supp2025.xml`）
 ///
 /// **使用示例**：
 ///
@@ -31,6 +32,9 @@ public final class MeshFileNameParser {
 
   /// Qualifier 文件名正则模式：qual{4位年份}.xml
   private static final Pattern QUALIFIER_PATTERN = Pattern.compile("qual(\\d{4})\\.xml");
+
+  /// Supplemental (SCR) 文件名正则模式：supp{4位年份}.xml
+  private static final Pattern SUPPLEMENTAL_PATTERN = Pattern.compile("supp(\\d{4})\\.xml");
 
   private MeshFileNameParser() {
     // 工具类禁止实例化
@@ -71,7 +75,7 @@ public final class MeshFileNameParser {
 
   /// 从文件名解析版本号。
   ///
-  /// @param fileName 文件名（如 desc2025.xml 或 qual2024.xml）
+  /// @param fileName 文件名（如 desc2025.xml、qual2024.xml 或 supp2025.xml）
   /// @return 版本号
   /// @throws MeshConfigurationException 当文件名不符合规范时
   private static String parseVersionFromFileName(String fileName) {
@@ -87,7 +91,14 @@ public final class MeshFileNameParser {
       return qualMatcher.group(1);
     }
 
+    // 尝试匹配 Supplemental (SCR) 格式
+    Matcher suppMatcher = SUPPLEMENTAL_PATTERN.matcher(fileName);
+    if (suppMatcher.find()) {
+      return suppMatcher.group(1);
+    }
+
     throw new MeshConfigurationException(
-        "无法从文件名解析 MeSH 版本号，期望格式为 desc{year}.xml 或 qual{year}.xml，实际：" + fileName);
+        "无法从文件名解析 MeSH 版本号，期望格式为 desc{year}.xml、qual{year}.xml 或 supp{year}.xml，实际："
+            + fileName);
   }
 }

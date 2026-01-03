@@ -5,8 +5,10 @@ import com.patra.catalog.adapter.scheduler.exception.MeshConfigurationException;
 import com.patra.catalog.adapter.scheduler.util.MeshFileNameParser;
 import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.command.MeshQualifierImportCommand;
+import com.patra.catalog.app.usecase.mesh.command.MeshScrImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
+import com.patra.catalog.app.usecase.mesh.dto.MeshScrImportResult;
 import com.patra.common.cqrs.CommandBus;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
@@ -19,10 +21,11 @@ import org.springframework.stereotype.Component;
 /// 通过 XXL-Job 控制台手动触发，执行 MeSH 数据的批量导入。
 /// URL 从配置文件读取，版本号从文件名自动推断。
 ///
-/// **包含两个 JobHandler**：
+/// **包含三个 JobHandler**：
 ///
 /// - `meshDescriptorImportJob`：导入 MeSH 主题词（约 35,000 条）
 /// - `meshQualifierImportJob`：导入 MeSH 限定词（约 80 条）
+/// - `meshScrImportJob`：导入 MeSH 补充概念记录（约 350,000 条）
 ///
 /// **配置要求**：
 ///
@@ -32,6 +35,7 @@ import org.springframework.stereotype.Component;
 ///     mesh:
 ///       descriptor-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml
 ///       qualifier-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml
+///       scr-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/supp2025.xml
 /// ```
 ///
 /// **导入策略**：
@@ -89,6 +93,33 @@ public class MeshImportScheduleJob {
 
       MeshQualifierImportResult result =
           commandBus.handle(MeshQualifierImportCommand.of(url, meshVersion));
+      handleSuccess(result.message());
+
+    } catch (MeshConfigurationException ex) {
+      handleConfigurationError(ex);
+    } catch (Exception ex) {
+      handleExecutionError(ex);
+    }
+  }
+
+  /// 执行 MeSH 补充概念记录（SCR）导入任务。
+  ///
+  /// **JobHandler 名称**: `meshScrImportJob`
+  ///
+  /// **无需参数**：URL 从配置文件读取，版本号从文件名自动推断。
+  ///
+  /// **数据规模**：约 350,000 条记录，是 Descriptor 的 10 倍。
+  @XxlJob("meshScrImportJob")
+  public void executeScrImport() {
+    log.info("MeSH SCR 导入任务已触发，jobId [{}]", XxlJobHelper.getJobId());
+
+    try {
+      String url = meshDataSourceProperties.getScrUrl();
+      String meshVersion = MeshFileNameParser.extractVersion(url);
+      log.info("MeSH SCR 配置：URL [{}]，版本 [{}]（从文件名推断）", url, meshVersion);
+
+      MeshScrImportResult result =
+          commandBus.handle(MeshScrImportCommand.of(url, meshVersion));
       handleSuccess(result.message());
 
     } catch (MeshConfigurationException ex) {

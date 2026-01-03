@@ -10,8 +10,10 @@ import static org.mockito.Mockito.when;
 import com.patra.catalog.adapter.scheduler.config.MeshDataSourceAutoConfiguration;
 import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.command.MeshQualifierImportCommand;
+import com.patra.catalog.app.usecase.mesh.command.MeshScrImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
+import com.patra.catalog.app.usecase.mesh.dto.MeshScrImportResult;
 import com.patra.common.cqrs.CommandBus;
 import com.xxl.job.core.context.XxlJobHelper;
 import java.util.concurrent.TimeUnit;
@@ -46,7 +48,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
     classes = MeshImportScheduleJob.class,
     properties = {
       "patra.catalog.mesh.descriptor-url=https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml",
-      "patra.catalog.mesh.qualifier-url=https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml"
+      "patra.catalog.mesh.qualifier-url=https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml",
+      "patra.catalog.mesh.scr-url=https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/supp2025.xml"
     })
 @Import(MeshDataSourceAutoConfiguration.class)
 @ActiveProfiles("test")
@@ -163,6 +166,62 @@ class MeshImportScheduleJobIT {
 
         // When
         meshImportScheduleJob.executeQualifierImport();
+
+        // Then
+        xxlJobHelper.verify(() -> XxlJobHelper.handleFail(any(String.class)), times(1));
+      }
+    }
+  }
+
+  // ==================== SCR 导入测试 ====================
+
+  @Nested
+  @DisplayName("executeScrImport 方法测试")
+  class ExecuteScrImportTests {
+
+    @Test
+    @DisplayName("应该从配置读取 URL 并自动推断版本号执行 SCR 导入")
+    void executeScrImport_shouldReadUrlFromConfigAndInferVersion() {
+      try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
+        // Given
+        MeshScrImportResult result =
+            MeshScrImportResult.success(
+                2001L,
+                "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/supp2025.xml",
+                "2025");
+
+        xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
+
+        when(commandBus.handle(any(MeshScrImportCommand.class))).thenReturn(result);
+
+        // When
+        meshImportScheduleJob.executeScrImport();
+
+        // Then - 验证从配置读取的 URL 和自动推断的版本号
+        verify(commandBus)
+            .handle(
+                argThat(
+                    (MeshScrImportCommand cmd) ->
+                        cmd.url()
+                                .equals(
+                                    "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/supp2025.xml")
+                            && cmd.meshVersion().equals("2025")));
+        xxlJobHelper.verify(() -> XxlJobHelper.handleSuccess(any(String.class)), times(1));
+      }
+    }
+
+    @Test
+    @DisplayName("应该在执行失败时调用 handleFail 报告错误")
+    void executeScrImport_shouldCallHandleFailWhenExecutionFails() {
+      try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
+        // Given
+        xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
+
+        RuntimeException cause = new RuntimeException("SCR 数据解析失败");
+        when(commandBus.handle(any(MeshScrImportCommand.class))).thenThrow(cause);
+
+        // When
+        meshImportScheduleJob.executeScrImport();
 
         // Then
         xxlJobHelper.verify(() -> XxlJobHelper.handleFail(any(String.class)), times(1));

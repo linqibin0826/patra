@@ -11,8 +11,8 @@ import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
 import com.patra.catalog.domain.model.vo.mesh.SeeRelatedDescriptor;
 import com.patra.catalog.infra.adapter.parser.MeshXmlElements;
-import com.patra.catalog.infra.adapter.parser.support.DescriptorListParsers;
-import com.patra.catalog.infra.adapter.parser.support.DescriptorListParsers.ConceptListResult;
+import com.patra.catalog.infra.adapter.parser.support.MeshListParsers;
+import com.patra.catalog.infra.adapter.parser.support.MeshListParsers.ConceptListResult;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingContext;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingHelper;
 import java.time.LocalDate;
@@ -55,7 +55,7 @@ import lombok.extern.slf4j.Slf4j;
 ///
 /// **设计说明**：
 ///
-/// 列表元素的解析逻辑委托给 [DescriptorListParsers] 工具类，
+/// 列表元素的解析逻辑委托给 [MeshListParsers] 工具类，
 /// 本类只负责：
 ///
 /// 1. 解析 DescriptorClass 属性
@@ -65,7 +65,7 @@ import lombok.extern.slf4j.Slf4j;
 ///
 /// @author linqibin
 /// @since 0.1.0
-/// @see DescriptorListParsers
+/// @see MeshListParsers
 @Slf4j
 public final class DescriptorParsingStrategy
     implements RecordParsingStrategy<MeshDescriptorAggregate> {
@@ -200,21 +200,21 @@ public final class DescriptorParsingStrategy
           fields.considerAlso = reader.getElementText().trim();
       case MeshXmlElements.Other.SCOPE_NOTE -> fields.scopeNote = reader.getElementText().trim();
 
-      // === 列表字段（委托给 DescriptorListParsers）===
+      // === 列表字段（委托给 MeshListParsers）===
       case MeshXmlElements.List.TREE_NUMBER_LIST ->
-          fields.treeNumbers = DescriptorListParsers.parseTreeNumbers(reader);
+          fields.treeNumbers = MeshListParsers.parseTreeNumbers(reader);
       case MeshXmlElements.List.ALLOWABLE_QUALIFIERS_LIST ->
-          fields.allowableQualifiers = DescriptorListParsers.parseAllowableQualifiers(reader);
+          fields.allowableQualifiers = MeshListParsers.parseAllowableQualifiers(reader);
       case MeshXmlElements.List.PHARMACOLOGICAL_ACTION_LIST ->
-          fields.pharmacologicalActions = DescriptorListParsers.parsePharmacologicalActions(reader);
+          fields.pharmacologicalActions = MeshListParsers.parsePharmacologicalActions(reader);
       case MeshXmlElements.List.PREVIOUS_INDEXING_LIST ->
-          fields.previousIndexings = DescriptorListParsers.parsePreviousIndexings(reader);
+          fields.previousIndexings = MeshListParsers.parsePreviousIndexings(reader);
       case MeshXmlElements.List.SEE_RELATED_LIST ->
-          fields.seeRelatedDescriptors = DescriptorListParsers.parseSeeRelatedDescriptors(reader);
+          fields.seeRelatedDescriptors = MeshListParsers.parseSeeRelatedDescriptors(reader);
       case MeshXmlElements.List.ENTRY_COMBINATION_LIST ->
-          fields.entryCombinations = DescriptorListParsers.parseEntryCombinations(reader);
+          fields.entryCombinations = MeshListParsers.parseEntryCombinations(reader);
       case MeshXmlElements.List.CONCEPT_LIST -> {
-        ConceptListResult result = DescriptorListParsers.parseConcepts(reader);
+        ConceptListResult result = MeshListParsers.parseConcepts(reader);
         fields.concepts = result.concepts();
         fields.entryTerms = result.entryTerms();
       }

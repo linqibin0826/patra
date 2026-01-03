@@ -5,8 +5,11 @@ import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.entity.MeshTreeNumber;
 import com.patra.catalog.domain.model.vo.mesh.AllowableQualifier;
 import com.patra.catalog.domain.model.vo.mesh.EntryCombination;
+import com.patra.catalog.domain.model.vo.mesh.HeadingMappedTo;
+import com.patra.catalog.domain.model.vo.mesh.IndexingInfo;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
+import com.patra.catalog.domain.model.vo.mesh.ScrSource;
 import com.patra.catalog.domain.model.vo.mesh.SeeRelatedDescriptor;
 import com.patra.catalog.infra.adapter.parser.MeshXmlElements;
 import com.patra.catalog.infra.adapter.parser.strategy.EntryTermParsingStrategy;
@@ -17,10 +20,10 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import lombok.extern.slf4j.Slf4j;
 
-/// Descriptor 列表元素解析工具类。
+/// MeSH 列表元素解析工具类。
 ///
-/// 提供 MeSH DescriptorRecord 中各种列表元素的解析方法，
-/// 从 DescriptorParsingStrategy 中提取，提升代码可读性和可维护性。
+/// 提供 MeSH Descriptor 和 SCR 记录中各种列表元素的解析方法，
+/// 支持 Descriptor 和 SCR 共用的解析逻辑（如 ConceptList、PharmacologicalActionList）。
 ///
 /// **设计原则**：
 ///
@@ -31,23 +34,27 @@ import lombok.extern.slf4j.Slf4j;
 ///
 /// **支持的列表类型**：
 ///
-/// | 列表元素 | 方法名 | 返回类型 |
+/// | 列表元素 | 方法名 | 适用范围 |
 /// |---------|--------|---------|
-/// | TreeNumberList | parseTreeNumbers | `List<MeshTreeNumber>` |
-/// | AllowableQualifiersList | parseAllowableQualifiers | `List<AllowableQualifier>` |
-/// | PharmacologicalActionList | parsePharmacologicalActions | `List<PharmacologicalAction>` |
-/// | PreviousIndexingList | parsePreviousIndexings | `List<String>` |
-/// | SeeRelatedList | parseSeeRelatedDescriptors | `List<SeeRelatedDescriptor>` |
-/// | EntryCombinationList | parseEntryCombinations | `List<EntryCombination>` |
-/// | ConceptList | parseConcepts | `ConceptListResult` |
+/// | TreeNumberList | parseTreeNumbers | Descriptor 专用 |
+/// | AllowableQualifiersList | parseAllowableQualifiers | Descriptor 专用 |
+/// | PharmacologicalActionList | parsePharmacologicalActions | Descriptor/SCR 共用 |
+/// | PreviousIndexingList | parsePreviousIndexings | Descriptor/SCR 共用 |
+/// | SeeRelatedList | parseSeeRelatedDescriptors | Descriptor 专用 |
+/// | EntryCombinationList | parseEntryCombinations | Descriptor 专用 |
+/// | ConceptList | parseConcepts | Descriptor/SCR 共用 |
+/// | HeadingMappedToList | parseHeadingMappedTos | SCR 专用 |
+/// | SourceList | parseSources | SCR 专用 |
+/// | IndexingInformationList | parseIndexingInfos | SCR 专用 |
 ///
 /// @author linqibin
 /// @since 0.1.0
 /// @see com.patra.catalog.infra.adapter.parser.strategy.DescriptorParsingStrategy
+/// @see com.patra.catalog.infra.adapter.parser.strategy.ScrParsingStrategy
 @Slf4j
-public final class DescriptorListParsers {
+public final class MeshListParsers {
 
-  private DescriptorListParsers() {
+  private MeshListParsers() {
     throw new UnsupportedOperationException("工具类禁止实例化");
   }
 
@@ -622,5 +629,197 @@ public final class DescriptorListParsers {
         break;
       }
     }
+  }
+
+  // ========== SCR 特有列表解析方法 ==========
+
+  /// 解析 HeadingMappedToList 元素。
+  ///
+  /// **XML 结构**：
+  /// ```xml
+  /// <HeadingMappedToList>
+  ///   <HeadingMappedTo>
+  ///     <DescriptorReferredTo>
+  ///       <DescriptorUI>D000001</DescriptorUI>
+  ///       <DescriptorName><String>Calcimycin</String></DescriptorName>
+  ///     </DescriptorReferredTo>
+  ///     <QualifierReferredTo>  <!-- 可选 -->
+  ///       <QualifierUI>Q000627</QualifierUI>
+  ///       <QualifierName><String>therapeutic use</String></QualifierName>
+  ///     </QualifierReferredTo>
+  ///   </HeadingMappedTo>
+  /// </HeadingMappedToList>
+  /// ```
+  ///
+  /// @param reader XML 流读取器（已定位到 HeadingMappedToList）
+  /// @return 映射关系列表
+  /// @throws XMLStreamException XML 解析异常
+  public static List<HeadingMappedTo> parseHeadingMappedTos(XMLStreamReader reader)
+      throws XMLStreamException {
+    List<HeadingMappedTo> mappings = new ArrayList<>();
+
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT
+          && MeshXmlElements.Other.HEADING_MAPPED_TO.equals(reader.getLocalName())) {
+        HeadingMappedTo mapping = parseSingleHeadingMappedTo(reader);
+        if (mapping != null) {
+          mappings.add(mapping);
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && MeshXmlElements.List.HEADING_MAPPED_TO_LIST.equals(reader.getLocalName())) {
+        break;
+      }
+    }
+
+    return mappings;
+  }
+
+  /// 解析单个 HeadingMappedTo 元素。
+  private static HeadingMappedTo parseSingleHeadingMappedTo(XMLStreamReader reader)
+      throws XMLStreamException {
+    ReferredTo descriptorRef = ReferredTo.empty();
+    ReferredTo qualifierRef = ReferredTo.empty();
+
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT) {
+        String localName = reader.getLocalName();
+        if (MeshXmlElements.Referred.DESCRIPTOR_REFERRED_TO.equals(localName)) {
+          descriptorRef = ReferredTo.parseDescriptor(reader);
+        } else if (MeshXmlElements.Referred.QUALIFIER_REFERRED_TO.equals(localName)) {
+          qualifierRef = ReferredTo.parseQualifier(reader);
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && MeshXmlElements.Other.HEADING_MAPPED_TO.equals(reader.getLocalName())) {
+        break;
+      }
+    }
+
+    // 验证必填字段：DescriptorUI 必须存在
+    if (descriptorRef.isValid()) {
+      try {
+        return HeadingMappedTo.of(
+            descriptorRef.toMeshUI(),
+            qualifierRef.isValid() ? qualifierRef.toMeshUI() : null);
+      } catch (Exception e) {
+        log.warn("解析 HeadingMappedTo 失败: {}", descriptorRef, e);
+      }
+    }
+
+    return null;
+  }
+
+  /// 解析 SourceList 元素。
+  ///
+  /// **XML 结构**：
+  /// ```xml
+  /// <SourceList>
+  ///   <Source>FDA Substance Registration System (23 Jun 2023)</Source>
+  ///   <Source>CAS Registry</Source>
+  /// </SourceList>
+  /// ```
+  ///
+  /// @param reader XML 流读取器（已定位到 SourceList）
+  /// @return 来源列表
+  /// @throws XMLStreamException XML 解析异常
+  public static List<ScrSource> parseSources(XMLStreamReader reader) throws XMLStreamException {
+    List<ScrSource> sources = new ArrayList<>();
+    int orderNum = 0;
+
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT
+          && MeshXmlElements.Other.SOURCE.equals(reader.getLocalName())) {
+        String sourceText = reader.getElementText().trim();
+        if (!sourceText.isEmpty()) {
+          try {
+            sources.add(ScrSource.of(sourceText, orderNum++));
+          } catch (Exception e) {
+            log.warn("解析 Source 失败: {}", sourceText, e);
+          }
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && MeshXmlElements.List.SOURCE_LIST.equals(reader.getLocalName())) {
+        break;
+      }
+    }
+
+    return sources;
+  }
+
+  /// 解析 IndexingInformationList 元素。
+  ///
+  /// **XML 结构**：
+  /// ```xml
+  /// <IndexingInformationList>
+  ///   <IndexingInformation>
+  ///     <DescriptorReferredTo>...</DescriptorReferredTo>
+  ///     <QualifierReferredTo>...</QualifierReferredTo>  <!-- 可选 -->
+  ///   </IndexingInformation>
+  /// </IndexingInformationList>
+  /// ```
+  ///
+  /// @param reader XML 流读取器（已定位到 IndexingInformationList）
+  /// @return 索引信息列表
+  /// @throws XMLStreamException XML 解析异常
+  public static List<IndexingInfo> parseIndexingInfos(XMLStreamReader reader)
+      throws XMLStreamException {
+    List<IndexingInfo> infos = new ArrayList<>();
+
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT
+          && MeshXmlElements.Other.INDEXING_INFORMATION.equals(reader.getLocalName())) {
+        IndexingInfo info = parseSingleIndexingInfo(reader);
+        if (info != null) {
+          infos.add(info);
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && MeshXmlElements.List.INDEXING_INFORMATION_LIST.equals(reader.getLocalName())) {
+        break;
+      }
+    }
+
+    return infos;
+  }
+
+  /// 解析单个 IndexingInformation 元素。
+  private static IndexingInfo parseSingleIndexingInfo(XMLStreamReader reader)
+      throws XMLStreamException {
+    ReferredTo descriptorRef = ReferredTo.empty();
+    ReferredTo qualifierRef = ReferredTo.empty();
+    ReferredTo chemicalRef = ReferredTo.empty();
+
+    while (reader.hasNext()) {
+      int event = reader.next();
+      if (event == XMLStreamConstants.START_ELEMENT) {
+        String localName = reader.getLocalName();
+        if (MeshXmlElements.Referred.DESCRIPTOR_REFERRED_TO.equals(localName)) {
+          descriptorRef = ReferredTo.parseDescriptor(reader);
+        } else if (MeshXmlElements.Referred.QUALIFIER_REFERRED_TO.equals(localName)) {
+          qualifierRef = ReferredTo.parseQualifier(reader);
+        } else if (MeshXmlElements.Referred.SUPPLEMENTAL_RECORD_REFERRED_TO.equals(localName)) {
+          chemicalRef = ReferredTo.parseSupplemental(reader);
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && MeshXmlElements.Other.INDEXING_INFORMATION.equals(reader.getLocalName())) {
+        break;
+      }
+    }
+
+    // IndexingInfo 至少需要一个引用
+    if (descriptorRef.isValid() || qualifierRef.isValid() || chemicalRef.isValid()) {
+      try {
+        return IndexingInfo.of(
+            descriptorRef.isValid() ? descriptorRef.toMeshUI() : null,
+            qualifierRef.isValid() ? qualifierRef.toMeshUI() : null,
+            chemicalRef.isValid() ? chemicalRef.toMeshUI() : null);
+      } catch (Exception e) {
+        log.warn("解析 IndexingInfo 失败", e);
+      }
+    }
+
+    return null;
   }
 }
