@@ -29,6 +29,7 @@ public final class MeshXmlElements {
   public static final class Record {
     public static final String DESCRIPTOR = "DescriptorRecord";
     public static final String QUALIFIER = "QualifierRecord";
+    public static final String SUPPLEMENTAL = "SupplementalRecord";
     public static final String CONCEPT = "Concept";
     public static final String TERM = "Term";
     public static final String TREE_NUMBER = "TreeNumber";
@@ -46,6 +47,7 @@ public final class MeshXmlElements {
     public static final String TERM_UI = "TermUI";
     public static final String CONCEPT1_UI = "Concept1UI";
     public static final String CONCEPT2_UI = "Concept2UI";
+    public static final String SUPPLEMENTAL_RECORD_UI = "SupplementalRecordUI";
 
     private Identifier() {}
   }
@@ -57,6 +59,7 @@ public final class MeshXmlElements {
     public static final String DESCRIPTOR_NAME = "DescriptorName";
     public static final String QUALIFIER_NAME = "QualifierName";
     public static final String CONCEPT_NAME = "ConceptName";
+    public static final String SUPPLEMENTAL_RECORD_NAME = "SupplementalRecordName";
     public static final String STRING = "String";
 
     private Name() {}
@@ -92,6 +95,10 @@ public final class MeshXmlElements {
     public static final String RELATED_REGISTRY_NUMBER_LIST = "RelatedRegistryNumberList";
     public static final String CONCEPT_RELATION_LIST = "ConceptRelationList";
     public static final String THESAURUS_ID_LIST = "ThesaurusIDlist";
+    // SCR 特有列表
+    public static final String HEADING_MAPPED_TO_LIST = "HeadingMappedToList";
+    public static final String SOURCE_LIST = "SourceList";
+    public static final String INDEXING_INFORMATION_LIST = "IndexingInformationList";
 
     private List() {}
   }
@@ -104,6 +111,8 @@ public final class MeshXmlElements {
     public static final String QUALIFIER_REFERRED_TO = "QualifierReferredTo";
     public static final String ECIN = "ECIN";
     public static final String ECOUT = "ECOUT";
+    // SCR 特有引用
+    public static final String SUPPLEMENTAL_RECORD_REFERRED_TO = "SupplementalRecordReferredTo";
 
     private Referred() {}
   }
@@ -120,6 +129,8 @@ public final class MeshXmlElements {
     public static final String LEXICAL_TAG = "LexicalTag";
     public static final String RELATION_NAME = "RelationName";
     public static final String PRINT_FLAG_YN = "PrintFlagYN";
+    // SCR 特有属性
+    public static final String SCR_CLASS = "SCRClass";
 
     private Attribute() {}
   }
@@ -136,6 +147,8 @@ public final class MeshXmlElements {
     public static final String ANNOTATION = "Annotation";
     public static final String CONSIDER_ALSO = "ConsiderAlso";
     public static final String SCOPE_NOTE = "ScopeNote";
+    public static final String NOTE = "Note";
+    public static final String FREQUENCY = "Frequency";
 
     // 列表项类
     public static final String ALLOWABLE_QUALIFIER = "AllowableQualifier";
@@ -159,6 +172,11 @@ public final class MeshXmlElements {
     public static final String CONCEPT_STATUS = "ConceptStatus";
     public static final String TRANSLATORS_ENGLISH_SCOPE_NOTE = "TranslatorsEnglishScopeNote";
     public static final String TRANSLATORS_SCOPE_NOTE = "TranslatorsScopeNote";
+
+    // SCR 特有元素
+    public static final String HEADING_MAPPED_TO = "HeadingMappedTo";
+    public static final String SOURCE = "Source";
+    public static final String INDEXING_INFORMATION = "IndexingInformation";
 
     private Other() {}
   }

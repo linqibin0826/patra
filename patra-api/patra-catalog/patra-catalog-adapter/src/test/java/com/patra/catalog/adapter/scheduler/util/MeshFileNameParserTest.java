@@ -46,13 +46,25 @@ class MeshFileNameParserTest {
       assertThat(result).isEqualTo("2024");
     }
 
+    @Test
+    @DisplayName("应从 Supplemental (SCR) URL 提取版本号")
+    void shouldExtractVersionFromSupplementalUrl() {
+      var url = "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/supp2025.xml";
+
+      var result = MeshFileNameParser.extractVersion(url);
+
+      assertThat(result).isEqualTo("2025");
+    }
+
     @ParameterizedTest
     @ValueSource(
         strings = {
           "http://example.com/desc2020.xml",
           "https://example.com/path/to/desc2021.xml",
           "http://localhost/qual2022.xml",
-          "https://test.org/mesh/qual2030.xml"
+          "https://test.org/mesh/qual2030.xml",
+          "https://example.com/supp2023.xml",
+          "http://localhost/path/supp2024.xml"
         })
     @DisplayName("应处理不同域名和路径的 URL")
     void shouldHandleVariousUrls(String url) {
