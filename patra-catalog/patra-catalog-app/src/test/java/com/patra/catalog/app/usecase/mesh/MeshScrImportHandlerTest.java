@@ -11,7 +11,7 @@ import com.patra.catalog.app.usecase.mesh.command.MeshScrImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshScrImportResult;
 import com.patra.catalog.domain.exception.DataAlreadyExistsException;
 import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
-import com.patra.catalog.domain.port.batch.MeshScrBatchPort;
+import com.patra.catalog.domain.port.batch.MeshBatchPort;
 import com.patra.catalog.domain.port.repository.MeshScrRepository;
 import com.patra.common.error.ApplicationException;
 import com.patra.common.error.codes.ErrorCodeLike;
@@ -43,13 +43,13 @@ class MeshScrImportHandlerTest {
 
   @Mock private MeshScrRepository scrRepository;
 
-  @Mock private MeshScrBatchPort meshScrBatchPort;
+  @Mock private MeshBatchPort meshBatchPort;
 
   private MeshScrImportHandler handler;
 
   @BeforeEach
   void setUp() {
-    handler = new MeshScrImportHandler(scrRepository, meshScrBatchPort);
+    handler = new MeshScrImportHandler(scrRepository, meshBatchPort);
   }
 
   @Nested
@@ -66,7 +66,7 @@ class MeshScrImportHandlerTest {
       Long expectedExecutionId = 12345L;
 
       when(scrRepository.hasAnyData()).thenReturn(false);
-      when(meshScrBatchPort.launchImport(any(MeshImportParams.class)))
+      when(meshBatchPort.launchScrImport(any(MeshImportParams.class)))
           .thenReturn(expectedExecutionId);
 
       // When
@@ -81,7 +81,7 @@ class MeshScrImportHandlerTest {
       // Verify batch port was called with correct parameters
       ArgumentCaptor<MeshImportParams> paramsCaptor =
           ArgumentCaptor.forClass(MeshImportParams.class);
-      verify(meshScrBatchPort).launchImport(paramsCaptor.capture());
+      verify(meshBatchPort).launchScrImport(paramsCaptor.capture());
       MeshImportParams capturedParams = paramsCaptor.getValue();
       assertThat(capturedParams.downloadUrl()).isEqualTo(url);
       assertThat(capturedParams.meshVersion()).isEqualTo(meshVersion);
@@ -106,7 +106,7 @@ class MeshScrImportHandlerTest {
           .hasMessageContaining("MeSH SCR");
 
       // Verify batch port was never called
-      verify(meshScrBatchPort, never()).launchImport(any());
+      verify(meshBatchPort, never()).launchScrImport(any());
     }
   }
 
@@ -121,7 +121,7 @@ class MeshScrImportHandlerTest {
       MeshScrImportCommand command =
           MeshScrImportCommand.of("https://example.com/supp2025.xml", "2025");
       when(scrRepository.hasAnyData()).thenReturn(false);
-      when(meshScrBatchPort.launchImport(any()))
+      when(meshBatchPort.launchScrImport(any()))
           .thenThrow(new RuntimeException("Job launch failed"));
 
       // When & Then
@@ -154,7 +154,7 @@ class MeshScrImportHandlerTest {
               "Original error message");
 
       when(scrRepository.hasAnyData()).thenReturn(false);
-      when(meshScrBatchPort.launchImport(any())).thenThrow(originalException);
+      when(meshBatchPort.launchScrImport(any())).thenThrow(originalException);
 
       // When & Then
       assertThatThrownBy(() -> handler.handle(command))

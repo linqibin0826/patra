@@ -27,7 +27,7 @@ import org.springframework.stereotype.Component;
 /// - 此类位于 Infrastructure 层，是六边形架构中的 Driven Adapter
 /// - Application 层通过 `VenueInitializeBatchPort` 接口调用，无需感知 Spring Batch
 ///
-/// **与 MeshDescriptorBatchAdapter 的差异**：
+/// **与 MeshBatchAdapter 的差异**：
 ///
 /// - 参数类型为 `VenueInitializeParams`（包含多分区 URL 列表）
 /// - Job 参数包含 `partitionUrls`（逗号分隔）和 `partitionCount`

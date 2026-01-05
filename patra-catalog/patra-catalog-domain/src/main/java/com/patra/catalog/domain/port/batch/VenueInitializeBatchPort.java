@@ -17,7 +17,7 @@ import com.patra.catalog.domain.model.vo.venue.VenueInitializeParams;
 /// - 支持断点续传（fileIndex + lineIndex）
 /// - 支持 Upsert 幂等写入
 ///
-/// **与 MeshDescriptorBatchPort 的差异**：
+/// **与 MeshBatchPort 的差异**：
 ///
 /// - MeSH 使用单文件路径，Venue 使用多文件路径列表
 /// - MeSH 使用 currentIndex 断点，Venue 使用 fileIndex + lineIndex
