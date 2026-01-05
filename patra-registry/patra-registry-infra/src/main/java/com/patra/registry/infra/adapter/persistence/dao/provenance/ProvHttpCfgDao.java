@@ -30,8 +30,7 @@ public interface ProvHttpCfgDao extends JpaRepository<ProvHttpCfgEntity, Long> {
       value =
           """
           SELECT * FROM reg_prov_http_cfg
-          WHERE deleted_at IS NULL
-            AND lifecycle_status_code = 'ACTIVE'
+          WHERE lifecycle_status_code = 'ACTIVE'
             AND provenance_id = :provenanceId
             AND effective_from <= :now
             AND (effective_to IS NULL OR effective_to > :now)

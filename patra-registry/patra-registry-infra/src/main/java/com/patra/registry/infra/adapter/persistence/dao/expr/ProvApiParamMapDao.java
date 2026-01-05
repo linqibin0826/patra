@@ -29,8 +29,7 @@ public interface ProvApiParamMapDao extends JpaRepository<ProvApiParamMapEntity,
       value =
           """
           SELECT * FROM reg_prov_api_param_map
-          WHERE deleted_at IS NULL
-            AND lifecycle_status_code = 'ACTIVE'
+          WHERE lifecycle_status_code = 'ACTIVE'
             AND provenance_id = :provenanceId
             AND operation_type IN (:operationType, 'ALL')
             AND (endpoint_name IS NULL OR endpoint_name = :endpointName)

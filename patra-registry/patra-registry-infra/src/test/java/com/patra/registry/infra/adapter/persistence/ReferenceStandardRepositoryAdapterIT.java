@@ -25,7 +25,7 @@ import org.springframework.test.context.ContextConfiguration;
 
 /// ReferenceStandardRepositoryAdapter 集成测试。
 ///
-/// 验证来源标准的查询与软删除过滤。
+/// 验证来源标准的查询与物理删除语义。
 ///
 /// @author linqibin
 /// @since 0.1.0

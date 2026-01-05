@@ -253,6 +253,32 @@ class ExprRepositoryAdapterIT {
   }
 
   @Nested
+  @DisplayName("API 参数映射查询")
+  class ApiParamMapQueryTests {
+
+    /// 仅返回生命周期为 ACTIVE 的映射。
+    @Test
+    @DisplayName("仅返回生命周期为 ACTIVE 的映射")
+    void shouldReturnOnlyActiveMappings() {
+      // Given
+      testProvenanceId = insertProvenance(TEST_PROVENANCE_CODE);
+      insertApiParamMappingWithStatus(
+          testProvenanceId, TEST_OPERATION_TYPE, TEST_ENDPOINT_NAME, "title", "ACTIVE");
+      insertApiParamMappingWithStatus(
+          testProvenanceId, TEST_OPERATION_TYPE, TEST_ENDPOINT_NAME, "author", "INACTIVE");
+
+      // When
+      var result =
+          apiParamMapDao.findActiveByTask(
+              testProvenanceId, TEST_OPERATION_TYPE, TEST_ENDPOINT_NAME, TEST_TIMESTAMP);
+
+      // Then
+      assertThat(result).hasSize(1);
+      assertThat(result).extracting(ProvApiParamMapEntity::getStdKey).containsExactly("title");
+    }
+  }
+
+  @Nested
   @DisplayName("端点名称规范化场景")
   class EndpointNameNormalizationTests {
 
@@ -482,6 +508,26 @@ class ExprRepositoryAdapterIT {
     apiParam.setStdKey(stdKey);
     apiParam.setProviderParamName(stdKey + "[Title]");
     apiParam.setLifecycleStatusCode("ACTIVE");
+    apiParam.setEffectiveFrom(EFFECTIVE_FROM);
+    apiParam.setEffectiveTo(null);
+    apiParamMapDao.saveAndFlush(apiParam);
+  }
+
+  /// 插入指定生命周期状态的 API 参数映射。
+  private void insertApiParamMappingWithStatus(
+      Long provenanceId,
+      String operationType,
+      String endpointName,
+      String stdKey,
+      String lifecycleStatusCode) {
+    ProvApiParamMapEntity apiParam = new ProvApiParamMapEntity();
+    apiParam.setId(SnowflakeIdGenerator.getId());
+    apiParam.setProvenanceId(provenanceId);
+    apiParam.setOperationType(operationType);
+    apiParam.setEndpointName(endpointName);
+    apiParam.setStdKey(stdKey);
+    apiParam.setProviderParamName(stdKey + "[Title]");
+    apiParam.setLifecycleStatusCode(lifecycleStatusCode);
     apiParam.setEffectiveFrom(EFFECTIVE_FROM);
     apiParam.setEffectiveTo(null);
     apiParamMapDao.saveAndFlush(apiParam);

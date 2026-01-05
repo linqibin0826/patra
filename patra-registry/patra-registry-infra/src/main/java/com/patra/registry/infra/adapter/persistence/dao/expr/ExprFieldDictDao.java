@@ -22,7 +22,6 @@ public interface ExprFieldDictDao extends JpaRepository<ExprFieldDictEntity, Lon
   @Query(
       """
       SELECT e FROM ExprFieldDictEntity e
-      WHERE e.deletedAt IS NULL
       ORDER BY e.fieldKey
       """)
   List<ExprFieldDictEntity> findAllActive();

@@ -28,7 +28,6 @@ public interface SysDictItemAliasDao extends JpaRepository<SysDictItemAliasEntit
       SELECT a FROM SysDictItemAliasEntity a
       WHERE a.sourceStandard = :sourceStandard
         AND a.externalCode = :externalCode
-        AND a.deletedAt IS NULL
       """)
   Optional<SysDictItemAliasEntity> findBySourceStandardAndExternalCode(
       @Param("sourceStandard") String sourceStandard, @Param("externalCode") String externalCode);
@@ -43,7 +42,6 @@ public interface SysDictItemAliasDao extends JpaRepository<SysDictItemAliasEntit
       SELECT a FROM SysDictItemAliasEntity a
       WHERE a.sourceStandard = :sourceStandard
         AND a.externalCode IN :externalCodes
-        AND a.deletedAt IS NULL
       """)
   List<SysDictItemAliasEntity> findBySourceStandardAndExternalCodeIn(
       @Param("sourceStandard") String sourceStandard,
@@ -57,7 +55,6 @@ public interface SysDictItemAliasDao extends JpaRepository<SysDictItemAliasEntit
       """
       SELECT a FROM SysDictItemAliasEntity a
       WHERE a.itemId = :itemId
-        AND a.deletedAt IS NULL
       ORDER BY a.sourceStandard, a.externalCode
       """)
   List<SysDictItemAliasEntity> findByItemId(@Param("itemId") Long itemId);

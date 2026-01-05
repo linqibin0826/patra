@@ -569,7 +569,7 @@ SELECT * FROM (
 ) AS source
 WHERE NOT EXISTS (
   SELECT 1 FROM patra_registry.sys_dict_item_alias
-  WHERE source_standard = 'name_en' AND deleted_at IS NULL
+  WHERE source_standard = 'name_en'
   LIMIT 1
 );
 

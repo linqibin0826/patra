@@ -28,8 +28,7 @@ public interface ProvExprRenderRuleDao extends JpaRepository<ProvExprRenderRuleE
       value =
           """
           SELECT * FROM reg_prov_expr_render_rule
-          WHERE deleted_at IS NULL
-            AND lifecycle_status_code = 'ACTIVE'
+          WHERE lifecycle_status_code = 'ACTIVE'
             AND provenance_id = :provenanceId
             AND operation_type IN (:operationType, 'ALL')
             AND effective_from <= :now
