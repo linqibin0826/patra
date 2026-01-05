@@ -2,7 +2,8 @@ package com.patra.catalog.domain.model.vo.mesh;
 
 /// MeSH 批量导入参数值对象。
 ///
-/// 封装批量导入所需的参数，用于 `MeshDescriptorBatchPort.launchImport()` 方法调用。
+/// 封装批量导入所需的参数，用于 `MeshBatchPort.launchDescriptorImport()` 与
+/// `MeshBatchPort.launchScrImport()` 方法调用。
 ///
 /// **参数说明**：
 ///

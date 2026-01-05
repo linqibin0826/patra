@@ -5,7 +5,7 @@ import com.patra.catalog.app.usecase.mesh.command.MeshScrImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshScrImportResult;
 import com.patra.catalog.domain.exception.DataAlreadyExistsException;
 import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
-import com.patra.catalog.domain.port.batch.MeshScrBatchPort;
+import com.patra.catalog.domain.port.batch.MeshBatchPort;
 import com.patra.catalog.domain.port.repository.MeshScrRepository;
 import com.patra.common.cqrs.CommandHandler;
 import com.patra.common.error.ApplicationException;
@@ -46,7 +46,7 @@ public class MeshScrImportHandler
     implements CommandHandler<MeshScrImportCommand, MeshScrImportResult> {
 
   private final MeshScrRepository scrRepository;
-  private final MeshScrBatchPort meshScrBatchPort;
+  private final MeshBatchPort meshBatchPort;
 
   /// 导入 MeSH SCR。
   ///
@@ -76,7 +76,7 @@ public class MeshScrImportHandler
     try {
       MeshImportParams params =
           MeshImportParams.withDownloadUrl(command.url(), command.meshVersion());
-      Long executionId = meshScrBatchPort.launchImport(params);
+      Long executionId = meshBatchPort.launchScrImport(params);
 
       log.info("MeSH SCR 导入任务已启动，executionId：{}", executionId);
       return MeshScrImportResult.success(executionId, command.url(), command.meshVersion());

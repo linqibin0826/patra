@@ -5,7 +5,7 @@ import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.domain.exception.DataAlreadyExistsException;
 import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
-import com.patra.catalog.domain.port.batch.MeshDescriptorBatchPort;
+import com.patra.catalog.domain.port.batch.MeshBatchPort;
 import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
 import com.patra.common.cqrs.CommandHandler;
 import com.patra.common.error.ApplicationException;
@@ -42,7 +42,7 @@ public class MeshDescriptorImportHandler
     implements CommandHandler<MeshDescriptorImportCommand, MeshDescriptorImportResult> {
 
   private final MeshDescriptorRepository descriptorRepository;
-  private final MeshDescriptorBatchPort meshDescriptorBatchPort;
+  private final MeshBatchPort meshBatchPort;
 
   /// 导入 MeSH 主题词。
   ///
@@ -72,7 +72,7 @@ public class MeshDescriptorImportHandler
     try {
       MeshImportParams params =
           MeshImportParams.withDownloadUrl(command.url(), command.meshVersion());
-      Long executionId = meshDescriptorBatchPort.launchImport(params);
+      Long executionId = meshBatchPort.launchDescriptorImport(params);
 
       log.info("MeSH 主题词导入任务已启动，executionId：{}", executionId);
       return MeshDescriptorImportResult.success(executionId, command.url(), command.meshVersion());
