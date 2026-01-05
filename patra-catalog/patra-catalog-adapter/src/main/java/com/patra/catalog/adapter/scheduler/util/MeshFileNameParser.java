@@ -98,7 +98,6 @@ public final class MeshFileNameParser {
     }
 
     throw new MeshConfigurationException(
-        "无法从文件名解析 MeSH 版本号，期望格式为 desc{year}.xml、qual{year}.xml 或 supp{year}.xml，实际："
-            + fileName);
+        "无法从文件名解析 MeSH 版本号，期望格式为 desc{year}.xml、qual{year}.xml 或 supp{year}.xml，实际：" + fileName);
   }
 }

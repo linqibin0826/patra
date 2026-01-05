@@ -34,9 +34,6 @@ public class MeshScrParserAdapter extends AbstractStaxParserAdapter<MeshScrAggre
   @Override
   public Stream<MeshScrAggregate> parse(InputStream inputStream) {
     return doParse(
-        inputStream,
-        ScrParsingStrategy.INSTANCE,
-        "开始解析 MeSH SCR XML 输入流",
-        XmlParseException::new);
+        inputStream, ScrParsingStrategy.INSTANCE, "开始解析 MeSH SCR XML 输入流", XmlParseException::new);
   }
 }

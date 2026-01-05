@@ -108,7 +108,9 @@ public class MeshScrItemReader implements ItemStreamReader<MeshScrAggregate> {
     // 委托 MeshScrParserPort 解析
     // Parser 返回不含版本的聚合根，在流转换时设置版本号
     stream =
-        scrParserPort.parse(downloadResult.inputStream()).map(scr -> scr.withMeshVersion(meshVersion));
+        scrParserPort
+            .parse(downloadResult.inputStream())
+            .map(scr -> scr.withMeshVersion(meshVersion));
     iterator = stream.iterator();
 
     // 跳过已处理的记录（断点续传）
