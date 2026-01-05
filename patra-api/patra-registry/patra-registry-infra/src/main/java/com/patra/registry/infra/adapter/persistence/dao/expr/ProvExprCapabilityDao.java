@@ -31,8 +31,7 @@ public interface ProvExprCapabilityDao extends JpaRepository<ProvExprCapabilityE
       value =
           """
           SELECT * FROM reg_prov_expr_capability
-          WHERE deleted_at IS NULL
-            AND lifecycle_status_code = 'ACTIVE'
+          WHERE lifecycle_status_code = 'ACTIVE'
             AND provenance_id = :provenanceId
             AND operation_type IN (:operationType, 'ALL')
             AND field_key = :fieldKey
@@ -71,8 +70,7 @@ public interface ProvExprCapabilityDao extends JpaRepository<ProvExprCapabilityE
                                   c.id DESC
                      ) AS rn
               FROM reg_prov_expr_capability c
-              WHERE c.deleted_at IS NULL
-                AND c.lifecycle_status_code = 'ACTIVE'
+              WHERE c.lifecycle_status_code = 'ACTIVE'
                 AND c.provenance_id = :provenanceId
                 AND c.operation_type IN (:operationType, 'ALL')
                 AND c.effective_from <= :now

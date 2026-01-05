@@ -14,7 +14,7 @@ import lombok.Setter;
 /// 数据库规则：
 ///
 /// - `(source_standard, external_code)` 全局唯一。
-/// - 别名可软删除，可能与禁用的字典项共存。
+/// - 别名使用物理删除，不支持软删除。
 ///
 /// @author linqibin
 /// @since 0.1.0

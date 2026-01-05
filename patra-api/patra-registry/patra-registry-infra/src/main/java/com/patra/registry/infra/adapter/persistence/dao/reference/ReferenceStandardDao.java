@@ -26,7 +26,6 @@ public interface ReferenceStandardDao extends JpaRepository<ReferenceStandardEnt
       SELECT s FROM ReferenceStandardEntity s
       WHERE s.dictTypeCode = :dictTypeCode
         AND s.standardCode = :standardCode
-        AND s.deletedAt IS NULL
       """)
   Optional<ReferenceStandardEntity> findByDictTypeCodeAndStandardCode(
       @Param("dictTypeCode") String dictTypeCode, @Param("standardCode") String standardCode);
@@ -41,7 +40,6 @@ public interface ReferenceStandardDao extends JpaRepository<ReferenceStandardEnt
       WHERE s.dictTypeCode = :dictTypeCode
         AND s.canonical = true
         AND s.enabled = true
-        AND s.deletedAt IS NULL
       """)
   Optional<ReferenceStandardEntity> findCanonicalByDictTypeCode(
       @Param("dictTypeCode") String dictTypeCode);

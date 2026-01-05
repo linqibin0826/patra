@@ -73,7 +73,7 @@ SELECT
   0
 WHERE NOT EXISTS (
   SELECT 1 FROM patra_registry.sys_reference_standard
-  WHERE dict_type_code = 'language' AND standard_code = 'BCP_47' AND deleted_at IS NULL
+  WHERE dict_type_code = 'language' AND standard_code = 'BCP_47'
 );
 
 -- ISO_639_3（外部标准 - PubMed 使用）
@@ -94,7 +94,7 @@ SELECT
   0
 WHERE NOT EXISTS (
   SELECT 1 FROM patra_registry.sys_reference_standard
-  WHERE dict_type_code = 'language' AND standard_code = 'ISO_639_3' AND deleted_at IS NULL
+  WHERE dict_type_code = 'language' AND standard_code = 'ISO_639_3'
 );
 
 -- NAME_EN（外部标准 - 英文名称）
@@ -115,7 +115,7 @@ SELECT
   0
 WHERE NOT EXISTS (
   SELECT 1 FROM patra_registry.sys_reference_standard
-  WHERE dict_type_code = 'language' AND standard_code = 'NAME_EN' AND deleted_at IS NULL
+  WHERE dict_type_code = 'language' AND standard_code = 'NAME_EN'
 );
 
 
