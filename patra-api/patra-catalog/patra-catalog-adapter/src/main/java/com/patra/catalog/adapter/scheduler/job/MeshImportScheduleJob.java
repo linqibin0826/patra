@@ -118,8 +118,7 @@ public class MeshImportScheduleJob {
       String meshVersion = MeshFileNameParser.extractVersion(url);
       log.info("MeSH SCR 配置：URL [{}]，版本 [{}]（从文件名推断）", url, meshVersion);
 
-      MeshScrImportResult result =
-          commandBus.handle(MeshScrImportCommand.of(url, meshVersion));
+      MeshScrImportResult result = commandBus.handle(MeshScrImportCommand.of(url, meshVersion));
       handleSuccess(result.message());
 
     } catch (MeshConfigurationException ex) {
