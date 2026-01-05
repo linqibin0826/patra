@@ -163,10 +163,10 @@ public class VenueTypeAttributeConverter
 
 | ✅ 应该 | ❌ 不应该 |
 |---------|-----------|
-| Entity 继承 `BaseJpaEntity` | 自定义 ID 生成策略 |
+| Entity 继承 `BaseJpaEntity`（需要软删除时用 `SoftDeletableJpaEntity`） | 自定义 ID 生成策略 |
 | Dao 继承 `JpaRepository` | 返回 Entity 给上层 |
 | 使用 MapStruct 转换 | 手动写转换代码 |
-| 使用 `@SQLRestriction` 软删除 | 物理删除数据 |
+| 仅在软删除实体上使用 `@SQLRestriction` | 对需要软删除的表做物理删除 |
 | 大批量操作 flush/clear | 一次性加载全部到内存 |
 
 ---
@@ -182,7 +182,8 @@ public class VenueTypeAttributeConverter
     @Index(name = "idx_email", columnList = "email")
 })
 public class AuthorEntity extends BaseJpaEntity {
-    // BaseJpaEntity 提供: id, version, createdAt, updatedAt, deletedAt 等
+    // BaseJpaEntity 提供: id, version, createdAt, updatedAt 等
+    // 若需要软删除，请改为继承 SoftDeletableJpaEntity（提供 deletedAt）
 
     @Column(name = "orcid", length = 19)
     private String orcid;
@@ -203,7 +204,7 @@ public interface AuthorDao extends JpaRepository<AuthorEntity, Long> {
 
     // ✅ 自定义 JPQL
     @Query("SELECT a FROM AuthorEntity a WHERE a.deletedAt IS NULL")
-    List<AuthorEntity> findAllActive();
+    List<AuthorEntity> findAllActive(); // 仅适用于继承 SoftDeletableJpaEntity 的实体
 
     // ✅ 检查是否有数据
     @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END FROM AuthorEntity a")
@@ -313,7 +314,7 @@ for (int i = 0; i < entities.size(); i++) {
 ## ✅ 最佳实践清单
 
 ### 设计原则
-- [ ] Entity 继承 `BaseJpaEntity`
+- [ ] Entity 继承 `BaseJpaEntity`；需要软删除时继承 `SoftDeletableJpaEntity`
 - [ ] Dao 继承 `JpaRepository`
 - [ ] Mapper 使用 MapStruct，放在 `converter/mapper/`
 - [ ] AttributeConverter 放在 `converter/attribute/`
@@ -327,7 +328,7 @@ for (int i = 0; i < entities.size(); i++) {
 
 ### 数据一致性
 - [ ] 使用 `@Version` 乐观锁（BaseJpaEntity 已包含）
-- [ ] 软删除使用 `@SQLRestriction`
+- [ ] 软删除仅对需要软删除的实体使用 `@SQLRestriction`
 - [ ] ID 使用 `SnowflakeIdGenerator` 预分配
 
 ---

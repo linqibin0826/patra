@@ -52,7 +52,8 @@ public class UserController {
 
 **核心功能**:
 - Spring Data JPA 自动配置
-- `BaseJpaEntity` 基类（雪花 ID + 审计字段 + 乐观锁 + 软删除）
+- `BaseJpaEntity` 基类（雪花 ID + 审计字段 + 乐观锁）
+- `SoftDeletableJpaEntity` 基类（在 `BaseJpaEntity` 基础上额外支持软删除）
 - 批量操作优化
 - Flyway 数据库迁移
 
@@ -320,7 +321,7 @@ public class CustomHandler implements ObservationHandler<Observation.Context> {
 
 1. ✅ **Adapter 层** → 添加 `patra-spring-boot-starter-web`
 2. ✅ **Infra 层（数据库）** → 添加 `patra-spring-boot-starter-jpa`
-   - 确认 Entity 继承 `BaseJpaEntity`
+   - 确认 Entity 继承 `BaseJpaEntity`；需要软删除时继承 `SoftDeletableJpaEntity`
 3. ✅ **Infra 层（服务调用）** → 添加 `patra-spring-cloud-starter-feign`(可选)
    - 在 `-api` 模块定义 FeignClient
    - 在 `-infra` 模块实现 Adapter
