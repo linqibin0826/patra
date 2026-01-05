@@ -46,11 +46,11 @@ CommandHandler 负责协调业务流程：
 1. 位于 `patra-{service}-infra` 模块
 2. 必须使用 `patra-spring-boot-starter-jpa`
 3. 参考 [jpa-patterns.md](resources/jpa-patterns.md) 获取详细实现
-4. **所有 Entity 必须继承 BaseJpaEntity**
+4. **所有 Entity 必须继承 BaseJpaEntity；需要软删除时继承 SoftDeletableJpaEntity**
 
 **开发流程**：
 ```
-创建 Entity（继承 BaseJpaEntity）→ 创建 Dao（继承 JpaRepository）→ 创建 JpaMapper → 实现 RepositoryAdapter
+创建 Entity（继承 BaseJpaEntity；需要软删除时继承 SoftDeletableJpaEntity）→ 创建 Dao（继承 JpaRepository）→ 创建 JpaMapper → 实现 RepositoryAdapter
 ```
 
 ### 4. 事务和错误处理
@@ -128,7 +128,7 @@ CommandHandler 负责协调业务流程：
 **A: 不能**。Domain 层必须保持纯 Java，不依赖任何框架。
 
 ### Q: 为什么 Entity 必须继承 BaseJpaEntity？
-**A: BaseJpaEntity 提供**：雪花 ID、审计字段、乐观锁、软删除支持。
+**A: BaseJpaEntity 提供**：雪花 ID、审计字段、乐观锁；若需要软删除，请改为继承 `SoftDeletableJpaEntity`。
 
 ### Q: 事务注解应该加在哪一层？
 **A: 只在 Application 层**（CommandHandler）使用 @Transactional。
@@ -152,7 +152,7 @@ CommandHandler 负责协调业务流程：
 ```
 [ ] Controller 不包含业务逻辑
 [ ] 事务只在 Application 层
-[ ] Entity 继承 BaseJpaEntity
+[ ] Entity 继承 BaseJpaEntity；需要软删除时继承 SoftDeletableJpaEntity
 [ ] 使用 MapStruct 进行对象转换
 ```
 

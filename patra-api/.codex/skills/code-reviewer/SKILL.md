@@ -54,10 +54,10 @@ metadata:
 
 ## 4. JPA 与持久化（高频）
 
-- Entity 必须继承 `BaseJpaEntity`
+- Entity 必须继承 `BaseJpaEntity`；需要软删除的实体继承 `SoftDeletableJpaEntity`
 - MapStruct 做映射，避免手写转换
 - 批量写入注意 `saveAll()` 与 `flush()/clear()`
-- 软删除使用 `@SQLRestriction("deleted_at IS NULL")`，禁止物理删除
+- 软删除仅对聚合根和被引用的配置数据启用；外部数据快照等子表使用物理删除
 
 ## 5. 安全与工程质量
 

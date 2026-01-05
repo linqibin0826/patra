@@ -32,7 +32,7 @@ color: green
 
 - **端口命名**: Repository（本地持久化）、Port（外部服务）
 - **JavaDoc**: `///` 风格 + Markdown 语法
-- **JPA**: Entity 继承 BaseJpaEntity，使用 Spring Data JPA 规范
+- **JPA**: Entity 继承 BaseJpaEntity；需要软删除时继承 SoftDeletableJpaEntity
 - **Starter**: 使用项目 Starter，禁止重复实现
 
 ### Adapter 层入口

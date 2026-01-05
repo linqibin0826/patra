@@ -38,7 +38,7 @@ metadata:
 
 ### 2.3 新增持久化（Infrastructure + JPA）
 
-- 目标：Entity 继承 `BaseJpaEntity`；MapStruct 做映射；批量保存控制 `flush()/clear()`。
+- 目标：Entity 继承 `BaseJpaEntity`；需要软删除时继承 `SoftDeletableJpaEntity`；MapStruct 做映射；批量保存控制 `flush()/clear()`。
 - 参考：`references/jpa-patterns.md`
 
 ### 2.4 适配层/基础设施层模式（Ports/Adapters）
@@ -67,5 +67,5 @@ metadata:
 
 - 分层依赖方向正确（Domain 无框架依赖；事务仅在 Application；写入口只注入 CommandBus）。
 - 异常体系符合规范（DomainException / ApplicationException / RemoteCallException）。
-- JPA 规范满足（`BaseJpaEntity`、软删除、批量与 ID 策略）。
+- JPA 规范满足（`BaseJpaEntity/SoftDeletableJpaEntity`、软删除适用范围、批量与 ID 策略）。
 - 测试按分层命名与类型补齐（`*Test/*IT/*E2E`），避免使用废弃 `@MockBean`。
