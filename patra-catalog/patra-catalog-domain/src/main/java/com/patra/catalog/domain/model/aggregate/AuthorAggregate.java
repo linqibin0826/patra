@@ -25,9 +25,9 @@ import lombok.Setter;
 ///
 /// **设计说明**：
 ///
-/// - Author 和 Affiliation 是独立的聚合根
+/// - Author 和 Organization 是独立的聚合根
 ///   - 作者-机构关联通过 Repository 管理(不在聚合内)
-///   - organizationName 是文本字段,不关联 Affiliation 聚合
+///   - organizationName 是文本字段,不关联 Organization 聚合
 ///   - 去重键由应用层计算并设置
 ///
 /// **业务规则**：
@@ -48,7 +48,7 @@ public class AuthorAggregate extends AggregateRoot<AuthorId> {
   /// 作者姓名(姓+名+缩写+后缀)
   private final AuthorName name;
 
-  /// 机构名称(文本,不关联 Affiliation 表)
+  /// 机构名称(文本,不关联 Organization 表)
   @Setter(AccessLevel.PACKAGE)
   private String organizationName;
 

@@ -1,4 +1,4 @@
-package com.patra.catalog.domain.model.vo.affiliation;
+package com.patra.catalog.domain.model.vo.organization;
 
 import cn.hutool.core.lang.Assert;
 import java.io.Serial;
