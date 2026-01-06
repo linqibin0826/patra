@@ -15,7 +15,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 ///   - 入口术语（EntryTerm）同义词管理
 ///   - 概念（Concept）关系维护
 /// - 期刊（Venue）目录和影响因子维护
-/// - 作者（Author）和机构（Affiliation）信息管理
+/// - 作者（Author）和机构（Organization）信息管理
 /// - 文献分类和标引服务
 ///
 /// 技术栈集成:
