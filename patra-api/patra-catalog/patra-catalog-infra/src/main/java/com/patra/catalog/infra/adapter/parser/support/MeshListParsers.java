@@ -700,7 +700,9 @@ public final class MeshListParsers {
     if (descriptorRef.isValid()) {
       try {
         return HeadingMappedTo.of(
-            descriptorRef.toMeshUI(), qualifierRef.isValid() ? qualifierRef.toMeshUI() : null);
+            descriptorRef.toMeshUI(),
+            qualifierRef.isValid() ? qualifierRef.toMeshUI() : null,
+            descriptorRef.isMajorTopic());
       } catch (Exception e) {
         log.warn("解析 HeadingMappedTo 失败: {}", descriptorRef, e);
       }

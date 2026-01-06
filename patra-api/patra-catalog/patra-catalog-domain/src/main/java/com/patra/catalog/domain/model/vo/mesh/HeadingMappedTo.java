@@ -14,6 +14,7 @@ import java.io.Serializable;
 /// - 每个 SCR 可以映射到多个 Descriptor
 /// - descriptorUi 是必需的，表示目标主题词
 /// - qualifierUi 是可选的，用于进一步限定映射关系
+/// - majorTopic 表示该描述符是否为主要主题词（NLM 用星号标记）
 ///
 /// 使用示例：
 ///
@@ -26,13 +27,22 @@ import java.io.Serializable;
 ///     MeshUI.of("D000001"),
 ///     MeshUI.of("Q000002")
 /// );
+///
+/// // 创建主要主题词映射
+/// HeadingMappedTo majorMapping = HeadingMappedTo.of(
+///     MeshUI.of("D000001"),
+///     null,
+///     true
+/// );
 /// ```
 ///
 /// @param descriptorUi 目标主题词UI（必需）
 /// @param qualifierUi 限定词UI（可选）
+/// @param majorTopic 是否为主要主题词（Major Topic）
 /// @author linqibin
 /// @since 0.1.0
-public record HeadingMappedTo(MeshUI descriptorUi, MeshUI qualifierUi) implements Serializable {
+public record HeadingMappedTo(MeshUI descriptorUi, MeshUI qualifierUi, boolean majorTopic)
+    implements Serializable {
 
   @Serial private static final long serialVersionUID = 1L;
 
@@ -46,21 +56,31 @@ public record HeadingMappedTo(MeshUI descriptorUi, MeshUI qualifierUi) implement
     }
   }
 
-  /// 创建只有主题词的映射。
+  /// 创建只有主题词的映射（非主要主题词）。
   ///
   /// @param descriptorUi 主题词UI
   /// @return 映射关系
   public static HeadingMappedTo of(MeshUI descriptorUi) {
-    return new HeadingMappedTo(descriptorUi, null);
+    return new HeadingMappedTo(descriptorUi, null, false);
   }
 
-  /// 创建带限定词的映射。
+  /// 创建带限定词的映射（非主要主题词）。
   ///
   /// @param descriptorUi 主题词UI
   /// @param qualifierUi 限定词UI（可为 null）
   /// @return 映射关系
   public static HeadingMappedTo of(MeshUI descriptorUi, MeshUI qualifierUi) {
-    return new HeadingMappedTo(descriptorUi, qualifierUi);
+    return new HeadingMappedTo(descriptorUi, qualifierUi, false);
+  }
+
+  /// 创建完整的映射关系。
+  ///
+  /// @param descriptorUi 主题词UI
+  /// @param qualifierUi 限定词UI（可为 null）
+  /// @param majorTopic 是否为主要主题词
+  /// @return 映射关系
+  public static HeadingMappedTo of(MeshUI descriptorUi, MeshUI qualifierUi, boolean majorTopic) {
+    return new HeadingMappedTo(descriptorUi, qualifierUi, majorTopic);
   }
 
   /// 判断是否有限定词。
@@ -72,9 +92,11 @@ public record HeadingMappedTo(MeshUI descriptorUi, MeshUI qualifierUi) implement
 
   @Override
   public String toString() {
+    String majorPrefix = majorTopic ? "*" : "";
     if (hasQualifier()) {
-      return String.format("HeadingMappedTo[%s/%s]", descriptorUi.ui(), qualifierUi.ui());
+      return String.format(
+          "HeadingMappedTo[%s%s/%s]", majorPrefix, descriptorUi.ui(), qualifierUi.ui());
     }
-    return String.format("HeadingMappedTo[%s]", descriptorUi.ui());
+    return String.format("HeadingMappedTo[%s%s]", majorPrefix, descriptorUi.ui());
   }
 }

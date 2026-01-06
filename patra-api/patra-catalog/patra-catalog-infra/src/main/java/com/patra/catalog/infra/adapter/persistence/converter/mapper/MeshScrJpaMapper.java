@@ -2,6 +2,8 @@ package com.patra.catalog.infra.adapter.persistence.converter.mapper;
 
 import com.patra.catalog.domain.model.aggregate.MeshScrAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
+import com.patra.catalog.domain.model.entity.MeshEntryTerm;
+import com.patra.catalog.domain.model.enums.LexicalTag;
 import com.patra.catalog.domain.model.enums.MeshRecordType;
 import com.patra.catalog.domain.model.enums.ScrClass;
 import com.patra.catalog.domain.model.vo.mesh.HeadingMappedTo;
@@ -11,6 +13,7 @@ import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
 import com.patra.catalog.domain.model.vo.mesh.ScrSource;
 import com.patra.catalog.infra.adapter.persistence.entity.MeshConceptEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.MeshEntryTermEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.MeshScrEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.MeshScrHeadingMappedToEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.MeshScrIndexingInfoEntity;
@@ -113,6 +116,7 @@ public abstract class MeshScrJpaMapper {
     entity.setScrUi(scrUi);
     entity.setDescriptorUi(mapping.descriptorUi().ui());
     entity.setQualifierUi(mapping.qualifierUi() != null ? mapping.qualifierUi().ui() : null);
+    entity.setMajorTopic(mapping.majorTopic());
     return entity;
   }
 
@@ -126,7 +130,8 @@ public abstract class MeshScrJpaMapper {
     }
     return HeadingMappedTo.of(
         MeshUI.of(entity.getDescriptorUi()),
-        entity.getQualifierUi() != null ? MeshUI.of(entity.getQualifierUi()) : null);
+        entity.getQualifierUi() != null ? MeshUI.of(entity.getQualifierUi()) : null,
+        entity.isMajorTopic());
   }
 
   /// 为聚合根添加映射关系。
@@ -353,6 +358,102 @@ public abstract class MeshScrJpaMapper {
       PharmacologicalAction action = toPharmacologicalAction(entity);
       if (action != null) {
         aggregate.addPharmacologicalAction(action);
+      }
+    }
+  }
+
+  // ========== EntryTerm 转换（复用 MeshEntryTermEntity）==========
+
+  /// 将入口术语领域实体转换为 JPA 实体。
+  ///
+  /// @param entryTerm 入口术语领域实体
+  /// @param scrUi SCR UI
+  /// @return JPA 实体
+  public MeshEntryTermEntity toEntryTermEntity(MeshEntryTerm entryTerm, String scrUi) {
+    if (entryTerm == null) {
+      return null;
+    }
+    MeshEntryTermEntity entity = new MeshEntryTermEntity();
+    entity.setId(entryTerm.getId());
+    entity.setRecordType(MeshRecordType.SCR);
+    entity.setOwnerUi(scrUi);
+    entity.setTermUi(entryTerm.getTermUi() != null ? entryTerm.getTermUi().ui() : null);
+    entity.setConceptUi(entryTerm.getConceptUi() != null ? entryTerm.getConceptUi().ui() : null);
+    entity.setTerm(entryTerm.getTerm());
+    entity.setLexicalTag(
+        entryTerm.getLexicalTag() != null ? entryTerm.getLexicalTag().getCode() : null);
+    entity.setIsPrintFlag(entryTerm.isPrintFlag());
+    entity.setRecordPreferred(entryTerm.isRecordPreferred() ? "Y" : "N");
+    entity.setIsPermutedTerm(entryTerm.isPermutedTerm());
+    entity.setIsConceptPreferred(entryTerm.isConceptPreferred());
+    entity.setAbbreviation(entryTerm.getAbbreviation());
+    entity.setSortVersion(entryTerm.getSortVersion());
+    entity.setEntryVersion(entryTerm.getEntryVersion());
+    entity.setTermNote(entryTerm.getTermNote());
+    entity.setDateCreated(entryTerm.getDateCreated());
+    entity.setThesaurusIds(new ArrayList<>(entryTerm.getThesaurusIds()));
+    return entity;
+  }
+
+  /// 将 JPA 实体转换为入口术语领域实体。
+  ///
+  /// @param entity JPA 实体
+  /// @return 入口术语领域实体
+  public MeshEntryTerm toEntryTerm(MeshEntryTermEntity entity) {
+    if (entity == null) {
+      return null;
+    }
+    MeshEntryTerm entryTerm =
+        MeshEntryTerm.restore(
+            entity.getId(),
+            entity.getOwnerUi() != null ? MeshUI.of(entity.getOwnerUi()) : null,
+            entity.getTermUi() != null ? MeshUI.of(entity.getTermUi()) : null,
+            entity.getTerm(),
+            entity.getLexicalTag() != null ? LexicalTag.fromCode(entity.getLexicalTag()) : null,
+            entity.getIsPrintFlag() != null && entity.getIsPrintFlag(),
+            "Y".equals(entity.getRecordPreferred()),
+            entity.getIsPermutedTerm() != null && entity.getIsPermutedTerm(),
+            entity.getIsConceptPreferred() != null && entity.getIsConceptPreferred());
+
+    // 设置可选字段
+    if (entity.getConceptUi() != null) {
+      entryTerm.withConceptUi(MeshUI.of(entity.getConceptUi()));
+    }
+    if (entity.getAbbreviation() != null) {
+      entryTerm.withAbbreviation(entity.getAbbreviation());
+    }
+    if (entity.getSortVersion() != null) {
+      entryTerm.withSortVersion(entity.getSortVersion());
+    }
+    if (entity.getEntryVersion() != null) {
+      entryTerm.withEntryVersion(entity.getEntryVersion());
+    }
+    if (entity.getTermNote() != null) {
+      entryTerm.withTermNote(entity.getTermNote());
+    }
+    if (entity.getDateCreated() != null) {
+      entryTerm.withDateCreated(entity.getDateCreated());
+    }
+    if (entity.getThesaurusIds() != null) {
+      entryTerm.addThesaurusIds(entity.getThesaurusIds());
+    }
+
+    return entryTerm;
+  }
+
+  /// 为聚合根添加入口术语。
+  ///
+  /// @param aggregate 聚合根
+  /// @param entities 入口术语实体列表
+  public void addEntryTermsToAggregate(
+      MeshScrAggregate aggregate, List<MeshEntryTermEntity> entities) {
+    if (aggregate == null || entities == null) {
+      return;
+    }
+    for (MeshEntryTermEntity entity : entities) {
+      MeshEntryTerm entryTerm = toEntryTerm(entity);
+      if (entryTerm != null) {
+        aggregate.addEntryTerm(entryTerm);
       }
     }
   }

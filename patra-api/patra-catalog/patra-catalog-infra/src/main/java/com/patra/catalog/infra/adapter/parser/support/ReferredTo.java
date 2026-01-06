@@ -57,11 +57,24 @@ public record ReferredTo(String ui, String name) {
     return ui != null && name == null;
   }
 
-  /// 将 UI 转换为 MeshUI 值对象。
+  /// 判断该引用是否为 Major Topic（UI 以星号开头）。
+  ///
+  /// 在 MeSH 数据中，星号前缀表示该描述符是文献的主要焦点（Major Topic）。
+  ///
+  /// @return 如果 UI 以星号开头返回 true
+  public boolean isMajorTopic() {
+    return ui != null && ui.startsWith("*");
+  }
+
+  /// 将 UI 转换为 MeshUI 值对象（自动剥离星号前缀）。
   ///
   /// @return MeshUI 实例，UI 为空时返回 null
   public MeshUI toMeshUI() {
-    return ui != null ? MeshUI.of(ui) : null;
+    if (ui == null) {
+      return null;
+    }
+    String cleaned = ui.startsWith("*") ? ui.substring(1) : ui;
+    return MeshUI.of(cleaned);
   }
 
   // ========== 静态解析方法 ==========

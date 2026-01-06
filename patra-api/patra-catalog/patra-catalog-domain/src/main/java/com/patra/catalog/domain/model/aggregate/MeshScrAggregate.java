@@ -3,6 +3,7 @@ package com.patra.catalog.domain.model.aggregate;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.entity.MeshConcept;
+import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.enums.ScrClass;
 import com.patra.catalog.domain.model.vo.mesh.HeadingMappedTo;
 import com.patra.catalog.domain.model.vo.mesh.IndexingInfo;
@@ -41,6 +42,7 @@ import lombok.Getter;
 ///
 /// - SCR 是聚合根
 /// - 包含 MeshConcept 列表（内部实体）
+/// - 包含 MeshEntryTerm 列表（入口术语/同义词）
 /// - 包含 HeadingMappedTo、ScrSource、IndexingInfo（值对象列表）
 /// - 包含 PharmacologicalAction（指向 Descriptor UI）
 ///
@@ -106,6 +108,9 @@ public class MeshScrAggregate extends AggregateRoot<MeshScrId> {
   /// 药理作用列表（指向 Descriptor）
   private final List<PharmacologicalAction> pharmacologicalActions;
 
+  /// 入口术语列表（同义词）
+  private final List<MeshEntryTerm> entryTerms;
+
   /// 私有构造函数。
   private MeshScrAggregate(MeshUI ui, String name, ScrClass scrClass) {
     super(); // 调用 AggregateRoot 构造函数
@@ -126,6 +131,7 @@ public class MeshScrAggregate extends AggregateRoot<MeshScrId> {
     this.sources = new ArrayList<>();
     this.indexingInfos = new ArrayList<>();
     this.pharmacologicalActions = new ArrayList<>();
+    this.entryTerms = new ArrayList<>();
   }
 
   // ========== 工厂方法 ==========
@@ -351,6 +357,37 @@ public class MeshScrAggregate extends AggregateRoot<MeshScrId> {
   /// 获取药理作用列表（不可变视图）。
   public List<PharmacologicalAction> getPharmacologicalActions() {
     return Collections.unmodifiableList(pharmacologicalActions);
+  }
+
+  // ========== EntryTerm 管理 ==========
+
+  /// 添加入口术语。
+  ///
+  /// @param entryTerm 入口术语
+  /// @return 当前对象（支持链式调用）
+  public MeshScrAggregate addEntryTerm(MeshEntryTerm entryTerm) {
+    Assert.notNull(entryTerm, "入口术语不能为空");
+    if (!entryTerms.contains(entryTerm)) {
+      entryTerms.add(entryTerm);
+      trackChildAdded(MeshEntryTerm.class, entryTerm);
+    }
+    return this;
+  }
+
+  /// 批量添加入口术语。
+  ///
+  /// @param entryTermList 入口术语列表
+  /// @return 当前对象（支持链式调用）
+  public MeshScrAggregate addEntryTerms(List<MeshEntryTerm> entryTermList) {
+    if (entryTermList != null && !entryTermList.isEmpty()) {
+      entryTermList.forEach(this::addEntryTerm);
+    }
+    return this;
+  }
+
+  /// 获取入口术语列表（不可变视图）。
+  public List<MeshEntryTerm> getEntryTerms() {
+    return Collections.unmodifiableList(entryTerms);
   }
 
   // ========== 状态管理 ==========
