@@ -192,7 +192,7 @@ patra:
   - `PharmacologicalAction`：药理作用
   - `SeeRelatedDescriptor`：相关主题词引用
   - `ConceptRelation`：概念关系
-  - `HeadingMappedTo`：SCR 到 Descriptor 的映射关系
+  - `HeadingMappedTo`：SCR 到 Descriptor 的映射关系（含 majorTopic 标记，NLM 用 `*` 前缀表示主要主题词）
   - `ScrSource`：SCR 数据来源
   - `IndexingInfo`：SCR 索引信息（mesh 包）
   - `HostOrganization`：主办机构信息
@@ -253,7 +253,7 @@ patra:
   - `cat_mesh_concept`：概念表（~180,000 条，支持 Descriptor 和 SCR）
   - `cat_mesh_entry_combination`：组合条目表（~500 条）
   - `cat_mesh_scr`：SCR 主表（~350,000 条）
-  - `cat_mesh_scr_heading_mapped_to`：SCR 到 Descriptor 映射关系表
+  - `cat_mesh_scr_heading_mapped_to`：SCR 到 Descriptor 映射关系表（含 major_topic 字段）
   - `cat_mesh_scr_source`：SCR 数据来源表
   - `cat_mesh_scr_indexing_info`：SCR 索引信息表
   - `cat_mesh_scr_pharmacological_action`：SCR 药理作用表
