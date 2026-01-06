@@ -154,6 +154,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_scr_heading_mapped_to` (
     `scr_ui` VARCHAR(10) NOT NULL COMMENT 'SCR UI(关联:cat_mesh_scr.ui,格式:C000001)',
     `descriptor_ui` VARCHAR(10) NOT NULL COMMENT '映射到的主题词UI(关联:cat_mesh_descriptor.ui,格式:D000001)',
     `qualifier_ui` VARCHAR(10) NULL DEFAULT NULL COMMENT '限定词UI(关联:cat_mesh_qualifier.ui,格式:Q000001,可选)',
+    `major_topic` BOOLEAN NOT NULL DEFAULT 0 COMMENT '是否为主要主题词(Major Topic,NLM用*标记)',
 
     -- ========================================
     -- 审计字段（完整版）

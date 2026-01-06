@@ -274,7 +274,9 @@ public final class ScrParsingStrategy implements RecordParsingStrategy<MeshScrAg
     if (!fields.concepts.isEmpty()) {
       aggregate.addConcepts(fields.concepts);
     }
-    // 注意：SCR 的 EntryTerm 存储在 Concept 内部，不单独存储在聚合根
+    if (!fields.entryTerms.isEmpty()) {
+      aggregate.addEntryTerms(fields.entryTerms);
+    }
   }
 
   // ========== 内部类 ==========

@@ -56,4 +56,8 @@ public class MeshScrHeadingMappedToEntity extends BaseJpaEntity {
   /// 限定词 UI（关联：cat_mesh_qualifier.ui，格式：Q000001，可选）
   @Column(name = "qualifier_ui", length = 10)
   private String qualifierUi;
+
+  /// 是否为主要主题词（Major Topic）
+  @Column(name = "major_topic", nullable = false)
+  private boolean majorTopic = false;
 }

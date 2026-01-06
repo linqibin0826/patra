@@ -2,6 +2,7 @@ package com.patra.catalog.infra.adapter.persistence;
 
 import com.patra.catalog.domain.model.aggregate.MeshScrAggregate;
 import com.patra.catalog.domain.model.entity.MeshConcept;
+import com.patra.catalog.domain.model.entity.MeshEntryTerm;
 import com.patra.catalog.domain.model.vo.mesh.HeadingMappedTo;
 import com.patra.catalog.domain.model.vo.mesh.IndexingInfo;
 import com.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
@@ -9,12 +10,14 @@ import com.patra.catalog.domain.model.vo.mesh.ScrSource;
 import com.patra.catalog.domain.port.repository.MeshScrRepository;
 import com.patra.catalog.infra.adapter.persistence.converter.mapper.MeshScrJpaMapper;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshConceptDao;
+import com.patra.catalog.infra.adapter.persistence.dao.MeshEntryTermDao;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshScrDao;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshScrHeadingMappedToDao;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshScrIndexingInfoDao;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshScrPharmacologicalActionDao;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshScrSourceDao;
 import com.patra.catalog.infra.adapter.persistence.entity.MeshConceptEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.MeshEntryTermEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.MeshScrEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.MeshScrHeadingMappedToEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.MeshScrIndexingInfoEntity;
@@ -50,6 +53,7 @@ import org.springframework.stereotype.Repository;
 ///
 /// - HeadingMappedTo：SCR 到 Descriptor 的映射关系
 /// - Concept：概念实体（复用 cat_mesh_concept 表，recordType=SCR）
+/// - EntryTerm：入口术语（复用 cat_mesh_entry_term 表，recordType=SCR）
 /// - Source：数据来源列表
 /// - IndexingInfo：索引信息
 /// - PharmacologicalAction：药理作用
@@ -66,6 +70,7 @@ public class MeshScrRepositoryAdapter implements MeshScrRepository {
   private final MeshScrDao scrDao;
   private final MeshScrHeadingMappedToDao headingMappedToDao;
   private final MeshConceptDao conceptDao;
+  private final MeshEntryTermDao entryTermDao;
   private final MeshScrSourceDao sourceDao;
   private final MeshScrIndexingInfoDao indexingInfoDao;
   private final MeshScrPharmacologicalActionDao pharmacologicalActionDao;
@@ -94,6 +99,7 @@ public class MeshScrRepositoryAdapter implements MeshScrRepository {
     // 2. 收集子表数据
     List<MeshScrHeadingMappedToEntity> headingMappedToEntities = new ArrayList<>();
     List<MeshConceptEntity> conceptEntities = new ArrayList<>();
+    List<MeshEntryTermEntity> entryTermEntities = new ArrayList<>();
     List<MeshScrSourceEntity> sourceEntities = new ArrayList<>();
     List<MeshScrIndexingInfoEntity> indexingInfoEntities = new ArrayList<>();
     List<MeshScrPharmacologicalActionEntity> pharmacologicalActionEntities = new ArrayList<>();
@@ -105,6 +111,7 @@ public class MeshScrRepositoryAdapter implements MeshScrRepository {
           scrUi,
           headingMappedToEntities,
           conceptEntities,
+          entryTermEntities,
           sourceEntities,
           indexingInfoEntities,
           pharmacologicalActionEntities);
@@ -119,6 +126,9 @@ public class MeshScrRepositoryAdapter implements MeshScrRepository {
     }
     if (!conceptEntities.isEmpty()) {
       saveBatchWithFlush(conceptEntities, "概念");
+    }
+    if (!entryTermEntities.isEmpty()) {
+      saveBatchWithFlush(entryTermEntities, "入口术语");
     }
     if (!sourceEntities.isEmpty()) {
       saveBatchWithFlush(sourceEntities, "来源");
@@ -137,6 +147,7 @@ public class MeshScrRepositoryAdapter implements MeshScrRepository {
   /// @param scrUi SCR UI（用于子表关联）
   /// @param headingMappedToEntities 映射关系实体列表（输出参数）
   /// @param conceptEntities 概念实体列表（输出参数）
+  /// @param entryTermEntities 入口术语实体列表（输出参数）
   /// @param sourceEntities 来源实体列表（输出参数）
   /// @param indexingInfoEntities 索引信息实体列表（输出参数）
   /// @param pharmacologicalActionEntities 药理作用实体列表（输出参数）
@@ -145,6 +156,7 @@ public class MeshScrRepositoryAdapter implements MeshScrRepository {
       String scrUi,
       List<MeshScrHeadingMappedToEntity> headingMappedToEntities,
       List<MeshConceptEntity> conceptEntities,
+      List<MeshEntryTermEntity> entryTermEntities,
       List<MeshScrSourceEntity> sourceEntities,
       List<MeshScrIndexingInfoEntity> indexingInfoEntities,
       List<MeshScrPharmacologicalActionEntity> pharmacologicalActionEntities) {
@@ -161,6 +173,13 @@ public class MeshScrRepositoryAdapter implements MeshScrRepository {
       MeshConceptEntity entity = converter.toConceptEntity(concept, scrUi);
       assignIdIfMissing(entity);
       conceptEntities.add(entity);
+    }
+
+    // 收集 EntryTerm
+    for (MeshEntryTerm entryTerm : aggregate.getEntryTerms()) {
+      MeshEntryTermEntity entity = converter.toEntryTermEntity(entryTerm, scrUi);
+      assignIdIfMissing(entity);
+      entryTermEntities.add(entity);
     }
 
     // 收集 Source（带排序号）
