@@ -52,7 +52,7 @@ public class AuthorEntity extends BaseJpaEntity {
   /// 作者姓名（嵌入式值对象）
   @Embedded private AuthorNameEmbeddable name;
 
-  /// 机构名称（文本，不关联 Affiliation 表）
+  /// 机构名称（文本，不关联 Organization 表）
   @Column(name = "organization_name", length = 500)
   private String organizationName;
 
