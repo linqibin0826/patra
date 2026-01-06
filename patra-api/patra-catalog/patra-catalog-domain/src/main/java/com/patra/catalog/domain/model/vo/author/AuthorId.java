@@ -7,7 +7,7 @@ import java.io.Serializable;
 /// 作者标识符值对象。
 ///
 /// 封装数据库主键（雪花 ID），提供编译时类型安全。
-/// 防止 ID 类型混淆（如 AffiliationId 误传给 AuthorId）。
+/// 防止 ID 类型混淆（如 OrganizationId 误传给 AuthorId）。
 ///
 /// @param value 数据库主键值（雪花 ID）
 /// @author Patra Lin
