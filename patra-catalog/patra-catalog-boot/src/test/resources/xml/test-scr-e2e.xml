@@ -92,6 +92,20 @@
           </DescriptorName>
         </DescriptorReferredTo>
       </HeadingMappedTo>
+      <HeadingMappedTo>
+        <DescriptorReferredTo>
+          <DescriptorUI>*D000020</DescriptorUI>
+          <DescriptorName>
+            <String>Major Topic Descriptor</String>
+          </DescriptorName>
+        </DescriptorReferredTo>
+        <QualifierReferredTo>
+          <QualifierUI>Q000002</QualifierUI>
+          <QualifierName>
+            <String>Qualifier Two</String>
+          </QualifierName>
+        </QualifierReferredTo>
+      </HeadingMappedTo>
     </HeadingMappedToList>
     <SourceList>
       <Source>Source C</Source>

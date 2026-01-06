@@ -7,17 +7,19 @@ import static org.mockito.Mockito.when;
 
 import com.patra.catalog.app.usecase.mesh.command.MeshScrImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshScrImportResult;
-import com.patra.catalog.domain.exception.DataAlreadyExistsException;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshConceptDao;
+import com.patra.catalog.infra.adapter.persistence.dao.MeshEntryTermDao;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshScrDao;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshScrHeadingMappedToDao;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshScrIndexingInfoDao;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshScrPharmacologicalActionDao;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshScrSourceDao;
+import com.patra.catalog.infra.adapter.persistence.entity.MeshScrHeadingMappedToEntity;
 import com.patra.catalog.integration.config.CatalogMySQLContainerInitializer;
 import com.patra.common.cqrs.CommandBus;
+import com.patra.common.error.ApplicationException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
@@ -84,7 +86,7 @@ class MeshScrImportE2E {
   /// 期望导入的 SCR 记录数。
   private static final int EXPECTED_SCR_COUNT = 3;
   /// 期望导入的 SCR 映射关系数。
-  private static final int EXPECTED_HEADING_MAPPED_TO_COUNT = 2;
+  private static final int EXPECTED_HEADING_MAPPED_TO_COUNT = 3;
   /// 期望导入的 SCR 来源数。
   private static final int EXPECTED_SOURCE_COUNT = 3;
   /// 期望导入的 SCR 索引信息数。
@@ -93,6 +95,8 @@ class MeshScrImportE2E {
   private static final int EXPECTED_PHARMACOLOGICAL_ACTION_COUNT = 1;
   /// 期望导入的 SCR 概念数。
   private static final int EXPECTED_CONCEPT_COUNT = 1;
+  /// 期望导入的 SCR 入口术语数。
+  private static final int EXPECTED_ENTRY_TERM_COUNT = 1;
 
   // ========== Test Dependencies ==========
 
@@ -101,6 +105,7 @@ class MeshScrImportE2E {
   @Autowired private MeshScrDao scrDao;
   @Autowired private MeshScrHeadingMappedToDao headingMappedToDao;
   @Autowired private MeshConceptDao conceptDao;
+  @Autowired private MeshEntryTermDao entryTermDao;
   @Autowired private MeshScrSourceDao sourceDao;
   @Autowired private MeshScrIndexingInfoDao indexingInfoDao;
   @Autowired private MeshScrPharmacologicalActionDao pharmacologicalActionDao;
@@ -140,6 +145,7 @@ class MeshScrImportE2E {
     indexingInfoDao.deleteAllInBatch();
     sourceDao.deleteAllInBatch();
     headingMappedToDao.deleteAllInBatch();
+    entryTermDao.deleteAllInBatch();
     conceptDao.deleteAllInBatch();
     scrDao.deleteAllInBatch();
 
@@ -196,9 +202,9 @@ class MeshScrImportE2E {
     /// 此 nested class 专用的 URL，与其他 nested class 区分避免 Job 参数冲突。
     private static final String TEST_URL = BASE_URL_TEMPLATE.formatted("existence");
 
-    /// 表中已有数据时应抛出 DataAlreadyExistsException。
+    /// 表中已有数据时应抛出 ApplicationException。
     @Test
-    @DisplayName("表中已有数据时应该抛出 DataAlreadyExistsException")
+    @DisplayName("表中已有数据时应该抛出 ApplicationException")
     void shouldThrowExceptionWhenDataAlreadyExists() {
       // Given - 先执行第一次导入
       MeshScrImportCommand command = MeshScrImportCommand.of(TEST_URL, MESH_VERSION);
@@ -207,9 +213,9 @@ class MeshScrImportE2E {
       // 验证数据已导入
       assertThat(scrDao.count()).isEqualTo(EXPECTED_SCR_COUNT);
 
-      // When/Then - 再次导入应该抛出 DataAlreadyExistsException
+      // When/Then - 再次导入应该抛出 ApplicationException
       assertThatThrownBy(() -> commandBus.handle(command))
-          .isInstanceOf(DataAlreadyExistsException.class)
+          .isInstanceOf(ApplicationException.class)
           .hasMessageContaining("MeSH SCR");
     }
   }
@@ -228,5 +234,31 @@ class MeshScrImportE2E {
         .as("SCR 药理作用记录数")
         .isEqualTo(EXPECTED_PHARMACOLOGICAL_ACTION_COUNT);
     assertThat(conceptDao.count()).as("SCR 概念记录数").isEqualTo(EXPECTED_CONCEPT_COUNT);
+    assertThat(entryTermDao.count()).as("SCR 入口术语记录数").isEqualTo(EXPECTED_ENTRY_TERM_COUNT);
+
+    // 验证 Major Topic（星号前缀）功能
+    verifyMajorTopicParsing();
+  }
+
+  /// 验证 Major Topic 解析功能。
+  ///
+  /// 测试数据 C000003 包含一个带星号前缀的 HeadingMappedTo（*D000020），
+  /// 应该被解析为 majorTopic=true，且星号被剥离存储为 D000020。
+  private void verifyMajorTopicParsing() {
+    var majorTopicMappings =
+        headingMappedToDao.findAll().stream()
+            .filter(MeshScrHeadingMappedToEntity::isMajorTopic)
+            .toList();
+
+    assertThat(majorTopicMappings).as("Major Topic 映射数量").hasSize(1);
+
+    MeshScrHeadingMappedToEntity majorTopicMapping = majorTopicMappings.getFirst();
+    assertThat(majorTopicMapping.getScrUi()).as("Major Topic 所属 SCR").isEqualTo("C000003");
+    assertThat(majorTopicMapping.getDescriptorUi())
+        .as("Major Topic Descriptor UI (星号应被剥离)")
+        .isEqualTo("D000020");
+    assertThat(majorTopicMapping.getQualifierUi())
+        .as("Major Topic Qualifier UI")
+        .isEqualTo("Q000002");
   }
 }

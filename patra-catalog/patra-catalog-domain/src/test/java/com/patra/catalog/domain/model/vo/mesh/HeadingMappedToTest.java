@@ -33,6 +33,7 @@ class HeadingMappedToTest {
       assertThat(mapping.descriptorUi()).isEqualTo(DESCRIPTOR_UI);
       assertThat(mapping.qualifierUi()).isNull();
       assertThat(mapping.hasQualifier()).isFalse();
+      assertThat(mapping.majorTopic()).isFalse();
     }
 
     @Test
@@ -45,6 +46,31 @@ class HeadingMappedToTest {
       assertThat(mapping.descriptorUi()).isEqualTo(DESCRIPTOR_UI);
       assertThat(mapping.qualifierUi()).isEqualTo(QUALIFIER_UI);
       assertThat(mapping.hasQualifier()).isTrue();
+      assertThat(mapping.majorTopic()).isFalse();
+    }
+
+    @Test
+    @DisplayName("应该成功创建主要主题词映射")
+    void shouldCreateWithMajorTopic() {
+      // when
+      HeadingMappedTo mapping = HeadingMappedTo.of(DESCRIPTOR_UI, null, true);
+
+      // then
+      assertThat(mapping.descriptorUi()).isEqualTo(DESCRIPTOR_UI);
+      assertThat(mapping.qualifierUi()).isNull();
+      assertThat(mapping.majorTopic()).isTrue();
+    }
+
+    @Test
+    @DisplayName("应该成功创建带限定词的主要主题词映射")
+    void shouldCreateWithQualifierAndMajorTopic() {
+      // when
+      HeadingMappedTo mapping = HeadingMappedTo.of(DESCRIPTOR_UI, QUALIFIER_UI, true);
+
+      // then
+      assertThat(mapping.descriptorUi()).isEqualTo(DESCRIPTOR_UI);
+      assertThat(mapping.qualifierUi()).isEqualTo(QUALIFIER_UI);
+      assertThat(mapping.majorTopic()).isTrue();
     }
 
     @Test
@@ -81,6 +107,35 @@ class HeadingMappedToTest {
   }
 
   @Nested
+  @DisplayName("toString 测试")
+  class ToStringTests {
+
+    @Test
+    @DisplayName("普通映射 toString 应该不带星号")
+    void toStringShouldNotHaveAsteriskForNonMajor() {
+      HeadingMappedTo mapping = HeadingMappedTo.of(DESCRIPTOR_UI);
+
+      assertThat(mapping.toString()).isEqualTo("HeadingMappedTo[D000001]");
+    }
+
+    @Test
+    @DisplayName("主要主题词 toString 应该带星号前缀")
+    void toStringShouldHaveAsteriskForMajor() {
+      HeadingMappedTo mapping = HeadingMappedTo.of(DESCRIPTOR_UI, null, true);
+
+      assertThat(mapping.toString()).isEqualTo("HeadingMappedTo[*D000001]");
+    }
+
+    @Test
+    @DisplayName("带限定词的主要主题词 toString 应该正确格式化")
+    void toStringShouldFormatCorrectlyWithQualifierAndMajor() {
+      HeadingMappedTo mapping = HeadingMappedTo.of(DESCRIPTOR_UI, QUALIFIER_UI, true);
+
+      assertThat(mapping.toString()).isEqualTo("HeadingMappedTo[*D000001/Q000002]");
+    }
+  }
+
+  @Nested
   @DisplayName("相等性测试")
   class EqualityTests {
 
@@ -99,6 +154,15 @@ class HeadingMappedToTest {
     void differentMappingShouldNotBeEqual() {
       HeadingMappedTo mapping1 = HeadingMappedTo.of(DESCRIPTOR_UI);
       HeadingMappedTo mapping2 = HeadingMappedTo.of(MeshUI.of("D000002"));
+
+      assertThat(mapping1).isNotEqualTo(mapping2);
+    }
+
+    @Test
+    @DisplayName("majorTopic 不同的映射应该不相等")
+    void differentMajorTopicShouldNotBeEqual() {
+      HeadingMappedTo mapping1 = HeadingMappedTo.of(DESCRIPTOR_UI, null, false);
+      HeadingMappedTo mapping2 = HeadingMappedTo.of(DESCRIPTOR_UI, null, true);
 
       assertThat(mapping1).isNotEqualTo(mapping2);
     }

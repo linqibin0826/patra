@@ -2,6 +2,7 @@ package com.patra.catalog.infra.adapter.parser.strategy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -444,6 +445,51 @@ class ScrParsingStrategyTest {
       assertThat(result.getHeadingMappedTos()).hasSize(2);
       assertEquals("D000001", result.getHeadingMappedTos().get(0).descriptorUi().ui());
       assertEquals("D000002", result.getHeadingMappedTos().get(1).descriptorUi().ui());
+    }
+
+    @Test
+    @DisplayName("应解析带星号前缀的 HeadingMappedTo（Major Topic）")
+    void shouldParseHeadingMappedToWithAsteriskPrefix() throws Exception {
+      var xml =
+          """
+          <SupplementalRecord SCRClass="1">
+            <SupplementalRecordUI>C000001</SupplementalRecordUI>
+            <SupplementalRecordName>
+              <String>Test SCR</String>
+            </SupplementalRecordName>
+            <HeadingMappedToList>
+              <HeadingMappedTo>
+                <DescriptorReferredTo>
+                  <DescriptorUI>*D000001</DescriptorUI>
+                  <DescriptorName>
+                    <String>Major Topic Descriptor</String>
+                  </DescriptorName>
+                </DescriptorReferredTo>
+              </HeadingMappedTo>
+              <HeadingMappedTo>
+                <DescriptorReferredTo>
+                  <DescriptorUI>D000002</DescriptorUI>
+                  <DescriptorName>
+                    <String>Non-Major Descriptor</String>
+                  </DescriptorName>
+                </DescriptorReferredTo>
+              </HeadingMappedTo>
+            </HeadingMappedToList>
+          </SupplementalRecord>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      MeshScrAggregate result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getHeadingMappedTos()).hasSize(2);
+      // 第一个带星号，应该是 majorTopic=true，UI 应该剥离星号
+      var majorMapping = result.getHeadingMappedTos().get(0);
+      assertEquals("D000001", majorMapping.descriptorUi().ui());
+      assertTrue(majorMapping.majorTopic(), "带星号的映射应该是 majorTopic");
+      // 第二个不带星号，应该是 majorTopic=false
+      var normalMapping = result.getHeadingMappedTos().get(1);
+      assertEquals("D000002", normalMapping.descriptorUi().ui());
+      assertFalse(normalMapping.majorTopic(), "不带星号的映射不应该是 majorTopic");
     }
   }
 
