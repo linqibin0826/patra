@@ -13,6 +13,7 @@ import com.patra.common.error.codes.ErrorCodeLike;
 /// - 11xx: 文件下载错误
 /// - 12xx: 数据解析错误
 /// - 13xx: Venue（期刊）导入错误
+/// - 14xx: ROR 机构导入错误
 ///
 /// @see com.patra.common.error.codes.ErrorCodeLike
 public enum CatalogErrorCode implements ErrorCodeLike {
@@ -58,7 +59,16 @@ public enum CatalogErrorCode implements ErrorCodeLike {
   /// 在导入 OpenAlex Sources 数据时发生。可能由于 JSON 解析失败、
   /// 批处理作业失败、数据库写入错误或系统资源不足导致。
   /// 请检查 Spring Batch 作业状态和系统资源。
-  CAT_1301("CAT-1301", 500);
+  CAT_1301("CAT-1301", 500),
+
+  // ===== ROR 机构导入错误 (14xx) =====
+
+  /// 表示 ROR 机构导入失败。
+  ///
+  /// 在导入 ROR（Research Organization Registry）机构数据时发生。
+  /// 可能由于 JSON 解析失败、批处理作业失败、数据库写入错误或系统资源不足导致。
+  /// 请检查 Spring Batch 作业状态和系统资源。
+  CAT_1401("CAT-1401", 500);
 
   private final String code;
   private final int httpStatus;
