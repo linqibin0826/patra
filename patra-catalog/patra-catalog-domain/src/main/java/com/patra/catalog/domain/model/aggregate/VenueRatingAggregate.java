@@ -202,7 +202,6 @@ public class VenueRatingAggregate extends AggregateRoot<VenueRatingId> {
   public void updateRatingDetails(String ratingData, String categories) {
     this.ratingData = ratingData;
     this.categories = categories;
-    markDirty();
   }
 
   /// 更新分区和影响力分数。
@@ -212,7 +211,6 @@ public class VenueRatingAggregate extends AggregateRoot<VenueRatingId> {
   public void updateQuartileAndScore(String quartile, BigDecimal impactScore) {
     this.quartile = quartile;
     this.impactScore = impactScore;
-    markDirty();
   }
 
   /// 记录数据来源。
@@ -222,7 +220,6 @@ public class VenueRatingAggregate extends AggregateRoot<VenueRatingId> {
   public void recordSource(String sourceUrl, Instant fetchedAt) {
     this.sourceUrl = sourceUrl;
     this.fetchedAt = fetchedAt != null ? fetchedAt : Instant.now();
-    markDirty();
   }
 
   // ========== 查询方法 ==========
@@ -274,6 +271,25 @@ public class VenueRatingAggregate extends AggregateRoot<VenueRatingId> {
   /// @return true 如果为 Scopus
   public boolean isScopusRating() {
     return ratingSystem.isScopus();
+  }
+
+  // ========== 不变量验证 ==========
+
+  /// 验证聚合根的业务不变量。
+  ///
+  /// @throws IllegalStateException 如果不变量被违反
+  @Override
+  protected void assertInvariants() {
+    if (venueId == null) {
+      throw new IllegalStateException("Venue ID 不能为空");
+    }
+    if (ratingSystem == null) {
+      throw new IllegalStateException("评价体系不能为空");
+    }
+    if (year < MIN_YEAR || year > MAX_YEAR) {
+      throw new IllegalStateException(
+          String.format("年份必须在 %d-%d 范围内: %d", MIN_YEAR, MAX_YEAR, year));
+    }
   }
 
   /// 判断是否为顶级分区（Q1 或 1区）。

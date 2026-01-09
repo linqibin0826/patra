@@ -171,7 +171,6 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
   /// @return 当前对象
   public OrganizationAggregate withEstablished(Integer established) {
     this.established = established;
-    markDirty();
     return this;
   }
 
@@ -181,7 +180,6 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
   /// @return 当前对象
   public OrganizationAggregate withAdminInfo(AdminInfo adminInfo) {
     this.adminInfo = adminInfo;
-    markDirty();
     return this;
   }
 
@@ -192,9 +190,7 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
   /// @param type 机构类型
   public void addType(OrganizationType type) {
     Assert.notNull(type, "机构类型不能为空");
-    if (types.add(type)) {
-      markDirty();
-    }
+    types.add(type);
   }
 
   /// 批量设置机构类型（替换现有类型）。
@@ -206,7 +202,6 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
     if (types != null) {
       this.types.addAll(types);
     }
-    markDirty();
     return this;
   }
 
@@ -226,7 +221,6 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
     Assert.notBlank(domain, "域名不能为空");
     if (!domains.contains(domain)) {
       domains.add(domain);
-      markDirty();
     }
   }
 
@@ -239,7 +233,6 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
     if (domains != null) {
       this.domains.addAll(domains);
     }
-    markDirty();
     return this;
   }
 
@@ -259,7 +252,6 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
     Assert.notNull(link, "链接不能为空");
     if (!links.contains(link)) {
       links.add(link);
-      markDirty();
     }
   }
 
@@ -272,7 +264,6 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
     if (links != null) {
       this.links.addAll(links);
     }
-    markDirty();
     return this;
   }
 
@@ -313,8 +304,6 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
     // 基于 value + lang 判断重复（OrganizationName 的 equals）
     if (!names.contains(name)) {
       names.add(name);
-      trackChildAdded(OrganizationName.class, name);
-      markDirty();
     }
   }
 
@@ -323,12 +312,7 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
   /// @param name 名称
   /// @return 是否成功移除
   public boolean removeName(OrganizationName name) {
-    boolean removed = names.remove(name);
-    if (removed) {
-      trackChildRemoved(OrganizationName.class, name);
-      markDirty();
-    }
-    return removed;
+    return names.remove(name);
   }
 
   /// 批量设置名称（替换现有名称）。
@@ -339,20 +323,10 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
   /// @param names 名称列表
   /// @return 当前对象
   public OrganizationAggregate withNames(List<OrganizationName> names) {
-    // 记录所有删除
-    for (OrganizationName old : this.names) {
-      trackChildRemoved(OrganizationName.class, old);
-    }
     this.names.clear();
-
-    // 添加新数据并记录
     if (names != null) {
-      for (OrganizationName name : names) {
-        this.names.add(name);
-        trackChildAdded(OrganizationName.class, name);
-      }
+      this.names.addAll(names);
     }
-    markDirty();
     return this;
   }
 
@@ -387,12 +361,9 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
       // 替换现有标识符
       int index = externalIds.indexOf(current);
       externalIds.set(index, toSave);
-      trackChildUpdated(ExternalId.class, toSave);
     } else {
       externalIds.add(toSave);
-      trackChildAdded(ExternalId.class, toSave);
     }
-    markDirty();
   }
 
   /// 移除外部标识符。
@@ -405,7 +376,6 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
     if (existing.isPresent()) {
       externalIds.remove(existing.get());
       trackChildRemoved(ExternalId.class, existing.get());
-      markDirty();
       return true;
     }
     return false;
@@ -427,20 +397,10 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
   /// @param externalIds 外部标识符列表
   /// @return 当前对象
   public OrganizationAggregate withExternalIds(List<ExternalId> externalIds) {
-    // 记录所有删除
-    for (ExternalId old : this.externalIds) {
-      trackChildRemoved(ExternalId.class, old);
-    }
     this.externalIds.clear();
-
-    // 添加新数据并记录
     if (externalIds != null) {
-      for (ExternalId extId : externalIds) {
-        this.externalIds.add(extId);
-        trackChildAdded(ExternalId.class, extId);
-      }
+      this.externalIds.addAll(externalIds);
     }
-    markDirty();
     return this;
   }
 
@@ -461,8 +421,6 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
     // 基于 geonamesId 判断重复（GeoLocation 的 equals）
     if (!locations.contains(location)) {
       locations.add(location);
-      trackChildAdded(GeoLocation.class, location);
-      markDirty();
     }
   }
 
@@ -471,12 +429,7 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
   /// @param location 地理位置
   /// @return 是否成功移除
   public boolean removeLocation(GeoLocation location) {
-    boolean removed = locations.remove(location);
-    if (removed) {
-      trackChildRemoved(GeoLocation.class, location);
-      markDirty();
-    }
-    return removed;
+    return locations.remove(location);
   }
 
   /// 批量设置地理位置（替换现有位置）。
@@ -487,20 +440,10 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
   /// @param locations 地理位置列表
   /// @return 当前对象
   public OrganizationAggregate withLocations(List<GeoLocation> locations) {
-    // 记录所有删除
-    for (GeoLocation old : this.locations) {
-      trackChildRemoved(GeoLocation.class, old);
-    }
     this.locations.clear();
-
-    // 添加新数据并记录
     if (locations != null) {
-      for (GeoLocation location : locations) {
-        this.locations.add(location);
-        trackChildAdded(GeoLocation.class, location);
-      }
+      this.locations.addAll(locations);
     }
-    markDirty();
     return this;
   }
 
@@ -521,8 +464,6 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
     // 基于 type + relatedRorId 判断重复（OrganizationRelation 的 equals）
     if (!relations.contains(relation)) {
       relations.add(relation);
-      trackChildAdded(OrganizationRelation.class, relation);
-      markDirty();
     }
   }
 
@@ -531,12 +472,7 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
   /// @param relation 机构关系
   /// @return 是否成功移除
   public boolean removeRelation(OrganizationRelation relation) {
-    boolean removed = relations.remove(relation);
-    if (removed) {
-      trackChildRemoved(OrganizationRelation.class, relation);
-      markDirty();
-    }
-    return removed;
+    return relations.remove(relation);
   }
 
   /// 批量设置机构关系（替换现有关系）。
@@ -547,20 +483,10 @@ public class OrganizationAggregate extends AggregateRoot<OrganizationId> {
   /// @param relations 机构关系列表
   /// @return 当前对象
   public OrganizationAggregate withRelations(List<OrganizationRelation> relations) {
-    // 记录所有删除
-    for (OrganizationRelation old : this.relations) {
-      trackChildRemoved(OrganizationRelation.class, old);
-    }
     this.relations.clear();
-
-    // 添加新数据并记录
     if (relations != null) {
-      for (OrganizationRelation relation : relations) {
-        this.relations.add(relation);
-        trackChildAdded(OrganizationRelation.class, relation);
-      }
+      this.relations.addAll(relations);
     }
-    markDirty();
     return this;
   }
 

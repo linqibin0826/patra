@@ -107,7 +107,6 @@ class OrganizationAggregateTest {
       org.withEstablished(1636);
 
       assertThat(org.getEstablished()).isEqualTo(1636);
-      assertThat(org.isDirty()).isTrue();
     }
 
     @Test
@@ -122,7 +121,6 @@ class OrganizationAggregateTest {
       org.withAdminInfo(adminInfo);
 
       assertThat(org.getAdminInfo()).isEqualTo(adminInfo);
-      assertThat(org.isDirty()).isTrue();
     }
   }
 
@@ -140,7 +138,6 @@ class OrganizationAggregateTest {
 
       assertThat(org.getTypes())
           .containsExactlyInAnyOrder(OrganizationType.EDUCATION, OrganizationType.NONPROFIT);
-      assertThat(org.isDirty()).isTrue();
     }
 
     @Test
@@ -178,7 +175,6 @@ class OrganizationAggregateTest {
       org.addDomain("hms.harvard.edu");
 
       assertThat(org.getDomains()).containsExactly("harvard.edu", "hms.harvard.edu");
-      assertThat(org.isDirty()).isTrue();
     }
 
     @Test
@@ -206,7 +202,6 @@ class OrganizationAggregateTest {
       org.addLink(OrganizationLink.wikipedia("https://en.wikipedia.org/wiki/Harvard_University"));
 
       assertThat(org.getLinks()).hasSize(2);
-      assertThat(org.isDirty()).isTrue();
     }
 
     @Test
@@ -244,8 +239,6 @@ class OrganizationAggregateTest {
       org.addName(name);
 
       assertThat(org.getNames()).hasSize(1);
-      assertThat(org.isDirty()).isTrue();
-      assertThat(org.hasChildChanges()).isTrue();
     }
 
     @Test
@@ -255,12 +248,10 @@ class OrganizationAggregateTest {
       OrganizationName name =
           OrganizationName.create("哈佛大学", Set.of(OrganizationNameType.LABEL), "zh");
       org.addName(name);
-      org.pullChildChanges(); // 清空变更记录
 
       org.removeName(name);
 
       assertThat(org.getNames()).isEmpty();
-      assertThat(org.hasChildChanges()).isTrue();
     }
 
     @Test
@@ -294,7 +285,6 @@ class OrganizationAggregateTest {
       org.addExternalId(extId);
 
       assertThat(org.getExternalIds()).hasSize(1);
-      assertThat(org.isDirty()).isTrue();
     }
 
     @Test
@@ -330,14 +320,12 @@ class OrganizationAggregateTest {
       OrganizationAggregate org = createTestOrganization();
       org.addExternalId(ExternalId.create(ExternalIdType.ISNI, "isni-value"));
       org.addExternalId(ExternalId.create(ExternalIdType.WIKIDATA, "Q219563"));
-      org.pullChildChanges(); // 清空变更记录
 
       boolean removed = org.removeExternalId(ExternalIdType.ISNI);
 
       assertThat(removed).isTrue();
       assertThat(org.getExternalIds()).hasSize(1);
       assertThat(org.getExternalId(ExternalIdType.ISNI)).isEmpty();
-      assertThat(org.hasChildChanges()).isTrue();
     }
 
     @Test
@@ -348,7 +336,6 @@ class OrganizationAggregateTest {
       boolean removed = org.removeExternalId(ExternalIdType.ISNI);
 
       assertThat(removed).isFalse();
-      assertThat(org.hasChildChanges()).isFalse();
     }
   }
 
@@ -371,7 +358,6 @@ class OrganizationAggregateTest {
       org.addLocation(location);
 
       assertThat(org.getLocations()).hasSize(1);
-      assertThat(org.isDirty()).isTrue();
     }
 
     @Test
@@ -408,13 +394,11 @@ class OrganizationAggregateTest {
               .countryName("United States")
               .build();
       org.addLocation(location);
-      org.pullChildChanges(); // 清空变更记录
 
       boolean removed = org.removeLocation(location);
 
       assertThat(removed).isTrue();
       assertThat(org.getLocations()).isEmpty();
-      assertThat(org.hasChildChanges()).isTrue();
     }
 
     @Test
@@ -431,7 +415,6 @@ class OrganizationAggregateTest {
       boolean removed = org.removeLocation(location);
 
       assertThat(removed).isFalse();
-      assertThat(org.hasChildChanges()).isFalse();
     }
   }
 
@@ -452,7 +435,6 @@ class OrganizationAggregateTest {
       org.addRelation(relation);
 
       assertThat(org.getRelations()).hasSize(1);
-      assertThat(org.isDirty()).isTrue();
     }
 
     @Test
@@ -511,13 +493,11 @@ class OrganizationAggregateTest {
           OrganizationRelation.create(
               OrganizationRelationType.PARENT, RorId.of("https://ror.org/0parent01"), "Parent 1");
       org.addRelation(relation);
-      org.pullChildChanges(); // 清空变更记录
 
       boolean removed = org.removeRelation(relation);
 
       assertThat(removed).isTrue();
       assertThat(org.getRelations()).isEmpty();
-      assertThat(org.hasChildChanges()).isTrue();
     }
 
     @Test
@@ -531,7 +511,6 @@ class OrganizationAggregateTest {
       boolean removed = org.removeRelation(relation);
 
       assertThat(removed).isFalse();
-      assertThat(org.hasChildChanges()).isFalse();
     }
 
     @Test
@@ -711,7 +690,6 @@ class OrganizationAggregateTest {
       OrganizationName oldName =
           OrganizationName.create("旧名称", Set.of(OrganizationNameType.LABEL), "zh");
       org.addName(oldName);
-      org.pullChildChanges(); // 清空变更记录
 
       OrganizationName newName1 =
           OrganizationName.create("新名称1", Set.of(OrganizationNameType.LABEL), "zh");
@@ -721,9 +699,7 @@ class OrganizationAggregateTest {
       org.withNames(List.of(newName1, newName2));
 
       assertThat(org.getNames()).hasSize(2);
-      assertThat(org.hasChildChanges()).isTrue();
       // 应该有 1 个删除 + 2 个添加 = 3 个变更
-      assertThat(org.pullChildChanges()).hasSize(3);
     }
 
     @Test
@@ -731,12 +707,10 @@ class OrganizationAggregateTest {
     void shouldClearAllNamesWhenNull() {
       OrganizationAggregate org = createTestOrganization();
       org.addName(OrganizationName.create("名称", Set.of(OrganizationNameType.LABEL), "zh"));
-      org.pullChildChanges();
 
       org.withNames(null);
 
       assertThat(org.getNames()).isEmpty();
-      assertThat(org.hasChildChanges()).isTrue();
     }
 
     @Test
@@ -744,14 +718,12 @@ class OrganizationAggregateTest {
     void shouldReplaceAllExternalIdsWithTracking() {
       OrganizationAggregate org = createTestOrganization();
       org.addExternalId(ExternalId.create(ExternalIdType.ISNI, "old-isni"));
-      org.pullChildChanges();
 
       ExternalId newExtId = ExternalId.create(ExternalIdType.WIKIDATA, "Q123");
       org.withExternalIds(List.of(newExtId));
 
       assertThat(org.getExternalIds()).hasSize(1);
       assertThat(org.getExternalId(ExternalIdType.WIKIDATA)).isPresent();
-      assertThat(org.hasChildChanges()).isTrue();
     }
 
     @Test
@@ -760,7 +732,6 @@ class OrganizationAggregateTest {
       OrganizationAggregate org = createTestOrganization();
       org.addLocation(
           GeoLocation.builder().geonamesId(1).countryCode("CN").countryName("China").build());
-      org.pullChildChanges();
 
       GeoLocation newLocation =
           GeoLocation.builder()
@@ -772,7 +743,6 @@ class OrganizationAggregateTest {
 
       assertThat(org.getLocations()).hasSize(1);
       assertThat(org.getLocations().get(0).countryCode()).isEqualTo("US");
-      assertThat(org.hasChildChanges()).isTrue();
     }
 
     @Test
@@ -784,7 +754,6 @@ class OrganizationAggregateTest {
               OrganizationRelationType.PARENT,
               RorId.of("https://ror.org/0oldpare1"),
               "Old Parent"));
-      org.pullChildChanges();
 
       OrganizationRelation newRelation =
           OrganizationRelation.create(
@@ -794,7 +763,6 @@ class OrganizationAggregateTest {
       assertThat(org.getRelations()).hasSize(1);
       assertThat(org.getChildren()).hasSize(1);
       assertThat(org.getParents()).isEmpty();
-      assertThat(org.hasChildChanges()).isTrue();
     }
   }
 

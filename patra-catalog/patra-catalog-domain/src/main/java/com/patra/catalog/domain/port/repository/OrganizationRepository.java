@@ -133,11 +133,11 @@ public interface OrganizationRepository {
 
   /// 批量更新机构聚合根。
   ///
-  /// 基于聚合根的脏标记和子实体变更，执行精准的增量更新。
+  /// 基于子实体变更，执行精准的增量更新。
   ///
   /// **更新策略**：
   ///
-  /// - **主表**：仅更新 isDirty() == true 的聚合根
+  /// - **主表**：更新聚合根字段
   /// - **子表**：基于 pullChildChanges() 执行增量操作
   ///
   /// @param aggregates 聚合根列表

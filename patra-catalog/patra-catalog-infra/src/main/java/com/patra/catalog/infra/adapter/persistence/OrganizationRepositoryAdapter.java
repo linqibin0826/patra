@@ -19,7 +19,6 @@ import com.patra.catalog.infra.adapter.persistence.entity.OrganizationExternalId
 import com.patra.catalog.infra.adapter.persistence.entity.OrganizationLocationEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.OrganizationNameEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.OrganizationRelationEntity;
-import com.patra.common.domain.ChildEntityChange;
 import com.patra.starter.jpa.entity.BaseJpaEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
@@ -124,7 +123,6 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
       mapper.addExternalIdsToAggregate(aggregate, extIdsByOrgId.getOrDefault(orgId, List.of()));
       mapper.addRelationsToAggregate(aggregate, relationsByOrgId.getOrDefault(orgId, List.of()));
       mapper.addLocationsToAggregate(aggregate, locationsByOrgId.getOrDefault(orgId, List.of()));
-      aggregate.clearDirty();
 
       result.put(RorId.of(entity.getRorId()), aggregate);
     }
@@ -236,7 +234,6 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
     }
 
     int updatedCount = 0;
-    int childChangesCount = 0;
 
     for (OrganizationAggregate aggregate : aggregates) {
       if (aggregate.getId() == null) {
@@ -245,23 +242,18 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
 
       Long orgId = aggregate.getId().value();
 
-      // 更新主表（仅脏数据）
-      if (aggregate.isDirty()) {
-        OrganizationEntity entity = mapper.toEntity(aggregate);
-        organizationDao.save(entity);
-        updatedCount++;
-      }
+      // 主表更新
+      OrganizationEntity entity = mapper.toEntity(aggregate);
+      organizationDao.save(entity);
 
-      // 处理子表变更
-      List<ChildEntityChange> changes = aggregate.pullChildChanges();
-      if (!changes.isEmpty()) {
-        applyChildChanges(orgId, changes);
-        childChangesCount += changes.size();
-      }
+      // 子表：全删全增
+      saveChildren(aggregate, orgId);
+
+      updatedCount++;
     }
 
-    if (updatedCount > 0 || childChangesCount > 0) {
-      log.debug("批量更新机构：主表 {} 条，子表变更 {} 条", updatedCount, childChangesCount);
+    if (updatedCount > 0) {
+      log.debug("批量更新机构：{} 条", updatedCount);
     }
   }
 
@@ -307,7 +299,6 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
     mapper.addExternalIdsToAggregate(aggregate, externalIdDao.findAllByOrgId(orgId));
     mapper.addRelationsToAggregate(aggregate, relationDao.findAllByOrgId(orgId));
     mapper.addLocationsToAggregate(aggregate, locationDao.findAllByOrgId(orgId));
-    aggregate.clearDirty();
 
     return aggregate;
   }
@@ -374,135 +365,6 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
     }
     if (!locationEntities.isEmpty()) {
       locationDao.saveAll(locationEntities);
-    }
-  }
-
-  /// 应用子实体变更。
-  ///
-  /// 根据变更事件的实体类型分发到对应的处理逻辑。
-  ///
-  /// @param orgId 机构 ID
-  /// @param changes 子实体变更事件列表
-  @SuppressWarnings("unchecked")
-  private void applyChildChanges(Long orgId, List<ChildEntityChange> changes) {
-    for (ChildEntityChange change : changes) {
-      Class<?> entityType = change.entityType();
-
-      if (entityType == OrganizationName.class) {
-        applyNameChange(orgId, change);
-      } else if (entityType == ExternalId.class) {
-        applyExternalIdChange(orgId, change);
-      } else if (entityType == OrganizationRelation.class) {
-        applyRelationChange(orgId, change);
-      } else if (entityType == GeoLocation.class) {
-        applyLocationChange(orgId, change);
-      } else {
-        log.warn("未知的子实体类型: {}", entityType.getName());
-      }
-    }
-  }
-
-  /// 应用名称子表变更。
-  @SuppressWarnings("unchecked")
-  private void applyNameChange(Long orgId, ChildEntityChange change) {
-    switch (change) {
-      case ChildEntityChange.Added<?> added -> {
-        OrganizationName name = (OrganizationName) added.entity();
-        OrganizationNameEntity entity = mapper.toNameEntity(name, orgId);
-        assignIdIfMissing(entity);
-        nameDao.save(entity);
-      }
-      case ChildEntityChange.Updated<?> updated -> {
-        OrganizationName name = (OrganizationName) updated.entity();
-        OrganizationNameEntity entity = mapper.toNameEntity(name, orgId);
-        nameDao.save(entity);
-      }
-      case ChildEntityChange.Removed<?> removed -> {
-        Object entityId = removed.entityId();
-        if (entityId instanceof OrganizationName name && name.id() != null) {
-          nameDao.deleteById(name.id());
-        } else if (entityId instanceof Long id) {
-          nameDao.deleteById(id);
-        }
-      }
-    }
-  }
-
-  /// 应用外部标识符子表变更。
-  @SuppressWarnings("unchecked")
-  private void applyExternalIdChange(Long orgId, ChildEntityChange change) {
-    switch (change) {
-      case ChildEntityChange.Added<?> added -> {
-        ExternalId extId = (ExternalId) added.entity();
-        OrganizationExternalIdEntity entity = mapper.toExternalIdEntity(extId, orgId);
-        assignIdIfMissing(entity);
-        externalIdDao.save(entity);
-      }
-      case ChildEntityChange.Updated<?> updated -> {
-        ExternalId extId = (ExternalId) updated.entity();
-        OrganizationExternalIdEntity entity = mapper.toExternalIdEntity(extId, orgId);
-        externalIdDao.save(entity);
-      }
-      case ChildEntityChange.Removed<?> removed -> {
-        Object entityId = removed.entityId();
-        if (entityId instanceof ExternalId extId && extId.id() != null) {
-          externalIdDao.deleteById(extId.id());
-        } else if (entityId instanceof Long id) {
-          externalIdDao.deleteById(id);
-        }
-      }
-    }
-  }
-
-  /// 应用关系子表变更。
-  @SuppressWarnings("unchecked")
-  private void applyRelationChange(Long orgId, ChildEntityChange change) {
-    switch (change) {
-      case ChildEntityChange.Added<?> added -> {
-        OrganizationRelation relation = (OrganizationRelation) added.entity();
-        OrganizationRelationEntity entity = mapper.toRelationEntity(relation, orgId);
-        assignIdIfMissing(entity);
-        relationDao.save(entity);
-      }
-      case ChildEntityChange.Updated<?> updated -> {
-        OrganizationRelation relation = (OrganizationRelation) updated.entity();
-        OrganizationRelationEntity entity = mapper.toRelationEntity(relation, orgId);
-        relationDao.save(entity);
-      }
-      case ChildEntityChange.Removed<?> removed -> {
-        Object entityId = removed.entityId();
-        if (entityId instanceof OrganizationRelation relation && relation.id() != null) {
-          relationDao.deleteById(relation.id());
-        } else if (entityId instanceof Long id) {
-          relationDao.deleteById(id);
-        }
-      }
-    }
-  }
-
-  /// 应用地理位置子表变更。
-  @SuppressWarnings("unchecked")
-  private void applyLocationChange(Long orgId, ChildEntityChange change) {
-    switch (change) {
-      case ChildEntityChange.Added<?> added -> {
-        GeoLocation location = (GeoLocation) added.entity();
-        OrganizationLocationEntity entity = mapper.toLocationEntity(location, orgId);
-        assignIdIfMissing(entity);
-        locationDao.save(entity);
-      }
-      case ChildEntityChange.Updated<?> updated -> {
-        GeoLocation location = (GeoLocation) updated.entity();
-        OrganizationLocationEntity entity = mapper.toLocationEntity(location, orgId);
-        locationDao.save(entity);
-      }
-      case ChildEntityChange.Removed<?> removed -> {
-        Object entityId = removed.entityId();
-        if (entityId instanceof GeoLocation location && location.id() != null) {
-          locationDao.deleteById(location.id());
-        } else if (entityId instanceof Long id) {
-          locationDao.deleteById(id);
-        }
-      }
     }
   }
 

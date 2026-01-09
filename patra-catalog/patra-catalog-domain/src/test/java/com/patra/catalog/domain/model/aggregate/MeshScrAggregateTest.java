@@ -401,81 +401,11 @@ class MeshScrAggregateTest {
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("版本必须 >= 0");
     }
-
-    @Test
-    @DisplayName("新创建的聚合根不应该是脏的")
-    void shouldNotBeDirtyWhenNewlyCreated() {
-      assertThat(scr.isDirty()).isFalse();
-    }
-
-    @Test
-    @DisplayName("修改字段后应该标记为脏")
-    void shouldBeDirtyAfterModification() {
-      // when
-      scr.withMeshVersion("2025");
-
-      // then
-      assertThat(scr.isDirty()).isTrue();
-    }
-
-    @Test
-    @DisplayName("清除脏标记后应该不再是脏的")
-    void shouldNotBeDirtyAfterClearDirty() {
-      // given
-      scr.withMeshVersion("2025");
-      assertThat(scr.isDirty()).isTrue();
-
-      // when
-      scr.clearDirty();
-
-      // then
-      assertThat(scr.isDirty()).isFalse();
-    }
-
-    @Test
-    @DisplayName("deprecate 应该标记为脏")
-    void deprecateShouldMarkDirty() {
-      // when
-      scr.deprecate();
-
-      // then
-      assertThat(scr.isDirty()).isTrue();
-    }
-
-    @Test
-    @DisplayName("activate 应该标记为脏")
-    void activateShouldMarkDirty() {
-      // given
-      scr.deprecate();
-      scr.clearDirty();
-
-      // when
-      scr.activate();
-
-      // then
-      assertThat(scr.isDirty()).isTrue();
-    }
   }
 
   @Nested
   @DisplayName("子实体变更追踪测试")
   class ChildEntityChangeTrackingTests {
-
-    @Test
-    @DisplayName("添加映射关系应该追踪变更")
-    void shouldTrackHeadingMappedToAddition() {
-      // given
-      HeadingMappedTo mapping = HeadingMappedTo.of(MeshUI.of("D000001"));
-
-      // when
-      scr.addHeadingMappedTo(mapping);
-
-      // then
-      assertThat(scr.hasChildChanges()).isTrue();
-      List<ChildEntityChange> changes = scr.pullChildChanges();
-      assertThat(changes).hasSize(1);
-      assertThat(changes.get(0)).isInstanceOf(ChildEntityChange.Added.class);
-    }
 
     @Test
     @DisplayName("添加概念应该追踪变更")
@@ -488,47 +418,23 @@ class MeshScrAggregateTest {
 
       // then
       assertThat(scr.hasChildChanges()).isTrue();
-    }
-
-    @Test
-    @DisplayName("添加来源应该追踪变更")
-    void shouldTrackSourceAddition() {
-      // given
-      ScrSource source = ScrSource.of("NCI");
-
-      // when
-      scr.addSource(source);
-
-      // then
-      assertThat(scr.hasChildChanges()).isTrue();
+      List<ChildEntityChange> changes = scr.pullChildChanges();
+      assertThat(changes).hasSize(1);
+      assertThat(changes.get(0)).isInstanceOf(ChildEntityChange.Added.class);
     }
 
     @Test
     @DisplayName("pullChildChanges 应该清空变更列表")
     void pullChildChangesShouldClearList() {
       // given
-      scr.addSource(ScrSource.of("NCI"));
+      MeshConcept concept = MeshConcept.create(MeshUI.of("M0000001"), "Test", true);
+      scr.addConcept(concept);
       assertThat(scr.hasChildChanges()).isTrue();
 
       // when
       scr.pullChildChanges();
 
       // then
-      assertThat(scr.hasChildChanges()).isFalse();
-    }
-
-    @Test
-    @DisplayName("重复添加同一项不应该追踪变更")
-    void shouldNotTrackDuplicateAddition() {
-      // given
-      ScrSource source = ScrSource.of("NCI");
-      scr.addSource(source);
-      scr.pullChildChanges(); // 清空变更
-
-      // when - 添加相同的来源
-      scr.addSource(source);
-
-      // then - 不应该有新的变更
       assertThat(scr.hasChildChanges()).isFalse();
     }
   }

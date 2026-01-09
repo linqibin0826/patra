@@ -137,9 +137,6 @@ public abstract class VenueJpaMapper {
       aggregate.withAffiliatedSocieties(entity.getAffiliatedSocieties());
     }
 
-    // 清除脏标记（重建不应标记为脏）
-    aggregate.clearDirty();
-
     return aggregate;
   }
 
@@ -159,9 +156,6 @@ public abstract class VenueJpaMapper {
         aggregate.addIdentifier(identifier);
       }
     }
-
-    // 清除因添加标识符产生的脏标记
-    aggregate.clearDirty();
   }
 
   // ========== 标识符转换 ==========

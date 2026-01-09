@@ -203,7 +203,6 @@ public class MeshScrAggregate extends AggregateRoot<MeshScrId> {
     Assert.notNull(mapping, "映射关系不能为空");
     if (!headingMappedTos.contains(mapping)) {
       headingMappedTos.add(mapping);
-      trackChildAdded(HeadingMappedTo.class, mapping);
     }
     return this;
   }
@@ -270,7 +269,6 @@ public class MeshScrAggregate extends AggregateRoot<MeshScrId> {
     Assert.notNull(source, "来源不能为空");
     if (!sources.contains(source)) {
       sources.add(source);
-      trackChildAdded(ScrSource.class, source);
     }
     return this;
   }
@@ -301,7 +299,6 @@ public class MeshScrAggregate extends AggregateRoot<MeshScrId> {
     Assert.notNull(info, "索引信息不能为空");
     if (!indexingInfos.contains(info)) {
       indexingInfos.add(info);
-      trackChildAdded(IndexingInfo.class, info);
     }
     return this;
   }
@@ -338,7 +335,6 @@ public class MeshScrAggregate extends AggregateRoot<MeshScrId> {
 
     if (!exists) {
       pharmacologicalActions.add(action);
-      trackChildAdded(PharmacologicalAction.class, action);
     }
     return this;
   }
@@ -398,7 +394,6 @@ public class MeshScrAggregate extends AggregateRoot<MeshScrId> {
   /// @return 当前对象（支持链式调用）
   public MeshScrAggregate withMeshVersion(String meshVersion) {
     this.meshVersion = meshVersion;
-    markDirty();
     return this;
   }
 
@@ -408,7 +403,6 @@ public class MeshScrAggregate extends AggregateRoot<MeshScrId> {
   /// @return 当前对象（支持链式调用）
   public MeshScrAggregate withNote(String note) {
     this.note = note;
-    markDirty();
     return this;
   }
 
@@ -418,7 +412,6 @@ public class MeshScrAggregate extends AggregateRoot<MeshScrId> {
   /// @return 当前对象（支持链式调用）
   public MeshScrAggregate withFrequency(String frequency) {
     this.frequency = frequency;
-    markDirty();
     return this;
   }
 
@@ -428,7 +421,6 @@ public class MeshScrAggregate extends AggregateRoot<MeshScrId> {
   /// @return 当前对象（支持链式调用）
   public MeshScrAggregate withPreviousIndexing(String previousIndexing) {
     this.previousIndexing = previousIndexing;
-    markDirty();
     return this;
   }
 
@@ -438,7 +430,6 @@ public class MeshScrAggregate extends AggregateRoot<MeshScrId> {
   /// @return 当前对象（支持链式调用）
   public MeshScrAggregate withDateCreated(LocalDate dateCreated) {
     this.dateCreated = dateCreated;
-    markDirty();
     return this;
   }
 
@@ -448,7 +439,6 @@ public class MeshScrAggregate extends AggregateRoot<MeshScrId> {
   /// @return 当前对象（支持链式调用）
   public MeshScrAggregate withDateRevised(LocalDate dateRevised) {
     this.dateRevised = dateRevised;
-    markDirty();
     return this;
   }
 
@@ -458,20 +448,17 @@ public class MeshScrAggregate extends AggregateRoot<MeshScrId> {
   /// @return 当前对象（支持链式调用）
   public MeshScrAggregate withMetadataJson(String metadataJson) {
     this.metadataJson = metadataJson;
-    markDirty();
     return this;
   }
 
   /// 废弃 SCR。
   public void deprecate() {
     this.activeStatus = false;
-    markDirty();
   }
 
   /// 激活 SCR。
   public void activate() {
     this.activeStatus = true;
-    markDirty();
   }
 
   /// 判断 SCR 是否有效。

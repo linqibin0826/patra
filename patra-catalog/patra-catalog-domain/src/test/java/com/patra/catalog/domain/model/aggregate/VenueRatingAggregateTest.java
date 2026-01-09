@@ -189,7 +189,6 @@ class VenueRatingAggregateTest {
       assertThat(aggregate.getSourceUrl()).isEqualTo(sourceUrl);
       assertThat(aggregate.getFetchedAt()).isEqualTo(fetchedAt);
       // restoreState 不应标记为脏
-      assertThat(aggregate.isDirty()).isFalse();
     }
   }
 
@@ -212,7 +211,6 @@ class VenueRatingAggregateTest {
       // Then
       assertThat(aggregate.getRatingData()).isEqualTo(ratingData);
       assertThat(aggregate.getCategories()).isEqualTo(categories);
-      assertThat(aggregate.isDirty()).isTrue();
     }
 
     @Test
@@ -230,7 +228,6 @@ class VenueRatingAggregateTest {
       // Then
       assertThat(aggregate.getQuartile()).isEqualTo(quartile);
       assertThat(aggregate.getImpactScore()).isEqualByComparingTo(impactScore);
-      assertThat(aggregate.isDirty()).isTrue();
     }
 
     @Test
@@ -248,7 +245,6 @@ class VenueRatingAggregateTest {
       // Then
       assertThat(aggregate.getSourceUrl()).isEqualTo(sourceUrl);
       assertThat(aggregate.getFetchedAt()).isEqualTo(fetchedAt);
-      assertThat(aggregate.isDirty()).isTrue();
     }
 
     @Test
@@ -460,22 +456,6 @@ class VenueRatingAggregateTest {
       // Then
       assertThat(aggregate.getId()).isEqualTo(id);
       assertThat(aggregate.isTransient()).isFalse();
-    }
-
-    @Test
-    @DisplayName("clearDirty() 应清除脏标记")
-    void shouldClearDirtyFlag() {
-      // Given
-      VenueRatingAggregate aggregate =
-          VenueRatingAggregate.create(VenueId.of(123L), 2024, RatingSystem.JCR, null, null);
-      aggregate.updateQuartileAndScore("Q1", new BigDecimal("42.778"));
-      assertThat(aggregate.isDirty()).isTrue();
-
-      // When
-      aggregate.clearDirty();
-
-      // Then
-      assertThat(aggregate.isDirty()).isFalse();
     }
   }
 }

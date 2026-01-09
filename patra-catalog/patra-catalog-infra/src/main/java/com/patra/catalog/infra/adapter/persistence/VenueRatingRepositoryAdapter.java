@@ -2,6 +2,7 @@ package com.patra.catalog.infra.adapter.persistence;
 
 import com.patra.catalog.domain.model.aggregate.VenueRatingAggregate;
 import com.patra.catalog.domain.model.enums.RatingSystem;
+import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueRatingId;
 import com.patra.catalog.domain.port.repository.VenueRatingRepository;
 import com.patra.catalog.infra.adapter.persistence.converter.mapper.VenueRatingJpaMapper;
@@ -58,56 +59,60 @@ public class VenueRatingRepositoryAdapter implements VenueRatingRepository {
 
   @Override
   public Optional<VenueRatingAggregate> findByVenueIdAndYearAndRatingSystem(
-      Long venueId, int year, RatingSystem ratingSystem) {
+      VenueId venueId, int year, RatingSystem ratingSystem) {
     if (venueId == null || ratingSystem == null) {
       return Optional.empty();
     }
     return jpaRepository
-        .findByVenueIdAndYearAndRatingSystem(venueId, (short) year, ratingSystem)
+        .findByVenueIdAndYearAndRatingSystem(venueId.value(), (short) year, ratingSystem)
         .map(jpaConverter::toAggregate);
   }
 
   @Override
-  public List<VenueRatingAggregate> findByVenueId(Long venueId) {
+  public List<VenueRatingAggregate> findByVenueId(VenueId venueId) {
     if (venueId == null) {
       return List.of();
     }
-    return jpaRepository.findByVenueId(venueId).stream().map(jpaConverter::toAggregate).toList();
+    return jpaRepository.findByVenueId(venueId.value()).stream()
+        .map(jpaConverter::toAggregate)
+        .toList();
   }
 
   @Override
   public List<VenueRatingAggregate> findByVenueIdAndRatingSystem(
-      Long venueId, RatingSystem ratingSystem) {
+      VenueId venueId, RatingSystem ratingSystem) {
     if (venueId == null || ratingSystem == null) {
       return List.of();
     }
-    return jpaRepository.findByVenueIdAndRatingSystem(venueId, ratingSystem).stream()
+    return jpaRepository.findByVenueIdAndRatingSystem(venueId.value(), ratingSystem).stream()
         .map(jpaConverter::toAggregate)
         .toList();
   }
 
   @Override
-  public List<VenueRatingAggregate> findByVenueIdAndYear(Long venueId, int year) {
+  public List<VenueRatingAggregate> findByVenueIdAndYear(VenueId venueId, int year) {
     if (venueId == null) {
       return List.of();
     }
-    return jpaRepository.findByVenueIdAndYear(venueId, (short) year).stream()
+    return jpaRepository.findByVenueIdAndYear(venueId.value(), (short) year).stream()
         .map(jpaConverter::toAggregate)
         .toList();
   }
 
   @Override
-  public Map<Long, List<VenueRatingAggregate>> findByVenueIds(Collection<Long> venueIds) {
+  public Map<VenueId, List<VenueRatingAggregate>> findByVenueIds(Collection<VenueId> venueIds) {
     if (venueIds == null || venueIds.isEmpty()) {
       return Map.of();
     }
 
-    List<VenueRatingEntity> entities = jpaRepository.findByVenueIdIn(venueIds);
+    List<Long> rawIds = venueIds.stream().map(VenueId::value).toList();
+    List<VenueRatingEntity> entities = jpaRepository.findByVenueIdIn(rawIds);
 
-    Map<Long, List<VenueRatingAggregate>> result = new HashMap<>();
+    Map<VenueId, List<VenueRatingAggregate>> result = new HashMap<>();
     for (VenueRatingEntity entity : entities) {
       VenueRatingAggregate aggregate = jpaConverter.toAggregate(entity);
-      result.computeIfAbsent(entity.getVenueId(), k -> new ArrayList<>()).add(aggregate);
+      VenueId vid = VenueId.of(entity.getVenueId());
+      result.computeIfAbsent(vid, k -> new ArrayList<>()).add(aggregate);
     }
     return result;
   }
@@ -163,7 +168,6 @@ public class VenueRatingRepositoryAdapter implements VenueRatingRepository {
       VenueRatingEntity saved = savedEntities.get(i);
       aggregate.assignId(VenueRatingId.of(saved.getId()));
       aggregate.assignVersion(saved.getVersion());
-      aggregate.clearDirty();
     }
 
     log.info("批量保存载体评级完成：{} 条", aggregates.size());
@@ -179,11 +183,11 @@ public class VenueRatingRepositoryAdapter implements VenueRatingRepository {
   }
 
   @Override
-  public void deleteByVenueId(Long venueId) {
+  public void deleteByVenueId(VenueId venueId) {
     if (venueId == null) {
       return;
     }
-    jpaRepository.deleteByVenueId(venueId);
+    jpaRepository.deleteByVenueId(venueId.value());
     log.debug("根据 venueId={} 删除载体评级", venueId);
   }
 
