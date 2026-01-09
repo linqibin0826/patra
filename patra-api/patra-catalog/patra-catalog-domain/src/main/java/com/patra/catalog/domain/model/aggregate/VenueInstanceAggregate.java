@@ -311,7 +311,6 @@ public class VenueInstanceAggregate extends AggregateRoot<VenueInstanceId> {
   /// @param json 元数据 JSON 字符串
   public void setInstanceMetadataJson(String json) {
     this.instanceMetadataJson = json;
-    markDirty();
   }
 
   // ========== 便捷判断方法 ==========

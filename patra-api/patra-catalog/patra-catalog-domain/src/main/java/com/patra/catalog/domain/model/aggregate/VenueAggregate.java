@@ -183,7 +183,6 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// @return 当前对象
   public VenueAggregate withProvenance(ProvenanceInfo provenance) {
     this.provenance = provenance;
-    markDirty();
     return this;
   }
 
@@ -192,7 +191,6 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// @return 当前对象
   public VenueAggregate withOpenAlexProvenance() {
     this.provenance = ProvenanceInfo.forOpenAlex();
-    markDirty();
     return this;
   }
 
@@ -204,7 +202,6 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// @return 当前对象
   public VenueAggregate withPublicationProfile(PublicationProfile publicationProfile) {
     this.publicationProfile = publicationProfile;
-    markDirty();
     return this;
   }
 
@@ -231,7 +228,6 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
 
     // 使用 toBuilder 保留其他字段，只更新 countryCode
     this.publicationProfile = publicationProfile.toBuilder().countryCode(validatedCode).build();
-    markDirty();
   }
 
   /// 标准化语言代码。
@@ -289,7 +285,6 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
     }
 
     this.publicationProfile = publicationProfile.toBuilder().languages(normalizedLanguages).build();
-    markDirty();
   }
 
   /// 设置引用指标。
@@ -298,7 +293,6 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// @return 当前对象
   public VenueAggregate withCitationMetrics(CitationMetrics citationMetrics) {
     this.citationMetrics = citationMetrics;
-    markDirty();
     return this;
   }
 
@@ -308,7 +302,6 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// @return 当前对象
   public VenueAggregate withOpenAccess(OpenAccessInfo openAccess) {
     this.openAccess = openAccess;
-    markDirty();
     return this;
   }
 
@@ -319,7 +312,6 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   public VenueAggregate withAffiliatedSocieties(List<Society> affiliatedSocieties) {
     this.affiliatedSocieties =
         affiliatedSocieties != null ? new ArrayList<>(affiliatedSocieties) : new ArrayList<>();
-    markDirty();
     return this;
   }
 
@@ -344,7 +336,6 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
     // 检查是否已存在相同的标识符（基于 Record 的 equals）
     if (!identifiers.contains(identifier)) {
       identifiers.add(identifier);
-      markDirty();
     }
   }
 
@@ -366,9 +357,7 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   public boolean removeIdentifier(VenueIdentifierType type, String value) {
     VenueIdentifier target = new VenueIdentifier(type, value);
     boolean removed = identifiers.remove(target);
-    if (removed) {
-      markDirty();
-    }
+    if (removed) {}
     return removed;
   }
 

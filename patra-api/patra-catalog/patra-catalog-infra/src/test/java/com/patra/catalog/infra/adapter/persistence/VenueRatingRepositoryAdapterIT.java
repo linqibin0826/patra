@@ -120,7 +120,8 @@ class VenueRatingRepositoryAdapterIT {
       repository.save(rating);
 
       // When
-      var result = repository.findByVenueIdAndYearAndRatingSystem(1001L, 2024, RatingSystem.JCR);
+      var result =
+          repository.findByVenueIdAndYearAndRatingSystem(VenueId.of(1001L), 2024, RatingSystem.JCR);
 
       // Then
       assertThat(result).isPresent();
@@ -133,7 +134,8 @@ class VenueRatingRepositoryAdapterIT {
     @DisplayName("业务唯一键不存在 - 应该返回 empty")
     void findByBusinessKey_notFound_shouldReturnEmpty() {
       // When
-      var result = repository.findByVenueIdAndYearAndRatingSystem(9999L, 2024, RatingSystem.JCR);
+      var result =
+          repository.findByVenueIdAndYearAndRatingSystem(VenueId.of(9999L), 2024, RatingSystem.JCR);
 
       // Then
       assertThat(result).isEmpty();
@@ -153,7 +155,7 @@ class VenueRatingRepositoryAdapterIT {
     @DisplayName("null ratingSystem - 应该返回 empty")
     void findByBusinessKey_nullRatingSystem_shouldReturnEmpty() {
       // When
-      var result = repository.findByVenueIdAndYearAndRatingSystem(1001L, 2024, null);
+      var result = repository.findByVenueIdAndYearAndRatingSystem(VenueId.of(1001L), 2024, null);
 
       // Then
       assertThat(result).isEmpty();
@@ -175,7 +177,7 @@ class VenueRatingRepositoryAdapterIT {
       repository.save(createCasRating(VenueId.of(1001L), 2024, "1区", new BigDecimal("45.0")));
 
       // When
-      List<VenueRatingAggregate> result = repository.findByVenueId(1001L);
+      List<VenueRatingAggregate> result = repository.findByVenueId(VenueId.of(1001L));
 
       // Then
       assertThat(result).hasSize(3);
@@ -186,7 +188,7 @@ class VenueRatingRepositoryAdapterIT {
     @DisplayName("无评级数据 - 应该返回空列表")
     void findByVenueId_notFound_shouldReturnEmptyList() {
       // When
-      List<VenueRatingAggregate> result = repository.findByVenueId(9999L);
+      List<VenueRatingAggregate> result = repository.findByVenueId(VenueId.of(9999L));
 
       // Then
       assertThat(result).isEmpty();
@@ -219,7 +221,7 @@ class VenueRatingRepositoryAdapterIT {
 
       // When
       List<VenueRatingAggregate> result =
-          repository.findByVenueIdAndRatingSystem(1001L, RatingSystem.JCR);
+          repository.findByVenueIdAndRatingSystem(VenueId.of(1001L), RatingSystem.JCR);
 
       // Then
       assertThat(result).hasSize(2);
@@ -231,7 +233,7 @@ class VenueRatingRepositoryAdapterIT {
     void findByVenueIdAndRatingSystem_notFound_shouldReturnEmptyList() {
       // When
       List<VenueRatingAggregate> result =
-          repository.findByVenueIdAndRatingSystem(9999L, RatingSystem.JCR);
+          repository.findByVenueIdAndRatingSystem(VenueId.of(9999L), RatingSystem.JCR);
 
       // Then
       assertThat(result).isEmpty();
@@ -253,7 +255,7 @@ class VenueRatingRepositoryAdapterIT {
       repository.save(createJcrRating(VenueId.of(1001L), 2023, "Q2", new BigDecimal("38.0")));
 
       // When
-      List<VenueRatingAggregate> result = repository.findByVenueIdAndYear(1001L, 2024);
+      List<VenueRatingAggregate> result = repository.findByVenueIdAndYear(VenueId.of(1001L), 2024);
 
       // Then
       assertThat(result).hasSize(2);
@@ -264,7 +266,7 @@ class VenueRatingRepositoryAdapterIT {
     @DisplayName("无匹配数据 - 应该返回空列表")
     void findByVenueIdAndYear_notFound_shouldReturnEmptyList() {
       // When
-      List<VenueRatingAggregate> result = repository.findByVenueIdAndYear(1001L, 2020);
+      List<VenueRatingAggregate> result = repository.findByVenueIdAndYear(VenueId.of(1001L), 2020);
 
       // Then
       assertThat(result).isEmpty();
@@ -286,21 +288,22 @@ class VenueRatingRepositoryAdapterIT {
       repository.save(createJcrRating(VenueId.of(1003L), 2024, "Q3", new BigDecimal("25.0")));
 
       // When
-      Map<Long, List<VenueRatingAggregate>> result =
-          repository.findByVenueIds(Set.of(1001L, 1002L, 9999L));
+      Map<VenueId, List<VenueRatingAggregate>> result =
+          repository.findByVenueIds(
+              Set.of(VenueId.of(1001L), VenueId.of(1002L), VenueId.of(9999L)));
 
       // Then
       assertThat(result).hasSize(2);
-      assertThat(result.get(1001L)).hasSize(1);
-      assertThat(result.get(1002L)).hasSize(1);
-      assertThat(result.get(9999L)).isNull();
+      assertThat(result.get(VenueId.of(1001L))).hasSize(1);
+      assertThat(result.get(VenueId.of(1002L))).hasSize(1);
+      assertThat(result.get(VenueId.of(9999L))).isNull();
     }
 
     @Test
     @DisplayName("空集合 - 应该返回空 Map")
     void findByVenueIds_emptyInput_shouldReturnEmptyMap() {
       // When
-      Map<Long, List<VenueRatingAggregate>> result = repository.findByVenueIds(Set.of());
+      Map<VenueId, List<VenueRatingAggregate>> result = repository.findByVenueIds(Set.of());
 
       // Then
       assertThat(result).isEmpty();
@@ -310,7 +313,7 @@ class VenueRatingRepositoryAdapterIT {
     @DisplayName("null - 应该返回空 Map")
     void findByVenueIds_nullInput_shouldReturnEmptyMap() {
       // When
-      Map<Long, List<VenueRatingAggregate>> result = repository.findByVenueIds(null);
+      Map<VenueId, List<VenueRatingAggregate>> result = repository.findByVenueIds(null);
 
       // Then
       assertThat(result).isEmpty();
@@ -341,22 +344,18 @@ class VenueRatingRepositoryAdapterIT {
 
     @Test
     @DisplayName("更新聚合根 - 应该更新数据")
-    void save_dirtyAggregate_shouldUpdateAndClearDirty() {
+    void save_existingAggregate_shouldUpdate() {
       // Given: 先插入
       var rating = createJcrRating(VenueId.of(1001L), 2024, "Q1", new BigDecimal("42.778"));
       VenueRatingAggregate saved = repository.save(rating);
 
       // Given: 修改保存后的聚合根
       saved.updateQuartileAndScore("Q2", new BigDecimal("45.0"));
-      assertThat(saved.isDirty()).isTrue();
 
       // When
       VenueRatingAggregate updated = repository.save(saved);
 
-      // Then: 返回的新聚合根应该是干净的
-      assertThat(updated.isDirty()).isFalse();
-
-      // 验证数据库中的值
+      // Then: 验证数据库中的值
       var found = repository.findById(updated.getId()).orElseThrow();
       assertThat(found.getQuartile()).isEqualTo("Q2");
       assertThat(found.getImpactScore()).isEqualByComparingTo(new BigDecimal("45.0"));
@@ -465,19 +464,20 @@ class VenueRatingRepositoryAdapterIT {
       assertThat(jpaRepository.count()).isEqualTo(3);
 
       // When
-      repository.deleteByVenueId(1001L);
+      repository.deleteByVenueId(VenueId.of(1001L));
 
       // Then
       assertThat(jpaRepository.count()).isEqualTo(1);
-      assertThat(repository.findByVenueId(1001L)).isEmpty();
-      assertThat(repository.findByVenueId(1002L)).hasSize(1);
+      assertThat(repository.findByVenueId(VenueId.of(1001L))).isEmpty();
+      assertThat(repository.findByVenueId(VenueId.of(1002L))).hasSize(1);
     }
 
     @Test
     @DisplayName("无匹配数据 - 不应该抛出异常")
     void deleteByVenueId_notFound_shouldNotThrow() {
       // When & Then
-      assertThatCode(() -> repository.deleteByVenueId(99999L)).doesNotThrowAnyException();
+      assertThatCode(() -> repository.deleteByVenueId(VenueId.of(99999L)))
+          .doesNotThrowAnyException();
     }
 
     @Test

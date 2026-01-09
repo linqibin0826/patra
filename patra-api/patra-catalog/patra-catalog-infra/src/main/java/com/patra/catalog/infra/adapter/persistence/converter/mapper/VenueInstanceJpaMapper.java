@@ -78,7 +78,6 @@ public abstract class VenueInstanceJpaMapper {
     // 恢复可变状态
     if (entity.getInstanceMetadata() != null) {
       aggregate.setInstanceMetadataJson(jsonNodeToString(entity.getInstanceMetadata()));
-      aggregate.clearDirty(); // 恢复后清除脏标记
     }
 
     return aggregate;

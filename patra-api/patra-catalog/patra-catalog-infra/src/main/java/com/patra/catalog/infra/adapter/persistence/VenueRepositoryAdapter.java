@@ -271,22 +271,16 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
     List<VenueIdentifierEntity> identifiersToInsert = new ArrayList<>();
     List<Long> identifierIdsToDelete = new ArrayList<>();
-    List<VenueAggregate> dirtyAggregates = new ArrayList<>();
-
     for (VenueAggregate aggregate : aggregates) {
       Long venueId = aggregate.getId().value();
 
       // 计算标识符差异
       computeIdentifierDiff(venueId, aggregate, identifiersToInsert, identifierIdsToDelete);
 
-      // 主表脏标记检查
-      if (aggregate.isDirty()) {
-        // 使用 EntityManager 获取托管实体并原地更新
-        VenueEntity managed = entityManager.find(VenueEntity.class, venueId);
-        if (managed != null) {
-          jpaConverter.updateEntity(managed, aggregate);
-          dirtyAggregates.add(aggregate);
-        }
+      // 主表更新
+      VenueEntity managed = entityManager.find(VenueEntity.class, venueId);
+      if (managed != null) {
+        jpaConverter.updateEntity(managed, aggregate);
       }
     }
 
@@ -304,14 +298,10 @@ public class VenueRepositoryAdapter implements VenueRepository {
     }
 
     log.debug(
-        "批量更新载体完成: 聚合根 {} 个, 主表更新 {} 条, 标识符新增 {} 条, 标识符删除 {} 条",
+        "批量更新载体完成: 聚合根 {} 个, 标识符新增 {} 条, 标识符删除 {} 条",
         aggregates.size(),
-        dirtyAggregates.size(),
         identifiersToInsert.size(),
         identifierIdsToDelete.size());
-
-    // 所有批量操作成功后，统一清除脏标记
-    dirtyAggregates.forEach(VenueAggregate::clearDirty);
   }
 
   // ========== 私有辅助方法 ==========
@@ -377,7 +367,6 @@ public class VenueRepositoryAdapter implements VenueRepository {
 
       // 清空变更追踪状态
       aggregate.pullChildChanges();
-      aggregate.clearDirty();
 
       aggregates.add(aggregate);
     }

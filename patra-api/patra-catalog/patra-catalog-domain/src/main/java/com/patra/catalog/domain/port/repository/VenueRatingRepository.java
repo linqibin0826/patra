@@ -2,6 +2,7 @@ package com.patra.catalog.domain.port.repository;
 
 import com.patra.catalog.domain.model.aggregate.VenueRatingAggregate;
 import com.patra.catalog.domain.model.enums.RatingSystem;
+import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueRatingId;
 import java.util.Collection;
 import java.util.List;
@@ -47,27 +48,28 @@ public interface VenueRatingRepository {
   /// @param ratingSystem 评价体系
   /// @return 聚合根（不存在时返回 empty）
   Optional<VenueRatingAggregate> findByVenueIdAndYearAndRatingSystem(
-      Long venueId, int year, RatingSystem ratingSystem);
+      VenueId venueId, int year, RatingSystem ratingSystem);
 
   /// 根据载体 ID 查找所有评级。
   ///
   /// @param venueId 载体 ID
   /// @return 该载体的所有评级列表（永不为 null）
-  List<VenueRatingAggregate> findByVenueId(Long venueId);
+  List<VenueRatingAggregate> findByVenueId(VenueId venueId);
 
   /// 根据载体 ID 和评价体系查找评级。
   ///
   /// @param venueId 载体 ID
   /// @param ratingSystem 评价体系
   /// @return 该载体在指定评价体系下的所有年度评级（永不为 null）
-  List<VenueRatingAggregate> findByVenueIdAndRatingSystem(Long venueId, RatingSystem ratingSystem);
+  List<VenueRatingAggregate> findByVenueIdAndRatingSystem(
+      VenueId venueId, RatingSystem ratingSystem);
 
   /// 根据载体 ID 和年份查找评级。
   ///
   /// @param venueId 载体 ID
   /// @param year 评级年份
   /// @return 该载体在指定年份的所有评价体系评级（永不为 null）
-  List<VenueRatingAggregate> findByVenueIdAndYear(Long venueId, int year);
+  List<VenueRatingAggregate> findByVenueIdAndYear(VenueId venueId, int year);
 
   // ========== 批量查询 ==========
 
@@ -75,15 +77,15 @@ public interface VenueRatingRepository {
   ///
   /// @param venueIds 载体 ID 集合（不能为 null，可以为空）
   /// @return Map，key 为 venueId，value 为该载体的评级列表（永不为 null）
-  Map<Long, List<VenueRatingAggregate>> findByVenueIds(Collection<Long> venueIds);
+  Map<VenueId, List<VenueRatingAggregate>> findByVenueIds(Collection<VenueId> venueIds);
 
   // ========== 保存操作 ==========
 
   /// 保存评级聚合根（INSERT 或 UPDATE）。
   ///
   /// - 如果聚合根是瞬态的（`isTransient() == true`），执行 INSERT
-  /// - 如果聚合根已持久化且被修改（`isDirty() == true`），执行 UPDATE
-  /// - 保存成功后，清除脏标记并分配 ID（如果是新建）
+  /// - 否则执行 UPDATE
+  /// - 保存成功后分配 ID（如果是新建）
   ///
   /// @param aggregate 聚合根
   /// @return 持久化后的聚合根（包含 ID 和更新后的 version）
@@ -93,7 +95,7 @@ public interface VenueRatingRepository {
   ///
   /// 内部区分新增和更新：
   /// - 新增（`isTransient() == true`）：批量 INSERT
-  /// - 更新（`isDirty() == true`）：批量 UPDATE
+  /// - 更新：批量 UPDATE
   ///
   /// @param aggregates 聚合根列表（不能为 null，可以为空）
   void saveAll(List<VenueRatingAggregate> aggregates);
@@ -108,5 +110,5 @@ public interface VenueRatingRepository {
   /// 根据载体 ID 删除所有评级（软删除）。
   ///
   /// @param venueId 载体 ID
-  void deleteByVenueId(Long venueId);
+  void deleteByVenueId(VenueId venueId);
 }

@@ -243,14 +243,12 @@ class VenueAggregateTest {
       // Given
       VenueAggregate venue =
           VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      venue.clearDirty();
 
       // When
       boolean removed = venue.removeIdentifier(VenueIdentifierType.ISSN, "9999-9999");
 
       // Then
       assertThat(removed).isFalse();
-      assertThat(venue.isDirty()).isFalse();
     }
 
     @Test
@@ -259,14 +257,11 @@ class VenueAggregateTest {
       // Given
       VenueAggregate venue =
           VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      venue.clearDirty();
-      assertThat(venue.isDirty()).isFalse();
 
       // When
       venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
 
       // Then
-      assertThat(venue.isDirty()).isTrue();
     }
 
     @Test
@@ -276,14 +271,11 @@ class VenueAggregateTest {
       VenueAggregate venue =
           VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
       venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
-      venue.clearDirty();
-      assertThat(venue.isDirty()).isFalse();
 
       // When - 添加相同的标识符
       venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
 
       // Then - 不应该标记为脏
-      assertThat(venue.isDirty()).isFalse();
     }
 
     @Test
@@ -293,14 +285,11 @@ class VenueAggregateTest {
       VenueAggregate venue =
           VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
       venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
-      venue.clearDirty();
-      assertThat(venue.isDirty()).isFalse();
 
       // When
       venue.removeIdentifier(VenueIdentifierType.ISSN, ISSN);
 
       // Then
-      assertThat(venue.isDirty()).isTrue();
     }
 
     @Test
@@ -377,14 +366,11 @@ class VenueAggregateTest {
       // Given
       VenueAggregate venue =
           VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      venue.clearDirty();
-      assertThat(venue.isDirty()).isFalse();
 
       // When
       venue.withProvenance(ProvenanceInfo.forPubMed());
 
       // Then
-      assertThat(venue.isDirty()).isTrue();
     }
   }
 
@@ -469,14 +455,12 @@ class VenueAggregateTest {
           VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
       PublicationProfile profile = PublicationProfile.builder().countryCode("US").build();
       venue.withPublicationProfile(profile);
-      venue.clearDirty();
 
       // When - 验证结果为 "US"（有效）
       venue.normalizeCountryCode("US");
 
       // Then - 编码不变，不标记为脏
       assertThat(venue.getPublicationProfile().countryCode()).isEqualTo("US");
-      assertThat(venue.isDirty()).isFalse();
     }
 
     @Test
@@ -487,14 +471,12 @@ class VenueAggregateTest {
           VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
       PublicationProfile profile = PublicationProfile.builder().countryCode("XX").build();
       venue.withPublicationProfile(profile);
-      venue.clearDirty();
 
       // When - 验证结果为 null（无效）
       venue.normalizeCountryCode(null);
 
       // Then - 编码被清除，标记为脏
       assertThat(venue.getPublicationProfile().countryCode()).isNull();
-      assertThat(venue.isDirty()).isTrue();
     }
 
     @Test
@@ -518,13 +500,11 @@ class VenueAggregateTest {
           VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
       PublicationProfile profile = PublicationProfile.builder().countryCode(null).build();
       venue.withPublicationProfile(profile);
-      venue.clearDirty();
 
       // When
       venue.normalizeCountryCode(null);
 
       // Then - 不应该标记为脏
-      assertThat(venue.isDirty()).isFalse();
     }
 
     @Test
@@ -541,7 +521,6 @@ class VenueAggregateTest {
               .frequency("Monthly")
               .build();
       venue.withPublicationProfile(profile);
-      venue.clearDirty();
 
       // When
       venue.normalizeCountryCode(null);
@@ -583,7 +562,6 @@ class VenueAggregateTest {
               .languages(VenueLanguages.of(List.of("eng", "chi"), List.of("fre", "ger")))
               .build();
       venue.withPublicationProfile(profile);
-      venue.clearDirty();
 
       // When
       venue.normalizeLanguages(VALID_MAPPINGS);
@@ -592,7 +570,6 @@ class VenueAggregateTest {
       VenueLanguages languages = venue.getPublicationProfile().languages();
       assertThat(languages.primary()).containsExactly("en", "zh");
       assertThat(languages.summary()).containsExactly("fr", "de");
-      assertThat(venue.isDirty()).isTrue();
     }
 
     @Test
@@ -606,7 +583,6 @@ class VenueAggregateTest {
               .languages(VenueLanguages.of(List.of("eng", "xxx"), List.of("yyy", "fre")))
               .build();
       venue.withPublicationProfile(profile);
-      venue.clearDirty();
 
       // When
       venue.normalizeLanguages(VALID_MAPPINGS);
@@ -628,7 +604,6 @@ class VenueAggregateTest {
               .languages(VenueLanguages.of(List.of("chi", "zho"), List.of("fre", "fra")))
               .build();
       venue.withPublicationProfile(profile);
-      venue.clearDirty();
 
       // When
       venue.normalizeLanguages(VALID_MAPPINGS);
@@ -660,12 +635,10 @@ class VenueAggregateTest {
           VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
       PublicationProfile profile = PublicationProfile.builder().countryCode("US").build();
       venue.withPublicationProfile(profile);
-      venue.clearDirty();
 
       // When & Then - 不应该抛出异常
       venue.normalizeLanguages(VALID_MAPPINGS);
       assertThat(venue.getPublicationProfile().languages()).isNull();
-      assertThat(venue.isDirty()).isFalse();
     }
 
     @Test
@@ -677,13 +650,11 @@ class VenueAggregateTest {
       PublicationProfile profile =
           PublicationProfile.builder().languages(VenueLanguages.empty()).build();
       venue.withPublicationProfile(profile);
-      venue.clearDirty();
 
       // When
       venue.normalizeLanguages(VALID_MAPPINGS);
 
       // Then - 不应该标记为脏
-      assertThat(venue.isDirty()).isFalse();
     }
 
     @Test
@@ -700,13 +671,11 @@ class VenueAggregateTest {
               .languages(VenueLanguages.of(List.of("en"), List.of("zh")))
               .build();
       venue.withPublicationProfile(profile);
-      venue.clearDirty();
 
       // When
       venue.normalizeLanguages(mappingWithBcp47);
 
       // Then - 结果相同，不应该标记为脏
-      assertThat(venue.isDirty()).isFalse();
     }
 
     @Test
@@ -723,7 +692,6 @@ class VenueAggregateTest {
               .languages(VenueLanguages.of(List.of("eng"), List.of()))
               .build();
       venue.withPublicationProfile(profile);
-      venue.clearDirty();
 
       // When
       venue.normalizeLanguages(VALID_MAPPINGS);
@@ -747,7 +715,6 @@ class VenueAggregateTest {
               .languages(VenueLanguages.of(List.of("eng"), List.of("fre")))
               .build();
       venue.withPublicationProfile(profile);
-      venue.clearDirty();
 
       // When - 空映射表意味着所有代码都无效
       venue.normalizeLanguages(Map.of());
@@ -756,7 +723,6 @@ class VenueAggregateTest {
       VenueLanguages languages = venue.getPublicationProfile().languages();
       assertThat(languages.primary()).isEmpty();
       assertThat(languages.summary()).isEmpty();
-      assertThat(venue.isDirty()).isTrue();
     }
   }
 }
