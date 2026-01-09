@@ -91,6 +91,10 @@ patra:
       descriptor-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml
       # MeSH Qualifier（限定词）XML 文件 URL - 版本号从文件名自动推断
       qualifier-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml
+    ror:
+      # ROR（Research Organization Registry）机构数据 ZIP 文件 URL - 版本号从文件名自动推断
+      # 最新版本下载地址：https://ror.readme.io/docs/data-dump
+      download-url: https://zenodo.org/records/17953395/files/v2.0-2025-12-16-ror-data.zip?download=1
 
 # ----------------------------------------------------------------------------
 # Logging Configuration

@@ -5,6 +5,8 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.ibm.icu.text.Collator;
+import com.ibm.icu.util.ULocale;
 import com.patra.catalog.domain.model.aggregate.OrganizationAggregate;
 import com.patra.catalog.domain.model.enums.ExternalIdType;
 import com.patra.catalog.domain.model.enums.LinkType;
@@ -27,7 +29,9 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
@@ -338,22 +342,84 @@ public class RorOrganizationParser {
   }
 
   /// 构建名称列表。
+  ///
+  /// ROR 数据可能包含 Collation 等价的重复名称记录，使用 ICU4J Collator 进行去重。
+  /// 当出现重复时，保留第一个出现的记录（types 可能不同，优先保留先出现的）。
+  ///
+  /// **技术说明**：MySQL `utf8mb4_unicode_ci` 遵循 Unicode Collation Algorithm (UCA)，
+  /// 包含数百条语言特定规则。使用 ICU4J 精确模拟此行为，避免手动处理各语言特例。
   private List<OrganizationName> buildNames(List<RorOrganizationRecord.Name> names) {
     if (names == null || names.isEmpty()) {
       return List.of();
     }
 
-    List<OrganizationName> result = new ArrayList<>();
+    // 使用 LinkedHashMap 基于 (collationKey, lang) 去重，保持插入顺序
+    Map<String, OrganizationName> result = new LinkedHashMap<>();
+    int duplicateCount = 0;
     for (RorOrganizationRecord.Name name : names) {
       if (name.value() == null || name.value().isBlank()) {
         continue;
       }
 
-      Set<OrganizationNameType> types = parseNameTypes(name.types());
-      OrganizationName orgName = OrganizationName.create(name.value(), types, name.lang());
-      result.add(orgName);
+      String value = name.value().strip();
+      String lang = name.lang() != null ? name.lang().strip().toLowerCase() : "";
+      // 使用 ICU4J 生成 collation key，精确匹配 MySQL unicode_ci 行为
+      String collationKey = toCollationKey(value) + "|" + lang;
+
+      if (!result.containsKey(collationKey)) {
+        Set<OrganizationNameType> types = parseNameTypes(name.types());
+        OrganizationName orgName = OrganizationName.create(value, types, name.lang());
+        result.put(collationKey, orgName);
+      } else {
+        duplicateCount++;
+        log.info("检测到 Collation 等价名称: original='{}', lang='{}'", value, lang);
+      }
     }
-    return result;
+
+    if (duplicateCount > 0) {
+      log.info("名称去重: 输入={}, 输出={}, 去除重复={}", names.size(), result.size(), duplicateCount);
+    }
+
+    return new ArrayList<>(result.values());
+  }
+
+  /// ICU4J Collator 实例（线程安全，可复用）。
+  ///
+  /// 配置为 PRIMARY 强度，匹配 MySQL `utf8mb4_unicode_ci` 的行为：
+  /// - 忽略重音差异："Slovenská" = "Slovenska"
+  /// - 忽略大小写："Harvard" = "harvard"
+  /// - 日语平假名/片假名等价："かいし" = "カイシ"
+  /// - 德语 ß = ss："Straße" = "Strasse"
+  private static final Collator UNICODE_CI_COLLATOR;
+
+  static {
+    // 使用 ROOT locale 获取语言无关的 Unicode Collation Algorithm
+    UNICODE_CI_COLLATOR = Collator.getInstance(ULocale.ROOT);
+    // PRIMARY 强度：忽略重音和大小写（等价于 MySQL 的 _ci 和 _ai）
+    UNICODE_CI_COLLATOR.setStrength(Collator.PRIMARY);
+    // 冻结以保证线程安全
+    UNICODE_CI_COLLATOR.freeze();
+  }
+
+  /// 生成 MySQL utf8mb4_unicode_ci 兼容的 Collation Key。
+  ///
+  /// 使用 ICU4J 实现完整的 Unicode Collation Algorithm，自动处理：
+  /// - 重音差异（斯洛伐克语 á/a、德语 ü/u 等）
+  /// - 日语平假名/片假名等价
+  /// - 德语 ß/ss 等价
+  /// - 大小写不敏感
+  /// - 其他所有 UCA 定义的等价规则
+  ///
+  /// @param value 原始字符串
+  /// @return 十六进制格式的 collation key
+  private String toCollationKey(String value) {
+    // 获取 CollationKey 的字节数组并转为十六进制字符串
+    byte[] keyBytes = UNICODE_CI_COLLATOR.getCollationKey(value).toByteArray();
+    StringBuilder hex = new StringBuilder(keyBytes.length * 2);
+    for (byte b : keyBytes) {
+      hex.append(String.format("%02x", b));
+    }
+    return hex.toString();
   }
 
   /// 解析名称类型列表。
@@ -411,21 +477,19 @@ public class RorOrganizationParser {
   }
 
   /// 解析链接类型。
+  ///
+  /// 复用 `LinkType.fromCodeOrNull()` 进行解析，无法识别时记录警告日志。
   private LinkType parseLinkType(String type) {
-    if (type == null) {
-      return null;
+    LinkType linkType = LinkType.fromCodeOrNull(type);
+    if (type != null && !type.isBlank() && linkType == null) {
+      log.warn("未知的链接类型：{}", type);
     }
-    return switch (type.toLowerCase()) {
-      case "website" -> LinkType.WEBSITE;
-      case "wikipedia" -> LinkType.WIKIPEDIA;
-      default -> {
-        log.warn("未知的链接类型：{}", type);
-        yield null;
-      }
-    };
+    return linkType;
   }
 
   /// 构建外部标识符列表。
+  ///
+  /// ROR Schema v2.0 中 `preferred` 字段可以为 null，此时使用 `all` 列表的第一个值作为首选值。
   private List<ExternalId> buildExternalIds(List<RorOrganizationRecord.ExternalId> externalIds) {
     if (externalIds == null || externalIds.isEmpty()) {
       return List.of();
@@ -438,7 +502,18 @@ public class RorOrganizationParser {
         continue;
       }
 
-      ExternalId domainExtId = ExternalId.create(type, extId.all(), extId.preferred());
+      List<String> allValues = extId.all();
+      if (allValues == null || allValues.isEmpty()) {
+        continue;
+      }
+
+      // ROR Schema v2.0: preferred 可以为 null，此时使用 all 列表的第一个值
+      String preferred = extId.preferred();
+      if (preferred == null || preferred.isBlank()) {
+        preferred = allValues.getFirst();
+      }
+
+      ExternalId domainExtId = ExternalId.create(type, allValues, preferred);
       result.add(domainExtId);
     }
     return result;

@@ -1,6 +1,8 @@
 package com.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 /// 链接类型枚举。
@@ -37,7 +39,7 @@ public enum LinkType {
   /// Wikipedia 页面
   WIKIPEDIA("wikipedia", "Wikipedia");
 
-  /// 数据库存储的代码值（与 ROR 一致，小写）
+  /// 数据库存储的代码值（与 ROR 一致，小写）。
   private final String code;
 
   /// 中文描述
@@ -48,11 +50,24 @@ public enum LinkType {
     this.description = description;
   }
 
+  /// 获取代码值（用于 JSON 序列化）。
+  ///
+  /// 使用 `@JsonValue` 确保 JSON 序列化时使用 `code`（如 `"website"`）而非枚举名称（`"WEBSITE"`）。
+  ///
+  /// @return 代码值
+  @JsonValue
+  public String getCode() {
+    return code;
+  }
+
   /// 从代码值解析枚举（不区分大小写）。
+  ///
+  /// 使用 `@JsonCreator` 确保 JSON 反序列化时能正确解析 `"website"` 等小写代码值。
   ///
   /// @param value 代码值（如 "website", "WIKIPEDIA"）
   /// @return 对应的枚举值
   /// @throws IllegalArgumentException 如果代码值为空或无效
+  @JsonCreator
   public static LinkType fromCode(String value) {
     Assert.notBlank(value, "链接类型代码不能为空");
     String normalized = value.trim().toLowerCase();
