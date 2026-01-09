@@ -374,7 +374,7 @@ public class ProvenanceInfo {
 | `VenueAggregate` | catalog-domain | 出版载体（期刊/仓库/会议） |
 | `PublicationAggregate` | catalog-domain | 学术文献 |
 | `AuthorAggregate` | catalog-domain | 作者 |
-| `AffiliationAggregate` | catalog-domain | 研究机构 |
+| `OrganizationAggregate` | catalog-domain | 研究机构 |
 | `MeshDescriptorAggregate` | catalog-domain | MeSH 描述符 |
 | `MeshQualifierAggregate` | catalog-domain | MeSH 限定词 |
 | `PlanAggregate` | ingest-domain | 采集计划 |
