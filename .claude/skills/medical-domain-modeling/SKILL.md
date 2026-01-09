@@ -306,7 +306,7 @@ stateDiagram-v2
 | VenueAggregate | catalog | 期刊/载体 |
 | PublicationAggregate | catalog | 文献 |
 | AuthorAggregate | catalog | 作者 |
-| AffiliationAggregate | catalog | 机构 |
+| OrganizationAggregate | catalog | 机构 |
 | MeshDescriptorAggregate | catalog | MeSH 描述符 |
 | MeshQualifierAggregate | catalog | MeSH 限定词 |
 

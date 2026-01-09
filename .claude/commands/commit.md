@@ -2,6 +2,7 @@
 description: 智能分析本地变更并生成规范的 Git 提交（支持自动拆分多个提交）
 argument-hint: [空]
 allowed-tools: Bash(git add:*), Bash(git status:*), Bash(git commit:*), Bash(git diff:*), Bash(git log:*), Bash(git reset:*), Bash(git restore:*)
+context: fork
 ---
 
 ## Git 变更上下文
