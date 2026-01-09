@@ -3,6 +3,7 @@ package com.patra.catalog.infra.adapter.batch.organization;
 import com.patra.catalog.domain.model.aggregate.OrganizationAggregate;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
+import java.io.InputStream;
 import java.net.URI;
 import java.text.NumberFormat;
 import java.time.Duration;
@@ -10,6 +11,8 @@ import java.time.Instant;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
@@ -106,7 +109,8 @@ public class RorOrganizationItemReader implements ItemStreamReader<OrganizationA
           downloadResult.contentLength() > 0 ? downloadResult.contentLength() : "未知");
 
       // 委托 RorOrganizationParser 解析
-      stream = rorOrganizationParser.parse(downloadResult.inputStream());
+      InputStream dataStream = openDataStream(downloadResult, downloadUrl);
+      stream = rorOrganizationParser.parse(dataStream);
       iterator = stream.iterator();
 
       // 跳过已处理的记录（断点续传）
@@ -118,6 +122,56 @@ public class RorOrganizationItemReader implements ItemStreamReader<OrganizationA
       log.info("跳过完成，当前索引：{}", currentIndex);
     } catch (Exception e) {
       throw new ItemStreamException("打开 ROR 机构数据流失败", e);
+    }
+  }
+
+  /// 打开可解析的数据流。
+  ///
+  /// - ZIP 文件：读取首个 JSON 文件条目
+  /// - 非 ZIP 文件：直接使用原始输入流
+  ///
+  /// @param downloadResult 下载结果
+  /// @param url 下载 URL
+  /// @return 可解析的数据流
+  private InputStream openDataStream(StreamingDownloadResult downloadResult, String url) {
+    InputStream inputStream = downloadResult.inputStream();
+    if (!isZipUrl(url)) {
+      return inputStream;
+    }
+
+    ZipInputStream zipInputStream = new ZipInputStream(inputStream);
+    ZipEntry entry = nextJsonEntry(zipInputStream);
+    if (entry == null) {
+      throw new IllegalStateException("ZIP 中未找到 JSON 数据文件");
+    }
+    log.info("检测到 ZIP，使用条目解析：{}", entry.getName());
+    return zipInputStream;
+  }
+
+  /// 判断下载 URL 是否为 ZIP 文件。
+  ///
+  /// @param url 下载 URL
+  /// @return 是否为 ZIP
+  private boolean isZipUrl(String url) {
+    return url != null && url.toLowerCase(Locale.ROOT).contains(".zip");
+  }
+
+  /// 从 ZIP 中找到下一个 JSON 文件条目。
+  ///
+  /// @param zipInputStream ZIP 输入流
+  /// @return JSON 条目（不存在则返回 null）
+  private ZipEntry nextJsonEntry(ZipInputStream zipInputStream) {
+    try {
+      ZipEntry entry = zipInputStream.getNextEntry();
+      while (entry != null) {
+        if (!entry.isDirectory() && entry.getName().toLowerCase(Locale.ROOT).endsWith(".json")) {
+          return entry;
+        }
+        entry = zipInputStream.getNextEntry();
+      }
+      return null;
+    } catch (Exception e) {
+      throw new IllegalStateException("读取 ZIP 条目失败: " + e.getMessage(), e);
     }
   }
 

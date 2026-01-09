@@ -148,6 +148,28 @@ patra:
 - LSIOU（List of Serials Indexed for Online Users）：约 15,000 条 MEDLINE 索引期刊
 - SerfileBase：约 35,000 条 NLM Catalog 完整记录（包含未被 MEDLINE 索引的期刊）
 
+### ROR 数据源配置
+
+```yaml
+patra:
+  catalog:
+    ror:
+      download-url: https://zenodo.org/records/17953395/files/v2.0-2025-12-16-ror-data.zip?download=1
+```
+
+| 配置项 | 说明 | 示例 |
+|--------|------|------|
+| `download-url` | ROR Data Dump ZIP 文件下载 URL | `v2.0-2025-12-16-ror-data.zip` |
+
+**版本号推断规则**：从文件名自动提取版本号，支持格式：
+- `v{version}-{date}-ror-data.zip`（如 `v2.0-2025-12-16-ror-data.zip` → 版本 `v2.0`）
+
+**数据源说明**：
+- ROR 数据发布在 Zenodo，每个版本有独立的下载链接
+- 最新版本下载地址：<https://ror.readme.io/docs/data-dump>
+- ZIP 文件约 60MB（压缩），包含约 120,000 条机构记录
+- 从 v2.0 开始仅提供 schema v2 格式
+
 ## 🎯 核心类说明
 
 ### Domain 层

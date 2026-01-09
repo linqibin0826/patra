@@ -14,7 +14,6 @@ import com.patra.common.error.codes.HttpStdErrors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 /// ROR 机构导入处理器。
 ///
@@ -59,11 +58,18 @@ public class RorOrganizationImportHandler
   ///
   /// - 如果数据库中已有数据，抛出 `DataAlreadyExistsException`
   ///
+  /// **事务说明**：
+  ///
+  /// 本方法**不使用 `@Transactional`**，原因：
+  ///
+  /// 1. 本方法仅启动 Spring Batch Job，不直接执行数据库写操作
+  /// 2. 实际数据持久化由 Batch Job 的 chunk 事务管理（每 500 条一个事务）
+  /// 3. `launchImport()` 返回后任务异步执行，无法用单一事务包裹
+  ///
   /// @param command 导入命令（包含文件 URL 和版本）
   /// @return 导入结果
   /// @throws DataAlreadyExistsException 当表中已有数据时
   @Override
-  @Transactional
   public RorOrganizationImportResult handle(RorOrganizationImportCommand command) {
     log.info("启动 ROR 机构导入，URL：{}，版本：{}", command.url(), command.rorVersion());
 

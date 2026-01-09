@@ -1,5 +1,7 @@
 package com.patra.catalog.domain.model.vo.organization;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -35,6 +37,11 @@ import java.time.LocalDate;
 /// | lastModifiedDate | 最后修改日期 |
 /// | lastModifiedSchemaVersion | 最后修改时的 ROR Schema 版本 |
 ///
+/// **Jackson 注解设计决策**：
+///
+/// - **@JsonIgnoreProperties(ignoreUnknown = true)**：防御性设计，忽略未知字段
+/// - **@JsonIgnore**：标记 `isXxx()`/`hasXxx()` 便捷方法，避免被 Jackson 序列化为冗余的布尔属性
+///
 /// @param createdDate ROR 记录创建日期
 /// @param createdSchemaVersion 创建时的 Schema 版本
 /// @param lastModifiedDate 最后修改日期
@@ -42,6 +49,7 @@ import java.time.LocalDate;
 /// @author linqibin
 /// @since 0.1.0
 /// @see <a href="https://ror.readme.io/docs/fields#admin">ROR Admin Field</a>
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record AdminInfo(
     LocalDate createdDate,
     String createdSchemaVersion,
@@ -84,6 +92,7 @@ public record AdminInfo(
   /// 判断是否为空（无任何信息）。
   ///
   /// @return true 如果所有字段都为空
+  @JsonIgnore
   public boolean isEmpty() {
     return createdDate == null
         && createdSchemaVersion == null
@@ -94,6 +103,7 @@ public record AdminInfo(
   /// 判断是否有创建信息。
   ///
   /// @return true 如果有创建日期
+  @JsonIgnore
   public boolean hasCreatedInfo() {
     return createdDate != null;
   }
@@ -101,6 +111,7 @@ public record AdminInfo(
   /// 判断是否有最后修改信息。
   ///
   /// @return true 如果有最后修改日期
+  @JsonIgnore
   public boolean hasLastModifiedInfo() {
     return lastModifiedDate != null;
   }
@@ -108,15 +119,9 @@ public record AdminInfo(
   /// 判断最后修改的 Schema 版本是否为 2.x。
   ///
   /// @return true 如果是 2.x 版本
+  @JsonIgnore
   public boolean isSchemaV2() {
     return lastModifiedSchemaVersion != null && lastModifiedSchemaVersion.startsWith("2.");
-  }
-
-  /// 判断最后修改的 Schema 版本是否为 1.x。
-  ///
-  /// @return true 如果是 1.x 版本
-  public boolean isSchemaV1() {
-    return lastModifiedSchemaVersion != null && lastModifiedSchemaVersion.startsWith("1.");
   }
 
   @Override

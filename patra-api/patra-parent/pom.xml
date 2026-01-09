@@ -55,6 +55,7 @@
     <jmh.version>1.37</jmh.version>
     <awaitility.version>4.2.2</awaitility.version>
     <objenesis.version>3.4</objenesis.version>
+    <mockftpserver.version>3.2.0</mockftpserver.version>
   </properties>
 
   <dependencies>
@@ -153,6 +154,13 @@
         <groupId>commons-net</groupId>
         <artifactId>commons-net</artifactId>
         <version>3.11.1</version>
+      </dependency>
+
+      <!-- ICU4J: Unicode 国际化支持，用于 Collation 等价性判断 -->
+      <dependency>
+        <groupId>com.ibm.icu</groupId>
+        <artifactId>icu4j</artifactId>
+        <version>76.1</version>
       </dependency>
 
       <dependency>
@@ -379,6 +387,14 @@
         <groupId>org.awaitility</groupId>
         <artifactId>awaitility</artifactId>
         <version>${awaitility.version}</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- MockFtpServer - FTP 集成测试 -->
+      <dependency>
+        <groupId>org.mockftpserver</groupId>
+        <artifactId>MockFtpServer</artifactId>
+        <version>${mockftpserver.version}</version>
         <scope>test</scope>
       </dependency>
 

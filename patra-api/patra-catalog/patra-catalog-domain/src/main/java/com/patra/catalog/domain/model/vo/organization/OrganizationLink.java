@@ -1,6 +1,8 @@
 package com.patra.catalog.domain.model.vo.organization;
 
 import cn.hutool.core.lang.Assert;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.patra.catalog.domain.model.enums.LinkType;
 import java.io.Serial;
 import java.io.Serializable;
@@ -28,11 +30,18 @@ import java.io.Serializable;
 /// | WEBSITE | 机构官方网站 |
 /// | WIKIPEDIA | Wikipedia 页面 |
 ///
+/// **Jackson 注解设计决策**：
+///
+/// - **@JsonIgnoreProperties(ignoreUnknown = true)**：防御性设计，忽略未知字段
+/// - **@JsonIgnore**：标记 `isXxx()` 便捷方法，避免被 Jackson 序列化为冗余的布尔属性
+///   （Jackson 默认会把 `isExternal()` 序列化为 `"external": true`，导致反序列化失败）
+///
 /// @param type 链接类型
 /// @param value 链接 URL
 /// @author linqibin
 /// @since 0.1.0
 /// @see <a href="https://ror.readme.io/docs/fields#links">ROR Links Field</a>
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record OrganizationLink(LinkType type, String value) implements Serializable {
 
   @Serial private static final long serialVersionUID = 1L;
@@ -75,6 +84,7 @@ public record OrganizationLink(LinkType type, String value) implements Serializa
   /// 判断是否为官方网站链接。
   ///
   /// @return true 如果是 WEBSITE
+  @JsonIgnore
   public boolean isWebsite() {
     return type == LinkType.WEBSITE;
   }
@@ -82,6 +92,7 @@ public record OrganizationLink(LinkType type, String value) implements Serializa
   /// 判断是否为 Wikipedia 链接。
   ///
   /// @return true 如果是 WIKIPEDIA
+  @JsonIgnore
   public boolean isWikipedia() {
     return type == LinkType.WIKIPEDIA;
   }
@@ -89,6 +100,7 @@ public record OrganizationLink(LinkType type, String value) implements Serializa
   /// 判断是否为外部参考链接（非机构自身的链接）。
   ///
   /// @return true 如果是外部链接
+  @JsonIgnore
   public boolean isExternal() {
     return type.isExternal();
   }
