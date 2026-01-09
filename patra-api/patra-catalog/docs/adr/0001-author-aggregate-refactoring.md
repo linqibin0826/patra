@@ -40,13 +40,16 @@ AuthorAggregate (聚合根)
 
 ### 4. 子实体审计字段策略
 
-子实体（`cat_author_name_variant`、`cat_author_orcid`）采用精简审计字段：
+所有实体（包括子实体）统一继承 `BaseJpaEntity`，采用完整审计字段：
 
 - `id`：雪花 ID
 - `version`：乐观锁
 - `created_at`、`updated_at`：时间戳
+- `created_by`、`created_by_name`：创建人
+- `updated_by`、`updated_by_name`：更新人
+- `record_remarks`、`ip_address`：扩展审计信息
 
-**理由**：子实体随聚合根一起保存，无需完整的审计追踪（创建人、更新人等）。
+**理由**：统一继承规范可降低认知负担，所有实体具有一致的审计能力，便于追踪数据变更和问题排查。
 
 ### 5. ID 生成策略
 

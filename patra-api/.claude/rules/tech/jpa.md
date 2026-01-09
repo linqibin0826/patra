@@ -5,8 +5,8 @@ paths: patra-*/*-infra/**/*.java, patra-spring-boot-starter-jpa/**/*.java
 # JPA 使用规范
 
 1. JPA Entity 继承规则：
-   - **聚合根实体**：必须继承 `BaseJpaEntity`（雪花 ID、审计字段、乐观锁）或 `SoftDeletableJpaEntity`（额外支持软删除）
-   - **子实体**（随聚合根一起保存的 1:N 关系表）：可使用精简审计字段（`id`, `version`, `created_at`, `updated_at`），无需继承基类
+   - **所有实体**（聚合根、子实体、值对象）：必须继承 `BaseJpaEntity`（雪花 ID、审计字段、乐观锁）
+   - **需要软删除的实体**：继承 `SoftDeletableJpaEntity`（额外支持软删除）
 2. 命名规则：`{Name}Entity`、`{Name}Dao`、`{Name}JpaMapper`、`{Type}AttributeConverter`
 3. Entity ↔ Aggregate 转换使用 MapStruct，禁止手动编写
 4. 批量保存使用 `saveAll()`，大批量（> 500 条）需手动 `flush()` + `clear()` 防止内存溢出
