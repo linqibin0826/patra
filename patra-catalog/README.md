@@ -179,14 +179,14 @@ patra:
   - `MeshScrAggregate`：MeSH 补充概念记录聚合根
   - `VenueAggregate`：载体（期刊/仓储/会议）聚合根
   - `VenueRatingAggregate`：载体评级聚合根（独立聚合，支持 JCR/CAS/Scopus）
+  - `AuthorAggregate`：作者聚合根（含名字变体、ORCID 子实体）
+  - `OrganizationAggregate`：机构聚合根（基于 ROR Schema v2.0）
   - `PublicationAggregate`：文献聚合根（规划中）
 
 - **实体**
   - `MeshConcept`：MeSH 概念实体
   - `MeshEntryTerm`：MeSH 入口术语实体
   - `MeshTreeNumber`：MeSH 树形编号实体
-  - `Author`：作者实体
-  - `Organization`：机构实体（基于 ROR Schema v2.0）
 
 - **Record 值对象**（不可变，通过 `VenueRepository` 统一管理）
   - `VenueSourceData`：载体数据源溯源（存储各数据源原始/提取数据）
@@ -212,6 +212,10 @@ patra:
   - `AuthorId`：作者聚合根 ID
   - `PublicationId`：出版物聚合根 ID
   - `VenueRatingId`：载体评级聚合根 ID
+
+- **值对象（author 子包）**：作者领域模型（适配 PubMed Computed Authors）
+  - `AuthorNameVariant`：作者名字变体（姓/名/缩写/原始字符串）
+  - `Orcid`：ORCID 标识符值对象（格式：0000-0001-2345-6789）
 
 - **值对象**
   - `MeshUI`：MeSH 唯一标识符（支持 Descriptor/Qualifier/SCR/Concept/Term）
@@ -280,6 +284,8 @@ patra:
 - `MeshQualifierRepositoryAdapter`：限定词仓储适配器
 - `MeshScrRepositoryAdapter`：补充概念记录仓储适配器
 - `VenueRepositoryAdapter`：载体聚合根仓储适配器（含 identifiers 和补充数据）
+- `VenueRatingRepositoryAdapter`：载体评级聚合根仓储适配器（独立聚合）
+- `AuthorRepositoryAdapter`：作者聚合根仓储适配器（含名字变体、ORCID 子实体级联保存）
 - `OrganizationRepositoryAdapter`：机构聚合根仓储适配器（支持批量插入/更新，子表变更追踪）
 - `MeshDescriptorJpaMapper`：主题词 Entity ↔ Aggregate 映射器（MapStruct）
 - `MeshQualifierJpaMapper`：限定词 Entity ↔ Aggregate 映射器（MapStruct）
@@ -317,6 +323,11 @@ patra:
   - `cat_venue_relation`：载体关联表（期刊演变关系：前刊/后刊/合并/分拆）
   - `cat_venue_indexing_history`：载体索引历史表（MEDLINE/PMC 索引收录变迁）
 
+- **Author（作者）相关表**（适配 PubMed Computed Authors）
+  - `cat_author`：作者主表（~2100 万条，含 normalized_key、display_name、status）
+  - `cat_author_name_variant`：作者名字变体表（~4200 万条，平均 2 个变体/作者）
+  - `cat_author_orcid`：作者 ORCID 表（~500 万条，约 25% 作者有 ORCID）
+
 - **Organization（机构）相关表**（基于 ROR Schema v2.0）
   - `cat_organization`：机构主表（含 JSON 字段：types、domains、links、admin_info）
   - `cat_organization_name`：机构名称表（多语言名称，含类型：ror_display/label/alias/acronym）
@@ -339,3 +350,4 @@ patra:
 ## 📖 相关文档
 
 - [patra-spring-boot-starter-batch](../patra-spring-boot-starter-batch/README.md)
+- [ADR-0001: Author 聚合根重构](docs/adr/0001-author-aggregate-refactoring.md)
