@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Timeout;
 
 /// AggregateRoot 基类单元测试。
 ///
-/// 验证脏标记和子实体变更追踪功能。
+/// 验证子实体变更追踪功能。
 @Timeout(2)
 class AggregateRootTest {
 
@@ -19,20 +19,12 @@ class AggregateRootTest {
   /// 用于测试的具体聚合根实现
   static class TestAggregate extends AggregateRoot<Long> {
 
-    private String name;
-
     TestAggregate() {
       super();
     }
 
     TestAggregate(Long id) {
       super(id);
-    }
-
-    /// 模拟业务方法：修改名称并标记为脏
-    void changeName(String newName) {
-      this.name = newName;
-      markDirty();
     }
 
     /// 模拟业务方法：添加组成部分
@@ -53,66 +45,6 @@ class AggregateRootTest {
 
   /// 用于测试的子实体
   record TestChildEntity(Long id, String value) {}
-
-  // ========== 脏标记测试 ==========
-
-  @Nested
-  @DisplayName("脏标记功能")
-  class DirtyFlagTests {
-
-    @Test
-    @DisplayName("新建聚合默认不是脏的")
-    void newAggregate_shouldNotBeDirty() {
-      var aggregate = new TestAggregate();
-
-      assertThat(aggregate.isDirty()).isFalse();
-    }
-
-    @Test
-    @DisplayName("调用 markDirty() 后聚合变为脏")
-    void markDirty_shouldSetDirtyFlag() {
-      var aggregate = new TestAggregate();
-
-      aggregate.changeName("新名称");
-
-      assertThat(aggregate.isDirty()).isTrue();
-    }
-
-    @Test
-    @DisplayName("多次调用 markDirty() 不会产生副作用")
-    void markDirty_multipleCalls_shouldBeSafe() {
-      var aggregate = new TestAggregate();
-
-      aggregate.changeName("名称1");
-      aggregate.changeName("名称2");
-      aggregate.changeName("名称3");
-
-      assertThat(aggregate.isDirty()).isTrue();
-    }
-
-    @Test
-    @DisplayName("调用 clearDirty() 后聚合恢复为干净")
-    void clearDirty_shouldResetDirtyFlag() {
-      var aggregate = new TestAggregate();
-      aggregate.changeName("新名称");
-
-      aggregate.clearDirty();
-
-      assertThat(aggregate.isDirty()).isFalse();
-    }
-
-    @Test
-    @DisplayName("清除后重新标记脏应该生效")
-    void clearDirty_thenMarkDirty_shouldSetDirtyAgain() {
-      var aggregate = new TestAggregate();
-      aggregate.changeName("名称1");
-      aggregate.clearDirty();
-
-      aggregate.changeName("名称2");
-
-      assertThat(aggregate.isDirty()).isTrue();
-    }
-  }
 
   // ========== 子实体变更追踪测试 ==========
 
