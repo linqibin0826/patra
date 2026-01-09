@@ -1,8 +1,11 @@
 package com.patra.catalog.infra.adapter.persistence.dao;
 
 import com.patra.catalog.infra.adapter.persistence.entity.AuthorEntity;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,36 +15,73 @@ import org.springframework.data.repository.query.Param;
 /// **职责**：
 ///
 /// - 提供作者实体的 CRUD 操作
-/// - 支持按 ORCID、邮箱、去重键查询
+/// - 支持按业务键（normalizedKey）、状态、数据来源查询
 /// - 支持批量操作（继承自 JpaRepository）
+///
+/// **设计说明**：
+///
+/// - 适配 PubMed Computed Authors 数据源
+/// - 使用 `normalizedKey` 作为业务键查询
 ///
 /// @author linqibin
 /// @since 0.1.0
 public interface AuthorDao extends JpaRepository<AuthorEntity, Long> {
 
-  /// 根据 ORCID 查询作者。
+  // ========== 业务键查询 ==========
+
+  /// 根据规范化标识（业务键）查询作者。
   ///
-  /// @param orcid ORCID 标识符
+  /// @param normalizedKey 规范化标识（如 "Lu+Z"）
   /// @return 作者实体（可选）
-  Optional<AuthorEntity> findByOrcid(String orcid);
+  Optional<AuthorEntity> findByNormalizedKey(String normalizedKey);
 
-  /// 根据邮箱查询作者。
+  /// 检查规范化标识是否已存在。
   ///
-  /// @param email 邮箱地址
-  /// @return 作者实体列表（邮箱可能重复）
-  List<AuthorEntity> findByEmail(String email);
-
-  /// 根据去重键查询作者。
-  ///
-  /// @param dedupKey 去重键
-  /// @return 作者实体列表
-  List<AuthorEntity> findByDedupKey(String dedupKey);
-
-  /// 检查 ORCID 是否已存在。
-  ///
-  /// @param orcid ORCID 标识符
+  /// @param normalizedKey 规范化标识
   /// @return true 如果已存在
-  boolean existsByOrcid(String orcid);
+  boolean existsByNormalizedKey(String normalizedKey);
+
+  /// 批量根据规范化标识查询作者。
+  ///
+  /// @param normalizedKeys 规范化标识集合
+  /// @return 作者实体列表
+  List<AuthorEntity> findByNormalizedKeyIn(Collection<String> normalizedKeys);
+
+  // ========== 状态查询 ==========
+
+  /// 根据状态查询作者（分页）。
+  ///
+  /// @param status 状态（ACTIVE/MERGED/INACTIVE）
+  /// @param pageable 分页参数
+  /// @return 作者分页结果
+  Page<AuthorEntity> findByStatus(String status, Pageable pageable);
+
+  /// 查询活跃状态的作者（分页）。
+  ///
+  /// @param pageable 分页参数
+  /// @return 活跃作者分页结果
+  @Query("SELECT a FROM AuthorEntity a WHERE a.status = 'ACTIVE'")
+  Page<AuthorEntity> findActiveAuthors(Pageable pageable);
+
+  // ========== 数据来源查询 ==========
+
+  /// 根据数据来源代码查询作者（分页）。
+  ///
+  /// @param provenanceCode 数据来源代码（PUBMED/ORCID/OPENALEX/MANUAL）
+  /// @param pageable 分页参数
+  /// @return 作者分页结果
+  Page<AuthorEntity> findByProvenanceCode(String provenanceCode, Pageable pageable);
+
+  // ========== 名称搜索 ==========
+
+  /// 根据展示名称模糊查询作者。
+  ///
+  /// @param displayName 展示名称（模糊匹配）
+  /// @param pageable 分页参数
+  /// @return 作者分页结果
+  Page<AuthorEntity> findByDisplayNameContainingIgnoreCase(String displayName, Pageable pageable);
+
+  // ========== 统计查询 ==========
 
   /// 检查表中是否有数据。
   ///
@@ -49,27 +89,31 @@ public interface AuthorDao extends JpaRepository<AuthorEntity, Long> {
   @Query("SELECT COUNT(a) > 0 FROM AuthorEntity a")
   boolean hasAnyData();
 
-  /// 根据姓名模糊查询作者。
+  /// 统计各状态的作者数量。
   ///
-  /// @param lastName 姓氏（模糊匹配）
-  /// @return 作者实体列表
-  @Query("SELECT a FROM AuthorEntity a WHERE a.name.lastName LIKE %:lastName%")
-  List<AuthorEntity> findByLastNameContaining(@Param("lastName") String lastName);
+  /// @param status 状态
+  /// @return 数量
+  long countByStatus(String status);
 
-  /// 查询有效的作者。
+  /// 统计各数据来源的作者数量。
   ///
-  /// @return 有效作者列表
-  List<AuthorEntity> findByValidTrue();
+  /// @param provenanceCode 数据来源代码
+  /// @return 数量
+  long countByProvenanceCode(String provenanceCode);
 
-  /// 根据 Researcher ID 查询作者。
+  // ========== 关联查询 ==========
+
+  /// 根据 ORCID 查询作者（通过子表关联）。
   ///
-  /// @param researcherId Researcher ID
+  /// @param orcid ORCID 标识符
   /// @return 作者实体（可选）
-  Optional<AuthorEntity> findByResearcherId(String researcherId);
+  @Query("SELECT a FROM AuthorEntity a JOIN a.orcids o WHERE o.orcid = :orcid")
+  Optional<AuthorEntity> findByOrcid(@Param("orcid") String orcid);
 
-  /// 根据 Scopus ID 查询作者。
+  /// 检查 ORCID 是否已存在（通过子表关联）。
   ///
-  /// @param scopusId Scopus ID
-  /// @return 作者实体（可选）
-  Optional<AuthorEntity> findByScopusId(String scopusId);
+  /// @param orcid ORCID 标识符
+  /// @return true 如果已存在
+  @Query("SELECT COUNT(a) > 0 FROM AuthorEntity a JOIN a.orcids o WHERE o.orcid = :orcid")
+  boolean existsByOrcid(@Param("orcid") String orcid);
 }

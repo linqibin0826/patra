@@ -1,13 +1,17 @@
 package com.patra.catalog.infra.adapter.persistence.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.catalog.infra.adapter.persistence.entity.embeddable.AuthorNameEmbeddable;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.SoftDeletableJpaEntity;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
-import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Index;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -20,15 +24,17 @@ import org.hibernate.type.SqlTypes;
 ///
 /// **设计说明**：
 ///
-/// - 继承 `BaseJpaEntity` 获得审计、乐观锁、软删除功能
-/// - 使用 `@Embedded` 嵌入 `AuthorNameEmbeddable` 值对象
-/// - 使用 Hibernate 6.6 的 `@JdbcTypeCode(SqlTypes.JSON)` 处理 JSON 字段
+/// - 继承 `SoftDeletableJpaEntity` 支持软删除
+/// - 适配 PubMed Computed Authors 数据源
+/// - 使用 `normalizedKey` 作为业务键（如 "Lu+Z"）
+/// - 关联名字变体（`AuthorNameVariantEntity`）和 ORCID（`AuthorOrcidEntity`）子表
 ///
 /// **索引设计**：
 ///
-/// - `uk_orcid`：ORCID 唯一索引（如果提供）
-/// - `idx_email`：邮箱索引（用于查询）
-/// - `idx_dedup_key`：去重键索引（用于查重）
+/// - `uk_normalized_key`：规范化标识唯一索引
+/// - `idx_status`：状态索引
+/// - `idx_provenance`：数据来源索引
+/// - `idx_display_name`：展示名称前缀索引
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -41,59 +47,112 @@ import org.hibernate.type.SqlTypes;
 @Table(
     name = "cat_author",
     indexes = {
-      @Index(name = "uk_orcid", columnList = "orcid", unique = true),
-      @Index(name = "idx_email", columnList = "email"),
-      @Index(name = "idx_dedup_key", columnList = "dedup_key")
+      @Index(name = "uk_normalized_key", columnList = "normalized_key", unique = true),
+      @Index(name = "idx_status", columnList = "status"),
+      @Index(name = "idx_provenance", columnList = "provenance_code"),
+      @Index(name = "idx_display_name", columnList = "display_name")
     })
-public class AuthorEntity extends BaseJpaEntity {
+public class AuthorEntity extends SoftDeletableJpaEntity {
 
-  // ========== 姓名信息（嵌入式值对象） ==========
+  // ========== 核心属性 ==========
 
-  /// 作者姓名（嵌入式值对象）
-  @Embedded private AuthorNameEmbeddable name;
+  /// 规范化标识（业务键），与 PubMed Computed Authors 的 name 字段对齐。
+  ///
+  /// 格式如 "Lu+Z"、"Smith+JK"，用于去重和外部数据源对齐。
+  @Column(name = "normalized_key", length = 100, nullable = false, unique = true)
+  private String normalizedKey;
 
-  /// 机构名称（文本，不关联 Organization 表）
-  @Column(name = "organization_name", length = 500)
-  private String organizationName;
+  /// 展示名称（从首个名字变体派生）。
+  ///
+  /// 格式如 "Zhiyong Lu"，用于界面显示和搜索。
+  @Column(name = "display_name", length = 200)
+  private String displayName;
 
-  // ========== 标识符 ==========
+  /// 作者状态。
+  ///
+  /// ACTIVE：活跃状态（正常使用）
+  /// MERGED：已合并状态（合并到其他作者）
+  /// INACTIVE：已停用状态（标记为无效）
+  @Column(name = "status", length = 20, nullable = false)
+  private String status;
 
-  /// ORCID 标识符（全局唯一，格式: 0000-0001-2345-6789）
-  @Column(name = "orcid", length = 19)
-  private String orcid;
+  // ========== 来源追踪 ==========
 
-  /// Researcher ID（ResearcherID/Publons）
-  @Column(name = "researcher_id", length = 50)
-  private String researcherId;
+  /// 数据来源代码。
+  ///
+  /// 标识作者数据最初来源于哪个系统：PUBMED、ORCID、OPENALEX、MANUAL 等。
+  @Column(name = "provenance_code", length = 32, nullable = false)
+  private String provenanceCode;
 
-  /// Scopus 作者 ID
-  @Column(name = "scopus_id", length = 50)
-  private String scopusId;
-
-  // ========== 联系方式 ==========
-
-  /// 邮箱地址
-  @Column(name = "email", length = 100)
-  private String email;
-
-  // ========== 去重和状态 ==========
-
-  /// 复合去重键（MD5 哈希，应用层计算）
-  @Column(name = "dedup_key", length = 32)
-  private String dedupKey;
-
-  /// 同等贡献标志（用于标记同等贡献作者）
-  @Column(name = "equal_contribution")
-  private Boolean equalContribution;
-
-  /// 信息是否有效（false = 无效，如已合并的重复作者）
-  @Column(name = "valid")
-  private Boolean valid;
+  /// 最后同步时间（UTC，微秒精度）。
+  ///
+  /// 记录上次与外部数据源同步的时间。
+  @Column(name = "last_synced_at")
+  private Instant lastSyncedAt;
 
   // ========== 扩展字段 ==========
 
-  /// 作者元数据（JSON 格式，灵活扩展）
+  /// 扩展数据（JSON 格式，预留 ORCID API 补充信息）。
   @JdbcTypeCode(SqlTypes.JSON)
-  @Column(name = "author_metadata", columnDefinition = "JSON")
-  private JsonNode authorMetadata;
+  @Column(name = "ext_data", columnDefinition = "JSON")
+  private JsonNode extData;
+
+  // ========== 关联子实体 ==========
+
+  /// 名字变体集合。
+  ///
+  /// 存储作者在不同文献中出现的各种名字形式，
+  /// 解析自 PubMed Computed Authors 的 names 数组。
+  @OneToMany(
+      mappedBy = "author",
+      cascade = CascadeType.ALL,
+      orphanRemoval = true,
+      fetch = FetchType.LAZY)
+  @lombok.Builder.Default
+  private List<AuthorNameVariantEntity> nameVariants = new ArrayList<>();
+
+  /// ORCID 标识符集合。
+  ///
+  /// 支持一对多关系（少数作者有多个 ORCID）。
+  @OneToMany(
+      mappedBy = "author",
+      cascade = CascadeType.ALL,
+      orphanRemoval = true,
+      fetch = FetchType.LAZY)
+  @lombok.Builder.Default
+  private List<AuthorOrcidEntity> orcids = new ArrayList<>();
+
+  // ========== 便捷方法 ==========
+
+  /// 添加名字变体并建立双向关联。
+  ///
+  /// @param variant 名字变体实体
+  public void addNameVariant(AuthorNameVariantEntity variant) {
+    nameVariants.add(variant);
+    variant.setAuthor(this);
+  }
+
+  /// 移除名字变体并解除双向关联。
+  ///
+  /// @param variant 名字变体实体
+  public void removeNameVariant(AuthorNameVariantEntity variant) {
+    nameVariants.remove(variant);
+    variant.setAuthor(null);
+  }
+
+  /// 添加 ORCID 并建立双向关联。
+  ///
+  /// @param orcid ORCID 实体
+  public void addOrcid(AuthorOrcidEntity orcid) {
+    orcids.add(orcid);
+    orcid.setAuthor(this);
+  }
+
+  /// 移除 ORCID 并解除双向关联。
+  ///
+  /// @param orcid ORCID 实体
+  public void removeOrcid(AuthorOrcidEntity orcid) {
+    orcids.remove(orcid);
+    orcid.setAuthor(null);
+  }
 }
