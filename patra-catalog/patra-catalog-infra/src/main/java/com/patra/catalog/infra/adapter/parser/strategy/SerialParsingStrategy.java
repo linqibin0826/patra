@@ -230,10 +230,10 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
   private boolean handleIdentifierElement(
       String localName, XMLStreamReader reader, IdentifierData data) throws XMLStreamException {
     switch (localName) {
-      case LsiouXmlElements.Identifier.NLM_UNIQUE_ID -> data.nlmUniqueId =
-          reader.getElementText().trim();
-      case LsiouXmlElements.Identifier.NLM_WORK_ID -> data.nlmWorkId =
-          reader.getElementText().trim();
+      case LsiouXmlElements.Identifier.NLM_UNIQUE_ID ->
+          data.nlmUniqueId = reader.getElementText().trim();
+      case LsiouXmlElements.Identifier.NLM_WORK_ID ->
+          data.nlmWorkId = reader.getElementText().trim();
       case LsiouXmlElements.Identifier.CODEN -> data.coden = reader.getElementText().trim();
       default -> {
         return false;
@@ -250,8 +250,8 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
     switch (localName) {
       case LsiouXmlElements.Name.TITLE -> data.title = reader.getElementText().trim();
       case LsiouXmlElements.Name.MEDLINE_TA -> data.medlineTA = reader.getElementText().trim();
-      case LsiouXmlElements.Name.SORT_SERIAL_NAME -> data.sortSerialName =
-          reader.getElementText().trim();
+      case LsiouXmlElements.Name.SORT_SERIAL_NAME ->
+          data.sortSerialName = reader.getElementText().trim();
       default -> {
         return false;
       }
@@ -315,31 +315,31 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
   // ========== 索引元素处理 ==========
 
   /// 处理索引相关元素。
-  private boolean handleIndexingElement(
-      String localName, XMLStreamReader reader, IndexingData data) throws XMLStreamException {
+  private boolean handleIndexingElement(String localName, XMLStreamReader reader, IndexingData data)
+      throws XMLStreamException {
     switch (localName) {
-      case LsiouXmlElements.Indexing.CURRENTLY_INDEXED_YN -> data.currentlyIndexedYN =
-          parseYesNo(reader.getElementText());
+      case LsiouXmlElements.Indexing.CURRENTLY_INDEXED_YN ->
+          data.currentlyIndexedYN = parseYesNo(reader.getElementText());
       case LsiouXmlElements.Indexing.CURRENTLY_INDEXED_FOR_SUBSET -> {
         PubmedCurrentIndexing indexing = parseCurrentlyIndexedForSubset(reader);
         if (indexing != null) {
           data.currentIndexings.add(indexing);
         }
       }
-      case LsiouXmlElements.Indexing.INDEXING_SUBSET -> data.indexingSubset =
-          reader.getElementText().trim();
-      case LsiouXmlElements.Indexing.INDEXING_START_DATE -> data.indexingStartDate =
-          reader.getElementText().trim();
-      case LsiouXmlElements.Indexing.INDEX_ONLINE_YN -> data.indexOnlineYN =
-          parseYesNo(reader.getElementText());
-      case LsiouXmlElements.Indexing.INDEXING_SELECTED_URL -> data.indexingSelectedURL =
-          reader.getElementText().trim();
-      case LsiouXmlElements.Indexing.REPORTED_MEDLINE_YN -> data.reportedMedlineYN =
-          parseYesNo(reader.getElementText());
-      case LsiouXmlElements.Indexing.PROCESSING_CODE -> data.processingCode =
-          reader.getElementText().trim();
-      case LsiouXmlElements.Indexing.INDEXING_HISTORY_LIST -> data.indexingHistories.addAll(
-          parseIndexingHistoryList(reader));
+      case LsiouXmlElements.Indexing.INDEXING_SUBSET ->
+          data.indexingSubset = reader.getElementText().trim();
+      case LsiouXmlElements.Indexing.INDEXING_START_DATE ->
+          data.indexingStartDate = reader.getElementText().trim();
+      case LsiouXmlElements.Indexing.INDEX_ONLINE_YN ->
+          data.indexOnlineYN = parseYesNo(reader.getElementText());
+      case LsiouXmlElements.Indexing.INDEXING_SELECTED_URL ->
+          data.indexingSelectedURL = reader.getElementText().trim();
+      case LsiouXmlElements.Indexing.REPORTED_MEDLINE_YN ->
+          data.reportedMedlineYN = parseYesNo(reader.getElementText());
+      case LsiouXmlElements.Indexing.PROCESSING_CODE ->
+          data.processingCode = reader.getElementText().trim();
+      case LsiouXmlElements.Indexing.INDEXING_HISTORY_LIST ->
+          data.indexingHistories.addAll(parseIndexingHistoryList(reader));
       default -> {
         return false;
       }
@@ -353,10 +353,10 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
   private boolean handleClassificationElement(
       String localName, XMLStreamReader reader, CollectionData data) throws XMLStreamException {
     switch (localName) {
-      case LsiouXmlElements.MeSH.BROAD_JOURNAL_HEADING_LIST -> data.broadJournalHeadings.addAll(
-          parseBroadJournalHeadingList(reader));
-      case LsiouXmlElements.MeSH.MESH_HEADING_LIST -> data.meshHeadings.addAll(
-          parseMeshHeadingList(reader));
+      case LsiouXmlElements.MeSH.BROAD_JOURNAL_HEADING_LIST ->
+          data.broadJournalHeadings.addAll(parseBroadJournalHeadingList(reader));
+      case LsiouXmlElements.MeSH.MESH_HEADING_LIST ->
+          data.meshHeadings.addAll(parseMeshHeadingList(reader));
       default -> {
         return false;
       }
@@ -370,8 +370,8 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
   private boolean handleRelationElement(
       String localName, XMLStreamReader reader, CollectionData data) throws XMLStreamException {
     switch (localName) {
-      case LsiouXmlElements.Relation.CROSS_REFERENCE_LIST -> data.crossReferences.addAll(
-          parseCrossReferenceList(reader));
+      case LsiouXmlElements.Relation.CROSS_REFERENCE_LIST ->
+          data.crossReferences.addAll(parseCrossReferenceList(reader));
       case LsiouXmlElements.Relation.TITLE_RELATED -> {
         PubmedTitleRelation relation = parseTitleRelated(reader);
         if (relation != null) {
@@ -397,10 +397,10 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
   private boolean handleMarkerElement(String localName, XMLStreamReader reader, MarkerData data)
       throws XMLStreamException {
     switch (localName) {
-      case LsiouXmlElements.Relation.TITLE_CONTINUATION_YN -> data.titleContinuationYN =
-          parseYesNo(reader.getElementText());
-      case LsiouXmlElements.Relation.MINOR_TITLE_CHANGE_YN -> data.minorTitleChangeYN =
-          parseYesNo(reader.getElementText());
+      case LsiouXmlElements.Relation.TITLE_CONTINUATION_YN ->
+          data.titleContinuationYN = parseYesNo(reader.getElementText());
+      case LsiouXmlElements.Relation.MINOR_TITLE_CHANGE_YN ->
+          data.minorTitleChangeYN = parseYesNo(reader.getElementText());
       default -> {
         return false;
       }
@@ -411,23 +411,28 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
   // ========== 时间戳元素处理 ==========
 
   /// 处理时间戳元素。
-  private void handleTimestampElement(
-      String localName, XMLStreamReader reader, TimestampData data) throws XMLStreamException {
+  private void handleTimestampElement(String localName, XMLStreamReader reader, TimestampData data)
+      throws XMLStreamException {
     switch (localName) {
-      case LsiouXmlElements.Date.ILS_CREATED_TIMESTAMP -> data.ilsCreatedTimestamp =
-          XmlParsingHelper.parseTimestamp(reader, LsiouXmlElements.Date.ILS_CREATED_TIMESTAMP);
-      case LsiouXmlElements.Date.ILS_UPDATED_TIMESTAMP -> data.ilsUpdatedTimestamp =
-          XmlParsingHelper.parseTimestamp(reader, LsiouXmlElements.Date.ILS_UPDATED_TIMESTAMP);
-      case LsiouXmlElements.Date.DELETED_TIMESTAMP -> data.deletedTimestamp =
-          XmlParsingHelper.parseTimestamp(reader, LsiouXmlElements.Date.DELETED_TIMESTAMP);
-      case LsiouXmlElements.Date.MEDLINE_DATA_UPDATED_TIMESTAMP -> data
-          .medlineDataUpdatedTimestamp =
+      case LsiouXmlElements.Date.ILS_CREATED_TIMESTAMP ->
+          data.ilsCreatedTimestamp =
+              XmlParsingHelper.parseTimestamp(reader, LsiouXmlElements.Date.ILS_CREATED_TIMESTAMP);
+      case LsiouXmlElements.Date.ILS_UPDATED_TIMESTAMP ->
+          data.ilsUpdatedTimestamp =
+              XmlParsingHelper.parseTimestamp(reader, LsiouXmlElements.Date.ILS_UPDATED_TIMESTAMP);
+      case LsiouXmlElements.Date.DELETED_TIMESTAMP ->
+          data.deletedTimestamp =
+              XmlParsingHelper.parseTimestamp(reader, LsiouXmlElements.Date.DELETED_TIMESTAMP);
+      case LsiouXmlElements.Date.MEDLINE_DATA_UPDATED_TIMESTAMP ->
+          data.medlineDataUpdatedTimestamp =
               XmlParsingHelper.parseTimestamp(
                   reader, LsiouXmlElements.Date.MEDLINE_DATA_UPDATED_TIMESTAMP);
-      case LsiouXmlElements.Date.SEF_CREATED_TIMESTAMP -> data.sefCreatedTimestamp =
-          XmlParsingHelper.parseTimestamp(reader, LsiouXmlElements.Date.SEF_CREATED_TIMESTAMP);
-      case LsiouXmlElements.Date.SEF_UPDATED_TIMESTAMP -> data.sefUpdatedTimestamp =
-          XmlParsingHelper.parseTimestamp(reader, LsiouXmlElements.Date.SEF_UPDATED_TIMESTAMP);
+      case LsiouXmlElements.Date.SEF_CREATED_TIMESTAMP ->
+          data.sefCreatedTimestamp =
+              XmlParsingHelper.parseTimestamp(reader, LsiouXmlElements.Date.SEF_CREATED_TIMESTAMP);
+      case LsiouXmlElements.Date.SEF_UPDATED_TIMESTAMP ->
+          data.sefUpdatedTimestamp =
+              XmlParsingHelper.parseTimestamp(reader, LsiouXmlElements.Date.SEF_UPDATED_TIMESTAMP);
       default -> {
         // 忽略未处理的元素
       }
