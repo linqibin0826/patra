@@ -35,13 +35,6 @@ public abstract class AggregateRoot<ID> implements Serializable {
   /// 待应用层收集的挂起领域事件。
   private final transient List<DomainEvent> domainEvents = new ArrayList<>();
 
-  // ========== 脏标记：追踪聚合根字段更新 ==========
-
-  /// 聚合根是否被修改。
-  ///
-  /// 在业务方法中修改字段后调用 `markDirty()`，Repository 据此决定是否执行 UPDATE。
-  private transient boolean dirty = false;
-
   // ========== 子实体变更事件：追踪集合成员增删改 ==========
 
   /// 子实体变更事件列表。
@@ -132,29 +125,6 @@ public abstract class AggregateRoot<ID> implements Serializable {
   /// @return 如果 t 为 null 则返回当前时间,否则返回 t
   protected static Instant nowIfNull(Instant t) {
     return (t == null) ? Instant.now() : t;
-  }
-
-  // ========== 脏标记方法 ==========
-
-  /// 标记聚合根已被修改。
-  ///
-  /// 在任何修改字段的业务方法中调用此方法。多次调用不会产生额外开销。
-  protected void markDirty() {
-    this.dirty = true;
-  }
-
-  /// 检查聚合根是否被修改。
-  ///
-  /// @return 如果调用过 `markDirty()` 则返回 `true`
-  public boolean isDirty() {
-    return dirty;
-  }
-
-  /// 清除脏标记。
-  ///
-  /// Repository 持久化成功后调用。
-  public void clearDirty() {
-    this.dirty = false;
   }
 
   // ========== 子实体变更追踪方法 ==========
