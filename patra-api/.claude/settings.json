@@ -39,5 +39,8 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "serena@claude-plugins-official": true
   }
 }
