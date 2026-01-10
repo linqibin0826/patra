@@ -127,17 +127,11 @@ CREATE TABLE IF NOT EXISTS `cat_author_name_variant` (
     `full_string` VARCHAR(300) NOT NULL COMMENT '原始字符串(如"Lu,Zhiyong,Z")',
 
     -- ========================================
-    -- 审计字段（完整版）
+    -- 审计字段（ChildJpaEntity: id + created_at + updated_at + version）
     -- ========================================
-    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
-    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
     `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
-    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
-    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
+    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
 
     -- ========================================
     -- 主键和索引
@@ -182,17 +176,11 @@ CREATE TABLE IF NOT EXISTS `cat_author_orcid` (
     `is_primary` BOOLEAN NOT NULL DEFAULT 1 COMMENT '是否主要ORCID(0=否,1=是)',
 
     -- ========================================
-    -- 审计字段（完整版）
+    -- 审计字段（ChildJpaEntity: id + created_at + updated_at + version）
     -- ========================================
-    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
-    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
     `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
-    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
-    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
+    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
 
     -- ========================================
     -- 主键和索引

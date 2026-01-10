@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.adapter.persistence.entity;
 
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -49,7 +49,7 @@ import org.hibernate.type.SqlTypes;
       @Index(name = "idx_org_name_org_id", columnList = "org_id"),
       @Index(name = "idx_org_name_value", columnList = "value")
     })
-public class OrganizationNameEntity extends BaseJpaEntity {
+public class OrganizationNameEntity extends ValueObjectJpaEntity {
 
   /// 所属机构 ID（逻辑外键）。
   @Column(name = "org_id", nullable = false)

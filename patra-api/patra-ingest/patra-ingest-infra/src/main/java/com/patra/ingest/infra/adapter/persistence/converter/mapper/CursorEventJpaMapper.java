@@ -31,16 +31,6 @@ public interface CursorEventJpaMapper {
   @Mapping(target = "taskId", source = "lineage.taskId")
   @Mapping(target = "runId", source = "lineage.runId")
   @Mapping(target = "batchId", source = "lineage.batchId")
-  // 审计字段由 JPA 管理
-  @Mapping(target = "version", ignore = true)
-  @Mapping(target = "createdAt", ignore = true)
-  @Mapping(target = "createdBy", ignore = true)
-  @Mapping(target = "createdByName", ignore = true)
-  @Mapping(target = "updatedAt", ignore = true)
-  @Mapping(target = "updatedBy", ignore = true)
-  @Mapping(target = "updatedByName", ignore = true)
-  @Mapping(target = "ipAddress", ignore = true)
-  @Mapping(target = "recordRemarks", ignore = true)
   CursorEventEntity toEntity(CursorEvent source);
 
   default CursorEvent toAggregate(CursorEventEntity entity) {

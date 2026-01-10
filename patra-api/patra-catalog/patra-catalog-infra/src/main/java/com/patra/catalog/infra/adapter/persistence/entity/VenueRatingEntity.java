@@ -2,7 +2,7 @@ package com.patra.catalog.infra.adapter.persistence.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.catalog.domain.model.enums.RatingSystem;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ChildJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -58,7 +58,7 @@ import org.hibernate.type.SqlTypes;
       @Index(name = "idx_quartile", columnList = "quartile"),
       @Index(name = "idx_impact_score", columnList = "impact_score")
     })
-public class VenueRatingEntity extends BaseJpaEntity {
+public class VenueRatingEntity extends ChildJpaEntity {
 
   // ========== 核心属性（不变量） ==========
 

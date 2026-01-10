@@ -143,19 +143,6 @@ CREATE TABLE IF NOT EXISTS `cat_venue_identifier` (
     `is_primary` BOOLEAN NOT NULL DEFAULT 0 COMMENT '是否首选标识符(同类型中,0=否,1=是)',
 
     -- ========================================
-    -- 审计字段
-    -- ========================================
-    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
-    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP',
-    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
-    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名',
-    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
-    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名',
-
-    -- ========================================
     -- 主键和索引
     -- ========================================
     PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
@@ -200,17 +187,11 @@ CREATE TABLE IF NOT EXISTS `cat_venue_publication_stats` (
     `oa_works_count` INT UNSIGNED NULL DEFAULT NULL COMMENT '该年OA作品数量(可选)',
 
     -- ========================================
-    -- 审计字段
+    -- 审计字段（ChildJpaEntity: id + created_at + updated_at + version）
     -- ========================================
-    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
-    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP',
     `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
-    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名',
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
-    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名',
+    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
 
     -- ========================================
     -- 主键和索引
@@ -338,19 +319,6 @@ CREATE TABLE IF NOT EXISTS `cat_venue_mesh` (
     `qualifier_ui` VARCHAR(20) NULL DEFAULT NULL COMMENT 'MeSH限定符唯一标识符(格式:Q000001)',
 
     -- ========================================
-    -- 审计字段
-    -- ========================================
-    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
-    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP',
-    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
-    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名',
-    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
-    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名',
-
-    -- ========================================
     -- 主键和索引
     -- ========================================
     PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
@@ -394,19 +362,6 @@ CREATE TABLE IF NOT EXISTS `cat_venue_relation` (
     `relation_type` VARCHAR(32) NOT NULL COMMENT '关联类型:PRECEDING/SUCCEEDING/ABSORBED/ABSORBED_BY/MERGED/SPLIT_FROM/CONTINUED_BY/CONTINUES',
     `effective_date` DATE NULL DEFAULT NULL COMMENT '关联生效日期',
     `notes` VARCHAR(500) NULL DEFAULT NULL COMMENT '关联说明备注',
-
-    -- ========================================
-    -- 审计字段
-    -- ========================================
-    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
-    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP',
-    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
-    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名',
-    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
-    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名',
 
     -- ========================================
     -- 主键和索引
@@ -462,17 +417,11 @@ CREATE TABLE IF NOT EXISTS `cat_venue_indexing_history` (
     `end_issue` VARCHAR(20) NULL DEFAULT NULL COMMENT '索引结束期号',
 
     -- ========================================
-    -- 审计字段
+    -- 审计字段（ChildJpaEntity: id + created_at + updated_at + version）
     -- ========================================
-    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
-    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP',
     `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
-    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名',
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
-    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名',
+    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
 
     -- ========================================
     -- 主键和索引

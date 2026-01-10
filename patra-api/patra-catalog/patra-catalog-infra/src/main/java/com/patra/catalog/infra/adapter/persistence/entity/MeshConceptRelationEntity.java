@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.adapter.persistence.entity;
 
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -39,7 +39,7 @@ import lombok.Setter;
       @Index(name = "idx_descriptor_ui", columnList = "descriptor_ui"),
       @Index(name = "idx_concept", columnList = "concept_ui")
     })
-public class MeshConceptRelationEntity extends BaseJpaEntity {
+public class MeshConceptRelationEntity extends ValueObjectJpaEntity {
 
   /// 主题词 UI（关联：cat_mesh_descriptor.ui）
   @Column(name = "descriptor_ui", nullable = false, length = 10)

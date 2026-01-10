@@ -128,19 +128,6 @@ CREATE TABLE IF NOT EXISTS `cat_organization_name` (
     `lang` VARCHAR(10) NULL DEFAULT NULL COMMENT '语言代码(ISO 639-1/639-3,可能为null)',
 
     -- ========================================
-    -- 审计字段
-    -- ========================================
-    `record_remarks` TEXT NULL DEFAULT NULL COMMENT '备注/变更日志',
-    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
-    `created_by` BIGINT NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
-    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
-    `updated_by` BIGINT NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `version` BIGINT NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
-
-    -- ========================================
     -- 主键和索引
     -- ========================================
     PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
@@ -179,19 +166,6 @@ CREATE TABLE IF NOT EXISTS `cat_organization_external_id` (
     `id_type` VARCHAR(20) NOT NULL COMMENT '标识符类型代码:GRID/ISNI/WIKIDATA/FUNDREF/RINGGOLD',
     `all_values` JSON NOT NULL COMMENT '所有标识符值(JSON数组,某些类型可能有多个值)',
     `preferred_value` VARCHAR(100) NOT NULL COMMENT '首选标识符值(用于快速查询和显示)',
-
-    -- ========================================
-    -- 审计字段
-    -- ========================================
-    `record_remarks` TEXT NULL DEFAULT NULL COMMENT '备注/变更日志',
-    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
-    `created_by` BIGINT NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
-    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
-    `updated_by` BIGINT NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `version` BIGINT NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
 
     -- ========================================
     -- 主键和索引
@@ -234,19 +208,6 @@ CREATE TABLE IF NOT EXISTS `cat_organization_relation` (
     `related_ror_id` VARCHAR(50) NOT NULL COMMENT '关联机构的ROR ID(用于导入时关系建立)',
     `related_label` VARCHAR(500) NULL DEFAULT NULL COMMENT '关联机构的显示名称(冗余,避免JOIN)',
     `related_org_id` BIGINT NULL DEFAULT NULL COMMENT '关联机构的内部ID(延迟填充,可能为null)',
-
-    -- ========================================
-    -- 审计字段
-    -- ========================================
-    `record_remarks` TEXT NULL DEFAULT NULL COMMENT '备注/变更日志',
-    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
-    `created_by` BIGINT NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
-    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
-    `updated_by` BIGINT NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `version` BIGINT NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
 
     -- ========================================
     -- 主键和索引
@@ -306,19 +267,6 @@ CREATE TABLE IF NOT EXISTS `cat_organization_location` (
     -- 坐标
     `latitude` DECIMAL(10,7) NULL DEFAULT NULL COMMENT '纬度(-90到+90,精度约1厘米)',
     `longitude` DECIMAL(10,7) NULL DEFAULT NULL COMMENT '经度(-180到+180,精度约1厘米)',
-
-    -- ========================================
-    -- 审计字段
-    -- ========================================
-    `record_remarks` TEXT NULL DEFAULT NULL COMMENT '备注/变更日志',
-    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
-    `created_by` BIGINT NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
-    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
-    `updated_by` BIGINT NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-    `version` BIGINT NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
 
     -- ========================================
     -- 主键和索引

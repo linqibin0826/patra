@@ -25,7 +25,7 @@ public interface SoftDeletable {
   /// 执行软删除。
   ///
   /// 设置 `deletedAt` 为当前时间戳，标记记录为已删除。
-  /// 调用此方法后，需要调用 `repository.save(entity)` 持久化更改。
+  /// 对于托管状态的实体，事务提交时会自动持久化（JPA 脏检查机制）。
   default void softDelete() {
     setDeletedAt(Instant.now());
   }

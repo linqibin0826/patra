@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.adapter.persistence.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.jpa.entity.SoftDeletableJpaEntity;
+import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -19,7 +19,7 @@ import org.hibernate.type.SqlTypes;
 ///
 /// **设计说明**：
 ///
-/// - 继承 `SoftDeletableJpaEntity` 支持软删除
+/// - 继承 `ValueObjectJpaEntity`，采用 DELETE/INSERT 模式管理
 /// - 管理文献与作者的多对多关系
 /// - 记录作者顺序、角色和机构归属（发表时的归属）
 ///
@@ -58,7 +58,7 @@ import org.hibernate.type.SqlTypes;
       @Index(name = "idx_corresponding", columnList = "is_corresponding_author"),
       @Index(name = "idx_organization", columnList = "organization_id")
     })
-public class PublicationAuthorEntity extends SoftDeletableJpaEntity {
+public class PublicationAuthorEntity extends ValueObjectJpaEntity {
 
   // ========== 关联信息 ==========
 

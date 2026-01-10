@@ -84,17 +84,6 @@ CREATE TABLE `reg_prov_window_offset_cfg`
 
     `lifecycle_status_code`   VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT '字典编码(type=lifecycle_status): 生命周期',
 
-    -- BaseDO (通用审计字段)
-    `record_remarks`          JSON            NULL COMMENT '审计备注: JSON数组, 例如 [{"time":"2025-08-18 15:00:00","by":"操作员","note":"..."}]',
-    `created_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
-    `created_by`              BIGINT UNSIGNED NULL COMMENT '创建人ID',
-    `created_by_name`         VARCHAR(100)    NULL COMMENT '创建人姓名',
-    `updated_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '最后更新时间 (UTC)',
-    `updated_by`              BIGINT UNSIGNED NULL COMMENT '最后更新人ID',
-    `updated_by_name`         VARCHAR(100)    NULL COMMENT '最后更新人姓名',
-    `version`                 BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    `ip_address`              VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
-
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_window_offset_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     UNIQUE KEY `uk_reg_prov_window_offset_cfg__dim_from` (`provenance_id`, `operation_type`, `effective_from`)
@@ -129,17 +118,6 @@ CREATE TABLE `reg_prov_pagination_cfg`
     `sorting_direction`       TINYINT                  DEFAULT 1 NOT NULL COMMENT '排序方向: 0=DESC, 1=ASC',
 
     `lifecycle_status_code`   VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT '字典编码(type=lifecycle_status): 生命周期; 读侧仅使用ACTIVE',
-
-    -- BaseDO (通用审计字段)
-    `record_remarks`          JSON            NULL COMMENT '审计备注: JSON数组, 例如 [{"time":"2025-08-18 15:00:00","by":"操作员","note":"..."}]',
-    `created_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
-    `created_by`              BIGINT UNSIGNED NULL COMMENT '创建人ID',
-    `created_by_name`         VARCHAR(100)    NULL COMMENT '创建人姓名',
-    `updated_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '最后更新时间 (UTC)',
-    `updated_by`              BIGINT UNSIGNED NULL COMMENT '最后更新人ID',
-    `updated_by_name`         VARCHAR(100)    NULL COMMENT '最后更新人姓名',
-    `version`                 BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    `ip_address`              VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_pagination_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
@@ -182,17 +160,6 @@ CREATE TABLE `reg_prov_http_cfg`
 
     `lifecycle_status_code`   VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT '字典编码(type=lifecycle_status): 生命周期; 读侧仅使用ACTIVE',
 
-    -- BaseDO (通用审计字段)
-    `record_remarks`          JSON            NULL COMMENT '审计备注: JSON数组, 例如 [{"time":"2025-08-18 15:00:00","by":"操作员","note":"..."}]',
-    `created_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
-    `created_by`              BIGINT UNSIGNED NULL COMMENT '创建人ID',
-    `created_by_name`         VARCHAR(100)    NULL COMMENT '创建人姓名',
-    `updated_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '最后更新时间 (UTC)',
-    `updated_by`              BIGINT UNSIGNED NULL COMMENT '最后更新人ID',
-    `updated_by_name`         VARCHAR(100)    NULL COMMENT '最后更新人姓名',
-    `version`                 BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    `ip_address`              VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
-
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_http_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     -- 字典编码: retry_after_policy_code/lifecycle_status_code 使用 sys_dict_item.item_code
@@ -227,17 +194,6 @@ CREATE TABLE `reg_prov_batching_cfg`
     `max_ids_per_request`            INT             NULL COMMENT '每个 HTTP 请求的 ID 硬上限',
 
     `lifecycle_status_code`          VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT '字典编码(type=lifecycle_status): 生命周期; 读侧仅使用ACTIVE',
-
-    -- BaseDO (通用审计字段)
-    `record_remarks`                 JSON            NULL COMMENT '审计备注: JSON数组, 例如 [{"time":"2025-08-18 15:00:00","by":"操作员","note":"..."}]',
-    `created_at`                     TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
-    `created_by`                     BIGINT UNSIGNED NULL COMMENT '创建人ID',
-    `created_by_name`                VARCHAR(100)    NULL COMMENT '创建人姓名',
-    `updated_at`                     TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '最后更新时间 (UTC)',
-    `updated_by`                     BIGINT UNSIGNED NULL COMMENT '最后更新人ID',
-    `updated_by_name`                VARCHAR(100)    NULL COMMENT '最后更新人姓名',
-    `version`                        BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    `ip_address`                     VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_batching_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
@@ -281,17 +237,6 @@ CREATE TABLE `reg_prov_retry_cfg`
 
     `lifecycle_status_code`    VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT '字典编码(type=lifecycle_status): 生命周期; 读侧仅使用ACTIVE',
 
-    -- BaseDO (通用审计字段)
-    `record_remarks`           JSON            NULL COMMENT '审计备注: JSON数组, 例如 [{"time":"2025-08-18 15:00:00","by":"操作员","note":"..."}]',
-    `created_at`               TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
-    `created_by`               BIGINT UNSIGNED NULL COMMENT '创建人ID',
-    `created_by_name`          VARCHAR(100)    NULL COMMENT '创建人姓名',
-    `updated_at`               TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '最后更新时间 (UTC)',
-    `updated_by`               BIGINT UNSIGNED NULL COMMENT '最后更新人ID',
-    `updated_by_name`          VARCHAR(100)    NULL COMMENT '最后更新人姓名',
-    `version`                  BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    `ip_address`               VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
-
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_retry_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     -- 字典编码: backoff_policy_type_code/lifecycle_status_code 使用 sys_dict_item.item_code
@@ -321,17 +266,6 @@ CREATE TABLE `reg_prov_rate_limit_cfg`
     `max_concurrent_requests`       INT             NULL COMMENT '全局最大并发请求数 (连接数/请求数); NULL使用默认值',
     `per_credential_qps_limit`      INT             NULL COMMENT '每凭证/密钥的 QPS 上限; 跨多个密钥分布负载',
     `lifecycle_status_code`         VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT '字典编码(type=lifecycle_status): 生命周期; 读侧仅使用ACTIVE',
-
-    -- BaseDO (通用审计字段)
-    `record_remarks`                JSON            NULL COMMENT '审计备注: JSON数组, 例如 [{"time":"2025-08-18 15:00:00","by":"操作员","note":"..."}]',
-    `created_at`                    TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
-    `created_by`                    BIGINT UNSIGNED NULL COMMENT '创建人ID',
-    `created_by_name`               VARCHAR(100)    NULL COMMENT '创建人姓名',
-    `updated_at`                    TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '最后更新时间 (UTC)',
-    `updated_by`                    BIGINT UNSIGNED NULL COMMENT '最后更新人ID',
-    `updated_by_name`               VARCHAR(100)    NULL COMMENT '最后更新人姓名',
-    `version`                       BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    `ip_address`                    VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_rate_limit_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),

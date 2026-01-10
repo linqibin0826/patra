@@ -1,6 +1,6 @@
 package com.patra.registry.infra.adapter.persistence.entity.expr;
 
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -17,7 +17,7 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "reg_expr_field_dict")
-public class ExprFieldDictEntity extends BaseJpaEntity {
+public class ExprFieldDictEntity extends ValueObjectJpaEntity {
 
   /// 规范字段键，在各环境间保持稳定。
   @Column(name = "field_key", nullable = false, length = 50)

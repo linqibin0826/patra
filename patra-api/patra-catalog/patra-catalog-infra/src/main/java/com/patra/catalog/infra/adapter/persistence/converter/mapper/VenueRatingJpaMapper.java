@@ -43,15 +43,10 @@ public abstract class VenueRatingJpaMapper {
   @Mapping(target = "year", source = "year", qualifiedByName = "intToShort")
   @Mapping(target = "ratingData", source = "ratingData", qualifiedByName = "stringToJsonNode")
   @Mapping(target = "categories", source = "categories", qualifiedByName = "stringToJsonNode")
+  // ChildJpaEntity 审计字段由 JPA 管理
   @Mapping(target = "version", ignore = true)
   @Mapping(target = "createdAt", ignore = true)
-  @Mapping(target = "createdBy", ignore = true)
-  @Mapping(target = "createdByName", ignore = true)
   @Mapping(target = "updatedAt", ignore = true)
-  @Mapping(target = "updatedBy", ignore = true)
-  @Mapping(target = "updatedByName", ignore = true)
-  @Mapping(target = "ipAddress", ignore = true)
-  @Mapping(target = "recordRemarks", ignore = true)
   public abstract VenueRatingEntity toEntity(VenueRatingAggregate aggregate);
 
   /// 将 JPA 实体转换为聚合根。

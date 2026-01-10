@@ -55,7 +55,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @EqualsAndHashCode
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
-public abstract class BaseJpaEntity implements Serializable {
+public abstract class BaseJpaEntity implements Serializable, IdAwareEntity {
 
   @Serial private static final long serialVersionUID = 1L;
 

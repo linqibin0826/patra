@@ -1,7 +1,7 @@
 package com.patra.registry.infra.adapter.persistence.entity.expr;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -21,7 +21,7 @@ import org.hibernate.type.SqlTypes;
 @Setter
 @Entity
 @Table(name = "reg_prov_api_param_map")
-public class ProvApiParamMapEntity extends BaseJpaEntity {
+public class ProvApiParamMapEntity extends ValueObjectJpaEntity {
 
   /// 外键，引用 `reg_provenance.id`。
   @Column(name = "provenance_id", nullable = false)

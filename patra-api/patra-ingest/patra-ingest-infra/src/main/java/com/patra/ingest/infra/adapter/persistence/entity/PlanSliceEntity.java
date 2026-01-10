@@ -1,7 +1,7 @@
 package com.patra.ingest.infra.adapter.persistence.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -35,7 +35,7 @@ import org.hibernate.type.SqlTypes;
       @Index(name = "idx_slice_plan", columnList = "plan_id"),
       @Index(name = "idx_slice_status", columnList = "status_code")
     })
-public class PlanSliceEntity extends BaseJpaEntity {
+public class PlanSliceEntity extends ValueObjectJpaEntity {
 
   /// 关联的计划 ID
   @Column(name = "plan_id", nullable = false)

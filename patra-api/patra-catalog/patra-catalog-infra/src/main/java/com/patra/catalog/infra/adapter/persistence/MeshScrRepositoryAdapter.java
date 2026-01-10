@@ -23,7 +23,7 @@ import com.patra.catalog.infra.adapter.persistence.entity.MeshScrHeadingMappedTo
 import com.patra.catalog.infra.adapter.persistence.entity.MeshScrIndexingInfoEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.MeshScrPharmacologicalActionEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.MeshScrSourceEntity;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.IdAwareEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
@@ -230,7 +230,7 @@ public class MeshScrRepositoryAdapter implements MeshScrRepository {
   /// 所有 MeSH 实体均继承 BaseJpaEntity，使用统一方法避免代码重复。
   ///
   /// @param entity JPA 实体（继承自 BaseJpaEntity）
-  private void assignIdIfMissing(BaseJpaEntity entity) {
+  private void assignIdIfMissing(IdAwareEntity entity) {
     if (entity.getId() == null) {
       entity.setId(SnowflakeIdGenerator.getId());
     }

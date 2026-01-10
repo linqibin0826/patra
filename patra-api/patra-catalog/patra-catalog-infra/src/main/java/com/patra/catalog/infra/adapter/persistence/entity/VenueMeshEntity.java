@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.adapter.persistence.entity;
 
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -50,7 +50,7 @@ import lombok.Setter;
       @Index(name = "idx_venue_id", columnList = "venue_id"),
       @Index(name = "idx_descriptor_ui", columnList = "descriptor_ui")
     })
-public class VenueMeshEntity extends BaseJpaEntity {
+public class VenueMeshEntity extends ValueObjectJpaEntity {
 
   /// 载体 ID（外键：cat_venue.id）
   @Column(name = "venue_id", nullable = false)

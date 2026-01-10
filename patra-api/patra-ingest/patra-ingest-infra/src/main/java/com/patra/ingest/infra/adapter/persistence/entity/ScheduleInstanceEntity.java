@@ -1,7 +1,7 @@
 package com.patra.ingest.infra.adapter.persistence.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -37,7 +37,7 @@ import org.hibernate.type.SqlTypes;
       @Index(name = "idx_sched_inst_time", columnList = "triggered_at"),
       @Index(name = "idx_sched_inst_job", columnList = "scheduler_code, scheduler_job_id")
     })
-public class ScheduleInstanceEntity extends BaseJpaEntity {
+public class ScheduleInstanceEntity extends ValueObjectJpaEntity {
 
   /// 调度器来源（如 XXL、CRON、MANUAL）
   @Column(name = "scheduler_code", nullable = false, length = 32)

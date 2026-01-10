@@ -1,6 +1,6 @@
 package com.patra.registry.infra.adapter.persistence.entity.dictionary;
 
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -22,7 +22,7 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "sys_dict_item_alias")
-public class SysDictItemAliasEntity extends BaseJpaEntity {
+public class SysDictItemAliasEntity extends ValueObjectJpaEntity {
 
   /// 此别名解析到的字典项的标识符(`sys_dict_item.id`)。
   @Column(name = "item_id", nullable = false)

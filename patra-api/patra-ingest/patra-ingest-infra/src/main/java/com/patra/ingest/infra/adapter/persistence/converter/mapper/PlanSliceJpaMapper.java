@@ -32,16 +32,6 @@ public interface PlanSliceJpaMapper {
       expression =
           "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getExprSnapshotJson()))")
   @Mapping(target = "statusCode", source = "status", qualifiedByName = "sliceStatusToCode")
-  // 审计字段由 JPA 管理
-  @Mapping(target = "version", ignore = true)
-  @Mapping(target = "createdAt", ignore = true)
-  @Mapping(target = "createdBy", ignore = true)
-  @Mapping(target = "createdByName", ignore = true)
-  @Mapping(target = "updatedAt", ignore = true)
-  @Mapping(target = "updatedBy", ignore = true)
-  @Mapping(target = "updatedByName", ignore = true)
-  @Mapping(target = "ipAddress", ignore = true)
-  @Mapping(target = "recordRemarks", ignore = true)
   PlanSliceEntity toEntity(PlanSliceAggregate aggregate);
 
   default PlanSliceAggregate toAggregate(PlanSliceEntity entity) {
@@ -53,7 +43,7 @@ public interface PlanSliceJpaMapper {
       return null;
     }
     SliceStatus status = sliceStatusFromCode(entity.getStatusCode());
-    long version = entity.getVersion() == null ? 0L : entity.getVersion();
+    // ValueObjectJpaEntity 使用 DELETE/INSERT 模式，无需乐观锁
     PlanId planId = entity.getPlanId() != null ? PlanId.of(entity.getPlanId()) : null;
     return PlanSliceAggregate.restore(
         PlanSliceId.of(entity.getId()),
@@ -65,7 +55,7 @@ public interface PlanSliceJpaMapper {
         entity.getExprHash(),
         JsonNodeMappings.jsonNodeToString(entity.getExprSnapshot()),
         status,
-        version);
+        0L);
   }
 
   @Named("planSliceIdToLong")

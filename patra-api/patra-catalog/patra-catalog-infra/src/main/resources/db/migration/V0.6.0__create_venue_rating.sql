@@ -63,17 +63,11 @@ CREATE TABLE IF NOT EXISTS `cat_venue_rating` (
     `fetched_at` TIMESTAMP(6) NULL DEFAULT NULL COMMENT '数据获取时间(UTC,微秒精度)',
 
     -- ========================================
-    -- 审计字段（10个标准字段，继承 BaseDO）
+    -- 审计字段（ChildJpaEntity: 4个字段）
     -- ========================================
-    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
-    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP',
     `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
-    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名',
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
-    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名',
+    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
 
     -- ========================================
     -- 主键和索引
