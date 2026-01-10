@@ -50,19 +50,53 @@ public record AuthorNameVariant(
 
   @Serial private static final long serialVersionUID = 1L;
 
-  /// 紧凑构造器：验证必填字段。
+  /// 字段最大长度限制（与数据库 VARCHAR 长度对齐）。
+  private static final int MAX_LAST_NAME_LENGTH = 200;
+  private static final int MAX_FORE_NAME_LENGTH = 200;
+  private static final int MAX_INITIALS_LENGTH = 10;
+  private static final int MAX_FULL_STRING_LENGTH = 300;
+
+  /// 紧凑构造器：验证必填字段并截断超长字段。
+  ///
+  /// 超长字段会被静默截断到最大长度，确保数据库存储安全。
   ///
   /// @throws IllegalArgumentException 如果 fullString 为空
   public AuthorNameVariant {
     Assert.notBlank(fullString, "原始字符串不能为空");
+
+    // 截断超长字段（防止数据库 Data truncation 错误）
+    lastName = truncate(lastName, MAX_LAST_NAME_LENGTH);
+    foreName = truncate(foreName, MAX_FORE_NAME_LENGTH);
+    initials = truncate(initials, MAX_INITIALS_LENGTH);
+    fullString = truncate(fullString, MAX_FULL_STRING_LENGTH);
+  }
+
+  /// 截断字符串到指定长度。
+  ///
+  /// @param value 原始字符串
+  /// @param maxLength 最大长度
+  /// @return 截断后的字符串，如果原始值为 null 则返回 null
+  private static String truncate(String value, int maxLength) {
+    if (value == null || value.length() <= maxLength) {
+      return value;
+    }
+    return value.substring(0, maxLength);
   }
 
   /// 从 PubMed names 数组格式解析名字变体。
   ///
   /// 支持的格式：
-  /// - "Lu,Zhiyong,Z" → lastName=Lu, foreName=Zhiyong, initials=Z
-  /// - "Smith,JK" → lastName=Smith, foreName=null, initials=JK
-  /// - "Einstein" → lastName=Einstein, foreName=null, initials=null
+  /// - `"Lu,Zhiyong,Z"` → lastName=Lu, foreName=Zhiyong, initials=Z
+  /// - `"Smith,JK"` → lastName=Smith, foreName=null, initials=JK（第二部分 ≤ 10 字符视为缩写）
+  /// - `"Smith,John Kennedy"` → lastName=Smith, foreName=John Kennedy, initials=null（第二部分 > 10
+  // 字符视为名字）
+  /// - `"Einstein"` → lastName=Einstein, foreName=null, initials=null
+  ///
+  /// **智能解析规则**：
+  ///
+  /// 两部分格式时，根据第二部分长度判断：
+  /// - ≤ 10 字符：视为 initials（缩写通常 1-5 字符）
+  /// - > 10 字符：视为 foreName（可能是数据格式异常）
   ///
   /// @param rawString 原始字符串
   /// @return 名字变体值对象
@@ -80,8 +114,15 @@ public record AuthorNameVariant(
       foreName = parts[1].trim();
       initials = parts[2].trim();
     } else if (parts.length == 2) {
-      // 两部分格式：姓,缩写
-      initials = parts[1].trim();
+      // 两部分格式：智能判断第二部分是缩写还是名字
+      String secondPart = parts[1].trim();
+      if (secondPart.length() <= MAX_INITIALS_LENGTH) {
+        // 短字符串视为缩写
+        initials = secondPart;
+      } else {
+        // 长字符串视为名字（数据格式异常的容错处理）
+        foreName = secondPart;
+      }
     }
     // 单部分格式：仅姓
 
