@@ -36,8 +36,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 ///
 /// **性能考量**：
 ///
-/// - 数据量约 2100 万条，建议 chunk size 1000-2000
-/// - 处理速率预计 1000-3000 条/秒，总耗时约 2-6 小时
+/// - 数据量约 2100 万条，chunk size 5000（平衡内存与事务开销）
+/// - 处理速率预计 3000-8000 条/秒，总耗时约 1-2 小时
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -45,7 +45,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 @Configuration
 public class AuthorImportJobConfig {
 
-  private static final int DEFAULT_CHUNK_SIZE = 1000;
+  private static final int DEFAULT_CHUNK_SIZE = 5000;
 
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
@@ -129,16 +129,33 @@ public class AuthorImportJobConfig {
   @StepScope
   public AuthorItemReader authorItemReader(
       @Value("#{jobParameters['downloadUrl']}") String downloadUrl) {
-    return new AuthorItemReader(streamingDownloadPort, parser, downloadUrl);
+    // 获取最大记录数配置
+    Long maxRecords = getMaxRecords();
+    return new AuthorItemReader(streamingDownloadPort, parser, downloadUrl, maxRecords);
+  }
+
+  /// 获取最大导入记录数限制。
+  ///
+  /// @return 最大记录数，如果未配置或不限制则返回 null
+  private Long getMaxRecords() {
+    if (batchProperties != null
+        && batchProperties.getImportLimit() != null
+        && batchProperties.getImportLimit().hasLimit()) {
+      return batchProperties.getImportLimit().getMaxRecords();
+    }
+    return null;
   }
 
   /// 获取 chunk size。
+  ///
+  /// 优先使用 Job 专属的 `DEFAULT_CHUNK_SIZE`（5000），
+  /// 仅当全局配置值更大时才使用配置值（允许调大，不允许调小）。
   ///
   /// @return chunk size
   private int getChunkSize() {
     if (batchProperties != null && batchProperties.getChunk() != null) {
       int configuredSize = batchProperties.getChunk().getDefaultSize();
-      if (configuredSize > 0) {
+      if (configuredSize > DEFAULT_CHUNK_SIZE) {
         return configuredSize;
       }
     }

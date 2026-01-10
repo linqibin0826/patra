@@ -31,6 +31,9 @@ patra:
       url: jdbc:mysql://127.0.0.1:13306/patra_batch?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&rewriteBatchedStatements=true
       username: root
       password: 123456
+    # 开发环境限制导入记录数（避免每次都导入 2100 万条）
+    import-limit:
+      max-records: 500000  # 仅导入 50 万条
 
   # 对象存储配置（MinIO）
   object-storage:

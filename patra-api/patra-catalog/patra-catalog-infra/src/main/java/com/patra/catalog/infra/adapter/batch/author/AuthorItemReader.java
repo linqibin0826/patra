@@ -59,6 +59,7 @@ public class AuthorItemReader implements ItemStreamReader<AuthorAggregate> {
   private final StreamingDownloadPort streamingDownloadPort;
   private final PubMedComputedAuthorParser parser;
   private final String downloadUrl;
+  private final Long maxRecords;
 
   private StreamingDownloadResult downloadResult;
   private Stream<AuthorAggregate> stream;
@@ -73,18 +74,28 @@ public class AuthorItemReader implements ItemStreamReader<AuthorAggregate> {
   /// @param streamingDownloadPort 流式下载端口
   /// @param parser JSON Lines 解析器
   /// @param downloadUrl JSON Lines 文件下载 URL
+  /// @param maxRecords 最大导入记录数限制（null 或 ≤0 表示不限制）
   public AuthorItemReader(
       StreamingDownloadPort streamingDownloadPort,
       PubMedComputedAuthorParser parser,
-      String downloadUrl) {
+      String downloadUrl,
+      Long maxRecords) {
     this.streamingDownloadPort = streamingDownloadPort;
     this.parser = parser;
     this.downloadUrl = downloadUrl;
+    this.maxRecords = maxRecords;
   }
 
   @Override
   public void open(ExecutionContext executionContext) throws ItemStreamException {
     log.info("开始流式下载 PubMed Computed Authors JSON Lines：{}", downloadUrl);
+
+    // 输出记录数限制配置
+    if (hasRecordLimit()) {
+      log.info("配置了最大导入记录数限制：{}（达到后将自动终止）", formatNumber(maxRecords));
+    } else {
+      log.info("未配置记录数限制，将导入全部数据");
+    }
 
     // 记录开始时间（用于计算处理速率）
     startTime = Instant.now();
@@ -139,11 +150,28 @@ public class AuthorItemReader implements ItemStreamReader<AuthorAggregate> {
 
   @Override
   public AuthorAggregate read() {
+    // 检查是否达到最大记录数限制
+    if (hasRecordLimit() && currentIndex >= maxRecords) {
+      if (iterator != null && iterator.hasNext()) {
+        log.info("已达到最大导入记录数限制（{}），终止读取", formatNumber(maxRecords));
+      }
+      return null;
+    }
+
     if (iterator != null && iterator.hasNext()) {
+      // 先获取记录，成功后再递增索引（确保断点续传不会跳过未处理的记录）
+      AuthorAggregate author = iterator.next();
       currentIndex++;
-      return iterator.next();
+      return author;
     }
     return null; // 返回 null 表示读取完成
+  }
+
+  /// 检查是否配置了记录数限制。
+  ///
+  /// @return 如果 maxRecords > 0 返回 true
+  private boolean hasRecordLimit() {
+    return maxRecords != null && maxRecords > 0;
   }
 
   @Override

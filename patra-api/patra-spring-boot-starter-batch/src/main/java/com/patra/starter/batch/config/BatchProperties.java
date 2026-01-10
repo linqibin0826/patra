@@ -46,12 +46,15 @@ public class BatchProperties {
   /// Schema 初始化配置。
   private SchemaProperties schema = new SchemaProperties();
 
+  /// 导入限制配置。
+  private ImportLimitProperties importLimit = new ImportLimitProperties();
+
   /// Chunk 批次处理配置。
   @Data
   public static class ChunkProperties {
 
     /// 默认批次大小。
-    private int defaultSize = 1000;
+    private int defaultSize = 5000;
 
     /// 最大批次大小。
     private int maxSize = 10000;
@@ -133,5 +136,47 @@ public class BatchProperties {
     /// - 多服务共享数据库，仅由指定服务初始化
     /// - 使用预配置的数据库（Schema 已存在）
     private boolean initialize = true;
+  }
+
+  /// 导入记录数限制配置。
+  ///
+  /// 用于在开发环境中限制批量导入的数据量，避免每次都导入全部数据。
+  ///
+  /// ## 配置示例
+  ///
+  /// 开发环境（仅导入 50 万条记录）：
+  ///
+  /// ```yaml
+  /// patra:
+  ///   batch:
+  ///     import-limit:
+  ///       max-records: 500000
+  /// ```
+  ///
+  /// 生产环境（导入全部数据，可省略此配置）：
+  ///
+  /// ```yaml
+  /// patra:
+  ///   batch:
+  ///     import-limit:
+  ///       max-records: -1
+  /// ```
+  @Data
+  public static class ImportLimitProperties {
+
+    /// 最大导入记录数限制。
+    ///
+    /// - 默认值 `-1` 表示不限制（生产环境导入全部数据）
+    /// - 设置为正整数（如 `500000`）时，Reader 读取到该数量后自动终止
+    ///
+    /// 注意：此配置仅影响 Reader 读取行为，不影响 Writer 写入逻辑。
+    private long maxRecords = -1;
+
+    /// 检查是否设置了记录数限制。
+    ///
+    /// @return 如果 `maxRecords > 0` 返回 true
+    public boolean hasLimit() {
+      return maxRecords > 0;
+    }
   }
 }
