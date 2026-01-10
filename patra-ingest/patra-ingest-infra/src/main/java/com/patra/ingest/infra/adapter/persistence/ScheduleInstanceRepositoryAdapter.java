@@ -54,9 +54,8 @@ public class ScheduleInstanceRepositoryAdapter implements ScheduleInstanceReposi
             instance.getTriggerType());
       }
     } else {
-      // 更新：使用现有 ID 和 version
+      // 更新：ValueObjectJpaEntity 无需乐观锁
       entity.setId(instance.getId().value());
-      entity.setVersion(instance.getVersion());
       if (log.isDebugEnabled()) {
         log.debug(
             "schedule instance update id={} triggerType={}",

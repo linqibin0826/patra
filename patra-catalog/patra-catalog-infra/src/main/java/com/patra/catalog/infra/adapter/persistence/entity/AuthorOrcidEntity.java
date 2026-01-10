@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.adapter.persistence.entity;
 
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ChildJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -46,7 +46,7 @@ import lombok.experimental.SuperBuilder;
           columnNames = {"orcid"})
     },
     indexes = {@Index(name = "idx_author_id", columnList = "author_id")})
-public class AuthorOrcidEntity extends BaseJpaEntity {
+public class AuthorOrcidEntity extends ChildJpaEntity {
 
   // ========== 关联信息 ==========
 

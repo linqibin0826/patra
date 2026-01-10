@@ -19,7 +19,7 @@ import com.patra.catalog.infra.adapter.persistence.entity.OrganizationExternalId
 import com.patra.catalog.infra.adapter.persistence.entity.OrganizationLocationEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.OrganizationNameEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.OrganizationRelationEntity;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.IdAwareEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
@@ -409,7 +409,7 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
   }
 
   /// 为没有 ID 的实体分配雪花 ID。
-  private void assignIdIfMissing(BaseJpaEntity entity) {
+  private void assignIdIfMissing(IdAwareEntity entity) {
     if (entity.getId() == null) {
       entity.setId(SnowflakeIdGenerator.getId());
     }

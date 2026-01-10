@@ -24,21 +24,8 @@ CREATE TABLE IF NOT EXISTS `ing_schedule_instance`
     `trigger_params`    JSON            NULL COMMENT '触发参数 (归一化)',
     `provenance_code`   VARCHAR(64)     NOT NULL COMMENT 'Provenance 编码: 与 reg_provenance.provenance_code 对齐, 例如 pubmed/epmc/crossref',
 
-    -- 审计字段
-    `record_remarks`    JSON            NULL COMMENT 'JSON 数组, 备注/变更日志 [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
-    `version`           BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address`        VARBINARY(16)   NULL COMMENT '请求者IP (二进制, 支持 IPv4/IPv6)',
-    `created_at`        TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
-    `created_by`        BIGINT UNSIGNED NULL COMMENT '创建人ID',
-    `created_by_name`   VARCHAR(100)    NULL COMMENT '创建人姓名',
-    `updated_at`        TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
-    `updated_by`        BIGINT UNSIGNED NULL COMMENT '更新人ID',
-    `updated_by_name`   VARCHAR(100)    NULL COMMENT '更新人姓名',
-
     PRIMARY KEY (`id`),
-    KEY `idx_sched_src` (`scheduler_code`, `scheduler_job_id`, `scheduler_log_id`),
-    KEY `idx_audit_created_by` (`created_by`),
-    KEY `idx_audit_updated_by` (`updated_by`)
+    KEY `idx_sched_src` (`scheduler_code`, `scheduler_job_id`, `scheduler_log_id`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -132,25 +119,12 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
     `expr_snapshot`        JSON            NULL COMMENT '本地化表达式快照 (AST, JSON): "可直接执行的表达式树",将此分片边界条件注入计划原型后得到; 分片携带重放语义',
     `status_code`          VARCHAR(32)     NOT NULL DEFAULT 'PENDING' COMMENT 'DICT CODE(type=ing_slice_status): PENDING/ASSIGNED/FINISHED',
 
-    -- 审计字段
-    `record_remarks`       JSON            NULL COMMENT 'JSON 数组, 备注/变更日志 [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
-    `version`              BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address`           VARBINARY(16)   NULL COMMENT '请求者IP (二进制, 支持 IPv4/IPv6)',
-    `created_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
-    `created_by`           BIGINT UNSIGNED NULL COMMENT '创建人ID',
-    `created_by_name`      VARCHAR(100)    NULL COMMENT '创建人姓名',
-    `updated_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
-    `updated_by`           BIGINT UNSIGNED NULL COMMENT '更新人ID',
-    `updated_by_name`      VARCHAR(100)    NULL COMMENT '更新人姓名',
-
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_slice_unique` (`plan_id`, `slice_no`),
     UNIQUE KEY `uk_slice_sig` (`plan_id`, `slice_signature_hash`),
     KEY `idx_slice_prov_status` (`provenance_code`, `status_code`),
     KEY `idx_slice_status` (`status_code`),
-    KEY `idx_slice_expr` (`expr_hash`),
-    KEY `idx_audit_created_by` (`created_by`),
-    KEY `idx_audit_updated_by` (`updated_by`)
+    KEY `idx_slice_expr` (`expr_hash`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -266,23 +240,15 @@ CREATE TABLE IF NOT EXISTS `ing_task_run`
 
     `correlation_id`   VARCHAR(64)     NULL,
 
-    -- 审计字段
-    `record_remarks`   JSON            NULL COMMENT 'JSON 数组, 备注/变更日志 [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
-    `version`          BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address`       VARBINARY(16)   NULL COMMENT '请求者IP (二进制, 支持 IPv4/IPv6)',
+    -- 审计字段（ChildJpaEntity: 4个字段）
     `created_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
-    `created_by`       BIGINT UNSIGNED NULL COMMENT '创建人ID',
-    `created_by_name`  VARCHAR(100)    NULL COMMENT '创建人姓名',
     `updated_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
-    `updated_by`       BIGINT UNSIGNED NULL COMMENT '更新人ID',
-    `updated_by_name`  VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `version`          BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_run_attempt` (`task_id`, `attempt_no`),
     KEY `idx_run_prov_op_status` (`provenance_code`, `operation_code`, `status_code`),
-    KEY `idx_run_task_status` (`task_id`, `status_code`, `started_at`),
-    KEY `idx_audit_created_by` (`created_by`),
-    KEY `idx_audit_updated_by` (`updated_by`)
+    KEY `idx_run_task_status` (`task_id`, `status_code`, `started_at`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -327,17 +293,6 @@ CREATE TABLE IF NOT EXISTS `ing_task_run_batch`
     `storage_key`     VARCHAR(512)    NULL COMMENT '批次负载的对象存储引用',
     `stats`           JSON            NULL,
 
-    -- 审计字段
-    `record_remarks`  JSON            NULL COMMENT 'JSON 数组, 备注/变更日志 [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
-    `version`         BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address`      VARBINARY(16)   NULL COMMENT '请求者IP (二进制, 支持 IPv4/IPv6)',
-    `created_at`      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
-    `created_by`      BIGINT UNSIGNED NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100)    NULL COMMENT '创建人姓名',
-    `updated_at`      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
-    `updated_by`      BIGINT UNSIGNED NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100)    NULL COMMENT '更新人姓名',
-
     PRIMARY KEY (`id`),
 
     UNIQUE KEY `uk_run_batch_no` (`run_id`, `batch_no`),
@@ -350,9 +305,7 @@ CREATE TABLE IF NOT EXISTS `ing_task_run_batch`
     KEY `idx_batch_task` (`task_id`, `status_code`, `committed_at`),
     KEY `idx_batch_slice` (`slice_id`, `status_code`, `committed_at`),
     KEY `idx_batch_plan` (`plan_id`, `status_code`, `committed_at`),
-    KEY `idx_batch_expr` (`expr_hash`),
-    KEY `idx_audit_created_by` (`created_by`),
-    KEY `idx_audit_updated_by` (`updated_by`)
+    KEY `idx_batch_expr` (`expr_hash`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -469,17 +422,6 @@ CREATE TABLE IF NOT EXISTS `ing_cursor_event`
     `batch_id`             BIGINT UNSIGNED NULL,
     `expr_hash`            CHAR(64)        NULL,
 
-    -- 审计字段 (事件表通常不可变; 如需统一治理保留下列字段)
-    `record_remarks`       JSON            NULL COMMENT 'JSON 数组, 备注/变更日志 [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
-    `version`              BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address`           VARBINARY(16)   NULL COMMENT '请求者IP (二进制, 支持 IPv4/IPv6)',
-    `created_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
-    `created_by`           BIGINT UNSIGNED NULL COMMENT '创建人ID',
-    `created_by_name`      VARCHAR(100)    NULL COMMENT '创建人姓名',
-    `updated_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)',
-    `updated_by`           BIGINT UNSIGNED NULL COMMENT '更新人ID',
-    `updated_by_name`      VARCHAR(100)    NULL COMMENT '更新人姓名',
-
     PRIMARY KEY (`id`),
 
     UNIQUE KEY `uk_cur_evt_idem` (`idempotent_key`),
@@ -488,9 +430,7 @@ CREATE TABLE IF NOT EXISTS `ing_cursor_event`
                                 `namespace_key`),
     KEY `idx_cur_evt_instant` (`cursor_type_code`, `new_instant`),
     KEY `idx_cur_evt_numeric` (`cursor_type_code`, `new_numeric`),
-    KEY `idx_cur_evt_lineage` (`schedule_instance_id`, `plan_id`, `slice_id`, `task_id`, `run_id`, `batch_id`),
-    KEY `idx_audit_created_by` (`created_by`),
-    KEY `idx_audit_updated_by` (`updated_by`)
+    KEY `idx_cur_evt_lineage` (`schedule_instance_id`, `plan_id`, `slice_id`, `task_id`, `run_id`, `batch_id`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci

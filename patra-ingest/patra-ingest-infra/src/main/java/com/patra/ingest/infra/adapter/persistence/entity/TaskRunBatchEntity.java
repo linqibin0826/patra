@@ -1,7 +1,7 @@
 package com.patra.ingest.infra.adapter.persistence.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -38,7 +38,7 @@ import org.hibernate.type.SqlTypes;
       @Index(name = "idx_batch_task", columnList = "task_id"),
       @Index(name = "idx_batch_status", columnList = "status_code")
     })
-public class TaskRunBatchEntity extends BaseJpaEntity {
+public class TaskRunBatchEntity extends ValueObjectJpaEntity {
 
   /// 关联的运行 ID
   @Column(name = "run_id", nullable = false)

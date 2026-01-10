@@ -31,16 +31,6 @@ public interface TaskRunBatchJpaMapper {
   @Mapping(target = "stats", source = "stats", qualifiedByName = "statsToJson")
   @Mapping(target = "statusCode", source = "status", qualifiedByName = "batchStatusToCode")
   @Mapping(target = "storageKey", source = "storageKey")
-  // 审计字段由 JPA 管理
-  @Mapping(target = "version", ignore = true)
-  @Mapping(target = "createdAt", ignore = true)
-  @Mapping(target = "createdBy", ignore = true)
-  @Mapping(target = "createdByName", ignore = true)
-  @Mapping(target = "updatedAt", ignore = true)
-  @Mapping(target = "updatedBy", ignore = true)
-  @Mapping(target = "updatedByName", ignore = true)
-  @Mapping(target = "ipAddress", ignore = true)
-  @Mapping(target = "recordRemarks", ignore = true)
   TaskRunBatchEntity toEntity(TaskRunBatch source);
 
   default TaskRunBatch toAggregate(TaskRunBatchEntity entity) {

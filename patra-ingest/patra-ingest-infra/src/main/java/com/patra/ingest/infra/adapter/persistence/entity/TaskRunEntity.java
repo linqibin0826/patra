@@ -1,7 +1,7 @@
 package com.patra.ingest.infra.adapter.persistence.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ChildJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -42,7 +42,7 @@ import org.hibernate.type.SqlTypes;
       @Index(name = "idx_run_task", columnList = "task_id"),
       @Index(name = "idx_run_status", columnList = "status_code")
     })
-public class TaskRunEntity extends BaseJpaEntity {
+public class TaskRunEntity extends ChildJpaEntity {
 
   /// 关联的任务 ID
   @Column(name = "task_id", nullable = false)

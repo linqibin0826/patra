@@ -1,6 +1,6 @@
 package com.patra.registry.infra.adapter.persistence.entity.provenance;
 
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -18,7 +18,7 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "reg_prov_window_offset_cfg")
-public class ProvWindowOffsetCfgEntity extends BaseJpaEntity {
+public class ProvWindowOffsetCfgEntity extends ValueObjectJpaEntity {
 
   /// 外键，引用 `reg_provenance.id`。
   @Column(name = "provenance_id", nullable = false)

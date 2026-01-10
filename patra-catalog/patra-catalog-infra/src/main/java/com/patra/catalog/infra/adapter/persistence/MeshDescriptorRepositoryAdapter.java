@@ -16,7 +16,7 @@ import com.patra.catalog.infra.adapter.persistence.entity.MeshDescriptorEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.MeshEntryCombinationEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.MeshEntryTermEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.MeshTreeNumberEntity;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.IdAwareEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
@@ -227,7 +227,7 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
   /// 所有 MeSH 实体均继承 BaseJpaEntity，使用统一方法避免代码重复。
   ///
   /// @param entity JPA 实体（继承自 BaseJpaEntity）
-  private void assignIdIfMissing(BaseJpaEntity entity) {
+  private void assignIdIfMissing(IdAwareEntity entity) {
     if (entity.getId() == null) {
       entity.setId(SnowflakeIdGenerator.getId());
     }

@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.adapter.persistence.entity;
 
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ChildJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -50,7 +50,7 @@ import lombok.Setter;
       @Index(name = "idx_works_count", columnList = "works_count"),
       @Index(name = "idx_cited_by_count", columnList = "cited_by_count")
     })
-public class VenuePublicationStatsEntity extends BaseJpaEntity {
+public class VenuePublicationStatsEntity extends ChildJpaEntity {
 
   /// 载体 ID（外键：cat_venue.id）
   @Column(name = "venue_id", nullable = false)

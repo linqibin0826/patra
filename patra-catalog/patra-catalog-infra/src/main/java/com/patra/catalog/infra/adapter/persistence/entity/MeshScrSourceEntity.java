@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.adapter.persistence.entity;
 
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -32,7 +32,7 @@ import lombok.Setter;
 @Table(
     name = "cat_mesh_scr_source",
     indexes = {@Index(name = "idx_scr_ui", columnList = "scr_ui")})
-public class MeshScrSourceEntity extends BaseJpaEntity {
+public class MeshScrSourceEntity extends ValueObjectJpaEntity {
 
   /// SCR UI（关联：cat_mesh_scr.ui，格式：C000001）
   @Column(name = "scr_ui", nullable = false, length = 10)

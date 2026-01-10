@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.adapter.persistence.entity;
 
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ChildJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -22,7 +22,7 @@ import lombok.experimental.SuperBuilder;
 ///
 /// - 存储作者在不同文献中出现的各种名字形式
 /// - 解析自 PubMed Computed Authors 的 names 数组
-/// - 继承 `BaseJpaEntity` 获取完整审计字段
+/// - 继承 `ChildJpaEntity` 支持增量同步
 ///
 /// **索引设计**：
 ///
@@ -49,7 +49,7 @@ import lombok.experimental.SuperBuilder;
       @Index(name = "idx_author_id", columnList = "author_id"),
       @Index(name = "idx_last_name", columnList = "last_name")
     })
-public class AuthorNameVariantEntity extends BaseJpaEntity {
+public class AuthorNameVariantEntity extends ChildJpaEntity {
 
   // ========== 关联信息 ==========
 

@@ -31,16 +31,6 @@ public interface ScheduleInstanceJpaMapper {
       target = "triggerParams",
       expression =
           "java(com.patra.common.json.JsonNodeMappings.mapToJsonNode(aggregate.getTriggerParams()))")
-  // 审计字段由 JPA 管理
-  @Mapping(target = "version", ignore = true)
-  @Mapping(target = "createdAt", ignore = true)
-  @Mapping(target = "createdBy", ignore = true)
-  @Mapping(target = "createdByName", ignore = true)
-  @Mapping(target = "updatedAt", ignore = true)
-  @Mapping(target = "updatedBy", ignore = true)
-  @Mapping(target = "updatedByName", ignore = true)
-  @Mapping(target = "ipAddress", ignore = true)
-  @Mapping(target = "recordRemarks", ignore = true)
   ScheduleInstanceEntity toEntity(ScheduleInstanceAggregate aggregate);
 
   default ScheduleInstanceAggregate toAggregate(ScheduleInstanceEntity entity) {
@@ -51,7 +41,7 @@ public interface ScheduleInstanceJpaMapper {
     if (entity == null) {
       return null;
     }
-    long version = entity.getVersion() == null ? 0L : entity.getVersion();
+    // ValueObjectJpaEntity 使用 DELETE/INSERT 模式，无需乐观锁
     return ScheduleInstanceAggregate.restore(
         ScheduleInstanceId.of(entity.getId()),
         schedulerFromCode(entity.getSchedulerCode()),
@@ -61,7 +51,7 @@ public interface ScheduleInstanceJpaMapper {
         entity.getTriggeredAt(),
         JsonNodeMappings.jsonNodeToMap(entity.getTriggerParams()),
         ProvenanceCode.parse(entity.getProvenanceCode()),
-        version);
+        0L);
   }
 
   @Named("scheduleInstanceIdToLong")

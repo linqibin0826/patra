@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.adapter.persistence.entity;
 
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -51,7 +51,7 @@ import lombok.experimental.SuperBuilder;
       @Index(name = "idx_org_rel_related_ror_id", columnList = "related_ror_id"),
       @Index(name = "idx_org_rel_related_org_id", columnList = "related_org_id")
     })
-public class OrganizationRelationEntity extends BaseJpaEntity {
+public class OrganizationRelationEntity extends ValueObjectJpaEntity {
 
   /// 源机构 ID（逻辑外键）。
   @Column(name = "org_id", nullable = false)

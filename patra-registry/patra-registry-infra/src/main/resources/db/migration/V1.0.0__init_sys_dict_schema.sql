@@ -113,17 +113,6 @@ CREATE TABLE IF NOT EXISTS sys_dict_item_alias
     external_label  VARCHAR(200)    NULL COMMENT '外部显示名称 (可选)',
     notes           VARCHAR(500)    NULL COMMENT '备注/映射说明 (差异、兼容性、来源链接等)',
 
-    -- 审计与治理
-    record_remarks  JSON            NULL COMMENT '变更备注: JSON数组',
-    created_at      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
-    created_by      BIGINT UNSIGNED NULL COMMENT '创建人ID',
-    created_by_name VARCHAR(100)    NULL COMMENT '创建人姓名/登录名快照',
-    updated_at      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '最后更新时间 (UTC)',
-    updated_by      BIGINT UNSIGNED NULL COMMENT '最后更新人ID',
-    updated_by_name VARCHAR(100)    NULL COMMENT '最后更新人姓名/登录名快照',
-    version         BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本 (CAS)',
-    ip_address      VARBINARY(16)   NULL COMMENT '请求者IP (二进制, IPv4/IPv6)',
-
     PRIMARY KEY (id),
     UNIQUE KEY uk_dict_alias__std_code (source_standard, external_code) COMMENT 'external_code 在同一 source_standard 内必须唯一',
     CONSTRAINT chk_dict_alias__std_format CHECK (REGEXP_LIKE(source_standard, '^[a-z0-9_\-]{1,64}$'))

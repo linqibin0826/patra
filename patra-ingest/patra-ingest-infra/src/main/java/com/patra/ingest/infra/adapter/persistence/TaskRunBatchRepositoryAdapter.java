@@ -51,10 +51,8 @@ public class TaskRunBatchRepositoryAdapter implements TaskRunBatchRepository {
       entity.setId(SnowflakeIdGenerator.getId());
       saved = taskRunBatchDao.save(entity);
     } else {
-      // 更新：先获取当前记录的 version（领域对象不持有 version）
+      // 更新：ValueObjectJpaEntity 无需乐观锁
       entity.setId(batch.getId());
-      TaskRunBatchEntity existing = taskRunBatchDao.findById(batch.getId()).orElseThrow();
-      entity.setVersion(existing.getVersion());
       // 使用 merge 处理可能存在的托管实体冲突
       saved = entityManager.merge(entity);
     }
@@ -66,7 +64,7 @@ public class TaskRunBatchRepositoryAdapter implements TaskRunBatchRepository {
   ///
   /// 分离新增和更新操作：
   /// - 新增：使用 JPA `saveAll()` 批量插入
-  /// - 更新：逐条更新（保持乐观锁语义）
+  /// - 更新：逐条 merge（ValueObjectJpaEntity 无乐观锁）
   ///
   /// @param batches 批次实体集合
   @Override

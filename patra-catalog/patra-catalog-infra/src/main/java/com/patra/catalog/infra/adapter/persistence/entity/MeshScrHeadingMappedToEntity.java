@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.adapter.persistence.entity;
 
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -43,7 +43,7 @@ import lombok.Setter;
       @Index(name = "idx_scr_ui", columnList = "scr_ui"),
       @Index(name = "idx_descriptor_ui", columnList = "descriptor_ui")
     })
-public class MeshScrHeadingMappedToEntity extends BaseJpaEntity {
+public class MeshScrHeadingMappedToEntity extends ValueObjectJpaEntity {
 
   /// SCR UI（关联：cat_mesh_scr.ui，格式：C000001）
   @Column(name = "scr_ui", nullable = false, length = 10)

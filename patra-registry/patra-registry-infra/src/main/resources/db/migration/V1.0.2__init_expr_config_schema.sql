@@ -15,16 +15,6 @@ CREATE TABLE IF NOT EXISTS `reg_expr_field_dict`
     `exposable`        TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否允许全局暴露/使用: 1=可暴露, 0=隐藏; 与数据源级能力解耦',
     `is_date`          TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '冗余标志: 1=类日期 (帮助UI/DateLens); 通常与 DATE/DATETIME 类型一致',
 
-    `record_remarks`   JSON            NULL COMMENT '审计备注: JSON数组,记录变更备注/审查/运维备注',
-    `version`          BIGINT          NOT NULL DEFAULT 0 COMMENT '乐观锁版本 (CAS) 避免并发覆盖',
-    `ip_address`       VARBINARY(16)   NULL COMMENT '最后写入来源IP (二进制, IPv4/IPv6) 用于审计/风控',
-    `created_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC, 微秒精度)',
-    `created_by`       BIGINT          NULL COMMENT '创建人ID (逻辑外键; 用户/系统账号)',
-    `created_by_name`  VARCHAR(64)     NULL COMMENT '创建人姓名/登录名快照',
-    `updated_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '最后更新时间 (UTC, 微秒精度)',
-    `updated_by`       BIGINT          NULL COMMENT '最后更新人ID (逻辑外键)',
-    `updated_by_name`  VARCHAR(64)     NULL COMMENT '最后更新人姓名/登录名快照',
-
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_expr_field_key` (`field_key`) COMMENT '确保统一字段键全局唯一'
 ) ENGINE = InnoDB
@@ -57,16 +47,6 @@ CREATE TABLE IF NOT EXISTS `reg_prov_api_param_map`
     `effective_from`      TIMESTAMP(6)    NOT NULL COMMENT '生效开始时间 (包含); UTC; 时间切片的起始',
     `effective_to`        TIMESTAMP(6)    NULL COMMENT '生效结束时间 (不包含); UTC; NULL表示"仍然有效"',
     CONSTRAINT `ck_param_map_range` CHECK (`effective_to` IS NULL OR `effective_to` > `effective_from`),
-
-    `record_remarks`      JSON            NULL COMMENT '审计备注: JSON数组',
-    `version`             BIGINT          NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    `ip_address`          VARBINARY(16)   NULL COMMENT '最后写入来源IP (二进制), IPv4/IPv6',
-    `created_at`          TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
-    `created_by`          BIGINT          NULL COMMENT '创建人ID',
-    `created_by_name`     VARCHAR(64)     NULL COMMENT '创建人姓名/登录名快照',
-    `updated_at`          TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '最后更新时间 (UTC)',
-    `updated_by`          BIGINT          NULL COMMENT '最后更新人ID',
-    `updated_by_name`     VARCHAR(64)     NULL COMMENT '最后更新人姓名/登录名快照',
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_param_map__dim_from`
@@ -129,16 +109,6 @@ CREATE TABLE IF NOT EXISTS `reg_prov_expr_capability`
     `token_kinds`                 JSON            NULL COMMENT '允许的令牌类型 (小写字符串数组, 例如 ["owner","pmcid"])',
     `token_value_pattern`         VARCHAR(255)    NULL COMMENT '令牌值的正则约束 (可选)',
 
-    `record_remarks`              JSON            NULL COMMENT '审计备注: JSON数组',
-    `version`                     BIGINT          NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    `ip_address`                  VARBINARY(16)   NULL COMMENT '最后写入来源IP (二进制)',
-    `created_at`                  TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
-    `created_by`                  BIGINT          NULL COMMENT '创建人ID',
-    `created_by_name`             VARCHAR(64)     NULL COMMENT '创建人姓名',
-    `updated_at`                  TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '最后更新时间 (UTC)',
-    `updated_by`                  BIGINT          NULL COMMENT '最后更新人ID',
-    `updated_by_name`             VARCHAR(64)     NULL COMMENT '最后更新人姓名',
-
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_cap__dim_from`
         (`provenance_id`, `operation_type`, `field_key`,
@@ -186,16 +156,6 @@ CREATE TABLE IF NOT EXISTS `reg_prov_expr_render_rule`
 
     `params`          JSON            NULL COMMENT '当 emit=PARAMS 时: 标准键/模板变量的 JSON (不使用提供商参数名); 例如 {"from":"from","to":"to"}',
     `fn_code`         VARCHAR(64)     NULL COMMENT '模板级渲染函数代码 (reg_transform 的子集/扩展); 例如 PUBMED_DATETYPE (非值级转换)',
-
-    `record_remarks`  JSON            NULL COMMENT '审计备注: JSON数组',
-    `version`         BIGINT          NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    `ip_address`      VARBINARY(16)   NULL COMMENT '最后写入来源IP (二进制)',
-    `created_at`      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
-    `created_by`      BIGINT          NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(64)     NULL COMMENT '创建人姓名',
-    `updated_at`      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '最后更新时间 (UTC)',
-    `updated_by`      BIGINT          NULL COMMENT '最后更新人ID',
-    `updated_by_name` VARCHAR(64)     NULL COMMENT '最后更新人姓名',
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_render__dim_from`

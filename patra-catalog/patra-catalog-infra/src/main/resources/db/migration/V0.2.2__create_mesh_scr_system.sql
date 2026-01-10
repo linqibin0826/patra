@@ -157,19 +157,6 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_scr_heading_mapped_to` (
     `major_topic` BOOLEAN NOT NULL DEFAULT 0 COMMENT '是否为主要主题词(Major Topic,NLM用*标记)',
 
     -- ========================================
-    -- 审计字段（完整版）
-    -- ========================================
-    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
-    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
-    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
-    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
-    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
-    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-
-    -- ========================================
     -- 主键和索引
     -- ========================================
     PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
@@ -205,19 +192,6 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_scr_source` (
     `order_num` INT UNSIGNED NULL DEFAULT NULL COMMENT '排序号(在同一SCR内的顺序)',
 
     -- ========================================
-    -- 审计字段（完整版）
-    -- ========================================
-    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
-    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
-    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
-    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
-    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
-    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-
-    -- ========================================
     -- 主键和索引
     -- ========================================
     PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
@@ -249,19 +223,6 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_scr_indexing_info` (
     `chemical_ui` VARCHAR(10) NULL DEFAULT NULL COMMENT '引用的化学物质UI(可选,指向其他SCR的UI)',
 
     -- ========================================
-    -- 审计字段（完整版）
-    -- ========================================
-    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
-    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
-    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
-    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
-    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
-    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
-
-    -- ========================================
     -- 主键和索引
     -- ========================================
     PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
@@ -291,19 +252,6 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_scr_pharmacological_action` (
     `scr_ui` VARCHAR(10) NOT NULL COMMENT 'SCR UI(关联:cat_mesh_scr.ui,格式:C000001)',
     `descriptor_ui` VARCHAR(10) NOT NULL COMMENT '药理作用主题词UI(关联:cat_mesh_descriptor.ui)',
     `descriptor_name` VARCHAR(255) NOT NULL COMMENT '主题词名称(冗余存储,避免查询时JOIN)',
-
-    -- ========================================
-    -- 审计字段（完整版）
-    -- ========================================
-    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
-    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
-    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
-    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
-    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
-    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
 
     -- ========================================
     -- 主键和索引

@@ -60,9 +60,8 @@ public class PlanSliceRepositoryAdapter implements PlanSliceRepository {
         log.debug("slice insert planId={} hash={}", entity.getPlanId(), entity.getExprHash());
       }
     } else {
-      // 更新：使用现有 ID 和 version
+      // 更新：ValueObjectJpaEntity 无需乐观锁
       entity.setId(slice.getId().value());
-      entity.setVersion(slice.getVersion());
       if (log.isDebugEnabled()) {
         log.debug(
             "slice update id={} planId={} hash={}",

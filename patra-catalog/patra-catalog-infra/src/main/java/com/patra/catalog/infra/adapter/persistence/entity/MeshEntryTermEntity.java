@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.adapter.persistence.entity;
 
 import com.patra.catalog.domain.model.enums.MeshRecordType;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -47,7 +47,7 @@ import org.hibernate.type.SqlTypes;
       @Index(name = "idx_record_type_owner", columnList = "record_type, owner_ui"),
       @Index(name = "idx_concept_ui", columnList = "concept_ui")
     })
-public class MeshEntryTermEntity extends BaseJpaEntity {
+public class MeshEntryTermEntity extends ValueObjectJpaEntity {
 
   /// 记录类型（DESCRIPTOR=主题词，SCR=补充概念）
   @Enumerated(EnumType.STRING)

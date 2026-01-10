@@ -1,6 +1,6 @@
 package com.patra.ingest.infra.adapter.persistence.entity;
 
-import com.patra.starter.jpa.entity.BaseJpaEntity;
+import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -39,7 +39,7 @@ import lombok.experimental.SuperBuilder;
       @Index(name = "idx_cur_evt_task", columnList = "task_id"),
       @Index(name = "idx_cur_evt_time", columnList = "new_instant")
     })
-public class CursorEventEntity extends BaseJpaEntity {
+public class CursorEventEntity extends ValueObjectJpaEntity {
 
   /// 数据源代码
   @Column(name = "provenance_code", nullable = false, length = 64)
