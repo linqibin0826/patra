@@ -288,6 +288,159 @@ class AuthorItemWriterIT {
     }
   }
 
+  @Nested
+  @DisplayName("ORCID 去重测试")
+  class OrcidDeduplicationTests {
+
+    @Test
+    @DisplayName("批次内 ORCID 重复 - 应该合并名字变体并只保存一条记录")
+    void batchInternalDuplicate_shouldMergeAndSaveOnce() throws Exception {
+      // Given: 两个作者有相同的 ORCID（模拟 PubMed 数据源的消歧误差）
+      String sharedOrcid = "0000-0001-7223-7726";
+
+      AuthorAggregate author1 = AuthorAggregate.fromPubMedComputed("SARMA+R");
+      author1.withNameVariants(
+          List.of(com.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse("Sarma,Rup,R")));
+      author1.addOrcid(com.patra.catalog.domain.model.vo.author.Orcid.of(sharedOrcid));
+
+      AuthorAggregate author2 = AuthorAggregate.fromPubMedComputed("SARMA+R");
+      author2.withNameVariants(
+          List.of(
+              com.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse(
+                  "Sarma,Rup Jyoti,RJ")));
+      author2.addOrcid(com.patra.catalog.domain.model.vo.author.Orcid.of(sharedOrcid));
+
+      // When: 写入包含重复 ORCID 的批次
+      Chunk<AuthorAggregate> chunk = new Chunk<>(List.of(author1, author2));
+      authorItemWriter.write(chunk);
+
+      // Then: 只有一条记录，但包含两个名字变体
+      List<AuthorEntity> savedAuthors = authorDao.findAll();
+      assertThat(savedAuthors).hasSize(1);
+
+      AuthorEntity savedAuthor = savedAuthors.getFirst();
+      assertThat(savedAuthor.getNameVariants()).hasSize(2);
+      assertThat(savedAuthor.getOrcids()).hasSize(1);
+      assertThat(savedAuthor.getOrcids().getFirst().getOrcid()).isEqualTo(sharedOrcid);
+    }
+
+    @Test
+    @DisplayName("跨批次 ORCID 重复 - 第二批次应合并名字变体到已存在的作者")
+    void crossBatchDuplicate_shouldMergeNameVariantsToExistingAuthor() throws Exception {
+      // Given: 第一批次写入一个有 ORCID 的作者
+      String existingOrcid = "0000-0002-0688-2193";
+
+      AuthorAggregate author1 = AuthorAggregate.fromPubMedComputed("SMITH+R");
+      author1.withNameVariants(
+          List.of(
+              com.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse("Smith,Raymond,R")));
+      author1.addOrcid(com.patra.catalog.domain.model.vo.author.Orcid.of(existingOrcid));
+
+      Chunk<AuthorAggregate> firstBatch = new Chunk<>(List.of(author1));
+      authorItemWriter.write(firstBatch);
+
+      // 验证第一批次写入成功
+      assertThat(authorDao.count()).isEqualTo(1);
+      AuthorEntity firstSaved = authorDao.findAll().getFirst();
+      assertThat(firstSaved.getNameVariants()).hasSize(1);
+
+      // When: 第二批次尝试写入相同 ORCID 的不同作者（名字变体不同）
+      AuthorAggregate author2 = AuthorAggregate.fromPubMedComputed("SMITH+R");
+      author2.withNameVariants(
+          List.of(
+              com.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse(
+                  "Smith,Ray Alexander,RA")));
+      author2.addOrcid(com.patra.catalog.domain.model.vo.author.Orcid.of(existingOrcid));
+
+      // 添加一个新作者（无 ORCID）确保不影响正常写入
+      AuthorAggregate author3 = AuthorAggregate.fromPubMedComputed("JONES+M");
+      author3.withNameVariants(
+          List.of(
+              com.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse("Jones,Mary,M")));
+
+      Chunk<AuthorAggregate> secondBatch = new Chunk<>(List.of(author2, author3));
+      authorItemWriter.write(secondBatch);
+
+      // Then: 只有 2 条记录（SMITH+R 被合并，JONES+M 是新增）
+      List<AuthorEntity> savedAuthors = authorDao.findAll();
+      assertThat(savedAuthors).hasSize(2);
+
+      // 验证 SMITH+R 的名字变体被合并（从 1 个变为 2 个）
+      AuthorEntity smithAuthor =
+          savedAuthors.stream()
+              .filter(a -> a.getNormalizedKey().equals("SMITH+R"))
+              .findFirst()
+              .orElseThrow();
+      assertThat(smithAuthor.getNameVariants()).hasSize(2);
+      assertThat(smithAuthor.getNameVariants())
+          .extracting(v -> v.getFullString())
+          .containsExactlyInAnyOrder("Smith,Raymond,R", "Smith,Ray Alexander,RA");
+
+      // 验证新作者正常写入
+      boolean jonesExists =
+          savedAuthors.stream().anyMatch(a -> a.getNormalizedKey().equals("JONES+M"));
+      assertThat(jonesExists).isTrue();
+    }
+
+    @Test
+    @DisplayName("跨批次 ORCID 重复 - 重复的名字变体应该被去重")
+    void crossBatchDuplicate_shouldDeduplicateSameNameVariants() throws Exception {
+      // Given: 第一批次写入一个有 ORCID 的作者
+      String existingOrcid = "0000-0003-1234-5678";
+
+      AuthorAggregate author1 = AuthorAggregate.fromPubMedComputed("WANG+L");
+      author1.withNameVariants(
+          List.of(com.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse("Wang,Lei,L")));
+      author1.addOrcid(com.patra.catalog.domain.model.vo.author.Orcid.of(existingOrcid));
+
+      Chunk<AuthorAggregate> firstBatch = new Chunk<>(List.of(author1));
+      authorItemWriter.write(firstBatch);
+
+      // When: 第二批次尝试写入相同 ORCID 且有重复名字变体的作者
+      AuthorAggregate author2 = AuthorAggregate.fromPubMedComputed("WANG+L");
+      author2.withNameVariants(
+          List.of(
+              com.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse("Wang,Lei,L"), // 重复
+              com.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse(
+                  "Wang,Lei Ming,LM"))); // 新变体
+      author2.addOrcid(com.patra.catalog.domain.model.vo.author.Orcid.of(existingOrcid));
+
+      Chunk<AuthorAggregate> secondBatch = new Chunk<>(List.of(author2));
+      authorItemWriter.write(secondBatch);
+
+      // Then: 只有 1 条记录，名字变体去重后应该有 2 个
+      List<AuthorEntity> savedAuthors = authorDao.findAll();
+      assertThat(savedAuthors).hasSize(1);
+
+      AuthorEntity wangAuthor = savedAuthors.getFirst();
+      assertThat(wangAuthor.getNameVariants()).hasSize(2);
+      assertThat(wangAuthor.getNameVariants())
+          .extracting(v -> v.getFullString())
+          .containsExactlyInAnyOrder("Wang,Lei,L", "Wang,Lei Ming,LM");
+    }
+
+    @Test
+    @DisplayName("无 ORCID 的作者 - 应该正常写入，不参与去重")
+    void authorsWithoutOrcid_shouldWriteNormally() throws Exception {
+      // Given: 两个无 ORCID 的作者
+      AuthorAggregate author1 = AuthorAggregate.fromPubMedComputed("ZHANG+W");
+      author1.withNameVariants(
+          List.of(com.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse("Zhang,Wei,W")));
+
+      AuthorAggregate author2 = AuthorAggregate.fromPubMedComputed("LI+X");
+      author2.withNameVariants(
+          List.of(
+              com.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse("Li,Xiaoming,X")));
+
+      // When: 写入
+      Chunk<AuthorAggregate> chunk = new Chunk<>(List.of(author1, author2));
+      authorItemWriter.write(chunk);
+
+      // Then: 两条记录都应该写入
+      assertThat(authorDao.count()).isEqualTo(2);
+    }
+  }
+
   // ========== 辅助方法 ==========
 
   /// 检查字符串是否包含中文字符。

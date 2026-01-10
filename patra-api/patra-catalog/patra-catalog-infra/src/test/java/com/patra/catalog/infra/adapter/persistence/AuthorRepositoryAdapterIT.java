@@ -40,7 +40,7 @@ import org.springframework.test.context.ContextConfiguration;
 ///
 /// - 名字变体（AuthorNameVariant）作为子实体的级联保存
 /// - ORCID 作为子实体的级联保存
-/// - normalizedKey 业务键的唯一性
+/// - normalizedKey 分组查询（同一格式下可能有多个作者）
 /// - 批量保存功能
 ///
 /// @author linqibin
@@ -229,30 +229,57 @@ class AuthorRepositoryAdapterIT {
   class FindByNormalizedKeyTests {
 
     @Test
-    @DisplayName("根据 normalizedKey 查询 - 存在时返回作者")
-    void findByNormalizedKey_exists_shouldReturnAuthor() {
+    @DisplayName("根据 normalizedKey 查询 - 存在时返回作者列表")
+    void findByNormalizedKey_exists_shouldReturnAuthorList() {
       // Given: 保存一个作者
       AuthorAggregate author = AuthorAggregate.fromPubMedComputed("Smith+J");
       author.addNameVariant(AuthorNameVariant.of("Smith", "John", "J", "Smith,John,J"));
       authorRepository.save(author);
 
       // When: 根据 normalizedKey 查询
-      Optional<AuthorAggregate> found = authorRepository.findByNormalizedKey("Smith+J");
+      List<AuthorAggregate> found = authorRepository.findByNormalizedKey("Smith+J");
 
       // Then: 验证
-      assertThat(found).isPresent();
-      assertThat(found.get().getNormalizedKey()).isEqualTo("Smith+J");
-      assertThat(found.get().getNameVariants()).hasSize(1);
+      assertThat(found).hasSize(1);
+      assertThat(found.getFirst().getNormalizedKey()).isEqualTo("Smith+J");
+      assertThat(found.getFirst().getNameVariants()).hasSize(1);
     }
 
     @Test
-    @DisplayName("根据 normalizedKey 查询 - 不存在时返回空")
-    void findByNormalizedKey_notExists_shouldReturnEmpty() {
+    @DisplayName("根据 normalizedKey 查询 - 不存在时返回空列表")
+    void findByNormalizedKey_notExists_shouldReturnEmptyList() {
       // When: 查询不存在的 normalizedKey
-      Optional<AuthorAggregate> found = authorRepository.findByNormalizedKey("Unknown+X");
+      List<AuthorAggregate> found = authorRepository.findByNormalizedKey("Unknown+X");
 
       // Then: 验证
       assertThat(found).isEmpty();
+    }
+
+    @Test
+    @DisplayName("同一 normalizedKey 下多个作者 - 应该返回所有匹配的作者")
+    void findByNormalizedKey_multipleAuthors_shouldReturnAll() {
+      // Given: 保存多个相同 normalizedKey 的作者（模拟 PubMed 数据中的情况）
+      AuthorAggregate author1 = AuthorAggregate.fromPubMedComputed("Smith+R");
+      author1.addNameVariant(AuthorNameVariant.of("Smith", "Richard", "R", "Smith,Richard,R"));
+      author1.addOrcid(Orcid.of("0000-0002-1825-0097"));
+
+      AuthorAggregate author2 = AuthorAggregate.fromPubMedComputed("Smith+R");
+      author2.addNameVariant(AuthorNameVariant.of("Smith", "Robert", "R", "Smith,Robert,R"));
+      author2.addOrcid(Orcid.of("0000-0001-5109-3700"));
+
+      AuthorAggregate author3 = AuthorAggregate.fromPubMedComputed("Smith+R");
+      author3.addNameVariant(AuthorNameVariant.of("Smith", "Roger", "R", "Smith,Roger,R"));
+
+      authorRepository.saveBatch(List.of(author1, author2, author3));
+
+      // When: 根据 normalizedKey 查询
+      List<AuthorAggregate> found = authorRepository.findByNormalizedKey("Smith+R");
+
+      // Then: 验证返回所有匹配的作者
+      assertThat(found).hasSize(3);
+      assertThat(found)
+          .extracting(a -> a.getNameVariants().getFirst().foreName())
+          .containsExactlyInAnyOrder("Richard", "Robert", "Roger");
     }
   }
 
@@ -339,10 +366,10 @@ class AuthorRepositoryAdapterIT {
       assertThat(saved.getOrcids()).hasSize(1);
 
       // Then: 重新从数据库读取验证
-      Optional<AuthorAggregate> reloaded = authorRepository.findByNormalizedKey("Smith+JK");
-      assertThat(reloaded).isPresent();
-      assertThat(reloaded.get().getNameVariants()).hasSize(2);
-      assertThat(reloaded.get().getOrcids()).hasSize(1);
+      List<AuthorAggregate> reloaded = authorRepository.findByNormalizedKey("Smith+JK");
+      assertThat(reloaded).hasSize(1);
+      assertThat(reloaded.getFirst().getNameVariants()).hasSize(2);
+      assertThat(reloaded.getFirst().getOrcids()).hasSize(1);
     }
 
     @Test
@@ -360,9 +387,11 @@ class AuthorRepositoryAdapterIT {
       assertThat(saved.getNameVariants()).hasSize(2);
 
       // Then: 重新读取验证
-      AuthorAggregate reloaded = authorRepository.findByNormalizedKey("Wang+XM").orElseThrow();
+      List<AuthorAggregate> reloadedList = authorRepository.findByNormalizedKey("Wang+XM");
+      assertThat(reloadedList).hasSize(1);
       boolean hasChineseVariant =
-          reloaded.getNameVariants().stream().anyMatch(v -> "王".equals(v.lastName()));
+          reloadedList.getFirst().getNameVariants().stream()
+              .anyMatch(v -> "王".equals(v.lastName()));
       assertThat(hasChineseVariant).isTrue();
     }
 
