@@ -1,0 +1,231 @@
+package com.patra.catalog.infra.adapter.batch.author;
+
+import com.patra.catalog.domain.model.aggregate.AuthorAggregate;
+import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.domain.port.source.StreamingDownloadResult;
+import java.net.URI;
+import java.text.NumberFormat;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Iterator;
+import java.util.Locale;
+import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.item.ItemStreamException;
+import org.springframework.batch.item.ItemStreamReader;
+
+/// PubMed Computed Authors 流式读取器。
+///
+/// **职责**：
+///
+/// - 从远程 URL 流式下载并解析 PubMed Computed Authors JSON Lines
+/// - 支持断点续传（通过 ExecutionContext 保存/恢复进度）
+/// - 委托 StreamingDownloadPort 下载，PubMedComputedAuthorParser 解析
+///
+/// **流式处理特性**：
+///
+/// - 无磁盘落盘，HTTP 响应体直接传递给 Parser
+/// - 失败时需重新下载（用户已确认可接受）
+///
+/// **断点续传实现**：
+///
+/// - 在 `open()` 中从 ExecutionContext 恢复 `currentIndex`，跳过已处理记录
+/// - 在 `update()` 中保存 `currentIndex` 到 ExecutionContext
+/// - chunk size 决定断点精度（如 chunk=1000，最多重复处理 999 条）
+///
+/// **资源管理**：
+///
+/// - StreamingDownloadResult 持有 HTTP 连接，在 `close()` 中释放
+/// - Stream.close() 释放 BufferedReader
+///
+/// **Bean 注册**：
+///
+/// 通过 [AuthorImportJobConfig#authorItemReader] 方法注册为 `@StepScope` Bean，
+/// 支持 Job 参数注入（downloadUrl）。
+///
+/// @author linqibin
+/// @since 0.1.0
+@Slf4j
+public class AuthorItemReader implements ItemStreamReader<AuthorAggregate> {
+
+  private static final String CURRENT_INDEX_KEY = "author.import.current.index";
+
+  /// 进度日志输出间隔（每处理多少条记录输出一次）。
+  ///
+  /// 由于数据量大（2100 万+），设置为 100,000 条以减少日志量。
+  private static final int PROGRESS_LOG_INTERVAL = 100_000;
+
+  private final StreamingDownloadPort streamingDownloadPort;
+  private final PubMedComputedAuthorParser parser;
+  private final String downloadUrl;
+
+  private StreamingDownloadResult downloadResult;
+  private Stream<AuthorAggregate> stream;
+  private Iterator<AuthorAggregate> iterator;
+  private int currentIndex = 0;
+  private int skipCount = 0;
+  private Instant startTime;
+  private int lastLoggedIndex = 0;
+
+  /// 构造函数。
+  ///
+  /// @param streamingDownloadPort 流式下载端口
+  /// @param parser JSON Lines 解析器
+  /// @param downloadUrl JSON Lines 文件下载 URL
+  public AuthorItemReader(
+      StreamingDownloadPort streamingDownloadPort,
+      PubMedComputedAuthorParser parser,
+      String downloadUrl) {
+    this.streamingDownloadPort = streamingDownloadPort;
+    this.parser = parser;
+    this.downloadUrl = downloadUrl;
+  }
+
+  @Override
+  public void open(ExecutionContext executionContext) throws ItemStreamException {
+    log.info("开始流式下载 PubMed Computed Authors JSON Lines：{}", downloadUrl);
+
+    // 记录开始时间（用于计算处理速率）
+    startTime = Instant.now();
+
+    // 从 ExecutionContext 恢复进度
+    if (executionContext.containsKey(CURRENT_INDEX_KEY)) {
+      skipCount = executionContext.getInt(CURRENT_INDEX_KEY);
+      lastLoggedIndex = skipCount;
+      log.info("从断点恢复，将跳过前 {} 条记录（需重新下载文件）", formatNumber(skipCount));
+    }
+
+    // 流式下载（无磁盘落盘）
+    try {
+      downloadResult = streamingDownloadPort.download(URI.create(downloadUrl));
+      log.info(
+          "HTTP 连接建立成功，Content-Length：{}，开始解析",
+          downloadResult.contentLength() > 0
+              ? formatNumber(downloadResult.contentLength()) + " bytes"
+              : "未知");
+
+      // 委托 PubMedComputedAuthorParser 解析
+      stream = parser.parse(downloadResult.inputStream());
+      iterator = stream.iterator();
+
+      // 跳过已处理的记录（断点续传）
+      if (skipCount > 0) {
+        log.info("开始跳过已处理的记录...");
+        int skippedCount = 0;
+        for (int i = 0; i < skipCount && iterator.hasNext(); i++) {
+          iterator.next();
+          currentIndex++;
+          skippedCount++;
+          // 每跳过 100 万条记录输出一次进度
+          if (currentIndex % 1_000_000 == 0) {
+            log.info("跳过进度：{} / {}", formatNumber(currentIndex), formatNumber(skipCount));
+          }
+        }
+
+        // 验证是否成功跳过了所有记录
+        if (skippedCount < skipCount) {
+          throw new ItemStreamException(
+              String.format("断点恢复失败：期望跳过 %d 条记录，实际只跳过 %d 条（文件可能已损坏或被截断）", skipCount, skippedCount));
+        }
+
+        log.info("跳过完成，当前索引：{}", formatNumber(currentIndex));
+      }
+
+    } catch (Exception e) {
+      throw new ItemStreamException("打开 PubMed Computed Authors 读取器失败", e);
+    }
+  }
+
+  @Override
+  public AuthorAggregate read() {
+    if (iterator != null && iterator.hasNext()) {
+      currentIndex++;
+      return iterator.next();
+    }
+    return null; // 返回 null 表示读取完成
+  }
+
+  @Override
+  public void update(ExecutionContext executionContext) throws ItemStreamException {
+    // 每个 chunk 提交时保存进度
+    executionContext.putInt(CURRENT_INDEX_KEY, currentIndex);
+
+    // 每隔 PROGRESS_LOG_INTERVAL 条记录输出一次进度日志
+    if (currentIndex - lastLoggedIndex >= PROGRESS_LOG_INTERVAL) {
+      lastLoggedIndex = currentIndex;
+      logProgress();
+    }
+  }
+
+  /// 输出进度日志。
+  ///
+  /// 格式：`进度: 100,000 条 | 速率: 1,234 条/秒 | 已用时: 00:01:21 | 预计剩余: 04:42:30`
+  private void logProgress() {
+    Duration elapsed = Duration.between(startTime, Instant.now());
+    long elapsedMillis = elapsed.toMillis();
+
+    // 计算处理速率（条/秒）
+    // 注意：这里计算的是本次执行的处理速率，不包括断点恢复跳过的记录
+    int processedInThisRun = currentIndex - skipCount;
+    long rate = elapsedMillis > 0 ? (processedInThisRun * 1000L) / elapsedMillis : 0;
+
+    // 估算剩余时间（假设总量约 2100 万）
+    long estimatedTotal = 21_000_000L;
+    long remaining = estimatedTotal - currentIndex;
+    String etaStr = "未知";
+    if (rate > 0 && remaining > 0) {
+      Duration eta = Duration.ofSeconds(remaining / rate);
+      etaStr = formatDuration(eta);
+    }
+
+    log.info(
+        "进度: {} 条 | 速率: {} 条/秒 | 已用时: {} | 预计剩余: {}",
+        formatNumber(currentIndex),
+        formatNumber(rate),
+        formatDuration(elapsed),
+        etaStr);
+  }
+
+  /// 格式化数字为千分位格式。
+  ///
+  /// 使用方法级别创建 NumberFormat 以确保线程安全。
+  ///
+  /// @param value 数值
+  /// @return 格式化后的字符串（如 `1,234`）
+  private String formatNumber(long value) {
+    return NumberFormat.getNumberInstance(Locale.CHINA).format(value);
+  }
+
+  /// 格式化时长为 HH:mm:ss 格式。
+  ///
+  /// @param duration 时长
+  /// @return 格式化后的字符串
+  private String formatDuration(Duration duration) {
+    long seconds = duration.getSeconds();
+    return String.format("%02d:%02d:%02d", seconds / 3600, (seconds % 3600) / 60, seconds % 60);
+  }
+
+  @Override
+  public void close() throws ItemStreamException {
+    log.info("关闭 PubMed Computed Authors 读取器，共处理 {} 条记录", formatNumber(currentIndex));
+
+    // 关闭 Stream（释放 BufferedReader）
+    if (stream != null) {
+      try {
+        stream.close();
+      } catch (Exception e) {
+        log.warn("关闭 Stream 时发生异常", e);
+      }
+    }
+
+    // 关闭 HTTP 连接
+    if (downloadResult != null) {
+      try {
+        downloadResult.close();
+      } catch (Exception e) {
+        log.warn("关闭 HTTP 连接时发生异常", e);
+      }
+    }
+  }
+}
