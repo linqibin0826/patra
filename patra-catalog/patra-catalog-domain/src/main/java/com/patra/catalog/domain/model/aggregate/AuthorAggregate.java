@@ -13,21 +13,30 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.Getter;
 
 /// 作者聚合根。
 ///
-/// 管理学术作者的基本信息、名字变体和 ORCID 标识符。
+/// 代表一个**已消歧的独立作者**，管理其基本信息、名字变体和 ORCID 标识符。
 /// 设计适配 PubMed Computed Authors 数据源。
+///
+/// **数据模型说明**：
+///
+/// 每个聚合根实例对应 PubMed Computed Authors 中的一条记录，代表一个已消歧的作者。
+/// `normalizedKey` 是姓名规范化格式（如 "SMITH+R" = 姓 Smith + 首字母 R），
+/// **同一 `normalizedKey` 下可能有多个不同的作者**（姓名格式相似但实为不同人）。
 ///
 /// **聚合边界**：
 ///
 /// - 名字变体（AuthorNameVariant）：值对象集合，随聚合持久化
 /// - ORCID（Orcid）：值对象集合，随聚合持久化
 ///
-/// **业务键**：
+/// **标识符设计**：
 ///
-/// - `normalizedKey`：与 PubMed Computed Authors 的 name 字段对齐（如 "Lu+Z"）
+/// - `id`：系统内部唯一标识（雪花 ID）
+/// - `normalizedKey`：姓名规范化格式，用于分组查询（非唯一）
+/// - `orcid`：外部标识符，约 25% 的作者有 ORCID
 ///
 /// **状态转换**：
 ///
@@ -45,9 +54,10 @@ public class AuthorAggregate extends AggregateRoot<AuthorId> {
 
   // ========== 核心属性 ==========
 
-  /// 规范化标识（业务键），与 PubMed Computed Authors 的 name 字段对齐。
+  /// 姓名规范化格式，对应 PubMed Computed Authors 的 name 字段。
   ///
-  /// 格式如 "Lu+Z"、"Smith+JK"，用于去重和外部数据源对齐。
+  /// 格式如 "SMITH+R"（姓 Smith + 首字母 R），用于分组查询。
+  /// **非唯一标识**：同一格式下可能有多个不同的已消歧作者。
   private final String normalizedKey;
 
   /// 数据来源代码。
@@ -92,7 +102,7 @@ public class AuthorAggregate extends AggregateRoot<AuthorId> {
   /// 私有构造函数，通过工厂方法创建实例。
   ///
   /// @param id 主键 ID（新建时为 null）
-  /// @param normalizedKey 规范化标识（业务键）
+  /// @param normalizedKey 姓名规范化格式（用于分组查询）
   /// @param displayName 展示名称
   /// @param provenanceCode 数据来源代码
   /// @param status 作者状态
@@ -109,7 +119,7 @@ public class AuthorAggregate extends AggregateRoot<AuthorId> {
     super(id);
 
     // 必填字段验证
-    Assert.notBlank(normalizedKey, "规范化标识不能为空");
+    Assert.notBlank(normalizedKey, "姓名规范化格式不能为空");
     Assert.notNull(provenanceCode, "数据来源代码不能为空");
     Assert.notNull(status, "作者状态不能为空");
 
@@ -131,7 +141,9 @@ public class AuthorAggregate extends AggregateRoot<AuthorId> {
 
   /// 从 PubMed Computed Authors 创建新的作者聚合根。
   ///
-  /// @param normalizedKey 规范化标识（如 "Lu+Z"）
+  /// 每次调用创建一个新的已消歧作者实例，即使 `normalizedKey` 相同。
+  ///
+  /// @param normalizedKey 姓名规范化格式（如 "SMITH+R"）
   /// @return 新建的作者聚合根
   /// @throws IllegalArgumentException 如果 normalizedKey 为空
   public static AuthorAggregate fromPubMedComputed(String normalizedKey) {
@@ -151,7 +163,7 @@ public class AuthorAggregate extends AggregateRoot<AuthorId> {
   /// 由 Repository 使用，用于从数据库读取后重建领域对象。
   ///
   /// @param id 主键 ID
-  /// @param normalizedKey 规范化标识
+  /// @param normalizedKey 姓名规范化格式
   /// @param displayName 展示名称
   /// @param provenanceCode 数据来源代码
   /// @param status 作者状态
@@ -210,6 +222,38 @@ public class AuthorAggregate extends AggregateRoot<AuthorId> {
     }
 
     return this;
+  }
+
+  /// 合并另一个作者的名字变体到当前作者。
+  ///
+  /// **使用场景**：
+  ///
+  /// 当通过 ORCID 识别出两条记录实际上是同一个人时，
+  /// 将被合并作者的名字变体添加到当前作者中。
+  ///
+  /// **去重策略**：
+  ///
+  /// 使用 `toLowerCase()` 进行大小写不敏感的去重，
+  /// 以匹配数据库 `utf8mb4_0900_ai_ci` 排序规则的行为。
+  ///
+  /// @param other 被合并的作者聚合根
+  public void mergeNameVariantsFrom(AuthorAggregate other) {
+    if (other == null || other.getNameVariants().isEmpty()) {
+      return;
+    }
+
+    // 收集当前已有的 fullString（使用 toLowerCase 进行大小写不敏感去重）
+    var existingFullStrings =
+        nameVariants.stream().map(v -> v.fullString().toLowerCase()).collect(Collectors.toSet());
+
+    // 添加不重复的名字变体
+    for (AuthorNameVariant variant : other.getNameVariants()) {
+      String lowerFullString = variant.fullString().toLowerCase();
+      if (!existingFullStrings.contains(lowerFullString)) {
+        nameVariants.add(variant);
+        existingFullStrings.add(lowerFullString);
+      }
+    }
   }
 
   /// 获取名字变体的不可变视图。
@@ -327,7 +371,7 @@ public class AuthorAggregate extends AggregateRoot<AuthorId> {
   @Override
   protected void assertInvariants() {
     if (normalizedKey == null || normalizedKey.isBlank()) {
-      throw new IllegalStateException("规范化标识不能为空");
+      throw new IllegalStateException("姓名规范化格式不能为空");
     }
     if (provenanceCode == null) {
       throw new IllegalStateException("数据来源代码不能为空");
