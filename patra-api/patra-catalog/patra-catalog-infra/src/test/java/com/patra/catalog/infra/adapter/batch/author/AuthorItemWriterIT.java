@@ -321,7 +321,7 @@ class AuthorItemWriterIT {
       AuthorEntity savedAuthor = savedAuthors.getFirst();
       assertThat(savedAuthor.getNameVariants()).hasSize(2);
       assertThat(savedAuthor.getOrcids()).hasSize(1);
-      assertThat(savedAuthor.getOrcids().getFirst().getOrcid()).isEqualTo(sharedOrcid);
+      assertThat(savedAuthor.getOrcids().iterator().next().getOrcid()).isEqualTo(sharedOrcid);
     }
 
     @Test
