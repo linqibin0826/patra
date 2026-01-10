@@ -8,7 +8,7 @@
 -- 作者: Patra Lin
 -- MySQL 版本: 8.0+
 -- 字符集: utf8mb4 (支持完整Unicode)
--- 排序规则: utf8mb4_unicode_ci (支持多语言准确排序)
+-- 排序规则: utf8mb4_0900_ai_ci (支持多语言准确排序)
 -- ============================================================
 
 -- ============================================================
@@ -106,5 +106,5 @@ CREATE TABLE IF NOT EXISTS `cat_publication_author` (
     INDEX `idx_corresponding` (`is_corresponding_author`) COMMENT '通讯作者索引,支持筛选通讯作者文献(联系查询)',
     INDEX `idx_organization` (`organization_id`) COMMENT '机构索引,支持按机构筛选作者文献'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='文献-作者关联表:管理作者顺序/角色/机构归属,支持逻辑删除(大数据量表,预估1.4亿条)';

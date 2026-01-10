@@ -7,7 +7,7 @@
 -- 作者: Patra Lin
 -- MySQL 版本: 8.0+
 -- 字符集: utf8mb4 (支持完整Unicode)
--- 排序规则: utf8mb4_unicode_ci (支持多语言准确排序)
+-- 排序规则: utf8mb4_0900_ai_ci (支持多语言准确排序)
 -- ============================================================
 
 -- ============================================================
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS `cat_funding` (
     INDEX `idx_funder_id` (`funder_id`) COMMENT 'Crossref Funder ID 索引,支持标准化查询',
     INDEX `idx_ror` (`ror_id`) COMMENT 'ROR 标识符索引,支持机构标识符查询',
     INDEX `idx_funding_type` (`funding_type`) COMMENT '资助类型索引,支持按类型筛选'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='资助信息表:管理研究资金来源和项目信息,支持去重策略';
 
 
@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_funding` (
     INDEX `idx_funding` (`funding_id`) COMMENT '资助ID索引,支持查询某资助项目的所有文献产出(中频)',
     INDEX `idx_primary` (`is_primary`) COMMENT '主要资助索引,支持筛选主要资助来源'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='文献-资助关联表:管理文献与资助的多对多关系';
 
 
@@ -199,7 +199,7 @@ CREATE TABLE IF NOT EXISTS `cat_external_reference` (
     INDEX `idx_accession` (`accession_number`) COMMENT '登录号索引,支持按登录号查询(低频)',
     INDEX `idx_category` (`database_category`) COMMENT '数据库类别索引,支持按类别筛选(低频)'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='外部引用表:管理外部数据库引用(基因库、临床试验等)';
 
 
@@ -257,7 +257,7 @@ CREATE TABLE IF NOT EXISTS `cat_related_item` (
     INDEX `idx_relationship` (`relationship_type`) COMMENT '关系类型索引,支持按类型筛选(如查询所有撤稿文献)',
     INDEX `idx_status` (`status`) COMMENT '状态索引,支持按状态筛选',
     INDEX `idx_date` (`relationship_date`) COMMENT '日期索引,支持按时间排序和统计'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='相关项目表:管理文献的相关项(撤稿、勘误、评论等)';
 
 
@@ -318,7 +318,7 @@ CREATE TABLE IF NOT EXISTS `cat_supplemental_object` (
     INDEX `idx_public` (`is_public`) COMMENT '公开标志索引,支持筛选公开材料',
     INDEX `idx_doi` (`doi`) COMMENT 'DOI索引,支持按DOI查询补充材料',
     INDEX `idx_available_date` (`available_date`) COMMENT '可用日期索引,支持按可用日期筛选'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='补充对象表:管理补充材料(图表、数据集、代码等)';
 
 
@@ -379,5 +379,5 @@ CREATE TABLE IF NOT EXISTS `cat_publication_history` (
 
     -- 复合索引
     INDEX `idx_pub_date` (`publication_id`, `event_date`, `order_num`) COMMENT '文献+日期+顺序号复合索引,优化时间线查询'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='发布历史表:记录文献生命周期事件,支持时序性保障';

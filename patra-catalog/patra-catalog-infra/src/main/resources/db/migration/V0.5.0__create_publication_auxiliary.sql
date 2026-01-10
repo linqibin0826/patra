@@ -7,7 +7,7 @@
 -- 作者: Patra Lin
 -- MySQL 版本: 8.0+
 -- 字符集: utf8mb4 (支持完整Unicode)
--- 排序规则: utf8mb4_unicode_ci (支持多语言准确排序)
+-- 排序规则: utf8mb4_0900_ai_ci (支持多语言准确排序)
 -- ============================================================
 
 -- ============================================================
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_date`
     INDEX `idx_year` (`year`) COMMENT '年份索引,支持按年份范围查询(中频)'
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='日期信息表:记录文献生命周期各类日期,支持不完整日期';
 
 -- 部分索引(仅索引完整日期) - MySQL 8.0.13+
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_metadata`
     INDEX `idx_review_status` (`review_status`) COMMENT '审核状态索引,支持审核工作流查询(低频)'
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='元数据表:管理文献索引状态、质量评分、数据溯源,与主表一对一';
 
 
@@ -210,7 +210,7 @@ CREATE TABLE IF NOT EXISTS `cat_alternative_abstract`
     INDEX `idx_language` (`language_code`) COMMENT '语言代码索引,支持按语言查询(中频)'
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='其他语言摘要表:管理摘要的多语言版本,支持官方/机器翻译';
 
 
@@ -279,5 +279,5 @@ CREATE TABLE IF NOT EXISTS `cat_oa_location`
     UNIQUE INDEX `uk_oa_url` (`publication_id`, `url`(255)) COMMENT '出版物+URL唯一索引,防止重复记录'
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='开放获取位置表:记录文献OA位置,支持多位置管理和最佳位置选择';

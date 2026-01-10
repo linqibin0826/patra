@@ -7,7 +7,7 @@
 -- 作者: Patra Lin
 -- MySQL 版本: 8.0+
 -- 字符集: utf8mb4 (支持完整Unicode)
--- 排序规则: utf8mb4_unicode_ci (支持多语言准确排序)
+-- 排序规则: utf8mb4_0900_ai_ci (支持多语言准确排序)
 -- ============================================================
 
 -- ============================================================
@@ -91,5 +91,5 @@ CREATE TABLE IF NOT EXISTS `cat_venue_rating` (
     INDEX `idx_quartile` (`quartile`) COMMENT '分区索引,支持按分区筛选',
     INDEX `idx_impact_score` (`impact_score`) COMMENT '影响力分数索引,支持排序'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='载体评级表(独立聚合根):JCR/CAS/SCOPUS年度评级数据';

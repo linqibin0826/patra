@@ -7,7 +7,7 @@
 -- 作者: Patra Lin
 -- MySQL 版本: 8.0+
 -- 字符集: utf8mb4 (支持完整Unicode)
--- 排序规则: utf8mb4_unicode_ci (支持多语言准确排序)
+-- 排序规则: utf8mb4_0900_ai_ci (支持多语言准确排序)
 -- ============================================================
 
 -- ============================================================
@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_scr` (
     INDEX `idx_active_version` (`active_status`, `mesh_version`) COMMENT '有效状态+版本复合索引,筛选某版本有效SCR',
     INDEX `idx_revised_version` (`date_revised`, `mesh_version`) COMMENT '修订日期+版本复合索引,支持增量更新查询'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='MeSH 补充概念记录表:存储 NLM MeSH SCR,主要用于化学物质、药物协议、疾病等补充术语';
 
 
@@ -181,7 +181,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_scr_heading_mapped_to` (
     INDEX `idx_scr_ui` (`scr_ui`) COMMENT 'SCR UI索引,支持查询某SCR的所有映射',
     INDEX `idx_descriptor_ui` (`descriptor_ui`) COMMENT '主题词UI索引,支持反向查询'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='SCR 映射关系表:存储 SCR 到 Descriptor 的映射关系,这是 SCR 最核心的关系';
 
 
@@ -225,7 +225,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_scr_source` (
     -- 普通索引
     INDEX `idx_scr_ui` (`scr_ui`) COMMENT 'SCR UI索引,支持查询某SCR的所有来源'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='SCR 来源表:存储 SCR 的数据来源(如 NCI/FDA/OMIM 等),SCR 特有';
 
 
@@ -269,7 +269,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_scr_indexing_info` (
     -- 普通索引
     INDEX `idx_scr_ui` (`scr_ui`) COMMENT 'SCR UI索引,支持查询某SCR的索引信息'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='SCR 索引信息表:存储 SCR 的索引信息,包含引用的主题词、限定词、其他SCR';
 
 
@@ -317,7 +317,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_scr_pharmacological_action` (
     INDEX `idx_scr_ui` (`scr_ui`) COMMENT 'SCR UI索引,支持查询某SCR的药理作用',
     INDEX `idx_descriptor_ui` (`descriptor_ui`) COMMENT '主题词UI索引,支持反向查询'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='SCR 药理作用表:存储 SCR 的药理作用,指向 Descriptor';
 
 

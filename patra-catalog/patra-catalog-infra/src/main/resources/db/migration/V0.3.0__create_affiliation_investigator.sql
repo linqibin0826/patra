@@ -8,7 +8,7 @@
 -- 作者: Patra Lin
 -- MySQL 版本: 8.0+
 -- 字符集: utf8mb4 (支持完整Unicode)
--- 排序规则: utf8mb4_unicode_ci (支持多语言准确排序)
+-- 排序规则: utf8mb4_0900_ai_ci (支持多语言准确排序)
 -- ============================================================
 
 -- ============================================================
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS `cat_organization` (
     INDEX `idx_org_status` (`status`) COMMENT '状态索引,支持按状态筛选',
     INDEX `idx_org_dedup_key` (`dedup_key`) COMMENT '去重键索引,支持机构去重'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='机构主表:基于ROR Schema v2.0的机构聚合根';
 
 
@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS `cat_organization_name` (
     INDEX `idx_org_name_org_id` (`org_id`) COMMENT '机构ID索引',
     INDEX `idx_org_name_value` (`value`(255)) COMMENT '名称值索引(前缀索引)'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='机构名称表:存储机构的多语言名称';
 
 
@@ -205,7 +205,7 @@ CREATE TABLE IF NOT EXISTS `cat_organization_external_id` (
     INDEX `idx_org_ext_id_org_id` (`org_id`) COMMENT '机构ID索引',
     INDEX `idx_org_ext_id_preferred` (`preferred_value`) COMMENT '首选值索引'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='机构外部标识符表:存储GRID/ISNI/Wikidata等外部标识';
 
 
@@ -261,7 +261,7 @@ CREATE TABLE IF NOT EXISTS `cat_organization_relation` (
     INDEX `idx_org_rel_related_ror_id` (`related_ror_id`) COMMENT '关联ROR ID索引',
     INDEX `idx_org_rel_related_org_id` (`related_org_id`) COMMENT '关联机构内部ID索引'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='机构关系表:存储父子机构/继任前任等关系';
 
 
@@ -333,7 +333,7 @@ CREATE TABLE IF NOT EXISTS `cat_organization_location` (
     INDEX `idx_org_loc_country` (`country_code`) COMMENT '国家代码索引,支持按国家统计',
     INDEX `idx_org_loc_geonames` (`geonames_id`) COMMENT 'GeoNames ID索引'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='机构地理位置表:基于GeoNames的层级地理信息';
 
 
@@ -390,7 +390,7 @@ CREATE TABLE IF NOT EXISTS `cat_investigator` (
     INDEX `idx_dedup_key` (`dedup_key`) COMMENT '去重键索引,支持研究者去重和合并(核心业务)',
     INDEX `idx_email` (`email`) COMMENT '邮箱索引,支持按邮箱查询研究者(联系场景)'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='研究者表:存储非作者的研究人员信息(如临床试验PI)';
 
 
@@ -445,7 +445,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_investigator` (
     INDEX `idx_investigator` (`investigator_id`) COMMENT '研究者索引,支持查询某研究者的所有文献(中频)',
     INDEX `idx_role` (`role`) COMMENT '角色索引,支持按角色筛选(如查询 PI 的所有文献)'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='文献-研究者关联表:管理研究者角色和职责';
 
 
@@ -501,5 +501,5 @@ CREATE TABLE IF NOT EXISTS `cat_personal_name_subject` (
     INDEX `idx_subject_type` (`subject_type`) COMMENT '主题类型索引,支持按类型筛选(如查询所有传记类文献)',
     INDEX `idx_last_name` (`last_name`) COMMENT '姓氏索引,支持按姓氏查询历史人物(低频但有需求)'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='人物主题表:存储传记类/历史类/纪念类文献的主题人物';
