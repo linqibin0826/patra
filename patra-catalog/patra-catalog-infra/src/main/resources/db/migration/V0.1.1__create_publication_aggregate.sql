@@ -14,8 +14,8 @@
 -- 表清单与依赖关系
 -- ============================================================
 -- 1. cat_publication (出版物主表) - 聚合根，依赖 cat_venue_instance, cat_venue
--- 2. cat_identifier (标识符表) - 依赖 cat_publication
--- 3. cat_abstract (摘要表) - 依赖 cat_publication
+-- 2. cat_publication_identifier (标识符表) - 依赖 cat_publication
+-- 3. cat_publication_abstract (摘要表) - 依赖 cat_publication
 -- ============================================================
 
 
@@ -115,7 +115,7 @@ COMMENT='出版物主表:存储医学文献核心元数据,系统中心表';
 
 
 -- ============================================================
--- 表 2: cat_identifier (标识符表)
+-- 表 2: cat_publication_identifier (标识符表)
 -- ============================================================
 -- 表说明: 管理出版物的多种类型标识符(PMID、DOI、PMC、PII、arXiv等)
 -- 记录数预估: 初始 300万 / 年增长 700万 / 5年规模 3800万
@@ -126,7 +126,7 @@ COMMENT='出版物主表:存储医学文献核心元数据,系统中心表';
 -- ============================================================
 
 
-CREATE TABLE IF NOT EXISTS `cat_identifier` (
+CREATE TABLE IF NOT EXISTS `cat_publication_identifier` (
     -- ========================================
     -- 业务字段
     -- ========================================
@@ -163,7 +163,7 @@ COMMENT='标识符表:管理出版物的多种类型标识符';
 
 
 -- ============================================================
--- 表 3: cat_abstract (摘要表)
+-- 表 3: cat_publication_abstract (摘要表)
 -- ============================================================
 -- 表说明: 独立存储文献摘要(大文本),支持结构化摘要和全文检索
 -- 记录数预估: 初始 80万 / 年增长 160万 / 5年规模 960万
@@ -174,7 +174,7 @@ COMMENT='标识符表:管理出版物的多种类型标识符';
 -- ============================================================
 
 
-CREATE TABLE IF NOT EXISTS `cat_abstract` (
+CREATE TABLE IF NOT EXISTS `cat_publication_abstract` (
     -- ========================================
     -- 业务字段
     -- ========================================
@@ -221,7 +221,7 @@ CREATE FULLTEXT INDEX `ft_title` ON `cat_publication` (`title`)
     WITH PARSER ngram
     COMMENT '标题全文索引,支持中英文混合检索';
 
--- cat_abstract 表的摘要全文索引
-CREATE FULLTEXT INDEX `ft_plain_text` ON `cat_abstract` (`plain_text`)
+-- cat_publication_abstract 表的摘要全文索引
+CREATE FULLTEXT INDEX `ft_plain_text` ON `cat_publication_abstract` (`plain_text`)
     WITH PARSER ngram
     COMMENT '摘要全文索引,支持中英文混合检索';

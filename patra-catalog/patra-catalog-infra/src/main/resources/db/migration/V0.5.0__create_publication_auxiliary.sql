@@ -15,8 +15,8 @@
 -- ============================================================
 -- 1. cat_publication_date (日期信息表) - 依赖 cat_publication
 -- 2. cat_publication_metadata (元数据表) - 依赖 cat_publication
--- 3. cat_alternative_abstract (其他语言摘要表) - 依赖 cat_publication, cat_abstract
--- 4. cat_oa_location (开放获取位置表) - 依赖 cat_publication
+-- 3. cat_publication_alternative_abstract (其他语言摘要表) - 依赖 cat_publication, cat_publication_abstract
+-- 4. cat_publication_oa_location (开放获取位置表) - 依赖 cat_publication
 -- ============================================================
 
 
@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_metadata`
 
 
 -- ============================================================
--- 表 3: cat_alternative_abstract (其他语言摘要表)
+-- 表 3: cat_publication_alternative_abstract (其他语言摘要表)
 -- ============================================================
 -- 表说明: 管理文献摘要的多语言版本(官方翻译、专业翻译、机器翻译)
 -- 记录数预估: 初始 20万 / 年增长 15万 / 5年规模 95万
@@ -163,14 +163,14 @@ CREATE TABLE IF NOT EXISTS `cat_publication_metadata`
 -- ============================================================
 
 
-CREATE TABLE IF NOT EXISTS `cat_alternative_abstract`
+CREATE TABLE IF NOT EXISTS `cat_publication_alternative_abstract`
 (
     -- ========================================
     -- 业务字段
     -- ========================================
     `id`                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键,雪花算法生成',
     `publication_id`      BIGINT UNSIGNED NOT NULL COMMENT '出版物ID(外键:cat_publication.id)',
-    `abstract_id`         BIGINT UNSIGNED NULL     DEFAULT NULL COMMENT '主摘要ID(外键:cat_abstract.id,关联原摘要)',
+    `abstract_id`         BIGINT UNSIGNED NULL     DEFAULT NULL COMMENT '主摘要ID(外键:cat_publication_abstract.id,关联原摘要)',
     `language_code`       VARCHAR(10)     NOT NULL COMMENT '语言代码(ISO 639-1,如"zh-CN","ja")',
     `language_name`       VARCHAR(50)     NULL     DEFAULT NULL COMMENT '语言名称(如"Chinese","Japanese")',
     `plain_text`          TEXT            NULL     DEFAULT NULL COMMENT '纯文本摘要(最大65535字符)',
@@ -215,7 +215,7 @@ CREATE TABLE IF NOT EXISTS `cat_alternative_abstract`
 
 
 -- ============================================================
--- 表 4: cat_oa_location (开放获取位置表)
+-- 表 4: cat_publication_oa_location (开放获取位置表)
 -- ============================================================
 -- 表说明: 详细记录文献的开放获取位置,支持多位置管理和最佳位置选择
 -- 记录数预估: 初始 500万 / 年增长 600万 / 5年规模 3500万
@@ -226,7 +226,7 @@ CREATE TABLE IF NOT EXISTS `cat_alternative_abstract`
 -- ============================================================
 
 
-CREATE TABLE IF NOT EXISTS `cat_oa_location`
+CREATE TABLE IF NOT EXISTS `cat_publication_oa_location`
 (
     -- ========================================
     -- 业务字段
