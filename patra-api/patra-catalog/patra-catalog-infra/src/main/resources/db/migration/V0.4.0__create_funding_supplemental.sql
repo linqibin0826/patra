@@ -15,9 +15,9 @@
 -- ============================================================
 -- 1. cat_funding (资助信息表) - 无依赖
 -- 2. cat_publication_funding (文献-资助关联表) - 依赖 cat_publication, cat_funding
--- 3. cat_external_reference (外部引用表) - 依赖 cat_publication
--- 4. cat_related_item (相关项目表) - 依赖 cat_publication, 可选依赖自身
--- 5. cat_supplemental_object (补充对象表) - 依赖 cat_publication
+-- 3. cat_publication_external_reference (外部引用表) - 依赖 cat_publication
+-- 4. cat_publication_related_item (相关项目表) - 依赖 cat_publication, 可选依赖自身
+-- 5. cat_publication_supplemental_object (补充对象表) - 依赖 cat_publication
 -- 6. cat_publication_history (发布历史表) - 依赖 cat_publication
 -- ============================================================
 
@@ -144,7 +144,7 @@ COMMENT='文献-资助关联表:管理文献与资助的多对多关系';
 
 
 -- ============================================================
--- 表 3: cat_external_reference (外部引用表)
+-- 表 3: cat_publication_external_reference (外部引用表)
 -- ============================================================
 -- 表说明: 管理外部数据库引用(基因库、临床试验、数据集等),与参考文献分离
 -- 记录数预估: 初始 200万 / 年增长 60万 / 5年规模 500万
@@ -155,7 +155,7 @@ COMMENT='文献-资助关联表:管理文献与资助的多对多关系';
 -- ============================================================
 
 
-CREATE TABLE IF NOT EXISTS `cat_external_reference` (
+CREATE TABLE IF NOT EXISTS `cat_publication_external_reference` (
     -- ========================================
     -- 业务字段
     -- ========================================
@@ -204,7 +204,7 @@ COMMENT='外部引用表:管理外部数据库引用(基因库、临床试验等
 
 
 -- ============================================================
--- 表 4: cat_related_item (相关项目表)
+-- 表 4: cat_publication_related_item (相关项目表)
 -- ============================================================
 -- 表说明: 管理文献的相关项(撤稿、勘误、评论等),支持 12 种关联类型
 -- 记录数预估: 初始 40万 / 年增长 12万 / 5年规模 100万
@@ -215,7 +215,7 @@ COMMENT='外部引用表:管理外部数据库引用(基因库、临床试验等
 -- ============================================================
 
 
-CREATE TABLE IF NOT EXISTS `cat_related_item` (
+CREATE TABLE IF NOT EXISTS `cat_publication_related_item` (
     -- ========================================
     -- 业务字段
     -- ========================================
@@ -262,7 +262,7 @@ COMMENT='相关项目表:管理文献的相关项(撤稿、勘误、评论等)';
 
 
 -- ============================================================
--- 表 5: cat_supplemental_object (补充对象表)
+-- 表 5: cat_publication_supplemental_object (补充对象表)
 -- ============================================================
 -- 表说明: 管理补充材料(图表、数据集、代码等),支持访问控制和许可证管理
 -- 记录数预估: 初始 400万 / 年增长 120万 / 5年规模 1000万
@@ -273,7 +273,7 @@ COMMENT='相关项目表:管理文献的相关项(撤稿、勘误、评论等)';
 -- ============================================================
 
 
-CREATE TABLE IF NOT EXISTS `cat_supplemental_object` (
+CREATE TABLE IF NOT EXISTS `cat_publication_supplemental_object` (
     -- ========================================
     -- 业务字段
     -- ========================================

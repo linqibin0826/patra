@@ -24,7 +24,7 @@
 -- 研究者相关:
 --   6. cat_investigator (研究者表) - 无依赖（独立表）
 --   7. cat_publication_investigator (文献-研究者关联表) - 依赖 cat_publication, cat_investigator
---   8. cat_personal_name_subject (人物主题表) - 依赖 cat_publication
+--   8. cat_publication_personal_name_subject (人物主题表) - 依赖 cat_publication
 -- ============================================================
 
 
@@ -450,7 +450,7 @@ COMMENT='文献-研究者关联表:管理研究者角色和职责';
 
 
 -- ============================================================
--- 表 8: cat_personal_name_subject (人物主题表)
+-- 表 8: cat_publication_personal_name_subject (人物主题表)
 -- ============================================================
 -- 表说明: 存储文献的主题人物信息(传记类、历史类、纪念类文献)
 -- 记录数预估: 初始 2万 / 年增长 0.6万 / 5年规模 5万
@@ -461,7 +461,7 @@ COMMENT='文献-研究者关联表:管理研究者角色和职责';
 -- ============================================================
 
 
-CREATE TABLE IF NOT EXISTS `cat_personal_name_subject` (
+CREATE TABLE IF NOT EXISTS `cat_publication_personal_name_subject` (
     -- ========================================
     -- 业务字段
     -- ========================================
