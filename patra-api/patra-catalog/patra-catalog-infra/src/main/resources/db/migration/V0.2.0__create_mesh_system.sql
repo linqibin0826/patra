@@ -7,7 +7,7 @@
 -- 作者: Patra Lin
 -- MySQL 版本: 8.0+
 -- 字符集: utf8mb4 (支持完整Unicode)
--- 排序规则: utf8mb4_unicode_ci (支持多语言准确排序)
+-- 排序规则: utf8mb4_0900_ai_ci (支持多语言准确排序)
 -- ============================================================
 
 -- ============================================================
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_descriptor` (
     -- 复合索引
     INDEX `idx_active_version` (`active_status`, `mesh_version`) COMMENT '有效状态+版本复合索引,筛选某版本的有效主题词'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='MeSH 主题词表:存储 NLM MeSH 主题词核心信息,医学文献标引权威词表';
 
 
@@ -145,7 +145,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_qualifier` (
 
     -- 普通索引
     INDEX `idx_name` (`name`) COMMENT '限定词名称索引,支持按名称查询'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='MeSH 限定词表:存储 MeSH 限定词,用于修饰主题词';
 
 
@@ -200,7 +200,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_tree_number` (
 
     -- 复合索引
     INDEX `idx_tree_level` (`tree_level`, `descriptor_ui`) COMMENT '层级+主题词UI复合索引,支持按层级筛选'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='MeSH 树形编号表:存储主题词树形编号,支持多位置和层次查询';
 
 
@@ -258,7 +258,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_entry_term` (
     -- 普通索引
     INDEX `idx_descriptor_ui` (`descriptor_ui`) COMMENT '主题词UI索引,支持查询某主题词的所有入口术语',
     INDEX `idx_concept_ui` (`concept_ui`) COMMENT '概念UI索引,支持按概念查询入口术语'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='MeSH 入口术语表:存储主题词同义词和入口术语,支持模糊检索';
 
 
@@ -315,7 +315,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_concept` (
     -- 普通索引
     INDEX `idx_descriptor_ui` (`descriptor_ui`) COMMENT '主题词UI索引,支持查询某主题词的所有概念'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='MeSH 概念表:存储主题词下的概念,支持概念级别关联和检索';
 
 
@@ -363,7 +363,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_concept_relation` (
     -- 普通索引
     INDEX `idx_descriptor_ui` (`descriptor_ui`) COMMENT '主题词UI索引,支持查询某主题词的所有概念关系',
     INDEX `idx_concept` (`concept_ui`) COMMENT '概念索引,支持查询某概念的所有关系'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='MeSH 概念关系表:存储概念关系(ConceptRelationList),记录同一主题词内不同概念之间的语义关系';
 
 
@@ -412,7 +412,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_entry_combination` (
     INDEX `idx_ecin_descriptor` (`ecin_descriptor_ui`) COMMENT 'ECIN主题词索引',
     INDEX `idx_ecout_descriptor` (`ecout_descriptor_ui`) COMMENT 'ECOUT主题词索引'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='MeSH 组合条目表:存储主题词的组合条目信息(EntryCombinationList)';
 
 
@@ -466,7 +466,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_mesh` (
 
     -- 普通索引
     INDEX `idx_qualifier_ui` (`qualifier_ui`) COMMENT '限定词UI索引,支持按限定词筛选文献'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='文献-MeSH 关联表:存储文献 MeSH 标引,支持主/副主题标记';
 
 

@@ -8,7 +8,7 @@
 -- 作者: Patra Lin
 -- MySQL 版本: 8.0+
 -- 字符集: utf8mb4 (支持完整Unicode)
--- 排序规则: utf8mb4_unicode_ci (支持多语言准确排序)
+-- 排序规则: utf8mb4_0900_ai_ci (支持多语言准确排序)
 -- ============================================================
 
 -- ============================================================
@@ -16,7 +16,9 @@
 -- ============================================================
 -- **设计决策**:
 -- - Author 是独立聚合根，与 Publication 通过关联表建立 N:M 关系
--- - 业务键 normalized_key 与 PubMed Computed Authors 对齐
+-- - 每条记录代表一个已消歧的独立作者（对齐 PubMed Computed Authors 数据源）
+-- - normalized_key 是姓名规范化格式（如 "SMITH+R"），用于分组查询，非唯一标识
+-- - 同一 normalized_key 下可能有多个不同的作者（姓名格式相似但实为不同人）
 -- - 名字变体独立存表，支持多种名字形式搜索
 -- - ORCID 独立存表，支持一对多（少数作者有多个 ORCID）
 --
@@ -33,8 +35,8 @@
 -- 表说明: Author 聚合根，适配 PubMed Computed Authors 数据源
 -- 记录数预估: 初始 2100万 / 年增长 100万 / 5年规模 2600万
 -- 主要查询场景:
---   1. 按 normalized_key 精确查询(>2000次/天,高频)
---   2. 按 ORCID 查询(通过子表,>500次/天,中频)
+--   1. 按 normalized_key 分组查询(>2000次/天,高频,同一key可能返回多个作者)
+--   2. 按 ORCID 精确查询(通过子表,>500次/天,中频)
 --   3. 按展示名称模糊查询(100-500次/天,中频)
 --   4. 按状态筛选(<100次/天,低频)
 -- ============================================================
@@ -49,7 +51,7 @@ CREATE TABLE IF NOT EXISTS `cat_author` (
     -- ========================================
     -- 核心属性
     -- ========================================
-    `normalized_key` VARCHAR(100) NOT NULL COMMENT '规范化标识(如"Lu+Z"),与PubMed Computed Authors对齐',
+    `normalized_key` VARCHAR(100) NOT NULL COMMENT '姓名规范化格式(如"SMITH+R"=姓Smith+首字母R),用于分组查询,非唯一标识',
     `display_name` VARCHAR(200) NULL DEFAULT NULL COMMENT '展示名称(从首个名字变体派生)',
     `status` VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT '状态:ACTIVE/MERGED/INACTIVE',
 
@@ -83,12 +85,12 @@ CREATE TABLE IF NOT EXISTS `cat_author` (
     -- ========================================
     PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
 
-    UNIQUE INDEX `uk_normalized_key` (`normalized_key`) COMMENT '规范化标识唯一索引',
+    INDEX `idx_normalized_key` (`normalized_key`) COMMENT '姓名规范化格式索引(非唯一,用于分组查询)',
     INDEX `idx_status` (`status`) COMMENT '状态索引',
     INDEX `idx_provenance` (`provenance_code`) COMMENT '数据来源索引',
     INDEX `idx_display_name` (`display_name`(100)) COMMENT '展示名称前缀索引'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='作者表(聚合根):适配PubMed Computed Authors,支持逻辑删除';
 
 
@@ -121,7 +123,7 @@ CREATE TABLE IF NOT EXISTS `cat_author_name_variant` (
     -- ========================================
     `last_name` VARCHAR(200) NULL DEFAULT NULL COMMENT '姓(Last Name/Family Name)',
     `fore_name` VARCHAR(200) NULL DEFAULT NULL COMMENT '名(First Name/Given Name,可选)',
-    `initials` VARCHAR(50) NULL DEFAULT NULL COMMENT '姓名缩写(如"Z","JK")',
+    `initials` VARCHAR(10) NULL DEFAULT NULL COMMENT '姓名缩写(如"Z","JK")',
     `full_string` VARCHAR(300) NOT NULL COMMENT '原始字符串(如"Lu,Zhiyong,Z")',
 
     -- ========================================
@@ -146,7 +148,7 @@ CREATE TABLE IF NOT EXISTS `cat_author_name_variant` (
     INDEX `idx_author_id` (`author_id`) COMMENT '作者索引',
     INDEX `idx_last_name` (`last_name`(100)) COMMENT '姓氏前缀索引'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='作者名字变体表:存储作者的多种名字形式,来源PubMed Computed Authors';
 
 
@@ -200,5 +202,5 @@ CREATE TABLE IF NOT EXISTS `cat_author_orcid` (
     UNIQUE INDEX `uk_orcid` (`orcid`) COMMENT 'ORCID全局唯一索引',
     INDEX `idx_author_id` (`author_id`) COMMENT '作者索引'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='作者ORCID表:存储作者的ORCID标识符,支持一对多';

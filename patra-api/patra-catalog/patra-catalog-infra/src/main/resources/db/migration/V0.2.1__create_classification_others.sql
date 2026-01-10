@@ -7,7 +7,7 @@
 -- 作者: Patra Lin
 -- MySQL 版本: 8.0+
 -- 字符集: utf8mb4 (支持完整Unicode)
--- 排序规则: utf8mb4_unicode_ci (支持多语言准确排序)
+-- 排序规则: utf8mb4_0900_ai_ci (支持多语言准确排序)
 -- ============================================================
 
 -- ============================================================
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS `cat_keyword` (
 
     -- 复合索引
     INDEX `idx_source_lang` (`source`, `language`) COMMENT '来源+语言复合索引,支持按来源和语言筛选'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='关键词表:存储自由关键词,支持规范化去重和频次统计';
 
 
@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_keyword` (
     INDEX `idx_pub_keyword` (`publication_id`, `keyword_id`) COMMENT '文献+关键词复合索引,支持查询文献的关键词(<20ms)',
     INDEX `idx_keyword_pub` (`keyword_id`, `publication_id`) COMMENT '关键词+文献复合索引,支持查询关键词的文献(<50ms)',
     INDEX `idx_major` (`keyword_id`, `is_major`) COMMENT '关键词+主/副标记复合索引,筛选主要关键词文献'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='文献-关键词关联表:存储文献关键词标注,支持主/副关键词标记';
 
 
@@ -178,7 +178,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_type` (
     -- 普通索引
     INDEX `idx_parent` (`parent_type`) COMMENT '父类型索引,支持查询子类型(递归查询)',
     INDEX `idx_active` (`is_active`) COMMENT '有效状态索引,筛选有效类型'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='出版类型表:存储文献类型,支持层次结构(自引用)';
 
 
@@ -224,7 +224,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_type_mapping` (
     INDEX `idx_pub_type` (`publication_id`, `type_id`) COMMENT '文献+类型复合索引,支持查询文献的类型(<20ms)',
     INDEX `idx_type_pub` (`type_id`, `publication_id`) COMMENT '类型+文献复合索引,支持查询类型的文献(<50ms)'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='文献-类型关联表:存储文献类型标注,一篇文献可有多个类型';
 
 
@@ -279,7 +279,7 @@ CREATE TABLE IF NOT EXISTS `cat_substance` (
     -- 普通索引
     INDEX `idx_name` (`name`) COMMENT '物质名称索引,支持按名称查询',
     INDEX `idx_class` (`substance_class`) COMMENT '物质分类索引,支持按分类筛选'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='物质表:存储化学物质/药物/生物制品,支持 CAS 号等注册号检索';
 
 
@@ -328,7 +328,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_substance` (
     INDEX `idx_pub_substance` (`publication_id`, `substance_id`) COMMENT '文献+物质复合索引,支持查询文献的物质(<20ms)',
     INDEX `idx_substance_pub` (`substance_id`, `publication_id`) COMMENT '物质+文献复合索引,支持查询物质的文献(<50ms)',
     INDEX `idx_major_role` (`substance_id`, `is_major`, `role`) COMMENT '物质+主/副标记+角色复合索引,支持多条件筛选'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='文献-物质关联表:存储文献物质标注,支持主/副物质标记和角色';
 
 

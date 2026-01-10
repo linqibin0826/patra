@@ -7,7 +7,7 @@
 -- 作者: Patra Lin
 -- MySQL 版本: 8.0+
 -- 字符集: utf8mb4 (支持完整Unicode)
--- 排序规则: utf8mb4_unicode_ci (支持多语言准确排序)
+-- 排序规则: utf8mb4_0900_ai_ci (支持多语言准确排序)
 -- ============================================================
 
 -- ============================================================
@@ -81,5 +81,5 @@ CREATE TABLE IF NOT EXISTS `cat_language_mapping`
     INDEX `idx_usage` (`usage_count`) COMMENT '使用次数索引,支持查询高频映射(低频)'
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='语言映射表:原始语言值到标准代码映射,支持动态学习(字典表)';

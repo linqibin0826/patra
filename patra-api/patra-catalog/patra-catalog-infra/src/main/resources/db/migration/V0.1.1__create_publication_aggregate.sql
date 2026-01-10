@@ -7,7 +7,7 @@
 -- 作者: Patra Lin
 -- MySQL 版本: 8.0+
 -- 字符集: utf8mb4 (支持完整Unicode)
--- 排序规则: utf8mb4_unicode_ci (支持多语言准确排序)
+-- 排序规则: utf8mb4_0900_ai_ci (支持多语言准确排序)
 -- ============================================================
 
 -- ============================================================
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication` (
     INDEX `idx_language_base` (`language_base`) COMMENT '基础语种索引,支持按语言筛选(如查询所有中文文献)',
     INDEX `idx_is_oa` (`is_oa`) COMMENT 'OA状态索引,支持快速筛选开放获取文献'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='出版物主表:存储医学文献核心元数据,系统中心表';
 
 
@@ -158,7 +158,7 @@ CREATE TABLE IF NOT EXISTS `cat_identifier` (
     INDEX `idx_pub_type` (`publication_id`, `type`) COMMENT '出版物+类型复合索引,支持查询某文献的某类型标识符(如查询PMID)',
     INDEX `idx_type_value` (`type`, `value`) COMMENT '类型+值复合索引,支持按标识符查询文献(如通过DOI查询文献)'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='标识符表:管理出版物的多种类型标识符';
 
 
@@ -206,7 +206,7 @@ CREATE TABLE IF NOT EXISTS `cat_abstract` (
     -- 唯一索引
     UNIQUE INDEX `uk_publication` (`publication_id`) COMMENT '出版物ID唯一索引,保证一对一关系,支持高频查询摘要(<10ms)'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='摘要表:独立存储文献摘要,优化主表性能';
 
 

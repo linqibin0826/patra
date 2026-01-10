@@ -8,7 +8,7 @@
 -- 作者: Patra Lin
 -- MySQL 版本: 8.0+
 -- 字符集: utf8mb4 (支持完整Unicode)
--- 排序规则: utf8mb4_unicode_ci (支持多语言准确排序)
+-- 排序规则: utf8mb4_0900_ai_ci (支持多语言准确排序)
 -- ============================================================
 
 -- ============================================================
@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
         `country_code` IS NULL OR REGEXP_LIKE(`country_code`, '^[A-Z]{2}$')
     )
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='出版载体表(最小聚合根):仅含核心身份标识和来源追踪,遵循CQRS原则';
 
 -- 全文索引
@@ -169,7 +169,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue_identifier` (
     -- 普通索引
     INDEX `idx_venue_id` (`venue_id`) COMMENT '载体索引,支持查询载体的所有标识符'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='载体标识符表:存储载体的各类标识符(OPENALEX/ISSN/ISSN_L/NLM/CODEN等)';
 
 
@@ -225,7 +225,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue_publication_stats` (
     INDEX `idx_works_count` (`works_count`) COMMENT '发文量索引',
     INDEX `idx_cited_by_count` (`cited_by_count`) COMMENT '被引量索引'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='年度发文统计表:载体年度发文/引用统计,来源OpenAlex';
 
 
@@ -303,7 +303,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue_instance` (
     INDEX `idx_publication_year` (`publication_year`) COMMENT '出版年份索引',
     INDEX `idx_venue_id` (`venue_id`) COMMENT '载体索引'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='载体实例表(独立聚合根):期刊卷期/书籍版次/会议届次';
 
 
@@ -364,7 +364,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue_mesh` (
     INDEX `idx_descriptor_ui` (`descriptor_ui`) COMMENT '描述符UI索引',
     INDEX `idx_is_major` (`is_major_topic`) COMMENT '主要主题索引'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='期刊MeSH主题表:来源Serfile';
 
 
@@ -422,7 +422,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue_relation` (
     INDEX `idx_relation_type` (`relation_type`) COMMENT '关联类型索引',
     INDEX `idx_related_venue` (`related_venue_id`) COMMENT '关联载体索引'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='期刊关联表:期刊间演变关系(前刊/后刊/合并/分拆),来源Serfile';
 
 
@@ -488,5 +488,5 @@ CREATE TABLE IF NOT EXISTS `cat_venue_indexing_history` (
     INDEX `idx_source_indexed` (`indexing_source`, `currently_indexed`) COMMENT '来源+索引状态复合索引',
     INDEX `idx_citation_subset` (`citation_subset`) COMMENT '引用子集索引'
 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='索引历史表:MEDLINE/PubMed收录历史变迁,来源Serfile';

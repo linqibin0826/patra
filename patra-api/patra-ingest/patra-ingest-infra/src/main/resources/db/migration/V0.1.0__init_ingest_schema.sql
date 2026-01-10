@@ -1,7 +1,7 @@
 -- B. Ingest 模块 —— ing_*
 -- - 统一审计字段: record_remarks / created_at/created_by/created_by_name / updated_at/updated_by/updated_by_name / version / ip_address / deleted.
 -- - 无物理外键 (跨/内模块完整性由应用层保证, 必要时创建辅助索引).
--- - MySQL 8.0 · InnoDB · utf8mb4_unicode_ci
+-- - MySQL 8.0 · InnoDB · utf8mb4_0900_ai_ci
 -- ======================================================================
 -- 1) 调度实例: 外部触发事件
 -- ======================================================================
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS `ing_schedule_instance`
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='调度实例: 外部触发事件 (作为此编排的根); 无物理外键';
 
 
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='计划蓝图: 定义总体窗口和分片策略 (表达式原型, 无本地化条件); 包含 provenance 配置哈希; 无物理外键';
 
 -- ======================================================================
@@ -153,7 +153,7 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='计划分片: 通用分片 (时间/ID/令牌/预算), 是并行和幂等的边界; 无物理外键';
 
 
@@ -234,7 +234,7 @@ CREATE TABLE IF NOT EXISTS `ing_task`
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='任务: 每个分片精确生成一个任务 (1:1 关系通过 uk_task_slice 强制); 支持强幂等性和调度/执行状态; 无物理外键';
 
 -- ======================================================================
@@ -285,7 +285,7 @@ CREATE TABLE IF NOT EXISTS `ing_task_run`
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='任务运行 (尝试): 一次具体的尝试; 失败的重试/重放各添加新记录; 无物理外键';
 
 -- ======================================================================
@@ -355,7 +355,7 @@ CREATE TABLE IF NOT EXISTS `ing_task_run_batch`
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='运行批次: 页/令牌步进的最小核算; 携带检查点恢复和去重; 无物理外键';
 
 -- ======================================================================
@@ -420,7 +420,7 @@ CREATE TABLE IF NOT EXISTS `ing_cursor`
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='通用游标·当前值: (source_code + operation + cursor_key + namespace) 唯一; 兼容 time/id/token; 无物理外键';
 
 -- ======================================================================
@@ -493,7 +493,7 @@ CREATE TABLE IF NOT EXISTS `ing_cursor_event`
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='游标推进事件 (不可变): 每次成功推进一条事件记录; 支持重放和全链路追踪; 无物理外键';
 
 -- ======================================================================
@@ -631,5 +631,5 @@ CREATE TABLE IF NOT EXISTS `ing_outbox_relay_log`
     -- 引用完整性在应用层强制
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='Outbox 中继执行日志 - 每次中继尝试的不可变审计跟踪';

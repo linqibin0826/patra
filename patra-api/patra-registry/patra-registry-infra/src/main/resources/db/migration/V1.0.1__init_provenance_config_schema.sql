@@ -41,7 +41,7 @@ CREATE TABLE `reg_provenance`
     UNIQUE KEY `uk_reg_provenance_code` (`provenance_code`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='Provenance注册表: 记录外部数据源作为所有 reg_prov_* 配置引用的根实体';
 
 /* ====================================================================
@@ -100,7 +100,7 @@ CREATE TABLE `reg_prov_window_offset_cfg`
     UNIQUE KEY `uk_reg_prov_window_offset_cfg__dim_from` (`provenance_id`, `operation_type`, `effective_from`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='窗口与偏移配置: 如何分割窗口和推进偏移 (DATE/ID/COMPOSITE)';
 
 
@@ -147,7 +147,7 @@ CREATE TABLE `reg_prov_pagination_cfg`
     UNIQUE KEY `uk_reg_prov_pagination_cfg__dim_from` (`provenance_id`, `operation_type`, `effective_from`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='分页与游标配置: 参数和响应提取; 支持 SOURCE/TASK 范围';
 
 
@@ -199,7 +199,7 @@ CREATE TABLE `reg_prov_http_cfg`
     UNIQUE KEY `uk_reg_prov_http_cfg__dim_from` (`provenance_id`, `operation_type`, `effective_from`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='HTTP 策略配置: 基础 URL/请求头/超时/代理/Retry-After/幂等性; 支持 SOURCE/TASK 范围';
 
 
@@ -245,7 +245,7 @@ CREATE TABLE `reg_prov_batching_cfg`
     UNIQUE KEY `uk_reg_prov_batching_cfg__dim_from` (`provenance_id`, `operation_type`, `effective_from`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='批处理与塑形配置: 详情批处理、ID 连接、并发/背压; 支持 SOURCE/TASK 范围';
 
 
@@ -298,7 +298,7 @@ CREATE TABLE `reg_prov_retry_cfg`
     UNIQUE KEY `uk_reg_prov_retry_cfg__dim_from` (`provenance_id`, `operation_type`, `effective_from`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='重试与退避配置: 次数、退避/抖动、网络策略和熔断器设置; 支持 SOURCE/TASK 范围';
 
 
@@ -339,5 +339,5 @@ CREATE TABLE `reg_prov_rate_limit_cfg`
     UNIQUE KEY `uk_reg_prov_rate_limit_cfg__dim_from` (`provenance_id`, `operation_type`, `effective_from`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='限流与并发配置: QPS/突发/并发数/粒度; 可适应服务器限流头';

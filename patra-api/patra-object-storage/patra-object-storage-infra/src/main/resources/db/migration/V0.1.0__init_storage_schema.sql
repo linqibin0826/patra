@@ -31,5 +31,5 @@ CREATE TABLE IF NOT EXISTS `storage_file_metadata`
     KEY `idx_uploaded_at` (`uploaded_at`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_0900_ai_ci
   COMMENT = 'File metadata for object storage';
