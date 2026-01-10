@@ -11,11 +11,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /// PubMedComputedAuthorParser 单元测试。
 ///
@@ -29,6 +31,7 @@ import org.junit.jupiter.api.Test;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("PubMedComputedAuthorParser 单元测试")
+@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class PubMedComputedAuthorParserTest {
 
   private PubMedComputedAuthorParser parser;
@@ -314,6 +317,102 @@ class PubMedComputedAuthorParserTest {
       assertThat(authors).hasSize(1);
       var variant = authors.getFirst().getNameVariants().getFirst();
       assertThat(variant.lastName()).isEqualTo("李明");
+    }
+  }
+
+  @Nested
+  @DisplayName("名字变体去重（ICU4J Collation）")
+  class NameVariantDeduplicationTests {
+
+    @Test
+    @DisplayName("大小写不同 - 应该去重为一个变体")
+    void parse_caseVariants_shouldDeduplicate() throws IOException {
+      // Given: 同一名字的大小写变体（如 PubMed 数据中的 Tephly/TEPHLY）
+      String jsonLines =
+          """
+          {"name": "TEPHLY+T", "names": ["Tephly,T R,TR", "TEPHLY,T R,TR"], "orcid": [], "pmids": []}
+          """;
+
+      // When
+      List<AuthorAggregate> authors = parseToList(jsonLines);
+
+      // Then: 应该只保留第一个变体
+      assertThat(authors).hasSize(1);
+      assertThat(authors.getFirst().getNameVariants()).hasSize(1);
+      assertThat(authors.getFirst().getNameVariants().getFirst().lastName()).isEqualTo("Tephly");
+    }
+
+    @Test
+    @DisplayName("重音字符差异 - 应该去重（García = Garcia）")
+    void parse_accentVariants_shouldDeduplicate() throws IOException {
+      // Given: 带重音和不带重音的变体（MySQL utf8mb4_0900_ai_ci 视为相同）
+      String jsonLines =
+          """
+          {"name": "GARCIA+M", "names": ["García,María,M", "Garcia,Maria,M"], "orcid": [], "pmids": []}
+          """;
+
+      // When
+      List<AuthorAggregate> authors = parseToList(jsonLines);
+
+      // Then: 应该只保留第一个变体（带重音的）
+      assertThat(authors).hasSize(1);
+      assertThat(authors.getFirst().getNameVariants()).hasSize(1);
+      assertThat(authors.getFirst().getNameVariants().getFirst().lastName()).isEqualTo("García");
+    }
+
+    @Test
+    @DisplayName("德语变音差异 - 应该去重（Müller = Muller，忽略变音符号）")
+    void parse_germanUmlautVariants_shouldDeduplicate() throws IOException {
+      // Given: 德语变音字符变体（ü → u，变音符号被忽略）
+      // 注意：Müller ≠ Mueller（后者是两个字符 ue，不是变音符号）
+      String jsonLines =
+          """
+          {"name": "MULLER+H", "names": ["Müller,Hans,H", "Muller,Hans,H"], "orcid": [], "pmids": []}
+          """;
+
+      // When
+      List<AuthorAggregate> authors = parseToList(jsonLines);
+
+      // Then: 应该只保留第一个变体（带变音符号的）
+      assertThat(authors).hasSize(1);
+      assertThat(authors.getFirst().getNameVariants()).hasSize(1);
+      assertThat(authors.getFirst().getNameVariants().getFirst().lastName()).isEqualTo("Müller");
+    }
+
+    @Test
+    @DisplayName("德语 ue 替代写法 - 应该保留两个变体（Müller ≠ Mueller）")
+    void parse_germanUeAlternative_shouldRetainBoth() throws IOException {
+      // Given: Müller 和 Mueller 是不同的字符序列
+      // Müller: M-ü-l-l-e-r (6 chars, ü 是单个变音字符)
+      // Mueller: M-u-e-l-l-e-r (7 chars, ue 是两个字符)
+      String jsonLines =
+          """
+          {"name": "MULLER+H", "names": ["Müller,Hans,H", "Mueller,Hans,H"], "orcid": [], "pmids": []}
+          """;
+
+      // When
+      List<AuthorAggregate> authors = parseToList(jsonLines);
+
+      // Then: 两者是不同的变体，都应该保留
+      assertThat(authors).hasSize(1);
+      assertThat(authors.getFirst().getNameVariants()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("不同名字 - 应该保留所有变体")
+    void parse_differentNames_shouldRetainAll() throws IOException {
+      // Given: 真正不同的名字变体
+      String jsonLines =
+          """
+          {"name": "SMITH+J", "names": ["Smith,John,J", "Smith,James,J", "Smith,Jack,J"], "orcid": [], "pmids": []}
+          """;
+
+      // When
+      List<AuthorAggregate> authors = parseToList(jsonLines);
+
+      // Then: 所有不同的变体都应该保留
+      assertThat(authors).hasSize(1);
+      assertThat(authors.getFirst().getNameVariants()).hasSize(3);
     }
   }
 
