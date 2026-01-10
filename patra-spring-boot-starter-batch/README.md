@@ -74,10 +74,12 @@ patra:
     enabled: true                    # 总开关（默认启用）
     table-prefix: "BATCH_"           # 元数据表前缀
     chunk:
-      default-size: 1000             # 默认 Chunk 大小
+      default-size: 5000             # 默认 Chunk 大小
       max-size: 10000                # 最大 Chunk 大小
     schema:
       initialize: true               # 自动初始化 Schema（默认启用）
+    import-limit:
+      max-records: -1                # 最大导入记录数（-1=不限制，正整数=限制后自动终止）
 ```
 
 ## 独立数据源
