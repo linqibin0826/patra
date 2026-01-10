@@ -10,8 +10,8 @@ import jakarta.persistence.Index;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -25,13 +25,14 @@ import org.hibernate.type.SqlTypes;
 /// **设计说明**：
 ///
 /// - 继承 `SoftDeletableJpaEntity` 支持软删除
-/// - 适配 PubMed Computed Authors 数据源
-/// - 使用 `normalizedKey` 作为业务键（如 "Lu+Z"）
+/// - 每条记录代表一个已消歧的独立作者（对齐 PubMed Computed Authors 数据源）
+/// - `normalizedKey` 是姓名规范化格式（如 "SMITH+R"），用于分组查询，**非唯一标识**
+/// - 同一 `normalizedKey` 下可能有多个不同的作者（姓名格式相似但实为不同人）
 /// - 关联名字变体（`AuthorNameVariantEntity`）和 ORCID（`AuthorOrcidEntity`）子表
 ///
 /// **索引设计**：
 ///
-/// - `uk_normalized_key`：规范化标识唯一索引
+/// - `idx_normalized_key`：姓名规范化格式索引（非唯一，用于分组查询）
 /// - `idx_status`：状态索引
 /// - `idx_provenance`：数据来源索引
 /// - `idx_display_name`：展示名称前缀索引
@@ -47,7 +48,7 @@ import org.hibernate.type.SqlTypes;
 @Table(
     name = "cat_author",
     indexes = {
-      @Index(name = "uk_normalized_key", columnList = "normalized_key", unique = true),
+      @Index(name = "idx_normalized_key", columnList = "normalized_key"),
       @Index(name = "idx_status", columnList = "status"),
       @Index(name = "idx_provenance", columnList = "provenance_code"),
       @Index(name = "idx_display_name", columnList = "display_name")
@@ -56,10 +57,11 @@ public class AuthorEntity extends SoftDeletableJpaEntity {
 
   // ========== 核心属性 ==========
 
-  /// 规范化标识（业务键），与 PubMed Computed Authors 的 name 字段对齐。
+  /// 姓名规范化格式，对应 PubMed Computed Authors 的 name 字段。
   ///
-  /// 格式如 "Lu+Z"、"Smith+JK"，用于去重和外部数据源对齐。
-  @Column(name = "normalized_key", length = 100, nullable = false, unique = true)
+  /// 格式如 "SMITH+R"（姓 Smith + 首字母 R），用于分组查询。
+  /// **非唯一标识**：同一格式下可能有多个不同的已消歧作者。
+  @Column(name = "normalized_key", length = 100, nullable = false)
   private String normalizedKey;
 
   /// 展示名称（从首个名字变体派生）。
@@ -103,24 +105,31 @@ public class AuthorEntity extends SoftDeletableJpaEntity {
   ///
   /// 存储作者在不同文献中出现的各种名字形式，
   /// 解析自 PubMed Computed Authors 的 names 数组。
+  ///
+  /// **使用 Set 而非 List 的原因**：
+  ///
+  /// - 语义正确：名字变体是唯一的，不允许重复
+  /// - JPA 优化：Hibernate 支持多 Set 同时 JOIN FETCH，避免 N+1 问题
   @OneToMany(
       mappedBy = "author",
       cascade = CascadeType.ALL,
       orphanRemoval = true,
       fetch = FetchType.LAZY)
   @lombok.Builder.Default
-  private List<AuthorNameVariantEntity> nameVariants = new ArrayList<>();
+  private Set<AuthorNameVariantEntity> nameVariants = new HashSet<>();
 
   /// ORCID 标识符集合。
   ///
   /// 支持一对多关系（少数作者有多个 ORCID）。
+  ///
+  /// **使用 Set 而非 List 的原因**：同上（语义正确 + JPA 优化）。
   @OneToMany(
       mappedBy = "author",
       cascade = CascadeType.ALL,
       orphanRemoval = true,
       fetch = FetchType.LAZY)
   @lombok.Builder.Default
-  private List<AuthorOrcidEntity> orcids = new ArrayList<>();
+  private Set<AuthorOrcidEntity> orcids = new HashSet<>();
 
   // ========== 便捷方法 ==========
 
