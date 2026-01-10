@@ -71,7 +71,9 @@ public class AuthorNameVariantEntity extends BaseJpaEntity {
   private String foreName;
 
   /// 姓名缩写（如 "Z", "JK"）。
-  @Column(name = "initials", length = 50)
+  ///
+  /// 正常情况下 1-5 字符，最多 10 字符。
+  @Column(name = "initials", length = 10)
   private String initials;
 
   /// 原始字符串（如 "Lu,Zhiyong,Z"）。

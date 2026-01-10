@@ -50,7 +50,7 @@ public interface AuthorJpaMapper {
   @Mapping(target = "nameVariants", ignore = true) // 子实体单独处理
   @Mapping(target = "orcids", ignore = true) // 子实体单独处理
   @Mapping(target = "extData", ignore = true)
-  @Mapping(target = "version", ignore = true)
+  @Mapping(target = "version", ignore = true) // 由 JPA @Version 自动管理
   @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "createdBy", ignore = true)
   @Mapping(target = "createdByName", ignore = true)
