@@ -3,6 +3,8 @@ package com.patra.catalog.infra.adapter.batch.author;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ibm.icu.text.Collator;
+import com.ibm.icu.util.ULocale;
 import com.patra.catalog.domain.model.aggregate.AuthorAggregate;
 import com.patra.catalog.domain.model.vo.author.AuthorNameVariant;
 import com.patra.catalog.domain.model.vo.author.Orcid;
@@ -11,6 +13,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -46,6 +49,23 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 public class PubMedComputedAuthorParser {
+
+  /// ICU4J Collator 实例（线程安全，可复用）。
+  ///
+  /// 配置为 PRIMARY 强度，匹配 MySQL `utf8mb4_0900_ai_ci` 的行为：
+  /// - 忽略重音差异："García" = "Garcia"
+  /// - 忽略大小写："Tephly" = "TEPHLY"
+  /// - 德语 ß = ss："Müller" = "Mueller"
+  private static final Collator UNICODE_CI_COLLATOR;
+
+  static {
+    // 使用 ROOT locale 获取语言无关的 Unicode Collation Algorithm
+    UNICODE_CI_COLLATOR = Collator.getInstance(ULocale.ROOT);
+    // PRIMARY 强度：忽略重音和大小写（等价于 MySQL 的 _ci 和 _ai）
+    UNICODE_CI_COLLATOR.setStrength(Collator.PRIMARY);
+    // 冻结以保证线程安全
+    UNICODE_CI_COLLATOR.freeze();
+  }
 
   private final ObjectMapper objectMapper;
 
@@ -114,11 +134,19 @@ public class PubMedComputedAuthorParser {
     // 1. 创建聚合根
     AuthorAggregate author = AuthorAggregate.fromPubMedComputed(dto.name());
 
-    // 2. 解析并设置名字变体
+    // 2. 解析并设置名字变体（使用 ICU4J Collator 去重，精确匹配 MySQL utf8mb4_0900_ai_ci）
     if (dto.names() != null && !dto.names().isEmpty()) {
-      List<AuthorNameVariant> nameVariants =
-          dto.names().stream().map(this::parseNameVariant).filter(Objects::nonNull).toList();
-      author.withNameVariants(nameVariants);
+      // 使用 LinkedHashMap 保持插入顺序，按 collation key 去重
+      LinkedHashMap<String, AuthorNameVariant> uniqueVariants = new LinkedHashMap<>();
+      for (String name : dto.names()) {
+        AuthorNameVariant variant = parseNameVariant(name);
+        if (variant != null) {
+          // 使用 collation key 作为去重依据（精确匹配 MySQL utf8mb4_0900_ai_ci 行为）
+          String key = toCollationKey(variant.fullString());
+          uniqueVariants.putIfAbsent(key, variant);
+        }
+      }
+      author.withNameVariants(uniqueVariants.values().stream().toList());
     }
 
     // 3. 设置 ORCID
@@ -166,6 +194,25 @@ public class PubMedComputedAuthorParser {
       log.debug("解析 ORCID 失败：{}，原因：{}", orcidStr, e.getMessage());
       return null;
     }
+  }
+
+  /// 生成 MySQL utf8mb4_0900_ai_ci 兼容的 Collation Key。
+  ///
+  /// 使用 ICU4J 实现完整的 Unicode Collation Algorithm，自动处理：
+  /// - 重音差异（西班牙语 García/Garcia、法语 François/Francois 等）
+  /// - 德语 ß/ss 等价（Müller/Mueller）
+  /// - 大小写不敏感（Tephly/TEPHLY）
+  /// - 其他所有 UCA 定义的等价规则
+  ///
+  /// @param value 原始字符串
+  /// @return 十六进制格式的 collation key
+  private String toCollationKey(String value) {
+    byte[] keyBytes = UNICODE_CI_COLLATOR.getCollationKey(value).toByteArray();
+    StringBuilder hex = new StringBuilder(keyBytes.length * 2);
+    for (byte b : keyBytes) {
+      hex.append(String.format("%02x", b));
+    }
+    return hex.toString();
   }
 
   /// PubMed Computed Author DTO（内部使用）。

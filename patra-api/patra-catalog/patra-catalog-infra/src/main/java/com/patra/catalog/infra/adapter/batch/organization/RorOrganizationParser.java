@@ -346,7 +346,7 @@ public class RorOrganizationParser {
   /// ROR 数据可能包含 Collation 等价的重复名称记录，使用 ICU4J Collator 进行去重。
   /// 当出现重复时，保留第一个出现的记录（types 可能不同，优先保留先出现的）。
   ///
-  /// **技术说明**：MySQL `utf8mb4_unicode_ci` 遵循 Unicode Collation Algorithm (UCA)，
+  /// **技术说明**：MySQL `utf8mb4_0900_ai_ci` 遵循 Unicode Collation Algorithm (UCA)，
   /// 包含数百条语言特定规则。使用 ICU4J 精确模拟此行为，避免手动处理各语言特例。
   private List<OrganizationName> buildNames(List<RorOrganizationRecord.Name> names) {
     if (names == null || names.isEmpty()) {
@@ -385,7 +385,7 @@ public class RorOrganizationParser {
 
   /// ICU4J Collator 实例（线程安全，可复用）。
   ///
-  /// 配置为 PRIMARY 强度，匹配 MySQL `utf8mb4_unicode_ci` 的行为：
+  /// 配置为 PRIMARY 强度，匹配 MySQL `utf8mb4_0900_ai_ci` 的行为：
   /// - 忽略重音差异："Slovenská" = "Slovenska"
   /// - 忽略大小写："Harvard" = "harvard"
   /// - 日语平假名/片假名等价："かいし" = "カイシ"
@@ -401,7 +401,7 @@ public class RorOrganizationParser {
     UNICODE_CI_COLLATOR.freeze();
   }
 
-  /// 生成 MySQL utf8mb4_unicode_ci 兼容的 Collation Key。
+  /// 生成 MySQL utf8mb4_0900_ai_ci 兼容的 Collation Key。
   ///
   /// 使用 ICU4J 实现完整的 Unicode Collation Algorithm，自动处理：
   /// - 重音差异（斯洛伐克语 á/a、德语 ü/u 等）
