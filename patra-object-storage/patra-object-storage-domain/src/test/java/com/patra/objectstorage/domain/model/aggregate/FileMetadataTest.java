@@ -69,7 +69,6 @@ class FileMetadataTest {
       assertThat(metadata.getStatus()).isEqualTo(FileStatus.ACTIVE);
       assertThat(metadata.getUploadedAt()).isNotNull();
       assertThat(metadata.getVersion()).isEqualTo(0L);
-      assertThat(metadata.getDeletedAt()).isNull();
       assertThat(metadata.getCreatedAt()).isNotNull();
       assertThat(metadata.getUpdatedAt()).isNotNull();
       assertThat(metadata.getCreatedAt()).isEqualTo(metadata.getUploadedAt());
@@ -198,7 +197,6 @@ class FileMetadataTest {
       FileStatus status = FileStatus.ACTIVE;
       Instant uploadedAt = Instant.parse("2024-01-01T10:00:00Z");
       Instant expiresAt = Instant.parse("2025-01-01T10:00:00Z");
-      Instant deletedAt = null;
       String recordRemarks = "{\"note\":\"test file\"}";
       Long version = 5L;
       byte[] ipAddress = new byte[] {(byte) 192, (byte) 168, 1, 100}; // 192.168.1.100
@@ -222,7 +220,6 @@ class FileMetadataTest {
               status,
               uploadedAt,
               expiresAt,
-              deletedAt,
               recordRemarks,
               version,
               ipAddress,
@@ -245,7 +242,6 @@ class FileMetadataTest {
       assertThat(metadata.getStatus()).isEqualTo(status);
       assertThat(metadata.getUploadedAt()).isEqualTo(uploadedAt);
       assertThat(metadata.getExpiresAt()).isEqualTo(expiresAt);
-      assertThat(metadata.getDeletedAt()).isNull();
       assertThat(metadata.getRecordRemarks()).isEqualTo(recordRemarks);
       assertThat(metadata.getVersion()).isEqualTo(version);
       assertThat(metadata.getIpAddress()).isEqualTo(ipAddress);
@@ -255,7 +251,6 @@ class FileMetadataTest {
       assertThat(metadata.getUpdatedAt()).isEqualTo(updatedAt);
       assertThat(metadata.getUpdatedBy()).isEqualTo(updatedBy);
       assertThat(metadata.getUpdatedByName()).isEqualTo(updatedByName);
-      assertThat(metadata.getDeletedAt()).isNull();
     }
 
     @Test
@@ -264,7 +259,6 @@ class FileMetadataTest {
       // Given - 所有可选字段为 null
       String contentType = null;
       Instant expiresAt = null;
-      Instant deletedAt = null;
       String recordRemarks = null;
       byte[] ipAddress = null;
       Long createdBy = null;
@@ -285,7 +279,6 @@ class FileMetadataTest {
               FileStatus.ACTIVE,
               Instant.now(),
               expiresAt,
-              deletedAt,
               recordRemarks,
               0L,
               ipAddress,
@@ -300,7 +293,6 @@ class FileMetadataTest {
       assertThat(metadata).isNotNull();
       assertThat(metadata.getContentType()).isNull();
       assertThat(metadata.getExpiresAt()).isNull();
-      assertThat(metadata.getDeletedAt()).isNull();
       assertThat(metadata.getRecordRemarks()).isNull();
       assertThat(metadata.getIpAddress()).isNull();
       assertThat(metadata.getCreatedBy()).isNull();
@@ -506,18 +498,15 @@ class FileMetadataTest {
       FileMetadata metadata =
           FileMetadataTestDataBuilder.anActiveFile().status(FileStatus.ACTIVE).buildRestored();
       assertThat(metadata.getStatus()).isEqualTo(FileStatus.ACTIVE);
-      assertThat(metadata.getDeletedAt()).isNull();
-      assertThat(metadata.getDeletedAt()).isNull();
 
       // When - 标记为已删除
       Long operatorId = 1001L;
       String operatorName = "张三";
       metadata.markAsDeleted(operatorId, operatorName);
 
-      // Then
+      // Then - 状态应更新为 DELETED，审计信息应更新
+      // 注意：deletedAt 时间戳由 JPA @SoftDelete 在持久化时自动管理，领域模型不再维护此字段
       assertThat(metadata.getStatus()).isEqualTo(FileStatus.DELETED);
-      assertThat(metadata.getDeletedAt()).isNotNull();
-      assertThat(metadata.getDeletedAt()).isNotNull();
       assertThat(metadata.getUpdatedBy()).isEqualTo(operatorId);
       assertThat(metadata.getUpdatedByName()).isEqualTo(operatorName);
       assertThat(metadata.getUpdatedAt()).isNotNull();
@@ -853,9 +842,8 @@ class FileMetadataTest {
       metadata.markAsDeleted(1002L, "李四");
 
       // Then - 验证最终状态
+      // 注意：deletedAt 时间戳由 JPA @SoftDelete 在持久化时自动管理，领域模型不再维护此字段
       assertThat(metadata.getStatus()).isEqualTo(FileStatus.DELETED);
-      assertThat(metadata.getDeletedAt()).isNotNull();
-      assertThat(metadata.getDeletedAt()).isNotNull();
       assertThat(metadata.getUpdatedBy()).isEqualTo(1002L);
       assertThat(metadata.getUpdatedByName()).isEqualTo("李四");
 

@@ -56,7 +56,6 @@ public interface TaskJpaMapper {
   @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
-  @Mapping(target = "deletedAt", ignore = true)
   TaskEntity toEntity(TaskAggregate aggregate);
 
   default TaskAggregate toAggregate(TaskEntity entity) {
