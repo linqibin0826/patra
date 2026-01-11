@@ -6,6 +6,7 @@ import com.patra.registry.domain.model.vo.reference.ReferenceStandard;
 import com.patra.registry.infra.adapter.persistence.dao.reference.ReferenceStandardDao;
 import com.patra.registry.infra.adapter.persistence.entity.reference.ReferenceStandardEntity;
 import com.patra.registry.infra.config.RegistryMySQLContainerInitializer;
+import com.patra.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.util.Optional;
@@ -16,7 +17,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
@@ -32,7 +35,12 @@ import org.springframework.test.context.ContextConfiguration;
 @DataJpaTest
 @ContextConfiguration(initializers = RegistryMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({ReferenceStandardRepositoryAdapter.class, JpaAuditingConfig.class})
+@ImportAutoConfiguration(FlywayAutoConfiguration.class)
+@Import({
+  ReferenceStandardRepositoryAdapter.class,
+  JpaAuditingConfig.class,
+  HibernatePropertiesCustomizer.class
+})
 @ComponentScan(basePackages = "com.patra.registry.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("ReferenceStandardRepositoryAdapter 集成测试")

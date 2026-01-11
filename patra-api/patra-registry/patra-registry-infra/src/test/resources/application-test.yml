@@ -9,3 +9,5 @@ spring:
     clean-disabled: false
     # 设置 baseline 跳过已存在的迁移历史检查
     baseline-on-migrate: true
+# 注意：Jackson 3.x FormatMapper 通过 HibernatePropertiesCustomizer 自动配置
+# @DataJpaTest 需要在 @Import 中显式添加 HibernatePropertiesCustomizer.class

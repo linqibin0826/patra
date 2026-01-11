@@ -11,6 +11,7 @@ import com.patra.registry.infra.adapter.persistence.entity.dictionary.SysDictIte
 import com.patra.registry.infra.adapter.persistence.entity.dictionary.SysDictItemEntity;
 import com.patra.registry.infra.adapter.persistence.entity.dictionary.SysDictTypeEntity;
 import com.patra.registry.infra.config.RegistryMySQLContainerInitializer;
+import com.patra.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
@@ -24,7 +25,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
@@ -40,7 +43,12 @@ import org.springframework.test.context.ContextConfiguration;
 @DataJpaTest
 @ContextConfiguration(initializers = RegistryMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({DictionaryRepositoryAdapter.class, JpaAuditingConfig.class})
+@ImportAutoConfiguration(FlywayAutoConfiguration.class)
+@Import({
+  DictionaryRepositoryAdapter.class,
+  JpaAuditingConfig.class,
+  HibernatePropertiesCustomizer.class
+})
 @ComponentScan(basePackages = "com.patra.registry.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("DictionaryRepositoryAdapter 集成测试")
@@ -100,6 +108,8 @@ class DictionaryRepositoryAdapterIT {
       deletedType.setId(SnowflakeIdGenerator.getId());
       deletedType.setTypeCode("deleted_type");
       deletedType.setTypeName("已删除类型");
+      deletedType.setIsSystem(true);
+      deletedType.setAllowCustomItems(false);
       deletedType.setDeletedAt(Instant.now());
       typeDao.save(deletedType);
 
@@ -144,7 +154,9 @@ class DictionaryRepositoryAdapterIT {
       deletedItem.setTypeId(testTypeId);
       deletedItem.setItemCode("DELETED");
       deletedItem.setItemName("已删除项");
+      deletedItem.setDisplayOrder(100);
       deletedItem.setEnabled(true);
+      deletedItem.setIsDefault(false);
       deletedItem.setDeletedAt(Instant.now());
       itemDao.save(deletedItem);
 
@@ -200,6 +212,7 @@ class DictionaryRepositoryAdapterIT {
       otherType.setTypeCode("language");
       otherType.setTypeName("语言");
       otherType.setIsSystem(true);
+      otherType.setAllowCustomItems(false);
       typeDao.save(otherType);
 
       // 在其他类型下创建字典项和别名
@@ -208,7 +221,9 @@ class DictionaryRepositoryAdapterIT {
       otherItem.setTypeId(otherType.getId());
       otherItem.setItemCode("ZH");
       otherItem.setItemName("中文");
+      otherItem.setDisplayOrder(100);
       otherItem.setEnabled(true);
+      otherItem.setIsDefault(false);
       itemDao.save(otherItem);
       createAlias(otherItem.getId(), "ISO_639_1", "zh");
 
@@ -229,6 +244,7 @@ class DictionaryRepositoryAdapterIT {
     item.setItemName(name);
     item.setDisplayOrder(order);
     item.setEnabled(true);
+    item.setIsDefault(false);
     itemDao.save(item);
     return item.getId();
   }
