@@ -31,9 +31,10 @@
             <artifactId>spring-boot-starter-json</artifactId>
         </dependency>
 
-        <!-- Jackson XML (optional): enables XmlMapper auto-config when present -->
+        <!-- Jackson 3 XML (optional): enables XmlMapper auto-config when present -->
+        <!-- Spring Boot 4.0 使用 Jackson 3，组 ID 从 com.fasterxml.jackson → tools.jackson -->
         <dependency>
-            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <groupId>tools.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-xml</artifactId>
             <optional>true</optional>
         </dependency>

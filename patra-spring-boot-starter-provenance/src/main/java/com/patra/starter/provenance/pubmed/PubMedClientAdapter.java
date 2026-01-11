@@ -89,7 +89,7 @@ public class PubMedClientAdapter implements PubMedClient {
     Map<String, String> queryParams = request.toQueryParams();
 
     var uriBuilder =
-        UriComponentsBuilder.fromHttpUrl(finalConfig.baseUrl())
+        UriComponentsBuilder.fromUriString(finalConfig.baseUrl())
             .path(PubMedOperation.ESEARCH.getEndpoint());
     queryParams.forEach(uriBuilder::queryParam);
 
@@ -135,7 +135,7 @@ public class PubMedClientAdapter implements PubMedClient {
     Map<String, String> queryParams = request.toQueryParams();
 
     var uriBuilder =
-        UriComponentsBuilder.fromHttpUrl(finalConfig.baseUrl())
+        UriComponentsBuilder.fromUriString(finalConfig.baseUrl())
             .path(PubMedOperation.EFETCH.getEndpoint());
     queryParams.forEach(uriBuilder::queryParam);
 
@@ -203,7 +203,7 @@ public class PubMedClientAdapter implements PubMedClient {
     formParams.forEach(formData::add);
 
     var uri =
-        UriComponentsBuilder.fromHttpUrl(finalConfig.baseUrl())
+        UriComponentsBuilder.fromUriString(finalConfig.baseUrl())
             .path(PubMedOperation.EPOST.getEndpoint())
             .build()
             .toUri();
