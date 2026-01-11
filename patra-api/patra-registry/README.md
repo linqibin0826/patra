@@ -134,11 +134,11 @@ patra-registry/
 | 组件 | 版本/说明 |
 |------|---------|
 | **Java** | 25 |
-| **Spring Boot** | 3.5.7 |
-| **Spring Cloud** | 2025.0.0 |
+| **Spring Boot** | 4.0.1 |
+| **Spring Cloud** | 2025.1.0 |
 | **Spring Data JPA** | 持久化框架 |
 | **MapStruct** | 对象映射 |
-| **Nacos** | 服务注册与配置中心 |
+| **Consul** | 服务注册中心 |
 | **Maven** | 构建工具 |
 
 ## 配置说明
@@ -161,8 +161,8 @@ patra:
 
 ### 数据库配置
 
-通过 Nacos 配置中心动态管理,主要配置项包括:
-- 数据源连接信息
+主要配置项包括:
+- 数据源连接信息（通过 application-{profile}.yml 配置）
 - JPA/Hibernate 配置
 - 日志级别
 

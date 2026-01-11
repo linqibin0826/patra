@@ -40,6 +40,22 @@
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
 
+        <!-- 4. Spring Boot JDBC Starter（Spring Boot 4.0 模块化后需要显式引入） -->
+        <!-- 提供 DataSourceAutoConfiguration 等 JDBC 自动配置类 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jdbc</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 5. HikariCP 连接池（可选，用于独立 Batch 数据源） -->
+        <!-- Spring Boot 4.0: HikariCP 不再被传递引入，需要显式声明 -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- 4. MySQL JDBC 驱动（可选，用于 JobRepository 元数据存储） -->
         <dependency>
             <groupId>com.mysql</groupId>

@@ -5,7 +5,7 @@
 **Patra** — 医学出版物数据平台 (v0.1.0-SNAPSHOT)，采集、解析、存储来自 PubMed/EPMC/Crossref 等 10+ 外部数据源的文献和期刊数据。
 
 **架构**: 微服务 + 六边形架构 + DDD + 事件驱动
-**技术栈**: Java 25 | Spring Boot 3.5.7 | Spring Data JPA | MySQL 8.x | Nacos
+**技术栈**: Java 25 | Spring Boot 4.0.1 | Spring Data JPA | MySQL 8.x | Consul
 
 ## 核心服务
 

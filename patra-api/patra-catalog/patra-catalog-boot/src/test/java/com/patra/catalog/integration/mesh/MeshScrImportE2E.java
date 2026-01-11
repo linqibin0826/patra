@@ -64,9 +64,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 /// @since 0.1.0
 @SpringBootTest(
     properties = {
-      "spring.cloud.nacos.config.enabled=false",
-      "spring.cloud.nacos.discovery.enabled=false",
-      "spring.cloud.nacos.config.import-check.enabled=false",
+      "spring.cloud.consul.enabled=false",
       "spring.config.import=classpath:catalog-error-config.yaml",
       "patra.batch.chunk.default-size=2"
     })

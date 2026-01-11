@@ -32,9 +32,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
@@ -88,8 +88,8 @@ class MeshDescriptorItemWriterIT {
   @DisplayName("write() 空 Chunk - 应该不抛出异常，直接返回")
   void write_emptyChunk_shouldReturnWithoutError() throws Exception {
     // Given: 空 Chunk
-    org.springframework.batch.item.Chunk<MeshDescriptorAggregate> emptyChunk =
-        new org.springframework.batch.item.Chunk<>();
+    org.springframework.batch.infrastructure.item.Chunk<MeshDescriptorAggregate> emptyChunk =
+        new org.springframework.batch.infrastructure.item.Chunk<>();
 
     // When: 写入空 Chunk
     meshDescriptorItemWriter.write(emptyChunk);
@@ -105,8 +105,8 @@ class MeshDescriptorItemWriterIT {
     // Given: 创建包含所有关联实体的 Descriptor
     MeshDescriptorAggregate descriptor = createTestDescriptor(1);
 
-    org.springframework.batch.item.Chunk<MeshDescriptorAggregate> chunk =
-        new org.springframework.batch.item.Chunk<>(List.of(descriptor));
+    org.springframework.batch.infrastructure.item.Chunk<MeshDescriptorAggregate> chunk =
+        new org.springframework.batch.infrastructure.item.Chunk<>(List.of(descriptor));
 
     // When: 写入 Chunk
     meshDescriptorItemWriter.write(chunk);
@@ -209,8 +209,8 @@ class MeshDescriptorItemWriterIT {
     List<MeshDescriptorAggregate> descriptors =
         List.of(createTestDescriptor(1), createTestDescriptor(2), createTestDescriptor(3));
 
-    org.springframework.batch.item.Chunk<MeshDescriptorAggregate> chunk =
-        new org.springframework.batch.item.Chunk<>(descriptors);
+    org.springframework.batch.infrastructure.item.Chunk<MeshDescriptorAggregate> chunk =
+        new org.springframework.batch.infrastructure.item.Chunk<>(descriptors);
 
     // When: 批量写入
     meshDescriptorItemWriter.write(chunk);
@@ -254,8 +254,8 @@ class MeshDescriptorItemWriterIT {
                 MeshUI.descriptorOf(99), "Minimal Descriptor", DescriptorClass.TOPICAL, "2025")
             .addTreeNumber(MeshTreeNumber.create("A01.001", true));
 
-    org.springframework.batch.item.Chunk<MeshDescriptorAggregate> chunk =
-        new org.springframework.batch.item.Chunk<>(List.of(descriptor));
+    org.springframework.batch.infrastructure.item.Chunk<MeshDescriptorAggregate> chunk =
+        new org.springframework.batch.infrastructure.item.Chunk<>(List.of(descriptor));
 
     // When: 写入
     meshDescriptorItemWriter.write(chunk);
@@ -292,8 +292,8 @@ class MeshDescriptorItemWriterIT {
     // Given: 创建一个 Descriptor
     MeshDescriptorAggregate descriptor = createTestDescriptor(1);
 
-    org.springframework.batch.item.Chunk<MeshDescriptorAggregate> chunk =
-        new org.springframework.batch.item.Chunk<>(List.of(descriptor));
+    org.springframework.batch.infrastructure.item.Chunk<MeshDescriptorAggregate> chunk =
+        new org.springframework.batch.infrastructure.item.Chunk<>(List.of(descriptor));
 
     // When: 写入
     meshDescriptorItemWriter.write(chunk);

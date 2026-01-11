@@ -264,7 +264,7 @@ try {
 
 - Spring Cloud OpenFeign
 - **Spring Cloud LoadBalancer**（已包含，无需单独引入）
-- Spring Boot 3.5.7
+- Spring Boot 4.0.1
 - Micrometer
 - patra-spring-boot-starter-core
 - patra-common-core（ErrorTrait、HasErrorTraits）

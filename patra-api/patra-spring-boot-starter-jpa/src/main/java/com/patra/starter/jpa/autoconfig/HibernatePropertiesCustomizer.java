@@ -6,12 +6,14 @@ import org.springframework.context.annotation.Configuration;
 
 /// Hibernate 属性定制器，配置批量写入和性能优化。
 ///
-/// **Hibernate 6.6 批量写入配置**：
+/// **Hibernate 7.1 批量写入配置**：
 ///
 /// - `hibernate.jdbc.batch_size = 500` - 批量写入大小，与 Spring Batch chunk size 对齐
 /// - `hibernate.order_inserts = true` - 按实体类型排序 INSERT，减少 SQL 切换
 /// - `hibernate.order_updates = true` - 按实体类型排序 UPDATE
-/// - `hibernate.jdbc.batch_versioned_data = true` - 支持带版本号实体的批量更新
+///
+/// **注意**：Hibernate 7.x 移除了 `hibernate.jdbc.batch_versioned_data` 配置，
+/// 版本化实体的批量更新现在始终启用（自 Hibernate 5.0 起该配置默认为 true）。
 ///
 /// **二级缓存配置**：
 ///
@@ -26,7 +28,8 @@ import org.springframework.context.annotation.Configuration;
 /// @since 0.1.0
 @Configuration
 public class HibernatePropertiesCustomizer
-    implements org.springframework.boot.autoconfigure.orm.jpa.HibernatePropertiesCustomizer {
+    // Spring Boot 4.0 模块化: HibernatePropertiesCustomizer 移到新包
+    implements org.springframework.boot.hibernate.autoconfigure.HibernatePropertiesCustomizer {
 
   /// 默认批量大小。
   private static final int DEFAULT_BATCH_SIZE = 500;
@@ -34,10 +37,10 @@ public class HibernatePropertiesCustomizer
   @Override
   public void customize(Map<String, Object> hibernateProperties) {
     // 批量写入配置
+    // Hibernate 7.x: BATCH_VERSIONED_DATA 已移除，版本化实体批量更新始终启用
     hibernateProperties.putIfAbsent(AvailableSettings.STATEMENT_BATCH_SIZE, DEFAULT_BATCH_SIZE);
     hibernateProperties.putIfAbsent(AvailableSettings.ORDER_INSERTS, true);
     hibernateProperties.putIfAbsent(AvailableSettings.ORDER_UPDATES, true);
-    hibernateProperties.putIfAbsent(AvailableSettings.BATCH_VERSIONED_DATA, true);
 
     // 禁用二级缓存（批量场景优化）
     hibernateProperties.putIfAbsent(AvailableSettings.USE_SECOND_LEVEL_CACHE, false);

@@ -71,6 +71,23 @@
             </exclusions>
         </dependency>
 
+        <!-- Spring Boot 4.0 模块化测试支持 -->
+        <!-- @DataJpaTest, @AutoConfigureTestDatabase 等注解 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa-test</artifactId>
+            <version>${spring-boot.version}</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <!-- JDBC 测试支持（@AutoConfigureTestDatabase） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc-test</artifactId>
+            <version>${spring-boot.version}</version>
+            <scope>compile</scope>
+        </dependency>
+
         <!-- Spring Boot AutoConfiguration 支持 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

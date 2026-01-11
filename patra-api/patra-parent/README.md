@@ -20,9 +20,9 @@
 
 | 依赖 | 版本 | 说明 |
 |------|------|------|
-| **Spring Boot** | 3.5.7 | Spring Boot 框架核心 |
-| **Spring Cloud** | 2025.0.0 | Spring Cloud 微服务组件 |
-| **Spring Cloud Alibaba** | 2025.0.0.0 | Nacos、Sentinel 等组件 |
+| **Spring Boot** | 4.0.1 | Spring Boot 框架核心 |
+| **Spring Cloud** | 2025.1.0 | Spring Cloud 微服务组件 |
+| **Spring Cloud Consul** | 4.3.0 | 服务发现 |
 
 ### ORM 与数据访问
 

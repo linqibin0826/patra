@@ -24,9 +24,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
@@ -132,7 +132,8 @@ class VenueInitializeItemWriterIT {
       VenueParseResult result2 = createParseResult("S2", "Journal B", "2222-2222");
 
       // When
-      writer.write(new org.springframework.batch.item.Chunk<>(List.of(result1, result2)));
+      writer.write(
+          new org.springframework.batch.infrastructure.item.Chunk<>(List.of(result1, result2)));
 
       // Then: 验证主表
       long venueCount = venueDao.count();
@@ -159,7 +160,7 @@ class VenueInitializeItemWriterIT {
     @DisplayName("空 Chunk - 不应该执行任何操作")
     void write_emptyChunk_shouldDoNothing() throws Exception {
       // When
-      writer.write(new org.springframework.batch.item.Chunk<>());
+      writer.write(new org.springframework.batch.infrastructure.item.Chunk<>());
 
       // Then
       long venueCount = venueDao.count();
@@ -178,7 +179,7 @@ class VenueInitializeItemWriterIT {
       VenueParseResult result = createParseResultWithIdentifiers("S1", "Journal A", "3333-3333");
 
       // When
-      writer.write(new org.springframework.batch.item.Chunk<>(List.of(result)));
+      writer.write(new org.springframework.batch.infrastructure.item.Chunk<>(List.of(result)));
 
       // Then: 应该插入标识符（OpenAlex + ISSN-L + 2 ISSN = 4）
       long identifierCount = identifierDao.count();
@@ -197,7 +198,7 @@ class VenueInitializeItemWriterIT {
       VenueParseResult result = createParseResultWithMetrics("S1", "Journal A", "4444-4444");
 
       // When
-      writer.write(new org.springframework.batch.item.Chunk<>(List.of(result)));
+      writer.write(new org.springframework.batch.infrastructure.item.Chunk<>(List.of(result)));
 
       // Then: 应该插入年度指标
       long metricsCount = metricsRepository.count();
@@ -224,7 +225,7 @@ class VenueInitializeItemWriterIT {
       VenueParseResult result = createParseResultWithMetrics("S1", "Journal A", "5555-5555");
 
       // When
-      writer.write(new org.springframework.batch.item.Chunk<>(List.of(result)));
+      writer.write(new org.springframework.batch.infrastructure.item.Chunk<>(List.of(result)));
 
       // Then: 获取主表 ID
       VenueEntity savedVenue = venueDao.findAll().get(0);

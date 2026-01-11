@@ -1,4 +1,4 @@
-# Local error-handling defaults for the registry module. These values will be migrated to Nacos governance later.
+# Registry 模块错误处理配置
 patra:
   error:
     enabled: true
