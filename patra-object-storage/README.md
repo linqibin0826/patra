@@ -265,8 +265,8 @@ spring:
 | 组件 | 版本 | 说明 |
 |------|------|------|
 | Java | 25 | 语言版本 |
-| Spring Boot | 3.5.7 | 应用框架 |
-| Spring Cloud | 2025.0.0 | 微服务框架 |
+| Spring Boot | 4.0.1 | 应用框架 |
+| Spring Cloud | 2025.1.0 | 微服务框架 |
 | Spring Data JPA | (Spring Boot 管理) | ORM 框架 |
 | MapStruct | 1.6.5+ | 对象映射 |
 | Consul | 1.18+ | 服务注册中心 |

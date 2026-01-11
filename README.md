@@ -2,7 +2,7 @@
 
 > **状态**: 🚧 引导阶段 (v0.1.0-SNAPSHOT)
 > **架构**: 微服务 + 六边形架构 + DDD + 事件驱动
-> **技术栈**: Java 25, Spring Boot 3.5.7, Spring Data JPA, MySQL 8.x
+> **技术栈**: Java 25, Spring Boot 4.0.1, Spring Data JPA, MySQL 8.x
 
 ---
 

@@ -1,6 +1,6 @@
 # Patra Spring Boot Starter - JPA
 
-Spring Data JPA Starter，提供基于 Hibernate 6.6 的数据持久化支持，包含雪花 ID 生成、审计、可选软删除和批量写入优化。
+Spring Data JPA Starter，提供基于 Hibernate 7.1 的数据持久化支持，包含雪花 ID 生成、审计、可选软删除和批量写入优化。
 
 ## 模块概述
 
@@ -22,7 +22,7 @@ Spring Data JPA Starter，提供基于 Hibernate 6.6 的数据持久化支持，
 |--------|------|------|
 | `PatraJpaAutoConfiguration` | 主配置类，导入审计和 Hibernate 优化配置 | JpaRepository 类存在 |
 | `JpaAuditingConfig` | 启用 JPA 审计，配置 AuditorAware 和 DateTimeProvider | 由主配置导入 |
-| `HibernatePropertiesCustomizer` | Hibernate 6.6 批量写入和性能优化配置 | 由主配置导入 |
+| `HibernatePropertiesCustomizer` | Hibernate 7.1 批量写入和性能优化配置 | 由主配置导入 |
 
 ### 组件说明
 
@@ -87,7 +87,7 @@ boolean deleted = entity.isDeleted();
 
 > **为什么不用 @SoftDelete？**
 >
-> Hibernate 6.6 的 `@SoftDelete` 设计为布尔型策略（`0/1`、`Y/N`），不原生支持时间戳策略。
+> Hibernate 7.1 的 `@SoftDelete` 设计为布尔型策略（`0/1`、`Y/N`），不原生支持时间戳策略。
 > 对于时间戳软删除，`@SQLRestriction` 是更好的选择。
 
 ### Entity 示例
@@ -365,7 +365,7 @@ public class JpaTaskRepository implements TaskRepository {
 patra-spring-boot-starter-jpa
 ├── patra-common-core                    # 公共工具、错误码定义
 ├── patra-spring-boot-starter-core       # 核心 Starter（ErrorMappingContributor SPI）
-├── spring-boot-starter-data-jpa         # Spring Data JPA（含 Hibernate 6.6）
+├── spring-boot-starter-data-jpa         # Spring Data JPA（含 Hibernate 7.1）
 ├── flyway-core                          # Flyway 核心
 ├── flyway-mysql                         # Flyway MySQL 支持
 ├── mysql-connector-j                    # MySQL 驱动

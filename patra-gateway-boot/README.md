@@ -154,8 +154,8 @@ management:
 
 | 组件 | 版本/说明 |
 |------|----------|
-| **Spring Boot** | 3.5.7 |
-| **Spring Cloud Gateway** | 2025.0.0 |
+| **Spring Boot** | 4.0.1 |
+| **Spring Cloud Gateway** | 2025.1.0 |
 | **Spring Cloud LoadBalancer** | 用于客户端负载均衡 |
 | **Consul Discovery** | 服务发现和注册 |
 | **patra-spring-boot-starter-core** | Patra 核心 starter |
