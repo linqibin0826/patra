@@ -9,6 +9,7 @@
  *   - 应用修复自: V1.1.4 (entrez_date DATE 类型)
  *   - 集成新增自: V1.1.5 (publication_date 支持)
  *   - 集成新增自: V1.1.6 (分页配置)
+ *   - 修复: Entity 继承体系调整后移除不存在的审计字段
  *
  * 结构:
  *   第0部分: 来源标准目录 (sys_reference_standard)
@@ -23,6 +24,11 @@
  *   - 全局范围 = endpoint_name IS NULL
  *   - 生效时间 = 2025-09-01 / 2025-10-14 (UTC)
  *   - lifecycle_status_code = 'ACTIVE'
+ *
+ * Entity 继承说明:
+ *   - reg_provenance: SoftDeletableJpaEntity (完整审计 + 软删除)
+ *   - sys_reference_standard: BaseJpaEntity (完整审计)
+ *   - 其他 reg_prov_* 表: ValueObjectJpaEntity (仅 id 字段)
  * ==================================================================== */
 
 
@@ -80,115 +86,93 @@ WHERE NOT EXISTS (
  * ==================================================================== */
 
 -- 1.1) 注册三个数据源: PubMed, EPMC, CrossRef
+-- 注: 使用预分配的雪花 ID 格式，便于后续表引用
+-- PUBMED_ID = 800000000000000001, EPMC_ID = 800000000000000002, CROSSREF_ID = 800000000000000003
 INSERT INTO patra_registry.`reg_provenance`
-(provenance_code, provenance_name, base_url_default, timezone_default,
+(id, provenance_code, provenance_name, base_url_default, timezone_default,
  docs_url, is_active, lifecycle_status_code, record_remarks,
  created_at, created_by, created_by_name,
  updated_at, updated_by, updated_by_name, version, ip_address, deleted_at)
 VALUES
-    ('PUBMED', 'PubMed', 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/', 'UTC',
+    (800000000000000001, 'PUBMED', 'PubMed', 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/', 'UTC',
      'https://www.ncbi.nlm.nih.gov/books/NBK25501/', 1, 'ACTIVE',
      JSON_ARRAY(JSON_OBJECT('time', '2025-09-01 10:30:00', 'by', '系统管理员', 'note', '初始化注册 PubMed 来源')),
      NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0, INET6_ATON('192.168.1.10'), NULL),
 
-    ('EPMC', 'Europe PMC', 'https://www.ebi.ac.uk/europepmc/webservices/rest/', 'UTC',
+    (800000000000000002, 'EPMC', 'Europe PMC', 'https://www.ebi.ac.uk/europepmc/webservices/rest/', 'UTC',
      'https://europepmc.org/RestfulWebService', 1, 'ACTIVE',
      JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', '初始化注册 Europe PMC 来源')),
      NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0, INET6_ATON('192.168.1.10'), NULL),
 
-    ('CROSSREF', 'Crossref', 'https://api.crossref.org/', 'UTC',
+    (800000000000000003, 'CROSSREF', 'Crossref', 'https://api.crossref.org/', 'UTC',
      'https://api.crossref.org/swagger-ui/index.html', 1, 'ACTIVE',
      JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', '初始化注册 Crossref 来源')),
      NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0, INET6_ATON('192.168.1.10'), NULL);
 
 
--- 1.2) PubMed 窗口与偏移配置
+-- 1.2) PubMed 窗口与偏移配置 (ValueObjectJpaEntity: 仅 id 字段)
 INSERT INTO patra_registry.reg_prov_window_offset_cfg
 (id, provenance_id, operation_type, effective_from, effective_to,
  window_mode_code, window_size_value, window_size_unit_code, calendar_align_to,
  lookback_value, lookback_unit_code, overlap_value, overlap_unit_code, watermark_lag_seconds,
  offset_type_code, offset_field_key, offset_date_format, window_date_field_key,
- max_ids_per_window, max_window_span_seconds, lifecycle_status_code, record_remarks,
- created_at, created_by, created_by_name, updated_at, updated_by, updated_by_name,
- version, ip_address)
+ max_ids_per_window, max_window_span_seconds, lifecycle_status_code)
 VALUES
-    (1, 1, 'ALL', '2025-09-01 00:00:00.000000', NULL,
+    (1, 800000000000000001, 'ALL', '2025-09-01 00:00:00.000000', NULL,
      'CALENDAR', 1, 'DAY', 'DAY',
      2, 'HOUR', 1, 'HOUR', 3600,
      'DATE', 'entrez_date', 'yyyy-MM-dd', 'entrez_date',
-     50000, 2592000, 'ACTIVE',
-     JSON_ARRAY(JSON_OBJECT('time', '2025-09-01 12:00:00', 'by', '系统管理员',
-                            'note', 'PubMed Harvest 任务窗口配置 - 仅支持日期级别查询（无时间组件）')),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0, INET6_ATON('192.168.1.20'));
+     50000, 2592000, 'ACTIVE');
 
 
--- 1.3) PubMed 分页配置 (合并自 V1.1.6)
+-- 1.3) PubMed 分页配置 (ValueObjectJpaEntity: 仅 id 字段)
 INSERT INTO patra_registry.reg_prov_pagination_cfg
-(provenance_id, operation_type, effective_from, effective_to,
+(id, provenance_id, operation_type, effective_from, effective_to,
  pagination_mode_code, page_size_value, max_pages_per_execution,
- sort_field_param_name, sorting_direction, lifecycle_status_code,
- record_remarks, created_at, created_by, created_by_name,
- updated_at, updated_by, updated_by_name, version, ip_address)
+ sort_field_param_name, sorting_direction, lifecycle_status_code)
 VALUES
-    (1, 'ALL', '2025-09-01 00:00:00.000000', NULL,
+    (1, 800000000000000001, 'ALL', '2025-09-01 00:00:00.000000', NULL,
      'PAGE_NUMBER', 100, 1000,
-     NULL, 1, 'ACTIVE',
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-19 11:30:00', 'by', '系统管理员',
-                            'note', 'PubMed 分页配置初始化 - 默认每页500条记录，最大支持10000条（API限制）')),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0, INET6_ATON('192.168.1.10'));
+     NULL, 1, 'ACTIVE');
 
 
 /* ====================================================================
  * 第2部分: 统一字段字典 (数据源无关)
  * ==================================================================== */
 
--- 2.1) PubMed 特定字段
+-- 2.1) PubMed 特定字段 (ValueObjectJpaEntity: 仅 id 字段)
 INSERT INTO patra_registry.reg_expr_field_dict
 (id, field_key, display_name, description, data_type_code, cardinality_code,
- exposable, is_date, record_remarks, version, ip_address,
- created_at, created_by, created_by_name, updated_at, updated_by, updated_by_name)
+ exposable, is_date)
 VALUES
     -- Entrez date field (PubMed)
     (900001, 'entrez_date', 'Entrez Date', 'PubMed Entrez date for temporal filtering',
-     'DATE', 'SINGLE', 1, 1,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-14 00:00:00', 'by', '系统管理员', 'note', 'Seed for PubMed test')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     'DATE', 'SINGLE', 1, 1),
 
     -- Title/Abstract text field (PubMed)
     (900002, 'tiab', 'Title/Abstract', 'Unified text field mapped to PubMed TIAB (Title/Abstract) for basic keyword search',
-     'TEXT', 'SINGLE', 1, 0,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-14 00:00:00', 'by', '系统管理员', 'note', 'Seed for PubMed TIAB text search')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员');
+     'TEXT', 'SINGLE', 1, 0);
 
 
--- 2.2) 共享字段 (EPMC & CrossRef & PubMed)
+-- 2.2) 共享字段 (EPMC & CrossRef & PubMed) (ValueObjectJpaEntity: 仅 id 字段)
 INSERT INTO patra_registry.reg_expr_field_dict
 (id, field_key, display_name, description, data_type_code, cardinality_code,
- exposable, is_date, record_remarks, version, ip_address,
- created_at, created_by, created_by_name, updated_at, updated_by, updated_by_name)
+ exposable, is_date)
 VALUES
     -- Publication date field (shared by EPMC, CrossRef, PubMed)
     (910001, 'publication_date', 'Publication Date', 'Publication date for article filtering (shared field)',
-     'DATE', 'SINGLE', 1, 1,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'Shared field for EPMC/CrossRef/PubMed')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     'DATE', 'SINGLE', 1, 1),
 
     -- Free text field (shared by EPMC & CrossRef)
     (910002, 'text', 'Free Text', 'Free text search field (shared by EPMC and CrossRef)',
-     'TEXT', 'SINGLE', 1, 0,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'Shared text search field')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员');
+     'TEXT', 'SINGLE', 1, 0);
 
 
 /* ====================================================================
  * 第3部分: PubMed 表达式配置
  * ==================================================================== */
 
--- 3.1) PubMed 字段能力
+-- 3.1) PubMed 字段能力 (ValueObjectJpaEntity: 仅 id 字段)
 INSERT INTO patra_registry.reg_prov_expr_capability
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, effective_from, effective_to,
@@ -197,182 +181,125 @@ INSERT INTO patra_registry.reg_prov_expr_capability
  in_max_size, in_case_sensitive_allowed,
  range_kind_code, range_allow_open_start, range_allow_open_end, range_allow_closed_at_infty,
  date_min, date_max, datetime_min, datetime_max, number_min, number_max,
- exists_supported, token_kinds, token_value_pattern,
- record_remarks, version, ip_address,
- created_at, created_by, created_by_name, updated_at, updated_by, updated_by_name)
+ exists_supported, token_kinds, token_value_pattern)
 VALUES
     -- entrez_date RANGE capability (DATE type, fixed from V1.1.4)
-    (900101, 1, 'ALL', 'ACTIVE',
+    (900101, 800000000000000001, 'ALL', 'ACTIVE',
      'entrez_date', TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
      JSON_ARRAY('RANGE'), NULL, 0,
      NULL, 0, 0, 0, 0, NULL,
      0, 0,
      'DATE', 1, 1, 0,
      DATE '1900-01-01', NULL, NULL, NULL, NULL, NULL,
-     0, NULL, NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-14 00:00:00', 'by', '系统管理员', 'note',
-                            'PubMed: entrez_date supports RANGE[DATE] (fixed from DATETIME)')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     0, NULL, NULL),
 
     -- tiab TERM/IN capability
-    (900102, 1, 'ALL', 'ACTIVE',
+    (900102, 800000000000000001, 'ALL', 'ACTIVE',
      'tiab', TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
      JSON_ARRAY('TERM', 'IN'), JSON_ARRAY('TERM'), 1,
      JSON_ARRAY('PHRASE', 'ANY'), 0, 0, 1, 0, NULL,
      1000, 0,
      'NONE', 0, 0, 0,
      NULL, NULL, NULL, NULL, NULL, NULL,
-     0, NULL, NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-14 00:00:00', 'by', '系统管理员', 'note',
-                            'PubMed: tiab supports TERM/IN; NOT allowed for TERM')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     0, NULL, NULL),
 
     -- publication_date RANGE capability (merged from V1.1.5)
-    (900103, 1, 'ALL', 'ACTIVE',
+    (900103, 800000000000000001, 'ALL', 'ACTIVE',
      'publication_date', TIMESTAMP('2025-10-18 00:00:00.000000'), NULL,
      JSON_ARRAY('RANGE'), NULL, 0,
      NULL, 0, 0, 0, 0, NULL,
      0, 0,
      'DATE', 1, 1, 0,
      DATE '1900-01-01', NULL, NULL, NULL, NULL, NULL,
-     0, NULL, NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-18 00:00:00', 'by', '系统管理员', 'note',
-                            'PubMed: publication_date supports RANGE[DATE] with pdat datetype')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员');
+     0, NULL, NULL);
 
 
--- 3.2) PubMed 渲染规则
+-- 3.2) PubMed 渲染规则 (ValueObjectJpaEntity: 仅 id 字段)
 INSERT INTO patra_registry.reg_prov_expr_render_rule
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, op_code, match_type_code, negated, value_type_code, emit_type_code,
  effective_from, effective_to,
  template, item_template, joiner, wrap_group,
- params, fn_code,
- record_remarks, version, ip_address,
- created_at, created_by, created_by_name, updated_at, updated_by, updated_by_name)
+ params, fn_code)
 VALUES
     -- entrez_date RANGE -> PARAMS
-    (900201, 1, 'ALL', 'ACTIVE',
+    (900201, 800000000000000001, 'ALL', 'ACTIVE',
      'entrez_date', 'RANGE', NULL, NULL, 'DATE', 'PARAMS',
      TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
      NULL, NULL, NULL, 0,
-     JSON_OBJECT('from', '{{from}}', 'to', '{{to}}', 'datetype', '{{datetype}}'), 'PUBMED_DATETYPE',
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-14 00:00:00', 'by', '系统管理员', 'note',
-                            'Emit std params for PubMed date filtering with {{...}} placeholders')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     JSON_OBJECT('from', '{{from}}', 'to', '{{to}}', 'datetype', '{{datetype}}'), 'PUBMED_DATETYPE'),
 
     -- tiab TERM (ANY match) -> QUERY
-    (900202, 1, 'ALL', 'ACTIVE',
+    (900202, 800000000000000001, 'ALL', 'ACTIVE',
      'tiab', 'TERM', NULL, NULL, 'STRING', 'QUERY',
      TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
      '{{v}}[TIAB]', NULL, NULL, 0,
-     NULL, NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-14 00:00:00', 'by', '系统管理员', 'note',
-                            'TERM template for TIAB: ANY match (no quotes)')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     NULL, NULL),
 
     -- tiab IN -> QUERY (OR-joined)
-    (900203, 1, 'ALL', 'ACTIVE',
+    (900203, 800000000000000001, 'ALL', 'ACTIVE',
      'tiab', 'IN', NULL, NULL, 'STRING', 'QUERY',
      TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
      NULL, '"{{item}}"[TIAB]', ' OR ', 1,
-     NULL, NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-14 00:00:00', 'by', '系统管理员', 'note',
-                            'IN template for TIAB: OR-joined quoted items with wrap')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     NULL, NULL),
 
     -- tiab TERM (PHRASE match) -> QUERY
-    (900204, 1, 'ALL', 'ACTIVE',
+    (900204, 800000000000000001, 'ALL', 'ACTIVE',
      'tiab', 'TERM', 'PHRASE', NULL, 'STRING', 'QUERY',
      TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
      '"{{v}}"[TIAB]', NULL, NULL, 0,
-     NULL, NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-14 00:00:00', 'by', '系统管理员', 'note',
-                            'TERM template for TIAB: PHRASE match (quoted)')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     NULL, NULL),
 
     -- publication_date RANGE -> PARAMS (merged from V1.1.5)
-    (900205, 1, 'ALL', 'ACTIVE',
+    (900205, 800000000000000001, 'ALL', 'ACTIVE',
      'publication_date', 'RANGE', NULL, NULL, 'DATE', 'PARAMS',
      TIMESTAMP('2025-10-18 00:00:00.000000'), NULL,
      NULL, NULL, NULL, 0,
-     JSON_OBJECT('from', '{{from}}', 'to', '{{to}}', 'datetype', '{{datetype}}'), 'PUBMED_DATETYPE',
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-18 00:00:00', 'by', '系统管理员', 'note',
-                            'Emit std params for PubMed publication_date filtering; PUBMED_DATETYPE returns pdat')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员');
+     JSON_OBJECT('from', '{{from}}', 'to', '{{to}}', 'datetype', '{{datetype}}'), 'PUBMED_DATETYPE');
 
 
--- 3.3) PubMed 全局 API 参数映射
+-- 3.3) PubMed 全局 API 参数映射 (ValueObjectJpaEntity: 仅 id 字段)
 INSERT INTO patra_registry.reg_prov_api_param_map
 (id, provenance_id, operation_type, lifecycle_status_code,
  endpoint_name, std_key, provider_param_name, transform_code, notes,
- effective_from, effective_to,
- record_remarks, version, ip_address,
- created_at, created_by, created_by_name, updated_at, updated_by, updated_by_name)
+ effective_from, effective_to)
 VALUES
     -- Boolean query bridging: std 'query' -> provider 'term'
-    (900310, 1, 'ALL', 'ACTIVE',
+    (900310, 800000000000000001, 'ALL', 'ACTIVE',
      NULL, 'query', 'term', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-14 00:00:00', 'by', '系统管理员', 'note', 'std query -> term (query bridging)')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
 
     -- Date window lower bound
-    (900301, 1, 'ALL', 'ACTIVE',
+    (900301, 800000000000000001, 'ALL', 'ACTIVE',
      NULL, 'from', 'mindate', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-14 00:00:00', 'by', '系统管理员', 'note', 'std from -> mindate')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
 
     -- Date window upper bound (exclusive -> inclusive transform)
-    (900302, 1, 'ALL', 'ACTIVE',
+    (900302, 800000000000000001, 'ALL', 'ACTIVE',
      NULL, 'to', 'maxdate', 'TO_EXCLUSIVE_MINUS_1D', NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-14 00:00:00', 'by', '系统管理员', 'note',
-                            'std to -> maxdate (exclusive minus 1 day)')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
 
     -- Date type discriminator (PDAT/EDAT)
-    (900303, 1, 'ALL', 'ACTIVE',
+    (900303, 800000000000000001, 'ALL', 'ACTIVE',
      NULL, 'datetype', 'datetype', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-14 00:00:00', 'by', '系统管理员', 'note', 'std datetype -> datetype')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
 
     -- Pagination: limit -> retmax
-    (900304, 1, 'ALL', 'ACTIVE',
+    (900304, 800000000000000001, 'ALL', 'ACTIVE',
      NULL, 'limit', 'retmax', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-14 00:00:00', 'by', '系统管理员', 'note', 'std limit -> retmax')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
 
     -- Pagination: offset -> retstart
-    (900305, 1, 'ALL', 'ACTIVE',
+    (900305, 800000000000000001, 'ALL', 'ACTIVE',
      NULL, 'offset', 'retstart', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-14 00:00:00', 'by', '系统管理员', 'note', 'std offset -> retstart')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员');
+     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL);
 
 
 /* ====================================================================
  * 第4部分: EPMC 表达式配置
  * ==================================================================== */
 
--- 4.1) EPMC 字段能力
+-- 4.1) EPMC 字段能力 (ValueObjectJpaEntity: 仅 id 字段)
 INSERT INTO patra_registry.reg_prov_expr_capability
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, effective_from, effective_to,
@@ -381,9 +308,7 @@ INSERT INTO patra_registry.reg_prov_expr_capability
  in_max_size, in_case_sensitive_allowed,
  range_kind_code, range_allow_open_start, range_allow_open_end, range_allow_closed_at_infty,
  date_min, date_max, datetime_min, datetime_max, number_min, number_max,
- exists_supported, token_kinds, token_value_pattern,
- record_remarks, version, ip_address,
- created_at, created_by, created_by_name, updated_at, updated_by, updated_by_name)
+ exists_supported, token_kinds, token_value_pattern)
 VALUES
     -- publication_date RANGE capability
     (910101, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
@@ -393,10 +318,7 @@ VALUES
      0, 0,
      'DATE', 1, 1, 0,
      DATE '1900-01-01', NULL, NULL, NULL, NULL, NULL,
-     0, NULL, NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'EPMC: publication_date supports RANGE[DATE]')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     0, NULL, NULL),
 
     -- text TERM/IN capability
     (910102, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
@@ -406,93 +328,68 @@ VALUES
      1000, 0,
      'NONE', 0, 0, 0,
      NULL, NULL, NULL, NULL, NULL, NULL,
-     0, NULL, NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'EPMC: text supports TERM/IN; NOT allowed for TERM')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员');
+     0, NULL, NULL);
 
 
--- 4.2) EPMC 渲染规则
+-- 4.2) EPMC 渲染规则 (ValueObjectJpaEntity: 仅 id 字段)
 INSERT INTO patra_registry.reg_prov_expr_render_rule
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, op_code, match_type_code, negated, value_type_code, emit_type_code,
  effective_from, effective_to,
  template, item_template, joiner, wrap_group,
- params, fn_code,
- record_remarks, version, ip_address,
- created_at, created_by, created_by_name, updated_at, updated_by, updated_by_name)
+ params, fn_code)
 VALUES
     -- publication_date RANGE -> QUERY
     (910201, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
      'publication_date', 'RANGE', NULL, NULL, 'DATE', 'QUERY',
      TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
      'FIRST_PDATE:[{{from}} TO {{to}}]', NULL, NULL, 0,
-     NULL, NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'EPMC date range as QUERY fragment')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     NULL, NULL),
 
     -- text TERM ANY -> QUERY (no quotes)
     (910202, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
      'text', 'TERM', 'ANY', NULL, 'STRING', 'QUERY',
      TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
      '{{v}}', NULL, NULL, 0,
-     NULL, NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'EPMC text TERM ANY: no quotes')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     NULL, NULL),
 
     -- text TERM PHRASE -> QUERY (quoted)
     (910203, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
      'text', 'TERM', 'PHRASE', NULL, 'STRING', 'QUERY',
      TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
      '"{{v}}"', NULL, NULL, 0,
-     NULL, NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'EPMC text TERM PHRASE: quoted')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     NULL, NULL),
 
     -- text IN -> QUERY (OR-joined)
     (910204, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
      'text', 'IN', NULL, NULL, 'STRING', 'QUERY',
      TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
      NULL, '"{{item}}"', ' OR ', 1,
-     NULL, NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'EPMC text IN: OR-joined quoted items with wrap')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员');
+     NULL, NULL);
 
 
--- 4.3) EPMC 全局 API 参数映射
+-- 4.3) EPMC 全局 API 参数映射 (ValueObjectJpaEntity: 仅 id 字段)
 INSERT INTO patra_registry.reg_prov_api_param_map
 (id, provenance_id, operation_type, lifecycle_status_code,
  endpoint_name, std_key, provider_param_name, transform_code, notes,
- effective_from, effective_to,
- record_remarks, version, ip_address,
- created_at, created_by, created_by_name, updated_at, updated_by, updated_by_name)
+ effective_from, effective_to)
 VALUES
     -- Boolean query bridging: std 'query' -> provider 'query'
     (910301, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
      NULL, 'query', 'query', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'EPMC: std query -> query (query bridging)')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
 
     -- Pagination: limit -> pageSize
     (910302, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
      NULL, 'limit', 'pageSize', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'EPMC: std limit -> pageSize')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员');
+     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL);
 
 
 /* ====================================================================
  * 第5部分: CrossRef 表达式配置
  * ==================================================================== */
 
--- 5.1) CrossRef 字段能力
+-- 5.1) CrossRef 字段能力 (ValueObjectJpaEntity: 仅 id 字段)
 INSERT INTO patra_registry.reg_prov_expr_capability
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, effective_from, effective_to,
@@ -501,9 +398,7 @@ INSERT INTO patra_registry.reg_prov_expr_capability
  in_max_size, in_case_sensitive_allowed,
  range_kind_code, range_allow_open_start, range_allow_open_end, range_allow_closed_at_infty,
  date_min, date_max, datetime_min, datetime_max, number_min, number_max,
- exists_supported, token_kinds, token_value_pattern,
- record_remarks, version, ip_address,
- created_at, created_by, created_by_name, updated_at, updated_by, updated_by_name)
+ exists_supported, token_kinds, token_value_pattern)
 VALUES
     -- publication_date RANGE capability
     (920101, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
@@ -513,10 +408,7 @@ VALUES
      0, 0,
      'DATE', 1, 1, 0,
      DATE '1900-01-01', NULL, NULL, NULL, NULL, NULL,
-     0, NULL, NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'Crossref: publication_date supports RANGE[DATE]')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     0, NULL, NULL),
 
     -- text TERM/IN capability
     (920102, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
@@ -526,102 +418,71 @@ VALUES
      1000, 0,
      'NONE', 0, 0, 0,
      NULL, NULL, NULL, NULL, NULL, NULL,
-     0, NULL, NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'Crossref: text supports TERM/IN; NOT allowed for TERM')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员');
+     0, NULL, NULL);
 
 
--- 5.2) CrossRef 渲染规则
+-- 5.2) CrossRef 渲染规则 (ValueObjectJpaEntity: 仅 id 字段)
 INSERT INTO patra_registry.reg_prov_expr_render_rule
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, op_code, match_type_code, negated, value_type_code, emit_type_code,
  effective_from, effective_to,
  template, item_template, joiner, wrap_group,
- params, fn_code,
- record_remarks, version, ip_address,
- created_at, created_by, created_by_name, updated_at, updated_by, updated_by_name)
+ params, fn_code)
 VALUES
     -- publication_date RANGE -> PARAMS
     (920201, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
      'publication_date', 'RANGE', NULL, NULL, 'DATE', 'PARAMS',
      TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
      NULL, NULL, NULL, 0,
-     JSON_OBJECT('filter', 'from-pub-date:{{from}},until-pub-date:{{to}}'), NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'Crossref date range via filter param (MULTI std_key)')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     JSON_OBJECT('filter', 'from-pub-date:{{from}},until-pub-date:{{to}}'), NULL),
 
     -- text TERM ANY -> QUERY (no quotes)
     (920202, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
      'text', 'TERM', 'ANY', NULL, 'STRING', 'QUERY',
      TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
      '{{v}}', NULL, NULL, 0,
-     NULL, NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'Crossref text TERM ANY: no quotes')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     NULL, NULL),
 
     -- text TERM PHRASE -> QUERY (quoted)
     (920203, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
      'text', 'TERM', 'PHRASE', NULL, 'STRING', 'QUERY',
      TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
      '"{{v}}"', NULL, NULL, 0,
-     NULL, NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'Crossref text TERM PHRASE: quoted')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     NULL, NULL),
 
     -- text IN -> QUERY (OR-joined)
     (920204, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
      'text', 'IN', NULL, NULL, 'STRING', 'QUERY',
      TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
      NULL, '"{{item}}"', ' OR ', 1,
-     NULL, NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'Crossref text IN: OR-joined quoted items with wrap')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员');
+     NULL, NULL);
 
 
--- 5.3) CrossRef 全局 API 参数映射
+-- 5.3) CrossRef 全局 API 参数映射 (ValueObjectJpaEntity: 仅 id 字段)
 INSERT INTO patra_registry.reg_prov_api_param_map
 (id, provenance_id, operation_type, lifecycle_status_code,
  endpoint_name, std_key, provider_param_name, transform_code, notes,
- effective_from, effective_to,
- record_remarks, version, ip_address,
- created_at, created_by, created_by_name, updated_at, updated_by, updated_by_name)
+ effective_from, effective_to)
 VALUES
     -- Boolean query bridging: std 'query' -> provider 'query'
     (920301, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
      NULL, 'query', 'query', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'Crossref: std query -> query (query bridging)')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
 
     -- Filter mapping: std 'filter' -> provider 'filter'
     (920302, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
      NULL, 'filter', 'filter', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'Crossref: std filter -> filter (MULTI cardinality)')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
 
     -- Pagination: limit -> rows
     (920303, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
      NULL, 'limit', 'rows', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'Crossref: std limit -> rows')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员'),
+     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
 
     -- Pagination: offset -> offset
     (920304, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
      NULL, 'offset', 'offset', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'Crossref: std offset -> offset')),
-     0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员');
+     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL);
 
 
 /* ====================================================================
