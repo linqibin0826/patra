@@ -24,7 +24,7 @@ import tools.jackson.databind.JsonNode;
 ///
 /// - 继承 `BaseJpaEntity` 获得审计、乐观锁、软删除功能
 /// - 业务唯一键：`(venue_id, year, rating_system)` 由唯一约束保证
-/// - 使用 Hibernate 6.6 的 `@JdbcTypeCode(SqlTypes.JSON)` 处理 JSON 字段
+/// - 使用 Hibernate 7.1 的 `@JdbcTypeCode(SqlTypes.JSON)` 处理 JSON 字段
 /// - `RatingSystem` 枚举通过 `RatingSystemAttributeConverter` 自动转换
 ///
 /// **索引设计**：

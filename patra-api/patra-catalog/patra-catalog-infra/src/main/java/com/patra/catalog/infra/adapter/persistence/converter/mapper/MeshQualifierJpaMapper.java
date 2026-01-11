@@ -19,7 +19,7 @@ import org.mapstruct.Named;
 ///
 /// **JPA 特性**：
 ///
-/// - `treeNumbers` 字段由 Hibernate 6.6 原生支持 JSON 映射（`List<String>` → JSON 列）
+/// - `treeNumbers` 字段由 Hibernate 7.1 原生支持 JSON 映射（`List<String>` → JSON 列）
 /// - 无需手动处理 JSON 序列化/反序列化
 ///
 /// @author linqibin

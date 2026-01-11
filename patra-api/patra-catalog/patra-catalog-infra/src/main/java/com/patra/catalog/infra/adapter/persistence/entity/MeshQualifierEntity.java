@@ -30,7 +30,7 @@ import org.hibernate.type.SqlTypes;
 /// - `abbreviation` - 限定词缩写（如 DI, GE, IM）
 /// - `tree_numbers` - 树形编号列表（JSON 数组）
 ///
-/// **Hibernate 6.6 特性**：
+/// **Hibernate 7.1 特性**：
 ///
 /// - 使用 `@JdbcTypeCode(SqlTypes.JSON)` 直接映射 `List<String>` 到 MySQL JSON 类型
 /// - 继承 `BaseJpaEntity` 获得软删除、审计、乐观锁功能
@@ -97,7 +97,7 @@ public class MeshQualifierEntity extends BaseJpaEntity {
 
   /// 树形编号列表（限定词在 MeSH 层级树中的位置）。
   ///
-  /// 使用 Hibernate 6.6 的 `@JdbcTypeCode(SqlTypes.JSON)` 直接映射到 MySQL JSON 类型。
+  /// 使用 Hibernate 7.1 的 `@JdbcTypeCode(SqlTypes.JSON)` 直接映射到 MySQL JSON 类型。
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "tree_numbers", columnDefinition = "JSON")
   private List<String> treeNumbers = new ArrayList<>();
