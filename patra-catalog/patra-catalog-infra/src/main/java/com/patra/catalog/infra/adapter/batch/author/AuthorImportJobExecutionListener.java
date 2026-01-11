@@ -8,10 +8,10 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.BatchStatus;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobExecutionListener;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.listener.JobExecutionListener;
+import org.springframework.batch.core.step.StepExecution;
 import org.springframework.stereotype.Component;
 
 /// PubMed Computed Authors 导入 Job 执行监听器。
@@ -179,16 +179,18 @@ public class AuthorImportJobExecutionListener implements JobExecutionListener {
   }
 
   /// 格式化 Job 参数（对 URL 只显示文件名部分）。
+  ///
+  /// Spring Batch 6.0：JobParameters 变为 record 类型，使用 `parameters()` 方法获取 `Set<JobParameter<?>>`。
   private String formatJobParameters(JobParameters params) {
     if (params == null || params.isEmpty()) {
       return "无";
     }
 
-    return params.getParameters().entrySet().stream()
+    return params.parameters().stream()
         .map(
-            entry -> {
-              String key = entry.getKey();
-              String value = String.valueOf(entry.getValue().getValue());
+            param -> {
+              String key = param.name();
+              String value = String.valueOf(param.value());
               // 对 downloadUrl 只显示文件名
               if ("downloadUrl".equals(key) && value.contains("/")) {
                 value = value.substring(value.lastIndexOf('/') + 1);

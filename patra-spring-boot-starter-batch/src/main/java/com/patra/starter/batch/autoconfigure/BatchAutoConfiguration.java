@@ -6,8 +6,8 @@ import com.patra.starter.batch.schema.BatchSchemaInitializer;
 import io.micrometer.observation.ObservationRegistry;
 import javax.sql.DataSource;
 import org.springframework.batch.core.configuration.annotation.BatchObservabilityBeanPostProcessor;
-import org.springframework.batch.core.configuration.support.DefaultBatchConfiguration;
-import org.springframework.batch.core.explore.JobExplorer;
+// Spring Batch 6.0: 使用 JdbcDefaultBatchConfiguration 替代 DefaultBatchConfiguration
+import org.springframework.batch.core.configuration.support.JdbcDefaultBatchConfiguration;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
@@ -16,8 +16,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+// Spring Boot 4.0: JDBC 自动配置类迁移到新包
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.task.SyncTaskExecutor;
 import org.springframework.jdbc.support.JdbcTransactionManager;
@@ -25,11 +26,13 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 /// Spring Batch 自动配置。
 ///
+/// **Spring Batch 6.0 变更**：继承 `JdbcDefaultBatchConfiguration` 而非 `DefaultBatchConfiguration`，
+/// 因为 6.0 版本中 `DefaultBatchConfiguration` 默认使用 `ResourcelessJobRepository`。
+///
 /// 自动配置 Spring Batch 核心组件：
 ///
-/// - JobRepository - 基于数据库的 Job 元数据存储
+/// - JobRepository - 基于数据库的 Job 元数据存储（继承 JobExplorer 接口）
 /// - JobLauncher - Job 启动器（使用 SyncTaskExecutor，XXL-Job 已异步）
-/// - JobExplorer - Job 执行历史查询
 /// - JobOperator - Job 运维操作接口
 ///
 /// ## 数据源选择
@@ -56,7 +59,7 @@ import org.springframework.transaction.PlatformTransactionManager;
     matchIfMissing = true)
 @AutoConfiguration(after = {DataSourceAutoConfiguration.class, BatchDataSourceConfiguration.class})
 @EnableConfigurationProperties(BatchProperties.class)
-public class BatchAutoConfiguration extends DefaultBatchConfiguration {
+public class BatchAutoConfiguration extends JdbcDefaultBatchConfiguration {
 
   private final BatchProperties properties;
   private final DataSource batchDataSource;
@@ -120,6 +123,9 @@ public class BatchAutoConfiguration extends DefaultBatchConfiguration {
 
   /// 配置 JobLauncher（同步执行）。
   ///
+  /// **Spring Batch 6.0 变更**：`JobLauncher` 接口已废弃（`JobOperator` 现在继承它），
+  /// 但实现类 `TaskExecutorJobLauncher` 仍可使用。
+  ///
   /// ## 关键改进
   ///
   /// 使用 `SyncTaskExecutor` 替代 `SimpleAsyncTaskExecutor`。
@@ -130,10 +136,31 @@ public class BatchAutoConfiguration extends DefaultBatchConfiguration {
   /// - Spring Batch 二次异步会导致 XXL-Job 无法正确追踪执行状态
   /// - 同步执行可确保分布式锁在 Job 执行期间有效
   ///
+  /// ## 迁移计划（中期）
+  ///
+  /// Spring Batch 6.0 推荐使用 `JobOperator` 替代 `JobLauncher`：
+  ///
+  /// - `JobOperator` 现在继承 `JobLauncher` 接口，提供向后兼容
+  /// - 新增功能：`start(Job, JobParameters)`、`restart(long)`、`stop(long)` 等
+  /// - 迁移时机：当 `JobLauncherHelper` 需要新增运维功能（如重启、停止）时
+  /// - 迁移方式：将 `JobLauncher` 替换为 `JobOperator`，无需修改调用代码
+  ///
+  /// ```java
+  /// // 迁移后的代码示例
+  /// @Bean
+  /// public JobOperator jobOperator(JobRepository jobRepository) {
+  ///     TaskExecutorJobLauncher launcher = new TaskExecutorJobLauncher();
+  ///     launcher.setJobRepository(jobRepository);
+  ///     launcher.setTaskExecutor(new SyncTaskExecutor());
+  ///     launcher.afterPropertiesSet();
+  ///     return launcher;  // TaskExecutorJobLauncher 实现 JobOperator
+  /// }
+  /// ```
+  ///
   /// @param jobRepository Job 元数据仓库
   /// @return JobLauncher 实例
   @Bean
-  @Override
+  @SuppressWarnings("removal") // JobLauncher 在 Spring Batch 6.0 中废弃，计划中期迁移到 JobOperator
   public JobLauncher jobLauncher(JobRepository jobRepository) {
     TaskExecutorJobLauncher launcher = new TaskExecutorJobLauncher();
     launcher.setJobRepository(jobRepository);
@@ -172,11 +199,14 @@ public class BatchAutoConfiguration extends DefaultBatchConfiguration {
   ///
   /// 封装 JobLauncher 调用逻辑，提供强类型参数支持和幂等性控制。
   ///
+  /// **Spring Batch 6.0 变更**：`JobRepository` 现在直接继承 `JobExplorer` 接口，
+  /// 不再需要单独的 `JobExplorer` Bean。
+  ///
   /// @param jobLauncher Job 启动器
-  /// @param jobExplorer Job 执行历史查询器
+  /// @param jobRepository Job 元数据仓库（同时提供 JobExplorer 功能）
   /// @return JobLauncherHelper 实例
   @Bean
-  public JobLauncherHelper jobLauncherHelper(JobLauncher jobLauncher, JobExplorer jobExplorer) {
-    return new JobLauncherHelper(jobLauncher, jobExplorer);
+  public JobLauncherHelper jobLauncherHelper(JobLauncher jobLauncher, JobRepository jobRepository) {
+    return new JobLauncherHelper(jobLauncher, jobRepository);
   }
 }

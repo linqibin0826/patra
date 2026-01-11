@@ -307,7 +307,7 @@ try {
 
 ### 不使用 @EnableBatchProcessing
 
-**原因**：Spring Boot 3.x 推荐继承 `DefaultBatchConfiguration` 而非使用 `@EnableBatchProcessing` 注解。
+**原因**：Spring Boot 4.0 推荐继承 `JdbcDefaultBatchConfiguration`（或 `DefaultBatchConfiguration`）而非使用 `@EnableBatchProcessing` 注解。
 
 **优势**：
 - 更灵活的配置覆盖能力

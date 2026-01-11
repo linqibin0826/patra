@@ -31,7 +31,7 @@ class BatchPropertiesTest {
     BatchProperties.ChunkProperties chunk = properties.getChunk();
 
     // Then
-    assertThat(chunk.getDefaultSize()).isEqualTo(1000);
+    assertThat(chunk.getDefaultSize()).isEqualTo(5000);
     assertThat(chunk.getMaxSize()).isEqualTo(10000);
   }
 
