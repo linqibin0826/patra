@@ -1,10 +1,11 @@
 package com.patra.starter.jpa.autoconfig;
 
+import com.patra.starter.jpa.json.Jackson3JsonFormatMapper;
 import java.util.Map;
 import org.hibernate.cfg.AvailableSettings;
 import org.springframework.context.annotation.Configuration;
 
-/// Hibernate 属性定制器，配置批量写入和性能优化。
+/// Hibernate 属性定制器，配置批量写入、性能优化和 JSON 序列化。
 ///
 /// **Hibernate 7.1 批量写入配置**：
 ///
@@ -20,12 +21,18 @@ import org.springframework.context.annotation.Configuration;
 /// - 默认禁用二级缓存（批量场景下无用且占内存）
 /// - 应用可以通过 `spring.jpa.properties.*` 覆盖
 ///
+/// **Jackson 3.x JSON 序列化配置**：
+///
+/// Hibernate 7.1 无法自动检测 Jackson 3.x（因为包名从 `com.fasterxml.jackson`
+/// 改为 `tools.jackson`），需要手动配置 `Jackson3JsonFormatMapper`。
+///
 /// **注意**：
 ///
 /// 这些配置可以通过 `application.yml` 的 `spring.jpa.properties.hibernate.*` 覆盖。
 ///
 /// @author linqibin
 /// @since 0.1.0
+/// @see Jackson3JsonFormatMapper
 @Configuration
 public class HibernatePropertiesCustomizer
     implements org.springframework.boot.hibernate.autoconfigure.HibernatePropertiesCustomizer {
@@ -47,5 +54,12 @@ public class HibernatePropertiesCustomizer
 
     // 禁用在 JVM 退出时自动创建 SessionFactory
     hibernateProperties.putIfAbsent(AvailableSettings.DELAY_CDI_ACCESS, true);
+
+    // Jackson 3.x JSON 序列化配置
+    // Hibernate 7.1 无法自动检测 Jackson 3.x，需要手动配置 FormatMapper
+    // 参见:
+    // https://discourse.hibernate.org/t/missing-formatmapper-for-json-format-with-jackson-3-x-hibernate-7-x/11819
+    hibernateProperties.putIfAbsent(
+        AvailableSettings.JSON_FORMAT_MAPPER, new Jackson3JsonFormatMapper());
   }
 }
