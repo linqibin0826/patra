@@ -1,4 +1,4 @@
-# Local error-handling configuration for the Ingest module; can be migrated to Nacos later.
+# Ingest 模块错误处理配置
 patra:
   error:
     enabled: true

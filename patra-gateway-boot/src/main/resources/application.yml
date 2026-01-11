@@ -2,7 +2,7 @@
 # Patra API Gateway - Main Configuration
 # ============================================================================
 # This gateway serves as the unified entry point for all Patra services.
-# Routes are configured below with Nacos-based service discovery.
+# Routes are configured below with Consul-based service discovery.
 # ============================================================================
 
 # ----------------------------------------------------------------------------
@@ -20,23 +20,17 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
-  # Nacos Configuration Import
-  # Loads service-specific and shared configurations from Nacos
-  config:
-    import:
-      - "optional:nacos:${spring.application.name}-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
-      - "optional:nacos:patra-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
-
   # Cloud Configuration
   cloud:
-    # Nacos Service Discovery & Configuration
-    nacos:
-      server-addr: ${NACOS_ADDR:127.0.0.1:8848}
-      username: ${NACOS_USERNAME:nacos}
-      password: ${NACOS_PASSWORD:nacos}
+    # Consul Service Discovery
+    consul:
+      host: ${CONSUL_HOST:localhost}
+      port: ${CONSUL_PORT:8500}
       discovery:
-        namespace: ${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}
-        group: ${NACOS_DISCOVERY_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}
+        service-name: ${spring.application.name}
+        health-check-interval: 10s
+        health-check-path: /actuator/health
+        instance-id: ${spring.application.name}:${random.value}
 
     # Gateway Route Configuration
     # Routes requests to downstream microservices using load balancing

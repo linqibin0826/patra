@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 /// Outbox 发布器框架的配置属性。
 ///
-/// 支持通过 Nacos 或 application.yml 动态配置:
+/// 支持通过 application.yml 配置:
 ///
 /// ```
 ///
