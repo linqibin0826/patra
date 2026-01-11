@@ -88,6 +88,15 @@
             <scope>compile</scope>
         </dependency>
 
+        <!-- Flyway 测试支持（@DataJpaTest 需要 Flyway 自动配置） -->
+        <!-- Spring Boot 4.0 模块化变更: 切片测试需要显式添加 Test Starter -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway-test</artifactId>
+            <version>${spring-boot.version}</version>
+            <scope>compile</scope>
+        </dependency>
+
         <!-- Spring Boot AutoConfiguration 支持 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

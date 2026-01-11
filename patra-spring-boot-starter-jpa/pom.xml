@@ -14,11 +14,12 @@
     <packaging>jar</packaging>
     <name>Patra Spring Boot Starter - JPA</name>
     <description>
-        Spring Data JPA Starter with Hibernate 6.6 features:
+        Spring Data JPA Starter with Hibernate 7.1 features:
         - BaseJpaEntity with @SoftDelete (timestamp-based soft delete)
         - JPA Auditing integration
         - Error mapping via ErrorMappingContributor SPI
         - Batch processing support
+        - Flyway database migration (Spring Boot 4.0 modular starter)
     </description>
 
     <dependencies>
@@ -52,11 +53,14 @@
         </dependency>
 
         <!-- Flyway 数据库迁移 -->
+        <!-- Spring Boot 4.0 模块化变更: 必须使用 starter 获取自动配置 -->
+        <!-- 参见: https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.0-Migration-Guide -->
         <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
         </dependency>
 
+        <!-- MySQL 方言支持（starter 不包含数据库特定方言） -->
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-mysql</artifactId>

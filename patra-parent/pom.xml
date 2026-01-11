@@ -31,7 +31,7 @@
     <opentelemetry-logback-appender.version>2.22.0-alpha</opentelemetry-logback-appender.version>
     <aws.sdk.version>2.25.36</aws.sdk.version>
     <feign.version>13.1</feign.version>
-    <redisson.version>3.52.0</redisson.version>
+    <redisson.version>4.1.0</redisson.version>
     <minio.version>8.5.7</minio.version>
 
     <maven.compiler.release>${java.version}</maven.compiler.release>
@@ -119,6 +119,16 @@
         <version>${testcontainers.version}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+
+      <!-- 强制指定 commons-compress 版本，解决 Testcontainers 2.0.3 与 MinIO 8.5.7 的版本冲突 -->
+      <!-- Testcontainers 2.0.3 (Spring Boot 4.0.1 依赖) 需要 1.28.0 -->
+      <!-- MinIO 8.5.7 需要 1.24.0 -->
+      <!-- 使用较新版本 1.28.0 保证与 Testcontainers 兼容 -->
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-compress</artifactId>
+        <version>1.28.0</version>
       </dependency>
 
       <dependency>
