@@ -1,7 +1,5 @@
 package com.patra.ingest.infra.adapter.compiler;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.expr.Expr;
 import com.patra.expr.json.ExprJsonCodec;
@@ -17,6 +15,8 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /// 表达式编译器端口实现。
 ///

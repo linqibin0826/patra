@@ -1,10 +1,10 @@
 package com.patra.ingest.domain.model.vo.execution;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
+import tools.jackson.databind.JsonNode;
 
 /// 任务运行的执行上下文值对象。
 ///

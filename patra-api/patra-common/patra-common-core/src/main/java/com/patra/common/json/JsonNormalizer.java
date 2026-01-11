@@ -1,16 +1,5 @@
 package com.patra.common.json;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.NullNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.POJONode;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.nio.charset.StandardCharsets;
@@ -27,6 +16,16 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.StreamWriteFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectWriter;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.NullNode;
+import tools.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.node.POJONode;
 
 /// JSON 规范化工具,将任意输入(POJO、{@link JsonNode}、字符串等)转换为确定性结构和规范 JSON 文本。
 ///
@@ -40,7 +39,7 @@ import java.util.regex.Pattern;
 ///   - **时间规范化**:解析多种格式(包括秒/毫秒纪元),并以毫秒精度发出 UTC 时间戳(`yyyy-MM-dd'T'HH:mm:ss.SSS'Z'`)。
 ///   - **安全防护**:强制执行 UTF-8 字节限制、最大深度,并拒绝非有限数字。
 ///   - **确定性输出**:使用配置了 {@link
-///       com.fasterxml.jackson.core.JsonGenerator.Feature#WRITE_BIGDECIMAL_AS_PLAIN} 的 {@link
+///       tools.jackson.core.JsonGenerator.Feature#WRITE_BIGDECIMAL_AS_PLAIN} 的 {@link
 ///       ObjectWriter} 编写规范 JSON。
 ///
 /// ### Spring 集成
@@ -91,7 +90,7 @@ public final class JsonNormalizer {
         objectMapper
             .writer()
             .without(SerializationFeature.INDENT_OUTPUT)
-            .withFeatures(JsonGenerator.Feature.WRITE_BIGDECIMAL_AS_PLAIN);
+            .with(StreamWriteFeature.WRITE_BIGDECIMAL_AS_PLAIN);
   }
 
   /// 使用由 {@link JsonMapperHolder} 提供的全局 {@link ObjectMapper}(从 Spring 桥接,如果可用)和默认的 {@link
@@ -145,7 +144,7 @@ public final class JsonNormalizer {
         return text.isEmpty() ? NullNode.getInstance() : objectMapper.readTree(text);
       }
       return objectMapper.valueToTree(input);
-    } catch (JsonProcessingException ex) {
+    } catch (JacksonException ex) {
       throw new JsonNormalizationException("Unable to parse JSON input", ex);
     }
   }
@@ -163,7 +162,7 @@ public final class JsonNormalizer {
     return switch (node.getNodeType()) {
       case OBJECT -> normalizeObject((ObjectNode) node, path, depth);
       case ARRAY -> normalizeArray((ArrayNode) node, path, depth);
-      case STRING -> normalizeText(node.textValue(), path);
+      case STRING -> normalizeText(node.stringValue(), path);
       case NUMBER -> normalizeNumber(node, path);
       case BOOLEAN -> NormalizedValue.of(Boolean.valueOf(node.booleanValue()));
       case BINARY -> normalizeBinary(node, path);
@@ -179,23 +178,19 @@ public final class JsonNormalizer {
   }
 
   private NormalizedValue normalizeBinary(JsonNode node, NormalizationPath path) {
-    try {
-      byte[] data = node.binaryValue();
-      if (data == null || data.length == 0) {
-        return applyEmptyPolicy(null, path);
-      }
-      String encoded = Base64.getEncoder().encodeToString(data);
-      ensureStringWithinLimit(encoded, path);
-      return applyEmptyPolicy(encoded, path);
-    } catch (IOException ex) {
-      throw new JsonNormalizationException("Failed to read binary data", ex);
+    // Jackson 3.x: binaryValue() 不再抛出 checked exception
+    byte[] data = node.binaryValue();
+    if (data == null || data.length == 0) {
+      return applyEmptyPolicy(null, path);
     }
+    String encoded = Base64.getEncoder().encodeToString(data);
+    ensureStringWithinLimit(encoded, path);
+    return applyEmptyPolicy(encoded, path);
   }
 
   private NormalizedValue normalizeObject(
       ObjectNode objectNode, NormalizationPath path, int depth) {
-    List<String> keys = new ArrayList<>();
-    objectNode.fieldNames().forEachRemaining(keys::add);
+    List<String> keys = new ArrayList<>(objectNode.propertyNames());
     keys.sort(config.keyComparator);
 
     Map<String, Object> result = new LinkedHashMap<>();
@@ -419,7 +414,7 @@ public final class JsonNormalizer {
   private String writeCanonicalJson(Object value) {
     try {
       return canonicalWriter.writeValueAsString(value);
-    } catch (JsonProcessingException ex) {
+    } catch (JacksonException ex) {
       throw new JsonNormalizationException("Failed to serialize canonical JSON", ex);
     }
   }

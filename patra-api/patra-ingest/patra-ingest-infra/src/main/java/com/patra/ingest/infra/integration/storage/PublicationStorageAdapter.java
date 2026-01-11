@@ -1,7 +1,5 @@
 package com.patra.ingest.infra.integration.storage;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.ingest.domain.port.PublicationStoragePort;
@@ -23,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /// 基础设施适配器,实现出版物存储到对象存储的功能。
 ///
@@ -93,7 +93,7 @@ public class PublicationStorageAdapter implements PublicationStoragePort {
           serialized.length,
           payload.size());
       return serialized;
-    } catch (JsonProcessingException ex) {
+    } catch (JacksonException ex) {
       throw new PublicationStorageException("序列化出版物负载失败", ex);
     }
   }

@@ -1,6 +1,5 @@
 package com.patra.catalog.infra.adapter.persistence.entity;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.catalog.domain.model.enums.RatingSystem;
 import com.patra.starter.jpa.entity.ChildJpaEntity;
 import jakarta.persistence.Column;
@@ -17,6 +16,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import tools.jackson.databind.JsonNode;
 
 /// 载体评级 JPA 实体，映射到表 `cat_venue_rating`。
 ///

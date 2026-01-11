@@ -1,13 +1,5 @@
 package com.patra.expr.canonical;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.NullNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.util.HashUtils;
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
@@ -21,6 +13,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectWriter;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.NullNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /// 为表达式生成确定性的 JSON 快照和哈希值,使下游服务能够一致地进行缓存、去重或审计。
 ///
@@ -64,7 +64,7 @@ public final class ExprCanonicalizer {
       String canonicalJson = CANONICAL_WRITER.writeValueAsString(canonical);
       String hash = HashUtils.sha256Hex(canonicalJson.getBytes(StandardCharsets.UTF_8));
       return new ExprCanonicalSnapshot(expr, canonicalJson, hash);
-    } catch (JsonProcessingException ex) {
+    } catch (JacksonException ex) {
       throw new IllegalStateException("Failed to canonicalize expression", ex);
     }
   }
@@ -84,7 +84,7 @@ public final class ExprCanonicalizer {
       return canonicalizeArray((ArrayNode) node);
     }
     if (node.isTextual()) {
-      return canonicalizeText(node.textValue());
+      return canonicalizeText(node.stringValue());
     }
     if (node.isNumber()) {
       return canonicalizeNumber(node);
@@ -97,8 +97,7 @@ public final class ExprCanonicalizer {
   /// @param objectNode 待规范化的对象节点
   /// @return 规范化后的对象节点
   private static JsonNode canonicalizeObject(ObjectNode objectNode) {
-    List<String> fieldNames = new ArrayList<>();
-    objectNode.fieldNames().forEachRemaining(fieldNames::add);
+    List<String> fieldNames = new ArrayList<>(objectNode.propertyNames());
     fieldNames.sort(Comparator.naturalOrder());
 
     ObjectNode canonical = NODE_FACTORY.objectNode();
@@ -217,7 +216,7 @@ public final class ExprCanonicalizer {
       return true;
     }
     if (node.isTextual()) {
-      return node.textValue().isEmpty();
+      return node.stringValue().isEmpty();
     }
     if (node.isArray()) {
       return node.isEmpty();
@@ -262,7 +261,7 @@ public final class ExprCanonicalizer {
   private static String writeJson(JsonNode node) {
     try {
       return CANONICAL_WRITER.writeValueAsString(node);
-    } catch (JsonProcessingException ex) {
+    } catch (JacksonException ex) {
       throw new IllegalStateException("Failed to write canonical JSON", ex);
     }
   }

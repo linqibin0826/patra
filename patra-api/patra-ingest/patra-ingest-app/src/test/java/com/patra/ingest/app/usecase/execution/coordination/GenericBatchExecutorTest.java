@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
@@ -28,6 +27,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// GenericBatchExecutor 单元测试
 ///
@@ -57,7 +58,7 @@ class GenericBatchExecutorTest {
 
   private ExecutionContext context;
   private Batch batch;
-  private ObjectMapper objectMapper = new ObjectMapper();
+  private ObjectMapper objectMapper = JsonMapper.builder().build();
   private QuerySession querySession;
 
   @BeforeEach

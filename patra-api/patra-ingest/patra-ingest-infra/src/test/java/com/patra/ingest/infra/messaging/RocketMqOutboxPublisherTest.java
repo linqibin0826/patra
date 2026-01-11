@@ -10,9 +10,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.domain.exception.OutboxPublishException;
 import com.patra.ingest.domain.exception.OutboxPublishException.Reason;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
@@ -38,6 +35,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.messaging.Message;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 /// RocketMqOutboxPublisher 单元测试。
 ///
@@ -92,7 +92,7 @@ class RocketMqOutboxPublisherTest {
 
     @Test
     @DisplayName("应成功发送普通消息并正确映射元数据")
-    void shouldSendNormalMessageSuccessfully() throws JsonProcessingException {
+    void shouldSendNormalMessageSuccessfully() throws JacksonException {
       // Given: 准备测试数据
       String channel = "TASK_READY";
       String topic = "INGEST_TASK_READY";
@@ -191,7 +191,7 @@ class RocketMqOutboxPublisherTest {
 
     @Test
     @DisplayName("应使用 syncSendOrderly 发送顺序消息并使用 partitionKey 作为 hashKey")
-    void shouldSendOrderedMessageWithPartitionKey() throws JsonProcessingException {
+    void shouldSendOrderedMessageWithPartitionKey() throws JacksonException {
       // Given
       String channel = "PUBLICATION_READY";
       String topic = "INGEST_PUBLICATION_READY";
@@ -407,7 +407,7 @@ class RocketMqOutboxPublisherTest {
 
     @Test
     @DisplayName("无效 JSON 格式的 headers 应抛出 HEADERS_INVALID 异常")
-    void shouldThrowExceptionWhenHeadersJsonIsInvalid() throws JsonProcessingException {
+    void shouldThrowExceptionWhenHeadersJsonIsInvalid() throws JacksonException {
       // Given
       String invalidJson = "{invalid json}";
       OutboxMessage message =
@@ -423,8 +423,7 @@ class RocketMqOutboxPublisherTest {
       when(properties.isChannelAllowed("TASK_READY")).thenReturn(true);
       when(channelMapper.toTopic("TASK_READY")).thenReturn("INGEST_TASK_READY");
 
-      JsonProcessingException parseException =
-          new JsonProcessingException("Unexpected character") {};
+      JacksonException parseException = new JacksonException("Unexpected character") {};
       when(objectMapper.readValue(eq(invalidJson), any(TypeReference.class)))
           .thenThrow(parseException);
 
@@ -438,7 +437,7 @@ class RocketMqOutboxPublisherTest {
 
     @Test
     @DisplayName("多个 headers 应正确设置为 UserProperties")
-    void shouldSetMultipleHeadersAsUserProperties() throws JsonProcessingException {
+    void shouldSetMultipleHeadersAsUserProperties() throws JacksonException {
       // Given
       String headersJson =
           "{\"traceId\":\"trace-001\",\"spanId\":\"span-001\",\"priority\":\"HIGH\"}";
@@ -483,7 +482,7 @@ class RocketMqOutboxPublisherTest {
 
     @Test
     @DisplayName("dedupKey 应映射到 RocketMQ KEYS,partitionKey 应映射到 UserProperty")
-    void shouldCorrectlyMapDedupKeyAndPartitionKey() throws JsonProcessingException {
+    void shouldCorrectlyMapDedupKeyAndPartitionKey() throws JacksonException {
       // Given: dedupKey 和 partitionKey 不同 (这是架构修正的关键点!)
       String dedupKey = "dedup-key-123"; // 用于去重和追踪
       String partitionKey = "partition-key-456"; // 用于队列选择

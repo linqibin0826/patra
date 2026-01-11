@@ -1,6 +1,5 @@
 package com.patra.registry.infra.adapter.persistence.entity.provenance;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,6 +9,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import tools.jackson.databind.JsonNode;
 
 /// 重试配置 JPA 实体，映射到表 `reg_prov_retry_cfg`。
 ///

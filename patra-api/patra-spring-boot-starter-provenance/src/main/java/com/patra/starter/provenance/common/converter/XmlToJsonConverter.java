@@ -1,12 +1,13 @@
 package com.patra.starter.provenance.common.converter;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.dataformat.xml.XmlMapper;
 
 /// XML 到 JSON 转换器
 ///
@@ -33,13 +34,18 @@ public class XmlToJsonConverter {
   /// - 启用单值作为数组处理
   /// - XML 禁用默认包装器
   public XmlToJsonConverter() {
-    this.xmlMapper = XmlMapper.builder().defaultUseWrapper(false).build();
-    xmlMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    xmlMapper.configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
+    this.xmlMapper =
+        XmlMapper.builder()
+            .defaultUseWrapper(false)
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+            .build();
 
-    this.jsonMapper = new ObjectMapper();
-    jsonMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    jsonMapper.configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
+    this.jsonMapper =
+        JsonMapper.builder()
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+            .build();
   }
 
   /// 将 XML 字符串转换为类型化 JSON 对象

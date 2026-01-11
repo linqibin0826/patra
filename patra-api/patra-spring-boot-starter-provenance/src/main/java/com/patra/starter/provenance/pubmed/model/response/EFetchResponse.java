@@ -2,14 +2,13 @@ package com.patra.starter.provenance.pubmed.model.response;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import tools.jackson.dataformat.xml.XmlMapper;
+import tools.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
+import tools.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import tools.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 
 /// 解析后的 PubMed EFetch 响应,包含文章详情视图和可选的 UID 列表视图。
 ///
@@ -63,7 +62,7 @@ public final class EFetchResponse {
   }
 
   /// 将 XML 负载解析为 {@link EFetchResponse}。
-  public static EFetchResponse fromXml(XmlMapper xmlMapper, String xml) throws IOException {
+  public static EFetchResponse fromXml(XmlMapper xmlMapper, String xml) {
     EFetchResponse response = xmlMapper.readValue(xml, EFetchResponse.class);
     response.normalise();
     return response;

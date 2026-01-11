@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.port.OutboxMessageRepository;
 import com.patra.ingest.domain.port.TechnicalRetryPort.RetryContext;
@@ -17,6 +16,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// TechnicalRetryAdapter 单元测试
 ///
@@ -38,7 +39,7 @@ class TechnicalRetryAdapterTest {
 
   @BeforeEach
   void setup() {
-    ObjectMapper objectMapper = new ObjectMapper();
+    ObjectMapper objectMapper = JsonMapper.builder().build();
     adapter = new TechnicalRetryAdapter(repository, objectMapper);
   }
 

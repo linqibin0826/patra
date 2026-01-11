@@ -25,9 +25,10 @@ import java.util.List;
 /// **使用方式**：
 ///
 /// ```java
-/// ObjectMapper mapper = new ObjectMapper()
-///     .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
-///     .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+/// ObjectMapper mapper = JsonMapper.builder()
+///     .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+///     .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+///     .build();
 /// OpenAlexSourceRecord record = mapper.readValue(jsonLine, OpenAlexSourceRecord.class);
 /// ```
 ///

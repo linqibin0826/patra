@@ -1,8 +1,5 @@
 package com.patra.catalog.infra.adapter.batch.venue;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
@@ -24,6 +21,10 @@ import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.json.JsonMapper;
 
 /// OpenAlex Sources JSON Lines 解析器。
 ///
@@ -64,9 +65,10 @@ public class OpenAlexSourceParser {
   /// 创建解析器实例。
   public OpenAlexSourceParser() {
     this.objectMapper =
-        new ObjectMapper()
-            .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        JsonMapper.builder()
+            .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .build();
   }
 
   /// 解析 .gz 压缩的 JSON Lines 输入流。

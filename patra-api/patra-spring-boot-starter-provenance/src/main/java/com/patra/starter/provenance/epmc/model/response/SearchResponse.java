@@ -1,11 +1,11 @@
 package com.patra.starter.provenance.epmc.model.response;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.provenance.common.support.JsonHelpers;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import tools.jackson.databind.JsonNode;
 
 /// Europe PMC 搜索响应结构化表示
 ///

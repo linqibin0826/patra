@@ -332,10 +332,9 @@ public class PlanAssemblerImpl implements PlanAssembler {
   /// Extracts window.from from windowSpecJson when present.
   private Instant extractWindowFrom(String windowSpecJson) {
     try {
-      com.fasterxml.jackson.databind.ObjectMapper mapper =
-          new com.fasterxml.jackson.databind.ObjectMapper();
-      com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(windowSpecJson);
-      com.fasterxml.jackson.databind.JsonNode window = root.get("window");
+      tools.jackson.databind.ObjectMapper mapper = new tools.jackson.databind.ObjectMapper();
+      tools.jackson.databind.JsonNode root = mapper.readTree(windowSpecJson);
+      tools.jackson.databind.JsonNode window = root.get("window");
       if (window != null && window.has("from")) {
         String fromStr = window.get("from").asText();
         return Instant.parse(fromStr);

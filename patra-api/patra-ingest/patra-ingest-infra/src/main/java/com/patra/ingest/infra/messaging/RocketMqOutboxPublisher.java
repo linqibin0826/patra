@@ -1,8 +1,5 @@
 package com.patra.ingest.infra.messaging;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.domain.exception.OutboxPublishException;
 import com.patra.ingest.domain.exception.OutboxPublishException.Reason;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
@@ -21,6 +18,9 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 /// RocketMQ 发件箱发布器实现。
 ///
@@ -233,7 +233,7 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
     }
     try {
       return objectMapper.readValue(headersJson, MAP_TYPE);
-    } catch (JsonProcessingException ex) {
+    } catch (JacksonException ex) {
       throw new OutboxPublishException(Reason.HEADERS_INVALID, "解析 Outbox headers JSON 失败", ex);
     }
   }

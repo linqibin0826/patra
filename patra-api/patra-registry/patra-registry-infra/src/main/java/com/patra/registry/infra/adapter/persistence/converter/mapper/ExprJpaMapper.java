@@ -1,6 +1,5 @@
 package com.patra.registry.infra.adapter.persistence.converter.mapper;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.registry.domain.model.vo.expr.ApiParamMapping;
 import com.patra.registry.domain.model.vo.expr.ExprCapability;
 import com.patra.registry.domain.model.vo.expr.ExprField;
@@ -12,6 +11,7 @@ import com.patra.registry.infra.adapter.persistence.entity.expr.ProvExprRenderRu
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
+import tools.jackson.databind.JsonNode;
 
 /// 表达式 JPA 实体转换器，负责将 JPA 实体转换为领域值对象。
 ///

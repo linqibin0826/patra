@@ -1,7 +1,5 @@
 package com.patra.starter.provenance.epmc;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.provenance.api.constants.EpmcOperation;
 import com.patra.starter.provenance.common.config.DefaultConfigProvider;
@@ -14,6 +12,8 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /// Europe PMC 客户端实现（使用 Spring RestClient）
 ///

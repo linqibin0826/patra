@@ -28,7 +28,6 @@ import org.springframework.context.annotation.Configuration;
 /// @since 0.1.0
 @Configuration
 public class HibernatePropertiesCustomizer
-    // Spring Boot 4.0 模块化: HibernatePropertiesCustomizer 移到新包
     implements org.springframework.boot.hibernate.autoconfigure.HibernatePropertiesCustomizer {
 
   /// 默认批量大小。

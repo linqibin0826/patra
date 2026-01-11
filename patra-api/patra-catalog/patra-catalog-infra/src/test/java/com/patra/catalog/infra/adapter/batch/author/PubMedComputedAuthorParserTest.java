@@ -2,7 +2,6 @@ package com.patra.catalog.infra.adapter.batch.author;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.catalog.domain.model.aggregate.AuthorAggregate;
 import com.patra.catalog.domain.model.enums.AuthorStatus;
 import com.patra.catalog.domain.model.enums.DataSourceCode;
@@ -18,6 +17,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import tools.jackson.databind.json.JsonMapper;
 
 /// PubMedComputedAuthorParser 单元测试。
 ///
@@ -38,7 +38,7 @@ class PubMedComputedAuthorParserTest {
 
   @BeforeEach
   void setUp() {
-    parser = new PubMedComputedAuthorParser(new ObjectMapper());
+    parser = new PubMedComputedAuthorParser(JsonMapper.builder().build());
   }
 
   @Nested

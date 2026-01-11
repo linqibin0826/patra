@@ -1,8 +1,5 @@
 package com.patra.ingest.infra.mapper.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.provenance.api.params.DoajParamKeys;
@@ -11,6 +8,9 @@ import com.patra.ingest.domain.model.vo.query.QuerySession;
 import com.patra.ingest.infra.mapper.ProviderParameterMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 /// DOAJ 参数映射器。
 ///

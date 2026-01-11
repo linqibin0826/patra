@@ -2,8 +2,6 @@ package com.patra.ingest.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.infra.adapter.persistence.dao.PlanDao;
@@ -34,6 +32,8 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 /// TaskRepositoryAdapter 集成测试。
 ///

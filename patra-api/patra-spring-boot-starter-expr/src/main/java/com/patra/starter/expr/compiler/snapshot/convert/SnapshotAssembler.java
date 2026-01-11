@@ -1,6 +1,5 @@
 package com.patra.starter.expr.compiler.snapshot.convert;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.RegistryConfigScope;
 import com.patra.expr.Atom;
 import com.patra.registry.api.dto.expr.ApiParamMappingResp;
@@ -10,7 +9,6 @@ import com.patra.registry.api.dto.expr.ExprRenderRuleResp;
 import com.patra.registry.api.dto.expr.ExprSnapshotResp;
 import com.patra.registry.api.dto.provenance.ProvenanceResp;
 import com.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
-import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,6 +18,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /// 将注册表 DTO 转换为启动器的不可变 {@link ProvenanceSnapshot} 模型。
 ///
@@ -197,7 +197,7 @@ public class SnapshotAssembler {
       @SuppressWarnings("unchecked")
       Map<String, String> map = objectMapper.readValue(paramsJson, Map.class);
       return Map.copyOf(map);
-    } catch (IOException e) {
+    } catch (JacksonException e) {
       throw new IllegalStateException("解析渲染规则参数失败", e);
     }
   }
@@ -214,7 +214,7 @@ public class SnapshotAssembler {
       @SuppressWarnings("unchecked")
       List<String> list = objectMapper.readValue(json, List.class);
       return new HashSet<>(list);
-    } catch (IOException e) {
+    } catch (JacksonException e) {
       throw new IllegalStateException("解析 JSON 数组失败: " + json, e);
     }
   }

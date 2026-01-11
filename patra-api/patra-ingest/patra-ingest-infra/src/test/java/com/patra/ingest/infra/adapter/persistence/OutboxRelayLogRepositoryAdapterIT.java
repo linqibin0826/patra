@@ -3,8 +3,6 @@ package com.patra.ingest.infra.adapter.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.ingest.domain.model.entity.OutboxRelayLog;
 import com.patra.ingest.domain.model.enums.RelayStatus;
 import com.patra.ingest.infra.adapter.persistence.dao.OutboxMessageDao;
@@ -31,6 +29,8 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 /// OutboxRelayLogRepositoryAdapter 集成测试。
 ///

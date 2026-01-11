@@ -1,8 +1,6 @@
 package com.patra.catalog.infra.adapter.batch.author;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ibm.icu.text.Collator;
 import com.ibm.icu.util.ULocale;
 import com.patra.catalog.domain.model.aggregate.AuthorAggregate;
@@ -19,6 +17,8 @@ import java.util.Objects;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.ObjectMapper;
 
 /// PubMed Computed Authors JSON Lines 解析器。
 ///
@@ -73,13 +73,13 @@ public class PubMedComputedAuthorParser {
   ///
   /// **ObjectMapper 配置**：
   ///
-  /// 使用 `copy()` 创建副本以避免修改全局配置，
+  /// 使用 `rebuild()` 创建派生配置，
   /// 并禁用 `FAIL_ON_UNKNOWN_PROPERTIES` 以容忍未知字段。
   ///
   /// @param objectMapper Jackson ObjectMapper（由 Spring 自动注入）
   public PubMedComputedAuthorParser(ObjectMapper objectMapper) {
     this.objectMapper =
-        objectMapper.copy().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        objectMapper.rebuild().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES).build();
   }
 
   /// 解析 JSON Lines 输入流。

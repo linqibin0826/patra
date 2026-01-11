@@ -1,6 +1,5 @@
 package com.patra.starter.batch.core;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.starter.batch.exception.BatchJobExecutionException;
 import java.util.Date;
@@ -9,14 +8,13 @@ import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-// Spring Batch 6.0: 核心类迁移到新包
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
-// Spring Batch 6.0: JobRepository 现在继承 JobExplorer 接口
 import org.springframework.batch.core.repository.JobRepository;
+import tools.jackson.databind.ObjectMapper;
 
 /// Job 启动辅助类。
 ///

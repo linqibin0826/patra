@@ -2,8 +2,6 @@ package com.patra.starter.provenance.pubmed.processor;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.model.CanonicalPublication;
@@ -39,6 +37,8 @@ import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /// PubMed 出版物数据处理器
 ///

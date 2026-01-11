@@ -1,6 +1,5 @@
 package com.patra.registry.infra.adapter.persistence.entity.expr;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,6 +11,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import tools.jackson.databind.JsonNode;
 
 /// 表达式能力 JPA 实体，映射到表 `reg_prov_expr_capability`。
 ///

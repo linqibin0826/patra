@@ -3,8 +3,6 @@ package com.patra.registry.infra.adapter.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException;
 import com.patra.registry.domain.model.vo.expr.ApiParamMapping;
@@ -40,6 +38,9 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// ExprRepositoryAdapter 集成测试。
 ///
@@ -86,7 +87,7 @@ class ExprRepositoryAdapterIT {
   private static final String TEST_ENDPOINT_NAME = "ESEARCH";
   private static final Instant TEST_TIMESTAMP = Instant.parse("2025-01-15T00:00:00Z");
   private static final Instant EFFECTIVE_FROM = Instant.parse("2025-01-01T00:00:00Z");
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
 
   private Long testProvenanceId;
 

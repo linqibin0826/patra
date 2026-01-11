@@ -6,7 +6,6 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.cqrs.CommandBus;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
 import com.patra.ingest.integration.config.IngestMySQLContainerInitializer;
@@ -26,6 +25,7 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import tools.jackson.databind.ObjectMapper;
 
 /// 任务就绪消息监听器集成测试。
 ///

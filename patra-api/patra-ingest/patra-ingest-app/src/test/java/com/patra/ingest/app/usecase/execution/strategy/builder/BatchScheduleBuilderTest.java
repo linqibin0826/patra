@@ -6,8 +6,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
 import com.patra.ingest.domain.exception.BatchSchedulingException;
@@ -27,6 +25,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * BatchScheduleBuilder 单元测试
@@ -59,7 +60,7 @@ class BatchScheduleBuilderTest {
 
   @BeforeEach
   void setUp() {
-    objectMapper = new ObjectMapper();
+    objectMapper = JsonMapper.builder().build();
 
     // 配置 mock 策略支持的 Provenance 代码
     when(mockStrategy1.getSupportedProvenanceCode()).thenReturn(ProvenanceCode.PUBMED);

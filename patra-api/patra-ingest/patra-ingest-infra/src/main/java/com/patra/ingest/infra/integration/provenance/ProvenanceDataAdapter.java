@@ -2,8 +2,6 @@ package com.patra.ingest.infra.integration.provenance;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.date.TimeInterval;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.model.DataType;
@@ -39,6 +37,8 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /// 数据源适配器
 ///
@@ -201,8 +201,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
 
     try {
       ObjectMapper mapper = JsonMapperHolder.getObjectMapper();
-      return mapper.readValue(
-          headersJson, new com.fasterxml.jackson.core.type.TypeReference<>() {});
+      return mapper.readValue(headersJson, new tools.jackson.core.type.TypeReference<>() {});
     } catch (Exception ex) {
       log.warn("解析Headers JSON失败: {}", headersJson, ex);
       return Map.of();

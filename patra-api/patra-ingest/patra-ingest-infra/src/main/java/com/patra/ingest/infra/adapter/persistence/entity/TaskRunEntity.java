@@ -1,6 +1,5 @@
 package com.patra.ingest.infra.adapter.persistence.entity;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.jpa.entity.ChildJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,6 +14,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import tools.jackson.databind.JsonNode;
 
 /// 任务执行记录 JPA 实体，映射到表 `ing_task_run`。
 ///

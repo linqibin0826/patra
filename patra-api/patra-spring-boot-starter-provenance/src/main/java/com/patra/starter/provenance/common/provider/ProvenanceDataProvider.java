@@ -1,6 +1,5 @@
 package com.patra.starter.provenance.common.provider;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
@@ -9,6 +8,7 @@ import com.patra.starter.provenance.common.processor.DataProcessor;
 import com.patra.starter.provenance.internal.metadata.PlanMetadata;
 import java.util.Optional;
 import java.util.Set;
+import tools.jackson.databind.JsonNode;
 
 /// 数据源提供者统一契约接口
 ///

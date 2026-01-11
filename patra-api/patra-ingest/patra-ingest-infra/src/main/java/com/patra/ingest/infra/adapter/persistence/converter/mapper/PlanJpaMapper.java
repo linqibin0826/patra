@@ -1,6 +1,5 @@
 package com.patra.ingest.infra.adapter.persistence.converter.mapper;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.json.JsonNodeMappings;
@@ -19,6 +18,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
+import tools.jackson.databind.ObjectMapper;
 
 /// 采集计划 JPA 实体转换器，负责领域对象与 JPA 实体转换。
 ///
@@ -124,7 +124,7 @@ public interface PlanJpaMapper {
   }
 
   @Named("windowSpecToJson")
-  static com.fasterxml.jackson.databind.JsonNode windowSpecToJson(WindowSpec spec) {
+  static tools.jackson.databind.JsonNode windowSpecToJson(WindowSpec spec) {
     if (spec == null) {
       return null;
     }
@@ -132,7 +132,7 @@ public interface PlanJpaMapper {
     return mapper.valueToTree(spec.toMap());
   }
 
-  static WindowSpec jsonToWindowSpec(com.fasterxml.jackson.databind.JsonNode json) {
+  static WindowSpec jsonToWindowSpec(tools.jackson.databind.JsonNode json) {
     if (json == null || json.isNull()) {
       return null;
     }

@@ -1,7 +1,5 @@
 package com.patra.ingest.infra.outbox;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.port.OutboxMessageRepository;
 import com.patra.ingest.domain.port.TechnicalRetryPort;
@@ -12,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /// 技术重试适配器（Infrastructure 层实现）
 ///
@@ -138,7 +138,7 @@ public class TechnicalRetryAdapter implements TechnicalRetryPort {
   private String serializeHeaders(RetryContext context) {
     try {
       return objectMapper.writeValueAsString(context.metadata());
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       log.error("序列化 metadata 失败，aggregateId={}", context.aggregateId(), e);
       return "{}";
     }

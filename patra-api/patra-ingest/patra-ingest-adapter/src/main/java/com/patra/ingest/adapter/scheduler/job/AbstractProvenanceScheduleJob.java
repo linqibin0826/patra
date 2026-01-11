@@ -1,8 +1,6 @@
 package com.patra.ingest.adapter.scheduler.job;
 
 import cn.hutool.core.text.CharSequenceUtil;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.cqrs.CommandBus;
 import com.patra.common.enums.Priority;
 import com.patra.common.enums.ProvenanceCode;
@@ -20,6 +18,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 /// 数据来源调度任务抽象基类。
 ///

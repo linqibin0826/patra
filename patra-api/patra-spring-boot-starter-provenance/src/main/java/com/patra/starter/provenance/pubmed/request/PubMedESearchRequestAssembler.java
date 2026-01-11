@@ -1,11 +1,11 @@
 package com.patra.starter.provenance.pubmed.request;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.provenance.api.params.PubMedParamKeys;
 import com.patra.common.provenance.api.values.pubmed.RetMode;
 import com.patra.common.provenance.api.values.pubmed.RetType;
 import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
+import tools.jackson.databind.JsonNode;
 
 /// PubMed ESearch 请求组装器
 ///

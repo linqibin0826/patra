@@ -1,6 +1,5 @@
 package com.patra.ingest.app.outbox.core;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.app.outbox.config.OutboxPublisherProperties;
 import com.patra.ingest.app.outbox.constants.OutboxAggregateTypes;
 import com.patra.ingest.app.outbox.metrics.OutboxMetrics;
@@ -17,6 +16,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 /// Outbox 消息发布的抽象基类。
 ///

@@ -1,8 +1,6 @@
 package com.patra.objectstorage.infra.adapter.persistence.converter.mapper;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.json.JsonMapperHolder;
 import com.patra.objectstorage.domain.model.aggregate.FileMetadata;
 import com.patra.objectstorage.domain.model.enums.FileStatus;
 import com.patra.objectstorage.domain.model.enums.StorageProvider;
@@ -15,6 +13,9 @@ import java.util.Locale;
 import java.util.Map;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /// 文件元数据 JPA 转换器。
 ///
@@ -29,7 +30,7 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface FileMetadataJpaMapper {
 
-  ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  ObjectMapper OBJECT_MAPPER = JsonMapperHolder.getObjectMapper();
   TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
   /// 将领域聚合根映射到其持久化表示。

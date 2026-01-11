@@ -3,7 +3,6 @@ package com.patra.ingest.domain.model.vo.batch;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
@@ -17,6 +16,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.node.JsonNodeFactory;
 
 /// {@link BatchSchedule} 的单元测试。
 ///

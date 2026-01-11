@@ -2,12 +2,13 @@ package com.patra.starter.provenance.pubmed.request;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 /// PubMedESearchRequestAssembler 单元测试
 ///
@@ -21,7 +22,7 @@ class PubMedESearchRequestAssemblerTest {
   @BeforeEach
   void setUp() {
     assembler = new PubMedESearchRequestAssembler();
-    objectMapper = new ObjectMapper();
+    objectMapper = JsonMapper.builder().build();
   }
 
   // ========== buildCount 测试 ==========
