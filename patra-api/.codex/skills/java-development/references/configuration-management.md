@@ -1,16 +1,15 @@
 # 配置管理指南
 
-## Spring Boot 3 配置加载机制
+## Spring Boot 配置加载机制
 
-Spring Boot 3 移除了 bootstrap context，配置优先级（由高到低）：
+Spring Boot 配置优先级（由高到低）：
 
 1. **命令行参数** - `--spring.datasource.url=...`
 2. **环境变量** - `SPRING_DATASOURCE_URL`
-3. **Nacos 配置中心** - 通过 `spring.config.import` 导入
-4. **application-{profile}.yaml** - 环境特定配置
-5. **application.yaml** - 基础配置
+3. **application-{profile}.yaml** - 环境特定配置
+4. **application.yaml** - 基础配置
 
-## Nacos 配置中心
+## Consul 服务发现
 
 ### 基础配置
 
@@ -20,54 +19,20 @@ spring:
   application:
     name: patra-catalog
   cloud:
-    nacos:
-      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
-      username: ${NACOS_USERNAME:nacos}
-      password: ${NACOS_PASSWORD:nacos}
-      config:
-        namespace: ${NACOS_NAMESPACE:}
-        group: ${NACOS_GROUP:DEFAULT_GROUP}
-        file-extension: yaml
-        refresh-enabled: true
-  config:
-    # Spring Boot 3 使用 spring.config.import 导入 Nacos 配置
-    import:
-      - optional:nacos:${spring.application.name}.yaml
-      - optional:nacos:${spring.application.name}-database.yaml?group=DATABASE_GROUP
+    consul:
+      host: ${CONSUL_HOST:localhost}
+      port: ${CONSUL_PORT:8500}
+      discovery:
+        service-name: ${spring.application.name}
+        health-check-interval: 10s
+        health-check-path: /actuator/health
+        instance-id: ${spring.application.name}:${random.value}
 ```
 
 **说明**：
-- `optional:` 前缀表示配置不存在时不会导致启动失败
-- 使用 `?group=XXX` 指定配置所属的 Group
-- 后加载的配置会覆盖先加载的配置
-
-### 动态配置刷新
-
-```java
-@RestController
-@RefreshScope  // 支持配置动态刷新
-public class ConfigController {
-    @Value("${app.feature.enabled:false}")
-    private boolean featureEnabled;
-}
-```
-
-### 配置类模式
-
-```java
-@Component
-@ConfigurationProperties(prefix = "app")
-@RefreshScope
-@Validated
-@Data
-public class AppConfig {
-    @NotBlank
-    private String name;
-
-    @Min(1) @Max(60)
-    private int timeout;
-}
-```
+- Consul 仅用于服务发现，不用于配置管理
+- 健康检查通过 Spring Boot Actuator 的 `/actuator/health` 端点
+- 实例 ID 使用随机值确保唯一性
 
 ## 环境配置
 
@@ -80,13 +45,13 @@ spring:
   application:
     name: patra-catalog
   cloud:
-    nacos:
-      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
-      config:
-        namespace: ${NACOS_NAMESPACE:}
-  config:
-    import:
-      - optional:nacos:${spring.application.name}.yaml
+    consul:
+      host: ${CONSUL_HOST:localhost}
+      port: ${CONSUL_PORT:8500}
+      discovery:
+        service-name: ${spring.application.name}
+        health-check-interval: 10s
+        health-check-path: /actuator/health
 ```
 
 ### application-dev.yaml（开发环境）
@@ -94,14 +59,9 @@ spring:
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/patra_dev
+    url: jdbc:mysql://localhost:13306/patra_catalog_dev
     username: root
-    password: dev_password
-  cloud:
-    nacos:
-      server-addr: localhost:8848
-      config:
-        namespace: dev
+    password: 123456
 
 logging:
   level:
@@ -116,11 +76,6 @@ spring:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
-  cloud:
-    nacos:
-      server-addr: ${NACOS_SERVER_ADDR}
-      config:
-        namespace: prod
 
 logging:
   level:
@@ -129,14 +84,32 @@ logging:
 
 **环境激活**：
 ```bash
-# 开发环境
-java -jar app.jar --spring.profiles.active=dev
+# 开发环境（默认）
+java -jar app.jar
 
 # 生产环境
 java -jar app.jar --spring.profiles.active=prod
 ```
 
-## 环境隔离
+## 配置类模式
+
+### 使用 @ConfigurationProperties
+
+```java
+@Component
+@ConfigurationProperties(prefix = "app")
+@Validated
+@Data
+public class AppConfig {
+    @NotBlank
+    private String name;
+
+    @Min(1) @Max(60)
+    private int timeout;
+}
+```
+
+### 环境隔离
 
 ```java
 @Configuration
@@ -196,50 +169,6 @@ spring:
     password: ${DB_PASSWORD}
 ```
 
-### 4. Spring Boot 3 配置导入
-
-```yaml
-spring:
-  config:
-    import:
-      # ✅ 使用 optional: 避免启动失败
-      - optional:nacos:${spring.application.name}.yaml
-      # ✅ 使用 Group 分组管理
-      - optional:nacos:database.yaml?group=DATABASE_GROUP
-```
-
-## Spring Boot 3 迁移指南
-
-### 从 Spring Boot 2.x 迁移
-
-**移除的功能**：
-- ❌ `bootstrap.yaml` / `bootstrap.properties` - 不再支持
-- ❌ Spring Cloud Bootstrap Context - 已移除
-
-**新的配置方式**：
-- ✅ 使用 `spring.config.import` 导入外部配置
-- ✅ 在 `application.yaml` 中配置 Nacos 连接信息
-
-**迁移示例**：
-
-```yaml
-# Spring Boot 2.x（bootstrap.yaml）❌
-spring:
-  cloud:
-    nacos:
-      config:
-        server-addr: localhost:8848
-
-# Spring Boot 3（application.yaml）✅
-spring:
-  cloud:
-    nacos:
-      server-addr: localhost:8848
-  config:
-    import:
-      - optional:nacos:${spring.application.name}.yaml
-```
-
 ## Patra 项目配置规范
 
 ### 配置文件结构
@@ -258,17 +187,15 @@ patra-{service}-boot/
 |------|----------|------|
 | 简单配置值 | `@Value` | `@Value("${app.timeout:30}")` |
 | 复杂配置对象 | `@ConfigurationProperties` | `@ConfigurationProperties("app")` |
-| 动态配置 | `@RefreshScope` + `@Value` | `@RefreshScope @Value("${app.feature}")` |
 | 环境特定 Bean | `@Profile` | `@Bean @Profile("prod")` |
 
 ### 强制规范
 
 ✅ **必须遵守**：
-1. Spring Boot 3 项目禁止使用 `bootstrap.yaml`
-2. 使用 `spring.config.import` 导入 Nacos 配置
-3. 仅使用 dev 和 prod 两个环境
-4. 生产环境敏感信息通过环境变量注入
-5. 所有配置属性必须提供默认值
+1. 仅使用 dev 和 prod 两个环境
+2. 生产环境敏感信息通过环境变量注入
+3. 所有配置属性必须提供默认值
+4. 服务发现使用 Consul
 
 ❌ **禁止行为**：
 1. 硬编码敏感信息（密码、密钥、Token）
@@ -283,18 +210,17 @@ patra-{service}-boot/
 - 提交到 Git 仓库
 
 **生产环境**：
-- 在 Nacos 控制台修改配置
-- 应用自动刷新（`@RefreshScope` 生效）
+- 修改环境变量或配置文件
+- 重启应用生效
 
 ## 故障排查
 
 ### 配置不生效检查清单
 
 ```
-1. [ ] 确认没有使用 bootstrap.yaml（Spring Boot 3 不支持）
-2. [ ] 检查 spring.config.import 是否正确配置
-3. [ ] 检查 @RefreshScope 注解是否添加
-4. [ ] 检查 Nacos namespace 和 group 是否正确
-5. [ ] 检查配置的 Data ID 是否匹配
-6. [ ] 查看应用日志中的配置加载信息
+1. [ ] 检查环境变量是否正确设置
+2. [ ] 检查 profile 是否正确激活
+3. [ ] 检查配置文件名称是否正确（application-{profile}.yaml）
+4. [ ] 查看应用日志中的配置加载信息
+5. [ ] 确认 Consul 服务发现配置是否正确
 ```
