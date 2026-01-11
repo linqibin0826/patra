@@ -14,9 +14,7 @@
 
     <spring-boot.version>3.5.7</spring-boot.version>
 
-    <!-- Align versions with Spring Cloud Alibaba by importing the BOM; choose specific versions according to the compatibility matrix. -->
     <spring-cloud.version>2025.0.0</spring-cloud.version>
-    <spring-cloud-alibaba.version>2025.0.0.0</spring-cloud-alibaba.version>
 
     <lombok.version>1.18.40</lombok.version>
     <mapstruct.version>1.6.3</mapstruct.version>
@@ -104,16 +102,6 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-
-      <!-- Spring Cloud Alibaba BOM (for Nacos, Sentinel, etc.). -->
-      <dependency>
-        <groupId>com.alibaba.cloud</groupId>
-        <artifactId>spring-cloud-alibaba-dependencies</artifactId>
-        <version>${spring-cloud-alibaba.version}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-
 
       <!-- Resilience4j -->
       <dependency>
@@ -443,7 +431,7 @@
         <version>2.14.0</version>
       </dependency>
 
-      <!-- Fastjson2 - Resolve version conflict between RocketMQ and Spring Cloud Alibaba -->
+      <!-- Fastjson2 - Required by RocketMQ -->
       <dependency>
         <groupId>com.alibaba.fastjson2</groupId>
         <artifactId>fastjson2</artifactId>
