@@ -77,6 +77,8 @@ public class RocketMQContainerSupport {
 
     log.info("加载 Docker Compose 配置: {}", composeFile.getAbsolutePath());
 
+    // Testcontainers 2.0: 单参数构造函数默认使用本地 docker-compose 二进制文件
+    // withLocalCompose(boolean) 方法已在 2.0 版本移除
     this.composeContainer =
         new ComposeContainer(composeFile)
             .withExposedService(
@@ -87,8 +89,7 @@ public class RocketMQContainerSupport {
                 "broker",
                 BROKER_PORT,
                 Wait.forLogMessage(".*The broker.*boot success.*", 1)
-                    .withStartupTimeout(Duration.ofMinutes(2)))
-            .withLocalCompose(true);
+                    .withStartupTimeout(Duration.ofMinutes(2)));
   }
 
   /// 启动 RocketMQ 容器。

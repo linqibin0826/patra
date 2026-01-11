@@ -43,13 +43,9 @@ spring:
   # ========================================
   # JSON Serialization Configuration
   # ========================================
-  jackson:
-    serialization:
-      # Use ISO-8601 format for dates instead of timestamps
-      write-dates-as-timestamps: false
-    deserialization:
-      # Tolerate unknown properties for forward compatibility
-      fail-on-unknown-properties: false
+  # 注意：Spring Boot 4.0 + Jackson 3.x 中 write-dates-as-timestamps 和 fail-on-unknown-properties
+  # 已不再是有效的配置属性。Jackson 3.x 默认使用 ISO-8601 格式序列化日期，
+  # 未知属性的处理通过 ObjectMapper 配置或 @JsonIgnoreProperties 注解控制。
 
   # ========================================
   # Database Configuration
