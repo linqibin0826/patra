@@ -242,14 +242,13 @@ spring:
     password: ${DB_PASSWORD:password}
 
   cloud:
-    nacos:
+    consul:
+      host: ${CONSUL_HOST:localhost}
+      port: ${CONSUL_PORT:8500}
       discovery:
-        server-addr: ${NACOS_SERVER:localhost:8848}
-        namespace: ${NACOS_NAMESPACE:dev}
-      config:
-        server-addr: ${NACOS_SERVER:localhost:8848}
-        namespace: ${NACOS_NAMESPACE:dev}
-        file-extension: yaml
+        service-name: ${spring.application.name}
+        health-check-interval: 10s
+        health-check-path: /actuator/health
 
 spring:
   jpa:
@@ -270,7 +269,7 @@ spring:
 | Spring Cloud | 2025.0.0 | 微服务框架 |
 | Spring Data JPA | (Spring Boot 管理) | ORM 框架 |
 | MapStruct | 1.6.5+ | 对象映射 |
-| Nacos | 2025.0.0.0 | 服务注册与配置中心 |
+| Consul | 1.18+ | 服务注册中心 |
 | MySQL | 8.0+ | 数据库 |
 | Flyway | 10.30.0+ | 数据库迁移工具 |
 | Hutool | 5.8.36+ | 工具库 |
@@ -282,7 +281,7 @@ spring:
 - **JDK 25+**: 确保安装 Java 25 或更高版本
 - **Maven 3.9.9+**: 用于构建和依赖管理
 - **MySQL 8.0+**: 数据库服务
-- **Nacos**: 服务注册与配置中心(开发环境可选)
+- **Consul**: 服务注册中心(开发环境可选)
 
 ### 本地启动
 
@@ -295,8 +294,8 @@ mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS patra_storage CHARACTER SET u
 ```bash
 export DB_USERNAME=root
 export DB_PASSWORD=your_password
-export NACOS_SERVER=localhost:8848
-export NACOS_NAMESPACE=dev
+export CONSUL_HOST=localhost
+export CONSUL_PORT=8500
 ```
 
 3. **编译并启动**:
@@ -312,8 +311,8 @@ cd patra-object-storage-boot
 # 检查健康端点
 curl http://localhost:8080/actuator/health
 
-# 查看服务注册(如果使用 Nacos)
-curl http://localhost:8848/nacos/v1/ns/instance/list?serviceName=patra-object-storage
+# 查看服务注册（Consul）
+curl http://localhost:8500/v1/catalog/service/patra-object-storage
 ```
 
 ### 代码规范
@@ -335,7 +334,7 @@ curl http://localhost:8848/nacos/v1/ns/instance/list?serviceName=patra-object-st
 **Q: Feign 调用超时**
 - **原因**: 网络延迟或服务未启动
 - **解决**:
-  - 检查 Nacos 服务注册状态
+  - 检查 Consul 服务注册状态
   - 增加 Feign 超时配置: `feign.client.config.default.connectTimeout=5000`
 
 **Q: Flyway 迁移失败**

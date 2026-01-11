@@ -9,7 +9,7 @@
 ## 核心职责
 
 - **请求路由**: 根据请求路径将流量分发到正确的微服务(patra-registry、patra-ingest 等)
-- **服务发现**: 通过 Nacos 自动发现和注册后端服务实例
+- **服务发现**: 通过 Consul 自动发现和注册后端服务实例
 - **负载均衡**: 使用 Spring Cloud LoadBalancer 在多个服务实例间分配请求
 - **统一入口**: 为所有 Patra API 提供单一访问点,简化客户端配置
 - **请求日志**: 集成分布式追踪,记录请求和响应以便问题诊断
@@ -21,7 +21,7 @@ patra-gateway-boot/
 ├── src/main/java/com/patra/gateway/
 │   └── PatraGatewayApplication.java    # Spring Boot 启动类
 ├── src/main/resources/
-│   ├── application.yml                 # 主配置文件(路由、Nacos)
+│   ├── application.yml                 # 主配置文件(路由、Consul)
 │   ├── application-dev.yml             # 开发环境配置(DEBUG 日志)
 │   └── application-prod.yml            # 生产环境配置
 └── pom.xml                             # Maven 依赖定义
@@ -63,17 +63,19 @@ spring:
 - `predicates`: 匹配条件,这里按路径前缀匹配
 - `filters`: 请求处理过滤器,`StripPrefix=1` 会移除路径的第一段
 
-### Nacos 集成
-通过 Spring Cloud Alibaba Nacos 实现服务发现和配置管理:
+### Consul 集成
+通过 Spring Cloud Consul 实现服务发现:
 
 ```yaml
 spring:
   cloud:
-    nacos:
-      server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+    consul:
+      host: ${CONSUL_HOST:localhost}
+      port: ${CONSUL_PORT:8500}
       discovery:
-        namespace: ${NACOS_NAMESPACE_ID:public}
-        group: ${NACOS_DISCOVERY_GROUP:DEFAULT_GROUP}
+        service-name: ${spring.application.name}
+        health-check-interval: 10s
+        health-check-path: /actuator/health
 ```
 
 ## 路由示例
@@ -103,14 +105,12 @@ GET http://patra-registry:8081/provenance/pubmed
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
 | `SPRING_PROFILES_ACTIVE` | 激活的配置文件 | `dev` |
-| `NACOS_ADDR` | Nacos 服务器地址 | `127.0.0.1:8848` |
-| `NACOS_USERNAME` | Nacos 用户名 | `nacos` |
-| `NACOS_PASSWORD` | Nacos 密码 | `nacos` |
-| `NACOS_NAMESPACE_ID` | Nacos 命名空间 ID | `public` |
+| `CONSUL_HOST` | Consul 服务器地址 | `localhost` |
+| `CONSUL_PORT` | Consul 端口 | `8500` |
 
 ### 端口配置
 - **默认端口**: 9528
-- **Nacos 端口**: 8848
+- **Consul 端口**: 8500
 
 ### 日志配置
 开发环境下启用 DEBUG 级别日志以便调试路由和负载均衡:
@@ -157,8 +157,7 @@ management:
 | **Spring Boot** | 3.5.7 |
 | **Spring Cloud Gateway** | 2025.0.0 |
 | **Spring Cloud LoadBalancer** | 用于客户端负载均衡 |
-| **Nacos Discovery** | 服务发现和注册 |
-| **Nacos Config** | 动态配置管理 |
+| **Consul Discovery** | 服务发现和注册 |
 | **patra-spring-boot-starter-core** | Patra 核心 starter |
 
 ---
