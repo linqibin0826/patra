@@ -80,17 +80,4 @@ public interface PlanDao extends JpaRepository<PlanEntity, Long> {
       """)
   int batchUpdateStatus(
       @Param("planIds") Collection<Long> planIds, @Param("statusCode") String statusCode);
-
-  /// 软删除计划。
-  ///
-  /// @param planId 计划 ID
-  /// @return 受影响行数
-  @Modifying
-  @Query(
-      """
-      UPDATE PlanEntity p
-      SET p.deletedAt = CURRENT_TIMESTAMP, p.version = p.version + 1
-      WHERE p.id = :planId AND p.deletedAt IS NULL
-      """)
-  int softDeleteById(@Param("planId") Long planId);
 }

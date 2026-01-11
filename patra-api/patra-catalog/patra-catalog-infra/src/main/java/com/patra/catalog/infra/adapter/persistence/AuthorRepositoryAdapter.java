@@ -12,7 +12,6 @@ import com.patra.catalog.infra.adapter.persistence.entity.AuthorNameVariantEntit
 import com.patra.catalog.infra.adapter.persistence.entity.AuthorOrcidEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
-import java.time.Instant;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -174,14 +173,8 @@ public class AuthorRepositoryAdapter implements AuthorRepository {
       return;
     }
 
-    authorDao
-        .findById(id.value())
-        .ifPresent(
-            entity -> {
-              entity.setDeletedAt(Instant.now());
-              authorDao.save(entity);
-              log.debug("作者软删除完成，ID：{}", id.value());
-            });
+    authorDao.deleteById(id.value());
+    log.debug("作者软删除完成，ID：{}", id.value());
   }
 
   @Override

@@ -59,7 +59,6 @@ public interface PlanJpaMapper {
   @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
-  @Mapping(target = "deletedAt", ignore = true)
   PlanEntity toEntity(PlanAggregate aggregate);
 
   /// 后处理钩子：为 TIME 策略填充反规范化时间戳字段。

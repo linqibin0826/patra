@@ -51,9 +51,6 @@ public class FileMetadata {
   /// 过期时间
   private Instant expiresAt;
 
-  /// 删除时间
-  private Instant deletedAt;
-
   /// 记录备注(JSON格式)
   private String recordRemarks;
 
@@ -138,7 +135,6 @@ public class FileMetadata {
   /// @param status 文件生命周期状态
   /// @param uploadedAt 上传时间戳
   /// @param expiresAt 过期时间戳
-  /// @param deletedAt 逻辑删除时间戳（null 表示未删除）
   /// @param recordRemarks 审计备注载荷
   /// @param version 乐观锁版本
   /// @param ipAddress 以二进制存储的请求者IP
@@ -160,7 +156,6 @@ public class FileMetadata {
       FileStatus status,
       Instant uploadedAt,
       Instant expiresAt,
-      Instant deletedAt,
       String recordRemarks,
       Long version,
       byte[] ipAddress,
@@ -181,7 +176,6 @@ public class FileMetadata {
     metadata.status = status;
     metadata.uploadedAt = uploadedAt;
     metadata.expiresAt = expiresAt;
-    metadata.deletedAt = deletedAt;
     metadata.recordRemarks = recordRemarks;
     metadata.version = version;
     metadata.ipAddress = ipAddress == null ? null : ipAddress.clone();
@@ -254,8 +248,8 @@ public class FileMetadata {
 
   /// 将文件标记为已删除,同时保留审计追踪。
   ///
-  /// 软删除操作,将状态更新为 DELETED,设置删除时间戳,并更新审计信息。
-  /// `deletedAt` 时间戳同时用作逻辑删除标记（null = 未删除）。
+  /// 软删除操作,将状态更新为 DELETED 并更新审计信息。
+  /// 实际的软删除（`deleted_at` 列）由 JPA `@SoftDelete` 注解在仓储层处理。
   ///
   /// @param operatorId 执行删除的操作员标识符
   /// @param operatorName 操作员显示名称
@@ -265,7 +259,6 @@ public class FileMetadata {
       throw new IllegalStateException("文件已被删除");
     }
     this.status = FileStatus.DELETED;
-    this.deletedAt = Instant.now();
     touchAudit(operatorId, operatorName);
   }
 

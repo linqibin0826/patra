@@ -21,7 +21,6 @@ import java.util.Map;
 ///
 /// // 创建已删除的文件元数据
 /// FileMetadata metadata = FileMetadataTestDataBuilder.aDeletedFile()
-///     .deletedAt(Instant.now())
 ///     .buildRestored();
 ///
 /// // 创建完全自定义的文件元数据
@@ -51,7 +50,6 @@ public class FileMetadataTestDataBuilder {
   // ========== 时间戳字段 ==========
   private Instant uploadedAt = Instant.parse("2024-01-01T10:00:00Z");
   private Instant expiresAt;
-  private Instant deletedAt;
 
   // ========== 审计字段 ==========
   private String recordRemarks;
@@ -91,13 +89,12 @@ public class FileMetadataTestDataBuilder {
   ///
   /// 包含以下默认配置：
   ///
-  /// - 状态: DELETED
-  ///   - 删除时间: 当前时间（deletedAt 非空表示已删除）
+  /// - 状态: DELETED（仅通过状态标记删除，实际的 deletedAt 时间戳由 JPA @SoftDelete 管理）
   ///   - 其他字段同 {@link #anActiveFile()}
   ///
   /// @return 文件元数据构建器
   public static FileMetadataTestDataBuilder aDeletedFile() {
-    return new FileMetadataTestDataBuilder().status(FileStatus.DELETED).deletedAt(Instant.now());
+    return new FileMetadataTestDataBuilder().status(FileStatus.DELETED);
   }
 
   /// 创建默认的已过期文件构建器。
@@ -164,11 +161,6 @@ public class FileMetadataTestDataBuilder {
 
   public FileMetadataTestDataBuilder expiresAt(Instant expiresAt) {
     this.expiresAt = expiresAt;
-    return this;
-  }
-
-  public FileMetadataTestDataBuilder deletedAt(Instant deletedAt) {
-    this.deletedAt = deletedAt;
     return this;
   }
 
@@ -274,7 +266,6 @@ public class FileMetadataTestDataBuilder {
   ///   - 状态自动设置为 ACTIVE
   ///   - 上传时间、创建时间、更新时间自动设置为当前时间
   ///   - 版本号为 0
-  ///   - deletedAt 为 null（表示未删除）
   ///
   /// @return FileMetadata 实例
   public FileMetadata build() {
@@ -319,7 +310,6 @@ public class FileMetadataTestDataBuilder {
         status,
         uploadedAt,
         expiresAt,
-        deletedAt,
         recordRemarks,
         version,
         ipAddress,

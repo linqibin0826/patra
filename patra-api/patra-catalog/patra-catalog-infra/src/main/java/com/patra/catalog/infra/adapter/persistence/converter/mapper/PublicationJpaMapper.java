@@ -68,7 +68,6 @@ public abstract class PublicationJpaMapper {
   @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
-  @Mapping(target = "deletedAt", ignore = true)
   public abstract PublicationEntity toEntity(PublicationAggregate aggregate);
 
   /// 将 JPA 实体转换为聚合根。

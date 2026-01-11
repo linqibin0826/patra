@@ -80,7 +80,6 @@ public abstract class VenueJpaMapper {
   @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
-  @Mapping(target = "deletedAt", ignore = true)
   public abstract VenueEntity toEntity(VenueAggregate aggregate);
 
   /// 将聚合根转换为 JPA 实体，并设置快速访问字段。
