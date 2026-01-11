@@ -26,6 +26,7 @@ import com.patra.registry.infra.adapter.persistence.entity.provenance.ProvRetryC
 import com.patra.registry.infra.adapter.persistence.entity.provenance.ProvWindowOffsetCfgEntity;
 import com.patra.registry.infra.adapter.persistence.entity.provenance.ProvenanceEntity;
 import com.patra.registry.infra.config.RegistryMySQLContainerInitializer;
+import com.patra.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
@@ -39,7 +40,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
@@ -71,7 +74,12 @@ import org.springframework.test.context.ContextConfiguration;
 @DataJpaTest
 @ContextConfiguration(initializers = RegistryMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({ProvenanceConfigRepositoryAdapter.class, JpaAuditingConfig.class})
+@ImportAutoConfiguration(FlywayAutoConfiguration.class)
+@Import({
+  ProvenanceConfigRepositoryAdapter.class,
+  JpaAuditingConfig.class,
+  HibernatePropertiesCustomizer.class
+})
 @ComponentScan(basePackages = "com.patra.registry.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("ProvenanceConfigRepositoryAdapter 集成测试")
