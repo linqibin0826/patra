@@ -19,12 +19,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.explore.JobExplorer;
+import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.JobInstance;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.launch.JobExecutionAlreadyRunningException;
 import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
+import org.springframework.batch.core.repository.JobRepository;
 
 /// {@link JobLauncherHelper} 单元测试
 ///
@@ -35,7 +36,7 @@ class JobLauncherHelperTest {
 
   @Mock private JobLauncher jobLauncher;
 
-  @Mock private JobExplorer jobExplorer;
+  @Mock private JobRepository jobRepository;
 
   @Mock private Job job;
 
@@ -43,7 +44,15 @@ class JobLauncherHelperTest {
 
   @BeforeEach
   void setUp() {
-    jobLauncherHelper = new JobLauncherHelper(jobLauncher, jobExplorer);
+    jobLauncherHelper = new JobLauncherHelper(jobLauncher, jobRepository);
+  }
+
+  /// 创建用于测试的 JobExecution 实例。
+  ///
+  /// Spring Batch 6.0：JobExecution 构造函数需要 JobInstance 和 JobParameters。
+  private JobExecution createJobExecution(long id) {
+    JobInstance jobInstance = new JobInstance(id, "testJob");
+    return new JobExecution(id, jobInstance, new JobParameters());
   }
 
   /// 测试用 JobParams 实现
@@ -70,7 +79,7 @@ class JobLauncherHelperTest {
               .doubleParam(3.14)
               .build();
 
-      JobExecution mockExecution = new JobExecution(123L);
+      JobExecution mockExecution = createJobExecution(123L);
       when(job.getName()).thenReturn("testJob");
       when(jobLauncher.run(eq(job), any(JobParameters.class))).thenReturn(mockExecution);
 
@@ -94,7 +103,7 @@ class JobLauncherHelperTest {
       // Given
       TestJobParams params = TestJobParams.builder().stringParam("test").build();
 
-      JobExecution mockExecution = new JobExecution(456L);
+      JobExecution mockExecution = createJobExecution(456L);
       when(job.getName()).thenReturn("testJob");
       when(jobLauncher.run(eq(job), any(JobParameters.class))).thenReturn(mockExecution);
 
@@ -115,7 +124,7 @@ class JobLauncherHelperTest {
       // Given
       TestJobParams params = TestJobParams.builder().stringParam("test").build();
 
-      JobExecution mockExecution = new JobExecution(789L);
+      JobExecution mockExecution = createJobExecution(789L);
       when(job.getName()).thenReturn("testJob");
       when(jobLauncher.run(eq(job), any(JobParameters.class))).thenReturn(mockExecution);
 
@@ -135,7 +144,7 @@ class JobLauncherHelperTest {
       // Given
       TestJobParams params = TestJobParams.builder().stringParam("test").build();
 
-      JobExecution mockExecution = new JobExecution(111L);
+      JobExecution mockExecution = createJobExecution(111L);
       when(job.getName()).thenReturn("testJob");
       when(jobLauncher.run(eq(job), any(JobParameters.class))).thenReturn(mockExecution);
 
@@ -174,7 +183,7 @@ class JobLauncherHelperTest {
               .doubleParam(null)
               .build();
 
-      JobExecution mockExecution = new JobExecution(222L);
+      JobExecution mockExecution = createJobExecution(222L);
       when(job.getName()).thenReturn("testJob");
       when(jobLauncher.run(eq(job), any(JobParameters.class))).thenReturn(mockExecution);
 
@@ -199,8 +208,8 @@ class JobLauncherHelperTest {
     void findJobExecution_WhenExists_ShouldReturnExecution() {
       // Given
       Long executionId = 999L;
-      JobExecution expectedExecution = new JobExecution(executionId);
-      when(jobExplorer.getJobExecution(executionId)).thenReturn(expectedExecution);
+      JobExecution expectedExecution = createJobExecution(executionId);
+      when(jobRepository.getJobExecution(executionId)).thenReturn(expectedExecution);
 
       // When
       var result = jobLauncherHelper.findJobExecution(executionId);
@@ -213,7 +222,7 @@ class JobLauncherHelperTest {
     void findJobExecution_WhenNotExists_ShouldReturnEmpty() {
       // Given
       Long executionId = 404L;
-      when(jobExplorer.getJobExecution(executionId)).thenReturn(null);
+      when(jobRepository.getJobExecution(executionId)).thenReturn(null);
 
       // When
       var result = jobLauncherHelper.findJobExecution(executionId);

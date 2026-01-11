@@ -3,10 +3,10 @@ package com.patra.catalog.infra.adapter.batch.venue;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.ItemProcessListener;
-import org.springframework.batch.core.ItemReadListener;
-import org.springframework.batch.core.ItemWriteListener;
-import org.springframework.batch.item.Chunk;
+import org.springframework.batch.core.listener.ItemProcessListener;
+import org.springframework.batch.core.listener.ItemReadListener;
+import org.springframework.batch.core.listener.ItemWriteListener;
+import org.springframework.batch.infrastructure.item.Chunk;
 import org.springframework.stereotype.Component;
 
 /// Venue 导入全阶段错误监听器。

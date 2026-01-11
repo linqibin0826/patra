@@ -28,8 +28,8 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.batch.item.ExecutionContext;
-import org.springframework.batch.item.ItemStreamException;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
+import org.springframework.batch.infrastructure.item.ItemStreamException;
 
 /// VenueInitializeItemReader 集成测试。
 ///
@@ -52,9 +52,9 @@ import org.springframework.batch.item.ItemStreamException;
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
-@DisplayName("VenueInitializeItemReader 集成测试")
+@DisplayName("VenueInitializeItemReader 单元测试")
 @Timeout(value = 5, unit = TimeUnit.SECONDS)
-class VenueInitializeItemReaderIT {
+class VenueInitializeItemReaderTest {
 
   private static final String FILE_INDEX_KEY = "venue.import.file.index";
   private static final String LINE_INDEX_KEY = "venue.import.line.index";

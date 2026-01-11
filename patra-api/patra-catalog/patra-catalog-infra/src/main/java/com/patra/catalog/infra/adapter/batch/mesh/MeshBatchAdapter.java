@@ -4,7 +4,7 @@ import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
 import com.patra.catalog.domain.port.batch.MeshBatchPort;
 import com.patra.starter.batch.core.JobLauncherHelper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.Job;
+import org.springframework.batch.core.job.Job;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 

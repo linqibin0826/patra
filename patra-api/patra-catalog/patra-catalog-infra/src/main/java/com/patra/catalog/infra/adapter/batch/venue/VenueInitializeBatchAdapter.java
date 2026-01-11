@@ -5,7 +5,7 @@ import com.patra.catalog.domain.port.batch.VenueInitializeBatchPort;
 import com.patra.starter.batch.core.JobLauncherHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.Job;
+import org.springframework.batch.core.job.Job;
 import org.springframework.stereotype.Component;
 
 /// OpenAlex Venue 批量导入端口适配器。

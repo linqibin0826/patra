@@ -9,12 +9,14 @@ import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersBuilder;
-import org.springframework.batch.core.explore.JobExplorer;
+// Spring Batch 6.0: 核心类迁移到新包
+import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
+// Spring Batch 6.0: JobRepository 现在继承 JobExplorer 接口
+import org.springframework.batch.core.repository.JobRepository;
 
 /// Job 启动辅助类。
 ///
@@ -52,7 +54,8 @@ import org.springframework.batch.core.launch.JobLauncher;
 public class JobLauncherHelper {
 
   private final JobLauncher jobLauncher;
-  private final JobExplorer jobExplorer;
+  /// Spring Batch 6.0: JobRepository 继承 JobExplorer，提供统一的查询和持久化接口。
+  private final JobRepository jobRepository;
 
   /// 启动 Job（默认添加 timestamp，每次创建新实例）。
   ///
@@ -146,9 +149,12 @@ public class JobLauncherHelper {
 
   /// 查询 Job 执行状态。
   ///
+  /// **Spring Batch 6.0**：`JobRepository` 现在继承 `JobExplorer` 接口，
+  /// 可直接调用 `getJobExecution()` 方法。
+  ///
   /// @param executionId JobExecution ID
   /// @return JobExecution（如果存在）
   public Optional<JobExecution> findJobExecution(Long executionId) {
-    return Optional.ofNullable(jobExplorer.getJobExecution(executionId));
+    return Optional.ofNullable(jobRepository.getJobExecution(executionId));
   }
 }
