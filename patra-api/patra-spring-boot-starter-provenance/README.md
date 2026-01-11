@@ -706,7 +706,7 @@ public class CustomProvenanceDataProvider implements ProvenanceDataProvider {
 
 ## 技术栈
 
-- Spring Boot 3.5.7
+- Spring Boot 4.0.1
 - **Spring Web** (RestClient)
 - Jackson (JSON/XML)
 - Micrometer（可选）

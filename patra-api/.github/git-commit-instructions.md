@@ -37,7 +37,7 @@
 | `style` | 代码格式（不影响功能） | `style(domain): 格式化 BatchPlan 类代码` |
 | `refactor` | 重构（不改变功能） | `refactor(app): 提取校验逻辑到领域层` |
 | `test` | 测试相关 | `test(domain): 为 BatchPlan 聚合根添加单元测试` |
-| `chore` | 构建/工具/依赖 | `chore: 升级 Spring Boot 到 3.5.7` |
+| `chore` | 构建/工具/依赖 | `chore: 升级 Spring Boot 到 4.0.1` |
 | `perf` | 性能优化 | `perf(test): 优化 GenericBatchExecutor 重试测试延迟` |
 | `ci` | CI/CD 配置 | `ci: 优化 CI 流程，减少无代码变更时的构建` |
 | `build` | 构建系统变更 | `build: 更新 Maven wrapper 到 3.9.9` |

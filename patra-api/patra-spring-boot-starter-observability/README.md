@@ -45,7 +45,7 @@
 > **注意**：
 > - Tracing 由 OTel Java Agent 自动处理，无需额外的 ObservationHandler
 > - 批处理可观测性已迁移至 `patra-spring-boot-starter-batch`，使用 Spring Batch 原生 `BatchObservabilityBeanPostProcessor`
-> - HTTP 客户端观测由 Spring Boot 3.x 内置的 `RestClient.Builder` 自动配置处理
+> - HTTP 客户端观测由 Spring Boot 4.0 内置的 `RestClient.Builder` 自动配置处理
 
 ## 快速开始
 

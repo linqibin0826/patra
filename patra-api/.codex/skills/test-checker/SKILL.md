@@ -32,7 +32,7 @@ metadata:
 
 ## 2. Mock 策略检查（高频）
 
-- Spring Boot 3.4+：统一使用 `@MockitoBean`，禁止废弃的 `@MockBean`
+- 使用 `@MockitoBean` 进行 Mock 注入（`@MockBean` 已在 Spring Boot 4.0 中移除）
 - Domain：禁止任何 Mock
 - Infrastructure：尽量用容器/真实组件验证映射与约束，避免 Mock Repository/Mapper
 
