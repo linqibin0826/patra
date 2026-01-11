@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.time.Duration;
 import java.time.Instant;
+import org.hibernate.annotations.SoftDelete;
+import org.hibernate.annotations.SoftDeleteType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -11,15 +13,16 @@ import org.junit.jupiter.api.Test;
 
 /// {@link SoftDeletableJpaEntity} 实体基类单元测试。
 ///
-/// 测试策略: 纯单元测试，验证实体基类的字段和方法行为。
+/// 测试策略: 纯单元测试，验证实体基类的结构和注解配置。
 ///
 /// 测试覆盖:
 ///
 /// - ✅ 继承验证 - 继承自 BaseJpaEntity
-/// - ✅ 软删除字段 - deletedAt 字段行为
-/// - ✅ 软删除方法 - softDelete() 和 isDeleted() 方法
+/// - ✅ 注解配置 - @SoftDelete 注解配置正确
 /// - ✅ Builder 模式 - Lombok @SuperBuilder 支持
-/// - ✅ 接口实现 - 实现 SoftDeletable 接口
+///
+/// 注意: `@SoftDelete` 由 Hibernate 内部管理 `deleted_at` 列，
+/// 应用层不再直接访问该字段。软删除通过 `repository.delete()` 触发。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -42,13 +45,6 @@ class SoftDeletableJpaEntityTest {
     void shouldExtendBaseJpaEntity() {
       // Given & When & Then
       assertThat(entity).isInstanceOf(BaseJpaEntity.class);
-    }
-
-    @Test
-    @DisplayName("应该实现 SoftDeletable 接口")
-    void shouldImplementSoftDeletable() {
-      // Given & When & Then
-      assertThat(entity).isInstanceOf(SoftDeletable.class);
     }
 
     @Test
@@ -101,99 +97,37 @@ class SoftDeletableJpaEntityTest {
   }
 
   @Nested
-  @DisplayName("软删除字段测试")
-  class SoftDeleteFieldTests {
+  @DisplayName("@SoftDelete 注解配置测试")
+  class SoftDeleteAnnotationTests {
 
     @Test
-    @DisplayName("新实体的 deletedAt 应该为 null")
-    void newEntityShouldHaveNullDeletedAt() {
+    @DisplayName("SoftDeletableJpaEntity 应该有 @SoftDelete 注解")
+    void shouldHaveSoftDeleteAnnotation() {
       // Given & When
-      TestEntity newEntity = new TestEntity();
+      SoftDelete annotation = SoftDeletableJpaEntity.class.getAnnotation(SoftDelete.class);
 
       // Then
-      assertThat(newEntity.getDeletedAt()).isNull();
+      assertThat(annotation).isNotNull();
     }
 
     @Test
-    @DisplayName("应该能够设置和获取 deletedAt")
-    void shouldSetAndGetDeletedAt() {
-      // Given
-      Instant expectedDeletedAt = Instant.now();
-
-      // When
-      entity.setDeletedAt(expectedDeletedAt);
+    @DisplayName("@SoftDelete 应该使用 TIMESTAMP 策略")
+    void shouldUseTimestampStrategy() {
+      // Given & When
+      SoftDelete annotation = SoftDeletableJpaEntity.class.getAnnotation(SoftDelete.class);
 
       // Then
-      assertThat(entity.getDeletedAt()).isEqualTo(expectedDeletedAt);
+      assertThat(annotation.strategy()).isEqualTo(SoftDeleteType.TIMESTAMP);
     }
 
     @Test
-    @DisplayName("应该能够将 deletedAt 设置为 null")
-    void shouldSetDeletedAtToNull() {
-      // Given
-      entity.setDeletedAt(Instant.now());
-      assertThat(entity.getDeletedAt()).isNotNull();
-
-      // When
-      entity.setDeletedAt(null);
+    @DisplayName("@SoftDelete 应该使用 deleted_at 列名")
+    void shouldUseDeletedAtColumnName() {
+      // Given & When
+      SoftDelete annotation = SoftDeletableJpaEntity.class.getAnnotation(SoftDelete.class);
 
       // Then
-      assertThat(entity.getDeletedAt()).isNull();
-    }
-  }
-
-  @Nested
-  @DisplayName("软删除方法测试")
-  class SoftDeleteMethodTests {
-
-    @Test
-    @DisplayName("softDelete() 应该设置 deletedAt 为当前时间")
-    void softDeleteShouldSetDeletedAtToCurrentTime() {
-      // Given
-      Instant before = Instant.now();
-
-      // When
-      entity.softDelete();
-
-      // Then
-      Instant after = Instant.now();
-      assertThat(entity.getDeletedAt())
-          .isNotNull()
-          .isAfterOrEqualTo(before)
-          .isBeforeOrEqualTo(after);
-    }
-
-    @Test
-    @DisplayName("isDeleted() 应该在 deletedAt 为 null 时返回 false")
-    void isDeletedShouldReturnFalseWhenDeletedAtIsNull() {
-      // Given
-      entity.setDeletedAt(null);
-
-      // When & Then
-      assertThat(entity.isDeleted()).isFalse();
-    }
-
-    @Test
-    @DisplayName("isDeleted() 应该在 deletedAt 有值时返回 true")
-    void isDeletedShouldReturnTrueWhenDeletedAtHasValue() {
-      // Given
-      entity.setDeletedAt(Instant.now());
-
-      // When & Then
-      assertThat(entity.isDeleted()).isTrue();
-    }
-
-    @Test
-    @DisplayName("softDelete() 后 isDeleted() 应该返回 true")
-    void isDeletedShouldReturnTrueAfterSoftDelete() {
-      // Given
-      assertThat(entity.isDeleted()).isFalse();
-
-      // When
-      entity.softDelete();
-
-      // Then
-      assertThat(entity.isDeleted()).isTrue();
+      assertThat(annotation.columnName()).isEqualTo("deleted_at");
     }
   }
 
@@ -206,15 +140,14 @@ class SoftDeletableJpaEntityTest {
     void shouldSupportBuilderPattern() {
       // Given
       Long expectedId = 999L;
-      Instant expectedDeletedAt = Instant.now();
+      Long expectedVersion = 1L;
 
       // When
-      TestEntity builtEntity =
-          TestEntity.builder().id(expectedId).deletedAt(expectedDeletedAt).build();
+      TestEntity builtEntity = TestEntity.builder().id(expectedId).version(expectedVersion).build();
 
       // Then
       assertThat(builtEntity.getId()).isEqualTo(expectedId);
-      assertThat(builtEntity.getDeletedAt()).isEqualTo(expectedDeletedAt);
+      assertThat(builtEntity.getVersion()).isEqualTo(expectedVersion);
     }
 
     @Test
@@ -238,17 +171,6 @@ class SoftDeletableJpaEntityTest {
       assertThat(builtEntity.getVersion()).isEqualTo(expectedVersion);
       assertThat(builtEntity.getCreatedAt()).isEqualTo(expectedCreatedAt);
     }
-
-    @Test
-    @DisplayName("Builder 不设置 deletedAt 时应该默认为 null")
-    void builderShouldDefaultDeletedAtToNull() {
-      // Given & When
-      TestEntity builtEntity = TestEntity.builder().id(1L).build();
-
-      // Then
-      assertThat(builtEntity.getDeletedAt()).isNull();
-      assertThat(builtEntity.isDeleted()).isFalse();
-    }
   }
 
   @Nested
@@ -259,9 +181,8 @@ class SoftDeletableJpaEntityTest {
     @DisplayName("相同字段的实体应该相等")
     void entitiesWithSameFieldsShouldBeEqual() {
       // Given
-      Instant now = Instant.now();
-      TestEntity entity1 = TestEntity.builder().id(1L).deletedAt(now).version(0L).build();
-      TestEntity entity2 = TestEntity.builder().id(1L).deletedAt(now).version(0L).build();
+      TestEntity entity1 = TestEntity.builder().id(1L).version(0L).build();
+      TestEntity entity2 = TestEntity.builder().id(1L).version(0L).build();
 
       // When & Then
       assertThat(entity1).isEqualTo(entity2);
@@ -269,11 +190,11 @@ class SoftDeletableJpaEntityTest {
     }
 
     @Test
-    @DisplayName("不同 deletedAt 的实体应该不相等")
-    void entitiesWithDifferentDeletedAtShouldNotBeEqual() {
+    @DisplayName("不同 ID 的实体应该不相等")
+    void entitiesWithDifferentIdShouldNotBeEqual() {
       // Given
-      TestEntity entity1 = TestEntity.builder().id(1L).deletedAt(Instant.now()).version(0L).build();
-      TestEntity entity2 = TestEntity.builder().id(1L).deletedAt(null).version(0L).build();
+      TestEntity entity1 = TestEntity.builder().id(1L).version(0L).build();
+      TestEntity entity2 = TestEntity.builder().id(2L).version(0L).build();
 
       // When & Then
       assertThat(entity1).isNotEqualTo(entity2);

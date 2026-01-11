@@ -29,8 +29,8 @@ Spring Data JPA Starter，提供基于 Hibernate 7.1 的数据持久化支持，
 | 组件 | 职责 |
 |------|------|
 | `BaseJpaEntity` | JPA 实体基类，提供 ID、审计字段、乐观锁 |
-| `SoftDeletable` | 软删除能力接口，定义 `softDelete()` 和 `isDeleted()` 方法 |
-| `SoftDeletableJpaEntity` | 软删除实体基类，继承 BaseJpaEntity 并实现 SoftDeletable |
+| `SoftDeletableJpaEntity` | 软删除实体基类，使用 Hibernate 原生 `@SoftDelete` 注解 |
+| `SoftDeletableChildJpaEntity` | 软删除子实体基类，适用于有独立更新语义的子表 |
 | `SnowflakeIdGenerator` | 雪花算法 ID 生成器，单例模式，线程安全 |
 | `JpaErrorMappingContributor` | JPA/Hibernate/SQL 异常到标准错误码的映射 |
 | `JpaAuditingConfig` | Spring Data JPA 审计配置 |
@@ -55,27 +55,28 @@ Spring Data JPA Starter，提供基于 Hibernate 7.1 的数据持久化支持，
 
 ## SoftDeletableJpaEntity 软删除基类
 
-需要软删除功能的实体应继承 `SoftDeletableJpaEntity`，它在 `BaseJpaEntity` 基础上额外提供：
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `deletedAt` | Instant | 软删除时间戳，null 表示未删除 |
+需要软删除功能的实体应继承 `SoftDeletableJpaEntity`，它基于 Hibernate 原生 `@SoftDelete` 注解实现时间戳策略的软删除。
 
 ### 软删除机制
 
-使用时间戳策略实现软删除，通过 `@SQLRestriction("deleted_at IS NULL")` 自动过滤：
+使用 Hibernate 7.x 原生 `@SoftDelete(strategy = SoftDeleteType.TIMESTAMP)` 注解：
 
 ```java
-// 执行软删除（仅 SoftDeletableJpaEntity 子类可用）
-entity.softDelete();  // 或 entity.setDeletedAt(Instant.now());
-repository.save(entity);
+// 执行软删除（直接调用 delete，Hibernate 自动转换为 UPDATE）
+repository.delete(entity);
+// 或
+entityManager.remove(entity);
+// 实际执行: UPDATE xxx SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?
 
-// 查询自动排除已删除记录
+// 查询自动排除已删除记录（Hibernate 自动添加条件）
 repository.findAll();  // WHERE deleted_at IS NULL
-
-// 检查是否已删除
-boolean deleted = entity.isDeleted();
 ```
+
+**实现原理**：
+
+- `deleted_at` 列由 Hibernate 自动管理，**不是实体字段**
+- `DELETE` 语句自动转换为 `UPDATE deleted_at = CURRENT_TIMESTAMP`
+- 所有查询自动添加 `WHERE deleted_at IS NULL` 条件
 
 ### 何时使用软删除？
 
@@ -83,12 +84,18 @@ boolean deleted = entity.isDeleted();
 |------|---------|------|
 | 聚合根（如 Venue、Publication、Plan、Task） | `SoftDeletableJpaEntity` | 需要保护数据完整性 |
 | 被引用的配置数据（如 Provenance、SysDictType） | `SoftDeletableJpaEntity` | 可能被外键引用 |
+| 需要软删除的子实体（有独立更新语义） | `SoftDeletableChildJpaEntity` | 子表需保留删除历史 |
 | 子表/外部数据快照（如 VenueMesh、TaskRun） | `BaseJpaEntity` | 使用物理删除，简化逻辑 |
 
-> **为什么不用 @SoftDelete？**
->
-> Hibernate 7.1 的 `@SoftDelete` 设计为布尔型策略（`0/1`、`Y/N`），不原生支持时间戳策略。
-> 对于时间戳软删除，`@SQLRestriction` 是更好的选择。
+### 基类体系对比
+
+| 基类 | 字段数 | 软删除 | 审计字段 | 适用场景 |
+|------|-------|--------|---------|----------|
+| `BaseJpaEntity` | 10 | ❌ | 完整（含 createdBy/updatedBy） | 聚合根，完整审计 |
+| `SoftDeletableJpaEntity` | 10 | ✅ | 完整 | 需要软删除的聚合根 |
+| `ChildJpaEntity` | 4 | ❌ | 仅时间戳 | 子实体，有独立更新 |
+| `SoftDeletableChildJpaEntity` | 4 | ✅ | 仅时间戳 | 需要软删除的子实体 |
+| `ValueObjectJpaEntity` | 1 | ❌ | 无 | 值对象表，DELETE/INSERT |
 
 ### Entity 示例
 
@@ -382,8 +389,10 @@ com.patra.starter.jpa
 │   └── HibernatePropertiesCustomizer   # Hibernate 属性定制器
 ├── entity/
 │   ├── BaseJpaEntity                   # JPA 实体基类（审计 + 乐观锁）
-│   ├── SoftDeletable                   # 软删除能力接口
-│   └── SoftDeletableJpaEntity          # 软删除实体基类
+│   ├── ChildJpaEntity                  # 子实体基类（仅 ID + 时间戳 + 版本号）
+│   ├── SoftDeletableJpaEntity          # 软删除聚合根基类（@SoftDelete）
+│   ├── SoftDeletableChildJpaEntity     # 软删除子实体基类（@SoftDelete）
+│   └── ValueObjectJpaEntity            # 值对象实体基类（仅 ID）
 ├── error/
 │   └── contributor/
 │       └── JpaErrorMappingContributor  # JPA 异常映射贡献器
@@ -414,13 +423,26 @@ com.patra.starter.jpa
 
 ### Q: 如何查询已删除的记录？
 
-**A**: 使用 Native Query 绕过 `@SQLRestriction`：
+**A**: Hibernate 的 `@SoftDelete` 会自动过滤已删除记录。如需查询（如审计场景），使用 Native Query 绕过过滤：
 
 ```java
+// 查询所有已删除记录
 @Query(value = "SELECT * FROM cat_venue WHERE deleted_at IS NOT NULL",
        nativeQuery = true)
 List<VenueEntity> findDeleted();
+
+// 查询包含已删除的所有记录
+@Query(value = "SELECT * FROM cat_venue",
+       nativeQuery = true)
+List<VenueEntity> findAllIncludingDeleted();
 ```
+
+### Q: 为什么使用 @SoftDelete 而不是 @SQLRestriction？
+
+**A**: Hibernate 7.x 的 `@SoftDelete` 现已支持 `SoftDeleteType.TIMESTAMP` 时间戳策略，相比自定义 `@SQLRestriction` 方案：
+- 自动将 `DELETE` 转换为 `UPDATE`，无需手动调用 `softDelete()` 方法
+- 框架原生支持，减少自定义代码维护成本
+- 与 Hibernate 查询优化器更好集成
 
 ### Q: 批量插入性能不佳？
 
@@ -431,5 +453,5 @@ List<VenueEntity> findDeleted();
 
 ---
 
-**最后更新**: 2025-12-20
+**最后更新**: 2026-01-11
 **维护者**: Patra Team

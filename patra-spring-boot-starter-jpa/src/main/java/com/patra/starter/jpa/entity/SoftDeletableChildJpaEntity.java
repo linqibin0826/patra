@@ -1,15 +1,13 @@
 package com.patra.starter.jpa.entity;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
 import java.io.Serial;
-import java.time.Instant;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.annotations.SoftDelete;
+import org.hibernate.annotations.SoftDeleteType;
 
 /// 支持软删除的子实体 JPA 基类。
 ///
@@ -27,22 +25,28 @@ import org.hibernate.annotations.SQLRestriction;
 /// | version | 乐观锁版本号 |
 /// | createdAt | 创建时间（用于增量同步） |
 /// | updatedAt | 更新时间（用于增量同步） |
-/// | deletedAt | 软删除时间戳 |
+/// | deleted_at | 软删除时间戳（由 @SoftDelete 管理，非实体字段） |
 ///
 /// **基类体系对比**：
 ///
 /// | 基类 | 字段 | 适用场景 |
 /// |------|------|----------|
-/// | BaseJpaEntity | 12 字段 | 聚合根，完整审计 |
-/// | SoftDeletableJpaEntity | 13 字段 | 需要软删除的聚合根 |
+/// | BaseJpaEntity | 10 字段 | 聚合根，完整审计 |
+/// | SoftDeletableJpaEntity | 10 字段 + 软删除 | 需要软删除的聚合根 |
 /// | ChildJpaEntity | 4 字段 | 子实体，有独立更新 |
-/// | **SoftDeletableChildJpaEntity** | **5 字段** | **需要软删除的子实体** |
+/// | **SoftDeletableChildJpaEntity** | **4 字段 + 软删除** | **需要软删除的子实体** |
 /// | ValueObjectJpaEntity | 1 字段 | 值对象表，DELETE/INSERT |
+///
+/// **软删除实现**（Hibernate 原生 @SoftDelete）：
+///
+/// - 使用 `@SoftDelete(strategy = SoftDeleteType.TIMESTAMP)` 注解
+/// - Hibernate 自动将 `DELETE` 语句转换为 `UPDATE deleted_at = CURRENT_TIMESTAMP`
+/// - 所有查询自动添加 `WHERE deleted_at IS NULL` 条件
 ///
 /// **与 ChildJpaEntity 的区别**：
 ///
-/// - 增加 `deletedAt` 字段支持软删除
-/// - 自动添加 `@SQLRestriction` 过滤已删除记录
+/// - 通过 `@SoftDelete` 注解支持软删除
+/// - 删除操作转换为更新 `deleted_at` 字段
 ///
 /// **与 SoftDeletableJpaEntity 的区别**：
 ///
@@ -57,24 +61,14 @@ import org.hibernate.annotations.SQLRestriction;
 /// @author linqibin
 /// @since 0.1.0
 /// @see ChildJpaEntity
-/// @see SoftDeletable
 /// @see SoftDeletableJpaEntity
 @Data
 @SuperBuilder
 @NoArgsConstructor
-@AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @MappedSuperclass
-@SQLRestriction("deleted_at IS NULL")
-public abstract class SoftDeletableChildJpaEntity extends ChildJpaEntity implements SoftDeletable {
+@SoftDelete(strategy = SoftDeleteType.TIMESTAMP, columnName = "deleted_at")
+public abstract class SoftDeletableChildJpaEntity extends ChildJpaEntity {
 
   @Serial private static final long serialVersionUID = 1L;
-
-  /// 软删除时间戳。
-  ///
-  /// 当实体被逻辑删除时，此字段记录删除时间。
-  /// 配合 `@SQLRestriction("deleted_at IS NULL")` 自动过滤已删除记录。
-  /// 使用 `softDelete()` 方法设置此字段。
-  @Column(name = "deleted_at")
-  private Instant deletedAt;
 }
