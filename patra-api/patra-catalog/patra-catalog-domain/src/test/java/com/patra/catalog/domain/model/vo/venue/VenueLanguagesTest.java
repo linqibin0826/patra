@@ -167,20 +167,19 @@ class VenueLanguagesTest {
   class LanguageTypeTests {
 
     @Test
-    @DisplayName("isEnglish() 应正确判断英语期刊")
+    @DisplayName("isEnglish() 应正确判断英语期刊（使用 BCP 47 代码 'en'）")
     void isEnglishShouldCheckForEngCode() {
-      assertThat(VenueLanguages.ofSingleLanguage("eng").isEnglish()).isTrue();
-      assertThat(VenueLanguages.of(List.of("chi", "eng"), List.of()).isEnglish()).isTrue();
-      assertThat(VenueLanguages.ofSingleLanguage("chi").isEnglish()).isFalse();
+      assertThat(VenueLanguages.ofSingleLanguage("en").isEnglish()).isTrue();
+      assertThat(VenueLanguages.of(List.of("zh", "en"), List.of()).isEnglish()).isTrue();
+      assertThat(VenueLanguages.ofSingleLanguage("zh").isEnglish()).isFalse();
     }
 
     @Test
-    @DisplayName("isChinese() 应正确判断中文期刊（支持 chi 和 zho 代码）")
+    @DisplayName("isChinese() 应正确判断中文期刊（使用 BCP 47 代码 'zh'）")
     void isChineseShouldCheckForBothCodes() {
-      assertThat(VenueLanguages.ofSingleLanguage("chi").isChinese()).isTrue();
-      assertThat(VenueLanguages.ofSingleLanguage("zho").isChinese()).isTrue();
-      assertThat(VenueLanguages.of(List.of("eng", "chi"), List.of()).isChinese()).isTrue();
-      assertThat(VenueLanguages.ofSingleLanguage("eng").isChinese()).isFalse();
+      assertThat(VenueLanguages.ofSingleLanguage("zh").isChinese()).isTrue();
+      assertThat(VenueLanguages.of(List.of("en", "zh"), List.of()).isChinese()).isTrue();
+      assertThat(VenueLanguages.ofSingleLanguage("en").isChinese()).isFalse();
     }
 
     @Test

@@ -244,9 +244,9 @@ class PublicationProfileTest {
     @DisplayName("isEnglishJournal() 应代理到 languages")
     void shouldDelegateToEnglishCheck() {
       PublicationProfile english =
-          PublicationProfile.builder().languages(VenueLanguages.ofSingleLanguage("eng")).build();
+          PublicationProfile.builder().languages(VenueLanguages.ofSingleLanguage("en")).build();
       PublicationProfile chinese =
-          PublicationProfile.builder().languages(VenueLanguages.ofSingleLanguage("chi")).build();
+          PublicationProfile.builder().languages(VenueLanguages.ofSingleLanguage("zh")).build();
       PublicationProfile noLang = PublicationProfile.empty();
 
       assertThat(english.isEnglishJournal()).isTrue();
@@ -258,9 +258,9 @@ class PublicationProfileTest {
     @DisplayName("isChineseJournal() 应代理到 languages")
     void shouldDelegateToChineseCheck() {
       PublicationProfile chinese =
-          PublicationProfile.builder().languages(VenueLanguages.ofSingleLanguage("chi")).build();
+          PublicationProfile.builder().languages(VenueLanguages.ofSingleLanguage("zh")).build();
       PublicationProfile english =
-          PublicationProfile.builder().languages(VenueLanguages.ofSingleLanguage("eng")).build();
+          PublicationProfile.builder().languages(VenueLanguages.ofSingleLanguage("en")).build();
       PublicationProfile noLang = PublicationProfile.empty();
 
       assertThat(chinese.isChineseJournal()).isTrue();
