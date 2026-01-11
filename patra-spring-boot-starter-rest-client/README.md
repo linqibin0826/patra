@@ -474,6 +474,6 @@ patra-spring-boot-starter-rest-client
 
 ## 版本要求
 
-- Java 21+
-- Spring Boot 3.5+
-- Spring Framework 6.2+
+- Java 25+
+- Spring Boot 4.0+
+- Spring Framework 7.0+

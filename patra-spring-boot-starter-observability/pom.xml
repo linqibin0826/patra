@@ -92,6 +92,24 @@
             <artifactId>patra-spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Redis autoconfiguration: 测试中用于排除自动配置 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- JDBC autoconfiguration: 测试中用于排除数据源自动配置 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jdbc</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Jackson: Spring Boot 4.0 模块化后需要显式依赖才能获得 ObjectMapper bean -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jackson</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-observation-test</artifactId>

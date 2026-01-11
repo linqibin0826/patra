@@ -73,7 +73,7 @@ public class EpmcClientAdapter implements EPMCClient {
     Map<String, String> queryParams = request.toQueryParams();
 
     var uriBuilder =
-        UriComponentsBuilder.fromHttpUrl(finalConfig.baseUrl())
+        UriComponentsBuilder.fromUriString(finalConfig.baseUrl())
             .path(EpmcOperation.SEARCH.getEndpoint());
     queryParams.forEach(uriBuilder::queryParam);
 

@@ -6,17 +6,14 @@
 spring:
   application:
     name: patra-ingest
-  # 覆盖 config.import，禁用 Nacos 导入
+  # 覆盖 config.import，仅加载本地测试配置
   config:
     import:
       - "classpath:ingest-error-config.yaml"
       - "classpath:ingest-rocketmq.yaml"
   cloud:
-    nacos:
-      discovery:
-        enabled: false  # 禁用服务注册
-      config:
-        enabled: false  # 禁用配置中心
+    consul:
+      enabled: false  # 禁用服务注册（测试环境）
   datasource:
     # 由 Testcontainers 动态配置
     url: ${spring.datasource.url}
@@ -115,4 +112,4 @@ logging:
     org.testcontainers: INFO
     org.apache.rocketmq: WARN
     org.springframework.cloud: WARN
-    com.alibaba.nacos: WARN
+    org.springframework.cloud.consul: WARN

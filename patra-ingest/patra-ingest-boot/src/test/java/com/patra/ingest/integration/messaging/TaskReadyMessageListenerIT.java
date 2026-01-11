@@ -69,9 +69,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @Slf4j
 @SpringBootTest(
     properties = {
-      "spring.cloud.nacos.config.enabled=false",
-      "spring.cloud.nacos.discovery.enabled=false",
-      "spring.cloud.nacos.config.import-check.enabled=false",
+      "spring.cloud.consul.enabled=false",
       "spring.config.import=classpath:ingest-error-config.yaml,classpath:ingest-rocketmq.yaml",
       // 启用测试目标：TaskReadyMessageListener
       "patra.ingest.listener.task-ready.enabled=true",

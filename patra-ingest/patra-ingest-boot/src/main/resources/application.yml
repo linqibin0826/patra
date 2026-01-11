@@ -11,18 +11,15 @@ spring:
       # Local configuration files (error handling and message queue)
       - "classpath:ingest-error-config.yaml"
       - "classpath:ingest-rocketmq.yaml"
-      # Service-specific configuration from Nacos
-      - "optional:nacos:${spring.application.name}-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
-      # Shared platform configuration from Nacos
-      - "optional:nacos:patra-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
   cloud:
-    nacos:
-      server-addr: ${NACOS_ADDR:127.0.0.1:8848}
-      username: ${NACOS_USERNAME:nacos}
-      password: ${NACOS_PASSWORD:nacos}
+    consul:
+      host: ${CONSUL_HOST:localhost}
+      port: ${CONSUL_PORT:8500}
       discovery:
-        namespace: ${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}
-        group: ${NACOS_DISCOVERY_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}
+        service-name: ${spring.application.name}
+        health-check-interval: 10s
+        health-check-path: /actuator/health
+        instance-id: ${spring.application.name}:${random.value}
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:

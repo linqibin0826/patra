@@ -26,36 +26,26 @@ spring:
     import:
       # Local error-handling configuration
       - "classpath:registry-error-config.yaml"
-      # Service-specific Nacos config (environment-aware)
-      - "optional:nacos:${spring.application.name}-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
-      # Shared platform config from Nacos (environment-aware)
-      - "optional:nacos:patra-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
 
   # ========================================
-  # Nacos Configuration & Service Discovery
+  # Consul Service Discovery
   # ========================================
   cloud:
-    nacos:
-      # Nacos server address (default: localhost for dev)
-      server-addr: ${NACOS_ADDR:127.0.0.1:8848}
-      username: ${NACOS_USERNAME:nacos}
-      password: ${NACOS_PASSWORD:nacos}
+    consul:
+      host: ${CONSUL_HOST:localhost}
+      port: ${CONSUL_PORT:8500}
       discovery:
-        # Service discovery namespace (multi-tenant isolation)
-        namespace: ${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}
-        # Service discovery group
-        group: ${NACOS_DISCOVERY_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}
+        service-name: ${spring.application.name}
+        health-check-interval: 10s
+        health-check-path: /actuator/health
+        instance-id: ${spring.application.name}:${random.value}
 
   # ========================================
   # JSON Serialization Configuration
   # ========================================
-  jackson:
-    serialization:
-      # Use ISO-8601 format for dates instead of timestamps
-      write-dates-as-timestamps: false
-    deserialization:
-      # Tolerate unknown properties for forward compatibility
-      fail-on-unknown-properties: false
+  # 注意：Spring Boot 4.0 + Jackson 3.x 中 write-dates-as-timestamps 和 fail-on-unknown-properties
+  # 已不再是有效的配置属性。Jackson 3.x 默认使用 ISO-8601 格式序列化日期，
+  # 未知属性的处理通过 ObjectMapper 配置或 @JsonIgnoreProperties 注解控制。
 
   # ========================================
   # Database Configuration

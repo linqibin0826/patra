@@ -24,11 +24,8 @@ spring:
     import:
       - "classpath:catalog-error-config.yaml"
   cloud:
-    nacos:
-      discovery:
-        enabled: false  # 禁用服务注册
-      config:
-        enabled: false  # 禁用配置中心
+    consul:
+      enabled: false  # 禁用服务注册（测试环境）
   datasource:
     # 由 Testcontainers 动态配置
     url: ${spring.datasource.url}
@@ -81,4 +78,4 @@ logging:
     com.patra: INFO
     org.springframework.batch: DEBUG
     org.testcontainers: INFO
-    com.alibaba.nacos: WARN
+    org.springframework.cloud.consul: WARN

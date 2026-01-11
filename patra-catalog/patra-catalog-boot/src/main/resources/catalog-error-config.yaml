@@ -1,4 +1,4 @@
-# Local error-handling configuration for the Catalog module; can be migrated to Nacos later.
+# Catalog 模块错误处理配置
 patra:
   error:
     enabled: true
