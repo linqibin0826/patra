@@ -1,6 +1,6 @@
 ---
 name: java-development
-description: 在编写代码时，你必须使用这个技能，java 开发指南。用于创建DDD组件，Spring组件，配置 JPA、Feign、Nacos，管理 Patra 自定义 Starter 依赖。涵盖六边形架构下的 Spring Boot 3.5.7 开发模式和最佳实践。
+description: 在编写代码时，你必须使用这个技能，java 开发指南。用于创建DDD组件，Spring组件，配置 JPA、Feign、Consul，管理 Patra 自定义 Starter 依赖。涵盖六边形架构下的 Spring Boot 3.5.7 开发模式和最佳实践。
 allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__replace_symbol_body, mcp__serena__rename_symbol, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__ide__getDiagnostics
 ---
 
@@ -90,11 +90,11 @@ CommandHandler 负责协调业务流程：
 
 ## 配置管理
 
-使用 Nacos 进行配置管理：
-1. 支持动态配置刷新（`@RefreshScope`）
+使用 Spring Boot 配置管理：
+1. 使用 `application.yml` + `application-{profile}.yml` 进行配置分层
 2. 参考 [configuration-management.md](resources/configuration-management.md) 获取详细配置
 3. 遵循配置分层和环境隔离原则
-4. 敏感配置需要加密处理
+4. 敏感配置需要通过环境变量注入
 
 ## 性能优化建议
 

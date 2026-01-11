@@ -6,7 +6,7 @@
       "type": "domain",
       "enforcement": "required",
       "priority": "critical",
-      "description": "Java 开发指南。用于创建 DDD 组件、Spring 组件，配置 Spring Data JPA、Feign、Nacos，管理 Patra 自定义 Starter 依赖。涵盖六边形架构下的 Spring Boot 3.5.7 开发模式和最佳实践。",
+      "description": "Java 开发指南。用于创建 DDD 组件、Spring 组件，配置 Spring Data JPA、Feign、Consul，管理 Patra 自定义 Starter 依赖。涵盖六边形架构下的 Spring Boot 3.5.7 开发模式和最佳实践。",
       "promptTriggers": {
         "keywords": [
           "controller",
@@ -43,7 +43,7 @@
           "DTO",
           "converter",
           "MapStruct",
-          "Nacos",
+          "Consul",
           "REST API",
           "endpoint",
           "command",
@@ -163,11 +163,11 @@
         "intentPatterns": [
           "(create|implement|add|build|write).*?(controller|service|repository|mapper|adapter|port)",
           "(develop|code|implement).*?(feature|functionality|module|api|endpoint)",
-          "(add|create|configure).*?(spring|jpa|feign|nacos|starter)",
+          "(add|create|configure).*?(spring|jpa|feign|consul|starter)",
           "(implement|create).*?(orchestrator|coordinator|usecase|use case)",
           "(创建|实现|添加|编写).*(控制器|服务|仓储|映射器|适配器|端口)",
           "(开发|编码|实现).*(功能|模块|接口|端点)",
-          "(添加|创建|配置).*(spring|jpa|feign|nacos|starter)",
+          "(添加|创建|配置).*(spring|jpa|feign|consul|starter)",
           "(实现|创建).*(编排器|协调器|用例)",
           "如何.*?(开发|实现|创建).*(接口|服务|功能)",
           "(新增|修改|重构).*(类|方法|接口)"

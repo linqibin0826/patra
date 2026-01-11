@@ -1,6 +1,6 @@
 ---
 name: java-development
-description: Patra Java/Spring Boot 开发指南（六边形架构 + DDD + TDD），用于本仓库 Java 代码编写/修改/重构（Controller/Handler/Repository、CommandBus、JPA、Feign、Nacos、Starter 依赖、测试）。
+description: Patra Java/Spring Boot 开发指南（六边形架构 + DDD + TDD），用于本仓库 Java 代码编写/修改/重构（Controller/Handler/Repository、CommandBus、JPA、Feign、Consul、Starter 依赖、测试）。
 metadata:
   short-description: Patra Java 开发规范与模板
 ---
@@ -53,7 +53,7 @@ metadata:
   - `references/event-driven-architecture.md`
   - `references/outbox-pattern.md`
 
-### 2.6 配置管理（Nacos / ConfigurationProperties）
+### 2.6 配置管理（Consul / ConfigurationProperties）
 
 - 目标：配置不硬编码；用 `@ConfigurationProperties` 绑定；敏感配置注意隔离与加密策略。
 - 参考：`references/configuration-management.md`

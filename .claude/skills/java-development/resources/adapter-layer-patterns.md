@@ -241,7 +241,7 @@ try {
 @Component
 @RequiredArgsConstructor
 public class OutboxRelayJob {
-  private final OutboxRelayProperties properties;  // 来自 Nacos
+  private final OutboxRelayProperties properties;  // 来自配置文件
   private final CommandBus commandBus;
 
   @XxlJob("outboxRelay")
@@ -342,7 +342,7 @@ public ProvenanceResponse create(@Valid @RequestBody CreateProvenanceRequest req
 | **直接返回业务数据** | 不使用 ResponseEntity 包装 | Controller |
 | **向调度器报告** | 使用 `XxlJobHelper.handleSuccess/Fail()` 提高可见性 | XXL-Job |
 | **使用模板模式** | 将通用逻辑提取到抽象基类 | XXL-Job |
-| **外部化配置** | 使用 Nacos/环境变量，支持功能开关 | 全部 |
+| **外部化配置** | 使用配置文件/环境变量，支持功能开关 | 全部 |
 
 ### ❌ 不应该
 

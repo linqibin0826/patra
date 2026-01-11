@@ -99,7 +99,7 @@ public class UserRepositoryAdapter implements UserRepository {
 
 **核心功能**:
 - OpenFeign 客户端自动配置
-- Nacos 服务发现
+- Consul 服务发现
 - 统一错误处理
 - 熔断降级（Resilience4j）
 
