@@ -1,11 +1,11 @@
 package com.patra.common.json;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collections;
 import java.util.Map;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /// JSON 结构与 {@link JsonNode} 互转的辅助工具类，复用平台配置的 {@link ObjectMapper}。
 ///
@@ -32,7 +32,7 @@ public final class JsonNodeMappings {
     }
     try {
       return MAPPER.readTree(json);
-    } catch (JsonProcessingException ex) {
+    } catch (JacksonException ex) {
       throw new IllegalArgumentException("Unable to parse JSON", ex);
     }
   }
@@ -48,7 +48,7 @@ public final class JsonNodeMappings {
     }
     try {
       return MAPPER.writeValueAsString(node);
-    } catch (JsonProcessingException ex) {
+    } catch (JacksonException ex) {
       throw new IllegalArgumentException(
           "Unable to serialize JsonNode: " + node.getClass().getSimpleName(), ex);
     }

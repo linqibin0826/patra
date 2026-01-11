@@ -1,8 +1,8 @@
 package com.patra.starter.core.json;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.json.JsonMapperHolder;
 import java.util.concurrent.atomic.AtomicReference;
+import tools.jackson.databind.ObjectMapper;
 
 /// 提供对 {@link ObjectMapper} 的全局访问，连接 Spring 管理的配置和非 Spring 代码路径。
 ///
@@ -22,12 +22,6 @@ import java.util.concurrent.atomic.AtomicReference;
 /// - 通过构造函数接收 ObjectMapper 并注册到全局持有者
 /// - 注册是幂等的；后续注册仅替换前一个映射器
 /// - {@link #getObjectMapper()} 在缓存的映射器不可用时回退到 {@link JsonMapperHolder}，确保无论初始化顺序如何都保持一致的行为
-///
-/// ### Spring Boot 4.0 兼容性
-///
-/// Spring Boot 4.0 默认使用 Jackson 3.x，不再自动创建 Jackson 2.x 的 ObjectMapper bean。
-/// 如果容器中没有 ObjectMapper bean，此 Provider 不会被创建（由 `@ConditionalOnSingleCandidate` 控制），
-/// `JsonMapperHolder` 会在需要时延迟创建默认 ObjectMapper。
 ///
 /// ### 使用提示
 ///

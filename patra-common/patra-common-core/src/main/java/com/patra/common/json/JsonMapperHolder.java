@@ -1,9 +1,9 @@
 package com.patra.common.json;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// 共享 {@link ObjectMapper} 的全局(非 Spring)持有者。
 ///

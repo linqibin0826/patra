@@ -426,7 +426,7 @@ public class GlobalExceptionHandler {
 ## 技术栈
 
 - **Spring Boot**: 4.0.1
-- **Jackson**: 2.18.2 (JSON/XML 序列化)
+- **Jackson**: 3.0.3 (JSON/XML 序列化)
 - **Resilience4j**: 2.2.0 (熔断器)
 
 ---

@@ -1,6 +1,5 @@
 package com.patra.ingest.adapter.rocketmq;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.cqrs.CommandBus;
 import com.patra.ingest.adapter.rocketmq.dto.TaskReadyPayload;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
@@ -14,6 +13,7 @@ import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 /// RocketMQ 任务就绪消息监听器。
 ///

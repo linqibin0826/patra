@@ -3,7 +3,6 @@ package com.patra.ingest.adapter.scheduler.job;
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.IdUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.cqrs.CommandBus;
 import com.patra.common.messaging.ChannelKey;
 import com.patra.ingest.adapter.scheduler.param.OutboxRelayJobParam;
@@ -21,6 +20,7 @@ import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 /// Outbox 消息中继定时任务。
 ///

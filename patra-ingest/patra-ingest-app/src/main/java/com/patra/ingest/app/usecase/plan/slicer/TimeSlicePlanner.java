@@ -1,8 +1,6 @@
 package com.patra.ingest.app.usecase.plan.slicer;
 
 import cn.hutool.core.util.StrUtil;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.json.JsonNormalizationException;
 import com.patra.common.json.JsonNormalizer;
 import com.patra.common.json.JsonNormalizerResult;
@@ -20,6 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 /// 时间窗口切片策略(应用层·策略)
 ///

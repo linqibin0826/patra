@@ -1,8 +1,5 @@
 package com.patra.catalog.infra.adapter.persistence.converter.mapper;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.catalog.domain.model.aggregate.VenueRatingAggregate;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueRatingId;
@@ -11,6 +8,9 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.springframework.beans.factory.annotation.Autowired;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /// 载体评级 JPA 实体转换器。
 ///
@@ -106,7 +106,7 @@ public abstract class VenueRatingJpaMapper {
     }
     try {
       return objectMapper.readTree(json);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new IllegalArgumentException("Invalid JSON: " + json, e);
     }
   }
@@ -118,7 +118,7 @@ public abstract class VenueRatingJpaMapper {
     }
     try {
       return objectMapper.writeValueAsString(node);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new IllegalArgumentException("Failed to serialize JsonNode", e);
     }
   }

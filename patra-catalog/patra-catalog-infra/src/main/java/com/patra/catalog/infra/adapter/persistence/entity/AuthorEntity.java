@@ -1,6 +1,5 @@
 package com.patra.catalog.infra.adapter.persistence.entity;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.jpa.entity.SoftDeletableJpaEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -19,6 +18,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import tools.jackson.databind.JsonNode;
 
 /// 作者 JPA 实体，映射到表 `cat_author`。
 ///

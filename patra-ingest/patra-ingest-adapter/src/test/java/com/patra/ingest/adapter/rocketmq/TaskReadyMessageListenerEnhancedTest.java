@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.cqrs.CommandBus;
 import com.patra.ingest.adapter.rocketmq.dto.TaskReadyPayload;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
@@ -24,6 +23,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.ObjectMapper;
 
 /// TaskReadyMessageListener 增强测试套件。
 ///
@@ -66,7 +66,7 @@ class TaskReadyMessageListenerEnhancedTest {
       MessageExt message = createMessageExt("INGEST_TASK_READY", "TASK_READY", "key-001", "");
 
       when(objectMapper.readValue(eq(""), eq(TaskReadyPayload.class)))
-          .thenThrow(new com.fasterxml.jackson.core.JsonParseException(null, "No content"));
+          .thenThrow(new tools.jackson.core.exc.StreamReadException(null, "No content"));
 
       // When & Then
       assertThatThrownBy(() -> listener.onMessage(message))
@@ -128,13 +128,13 @@ class TaskReadyMessageListenerEnhancedTest {
 
       when(objectMapper.readValue(eq(malformedJson), eq(TaskReadyPayload.class)))
           .thenThrow(
-              new com.fasterxml.jackson.core.JsonParseException(null, "Unexpected end-of-input"));
+              new tools.jackson.core.exc.StreamReadException(null, "Unexpected end-of-input"));
 
       // When & Then
       assertThatThrownBy(() -> listener.onMessage(message))
           .isInstanceOf(RuntimeException.class)
           .hasMessageContaining("消息消费失败")
-          .hasCauseInstanceOf(com.fasterxml.jackson.core.JsonParseException.class);
+          .hasCauseInstanceOf(tools.jackson.core.exc.StreamReadException.class);
 
       verify(commandBus, never()).handle(any(TaskReadyCommand.class));
     }
@@ -160,7 +160,7 @@ class TaskReadyMessageListenerEnhancedTest {
       String decodedJson = new String(gbkBytes, StandardCharsets.UTF_8);
 
       when(objectMapper.readValue(eq(decodedJson), eq(TaskReadyPayload.class)))
-          .thenThrow(new com.fasterxml.jackson.core.JsonParseException(null, "Invalid UTF-8"));
+          .thenThrow(new tools.jackson.core.exc.StreamReadException(null, "Invalid UTF-8"));
 
       // When & Then: 应抛出异常
       assertThatThrownBy(() -> listener.onMessage(message))
@@ -356,13 +356,17 @@ class TaskReadyMessageListenerEnhancedTest {
           createMessageExt("INGEST_TASK_READY", "TASK_READY", "key-parse-error", invalidJson);
 
       when(objectMapper.readValue(eq(invalidJson), eq(TaskReadyPayload.class)))
-          .thenThrow(new com.fasterxml.jackson.databind.JsonMappingException(null, "Cannot parse"));
+          .thenThrow(
+              tools.jackson.databind.exc.InvalidDefinitionException.from(
+                  (tools.jackson.core.JsonParser) null,
+                  "Cannot parse",
+                  (tools.jackson.databind.JavaType) null));
 
       // When & Then
       assertThatThrownBy(() -> listener.onMessage(message))
           .isInstanceOf(RuntimeException.class)
           .hasMessageContaining("消息消费失败")
-          .hasCauseInstanceOf(com.fasterxml.jackson.databind.JsonMappingException.class);
+          .hasCauseInstanceOf(tools.jackson.databind.DatabindException.class);
 
       verify(commandBus, never()).handle(any(TaskReadyCommand.class));
     }

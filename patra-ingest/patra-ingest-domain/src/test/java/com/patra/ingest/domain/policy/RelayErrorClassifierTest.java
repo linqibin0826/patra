@@ -2,7 +2,6 @@ package com.patra.ingest.domain.policy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.patra.ingest.domain.exception.OutboxPublishException;
 import com.patra.ingest.domain.exception.OutboxRelayExecutionException;
 import com.patra.ingest.domain.policy.RelayErrorClassifier.RelayErrorKind;
@@ -13,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import tools.jackson.core.JacksonException;
 
 /// RelayErrorClassifier 单元测试
 ///
@@ -68,10 +68,10 @@ class RelayErrorClassifierTest {
     }
 
     @Test
-    @DisplayName("应该将 JsonProcessingException 分类为 FATAL")
-    void shouldClassifyJsonProcessingExceptionAsFatal() {
+    @DisplayName("应该将 JacksonException 分类为 FATAL")
+    void shouldClassifyJacksonExceptionAsFatal() {
       // Given
-      Throwable cause = new JsonProcessingException("JSON parsing failed") {};
+      Throwable cause = new JacksonException("JSON parsing failed") {};
 
       // When
       RelayErrorKind kind = classifier.classify(cause);
@@ -111,7 +111,7 @@ class RelayErrorClassifierTest {
     @DisplayName("应该将深层嵌套的 FATAL 异常正确分类")
     void shouldClassifyDeeplyNestedFatalExceptionCorrectly() {
       // Given - 多层嵌套异常
-      Throwable root = new JsonProcessingException("JSON error") {};
+      Throwable root = new JacksonException("JSON error") {};
       Throwable middle = new RuntimeException("Middle layer", root);
       Throwable cause = new Exception("Top layer", middle);
 
@@ -337,7 +337,7 @@ class RelayErrorClassifierTest {
     @DisplayName("应该正确分类 JSON 序列化失败场景（FATAL）")
     void shouldClassifyJsonSerializationFailureAsFatal() {
       // Given - 模拟 JSON 序列化失败
-      Throwable cause = new JsonProcessingException("Cannot serialize object to JSON") {};
+      Throwable cause = new JacksonException("Cannot serialize object to JSON") {};
 
       // When
       RelayErrorKind kind = classifier.classify(cause);
@@ -410,7 +410,7 @@ class RelayErrorClassifierTest {
       if (root instanceof OutboxRelayExecutionException
           || root instanceof IllegalArgumentException
           || root instanceof IllegalStateException
-          || root instanceof JsonProcessingException) {
+          || root instanceof JacksonException) {
         return RelayErrorKind.FATAL;
       }
 

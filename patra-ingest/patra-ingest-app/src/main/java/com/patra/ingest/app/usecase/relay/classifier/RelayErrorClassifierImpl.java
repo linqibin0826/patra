@@ -1,12 +1,12 @@
 package com.patra.ingest.app.usecase.relay.classifier;
 
 import cn.hutool.core.exceptions.ExceptionUtil;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.patra.ingest.domain.exception.OutboxPublishException;
 import com.patra.ingest.domain.exception.OutboxRelayExecutionException;
 import com.patra.ingest.domain.policy.RelayErrorClassifier;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
 
 /// 默认异常分类策略: 用于决定 FATAL 和 TRANSIENT 的最小但实用的规则
 ///
@@ -45,7 +45,7 @@ public class RelayErrorClassifierImpl implements RelayErrorClassifier {
     if (root instanceof OutboxRelayExecutionException
         || root instanceof IllegalArgumentException
         || root instanceof IllegalStateException
-        || root instanceof JsonProcessingException) {
+        || root instanceof JacksonException) {
       kind = RelayErrorKind.FATAL;
     } else {
       kind = RelayErrorKind.TRANSIENT;

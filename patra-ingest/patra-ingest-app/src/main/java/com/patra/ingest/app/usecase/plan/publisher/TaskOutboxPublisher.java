@@ -1,7 +1,6 @@
 package com.patra.ingest.app.usecase.plan.publisher;
 
 import cn.hutool.core.util.StrUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.outbox.config.OutboxPublisherProperties;
 import com.patra.ingest.app.outbox.constants.OutboxAggregateTypes;
@@ -20,6 +19,7 @@ import java.util.List;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 /// Task Outbox 发布器
 ///
@@ -38,12 +38,10 @@ import org.springframework.stereotype.Component;
 ///
 /// notBefore = scheduledAt (若为 null 则使用 Instant.now())
 ///
-/// ### 适配器方法
-///
-/// 提供向后兼容的适配器方法:
+/// ### 便捷方法
 ///
 /// - {@link #publish(List, PlanAggregate, ScheduleInstanceAggregate)}: 首次发布
-///   - {@link #publishRetry(List, PlanAggregate, ScheduleInstanceAggregate)}: 重试发布
+/// - {@link #publishRetry(List, PlanAggregate, ScheduleInstanceAggregate)}: 重试发布
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -63,9 +61,9 @@ public class TaskOutboxPublisher
     this.objectMapper = objectMapper;
   }
 
-  // ==================== 适配器方法(向后兼容) ====================
+  // ==================== 便捷方法 ====================
 
-  /// 首次发布(适配器方法,向后兼容)
+  /// 首次发布。
   ///
   /// 将聚合转换为上下文并委托给框架。
   ///
@@ -92,7 +90,7 @@ public class TaskOutboxPublisher
     log.debug("已成功发布 {} 个任务就绪事件到 Outbox", events.size());
   }
 
-  /// 重试发布(适配器方法,向后兼容)
+  /// 重试发布。
   ///
   /// 将聚合转换为上下文并委托给框架。
   ///

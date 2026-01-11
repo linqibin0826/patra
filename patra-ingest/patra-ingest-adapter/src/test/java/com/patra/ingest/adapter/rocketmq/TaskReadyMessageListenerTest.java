@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.cqrs.CommandBus;
 import com.patra.ingest.adapter.rocketmq.dto.TaskReadyPayload;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
@@ -20,6 +19,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.ObjectMapper;
 
 /// TaskReadyMessageListener 单元测试。
 ///
@@ -140,13 +140,13 @@ class TaskReadyMessageListenerTest {
           createMessageExt("INGEST_TASK_READY", "TASK_READY", "key-001", invalidJson);
 
       when(objectMapper.readValue(eq(invalidJson), eq(TaskReadyPayload.class)))
-          .thenThrow(new com.fasterxml.jackson.core.JsonParseException(null, "Invalid JSON"));
+          .thenThrow(new tools.jackson.core.exc.StreamReadException(null, "Invalid JSON"));
 
       // When & Then
       assertThatThrownBy(() -> listener.onMessage(message))
           .isInstanceOf(RuntimeException.class)
           .hasMessageContaining("消息消费失败")
-          .hasCauseInstanceOf(com.fasterxml.jackson.core.JsonParseException.class);
+          .hasCauseInstanceOf(tools.jackson.core.exc.StreamReadException.class);
 
       // 验证没有调用 UseCase
       verify(commandBus, never()).handle(any(TaskReadyCommand.class));

@@ -2,13 +2,13 @@ package com.patra.starter.provenance.pubmed.converter;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.starter.provenance.pubmed.model.response.PubmedPublication;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tools.jackson.dataformat.xml.XmlMapper;
 
 /// PubmedPublicationConverter 单元测试
 ///

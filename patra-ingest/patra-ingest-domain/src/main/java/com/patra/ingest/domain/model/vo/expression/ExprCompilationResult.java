@@ -1,6 +1,6 @@
 package com.patra.ingest.domain.model.vo.expression;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 /// 表达式编译结果值对象。
 ///

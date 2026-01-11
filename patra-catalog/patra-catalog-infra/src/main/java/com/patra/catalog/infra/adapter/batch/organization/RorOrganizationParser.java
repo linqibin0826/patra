@@ -1,10 +1,5 @@
 package com.patra.catalog.infra.adapter.batch.organization;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.ibm.icu.text.Collator;
 import com.ibm.icu.util.ULocale;
 import com.patra.catalog.domain.model.aggregate.OrganizationAggregate;
@@ -39,6 +34,13 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.JsonToken;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.json.JsonMapper;
 
 /// ROR v2 JSON 解析器。
 ///
@@ -78,9 +80,11 @@ public class RorOrganizationParser {
   /// 创建解析器实例。
   public RorOrganizationParser() {
     this.objectMapper =
-        new ObjectMapper()
-            .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        JsonMapper.builder()
+            .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .disable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+            .build();
   }
 
   /// 解析 ROR Data Dump JSON 输入流。
@@ -91,7 +95,7 @@ public class RorOrganizationParser {
   /// @return OrganizationAggregate 流
   /// @throws IOException 读取或解析失败时
   public Stream<OrganizationAggregate> parse(InputStream inputStream) throws IOException {
-    JsonParser jsonParser = objectMapper.getFactory().createParser(inputStream);
+    JsonParser jsonParser = objectMapper.createParser(inputStream);
 
     // 移动到数组开始位置
     if (jsonParser.nextToken() != JsonToken.START_ARRAY) {
@@ -110,7 +114,7 @@ public class RorOrganizationParser {
             () -> {
               try {
                 jsonParser.close();
-              } catch (IOException e) {
+              } catch (JacksonException e) {
                 log.warn("关闭 JsonParser 失败", e);
               }
             });
@@ -167,7 +171,7 @@ public class RorOrganizationParser {
           log.warn("跳过非对象 token：{}", token);
           advance(); // 递归跳过非对象元素
         }
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         log.error("解析 ROR 记录失败", e);
         finished = true;
         nextRecord = null;

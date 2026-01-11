@@ -1,6 +1,6 @@
 package com.patra.starter.provenance.common.provider;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 /// 批次执行的完整参数
 ///

@@ -3,14 +3,15 @@ package com.patra.catalog.domain.model.vo.venue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// Venue 值对象 JSON 序列化/反序列化兼容性测试。
 ///
@@ -20,7 +21,7 @@ import org.junit.jupiter.api.Timeout;
 @Timeout(2)
 class VenueValueObjectJsonTest {
 
-  private final ObjectMapper objectMapper = new ObjectMapper();
+  private final ObjectMapper objectMapper = JsonMapper.builder().build();
 
   @Nested
   @DisplayName("OpenAccessInfo")

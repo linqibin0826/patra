@@ -9,7 +9,6 @@ import static org.mockito.Mockito.when;
 
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.IdUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.cqrs.CommandBus;
 import com.patra.ingest.adapter.scheduler.param.OutboxRelayJobParam;
 import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
@@ -30,6 +29,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.ObjectMapper;
 
 /// OutboxRelayJob 单元测试。
 ///

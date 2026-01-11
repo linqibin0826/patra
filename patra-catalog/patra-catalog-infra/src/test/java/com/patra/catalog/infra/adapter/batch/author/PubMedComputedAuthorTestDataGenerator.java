@@ -1,8 +1,5 @@
 package com.patra.catalog.infra.adapter.batch.author;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -11,6 +8,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /// PubMed Computed Authors 测试数据生成器。
 ///
@@ -33,7 +34,7 @@ import java.util.Random;
 /// @since 0.1.0
 public class PubMedComputedAuthorTestDataGenerator {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
   private static final Random RANDOM = new Random(42); // 固定种子确保可重复
 
   // 常见姓氏

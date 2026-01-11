@@ -1,15 +1,16 @@
 package com.patra.catalog.infra.adapter.source;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.model.vo.venue.OpenAlexManifest;
 import com.patra.common.error.trait.StandardErrorTrait;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.json.JsonMapper;
 
 /// OpenAlex Manifest 解析器。
 ///
@@ -26,9 +27,10 @@ import lombok.extern.slf4j.Slf4j;
 public final class OpenAlexManifestParser {
 
   private static final ObjectMapper OBJECT_MAPPER =
-      new ObjectMapper()
-          .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
-          .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+      JsonMapper.builder()
+          .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+          .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+          .build();
 
   private OpenAlexManifestParser() {
     // 工具类禁止实例化
@@ -50,7 +52,7 @@ public final class OpenAlexManifestParser {
           manifest.entries().size(),
           manifest.totalRecordCount());
       return manifest;
-    } catch (IOException e) {
+    } catch (JacksonException e) {
       throw new FileDownloadException(
           "解析 manifest 输入流失败: " + e.getMessage(), e, StandardErrorTrait.DEP_UNAVAILABLE);
     }

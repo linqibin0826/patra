@@ -1,9 +1,9 @@
 package com.patra.ingest.infra.mapper;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.query.QuerySession;
+import tools.jackson.databind.JsonNode;
 
 /// 数据源参数映射器接口。
 ///

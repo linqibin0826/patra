@@ -45,7 +45,7 @@ import java.util.Objects;
 ///
 /// **类似设计参考**：
 ///
-/// - Jackson: `com.fasterxml.jackson.core.type.TypeReference`
+/// - Jackson: `tools.jackson.core.type.TypeReference`
 ///   - Gson: `com.google.gson.reflect.TypeToken`
 ///   - Spring: `org.springframework.core.ParameterizedTypeReference`
 ///

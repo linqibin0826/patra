@@ -2,7 +2,6 @@ package com.patra.catalog.infra.adapter.batch.author;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.catalog.domain.model.aggregate.AuthorAggregate;
 import com.patra.catalog.infra.adapter.persistence.AuthorRepositoryAdapter;
 import com.patra.catalog.infra.adapter.persistence.dao.AuthorDao;
@@ -28,6 +27,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import tools.jackson.databind.ObjectMapper;
 
 /// AuthorItemWriter 集成测试。
 ///

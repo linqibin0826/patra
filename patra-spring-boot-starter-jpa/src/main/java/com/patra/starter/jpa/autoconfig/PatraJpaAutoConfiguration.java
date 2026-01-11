@@ -5,7 +5,6 @@ import com.patra.starter.jpa.error.contributor.JpaErrorMappingContributor;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-// Spring Boot 4.0 模块化: JPA 相关类移到 org.springframework.boot.hibernate.autoconfigure
 import org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;

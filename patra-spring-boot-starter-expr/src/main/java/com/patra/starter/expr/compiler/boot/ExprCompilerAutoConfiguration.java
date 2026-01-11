@@ -1,6 +1,5 @@
 package com.patra.starter.expr.compiler.boot;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.registry.api.client.ExprClient;
 import com.patra.registry.api.client.ProvenanceClient;
 import com.patra.starter.expr.compiler.DefaultExprCompiler;
@@ -28,6 +27,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.openfeign.FeignAutoConfiguration;
 import org.springframework.context.annotation.Bean;
+import tools.jackson.databind.ObjectMapper;
 
 /// 表达式编译器自动配置
 ///

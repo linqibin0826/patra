@@ -1,7 +1,5 @@
 package com.patra.starter.provenance.pubmed;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.provenance.api.constants.PubMedOperation;
 import com.patra.common.provenance.api.values.pubmed.RetMode;
@@ -16,7 +14,6 @@ import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
 import com.patra.starter.provenance.pubmed.model.response.EFetchResponse;
 import com.patra.starter.provenance.pubmed.model.response.EPostResponse;
 import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
-import java.io.IOException;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -24,6 +21,9 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.dataformat.xml.XmlMapper;
 
 /// PubMed 客户端实现（使用 Spring RestClient）
 ///
@@ -161,7 +161,7 @@ public class PubMedClientAdapter implements PubMedClient {
       throw new IllegalArgumentException(
           "Unsupported EFetch combination: rettype=%s, retmode=%s"
               .formatted(request.rettype(), retmode));
-    } catch (IOException | IllegalArgumentException ex) {
+    } catch (JacksonException | IllegalArgumentException ex) {
       throw new ProvenanceClientException(
           PROVENANCE.getCode(),
           PubMedOperation.EFETCH.getOperationName(),
@@ -230,7 +230,7 @@ public class PubMedClientAdapter implements PubMedClient {
           response.queryKey());
 
       return response;
-    } catch (IOException | IllegalArgumentException ex) {
+    } catch (JacksonException | IllegalArgumentException ex) {
       throw new ProvenanceClientException(
           PROVENANCE.getCode(),
           PubMedOperation.EPOST.getOperationName(),

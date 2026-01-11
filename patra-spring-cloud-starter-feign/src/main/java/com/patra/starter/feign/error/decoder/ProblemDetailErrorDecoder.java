@@ -1,6 +1,5 @@
 package com.patra.starter.feign.error.decoder;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.error.problem.ErrorKeys;
 import com.patra.starter.feign.error.config.FeignErrorProperties;
 import com.patra.starter.feign.error.exception.RemoteCallException;
@@ -15,6 +14,7 @@ import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ProblemDetail;
+import tools.jackson.databind.ObjectMapper;
 
 /// Feign {@link ErrorDecoder} 实现,优先处理 {@link ProblemDetail} 错误载荷,并在启用宽容模式时优雅降级
 ///

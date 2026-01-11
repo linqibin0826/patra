@@ -2,7 +2,6 @@ package com.patra.starter.provenance.pubmed;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.date.TimeInterval;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
@@ -22,6 +21,7 @@ import com.patra.starter.provenance.pubmed.request.PubMedESearchRequestAssembler
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import tools.jackson.databind.JsonNode;
 
 /// PubMed 数据源提供者实现
 ///

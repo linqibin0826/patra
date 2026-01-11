@@ -1,10 +1,10 @@
 package com.patra.starter.provenance.common.support;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import tools.jackson.databind.JsonNode;
 
 /// JSON节点解析防御性工具类
 ///
@@ -115,7 +115,7 @@ public final class JsonHelpers {
       return Collections.emptyList();
     }
     List<JsonNode> values = new ArrayList<>();
-    Iterator<JsonNode> iterator = objectNode.elements();
+    Iterator<JsonNode> iterator = objectNode.values().iterator();
     while (iterator.hasNext()) {
       values.add(iterator.next().deepCopy());
     }

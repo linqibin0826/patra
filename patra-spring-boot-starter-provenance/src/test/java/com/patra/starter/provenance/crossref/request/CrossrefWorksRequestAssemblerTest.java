@@ -2,12 +2,13 @@ package com.patra.starter.provenance.crossref.request;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.starter.provenance.crossref.model.request.CrossrefWorksRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 /// CrossrefWorksRequestAssembler 单元测试
 ///
@@ -21,7 +22,7 @@ class CrossrefWorksRequestAssemblerTest {
   @BeforeEach
   void setUp() {
     assembler = new CrossrefWorksRequestAssembler();
-    objectMapper = new ObjectMapper();
+    objectMapper = JsonMapper.builder().build();
   }
 
   @Test

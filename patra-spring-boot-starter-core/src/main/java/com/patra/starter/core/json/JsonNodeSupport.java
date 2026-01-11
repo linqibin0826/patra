@@ -1,10 +1,10 @@
 package com.patra.starter.core.json;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.json.JsonMapperHolder;
 import org.springframework.util.StringUtils;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /// 帮助 MapStruct 默认方法复用平台配置的 {@link ObjectMapper} 的接口。
 public interface JsonNodeSupport {
@@ -30,7 +30,7 @@ public interface JsonNodeSupport {
     }
     try {
       return jsonMapper().readTree(json);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new IllegalArgumentException("无法解析 JSON", e);
     }
   }
@@ -47,7 +47,7 @@ public interface JsonNodeSupport {
     }
     try {
       return jsonMapper().writeValueAsString(node);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new IllegalArgumentException("无法序列化 JsonNode", e);
     }
   }
