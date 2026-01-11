@@ -26,7 +26,7 @@ import org.hibernate.annotations.SQLRestriction;
 ///
 /// **为什么不用 @SoftDelete**：
 ///
-/// Hibernate 6.6 的 `@SoftDelete` 设计为布尔型策略（`0/1`、`Y/N`），
+/// Hibernate 7.1 的 `@SoftDelete` 设计为布尔型策略（`0/1`、`Y/N`），
 /// 不原生支持时间戳策略。对于时间戳软删除，`@SQLRestriction` 是更好的选择。
 ///
 /// 使用示例：

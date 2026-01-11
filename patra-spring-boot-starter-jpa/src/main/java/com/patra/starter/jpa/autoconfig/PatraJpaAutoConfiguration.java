@@ -14,7 +14,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 ///
 /// **功能说明**：
 ///
-/// - 配置 Hibernate 6.6 批量写入优化
+/// - 配置 Hibernate 7.1 批量写入优化
 /// - 注册 JPA 异常映射贡献器
 /// - 导入审计配置（自动填充 createdAt/updatedAt/createdBy/updatedBy）
 ///
