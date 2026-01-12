@@ -13,7 +13,6 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
-import org.springframework.lang.NonNull;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -96,10 +95,10 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   /// @return 包含问题详情和验证错误列表的响应实体
   @Override
   protected ResponseEntity<Object> handleMethodArgumentNotValid(
-      @NonNull MethodArgumentNotValidException ex,
-      @NonNull org.springframework.http.HttpHeaders headers,
-      @NonNull org.springframework.http.HttpStatusCode status,
-      @NonNull org.springframework.web.context.request.WebRequest request) {
+      MethodArgumentNotValidException ex,
+      org.springframework.http.HttpHeaders headers,
+      org.springframework.http.HttpStatusCode status,
+      org.springframework.web.context.request.WebRequest request) {
 
     HttpServletRequest servletRequest = extractServletRequest(request);
     ProblemDetailResponse response = problemDetailAdapter.adapt(ex, servletRequest);
