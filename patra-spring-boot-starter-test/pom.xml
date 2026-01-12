@@ -76,7 +76,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa-test</artifactId>
-            <version>${spring-boot.version}</version>
             <scope>compile</scope>
         </dependency>
 
@@ -84,7 +83,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jdbc-test</artifactId>
-            <version>${spring-boot.version}</version>
             <scope>compile</scope>
         </dependency>
 
@@ -93,7 +91,21 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-flyway-test</artifactId>
-            <version>${spring-boot.version}</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <!-- Web MVC 测试支持（@AutoConfigureMockMvc） -->
+        <!-- Spring Boot 4.0 模块化变更: MockMvc 需要显式添加 Starter -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <!-- RestTestClient 测试支持（@AutoConfigureRestTestClient） -->
+        <!-- Spring Boot 4.0 新特性: 替代 TestRestTemplate -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-restclient-test</artifactId>
             <scope>compile</scope>
         </dependency>
 

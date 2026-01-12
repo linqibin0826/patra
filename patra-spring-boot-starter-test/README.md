@@ -121,6 +121,11 @@ class CatalogArchitectureTest {
 - AssertJ
 - Mockito (core + junit-jupiter)
 - Spring Boot Test
+- Spring Boot WebMvc Test（含 RestTestClient 支持）
+- Spring Boot RestClient Test
+- Spring Boot Data JPA Test
+- Spring Boot JDBC Test
+- Spring Boot Flyway Test
 - TestContainers (core + junit-jupiter + mysql)
 - ArchUnit JUnit 5
 - Awaitility
