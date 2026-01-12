@@ -2,6 +2,7 @@ package com.patra.registry.api.endpoint;
 
 import com.patra.registry.api.dto.dict.DictionaryResolveReq;
 import com.patra.registry.api.dto.dict.DictionaryResolveResp;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -24,5 +25,5 @@ public interface DictionaryEndpoint {
   /// @param request 批量解析请求
   /// @return 批量解析结果
   @PostMapping(BASE_PATH + "/resolve")
-  DictionaryResolveResp resolve(@RequestBody DictionaryResolveReq request);
+  DictionaryResolveResp resolve(@Valid @RequestBody DictionaryResolveReq request);
 }
