@@ -2,7 +2,7 @@ package com.patra.starter.restclient.download;
 
 import java.net.URI;
 import java.nio.file.Path;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /// 统一下载客户端（流式 + 落盘）。
 ///
