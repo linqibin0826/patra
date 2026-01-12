@@ -25,6 +25,10 @@ spring:
     redis:
       url: redis://localhost:16379
 
+  # Development Elasticsearch (local Docker container)
+  elasticsearch:
+    uris: http://localhost:19200
+
 # 可观测性：开箱即用（零配置）
 # - Tracing/Logging: OTel Agent 自动处理
 # - Metrics: applicationName 自动取 spring.application.name，environment 自动取 spring.profiles.active
