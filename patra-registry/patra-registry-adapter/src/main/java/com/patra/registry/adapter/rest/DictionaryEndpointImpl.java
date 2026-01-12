@@ -6,6 +6,7 @@ import com.patra.registry.api.dto.dict.DictionaryResolveResp;
 import com.patra.registry.api.endpoint.DictionaryEndpoint;
 import com.patra.registry.app.service.DictionaryQueryService;
 import com.patra.registry.domain.model.read.dictionary.DictionaryResolveQuery;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,7 +39,7 @@ public class DictionaryEndpointImpl implements DictionaryEndpoint {
   /// @param request 批量解析请求
   /// @return 批量解析结果
   @Override
-  public DictionaryResolveResp resolve(DictionaryResolveReq request) {
+  public DictionaryResolveResp resolve(@Valid DictionaryResolveReq request) {
     log.debug(
         "Received dictionary resolve request: typeCode [{}], sourceStandard [{}], size [{}]",
         request.typeCode(),
