@@ -14,7 +14,7 @@ import com.patra.registry.infra.config.RegistryMySQLContainerInitializer;
 import com.patra.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
-import java.time.Instant;
+import jakarta.persistence.EntityManager;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -59,6 +59,7 @@ class DictionaryRepositoryAdapterIT {
   @Autowired private SysDictTypeDao typeDao;
   @Autowired private SysDictItemDao itemDao;
   @Autowired private SysDictItemAliasDao aliasDao;
+  @Autowired private EntityManager entityManager;
 
   private Long testTypeId;
 
@@ -104,14 +105,23 @@ class DictionaryRepositoryAdapterIT {
     @Test
     @DisplayName("已软删除的类型不应被查询到")
     void shouldIgnoreDeletedType() {
+      // 创建并保存类型
       SysDictTypeEntity deletedType = new SysDictTypeEntity();
-      deletedType.setId(SnowflakeIdGenerator.getId());
+      Long deletedTypeId = SnowflakeIdGenerator.getId();
+      deletedType.setId(deletedTypeId);
       deletedType.setTypeCode("deleted_type");
       deletedType.setTypeName("已删除类型");
       deletedType.setIsSystem(true);
       deletedType.setAllowCustomItems(false);
-      deletedType.setDeletedAt(Instant.now());
-      typeDao.save(deletedType);
+      typeDao.saveAndFlush(deletedType);
+
+      // 使用 Native SQL 标记为已删除（@SoftDelete 由 Hibernate 自动管理，不暴露 setter）
+      entityManager
+          .createNativeQuery("UPDATE reg_sys_dict_type SET deleted_at = NOW() WHERE id = :id")
+          .setParameter("id", deletedTypeId)
+          .executeUpdate();
+      entityManager.flush();
+      entityManager.clear();
 
       Optional<DictionaryType> result = repository.findTypeByCode("deleted_type");
 
@@ -149,16 +159,25 @@ class DictionaryRepositoryAdapterIT {
     @Test
     @DisplayName("已软删除的字典项不应被查询到")
     void shouldIgnoreDeletedItems() {
+      // 创建并保存字典项
       SysDictItemEntity deletedItem = new SysDictItemEntity();
-      deletedItem.setId(SnowflakeIdGenerator.getId());
+      Long deletedItemId = SnowflakeIdGenerator.getId();
+      deletedItem.setId(deletedItemId);
       deletedItem.setTypeId(testTypeId);
       deletedItem.setItemCode("DELETED");
       deletedItem.setItemName("已删除项");
       deletedItem.setDisplayOrder(100);
       deletedItem.setEnabled(true);
       deletedItem.setIsDefault(false);
-      deletedItem.setDeletedAt(Instant.now());
-      itemDao.save(deletedItem);
+      itemDao.saveAndFlush(deletedItem);
+
+      // 使用 Native SQL 标记为已删除（@SoftDelete 由 Hibernate 自动管理，不暴露 setter）
+      entityManager
+          .createNativeQuery("UPDATE reg_sys_dict_item SET deleted_at = NOW() WHERE id = :id")
+          .setParameter("id", deletedItemId)
+          .executeUpdate();
+      entityManager.flush();
+      entityManager.clear();
 
       Map<String, DictionaryItem> result =
           repository.findItemsByTypeAndCodes(testTypeId, Set.of("DELETED"));
