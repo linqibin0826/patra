@@ -1,23 +1,21 @@
 # SCRATCHPAD.md - 工作记忆
 
 > **状态**：✅ 已完成
-> **任务名称**：Spring Boot 4.0.1 升级后检查
-> **开始时间**：2026-01-11
-> **完成时间**：2026-01-11
+> **任务名称**：Spring Boot 4.0.1 升级后优化
+> **开始时间**：2026-01-12
+> **完成时间**：2026-01-12
 > **更新者**：Claude
 
 ---
 
 ## 🎯 当前任务
 
-**目标**：检查 Spring Boot 3.5.7 → 4.0.1 升级后需要进行的迁移工作，确保项目正常运行
+**目标**：完成 Spring Boot 4.0.1 升级后的可选优化项，提升代码质量和消除警告
 
 **进度**：
-- [x] 检查编译状态（通过）
-- [x] 分析 Spring Boot 4.x 重大变更
-- [x] 检查废弃 API 使用情况
-- [x] 运行测试验证功能
-- [x] 必要的代码调整
+- [x] 配置 Mockito Agent 消除测试警告
+- [x] 迁移 JSpecify nullability 注解（5 个文件）
+- [x] 运行测试验证优化效果（BUILD SUCCESS）
 
 ---
 
@@ -25,43 +23,53 @@
 
 | 日期 | 决策 | 原因 |
 |------|------|------|
-| 2026-01-11 | API 模块跳过测试执行 | 没有测试代码的模块配置 `<skipTests>true</skipTests>` 避免 surefire 报错 |
-| 2026-01-11 | 软删除测试使用 Native SQL | `@SoftDelete` 不暴露 setter，测试中使用 Native Query 模拟已删除记录 |
+| 2026-01-12 | Mockito Agent 使用本地仓库路径配置 | `maven-dependency-plugin` 的 `properties` goal 在某些模块无法正确解析，改用 `${settings.localRepository}` 直接引用 jar 路径 |
+| 2026-01-12 | GlobalRestExceptionHandler 保留 Spring @NonNull | JSpecify @NonNull 是类型注解，不能用于方法参数声明处；该方法是 `@Override`，需与父类签名一致 |
 
 ---
 
-## ✅ 已解决问题
+## ✅ 已完成的优化
 
-| 问题 | 解决方案 |
-|------|----------|
-| maven-surefire-plugin 报错 `groups/excludedGroups require JUnit5` | 给没有测试的 API 模块添加 `<skipTests>true</skipTests>` |
-| `setDeletedAt()` 方法不存在导致编译失败 | 测试改用 EntityManager Native SQL 设置 `deleted_at` |
+### 1. Mockito Agent 配置
 
----
+**问题**：测试运行时出现警告
+```
+Mockito is currently self-attaching to enable the inline-mock-maker.
+This will no longer work in future releases of the JDK.
+```
 
-## 🧠 Spring Boot 4.0 迁移检查清单
+**解决方案**：在 `patra-parent/pom.xml` 的 surefire 配置中添加 `-javaagent`
+```xml
+<argLine>
+  -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar
+  --add-opens java.base/java.lang=ALL-UNNAMED
+</argLine>
+```
 
-### ✅ 已确认无需修改
+### 2. JSpecify Nullability 注解迁移
 
-1. **@MockBean/@SpyBean**：项目已使用 `@MockitoBean`（Spring Boot 4.0 推荐）
-2. **@JsonComponent**：项目未使用（无需迁移到 `@JacksonComponent`）
-3. **@SpringBootTest + MockMvc**：项目未使用 MockMvc
-4. **配置属性变更**：未使用 `spring.session.*` 或 `spring.data.mongodb.*`
+**迁移的文件**（5 个）：
+- `patra-spring-boot-starter-provenance/.../PubmedPublicationProcessor.java`
+- `patra-spring-boot-starter-rest-client/.../DownloadOptions.java`
+- `patra-spring-boot-starter-rest-client/.../DownloadRequest.java`
+- `patra-spring-boot-starter-rest-client/.../DefaultDownloadClient.java`
+- `patra-spring-boot-starter-rest-client/.../DownloadClient.java`
 
-### ⚠️ 已知警告（无需立即处理）
-
-1. **Mockito agent 警告**：提示配置 Mockito agent，当前不影响测试运行
-2. **ByteBuddy 警告**：`UsingUnsafe$Dispatcher$CreationAction` 提示，不影响功能
+**未迁移的文件**（1 个）：
+- `patra-spring-boot-starter-web/.../GlobalRestExceptionHandler.java`
+  - 原因：使用 `@NonNull` 的是 `@Override` 方法参数，需与父类签名保持一致
 
 ---
 
 ## 📁 变更文件汇总
 
 **修改**：
-- `patra-registry/patra-registry-api/pom.xml` - 添加 skipTests
-- `patra-ingest/patra-ingest-api/pom.xml` - 添加 skipTests
-- `patra-object-storage/patra-object-storage-api/pom.xml` - 添加 skipTests
-- `patra-registry/patra-registry-infra/src/test/java/.../DictionaryRepositoryAdapterIT.java` - 软删除测试改用 Native SQL
+- `patra-parent/pom.xml` - 配置 Mockito Agent
+- `patra-spring-boot-starter-provenance/.../PubmedPublicationProcessor.java` - JSpecify 迁移
+- `patra-spring-boot-starter-rest-client/.../DownloadOptions.java` - JSpecify 迁移
+- `patra-spring-boot-starter-rest-client/.../DownloadRequest.java` - JSpecify 迁移
+- `patra-spring-boot-starter-rest-client/.../DefaultDownloadClient.java` - JSpecify 迁移
+- `patra-spring-boot-starter-rest-client/.../DownloadClient.java` - JSpecify 迁移
 
 ---
 
