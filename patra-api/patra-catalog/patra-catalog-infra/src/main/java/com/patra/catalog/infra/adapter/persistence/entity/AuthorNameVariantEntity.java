@@ -54,7 +54,7 @@ public class AuthorNameVariantEntity extends ChildJpaEntity {
   // ========== 关联信息 ==========
 
   /// 关联的作者实体。
-  @ManyToOne(fetch = FetchType.LAZY)
+  @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "author_id", nullable = false)
   @ToString.Exclude
   @EqualsAndHashCode.Exclude
