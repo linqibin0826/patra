@@ -32,6 +32,7 @@ patra-common/                         (聚合 POM - 无代码)
 ├── patra-common-core/               (核心基础 - 所有服务必需)
 │   ├── domain/                      (领域层基类)
 │   ├── error/                       (异常处理框架)
+│   │   └── remote/                  (远程调用异常)
 │   ├── enums/                       (共享枚举)
 │   ├── json/                        (JSON 工具)
 │   ├── messaging/                   (消息通道标识)
@@ -54,7 +55,7 @@ patra-common/                         (聚合 POM - 无代码)
 
 **主要内容**:
 - **domain**: `AggregateRoot`、`DomainEvent`、`ReadOnlyAggregate`
-- **error**: `DomainException`、`ApplicationException`、`ErrorCodeLike`、`ErrorTrait`
+- **error**: `DomainException`、`ApplicationException`、`ErrorCodeLike`、`ErrorTrait`、`RemoteCallException`、`RemoteErrorHelper`
 - **enums**: `ProvenanceCode`、`Priority`、`IngestDateType`、`RegistryConfigScope`
 - **json**: `JsonMapperHolder`、`JsonNormalizer`、`JsonNormalizerConfig`
 - **messaging**: `ChannelKey`
