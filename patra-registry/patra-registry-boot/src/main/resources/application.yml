@@ -2,7 +2,7 @@
 # Patra Registry Service Configuration
 # ========================================
 # Single Source of Truth for provenance metadata, operational configurations,
-# expressions, and dictionaries. Other services query this via Feign RPC.
+# expressions, and dictionaries. Other services query this via HTTP Interface.
 
 # ========================================
 # Server Configuration

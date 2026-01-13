@@ -22,7 +22,7 @@ import org.mapstruct.ReportingPolicy;
 
 /// Provenance 查询 DTO 到 API 响应 DTO 的转换器。
 ///
-/// 使用 MapStruct 自动生成转换代码,将读侧领域查询对象转换为外部 API 契约 DTO,供其他微服务的 Feign 客户端消费。
+/// 使用 MapStruct 自动生成转换代码,将读侧领域查询对象转换为外部 API 契约 DTO,供其他微服务的 HTTP Interface 客户端消费。
 ///
 /// 转换方法:
 ///
