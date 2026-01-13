@@ -11,6 +11,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.patra.catalog.domain.model.enums.DictionaryType;
@@ -18,6 +19,8 @@ import com.patra.catalog.domain.model.vo.common.SourceStandard;
 import com.patra.registry.api.endpoint.DictionaryEndpoint;
 import com.patra.starter.httpinterface.config.HttpInterfaceProperties;
 import com.patra.starter.httpinterface.error.ProblemDetailErrorHandler;
+import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -27,6 +30,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.support.RestClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
@@ -49,12 +53,19 @@ import tools.jackson.databind.json.JsonMapper;
 ///
 /// @author linqibin
 /// @since 0.1.0
+/// @see DictionaryResolverAdapterTest
 @WireMockTest
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
 @DisplayName("DictionaryResolverAdapter WireMock 集成测试")
 class DictionaryResolverAdapterIT {
 
   private static final String DICTIONARY_RESOLVE_PATH = "/_internal/dictionaries/resolve";
+
+  /// 连接超时时间（秒）
+  private static final int CONNECT_TIMEOUT_SECONDS = 2;
+
+  /// 读取超时时间（秒）
+  private static final int READ_TIMEOUT_SECONDS = 3;
 
   private DictionaryResolverAdapter adapter;
 
@@ -66,6 +77,16 @@ class DictionaryResolverAdapterIT {
         new HttpInterfaceProperties.ErrorHandlingProperties();
     errorProps.setTolerant(true); // 启用容错模式
 
+    // 显式配置超时的 HttpClient（使用 JDK HttpClient）
+    // 注意：必须使用 HTTP/1.1，因为 WireMock 默认不支持 HTTP/2
+    HttpClient httpClient =
+        HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_1_1)
+            .connectTimeout(Duration.ofSeconds(CONNECT_TIMEOUT_SECONDS))
+            .build();
+    JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+    requestFactory.setReadTimeout(Duration.ofSeconds(READ_TIMEOUT_SECONDS));
+
     // 手动构建 RestClient（不依赖 Spring 上下文）
     // 使用 statusPredicate 形式注册错误处理器
     ProblemDetailErrorHandler errorHandler =
@@ -73,6 +94,7 @@ class DictionaryResolverAdapterIT {
     RestClient restClient =
         RestClient.builder()
             .baseUrl(wmRuntimeInfo.getHttpBaseUrl())
+            .requestFactory(requestFactory)
             .defaultStatusHandler(status -> status.isError(), errorHandler)
             .build();
 
@@ -265,22 +287,22 @@ class DictionaryResolverAdapterIT {
     }
   }
 
-  // ==================== 超时场景 ====================
+  // ==================== 超时和网络故障场景 ====================
 
   @Nested
-  @DisplayName("超时场景")
-  class TimeoutScenarios {
+  @DisplayName("超时和网络故障场景")
+  class TimeoutAndFaultScenarios {
 
     @Test
     @DisplayName("读取超时 - 降级返回空 Map")
     void shouldReturnEmptyMapOnReadTimeout() {
-      // Given: 模拟超时（超过 5s 读取超时）
+      // Given: 模拟超时（超过 READ_TIMEOUT_SECONDS 读取超时）
       stubFor(
           post(urlEqualTo(DICTIONARY_RESOLVE_PATH))
               .willReturn(
                   aResponse()
                       .withStatus(200)
-                      .withFixedDelay(6000) // 6秒，超过 5s 读取超时
+                      .withFixedDelay(4000) // 4秒，超过 3s 读取超时
                       .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
                       .withBody("{}")));
 
@@ -289,6 +311,22 @@ class DictionaryResolverAdapterIT {
           adapter.resolve(DictionaryType.COUNTRY, SourceStandard.NAME_EN, Set.of("China"));
 
       // Then: 超时异常被捕获，降级返回空 Map
+      assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("连接重置 - 降级返回空 Map")
+    void shouldReturnEmptyMapOnConnectionReset() {
+      // Given: 模拟连接被重置（如服务器意外关闭连接）
+      stubFor(
+          post(urlEqualTo(DICTIONARY_RESOLVE_PATH))
+              .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)));
+
+      // When
+      Map<String, String> result =
+          adapter.resolve(DictionaryType.COUNTRY, SourceStandard.NAME_EN, Set.of("China"));
+
+      // Then: 连接重置异常被捕获，降级返回空 Map
       assertThat(result).isEmpty();
     }
   }

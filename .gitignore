@@ -45,23 +45,21 @@ build/
 !**/src/test/**/build/
 
 ##############################
-# Maven wrapper (keep these files tracked)
+# Gradle
 ##############################
-!.mvn/wrapper/maven-wrapper.jar
-!.mvn/wrapper/maven-wrapper.properties
-!.mvn/maven.config
-!.mvn/settings.xml
+# Gradle cache (root and subprojects)
+.gradle/
+**/.gradle/
 
-##############################
-# Maven, Release, and Versions plugin artifacts
-##############################
-dependency-reduced-pom.xml
-release.properties
-pom.xml.tag
-pom.xml.releaseBackup
-pom.xml.versionsBackup
-pom.xml.next
-buildNumber.properties
+# Kotlin compiler cache (build-logic uses Kotlin DSL)
+.kotlin/
+**/.kotlin/
+
+# Gradle wrapper jar - should be tracked for reproducible builds
+!gradle/wrapper/gradle-wrapper.jar
+
+# Local Gradle configuration (user-specific)
+gradle-local.properties
 
 ##############################
 # Logs & diagnostics
@@ -91,4 +89,6 @@ heapdump.hprof
 # Backup directories
 .claude.backup-*/
 
+# JAR files (except Gradle wrapper)
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
