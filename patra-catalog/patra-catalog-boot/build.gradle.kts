@@ -1,0 +1,38 @@
+/**
+ * Patra Catalog Boot
+ *
+ * 启动层 - Spring Boot 应用入口
+ */
+
+plugins {
+    id("patra.hexagonal-boot")
+}
+
+springBoot {
+    mainClass = "com.patra.catalog.PatraCatalogApplication"
+}
+
+dependencies {
+    // 六边形架构各层
+    implementation(project(":patra-catalog:patra-catalog-adapter"))
+    implementation(project(":patra-catalog:patra-catalog-infra"))
+
+    // Web Starter
+    implementation(project(":patra-spring-boot-starter-web"))
+
+    // HTTP Interface 客户端
+    implementation(project(":patra-spring-boot-starter-http-interface"))
+
+    // Actuator
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+
+    // 可观测性
+    implementation(project(":patra-spring-boot-starter-observability"))
+
+    // 对象存储
+    implementation(project(":patra-spring-boot-starter-object-storage"))
+
+    // 测试依赖
+    testImplementation(project(":patra-spring-boot-starter-test"))
+    testImplementation("org.testcontainers:elasticsearch")
+}

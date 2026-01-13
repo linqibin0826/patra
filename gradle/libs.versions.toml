@@ -1,0 +1,155 @@
+# Patra Project - Gradle Version Catalog
+
+[versions]
+# Core
+java = "25"
+patra = "0.1.0-SNAPSHOT"
+
+# Spring
+spring-boot = "4.0.1"
+spring-cloud = "2025.1.0"
+spring-dependency-management = "1.1.7"
+
+# Code Generation
+lombok = "1.18.40"
+mapstruct = "1.6.3"
+lombok-mapstruct-binding = "0.2.0"
+
+# Utilities
+hutool = "5.8.25"
+guava = "31.1-jre"
+okio = "3.6.0"
+icu4j = "76.1"
+commons-net = "3.11.1"
+commons-compress = "1.28.0"
+bouncycastle = "1.77"
+error-prone = "2.14.0"
+
+# Messaging
+xxl-job = "3.2.0"
+rocketmq = "5.3.1"
+rocketmq-spring-boot = "2.3.1"
+fastjson2 = "2.0.58"
+
+# Resilience & Observability
+resilience4j = "2.2.0"
+opentelemetry-logback = "2.22.0-alpha"
+
+# Data & Storage
+aws-sdk = "2.25.36"
+redisson = "4.1.0"
+minio = "8.5.7"
+httpclient = "4.5.14"
+
+# Testing
+junit = "5.11.4"
+mockito = "5.15.2"
+assertj = "3.27.3"
+testcontainers = "1.20.4"
+wiremock = "3.10.0"
+awaitility = "4.2.2"
+mockftpserver = "3.2.0"
+jmh = "1.37"
+archunit = "1.4.1"
+objenesis = "3.4"
+
+# Code Quality
+spotbugs-plugin = "6.4.8"
+spotbugs = "4.9.3"
+jacoco = "0.8.14"
+spotless = "7.0.4"
+google-java-format = "1.29.0"
+
+# Build Plugins
+kordamp-enforcer = "0.14.0"
+
+[libraries]
+# BOMs
+spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
+spring-cloud-bom = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
+resilience4j-bom = { module = "io.github.resilience4j:resilience4j-bom", version.ref = "resilience4j" }
+testcontainers-bom = { module = "org.testcontainers:testcontainers-bom", version.ref = "testcontainers" }
+aws-sdk-bom = { module = "software.amazon.awssdk:bom", version.ref = "aws-sdk" }
+
+# Spring Boot Starters
+spring-boot-autoconfigure = { module = "org.springframework.boot:spring-boot-autoconfigure" }
+spring-boot-configuration-processor = { module = "org.springframework.boot:spring-boot-configuration-processor" }
+spring-boot-starter = { module = "org.springframework.boot:spring-boot-starter" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+spring-boot-starter-webmvc = { module = "org.springframework.boot:spring-boot-starter-webmvc" }
+spring-boot-starter-webflux = { module = "org.springframework.boot:spring-boot-starter-webflux" }
+spring-boot-starter-data-jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
+spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
+spring-boot-starter-jackson = { module = "org.springframework.boot:spring-boot-starter-jackson" }
+spring-boot-starter-flyway = { module = "org.springframework.boot:spring-boot-starter-flyway" }
+spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
+spring-boot-starter-batch = { module = "org.springframework.boot:spring-boot-starter-batch" }
+
+# Spring Cloud
+spring-cloud-starter-consul-discovery = { module = "org.springframework.cloud:spring-cloud-starter-consul-discovery" }
+spring-cloud-starter-gateway = { module = "org.springframework.cloud:spring-cloud-starter-gateway-server-webflux" }
+spring-cloud-starter-loadbalancer = { module = "org.springframework.cloud:spring-cloud-starter-loadbalancer" }
+
+# Spring Framework
+spring-web = { module = "org.springframework:spring-web" }
+spring-tx = { module = "org.springframework:spring-tx" }
+spring-context = { module = "org.springframework:spring-context" }
+
+# Jakarta API
+jakarta-validation-api = { module = "jakarta.validation:jakarta.validation-api" }
+
+# Lombok & MapStruct
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapstruct" }
+mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.ref = "mapstruct" }
+lombok-mapstruct-binding = { module = "org.projectlombok:lombok-mapstruct-binding", version.ref = "lombok-mapstruct-binding" }
+
+# Utilities
+hutool-core = { module = "cn.hutool:hutool-core", version.ref = "hutool" }
+hutool-crypto = { module = "cn.hutool:hutool-crypto", version.ref = "hutool" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
+commons-net = { module = "commons-net:commons-net", version.ref = "commons-net" }
+icu4j = { module = "com.ibm.icu:icu4j", version.ref = "icu4j" }
+
+# Messaging
+rocketmq-spring-boot = { module = "org.apache.rocketmq:rocketmq-spring-boot-starter", version.ref = "rocketmq-spring-boot" }
+xxl-job = { module = "com.xuxueli:xxl-job-core", version.ref = "xxl-job" }
+
+# Data & Storage
+minio = { module = "io.minio:minio", version.ref = "minio" }
+redisson-spring-boot = { module = "org.redisson:redisson-spring-boot-starter", version.ref = "redisson" }
+
+# Testing
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
+awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
+objenesis = { module = "org.objenesis:objenesis", version.ref = "objenesis" }
+mockftpserver = { module = "org.mockftpserver:MockFtpServer", version.ref = "mockftpserver" }
+jmh-core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }
+jmh-generator = { module = "org.openjdk.jmh:jmh-generator-annprocess", version.ref = "jmh" }
+
+# Testcontainers
+testcontainers-core = { module = "org.testcontainers:testcontainers" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter" }
+testcontainers-mysql = { module = "org.testcontainers:mysql" }
+testcontainers-minio = { module = "org.testcontainers:minio" }
+testcontainers-jdbc = { module = "org.testcontainers:jdbc" }
+testcontainers-elasticsearch = { module = "org.testcontainers:elasticsearch" }
+
+# WireMock
+wiremock-standalone = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
+
+[bundles]
+testing = ["junit-jupiter", "assertj-core", "mockito-core", "mockito-junit-jupiter"]
+testcontainers = ["testcontainers-core", "testcontainers-junit-jupiter"]
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+spotbugs = { id = "com.github.spotbugs", version.ref = "spotbugs-plugin" }
+kordamp-enforcer = { id = "org.kordamp.gradle.project-enforcer", version.ref = "kordamp-enforcer" }
