@@ -1,21 +1,22 @@
 # SCRATCHPAD.md - 工作记忆
 
 > **状态**：✅ 已完成
-> **任务名称**：Spring Boot 4.0.1 升级后优化
+> **任务名称**：Maven 到 Gradle 9.2.1 迁移
 > **开始时间**：2026-01-12
-> **完成时间**：2026-01-12
+> **完成时间**：2026-01-13
 > **更新者**：Claude
 
 ---
 
-## 🎯 当前任务
+## 🎯 任务目标
 
-**目标**：完成 Spring Boot 4.0.1 升级后的可选优化项，提升代码质量和消除警告
+**目标**：将 Patra 项目从 Maven 迁移到 Gradle 9.2.1，采用现代化最佳实践
 
-**进度**：
-- [x] 配置 Mockito Agent 消除测试警告
-- [x] 迁移 JSpecify nullability 注解（5 个文件）
-- [x] 运行测试验证优化效果（BUILD SUCCESS）
+**完成情况**：
+- [x] Phase 1: 基础设施搭建（Wrapper、Version Catalog、Settings）
+- [x] Phase 2: Convention Plugins 开发（10 个插件）
+- [x] Phase 3: 全部 35+ 模块迁移
+- [x] Phase 4: 验证编译 & 清理 Maven 文件
 
 ---
 
@@ -23,53 +24,73 @@
 
 | 日期 | 决策 | 原因 |
 |------|------|------|
-| 2026-01-12 | Mockito Agent 使用本地仓库路径配置 | `maven-dependency-plugin` 的 `properties` goal 在某些模块无法正确解析，改用 `${settings.localRepository}` 直接引用 jar 路径 |
-| 2026-01-12 | GlobalRestExceptionHandler 保留 Spring @NonNull | JSpecify @NonNull 是类型注解，不能用于方法参数声明处；该方法是 `@Override`，需与父类签名一致 |
+| 2026-01-12 | 使用 Gradle 9.2.1 | 最新稳定版，Configuration Cache 首选执行模式 |
+| 2026-01-12 | 采用 Kotlin DSL | 类型安全、IDE 支持更好 |
+| 2026-01-12 | 使用 Composite Build (build-logic) | Convention Plugins 最佳实践 |
+| 2026-01-12 | 用自定义 Task 替代 Kordamp Enforcer | Kordamp 插件与 Configuration Cache 不兼容 |
+| 2026-01-12 | 使用 Spring Dependency Management Plugin | 统一 BOM 版本管理，避免手动指定版本 |
 
 ---
 
-## ✅ 已完成的优化
+## ✅ 迁移成果
 
-### 1. Mockito Agent 配置
+### 新增文件
 
-**问题**：测试运行时出现警告
-```
-Mockito is currently self-attaching to enable the inline-mock-maker.
-This will no longer work in future releases of the JDK.
-```
+**Gradle 核心配置**：
+- `gradle/wrapper/` - Gradle 9.2.1 Wrapper
+- `gradle/libs.versions.toml` - Version Catalog（集中版本管理）
+- `settings.gradle.kts` - 项目设置（阿里云镜像 + 35+ 模块）
+- `gradle.properties` - 构建优化（并行、缓存、Daemon）
 
-**解决方案**：在 `patra-parent/pom.xml` 的 surefire 配置中添加 `-javaagent`
-```xml
-<argLine>
-  -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar
-  --add-opens java.base/java.lang=ALL-UNNAMED
-</argLine>
-```
+**Convention Plugins（build-logic/）**：
+- `patra.java-base.gradle.kts` - 基础 Java 配置 + BOM
+- `patra.java-library.gradle.kts` - 库模块配置
+- `patra.spring-boot-starter.gradle.kts` - Starter 模块配置
+- `patra.hexagonal-domain.gradle.kts` - 领域层（含纯净性检查）
+- `patra.hexagonal-app.gradle.kts` - 应用层
+- `patra.hexagonal-infra.gradle.kts` - 基础设施层
+- `patra.hexagonal-adapter.gradle.kts` - 适配器层
+- `patra.hexagonal-api.gradle.kts` - API 层
+- `patra.hexagonal-boot.gradle.kts` - 启动层（fat JAR）
+- `patra.test-suites.gradle.kts` - 测试套件（集成测试、E2E）
 
-### 2. JSpecify Nullability 注解迁移
+**模块 build.gradle.kts**：
+- 35+ 模块全部迁移完成
 
-**迁移的文件**（5 个）：
-- `patra-spring-boot-starter-provenance/.../PubmedPublicationProcessor.java`
-- `patra-spring-boot-starter-rest-client/.../DownloadOptions.java`
-- `patra-spring-boot-starter-rest-client/.../DownloadRequest.java`
-- `patra-spring-boot-starter-rest-client/.../DefaultDownloadClient.java`
-- `patra-spring-boot-starter-rest-client/.../DownloadClient.java`
+### 删除文件
 
-**未迁移的文件**（1 个）：
-- `patra-spring-boot-starter-web/.../GlobalRestExceptionHandler.java`
-  - 原因：使用 `@NonNull` 的是 `@Override` 方法参数，需与父类签名保持一致
+- 49 个 `pom.xml` 文件
+- `.mvn/` 目录（Maven Wrapper 配置）
+- `mvnw` 和 `mvnw.cmd`（Maven Wrapper 脚本）
+- `patra-parent/` 目录（Maven 父 POM 模块）
 
 ---
 
-## 📁 变更文件汇总
+## 🔧 解决的问题
 
-**修改**：
-- `patra-parent/pom.xml` - 配置 Mockito Agent
-- `patra-spring-boot-starter-provenance/.../PubmedPublicationProcessor.java` - JSpecify 迁移
-- `patra-spring-boot-starter-rest-client/.../DownloadOptions.java` - JSpecify 迁移
-- `patra-spring-boot-starter-rest-client/.../DownloadRequest.java` - JSpecify 迁移
-- `patra-spring-boot-starter-rest-client/.../DefaultDownloadClient.java` - JSpecify 迁移
-- `patra-spring-boot-starter-rest-client/.../DownloadClient.java` - JSpecify 迁移
+| 问题 | 解决方案 |
+|------|----------|
+| Kordamp Enforcer 与 Configuration Cache 不兼容 | 用抽象任务类 `DomainPurityCheck` 替代，使用 `@Input` 属性存储违规列表 |
+| 依赖缺少版本号（BOM 未生效） | 在 java-base 插件添加 Spring Dependency Management Plugin |
+| Javadoc 对 Lombok 生成 Builder 报错 | 为 `CanonicalPublication` 添加空 Builder stub（与内嵌类一致） |
+| Maven Central 下载慢/超时 | 添加阿里云镜像仓库 |
+
+---
+
+## 📊 构建结果
+
+```
+BUILD SUCCESSFUL in 38s
+230 actionable tasks: 151 executed, 79 up-to-date
+```
+
+---
+
+## 🚀 后续可选优化
+
+1. **运行完整测试**：`./gradlew check` 验证所有测试通过
+2. **启用 Configuration Cache**：目前在 `gradle.properties` 中禁用，待排查兼容性后启用
+3. **删除 Maven 相关 CI 配置**：如有 Maven 相关的 CI/CD 配置需更新
 
 ---
 

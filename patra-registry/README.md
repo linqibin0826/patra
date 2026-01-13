@@ -139,7 +139,7 @@ patra-registry/
 | **Spring Data JPA** | 持久化框架 |
 | **MapStruct** | 对象映射 |
 | **Consul** | 服务注册中心 |
-| **Maven** | 构建工具 |
+| **Gradle** | 构建工具 |
 
 ## 配置说明
 
@@ -175,7 +175,7 @@ patra:
 cd patra-registry-boot
 
 # 启动应用
-../../mvnw spring-boot:run
+../../gradlew :patra-registry:patra-registry-boot:bootRun
 ```
 
 **默认端口**: 8081
@@ -213,4 +213,4 @@ Flyway 自动执行数据库迁移,种子数据包括:
 
 ---
 
-**最后更新**: 2025-12-29
+**最后更新**: 2026-01-14

@@ -107,13 +107,10 @@ patra:
 
 ## 使用方式
 
-### Maven 依赖
+### Gradle 依赖
 
-```xml
-<dependency>
-    <groupId>com.patra</groupId>
-    <artifactId>patra-spring-boot-starter-expr</artifactId>
-</dependency>
+```kotlin
+implementation(project(":patra-spring-boot-starter-expr"))
 ```
 
 ### 配置示例

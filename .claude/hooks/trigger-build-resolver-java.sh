@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # trigger-build-resolver-java.sh
-# 目的：当 Maven 编译失败时自动建议使用自动错误解析器代理
-# 触发器：Stop 事件（在 maven-compile-check.sh 之后）
-# 依赖关系：maven-compile-check.sh 必须首先运行
+# 目的：当 Gradle 编译失败时自动建议使用自动错误解析器代理
+# 触发器：Stop 事件（在 gradle-compile-check.sh 之后）
+# 依赖关系：gradle-compile-check.sh 必须首先运行
 
 set -e
 
@@ -13,14 +13,14 @@ CYAN='\033[0;36m'
 NC='\033[0m' # 无颜色
 
 # 检查是否有编译错误指示器
-# 此脚本应在 maven-compile-check.sh 之后运行
+# 此脚本应在 gradle-compile-check.sh 之后运行
 # 如果前一个 hook 失败（编译错误），建议使用代理
 
 # 检查我们是否在 Java 项目中
 PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 
-if [ ! -f "$PROJECT_ROOT/pom.xml" ]; then
-    # 不是 Maven 项目，静默退出
+if [ ! -f "$PROJECT_ROOT/build.gradle.kts" ]; then
+    # 不是 Gradle 项目，静默退出
     exit 0
 fi
 

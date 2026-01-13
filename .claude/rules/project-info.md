@@ -6,6 +6,7 @@
 
 **架构**: 微服务 + 六边形架构 + DDD + 事件驱动
 **技术栈**: Java 25 | Spring Boot 4.0.1 | Spring Data JPA | MySQL 8.x | Consul
+**构建工具**: Gradle 9.2.1 (Kotlin DSL) + Convention Plugins
 
 ## 核心服务
 
@@ -35,3 +36,9 @@ patra-{service}/
 **Starter 模块**:
 - `patra-spring-boot-starter-core/web/jpa/batch/rest-client/object-storage/observability/redisson/provenance/test`
 - `patra-spring-boot-starter-http-interface`
+
+**构建逻辑** (`build-logic/`):
+- Convention Plugins 定义六边形架构各层的构建约束
+- `patra.hexagonal-domain` - 领域层纯净性检查（禁止框架依赖）
+- `patra.hexagonal-app/infra/adapter/api/boot` - 各层依赖配置
+- `PatraDependencyManagement.kt` - 统一 BOM 和版本管理

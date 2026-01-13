@@ -82,7 +82,7 @@ argument-hint: [模块名 | committed | uncommitted | 空]
 
 #### 步骤 1：识别变更的模块
 
-根据**第零阶段确定的审查范围**，识别涉及的 Maven 模块（artifactId）。
+根据**第零阶段确定的审查范围**，识别涉及的 Gradle 模块。
 
 **模块识别方式：**
 
@@ -103,16 +103,12 @@ argument-hint: [模块名 | committed | uncommitted | 空]
 对识别出的模块执行编译：
 
 ```bash
-mvn test-compile -pl :模块1,:模块2,:模块3 -am
+./gradlew :模块1:testClasses :模块2:testClasses
 ```
-
-**参数说明：**
-- `-pl` : 指定要编译的模块列表（用逗号分隔，格式：`:artifactId`）
-- `-am` : 同时编译所有依赖模块（also-make）
 
 **示例：**
 ```bash
-mvn test-compile -pl :patra-ingest-boot,:patra-registry-boot -am
+./gradlew :patra-ingest:patra-ingest-boot:testClasses :patra-registry:patra-registry-boot:testClasses
 ```
 
 #### 步骤 3：执行架构测试
@@ -122,7 +118,7 @@ mvn test-compile -pl :patra-ingest-boot,:patra-registry-boot -am
 对识别出的模块执行架构测试：
 
 ```bash
-mvn test -pl :模块1,:模块2,:模块3 -am -Dtest="*ArchTest,*ArchitectureTest"
+./gradlew :模块1:test --tests "*ArchTest" --tests "*ArchitectureTest"
 ```
 
 **架构测试命名规范：**
@@ -131,7 +127,7 @@ mvn test -pl :模块1,:模块2,:模块3 -am -Dtest="*ArchTest,*ArchitectureTest"
 
 **示例：**
 ```bash
-mvn test -pl :patra-ingest-boot,:patra-registry-boot -am -Dtest="*ArchTest,*ArchitectureTest"
+./gradlew :patra-ingest:patra-ingest-boot:test :patra-registry:patra-registry-boot:test --tests "*ArchTest" --tests "*ArchitectureTest"
 ```
 
 #### 步骤 4：测试结果判断

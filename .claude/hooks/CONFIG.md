@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/maven-compile-check.sh"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gradle-compile-check.sh"
           },
           {
             "type": "command",
@@ -75,7 +75,7 @@ chmod +x .claude/hooks/*.sh
 
 **Java 服务**：`src/main/java/`、`patra-*/`、`*-service/`
 **资源**：`src/main/resources/`、`src/test/java/`
-**构建**：`target/`、`build/`
+**构建**：`build/`
 
 #### 添加自定义目录模式
 
@@ -96,39 +96,39 @@ esac
 
 ---
 
-### Maven 编译配置
+### Gradle 编译配置
 
-#### 调整 Maven 编译命令
+#### 调整 Gradle 编译命令
 
-编辑 `.claude/hooks/maven-compile-check.sh`：
+编辑 `.claude/hooks/gradle-compile-check.sh`：
 
 ```bash
-# 默认：多线程编译
-./mvnw -T 1C compile -q -DskipTests
+# 默认：编译所有模块
+./gradlew classes -q
 
-# 单线程（更慢但更稳定）：
-./mvnw compile -q -DskipTests
-
-# 使用特定模块：
-./mvnw -pl patra-registry,patra-ingest compile -q -DskipTests
+# 编译特定模块：
+./gradlew :patra-registry:patra-registry-boot:classes :patra-ingest:patra-ingest-boot:classes -q
 
 # 完整的清理编译：
-./mvnw clean compile -q -DskipTests
+./gradlew clean classes -q
+
+# 包含测试类编译：
+./gradlew testClasses -q
 ```
 
 #### 调整错误显示限制
 
-编辑 `.claude/hooks/maven-compile-check.sh`（大约第 47 行）：
+编辑 `.claude/hooks/gradle-compile-check.sh`（大约第 47 行）：
 
 ```bash
 # 默认：显示前 20 个错误
-grep -E "\[ERROR\]|error:|cannot find symbol" "$TEMP_OUTPUT" | head -20
+grep -E "error:|cannot find symbol|cannot resolve" "$TEMP_OUTPUT" | head -20
 
 # 显示更多错误（例如 50 个）：
-grep -E "\[ERROR\]|error:|cannot find symbol" "$TEMP_OUTPUT" | head -50
+grep -E "error:|cannot find symbol|cannot resolve" "$TEMP_OUTPUT" | head -50
 
 # 显示所有错误（无限制）：
-grep -E "\[ERROR\]|error:|cannot find symbol" "$TEMP_OUTPUT"
+grep -E "error:|cannot find symbol|cannot resolve" "$TEMP_OUTPUT"
 ```
 
 ---
@@ -186,9 +186,8 @@ grep -E "\[ERROR\]|error:|cannot find symbol" "$TEMP_OUTPUT"
 # 自定义项目目录（如果不使用默认值）
 export CLAUDE_PROJECT_DIR=/path/to/your/project
 
-# Maven 主目录（如果不在 PATH 中）
-export M2_HOME=/usr/local/maven
-export PATH=$M2_HOME/bin:$PATH
+# Gradle 用户主目录（如果使用自定义缓存位置）
+export GRADLE_USER_HOME=~/.gradle
 ```
 
 ### 每个会话的环境变量
@@ -209,7 +208,7 @@ Stop hooks 按照在 `settings.json` 中指定的顺序运行：
 "Stop": [
   {
     "hooks": [
-      { "command": "...maven-compile-check.sh" },          // 首先运行
+      { "command": "...gradle-compile-check.sh" },          // 首先运行
       { "command": "...trigger-build-resolver-java.sh" }   // 其次运行
     ]
   }
@@ -245,7 +244,7 @@ Stop hooks 按照在 `settings.json` 中指定的顺序运行：
 }
 ```
 
-### 无 Maven 编译检查
+### 无 Gradle 编译检查
 
 ```json
 {
@@ -275,7 +274,7 @@ Stop hooks 按照在 `settings.json` 中指定的顺序运行：
 }
 ```
 
-### 仅 Maven 编译（无技能激活）
+### 仅 Gradle 编译（无技能激活）
 
 ```json
 {
@@ -285,7 +284,7 @@ Stop hooks 按照在 `settings.json` 中指定的顺序运行：
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/maven-compile-check.sh"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gradle-compile-check.sh"
           },
           {
             "type": "command",
@@ -308,7 +307,7 @@ Stop hooks 按照在 `settings.json` 中指定的顺序运行：
 $CLAUDE_PROJECT_DIR/.claude/hooks/.last-compile-failed
 ```
 
-当 Maven 编译失败时创建此标记文件，显示建议的代理时移除。
+当 Gradle 编译失败时创建此标记文件，显示建议的代理时移除。
 
 ### 手动清理
 
@@ -328,34 +327,37 @@ rm -f $CLAUDE_PROJECT_DIR/.claude/hooks/.last-compile-failed
 3. **检查路径**：确保 `$CLAUDE_PROJECT_DIR` 设置正确
 4. **检查依赖**：运行 `cd .claude/hooks && npm install`
 
-### Maven 编译过慢
+### Gradle 编译过慢
 
 **问题**：Hook 运行时间过长
 
 **解决方案**：
 
-1. **禁用多线程**（`maven-compile-check.sh` 第 36 行）：
-   ```bash
-   # 从以下改为：
-   ./mvnw -T 1C compile -q -DskipTests
-
-   # 改为：
-   ./mvnw compile -q -DskipTests
+1. **启用 Gradle Daemon**（默认已启用）：
+   ```properties
+   # gradle.properties
+   org.gradle.daemon=true
    ```
 
 2. **仅编译特定模块**：
    ```bash
-   # 在 maven-compile-check.sh 中，改变第 36 行：
-   ./mvnw -pl patra-registry,patra-ingest compile -q -DskipTests
+   # 在 gradle-compile-check.sh 中：
+   ./gradlew :patra-registry:patra-registry-boot:classes -q
    ```
 
-3. **完全跳过此 hook** - 从 `settings.json` 中移除
+3. **使用 Configuration Cache**（已在项目中启用）：
+   ```properties
+   # gradle.properties
+   org.gradle.configuration-cache=true
+   ```
+
+4. **完全跳过此 hook** - 从 `settings.json` 中移除
 
 ### 误报检测
 
 **问题**：Hook 对不应该的文件被触发
 
-**解决方案**：在 `maven-compile-check.sh` 中添加跳过条件：
+**解决方案**：在 `gradle-compile-check.sh` 中添加跳过条件：
 
 ```bash
 # 添加到顶部，在设置 PROJECT_ROOT 后
@@ -364,28 +366,23 @@ if [[ "$CLAUDE_PROJECT_DIR" =~ /test-fixtures/ ]]; then
 fi
 ```
 
-### Maven 未找到
+### Gradle Wrapper 未找到
 
-**问题**：`mvn: command not found`
+**问题**：`gradlew: command not found`
 
 **解决方案**：
 
-1. **安装 Maven**：
+1. **生成 Gradle Wrapper**：
    ```bash
-   # macOS
-   brew install maven
-
-   # Linux (Ubuntu/Debian)
-   sudo apt-get install maven
+   gradle wrapper --gradle-version 9.2.1
 
    # 验证安装
-   ./mvnw --version
+   ./gradlew --version
    ```
 
-2. **设置 MAVEN_HOME 环境变量**：
+2. **设置执行权限**：
    ```bash
-   export M2_HOME=/usr/local/maven
-   export PATH=$M2_HOME/bin:$PATH
+   chmod +x gradlew
    ```
 
 ### 调试 Hooks
@@ -398,7 +395,7 @@ set -x  # 启用调试模式
 
 # 或添加特定的调试行
 echo "DEBUG: PROJECT_ROOT=$PROJECT_ROOT" >&2
-echo "DEBUG: 运行 mvn compile..." >&2
+echo "DEBUG: 运行 gradlew classes..." >&2
 ```
 
 在 Claude Code 的日志中查看 hook 执行。
@@ -407,45 +404,56 @@ echo "DEBUG: 运行 mvn compile..." >&2
 
 ## 高级配置
 
-### 多模块 Maven 项目
+### 多模块 Gradle 项目
 
 对于具有选择性模块编译的项目：
 
 ```bash
-# 在 maven-compile-check.sh 中，修改第 36 行
+# 在 gradle-compile-check.sh 中
 # 检测哪些模块已更改并仅编译那些模块
 
-CHANGED_MODULES=$(git diff --name-only HEAD | grep -oP 'patra-\w+' | sort -u | tr '\n' ',' | sed 's/,$//')
+CHANGED_FILES=$(git diff --name-only HEAD 2>/dev/null || echo "")
+if [[ -n "$CHANGED_FILES" ]]; then
+    # 从更改的文件中提取模块名称
+    MODULES=$(echo "$CHANGED_FILES" | grep -oP 'patra-[\w-]+' | sort -u)
 
-if [[ -n "$CHANGED_MODULES" ]]; then
-    ./mvnw -pl "$CHANGED_MODULES" compile -q -DskipTests
-else
-    ./mvnw -T 1C compile -q -DskipTests
+    if [[ -n "$MODULES" ]]; then
+        # 构建 Gradle 任务列表
+        TASKS=""
+        for module in $MODULES; do
+            TASKS="$TASKS :$module:classes"
+        done
+        ./gradlew $TASKS -q
+        exit $?
+    fi
 fi
+
+# 回退到完整编译
+./gradlew classes -q
 ```
 
-### 自定义 Maven 配置文件
+### 使用 Gradle 属性文件
 
-在编译期间使用特定的 Maven 配置文件：
+在编译期间使用特定的 Gradle 属性：
 
 ```bash
-# 在 maven-compile-check.sh 中，第 36 行
-./mvnw -T 1C compile -q -DskipTests -P dev
+# 在 gradle-compile-check.sh 中
+./gradlew classes -q -Pdev=true
 
-# 或多个配置文件：
-./mvnw -T 1C compile -q -DskipTests -P dev,local
+# 或指定属性文件：
+./gradlew classes -q -Dorg.gradle.project.environment=dev
 ```
 
 ### Docker/容器项目
 
-如果 Maven 在容器中运行：
+如果 Gradle 在容器中运行：
 
 ```bash
-# 在 maven-compile-check.sh 中，替换第 36 行
-docker-compose exec -T app mvn compile -q -DskipTests
+# 在 gradle-compile-check.sh 中
+docker-compose exec -T app ./gradlew classes -q
 
 # 或使用 Docker run：
-docker run --rm -v "$PROJECT_ROOT":/workspace -w /workspace maven:3.9-eclipse-temurin-25 mvn compile -q -DskipTests
+docker run --rm -v "$PROJECT_ROOT":/workspace -w /workspace gradle:8.5-jdk25 gradle classes -q
 ```
 
 ---
@@ -471,33 +479,39 @@ docker run --rm -v "$PROJECT_ROOT":/workspace -w /workspace maven:3.9-eclipse-te
 跟踪更改的文件并仅编译受影响的模块：
 
 ```bash
-# 在 maven-compile-check.sh 中
+# 在 gradle-compile-check.sh 中
 CHANGED_FILES=$(git diff --name-only HEAD 2>/dev/null || echo "")
 if [[ -n "$CHANGED_FILES" ]]; then
     # 从更改的文件中提取模块名称
-    MODULES=$(echo "$CHANGED_FILES" | grep -oP 'patra-\w+' | sort -u | paste -sd,)
+    MODULES=$(echo "$CHANGED_FILES" | grep -oP 'patra-[\w-]+' | sort -u)
 
     if [[ -n "$MODULES" ]]; then
-        ./mvnw -pl "$MODULES" -am compile -q -DskipTests
+        TASKS=""
+        for module in $MODULES; do
+            TASKS="$TASKS :$module:classes"
+        done
+        ./gradlew $TASKS -q
         exit $?
     fi
 fi
 
 # 回退到完整编译
-./mvnw -T 1C compile -q -DskipTests
+./gradlew classes -q
 ```
 
-**选项 2：使用 Maven Daemon**
+**选项 2：利用 Gradle 内置优化**
 
-安装并使用 [mvnd](https://github.com/apache/maven-mvnd) 以加快构建速度：
+Gradle 已经内置了强大的增量编译和缓存机制：
 
-```bash
-# 安装 mvnd
-brew install mvnd
-
-# 在 maven-compile-check.sh 中，第 36 行，将 mvn 替换为 mvnd：
-mvnd -T 1C compile -q -DskipTests
+```properties
+# gradle.properties - 已在项目中配置
+org.gradle.caching=true
+org.gradle.parallel=true
+org.gradle.configuration-cache=true
+org.gradle.vfs.watch=true
 ```
+
+这些配置确保 Gradle 只重新编译有变更的文件，无需额外脚本。
 
 ---
 

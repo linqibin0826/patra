@@ -34,7 +34,7 @@ color: yellow
 
 - 行覆盖率 ≥ 80%，分支覆盖率 ≥ 70%
 - 关键业务逻辑 100%
-- 运行 `mvn clean verify -pl 模块名`，查看 `target/site/jacoco/index.html`
+- 运行 `./gradlew :模块名:test jacocoTestReport`，查看 `build/reports/jacoco/test/html/index.html`
 
 ## 4. Mock 策略
 
@@ -52,7 +52,7 @@ color: yellow
 - **容器初始化器**：`MySQLContainerInitializer`、`RocketMQContainerInitializer` 基类
 - **ArchUnit 规则**：`HexagonalArchitectureRules`、`TestingRules`
 - **传递依赖**：JUnit 5、AssertJ、Mockito、TestContainers、ArchUnit、Awaitility、WireMock
-- **禁止重复声明**：上述已传递的依赖不应在模块 pom.xml 中重复声明
+- **禁止重复声明**：上述已传递的依赖不应在模块 build.gradle.kts 中重复声明
 
 ## 注意事项
 

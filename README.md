@@ -77,7 +77,7 @@ Patra 是一个**医学出版物数据平台**,旨在:
 
 | 模块 | 用途 |
 |--------|---------|
-| **patra-parent** | 父 POM,包含依赖管理 |
+| **build-logic** | Gradle Convention Plugins，包含依赖管理和架构约束 |
 
 ---
 
@@ -86,7 +86,7 @@ Patra 是一个**医学出版物数据平台**,旨在:
 ### 前置条件
 
 - **Java 25+** (OpenJDK 或 Oracle JDK)
-- **Maven 3.9+**
+- **Gradle 8.x+** (已内置 Wrapper，无需单独安装)
 - **MySQL 8.0+**
 - **Docker & Docker Compose** (用于本地基础设施)
 
@@ -113,23 +113,20 @@ mysql -h127.0.0.1 -uroot -p < scripts/init-ingest.sql
 ### 3. 构建项目
 
 ```bash
-./mvnw clean install -DskipTests
+./gradlew build -x test
 ```
 
 ### 4. 启动服务
 
 ```bash
 # 终端 1: 启动 registry
-cd patra-registry/patra-registry-boot
-../../mvnw spring-boot:run
+./gradlew :patra-registry:patra-registry-boot:bootRun
 
 # 终端 2: 启动 ingest
-cd patra-ingest/patra-ingest-boot
-../../mvnw spring-boot:run
+./gradlew :patra-ingest:patra-ingest-boot:bootRun
 
 # 终端 3: 启动 gateway
-cd patra-gateway-boot
-../mvnw spring-boot:run
+./gradlew :patra-gateway-boot:bootRun
 ```
 
 ### 5. 验证服务
@@ -194,23 +191,22 @@ Patra 项目遵循**测试金字塔**，各层使用不同的测试策略：
 
 ```bash
 # 1. Domain 层：纯单元测试（JUnit 5 + AssertJ，无框架依赖）
-./mvnw test -pl patra-{service}-domain
+./gradlew :patra-{service}:patra-{service}-domain:test
 
 # 2. Application 层：Mock 单元测试（Mock 所有 Port 接口）
-./mvnw test -pl patra-{service}-app
+./gradlew :patra-{service}:patra-{service}-app:test
 
 # 3. Infrastructure 层：单元测试 + 集成测试
-./mvnw test -pl patra-{service}-infra           # 单元测试（Converter、HTTP Interface Mock）
-./mvnw verify -pl patra-{service}-infra         # 集成测试（@DataJpaTest + TestContainers）
+./gradlew :patra-{service}:patra-{service}-infra:test
 
 # 4. Adapter 层：单元测试 + 切片测试
-./mvnw test -pl patra-{service}-adapter         # 单元测试（Listener、Job）+ @WebMvcTest（Controller）
+./gradlew :patra-{service}:patra-{service}-adapter:test
 
 # 5. Boot 层：E2E 端到端测试（@SpringBootTest + TestContainers + Awaitility）
-./mvnw verify -pl patra-{service}-boot
+./gradlew :patra-{service}:patra-{service}-boot:test
 
 # 运行所有测试
-./mvnw clean verify
+./gradlew check
 ```
 
 ### 测试覆盖率要求
@@ -258,7 +254,7 @@ Patra 项目遵循**测试金字塔**，各层使用不同的测试策略：
 ### 开发工作流
 
 1. **创建特性分支**: `git checkout -b feat/your-feature`
-2. **确保编译通过**: `./mvnw clean compile -DskipTests`
+2. **确保编译通过**: `./gradlew classes`
 3. **提交 PR** 保持最小差异
 
 ### 代码风格

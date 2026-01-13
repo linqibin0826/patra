@@ -62,7 +62,7 @@ allowed-tools: Bash(git add:*), Bash(git status:*), Bash(git commit:*), Bash(git
 | `chore` | 杂务 | 更新依赖、配置文件变更 |
 | `perf` | 性能 | 性能优化 |
 | `ci` | CI/CD | 流水线配置变更 |
-| `build` | 构建 | Maven/Gradle 配置变更 |
+| `build` | 构建 | Gradle 配置变更 |
 
 ### Scope 作用域（使用模块名或功能名）
 

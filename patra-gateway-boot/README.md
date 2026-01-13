@@ -24,7 +24,7 @@ patra-gateway-boot/
 │   ├── application.yml                 # 主配置文件(路由、Consul)
 │   ├── application-dev.yml             # 开发环境配置(DEBUG 日志)
 │   └── application-prod.yml            # 生产环境配置
-└── pom.xml                             # Maven 依赖定义
+└── build.gradle.kts                    # Gradle 依赖定义
 ```
 
 ## 主要组件
@@ -162,5 +162,5 @@ management:
 
 ---
 
-**最后更新**: 2025-01-12
+**最后更新**: 2026-01-14
 **版本**: 0.1.0-SNAPSHOT

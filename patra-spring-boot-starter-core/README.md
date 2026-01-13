@@ -355,12 +355,10 @@ patra:
 
 ## 使用方式
 
-### Maven 依赖
-```xml
-<dependency>
-    <groupId>com.patra</groupId>
-    <artifactId>patra-spring-boot-starter-core</artifactId>
-</dependency>
+### Gradle 依赖
+
+```kotlin
+implementation(project(":patra-spring-boot-starter-core"))
 ```
 
 **传递依赖**(自动包含):
@@ -431,5 +429,5 @@ public class GlobalExceptionHandler {
 
 ---
 
-**最后更新**: 2025-12-10 (新增: CommandBus 命令总线文档)
+**最后更新**: 2026-01-14 (迁移至 Gradle 构建)
 **维护者**: Patra Team
