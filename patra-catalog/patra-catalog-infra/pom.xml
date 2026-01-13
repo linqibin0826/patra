@@ -85,13 +85,13 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Feign 远程调用（已包含 LoadBalancer） -->
+        <!-- HTTP Interface 远程调用（已包含 LoadBalancer） -->
         <dependency>
             <groupId>com.patra</groupId>
-            <artifactId>patra-spring-cloud-starter-feign</artifactId>
+            <artifactId>patra-spring-boot-starter-http-interface</artifactId>
         </dependency>
 
-        <!-- Registry 服务 API（DictionaryClient） -->
+        <!-- Registry 服务 API（DictionaryEndpoint） -->
         <dependency>
             <groupId>com.patra</groupId>
             <artifactId>patra-registry-api</artifactId>

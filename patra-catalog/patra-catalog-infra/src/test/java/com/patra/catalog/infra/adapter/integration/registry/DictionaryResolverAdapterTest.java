@@ -8,11 +8,11 @@ import static org.mockito.Mockito.when;
 
 import com.patra.catalog.domain.model.enums.DictionaryType;
 import com.patra.catalog.domain.model.vo.common.SourceStandard;
-import com.patra.registry.api.client.DictionaryClient;
+import com.patra.common.error.remote.RemoteCallException;
 import com.patra.registry.api.dto.dict.DictionaryResolveItemResp;
 import com.patra.registry.api.dto.dict.DictionaryResolveReq;
 import com.patra.registry.api.dto.dict.DictionaryResolveResp;
-import com.patra.starter.feign.error.exception.RemoteCallException;
+import com.patra.registry.api.endpoint.DictionaryEndpoint;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,10 +32,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///
 /// **测试策略说明**：
 ///
-/// 本测试采用单元测试（Mock Feign Client），原因如下：
+/// 本测试采用单元测试（Mock HTTP Interface），原因如下：
 ///
-/// 1. Adapter 职责单一：仅做 Feign 调用 + DTO 转换，无复杂 HTTP 交互逻辑
-/// 2. HTTP 层可靠性由 Feign + Starter 保障，无需重复验证
+/// 1. Adapter 职责单一：仅做 HTTP Interface 调用 + DTO 转换，无复杂 HTTP 交互逻辑
+/// 2. HTTP 层可靠性由 HTTP Interface + Starter 保障，无需重复验证
 /// 3. 核心测试目标是转换逻辑和异常处理，单元测试足以覆盖
 ///
 /// @author linqibin
@@ -45,7 +45,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @Timeout(value = 2, unit = TimeUnit.SECONDS)
 class DictionaryResolverAdapterTest {
 
-  @Mock private DictionaryClient dictionaryClient;
+  @Mock private DictionaryEndpoint dictionaryEndpoint;
   @InjectMocks private DictionaryResolverAdapter adapter;
   @Captor private ArgumentCaptor<DictionaryResolveReq> requestCaptor;
 
@@ -66,7 +66,7 @@ class DictionaryResolverAdapterTest {
                   new DictionaryResolveItemResp("China", "CN", "中国", "RESOLVED"),
                   new DictionaryResolveItemResp("United States", "US", "美国", "RESOLVED"),
                   new DictionaryResolveItemResp("Japan", "JP", "日本", "RESOLVED")));
-      when(dictionaryClient.resolve(any())).thenReturn(response);
+      when(dictionaryEndpoint.resolve(any())).thenReturn(response);
 
       // When
       Map<String, String> result =
@@ -78,7 +78,7 @@ class DictionaryResolverAdapterTest {
       assertThat(result.get("United States")).isEqualTo("US");
       assertThat(result.get("Japan")).isEqualTo("JP");
 
-      verify(dictionaryClient).resolve(requestCaptor.capture());
+      verify(dictionaryEndpoint).resolve(requestCaptor.capture());
       DictionaryResolveReq request = requestCaptor.getValue();
       assertThat(request.typeCode()).isEqualTo("country");
       assertThat(request.sourceStandard()).isEqualTo("NAME_EN");
@@ -98,7 +98,7 @@ class DictionaryResolverAdapterTest {
                   new DictionaryResolveItemResp("eng", "en", "English", "RESOLVED"),
                   new DictionaryResolveItemResp("chi", "zh", "Chinese", "RESOLVED"),
                   new DictionaryResolveItemResp("jpn", "ja", "Japanese", "RESOLVED")));
-      when(dictionaryClient.resolve(any())).thenReturn(response);
+      when(dictionaryEndpoint.resolve(any())).thenReturn(response);
 
       // When
       Map<String, String> result =
@@ -110,7 +110,7 @@ class DictionaryResolverAdapterTest {
       assertThat(result.get("chi")).isEqualTo("zh");
       assertThat(result.get("jpn")).isEqualTo("ja");
 
-      verify(dictionaryClient).resolve(requestCaptor.capture());
+      verify(dictionaryEndpoint).resolve(requestCaptor.capture());
       DictionaryResolveReq request = requestCaptor.getValue();
       assertThat(request.typeCode()).isEqualTo("language");
       assertThat(request.sourceStandard()).isEqualTo("ISO_639_3");
@@ -129,7 +129,7 @@ class DictionaryResolverAdapterTest {
                   new DictionaryResolveItemResp("China", "CN", "中国", "RESOLVED"),
                   new DictionaryResolveItemResp("InvalidCountry", null, null, "UNKNOWN"),
                   new DictionaryResolveItemResp("Atlantis", null, null, "UNKNOWN")));
-      when(dictionaryClient.resolve(any())).thenReturn(response);
+      when(dictionaryEndpoint.resolve(any())).thenReturn(response);
 
       // When
       Map<String, String> result =
@@ -154,7 +154,7 @@ class DictionaryResolverAdapterTest {
               List.of(
                   new DictionaryResolveItemResp("China", "CN", "中国", "RESOLVED"),
                   new DictionaryResolveItemResp("XX", "XX", "已废弃国家", "DISABLED")));
-      when(dictionaryClient.resolve(any())).thenReturn(response);
+      when(dictionaryEndpoint.resolve(any())).thenReturn(response);
 
       // When
       Map<String, String> result =
@@ -176,13 +176,13 @@ class DictionaryResolverAdapterTest {
     void shouldReturnEmptyMapOnRemoteFailure() {
       // Given
       Set<String> rawCodes = Set.of("China");
-      when(dictionaryClient.resolve(any()))
+      when(dictionaryEndpoint.resolve(any()))
           .thenThrow(
               new RemoteCallException(
                   "SERVER_ERROR",
                   500,
                   "Service unavailable",
-                  "DictionaryClient#resolve",
+                  "DictionaryEndpoint#resolve",
                   null,
                   null));
 
@@ -199,7 +199,7 @@ class DictionaryResolverAdapterTest {
     void shouldReturnEmptyMapOnUnexpectedException() {
       // Given
       Set<String> rawCodes = Set.of("China");
-      when(dictionaryClient.resolve(any())).thenThrow(new RuntimeException("Unexpected error"));
+      when(dictionaryEndpoint.resolve(any())).thenThrow(new RuntimeException("Unexpected error"));
 
       // When
       Map<String, String> result =
@@ -223,7 +223,7 @@ class DictionaryResolverAdapterTest {
 
       // Then
       assertThat(result).isEmpty();
-      verifyNoInteractions(dictionaryClient);
+      verifyNoInteractions(dictionaryEndpoint);
     }
 
     @Test
@@ -235,7 +235,7 @@ class DictionaryResolverAdapterTest {
 
       // Then
       assertThat(result).isEmpty();
-      verifyNoInteractions(dictionaryClient);
+      verifyNoInteractions(dictionaryEndpoint);
     }
 
     @Test
@@ -243,7 +243,7 @@ class DictionaryResolverAdapterTest {
     void shouldReturnEmptyMapWhenResponseIsNull() {
       // Given
       Set<String> rawCodes = Set.of("China");
-      when(dictionaryClient.resolve(any())).thenReturn(null);
+      when(dictionaryEndpoint.resolve(any())).thenReturn(null);
 
       // When
       Map<String, String> result =
@@ -259,7 +259,7 @@ class DictionaryResolverAdapterTest {
       // Given
       Set<String> rawCodes = Set.of("China");
       DictionaryResolveResp response = new DictionaryResolveResp("country", "NAME_EN", null);
-      when(dictionaryClient.resolve(any())).thenReturn(response);
+      when(dictionaryEndpoint.resolve(any())).thenReturn(response);
 
       // When
       Map<String, String> result =

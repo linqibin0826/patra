@@ -3,11 +3,11 @@ package com.patra.catalog.infra.adapter.integration.registry;
 import com.patra.catalog.domain.model.enums.DictionaryType;
 import com.patra.catalog.domain.model.vo.common.SourceStandard;
 import com.patra.catalog.domain.port.registry.DictionaryResolverPort;
-import com.patra.registry.api.client.DictionaryClient;
+import com.patra.common.error.remote.RemoteCallException;
 import com.patra.registry.api.dto.dict.DictionaryResolveItemResp;
 import com.patra.registry.api.dto.dict.DictionaryResolveReq;
 import com.patra.registry.api.dto.dict.DictionaryResolveResp;
-import com.patra.starter.feign.error.exception.RemoteCallException;
+import com.patra.registry.api.endpoint.DictionaryEndpoint;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +34,7 @@ public class DictionaryResolverAdapter implements DictionaryResolverPort {
 
   private static final String STATUS_RESOLVED = "RESOLVED";
 
-  private final DictionaryClient dictionaryClient;
+  private final DictionaryEndpoint dictionaryEndpoint;
 
   @Override
   public Map<String, String> resolve(
@@ -48,7 +48,7 @@ public class DictionaryResolverAdapter implements DictionaryResolverPort {
           new DictionaryResolveReq(
               dictionaryType.getTypeCode(), sourceStandard.code(), List.copyOf(rawValues));
 
-      DictionaryResolveResp response = dictionaryClient.resolve(request);
+      DictionaryResolveResp response = dictionaryEndpoint.resolve(request);
       return extractResolvedCodes(response);
 
     } catch (RemoteCallException ex) {

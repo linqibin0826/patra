@@ -21,7 +21,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /// 技术栈集成:
 ///
 /// - Spring Cloud - 微服务基础设施和服务发现
-/// - Feign 客户端 - 通过 `patra-spring-cloud-starter-feign` 自动扫描 `com.patra.*.api.rpc.client` 包下的接口
+/// - HTTP Interface - 声明式 HTTP 客户端（通过 `patra-spring-boot-starter-http-interface`）
 /// - Spring Data JPA + Hibernate - 数据持久化
 /// - RocketMQ - 消息队列（事件发布）
 ///
