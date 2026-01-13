@@ -33,15 +33,10 @@
             <groupId>com.patra</groupId>
             <artifactId>patra-registry-api</artifactId>
         </dependency>
+        <!-- Optional: for @AutoConfigureAfter(HttpInterfaceAutoConfiguration.class) -->
         <dependency>
-            <groupId>io.github.openfeign</groupId>
-            <artifactId>feign-core</artifactId>
-        </dependency>
-
-        <!-- Optional: for @AutoConfigureAfter(FeignAutoConfiguration.class) -->
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-openfeign-core</artifactId>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-http-interface</artifactId>
             <optional>true</optional>
         </dependency>
 
