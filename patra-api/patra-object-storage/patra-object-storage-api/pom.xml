@@ -13,7 +13,7 @@
 
     <artifactId>patra-object-storage-api</artifactId>
     <name>Patra Storage API</name>
-    <description>Internal Feign contracts for the storage metadata service</description>
+    <description>Internal HTTP contracts for the storage metadata service</description>
 
     <dependencies>
         <dependency>
@@ -26,15 +26,10 @@
             <artifactId>jakarta.validation-api</artifactId>
         </dependency>
 
+        <!-- Provide @HttpExchange/@PostExchange annotations when defining HTTP contracts. -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-web</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-openfeign-core</artifactId>
             <scope>provided</scope>
         </dependency>
     </dependencies>
