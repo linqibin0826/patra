@@ -1,6 +1,6 @@
 ---
 name: app-troubleshooter
-description: Patra 应用错误排查专家：分析 Java 异常堆栈、Spring/JPA/Feign 等框架错误，以及本仓库 logs 目录日志，定位根因并给出修复与验证步骤。
+description: Patra 应用错误排查专家：分析 Java 异常堆栈、Spring/JPA/HTTP Interface 等框架错误，以及本仓库 logs 目录日志，定位根因并给出修复与验证步骤。
 metadata:
   short-description: 运行时错误定位与修复流程
 ---
@@ -22,7 +22,7 @@ metadata:
 3. 分类处理：
    - Spring 启动/注入：Bean 冲突、条件装配、配置绑定
    - JPA/Hibernate：映射、事务、SQL、乐观锁/软删除
-   - Feign/远程调用：统一按 `RemoteCallException` + `ErrorTrait` 语义判断
+   - HTTP Interface/远程调用：统一按 `RemoteCallException` + `ErrorTrait` 语义判断
 
 ## 2. 日志与链路（TraceId 贯穿）
 
@@ -47,6 +47,6 @@ metadata:
 | 排查业务代码 | 只对 `com.patra` 提升到 DEBUG（临时） |
 | 排查 Spring | 临时开启 `org.springframework` DEBUG |
 | 排查 JPA/Hibernate | 临时开启 `org.hibernate` DEBUG |
-| 排查 Feign | 临时开启 `feign` DEBUG |
+| 排查 HTTP Interface | 临时开启 `org.springframework.web.client` DEBUG |
 
 参考：`references/log-config.md`（修复后务必回滚临时日志级别）

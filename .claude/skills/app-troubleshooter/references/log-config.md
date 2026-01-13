@@ -77,8 +77,8 @@ grep "abc123def456" /Users/linqibin/Desktop/Patra/patra-api/logs/*.log
     <appender-ref ref="CONSOLE"/>
 </logger>
 
-<!-- 临时开启 Feign DEBUG -->
-<logger name="feign" level="DEBUG" additivity="false">
+<!-- 临时开启 HTTP Interface/RestClient DEBUG -->
+<logger name="org.springframework.web.client" level="DEBUG" additivity="false">
     <appender-ref ref="CONSOLE"/>
 </logger>
 ```

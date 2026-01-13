@@ -29,7 +29,7 @@ metadata:
 - Application：编排 + 事务边界（`@Transactional` 只在此层）；写用例通过 `*Handler`
 - Infrastructure：实现端口；做技术适配与映射；不反向依赖 Application/Adapter
 - Adapter：仅协议转换；写入口只注入 `CommandBus`；禁止直接触达持久化
-- API：只放契约（DTO/Feign/常量），禁止实现与业务逻辑
+- API：只放契约（DTO/HTTP Interface Endpoint/常量），禁止实现与业务逻辑
 - Boot：唯一启动入口与装配配置
 
 常见违规模式（优先指出并给修复路径）：
@@ -49,7 +49,7 @@ metadata:
 
 - Domain：`DomainException` + `StandardErrorTrait`
 - Application：`ApplicationException` + `ErrorCodeLike`（`{SERVICE}-{0xxx}`）
-- Adapter：Feign 统一 `RemoteCallException` + `ErrorTrait`，禁止捕获 `FeignException`
+- Adapter：HTTP Interface 统一 `RemoteCallException` + `ErrorTrait`，禁止捕获 `RestClientException`
 - Infrastructure：第三方异常通过 `ErrorMappingContributor` SPI 映射
 
 ## 4. JPA 与持久化（高频）

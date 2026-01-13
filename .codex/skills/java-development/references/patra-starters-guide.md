@@ -6,7 +6,7 @@
 |-------|----------|
 | **adapter** | `patra-spring-boot-starter-web` |
 | **infra（数据库）** | `patra-spring-boot-starter-jpa` |
-| **infra（服务调用）** | `patra-spring-cloud-starter-feign` |
+| **infra（服务调用）** | `patra-spring-boot-starter-http-interface` |
 | **infra（对象存储）** | `patra-spring-boot-starter-object-storage` |
 | **infra（REST 调用）** | `patra-spring-boot-starter-rest-client` |
 | **infra（分布式锁）** | `patra-spring-boot-starter-redisson` |
@@ -91,41 +91,48 @@ public class UserRepositoryAdapter implements UserRepository {
 
 ---
 
-## 3. patra-spring-cloud-starter-feign
+## 3. patra-spring-boot-starter-http-interface
 
-**Maven 坐标**: `com.patra:patra-spring-cloud-starter-feign`
+**Maven 坐标**: `com.patra:patra-spring-boot-starter-http-interface`
 
 **适用场景**: `patra-{service}-infra` 模块（调用其他服务）
 
 **核心功能**:
-- OpenFeign 客户端自动配置
-- Consul 服务发现
-- 统一错误处理
-- 熔断降级（Resilience4j）
+- Spring Framework 7 HTTP Interface 自动配置
+- RestClient + @HttpExchange 声明式客户端
+- Consul 服务发现（通过 Spring Cloud LoadBalancer）
+- RFC 7807 ProblemDetail 错误处理
+
+> **注意**：TraceId 传播由 OpenTelemetry Java Agent 自动处理，无需手动配置。
 
 **使用示例**:
 ```java
-/// 步骤 1: 在 -api 模块定义 Endpoint 接口
+/// 步骤 1: 在 -api 模块定义 Endpoint 接口（使用 @HttpExchange）
+@HttpExchange(url = "/_internal/provenances", accept = "application/json")
 public interface ProvenanceEndpoint {
-    @GetMapping("/_internal/provenances/{code}/config")
+    @GetExchange("/{code}/config")
     ProvenanceConfigResp getConfiguration(
         @PathVariable("code") ProvenanceCode code,
         @RequestParam(value = "operationType", required = false) String operationType
     );
 }
 
-/// 步骤 2: 在 -api 模块定义 FeignClient（继承 Endpoint）
-@FeignClient(name = "patra-registry", contextId = "provenanceClient")
-public interface ProvenanceClient extends ProvenanceEndpoint {}
+/// 步骤 2: 在 -boot 模块的 HttpClientConfiguration 中注册代理
+@Bean
+public ProvenanceEndpoint provenanceEndpoint(RestClient registryRestClient) {
+    RestClientAdapter adapter = RestClientAdapter.create(registryRestClient);
+    HttpServiceProxyFactory factory = HttpServiceProxyFactory.builderFor(adapter).build();
+    return factory.createClient(ProvenanceEndpoint.class);
+}
 
-/// 步骤 3: 在 -infra 模块注入使用
+/// 步骤 3: 在 -infra 模块注入使用（直接注入 Endpoint）
 @Component
 @RequiredArgsConstructor
 public class ProvenanceAdapter implements ProvenancePort {
-    private final ProvenanceClient client;
+    private final ProvenanceEndpoint provenanceEndpoint;
     @Override
     public ProvenanceConfig getConfig(ProvenanceCode code) {
-        return converter.toDomain(client.getConfiguration(code, "HARVEST"));
+        return converter.toDomain(provenanceEndpoint.getConfiguration(code, "HARVEST"));
     }
 }
 ```
@@ -322,8 +329,9 @@ public class CustomHandler implements ObservationHandler<Observation.Context> {
 1. ✅ **Adapter 层** → 添加 `patra-spring-boot-starter-web`
 2. ✅ **Infra 层（数据库）** → 添加 `patra-spring-boot-starter-jpa`
    - 确认 Entity 继承 `BaseJpaEntity`；需要软删除时继承 `SoftDeletableJpaEntity`
-3. ✅ **Infra 层（服务调用）** → 添加 `patra-spring-cloud-starter-feign`(可选)
-   - 在 `-api` 模块定义 FeignClient
+3. ✅ **Infra 层（服务调用）** → 添加 `patra-spring-boot-starter-http-interface`(可选)
+   - 在 `-api` 模块定义 `@HttpExchange` 接口
+   - 在 `-boot` 模块的 `HttpClientConfiguration` 注册代理
    - 在 `-infra` 模块实现 Adapter
 4. ✅ **Infra 层（对象存储）** → 添加 `patra-spring-boot-starter-object-storage`(可选)
 5. ✅ **Infra 层（REST 调用）** → 添加 `patra-spring-boot-starter-rest-client`(可选)

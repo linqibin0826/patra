@@ -3,7 +3,7 @@ name: app-troubleshooter
 description: |
   Patra 应用程序错误排查专家。分析异常堆栈、追踪日志链路、定位问题根因。
   触发条件：(1) 用户贴出 Java 异常堆栈或错误日志，(2) 用户描述应用运行时错误，
-  (3) 用户请求排查某个服务的问题，(4) 出现 Spring/JPA/Feign 等框架异常。
+  (3) 用户请求排查某个服务的问题，(4) 出现 Spring/JPA/RestClient 等框架异常。
   提供日志分析、链路追踪、代码定位、第三方文档查询、联网搜索解决方案。
 ---
 
@@ -55,7 +55,7 @@ grep "2025-12-18 11:30" /Users/linqibin/Desktop/Patra/patra-api/logs/patra-catal
 | 排查 com.patra 问题 | 默认 DEBUG 已开启 | - |
 | 排查 Spring 问题 | 临时开启 `org.springframework` DEBUG | logback-spring.xml |
 | 排查 JPA/Hibernate 问题 | 临时开启 `org.hibernate` DEBUG | logback-spring.xml |
-| 排查 Feign 问题 | 临时开启 `feign` DEBUG | logback-spring.xml |
+| 排查 HTTP Interface/RestClient 问题 | 临时开启 `org.springframework.web.client` DEBUG | logback-spring.xml |
 | 业务逻辑缺日志 | 在代码中添加 log.debug() | 对应 Java 文件 |
 
 **重要**：修复后必须关闭临时 DEBUG 日志！
@@ -64,7 +64,7 @@ grep "2025-12-18 11:30" /Users/linqibin/Desktop/Patra/patra-api/logs/patra-catal
 
 ## 常见异常模式
 
-### RemoteCallException（Feign 调用失败）
+### RemoteCallException（HTTP Interface 调用失败）
 ```java
 // 正确处理方式：基于 ErrorTrait 语义判断
 catch (RemoteCallException ex) {

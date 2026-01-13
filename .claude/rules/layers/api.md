@@ -6,7 +6,7 @@ paths: patra-*/*-api/**/*.java
 
 ## 核心职责
 
-- 定义服务契约：Feign 接口、DTO、常量
+- 定义服务契约：HTTP Interface 接口（@HttpExchange）、DTO、常量
 - 跨服务共享的公共定义
 
 ## 禁止行为

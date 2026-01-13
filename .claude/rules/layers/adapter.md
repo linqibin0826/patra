@@ -16,13 +16,6 @@ paths: patra-*/*-adapter/**/*.java
 3. 禁止在请求/响应对象中使用领域对象
 4. 禁止直接注入 CommandHandler（应使用 CommandBus）
 
-## Feign 错误处理
-
-1. 捕获 `RemoteCallException`，基于 `getErrorTraits()` 判断错误类型
-2. 备选：使用 `RemoteErrorHelper` 工具类
-3. 禁止直接捕获 `FeignException`
-
 ## Starter 依赖
 
 - Web 层：`starter-web`
-- Feign：`cloud-starter-feign`

@@ -68,10 +68,10 @@ Patra 是一个**医学出版物数据平台**,旨在:
 | **patra-common** | 基础类 (AggregateRoot, DomainEvent)、错误码、枚举 |
 | **patra-expr-kernel** | 表达式引擎,用于动态 API 参数映射 |
 | **patra-spring-boot-starter-core** | 核心自动配置 (Jackson, 错误处理) |
-| **patra-spring-boot-starter-web** | Web 自动配置 (REST, Feign, 追踪) |
+| **patra-spring-boot-starter-web** | Web 自动配置 (REST, 追踪) |
 | **patra-spring-boot-starter-jpa** | Spring Data JPA 自动配置 |
 | **patra-spring-boot-starter-provenance** | Provenance 配置集成 |
-| **patra-spring-cloud-starter-feign** | Feign 客户端增强 |
+| **patra-spring-boot-starter-http-interface** | HTTP Interface 客户端（错误处理） |
 
 ### 构建基础设施
 
@@ -200,7 +200,7 @@ Patra 项目遵循**测试金字塔**，各层使用不同的测试策略：
 ./mvnw test -pl patra-{service}-app
 
 # 3. Infrastructure 层：单元测试 + 集成测试
-./mvnw test -pl patra-{service}-infra           # 单元测试（Converter、Feign Client Mock）
+./mvnw test -pl patra-{service}-infra           # 单元测试（Converter、HTTP Interface Mock）
 ./mvnw verify -pl patra-{service}-infra         # 集成测试（@DataJpaTest + TestContainers）
 
 # 4. Adapter 层：单元测试 + 切片测试
@@ -231,7 +231,7 @@ Patra 项目遵循**测试金字塔**，各层使用不同的测试策略：
 
 - ✅ 六边形架构脚手架
 - ✅ 领域模型 (Provenance, Plan, Task 聚合)
-- ✅ Registry CRUD API (基于 Feign)
+- ✅ Registry CRUD API (基于 HTTP Interface)
 - ✅ Plan 编排 (时间窗口解析、切片、任务生成)
 - ✅ Outbox 模式实现
 - ✅ Cursor 水位线跟踪

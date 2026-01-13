@@ -1,6 +1,6 @@
 ---
 name: java-development
-description: 在编写代码时，你必须使用这个技能，java 开发指南。用于创建DDD组件，Spring组件，配置 JPA、Feign、Consul，管理 Patra 自定义 Starter 依赖。涵盖六边形架构下的 Spring Boot 4.0.1 开发模式和最佳实践。
+description: 在编写代码时，你必须使用这个技能，java 开发指南。用于创建DDD组件，Spring组件，配置 JPA、HTTP Interface、Consul，管理 Patra 自定义 Starter 依赖。涵盖六边形架构下的 Spring Boot 4.0.1 开发模式和最佳实践。
 allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__replace_symbol_body, mcp__serena__rename_symbol, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__ide__getDiagnostics
 ---
 
@@ -81,7 +81,7 @@ CommandHandler 负责协调业务流程：
 ├── adapter 层 → patra-spring-boot-starter-web
 ├── infra 层
 │   ├── 需要数据库 → patra-spring-boot-starter-jpa
-│   ├── 需要调用服务 → patra-spring-cloud-starter-feign
+│   ├── 需要调用服务 → patra-spring-boot-starter-http-interface
 │   └── 需要对象存储 → patra-spring-boot-starter-object-storage
 ├── domain 层 → ❌ 不能添加任何 Starter
 ```

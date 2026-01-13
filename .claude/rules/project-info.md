@@ -21,7 +21,7 @@
 patra-{service}/
 ├── patra-{service}-domain   # 纯 Java 领域模型
 ├── patra-{service}-app      # 编排层 (@Transactional)
-├── patra-{service}-infra    # 基础设施 (Repository 实现、Feign 客户端)
+├── patra-{service}-infra    # 基础设施 (Repository 实现、HTTP Interface 客户端)
 ├── patra-{service}-adapter  # 适配器 (Controller、Job)
 ├── patra-{service}-api      # 服务契约 (DTO、接口定义)
 └── patra-{service}-boot     # 启动入口 (@SpringBootApplication)
@@ -34,4 +34,4 @@ patra-{service}/
 
 **Starter 模块**:
 - `patra-spring-boot-starter-core/web/jpa/batch/rest-client/object-storage/observability/redisson/provenance/test`
-- `patra-spring-cloud-starter-feign`
+- `patra-spring-boot-starter-http-interface`

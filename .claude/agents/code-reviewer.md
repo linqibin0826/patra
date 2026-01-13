@@ -130,10 +130,10 @@ patra-{service}-adapter/
 
 **错误码格式**: `{SERVICE}-{0xxx}`（如 `INGEST-0404`），0xxx 映射 HTTP 状态码
 
-**Feign 调用检查**:
+**HTTP Interface 调用检查**:
 - ✅ 捕获 `RemoteCallException`，优先用 `ex.getErrorTraits()` 判断
 - ✅ 备选使用 `RemoteErrorHelper` 工具类（`isNotFound()`、`isServerError()`）
-- ❌ 禁止直接捕获 `FeignException`
+- ❌ 禁止直接捕获 `RestClientException`
 
 **命名启发式**: 类名后缀自动映射（`NotFoundException` → 404，`ConflictException` → 409）
 
