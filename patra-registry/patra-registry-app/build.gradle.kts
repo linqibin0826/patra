@@ -13,13 +13,10 @@ dependencies {
     api(project(":patra-registry:patra-registry-api"))
     api(project(":patra-spring-boot-starter-core"))
 
-    // MapStruct
-    api("org.mapstruct:mapstruct:1.6.3")
-    annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
-    annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
+    // MapStruct 由 patra.hexagonal-app 插件提供
+    // annotationProcessor 由 patra.java-base 插件提供
 
-    // Hibernate Validator
-    api("org.hibernate.validator:hibernate-validator")
+    // Hibernate Validator 由 patra.hexagonal-app 插件提供
 
     // 测试依赖
     testImplementation(project(":patra-spring-boot-starter-test"))

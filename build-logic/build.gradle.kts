@@ -20,8 +20,5 @@ dependencies {
     implementation("com.diffplug.spotless:spotless-plugin-gradle:${libs.versions.spotless.get()}")
 
     // SpotBugs - 静态代码分析
-    implementation("com.github.spotbugs.snom:spotbugs-gradle-plugin:${libs.versions.spotbugs.plugin.get()}")
-
-    // Kordamp Enforcer - 依赖约束 (替代 maven-enforcer-plugin)
-    implementation("org.kordamp.gradle:enforcer-gradle-plugin:${libs.versions.kordamp.enforcer.get()}")
+    implementation("com.github.spotbugs:com.github.spotbugs.gradle.plugin:${libs.versions.spotbugs.plugin.get()}")
 }

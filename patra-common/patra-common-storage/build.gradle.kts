@@ -13,11 +13,9 @@ plugins {
 
 dependencies {
     // Hutool 工具库
-    api("cn.hutool:hutool-core:5.8.25")
+    api(libs.hutool.core)
 
-    // 测试依赖
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
-    testImplementation("org.assertj:assertj-core:3.27.3")
+    // 测试依赖由 patra.java-library 插件提供
 }
 
 // 覆盖率要求 75%

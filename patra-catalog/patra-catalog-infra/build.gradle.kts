@@ -30,25 +30,23 @@ dependencies {
     api("io.projectreactor.netty:reactor-netty-http")
 
     // Apache Commons Net（FTP 客户端）
-    api("commons-net:commons-net:3.11.1")
+    api(libs.commons.net)
 
     // RocketMQ
-    api("org.apache.rocketmq:rocketmq-spring-boot-starter:2.3.1")
+    api(libs.rocketmq.spring.boot)
 
-    // MapStruct
-    api("org.mapstruct:mapstruct:1.6.3")
-    annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
-    annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
+    // MapStruct 由 patra.hexagonal-infra 插件提供
+    // annotationProcessor 由 patra.java-base 插件提供
 
     // ICU4J（Unicode 国际化支持）
-    api("com.ibm.icu:icu4j:76.1")
+    api(libs.icu4j)
 
     // Spring Boot Starter
     api("org.springframework.boot:spring-boot-starter")
 
-    // 测试依赖
+    // 测试依赖（基础由 patra.java-library 提供）
     testImplementation(project(":patra-spring-boot-starter-test"))
-    testImplementation("org.mockftpserver:MockFtpServer:3.2.0")
+    testImplementation(libs.mockftpserver)
 }
 
 // 生成 test-jar 供 boot 模块复用

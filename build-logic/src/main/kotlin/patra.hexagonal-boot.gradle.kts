@@ -7,39 +7,28 @@
  * - @SpringBootApplication 入口
  * - 配置装配
  * - 生成可执行 fat JAR
+ *
+ * 注意：org.springframework.boot 插件会自动应用 io.spring.dependency-management，
+ * 但 patra.java-base 中的 BOM 配置不会自动继承。这里通过 applyPatraDependencyManagement()
+ * 确保 BOM 和强制版本约束正确应用。
  */
 
 plugins {
     id("patra.java-base")
     id("org.springframework.boot")
-    id("io.spring.dependency-management")
+    // 注意：org.springframework.boot 会自动应用 io.spring.dependency-management
 }
 
-// 导入 BOM
-dependencyManagement {
-    imports {
-        mavenBom("org.springframework.boot:spring-boot-dependencies:4.0.1")
-        mavenBom("org.springframework.cloud:spring-cloud-dependencies:2025.1.0")
-        mavenBom("io.github.resilience4j:resilience4j-bom:2.2.0")
-        mavenBom("org.testcontainers:testcontainers-bom:1.20.4")
-        mavenBom("software.amazon.awssdk:bom:2.25.36")
-    }
-}
+// 预编译脚本插件需要显式获取 Version Catalog
+val libs = the<org.gradle.api.artifacts.VersionCatalogsExtension>().named("libs")
 
-// 强制版本约束
-configurations.all {
-    resolutionStrategy {
-        force("org.apache.commons:commons-compress:1.28.0")
-        force("org.apache.httpcomponents:httpclient:4.5.14")
-        force("org.objenesis:objenesis:3.4")
-    }
-}
+// 重新应用依赖管理配置
+// 虽然 patra.java-base 已经配置过，但 org.springframework.boot 插件会重置配置
+applyPatraDependencyManagement(libs)
 
 // ==================== Spring Boot JAR 配置 ====================
 tasks.bootJar {
     archiveClassifier = ""
-    // 生成启动脚本（可选）
-    launchScript()
 }
 
 // 禁用普通 JAR（只生成 fat JAR）
@@ -61,9 +50,9 @@ tasks.bootRun {
 
 dependencies {
     // 服务发现
-    implementation("org.springframework.cloud:spring-cloud-starter-consul-discovery")
+    implementation(libs.findLibrary("spring-cloud-starter-consul-discovery").get())
 
     // 测试依赖
     testImplementation(project(":patra-spring-boot-starter-test"))
-    testImplementation("org.testcontainers:jdbc")
+    testImplementation(libs.findLibrary("testcontainers-jdbc").get())
 }

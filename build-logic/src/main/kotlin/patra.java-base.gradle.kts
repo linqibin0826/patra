@@ -15,7 +15,16 @@ plugins {
     jacoco
     id("com.diffplug.spotless")
     id("com.github.spotbugs")
+    id("io.spring.dependency-management")
 }
+
+// ==================== Version Catalog 访问 ====================
+// 预编译脚本插件需要显式获取 Version Catalog
+val libs = the<org.gradle.api.artifacts.VersionCatalogsExtension>().named("libs")
+
+// ==================== 统一依赖管理（BOM + 强制版本约束）====================
+// 配置定义在 PatraDependencyManagement.kt 中，版本从 libs.versions.toml 获取
+applyPatraDependencyManagement(libs)
 
 // ==================== Java Toolchain ====================
 java {
@@ -35,7 +44,7 @@ tasks.withType<JavaCompile>().configureEach {
 spotless {
     java {
         target("src/**/*.java")
-        googleJavaFormat("1.29.0")
+        googleJavaFormat(libs.findVersion("google-java-format").get().requiredVersion)
         removeUnusedImports()
         trimTrailingWhitespace()
         endWithNewline()
@@ -57,7 +66,7 @@ tasks.withType<com.github.spotbugs.snom.SpotBugsTask>().configureEach {
 
 // ==================== JaCoCo (Code Coverage) ====================
 jacoco {
-    toolVersion = "0.8.14"
+    toolVersion = libs.findVersion("jacoco").get().requiredVersion
 }
 
 tasks.jacocoTestReport {
@@ -108,18 +117,24 @@ tasks.test {
 }
 
 // ==================== Annotation Processors ====================
+// 使用 Version Catalog (libs) 声明依赖
 dependencies {
     // Lombok
-    compileOnly("org.projectlombok:lombok:1.18.40")
-    annotationProcessor("org.projectlombok:lombok:1.18.40")
-    testCompileOnly("org.projectlombok:lombok:1.18.40")
-    testAnnotationProcessor("org.projectlombok:lombok:1.18.40")
+    compileOnly(libs.findLibrary("lombok").get())
+    annotationProcessor(libs.findLibrary("lombok").get())
+    testCompileOnly(libs.findLibrary("lombok").get())
+    testAnnotationProcessor(libs.findLibrary("lombok").get())
 
     // MapStruct
-    annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
-    testAnnotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
+    annotationProcessor(libs.findLibrary("mapstruct-processor").get())
+    testAnnotationProcessor(libs.findLibrary("mapstruct-processor").get())
 
     // Lombok-MapStruct Binding
-    annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
-    testAnnotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
+    annotationProcessor(libs.findLibrary("lombok-mapstruct-binding").get())
+    testAnnotationProcessor(libs.findLibrary("lombok-mapstruct-binding").get())
+
+    // JUnit Platform Launcher - Gradle 9 不再自动添加，需要显式声明
+    // See: https://github.com/gradle/gradle/issues/34512
+    // See: https://github.com/spring-projects/spring-boot/issues/46037
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

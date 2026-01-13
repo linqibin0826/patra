@@ -9,10 +9,7 @@ plugins {
     id("patra.hexagonal-domain")
 }
 
-dependencies {
-    api(project(":patra-common:patra-common-core"))
-
-    // 测试依赖
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
-    testImplementation("org.assertj:assertj-core:3.27.3")
-}
+// 所有依赖由 patra.hexagonal-domain 插件提供:
+// - patra-common-core (api)
+// - Hutool, MapStruct
+// - 测试依赖

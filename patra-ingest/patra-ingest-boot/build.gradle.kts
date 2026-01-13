@@ -31,7 +31,7 @@ dependencies {
     implementation(project(":patra-object-storage:patra-object-storage-api"))
 
     // RocketMQ
-    implementation("org.apache.rocketmq:rocketmq-spring-boot-starter:2.3.1") {
+    implementation(libs.rocketmq.spring.boot) {
         exclude(group = "commons-logging", module = "commons-logging")
     }
 
@@ -39,6 +39,6 @@ dependencies {
     testImplementation(project(":patra-spring-boot-starter-test"))
 
     // JMH for performance benchmarks
-    testImplementation("org.openjdk.jmh:jmh-core:1.37")
-    testAnnotationProcessor("org.openjdk.jmh:jmh-generator-annprocess:1.37")
+    testImplementation(libs.jmh.core)
+    testAnnotationProcessor(libs.jmh.generator)
 }

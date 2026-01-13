@@ -15,15 +15,13 @@ dependencies {
     api(project(":patra-spring-boot-starter-web"))
 
     // RocketMQ
-    api("org.apache.rocketmq:rocketmq-spring-boot-starter:2.3.1")
+    api(libs.rocketmq.spring.boot)
 
-    // MapStruct
-    api("org.mapstruct:mapstruct:1.6.3")
-    annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
-    annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
+    // MapStruct 由 patra.hexagonal-adapter 插件提供
+    // annotationProcessor 由 patra.java-base 插件提供
 
     // XXL-Job
-    api("com.xuxueli:xxl-job-core:2.4.2")
+    api(libs.xxl.job)
 
     // 测试依赖
     testImplementation(project(":patra-spring-boot-starter-test"))
