@@ -25,17 +25,10 @@
             <artifactId>jakarta.validation-api</artifactId>
         </dependency>
 
-        <!-- Provide @RequestMapping/@GetMapping annotations when defining HTTP contracts. -->
+        <!-- Provide @HttpExchange/@GetExchange annotations when defining HTTP contracts. -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-web</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <!-- Expose @FeignClient and related annotations for contract definitions. -->
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-openfeign-core</artifactId>
             <scope>provided</scope>
         </dependency>
     </dependencies>
