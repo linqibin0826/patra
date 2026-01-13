@@ -20,7 +20,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 /// 存储端点实现。
 ///
-/// 实现内部存储元数据端点的REST控制器,作为适配器层的入站适配器, 接收来自其他微服务的Feign客户端请求,并将其转换为应用层的用例调用。
+/// 实现内部存储元数据端点的REST控制器,作为适配器层的入站适配器, 接收来自其他微服务的 HTTP Interface 客户端请求,并将其转换为应用层的用例调用。
 ///
 /// 职责:
 ///

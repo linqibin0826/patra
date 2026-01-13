@@ -4,7 +4,7 @@
 
 **patra-object-storage** 是 Patra 平台的对象存储元数据管理微服务,专门负责记录和管理上传到外部对象存储提供商(MinIO/S3)的文件元数据。
 
-作为平台的基础设施服务,patra-object-storage 提供了文件上传记录的持久化存储,维护文件与业务上下文的关联关系,并通过唯一的 `storage_key` (bucket/objectKey) 确保幂等性。该服务仅对内部微服务提供 Feign API,不暴露公共 REST 接口。
+作为平台的基础设施服务,patra-object-storage 提供了文件上传记录的持久化存储,维护文件与业务上下文的关联关系,并通过唯一的 `storage_key` (bucket/objectKey) 确保幂等性。该服务仅对内部微服务提供 HTTP Interface API,不暴露公共 REST 接口。
 
 **核心价值**:
 - **元数据持久化**: 记录文件大小、校验和、MIME 类型、业务上下文等完整元数据
@@ -19,7 +19,7 @@
 - **业务上下文管理**: 存储 `serviceName`、`businessType`、`businessId`、`correlationData` 等业务上下文
 - **幂等性控制**: 通过数据库唯一约束确保同一 `storage_key` 不会重复记录
 - **生命周期追踪**: 追踪文件状态(ACTIVE/DELETED)、上传时间、过期时间、删除时间
-- **内部 API 提供**: 为其他微服务提供 Feign 客户端接口,实现类型安全的 RPC 调用
+- **内部 API 提供**: 为其他微服务提供 HTTP Interface 接口,实现类型安全的服务间调用
 
 ## 架构设计
 
@@ -57,7 +57,7 @@
                            │
                   ┌────────┴─────────┐
                   │       api        │
-                  │   Feign 契约层   │
+                  │ HTTP Interface   │
                   │   DTO + 接口     │
                   └──────────────────┘
 ```
@@ -68,7 +68,7 @@
 
 ```
 patra-object-storage/
-├── patra-object-storage-api/        # 外部契约层 - Feign 客户端接口 + DTO
+├── patra-object-storage-api/        # 外部契约层 - HTTP Interface 接口 + DTO
 ├── patra-object-storage-domain/     # 领域层 - 聚合根、值对象、仓储端口(纯 Java)
 ├── patra-object-storage-app/        # 应用层 - 用例编排器、事务管理
 ├── patra-object-storage-infra/      # 基础设施层 - JPA 仓储实现 + Flyway 迁移
@@ -151,12 +151,15 @@ patra-object-storage/
 
 ## API 契约
 
-### Feign 客户端
+### HTTP Interface 端点
 
-**StorageClient** (继承 `StorageEndpoint`):
+**StorageEndpoint** (`@HttpExchange` 注解定义):
 ```java
-@FeignClient(name = "patra-object-storage", contextId = "storageClient")
-public interface StorageClient extends StorageEndpoint {}
+@HttpExchange(url = "/_internal/storage", accept = "application/json", contentType = "application/json")
+public interface StorageEndpoint {
+    @PostExchange("/files/record")
+    RecordUploadResponse recordUpload(@RequestBody UploadRecordRequest request);
+}
 ```
 
 ### 端点定义
@@ -206,13 +209,24 @@ public interface StorageClient extends StorageEndpoint {}
 </dependency>
 ```
 
-**2. 注入 Feign 客户端**:
+**2. 创建 HTTP Interface 代理并注入**:
 ```java
+@Configuration
+public class StorageClientConfig {
+    @Bean
+    public StorageEndpoint storageEndpoint(
+            @Qualifier("httpInterfaceLoadBalancedRestClientBuilder") RestClient.Builder builder,
+            RestClientFactory factory) {
+        RestClient client = factory.createRestClient(builder, "storage", "lb://patra-object-storage");
+        return factory.createProxy(client, StorageEndpoint.class);
+    }
+}
+
 @Service
 @RequiredArgsConstructor
 public class FileUploadService {
 
-    private final StorageClient storageClient;
+    private final StorageEndpoint storageEndpoint;
 
     public void recordUpload(String bucket, String key, long size, String md5) {
         var request = new UploadRecordRequest(
@@ -221,7 +235,7 @@ public class FileUploadService {
             "export-001", Map.of(), "MINIO", null, null
         );
 
-        RecordUploadResponse response = storageClient.recordUpload(request);
+        RecordUploadResponse response = storageEndpoint.recordUpload(request);
         log.info("Metadata recorded with id: {}", response.metadataId());
     }
 }
@@ -331,11 +345,11 @@ curl http://localhost:8500/v1/catalog/service/patra-object-storage
 - **原因**: 尝试记录已存在的 storage_key
 - **解决**: 检查上游服务是否正确处理幂等性,或手动清理测试数据
 
-**Q: Feign 调用超时**
+**Q: HTTP Interface 调用超时**
 - **原因**: 网络延迟或服务未启动
 - **解决**:
   - 检查 Consul 服务注册状态
-  - 增加 Feign 超时配置: `feign.client.config.default.connectTimeout=5000`
+  - 调整 RestClient 超时配置: `patra.http.interface.connect-timeout=5s`
 
 **Q: Flyway 迁移失败**
 - **原因**: 数据库版本不兼容或迁移脚本错误
