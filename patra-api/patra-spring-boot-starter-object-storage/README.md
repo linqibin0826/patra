@@ -162,12 +162,10 @@ patra:
 
 ## 使用方式
 
-### Maven 依赖
-```xml
-<dependency>
-    <groupId>com.patra</groupId>
-    <artifactId>patra-spring-boot-starter-object-storage</artifactId>
-</dependency>
+### Gradle 依赖
+
+```kotlin
+implementation(project(":patra-spring-boot-starter-object-storage"))
 ```
 
 **传递依赖**(自动包含):
@@ -425,5 +423,5 @@ RuntimeException
 
 ---
 
-**最后更新**: 2025-12-01
+**最后更新**: 2026-01-14
 **维护者**: Patra Team

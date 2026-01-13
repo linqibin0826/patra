@@ -28,7 +28,7 @@
 ## 模块结构
 
 ```
-patra-common/                         (聚合 POM - 无代码)
+patra-common/                         (Gradle 聚合项目 - 无代码)
 ├── patra-common-core/               (核心基础 - 所有服务必需)
 │   ├── domain/                      (领域层基类)
 │   ├── error/                       (异常处理框架)
@@ -49,7 +49,7 @@ patra-common/                         (聚合 POM - 无代码)
 
 ### 1. patra-common-core (必需)
 
-**Maven 坐标**: `com.patra:patra-common-core`
+**模块坐标**: `com.patra:patra-common-core`
 
 **定位**: 所有 Patra 服务必须依赖的核心基础设施。
 
@@ -69,7 +69,7 @@ patra-common/                         (聚合 POM - 无代码)
 
 ### 2. patra-common-storage (可选)
 
-**Maven 坐标**: `com.patra:patra-common-storage`
+**模块坐标**: `com.patra:patra-common-storage`
 
 **定位**: 标准化的对象存储键生成策略(业务规则,非基础设施代码)。
 
@@ -89,7 +89,7 @@ patra-common/                         (聚合 POM - 无代码)
 
 ### 3. patra-common-model (可选)
 
-**Maven 坐标**: `com.patra:patra-common-model`
+**模块坐标**: `com.patra:patra-common-model`
 
 **定位**: 跨服务共享的标准化数据模型(Shared Kernel)。
 
@@ -122,24 +122,15 @@ patra-common/                         (聚合 POM - 无代码)
 
 ### 引入依赖
 
-```xml
-<!-- 必需: 核心基础设施 -->
-<dependency>
-    <groupId>com.patra</groupId>
-    <artifactId>patra-common-core</artifactId>
-</dependency>
+```kotlin
+// 必需: 核心基础设施
+implementation(project(":patra-common:patra-common-core"))
 
-<!-- 可选: 存储键生成策略 -->
-<dependency>
-    <groupId>com.patra</groupId>
-    <artifactId>patra-common-storage</artifactId>
-</dependency>
+// 可选: 存储键生成策略
+implementation(project(":patra-common:patra-common-storage"))
 
-<!-- 可选: 共享数据模型 -->
-<dependency>
-    <groupId>com.patra</groupId>
-    <artifactId>patra-common-model</artifactId>
-</dependency>
+// 可选: 共享数据模型
+implementation(project(":patra-common:patra-common-model"))
 ```
 
 ### 使用存储键生成器
@@ -202,4 +193,4 @@ byte[] hashMaterial = result.getHashMaterial();
 ---
 
 **版本**: 0.1.0-SNAPSHOT
-**最后更新**: 2025-12-10
+**最后更新**: 2026-01-14

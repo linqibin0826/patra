@@ -20,7 +20,7 @@ echo '{"prompt":"create backend controller"}' | ./.claude/hooks/skill-activation
 
 - **mark-java-changes.sh** - 标记 Java 文件修改 (PostToolUse)
 - **auto-format-java.sh** - 自动格式化 Java 代码 (PostToolUse)
-- **maven-compile-check.sh** - 检查编译错误 (Stop)
+- **gradle-compile-check.sh** - 检查编译错误 (Stop)
 - **trigger-build-resolver-java.sh** - 自动修复编译错误 (Stop)
 
 ## 🔧 维护

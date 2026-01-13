@@ -245,7 +245,7 @@ docker-compose -f docker/docker-compose.yml up -d
 
 ```bash
 cd patra-ingest/patra-ingest-boot
-../../mvnw spring-boot:run
+../../gradlew :patra-ingest:patra-ingest-boot:bootRun
 ```
 
 **默认端口**: 8082
@@ -306,10 +306,10 @@ curl http://localhost:8082/actuator/metrics/patra.outbox.publish.total
 ```bash
 # 单独运行架构测试
 cd patra-ingest/patra-ingest-boot
-../../mvnw test -Dtest=IngestArchitectureTest
+../../gradlew :patra-ingest:patra-ingest-boot:test --tests "IngestArchitectureTest"
 
 # 查看测试报告
-cat target/surefire-reports/com.patra.ingest.architecture.IngestArchitectureTest.txt
+cat patra-ingest-boot/build/reports/tests/test/index.html
 ```
 
 ### 冻结模式工作流
@@ -331,7 +331,7 @@ Git pre-commit hook 自动运行架构测试：
 
 ```bash
 # 手动触发（提交前）
-./scripts/git/mvn_archunit_changed_modules.sh
+./gradlew :patra-ingest:patra-ingest-boot:test --tests "*ArchitectureTest*"
 ```
 
 ### 架构规则详情
@@ -451,6 +451,6 @@ A: 临时设置 `freeze.refreeze=true` 更新基线，但重构完成后立即�
 
 ---
 
-**最后更新**: 2025-01-16
-**Maven 坐标**: `com.patra:patra-ingest:0.1.0-SNAPSHOT`
+**最后更新**: 2026-01-14
+**模块坐标**: `com.patra:patra-ingest:0.1.0-SNAPSHOT`
 **作者**: linqibin

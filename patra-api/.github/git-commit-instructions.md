@@ -40,7 +40,7 @@
 | `chore` | 构建/工具/依赖 | `chore: 升级 Spring Boot 到 4.0.1` |
 | `perf` | 性能优化 | `perf(test): 优化 GenericBatchExecutor 重试测试延迟` |
 | `ci` | CI/CD 配置 | `ci: 优化 CI 流程，减少无代码变更时的构建` |
-| `build` | 构建系统变更 | `build: 更新 Maven wrapper 到 3.9.9` |
+| `build` | 构建系统变更 | `build: 更新 Gradle wrapper 到 9.2.1` |
 | `revert` | 回滚提交 | `revert: 回滚"feat(ingest): 添加批量计划功能"` |
 
 ---

@@ -38,22 +38,22 @@ argument-hint: [模块名 | committed | uncommitted | 空]
 
 ## 2. 第一阶段：测试编译 + 架构测试（质量门槛）
 
-### 2.1 识别需要编译的 Maven 模块（artifactId）
+### 2.1 识别需要编译的 Gradle 模块
 
-根据“变更文件清单”识别模块列表：
+根据"变更文件清单"识别模块列表：
 - 对每个变更文件取顶层目录名 `X`（如 `patra-ingest`、`patra-spring-boot-starter-web`）
-- 若存在目录 `X/X-boot`（例如 `patra-ingest/patra-ingest-boot`），则编译目标为 `:X-boot`
+- 若存在目录 `X/X-boot`（例如 `patra-ingest/patra-ingest-boot`），则编译目标为 `:X:X-boot`
 - 否则编译目标为 `:X`
-- 若用户参数是模块名：优先以参数解析出的目标为准（`patra-ingest` → `:patra-ingest-boot`；`patra-spring-boot-starter-web` → `:patra-spring-boot-starter-web`）
+- 若用户参数是模块名：优先以参数解析出的目标为准（`patra-ingest` → `:patra-ingest:patra-ingest-boot`；`patra-spring-boot-starter-web` → `:patra-spring-boot-starter-web`）
 
 输出一行：
 - 涉及模块：`:m1,:m2,...`
 
 ### 2.2 执行测试编译
 
-优先使用 Maven Wrapper（若存在 `./mvnw`）：
+使用 Gradle Wrapper：
 
-- `./mvnw test-compile -pl :m1,:m2 -am`
+- `./gradlew :m1:testClasses :m2:testClasses`
 
 若编译失败：
 - 汇总关键错误（不要刷屏），指出失败模块
@@ -64,7 +64,7 @@ argument-hint: [模块名 | committed | uncommitted | 空]
 
 编译通过后，执行：
 
-- `./mvnw test -pl :m1,:m2 -am -Dtest=\"*ArchTest,*ArchitectureTest\"`
+- `./gradlew :m1:test :m2:test --tests "*ArchTest" --tests "*ArchitectureTest"`
 
 若失败：
 - 汇总违规信息与可能原因

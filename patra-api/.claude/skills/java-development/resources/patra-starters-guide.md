@@ -17,7 +17,7 @@
 
 ## 1. patra-spring-boot-starter-web
 
-**Maven 坐标**: `com.patra:patra-spring-boot-starter-web`
+**模块坐标**: `com.patra:patra-spring-boot-starter-web`
 
 **适用场景**: `patra-{service}-adapter` 模块
 
@@ -46,7 +46,7 @@ public class UserController {
 
 ## 2. patra-spring-boot-starter-jpa
 
-**Maven 坐标**: `com.patra:patra-spring-boot-starter-jpa`
+**模块坐标**: `com.patra:patra-spring-boot-starter-jpa`
 
 **适用场景**: `patra-{service}-infra` 模块（涉及数据库）
 
@@ -93,7 +93,7 @@ public class UserRepositoryAdapter implements UserRepository {
 
 ## 3. patra-spring-boot-starter-http-interface
 
-**Maven 坐标**: `com.patra:patra-spring-boot-starter-http-interface`
+**模块坐标**: `com.patra:patra-spring-boot-starter-http-interface`
 
 **适用场景**: `patra-{service}-infra` 模块（调用其他服务）
 
@@ -158,7 +158,7 @@ public class ProvenanceAdapter implements ProvenancePort {
 
 ## 4. patra-spring-boot-starter-object-storage
 
-**Maven 坐标**: `com.patra:patra-spring-boot-starter-object-storage`
+**模块坐标**: `com.patra:patra-spring-boot-starter-object-storage`
 
 **适用场景**: `patra-{service}-infra` 模块（需要对象存储）
 
@@ -202,7 +202,7 @@ public class PublicationStorageAdapter implements PublicationStoragePort {
 
 ## 5. patra-spring-boot-starter-rest-client
 
-**Maven 坐标**: `com.patra:patra-spring-boot-starter-rest-client`
+**模块坐标**: `com.patra:patra-spring-boot-starter-rest-client`
 
 **适用场景**: `patra-{service}-infra` 模块（调用外部 REST API、下载文件）
 
@@ -233,7 +233,7 @@ public class ExternalApiAdapter implements ExternalApiPort {
 
 ## 6. patra-spring-boot-starter-redisson
 
-**Maven 坐标**: `com.patra:patra-spring-boot-starter-redisson`
+**模块坐标**: `com.patra:patra-spring-boot-starter-redisson`
 
 **适用场景**: `patra-{service}-infra` 模块（需要分布式锁）
 
@@ -272,7 +272,7 @@ public class PlanService {
 
 ## 7. patra-spring-boot-starter-core
 
-**Maven 坐标**: `com.patra:patra-spring-boot-starter-core`
+**模块坐标**: `com.patra:patra-spring-boot-starter-core`
 
 **适用场景**: **所有模块（除了 domain 层）**
 
@@ -301,7 +301,7 @@ public class SomeService {
 
 ## 8. patra-spring-boot-starter-observability
 
-**Maven 坐标**: `com.patra:patra-spring-boot-starter-observability`
+**模块坐标**: `com.patra:patra-spring-boot-starter-observability`
 
 **适用场景**: 可选依赖（增强可观测性）
 

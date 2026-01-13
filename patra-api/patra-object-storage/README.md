@@ -78,7 +78,7 @@ patra-object-storage/
 
 **架构约束**:
 - **domain 层**: 禁止依赖 Spring/JPA 等框架,仅允许 `patra-common-core` + Lombok/Hutool
-- **Maven Enforcer**: 通过 `maven-enforcer-plugin` 强制检查 domain 层纯净性
+- **Gradle 架构检查**: 通过 `enforceDomainPurity` 任务强制检查 domain 层纯净性
 - **依赖方向**: 所有模块均指向 domain,确保业务逻辑独立于框架
 
 ## 领域模型
@@ -201,12 +201,9 @@ public interface StorageEndpoint {
 
 ### 在其他服务中集成
 
-**1. 添加依赖** (在 `pom.xml` 中):
-```xml
-<dependency>
-    <groupId>com.patra</groupId>
-    <artifactId>patra-object-storage-api</artifactId>
-</dependency>
+**1. 添加依赖** (在 `build.gradle.kts` 中):
+```kotlin
+implementation(project(":patra-object-storage:patra-object-storage-api"))
 ```
 
 **2. 创建 HTTP Interface 代理并注入**:
@@ -293,7 +290,7 @@ spring:
 ### 前置要求
 
 - **JDK 25+**: 确保安装 Java 25 或更高版本
-- **Maven 3.9.9+**: 用于构建和依赖管理
+- **Gradle 8.x+**: 用于构建和依赖管理（已内置 Wrapper）
 - **MySQL 8.0+**: 数据库服务
 - **Consul**: 服务注册中心(开发环境可选)
 
@@ -314,10 +311,9 @@ export CONSUL_PORT=8500
 
 3. **编译并启动**:
 ```bash
-cd patra-object-storage
-../mvnw clean install -DskipTests
-cd patra-object-storage-boot
-../../mvnw spring-boot:run
+# 在项目根目录执行
+./gradlew :patra-object-storage:patra-object-storage-boot:build -x test
+./gradlew :patra-object-storage:patra-object-storage-boot:bootRun
 ```
 
 4. **验证启动**:
@@ -334,7 +330,7 @@ curl http://localhost:8500/v1/catalog/service/patra-object-storage
 遵循项目统一的代码规范:
 - **Google Java Style Guide**: 所有 Java 代码遵循 Google 风格
 - **中文注释**: 所有注释、文档、提交信息使用简体中文
-- **领域层纯净性**: domain 模块禁止引入框架依赖,由 Maven Enforcer 强制检查
+- **领域层纯净性**: domain 模块禁止引入框架依赖,由 Gradle `enforceDomainPurity` 任务强制检查
 - **依赖方向**: 严格遵守六边形架构的依赖方向规则
 
 ## 故障排查
