@@ -1,7 +1,7 @@
 package com.patra.starter.expr.compiler.boot;
 
-import com.patra.registry.api.client.ExprClient;
-import com.patra.registry.api.client.ProvenanceClient;
+import com.patra.registry.api.endpoint.ExprEndpoint;
+import com.patra.registry.api.endpoint.ProvenanceEndpoint;
 import com.patra.starter.expr.compiler.DefaultExprCompiler;
 import com.patra.starter.expr.compiler.ExprCompiler;
 import com.patra.starter.expr.compiler.check.CapabilityChecker;
@@ -16,6 +16,7 @@ import com.patra.starter.expr.compiler.snapshot.RegistryRuleSnapshotLoader;
 import com.patra.starter.expr.compiler.snapshot.RuleSnapshotLoader;
 import com.patra.starter.expr.compiler.snapshot.convert.SnapshotAssembler;
 import com.patra.starter.expr.compiler.transform.TransformRegistry;
+import com.patra.starter.httpinterface.config.HttpInterfaceAutoConfiguration;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -25,7 +26,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.cloud.openfeign.FeignAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import tools.jackson.databind.ObjectMapper;
 
@@ -45,7 +45,7 @@ import tools.jackson.databind.ObjectMapper;
 ///
 /// ### 条件装配
 ///
-/// - 依赖 {@link FeignAutoConfiguration} 和 {@link ExprFunctionAutoConfiguration} 先完成
+/// - 依赖 {@link HttpInterfaceAutoConfiguration} 和 {@link ExprFunctionAutoConfiguration} 先完成
 ///   - Registry API 集成可通过 `patra.expr.compiler.registry-api.enabled=false` 禁用
 ///   - 编译器整体可通过 `patra.expr.compiler.enabled=false` 禁用
 ///
@@ -58,7 +58,7 @@ import tools.jackson.databind.ObjectMapper;
 /// @see ExprModeProperties
 /// @see ExprCompiler
 @AutoConfiguration
-@AutoConfigureAfter({FeignAutoConfiguration.class, ExprFunctionAutoConfiguration.class})
+@AutoConfigureAfter({HttpInterfaceAutoConfiguration.class, ExprFunctionAutoConfiguration.class})
 @EnableConfigurationProperties({CompilerProperties.class, ExprModeProperties.class})
 public class ExprCompilerAutoConfiguration {
 
@@ -87,8 +87,8 @@ public class ExprCompilerAutoConfiguration {
   @ConditionalOnMissingBean(RuleSnapshotLoader.class)
   @ConditionalOnClass(
       name = {
-        "com.patra.registry.api.client.ProvenanceClient",
-        "com.patra.registry.api.client.ExprClient"
+        "com.patra.registry.api.endpoint.ProvenanceEndpoint",
+        "com.patra.registry.api.endpoint.ExprEndpoint"
       })
   @ConditionalOnProperty(
       prefix = "patra.expr.compiler.registry-api",
@@ -96,10 +96,10 @@ public class ExprCompilerAutoConfiguration {
       havingValue = "true",
       matchIfMissing = true)
   public RuleSnapshotLoader registryRuleSnapshotLoader(
-      ProvenanceClient provenanceClient,
-      ExprClient exprClient,
+      ProvenanceEndpoint provenanceEndpoint,
+      ExprEndpoint exprEndpoint,
       SnapshotAssembler snapshotAssembler) {
-    return new RegistryRuleSnapshotLoader(provenanceClient, exprClient, snapshotAssembler);
+    return new RegistryRuleSnapshotLoader(provenanceEndpoint, exprEndpoint, snapshotAssembler);
   }
 
   /// 创建默认能力检查器 Bean。

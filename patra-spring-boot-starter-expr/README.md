@@ -40,7 +40,7 @@
 
 - 配置属性 `patra.expr.compiler.enabled=true` (默认启用)
 - 配置属性 `patra.expr.compiler.registry-api.enabled=true` (默认启用)
-- 需要 `ProvenanceClient` 和 `ExprClient` Feign 客户端存在
+- 需要 `ProvenanceEndpoint` 和 `ExprEndpoint` HTTP Interface 代理存在
 
 ## 主要组件
 
