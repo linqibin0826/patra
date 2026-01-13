@@ -313,10 +313,10 @@ public interface RegistryClient {
     ProvenanceConfig getProvenance(String code);
 }
 
-// Infrastructure 层实现（Feign）
-@FeignClient(name = "patra-registry")
-public interface RegistryFeignClient extends RegistryClient {
-    @GetMapping("/api/v1/provenances/{code}")
+// Infrastructure 层实现（HTTP Interface）
+@HttpExchange(url = "/api/v1/provenances")
+public interface RegistryEndpoint extends RegistryClient {
+    @GetExchange("/{code}")
     ProvenanceConfig getProvenance(@PathVariable String code);
 }
 ```

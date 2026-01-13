@@ -31,8 +31,7 @@
         <module>patra-spring-boot-starter-batch</module>
         <module>patra-spring-boot-starter-observability</module>
         <module>patra-spring-boot-starter-test</module>
-
-        <module>patra-spring-cloud-starter-feign</module>
+        <module>patra-spring-boot-starter-http-interface</module>
     </modules>
 
     <build>

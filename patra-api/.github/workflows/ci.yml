@@ -79,7 +79,7 @@ jobs:
           MODULE_MAP["patra-spring-boot-starter-expr"]="patra-spring-boot-starter-expr"
           MODULE_MAP["patra-spring-boot-starter-provenance"]="patra-spring-boot-starter-provenance"
           MODULE_MAP["patra-spring-boot-starter-object-storage"]="patra-spring-boot-starter-object-storage"
-          MODULE_MAP["patra-spring-cloud-starter-feign"]="patra-spring-cloud-starter-feign"
+          MODULE_MAP["patra-spring-boot-starter-http-interface"]="patra-spring-boot-starter-http-interface"
 
           for module in "${!MODULE_MAP[@]}"; do
             if echo "$CHANGED_FILES" | grep -q "^${module}/"; then

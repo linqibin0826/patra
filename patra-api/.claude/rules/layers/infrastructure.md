@@ -23,9 +23,15 @@ paths: patra-*/*-infra/**/*.java
 
 - 通过 `ErrorMappingContributor` SPI 映射第三方异常
 
+## HTTP Interface 错误处理
+
+1. 捕获 `RemoteCallException`，基于 `getErrorTraits()` 判断错误类型
+2. 备选：使用 `RemoteErrorHelper` 工具类
+3. 禁止直接捕获 `RestClientException`
+
 ## Starter 依赖
 
 - 数据库：`starter-jpa`
 - 对象存储：`starter-object-storage`
 - REST 调用：`starter-rest-client`
-- Feign 调用：`cloud-starter-feign`
+- HTTP Interface 调用：`starter-http-interface`
