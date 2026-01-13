@@ -20,76 +20,93 @@
 
 plugins {
     id("patra.java-library")
-    id("org.kordamp.gradle.project-enforcer")
 }
 
+// 预编译脚本插件需要显式获取 Version Catalog
+val libs = the<org.gradle.api.artifacts.VersionCatalogsExtension>().named("libs")
+
 // ==================== 领域层纯净性强制规则 ====================
-enforce {
-    rule(enforcer.rules.BannedDependencies::class.java) {
-        // 检查编译时和运行时依赖
-        configurations.addAll(listOf("compileClasspath", "runtimeClasspath"))
+// 禁止的依赖组（框架依赖）
+val bannedGroups = setOf(
+    "org.springframework",
+    "org.springframework.boot",
+    "org.springframework.cloud",
+    "org.springframework.data",
+    "org.springframework.security",
+    "jakarta.persistence",
+    "jakarta.validation",
+    "jakarta.annotation",
+    "jakarta.servlet",
+    "jakarta.transaction",
+    "org.hibernate",
+    "org.hibernate.orm",
+    "org.apache.tomcat",
+    "org.apache.tomcat.embed",
+    "io.netty"
+)
 
-        // 禁止 Spring Framework
-        exclude("org.springframework:*")
-        exclude("org.springframework.boot:*")
-        exclude("org.springframework.cloud:*")
-        exclude("org.springframework.data:*")
-        exclude("org.springframework.security:*")
+// Configuration Cache 兼容的领域层纯净性检查任务
+abstract class DomainPurityCheck : DefaultTask() {
+    @get:Input
+    abstract val violations: ListProperty<String>
 
-        // 禁止 Jakarta EE
-        exclude("jakarta.persistence:*")
-        exclude("jakarta.validation:*")
-        exclude("jakarta.annotation:*")
-        exclude("jakarta.servlet:*")
-        exclude("jakarta.transaction:*")
-
-        // 禁止持久化框架
-        exclude("org.hibernate:*")
-        exclude("org.hibernate.orm:*")
-
-        // 禁止 Web 容器
-        exclude("org.apache.tomcat:*")
-        exclude("org.apache.tomcat.embed:*")
-        exclude("io.netty:*")
-
-        message.set("""
-            |
-            |❌ DOMAIN LAYER VIOLATION - Hexagonal Architecture Constraint
-            |━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            |
-            |The domain layer MUST be framework-free!
-            |
-            |✅ Allowed dependencies:
-            |   - patra-common-core
-            |   - Lombok, Hutool, Jackson
-            |   - Test frameworks (JUnit, AssertJ, Mockito)
-            |
-            |❌ Forbidden dependencies:
-            |   - Spring Framework / Boot / Cloud / Data
-            |   - Jakarta EE (JPA, Validation, Servlet)
-            |   - Hibernate, Tomcat, Netty
-            |
-            |Domain layer should contain pure business logic only.
-            |Use Ports (interfaces) to abstract infrastructure concerns.
-            |
-            |━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        """.trimMargin())
+    @TaskAction
+    fun check() {
+        val v = violations.get()
+        if (v.isNotEmpty()) {
+            throw GradleException("""
+                |
+                |❌ DOMAIN LAYER VIOLATION - Hexagonal Architecture Constraint
+                |━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                |
+                |The domain layer MUST be framework-free!
+                |
+                |Found forbidden dependencies:
+                |${v.joinToString("\n") { "  - $it" }}
+                |
+                |✅ Allowed: patra-common, Lombok, Hutool, Jackson, Test frameworks
+                |❌ Forbidden: Spring, Jakarta EE, Hibernate, Tomcat, Netty
+                |
+                |━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            """.trimMargin())
+        }
     }
 }
 
+tasks.register<DomainPurityCheck>("enforceDomainPurity") {
+    group = "verification"
+    description = "Enforces domain layer purity - no framework dependencies allowed"
+
+    // 在配置阶段解析依赖，结果作为任务输入属性（Configuration Cache 兼容）
+    violations.set(provider {
+        val result = mutableListOf<String>()
+        configurations.filter { it.name in listOf("compileClasspath", "runtimeClasspath") }
+            .forEach { config ->
+                config.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
+                    val moduleId = artifact.moduleVersion.id
+                    if (bannedGroups.any { moduleId.group.startsWith(it) }) {
+                        result.add("${moduleId.group}:${moduleId.name}:${moduleId.version}")
+                    }
+                }
+            }
+        result
+    })
+}
+
+tasks.named("check") {
+    dependsOn("enforceDomainPurity")
+}
+
+// 使用 Version Catalog (libs) 声明依赖
 dependencies {
     // 领域层核心依赖
     api(project(":patra-common:patra-common-core"))
 
     // Hutool 工具库
-    implementation("cn.hutool:hutool-core:5.8.25")
+    implementation(libs.findLibrary("hutool-core").get())
 
     // MapStruct (用于值对象映射)
-    implementation("org.mapstruct:mapstruct:1.6.3")
+    implementation(libs.findLibrary("mapstruct").get())
 
-    // 测试依赖
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
-    testImplementation("org.assertj:assertj-core:3.27.3")
-    testImplementation("org.mockito:mockito-core:5.15.2")
-    testImplementation("org.mockito:mockito-junit-jupiter:5.15.2")
+    // 测试依赖由 patra.java-library 提供
 }

@@ -29,7 +29,7 @@ dependencies {
     api("tools.jackson.dataformat:jackson-dataformat-xml")
 
     // Utility Libraries
-    api("cn.hutool:hutool-core:5.8.25")
+    api(libs.hutool.core)
 
     // Logging
     api("org.slf4j:slf4j-api")

@@ -15,14 +15,14 @@ dependencies {
     // ==================== 核心测试框架（api scope，暴露给使用方）====================
 
     // JUnit 5
-    api("org.junit.jupiter:junit-jupiter:5.11.4")
+    api(libs.junit.jupiter)
 
     // AssertJ 流式断言
-    api("org.assertj:assertj-core:3.27.3")
+    api(libs.assertj.core)
 
     // Mockito Mock 框架
-    api("org.mockito:mockito-core:5.15.2")
-    api("org.mockito:mockito-junit-jupiter:5.15.2")
+    api(libs.mockito.core)
+    api(libs.mockito.junit.jupiter)
 
     // ==================== Spring Boot Test ====================
 
@@ -52,28 +52,29 @@ dependencies {
 
     // ==================== TestContainers ====================
 
-    api("org.testcontainers:testcontainers")
-    api("org.testcontainers:junit-jupiter")
-    api("org.testcontainers:mysql")
-    api("org.testcontainers:minio")
+    api(libs.testcontainers.core)
+    api(libs.testcontainers.junit.jupiter)
+    api(libs.testcontainers.mysql)
+    api(libs.testcontainers.minio)
 
     // MinIO Java Client（MinIOContainerInitializer 创建存储桶需要）
-    api("io.minio:minio:8.5.7") {
+    api(libs.minio) {
         // 排除 Kotlin 传递的旧版 annotations
         exclude(group = "org.jetbrains", module = "annotations")
     }
 
     // ==================== ArchUnit 架构测试 ====================
 
-    api("com.tngtech.archunit:archunit-junit5:1.3.0")
+    // 1.4.1 支持 Java 25 (class file major version 69)
+    api(libs.archunit.junit5)
 
     // ==================== 其他测试工具 ====================
 
     // WireMock HTTP Mock Server
-    api("org.wiremock:wiremock-standalone:3.10.0")
+    api(libs.wiremock.standalone)
 
     // Awaitility 异步测试工具
-    api("org.awaitility:awaitility:4.2.2")
+    api(libs.awaitility)
 
     // ==================== Micrometer（SimpleMeterRegistry 支持）====================
 

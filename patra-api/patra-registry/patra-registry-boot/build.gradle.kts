@@ -25,5 +25,5 @@ dependencies {
 
     // 测试依赖
     testImplementation(project(":patra-spring-boot-starter-test"))
-    testImplementation("org.testcontainers:jdbc")
+    testImplementation(libs.testcontainers.jdbc)
 }

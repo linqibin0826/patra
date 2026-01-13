@@ -9,11 +9,7 @@ plugins {
     id("patra.hexagonal-domain")
 }
 
+// patra-common-core 由 patra.hexagonal-domain 插件提供
 dependencies {
-    api(project(":patra-common:patra-common-core"))
     api(project(":patra-common:patra-common-model"))
-
-    // 测试依赖
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
-    testImplementation("org.assertj:assertj-core:3.27.3")
 }

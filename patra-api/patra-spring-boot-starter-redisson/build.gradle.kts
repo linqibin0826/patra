@@ -16,7 +16,7 @@ dependencies {
     api(project(":patra-spring-boot-starter-core"))
 
     // Redisson 官方 Starter
-    api("org.redisson:redisson-spring-boot-starter:3.40.2")
+    api(libs.redisson.spring.boot)
 
     // Spring Boot 依赖
     api("org.springframework.boot:spring-boot-autoconfigure")

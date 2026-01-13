@@ -34,5 +34,5 @@ dependencies {
 
     // 测试依赖
     testImplementation(project(":patra-spring-boot-starter-test"))
-    testImplementation("org.testcontainers:elasticsearch")
+    testImplementation(libs.testcontainers.elasticsearch)
 }

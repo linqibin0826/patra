@@ -35,13 +35,17 @@ dependencies {
     compileOnly("io.projectreactor.netty:reactor-netty-http")
 
     // Apache Commons Net: FTP client for LSIOU data source
-    api("commons-net:commons-net:3.11.1")
+    api(libs.commons.net)
 
     // Configuration metadata
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
     // 测试依赖
     testImplementation(project(":patra-spring-boot-starter-test"))
+    // WebFlux 和 Reactor Netty 在主代码中是 compileOnly（optional），
+    // 但测试代码需要使用 WebClient，因此需要显式声明测试依赖
+    testImplementation("org.springframework:spring-webflux")
+    testImplementation("io.projectreactor.netty:reactor-netty-http")
 }
 
 // 覆盖率要求 75%

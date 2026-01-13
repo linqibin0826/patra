@@ -19,7 +19,7 @@ dependencies {
     api(project(":patra-common:patra-common-storage"))
 
     // MinIO Client
-    api("io.minio:minio:8.5.7")
+    api(libs.minio)
 
     // AWS S3 SDK (optional)
     compileOnly("software.amazon.awssdk:s3")

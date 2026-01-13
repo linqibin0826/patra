@@ -17,10 +17,8 @@ dependencies {
     // Spring Boot Starter
     api("org.springframework.boot:spring-boot-starter")
 
-    // MapStruct
-    api("org.mapstruct:mapstruct:1.6.3")
-    annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
-    annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
+    // MapStruct 由 patra.hexagonal-infra 插件提供
+    // annotationProcessor 由 patra.java-base 插件提供
 
     // 测试依赖
     testImplementation(project(":patra-spring-boot-starter-test"))
