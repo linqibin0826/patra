@@ -152,16 +152,19 @@ public final class RemoteErrorHelper {
     return false;
   }
 
-  /// 判断错误是否代表可能可重试的瞬时故障（如 5xx, 429, 408, 503, 504）
+  /// 判断错误是否代表可能可重试的瞬时故障
+  ///
+  /// **可重试的状态码：**
+  /// - 5xx 服务器错误（包括 500, 502, 503, 504 等）
+  /// - 429 Too Many Requests（速率限制）
+  /// - 408 Request Timeout（请求超时）
   ///
   /// @param ex 远程调用异常
   /// @return 如果错误可重试则返回 true
   public static boolean isRetryable(RemoteCallException ex) {
     int status = ex.getHttpStatus();
-    return isServerError(ex)
-        || status == 429  // Too Many Requests
-        || status == 408  // Request Timeout
-        || status == 503  // Service Unavailable
-        || status == 504; // Gateway Timeout
+    return isServerError(ex) // 所有 5xx 错误
+        || status == 429 // Too Many Requests
+        || status == 408; // Request Timeout
   }
 }

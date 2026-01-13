@@ -1,13 +1,14 @@
 # Patra Spring Boot Starter - HTTP Interface
 
-为 Spring HTTP Interface 提供统一的错误处理、TraceId 传播和自动配置支持。
+为 Spring HTTP Interface 提供统一的错误处理和自动配置支持。
 
 ## 功能概述
 
 - **ProblemDetail 错误处理**：自动解析 RFC 7807 格式的错误响应，转换为 `RemoteCallException`
 - **ErrorTrait 语义传播**：支持服务间错误语义自动传播（NOT_FOUND、TIMEOUT、CONFLICT 等）
-- **TraceId 传播**：自动在出站请求中传播当前跟踪标识符
-- **RestClient 自动配置**：预配置超时、错误处理器和拦截器
+- **RestClient 自动配置**：预配置超时和错误处理器
+
+> **注意**：TraceId 传播由 OpenTelemetry Java Agent 自动处理，无需手动配置。
 
 ## 包结构
 
@@ -18,8 +19,8 @@ com.patra.starter.httpinterface
 │   └── HttpInterfaceProperties         # 配置属性
 ├── error/
 │   └── ProblemDetailErrorHandler       # RFC 7807 错误处理器
-└── interceptor/
-    └── TraceIdClientHttpRequestInterceptor  # TraceId 传播拦截器
+└── factory/
+    └── RestClientFactory               # RestClient 工厂
 ```
 
 ## 自动配置的 Bean
@@ -27,9 +28,9 @@ com.patra.starter.httpinterface
 | Bean 名称 | 类型 | 说明 |
 |-----------|------|------|
 | `problemDetailErrorHandler` | `ProblemDetailErrorHandler` | RFC 7807 错误响应处理器 |
-| `traceIdClientHttpRequestInterceptor` | `TraceIdClientHttpRequestInterceptor` | TraceId 传播拦截器 |
 | `httpInterfaceRestClientCustomizer` | `RestClientCustomizer` | RestClient.Builder 自定义器 |
-| `httpInterfaceRestClientBuilder` | `RestClient.Builder` | 预配置的 RestClient.Builder |
+| `httpInterfaceRestClientBuilder` | `RestClient.Builder` | 预配置的 RestClient.Builder（默认主 Bean，非负载均衡） |
+| `httpInterfaceLoadBalancedRestClientBuilder` | `RestClient.Builder` | 预配置的 RestClient.Builder（负载均衡，专用于 `lb://`） |
 
 ## 配置属性
 
@@ -39,18 +40,18 @@ patra:
     interface:
       # 是否启用 HTTP Interface 自动配置（默认 true）
       enabled: true
-      # 全局连接超时（默认 2s）
-      connect-timeout: 2s
-      # 全局读取超时（默认 5s）
-      read-timeout: 5s
+      # 全局连接超时（默认 5s）
+      connect-timeout: 5s
+      # 全局读取超时（默认 30s）
+      read-timeout: 30s
       # 错误处理配置
       error-handling:
         # 是否启用 ProblemDetail 解析（默认 true）
         problem-detail-enabled: true
         # 容错模式：非 ProblemDetail 响应也包装为 RemoteCallException（默认 true）
         tolerant: true
-        # 最大错误响应体大小（默认 10KB）
-        max-error-body-size: 10240
+        # 最大错误响应体大小（默认 64KB）
+        max-error-body-size: 65536
       # 服务分组配置（可选）
       groups:
         registry:
@@ -94,12 +95,10 @@ public class HttpClientConfiguration {
 
     @Bean
     public DictionaryEndpoint dictionaryEndpoint(
-            @Qualifier("httpInterfaceRestClientBuilder") RestClient.Builder builder) {
-        RestClient client = builder.baseUrl("lb://patra-registry").build();
-        return HttpServiceProxyFactory
-            .builderFor(RestClientAdapter.create(client))
-            .build()
-            .createClient(DictionaryEndpoint.class);
+            @Qualifier("httpInterfaceLoadBalancedRestClientBuilder") RestClient.Builder builder,
+            RestClientFactory factory) {
+        RestClient client = factory.createRestClient(builder, "registry", "lb://patra-registry");
+        return factory.createProxy(client, DictionaryEndpoint.class);
     }
 }
 ```
@@ -119,7 +118,7 @@ public class DictionaryResolverAdapter implements DictionaryResolver {
             return dictionaryEndpoint.getByCode(code);
         } catch (RemoteCallException ex) {
             // 基于 ErrorTrait 语义判断
-            if (ex.hasErrorTrait(StandardErrorTrait.NOT_FOUND)) {
+            if (ex.getErrorTraits().contains(StandardErrorTrait.NOT_FOUND)) {
                 throw new DictionaryNotFoundException(code);
             }
             // 或使用工具类基于 HTTP 状态码判断
@@ -179,10 +178,10 @@ try {
     return endpoint.getResource(id);
 } catch (RemoteCallException ex) {
     // 推荐方式：基于语义特征判断
-    if (ex.hasErrorTrait(StandardErrorTrait.NOT_FOUND)) {
+    if (ex.getErrorTraits().contains(StandardErrorTrait.NOT_FOUND)) {
         throw new ResourceNotFoundException(id);
     }
-    if (ex.hasErrorTrait(StandardErrorTrait.RETRYABLE)) {
+    if (ex.getErrorTraits().contains(StandardErrorTrait.RETRYABLE)) {
         // 执行重试逻辑
     }
     throw ex;
@@ -205,4 +204,4 @@ try {
 - [Spring HTTP Interface](https://docs.spring.io/spring-framework/reference/integration/rest-clients.html#rest-http-interface)
 - [RestClient](https://docs.spring.io/spring-framework/reference/integration/rest-clients.html#rest-restclient)
 - [RFC 7807 Problem Details](https://www.rfc-editor.org/rfc/rfc7807)
-- [ADR-023: 从 OpenFeign 迁移到 Spring HTTP Interface](../Patra-docs/content/decisions/ADR-023-feign-to-http-interface-migration.md)
+- ADR-023: 从 OpenFeign 迁移到 Spring HTTP Interface（位于 `Patra-docs/content/decisions/` 目录）

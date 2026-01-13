@@ -36,7 +36,7 @@ import org.springframework.web.client.RestClient;
 ///
 /// 2. **LoadBalancer 拦截器隔离**：`defaultRestClient` 设计用于调用外部 API（如 PubMed、EPMC），
 ///    会自动过滤掉 Spring Cloud LoadBalancer 注册的拦截器（如 `RetryLoadBalancerInterceptor`），
-///    避免外部域名被错误解析为服务 ID。Feign 客户端使用独立的 HTTP 客户端栈，不受影响。
+///    避免外部域名被错误解析为服务 ID。
 ///
 /// @author linqibin
 /// @since 0.1.0
