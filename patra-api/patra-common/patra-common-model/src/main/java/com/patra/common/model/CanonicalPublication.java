@@ -34,6 +34,10 @@ import tools.jackson.databind.annotation.JsonPOJOBuilder;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CanonicalPublication {
 
+  /// Jackson 3.x Builder 配置（Lombok 会生成实际实现）。
+  @JsonPOJOBuilder(withPrefix = "")
+  public static class CanonicalPublicationBuilder {}
+
   // ==================== 标识符组 ====================
 
   /// 出版物的多种标识符（PMID, DOI, PMC, PII, arXiv 等）。
