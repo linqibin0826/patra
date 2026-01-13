@@ -4,7 +4,7 @@
 
 `patra-registry` 是 Patra 平台的**单一真实数据源(SSOT)**和配置中枢,负责管理所有数据源的元数据、运营配置、表达式元数据和系统字典。本服务采用六边形架构 + DDD 设计模式,通过时态配置机制确保配置变更的可追溯性和安全性。
 
-其他微服务(特别是 `patra-ingest`)通过 Feign 客户端查询本服务,获取特定时间点的有效配置快照,实现配置的集中管理和一致性保障。
+其他微服务(特别是 `patra-ingest`)通过 HTTP Interface 客户端查询本服务,获取特定时间点的有效配置快照,实现配置的集中管理和一致性保障。
 
 ## 核心职责
 
@@ -19,7 +19,7 @@
 ```
 patra-registry/
 ├── patra-registry-boot/          # 可执行入口,组装所有模块
-├── patra-registry-api/           # 外部契约(Feign 客户端、DTO、错误码)
+├── patra-registry-api/           # 外部契约(HTTP Interface、DTO、错误码)
 ├── patra-registry-domain/        # 纯 Java 领域模型(无框架依赖)
 ├── patra-registry-app/           # 应用层,用例编排
 ├── patra-registry-infra/         # 基础设施层,持久化实现
@@ -125,9 +125,9 @@ patra-registry/
 - `patra-spring-boot-starter-*`: 统一的 Spring Boot 配置
 
 **下游消费者**:
-- `patra-ingest`: 通过 Feign 客户端查询数据源配置
-- `patra-catalog`: 通过 `DictionaryClient` 解析字典值（国家、语言等多种类型标准化）
-- 其他微服务: 通过 `patra-registry-api` 模块引入客户端
+- `patra-ingest`: 通过 HTTP Interface 客户端查询数据源配置
+- `patra-catalog`: 通过 `DictionaryEndpoint` 解析字典值（国家、语言等多种类型标准化）
+- 其他微服务: 通过 `patra-registry-api` 模块引入 HTTP Interface 契约
 
 ## 技术栈
 

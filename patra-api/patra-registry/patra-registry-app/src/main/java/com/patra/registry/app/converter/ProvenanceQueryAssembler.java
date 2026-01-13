@@ -24,7 +24,7 @@ import org.mapstruct.ReportingPolicy;
 /// 职责：
 ///
 /// - 将领域值对象和聚合根转换为只读查询 DTO
-///   - 支持 REST API 和 Feign 客户端的数据契约
+///   - 支持 REST API 和 HTTP Interface 客户端的数据契约
 ///   - 隔离领域模型和外部表示层
 ///
 /// 设计模式：MapStruct 自动生成转换代码,避免手写样板映射。

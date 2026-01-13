@@ -58,7 +58,6 @@
 | 依赖 | 版本 | 说明 |
 |------|------|------|
 | **AWS SDK** | 2.25.36 | AWS 云服务 SDK |
-| **OpenFeign** | 13.1 | HTTP 客户端 |
 
 ### Patra 内部模块
 
@@ -69,7 +68,6 @@
 - **patra-common-model**: 共享数据模型
 - **patra-expr-kernel**: 表达式引擎
 - **patra-spring-boot-starter-\***: Spring Boot 集成 starter
-- **patra-spring-cloud-starter-\***: Spring Cloud 集成 starter
 - **patra-registry-api / patra-object-storage-api**: 微服务 API 模块
 
 ### 测试框架

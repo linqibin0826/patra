@@ -21,11 +21,6 @@
             <artifactId>patra-spring-boot-starter-web</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>com.patra</groupId>
-            <artifactId>patra-spring-cloud-starter-feign</artifactId>
-        </dependency>
-
         <!-- Consul 服务发现 -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>

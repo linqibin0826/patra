@@ -30,7 +30,6 @@
     <!-- OpenTelemetry Logback Appender（与 OTel Agent 版本对齐） -->
     <opentelemetry-logback-appender.version>2.22.0-alpha</opentelemetry-logback-appender.version>
     <aws.sdk.version>2.25.36</aws.sdk.version>
-    <feign.version>13.1</feign.version>
     <redisson.version>4.1.0</redisson.version>
     <minio.version>8.5.7</minio.version>
 
@@ -315,10 +314,9 @@
         <artifactId>patra-spring-boot-starter-object-storage</artifactId>
         <version>${project.version}</version>
       </dependency>
-
       <dependency>
         <groupId>com.patra</groupId>
-        <artifactId>patra-spring-cloud-starter-feign</artifactId>
+        <artifactId>patra-spring-boot-starter-http-interface</artifactId>
         <version>${project.version}</version>
       </dependency>
 
@@ -352,13 +350,6 @@
         <groupId>io.opentelemetry.instrumentation</groupId>
         <artifactId>opentelemetry-logback-appender-1.0</artifactId>
         <version>${opentelemetry-logback-appender.version}</version>
-      </dependency>
-
-      <!-- OpenFeign Core (shared by logging and expr starters) -->
-      <dependency>
-        <groupId>io.github.openfeign</groupId>
-        <artifactId>feign-core</artifactId>
-        <version>${feign.version}</version>
       </dependency>
 
       <!-- JUnit - moved from dependencies -->
