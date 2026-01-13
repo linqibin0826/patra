@@ -1,0 +1,42 @@
+/**
+ * Patra Spring Boot Starter - Provenance
+ *
+ * Provenance API 客户端：
+ * - PubMed API
+ * - EPMC API
+ * - Crossref API
+ */
+
+plugins {
+    id("patra.spring-boot-starter")
+}
+
+dependencies {
+    // Patra 内部依赖
+    api(project(":patra-common:patra-common-core"))
+    api(project(":patra-spring-boot-starter-rest-client"))
+    api(project(":patra-common:patra-common-model"))
+    api(project(":patra-common:patra-common-provenance-api"))
+
+    // Spring Boot AutoConfiguration
+    api("org.springframework.boot:spring-boot-autoconfigure")
+
+    // Configuration metadata
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+
+    // JSON/XML Processing
+    api("tools.jackson.core:jackson-databind")
+    api("tools.jackson.dataformat:jackson-dataformat-xml")
+
+    // Utility Libraries
+    api("cn.hutool:hutool-core:5.8.25")
+
+    // Logging
+    api("org.slf4j:slf4j-api")
+
+    // Monitoring (optional)
+    compileOnly("io.micrometer:micrometer-core")
+
+    // 测试依赖
+    testImplementation(project(":patra-spring-boot-starter-test"))
+}

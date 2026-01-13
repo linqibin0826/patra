@@ -1,0 +1,28 @@
+/**
+ * Patra API Gateway Boot
+ *
+ * API 网关 - Spring Cloud Gateway
+ */
+
+plugins {
+    id("patra.hexagonal-boot")
+}
+
+springBoot {
+    mainClass = "com.patra.gateway.PatraGatewayApplication"
+}
+
+dependencies {
+    // Patra Starter
+    implementation(project(":patra-spring-boot-starter-core"))
+    implementation(project(":patra-spring-boot-starter-observability"))
+
+    // Spring Cloud Gateway (WebFlux)
+    implementation("org.springframework.cloud:spring-cloud-starter-gateway-server-webflux")
+
+    // LoadBalancer
+    implementation("org.springframework.cloud:spring-cloud-starter-loadbalancer")
+
+    // 测试依赖
+    testImplementation(project(":patra-spring-boot-starter-test"))
+}
