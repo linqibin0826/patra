@@ -3,16 +3,19 @@ package com.patra.ingest.infra.integration.registry;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.date.TimeInterval;
 import com.patra.common.enums.ProvenanceCode;
+import com.patra.common.error.remote.RemoteCallException;
+import com.patra.common.error.remote.RemoteErrorHelper;
+import com.patra.common.error.trait.ErrorTrait;
+import com.patra.common.error.trait.StandardErrorTrait;
 import com.patra.ingest.domain.exception.IngestConfigurationException;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.port.PatraRegistryPort;
 import com.patra.ingest.infra.integration.registry.converter.ProvenanceConfigSnapshotConverter;
-import com.patra.registry.api.client.ProvenanceClient;
 import com.patra.registry.api.dto.provenance.ProvenanceConfigResp;
-import com.patra.starter.feign.error.exception.RemoteCallException;
-import com.patra.starter.feign.error.util.RemoteErrorHelper;
+import com.patra.registry.api.endpoint.ProvenanceEndpoint;
 import java.time.Instant;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -31,7 +34,7 @@ import org.springframework.stereotype.Component;
 public class PatraRegistryAdapter implements PatraRegistryPort {
 
   /// 注册中心 RPC 客户端。
-  private final ProvenanceClient provenanceClient;
+  private final ProvenanceEndpoint provenanceEndpoint;
 
   /// 配置快照转换器。
   private final ProvenanceConfigSnapshotConverter converter;
@@ -57,7 +60,7 @@ public class PatraRegistryAdapter implements PatraRegistryPort {
   private ProvenanceConfigResp callRegistry(ProvenanceCode provenanceCode, String operationType) {
     TimeInterval timer = DateUtil.timer();
     ProvenanceConfigResp resp =
-        provenanceClient.getConfiguration(provenanceCode, operationType, Instant.now());
+        provenanceEndpoint.getConfiguration(provenanceCode, operationType, Instant.now());
     if (log.isDebugEnabled()) {
       log.debug(
           "已加载溯源配置 code [{}] operation [{}] in {}ms",
@@ -88,14 +91,30 @@ public class PatraRegistryAdapter implements PatraRegistryPort {
   }
 
   /// 处理远程 ProblemDetail 异常。
+  ///
+  /// 错误判断策略：优先使用 ErrorTrait 语义判断，HTTP 状态码作为 fallback。
+  /// 这种方式更稳定，因为 ErrorTrait 是语义化的，不依赖 HTTP 状态码约定。
   private ProvenanceConfigSnapshot handleRemoteException(
       RemoteCallException ex, String code, String operationType) {
+    Set<ErrorTrait> traits = ex.getErrorTraits();
+
+    // 优先使用 ErrorTrait 语义判断
+    if (traits.contains(StandardErrorTrait.NOT_FOUND)) {
+      throw createConfigNotFoundException(ex, code, operationType);
+    }
+    if (traits.contains(StandardErrorTrait.DEP_UNAVAILABLE)
+        || traits.contains(StandardErrorTrait.TIMEOUT)) {
+      return handleRegistryUnavailable(ex, code);
+    }
+
+    // Fallback：使用 HTTP 状态码判断（兼容未携带 ErrorTrait 的响应）
     if (RemoteErrorHelper.isNotFound(ex)) {
       throw createConfigNotFoundException(ex, code, operationType);
     }
     if (RemoteErrorHelper.isServerError(ex) || RemoteErrorHelper.isRetryable(ex)) {
       return handleRegistryUnavailable(ex, code);
     }
+
     throw createClientErrorException(ex, code, operationType);
   }
 

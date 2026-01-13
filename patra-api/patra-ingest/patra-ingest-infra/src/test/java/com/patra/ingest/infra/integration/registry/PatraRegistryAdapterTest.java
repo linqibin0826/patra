@@ -8,17 +8,22 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.patra.common.enums.ProvenanceCode;
+import com.patra.common.error.remote.RemoteCallException;
+import com.patra.common.error.trait.ErrorTrait;
+import com.patra.common.error.trait.StandardErrorTrait;
 import com.patra.ingest.domain.exception.IngestConfigurationException;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.infra.integration.registry.converter.ProvenanceConfigSnapshotConverter;
-import com.patra.registry.api.client.ProvenanceClient;
 import com.patra.registry.api.dto.provenance.ProvenanceConfigResp;
 import com.patra.registry.api.dto.provenance.ProvenanceResp;
-import com.patra.starter.feign.error.exception.RemoteCallException;
+import com.patra.registry.api.endpoint.ProvenanceEndpoint;
 import java.time.Instant;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -32,9 +37,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PatraRegistryAdapter 单元测试")
+@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class PatraRegistryAdapterTest {
 
-  @Mock private ProvenanceClient provenanceClient;
+  @Mock private ProvenanceEndpoint provenanceEndpoint;
 
   @Mock private ProvenanceConfigSnapshotConverter converter;
 
@@ -50,7 +56,8 @@ class PatraRegistryAdapterTest {
     ProvenanceConfigResp mockResp = createMockProvenanceConfigResp();
     ProvenanceConfigSnapshot expectedSnapshot = createMockSnapshot();
 
-    when(provenanceClient.getConfiguration(eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
+    when(provenanceEndpoint.getConfiguration(
+            eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
         .thenReturn(mockResp);
     when(converter.convert(mockResp)).thenReturn(expectedSnapshot);
 
@@ -59,7 +66,7 @@ class PatraRegistryAdapterTest {
 
     // Then: 验证返回正确的快照
     assertThat(result).isNotNull().isEqualTo(expectedSnapshot);
-    verify(provenanceClient)
+    verify(provenanceEndpoint)
         .getConfiguration(eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class));
     verify(converter).convert(mockResp);
   }
@@ -68,7 +75,8 @@ class PatraRegistryAdapterTest {
   @DisplayName("空响应场景 - 返回最小快照")
   void shouldReturnMinimalSnapshotWhenResponseIsNull() {
     // Given: 注册中心返回 null
-    when(provenanceClient.getConfiguration(eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
+    when(provenanceEndpoint.getConfiguration(
+            eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
         .thenReturn(null);
 
     // When: 调用 fetchConfig
@@ -96,7 +104,8 @@ class PatraRegistryAdapterTest {
             "trace-123",
             null);
 
-    when(provenanceClient.getConfiguration(eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
+    when(provenanceEndpoint.getConfiguration(
+            eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
         .thenThrow(notFoundException);
 
     // When & Then: 验证抛出正确的异常
@@ -121,7 +130,8 @@ class PatraRegistryAdapterTest {
             "trace-456",
             null);
 
-    when(provenanceClient.getConfiguration(eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
+    when(provenanceEndpoint.getConfiguration(
+            eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
         .thenThrow(serverError);
 
     // When: 调用 fetchConfig
@@ -147,7 +157,8 @@ class PatraRegistryAdapterTest {
             "trace-789",
             null);
 
-    when(provenanceClient.getConfiguration(eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
+    when(provenanceEndpoint.getConfiguration(
+            eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
         .thenThrow(retryableError);
 
     // When: 调用 fetchConfig
@@ -158,6 +169,89 @@ class PatraRegistryAdapterTest {
     assertThat(result.provenance()).isNotNull();
     assertThat(result.provenance().code()).isEqualTo(PROVENANCE_CODE.getCode());
   }
+
+  // ===== ErrorTrait 语义判断测试（优先于 HTTP 状态码） =====
+
+  @Test
+  @DisplayName("ErrorTrait NOT_FOUND - 优先使用语义判断抛出异常")
+  void shouldThrowExceptionWhenNotFoundTrait() {
+    // Given: 模拟携带 NOT_FOUND trait 的异常（HTTP 状态码故意不是 404，验证语义判断优先）
+    RemoteCallException notFoundException =
+        new RemoteCallException(
+            "REG-0404",
+            422, // 即使状态码不是 404，也应该根据 trait 判断
+            "Resource not found",
+            "http://registry.com/config",
+            "trace-trait-404",
+            null,
+            Set.<ErrorTrait>of(StandardErrorTrait.NOT_FOUND));
+
+    when(provenanceEndpoint.getConfiguration(
+            eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
+        .thenThrow(notFoundException);
+
+    // When & Then: 验证优先使用 ErrorTrait 语义判断
+    assertThatThrownBy(() -> adapter.fetchConfig(PROVENANCE_CODE, OPERATION_CODE))
+        .isInstanceOf(IngestConfigurationException.class)
+        .hasMessageContaining("未找到溯源配置")
+        .hasCause(notFoundException);
+  }
+
+  @Test
+  @DisplayName("ErrorTrait DEP_UNAVAILABLE - 优先使用语义判断降级")
+  void shouldReturnMinimalSnapshotWhenDepUnavailableTrait() {
+    // Given: 模拟携带 DEP_UNAVAILABLE trait 的异常
+    RemoteCallException depUnavailableException =
+        new RemoteCallException(
+            "REG-0503",
+            503,
+            "Dependency unavailable",
+            "http://registry.com/config",
+            "trace-trait-dep",
+            null,
+            Set.<ErrorTrait>of(StandardErrorTrait.DEP_UNAVAILABLE));
+
+    when(provenanceEndpoint.getConfiguration(
+            eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
+        .thenThrow(depUnavailableException);
+
+    // When: 调用 fetchConfig
+    ProvenanceConfigSnapshot result = adapter.fetchConfig(PROVENANCE_CODE, OPERATION_CODE);
+
+    // Then: 验证优先使用 ErrorTrait 语义判断降级
+    assertThat(result).isNotNull();
+    assertThat(result.provenance()).isNotNull();
+    assertThat(result.provenance().code()).isEqualTo(PROVENANCE_CODE.getCode());
+  }
+
+  @Test
+  @DisplayName("ErrorTrait TIMEOUT - 优先使用语义判断降级")
+  void shouldReturnMinimalSnapshotWhenTimeoutTrait() {
+    // Given: 模拟携带 TIMEOUT trait 的异常（状态码可能是 408 或 504）
+    RemoteCallException timeoutException =
+        new RemoteCallException(
+            "REG-0504",
+            504,
+            "Gateway timeout",
+            "http://registry.com/config",
+            "trace-trait-timeout",
+            null,
+            Set.<ErrorTrait>of(StandardErrorTrait.TIMEOUT));
+
+    when(provenanceEndpoint.getConfiguration(
+            eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
+        .thenThrow(timeoutException);
+
+    // When: 调用 fetchConfig
+    ProvenanceConfigSnapshot result = adapter.fetchConfig(PROVENANCE_CODE, OPERATION_CODE);
+
+    // Then: 验证优先使用 ErrorTrait 语义判断降级
+    assertThat(result).isNotNull();
+    assertThat(result.provenance()).isNotNull();
+    assertThat(result.provenance().code()).isEqualTo(PROVENANCE_CODE.getCode());
+  }
+
+  // ===== HTTP 状态码 Fallback 测试 =====
 
   @Test
   @DisplayName("客户端错误场景 - 抛出 IngestConfigurationException")
@@ -172,7 +266,8 @@ class PatraRegistryAdapterTest {
             "trace-999",
             null);
 
-    when(provenanceClient.getConfiguration(eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
+    when(provenanceEndpoint.getConfiguration(
+            eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
         .thenThrow(clientError);
 
     // When & Then: 验证抛出正确的异常
@@ -190,7 +285,8 @@ class PatraRegistryAdapterTest {
     // Given: 模拟意外异常
     RuntimeException unexpectedException = new RuntimeException("Unexpected database error");
 
-    when(provenanceClient.getConfiguration(eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
+    when(provenanceEndpoint.getConfiguration(
+            eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
         .thenThrow(unexpectedException);
 
     // When & Then: 验证抛出正确的异常
@@ -209,7 +305,8 @@ class PatraRegistryAdapterTest {
     ProvenanceConfigResp mockResp = createMockProvenanceConfigResp();
     RuntimeException converterException = new RuntimeException("Conversion failed");
 
-    when(provenanceClient.getConfiguration(eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
+    when(provenanceEndpoint.getConfiguration(
+            eq(PROVENANCE_CODE), eq("HARVEST"), any(Instant.class)))
         .thenReturn(mockResp);
     when(converter.convert(mockResp)).thenThrow(converterException);
 

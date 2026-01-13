@@ -41,7 +41,7 @@
             <artifactId>rocketmq-spring-boot-starter</artifactId>
         </dependency>
 
-        <!-- Outbound Feign/contracts moved to infra; adapter keeps only inbound dependencies -->
+        <!-- Outbound HTTP Interface contracts moved to infra; adapter keeps only inbound dependencies -->
 
         <dependency>
             <groupId>org.mapstruct</groupId>

@@ -54,7 +54,7 @@
 ┌─────────────────▼───────────────────────────────────────┐
 │  patra-ingest-infra (基础设施层 - 被驱动适配器)          │
 │  ├─ persistence/         - JPA 仓储实现                 │
-│  ├─ integration/         - Feign 客户端(Registry/PubMed)│
+│  ├─ integration/         - HTTP Interface 客户端        │
 │  └─ messaging/           - RocketMQ 发布器              │
 └─────────────────────────────────────────────────────────┘
 ```

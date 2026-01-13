@@ -5,8 +5,6 @@ import com.patra.common.model.CanonicalPublication;
 import com.patra.ingest.domain.port.PublicationStoragePort;
 import com.patra.ingest.domain.port.StorageMetadataPort;
 import com.patra.ingest.domain.port.TechnicalRetryPort;
-import feign.FeignException;
-import feign.RetryableException;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 /// 出版物发布器。
 ///
@@ -45,6 +44,7 @@ public class PublicationPublisher {
   private final PublicationStoragePort publicationStoragePort;
   private final StorageMetadataPort storageMetadataPort;
   private final TechnicalRetryPort technicalRetryPort;
+  private final ObjectMapper objectMapper;
 
   /// 发布标准化出版物
   ///
@@ -82,16 +82,10 @@ public class PublicationPublisher {
           storageResult.storageKey(),
           metadataResult.metadataId());
 
-    } catch (FeignException e) {
-      handleMetadataRecordFailure(e, storageResult, context);
-    } catch (Exception e) {
-      if (e instanceof RetryableException) {
-        log.warn("元数据记录超时,委托给重试机制 storageKey={}", storageResult.storageKey(), e);
-        delegateToRetry(storageResult, context, e);
-      } else {
-        log.error("记录元数据时发生意外错误,委托给重试机制 storageKey={}", storageResult.storageKey(), e);
-        delegateToRetry(storageResult, context, e);
-      }
+    } catch (StorageMetadataPort.StorageMetadataException e) {
+      // 元数据记录失败（远程调用失败），委托给重试机制
+      log.warn("元数据记录失败,委托给重试机制 storageKey={}", storageResult.storageKey(), e);
+      delegateToRetry(storageResult, context, e);
     }
 
     return PublishResult.builder()
@@ -146,38 +140,6 @@ public class PublicationPublisher {
     return provenance + "-" + context.batchNo() + "-" + runIdSegment;
   }
 
-  /// 处理元数据记录失败
-  ///
-  /// @param exception Feign异常
-  /// @param storageResult 存储结果
-  /// @param context 发布上下文
-  private void handleMetadataRecordFailure(
-      FeignException exception,
-      PublicationStoragePort.StorageResult storageResult,
-      PublishContext context) {
-    int status = exception.status();
-    if (status >= 500 || status == 503 || status == -1) {
-      log.warn(
-          "patra-object-storage服务不可用 (HTTP {}),委托给重试机制 storageKey={}",
-          status,
-          storageResult.storageKey());
-      delegateToRetry(storageResult, context, exception);
-      return;
-    }
-    if (status >= 400 && status < 500) {
-      log.error(
-          "无效的元数据记录请求 (HTTP {}),需要人工调查 StorageKey={} bucket={} key={}",
-          status,
-          storageResult.storageKey(),
-          storageResult.bucketName(),
-          storageResult.objectKey(),
-          exception);
-      return;
-    }
-    log.error("意外的Feign错误,委托给重试机制 storageKey={}", storageResult.storageKey(), exception);
-    delegateToRetry(storageResult, context, exception);
-  }
-
   /// 将失败的元数据记录委托给技术重试机制
   ///
   /// 使用{@link TechnicalRetryPort}通过outbox发布者框架确保一致的重试处理。
@@ -192,7 +154,7 @@ public class PublicationPublisher {
       StorageMetadataPort.MetadataRequest metadataRequest =
           buildMetadataRequest(storageResult, context);
 
-      String payloadJson = metadataRequest.toString();
+      String payloadJson = objectMapper.writeValueAsString(metadataRequest);
       Long aggregateId = context.runId() != null ? context.runId() : 0L;
 
       Map<String, Object> metadata = new LinkedHashMap<>();

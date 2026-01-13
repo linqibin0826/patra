@@ -42,14 +42,6 @@ xxl:
   job:
     enabled: false
 
-# Feign 配置
-feign:
-  client:
-    config:
-      default:
-        connectTimeout: 2000
-        readTimeout: 5000
-
 # Patra Ingest 配置
 patra:
   ingest:
