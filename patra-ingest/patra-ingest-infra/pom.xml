@@ -40,17 +40,17 @@
             <artifactId>patra-spring-boot-starter-expr</artifactId>
         </dependency>
 
-        <!-- Outbound RPC (Feign) capability and shared contracts -->
+        <!-- Outbound RPC (HTTP Interface) capability and shared contracts -->
         <dependency>
             <groupId>com.patra</groupId>
-            <artifactId>patra-spring-cloud-starter-feign</artifactId>
+            <artifactId>patra-spring-boot-starter-http-interface</artifactId>
         </dependency>
         <!-- Provenance client starter (PubMed/EPMC clients) -->
         <dependency>
             <groupId>com.patra</groupId>
             <artifactId>patra-spring-boot-starter-provenance</artifactId>
         </dependency>
-        <!-- LoadBalancer 已由 patra-spring-cloud-starter-feign 传递 -->
+        <!-- LoadBalancer 已由 patra-spring-boot-starter-http-interface 传递 -->
         <dependency>
             <groupId>com.patra</groupId>
             <artifactId>patra-registry-api</artifactId>

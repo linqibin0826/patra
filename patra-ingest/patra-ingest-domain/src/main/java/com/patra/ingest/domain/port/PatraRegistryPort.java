@@ -10,7 +10,7 @@ import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 ///
 /// - 为应用服务提供单一入口以调用 Registry
 ///   - 根据 provenance/operation 组合获取 provenance 配置快照
-///   - 隐藏协议/客户端细节(Feign/HTTP/gRPC),使 Domain 层保持解耦
+///   - 隐藏协议/客户端细节(HTTP Interface/gRPC),使 Domain 层保持解耦
 ///
 /// **分层**: 接口定义在 Domain 层;基础设施实现位于 `infra.rpc.registry`。 应用服务仅通过此端口进行编排。
 ///

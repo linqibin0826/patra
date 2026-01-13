@@ -27,6 +27,12 @@
             <artifactId>spring-cloud-starter-consul-discovery</artifactId>
         </dependency>
 
+        <!-- HTTP Interface 客户端（替代 Feign） -->
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-spring-boot-starter-http-interface</artifactId>
+        </dependency>
+
         <!-- 可观测性（Metrics 通过 OTel Agent + Micrometer Bridge 导出） -->
         <dependency>
             <groupId>com.patra</groupId>

@@ -9,7 +9,7 @@ import lombok.Builder;
 /// **职责**: 向 patra-object-storage 服务记录上传元数据。此端口与 patra-object-storage 限界上下文(独立微服务)集成,
 /// 在系统范围的存储目录中注册文件上传。目录跟踪所有上传的文件及其业务上下文、校验和和关联数据,用于审计和检索。
 ///
-/// **实现**: 基础设施适配器通过 Feign RPC 客户端或类似的服务集成机制实现此端口。
+/// **实现**: 基础设施适配器通过 HTTP Interface 客户端实现此端口。
 ///
 /// **端口语义**: 此接口是六边形架构中的 **输出端口(Output Port)**,定义在 Domain
 /// 层,由基础设施层(Infrastructure)实现,抽象存储元数据服务的 RPC 细节。
@@ -60,4 +60,19 @@ public interface StorageMetadataPort {
   /// @param recordedAt 元数据记录时间戳
   @Builder
   record MetadataResult(Long metadataId, Instant recordedAt) {}
+
+  /// 存储元数据记录异常。
+  ///
+  /// 当与 patra-object-storage 服务通信失败时抛出。此异常定义在端口接口中,
+  /// 由基础设施适配器抛出,应用层可捕获并处理。
+  class StorageMetadataException extends RuntimeException {
+
+    /// 构造存储元数据异常
+    ///
+    /// @param message 错误消息
+    /// @param cause 原始异常
+    public StorageMetadataException(String message, Throwable cause) {
+      super(message, cause);
+    }
+  }
 }

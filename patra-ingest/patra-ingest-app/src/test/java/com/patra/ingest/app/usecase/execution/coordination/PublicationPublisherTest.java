@@ -14,23 +14,21 @@ import com.patra.common.model.CanonicalPublication;
 import com.patra.ingest.domain.port.PublicationStoragePort;
 import com.patra.ingest.domain.port.StorageMetadataPort;
 import com.patra.ingest.domain.port.TechnicalRetryPort;
-import feign.FeignException;
-import feign.Request;
-import feign.RetryableException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.ObjectMapper;
 
 /// 出版物发布编排器单元测试
 ///
@@ -39,10 +37,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// - Mock PublicationStoragePort、StorageMetadataPort、TechnicalRetryPort
 ///   - 验证存储和元数据记录编排
 ///   - 测试元数据记录失败场景和重试委托
-///   - 覆盖 Feign 异常处理
+///   - 覆盖 StorageMetadataException 异常处理
+///
+/// **注意**：Jackson 3 的 ObjectMapper 无法被 Mockito mock，因此使用真实实例。
 ///
 @ExtendWith(MockitoExtension.class)
 @DisplayName("出版物发布编排器测试")
+@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class PublicationPublisherTest {
 
   @Mock private PublicationStoragePort publicationStoragePort;
@@ -51,7 +52,10 @@ class PublicationPublisherTest {
 
   @Mock private TechnicalRetryPort technicalRetryPort;
 
-  @InjectMocks private PublicationPublisher orchestrator;
+  /// Jackson 3 的 ObjectMapper 无法被 Mockito mock，使用真实实例
+  private final ObjectMapper objectMapper = new ObjectMapper();
+
+  private PublicationPublisher publisher;
 
   private static final Long RUN_ID = 100L;
   private static final int BATCH_NO = 1;
@@ -69,6 +73,10 @@ class PublicationPublisherTest {
 
   @BeforeEach
   void setUp() {
+    publisher =
+        new PublicationPublisher(
+            publicationStoragePort, storageMetadataPort, technicalRetryPort, objectMapper);
+
     publishContext =
         PublicationPublisher.PublishContext.builder()
             .runId(RUN_ID)
@@ -105,8 +113,7 @@ class PublicationPublisherTest {
       when(storageMetadataPort.recordUpload(any())).thenReturn(metadataResult);
 
       // Act
-      PublicationPublisher.PublishResult result =
-          orchestrator.publish(publications, publishContext);
+      PublicationPublisher.PublishResult result = publisher.publish(publications, publishContext);
 
       // Assert
       assertThat(result).isNotNull();
@@ -139,7 +146,7 @@ class PublicationPublisherTest {
       when(storageMetadataPort.recordUpload(any())).thenReturn(metadataResult);
 
       // Act
-      PublicationPublisher.PublishResult result = orchestrator.publish(emptyList, publishContext);
+      PublicationPublisher.PublishResult result = publisher.publish(emptyList, publishContext);
 
       // Assert
       assertThat(result).isNotNull();
@@ -161,8 +168,12 @@ class PublicationPublisherTest {
               .build();
       when(publicationStoragePort.store(any(), any())).thenReturn(emptyResult);
 
+      StorageMetadataPort.MetadataResult metadataResult =
+          new StorageMetadataPort.MetadataResult(123L, java.time.Instant.now());
+      when(storageMetadataPort.recordUpload(any())).thenReturn(metadataResult);
+
       // Act
-      PublicationPublisher.PublishResult result = orchestrator.publish(null, publishContext);
+      PublicationPublisher.PublishResult result = publisher.publish(null, publishContext);
 
       // Assert
       assertThat(result).isNotNull();
@@ -184,7 +195,7 @@ class PublicationPublisherTest {
       when(storageMetadataPort.recordUpload(any())).thenReturn(metadataResult);
 
       // Act
-      orchestrator.publish(publications, publishContext);
+      publisher.publish(publications, publishContext);
 
       // Assert
       ArgumentCaptor<PublicationStoragePort.StorageContext> contextCaptor =
@@ -208,7 +219,7 @@ class PublicationPublisherTest {
       when(storageMetadataPort.recordUpload(any())).thenReturn(metadataResult);
 
       // Act
-      orchestrator.publish(publications, publishContext);
+      publisher.publish(publications, publishContext);
 
       // Assert
       ArgumentCaptor<StorageMetadataPort.MetadataRequest> requestCaptor =
@@ -239,17 +250,16 @@ class PublicationPublisherTest {
   class MetadataRecordFailureTests {
 
     @Test
-    @DisplayName("5xx 错误，委托给重试机制")
-    void shouldDelegateToRetryOn5xxError() {
+    @DisplayName("StorageMetadataException，委托给重试机制")
+    void shouldDelegateToRetryOnStorageMetadataException() {
       // Arrange
       when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
-      FeignException feignException = createFeignException(500, "Internal Server Error");
-      when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
+      var exception = new StorageMetadataPort.StorageMetadataException("Remote call failed", null);
+      when(storageMetadataPort.recordUpload(any())).thenThrow(exception);
 
       // Act
-      PublicationPublisher.PublishResult result =
-          orchestrator.publish(publications, publishContext);
+      PublicationPublisher.PublishResult result = publisher.publish(publications, publishContext);
 
       // Assert
       assertThat(result).isNotNull();
@@ -260,104 +270,19 @@ class PublicationPublisherTest {
     }
 
     @Test
-    @DisplayName("503 Service Unavailable，委托给重试机制")
-    void shouldDelegateToRetryOn503Error() {
-      // Arrange
-      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
-
-      FeignException feignException = createFeignException(503, "Service Unavailable");
-      when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
-
-      // Act
-      orchestrator.publish(publications, publishContext);
-
-      // Assert
-      verify(technicalRetryPort).publishRetry(any());
-    }
-
-    @Test
-    @DisplayName("4xx 错误，不委托给重试机制")
-    void shouldNotDelegateToRetryOn4xxError() {
-      // Arrange
-      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
-
-      FeignException feignException = createFeignException(400, "Bad Request");
-      when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
-
-      // Act
-      PublicationPublisher.PublishResult result =
-          orchestrator.publish(publications, publishContext);
-
-      // Assert
-      assertThat(result).isNotNull();
-      verify(technicalRetryPort, never()).publishRetry(any());
-    }
-
-    @Test
-    @DisplayName("404 错误，不委托给重试机制")
-    void shouldNotDelegateToRetryOn404Error() {
-      // Arrange
-      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
-
-      FeignException feignException = createFeignException(404, "Not Found");
-      when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
-
-      // Act
-      orchestrator.publish(publications, publishContext);
-
-      // Assert
-      verify(technicalRetryPort, never()).publishRetry(any());
-    }
-
-    @Test
-    @DisplayName("RetryableException，委托给重试机制")
-    void shouldDelegateToRetryOnRetryableException() {
-      // Arrange
-      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
-
-      Request request = createDummyRequest();
-      RetryableException retryableException =
-          new RetryableException(
-              504, "Gateway Timeout", Request.HttpMethod.POST, (Long) null, request);
-      when(storageMetadataPort.recordUpload(any())).thenThrow(retryableException);
-
-      // Act
-      orchestrator.publish(publications, publishContext);
-
-      // Assert
-      verify(technicalRetryPort).publishRetry(any());
-    }
-
-    @Test
-    @DisplayName("一般异常，委托给重试机制")
-    void shouldDelegateToRetryOnGeneralException() {
-      // Arrange
-      when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
-
-      when(storageMetadataPort.recordUpload(any()))
-          .thenThrow(new RuntimeException("Unexpected error"));
-
-      // Act
-      orchestrator.publish(publications, publishContext);
-
-      // Assert
-      verify(technicalRetryPort).publishRetry(any());
-    }
-
-    @Test
     @DisplayName("重试委托失败不应抛出异常")
     void shouldNotThrowWhenRetryDelegationFails() {
       // Arrange
       when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
-      FeignException feignException = createFeignException(500, "Internal Server Error");
-      when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
+      when(storageMetadataPort.recordUpload(any()))
+          .thenThrow(new StorageMetadataPort.StorageMetadataException("Remote call failed", null));
       doThrow(new RuntimeException("Retry delegation failed"))
           .when(technicalRetryPort)
           .publishRetry(any());
 
       // Act & Assert
-      assertThatCode(() -> orchestrator.publish(publications, publishContext))
+      assertThatCode(() -> publisher.publish(publications, publishContext))
           .doesNotThrowAnyException();
     }
   }
@@ -372,11 +297,11 @@ class PublicationPublisherTest {
       // Arrange
       when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
-      FeignException feignException = createFeignException(500, "Internal Server Error");
-      when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
+      when(storageMetadataPort.recordUpload(any()))
+          .thenThrow(new StorageMetadataPort.StorageMetadataException("Remote call failed", null));
 
       // Act
-      orchestrator.publish(publications, publishContext);
+      publisher.publish(publications, publishContext);
 
       // Assert
       ArgumentCaptor<TechnicalRetryPort.RetryContext> contextCaptor =
@@ -408,11 +333,11 @@ class PublicationPublisherTest {
 
       when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
-      FeignException feignException = createFeignException(500, "Internal Server Error");
-      when(storageMetadataPort.recordUpload(any())).thenThrow(feignException);
+      when(storageMetadataPort.recordUpload(any()))
+          .thenThrow(new StorageMetadataPort.StorageMetadataException("Remote call failed", null));
 
       // Act
-      orchestrator.publish(publications, contextWithoutRunId);
+      publisher.publish(publications, contextWithoutRunId);
 
       // Assert
       ArgumentCaptor<TechnicalRetryPort.RetryContext> contextCaptor =
@@ -445,7 +370,7 @@ class PublicationPublisherTest {
       when(storageMetadataPort.recordUpload(any())).thenReturn(metadataResult);
 
       // Act
-      orchestrator.publish(publications, contextWithNullProvenance);
+      publisher.publish(publications, contextWithNullProvenance);
 
       // Assert
       ArgumentCaptor<StorageMetadataPort.MetadataRequest> requestCaptor =
@@ -474,7 +399,7 @@ class PublicationPublisherTest {
       when(storageMetadataPort.recordUpload(any())).thenReturn(metadataResult);
 
       // Act
-      orchestrator.publish(publications, contextWithEmptyProvenance);
+      publisher.publish(publications, contextWithEmptyProvenance);
 
       // Assert
       ArgumentCaptor<StorageMetadataPort.MetadataRequest> requestCaptor =
@@ -503,7 +428,7 @@ class PublicationPublisherTest {
       when(storageMetadataPort.recordUpload(any())).thenReturn(metadataResult);
 
       // Act
-      orchestrator.publish(publications, contextWithUpperCase);
+      publisher.publish(publications, contextWithUpperCase);
 
       // Assert
       ArgumentCaptor<StorageMetadataPort.MetadataRequest> requestCaptor =
@@ -525,28 +450,5 @@ class PublicationPublisherTest {
       list.add(publication);
     }
     return list;
-  }
-
-  private FeignException createFeignException(int status, String message) {
-    Request request = createDummyRequest();
-    return FeignException.errorStatus(
-        "recordUpload",
-        feign.Response.builder()
-            .status(status)
-            .reason(message)
-            .request(request)
-            .headers(Collections.emptyMap())
-            .body(new byte[0])
-            .build());
-  }
-
-  private Request createDummyRequest() {
-    return Request.create(
-        Request.HttpMethod.POST,
-        "http://localhost/api/metadata",
-        Collections.emptyMap(),
-        null,
-        StandardCharsets.UTF_8,
-        null);
   }
 }

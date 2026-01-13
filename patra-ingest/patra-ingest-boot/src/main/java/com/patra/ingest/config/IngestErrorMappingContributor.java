@@ -1,6 +1,7 @@
 package com.patra.ingest.config;
 
 import com.patra.common.error.codes.ErrorCodeLike;
+import com.patra.common.error.remote.RemoteCallException;
 import com.patra.common.error.trait.ErrorTrait;
 import com.patra.common.error.trait.StandardErrorTrait;
 import com.patra.ingest.api.error.IngestErrorCode;
@@ -13,7 +14,6 @@ import com.patra.ingest.domain.exception.PlanPersistenceException;
 import com.patra.ingest.domain.exception.PlanValidationException;
 import com.patra.ingest.domain.exception.TaskCheckpointException;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
-import com.patra.starter.feign.error.exception.RemoteCallException;
 import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
