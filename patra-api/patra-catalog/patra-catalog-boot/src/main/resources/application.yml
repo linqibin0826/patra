@@ -56,14 +56,21 @@ spring:
     baseline-version: 0.1.0
 
 # ----------------------------------------------------------------------------
-# Feign Client Configuration
+# HTTP Interface 客户端配置（替代 Feign）
 # ----------------------------------------------------------------------------
-feign:
-  client:
-    config:
-      default:
-        connectTimeout: 2000
-        readTimeout: 5000
+patra:
+  http:
+    interface:
+      enabled: true
+      connect-timeout: 2s
+      read-timeout: 5s
+      error-handling:
+        problem-detail-enabled: true
+        tolerant: true
+      groups:
+        registry:
+          base-url: lb://patra-registry
+          read-timeout: 10s
 
 # ----------------------------------------------------------------------------
 # XXL-Job Distributed Task Scheduler
@@ -81,7 +88,6 @@ xxl:
 # ----------------------------------------------------------------------------
 # Patra Catalog Service Configuration
 # ----------------------------------------------------------------------------
-patra:
   catalog:
     mesh:
       # MeSH Descriptor（主题词）XML 文件 URL - 版本号从文件名自动推断
