@@ -59,6 +59,7 @@ spotbugs = "4.9.3"
 jacoco = "0.8.14"
 spotless = "7.0.4"
 google-java-format = "1.29.0"
+ktlint = "1.5.0"
 
 # Build Plugins
 kordamp-enforcer = "0.14.0"
