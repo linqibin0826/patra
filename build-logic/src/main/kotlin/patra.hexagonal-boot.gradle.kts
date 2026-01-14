@@ -38,14 +38,23 @@ tasks.jar {
 
 // ==================== bootRun 配置 ====================
 tasks.bootRun {
-    // OTel Agent JVM 参数
-    jvmArgs(
-        "-javaagent:${rootProject.projectDir}/../patra-infra/docker/opentelemetry-javaagent.jar",
-        "-Dotel.service.name=${project.name}",
-        "-Dotel.exporter.otlp.endpoint=http://localhost:4317",
-        "-Dotel.exporter.otlp.protocol=grpc",
-        "-Dotel.traces.exporter=otlp"
-    )
+    // 从 gradle.properties 读取 OTel 配置
+    // NOTE: 属性值在配置阶段求值，变化时会触发 Configuration Cache 失效（这是预期行为）
+    // 对于 bootRun 开发任务，这完全可接受，因为 OTel 配置很少变化
+    val otelAgentPath = providers.gradleProperty("otel.agent.path").getOrElse("")
+    val otelExporterEndpoint = providers.gradleProperty("otel.exporter.endpoint").getOrElse("http://localhost:4317")
+
+    // OTel Agent JVM 参数（仅当配置了 agent 路径时启用）
+    if (otelAgentPath.isNotBlank()) {
+        val agentJar = rootProject.projectDir.resolve(otelAgentPath)
+        jvmArgs(
+            "-javaagent:$agentJar",
+            "-Dotel.service.name=${project.name}",
+            "-Dotel.exporter.otlp.endpoint=$otelExporterEndpoint",
+            "-Dotel.exporter.otlp.protocol=grpc",
+            "-Dotel.traces.exporter=otlp"
+        )
+    }
 }
 
 dependencies {

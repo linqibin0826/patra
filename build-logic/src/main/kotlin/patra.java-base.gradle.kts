@@ -49,6 +49,13 @@ spotless {
         trimTrailingWhitespace()
         endWithNewline()
     }
+    // Kotlin DSL 格式化（build.gradle.kts 文件）
+    kotlinGradle {
+        target("*.gradle.kts")
+        ktlint(libs.findVersion("ktlint").get().requiredVersion)
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
 }
 
 // ==================== SpotBugs (Static Analysis) ====================
