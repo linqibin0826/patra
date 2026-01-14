@@ -451,12 +451,7 @@ class DataProcessorTest {
 
       // When: 创建带元数据的结果
       ProcessResult<CanonicalPublication> result =
-          ProcessResult.<CanonicalPublication>builder()
-              .success(true)
-              .data(List.of(createValidPublication()))
-              .status(ProcessStatus.SUCCESS)
-              .metadata(metadata)
-              .build();
+          ProcessResult.successWithMetadata(List.of(createValidPublication()), metadata);
 
       // Then: 验证元数据
       assertThat(result.metadata()).isEqualTo(metadata);

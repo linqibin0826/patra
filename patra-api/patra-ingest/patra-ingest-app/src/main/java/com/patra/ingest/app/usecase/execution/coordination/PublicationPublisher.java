@@ -5,12 +5,10 @@ import com.patra.common.model.CanonicalPublication;
 import com.patra.ingest.domain.port.PublicationStoragePort;
 import com.patra.ingest.domain.port.StorageMetadataPort;
 import com.patra.ingest.domain.port.TechnicalRetryPort;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -54,8 +52,7 @@ public class PublicationPublisher {
   /// @param context 发布上下文(包含执行元数据)
   /// @return 发布结果(包含存储位置)
   public PublishResult publish(List<CanonicalPublication> publication, PublishContext context) {
-    List<CanonicalPublication> safePublication =
-        publication == null ? Collections.emptyList() : publication;
+    List<CanonicalPublication> safePublication = publication == null ? List.of() : publication;
 
     // 步骤1: 存储到对象存储
     PublicationStoragePort.StorageContext storageContext = toStorageContext(context);
@@ -88,10 +85,7 @@ public class PublicationPublisher {
       delegateToRetry(storageResult, context, e);
     }
 
-    return PublishResult.builder()
-        .storageKey(storageResult.storageKey())
-        .publishedCount(storageResult.publicationCount())
-        .build();
+    return PublishResult.of(storageResult.storageKey(), storageResult.publicationCount());
   }
 
   private PublicationStoragePort.StorageContext toStorageContext(PublishContext context) {
@@ -194,8 +188,17 @@ public class PublicationPublisher {
   ///
   /// @param storageKey 完整的存储标识符
   /// @param publishedCount 已发布的出版物数量
-  @Builder
-  public record PublishResult(String storageKey, int publishedCount) {}
+  public record PublishResult(String storageKey, int publishedCount) {
+
+    /// 创建发布结果。
+    ///
+    /// @param storageKey 存储标识符
+    /// @param publishedCount 发布数量
+    /// @return 发布结果
+    public static PublishResult of(String storageKey, int publishedCount) {
+      return new PublishResult(storageKey, publishedCount);
+    }
+  }
 
   /// 发布上下文
   ///
@@ -204,6 +207,16 @@ public class PublicationPublisher {
   /// @param runId 任务运行标识符
   /// @param batchNo 执行批次编号
   /// @param provenanceCode 标准化的数据源标识符
-  @Builder
-  public record PublishContext(Long runId, int batchNo, ProvenanceCode provenanceCode) {}
+  public record PublishContext(Long runId, int batchNo, ProvenanceCode provenanceCode) {
+
+    /// 创建发布上下文。
+    ///
+    /// @param runId 运行 ID
+    /// @param batchNo 批次号
+    /// @param provenanceCode 数据源代码
+    /// @return 发布上下文
+    public static PublishContext of(Long runId, int batchNo, ProvenanceCode provenanceCode) {
+      return new PublishContext(runId, batchNo, provenanceCode);
+    }
+  }
 }

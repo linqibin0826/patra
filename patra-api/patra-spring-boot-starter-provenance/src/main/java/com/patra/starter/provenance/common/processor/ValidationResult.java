@@ -1,7 +1,6 @@
 package com.patra.starter.provenance.common.processor;
 
 import java.util.List;
-import lombok.Builder;
 
 /// 数据验证结果
 ///
@@ -17,7 +16,6 @@ import lombok.Builder;
 /// @param errors 错误列表（不可变）
 /// @author linqibin
 /// @since 0.1.0
-@Builder
 public record ValidationResult(boolean isValid, List<String> errors) {
 
   /// 创建成功的验证结果

@@ -154,18 +154,11 @@ public class GenericBatchExecutor {
     List<CanonicalPublication> payload =
         publications == null ? List.of() : List.copyOf(publications);
     if (payload.isEmpty()) {
-      return PublicationPublisher.PublishResult.builder()
-          .publishedCount(0)
-          .storageKey(null)
-          .build();
+      return PublicationPublisher.PublishResult.of(null, 0);
     }
     ProvenanceCode provenanceCode = context.provenanceCode();
     PublicationPublisher.PublishContext publishContext =
-        PublicationPublisher.PublishContext.builder()
-            .runId(context.runId())
-            .batchNo(batchNo)
-            .provenanceCode(provenanceCode)
-            .build();
+        PublicationPublisher.PublishContext.of(context.runId(), batchNo, provenanceCode);
     return publicationPublisher.publish(payload, publishContext);
   }
 

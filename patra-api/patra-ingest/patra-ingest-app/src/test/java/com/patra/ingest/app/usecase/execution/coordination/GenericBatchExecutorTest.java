@@ -127,10 +127,7 @@ class GenericBatchExecutorTest {
 
       // Mock 出版物发布
       PublicationPublisher.PublishResult publishResult =
-          PublicationPublisher.PublishResult.builder()
-              .publishedCount(5)
-              .storageKey("s3://bucket/pubmed/run-1/batch-1.json")
-              .build();
+          PublicationPublisher.PublishResult.of("s3://bucket/pubmed/run-1/batch-1.json", 5);
       when(publicationPublisher.publish(any(), any())).thenReturn(publishResult);
 
       // When: 执行批次
@@ -392,10 +389,7 @@ class GenericBatchExecutorTest {
 
   private void mockPublish(int count, String storageKey) {
     PublicationPublisher.PublishResult publishResult =
-        PublicationPublisher.PublishResult.builder()
-            .publishedCount(count)
-            .storageKey(storageKey)
-            .build();
+        PublicationPublisher.PublishResult.of(storageKey, count);
     when(publicationPublisher.publish(any(), any())).thenReturn(publishResult);
   }
 }

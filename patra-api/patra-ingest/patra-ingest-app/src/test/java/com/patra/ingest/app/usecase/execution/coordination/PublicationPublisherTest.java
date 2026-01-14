@@ -78,11 +78,7 @@ class PublicationPublisherTest {
             publicationStoragePort, storageMetadataPort, technicalRetryPort, objectMapper);
 
     publishContext =
-        PublicationPublisher.PublishContext.builder()
-            .runId(RUN_ID)
-            .batchNo(BATCH_NO)
-            .provenanceCode(ProvenanceCode.PUBMED)
-            .build();
+        PublicationPublisher.PublishContext.of(RUN_ID, BATCH_NO, ProvenanceCode.PUBMED);
 
     publications = createPublicationList(5);
 
@@ -325,11 +321,7 @@ class PublicationPublisherTest {
     void shouldUseDefaultAggregateIdWhenRunIdIsNull() {
       // Arrange
       PublicationPublisher.PublishContext contextWithoutRunId =
-          PublicationPublisher.PublishContext.builder()
-              .runId(null)
-              .batchNo(BATCH_NO)
-              .provenanceCode(ProvenanceCode.PUBMED)
-              .build();
+          PublicationPublisher.PublishContext.of(null, BATCH_NO, ProvenanceCode.PUBMED);
 
       when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
@@ -357,11 +349,7 @@ class PublicationPublisherTest {
     void shouldUseUnknownForNullProvenanceCode() {
       // Arrange
       PublicationPublisher.PublishContext contextWithNullProvenance =
-          PublicationPublisher.PublishContext.builder()
-              .runId(RUN_ID)
-              .batchNo(BATCH_NO)
-              .provenanceCode(null)
-              .build();
+          PublicationPublisher.PublishContext.of(RUN_ID, BATCH_NO, null);
 
       when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
@@ -386,11 +374,8 @@ class PublicationPublisherTest {
     void shouldUseUnknownForEmptyProvenanceCode() {
       // Arrange
       PublicationPublisher.PublishContext contextWithEmptyProvenance =
-          PublicationPublisher.PublishContext.builder()
-              .runId(RUN_ID)
-              .batchNo(BATCH_NO)
-              .provenanceCode(null) // 注意：空字符串测试需要调整为 null，因为 ProvenanceCode 是枚举类型
-              .build();
+          PublicationPublisher.PublishContext.of(
+              RUN_ID, BATCH_NO, null); // 注意：空字符串测试需要调整为 null，因为 ProvenanceCode 是枚举类型
 
       when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
@@ -415,11 +400,8 @@ class PublicationPublisherTest {
     void shouldConvertProvenanceCodeToLowerCase() {
       // Arrange
       PublicationPublisher.PublishContext contextWithUpperCase =
-          PublicationPublisher.PublishContext.builder()
-              .runId(RUN_ID)
-              .batchNo(BATCH_NO)
-              .provenanceCode(ProvenanceCode.PUBMED) // 注意：枚举已经定义为 PUBMED，无需测试大小写转换
-              .build();
+          PublicationPublisher.PublishContext.of(
+              RUN_ID, BATCH_NO, ProvenanceCode.PUBMED); // 注意：枚举已经定义为 PUBMED，无需测试大小写转换
 
       when(publicationStoragePort.store(any(), any())).thenReturn(storageResult);
 
