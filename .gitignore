@@ -41,6 +41,7 @@ docs/.obsidian/
 ##############################
 target/
 build/
+bin/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
