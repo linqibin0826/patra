@@ -1,6 +1,5 @@
 package com.patra.starter.objectstorage.domain;
 
-import java.util.Collections;
 import java.util.Map;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,5 +16,5 @@ public class ObjectMetadata {
   @Builder.Default private final String contentType = "application/octet-stream";
 
   /// 用户自定义元数据
-  @Builder.Default private final Map<String, String> userMetadata = Collections.emptyMap();
+  @Builder.Default private final Map<String, String> userMetadata = Map.of();
 }

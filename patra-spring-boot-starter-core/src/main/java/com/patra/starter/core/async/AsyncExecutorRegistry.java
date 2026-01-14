@@ -3,6 +3,7 @@ package com.patra.starter.core.async;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -102,8 +103,7 @@ public class AsyncExecutorRegistry implements DisposableBean {
 
     // 注册 Micrometer 指标
     if (meterRegistry != null) {
-      new ExecutorServiceMetrics(
-              executor.getThreadPoolExecutor(), poolName, Collections.emptyList())
+      new ExecutorServiceMetrics(executor.getThreadPoolExecutor(), poolName, List.of())
           .bindTo(meterRegistry);
       log.debug("已注册线程池 '{}' 的 Micrometer 指标", poolName);
     }

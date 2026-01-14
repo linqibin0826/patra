@@ -10,7 +10,6 @@ import com.patra.ingest.infra.adapter.persistence.entity.OutboxMessageEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -175,7 +174,7 @@ public class OutboxMessageRepositoryAdapter
   @Override
   public List<OutboxMessage> fetchPending(String channel, Instant availableTime, int limit) {
     if (limit <= 0) {
-      return Collections.emptyList();
+      return List.of();
     }
     List<OutboxMessageEntity> entities =
         outboxMessageDao.fetchPending(channel, availableTime, limit);
@@ -184,7 +183,7 @@ public class OutboxMessageRepositoryAdapter
         log.debug(
             "fetch pending Outbox messages channel={} limit={}, found 0 results", channel, limit);
       }
-      return Collections.emptyList();
+      return List.of();
     }
     if (log.isDebugEnabled()) {
       log.debug(
@@ -321,7 +320,7 @@ public class OutboxMessageRepositoryAdapter
   @Override
   public List<OutboxMessage> findByChannelAndDedupIn(String channel, List<String> dedupKeys) {
     if (dedupKeys == null || dedupKeys.isEmpty()) {
-      return Collections.emptyList();
+      return List.of();
     }
 
     if (log.isDebugEnabled()) {
@@ -331,7 +330,7 @@ public class OutboxMessageRepositoryAdapter
     List<OutboxMessageEntity> entities =
         outboxMessageDao.findByChannelAndDedupKeyIn(channel, dedupKeys);
     if (entities == null || entities.isEmpty()) {
-      return Collections.emptyList();
+      return List.of();
     }
 
     return entities.stream().map(outboxMessageJpaMapper::toAggregate).toList();

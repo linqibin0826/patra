@@ -3,7 +3,6 @@ package com.patra.starter.core.cqrs;
 import com.patra.common.cqrs.CommandBus;
 import com.patra.common.cqrs.CommandHandler;
 import com.patra.common.cqrs.CommandInterceptor;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executor;
 import org.slf4j.Logger;
@@ -48,9 +47,8 @@ public class CommandBusAutoConfiguration {
       List<CommandInterceptor> interceptors,
       Executor commandBusAsyncExecutor) {
     // 处理可能的 null 值（当没有任何 Handler/Interceptor 时）
-    List<CommandHandler<?, ?>> safeHandlers = handlers != null ? handlers : Collections.emptyList();
-    List<CommandInterceptor> safeInterceptors =
-        interceptors != null ? interceptors : Collections.emptyList();
+    List<CommandHandler<?, ?>> safeHandlers = handlers != null ? handlers : List.of();
+    List<CommandInterceptor> safeInterceptors = interceptors != null ? interceptors : List.of();
 
     log.info("创建 CommandBus: {} 个 Handler, {} 个拦截器", safeHandlers.size(), safeInterceptors.size());
 

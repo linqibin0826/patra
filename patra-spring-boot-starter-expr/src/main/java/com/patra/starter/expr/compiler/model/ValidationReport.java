@@ -1,6 +1,5 @@
 package com.patra.starter.expr.compiler.model;
 
-import java.util.Collections;
 import java.util.List;
 
 /// 验证报告,包含警告和错误列表。
@@ -26,6 +25,6 @@ public record ValidationReport(List<Issue> warnings, List<Issue> errors) {
   ///
   /// @return 空报告
   public static ValidationReport empty() {
-    return new ValidationReport(Collections.emptyList(), Collections.emptyList());
+    return new ValidationReport(List.of(), List.of());
   }
 }

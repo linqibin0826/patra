@@ -6,7 +6,6 @@ import com.patra.common.error.trait.ErrorTrait;
 import com.patra.starter.httpinterface.config.HttpInterfaceProperties;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -157,9 +156,7 @@ public class ProblemDetailErrorHandler implements RestClient.ResponseSpec.ErrorH
   private RemoteCallException createExceptionFromProblemDetail(
       ProblemDetail problemDetail, String methodKey) {
     Map<String, Object> properties =
-        problemDetail.getProperties() != null
-            ? problemDetail.getProperties()
-            : Collections.emptyMap();
+        problemDetail.getProperties() != null ? problemDetail.getProperties() : Map.of();
 
     String errorCode = (String) properties.get(ErrorKeys.CODE);
     String traceId = (String) properties.get(ErrorKeys.TRACE_ID);

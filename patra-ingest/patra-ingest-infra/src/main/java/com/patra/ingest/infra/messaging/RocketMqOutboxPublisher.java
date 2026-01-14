@@ -7,7 +7,6 @@ import com.patra.ingest.domain.model.vo.relay.RelayPlan;
 import com.patra.ingest.domain.port.OutboxPublisherPort;
 import com.patra.ingest.infra.config.OutboxMqProperties;
 import com.patra.ingest.infra.messaging.config.RocketMqChannelMapper;
-import java.util.Collections;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.client.producer.SendResult;
@@ -229,7 +228,7 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
   /// @return 消息头 Map
   private Map<String, Object> parseHeaders(String headersJson) {
     if (!StringUtils.hasText(headersJson)) {
-      return Collections.emptyMap();
+      return Map.of();
     }
     try {
       return objectMapper.readValue(headersJson, MAP_TYPE);

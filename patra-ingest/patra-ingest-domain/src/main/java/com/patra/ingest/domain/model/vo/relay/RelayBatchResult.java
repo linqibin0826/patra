@@ -2,7 +2,6 @@ package com.patra.ingest.domain.model.vo.relay;
 
 import com.patra.common.messaging.ChannelKey;
 import com.patra.ingest.domain.event.OutboxRelayDomainEvent;
-import java.util.Collections;
 import java.util.List;
 
 /// 中继批次执行结果汇总 Value Object。
@@ -43,6 +42,6 @@ public record RelayBatchResult(
 
   /// 工厂方法: 创建空的批次结果(所有计数为 0)。
   public static RelayBatchResult empty(ChannelKey channel) {
-    return new RelayBatchResult(channel, 0, 0, 0, 0, 0, Collections.emptyList());
+    return new RelayBatchResult(channel, 0, 0, 0, 0, 0, List.of());
   }
 }

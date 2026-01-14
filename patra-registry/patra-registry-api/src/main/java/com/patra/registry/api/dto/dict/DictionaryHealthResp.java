@@ -1,6 +1,5 @@
 package com.patra.registry.api.dto.dict;
 
-import java.util.Collections;
 import java.util.List;
 
 /// 字典健康度指标,用于子系统监控。
@@ -33,11 +32,9 @@ public record DictionaryHealthResp(
       throw new IllegalArgumentException("启用项总数不能为负数");
     }
     typesWithoutDefault =
-        typesWithoutDefault != null ? List.copyOf(typesWithoutDefault) : Collections.emptyList();
+        typesWithoutDefault != null ? List.copyOf(typesWithoutDefault) : List.of();
     typesWithMultipleDefaults =
-        typesWithMultipleDefaults != null
-            ? List.copyOf(typesWithMultipleDefaults)
-            : Collections.emptyList();
+        typesWithMultipleDefaults != null ? List.copyOf(typesWithMultipleDefaults) : List.of();
   }
 
   /// 检查字典配置是否健康。
