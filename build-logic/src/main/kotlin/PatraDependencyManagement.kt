@@ -30,7 +30,7 @@ import org.gradle.kotlin.dsl.configure
 /// 应用 Patra 统一的依赖管理配置
 ///
 /// 包括：
-/// - Spring Boot / Cloud / Resilience4j / Testcontainers / AWS SDK BOM
+/// - Spring Boot / Cloud / Resilience4j / Testcontainers BOM
 /// - 强制版本约束（解决依赖冲突）
 ///
 /// 版本统一从 `gradle/libs.versions.toml` 获取，确保单一来源。
@@ -42,8 +42,6 @@ fun Project.applyPatraDependencyManagement(libs: VersionCatalog) {
     val springCloudVersion = libs.findVersion("spring-cloud").get().requiredVersion
     val resilience4jVersion = libs.findVersion("resilience4j").get().requiredVersion
     val testcontainersVersion = libs.findVersion("testcontainers").get().requiredVersion
-    val awsSdkVersion = libs.findVersion("aws-sdk").get().requiredVersion
-
     // 强制版本约束
     val commonsCompressVersion = libs.findVersion("commons-compress").get().requiredVersion
     val httpclientVersion = libs.findVersion("httpclient").get().requiredVersion
@@ -55,7 +53,6 @@ fun Project.applyPatraDependencyManagement(libs: VersionCatalog) {
             mavenBom("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion")
             mavenBom("io.github.resilience4j:resilience4j-bom:$resilience4jVersion")
             mavenBom("org.testcontainers:testcontainers-bom:$testcontainersVersion")
-            mavenBom("software.amazon.awssdk:bom:$awsSdkVersion")
         }
     }
 
