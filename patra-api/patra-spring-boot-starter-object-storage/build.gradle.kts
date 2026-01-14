@@ -22,7 +22,7 @@ dependencies {
     api(libs.minio)
 
     // AWS S3 SDK (optional)
-    compileOnly("software.amazon.awssdk:s3")
+    compileOnly(libs.aws.sdk.s3)
 
     // Spring Retry
     api("org.springframework.retry:spring-retry")
