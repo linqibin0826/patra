@@ -192,27 +192,28 @@ public class JpaErrorMappingContributor implements ErrorMappingContributor {
     }
 
     if (exception instanceof SQLException sqlEx) {
-      // MySQL 特定错误码
-      int errorCode = sqlEx.getErrorCode();
-      switch (errorCode) {
-        case 1062: // ER_DUP_ENTRY: 唯一键的重复条目
-          log.debug("将 MySQL 重复条目错误 ({}) 映射为冲突", errorCode, sqlEx);
-          return Optional.of(http.CONFLICT());
-        case 1451: // ER_ROW_IS_REFERENCED_2: 无法删除/更新父行
-        case 1452: // ER_NO_REFERENCED_ROW_2: 无法添加/更新子行
-          log.debug("将 MySQL 外键约束错误 ({}) 映射为冲突", errorCode, sqlEx);
-          return Optional.of(http.CONFLICT());
-        default:
-          break;
+      // MySQL 特定错误码映射
+      Optional<ErrorCodeLike> mysqlResult =
+          switch (sqlEx.getErrorCode()) {
+            case 1062 -> { // ER_DUP_ENTRY: 唯一键的重复条目
+              log.debug("将 MySQL 重复条目错误 ({}) 映射为冲突", sqlEx.getErrorCode(), sqlEx);
+              yield Optional.of(http.CONFLICT());
+            }
+            case 1451, 1452 -> { // ER_ROW_IS_REFERENCED_2, ER_NO_REFERENCED_ROW_2: 外键约束
+              log.debug("将 MySQL 外键约束错误 ({}) 映射为冲突", sqlEx.getErrorCode(), sqlEx);
+              yield Optional.of(http.CONFLICT());
+            }
+            default -> Optional.empty();
+          };
+      if (mysqlResult.isPresent()) {
+        return mysqlResult;
       }
 
       // SQLState 映射
       String sqlState = sqlEx.getSQLState();
-      if (sqlState != null) {
-        if (sqlState.startsWith("08") || sqlState.startsWith("HY")) {
-          log.warn("将 SQL 连接/超时错误（SQLState: {}）映射为服务不可用", sqlState, sqlEx);
-          return Optional.of(http.UNAVAILABLE());
-        }
+      if (sqlState != null && (sqlState.startsWith("08") || sqlState.startsWith("HY"))) {
+        log.warn("将 SQL 连接/超时错误（SQLState: {}）映射为服务不可用", sqlState, sqlEx);
+        return Optional.of(http.UNAVAILABLE());
       }
 
       log.error(
