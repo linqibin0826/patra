@@ -11,7 +11,6 @@ import com.patra.starter.objectstorage.domain.UploadFailedException;
 import com.patra.starter.objectstorage.domain.UploadResult;
 import java.io.InputStream;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -75,9 +74,7 @@ public class S3StorageProvider extends AbstractObjectStorageProvider {
       validateUploadArguments(bucket, key, inputStream, metadata);
 
       Map<String, String> userMetadata =
-          metadata.getUserMetadata() == null
-              ? Collections.emptyMap()
-              : new HashMap<>(metadata.getUserMetadata());
+          metadata.getUserMetadata() == null ? Map.of() : new HashMap<>(metadata.getUserMetadata());
 
       PutObjectRequest request =
           PutObjectRequest.builder()

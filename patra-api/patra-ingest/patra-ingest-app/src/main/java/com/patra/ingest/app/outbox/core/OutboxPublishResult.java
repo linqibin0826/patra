@@ -1,7 +1,6 @@
 package com.patra.ingest.app.outbox.core;
 
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -22,7 +21,7 @@ public final class OutboxPublishResult {
       int successCount, int failureCount, List<FailureDetail> failures, Duration duration) {
     this.successCount = successCount;
     this.failureCount = failureCount;
-    this.failures = Collections.unmodifiableList(Objects.requireNonNull(failures));
+    this.failures = List.copyOf(Objects.requireNonNull(failures));
     this.duration = Objects.requireNonNull(duration);
   }
 
@@ -67,7 +66,7 @@ public final class OutboxPublishResult {
   /// @param duration 操作持续时间
   /// @return 成功结果
   public static OutboxPublishResult success(int count, Duration duration) {
-    return new OutboxPublishResult(count, 0, Collections.emptyList(), duration);
+    return new OutboxPublishResult(count, 0, List.of(), duration);
   }
 
   /// 创建失败结果。
@@ -96,7 +95,7 @@ public final class OutboxPublishResult {
   /// @param duration 操作持续时间
   /// @return 空结果
   public static OutboxPublishResult empty(Duration duration) {
-    return new OutboxPublishResult(0, 0, Collections.emptyList(), duration);
+    return new OutboxPublishResult(0, 0, List.of(), duration);
   }
 
   /// 合并两个结果(用于批处理)。

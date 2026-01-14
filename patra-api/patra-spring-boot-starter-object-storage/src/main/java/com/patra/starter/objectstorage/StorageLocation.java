@@ -18,7 +18,7 @@ public record StorageLocation(
     Map<String, Object> correlationData) {
 
   public StorageLocation(String bucket, String objectKey, String businessId) {
-    this(bucket, objectKey, businessId, bucket + "/" + objectKey, Collections.emptyMap());
+    this(bucket, objectKey, businessId, bucket + "/" + objectKey, Map.of());
   }
 
   public StorageLocation(
@@ -38,9 +38,7 @@ public record StorageLocation(
     }
     storageKey = hasText(storageKey) ? storageKey : bucket + "/" + objectKey;
     correlationData =
-        correlationData == null
-            ? Collections.emptyMap()
-            : Collections.unmodifiableMap(correlationData);
+        correlationData == null ? Map.of() : Collections.unmodifiableMap(correlationData);
   }
 
   private static boolean hasText(String value) {

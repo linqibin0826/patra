@@ -1,6 +1,5 @@
 package com.patra.starter.restclient.download;
 
-import java.util.Arrays;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
@@ -38,7 +37,7 @@ public class CompositeProgressListener implements ProgressListener {
   /// @param listeners 监听器数组
   /// @return 组合监听器
   public static CompositeProgressListener of(ProgressListener... listeners) {
-    return new CompositeProgressListener(Arrays.asList(listeners));
+    return new CompositeProgressListener(List.of(listeners));
   }
 
   /// 工厂方法：从监听器列表创建组合监听器。

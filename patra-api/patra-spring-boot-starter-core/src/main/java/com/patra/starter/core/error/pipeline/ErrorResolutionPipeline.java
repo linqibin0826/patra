@@ -3,7 +3,6 @@ package com.patra.starter.core.error.pipeline;
 import com.patra.starter.core.error.engine.ErrorResolutionEngine;
 import com.patra.starter.core.error.model.ErrorResolution;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 
@@ -45,11 +44,11 @@ public class ErrorResolutionPipeline {
       ErrorResolutionEngine engine, List<ResolutionInterceptor> interceptors) {
     this.engine = engine;
     if (interceptors == null || interceptors.isEmpty()) {
-      this.interceptors = Collections.emptyList();
+      this.interceptors = List.of();
     } else {
       List<ResolutionInterceptor> ordered = new ArrayList<>(interceptors);
       AnnotationAwareOrderComparator.sort(ordered);
-      this.interceptors = Collections.unmodifiableList(ordered);
+      this.interceptors = List.copyOf(ordered);
     }
   }
 

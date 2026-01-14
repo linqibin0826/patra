@@ -1,6 +1,5 @@
 package com.patra.common.json;
 
-import java.util.Collections;
 import java.util.Map;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
@@ -71,7 +70,7 @@ public final class JsonNodeMappings {
   /// @return Map 表示形式，如果节点为 `null` 或 JSON `null` 则返回空 Map
   public static Map<String, Object> jsonNodeToMap(JsonNode node) {
     if (node == null || node.isNull()) {
-      return Collections.emptyMap();
+      return Map.of();
     }
     return MAPPER.convertValue(node, MAP_TYPE);
   }

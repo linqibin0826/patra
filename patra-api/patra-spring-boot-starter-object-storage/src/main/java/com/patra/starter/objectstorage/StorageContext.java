@@ -34,9 +34,7 @@ public final class StorageContext {
   }
 
   public Map<String, Object> getCorrelationData() {
-    return correlationData == null
-        ? Collections.emptyMap()
-        : Collections.unmodifiableMap(correlationData);
+    return correlationData == null ? Map.of() : Collections.unmodifiableMap(correlationData);
   }
 
   /// 验证必填字段并防范路径遍历输入。

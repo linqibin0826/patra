@@ -96,7 +96,7 @@ public abstract class AggregateRoot<ID> implements Serializable {
   /// @return 已注册的领域事件列表的不可变副本,如果没有事件则返回空列表
   public List<DomainEvent> pullDomainEvents() {
     if (domainEvents.isEmpty()) {
-      return Collections.emptyList();
+      return List.of();
     }
     List<DomainEvent> snapshot = List.copyOf(domainEvents);
     domainEvents.clear();
@@ -163,7 +163,7 @@ public abstract class AggregateRoot<ID> implements Serializable {
   /// @return 子实体变更事件列表的副本，如果没有变更则返回空列表
   public List<ChildEntityChange> pullChildChanges() {
     if (childChanges.isEmpty()) {
-      return Collections.emptyList();
+      return List.of();
     }
     List<ChildEntityChange> snapshot = List.copyOf(childChanges);
     childChanges.clear();

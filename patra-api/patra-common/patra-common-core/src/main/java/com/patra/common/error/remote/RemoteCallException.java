@@ -72,8 +72,8 @@ public class RemoteCallException extends RuntimeException implements HasErrorTra
     this.methodKey = methodKey;
     this.traceId = traceId;
     this.errorCode = null;
-    this.extensions = Collections.emptyMap();
-    this.errorTraits = Collections.emptySet();
+    this.extensions = Map.of();
+    this.errorTraits = Set.of();
   }
 
   /// 使用所有字段的显式值构造异常
@@ -96,7 +96,7 @@ public class RemoteCallException extends RuntimeException implements HasErrorTra
     this.httpStatus = httpStatus;
     this.methodKey = methodKey;
     this.traceId = traceId;
-    this.extensions = extensions != null ? new HashMap<>(extensions) : Collections.emptyMap();
+    this.extensions = extensions != null ? new HashMap<>(extensions) : Map.of();
     this.errorTraits =
         parseErrorTraits(extensions != null ? extensions.get(ErrorKeys.TRAITS) : null);
   }
@@ -123,8 +123,8 @@ public class RemoteCallException extends RuntimeException implements HasErrorTra
     this.httpStatus = httpStatus;
     this.methodKey = methodKey;
     this.traceId = traceId;
-    this.extensions = extensions != null ? new HashMap<>(extensions) : Collections.emptyMap();
-    this.errorTraits = errorTraits != null ? Set.copyOf(errorTraits) : Collections.emptySet();
+    this.extensions = extensions != null ? new HashMap<>(extensions) : Map.of();
+    this.errorTraits = errorTraits != null ? Set.copyOf(errorTraits) : Set.of();
   }
 
   /// 获取下游服务返回的业务错误代码
@@ -220,7 +220,7 @@ public class RemoteCallException extends RuntimeException implements HasErrorTra
   /// @return 解析后的错误特征集合，如果解析失败则返回空集合
   public static Set<ErrorTrait> parseErrorTraits(Object traitsValue) {
     if (traitsValue == null) {
-      return Collections.emptySet();
+      return Set.of();
     }
 
     if (traitsValue instanceof List<?> traitsList) {
@@ -239,7 +239,7 @@ public class RemoteCallException extends RuntimeException implements HasErrorTra
       }
     }
 
-    return Collections.emptySet();
+    return Set.of();
   }
 
   /// 将特征名称解析为 ErrorTrait 枚举值
