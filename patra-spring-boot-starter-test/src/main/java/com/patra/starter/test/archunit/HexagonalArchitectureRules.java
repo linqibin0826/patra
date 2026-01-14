@@ -349,7 +349,7 @@ public class HexagonalArchitectureRules {
 
   // ==================== 事务边界规则 ====================
 
-  /// @Transactional 只能在 app 层。
+  /// {@code @Transactional} 只能在 app 层。
   ///
   /// @return ArchRule 规则实例
   public ArchRule transactionsOnlyInAppLayer() {
