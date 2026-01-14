@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
-import lombok.Builder;
 
 /// 开放获取（Open Access）信息值对象。
 ///
@@ -48,7 +47,6 @@ import lombok.Builder;
 /// @param apcPrices 多货币价格列表
 /// @author linqibin
 /// @since 0.7.0
-@Builder
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record OpenAccessInfo(
     boolean isOa, boolean isInDoaj, String oaType, Integer apcUsd, List<ApcPrice> apcPrices)

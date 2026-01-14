@@ -2,7 +2,6 @@ package com.patra.starter.provenance.common.processor;
 
 import java.util.List;
 import java.util.Map;
-import lombok.Builder;
 
 /// 数据处理结果
 ///
@@ -23,7 +22,6 @@ import lombok.Builder;
 /// @param metadata 扩展元数据（如recordCount、processingTime等）
 /// @author linqibin
 /// @since 0.1.0
-@Builder
 public record ProcessResult<T>(
     boolean success,
     List<T> data,
@@ -39,12 +37,18 @@ public record ProcessResult<T>(
   /// @param <T> 数据类型
   /// @return 成功的处理结果
   public static <T> ProcessResult<T> success(List<T> data, String nextCursor) {
-    return ProcessResult.<T>builder()
-        .success(true)
-        .data(data)
-        .nextCursor(nextCursor)
-        .status(ProcessStatus.SUCCESS)
-        .build();
+    return new ProcessResult<>(true, data, nextCursor, null, ProcessStatus.SUCCESS, null);
+  }
+
+  /// 创建带元数据的成功结果
+  ///
+  /// @param data 处理后的数据列表
+  /// @param metadata 扩展元数据
+  /// @param <T> 数据类型
+  /// @return 成功的处理结果
+  public static <T> ProcessResult<T> successWithMetadata(
+      List<T> data, Map<String, Object> metadata) {
+    return new ProcessResult<>(true, data, null, null, ProcessStatus.SUCCESS, metadata);
   }
 
   /// 创建失败结果
@@ -53,11 +57,7 @@ public record ProcessResult<T>(
   /// @param <T> 数据类型
   /// @return 失败的处理结果
   public static <T> ProcessResult<T> failure(String errorMessage) {
-    return ProcessResult.<T>builder()
-        .success(false)
-        .errorMessage(errorMessage)
-        .status(ProcessStatus.FAILED)
-        .build();
+    return new ProcessResult<>(false, null, null, errorMessage, ProcessStatus.FAILED, null);
   }
 
   /// 创建部分成功结果
@@ -71,13 +71,8 @@ public record ProcessResult<T>(
   /// @return 部分成功的处理结果
   public static <T> ProcessResult<T> partialSuccess(
       List<T> data, String nextCursor, String warningMessage) {
-    return ProcessResult.<T>builder()
-        .success(true)
-        .data(data)
-        .nextCursor(nextCursor)
-        .errorMessage(warningMessage)
-        .status(ProcessStatus.PARTIAL_SUCCESS)
-        .build();
+    return new ProcessResult<>(
+        true, data, nextCursor, warningMessage, ProcessStatus.PARTIAL_SUCCESS, null);
   }
 
   /// 创建验证错误结果
@@ -86,10 +81,7 @@ public record ProcessResult<T>(
   /// @param <T> 数据类型
   /// @return 验证错误的处理结果
   public static <T> ProcessResult<T> validationError(String errorMessage) {
-    return ProcessResult.<T>builder()
-        .success(false)
-        .errorMessage(errorMessage)
-        .status(ProcessStatus.VALIDATION_ERROR)
-        .build();
+    return new ProcessResult<>(
+        false, null, null, errorMessage, ProcessStatus.VALIDATION_ERROR, null);
   }
 }
