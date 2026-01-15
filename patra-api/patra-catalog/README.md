@@ -216,6 +216,7 @@ patra:
 - **值对象（author 子包）**：作者领域模型（适配 PubMed Computed Authors）
   - `AuthorNameVariant`：作者名字变体（姓/名/缩写/原始字符串）
   - `Orcid`：ORCID 标识符值对象（格式：0000-0001-2345-6789）
+  - `AffiliationIdentifiers`：机构标识符集合（ROR ID / Ringgold ID / GRID ID，支持消歧优先级选择）
 
 - **值对象**
   - `MeshUI`：MeSH 唯一标识符（支持 Descriptor/Qualifier/SCR/Concept/Term）
@@ -279,6 +280,10 @@ patra:
   - `OrganizationNameType`：名称类型（ROR_DISPLAY、LABEL、ALIAS、ACRONYM）
   - `OrganizationRelationType`：关系类型（PARENT、CHILD、RELATED、SUCCESSOR、PREDECESSOR）
 
+- **枚举（消歧相关）**：机构消歧领域枚举
+  - `DisambiguationStatus`：消歧状态（PENDING、MATCHED、UNMATCHED、AMBIGUOUS）
+  - `DisambiguationMethod`：消歧方法（ROR_ID、RINGGOLD、GRID、NAME_MATCH、MANUAL）
+
 ### Infrastructure 层
 - `MeshDescriptorRepositoryAdapter`：主题词仓储适配器
 - `MeshQualifierRepositoryAdapter`：限定词仓储适配器
@@ -328,6 +333,10 @@ patra:
   - `cat_author_name_variant`：作者名字变体表（~4200 万条，平均 2 个变体/作者）
   - `cat_author_orcid`：作者 ORCID 表（~500 万条，约 25% 作者有 ORCID）
 
+- **Publication-Author 关联表**
+  - `cat_publication_author`：文献-作者关联表（~1.4 亿条，含作者顺序、角色标记）
+  - `cat_publication_author_affiliation`：作者-机构归属表（~2.1 亿条，支持多机构归属和延迟消歧）
+
 - **Organization（机构）相关表**（基于 ROR Schema v2.0）
   - `cat_organization`：机构主表（含 JSON 字段：types、domains、links、admin_info）
   - `cat_organization_name`：机构名称表（多语言名称，含类型：ror_display/label/alias/acronym）
@@ -350,4 +359,5 @@ patra:
 ## 📖 相关文档
 
 - [patra-spring-boot-starter-batch](../patra-spring-boot-starter-batch/README.md)
-- [ADR-0001: Author 聚合根重构](docs/adr/0001-author-aggregate-refactoring.md)
+- [ADR-025: Author 聚合根设计](../../../Patra-docs/content/decisions/ADR-025-author-aggregate-design.md)
+- [ADR-026: 作者多机构归属支持](../../../Patra-docs/content/decisions/ADR-026-author-multi-affiliation-support.md)
