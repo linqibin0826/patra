@@ -697,6 +697,183 @@ class PubmedPublicationConverterTest {
   }
 
   @Test
+  @DisplayName("toCanonicalPublication - 机构标识符正确提取")
+  void toCanonicalPublication_shouldExtractAffiliationIdentifiers() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedPublication>
+          <MedlineCitation>
+            <PMID>99999999</PMID>
+            <Article>
+              <ArticleTitle>Title with Affiliation Identifiers</ArticleTitle>
+              <AuthorList>
+                <Author>
+                  <LastName>Wang</LastName>
+                  <ForeName>Li</ForeName>
+                  <AffiliationInfo>
+                    <Affiliation>Peking University, Beijing, China</Affiliation>
+                    <Identifier Source="ROR">03vek6s52</Identifier>
+                    <Identifier Source="Ringgold">12345</Identifier>
+                  </AffiliationInfo>
+                </Author>
+              </AuthorList>
+            </Article>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedPublication>
+        """;
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
+
+    // Act
+    CanonicalPublication result = converter.toCanonicalPublication(article);
+
+    // Assert
+    assertThat(result.getAuthors()).hasSize(1);
+    assertThat(result.getAuthors().get(0).getAffiliations()).hasSize(1);
+
+    var affiliation = result.getAuthors().get(0).getAffiliations().get(0);
+    assertThat(affiliation.getName()).isEqualTo("Peking University, Beijing, China");
+    assertThat(affiliation.getIdentifiers()).hasSize(2);
+    assertThat(affiliation.getIdentifiers())
+        .extracting("type", "value")
+        .contains(tuple("ror", "03vek6s52"), tuple("ringgold", "12345"));
+  }
+
+  @Test
+  @DisplayName("toCanonicalPublication - 多机构各有独立标识符")
+  void toCanonicalPublication_shouldExtractIdentifiersForEachAffiliation() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedPublication>
+          <MedlineCitation>
+            <PMID>88888888</PMID>
+            <Article>
+              <ArticleTitle>Multi-Affiliation with Identifiers</ArticleTitle>
+              <AuthorList>
+                <Author>
+                  <LastName>Zhang</LastName>
+                  <ForeName>Wei</ForeName>
+                  <AffiliationInfo>
+                    <Affiliation>Tsinghua University</Affiliation>
+                    <Identifier Source="ROR">00k4n6c32</Identifier>
+                  </AffiliationInfo>
+                  <AffiliationInfo>
+                    <Affiliation>Harvard Medical School</Affiliation>
+                    <Identifier Source="Ringgold">67890</Identifier>
+                    <Identifier Source="GRID">grid.38142.3c</Identifier>
+                  </AffiliationInfo>
+                </Author>
+              </AuthorList>
+            </Article>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedPublication>
+        """;
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
+
+    // Act
+    CanonicalPublication result = converter.toCanonicalPublication(article);
+
+    // Assert
+    assertThat(result.getAuthors()).hasSize(1);
+    var affiliations = result.getAuthors().get(0).getAffiliations();
+    assertThat(affiliations).hasSize(2);
+
+    // 第一个机构：清华大学，只有 ROR
+    assertThat(affiliations.get(0).getName()).isEqualTo("Tsinghua University");
+    assertThat(affiliations.get(0).getIdentifiers()).hasSize(1);
+    assertThat(affiliations.get(0).getIdentifiers().get(0).getType()).isEqualTo("ror");
+    assertThat(affiliations.get(0).getIdentifiers().get(0).getValue()).isEqualTo("00k4n6c32");
+
+    // 第二个机构：哈佛医学院，有 Ringgold 和 GRID
+    assertThat(affiliations.get(1).getName()).isEqualTo("Harvard Medical School");
+    assertThat(affiliations.get(1).getIdentifiers()).hasSize(2);
+    assertThat(affiliations.get(1).getIdentifiers())
+        .extracting("type", "value")
+        .contains(tuple("ringgold", "67890"), tuple("grid", "grid.38142.3c"));
+  }
+
+  @Test
+  @DisplayName("toCanonicalPublication - 机构无标识符时identifiers为null")
+  void toCanonicalPublication_shouldReturnNullIdentifiers_whenNoIdentifiersProvided()
+      throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedPublication>
+          <MedlineCitation>
+            <PMID>77777777</PMID>
+            <Article>
+              <ArticleTitle>No Identifiers</ArticleTitle>
+              <AuthorList>
+                <Author>
+                  <LastName>Liu</LastName>
+                  <ForeName>Ming</ForeName>
+                  <AffiliationInfo>
+                    <Affiliation>Unknown University</Affiliation>
+                  </AffiliationInfo>
+                </Author>
+              </AuthorList>
+            </Article>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedPublication>
+        """;
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
+
+    // Act
+    CanonicalPublication result = converter.toCanonicalPublication(article);
+
+    // Assert
+    assertThat(result.getAuthors()).hasSize(1);
+    assertThat(result.getAuthors().get(0).getAffiliations()).hasSize(1);
+    assertThat(result.getAuthors().get(0).getAffiliations().get(0).getName())
+        .isEqualTo("Unknown University");
+    assertThat(result.getAuthors().get(0).getAffiliations().get(0).getIdentifiers()).isNull();
+  }
+
+  @Test
+  @DisplayName("toCanonicalPublication - 标识符类型转换为小写")
+  void toCanonicalPublication_shouldLowercaseIdentifierType() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedPublication>
+          <MedlineCitation>
+            <PMID>66666666</PMID>
+            <Article>
+              <ArticleTitle>Uppercase Identifier Source</ArticleTitle>
+              <AuthorList>
+                <Author>
+                  <LastName>Chen</LastName>
+                  <ForeName>Hui</ForeName>
+                  <AffiliationInfo>
+                    <Affiliation>Some University</Affiliation>
+                    <Identifier Source="ROR">abc123</Identifier>
+                    <Identifier Source="RINGGOLD">789</Identifier>
+                  </AffiliationInfo>
+                </Author>
+              </AuthorList>
+            </Article>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedPublication>
+        """;
+    PubmedPublication article = xmlMapper.readValue(xml, PubmedPublication.class);
+
+    // Act
+    CanonicalPublication result = converter.toCanonicalPublication(article);
+
+    // Assert
+    var identifiers = result.getAuthors().get(0).getAffiliations().get(0).getIdentifiers();
+    assertThat(identifiers).hasSize(2);
+    // 验证类型已转换为小写
+    assertThat(identifiers).extracting("type").containsExactly("ror", "ringgold");
+  }
+
+  @Test
   @DisplayName("toCanonicalPublication - 无效月份名称时默认为1月")
   void toCanonicalPublication_shouldDefaultToJanuary_whenMonthNameIsInvalid() throws Exception {
     // Arrange

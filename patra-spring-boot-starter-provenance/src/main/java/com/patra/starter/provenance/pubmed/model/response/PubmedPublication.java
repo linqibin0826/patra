@@ -1686,6 +1686,15 @@ public final class PubmedPublication {
       return identifiers != null ? List.copyOf(identifiers) : List.of();
     }
 
+    /// 返回完整的机构信息列表（包含标识符）。
+    ///
+    /// 相比 `affiliations()` 方法（只返回文本），此方法保留 ROR/Ringgold 等标识符信息。
+    ///
+    /// @return 机构信息列表
+    public List<AffiliationInfo> affiliationInfo() {
+      return affiliationInfo != null ? List.copyOf(affiliationInfo) : List.of();
+    }
+
     /// 作者的机构隶属关系信息。
     ///
     /// 包含机构文本和可选的机构标识符(如 ROR)。

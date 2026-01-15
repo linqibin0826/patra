@@ -134,15 +134,13 @@ public class PubmedPublicationConverter {
 
     List<CanonicalPublication.Author> canonicalAuthors = new ArrayList<>();
     for (Author author : citationArticle.authors()) {
-      // 转换机构信息
+      // 转换机构信息（保留 ROR/Ringgold 等标识符）
       List<CanonicalPublication.Affiliation> affiliations = null;
-      if (!CollectionUtils.isEmpty(author.affiliations())) {
+      if (!CollectionUtils.isEmpty(author.affiliationInfo())) {
         affiliations =
-            author.affiliations().stream()
-                .filter(StringUtils::hasText)
-                .map(
-                    affiliationName ->
-                        CanonicalPublication.Affiliation.builder().name(affiliationName).build())
+            author.affiliationInfo().stream()
+                .filter(info -> StringUtils.hasText(info.value()))
+                .map(this::convertAffiliationInfo)
                 .collect(Collectors.toList());
         if (affiliations.isEmpty()) {
           affiliations = null;
@@ -194,6 +192,35 @@ public class PubmedPublicationConverter {
     }
 
     return canonicalAuthors;
+  }
+
+  /// 转换单个机构信息（保留标识符）。
+  ///
+  /// @param info PubMed 机构信息
+  /// @return 标准化的机构信息
+  private CanonicalPublication.Affiliation convertAffiliationInfo(Author.AffiliationInfo info) {
+    // 提取机构标识符（ROR、Ringgold、GRID 等）
+    List<CanonicalPublication.Identifier> identifiers = null;
+    if (!CollectionUtils.isEmpty(info.identifiers())) {
+      identifiers =
+          info.identifiers().stream()
+              .filter(id -> StringUtils.hasText(id.source()) && StringUtils.hasText(id.value()))
+              .map(
+                  id ->
+                      CanonicalPublication.Identifier.builder()
+                          .type(id.source().toLowerCase(Locale.ROOT))
+                          .value(id.value())
+                          .build())
+              .collect(Collectors.toList());
+      if (identifiers.isEmpty()) {
+        identifiers = null;
+      }
+    }
+
+    return CanonicalPublication.Affiliation.builder()
+        .name(info.value())
+        .identifiers(identifiers)
+        .build();
   }
 
   /// 转换期刊信息
@@ -910,13 +937,13 @@ public class PubmedPublicationConverter {
     List<CanonicalPublication.Investigator> canonicalInvestigators =
         new ArrayList<>(investigators.size());
     for (PubmedPublication.Investigator investigator : investigators) {
-      // 转换机构信息
+      // 转换机构信息（保留 ROR/Ringgold 等标识符）
       List<CanonicalPublication.Affiliation> affiliations = null;
       if (!CollectionUtils.isEmpty(investigator.affiliationInfo())) {
         affiliations =
             investigator.affiliationInfo().stream()
                 .filter(info -> StringUtils.hasText(info.value()))
-                .map(info -> CanonicalPublication.Affiliation.builder().name(info.value()).build())
+                .map(this::convertAffiliationInfo)
                 .collect(Collectors.toList());
         if (affiliations.isEmpty()) {
           affiliations = null;
