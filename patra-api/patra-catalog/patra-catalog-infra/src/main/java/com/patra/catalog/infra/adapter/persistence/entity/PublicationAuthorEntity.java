@@ -21,7 +21,8 @@ import tools.jackson.databind.JsonNode;
 ///
 /// - 继承 `ValueObjectJpaEntity`，采用 DELETE/INSERT 模式管理
 /// - 管理文献与作者的多对多关系
-/// - 记录作者顺序、角色和机构归属（发表时的归属）
+/// - 记录作者顺序和角色信息
+/// - 机构归属信息由 `PublicationAuthorAffiliationEntity` 独立管理（支持多机构）
 ///
 /// **索引设计**：
 ///
@@ -31,7 +32,6 @@ import tools.jackson.databind.JsonNode;
 /// - `idx_author`：作者索引
 /// - `idx_first_author`：第一作者索引
 /// - `idx_corresponding`：通讯作者索引
-/// - `idx_organization`：机构索引
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -55,8 +55,7 @@ import tools.jackson.databind.JsonNode;
       @Index(name = "idx_publication", columnList = "publication_id"),
       @Index(name = "idx_author", columnList = "author_id"),
       @Index(name = "idx_first_author", columnList = "is_first_author"),
-      @Index(name = "idx_corresponding", columnList = "is_corresponding_author"),
-      @Index(name = "idx_organization", columnList = "organization_id")
+      @Index(name = "idx_corresponding", columnList = "is_corresponding_author")
     })
 public class PublicationAuthorEntity extends ValueObjectJpaEntity {
 
@@ -91,16 +90,6 @@ public class PublicationAuthorEntity extends ValueObjectJpaEntity {
   @lombok.Builder.Default
   private Boolean equalContribution = false;
 
-  // ========== 机构归属（发表时的归属） ==========
-
-  /// 原始机构字符串（外部采集，未标准化）。
-  @Column(name = "affiliation_string", length = 1000)
-  private String affiliationString;
-
-  /// 机构 ID（外键：cat_organization.id，延迟填充）。
-  @Column(name = "organization_id")
-  private Long organizationId;
-
   // ========== 联系方式 ==========
 
   /// 作者邮箱（通讯作者时常填写）。
@@ -128,14 +117,5 @@ public class PublicationAuthorEntity extends ValueObjectJpaEntity {
   public void markAsCorresponding(String email) {
     this.correspondingAuthor = true;
     this.email = email;
-  }
-
-  /// 设置机构归属。
-  ///
-  /// @param affiliationString 原始机构字符串
-  /// @param organizationId 标准化后的机构 ID（可选）
-  public void setAffiliation(String affiliationString, Long organizationId) {
-    this.affiliationString = affiliationString;
-    this.organizationId = organizationId;
   }
 }
