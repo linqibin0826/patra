@@ -4,8 +4,6 @@ import com.patra.registry.infra.adapter.persistence.entity.provenance.Provenance
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 /// 数据源 JPA Repository。
 ///
@@ -20,25 +18,17 @@ public interface ProvenanceDao extends JpaRepository<ProvenanceEntity, Long> {
 
   /// 通过其稳定的业务代码获取数据源。
   ///
+  /// 由于实体继承自 SoftDeletableJpaEntity（使用 Hibernate @SoftDelete），
+  /// 框架会自动添加 `deleted_at IS NULL` 过滤条件，无需手动指定。
+  ///
   /// @param code 数据源代码(例如，pubmed)
   /// @return 可选的数据源实体
-  @Query(
-      """
-      SELECT p FROM ProvenanceEntity p
-      WHERE p.provenanceCode = :code
-        AND p.deletedAt IS NULL
-      """)
-  Optional<ProvenanceEntity> findByCode(@Param("code") String code);
+  Optional<ProvenanceEntity> findByProvenanceCode(String code);
 
   /// 列出按代码排序的所有激活数据源。
   ///
+  /// 由于实体使用 Hibernate @SoftDelete，已删除记录会自动被过滤。
+  ///
   /// @return 数据源列表
-  @Query(
-      """
-      SELECT p FROM ProvenanceEntity p
-      WHERE p.isActive = true
-        AND p.deletedAt IS NULL
-      ORDER BY p.provenanceCode
-      """)
-  List<ProvenanceEntity> findAllActive();
+  List<ProvenanceEntity> findByIsActiveTrueOrderByProvenanceCodeAsc();
 }

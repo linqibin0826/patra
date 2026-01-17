@@ -53,7 +53,7 @@ public class ProvenanceConfigRepositoryAdapter implements ProvenanceConfigReposi
   @Override
   public Optional<Provenance> findProvenanceByCode(ProvenanceCode provenanceCode) {
     String code = provenanceCode.getCode();
-    Optional<Provenance> result = provenanceDao.findByCode(code).map(mapper::toDomain);
+    Optional<Provenance> result = provenanceDao.findByProvenanceCode(code).map(mapper::toDomain);
     if (log.isDebugEnabled()) {
       log.debug(
           "Provenance lookup for code [{}]: {}", code, result.isPresent() ? "found" : "not found");
@@ -68,7 +68,9 @@ public class ProvenanceConfigRepositoryAdapter implements ProvenanceConfigReposi
   public List<Provenance> findAllProvenances() {
     log.debug("Querying all active provenances from database");
     List<Provenance> provenances =
-        provenanceDao.findAllActive().stream().map(mapper::toDomain).toList();
+        provenanceDao.findByIsActiveTrueOrderByProvenanceCodeAsc().stream()
+            .map(mapper::toDomain)
+            .toList();
     log.debug(
         "Converting {} ProvenanceEntity to domain models, codes: {}",
         provenances.size(),
