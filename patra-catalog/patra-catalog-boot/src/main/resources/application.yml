@@ -56,7 +56,7 @@ spring:
     baseline-version: 0.1.0
 
 # ----------------------------------------------------------------------------
-# HTTP Interface 客户端配置（替代 Feign）
+# Patra Configuration
 # ----------------------------------------------------------------------------
 patra:
   http:
@@ -71,6 +71,16 @@ patra:
         registry:
           base-url: lb://patra-registry
           read-timeout: 10s
+  catalog:
+    mesh:
+      # MeSH Descriptor（主题词）XML 文件 URL - 版本号从文件名自动推断
+      descriptor-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml
+      # MeSH Qualifier（限定词）XML 文件 URL - 版本号从文件名自动推断
+      qualifier-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml
+    ror:
+      # ROR（Research Organization Registry）机构数据 ZIP 文件 URL - 版本号从文件名自动推断
+      # 最新版本下载地址：https://ror.readme.io/docs/data-dump
+      download-url: https://zenodo.org/records/17953395/files/v2.0-2025-12-16-ror-data.zip?download=1
 
 # ----------------------------------------------------------------------------
 # XXL-Job Distributed Task Scheduler
@@ -84,20 +94,6 @@ xxl:
       # Log directory in centralized logs folder
       logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PATRA_LOG_DIR:logs}/xxl-job/patra-catalog}
       logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}
-
-# ----------------------------------------------------------------------------
-# Patra Catalog Service Configuration
-# ----------------------------------------------------------------------------
-  catalog:
-    mesh:
-      # MeSH Descriptor（主题词）XML 文件 URL - 版本号从文件名自动推断
-      descriptor-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml
-      # MeSH Qualifier（限定词）XML 文件 URL - 版本号从文件名自动推断
-      qualifier-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml
-    ror:
-      # ROR（Research Organization Registry）机构数据 ZIP 文件 URL - 版本号从文件名自动推断
-      # 最新版本下载地址：https://ror.readme.io/docs/data-dump
-      download-url: https://zenodo.org/records/17953395/files/v2.0-2025-12-16-ror-data.zip?download=1
 
 # ----------------------------------------------------------------------------
 # Logging Configuration
