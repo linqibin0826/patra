@@ -180,7 +180,7 @@ public class ExprRepositoryAdapter implements ExprRepository {
     String code = provenanceCode.getCode();
     log.debug("Querying provenance ID for code [{}] from database", code);
     return provenanceDao
-        .findByCode(code)
+        .findByProvenanceCode(code)
         .map(
             entity -> {
               log.debug("Resolved provenance code [{}] to ID [{}]", code, entity.getId());

@@ -4,8 +4,6 @@ import com.patra.registry.infra.adapter.persistence.entity.dictionary.SysDictTyp
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 /// 系统字典类型 JPA Repository。
 ///
@@ -20,24 +18,17 @@ public interface SysDictTypeDao extends JpaRepository<SysDictTypeEntity, Long> {
 
   /// 通过类型代码查询字典类型。
   ///
+  /// 由于实体继承自 SoftDeletableJpaEntity（使用 Hibernate @SoftDelete），
+  /// 框架会自动添加 `deleted_at IS NULL` 过滤条件，无需手动指定。
+  ///
   /// @param typeCode 类型代码
   /// @return 可选的字典类型实体
-  @Query(
-      """
-      SELECT t FROM SysDictTypeEntity t
-      WHERE t.typeCode = :typeCode
-        AND t.deletedAt IS NULL
-      """)
-  Optional<SysDictTypeEntity> findByTypeCode(@Param("typeCode") String typeCode);
+  Optional<SysDictTypeEntity> findByTypeCode(String typeCode);
 
-  /// 查询所有激活的字典类型。
+  /// 查询所有激活的字典类型，按类型代码排序。
+  ///
+  /// 由于实体使用 Hibernate @SoftDelete，已删除记录会自动被过滤。
   ///
   /// @return 字典类型列表
-  @Query(
-      """
-      SELECT t FROM SysDictTypeEntity t
-      WHERE t.deletedAt IS NULL
-      ORDER BY t.typeCode
-      """)
-  List<SysDictTypeEntity> findAllActive();
+  List<SysDictTypeEntity> findAllByOrderByTypeCodeAsc();
 }
