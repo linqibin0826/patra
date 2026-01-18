@@ -1,0 +1,38 @@
+package com.patra.catalog.infra.adapter.batch.publication;
+
+import com.patra.starter.batch.core.JobParams;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+/// Publication Baseline 导入 Job 参数。
+///
+/// 用于 PubMed Baseline 文献批量导入任务的强类型参数。
+///
+/// **流式处理特性**：
+///
+/// - 使用 `downloadUrl` 存储 XML.gz 文件下载 URL
+/// - ItemReader 在 open() 时建立 HTTP 连接，流式解压并解析
+/// - 无临时文件清理逻辑
+///
+/// **断点续传**：
+///
+/// 由于不添加时间戳（`addTimestamp=false`），相同 downloadUrl 的 Job 只会执行一次。
+/// 如果 Job 失败，重新启动时会从上次中断的位置继续执行。
+///
+/// @author linqibin
+/// @since 0.1.0
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class PublicationImportJobParams implements JobParams {
+
+  /// PubMed XML.gz 文件下载 URL。
+  ///
+  /// 格式：`{baseUrl}pubmed25n{fileIndex:04d}.xml.gz`
+  ///
+  /// 示例：`https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/pubmed25n0001.xml.gz`
+  private String downloadUrl;
+}
