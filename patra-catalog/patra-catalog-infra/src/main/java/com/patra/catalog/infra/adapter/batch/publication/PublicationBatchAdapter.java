@@ -1,0 +1,76 @@
+package com.patra.catalog.infra.adapter.batch.publication;
+
+import com.patra.catalog.domain.model.vo.publication.PublicationImportParams;
+import com.patra.catalog.domain.port.batch.PublicationBatchPort;
+import com.patra.starter.batch.core.JobLauncherHelper;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.core.job.Job;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+
+/// Publication 批量导入端口适配器。
+///
+/// **职责**：
+///
+/// - 实现 Domain 层定义的 `PublicationBatchPort` 接口
+/// - 封装 Spring Batch 框架细节，对上层透明
+/// - 使用 `JobLauncherHelper` 启动批处理任务
+///
+/// **单文件模式**：
+///
+/// 每次调用只处理一个 PubMed Baseline XML 文件：
+/// - `params.fileIndex` 指定文件索引（1-1274）
+/// - 自动生成完整的下载 URL
+///
+/// **流式处理特性**：
+///
+/// - 传递 download URL 给 Job
+/// - ItemReader 在 open() 时建立 HTTP 连接
+/// - 无临时文件清理逻辑
+///
+/// **断点续传**：
+///
+/// 由于不添加时间戳（`addTimestamp=false`），相同参数的 Job 只会执行一次。
+/// 如果 Job 失败，重新启动时会从上次中断的位置继续执行。
+///
+/// **设计说明**：
+///
+/// - 此类位于 Infrastructure 层，是六边形架构中的 Driven Adapter
+/// - Application 层通过 `PublicationBatchPort` 接口调用，无需感知 Spring Batch
+///
+/// @author linqibin
+/// @since 0.1.0
+@Slf4j
+@Component
+public class PublicationBatchAdapter implements PublicationBatchPort {
+
+  private final JobLauncherHelper jobLauncherHelper;
+  private final Job pubmedBaselineImportJob;
+
+  /// 构造函数。
+  ///
+  /// @param jobLauncherHelper Job 启动器
+  /// @param pubmedBaselineImportJob PubMed Baseline 导入 Job
+  public PublicationBatchAdapter(
+      JobLauncherHelper jobLauncherHelper,
+      @Qualifier("pubmedBaselineImportJob") Job pubmedBaselineImportJob) {
+    this.jobLauncherHelper = jobLauncherHelper;
+    this.pubmedBaselineImportJob = pubmedBaselineImportJob;
+  }
+
+  /// 启动 PubMed Baseline 文献批量导入任务。
+  ///
+  /// @param params 导入参数（包含 baseUrl 和 fileIndex）
+  /// @return 批处理执行标识符（Spring Batch Job Execution ID）
+  @Override
+  public Long launchBaselineImport(PublicationImportParams params) {
+    String downloadUrl = params.getDownloadUrl();
+    log.info("启动 PubMed Baseline 导入 Job，文件索引：{}，URL：{}", params.fileIndex(), downloadUrl);
+
+    PublicationImportJobParams jobParams =
+        PublicationImportJobParams.builder().downloadUrl(downloadUrl).build();
+
+    // 不添加时间戳，相同参数的 Job 只执行一次（支持断点续传）
+    return jobLauncherHelper.launch(pubmedBaselineImportJob, jobParams, false);
+  }
+}
