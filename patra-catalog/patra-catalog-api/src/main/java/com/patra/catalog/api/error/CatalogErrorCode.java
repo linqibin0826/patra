@@ -14,6 +14,7 @@ import com.patra.common.error.codes.ErrorCodeLike;
 /// - 12xx: 数据解析错误
 /// - 13xx: Venue（期刊）导入错误
 /// - 14xx: ROR 机构导入错误
+/// - 15xx: Publication 导入错误
 ///
 /// @see com.patra.common.error.codes.ErrorCodeLike
 public enum CatalogErrorCode implements ErrorCodeLike {
@@ -68,7 +69,21 @@ public enum CatalogErrorCode implements ErrorCodeLike {
   /// 在导入 ROR（Research Organization Registry）机构数据时发生。
   /// 可能由于 JSON 解析失败、批处理作业失败、数据库写入错误或系统资源不足导致。
   /// 请检查 Spring Batch 作业状态和系统资源。
-  CAT_1401("CAT-1401", 500);
+  CAT_1401("CAT-1401", 500),
+
+  // ===== Publication 导入错误 (15xx) =====
+
+  /// 表示 PubMed Baseline 文献导入失败。
+  ///
+  /// 在导入 PubMed Baseline 文献数据时发生。可能由于：
+  ///
+  /// - XML 解析失败（gzip 解压或 StAX 解析错误）
+  /// - 批处理作业失败（Spring Batch Job 执行异常）
+  /// - 数据库写入错误（唯一约束冲突或事务超时）
+  /// - 系统资源不足（内存、网络带宽）
+  ///
+  /// 请检查 Spring Batch 作业状态、网络连接和系统资源。
+  CAT_1501("CAT-1501", 500);
 
   private final String code;
   private final int httpStatus;
