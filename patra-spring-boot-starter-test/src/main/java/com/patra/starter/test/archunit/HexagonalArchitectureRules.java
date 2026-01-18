@@ -218,7 +218,11 @@ public class HexagonalArchitectureRules {
 
   // ==================== 命名约定规则 ====================
 
-  /// Port 接口必须在 domain.port 包，命名以 Port 或 Repository 结尾。
+  /// Port 接口必须在 domain.port 包，命名以 Port、Repository 或 Gateway 结尾。
+  ///
+  /// - **Repository**: 聚合根持久化接口（实现在 Infra 层）
+  /// - **Port**: 被驱动端口/Driven Port（实现在 Infra 层）
+  /// - **Gateway**: 驱动端口/Driving Port（实现在 App 层）
   ///
   /// @return ArchRule 规则实例
   public ArchRule portsShouldResideInDomainPortPackage() {
@@ -233,11 +237,15 @@ public class HexagonalArchitectureRules {
         .haveSimpleNameEndingWith("Port")
         .orShould()
         .haveSimpleNameEndingWith("Repository")
-        .as("Port 接口必须在 domain.port 包，命名以 Port 或 Repository 结尾")
+        .orShould()
+        .haveSimpleNameEndingWith("Gateway")
+        .as("Port 接口必须在 domain.port 包，命名以 Port、Repository 或 Gateway 结尾")
         .because("统一的命名约定便于识别 Port 接口");
   }
 
-  /// Port 接口实现必须在 infra 层。
+  /// Port/Repository 接口实现必须在 infra 层（Gateway 除外）。
+  ///
+  /// **注意**: Gateway 接口（Driving Port）的实现在 App 层，不受此规则约束。
   ///
   /// @return ArchRule 规则实例
   public ArchRule repositoryImplsShouldResideInInfra() {
@@ -250,10 +258,32 @@ public class HexagonalArchitectureRules {
         .implement(
             com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage(
                 "..domain.port.."))
+        .and()
+        .haveSimpleNameNotEndingWith("GatewayImpl")
         .should()
         .resideInAPackage("..infra..")
-        .as("Domain Port 接口的实现类必须在 infra 层")
-        .because("Infra 层负责实现 Domain 层定义的 Port 接口（六边形架构依赖倒置原则）");
+        .as("Domain Port/Repository 接口的实现类必须在 infra 层（Gateway 除外）")
+        .because("Infra 层负责实现 Domain 层定义的 Port 接口（六边形架构依赖倒置原则），Gateway 实现在 App 层");
+  }
+
+  /// Gateway 接口实现必须在 app 层。
+  ///
+  /// Gateway 是 Driving Port（驱动端口），其实现在 Application 层，
+  /// 与 Repository/Port（实现在 Infra 层）形成对比。
+  ///
+  /// @return ArchRule 规则实例
+  public ArchRule gatewayImplsShouldResideInApp() {
+    return classes()
+        .that()
+        .resideInAPackage(".." + serviceName + "..")
+        .and()
+        .areNotInterfaces()
+        .and()
+        .haveSimpleNameEndingWith("GatewayImpl")
+        .should()
+        .resideInAPackage("..app..")
+        .as("Gateway 接口的实现类必须在 app 层")
+        .because("Gateway 是 Driving Port，其实现在 Application 层提供业务服务");
   }
 
   /// DO 类必须在 infra.persistence.entity 包。
@@ -400,6 +430,7 @@ public class HexagonalArchitectureRules {
     // 命名约定规则
     rules.add(portsShouldResideInDomainPortPackage());
     rules.add(repositoryImplsShouldResideInInfra());
+    rules.add(gatewayImplsShouldResideInApp());
     rules.add(doClassesShouldResideInPersistenceEntity());
     rules.add(aggregatesShouldResideInDomainModelAggregate());
     rules.add(orchestratorsShouldResideInAppUsecase());
