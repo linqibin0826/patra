@@ -1,10 +1,23 @@
 package com.patra.catalog.domain.port.repository;
 
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
+import com.patra.catalog.domain.model.vo.publication.PublicationAbstract;
+import com.patra.catalog.domain.model.vo.publication.PublicationAlternativeAbstract;
+import com.patra.catalog.domain.model.vo.publication.PublicationDate;
+import com.patra.catalog.domain.model.vo.publication.PublicationIdentifier;
+import com.patra.catalog.domain.model.vo.publication.PublicationMetadata;
+import com.patra.catalog.domain.model.vo.publication.PublicationOaLocation;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /// 文献聚合根仓储接口（领域层定义，基础设施层实现）。
+///
+/// **聚合边界**：
+///
+/// - PublicationAggregate：聚合根
+/// - PublicationIdentifier：值对象集合（保护标识符唯一性不变量）
+/// - PublicationAbstract：嵌入式值对象（与主文献 1:1 关系）
 ///
 /// **设计原则**：
 ///
@@ -12,6 +25,20 @@ import java.util.Optional;
 /// - 实现在 Infrastructure 层，遵循依赖倒置原则（DIP）
 /// - 以聚合为单位加载和保存，维护聚合一致性
 /// - 方法返回领域对象，而非 DO（数据对象）
+///
+/// **补充数据管理**：
+///
+/// 本接口同时管理与文献关联的补充数据（不属于聚合边界，但通过 Repository 统一访问）：
+///
+/// - PublicationDate：日期信息（投稿、接收、发表等）
+/// - PublicationMetadata：索引状态、质量评分、数据溯源
+/// - PublicationAlternativeAbstract：翻译摘要
+/// - PublicationOaLocation：开放获取位置
+///
+/// **主要使用场景**：
+///
+/// - PubMed Baseline 批量导入（批量写入）
+/// - OpenAlex Works 数据富化（批量更新 OA 位置）
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -106,4 +133,92 @@ public interface PublicationRepository {
   /// @param venueId 载体 ID
   /// @return 删除的记录数
   int deleteByVenueId(Long venueId);
+
+  // ========== 标识符管理（聚合边界内，独立表） ==========
+
+  /// 批量替换标识符（删除旧数据后插入新数据）。
+  ///
+  /// 用于 PubMed Baseline 导入时保存完整的标识符列表。
+  /// 标识符包括 PMID、DOI、PMC、PII、ArXiv 等。
+  ///
+  /// **语义**：对于每个 publicationId，先删除该文献的所有现有标识符，
+  /// 然后插入新的标识符列表（replace 语义）。
+  ///
+  /// @param identifiersByPublicationId Map，key 为 publicationId，value 为要设置的标识符列表
+  void replaceIdentifiersBatch(Map<Long, List<PublicationIdentifier>> identifiersByPublicationId);
+
+  // ========== 摘要管理（聚合边界内，独立表） ==========
+
+  /// 批量替换摘要（删除旧数据后插入新数据）。
+  ///
+  /// 用于 PubMed Baseline 导入时保存文献摘要。
+  /// 摘要与主文献为 1:1 关系，存储在独立表中。
+  ///
+  /// **语义**：对于每个 publicationId，先删除该文献的现有摘要，
+  /// 然后插入新的摘要（replace 语义）。
+  ///
+  /// @param abstractsByPublicationId Map，key 为 publicationId，value 为要设置的摘要
+  void replaceAbstractsBatch(Map<Long, PublicationAbstract> abstractsByPublicationId);
+
+  // ========== 补充数据管理（聚合边界外） ==========
+
+  /// 批量替换日期信息（删除旧数据后插入新数据）。
+  ///
+  /// 用于 PubMed Baseline 导入时保存文献的各类日期信息。
+  /// 日期类型包括投稿日期、接收日期、发表日期、修订日期等。
+  ///
+  /// @param datesByPublicationId Map，key 为 publicationId，value 为要设置的日期列表
+  void replaceDatesBatch(Map<Long, List<PublicationDate>> datesByPublicationId);
+
+  /// 批量替换元数据（删除旧数据后插入新数据）。
+  ///
+  /// 用于 PubMed Baseline 导入时保存文献元数据。
+  /// 元数据包括索引状态、质量评分、数据溯源、审核状态等。
+  /// 元数据与主文献为 1:1 关系。
+  ///
+  /// @param metadataByPublicationId Map，key 为 publicationId，value 为要设置的元数据
+  void replaceMetadataBatch(Map<Long, PublicationMetadata> metadataByPublicationId);
+
+  /// 批量替换翻译摘要（删除旧数据后插入新数据）。
+  ///
+  /// 用于保存文献摘要的多语言翻译版本。
+  /// 一个文献可有多个不同语言的翻译摘要。
+  ///
+  /// @param abstractsByPublicationId Map，key 为 publicationId，value 为要设置的翻译摘要列表
+  void replaceAlternativeAbstractsBatch(
+      Map<Long, List<PublicationAlternativeAbstract>> abstractsByPublicationId);
+
+  /// 批量替换开放获取位置（删除旧数据后插入新数据）。
+  ///
+  /// 用于 OpenAlex Works 数据富化时保存 OA 位置信息。
+  /// 一个文献可有多个 OA 位置（不同来源）。
+  ///
+  /// @param locationsByPublicationId Map，key 为 publicationId，value 为要设置的 OA 位置列表
+  void replaceOaLocationsBatch(Map<Long, List<PublicationOaLocation>> locationsByPublicationId);
+
+  /// 批量替换所有补充数据。
+  ///
+  /// 用于 PubMed Baseline 导入场景，在同一次调用中更新所有补充数据。
+  /// 内部实现依次调用各个 replace 方法。
+  ///
+  /// @param identifiersByPublicationId 标识符
+  /// @param abstractsByPublicationId 摘要
+  /// @param datesByPublicationId 日期信息
+  /// @param metadataByPublicationId 元数据
+  /// @param alternativeAbstractsByPublicationId 翻译摘要
+  /// @param oaLocationsByPublicationId OA 位置
+  default void replaceAllSupplementaryDataBatch(
+      Map<Long, List<PublicationIdentifier>> identifiersByPublicationId,
+      Map<Long, PublicationAbstract> abstractsByPublicationId,
+      Map<Long, List<PublicationDate>> datesByPublicationId,
+      Map<Long, PublicationMetadata> metadataByPublicationId,
+      Map<Long, List<PublicationAlternativeAbstract>> alternativeAbstractsByPublicationId,
+      Map<Long, List<PublicationOaLocation>> oaLocationsByPublicationId) {
+    replaceIdentifiersBatch(identifiersByPublicationId);
+    replaceAbstractsBatch(abstractsByPublicationId);
+    replaceDatesBatch(datesByPublicationId);
+    replaceMetadataBatch(metadataByPublicationId);
+    replaceAlternativeAbstractsBatch(alternativeAbstractsByPublicationId);
+    replaceOaLocationsBatch(oaLocationsByPublicationId);
+  }
 }
