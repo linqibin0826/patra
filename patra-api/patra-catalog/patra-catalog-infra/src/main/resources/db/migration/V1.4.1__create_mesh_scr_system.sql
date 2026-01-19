@@ -1,9 +1,12 @@
 -- ============================================================
 -- Patra Catalog 数据库 - MeSH SCR (Supplementary Concept Record) 体系表 DDL
 -- ============================================================
+-- 版本: V1.4.1
+-- 领域: 分类体系
 -- 设计阶段: 阶段 3 - SQL DDL 生成
 -- 创建日期: 2025-12-31
--- 设计范围: MeSH SCR (补充概念记录) 体系（5张新表 + 2张现有表修改）
+-- 设计范围: MeSH SCR (补充概念记录) 体系（5张新表）
+-- 依赖: V1.4.0__create_mesh_system.sql
 -- 作者: Patra Lin
 -- MySQL 版本: 8.0+
 -- 字符集: utf8mb4 (支持完整Unicode)
@@ -22,9 +25,9 @@
 --   4. cat_mesh_scr_indexing_info (SCR 索引信息表) - 依赖 cat_mesh_scr, cat_mesh_descriptor, cat_mesh_qualifier
 --   5. cat_mesh_scr_pharmacological_action (SCR 药理作用表) - 依赖 cat_mesh_scr, cat_mesh_descriptor
 --
--- 复用现有表（修改）:
---   - cat_mesh_concept (添加 record_type, owner_ui 字段) - 概念表通用化
---   - cat_mesh_entry_term (添加 record_type, owner_ui 字段) - 术语表通用化
+-- 修改现有表（V1.4.0 中创建的表）:
+--   - cat_mesh_concept (添加 record_type 字段，owner_ui 已存在) - 概念表通用化
+--   - cat_mesh_entry_term (添加 record_type 字段，owner_ui 已存在) - 术语表通用化
 --
 -- 导入顺序要求:
 --   QUALIFIER → DESCRIPTOR → SCR(主表) → SCR 从表
@@ -34,19 +37,14 @@
 -- ============================================================
 -- 修改现有表：cat_mesh_concept (概念表通用化)
 -- ============================================================
--- 将 descriptor_ui 重命名为 owner_ui，添加 record_type 字段
--- 使概念表同时支持 Descriptor 和 SCR 的概念存储
+-- 添加 record_type 字段使概念表同时支持 Descriptor 和 SCR 的概念存储
+-- 注意: owner_ui 字段已在 V1.4.0 中定义
 -- ============================================================
 
 -- 添加 record_type 字段
 ALTER TABLE `cat_mesh_concept`
     ADD COLUMN `record_type` VARCHAR(20) NOT NULL DEFAULT 'DESCRIPTOR'
         COMMENT '记录类型(DESCRIPTOR=主题词,SCR=补充概念)' AFTER `id`;
-
--- 重命名 descriptor_ui 为 owner_ui
-ALTER TABLE `cat_mesh_concept`
-    CHANGE COLUMN `descriptor_ui` `owner_ui` VARCHAR(10) NOT NULL
-        COMMENT '所有者UI(Descriptor:D开头,SCR:C开头)';
 
 -- 添加复合索引支持按类型查询
 CREATE INDEX `idx_record_type_owner` ON `cat_mesh_concept` (`record_type`, `owner_ui`);
@@ -55,19 +53,14 @@ CREATE INDEX `idx_record_type_owner` ON `cat_mesh_concept` (`record_type`, `owne
 -- ============================================================
 -- 修改现有表：cat_mesh_entry_term (术语表通用化)
 -- ============================================================
--- 将 descriptor_ui 重命名为 owner_ui，添加 record_type 字段
--- 使术语表同时支持 Descriptor 和 SCR 的术语存储
+-- 添加 record_type 字段使术语表同时支持 Descriptor 和 SCR 的术语存储
+-- 注意: owner_ui 字段已在 V1.4.0 中定义
 -- ============================================================
 
 -- 添加 record_type 字段
 ALTER TABLE `cat_mesh_entry_term`
     ADD COLUMN `record_type` VARCHAR(20) NOT NULL DEFAULT 'DESCRIPTOR'
         COMMENT '记录类型(DESCRIPTOR=主题词,SCR=补充概念)' AFTER `id`;
-
--- 重命名 descriptor_ui 为 owner_ui
-ALTER TABLE `cat_mesh_entry_term`
-    CHANGE COLUMN `descriptor_ui` `owner_ui` VARCHAR(10) NOT NULL
-        COMMENT '所有者UI(Descriptor:D开头,SCR:C开头)';
 
 -- 添加复合索引支持按类型查询
 CREATE INDEX `idx_record_type_owner` ON `cat_mesh_entry_term` (`record_type`, `owner_ui`);

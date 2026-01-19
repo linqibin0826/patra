@@ -1,6 +1,8 @@
 -- ============================================================
 -- Patra Catalog 数据库 - MeSH 体系表 DDL
 -- ============================================================
+-- 版本: V1.4.0
+-- 领域: 分类体系
 -- 设计阶段: 阶段 3 - SQL DDL 生成
 -- 创建日期: 2025-01-18
 -- 设计范围: MeSH (医学主题词表) 体系（8张表）
@@ -208,7 +210,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_entry_term` (
     -- 业务字段
     -- ========================================
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键,雪花算法生成',
-    `descriptor_ui` VARCHAR(10) NOT NULL COMMENT '主题词UI(关联:cat_mesh_descriptor.ui,格式:D000001)',
+    `owner_ui` VARCHAR(10) NOT NULL COMMENT '所有者UI(Descriptor:D开头,SCR:C开头)',
     `term_ui` VARCHAR(10) NULL DEFAULT NULL COMMENT '术语UI',
     `concept_ui` VARCHAR(10) NULL DEFAULT NULL COMMENT '所属概念UI',
     `term` VARCHAR(255) NOT NULL COMMENT '入口术语/同义词',
@@ -230,7 +232,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_entry_term` (
     PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
 
     -- 普通索引
-    INDEX `idx_descriptor_ui` (`descriptor_ui`) COMMENT '主题词UI索引,支持查询某主题词的所有入口术语',
+    INDEX `idx_owner_ui` (`owner_ui`) COMMENT '所有者UI索引,支持查询某主题词的所有入口术语',
     INDEX `idx_concept_ui` (`concept_ui`) COMMENT '概念UI索引,支持按概念查询入口术语'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='MeSH 入口术语表:存储主题词同义词和入口术语,支持模糊检索';
@@ -253,7 +255,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_concept` (
     -- 业务字段
     -- ========================================
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键,雪花算法生成',
-    `descriptor_ui` VARCHAR(10) NOT NULL COMMENT '主题词UI(关联:cat_mesh_descriptor.ui,格式:D000001)',
+    `owner_ui` VARCHAR(10) NOT NULL COMMENT '所有者UI(Descriptor:D开头,SCR:C开头)',
     `concept_ui` VARCHAR(10) NOT NULL COMMENT '概念唯一标识符(格式:M000001-M999999)',
     `concept_name` VARCHAR(255) NOT NULL COMMENT '概念名称',
     `is_preferred` BOOLEAN NOT NULL DEFAULT 0 COMMENT '是否首选概念(0=否,1=是)',
@@ -274,7 +276,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_concept` (
     UNIQUE INDEX `uk_concept_ui` (`concept_ui`) COMMENT '概念 UI 唯一索引,支持精确查询',
 
     -- 普通索引
-    INDEX `idx_descriptor_ui` (`descriptor_ui`) COMMENT '主题词UI索引,支持查询某主题词的所有概念'
+    INDEX `idx_owner_ui` (`owner_ui`) COMMENT '所有者UI索引,支持查询某主题词的所有概念'
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='MeSH 概念表:存储主题词下的概念,支持概念级别关联和检索';
