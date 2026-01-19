@@ -5,16 +5,18 @@ import com.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;
 import com.patra.catalog.domain.model.enums.PublicationStatus;
 import com.patra.catalog.domain.model.vo.publication.LanguageInfo;
 import com.patra.catalog.domain.model.vo.publication.PublicationIdentifiers;
-import com.patra.catalog.domain.model.vo.publication.pubmed.PubmedArticle;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venueinstance.JournalInstanceParams;
 import com.patra.catalog.domain.port.gateway.VenueInstanceGateway;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.infra.adapter.batch.publication.cache.VenueCache;
 import com.patra.common.enums.ProvenanceCode;
+import com.patra.common.model.CanonicalPublication;
+import com.patra.common.model.CanonicalPublication.Identifier;
+import com.patra.common.model.CanonicalPublication.Journal;
+import com.patra.common.model.CanonicalPublication.PublicationDates;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +29,7 @@ import org.springframework.batch.infrastructure.item.ItemProcessor;
 /// 1. 去重：检查 PMID 是否已存在，跳过重复记录
 /// 2. Venue 匹配：通过 NLM ID/ISSN 匹配载体
 /// 3. VenueInstance 创建：获取或创建载体实例（卷期）
-/// 4. 聚合根构建：将 PubmedArticle DTO 转换为 PublicationAggregate
+/// 4. 聚合根构建：将 CanonicalPublication 转换为 PublicationAggregate
 ///
 /// **跳过条件**：
 ///
@@ -41,42 +43,20 @@ import org.springframework.batch.infrastructure.item.ItemProcessor;
 @Slf4j
 @RequiredArgsConstructor
 public class PubmedArticleItemProcessor
-    implements ItemProcessor<PubmedArticle, PublicationAggregate> {
+    implements ItemProcessor<CanonicalPublication, PublicationAggregate> {
 
   private final PublicationRepository publicationRepository;
   private final VenueCache venueCache;
   private final VenueInstanceGateway venueInstanceGateway;
 
-  /// 语言代码映射（PubMed 3 字母代码 → BCP 47）。
-  private static final Map<String, String> LANGUAGE_CODE_MAP =
-      Map.ofEntries(
-          Map.entry("eng", "en"),
-          Map.entry("chi", "zh"),
-          Map.entry("jpn", "ja"),
-          Map.entry("kor", "ko"),
-          Map.entry("ger", "de"),
-          Map.entry("fre", "fr"),
-          Map.entry("spa", "es"),
-          Map.entry("ita", "it"),
-          Map.entry("por", "pt"),
-          Map.entry("rus", "ru"),
-          Map.entry("ara", "ar"),
-          Map.entry("dut", "nl"),
-          Map.entry("pol", "pl"),
-          Map.entry("tur", "tr"),
-          Map.entry("hun", "hu"),
-          Map.entry("cze", "cs"),
-          Map.entry("dan", "da"),
-          Map.entry("fin", "fi"),
-          Map.entry("gre", "el"),
-          Map.entry("heb", "he"),
-          Map.entry("nor", "no"),
-          Map.entry("swe", "sv"),
-          Map.entry("ukr", "uk"));
-
   @Override
-  public PublicationAggregate process(PubmedArticle article) throws Exception {
-    String pmid = article.pmid();
+  public PublicationAggregate process(CanonicalPublication publication) throws Exception {
+    String pmid = extractPmid(publication);
+
+    if (pmid == null) {
+      log.debug("跳过缺少 PMID 的文献");
+      return null;
+    }
 
     // 1. 去重检查
     if (publicationRepository.existsByPmid(pmid)) {
@@ -85,82 +65,147 @@ public class PubmedArticleItemProcessor
     }
 
     // 2. Venue 匹配
-    List<String> issns = collectIssns(article);
-    Optional<VenueId> venueIdOpt = venueCache.findByPriority(article.nlmUniqueId(), issns);
+    Journal journal = publication.getJournal();
+    if (journal == null) {
+      log.debug("跳过缺少期刊信息的文献：PMID={}", pmid);
+      return null;
+    }
+
+    String nlmUniqueId = journal.getNlmUniqueId();
+    List<String> issns = collectIssns(journal);
+    Optional<VenueId> venueIdOpt = venueCache.findByPriority(nlmUniqueId, issns);
 
     if (venueIdOpt.isEmpty()) {
-      log.debug("无法匹配 Venue，跳过文献：PMID={}, NLM={}, ISSNs={}", pmid, article.nlmUniqueId(), issns);
+      log.debug("无法匹配 Venue，跳过文献：PMID={}, NLM={}, ISSNs={}", pmid, nlmUniqueId, issns);
       return null;
     }
 
     VenueId venueId = venueIdOpt.get();
 
     // 3. VenueInstance 创建/获取
+    Integer pubYear = extractPublicationYear(publication);
     JournalInstanceParams params =
         JournalInstanceParams.builder()
             .venueId(venueId)
-            .volume(article.volume())
-            .issue(article.issue())
-            .publicationYear(article.pubYear())
-            .publicationMonth(article.pubMonth())
-            .publicationDay(article.pubDay())
+            .volume(journal.getVolume())
+            .issue(journal.getIssue())
+            .publicationYear(pubYear)
+            .publicationMonth(extractPublicationMonth(publication))
+            .publicationDay(extractPublicationDay(publication))
             .build();
     VenueInstanceAggregate venueInstance = venueInstanceGateway.findOrCreateJournalInstance(params);
 
     // 4. 构建 PublicationAggregate
-    return buildPublicationAggregate(article, venueId, venueInstance);
+    return buildPublicationAggregate(publication, pmid, venueId, venueInstance, pubYear);
   }
 
-  /// 收集所有 ISSN（按优先级排序：Linking → Print → Electronic）。
-  private List<String> collectIssns(PubmedArticle article) {
-    List<String> issns = new ArrayList<>(3);
-    if (article.issnLinking() != null && !article.issnLinking().isBlank()) {
-      issns.add(article.issnLinking());
+  /// 从 CanonicalPublication 提取 PMID。
+  private String extractPmid(CanonicalPublication publication) {
+    if (publication.getIdentifiers() == null) {
+      return null;
     }
-    if (article.issnPrint() != null && !article.issnPrint().isBlank()) {
-      issns.add(article.issnPrint());
+    return publication.getIdentifiers().stream()
+        .filter(id -> "pmid".equals(id.getType()))
+        .map(Identifier::getValue)
+        .findFirst()
+        .orElse(null);
+  }
+
+  /// 从 CanonicalPublication 提取 DOI。
+  private String extractDoi(CanonicalPublication publication) {
+    if (publication.getIdentifiers() == null) {
+      return null;
     }
-    if (article.issnElectronic() != null && !article.issnElectronic().isBlank()) {
-      issns.add(article.issnElectronic());
+    return publication.getIdentifiers().stream()
+        .filter(id -> "doi".equals(id.getType()))
+        .map(Identifier::getValue)
+        .findFirst()
+        .orElse(null);
+  }
+
+  /// 从 CanonicalPublication 提取出版年份。
+  private Integer extractPublicationYear(CanonicalPublication publication) {
+    PublicationDates dates = publication.getDates();
+    if (dates == null || dates.getPublished() == null) {
+      return null;
     }
+    return dates.getPublished().getYear();
+  }
+
+  /// 从 CanonicalPublication 提取出版月份。
+  private Integer extractPublicationMonth(CanonicalPublication publication) {
+    PublicationDates dates = publication.getDates();
+    if (dates == null || dates.getPublished() == null) {
+      return null;
+    }
+    return dates.getPublished().getMonthValue();
+  }
+
+  /// 从 CanonicalPublication 提取出版日期。
+  private Integer extractPublicationDay(CanonicalPublication publication) {
+    PublicationDates dates = publication.getDates();
+    if (dates == null || dates.getPublished() == null) {
+      return null;
+    }
+    return dates.getPublished().getDayOfMonth();
+  }
+
+  /// 收集所有 ISSN（按优先级排序：Linking → Print/Electronic）。
+  ///
+  /// Venue 匹配优先级：nlmUniqueId > issnLinking > issn
+  private List<String> collectIssns(Journal journal) {
+    List<String> issns = new ArrayList<>(2);
+
+    // ISSN-L 优先级最高
+    if (journal.getIssnLinking() != null && !journal.getIssnLinking().isBlank()) {
+      issns.add(journal.getIssnLinking());
+    }
+
+    // 主 ISSN（已在解析阶段确定为 Print 或 Electronic）
+    if (journal.getIssn() != null && !journal.getIssn().isBlank()) {
+      issns.add(journal.getIssn());
+    }
+
     return issns;
   }
 
   /// 构建 PublicationAggregate。
   private PublicationAggregate buildPublicationAggregate(
-      PubmedArticle article, VenueId venueId, VenueInstanceAggregate venueInstance) {
+      CanonicalPublication publication,
+      String pmid,
+      VenueId venueId,
+      VenueInstanceAggregate venueInstance,
+      Integer pubYear) {
 
     // 构建标识符
-    PublicationIdentifiers identifiers = buildIdentifiers(article);
+    PublicationIdentifiers identifiers = buildIdentifiers(pmid, extractDoi(publication));
 
     // 构建语言信息
-    LanguageInfo languageInfo = buildLanguageInfo(article);
+    LanguageInfo languageInfo = buildLanguageInfo(publication);
 
     // 解析出版状态
-    PublicationStatus publicationStatus = parsePublicationStatus(article.publicationStatus());
+    PublicationStatus publicationStatus =
+        parsePublicationStatus(publication.getPublicationStatus());
 
     return PublicationAggregate.create(
         ProvenanceCode.PUBMED,
         identifiers,
         venueId,
         venueInstance.getId(),
-        article.articleTitle(),
-        article.vernacularTitle(),
+        publication.getTitle(),
+        publication.getOriginalTitle(),
         languageInfo,
         publicationStatus,
-        null, // MediaType - PubMed 不直接提供此信息
-        article.pubYear(),
-        article.authorsComplete(),
-        null, // numberOfReferences - PubMed 不提供
-        null // conflictOfInterest - 需要从其他字段提取
+        null, // MediaType - 可从 publication.getMediaType() 获取，但需映射
+        pubYear,
+        publication.getAuthorsComplete(),
+        null, // numberOfReferences - 可从 publication.getNumberOfReferences() 获取
+        null // conflictOfInterest - 可从 publication.getConflictOfInterestStatement() 获取
         );
   }
 
   /// 构建标识符。
-  private PublicationIdentifiers buildIdentifiers(PubmedArticle article) {
-    String pmid = article.pmid();
-    String doi = article.doi();
-
+  private PublicationIdentifiers buildIdentifiers(String pmid, String doi) {
     // DOI 为空时只使用 PMID
     if (doi == null || doi.isBlank()) {
       return PublicationIdentifiers.ofPmid(pmid);
@@ -170,19 +215,17 @@ public class PubmedArticleItemProcessor
   }
 
   /// 构建语言信息。
-  private LanguageInfo buildLanguageInfo(PubmedArticle article) {
-    List<String> languages = article.languages();
+  ///
+  /// CanonicalPublication 中的 language 已是 ISO 639-1 代码。
+  private LanguageInfo buildLanguageInfo(CanonicalPublication publication) {
+    String isoCode = publication.getLanguage();
 
     // 默认英语
-    if (languages == null || languages.isEmpty()) {
+    if (isoCode == null || isoCode.isBlank()) {
       return LanguageInfo.ofCode("en");
     }
 
-    // 使用第一个语言
-    String rawLang = languages.getFirst();
-    String code = LANGUAGE_CODE_MAP.getOrDefault(rawLang.toLowerCase(), "en");
-
-    return LanguageInfo.of(rawLang, code);
+    return LanguageInfo.ofCode(isoCode);
   }
 
   /// 解析出版状态。
