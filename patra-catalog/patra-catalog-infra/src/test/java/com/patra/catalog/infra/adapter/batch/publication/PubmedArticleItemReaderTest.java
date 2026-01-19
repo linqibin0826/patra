@@ -5,13 +5,15 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.catalog.domain.model.vo.publication.pubmed.PubmedArticle;
 import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
+import com.patra.common.model.CanonicalPublication;
+import com.patra.common.model.CanonicalPublication.Identifier;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -76,10 +78,10 @@ class PubmedArticleItemReaderTest {
       when(downloadPort.download(any(URI.class))).thenReturn(downloadResult);
       when(downloadResult.inputStream()).thenReturn(mockGzipStream);
 
-      PubmedArticle article1 = createArticle("1");
-      PubmedArticle article2 = createArticle("2");
-      PubmedArticle article3 = createArticle("3");
-      when(parserPort.parse(any())).thenReturn(Stream.of(article1, article2, article3));
+      CanonicalPublication publication1 = createPublication("1");
+      CanonicalPublication publication2 = createPublication("2");
+      CanonicalPublication publication3 = createPublication("3");
+      when(parserPort.parse(any())).thenReturn(Stream.of(publication1, publication2, publication3));
 
       ExecutionContext context = new ExecutionContext();
       context.putInt("pubmed.article.current.index", 2);
@@ -88,9 +90,9 @@ class PubmedArticleItemReaderTest {
       reader.open(context);
 
       // then - 应该跳过前 2 条，第一次 read 返回第 3 条
-      PubmedArticle result = reader.read();
+      CanonicalPublication result = reader.read();
       assertThat(result).isNotNull();
-      assertThat(result.pmid()).isEqualTo("3");
+      assertThat(extractPmid(result)).isEqualTo("3");
     }
   }
 
@@ -100,21 +102,21 @@ class PubmedArticleItemReaderTest {
 
     @Test
     @DisplayName("应该逐条返回文献记录")
-    void should_return_articles_one_by_one() throws Exception {
+    void should_return_publications_one_by_one() throws Exception {
       // given
       InputStream mockGzipStream = createMockGzipStream();
       when(downloadPort.download(any(URI.class))).thenReturn(downloadResult);
       when(downloadResult.inputStream()).thenReturn(mockGzipStream);
 
-      PubmedArticle article1 = createArticle("12345");
-      PubmedArticle article2 = createArticle("67890");
-      when(parserPort.parse(any())).thenReturn(Stream.of(article1, article2));
+      CanonicalPublication publication1 = createPublication("12345");
+      CanonicalPublication publication2 = createPublication("67890");
+      when(parserPort.parse(any())).thenReturn(Stream.of(publication1, publication2));
 
       reader.open(new ExecutionContext());
 
       // when & then
-      assertThat(reader.read()).isEqualTo(article1);
-      assertThat(reader.read()).isEqualTo(article2);
+      assertThat(reader.read()).isEqualTo(publication1);
+      assertThat(reader.read()).isEqualTo(publication2);
       assertThat(reader.read()).isNull(); // 读取完成返回 null
     }
 
@@ -130,7 +132,7 @@ class PubmedArticleItemReaderTest {
       reader.open(new ExecutionContext());
 
       // when
-      PubmedArticle result = reader.read();
+      CanonicalPublication result = reader.read();
 
       // then
       assertThat(result).isNull();
@@ -149,8 +151,8 @@ class PubmedArticleItemReaderTest {
       when(downloadPort.download(any(URI.class))).thenReturn(downloadResult);
       when(downloadResult.inputStream()).thenReturn(mockGzipStream);
 
-      PubmedArticle article = createArticle("12345");
-      when(parserPort.parse(any())).thenReturn(Stream.of(article));
+      CanonicalPublication publication = createPublication("12345");
+      when(parserPort.parse(any())).thenReturn(Stream.of(publication));
 
       ExecutionContext context = new ExecutionContext();
       reader.open(context);
@@ -189,9 +191,24 @@ class PubmedArticleItemReaderTest {
     }
   }
 
-  /// 创建测试用的 PubmedArticle。
-  private PubmedArticle createArticle(String pmid) {
-    return PubmedArticle.builder().pmid(pmid).articleTitle("Test Article " + pmid).build();
+  /// 创建测试用的 CanonicalPublication。
+  private CanonicalPublication createPublication(String pmid) {
+    return CanonicalPublication.builder()
+        .identifiers(List.of(Identifier.builder().type("pmid").value(pmid).build()))
+        .title("Test Article " + pmid)
+        .build();
+  }
+
+  /// 从 CanonicalPublication 中提取 PMID。
+  private String extractPmid(CanonicalPublication publication) {
+    if (publication.getIdentifiers() == null) {
+      return null;
+    }
+    return publication.getIdentifiers().stream()
+        .filter(id -> "pmid".equals(id.getType()))
+        .map(Identifier::getValue)
+        .findFirst()
+        .orElse(null);
   }
 
   /// 创建模拟的 gzip 输入流。

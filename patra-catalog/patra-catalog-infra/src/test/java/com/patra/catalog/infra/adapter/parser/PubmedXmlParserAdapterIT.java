@@ -3,7 +3,7 @@ package com.patra.catalog.infra.adapter.parser;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.patra.catalog.domain.model.vo.publication.pubmed.PubmedArticle;
+import com.patra.common.model.CanonicalPublication;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -73,22 +73,23 @@ class PubmedXmlParserAdapterIT {
           """;
       InputStream inputStream = toInputStream(xml);
 
-      List<PubmedArticle> articles;
+      List<CanonicalPublication> publications;
       try (var stream = adapter.parse(inputStream)) {
-        articles = stream.toList();
+        publications = stream.toList();
       }
 
-      assertThat(articles).hasSize(1);
-      PubmedArticle article = articles.getFirst();
-      assertEquals("12345678", article.pmid());
-      assertEquals("Sample Article Title", article.articleTitle());
-      assertEquals("10.1000/example", article.doi());
-      assertEquals("101234567", article.nlmUniqueId());
-      assertEquals("1234-5678", article.issnPrint());
-      assertEquals("10", article.volume());
-      assertEquals("2", article.issue());
-      assertEquals(2024, article.pubYear());
-      assertEquals(6, article.pubMonth());
+      assertThat(publications).hasSize(1);
+      CanonicalPublication pub = publications.getFirst();
+      assertEquals("12345678", extractPmid(pub));
+      assertEquals("Sample Article Title", pub.getTitle());
+      assertEquals("10.1000/example", extractDoi(pub));
+      assertEquals("101234567", pub.getJournal().getNlmUniqueId());
+      assertEquals("1234-5678", pub.getJournal().getIssn());
+      assertEquals("print", pub.getJournal().getIssnType());
+      assertEquals("10", pub.getJournal().getVolume());
+      assertEquals("2", pub.getJournal().getIssue());
+      assertEquals(2024, pub.getDates().getPublished().getYear());
+      assertEquals(6, pub.getDates().getPublished().getMonthValue());
     }
 
     @Test
@@ -135,15 +136,15 @@ class PubmedXmlParserAdapterIT {
           """;
       InputStream inputStream = toInputStream(xml);
 
-      List<PubmedArticle> articles;
+      List<CanonicalPublication> publications;
       try (var stream = adapter.parse(inputStream)) {
-        articles = stream.toList();
+        publications = stream.toList();
       }
 
-      assertThat(articles).hasSize(3);
-      assertEquals("1", articles.get(0).pmid());
-      assertEquals("2", articles.get(1).pmid());
-      assertEquals("3", articles.get(2).pmid());
+      assertThat(publications).hasSize(3);
+      assertEquals("1", extractPmid(publications.get(0)));
+      assertEquals("2", extractPmid(publications.get(1)));
+      assertEquals("3", extractPmid(publications.get(2)));
     }
 
     @Test
@@ -186,14 +187,14 @@ class PubmedXmlParserAdapterIT {
           """;
       InputStream inputStream = toInputStream(xml);
 
-      List<PubmedArticle> articles;
+      List<CanonicalPublication> publications;
       try (var stream = adapter.parse(inputStream)) {
-        articles = stream.toList();
+        publications = stream.toList();
       }
 
-      assertThat(articles).hasSize(2);
-      assertEquals("1", articles.get(0).pmid());
-      assertEquals("3", articles.get(1).pmid());
+      assertThat(publications).hasSize(2);
+      assertEquals("1", extractPmid(publications.get(0)));
+      assertEquals("3", extractPmid(publications.get(1)));
     }
 
     @Test
@@ -207,12 +208,12 @@ class PubmedXmlParserAdapterIT {
           """;
       InputStream inputStream = toInputStream(xml);
 
-      List<PubmedArticle> articles;
+      List<CanonicalPublication> publications;
       try (var stream = adapter.parse(inputStream)) {
-        articles = stream.toList();
+        publications = stream.toList();
       }
 
-      assertThat(articles).isEmpty();
+      assertThat(publications).isEmpty();
     }
   }
 
@@ -253,18 +254,42 @@ class PubmedXmlParserAdapterIT {
       InputStream inputStream = toInputStream(xml);
 
       // 使用 limit() 验证惰性求值 - 只获取前 2 条
-      List<PubmedArticle> articles;
+      List<CanonicalPublication> publications;
       try (var stream = adapter.parse(inputStream)) {
-        articles = stream.limit(2).toList();
+        publications = stream.limit(2).toList();
       }
 
-      assertThat(articles).hasSize(2);
-      assertEquals("1", articles.get(0).pmid());
-      assertEquals("2", articles.get(1).pmid());
+      assertThat(publications).hasSize(2);
+      assertEquals("1", extractPmid(publications.get(0)));
+      assertEquals("2", extractPmid(publications.get(1)));
     }
   }
 
   // ========== 辅助方法 ==========
+
+  /// 从 CanonicalPublication 中提取 PMID。
+  private String extractPmid(CanonicalPublication publication) {
+    if (publication.getIdentifiers() == null) {
+      return null;
+    }
+    return publication.getIdentifiers().stream()
+        .filter(id -> "pmid".equals(id.getType()))
+        .map(CanonicalPublication.Identifier::getValue)
+        .findFirst()
+        .orElse(null);
+  }
+
+  /// 从 CanonicalPublication 中提取 DOI。
+  private String extractDoi(CanonicalPublication publication) {
+    if (publication.getIdentifiers() == null) {
+      return null;
+    }
+    return publication.getIdentifiers().stream()
+        .filter(id -> "doi".equals(id.getType()))
+        .map(CanonicalPublication.Identifier::getValue)
+        .findFirst()
+        .orElse(null);
+  }
 
   private InputStream toInputStream(String xml) {
     return new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8));
