@@ -4,9 +4,12 @@ import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.enums.MediaType;
 import com.patra.catalog.domain.model.enums.OaStatus;
+import com.patra.catalog.domain.model.enums.PublicationIdentifierType;
 import com.patra.catalog.domain.model.enums.PublicationStatus;
 import com.patra.catalog.domain.model.vo.publication.LanguageInfo;
+import com.patra.catalog.domain.model.vo.publication.PublicationAbstract;
 import com.patra.catalog.domain.model.vo.publication.PublicationId;
+import com.patra.catalog.domain.model.vo.publication.PublicationIdentifier;
 import com.patra.catalog.domain.model.vo.publication.PublicationIdentifiers;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
@@ -14,7 +17,11 @@ import com.patra.common.domain.AggregateRoot;
 import com.patra.common.enums.ProvenanceCode;
 import java.io.Serial;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.Getter;
 
 /// 医学文献聚合根。封装出版物的核心元数据及其一致性规则。
@@ -64,8 +71,15 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
 
   // ========== 标识符 ==========
 
-  /// 标识符值对象（PMID, DOI, PMC 等）
+  /// 标识符值对象（PMID, DOI - 冗余优化，存储在主表用于高频查询）
   private final PublicationIdentifiers identifiers;
+
+  /// 扩展标识符集合（完整的多标识符管理，存储在子表）
+  ///
+  /// 与 `identifiers` 是**互补关系**：
+  /// - `identifiers`：冗余字段（pmid + doi），用于高频精确查询
+  /// - `extendedIdentifiers`：完整标识符列表，支持 PMC、PII、arXiv 等多种类型
+  private final List<PublicationIdentifier> extendedIdentifiers;
 
   // ========== 关联关系（含冗余） ==========
 
@@ -85,6 +99,13 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
 
   /// 语言信息值对象（三层设计：raw → code → base）
   private final LanguageInfo languageInfo;
+
+  // ========== 摘要（嵌入式值对象） ==========
+
+  /// 文献摘要（与主文献 1:1 关系）
+  ///
+  /// 存储在独立表 `cat_publication_abstract`，但属于聚合边界内。
+  private PublicationAbstract publicationAbstract;
 
   // ========== 出版信息 ==========
 
@@ -125,12 +146,14 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   ///
   /// @param id 主键标识（新建时为 null）
   /// @param provenanceCode 数据来源代码
-  /// @param identifiers 标识符值对象
+  /// @param identifiers 标识符值对象（冗余字段）
+  /// @param extendedIdentifiers 扩展标识符集合
   /// @param venueId 载体 ID
   /// @param venueInstanceId 载体实例 ID
   /// @param title 标题
   /// @param originalTitle 原始标题
   /// @param languageInfo 语言信息
+  /// @param publicationAbstract 文献摘要
   /// @param publicationStatus 出版状态
   /// @param mediaType 媒介类型
   /// @param publicationYear 出版年份
@@ -145,11 +168,13 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
       PublicationId id,
       ProvenanceCode provenanceCode,
       PublicationIdentifiers identifiers,
+      List<PublicationIdentifier> extendedIdentifiers,
       VenueId venueId,
       VenueInstanceId venueInstanceId,
       String title,
       String originalTitle,
       LanguageInfo languageInfo,
+      PublicationAbstract publicationAbstract,
       PublicationStatus publicationStatus,
       MediaType mediaType,
       Integer publicationYear,
@@ -179,11 +204,14 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
     this.provenanceCode = provenanceCode;
     this.lastSyncedAt = lastSyncedAt;
     this.identifiers = identifiers;
+    this.extendedIdentifiers =
+        extendedIdentifiers != null ? new ArrayList<>(extendedIdentifiers) : new ArrayList<>();
     this.venueId = venueId;
     this.venueInstanceId = venueInstanceId;
     this.title = title;
     this.originalTitle = originalTitle;
     this.languageInfo = languageInfo;
+    this.publicationAbstract = publicationAbstract;
     this.publicationStatus = publicationStatus;
     this.mediaType = mediaType;
     this.publicationYear = publicationYear;
@@ -200,7 +228,7 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   /// 使用场景：patra-ingest 通过 RocketMQ 发布文献创建事件，patra-catalog 消费事件时调用此方法。
   ///
   /// @param provenanceCode 数据来源代码（PUBMED, EPMC, CROSSREF 等）
-  /// @param identifiers 标识符值对象
+  /// @param identifiers 标识符值对象（冗余字段）
   /// @param venueId 载体 ID
   /// @param venueInstanceId 载体实例 ID
   /// @param title 标题
@@ -231,11 +259,13 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
         null, // 新建时 ID 为 null
         provenanceCode,
         identifiers,
+        null, // 初始无扩展标识符
         venueId,
         venueInstanceId,
         title,
         originalTitle,
         languageInfo,
+        null, // 初始无摘要
         publicationStatus,
         mediaType,
         publicationYear,
@@ -253,12 +283,14 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   ///
   /// @param id 主键标识
   /// @param provenanceCode 数据来源代码
-  /// @param identifiers 标识符值对象
+  /// @param identifiers 标识符值对象（冗余字段）
+  /// @param extendedIdentifiers 扩展标识符集合
   /// @param venueId 载体 ID
   /// @param venueInstanceId 载体实例 ID
   /// @param title 标题
   /// @param originalTitle 原始标题
   /// @param languageInfo 语言信息
+  /// @param publicationAbstract 文献摘要
   /// @param publicationStatus 出版状态
   /// @param mediaType 媒介类型
   /// @param publicationYear 出版年份
@@ -275,11 +307,13 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
       PublicationId id,
       ProvenanceCode provenanceCode,
       PublicationIdentifiers identifiers,
+      List<PublicationIdentifier> extendedIdentifiers,
       VenueId venueId,
       VenueInstanceId venueInstanceId,
       String title,
       String originalTitle,
       LanguageInfo languageInfo,
+      PublicationAbstract publicationAbstract,
       PublicationStatus publicationStatus,
       MediaType mediaType,
       Integer publicationYear,
@@ -296,11 +330,13 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
             id,
             provenanceCode,
             identifiers,
+            extendedIdentifiers,
             venueId,
             venueInstanceId,
             title,
             originalTitle,
             languageInfo,
+            publicationAbstract,
             publicationStatus,
             mediaType,
             publicationYear,
@@ -383,6 +419,94 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   /// @param syncedAt 同步时间
   void syncLastSyncedAt(Instant syncedAt) {
     this.lastSyncedAt = syncedAt;
+  }
+
+  // ========== 标识符管理 ==========
+
+  /// 添加扩展标识符。
+  ///
+  /// 业务规则：同类型标识符不能重复添加。
+  ///
+  /// @param identifier 要添加的标识符
+  /// @return true 如果成功添加，false 如果已存在
+  /// @throws IllegalArgumentException 如果 identifier 为 null
+  public boolean addIdentifier(PublicationIdentifier identifier) {
+    Assert.notNull(identifier, "标识符不能为空");
+
+    // 检查是否已存在同类型同值的标识符
+    boolean exists =
+        extendedIdentifiers.stream()
+            .anyMatch(
+                id -> id.type() == identifier.type() && id.value().equals(identifier.value()));
+    if (exists) {
+      return false;
+    }
+
+    extendedIdentifiers.add(identifier);
+    return true;
+  }
+
+  /// 按类型获取标识符。
+  ///
+  /// @param type 标识符类型
+  /// @return 对应类型的标识符（如果存在）
+  public Optional<PublicationIdentifier> getIdentifier(PublicationIdentifierType type) {
+    Assert.notNull(type, "标识符类型不能为空");
+    return extendedIdentifiers.stream().filter(id -> id.type() == type).findFirst();
+  }
+
+  /// 获取所有扩展标识符（只读视图）。
+  ///
+  /// 覆盖 Lombok 生成的 getter，返回不可变列表。
+  ///
+  /// @return 不可变的标识符列表
+  public List<PublicationIdentifier> getExtendedIdentifiers() {
+    return Collections.unmodifiableList(extendedIdentifiers);
+  }
+
+  /// 判断是否有指定类型的标识符。
+  ///
+  /// @param type 标识符类型
+  /// @return true 如果存在
+  public boolean hasIdentifier(PublicationIdentifierType type) {
+    return getIdentifier(type).isPresent();
+  }
+
+  /// 同步扩展标识符列表（由仓储层调用）。
+  ///
+  /// **包私有方法**：仅供 Repository 层调用，用于从数据库加载标识符后设置。
+  ///
+  /// @param identifiers 标识符列表
+  void syncExtendedIdentifiers(List<PublicationIdentifier> identifiers) {
+    this.extendedIdentifiers.clear();
+    if (identifiers != null) {
+      this.extendedIdentifiers.addAll(identifiers);
+    }
+  }
+
+  // ========== 摘要管理 ==========
+
+  /// 更新文献摘要。
+  ///
+  /// @param newAbstract 新的摘要（可为 null 表示清除摘要）
+  public void updateAbstract(PublicationAbstract newAbstract) {
+    this.publicationAbstract = newAbstract;
+  }
+
+  /// 判断是否有摘要。
+  ///
+  /// @return true 如果有摘要内容
+  public boolean hasAbstract() {
+    return publicationAbstract != null && publicationAbstract.hasContent();
+  }
+
+  /// 同步摘要（由仓储层调用）。
+  ///
+  /// **包私有方法**：仅供 Repository 层调用，用于从数据库加载摘要后设置。
+  ///
+  /// @param publicationAbstract 摘要
+  void syncAbstract(PublicationAbstract publicationAbstract) {
+    this.publicationAbstract = publicationAbstract;
   }
 
   // ========== 便捷访问器 ==========
