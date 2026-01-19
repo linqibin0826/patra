@@ -9,13 +9,17 @@ import static org.mockito.Mockito.when;
 
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import com.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;
-import com.patra.catalog.domain.model.vo.publication.pubmed.PubmedArticle;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.catalog.domain.model.vo.venueinstance.JournalInstanceParams;
 import com.patra.catalog.domain.port.gateway.VenueInstanceGateway;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.infra.adapter.batch.publication.cache.VenueCache;
+import com.patra.common.model.CanonicalPublication;
+import com.patra.common.model.CanonicalPublication.Identifier;
+import com.patra.common.model.CanonicalPublication.Journal;
+import com.patra.common.model.CanonicalPublication.PublicationDates;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,11 +67,11 @@ class PubmedArticleItemProcessorTest {
     @DisplayName("已存在的 PMID 应该返回 null（跳过）")
     void should_return_null_when_pmid_already_exists() throws Exception {
       // given
-      PubmedArticle article = createArticle(PMID);
+      CanonicalPublication publication = createPublication(PMID);
       when(publicationRepository.existsByPmid(PMID)).thenReturn(true);
 
       // when
-      PublicationAggregate result = processor.process(article);
+      PublicationAggregate result = processor.process(publication);
 
       // then
       assertThat(result).isNull();
@@ -78,12 +82,12 @@ class PubmedArticleItemProcessorTest {
     @DisplayName("无法匹配 Venue 时应该返回 null（跳过）")
     void should_return_null_when_venue_not_matched() throws Exception {
       // given
-      PubmedArticle article = createArticle(PMID);
+      CanonicalPublication publication = createPublication(PMID);
       when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueCache.findByPriority(any(), any())).thenReturn(Optional.empty());
 
       // when
-      PublicationAggregate result = processor.process(article);
+      PublicationAggregate result = processor.process(publication);
 
       // then
       assertThat(result).isNull();
@@ -94,7 +98,7 @@ class PubmedArticleItemProcessorTest {
     @DisplayName("成功匹配 Venue 时应该创建 PublicationAggregate")
     void should_create_publication_aggregate_when_venue_matched() throws Exception {
       // given
-      PubmedArticle article = createFullArticle();
+      CanonicalPublication publication = createFullPublication();
       when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueCache.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
@@ -104,7 +108,7 @@ class PubmedArticleItemProcessorTest {
           .thenReturn(venueInstance);
 
       // when
-      PublicationAggregate result = processor.process(article);
+      PublicationAggregate result = processor.process(publication);
 
       // then
       assertThat(result).isNotNull();
@@ -120,12 +124,12 @@ class PubmedArticleItemProcessorTest {
     @DisplayName("无 DOI 时应该只使用 PMID 创建标识符")
     void should_create_identifiers_with_pmid_only_when_no_doi() throws Exception {
       // given
-      PubmedArticle article =
-          PubmedArticle.builder()
-              .pmid(PMID)
-              .articleTitle("Test Article")
-              .nlmUniqueId(NLM_ID)
-              .pubYear(2024)
+      CanonicalPublication publication =
+          CanonicalPublication.builder()
+              .identifiers(List.of(Identifier.builder().type("pmid").value(PMID).build()))
+              .title("Test Article")
+              .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
               .build();
 
       when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
@@ -137,7 +141,7 @@ class PubmedArticleItemProcessorTest {
           .thenReturn(venueInstance);
 
       // when
-      PublicationAggregate result = processor.process(article);
+      PublicationAggregate result = processor.process(publication);
 
       // then
       assertThat(result).isNotNull();
@@ -149,12 +153,12 @@ class PubmedArticleItemProcessorTest {
     @DisplayName("应该使用出版状态转换枚举值")
     void should_convert_publication_status() throws Exception {
       // given
-      PubmedArticle article =
-          PubmedArticle.builder()
-              .pmid(PMID)
-              .articleTitle("Test Article")
-              .nlmUniqueId(NLM_ID)
-              .pubYear(2024)
+      CanonicalPublication publication =
+          CanonicalPublication.builder()
+              .identifiers(List.of(Identifier.builder().type("pmid").value(PMID).build()))
+              .title("Test Article")
+              .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
               .publicationStatus("epublish")
               .build();
 
@@ -167,7 +171,7 @@ class PubmedArticleItemProcessorTest {
           .thenReturn(venueInstance);
 
       // when
-      PublicationAggregate result = processor.process(article);
+      PublicationAggregate result = processor.process(publication);
 
       // then
       assertThat(result).isNotNull();
@@ -176,32 +180,36 @@ class PubmedArticleItemProcessorTest {
     }
   }
 
-  /// 创建简单的测试文章。
-  private PubmedArticle createArticle(String pmid) {
-    return PubmedArticle.builder()
-        .pmid(pmid)
-        .articleTitle("Test Article")
-        .nlmUniqueId(NLM_ID)
-        .pubYear(2024)
+  /// 创建简单的测试文献。
+  private CanonicalPublication createPublication(String pmid) {
+    return CanonicalPublication.builder()
+        .identifiers(List.of(Identifier.builder().type("pmid").value(pmid).build()))
+        .title("Test Article")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
         .build();
   }
 
-  /// 创建包含所有字段的测试文章。
-  private PubmedArticle createFullArticle() {
-    return PubmedArticle.builder()
-        .pmid(PMID)
-        .doi(DOI)
-        .articleTitle("Test Article Title")
-        .vernacularTitle("测试文章标题")
-        .nlmUniqueId(NLM_ID)
-        .issnPrint(ISSN)
-        .journalTitle("Test Journal")
-        .volume("10")
-        .issue("2")
-        .pubYear(2024)
-        .pubMonth(6)
-        .pubDay(15)
-        .languages(List.of("eng"))
+  /// 创建包含所有字段的测试文献。
+  private CanonicalPublication createFullPublication() {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(
+                Identifier.builder().type("pmid").value(PMID).build(),
+                Identifier.builder().type("doi").value(DOI).build()))
+        .title("Test Article Title")
+        .originalTitle("测试文章标题")
+        .journal(
+            Journal.builder()
+                .nlmUniqueId(NLM_ID)
+                .issn(ISSN)
+                .issnType("print")
+                .title("Test Journal")
+                .volume("10")
+                .issue("2")
+                .build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 6, 15)).build())
+        .language("en")
         .publicationStatus("ppublish")
         .authorsComplete(true)
         .build();
