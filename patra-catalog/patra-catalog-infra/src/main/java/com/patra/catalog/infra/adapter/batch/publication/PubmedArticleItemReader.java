@@ -1,9 +1,9 @@
 package com.patra.catalog.infra.adapter.batch.publication;
 
-import com.patra.catalog.domain.model.vo.publication.pubmed.PubmedArticle;
 import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
+import com.patra.common.model.CanonicalPublication;
 import java.net.URI;
 import java.text.NumberFormat;
 import java.time.Duration;
@@ -22,7 +22,7 @@ import org.springframework.batch.infrastructure.item.ItemStreamReader;
 /// **职责**：
 ///
 /// - 从远程 URL 流式下载 PubMed Baseline gzip 压缩文件
-/// - 解压并解析 XML，逐条返回 `PubmedArticle` 中间 DTO
+/// - 解压并解析 XML，逐条返回 `CanonicalPublication`
 /// - 支持断点续传（通过 ExecutionContext 保存/恢复进度）
 ///
 /// **流式处理特性**：
@@ -48,7 +48,7 @@ import org.springframework.batch.infrastructure.item.ItemStreamReader;
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
-public class PubmedArticleItemReader implements ItemStreamReader<PubmedArticle> {
+public class PubmedArticleItemReader implements ItemStreamReader<CanonicalPublication> {
 
   private static final String CURRENT_INDEX_KEY = "pubmed.article.current.index";
 
@@ -60,8 +60,8 @@ public class PubmedArticleItemReader implements ItemStreamReader<PubmedArticle> 
   private final String downloadUrl;
 
   private StreamingDownloadResult downloadResult;
-  private Stream<PubmedArticle> stream;
-  private Iterator<PubmedArticle> iterator;
+  private Stream<CanonicalPublication> stream;
+  private Iterator<CanonicalPublication> iterator;
   private int currentIndex = 0;
   private int skipCount = 0;
   private Instant startTime;
@@ -120,7 +120,7 @@ public class PubmedArticleItemReader implements ItemStreamReader<PubmedArticle> 
   }
 
   @Override
-  public PubmedArticle read() {
+  public CanonicalPublication read() {
     if (iterator != null && iterator.hasNext()) {
       currentIndex++;
       return iterator.next();

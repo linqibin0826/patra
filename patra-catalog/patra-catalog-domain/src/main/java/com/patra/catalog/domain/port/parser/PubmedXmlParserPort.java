@@ -1,6 +1,6 @@
 package com.patra.catalog.domain.port.parser;
 
-import com.patra.catalog.domain.model.vo.publication.pubmed.PubmedArticle;
+import com.patra.common.model.CanonicalPublication;
 import java.io.InputStream;
 import java.util.stream.Stream;
 
@@ -16,11 +16,11 @@ import java.util.stream.Stream;
 ///
 /// **返回类型说明**：
 ///
-/// 返回 `PubmedArticle` 中间 DTO 而非 `PublicationAggregate`，原因：
+/// 返回 `CanonicalPublication`（Shared Kernel 标准化模型），该模型：
 ///
-/// 1. **解耦解析与业务逻辑**：解析器只负责提取 XML 数据
-/// 2. **Venue 匹配延迟**：需要在 Processor 阶段进行 Venue 匹配
-/// 3. **批处理管道**：Reader → Processor → Writer 职责分离
+/// 1. 覆盖 ~95% PubMed DTD 元素，字段完备
+/// 2. 统一了多数据源（PubMed/EPMC/Crossref）的数据结构
+/// 3. `Journal` 内嵌对象包含 Venue 匹配所需的全部字段（nlmUniqueId、issn、issnLinking）
 ///
 /// **主要使用场景**：
 ///
@@ -38,7 +38,7 @@ public interface PubmedXmlParserPort {
   /// **注意**：
   ///
   /// - 此方法**不关闭**传入的 InputStream，由调用方负责管理
-  /// - 每个 `PubmedArticle` 对应一个 `<PubmedArticle>` XML 元素
+  /// - 每个 `CanonicalPublication` 对应一个 `<PubmedArticle>` XML 元素
   /// - 无效记录（缺少 PMID）会被跳过，不会中断流处理
   ///
   /// **使用示例**：
@@ -46,12 +46,12 @@ public interface PubmedXmlParserPort {
   /// ```java
   /// try (StreamingDownloadResult result = downloadPort.download(uri)) {
   ///     port.parse(result.inputStream())
-  ///         .forEach(article -> processArticle(article));
+  ///         .forEach(publication -> processPublication(publication));
   /// }
   /// ```
   ///
   /// @param inputStream XML 输入流（调用方负责关闭）
   /// @return 文献记录流（调用方负责关闭）
   /// @throws com.patra.catalog.domain.exception.XmlParseException 解析失败时抛出
-  Stream<PubmedArticle> parse(InputStream inputStream);
+  Stream<CanonicalPublication> parse(InputStream inputStream);
 }

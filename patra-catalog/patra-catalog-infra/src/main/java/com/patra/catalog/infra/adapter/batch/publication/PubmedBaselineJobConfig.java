@@ -1,13 +1,13 @@
 package com.patra.catalog.infra.adapter.batch.publication;
 
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
-import com.patra.catalog.domain.model.vo.publication.pubmed.PubmedArticle;
 import com.patra.catalog.domain.port.gateway.VenueInstanceGateway;
 import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.infra.adapter.batch.publication.cache.VenueCache;
+import com.patra.common.model.CanonicalPublication;
 import com.patra.starter.batch.config.BatchProperties;
 import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
 import java.util.Optional;
@@ -150,7 +150,7 @@ public class PubmedBaselineJobConfig {
 
     var stepBuilder =
         new StepBuilder("pubmedArticleProcessingStep", jobRepository)
-            .<PubmedArticle, PublicationAggregate>chunk(chunkSize, transactionManager)
+            .<CanonicalPublication, PublicationAggregate>chunk(chunkSize, transactionManager)
             .reader(pubmedArticleItemReader(null))
             .processor(pubmedArticleItemProcessor())
             .writer(publicationItemWriter())

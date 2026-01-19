@@ -97,8 +97,39 @@ public final class PubmedXmlElements {
     public static final String LANGUAGE = "Language";
     public static final String AUTHOR_LIST = "AuthorList";
     public static final String PUBLICATION_STATUS = "PublicationStatus";
+    public static final String ABSTRACT = "Abstract";
+    public static final String ABSTRACT_TEXT = "AbstractText";
+    public static final String PUBLICATION_TYPE_LIST = "PublicationTypeList";
+    public static final String PUBLICATION_TYPE = "PublicationType";
+    public static final String PAGINATION = "Pagination";
+    public static final String MEDLINE_PGN = "MedlinePgn";
 
     private Article() {}
+  }
+
+  /// 作者相关元素名称。
+  public static final class Author {
+    public static final String AUTHOR = "Author";
+    public static final String LAST_NAME = "LastName";
+    public static final String FORE_NAME = "ForeName";
+    public static final String INITIALS = "Initials";
+    public static final String SUFFIX = "Suffix";
+    public static final String COLLECTIVE_NAME = "CollectiveName";
+    public static final String AFFILIATION_INFO = "AffiliationInfo";
+    public static final String AFFILIATION = "Affiliation";
+    public static final String IDENTIFIER = "Identifier";
+
+    private Author() {}
+  }
+
+  /// MeSH 相关元素名称。
+  public static final class MeSH {
+    public static final String MESH_HEADING_LIST = "MeshHeadingList";
+    public static final String MESH_HEADING = "MeshHeading";
+    public static final String DESCRIPTOR_NAME = "DescriptorName";
+    public static final String QUALIFIER_NAME = "QualifierName";
+
+    private MeSH() {}
   }
 
   /// 日期相关元素名称。
@@ -117,6 +148,13 @@ public final class PubmedXmlElements {
     public static final String ISSN_TYPE = "IssnType";
     public static final String ID_TYPE = "IdType";
     public static final String COMPLETE_YN = "CompleteYN";
+    public static final String VALID_YN = "ValidYN";
+    public static final String EQUAL_CONTRIB = "EqualContrib";
+    public static final String MAJOR_TOPIC_YN = "MajorTopicYN";
+    public static final String UI = "UI";
+    public static final String TYPE = "Type";
+    public static final String SOURCE = "Source";
+    public static final String LABEL = "Label";
 
     // ISSN Type 属性值
     public static final String ISSN_TYPE_PRINT = "Print";
@@ -126,6 +164,9 @@ public final class PubmedXmlElements {
     public static final String ID_TYPE_DOI = "doi";
     public static final String ID_TYPE_PMC = "pmc";
     public static final String ID_TYPE_PUBMED = "pubmed";
+
+    // Author Identifier Source 属性值
+    public static final String SOURCE_ORCID = "ORCID";
 
     private Attribute() {}
   }
