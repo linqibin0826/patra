@@ -1,9 +1,10 @@
 -- ============================================================
 -- Patra Catalog 数据库 - Venue 聚合表 DDL
 -- ============================================================
--- 设计阶段: CQRS 最小聚合设计
+-- 版本: V1.0.0
+-- 领域: Venue 领域
+-- 设计阶段: 阶段 3 - SQL DDL 生成
 -- 创建日期: 2025-01-18
--- 修改日期: 2025-12-11
 -- 设计范围: Venue 聚合根（最小化）及关联数据表
 -- 作者: Patra Lin
 -- MySQL 版本: 8.0+
@@ -27,7 +28,6 @@
 -- 5. cat_venue_mesh (MeSH主题，1:N) - Serfile扩展
 -- 6. cat_venue_relation (期刊关联，1:N) - Serfile扩展
 -- 7. cat_venue_indexing_history (索引历史，1:N) - Serfile扩展
--- 8. cat_venue_rating (期刊评级，独立聚合根) - JCR/中科院分区等
 --
 -- **cat_venue JSON 嵌入式值对象**:
 -- - publication_profile: 出版概况（缩写标题、备选标题、主页 URL、宿主机构、国家代码）
