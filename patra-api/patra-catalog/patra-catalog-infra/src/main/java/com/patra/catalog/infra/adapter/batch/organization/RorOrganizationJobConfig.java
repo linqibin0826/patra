@@ -96,7 +96,8 @@ public class RorOrganizationJobConfig {
 
     var stepBuilder =
         new StepBuilder("rorOrganizationImportStep", jobRepository)
-            .<OrganizationAggregate, OrganizationAggregate>chunk(chunkSize, transactionManager)
+            .<OrganizationAggregate, OrganizationAggregate>chunk(chunkSize)
+            .transactionManager(transactionManager)
             .reader(rorOrganizationItemReader(null, null))
             .writer(rorOrganizationItemWriter);
 

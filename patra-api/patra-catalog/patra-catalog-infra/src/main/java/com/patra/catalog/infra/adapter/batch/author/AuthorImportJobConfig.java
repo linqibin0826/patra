@@ -106,7 +106,8 @@ public class AuthorImportJobConfig {
 
     var stepBuilder =
         new StepBuilder("authorImportStep", jobRepository)
-            .<AuthorAggregate, AuthorAggregate>chunk(chunkSize, transactionManager)
+            .<AuthorAggregate, AuthorAggregate>chunk(chunkSize)
+            .transactionManager(transactionManager)
             .reader(authorItemReader(null))
             .writer(authorItemWriter);
 

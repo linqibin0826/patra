@@ -107,7 +107,8 @@ public class MeshScrJobConfig {
 
     var stepBuilder =
         new StepBuilder("meshScrImportStep", jobRepository)
-            .<MeshScrAggregate, MeshScrAggregate>chunk(chunkSize, transactionManager)
+            .<MeshScrAggregate, MeshScrAggregate>chunk(chunkSize)
+            .transactionManager(transactionManager)
             .reader(meshScrItemReader(null, null))
             .writer(meshScrItemWriter);
 
