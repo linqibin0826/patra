@@ -3,11 +3,17 @@ package com.patra.catalog.infra.adapter.batch.publication;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.catalog.domain.port.gateway.VenueInstanceGateway;
+import com.patra.catalog.domain.port.lookup.FunderLookupPort;
 import com.patra.catalog.domain.port.lookup.LanguageLookupPort;
 import com.patra.catalog.domain.port.lookup.VenueLookupPort;
 import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.starter.batch.config.BatchProperties;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,7 +43,13 @@ class PubmedBaselineJobConfigTest {
   @Mock private PublicationRepository publicationRepository;
   @Mock private VenueLookupPort venueLookupPort;
   @Mock private LanguageLookupPort languageLookupPort;
+  @Mock private FunderLookupPort funderLookupPort;
   @Mock private VenueInstanceGateway venueInstanceGateway;
+  @Mock private PublicationMeshHeadingDao meshHeadingDao;
+  @Mock private PublicationMeshQualifierDao meshQualifierDao;
+  @Mock private PublicationKeywordDao keywordDao;
+  @Mock private PublicationFundingDao fundingDao;
+  @Mock private PublicationTypeDao typeDao;
   @Mock private BatchProperties batchProperties;
 
   private PubmedBaselineJobConfig jobConfig;
@@ -52,6 +64,11 @@ class PubmedBaselineJobConfigTest {
             pubmedXmlParserPort,
             publicationRepository,
             venueInstanceGateway,
+            meshHeadingDao,
+            meshQualifierDao,
+            keywordDao,
+            fundingDao,
+            typeDao,
             batchProperties,
             Optional.empty());
   }
@@ -67,7 +84,8 @@ class PubmedBaselineJobConfigTest {
       PubmedArticleItemReader reader =
           jobConfig.pubmedArticleItemReader("https://example.com/test.xml.gz");
       PubmedArticleItemProcessor processor =
-          jobConfig.pubmedArticleItemProcessor(venueLookupPort, languageLookupPort);
+          jobConfig.pubmedArticleItemProcessor(
+              venueLookupPort, languageLookupPort, funderLookupPort);
       Step step = jobConfig.pubmedArticleProcessingStep(reader, processor);
 
       // when
@@ -90,7 +108,8 @@ class PubmedBaselineJobConfigTest {
       PubmedArticleItemReader reader =
           jobConfig.pubmedArticleItemReader("https://example.com/test.xml.gz");
       PubmedArticleItemProcessor processor =
-          jobConfig.pubmedArticleItemProcessor(venueLookupPort, languageLookupPort);
+          jobConfig.pubmedArticleItemProcessor(
+              venueLookupPort, languageLookupPort, funderLookupPort);
 
       // when
       Step step = jobConfig.pubmedArticleProcessingStep(reader, processor);
@@ -128,7 +147,8 @@ class PubmedBaselineJobConfigTest {
     void should_create_item_processor() {
       // when - 通过方法参数传入 @StepScope beans
       PubmedArticleItemProcessor processor =
-          jobConfig.pubmedArticleItemProcessor(venueLookupPort, languageLookupPort);
+          jobConfig.pubmedArticleItemProcessor(
+              venueLookupPort, languageLookupPort, funderLookupPort);
 
       // then
       assertThat(processor).isNotNull();
@@ -143,7 +163,9 @@ class PubmedBaselineJobConfigTest {
     @DisplayName("应该创建 PublicationItemWriter")
     void should_create_item_writer() {
       // when
-      PublicationItemWriter writer = jobConfig.publicationItemWriter();
+      PublicationItemWriter writer =
+          jobConfig.publicationItemWriter(
+              meshHeadingDao, meshQualifierDao, keywordDao, fundingDao, typeDao);
 
       // then
       assertThat(writer).isNotNull();

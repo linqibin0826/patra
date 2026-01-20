@@ -11,17 +11,30 @@ import static org.mockito.Mockito.when;
 
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import com.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;
+import com.patra.catalog.domain.model.enums.PublicationMedium;
+import com.patra.catalog.domain.model.vo.publication.PublicationAbstract;
+import com.patra.catalog.domain.model.vo.publication.PublicationIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.catalog.domain.model.vo.venueinstance.JournalInstanceParams;
 import com.patra.catalog.domain.port.gateway.VenueInstanceGateway;
+import com.patra.catalog.domain.port.lookup.FunderLookupPort;
 import com.patra.catalog.domain.port.lookup.LanguageLookupPort;
 import com.patra.catalog.domain.port.lookup.VenueLookupPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.common.model.CanonicalPublication;
+import com.patra.common.model.CanonicalPublication.Abstract;
+import com.patra.common.model.CanonicalPublication.AbstractSection;
+import com.patra.common.model.CanonicalPublication.DescriptorName;
+import com.patra.common.model.CanonicalPublication.FundingInfo;
 import com.patra.common.model.CanonicalPublication.Identifier;
 import com.patra.common.model.CanonicalPublication.Journal;
+import com.patra.common.model.CanonicalPublication.Keyword;
+import com.patra.common.model.CanonicalPublication.KeywordSet;
+import com.patra.common.model.CanonicalPublication.MeshHeading;
 import com.patra.common.model.CanonicalPublication.PublicationDates;
+import com.patra.common.model.CanonicalPublication.PublicationType;
+import com.patra.common.model.CanonicalPublication.QualifierName;
 import com.patra.common.model.enums.PublicationIdentifierType;
 import java.time.LocalDate;
 import java.util.List;
@@ -50,6 +63,8 @@ class PubmedArticleItemProcessorTest {
 
   @Mock private LanguageLookupPort languageLookupPort;
 
+  @Mock private FunderLookupPort funderLookupPort;
+
   private PubmedArticleItemProcessor processor;
 
   private static final String PMID = "12345678";
@@ -58,15 +73,30 @@ class PubmedArticleItemProcessorTest {
   private static final String ISSN = "1234-5678";
   private static final Long VENUE_ID = 1L;
   private static final Long VENUE_INSTANCE_ID = 100L;
+  private static final Long ORG_ID_NIH = 1001L;
+  private static final Long ORG_ID_NSFC = 1002L;
 
   @BeforeEach
   void setUp() {
     // 配置默认的语言查找行为（使用 lenient 避免 UnnecessaryStubbingException）
     lenient().when(languageLookupPort.resolve(anyString())).thenReturn("en");
 
+    // 配置默认的资助机构查找行为
+    lenient()
+        .when(funderLookupPort.findByPriority(eq("100000002"), any()))
+        .thenReturn(Optional.of(ORG_ID_NIH));
+    lenient()
+        .when(funderLookupPort.findByPriority(eq("501100001809"), any()))
+        .thenReturn(Optional.of(ORG_ID_NSFC));
+    lenient().when(funderLookupPort.findByPriority(eq(null), any())).thenReturn(Optional.empty());
+
     processor =
         new PubmedArticleItemProcessor(
-            publicationRepository, venueLookupPort, venueInstanceGateway, languageLookupPort);
+            publicationRepository,
+            venueLookupPort,
+            venueInstanceGateway,
+            languageLookupPort,
+            funderLookupPort);
   }
 
   @Nested
@@ -81,7 +111,7 @@ class PubmedArticleItemProcessorTest {
       when(publicationRepository.existsByPmid(PMID)).thenReturn(true);
 
       // when
-      PublicationAggregate result = processor.process(publication);
+      PublicationImportResult result = processor.process(publication);
 
       // then
       assertThat(result).isNull();
@@ -97,7 +127,7 @@ class PubmedArticleItemProcessorTest {
       when(venueLookupPort.findByPriority(any(), any())).thenReturn(Optional.empty());
 
       // when
-      PublicationAggregate result = processor.process(publication);
+      PublicationImportResult result = processor.process(publication);
 
       // then
       assertThat(result).isNull();
@@ -105,7 +135,7 @@ class PubmedArticleItemProcessorTest {
     }
 
     @Test
-    @DisplayName("成功匹配 Venue 时应该创建 PublicationAggregate")
+    @DisplayName("成功匹配 Venue 时应该创建 PublicationImportResult")
     void should_create_publication_aggregate_when_venue_matched() throws Exception {
       // given
       CanonicalPublication publication = createFullPublication();
@@ -118,16 +148,17 @@ class PubmedArticleItemProcessorTest {
           .thenReturn(venueInstance);
 
       // when
-      PublicationAggregate result = processor.process(publication);
+      PublicationImportResult result = processor.process(publication);
 
       // then
       assertThat(result).isNotNull();
-      assertThat(result.getPmid()).isEqualTo(PMID);
-      assertThat(result.getDoi()).isEqualTo(DOI);
-      assertThat(result.getTitle()).isEqualTo("Test Article Title");
-      assertThat(result.getPublicationYear()).isEqualTo(2024);
-      assertThat(result.getVenueId().value()).isEqualTo(VENUE_ID);
-      assertThat(result.getVenueInstanceId().value()).isEqualTo(VENUE_INSTANCE_ID);
+      PublicationAggregate aggregate = result.publication();
+      assertThat(aggregate.getPmid()).isEqualTo(PMID);
+      assertThat(aggregate.getDoi()).isEqualTo(DOI);
+      assertThat(aggregate.getTitle()).isEqualTo("Test Article Title");
+      assertThat(aggregate.getPublicationYear()).isEqualTo(2024);
+      assertThat(aggregate.getVenueId().value()).isEqualTo(VENUE_ID);
+      assertThat(aggregate.getVenueInstanceId().value()).isEqualTo(VENUE_INSTANCE_ID);
     }
 
     @Test
@@ -156,12 +187,127 @@ class PubmedArticleItemProcessorTest {
           .thenReturn(venueInstance);
 
       // when
-      PublicationAggregate result = processor.process(publication);
+      PublicationImportResult result = processor.process(publication);
 
       // then
       assertThat(result).isNotNull();
-      assertThat(result.getPmid()).isEqualTo(PMID);
-      assertThat(result.getDoi()).isNull();
+      PublicationAggregate aggregate = result.publication();
+      assertThat(aggregate.getPmid()).isEqualTo(PMID);
+      assertThat(aggregate.getDoi()).isNull();
+    }
+
+    @Test
+    @DisplayName("应该正确映射纯文本摘要")
+    void should_map_plain_text_abstract() throws Exception {
+      // given
+      CanonicalPublication publication = createPublicationWithPlainTextAbstract();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      PublicationAggregate aggregate = result.publication();
+      assertThat(aggregate.hasAbstract()).isTrue();
+      PublicationAbstract abstractContent = aggregate.getPublicationAbstract();
+      assertThat(abstractContent.plainText()).isEqualTo("This is a test abstract content.");
+      assertThat(abstractContent.copyright()).isEqualTo("Copyright 2024");
+      assertThat(abstractContent.isStructured()).isFalse();
+    }
+
+    @Test
+    @DisplayName("应该正确映射结构化摘要")
+    void should_map_structured_abstract() throws Exception {
+      // given
+      CanonicalPublication publication = createPublicationWithStructuredAbstract();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      PublicationAggregate aggregate = result.publication();
+      assertThat(aggregate.hasAbstract()).isTrue();
+      PublicationAbstract abstractContent = aggregate.getPublicationAbstract();
+      assertThat(abstractContent.isStructured()).isTrue();
+      assertThat(abstractContent.getSection("BACKGROUND")).isPresent();
+      assertThat(abstractContent.getSection("METHODS")).isPresent();
+      assertThat(abstractContent.getSection("RESULTS")).isPresent();
+      assertThat(abstractContent.getSection("CONCLUSIONS")).isPresent();
+    }
+
+    @Test
+    @DisplayName("应该提取扩展标识符 (PMC, PII)")
+    void should_extract_extended_identifiers() throws Exception {
+      // given
+      CanonicalPublication publication = createPublicationWithExtendedIdentifiers();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      PublicationAggregate aggregate = result.publication();
+      List<PublicationIdentifier> extIds = aggregate.getExtendedIdentifiers();
+      assertThat(extIds).hasSize(2);
+      assertThat(extIds).anyMatch(id -> id.isPmc() && id.value().equals("PMC1234567"));
+      assertThat(extIds).anyMatch(id -> id.type() == PublicationIdentifierType.PII);
+    }
+
+    @Test
+    @DisplayName("应该正确映射 PublicationMedium")
+    void should_map_media_type() throws Exception {
+      // given
+      CanonicalPublication publication = createPublicationWithPublicationMedium();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.publication().getMediaType()).isEqualTo(PublicationMedium.ELECTRONIC);
+    }
+
+    @Test
+    @DisplayName("应该正确填充 numberOfReferences 和 conflictOfInterest")
+    void should_fill_number_of_references_and_conflict_of_interest() throws Exception {
+      // given
+      CanonicalPublication publication = createPublicationWithMetadata();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      PublicationAggregate aggregate = result.publication();
+      assertThat(aggregate.getNumberOfReferences()).isEqualTo(42);
+      assertThat(aggregate.getConflictOfInterest())
+          .isEqualTo("The authors declare no conflict of interest.");
     }
 
     @Test
@@ -191,12 +337,223 @@ class PubmedArticleItemProcessorTest {
           .thenReturn(venueInstance);
 
       // when
-      PublicationAggregate result = processor.process(publication);
+      PublicationImportResult result = processor.process(publication);
 
       // then
       assertThat(result).isNotNull();
-      assertThat(result.getPublicationStatus()).isNotNull();
-      assertThat(result.getPublicationStatus().getCode()).isEqualTo("epublish");
+      assertThat(result.publication().getPublicationStatus()).isNotNull();
+      assertThat(result.publication().getPublicationStatus().getCode()).isEqualTo("epublish");
+    }
+
+    @Test
+    @DisplayName("应该正确处理 MeSH 标引数据")
+    void should_process_mesh_headings() throws Exception {
+      // given
+      CanonicalPublication publication = createPublicationWithMeshHeadings();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasMeshHeadings()).isTrue();
+      assertThat(result.meshHeadings()).hasSize(1);
+
+      var heading = result.meshHeadings().getFirst();
+      assertThat(heading.descriptorUi()).isEqualTo("D000001");
+      assertThat(heading.majorTopic()).isTrue();
+      assertThat(heading.hasQualifiers()).isTrue();
+      assertThat(heading.qualifiers()).hasSize(1);
+      assertThat(heading.qualifiers().getFirst().qualifierUi()).isEqualTo("Q000379");
+    }
+
+    @Test
+    @DisplayName("无 MeSH 数据时 meshHeadings 应该为空列表")
+    void should_return_empty_mesh_headings_when_no_mesh_data() throws Exception {
+      // given
+      CanonicalPublication publication = createFullPublication();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasMeshHeadings()).isFalse();
+      assertThat(result.meshHeadings()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("应该正确处理关键词数据")
+    void should_process_keywords() throws Exception {
+      // given
+      CanonicalPublication publication = createPublicationWithKeywords();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasKeywords()).isTrue();
+      assertThat(result.keywords()).hasSize(3);
+
+      var keyword1 = result.keywords().get(0);
+      assertThat(keyword1.source()).isEqualTo("author");
+      assertThat(keyword1.term()).isEqualTo("machine learning");
+      assertThat(keyword1.majorTopic()).isTrue();
+      assertThat(keyword1.keywordOrder()).isEqualTo(1);
+
+      var keyword2 = result.keywords().get(1);
+      assertThat(keyword2.source()).isEqualTo("author");
+      assertThat(keyword2.term()).isEqualTo("deep learning");
+      assertThat(keyword2.majorTopic()).isFalse();
+
+      var keyword3 = result.keywords().get(2);
+      assertThat(keyword3.source()).isEqualTo("publisher");
+      assertThat(keyword3.term()).isEqualTo("artificial intelligence");
+    }
+
+    @Test
+    @DisplayName("无关键词数据时 keywords 应该为空列表")
+    void should_return_empty_keywords_when_no_keyword_data() throws Exception {
+      // given
+      CanonicalPublication publication = createFullPublication();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasKeywords()).isFalse();
+      assertThat(result.keywords()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("应该正确处理资助信息数据")
+    void should_process_funding() throws Exception {
+      // given
+      CanonicalPublication publication = createPublicationWithFunding();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasFunding()).isTrue();
+      assertThat(result.funding()).hasSize(2);
+
+      var funding1 = result.funding().get(0);
+      assertThat(funding1.organizationId()).isEqualTo(ORG_ID_NIH);
+      assertThat(funding1.grantId()).isEqualTo("R01AI123456");
+      assertThat(funding1.funderNameRaw()).isEqualTo("National Institutes of Health");
+      assertThat(funding1.funderAcronymRaw()).isEqualTo("NIH");
+      assertThat(funding1.funderIdentifierRaw()).isEqualTo("100000002");
+      assertThat(funding1.countryRaw()).isEqualTo("United States");
+      assertThat(funding1.fundingOrder()).isEqualTo(1);
+      assertThat(funding1.provenanceCode()).isEqualTo("PUBMED");
+
+      var funding2 = result.funding().get(1);
+      assertThat(funding2.organizationId()).isEqualTo(ORG_ID_NSFC);
+      assertThat(funding2.grantId()).isEqualTo("81970001");
+      assertThat(funding2.funderNameRaw())
+          .isEqualTo("National Natural Science Foundation of China");
+      assertThat(funding2.funderAcronymRaw()).isEqualTo("NSFC");
+      assertThat(funding2.countryRaw()).isEqualTo("China");
+    }
+
+    @Test
+    @DisplayName("无资助信息数据时 funding 应该为空列表")
+    void should_return_empty_funding_when_no_funding_data() throws Exception {
+      // given
+      CanonicalPublication publication = createFullPublication();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasFunding()).isFalse();
+      assertThat(result.funding()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("应该正确处理出版类型数据")
+    void should_process_publication_types() throws Exception {
+      // given
+      CanonicalPublication publication = createPublicationWithTypes();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasPublicationTypes()).isTrue();
+      assertThat(result.publicationTypes()).hasSize(2);
+
+      var type1 = result.publicationTypes().get(0);
+      assertThat(type1.typeId()).isEqualTo("D016428");
+      assertThat(type1.typeValue()).isEqualTo("Journal Article");
+      assertThat(type1.vocabularySource()).isEqualTo("MeSH");
+      assertThat(type1.typeOrder()).isEqualTo(1);
+
+      var type2 = result.publicationTypes().get(1);
+      assertThat(type2.typeId()).isEqualTo("D016454");
+      assertThat(type2.typeValue()).isEqualTo("Review");
+      assertThat(type2.vocabularySource()).isEqualTo("MeSH");
+    }
+
+    @Test
+    @DisplayName("无出版类型数据时 publicationTypes 应该为空列表")
+    void should_return_empty_publication_types_when_no_type_data() throws Exception {
+      // given
+      CanonicalPublication publication = createFullPublication();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasPublicationTypes()).isFalse();
+      assertThat(result.publicationTypes()).isEmpty();
     }
   }
 
@@ -236,6 +593,100 @@ class PubmedArticleItemProcessorTest {
         .build();
   }
 
+  /// 创建包含纯文本摘要的测试文献。
+  private CanonicalPublication createPublicationWithPlainTextAbstract() {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
+        .title("Test Article")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .abstractContent(
+            Abstract.builder()
+                .text("This is a test abstract content.")
+                .copyright("Copyright 2024")
+                .build())
+        .build();
+  }
+
+  /// 创建包含结构化摘要的测试文献。
+  private CanonicalPublication createPublicationWithStructuredAbstract() {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
+        .title("Test Article")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .abstractContent(
+            Abstract.builder()
+                .sections(
+                    List.of(
+                        AbstractSection.builder()
+                            .label("BACKGROUND")
+                            .content("Background content.")
+                            .build(),
+                        AbstractSection.builder()
+                            .label("METHODS")
+                            .content("Methods content.")
+                            .build(),
+                        AbstractSection.builder()
+                            .label("RESULTS")
+                            .content("Results content.")
+                            .build(),
+                        AbstractSection.builder()
+                            .label("CONCLUSIONS")
+                            .content("Conclusions content.")
+                            .build()))
+                .build())
+        .build();
+  }
+
+  /// 创建包含扩展标识符的测试文献。
+  private CanonicalPublication createPublicationWithExtendedIdentifiers() {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(
+                Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build(),
+                Identifier.builder().type(PublicationIdentifierType.DOI).value(DOI).build(),
+                Identifier.builder()
+                    .type(PublicationIdentifierType.PMC)
+                    .value("PMC1234567")
+                    .build(),
+                Identifier.builder()
+                    .type(PublicationIdentifierType.PII)
+                    .value("S0140-6736(21)00123-4")
+                    .build()))
+        .title("Test Article")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .build();
+  }
+
+  /// 创建包含 PublicationMedium 的测试文献。
+  private CanonicalPublication createPublicationWithPublicationMedium() {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
+        .title("Test Article")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .mediaType("electronic")
+        .build();
+  }
+
+  /// 创建包含元数据的测试文献。
+  private CanonicalPublication createPublicationWithMetadata() {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
+        .title("Test Article")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .numberOfReferences(42)
+        .conflictOfInterestStatement("The authors declare no conflict of interest.")
+        .build();
+  }
+
   /// 创建测试用的 VenueInstance。
   private VenueInstanceAggregate createVenueInstance() {
     // 使用 restore 模拟已持久化的实例
@@ -253,5 +704,112 @@ class PubmedArticleItemProcessorTest {
         null,
         null,
         0L);
+  }
+
+  /// 创建包含 MeSH 标引的测试文献。
+  private CanonicalPublication createPublicationWithMeshHeadings() {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
+        .title("Test Article with MeSH")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .meshHeadings(
+            List.of(
+                MeshHeading.builder()
+                    .descriptorName(
+                        DescriptorName.builder()
+                            .ui("D000001")
+                            .term("Calcimycin")
+                            .majorTopic(true)
+                            .build())
+                    .qualifierNames(
+                        List.of(
+                            QualifierName.builder()
+                                .ui("Q000379")
+                                .term("methods")
+                                .majorTopic(false)
+                                .build()))
+                    .build()))
+        .build();
+  }
+
+  /// 创建包含关键词的测试文献。
+  private CanonicalPublication createPublicationWithKeywords() {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
+        .title("Test Article with Keywords")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .keywords(
+            List.of(
+                KeywordSet.builder()
+                    .source("author")
+                    .keywords(
+                        List.of(
+                            Keyword.builder().term("machine learning").majorTopic(true).build(),
+                            Keyword.builder().term("deep learning").majorTopic(false).build()))
+                    .build(),
+                KeywordSet.builder()
+                    .source("publisher")
+                    .keywords(
+                        List.of(
+                            Keyword.builder()
+                                .term("artificial intelligence")
+                                .majorTopic(false)
+                                .build()))
+                    .build()))
+        .build();
+  }
+
+  /// 创建包含资助信息的测试文献。
+  private CanonicalPublication createPublicationWithFunding() {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
+        .title("Test Article with Funding")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .funding(
+            List.of(
+                FundingInfo.builder()
+                    .grantId("R01AI123456")
+                    .funderName("National Institutes of Health")
+                    .funderAcronym("NIH")
+                    .funderIdentifier("100000002")
+                    .country("United States")
+                    .build(),
+                FundingInfo.builder()
+                    .grantId("81970001")
+                    .funderName("National Natural Science Foundation of China")
+                    .funderAcronym("NSFC")
+                    .funderIdentifier("501100001809")
+                    .country("China")
+                    .build()))
+        .build();
+  }
+
+  /// 创建包含出版类型的测试文献。
+  private CanonicalPublication createPublicationWithTypes() {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
+        .title("Test Article with Publication Types")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .publicationTypes(
+            List.of(
+                PublicationType.builder()
+                    .id("D016428")
+                    .value("Journal Article")
+                    .vocabularySource("MeSH")
+                    .build(),
+                PublicationType.builder()
+                    .id("D016454")
+                    .value("Review")
+                    .vocabularySource("MeSH")
+                    .build()))
+        .build();
   }
 }

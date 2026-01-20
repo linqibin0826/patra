@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
-import com.patra.catalog.domain.model.enums.MediaType;
 import com.patra.catalog.domain.model.enums.OaStatus;
+import com.patra.catalog.domain.model.enums.PublicationMedium;
 import com.patra.catalog.domain.model.enums.PublicationStatus;
 import com.patra.catalog.domain.model.vo.publication.LanguageInfo;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
@@ -75,7 +75,7 @@ class PublicationRepositoryAdapterIT {
         null, // originalTitle
         LanguageInfo.of("English", "en-US"),
         PublicationStatus.PPUBLISH,
-        MediaType.PRINT,
+        PublicationMedium.PRINT,
         year,
         true, // authorsComplete
         10, // numberOfReferences
@@ -95,7 +95,7 @@ class PublicationRepositoryAdapterIT {
         null,
         LanguageInfo.of("English", "en-US"),
         PublicationStatus.PPUBLISH,
-        MediaType.PRINT,
+        PublicationMedium.PRINT,
         year,
         true,
         0,
@@ -582,7 +582,7 @@ class PublicationRepositoryAdapterIT {
               "Chinese Publication Title",
               LanguageInfo.of("Chinese", "zh-CN"),
               PublicationStatus.PPUBLISH,
-              MediaType.ELECTRONIC,
+              PublicationMedium.ELECTRONIC,
               2024,
               true,
               5,
