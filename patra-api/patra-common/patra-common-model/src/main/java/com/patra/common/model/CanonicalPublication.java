@@ -1,6 +1,7 @@
 package com.patra.common.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import java.time.LocalDate;
 import java.util.List;
 import lombok.Builder;
@@ -163,8 +164,9 @@ public class CanonicalPublication {
 
     /// 标识符类型。
     ///
-    /// 常见值：doi, pmid, pmc, pii, arxiv, isbn, issn, orcid, ror。
-    String type;
+    /// 使用 `PublicationIdentifierType` 枚举，支持 PMID、DOI、PMC、PII、ARXIV 等。
+    /// JSON 序列化时按 code 值输出（如 `"doi"`、`"pmid"`）。
+    PublicationIdentifierType type;
 
     /// 标识符的实际值。
     String value;
