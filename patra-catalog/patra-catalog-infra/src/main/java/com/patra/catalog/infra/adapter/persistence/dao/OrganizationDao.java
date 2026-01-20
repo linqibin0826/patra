@@ -65,4 +65,12 @@ public interface OrganizationDao extends JpaRepository<OrganizationEntity, Long>
   /// @return 状态代码到数量的列表（每行：[status, count]）
   @Query("SELECT o.status, COUNT(o) FROM OrganizationEntity o GROUP BY o.status")
   List<Object[]> countByStatus();
+
+  /// 根据显示名称精确查找机构。
+  ///
+  /// 用于资助机构名称匹配场景。
+  ///
+  /// @param displayName 机构显示名称
+  /// @return 机构实体
+  Optional<OrganizationEntity> findByDisplayName(String displayName);
 }

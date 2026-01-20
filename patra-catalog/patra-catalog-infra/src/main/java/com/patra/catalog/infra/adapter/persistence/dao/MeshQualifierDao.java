@@ -57,4 +57,10 @@ public interface MeshQualifierDao extends JpaRepository<MeshQualifierEntity, Lon
   /// @param names 限定词名称列表
   /// @return 限定词实体列表
   List<MeshQualifierEntity> findAllByNameIn(Collection<String> names);
+
+  /// 按 UI 列表批量查询限定词。
+  ///
+  /// @param uis 限定词 UI 列表
+  /// @return 限定词实体列表
+  List<MeshQualifierEntity> findAllByUiIn(Collection<String> uis);
 }

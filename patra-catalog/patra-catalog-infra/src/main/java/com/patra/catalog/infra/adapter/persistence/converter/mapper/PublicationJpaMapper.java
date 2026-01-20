@@ -8,10 +8,10 @@ import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import com.patra.catalog.domain.model.enums.AbstractType;
 import com.patra.catalog.domain.model.enums.DatePrecision;
 import com.patra.catalog.domain.model.enums.IndexingStatus;
-import com.patra.catalog.domain.model.enums.MediaType;
 import com.patra.catalog.domain.model.enums.OaLocationType;
 import com.patra.catalog.domain.model.enums.OaStatus;
 import com.patra.catalog.domain.model.enums.PublicationDateType;
+import com.patra.catalog.domain.model.enums.PublicationMedium;
 import com.patra.catalog.domain.model.enums.PublicationStatus;
 import com.patra.catalog.domain.model.enums.QualityLevel;
 import com.patra.catalog.domain.model.enums.QualityScore;
@@ -129,7 +129,7 @@ public abstract class PublicationJpaMapper {
         languageInfo,
         null, // publicationAbstract 单独加载
         stringToPublicationStatus(entity.getPublicationStatus()),
-        stringToMediaType(entity.getMediaType()),
+        stringToPublicationMedium(entity.getMediaType()),
         entity.getPublicationYear(),
         entity.getIsOa(),
         stringToOaStatus(entity.getOaStatus()),
@@ -219,15 +219,15 @@ public abstract class PublicationJpaMapper {
     return status != null ? PublicationStatus.valueOf(status) : null;
   }
 
-  /// 将 MediaType 枚举转换为 String。
+  /// 将 PublicationMedium 枚举转换为 String。
   @Named("mediaTypeToString")
-  String mediaTypeToString(MediaType type) {
+  String mediaTypeToString(PublicationMedium type) {
     return type != null ? type.name() : null;
   }
 
-  /// 将 String 转换为 MediaType 枚举。
-  MediaType stringToMediaType(String type) {
-    return type != null ? MediaType.valueOf(type) : null;
+  /// 将 String 转换为 PublicationMedium 枚举。
+  PublicationMedium stringToPublicationMedium(String type) {
+    return type != null ? PublicationMedium.valueOf(type) : null;
   }
 
   /// 将 OaStatus 枚举转换为 String。

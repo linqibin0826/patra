@@ -3,6 +3,7 @@ package com.patra.catalog.infra.adapter.persistence.dao;
 import com.patra.catalog.infra.adapter.persistence.entity.OrganizationExternalIdEntity;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /// 机构外部标识符 JPA Repository。
@@ -35,4 +36,20 @@ public interface OrganizationExternalIdDao
   ///
   /// @param orgIds 机构 ID 列表
   void deleteAllByOrgIdIn(Collection<Long> orgIds);
+
+  /// 按标识符类型和首选值查询。
+  ///
+  /// 用于根据 FundRef ID 或 ROR ID 查找机构。
+  ///
+  /// @param idType 标识符类型（如 "FUNDREF"、"ROR"）
+  /// @param preferredValue 首选标识符值
+  /// @return 外部标识符实体
+  Optional<OrganizationExternalIdEntity> findByIdTypeAndPreferredValue(
+      String idType, String preferredValue);
+
+  /// 按标识符类型批量查询。
+  ///
+  /// @param idType 标识符类型
+  /// @return 该类型的所有外部标识符实体列表
+  List<OrganizationExternalIdEntity> findAllByIdType(String idType);
 }
