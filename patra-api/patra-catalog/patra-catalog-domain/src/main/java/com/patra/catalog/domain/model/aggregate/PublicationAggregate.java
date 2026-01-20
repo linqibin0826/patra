@@ -2,8 +2,8 @@ package com.patra.catalog.domain.model.aggregate;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
-import com.patra.catalog.domain.model.enums.MediaType;
 import com.patra.catalog.domain.model.enums.OaStatus;
+import com.patra.catalog.domain.model.enums.PublicationMedium;
 import com.patra.catalog.domain.model.enums.PublicationStatus;
 import com.patra.catalog.domain.model.vo.publication.LanguageInfo;
 import com.patra.catalog.domain.model.vo.publication.PublicationAbstract;
@@ -119,7 +119,7 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   private final PublicationStatus publicationStatus;
 
   /// 媒介类型
-  private final MediaType mediaType;
+  private final PublicationMedium mediaType;
 
   /// 出版年份（冗余优化 - 最高频查询字段）
   private final Integer publicationYear;
@@ -184,7 +184,7 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
       LanguageInfo languageInfo,
       PublicationAbstract publicationAbstract,
       PublicationStatus publicationStatus,
-      MediaType mediaType,
+      PublicationMedium mediaType,
       Integer publicationYear,
       Boolean isOa,
       OaStatus oaStatus,
@@ -260,7 +260,7 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
       String originalTitle,
       LanguageInfo languageInfo,
       PublicationStatus publicationStatus,
-      MediaType mediaType,
+      PublicationMedium mediaType,
       Integer publicationYear,
       Boolean authorsComplete,
       Integer numberOfReferences,
@@ -328,7 +328,7 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
       LanguageInfo languageInfo,
       PublicationAbstract publicationAbstract,
       PublicationStatus publicationStatus,
-      MediaType mediaType,
+      PublicationMedium mediaType,
       Integer publicationYear,
       Boolean isOa,
       OaStatus oaStatus,
@@ -460,6 +460,20 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
     return true;
   }
 
+  /// 批量添加扩展标识符。
+  ///
+  /// 遍历列表并调用 {@link #addIdentifier}，跳过重复的标识符。
+  ///
+  /// @param identifiers 要添加的标识符列表
+  public void addExtendedIdentifiers(List<PublicationIdentifier> identifiers) {
+    if (identifiers == null || identifiers.isEmpty()) {
+      return;
+    }
+    for (PublicationIdentifier id : identifiers) {
+      addIdentifier(id);
+    }
+  }
+
   /// 按类型获取标识符。
   ///
   /// @param type 标识符类型
@@ -500,11 +514,11 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
 
   // ========== 摘要管理 ==========
 
-  /// 更新文献摘要。
+  /// 附加摘要到文献。
   ///
-  /// @param newAbstract 新的摘要（可为 null 表示清除摘要）
-  public void updateAbstract(PublicationAbstract newAbstract) {
-    this.publicationAbstract = newAbstract;
+  /// @param abstractContent 摘要内容（可为 null 表示清除摘要）
+  public void attachAbstract(PublicationAbstract abstractContent) {
+    this.publicationAbstract = abstractContent;
   }
 
   /// 判断是否有摘要。

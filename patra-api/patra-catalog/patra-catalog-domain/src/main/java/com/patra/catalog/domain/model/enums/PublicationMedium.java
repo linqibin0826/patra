@@ -3,20 +3,20 @@ package com.patra.catalog.domain.model.enums;
 import cn.hutool.core.lang.Assert;
 import lombok.Getter;
 
-/// 文献媒介类型枚举。
+/// 出版媒介枚举。
 ///
 /// 字段映射：cat_publication.media_type
 ///
 /// 类型说明：
 ///
 /// - **PRINT** - 仅纸质版
-///   - **ELECTRONIC** - 仅电子版
-///   - **BOTH** - 纸质+电子双版本
+/// - **ELECTRONIC** - 仅电子版
+/// - **BOTH** - 纸质+电子双版本
 ///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
-public enum MediaType {
+public enum PublicationMedium {
 
   /// 仅纸质版
   PRINT("print", "Print"),
@@ -30,7 +30,7 @@ public enum MediaType {
   private final String code;
   private final String description;
 
-  MediaType(String code, String description) {
+  PublicationMedium(String code, String description) {
     this.code = code;
     this.description = description;
   }
@@ -40,10 +40,10 @@ public enum MediaType {
   /// @param value 代码值（如 "print", "ELECTRONIC", "both"）
   /// @return 对应的枚举值
   /// @throws IllegalArgumentException 如果代码值无效
-  public static MediaType fromCode(String value) {
+  public static PublicationMedium fromCode(String value) {
     Assert.notBlank(value, "媒介类型代码不能为空");
     String normalized = value.trim().toLowerCase();
-    for (MediaType type : values()) {
+    for (PublicationMedium type : values()) {
       if (type.code.equals(normalized)) {
         return type;
       }
