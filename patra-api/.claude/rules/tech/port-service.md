@@ -10,6 +10,7 @@
 |------|--------|--------|----------|----------|------|
 | Repository | Domain | Infra | `{Entity}Repository` | `{Entity}RepositoryAdapter` | 聚合根持久化 |
 | Driven Port | Domain | Infra | `{Function}Port` | `{Function}Adapter` | 被驱动端口（外部调用） |
+| LookupPort | Domain | Infra | `{Entity}LookupPort` | `Default{Entity}LookupAdapter` + `Caching{Entity}LookupDecorator` + `Batch{Entity}LookupAdapter` | 查找端口（带缓存装饰器） |
 | Driving Port | Domain | App | `{Entity}Gateway` | `{Entity}GatewayImpl` | 驱动端口（调用应用层） |
 | QueryService | - | App | 无接口 | `{Domain}QueryService` | CQRS 查询服务 |
 
@@ -60,6 +61,55 @@ Domain 层                          Infra 层
 **位置**：
 - 接口：`{service}-domain/src/main/java/.../domain/port/{subdir}/{Function}Port.java`
 - 实现：`{service}-infra/src/main/java/.../infra/adapter/{subdir}/{Function}Adapter.java`
+
+### LookupPort（查找端口）
+
+**职责**：定义领域层需要的实体查找能力（ID 匹配、缓存优化）
+
+**依赖方向**：Domain → (interface) → Infra
+
+**实现模式**：装饰器模式，三层实现结构
+
+```
+Domain 层                          Infra 层
+┌─────────────────────┐           ┌─────────────────────────────┐
+│ VenueLookupPort     │           │ DefaultVenueLookupAdapter   │ ← 无缓存，直接查库
+│     (interface)     │ ←─────── │ CachingVenueLookupDecorator │ ← 缓存装饰器（手动实例化）
+│                     │           │ BatchVenueLookupAdapter     │ ← @StepScope 批处理专用
+└─────────────────────┘           └─────────────────────────────┘
+```
+
+**使用场景**：
+- 批处理中频繁查询实体 ID（如 Venue、Funder、Language）
+- 需要多种标识符匹配（如 NLM ID、ISSN、FundRef ID、ROR ID）
+- API 单次查询（使用 DefaultAdapter，无缓存）
+- Spring Batch Step 级别缓存（使用 BatchAdapter）
+
+**命名示例**：
+- `VenueLookupPort` → `DefaultVenueLookupAdapter` + `CachingVenueLookupDecorator` + `BatchVenueLookupAdapter`
+- `FunderLookupPort` → `DefaultFunderLookupAdapter` + `CachingFunderLookupDecorator` + `BatchFunderLookupAdapter`
+- `LanguageLookupPort` → `DefaultLanguageLookupAdapter` + `CachingLanguageLookupDecorator` + `BatchLanguageLookupAdapter`
+
+**位置**：
+- 接口：`{service}-domain/src/main/java/.../domain/port/lookup/{Entity}LookupPort.java`
+- 默认实现：`{service}-infra/src/main/java/.../infra/adapter/lookup/Default{Entity}LookupAdapter.java`
+- 缓存装饰器：`{service}-infra/src/main/java/.../infra/adapter/lookup/Caching{Entity}LookupDecorator.java`
+- 批处理实现：`{service}-infra/src/main/java/.../infra/adapter/lookup/Batch{Entity}LookupAdapter.java`
+
+**注入方式**：
+```java
+// API 场景：直接注入默认实现
+@Autowired
+private FunderLookupPort funderLookupPort; // DefaultFunderLookupAdapter
+
+// 批处理场景：通过 @Qualifier 注入批处理实现
+@Bean
+@StepScope
+public PubmedArticleItemProcessor processor(
+    @Qualifier("batchFunderLookupAdapter") FunderLookupPort funderLookupPort) {
+  return new PubmedArticleItemProcessor(..., funderLookupPort);
+}
+```
 
 ### Driving Port / Gateway（驱动端口）
 
@@ -121,6 +171,10 @@ patra-catalog/
 │       │   └── VenueRepository.java
 │       ├── gateway/                        # 驱动端口接口
 │       │   └── VenueInstanceGateway.java
+│       ├── lookup/                         # 查找端口接口
+│       │   ├── VenueLookupPort.java
+│       │   ├── FunderLookupPort.java
+│       │   └── LanguageLookupPort.java
 │       ├── parser/                         # 解析器端口
 │       │   └── PubmedXmlParserPort.java
 │       ├── batch/                          # 批处理端口
@@ -146,6 +200,13 @@ patra-catalog/
         ├── persistence/                    # 仓储实现
         │   ├── PublicationRepositoryAdapter.java
         │   └── VenueRepositoryAdapter.java
+        ├── lookup/                         # 查找端口实现（含缓存装饰器）
+        │   ├── DefaultVenueLookupAdapter.java
+        │   ├── CachingVenueLookupDecorator.java
+        │   ├── BatchVenueLookupAdapter.java
+        │   ├── DefaultFunderLookupAdapter.java
+        │   ├── CachingFunderLookupDecorator.java
+        │   └── BatchFunderLookupAdapter.java
         ├── parser/
         │   └── PubmedXmlParserAdapter.java
         └── batch/
@@ -161,6 +222,9 @@ patra-catalog/
 │
 ├── 外部能力（解析/下载/批处理等）
 │   └─────────────────────→ {Function}Port（Domain → Infra）
+│
+├── 实体 ID 查找（需要缓存优化）
+│   └─────────────────────→ {Entity}LookupPort（Domain → Infra，装饰器模式）
 │
 ├── 应用层服务供其他层调用
 │   └─────────────────────→ {Entity}Gateway（Domain → App）
