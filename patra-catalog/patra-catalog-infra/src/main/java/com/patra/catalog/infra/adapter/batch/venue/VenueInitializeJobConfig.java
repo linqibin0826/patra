@@ -114,7 +114,8 @@ public class VenueInitializeJobConfig {
 
     var stepBuilder =
         new StepBuilder("venueInitializeStep", jobRepository)
-            .<VenueParseResult, VenueParseResult>chunk(chunkSize, transactionManager)
+            .<VenueParseResult, VenueParseResult>chunk(chunkSize)
+            .transactionManager(transactionManager)
             .reader(venueInitializeItemReader(null))
             .writer(venueInitializeItemWriter);
 

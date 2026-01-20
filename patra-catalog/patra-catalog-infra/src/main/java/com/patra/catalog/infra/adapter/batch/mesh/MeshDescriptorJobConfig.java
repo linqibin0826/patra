@@ -102,7 +102,8 @@ public class MeshDescriptorJobConfig {
 
     var stepBuilder =
         new StepBuilder("meshDescriptorImportStep", jobRepository)
-            .<MeshDescriptorAggregate, MeshDescriptorAggregate>chunk(chunkSize, transactionManager)
+            .<MeshDescriptorAggregate, MeshDescriptorAggregate>chunk(chunkSize)
+            .transactionManager(transactionManager)
             .reader(meshDescriptorItemReader(null, null))
             .writer(meshDescriptorItemWriter);
 
