@@ -4,17 +4,18 @@ import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import com.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;
 import com.patra.catalog.domain.model.enums.PublicationStatus;
 import com.patra.catalog.domain.model.vo.publication.LanguageInfo;
-import com.patra.catalog.domain.model.vo.publication.PublicationIdentifiers;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venueinstance.JournalInstanceParams;
 import com.patra.catalog.domain.port.gateway.VenueInstanceGateway;
+import com.patra.catalog.domain.port.lookup.LanguageLookupPort;
+import com.patra.catalog.domain.port.lookup.VenueLookupPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
-import com.patra.catalog.infra.adapter.batch.publication.cache.VenueCache;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.CanonicalPublication.Identifier;
 import com.patra.common.model.CanonicalPublication.Journal;
 import com.patra.common.model.CanonicalPublication.PublicationDates;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -46,8 +47,9 @@ public class PubmedArticleItemProcessor
     implements ItemProcessor<CanonicalPublication, PublicationAggregate> {
 
   private final PublicationRepository publicationRepository;
-  private final VenueCache venueCache;
+  private final VenueLookupPort venueLookupPort;
   private final VenueInstanceGateway venueInstanceGateway;
+  private final LanguageLookupPort languageLookupPort;
 
   @Override
   public PublicationAggregate process(CanonicalPublication publication) throws Exception {
@@ -65,18 +67,26 @@ public class PubmedArticleItemProcessor
     }
 
     // 2. Venue 匹配
+    // TODO: 当前仅支持期刊文章，后续需扩展支持其他出版物类型
+    //   - Book/Book Chapter：PubMed 通过 NCBI Bookshelf 索引的书籍章节，使用 <Book> 元素
+    //   - Preprint：bioRxiv/medRxiv 预印本
+    //   - Dataset：数据集引用
     Journal journal = publication.getJournal();
     if (journal == null) {
-      log.debug("跳过缺少期刊信息的文献：PMID={}", pmid);
+      log.debug("跳过非期刊类型文献：PMID={}", pmid);
       return null;
     }
 
     String nlmUniqueId = journal.getNlmUniqueId();
     List<String> issns = collectIssns(journal);
-    Optional<VenueId> venueIdOpt = venueCache.findByPriority(nlmUniqueId, issns);
+    Optional<VenueId> venueIdOpt = venueLookupPort.findByPriority(nlmUniqueId, issns);
 
+    // TODO: 没有匹配到 Venue 时不应该跳过文献，应该：
+    //   1. 创建 PublicationAggregate（venueId 和 venueInstanceId 为 null）
+    //   2. 后续通过异步任务或事件驱动方式补充 Venue 关联
+    //   3. 或者将这些"孤儿文献"记录到专门的队列/表中待处理
     if (venueIdOpt.isEmpty()) {
-      log.debug("无法匹配 Venue，跳过文献：PMID={}, NLM={}, ISSNs={}", pmid, nlmUniqueId, issns);
+      log.warn("无法匹配 Venue，跳过文献：PMID={}, NLM={}, ISSNs={}", pmid, nlmUniqueId, issns);
       return null;
     }
 
@@ -105,7 +115,7 @@ public class PubmedArticleItemProcessor
       return null;
     }
     return publication.getIdentifiers().stream()
-        .filter(id -> "pmid".equals(id.getType()))
+        .filter(id -> PublicationIdentifierType.PMID == id.getType())
         .map(Identifier::getValue)
         .findFirst()
         .orElse(null);
@@ -117,7 +127,7 @@ public class PubmedArticleItemProcessor
       return null;
     }
     return publication.getIdentifiers().stream()
-        .filter(id -> "doi".equals(id.getType()))
+        .filter(id -> PublicationIdentifierType.DOI == id.getType())
         .map(Identifier::getValue)
         .findFirst()
         .orElse(null);
@@ -177,9 +187,6 @@ public class PubmedArticleItemProcessor
       VenueInstanceAggregate venueInstance,
       Integer pubYear) {
 
-    // 构建标识符
-    PublicationIdentifiers identifiers = buildIdentifiers(pmid, extractDoi(publication));
-
     // 构建语言信息
     LanguageInfo languageInfo = buildLanguageInfo(publication);
 
@@ -187,9 +194,13 @@ public class PubmedArticleItemProcessor
     PublicationStatus publicationStatus =
         parsePublicationStatus(publication.getPublicationStatus());
 
+    // 提取 DOI
+    String doi = extractDoi(publication);
+
     return PublicationAggregate.create(
         ProvenanceCode.PUBMED,
-        identifiers,
+        pmid,
+        doi,
         venueId,
         venueInstance.getId(),
         publication.getTitle(),
@@ -204,28 +215,28 @@ public class PubmedArticleItemProcessor
         );
   }
 
-  /// 构建标识符。
-  private PublicationIdentifiers buildIdentifiers(String pmid, String doi) {
-    // DOI 为空时只使用 PMID
-    if (doi == null || doi.isBlank()) {
-      return PublicationIdentifiers.ofPmid(pmid);
-    }
-
-    return PublicationIdentifiers.of(pmid, doi);
-  }
-
   /// 构建语言信息。
   ///
-  /// CanonicalPublication 中的 language 已是 ISO 639-1 代码。
+  /// PubMed 使用 ISO 639-3 三字母代码（如 "eng", "chi"），
+  /// 通过 LanguageLookupPort 转换为项目标准 BCP 47 代码（如 "en", "zh"）。
   private LanguageInfo buildLanguageInfo(CanonicalPublication publication) {
-    String isoCode = publication.getLanguage();
+    String iso639Code = publication.getLanguage();
 
     // 默认英语
-    if (isoCode == null || isoCode.isBlank()) {
+    if (iso639Code == null || iso639Code.isBlank()) {
       return LanguageInfo.ofCode("en");
     }
 
-    return LanguageInfo.ofCode(isoCode);
+    // 通过 LanguageLookupPort 解析语言代码
+    String bcp47Code = languageLookupPort.resolve(iso639Code);
+
+    // 如果解析失败（返回 null 或 "unknown"），使用默认英语
+    if (bcp47Code == null || LanguageLookupPort.UNKNOWN_LANGUAGE.equals(bcp47Code)) {
+      log.warn("无法解析语言代码：{}，使用默认值 en", iso639Code);
+      return LanguageInfo.ofCode("en");
+    }
+
+    return LanguageInfo.ofCode(bcp47Code);
   }
 
   /// 解析出版状态。

@@ -2,7 +2,9 @@ package com.patra.catalog.infra.adapter.batch.publication;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,12 +15,14 @@ import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.catalog.domain.model.vo.venueinstance.JournalInstanceParams;
 import com.patra.catalog.domain.port.gateway.VenueInstanceGateway;
+import com.patra.catalog.domain.port.lookup.LanguageLookupPort;
+import com.patra.catalog.domain.port.lookup.VenueLookupPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
-import com.patra.catalog.infra.adapter.batch.publication.cache.VenueCache;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.CanonicalPublication.Identifier;
 import com.patra.common.model.CanonicalPublication.Journal;
 import com.patra.common.model.CanonicalPublication.PublicationDates;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -40,9 +44,11 @@ class PubmedArticleItemProcessorTest {
 
   @Mock private PublicationRepository publicationRepository;
 
-  @Mock private VenueCache venueCache;
+  @Mock private VenueLookupPort venueLookupPort;
 
   @Mock private VenueInstanceGateway venueInstanceGateway;
+
+  @Mock private LanguageLookupPort languageLookupPort;
 
   private PubmedArticleItemProcessor processor;
 
@@ -55,8 +61,12 @@ class PubmedArticleItemProcessorTest {
 
   @BeforeEach
   void setUp() {
+    // 配置默认的语言查找行为（使用 lenient 避免 UnnecessaryStubbingException）
+    lenient().when(languageLookupPort.resolve(anyString())).thenReturn("en");
+
     processor =
-        new PubmedArticleItemProcessor(publicationRepository, venueCache, venueInstanceGateway);
+        new PubmedArticleItemProcessor(
+            publicationRepository, venueLookupPort, venueInstanceGateway, languageLookupPort);
   }
 
   @Nested
@@ -75,7 +85,7 @@ class PubmedArticleItemProcessorTest {
 
       // then
       assertThat(result).isNull();
-      verify(venueCache, never()).findByPriority(any(), any());
+      verify(venueLookupPort, never()).findByPriority(any(), any());
     }
 
     @Test
@@ -84,7 +94,7 @@ class PubmedArticleItemProcessorTest {
       // given
       CanonicalPublication publication = createPublication(PMID);
       when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
-      when(venueCache.findByPriority(any(), any())).thenReturn(Optional.empty());
+      when(venueLookupPort.findByPriority(any(), any())).thenReturn(Optional.empty());
 
       // when
       PublicationAggregate result = processor.process(publication);
@@ -100,7 +110,7 @@ class PubmedArticleItemProcessorTest {
       // given
       CanonicalPublication publication = createFullPublication();
       when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
-      when(venueCache.findByPriority(eq(NLM_ID), any()))
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
 
       VenueInstanceAggregate venueInstance = createVenueInstance();
@@ -126,14 +136,19 @@ class PubmedArticleItemProcessorTest {
       // given
       CanonicalPublication publication =
           CanonicalPublication.builder()
-              .identifiers(List.of(Identifier.builder().type("pmid").value(PMID).build()))
+              .identifiers(
+                  List.of(
+                      Identifier.builder()
+                          .type(PublicationIdentifierType.PMID)
+                          .value(PMID)
+                          .build()))
               .title("Test Article")
               .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
               .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
               .build();
 
       when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
-      when(venueCache.findByPriority(eq(NLM_ID), any()))
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
 
       VenueInstanceAggregate venueInstance = createVenueInstance();
@@ -155,7 +170,12 @@ class PubmedArticleItemProcessorTest {
       // given
       CanonicalPublication publication =
           CanonicalPublication.builder()
-              .identifiers(List.of(Identifier.builder().type("pmid").value(PMID).build()))
+              .identifiers(
+                  List.of(
+                      Identifier.builder()
+                          .type(PublicationIdentifierType.PMID)
+                          .value(PMID)
+                          .build()))
               .title("Test Article")
               .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
               .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
@@ -163,7 +183,7 @@ class PubmedArticleItemProcessorTest {
               .build();
 
       when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
-      when(venueCache.findByPriority(eq(NLM_ID), any()))
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
 
       VenueInstanceAggregate venueInstance = createVenueInstance();
@@ -183,7 +203,8 @@ class PubmedArticleItemProcessorTest {
   /// 创建简单的测试文献。
   private CanonicalPublication createPublication(String pmid) {
     return CanonicalPublication.builder()
-        .identifiers(List.of(Identifier.builder().type("pmid").value(pmid).build()))
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(pmid).build()))
         .title("Test Article")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
         .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
@@ -195,8 +216,8 @@ class PubmedArticleItemProcessorTest {
     return CanonicalPublication.builder()
         .identifiers(
             List.of(
-                Identifier.builder().type("pmid").value(PMID).build(),
-                Identifier.builder().type("doi").value(DOI).build()))
+                Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build(),
+                Identifier.builder().type(PublicationIdentifierType.DOI).value(DOI).build()))
         .title("Test Article Title")
         .originalTitle("测试文章标题")
         .journal(

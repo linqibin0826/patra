@@ -16,6 +16,7 @@ import com.patra.common.model.CanonicalPublication.Pagination;
 import com.patra.common.model.CanonicalPublication.PublicationDates;
 import com.patra.common.model.CanonicalPublication.PublicationType;
 import com.patra.common.model.CanonicalPublication.QualifierName;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -689,17 +690,20 @@ public final class CanonicalPublicationParsingStrategy
 
     // PMID（必填）
     if (fields.pmid != null) {
-      identifiers.add(Identifier.builder().type("pmid").value(fields.pmid).build());
+      identifiers.add(
+          Identifier.builder().type(PublicationIdentifierType.PMID).value(fields.pmid).build());
     }
 
     // DOI（可选）
     if (fields.doi != null && !fields.doi.isBlank()) {
-      identifiers.add(Identifier.builder().type("doi").value(fields.doi).build());
+      identifiers.add(
+          Identifier.builder().type(PublicationIdentifierType.DOI).value(fields.doi).build());
     }
 
     // PMC（可选）
     if (fields.pmcId != null && !fields.pmcId.isBlank()) {
-      identifiers.add(Identifier.builder().type("pmc").value(fields.pmcId).build());
+      identifiers.add(
+          Identifier.builder().type(PublicationIdentifierType.PMC).value(fields.pmcId).build());
     }
 
     return identifiers;
@@ -786,7 +790,11 @@ public final class CanonicalPublicationParsingStrategy
     // 构建 ORCID 标识符
     List<Identifier> identifiers =
         parsed.orcid != null
-            ? List.of(Identifier.builder().type("orcid").value(parsed.orcid).build())
+            ? List.of(
+                Identifier.builder()
+                    .type(PublicationIdentifierType.ORCID)
+                    .value(parsed.orcid)
+                    .build())
             : List.of();
 
     return Author.builder()

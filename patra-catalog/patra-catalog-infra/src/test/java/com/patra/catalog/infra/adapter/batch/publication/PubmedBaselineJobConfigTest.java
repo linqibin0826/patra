@@ -3,12 +3,13 @@ package com.patra.catalog.infra.adapter.batch.publication;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.catalog.domain.port.gateway.VenueInstanceGateway;
+import com.patra.catalog.domain.port.lookup.LanguageLookupPort;
+import com.patra.catalog.domain.port.lookup.VenueLookupPort;
 import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
-import com.patra.catalog.domain.port.repository.VenueRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
-import com.patra.catalog.infra.adapter.batch.publication.cache.VenueCache;
 import com.patra.starter.batch.config.BatchProperties;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -34,7 +35,8 @@ class PubmedBaselineJobConfigTest {
   @Mock private StreamingDownloadPort streamingDownloadPort;
   @Mock private PubmedXmlParserPort pubmedXmlParserPort;
   @Mock private PublicationRepository publicationRepository;
-  @Mock private VenueRepository venueRepository;
+  @Mock private VenueLookupPort venueLookupPort;
+  @Mock private LanguageLookupPort languageLookupPort;
   @Mock private VenueInstanceGateway venueInstanceGateway;
   @Mock private BatchProperties batchProperties;
 
@@ -49,9 +51,9 @@ class PubmedBaselineJobConfigTest {
             streamingDownloadPort,
             pubmedXmlParserPort,
             publicationRepository,
-            venueRepository,
             venueInstanceGateway,
-            batchProperties);
+            batchProperties,
+            Optional.empty());
   }
 
   @Nested
@@ -61,8 +63,15 @@ class PubmedBaselineJobConfigTest {
     @Test
     @DisplayName("应该创建名为 pubmedBaselineImportJob 的 Job")
     void should_create_job_with_correct_name() {
+      // given - 创建 Step 依赖
+      PubmedArticleItemReader reader =
+          jobConfig.pubmedArticleItemReader("https://example.com/test.xml.gz");
+      PubmedArticleItemProcessor processor =
+          jobConfig.pubmedArticleItemProcessor(venueLookupPort, languageLookupPort);
+      Step step = jobConfig.pubmedArticleProcessingStep(reader, processor);
+
       // when
-      Job job = jobConfig.pubmedBaselineImportJob();
+      Job job = jobConfig.pubmedBaselineImportJob(step);
 
       // then
       assertThat(job).isNotNull();
@@ -77,8 +86,14 @@ class PubmedBaselineJobConfigTest {
     @Test
     @DisplayName("应该创建名为 pubmedArticleProcessingStep 的 Step")
     void should_create_step_with_correct_name() {
+      // given - 创建 Reader 和 Processor 依赖
+      PubmedArticleItemReader reader =
+          jobConfig.pubmedArticleItemReader("https://example.com/test.xml.gz");
+      PubmedArticleItemProcessor processor =
+          jobConfig.pubmedArticleItemProcessor(venueLookupPort, languageLookupPort);
+
       // when
-      Step step = jobConfig.pubmedArticleProcessingStep();
+      Step step = jobConfig.pubmedArticleProcessingStep(reader, processor);
 
       // then
       assertThat(step).isNotNull();
@@ -111,8 +126,9 @@ class PubmedBaselineJobConfigTest {
     @Test
     @DisplayName("应该创建 PubmedArticleItemProcessor")
     void should_create_item_processor() {
-      // when
-      PubmedArticleItemProcessor processor = jobConfig.pubmedArticleItemProcessor();
+      // when - 通过方法参数传入 @StepScope beans
+      PubmedArticleItemProcessor processor =
+          jobConfig.pubmedArticleItemProcessor(venueLookupPort, languageLookupPort);
 
       // then
       assertThat(processor).isNotNull();
@@ -131,21 +147,6 @@ class PubmedBaselineJobConfigTest {
 
       // then
       assertThat(writer).isNotNull();
-    }
-  }
-
-  @Nested
-  @DisplayName("VenueCache 配置")
-  class VenueCacheConfigTest {
-
-    @Test
-    @DisplayName("应该创建 VenueCache")
-    void should_create_venue_cache() {
-      // when
-      VenueCache cache = jobConfig.venueCache();
-
-      // then
-      assertThat(cache).isNotNull();
     }
   }
 }
