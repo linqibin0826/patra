@@ -5,7 +5,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
-import com.patra.catalog.domain.model.vo.publication.PublicationIdentifiers;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
@@ -74,7 +73,8 @@ class PublicationItemWriterTest {
   private PublicationAggregate createPublication(String pmid) {
     return PublicationAggregate.create(
         ProvenanceCode.PUBMED,
-        PublicationIdentifiers.ofPmid(pmid),
+        pmid,
+        null, // doi
         VenueId.of(1L),
         VenueInstanceId.of(100L),
         "Test Article " + pmid,
