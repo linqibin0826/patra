@@ -41,7 +41,8 @@ public class MyJobConfig {
     public Step myStep(JobRepository jobRepository,
                        PlatformTransactionManager transactionManager) {
         return new StepBuilder("myStep", jobRepository)
-            .<Input, Output>chunk(100, transactionManager)
+            .<Input, Output>chunk(100)
+            .transactionManager(transactionManager)
             .reader(reader())
             .processor(processor())
             .writer(writer())
