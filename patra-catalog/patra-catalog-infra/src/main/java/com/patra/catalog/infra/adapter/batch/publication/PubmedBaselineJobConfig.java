@@ -1,12 +1,17 @@
 package com.patra.catalog.infra.adapter.batch.publication;
 
-import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import com.patra.catalog.domain.port.gateway.VenueInstanceGateway;
+import com.patra.catalog.domain.port.lookup.FunderLookupPort;
 import com.patra.catalog.domain.port.lookup.LanguageLookupPort;
 import com.patra.catalog.domain.port.lookup.VenueLookupPort;
 import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.starter.batch.config.BatchProperties;
 import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
@@ -64,6 +69,11 @@ public class PubmedBaselineJobConfig {
   private final PubmedXmlParserPort pubmedXmlParserPort;
   private final PublicationRepository publicationRepository;
   private final VenueInstanceGateway venueInstanceGateway;
+  private final PublicationMeshHeadingDao meshHeadingDao;
+  private final PublicationMeshQualifierDao meshQualifierDao;
+  private final PublicationKeywordDao keywordDao;
+  private final PublicationFundingDao fundingDao;
+  private final PublicationTypeDao typeDao;
   private final BatchProperties batchProperties;
   private final BatchProgressMetricsListener batchProgressMetricsListener;
 
@@ -75,6 +85,11 @@ public class PubmedBaselineJobConfig {
   /// @param pubmedXmlParserPort PubMed XML 解析端口
   /// @param publicationRepository 文献仓库
   /// @param venueInstanceGateway 载体实例端口
+  /// @param meshHeadingDao MeSH Heading DAO
+  /// @param meshQualifierDao MeSH Qualifier DAO
+  /// @param keywordDao 关键词 DAO
+  /// @param fundingDao 资助信息 DAO
+  /// @param typeDao 出版类型 DAO
   /// @param batchProperties 批处理属性
   /// @param batchProgressMetricsListener 进度指标监听器（可选）
   public PubmedBaselineJobConfig(
@@ -84,6 +99,11 @@ public class PubmedBaselineJobConfig {
       PubmedXmlParserPort pubmedXmlParserPort,
       PublicationRepository publicationRepository,
       VenueInstanceGateway venueInstanceGateway,
+      PublicationMeshHeadingDao meshHeadingDao,
+      PublicationMeshQualifierDao meshQualifierDao,
+      PublicationKeywordDao keywordDao,
+      PublicationFundingDao fundingDao,
+      PublicationTypeDao typeDao,
       BatchProperties batchProperties,
       Optional<BatchProgressMetricsListener> batchProgressMetricsListener) {
     this.jobRepository = jobRepository;
@@ -92,6 +112,11 @@ public class PubmedBaselineJobConfig {
     this.pubmedXmlParserPort = pubmedXmlParserPort;
     this.publicationRepository = publicationRepository;
     this.venueInstanceGateway = venueInstanceGateway;
+    this.meshHeadingDao = meshHeadingDao;
+    this.meshQualifierDao = meshQualifierDao;
+    this.keywordDao = keywordDao;
+    this.fundingDao = fundingDao;
+    this.typeDao = typeDao;
     this.batchProperties = batchProperties;
     this.batchProgressMetricsListener = batchProgressMetricsListener.orElse(null);
   }
@@ -122,11 +147,13 @@ public class PubmedBaselineJobConfig {
 
     var stepBuilder =
         new StepBuilder("pubmedArticleProcessingStep", jobRepository)
-            .<CanonicalPublication, PublicationAggregate>chunk(chunkSize)
+            .<CanonicalPublication, PublicationImportResult>chunk(chunkSize)
             .transactionManager(transactionManager)
             .reader(reader)
             .processor(processor)
-            .writer(publicationItemWriter())
+            .writer(
+                publicationItemWriter(
+                    meshHeadingDao, meshQualifierDao, keywordDao, fundingDao, typeDao))
             .faultTolerant()
             .skipLimit(DEFAULT_SKIP_LIMIT)
             .skip(Exception.class);
@@ -153,27 +180,44 @@ public class PubmedBaselineJobConfig {
 
   /// 创建 PubMed 文献 ItemProcessor。
   ///
-  /// **注意**：`VenueLookupPort` 和 `LanguageLookupPort` 通过方法参数注入，
+  /// **注意**：`VenueLookupPort`、`LanguageLookupPort` 和 `FunderLookupPort` 通过方法参数注入，
   /// 因为它们是 `@StepScope` Bean，不能在 Configuration 构造函数中注入。
   ///
   /// @param venueLookupPort Venue 查找端口（批处理专用，带缓存）
   /// @param languageLookupPort 语言查找端口（批处理专用，带缓存）
+  /// @param funderLookupPort 资助机构查找端口（批处理专用，带缓存）
   /// @return ItemProcessor 实例
   @Bean
   @StepScope
   public PubmedArticleItemProcessor pubmedArticleItemProcessor(
       @Qualifier("batchVenueLookupAdapter") VenueLookupPort venueLookupPort,
-      @Qualifier("batchLanguageLookupAdapter") LanguageLookupPort languageLookupPort) {
+      @Qualifier("batchLanguageLookupAdapter") LanguageLookupPort languageLookupPort,
+      @Qualifier("batchFunderLookupAdapter") FunderLookupPort funderLookupPort) {
     return new PubmedArticleItemProcessor(
-        publicationRepository, venueLookupPort, venueInstanceGateway, languageLookupPort);
+        publicationRepository,
+        venueLookupPort,
+        venueInstanceGateway,
+        languageLookupPort,
+        funderLookupPort);
   }
 
   /// 创建 Publication ItemWriter。
   ///
+  /// @param headingDao MeSH Heading DAO
+  /// @param qualifierDao MeSH Qualifier DAO
+  /// @param kwDao 关键词 DAO
+  /// @param fundDao 资助信息 DAO
+  /// @param ptDao 出版类型 DAO
   /// @return ItemWriter 实例
   @Bean
-  public PublicationItemWriter publicationItemWriter() {
-    return new PublicationItemWriter(publicationRepository);
+  public PublicationItemWriter publicationItemWriter(
+      PublicationMeshHeadingDao headingDao,
+      PublicationMeshQualifierDao qualifierDao,
+      PublicationKeywordDao kwDao,
+      PublicationFundingDao fundDao,
+      PublicationTypeDao ptDao) {
+    return new PublicationItemWriter(
+        publicationRepository, headingDao, qualifierDao, kwDao, fundDao, ptDao);
   }
 
   /// 获取 chunk size。
