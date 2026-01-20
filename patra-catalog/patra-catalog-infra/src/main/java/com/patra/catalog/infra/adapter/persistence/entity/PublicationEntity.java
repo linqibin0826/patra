@@ -20,7 +20,7 @@ import tools.jackson.databind.JsonNode;
 /// **设计说明**：
 ///
 /// - 继承 `BaseJpaEntity` 获得审计、乐观锁、软删除功能
-/// - 嵌入式值对象展开：`PublicationIdentifiers` 和 `LanguageInfo` 直接映射为字段
+/// - 嵌入式值对象展开：`LanguageInfo` 直接映射为字段，`pmid`/`doi` 为扁平字段
 /// - `language_base` 是数据库生成列，设为只读
 /// - 枚举类型（ProvenanceCode、PublicationStatus 等）存储为 String
 ///
