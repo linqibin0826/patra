@@ -10,6 +10,7 @@ import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.CanonicalPublication.Identifier;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URI;
@@ -194,7 +195,8 @@ class PubmedArticleItemReaderTest {
   /// 创建测试用的 CanonicalPublication。
   private CanonicalPublication createPublication(String pmid) {
     return CanonicalPublication.builder()
-        .identifiers(List.of(Identifier.builder().type("pmid").value(pmid).build()))
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(pmid).build()))
         .title("Test Article " + pmid)
         .build();
   }
@@ -205,7 +207,7 @@ class PubmedArticleItemReaderTest {
       return null;
     }
     return publication.getIdentifiers().stream()
-        .filter(id -> "pmid".equals(id.getType()))
+        .filter(id -> PublicationIdentifierType.PMID == id.getType())
         .map(Identifier::getValue)
         .findFirst()
         .orElse(null);
