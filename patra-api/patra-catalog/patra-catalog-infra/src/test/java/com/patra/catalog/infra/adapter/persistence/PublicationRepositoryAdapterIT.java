@@ -8,7 +8,6 @@ import com.patra.catalog.domain.model.enums.MediaType;
 import com.patra.catalog.domain.model.enums.OaStatus;
 import com.patra.catalog.domain.model.enums.PublicationStatus;
 import com.patra.catalog.domain.model.vo.publication.LanguageInfo;
-import com.patra.catalog.domain.model.vo.publication.PublicationIdentifiers;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDao;
@@ -68,7 +67,8 @@ class PublicationRepositoryAdapterIT {
       String pmid, String doi, Long venueId, Long venueInstanceId, String title, int year) {
     return PublicationAggregate.create(
         ProvenanceCode.PUBMED,
-        PublicationIdentifiers.of(pmid, doi),
+        pmid,
+        doi,
         venueId != null ? VenueId.of(venueId) : null,
         VenueInstanceId.of(venueInstanceId),
         title,
@@ -87,7 +87,8 @@ class PublicationRepositoryAdapterIT {
       String pmid, Long venueInstanceId, String title, int year) {
     return PublicationAggregate.create(
         ProvenanceCode.PUBMED,
-        PublicationIdentifiers.ofPmid(pmid),
+        pmid,
+        null, // doi
         null, // venueId
         VenueInstanceId.of(venueInstanceId),
         title,
@@ -573,7 +574,8 @@ class PublicationRepositoryAdapterIT {
       var publication =
           PublicationAggregate.create(
               ProvenanceCode.PUBMED,
-              PublicationIdentifiers.ofPmid("60606060"),
+              "60606060",
+              null, // doi
               VenueId.of(1001L),
               VenueInstanceId.of(2001L),
               "中文文献标题",

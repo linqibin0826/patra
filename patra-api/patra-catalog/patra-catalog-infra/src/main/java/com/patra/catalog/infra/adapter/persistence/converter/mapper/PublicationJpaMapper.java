@@ -12,7 +12,6 @@ import com.patra.catalog.domain.model.enums.MediaType;
 import com.patra.catalog.domain.model.enums.OaLocationType;
 import com.patra.catalog.domain.model.enums.OaStatus;
 import com.patra.catalog.domain.model.enums.PublicationDateType;
-import com.patra.catalog.domain.model.enums.PublicationIdentifierType;
 import com.patra.catalog.domain.model.enums.PublicationStatus;
 import com.patra.catalog.domain.model.enums.QualityLevel;
 import com.patra.catalog.domain.model.enums.QualityScore;
@@ -25,7 +24,6 @@ import com.patra.catalog.domain.model.vo.publication.PublicationAlternativeAbstr
 import com.patra.catalog.domain.model.vo.publication.PublicationDate;
 import com.patra.catalog.domain.model.vo.publication.PublicationId;
 import com.patra.catalog.domain.model.vo.publication.PublicationIdentifier;
-import com.patra.catalog.domain.model.vo.publication.PublicationIdentifiers;
 import com.patra.catalog.domain.model.vo.publication.PublicationMetadata;
 import com.patra.catalog.domain.model.vo.publication.PublicationOaLocation;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
@@ -38,6 +36,7 @@ import com.patra.catalog.infra.adapter.persistence.entity.PublicationIdentifierE
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMetadataEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationOaLocationEntity;
 import com.patra.common.enums.ProvenanceCode;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import java.util.List;
 import java.util.Map;
 import org.mapstruct.Mapper;
@@ -51,7 +50,7 @@ import org.slf4j.LoggerFactory;
 /// **职责**：
 ///
 /// - `PublicationAggregate` ↔ `PublicationEntity` 双向转换
-/// - 嵌入式值对象（`PublicationIdentifiers`、`LanguageInfo`）的展开与重建
+/// - 嵌入式值对象（`LanguageInfo`）的展开与重建
 /// - 枚举类型（`ProvenanceCode`、`PublicationStatus` 等）与 String 的映射
 ///
 /// **特殊处理**：
@@ -73,8 +72,8 @@ public abstract class PublicationJpaMapper {
       target = "provenanceCode",
       source = "provenanceCode",
       qualifiedByName = "provenanceCodeToString")
-  @Mapping(target = "pmid", source = "identifiers.pmid")
-  @Mapping(target = "doi", source = "identifiers.doi")
+  @Mapping(target = "pmid", source = "pmid")
+  @Mapping(target = "doi", source = "doi")
   @Mapping(target = "venueId", source = "venueId", qualifiedByName = "venueIdToLong")
   @Mapping(
       target = "venueInstanceId",
@@ -115,13 +114,13 @@ public abstract class PublicationJpaMapper {
     }
 
     // 重建嵌入式值对象
-    PublicationIdentifiers identifiers = rebuildIdentifiers(entity);
     LanguageInfo languageInfo = rebuildLanguageInfo(entity);
 
     return PublicationAggregate.restore(
         entity.getId() != null ? PublicationId.of(entity.getId()) : null,
         stringToProvenanceCode(entity.getProvenanceCode()),
-        identifiers,
+        entity.getPmid(),
+        entity.getDoi(),
         List.of(), // extendedIdentifiers 单独加载
         entity.getVenueId() != null ? VenueId.of(entity.getVenueId()) : null,
         VenueInstanceId.of(entity.getVenueInstanceId()),
@@ -161,16 +160,6 @@ public abstract class PublicationJpaMapper {
   }
 
   // ========== 值对象重建方法 ==========
-
-  /// 重建 PublicationIdentifiers 值对象。
-  private PublicationIdentifiers rebuildIdentifiers(PublicationEntity entity) {
-    String pmid = entity.getPmid();
-    String doi = entity.getDoi();
-    if (pmid == null && doi == null) {
-      return null;
-    }
-    return PublicationIdentifiers.of(pmid, doi);
-  }
 
   /// 重建 LanguageInfo 值对象。
   private LanguageInfo rebuildLanguageInfo(PublicationEntity entity) {

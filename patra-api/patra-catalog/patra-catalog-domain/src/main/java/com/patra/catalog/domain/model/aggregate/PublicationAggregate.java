@@ -4,17 +4,16 @@ import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.enums.MediaType;
 import com.patra.catalog.domain.model.enums.OaStatus;
-import com.patra.catalog.domain.model.enums.PublicationIdentifierType;
 import com.patra.catalog.domain.model.enums.PublicationStatus;
 import com.patra.catalog.domain.model.vo.publication.LanguageInfo;
 import com.patra.catalog.domain.model.vo.publication.PublicationAbstract;
 import com.patra.catalog.domain.model.vo.publication.PublicationId;
 import com.patra.catalog.domain.model.vo.publication.PublicationIdentifier;
-import com.patra.catalog.domain.model.vo.publication.PublicationIdentifiers;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.common.domain.AggregateRoot;
 import com.patra.common.enums.ProvenanceCode;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import java.io.Serial;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -71,13 +70,20 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
 
   // ========== 标识符 ==========
 
-  /// 标识符值对象（PMID, DOI - 冗余优化，存储在主表用于高频查询）
-  private final PublicationIdentifiers identifiers;
+  /// PubMed ID（冗余优化，存储在主表用于高频查询）
+  ///
+  /// 格式：1-15位数字，可为空。
+  private final String pmid;
+
+  /// Digital Object Identifier（冗余优化，存储在主表用于高频查询）
+  ///
+  /// 格式：以 "10." 开头，最长200字符，可为空。
+  private final String doi;
 
   /// 扩展标识符集合（完整的多标识符管理，存储在子表）
   ///
-  /// 与 `identifiers` 是**互补关系**：
-  /// - `identifiers`：冗余字段（pmid + doi），用于高频精确查询
+  /// 与 `pmid`/`doi` 是**互补关系**：
+  /// - `pmid`/`doi`：冗余字段，用于高频精确查询
   /// - `extendedIdentifiers`：完整标识符列表，支持 PMC、PII、arXiv 等多种类型
   private final List<PublicationIdentifier> extendedIdentifiers;
 
@@ -146,7 +152,8 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   ///
   /// @param id 主键标识（新建时为 null）
   /// @param provenanceCode 数据来源代码
-  /// @param identifiers 标识符值对象（冗余字段）
+  /// @param pmid PubMed ID（可为空）
+  /// @param doi Digital Object Identifier（可为空）
   /// @param extendedIdentifiers 扩展标识符集合
   /// @param venueId 载体 ID
   /// @param venueInstanceId 载体实例 ID
@@ -167,7 +174,8 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   private PublicationAggregate(
       PublicationId id,
       ProvenanceCode provenanceCode,
-      PublicationIdentifiers identifiers,
+      String pmid,
+      String doi,
       List<PublicationIdentifier> extendedIdentifiers,
       VenueId venueId,
       VenueInstanceId venueInstanceId,
@@ -189,7 +197,6 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
 
     // 必填字段验证
     Assert.notNull(provenanceCode, "数据来源代码不能为空");
-    Assert.notNull(identifiers, "标识符不能为空");
     Assert.notNull(venueInstanceId, "载体实例ID不能为空");
     Assert.notBlank(title, "标题不能为空");
     Assert.notNull(publicationYear, "出版年份不能为空");
@@ -203,7 +210,8 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
     // 赋值
     this.provenanceCode = provenanceCode;
     this.lastSyncedAt = lastSyncedAt;
-    this.identifiers = identifiers;
+    this.pmid = pmid;
+    this.doi = doi;
     this.extendedIdentifiers =
         extendedIdentifiers != null ? new ArrayList<>(extendedIdentifiers) : new ArrayList<>();
     this.venueId = venueId;
@@ -228,7 +236,8 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   /// 使用场景：patra-ingest 通过 RocketMQ 发布文献创建事件，patra-catalog 消费事件时调用此方法。
   ///
   /// @param provenanceCode 数据来源代码（PUBMED, EPMC, CROSSREF 等）
-  /// @param identifiers 标识符值对象（冗余字段）
+  /// @param pmid PubMed ID（可为空）
+  /// @param doi Digital Object Identifier（可为空）
   /// @param venueId 载体 ID
   /// @param venueInstanceId 载体实例 ID
   /// @param title 标题
@@ -243,7 +252,8 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   /// @return 新创建的文献聚合根
   public static PublicationAggregate create(
       ProvenanceCode provenanceCode,
-      PublicationIdentifiers identifiers,
+      String pmid,
+      String doi,
       VenueId venueId,
       VenueInstanceId venueInstanceId,
       String title,
@@ -258,7 +268,8 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
     return new PublicationAggregate(
         null, // 新建时 ID 为 null
         provenanceCode,
-        identifiers,
+        pmid,
+        doi,
         null, // 初始无扩展标识符
         venueId,
         venueInstanceId,
@@ -283,7 +294,8 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   ///
   /// @param id 主键标识
   /// @param provenanceCode 数据来源代码
-  /// @param identifiers 标识符值对象（冗余字段）
+  /// @param pmid PubMed ID（可为空）
+  /// @param doi Digital Object Identifier（可为空）
   /// @param extendedIdentifiers 扩展标识符集合
   /// @param venueId 载体 ID
   /// @param venueInstanceId 载体实例 ID
@@ -306,7 +318,8 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   public static PublicationAggregate restore(
       PublicationId id,
       ProvenanceCode provenanceCode,
-      PublicationIdentifiers identifiers,
+      String pmid,
+      String doi,
       List<PublicationIdentifier> extendedIdentifiers,
       VenueId venueId,
       VenueInstanceId venueInstanceId,
@@ -329,7 +342,8 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
         new PublicationAggregate(
             id,
             provenanceCode,
-            identifiers,
+            pmid,
+            doi,
             extendedIdentifiers,
             venueId,
             venueInstanceId,
@@ -511,18 +525,18 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
 
   // ========== 便捷访问器 ==========
 
-  /// 获取 PMID（便捷访问器）。
+  /// 判断是否有 PMID。
   ///
-  /// @return PMID 值或 null
-  public String getPmid() {
-    return identifiers.pmid();
+  /// @return true 如果有 PMID
+  public boolean hasPmid() {
+    return pmid != null && !pmid.isBlank();
   }
 
-  /// 获取 DOI（便捷访问器）。
+  /// 判断是否有 DOI。
   ///
-  /// @return DOI 值或 null
-  public String getDoi() {
-    return identifiers.doi();
+  /// @return true 如果有 DOI
+  public boolean hasDoi() {
+    return doi != null && !doi.isBlank();
   }
 
   /// 判断是否为开放获取文献。
@@ -560,11 +574,6 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   /// @throws IllegalStateException 如果不变量被违反
   @Override
   protected void assertInvariants() {
-    // 标识符不能为空
-    if (identifiers == null) {
-      throw new IllegalStateException("文献标识符不能为空");
-    }
-
     // 标题不能为空
     if (StrUtil.isBlank(title)) {
       throw new IllegalStateException("文献标题不能为空");
@@ -597,8 +606,8 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
         "PublicationAggregate[id=%s, provenance=%s, pmid=%s, doi=%s, title=%s, year=%d]",
         getId(),
         provenanceCode,
-        getPmid(),
-        getDoi(),
+        pmid,
+        doi,
         title != null && title.length() > 50 ? title.substring(0, 50) + "..." : title,
         publicationYear);
   }
