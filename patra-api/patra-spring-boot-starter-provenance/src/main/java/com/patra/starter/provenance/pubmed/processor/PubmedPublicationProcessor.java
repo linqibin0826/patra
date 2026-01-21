@@ -6,6 +6,7 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import com.patra.common.provenance.api.constants.PubMedOperation;
 import com.patra.common.provenance.api.params.PubMedParamKeys;
 import com.patra.common.provenance.api.values.pubmed.RetMode;
@@ -138,7 +139,9 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
       hasPmid =
           data.getIdentifiers().stream()
               .anyMatch(
-                  id -> "pmid".equalsIgnoreCase(id.getType()) && StrUtil.isNotBlank(id.getValue()));
+                  id ->
+                      PublicationIdentifierType.PMID.equals(id.getType())
+                          && StrUtil.isNotBlank(id.getValue()));
     }
     if (!hasPmid) {
       errors.add("PMID不能为空");

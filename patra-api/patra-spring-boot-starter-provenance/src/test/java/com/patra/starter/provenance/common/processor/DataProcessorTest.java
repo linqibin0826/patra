@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import com.patra.starter.provenance.common.provider.BatchExecutionParams;
 import com.patra.starter.provenance.common.provider.ProviderRequest;
@@ -58,7 +59,11 @@ class DataProcessorTest {
         .title("Test Article")
         .abstractContent(CanonicalPublication.Abstract.builder().text("Test abstract").build())
         .identifiers(
-            List.of(CanonicalPublication.Identifier.builder().type("PMID").value("12345").build()))
+            List.of(
+                CanonicalPublication.Identifier.builder()
+                    .type(PublicationIdentifierType.PMID)
+                    .value("12345")
+                    .build()))
         .build();
   }
 

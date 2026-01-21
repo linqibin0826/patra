@@ -1,6 +1,7 @@
 package com.patra.starter.provenance.pubmed.converter;
 
 import com.patra.common.model.CanonicalPublication;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import com.patra.starter.provenance.pubmed.model.response.PubmedPublication;
 import com.patra.starter.provenance.pubmed.model.response.PubmedPublication.Article;
 import com.patra.starter.provenance.pubmed.model.response.PubmedPublication.Author;
@@ -156,7 +157,7 @@ public class PubmedPublicationConverter {
                 .map(
                     id ->
                         CanonicalPublication.Identifier.builder()
-                            .type(id.source().toLowerCase(Locale.ROOT))
+                            .type(PublicationIdentifierType.fromCodeOrOther(id.source()))
                             .value(id.value())
                             .build())
                 .collect(Collectors.toList());
@@ -208,7 +209,7 @@ public class PubmedPublicationConverter {
               .map(
                   id ->
                       CanonicalPublication.Identifier.builder()
-                          .type(id.source().toLowerCase(Locale.ROOT))
+                          .type(PublicationIdentifierType.fromCodeOrOther(id.source()))
                           .value(id.value())
                           .build())
               .collect(Collectors.toList());
@@ -306,7 +307,10 @@ public class PubmedPublicationConverter {
     // 添加 PMID
     if (StringUtils.hasText(article.pmid())) {
       identifiers.add(
-          CanonicalPublication.Identifier.builder().type("pmid").value(article.pmid()).build());
+          CanonicalPublication.Identifier.builder()
+              .type(PublicationIdentifierType.PMID)
+              .value(article.pmid())
+              .build());
     }
 
     // 从 PubmedData.ArticleIdList 提取 DOI 和 PMC
@@ -318,10 +322,16 @@ public class PubmedPublicationConverter {
       switch (type) {
         case "doi" ->
             identifiers.add(
-                CanonicalPublication.Identifier.builder().type("doi").value(id.value()).build());
+                CanonicalPublication.Identifier.builder()
+                    .type(PublicationIdentifierType.DOI)
+                    .value(id.value())
+                    .build());
         case "pmc", "pmcid" ->
             identifiers.add(
-                CanonicalPublication.Identifier.builder().type("pmc").value(id.value()).build());
+                CanonicalPublication.Identifier.builder()
+                    .type(PublicationIdentifierType.PMC)
+                    .value(id.value())
+                    .build());
         default -> {
           // Ignore other identifier types for now.
         }
@@ -339,7 +349,7 @@ public class PubmedPublicationConverter {
           if ("Y".equals(eLocationId.validYN()) || eLocationId.validYN() == null) {
             identifiers.add(
                 CanonicalPublication.Identifier.builder()
-                    .type(type.toLowerCase(Locale.ROOT))
+                    .type(PublicationIdentifierType.fromCodeOrOther(type))
                     .value(value)
                     .build());
           }
@@ -354,7 +364,7 @@ public class PubmedPublicationConverter {
       if (StringUtils.hasText(source) && StringUtils.hasText(value)) {
         identifiers.add(
             CanonicalPublication.Identifier.builder()
-                .type(source.toLowerCase(Locale.ROOT))
+                .type(PublicationIdentifierType.fromCodeOrOther(source))
                 .value(value)
                 .build());
       }
@@ -959,7 +969,7 @@ public class PubmedPublicationConverter {
                 .map(
                     id ->
                         CanonicalPublication.Identifier.builder()
-                            .type(id.source().toLowerCase(Locale.ROOT))
+                            .type(PublicationIdentifierType.fromCodeOrOther(id.source()))
                             .value(id.value())
                             .build())
                 .collect(Collectors.toList());
@@ -1118,7 +1128,7 @@ public class PubmedPublicationConverter {
                 .map(
                     id ->
                         CanonicalPublication.Identifier.builder()
-                            .type(id.type().toLowerCase(Locale.ROOT))
+                            .type(PublicationIdentifierType.fromCodeOrOther(id.type()))
                             .value(id.value())
                             .build())
                 .collect(Collectors.toList());
