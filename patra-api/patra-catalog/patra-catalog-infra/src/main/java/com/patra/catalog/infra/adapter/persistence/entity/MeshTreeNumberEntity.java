@@ -24,7 +24,7 @@ import lombok.Setter;
 ///
 /// **索引说明**：
 ///
-/// - 唯一索引 `uk_tree_number`: tree_number 保证编号唯一性
+/// - 唯一索引 `uk_tree_number_descriptor`: (tree_number, descriptor_ui) 支持 MeSH 2026 共享树形位置
 /// - 普通索引 `idx_descriptor_ui`: 支持查询某主题词的所有位置
 /// - 前缀索引 `idx_tree_prefix`: 支持层次查询（LIKE "D12.%"）
 ///
@@ -35,7 +35,11 @@ import lombok.Setter;
 @Entity
 @Table(
     name = "cat_mesh_tree_number",
-    uniqueConstraints = {@UniqueConstraint(name = "uk_tree_number", columnNames = "tree_number")},
+    uniqueConstraints = {
+      @UniqueConstraint(
+          name = "uk_tree_number_descriptor",
+          columnNames = {"tree_number", "descriptor_ui"})
+    },
     indexes = {
       @Index(name = "idx_descriptor_ui", columnList = "descriptor_ui"),
       @Index(name = "idx_tree_level", columnList = "tree_level, descriptor_ui")
