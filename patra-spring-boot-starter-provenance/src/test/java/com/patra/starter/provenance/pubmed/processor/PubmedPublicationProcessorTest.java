@@ -7,6 +7,7 @@ import static org.mockito.Mockito.withSettings;
 
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import com.patra.starter.provenance.boot.ProvenanceProperties;
 import com.patra.starter.provenance.common.config.BatchingConfig;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
@@ -162,7 +163,11 @@ class PubmedPublicationProcessorTest {
         .abstractContent(
             CanonicalPublication.Abstract.builder().text("Test abstract for " + pmid).build())
         .identifiers(
-            List.of(CanonicalPublication.Identifier.builder().type("pmid").value(pmid).build()))
+            List.of(
+                CanonicalPublication.Identifier.builder()
+                    .type(PublicationIdentifierType.PMID)
+                    .value(pmid)
+                    .build()))
         .build();
   }
 
@@ -708,7 +713,7 @@ class PubmedPublicationProcessorTest {
               .identifiers(
                   List.of(
                       CanonicalPublication.Identifier.builder()
-                          .type("pmid")
+                          .type(PublicationIdentifierType.PMID)
                           .value(TEST_PMID_1)
                           .build()))
               .build();
