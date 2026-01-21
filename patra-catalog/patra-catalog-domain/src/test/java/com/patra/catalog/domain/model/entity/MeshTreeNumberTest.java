@@ -153,22 +153,35 @@ class MeshTreeNumberTest {
     }
 
     @Test
-    @DisplayName("树形编号格式无效时应该抛出异常（子段位数错误）")
-    void shouldThrowWhenTreeNumberHasWrongSubsectionDigitCount() {
-      // 子段应该是3位数字，不是2位
-      assertThatThrownBy(() -> MeshTreeNumber.create("C04.55", true))
+    @DisplayName("树形编号格式无效时应该抛出异常（子段位数超过3位）")
+    void shouldThrowWhenTreeNumberHasMoreThanThreeDigitsInSubsection() {
+      // 子段最多3位数字，不能是4位
+      assertThatThrownBy(() -> MeshTreeNumber.create("C04.5570", true))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("树形编号格式无效");
     }
 
     @Test
-    @DisplayName("有效的树形编号格式应该通过验证")
+    @DisplayName("有效的树形编号格式应该通过验证（包括 MeSH 2026 新格式）")
     void shouldPassValidationForValidFormats() {
-      // 各种有效格式
+      // 传统格式（每段3位数字）
       assertThat(MeshTreeNumber.create("A01", true)).isNotNull();
       assertThat(MeshTreeNumber.create("C04.557", true)).isNotNull();
       assertThat(MeshTreeNumber.create("D12.776.124", true)).isNotNull();
       assertThat(MeshTreeNumber.create("E05.318.740.600.800", true)).isNotNull();
+
+      // MeSH 2026 新格式（支持 1-2 位数字段）
+      assertThat(MeshTreeNumber.create("B04.820.578.688.2.150", true)).isNotNull();
+      assertThat(MeshTreeNumber.create("C04.1.2.3", true)).isNotNull();
+      assertThat(MeshTreeNumber.create("D12.77.12", true)).isNotNull();
+    }
+
+    @Test
+    @DisplayName("MeSH 2026 新格式应该正确计算层级深度")
+    void shouldCalculateLevelForMesh2026Format() {
+      // B04.820.578.688.2.150 有 6 个段，层级应该是 6
+      MeshTreeNumber treeNumber = MeshTreeNumber.create("B04.820.578.688.2.150", true);
+      assertThat(treeNumber.getTreeLevel()).isEqualTo(6);
     }
   }
 
@@ -365,8 +378,8 @@ class MeshTreeNumberTest {
   class EqualsAndHashCodeTests {
 
     @Test
-    @DisplayName("相同树形编号应该相等")
-    void shouldBeEqualForSameTreeNumber() {
+    @DisplayName("相同树形编号（无 descriptorUi）应该相等")
+    void shouldBeEqualForSameTreeNumberWithoutDescriptorUi() {
       // Given
       MeshTreeNumber treeNumber1 = MeshTreeNumber.create("C04.557.337", true);
       MeshTreeNumber treeNumber2 = MeshTreeNumber.create("C04.557.337", false);
@@ -374,6 +387,44 @@ class MeshTreeNumberTest {
       // When & Then
       assertThat(treeNumber1).isEqualTo(treeNumber2);
       assertThat(treeNumber1.hashCode()).isEqualTo(treeNumber2.hashCode());
+    }
+
+    @Test
+    @DisplayName("相同树形编号 + 相同 descriptorUi 应该相等")
+    void shouldBeEqualForSameTreeNumberAndSameDescriptorUi() {
+      // Given
+      MeshUI descriptorUi = MeshUI.of("D000001");
+      MeshTreeNumber treeNumber1 = MeshTreeNumber.create(descriptorUi, "C04.557.337", true);
+      MeshTreeNumber treeNumber2 = MeshTreeNumber.create(descriptorUi, "C04.557.337", false);
+
+      // When & Then
+      assertThat(treeNumber1).isEqualTo(treeNumber2);
+      assertThat(treeNumber1.hashCode()).isEqualTo(treeNumber2.hashCode());
+    }
+
+    @Test
+    @DisplayName("相同树形编号 + 不同 descriptorUi 应该不相等（MeSH 2026 共享树形位置）")
+    void shouldNotBeEqualForSameTreeNumberButDifferentDescriptorUi() {
+      // Given - MeSH 2026 允许同一个树形编号属于多个 Descriptor
+      MeshTreeNumber treeNumber1 =
+          MeshTreeNumber.create(MeshUI.of("D000001"), "B03.300.390.400.001", true);
+      MeshTreeNumber treeNumber2 =
+          MeshTreeNumber.create(MeshUI.of("D000002"), "B03.300.390.400.001", true);
+
+      // When & Then
+      assertThat(treeNumber1).isNotEqualTo(treeNumber2);
+    }
+
+    @Test
+    @DisplayName("相同树形编号，一方有 descriptorUi 一方无，应该相等（聚合内部场景）")
+    void shouldBeEqualWhenOneHasDescriptorUiAndOtherDoesNot() {
+      // Given - 聚合内部比较场景
+      MeshTreeNumber treeNumber1 = MeshTreeNumber.create("C04.557.337", true);
+      MeshTreeNumber treeNumber2 =
+          MeshTreeNumber.create(MeshUI.of("D000001"), "C04.557.337", false);
+
+      // When & Then
+      assertThat(treeNumber1).isEqualTo(treeNumber2);
     }
 
     @Test

@@ -12,10 +12,12 @@ import lombok.Getter;
 /// - 树形结构：采用层次编号系统(如 C04.557.337.428)
 ///   - 多位置：一个主题词可以有多个树形位置(平均 2.3 个)
 ///   - 层级深度：最多 15 层（实际数据中最大约 13 层）
+///   - 格式：`X00[.000]*`，首段固定 3 字符（字母+2位数字），后续段 1-3 位数字
 ///   - 示例：
 ///
 /// - C04.557.337.428 - "Lung Neoplasms"(肺肿瘤)
-///         - C08.381.540 - "Lung Neoplasms"(同一主题词的另一个位置)
+/// - C08.381.540 - "Lung Neoplasms"(同一主题词的另一个位置)
+/// - B04.820.578.688.2.150 - MeSH 2026 新格式（支持 1-2 位数字段）
 ///
 /// 业务规则：
 ///
@@ -77,10 +79,11 @@ public class MeshTreeNumber implements Serializable {
       throw new IllegalArgumentException("树形编号不能为空");
     }
 
-    // 树形编号格式验证(字母+数字组合,点号分隔)
-    if (!treeNumber.matches("^[A-Z]\\d{2}(\\.\\d{3})*$")) {
+    // 树形编号格式验证(字母+数字组合,点号分隔,每段1-3位数字)
+    // MeSH 2026 起支持 1-2 位数字的子分类段（如 B04.820.578.688.2.150）
+    if (!treeNumber.matches("^[A-Z]\\d{2}(\\.\\d{1,3})*$")) {
       throw new IllegalArgumentException(
-          String.format("树形编号格式无效,必须符合 'X00.000.000' 格式：%s", treeNumber));
+          String.format("树形编号格式无效,必须符合 'X00[.000]*' 格式（后续段支持1-3位数字）：%s", treeNumber));
     }
 
     // 层级深度范围验证（MeSH 实际数据中最大深度约 13 层，预留余量到 15 层）
@@ -212,11 +215,21 @@ public class MeshTreeNumber implements Serializable {
     if (!(o instanceof MeshTreeNumber that)) {
       return false;
     }
-    return treeNumber.equals(that.treeNumber);
+    // MeSH 2026 起支持共享树形位置，需同时比较 treeNumber 和 descriptorUi
+    if (!treeNumber.equals(that.treeNumber)) {
+      return false;
+    }
+    // 如果两者的 descriptorUi 都不为 null，则需要相等
+    if (descriptorUi != null && that.descriptorUi != null) {
+      return descriptorUi.equals(that.descriptorUi);
+    }
+    // 如果任一方 descriptorUi 为 null，则只比较 treeNumber（聚合内部场景）
+    return true;
   }
 
   @Override
   public int hashCode() {
+    // hashCode 只使用 treeNumber，保证与 equals 的宽松匹配兼容
     return treeNumber.hashCode();
   }
 }
