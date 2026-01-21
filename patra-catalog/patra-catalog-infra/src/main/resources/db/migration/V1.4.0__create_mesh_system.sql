@@ -178,8 +178,8 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_tree_number` (
     -- ========================================
     PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
 
-    -- 唯一索引
-    UNIQUE INDEX `uk_tree_number` (`tree_number`) COMMENT '树形编号唯一索引,保证编号唯一性',
+    -- 唯一索引（MeSH 2026 起支持共享树形位置，同一 tree_number 可属于多个 Descriptor）
+    UNIQUE INDEX `uk_tree_number_descriptor` (`tree_number`, `descriptor_ui`) COMMENT '树形编号+主题词UI复合唯一索引,支持共享树形位置',
 
     -- 普通索引
     INDEX `idx_descriptor_ui` (`descriptor_ui`) COMMENT '主题词UI索引,支持查询某主题词的所有位置',
