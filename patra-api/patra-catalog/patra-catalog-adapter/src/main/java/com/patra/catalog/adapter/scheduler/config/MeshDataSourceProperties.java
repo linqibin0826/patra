@@ -9,7 +9,7 @@ import org.springframework.validation.annotation.Validated;
 /// MeSH 数据源配置属性。
 ///
 /// 配置 MeSH 主题词（Descriptor）、限定词（Qualifier）和补充概念记录（SCR）数据文件的下载 URL。
-/// 版本号会从文件名自动推断（如 `desc2025.xml` → `2025`）。
+/// 版本号会从文件名自动推断（如 `desc2026.xml` → `2026`）。
 ///
 /// **配置示例**：
 ///
@@ -17,9 +17,9 @@ import org.springframework.validation.annotation.Validated;
 /// patra:
 ///   catalog:
 ///     mesh:
-///       descriptor-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml
-///       qualifier-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml
-///       scr-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/supp2025.xml
+///       descriptor-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2026.xml
+///       qualifier-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2026.xml
+///       scr-url: https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/supp2026.xml
 /// ```
 ///
 /// **数据源说明**：
@@ -39,24 +39,24 @@ public class MeshDataSourceProperties {
 
   /// MeSH Descriptor（主题词）XML 文件 URL。
   ///
-  /// 文件名格式必须为 `desc{year}.xml`，如 `desc2025.xml`。
-  /// 默认使用 2025 年版本。
+  /// 文件名格式必须为 `desc{year}.xml`，如 `desc2026.xml`。
+  /// 默认使用 2026 年版本。
   @NotBlank(message = "patra.catalog.mesh.descriptor-url 不能为空")
   private String descriptorUrl =
-      "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml";
+      "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2026.xml";
 
   /// MeSH Qualifier（限定词）XML 文件 URL。
   ///
-  /// 文件名格式必须为 `qual{year}.xml`，如 `qual2025.xml`。
-  /// 默认使用 2025 年版本。
+  /// 文件名格式必须为 `qual{year}.xml`，如 `qual2026.xml`。
+  /// 默认使用 2026 年版本。
   @NotBlank(message = "patra.catalog.mesh.qualifier-url 不能为空")
   private String qualifierUrl =
-      "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2025.xml";
+      "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/qual2026.xml";
 
   /// MeSH Supplementary Concept Record（SCR）XML 文件 URL。
   ///
-  /// 文件名格式必须为 `supp{year}.xml`，如 `supp2025.xml`。
-  /// 默认使用 2025 年版本。
+  /// 文件名格式必须为 `supp{year}.xml`，如 `supp2026.xml`。
+  /// 默认使用 2026 年版本。
   ///
   /// **数据规模**：
   ///
@@ -64,5 +64,5 @@ public class MeshDataSourceProperties {
   /// - 是 Descriptor 的 10 倍，建议使用较大的 chunk size
   @NotBlank(message = "patra.catalog.mesh.scr-url 不能为空")
   private String scrUrl =
-      "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/supp2025.xml";
+      "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/supp2026.xml";
 }

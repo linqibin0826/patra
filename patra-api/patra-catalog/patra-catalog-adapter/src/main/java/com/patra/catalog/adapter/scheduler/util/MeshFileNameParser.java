@@ -11,16 +11,16 @@ import java.util.regex.Pattern;
 /// 从 MeSH 数据文件的 URL 中提取版本号。
 ///
 /// **支持的文件名格式**：
-/// - Descriptor: `desc{year}.xml`（如 `desc2025.xml`）
-/// - Qualifier: `qual{year}.xml`（如 `qual2025.xml`）
-/// - Supplemental (SCR): `supp{year}.xml`（如 `supp2025.xml`）
+/// - Descriptor: `desc{year}.xml`（如 `desc2026.xml`）
+/// - Qualifier: `qual{year}.xml`（如 `qual2026.xml`）
+/// - Supplemental (SCR): `supp{year}.xml`（如 `supp2026.xml`）
 ///
 /// **使用示例**：
 ///
 /// ```java
 /// String version = MeshFileNameParser.extractVersion(
-///     "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2025.xml");
-/// // 返回 "2025"
+///     "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2026.xml");
+/// // 返回 "2026"
 /// ```
 ///
 /// @author linqibin
