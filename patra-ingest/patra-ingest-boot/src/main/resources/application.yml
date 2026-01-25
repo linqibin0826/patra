@@ -20,6 +20,9 @@ spring:
         health-check-interval: 10s
         health-check-path: /actuator/health
         instance-id: ${spring.application.name}:${random.value}
+        # 宿主机运行 + Consul 容器：使用 host.docker.internal 让 Consul 能访问宿主机服务
+        prefer-ip-address: false
+        hostname: ${SERVICE_HOSTNAME:host.docker.internal}
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
@@ -46,10 +49,10 @@ patra:
         tolerant: true
       groups:
         registry:
-          base-url: lb://patra-registry
+          base-url: http://patra-registry
           read-timeout: 10s
         storage:
-          base-url: lb://patra-object-storage
+          base-url: http://patra-object-storage
           read-timeout: 60s
   ingest:
     exec:

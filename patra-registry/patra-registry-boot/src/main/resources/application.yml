@@ -39,6 +39,9 @@ spring:
         health-check-interval: 10s
         health-check-path: /actuator/health
         instance-id: ${spring.application.name}:${random.value}
+        # 宿主机运行 + Consul 容器：使用 host.docker.internal 让 Consul 能访问宿主机服务
+        prefer-ip-address: false
+        hostname: ${SERVICE_HOSTNAME:host.docker.internal}
 
   # ========================================
   # JSON Serialization Configuration
