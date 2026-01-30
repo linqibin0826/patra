@@ -1,14 +1,13 @@
 package com.patra.starter.batch.autoconfigure;
 
 import com.patra.starter.batch.config.BatchProperties;
-import com.patra.starter.batch.core.JobLauncherHelper;
+import com.patra.starter.batch.core.JobOperatorHelper;
 import com.patra.starter.batch.schema.BatchSchemaInitializer;
 import io.micrometer.observation.ObservationRegistry;
 import javax.sql.DataSource;
 import org.springframework.batch.core.configuration.annotation.BatchObservabilityBeanPostProcessor;
 import org.springframework.batch.core.configuration.support.JdbcDefaultBatchConfiguration;
-import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
+import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -18,7 +17,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.core.task.SyncTaskExecutor;
 import org.springframework.jdbc.support.JdbcTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -29,8 +27,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 /// ### 配置组件
 ///
 /// - JobRepository - 基于数据库的 Job 元数据存储
-/// - JobLauncher - Job 启动器（使用 SyncTaskExecutor，XXL-Job 已提供异步调度）
-/// - JobOperator - Job 运维操作接口
+/// - JobOperator - Job 启动和运维操作统一接口（Spring Batch 6.0 起替代 JobLauncher）
+/// - JobOperatorHelper - 封装 Job 启动逻辑的辅助类
 ///
 /// ### 数据源选择
 ///
@@ -113,33 +111,6 @@ public class BatchAutoConfiguration extends JdbcDefaultBatchConfiguration {
     return properties.getTablePrefix();
   }
 
-  /// 配置 JobLauncher（同步执行）。
-  ///
-  /// 使用 `SyncTaskExecutor` 实现同步执行，原因：
-  ///
-  /// - XXL-Job 已提供异步调度能力（线程池执行）
-  /// - Spring Batch 二次异步会导致 XXL-Job 无法正确追踪执行状态
-  /// - 同步执行可确保分布式锁在 Job 执行期间有效
-  ///
-  /// @param jobRepository Job 元数据仓库
-  /// @return JobLauncher 实例
-  @Bean
-  @SuppressWarnings("removal")
-  public JobLauncher jobLauncher(JobRepository jobRepository) {
-    TaskExecutorJobLauncher launcher = new TaskExecutorJobLauncher();
-    launcher.setJobRepository(jobRepository);
-
-    launcher.setTaskExecutor(new SyncTaskExecutor());
-
-    try {
-      launcher.afterPropertiesSet();
-    } catch (Exception e) {
-      throw new IllegalStateException("Failed to initialize JobLauncher", e);
-    }
-
-    return launcher;
-  }
-
   /// 注册 Spring Batch 原生可观测性支持。
   ///
   /// 当 `ObservationRegistry` 存在时，自动将其注入到所有 Job 和 Step Bean 中，
@@ -159,18 +130,19 @@ public class BatchAutoConfiguration extends JdbcDefaultBatchConfiguration {
     return new BatchObservabilityBeanPostProcessor();
   }
 
-  /// 配置 JobLauncherHelper。
+  /// 配置 JobOperatorHelper。
   ///
-  /// 封装 JobLauncher 调用逻辑，提供强类型参数支持和幂等性控制。
+  /// 封装 JobOperator 调用逻辑，提供强类型参数支持和幂等性控制。
   ///
-  /// **Spring Batch 6.0 变更**：`JobRepository` 现在直接继承 `JobExplorer` 接口，
-  /// 不再需要单独的 `JobExplorer` Bean。
+  /// **Spring Batch 6.0 变更**：
+  /// - `JobLauncher` 已弃用，使用 `JobOperator` 替代
+  /// - `JobRepository` 现在直接继承 `JobExplorer` 接口，不再需要单独的 `JobExplorer` Bean
   ///
-  /// @param jobLauncher Job 启动器
+  /// @param jobOperator Job 启动和运维操作接口
   /// @param jobRepository Job 元数据仓库（同时提供 JobExplorer 功能）
-  /// @return JobLauncherHelper 实例
+  /// @return JobOperatorHelper 实例
   @Bean
-  public JobLauncherHelper jobLauncherHelper(JobLauncher jobLauncher, JobRepository jobRepository) {
-    return new JobLauncherHelper(jobLauncher, jobRepository);
+  public JobOperatorHelper jobOperatorHelper(JobOperator jobOperator, JobRepository jobRepository) {
+    return new JobOperatorHelper(jobOperator, jobRepository);
   }
 }

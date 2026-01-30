@@ -7,7 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.patra.catalog.domain.model.vo.publication.PublicationImportParams;
-import com.patra.starter.batch.core.JobLauncherHelper;
+import com.patra.starter.batch.core.JobOperatorHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -27,7 +27,7 @@ import org.springframework.batch.core.job.Job;
 @ExtendWith(MockitoExtension.class)
 class PublicationBatchAdapterTest {
 
-  @Mock private JobLauncherHelper jobLauncherHelper;
+  @Mock private JobOperatorHelper jobOperatorHelper;
   @Mock private Job pubmedBaselineImportJob;
 
   @Captor private ArgumentCaptor<PublicationImportJobParams> jobParamsCaptor;
@@ -40,7 +40,7 @@ class PublicationBatchAdapterTest {
 
   @BeforeEach
   void setUp() {
-    adapter = new PublicationBatchAdapter(jobLauncherHelper, pubmedBaselineImportJob);
+    adapter = new PublicationBatchAdapter(jobOperatorHelper, pubmedBaselineImportJob);
   }
 
   @Nested
@@ -52,7 +52,7 @@ class PublicationBatchAdapterTest {
     void should_launch_job_and_return_execution_id() {
       // given
       PublicationImportParams params = PublicationImportParams.of(BASE_URL, FILE_INDEX);
-      when(jobLauncherHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
+      when(jobOperatorHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
           .thenReturn(EXPECTED_EXECUTION_ID);
 
       // when
@@ -67,14 +67,14 @@ class PublicationBatchAdapterTest {
     void should_pass_correct_job_params() {
       // given
       PublicationImportParams params = PublicationImportParams.of(BASE_URL, FILE_INDEX);
-      when(jobLauncherHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
+      when(jobOperatorHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
           .thenReturn(EXPECTED_EXECUTION_ID);
 
       // when
       adapter.launchBaselineImport(params);
 
       // then
-      verify(jobLauncherHelper)
+      verify(jobOperatorHelper)
           .launch(eq(pubmedBaselineImportJob), jobParamsCaptor.capture(), eq(false));
 
       PublicationImportJobParams captured = jobParamsCaptor.getValue();
@@ -87,14 +87,14 @@ class PublicationBatchAdapterTest {
     void should_use_no_timestamp_mode_for_restart() {
       // given
       PublicationImportParams params = PublicationImportParams.of(BASE_URL, FILE_INDEX);
-      when(jobLauncherHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
+      when(jobOperatorHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
           .thenReturn(EXPECTED_EXECUTION_ID);
 
       // when
       adapter.launchBaselineImport(params);
 
       // then
-      verify(jobLauncherHelper).launch(any(), any(), eq(false)); // addTimestamp = false
+      verify(jobOperatorHelper).launch(any(), any(), eq(false)); // addTimestamp = false
     }
   }
 }

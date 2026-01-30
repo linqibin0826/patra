@@ -2,25 +2,21 @@ package com.patra.starter.batch.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.starter.batch.core.JobOperatorHelper;
 import com.patra.starter.test.container.initializer.MySQLContainerInitializer;
 import io.micrometer.observation.ObservationRegistry;
-import java.lang.reflect.Field;
 import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.batch.core.configuration.annotation.BatchObservabilityBeanPostProcessor;
-import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.JobOperator;
-import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.repository.explore.JobExplorer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
-import org.springframework.core.task.SyncTaskExecutor;
-import org.springframework.core.task.TaskExecutor;
 import org.springframework.test.context.ContextConfiguration;
 
 /// BatchAutoConfiguration 集成测试。
@@ -55,34 +51,6 @@ class BatchAutoConfigurationIT {
   }
 
   @Test
-  @DisplayName("应该自动配置 JobLauncher Bean")
-  void shouldAutoConfigureJobLauncher() {
-    // When
-    JobLauncher jobLauncher = applicationContext.getBean(JobLauncher.class);
-
-    // Then
-    assertThat(jobLauncher).isNotNull();
-    assertThat(jobLauncher).isInstanceOf(TaskExecutorJobLauncher.class);
-  }
-
-  @Test
-  @DisplayName("JobLauncher 应该使用 SyncTaskExecutor（关键改进点）")
-  void jobLauncher_ShouldUseSyncTaskExecutor() throws Exception {
-    // Given
-    JobLauncher jobLauncher = applicationContext.getBean(JobLauncher.class);
-
-    // When - 通过反射获取 TaskExecutor
-    Field taskExecutorField = TaskExecutorJobLauncher.class.getDeclaredField("taskExecutor");
-    taskExecutorField.setAccessible(true);
-    TaskExecutor taskExecutor = (TaskExecutor) taskExecutorField.get(jobLauncher);
-
-    // Then - 验证使用的是 SyncTaskExecutor（而非 SimpleAsyncTaskExecutor）
-    assertThat(taskExecutor)
-        .as("JobLauncher 应使用 SyncTaskExecutor（XXL-Job 已异步）")
-        .isInstanceOf(SyncTaskExecutor.class);
-  }
-
-  @Test
   @DisplayName("应该自动配置 JobExplorer Bean")
   void shouldAutoConfigureJobExplorer() {
     // When
@@ -110,6 +78,16 @@ class BatchAutoConfigurationIT {
 
     // Then
     assertThat(dataSource).isNotNull();
+  }
+
+  @Test
+  @DisplayName("应该自动配置 JobOperatorHelper Bean")
+  void shouldAutoConfigureJobOperatorHelper() {
+    // When
+    JobOperatorHelper helper = applicationContext.getBean(JobOperatorHelper.class);
+
+    // Then
+    assertThat(helper).isNotNull();
   }
 
   @Test

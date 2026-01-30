@@ -3,22 +3,17 @@ package com.patra.starter.batch.autoconfigure;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zaxxer.hikari.HikariDataSource;
-import java.lang.reflect.Field;
 import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.repository.explore.JobExplorer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
-import org.springframework.core.task.SyncTaskExecutor;
-import org.springframework.core.task.TaskExecutor;
 
 /// 双数据源集成测试。
 ///
@@ -56,8 +51,6 @@ class DualDataSourceIT {
   @Autowired private JobRepository jobRepository;
 
   @Autowired private JobExplorer jobExplorer;
-
-  @Autowired private JobLauncher jobLauncher;
 
   @Test
   @DisplayName("配置独立数据源时：batchDataSource Bean 应被创建")
@@ -115,20 +108,5 @@ class DualDataSourceIT {
   void jobExplorer_ShouldBeCreated() {
     // Then
     assertThat(jobExplorer).isNotNull();
-  }
-
-  @Test
-  @DisplayName("配置独立数据源时：JobLauncher 应使用 SyncTaskExecutor")
-  void jobLauncher_ShouldUseSyncTaskExecutor() throws Exception {
-    // Given
-    assertThat(jobLauncher).isInstanceOf(TaskExecutorJobLauncher.class);
-
-    // When - 通过反射获取 TaskExecutor
-    Field taskExecutorField = TaskExecutorJobLauncher.class.getDeclaredField("taskExecutor");
-    taskExecutorField.setAccessible(true);
-    TaskExecutor taskExecutor = (TaskExecutor) taskExecutorField.get(jobLauncher);
-
-    // Then
-    assertThat(taskExecutor).isInstanceOf(SyncTaskExecutor.class);
   }
 }

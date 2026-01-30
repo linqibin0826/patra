@@ -2,7 +2,7 @@ package com.patra.catalog.infra.adapter.batch.venue;
 
 import com.patra.catalog.domain.model.vo.venue.VenueInitializeParams;
 import com.patra.catalog.domain.port.batch.VenueInitializeBatchPort;
-import com.patra.starter.batch.core.JobLauncherHelper;
+import com.patra.starter.batch.core.JobOperatorHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 ///
 /// - 实现 Domain 层定义的 `VenueInitializeBatchPort` 接口
 /// - 封装 Spring Batch 框架细节，对上层透明
-/// - 使用 `JobLauncherHelper` 启动批处理任务
+/// - 使用 `JobOperatorHelper` 启动批处理任务
 ///
 /// **流式处理特性**：
 ///
@@ -39,7 +39,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class VenueInitializeBatchAdapter implements VenueInitializeBatchPort {
 
-  private final JobLauncherHelper jobLauncherHelper;
+  private final JobOperatorHelper jobOperatorHelper;
   private final Job venueInitializeJob;
 
   @Override
@@ -53,6 +53,6 @@ public class VenueInitializeBatchAdapter implements VenueInitializeBatchPort {
             .build();
 
     // 不添加时间戳，相同参数的 Job 只执行一次（支持断点续传）
-    return jobLauncherHelper.launch(venueInitializeJob, jobParams, false);
+    return jobOperatorHelper.launch(venueInitializeJob, jobParams, false);
   }
 }
