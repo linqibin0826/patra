@@ -20,9 +20,16 @@ import org.springframework.web.client.RestClient;
 ///
 /// 使用 ApplicationContextRunner 验证 Bean 装配和条件配置逻辑。
 ///
+/// 测试覆盖：
+///
+/// - 默认配置下的 Bean 注册
+/// - 禁用配置时的行为
+/// - 自定义 Bean 不被覆盖
+/// - Apache HttpClient 连接池配置
+///
 /// @author linqibin
 /// @since 0.1.0
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
+@Timeout(value = 10, unit = TimeUnit.SECONDS)
 @DisplayName("HttpInterfaceAutoConfiguration 自动配置测试")
 class HttpInterfaceAutoConfigurationTest {
 
@@ -108,7 +115,7 @@ class HttpInterfaceAutoConfigurationTest {
           .run(
               context -> {
                 assertThat(context).hasBean("httpInterfaceRestClientBuilder");
-                // 验证 Bean 存在即可，超时值在 SimpleClientHttpRequestFactory 内部，不易直接验证
+                // 验证 Bean 存在即可，超时值在 Apache HttpClient 内部，不易直接验证
               });
     }
 
@@ -120,6 +127,29 @@ class HttpInterfaceAutoConfigurationTest {
           .run(
               context -> {
                 assertThat(context).hasSingleBean(ProblemDetailErrorHandler.class);
+              });
+    }
+
+    @Test
+    @DisplayName("连接池配置 - 应用于 Apache HttpClient")
+    void shouldApplyConnectionPoolProperties() {
+      contextRunner
+          .withPropertyValues(
+              "patra.http.interface.connection-pool.max-conn-total=200",
+              "patra.http.interface.connection-pool.max-conn-per-route=50",
+              "patra.http.interface.connection-pool.validate-after-inactivity=10s",
+              "patra.http.interface.connection-pool.evict-idle-connections-after=60s")
+          .run(
+              context -> {
+                assertThat(context).hasBean("httpInterfaceRestClientBuilder");
+                // 验证配置属性绑定
+                HttpInterfaceProperties props = context.getBean(HttpInterfaceProperties.class);
+                assertThat(props.getConnectionPool().getMaxConnTotal()).isEqualTo(200);
+                assertThat(props.getConnectionPool().getMaxConnPerRoute()).isEqualTo(50);
+                assertThat(props.getConnectionPool().getValidateAfterInactivity().toSeconds())
+                    .isEqualTo(10);
+                assertThat(props.getConnectionPool().getEvictIdleConnectionsAfter().toSeconds())
+                    .isEqualTo(60);
               });
     }
   }

@@ -24,6 +24,12 @@ dependencies {
     // Spring Web（提供 RestClient、@HttpExchange 等）
     api("org.springframework:spring-web")
 
+    // Apache HttpClient 5.x（替代 JDK HttpClient，提供更可靠的连接池管理）
+    // - 支持 validateAfterInactivity 在使用前验证连接有效性
+    // - 内置 evictIdleConnections/evictExpiredConnections 主动清理无效连接
+    // - 解决 "HTTP/1.1 header parser received no bytes" stale connection 问题
+    api("org.apache.httpcomponents.client5:httpclient5")
+
     // Spring Cloud LoadBalancer（服务发现支持）
     api("org.springframework.cloud:spring-cloud-starter-loadbalancer")
 
