@@ -9,6 +9,11 @@
 # ========================================
 server:
   port: 6000
+  # Tomcat Keep-Alive 配置 - 防止客户端遇到 stale connection 错误
+  # 参考: https://github.com/spring-projects/spring-boot/issues/23539
+  tomcat:
+    keep-alive-timeout: 120s       # Keep-Alive 超时（应大于客户端超时）
+    max-keep-alive-requests: 1000  # 单连接最大请求数
 
 # ========================================
 # Spring Application Configuration
@@ -38,10 +43,14 @@ spring:
         service-name: ${spring.application.name}
         health-check-interval: 10s
         health-check-path: /actuator/health
-        instance-id: ${spring.application.name}:${random.value}
-        # 宿主机运行 + Consul 容器：使用 host.docker.internal 让 Consul 能访问宿主机服务
-        prefer-ip-address: false
-        hostname: ${SERVICE_HOSTNAME:host.docker.internal}
+        # 使用固定 instance-id，服务重启时覆盖旧注册，避免僵尸实例
+        instance-id: ${spring.application.name}:${server.port}
+        # 使用宿主机实际 IP 注册服务（Consul 容器和宿主机服务都能访问）
+        prefer-ip-address: true
+        # 指定服务注册的 scheme，让 LoadBalancer 能正确重建 URL
+        # 解决 lb:// 协议与 JDK HttpClient 不兼容问题
+        # 参考：https://github.com/spring-cloud/spring-cloud-commons/issues/1320
+        scheme: http
 
   # ========================================
   # JSON Serialization Configuration

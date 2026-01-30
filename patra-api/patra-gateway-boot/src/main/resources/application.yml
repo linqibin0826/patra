@@ -30,10 +30,12 @@ spring:
         service-name: ${spring.application.name}
         health-check-interval: 10s
         health-check-path: /actuator/health
-        instance-id: ${spring.application.name}:${random.value}
-        # 宿主机运行 + Consul 容器：使用 host.docker.internal 让 Consul 能访问宿主机服务
-        prefer-ip-address: false
-        hostname: ${SERVICE_HOSTNAME:host.docker.internal}
+        # 使用固定 instance-id，服务重启时覆盖旧注册，避免僵尸实例
+        instance-id: ${spring.application.name}:${server.port}
+        # 使用宿主机实际 IP 注册服务（Consul 容器和宿主机服务都能访问）
+        prefer-ip-address: true
+        # 指定服务注册的 scheme，解决 lb:// 协议与 HttpClient 不兼容问题
+        scheme: http
 
     # Gateway Route Configuration
     # Routes requests to downstream microservices using load balancing
