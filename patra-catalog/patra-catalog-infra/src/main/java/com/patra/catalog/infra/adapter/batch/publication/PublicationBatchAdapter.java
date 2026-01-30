@@ -2,7 +2,7 @@ package com.patra.catalog.infra.adapter.batch.publication;
 
 import com.patra.catalog.domain.model.vo.publication.PublicationImportParams;
 import com.patra.catalog.domain.port.batch.PublicationBatchPort;
-import com.patra.starter.batch.core.JobLauncherHelper;
+import com.patra.starter.batch.core.JobOperatorHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 ///
 /// - 实现 Domain 层定义的 `PublicationBatchPort` 接口
 /// - 封装 Spring Batch 框架细节，对上层透明
-/// - 使用 `JobLauncherHelper` 启动批处理任务
+/// - 使用 `JobOperatorHelper` 启动批处理任务
 ///
 /// **单文件模式**：
 ///
@@ -44,17 +44,17 @@ import org.springframework.stereotype.Component;
 @Component
 public class PublicationBatchAdapter implements PublicationBatchPort {
 
-  private final JobLauncherHelper jobLauncherHelper;
+  private final JobOperatorHelper jobOperatorHelper;
   private final Job pubmedBaselineImportJob;
 
   /// 构造函数。
   ///
-  /// @param jobLauncherHelper Job 启动器
+  /// @param jobOperatorHelper Job 启动器
   /// @param pubmedBaselineImportJob PubMed Baseline 导入 Job
   public PublicationBatchAdapter(
-      JobLauncherHelper jobLauncherHelper,
+      JobOperatorHelper jobOperatorHelper,
       @Qualifier("pubmedBaselineImportJob") Job pubmedBaselineImportJob) {
-    this.jobLauncherHelper = jobLauncherHelper;
+    this.jobOperatorHelper = jobOperatorHelper;
     this.pubmedBaselineImportJob = pubmedBaselineImportJob;
   }
 
@@ -71,6 +71,6 @@ public class PublicationBatchAdapter implements PublicationBatchPort {
         PublicationImportJobParams.builder().downloadUrl(downloadUrl).build();
 
     // 不添加时间戳，相同参数的 Job 只执行一次（支持断点续传）
-    return jobLauncherHelper.launch(pubmedBaselineImportJob, jobParams, false);
+    return jobOperatorHelper.launch(pubmedBaselineImportJob, jobParams, false);
   }
 }

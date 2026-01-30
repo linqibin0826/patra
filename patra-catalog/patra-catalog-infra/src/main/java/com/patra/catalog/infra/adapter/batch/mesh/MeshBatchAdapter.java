@@ -2,7 +2,7 @@ package com.patra.catalog.infra.adapter.batch.mesh;
 
 import com.patra.catalog.domain.model.vo.mesh.MeshImportParams;
 import com.patra.catalog.domain.port.batch.MeshBatchPort;
-import com.patra.starter.batch.core.JobLauncherHelper;
+import com.patra.starter.batch.core.JobOperatorHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 /// - 实现 Domain 层定义的 `MeshBatchPort` 接口
 /// - 封装 Spring Batch 框架细节，对上层透明
 /// - 为不同的导入类型提供语义明确的方法实现
-/// - 使用 `JobLauncherHelper` 启动批处理任务
+/// - 使用 `JobOperatorHelper` 启动批处理任务
 ///
 /// **流式处理特性**：
 ///
@@ -34,20 +34,20 @@ import org.springframework.stereotype.Component;
 @Component
 public class MeshBatchAdapter implements MeshBatchPort {
 
-  private final JobLauncherHelper jobLauncherHelper;
+  private final JobOperatorHelper jobOperatorHelper;
   private final Job meshDescriptorImportJob;
   private final Job meshScrImportJob;
 
   /// 构造函数。
   ///
-  /// @param jobLauncherHelper Job 启动器
+  /// @param jobOperatorHelper Job 启动器
   /// @param meshDescriptorImportJob Descriptor 导入 Job
   /// @param meshScrImportJob SCR 导入 Job
   public MeshBatchAdapter(
-      JobLauncherHelper jobLauncherHelper,
+      JobOperatorHelper jobOperatorHelper,
       @Qualifier("meshDescriptorImportJob") Job meshDescriptorImportJob,
       @Qualifier("meshScrImportJob") Job meshScrImportJob) {
-    this.jobLauncherHelper = jobLauncherHelper;
+    this.jobOperatorHelper = jobOperatorHelper;
     this.meshDescriptorImportJob = meshDescriptorImportJob;
     this.meshScrImportJob = meshScrImportJob;
   }
@@ -79,6 +79,6 @@ public class MeshBatchAdapter implements MeshBatchPort {
             .build();
 
     // 不添加时间戳，相同参数的 Job 只执行一次（支持断点续传）
-    return jobLauncherHelper.launch(job, jobParams, false);
+    return jobOperatorHelper.launch(job, jobParams, false);
   }
 }

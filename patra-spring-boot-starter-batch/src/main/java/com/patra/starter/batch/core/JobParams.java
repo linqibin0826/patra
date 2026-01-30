@@ -5,7 +5,7 @@ import java.util.Set;
 
 /// Job 参数标记接口。
 ///
-/// 所有 Job 参数类必须实现此接口，以便 `JobLauncherHelper` 进行类型安全的参数传递。
+/// 所有 Job 参数类必须实现此接口，以便 `JobOperatorHelper` 进行类型安全的参数传递。
 ///
 /// ## 使用示例
 ///
