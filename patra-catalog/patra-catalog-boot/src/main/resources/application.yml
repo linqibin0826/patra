@@ -35,10 +35,13 @@ spring:
         service-name: ${spring.application.name}
         health-check-interval: 10s
         health-check-path: /actuator/health
-        instance-id: ${spring.application.name}:${random.value}
-        # 宿主机运行 + Consul 容器：使用 host.docker.internal 让 Consul 能访问宿主机服务
-        prefer-ip-address: false
-        hostname: ${SERVICE_HOSTNAME:host.docker.internal}
+        # 使用固定 instance-id，服务重启时覆盖旧注册，避免僵尸实例
+        instance-id: ${spring.application.name}:${server.port}
+        # 使用宿主机实际 IP 注册服务（Consul 容器和宿主机服务都能访问）
+        prefer-ip-address: true
+        # 指定服务发现返回的 scheme，解决 lb:// 协议与 JDK HttpClient 不兼容问题
+        # 参考：https://github.com/spring-cloud/spring-cloud-commons/issues/1320
+        scheme: http
 
   # Database Configuration
   datasource:
@@ -72,7 +75,7 @@ patra:
         tolerant: true
       groups:
         registry:
-          base-url: http://patra-registry
+          base-url: lb://patra-registry
           read-timeout: 10s
   catalog:
     mesh:
@@ -93,7 +96,7 @@ xxl:
     admin:
       addresses: ${XXL_JOB_ADMIN_ADDRESSES:http://localhost:7070/xxl-job-admin}
     executor:
-      ip: ${XXL_JOB_EXECUTOR_IP:host.docker.internal}
+      ip: ${XXL_JOB_EXECUTOR_IP:host.docker.internal}  # Docker 容器中的 xxl-job-admin 需要通过此地址回调宿主机
       # Log directory in centralized logs folder
       logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PATRA_LOG_DIR:logs}/xxl-job/patra-catalog}
       logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}
