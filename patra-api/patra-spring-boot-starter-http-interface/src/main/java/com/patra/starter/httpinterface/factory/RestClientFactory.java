@@ -1,13 +1,21 @@
 package com.patra.starter.httpinterface.factory;
 
 import com.patra.starter.httpinterface.config.HttpInterfaceProperties;
+import com.patra.starter.httpinterface.config.HttpInterfaceProperties.ConnectionPoolProperties;
 import com.patra.starter.httpinterface.config.HttpInterfaceProperties.ServiceGroupProperties;
 import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hc.client5.http.classic.HttpClient;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.core5.util.TimeValue;
+import org.apache.hc.core5.util.Timeout;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.restclient.RestClientCustomizer;
 import org.springframework.http.client.ClientHttpRequestFactory;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.support.RestClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
@@ -16,6 +24,14 @@ import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 ///
 /// 提供通用的 RestClient 创建逻辑，简化各服务的 HTTP Interface 配置。
 /// 自动应用分组级别的超时配置、错误处理器和 TraceId 拦截器。
+///
+/// **使用 Apache HttpClient 5.x**
+///
+/// 解决 JDK HttpClient 的 stale connection 检测不可靠问题：
+///
+/// - 支持 `validateAfterInactivity` 在使用前验证连接有效性
+/// - 内置 `evictIdleConnections` / `evictExpiredConnections` 主动清理无效连接
+/// - 解决 "HTTP/1.1 header parser received no bytes" 错误
 ///
 /// **使用示例：**
 ///
@@ -88,7 +104,7 @@ public class RestClientFactory {
     // 克隆 builder 避免污染原始实例
     RestClient.Builder clientBuilder = builder.clone().baseUrl(baseUrl);
 
-    // 应用超时配置
+    // 应用超时配置（使用 Apache HttpClient）
     ClientHttpRequestFactory requestFactory = createRequestFactory(groupProps);
     if (requestFactory != null) {
       clientBuilder.requestFactory(requestFactory);
@@ -118,22 +134,17 @@ public class RestClientFactory {
 
   /// 创建带有超时配置的 ClientHttpRequestFactory
   ///
+  /// 使用 Apache HttpClient 5.x，支持连接池管理和空闲连接清理。
   /// 优先使用分组配置，其次使用全局配置。
   ///
   /// @param groupProps 分组配置（可为 null）
   /// @return 配置好的 RequestFactory，如果无需自定义超时则返回 null
   private ClientHttpRequestFactory createRequestFactory(ServiceGroupProperties groupProps) {
     // 确定连接超时
-    Duration connectTimeout =
-        (groupProps != null && groupProps.getConnectTimeout() != null)
-            ? groupProps.getConnectTimeout()
-            : properties.getConnectTimeout();
+    Duration connectTimeout = resolveConnectTimeout(groupProps);
 
     // 确定读取超时
-    Duration readTimeout =
-        (groupProps != null && groupProps.getReadTimeout() != null)
-            ? groupProps.getReadTimeout()
-            : properties.getReadTimeout();
+    Duration readTimeout = resolveReadTimeout(groupProps);
 
     // 如果超时配置与全局配置相同，不创建自定义 RequestFactory
     if (connectTimeout.equals(properties.getConnectTimeout())
@@ -141,15 +152,55 @@ public class RestClientFactory {
       return null;
     }
 
-    SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-    factory.setConnectTimeout(connectTimeout);
-    factory.setReadTimeout(readTimeout);
+    // 创建独立的 Apache HttpClient（使用分组超时配置）
+    ConnectionPoolProperties poolProps = properties.getConnectionPool();
+
+    PoolingHttpClientConnectionManager connManager =
+        PoolingHttpClientConnectionManagerBuilder.create()
+            .setMaxConnTotal(poolProps.getMaxConnTotal())
+            .setMaxConnPerRoute(poolProps.getMaxConnPerRoute())
+            .setValidateAfterInactivity(
+                TimeValue.ofSeconds(poolProps.getValidateAfterInactivity().toSeconds()))
+            .build();
+
+    RequestConfig requestConfig =
+        RequestConfig.custom()
+            .setConnectTimeout(Timeout.of(connectTimeout))
+            .setResponseTimeout(Timeout.of(readTimeout))
+            .build();
+
+    HttpClient httpClient =
+        HttpClients.custom()
+            .setConnectionManager(connManager)
+            .setDefaultRequestConfig(requestConfig)
+            .evictIdleConnections(
+                TimeValue.ofSeconds(poolProps.getEvictIdleConnectionsAfter().toSeconds()))
+            .evictExpiredConnections()
+            .build();
 
     log.debug(
-        "配置超时：connectTimeout={}ms, readTimeout={}ms",
+        "配置分组超时：connectTimeout={}ms, readTimeout={}ms",
         connectTimeout.toMillis(),
         readTimeout.toMillis());
 
-    return factory;
+    return new HttpComponentsClientHttpRequestFactory(httpClient);
+  }
+
+  /// 解析连接超时配置
+  ///
+  /// 优先使用分组配置，其次使用全局配置。
+  private Duration resolveConnectTimeout(ServiceGroupProperties groupProps) {
+    return (groupProps != null && groupProps.getConnectTimeout() != null)
+        ? groupProps.getConnectTimeout()
+        : properties.getConnectTimeout();
+  }
+
+  /// 解析读取超时配置
+  ///
+  /// 优先使用分组配置，其次使用全局配置。
+  private Duration resolveReadTimeout(ServiceGroupProperties groupProps) {
+    return (groupProps != null && groupProps.getReadTimeout() != null)
+        ? groupProps.getReadTimeout()
+        : properties.getReadTimeout();
   }
 }

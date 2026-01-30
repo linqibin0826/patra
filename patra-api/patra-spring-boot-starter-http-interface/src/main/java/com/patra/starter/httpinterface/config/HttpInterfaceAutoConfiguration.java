@@ -1,8 +1,16 @@
 package com.patra.starter.httpinterface.config;
 
+import com.patra.starter.httpinterface.config.HttpInterfaceProperties.ConnectionPoolProperties;
 import com.patra.starter.httpinterface.error.ProblemDetailErrorHandler;
 import com.patra.starter.httpinterface.factory.RestClientFactory;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hc.client5.http.classic.HttpClient;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.core5.util.TimeValue;
+import org.apache.hc.core5.util.Timeout;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -14,7 +22,7 @@ import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpStatusCode;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.ObjectMapper;
 
@@ -24,6 +32,14 @@ import tools.jackson.databind.ObjectMapper;
 ///
 /// - 类路径存在 `RestClient` 和 `ProblemDetail`
 /// - 配置属性 `patra.http.interface.enabled` 为 `true`（默认）
+///
+/// **使用 Apache HttpClient 5.x 替代 JDK HttpClient**
+///
+/// 解决 "HTTP/1.1 header parser received no bytes" stale connection 问题：
+///
+/// - `validateAfterInactivity`：使用前验证连接有效性
+/// - `evictIdleConnections`：主动清理空闲连接
+/// - `evictExpiredConnections`：清理过期连接
 ///
 /// **注册的 Bean：**
 ///
@@ -87,7 +103,8 @@ public class HttpInterfaceAutoConfiguration {
   ///
   /// 此 Builder 已配置：
   ///
-  /// - 全局连接和读取超时（通过 SimpleClientHttpRequestFactory）
+  /// - Apache HttpClient 5.x 连接池（支持 stale connection 检测和清理）
+  /// - 全局连接和读取超时
   /// - ProblemDetail 错误处理
   ///
   /// @param customizers 所有 RestClientCustomizer 实例
@@ -105,9 +122,14 @@ public class HttpInterfaceAutoConfiguration {
     customizers.orderedStream().forEach(customizer -> customizer.customize(builder));
 
     log.info(
-        "创建 httpInterfaceRestClientBuilder (connectTimeout={}, readTimeout={})",
+        "创建 httpInterfaceRestClientBuilder (connectTimeout={}, readTimeout={}, "
+            + "maxConnTotal={}, maxConnPerRoute={}, validateAfterInactivity={}, evictIdleAfter={})",
         properties.getConnectTimeout(),
-        properties.getReadTimeout());
+        properties.getReadTimeout(),
+        properties.getConnectionPool().getMaxConnTotal(),
+        properties.getConnectionPool().getMaxConnPerRoute(),
+        properties.getConnectionPool().getValidateAfterInactivity(),
+        properties.getConnectionPool().getEvictIdleConnectionsAfter());
 
     return builder;
   }
@@ -131,13 +153,61 @@ public class HttpInterfaceAutoConfiguration {
     return RestClient.builder().requestFactory(createDefaultRequestFactory(properties));
   }
 
-  /// 构建默认的请求工厂（全局超时）。
-  private SimpleClientHttpRequestFactory createDefaultRequestFactory(
+  /// 构建默认的请求工厂
+  ///
+  /// 使用 Apache HttpClient 5.x 提供：
+  ///
+  /// - **可靠的 stale connection 检测**：通过 `validateAfterInactivity` 配置，
+  ///   连接空闲超过指定时间后，下次使用前会验证连接有效性
+  /// - **主动连接清理**：`evictIdleConnections` 和 `evictExpiredConnections`
+  ///   自动清理无效连接，避免复用已被服务端关闭的连接
+  /// - **精细的连接池控制**：`maxConnTotal` 和 `maxConnPerRoute` 控制连接池大小
+  ///
+  /// 这解决了 JDK HttpClient 的以下问题：
+  ///
+  /// - "HTTP/1.1 header parser received no bytes" 错误
+  /// - "EOF reached while reading" 错误
+  /// - stale connection 检测不可靠导致连续重试都失败
+  private HttpComponentsClientHttpRequestFactory createDefaultRequestFactory(
       HttpInterfaceProperties properties) {
-    SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-    requestFactory.setConnectTimeout(properties.getConnectTimeout());
-    requestFactory.setReadTimeout(properties.getReadTimeout());
-    return requestFactory;
+
+    ConnectionPoolProperties poolProps = properties.getConnectionPool();
+
+    // 创建连接池管理器
+    PoolingHttpClientConnectionManager connManager =
+        PoolingHttpClientConnectionManagerBuilder.create()
+            .setMaxConnTotal(poolProps.getMaxConnTotal())
+            .setMaxConnPerRoute(poolProps.getMaxConnPerRoute())
+            .setValidateAfterInactivity(
+                TimeValue.ofSeconds(poolProps.getValidateAfterInactivity().toSeconds()))
+            .build();
+
+    // 创建请求配置
+    RequestConfig requestConfig =
+        RequestConfig.custom()
+            .setConnectTimeout(Timeout.of(properties.getConnectTimeout()))
+            .setResponseTimeout(Timeout.of(properties.getReadTimeout()))
+            .build();
+
+    // 创建 HttpClient
+    HttpClient httpClient =
+        HttpClients.custom()
+            .setConnectionManager(connManager)
+            .setDefaultRequestConfig(requestConfig)
+            .evictIdleConnections(
+                TimeValue.ofSeconds(poolProps.getEvictIdleConnectionsAfter().toSeconds()))
+            .evictExpiredConnections()
+            .build();
+
+    log.debug(
+        "创建 Apache HttpClient 连接池: maxConnTotal={}, maxConnPerRoute={}, "
+            + "validateAfterInactivity={}s, evictIdleAfter={}s",
+        poolProps.getMaxConnTotal(),
+        poolProps.getMaxConnPerRoute(),
+        poolProps.getValidateAfterInactivity().toSeconds(),
+        poolProps.getEvictIdleConnectionsAfter().toSeconds());
+
+    return new HttpComponentsClientHttpRequestFactory(httpClient);
   }
 
   /// 注册 RestClient 工厂
