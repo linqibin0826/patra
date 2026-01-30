@@ -10,7 +10,7 @@ import lombok.Builder;
 ///
 /// 封装 ItemProcessor 处理后的所有数据，包括：
 /// - 主数据：PublicationAggregate（文献聚合根）
-/// - 关联数据：MeSH 标引、关键词、资助信息、出版类型等
+/// - 关联数据：MeSH 标引、关键词、资助信息、出版类型、补充 MeSH 概念等
 ///
 /// **使用场景**：
 ///
@@ -23,6 +23,7 @@ import lombok.Builder;
 /// @param keywords 关键词数据
 /// @param funding 资助信息数据
 /// @param publicationTypes 出版类型数据
+/// @param supplMeshNames 补充 MeSH 概念数据
 /// @author linqibin
 /// @since 0.1.0
 @Builder
@@ -31,14 +32,16 @@ public record PublicationImportResult(
     List<MeshHeadingData> meshHeadings,
     List<KeywordData> keywords,
     List<FundingData> funding,
-    List<PublicationTypeData> publicationTypes) {
+    List<PublicationTypeData> publicationTypes,
+    List<SupplMeshData> supplMeshNames) {
 
   /// 创建仅包含主数据的结果（无关联数据）。
   ///
   /// @param publication 文献聚合根
   /// @return 结果对象
   public static PublicationImportResult ofPublication(PublicationAggregate publication) {
-    return new PublicationImportResult(publication, List.of(), List.of(), List.of(), List.of());
+    return new PublicationImportResult(
+        publication, List.of(), List.of(), List.of(), List.of(), List.of());
   }
 
   /// 创建包含 MeSH 数据的结果（向后兼容）。
@@ -51,6 +54,7 @@ public record PublicationImportResult(
     return new PublicationImportResult(
         publication,
         meshHeadings != null ? meshHeadings : List.of(),
+        List.of(),
         List.of(),
         List.of(),
         List.of());
@@ -75,7 +79,33 @@ public record PublicationImportResult(
         meshHeadings != null ? meshHeadings : List.of(),
         keywords != null ? keywords : List.of(),
         funding != null ? funding : List.of(),
-        publicationTypes != null ? publicationTypes : List.of());
+        publicationTypes != null ? publicationTypes : List.of(),
+        List.of());
+  }
+
+  /// 创建包含所有关联数据的结果（含补充 MeSH 概念）。
+  ///
+  /// @param publication 文献聚合根
+  /// @param meshHeadings MeSH 标引数据
+  /// @param keywords 关键词数据
+  /// @param funding 资助信息数据
+  /// @param publicationTypes 出版类型数据
+  /// @param supplMeshNames 补充 MeSH 概念数据
+  /// @return 结果对象
+  public static PublicationImportResult ofAllWithSupplMesh(
+      PublicationAggregate publication,
+      List<MeshHeadingData> meshHeadings,
+      List<KeywordData> keywords,
+      List<FundingData> funding,
+      List<PublicationTypeData> publicationTypes,
+      List<SupplMeshData> supplMeshNames) {
+    return new PublicationImportResult(
+        publication,
+        meshHeadings != null ? meshHeadings : List.of(),
+        keywords != null ? keywords : List.of(),
+        funding != null ? funding : List.of(),
+        publicationTypes != null ? publicationTypes : List.of(),
+        supplMeshNames != null ? supplMeshNames : List.of());
   }
 
   /// 是否有 MeSH 标引数据。
@@ -96,6 +126,11 @@ public record PublicationImportResult(
   /// 是否有出版类型数据。
   public boolean hasPublicationTypes() {
     return publicationTypes != null && !publicationTypes.isEmpty();
+  }
+
+  /// 是否有补充 MeSH 概念数据。
+  public boolean hasSupplMeshNames() {
+    return supplMeshNames != null && !supplMeshNames.isEmpty();
   }
 
   // ==================== MeSH 相关数据类型 ====================
@@ -132,11 +167,12 @@ public record PublicationImportResult(
   ///
   /// @param qualifierUi MeSH 限定词 UI（如 "Q000379"）
   /// @param majorTopic 是否为主要主题
-  public record QualifierData(String qualifierUi, boolean majorTopic) {
+  /// @param qualifierOrder 限定词顺序（在同一标引内）
+  public record QualifierData(String qualifierUi, boolean majorTopic, Integer qualifierOrder) {
 
     /// 创建限定词数据。
-    public static QualifierData of(String qualifierUi, boolean majorTopic) {
-      return new QualifierData(qualifierUi, majorTopic);
+    public static QualifierData of(String qualifierUi, boolean majorTopic, Integer qualifierOrder) {
+      return new QualifierData(qualifierUi, majorTopic, qualifierOrder);
     }
   }
 
@@ -202,6 +238,27 @@ public record PublicationImportResult(
     public static PublicationTypeData of(
         String typeId, String typeValue, String vocabularySource, Integer order) {
       return new PublicationTypeData(typeId, typeValue, vocabularySource, order);
+    }
+  }
+
+  // ==================== 补充 MeSH 概念数据类型 ====================
+
+  /// 补充 MeSH 概念数据。
+  ///
+  /// 用于存储 PubMed 文献中的 SupplMeshNameList 数据，关联到 MeSH SCR（补充概念记录）。
+  ///
+  /// **业务含义**：
+  ///
+  /// MeSH SCR 用于标注文献中的化学物质、疾病变体、实验方案等概念，
+  /// 与 MeshHeading（正式描述符）互补，提供更精细的标引。
+  ///
+  /// @param scrUi SCR UI（如 "C538003"）
+  /// @param supplOrder 顺序（保留 XML 中的顺序）
+  public record SupplMeshData(String scrUi, Integer supplOrder) {
+
+    /// 创建补充 MeSH 概念数据。
+    public static SupplMeshData of(String scrUi, Integer supplOrder) {
+      return new SupplMeshData(scrUi, supplOrder);
     }
   }
 }

@@ -19,6 +19,7 @@ import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.MeshHeadingData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationTypeData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.QualifierData;
+import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.SupplMeshData;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.CanonicalPublication.Abstract;
@@ -137,9 +138,10 @@ public class PubmedArticleItemProcessor
     List<KeywordData> keywords = buildKeywordData(publication);
     List<FundingData> funding = buildFundingData(publication);
     List<PublicationTypeData> publicationTypes = buildPublicationTypeData(publication);
+    List<SupplMeshData> supplMeshNames = buildSupplMeshData(publication);
 
-    return PublicationImportResult.ofAll(
-        aggregate, meshHeadings, keywords, funding, publicationTypes);
+    return PublicationImportResult.ofAllWithSupplMesh(
+        aggregate, meshHeadings, keywords, funding, publicationTypes, supplMeshNames);
   }
 
   /// 从 CanonicalPublication 提取 PMID。
@@ -434,20 +436,22 @@ public class PubmedArticleItemProcessor
   /// 构建限定词数据。
   ///
   /// @param qualifierNames 限定词列表
-  /// @return 限定词数据列表
+  /// @return 限定词数据列表（保留原始顺序）
   private List<QualifierData> buildQualifierData(List<QualifierName> qualifierNames) {
     if (qualifierNames == null || qualifierNames.isEmpty()) {
       return List.of();
     }
 
     List<QualifierData> result = new ArrayList<>();
+    int order = 1;
     for (QualifierName qualifier : qualifierNames) {
       if (qualifier == null || qualifier.getUi() == null) {
         continue;
       }
 
       result.add(
-          QualifierData.of(qualifier.getUi(), Boolean.TRUE.equals(qualifier.getMajorTopic())));
+          QualifierData.of(
+              qualifier.getUi(), Boolean.TRUE.equals(qualifier.getMajorTopic()), order++));
     }
 
     return result;
@@ -573,6 +577,42 @@ public class PubmedArticleItemProcessor
       result.add(
           PublicationTypeData.of(
               type.getId(), type.getValue(), type.getVocabularySource(), order++));
+    }
+
+    return result;
+  }
+
+  // ========== 补充 MeSH 概念数据处理 ==========
+
+  /// 构建补充 MeSH 概念数据。
+  ///
+  /// 从 CanonicalPublication 提取 SupplMeshNameList，转换为 SupplMeshData 列表。
+  /// 每个记录包含 SCR UI 和顺序号，用于关联到 cat_mesh_scr 表。
+  ///
+  /// **业务含义**：
+  ///
+  /// MeSH SCR（Supplementary Concept Records）用于标注 PubMed 文献中的：
+  /// - 化学物质和药物（Type="Chemical"）
+  /// - 疾病名称变体（Type="Disease"）
+  /// - 实验方案（Type="Protocol"）
+  ///
+  /// @param publication 规范化文献
+  /// @return 补充 MeSH 概念数据列表（可能为空，不会为 null）
+  private List<SupplMeshData> buildSupplMeshData(CanonicalPublication publication) {
+    List<CanonicalPublication.SupplMeshName> supplMeshNames = publication.getSupplMeshNames();
+    if (supplMeshNames == null || supplMeshNames.isEmpty()) {
+      return List.of();
+    }
+
+    List<SupplMeshData> result = new ArrayList<>();
+    int order = 1;
+
+    for (CanonicalPublication.SupplMeshName supplMesh : supplMeshNames) {
+      if (supplMesh == null || supplMesh.getUi() == null) {
+        continue;
+      }
+
+      result.add(SupplMeshData.of(supplMesh.getUi(), order++));
     }
 
     return result;

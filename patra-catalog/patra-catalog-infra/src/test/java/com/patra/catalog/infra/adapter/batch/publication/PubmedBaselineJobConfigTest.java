@@ -13,6 +13,7 @@ import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.starter.batch.config.BatchProperties;
 import java.util.Optional;
@@ -50,6 +51,7 @@ class PubmedBaselineJobConfigTest {
   @Mock private PublicationKeywordDao keywordDao;
   @Mock private PublicationFundingDao fundingDao;
   @Mock private PublicationTypeDao typeDao;
+  @Mock private PublicationSupplMeshDao supplMeshDao;
   @Mock private BatchProperties batchProperties;
 
   private PubmedBaselineJobConfig jobConfig;
@@ -69,6 +71,7 @@ class PubmedBaselineJobConfigTest {
             keywordDao,
             fundingDao,
             typeDao,
+            supplMeshDao,
             batchProperties,
             Optional.empty());
   }
@@ -165,7 +168,7 @@ class PubmedBaselineJobConfigTest {
       // when
       PublicationItemWriter writer =
           jobConfig.publicationItemWriter(
-              meshHeadingDao, meshQualifierDao, keywordDao, fundingDao, typeDao);
+              meshHeadingDao, meshQualifierDao, keywordDao, fundingDao, typeDao, supplMeshDao);
 
       // then
       assertThat(writer).isNotNull();
