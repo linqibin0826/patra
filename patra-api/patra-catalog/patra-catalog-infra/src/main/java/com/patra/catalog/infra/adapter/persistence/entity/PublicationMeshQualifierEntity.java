@@ -76,6 +76,12 @@ public class PublicationMeshQualifierEntity extends ValueObjectJpaEntity {
   @lombok.Builder.Default
   private Boolean majorTopic = false;
 
+  /// 限定词顺序（可选）。
+  ///
+  /// 保留原始 XML 中的限定词顺序，在同一标引内的排序。
+  @Column(name = "qualifier_order")
+  private Integer qualifierOrder;
+
   // ========== 便捷方法 ==========
 
   /// 创建限定词记录。
@@ -83,13 +89,15 @@ public class PublicationMeshQualifierEntity extends ValueObjectJpaEntity {
   /// @param headingId 文献 MeSH 标引 ID
   /// @param qualifierUi MeSH 限定词 UI
   /// @param majorTopic 是否为主要主题
+  /// @param qualifierOrder 限定词顺序
   /// @return 新建的实体
   public static PublicationMeshQualifierEntity of(
-      Long headingId, String qualifierUi, boolean majorTopic) {
+      Long headingId, String qualifierUi, boolean majorTopic, Integer qualifierOrder) {
     return PublicationMeshQualifierEntity.builder()
         .publicationMeshHeadingId(headingId)
         .qualifierUi(qualifierUi)
         .majorTopic(majorTopic)
+        .qualifierOrder(qualifierOrder)
         .build();
   }
 }

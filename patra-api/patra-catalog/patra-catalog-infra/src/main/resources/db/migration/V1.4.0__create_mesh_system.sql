@@ -5,7 +5,7 @@
 -- 领域: 分类体系
 -- 设计阶段: 阶段 3 - SQL DDL 生成
 -- 创建日期: 2025-01-18
--- 设计范围: MeSH (医学主题词表) 体系（8张表）
+-- 设计范围: MeSH (医学主题词表) 体系（9张表）
 -- 作者: Patra Lin
 -- MySQL 版本: 8.0+
 -- 字符集: utf8mb4 (支持完整Unicode)
@@ -15,7 +15,7 @@
 -- ============================================================
 -- 表清单与依赖关系
 -- ============================================================
--- MeSH 体系 (8张表):
+-- MeSH 体系 (9张表):
 --   1. cat_mesh_descriptor (MeSH 主题词表) - 无依赖
 --   2. cat_mesh_qualifier (MeSH 限定词表) - 无依赖
 --   3. cat_mesh_tree_number (树形编号表) - 依赖 cat_mesh_descriptor
@@ -23,7 +23,8 @@
 --   5. cat_mesh_concept (MeSH 概念表) - 依赖 cat_mesh_descriptor
 --   6. cat_mesh_concept_relation (概念关系表) - 依赖 cat_mesh_descriptor
 --   7. cat_mesh_entry_combination (组合条目表) - 依赖 cat_mesh_descriptor
---   8. cat_publication_mesh (文献-MeSH关联表) - 依赖 cat_publication, cat_mesh_descriptor, cat_mesh_qualifier
+--   8. cat_publication_mesh_heading (文献-MeSH标引表) - 依赖 cat_publication, cat_mesh_descriptor
+--   9. cat_publication_mesh_qualifier (文献-MeSH限定词表) - 依赖 cat_publication_mesh_heading, cat_mesh_qualifier
 -- ============================================================
 
 
@@ -354,57 +355,78 @@ COMMENT='MeSH 组合条目表:存储主题词的组合条目信息(EntryCombinat
 
 
 -- ============================================================
--- 表 8: cat_publication_mesh (文献-MeSH 关联表)
+-- 表 8: cat_publication_mesh_heading (文献-MeSH 主题标引关联表)
 -- ============================================================
--- 表说明: 存储文献的 MeSH 标引,关联文献、主题词、限定词,支持主/副主题标记
+-- 表说明: 存储文献的 MeSH 主题词标引,一篇文献可有多个标引,每个标引对应一个 Descriptor
 -- 记录数预估: 初始 2000万 / 年增长 1600万 / 5年规模 2.8亿
 -- 主要查询场景:
 --   1. 按 publication_id 查询某文献的所有 MeSH(>3000次/天,高频)
 --   2. 按 descriptor_ui 查询某主题词的所有文献(>2000次/天,高频)
 --   3. 筛选主要主题(is_major_topic=1)(>1000次/天,高频)
---   4. 按限定词筛选(>500次/天,中频)
 -- ============================================================
 
 
-CREATE TABLE IF NOT EXISTS `cat_publication_mesh` (
+CREATE TABLE IF NOT EXISTS `cat_publication_mesh_heading` (
     -- ========================================
     -- 业务字段
     -- ========================================
-    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键,雪花算法生成',
+    `id` BIGINT UNSIGNED NOT NULL COMMENT '主键,雪花算法生成',
     `publication_id` BIGINT UNSIGNED NOT NULL COMMENT '出版物ID(外键:cat_publication.id)',
     `descriptor_ui` VARCHAR(10) NOT NULL COMMENT '主题词UI(关联:cat_mesh_descriptor.ui,格式:D000001)',
-    `qualifier_ui` VARCHAR(10) NULL DEFAULT NULL COMMENT '限定词UI(关联:cat_mesh_qualifier.ui,格式:Q000001,可选)',
     `is_major_topic` BOOLEAN NOT NULL DEFAULT 0 COMMENT '是否主要主题(0=副主题,1=主要主题,对应 MeSH 星号*)',
-    `order_num` INT UNSIGNED NULL DEFAULT NULL COMMENT '顺序号(在同一文献内的排序)',
-    `indexing_method` VARCHAR(50) NULL DEFAULT NULL COMMENT '标引方法(如 Manual/Automatic)',
-
-    -- ========================================
-    -- 审计字段（完整版）
-    -- ========================================
-    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
-    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
-    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
-    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
-    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
-    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
+    `heading_order` INT UNSIGNED NULL DEFAULT NULL COMMENT '标引顺序(在同一文献内的排序,保留原始 XML 顺序)',
 
     -- ========================================
     -- 主键和索引
     -- ========================================
     PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
 
-    -- 复合索引(核心查询)
-    INDEX `idx_pub_desc` (`publication_id`, `descriptor_ui`) COMMENT '文献+主题词UI复合索引,支持查询文献的MeSH(<20ms)',
-    INDEX `idx_desc_pub` (`descriptor_ui`, `publication_id`) COMMENT '主题词UI+文献复合索引,支持查询MeSH的文献(<50ms)',
-    INDEX `idx_major_topic` (`descriptor_ui`, `is_major_topic`) COMMENT '主题词UI+主/副主题复合索引,筛选主要主题文献',
+    -- 唯一索引
+    UNIQUE INDEX `uk_pub_descriptor` (`publication_id`, `descriptor_ui`) COMMENT '文献+主题词UI唯一索引,防止重复标引',
 
     -- 普通索引
-    INDEX `idx_qualifier_ui` (`qualifier_ui`) COMMENT '限定词UI索引,支持按限定词筛选文献'
+    INDEX `idx_publication` (`publication_id`) COMMENT '文献索引,查询某篇文献的所有 MeSH 标引',
+    INDEX `idx_descriptor_ui` (`descriptor_ui`) COMMENT '主题词UI索引,查询某个主题词关联的所有文献',
+    INDEX `idx_major_topic` (`is_major_topic`) COMMENT '主要主题索引,筛选主要主题的标引'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
-COMMENT='文献-MeSH 关联表:存储文献 MeSH 标引,支持主/副主题标记';
+COMMENT='文献-MeSH 主题标引关联表:存储文献 MeSH 主题词标引,支持主/副主题标记';
+
+
+-- ============================================================
+-- 表 9: cat_publication_mesh_qualifier (文献-MeSH 限定词关联表)
+-- ============================================================
+-- 表说明: 存储 MeSH 标引的限定词,一个标引可有多个限定词(如 Cardiology/methods + Cardiology/diagnosis)
+-- 记录数预估: 初始 3000万 / 年增长 2400万 / 5年规模 4.2亿 (平均每个标引1.5个限定词)
+-- 主要查询场景:
+--   1. 按 publication_mesh_heading_id 查询某标引的所有限定词(>2000次/天,高频)
+--   2. 按 qualifier_ui 查询某限定词的使用情况(>500次/天,中频)
+-- ============================================================
+
+
+CREATE TABLE IF NOT EXISTS `cat_publication_mesh_qualifier` (
+    -- ========================================
+    -- 业务字段
+    -- ========================================
+    `id` BIGINT UNSIGNED NOT NULL COMMENT '主键,雪花算法生成',
+    `publication_mesh_heading_id` BIGINT UNSIGNED NOT NULL COMMENT '文献MeSH标引ID(外键:cat_publication_mesh_heading.id)',
+    `qualifier_ui` VARCHAR(10) NOT NULL COMMENT '限定词UI(关联:cat_mesh_qualifier.ui,格式:Q000001)',
+    `is_major_topic` BOOLEAN NOT NULL DEFAULT 0 COMMENT '是否主要主题(限定词也可单独标记为主题)',
+    `qualifier_order` INT UNSIGNED NULL DEFAULT NULL COMMENT '限定词顺序(在同一标引内的排序,保留原始 XML 顺序)',
+
+    -- ========================================
+    -- 主键和索引
+    -- ========================================
+    PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
+
+    -- 唯一索引
+    UNIQUE INDEX `uk_heading_qualifier` (`publication_mesh_heading_id`, `qualifier_ui`) COMMENT '标引+限定词唯一索引,防止重复',
+
+    -- 普通索引
+    INDEX `idx_heading` (`publication_mesh_heading_id`) COMMENT '标引索引,查询某个标引的所有限定词',
+    INDEX `idx_qualifier_ui` (`qualifier_ui`) COMMENT '限定词UI索引,查询某个限定词的使用情况',
+    INDEX `idx_major_topic` (`is_major_topic`) COMMENT '主要主题索引'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+COMMENT='文献-MeSH 限定词关联表:存储 MeSH 标引的限定词,一个标引可有多个限定词';
 
 
 -- ============================================================
@@ -422,3 +444,38 @@ CREATE FULLTEXT INDEX `ft_name_note` ON `cat_mesh_descriptor` (`name`, `scope_no
 CREATE FULLTEXT INDEX `ft_term` ON `cat_mesh_entry_term` (`term`)
     WITH PARSER ngram
     COMMENT '入口术语全文索引,支持同义词模糊检索';
+
+
+-- ============================================================
+-- 表 10: cat_publication_suppl_mesh (文献-补充MeSH概念关联表)
+-- ============================================================
+-- 表说明: 存储文献与 MeSH SCR(补充概念记录)的关联
+-- 记录数预估: 初始 500万 / 年增长 100万 / 5年规模 1000万
+-- 主要查询场景:
+--   1. 按 publication_id 查询文献的所有 SCR 标引(高频)
+--   2. 按 scr_ui 反查使用该 SCR 的所有文献(中频)
+-- ============================================================
+
+
+CREATE TABLE IF NOT EXISTS `cat_publication_suppl_mesh` (
+    -- ========================================
+    -- 业务字段
+    -- ========================================
+    `id` BIGINT UNSIGNED NOT NULL COMMENT '主键,雪花算法预分配',
+    `publication_id` BIGINT UNSIGNED NOT NULL COMMENT '文献ID(外键:cat_publication.id)',
+    `scr_ui` VARCHAR(10) NOT NULL COMMENT 'SCR UI(关联:cat_mesh_scr.ui,格式:C000001)',
+    `suppl_order` INT UNSIGNED NULL DEFAULT NULL COMMENT '补充概念顺序(保留 XML 中的顺序)',
+
+    -- ========================================
+    -- 主键和索引
+    -- ========================================
+    PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
+
+    -- 唯一索引
+    UNIQUE INDEX `uk_pub_scr` (`publication_id`, `scr_ui`) COMMENT '文献+SCR唯一索引,防止重复',
+
+    -- 普通索引
+    INDEX `idx_scr_ui` (`scr_ui`) COMMENT 'SCR UI索引,支持反向查询'
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+COMMENT='文献-补充MeSH概念关联表:存储文献与 SCR 的关联';

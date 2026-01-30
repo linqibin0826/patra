@@ -11,6 +11,7 @@ import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.starter.batch.config.BatchProperties;
@@ -74,6 +75,7 @@ public class PubmedBaselineJobConfig {
   private final PublicationKeywordDao keywordDao;
   private final PublicationFundingDao fundingDao;
   private final PublicationTypeDao typeDao;
+  private final PublicationSupplMeshDao supplMeshDao;
   private final BatchProperties batchProperties;
   private final BatchProgressMetricsListener batchProgressMetricsListener;
 
@@ -90,6 +92,7 @@ public class PubmedBaselineJobConfig {
   /// @param keywordDao 关键词 DAO
   /// @param fundingDao 资助信息 DAO
   /// @param typeDao 出版类型 DAO
+  /// @param supplMeshDao 补充 MeSH 概念 DAO
   /// @param batchProperties 批处理属性
   /// @param batchProgressMetricsListener 进度指标监听器（可选）
   public PubmedBaselineJobConfig(
@@ -104,6 +107,7 @@ public class PubmedBaselineJobConfig {
       PublicationKeywordDao keywordDao,
       PublicationFundingDao fundingDao,
       PublicationTypeDao typeDao,
+      PublicationSupplMeshDao supplMeshDao,
       BatchProperties batchProperties,
       Optional<BatchProgressMetricsListener> batchProgressMetricsListener) {
     this.jobRepository = jobRepository;
@@ -117,6 +121,7 @@ public class PubmedBaselineJobConfig {
     this.keywordDao = keywordDao;
     this.fundingDao = fundingDao;
     this.typeDao = typeDao;
+    this.supplMeshDao = supplMeshDao;
     this.batchProperties = batchProperties;
     this.batchProgressMetricsListener = batchProgressMetricsListener.orElse(null);
   }
@@ -153,7 +158,12 @@ public class PubmedBaselineJobConfig {
             .processor(processor)
             .writer(
                 publicationItemWriter(
-                    meshHeadingDao, meshQualifierDao, keywordDao, fundingDao, typeDao))
+                    meshHeadingDao,
+                    meshQualifierDao,
+                    keywordDao,
+                    fundingDao,
+                    typeDao,
+                    supplMeshDao))
             .faultTolerant()
             .skipLimit(DEFAULT_SKIP_LIMIT)
             .skip(Exception.class);
@@ -208,6 +218,7 @@ public class PubmedBaselineJobConfig {
   /// @param kwDao 关键词 DAO
   /// @param fundDao 资助信息 DAO
   /// @param ptDao 出版类型 DAO
+  /// @param supplMeshDao 补充 MeSH 概念 DAO
   /// @return ItemWriter 实例
   @Bean
   public PublicationItemWriter publicationItemWriter(
@@ -215,9 +226,10 @@ public class PubmedBaselineJobConfig {
       PublicationMeshQualifierDao qualifierDao,
       PublicationKeywordDao kwDao,
       PublicationFundingDao fundDao,
-      PublicationTypeDao ptDao) {
+      PublicationTypeDao ptDao,
+      PublicationSupplMeshDao supplMeshDao) {
     return new PublicationItemWriter(
-        publicationRepository, headingDao, qualifierDao, kwDao, fundDao, ptDao);
+        publicationRepository, headingDao, qualifierDao, kwDao, fundDao, ptDao, supplMeshDao);
   }
 
   /// 获取 chunk size。

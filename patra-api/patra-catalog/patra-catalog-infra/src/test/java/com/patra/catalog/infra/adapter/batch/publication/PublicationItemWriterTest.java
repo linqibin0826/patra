@@ -15,15 +15,18 @@ import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.MeshHeadingData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationTypeData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.QualifierData;
+import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.SupplMeshData;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationFundingEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationKeywordEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshHeadingEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshQualifierEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationSupplMeshEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationTypeEntity;
 import com.patra.common.enums.ProvenanceCode;
 import java.util.List;
@@ -58,6 +61,8 @@ class PublicationItemWriterTest {
 
   @Mock private PublicationTypeDao typeDao;
 
+  @Mock private PublicationSupplMeshDao supplMeshDao;
+
   @Captor private ArgumentCaptor<List<PublicationMeshHeadingEntity>> headingCaptor;
 
   @Captor private ArgumentCaptor<List<PublicationMeshQualifierEntity>> qualifierCaptor;
@@ -67,6 +72,8 @@ class PublicationItemWriterTest {
   @Captor private ArgumentCaptor<List<PublicationFundingEntity>> fundingCaptor;
 
   @Captor private ArgumentCaptor<List<PublicationTypeEntity>> typeCaptor;
+
+  @Captor private ArgumentCaptor<List<PublicationSupplMeshEntity>> supplMeshCaptor;
 
   private PublicationItemWriter writer;
 
@@ -81,7 +88,8 @@ class PublicationItemWriterTest {
             meshQualifierDao,
             keywordDao,
             fundingDao,
-            typeDao);
+            typeDao,
+            supplMeshDao);
   }
 
   @Nested
@@ -149,7 +157,7 @@ class PublicationItemWriterTest {
       PublicationAggregate pub = createPublication("12345678");
       pub.assignId(PublicationId.of(PUBLICATION_ID));
 
-      QualifierData qualifier = QualifierData.of("Q000379", false);
+      QualifierData qualifier = QualifierData.of("Q000379", false, 1);
       MeshHeadingData heading = MeshHeadingData.of("D000001", true, 1, List.of(qualifier));
 
       PublicationImportResult result = PublicationImportResult.of(pub, List.of(heading));
@@ -164,6 +172,7 @@ class PublicationItemWriterTest {
       assertThat(savedQualifiers).hasSize(1);
       assertThat(savedQualifiers.getFirst().getQualifierUi()).isEqualTo("Q000379");
       assertThat(savedQualifiers.getFirst().getMajorTopic()).isFalse();
+      assertThat(savedQualifiers.getFirst().getQualifierOrder()).isEqualTo(1);
     }
 
     @Test
@@ -325,6 +334,52 @@ class PublicationItemWriterTest {
 
       // then
       verify(typeDao, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("应该写入补充 MeSH 概念关联")
+    void should_write_suppl_mesh_associations() throws Exception {
+      // given
+      PublicationAggregate pub = createPublication("12345678");
+      pub.assignId(PublicationId.of(PUBLICATION_ID));
+
+      SupplMeshData suppl1 = SupplMeshData.of("C538003", 1);
+      SupplMeshData suppl2 = SupplMeshData.of("C095232", 2);
+
+      PublicationImportResult result =
+          PublicationImportResult.ofAllWithSupplMesh(
+              pub, List.of(), List.of(), List.of(), List.of(), List.of(suppl1, suppl2));
+      Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
+
+      // when
+      writer.write(chunk);
+
+      // then
+      verify(supplMeshDao).saveAll(supplMeshCaptor.capture());
+      List<PublicationSupplMeshEntity> savedSupplMesh = supplMeshCaptor.getValue();
+      assertThat(savedSupplMesh).hasSize(2);
+      assertThat(savedSupplMesh.get(0).getPublicationId()).isEqualTo(PUBLICATION_ID);
+      assertThat(savedSupplMesh.get(0).getScrUi()).isEqualTo("C538003");
+      assertThat(savedSupplMesh.get(0).getSupplOrder()).isEqualTo(1);
+      assertThat(savedSupplMesh.get(1).getScrUi()).isEqualTo("C095232");
+      assertThat(savedSupplMesh.get(1).getSupplOrder()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("无补充 MeSH 概念数据时不应调用 DAO")
+    void should_not_call_suppl_mesh_dao_when_no_suppl_mesh_data() throws Exception {
+      // given
+      PublicationAggregate pub = createPublication("12345678");
+      pub.assignId(PublicationId.of(PUBLICATION_ID));
+
+      PublicationImportResult result = PublicationImportResult.ofPublication(pub);
+      Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
+
+      // when
+      writer.write(chunk);
+
+      // then
+      verify(supplMeshDao, never()).saveAll(anyList());
     }
   }
 

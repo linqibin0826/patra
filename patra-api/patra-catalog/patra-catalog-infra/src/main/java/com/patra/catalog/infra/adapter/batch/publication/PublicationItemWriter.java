@@ -7,15 +7,18 @@ import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.MeshHeadingData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationTypeData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.QualifierData;
+import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.SupplMeshData;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationFundingEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationKeywordEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshHeadingEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshQualifierEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationSupplMeshEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationTypeEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.util.ArrayList;
@@ -61,6 +64,7 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
   private final PublicationKeywordDao keywordDao;
   private final PublicationFundingDao fundingDao;
   private final PublicationTypeDao typeDao;
+  private final PublicationSupplMeshDao supplMeshDao;
 
   @Override
   public void write(Chunk<? extends PublicationImportResult> chunk) throws Exception {
@@ -81,6 +85,7 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
     writeKeywordAssociations(results);
     writeFundingAssociations(results);
     writePublicationTypeAssociations(results);
+    writeSupplMeshAssociations(results);
   }
 
   /// 写入 MeSH 关联数据。
@@ -124,6 +129,7 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
                     .publicationMeshHeadingId(headingId)
                     .qualifierUi(qualifier.qualifierUi())
                     .majorTopic(qualifier.majorTopic())
+                    .qualifierOrder(qualifier.qualifierOrder())
                     .build();
             qualifierEntities.add(qualifierEntity);
           }
@@ -244,6 +250,39 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
     if (!entities.isEmpty()) {
       typeDao.saveAll(entities);
       log.debug("写入 {} 条出版类型关联", entities.size());
+    }
+  }
+
+  // ========== SupplMesh 关联写入 ==========
+
+  /// 写入补充 MeSH 概念关联数据。
+  ///
+  /// 将补充 MeSH 概念（SupplMeshNameList）写入 `cat_publication_suppl_mesh` 表。
+  /// 每条记录包含 SCR UI 和顺序，关联到 cat_mesh_scr 主数据表。
+  private void writeSupplMeshAssociations(List<PublicationImportResult> results) {
+    List<PublicationSupplMeshEntity> entities = new ArrayList<>();
+
+    for (PublicationImportResult result : results) {
+      if (!result.hasSupplMeshNames()) {
+        continue;
+      }
+
+      Long publicationId = result.publication().getId().value();
+
+      for (SupplMeshData supplMesh : result.supplMeshNames()) {
+        entities.add(
+            PublicationSupplMeshEntity.builder()
+                .id(SnowflakeIdGenerator.getId())
+                .publicationId(publicationId)
+                .scrUi(supplMesh.scrUi())
+                .supplOrder(supplMesh.supplOrder())
+                .build());
+      }
+    }
+
+    if (!entities.isEmpty()) {
+      supplMeshDao.saveAll(entities);
+      log.debug("写入 {} 条补充 MeSH 概念关联", entities.size());
     }
   }
 }

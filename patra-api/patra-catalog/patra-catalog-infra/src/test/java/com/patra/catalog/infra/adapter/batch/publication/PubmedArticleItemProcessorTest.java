@@ -35,6 +35,7 @@ import com.patra.common.model.CanonicalPublication.MeshHeading;
 import com.patra.common.model.CanonicalPublication.PublicationDates;
 import com.patra.common.model.CanonicalPublication.PublicationType;
 import com.patra.common.model.CanonicalPublication.QualifierName;
+import com.patra.common.model.CanonicalPublication.SupplMeshName;
 import com.patra.common.model.enums.PublicationIdentifierType;
 import java.time.LocalDate;
 import java.util.List;
@@ -555,6 +556,54 @@ class PubmedArticleItemProcessorTest {
       assertThat(result.hasPublicationTypes()).isFalse();
       assertThat(result.publicationTypes()).isEmpty();
     }
+
+    @Test
+    @DisplayName("应该正确处理补充 MeSH 概念数据")
+    void should_process_suppl_mesh_names() throws Exception {
+      // given
+      CanonicalPublication publication = createPublicationWithSupplMeshNames();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasSupplMeshNames()).isTrue();
+      assertThat(result.supplMeshNames()).hasSize(2);
+
+      var suppl1 = result.supplMeshNames().get(0);
+      assertThat(suppl1.scrUi()).isEqualTo("C538003");
+      assertThat(suppl1.supplOrder()).isEqualTo(1);
+
+      var suppl2 = result.supplMeshNames().get(1);
+      assertThat(suppl2.scrUi()).isEqualTo("C095232");
+      assertThat(suppl2.supplOrder()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("无补充 MeSH 概念数据时 supplMeshNames 应该为空列表")
+    void should_return_empty_suppl_mesh_when_no_suppl_mesh_data() throws Exception {
+      // given
+      CanonicalPublication publication = createFullPublication();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasSupplMeshNames()).isFalse();
+      assertThat(result.supplMeshNames()).isEmpty();
+    }
   }
 
   /// 创建简单的测试文献。
@@ -809,6 +858,29 @@ class PubmedArticleItemProcessorTest {
                     .id("D016454")
                     .value("Review")
                     .vocabularySource("MeSH")
+                    .build()))
+        .build();
+  }
+
+  /// 创建包含补充 MeSH 概念的测试文献。
+  private CanonicalPublication createPublicationWithSupplMeshNames() {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
+        .title("Test Article with SupplMeshNames")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .supplMeshNames(
+            List.of(
+                SupplMeshName.builder()
+                    .ui("C538003")
+                    .name("Aspirin-sensitive asthma")
+                    .type("Disease")
+                    .build(),
+                SupplMeshName.builder()
+                    .ui("C095232")
+                    .name("FOLFOX protocol")
+                    .type("Protocol")
                     .build()))
         .build();
   }
