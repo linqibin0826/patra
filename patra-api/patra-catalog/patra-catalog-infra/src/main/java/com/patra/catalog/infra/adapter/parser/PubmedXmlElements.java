@@ -132,6 +132,14 @@ public final class PubmedXmlElements {
     private MeSH() {}
   }
 
+  /// 补充 MeSH 概念相关元素名称。
+  public static final class SupplMesh {
+    public static final String SUPPL_MESH_LIST = "SupplMeshList";
+    public static final String SUPPL_MESH_NAME = "SupplMeshName";
+
+    private SupplMesh() {}
+  }
+
   /// 日期相关元素名称。
   public static final class Date {
     public static final String PUB_DATE = "PubDate";

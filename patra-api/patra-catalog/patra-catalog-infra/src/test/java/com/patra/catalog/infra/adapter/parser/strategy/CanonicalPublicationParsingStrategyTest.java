@@ -1043,6 +1043,83 @@ class CanonicalPublicationParsingStrategyTest {
     }
   }
 
+  // ========== 补充 MeSH 概念解析测试 ==========
+
+  @Nested
+  @DisplayName("补充 MeSH 概念解析")
+  class SupplMeshParsing {
+
+    @Test
+    @DisplayName("应解析 SupplMeshList 中的补充 MeSH 概念")
+    void shouldParseSupplMeshNames() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article><ArticleTitle>T</ArticleTitle></Article>
+              <MedlineJournalInfo><NlmUniqueID>N</NlmUniqueID></MedlineJournalInfo>
+              <SupplMeshList>
+                <SupplMeshName UI="C538003" Type="Disease">Aspirin-sensitive asthma</SupplMeshName>
+                <SupplMeshName UI="C095232" Type="Protocol">FOLFOX protocol</SupplMeshName>
+              </SupplMeshList>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getSupplMeshNames()).hasSize(2);
+
+      var first = result.getSupplMeshNames().get(0);
+      assertThat(first.getUi()).isEqualTo("C538003");
+      assertThat(first.getName()).isEqualTo("Aspirin-sensitive asthma");
+      assertThat(first.getType()).isEqualTo("Disease");
+
+      var second = result.getSupplMeshNames().get(1);
+      assertThat(second.getUi()).isEqualTo("C095232");
+      assertThat(second.getName()).isEqualTo("FOLFOX protocol");
+      assertThat(second.getType()).isEqualTo("Protocol");
+    }
+
+    @Test
+    @DisplayName("无 SupplMeshList 时应返回空列表")
+    void shouldReturnEmptyListWhenNoSupplMeshList() throws Exception {
+      var xml = minimalArticleXml("1", "T", "N", 2024);
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getSupplMeshNames()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("应忽略缺少 UI 的 SupplMeshName")
+    void shouldIgnoreSupplMeshWithoutUi() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article><ArticleTitle>T</ArticleTitle></Article>
+              <MedlineJournalInfo><NlmUniqueID>N</NlmUniqueID></MedlineJournalInfo>
+              <SupplMeshList>
+                <SupplMeshName Type="Disease">No UI concept</SupplMeshName>
+                <SupplMeshName UI="C538003" Type="Disease">Valid concept</SupplMeshName>
+              </SupplMeshList>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getSupplMeshNames()).hasSize(1);
+      assertThat(result.getSupplMeshNames().get(0).getUi()).isEqualTo("C538003");
+    }
+  }
+
   // ========== 发表类型解析测试 ==========
 
   @Nested
