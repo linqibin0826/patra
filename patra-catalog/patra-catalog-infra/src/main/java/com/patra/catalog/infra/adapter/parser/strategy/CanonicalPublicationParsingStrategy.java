@@ -16,6 +16,7 @@ import com.patra.common.model.CanonicalPublication.Pagination;
 import com.patra.common.model.CanonicalPublication.PublicationDates;
 import com.patra.common.model.CanonicalPublication.PublicationType;
 import com.patra.common.model.CanonicalPublication.QualifierName;
+import com.patra.common.model.CanonicalPublication.SupplMeshName;
 import com.patra.common.model.enums.PublicationIdentifierType;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -197,6 +198,7 @@ public final class CanonicalPublicationParsingStrategy
           case PubmedXmlElements.Journal.MEDLINE_JOURNAL_INFO ->
               parseMedlineJournalInfo(reader, fields);
           case PubmedXmlElements.MeSH.MESH_HEADING_LIST -> parseMeshHeadingList(reader, fields);
+          case PubmedXmlElements.SupplMesh.SUPPL_MESH_LIST -> parseSupplMeshList(reader, fields);
           default -> {
             // 跳过其他元素
           }
@@ -576,6 +578,36 @@ public final class CanonicalPublicationParsingStrategy
     return heading;
   }
 
+  /// 解析 SupplMeshList 元素。
+  private void parseSupplMeshList(XMLStreamReader reader, ParsedFields fields)
+      throws XMLStreamException {
+    while (reader.hasNext()) {
+      int event = reader.next();
+
+      if (event == XMLStreamConstants.START_ELEMENT
+          && PubmedXmlElements.SupplMesh.SUPPL_MESH_NAME.equals(reader.getLocalName())) {
+        ParsedSupplMeshName supplMesh = parseSupplMeshName(reader);
+        if (supplMesh != null && supplMesh.ui != null) {
+          fields.supplMeshNames.add(supplMesh);
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && PubmedXmlElements.SupplMesh.SUPPL_MESH_LIST.equals(reader.getLocalName())) {
+        break;
+      }
+    }
+  }
+
+  /// 解析单个 SupplMeshName 元素。
+  ///
+  /// XML 结构：`<SupplMeshName UI="C538003" Type="Disease">Aspirin-sensitive asthma</SupplMeshName>`
+  private ParsedSupplMeshName parseSupplMeshName(XMLStreamReader reader) throws XMLStreamException {
+    ParsedSupplMeshName supplMesh = new ParsedSupplMeshName();
+    supplMesh.ui = reader.getAttributeValue(null, PubmedXmlElements.Attribute.UI);
+    supplMesh.type = reader.getAttributeValue(null, PubmedXmlElements.Attribute.TYPE);
+    supplMesh.name = reader.getElementText().trim();
+    return supplMesh;
+  }
+
   /// 解析 PublicationTypeList 元素。
   private void parsePublicationTypeList(XMLStreamReader reader, ParsedFields fields)
       throws XMLStreamException {
@@ -677,6 +709,7 @@ public final class CanonicalPublicationParsingStrategy
         .authors(buildAuthors(fields))
         .abstractContent(buildAbstract(fields))
         .meshHeadings(buildMeshHeadings(fields))
+        .supplMeshNames(buildSupplMeshNames(fields))
         .publicationTypes(buildPublicationTypes(fields))
         .pagination(buildPagination(fields))
         .journal(buildJournal(fields))
@@ -880,6 +913,19 @@ public final class CanonicalPublicationParsingStrategy
     return Pagination.builder().medlinePgn(fields.medlinePgn).build();
   }
 
+  /// 构建补充 MeSH 概念列表。
+  private List<SupplMeshName> buildSupplMeshNames(ParsedFields fields) {
+    if (fields.supplMeshNames.isEmpty()) {
+      return List.of();
+    }
+
+    return fields.supplMeshNames.stream()
+        .map(
+            parsed ->
+                SupplMeshName.builder().ui(parsed.ui).name(parsed.name).type(parsed.type).build())
+        .toList();
+  }
+
   // ========== 内部类 ==========
 
   /// 解析字段容器。
@@ -921,6 +967,9 @@ public final class CanonicalPublicationParsingStrategy
 
     // MeSH 主题词
     List<ParsedMeshHeading> meshHeadings = new ArrayList<>();
+
+    // 补充 MeSH 概念
+    List<ParsedSupplMeshName> supplMeshNames = new ArrayList<>();
 
     // 发表类型
     List<ParsedPublicationType> publicationTypes = new ArrayList<>();
@@ -967,5 +1016,12 @@ public final class CanonicalPublicationParsingStrategy
   private static class ParsedPublicationType {
     String ui;
     String value;
+  }
+
+  /// 解析的补充 MeSH 概念。
+  private static class ParsedSupplMeshName {
+    String ui;
+    String name;
+    String type;
   }
 }

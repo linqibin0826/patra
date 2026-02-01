@@ -135,10 +135,10 @@ public class PubmedArticleItemProcessor
 
     // 5. 处理关联数据
     List<MeshHeadingData> meshHeadings = buildMeshHeadingData(publication);
+    List<SupplMeshData> supplMeshNames = buildSupplMeshData(publication);
     List<KeywordData> keywords = buildKeywordData(publication);
     List<FundingData> funding = buildFundingData(publication);
     List<PublicationTypeData> publicationTypes = buildPublicationTypeData(publication);
-    List<SupplMeshData> supplMeshNames = buildSupplMeshData(publication);
 
     return PublicationImportResult.ofAllWithSupplMesh(
         aggregate, meshHeadings, keywords, funding, publicationTypes, supplMeshNames);
