@@ -10,7 +10,7 @@ import lombok.Builder;
 ///
 /// 封装 ItemProcessor 处理后的所有数据，包括：
 /// - 主数据：PublicationAggregate（文献聚合根）
-/// - 关联数据：MeSH 标引、关键词、资助信息、出版类型、补充 MeSH 概念等
+/// - 关联数据：MeSH 标引、关键词、资助信息、出版类型、补充 MeSH 概念、翻译摘要等
 ///
 /// **使用场景**：
 ///
@@ -24,6 +24,7 @@ import lombok.Builder;
 /// @param funding 资助信息数据
 /// @param publicationTypes 出版类型数据
 /// @param supplMeshNames 补充 MeSH 概念数据
+/// @param alternativeAbstracts 翻译摘要数据
 /// @author linqibin
 /// @since 0.1.0
 @Builder
@@ -33,7 +34,8 @@ public record PublicationImportResult(
     List<KeywordData> keywords,
     List<FundingData> funding,
     List<PublicationTypeData> publicationTypes,
-    List<SupplMeshData> supplMeshNames) {
+    List<SupplMeshData> supplMeshNames,
+    List<AlternativeAbstractData> alternativeAbstracts) {
 
   /// 创建仅包含主数据的结果（无关联数据）。
   ///
@@ -41,7 +43,7 @@ public record PublicationImportResult(
   /// @return 结果对象
   public static PublicationImportResult ofPublication(PublicationAggregate publication) {
     return new PublicationImportResult(
-        publication, List.of(), List.of(), List.of(), List.of(), List.of());
+        publication, List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
   }
 
   /// 创建包含 MeSH 数据的结果（向后兼容）。
@@ -54,6 +56,7 @@ public record PublicationImportResult(
     return new PublicationImportResult(
         publication,
         meshHeadings != null ? meshHeadings : List.of(),
+        List.of(),
         List.of(),
         List.of(),
         List.of(),
@@ -80,6 +83,7 @@ public record PublicationImportResult(
         keywords != null ? keywords : List.of(),
         funding != null ? funding : List.of(),
         publicationTypes != null ? publicationTypes : List.of(),
+        List.of(),
         List.of());
   }
 
@@ -105,7 +109,36 @@ public record PublicationImportResult(
         keywords != null ? keywords : List.of(),
         funding != null ? funding : List.of(),
         publicationTypes != null ? publicationTypes : List.of(),
-        supplMeshNames != null ? supplMeshNames : List.of());
+        supplMeshNames != null ? supplMeshNames : List.of(),
+        List.of());
+  }
+
+  /// 创建包含所有关联数据的结果（含翻译摘要）。
+  ///
+  /// @param publication 文献聚合根
+  /// @param meshHeadings MeSH 标引数据
+  /// @param keywords 关键词数据
+  /// @param funding 资助信息数据
+  /// @param publicationTypes 出版类型数据
+  /// @param supplMeshNames 补充 MeSH 概念数据
+  /// @param alternativeAbstracts 翻译摘要数据
+  /// @return 结果对象
+  public static PublicationImportResult ofComplete(
+      PublicationAggregate publication,
+      List<MeshHeadingData> meshHeadings,
+      List<KeywordData> keywords,
+      List<FundingData> funding,
+      List<PublicationTypeData> publicationTypes,
+      List<SupplMeshData> supplMeshNames,
+      List<AlternativeAbstractData> alternativeAbstracts) {
+    return new PublicationImportResult(
+        publication,
+        meshHeadings != null ? meshHeadings : List.of(),
+        keywords != null ? keywords : List.of(),
+        funding != null ? funding : List.of(),
+        publicationTypes != null ? publicationTypes : List.of(),
+        supplMeshNames != null ? supplMeshNames : List.of(),
+        alternativeAbstracts != null ? alternativeAbstracts : List.of());
   }
 
   /// 是否有 MeSH 标引数据。
@@ -131,6 +164,11 @@ public record PublicationImportResult(
   /// 是否有补充 MeSH 概念数据。
   public boolean hasSupplMeshNames() {
     return supplMeshNames != null && !supplMeshNames.isEmpty();
+  }
+
+  /// 是否有翻译摘要数据。
+  public boolean hasAlternativeAbstracts() {
+    return alternativeAbstracts != null && !alternativeAbstracts.isEmpty();
   }
 
   // ==================== MeSH 相关数据类型 ====================
@@ -259,6 +297,43 @@ public record PublicationImportResult(
     /// 创建补充 MeSH 概念数据。
     public static SupplMeshData of(String scrUi, Integer supplOrder) {
       return new SupplMeshData(scrUi, supplOrder);
+    }
+  }
+
+  // ==================== 翻译摘要数据类型 ====================
+
+  /// 翻译摘要数据。
+  ///
+  /// 用于存储 PubMed 文献中的 OtherAbstract 数据（其他语言摘要）。
+  ///
+  /// **业务含义**：
+  ///
+  /// OtherAbstract 包含文献摘要的翻译版本，来源包括：
+  /// - Publisher（出版商提供）：官方翻译
+  /// - AIMSHP/KIEML/NASA 等：专业机构翻译
+  /// - plain-language-summary：面向患者的通俗语言摘要
+  ///
+  /// @param languageCode 语言代码（ISO 639-1，如 "zh"、"ja"）
+  /// @param abstractType 摘要类型（如 "Publisher"、"AIMSHP"、"plain-language-summary"）
+  /// @param plainText 摘要文本
+  /// @param copyright 版权信息
+  /// @param abstractOrder 顺序号
+  @Builder
+  public record AlternativeAbstractData(
+      String languageCode,
+      String abstractType,
+      String plainText,
+      String copyright,
+      Integer abstractOrder) {
+
+    /// 创建翻译摘要数据。
+    public static AlternativeAbstractData of(
+        String languageCode,
+        String abstractType,
+        String plainText,
+        String copyright,
+        Integer order) {
+      return new AlternativeAbstractData(languageCode, abstractType, plainText, copyright, order);
     }
   }
 }

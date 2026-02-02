@@ -16,6 +16,7 @@ import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationTypeData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.QualifierData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.SupplMeshData;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
@@ -63,6 +64,8 @@ class PublicationItemWriterTest {
 
   @Mock private PublicationSupplMeshDao supplMeshDao;
 
+  @Mock private PublicationAlternativeAbstractDao alternativeAbstractDao;
+
   @Captor private ArgumentCaptor<List<PublicationMeshHeadingEntity>> headingCaptor;
 
   @Captor private ArgumentCaptor<List<PublicationMeshQualifierEntity>> qualifierCaptor;
@@ -89,7 +92,8 @@ class PublicationItemWriterTest {
             keywordDao,
             fundingDao,
             typeDao,
-            supplMeshDao);
+            supplMeshDao,
+            alternativeAbstractDao);
   }
 
   @Nested

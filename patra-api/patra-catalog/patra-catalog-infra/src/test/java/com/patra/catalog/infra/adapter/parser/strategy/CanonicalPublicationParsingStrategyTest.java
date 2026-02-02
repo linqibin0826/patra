@@ -14,6 +14,7 @@ import com.patra.common.model.CanonicalPublication.Identifier;
 import com.patra.common.model.CanonicalPublication.Journal;
 import com.patra.common.model.CanonicalPublication.MeshHeading;
 import com.patra.common.model.CanonicalPublication.PublicationType;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import java.io.StringReader;
 import java.time.LocalDate;
 import java.util.concurrent.TimeUnit;
@@ -78,7 +79,8 @@ class CanonicalPublicationParsingStrategyTest {
       assertNotNull(result);
       assertThat(result.getIdentifiers())
           .extracting(Identifier::getType, Identifier::getValue)
-          .contains(org.assertj.core.groups.Tuple.tuple("pmid", "12345678"));
+          .contains(
+              org.assertj.core.groups.Tuple.tuple(PublicationIdentifierType.PMID, "12345678"));
     }
 
     @Test
@@ -132,7 +134,9 @@ class CanonicalPublicationParsingStrategyTest {
 
       assertThat(result.getIdentifiers())
           .extracting(Identifier::getType, Identifier::getValue)
-          .contains(org.assertj.core.groups.Tuple.tuple("doi", "10.1000/example.doi"));
+          .contains(
+              org.assertj.core.groups.Tuple.tuple(
+                  PublicationIdentifierType.DOI, "10.1000/example.doi"));
     }
 
     @Test
@@ -163,7 +167,8 @@ class CanonicalPublicationParsingStrategyTest {
 
       assertThat(result.getIdentifiers())
           .extracting(Identifier::getType, Identifier::getValue)
-          .contains(org.assertj.core.groups.Tuple.tuple("pmc", "PMC1234567"));
+          .contains(
+              org.assertj.core.groups.Tuple.tuple(PublicationIdentifierType.PMC, "PMC1234567"));
     }
   }
 
@@ -809,7 +814,9 @@ class CanonicalPublicationParsingStrategyTest {
       assertNotNull(author.getIdentifiers());
       assertThat(author.getIdentifiers())
           .extracting(Identifier::getType, Identifier::getValue)
-          .contains(org.assertj.core.groups.Tuple.tuple("orcid", "0000-0001-2345-6789"));
+          .contains(
+              org.assertj.core.groups.Tuple.tuple(
+                  PublicationIdentifierType.ORCID, "0000-0001-2345-6789"));
     }
 
     @Test
@@ -1318,9 +1325,10 @@ class CanonicalPublicationParsingStrategyTest {
       assertThat(result.getIdentifiers())
           .extracting(Identifier::getType, Identifier::getValue)
           .contains(
-              org.assertj.core.groups.Tuple.tuple("pmid", "12345678"),
-              org.assertj.core.groups.Tuple.tuple("doi", "10.1000/example.doi"),
-              org.assertj.core.groups.Tuple.tuple("pmc", "PMC1234567"));
+              org.assertj.core.groups.Tuple.tuple(PublicationIdentifierType.PMID, "12345678"),
+              org.assertj.core.groups.Tuple.tuple(
+                  PublicationIdentifierType.DOI, "10.1000/example.doi"),
+              org.assertj.core.groups.Tuple.tuple(PublicationIdentifierType.PMC, "PMC1234567"));
 
       // 标题
       assertEquals("Sample Article Title", result.getTitle());
@@ -1346,6 +1354,218 @@ class CanonicalPublicationParsingStrategyTest {
       // 元数据
       assertEquals("epublish", result.getPublicationStatus());
       assertTrue(result.getAuthorsComplete());
+    }
+  }
+
+  // ========== 其他语言摘要（OtherAbstract）解析测试 ==========
+
+  @Nested
+  @DisplayName("OtherAbstract 解析")
+  class OtherAbstractParsing {
+
+    @Test
+    @DisplayName("应解析单个 OtherAbstract")
+    void shouldParseSingleOtherAbstract() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article>
+                <ArticleTitle>T</ArticleTitle>
+              </Article>
+              <MedlineJournalInfo>
+                <NlmUniqueID>N</NlmUniqueID>
+              </MedlineJournalInfo>
+              <OtherAbstract Language="chi" Type="Publisher">
+                <AbstractText>这是中文摘要内容。</AbstractText>
+              </OtherAbstract>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertNotNull(result.getAlternativeAbstracts());
+      assertThat(result.getAlternativeAbstracts()).hasSize(1);
+      var altAbstract = result.getAlternativeAbstracts().getFirst();
+      assertThat(altAbstract.getLanguage()).isEqualTo("zh");
+      assertThat(altAbstract.getType()).isEqualTo("Publisher");
+      assertThat(altAbstract.getText()).isEqualTo("这是中文摘要内容。");
+    }
+
+    @Test
+    @DisplayName("应解析多个 OtherAbstract")
+    void shouldParseMultipleOtherAbstracts() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article>
+                <ArticleTitle>T</ArticleTitle>
+              </Article>
+              <MedlineJournalInfo>
+                <NlmUniqueID>N</NlmUniqueID>
+              </MedlineJournalInfo>
+              <OtherAbstract Language="chi" Type="Publisher">
+                <AbstractText>中文摘要。</AbstractText>
+              </OtherAbstract>
+              <OtherAbstract Language="jpn" Type="AIMSHP">
+                <AbstractText>日本語の要約。</AbstractText>
+              </OtherAbstract>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getAlternativeAbstracts()).hasSize(2);
+      assertThat(result.getAlternativeAbstracts())
+          .extracting(
+              CanonicalPublication.AlternativeAbstract::getLanguage,
+              CanonicalPublication.AlternativeAbstract::getType)
+          .containsExactly(
+              org.assertj.core.groups.Tuple.tuple("zh", "Publisher"),
+              org.assertj.core.groups.Tuple.tuple("ja", "AIMSHP"));
+    }
+
+    @Test
+    @DisplayName("应解析结构化 OtherAbstract")
+    void shouldParseStructuredOtherAbstract() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article>
+                <ArticleTitle>T</ArticleTitle>
+              </Article>
+              <MedlineJournalInfo>
+                <NlmUniqueID>N</NlmUniqueID>
+              </MedlineJournalInfo>
+              <OtherAbstract Language="chi" Type="Publisher">
+                <AbstractText Label="BACKGROUND">背景内容。</AbstractText>
+                <AbstractText Label="METHODS">方法内容。</AbstractText>
+                <AbstractText Label="RESULTS">结果内容。</AbstractText>
+              </OtherAbstract>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getAlternativeAbstracts()).hasSize(1);
+      var altAbstract = result.getAlternativeAbstracts().getFirst();
+      assertThat(altAbstract.getLanguage()).isEqualTo("zh");
+      // 结构化摘要应拼接成完整文本
+      assertThat(altAbstract.getText()).contains("背景内容", "方法内容", "结果内容");
+    }
+
+    @Test
+    @DisplayName("无 OtherAbstract 时应返回空列表")
+    void shouldReturnEmptyListWhenNoOtherAbstract() throws Exception {
+      var xml = minimalArticleXml("1", "T", "N", 2024);
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getAlternativeAbstracts()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("应忽略空的 OtherAbstract")
+    void shouldIgnoreEmptyOtherAbstract() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article>
+                <ArticleTitle>T</ArticleTitle>
+              </Article>
+              <MedlineJournalInfo>
+                <NlmUniqueID>N</NlmUniqueID>
+              </MedlineJournalInfo>
+              <OtherAbstract Language="chi" Type="Publisher">
+                <AbstractText></AbstractText>
+              </OtherAbstract>
+              <OtherAbstract Language="jpn" Type="AIMSHP">
+                <AbstractText>有效的日文摘要。</AbstractText>
+              </OtherAbstract>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      // 空摘要应被忽略，只保留有效的日文摘要
+      assertThat(result.getAlternativeAbstracts()).hasSize(1);
+      assertThat(result.getAlternativeAbstracts().getFirst().getLanguage()).isEqualTo("ja");
+    }
+
+    @Test
+    @DisplayName("应正确解析 OtherAbstract 的 CopyrightInformation")
+    void shouldParseCopyrightInformation() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article>
+                <ArticleTitle>T</ArticleTitle>
+              </Article>
+              <MedlineJournalInfo>
+                <NlmUniqueID>N</NlmUniqueID>
+              </MedlineJournalInfo>
+              <OtherAbstract Language="chi" Type="Publisher">
+                <AbstractText>中文摘要。</AbstractText>
+                <CopyrightInformation>© 2024 Publisher.</CopyrightInformation>
+              </OtherAbstract>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getAlternativeAbstracts()).hasSize(1);
+      var altAbstract = result.getAlternativeAbstracts().getFirst();
+      assertThat(altAbstract.getCopyright()).isEqualTo("© 2024 Publisher.");
+    }
+
+    @Test
+    @DisplayName("应处理 plain-language 类型的 OtherAbstract")
+    void shouldParsePlainLanguageType() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article>
+                <ArticleTitle>T</ArticleTitle>
+              </Article>
+              <MedlineJournalInfo>
+                <NlmUniqueID>N</NlmUniqueID>
+              </MedlineJournalInfo>
+              <OtherAbstract Language="eng" Type="plain-language-summary">
+                <AbstractText>Plain language summary for patients.</AbstractText>
+              </OtherAbstract>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getAlternativeAbstracts()).hasSize(1);
+      var altAbstract = result.getAlternativeAbstracts().getFirst();
+      assertThat(altAbstract.getLanguage()).isEqualTo("en");
+      assertThat(altAbstract.getType()).isEqualTo("plain-language-summary");
     }
   }
 

@@ -14,6 +14,7 @@ import com.patra.catalog.domain.port.lookup.FunderLookupPort;
 import com.patra.catalog.domain.port.lookup.LanguageLookupPort;
 import com.patra.catalog.domain.port.lookup.VenueLookupPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
+import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.AlternativeAbstractData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.FundingData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.KeywordData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.MeshHeadingData;
@@ -139,9 +140,16 @@ public class PubmedArticleItemProcessor
     List<KeywordData> keywords = buildKeywordData(publication);
     List<FundingData> funding = buildFundingData(publication);
     List<PublicationTypeData> publicationTypes = buildPublicationTypeData(publication);
+    List<AlternativeAbstractData> alternativeAbstracts = buildAlternativeAbstractData(publication);
 
-    return PublicationImportResult.ofAllWithSupplMesh(
-        aggregate, meshHeadings, keywords, funding, publicationTypes, supplMeshNames);
+    return PublicationImportResult.ofComplete(
+        aggregate,
+        meshHeadings,
+        keywords,
+        funding,
+        publicationTypes,
+        supplMeshNames,
+        alternativeAbstracts);
   }
 
   /// 从 CanonicalPublication 提取 PMID。
@@ -577,6 +585,50 @@ public class PubmedArticleItemProcessor
       result.add(
           PublicationTypeData.of(
               type.getId(), type.getValue(), type.getVocabularySource(), order++));
+    }
+
+    return result;
+  }
+
+  // ========== 翻译摘要数据处理 ==========
+
+  /// 构建翻译摘要数据。
+  ///
+  /// 从 CanonicalPublication 提取 alternativeAbstracts（OtherAbstract），
+  /// 转换为 AlternativeAbstractData 列表供 Writer 写入关联表。
+  ///
+  /// **业务含义**：
+  ///
+  /// PubMed 的 OtherAbstract 元素包含其他语言版本的摘要，常见来源：
+  /// - Publisher：出版商提供的官方翻译
+  /// - AIMSHP/KIEML：专业翻译机构
+  /// - plain-language-summary：面向患者的通俗语言摘要
+  ///
+  /// @param publication 规范化文献
+  /// @return 翻译摘要数据列表（可能为空，不会为 null）
+  private List<AlternativeAbstractData> buildAlternativeAbstractData(
+      CanonicalPublication publication) {
+    List<CanonicalPublication.AlternativeAbstract> alternativeAbstracts =
+        publication.getAlternativeAbstracts();
+    if (alternativeAbstracts == null || alternativeAbstracts.isEmpty()) {
+      return List.of();
+    }
+
+    List<AlternativeAbstractData> result = new ArrayList<>();
+    int order = 1;
+
+    for (CanonicalPublication.AlternativeAbstract altAbstract : alternativeAbstracts) {
+      if (altAbstract == null || altAbstract.getText() == null || altAbstract.getText().isBlank()) {
+        continue;
+      }
+
+      result.add(
+          AlternativeAbstractData.of(
+              altAbstract.getLanguage(),
+              altAbstract.getType(),
+              altAbstract.getText(),
+              altAbstract.getCopyright(),
+              order++));
     }
 
     return result;

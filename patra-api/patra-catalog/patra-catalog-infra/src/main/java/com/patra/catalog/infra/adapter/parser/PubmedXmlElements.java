@@ -140,6 +140,14 @@ public final class PubmedXmlElements {
     private SupplMesh() {}
   }
 
+  /// 其他语言摘要相关元素名称。
+  public static final class OtherAbstract {
+    public static final String OTHER_ABSTRACT = "OtherAbstract";
+    public static final String COPYRIGHT_INFORMATION = "CopyrightInformation";
+
+    private OtherAbstract() {}
+  }
+
   /// 日期相关元素名称。
   public static final class Date {
     public static final String PUB_DATE = "PubDate";
@@ -163,6 +171,7 @@ public final class PubmedXmlElements {
     public static final String TYPE = "Type";
     public static final String SOURCE = "Source";
     public static final String LABEL = "Label";
+    public static final String LANGUAGE = "Language";
 
     // ISSN Type 属性值
     public static final String ISSN_TYPE_PRINT = "Print";
