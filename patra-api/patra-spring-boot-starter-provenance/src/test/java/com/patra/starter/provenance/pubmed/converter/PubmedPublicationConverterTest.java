@@ -3,6 +3,7 @@ package com.patra.starter.provenance.pubmed.converter;
 import static org.assertj.core.api.Assertions.*;
 
 import com.patra.common.model.CanonicalPublication;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import com.patra.starter.provenance.pubmed.model.response.PubmedPublication;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
@@ -117,9 +118,9 @@ class PubmedPublicationConverterTest {
     assertThat(result.getIdentifiers())
         .extracting("type", "value")
         .contains(
-            tuple("pmid", "12345678"),
-            tuple("doi", "10.1234/test.2023.001"),
-            tuple("pmc", "PMC1234567"));
+            tuple(PublicationIdentifierType.PMID, "12345678"),
+            tuple(PublicationIdentifierType.DOI, "10.1234/test.2023.001"),
+            tuple(PublicationIdentifierType.PMC, "PMC1234567"));
     assertThat(result.getDates()).isNotNull();
     assertThat(result.getDates().getPublished()).isEqualTo(LocalDate.of(2023, 12, 15));
     assertThat(result.getKeywords()).hasSize(1);
@@ -157,7 +158,7 @@ class PubmedPublicationConverterTest {
     assertThat(result.getAuthors()).isEmpty();
     assertThat(result.getJournal()).isNull();
     assertThat(result.getIdentifiers()).hasSize(1);
-    assertThat(result.getIdentifiers().get(0).getType()).isEqualTo("pmid");
+    assertThat(result.getIdentifiers().get(0).getType()).isEqualTo(PublicationIdentifierType.PMID);
     assertThat(result.getIdentifiers().get(0).getValue()).isEqualTo("99999999");
     assertThat(result.getDates()).isNull();
     assertThat(result.getKeywords()).isNull();
@@ -356,7 +357,9 @@ class PubmedPublicationConverterTest {
     assertThat(result.getIdentifiers())
         .extracting("type", "value")
         .contains(
-            tuple("pmid", "66666666"), tuple("doi", "10.9999/example"), tuple("pmc", "PMC9999999"));
+            tuple(PublicationIdentifierType.PMID, "66666666"),
+            tuple(PublicationIdentifierType.DOI, "10.9999/example"),
+            tuple(PublicationIdentifierType.PMC, "PMC9999999"));
   }
 
   @Test
@@ -387,7 +390,7 @@ class PubmedPublicationConverterTest {
     // Assert
     assertThat(result.getIdentifiers())
         .extracting("type", "value")
-        .contains(tuple("pmc", "PMC7777777"));
+        .contains(tuple(PublicationIdentifierType.PMC, "PMC7777777"));
   }
 
   @Test

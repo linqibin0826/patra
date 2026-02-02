@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.patra.common.model.CanonicalPublication;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -273,7 +274,7 @@ class PubmedXmlParserAdapterIT {
       return null;
     }
     return publication.getIdentifiers().stream()
-        .filter(id -> "pmid".equals(id.getType()))
+        .filter(id -> PublicationIdentifierType.PMID.equals(id.getType()))
         .map(CanonicalPublication.Identifier::getValue)
         .findFirst()
         .orElse(null);
@@ -285,7 +286,7 @@ class PubmedXmlParserAdapterIT {
       return null;
     }
     return publication.getIdentifiers().stream()
-        .filter(id -> "doi".equals(id.getType()))
+        .filter(id -> PublicationIdentifierType.DOI.equals(id.getType()))
         .map(CanonicalPublication.Identifier::getValue)
         .findFirst()
         .orElse(null);
