@@ -2,6 +2,7 @@ package com.patra.catalog.infra.adapter.batch.publication;
 
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import com.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;
+import com.patra.catalog.domain.model.enums.PublicationDateType;
 import com.patra.catalog.domain.model.enums.PublicationMedium;
 import com.patra.catalog.domain.model.enums.PublicationStatus;
 import com.patra.catalog.domain.model.vo.publication.LanguageInfo;
@@ -18,6 +19,7 @@ import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.FundingData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.KeywordData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.MeshHeadingData;
+import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationDateData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationTypeData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.QualifierData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.SupplMeshData;
@@ -141,6 +143,7 @@ public class PubmedArticleItemProcessor
     List<FundingData> funding = buildFundingData(publication);
     List<PublicationTypeData> publicationTypes = buildPublicationTypeData(publication);
     List<AlternativeAbstractData> alternativeAbstracts = buildAlternativeAbstractData(publication);
+    List<PublicationDateData> dates = buildPublicationDateData(publication);
 
     return PublicationImportResult.ofComplete(
         aggregate,
@@ -149,7 +152,8 @@ public class PubmedArticleItemProcessor
         funding,
         publicationTypes,
         supplMeshNames,
-        alternativeAbstracts);
+        alternativeAbstracts,
+        dates);
   }
 
   /// 从 CanonicalPublication 提取 PMID。
@@ -665,6 +669,99 @@ public class PubmedArticleItemProcessor
       }
 
       result.add(SupplMeshData.of(supplMesh.getUi(), order++));
+    }
+
+    return result;
+  }
+
+  // ========== 日期数据处理 ==========
+
+  /// 构建文献日期数据。
+  ///
+  /// 从 CanonicalPublication 提取 PublicationDates，转换为 PublicationDateData 列表。
+  /// 支持 8 种日期类型的映射：
+  ///
+  /// | CanonicalPublication.PublicationDates | PublicationDateType |
+  /// |---------------------------------------|---------------------|
+  /// | published | PUBLISHED |
+  /// | electronic | EPUBLISH |
+  /// | received | RECEIVED |
+  /// | accepted | ACCEPTED |
+  /// | revised | REVISED |
+  /// | created | ENTREZ_DATE |
+  /// | completed | OTHER |
+  /// | indexed | OTHER |
+  ///
+  /// **特殊处理**：
+  ///
+  /// - `published` 日期标记为 `isPrimary=true`（主要发表日期）
+  /// - 所有日期从 `LocalDate` 转换，精度均为 `day`
+  ///
+  /// @param publication 规范化文献
+  /// @return 日期数据列表（可能为空，不会为 null）
+  private List<PublicationDateData> buildPublicationDateData(CanonicalPublication publication) {
+    PublicationDates dates = publication.getDates();
+    if (dates == null) {
+      return List.of();
+    }
+
+    List<PublicationDateData> result = new ArrayList<>();
+    int order = 1;
+
+    // published → PUBLISHED（主要发表日期）
+    if (dates.getPublished() != null) {
+      result.add(
+          PublicationDateData.primaryFromLocalDate(
+              PublicationDateType.PUBLISHED.getCode(), dates.getPublished(), order++));
+    }
+
+    // electronic → EPUBLISH
+    if (dates.getElectronic() != null) {
+      result.add(
+          PublicationDateData.fromLocalDate(
+              PublicationDateType.EPUBLISH.getCode(), dates.getElectronic(), order++));
+    }
+
+    // received → RECEIVED
+    if (dates.getReceived() != null) {
+      result.add(
+          PublicationDateData.fromLocalDate(
+              PublicationDateType.RECEIVED.getCode(), dates.getReceived(), order++));
+    }
+
+    // accepted → ACCEPTED
+    if (dates.getAccepted() != null) {
+      result.add(
+          PublicationDateData.fromLocalDate(
+              PublicationDateType.ACCEPTED.getCode(), dates.getAccepted(), order++));
+    }
+
+    // revised → REVISED
+    if (dates.getRevised() != null) {
+      result.add(
+          PublicationDateData.fromLocalDate(
+              PublicationDateType.REVISED.getCode(), dates.getRevised(), order++));
+    }
+
+    // created → ENTREZ_DATE（进入 PubMed 数据库日期）
+    if (dates.getCreated() != null) {
+      result.add(
+          PublicationDateData.fromLocalDate(
+              PublicationDateType.ENTREZ_DATE.getCode(), dates.getCreated(), order++));
+    }
+
+    // completed → OTHER
+    if (dates.getCompleted() != null) {
+      result.add(
+          PublicationDateData.fromLocalDate(
+              PublicationDateType.OTHER.getCode(), dates.getCompleted(), order++));
+    }
+
+    // indexed → OTHER
+    if (dates.getIndexed() != null) {
+      result.add(
+          PublicationDateData.fromLocalDate(
+              PublicationDateType.OTHER.getCode(), dates.getIndexed(), order++));
     }
 
     return result;

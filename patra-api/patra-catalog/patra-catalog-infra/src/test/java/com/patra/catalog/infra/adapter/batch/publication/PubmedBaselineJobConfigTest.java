@@ -10,6 +10,7 @@ import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
@@ -18,10 +19,12 @@ import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.starter.batch.config.BatchProperties;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -36,6 +39,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 /// @since 0.1.0
 @DisplayName("PubmedBaselineJobConfig")
 @ExtendWith(MockitoExtension.class)
+@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class PubmedBaselineJobConfigTest {
 
   @Mock private JobRepository jobRepository;
@@ -54,6 +58,7 @@ class PubmedBaselineJobConfigTest {
   @Mock private PublicationTypeDao typeDao;
   @Mock private PublicationSupplMeshDao supplMeshDao;
   @Mock private PublicationAlternativeAbstractDao alternativeAbstractDao;
+  @Mock private PublicationDateDao dateDao;
   @Mock private BatchProperties batchProperties;
 
   private PubmedBaselineJobConfig jobConfig;
@@ -75,6 +80,7 @@ class PubmedBaselineJobConfigTest {
             typeDao,
             supplMeshDao,
             alternativeAbstractDao,
+            dateDao,
             batchProperties,
             Optional.empty());
   }
@@ -177,7 +183,8 @@ class PubmedBaselineJobConfigTest {
               fundingDao,
               typeDao,
               supplMeshDao,
-              alternativeAbstractDao);
+              alternativeAbstractDao,
+              dateDao);
 
       // then
       assertThat(writer).isNotNull();

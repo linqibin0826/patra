@@ -25,6 +25,7 @@ import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.CanonicalPublication.Abstract;
 import com.patra.common.model.CanonicalPublication.AbstractSection;
+import com.patra.common.model.CanonicalPublication.AlternativeAbstract;
 import com.patra.common.model.CanonicalPublication.DescriptorName;
 import com.patra.common.model.CanonicalPublication.FundingInfo;
 import com.patra.common.model.CanonicalPublication.Identifier;
@@ -40,10 +41,12 @@ import com.patra.common.model.enums.PublicationIdentifierType;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -54,6 +57,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// @since 0.1.0
 @DisplayName("PubmedArticleItemProcessor")
 @ExtendWith(MockitoExtension.class)
+@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class PubmedArticleItemProcessorTest {
 
   @Mock private PublicationRepository publicationRepository;
@@ -604,6 +608,140 @@ class PubmedArticleItemProcessorTest {
       assertThat(result.hasSupplMeshNames()).isFalse();
       assertThat(result.supplMeshNames()).isEmpty();
     }
+
+    @Test
+    @DisplayName("应该正确处理翻译摘要数据")
+    void should_process_alternative_abstracts() throws Exception {
+      // given
+      CanonicalPublication publication = createPublicationWithAlternativeAbstracts();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasAlternativeAbstracts()).isTrue();
+      assertThat(result.alternativeAbstracts()).hasSize(2);
+
+      var abstract1 = result.alternativeAbstracts().get(0);
+      assertThat(abstract1.languageCode()).isEqualTo("zh");
+      assertThat(abstract1.abstractType()).isEqualTo("Publisher");
+      assertThat(abstract1.plainText()).isEqualTo("这是中文翻译摘要。");
+      assertThat(abstract1.copyright()).isEqualTo("版权所有 2024");
+      assertThat(abstract1.abstractOrder()).isEqualTo(1);
+
+      var abstract2 = result.alternativeAbstracts().get(1);
+      assertThat(abstract2.languageCode()).isEqualTo("ja");
+      assertThat(abstract2.abstractType()).isEqualTo("AIMSHP");
+      assertThat(abstract2.plainText()).isEqualTo("これは日本語の翻訳要約です。");
+      assertThat(abstract2.abstractOrder()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("无翻译摘要数据时 alternativeAbstracts 应该为空列表")
+    void should_return_empty_alternative_abstracts_when_no_data() throws Exception {
+      // given
+      CanonicalPublication publication = createFullPublication();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasAlternativeAbstracts()).isFalse();
+      assertThat(result.alternativeAbstracts()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("应该正确处理文献日期数据")
+    void should_process_publication_dates() throws Exception {
+      // given
+      CanonicalPublication publication = createPublicationWithDates();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasDates()).isTrue();
+      assertThat(result.dates()).hasSize(3);
+
+      // published 日期应该标记为 primary
+      var publishedDate = result.dates().get(0);
+      assertThat(publishedDate.dateType()).isEqualTo("published");
+      assertThat(publishedDate.year()).isEqualTo(2024);
+      assertThat(publishedDate.month()).isEqualTo(6);
+      assertThat(publishedDate.day()).isEqualTo(15);
+      assertThat(publishedDate.isPrimary()).isTrue();
+      assertThat(publishedDate.orderNum()).isEqualTo(1);
+
+      // received 日期
+      var receivedDate = result.dates().get(1);
+      assertThat(receivedDate.dateType()).isEqualTo("received");
+      assertThat(receivedDate.year()).isEqualTo(2024);
+      assertThat(receivedDate.month()).isEqualTo(1);
+      assertThat(receivedDate.day()).isEqualTo(10);
+      assertThat(receivedDate.isPrimary()).isFalse();
+      assertThat(receivedDate.orderNum()).isEqualTo(2);
+
+      // accepted 日期
+      var acceptedDate = result.dates().get(2);
+      assertThat(acceptedDate.dateType()).isEqualTo("accepted");
+      assertThat(acceptedDate.year()).isEqualTo(2024);
+      assertThat(acceptedDate.month()).isEqualTo(5);
+      assertThat(acceptedDate.day()).isEqualTo(20);
+      assertThat(acceptedDate.isPrimary()).isFalse();
+    }
+
+    @Test
+    @DisplayName("无日期数据时 dates 应该为空列表")
+    void should_return_empty_dates_when_no_date_data() throws Exception {
+      // given - 创建不带日期的文献
+      CanonicalPublication publication =
+          CanonicalPublication.builder()
+              .identifiers(
+                  List.of(
+                      Identifier.builder()
+                          .type(PublicationIdentifierType.PMID)
+                          .value(PMID)
+                          .build()))
+              .title("Test Article")
+              .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+              // 使用最小的 PublicationDates（只有 published）
+              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .build();
+
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      // 即使只有 published 日期，也应该有 1 条日期记录
+      assertThat(result.hasDates()).isTrue();
+      assertThat(result.dates()).hasSize(1);
+      assertThat(result.dates().getFirst().dateType()).isEqualTo("published");
+    }
   }
 
   /// 创建简单的测试文献。
@@ -882,6 +1020,46 @@ class PubmedArticleItemProcessorTest {
                     .name("FOLFOX protocol")
                     .type("Protocol")
                     .build()))
+        .build();
+  }
+
+  /// 创建包含翻译摘要的测试文献。
+  private CanonicalPublication createPublicationWithAlternativeAbstracts() {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
+        .title("Test Article with Alternative Abstracts")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .alternativeAbstracts(
+            List.of(
+                AlternativeAbstract.builder()
+                    .type("Publisher")
+                    .language("zh")
+                    .text("这是中文翻译摘要。")
+                    .copyright("版权所有 2024")
+                    .build(),
+                AlternativeAbstract.builder()
+                    .type("AIMSHP")
+                    .language("ja")
+                    .text("これは日本語の翻訳要約です。")
+                    .build()))
+        .build();
+  }
+
+  /// 创建包含多种日期的测试文献。
+  private CanonicalPublication createPublicationWithDates() {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
+        .title("Test Article with Dates")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(
+            PublicationDates.builder()
+                .published(LocalDate.of(2024, 6, 15))
+                .received(LocalDate.of(2024, 1, 10))
+                .accepted(LocalDate.of(2024, 5, 20))
+                .build())
         .build();
   }
 }
