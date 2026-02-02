@@ -10,19 +10,24 @@ import com.patra.catalog.domain.model.vo.publication.PublicationId;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
+import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.AlternativeAbstractData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.FundingData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.KeywordData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.MeshHeadingData;
+import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationDateData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationTypeData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.QualifierData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.SupplMeshData;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationAlternativeAbstractEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationDateEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationFundingEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationKeywordEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshHeadingEntity;
@@ -30,11 +35,14 @@ import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshQualifi
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationSupplMeshEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationTypeEntity;
 import com.patra.common.enums.ProvenanceCode;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
@@ -48,6 +56,7 @@ import org.springframework.batch.infrastructure.item.Chunk;
 /// @since 0.1.0
 @DisplayName("PublicationItemWriter")
 @ExtendWith(MockitoExtension.class)
+@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class PublicationItemWriterTest {
 
   @Mock private PublicationRepository publicationRepository;
@@ -66,6 +75,8 @@ class PublicationItemWriterTest {
 
   @Mock private PublicationAlternativeAbstractDao alternativeAbstractDao;
 
+  @Mock private PublicationDateDao dateDao;
+
   @Captor private ArgumentCaptor<List<PublicationMeshHeadingEntity>> headingCaptor;
 
   @Captor private ArgumentCaptor<List<PublicationMeshQualifierEntity>> qualifierCaptor;
@@ -77,6 +88,10 @@ class PublicationItemWriterTest {
   @Captor private ArgumentCaptor<List<PublicationTypeEntity>> typeCaptor;
 
   @Captor private ArgumentCaptor<List<PublicationSupplMeshEntity>> supplMeshCaptor;
+
+  @Captor private ArgumentCaptor<List<PublicationAlternativeAbstractEntity>> altAbstractCaptor;
+
+  @Captor private ArgumentCaptor<List<PublicationDateEntity>> dateCaptor;
 
   private PublicationItemWriter writer;
 
@@ -93,7 +108,8 @@ class PublicationItemWriterTest {
             fundingDao,
             typeDao,
             supplMeshDao,
-            alternativeAbstractDao);
+            alternativeAbstractDao,
+            dateDao);
   }
 
   @Nested
@@ -139,7 +155,17 @@ class PublicationItemWriterTest {
 
       MeshHeadingData heading = MeshHeadingData.of("D000001", true, 1, List.of());
 
-      PublicationImportResult result = PublicationImportResult.of(pub, List.of(heading));
+      PublicationImportResult result =
+          PublicationImportResult.builder()
+              .publication(pub)
+              .meshHeadings(List.of(heading))
+              .keywords(List.of())
+              .funding(List.of())
+              .publicationTypes(List.of())
+              .supplMeshNames(List.of())
+              .alternativeAbstracts(List.of())
+              .dates(List.of())
+              .build();
       Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
 
       // when
@@ -164,7 +190,17 @@ class PublicationItemWriterTest {
       QualifierData qualifier = QualifierData.of("Q000379", false, 1);
       MeshHeadingData heading = MeshHeadingData.of("D000001", true, 1, List.of(qualifier));
 
-      PublicationImportResult result = PublicationImportResult.of(pub, List.of(heading));
+      PublicationImportResult result =
+          PublicationImportResult.builder()
+              .publication(pub)
+              .meshHeadings(List.of(heading))
+              .keywords(List.of())
+              .funding(List.of())
+              .publicationTypes(List.of())
+              .supplMeshNames(List.of())
+              .alternativeAbstracts(List.of())
+              .dates(List.of())
+              .build();
       Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
 
       // when
@@ -208,8 +244,16 @@ class PublicationItemWriterTest {
       KeywordData keyword2 = KeywordData.of("publisher", "AI", false, 2);
 
       PublicationImportResult result =
-          PublicationImportResult.ofAll(
-              pub, List.of(), List.of(keyword1, keyword2), List.of(), List.of());
+          PublicationImportResult.builder()
+              .publication(pub)
+              .meshHeadings(List.of())
+              .keywords(List.of(keyword1, keyword2))
+              .funding(List.of())
+              .publicationTypes(List.of())
+              .supplMeshNames(List.of())
+              .alternativeAbstracts(List.of())
+              .dates(List.of())
+              .build();
       Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
 
       // when
@@ -263,7 +307,16 @@ class PublicationItemWriterTest {
               .build();
 
       PublicationImportResult result =
-          PublicationImportResult.ofAll(pub, List.of(), List.of(), List.of(funding), List.of());
+          PublicationImportResult.builder()
+              .publication(pub)
+              .meshHeadings(List.of())
+              .keywords(List.of())
+              .funding(List.of(funding))
+              .publicationTypes(List.of())
+              .supplMeshNames(List.of())
+              .alternativeAbstracts(List.of())
+              .dates(List.of())
+              .build();
       Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
 
       // when
@@ -307,7 +360,16 @@ class PublicationItemWriterTest {
       PublicationTypeData type = PublicationTypeData.of("D016428", "Journal Article", "MeSH", 1);
 
       PublicationImportResult result =
-          PublicationImportResult.ofAll(pub, List.of(), List.of(), List.of(), List.of(type));
+          PublicationImportResult.builder()
+              .publication(pub)
+              .meshHeadings(List.of())
+              .keywords(List.of())
+              .funding(List.of())
+              .publicationTypes(List.of(type))
+              .supplMeshNames(List.of())
+              .alternativeAbstracts(List.of())
+              .dates(List.of())
+              .build();
       Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
 
       // when
@@ -351,8 +413,16 @@ class PublicationItemWriterTest {
       SupplMeshData suppl2 = SupplMeshData.of("C095232", 2);
 
       PublicationImportResult result =
-          PublicationImportResult.ofAllWithSupplMesh(
-              pub, List.of(), List.of(), List.of(), List.of(), List.of(suppl1, suppl2));
+          PublicationImportResult.builder()
+              .publication(pub)
+              .meshHeadings(List.of())
+              .keywords(List.of())
+              .funding(List.of())
+              .publicationTypes(List.of())
+              .supplMeshNames(List.of(suppl1, suppl2))
+              .alternativeAbstracts(List.of())
+              .dates(List.of())
+              .build();
       Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
 
       // when
@@ -384,6 +454,130 @@ class PublicationItemWriterTest {
 
       // then
       verify(supplMeshDao, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("应该写入翻译摘要关联")
+    void should_write_alternative_abstract_associations() throws Exception {
+      // given
+      PublicationAggregate pub = createPublication("12345678");
+      pub.assignId(PublicationId.of(PUBLICATION_ID));
+
+      AlternativeAbstractData altAbstract1 =
+          AlternativeAbstractData.of("zh", "Publisher", "这是中文摘要", "版权所有", 1);
+      AlternativeAbstractData altAbstract2 =
+          AlternativeAbstractData.of("ja", "AIMSHP", "日本語の要約", null, 2);
+
+      PublicationImportResult result =
+          PublicationImportResult.ofComplete(
+              pub,
+              List.of(),
+              List.of(),
+              List.of(),
+              List.of(),
+              List.of(),
+              List.of(altAbstract1, altAbstract2),
+              List.of());
+      Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
+
+      // when
+      writer.write(chunk);
+
+      // then
+      verify(alternativeAbstractDao).saveAll(altAbstractCaptor.capture());
+      List<PublicationAlternativeAbstractEntity> savedAbstracts = altAbstractCaptor.getValue();
+      assertThat(savedAbstracts).hasSize(2);
+      // 验证第一条翻译摘要
+      assertThat(savedAbstracts.get(0).getPublicationId()).isEqualTo(PUBLICATION_ID);
+      assertThat(savedAbstracts.get(0).getLanguageCode()).isEqualTo("zh");
+      assertThat(savedAbstracts.get(0).getPlainText()).isEqualTo("这是中文摘要");
+      assertThat(savedAbstracts.get(0).getTranslationType()).isEqualTo("official");
+      assertThat(savedAbstracts.get(0).getIsOfficial()).isTrue();
+      assertThat(savedAbstracts.get(0).getOrderNum()).isEqualTo(1);
+      // 验证第二条翻译摘要
+      assertThat(savedAbstracts.get(1).getLanguageCode()).isEqualTo("ja");
+      assertThat(savedAbstracts.get(1).getTranslationType()).isEqualTo("professional");
+      assertThat(savedAbstracts.get(1).getIsOfficial()).isFalse();
+    }
+
+    @Test
+    @DisplayName("无翻译摘要数据时不应调用 DAO")
+    void should_not_call_alternative_abstract_dao_when_no_data() throws Exception {
+      // given
+      PublicationAggregate pub = createPublication("12345678");
+      pub.assignId(PublicationId.of(PUBLICATION_ID));
+
+      PublicationImportResult result = PublicationImportResult.ofPublication(pub);
+      Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
+
+      // when
+      writer.write(chunk);
+
+      // then
+      verify(alternativeAbstractDao, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("应该写入日期关联")
+    void should_write_date_associations() throws Exception {
+      // given
+      PublicationAggregate pub = createPublication("12345678");
+      pub.assignId(PublicationId.of(PUBLICATION_ID));
+
+      PublicationDateData date1 =
+          PublicationDateData.primaryFromLocalDate("published", LocalDate.of(2024, 3, 15), 1);
+      PublicationDateData date2 =
+          PublicationDateData.fromLocalDate("received", LocalDate.of(2023, 10, 1), 2);
+
+      PublicationImportResult result =
+          PublicationImportResult.ofComplete(
+              pub,
+              List.of(),
+              List.of(),
+              List.of(),
+              List.of(),
+              List.of(),
+              List.of(),
+              List.of(date1, date2));
+      Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
+
+      // when
+      writer.write(chunk);
+
+      // then
+      verify(dateDao).saveAll(dateCaptor.capture());
+      List<PublicationDateEntity> savedDates = dateCaptor.getValue();
+      assertThat(savedDates).hasSize(2);
+      // 验证发表日期（主要日期）
+      assertThat(savedDates.get(0).getPublicationId()).isEqualTo(PUBLICATION_ID);
+      assertThat(savedDates.get(0).getDateType()).isEqualTo("published");
+      assertThat(savedDates.get(0).getYear()).isEqualTo(2024);
+      assertThat(savedDates.get(0).getMonth()).isEqualTo(3);
+      assertThat(savedDates.get(0).getDay()).isEqualTo(15);
+      assertThat(savedDates.get(0).getDatePrecision()).isEqualTo("day");
+      assertThat(savedDates.get(0).getIsPrimary()).isTrue();
+      assertThat(savedDates.get(0).getDateValue()).isEqualTo(LocalDate.of(2024, 3, 15));
+      // 验证投稿日期
+      assertThat(savedDates.get(1).getDateType()).isEqualTo("received");
+      assertThat(savedDates.get(1).getYear()).isEqualTo(2023);
+      assertThat(savedDates.get(1).getIsPrimary()).isFalse();
+    }
+
+    @Test
+    @DisplayName("无日期数据时不应调用 DAO")
+    void should_not_call_date_dao_when_no_date_data() throws Exception {
+      // given
+      PublicationAggregate pub = createPublication("12345678");
+      pub.assignId(PublicationId.of(PUBLICATION_ID));
+
+      PublicationImportResult result = PublicationImportResult.ofPublication(pub);
+      Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
+
+      // when
+      writer.write(chunk);
+
+      // then
+      verify(dateDao, never()).saveAll(anyList());
     }
   }
 

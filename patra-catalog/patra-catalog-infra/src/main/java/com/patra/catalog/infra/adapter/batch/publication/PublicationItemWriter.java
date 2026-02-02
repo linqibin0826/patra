@@ -6,10 +6,12 @@ import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.FundingData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.KeywordData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.MeshHeadingData;
+import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationDateData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationTypeData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.QualifierData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.SupplMeshData;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
@@ -17,6 +19,7 @@ import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierD
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationAlternativeAbstractEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationDateEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationFundingEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationKeywordEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshHeadingEntity;
@@ -24,6 +27,7 @@ import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshQualifi
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationSupplMeshEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationTypeEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -69,6 +73,7 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
   private final PublicationTypeDao typeDao;
   private final PublicationSupplMeshDao supplMeshDao;
   private final PublicationAlternativeAbstractDao alternativeAbstractDao;
+  private final PublicationDateDao dateDao;
 
   @Override
   public void write(Chunk<? extends PublicationImportResult> chunk) throws Exception {
@@ -91,6 +96,7 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
     writePublicationTypeAssociations(results);
     writeSupplMeshAssociations(results);
     writeAlternativeAbstractAssociations(results);
+    writeDateAssociations(results);
   }
 
   /// 写入 MeSH 关联数据。
@@ -327,12 +333,6 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
         entity.setIsOfficial(isOfficial);
         entity.setOrderNum(altAbstract.abstractOrder());
 
-        // 可选字段
-        if (altAbstract.copyright() != null && !altAbstract.copyright().isBlank()) {
-          // 版权信息可以记录到 translator 字段（暂无专用字段）
-          // 或者可以考虑后续扩展实体字段
-        }
-
         entities.add(entity);
       }
     }
@@ -373,5 +373,62 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
 
     // 其他未知类型默认为官方翻译（保守处理）
     return "official";
+  }
+
+  // ========== Date 关联写入 ==========
+
+  /// 写入日期关联数据。
+  ///
+  /// 将文献生命周期中的各类日期写入 `cat_publication_date` 表。
+  /// 支持不完整日期（仅年份、年月、完整日期三种精度）。
+  ///
+  /// **写入字段**：
+  ///
+  /// - `publication_id` 文献 ID
+  /// - `date_type` 日期类型（received/accepted/published 等）
+  /// - `year/month/day` 分别存储年月日
+  /// - `date_value` 完整日期时填充 LocalDate
+  /// - `date_precision` 精度（year/month/day）
+  /// - `is_primary` 是否主要日期
+  /// - `order_num` 顺序号
+  private void writeDateAssociations(List<PublicationImportResult> results) {
+    List<PublicationDateEntity> entities = new ArrayList<>();
+
+    for (PublicationImportResult result : results) {
+      if (!result.hasDates()) {
+        continue;
+      }
+
+      Long publicationId = result.publication().getId().value();
+
+      for (PublicationDateData dateData : result.dates()) {
+        PublicationDateEntity entity = new PublicationDateEntity();
+        entity.setId(SnowflakeIdGenerator.getId());
+        entity.setPublicationId(publicationId);
+        entity.setDateType(dateData.dateType());
+        entity.setYear(dateData.year());
+        entity.setMonth(dateData.month());
+        entity.setDay(dateData.day());
+        entity.setDatePrecision(dateData.datePrecision());
+        entity.setSeason(dateData.season());
+        entity.setDateString(dateData.dateString());
+        entity.setIsPrimary(dateData.isPrimary());
+        entity.setOrderNum(dateData.orderNum());
+
+        // 完整日期时填充 dateValue
+        if ("day".equals(dateData.datePrecision())
+            && dateData.month() != null
+            && dateData.day() != null) {
+          entity.setDateValue(LocalDate.of(dateData.year(), dateData.month(), dateData.day()));
+        }
+
+        entities.add(entity);
+      }
+    }
+
+    if (!entities.isEmpty()) {
+      dateDao.saveAll(entities);
+      log.debug("写入 {} 条日期关联", entities.size());
+    }
   }
 }
