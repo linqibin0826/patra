@@ -1,6 +1,7 @@
 package com.patra.catalog.infra.adapter.batch.publication;
 
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
+import com.patra.catalog.domain.model.vo.publication.PublicationIdentifier;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.AlternativeAbstractData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.FundingData;
@@ -13,6 +14,7 @@ import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationIdentifierDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
@@ -21,6 +23,7 @@ import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationAlternativeAbstractEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationDateEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationFundingEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationIdentifierEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationKeywordEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshHeadingEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshQualifierEntity;
@@ -74,6 +77,7 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
   private final PublicationSupplMeshDao supplMeshDao;
   private final PublicationAlternativeAbstractDao alternativeAbstractDao;
   private final PublicationDateDao dateDao;
+  private final PublicationIdentifierDao identifierDao;
 
   @Override
   public void write(Chunk<? extends PublicationImportResult> chunk) throws Exception {
@@ -97,6 +101,7 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
     writeSupplMeshAssociations(results);
     writeAlternativeAbstractAssociations(results);
     writeDateAssociations(results);
+    writeIdentifierAssociations(results);
   }
 
   /// 写入 MeSH 关联数据。
@@ -429,6 +434,47 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
     if (!entities.isEmpty()) {
       dateDao.saveAll(entities);
       log.debug("写入 {} 条日期关联", entities.size());
+    }
+  }
+
+  // ========== Identifier 关联写入 ==========
+
+  /// 写入标识符关联数据。
+  ///
+  /// 将扩展标识符（PMC、PII、ARXIV 等）写入 `cat_publication_identifier` 表。
+  /// 主要标识符（PMID、DOI）已冗余存储在主表中，不在此处重复写入。
+  ///
+  /// **写入字段**：
+  ///
+  /// - `publication_id` 文献 ID
+  /// - `type` 标识符类型枚举
+  /// - `value` 标识符值
+  /// - `source` 标识符来源
+  private void writeIdentifierAssociations(List<PublicationImportResult> results) {
+    List<PublicationIdentifierEntity> entities = new ArrayList<>();
+
+    for (PublicationImportResult result : results) {
+      List<PublicationIdentifier> identifiers = result.publication().getExtendedIdentifiers();
+      if (identifiers.isEmpty()) {
+        continue;
+      }
+
+      Long publicationId = result.publication().getId().value();
+
+      for (PublicationIdentifier identifier : identifiers) {
+        PublicationIdentifierEntity entity = new PublicationIdentifierEntity();
+        entity.setId(SnowflakeIdGenerator.getId());
+        entity.setPublicationId(publicationId);
+        entity.setType(identifier.type());
+        entity.setValue(identifier.value());
+        entity.setSource(identifier.source());
+        entities.add(entity);
+      }
+    }
+
+    if (!entities.isEmpty()) {
+      identifierDao.saveAll(entities);
+      log.debug("写入 {} 条标识符关联", entities.size());
     }
   }
 }
