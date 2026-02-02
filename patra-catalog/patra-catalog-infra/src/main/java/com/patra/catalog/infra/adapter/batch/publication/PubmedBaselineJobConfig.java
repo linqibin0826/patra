@@ -7,6 +7,7 @@ import com.patra.catalog.domain.port.lookup.VenueLookupPort;
 import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
@@ -76,6 +77,7 @@ public class PubmedBaselineJobConfig {
   private final PublicationFundingDao fundingDao;
   private final PublicationTypeDao typeDao;
   private final PublicationSupplMeshDao supplMeshDao;
+  private final PublicationAlternativeAbstractDao alternativeAbstractDao;
   private final BatchProperties batchProperties;
   private final BatchProgressMetricsListener batchProgressMetricsListener;
 
@@ -93,6 +95,7 @@ public class PubmedBaselineJobConfig {
   /// @param fundingDao 资助信息 DAO
   /// @param typeDao 出版类型 DAO
   /// @param supplMeshDao 补充 MeSH 概念 DAO
+  /// @param alternativeAbstractDao 翻译摘要 DAO
   /// @param batchProperties 批处理属性
   /// @param batchProgressMetricsListener 进度指标监听器（可选）
   public PubmedBaselineJobConfig(
@@ -108,6 +111,7 @@ public class PubmedBaselineJobConfig {
       PublicationFundingDao fundingDao,
       PublicationTypeDao typeDao,
       PublicationSupplMeshDao supplMeshDao,
+      PublicationAlternativeAbstractDao alternativeAbstractDao,
       BatchProperties batchProperties,
       Optional<BatchProgressMetricsListener> batchProgressMetricsListener) {
     this.jobRepository = jobRepository;
@@ -122,6 +126,7 @@ public class PubmedBaselineJobConfig {
     this.fundingDao = fundingDao;
     this.typeDao = typeDao;
     this.supplMeshDao = supplMeshDao;
+    this.alternativeAbstractDao = alternativeAbstractDao;
     this.batchProperties = batchProperties;
     this.batchProgressMetricsListener = batchProgressMetricsListener.orElse(null);
   }
@@ -163,7 +168,8 @@ public class PubmedBaselineJobConfig {
                     keywordDao,
                     fundingDao,
                     typeDao,
-                    supplMeshDao))
+                    supplMeshDao,
+                    alternativeAbstractDao))
             .faultTolerant()
             .skipLimit(DEFAULT_SKIP_LIMIT)
             .skip(Exception.class);
@@ -219,6 +225,7 @@ public class PubmedBaselineJobConfig {
   /// @param fundDao 资助信息 DAO
   /// @param ptDao 出版类型 DAO
   /// @param supplMeshDao 补充 MeSH 概念 DAO
+  /// @param altAbstractDao 翻译摘要 DAO
   /// @return ItemWriter 实例
   @Bean
   public PublicationItemWriter publicationItemWriter(
@@ -227,9 +234,17 @@ public class PubmedBaselineJobConfig {
       PublicationKeywordDao kwDao,
       PublicationFundingDao fundDao,
       PublicationTypeDao ptDao,
-      PublicationSupplMeshDao supplMeshDao) {
+      PublicationSupplMeshDao supplMeshDao,
+      PublicationAlternativeAbstractDao altAbstractDao) {
     return new PublicationItemWriter(
-        publicationRepository, headingDao, qualifierDao, kwDao, fundDao, ptDao, supplMeshDao);
+        publicationRepository,
+        headingDao,
+        qualifierDao,
+        kwDao,
+        fundDao,
+        ptDao,
+        supplMeshDao,
+        altAbstractDao);
   }
 
   /// 获取 chunk size。

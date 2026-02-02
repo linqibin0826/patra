@@ -9,6 +9,7 @@ import com.patra.catalog.domain.port.lookup.VenueLookupPort;
 import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
@@ -52,6 +53,7 @@ class PubmedBaselineJobConfigTest {
   @Mock private PublicationFundingDao fundingDao;
   @Mock private PublicationTypeDao typeDao;
   @Mock private PublicationSupplMeshDao supplMeshDao;
+  @Mock private PublicationAlternativeAbstractDao alternativeAbstractDao;
   @Mock private BatchProperties batchProperties;
 
   private PubmedBaselineJobConfig jobConfig;
@@ -72,6 +74,7 @@ class PubmedBaselineJobConfigTest {
             fundingDao,
             typeDao,
             supplMeshDao,
+            alternativeAbstractDao,
             batchProperties,
             Optional.empty());
   }
@@ -168,7 +171,13 @@ class PubmedBaselineJobConfigTest {
       // when
       PublicationItemWriter writer =
           jobConfig.publicationItemWriter(
-              meshHeadingDao, meshQualifierDao, keywordDao, fundingDao, typeDao, supplMeshDao);
+              meshHeadingDao,
+              meshQualifierDao,
+              keywordDao,
+              fundingDao,
+              typeDao,
+              supplMeshDao,
+              alternativeAbstractDao);
 
       // then
       assertThat(writer).isNotNull();

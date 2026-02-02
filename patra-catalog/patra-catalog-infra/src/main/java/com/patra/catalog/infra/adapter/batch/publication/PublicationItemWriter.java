@@ -2,18 +2,21 @@ package com.patra.catalog.infra.adapter.batch.publication;
 
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
+import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.AlternativeAbstractData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.FundingData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.KeywordData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.MeshHeadingData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationTypeData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.QualifierData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.SupplMeshData;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationAlternativeAbstractEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationFundingEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationKeywordEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshHeadingEntity;
@@ -65,6 +68,7 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
   private final PublicationFundingDao fundingDao;
   private final PublicationTypeDao typeDao;
   private final PublicationSupplMeshDao supplMeshDao;
+  private final PublicationAlternativeAbstractDao alternativeAbstractDao;
 
   @Override
   public void write(Chunk<? extends PublicationImportResult> chunk) throws Exception {
@@ -86,6 +90,7 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
     writeFundingAssociations(results);
     writePublicationTypeAssociations(results);
     writeSupplMeshAssociations(results);
+    writeAlternativeAbstractAssociations(results);
   }
 
   /// 写入 MeSH 关联数据。
@@ -284,5 +289,89 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
       supplMeshDao.saveAll(entities);
       log.debug("写入 {} 条补充 MeSH 概念关联", entities.size());
     }
+  }
+
+  // ========== AlternativeAbstract 关联写入 ==========
+
+  /// 写入翻译摘要关联数据。
+  ///
+  /// 将 OtherAbstract 数据写入 `cat_publication_alternative_abstract` 表。
+  /// 每条记录包含语言代码、翻译类型、摘要文本和版权信息。
+  ///
+  /// **Type 映射规则**：
+  ///
+  /// - Publisher → OFFICIAL（官方翻译）
+  /// - plain-language-summary → PROFESSIONAL（专业翻译）
+  /// - AIMSHP/KIEML/NASA 等 → PROFESSIONAL（专业机构翻译）
+  /// - 其他 → OFFICIAL（默认假设为官方翻译）
+  private void writeAlternativeAbstractAssociations(List<PublicationImportResult> results) {
+    List<PublicationAlternativeAbstractEntity> entities = new ArrayList<>();
+
+    for (PublicationImportResult result : results) {
+      if (!result.hasAlternativeAbstracts()) {
+        continue;
+      }
+
+      Long publicationId = result.publication().getId().value();
+
+      for (AlternativeAbstractData altAbstract : result.alternativeAbstracts()) {
+        String translationType = mapAbstractTypeToTranslationType(altAbstract.abstractType());
+        boolean isOfficial = "Publisher".equalsIgnoreCase(altAbstract.abstractType());
+
+        PublicationAlternativeAbstractEntity entity = new PublicationAlternativeAbstractEntity();
+        entity.setId(SnowflakeIdGenerator.getId());
+        entity.setPublicationId(publicationId);
+        entity.setLanguageCode(altAbstract.languageCode());
+        entity.setPlainText(altAbstract.plainText());
+        entity.setTranslationType(translationType);
+        entity.setIsOfficial(isOfficial);
+        entity.setOrderNum(altAbstract.abstractOrder());
+
+        // 可选字段
+        if (altAbstract.copyright() != null && !altAbstract.copyright().isBlank()) {
+          // 版权信息可以记录到 translator 字段（暂无专用字段）
+          // 或者可以考虑后续扩展实体字段
+        }
+
+        entities.add(entity);
+      }
+    }
+
+    if (!entities.isEmpty()) {
+      alternativeAbstractDao.saveAll(entities);
+      log.debug("写入 {} 条翻译摘要关联", entities.size());
+    }
+  }
+
+  /// 将 PubMed OtherAbstract Type 映射为 TranslationType 代码。
+  ///
+  /// @param abstractType PubMed OtherAbstract 的 Type 属性值
+  /// @return TranslationType 枚举的 code 值
+  private String mapAbstractTypeToTranslationType(String abstractType) {
+    if (abstractType == null || abstractType.isBlank()) {
+      return "official"; // 默认为官方翻译
+    }
+
+    String normalizedType = abstractType.trim().toLowerCase();
+
+    // Publisher 类型 → 官方翻译
+    if ("publisher".equals(normalizedType)) {
+      return "official";
+    }
+
+    // plain-language 系列 → 专业翻译
+    if (normalizedType.contains("plain-language")) {
+      return "professional";
+    }
+
+    // 专业机构翻译（AIMSHP, KIEML, NASA 等）→ 专业翻译
+    if ("aimshp".equals(normalizedType)
+        || "kieml".equals(normalizedType)
+        || "nasa".equals(normalizedType)) {
+      return "professional";
+    }
+
+    // 其他未知类型默认为官方翻译（保守处理）
+    return "official";
   }
 }

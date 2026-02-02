@@ -199,6 +199,7 @@ public final class CanonicalPublicationParsingStrategy
               parseMedlineJournalInfo(reader, fields);
           case PubmedXmlElements.MeSH.MESH_HEADING_LIST -> parseMeshHeadingList(reader, fields);
           case PubmedXmlElements.SupplMesh.SUPPL_MESH_LIST -> parseSupplMeshList(reader, fields);
+          case PubmedXmlElements.OtherAbstract.OTHER_ABSTRACT -> parseOtherAbstract(reader, fields);
           default -> {
             // 跳过其他元素
           }
@@ -629,6 +630,57 @@ public final class CanonicalPublicationParsingStrategy
     }
   }
 
+  /// 解析 OtherAbstract 元素。
+  ///
+  /// XML 结构：
+  /// ```xml
+  /// <OtherAbstract Language="chi" Type="Publisher">
+  ///   <AbstractText>摘要文本</AbstractText>
+  ///   <AbstractText Label="BACKGROUND">背景</AbstractText>
+  ///   <CopyrightInformation>版权信息</CopyrightInformation>
+  /// </OtherAbstract>
+  /// ```
+  private void parseOtherAbstract(XMLStreamReader reader, ParsedFields fields)
+      throws XMLStreamException {
+    ParsedOtherAbstract otherAbstract = new ParsedOtherAbstract();
+
+    // 提取 Language 和 Type 属性
+    String language = reader.getAttributeValue(null, PubmedXmlElements.Attribute.LANGUAGE);
+    otherAbstract.language = convertLanguageCode(language);
+    otherAbstract.type = reader.getAttributeValue(null, PubmedXmlElements.Attribute.TYPE);
+
+    while (reader.hasNext()) {
+      int event = reader.next();
+
+      if (event == XMLStreamConstants.START_ELEMENT) {
+        String localName = reader.getLocalName();
+        switch (localName) {
+          case PubmedXmlElements.Article.ABSTRACT_TEXT -> {
+            ParsedAbstractSection section = new ParsedAbstractSection();
+            section.label = reader.getAttributeValue(null, PubmedXmlElements.Attribute.LABEL);
+            section.content = reader.getElementText().trim();
+            if (!section.content.isBlank()) {
+              otherAbstract.sections.add(section);
+            }
+          }
+          case PubmedXmlElements.OtherAbstract.COPYRIGHT_INFORMATION ->
+              otherAbstract.copyright = reader.getElementText().trim();
+          default -> {
+            // 跳过其他元素
+          }
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && PubmedXmlElements.OtherAbstract.OTHER_ABSTRACT.equals(reader.getLocalName())) {
+        break;
+      }
+    }
+
+    // 只添加有内容的摘要
+    if (!otherAbstract.sections.isEmpty()) {
+      fields.otherAbstracts.add(otherAbstract);
+    }
+  }
+
   /// 解析 Pagination 元素。
   private void parsePagination(XMLStreamReader reader, ParsedFields fields)
       throws XMLStreamException {
@@ -708,6 +760,7 @@ public final class CanonicalPublicationParsingStrategy
         .authorsComplete(fields.authorsComplete)
         .authors(buildAuthors(fields))
         .abstractContent(buildAbstract(fields))
+        .alternativeAbstracts(buildAlternativeAbstracts(fields))
         .meshHeadings(buildMeshHeadings(fields))
         .supplMeshNames(buildSupplMeshNames(fields))
         .publicationTypes(buildPublicationTypes(fields))
@@ -926,6 +979,53 @@ public final class CanonicalPublicationParsingStrategy
         .toList();
   }
 
+  /// 构建其他语言摘要列表。
+  ///
+  /// 将解析的 OtherAbstract 转换为 AlternativeAbstract 列表。
+  /// 结构化摘要的段落会拼接成完整文本。
+  private List<CanonicalPublication.AlternativeAbstract> buildAlternativeAbstracts(
+      ParsedFields fields) {
+    if (fields.otherAbstracts.isEmpty()) {
+      return List.of();
+    }
+
+    return fields.otherAbstracts.stream().map(this::buildAlternativeAbstract).toList();
+  }
+
+  /// 构建单个其他语言摘要。
+  private CanonicalPublication.AlternativeAbstract buildAlternativeAbstract(
+      ParsedOtherAbstract parsed) {
+    // 拼接所有段落为完整文本
+    String text = joinAbstractSections(parsed.sections);
+
+    return CanonicalPublication.AlternativeAbstract.builder()
+        .language(parsed.language)
+        .type(parsed.type)
+        .text(text)
+        .copyright(parsed.copyright)
+        .build();
+  }
+
+  /// 拼接摘要段落为完整文本。
+  ///
+  /// 对于结构化摘要，按顺序拼接各段落内容。
+  private String joinAbstractSections(List<ParsedAbstractSection> sections) {
+    if (sections == null || sections.isEmpty()) {
+      return null;
+    }
+
+    if (sections.size() == 1) {
+      return sections.getFirst().content;
+    }
+
+    // 多段落拼接，用空格分隔
+    return sections.stream()
+        .map(s -> s.content)
+        .filter(content -> content != null && !content.isBlank())
+        .reduce((a, b) -> a + " " + b)
+        .orElse(null);
+  }
+
   // ========== 内部类 ==========
 
   /// 解析字段容器。
@@ -976,6 +1076,9 @@ public final class CanonicalPublicationParsingStrategy
 
     // 页码
     String medlinePgn;
+
+    // 其他语言摘要
+    List<ParsedOtherAbstract> otherAbstracts = new ArrayList<>();
   }
 
   /// 解析的作者信息。
@@ -1023,5 +1126,13 @@ public final class CanonicalPublicationParsingStrategy
     String ui;
     String name;
     String type;
+  }
+
+  /// 解析的其他语言摘要。
+  private static class ParsedOtherAbstract {
+    String language;
+    String type;
+    String copyright;
+    List<ParsedAbstractSection> sections = new ArrayList<>();
   }
 }
