@@ -12,6 +12,7 @@ import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationIdentifierDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
@@ -59,6 +60,7 @@ class PubmedBaselineJobConfigTest {
   @Mock private PublicationSupplMeshDao supplMeshDao;
   @Mock private PublicationAlternativeAbstractDao alternativeAbstractDao;
   @Mock private PublicationDateDao dateDao;
+  @Mock private PublicationIdentifierDao identifierDao;
   @Mock private BatchProperties batchProperties;
 
   private PubmedBaselineJobConfig jobConfig;
@@ -81,6 +83,7 @@ class PubmedBaselineJobConfigTest {
             supplMeshDao,
             alternativeAbstractDao,
             dateDao,
+            identifierDao,
             batchProperties,
             Optional.empty());
   }
@@ -184,7 +187,8 @@ class PubmedBaselineJobConfigTest {
               typeDao,
               supplMeshDao,
               alternativeAbstractDao,
-              dateDao);
+              dateDao,
+              identifierDao);
 
       // then
       assertThat(writer).isNotNull();

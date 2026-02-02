@@ -1,7 +1,10 @@
 package com.patra.catalog.infra.adapter.persistence.entity;
 
+import com.patra.catalog.infra.adapter.persistence.converter.attribute.PublicationIdentifierTypeConverter;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
@@ -41,9 +44,10 @@ public class PublicationIdentifierEntity extends ValueObjectJpaEntity {
   @Column(name = "publication_id", nullable = false)
   private Long publicationId;
 
-  /// 标识符类型：pmid/doi/pmc/pii/arxiv 等
+  /// 标识符类型：PMID/DOI/PMC/PII/ARXIV 等
   @Column(name = "type", nullable = false, length = 20)
-  private String type;
+  @Convert(converter = PublicationIdentifierTypeConverter.class)
+  private PublicationIdentifierType type;
 
   /// 标识符值
   @Column(name = "value", nullable = false, length = 255)

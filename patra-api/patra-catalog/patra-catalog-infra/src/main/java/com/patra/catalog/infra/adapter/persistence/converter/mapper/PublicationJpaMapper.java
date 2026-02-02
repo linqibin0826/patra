@@ -36,7 +36,6 @@ import com.patra.catalog.infra.adapter.persistence.entity.PublicationIdentifierE
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMetadataEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationOaLocationEntity;
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.model.enums.PublicationIdentifierType;
 import java.util.List;
 import java.util.Map;
 import org.mapstruct.Mapper;
@@ -258,7 +257,7 @@ public abstract class PublicationJpaMapper {
     }
     PublicationIdentifierEntity entity = new PublicationIdentifierEntity();
     entity.setPublicationId(publicationId);
-    entity.setType(identifier.type().getCode());
+    entity.setType(identifier.type());
     entity.setValue(identifier.value());
     entity.setSource(identifier.source());
     return entity;
@@ -272,8 +271,7 @@ public abstract class PublicationJpaMapper {
     if (entity == null) {
       return null;
     }
-    PublicationIdentifierType type = PublicationIdentifierType.fromCode(entity.getType());
-    return new PublicationIdentifier(type, entity.getValue(), entity.getSource());
+    return new PublicationIdentifier(entity.getType(), entity.getValue(), entity.getSource());
   }
 
   // ========== 摘要转换 ==========

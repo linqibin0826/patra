@@ -21,6 +21,7 @@ import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationIdentifierDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
@@ -29,12 +30,14 @@ import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationAlternativeAbstractEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationDateEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationFundingEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationIdentifierEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationKeywordEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshHeadingEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshQualifierEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationSupplMeshEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationTypeEntity;
 import com.patra.common.enums.ProvenanceCode;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -77,6 +80,8 @@ class PublicationItemWriterTest {
 
   @Mock private PublicationDateDao dateDao;
 
+  @Mock private PublicationIdentifierDao identifierDao;
+
   @Captor private ArgumentCaptor<List<PublicationMeshHeadingEntity>> headingCaptor;
 
   @Captor private ArgumentCaptor<List<PublicationMeshQualifierEntity>> qualifierCaptor;
@@ -92,6 +97,8 @@ class PublicationItemWriterTest {
   @Captor private ArgumentCaptor<List<PublicationAlternativeAbstractEntity>> altAbstractCaptor;
 
   @Captor private ArgumentCaptor<List<PublicationDateEntity>> dateCaptor;
+
+  @Captor private ArgumentCaptor<List<PublicationIdentifierEntity>> identifierCaptor;
 
   private PublicationItemWriter writer;
 
@@ -109,7 +116,8 @@ class PublicationItemWriterTest {
             typeDao,
             supplMeshDao,
             alternativeAbstractDao,
-            dateDao);
+            dateDao,
+            identifierDao);
   }
 
   @Nested
@@ -578,6 +586,58 @@ class PublicationItemWriterTest {
 
       // then
       verify(dateDao, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("应该写入标识符关联")
+    void should_write_identifier_associations() throws Exception {
+      // given
+      PublicationAggregate pub = createPublication("12345678");
+      pub.assignId(PublicationId.of(PUBLICATION_ID));
+      // 添加扩展标识符
+      pub.addExtendedIdentifiers(
+          List.of(
+              com.patra.catalog.domain.model.vo.publication.PublicationIdentifier.forPmc(
+                  "PMC1234567", "PubMed"),
+              com.patra.catalog.domain.model.vo.publication.PublicationIdentifier.of(
+                  PublicationIdentifierType.PII, "S0140-6736(21)00001-1", "PubMed")));
+
+      PublicationImportResult result = PublicationImportResult.ofPublication(pub);
+      Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
+
+      // when
+      writer.write(chunk);
+
+      // then
+      verify(identifierDao).saveAll(identifierCaptor.capture());
+      List<PublicationIdentifierEntity> savedIdentifiers = identifierCaptor.getValue();
+      assertThat(savedIdentifiers).hasSize(2);
+      // 验证第一条标识符（PMC）
+      assertThat(savedIdentifiers.get(0).getPublicationId()).isEqualTo(PUBLICATION_ID);
+      assertThat(savedIdentifiers.get(0).getType()).isEqualTo(PublicationIdentifierType.PMC);
+      assertThat(savedIdentifiers.get(0).getValue()).isEqualTo("PMC1234567");
+      assertThat(savedIdentifiers.get(0).getSource()).isEqualTo("PubMed");
+      // 验证第二条标识符（PII）
+      assertThat(savedIdentifiers.get(1).getType()).isEqualTo(PublicationIdentifierType.PII);
+      assertThat(savedIdentifiers.get(1).getValue()).isEqualTo("S0140-6736(21)00001-1");
+    }
+
+    @Test
+    @DisplayName("无扩展标识符数据时不应调用 DAO")
+    void should_not_call_identifier_dao_when_no_extended_identifiers() throws Exception {
+      // given
+      PublicationAggregate pub = createPublication("12345678");
+      pub.assignId(PublicationId.of(PUBLICATION_ID));
+      // 不添加扩展标识符
+
+      PublicationImportResult result = PublicationImportResult.ofPublication(pub);
+      Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
+
+      // when
+      writer.write(chunk);
+
+      // then
+      verify(identifierDao, never()).saveAll(anyList());
     }
   }
 

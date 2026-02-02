@@ -1,6 +1,7 @@
 package com.patra.catalog.infra.adapter.persistence.dao;
 
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationIdentifierEntity;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -36,10 +37,11 @@ public interface PublicationIdentifierDao extends JpaRepository<PublicationIdent
   ///
   /// 用于按 PMID/DOI 反查文献。
   ///
-  /// @param type 标识符类型（如 pmid、doi）
+  /// @param type 标识符类型枚举（如 PMID、DOI）
   /// @param values 标识符值列表
   /// @return 匹配的标识符实体列表
-  List<PublicationIdentifierEntity> findByTypeAndValueIn(String type, Collection<String> values);
+  List<PublicationIdentifierEntity> findByTypeAndValueIn(
+      PublicationIdentifierType type, Collection<String> values);
 
   /// 根据文献 ID 删除所有标识符。
   ///
