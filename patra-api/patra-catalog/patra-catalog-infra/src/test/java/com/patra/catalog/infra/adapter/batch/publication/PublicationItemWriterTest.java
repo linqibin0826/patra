@@ -17,31 +17,39 @@ import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.AlternativeAbstractData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.FundingData;
+import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.InvestigatorData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.KeywordData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.MeshHeadingData;
+import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PersonalNameSubjectData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationDateData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationTypeData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.QualifierData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.SupplMeshData;
 import com.patra.catalog.infra.adapter.persistence.converter.mapper.PublicationJpaMapper;
+import com.patra.catalog.infra.adapter.persistence.dao.InvestigatorDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationIdentifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationInvestigatorDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationPersonalNameSubjectDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
+import com.patra.catalog.infra.adapter.persistence.entity.InvestigatorEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationAbstractEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationAlternativeAbstractEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationDateEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationFundingEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationIdentifierEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationInvestigatorEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationKeywordEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshHeadingEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshQualifierEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationPersonalNameSubjectEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationSupplMeshEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationTypeEntity;
 import com.patra.common.enums.ProvenanceCode;
@@ -93,6 +101,12 @@ class PublicationItemWriterTest {
 
   @Mock private PublicationAbstractDao abstractDao;
 
+  @Mock private InvestigatorDao investigatorDao;
+
+  @Mock private PublicationInvestigatorDao publicationInvestigatorDao;
+
+  @Mock private PublicationPersonalNameSubjectDao personalNameSubjectDao;
+
   @Mock private PublicationJpaMapper jpaMapper;
 
   @Captor private ArgumentCaptor<List<PublicationMeshHeadingEntity>> headingCaptor;
@@ -115,6 +129,13 @@ class PublicationItemWriterTest {
 
   @Captor private ArgumentCaptor<List<PublicationAbstractEntity>> abstractCaptor;
 
+  @Captor private ArgumentCaptor<List<InvestigatorEntity>> investigatorCaptor;
+
+  @Captor private ArgumentCaptor<List<PublicationInvestigatorEntity>> publicationInvestigatorCaptor;
+
+  @Captor
+  private ArgumentCaptor<List<PublicationPersonalNameSubjectEntity>> personalNameSubjectCaptor;
+
   private PublicationItemWriter writer;
 
   private static final Long PUBLICATION_ID = 1001L;
@@ -134,6 +155,9 @@ class PublicationItemWriterTest {
             dateDao,
             identifierDao,
             abstractDao,
+            investigatorDao,
+            publicationInvestigatorDao,
+            personalNameSubjectDao,
             jpaMapper);
   }
 
@@ -502,6 +526,8 @@ class PublicationItemWriterTest {
               List.of(),
               List.of(),
               List.of(altAbstract1, altAbstract2),
+              List.of(),
+              List.of(),
               List.of());
       Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
 
@@ -563,7 +589,9 @@ class PublicationItemWriterTest {
               List.of(),
               List.of(),
               List.of(),
-              List.of(date1, date2));
+              List.of(date1, date2),
+              List.of(),
+              List.of());
       Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
 
       // when
@@ -717,6 +745,221 @@ class PublicationItemWriterTest {
 
       // then
       verify(abstractDao, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("应该写入研究者关联")
+    void should_write_investigator_associations() throws Exception {
+      // given
+      PublicationAggregate pub = createPublication("12345678");
+      pub.assignId(PublicationId.of(PUBLICATION_ID));
+
+      InvestigatorData inv1 =
+          InvestigatorData.builder()
+              .lastName("Smith")
+              .foreName("John")
+              .initials("J.S.")
+              .orcid("0000-0001-2345-6789")
+              .affiliationName("Harvard Medical School")
+              .dedupKey("abc123def456")
+              .orderNum(1)
+              .build();
+
+      InvestigatorData inv2 =
+          InvestigatorData.builder()
+              .lastName("Jones")
+              .foreName("Mary")
+              .initials("M.J.")
+              .affiliationName("Stanford University")
+              .dedupKey("xyz789uvw012")
+              .orderNum(2)
+              .build();
+
+      PublicationImportResult result =
+          PublicationImportResult.builder()
+              .publication(pub)
+              .meshHeadings(List.of())
+              .keywords(List.of())
+              .funding(List.of())
+              .publicationTypes(List.of())
+              .supplMeshNames(List.of())
+              .alternativeAbstracts(List.of())
+              .dates(List.of())
+              .investigators(List.of(inv1, inv2))
+              .personalNameSubjects(List.of())
+              .build();
+      Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
+
+      // when
+      writer.write(chunk);
+
+      // then
+      // 验证创建新研究者
+      verify(investigatorDao).saveAll(investigatorCaptor.capture());
+      List<InvestigatorEntity> savedInvestigators = investigatorCaptor.getValue();
+      assertThat(savedInvestigators).hasSize(2);
+      assertThat(savedInvestigators.get(0).getLastName()).isEqualTo("Smith");
+      assertThat(savedInvestigators.get(0).getOrcid()).isEqualTo("0000-0001-2345-6789");
+      assertThat(savedInvestigators.get(1).getLastName()).isEqualTo("Jones");
+
+      // 验证创建关联记录
+      verify(publicationInvestigatorDao).saveAll(publicationInvestigatorCaptor.capture());
+      List<PublicationInvestigatorEntity> savedAssociations =
+          publicationInvestigatorCaptor.getValue();
+      assertThat(savedAssociations).hasSize(2);
+      assertThat(savedAssociations.get(0).getPublicationId()).isEqualTo(PUBLICATION_ID);
+      assertThat(savedAssociations.get(0).getOrderNum()).isEqualTo(1);
+      assertThat(savedAssociations.get(1).getOrderNum()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("无研究者数据时不应调用 DAO")
+    void should_not_call_investigator_dao_when_no_data() throws Exception {
+      // given
+      PublicationAggregate pub = createPublication("12345678");
+      pub.assignId(PublicationId.of(PUBLICATION_ID));
+
+      PublicationImportResult result = PublicationImportResult.ofPublication(pub);
+      Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
+
+      // when
+      writer.write(chunk);
+
+      // then
+      verify(investigatorDao, never()).saveAll(anyList());
+      verify(publicationInvestigatorDao, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("应该通过 ORCID 去重研究者")
+    void should_deduplicate_investigators_by_orcid() throws Exception {
+      // given
+      PublicationAggregate pub = createPublication("12345678");
+      pub.assignId(PublicationId.of(PUBLICATION_ID));
+
+      String existingOrcid = "0000-0001-2345-6789";
+      Long existingInvestigatorId = 9999L;
+
+      InvestigatorData inv =
+          InvestigatorData.builder()
+              .lastName("Smith")
+              .foreName("John")
+              .orcid(existingOrcid)
+              .dedupKey("abc123def456")
+              .orderNum(1)
+              .build();
+
+      PublicationImportResult result =
+          PublicationImportResult.builder()
+              .publication(pub)
+              .meshHeadings(List.of())
+              .keywords(List.of())
+              .funding(List.of())
+              .publicationTypes(List.of())
+              .supplMeshNames(List.of())
+              .alternativeAbstracts(List.of())
+              .dates(List.of())
+              .investigators(List.of(inv))
+              .personalNameSubjects(List.of())
+              .build();
+      Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
+
+      // 模拟已存在的研究者（通过 ORCID 匹配）
+      InvestigatorEntity existingEntity =
+          InvestigatorEntity.builder()
+              .id(existingInvestigatorId)
+              .lastName("Smith")
+              .foreName("John")
+              .orcid(existingOrcid)
+              .dedupKey("abc123def456")
+              .build();
+      when(investigatorDao.findByOrcidIn(any())).thenReturn(List.of(existingEntity));
+
+      // when
+      writer.write(chunk);
+
+      // then
+      // 不应该创建新研究者（已通过 ORCID 匹配到已有记录）
+      verify(investigatorDao, never()).saveAll(anyList());
+
+      // 但应该创建关联记录
+      verify(publicationInvestigatorDao).saveAll(publicationInvestigatorCaptor.capture());
+      List<PublicationInvestigatorEntity> associations = publicationInvestigatorCaptor.getValue();
+      assertThat(associations).hasSize(1);
+      assertThat(associations.getFirst().getInvestigatorId()).isEqualTo(existingInvestigatorId);
+    }
+
+    @Test
+    @DisplayName("应该写入人物主题关联")
+    void should_write_personal_name_subject_associations() throws Exception {
+      // given
+      PublicationAggregate pub = createPublication("12345678");
+      pub.assignId(PublicationId.of(PUBLICATION_ID));
+
+      PersonalNameSubjectData subject1 =
+          PersonalNameSubjectData.builder()
+              .lastName("Darwin")
+              .foreName("Charles")
+              .initials("C.R.")
+              .suffix("FRS")
+              .orderNum(1)
+              .build();
+
+      PersonalNameSubjectData subject2 =
+          PersonalNameSubjectData.builder()
+              .lastName("Pasteur")
+              .foreName("Louis")
+              .initials("L.")
+              .orderNum(2)
+              .build();
+
+      PublicationImportResult result =
+          PublicationImportResult.builder()
+              .publication(pub)
+              .meshHeadings(List.of())
+              .keywords(List.of())
+              .funding(List.of())
+              .publicationTypes(List.of())
+              .supplMeshNames(List.of())
+              .alternativeAbstracts(List.of())
+              .dates(List.of())
+              .investigators(List.of())
+              .personalNameSubjects(List.of(subject1, subject2))
+              .build();
+      Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
+
+      // when
+      writer.write(chunk);
+
+      // then
+      verify(personalNameSubjectDao).saveAll(personalNameSubjectCaptor.capture());
+      List<PublicationPersonalNameSubjectEntity> savedSubjects =
+          personalNameSubjectCaptor.getValue();
+      assertThat(savedSubjects).hasSize(2);
+      assertThat(savedSubjects.get(0).getPublicationId()).isEqualTo(PUBLICATION_ID);
+      assertThat(savedSubjects.get(0).getLastName()).isEqualTo("Darwin");
+      assertThat(savedSubjects.get(0).getForeName()).isEqualTo("Charles");
+      assertThat(savedSubjects.get(0).getSuffix()).isEqualTo("FRS");
+      assertThat(savedSubjects.get(0).getOrderNum()).isEqualTo(1);
+      assertThat(savedSubjects.get(1).getLastName()).isEqualTo("Pasteur");
+      assertThat(savedSubjects.get(1).getOrderNum()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("无人物主题数据时不应调用 DAO")
+    void should_not_call_personal_name_subject_dao_when_no_data() throws Exception {
+      // given
+      PublicationAggregate pub = createPublication("12345678");
+      pub.assignId(PublicationId.of(PUBLICATION_ID));
+
+      PublicationImportResult result = PublicationImportResult.ofPublication(pub);
+      Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
+
+      // when
+      writer.write(chunk);
+
+      // then
+      verify(personalNameSubjectDao, never()).saveAll(anyList());
     }
   }
 
