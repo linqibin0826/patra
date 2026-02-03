@@ -24,6 +24,7 @@ import com.patra.catalog.infra.adapter.persistence.dao.OrganizationRelationDao;
 import com.patra.catalog.infra.adapter.persistence.entity.OrganizationExternalIdEntity;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
+import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -69,6 +70,7 @@ class OrganizationRepositoryAdapterIT {
   @Autowired private OrganizationExternalIdDao externalIdDao;
   @Autowired private OrganizationRelationDao relationDao;
   @Autowired private OrganizationLocationDao locationDao;
+  @Autowired private EntityManager entityManager;
 
   @Nested
   @DisplayName("hasAnyData() 测试")
@@ -125,6 +127,10 @@ class OrganizationRepositoryAdapterIT {
 
       Long orgId = organizationDao.findByRorId(RorId.fromId(rorId).getId()).orElseThrow().getId();
       OrganizationExternalIdEntity before = externalIdDao.findAllByOrgId(orgId).getFirst();
+      Long beforeId = before.getId();
+
+      // 清除 Session 缓存，避免 NonUniqueObjectException
+      entityManager.clear();
 
       OrganizationAggregate loaded = repository.findByRorId(RorId.of(rorId)).orElseThrow();
       loaded.addExternalId(ExternalId.create(ExternalIdType.GRID, "grid.updated.1"));
@@ -132,7 +138,7 @@ class OrganizationRepositoryAdapterIT {
 
       List<OrganizationExternalIdEntity> updated = externalIdDao.findAllByOrgId(orgId);
       assertThat(updated).hasSize(1);
-      assertThat(updated.getFirst().getId()).isEqualTo(before.getId());
+      assertThat(updated.getFirst().getId()).isEqualTo(beforeId);
       assertThat(updated.getFirst().getPreferredValue()).isEqualTo("grid.updated.1");
     }
   }

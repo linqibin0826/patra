@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 
 /// 机构 JPA 实体转换器。
@@ -68,6 +69,32 @@ public abstract class OrganizationJpaMapper {
   @Mapping(target = "dedupKey", ignore = true)
   @Mapping(target = "metadata", ignore = true)
   public abstract OrganizationEntity toEntity(OrganizationAggregate aggregate);
+
+  /// 更新已存在的 JPA 实体。
+  ///
+  /// 用于批量更新场景，保留实体的 ID、version 和审计字段，只更新业务字段。
+  ///
+  /// @param entity 已存在的 JPA 实体
+  /// @param aggregate 机构聚合根
+  @Mapping(target = "id", ignore = true)
+  @Mapping(target = "rorId", source = "rorId", qualifiedByName = "rorIdToString")
+  @Mapping(target = "status", source = "status", qualifiedByName = "statusToString")
+  @Mapping(target = "types", source = "aggregate", qualifiedByName = "typesToStrings")
+  @Mapping(target = "links", source = "aggregate", qualifiedByName = "linksToEntities")
+  // 审计字段由 JPA 管理
+  @Mapping(target = "version", ignore = true)
+  @Mapping(target = "createdAt", ignore = true)
+  @Mapping(target = "createdBy", ignore = true)
+  @Mapping(target = "createdByName", ignore = true)
+  @Mapping(target = "updatedAt", ignore = true)
+  @Mapping(target = "updatedBy", ignore = true)
+  @Mapping(target = "updatedByName", ignore = true)
+  @Mapping(target = "ipAddress", ignore = true)
+  @Mapping(target = "recordRemarks", ignore = true)
+  @Mapping(target = "dedupKey", ignore = true)
+  @Mapping(target = "metadata", ignore = true)
+  public abstract void updateEntity(
+      @MappingTarget OrganizationEntity entity, OrganizationAggregate aggregate);
 
   /// 将 JPA 实体转换为聚合根。
   ///

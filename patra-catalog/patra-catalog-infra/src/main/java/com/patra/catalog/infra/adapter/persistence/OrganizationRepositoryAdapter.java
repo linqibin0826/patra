@@ -242,9 +242,13 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
 
       Long orgId = aggregate.getId().value();
 
-      // 主表更新
-      OrganizationEntity entity = mapper.toEntity(aggregate);
-      organizationDao.save(entity);
+      // 主表更新：先查询已存在的实体，然后更新字段
+      // 这样可以正确处理乐观锁（version 字段），避免 StaleObjectStateException
+      OrganizationEntity existingEntity = organizationDao.findById(orgId).orElse(null);
+      if (existingEntity != null) {
+        mapper.updateEntity(existingEntity, aggregate);
+        organizationDao.save(existingEntity);
+      }
 
       // 子表：全删全增
       saveChildren(aggregate, orgId);
@@ -344,6 +348,10 @@ public class OrganizationRepositoryAdapter implements OrganizationRepository {
     externalIdDao.deleteAllByOrgId(orgId);
     relationDao.deleteAllByOrgId(orgId);
     locationDao.deleteAllByOrgId(orgId);
+
+    // 刷新并清除 Session，确保删除操作提交并移除缓存，避免重用 ID 时出现 NonUniqueObjectException
+    entityManager.flush();
+    entityManager.clear();
 
     // 插入新数据
     List<OrganizationNameEntity> nameEntities = new ArrayList<>();
