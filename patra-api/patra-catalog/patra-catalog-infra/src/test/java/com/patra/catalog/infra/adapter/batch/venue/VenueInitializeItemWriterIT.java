@@ -8,6 +8,7 @@ import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
+import com.patra.catalog.domain.port.registry.DictionaryResolverPort;
 import com.patra.catalog.infra.adapter.persistence.VenueRepositoryAdapter;
 import com.patra.catalog.infra.adapter.persistence.dao.VenueDao;
 import com.patra.catalog.infra.adapter.persistence.dao.VenueIdentifierDao;
@@ -31,6 +32,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /// VenueInitializeItemWriter 集成测试（纯 JPA 版本）。
 ///
@@ -82,6 +84,9 @@ class VenueInitializeItemWriterIT {
   @Autowired private VenueDao venueDao;
   @Autowired private VenueIdentifierDao identifierDao;
   @Autowired private VenuePublicationStatsDao metricsRepository;
+
+  /// DictionaryResolverPort Mock（国家编码验证，测试中不需要真实调用）
+  @MockitoBean private DictionaryResolverPort dictionaryResolverPort;
 
   /// 创建测试用的 VenueParseResult（无年度指标）。
   ///

@@ -441,7 +441,7 @@ class VenueRepositoryAdapterIT {
           PublicationProfile.builder()
               .abbreviatedTitle("J A")
               .alternateTitles(List.of("Alternate Title"))
-              .countryCode("USA")
+              .countryCode("US")
               .frequency("Monthly")
               .publicationHistory(PublicationHistory.active(1990))
               .build());
