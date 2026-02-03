@@ -29,10 +29,12 @@ import com.patra.common.model.CanonicalPublication.AlternativeAbstract;
 import com.patra.common.model.CanonicalPublication.DescriptorName;
 import com.patra.common.model.CanonicalPublication.FundingInfo;
 import com.patra.common.model.CanonicalPublication.Identifier;
+import com.patra.common.model.CanonicalPublication.Investigator;
 import com.patra.common.model.CanonicalPublication.Journal;
 import com.patra.common.model.CanonicalPublication.Keyword;
 import com.patra.common.model.CanonicalPublication.KeywordSet;
 import com.patra.common.model.CanonicalPublication.MeshHeading;
+import com.patra.common.model.CanonicalPublication.PersonalNameSubject;
 import com.patra.common.model.CanonicalPublication.PublicationDates;
 import com.patra.common.model.CanonicalPublication.PublicationType;
 import com.patra.common.model.CanonicalPublication.QualifierName;
@@ -742,6 +744,250 @@ class PubmedArticleItemProcessorTest {
       assertThat(result.dates()).hasSize(1);
       assertThat(result.dates().getFirst().dateType()).isEqualTo("published");
     }
+
+    @Test
+    @DisplayName("应该正确处理研究者数据")
+    void should_process_investigators() throws Exception {
+      // given
+      CanonicalPublication publication = createPublicationWithInvestigators();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasInvestigators()).isTrue();
+      assertThat(result.investigators()).hasSize(2);
+
+      // 验证第一个研究者（带 ORCID）
+      var inv1 = result.investigators().get(0);
+      assertThat(inv1.lastName()).isEqualTo("Smith");
+      assertThat(inv1.foreName()).isEqualTo("John");
+      assertThat(inv1.initials()).isEqualTo("J.S.");
+      assertThat(inv1.orcid()).isEqualTo("0000-0001-2345-6789");
+      assertThat(inv1.affiliationName()).isEqualTo("Harvard Medical School");
+      assertThat(inv1.dedupKey()).isNotNull();
+      assertThat(inv1.orderNum()).isEqualTo(1);
+
+      // 验证第二个研究者（无 ORCID）
+      var inv2 = result.investigators().get(1);
+      assertThat(inv2.lastName()).isEqualTo("Jones");
+      assertThat(inv2.foreName()).isEqualTo("Mary");
+      assertThat(inv2.orcid()).isNull();
+      assertThat(inv2.affiliationName()).isEqualTo("Stanford University");
+      assertThat(inv2.orderNum()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("应该过滤掉姓名都为空的研究者")
+    void should_filter_invalid_investigators() throws Exception {
+      // given - 创建包含无效研究者的文献
+      CanonicalPublication publication =
+          CanonicalPublication.builder()
+              .identifiers(
+                  List.of(
+                      Identifier.builder()
+                          .type(PublicationIdentifierType.PMID)
+                          .value(PMID)
+                          .build()))
+              .title("Test Article")
+              .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .investigators(
+                  List.of(
+                      // 有效研究者
+                      Investigator.builder().lastName("Smith").foreName("John").build(),
+                      // 无效：姓名都为空
+                      Investigator.builder().lastName(null).foreName(null).build(),
+                      // 无效：姓名都为空白字符
+                      Investigator.builder().lastName("  ").foreName("").build()))
+              .build();
+
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasInvestigators()).isTrue();
+      assertThat(result.investigators()).hasSize(1);
+      assertThat(result.investigators().getFirst().lastName()).isEqualTo("Smith");
+    }
+
+    @Test
+    @DisplayName("无研究者数据时 investigators 应该为空列表")
+    void should_return_empty_investigators_when_no_investigator_data() throws Exception {
+      // given
+      CanonicalPublication publication = createFullPublication();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasInvestigators()).isFalse();
+      assertThat(result.investigators()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("应该正确处理人物主题数据")
+    void should_process_personal_name_subjects() throws Exception {
+      // given
+      CanonicalPublication publication = createPublicationWithPersonalNameSubjects();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasPersonalNameSubjects()).isTrue();
+      assertThat(result.personalNameSubjects()).hasSize(2);
+
+      // 验证第一个人物主题
+      var subject1 = result.personalNameSubjects().get(0);
+      assertThat(subject1.lastName()).isEqualTo("Darwin");
+      assertThat(subject1.foreName()).isEqualTo("Charles");
+      assertThat(subject1.initials()).isEqualTo("C.R.");
+      assertThat(subject1.suffix()).isEqualTo("FRS");
+      assertThat(subject1.orderNum()).isEqualTo(1);
+
+      // 验证第二个人物主题
+      var subject2 = result.personalNameSubjects().get(1);
+      assertThat(subject2.lastName()).isEqualTo("Pasteur");
+      assertThat(subject2.foreName()).isEqualTo("Louis");
+      assertThat(subject2.orderNum()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("应该过滤掉姓名都为空的人物主题")
+    void should_filter_invalid_personal_name_subjects() throws Exception {
+      // given - 创建包含无效人物主题的文献
+      CanonicalPublication publication =
+          CanonicalPublication.builder()
+              .identifiers(
+                  List.of(
+                      Identifier.builder()
+                          .type(PublicationIdentifierType.PMID)
+                          .value(PMID)
+                          .build()))
+              .title("Test Article")
+              .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .personalNameSubjects(
+                  List.of(
+                      // 有效
+                      PersonalNameSubject.builder().lastName("Darwin").foreName("Charles").build(),
+                      // 无效：姓名都为空
+                      PersonalNameSubject.builder().lastName(null).foreName(null).build(),
+                      // 无效：姓名都为空白
+                      PersonalNameSubject.builder().lastName("").foreName("  ").build()))
+              .build();
+
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasPersonalNameSubjects()).isTrue();
+      assertThat(result.personalNameSubjects()).hasSize(1);
+      assertThat(result.personalNameSubjects().getFirst().lastName()).isEqualTo("Darwin");
+    }
+
+    @Test
+    @DisplayName("无人物主题数据时 personalNameSubjects 应该为空列表")
+    void should_return_empty_personal_name_subjects_when_no_data() throws Exception {
+      // given
+      CanonicalPublication publication = createFullPublication();
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasPersonalNameSubjects()).isFalse();
+      assertThat(result.personalNameSubjects()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("去重键应该包含 ORCID 并转换为小写")
+    void should_calculate_dedup_key_with_orcid_lowercase() throws Exception {
+      // given - 创建带大写姓名和 ORCID 的研究者
+      CanonicalPublication publication =
+          CanonicalPublication.builder()
+              .identifiers(
+                  List.of(
+                      Identifier.builder()
+                          .type(PublicationIdentifierType.PMID)
+                          .value(PMID)
+                          .build()))
+              .title("Test Article")
+              .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .investigators(
+                  List.of(
+                      Investigator.builder()
+                          .lastName("SMITH")
+                          .foreName("JOHN")
+                          .identifiers(
+                              List.of(
+                                  Identifier.builder()
+                                      .type(PublicationIdentifierType.ORCID)
+                                      .value("0000-0001-2345-6789")
+                                      .build()))
+                          .build()))
+              .build();
+
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.investigators()).hasSize(1);
+
+      var inv = result.investigators().getFirst();
+      assertThat(inv.dedupKey()).isNotNull();
+      // 去重键应该是 32 位的 MD5 哈希
+      assertThat(inv.dedupKey()).hasSize(32);
+      // 去重键应该全部是小写十六进制字符
+      assertThat(inv.dedupKey()).matches("[a-f0-9]{32}");
+    }
   }
 
   /// 创建简单的测试文献。
@@ -1060,6 +1306,72 @@ class PubmedArticleItemProcessorTest {
                 .received(LocalDate.of(2024, 1, 10))
                 .accepted(LocalDate.of(2024, 5, 20))
                 .build())
+        .build();
+  }
+
+  /// 创建包含研究者的测试文献。
+  private CanonicalPublication createPublicationWithInvestigators() {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
+        .title("Test Article with Investigators")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .investigators(
+            List.of(
+                // 第一个研究者：带 ORCID 和机构
+                Investigator.builder()
+                    .lastName("Smith")
+                    .foreName("John")
+                    .initials("J.S.")
+                    .suffix("Jr")
+                    .identifiers(
+                        List.of(
+                            Identifier.builder()
+                                .type(PublicationIdentifierType.ORCID)
+                                .value("0000-0001-2345-6789")
+                                .build()))
+                    .affiliations(
+                        List.of(
+                            CanonicalPublication.Affiliation.builder()
+                                .name("Harvard Medical School")
+                                .build()))
+                    .build(),
+                // 第二个研究者：无 ORCID
+                Investigator.builder()
+                    .lastName("Jones")
+                    .foreName("Mary")
+                    .initials("M.J.")
+                    .affiliations(
+                        List.of(
+                            CanonicalPublication.Affiliation.builder()
+                                .name("Stanford University")
+                                .build()))
+                    .build()))
+        .build();
+  }
+
+  /// 创建包含人物主题的测试文献。
+  private CanonicalPublication createPublicationWithPersonalNameSubjects() {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
+        .title("Biography of Famous Scientists")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .personalNameSubjects(
+            List.of(
+                PersonalNameSubject.builder()
+                    .lastName("Darwin")
+                    .foreName("Charles")
+                    .initials("C.R.")
+                    .suffix("FRS")
+                    .build(),
+                PersonalNameSubject.builder()
+                    .lastName("Pasteur")
+                    .foreName("Louis")
+                    .initials("L.")
+                    .build()))
         .build();
   }
 }

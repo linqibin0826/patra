@@ -17,8 +17,10 @@ import com.patra.catalog.domain.port.lookup.VenueLookupPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.AlternativeAbstractData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.FundingData;
+import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.InvestigatorData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.KeywordData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.MeshHeadingData;
+import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PersonalNameSubjectData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationDateData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationTypeData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.QualifierData;
@@ -38,7 +40,11 @@ import com.patra.common.model.CanonicalPublication.PublicationDates;
 import com.patra.common.model.CanonicalPublication.PublicationType;
 import com.patra.common.model.CanonicalPublication.QualifierName;
 import com.patra.common.model.enums.PublicationIdentifierType;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -144,6 +150,8 @@ public class PubmedArticleItemProcessor
     List<PublicationTypeData> publicationTypes = buildPublicationTypeData(publication);
     List<AlternativeAbstractData> alternativeAbstracts = buildAlternativeAbstractData(publication);
     List<PublicationDateData> dates = buildPublicationDateData(publication);
+    List<InvestigatorData> investigators = buildInvestigatorData(publication);
+    List<PersonalNameSubjectData> personalNameSubjects = buildPersonalNameSubjectData(publication);
 
     return PublicationImportResult.ofComplete(
         aggregate,
@@ -153,7 +161,9 @@ public class PubmedArticleItemProcessor
         publicationTypes,
         supplMeshNames,
         alternativeAbstracts,
-        dates);
+        dates,
+        investigators,
+        personalNameSubjects);
   }
 
   /// 从 CanonicalPublication 提取 PMID。
@@ -765,5 +775,199 @@ public class PubmedArticleItemProcessor
     }
 
     return result;
+  }
+
+  // ========== 研究者数据处理 ==========
+
+  /// 构建研究者数据。
+  ///
+  /// 从 CanonicalPublication 提取 investigators（非作者研究人员），
+  /// 转换为 InvestigatorData 列表供 Writer 写入关联表。
+  ///
+  /// **业务含义**：
+  ///
+  /// Investigator 是参与研究但未列为文章作者的研究人员，常见于：
+  /// - 大型临床试验（Principal Investigator、Co-Investigator）
+  /// - 多中心研究（Site Investigator）
+  /// - 协作研究组（Consortium Member）
+  ///
+  /// **去重策略**：
+  ///
+  /// 计算 dedupKey = MD5(LOWER(lastName) + "|" + LOWER(foreName) + "|" + LOWER(COALESCE(orcid, "")))
+  /// Writer 使用此 key 进行去重匹配。
+  ///
+  /// @param publication 规范化文献
+  /// @return 研究者数据列表（可能为空，不会为 null）
+  private List<InvestigatorData> buildInvestigatorData(CanonicalPublication publication) {
+    List<CanonicalPublication.Investigator> investigators = publication.getInvestigators();
+    if (investigators == null || investigators.isEmpty()) {
+      return List.of();
+    }
+
+    List<InvestigatorData> result = new ArrayList<>();
+    int order = 1;
+
+    for (CanonicalPublication.Investigator inv : investigators) {
+      // 跳过无效记录：lastName 和 foreName 都为空
+      if (isInvalidInvestigator(inv)) {
+        continue;
+      }
+
+      // 提取 ORCID（从标识符列表中查找）
+      String orcid = extractOrcid(inv.getIdentifiers());
+
+      // 提取第一个机构名称
+      String affiliationName = extractFirstAffiliationName(inv.getAffiliations());
+
+      // 计算去重键
+      String dedupKey = calculateDedupKey(inv.getLastName(), inv.getForeName(), orcid);
+
+      result.add(
+          InvestigatorData.builder()
+              .lastName(inv.getLastName())
+              .foreName(inv.getForeName())
+              .initials(inv.getInitials())
+              .suffix(inv.getSuffix())
+              .orcid(orcid)
+              .affiliationName(affiliationName)
+              .dedupKey(dedupKey)
+              .orderNum(order++)
+              .build());
+    }
+
+    return result;
+  }
+
+  /// 检查研究者是否无效。
+  ///
+  /// 无效条件：lastName 和 foreName 都为空或 blank。
+  private boolean isInvalidInvestigator(CanonicalPublication.Investigator inv) {
+    boolean lastNameEmpty = inv.getLastName() == null || inv.getLastName().isBlank();
+    boolean foreNameEmpty = inv.getForeName() == null || inv.getForeName().isBlank();
+    return lastNameEmpty && foreNameEmpty;
+  }
+
+  /// 从标识符列表中提取 ORCID。
+  ///
+  /// @param identifiers 标识符列表
+  /// @return ORCID 值，如果未找到返回 null
+  private String extractOrcid(List<Identifier> identifiers) {
+    if (identifiers == null || identifiers.isEmpty()) {
+      return null;
+    }
+    return identifiers.stream()
+        .filter(id -> PublicationIdentifierType.ORCID == id.getType())
+        .map(Identifier::getValue)
+        .findFirst()
+        .orElse(null);
+  }
+
+  /// 提取第一个机构名称。
+  ///
+  /// @param affiliations 机构列表
+  /// @return 第一个机构名称，如果列表为空返回 null
+  private String extractFirstAffiliationName(List<CanonicalPublication.Affiliation> affiliations) {
+    if (affiliations == null || affiliations.isEmpty()) {
+      return null;
+    }
+    CanonicalPublication.Affiliation first = affiliations.getFirst();
+    return first != null ? first.getName() : null;
+  }
+
+  /// 计算研究者去重键（MD5 哈希）。
+  ///
+  /// **计算规则**：
+  /// `MD5(LOWER(lastName) + "|" + LOWER(foreName) + "|" + LOWER(COALESCE(orcid, "")))`
+  ///
+  /// @param lastName 姓
+  /// @param foreName 名
+  /// @param orcid ORCID（可能为 null）
+  /// @return 32 位小写 MD5 哈希字符串
+  private String calculateDedupKey(String lastName, String foreName, String orcid) {
+    String raw =
+        String.join(
+            "|",
+            nullToEmpty(lastName).toLowerCase().trim(),
+            nullToEmpty(foreName).toLowerCase().trim(),
+            nullToEmpty(orcid).toLowerCase().trim());
+    return md5Hex(raw);
+  }
+
+  /// 将 null 转换为空字符串。
+  private String nullToEmpty(String s) {
+    return s != null ? s : "";
+  }
+
+  /// 计算字符串的 MD5 哈希值（32 位小写十六进制）。
+  private String md5Hex(String input) {
+    try {
+      MessageDigest md = MessageDigest.getInstance("MD5");
+      byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
+      return HexFormat.of().formatHex(digest);
+    } catch (NoSuchAlgorithmException e) {
+      // MD5 是 Java 标准算法，不应该抛出此异常
+      throw new IllegalStateException("MD5 algorithm not available", e);
+    }
+  }
+
+  // ========== 人物主题数据处理 ==========
+
+  /// 构建人物主题数据。
+  ///
+  /// 从 CanonicalPublication 提取 personalNameSubjects（主题人物），
+  /// 转换为 PersonalNameSubjectData 列表供 Writer 写入关联表。
+  ///
+  /// **业务含义**：
+  ///
+  /// PersonalNameSubject 是文献内容描述的对象（而非文献作者），常见于：
+  /// - 传记文献：描述某人生平的文章
+  /// - 历史类文献：涉及历史人物的研究
+  /// - 纪念类文献：纪念某位学者或研究者的文章
+  /// - 案例报告：以特定患者为主题的医学报告（已匿名）
+  ///
+  /// @param publication 规范化文献
+  /// @return 人物主题数据列表（可能为空，不会为 null）
+  private List<PersonalNameSubjectData> buildPersonalNameSubjectData(
+      CanonicalPublication publication) {
+    List<CanonicalPublication.PersonalNameSubject> subjects = publication.getPersonalNameSubjects();
+    if (subjects == null || subjects.isEmpty()) {
+      return List.of();
+    }
+
+    List<PersonalNameSubjectData> result = new ArrayList<>();
+    int order = 1;
+
+    for (CanonicalPublication.PersonalNameSubject subject : subjects) {
+      // 跳过无效记录：lastName 和 foreName 都为空
+      if (isInvalidPersonalNameSubject(subject)) {
+        continue;
+      }
+
+      // 注意：CanonicalPublication.PersonalNameSubject 模型较简单，
+      // 不包含 dates、description、subjectType、identifier 字段。
+      // 这些字段在数据库表中预留，留待后续数据源扩展时使用。
+      result.add(
+          PersonalNameSubjectData.of(
+              subject.getLastName(),
+              subject.getForeName(),
+              subject.getInitials(),
+              subject.getSuffix(),
+              null, // dates - 预留字段
+              null, // description - 预留字段
+              null, // subjectType - 预留字段
+              null, // identifier - 预留字段
+              order++));
+    }
+
+    return result;
+  }
+
+  /// 检查人物主题是否无效。
+  ///
+  /// 无效条件：lastName 和 foreName 都为空或 blank。
+  private boolean isInvalidPersonalNameSubject(CanonicalPublication.PersonalNameSubject subject) {
+    boolean lastNameEmpty = subject.getLastName() == null || subject.getLastName().isBlank();
+    boolean foreNameEmpty = subject.getForeName() == null || subject.getForeName().isBlank();
+    return lastNameEmpty && foreNameEmpty;
   }
 }

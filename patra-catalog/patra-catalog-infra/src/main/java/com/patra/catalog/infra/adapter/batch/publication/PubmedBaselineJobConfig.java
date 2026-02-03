@@ -8,14 +8,17 @@ import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.infra.adapter.persistence.converter.mapper.PublicationJpaMapper;
+import com.patra.catalog.infra.adapter.persistence.dao.InvestigatorDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationIdentifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationInvestigatorDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationPersonalNameSubjectDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.common.model.CanonicalPublication;
@@ -85,6 +88,9 @@ public class PubmedBaselineJobConfig {
   private final PublicationDateDao dateDao;
   private final PublicationIdentifierDao identifierDao;
   private final PublicationAbstractDao abstractDao;
+  private final InvestigatorDao investigatorDao;
+  private final PublicationInvestigatorDao publicationInvestigatorDao;
+  private final PublicationPersonalNameSubjectDao personalNameSubjectDao;
   private final PublicationJpaMapper jpaMapper;
   private final BatchProperties batchProperties;
   private final BatchProgressMetricsListener batchProgressMetricsListener;
@@ -107,6 +113,9 @@ public class PubmedBaselineJobConfig {
   /// @param dateDao 日期 DAO
   /// @param identifierDao 标识符 DAO
   /// @param abstractDao 摘要 DAO
+  /// @param investigatorDao 研究者 DAO
+  /// @param publicationInvestigatorDao 文献-研究者关联 DAO
+  /// @param personalNameSubjectDao 人物主题 DAO
   /// @param jpaMapper JPA 实体转换器
   /// @param batchProperties 批处理属性
   /// @param batchProgressMetricsListener 进度指标监听器（可选）
@@ -127,6 +136,9 @@ public class PubmedBaselineJobConfig {
       PublicationDateDao dateDao,
       PublicationIdentifierDao identifierDao,
       PublicationAbstractDao abstractDao,
+      InvestigatorDao investigatorDao,
+      PublicationInvestigatorDao publicationInvestigatorDao,
+      PublicationPersonalNameSubjectDao personalNameSubjectDao,
       PublicationJpaMapper jpaMapper,
       BatchProperties batchProperties,
       Optional<BatchProgressMetricsListener> batchProgressMetricsListener) {
@@ -146,6 +158,9 @@ public class PubmedBaselineJobConfig {
     this.dateDao = dateDao;
     this.identifierDao = identifierDao;
     this.abstractDao = abstractDao;
+    this.investigatorDao = investigatorDao;
+    this.publicationInvestigatorDao = publicationInvestigatorDao;
+    this.personalNameSubjectDao = personalNameSubjectDao;
     this.jpaMapper = jpaMapper;
     this.batchProperties = batchProperties;
     this.batchProgressMetricsListener = batchProgressMetricsListener.orElse(null);
@@ -193,6 +208,9 @@ public class PubmedBaselineJobConfig {
                     dateDao,
                     identifierDao,
                     abstractDao,
+                    investigatorDao,
+                    publicationInvestigatorDao,
+                    personalNameSubjectDao,
                     jpaMapper))
             .faultTolerant()
             .skipLimit(DEFAULT_SKIP_LIMIT)
@@ -253,6 +271,9 @@ public class PubmedBaselineJobConfig {
   /// @param dateDao 日期 DAO
   /// @param idDao 标识符 DAO
   /// @param absDao 摘要 DAO
+  /// @param invDao 研究者 DAO
+  /// @param pubInvDao 文献-研究者关联 DAO
+  /// @param pnsDao 人物主题 DAO
   /// @param mapper JPA 实体转换器
   /// @return ItemWriter 实例
   @Bean
@@ -267,6 +288,9 @@ public class PubmedBaselineJobConfig {
       PublicationDateDao dateDao,
       PublicationIdentifierDao idDao,
       PublicationAbstractDao absDao,
+      InvestigatorDao invDao,
+      PublicationInvestigatorDao pubInvDao,
+      PublicationPersonalNameSubjectDao pnsDao,
       PublicationJpaMapper mapper) {
     return new PublicationItemWriter(
         publicationRepository,
@@ -280,6 +304,9 @@ public class PubmedBaselineJobConfig {
         dateDao,
         idDao,
         absDao,
+        invDao,
+        pubInvDao,
+        pnsDao,
         mapper);
   }
 
