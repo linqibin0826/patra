@@ -2,12 +2,14 @@ package com.patra.catalog.infra.adapter.batch.publication;
 
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import com.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;
+import com.patra.catalog.domain.model.enums.IndexingStatus;
 import com.patra.catalog.domain.model.enums.PublicationDateType;
 import com.patra.catalog.domain.model.enums.PublicationMedium;
 import com.patra.catalog.domain.model.enums.PublicationStatus;
 import com.patra.catalog.domain.model.vo.publication.LanguageInfo;
 import com.patra.catalog.domain.model.vo.publication.PublicationAbstract;
 import com.patra.catalog.domain.model.vo.publication.PublicationIdentifier;
+import com.patra.catalog.domain.model.vo.publication.PublicationMetadata;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venueinstance.JournalInstanceParams;
 import com.patra.catalog.domain.port.gateway.VenueInstanceGateway;
@@ -38,6 +40,7 @@ import com.patra.common.model.CanonicalPublication.PublicationDates;
 import com.patra.common.model.CanonicalPublication.PublicationType;
 import com.patra.common.model.CanonicalPublication.QualifierName;
 import com.patra.common.model.enums.PublicationIdentifierType;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -77,6 +80,7 @@ public class PubmedArticleItemProcessor
   private final VenueInstanceGateway venueInstanceGateway;
   private final LanguageLookupPort languageLookupPort;
   private final FunderLookupPort funderLookupPort;
+  private final String importBatch;
 
   @Override
   public PublicationImportResult process(CanonicalPublication publication) throws Exception {
@@ -145,8 +149,12 @@ public class PubmedArticleItemProcessor
     List<AlternativeAbstractData> alternativeAbstracts = buildAlternativeAbstractData(publication);
     List<PublicationDateData> dates = buildPublicationDateData(publication);
 
+    // 6. 构建元数据
+    PublicationMetadata metadata = buildMetadata(publication);
+
     return PublicationImportResult.ofComplete(
         aggregate,
+        metadata,
         meshHeadings,
         keywords,
         funding,
@@ -765,5 +773,77 @@ public class PubmedArticleItemProcessor
     }
 
     return result;
+  }
+
+  // ========== 元数据处理 ==========
+
+  /// 构建文献元数据。
+  ///
+  /// 从 CanonicalPublication 提取元数据信息，转换为 PublicationMetadata 值对象。
+  /// 包含索引状态、数据溯源、以及 PubMed 特有的 owner 和 citationSubset 信息。
+  ///
+  /// @param publication 规范化文献
+  /// @return 元数据值对象
+  private PublicationMetadata buildMetadata(CanonicalPublication publication) {
+    CanonicalPublication.PublicationMetadata sourceMetadata = publication.getMetadata();
+
+    // 解析 IndexingStatus
+    IndexingStatus indexingStatus = null;
+    String indexingMethod = null;
+    String owner = null;
+    String citationSubset = null;
+
+    if (sourceMetadata != null) {
+      indexingStatus = parseIndexingStatus(sourceMetadata.getStatus());
+      indexingMethod = sourceMetadata.getIndexingMethod();
+      owner = sourceMetadata.getOwner();
+      citationSubset = sourceMetadata.getCitationSubset();
+    }
+
+    return PublicationMetadata.builder()
+        .indexingStatus(indexingStatus)
+        .indexingMethod(indexingMethod)
+        .dataSource(ProvenanceCode.PUBMED)
+        .importBatch(this.importBatch)
+        .importDate(Instant.now())
+        .owner(owner)
+        .citationSubset(citationSubset)
+        .build();
+  }
+
+  /// 解析 PubMed Status 为 IndexingStatus 枚举。
+  ///
+  /// PubMed MedlineCitation.Status 属性的可能值映射：
+  ///
+  /// | PubMed Status | IndexingStatus |
+  /// |---------------|----------------|
+  /// | MEDLINE | MEDLINE |
+  /// | PubMed-not-MEDLINE | PUBMED_NOT_MEDLINE |
+  /// | In-Process | IN_PROCESS |
+  /// | In-Data-Review | IN_DATA_REVIEW |
+  /// | Publisher | PENDING |
+  /// | OLDMEDLINE | OLDMEDLINE |
+  ///
+  /// @param pubmedStatus PubMed MedlineCitation.Status 值
+  /// @return IndexingStatus 枚举，无法识别时返回 null
+  private IndexingStatus parseIndexingStatus(String pubmedStatus) {
+    if (pubmedStatus == null || pubmedStatus.isBlank()) {
+      return null;
+    }
+
+    String normalized = pubmedStatus.trim();
+
+    return switch (normalized) {
+      case "MEDLINE" -> IndexingStatus.MEDLINE;
+      case "PubMed-not-MEDLINE" -> IndexingStatus.PUBMED_NOT_MEDLINE;
+      case "In-Process" -> IndexingStatus.IN_PROCESS;
+      case "In-Data-Review" -> IndexingStatus.IN_DATA_REVIEW;
+      case "Publisher" -> IndexingStatus.PENDING;
+      case "OLDMEDLINE" -> IndexingStatus.OLDMEDLINE;
+      default -> {
+        log.warn("未知的 PubMed Status: {}，使用 null", normalized);
+        yield null;
+      }
+    };
   }
 }

@@ -59,6 +59,8 @@ import lombok.Builder;
 /// @param reviewer 审核人
 /// @param validationErrors 验证错误列表
 /// @param processingNotes 处理注释列表
+/// @param owner 数据记录所有者（NLM, NASA, PIP 等）
+/// @param citationSubset 引用子集标识（IM, AIM 等）
 /// @author linqibin
 /// @since 0.1.0
 @Builder(toBuilder = true)
@@ -69,6 +71,8 @@ public record PublicationMetadata(
     ProvenanceCode dataSource,
     String importBatch,
     Instant importDate,
+    String owner,
+    String citationSubset,
     QualityScore qualityScore,
     QualityScore completenessScore,
     boolean hasFullText,

@@ -21,6 +21,7 @@ import com.patra.catalog.infra.adapter.persistence.dao.PublicationIdentifierDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationMetadataDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationAbstractEntity;
@@ -31,6 +32,7 @@ import com.patra.catalog.infra.adapter.persistence.entity.PublicationIdentifierE
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationKeywordEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshHeadingEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshQualifierEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationMetadataEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationSupplMeshEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationTypeEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
@@ -83,6 +85,7 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
   private final PublicationDateDao dateDao;
   private final PublicationIdentifierDao identifierDao;
   private final PublicationAbstractDao abstractDao;
+  private final PublicationMetadataDao metadataDao;
   private final PublicationJpaMapper jpaMapper;
 
   @Override
@@ -100,6 +103,7 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
     publicationRepository.insertAll(publications);
 
     // 2. 写入关联数据
+    writeMetadataAssociations(results);
     writeMeshAssociations(results);
     writeKeywordAssociations(results);
     writeFundingAssociations(results);
@@ -110,6 +114,46 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
     writeIdentifierAssociations(results);
     writeAbstractAssociations(results);
   }
+
+  // ========== Metadata 关联写入 ==========
+
+  /// 写入文献元数据关联数据。
+  ///
+  /// 将索引状态、数据来源、导入批次等元数据写入 `cat_publication_metadata` 表。
+  /// 文献与元数据是 1:1 关系，一篇文献最多有一条元数据记录。
+  ///
+  /// **写入字段**：
+  ///
+  /// - `publication_id` 文献 ID
+  /// - `indexing_status` 索引状态（MEDLINE/PubMed-not-MEDLINE 等）
+  /// - `indexing_method` 索引方法（Automated/Curated）
+  /// - `data_source` 数据来源（PUBMED）
+  /// - `import_batch` 导入批次标识
+  /// - `import_date` 导入时间
+  /// - `owner` 数据记录所有者（NLM/NASA/PIP 等）
+  /// - `citation_subset` 引用子集标识（IM/AIM 等）
+  private void writeMetadataAssociations(List<PublicationImportResult> results) {
+    List<PublicationMetadataEntity> entities = new ArrayList<>();
+
+    for (PublicationImportResult result : results) {
+      if (!result.hasMetadata()) {
+        continue;
+      }
+
+      Long publicationId = result.publication().getId().value();
+      PublicationMetadataEntity entity =
+          jpaMapper.toMetadataEntity(result.metadata(), publicationId);
+      entity.setId(SnowflakeIdGenerator.getId());
+      entities.add(entity);
+    }
+
+    if (!entities.isEmpty()) {
+      metadataDao.saveAll(entities);
+      log.debug("写入 {} 条元数据", entities.size());
+    }
+  }
+
+  // ========== MeSH 关联写入 ==========
 
   /// 写入 MeSH 关联数据。
   ///

@@ -16,6 +16,7 @@ import com.patra.catalog.infra.adapter.persistence.dao.PublicationIdentifierDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationMetadataDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.common.model.CanonicalPublication;
@@ -85,6 +86,7 @@ public class PubmedBaselineJobConfig {
   private final PublicationDateDao dateDao;
   private final PublicationIdentifierDao identifierDao;
   private final PublicationAbstractDao abstractDao;
+  private final PublicationMetadataDao metadataDao;
   private final PublicationJpaMapper jpaMapper;
   private final BatchProperties batchProperties;
   private final BatchProgressMetricsListener batchProgressMetricsListener;
@@ -107,6 +109,7 @@ public class PubmedBaselineJobConfig {
   /// @param dateDao 日期 DAO
   /// @param identifierDao 标识符 DAO
   /// @param abstractDao 摘要 DAO
+  /// @param metadataDao 元数据 DAO
   /// @param jpaMapper JPA 实体转换器
   /// @param batchProperties 批处理属性
   /// @param batchProgressMetricsListener 进度指标监听器（可选）
@@ -127,6 +130,7 @@ public class PubmedBaselineJobConfig {
       PublicationDateDao dateDao,
       PublicationIdentifierDao identifierDao,
       PublicationAbstractDao abstractDao,
+      PublicationMetadataDao metadataDao,
       PublicationJpaMapper jpaMapper,
       BatchProperties batchProperties,
       Optional<BatchProgressMetricsListener> batchProgressMetricsListener) {
@@ -146,6 +150,7 @@ public class PubmedBaselineJobConfig {
     this.dateDao = dateDao;
     this.identifierDao = identifierDao;
     this.abstractDao = abstractDao;
+    this.metadataDao = metadataDao;
     this.jpaMapper = jpaMapper;
     this.batchProperties = batchProperties;
     this.batchProgressMetricsListener = batchProgressMetricsListener.orElse(null);
@@ -193,6 +198,7 @@ public class PubmedBaselineJobConfig {
                     dateDao,
                     identifierDao,
                     abstractDao,
+                    metadataDao,
                     jpaMapper))
             .faultTolerant()
             .skipLimit(DEFAULT_SKIP_LIMIT)
@@ -226,19 +232,22 @@ public class PubmedBaselineJobConfig {
   /// @param venueLookupPort Venue 查找端口（批处理专用，带缓存）
   /// @param languageLookupPort 语言查找端口（批处理专用，带缓存）
   /// @param funderLookupPort 资助机构查找端口（批处理专用，带缓存）
+  /// @param importBatch 导入批次标识（从 Job 参数注入）
   /// @return ItemProcessor 实例
   @Bean
   @StepScope
   public PubmedArticleItemProcessor pubmedArticleItemProcessor(
       @Qualifier("batchVenueLookupAdapter") VenueLookupPort venueLookupPort,
       @Qualifier("batchLanguageLookupAdapter") LanguageLookupPort languageLookupPort,
-      @Qualifier("batchFunderLookupAdapter") FunderLookupPort funderLookupPort) {
+      @Qualifier("batchFunderLookupAdapter") FunderLookupPort funderLookupPort,
+      @Value("#{jobParameters['importBatch']}") String importBatch) {
     return new PubmedArticleItemProcessor(
         publicationRepository,
         venueLookupPort,
         venueInstanceGateway,
         languageLookupPort,
-        funderLookupPort);
+        funderLookupPort,
+        importBatch);
   }
 
   /// 创建 Publication ItemWriter。
@@ -253,6 +262,7 @@ public class PubmedBaselineJobConfig {
   /// @param dateDao 日期 DAO
   /// @param idDao 标识符 DAO
   /// @param absDao 摘要 DAO
+  /// @param metaDao 元数据 DAO
   /// @param mapper JPA 实体转换器
   /// @return ItemWriter 实例
   @Bean
@@ -267,6 +277,7 @@ public class PubmedBaselineJobConfig {
       PublicationDateDao dateDao,
       PublicationIdentifierDao idDao,
       PublicationAbstractDao absDao,
+      PublicationMetadataDao metaDao,
       PublicationJpaMapper mapper) {
     return new PublicationItemWriter(
         publicationRepository,
@@ -280,6 +291,7 @@ public class PubmedBaselineJobConfig {
         dateDao,
         idDao,
         absDao,
+        metaDao,
         mapper);
   }
 
