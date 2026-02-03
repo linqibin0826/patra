@@ -380,6 +380,8 @@ public abstract class PublicationJpaMapper {
     entity.setDataSource(metadata.dataSource() != null ? metadata.dataSource().getCode() : null);
     entity.setImportBatch(metadata.importBatch());
     entity.setImportDate(metadata.importDate());
+    entity.setOwner(metadata.owner());
+    entity.setCitationSubset(metadata.citationSubset());
     entity.setQualityScore(metadata.qualityScore() != null ? metadata.qualityScore().name() : null);
     entity.setCompletenessScore(
         metadata.completenessScore() != null ? metadata.completenessScore().name() : null);
@@ -408,6 +410,8 @@ public abstract class PublicationJpaMapper {
         .dataSource(stringToProvenanceCode(entity.getDataSource()))
         .importBatch(entity.getImportBatch())
         .importDate(entity.getImportDate())
+        .owner(entity.getOwner())
+        .citationSubset(entity.getCitationSubset())
         .qualityScore(stringToQualityScore(entity.getQualityScore()))
         .completenessScore(stringToQualityScore(entity.getCompletenessScore()))
         .hasFullText(Boolean.TRUE.equals(entity.getHasFullText()))

@@ -103,7 +103,8 @@ class PubmedArticleItemProcessorTest {
             venueLookupPort,
             venueInstanceGateway,
             languageLookupPort,
-            funderLookupPort);
+            funderLookupPort,
+            "test-batch-001");
   }
 
   @Nested

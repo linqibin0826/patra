@@ -36,6 +36,7 @@ import com.patra.catalog.infra.adapter.persistence.dao.PublicationInvestigatorDa
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationMetadataDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationPersonalNameSubjectDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
@@ -101,6 +102,8 @@ class PublicationItemWriterTest {
 
   @Mock private PublicationAbstractDao abstractDao;
 
+  @Mock private PublicationMetadataDao metadataDao;
+
   @Mock private InvestigatorDao investigatorDao;
 
   @Mock private PublicationInvestigatorDao publicationInvestigatorDao;
@@ -155,6 +158,7 @@ class PublicationItemWriterTest {
             dateDao,
             identifierDao,
             abstractDao,
+            metadataDao,
             investigatorDao,
             publicationInvestigatorDao,
             personalNameSubjectDao,

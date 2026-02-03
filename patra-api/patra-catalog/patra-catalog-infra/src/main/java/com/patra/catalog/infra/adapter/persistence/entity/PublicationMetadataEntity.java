@@ -75,6 +75,14 @@ public class PublicationMetadataEntity extends ValueObjectJpaEntity {
   @Column(name = "import_date")
   private Instant importDate;
 
+  /// 数据记录所有者（NLM, NASA, PIP 等）
+  @Column(name = "owner", length = 50)
+  private String owner;
+
+  /// 引用子集标识（IM, AIM 等）
+  @Column(name = "citation_subset", length = 20)
+  private String citationSubset;
+
   /// 质量评分：A/B/C/D/F
   @Column(name = "quality_score", length = 2)
   private String qualityScore;

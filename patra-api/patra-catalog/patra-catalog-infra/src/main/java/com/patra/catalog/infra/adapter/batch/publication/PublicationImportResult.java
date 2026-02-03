@@ -1,6 +1,7 @@
 package com.patra.catalog.infra.adapter.batch.publication;
 
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
+import com.patra.catalog.domain.model.vo.publication.PublicationMetadata;
 import java.util.List;
 import lombok.Builder;
 
@@ -19,6 +20,7 @@ import lombok.Builder;
 /// 2. 使用 Publication ID 写入关联数据
 ///
 /// @param publication 文献聚合根（主数据）
+/// @param metadata 文献元数据（索引状态、数据溯源等）
 /// @param meshHeadings MeSH 标引数据
 /// @param keywords 关键词数据
 /// @param funding 资助信息数据
@@ -33,6 +35,7 @@ import lombok.Builder;
 @Builder
 public record PublicationImportResult(
     PublicationAggregate publication,
+    PublicationMetadata metadata,
     List<MeshHeadingData> meshHeadings,
     List<KeywordData> keywords,
     List<FundingData> funding,
@@ -67,6 +70,7 @@ public record PublicationImportResult(
   public static PublicationImportResult ofPublication(PublicationAggregate publication) {
     return new PublicationImportResult(
         publication,
+        null,
         List.of(),
         List.of(),
         List.of(),
@@ -83,6 +87,7 @@ public record PublicationImportResult(
   /// **使用场景**：Processor 返回完整处理结果时使用。
   ///
   /// @param publication 文献聚合根
+  /// @param metadata 文献元数据
   /// @param meshHeadings MeSH 标引数据
   /// @param keywords 关键词数据
   /// @param funding 资助信息数据
@@ -95,6 +100,7 @@ public record PublicationImportResult(
   /// @return 结果对象
   public static PublicationImportResult ofComplete(
       PublicationAggregate publication,
+      PublicationMetadata metadata,
       List<MeshHeadingData> meshHeadings,
       List<KeywordData> keywords,
       List<FundingData> funding,
@@ -107,6 +113,7 @@ public record PublicationImportResult(
     // compact constructor 会自动处理 null 值并进行防御性拷贝
     return new PublicationImportResult(
         publication,
+        metadata,
         meshHeadings,
         keywords,
         funding,
@@ -116,6 +123,11 @@ public record PublicationImportResult(
         dates,
         investigators,
         personalNameSubjects);
+  }
+
+  /// 是否有元数据。
+  public boolean hasMetadata() {
+    return metadata != null;
   }
 
   /// 是否有 MeSH 标引数据。
