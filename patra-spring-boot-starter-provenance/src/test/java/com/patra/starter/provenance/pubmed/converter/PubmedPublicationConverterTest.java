@@ -6,15 +6,18 @@ import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.enums.PublicationIdentifierType;
 import com.patra.starter.provenance.pubmed.model.response.PubmedPublication;
 import java.time.LocalDate;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import tools.jackson.dataformat.xml.XmlMapper;
 
 /// PubmedPublicationConverter 单元测试
 ///
 /// @author linqibin
 @DisplayName("PubmedPublicationConverter 测试")
+@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class PubmedPublicationConverterTest {
 
   private PubmedPublicationConverter converter;
@@ -740,7 +743,9 @@ class PubmedPublicationConverterTest {
     assertThat(affiliation.getIdentifiers()).hasSize(2);
     assertThat(affiliation.getIdentifiers())
         .extracting("type", "value")
-        .contains(tuple("ror", "03vek6s52"), tuple("ringgold", "12345"));
+        .contains(
+            tuple(PublicationIdentifierType.ROR, "03vek6s52"),
+            tuple(PublicationIdentifierType.RINGGOLD, "12345"));
   }
 
   @Test
@@ -787,7 +792,8 @@ class PubmedPublicationConverterTest {
     // 第一个机构：清华大学，只有 ROR
     assertThat(affiliations.get(0).getName()).isEqualTo("Tsinghua University");
     assertThat(affiliations.get(0).getIdentifiers()).hasSize(1);
-    assertThat(affiliations.get(0).getIdentifiers().get(0).getType()).isEqualTo("ror");
+    assertThat(affiliations.get(0).getIdentifiers().get(0).getType())
+        .isEqualTo(PublicationIdentifierType.ROR);
     assertThat(affiliations.get(0).getIdentifiers().get(0).getValue()).isEqualTo("00k4n6c32");
 
     // 第二个机构：哈佛医学院，有 Ringgold 和 GRID
@@ -795,7 +801,9 @@ class PubmedPublicationConverterTest {
     assertThat(affiliations.get(1).getIdentifiers()).hasSize(2);
     assertThat(affiliations.get(1).getIdentifiers())
         .extracting("type", "value")
-        .contains(tuple("ringgold", "67890"), tuple("grid", "grid.38142.3c"));
+        .contains(
+            tuple(PublicationIdentifierType.RINGGOLD, "67890"),
+            tuple(PublicationIdentifierType.GRID, "grid.38142.3c"));
   }
 
   @Test
@@ -872,8 +880,10 @@ class PubmedPublicationConverterTest {
     // Assert
     var identifiers = result.getAuthors().get(0).getAffiliations().get(0).getIdentifiers();
     assertThat(identifiers).hasSize(2);
-    // 验证类型已转换为小写
-    assertThat(identifiers).extracting("type").containsExactly("ror", "ringgold");
+    // 验证类型正确识别（ROR 和 RINGGOLD）
+    assertThat(identifiers)
+        .extracting("type")
+        .containsExactly(PublicationIdentifierType.ROR, PublicationIdentifierType.RINGGOLD);
   }
 
   @Test

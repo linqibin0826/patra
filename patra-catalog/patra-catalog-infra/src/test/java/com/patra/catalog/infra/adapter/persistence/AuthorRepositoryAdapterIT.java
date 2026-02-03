@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
@@ -48,7 +49,7 @@ import org.springframework.test.context.ContextConfiguration;
 @DataJpaTest
 @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({AuthorRepositoryAdapter.class, JpaAuditingConfig.class})
+@Import({AuthorRepositoryAdapter.class, JpaAuditingConfig.class, JacksonAutoConfiguration.class})
 @ComponentScan(basePackages = "com.patra.catalog.infra.adapter.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("AuthorRepositoryAdapter 集成测试（JPA）")
@@ -78,7 +79,7 @@ class AuthorRepositoryAdapterIT {
       assertThat(saved).isNotNull();
       assertThat(saved.getId()).isNotNull();
       assertThat(saved.getNormalizedKey()).isEqualTo("Smith+J");
-      assertThat(saved.getDisplayName()).isEqualTo("Smith John");
+      assertThat(saved.getDisplayName()).isEqualTo("John Smith");
       assertThat(saved.getNameVariants()).hasSize(1);
       assertThat(saved.getNameVariants().getFirst().lastName()).isEqualTo("Smith");
       assertThat(saved.getOrcids()).hasSize(1);
@@ -361,7 +362,7 @@ class AuthorRepositoryAdapterIT {
 
       // Then: 验证聚合根
       assertThat(saved.getNormalizedKey()).isEqualTo("Smith+JK");
-      assertThat(saved.getDisplayName()).isEqualTo("Smith John");
+      assertThat(saved.getDisplayName()).isEqualTo("John Smith");
       assertThat(saved.getNameVariants()).hasSize(2);
       assertThat(saved.getOrcids()).hasSize(1);
 
