@@ -1,6 +1,7 @@
 package com.patra.catalog.infra.adapter.batch.publication;
 
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
+import com.patra.catalog.domain.model.vo.publication.PublicationAbstract;
 import com.patra.catalog.domain.model.vo.publication.PublicationIdentifier;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.AlternativeAbstractData;
@@ -11,6 +12,8 @@ import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationTypeData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.QualifierData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.SupplMeshData;
+import com.patra.catalog.infra.adapter.persistence.converter.mapper.PublicationJpaMapper;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
@@ -20,6 +23,7 @@ import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationAbstractEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationAlternativeAbstractEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationDateEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationFundingEntity;
@@ -78,6 +82,8 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
   private final PublicationAlternativeAbstractDao alternativeAbstractDao;
   private final PublicationDateDao dateDao;
   private final PublicationIdentifierDao identifierDao;
+  private final PublicationAbstractDao abstractDao;
+  private final PublicationJpaMapper jpaMapper;
 
   @Override
   public void write(Chunk<? extends PublicationImportResult> chunk) throws Exception {
@@ -102,6 +108,7 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
     writeAlternativeAbstractAssociations(results);
     writeDateAssociations(results);
     writeIdentifierAssociations(results);
+    writeAbstractAssociations(results);
   }
 
   /// 写入 MeSH 关联数据。
@@ -475,6 +482,46 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
     if (!entities.isEmpty()) {
       identifierDao.saveAll(entities);
       log.debug("写入 {} 条标识符关联", entities.size());
+    }
+  }
+
+  // ========== Abstract 关联写入 ==========
+
+  /// 写入摘要关联数据。
+  ///
+  /// 将文献摘要写入 `cat_publication_abstract` 表。
+  /// 摘要与文献是 1:1 关系，一篇文献最多有一条摘要记录。
+  ///
+  /// **写入字段**：
+  ///
+  /// - `publication_id` 文献 ID
+  /// - `plain_text` 纯文本摘要
+  /// - `structured_sections` 结构化摘要（JSON 格式）
+  /// - `copyright` 版权信息
+  /// - `abstract_type` 摘要类型
+  private void writeAbstractAssociations(List<PublicationImportResult> results) {
+    List<PublicationAbstractEntity> entities = new ArrayList<>();
+
+    for (PublicationImportResult result : results) {
+      PublicationAggregate publication = result.publication();
+
+      // 只有有摘要内容时才写入
+      if (!publication.hasAbstract()) {
+        continue;
+      }
+
+      Long publicationId = publication.getId().value();
+      PublicationAbstract abstractContent = publication.getPublicationAbstract();
+
+      // 使用 mapper 转换（处理 JSON 序列化）
+      PublicationAbstractEntity entity = jpaMapper.toAbstractEntity(abstractContent, publicationId);
+      entity.setId(SnowflakeIdGenerator.getId());
+      entities.add(entity);
+    }
+
+    if (!entities.isEmpty()) {
+      abstractDao.saveAll(entities);
+      log.debug("写入 {} 条摘要", entities.size());
     }
   }
 }
