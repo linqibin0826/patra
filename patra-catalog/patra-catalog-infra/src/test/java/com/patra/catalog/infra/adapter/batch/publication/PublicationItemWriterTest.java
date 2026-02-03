@@ -32,6 +32,7 @@ import com.patra.catalog.infra.adapter.persistence.dao.PublicationIdentifierDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationMetadataDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationAbstractEntity;
@@ -93,6 +94,8 @@ class PublicationItemWriterTest {
 
   @Mock private PublicationAbstractDao abstractDao;
 
+  @Mock private PublicationMetadataDao metadataDao;
+
   @Mock private PublicationJpaMapper jpaMapper;
 
   @Captor private ArgumentCaptor<List<PublicationMeshHeadingEntity>> headingCaptor;
@@ -134,6 +137,7 @@ class PublicationItemWriterTest {
             dateDao,
             identifierDao,
             abstractDao,
+            metadataDao,
             jpaMapper);
   }
 
@@ -496,6 +500,7 @@ class PublicationItemWriterTest {
       PublicationImportResult result =
           PublicationImportResult.ofComplete(
               pub,
+              null,
               List.of(),
               List.of(),
               List.of(),
@@ -557,6 +562,7 @@ class PublicationItemWriterTest {
       PublicationImportResult result =
           PublicationImportResult.ofComplete(
               pub,
+              null,
               List.of(),
               List.of(),
               List.of(),

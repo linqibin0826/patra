@@ -18,6 +18,7 @@ import com.patra.catalog.infra.adapter.persistence.dao.PublicationIdentifierDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationMetadataDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.starter.batch.config.BatchProperties;
@@ -64,6 +65,7 @@ class PubmedBaselineJobConfigTest {
   @Mock private PublicationDateDao dateDao;
   @Mock private PublicationIdentifierDao identifierDao;
   @Mock private PublicationAbstractDao abstractDao;
+  @Mock private PublicationMetadataDao metadataDao;
   @Mock private PublicationJpaMapper jpaMapper;
   @Mock private BatchProperties batchProperties;
 
@@ -89,6 +91,7 @@ class PubmedBaselineJobConfigTest {
             dateDao,
             identifierDao,
             abstractDao,
+            metadataDao,
             jpaMapper,
             batchProperties,
             Optional.empty());
@@ -106,7 +109,7 @@ class PubmedBaselineJobConfigTest {
           jobConfig.pubmedArticleItemReader("https://example.com/test.xml.gz");
       PubmedArticleItemProcessor processor =
           jobConfig.pubmedArticleItemProcessor(
-              venueLookupPort, languageLookupPort, funderLookupPort);
+              venueLookupPort, languageLookupPort, funderLookupPort, "test-batch-001");
       Step step = jobConfig.pubmedArticleProcessingStep(reader, processor);
 
       // when
@@ -130,7 +133,7 @@ class PubmedBaselineJobConfigTest {
           jobConfig.pubmedArticleItemReader("https://example.com/test.xml.gz");
       PubmedArticleItemProcessor processor =
           jobConfig.pubmedArticleItemProcessor(
-              venueLookupPort, languageLookupPort, funderLookupPort);
+              venueLookupPort, languageLookupPort, funderLookupPort, "test-batch-001");
 
       // when
       Step step = jobConfig.pubmedArticleProcessingStep(reader, processor);
@@ -169,7 +172,7 @@ class PubmedBaselineJobConfigTest {
       // when - 通过方法参数传入 @StepScope beans
       PubmedArticleItemProcessor processor =
           jobConfig.pubmedArticleItemProcessor(
-              venueLookupPort, languageLookupPort, funderLookupPort);
+              venueLookupPort, languageLookupPort, funderLookupPort, "test-batch-001");
 
       // then
       assertThat(processor).isNotNull();
@@ -196,6 +199,7 @@ class PubmedBaselineJobConfigTest {
               dateDao,
               identifierDao,
               abstractDao,
+              metadataDao,
               jpaMapper);
 
       // then
