@@ -1,11 +1,16 @@
 package com.patra.catalog.infra.adapter.batch.publication;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
+import com.patra.catalog.domain.model.enums.AbstractType;
+import com.patra.catalog.domain.model.vo.publication.PublicationAbstract;
 import com.patra.catalog.domain.model.vo.publication.PublicationId;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
@@ -18,6 +23,8 @@ import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationTypeData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.QualifierData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.SupplMeshData;
+import com.patra.catalog.infra.adapter.persistence.converter.mapper.PublicationJpaMapper;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
@@ -27,6 +34,7 @@ import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationAbstractEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationAlternativeAbstractEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationDateEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationFundingEntity;
@@ -40,6 +48,7 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.enums.PublicationIdentifierType;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -82,6 +91,10 @@ class PublicationItemWriterTest {
 
   @Mock private PublicationIdentifierDao identifierDao;
 
+  @Mock private PublicationAbstractDao abstractDao;
+
+  @Mock private PublicationJpaMapper jpaMapper;
+
   @Captor private ArgumentCaptor<List<PublicationMeshHeadingEntity>> headingCaptor;
 
   @Captor private ArgumentCaptor<List<PublicationMeshQualifierEntity>> qualifierCaptor;
@@ -100,6 +113,8 @@ class PublicationItemWriterTest {
 
   @Captor private ArgumentCaptor<List<PublicationIdentifierEntity>> identifierCaptor;
 
+  @Captor private ArgumentCaptor<List<PublicationAbstractEntity>> abstractCaptor;
+
   private PublicationItemWriter writer;
 
   private static final Long PUBLICATION_ID = 1001L;
@@ -117,7 +132,9 @@ class PublicationItemWriterTest {
             supplMeshDao,
             alternativeAbstractDao,
             dateDao,
-            identifierDao);
+            identifierDao,
+            abstractDao,
+            jpaMapper);
   }
 
   @Nested
@@ -638,6 +655,68 @@ class PublicationItemWriterTest {
 
       // then
       verify(identifierDao, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("应该写入摘要关联")
+    void should_write_abstract_associations() throws Exception {
+      // given
+      PublicationAggregate pub = createPublication("12345678");
+      pub.assignId(PublicationId.of(PUBLICATION_ID));
+
+      // 构建并附加摘要
+      PublicationAbstract pubAbstract =
+          PublicationAbstract.builder()
+              .plainText("This is a test abstract about machine learning.")
+              .structuredSections(
+                  Map.of(
+                      "BACKGROUND", "Background section content.",
+                      "METHODS", "Methods section content."))
+              .abstractType(AbstractType.STRUCTURED)
+              .copyright("Copyright 2024")
+              .build();
+      pub.attachAbstract(pubAbstract);
+
+      PublicationImportResult result = PublicationImportResult.ofPublication(pub);
+      Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
+
+      // mock mapper 转换
+      PublicationAbstractEntity mockEntity = new PublicationAbstractEntity();
+      mockEntity.setPublicationId(PUBLICATION_ID);
+      mockEntity.setPlainText("This is a test abstract about machine learning.");
+      mockEntity.setAbstractType("STRUCTURED");
+      when(jpaMapper.toAbstractEntity(any(PublicationAbstract.class), eq(PUBLICATION_ID)))
+          .thenReturn(mockEntity);
+
+      // when
+      writer.write(chunk);
+
+      // then
+      verify(abstractDao).saveAll(abstractCaptor.capture());
+      List<PublicationAbstractEntity> savedAbstracts = abstractCaptor.getValue();
+      assertThat(savedAbstracts).hasSize(1);
+      assertThat(savedAbstracts.getFirst().getPublicationId()).isEqualTo(PUBLICATION_ID);
+      assertThat(savedAbstracts.getFirst().getPlainText())
+          .isEqualTo("This is a test abstract about machine learning.");
+      assertThat(savedAbstracts.getFirst().getAbstractType()).isEqualTo("STRUCTURED");
+    }
+
+    @Test
+    @DisplayName("无摘要数据时不应调用 DAO")
+    void should_not_call_abstract_dao_when_no_abstract_data() throws Exception {
+      // given
+      PublicationAggregate pub = createPublication("12345678");
+      pub.assignId(PublicationId.of(PUBLICATION_ID));
+      // 不附加摘要
+
+      PublicationImportResult result = PublicationImportResult.ofPublication(pub);
+      Chunk<PublicationImportResult> chunk = new Chunk<>(List.of(result));
+
+      // when
+      writer.write(chunk);
+
+      // then
+      verify(abstractDao, never()).saveAll(anyList());
     }
   }
 

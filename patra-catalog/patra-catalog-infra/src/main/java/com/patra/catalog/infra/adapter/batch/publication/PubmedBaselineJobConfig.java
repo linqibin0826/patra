@@ -7,6 +7,8 @@ import com.patra.catalog.domain.port.lookup.VenueLookupPort;
 import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.infra.adapter.persistence.converter.mapper.PublicationJpaMapper;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
@@ -82,6 +84,8 @@ public class PubmedBaselineJobConfig {
   private final PublicationAlternativeAbstractDao alternativeAbstractDao;
   private final PublicationDateDao dateDao;
   private final PublicationIdentifierDao identifierDao;
+  private final PublicationAbstractDao abstractDao;
+  private final PublicationJpaMapper jpaMapper;
   private final BatchProperties batchProperties;
   private final BatchProgressMetricsListener batchProgressMetricsListener;
 
@@ -102,6 +106,8 @@ public class PubmedBaselineJobConfig {
   /// @param alternativeAbstractDao 翻译摘要 DAO
   /// @param dateDao 日期 DAO
   /// @param identifierDao 标识符 DAO
+  /// @param abstractDao 摘要 DAO
+  /// @param jpaMapper JPA 实体转换器
   /// @param batchProperties 批处理属性
   /// @param batchProgressMetricsListener 进度指标监听器（可选）
   public PubmedBaselineJobConfig(
@@ -120,6 +126,8 @@ public class PubmedBaselineJobConfig {
       PublicationAlternativeAbstractDao alternativeAbstractDao,
       PublicationDateDao dateDao,
       PublicationIdentifierDao identifierDao,
+      PublicationAbstractDao abstractDao,
+      PublicationJpaMapper jpaMapper,
       BatchProperties batchProperties,
       Optional<BatchProgressMetricsListener> batchProgressMetricsListener) {
     this.jobRepository = jobRepository;
@@ -137,6 +145,8 @@ public class PubmedBaselineJobConfig {
     this.alternativeAbstractDao = alternativeAbstractDao;
     this.dateDao = dateDao;
     this.identifierDao = identifierDao;
+    this.abstractDao = abstractDao;
+    this.jpaMapper = jpaMapper;
     this.batchProperties = batchProperties;
     this.batchProgressMetricsListener = batchProgressMetricsListener.orElse(null);
   }
@@ -181,7 +191,9 @@ public class PubmedBaselineJobConfig {
                     supplMeshDao,
                     alternativeAbstractDao,
                     dateDao,
-                    identifierDao))
+                    identifierDao,
+                    abstractDao,
+                    jpaMapper))
             .faultTolerant()
             .skipLimit(DEFAULT_SKIP_LIMIT)
             .skip(Exception.class);
@@ -240,6 +252,8 @@ public class PubmedBaselineJobConfig {
   /// @param altAbstractDao 翻译摘要 DAO
   /// @param dateDao 日期 DAO
   /// @param idDao 标识符 DAO
+  /// @param absDao 摘要 DAO
+  /// @param mapper JPA 实体转换器
   /// @return ItemWriter 实例
   @Bean
   public PublicationItemWriter publicationItemWriter(
@@ -251,7 +265,9 @@ public class PubmedBaselineJobConfig {
       PublicationSupplMeshDao supplMeshDao,
       PublicationAlternativeAbstractDao altAbstractDao,
       PublicationDateDao dateDao,
-      PublicationIdentifierDao idDao) {
+      PublicationIdentifierDao idDao,
+      PublicationAbstractDao absDao,
+      PublicationJpaMapper mapper) {
     return new PublicationItemWriter(
         publicationRepository,
         headingDao,
@@ -262,7 +278,9 @@ public class PubmedBaselineJobConfig {
         supplMeshDao,
         altAbstractDao,
         dateDao,
-        idDao);
+        idDao,
+        absDao,
+        mapper);
   }
 
   /// 获取 chunk size。
