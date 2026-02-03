@@ -18,6 +18,7 @@ import com.patra.catalog.infra.adapter.persistence.dao.PublicationInvestigatorDa
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationMetadataDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationPersonalNameSubjectDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
@@ -88,6 +89,7 @@ public class PubmedBaselineJobConfig {
   private final PublicationDateDao dateDao;
   private final PublicationIdentifierDao identifierDao;
   private final PublicationAbstractDao abstractDao;
+  private final PublicationMetadataDao metadataDao;
   private final InvestigatorDao investigatorDao;
   private final PublicationInvestigatorDao publicationInvestigatorDao;
   private final PublicationPersonalNameSubjectDao personalNameSubjectDao;
@@ -113,6 +115,7 @@ public class PubmedBaselineJobConfig {
   /// @param dateDao 日期 DAO
   /// @param identifierDao 标识符 DAO
   /// @param abstractDao 摘要 DAO
+  /// @param metadataDao 元数据 DAO
   /// @param investigatorDao 研究者 DAO
   /// @param publicationInvestigatorDao 文献-研究者关联 DAO
   /// @param personalNameSubjectDao 人物主题 DAO
@@ -136,6 +139,7 @@ public class PubmedBaselineJobConfig {
       PublicationDateDao dateDao,
       PublicationIdentifierDao identifierDao,
       PublicationAbstractDao abstractDao,
+      PublicationMetadataDao metadataDao,
       InvestigatorDao investigatorDao,
       PublicationInvestigatorDao publicationInvestigatorDao,
       PublicationPersonalNameSubjectDao personalNameSubjectDao,
@@ -158,6 +162,7 @@ public class PubmedBaselineJobConfig {
     this.dateDao = dateDao;
     this.identifierDao = identifierDao;
     this.abstractDao = abstractDao;
+    this.metadataDao = metadataDao;
     this.investigatorDao = investigatorDao;
     this.publicationInvestigatorDao = publicationInvestigatorDao;
     this.personalNameSubjectDao = personalNameSubjectDao;
@@ -208,6 +213,7 @@ public class PubmedBaselineJobConfig {
                     dateDao,
                     identifierDao,
                     abstractDao,
+                    metadataDao,
                     investigatorDao,
                     publicationInvestigatorDao,
                     personalNameSubjectDao,
@@ -244,19 +250,22 @@ public class PubmedBaselineJobConfig {
   /// @param venueLookupPort Venue 查找端口（批处理专用，带缓存）
   /// @param languageLookupPort 语言查找端口（批处理专用，带缓存）
   /// @param funderLookupPort 资助机构查找端口（批处理专用，带缓存）
+  /// @param importBatch 导入批次标识（从 Job 参数注入）
   /// @return ItemProcessor 实例
   @Bean
   @StepScope
   public PubmedArticleItemProcessor pubmedArticleItemProcessor(
       @Qualifier("batchVenueLookupAdapter") VenueLookupPort venueLookupPort,
       @Qualifier("batchLanguageLookupAdapter") LanguageLookupPort languageLookupPort,
-      @Qualifier("batchFunderLookupAdapter") FunderLookupPort funderLookupPort) {
+      @Qualifier("batchFunderLookupAdapter") FunderLookupPort funderLookupPort,
+      @Value("#{jobParameters['importBatch']}") String importBatch) {
     return new PubmedArticleItemProcessor(
         publicationRepository,
         venueLookupPort,
         venueInstanceGateway,
         languageLookupPort,
-        funderLookupPort);
+        funderLookupPort,
+        importBatch);
   }
 
   /// 创建 Publication ItemWriter。
@@ -271,6 +280,7 @@ public class PubmedBaselineJobConfig {
   /// @param dateDao 日期 DAO
   /// @param idDao 标识符 DAO
   /// @param absDao 摘要 DAO
+  /// @param metaDao 元数据 DAO
   /// @param invDao 研究者 DAO
   /// @param pubInvDao 文献-研究者关联 DAO
   /// @param pnsDao 人物主题 DAO
@@ -288,6 +298,7 @@ public class PubmedBaselineJobConfig {
       PublicationDateDao dateDao,
       PublicationIdentifierDao idDao,
       PublicationAbstractDao absDao,
+      PublicationMetadataDao metaDao,
       InvestigatorDao invDao,
       PublicationInvestigatorDao pubInvDao,
       PublicationPersonalNameSubjectDao pnsDao,
@@ -304,6 +315,7 @@ public class PubmedBaselineJobConfig {
         dateDao,
         idDao,
         absDao,
+        metaDao,
         invDao,
         pubInvDao,
         pnsDao,

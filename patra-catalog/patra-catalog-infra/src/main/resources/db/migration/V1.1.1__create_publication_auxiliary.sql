@@ -110,6 +110,8 @@ CREATE TABLE IF NOT EXISTS `cat_publication_metadata`
     `data_source`        VARCHAR(50)     NULL     DEFAULT NULL COMMENT '数据来源:PubMed/EPMC/Crossref/Manual/Other',
     `import_batch`       VARCHAR(50)     NULL     DEFAULT NULL COMMENT '导入批次标识(如"2025-01-18_PUBMED")',
     `import_date`        TIMESTAMP(6)    NULL     DEFAULT NULL COMMENT '导入时间(UTC微秒精度)',
+    `owner`              VARCHAR(50)     NULL     DEFAULT NULL COMMENT '数据记录所有者:NLM/NASA/PIP等',
+    `citation_subset`    VARCHAR(20)     NULL     DEFAULT NULL COMMENT '引用子集标识:IM/AIM等',
     `quality_score`      VARCHAR(2)      NULL     DEFAULT NULL COMMENT '质量评分:A/B/C/D/F',
     `completeness_score` VARCHAR(2)      NULL     DEFAULT NULL COMMENT '完整性评分:A/B/C/D/F',
     `has_full_text`      BOOLEAN         NOT NULL DEFAULT 0 COMMENT '是否有全文(0=否,1=是)',
