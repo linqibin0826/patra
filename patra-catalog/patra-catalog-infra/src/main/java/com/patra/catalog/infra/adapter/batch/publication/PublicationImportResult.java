@@ -11,7 +11,7 @@ import lombok.Builder;
 ///
 /// 封装 ItemProcessor 处理后的所有数据，包括：
 /// - 主数据：PublicationAggregate（文献聚合根）
-/// - 关联数据：MeSH 标引、关键词、资助信息、出版类型、补充 MeSH 概念、翻译摘要、日期等
+/// - 关联数据：MeSH 标引、关键词、资助信息、出版类型、补充 MeSH 概念、翻译摘要、日期、研究者、人物主题等
 ///
 /// **使用场景**：
 ///
@@ -28,6 +28,8 @@ import lombok.Builder;
 /// @param supplMeshNames 补充 MeSH 概念数据
 /// @param alternativeAbstracts 翻译摘要数据
 /// @param dates 日期数据
+/// @param investigators 研究者数据
+/// @param personalNameSubjects 人物主题数据
 /// @author linqibin
 /// @since 0.1.0
 @Builder
@@ -40,7 +42,9 @@ public record PublicationImportResult(
     List<PublicationTypeData> publicationTypes,
     List<SupplMeshData> supplMeshNames,
     List<AlternativeAbstractData> alternativeAbstracts,
-    List<PublicationDateData> dates) {
+    List<PublicationDateData> dates,
+    List<InvestigatorData> investigators,
+    List<PersonalNameSubjectData> personalNameSubjects) {
 
   /// Compact constructor：确保所有集合字段不为 null。
   public PublicationImportResult {
@@ -52,6 +56,9 @@ public record PublicationImportResult(
     alternativeAbstracts =
         alternativeAbstracts != null ? List.copyOf(alternativeAbstracts) : List.of();
     dates = dates != null ? List.copyOf(dates) : List.of();
+    investigators = investigators != null ? List.copyOf(investigators) : List.of();
+    personalNameSubjects =
+        personalNameSubjects != null ? List.copyOf(personalNameSubjects) : List.of();
   }
 
   /// 创建仅包含主数据的结果（无关联数据）。
@@ -64,6 +71,8 @@ public record PublicationImportResult(
     return new PublicationImportResult(
         publication,
         null,
+        List.of(),
+        List.of(),
         List.of(),
         List.of(),
         List.of(),
@@ -86,6 +95,8 @@ public record PublicationImportResult(
   /// @param supplMeshNames 补充 MeSH 概念数据
   /// @param alternativeAbstracts 翻译摘要数据
   /// @param dates 日期数据
+  /// @param investigators 研究者数据
+  /// @param personalNameSubjects 人物主题数据
   /// @return 结果对象
   public static PublicationImportResult ofComplete(
       PublicationAggregate publication,
@@ -96,7 +107,9 @@ public record PublicationImportResult(
       List<PublicationTypeData> publicationTypes,
       List<SupplMeshData> supplMeshNames,
       List<AlternativeAbstractData> alternativeAbstracts,
-      List<PublicationDateData> dates) {
+      List<PublicationDateData> dates,
+      List<InvestigatorData> investigators,
+      List<PersonalNameSubjectData> personalNameSubjects) {
     // compact constructor 会自动处理 null 值并进行防御性拷贝
     return new PublicationImportResult(
         publication,
@@ -107,7 +120,9 @@ public record PublicationImportResult(
         publicationTypes,
         supplMeshNames,
         alternativeAbstracts,
-        dates);
+        dates,
+        investigators,
+        personalNameSubjects);
   }
 
   /// 是否有元数据。
@@ -148,6 +163,16 @@ public record PublicationImportResult(
   /// 是否有日期数据。
   public boolean hasDates() {
     return !dates.isEmpty();
+  }
+
+  /// 是否有研究者数据。
+  public boolean hasInvestigators() {
+    return !investigators.isEmpty();
+  }
+
+  /// 是否有人物主题数据。
+  public boolean hasPersonalNameSubjects() {
+    return !personalNameSubjects.isEmpty();
   }
 
   // ==================== MeSH 相关数据类型 ====================
@@ -413,6 +438,130 @@ public record PublicationImportResult(
           null,
           null,
           true,
+          orderNum);
+    }
+  }
+
+  // ==================== 研究者数据类型 ====================
+
+  /// 研究者数据（中间结构，用于后续写入关联表）。
+  ///
+  /// **设计说明**：
+  ///
+  /// - 研究者（Investigator）是参与研究但未列为文章作者的研究人员
+  /// - 常见于大型临床试验、多中心研究等场景
+  /// - 支持通过 ORCID 或 dedupKey 进行去重匹配
+  ///
+  /// **去重键计算规则**：
+  ///
+  /// `MD5(LOWER(lastName) + "|" + LOWER(foreName) + "|" + LOWER(COALESCE(orcid, "")))`
+  ///
+  /// @param lastName 姓
+  /// @param foreName 名
+  /// @param initials 姓名缩写
+  /// @param suffix 后缀（如 "Jr.", "MD"）
+  /// @param orcid ORCID 标识符（可能为 null）
+  /// @param affiliationName 机构名称（取第一个机构）
+  /// @param dedupKey 去重键（MD5 哈希）
+  /// @param orderNum 顺序号
+  @Builder
+  public record InvestigatorData(
+      String lastName,
+      String foreName,
+      String initials,
+      String suffix,
+      String orcid,
+      String affiliationName,
+      String dedupKey,
+      Integer orderNum) {
+
+    /// 创建研究者数据。
+    ///
+    /// @param lastName 姓
+    /// @param foreName 名
+    /// @param initials 姓名缩写
+    /// @param suffix 后缀
+    /// @param orcid ORCID 标识符
+    /// @param affiliationName 机构名称
+    /// @param dedupKey 去重键
+    /// @param orderNum 顺序号
+    /// @return 研究者数据对象
+    public static InvestigatorData of(
+        String lastName,
+        String foreName,
+        String initials,
+        String suffix,
+        String orcid,
+        String affiliationName,
+        String dedupKey,
+        Integer orderNum) {
+      return new InvestigatorData(
+          lastName, foreName, initials, suffix, orcid, affiliationName, dedupKey, orderNum);
+    }
+  }
+
+  // ==================== 人物主题数据类型 ====================
+
+  /// 人物主题数据（中间结构，用于后续写入关联表）。
+  ///
+  /// **设计说明**：
+  ///
+  /// - 人物主题（PersonalNameSubject）是文献内容描述的对象
+  /// - 用于传记类、历史类、纪念类文献
+  /// - 例如：描述某位科学家生平的文献，该科学家就是人物主题
+  ///
+  /// @param lastName 姓
+  /// @param foreName 名
+  /// @param initials 姓名缩写
+  /// @param suffix 后缀/头衔
+  /// @param dates 生卒年代（如 "1820-1910"）
+  /// @param description 人物描述
+  /// @param subjectType 主题类型（如 "biography", "history"）
+  /// @param identifier 人物标识符（如 VIAF ID）
+  /// @param orderNum 顺序号
+  @Builder
+  public record PersonalNameSubjectData(
+      String lastName,
+      String foreName,
+      String initials,
+      String suffix,
+      String dates,
+      String description,
+      String subjectType,
+      String identifier,
+      Integer orderNum) {
+
+    /// 创建人物主题数据。
+    ///
+    /// @param lastName 姓
+    /// @param foreName 名
+    /// @param initials 姓名缩写
+    /// @param suffix 后缀
+    /// @param dates 生卒年代
+    /// @param description 描述
+    /// @param subjectType 主题类型
+    /// @param identifier 标识符
+    /// @param orderNum 顺序号
+    /// @return 人物主题数据对象
+    public static PersonalNameSubjectData of(
+        String lastName,
+        String foreName,
+        String initials,
+        String suffix,
+        String dates,
+        String description,
+        String subjectType,
+        String identifier,
+        Integer orderNum) {
+      return new PersonalNameSubjectData(
+          lastName,
+          foreName,
+          initials,
+          suffix,
+          dates,
+          description,
+          subjectType,
+          identifier,
           orderNum);
     }
   }

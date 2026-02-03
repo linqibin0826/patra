@@ -6,39 +6,53 @@ import com.patra.catalog.domain.model.vo.publication.PublicationIdentifier;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.AlternativeAbstractData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.FundingData;
+import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.InvestigatorData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.KeywordData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.MeshHeadingData;
+import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PersonalNameSubjectData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationDateData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.PublicationTypeData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.QualifierData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.SupplMeshData;
 import com.patra.catalog.infra.adapter.persistence.converter.mapper.PublicationJpaMapper;
+import com.patra.catalog.infra.adapter.persistence.dao.InvestigatorDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationIdentifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationInvestigatorDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMetadataDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationPersonalNameSubjectDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
+import com.patra.catalog.infra.adapter.persistence.entity.InvestigatorEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationAbstractEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationAlternativeAbstractEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationDateEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationFundingEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationIdentifierEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationInvestigatorEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationKeywordEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshHeadingEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshQualifierEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMetadataEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationPersonalNameSubjectEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationSupplMeshEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationTypeEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.infrastructure.item.Chunk;
@@ -86,6 +100,9 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
   private final PublicationIdentifierDao identifierDao;
   private final PublicationAbstractDao abstractDao;
   private final PublicationMetadataDao metadataDao;
+  private final InvestigatorDao investigatorDao;
+  private final PublicationInvestigatorDao publicationInvestigatorDao;
+  private final PublicationPersonalNameSubjectDao personalNameSubjectDao;
   private final PublicationJpaMapper jpaMapper;
 
   @Override
@@ -113,6 +130,8 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
     writeDateAssociations(results);
     writeIdentifierAssociations(results);
     writeAbstractAssociations(results);
+    writeInvestigatorAssociations(results);
+    writePersonalNameSubjectAssociations(results);
   }
 
   // ========== Metadata 关联写入 ==========
@@ -566,6 +585,258 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
     if (!entities.isEmpty()) {
       abstractDao.saveAll(entities);
       log.debug("写入 {} 条摘要", entities.size());
+    }
+  }
+
+  // ========== Investigator 关联写入 ==========
+
+  /// 写入研究者关联数据。
+  ///
+  /// **去重策略**：
+  ///
+  /// 1. 收集本批次所有 ORCID 和 dedupKey
+  /// 2. 批量查询已存在的研究者（优先 ORCID 匹配，其次 dedupKey 匹配）
+  /// 3. 不存在则创建新研究者记录
+  /// 4. 创建文献-研究者关联记录
+  ///
+  /// **性能优化**：
+  ///
+  /// - 批量查询替代逐条查询
+  /// - 批量插入研究者和关联记录
+  private void writeInvestigatorAssociations(List<PublicationImportResult> results) {
+    // 1. 收集研究者数据
+    var collectedData = collectInvestigatorsFromResults(results);
+    if (collectedData.dedupKeyToData().isEmpty()) {
+      return;
+    }
+
+    // 2. 查询已存在的研究者
+    var existingMapping = queryExistingInvestigators(collectedData.dedupKeyToData());
+
+    // 3. 创建新研究者并建立 dedupKey → ID 映射
+    var dedupKeyToInvestigatorId =
+        createNewInvestigatorsIfNeeded(collectedData.dedupKeyToData(), existingMapping);
+
+    // 4. 创建关联记录
+    createInvestigatorAssociations(
+        collectedData.publicationInvestigators(), dedupKeyToInvestigatorId);
+  }
+
+  /// 研究者收集结果。
+  ///
+  /// @param dedupKeyToData dedupKey → 研究者数据映射
+  /// @param publicationInvestigators 文献 ID → 研究者列表映射
+  private record InvestigatorCollectionResult(
+      Map<String, InvestigatorData> dedupKeyToData,
+      Map<Long, List<InvestigatorData>> publicationInvestigators) {}
+
+  /// 研究者查询结果。
+  ///
+  /// @param byOrcid ORCID → 研究者 ID 映射
+  /// @param byDedupKey dedupKey → 研究者 ID 映射
+  private record ExistingInvestigatorMapping(
+      Map<String, Long> byOrcid, Map<String, Long> byDedupKey) {}
+
+  /// 从处理结果中收集研究者数据。
+  private InvestigatorCollectionResult collectInvestigatorsFromResults(
+      List<PublicationImportResult> results) {
+    Map<String, InvestigatorData> dedupKeyToData = new LinkedHashMap<>();
+    Map<Long, List<InvestigatorData>> publicationInvestigators = new LinkedHashMap<>();
+
+    for (PublicationImportResult result : results) {
+      if (!result.hasInvestigators()) {
+        continue;
+      }
+
+      Long pubId = result.publication().getId().value();
+      List<InvestigatorData> invList = new ArrayList<>();
+
+      for (InvestigatorData inv : result.investigators()) {
+        dedupKeyToData.putIfAbsent(inv.dedupKey(), inv);
+        invList.add(inv);
+      }
+
+      if (!invList.isEmpty()) {
+        publicationInvestigators.put(pubId, invList);
+      }
+    }
+
+    return new InvestigatorCollectionResult(dedupKeyToData, publicationInvestigators);
+  }
+
+  /// 查询已存在的研究者（优先 ORCID，其次 dedupKey）。
+  private ExistingInvestigatorMapping queryExistingInvestigators(
+      Map<String, InvestigatorData> dedupKeyToData) {
+    // 按 ORCID 查询
+    Set<String> orcids =
+        dedupKeyToData.values().stream()
+            .map(InvestigatorData::orcid)
+            .filter(Objects::nonNull)
+            .filter(s -> !s.isBlank())
+            .collect(Collectors.toSet());
+
+    Map<String, Long> existingByOrcid = new HashMap<>();
+    if (!orcids.isEmpty()) {
+      investigatorDao
+          .findByOrcidIn(orcids)
+          .forEach(e -> existingByOrcid.put(e.getOrcid(), e.getId()));
+    }
+
+    // 按 dedupKey 查询（排除已通过 ORCID 匹配的）
+    Set<String> dedupKeysToQuery =
+        dedupKeyToData.entrySet().stream()
+            .filter(
+                entry -> {
+                  String orcid = entry.getValue().orcid();
+                  return orcid == null || orcid.isBlank() || !existingByOrcid.containsKey(orcid);
+                })
+            .map(Map.Entry::getKey)
+            .collect(Collectors.toSet());
+
+    Map<String, Long> existingByDedupKey = new HashMap<>();
+    if (!dedupKeysToQuery.isEmpty()) {
+      investigatorDao
+          .findByDedupKeyIn(dedupKeysToQuery)
+          .forEach(e -> existingByDedupKey.put(e.getDedupKey(), e.getId()));
+    }
+
+    return new ExistingInvestigatorMapping(existingByOrcid, existingByDedupKey);
+  }
+
+  /// 创建新研究者记录（如果不存在）并返回 dedupKey → ID 映射。
+  private Map<String, Long> createNewInvestigatorsIfNeeded(
+      Map<String, InvestigatorData> dedupKeyToData, ExistingInvestigatorMapping existingMapping) {
+    List<InvestigatorEntity> newInvestigators = new ArrayList<>();
+    Map<String, Long> dedupKeyToInvestigatorId = new HashMap<>();
+
+    for (Map.Entry<String, InvestigatorData> entry : dedupKeyToData.entrySet()) {
+      String dedupKey = entry.getKey();
+      InvestigatorData data = entry.getValue();
+
+      // 优先 ORCID 匹配
+      Long existingId = null;
+      if (data.orcid() != null && !data.orcid().isBlank()) {
+        existingId = existingMapping.byOrcid().get(data.orcid());
+      }
+
+      // 其次 dedupKey 匹配
+      if (existingId == null) {
+        existingId = existingMapping.byDedupKey().get(dedupKey);
+      }
+
+      if (existingId != null) {
+        dedupKeyToInvestigatorId.put(dedupKey, existingId);
+      } else {
+        Long newId = SnowflakeIdGenerator.getId();
+        dedupKeyToInvestigatorId.put(dedupKey, newId);
+        newInvestigators.add(buildInvestigatorEntity(newId, data));
+      }
+    }
+
+    if (!newInvestigators.isEmpty()) {
+      investigatorDao.saveAll(newInvestigators);
+      log.debug("创建 {} 条新研究者记录", newInvestigators.size());
+    }
+
+    return dedupKeyToInvestigatorId;
+  }
+
+  /// 创建文献-研究者关联记录。
+  private void createInvestigatorAssociations(
+      Map<Long, List<InvestigatorData>> publicationInvestigators,
+      Map<String, Long> dedupKeyToInvestigatorId) {
+    List<PublicationInvestigatorEntity> associations = new ArrayList<>();
+
+    for (Map.Entry<Long, List<InvestigatorData>> entry : publicationInvestigators.entrySet()) {
+      Long pubId = entry.getKey();
+
+      for (InvestigatorData inv : entry.getValue()) {
+        Long investigatorId = dedupKeyToInvestigatorId.get(inv.dedupKey());
+        if (investigatorId == null) {
+          log.warn("研究者 ID 查找失败：dedupKey={}", inv.dedupKey());
+          continue;
+        }
+
+        PublicationInvestigatorEntity association =
+            PublicationInvestigatorEntity.builder()
+                .id(SnowflakeIdGenerator.getId())
+                .publicationId(pubId)
+                .investigatorId(investigatorId)
+                .orderNum(inv.orderNum())
+                .build();
+        associations.add(association);
+      }
+    }
+
+    if (!associations.isEmpty()) {
+      publicationInvestigatorDao.saveAll(associations);
+      log.debug("写入 {} 条研究者关联", associations.size());
+    }
+  }
+
+  /// 构建研究者实体。
+  ///
+  /// @param id 预分配的雪花 ID
+  /// @param data 研究者数据
+  /// @return 研究者实体
+  private InvestigatorEntity buildInvestigatorEntity(Long id, InvestigatorData data) {
+    return InvestigatorEntity.builder()
+        .id(id)
+        .lastName(data.lastName())
+        .foreName(data.foreName())
+        .initials(data.initials())
+        .suffix(data.suffix())
+        .orcid(data.orcid())
+        .affiliationName(data.affiliationName())
+        .dedupKey(data.dedupKey())
+        .build();
+  }
+
+  // ========== PersonalNameSubject 关联写入 ==========
+
+  /// 写入人物主题关联数据。
+  ///
+  /// 将文献的主题人物（传记类、历史类、纪念类文献的描述对象）
+  /// 写入 `cat_publication_personal_name_subject` 表。
+  ///
+  /// **设计说明**：
+  ///
+  /// 与研究者不同，人物主题不需要去重：
+  /// - 同一历史人物可能有多种名字拼写形式
+  /// - 不同文献引用同一人物时可能使用不同的描述
+  /// - 人物主题记录与文献绑定，不作为独立实体管理
+  private void writePersonalNameSubjectAssociations(List<PublicationImportResult> results) {
+    List<PublicationPersonalNameSubjectEntity> entities = new ArrayList<>();
+
+    for (PublicationImportResult result : results) {
+      if (!result.hasPersonalNameSubjects()) {
+        continue;
+      }
+
+      Long pubId = result.publication().getId().value();
+
+      for (PersonalNameSubjectData subject : result.personalNameSubjects()) {
+        PublicationPersonalNameSubjectEntity entity =
+            PublicationPersonalNameSubjectEntity.builder()
+                .publicationId(pubId)
+                .lastName(subject.lastName())
+                .foreName(subject.foreName())
+                .initials(subject.initials())
+                .suffix(subject.suffix())
+                .dates(subject.dates())
+                .description(subject.description())
+                .subjectType(subject.subjectType())
+                .identifier(subject.identifier())
+                .orderNum(subject.orderNum())
+                .build();
+        entity.setId(SnowflakeIdGenerator.getId());
+        entities.add(entity);
+      }
+    }
+
+    if (!entities.isEmpty()) {
+      personalNameSubjectDao.saveAll(entities);
+      log.debug("写入 {} 条人物主题关联", entities.size());
     }
   }
 }

@@ -10,15 +10,18 @@ import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.infra.adapter.persistence.converter.mapper.PublicationJpaMapper;
+import com.patra.catalog.infra.adapter.persistence.dao.InvestigatorDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationIdentifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationInvestigatorDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMetadataDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationPersonalNameSubjectDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.starter.batch.config.BatchProperties;
@@ -66,6 +69,9 @@ class PubmedBaselineJobConfigTest {
   @Mock private PublicationIdentifierDao identifierDao;
   @Mock private PublicationAbstractDao abstractDao;
   @Mock private PublicationMetadataDao metadataDao;
+  @Mock private InvestigatorDao investigatorDao;
+  @Mock private PublicationInvestigatorDao publicationInvestigatorDao;
+  @Mock private PublicationPersonalNameSubjectDao personalNameSubjectDao;
   @Mock private PublicationJpaMapper jpaMapper;
   @Mock private BatchProperties batchProperties;
 
@@ -92,6 +98,9 @@ class PubmedBaselineJobConfigTest {
             identifierDao,
             abstractDao,
             metadataDao,
+            investigatorDao,
+            publicationInvestigatorDao,
+            personalNameSubjectDao,
             jpaMapper,
             batchProperties,
             Optional.empty());
@@ -109,7 +118,7 @@ class PubmedBaselineJobConfigTest {
           jobConfig.pubmedArticleItemReader("https://example.com/test.xml.gz");
       PubmedArticleItemProcessor processor =
           jobConfig.pubmedArticleItemProcessor(
-              venueLookupPort, languageLookupPort, funderLookupPort, "test-batch-001");
+              venueLookupPort, languageLookupPort, funderLookupPort, "test-batch");
       Step step = jobConfig.pubmedArticleProcessingStep(reader, processor);
 
       // when
@@ -133,7 +142,7 @@ class PubmedBaselineJobConfigTest {
           jobConfig.pubmedArticleItemReader("https://example.com/test.xml.gz");
       PubmedArticleItemProcessor processor =
           jobConfig.pubmedArticleItemProcessor(
-              venueLookupPort, languageLookupPort, funderLookupPort, "test-batch-001");
+              venueLookupPort, languageLookupPort, funderLookupPort, "test-batch");
 
       // when
       Step step = jobConfig.pubmedArticleProcessingStep(reader, processor);
@@ -172,7 +181,7 @@ class PubmedBaselineJobConfigTest {
       // when - 通过方法参数传入 @StepScope beans
       PubmedArticleItemProcessor processor =
           jobConfig.pubmedArticleItemProcessor(
-              venueLookupPort, languageLookupPort, funderLookupPort, "test-batch-001");
+              venueLookupPort, languageLookupPort, funderLookupPort, "test-batch");
 
       // then
       assertThat(processor).isNotNull();
@@ -200,6 +209,9 @@ class PubmedBaselineJobConfigTest {
               identifierDao,
               abstractDao,
               metadataDao,
+              investigatorDao,
+              publicationInvestigatorDao,
+              personalNameSubjectDao,
               jpaMapper);
 
       // then
