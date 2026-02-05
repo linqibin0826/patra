@@ -264,6 +264,17 @@ patra:
   - `OrganizationLink`：机构链接（官网/维基百科，支持语言标记）
   - `AdminInfo`：管理信息（ROR 创建/更新日期和版本号）
 
+- **值对象（publication 子包）**：文献批量导入关联数据的值对象（`PublicationRepository.insertAllWithAssociations()` 使用）
+  - `PublicationCompleteData`：完整文献数据封装（聚合根 + 所有关联数据），Repository 批量写入接口的参数类型
+  - `PublicationMeshHeading`：文献 MeSH 标引值对象（含 Descriptor UI、主题标记、顺序）
+  - `MeshQualifier`：MeSH 限定词值对象（嵌套在 MeshHeading 中）
+  - `PublicationKeyword`：文献关键词值对象（来源、主/副标记、顺序）
+  - `PublicationFunding`：文献资助信息值对象（资助机构、项目编号、数据来源）
+  - `PublicationTypeInfo`：文献出版类型值对象（类型 ID、类型值、词汇来源）
+  - `PublicationSupplMesh`：文献补充 MeSH 概念值对象（SCR UI、顺序）
+  - `PublicationInvestigator`：文献研究者值对象（姓名、ORCID、机构、dedupKey）
+  - `PublicationPersonalNameSubject`：文献人物主题值对象（传记类/历史类文献的主题人物）
+
 - **值对象（venue/pubmed 子包）**：NLM LSIOU 解析结果的完整领域模型（解析器直接产出）
   - `PubmedSerialData`：PubMed 期刊解析数据（完整版，44 字段，解析器直接产出 Domain 模型）
   - `PubmedLanguage`：PubMed 期刊语言信息（主要/次要语言）
@@ -342,6 +353,13 @@ patra:
   - `cat_publication_mesh_heading`：文献-MeSH 主题标引表（一对多：一篇文献多个标引）
   - `cat_publication_mesh_qualifier`：文献-MeSH 限定词表（一对多：一个标引多个限定词）
   - `cat_publication_suppl_mesh`：文献-补充 MeSH 概念关联表（关联 SCR：化学物质、疾病、方案等）
+
+- **Keyword（关键词）相关表**
+  - `cat_keyword`：关键词主表（~800 万条，作者/编辑/索引机构提供的自由关键词，含规范化词形去重、频次统计）
+  - `cat_publication_keyword`：文献-关键词关联表（~8500 万条，多对多关系，含主/副关键词标记、来源集合、顺序）
+
+- **PublicationType（出版类型）相关表**
+  - `cat_publication_type`：文献出版类型关联表（一对多，含类型 ID、类型值、词汇来源、顺序）
 
 - **Publication（文献）补充数据表**
   - `cat_publication_abstract`：文献摘要表（独立存储，支持结构化摘要 JSON 和纯文本摘要，含版权信息）
