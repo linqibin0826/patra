@@ -3,6 +3,7 @@ package com.patra.catalog.domain.port.repository;
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import com.patra.catalog.domain.model.vo.publication.PublicationAbstract;
 import com.patra.catalog.domain.model.vo.publication.PublicationAlternativeAbstract;
+import com.patra.catalog.domain.model.vo.publication.PublicationCompleteData;
 import com.patra.catalog.domain.model.vo.publication.PublicationDate;
 import com.patra.catalog.domain.model.vo.publication.PublicationIdentifier;
 import com.patra.catalog.domain.model.vo.publication.PublicationMetadata;
@@ -110,6 +111,26 @@ public interface PublicationRepository {
   ///
   /// @param aggregates 文献聚合根列表
   void insertAll(List<PublicationAggregate> aggregates);
+
+  /// 批量插入文献及其关联数据。
+  ///
+  /// 用于 PubMed Baseline 等批量导入场景，一次性写入：
+  /// - 文献聚合根（ID 会被回填）
+  /// - MeSH 标引、关键词、资助信息、出版类型
+  /// - 补充 MeSH 概念、翻译摘要、日期信息
+  /// - 元数据、研究者、人物主题
+  ///
+  /// **事务保证**：
+  ///
+  /// 所有数据在同一事务内写入，保证一致性。
+  ///
+  /// **性能优化**：
+  ///
+  /// - 批量插入减少数据库往返次数
+  /// - 研究者去重（优先 ORCID 匹配，其次 dedupKey 匹配）
+  ///
+  /// @param data 完整文献数据列表
+  void insertAllWithAssociations(List<PublicationCompleteData> data);
 
   /// 批量更新文献。
   ///
