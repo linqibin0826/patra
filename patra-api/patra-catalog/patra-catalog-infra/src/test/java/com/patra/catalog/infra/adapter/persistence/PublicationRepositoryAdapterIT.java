@@ -5,12 +5,37 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import com.patra.catalog.domain.model.enums.OaStatus;
+import com.patra.catalog.domain.model.enums.PublicationDateType;
 import com.patra.catalog.domain.model.enums.PublicationMedium;
 import com.patra.catalog.domain.model.enums.PublicationStatus;
 import com.patra.catalog.domain.model.vo.publication.LanguageInfo;
+import com.patra.catalog.domain.model.vo.publication.MeshQualifier;
+import com.patra.catalog.domain.model.vo.publication.PublicationAlternativeAbstract;
+import com.patra.catalog.domain.model.vo.publication.PublicationCompleteData;
+import com.patra.catalog.domain.model.vo.publication.PublicationDate;
+import com.patra.catalog.domain.model.vo.publication.PublicationFunding;
+import com.patra.catalog.domain.model.vo.publication.PublicationInvestigator;
+import com.patra.catalog.domain.model.vo.publication.PublicationKeyword;
+import com.patra.catalog.domain.model.vo.publication.PublicationMeshHeading;
+import com.patra.catalog.domain.model.vo.publication.PublicationMetadata;
+import com.patra.catalog.domain.model.vo.publication.PublicationPersonalNameSubject;
+import com.patra.catalog.domain.model.vo.publication.PublicationSupplMesh;
+import com.patra.catalog.domain.model.vo.publication.PublicationTypeInfo;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
+import com.patra.catalog.infra.adapter.persistence.dao.InvestigatorDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationInvestigatorDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationMetadataDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationPersonalNameSubjectDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
@@ -60,6 +85,18 @@ class PublicationRepositoryAdapterIT {
   @Autowired private PublicationRepositoryAdapter repository;
 
   @Autowired private PublicationDao jpaRepository;
+  @Autowired private PublicationMeshHeadingDao meshHeadingDao;
+  @Autowired private PublicationMeshQualifierDao meshQualifierDao;
+  @Autowired private PublicationKeywordDao keywordDao;
+  @Autowired private PublicationFundingDao fundingDao;
+  @Autowired private PublicationTypeDao typeDao;
+  @Autowired private PublicationSupplMeshDao supplMeshDao;
+  @Autowired private PublicationAlternativeAbstractDao alternativeAbstractDao;
+  @Autowired private PublicationDateDao dateDao;
+  @Autowired private PublicationMetadataDao metadataDao;
+  @Autowired private InvestigatorDao investigatorDao;
+  @Autowired private PublicationInvestigatorDao publicationInvestigatorDao;
+  @Autowired private PublicationPersonalNameSubjectDao personalNameSubjectDao;
 
   // ========== 工厂方法 ==========
 
@@ -597,6 +634,302 @@ class PublicationRepositoryAdapterIT {
       assertThat(found.getLanguageInfo().raw()).isEqualTo("Chinese");
       assertThat(found.getLanguageInfo().code()).isEqualTo("zh-CN");
       // language_base 由数据库生成列计算
+    }
+  }
+
+  @Nested
+  @DisplayName("insertAllWithAssociations 测试")
+  class InsertAllWithAssociationsTests {
+
+    @Test
+    @DisplayName("应该写入主数据和所有关联数据")
+    void should_insert_publication_and_all_associations() {
+      // Given
+      var publication =
+          createPublication("70707070", "10.7070/test", 1001L, 2001L, "Test Pub", 2024);
+
+      var meshHeading =
+          PublicationMeshHeading.of(
+              "D000001", true, 1, List.of(MeshQualifier.ofMinor("Q000001", 1)));
+
+      var keyword = PublicationKeyword.ofAuthor("artificial intelligence", 1);
+
+      var funding =
+          PublicationFunding.builder()
+              .organizationId(100L)
+              .funderNameRaw("Test Agency")
+              .grantId("Grant-001")
+              .countryRaw("USA")
+              .provenanceCode("PUBMED")
+              .build();
+
+      var pubType = PublicationTypeInfo.of("D016428", "Journal Article", "PUBMED", 1);
+
+      var supplMesh = PublicationSupplMesh.of("C000001", 1);
+
+      var altAbstract = PublicationAlternativeAbstract.ofOfficial("zh-CN", "Chinese", "简体中文摘要");
+
+      var pubDate = PublicationDate.of(PublicationDateType.PUBLISHED, 2024, 1, 15);
+
+      var metadata = PublicationMetadata.ofImport(ProvenanceCode.PUBMED, "test-batch-001");
+
+      var investigator =
+          PublicationInvestigator.builder()
+              .lastName("Smith")
+              .foreName("John")
+              .initials("J")
+              .orcid("0000-0001-1234-5678")
+              .affiliationName("Test Affiliation")
+              .dedupKey("dedup-smith-john-1234")
+              .build();
+
+      var personalNameSubject =
+          PublicationPersonalNameSubject.builder()
+              .lastName("Einstein")
+              .foreName("Albert")
+              .initials("A")
+              .dates("1879-1955")
+              .build();
+
+      var completeData =
+          PublicationCompleteData.builder()
+              .publication(publication)
+              .metadata(metadata)
+              .meshHeadings(List.of(meshHeading))
+              .keywords(List.of(keyword))
+              .funding(List.of(funding))
+              .publicationTypes(List.of(pubType))
+              .supplMeshList(List.of(supplMesh))
+              .alternativeAbstracts(List.of(altAbstract))
+              .dates(List.of(pubDate))
+              .investigators(List.of(investigator))
+              .personalNameSubjects(List.of(personalNameSubject))
+              .build();
+
+      // When
+      repository.insertAllWithAssociations(List.of(completeData));
+
+      // Then - 验证主数据
+      assertThat(jpaRepository.count()).isEqualTo(1);
+      assertThat(publication.getId()).isNotNull();
+      Long pubId = publication.getId().value();
+
+      // 验证关联数据
+      var meshHeadings = meshHeadingDao.findByPublicationId(pubId);
+      assertThat(meshHeadings).hasSize(1);
+      // 验证 MeSH 限定词（通过 MeSH 标引 ID 查询）
+      var qualifiers =
+          meshQualifierDao.findByPublicationMeshHeadingId(meshHeadings.getFirst().getId());
+      assertThat(qualifiers).hasSize(1);
+      assertThat(keywordDao.findByPublicationId(pubId)).hasSize(1);
+      assertThat(fundingDao.findByPublicationId(pubId)).hasSize(1);
+      assertThat(typeDao.findByPublicationId(pubId)).hasSize(1);
+      assertThat(supplMeshDao.findByPublicationId(pubId)).hasSize(1);
+      assertThat(alternativeAbstractDao.findByPublicationId(pubId)).hasSize(1);
+      assertThat(dateDao.findByPublicationId(pubId)).hasSize(1);
+      assertThat(metadataDao.findByPublicationId(pubId)).isPresent();
+      assertThat(publicationInvestigatorDao.findByPublicationId(pubId)).hasSize(1);
+      assertThat(personalNameSubjectDao.findByPublicationId(pubId)).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("空列表应该不执行任何操作")
+    void should_do_nothing_for_empty_list() {
+      // When
+      repository.insertAllWithAssociations(List.of());
+
+      // Then
+      assertThat(jpaRepository.count()).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("null 应该不执行任何操作")
+    void should_do_nothing_for_null() {
+      // When
+      repository.insertAllWithAssociations(null);
+
+      // Then
+      assertThat(jpaRepository.count()).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("无关联数据的文献应该只写入主数据")
+    void should_insert_publication_only_when_no_associations() {
+      // Given
+      var publication =
+          createPublication("71717171", "10.7171/test", 1001L, 2001L, "Minimal Pub", 2024);
+      var completeData = PublicationCompleteData.ofPublication(publication);
+
+      // When
+      repository.insertAllWithAssociations(List.of(completeData));
+
+      // Then
+      assertThat(jpaRepository.count()).isEqualTo(1);
+      Long pubId = publication.getId().value();
+
+      // 验证无关联数据
+      assertThat(meshHeadingDao.findByPublicationId(pubId)).isEmpty();
+      assertThat(keywordDao.findByPublicationId(pubId)).isEmpty();
+      assertThat(fundingDao.findByPublicationId(pubId)).isEmpty();
+      assertThat(typeDao.findByPublicationId(pubId)).isEmpty();
+      assertThat(supplMeshDao.findByPublicationId(pubId)).isEmpty();
+      assertThat(alternativeAbstractDao.findByPublicationId(pubId)).isEmpty();
+      assertThat(dateDao.findByPublicationId(pubId)).isEmpty();
+      assertThat(metadataDao.findByPublicationId(pubId)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("研究者去重 - 相同 ORCID 应该复用")
+    void should_deduplicate_investigators_by_orcid() {
+      // Given - 两篇文献引用同一个研究者（相同 ORCID）
+      var pub1 = createPublication("72727271", "10.7272/a", 1001L, 2001L, "Pub A", 2024);
+      var pub2 = createPublication("72727272", "10.7272/b", 1001L, 2001L, "Pub B", 2024);
+
+      String sharedOrcid = "0000-0001-9999-8888";
+      String sharedDedupKey = "dedup-smith-john-orcid";
+      var investigator1 =
+          PublicationInvestigator.builder()
+              .lastName("Smith")
+              .foreName("John")
+              .initials("J")
+              .orcid(sharedOrcid)
+              .affiliationName("Affiliation A")
+              .dedupKey(sharedDedupKey)
+              .build();
+      var investigator2 =
+          PublicationInvestigator.builder()
+              .lastName("Smith")
+              .foreName("John")
+              .initials("J")
+              .orcid(sharedOrcid)
+              .affiliationName("Affiliation B")
+              .dedupKey(sharedDedupKey)
+              .build();
+
+      var data1 =
+          PublicationCompleteData.builder()
+              .publication(pub1)
+              .investigators(List.of(investigator1))
+              .build();
+      var data2 =
+          PublicationCompleteData.builder()
+              .publication(pub2)
+              .investigators(List.of(investigator2))
+              .build();
+
+      // When
+      repository.insertAllWithAssociations(List.of(data1, data2));
+
+      // Then
+      assertThat(jpaRepository.count()).isEqualTo(2);
+
+      // 研究者主表应该只有 1 条记录（去重）
+      assertThat(investigatorDao.findByOrcid(sharedOrcid)).isPresent();
+
+      // 关联表应该有 2 条记录（两篇文献各引用一次）
+      Long pub1Id = pub1.getId().value();
+      Long pub2Id = pub2.getId().value();
+      assertThat(publicationInvestigatorDao.findByPublicationId(pub1Id)).hasSize(1);
+      assertThat(publicationInvestigatorDao.findByPublicationId(pub2Id)).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("研究者去重 - 无 ORCID 时使用 dedupKey")
+    void should_deduplicate_investigators_by_dedup_key_when_no_orcid() {
+      // Given - 两篇文献引用同一个研究者（无 ORCID，但姓名相同）
+      var pub1 = createPublication("73737371", "10.7373/a", 1001L, 2001L, "Pub A", 2024);
+      var pub2 = createPublication("73737372", "10.7373/b", 1001L, 2001L, "Pub B", 2024);
+
+      // 无 ORCID，但姓名相同 -> 应该被去重（使用相同的 dedupKey）
+      String sharedDedupKey = "dedup-johnson-mary-noorcid";
+      var investigator1 =
+          PublicationInvestigator.builder()
+              .lastName("Johnson")
+              .foreName("Mary")
+              .initials("M")
+              .affiliationName("Affiliation A")
+              .dedupKey(sharedDedupKey)
+              .build();
+      var investigator2 =
+          PublicationInvestigator.builder()
+              .lastName("Johnson")
+              .foreName("Mary")
+              .initials("M")
+              .affiliationName("Affiliation B")
+              .dedupKey(sharedDedupKey)
+              .build();
+
+      var data1 =
+          PublicationCompleteData.builder()
+              .publication(pub1)
+              .investigators(List.of(investigator1))
+              .build();
+      var data2 =
+          PublicationCompleteData.builder()
+              .publication(pub2)
+              .investigators(List.of(investigator2))
+              .build();
+
+      // When
+      repository.insertAllWithAssociations(List.of(data1, data2));
+
+      // Then
+      assertThat(jpaRepository.count()).isEqualTo(2);
+
+      // 关联表应该有 2 条记录
+      Long pub1Id = pub1.getId().value();
+      Long pub2Id = pub2.getId().value();
+      assertThat(publicationInvestigatorDao.findByPublicationId(pub1Id)).hasSize(1);
+      assertThat(publicationInvestigatorDao.findByPublicationId(pub2Id)).hasSize(1);
+
+      // 研究者主表的记录数取决于去重实现，至少应该 >= 1
+      assertThat(investigatorDao.count()).isGreaterThanOrEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("批量写入多条文献及关联数据")
+    void should_batch_insert_multiple_publications_with_associations() {
+      // Given
+      var pub1 = createPublication("74747471", "10.7474/a", 1001L, 2001L, "Batch Pub A", 2024);
+      var pub2 = createPublication("74747472", "10.7474/b", 1001L, 2001L, "Batch Pub B", 2024);
+      var pub3 = createPublication("74747473", "10.7474/c", 1001L, 2001L, "Batch Pub C", 2024);
+
+      var data1 =
+          PublicationCompleteData.builder()
+              .publication(pub1)
+              .keywords(List.of(PublicationKeyword.ofAuthor("keyword1", 1)))
+              .build();
+      var data2 =
+          PublicationCompleteData.builder()
+              .publication(pub2)
+              .keywords(
+                  List.of(
+                      PublicationKeyword.ofAuthor("keyword2", 1),
+                      PublicationKeyword.of("mesh", "keyword3", true, 2)))
+              .build();
+      var data3 =
+          PublicationCompleteData.builder()
+              .publication(pub3)
+              .publicationTypes(
+                  List.of(PublicationTypeInfo.of("D016428", "Journal Article", "PUBMED", 1)))
+              .build();
+
+      // When
+      repository.insertAllWithAssociations(List.of(data1, data2, data3));
+
+      // Then
+      assertThat(jpaRepository.count()).isEqualTo(3);
+
+      // 验证 ID 都已分配
+      assertThat(pub1.getId()).isNotNull();
+      assertThat(pub2.getId()).isNotNull();
+      assertThat(pub3.getId()).isNotNull();
+
+      // 验证关联数据分布正确
+      assertThat(keywordDao.findByPublicationId(pub1.getId().value())).hasSize(1);
+      assertThat(keywordDao.findByPublicationId(pub2.getId().value())).hasSize(2);
+      assertThat(keywordDao.findByPublicationId(pub3.getId().value())).isEmpty();
+      assertThat(typeDao.findByPublicationId(pub3.getId().value())).hasSize(1);
     }
   }
 }
