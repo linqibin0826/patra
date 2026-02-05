@@ -9,21 +9,6 @@ import com.patra.catalog.domain.port.lookup.VenueLookupPort;
 import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
-import com.patra.catalog.infra.adapter.persistence.converter.mapper.PublicationJpaMapper;
-import com.patra.catalog.infra.adapter.persistence.dao.InvestigatorDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationAbstractDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationIdentifierDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationInvestigatorDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationMetadataDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationPersonalNameSubjectDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.starter.batch.config.BatchProperties;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -42,6 +27,12 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 /// PubmedBaselineJobConfig 单元测试。
 ///
+/// **重构后的测试策略**：
+///
+/// 重构后 JobConfig 的依赖大幅简化：
+/// - 移除 15+ 个 DAO 依赖
+/// - Writer 仅依赖 PublicationRepository 和 PublicationImportResultMapper
+///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("PubmedBaselineJobConfig")
@@ -58,22 +49,8 @@ class PubmedBaselineJobConfigTest {
   @Mock private LanguageLookupPort languageLookupPort;
   @Mock private FunderLookupPort funderLookupPort;
   @Mock private VenueInstanceGateway venueInstanceGateway;
-  @Mock private PublicationMeshHeadingDao meshHeadingDao;
-  @Mock private PublicationMeshQualifierDao meshQualifierDao;
-  @Mock private PublicationKeywordDao keywordDao;
-  @Mock private PublicationFundingDao fundingDao;
-  @Mock private PublicationTypeDao typeDao;
-  @Mock private PublicationSupplMeshDao supplMeshDao;
-  @Mock private PublicationAlternativeAbstractDao alternativeAbstractDao;
-  @Mock private PublicationDateDao dateDao;
-  @Mock private PublicationIdentifierDao identifierDao;
-  @Mock private PublicationAbstractDao abstractDao;
-  @Mock private PublicationMetadataDao metadataDao;
-  @Mock private InvestigatorDao investigatorDao;
-  @Mock private PublicationInvestigatorDao publicationInvestigatorDao;
-  @Mock private PublicationPersonalNameSubjectDao personalNameSubjectDao;
-  @Mock private PublicationJpaMapper jpaMapper;
   @Mock private BatchProperties batchProperties;
+  @Mock private PublicationImportResultMapper resultMapper;
 
   private PubmedBaselineJobConfig jobConfig;
 
@@ -87,21 +64,6 @@ class PubmedBaselineJobConfigTest {
             pubmedXmlParserPort,
             publicationRepository,
             venueInstanceGateway,
-            meshHeadingDao,
-            meshQualifierDao,
-            keywordDao,
-            fundingDao,
-            typeDao,
-            supplMeshDao,
-            alternativeAbstractDao,
-            dateDao,
-            identifierDao,
-            abstractDao,
-            metadataDao,
-            investigatorDao,
-            publicationInvestigatorDao,
-            personalNameSubjectDao,
-            jpaMapper,
             batchProperties,
             Optional.empty());
   }
@@ -119,7 +81,8 @@ class PubmedBaselineJobConfigTest {
       PubmedArticleItemProcessor processor =
           jobConfig.pubmedArticleItemProcessor(
               venueLookupPort, languageLookupPort, funderLookupPort, "test-batch");
-      Step step = jobConfig.pubmedArticleProcessingStep(reader, processor);
+      PublicationItemWriter writer = jobConfig.publicationItemWriter(resultMapper);
+      Step step = jobConfig.pubmedArticleProcessingStep(reader, processor, writer);
 
       // when
       Job job = jobConfig.pubmedBaselineImportJob(step);
@@ -137,15 +100,16 @@ class PubmedBaselineJobConfigTest {
     @Test
     @DisplayName("应该创建名为 pubmedArticleProcessingStep 的 Step")
     void should_create_step_with_correct_name() {
-      // given - 创建 Reader 和 Processor 依赖
+      // given - 创建 Reader、Processor 和 Writer 依赖
       PubmedArticleItemReader reader =
           jobConfig.pubmedArticleItemReader("https://example.com/test.xml.gz");
       PubmedArticleItemProcessor processor =
           jobConfig.pubmedArticleItemProcessor(
               venueLookupPort, languageLookupPort, funderLookupPort, "test-batch");
+      PublicationItemWriter writer = jobConfig.publicationItemWriter(resultMapper);
 
       // when
-      Step step = jobConfig.pubmedArticleProcessingStep(reader, processor);
+      Step step = jobConfig.pubmedArticleProcessingStep(reader, processor, writer);
 
       // then
       assertThat(step).isNotNull();
@@ -196,23 +160,7 @@ class PubmedBaselineJobConfigTest {
     @DisplayName("应该创建 PublicationItemWriter")
     void should_create_item_writer() {
       // when
-      PublicationItemWriter writer =
-          jobConfig.publicationItemWriter(
-              meshHeadingDao,
-              meshQualifierDao,
-              keywordDao,
-              fundingDao,
-              typeDao,
-              supplMeshDao,
-              alternativeAbstractDao,
-              dateDao,
-              identifierDao,
-              abstractDao,
-              metadataDao,
-              investigatorDao,
-              publicationInvestigatorDao,
-              personalNameSubjectDao,
-              jpaMapper);
+      PublicationItemWriter writer = jobConfig.publicationItemWriter(resultMapper);
 
       // then
       assertThat(writer).isNotNull();
