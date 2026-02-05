@@ -7,21 +7,6 @@ import com.patra.catalog.domain.port.lookup.VenueLookupPort;
 import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.domain.port.source.StreamingDownloadPort;
-import com.patra.catalog.infra.adapter.persistence.converter.mapper.PublicationJpaMapper;
-import com.patra.catalog.infra.adapter.persistence.dao.InvestigatorDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationAbstractDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationIdentifierDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationInvestigatorDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationMetadataDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationPersonalNameSubjectDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.starter.batch.config.BatchProperties;
 import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
@@ -79,21 +64,6 @@ public class PubmedBaselineJobConfig {
   private final PubmedXmlParserPort pubmedXmlParserPort;
   private final PublicationRepository publicationRepository;
   private final VenueInstanceGateway venueInstanceGateway;
-  private final PublicationMeshHeadingDao meshHeadingDao;
-  private final PublicationMeshQualifierDao meshQualifierDao;
-  private final PublicationKeywordDao keywordDao;
-  private final PublicationFundingDao fundingDao;
-  private final PublicationTypeDao typeDao;
-  private final PublicationSupplMeshDao supplMeshDao;
-  private final PublicationAlternativeAbstractDao alternativeAbstractDao;
-  private final PublicationDateDao dateDao;
-  private final PublicationIdentifierDao identifierDao;
-  private final PublicationAbstractDao abstractDao;
-  private final PublicationMetadataDao metadataDao;
-  private final InvestigatorDao investigatorDao;
-  private final PublicationInvestigatorDao publicationInvestigatorDao;
-  private final PublicationPersonalNameSubjectDao personalNameSubjectDao;
-  private final PublicationJpaMapper jpaMapper;
   private final BatchProperties batchProperties;
   private final BatchProgressMetricsListener batchProgressMetricsListener;
 
@@ -105,21 +75,6 @@ public class PubmedBaselineJobConfig {
   /// @param pubmedXmlParserPort PubMed XML 解析端口
   /// @param publicationRepository 文献仓库
   /// @param venueInstanceGateway 载体实例端口
-  /// @param meshHeadingDao MeSH Heading DAO
-  /// @param meshQualifierDao MeSH Qualifier DAO
-  /// @param keywordDao 关键词 DAO
-  /// @param fundingDao 资助信息 DAO
-  /// @param typeDao 出版类型 DAO
-  /// @param supplMeshDao 补充 MeSH 概念 DAO
-  /// @param alternativeAbstractDao 翻译摘要 DAO
-  /// @param dateDao 日期 DAO
-  /// @param identifierDao 标识符 DAO
-  /// @param abstractDao 摘要 DAO
-  /// @param metadataDao 元数据 DAO
-  /// @param investigatorDao 研究者 DAO
-  /// @param publicationInvestigatorDao 文献-研究者关联 DAO
-  /// @param personalNameSubjectDao 人物主题 DAO
-  /// @param jpaMapper JPA 实体转换器
   /// @param batchProperties 批处理属性
   /// @param batchProgressMetricsListener 进度指标监听器（可选）
   public PubmedBaselineJobConfig(
@@ -129,21 +84,6 @@ public class PubmedBaselineJobConfig {
       PubmedXmlParserPort pubmedXmlParserPort,
       PublicationRepository publicationRepository,
       VenueInstanceGateway venueInstanceGateway,
-      PublicationMeshHeadingDao meshHeadingDao,
-      PublicationMeshQualifierDao meshQualifierDao,
-      PublicationKeywordDao keywordDao,
-      PublicationFundingDao fundingDao,
-      PublicationTypeDao typeDao,
-      PublicationSupplMeshDao supplMeshDao,
-      PublicationAlternativeAbstractDao alternativeAbstractDao,
-      PublicationDateDao dateDao,
-      PublicationIdentifierDao identifierDao,
-      PublicationAbstractDao abstractDao,
-      PublicationMetadataDao metadataDao,
-      InvestigatorDao investigatorDao,
-      PublicationInvestigatorDao publicationInvestigatorDao,
-      PublicationPersonalNameSubjectDao personalNameSubjectDao,
-      PublicationJpaMapper jpaMapper,
       BatchProperties batchProperties,
       Optional<BatchProgressMetricsListener> batchProgressMetricsListener) {
     this.jobRepository = jobRepository;
@@ -152,21 +92,6 @@ public class PubmedBaselineJobConfig {
     this.pubmedXmlParserPort = pubmedXmlParserPort;
     this.publicationRepository = publicationRepository;
     this.venueInstanceGateway = venueInstanceGateway;
-    this.meshHeadingDao = meshHeadingDao;
-    this.meshQualifierDao = meshQualifierDao;
-    this.keywordDao = keywordDao;
-    this.fundingDao = fundingDao;
-    this.typeDao = typeDao;
-    this.supplMeshDao = supplMeshDao;
-    this.alternativeAbstractDao = alternativeAbstractDao;
-    this.dateDao = dateDao;
-    this.identifierDao = identifierDao;
-    this.abstractDao = abstractDao;
-    this.metadataDao = metadataDao;
-    this.investigatorDao = investigatorDao;
-    this.publicationInvestigatorDao = publicationInvestigatorDao;
-    this.personalNameSubjectDao = personalNameSubjectDao;
-    this.jpaMapper = jpaMapper;
     this.batchProperties = batchProperties;
     this.batchProgressMetricsListener = batchProgressMetricsListener.orElse(null);
   }
@@ -184,14 +109,17 @@ public class PubmedBaselineJobConfig {
 
   /// 配置 PubMed 文献处理 Step。
   ///
-  /// **注意**：Reader 和 Processor 通过方法参数注入，因为它们是 `@StepScope` Bean。
+  /// **注意**：Reader、Processor 和 Writer 通过方法参数注入。
   ///
   /// @param reader 文献读取器（@StepScope）
   /// @param processor 文献处理器（@StepScope）
+  /// @param writer 文献写入器
   /// @return Step 实例
   @Bean
   public Step pubmedArticleProcessingStep(
-      PubmedArticleItemReader reader, PubmedArticleItemProcessor processor) {
+      PubmedArticleItemReader reader,
+      PubmedArticleItemProcessor processor,
+      PublicationItemWriter writer) {
     int chunkSize = getChunkSize();
     log.info("配置 pubmedArticleProcessingStep，chunk size: {}", chunkSize);
 
@@ -201,23 +129,7 @@ public class PubmedBaselineJobConfig {
             .transactionManager(transactionManager)
             .reader(reader)
             .processor(processor)
-            .writer(
-                publicationItemWriter(
-                    meshHeadingDao,
-                    meshQualifierDao,
-                    keywordDao,
-                    fundingDao,
-                    typeDao,
-                    supplMeshDao,
-                    alternativeAbstractDao,
-                    dateDao,
-                    identifierDao,
-                    abstractDao,
-                    metadataDao,
-                    investigatorDao,
-                    publicationInvestigatorDao,
-                    personalNameSubjectDao,
-                    jpaMapper))
+            .writer(writer)
             .faultTolerant()
             .skipLimit(DEFAULT_SKIP_LIMIT)
             .skip(Exception.class);
@@ -270,56 +182,16 @@ public class PubmedBaselineJobConfig {
 
   /// 创建 Publication ItemWriter。
   ///
-  /// @param headingDao MeSH Heading DAO
-  /// @param qualifierDao MeSH Qualifier DAO
-  /// @param kwDao 关键词 DAO
-  /// @param fundDao 资助信息 DAO
-  /// @param ptDao 出版类型 DAO
-  /// @param supplMeshDao 补充 MeSH 概念 DAO
-  /// @param altAbstractDao 翻译摘要 DAO
-  /// @param dateDao 日期 DAO
-  /// @param idDao 标识符 DAO
-  /// @param absDao 摘要 DAO
-  /// @param metaDao 元数据 DAO
-  /// @param invDao 研究者 DAO
-  /// @param pubInvDao 文献-研究者关联 DAO
-  /// @param pnsDao 人物主题 DAO
-  /// @param mapper JPA 实体转换器
+  /// **重构说明**：
+  ///
+  /// 重构后 Writer 仅依赖 Repository 和 Mapper，不再直接依赖多个 DAO。
+  /// 所有关联数据的写入逻辑已移至 PublicationRepositoryAdapter.insertAllWithAssociations()。
+  ///
+  /// @param resultMapper 结果转换器（Data → Domain 值对象）
   /// @return ItemWriter 实例
   @Bean
-  public PublicationItemWriter publicationItemWriter(
-      PublicationMeshHeadingDao headingDao,
-      PublicationMeshQualifierDao qualifierDao,
-      PublicationKeywordDao kwDao,
-      PublicationFundingDao fundDao,
-      PublicationTypeDao ptDao,
-      PublicationSupplMeshDao supplMeshDao,
-      PublicationAlternativeAbstractDao altAbstractDao,
-      PublicationDateDao dateDao,
-      PublicationIdentifierDao idDao,
-      PublicationAbstractDao absDao,
-      PublicationMetadataDao metaDao,
-      InvestigatorDao invDao,
-      PublicationInvestigatorDao pubInvDao,
-      PublicationPersonalNameSubjectDao pnsDao,
-      PublicationJpaMapper mapper) {
-    return new PublicationItemWriter(
-        publicationRepository,
-        headingDao,
-        qualifierDao,
-        kwDao,
-        fundDao,
-        ptDao,
-        supplMeshDao,
-        altAbstractDao,
-        dateDao,
-        idDao,
-        absDao,
-        metaDao,
-        invDao,
-        pubInvDao,
-        pnsDao,
-        mapper);
+  public PublicationItemWriter publicationItemWriter(PublicationImportResultMapper resultMapper) {
+    return new PublicationItemWriter(publicationRepository, resultMapper);
   }
 
   /// 获取 chunk size。
