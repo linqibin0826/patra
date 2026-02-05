@@ -36,27 +36,30 @@
 
 CREATE TABLE IF NOT EXISTS `cat_keyword` (
     -- ========================================
+    -- 主键
+    -- ========================================
+    `id` BIGINT NOT NULL COMMENT '主键,雪花算法预分配',
+
+    -- ========================================
     -- 业务字段
     -- ========================================
-    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键,雪花算法生成',
     `term` VARCHAR(500) NOT NULL COMMENT '关键词原始形式',
     `source` VARCHAR(50) NULL DEFAULT NULL COMMENT '来源(枚举:author/editor/indexer/pubmed)',
     `language` VARCHAR(10) NULL DEFAULT NULL COMMENT '语言代码(ISO 639-1,如 en/zh)',
     `normalized_term` VARCHAR(255) NULL DEFAULT NULL COMMENT '规范化词形(小写+去标点+去空格,用于去重)',
     `frequency` INT UNSIGNED NULL DEFAULT 0 COMMENT '出现频次(被多少篇文献使用)',
-    `metadata` JSON NULL DEFAULT NULL COMMENT '元数据(扩展字段)',
 
     -- ========================================
-    -- 审计字段（完整版）
+    -- 审计字段（BaseJpaEntity）
     -- ========================================
     `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
-    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
+    `version` BIGINT NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
     `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
     `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
-    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
+    `created_by` BIGINT NULL DEFAULT NULL COMMENT '创建人ID',
     `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
     `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
-    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
+    `updated_by` BIGINT NULL DEFAULT NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
 
     -- ========================================
@@ -64,8 +67,8 @@ CREATE TABLE IF NOT EXISTS `cat_keyword` (
     -- ========================================
     PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
 
-    -- 普通索引
-    INDEX `idx_normalized` (`normalized_term`) COMMENT '规范化词形索引,支持去重查询',
+    -- 唯一索引（规范化词形去重）
+    UNIQUE INDEX `uk_normalized_term` (`normalized_term`) COMMENT '规范化词形唯一索引,确保关键词去重',
     INDEX `idx_frequency` (`frequency` DESC) COMMENT '频次索引,支持热门关键词排序',
 
     -- 复合索引
@@ -88,27 +91,18 @@ COMMENT='关键词表:存储自由关键词,支持规范化去重和频次统计
 
 CREATE TABLE IF NOT EXISTS `cat_publication_keyword` (
     -- ========================================
-    -- 业务字段
+    -- 主键
     -- ========================================
-    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键,雪花算法生成',
-    `publication_id` BIGINT UNSIGNED NOT NULL COMMENT '出版物ID(外键:cat_publication.id)',
-    `keyword_id` BIGINT UNSIGNED NOT NULL COMMENT '关键词ID(外键:cat_keyword.id)',
-    `is_major` BOOLEAN NOT NULL DEFAULT 0 COMMENT '是否主要关键词(0=副关键词,1=主要关键词)',
-    `order_num` INT UNSIGNED NULL DEFAULT NULL COMMENT '顺序号(在同一文献内的排序)',
-    `keyword_set` VARCHAR(50) NULL DEFAULT NULL COMMENT '关键词集(如 Author/Editor,区分不同来源)',
+    `id` BIGINT NOT NULL COMMENT '主键,雪花算法预分配',
 
     -- ========================================
-    -- 审计字段（完整版）
+    -- 业务字段
     -- ========================================
-    `record_remarks` JSON NULL DEFAULT NULL COMMENT 'JSON数组,备注/变更日志',
-    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号(每次更新自增)',
-    `ip_address` VARBINARY(16) NULL DEFAULT NULL COMMENT '请求者IP(二进制,支持IPv4/IPv6)',
-    `created_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC,微秒精度)',
-    `created_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '创建人ID',
-    `created_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '创建人姓名(冗余-审计友好)',
-    `updated_at` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC,微秒精度)',
-    `updated_by` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT '更新人ID',
-    `updated_by_name` VARCHAR(100) NULL DEFAULT NULL COMMENT '更新人姓名(冗余-审计友好)',
+    `publication_id` BIGINT NOT NULL COMMENT '出版物ID(外键:cat_publication.id)',
+    `keyword_id` BIGINT NOT NULL COMMENT '关键词ID(外键:cat_keyword.id)',
+    `is_major` BOOLEAN NOT NULL DEFAULT 0 COMMENT '是否主要关键词(0=副关键词,1=主要关键词)',
+    `order_num` INT NULL DEFAULT NULL COMMENT '顺序号(在同一文献内的排序)',
+    `keyword_set` VARCHAR(50) NULL DEFAULT NULL COMMENT '关键词集(如 Author/Editor,区分不同来源)',
 
     -- ========================================
     -- 主键和索引
