@@ -1,35 +1,70 @@
 package com.patra.catalog.infra.adapter.persistence;
 
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
+import com.patra.catalog.domain.model.vo.publication.MeshQualifier;
 import com.patra.catalog.domain.model.vo.publication.PublicationAbstract;
 import com.patra.catalog.domain.model.vo.publication.PublicationAlternativeAbstract;
+import com.patra.catalog.domain.model.vo.publication.PublicationCompleteData;
 import com.patra.catalog.domain.model.vo.publication.PublicationDate;
+import com.patra.catalog.domain.model.vo.publication.PublicationFunding;
 import com.patra.catalog.domain.model.vo.publication.PublicationId;
 import com.patra.catalog.domain.model.vo.publication.PublicationIdentifier;
+import com.patra.catalog.domain.model.vo.publication.PublicationInvestigator;
+import com.patra.catalog.domain.model.vo.publication.PublicationKeyword;
+import com.patra.catalog.domain.model.vo.publication.PublicationMeshHeading;
 import com.patra.catalog.domain.model.vo.publication.PublicationMetadata;
 import com.patra.catalog.domain.model.vo.publication.PublicationOaLocation;
+import com.patra.catalog.domain.model.vo.publication.PublicationPersonalNameSubject;
+import com.patra.catalog.domain.model.vo.publication.PublicationSupplMesh;
+import com.patra.catalog.domain.model.vo.publication.PublicationTypeInfo;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.infra.adapter.persistence.converter.mapper.PublicationJpaMapper;
+import com.patra.catalog.infra.adapter.persistence.dao.InvestigatorDao;
+import com.patra.catalog.infra.adapter.persistence.dao.KeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationIdentifierDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationInvestigatorDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMetadataDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationOaLocationDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationPersonalNameSubjectDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
+import com.patra.catalog.infra.adapter.persistence.entity.InvestigatorEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.KeywordEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationAbstractEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationAlternativeAbstractEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationDateEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationFundingEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationIdentifierEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationInvestigatorEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationKeywordEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshHeadingEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationMeshQualifierEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationMetadataEntity;
 import com.patra.catalog.infra.adapter.persistence.entity.PublicationOaLocationEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationPersonalNameSubjectEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationSupplMeshEntity;
+import com.patra.catalog.infra.adapter.persistence.entity.PublicationTypeEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -74,6 +109,18 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
   private final PublicationMetadataDao metadataDao;
   private final PublicationAlternativeAbstractDao alternativeAbstractDao;
   private final PublicationOaLocationDao oaLocationDao;
+
+  // ========== 关联数据 DAO（用于 insertAllWithAssociations） ==========
+  private final PublicationMeshHeadingDao meshHeadingDao;
+  private final PublicationMeshQualifierDao meshQualifierDao;
+  private final KeywordDao keywordMasterDao;
+  private final PublicationKeywordDao keywordDao;
+  private final PublicationFundingDao fundingDao;
+  private final PublicationTypeDao typeDao;
+  private final PublicationSupplMeshDao supplMeshDao;
+  private final InvestigatorDao investigatorDao;
+  private final PublicationInvestigatorDao publicationInvestigatorDao;
+  private final PublicationPersonalNameSubjectDao personalNameSubjectDao;
 
   @Override
   public Optional<PublicationAggregate> findById(Long id) {
@@ -203,6 +250,636 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     }
 
     log.info("批量插入文献完成：{} 条", aggregates.size());
+  }
+
+  @Override
+  public void insertAllWithAssociations(List<PublicationCompleteData> data) {
+    if (data == null || data.isEmpty()) {
+      return;
+    }
+
+    // 1. 提取并写入 PublicationAggregate（ID 会被回填）
+    List<PublicationAggregate> publications =
+        data.stream().map(PublicationCompleteData::publication).toList();
+    log.debug("批量写入 {} 条 Publication", publications.size());
+    insertAll(publications);
+
+    // 2. 写入关联数据
+    writeMetadataAssociations(data);
+    writeMeshAssociations(data);
+    writeKeywordAssociations(data);
+    writeFundingAssociations(data);
+    writePublicationTypeAssociations(data);
+    writeSupplMeshAssociations(data);
+    writeAlternativeAbstractAssociations(data);
+    writeDateAssociations(data);
+    writeIdentifierAssociations(data);
+    writeAbstractAssociations(data);
+    writeInvestigatorAssociations(data);
+    writePersonalNameSubjectAssociations(data);
+
+    log.info("批量写入 {} 条 Publication（含关联数据）完成", data.size());
+  }
+
+  // ========== insertAllWithAssociations 辅助方法 ==========
+
+  /// 写入文献元数据关联数据。
+  private void writeMetadataAssociations(List<PublicationCompleteData> data) {
+    List<PublicationMetadataEntity> entities = new ArrayList<>();
+
+    for (PublicationCompleteData item : data) {
+      if (!item.hasMetadata()) {
+        continue;
+      }
+
+      Long publicationId = item.getPublicationId();
+      PublicationMetadataEntity entity =
+          jpaConverter.toMetadataEntity(item.metadata(), publicationId);
+      entity.setId(SnowflakeIdGenerator.getId());
+      entities.add(entity);
+    }
+
+    if (!entities.isEmpty()) {
+      batchSaveWithFlush(entities, metadataDao);
+      log.debug("写入 {} 条元数据", entities.size());
+    }
+  }
+
+  /// 写入 MeSH 关联数据。
+  private void writeMeshAssociations(List<PublicationCompleteData> data) {
+    List<PublicationMeshHeadingEntity> headingEntities = new ArrayList<>();
+    List<PublicationMeshQualifierEntity> qualifierEntities = new ArrayList<>();
+
+    for (PublicationCompleteData item : data) {
+      if (!item.hasMeshHeadings()) {
+        continue;
+      }
+
+      Long publicationId = item.getPublicationId();
+
+      for (PublicationMeshHeading heading : item.meshHeadings()) {
+        // 创建 Heading 实体（预分配 ID 用于关联 Qualifier）
+        Long headingId = SnowflakeIdGenerator.getId();
+        PublicationMeshHeadingEntity headingEntity =
+            PublicationMeshHeadingEntity.builder()
+                .id(headingId)
+                .publicationId(publicationId)
+                .descriptorUi(heading.descriptorUi())
+                .majorTopic(heading.majorTopic())
+                .headingOrder(heading.headingOrder())
+                .build();
+        headingEntities.add(headingEntity);
+
+        // 创建 Qualifier 实体
+        if (heading.hasQualifiers()) {
+          for (MeshQualifier qualifier : heading.qualifiers()) {
+            PublicationMeshQualifierEntity qualifierEntity =
+                PublicationMeshQualifierEntity.builder()
+                    .id(SnowflakeIdGenerator.getId())
+                    .publicationMeshHeadingId(headingId)
+                    .qualifierUi(qualifier.qualifierUi())
+                    .majorTopic(qualifier.majorTopic())
+                    .qualifierOrder(qualifier.qualifierOrder())
+                    .build();
+            qualifierEntities.add(qualifierEntity);
+          }
+        }
+      }
+    }
+
+    // 批量保存
+    if (!headingEntities.isEmpty()) {
+      batchSaveWithFlush(headingEntities, meshHeadingDao);
+      log.debug("写入 {} 条 MeSH Heading 关联", headingEntities.size());
+    }
+
+    if (!qualifierEntities.isEmpty()) {
+      batchSaveWithFlush(qualifierEntities, meshQualifierDao);
+      log.debug("写入 {} 条 MeSH Qualifier 关联", qualifierEntities.size());
+    }
+  }
+
+  /// 写入关键词关联数据。
+  /// 写入关键词关联数据（规范化设计）。
+  ///
+  /// **写入流程**：
+  /// 1. 收集所有关键词，计算规范化词形
+  /// 2. 批量查询已存在的关键词（通过 normalized_term）
+  /// 3. 对于不存在的关键词，创建新的 KeywordEntity 并插入
+  /// 4. 创建 PublicationKeywordEntity 关联记录
+  private void writeKeywordAssociations(List<PublicationCompleteData> data) {
+    // 收集所有关键词及其来源
+    Map<String, PublicationKeyword> keywordMap = new LinkedHashMap<>();
+    for (PublicationCompleteData item : data) {
+      if (!item.hasKeywords()) {
+        continue;
+      }
+      for (PublicationKeyword keyword : item.keywords()) {
+        String normalizedTerm = KeywordEntity.normalize(keyword.term());
+        // 使用 normalized_term + source 作为 key 进行去重
+        String key = normalizedTerm + "|" + keyword.source();
+        keywordMap.putIfAbsent(key, keyword);
+      }
+    }
+
+    if (keywordMap.isEmpty()) {
+      return;
+    }
+
+    // 批量查询已存在的关键词
+    List<String> normalizedTerms =
+        keywordMap.values().stream()
+            .map(k -> KeywordEntity.normalize(k.term()))
+            .distinct()
+            .toList();
+
+    List<KeywordEntity> existingKeywords = keywordMasterDao.findByNormalizedTermIn(normalizedTerms);
+
+    // 构建 normalized_term -> KeywordEntity 的映射
+    Map<String, KeywordEntity> existingKeywordMap =
+        existingKeywords.stream()
+            .collect(Collectors.toMap(KeywordEntity::getNormalizedTerm, e -> e, (a, b) -> a));
+
+    // 创建不存在的关键词
+    List<KeywordEntity> newKeywords = new ArrayList<>();
+    for (PublicationKeyword keyword : keywordMap.values()) {
+      String normalizedTerm = KeywordEntity.normalize(keyword.term());
+      if (!existingKeywordMap.containsKey(normalizedTerm)) {
+        KeywordEntity entity = KeywordEntity.of(keyword.term(), keyword.source(), null);
+        entity.setId(SnowflakeIdGenerator.getId());
+        newKeywords.add(entity);
+        existingKeywordMap.put(normalizedTerm, entity);
+      }
+    }
+
+    if (!newKeywords.isEmpty()) {
+      batchSaveWithFlush(newKeywords, keywordMasterDao);
+      log.debug("新增 {} 条关键词", newKeywords.size());
+    }
+
+    // 创建关联记录
+    List<PublicationKeywordEntity> associations = new ArrayList<>();
+    for (PublicationCompleteData item : data) {
+      if (!item.hasKeywords()) {
+        continue;
+      }
+
+      Long publicationId = item.getPublicationId();
+
+      for (PublicationKeyword keyword : item.keywords()) {
+        String normalizedTerm = KeywordEntity.normalize(keyword.term());
+        KeywordEntity keywordEntity = existingKeywordMap.get(normalizedTerm);
+
+        if (keywordEntity == null) {
+          log.warn("关键词未找到: {}", keyword.term());
+          continue;
+        }
+
+        PublicationKeywordEntity association =
+            PublicationKeywordEntity.of(
+                publicationId,
+                keywordEntity.getId(),
+                keyword.majorTopic(),
+                keyword.keywordOrder(),
+                keyword.source());
+        association.setId(SnowflakeIdGenerator.getId());
+        associations.add(association);
+      }
+    }
+
+    if (!associations.isEmpty()) {
+      batchSaveWithFlush(associations, keywordDao);
+      log.debug("写入 {} 条关键词关联", associations.size());
+    }
+  }
+
+  /// 写入资助信息关联数据。
+  private void writeFundingAssociations(List<PublicationCompleteData> data) {
+    List<PublicationFundingEntity> entities = new ArrayList<>();
+
+    for (PublicationCompleteData item : data) {
+      if (!item.hasFunding()) {
+        continue;
+      }
+
+      Long publicationId = item.getPublicationId();
+
+      for (PublicationFunding funding : item.funding()) {
+        entities.add(
+            PublicationFundingEntity.builder()
+                .id(SnowflakeIdGenerator.getId())
+                .publicationId(publicationId)
+                .organizationId(funding.organizationId())
+                .grantId(funding.grantId())
+                .funderNameRaw(funding.funderNameRaw())
+                .funderAcronymRaw(funding.funderAcronymRaw())
+                .funderIdentifierRaw(funding.funderIdentifierRaw())
+                .countryRaw(funding.countryRaw())
+                .fundingOrder(funding.fundingOrder() != null ? funding.fundingOrder() : 1)
+                .provenanceCode(funding.provenanceCode())
+                .build());
+      }
+    }
+
+    if (!entities.isEmpty()) {
+      batchSaveWithFlush(entities, fundingDao);
+      log.debug("写入 {} 条资助信息关联", entities.size());
+    }
+  }
+
+  /// 写入出版类型关联数据。
+  private void writePublicationTypeAssociations(List<PublicationCompleteData> data) {
+    List<PublicationTypeEntity> entities = new ArrayList<>();
+
+    for (PublicationCompleteData item : data) {
+      if (!item.hasPublicationTypes()) {
+        continue;
+      }
+
+      Long publicationId = item.getPublicationId();
+
+      for (PublicationTypeInfo type : item.publicationTypes()) {
+        var entity =
+            PublicationTypeEntity.of(
+                publicationId,
+                type.typeId(),
+                type.typeValue(),
+                type.vocabularySource(),
+                type.typeOrder());
+        entity.setId(SnowflakeIdGenerator.getId());
+        entities.add(entity);
+      }
+    }
+
+    if (!entities.isEmpty()) {
+      batchSaveWithFlush(entities, typeDao);
+      log.debug("写入 {} 条出版类型关联", entities.size());
+    }
+  }
+
+  /// 写入补充 MeSH 概念关联数据。
+  private void writeSupplMeshAssociations(List<PublicationCompleteData> data) {
+    List<PublicationSupplMeshEntity> entities = new ArrayList<>();
+
+    for (PublicationCompleteData item : data) {
+      if (!item.hasSupplMeshList()) {
+        continue;
+      }
+
+      Long publicationId = item.getPublicationId();
+
+      for (PublicationSupplMesh supplMesh : item.supplMeshList()) {
+        entities.add(
+            PublicationSupplMeshEntity.builder()
+                .id(SnowflakeIdGenerator.getId())
+                .publicationId(publicationId)
+                .scrUi(supplMesh.scrUi())
+                .supplOrder(supplMesh.supplOrder())
+                .build());
+      }
+    }
+
+    if (!entities.isEmpty()) {
+      batchSaveWithFlush(entities, supplMeshDao);
+      log.debug("写入 {} 条补充 MeSH 概念关联", entities.size());
+    }
+  }
+
+  /// 写入翻译摘要关联数据。
+  private void writeAlternativeAbstractAssociations(List<PublicationCompleteData> data) {
+    List<PublicationAlternativeAbstractEntity> entities = new ArrayList<>();
+
+    for (PublicationCompleteData item : data) {
+      if (!item.hasAlternativeAbstracts()) {
+        continue;
+      }
+
+      Long publicationId = item.getPublicationId();
+
+      for (PublicationAlternativeAbstract altAbstract : item.alternativeAbstracts()) {
+        PublicationAlternativeAbstractEntity entity =
+            jpaConverter.toAlternativeAbstractEntity(altAbstract, publicationId);
+        entity.setId(SnowflakeIdGenerator.getId());
+        entities.add(entity);
+      }
+    }
+
+    if (!entities.isEmpty()) {
+      batchSaveWithFlush(entities, alternativeAbstractDao);
+      log.debug("写入 {} 条翻译摘要关联", entities.size());
+    }
+  }
+
+  /// 写入日期关联数据。
+  private void writeDateAssociations(List<PublicationCompleteData> data) {
+    List<PublicationDateEntity> entities = new ArrayList<>();
+
+    for (PublicationCompleteData item : data) {
+      if (!item.hasDates()) {
+        continue;
+      }
+
+      Long publicationId = item.getPublicationId();
+
+      for (PublicationDate dateData : item.dates()) {
+        PublicationDateEntity entity = jpaConverter.toDateEntity(dateData, publicationId);
+        entity.setId(SnowflakeIdGenerator.getId());
+
+        // 完整日期时填充 dateValue
+        if (dateData.isComplete()) {
+          entity.setDateValue(LocalDate.of(dateData.year(), dateData.month(), dateData.day()));
+        }
+
+        entities.add(entity);
+      }
+    }
+
+    if (!entities.isEmpty()) {
+      batchSaveWithFlush(entities, dateDao);
+      log.debug("写入 {} 条日期关联", entities.size());
+    }
+  }
+
+  /// 写入标识符关联数据。
+  private void writeIdentifierAssociations(List<PublicationCompleteData> data) {
+    List<PublicationIdentifierEntity> entities = new ArrayList<>();
+
+    for (PublicationCompleteData item : data) {
+      PublicationAggregate publication = item.publication();
+      List<PublicationIdentifier> identifiers = publication.getExtendedIdentifiers();
+      if (identifiers.isEmpty()) {
+        continue;
+      }
+
+      Long publicationId = item.getPublicationId();
+
+      for (PublicationIdentifier identifier : identifiers) {
+        PublicationIdentifierEntity entity =
+            jpaConverter.toIdentifierEntity(identifier, publicationId);
+        entity.setId(SnowflakeIdGenerator.getId());
+        entities.add(entity);
+      }
+    }
+
+    if (!entities.isEmpty()) {
+      batchSaveWithFlush(entities, identifierDao);
+      log.debug("写入 {} 条标识符关联", entities.size());
+    }
+  }
+
+  /// 写入摘要关联数据。
+  private void writeAbstractAssociations(List<PublicationCompleteData> data) {
+    List<PublicationAbstractEntity> entities = new ArrayList<>();
+
+    for (PublicationCompleteData item : data) {
+      PublicationAggregate publication = item.publication();
+
+      // 只有有摘要内容时才写入
+      if (!publication.hasAbstract()) {
+        continue;
+      }
+
+      Long publicationId = item.getPublicationId();
+      PublicationAbstract abstractContent = publication.getPublicationAbstract();
+
+      // 使用 mapper 转换（处理 JSON 序列化）
+      PublicationAbstractEntity entity =
+          jpaConverter.toAbstractEntity(abstractContent, publicationId);
+      entity.setId(SnowflakeIdGenerator.getId());
+      entities.add(entity);
+    }
+
+    if (!entities.isEmpty()) {
+      batchSaveWithFlush(entities, abstractDao);
+      log.debug("写入 {} 条摘要", entities.size());
+    }
+  }
+
+  /// 写入研究者关联数据。
+  ///
+  /// **去重策略**：
+  ///
+  /// 1. 收集本批次所有 ORCID 和 dedupKey
+  /// 2. 批量查询已存在的研究者（优先 ORCID 匹配，其次 dedupKey 匹配）
+  /// 3. 不存在则创建新研究者记录
+  /// 4. 创建文献-研究者关联记录
+  private void writeInvestigatorAssociations(List<PublicationCompleteData> data) {
+    // 1. 收集研究者数据
+    InvestigatorCollectionResult collectedData = collectInvestigatorsFromData(data);
+    if (collectedData.dedupKeyToData().isEmpty()) {
+      return;
+    }
+
+    // 2. 查询已存在的研究者
+    ExistingInvestigatorMapping existingMapping =
+        queryExistingInvestigators(collectedData.dedupKeyToData());
+
+    // 3. 创建新研究者并建立 dedupKey → ID 映射
+    Map<String, Long> dedupKeyToInvestigatorId =
+        createNewInvestigatorsIfNeeded(collectedData.dedupKeyToData(), existingMapping);
+
+    // 4. 创建关联记录
+    createInvestigatorAssociations(
+        collectedData.publicationInvestigators(), dedupKeyToInvestigatorId);
+  }
+
+  /// 研究者收集结果。
+  private record InvestigatorCollectionResult(
+      Map<String, PublicationInvestigator> dedupKeyToData,
+      Map<Long, List<PublicationInvestigator>> publicationInvestigators) {}
+
+  /// 研究者查询结果。
+  private record ExistingInvestigatorMapping(
+      Map<String, Long> byOrcid, Map<String, Long> byDedupKey) {}
+
+  /// 从完整数据中收集研究者数据。
+  private InvestigatorCollectionResult collectInvestigatorsFromData(
+      List<PublicationCompleteData> data) {
+    Map<String, PublicationInvestigator> dedupKeyToData = new LinkedHashMap<>();
+    Map<Long, List<PublicationInvestigator>> publicationInvestigators = new LinkedHashMap<>();
+
+    for (PublicationCompleteData item : data) {
+      if (!item.hasInvestigators()) {
+        continue;
+      }
+
+      Long pubId = item.getPublicationId();
+      List<PublicationInvestigator> invList = new ArrayList<>();
+
+      for (PublicationInvestigator inv : item.investigators()) {
+        dedupKeyToData.putIfAbsent(inv.dedupKey(), inv);
+        invList.add(inv);
+      }
+
+      if (!invList.isEmpty()) {
+        publicationInvestigators.put(pubId, invList);
+      }
+    }
+
+    return new InvestigatorCollectionResult(dedupKeyToData, publicationInvestigators);
+  }
+
+  /// 查询已存在的研究者（优先 ORCID，其次 dedupKey）。
+  private ExistingInvestigatorMapping queryExistingInvestigators(
+      Map<String, PublicationInvestigator> dedupKeyToData) {
+    // 按 ORCID 查询
+    Set<String> orcids =
+        dedupKeyToData.values().stream()
+            .filter(PublicationInvestigator::hasOrcid)
+            .map(PublicationInvestigator::orcid)
+            .filter(Objects::nonNull)
+            .filter(s -> !s.isBlank())
+            .collect(Collectors.toSet());
+
+    Map<String, Long> existingByOrcid = new HashMap<>();
+    if (!orcids.isEmpty()) {
+      investigatorDao
+          .findByOrcidIn(orcids)
+          .forEach(e -> existingByOrcid.put(e.getOrcid(), e.getId()));
+    }
+
+    // 按 dedupKey 查询（排除已通过 ORCID 匹配的）
+    Set<String> dedupKeysToQuery =
+        dedupKeyToData.entrySet().stream()
+            .filter(
+                entry -> {
+                  String orcid = entry.getValue().orcid();
+                  return orcid == null || orcid.isBlank() || !existingByOrcid.containsKey(orcid);
+                })
+            .map(Map.Entry::getKey)
+            .collect(Collectors.toSet());
+
+    Map<String, Long> existingByDedupKey = new HashMap<>();
+    if (!dedupKeysToQuery.isEmpty()) {
+      investigatorDao
+          .findByDedupKeyIn(dedupKeysToQuery)
+          .forEach(e -> existingByDedupKey.put(e.getDedupKey(), e.getId()));
+    }
+
+    return new ExistingInvestigatorMapping(existingByOrcid, existingByDedupKey);
+  }
+
+  /// 创建新研究者记录（如果不存在）并返回 dedupKey → ID 映射。
+  private Map<String, Long> createNewInvestigatorsIfNeeded(
+      Map<String, PublicationInvestigator> dedupKeyToData,
+      ExistingInvestigatorMapping existingMapping) {
+    List<InvestigatorEntity> newInvestigators = new ArrayList<>();
+    Map<String, Long> dedupKeyToInvestigatorId = new HashMap<>();
+
+    for (Map.Entry<String, PublicationInvestigator> entry : dedupKeyToData.entrySet()) {
+      String dedupKey = entry.getKey();
+      PublicationInvestigator inv = entry.getValue();
+
+      // 优先 ORCID 匹配
+      Long existingId = null;
+      if (inv.hasOrcid()) {
+        existingId = existingMapping.byOrcid().get(inv.orcid());
+      }
+
+      // 其次 dedupKey 匹配
+      if (existingId == null) {
+        existingId = existingMapping.byDedupKey().get(dedupKey);
+      }
+
+      if (existingId != null) {
+        dedupKeyToInvestigatorId.put(dedupKey, existingId);
+      } else {
+        Long newId = SnowflakeIdGenerator.getId();
+        dedupKeyToInvestigatorId.put(dedupKey, newId);
+        newInvestigators.add(buildInvestigatorEntity(newId, inv));
+      }
+    }
+
+    if (!newInvestigators.isEmpty()) {
+      batchSaveWithFlush(newInvestigators, investigatorDao);
+      log.debug("创建 {} 条新研究者记录", newInvestigators.size());
+    }
+
+    return dedupKeyToInvestigatorId;
+  }
+
+  /// 创建文献-研究者关联记录。
+  private void createInvestigatorAssociations(
+      Map<Long, List<PublicationInvestigator>> publicationInvestigators,
+      Map<String, Long> dedupKeyToInvestigatorId) {
+    List<PublicationInvestigatorEntity> associations = new ArrayList<>();
+
+    for (Map.Entry<Long, List<PublicationInvestigator>> entry :
+        publicationInvestigators.entrySet()) {
+      Long pubId = entry.getKey();
+
+      for (PublicationInvestigator inv : entry.getValue()) {
+        Long investigatorId = dedupKeyToInvestigatorId.get(inv.dedupKey());
+        if (investigatorId == null) {
+          log.warn("研究者 ID 查找失败：dedupKey={}", inv.dedupKey());
+          continue;
+        }
+
+        PublicationInvestigatorEntity association =
+            PublicationInvestigatorEntity.builder()
+                .id(SnowflakeIdGenerator.getId())
+                .publicationId(pubId)
+                .investigatorId(investigatorId)
+                .orderNum(inv.orderNum())
+                .build();
+        associations.add(association);
+      }
+    }
+
+    if (!associations.isEmpty()) {
+      batchSaveWithFlush(associations, publicationInvestigatorDao);
+      log.debug("写入 {} 条研究者关联", associations.size());
+    }
+  }
+
+  /// 构建研究者实体。
+  private InvestigatorEntity buildInvestigatorEntity(Long id, PublicationInvestigator inv) {
+    return InvestigatorEntity.builder()
+        .id(id)
+        .lastName(inv.lastName())
+        .foreName(inv.foreName())
+        .initials(inv.initials())
+        .suffix(inv.suffix())
+        .orcid(inv.orcid())
+        .affiliationName(inv.affiliationName())
+        .dedupKey(inv.dedupKey())
+        .build();
+  }
+
+  /// 写入人物主题关联数据。
+  private void writePersonalNameSubjectAssociations(List<PublicationCompleteData> data) {
+    List<PublicationPersonalNameSubjectEntity> entities = new ArrayList<>();
+
+    for (PublicationCompleteData item : data) {
+      if (!item.hasPersonalNameSubjects()) {
+        continue;
+      }
+
+      Long pubId = item.getPublicationId();
+
+      for (PublicationPersonalNameSubject subject : item.personalNameSubjects()) {
+        PublicationPersonalNameSubjectEntity entity =
+            PublicationPersonalNameSubjectEntity.builder()
+                .publicationId(pubId)
+                .lastName(subject.lastName())
+                .foreName(subject.foreName())
+                .initials(subject.initials())
+                .suffix(subject.suffix())
+                .dates(subject.dates())
+                .description(subject.description())
+                .subjectType(subject.subjectType())
+                .identifier(subject.identifier())
+                .orderNum(subject.orderNum())
+                .build();
+        entity.setId(SnowflakeIdGenerator.getId());
+        entities.add(entity);
+      }
+    }
+
+    if (!entities.isEmpty()) {
+      batchSaveWithFlush(entities, personalNameSubjectDao);
+      log.debug("写入 {} 条人物主题关联", entities.size());
+    }
   }
 
   @Override
