@@ -140,6 +140,14 @@ public final class PubmedXmlElements {
     private SupplMesh() {}
   }
 
+  /// 关键词相关元素名称。
+  public static final class Keyword {
+    public static final String KEYWORD_LIST = "KeywordList";
+    public static final String KEYWORD = "Keyword";
+
+    private Keyword() {}
+  }
+
   /// 其他语言摘要相关元素名称。
   public static final class OtherAbstract {
     public static final String OTHER_ABSTRACT = "OtherAbstract";
@@ -170,6 +178,7 @@ public final class PubmedXmlElements {
     public static final String UI = "UI";
     public static final String TYPE = "Type";
     public static final String SOURCE = "Source";
+    public static final String OWNER = "Owner";
     public static final String LABEL = "Label";
     public static final String LANGUAGE = "Language";
 
