@@ -180,9 +180,7 @@ public final class CanonicalPublicationParsingStrategy
     switch (localName) {
       case PubmedXmlElements.Container.MEDLINE_CITATION -> parseMedlineCitation(reader, fields);
       case PubmedXmlElements.Container.PUBMED_DATA -> parsePubmedData(reader, fields);
-      default -> {
-        // 跳过其他顶层元素
-      }
+      default -> XmlParsingHelper.skipElement(reader, localName);
     }
   }
 
@@ -203,9 +201,7 @@ public final class CanonicalPublicationParsingStrategy
           case PubmedXmlElements.SupplMesh.SUPPL_MESH_LIST -> parseSupplMeshList(reader, fields);
           case PubmedXmlElements.Keyword.KEYWORD_LIST -> parseKeywordList(reader, fields);
           case PubmedXmlElements.OtherAbstract.OTHER_ABSTRACT -> parseOtherAbstract(reader, fields);
-          default -> {
-            // 跳过其他元素
-          }
+          default -> XmlParsingHelper.skipElement(reader, localName);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && PubmedXmlElements.Container.MEDLINE_CITATION.equals(reader.getLocalName())) {
@@ -234,9 +230,7 @@ public final class CanonicalPublicationParsingStrategy
           case PubmedXmlElements.Article.PUBLICATION_TYPE_LIST ->
               parsePublicationTypeList(reader, fields);
           case PubmedXmlElements.Article.PAGINATION -> parsePagination(reader, fields);
-          default -> {
-            // 跳过其他元素
-          }
+          default -> XmlParsingHelper.skipElement(reader, localName);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && PubmedXmlElements.Container.ARTICLE.equals(reader.getLocalName())) {
@@ -257,9 +251,7 @@ public final class CanonicalPublicationParsingStrategy
           case PubmedXmlElements.Journal.JOURNAL_ISSUE -> parseJournalIssue(reader, fields);
           case PubmedXmlElements.Journal.TITLE ->
               fields.journalTitle = reader.getElementText().trim();
-          default -> {
-            // 跳过其他元素
-          }
+          default -> XmlParsingHelper.skipElement(reader, localName);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && PubmedXmlElements.Journal.JOURNAL.equals(reader.getLocalName())) {
@@ -292,9 +284,7 @@ public final class CanonicalPublicationParsingStrategy
           case PubmedXmlElements.Journal.VOLUME -> fields.volume = reader.getElementText().trim();
           case PubmedXmlElements.Journal.ISSUE -> fields.issue = reader.getElementText().trim();
           case PubmedXmlElements.Date.PUB_DATE -> parsePubDate(reader, fields);
-          default -> {
-            // 跳过其他元素
-          }
+          default -> XmlParsingHelper.skipElement(reader, localName);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && PubmedXmlElements.Journal.JOURNAL_ISSUE.equals(reader.getLocalName())) {
@@ -330,9 +320,7 @@ public final class CanonicalPublicationParsingStrategy
               fields.pubYear = extractYearFromMedlineDate(fields.medlineDate);
             }
           }
-          default -> {
-            // 跳过其他元素
-          }
+          default -> XmlParsingHelper.skipElement(reader, localName);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && PubmedXmlElements.Date.PUB_DATE.equals(reader.getLocalName())) {
@@ -354,9 +342,7 @@ public final class CanonicalPublicationParsingStrategy
               fields.nlmUniqueId = reader.getElementText().trim();
           case PubmedXmlElements.Journal.ISSN_LINKING ->
               fields.issnLinking = reader.getElementText().trim();
-          default -> {
-            // 跳过其他元素
-          }
+          default -> XmlParsingHelper.skipElement(reader, localName);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && PubmedXmlElements.Journal.MEDLINE_JOURNAL_INFO.equals(reader.getLocalName())) {
@@ -377,9 +363,7 @@ public final class CanonicalPublicationParsingStrategy
           case PubmedXmlElements.Article.PUBLICATION_STATUS ->
               fields.publicationStatus = reader.getElementText().trim();
           case PubmedXmlElements.Identifier.ARTICLE_ID_LIST -> parseArticleIdList(reader, fields);
-          default -> {
-            // 跳过其他元素
-          }
+          default -> XmlParsingHelper.skipElement(reader, localName);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && PubmedXmlElements.Container.PUBMED_DATA.equals(reader.getLocalName())) {
@@ -466,9 +450,7 @@ public final class CanonicalPublicationParsingStrategy
               author.collectiveName = reader.getElementText().trim();
           case PubmedXmlElements.Author.AFFILIATION_INFO -> parseAffiliationInfo(reader, author);
           case PubmedXmlElements.Author.IDENTIFIER -> parseAuthorIdentifier(reader, author);
-          default -> {
-            // 跳过其他元素
-          }
+          default -> XmlParsingHelper.skipElement(reader, localName);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && PubmedXmlElements.Author.AUTHOR.equals(reader.getLocalName())) {
@@ -714,9 +696,7 @@ public final class CanonicalPublicationParsingStrategy
           }
           case PubmedXmlElements.OtherAbstract.COPYRIGHT_INFORMATION ->
               otherAbstract.copyright = reader.getElementText().trim();
-          default -> {
-            // 跳过其他元素
-          }
+          default -> XmlParsingHelper.skipElement(reader, localName);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && PubmedXmlElements.OtherAbstract.OTHER_ABSTRACT.equals(reader.getLocalName())) {
