@@ -23,7 +23,7 @@ MySQL 表 (34 张 publication 相关表)
 | `<ArticleId IdType="pmc">` | `identifiers` (PMC) | `cat_publication_identifier` | ✅ 完成 |
 | `<ArticleTitle>` | `title` | `cat_publication.title` | ✅ 完成 |
 | `<VernacularTitle>` | `originalTitle` | `cat_publication.original_title` | ✅ 完成 |
-| `<Language>` | `language` (ISO 639-3→639-1) | `cat_publication.language_raw` + `language_code` | ✅ 完成 |
+| `<Language>` | `language` (ISO 639-3 原始代码) | `cat_publication.language_raw` + `language_code` | ✅ 完成 |
 | `<PublicationStatus>` | `publicationStatus` | `cat_publication.publication_status` | ✅ 完成 |
 | `<AuthorList CompleteYN>` | `authorsComplete` | `cat_publication.authors_complete` | ✅ 完成 |
 | `<Journal>` + `<MedlineJournalInfo>` | `journal` | `cat_publication.venue_id` + `venue_instance_id` | ✅ 完成 |

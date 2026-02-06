@@ -644,9 +644,18 @@ public class PubmedArticleItemProcessor
         continue;
       }
 
+      // 将 ISO 639-3 代码转换为 BCP 47（如 "chi" → "zh"），转换失败保留原始代码
+      String langCode = altAbstract.getLanguage();
+      if (langCode != null && !langCode.isBlank()) {
+        String resolved = languageLookupPort.resolve(langCode);
+        if (resolved != null && !LanguageLookupPort.UNKNOWN_LANGUAGE.equals(resolved)) {
+          langCode = resolved;
+        }
+      }
+
       result.add(
           AlternativeAbstractData.of(
-              altAbstract.getLanguage(),
+              langCode,
               altAbstract.getType(),
               altAbstract.getText(),
               altAbstract.getCopyright(),

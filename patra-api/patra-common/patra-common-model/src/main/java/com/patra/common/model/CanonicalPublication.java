@@ -52,7 +52,7 @@ public class CanonicalPublication {
   /// 原始语言标题（针对翻译作品或多语言出版物）。
   String originalTitle;
 
-  /// 出版物语言（ISO 639-1 代码，如 "en", "zh", "ja"）。
+  /// 出版物语言（ISO 639-3 代码，如 "eng", "chi", "jpn"）。
   String language;
 
   /// 发表类型列表（如 "Journal Article", "Review", "Conference Paper"）。
@@ -369,7 +369,7 @@ public class CanonicalPublication {
     /// 摘要类型（如 "author", "publisher", "plain-language"）。
     String type;
 
-    /// 语言代码（ISO 639-1，如 "zh", "ja"）。
+    /// 语言代码（ISO 639-3，如 "chi", "jpn"）。
     String language;
 
     /// 摘要文本。
