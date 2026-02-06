@@ -46,11 +46,11 @@ public record PublicationKeyword(
   /// @param source 关键词来源
   /// @param term 关键词文本
   /// @param majorTopic 是否为主要主题
-  /// @param order 关键词顺序
+  /// @param keywordOrder 关键词顺序
   /// @return 关键词值对象
   public static PublicationKeyword of(
-      String source, String term, boolean majorTopic, Integer order) {
-    return new PublicationKeyword(source, term, majorTopic, order);
+      String source, String term, boolean majorTopic, Integer keywordOrder) {
+    return new PublicationKeyword(source, term, majorTopic, keywordOrder);
   }
 
   /// 创建作者关键词。
