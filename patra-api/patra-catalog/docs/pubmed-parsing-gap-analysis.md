@@ -35,6 +35,7 @@ MySQL 表 (34 张 publication 相关表)
 | `<SupplMeshList>` | `supplMeshNames` | `cat_publication_suppl_mesh` | ✅ 完成 |
 | `<PublicationTypeList>` | `publicationTypes` | `cat_publication_type` | ✅ 完成 |
 | `<Pagination>/<MedlinePgn>` | `pagination` | 通过 `cat_publication.ext_data` 或主表字段 | ✅ 完成 |
+| `<KeywordList>` | `keywords` | `cat_keyword` + `cat_publication_keyword` | ✅ 完成 |
 | `<MedlineCitation Status>` | (Processor 提取) | `cat_publication_metadata.indexing_status` | ✅ 完成 |
 
 ## 二、XML 中有但未解析的数据（核心缺失）
@@ -47,7 +48,7 @@ MySQL 表 (34 张 publication 相关表)
 
 | XML 元素 | 数据库表（已建） | CanonicalPublication 字段 | 优先级 |
 |----------|----------------|--------------------------|--------|
-| **`<KeywordList>`** | `cat_keyword` + `cat_publication_keyword` | `keywords` | 🔴 高 |
+| ~~`<KeywordList>`~~ | `cat_keyword` + `cat_publication_keyword` | `keywords` | ✅ 已完成 |
 | **`<InvestigatorList>`** | `cat_investigator` + `cat_publication_investigator` | `investigators` | 🟡 中 |
 | **`<PersonalNameSubjectList>`** | `cat_publication_personal_name_subject` | `personalNameSubjects` | 🟢 低 |
 | **`<ChemicalList>`** | (无独立表，可用 `ext_data`) | `substances` | 🟡 中 |
@@ -84,7 +85,7 @@ MySQL 表 (34 张 publication 相关表)
 
 | # | XML 元素 | 目标表 | 估计数据量 | 说明 |
 |---|---------|--------|-----------|------|
-| 1 | **`<KeywordList>`** | `cat_keyword` + `cat_publication_keyword` | ~1500 万/初始 | 作者/编辑关键词，全文检索核心字段 |
+| ~~1~~ | ~~**`<KeywordList>`**~~ | ~~`cat_keyword` + `cat_publication_keyword`~~ | ~~~1500 万/初始~~ | ✅ 已完成（Parser 解析 + 端到端链路打通） |
 | 2 | **`<GrantList>`** | `cat_publication_funding` | ~750 万/初始 | 资助来源，科研评估关键数据 |
 | 3 | **`<ReferenceList>`** | `cat_publication_reference` | ~2 亿/初始 | 引用网络，影响力分析基础 |
 
@@ -133,7 +134,7 @@ MySQL 表 (34 张 publication 相关表)
 
 ```
 Phase 1: 高价值 + 低复杂度
-├── KeywordList → cat_keyword + cat_publication_keyword
+├── ✅ KeywordList → cat_keyword + cat_publication_keyword (已完成)
 ├── GrantList → cat_publication_funding (含 FunderLookupPort 匹配)
 └── CoiStatement → cat_publication.conflict_of_interest
     PubModel 属性 → cat_publication.media_type
