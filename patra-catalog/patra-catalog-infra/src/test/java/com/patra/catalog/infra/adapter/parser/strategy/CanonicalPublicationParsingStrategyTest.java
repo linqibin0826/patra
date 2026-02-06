@@ -555,8 +555,8 @@ class CanonicalPublicationParsingStrategyTest {
   class LanguageParsing {
 
     @Test
-    @DisplayName("应将 PubMed 语言代码转换为 ISO 639-1")
-    void shouldConvertLanguageCodeToIso6391() throws Exception {
+    @DisplayName("应保留原始 ISO 639-3 语言代码")
+    void shouldPreserveOriginalLanguageCode() throws Exception {
       var xml =
           """
           <PubmedArticle>
@@ -576,7 +576,7 @@ class CanonicalPublicationParsingStrategyTest {
 
       CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
 
-      assertEquals("en", result.getLanguage());
+      assertEquals("eng", result.getLanguage());
     }
 
     @Test
@@ -602,7 +602,7 @@ class CanonicalPublicationParsingStrategyTest {
 
       CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
 
-      assertEquals("zh", result.getLanguage());
+      assertEquals("chi", result.getLanguage());
     }
   }
 
@@ -1519,8 +1519,8 @@ class CanonicalPublicationParsingStrategyTest {
       // 日期
       assertEquals(LocalDate.of(2024, 6, 15), result.getDates().getPublished());
 
-      // 语言（第一个语言转换为 ISO 639-1）
-      assertEquals("en", result.getLanguage());
+      // 语言（保留原始 ISO 639-3 代码）
+      assertEquals("eng", result.getLanguage());
 
       // 元数据
       assertEquals("epublish", result.getPublicationStatus());
@@ -1561,7 +1561,7 @@ class CanonicalPublicationParsingStrategyTest {
       assertNotNull(result.getAlternativeAbstracts());
       assertThat(result.getAlternativeAbstracts()).hasSize(1);
       var altAbstract = result.getAlternativeAbstracts().getFirst();
-      assertThat(altAbstract.getLanguage()).isEqualTo("zh");
+      assertThat(altAbstract.getLanguage()).isEqualTo("chi");
       assertThat(altAbstract.getType()).isEqualTo("Publisher");
       assertThat(altAbstract.getText()).isEqualTo("这是中文摘要内容。");
     }
@@ -1599,8 +1599,8 @@ class CanonicalPublicationParsingStrategyTest {
               CanonicalPublication.AlternativeAbstract::getLanguage,
               CanonicalPublication.AlternativeAbstract::getType)
           .containsExactly(
-              org.assertj.core.groups.Tuple.tuple("zh", "Publisher"),
-              org.assertj.core.groups.Tuple.tuple("ja", "AIMSHP"));
+              org.assertj.core.groups.Tuple.tuple("chi", "Publisher"),
+              org.assertj.core.groups.Tuple.tuple("jpn", "AIMSHP"));
     }
 
     @Test
@@ -1631,7 +1631,7 @@ class CanonicalPublicationParsingStrategyTest {
 
       assertThat(result.getAlternativeAbstracts()).hasSize(1);
       var altAbstract = result.getAlternativeAbstracts().getFirst();
-      assertThat(altAbstract.getLanguage()).isEqualTo("zh");
+      assertThat(altAbstract.getLanguage()).isEqualTo("chi");
       // 结构化摘要应拼接成完整文本
       assertThat(altAbstract.getText()).contains("背景内容", "方法内容", "结果内容");
     }
@@ -1676,7 +1676,7 @@ class CanonicalPublicationParsingStrategyTest {
 
       // 空摘要应被忽略，只保留有效的日文摘要
       assertThat(result.getAlternativeAbstracts()).hasSize(1);
-      assertThat(result.getAlternativeAbstracts().getFirst().getLanguage()).isEqualTo("ja");
+      assertThat(result.getAlternativeAbstracts().getFirst().getLanguage()).isEqualTo("jpn");
     }
 
     @Test
@@ -1735,7 +1735,7 @@ class CanonicalPublicationParsingStrategyTest {
 
       assertThat(result.getAlternativeAbstracts()).hasSize(1);
       var altAbstract = result.getAlternativeAbstracts().getFirst();
-      assertThat(altAbstract.getLanguage()).isEqualTo("en");
+      assertThat(altAbstract.getLanguage()).isEqualTo("eng");
       assertThat(altAbstract.getType()).isEqualTo("plain-language-summary");
     }
   }

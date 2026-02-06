@@ -72,7 +72,7 @@ import lombok.extern.slf4j.Slf4j;
 ///
 /// **关键决策**：
 ///
-/// 1. 多语言处理：取第一个语言，转换为 ISO 639-1 代码
+/// 1. 多语言处理：取第一个语言，保留原始 ISO 639-3 代码（转换在 Processor 层完成）
 /// 2. ISSN 存储：优先存储 Print ISSN，issnLinking 单独存储
 /// 3. 日期转换：Year/Month/Day → LocalDate，缺失月/日用默认值 1
 ///
@@ -104,33 +104,6 @@ public final class CanonicalPublicationParsingStrategy
           Map.entry("oct", 10),
           Map.entry("nov", 11),
           Map.entry("dec", 12));
-
-  /// PubMed 3 字母语言代码到 ISO 639-1 的映射。
-  private static final Map<String, String> LANGUAGE_CODE_MAP =
-      Map.ofEntries(
-          Map.entry("eng", "en"),
-          Map.entry("chi", "zh"),
-          Map.entry("jpn", "ja"),
-          Map.entry("kor", "ko"),
-          Map.entry("ger", "de"),
-          Map.entry("fre", "fr"),
-          Map.entry("spa", "es"),
-          Map.entry("ita", "it"),
-          Map.entry("por", "pt"),
-          Map.entry("rus", "ru"),
-          Map.entry("ara", "ar"),
-          Map.entry("dut", "nl"),
-          Map.entry("pol", "pl"),
-          Map.entry("tur", "tr"),
-          Map.entry("hun", "hu"),
-          Map.entry("cze", "cs"),
-          Map.entry("dan", "da"),
-          Map.entry("fin", "fi"),
-          Map.entry("gre", "el"),
-          Map.entry("heb", "he"),
-          Map.entry("nor", "no"),
-          Map.entry("swe", "sv"),
-          Map.entry("ukr", "uk"));
 
   private CanonicalPublicationParsingStrategy() {}
 
@@ -677,7 +650,7 @@ public final class CanonicalPublicationParsingStrategy
 
     // 提取 Language 和 Type 属性
     String language = reader.getAttributeValue(null, PubmedXmlElements.Attribute.LANGUAGE);
-    otherAbstract.language = convertLanguageCode(language);
+    otherAbstract.language = normalizeLanguageCode(language);
     otherAbstract.type = reader.getAttributeValue(null, PubmedXmlElements.Attribute.TYPE);
 
     while (reader.hasNext()) {
@@ -767,15 +740,15 @@ public final class CanonicalPublicationParsingStrategy
     }
   }
 
-  /// 转换语言代码（PubMed 3 字母 → ISO 639-1）。
+  /// 标准化语言代码（小写 + 去空格）。
   ///
-  /// @param pubmedLang PubMed 语言代码（如 "eng", "chi"）
-  /// @return ISO 639-1 代码（如 "en", "zh"），未知语言返回 null
-  private String convertLanguageCode(String pubmedLang) {
-    if (pubmedLang == null || pubmedLang.isBlank()) {
+  /// @param rawLang 原始语言代码（如 "eng", "chi"）
+  /// @return 标准化后的 ISO 639-3 代码，空值返回 null
+  private String normalizeLanguageCode(String rawLang) {
+    if (rawLang == null || rawLang.isBlank()) {
       return null;
     }
-    return LANGUAGE_CODE_MAP.get(pubmedLang.toLowerCase());
+    return rawLang.trim().toLowerCase();
   }
 
   /// 构建 CanonicalPublication。
@@ -825,12 +798,12 @@ public final class CanonicalPublicationParsingStrategy
     return identifiers;
   }
 
-  /// 构建语言代码（取第一个语言，转换为 ISO 639-1）。
+  /// 构建语言代码（取第一个语言，保留原始 ISO 639-3 代码）。
   private String buildLanguage(ParsedFields fields) {
     if (fields.languages.isEmpty()) {
       return null;
     }
-    return convertLanguageCode(fields.languages.getFirst());
+    return normalizeLanguageCode(fields.languages.getFirst());
   }
 
   /// 构建期刊信息。
