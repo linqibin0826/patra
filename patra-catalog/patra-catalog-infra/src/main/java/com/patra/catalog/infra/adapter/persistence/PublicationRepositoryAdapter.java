@@ -359,7 +359,6 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     }
   }
 
-  /// 写入关键词关联数据。
   /// 写入关键词关联数据（规范化设计）。
   ///
   /// **写入流程**：
@@ -376,9 +375,8 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
       }
       for (PublicationKeyword keyword : item.keywords()) {
         String normalizedTerm = KeywordEntity.normalize(keyword.term());
-        // 使用 normalized_term + source 作为 key 进行去重
-        String key = normalizedTerm + "|" + keyword.source();
-        keywordMap.putIfAbsent(key, keyword);
+        // 使用 normalized_term 作为去重 key（与 DB 唯一约束 uk_normalized_term 一致）
+        keywordMap.putIfAbsent(normalizedTerm, keyword);
       }
     }
 

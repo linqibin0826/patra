@@ -216,30 +216,4 @@ public interface PublicationRepository {
   ///
   /// @param locationsByPublicationId Map，key 为 publicationId，value 为要设置的 OA 位置列表
   void replaceOaLocationsBatch(Map<Long, List<PublicationOaLocation>> locationsByPublicationId);
-
-  /// 批量替换所有补充数据。
-  ///
-  /// 用于 PubMed Baseline 导入场景，在同一次调用中更新所有补充数据。
-  /// 内部实现依次调用各个 replace 方法。
-  ///
-  /// @param identifiersByPublicationId 标识符
-  /// @param abstractsByPublicationId 摘要
-  /// @param datesByPublicationId 日期信息
-  /// @param metadataByPublicationId 元数据
-  /// @param alternativeAbstractsByPublicationId 翻译摘要
-  /// @param oaLocationsByPublicationId OA 位置
-  default void replaceAllSupplementaryDataBatch(
-      Map<Long, List<PublicationIdentifier>> identifiersByPublicationId,
-      Map<Long, PublicationAbstract> abstractsByPublicationId,
-      Map<Long, List<PublicationDate>> datesByPublicationId,
-      Map<Long, PublicationMetadata> metadataByPublicationId,
-      Map<Long, List<PublicationAlternativeAbstract>> alternativeAbstractsByPublicationId,
-      Map<Long, List<PublicationOaLocation>> oaLocationsByPublicationId) {
-    replaceIdentifiersBatch(identifiersByPublicationId);
-    replaceAbstractsBatch(abstractsByPublicationId);
-    replaceDatesBatch(datesByPublicationId);
-    replaceMetadataBatch(metadataByPublicationId);
-    replaceAlternativeAbstractsBatch(alternativeAbstractsByPublicationId);
-    replaceOaLocationsBatch(oaLocationsByPublicationId);
-  }
 }

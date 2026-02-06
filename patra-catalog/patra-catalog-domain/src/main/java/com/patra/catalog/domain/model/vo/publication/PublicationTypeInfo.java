@@ -76,13 +76,13 @@ public record PublicationTypeInfo(
   ///
   /// @return true 如果类型值包含 "Journal Article"
   public boolean isJournalArticle() {
-    return typeValue != null && typeValue.toLowerCase().contains("journal article");
+    return typeValue.toLowerCase().contains("journal article");
   }
 
   /// 判断是否为综述类型。
   ///
   /// @return true 如果类型值包含 "Review"
   public boolean isReview() {
-    return typeValue != null && typeValue.toLowerCase().contains("review");
+    return typeValue.toLowerCase().contains("review");
   }
 }
