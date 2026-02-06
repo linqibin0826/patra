@@ -35,4 +35,13 @@ public class PublicationImportJobParams implements JobParams {
   ///
   /// 示例：`https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/pubmed25n0001.xml.gz`
   private String downloadUrl;
+
+  /// 导入批次标识。
+  ///
+  /// 用于标记本次导入的文献来源批次，供 Processor 写入 `PublicationMetadata.importBatch`。
+  ///
+  /// 格式：`baseline-{fileName}`（不含扩展名）
+  ///
+  /// 示例：`baseline-pubmed25n0001`
+  private String importBatch;
 }

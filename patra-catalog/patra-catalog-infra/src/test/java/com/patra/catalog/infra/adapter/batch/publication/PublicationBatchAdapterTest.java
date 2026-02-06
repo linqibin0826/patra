@@ -83,6 +83,45 @@ class PublicationBatchAdapterTest {
     }
 
     @Test
+    @DisplayName("应该生成非空的 importBatch 参数")
+    void should_generate_non_null_import_batch() {
+      // given
+      PublicationImportParams params = PublicationImportParams.of(BASE_URL, FILE_INDEX);
+      when(jobOperatorHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
+          .thenReturn(EXPECTED_EXECUTION_ID);
+
+      // when
+      adapter.launchBaselineImport(params);
+
+      // then
+      verify(jobOperatorHelper)
+          .launch(eq(pubmedBaselineImportJob), jobParamsCaptor.capture(), eq(false));
+
+      PublicationImportJobParams captured = jobParamsCaptor.getValue();
+      assertThat(captured.getImportBatch()).isNotNull().isNotBlank();
+    }
+
+    @Test
+    @DisplayName("importBatch 应从 downloadUrl 中提取文件名标识")
+    void should_extract_import_batch_from_download_url() {
+      // given
+      PublicationImportParams params = PublicationImportParams.of(BASE_URL, FILE_INDEX);
+      when(jobOperatorHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
+          .thenReturn(EXPECTED_EXECUTION_ID);
+
+      // when
+      adapter.launchBaselineImport(params);
+
+      // then
+      verify(jobOperatorHelper)
+          .launch(eq(pubmedBaselineImportJob), jobParamsCaptor.capture(), eq(false));
+
+      PublicationImportJobParams captured = jobParamsCaptor.getValue();
+      // 从 pubmed25n0001.xml.gz 提取为 baseline-pubmed25n0001
+      assertThat(captured.getImportBatch()).isEqualTo("baseline-pubmed25n0001");
+    }
+
+    @Test
     @DisplayName("应该使用不添加时间戳的模式（支持断点续传）")
     void should_use_no_timestamp_mode_for_restart() {
       // given
