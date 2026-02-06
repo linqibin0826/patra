@@ -10,29 +10,35 @@ import com.patra.catalog.domain.model.enums.PublicationMedium;
 import com.patra.catalog.domain.model.enums.PublicationStatus;
 import com.patra.catalog.domain.model.vo.publication.LanguageInfo;
 import com.patra.catalog.domain.model.vo.publication.MeshQualifier;
+import com.patra.catalog.domain.model.vo.publication.PublicationAbstract;
 import com.patra.catalog.domain.model.vo.publication.PublicationAlternativeAbstract;
 import com.patra.catalog.domain.model.vo.publication.PublicationCompleteData;
 import com.patra.catalog.domain.model.vo.publication.PublicationDate;
 import com.patra.catalog.domain.model.vo.publication.PublicationFunding;
+import com.patra.catalog.domain.model.vo.publication.PublicationIdentifier;
 import com.patra.catalog.domain.model.vo.publication.PublicationInvestigator;
 import com.patra.catalog.domain.model.vo.publication.PublicationKeyword;
 import com.patra.catalog.domain.model.vo.publication.PublicationMeshHeading;
 import com.patra.catalog.domain.model.vo.publication.PublicationMetadata;
+import com.patra.catalog.domain.model.vo.publication.PublicationOaLocation;
 import com.patra.catalog.domain.model.vo.publication.PublicationPersonalNameSubject;
 import com.patra.catalog.domain.model.vo.publication.PublicationSupplMesh;
 import com.patra.catalog.domain.model.vo.publication.PublicationTypeInfo;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.catalog.infra.adapter.persistence.dao.InvestigatorDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationIdentifierDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationInvestigatorDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationMetadataDao;
+import com.patra.catalog.infra.adapter.persistence.dao.PublicationOaLocationDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationPersonalNameSubjectDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
@@ -40,6 +46,7 @@ import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
@@ -97,6 +104,9 @@ class PublicationRepositoryAdapterIT {
   @Autowired private InvestigatorDao investigatorDao;
   @Autowired private PublicationInvestigatorDao publicationInvestigatorDao;
   @Autowired private PublicationPersonalNameSubjectDao personalNameSubjectDao;
+  @Autowired private PublicationIdentifierDao identifierDao;
+  @Autowired private PublicationAbstractDao abstractDao;
+  @Autowired private PublicationOaLocationDao oaLocationDao;
 
   // ========== 工厂方法 ==========
 
@@ -930,6 +940,302 @@ class PublicationRepositoryAdapterIT {
       assertThat(keywordDao.findByPublicationId(pub2.getId().value())).hasSize(2);
       assertThat(keywordDao.findByPublicationId(pub3.getId().value())).isEmpty();
       assertThat(typeDao.findByPublicationId(pub3.getId().value())).hasSize(1);
+    }
+  }
+
+  // ========== 辅助方法：插入文献并返回 ID ==========
+
+  /// 插入一篇文献到数据库并返回其 ID。
+  private Long insertPublication(String pmid, String doi) {
+    var publication = createPublication(pmid, doi, 1001L, 2001L, "Test Pub " + pmid, 2024);
+    repository.insertAll(List.of(publication));
+    return publication.getId().value();
+  }
+
+  @Nested
+  @DisplayName("updateBatch 测试")
+  class UpdateBatchTests {
+
+    @Test
+    @DisplayName("应该批量更新聚合根字段")
+    void should_update_aggregate_fields() {
+      // Given - 插入两篇文献
+      var pub1 = createPublication("80808081", "10.8080/a", 1001L, 2001L, "Original A", 2024);
+      var pub2 = createPublication("80808082", "10.8080/b", 1001L, 2001L, "Original B", 2024);
+      repository.insertAll(List.of(pub1, pub2));
+
+      // 修改聚合根状态
+      pub1.incrementCitationCount(5);
+      pub2.updateOaStatus(true, OaStatus.GOLD);
+
+      // When
+      repository.updateBatch(List.of(pub1, pub2));
+
+      // Then - 重新查询验证更新
+      var found1 = repository.findById(pub1.getId().value()).orElseThrow();
+      assertThat(found1.getNumberOfReferences()).isEqualTo(10); // 原始值
+      assertThat(found1.getCitationCount()).isEqualTo(5);
+
+      var found2 = repository.findById(pub2.getId().value()).orElseThrow();
+      assertThat(found2.getOaStatus()).isEqualTo(OaStatus.GOLD);
+    }
+
+    @Test
+    @DisplayName("空列表应该不执行任何操作")
+    void should_do_nothing_for_empty_list() {
+      // When & Then - 不抛异常
+      repository.updateBatch(List.of());
+    }
+
+    @Test
+    @DisplayName("null 应该不执行任何操作")
+    void should_do_nothing_for_null() {
+      // When & Then - 不抛异常
+      repository.updateBatch(null);
+    }
+
+    @Test
+    @DisplayName("ID 为 null 的聚合根应该抛出异常")
+    void should_throw_when_id_is_null() {
+      // Given - 创建未持久化的聚合根（无 ID）
+      var pub = createPublication("80808083", "10.8080/c", 1001L, 2001L, "No Id", 2024);
+
+      // When & Then
+      assertThatThrownBy(() -> repository.updateBatch(List.of(pub)))
+          .isInstanceOf(IllegalArgumentException.class);
+    }
+  }
+
+  @Nested
+  @DisplayName("replaceIdentifiersBatch 测试")
+  class ReplaceIdentifiersBatchTests {
+
+    @Test
+    @DisplayName("应该替换标识符（先删后插）")
+    void should_replace_identifiers() {
+      // Given - 插入文献，带初始标识符
+      Long pubId = insertPublication("81818181", "10.8181/a");
+
+      var initialIds = List.of(PublicationIdentifier.forPmid("81818181", "PUBMED"));
+      repository.replaceIdentifiersBatch(Map.of(pubId, initialIds));
+      assertThat(identifierDao.findByPublicationId(pubId)).hasSize(1);
+
+      // When - 替换为新标识符
+      var newIds =
+          List.of(
+              PublicationIdentifier.forPmid("81818181", "PUBMED"),
+              PublicationIdentifier.forDoi("10.8181/a", "PUBMED"),
+              PublicationIdentifier.forPmc("PMC999999", "PUBMED"));
+      repository.replaceIdentifiersBatch(Map.of(pubId, newIds));
+
+      // Then - 旧的被删除，新的被插入
+      var result = identifierDao.findByPublicationId(pubId);
+      assertThat(result).hasSize(3);
+    }
+
+    @Test
+    @DisplayName("空 Map 应该不执行任何操作")
+    void should_do_nothing_for_empty_map() {
+      repository.replaceIdentifiersBatch(Map.of());
+    }
+
+    @Test
+    @DisplayName("null 应该不执行任何操作")
+    void should_do_nothing_for_null() {
+      repository.replaceIdentifiersBatch(null);
+    }
+  }
+
+  @Nested
+  @DisplayName("replaceAbstractsBatch 测试")
+  class ReplaceAbstractsBatchTests {
+
+    @Test
+    @DisplayName("应该替换摘要（1:1 关系）")
+    void should_replace_abstract() {
+      // Given
+      Long pubId = insertPublication("82828281", "10.8282/a");
+
+      var initialAbstract = PublicationAbstract.ofPlainText("Original abstract text");
+      repository.replaceAbstractsBatch(Map.of(pubId, initialAbstract));
+      assertThat(abstractDao.findByPublicationId(pubId)).isPresent();
+
+      // When - 替换为新摘要
+      var newAbstract = PublicationAbstract.ofPlainText("Updated abstract text");
+      repository.replaceAbstractsBatch(Map.of(pubId, newAbstract));
+
+      // Then
+      var result = abstractDao.findByPublicationId(pubId);
+      assertThat(result).isPresent();
+      assertThat(result.get().getPlainText()).isEqualTo("Updated abstract text");
+    }
+
+    @Test
+    @DisplayName("null 摘要值应该跳过（不写入空记录）")
+    void should_skip_null_abstract_value() {
+      // Given
+      Long pubId = insertPublication("82828282", "10.8282/b");
+
+      // When - 传入 null 值
+      repository.replaceAbstractsBatch(Map.of(pubId, PublicationAbstract.empty()));
+
+      // Then - 无内容的摘要不写入
+      assertThat(abstractDao.findByPublicationId(pubId)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("空 Map 应该不执行任何操作")
+    void should_do_nothing_for_empty_map() {
+      repository.replaceAbstractsBatch(Map.of());
+    }
+  }
+
+  @Nested
+  @DisplayName("replaceDatesBatch 测试")
+  class ReplaceDatesBatchTests {
+
+    @Test
+    @DisplayName("应该替换日期列表")
+    void should_replace_dates() {
+      // Given
+      Long pubId = insertPublication("83838381", "10.8383/a");
+
+      var initialDates = List.of(PublicationDate.of(PublicationDateType.PUBLISHED, 2024, 1, 15));
+      repository.replaceDatesBatch(Map.of(pubId, initialDates));
+      assertThat(dateDao.findByPublicationId(pubId)).hasSize(1);
+
+      // When - 替换为多条日期
+      var newDates =
+          List.of(
+              PublicationDate.of(PublicationDateType.PUBLISHED, 2024, 6, 1),
+              PublicationDate.of(PublicationDateType.RECEIVED, 2024, 3, 10),
+              PublicationDate.of(PublicationDateType.ACCEPTED, 2024, 5, 20));
+      repository.replaceDatesBatch(Map.of(pubId, newDates));
+
+      // Then
+      assertThat(dateDao.findByPublicationId(pubId)).hasSize(3);
+    }
+
+    @Test
+    @DisplayName("空 Map 应该不执行任何操作")
+    void should_do_nothing_for_empty_map() {
+      repository.replaceDatesBatch(Map.of());
+    }
+  }
+
+  @Nested
+  @DisplayName("replaceMetadataBatch 测试")
+  class ReplaceMetadataBatchTests {
+
+    @Test
+    @DisplayName("应该替换元数据（1:1 关系）")
+    void should_replace_metadata() {
+      // Given
+      Long pubId = insertPublication("84848481", "10.8484/a");
+
+      var initialMeta = PublicationMetadata.ofImport(ProvenanceCode.PUBMED, "batch-001");
+      repository.replaceMetadataBatch(Map.of(pubId, initialMeta));
+      assertThat(metadataDao.findByPublicationId(pubId)).isPresent();
+
+      // When - 替换为新元数据
+      var newMeta = PublicationMetadata.ofImport(ProvenanceCode.PUBMED, "batch-002");
+      repository.replaceMetadataBatch(Map.of(pubId, newMeta));
+
+      // Then
+      var result = metadataDao.findByPublicationId(pubId);
+      assertThat(result).isPresent();
+      assertThat(result.get().getImportBatch()).isEqualTo("batch-002");
+    }
+
+    @Test
+    @DisplayName("空 Map 应该不执行任何操作")
+    void should_do_nothing_for_empty_map() {
+      repository.replaceMetadataBatch(Map.of());
+    }
+  }
+
+  @Nested
+  @DisplayName("replaceAlternativeAbstractsBatch 测试")
+  class ReplaceAlternativeAbstractsBatchTests {
+
+    @Test
+    @DisplayName("应该替换翻译摘要列表")
+    void should_replace_alternative_abstracts() {
+      // Given
+      Long pubId = insertPublication("85858581", "10.8585/a");
+
+      var initial = List.of(PublicationAlternativeAbstract.ofOfficial("zh-CN", "Chinese", "旧摘要"));
+      repository.replaceAlternativeAbstractsBatch(Map.of(pubId, initial));
+      assertThat(alternativeAbstractDao.findByPublicationId(pubId)).hasSize(1);
+
+      // When - 替换为多条翻译摘要
+      var updated =
+          List.of(
+              PublicationAlternativeAbstract.ofOfficial("zh-CN", "Chinese", "新中文摘要"),
+              PublicationAlternativeAbstract.ofOfficial("ja-JP", "Japanese", "日本語の要約"));
+      repository.replaceAlternativeAbstractsBatch(Map.of(pubId, updated));
+
+      // Then
+      assertThat(alternativeAbstractDao.findByPublicationId(pubId)).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("空 Map 应该不执行任何操作")
+    void should_do_nothing_for_empty_map() {
+      repository.replaceAlternativeAbstractsBatch(Map.of());
+    }
+  }
+
+  @Nested
+  @DisplayName("replaceOaLocationsBatch 测试")
+  class ReplaceOaLocationsBatchTests {
+
+    @Test
+    @DisplayName("应该替换 OA 位置列表")
+    void should_replace_oa_locations() {
+      // Given
+      Long pubId = insertPublication("86868681", "10.8686/a");
+
+      var initial = List.of(PublicationOaLocation.ofPmc("PMC1000001", true));
+      repository.replaceOaLocationsBatch(Map.of(pubId, initial));
+      assertThat(oaLocationDao.findByPublicationId(pubId)).hasSize(1);
+
+      // When - 替换为多条 OA 位置
+      var updated =
+          List.of(
+              PublicationOaLocation.ofPublisher("https://example.com/article", "CC-BY-4.0"),
+              PublicationOaLocation.ofPmc("PMC1000002", false));
+      repository.replaceOaLocationsBatch(Map.of(pubId, updated));
+
+      // Then
+      assertThat(oaLocationDao.findByPublicationId(pubId)).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("多文献批量替换")
+    void should_replace_for_multiple_publications() {
+      // Given
+      Long pubId1 = insertPublication("86868682", "10.8686/b");
+      Long pubId2 = insertPublication("86868683", "10.8686/c");
+
+      // When - 同时替换两篇文献的 OA 位置
+      repository.replaceOaLocationsBatch(
+          Map.of(
+              pubId1, List.of(PublicationOaLocation.ofPmc("PMC2000001", true)),
+              pubId2,
+                  List.of(
+                      PublicationOaLocation.ofPmc("PMC2000002", true),
+                      PublicationOaLocation.ofPublisher("https://example2.com", "CC-BY-NC-4.0"))));
+
+      // Then
+      assertThat(oaLocationDao.findByPublicationId(pubId1)).hasSize(1);
+      assertThat(oaLocationDao.findByPublicationId(pubId2)).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("空 Map 应该不执行任何操作")
+    void should_do_nothing_for_empty_map() {
+      repository.replaceOaLocationsBatch(Map.of());
     }
   }
 }
