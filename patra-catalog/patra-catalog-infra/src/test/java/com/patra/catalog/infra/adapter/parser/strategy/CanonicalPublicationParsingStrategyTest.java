@@ -1740,6 +1740,135 @@ class CanonicalPublicationParsingStrategyTest {
     }
   }
 
+  // ========== 嵌套元素跳过测试 ==========
+
+  @Nested
+  @DisplayName("嵌套未知元素跳过")
+  class NestedElementSkipping {
+
+    @Test
+    @DisplayName("PMID 不应被 CommentsCorrectionsList 内的 PMID 覆盖")
+    void pmidShouldNotBeOverriddenByCommentsCorrectionsList() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>12345678</PMID>
+              <Article>
+                <ArticleTitle>Test Title</ArticleTitle>
+              </Article>
+              <MedlineJournalInfo>
+                <NlmUniqueID>N</NlmUniqueID>
+              </MedlineJournalInfo>
+              <CommentsCorrectionsList>
+                <CommentsCorrections RefType="Cites">
+                  <RefSource>Some Journal. 2020</RefSource>
+                  <PMID>99999</PMID>
+                </CommentsCorrections>
+                <CommentsCorrections RefType="Cites">
+                  <RefSource>Another Journal. 2021</RefSource>
+                  <PMID>88888</PMID>
+                </CommentsCorrections>
+              </CommentsCorrectionsList>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertNotNull(result);
+      // PMID 应为文献自身的 12345678，而非引用列表中的 99999 或 88888
+      assertThat(result.getIdentifiers())
+          .extracting(Identifier::getType, Identifier::getValue)
+          .contains(
+              org.assertj.core.groups.Tuple.tuple(PublicationIdentifierType.PMID, "12345678"));
+      assertThat(result.getIdentifiers())
+          .extracting(Identifier::getValue)
+          .doesNotContain("99999", "88888");
+    }
+
+    @Test
+    @DisplayName("ArticleIdList 不应被 ReferenceList 内的 ArticleIdList 污染")
+    void articleIdListShouldNotBePollutedByReferenceList() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article>
+                <ArticleTitle>T</ArticleTitle>
+              </Article>
+              <MedlineJournalInfo>
+                <NlmUniqueID>N</NlmUniqueID>
+              </MedlineJournalInfo>
+            </MedlineCitation>
+            <PubmedData>
+              <ArticleIdList>
+                <ArticleId IdType="doi">10.1000/real.doi</ArticleId>
+              </ArticleIdList>
+              <ReferenceList>
+                <Reference>
+                  <Citation>Some Reference</Citation>
+                  <ArticleIdList>
+                    <ArticleId IdType="doi">10.9999/fake</ArticleId>
+                  </ArticleIdList>
+                </Reference>
+              </ReferenceList>
+            </PubmedData>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertNotNull(result);
+      // 应包含文献自身的 DOI
+      assertThat(result.getIdentifiers())
+          .extracting(Identifier::getType, Identifier::getValue)
+          .contains(
+              org.assertj.core.groups.Tuple.tuple(
+                  PublicationIdentifierType.DOI, "10.1000/real.doi"));
+      // 不应包含引用列表中的 DOI
+      assertThat(result.getIdentifiers())
+          .extracting(Identifier::getValue)
+          .doesNotContain("10.9999/fake");
+    }
+
+    @Test
+    @DisplayName("嵌套未知元素应被正确跳过，后续元素仍能正常解析")
+    void nestedUnknownElementsShouldBeSkippedCorrectly() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article>
+                <ArticleTitle>T</ArticleTitle>
+              </Article>
+              <ChemicalList>
+                <Chemical>
+                  <RegistryNumber>0</RegistryNumber>
+                  <NameOfSubstance UI="D000241">Adenosine</NameOfSubstance>
+                </Chemical>
+              </ChemicalList>
+              <MedlineJournalInfo>
+                <NlmUniqueID>101234567</NlmUniqueID>
+              </MedlineJournalInfo>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      // ChemicalList 应被跳过，但后续的 MedlineJournalInfo 仍应正确解析
+      assertNotNull(result);
+      assertNotNull(result.getJournal());
+      assertEquals("101234567", result.getJournal().getNlmUniqueId());
+    }
+  }
+
   // ========== 辅助方法 ==========
 
   /// 创建最小有效的 PubmedArticle XML。
