@@ -65,12 +65,34 @@ public class PublicationBatchAdapter implements PublicationBatchPort {
   @Override
   public Long launchBaselineImport(PublicationImportParams params) {
     String downloadUrl = params.getDownloadUrl();
-    log.info("启动 PubMed Baseline 导入 Job，文件索引：{}，URL：{}", params.fileIndex(), downloadUrl);
+    String importBatch = extractImportBatch(downloadUrl);
+    log.info(
+        "启动 PubMed Baseline 导入 Job，文件索引：{}，批次：{}，URL：{}",
+        params.fileIndex(),
+        importBatch,
+        downloadUrl);
 
     PublicationImportJobParams jobParams =
-        PublicationImportJobParams.builder().downloadUrl(downloadUrl).build();
+        PublicationImportJobParams.builder()
+            .downloadUrl(downloadUrl)
+            .importBatch(importBatch)
+            .build();
 
     // 不添加时间戳，相同参数的 Job 只执行一次（支持断点续传）
     return jobOperatorHelper.launch(pubmedBaselineImportJob, jobParams, false);
+  }
+
+  /// 从下载 URL 中提取导入批次标识。
+  ///
+  /// 从 URL 路径中提取文件名（去除 `.xml.gz` 扩展名），并加上 `baseline-` 前缀。
+  ///
+  /// 示例：`https://.../.../pubmed25n0001.xml.gz` → `baseline-pubmed25n0001`
+  ///
+  /// @param downloadUrl 下载 URL
+  /// @return 导入批次标识
+  private static String extractImportBatch(String downloadUrl) {
+    String fileName = downloadUrl.substring(downloadUrl.lastIndexOf('/') + 1);
+    String baseName = fileName.replace(".xml.gz", "");
+    return "baseline-" + baseName;
   }
 }
