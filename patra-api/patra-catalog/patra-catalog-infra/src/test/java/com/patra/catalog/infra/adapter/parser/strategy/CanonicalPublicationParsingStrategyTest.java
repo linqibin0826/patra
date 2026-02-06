@@ -12,6 +12,8 @@ import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.CanonicalPublication.Author;
 import com.patra.common.model.CanonicalPublication.Identifier;
 import com.patra.common.model.CanonicalPublication.Journal;
+import com.patra.common.model.CanonicalPublication.Keyword;
+import com.patra.common.model.CanonicalPublication.KeywordSet;
 import com.patra.common.model.CanonicalPublication.MeshHeading;
 import com.patra.common.model.CanonicalPublication.PublicationType;
 import com.patra.common.model.enums.PublicationIdentifierType;
@@ -1124,6 +1126,175 @@ class CanonicalPublicationParsingStrategyTest {
 
       assertThat(result.getSupplMeshNames()).hasSize(1);
       assertThat(result.getSupplMeshNames().get(0).getUi()).isEqualTo("C538003");
+    }
+  }
+
+  // ========== 关键词解析测试 ==========
+
+  @Nested
+  @DisplayName("关键词解析")
+  class KeywordParsing {
+
+    @Test
+    @DisplayName("应解析单个 KeywordList 中的关键词")
+    void shouldParseKeywords() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article><ArticleTitle>T</ArticleTitle></Article>
+              <MedlineJournalInfo><NlmUniqueID>N</NlmUniqueID></MedlineJournalInfo>
+              <KeywordList Owner="NOTNLM">
+                <Keyword MajorTopicYN="N">Machine learning</Keyword>
+                <Keyword MajorTopicYN="Y">Drug discovery</Keyword>
+              </KeywordList>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertNotNull(result.getKeywords());
+      assertThat(result.getKeywords()).hasSize(1);
+
+      KeywordSet keywordSet = result.getKeywords().getFirst();
+      assertThat(keywordSet.getSource()).isEqualTo("NOTNLM");
+      assertThat(keywordSet.getKeywords()).hasSize(2);
+
+      Keyword first = keywordSet.getKeywords().get(0);
+      assertThat(first.getTerm()).isEqualTo("Machine learning");
+      assertThat(first.getMajorTopic()).isFalse();
+
+      Keyword second = keywordSet.getKeywords().get(1);
+      assertThat(second.getTerm()).isEqualTo("Drug discovery");
+      assertThat(second.getMajorTopic()).isTrue();
+    }
+
+    @Test
+    @DisplayName("应解析多个 KeywordList（不同 Owner）")
+    void shouldParseMultipleKeywordLists() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article><ArticleTitle>T</ArticleTitle></Article>
+              <MedlineJournalInfo><NlmUniqueID>N</NlmUniqueID></MedlineJournalInfo>
+              <KeywordList Owner="NOTNLM">
+                <Keyword MajorTopicYN="N">Machine learning</Keyword>
+              </KeywordList>
+              <KeywordList Owner="NLM">
+                <Keyword MajorTopicYN="N">Artificial Intelligence</Keyword>
+              </KeywordList>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getKeywords()).hasSize(2);
+      assertThat(result.getKeywords())
+          .extracting(KeywordSet::getSource)
+          .containsExactly("NOTNLM", "NLM");
+
+      assertThat(result.getKeywords().get(0).getKeywords()).hasSize(1);
+      assertThat(result.getKeywords().get(0).getKeywords().getFirst().getTerm())
+          .isEqualTo("Machine learning");
+
+      assertThat(result.getKeywords().get(1).getKeywords()).hasSize(1);
+      assertThat(result.getKeywords().get(1).getKeywords().getFirst().getTerm())
+          .isEqualTo("Artificial Intelligence");
+    }
+
+    @Test
+    @DisplayName("无 KeywordList 时应返回空列表")
+    void shouldReturnEmptyListWhenNoKeywordList() throws Exception {
+      var xml = minimalArticleXml("1", "T", "N", 2024);
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getKeywords()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("应忽略空白关键词")
+    void shouldIgnoreBlankKeywords() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article><ArticleTitle>T</ArticleTitle></Article>
+              <MedlineJournalInfo><NlmUniqueID>N</NlmUniqueID></MedlineJournalInfo>
+              <KeywordList Owner="NOTNLM">
+                <Keyword MajorTopicYN="N">  </Keyword>
+                <Keyword MajorTopicYN="N">Valid keyword</Keyword>
+              </KeywordList>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getKeywords()).hasSize(1);
+      assertThat(result.getKeywords().getFirst().getKeywords()).hasSize(1);
+      assertThat(result.getKeywords().getFirst().getKeywords().getFirst().getTerm())
+          .isEqualTo("Valid keyword");
+    }
+
+    @Test
+    @DisplayName("所有关键词为空白时应忽略整个 KeywordList")
+    void shouldIgnoreKeywordListWhenAllKeywordsBlank() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article><ArticleTitle>T</ArticleTitle></Article>
+              <MedlineJournalInfo><NlmUniqueID>N</NlmUniqueID></MedlineJournalInfo>
+              <KeywordList Owner="NOTNLM">
+                <Keyword MajorTopicYN="N">  </Keyword>
+                <Keyword MajorTopicYN="N"></Keyword>
+              </KeywordList>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getKeywords()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("MajorTopicYN 缺失时应默认为 false")
+    void shouldDefaultMajorTopicToFalseWhenMissing() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article><ArticleTitle>T</ArticleTitle></Article>
+              <MedlineJournalInfo><NlmUniqueID>N</NlmUniqueID></MedlineJournalInfo>
+              <KeywordList Owner="NOTNLM">
+                <Keyword>No attribute keyword</Keyword>
+              </KeywordList>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getKeywords()).hasSize(1);
+      Keyword keyword = result.getKeywords().getFirst().getKeywords().getFirst();
+      assertThat(keyword.getTerm()).isEqualTo("No attribute keyword");
+      assertThat(keyword.getMajorTopic()).isFalse();
     }
   }
 

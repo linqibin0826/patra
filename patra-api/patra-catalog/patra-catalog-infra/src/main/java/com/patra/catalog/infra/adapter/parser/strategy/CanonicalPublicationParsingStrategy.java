@@ -11,6 +11,8 @@ import com.patra.common.model.CanonicalPublication.Author;
 import com.patra.common.model.CanonicalPublication.DescriptorName;
 import com.patra.common.model.CanonicalPublication.Identifier;
 import com.patra.common.model.CanonicalPublication.Journal;
+import com.patra.common.model.CanonicalPublication.Keyword;
+import com.patra.common.model.CanonicalPublication.KeywordSet;
 import com.patra.common.model.CanonicalPublication.MeshHeading;
 import com.patra.common.model.CanonicalPublication.Pagination;
 import com.patra.common.model.CanonicalPublication.PublicationDates;
@@ -199,6 +201,7 @@ public final class CanonicalPublicationParsingStrategy
               parseMedlineJournalInfo(reader, fields);
           case PubmedXmlElements.MeSH.MESH_HEADING_LIST -> parseMeshHeadingList(reader, fields);
           case PubmedXmlElements.SupplMesh.SUPPL_MESH_LIST -> parseSupplMeshList(reader, fields);
+          case PubmedXmlElements.Keyword.KEYWORD_LIST -> parseKeywordList(reader, fields);
           case PubmedXmlElements.OtherAbstract.OTHER_ABSTRACT -> parseOtherAbstract(reader, fields);
           default -> {
             // 跳过其他元素
@@ -609,6 +612,52 @@ public final class CanonicalPublicationParsingStrategy
     return supplMesh;
   }
 
+  /// 解析 KeywordList 元素。
+  ///
+  /// XML 结构：
+  /// ```xml
+  /// <KeywordList Owner="NOTNLM">
+  ///   <Keyword MajorTopicYN="N">Machine learning</Keyword>
+  ///   <Keyword MajorTopicYN="Y">Drug discovery</Keyword>
+  /// </KeywordList>
+  /// ```
+  private void parseKeywordList(XMLStreamReader reader, ParsedFields fields)
+      throws XMLStreamException {
+    var keywordSet = new ParsedKeywordSet();
+    keywordSet.owner = reader.getAttributeValue(null, PubmedXmlElements.Attribute.OWNER);
+
+    while (reader.hasNext()) {
+      int event = reader.next();
+
+      if (event == XMLStreamConstants.START_ELEMENT
+          && PubmedXmlElements.Keyword.KEYWORD.equals(reader.getLocalName())) {
+        ParsedKeyword keyword = parseKeyword(reader);
+        if (keyword != null && keyword.term != null && !keyword.term.isBlank()) {
+          keywordSet.keywords.add(keyword);
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && PubmedXmlElements.Keyword.KEYWORD_LIST.equals(reader.getLocalName())) {
+        break;
+      }
+    }
+
+    if (!keywordSet.keywords.isEmpty()) {
+      fields.keywordSets.add(keywordSet);
+    }
+  }
+
+  /// 解析单个 Keyword 元素。
+  ///
+  /// XML 结构：`<Keyword MajorTopicYN="N">Machine learning</Keyword>`
+  private ParsedKeyword parseKeyword(XMLStreamReader reader) throws XMLStreamException {
+    var keyword = new ParsedKeyword();
+    keyword.majorTopic =
+        XmlParsingHelper.parseYesNoAttributeNullable(
+            reader, PubmedXmlElements.Attribute.MAJOR_TOPIC_YN);
+    keyword.term = reader.getElementText().trim();
+    return keyword;
+  }
+
   /// 解析 PublicationTypeList 元素。
   private void parsePublicationTypeList(XMLStreamReader reader, ParsedFields fields)
       throws XMLStreamException {
@@ -763,6 +812,7 @@ public final class CanonicalPublicationParsingStrategy
         .alternativeAbstracts(buildAlternativeAbstracts(fields))
         .meshHeadings(buildMeshHeadings(fields))
         .supplMeshNames(buildSupplMeshNames(fields))
+        .keywords(buildKeywordSets(fields))
         .publicationTypes(buildPublicationTypes(fields))
         .pagination(buildPagination(fields))
         .journal(buildJournal(fields))
@@ -979,6 +1029,30 @@ public final class CanonicalPublicationParsingStrategy
         .toList();
   }
 
+  /// 构建关键词集合列表。
+  private List<KeywordSet> buildKeywordSets(ParsedFields fields) {
+    if (fields.keywordSets.isEmpty()) {
+      return List.of();
+    }
+
+    return fields.keywordSets.stream().map(this::buildKeywordSet).toList();
+  }
+
+  /// 构建单个关键词集合。
+  private KeywordSet buildKeywordSet(ParsedKeywordSet parsed) {
+    List<Keyword> keywords =
+        parsed.keywords.stream()
+            .map(
+                k ->
+                    Keyword.builder()
+                        .majorTopic(Boolean.TRUE.equals(k.majorTopic))
+                        .term(k.term)
+                        .build())
+            .toList();
+
+    return KeywordSet.builder().source(parsed.owner).keywords(keywords).build();
+  }
+
   /// 构建其他语言摘要列表。
   ///
   /// 将解析的 OtherAbstract 转换为 AlternativeAbstract 列表。
@@ -1071,6 +1145,9 @@ public final class CanonicalPublicationParsingStrategy
     // 补充 MeSH 概念
     List<ParsedSupplMeshName> supplMeshNames = new ArrayList<>();
 
+    // 关键词
+    List<ParsedKeywordSet> keywordSets = new ArrayList<>();
+
     // 发表类型
     List<ParsedPublicationType> publicationTypes = new ArrayList<>();
 
@@ -1126,6 +1203,18 @@ public final class CanonicalPublicationParsingStrategy
     String ui;
     String name;
     String type;
+  }
+
+  /// 解析的关键词集合。
+  private static class ParsedKeywordSet {
+    String owner;
+    List<ParsedKeyword> keywords = new ArrayList<>();
+  }
+
+  /// 解析的单个关键词。
+  private static class ParsedKeyword {
+    Boolean majorTopic;
+    String term;
   }
 
   /// 解析的其他语言摘要。
