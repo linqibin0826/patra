@@ -8,6 +8,7 @@ import com.patra.catalog.domain.port.repository.VenueInstanceRepository;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -94,9 +95,9 @@ public class VenueInstanceGatewayImpl implements VenueInstanceGateway {
           issue,
           publicationYear);
       return newInstance;
-    } catch (Exception e) {
-      // 3. 并发创建时可能发生唯一约束冲突，重新查询
-      log.debug("JournalInstance 创建冲突，尝试重新查询: {}", e.getMessage());
+    } catch (DataIntegrityViolationException e) {
+      // 3. 并发创建时唯一约束冲突，重新查询已存在的实例
+      log.debug("JournalInstance 创建冲突（唯一约束），尝试重新查询: {}", e.getMessage());
       return venueInstanceRepository
           .findJournalInstance(venueId.value(), volume, issue, publicationYear)
           .orElseThrow(
