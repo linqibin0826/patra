@@ -15,7 +15,7 @@ import com.patra.catalog.domain.model.vo.venue.OpenAlexManifest;
 /// **流式处理特性**：
 ///
 /// - Manifest 解析：无磁盘落盘，HTTP 响应体直接传递给 JSON 解析器
-/// - 分区文件：通过 Manifest 获取 URL 列表，由 ItemReader 按需流式下载
+/// - 分区文件：通过 Manifest 获取 URL 列表，由 ItemReader 按需下载到临时文件
 ///
 /// **设计原则**：
 ///

@@ -12,8 +12,8 @@ import java.util.List;
 ///
 /// **流式处理特性**：
 ///
-/// - 无磁盘落盘，ItemReader 在切换文件时按需建立 HTTP 连接
-/// - 传递 URL 列表给 Job，由 ItemReader 负责流式下载
+/// - ItemReader 在切换文件时按需下载分区文件到临时目录
+/// - 传递 URL 列表给 Job，由 ItemReader 负责下载到临时文件
 ///
 /// **设计说明**：
 ///

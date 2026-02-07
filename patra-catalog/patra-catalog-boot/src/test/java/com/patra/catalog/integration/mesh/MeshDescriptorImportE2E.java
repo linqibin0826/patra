@@ -7,8 +7,8 @@ import static org.mockito.Mockito.when;
 import com.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import com.patra.catalog.domain.exception.DataAlreadyExistsException;
-import com.patra.catalog.domain.port.source.StreamingDownloadPort;
-import com.patra.catalog.domain.port.source.StreamingDownloadResult;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadResult;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshConceptDao;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshConceptRelationDao;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshDescriptorDao;
@@ -17,8 +17,11 @@ import com.patra.catalog.infra.adapter.persistence.dao.MeshEntryTermDao;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshTreeNumberDao;
 import com.patra.catalog.integration.config.CatalogMySQLContainerInitializer;
 import com.patra.common.cqrs.CommandBus;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.ClassOrderer;
@@ -44,7 +47,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 ///   → MeshDescriptorImportHandler.handle()
 ///     → MeshBatchAdapter.launchDescriptorImport()
 ///       → Spring Batch Job
-///         → MeshDescriptorItemReader (流式下载 + XML 解析)
+///         → MeshDescriptorItemReader (临时文件下载 + XML 解析)
 ///         → MeshDescriptorItemWriter (批量写入 6 张表)
 /// ```
 ///
@@ -96,8 +99,8 @@ class MeshDescriptorImportE2E {
   @Autowired private MeshEntryCombinationDao entryCombinationRepository;
   @Autowired private JdbcTemplate jdbcTemplate;
 
-  /// Mock StreamingDownloadPort，返回测试资源文件的 InputStream。
-  @MockitoBean private StreamingDownloadPort streamingDownloadPort;
+  /// Mock FileDownloadPort，将测试资源文件写入临时文件后返回路径。
+  @MockitoBean private FileDownloadPort fileDownloadPort;
 
   // ========== Setup & Teardown ==========
 
@@ -106,23 +109,34 @@ class MeshDescriptorImportE2E {
     // 清空所有 MeSH 表（注意顺序：先子表后主表）
     cleanupAllTables();
 
-    // 配置 Mock：每次调用都返回新的 InputStream
-    configureStreamingDownloadMock();
+    // 配置 Mock：每次调用都将测试资源写入临时文件
+    configureFileDownloadMock();
   }
 
-  /// 配置流式下载 Mock。
+  /// 配置文件下载 Mock。
   ///
-  /// 每次调用 download() 都返回新的 StreamingDownloadResult，包含测试 XML 的 InputStream。
-  private void configureStreamingDownloadMock() {
-    when(streamingDownloadPort.download(any(URI.class)))
+  /// 每次调用 download() 都将测试 XML 写入新的临时文件，返回 FileDownloadResult。
+  private void configureFileDownloadMock() {
+    when(fileDownloadPort.download(any(URI.class)))
         .thenAnswer(
             invocation -> {
               InputStream testInputStream = getClass().getResourceAsStream(TEST_RESOURCE_PATH);
               if (testInputStream == null) {
                 throw new IllegalStateException("测试资源文件不存在: " + TEST_RESOURCE_PATH);
               }
-              return StreamingDownloadResult.of(testInputStream);
+              return copyToTempFile(testInputStream);
             });
+  }
+
+  /// 将 InputStream 内容写入临时文件。
+  ///
+  /// @param inputStream 输入流
+  /// @return 临时文件下载结果
+  private FileDownloadResult copyToTempFile(InputStream inputStream) throws IOException {
+    Path tempFile = Files.createTempFile("mesh-descriptor-e2e-", ".xml");
+    Files.copy(inputStream, tempFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+    inputStream.close();
+    return FileDownloadResult.of(tempFile, Files.size(tempFile));
   }
 
   /// 清空所有 MeSH 相关表。

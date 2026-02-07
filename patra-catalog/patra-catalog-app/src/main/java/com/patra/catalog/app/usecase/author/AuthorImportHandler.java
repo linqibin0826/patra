@@ -22,8 +22,8 @@ import org.springframework.stereotype.Component;
 ///
 /// **流式处理特性**：
 ///
-/// - 无磁盘落盘，ItemReader 在 open() 时建立 HTTP 连接
-/// - 传递 downloadUrl 给 Job，由 ItemReader 负责流式下载
+/// - ItemReader 在 open() 时通过 FileDownloadPort 下载文件到临时目录
+/// - 传递 downloadUrl 给 Job，由 ItemReader 负责下载到临时文件
 ///
 /// **数据源说明**：
 ///
@@ -74,7 +74,7 @@ public class AuthorImportHandler
       throw new DataAlreadyExistsException("Author");
     }
 
-    // 2. 启动批处理导入（传递 downloadUrl，由 ItemReader 负责流式下载）
+    // 2. 启动批处理导入（传递 downloadUrl，由 ItemReader 负责下载到临时文件）
     try {
       AuthorImportParams params = AuthorImportParams.withDownloadUrl(command.url());
       Long executionId = authorBatchPort.launchAuthorImport(params);

@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 /// **流式处理特性**：
 ///
 /// - 使用 `partitionUrls` 存储分区文件 HTTP URL 列表
-/// - ItemReader 按需从远程 URL 流式下载每个分区文件
+/// - ItemReader 按需从远程 URL 下载每个分区文件到临时目录
 /// - 无临时文件清理逻辑
 ///
 /// **与 MeshImportJobParams 的差异**：
