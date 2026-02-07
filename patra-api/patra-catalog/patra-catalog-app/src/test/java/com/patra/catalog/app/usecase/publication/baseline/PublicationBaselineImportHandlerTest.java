@@ -61,7 +61,7 @@ class PublicationBaselineImportHandlerTest {
       assertThat(result.executionId()).isEqualTo(EXECUTION_ID);
       assertThat(result.baseUrl()).isEqualTo(BASE_URL);
       assertThat(result.fileIndex()).isEqualTo(FILE_INDEX);
-      assertThat(result.fileName()).isEqualTo("pubmed25n0042.xml.gz");
+      assertThat(result.fileName()).isEqualTo("pubmed26n0042.xml.gz");
     }
 
     @Test
@@ -95,7 +95,7 @@ class PublicationBaselineImportHandlerTest {
       assertThat(result.message())
           .contains(EXECUTION_ID.toString())
           .contains(String.valueOf(FILE_INDEX))
-          .contains("pubmed25n0042.xml.gz");
+          .contains("pubmed26n0042.xml.gz");
     }
   }
 }

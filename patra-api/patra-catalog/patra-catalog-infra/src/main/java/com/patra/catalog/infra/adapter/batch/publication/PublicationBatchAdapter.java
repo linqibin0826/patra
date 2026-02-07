@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 /// **单文件模式**：
 ///
 /// 每次调用只处理一个 PubMed Baseline XML 文件：
-/// - `params.fileIndex` 指定文件索引（1-1274）
+/// - `params.fileIndex` 指定文件索引（1-1334）
 /// - 自动生成完整的下载 URL
 ///
 /// **流式处理特性**：
@@ -86,7 +86,7 @@ public class PublicationBatchAdapter implements PublicationBatchPort {
   ///
   /// 从 URL 路径中提取文件名（去除 `.xml.gz` 扩展名），并加上 `baseline-` 前缀。
   ///
-  /// 示例：`https://.../.../pubmed25n0001.xml.gz` → `baseline-pubmed25n0001`
+  /// 示例：`https://.../.../pubmed26n0001.xml.gz` → `baseline-pubmed26n0001`
   ///
   /// @param downloadUrl 下载 URL
   /// @return 导入批次标识

@@ -7,7 +7,7 @@ package com.patra.catalog.domain.model.vo.publication;
 ///
 /// **单文件模式设计**：
 ///
-/// 每次 Job 执行只处理一个文件，通过 `fileIndex` 指定文件索引（1-1274）。
+/// 每次 Job 执行只处理一个文件，通过 `fileIndex` 指定文件索引（1-1334）。
 /// 这种设计支持：
 ///
 /// - 测试环境只导入 1 个文件
@@ -17,28 +17,28 @@ package com.patra.catalog.domain.model.vo.publication;
 /// **参数说明**：
 ///
 /// - `baseUrl`：FTP 基础 URL（如 `https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/`）
-/// - `fileIndex`：文件索引（1-1274，对应 pubmed25n0001.xml.gz ~ pubmed25n1274.xml.gz）
+/// - `fileIndex`：文件索引（1-1334，对应 pubmed26n0001.xml.gz ~ pubmed26n1334.xml.gz）
 ///
 /// **URL 生成规则**：
 ///
-/// `{baseUrl}pubmed25n{fileIndex:04d}.xml.gz`
+/// `{baseUrl}pubmed26n{fileIndex:04d}.xml.gz`
 ///
-/// 示例：fileIndex=1 → `pubmed25n0001.xml.gz`
+/// 示例：fileIndex=1 → `pubmed26n0001.xml.gz`
 ///
 /// @author linqibin
 /// @since 0.1.0
 public record PublicationImportParams(String baseUrl, int fileIndex) {
 
-  /// 2025 Baseline 文件总数。
-  public static final int TOTAL_FILE_COUNT = 1274;
+  /// 2026 Baseline 文件总数。
+  public static final int TOTAL_FILE_COUNT = 1334;
 
   /// 文件名模板。
-  private static final String FILE_NAME_TEMPLATE = "pubmed25n%04d.xml.gz";
+  private static final String FILE_NAME_TEMPLATE = "pubmed26n%04d.xml.gz";
 
   /// 创建导入参数。
   ///
   /// @param baseUrl FTP 基础 URL
-  /// @param fileIndex 文件索引（1-1274）
+  /// @param fileIndex 文件索引（1-1334）
   public PublicationImportParams {
     if (baseUrl == null || baseUrl.isBlank()) {
       throw new IllegalArgumentException("baseUrl 不能为空");
@@ -60,7 +60,7 @@ public record PublicationImportParams(String baseUrl, int fileIndex) {
 
   /// 获取文件名。
   ///
-  /// @return 文件名（如 pubmed25n0001.xml.gz）
+  /// @return 文件名（如 pubmed26n0001.xml.gz）
   public String getFileName() {
     return FILE_NAME_TEMPLATE.formatted(fileIndex);
   }

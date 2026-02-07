@@ -13,7 +13,7 @@ import java.net.URI;
 ///
 /// **单文件模式设计**：
 ///
-/// 每次命令只处理一个 XML 文件，通过 `fileIndex` 指定文件索引（1-1274）。
+/// 每次命令只处理一个 XML 文件，通过 `fileIndex` 指定文件索引（1-1334）。
 /// 这种设计支持：
 ///
 /// - 测试环境只导入 1 个文件
@@ -23,20 +23,20 @@ import java.net.URI;
 /// **字段语义与约束**：
 ///
 /// - **baseUrl**：FTP 基础 URL，必填，必须是 HTTP/HTTPS 协议
-/// - **fileIndex**：文件索引（1-1274），对应 pubmed25n0001.xml.gz ~ pubmed25n1274.xml.gz
+/// - **fileIndex**：文件索引（1-1334），对应 pubmed26n0001.xml.gz ~ pubmed26n1334.xml.gz
 ///
 /// **不变量**：
 ///
 /// - baseUrl 不为 null 且不为空白
 /// - baseUrl 必须是有效的 HTTP 或 HTTPS URL
-/// - fileIndex 在 1 到 1274 之间
+/// - fileIndex 在 1 到 1334 之间
 ///
 /// **线程安全**：
 ///
 /// Record 是不可变的，可安全跨线程共享。
 ///
 /// @param baseUrl FTP 基础 URL（必填，HTTP/HTTPS 协议）
-/// @param fileIndex 文件索引（1-1274）
+/// @param fileIndex 文件索引（1-1334）
 /// @author linqibin
 /// @since 0.1.0
 public record PublicationBaselineImportCommand(String baseUrl, int fileIndex)
