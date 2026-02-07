@@ -2,7 +2,7 @@ package com.patra.catalog.infra.adapter.batch.mesh;
 
 import com.patra.catalog.domain.model.aggregate.MeshScrAggregate;
 import com.patra.catalog.domain.port.parser.MeshScrParserPort;
-import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
 import com.patra.starter.batch.config.BatchProperties;
 import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
 import java.util.Optional;
@@ -50,7 +50,7 @@ public class MeshScrJobConfig {
 
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
-  private final StreamingDownloadPort streamingDownloadPort;
+  private final FileDownloadPort fileDownloadPort;
   private final MeshScrParserPort scrParserPort;
   private final MeshScrItemWriter meshScrItemWriter;
   private final BatchProperties batchProperties;
@@ -61,7 +61,7 @@ public class MeshScrJobConfig {
   ///
   /// @param jobRepository Job 仓库
   /// @param transactionManager 事务管理器
-  /// @param streamingDownloadPort 流式下载端口
+  /// @param fileDownloadPort 文件下载端口
   /// @param scrParserPort SCR 解析端口
   /// @param meshScrItemWriter Item 写入器
   /// @param batchProperties 批处理属性
@@ -70,7 +70,7 @@ public class MeshScrJobConfig {
   public MeshScrJobConfig(
       JobRepository jobRepository,
       PlatformTransactionManager transactionManager,
-      StreamingDownloadPort streamingDownloadPort,
+      FileDownloadPort fileDownloadPort,
       MeshScrParserPort scrParserPort,
       MeshScrItemWriter meshScrItemWriter,
       BatchProperties batchProperties,
@@ -78,7 +78,7 @@ public class MeshScrJobConfig {
       Optional<BatchProgressMetricsListener> batchProgressMetricsListener) {
     this.jobRepository = jobRepository;
     this.transactionManager = transactionManager;
-    this.streamingDownloadPort = streamingDownloadPort;
+    this.fileDownloadPort = fileDownloadPort;
     this.scrParserPort = scrParserPort;
     this.meshScrItemWriter = meshScrItemWriter;
     this.batchProperties = batchProperties;
@@ -133,7 +133,7 @@ public class MeshScrJobConfig {
   public MeshScrItemReader meshScrItemReader(
       @Value("#{jobParameters['downloadUrl']}") String downloadUrl,
       @Value("#{jobParameters['meshVersion']}") String meshVersion) {
-    return new MeshScrItemReader(streamingDownloadPort, scrParserPort, downloadUrl, meshVersion);
+    return new MeshScrItemReader(fileDownloadPort, scrParserPort, downloadUrl, meshVersion);
   }
 
   /// 获取 chunk size。

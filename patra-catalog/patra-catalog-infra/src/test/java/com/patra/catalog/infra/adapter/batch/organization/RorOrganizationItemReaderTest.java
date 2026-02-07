@@ -6,22 +6,24 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.patra.catalog.domain.model.aggregate.OrganizationAggregate;
-import com.patra.catalog.domain.port.source.StreamingDownloadPort;
-import com.patra.catalog.domain.port.source.StreamingDownloadResult;
-import java.io.ByteArrayInputStream;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadResult;
 import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.infrastructure.item.ExecutionContext;
@@ -31,16 +33,17 @@ import org.springframework.batch.infrastructure.item.ItemStreamException;
 ///
 /// **测试策略**：
 ///
-/// - 使用 Mock 的 StreamingDownloadPort 模拟 HTTP 下载
-/// - 使用内存中的 JSON 数据验证解析逻辑
+/// - 使用 Mock 的 FileDownloadPort 模拟文件下载
+/// - 使用 @TempDir 创建临时文件（JSON 或 ZIP）模拟下载结果
+/// - 使用真实的 RorOrganizationParser 验证端到端解析逻辑
 /// - 验证断点续传（ExecutionContext 保存/恢复）
 ///
 /// **重点测试场景**：
 ///
-/// - 正常流式读取 JSON 数组
+/// - 正常读取 JSON 数组
 /// - ZIP 文件解压并读取内部 JSON
 /// - 断点续传（跳过已处理记录）
-/// - 资源正确关闭
+/// - 临时文件正确删除
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -51,6 +54,7 @@ class RorOrganizationItemReaderTest {
 
   private static final String TEST_URL = "https://example.com/v2.0-2025-12-16-ror-data.zip";
   private static final String TEST_VERSION = "v2.0";
+  private static final String CURRENT_INDEX_KEY = "ror.organization.current.index";
 
   /// 最小化的 ROR 组织 JSON（包含必需字段）
   private static final String MINIMAL_ROR_JSON =
@@ -88,24 +92,36 @@ class RorOrganizationItemReaderTest {
       ]
       """;
 
-  @Mock private StreamingDownloadPort streamingDownloadPort;
+  @Mock private FileDownloadPort fileDownloadPort;
+
+  @TempDir Path tempDir;
 
   private RorOrganizationParser parser;
   private RorOrganizationItemReader reader;
+  private ExecutionContext executionContext;
 
   @BeforeEach
   void setUp() {
     parser = new RorOrganizationParser();
+    executionContext = new ExecutionContext();
   }
 
-  /// 创建模拟的下载结果（纯 JSON）。
-  private StreamingDownloadResult createJsonDownloadResult(String json) {
-    InputStream inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
-    return StreamingDownloadResult.of(inputStream);
+  @AfterEach
+  void tearDown() {
+    if (reader != null) {
+      reader.close();
+    }
   }
 
-  /// 创建模拟的下载结果（ZIP 包含 JSON）。
-  private StreamingDownloadResult createZipDownloadResult(String json) throws Exception {
+  /// 创建临时 JSON 文件并返回 FileDownloadResult。
+  private FileDownloadResult createJsonFileResult(String json) throws Exception {
+    Path tempFile = tempDir.resolve("test-ror.json");
+    Files.writeString(tempFile, json, StandardCharsets.UTF_8);
+    return FileDownloadResult.of(tempFile, Files.size(tempFile));
+  }
+
+  /// 创建临时 ZIP 文件（包含 JSON）并返回 FileDownloadResult。
+  private FileDownloadResult createZipFileResult(String json) throws Exception {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     try (ZipOutputStream zos = new ZipOutputStream(baos)) {
       zos.putNextEntry(new ZipEntry("v2.0-2025-12-16-ror-data.json"));
@@ -113,9 +129,9 @@ class RorOrganizationItemReaderTest {
       zos.closeEntry();
     }
 
-    byte[] zipBytes = baos.toByteArray();
-    InputStream inputStream = new ByteArrayInputStream(zipBytes);
-    return StreamingDownloadResult.of(inputStream);
+    Path tempFile = tempDir.resolve("test-ror.zip");
+    Files.write(tempFile, baos.toByteArray());
+    return FileDownloadResult.of(tempFile, Files.size(tempFile));
   }
 
   // ==================== 正常读取测试 ====================
@@ -125,22 +141,22 @@ class RorOrganizationItemReaderTest {
   class NormalReadingTests {
 
     @Test
-    @DisplayName("应该从纯 JSON 文件流式读取组织数据")
+    @DisplayName("应该从纯 JSON 文件读取组织数据")
     void shouldReadFromJsonFile() throws Exception {
       // Given - 使用纯 JSON URL（不含 .zip）
       String jsonUrl = "https://example.com/v2.0-2025-12-16-ror-data.json";
-      when(streamingDownloadPort.download(any(URI.class)))
-          .thenReturn(createJsonDownloadResult(MINIMAL_ROR_JSON));
+      when(fileDownloadPort.download(any(URI.class)))
+          .thenReturn(createJsonFileResult(MINIMAL_ROR_JSON));
 
-      reader = new RorOrganizationItemReader(streamingDownloadPort, parser, jsonUrl, TEST_VERSION);
-      ExecutionContext context = new ExecutionContext();
+      reader = new RorOrganizationItemReader(fileDownloadPort, parser, jsonUrl, TEST_VERSION);
 
       // When
-      reader.open(context);
+      reader.open(executionContext);
       OrganizationAggregate first = reader.read();
       OrganizationAggregate second = reader.read();
       OrganizationAggregate third = reader.read();
       reader.close();
+      reader = null;
 
       // Then
       assertThat(first).isNotNull();
@@ -158,17 +174,17 @@ class RorOrganizationItemReaderTest {
     @DisplayName("应该从 ZIP 文件中提取并解析 JSON")
     void shouldReadFromZipFile() throws Exception {
       // Given
-      when(streamingDownloadPort.download(any(URI.class)))
-          .thenReturn(createZipDownloadResult(MINIMAL_ROR_JSON));
+      when(fileDownloadPort.download(any(URI.class)))
+          .thenReturn(createZipFileResult(MINIMAL_ROR_JSON));
 
-      reader = new RorOrganizationItemReader(streamingDownloadPort, parser, TEST_URL, TEST_VERSION);
-      ExecutionContext context = new ExecutionContext();
+      reader = new RorOrganizationItemReader(fileDownloadPort, parser, TEST_URL, TEST_VERSION);
 
       // When
-      reader.open(context);
+      reader.open(executionContext);
       OrganizationAggregate first = reader.read();
       OrganizationAggregate second = reader.read();
       reader.close();
+      reader = null;
 
       // Then
       assertThat(first).isNotNull();
@@ -190,50 +206,41 @@ class RorOrganizationItemReaderTest {
     void shouldSaveProgressInUpdate() throws Exception {
       // Given
       String jsonUrl = "https://example.com/v2.0-2025-12-16-ror-data.json";
-      when(streamingDownloadPort.download(any(URI.class)))
-          .thenReturn(createJsonDownloadResult(MINIMAL_ROR_JSON));
+      when(fileDownloadPort.download(any(URI.class)))
+          .thenReturn(createJsonFileResult(MINIMAL_ROR_JSON));
 
-      reader = new RorOrganizationItemReader(streamingDownloadPort, parser, jsonUrl, TEST_VERSION);
-      ExecutionContext context = new ExecutionContext();
+      reader = new RorOrganizationItemReader(fileDownloadPort, parser, jsonUrl, TEST_VERSION);
 
       // When
-      reader.open(context);
+      reader.open(executionContext);
       reader.read(); // 读取第 1 条
-      reader.update(context);
+      reader.update(executionContext);
 
       // Then
-      assertThat(context.getInt("ror.organization.current.index")).isEqualTo(1);
+      assertThat(executionContext.getInt(CURRENT_INDEX_KEY)).isEqualTo(1);
 
       // 继续读取并更新
       reader.read(); // 读取第 2 条
-      reader.update(context);
+      reader.update(executionContext);
 
-      assertThat(context.getInt("ror.organization.current.index")).isEqualTo(2);
-
-      reader.close();
+      assertThat(executionContext.getInt(CURRENT_INDEX_KEY)).isEqualTo(2);
     }
 
     @Test
     @DisplayName("应该从 ExecutionContext 恢复进度并跳过已处理记录")
     void shouldResumeFromCheckpoint() throws Exception {
       // Given - 模拟已处理 1 条记录
-      // 注意：每次测试需要创建新的 InputStream，因为 Mockito thenReturn 会复用同一个实例
       String jsonUrl = "https://example.com/v2.0-2025-12-16-ror-data.json";
-      when(streamingDownloadPort.download(any(URI.class)))
-          .thenAnswer(
-              invocation ->
-                  StreamingDownloadResult.of(
-                      new ByteArrayInputStream(MINIMAL_ROR_JSON.getBytes(StandardCharsets.UTF_8))));
+      when(fileDownloadPort.download(any(URI.class)))
+          .thenAnswer(invocation -> createJsonFileResult(MINIMAL_ROR_JSON));
 
-      reader = new RorOrganizationItemReader(streamingDownloadPort, parser, jsonUrl, TEST_VERSION);
-      ExecutionContext context = new ExecutionContext();
-      context.putInt("ror.organization.current.index", 1); // 已处理 1 条
+      reader = new RorOrganizationItemReader(fileDownloadPort, parser, jsonUrl, TEST_VERSION);
+      executionContext.putInt(CURRENT_INDEX_KEY, 1); // 已处理 1 条
 
       // When
-      reader.open(context);
+      reader.open(executionContext);
       OrganizationAggregate first = reader.read(); // 应该是第 2 条（跳过第 1 条）
       OrganizationAggregate second = reader.read();
-      reader.close();
 
       // Then
       assertThat(first).isNotNull();
@@ -253,14 +260,12 @@ class RorOrganizationItemReaderTest {
     @DisplayName("下载失败时应该抛出 ItemStreamException")
     void shouldThrowExceptionWhenDownloadFails() {
       // Given
-      when(streamingDownloadPort.download(any(URI.class)))
-          .thenThrow(new RuntimeException("网络连接失败"));
+      when(fileDownloadPort.download(any(URI.class))).thenThrow(new RuntimeException("网络连接失败"));
 
-      reader = new RorOrganizationItemReader(streamingDownloadPort, parser, TEST_URL, TEST_VERSION);
-      ExecutionContext context = new ExecutionContext();
+      reader = new RorOrganizationItemReader(fileDownloadPort, parser, TEST_URL, TEST_VERSION);
 
       // When & Then
-      assertThatThrownBy(() -> reader.open(context))
+      assertThatThrownBy(() -> reader.open(executionContext))
           .isInstanceOf(ItemStreamException.class)
           .hasMessageContaining("打开 ROR 机构数据流失败")
           .hasCauseInstanceOf(RuntimeException.class);
@@ -268,18 +273,16 @@ class RorOrganizationItemReaderTest {
 
     @Test
     @DisplayName("无效 JSON 格式时应该抛出异常")
-    void shouldThrowExceptionForInvalidJson() {
+    void shouldThrowExceptionForInvalidJson() throws Exception {
       // Given
       String invalidJson = "{ invalid json }";
       String jsonUrl = "https://example.com/v2.0-2025-12-16-ror-data.json";
-      when(streamingDownloadPort.download(any(URI.class)))
-          .thenReturn(createJsonDownloadResult(invalidJson));
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(createJsonFileResult(invalidJson));
 
-      reader = new RorOrganizationItemReader(streamingDownloadPort, parser, jsonUrl, TEST_VERSION);
-      ExecutionContext context = new ExecutionContext();
+      reader = new RorOrganizationItemReader(fileDownloadPort, parser, jsonUrl, TEST_VERSION);
 
       // When & Then
-      assertThatThrownBy(() -> reader.open(context))
+      assertThatThrownBy(() -> reader.open(executionContext))
           .isInstanceOf(ItemStreamException.class)
           .hasMessageContaining("打开 ROR 机构数据流失败");
     }
@@ -287,7 +290,7 @@ class RorOrganizationItemReaderTest {
     @Test
     @DisplayName("ZIP 中无 JSON 文件时应该抛出异常")
     void shouldThrowExceptionWhenNoJsonInZip() throws Exception {
-      // Given - 创建空 ZIP
+      // Given - 创建含非 JSON 文件的 ZIP
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       try (ZipOutputStream zos = new ZipOutputStream(baos)) {
         zos.putNextEntry(new ZipEntry("readme.txt"));
@@ -295,17 +298,16 @@ class RorOrganizationItemReaderTest {
         zos.closeEntry();
       }
 
-      byte[] zipBytes = baos.toByteArray();
-      StreamingDownloadResult result =
-          StreamingDownloadResult.of(new ByteArrayInputStream(zipBytes));
+      Path tempFile = tempDir.resolve("test-no-json.zip");
+      Files.write(tempFile, baos.toByteArray());
+      FileDownloadResult result = FileDownloadResult.of(tempFile, Files.size(tempFile));
 
-      when(streamingDownloadPort.download(any(URI.class))).thenReturn(result);
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(result);
 
-      reader = new RorOrganizationItemReader(streamingDownloadPort, parser, TEST_URL, TEST_VERSION);
-      ExecutionContext context = new ExecutionContext();
+      reader = new RorOrganizationItemReader(fileDownloadPort, parser, TEST_URL, TEST_VERSION);
 
       // When & Then
-      assertThatThrownBy(() -> reader.open(context))
+      assertThatThrownBy(() -> reader.open(executionContext))
           .isInstanceOf(ItemStreamException.class)
           .hasMessageContaining("打开 ROR 机构数据流失败")
           .cause()
@@ -320,26 +322,42 @@ class RorOrganizationItemReaderTest {
   class ResourceManagementTests {
 
     @Test
-    @DisplayName("close() 应该正确关闭 reader 而不抛出异常")
-    void shouldCloseWithoutException() throws Exception {
+    @DisplayName("close() 应该删除临时文件")
+    void close_afterOpen_shouldDeleteTempFile() throws Exception {
       // Given
+      Path tempFile = tempDir.resolve("test-close.json");
+      Files.writeString(tempFile, MINIMAL_ROR_JSON, StandardCharsets.UTF_8);
+      FileDownloadResult downloadResult = FileDownloadResult.of(tempFile, Files.size(tempFile));
+
       String jsonUrl = "https://example.com/v2.0-2025-12-16-ror-data.json";
-      StreamingDownloadResult result =
-          StreamingDownloadResult.of(
-              new ByteArrayInputStream(MINIMAL_ROR_JSON.getBytes(StandardCharsets.UTF_8)));
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
 
-      when(streamingDownloadPort.download(any(URI.class))).thenReturn(result);
-
-      reader = new RorOrganizationItemReader(streamingDownloadPort, parser, jsonUrl, TEST_VERSION);
-      ExecutionContext context = new ExecutionContext();
+      reader = new RorOrganizationItemReader(fileDownloadPort, parser, jsonUrl, TEST_VERSION);
+      reader.open(executionContext);
 
       // When
-      reader.open(context);
-      reader.read();
       reader.close();
+      reader = null;
 
-      // Then - close() 应该正常完成，不抛出异常
-      // StreamingDownloadResult.of() 创建的结果会在 close() 时关闭底层 InputStream
+      // Then
+      assertThat(tempFile).doesNotExist();
+    }
+
+    @Test
+    @DisplayName("重复关闭 - 不应该抛出异常")
+    void close_calledTwice_shouldNotThrowException() throws Exception {
+      // Given
+      String jsonUrl = "https://example.com/v2.0-2025-12-16-ror-data.json";
+      when(fileDownloadPort.download(any(URI.class)))
+          .thenReturn(createJsonFileResult(MINIMAL_ROR_JSON));
+
+      reader = new RorOrganizationItemReader(fileDownloadPort, parser, jsonUrl, TEST_VERSION);
+      reader.open(executionContext);
+
+      // When & Then
+      reader.close();
+      reader.close();
+      reader = null;
     }
   }
 }

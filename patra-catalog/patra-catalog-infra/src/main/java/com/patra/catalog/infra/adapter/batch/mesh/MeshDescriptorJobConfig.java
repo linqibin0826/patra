@@ -2,7 +2,7 @@ package com.patra.catalog.infra.adapter.batch.mesh;
 
 import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.port.parser.MeshDescriptorParserPort;
-import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
 import com.patra.starter.batch.config.BatchProperties;
 import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
 import java.util.Optional;
@@ -45,7 +45,7 @@ public class MeshDescriptorJobConfig {
 
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
-  private final StreamingDownloadPort streamingDownloadPort;
+  private final FileDownloadPort fileDownloadPort;
   private final MeshDescriptorParserPort descriptorParserPort;
   private final MeshDescriptorItemWriter meshDescriptorItemWriter;
   private final BatchProperties batchProperties;
@@ -56,7 +56,7 @@ public class MeshDescriptorJobConfig {
   ///
   /// @param jobRepository Job 仓库
   /// @param transactionManager 事务管理器
-  /// @param streamingDownloadPort 流式下载端口
+  /// @param fileDownloadPort 文件下载端口
   /// @param descriptorParserPort 主题词解析端口
   /// @param meshDescriptorItemWriter Item 写入器
   /// @param batchProperties 批处理属性
@@ -65,7 +65,7 @@ public class MeshDescriptorJobConfig {
   public MeshDescriptorJobConfig(
       JobRepository jobRepository,
       PlatformTransactionManager transactionManager,
-      StreamingDownloadPort streamingDownloadPort,
+      FileDownloadPort fileDownloadPort,
       MeshDescriptorParserPort descriptorParserPort,
       MeshDescriptorItemWriter meshDescriptorItemWriter,
       BatchProperties batchProperties,
@@ -73,7 +73,7 @@ public class MeshDescriptorJobConfig {
       Optional<BatchProgressMetricsListener> batchProgressMetricsListener) {
     this.jobRepository = jobRepository;
     this.transactionManager = transactionManager;
-    this.streamingDownloadPort = streamingDownloadPort;
+    this.fileDownloadPort = fileDownloadPort;
     this.descriptorParserPort = descriptorParserPort;
     this.meshDescriptorItemWriter = meshDescriptorItemWriter;
     this.batchProperties = batchProperties;
@@ -129,7 +129,7 @@ public class MeshDescriptorJobConfig {
       @Value("#{jobParameters['downloadUrl']}") String downloadUrl,
       @Value("#{jobParameters['meshVersion']}") String meshVersion) {
     return new MeshDescriptorItemReader(
-        streamingDownloadPort, descriptorParserPort, downloadUrl, meshVersion);
+        fileDownloadPort, descriptorParserPort, downloadUrl, meshVersion);
   }
 
   /// 获取 chunk size。

@@ -1,10 +1,13 @@
 package com.patra.catalog.infra.adapter.batch.organization;
 
 import com.patra.catalog.domain.model.aggregate.OrganizationAggregate;
-import com.patra.catalog.domain.port.source.StreamingDownloadPort;
-import com.patra.catalog.domain.port.source.StreamingDownloadResult;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadResult;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.time.Duration;
 import java.time.Instant;
@@ -18,18 +21,24 @@ import org.springframework.batch.infrastructure.item.ExecutionContext;
 import org.springframework.batch.infrastructure.item.ItemStreamException;
 import org.springframework.batch.infrastructure.item.ItemStreamReader;
 
-/// ROR 机构流式读取器。
+/// ROR 机构读取器。
 ///
 /// **职责**：
 ///
-/// - 从远程 URL 流式下载并解析 ROR Data Dump JSON
+/// - 从远程 URL 下载 ROR Data Dump 到临时文件并解析 JSON
 /// - 支持断点续传（通过 ExecutionContext 保存/恢复进度）
-/// - 委托 StreamingDownloadPort 下载，RorOrganizationParser 解析
+/// - 委托 FileDownloadPort 下载，RorOrganizationParser 解析
 ///
-/// **流式处理特性**：
+/// **临时文件策略**：
 ///
-/// - 无磁盘落盘，HTTP 响应体直接传递给 Parser
-/// - 失败时需重新下载（用户已确认可接受）
+/// - 在 `open()` 中下载到临时文件，解耦 HTTP 连接与数据处理速度
+/// - 在 `close()` 中删除临时文件
+/// - 断点恢复时需重新下载文件
+///
+/// **条件 ZIP 处理**：
+///
+/// - ZIP 文件（URL 含 `.zip`）：从 ZIP 中提取首个 JSON 条目
+/// - 非 ZIP 文件：直接读取 JSON
 ///
 /// **断点续传实现**：
 ///
@@ -39,7 +48,7 @@ import org.springframework.batch.infrastructure.item.ItemStreamReader;
 ///
 /// **资源管理**：
 ///
-/// - StreamingDownloadResult 持有 HTTP 连接，在 `close()` 中释放
+/// - 临时文件在 `close()` 中通过 `Files.deleteIfExists()` 删除
 /// - Stream.close() 释放 JsonParser
 ///
 /// **Bean 注册**：
@@ -57,12 +66,12 @@ public class RorOrganizationItemReader implements ItemStreamReader<OrganizationA
   /// 进度日志输出间隔（每处理多少条记录输出一次）。
   private static final int PROGRESS_LOG_INTERVAL = 5000;
 
-  private final StreamingDownloadPort streamingDownloadPort;
+  private final FileDownloadPort fileDownloadPort;
   private final RorOrganizationParser rorOrganizationParser;
   private final String downloadUrl;
   private final String rorVersion;
 
-  private StreamingDownloadResult downloadResult;
+  private Path tempFilePath;
   private Stream<OrganizationAggregate> stream;
   private Iterator<OrganizationAggregate> iterator;
   private int currentIndex = 0;
@@ -72,16 +81,16 @@ public class RorOrganizationItemReader implements ItemStreamReader<OrganizationA
 
   /// 构造函数。
   ///
-  /// @param streamingDownloadPort 流式下载端口
+  /// @param fileDownloadPort 文件下载端口
   /// @param rorOrganizationParser ROR 机构解析器
   /// @param downloadUrl JSON 文件下载 URL
   /// @param rorVersion ROR 版本号
   public RorOrganizationItemReader(
-      StreamingDownloadPort streamingDownloadPort,
+      FileDownloadPort fileDownloadPort,
       RorOrganizationParser rorOrganizationParser,
       String downloadUrl,
       String rorVersion) {
-    this.streamingDownloadPort = streamingDownloadPort;
+    this.fileDownloadPort = fileDownloadPort;
     this.rorOrganizationParser = rorOrganizationParser;
     this.downloadUrl = downloadUrl;
     this.rorVersion = rorVersion;
@@ -89,7 +98,7 @@ public class RorOrganizationItemReader implements ItemStreamReader<OrganizationA
 
   @Override
   public void open(ExecutionContext executionContext) throws ItemStreamException {
-    log.info("开始流式下载 ROR Organization JSON：{}，版本：{}", downloadUrl, rorVersion);
+    log.info("开始下载 ROR Organization 数据到临时文件：{}，版本：{}", downloadUrl, rorVersion);
 
     // 记录开始时间（用于计算处理速率）
     startTime = Instant.now();
@@ -102,14 +111,14 @@ public class RorOrganizationItemReader implements ItemStreamReader<OrganizationA
     }
 
     try {
-      // 流式下载（无磁盘落盘）
-      downloadResult = streamingDownloadPort.download(URI.create(downloadUrl));
-      log.info(
-          "HTTP 连接建立成功，Content-Length：{}，开始解析",
-          downloadResult.contentLength() > 0 ? downloadResult.contentLength() : "未知");
+      // 下载到临时文件
+      FileDownloadResult downloadResult = fileDownloadPort.download(URI.create(downloadUrl));
+      tempFilePath = downloadResult.filePath();
+      log.info("文件下载完成，临时文件：{}，大小：{} bytes", tempFilePath, downloadResult.fileSize());
 
-      // 委托 RorOrganizationParser 解析
-      InputStream dataStream = openDataStream(downloadResult, downloadUrl);
+      // 从临时文件创建 InputStream，委托 RorOrganizationParser 解析
+      InputStream dataStream =
+          openDataStream(new FileInputStream(tempFilePath.toFile()), downloadUrl);
       stream = rorOrganizationParser.parse(dataStream);
       iterator = stream.iterator();
 
@@ -130,11 +139,10 @@ public class RorOrganizationItemReader implements ItemStreamReader<OrganizationA
   /// - ZIP 文件：读取首个 JSON 文件条目
   /// - 非 ZIP 文件：直接使用原始输入流
   ///
-  /// @param downloadResult 下载结果
-  /// @param url 下载 URL
+  /// @param inputStream 文件输入流
+  /// @param url 下载 URL（用于判断是否为 ZIP）
   /// @return 可解析的数据流
-  private InputStream openDataStream(StreamingDownloadResult downloadResult, String url) {
-    InputStream inputStream = downloadResult.inputStream();
+  private InputStream openDataStream(InputStream inputStream, String url) {
     if (!isZipUrl(url)) {
       return inputStream;
     }
@@ -178,8 +186,10 @@ public class RorOrganizationItemReader implements ItemStreamReader<OrganizationA
   @Override
   public OrganizationAggregate read() {
     if (iterator != null && iterator.hasNext()) {
+      // 先获取记录，成功后再递增索引（确保断点续传不会跳过未处理的记录）
+      OrganizationAggregate item = iterator.next();
       currentIndex++;
-      return iterator.next();
+      return item;
     }
     return null; // 返回 null 表示读取完成
   }
@@ -247,12 +257,13 @@ public class RorOrganizationItemReader implements ItemStreamReader<OrganizationA
       }
     }
 
-    // 关闭 HTTP 连接
-    if (downloadResult != null) {
+    // 删除临时文件
+    if (tempFilePath != null) {
       try {
-        downloadResult.close();
+        Files.deleteIfExists(tempFilePath);
+        log.debug("临时文件已删除：{}", tempFilePath);
       } catch (Exception e) {
-        log.warn("关闭 HTTP 连接时发生异常", e);
+        log.warn("删除临时文件失败：{}", tempFilePath, e);
       }
     }
   }

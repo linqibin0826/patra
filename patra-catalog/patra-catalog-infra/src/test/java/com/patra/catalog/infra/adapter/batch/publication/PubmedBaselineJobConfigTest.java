@@ -8,7 +8,7 @@ import com.patra.catalog.domain.port.lookup.LanguageLookupPort;
 import com.patra.catalog.domain.port.lookup.VenueLookupPort;
 import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
-import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
 import com.patra.starter.batch.config.BatchProperties;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -42,7 +42,7 @@ class PubmedBaselineJobConfigTest {
 
   @Mock private JobRepository jobRepository;
   @Mock private PlatformTransactionManager transactionManager;
-  @Mock private StreamingDownloadPort streamingDownloadPort;
+  @Mock private FileDownloadPort fileDownloadPort;
   @Mock private PubmedXmlParserPort pubmedXmlParserPort;
   @Mock private PublicationRepository publicationRepository;
   @Mock private VenueLookupPort venueLookupPort;
@@ -60,7 +60,7 @@ class PubmedBaselineJobConfigTest {
         new PubmedBaselineJobConfig(
             jobRepository,
             transactionManager,
-            streamingDownloadPort,
+            fileDownloadPort,
             pubmedXmlParserPort,
             publicationRepository,
             venueInstanceGateway,
@@ -125,7 +125,7 @@ class PubmedBaselineJobConfigTest {
     @DisplayName("应该创建 PubmedArticleItemReader")
     void should_create_item_reader() {
       // given
-      String downloadUrl = "https://example.com/pubmed25n0001.xml.gz";
+      String downloadUrl = "https://example.com/pubmed26n0001.xml.gz";
 
       // when
       PubmedArticleItemReader reader = jobConfig.pubmedArticleItemReader(downloadUrl);

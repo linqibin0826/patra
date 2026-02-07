@@ -8,20 +8,22 @@ import com.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import com.patra.catalog.domain.model.enums.DescriptorClass;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.domain.port.parser.MeshDescriptorParserPort;
-import com.patra.catalog.domain.port.source.StreamingDownloadPort;
-import com.patra.catalog.domain.port.source.StreamingDownloadResult;
-import java.io.ByteArrayInputStream;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadResult;
 import java.io.InputStream;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.infrastructure.item.ExecutionContext;
@@ -32,25 +34,9 @@ import org.springframework.batch.infrastructure.item.ExecutionContext;
 ///
 /// **测试策略**：
 ///
-/// - 单元测试：Mock StreamingDownloadPort 和 MeshDescriptorParserPort
-/// - 测试隔离：每个测试方法独立
-/// - Mock 策略：Mock 端口接口
+/// - 单元测试：Mock FileDownloadPort 和 MeshDescriptorParserPort
+/// - 使用 @TempDir 创建临时文件模拟下载结果
 /// - 测试覆盖：open()、read()、update()、close() 生命周期
-///
-/// **流式下载架构**：
-///
-/// ItemReader 在 open() 时通过 StreamingDownloadPort 建立 HTTP 连接，
-/// 获取 InputStream 后传递给 Parser 进行解析。
-///
-/// **重点测试场景**：
-///
-/// - open() 正常下载并解析
-/// - open() 从断点恢复
-/// - read() 逐条读取记录
-/// - read() 读取完成返回 null
-/// - update() 保存进度
-/// - close() 释放资源
-/// - 断点续传：跳过已处理记录
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -64,8 +50,10 @@ class MeshDescriptorItemReaderTest {
   private static final String TEST_MESH_VERSION = "2025";
   private static final String CURRENT_INDEX_KEY = "mesh.descriptor.current.index";
 
-  @Mock private StreamingDownloadPort streamingDownloadPort;
+  @Mock private FileDownloadPort fileDownloadPort;
   @Mock private MeshDescriptorParserPort descriptorParserPort;
+
+  @TempDir Path tempDir;
 
   private MeshDescriptorItemReader itemReader;
   private ExecutionContext executionContext;
@@ -75,15 +63,23 @@ class MeshDescriptorItemReaderTest {
     executionContext = new ExecutionContext();
   }
 
-  /// 创建 StreamingDownloadResult（模拟 HTTP 响应）。
-  private StreamingDownloadResult createDownloadResult() {
+  @AfterEach
+  void tearDown() {
+    if (itemReader != null) {
+      itemReader.close();
+    }
+  }
+
+  /// 创建临时 XML 文件并返回 FileDownloadResult。
+  private FileDownloadResult createTempFileResult() throws Exception {
     String dummyXml =
         """
         <?xml version="1.0" encoding="UTF-8"?>
         <DescriptorRecordSet/>
         """;
-    InputStream inputStream = new ByteArrayInputStream(dummyXml.getBytes(StandardCharsets.UTF_8));
-    return StreamingDownloadResult.of(inputStream);
+    Path tempFile = tempDir.resolve("test-desc.xml");
+    Files.writeString(tempFile, dummyXml);
+    return FileDownloadResult.of(tempFile, Files.size(tempFile));
   }
 
   /// 创建测试用的 MeshDescriptorAggregate。
@@ -98,25 +94,24 @@ class MeshDescriptorItemReaderTest {
 
     @Test
     @DisplayName("正常下载并解析 - 应该成功初始化")
-    void open_validUrl_shouldInitializeSuccessfully() {
-      // Given: Mock 流式下载和解析
-      when(streamingDownloadPort.download(any(URI.class))).thenReturn(createDownloadResult());
+    void open_validUrl_shouldInitializeSuccessfully() throws Exception {
+      // Given: Mock 文件下载和解析
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(createTempFileResult());
       when(descriptorParserPort.parse(any(InputStream.class))).thenReturn(Stream.empty());
 
       itemReader =
           new MeshDescriptorItemReader(
-              streamingDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
+              fileDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
 
       // When: 打开 Reader
       itemReader.open(executionContext);
 
       // Then: 不应该抛出异常
-      itemReader.close();
     }
 
     @Test
     @DisplayName("从断点恢复 - 应该跳过已处理记录")
-    void open_withCheckpoint_shouldSkipProcessedRecords() {
+    void open_withCheckpoint_shouldSkipProcessedRecords() throws Exception {
       // Given: ExecutionContext 中有保存的进度
       executionContext.putInt(CURRENT_INDEX_KEY, 2);
 
@@ -129,12 +124,12 @@ class MeshDescriptorItemReaderTest {
               createTestDescriptor("D000004", "Descriptor 4"),
               createTestDescriptor("D000005", "Descriptor 5"));
 
-      when(streamingDownloadPort.download(any(URI.class))).thenReturn(createDownloadResult());
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(createTempFileResult());
       when(descriptorParserPort.parse(any(InputStream.class))).thenReturn(mockStream);
 
       itemReader =
           new MeshDescriptorItemReader(
-              streamingDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
+              fileDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
 
       // When: 打开 Reader（应该跳过前 2 条）
       itemReader.open(executionContext);
@@ -143,8 +138,6 @@ class MeshDescriptorItemReaderTest {
       MeshDescriptorAggregate result = itemReader.read();
       assertThat(result).isNotNull();
       assertThat(result.getUi().ui()).isEqualTo("D000003");
-
-      itemReader.close();
     }
   }
 
@@ -154,7 +147,7 @@ class MeshDescriptorItemReaderTest {
 
     @Test
     @DisplayName("逐条读取 - 应该返回所有记录")
-    void read_multipleRecords_shouldReturnAllRecords() {
+    void read_multipleRecords_shouldReturnAllRecords() throws Exception {
       // Given: Mock 返回 3 条记录
       Stream<MeshDescriptorAggregate> mockStream =
           Stream.of(
@@ -162,12 +155,12 @@ class MeshDescriptorItemReaderTest {
               createTestDescriptor("D000002", "Descriptor 2"),
               createTestDescriptor("D000003", "Descriptor 3"));
 
-      when(streamingDownloadPort.download(any(URI.class))).thenReturn(createDownloadResult());
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(createTempFileResult());
       when(descriptorParserPort.parse(any(InputStream.class))).thenReturn(mockStream);
 
       itemReader =
           new MeshDescriptorItemReader(
-              streamingDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
+              fileDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
       itemReader.open(executionContext);
 
       // When & Then: 逐条读取
@@ -175,26 +168,22 @@ class MeshDescriptorItemReaderTest {
       assertThat(itemReader.read().getUi().ui()).isEqualTo("D000002");
       assertThat(itemReader.read().getUi().ui()).isEqualTo("D000003");
       assertThat(itemReader.read()).isNull(); // 读取完成
-
-      itemReader.close();
     }
 
     @Test
     @DisplayName("空流 - 应该立即返回 null")
-    void read_emptyStream_shouldReturnNull() {
+    void read_emptyStream_shouldReturnNull() throws Exception {
       // Given: Mock 返回空流
-      when(streamingDownloadPort.download(any(URI.class))).thenReturn(createDownloadResult());
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(createTempFileResult());
       when(descriptorParserPort.parse(any(InputStream.class))).thenReturn(Stream.empty());
 
       itemReader =
           new MeshDescriptorItemReader(
-              streamingDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
+              fileDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
       itemReader.open(executionContext);
 
       // When & Then: 应该立即返回 null
       assertThat(itemReader.read()).isNull();
-
-      itemReader.close();
     }
   }
 
@@ -204,7 +193,7 @@ class MeshDescriptorItemReaderTest {
 
     @Test
     @DisplayName("保存进度 - 应该更新 ExecutionContext")
-    void update_afterReading_shouldUpdateExecutionContext() {
+    void update_afterReading_shouldUpdateExecutionContext() throws Exception {
       // Given: Mock 返回 3 条记录
       Stream<MeshDescriptorAggregate> mockStream =
           Stream.of(
@@ -212,12 +201,12 @@ class MeshDescriptorItemReaderTest {
               createTestDescriptor("D000002", "Descriptor 2"),
               createTestDescriptor("D000003", "Descriptor 3"));
 
-      when(streamingDownloadPort.download(any(URI.class))).thenReturn(createDownloadResult());
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(createTempFileResult());
       when(descriptorParserPort.parse(any(InputStream.class))).thenReturn(mockStream);
 
       itemReader =
           new MeshDescriptorItemReader(
-              streamingDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
+              fileDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
       itemReader.open(executionContext);
 
       // When: 读取 2 条后保存进度
@@ -227,8 +216,6 @@ class MeshDescriptorItemReaderTest {
 
       // Then: ExecutionContext 应该保存当前索引
       assertThat(executionContext.getInt(CURRENT_INDEX_KEY)).isEqualTo(2);
-
-      itemReader.close();
     }
   }
 
@@ -237,36 +224,45 @@ class MeshDescriptorItemReaderTest {
   class CloseTest {
 
     @Test
-    @DisplayName("关闭 Reader - 应该释放资源")
-    void close_afterOpen_shouldReleaseResources() {
-      // Given: Mock 返回空流
-      when(streamingDownloadPort.download(any(URI.class))).thenReturn(createDownloadResult());
+    @DisplayName("关闭 Reader - 应该释放资源并删除临时文件")
+    void close_afterOpen_shouldReleaseResourcesAndDeleteTempFile() throws Exception {
+      // Given: 创建临时文件
+      Path tempFile = tempDir.resolve("test-close.xml");
+      Files.writeString(tempFile, "<root/>");
+      FileDownloadResult downloadResult = FileDownloadResult.of(tempFile, Files.size(tempFile));
+
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
       when(descriptorParserPort.parse(any(InputStream.class))).thenReturn(Stream.empty());
 
       itemReader =
           new MeshDescriptorItemReader(
-              streamingDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
+              fileDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
       itemReader.open(executionContext);
 
-      // When & Then: 关闭不应该抛出异常
+      // When: 关闭 Reader
       itemReader.close();
+      itemReader = null; // 防止 @AfterEach 重复 close
+
+      // Then: 临时文件应该被删除
+      assertThat(tempFile).doesNotExist();
     }
 
     @Test
     @DisplayName("重复关闭 - 不应该抛出异常")
-    void close_calledTwice_shouldNotThrowException() {
+    void close_calledTwice_shouldNotThrowException() throws Exception {
       // Given: Mock 返回空流
-      when(streamingDownloadPort.download(any(URI.class))).thenReturn(createDownloadResult());
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(createTempFileResult());
       when(descriptorParserPort.parse(any(InputStream.class))).thenReturn(Stream.empty());
 
       itemReader =
           new MeshDescriptorItemReader(
-              streamingDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
+              fileDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
       itemReader.open(executionContext);
 
       // When & Then: 重复关闭不应该抛出异常
       itemReader.close();
       itemReader.close();
+      itemReader = null; // 防止 @AfterEach 重复 close
     }
   }
 
@@ -276,7 +272,7 @@ class MeshDescriptorItemReaderTest {
 
     @Test
     @DisplayName("完整断点续传流程 - 应该正确恢复并继续处理")
-    void checkpointResume_fullWorkflow_shouldResumeCorrectly() {
+    void checkpointResume_fullWorkflow_shouldResumeCorrectly() throws Exception {
       // === 第一阶段：模拟处理中断 ===
 
       // Given: Mock 返回 5 条记录
@@ -288,13 +284,13 @@ class MeshDescriptorItemReaderTest {
               createTestDescriptor("D000004", "Descriptor 4"),
               createTestDescriptor("D000005", "Descriptor 5"));
 
-      when(streamingDownloadPort.download(any(URI.class))).thenReturn(createDownloadResult());
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(createTempFileResult());
       when(descriptorParserPort.parse(any(InputStream.class))).thenReturn(mockStream1);
 
       ExecutionContext context1 = new ExecutionContext();
       MeshDescriptorItemReader reader1 =
           new MeshDescriptorItemReader(
-              streamingDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
+              fileDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
       reader1.open(context1);
 
       // 读取 3 条记录后"中断"
@@ -318,12 +314,12 @@ class MeshDescriptorItemReaderTest {
               createTestDescriptor("D000004", "Descriptor 4"),
               createTestDescriptor("D000005", "Descriptor 5"));
 
-      when(streamingDownloadPort.download(any(URI.class))).thenReturn(createDownloadResult());
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(createTempFileResult());
       when(descriptorParserPort.parse(any(InputStream.class))).thenReturn(mockStream2);
 
       MeshDescriptorItemReader reader2 =
           new MeshDescriptorItemReader(
-              streamingDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
+              fileDownloadPort, descriptorParserPort, TEST_DOWNLOAD_URL, TEST_MESH_VERSION);
       reader2.open(context1); // 使用保存的 context 恢复
 
       // Then: 应该从第 4 条开始读取

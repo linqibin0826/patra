@@ -1,10 +1,13 @@
 package com.patra.catalog.infra.adapter.batch.publication;
 
 import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
-import com.patra.catalog.domain.port.source.StreamingDownloadPort;
-import com.patra.catalog.domain.port.source.StreamingDownloadResult;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadResult;
 import com.patra.common.model.CanonicalPublication;
+import java.io.FileInputStream;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.time.Duration;
 import java.time.Instant;
@@ -17,17 +20,20 @@ import org.springframework.batch.infrastructure.item.ExecutionContext;
 import org.springframework.batch.infrastructure.item.ItemStreamException;
 import org.springframework.batch.infrastructure.item.ItemStreamReader;
 
-/// PubMed 文献流式读取器。
+/// PubMed 文献读取器。
 ///
 /// **职责**：
 ///
-/// - 从远程 URL 流式下载 PubMed Baseline gzip 压缩文件
-/// - 解压并解析 XML，逐条返回 `CanonicalPublication`
+/// - 从远程 URL 下载 PubMed Baseline gzip 压缩文件到临时文件
+/// - 从本地临时文件解压并解析 XML，逐条返回 `CanonicalPublication`
 /// - 支持断点续传（通过 ExecutionContext 保存/恢复进度）
+/// - 委托 FileDownloadPort 下载，PubmedXmlParserPort 解析
 ///
-/// **流式处理特性**：
+/// **临时文件策略**：
 ///
-/// - 无磁盘落盘：HTTP → GZIPInputStream → StAX 解析
+/// - 在 `open()` 中下载到临时文件，解耦 HTTP 连接与数据处理速度
+/// - 在 `close()` 中删除临时文件
+/// - 断点恢复时需重新下载文件
 /// - 单文件约 30,000 条记录，内存占用可控
 ///
 /// **断点续传实现**：
@@ -38,12 +44,13 @@ import org.springframework.batch.infrastructure.item.ItemStreamReader;
 ///
 /// **资源管理**：
 ///
-/// - StreamingDownloadResult 持有 HTTP 连接，在 `close()` 中释放
+/// - 临时文件在 `close()` 中通过 `Files.deleteIfExists()` 删除
 /// - Stream.close() 释放 XMLStreamReader
 ///
 /// **Bean 注册**：
 ///
-/// 通过 Job 配置类注册为 `@StepScope` Bean，支持 Job 参数注入（downloadUrl）。
+/// 通过 [PubmedBaselineJobConfig#pubmedArticleItemReader] 方法注册为 `@StepScope` Bean，
+/// 支持 Job 参数注入（downloadUrl）。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -55,11 +62,11 @@ public class PubmedArticleItemReader implements ItemStreamReader<CanonicalPublic
   /// 进度日志输出间隔（每处理多少条记录输出一次）。
   private static final int PROGRESS_LOG_INTERVAL = 5000;
 
-  private final StreamingDownloadPort streamingDownloadPort;
+  private final FileDownloadPort fileDownloadPort;
   private final PubmedXmlParserPort parserPort;
   private final String downloadUrl;
 
-  private StreamingDownloadResult downloadResult;
+  private Path tempFilePath;
   private Stream<CanonicalPublication> stream;
   private Iterator<CanonicalPublication> iterator;
   private int currentIndex = 0;
@@ -69,21 +76,19 @@ public class PubmedArticleItemReader implements ItemStreamReader<CanonicalPublic
 
   /// 构造函数。
   ///
-  /// @param streamingDownloadPort 流式下载端口
+  /// @param fileDownloadPort 文件下载端口
   /// @param parserPort PubMed XML 解析端口
   /// @param downloadUrl gzip 压缩的 XML 文件下载 URL
   public PubmedArticleItemReader(
-      StreamingDownloadPort streamingDownloadPort,
-      PubmedXmlParserPort parserPort,
-      String downloadUrl) {
-    this.streamingDownloadPort = streamingDownloadPort;
+      FileDownloadPort fileDownloadPort, PubmedXmlParserPort parserPort, String downloadUrl) {
+    this.fileDownloadPort = fileDownloadPort;
     this.parserPort = parserPort;
     this.downloadUrl = downloadUrl;
   }
 
   @Override
   public void open(ExecutionContext executionContext) throws ItemStreamException {
-    log.info("开始流式下载 PubMed Baseline XML：{}", downloadUrl);
+    log.info("开始下载 PubMed Baseline XML 到临时文件：{}", downloadUrl);
 
     // 记录开始时间（用于计算处理速率）
     startTime = Instant.now();
@@ -95,35 +100,50 @@ public class PubmedArticleItemReader implements ItemStreamReader<CanonicalPublic
       log.info("从断点恢复，将跳过前 {} 条记录（需重新下载文件）", skipCount);
     }
 
-    // 流式下载（无磁盘落盘）
-    downloadResult = streamingDownloadPort.download(URI.create(downloadUrl));
-    log.info(
-        "HTTP 连接建立成功，Content-Length：{}，开始解压并解析",
-        downloadResult.contentLength() > 0 ? downloadResult.contentLength() : "未知");
-
+    // 下载到临时文件
     try {
-      // 使用 GZIPInputStream 解压，然后委托 Parser 解析
-      GZIPInputStream gzipInputStream = new GZIPInputStream(downloadResult.inputStream());
+      FileDownloadResult downloadResult = fileDownloadPort.download(URI.create(downloadUrl));
+      tempFilePath = downloadResult.filePath();
+      log.info("文件下载完成，临时文件：{}，大小：{} bytes", tempFilePath, downloadResult.fileSize());
+
+      // 从临时文件创建 GZIPInputStream，然后委托 Parser 解析
+      GZIPInputStream gzipInputStream =
+          new GZIPInputStream(new FileInputStream(tempFilePath.toFile()));
       stream = parserPort.parse(gzipInputStream);
       iterator = stream.iterator();
+
+      // 跳过已处理的记录（断点续传）
+      if (skipCount > 0) {
+        int skippedCount = 0;
+        for (int i = 0; i < skipCount && iterator.hasNext(); i++) {
+          iterator.next();
+          currentIndex++;
+          skippedCount++;
+        }
+
+        // 验证是否成功跳过了所有记录
+        if (skippedCount < skipCount) {
+          throw new ItemStreamException(
+              String.format("断点恢复失败：期望跳过 %d 条记录，实际只跳过 %d 条（文件可能已损坏或被截断）", skipCount, skippedCount));
+        }
+
+        log.info("跳过完成，当前索引：{}", currentIndex);
+      }
+
+    } catch (ItemStreamException e) {
+      throw e;
     } catch (Exception e) {
-      throw new ItemStreamException("初始化 GZIPInputStream 失败", e);
+      throw new ItemStreamException("打开 PubMed Baseline 读取器失败", e);
     }
-
-    // 跳过已处理的记录（断点续传）
-    for (int i = 0; i < skipCount && iterator.hasNext(); i++) {
-      iterator.next();
-      currentIndex++;
-    }
-
-    log.info("跳过完成，当前索引：{}", currentIndex);
   }
 
   @Override
   public CanonicalPublication read() {
     if (iterator != null && iterator.hasNext()) {
+      // 先获取记录，成功后再递增索引（确保断点续传不会跳过未处理的记录）
+      CanonicalPublication item = iterator.next();
       currentIndex++;
-      return iterator.next();
+      return item;
     }
     return null; // 返回 null 表示读取完成
   }
@@ -191,12 +211,13 @@ public class PubmedArticleItemReader implements ItemStreamReader<CanonicalPublic
       }
     }
 
-    // 关闭 HTTP 连接
-    if (downloadResult != null) {
+    // 删除临时文件
+    if (tempFilePath != null) {
       try {
-        downloadResult.close();
+        Files.deleteIfExists(tempFilePath);
+        log.debug("临时文件已删除：{}", tempFilePath);
       } catch (Exception e) {
-        log.warn("关闭 HTTP 连接时发生异常", e);
+        log.warn("删除临时文件失败：{}", tempFilePath, e);
       }
     }
   }

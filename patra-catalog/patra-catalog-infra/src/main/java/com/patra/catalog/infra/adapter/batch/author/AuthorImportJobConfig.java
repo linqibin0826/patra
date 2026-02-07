@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.adapter.batch.author;
 
 import com.patra.catalog.domain.model.aggregate.AuthorAggregate;
-import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
 import com.patra.starter.batch.config.BatchProperties;
 import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
 import java.util.Optional;
@@ -49,7 +49,7 @@ public class AuthorImportJobConfig {
 
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
-  private final StreamingDownloadPort streamingDownloadPort;
+  private final FileDownloadPort fileDownloadPort;
   private final PubMedComputedAuthorParser parser;
   private final AuthorItemWriter authorItemWriter;
   private final BatchProperties batchProperties;
@@ -60,7 +60,7 @@ public class AuthorImportJobConfig {
   ///
   /// @param jobRepository Job 仓库
   /// @param transactionManager 事务管理器
-  /// @param streamingDownloadPort 流式下载端口
+  /// @param fileDownloadPort 文件下载端口
   /// @param parser JSON Lines 解析器
   /// @param authorItemWriter Item 写入器
   /// @param batchProperties 批处理属性
@@ -69,7 +69,7 @@ public class AuthorImportJobConfig {
   public AuthorImportJobConfig(
       JobRepository jobRepository,
       PlatformTransactionManager transactionManager,
-      StreamingDownloadPort streamingDownloadPort,
+      FileDownloadPort fileDownloadPort,
       PubMedComputedAuthorParser parser,
       AuthorItemWriter authorItemWriter,
       BatchProperties batchProperties,
@@ -77,7 +77,7 @@ public class AuthorImportJobConfig {
       Optional<BatchProgressMetricsListener> batchProgressMetricsListener) {
     this.jobRepository = jobRepository;
     this.transactionManager = transactionManager;
-    this.streamingDownloadPort = streamingDownloadPort;
+    this.fileDownloadPort = fileDownloadPort;
     this.parser = parser;
     this.authorItemWriter = authorItemWriter;
     this.batchProperties = batchProperties;
@@ -132,7 +132,7 @@ public class AuthorImportJobConfig {
       @Value("#{jobParameters['downloadUrl']}") String downloadUrl) {
     // 获取最大记录数配置
     Long maxRecords = getMaxRecords();
-    return new AuthorItemReader(streamingDownloadPort, parser, downloadUrl, maxRecords);
+    return new AuthorItemReader(fileDownloadPort, parser, downloadUrl, maxRecords);
   }
 
   /// 获取最大导入记录数限制。

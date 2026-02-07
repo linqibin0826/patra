@@ -1,8 +1,11 @@
 package com.patra.catalog.infra.adapter.batch.venue;
 
-import com.patra.catalog.domain.port.source.StreamingDownloadPort;
-import com.patra.catalog.domain.port.source.StreamingDownloadResult;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadResult;
+import java.io.FileInputStream;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.time.Duration;
 import java.time.Instant;
@@ -15,18 +18,19 @@ import org.springframework.batch.infrastructure.item.ExecutionContext;
 import org.springframework.batch.infrastructure.item.ItemStreamException;
 import org.springframework.batch.infrastructure.item.ItemStreamReader;
 
-/// OpenAlex Venue 流式多文件 JSON Lines 读取器。
+/// OpenAlex Venue 多文件 JSON Lines 读取器。
 ///
 /// **职责**：
 ///
-/// - 按需流式下载并顺序读取多个 .gz 压缩的 JSON Lines 文件
+/// - 逐个下载多个 .gz 压缩的 JSON Lines 文件到临时文件并解析
 /// - 支持断点续传（通过 ExecutionContext 保存/恢复 fileIndex 和 lineIndex）
-/// - 委托 OpenAlexSourceParser 进行解析
+/// - 委托 FileDownloadPort 下载，OpenAlexSourceParser 解析
 ///
-/// **流式处理特性**：
+/// **临时文件策略**：
 ///
-/// - 无磁盘落盘，每个分区文件按需从远程 URL 流式下载
-/// - 切换文件时自动关闭当前 HTTP 连接，打开下一个
+/// - 每个分区文件在 `openCurrentFile()` 中下载到临时文件
+/// - 在 `closeCurrentFile()` 中删除当前临时文件（切换文件或关闭时）
+/// - 逐个下载→处理→删除，减少磁盘占用
 ///
 /// **断点续传实现**：
 ///
@@ -34,15 +38,16 @@ import org.springframework.batch.infrastructure.item.ItemStreamReader;
 /// - 在 `open()` 中从 ExecutionContext 恢复进度，跳过已处理文件和行
 /// - 在 `update()` 中保存当前进度到 ExecutionContext
 /// - chunk size 决定断点精度
-/// - 恢复时需要重新下载当前文件（用户已确认可接受）
+/// - 恢复时需要重新下载当前文件
 ///
 /// **文件切换逻辑**：
 ///
-/// 当当前文件读取完毕时，关闭当前 HTTP 连接，打开下一个 URL 的连接。
+/// 当当前文件读取完毕时，删除当前临时文件，下载并打开下一个文件。
 ///
 /// **Bean 注册**：
 ///
-/// 通过 VenueImportJobConfig 注册为 `@StepScope` Bean，支持 Job 参数注入。
+/// 通过 [VenueInitializeJobConfig#venueInitializeItemReader] 方法注册为 `@StepScope` Bean，
+/// 支持 Job 参数注入。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -55,7 +60,7 @@ public class VenueInitializeItemReader implements ItemStreamReader<VenueParseRes
   /// 进度日志输出间隔（每处理多少条记录输出一次）。
   private static final int PROGRESS_LOG_INTERVAL = 2000;
 
-  private final StreamingDownloadPort streamingDownloadPort;
+  private final FileDownloadPort fileDownloadPort;
   private final OpenAlexSourceParser parser;
   private final List<String> partitionUrls;
 
@@ -68,8 +73,8 @@ public class VenueInitializeItemReader implements ItemStreamReader<VenueParseRes
   /// 需要跳过的行数（断点恢复时使用）。
   private int skipLineCount = 0;
 
-  /// 当前文件的 HTTP 下载结果（持有连接）。
-  private StreamingDownloadResult currentDownloadResult;
+  /// 当前分区文件的临时文件路径。
+  private Path currentTempFilePath;
 
   /// 当前文件的记录流。
   private Stream<VenueParseResult> currentStream;
@@ -88,14 +93,12 @@ public class VenueInitializeItemReader implements ItemStreamReader<VenueParseRes
 
   /// 构造函数。
   ///
-  /// @param streamingDownloadPort 流式下载端口
+  /// @param fileDownloadPort 文件下载端口
   /// @param parser OpenAlex Source 解析器
   /// @param partitionUrls 待处理的分区 URL 列表
   public VenueInitializeItemReader(
-      StreamingDownloadPort streamingDownloadPort,
-      OpenAlexSourceParser parser,
-      List<String> partitionUrls) {
-    this.streamingDownloadPort = streamingDownloadPort;
+      FileDownloadPort fileDownloadPort, OpenAlexSourceParser parser, List<String> partitionUrls) {
+    this.fileDownloadPort = fileDownloadPort;
     this.parser = parser;
     this.partitionUrls = partitionUrls;
   }
@@ -133,9 +136,11 @@ public class VenueInitializeItemReader implements ItemStreamReader<VenueParseRes
     // 尝试从当前迭代器读取
     while (true) {
       if (currentIterator != null && currentIterator.hasNext()) {
+        // 先获取记录，成功后再递增索引（确保断点续传不会跳过未处理的记录）
+        VenueParseResult item = currentIterator.next();
         currentLineIndex++;
         totalProcessedCount++;
-        return currentIterator.next();
+        return item;
       }
 
       // 当前文件读完，关闭 HTTP 连接，切换到下一个文件
@@ -177,18 +182,22 @@ public class VenueInitializeItemReader implements ItemStreamReader<VenueParseRes
     closeCurrentFile();
   }
 
-  /// 流式下载并打开当前索引指向的分区文件。
+  /// 下载并打开当前索引指向的分区文件。
   ///
-  /// 建立 HTTP 连接，获取输入流并开始解析。
+  /// 下载到临时文件，从本地文件创建输入流并开始解析。
   ///
   /// @throws java.io.IOException 下载或解析失败时
   private void openCurrentFile() throws java.io.IOException {
     String url = partitionUrls.get(currentFileIndex);
-    log.debug("流式下载分区文件 [{}/{}]: {}", currentFileIndex + 1, partitionUrls.size(), url);
+    log.debug("下载分区文件 [{}/{}]: {}", currentFileIndex + 1, partitionUrls.size(), url);
 
-    // 流式下载（建立 HTTP 连接）
-    currentDownloadResult = streamingDownloadPort.download(URI.create(url));
-    currentStream = parser.parse(currentDownloadResult.inputStream());
+    // 下载到临时文件
+    FileDownloadResult downloadResult = fileDownloadPort.download(URI.create(url));
+    currentTempFilePath = downloadResult.filePath();
+    log.debug("分区文件下载完成，临时文件：{}，大小：{} bytes", currentTempFilePath, downloadResult.fileSize());
+
+    // 从临时文件创建输入流并解析
+    currentStream = parser.parse(new FileInputStream(currentTempFilePath.toFile()));
     currentIterator = currentStream.iterator();
 
     // 跳过已处理的行（断点续传）
@@ -202,7 +211,7 @@ public class VenueInitializeItemReader implements ItemStreamReader<VenueParseRes
     }
   }
 
-  /// 关闭当前文件（释放 HTTP 连接）。
+  /// 关闭当前文件（释放解析器资源并删除临时文件）。
   private void closeCurrentFile() {
     // 先关闭 Stream（释放解析器资源）
     if (currentStream != null) {
@@ -214,14 +223,15 @@ public class VenueInitializeItemReader implements ItemStreamReader<VenueParseRes
       currentStream = null;
     }
 
-    // 再关闭 HTTP 连接
-    if (currentDownloadResult != null) {
+    // 删除当前分区的临时文件
+    if (currentTempFilePath != null) {
       try {
-        currentDownloadResult.close();
+        Files.deleteIfExists(currentTempFilePath);
+        log.debug("临时文件已删除：{}", currentTempFilePath);
       } catch (Exception e) {
-        log.warn("关闭 HTTP 连接失败", e);
+        log.warn("删除临时文件失败：{}", currentTempFilePath, e);
       }
-      currentDownloadResult = null;
+      currentTempFilePath = null;
     }
 
     currentIterator = null;

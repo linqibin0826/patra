@@ -6,7 +6,7 @@ import com.patra.catalog.domain.port.lookup.LanguageLookupPort;
 import com.patra.catalog.domain.port.lookup.VenueLookupPort;
 import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
-import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.starter.batch.config.BatchProperties;
 import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
@@ -60,7 +60,7 @@ public class PubmedBaselineJobConfig {
 
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
-  private final StreamingDownloadPort streamingDownloadPort;
+  private final FileDownloadPort fileDownloadPort;
   private final PubmedXmlParserPort pubmedXmlParserPort;
   private final PublicationRepository publicationRepository;
   private final VenueInstanceGateway venueInstanceGateway;
@@ -71,7 +71,7 @@ public class PubmedBaselineJobConfig {
   ///
   /// @param jobRepository Job 仓库
   /// @param transactionManager 事务管理器
-  /// @param streamingDownloadPort 流式下载端口
+  /// @param fileDownloadPort 文件下载端口
   /// @param pubmedXmlParserPort PubMed XML 解析端口
   /// @param publicationRepository 文献仓库
   /// @param venueInstanceGateway 载体实例端口
@@ -80,7 +80,7 @@ public class PubmedBaselineJobConfig {
   public PubmedBaselineJobConfig(
       JobRepository jobRepository,
       PlatformTransactionManager transactionManager,
-      StreamingDownloadPort streamingDownloadPort,
+      FileDownloadPort fileDownloadPort,
       PubmedXmlParserPort pubmedXmlParserPort,
       PublicationRepository publicationRepository,
       VenueInstanceGateway venueInstanceGateway,
@@ -88,7 +88,7 @@ public class PubmedBaselineJobConfig {
       Optional<BatchProgressMetricsListener> batchProgressMetricsListener) {
     this.jobRepository = jobRepository;
     this.transactionManager = transactionManager;
-    this.streamingDownloadPort = streamingDownloadPort;
+    this.fileDownloadPort = fileDownloadPort;
     this.pubmedXmlParserPort = pubmedXmlParserPort;
     this.publicationRepository = publicationRepository;
     this.venueInstanceGateway = venueInstanceGateway;
@@ -151,7 +151,7 @@ public class PubmedBaselineJobConfig {
   @StepScope
   public PubmedArticleItemReader pubmedArticleItemReader(
       @Value("#{jobParameters['downloadUrl']}") String downloadUrl) {
-    return new PubmedArticleItemReader(streamingDownloadPort, pubmedXmlParserPort, downloadUrl);
+    return new PubmedArticleItemReader(fileDownloadPort, pubmedXmlParserPort, downloadUrl);
   }
 
   /// 创建 PubMed 文献 ItemProcessor。

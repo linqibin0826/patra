@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.adapter.batch.venue;
 
-import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
 import com.patra.starter.batch.config.BatchProperties;
 import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
 import java.util.Arrays;
@@ -60,7 +60,7 @@ public class VenueInitializeJobConfig {
 
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
-  private final StreamingDownloadPort streamingDownloadPort;
+  private final FileDownloadPort fileDownloadPort;
   private final OpenAlexSourceParser openAlexSourceParser;
   private final VenueInitializeItemWriter venueInitializeItemWriter;
   private final BatchProperties batchProperties;
@@ -71,7 +71,7 @@ public class VenueInitializeJobConfig {
   ///
   /// @param jobRepository Job 仓库
   /// @param transactionManager 事务管理器
-  /// @param streamingDownloadPort 流式下载端口
+  /// @param fileDownloadPort 文件下载端口
   /// @param openAlexSourceParser OpenAlex Source 解析器
   /// @param venueInitializeItemWriter Item 写入器
   /// @param batchProperties 批处理属性
@@ -80,7 +80,7 @@ public class VenueInitializeJobConfig {
   public VenueInitializeJobConfig(
       JobRepository jobRepository,
       PlatformTransactionManager transactionManager,
-      StreamingDownloadPort streamingDownloadPort,
+      FileDownloadPort fileDownloadPort,
       OpenAlexSourceParser openAlexSourceParser,
       VenueInitializeItemWriter venueInitializeItemWriter,
       BatchProperties batchProperties,
@@ -88,7 +88,7 @@ public class VenueInitializeJobConfig {
       VenueInitializeErrorListener venueInitializeErrorListener) {
     this.jobRepository = jobRepository;
     this.transactionManager = transactionManager;
-    this.streamingDownloadPort = streamingDownloadPort;
+    this.fileDownloadPort = fileDownloadPort;
     this.openAlexSourceParser = openAlexSourceParser;
     this.venueInitializeItemWriter = venueInitializeItemWriter;
     this.batchProperties = batchProperties;
@@ -147,7 +147,7 @@ public class VenueInitializeJobConfig {
       @Value("#{jobParameters['partitionUrls']}") String partitionUrls) {
     List<String> urls = parsePartitionUrls(partitionUrls);
     log.debug("创建 VenueInitializeItemReader，分区 URL 数量: {}", urls.size());
-    return new VenueInitializeItemReader(streamingDownloadPort, openAlexSourceParser, urls);
+    return new VenueInitializeItemReader(fileDownloadPort, openAlexSourceParser, urls);
   }
 
   /// 解析逗号分隔的分区 URL 字符串。
