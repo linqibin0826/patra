@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.adapter.batch.organization;
 
 import com.patra.catalog.domain.model.aggregate.OrganizationAggregate;
-import com.patra.catalog.domain.port.source.StreamingDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
 import com.patra.starter.batch.config.BatchProperties;
 import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
 import java.util.Optional;
@@ -44,7 +44,7 @@ public class RorOrganizationJobConfig {
 
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
-  private final StreamingDownloadPort streamingDownloadPort;
+  private final FileDownloadPort fileDownloadPort;
   private final RorOrganizationParser rorOrganizationParser;
   private final RorOrganizationItemWriter rorOrganizationItemWriter;
   private final BatchProperties batchProperties;
@@ -54,7 +54,7 @@ public class RorOrganizationJobConfig {
   ///
   /// @param jobRepository Job 仓库
   /// @param transactionManager 事务管理器
-  /// @param streamingDownloadPort 流式下载端口
+  /// @param fileDownloadPort 文件下载端口
   /// @param rorOrganizationParser ROR 机构解析器
   /// @param rorOrganizationItemWriter Item 写入器
   /// @param batchProperties 批处理属性
@@ -62,14 +62,14 @@ public class RorOrganizationJobConfig {
   public RorOrganizationJobConfig(
       JobRepository jobRepository,
       PlatformTransactionManager transactionManager,
-      StreamingDownloadPort streamingDownloadPort,
+      FileDownloadPort fileDownloadPort,
       RorOrganizationParser rorOrganizationParser,
       RorOrganizationItemWriter rorOrganizationItemWriter,
       BatchProperties batchProperties,
       Optional<BatchProgressMetricsListener> batchProgressMetricsListener) {
     this.jobRepository = jobRepository;
     this.transactionManager = transactionManager;
-    this.streamingDownloadPort = streamingDownloadPort;
+    this.fileDownloadPort = fileDownloadPort;
     this.rorOrganizationParser = rorOrganizationParser;
     this.rorOrganizationItemWriter = rorOrganizationItemWriter;
     this.batchProperties = batchProperties;
@@ -123,7 +123,7 @@ public class RorOrganizationJobConfig {
       @Value("#{jobParameters['downloadUrl']}") String downloadUrl,
       @Value("#{jobParameters['rorVersion']}") String rorVersion) {
     return new RorOrganizationItemReader(
-        streamingDownloadPort, rorOrganizationParser, downloadUrl, rorVersion);
+        fileDownloadPort, rorOrganizationParser, downloadUrl, rorVersion);
   }
 
   /// 获取 chunk size。

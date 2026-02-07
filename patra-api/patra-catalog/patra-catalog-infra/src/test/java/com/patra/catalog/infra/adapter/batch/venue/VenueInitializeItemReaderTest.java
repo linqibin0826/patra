@@ -8,36 +8,40 @@ import static org.mockito.Mockito.when;
 
 import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
-import com.patra.catalog.domain.port.source.StreamingDownloadPort;
-import com.patra.catalog.domain.port.source.StreamingDownloadResult;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadResult;
 import com.patra.common.error.trait.StandardErrorTrait;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPOutputStream;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.infrastructure.item.ExecutionContext;
 import org.springframework.batch.infrastructure.item.ItemStreamException;
 
-/// VenueInitializeItemReader 集成测试。
+/// VenueInitializeItemReader 单元测试。
 ///
-/// 测试 Spring Batch ItemStreamReader 的流式多文件读取和断点续传功能。
+/// 测试 Spring Batch ItemStreamReader 的多文件读取和断点续传功能。
 ///
 /// **测试策略**：
 ///
-/// - Mock StreamingDownloadPort 返回 GZIP 压缩的 JSON Lines 数据
+/// - Mock FileDownloadPort 返回 GZIP 压缩的 JSON Lines 临时文件
+/// - 使用 @TempDir 创建临时文件模拟下载结果
 /// - 使用真实的 OpenAlexSourceParser 进行解析
 /// - 测试生命周期：open()、read()、update()、close()
 ///
@@ -48,6 +52,7 @@ import org.springframework.batch.infrastructure.item.ItemStreamException;
 /// - 断点续传（文件内和跨文件）
 /// - 空文件处理
 /// - 下载失败处理
+/// - 临时文件正确删除
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -63,10 +68,16 @@ class VenueInitializeItemReaderTest {
   private static final String URL_2 = "https://openalex.s3.amazonaws.com/data/sources/part_001.gz";
   private static final String URL_3 = "https://openalex.s3.amazonaws.com/data/sources/part_002.gz";
 
-  @Mock private StreamingDownloadPort streamingDownloadPort;
+  @Mock private FileDownloadPort fileDownloadPort;
+
+  @TempDir Path tempDir;
 
   private OpenAlexSourceParser parser;
   private ExecutionContext executionContext;
+  private VenueInitializeItemReader reader;
+
+  /// 临时文件计数器（用于生成唯一文件名）。
+  private final AtomicInteger tempFileCounter = new AtomicInteger(0);
 
   @BeforeEach
   void setUp() {
@@ -74,20 +85,24 @@ class VenueInitializeItemReaderTest {
     executionContext = new ExecutionContext();
   }
 
-  /// 创建 GZIP 压缩的 JSON Lines 输入流。
-  private InputStream createGzipJsonLinesStream(String... jsonLines) throws Exception {
+  @AfterEach
+  void tearDown() {
+    if (reader != null) {
+      reader.close();
+    }
+  }
+
+  /// 创建 GZIP 压缩的 JSON Lines 临时文件并返回 FileDownloadResult。
+  private FileDownloadResult createGzipFileResult(String... jsonLines) throws Exception {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     try (GZIPOutputStream gzos = new GZIPOutputStream(baos)) {
       for (String line : jsonLines) {
         gzos.write((line + "\n").getBytes(StandardCharsets.UTF_8));
       }
     }
-    return new ByteArrayInputStream(baos.toByteArray());
-  }
-
-  /// 创建 StreamingDownloadResult（模拟 HTTP 响应）。
-  private StreamingDownloadResult createDownloadResult(String... jsonLines) throws Exception {
-    return StreamingDownloadResult.of(createGzipJsonLinesStream(jsonLines));
+    Path tempFile = tempDir.resolve("test-venue-" + tempFileCounter.incrementAndGet() + ".gz");
+    Files.write(tempFile, baos.toByteArray());
+    return FileDownloadResult.of(tempFile, Files.size(tempFile));
   }
 
   /// 创建测试用的 OpenAlex Source JSON。
@@ -105,28 +120,26 @@ class VenueInitializeItemReaderTest {
     @Test
     @DisplayName("读取单个文件 - 应该返回所有记录")
     void read_singleFile_shouldReturnAllRecords() throws Exception {
-      // Given: 配置 Mock 返回 3 条记录
-      when(streamingDownloadPort.download(URI.create(URL_1)))
+      // Given
+      when(fileDownloadPort.download(URI.create(URL_1)))
           .thenReturn(
-              createDownloadResult(
+              createGzipFileResult(
                   createSourceJson("S1", "Journal A"),
                   createSourceJson("S2", "Journal B"),
                   createSourceJson("S3", "Journal C")));
 
-      VenueInitializeItemReader reader =
-          new VenueInitializeItemReader(streamingDownloadPort, parser, List.of(URL_1));
+      reader = new VenueInitializeItemReader(fileDownloadPort, parser, List.of(URL_1));
       reader.open(executionContext);
 
-      // When: 读取所有记录
+      // When
       List<VenueParseResult> results = new ArrayList<>();
       VenueParseResult item;
       while ((item = reader.read()) != null) {
         results.add(item);
       }
 
-      // Then: 应该返回 3 条记录
+      // Then
       assertThat(results).hasSize(3);
-      // CQRS 最小聚合设计：openalexId 现在存储在 identifiers 中
       assertThat(results.get(0).aggregate().getIdentifier(VenueIdentifierType.OPENALEX))
           .hasValue("S1");
       assertThat(results.get(0).aggregate().getDisplayName()).isEqualTo("Journal A");
@@ -134,22 +147,17 @@ class VenueInitializeItemReaderTest {
           .hasValue("S2");
       assertThat(results.get(2).aggregate().getIdentifier(VenueIdentifierType.OPENALEX))
           .hasValue("S3");
-
-      reader.close();
     }
 
     @Test
     @DisplayName("空 URL 列表 - read() 应该立即返回 null")
     void read_emptyUrlList_shouldReturnNull() throws Exception {
-      // Given: 空 URL 列表
-      VenueInitializeItemReader reader =
-          new VenueInitializeItemReader(streamingDownloadPort, parser, List.of());
+      // Given
+      reader = new VenueInitializeItemReader(fileDownloadPort, parser, List.of());
       reader.open(executionContext);
 
-      // When & Then: 应该立即返回 null
+      // When & Then
       assertThat(reader.read()).isNull();
-
-      reader.close();
     }
   }
 
@@ -160,28 +168,27 @@ class VenueInitializeItemReaderTest {
     @Test
     @DisplayName("顺序读取多个文件 - 应该返回所有文件的记录")
     void read_multipleFiles_shouldReturnAllRecordsInOrder() throws Exception {
-      // Given: 配置 Mock 为每个 URL 返回数据
-      when(streamingDownloadPort.download(URI.create(URL_1)))
+      // Given
+      when(fileDownloadPort.download(URI.create(URL_1)))
           .thenReturn(
-              createDownloadResult(
+              createGzipFileResult(
                   createSourceJson("S1", "Journal A"), createSourceJson("S2", "Journal B")));
-      when(streamingDownloadPort.download(URI.create(URL_2)))
+      when(fileDownloadPort.download(URI.create(URL_2)))
           .thenReturn(
-              createDownloadResult(
+              createGzipFileResult(
                   createSourceJson("S3", "Journal C"), createSourceJson("S4", "Journal D")));
 
-      VenueInitializeItemReader reader =
-          new VenueInitializeItemReader(streamingDownloadPort, parser, List.of(URL_1, URL_2));
+      reader = new VenueInitializeItemReader(fileDownloadPort, parser, List.of(URL_1, URL_2));
       reader.open(executionContext);
 
-      // When: 读取所有记录
+      // When
       List<VenueParseResult> results = new ArrayList<>();
       VenueParseResult item;
       while ((item = reader.read()) != null) {
         results.add(item);
       }
 
-      // Then: 应该返回 4 条记录，顺序正确
+      // Then
       assertThat(results).hasSize(4);
       assertThat(results.get(0).aggregate().getIdentifier(VenueIdentifierType.OPENALEX))
           .hasValue("S1");
@@ -191,41 +198,35 @@ class VenueInitializeItemReaderTest {
           .hasValue("S3");
       assertThat(results.get(3).aggregate().getIdentifier(VenueIdentifierType.OPENALEX))
           .hasValue("S4");
-
-      reader.close();
     }
 
     @Test
     @DisplayName("包含空文件 - 应该跳过空文件继续读取")
     void read_withEmptyFile_shouldSkipAndContinue() throws Exception {
-      // Given: 中间有一个空文件
-      when(streamingDownloadPort.download(URI.create(URL_1)))
-          .thenReturn(createDownloadResult(createSourceJson("S1", "Journal A")));
-      when(streamingDownloadPort.download(URI.create(URL_2)))
-          .thenReturn(createDownloadResult()); // 空文件
-      when(streamingDownloadPort.download(URI.create(URL_3)))
-          .thenReturn(createDownloadResult(createSourceJson("S2", "Journal B")));
+      // Given
+      when(fileDownloadPort.download(URI.create(URL_1)))
+          .thenReturn(createGzipFileResult(createSourceJson("S1", "Journal A")));
+      when(fileDownloadPort.download(URI.create(URL_2))).thenReturn(createGzipFileResult()); // 空文件
+      when(fileDownloadPort.download(URI.create(URL_3)))
+          .thenReturn(createGzipFileResult(createSourceJson("S2", "Journal B")));
 
-      VenueInitializeItemReader reader =
-          new VenueInitializeItemReader(
-              streamingDownloadPort, parser, List.of(URL_1, URL_2, URL_3));
+      reader =
+          new VenueInitializeItemReader(fileDownloadPort, parser, List.of(URL_1, URL_2, URL_3));
       reader.open(executionContext);
 
-      // When: 读取所有记录
+      // When
       List<VenueParseResult> results = new ArrayList<>();
       VenueParseResult item;
       while ((item = reader.read()) != null) {
         results.add(item);
       }
 
-      // Then: 应该返回 2 条记录
+      // Then
       assertThat(results).hasSize(2);
       assertThat(results.get(0).aggregate().getIdentifier(VenueIdentifierType.OPENALEX))
           .hasValue("S1");
       assertThat(results.get(1).aggregate().getIdentifier(VenueIdentifierType.OPENALEX))
           .hasValue("S2");
-
-      reader.close();
     }
   }
 
@@ -236,117 +237,104 @@ class VenueInitializeItemReaderTest {
     @Test
     @DisplayName("update() - 应该保存文件索引和行索引")
     void update_shouldSaveFileAndLineIndex() throws Exception {
-      // Given: 配置 Mock 返回多条记录
-      when(streamingDownloadPort.download(URI.create(URL_1)))
+      // Given
+      when(fileDownloadPort.download(URI.create(URL_1)))
           .thenReturn(
-              createDownloadResult(
+              createGzipFileResult(
                   createSourceJson("S1", "Journal A"),
                   createSourceJson("S2", "Journal B"),
                   createSourceJson("S3", "Journal C")));
 
-      VenueInitializeItemReader reader =
-          new VenueInitializeItemReader(streamingDownloadPort, parser, List.of(URL_1));
+      reader = new VenueInitializeItemReader(fileDownloadPort, parser, List.of(URL_1));
       reader.open(executionContext);
 
-      // When: 读取 2 条后保存进度
+      // When
       reader.read();
       reader.read();
       reader.update(executionContext);
 
-      // Then: ExecutionContext 应该保存正确的索引
+      // Then
       assertThat(executionContext.getInt(FILE_INDEX_KEY)).isEqualTo(0);
       assertThat(executionContext.getInt(LINE_INDEX_KEY)).isEqualTo(2);
-
-      reader.close();
     }
 
     @Test
     @DisplayName("从断点恢复（文件内） - 应该跳过已处理记录")
     void resume_withinFile_shouldSkipProcessedRecords() throws Exception {
-      // Given: 配置 Mock 返回数据
-      when(streamingDownloadPort.download(URI.create(URL_1)))
+      // Given
+      when(fileDownloadPort.download(URI.create(URL_1)))
           .thenReturn(
-              createDownloadResult(
+              createGzipFileResult(
                   createSourceJson("S1", "Journal A"),
                   createSourceJson("S2", "Journal B"),
                   createSourceJson("S3", "Journal C")));
 
-      // 模拟已处理 2 条
       executionContext.putInt(FILE_INDEX_KEY, 0);
       executionContext.putInt(LINE_INDEX_KEY, 2);
 
-      VenueInitializeItemReader reader =
-          new VenueInitializeItemReader(streamingDownloadPort, parser, List.of(URL_1));
+      reader = new VenueInitializeItemReader(fileDownloadPort, parser, List.of(URL_1));
       reader.open(executionContext);
 
-      // When: 读取第一条
+      // When
       VenueParseResult result = reader.read();
 
       // Then: 应该是第 3 条记录
       assertThat(result).isNotNull();
       assertThat(result.aggregate().getIdentifier(VenueIdentifierType.OPENALEX)).hasValue("S3");
 
-      // 读取完成
       assertThat(reader.read()).isNull();
-
-      reader.close();
     }
 
     @Test
     @DisplayName("从断点恢复（跨文件） - 应该从正确的文件和行开始")
     void resume_acrossFiles_shouldStartFromCorrectPosition() throws Exception {
-      // Given: 配置 Mock（注意：第一个文件不会被访问）
+      // Given（注意：第一个文件不会被访问）
       lenient()
-          .when(streamingDownloadPort.download(URI.create(URL_1)))
+          .when(fileDownloadPort.download(URI.create(URL_1)))
           .thenReturn(
-              createDownloadResult(
+              createGzipFileResult(
                   createSourceJson("S1", "Journal A"), createSourceJson("S2", "Journal B")));
-      when(streamingDownloadPort.download(URI.create(URL_2)))
+      when(fileDownloadPort.download(URI.create(URL_2)))
           .thenReturn(
-              createDownloadResult(
+              createGzipFileResult(
                   createSourceJson("S3", "Journal C"), createSourceJson("S4", "Journal D")));
 
-      // 模拟已完成第一个文件，第二个文件处理了 1 条
       executionContext.putInt(FILE_INDEX_KEY, 1);
       executionContext.putInt(LINE_INDEX_KEY, 1);
 
-      VenueInitializeItemReader reader =
-          new VenueInitializeItemReader(streamingDownloadPort, parser, List.of(URL_1, URL_2));
+      reader = new VenueInitializeItemReader(fileDownloadPort, parser, List.of(URL_1, URL_2));
       reader.open(executionContext);
 
-      // When: 读取
+      // When
       VenueParseResult result = reader.read();
 
       // Then: 应该是第二个文件的第 2 条记录（S4）
       assertThat(result).isNotNull();
       assertThat(result.aggregate().getIdentifier(VenueIdentifierType.OPENALEX)).hasValue("S4");
 
-      // 读取完成
       assertThat(reader.read()).isNull();
-
-      reader.close();
     }
 
     @Test
     @DisplayName("完整断点续传流程 - 模拟中断恢复")
     void fullCheckpointResumeWorkflow() throws Exception {
-      // Given: 配置 Mock
+      // Given
       List<String> urls = List.of(URL_1, URL_2);
 
       // 第一阶段使用的 Mock
-      when(streamingDownloadPort.download(URI.create(URL_1)))
+      when(fileDownloadPort.download(URI.create(URL_1)))
           .thenReturn(
-              createDownloadResult(
+              createGzipFileResult(
                   createSourceJson("S1", "Journal A"), createSourceJson("S2", "Journal B")));
-      when(streamingDownloadPort.download(URI.create(URL_2)))
+      when(fileDownloadPort.download(URI.create(URL_2)))
           .thenReturn(
-              createDownloadResult(
+              createGzipFileResult(
                   createSourceJson("S3", "Journal C"), createSourceJson("S4", "Journal D")));
 
       // === 第一阶段：处理 3 条后"中断" ===
       ExecutionContext context1 = new ExecutionContext();
       VenueInitializeItemReader reader1 =
-          new VenueInitializeItemReader(streamingDownloadPort, parser, urls);
+          new VenueInitializeItemReader(fileDownloadPort, parser, urls);
       reader1.open(context1);
 
       reader1.read(); // S1
@@ -360,25 +348,21 @@ class VenueInitializeItemReaderTest {
       assertThat(context1.getInt(LINE_INDEX_KEY)).isEqualTo(1);
 
       // === 第二阶段：从断点恢复 ===
-      // 重新配置 Mock（因为 InputStream 只能读取一次）
-      when(streamingDownloadPort.download(URI.create(URL_2)))
+      // 重新配置 Mock（因为临时文件在 close() 时被删除）
+      when(fileDownloadPort.download(URI.create(URL_2)))
           .thenReturn(
-              createDownloadResult(
+              createGzipFileResult(
                   createSourceJson("S3", "Journal C"), createSourceJson("S4", "Journal D")));
 
-      VenueInitializeItemReader reader2 =
-          new VenueInitializeItemReader(streamingDownloadPort, parser, urls);
-      reader2.open(context1);
+      reader = new VenueInitializeItemReader(fileDownloadPort, parser, urls);
+      reader.open(context1);
 
       // Then: 应该从 S4 开始
-      VenueParseResult result = reader2.read();
+      VenueParseResult result = reader.read();
       assertThat(result).isNotNull();
       assertThat(result.aggregate().getIdentifier(VenueIdentifierType.OPENALEX)).hasValue("S4");
 
-      // 读取完成
-      assertThat(reader2.read()).isNull();
-
-      reader2.close();
+      assertThat(reader.read()).isNull();
     }
   }
 
@@ -389,16 +373,15 @@ class VenueInitializeItemReaderTest {
     @Test
     @DisplayName("下载失败 - 应该抛出 ItemStreamException")
     void open_downloadFails_shouldThrowItemStreamException() {
-      // Given: Mock 下载失败
-      when(streamingDownloadPort.download(any(URI.class)))
+      // Given
+      when(fileDownloadPort.download(any(URI.class)))
           .thenThrow(
               new FileDownloadException(
                   "网络连接失败", new RuntimeException("Timeout"), StandardErrorTrait.TIMEOUT));
 
-      VenueInitializeItemReader reader =
-          new VenueInitializeItemReader(streamingDownloadPort, parser, List.of(URL_1));
+      reader = new VenueInitializeItemReader(fileDownloadPort, parser, List.of(URL_1));
 
-      // When & Then: 应该抛出异常
+      // When & Then
       assertThatThrownBy(() -> reader.open(executionContext))
           .isInstanceOf(ItemStreamException.class)
           .hasMessageContaining("无法下载分区文件");
@@ -410,34 +393,44 @@ class VenueInitializeItemReaderTest {
   class CloseTest {
 
     @Test
-    @DisplayName("正常关闭 - 不应该抛出异常")
-    void close_afterOpen_shouldNotThrowException() throws Exception {
+    @DisplayName("关闭 Reader - 应该删除当前临时文件")
+    void close_afterOpen_shouldDeleteTempFile() throws Exception {
       // Given
-      when(streamingDownloadPort.download(URI.create(URL_1)))
-          .thenReturn(createDownloadResult(createSourceJson("S1", "Journal A")));
+      Path tempFile = tempDir.resolve("test-venue-close.gz");
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      try (GZIPOutputStream gzos = new GZIPOutputStream(baos)) {
+        gzos.write((createSourceJson("S1", "Journal A") + "\n").getBytes(StandardCharsets.UTF_8));
+      }
+      Files.write(tempFile, baos.toByteArray());
+      FileDownloadResult downloadResult = FileDownloadResult.of(tempFile, Files.size(tempFile));
 
-      VenueInitializeItemReader reader =
-          new VenueInitializeItemReader(streamingDownloadPort, parser, List.of(URL_1));
+      when(fileDownloadPort.download(URI.create(URL_1))).thenReturn(downloadResult);
+
+      reader = new VenueInitializeItemReader(fileDownloadPort, parser, List.of(URL_1));
       reader.open(executionContext);
 
-      // When & Then
+      // When
       reader.close();
+      reader = null;
+
+      // Then
+      assertThat(tempFile).doesNotExist();
     }
 
     @Test
     @DisplayName("重复关闭 - 不应该抛出异常")
     void close_calledTwice_shouldNotThrowException() throws Exception {
       // Given
-      when(streamingDownloadPort.download(URI.create(URL_1)))
-          .thenReturn(createDownloadResult(createSourceJson("S1", "Journal A")));
+      when(fileDownloadPort.download(URI.create(URL_1)))
+          .thenReturn(createGzipFileResult(createSourceJson("S1", "Journal A")));
 
-      VenueInitializeItemReader reader =
-          new VenueInitializeItemReader(streamingDownloadPort, parser, List.of(URL_1));
+      reader = new VenueInitializeItemReader(fileDownloadPort, parser, List.of(URL_1));
       reader.open(executionContext);
 
       // When & Then
       reader.close();
       reader.close();
+      reader = null;
     }
   }
 }
