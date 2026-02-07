@@ -34,7 +34,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 ///
 /// **流式处理特性**：
 ///
-/// - 无磁盘落盘，ItemReader 按需从远程 URL 流式下载每个分区文件
+/// - ItemReader 按需从远程 URL 下载每个分区文件到临时目录，从本地文件解析
 /// - 切换文件时自动关闭当前 HTTP 连接，打开下一个
 ///
 /// **配置说明**：

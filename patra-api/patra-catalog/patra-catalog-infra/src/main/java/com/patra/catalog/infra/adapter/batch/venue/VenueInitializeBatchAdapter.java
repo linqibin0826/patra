@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 /// **流式处理特性**：
 ///
 /// - 传递分区 URL 列表给 Job
-/// - ItemReader 按需从远程 URL 流式下载
+/// - ItemReader 按需从远程 URL 下载到临时文件
 /// - 无临时文件清理逻辑
 ///
 /// **设计说明**：

@@ -22,10 +22,10 @@ import org.springframework.stereotype.Component;
 /// - 编排 ROR 机构导入流程
 /// - 委派具体任务给领域端口
 ///
-/// **流式处理特性**：
+/// **临时文件下载特性**：
 ///
-/// - 无磁盘落盘，ItemReader 在 open() 时建立 HTTP 连接
-/// - 传递 downloadUrl 给 Job，由 ItemReader 负责流式下载
+/// - ItemReader 在 open() 时通过 FileDownloadPort 下载文件到临时目录，再从本地文件解析
+/// - 传递 downloadUrl 给 Job，由 ItemReader 负责下载到临时文件
 ///
 /// **设计说明**：
 ///
@@ -80,7 +80,7 @@ public class RorOrganizationImportHandler
           HttpStdErrors.of("CAT").CONFLICT(), exception.getMessage(), exception);
     }
 
-    // 2. 启动批处理导入（传递 downloadUrl，由 ItemReader 负责流式下载）
+    // 2. 启动批处理导入（传递 downloadUrl，由 ItemReader 负责下载到临时文件）
     try {
       RorImportParams params = RorImportParams.withDownloadUrl(command.url(), command.rorVersion());
       Long executionId = rorOrganizationBatchPort.launchImport(params);

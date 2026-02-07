@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component;
 /// 1. 检查数据库是否已有数据（如有则拒绝导入）
 /// 2. 流式获取 manifest（获取分区文件 URL 列表）
 /// 3. 传递分区 URL 列表给 Spring Batch Job
-/// 4. ItemReader 按需流式下载每个分区文件
+/// 4. ItemReader 按需下载每个分区文件到临时目录
 ///
 /// **流式处理特性**：
 ///
@@ -61,7 +61,7 @@ public class VenueInitializeHandler
   /// **流式处理特性**：
   ///
   /// - Manifest 直接从 HTTP 响应解析，无磁盘落盘
-  /// - 分区 URL 列表传递给 Job，由 ItemReader 按需流式下载
+  /// - 分区 URL 列表传递给 Job，由 ItemReader 按需下载到临时文件
   ///
   /// **前置条件**：
   ///
@@ -93,7 +93,7 @@ public class VenueInitializeHandler
       List<String> partitionUrls = manifest.getAllHttpPaths();
       log.info("准备启动导入任务，分区 URL 数量：{}", partitionUrls.size());
 
-      // 4. 启动批处理导入（传递 URL 列表，由 ItemReader 负责流式下载）
+      // 4. 启动批处理导入（传递 URL 列表，由 ItemReader 负责下载到临时文件）
       VenueInitializeParams params = VenueInitializeParams.of(partitionUrls);
       Long executionId = venueImportBatchPort.launchImport(params);
 
@@ -110,6 +110,6 @@ public class VenueInitializeHandler
       throw new ApplicationException(
           CatalogErrorCode.CAT_1301, "OpenAlex Venue 导入时发生意外错误: " + e.getMessage(), e);
     }
-    // 无需清理临时文件，ItemReader 使用流式下载
+    // ItemReader 在 close() 中自动清理临时文件
   }
 }

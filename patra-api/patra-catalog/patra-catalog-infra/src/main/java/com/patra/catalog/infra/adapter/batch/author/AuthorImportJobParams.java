@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 /// **流式处理特性**：
 ///
 /// - 使用 `downloadUrl` 存储 JSON Lines 文件下载 URL
-/// - ItemReader 在 open() 时建立 HTTP 连接，流式下载并解析
+/// - ItemReader 在 open() 时通过 FileDownloadPort 下载文件到临时目录，从本地文件解析
 /// - 无临时文件清理逻辑
 ///
 /// @author linqibin

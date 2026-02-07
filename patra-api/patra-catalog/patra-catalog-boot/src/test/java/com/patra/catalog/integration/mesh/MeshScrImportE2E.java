@@ -7,8 +7,8 @@ import static org.mockito.Mockito.when;
 
 import com.patra.catalog.app.usecase.mesh.command.MeshScrImportCommand;
 import com.patra.catalog.app.usecase.mesh.dto.MeshScrImportResult;
-import com.patra.catalog.domain.port.source.StreamingDownloadPort;
-import com.patra.catalog.domain.port.source.StreamingDownloadResult;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadResult;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshConceptDao;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshEntryTermDao;
 import com.patra.catalog.infra.adapter.persistence.dao.MeshScrDao;
@@ -20,8 +20,11 @@ import com.patra.catalog.infra.adapter.persistence.entity.MeshScrHeadingMappedTo
 import com.patra.catalog.integration.config.CatalogMySQLContainerInitializer;
 import com.patra.common.cqrs.CommandBus;
 import com.patra.common.error.ApplicationException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.ClassOrderer;
@@ -47,7 +50,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 ///   → MeshScrImportHandler.handle()
 ///     → MeshBatchAdapter.launchScrImport()
 ///       → Spring Batch Job
-///         → MeshScrItemReader (流式下载 + XML 解析)
+///         → MeshScrItemReader (临时文件下载 + XML 解析)
 ///         → MeshScrItemWriter (批量写入多张表)
 /// ```
 ///
@@ -109,8 +112,8 @@ class MeshScrImportE2E {
   @Autowired private MeshScrPharmacologicalActionDao pharmacologicalActionDao;
   @Autowired private JdbcTemplate jdbcTemplate;
 
-  /// Mock StreamingDownloadPort，返回测试资源文件的 InputStream。
-  @MockitoBean private StreamingDownloadPort streamingDownloadPort;
+  /// Mock FileDownloadPort，将测试资源文件写入临时文件后返回路径。
+  @MockitoBean private FileDownloadPort fileDownloadPort;
 
   // ========== Setup & Teardown ==========
 
@@ -118,22 +121,33 @@ class MeshScrImportE2E {
   @BeforeEach
   void setUp() {
     cleanupAllTables();
-    configureStreamingDownloadMock();
+    configureFileDownloadMock();
   }
 
-  /// 配置流式下载 Mock。
+  /// 配置文件下载 Mock。
   ///
-  /// 每次调用 download() 都返回新的 StreamingDownloadResult，包含测试 XML 的 InputStream。
-  private void configureStreamingDownloadMock() {
-    when(streamingDownloadPort.download(any(URI.class)))
+  /// 每次调用 download() 都将测试 XML 写入新的临时文件，返回 FileDownloadResult。
+  private void configureFileDownloadMock() {
+    when(fileDownloadPort.download(any(URI.class)))
         .thenAnswer(
             invocation -> {
               InputStream testInputStream = getClass().getResourceAsStream(TEST_RESOURCE_PATH);
               if (testInputStream == null) {
                 throw new IllegalStateException("测试资源文件不存在: " + TEST_RESOURCE_PATH);
               }
-              return StreamingDownloadResult.of(testInputStream);
+              return copyToTempFile(testInputStream);
             });
+  }
+
+  /// 将 InputStream 内容写入临时文件。
+  ///
+  /// @param inputStream 输入流
+  /// @return 临时文件下载结果
+  private FileDownloadResult copyToTempFile(InputStream inputStream) throws IOException {
+    Path tempFile = Files.createTempFile("mesh-scr-e2e-", ".xml");
+    Files.copy(inputStream, tempFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+    inputStream.close();
+    return FileDownloadResult.of(tempFile, Files.size(tempFile));
   }
 
   /// 清空所有 MeSH SCR 相关表。

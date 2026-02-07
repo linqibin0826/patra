@@ -6,7 +6,7 @@ package com.patra.catalog.app.usecase.mesh.dto;
 ///
 /// **设计说明**：
 ///
-/// 采用流式下载模式，ItemReader 在 open() 时建立 HTTP 连接，无本地临时文件。
+/// ItemReader 在 open() 时通过 FileDownloadPort 下载文件到临时目录，从本地文件解析。
 ///
 /// @param executionId 批处理执行标识符（Spring Batch Job Execution ID）
 /// @param sourceUrl 原始数据源 URL

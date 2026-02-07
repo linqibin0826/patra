@@ -13,7 +13,7 @@ package com.patra.catalog.domain.model.vo.mesh;
 /// **设计说明**：
 ///
 /// - 导入操作设计为「一次性初始化」语义，不支持增量或覆盖模式
-/// - 使用流式下载，无磁盘落盘，ItemReader 在 open() 时建立 HTTP 连接
+/// - ItemReader 在 open() 时通过 FileDownloadPort 下载文件到临时目录，从本地文件解析
 ///
 /// @author linqibin
 /// @since 0.1.0

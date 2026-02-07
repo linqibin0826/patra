@@ -42,7 +42,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// - 正常导入流程：获取 manifest → 传递 URL 列表 → 启动批处理
 /// - 参数传递正确性验证
 ///
-/// **流式下载架构**：
+/// **临时文件下载架构**：
 ///
 /// Handler 只负责获取 manifest 并提取分区 URL 列表，
 /// 实际的分区文件下载由 ItemReader 按需完成。
