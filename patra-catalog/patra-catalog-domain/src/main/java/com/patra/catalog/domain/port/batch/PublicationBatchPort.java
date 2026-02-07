@@ -16,13 +16,13 @@ import com.patra.catalog.domain.model.vo.publication.PublicationImportParams;
 /// 这种设计支持：
 ///
 /// - 测试环境只导入 1 个文件验证功能
-/// - 生产环境通过 XXL-Job 循环调度批量导入 1274 个文件
+/// - 生产环境通过 XXL-Job 循环调度批量导入 1334 个文件
 /// - 断点续传（从指定文件索引继续）
 ///
 /// **使用场景**：
 ///
 /// - `launchBaselineImport(params)`：导入指定的 PubMed Baseline 文件
-/// - 文件索引范围：1-1274（对应 pubmed25n0001.xml.gz ~ pubmed25n1274.xml.gz）
+/// - 文件索引范围：1-1334（对应 pubmed26n0001.xml.gz ~ pubmed26n1334.xml.gz）
 /// - 每文件约 30,000 条记录
 ///
 /// @author linqibin

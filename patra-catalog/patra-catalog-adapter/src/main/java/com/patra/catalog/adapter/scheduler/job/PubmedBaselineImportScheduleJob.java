@@ -16,17 +16,17 @@ import org.springframework.stereotype.Component;
 ///
 /// **单文件模式**：
 ///
-/// 每次 Job 执行只处理一个 XML 文件，通过 `fileIndex` 参数指定（1-1274）。
+/// 每次 Job 执行只处理一个 XML 文件，通过 `fileIndex` 参数指定（1-1334）。
 /// 这种设计支持：
 ///
 /// - 测试环境：手动指定 `fileIndex=1` 测试第 1 个文件
-/// - 生产环境：通过 XXL-Job 循环调度批量导入 1274 个文件
+/// - 生产环境：通过 XXL-Job 循环调度批量导入 1334 个文件
 ///
 /// **调度参数**：
 ///
 /// ```
-/// fileIndex=1      # 导入第 1 个文件（pubmed25n0001.xml.gz）
-/// fileIndex=42     # 导入第 42 个文件（pubmed25n0042.xml.gz）
+/// fileIndex=1      # 导入第 1 个文件（pubmed26n0001.xml.gz）
+/// fileIndex=42     # 导入第 42 个文件（pubmed26n0042.xml.gz）
 /// ```
 ///
 /// **配置要求**：
@@ -40,7 +40,7 @@ import org.springframework.stereotype.Component;
 ///
 /// **数据规模**：
 ///
-/// - 2025 Baseline 共 1274 个文件
+/// - 2025 Baseline 共 1334 个文件
 /// - 每文件约 30,000 条记录
 /// - 总计约 3,700 万条
 ///
@@ -58,7 +58,7 @@ public class PubmedBaselineImportScheduleJob {
   ///
   /// **JobHandler 名称**: `pubmedBaselineImportJob`
   ///
-  /// **参数格式**: `fileIndex=N`，其中 N 为 1-1274 的整数
+  /// **参数格式**: `fileIndex=N`，其中 N 为 1-1334 的整数
   ///
   /// **示例**:
   /// - `fileIndex=1` - 导入第 1 个文件
@@ -102,13 +102,13 @@ public class PubmedBaselineImportScheduleJob {
   private int parseFileIndex() {
     String jobParam = XxlJobHelper.getJobParam();
     if (jobParam == null || jobParam.isBlank()) {
-      throw new IllegalArgumentException("缺少 fileIndex 参数，格式：fileIndex=N（N 为 1-1274）");
+      throw new IllegalArgumentException("缺少 fileIndex 参数，格式：fileIndex=N（N 为 1-1334）");
     }
 
     // 解析 fileIndex=N 格式
     String[] parts = jobParam.split("=");
     if (parts.length != 2 || !"fileIndex".equals(parts[0].trim())) {
-      throw new IllegalArgumentException("参数格式无效，期望：fileIndex=N（N 为 1-1274），实际：" + jobParam);
+      throw new IllegalArgumentException("参数格式无效，期望：fileIndex=N（N 为 1-1334），实际：" + jobParam);
     }
 
     try {

@@ -22,9 +22,9 @@ import org.springframework.validation.annotation.Validated;
 ///
 /// **数据源说明**：
 ///
-/// - 2025 Baseline 共 1274 个 gzip 压缩 XML 文件
+/// - 2026 Baseline 共 1334 个 gzip 压缩 XML 文件
 /// - 每文件约 30,000 条记录，总计约 3,700 万条
-/// - 文件名格式：`pubmed25n{0001-1274}.xml.gz`
+/// - 文件名格式：`pubmed26n{0001-1274}.xml.gz`
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -37,7 +37,7 @@ public class PubmedDataSourceProperties {
   /// PubMed Baseline 基础 URL。
   ///
   /// 指向 NCBI FTP 服务器的 baseline 目录。
-  /// 实际下载时会追加文件名（如 `pubmed25n0001.xml.gz`）。
+  /// 实际下载时会追加文件名（如 `pubmed26n0001.xml.gz`）。
   @NotBlank(message = "patra.catalog.pubmed.baseline-url 不能为空")
   private String baselineUrl = "https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/";
 

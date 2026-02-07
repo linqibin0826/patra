@@ -10,8 +10,8 @@ package com.patra.catalog.app.usecase.publication.baseline.dto;
 ///
 /// @param executionId 批处理执行标识符（Spring Batch Job Execution ID）
 /// @param baseUrl FTP 基础 URL
-/// @param fileIndex 处理的文件索引（1-1274）
-/// @param fileName 处理的文件名（如 pubmed25n0001.xml.gz）
+/// @param fileIndex 处理的文件索引（1-1334）
+/// @param fileName 处理的文件名（如 pubmed26n0001.xml.gz）
 /// @param message 人类可读的状态摘要
 /// @author linqibin
 /// @since 0.1.0

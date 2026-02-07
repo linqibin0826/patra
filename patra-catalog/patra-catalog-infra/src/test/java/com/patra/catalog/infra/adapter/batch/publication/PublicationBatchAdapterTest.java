@@ -79,7 +79,7 @@ class PublicationBatchAdapterTest {
 
       PublicationImportJobParams captured = jobParamsCaptor.getValue();
       assertThat(captured.getDownloadUrl())
-          .isEqualTo("https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/pubmed25n0001.xml.gz");
+          .isEqualTo("https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/pubmed26n0001.xml.gz");
     }
 
     @Test
@@ -117,8 +117,8 @@ class PublicationBatchAdapterTest {
           .launch(eq(pubmedBaselineImportJob), jobParamsCaptor.capture(), eq(false));
 
       PublicationImportJobParams captured = jobParamsCaptor.getValue();
-      // 从 pubmed25n0001.xml.gz 提取为 baseline-pubmed25n0001
-      assertThat(captured.getImportBatch()).isEqualTo("baseline-pubmed25n0001");
+      // 从 pubmed26n0001.xml.gz 提取为 baseline-pubmed26n0001
+      assertThat(captured.getImportBatch()).isEqualTo("baseline-pubmed26n0001");
     }
 
     @Test

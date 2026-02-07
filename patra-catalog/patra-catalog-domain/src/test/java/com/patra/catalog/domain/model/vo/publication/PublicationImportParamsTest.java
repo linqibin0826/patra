@@ -46,21 +46,21 @@ class PublicationImportParamsTest {
     }
 
     @Test
-    @DisplayName("fileIndex 大于 1274 时应抛出异常")
+    @DisplayName("fileIndex 大于 1334 时应抛出异常")
     void should_throw_when_fileIndex_greater_than_max() {
-      assertThatThrownBy(() -> PublicationImportParams.of(BASE_URL, 1275))
+      assertThatThrownBy(() -> PublicationImportParams.of(BASE_URL, 1335))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("fileIndex 必须在 1 到");
     }
 
     @Test
-    @DisplayName("应接受边界值 1 和 1274")
+    @DisplayName("应接受边界值 1 和 1334")
     void should_accept_boundary_values() {
       var params1 = PublicationImportParams.of(BASE_URL, 1);
-      var params1274 = PublicationImportParams.of(BASE_URL, 1274);
+      var params1334 = PublicationImportParams.of(BASE_URL, 1334);
 
       assertEquals(1, params1.fileIndex());
-      assertEquals(1274, params1274.fileIndex());
+      assertEquals(1334, params1334.fileIndex());
     }
   }
 
@@ -73,7 +73,7 @@ class PublicationImportParamsTest {
     void should_generate_first_file_name() {
       var params = PublicationImportParams.of(BASE_URL, 1);
 
-      assertEquals("pubmed25n0001.xml.gz", params.getFileName());
+      assertEquals("pubmed26n0001.xml.gz", params.getFileName());
     }
 
     @Test
@@ -81,15 +81,15 @@ class PublicationImportParamsTest {
     void should_generate_100th_file_name() {
       var params = PublicationImportParams.of(BASE_URL, 100);
 
-      assertEquals("pubmed25n0100.xml.gz", params.getFileName());
+      assertEquals("pubmed26n0100.xml.gz", params.getFileName());
     }
 
     @Test
-    @DisplayName("应正确生成第 1274 个文件名")
+    @DisplayName("应正确生成第 1334 个文件名")
     void should_generate_last_file_name() {
-      var params = PublicationImportParams.of(BASE_URL, 1274);
+      var params = PublicationImportParams.of(BASE_URL, 1334);
 
-      assertEquals("pubmed25n1274.xml.gz", params.getFileName());
+      assertEquals("pubmed26n1334.xml.gz", params.getFileName());
     }
   }
 
@@ -103,7 +103,7 @@ class PublicationImportParamsTest {
       var params = PublicationImportParams.of(BASE_URL, 1);
 
       assertEquals(
-          "https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/pubmed25n0001.xml.gz",
+          "https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/pubmed26n0001.xml.gz",
           params.getDownloadUrl());
     }
 
@@ -113,7 +113,7 @@ class PublicationImportParamsTest {
       var params = PublicationImportParams.of("https://ftp.ncbi.nlm.nih.gov/pubmed/baseline", 1);
 
       assertEquals(
-          "https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/pubmed25n0001.xml.gz",
+          "https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/pubmed26n0001.xml.gz",
           params.getDownloadUrl());
     }
   }
@@ -123,9 +123,9 @@ class PublicationImportParamsTest {
   class ConstantsTest {
 
     @Test
-    @DisplayName("TOTAL_FILE_COUNT 应为 1274")
+    @DisplayName("TOTAL_FILE_COUNT 应为 1334")
     void should_have_correct_total_file_count() {
-      assertEquals(1274, PublicationImportParams.TOTAL_FILE_COUNT);
+      assertEquals(1334, PublicationImportParams.TOTAL_FILE_COUNT);
     }
   }
 }

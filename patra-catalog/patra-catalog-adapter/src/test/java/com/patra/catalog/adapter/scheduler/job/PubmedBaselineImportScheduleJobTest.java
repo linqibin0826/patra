@@ -200,6 +200,6 @@ class PubmedBaselineImportScheduleJobTest {
   /// 创建模拟结果。
   private PublicationBaselineImportResult mockResult(int fileIndex) {
     return PublicationBaselineImportResult.success(
-        EXECUTION_ID, BASE_URL, fileIndex, "pubmed25n%04d.xml.gz".formatted(fileIndex));
+        EXECUTION_ID, BASE_URL, fileIndex, "pubmed26n%04d.xml.gz".formatted(fileIndex));
   }
 }
