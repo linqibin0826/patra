@@ -37,7 +37,7 @@ public interface PublicationBatchPort {
   /// **处理流程**：
   ///
   /// 1. 下载指定的 .xml.gz 文件
-  /// 2. 流式解压并解析 XML
+  /// 2. 从临时文件解压并解析 XML
   /// 3. Venue 匹配和 VenueInstance 创建
   /// 4. 批量写入 Publication 表
   ///

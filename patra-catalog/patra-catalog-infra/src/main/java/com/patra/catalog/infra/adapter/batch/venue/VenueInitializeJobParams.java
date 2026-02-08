@@ -13,11 +13,11 @@ import lombok.NoArgsConstructor;
 ///
 /// 用于 OpenAlex Venue 批量导入任务的强类型参数。
 ///
-/// **流式处理特性**：
+/// **临时文件下载特性**：
 ///
 /// - 使用 `partitionUrls` 存储分区文件 HTTP URL 列表
 /// - ItemReader 按需从远程 URL 下载每个分区文件到临时目录
-/// - 无临时文件清理逻辑
+/// - ItemReader 在切换文件和 close() 时自动清理临时文件
 ///
 /// **与 MeshImportJobParams 的差异**：
 ///

@@ -27,7 +27,7 @@ import org.springframework.stereotype.Component;
 /// - 生产环境通过 XXL-Job 循环调度批量导入 1274 个文件
 /// - 断点续传（从指定文件继续）
 ///
-/// **流式处理特性**：
+/// **临时文件下载特性**：
 ///
 /// - ItemReader 在 open() 时通过 FileDownloadPort 下载文件到临时目录
 /// - 传递 downloadUrl 给 Job，由 ItemReader 负责下载到临时文件

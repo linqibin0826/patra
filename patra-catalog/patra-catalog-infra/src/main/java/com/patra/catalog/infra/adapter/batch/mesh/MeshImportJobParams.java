@@ -10,11 +10,11 @@ import lombok.NoArgsConstructor;
 ///
 /// 用于 MeSH Descriptor 批量导入任务的强类型参数。
 ///
-/// **流式处理特性**：
+/// **临时文件下载特性**：
 ///
 /// - 使用 `downloadUrl` 存储 XML 文件下载 URL
 /// - ItemReader 在 open() 时通过 FileDownloadPort 下载文件到临时目录，从本地文件解析
-/// - 无临时文件清理逻辑
+/// - ItemReader 在 close() 时自动清理临时文件
 ///
 /// @author linqibin
 /// @since 0.1.0
