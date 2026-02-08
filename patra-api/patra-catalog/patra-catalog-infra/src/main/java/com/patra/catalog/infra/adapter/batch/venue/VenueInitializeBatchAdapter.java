@@ -16,11 +16,11 @@ import org.springframework.stereotype.Component;
 /// - 封装 Spring Batch 框架细节，对上层透明
 /// - 使用 `JobOperatorHelper` 启动批处理任务
 ///
-/// **流式处理特性**：
+/// **临时文件下载特性**：
 ///
 /// - 传递分区 URL 列表给 Job
 /// - ItemReader 按需从远程 URL 下载到临时文件
-/// - 无临时文件清理逻辑
+/// - ItemReader 在切换文件和 close() 时自动清理临时文件
 ///
 /// **设计说明**：
 ///

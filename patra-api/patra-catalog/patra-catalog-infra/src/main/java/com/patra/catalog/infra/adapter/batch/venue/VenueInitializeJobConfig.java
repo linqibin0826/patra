@@ -32,10 +32,10 @@ import org.springframework.transaction.PlatformTransactionManager;
 ///         └── writer: VenueInitializeItemWriter (Upsert 策略)
 /// ```
 ///
-/// **流式处理特性**：
+/// **临时文件下载特性**：
 ///
 /// - ItemReader 按需从远程 URL 下载每个分区文件到临时目录，从本地文件解析
-/// - 切换文件时自动关闭当前 HTTP 连接，打开下一个
+/// - 切换文件时自动清理当前临时文件，下载下一个分区
 ///
 /// **配置说明**：
 ///

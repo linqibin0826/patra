@@ -10,7 +10,7 @@ import java.util.List;
 ///
 /// - `partitionUrls`：分区文件 URL 列表（.gz 压缩），至少包含一个 URL
 ///
-/// **流式处理特性**：
+/// **临时文件下载特性**：
 ///
 /// - ItemReader 在切换文件时按需下载分区文件到临时目录
 /// - 传递 URL 列表给 Job，由 ItemReader 负责下载到临时文件

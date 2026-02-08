@@ -22,11 +22,11 @@ import org.springframework.stereotype.Component;
 /// - `params.fileIndex` 指定文件索引（1-1334）
 /// - 自动生成完整的下载 URL
 ///
-/// **流式处理特性**：
+/// **临时文件下载特性**：
 ///
 /// - 传递 download URL 给 Job
-/// - ItemReader 在 open() 时建立 HTTP 连接
-/// - 无临时文件清理逻辑
+/// - ItemReader 在 open() 时通过 FileDownloadPort 下载文件到临时目录
+/// - ItemReader 在 close() 时自动清理临时文件
 ///
 /// **断点续传**：
 ///

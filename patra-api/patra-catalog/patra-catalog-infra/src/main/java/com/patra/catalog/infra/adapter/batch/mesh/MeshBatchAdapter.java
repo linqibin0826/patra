@@ -17,11 +17,11 @@ import org.springframework.stereotype.Component;
 /// - 为不同的导入类型提供语义明确的方法实现
 /// - 使用 `JobOperatorHelper` 启动批处理任务
 ///
-/// **流式处理特性**：
+/// **临时文件下载特性**：
 ///
 /// - 传递 download URL 给 Job
-/// - ItemReader 在 open() 时建立 HTTP 连接
-/// - 无临时文件清理逻辑
+/// - ItemReader 在 open() 时通过 FileDownloadPort 下载文件到临时目录
+/// - ItemReader 在 close() 时自动清理临时文件
 ///
 /// **设计说明**：
 ///

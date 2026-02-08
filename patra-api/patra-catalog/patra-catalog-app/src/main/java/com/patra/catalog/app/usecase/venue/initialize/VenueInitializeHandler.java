@@ -34,7 +34,7 @@ import org.springframework.stereotype.Component;
 /// **流式处理特性**：
 ///
 /// - 无磁盘落盘，Manifest 直接从 HTTP 响应解析
-/// - 分区文件由 ItemReader 按需下载，切换文件时关闭当前 HTTP 连接
+/// - 分区文件由 ItemReader 按需下载到临时目录，切换文件时自动清理临时文件
 ///
 /// **设计说明**：
 ///
