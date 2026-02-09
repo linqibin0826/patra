@@ -941,6 +941,78 @@ class PubmedArticleItemProcessorTest {
     }
 
     @Test
+    @DisplayName("应该保留原始语言代码到 languageInfo.raw")
+    void should_preserve_raw_language_code_in_language_info() throws Exception {
+      // given - 使用 PubMed 的 ISO 639-3 三字母代码
+      CanonicalPublication publication =
+          CanonicalPublication.builder()
+              .identifiers(
+                  List.of(
+                      Identifier.builder()
+                          .type(PublicationIdentifierType.PMID)
+                          .value(PMID)
+                          .build()))
+              .title("Test Article")
+              .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .language("eng")
+              .build();
+
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(languageLookupPort.resolve("eng")).thenReturn("en");
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      PublicationAggregate aggregate = result.publication();
+      assertThat(aggregate.getLanguageInfo()).isNotNull();
+      assertThat(aggregate.getLanguageInfo().raw()).isEqualTo("eng");
+      assertThat(aggregate.getLanguageInfo().code()).isEqualTo("en");
+      assertThat(aggregate.getLanguageInfo().base()).isEqualTo("en");
+    }
+
+    @Test
+    @DisplayName("语言代码无法解析时应保留原始代码并回退为英语")
+    void should_preserve_raw_and_fallback_to_english_when_language_unresolvable() throws Exception {
+      // given
+      CanonicalPublication publication =
+          CanonicalPublication.builder()
+              .identifiers(
+                  List.of(
+                      Identifier.builder()
+                          .type(PublicationIdentifierType.PMID)
+                          .value(PMID)
+                          .build()))
+              .title("Test Article")
+              .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .language("zzz")
+              .build();
+
+      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
+      when(languageLookupPort.resolve("zzz")).thenReturn(LanguageLookupPort.UNKNOWN_LANGUAGE);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      PublicationAggregate aggregate = result.publication();
+      assertThat(aggregate.getLanguageInfo().raw()).isEqualTo("zzz");
+      assertThat(aggregate.getLanguageInfo().code()).isEqualTo("en");
+    }
+
+    @Test
     @DisplayName("去重键应该包含 ORCID 并转换为小写")
     void should_calculate_dedup_key_with_orcid_lowercase() throws Exception {
       // given - 创建带大写姓名和 ORCID 的研究者

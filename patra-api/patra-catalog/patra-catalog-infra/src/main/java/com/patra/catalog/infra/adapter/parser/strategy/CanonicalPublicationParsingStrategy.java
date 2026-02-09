@@ -166,7 +166,8 @@ public final class CanonicalPublicationParsingStrategy
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case PubmedXmlElements.Identifier.PMID -> fields.pmid = reader.getElementText().trim();
+          case PubmedXmlElements.Identifier.PMID ->
+              fields.pmid = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           case PubmedXmlElements.Container.ARTICLE -> parseArticle(reader, fields);
           case PubmedXmlElements.Journal.MEDLINE_JOURNAL_INFO ->
               parseMedlineJournalInfo(reader, fields);
@@ -193,11 +194,12 @@ public final class CanonicalPublicationParsingStrategy
         switch (localName) {
           case PubmedXmlElements.Journal.JOURNAL -> parseJournal(reader, fields);
           case PubmedXmlElements.Article.ARTICLE_TITLE ->
-              fields.articleTitle = reader.getElementText().trim();
+              fields.articleTitle = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           case PubmedXmlElements.Article.VERNACULAR_TITLE ->
-              fields.vernacularTitle = reader.getElementText().trim();
+              fields.vernacularTitle =
+                  XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           case PubmedXmlElements.Article.LANGUAGE ->
-              fields.languages.add(reader.getElementText().trim());
+              fields.languages.add(XmlParsingHelper.getElementTextWithMixedContent(reader).trim());
           case PubmedXmlElements.Article.AUTHOR_LIST -> parseAuthorList(reader, fields);
           case PubmedXmlElements.Article.ABSTRACT -> parseAbstract(reader, fields);
           case PubmedXmlElements.Article.PUBLICATION_TYPE_LIST ->
@@ -223,7 +225,7 @@ public final class CanonicalPublicationParsingStrategy
           case PubmedXmlElements.Journal.ISSN -> parseIssn(reader, fields);
           case PubmedXmlElements.Journal.JOURNAL_ISSUE -> parseJournalIssue(reader, fields);
           case PubmedXmlElements.Journal.TITLE ->
-              fields.journalTitle = reader.getElementText().trim();
+              fields.journalTitle = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           default -> XmlParsingHelper.skipElement(reader, localName);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
@@ -236,7 +238,7 @@ public final class CanonicalPublicationParsingStrategy
   /// 解析 ISSN 元素（根据 IssnType 属性区分）。
   private void parseIssn(XMLStreamReader reader, ParsedFields fields) throws XMLStreamException {
     String issnType = reader.getAttributeValue(null, PubmedXmlElements.Attribute.ISSN_TYPE);
-    String issn = reader.getElementText().trim();
+    String issn = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
 
     if (PubmedXmlElements.Attribute.ISSN_TYPE_PRINT.equals(issnType)) {
       fields.issnPrint = issn;
@@ -254,8 +256,10 @@ public final class CanonicalPublicationParsingStrategy
       if (event == XMLStreamConstants.START_ELEMENT) {
         String localName = reader.getLocalName();
         switch (localName) {
-          case PubmedXmlElements.Journal.VOLUME -> fields.volume = reader.getElementText().trim();
-          case PubmedXmlElements.Journal.ISSUE -> fields.issue = reader.getElementText().trim();
+          case PubmedXmlElements.Journal.VOLUME ->
+              fields.volume = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
+          case PubmedXmlElements.Journal.ISSUE ->
+              fields.issue = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           case PubmedXmlElements.Date.PUB_DATE -> parsePubDate(reader, fields);
           default -> XmlParsingHelper.skipElement(reader, localName);
         }
@@ -275,19 +279,19 @@ public final class CanonicalPublicationParsingStrategy
         String localName = reader.getLocalName();
         switch (localName) {
           case PubmedXmlElements.Date.YEAR -> {
-            String yearStr = reader.getElementText().trim();
+            String yearStr = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
             fields.pubYear = parseIntSafe(yearStr);
           }
           case PubmedXmlElements.Date.MONTH -> {
-            String monthStr = reader.getElementText().trim();
+            String monthStr = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
             fields.pubMonth = parseMonth(monthStr);
           }
           case PubmedXmlElements.Date.DAY -> {
-            String dayStr = reader.getElementText().trim();
+            String dayStr = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
             fields.pubDay = parseIntSafe(dayStr);
           }
           case PubmedXmlElements.Date.MEDLINE_DATE -> {
-            fields.medlineDate = reader.getElementText().trim();
+            fields.medlineDate = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
             // 从 MedlineDate 提取年份
             if (fields.pubYear == null) {
               fields.pubYear = extractYearFromMedlineDate(fields.medlineDate);
@@ -312,9 +316,9 @@ public final class CanonicalPublicationParsingStrategy
         String localName = reader.getLocalName();
         switch (localName) {
           case PubmedXmlElements.Identifier.NLM_UNIQUE_ID ->
-              fields.nlmUniqueId = reader.getElementText().trim();
+              fields.nlmUniqueId = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           case PubmedXmlElements.Journal.ISSN_LINKING ->
-              fields.issnLinking = reader.getElementText().trim();
+              fields.issnLinking = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           default -> XmlParsingHelper.skipElement(reader, localName);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
@@ -334,7 +338,8 @@ public final class CanonicalPublicationParsingStrategy
         String localName = reader.getLocalName();
         switch (localName) {
           case PubmedXmlElements.Article.PUBLICATION_STATUS ->
-              fields.publicationStatus = reader.getElementText().trim();
+              fields.publicationStatus =
+                  XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           case PubmedXmlElements.Identifier.ARTICLE_ID_LIST -> parseArticleIdList(reader, fields);
           default -> XmlParsingHelper.skipElement(reader, localName);
         }
@@ -354,7 +359,7 @@ public final class CanonicalPublicationParsingStrategy
       if (event == XMLStreamConstants.START_ELEMENT
           && PubmedXmlElements.Identifier.ARTICLE_ID.equals(reader.getLocalName())) {
         String idType = reader.getAttributeValue(null, PubmedXmlElements.Attribute.ID_TYPE);
-        String value = reader.getElementText().trim();
+        String value = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
 
         if (PubmedXmlElements.Attribute.ID_TYPE_DOI.equals(idType)) {
           fields.doi = value;
@@ -413,14 +418,16 @@ public final class CanonicalPublicationParsingStrategy
         String localName = reader.getLocalName();
         switch (localName) {
           case PubmedXmlElements.Author.LAST_NAME ->
-              author.lastName = reader.getElementText().trim();
+              author.lastName = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           case PubmedXmlElements.Author.FORE_NAME ->
-              author.foreName = reader.getElementText().trim();
+              author.foreName = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           case PubmedXmlElements.Author.INITIALS ->
-              author.initials = reader.getElementText().trim();
-          case PubmedXmlElements.Author.SUFFIX -> author.suffix = reader.getElementText().trim();
+              author.initials = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
+          case PubmedXmlElements.Author.SUFFIX ->
+              author.suffix = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           case PubmedXmlElements.Author.COLLECTIVE_NAME ->
-              author.collectiveName = reader.getElementText().trim();
+              author.collectiveName =
+                  XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           case PubmedXmlElements.Author.AFFILIATION_INFO -> parseAffiliationInfo(reader, author);
           case PubmedXmlElements.Author.IDENTIFIER -> parseAuthorIdentifier(reader, author);
           default -> XmlParsingHelper.skipElement(reader, localName);
@@ -442,7 +449,7 @@ public final class CanonicalPublicationParsingStrategy
 
       if (event == XMLStreamConstants.START_ELEMENT
           && PubmedXmlElements.Author.AFFILIATION.equals(reader.getLocalName())) {
-        String affiliation = reader.getElementText().trim();
+        String affiliation = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
         if (!affiliation.isBlank()) {
           author.affiliations.add(affiliation);
         }
@@ -457,7 +464,7 @@ public final class CanonicalPublicationParsingStrategy
   private void parseAuthorIdentifier(XMLStreamReader reader, ParsedAuthor author)
       throws XMLStreamException {
     String source = reader.getAttributeValue(null, PubmedXmlElements.Attribute.SOURCE);
-    String value = reader.getElementText().trim();
+    String value = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
 
     if (PubmedXmlElements.Attribute.SOURCE_ORCID.equals(source) && !value.isBlank()) {
       author.orcid = value;
@@ -474,7 +481,7 @@ public final class CanonicalPublicationParsingStrategy
           && PubmedXmlElements.Article.ABSTRACT_TEXT.equals(reader.getLocalName())) {
         ParsedAbstractSection section = new ParsedAbstractSection();
         section.label = reader.getAttributeValue(null, PubmedXmlElements.Attribute.LABEL);
-        section.content = reader.getElementText().trim();
+        section.content = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
         if (!section.content.isBlank()) {
           fields.abstractSections.add(section);
         }
@@ -518,14 +525,14 @@ public final class CanonicalPublicationParsingStrategy
           heading.descriptorMajorTopic =
               XmlParsingHelper.parseYesNoAttributeNullable(
                   reader, PubmedXmlElements.Attribute.MAJOR_TOPIC_YN);
-          heading.descriptorName = reader.getElementText().trim();
+          heading.descriptorName = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
         } else if (PubmedXmlElements.MeSH.QUALIFIER_NAME.equals(localName)) {
           ParsedQualifier qualifier = new ParsedQualifier();
           qualifier.ui = reader.getAttributeValue(null, PubmedXmlElements.Attribute.UI);
           qualifier.majorTopic =
               XmlParsingHelper.parseYesNoAttributeNullable(
                   reader, PubmedXmlElements.Attribute.MAJOR_TOPIC_YN);
-          qualifier.name = reader.getElementText().trim();
+          qualifier.name = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           heading.qualifiers.add(qualifier);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
@@ -563,7 +570,7 @@ public final class CanonicalPublicationParsingStrategy
     ParsedSupplMeshName supplMesh = new ParsedSupplMeshName();
     supplMesh.ui = reader.getAttributeValue(null, PubmedXmlElements.Attribute.UI);
     supplMesh.type = reader.getAttributeValue(null, PubmedXmlElements.Attribute.TYPE);
-    supplMesh.name = reader.getElementText().trim();
+    supplMesh.name = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
     return supplMesh;
   }
 
@@ -609,7 +616,7 @@ public final class CanonicalPublicationParsingStrategy
     keyword.majorTopic =
         XmlParsingHelper.parseYesNoAttributeNullable(
             reader, PubmedXmlElements.Attribute.MAJOR_TOPIC_YN);
-    keyword.term = reader.getElementText().trim();
+    keyword.term = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
     return keyword;
   }
 
@@ -623,7 +630,7 @@ public final class CanonicalPublicationParsingStrategy
           && PubmedXmlElements.Article.PUBLICATION_TYPE.equals(reader.getLocalName())) {
         ParsedPublicationType pubType = new ParsedPublicationType();
         pubType.ui = reader.getAttributeValue(null, PubmedXmlElements.Attribute.UI);
-        pubType.value = reader.getElementText().trim();
+        pubType.value = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
         if (!pubType.value.isBlank()) {
           fields.publicationTypes.add(pubType);
         }
@@ -662,13 +669,14 @@ public final class CanonicalPublicationParsingStrategy
           case PubmedXmlElements.Article.ABSTRACT_TEXT -> {
             ParsedAbstractSection section = new ParsedAbstractSection();
             section.label = reader.getAttributeValue(null, PubmedXmlElements.Attribute.LABEL);
-            section.content = reader.getElementText().trim();
+            section.content = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
             if (!section.content.isBlank()) {
               otherAbstract.sections.add(section);
             }
           }
           case PubmedXmlElements.OtherAbstract.COPYRIGHT_INFORMATION ->
-              otherAbstract.copyright = reader.getElementText().trim();
+              otherAbstract.copyright =
+                  XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           default -> XmlParsingHelper.skipElement(reader, localName);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
@@ -691,7 +699,7 @@ public final class CanonicalPublicationParsingStrategy
 
       if (event == XMLStreamConstants.START_ELEMENT
           && PubmedXmlElements.Article.MEDLINE_PGN.equals(reader.getLocalName())) {
-        fields.medlinePgn = reader.getElementText().trim();
+        fields.medlinePgn = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
       } else if (event == XMLStreamConstants.END_ELEMENT
           && PubmedXmlElements.Article.PAGINATION.equals(reader.getLocalName())) {
         break;

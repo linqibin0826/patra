@@ -266,6 +266,93 @@ public final class XmlParsingHelper {
     return null;
   }
 
+  /// 提取元素文本内容（支持 mixed content 内联标签）。
+  ///
+  /// 与 `XMLStreamReader.getElementText()` 的区别：
+  /// - 遇到嵌套标签不会抛异常，而是保留标签原样输出
+  /// - 例如 `<ArticleTitle>Role of <i>E. coli</i></ArticleTitle>` → `"Role of <i>E. coli</i>"`
+  ///
+  /// **语义契约**（与 `getElementText()` 一致）：
+  /// - 前置条件：`reader` 定位在 `START_ELEMENT`
+  /// - 后置条件：`reader` 定位在对应的 `END_ELEMENT`
+  ///
+  /// @param reader XML 读取器（已定位到起始元素）
+  /// @return 元素的文本内容（内联标签保留原样）
+  /// @throws XMLStreamException XML 解析异常
+  public static String getElementTextWithMixedContent(XMLStreamReader reader)
+      throws XMLStreamException {
+    var sb = new StringBuilder(256);
+    int depth = 1;
+
+    while (reader.hasNext()) {
+      int event = reader.next();
+      switch (event) {
+        case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA, XMLStreamConstants.SPACE ->
+            sb.append(reader.getText());
+        case XMLStreamConstants.ENTITY_REFERENCE ->
+            sb.append('&').append(reader.getLocalName()).append(';');
+        case XMLStreamConstants.START_ELEMENT -> {
+          depth++;
+          sb.append('<').append(reader.getLocalName());
+          for (int i = 0; i < reader.getAttributeCount(); i++) {
+            sb.append(' ')
+                .append(reader.getAttributeLocalName(i))
+                .append("=\"")
+                .append(escapeXmlAttribute(reader.getAttributeValue(i)))
+                .append('"');
+          }
+          sb.append('>');
+        }
+        case XMLStreamConstants.END_ELEMENT -> {
+          depth--;
+          if (depth == 0) {
+            return sb.toString();
+          }
+          sb.append("</").append(reader.getLocalName()).append('>');
+        }
+        default -> {
+          // 忽略 COMMENT、PROCESSING_INSTRUCTION 等事件
+        }
+      }
+    }
+    // 不应到达此处（意味着 XML 格式错误）
+    return sb.toString();
+  }
+
+  /// 转义 XML 属性值中的特殊字符。
+  ///
+  /// @param value 属性值
+  /// @return 转义后的字符串
+  private static String escapeXmlAttribute(String value) {
+    if (value == null) {
+      return "";
+    }
+    // 快速路径：大部分属性值无需转义
+    boolean needsEscape = false;
+    for (int i = 0; i < value.length(); i++) {
+      char c = value.charAt(i);
+      if (c == '&' || c == '"' || c == '<' || c == '>') {
+        needsEscape = true;
+        break;
+      }
+    }
+    if (!needsEscape) {
+      return value;
+    }
+    var sb = new StringBuilder(value.length() + 8);
+    for (int i = 0; i < value.length(); i++) {
+      char c = value.charAt(i);
+      switch (c) {
+        case '&' -> sb.append("&amp;");
+        case '"' -> sb.append("&quot;");
+        case '<' -> sb.append("&lt;");
+        case '>' -> sb.append("&gt;");
+        default -> sb.append(c);
+      }
+    }
+    return sb.toString();
+  }
+
   /// 安全解析整数，解析失败时返回默认值。
   ///
   /// @param value 要解析的字符串
