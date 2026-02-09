@@ -622,6 +622,8 @@ class PubmedArticleItemProcessorTest {
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
           .thenReturn(createVenueInstance());
+      when(languageLookupPort.resolve("chi")).thenReturn("zh");
+      when(languageLookupPort.resolve("jpn")).thenReturn("ja");
 
       // when
       PublicationImportResult result = processor.process(publication);
@@ -1354,13 +1356,13 @@ class PubmedArticleItemProcessorTest {
             List.of(
                 AlternativeAbstract.builder()
                     .type("Publisher")
-                    .language("zh")
+                    .language("chi")
                     .text("这是中文翻译摘要。")
                     .copyright("版权所有 2024")
                     .build(),
                 AlternativeAbstract.builder()
                     .type("AIMSHP")
-                    .language("ja")
+                    .language("jpn")
                     .text("これは日本語の翻訳要約です。")
                     .build()))
         .build();
