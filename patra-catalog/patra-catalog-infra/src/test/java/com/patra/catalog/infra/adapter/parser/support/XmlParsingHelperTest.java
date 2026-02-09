@@ -478,6 +478,124 @@ class XmlParsingHelperTest {
     }
   }
 
+  // ========== getElementTextWithMixedContent 测试 ==========
+
+  @Nested
+  @DisplayName("getElementTextWithMixedContent() Mixed Content 文本提取")
+  class GetElementTextWithMixedContent {
+
+    @Test
+    @DisplayName("纯文本（无内联标签）→ 原样返回")
+    void should_return_plain_text() throws XMLStreamException {
+      var xml = "<ArticleTitle>Plain text</ArticleTitle>";
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.getElementTextWithMixedContent(reader);
+
+      assertThat(result).isEqualTo("Plain text");
+    }
+
+    @Test
+    @DisplayName("单个内联标签 → 保留标签原样输出")
+    void should_preserve_single_inline_tag() throws XMLStreamException {
+      var xml = "<ArticleTitle>Role of <i>E. coli</i></ArticleTitle>";
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.getElementTextWithMixedContent(reader);
+
+      assertThat(result).isEqualTo("Role of <i>E. coli</i>");
+    }
+
+    @Test
+    @DisplayName("多个内联标签 → 全部保留")
+    void should_preserve_multiple_inline_tags() throws XMLStreamException {
+      var xml = "<ArticleTitle><b>Bold</b> and <i>italic</i></ArticleTitle>";
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.getElementTextWithMixedContent(reader);
+
+      assertThat(result).isEqualTo("<b>Bold</b> and <i>italic</i>");
+    }
+
+    @Test
+    @DisplayName("下标标签 → 保留 <sub> 标签")
+    void should_preserve_subscript_tag() throws XMLStreamException {
+      var xml = "<ArticleTitle>H<sub>2</sub>O</ArticleTitle>";
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.getElementTextWithMixedContent(reader);
+
+      assertThat(result).isEqualTo("H<sub>2</sub>O");
+    }
+
+    @Test
+    @DisplayName("空元素 → 返回空字符串")
+    void should_return_empty_for_empty_element() throws XMLStreamException {
+      var xml = "<ArticleTitle></ArticleTitle>";
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.getElementTextWithMixedContent(reader);
+
+      assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("调用后 reader 定位在 END_ELEMENT（与 getElementText 语义一致）")
+    void should_leave_reader_at_end_element() throws XMLStreamException {
+      var xml = "<ArticleTitle>Role of <i>E. coli</i></ArticleTitle>";
+      var reader = createReaderAtStartElement(xml);
+
+      XmlParsingHelper.getElementTextWithMixedContent(reader);
+
+      assertThat(reader.getEventType()).isEqualTo(XMLStreamConstants.END_ELEMENT);
+      assertThat(reader.getLocalName()).isEqualTo("ArticleTitle");
+    }
+
+    @Test
+    @DisplayName("带属性的内联标签 → 保留属性")
+    void should_preserve_tag_attributes() throws XMLStreamException {
+      var xml = "<AbstractText>See <a href=\"http://example.com\">link</a> here</AbstractText>";
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.getElementTextWithMixedContent(reader);
+
+      assertThat(result).isEqualTo("See <a href=\"http://example.com\">link</a> here");
+    }
+
+    @Test
+    @DisplayName("上标标签 → 保留 <sup> 标签")
+    void should_preserve_superscript_tag() throws XMLStreamException {
+      var xml = "<ArticleTitle>10<sup>3</sup> cells</ArticleTitle>";
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.getElementTextWithMixedContent(reader);
+
+      assertThat(result).isEqualTo("10<sup>3</sup> cells");
+    }
+
+    @Test
+    @DisplayName("嵌套内联标签 → 多层嵌套全部保留")
+    void should_preserve_nested_inline_tags() throws XMLStreamException {
+      var xml = "<ArticleTitle><b>Role of <i>E. coli</i> in disease</b></ArticleTitle>";
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.getElementTextWithMixedContent(reader);
+
+      assertThat(result).isEqualTo("<b>Role of <i>E. coli</i> in disease</b>");
+    }
+
+    @Test
+    @DisplayName("属性值含特殊字符 → 正确转义")
+    void should_escape_special_chars_in_attribute_value() throws XMLStreamException {
+      var xml = "<AbstractText>See <a title=\"A&amp;B\">link</a> here</AbstractText>";
+      var reader = createReaderAtStartElement(xml);
+
+      var result = XmlParsingHelper.getElementTextWithMixedContent(reader);
+
+      assertThat(result).isEqualTo("See <a title=\"A&amp;B\">link</a> here");
+    }
+  }
+
   // ========== 辅助方法 ==========
 
   /// 创建定位到起始元素的 XMLStreamReader。

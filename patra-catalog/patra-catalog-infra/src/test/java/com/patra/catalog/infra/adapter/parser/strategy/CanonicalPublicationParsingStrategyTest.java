@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.patra.catalog.infra.adapter.parser.PubmedXmlElements;
+import com.patra.catalog.infra.adapter.parser.support.SecureXmlInputFactory;
 import com.patra.catalog.infra.adapter.parser.support.XmlParsingContext;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.CanonicalPublication.Author;
@@ -20,7 +21,6 @@ import com.patra.common.model.enums.PublicationIdentifierType;
 import java.io.StringReader;
 import java.time.LocalDate;
 import java.util.concurrent.TimeUnit;
-import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
@@ -39,7 +39,8 @@ import org.junit.jupiter.api.Timeout;
 @Timeout(value = 2, unit = TimeUnit.SECONDS)
 class CanonicalPublicationParsingStrategyTest {
 
-  private static final XMLInputFactory XML_INPUT_FACTORY = XMLInputFactory.newInstance();
+  private static final javax.xml.stream.XMLInputFactory XML_INPUT_FACTORY =
+      SecureXmlInputFactory.getInstance();
 
   private final CanonicalPublicationParsingStrategy strategy =
       CanonicalPublicationParsingStrategy.INSTANCE;
@@ -1866,6 +1867,126 @@ class CanonicalPublicationParsingStrategyTest {
       assertNotNull(result);
       assertNotNull(result.getJournal());
       assertEquals("101234567", result.getJournal().getNlmUniqueId());
+    }
+  }
+
+  // ========== Mixed Content 解析测试 ==========
+
+  @Nested
+  @DisplayName("Mixed Content 内联标签解析")
+  class MixedContentParsing {
+
+    @Test
+    @DisplayName("标题中包含 <i> 斜体标签 → 保留原样")
+    void shouldPreserveItalicTagInTitle() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article>
+                <ArticleTitle>Role of <i>Helicobacter pylori</i> in gastric cancer</ArticleTitle>
+              </Article>
+              <MedlineJournalInfo>
+                <NlmUniqueID>N</NlmUniqueID>
+              </MedlineJournalInfo>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getTitle())
+          .isEqualTo("Role of <i>Helicobacter pylori</i> in gastric cancer");
+    }
+
+    @Test
+    @DisplayName("摘要中包含 <sub>/<sup> 上下标标签 → 保留原样")
+    void shouldPreserveSubSupTagsInAbstract() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article>
+                <ArticleTitle>T</ArticleTitle>
+                <Abstract>
+                  <AbstractText>The concentration of H<sub>2</sub>O<sub>2</sub> was 10<sup>-3</sup> mol/L.</AbstractText>
+                </Abstract>
+              </Article>
+              <MedlineJournalInfo>
+                <NlmUniqueID>N</NlmUniqueID>
+              </MedlineJournalInfo>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getAbstractContent().getSections()).hasSize(1);
+      assertThat(result.getAbstractContent().getSections().getFirst().getContent())
+          .isEqualTo("The concentration of H<sub>2</sub>O<sub>2</sub> was 10<sup>-3</sup> mol/L.");
+    }
+
+    @Test
+    @DisplayName("关键词中包含内联标签 → 保留原样")
+    void shouldPreserveInlineTagsInKeyword() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article>
+                <ArticleTitle>T</ArticleTitle>
+              </Article>
+              <MedlineJournalInfo>
+                <NlmUniqueID>N</NlmUniqueID>
+              </MedlineJournalInfo>
+              <KeywordList Owner="NOTNLM">
+                <Keyword><i>Staphylococcus aureus</i> infection</Keyword>
+              </KeywordList>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getKeywords()).hasSize(1);
+      assertThat(result.getKeywords().getFirst().getKeywords())
+          .extracting(Keyword::getTerm)
+          .containsExactly("<i>Staphylococcus aureus</i> infection");
+    }
+
+    @Test
+    @DisplayName("OtherAbstract 中包含内联标签 → 保留原样")
+    void shouldPreserveInlineTagsInOtherAbstract() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article>
+                <ArticleTitle>T</ArticleTitle>
+              </Article>
+              <MedlineJournalInfo>
+                <NlmUniqueID>N</NlmUniqueID>
+              </MedlineJournalInfo>
+              <OtherAbstract Language="chi" Type="Publisher">
+                <AbstractText><b>目的</b>：研究 <i>E. coli</i> 的耐药性。</AbstractText>
+              </OtherAbstract>
+            </MedlineCitation>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getAlternativeAbstracts()).hasSize(1);
+      assertThat(result.getAlternativeAbstracts().getFirst().getText())
+          .isEqualTo("<b>目的</b>：研究 <i>E. coli</i> 的耐药性。");
     }
   }
 

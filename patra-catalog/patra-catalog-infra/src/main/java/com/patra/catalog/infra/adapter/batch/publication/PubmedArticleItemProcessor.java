@@ -399,13 +399,13 @@ public class PubmedArticleItemProcessor
     // 通过 LanguageLookupPort 解析语言代码
     String bcp47Code = languageLookupPort.resolve(iso639Code);
 
-    // 如果解析失败（返回 null 或 "unknown"），使用默认英语
+    // 如果解析失败（返回 null 或 "unknown"），使用默认英语，但保留原始代码
     if (bcp47Code == null || LanguageLookupPort.UNKNOWN_LANGUAGE.equals(bcp47Code)) {
       log.warn("无法解析语言代码：{}，使用默认值 en", iso639Code);
-      return LanguageInfo.ofCode("en");
+      return LanguageInfo.of(iso639Code, "en");
     }
 
-    return LanguageInfo.ofCode(bcp47Code);
+    return LanguageInfo.of(iso639Code, bcp47Code);
   }
 
   /// 解析出版状态。
