@@ -14,6 +14,7 @@ spring:
   autoconfigure:
     exclude:
       - org.redisson.spring.starter.RedissonAutoConfigurationV2  # 测试环境禁用 Redisson
+      - org.redisson.spring.starter.RedissonAutoConfigurationV4  # Spring Boot 4 需同时排除 V4
 
 patra:
   batch:

@@ -10,7 +10,6 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.springframework.batch.core.configuration.annotation.BatchObservabilityBeanPostProcessor;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.repository.explore.JobExplorer;
@@ -30,7 +29,7 @@ import org.springframework.test.context.ContextConfiguration;
     properties = {
       "spring.batch.jdbc.initialize-schema=always",
       "spring.batch.job.enabled=false",
-      "spring.autoconfigure.exclude=org.redisson.spring.starter.RedissonAutoConfigurationV2",
+      "spring.autoconfigure.exclude=org.redisson.spring.starter.RedissonAutoConfigurationV2,org.redisson.spring.starter.RedissonAutoConfigurationV4",
       "patra.batch.enabled=true",
       "patra.redisson.observability.metrics-enabled=false"
     })
@@ -91,26 +90,27 @@ class BatchAutoConfigurationIT {
   }
 
   @Test
-  @DisplayName("BatchObservabilityBeanPostProcessor 应根据 ObservationRegistry 条件化注册")
-  void batchObservabilityBeanPostProcessor_ShouldBeConditionalOnObservationRegistry() {
+  @DisplayName("自定义 batchObservabilityBeanPostProcessor 应根据 ObservationRegistry 条件化注册")
+  void customBatchObservabilityBeanPostProcessor_ShouldBeConditionalOnObservationRegistry() {
     // Given - 检查 ObservationRegistry 是否存在
     String[] observationRegistryBeans =
         applicationContext.getBeanNamesForType(ObservationRegistry.class);
     boolean hasObservationRegistry = observationRegistryBeans.length > 0;
 
-    // When - 检查 BatchObservabilityBeanPostProcessor 是否注册
-    String[] beanPostProcessorBeans =
-        applicationContext.getBeanNamesForType(BatchObservabilityBeanPostProcessor.class);
+    // When - 检查自定义 Bean（方法名）是否注册
+    boolean hasCustomBean = applicationContext.containsBean("batchObservabilityBeanPostProcessor");
 
-    // Then - 条件化验证
+    // Then - 仅验证我们自定义 Bean 的条件化行为
+    // 注意：Spring Batch 6+ 可能会提供框架默认的 BatchObservabilityBeanPostProcessor，
+    // 该 Bean 不受本自定义方法条件控制。
     if (hasObservationRegistry) {
-      assertThat(beanPostProcessorBeans)
-          .as("当 ObservationRegistry 存在时，BatchObservabilityBeanPostProcessor 应被注册")
-          .isNotEmpty();
+      assertThat(hasCustomBean)
+          .as("当 ObservationRegistry 存在时，自定义 batchObservabilityBeanPostProcessor 应被注册")
+          .isTrue();
     } else {
-      assertThat(beanPostProcessorBeans)
-          .as("当 ObservationRegistry 不存在时，BatchObservabilityBeanPostProcessor 不应被注册")
-          .isEmpty();
+      assertThat(hasCustomBean)
+          .as("当 ObservationRegistry 不存在时，自定义 batchObservabilityBeanPostProcessor 不应被注册")
+          .isFalse();
     }
   }
 }
