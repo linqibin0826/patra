@@ -24,6 +24,9 @@ spring:
   data:
     redis:
       url: redis://localhost:16379
+      # 宿主机 DarkWake/短暂抖动时降低误超时概率
+      connect-timeout: 10s
+      timeout: 30s
 
   # Development Elasticsearch (local Docker container)
   elasticsearch:
@@ -32,6 +35,12 @@ spring:
 # 可观测性：开箱即用（零配置）
 # - Tracing/Logging: OTel Agent 自动处理
 # - Metrics: applicationName 自动取 spring.application.name，environment 自动取 spring.profiles.active
+
+# 开发环境日志降噪（保留全局 DEBUG 能力，仅抑制高频刷屏类）
+logging:
+  level:
+    com.patra.catalog.app.usecase.publication.service.VenueInstanceGatewayImpl: INFO
+    com.patra.catalog.infra.adapter.persistence.VenueInstanceRepositoryAdapter: INFO
 
 # Spring Batch 独立数据源（与业务数据库隔离）
 patra:

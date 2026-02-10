@@ -1,13 +1,16 @@
 package com.patra.catalog.infra.adapter.batch.publication;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.patra.catalog.domain.model.vo.publication.PublicationImportParams;
 import com.patra.starter.batch.core.JobOperatorHelper;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -17,7 +20,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.job.JobExecution;
 
 /// PublicationBatchAdapter 单元测试。
 ///
@@ -134,6 +139,43 @@ class PublicationBatchAdapterTest {
 
       // then
       verify(jobOperatorHelper).launch(any(), any(), eq(false)); // addTimestamp = false
+    }
+
+    @Test
+    @DisplayName("Job 同步执行失败时应该快速失败抛出异常")
+    void should_fail_fast_when_job_execution_unsuccessful() {
+      // given
+      PublicationImportParams params = PublicationImportParams.of(BASE_URL, FILE_INDEX);
+      JobExecution jobExecution = mock(JobExecution.class);
+      when(jobExecution.getStatus()).thenReturn(BatchStatus.FAILED);
+
+      when(jobOperatorHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
+          .thenReturn(EXPECTED_EXECUTION_ID);
+      when(jobOperatorHelper.findJobExecution(EXPECTED_EXECUTION_ID))
+          .thenReturn(Optional.of(jobExecution));
+
+      // when / then
+      assertThatThrownBy(() -> adapter.launchBaselineImport(params))
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("executionId=" + EXPECTED_EXECUTION_ID)
+          .hasMessageContaining("status=FAILED");
+    }
+
+    @Test
+    @DisplayName("Job 执行记录不存在时不应因状态检查失败")
+    void should_not_fail_when_job_execution_not_found() {
+      // given
+      PublicationImportParams params = PublicationImportParams.of(BASE_URL, FILE_INDEX);
+      when(jobOperatorHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
+          .thenReturn(EXPECTED_EXECUTION_ID);
+      when(jobOperatorHelper.findJobExecution(EXPECTED_EXECUTION_ID)).thenReturn(Optional.empty());
+
+      // when
+      Long executionId = adapter.launchBaselineImport(params);
+
+      // then
+      assertThat(executionId).isEqualTo(EXPECTED_EXECUTION_ID);
+      verify(jobOperatorHelper).findJobExecution(EXPECTED_EXECUTION_ID);
     }
   }
 }
