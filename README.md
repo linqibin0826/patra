@@ -151,7 +151,8 @@ curl http://localhost:8082/actuator/health   # Ingest
 
 ### 核心指南
 
-- [**CLAUDE.md**](.claude/CLAUDE.md) — AI 助手使用本代码库的说明
+- [**AGENTS.md**](./AGENTS.md) — Codex 规则主入口（项目架构与工程规范）
+- [**.codex/README.md**](./.codex/README.md) — Codex 工作流与目录说明
 
 ### 模块 README
 
