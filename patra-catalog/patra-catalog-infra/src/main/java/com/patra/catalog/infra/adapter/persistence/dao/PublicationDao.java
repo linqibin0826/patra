@@ -56,6 +56,32 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
   /// @return true 如果存在
   boolean existsByDoi(String doi);
 
+  /// 按 PMID 集合批量查询文献。
+  ///
+  /// @param pmids PMID 集合
+  /// @return 命中的文献实体列表
+  List<PublicationEntity> findByPmidIn(Collection<String> pmids);
+
+  /// 按 DOI 集合批量查询文献。
+  ///
+  /// @param dois DOI 集合
+  /// @return 命中的文献实体列表
+  List<PublicationEntity> findByDoiIn(Collection<String> dois);
+
+  /// 按 PMID/DOI 集合批量查询文献（任一匹配即可）。
+  ///
+  /// @param pmids PMID 集合
+  /// @param dois DOI 集合
+  /// @return 命中的文献实体列表
+  @Query(
+      """
+      SELECT e FROM PublicationEntity e
+      WHERE e.pmid IN :pmids
+         OR e.doi IN :dois
+      """)
+  List<PublicationEntity> findByPmidInOrDoiIn(
+      @Param("pmids") Collection<String> pmids, @Param("dois") Collection<String> dois);
+
   /// 根据载体实例 ID 查找文献列表。
   ///
   /// @param venueInstanceId 载体实例 ID

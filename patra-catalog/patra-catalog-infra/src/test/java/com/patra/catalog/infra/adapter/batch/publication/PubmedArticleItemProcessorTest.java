@@ -21,7 +21,6 @@ import com.patra.catalog.domain.port.gateway.VenueInstanceGateway;
 import com.patra.catalog.domain.port.lookup.FunderLookupPort;
 import com.patra.catalog.domain.port.lookup.LanguageLookupPort;
 import com.patra.catalog.domain.port.lookup.VenueLookupPort;
-import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.CanonicalPublication.Abstract;
 import com.patra.common.model.CanonicalPublication.AbstractSection;
@@ -62,8 +61,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @Timeout(value = 2, unit = TimeUnit.SECONDS)
 class PubmedArticleItemProcessorTest {
 
-  @Mock private PublicationRepository publicationRepository;
-
   @Mock private VenueLookupPort venueLookupPort;
 
   @Mock private VenueInstanceGateway venueInstanceGateway;
@@ -99,7 +96,6 @@ class PubmedArticleItemProcessorTest {
 
     processor =
         new PubmedArticleItemProcessor(
-            publicationRepository,
             venueLookupPort,
             venueInstanceGateway,
             languageLookupPort,
@@ -112,11 +108,15 @@ class PubmedArticleItemProcessorTest {
   class ProcessTest {
 
     @Test
-    @DisplayName("已存在的 PMID 应该返回 null（跳过）")
-    void should_return_null_when_pmid_already_exists() throws Exception {
+    @DisplayName("缺少 PMID 时应该返回 null（跳过）")
+    void should_return_null_when_pmid_missing() throws Exception {
       // given
-      CanonicalPublication publication = createPublication(PMID);
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(true);
+      CanonicalPublication publication =
+          CanonicalPublication.builder()
+              .title("No PMID")
+              .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .build();
 
       // when
       PublicationImportResult result = processor.process(publication);
@@ -127,11 +127,62 @@ class PubmedArticleItemProcessorTest {
     }
 
     @Test
+    @DisplayName("Processor 不负责 DOI 去重，同一 DOI 的两条记录都应继续处理")
+    void should_not_deduplicate_doi_in_processor() throws Exception {
+      // given
+      CanonicalPublication first = createPublicationWithPmidAndDoi("92345678", DOI);
+      CanonicalPublication second = createPublicationWithPmidAndDoi("92345679", DOI);
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult firstResult = processor.process(first);
+      PublicationImportResult secondResult = processor.process(second);
+
+      // then
+      assertThat(firstResult).isNotNull();
+      assertThat(secondResult).isNotNull();
+    }
+
+    @Test
+    @DisplayName("被业务条件跳过的记录不会影响后续处理")
+    void should_not_affect_following_records_when_record_skipped_by_business_rules()
+        throws Exception {
+      // given
+      CanonicalPublication skipped =
+          CanonicalPublication.builder()
+              .identifiers(
+                  List.of(
+                      Identifier.builder()
+                          .type(PublicationIdentifierType.PMID)
+                          .value("93333331")
+                          .build(),
+                      Identifier.builder().type(PublicationIdentifierType.DOI).value(DOI).build()))
+              .title("Skipped Article")
+              .build(); // 无 Journal，命中业务跳过路径
+      CanonicalPublication valid = createPublicationWithPmidAndDoi("93333332", DOI);
+
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult skippedResult = processor.process(skipped);
+      PublicationImportResult validResult = processor.process(valid);
+
+      // then
+      assertThat(skippedResult).isNull();
+      assertThat(validResult).isNotNull();
+    }
+
+    @Test
     @DisplayName("无法匹配 Venue 时应该返回 null（跳过）")
     void should_return_null_when_venue_not_matched() throws Exception {
       // given
       CanonicalPublication publication = createPublication(PMID);
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(any(), any())).thenReturn(Optional.empty());
 
       // when
@@ -147,7 +198,6 @@ class PubmedArticleItemProcessorTest {
     void should_create_publication_aggregate_when_venue_matched() throws Exception {
       // given
       CanonicalPublication publication = createFullPublication();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
 
@@ -170,6 +220,71 @@ class PubmedArticleItemProcessorTest {
     }
 
     @Test
+    @DisplayName("title 有值时应优先使用 title")
+    void should_prefer_title_when_title_present() throws Exception {
+      // given
+      CanonicalPublication publication =
+          createPublicationWithTitles(PMID, "Primary Title", "Original Title");
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.publication().getTitle()).isEqualTo("Primary Title");
+    }
+
+    @Test
+    @DisplayName("title 为空时应回退使用 originalTitle")
+    void should_fallback_to_original_title_when_title_is_blank() throws Exception {
+      // given
+      CanonicalPublication publication = createPublicationWithTitles(PMID, "   ", "  备用标题  ");
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.publication().getTitle()).isEqualTo("备用标题");
+    }
+
+    @Test
+    @DisplayName("title 和 originalTitle 都为空时应返回 null")
+    void should_return_null_when_both_title_and_original_title_blank() throws Exception {
+      // given
+      CanonicalPublication publication = createPublicationWithTitles(PMID, "   ", null);
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNull();
+    }
+
+    @Test
+    @DisplayName("title 和 originalTitle 都为空时应短路，不调用 Venue/Gateway")
+    void should_short_circuit_when_both_titles_blank() throws Exception {
+      // given
+      CanonicalPublication publication = createPublicationWithTitles(PMID, "", "  ");
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNull();
+      verify(venueLookupPort, never()).findByPriority(any(), any());
+      verify(venueInstanceGateway, never()).findOrCreateJournalInstance(any());
+    }
+
+    @Test
     @DisplayName("无 DOI 时应该只使用 PMID 创建标识符")
     void should_create_identifiers_with_pmid_only_when_no_doi() throws Exception {
       // given
@@ -186,7 +301,6 @@ class PubmedArticleItemProcessorTest {
               .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
               .build();
 
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
 
@@ -209,7 +323,6 @@ class PubmedArticleItemProcessorTest {
     void should_map_plain_text_abstract() throws Exception {
       // given
       CanonicalPublication publication = createPublicationWithPlainTextAbstract();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -233,7 +346,6 @@ class PubmedArticleItemProcessorTest {
     void should_map_structured_abstract() throws Exception {
       // given
       CanonicalPublication publication = createPublicationWithStructuredAbstract();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -259,7 +371,6 @@ class PubmedArticleItemProcessorTest {
     void should_extract_extended_identifiers() throws Exception {
       // given
       CanonicalPublication publication = createPublicationWithExtendedIdentifiers();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -282,7 +393,6 @@ class PubmedArticleItemProcessorTest {
     void should_map_media_type() throws Exception {
       // given
       CanonicalPublication publication = createPublicationWithPublicationMedium();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -301,7 +411,6 @@ class PubmedArticleItemProcessorTest {
     void should_fill_number_of_references_and_conflict_of_interest() throws Exception {
       // given
       CanonicalPublication publication = createPublicationWithMetadata();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -336,7 +445,6 @@ class PubmedArticleItemProcessorTest {
               .publicationStatus("epublish")
               .build();
 
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
 
@@ -358,7 +466,6 @@ class PubmedArticleItemProcessorTest {
     void should_process_mesh_headings() throws Exception {
       // given
       CanonicalPublication publication = createPublicationWithMeshHeadings();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -385,7 +492,6 @@ class PubmedArticleItemProcessorTest {
     void should_return_empty_mesh_headings_when_no_mesh_data() throws Exception {
       // given
       CanonicalPublication publication = createFullPublication();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -405,7 +511,6 @@ class PubmedArticleItemProcessorTest {
     void should_process_keywords() throws Exception {
       // given
       CanonicalPublication publication = createPublicationWithKeywords();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -440,7 +545,6 @@ class PubmedArticleItemProcessorTest {
     void should_return_empty_keywords_when_no_keyword_data() throws Exception {
       // given
       CanonicalPublication publication = createFullPublication();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -460,7 +564,6 @@ class PubmedArticleItemProcessorTest {
     void should_process_funding() throws Exception {
       // given
       CanonicalPublication publication = createPublicationWithFunding();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -498,7 +601,6 @@ class PubmedArticleItemProcessorTest {
     void should_return_empty_funding_when_no_funding_data() throws Exception {
       // given
       CanonicalPublication publication = createFullPublication();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -518,7 +620,6 @@ class PubmedArticleItemProcessorTest {
     void should_process_publication_types() throws Exception {
       // given
       CanonicalPublication publication = createPublicationWithTypes();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -549,7 +650,6 @@ class PubmedArticleItemProcessorTest {
     void should_return_empty_publication_types_when_no_type_data() throws Exception {
       // given
       CanonicalPublication publication = createFullPublication();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -569,7 +669,6 @@ class PubmedArticleItemProcessorTest {
     void should_process_suppl_mesh_names() throws Exception {
       // given
       CanonicalPublication publication = createPublicationWithSupplMeshNames();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -597,7 +696,6 @@ class PubmedArticleItemProcessorTest {
     void should_return_empty_suppl_mesh_when_no_suppl_mesh_data() throws Exception {
       // given
       CanonicalPublication publication = createFullPublication();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -617,7 +715,6 @@ class PubmedArticleItemProcessorTest {
     void should_process_alternative_abstracts() throws Exception {
       // given
       CanonicalPublication publication = createPublicationWithAlternativeAbstracts();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -652,7 +749,6 @@ class PubmedArticleItemProcessorTest {
     void should_return_empty_alternative_abstracts_when_no_data() throws Exception {
       // given
       CanonicalPublication publication = createFullPublication();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -672,7 +768,6 @@ class PubmedArticleItemProcessorTest {
     void should_process_publication_dates() throws Exception {
       // given
       CanonicalPublication publication = createPublicationWithDates();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -731,7 +826,6 @@ class PubmedArticleItemProcessorTest {
               .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
               .build();
 
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -753,7 +847,6 @@ class PubmedArticleItemProcessorTest {
     void should_process_investigators() throws Exception {
       // given
       CanonicalPublication publication = createPublicationWithInvestigators();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -811,7 +904,6 @@ class PubmedArticleItemProcessorTest {
                       Investigator.builder().lastName("  ").foreName("").build()))
               .build();
 
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -832,7 +924,6 @@ class PubmedArticleItemProcessorTest {
     void should_return_empty_investigators_when_no_investigator_data() throws Exception {
       // given
       CanonicalPublication publication = createFullPublication();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -852,7 +943,6 @@ class PubmedArticleItemProcessorTest {
     void should_process_personal_name_subjects() throws Exception {
       // given
       CanonicalPublication publication = createPublicationWithPersonalNameSubjects();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -906,7 +996,6 @@ class PubmedArticleItemProcessorTest {
                       PersonalNameSubject.builder().lastName("").foreName("  ").build()))
               .build();
 
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -927,7 +1016,6 @@ class PubmedArticleItemProcessorTest {
     void should_return_empty_personal_name_subjects_when_no_data() throws Exception {
       // given
       CanonicalPublication publication = createFullPublication();
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -960,7 +1048,6 @@ class PubmedArticleItemProcessorTest {
               .language("eng")
               .build();
 
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(languageLookupPort.resolve("eng")).thenReturn("en");
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
@@ -997,7 +1084,6 @@ class PubmedArticleItemProcessorTest {
               .language("zzz")
               .build();
 
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(languageLookupPort.resolve("zzz")).thenReturn(LanguageLookupPort.UNKNOWN_LANGUAGE);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
@@ -1043,7 +1129,6 @@ class PubmedArticleItemProcessorTest {
                           .build()))
               .build();
 
-      when(publicationRepository.existsByPmid(PMID)).thenReturn(false);
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
           .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
       when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
@@ -1071,6 +1156,32 @@ class PubmedArticleItemProcessorTest {
         .identifiers(
             List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(pmid).build()))
         .title("Test Article")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .build();
+  }
+
+  /// 创建包含 PMID 与 DOI 的测试文献。
+  private CanonicalPublication createPublicationWithPmidAndDoi(String pmid, String doi) {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(
+                Identifier.builder().type(PublicationIdentifierType.PMID).value(pmid).build(),
+                Identifier.builder().type(PublicationIdentifierType.DOI).value(doi).build()))
+        .title("Test Article")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .build();
+  }
+
+  /// 创建可指定中英文标题的测试文献。
+  private CanonicalPublication createPublicationWithTitles(
+      String pmid, String title, String originalTitle) {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(pmid).build()))
+        .title(title)
+        .originalTitle(originalTitle)
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
         .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
         .build();
