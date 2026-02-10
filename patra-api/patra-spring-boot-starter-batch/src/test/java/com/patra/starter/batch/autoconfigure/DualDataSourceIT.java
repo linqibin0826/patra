@@ -36,7 +36,7 @@ import org.springframework.context.ApplicationContext;
       "patra.batch.enabled=true",
       "patra.batch.table-prefix=BATCH_",
       // 禁用 Redisson（测试环境）
-      "spring.autoconfigure.exclude=org.redisson.spring.starter.RedissonAutoConfigurationV2",
+      "spring.autoconfigure.exclude=org.redisson.spring.starter.RedissonAutoConfigurationV2,org.redisson.spring.starter.RedissonAutoConfigurationV4",
       "patra.redisson.observability.metrics-enabled=false"
     })
 @Timeout(value = 30, unit = TimeUnit.SECONDS)

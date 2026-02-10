@@ -38,6 +38,8 @@ dependencies {
     api("org.springframework.boot:spring-boot-starter-data-jpa-test")
     api("org.springframework.boot:spring-boot-starter-jdbc-test")
     api("org.springframework.boot:spring-boot-starter-flyway-test")
+    // Flyway 11+ 数据库支持拆分为独立模块，MySQL 需显式引入
+    api("org.flywaydb:flyway-mysql")
     api("org.springframework.boot:spring-boot-starter-webmvc-test")
     api("org.springframework.boot:spring-boot-starter-restclient-test")
 
