@@ -4,6 +4,7 @@ import com.patra.catalog.domain.model.vo.publication.PublicationImportParams;
 import com.patra.catalog.domain.port.batch.PublicationBatchPort;
 import com.patra.starter.batch.core.JobOperatorHelper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.job.Job;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -79,7 +80,9 @@ public class PublicationBatchAdapter implements PublicationBatchPort {
             .build();
 
     // 不添加时间戳，相同参数的 Job 只执行一次（支持断点续传）
-    return jobOperatorHelper.launch(pubmedBaselineImportJob, jobParams, false);
+    Long executionId = jobOperatorHelper.launch(pubmedBaselineImportJob, jobParams, false);
+    failFastWhenExecutionFailed(executionId);
+    return executionId;
   }
 
   /// 从下载 URL 中提取导入批次标识。
@@ -94,5 +97,19 @@ public class PublicationBatchAdapter implements PublicationBatchPort {
     String fileName = downloadUrl.substring(downloadUrl.lastIndexOf('/') + 1);
     String baseName = fileName.replace(".xml.gz", "");
     return "baseline-" + baseName;
+  }
+
+  /// 对同步失败的 Job 执行结果进行快速失败处理，避免上层误判为成功。
+  private void failFastWhenExecutionFailed(Long executionId) {
+    jobOperatorHelper
+        .findJobExecution(executionId)
+        .ifPresent(
+            execution -> {
+              BatchStatus status = execution.getStatus();
+              if (status != null && status.isUnsuccessful()) {
+                throw new IllegalStateException(
+                    "PubMed Baseline 导入任务执行失败，executionId=" + executionId + "，status=" + status);
+              }
+            });
   }
 }
