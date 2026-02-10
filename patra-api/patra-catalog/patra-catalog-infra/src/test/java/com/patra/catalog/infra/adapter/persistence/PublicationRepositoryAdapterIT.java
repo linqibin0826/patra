@@ -27,6 +27,7 @@ import com.patra.catalog.domain.model.vo.publication.PublicationTypeInfo;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import com.patra.catalog.infra.adapter.persistence.dao.InvestigatorDao;
+import com.patra.catalog.infra.adapter.persistence.dao.KeywordDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
 import com.patra.catalog.infra.adapter.persistence.dao.PublicationDao;
@@ -48,7 +49,9 @@ import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -59,6 +62,7 @@ import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -94,6 +98,7 @@ class PublicationRepositoryAdapterIT {
   @Autowired private PublicationDao jpaRepository;
   @Autowired private PublicationMeshHeadingDao meshHeadingDao;
   @Autowired private PublicationMeshQualifierDao meshQualifierDao;
+  @Autowired private KeywordDao keywordMasterDao;
   @Autowired private PublicationKeywordDao keywordDao;
   @Autowired private PublicationFundingDao fundingDao;
   @Autowired private PublicationTypeDao typeDao;
@@ -315,7 +320,7 @@ class PublicationRepositoryAdapterIT {
   }
 
   @Nested
-  @DisplayName("existsByPmid/existsByDoi 测试")
+  @DisplayName("existsByPmid/existsByDoi/findExistingKeys 测试")
   class ExistsTests {
 
     @Test
@@ -342,6 +347,63 @@ class PublicationRepositoryAdapterIT {
       // When & Then
       assertThat(repository.existsByDoi("10.5555/exists")).isTrue();
       assertThat(repository.existsByDoi("10.9999/notexists")).isFalse();
+    }
+
+    @Test
+    @DisplayName("findExistingKeys - 仅 PMID 命中")
+    void findExistingKeys_shouldReturnMatchedPmids() {
+      // Given
+      var publication =
+          createPublication("56666666", "10.5666/exists", 1001L, 2001L, "Exists Any Test", 2024);
+      repository.save(publication);
+
+      // When
+      var keys = repository.findExistingKeys(Set.of("56666666", "99999999"), Set.of());
+
+      // Then
+      assertThat(keys.pmids()).containsExactly("56666666");
+      assertThat(keys.dois()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("findExistingKeys - 仅 DOI 命中")
+    void findExistingKeys_shouldReturnMatchedDois() {
+      // Given
+      var publication =
+          createPublication("57777777", "10.5777/exists", 1001L, 2001L, "Exists Doi Test", 2024);
+      repository.save(publication);
+
+      // When
+      var keys =
+          repository.findExistingKeys(Set.of(), Set.of("10.5777/exists", "10.9999/notexists"));
+
+      // Then
+      assertThat(keys.pmids()).isEmpty();
+      assertThat(keys.dois()).containsExactly("10.5777/exists");
+    }
+
+    @Test
+    @DisplayName("findExistingKeys - PMID 与 DOI 同时命中")
+    void findExistingKeys_shouldReturnMatchedPmidsAndDois() {
+      // Given
+      var publication =
+          createPublication("58888888", "10.5888/exists", 1001L, 2001L, "Exists Both Test", 2024);
+      repository.save(publication);
+
+      // When
+      var keys = repository.findExistingKeys(Set.of("58888888"), Set.of("10.5888/exists"));
+
+      // Then
+      assertThat(keys.pmids()).containsExactly("58888888");
+      assertThat(keys.dois()).containsExactly("10.5888/exists");
+    }
+
+    @Test
+    @DisplayName("findExistingKeys - 空集合输入返回空结果")
+    void findExistingKeys_shouldReturnEmpty_when_inputs_are_empty() {
+      var keys = repository.findExistingKeys(Set.of(), Set.of());
+      assertThat(keys.pmids()).isEmpty();
+      assertThat(keys.dois()).isEmpty();
     }
   }
 
@@ -789,6 +851,53 @@ class PublicationRepositoryAdapterIT {
     }
 
     @Test
+    @DisplayName("主表 DOI 冲突应在主数据写入阶段立即抛出异常")
+    void should_fail_fast_on_publication_doi_conflict() {
+      // Given
+      var existing =
+          createPublication("91919191", "10.9191/conflict", 1001L, 2001L, "Existing", 2024);
+      repository.insertAll(List.of(existing));
+
+      var incoming =
+          createPublication("92929292", "10.9191/conflict", 1001L, 2001L, "Incoming", 2024);
+      var completeData = PublicationCompleteData.ofPublication(incoming);
+
+      // When / Then
+      assertThatThrownBy(() -> repository.insertAllWithAssociations(List.of(completeData)))
+          .isInstanceOfAny(
+              DataIntegrityViolationException.class, ConstraintViolationException.class)
+          .hasMessageContaining("Duplicate");
+    }
+
+    @Test
+    @DisplayName("主表 DOI 冲突后应清理上下文，后续写入不应触发 NonUniqueObjectException")
+    void should_allow_following_insert_after_conflict() {
+      // Given
+      var existing =
+          createPublication("91919191", "10.9191/conflict", 1001L, 2001L, "Existing", 2024);
+      repository.insertAll(List.of(existing));
+
+      var conflict =
+          createPublication("92929292", "10.9191/conflict", 1001L, 2001L, "Conflict", 2024);
+      var conflictData = PublicationCompleteData.ofPublication(conflict);
+
+      // 先制造一次唯一键冲突
+      assertThatThrownBy(() -> repository.insertAllWithAssociations(List.of(conflictData)))
+          .isInstanceOfAny(
+              DataIntegrityViolationException.class, ConstraintViolationException.class);
+
+      var valid = createPublication("93939393", "10.9393/success", 1001L, 2001L, "Valid", 2024);
+      var validData = PublicationCompleteData.ofPublication(valid);
+
+      // When
+      repository.insertAllWithAssociations(List.of(validData));
+
+      // Then
+      assertThat(jpaRepository.count()).isEqualTo(2);
+      assertThat(repository.findByPmid("93939393")).isPresent();
+    }
+
+    @Test
     @DisplayName("研究者去重 - 相同 ORCID 应该复用")
     void should_deduplicate_investigators_by_orcid() {
       // Given - 两篇文献引用同一个研究者（相同 ORCID）
@@ -940,6 +1049,40 @@ class PublicationRepositoryAdapterIT {
       assertThat(keywordDao.findByPublicationId(pub2.getId().value())).hasSize(2);
       assertThat(keywordDao.findByPublicationId(pub3.getId().value())).isEmpty();
       assertThat(typeDao.findByPublicationId(pub3.getId().value())).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("关键词去重 - 重音差异应视为同一词（cancer = cáncer）")
+    void should_deduplicate_keywords_with_accent_variants() {
+      // Given
+      var pub1 = createPublication("75757571", "10.7575/a", 1001L, 2001L, "Accent Pub A", 2024);
+      var pub2 = createPublication("75757572", "10.7575/b", 1001L, 2001L, "Accent Pub B", 2024);
+
+      var data1 =
+          PublicationCompleteData.builder()
+              .publication(pub1)
+              .keywords(List.of(PublicationKeyword.ofAuthor("cancer", 1)))
+              .build();
+      var data2 =
+          PublicationCompleteData.builder()
+              .publication(pub2)
+              .keywords(List.of(PublicationKeyword.ofAuthor("cáncer", 1)))
+              .build();
+
+      // When
+      repository.insertAllWithAssociations(List.of(data1, data2));
+
+      // Then
+      assertThat(jpaRepository.count()).isEqualTo(2);
+      assertThat(keywordMasterDao.count()).isEqualTo(1);
+      assertThat(keywordDao.findByPublicationId(pub1.getId().value())).hasSize(1);
+      assertThat(keywordDao.findByPublicationId(pub2.getId().value())).hasSize(1);
+
+      Long keywordId1 =
+          keywordDao.findByPublicationId(pub1.getId().value()).getFirst().getKeywordId();
+      Long keywordId2 =
+          keywordDao.findByPublicationId(pub2.getId().value()).getFirst().getKeywordId();
+      assertThat(keywordId1).isEqualTo(keywordId2);
     }
   }
 

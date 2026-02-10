@@ -1,6 +1,9 @@
 package com.patra.catalog.infra.adapter.persistence;
 
+import com.ibm.icu.text.Collator;
+import com.ibm.icu.util.ULocale;
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
+import com.patra.catalog.domain.model.vo.publication.ExistingPublicationKeys;
 import com.patra.catalog.domain.model.vo.publication.MeshQualifier;
 import com.patra.catalog.domain.model.vo.publication.PublicationAbstract;
 import com.patra.catalog.domain.model.vo.publication.PublicationAlternativeAbstract;
@@ -58,8 +61,10 @@ import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -97,6 +102,15 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
 
   /// 批量操作时每批次的大小，超过此值会 flush 并 clear 以防内存溢出。
   private static final int BATCH_FLUSH_SIZE = 500;
+
+  /// ICU4J Collator（匹配 MySQL utf8mb4_0900_ai_ci：忽略重音与大小写）。
+  private static final Collator UNICODE_CI_COLLATOR;
+
+  static {
+    UNICODE_CI_COLLATOR = Collator.getInstance(ULocale.ROOT);
+    UNICODE_CI_COLLATOR.setStrength(Collator.PRIMARY);
+    UNICODE_CI_COLLATOR.freeze();
+  }
 
   private final PublicationDao jpaRepository;
   private final PublicationJpaMapper jpaConverter;
@@ -171,6 +185,57 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
   }
 
   @Override
+  public ExistingPublicationKeys findExistingKeys(Set<String> pmids, Set<String> dois) {
+    Set<String> normalizedPmids =
+        pmids == null
+            ? Set.of()
+            : pmids.stream()
+                .map(this::trimToNull)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    Set<String> normalizedDois =
+        dois == null
+            ? Set.of()
+            : dois.stream()
+                .map(this::normalizeDoi)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+    if (normalizedPmids.isEmpty() && normalizedDois.isEmpty()) {
+      return ExistingPublicationKeys.empty();
+    }
+
+    List<PublicationEntity> matchedEntities;
+    if (!normalizedPmids.isEmpty() && !normalizedDois.isEmpty()) {
+      matchedEntities = jpaRepository.findByPmidInOrDoiIn(normalizedPmids, normalizedDois);
+    } else if (!normalizedPmids.isEmpty()) {
+      matchedEntities = jpaRepository.findByPmidIn(normalizedPmids);
+    } else {
+      matchedEntities = jpaRepository.findByDoiIn(normalizedDois);
+    }
+
+    Set<String> existingPmids = new HashSet<>();
+    Set<String> existingDois = new HashSet<>();
+    for (PublicationEntity entity : matchedEntities) {
+      if (!normalizedPmids.isEmpty()) {
+        String pmid = trimToNull(entity.getPmid());
+        if (pmid != null) {
+          existingPmids.add(pmid);
+        }
+      }
+
+      if (!normalizedDois.isEmpty()) {
+        String doi = normalizeDoi(entity.getDoi());
+        if (doi != null) {
+          existingDois.add(doi);
+        }
+      }
+    }
+
+    return ExistingPublicationKeys.of(existingPmids, existingDois);
+  }
+
+  @Override
   public List<PublicationAggregate> findByVenueInstanceId(Long venueInstanceId) {
     if (venueInstanceId == null) {
       return List.of();
@@ -240,6 +305,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
         aggregates.stream().map(jpaConverter::toEntity).peek(this::assignIdIfMissing).toList();
 
     List<PublicationEntity> savedEntities = jpaRepository.saveAll(entities);
+    entityManager.flush();
 
     // 回填 ID 和版本
     for (int i = 0; i < aggregates.size(); i++) {
@@ -258,27 +324,32 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
       return;
     }
 
-    // 1. 提取并写入 PublicationAggregate（ID 会被回填）
-    List<PublicationAggregate> publications =
-        data.stream().map(PublicationCompleteData::publication).toList();
-    log.debug("批量写入 {} 条 Publication", publications.size());
-    insertAll(publications);
+    try {
+      // 1. 提取并写入 PublicationAggregate（ID 会被回填）
+      List<PublicationAggregate> publications =
+          data.stream().map(PublicationCompleteData::publication).toList();
+      log.debug("批量写入 {} 条 Publication", publications.size());
+      insertAll(publications);
 
-    // 2. 写入关联数据
-    writeMetadataAssociations(data);
-    writeMeshAssociations(data);
-    writeKeywordAssociations(data);
-    writeFundingAssociations(data);
-    writePublicationTypeAssociations(data);
-    writeSupplMeshAssociations(data);
-    writeAlternativeAbstractAssociations(data);
-    writeDateAssociations(data);
-    writeIdentifierAssociations(data);
-    writeAbstractAssociations(data);
-    writeInvestigatorAssociations(data);
-    writePersonalNameSubjectAssociations(data);
+      // 2. 写入关联数据
+      writeMetadataAssociations(data);
+      writeMeshAssociations(data);
+      writeKeywordAssociations(data);
+      writeFundingAssociations(data);
+      writePublicationTypeAssociations(data);
+      writeSupplMeshAssociations(data);
+      writeAlternativeAbstractAssociations(data);
+      writeDateAssociations(data);
+      writeIdentifierAssociations(data);
+      writeAbstractAssociations(data);
+      writeInvestigatorAssociations(data);
+      writePersonalNameSubjectAssociations(data);
 
-    log.info("批量写入 {} 条 Publication（含关联数据）完成", data.size());
+      log.info("批量写入 {} 条 Publication（含关联数据）完成", data.size());
+    } catch (RuntimeException ex) {
+      entityManager.clear();
+      throw ex;
+    }
   }
 
   // ========== insertAllWithAssociations 辅助方法 ==========
@@ -375,8 +446,8 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
       }
       for (PublicationKeyword keyword : item.keywords()) {
         String normalizedTerm = KeywordEntity.normalize(keyword.term());
-        // 使用 normalized_term 作为去重 key（与 DB 唯一约束 uk_normalized_term 一致）
-        keywordMap.putIfAbsent(normalizedTerm, keyword);
+        // 使用与 MySQL utf8mb4_0900_ai_ci 一致的 collation key 去重
+        keywordMap.putIfAbsent(toCollationKey(normalizedTerm), keyword);
       }
     }
 
@@ -396,17 +467,20 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     // 构建 normalized_term -> KeywordEntity 的映射
     Map<String, KeywordEntity> existingKeywordMap =
         existingKeywords.stream()
-            .collect(Collectors.toMap(KeywordEntity::getNormalizedTerm, e -> e, (a, b) -> a));
+            .collect(
+                Collectors.toMap(
+                    entity -> toCollationKey(entity.getNormalizedTerm()), e -> e, (a, b) -> a));
 
     // 创建不存在的关键词
     List<KeywordEntity> newKeywords = new ArrayList<>();
     for (PublicationKeyword keyword : keywordMap.values()) {
       String normalizedTerm = KeywordEntity.normalize(keyword.term());
-      if (!existingKeywordMap.containsKey(normalizedTerm)) {
+      String dedupKey = toCollationKey(normalizedTerm);
+      if (!existingKeywordMap.containsKey(dedupKey)) {
         KeywordEntity entity = KeywordEntity.of(keyword.term(), keyword.source(), null);
         entity.setId(SnowflakeIdGenerator.getId());
         newKeywords.add(entity);
-        existingKeywordMap.put(normalizedTerm, entity);
+        existingKeywordMap.put(dedupKey, entity);
       }
     }
 
@@ -426,7 +500,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
 
       for (PublicationKeyword keyword : item.keywords()) {
         String normalizedTerm = KeywordEntity.normalize(keyword.term());
-        KeywordEntity keywordEntity = existingKeywordMap.get(normalizedTerm);
+        KeywordEntity keywordEntity = existingKeywordMap.get(toCollationKey(normalizedTerm));
 
         if (keywordEntity == null) {
           log.warn("关键词未找到: {}", keyword.term());
@@ -1137,6 +1211,41 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
       batchSaveWithFlush(entities, oaLocationDao);
       log.debug("批量插入 OA 位置 {} 条", entities.size());
     }
+  }
+
+  /// 生成与 MySQL utf8mb4_0900_ai_ci 一致的去重键。
+  ///
+  /// - 忽略重音差异（如 cáncer = cancer）
+  /// - 忽略大小写差异
+  /// - 基于 Unicode Collation Algorithm（ICU4J）
+  private String toCollationKey(String value) {
+    if (value == null) {
+      return "";
+    }
+    byte[] keyBytes = UNICODE_CI_COLLATOR.getCollationKey(value).toByteArray();
+    StringBuilder hex = new StringBuilder(keyBytes.length * 2);
+    for (byte b : keyBytes) {
+      hex.append(String.format("%02x", b));
+    }
+    return hex.toString();
+  }
+
+  /// 去除首尾空白并转换为 null。
+  private String trimToNull(String value) {
+    if (value == null) {
+      return null;
+    }
+    String trimmed = value.trim();
+    return trimmed.isEmpty() ? null : trimmed;
+  }
+
+  /// 标准化 DOI（trim + lower）。
+  private String normalizeDoi(String doi) {
+    String trimmed = trimToNull(doi);
+    if (trimmed == null) {
+      return null;
+    }
+    return trimmed.toLowerCase(Locale.ROOT);
   }
 
   // ========== 批量操作辅助方法 ==========

@@ -16,7 +16,6 @@ import com.patra.catalog.domain.port.gateway.VenueInstanceGateway;
 import com.patra.catalog.domain.port.lookup.FunderLookupPort;
 import com.patra.catalog.domain.port.lookup.LanguageLookupPort;
 import com.patra.catalog.domain.port.lookup.VenueLookupPort;
-import com.patra.catalog.domain.port.repository.PublicationRepository;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.AlternativeAbstractData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.FundingData;
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.InvestigatorData;
@@ -61,15 +60,16 @@ import org.springframework.batch.infrastructure.item.ItemProcessor;
 ///
 /// **职责**：
 ///
-/// 1. 去重：检查 PMID 是否已存在，跳过重复记录
+/// 1. 标题容错：`title -> originalTitle -> 跳过`
 /// 2. Venue 匹配：通过 NLM ID/ISSN 匹配载体
 /// 3. VenueInstance 创建：获取或创建载体实例（卷期）
 /// 4. 聚合根构建：将 CanonicalPublication 转换为 PublicationAggregate
-/// 5. MeSH 数据处理：解析 MeSH 标引并映射为关联数据
+/// 5. 关联数据处理：解析 MeSH/关键词/资助等数据
 ///
 /// **跳过条件**：
 ///
-/// - PMID 已存在（去重）
+/// - 缺少 PMID
+/// - 标题与原始标题均为空
 /// - 无法匹配 Venue（数据不完整）
 ///
 /// **返回 null 表示跳过该记录**，Spring Batch 会自动忽略。
@@ -81,7 +81,6 @@ import org.springframework.batch.infrastructure.item.ItemProcessor;
 public class PubmedArticleItemProcessor
     implements ItemProcessor<CanonicalPublication, PublicationImportResult> {
 
-  private final PublicationRepository publicationRepository;
   private final VenueLookupPort venueLookupPort;
   private final VenueInstanceGateway venueInstanceGateway;
   private final LanguageLookupPort languageLookupPort;
@@ -91,19 +90,28 @@ public class PubmedArticleItemProcessor
   @Override
   public PublicationImportResult process(CanonicalPublication publication) throws Exception {
     String pmid = extractPmid(publication);
+    String doi = extractDoi(publication);
 
     if (pmid == null) {
       log.debug("跳过缺少 PMID 的文献");
       return null;
     }
 
-    // 1. 去重检查
-    if (publicationRepository.existsByPmid(pmid)) {
-      log.debug("跳过已存在的文献：PMID={}", pmid);
+    String effectiveTitle = resolveEffectiveTitle(publication);
+    if (effectiveTitle == null) {
+      log.warn(
+          "跳过缺少标题的文献：PMID={}, DOI={}, importBatch={}, reason=TITLE_MISSING",
+          pmid,
+          doi,
+          importBatch);
       return null;
     }
+    if (isBlank(publication.getTitle()) && !isBlank(publication.getOriginalTitle())) {
+      log.debug(
+          "文献标题缺失，回退使用 originalTitle：PMID={}, DOI={}, importBatch={}", pmid, doi, importBatch);
+    }
 
-    // 2. Venue 匹配
+    // 1. Venue 匹配
     // TODO: 当前仅支持期刊文章，后续需扩展支持其他出版物类型
     //   - Book/Book Chapter：PubMed 通过 NCBI Bookshelf 索引的书籍章节，使用 <Book> 元素
     //   - Preprint：bioRxiv/medRxiv 预印本
@@ -129,7 +137,7 @@ public class PubmedArticleItemProcessor
 
     VenueId venueId = venueIdOpt.get();
 
-    // 3. VenueInstance 创建/获取
+    // 2. VenueInstance 创建/获取
     Integer pubYear = extractPublicationYear(publication);
     JournalInstanceParams params =
         JournalInstanceParams.builder()
@@ -142,11 +150,12 @@ public class PubmedArticleItemProcessor
             .build();
     VenueInstanceAggregate venueInstance = venueInstanceGateway.findOrCreateJournalInstance(params);
 
-    // 4. 构建 PublicationAggregate
+    // 3. 构建 PublicationAggregate
     PublicationAggregate aggregate =
-        buildPublicationAggregate(publication, pmid, venueId, venueInstance, pubYear);
+        buildPublicationAggregate(
+            publication, pmid, doi, venueId, venueInstance, pubYear, effectiveTitle);
 
-    // 5. 处理关联数据
+    // 4. 处理关联数据
     List<MeshHeadingData> meshHeadings = buildMeshHeadingData(publication);
     List<SupplMeshData> supplMeshNames = buildSupplMeshData(publication);
     List<KeywordData> keywords = buildKeywordData(publication);
@@ -157,21 +166,52 @@ public class PubmedArticleItemProcessor
     List<InvestigatorData> investigators = buildInvestigatorData(publication);
     List<PersonalNameSubjectData> personalNameSubjects = buildPersonalNameSubjectData(publication);
 
-    // 6. 构建元数据
+    // 5. 构建元数据
     PublicationMetadata metadata = buildMetadata(publication);
 
-    return PublicationImportResult.ofComplete(
-        aggregate,
-        metadata,
-        meshHeadings,
-        keywords,
-        funding,
-        publicationTypes,
-        supplMeshNames,
-        alternativeAbstracts,
-        dates,
-        investigators,
-        personalNameSubjects);
+    PublicationImportResult result =
+        PublicationImportResult.ofComplete(
+            aggregate,
+            metadata,
+            meshHeadings,
+            keywords,
+            funding,
+            publicationTypes,
+            supplMeshNames,
+            alternativeAbstracts,
+            dates,
+            investigators,
+            personalNameSubjects);
+    return result;
+  }
+
+  /// 解析文献有效标题。
+  ///
+  /// 标题优先级：
+  /// 1. `title`（ArticleTitle）
+  /// 2. `originalTitle`（VernacularTitle）
+  ///
+  /// 两者均为空时返回 `null`。
+  private String resolveEffectiveTitle(CanonicalPublication publication) {
+    String title = trimToNull(publication.getTitle());
+    if (title != null) {
+      return title;
+    }
+    return trimToNull(publication.getOriginalTitle());
+  }
+
+  /// 将字符串去空白并转换为空值。
+  private String trimToNull(String value) {
+    if (value == null) {
+      return null;
+    }
+    String trimmed = value.trim();
+    return trimmed.isEmpty() ? null : trimmed;
+  }
+
+  /// 判断字符串是否为空白。
+  private boolean isBlank(String value) {
+    return value == null || value.trim().isEmpty();
   }
 
   /// 从 CanonicalPublication 提取 PMID。
@@ -248,9 +288,11 @@ public class PubmedArticleItemProcessor
   private PublicationAggregate buildPublicationAggregate(
       CanonicalPublication publication,
       String pmid,
+      String doi,
       VenueId venueId,
       VenueInstanceAggregate venueInstance,
-      Integer pubYear) {
+      Integer pubYear,
+      String effectiveTitle) {
 
     // 构建语言信息
     LanguageInfo languageInfo = buildLanguageInfo(publication);
@@ -258,9 +300,6 @@ public class PubmedArticleItemProcessor
     // 解析出版状态
     PublicationStatus publicationStatus =
         parsePublicationStatus(publication.getPublicationStatus());
-
-    // 提取 DOI
-    String doi = extractDoi(publication);
 
     // 解析媒介类型
     PublicationMedium mediaType = parsePublicationMedium(publication.getMediaType());
@@ -273,7 +312,7 @@ public class PubmedArticleItemProcessor
             doi,
             venueId,
             venueInstance.getId(),
-            publication.getTitle(),
+            effectiveTitle,
             publication.getOriginalTitle(),
             languageInfo,
             publicationStatus,

@@ -1,6 +1,7 @@
 package com.patra.catalog.domain.port.repository;
 
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
+import com.patra.catalog.domain.model.vo.publication.ExistingPublicationKeys;
 import com.patra.catalog.domain.model.vo.publication.PublicationAbstract;
 import com.patra.catalog.domain.model.vo.publication.PublicationAlternativeAbstract;
 import com.patra.catalog.domain.model.vo.publication.PublicationCompleteData;
@@ -11,6 +12,7 @@ import com.patra.catalog.domain.model.vo.publication.PublicationOaLocation;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /// 文献聚合根仓储接口（领域层定义，基础设施层实现）。
 ///
@@ -83,6 +85,15 @@ public interface PublicationRepository {
   /// @param doi Digital Object Identifier
   /// @return true 如果存在
   boolean existsByDoi(String doi);
+
+  /// 批量查询已存在的 PMID 与 DOI。
+  ///
+  /// 用于导入写入阶段的批量去重，避免逐条查询数据库。
+  ///
+  /// @param pmids 待检查的 PMID 集合
+  /// @param dois 待检查的 DOI 集合（建议传入标准化值）
+  /// @return 已存在的 PMID/DOI 集合
+  ExistingPublicationKeys findExistingKeys(Set<String> pmids, Set<String> dois);
 
   /// 根据载体实例 ID 查找文献列表。
   ///

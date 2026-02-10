@@ -22,6 +22,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.PlatformTransactionManager;
 
 /// PubMed Baseline 文献导入 Job 配置。
@@ -132,7 +134,8 @@ public class PubmedBaselineJobConfig {
             .writer(writer)
             .faultTolerant()
             .skipLimit(DEFAULT_SKIP_LIMIT)
-            .skip(Exception.class);
+            .skip(DataIntegrityViolationException.class)
+            .skip(DuplicateKeyException.class);
 
     // 仅在指标监听器存在时注册
     if (batchProgressMetricsListener != null) {
@@ -172,12 +175,7 @@ public class PubmedBaselineJobConfig {
       @Qualifier("batchFunderLookupAdapter") FunderLookupPort funderLookupPort,
       @Value("#{jobParameters['importBatch']}") String importBatch) {
     return new PubmedArticleItemProcessor(
-        publicationRepository,
-        venueLookupPort,
-        venueInstanceGateway,
-        languageLookupPort,
-        funderLookupPort,
-        importBatch);
+        venueLookupPort, venueInstanceGateway, languageLookupPort, funderLookupPort, importBatch);
   }
 
   /// 创建 Publication ItemWriter。
@@ -188,10 +186,14 @@ public class PubmedBaselineJobConfig {
   /// 所有关联数据的写入逻辑已移至 PublicationRepositoryAdapter.insertAllWithAssociations()。
   ///
   /// @param resultMapper 结果转换器（Data → Domain 值对象）
+  /// @param importBatch 导入批次标识（从 Job 参数注入）
   /// @return ItemWriter 实例
   @Bean
-  public PublicationItemWriter publicationItemWriter(PublicationImportResultMapper resultMapper) {
-    return new PublicationItemWriter(publicationRepository, resultMapper);
+  @StepScope
+  public PublicationItemWriter publicationItemWriter(
+      PublicationImportResultMapper resultMapper,
+      @Value("#{jobParameters['importBatch']}") String importBatch) {
+    return new PublicationItemWriter(publicationRepository, resultMapper, importBatch);
   }
 
   /// 获取 chunk size。

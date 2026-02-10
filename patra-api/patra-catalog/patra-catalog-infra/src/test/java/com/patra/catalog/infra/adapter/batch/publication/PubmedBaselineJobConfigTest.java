@@ -81,7 +81,7 @@ class PubmedBaselineJobConfigTest {
       PubmedArticleItemProcessor processor =
           jobConfig.pubmedArticleItemProcessor(
               venueLookupPort, languageLookupPort, funderLookupPort, "test-batch");
-      PublicationItemWriter writer = jobConfig.publicationItemWriter(resultMapper);
+      PublicationItemWriter writer = jobConfig.publicationItemWriter(resultMapper, "test-batch");
       Step step = jobConfig.pubmedArticleProcessingStep(reader, processor, writer);
 
       // when
@@ -106,7 +106,7 @@ class PubmedBaselineJobConfigTest {
       PubmedArticleItemProcessor processor =
           jobConfig.pubmedArticleItemProcessor(
               venueLookupPort, languageLookupPort, funderLookupPort, "test-batch");
-      PublicationItemWriter writer = jobConfig.publicationItemWriter(resultMapper);
+      PublicationItemWriter writer = jobConfig.publicationItemWriter(resultMapper, "test-batch");
 
       // when
       Step step = jobConfig.pubmedArticleProcessingStep(reader, processor, writer);
@@ -160,7 +160,7 @@ class PubmedBaselineJobConfigTest {
     @DisplayName("应该创建 PublicationItemWriter")
     void should_create_item_writer() {
       // when
-      PublicationItemWriter writer = jobConfig.publicationItemWriter(resultMapper);
+      PublicationItemWriter writer = jobConfig.publicationItemWriter(resultMapper, "test-batch");
 
       // then
       assertThat(writer).isNotNull();
