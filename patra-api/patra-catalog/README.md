@@ -369,7 +369,7 @@ patra:
 
 - **Publication（文献）补充数据表**
   - `cat_publication_abstract`：文献摘要表（独立存储，支持结构化摘要 JSON 和纯文本摘要，含版权信息）
-  - `cat_publication_alternative_abstract`：文献翻译摘要表（支持多语言摘要，含语言代码、翻译类型、官方/专业翻译标记）
+  - `cat_publication_alternative_abstract`：文献翻译摘要表（支持同语言多来源类型摘要，含 language_code、source_type、translation_type、官方/专业翻译标记）
   - `cat_publication_date`：文献日期表（支持不完整日期，含年/月/日三种精度，日期类型：received/accepted/published/revised/epublish/entrezdate 等）
   - `cat_publication_identifier`：文献标识符表（支持 PMID/DOI/PMC/PII 等多种标识符类型，建立反向索引）
 

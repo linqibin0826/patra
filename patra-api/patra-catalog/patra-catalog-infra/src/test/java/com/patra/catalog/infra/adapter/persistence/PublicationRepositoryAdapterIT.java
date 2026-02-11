@@ -8,6 +8,7 @@ import com.patra.catalog.domain.model.enums.OaStatus;
 import com.patra.catalog.domain.model.enums.PublicationDateType;
 import com.patra.catalog.domain.model.enums.PublicationMedium;
 import com.patra.catalog.domain.model.enums.PublicationStatus;
+import com.patra.catalog.domain.model.enums.TranslationType;
 import com.patra.catalog.domain.model.vo.publication.LanguageInfo;
 import com.patra.catalog.domain.model.vo.publication.MeshQualifier;
 import com.patra.catalog.domain.model.vo.publication.PublicationAbstract;
@@ -1320,6 +1321,69 @@ class PublicationRepositoryAdapterIT {
 
       // Then
       assertThat(alternativeAbstractDao.findByPublicationId(pubId)).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("同语言不同来源类型应允许共存")
+    void should_allow_same_language_with_different_source_types() {
+      // Given
+      Long pubId = insertPublication("85858582", "10.8585/b");
+      var abstracts =
+          List.of(
+              PublicationAlternativeAbstract.ofOfficial("fr", "French", "法语官方摘要"),
+              PublicationAlternativeAbstract.builder()
+                  .languageCode("fr")
+                  .sourceType("plain-language-summary")
+                  .plainText("法语通俗摘要")
+                  .translationType(TranslationType.PROFESSIONAL)
+                  .orderNum(2)
+                  .build());
+
+      // When
+      repository.replaceAlternativeAbstractsBatch(Map.of(pubId, abstracts));
+
+      // Then
+      var persisted = alternativeAbstractDao.findByPublicationId(pubId);
+      assertThat(persisted).hasSize(2);
+      assertThat(persisted).allMatch(entity -> "fr".equals(entity.getLanguageCode()));
+      assertThat(persisted)
+          .extracting(entity -> entity.getSourceType())
+          .containsExactlyInAnyOrder("publisher", "plain-language-summary");
+    }
+
+    @Test
+    @DisplayName("同文献同语言同来源重复输入应保留首条并去重")
+    void should_keep_first_when_same_language_and_source_type_duplicated() {
+      // Given
+      Long pubId = insertPublication("85858583", "10.8585/c");
+      var duplicated =
+          List.of(
+              PublicationAlternativeAbstract.builder()
+                  .languageCode("fr")
+                  .sourceType("Publisher")
+                  .plainText("首条摘要")
+                  .translationType(TranslationType.OFFICIAL)
+                  .isOfficial(true)
+                  .orderNum(1)
+                  .build(),
+              PublicationAlternativeAbstract.builder()
+                  .languageCode("fr")
+                  .sourceType(" publisher ")
+                  .plainText("重复摘要")
+                  .translationType(TranslationType.OFFICIAL)
+                  .isOfficial(true)
+                  .orderNum(2)
+                  .build());
+
+      // When
+      repository.replaceAlternativeAbstractsBatch(Map.of(pubId, duplicated));
+
+      // Then
+      var persisted = alternativeAbstractDao.findByPublicationId(pubId);
+      assertThat(persisted).hasSize(1);
+      assertThat(persisted.getFirst().getLanguageCode()).isEqualTo("fr");
+      assertThat(persisted.getFirst().getSourceType()).isEqualTo("publisher");
+      assertThat(persisted.getFirst().getPlainText()).isEqualTo("首条摘要");
     }
 
     @Test

@@ -7,6 +7,7 @@ import com.patra.catalog.domain.model.enums.TranslationType;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import lombok.Builder;
@@ -23,7 +24,7 @@ import lombok.Builder;
 ///
 /// **唯一性约束**：
 ///
-/// - 同一文献 + 同一语言只能有一个翻译摘要
+/// - 同一文献 + 同一语言 + 同一来源类型只能有一个翻译摘要
 ///
 /// **翻译类型优先级**：
 ///
@@ -51,6 +52,7 @@ import lombok.Builder;
 /// @param languageName 语言名称（如 "Chinese"、"Japanese"）
 /// @param plainText 纯文本摘要
 /// @param structuredSections 结构化摘要段落
+/// @param sourceType 摘要来源类型（如 `publisher`、`plain-language-summary`）
 /// @param translationType 翻译类型
 /// @param translator 译者姓名或机构
 /// @param translationDate 翻译日期
@@ -65,6 +67,7 @@ public record PublicationAlternativeAbstract(
     String languageName,
     String plainText,
     Map<String, String> structuredSections,
+    String sourceType,
     TranslationType translationType,
     String translator,
     LocalDate translationDate,
@@ -74,6 +77,7 @@ public record PublicationAlternativeAbstract(
     implements Serializable {
 
   @Serial private static final long serialVersionUID = 1L;
+  private static final String UNKNOWN_SOURCE_TYPE = "unknown";
 
   /// 紧凑构造器：验证必填字段并处理防御性拷贝。
   ///
@@ -83,6 +87,9 @@ public record PublicationAlternativeAbstract(
 
     // 防御性拷贝：确保 structuredSections 不可变
     structuredSections = structuredSections != null ? Map.copyOf(structuredSections) : Map.of();
+
+    // 规范化来源类型（空值回退为 unknown）。
+    sourceType = normalizeSourceType(sourceType);
 
     // 如果标记为官方翻译，确保翻译类型一致
     if (isOfficial && translationType != TranslationType.OFFICIAL) {
@@ -102,6 +109,7 @@ public record PublicationAlternativeAbstract(
         .languageCode(languageCode)
         .languageName(languageName)
         .plainText(plainText)
+        .sourceType("publisher")
         .translationType(TranslationType.OFFICIAL)
         .isOfficial(true)
         .build();
@@ -120,6 +128,7 @@ public record PublicationAlternativeAbstract(
         .languageCode(languageCode)
         .languageName(languageName)
         .plainText(plainText)
+        .sourceType("professional")
         .translationType(TranslationType.PROFESSIONAL)
         .translator(translator)
         .build();
@@ -137,6 +146,7 @@ public record PublicationAlternativeAbstract(
         .languageCode(languageCode)
         .languageName(languageName)
         .plainText(plainText)
+        .sourceType("machine")
         .translationType(TranslationType.MACHINE)
         .qualityLevel(QualityLevel.FAIR)
         .build();
@@ -205,5 +215,13 @@ public record PublicationAlternativeAbstract(
     String lang = StrUtil.isNotBlank(languageName) ? languageName : languageCode;
     String type = translationType != null ? translationType.getDescription() : "Translation";
     return String.format("%s (%s)", lang, type);
+  }
+
+  /// 规范化摘要来源类型。
+  private static String normalizeSourceType(String value) {
+    if (value == null || value.isBlank()) {
+      return UNKNOWN_SOURCE_TYPE;
+    }
+    return value.trim().toLowerCase(Locale.ROOT);
   }
 }

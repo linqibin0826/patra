@@ -745,6 +745,38 @@ class PubmedArticleItemProcessorTest {
     }
 
     @Test
+    @DisplayName("同语言不同来源类型的翻译摘要应该全部保留")
+    void should_keep_same_language_alternative_abstracts_with_different_source_type()
+        throws Exception {
+      // given
+      CanonicalPublication publication =
+          createPublicationWithSameLanguageDifferentAlternativeAbstractTypes();
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+      when(languageLookupPort.resolve("fre")).thenReturn("fr");
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result.hasAlternativeAbstracts()).isTrue();
+      assertThat(result.alternativeAbstracts()).hasSize(2);
+
+      var first = result.alternativeAbstracts().get(0);
+      assertThat(first.languageCode()).isEqualTo("fr");
+      assertThat(first.abstractType()).isEqualTo("Publisher");
+      assertThat(first.abstractOrder()).isEqualTo(1);
+
+      var second = result.alternativeAbstracts().get(1);
+      assertThat(second.languageCode()).isEqualTo("fr");
+      assertThat(second.abstractType()).isEqualTo("plain-language-summary");
+      assertThat(second.abstractOrder()).isEqualTo(2);
+    }
+
+    @Test
     @DisplayName("无翻译摘要数据时 alternativeAbstracts 应该为空列表")
     void should_return_empty_alternative_abstracts_when_no_data() throws Exception {
       // given
@@ -1475,6 +1507,30 @@ class PubmedArticleItemProcessorTest {
                     .type("AIMSHP")
                     .language("jpn")
                     .text("これは日本語の翻訳要約です。")
+                    .build()))
+        .build();
+  }
+
+  /// 创建同语言不同来源类型翻译摘要的测试文献。
+  private CanonicalPublication
+      createPublicationWithSameLanguageDifferentAlternativeAbstractTypes() {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
+        .title("Test Article with Same Language Alternative Abstract Types")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .alternativeAbstracts(
+            List.of(
+                AlternativeAbstract.builder()
+                    .type("Publisher")
+                    .language("fre")
+                    .text("法语官方摘要。")
+                    .build(),
+                AlternativeAbstract.builder()
+                    .type("plain-language-summary")
+                    .language("fre")
+                    .text("法语通俗语言摘要。")
                     .build()))
         .build();
   }

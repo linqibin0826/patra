@@ -19,12 +19,14 @@ import lombok.Setter;
 ///
 /// - `publication_id` 文献 ID，外键关联 cat_publication.id
 /// - `language_code` 语言代码（ISO 639-1，如 "zh-CN"、"ja"）
+/// - `source_type` 摘要来源类型（如 `publisher`、`plain-language-summary`）
 /// - `translation_type` 翻译类型：Official/Professional/Machine/Community
 /// - `is_official` 是否官方翻译
 ///
 /// **索引说明**：
 ///
-/// - 复合唯一索引 `uk_abstract_lang`: (publication_id, language_code) 保证每种语言只有一个翻译
+/// - 复合唯一索引 `uk_abstract_lang_source`: (publication_id, language_code, source_type)
+///   保证每种语言下的同来源类型只有一个翻译
 /// - 普通索引支持按文献、语言查询
 ///
 /// @author linqibin
@@ -36,8 +38,8 @@ import lombok.Setter;
     name = "cat_publication_alternative_abstract",
     uniqueConstraints = {
       @UniqueConstraint(
-          name = "uk_abstract_lang",
-          columnNames = {"publication_id", "language_code"})
+          name = "uk_abstract_lang_source",
+          columnNames = {"publication_id", "language_code", "source_type"})
     },
     indexes = {
       @Index(name = "idx_publication", columnList = "publication_id"),
@@ -57,6 +59,10 @@ public class PublicationAlternativeAbstractEntity extends ValueObjectJpaEntity {
   /// 语言代码（ISO 639-1，如 "zh-CN"、"ja"）
   @Column(name = "language_code", nullable = false, length = 10)
   private String languageCode;
+
+  /// 摘要来源类型（如 `publisher`、`plain-language-summary`）
+  @Column(name = "source_type", nullable = false, length = 64)
+  private String sourceType;
 
   /// 语言名称（如 "Chinese"、"Japanese"）
   @Column(name = "language_name", length = 50)

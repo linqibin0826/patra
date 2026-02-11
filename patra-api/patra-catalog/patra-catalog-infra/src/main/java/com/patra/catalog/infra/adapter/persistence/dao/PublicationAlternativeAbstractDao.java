@@ -34,13 +34,22 @@ public interface PublicationAlternativeAbstractDao
   /// @return 翻译摘要实体列表
   List<PublicationAlternativeAbstractEntity> findByPublicationIdIn(Collection<Long> publicationIds);
 
-  /// 根据文献 ID 和语言代码查找翻译摘要。
+  /// 根据文献 ID 和语言代码查找翻译摘要列表。
   ///
   /// @param publicationId 文献 ID
   /// @param languageCode 语言代码
-  /// @return 翻译摘要实体
-  Optional<PublicationAlternativeAbstractEntity> findByPublicationIdAndLanguageCode(
+  /// @return 翻译摘要实体列表
+  List<PublicationAlternativeAbstractEntity> findByPublicationIdAndLanguageCode(
       Long publicationId, String languageCode);
+
+  /// 根据文献 ID、语言代码和来源类型查找翻译摘要。
+  ///
+  /// @param publicationId 文献 ID
+  /// @param languageCode 语言代码
+  /// @param sourceType 来源类型
+  /// @return 翻译摘要实体
+  Optional<PublicationAlternativeAbstractEntity> findByPublicationIdAndLanguageCodeAndSourceType(
+      Long publicationId, String languageCode, String sourceType);
 
   /// 根据语言代码查找所有翻译摘要。
   ///

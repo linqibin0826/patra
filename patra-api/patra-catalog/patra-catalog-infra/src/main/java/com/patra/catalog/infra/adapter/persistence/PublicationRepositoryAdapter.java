@@ -619,22 +619,8 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
 
   /// 写入翻译摘要关联数据。
   private void writeAlternativeAbstractAssociations(List<PublicationCompleteData> data) {
-    List<PublicationAlternativeAbstractEntity> entities = new ArrayList<>();
-
-    for (PublicationCompleteData item : data) {
-      if (!item.hasAlternativeAbstracts()) {
-        continue;
-      }
-
-      Long publicationId = item.getPublicationId();
-
-      for (PublicationAlternativeAbstract altAbstract : item.alternativeAbstracts()) {
-        PublicationAlternativeAbstractEntity entity =
-            jpaConverter.toAlternativeAbstractEntity(altAbstract, publicationId);
-        entity.setId(SnowflakeIdGenerator.getId());
-        entities.add(entity);
-      }
-    }
+    List<PublicationAlternativeAbstractEntity> entities =
+        collectAlternativeAbstractEntitiesFromCompleteData(data);
 
     if (!entities.isEmpty()) {
       batchSaveWithFlush(entities, alternativeAbstractDao);
@@ -1162,17 +1148,8 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     entityManager.flush();
 
     // 收集新数据
-    List<PublicationAlternativeAbstractEntity> entities = new ArrayList<>();
-    for (Map.Entry<Long, List<PublicationAlternativeAbstract>> entry :
-        abstractsByPublicationId.entrySet()) {
-      Long publicationId = entry.getKey();
-      for (PublicationAlternativeAbstract altAbstract : entry.getValue()) {
-        PublicationAlternativeAbstractEntity entity =
-            jpaConverter.toAlternativeAbstractEntity(altAbstract, publicationId);
-        entity.setId(SnowflakeIdGenerator.getId());
-        entities.add(entity);
-      }
-    }
+    List<PublicationAlternativeAbstractEntity> entities =
+        collectAlternativeAbstractEntitiesFromMap(abstractsByPublicationId);
 
     // 批量插入（带 flush）
     if (!entities.isEmpty()) {
@@ -1246,6 +1223,89 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
       return null;
     }
     return trimmed.toLowerCase(Locale.ROOT);
+  }
+
+  /// 从完整文献数据中收集翻译摘要实体并按（publicationId, languageCode, sourceType）去重。
+  private List<PublicationAlternativeAbstractEntity>
+      collectAlternativeAbstractEntitiesFromCompleteData(List<PublicationCompleteData> data) {
+    LinkedHashMap<String, PublicationAlternativeAbstractEntity> deduplicated =
+        new LinkedHashMap<>();
+
+    for (PublicationCompleteData item : data) {
+      if (!item.hasAlternativeAbstracts()) {
+        continue;
+      }
+
+      Long publicationId = item.getPublicationId();
+      for (PublicationAlternativeAbstract altAbstract : item.alternativeAbstracts()) {
+        PublicationAlternativeAbstractEntity entity =
+            jpaConverter.toAlternativeAbstractEntity(altAbstract, publicationId);
+        if (entity == null) {
+          continue;
+        }
+        entity.setId(SnowflakeIdGenerator.getId());
+        putAlternativeAbstractIfAbsent(deduplicated, entity);
+      }
+    }
+
+    return new ArrayList<>(deduplicated.values());
+  }
+
+  /// 从 publicationId -> 翻译摘要列表中收集实体并按（publicationId, languageCode, sourceType）去重。
+  private List<PublicationAlternativeAbstractEntity> collectAlternativeAbstractEntitiesFromMap(
+      Map<Long, List<PublicationAlternativeAbstract>> abstractsByPublicationId) {
+    LinkedHashMap<String, PublicationAlternativeAbstractEntity> deduplicated =
+        new LinkedHashMap<>();
+
+    for (Map.Entry<Long, List<PublicationAlternativeAbstract>> entry :
+        abstractsByPublicationId.entrySet()) {
+      Long publicationId = entry.getKey();
+      for (PublicationAlternativeAbstract altAbstract : entry.getValue()) {
+        PublicationAlternativeAbstractEntity entity =
+            jpaConverter.toAlternativeAbstractEntity(altAbstract, publicationId);
+        if (entity == null) {
+          continue;
+        }
+        entity.setId(SnowflakeIdGenerator.getId());
+        putAlternativeAbstractIfAbsent(deduplicated, entity);
+      }
+    }
+
+    return new ArrayList<>(deduplicated.values());
+  }
+
+  /// 按复合键放入翻译摘要，遇到重复键时保留首条并记录告警。
+  private void putAlternativeAbstractIfAbsent(
+      LinkedHashMap<String, PublicationAlternativeAbstractEntity> deduplicated,
+      PublicationAlternativeAbstractEntity entity) {
+    String key =
+        buildAlternativeAbstractDedupKey(
+            entity.getPublicationId(), entity.getLanguageCode(), entity.getSourceType());
+    if (deduplicated.putIfAbsent(key, entity) != null) {
+      log.warn(
+          "跳过重复翻译摘要：publicationId={}, languageCode={}, sourceType={}, reason=IN_MEMORY_DUPLICATE",
+          entity.getPublicationId(),
+          entity.getLanguageCode(),
+          entity.getSourceType());
+    }
+  }
+
+  /// 构建翻译摘要去重键（publicationId + languageCode + sourceType）。
+  private String buildAlternativeAbstractDedupKey(
+      Long publicationId, String languageCode, String sourceType) {
+    return publicationId
+        + "|"
+        + normalizeAlternativeAbstractKeyPart(languageCode)
+        + "|"
+        + normalizeAlternativeAbstractKeyPart(sourceType);
+  }
+
+  /// 规范化翻译摘要去重键组件。
+  private String normalizeAlternativeAbstractKeyPart(String value) {
+    if (value == null) {
+      return "";
+    }
+    return value.trim().toLowerCase(Locale.ROOT);
   }
 
   // ========== 批量操作辅助方法 ==========
