@@ -439,6 +439,7 @@ public abstract class PublicationJpaMapper {
     PublicationAlternativeAbstractEntity entity = new PublicationAlternativeAbstractEntity();
     entity.setPublicationId(publicationId);
     entity.setLanguageCode(altAbstract.languageCode());
+    entity.setSourceType(altAbstract.sourceType());
     entity.setLanguageName(altAbstract.languageName());
     entity.setPlainText(altAbstract.plainText());
     entity.setStructuredSections(mapToJson(altAbstract.structuredSections()));
@@ -464,6 +465,7 @@ public abstract class PublicationJpaMapper {
     }
     return PublicationAlternativeAbstract.builder()
         .languageCode(entity.getLanguageCode())
+        .sourceType(entity.getSourceType())
         .languageName(entity.getLanguageName())
         .plainText(entity.getPlainText())
         .structuredSections(jsonToMap(entity.getStructuredSections()))

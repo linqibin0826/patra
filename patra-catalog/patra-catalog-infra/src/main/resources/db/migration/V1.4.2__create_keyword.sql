@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS `cat_keyword` (
     `term` VARCHAR(500) NOT NULL COMMENT '关键词原始形式',
     `source` VARCHAR(50) NULL DEFAULT NULL COMMENT '来源(枚举:author/editor/indexer/pubmed)',
     `language` VARCHAR(10) NULL DEFAULT NULL COMMENT '语言代码(ISO 639-1,如 en/zh)',
-    `normalized_term` VARCHAR(255) NULL DEFAULT NULL COMMENT '规范化词形(小写+去标点+去空格,用于去重)',
+    `normalized_term` VARCHAR(500) NULL DEFAULT NULL COMMENT '规范化词形(小写+去标点+去空格,用于去重)',
     `frequency` INT UNSIGNED NULL DEFAULT 0 COMMENT '出现频次(被多少篇文献使用)',
 
     -- ========================================

@@ -5,6 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import java.util.Locale;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -54,10 +55,14 @@ import lombok.experimental.SuperBuilder;
     })
 public class KeywordEntity extends BaseJpaEntity {
 
+  private static final int TERM_MAX_LENGTH = 500;
+
+  private static final int NORMALIZED_TERM_MAX_LENGTH = 500;
+
   // ========== 关键词信息 ==========
 
   /// 关键词原始形式。
-  @Column(name = "term", nullable = false, length = 500)
+  @Column(name = "term", nullable = false, length = TERM_MAX_LENGTH)
   private String term;
 
   /// 关键词来源。
@@ -75,7 +80,7 @@ public class KeywordEntity extends BaseJpaEntity {
   /// 规范化词形。
   ///
   /// 小写 + 去标点 + 去空格，用于去重。
-  @Column(name = "normalized_term", length = 255)
+  @Column(name = "normalized_term", length = NORMALIZED_TERM_MAX_LENGTH)
   private String normalizedTerm;
 
   /// 出现频次。
@@ -120,6 +125,11 @@ public class KeywordEntity extends BaseJpaEntity {
     if (term == null) {
       return null;
     }
-    return term.toLowerCase().replaceAll("[^\\p{L}\\p{N}]", "");
+    String normalized = term.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]", "");
+    if (normalized.codePointCount(0, normalized.length()) <= NORMALIZED_TERM_MAX_LENGTH) {
+      return normalized;
+    }
+    int endIndex = normalized.offsetByCodePoints(0, NORMALIZED_TERM_MAX_LENGTH);
+    return normalized.substring(0, endIndex);
   }
 }

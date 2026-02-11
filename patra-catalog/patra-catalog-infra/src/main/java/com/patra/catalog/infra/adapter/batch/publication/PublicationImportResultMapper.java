@@ -196,6 +196,7 @@ public class PublicationImportResultMapper {
 
     return PublicationAlternativeAbstract.builder()
         .languageCode(data.languageCode())
+        .sourceType(data.abstractType())
         .translationType(translationType)
         .plainText(data.plainText())
         .isOfficial(isOfficial)

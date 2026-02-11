@@ -30,6 +30,7 @@ import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult
 import com.patra.catalog.infra.adapter.batch.publication.PublicationImportResult.SupplMeshData;
 import com.patra.common.enums.ProvenanceCode;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -356,6 +357,7 @@ class PublicationImportResultMapperTest {
       assertThat(data.alternativeAbstracts().getFirst().translationType())
           .isEqualTo(TranslationType.OFFICIAL);
       assertThat(data.alternativeAbstracts().getFirst().isOfficial()).isTrue();
+      assertThat(data.alternativeAbstracts().getFirst().sourceType()).isEqualTo("publisher");
     }
 
     @ParameterizedTest(name = "[{index}] abstractType=\"{0}\" 应该映射为 PROFESSIONAL")
@@ -388,6 +390,8 @@ class PublicationImportResultMapperTest {
       // then
       assertThat(data.alternativeAbstracts().getFirst().translationType())
           .isEqualTo(TranslationType.PROFESSIONAL);
+      assertThat(data.alternativeAbstracts().getFirst().sourceType())
+          .isEqualTo(abstractType.trim().toLowerCase(Locale.ROOT));
     }
 
     @ParameterizedTest(name = "[{index}] abstractType=\"{0}\" 应该映射为 OFFICIAL (默认)")
@@ -411,6 +415,11 @@ class PublicationImportResultMapperTest {
       // then
       assertThat(data.alternativeAbstracts().getFirst().translationType())
           .isEqualTo(TranslationType.OFFICIAL);
+      String expectedSourceType =
+          (abstractType == null || abstractType.trim().isEmpty())
+              ? "unknown"
+              : abstractType.trim().toLowerCase(Locale.ROOT);
+      assertThat(data.alternativeAbstracts().getFirst().sourceType()).isEqualTo(expectedSourceType);
     }
   }
 
