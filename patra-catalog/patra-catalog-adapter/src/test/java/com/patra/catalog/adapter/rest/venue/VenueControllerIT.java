@@ -6,9 +6,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.patra.catalog.adapter.config.TestConfiguration;
-import com.patra.catalog.adapter.rest.venue.mapper.VenueApiConverter;
-import com.patra.catalog.adapter.rest.venue.request.VenueListRequest;
-import com.patra.catalog.adapter.rest.venue.response.VenueItemResponse;
 import com.patra.catalog.app.usecase.venue.query.VenueQueryService;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
@@ -34,6 +31,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 ///
 /// - 路径与查询参数绑定正确
 /// - 控制器委托链路正确（Controller -> Converter -> QueryService）
+/// - MapStruct 转换器字段映射正确（使用真实 VenueApiConverter）
 /// - 响应结构与字段序列化正确
 @WebMvcTest(controllers = VenueController.class)
 @ContextConfiguration(classes = TestConfiguration.class)
@@ -46,14 +44,11 @@ class VenueControllerIT {
 
   @MockitoBean private VenueQueryService venueQueryService;
 
-  @MockitoBean private VenueApiConverter venueApiConverter;
-
   /// 指定查询参数时应返回分页结果。
   @Test
   @DisplayName("GET /venues 指定参数应返回 200 和分页数据")
   void shouldReturnPagedVenuesWhenQueryProvided() {
     // Given
-    VenueListQuery query = new VenueListQuery(2, 10, "Nature");
     VenueSummaryReadModel readModel =
         new VenueSummaryReadModel(
             1001L,
@@ -64,19 +59,8 @@ class VenueControllerIT {
             "US",
             Instant.parse("2026-02-12T10:00:00Z"));
     PageResult<VenueSummaryReadModel> serviceResult = PageResult.of(List.of(readModel), 2, 10, 31);
-    VenueItemResponse itemResponse =
-        new VenueItemResponse(
-            1001L,
-            "Nature",
-            "0028-0836",
-            "0410462",
-            "OPENALEX",
-            "US",
-            Instant.parse("2026-02-12T10:00:00Z"));
 
-    when(venueApiConverter.toQuery(any(VenueListRequest.class))).thenReturn(query);
-    when(venueQueryService.listVenues(query)).thenReturn(serviceResult);
-    when(venueApiConverter.toItemResponse(readModel)).thenReturn(itemResponse);
+    when(venueQueryService.listVenues(any(VenueListQuery.class))).thenReturn(serviceResult);
 
     // When & Then
     restClient
@@ -98,11 +82,26 @@ class VenueControllerIT {
         .isEqualTo(4)
         .jsonPath("$.items.length()")
         .isEqualTo(1)
+        .jsonPath("$.items[0].id")
+        .isEqualTo(1001)
         .jsonPath("$.items[0].displayName")
-        .isEqualTo("Nature");
+        .isEqualTo("Nature")
+        .jsonPath("$.items[0].issnL")
+        .isEqualTo("0028-0836")
+        .jsonPath("$.items[0].nlmId")
+        .isEqualTo("0410462")
+        .jsonPath("$.items[0].provenanceCode")
+        .isEqualTo("OPENALEX")
+        .jsonPath("$.items[0].countryCode")
+        .isEqualTo("US");
 
-    verify(venueQueryService).listVenues(query);
-    verify(venueApiConverter).toItemResponse(readModel);
+    // 验证 QueryService 接收到正确的查询参数（由真实 Converter 转换）
+    ArgumentCaptor<VenueListQuery> queryCaptor = ArgumentCaptor.forClass(VenueListQuery.class);
+    verify(venueQueryService).listVenues(queryCaptor.capture());
+    VenueListQuery capturedQuery = queryCaptor.getValue();
+    assertThat(capturedQuery.page()).isEqualTo(2);
+    assertThat(capturedQuery.pageSize()).isEqualTo(10);
+    assertThat(capturedQuery.q()).isEqualTo("Nature");
   }
 
   /// 未指定查询参数时应使用默认分页参数。
@@ -110,11 +109,9 @@ class VenueControllerIT {
   @DisplayName("GET /venues 无参数时 null 应透传到服务层归一化")
   void shouldUseDefaultParamsWhenQueryNotProvided() {
     // Given
-    VenueListQuery query = new VenueListQuery(null, null, null);
     PageResult<VenueSummaryReadModel> serviceResult = PageResult.empty(1, 20);
 
-    when(venueApiConverter.toQuery(any(VenueListRequest.class))).thenReturn(query);
-    when(venueQueryService.listVenues(query)).thenReturn(serviceResult);
+    when(venueQueryService.listVenues(any(VenueListQuery.class))).thenReturn(serviceResult);
 
     // When
     restClient
@@ -131,11 +128,13 @@ class VenueControllerIT {
         .jsonPath("$.items.length()")
         .isEqualTo(0);
 
-    // Then
-    ArgumentCaptor<VenueListRequest> requestCaptor =
-        ArgumentCaptor.forClass(VenueListRequest.class);
-    verify(venueApiConverter).toQuery(requestCaptor.capture());
-    assertThat(requestCaptor.getValue()).isEqualTo(new VenueListRequest(null, null, null));
+    // Then — 验证 Converter 正确地将空请求转换为全 null 查询
+    ArgumentCaptor<VenueListQuery> queryCaptor = ArgumentCaptor.forClass(VenueListQuery.class);
+    verify(venueQueryService).listVenues(queryCaptor.capture());
+    VenueListQuery capturedQuery = queryCaptor.getValue();
+    assertThat(capturedQuery.page()).isNull();
+    assertThat(capturedQuery.pageSize()).isNull();
+    assertThat(capturedQuery.q()).isNull();
   }
 
   /// 非法分页参数不应在控制器层被拦截，需继续传递到 QueryService 做归一化。
@@ -143,11 +142,9 @@ class VenueControllerIT {
   @DisplayName("GET /venues 非法分页参数应继续委托到服务层")
   void shouldDelegateWhenInvalidPagingParamsProvided() {
     // Given
-    VenueListQuery query = new VenueListQuery(0, 1000, "Nature");
     PageResult<VenueSummaryReadModel> serviceResult = PageResult.empty(1, 100);
 
-    when(venueApiConverter.toQuery(any(VenueListRequest.class))).thenReturn(query);
-    when(venueQueryService.listVenues(query)).thenReturn(serviceResult);
+    when(venueQueryService.listVenues(any(VenueListQuery.class))).thenReturn(serviceResult);
 
     // When
     restClient
@@ -160,11 +157,12 @@ class VenueControllerIT {
         .jsonPath("$.pageSize")
         .isEqualTo(100);
 
-    // Then
-    ArgumentCaptor<VenueListRequest> requestCaptor =
-        ArgumentCaptor.forClass(VenueListRequest.class);
-    verify(venueApiConverter).toQuery(requestCaptor.capture());
-    assertThat(requestCaptor.getValue()).isEqualTo(new VenueListRequest(0, 1000, "Nature"));
-    verify(venueQueryService).listVenues(query);
+    // Then — 验证 Converter 忠实地传递了原始非法参数
+    ArgumentCaptor<VenueListQuery> queryCaptor = ArgumentCaptor.forClass(VenueListQuery.class);
+    verify(venueQueryService).listVenues(queryCaptor.capture());
+    VenueListQuery capturedQuery = queryCaptor.getValue();
+    assertThat(capturedQuery.page()).isEqualTo(0);
+    assertThat(capturedQuery.pageSize()).isEqualTo(1000);
+    assertThat(capturedQuery.q()).isEqualTo("Nature");
   }
 }
