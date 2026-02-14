@@ -31,8 +31,9 @@ rocketmq = "5.3.1"
 rocketmq-spring-boot = "2.3.1"
 fastjson2 = "2.0.58"
 
-# API Documentation
+# API Documentation (swagger-annotations 版本须与 springdoc 传递依赖保持一致)
 springdoc = "3.0.1"
+swagger-annotations = "2.2.41"
 therapi-javadoc = "0.15.0"
 
 # Resilience & Observability
@@ -96,6 +97,7 @@ spring-cloud-starter-gateway = { module = "org.springframework.cloud:spring-clou
 spring-cloud-starter-loadbalancer = { module = "org.springframework.cloud:spring-cloud-starter-loadbalancer" }
 
 # API Documentation
+swagger-annotations-jakarta = { module = "io.swagger.core.v3:swagger-annotations-jakarta", version.ref = "swagger-annotations" }
 springdoc-openapi-scalar = { module = "org.springdoc:springdoc-openapi-starter-webmvc-scalar", version.ref = "springdoc" }
 springdoc-openapi-webflux-scalar = { module = "org.springdoc:springdoc-openapi-starter-webflux-scalar", version.ref = "springdoc" }
 therapi-javadoc = { module = "com.github.therapi:therapi-runtime-javadoc", version.ref = "therapi-javadoc" }

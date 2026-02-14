@@ -25,8 +25,8 @@ dependencies {
     // Therapi Javadoc Scribe: 编译期提取 Javadoc 注释供 SpringDoc OpenAPI 运行时读取
     annotationProcessor(libs.findLibrary("therapi-javadoc-scribe").get())
 
-    // Spring Transaction
-    implementation("org.springframework:spring-tx")
+    // Swagger Annotations: Controller 层 OpenAPI 注解（@Tag、@Operation 等），零传递依赖
+    compileOnly(libs.findLibrary("swagger-annotations-jakarta").get())
 
     // 测试依赖
     testImplementation(project(":patra-spring-boot-starter-test"))
