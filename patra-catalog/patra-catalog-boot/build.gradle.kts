@@ -32,6 +32,9 @@ dependencies {
     // 对象存储
     implementation(project(":patra-spring-boot-starter-object-storage"))
 
+    // API 文档
+    implementation(project(":patra-spring-boot-starter-openapi"))
+
     // 测试依赖
     testImplementation(project(":patra-spring-boot-starter-test"))
     testImplementation(libs.testcontainers.elasticsearch)

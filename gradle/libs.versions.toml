@@ -31,6 +31,10 @@ rocketmq = "5.3.1"
 rocketmq-spring-boot = "2.3.1"
 fastjson2 = "2.0.58"
 
+# API Documentation
+springdoc = "3.0.1"
+therapi-javadoc = "0.15.0"
+
 # Resilience & Observability
 resilience4j = "2.2.0"
 opentelemetry-logback = "2.22.0-alpha"
@@ -90,6 +94,11 @@ spring-boot-starter-batch = { module = "org.springframework.boot:spring-boot-sta
 spring-cloud-starter-consul-discovery = { module = "org.springframework.cloud:spring-cloud-starter-consul-discovery" }
 spring-cloud-starter-gateway = { module = "org.springframework.cloud:spring-cloud-starter-gateway-server-webflux" }
 spring-cloud-starter-loadbalancer = { module = "org.springframework.cloud:spring-cloud-starter-loadbalancer" }
+
+# API Documentation
+springdoc-openapi-scalar = { module = "org.springdoc:springdoc-openapi-starter-webmvc-scalar", version.ref = "springdoc" }
+therapi-javadoc = { module = "com.github.therapi:therapi-runtime-javadoc", version.ref = "therapi-javadoc" }
+therapi-javadoc-scribe = { module = "com.github.therapi:therapi-runtime-javadoc-scribe", version.ref = "therapi-javadoc" }
 
 # Spring Framework
 spring-web = { module = "org.springframework:spring-web" }
