@@ -22,6 +22,9 @@ dependencies {
     // MapStruct
     implementation(libs.findLibrary("mapstruct").get())
 
+    // Therapi Javadoc Scribe: 编译期提取 Javadoc 注释供 SpringDoc OpenAPI 运行时读取
+    annotationProcessor(libs.findLibrary("therapi-javadoc-scribe").get())
+
     // Spring Transaction
     implementation("org.springframework:spring-tx")
 

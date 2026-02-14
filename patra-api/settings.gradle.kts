@@ -57,6 +57,7 @@ include(":patra-spring-boot-starter-redisson")
 include(":patra-spring-boot-starter-object-storage")
 include(":patra-spring-boot-starter-expr")
 include(":patra-spring-boot-starter-test")
+include(":patra-spring-boot-starter-openapi")
 
 // ==================== Microservices ====================
 include(":patra-registry:patra-registry-domain")
