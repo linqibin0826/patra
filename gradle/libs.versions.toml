@@ -97,6 +97,7 @@ spring-cloud-starter-loadbalancer = { module = "org.springframework.cloud:spring
 
 # API Documentation
 springdoc-openapi-scalar = { module = "org.springdoc:springdoc-openapi-starter-webmvc-scalar", version.ref = "springdoc" }
+springdoc-openapi-webflux-scalar = { module = "org.springdoc:springdoc-openapi-starter-webflux-scalar", version.ref = "springdoc" }
 therapi-javadoc = { module = "com.github.therapi:therapi-runtime-javadoc", version.ref = "therapi-javadoc" }
 therapi-javadoc-scribe = { module = "com.github.therapi:therapi-runtime-javadoc-scribe", version.ref = "therapi-javadoc" }
 
