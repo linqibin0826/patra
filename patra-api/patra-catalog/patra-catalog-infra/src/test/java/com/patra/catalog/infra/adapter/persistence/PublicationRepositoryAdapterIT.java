@@ -27,24 +27,24 @@ import com.patra.catalog.domain.model.vo.publication.PublicationSupplMesh;
 import com.patra.catalog.domain.model.vo.publication.PublicationTypeInfo;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueInstanceId;
-import com.patra.catalog.infra.adapter.persistence.dao.InvestigatorDao;
-import com.patra.catalog.infra.adapter.persistence.dao.KeywordDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationAbstractDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationAlternativeAbstractDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationDateDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationFundingDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationIdentifierDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationInvestigatorDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationKeywordDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshHeadingDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationMeshQualifierDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationMetadataDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationOaLocationDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationPersonalNameSubjectDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationSupplMeshDao;
-import com.patra.catalog.infra.adapter.persistence.dao.PublicationTypeDao;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import com.patra.catalog.infra.persistence.dao.InvestigatorDao;
+import com.patra.catalog.infra.persistence.dao.KeywordDao;
+import com.patra.catalog.infra.persistence.dao.PublicationAbstractDao;
+import com.patra.catalog.infra.persistence.dao.PublicationAlternativeAbstractDao;
+import com.patra.catalog.infra.persistence.dao.PublicationDao;
+import com.patra.catalog.infra.persistence.dao.PublicationDateDao;
+import com.patra.catalog.infra.persistence.dao.PublicationFundingDao;
+import com.patra.catalog.infra.persistence.dao.PublicationIdentifierDao;
+import com.patra.catalog.infra.persistence.dao.PublicationInvestigatorDao;
+import com.patra.catalog.infra.persistence.dao.PublicationKeywordDao;
+import com.patra.catalog.infra.persistence.dao.PublicationMeshHeadingDao;
+import com.patra.catalog.infra.persistence.dao.PublicationMeshQualifierDao;
+import com.patra.catalog.infra.persistence.dao.PublicationMetadataDao;
+import com.patra.catalog.infra.persistence.dao.PublicationOaLocationDao;
+import com.patra.catalog.infra.persistence.dao.PublicationPersonalNameSubjectDao;
+import com.patra.catalog.infra.persistence.dao.PublicationSupplMeshDao;
+import com.patra.catalog.infra.persistence.dao.PublicationTypeDao;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.util.List;
@@ -88,7 +88,7 @@ import org.springframework.test.context.ContextConfiguration;
   JpaAuditingConfig.class,
   JacksonAutoConfiguration.class
 })
-@ComponentScan(basePackages = "com.patra.catalog.infra.adapter.persistence.converter")
+@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("PublicationRepositoryAdapter 集成测试（JPA）")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)

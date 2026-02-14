@@ -10,13 +10,13 @@ import com.patra.catalog.domain.model.entity.MeshTreeNumber;
 import com.patra.catalog.domain.model.enums.DescriptorClass;
 import com.patra.catalog.domain.model.enums.LexicalTag;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
-import com.patra.catalog.infra.adapter.persistence.dao.MeshConceptDao;
-import com.patra.catalog.infra.adapter.persistence.dao.MeshConceptRelationDao;
-import com.patra.catalog.infra.adapter.persistence.dao.MeshDescriptorDao;
-import com.patra.catalog.infra.adapter.persistence.dao.MeshEntryCombinationDao;
-import com.patra.catalog.infra.adapter.persistence.dao.MeshEntryTermDao;
-import com.patra.catalog.infra.adapter.persistence.dao.MeshTreeNumberDao;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import com.patra.catalog.infra.persistence.dao.MeshConceptDao;
+import com.patra.catalog.infra.persistence.dao.MeshConceptRelationDao;
+import com.patra.catalog.infra.persistence.dao.MeshDescriptorDao;
+import com.patra.catalog.infra.persistence.dao.MeshEntryCombinationDao;
+import com.patra.catalog.infra.persistence.dao.MeshEntryTermDao;
+import com.patra.catalog.infra.persistence.dao.MeshTreeNumberDao;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.util.List;
 import java.util.Map;
@@ -56,7 +56,7 @@ import org.springframework.test.context.ContextConfiguration;
   JpaAuditingConfig.class,
   JacksonAutoConfiguration.class
 })
-@ComponentScan(basePackages = "com.patra.catalog.infra.adapter.persistence.converter")
+@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("MeshDescriptorRepositoryAdapter 集成测试（JPA）")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)

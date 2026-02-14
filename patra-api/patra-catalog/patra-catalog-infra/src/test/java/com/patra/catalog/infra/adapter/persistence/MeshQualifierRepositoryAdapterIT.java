@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
-import com.patra.catalog.infra.adapter.persistence.dao.MeshQualifierDao;
-import com.patra.catalog.infra.adapter.persistence.entity.MeshQualifierEntity;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import com.patra.catalog.infra.persistence.dao.MeshQualifierDao;
+import com.patra.catalog.infra.persistence.entity.MeshQualifierEntity;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -53,7 +53,7 @@ import org.springframework.test.context.ContextConfiguration;
   JpaAuditingConfig.class,
   JacksonAutoConfiguration.class
 })
-@ComponentScan(basePackages = "com.patra.catalog.infra.adapter.persistence.converter")
+@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("MeshQualifierRepositoryAdapter 集成测试（JPA）")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)

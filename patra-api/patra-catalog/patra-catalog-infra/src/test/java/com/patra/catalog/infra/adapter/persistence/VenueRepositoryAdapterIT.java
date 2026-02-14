@@ -14,9 +14,9 @@ import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import com.patra.catalog.domain.model.vo.venue.Society;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
-import com.patra.catalog.infra.adapter.persistence.dao.VenueDao;
-import com.patra.catalog.infra.adapter.persistence.dao.VenueIdentifierDao;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import com.patra.catalog.infra.persistence.dao.VenueDao;
+import com.patra.catalog.infra.persistence.dao.VenueIdentifierDao;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.math.BigDecimal;
@@ -55,7 +55,7 @@ import org.springframework.test.context.ContextConfiguration;
 @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({VenueRepositoryAdapter.class, JpaAuditingConfig.class, JacksonAutoConfiguration.class})
-@ComponentScan(basePackages = "com.patra.catalog.infra.adapter.persistence.converter")
+@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("VenueRepositoryAdapter 集成测试（JPA）")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)

@@ -1,8 +1,8 @@
 package com.patra.catalog.infra.adapter.lookup;
 
 import com.patra.catalog.domain.port.lookup.FunderLookupPort;
-import com.patra.catalog.infra.adapter.persistence.dao.OrganizationDao;
-import com.patra.catalog.infra.adapter.persistence.dao.OrganizationExternalIdDao;
+import com.patra.catalog.infra.persistence.dao.OrganizationDao;
+import com.patra.catalog.infra.persistence.dao.OrganizationExternalIdDao;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.configuration.annotation.StepScope;

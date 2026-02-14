@@ -3,9 +3,9 @@ package com.patra.catalog.infra.adapter.read;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
-import com.patra.catalog.infra.adapter.persistence.dao.VenueDao;
-import com.patra.catalog.infra.adapter.persistence.entity.VenueEntity;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import com.patra.catalog.infra.persistence.dao.VenueDao;
+import com.patra.catalog.infra.persistence.entity.VenueEntity;
 import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
@@ -34,7 +34,7 @@ import org.springframework.test.context.ContextConfiguration;
 @DataJpaTest
 @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({VenueReadAdapter.class, JpaAuditingConfig.class})
+@Import({VenueReadAdapter.class, VenueReadModelMapperImpl.class, JpaAuditingConfig.class})
 @ActiveProfiles("test")
 @DisplayName("VenueReadAdapter 集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)

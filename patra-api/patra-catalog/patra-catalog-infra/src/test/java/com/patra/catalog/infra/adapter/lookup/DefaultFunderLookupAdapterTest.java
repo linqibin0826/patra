@@ -6,10 +6,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.catalog.infra.adapter.persistence.dao.OrganizationDao;
-import com.patra.catalog.infra.adapter.persistence.dao.OrganizationExternalIdDao;
-import com.patra.catalog.infra.adapter.persistence.entity.OrganizationEntity;
-import com.patra.catalog.infra.adapter.persistence.entity.OrganizationExternalIdEntity;
+import com.patra.catalog.infra.persistence.dao.OrganizationDao;
+import com.patra.catalog.infra.persistence.dao.OrganizationExternalIdDao;
+import com.patra.catalog.infra.persistence.entity.OrganizationEntity;
+import com.patra.catalog.infra.persistence.entity.OrganizationExternalIdEntity;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;

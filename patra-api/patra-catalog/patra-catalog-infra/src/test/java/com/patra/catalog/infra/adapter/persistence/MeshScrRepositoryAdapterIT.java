@@ -11,13 +11,13 @@ import com.patra.catalog.domain.model.vo.mesh.IndexingInfo;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
 import com.patra.catalog.domain.model.vo.mesh.ScrSource;
-import com.patra.catalog.infra.adapter.persistence.dao.MeshConceptDao;
-import com.patra.catalog.infra.adapter.persistence.dao.MeshScrDao;
-import com.patra.catalog.infra.adapter.persistence.dao.MeshScrHeadingMappedToDao;
-import com.patra.catalog.infra.adapter.persistence.dao.MeshScrIndexingInfoDao;
-import com.patra.catalog.infra.adapter.persistence.dao.MeshScrPharmacologicalActionDao;
-import com.patra.catalog.infra.adapter.persistence.dao.MeshScrSourceDao;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import com.patra.catalog.infra.persistence.dao.MeshConceptDao;
+import com.patra.catalog.infra.persistence.dao.MeshScrDao;
+import com.patra.catalog.infra.persistence.dao.MeshScrHeadingMappedToDao;
+import com.patra.catalog.infra.persistence.dao.MeshScrIndexingInfoDao;
+import com.patra.catalog.infra.persistence.dao.MeshScrPharmacologicalActionDao;
+import com.patra.catalog.infra.persistence.dao.MeshScrSourceDao;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +53,7 @@ import org.springframework.test.context.ContextConfiguration;
 @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({MeshScrRepositoryAdapter.class, JpaAuditingConfig.class, JacksonAutoConfiguration.class})
-@ComponentScan(basePackages = "com.patra.catalog.infra.adapter.persistence.converter")
+@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("MeshScrRepositoryAdapter 集成测试（JPA）")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)

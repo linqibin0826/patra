@@ -2,9 +2,9 @@ package com.patra.catalog.infra.adapter.persistence;
 
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.port.repository.MeshQualifierRepository;
-import com.patra.catalog.infra.adapter.persistence.converter.mapper.MeshQualifierJpaMapper;
-import com.patra.catalog.infra.adapter.persistence.dao.MeshQualifierDao;
-import com.patra.catalog.infra.adapter.persistence.entity.MeshQualifierEntity;
+import com.patra.catalog.infra.persistence.converter.mapper.MeshQualifierJpaMapper;
+import com.patra.catalog.infra.persistence.dao.MeshQualifierDao;
+import com.patra.catalog.infra.persistence.entity.MeshQualifierEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.util.Collection;
 import java.util.List;
