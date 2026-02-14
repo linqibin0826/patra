@@ -227,23 +227,33 @@ patra-catalog/
 │               └── VenueQueryService.java
 │
 └── patra-catalog-infra/
-    └── src/main/java/.../infra/adapter/
-        ├── persistence/                    # 仓储实现
-        │   ├── PublicationRepositoryAdapter.java
-        │   └── VenueRepositoryAdapter.java
-        ├── lookup/                         # 查找端口实现（含缓存装饰器）
-        │   ├── DefaultVenueLookupAdapter.java
-        │   ├── CachingVenueLookupDecorator.java
-        │   ├── BatchVenueLookupAdapter.java
-        │   ├── DefaultFunderLookupAdapter.java
-        │   ├── CachingFunderLookupDecorator.java
-        │   └── BatchFunderLookupAdapter.java
-        ├── read/                           # CQRS 读适配器
-        │   └── VenueReadAdapter.java
-        ├── parser/
+    └── src/main/java/.../infra/
+        ├── adapter/                        # 端口适配器（仅端口实现）
+        │   ├── persistence/                # 仓储实现
+        │   │   ├── PublicationRepositoryAdapter.java
+        │   │   └── VenueRepositoryAdapter.java
+        │   ├── lookup/                     # 查找端口实现（含缓存装饰器）
+        │   │   ├── DefaultVenueLookupAdapter.java
+        │   │   ├── CachingVenueLookupDecorator.java
+        │   │   ├── BatchVenueLookupAdapter.java
+        │   │   ├── DefaultFunderLookupAdapter.java
+        │   │   ├── CachingFunderLookupDecorator.java
+        │   │   └── BatchFunderLookupAdapter.java
+        │   ├── read/                       # CQRS 读适配器
+        │   │   └── VenueReadAdapter.java
+        │   ├── integration/                # 外部服务集成
+        │   │   └── DictionaryResolverAdapter.java
+        │   └── source/                     # 数据源适配器
+        │       └── StreamingDownloadAdapter.java
+        ├── batch/                          # Spring Batch 子系统
+        │   └── publication/
+        │       └── PublicationBatchAdapter.java
+        ├── parser/                         # XML 解析子系统
         │   └── PubmedXmlParserAdapter.java
-        └── batch/
-            └── PublicationBatchAdapter.java
+        └── persistence/                    # JPA 内部实现（非端口）
+            ├── entity/
+            ├── dao/
+            └── converter/
 ```
 
 ## 选择指南

@@ -5,9 +5,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.catalog.infra.adapter.persistence.dao.OrganizationDao;
-import com.patra.catalog.infra.adapter.persistence.dao.OrganizationExternalIdDao;
-import com.patra.catalog.infra.adapter.persistence.entity.OrganizationExternalIdEntity;
+import com.patra.catalog.infra.persistence.dao.OrganizationDao;
+import com.patra.catalog.infra.persistence.dao.OrganizationExternalIdDao;
+import com.patra.catalog.infra.persistence.entity.OrganizationExternalIdEntity;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;

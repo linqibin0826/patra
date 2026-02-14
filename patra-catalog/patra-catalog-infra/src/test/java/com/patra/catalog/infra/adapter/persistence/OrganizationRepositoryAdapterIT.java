@@ -16,13 +16,13 @@ import com.patra.catalog.domain.model.vo.organization.OrganizationLink;
 import com.patra.catalog.domain.model.vo.organization.OrganizationName;
 import com.patra.catalog.domain.model.vo.organization.OrganizationRelation;
 import com.patra.catalog.domain.model.vo.organization.RorId;
-import com.patra.catalog.infra.adapter.persistence.dao.OrganizationDao;
-import com.patra.catalog.infra.adapter.persistence.dao.OrganizationExternalIdDao;
-import com.patra.catalog.infra.adapter.persistence.dao.OrganizationLocationDao;
-import com.patra.catalog.infra.adapter.persistence.dao.OrganizationNameDao;
-import com.patra.catalog.infra.adapter.persistence.dao.OrganizationRelationDao;
-import com.patra.catalog.infra.adapter.persistence.entity.OrganizationExternalIdEntity;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import com.patra.catalog.infra.persistence.dao.OrganizationDao;
+import com.patra.catalog.infra.persistence.dao.OrganizationExternalIdDao;
+import com.patra.catalog.infra.persistence.dao.OrganizationLocationDao;
+import com.patra.catalog.infra.persistence.dao.OrganizationNameDao;
+import com.patra.catalog.infra.persistence.dao.OrganizationRelationDao;
+import com.patra.catalog.infra.persistence.entity.OrganizationExternalIdEntity;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
@@ -57,7 +57,7 @@ import org.springframework.test.context.ContextConfiguration;
   JpaAuditingConfig.class,
   JacksonAutoConfiguration.class
 })
-@ComponentScan(basePackages = "com.patra.catalog.infra.adapter.persistence.converter")
+@ComponentScan(basePackages = "com.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("OrganizationRepositoryAdapter 集成测试（JPA）")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)

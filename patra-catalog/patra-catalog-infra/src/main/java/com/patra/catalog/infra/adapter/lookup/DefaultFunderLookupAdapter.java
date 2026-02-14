@@ -1,10 +1,10 @@
 package com.patra.catalog.infra.adapter.lookup;
 
 import com.patra.catalog.domain.port.lookup.FunderLookupPort;
-import com.patra.catalog.infra.adapter.persistence.dao.OrganizationDao;
-import com.patra.catalog.infra.adapter.persistence.dao.OrganizationExternalIdDao;
-import com.patra.catalog.infra.adapter.persistence.entity.OrganizationEntity;
-import com.patra.catalog.infra.adapter.persistence.entity.OrganizationExternalIdEntity;
+import com.patra.catalog.infra.persistence.dao.OrganizationDao;
+import com.patra.catalog.infra.persistence.dao.OrganizationExternalIdDao;
+import com.patra.catalog.infra.persistence.entity.OrganizationEntity;
+import com.patra.catalog.infra.persistence.entity.OrganizationExternalIdEntity;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
