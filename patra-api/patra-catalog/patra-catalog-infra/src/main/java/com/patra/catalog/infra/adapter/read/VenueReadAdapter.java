@@ -2,14 +2,12 @@ package com.patra.catalog.infra.adapter.read;
 
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.port.read.VenueReadPort;
-import com.patra.catalog.infra.adapter.persistence.dao.VenueDao;
-import com.patra.catalog.infra.adapter.persistence.entity.VenueEntity;
+import com.patra.catalog.infra.persistence.dao.VenueDao;
 import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
 import com.patra.starter.jpa.entity.BaseJpaEntity;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
@@ -22,6 +20,7 @@ import org.springframework.stereotype.Repository;
 public class VenueReadAdapter implements VenueReadPort {
 
   private final VenueDao venueDao;
+  private final VenueReadModelMapper venueReadModelMapper;
 
   /// 查询 Venue 分页列表。
   ///
@@ -33,25 +32,10 @@ public class VenueReadAdapter implements VenueReadPort {
     Pageable pageable =
         PageRequest.of(paging.page() - 1, paging.pageSize(), BaseJpaEntity.DEFAULT_SORT);
 
-    Page<VenueEntity> entityPage = venueDao.findJournalPage(keyword, pageable);
+    var entityPage = venueDao.findJournalPage(keyword, pageable);
     List<VenueSummaryReadModel> items =
-        entityPage.getContent().stream().map(this::toReadModel).toList();
+        entityPage.getContent().stream().map(venueReadModelMapper::toReadModel).toList();
 
     return PageResult.of(items, paging.page(), paging.pageSize(), entityPage.getTotalElements());
-  }
-
-  /// 将 VenueEntity 转换为 Venue 列表读模型。
-  ///
-  /// @param entity Venue 实体
-  /// @return Venue 列表项读模型
-  private VenueSummaryReadModel toReadModel(VenueEntity entity) {
-    return new VenueSummaryReadModel(
-        entity.getId(),
-        entity.getDisplayName(),
-        entity.getIssnL(),
-        entity.getNlmId(),
-        entity.getProvenanceCode(),
-        entity.getCountryCode(),
-        entity.getLastSyncedAt());
   }
 }
