@@ -36,6 +36,8 @@ patra-{service}/
 **Starter 模块**:
 - `patra-spring-boot-starter-core/web/jpa/batch/rest-client/object-storage/observability/redisson/provenance/test`
 - `patra-spring-boot-starter-http-interface`
+- `patra-spring-boot-starter-expr`
+- `patra-spring-boot-starter-openapi`
 
 **构建逻辑** (`build-logic/`):
 - Convention Plugins 定义六边形架构各层的构建约束

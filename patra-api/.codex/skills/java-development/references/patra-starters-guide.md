@@ -12,6 +12,7 @@
 | **infra（分布式锁）** | `patra-spring-boot-starter-redisson` |
 | **所有层（除 domain）** | `patra-spring-boot-starter-core` |
 | **可选增强** | `patra-spring-boot-starter-observability` |
+| **可选增强（API 文档）** | `patra-spring-boot-starter-openapi` |
 
 ---
 
@@ -339,6 +340,37 @@ public class CustomHandler implements ObservationHandler<Observation.Context> {
 
 ---
 
+## 9. patra-spring-boot-starter-openapi
+
+**模块坐标**: `com.patra:patra-spring-boot-starter-openapi`
+
+**适用场景**: `patra-{service}-boot` 模块（需要 API 文档）
+
+**核心功能**:
+- SpringDoc OpenAPI 3.0.1 + Scalar UI
+- Javadoc 运行时读取（Controller 的 `///` 注释自动映射为 API 文档描述）
+- 可配置的文档标题、版本、描述
+
+**配合 adapter 层**:
+- adapter convention plugin 已自动添加 `therapi-javadoc-scribe` 注解处理器
+- 编译期提取 Javadoc → 运行时 SpringDoc 读取 → Scalar UI 展示
+
+**配置属性**:
+```yaml
+patra:
+  openapi:
+    enabled: true              # 全局开关（默认启用）
+    title: Catalog Service API # 默认从 spring.application.name 推导
+    version: 0.1.0             # API 版本号
+    description: ...           # API 描述
+```
+
+**访问地址**（启动后）:
+- Scalar UI: `http://localhost:8080/scalar/index.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+
+---
+
 ## 依赖检查清单
 
 新建功能时，按以下顺序检查：
@@ -356,3 +388,4 @@ public class CustomHandler implements ObservationHandler<Observation.Context> {
 7. ✅ **Domain 层** → ❌ 不能添加任何 Spring Boot Starter
 8. ✅ **其他层** → 添加 `patra-spring-boot-starter-core`
 9. ✅ **可选** → 添加 `patra-spring-boot-starter-observability`
+10. ✅ **可选（API 文档）** → 添加 `patra-spring-boot-starter-openapi`（在 boot 模块）
