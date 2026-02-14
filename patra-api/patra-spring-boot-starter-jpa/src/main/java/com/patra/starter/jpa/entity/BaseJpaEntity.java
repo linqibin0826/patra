@@ -17,6 +17,7 @@ import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /// JPA 实体基类，提供审计和乐观锁功能。
@@ -58,6 +59,13 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 public abstract class BaseJpaEntity implements Serializable, IdAwareEntity {
 
   @Serial private static final long serialVersionUID = 1L;
+
+  /// 默认排序：按最后更新时间降序，再按 ID 降序。
+  ///
+  /// 适用于大多数分页列表场景，确保最近更新的记录排在前面，
+  /// 同一时间更新的记录按 ID 降序保证稳定排序。
+  public static final Sort DEFAULT_SORT =
+      Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.desc("id"));
 
   /// 实体的主键 ID。
   ///
