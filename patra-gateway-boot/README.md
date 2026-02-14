@@ -39,22 +39,32 @@ Spring Boot 应用启动类,使用 `@SpringBootApplication` 注解启动 Spring 
 spring:
   cloud:
     gateway:
-      routes:
-        # Ingest 服务路由
-        - id: patra-ingest
-          uri: lb://patra-ingest
-          predicates:
-            - Path=/patra-ingest/**
-          filters:
-            - StripPrefix=1
+      server:
+        webflux:
+          routes:
+            # Ingest 服务路由
+            - id: patra-ingest
+              uri: lb://patra-ingest
+              predicates:
+                - Path=/patra-ingest/**
+              filters:
+                - StripPrefix=1
 
-        # Registry 服务路由
-        - id: patra-registry
-          uri: lb://patra-registry
-          predicates:
-            - Path=/patra-registry/**
-          filters:
-            - StripPrefix=1
+            # Registry 服务路由
+            - id: patra-registry
+              uri: lb://patra-registry
+              predicates:
+                - Path=/patra-registry/**
+              filters:
+                - StripPrefix=1
+
+            # Catalog 服务路由
+            - id: patra-catalog
+              uri: lb://patra-catalog
+              predicates:
+                - Path=/patra-catalog/**
+              filters:
+                - StripPrefix=1
 ```
 
 **路由说明**:
@@ -97,6 +107,41 @@ GET http://gateway:9528/patra-registry/provenance/pubmed
 # 网关转发到
 GET http://patra-registry:8081/provenance/pubmed
 ```
+
+### Catalog 服务
+```bash
+# 客户端请求
+GET http://gateway:9528/patra-catalog/venues?page=0&size=20
+
+# 网关转发到
+GET http://patra-catalog:8083/venues?page=0&size=20
+```
+
+## API 文档聚合（Scalar UI）
+
+网关通过 Scalar UI 聚合各微服务的 OpenAPI 文档,提供统一的 API 文档入口。
+
+### 访问方式
+
+打开浏览器访问 `http://gateway:9528/scalar.html` 即可查看所有服务的 API 文档。
+
+### 配置
+
+```yaml
+scalar:
+  sources:
+    - url: /patra-catalog/v3/api-docs
+      title: Catalog Service
+      slug: catalog
+    - url: /patra-registry/v3/api-docs
+      title: Registry Service
+      slug: registry
+    - url: /patra-ingest/v3/api-docs
+      title: Ingest Service
+      slug: ingest
+```
+
+各服务的 `/v3/api-docs` 请求通过已有路由代理到下游服务,无需额外配置。每个后端服务需引入 `patra-spring-boot-starter-openapi` 以暴露 OpenAPI 文档端点。
 
 ## 配置说明
 
@@ -159,8 +204,10 @@ management:
 | **Spring Cloud LoadBalancer** | 用于客户端负载均衡 |
 | **Consul Discovery** | 服务发现和注册 |
 | **patra-spring-boot-starter-core** | Patra 核心 starter |
+| **Scalar UI** | API 文档聚合展示 |
+| **SpringDoc OpenAPI (WebFlux)** | OpenAPI 文档生成（WebFlux 版） |
 
 ---
 
-**最后更新**: 2026-01-14
+**最后更新**: 2026-02-15
 **版本**: 0.1.0-SNAPSHOT
