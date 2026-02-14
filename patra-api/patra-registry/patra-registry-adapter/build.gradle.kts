@@ -16,8 +16,6 @@ dependencies {
     // MapStruct 由 patra.hexagonal-adapter 插件提供
     // annotationProcessor 由 patra.java-base 插件提供
 
-    // Spring DAO exception hierarchy (由 patra.hexagonal-adapter 提供)
-
     // 测试依赖
     testImplementation(project(":patra-spring-boot-starter-test"))
 }
