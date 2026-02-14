@@ -23,6 +23,9 @@ dependencies {
     // LoadBalancer
     implementation("org.springframework.cloud:spring-cloud-starter-loadbalancer")
 
+    // API 文档聚合（WebFlux 版本 Scalar UI）
+    implementation(libs.springdoc.openapi.webflux.scalar)
+
     // 测试依赖
     testImplementation(project(":patra-spring-boot-starter-test"))
 }

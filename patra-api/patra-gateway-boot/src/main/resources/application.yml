@@ -71,6 +71,23 @@ spring:
                 - StripPrefix=1
 
 # ----------------------------------------------------------------------------
+# API Documentation Aggregation
+# ----------------------------------------------------------------------------
+# 通过 Gateway 聚合各微服务的 OpenAPI 文档
+# 各服务的 /v3/api-docs 请求通过已有路由代理到下游
+scalar:
+  sources:
+    - url: /patra-catalog/v3/api-docs
+      title: Catalog Service
+      slug: catalog
+    - url: /patra-registry/v3/api-docs
+      title: Registry Service
+      slug: registry
+    - url: /patra-ingest/v3/api-docs
+      title: Ingest Service
+      slug: ingest
+
+# ----------------------------------------------------------------------------
 # Logging Configuration
 # ----------------------------------------------------------------------------
 logging:
