@@ -4,6 +4,8 @@ import com.patra.catalog.infra.adapter.persistence.entity.VenueEntity;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -67,4 +69,28 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
   /// @param ids 载体 ID 列表
   /// @return 载体实体列表
   List<VenueEntity> findByIdIn(Collection<Long> ids);
+
+  /// 分页查询期刊列表。
+  ///
+  /// 查询条件：
+  ///
+  /// - 固定 `venueType=JOURNAL`
+  /// - 关键词为空时返回全部期刊
+  /// - 关键词非空时按 `displayName` 前缀匹配，或 `issnL` / `nlmId` 精确匹配
+  ///
+  /// @param keyword 关键词（可空），同时用于名称前缀匹配和 ISSN-L/NLM ID 精确匹配
+  /// @param pageable 分页参数
+  /// @return 期刊分页结果
+  @Query(
+      """
+      SELECT v FROM VenueEntity v
+      WHERE v.venueType = 'JOURNAL'
+        AND (
+          :keyword IS NULL
+          OR LOWER(v.displayName) LIKE LOWER(CONCAT(:keyword, '%'))
+          OR v.issnL = :keyword
+          OR v.nlmId = :keyword
+        )
+      """)
+  Page<VenueEntity> findJournalPage(@Param("keyword") String keyword, Pageable pageable);
 }
