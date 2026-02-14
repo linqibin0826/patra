@@ -24,7 +24,8 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__serena__get_symbols_ove
 **核心原则**：
 - Controller 只负责协议转换，不包含业务逻辑
 - 使用 DTO 作为请求响应对象，不暴露领域对象
-- 只注入 `CommandBus`，通过 `commandBus.handle(command)` 调用业务逻辑
+- 写操作：注入 `CommandBus`，通过 `commandBus.handle(command)` 调用
+- 读操作：注入 `QueryService`，直接调用查询方法
 
 ### 2. 实现 CommandHandler（应用层命令处理器）
 

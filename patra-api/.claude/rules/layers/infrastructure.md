@@ -14,6 +14,7 @@ paths: patra-*/*-infra/**/*.java
 
 - `{Entity}Repository` → `{Entity}RepositoryAdapter`（放 `adapter/persistence/`）
 - `{Function}Port` → `{Function}Adapter`（放 `adapter/{function}/`）
+- `{Entity}ReadPort` → `{Entity}ReadAdapter`（放 `adapter/read/`）
 
 ## 对象转换
 

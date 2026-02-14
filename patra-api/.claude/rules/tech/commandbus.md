@@ -206,16 +206,14 @@ class UserControllerTest {
 @RequiredArgsConstructor
 public class VenueQueryService {
 
-    private final VenueReadRepository venueReadRepository;
+    private final VenueReadPort venueReadPort;
 
-    public Optional<VenueDTO> findById(VenueId id) {
-        return venueReadRepository.findById(id)
-            .map(VenueDTO::from);
-    }
-
-    public Page<VenueDTO> search(VenueSearchCriteria criteria, Pageable pageable) {
-        return venueReadRepository.search(criteria, pageable)
-            .map(VenueDTO::from);
+    /// 查询 Venue 分页列表。
+    public PageResult<VenueSummaryReadModel> listVenues(VenueListQuery query) {
+        Objects.requireNonNull(query, "query must not be null");
+        PagingParams paging = PagingParams.normalize(query.page(), query.pageSize());
+        String keyword = normalizeKeyword(query.q());
+        return venueReadPort.findVenuePage(paging, keyword);
     }
 }
 ```
@@ -227,18 +225,19 @@ public class VenueQueryService {
 @RequiredArgsConstructor
 public class VenueController {
 
-    private final CommandBus commandBus;           // 写操作
-    private final VenueQueryService queryService;  // 读操作
+    private final CommandBus commandBus;               // 写操作
+    private final VenueQueryService venueQueryService; // 读操作
+    private final VenueApiConverter venueApiConverter;  // 转换器
 
     @PostMapping("/venues")
     public VenueId create(@RequestBody CreateVenueRequest request) {
         return commandBus.handle(new CreateVenueCommand(request.name()));
     }
 
-    @GetMapping("/venues/{id}")
-    public VenueDTO findById(@PathVariable Long id) {
-        return queryService.findById(VenueId.of(id))
-            .orElseThrow(() -> new NotFoundException("Venue not found"));
+    @GetMapping("/venues")
+    public PageResult<VenueItemResponse> listVenues(VenueListRequest request) {
+        VenueListQuery query = venueApiConverter.toQuery(request);
+        return venueQueryService.listVenues(query).map(venueApiConverter::toItemResponse);
     }
 }
 ```
