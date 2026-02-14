@@ -40,24 +40,35 @@ spring:
     # Gateway Route Configuration
     # Routes requests to downstream microservices using load balancing
     gateway:
-      routes:
-        # Ingest Service Route
-        # Example: /patra-ingest/plans -> lb://patra-ingest/plans
-        - id: patra-ingest
-          uri: lb://patra-ingest
-          predicates:
-            - Path=/patra-ingest/**
-          filters:
-            - StripPrefix=1
+      server:
+        webflux:
+          routes:
+            # Ingest Service Route
+            # Example: /patra-ingest/plans -> lb://patra-ingest/plans
+            - id: patra-ingest
+              uri: lb://patra-ingest
+              predicates:
+                - Path=/patra-ingest/**
+              filters:
+                - StripPrefix=1
 
-        # Registry Service Route
-        # Example: /patra-registry/provenance -> lb://patra-registry/provenance
-        - id: patra-registry
-          uri: lb://patra-registry
-          predicates:
-            - Path=/patra-registry/**
-          filters:
-            - StripPrefix=1
+            # Registry Service Route
+            # Example: /patra-registry/provenance -> lb://patra-registry/provenance
+            - id: patra-registry
+              uri: lb://patra-registry
+              predicates:
+                - Path=/patra-registry/**
+              filters:
+                - StripPrefix=1
+
+            # Catalog Service Route
+            # Example: /patra-catalog/venues -> lb://patra-catalog/venues
+            - id: patra-catalog
+              uri: lb://patra-catalog
+              predicates:
+                - Path=/patra-catalog/**
+              filters:
+                - StripPrefix=1
 
 # ----------------------------------------------------------------------------
 # Logging Configuration
@@ -66,7 +77,6 @@ logging:
   file:
     # Centralized log directory in project root
     path: ${PATRA_LOG_DIR:logs}
-  layer: adapter
   level:
     org.springframework.cloud.gateway: INFO
     org.springframework.cloud.loadbalancer: INFO
