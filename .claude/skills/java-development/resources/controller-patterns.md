@@ -227,6 +227,60 @@ public ResourceResponse create(@Valid @RequestBody CreateResourceRequest request
 
 ---
 
+## 分页列表查询模板
+
+查询 Controller 不注入 CommandBus，仅使用 QueryService + ApiConverter：
+
+```java
+@RestController
+@RequestMapping("/venues")
+@RequiredArgsConstructor
+public class VenueController {
+
+    private final VenueQueryService venueQueryService;
+    private final VenueApiConverter venueApiConverter;
+
+    /// 查询 Venue 分页列表。
+    @GetMapping
+    public PageResult<VenueItemResponse> listVenues(VenueListRequest request) {
+        VenueListQuery query = venueApiConverter.toQuery(request);
+        return venueQueryService.listVenues(query).map(venueApiConverter::toItemResponse);
+    }
+}
+```
+
+**关键要点**：
+- 不注入 CommandBus（纯查询 Controller）
+- 使用 `PageResult.map()` 进行跨层类型转换
+- 数据流：Request → Query → PageResult\<ReadModel> → PageResult\<ItemResponse>
+- Request/Response 使用独立子包（`request/`、`response/`）
+
+### 查询 Controller 子包结构
+
+```
+adapter/rest/{entity}/
+├── {Entity}Controller.java
+├── request/{Entity}ListRequest.java      # 查询参数 DTO
+├── response/{Entity}ItemResponse.java    # 列表项响应 DTO
+└── mapper/{Entity}ApiConverter.java      # MapStruct 转换器
+```
+
+### ApiConverter 查询端模板
+
+```java
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
+public interface VenueApiConverter {
+
+    /// 将列表请求转换为查询参数。
+    VenueListQuery toQuery(VenueListRequest request);
+
+    /// 将读模型转换为列表项响应。
+    VenueItemResponse toItemResponse(VenueSummaryReadModel readModel);
+}
+```
+
+---
+
 ## 常见模式
 
 ### 1. 参数校验

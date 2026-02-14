@@ -42,3 +42,20 @@ paths: patra-*/*-app/**/*.java
 - 需要独立事务管理的跨聚合协调
 
 > 详细规范参见 [port-service.md](../tech/port-service.md)
+
+## QueryService 规范
+
+CQRS 读端查询服务，不走 CommandBus，直接被 Controller 注入。
+
+| 组件 | 位置 | 说明 |
+|------|------|------|
+| `{Domain}QueryService` | `usecase/{domain}/query/` | 具体类，无接口 |
+| `{Domain}ListQuery` | `usecase/{domain}/query/dto/` | 查询参数 DTO |
+
+**特点**：
+- 无 `@Transactional`（只读操作，JPA 默认读事务即可）
+- 无接口定义（CQRS 读端不需要抽象）
+- 使用 `PagingParams.normalize()` 统一归一化分页参数
+- 返回 `PageResult<{Entity}SummaryReadModel>`
+
+> 详细规范参见 [port-service.md](../tech/port-service.md) 和 [commandbus.md](../tech/commandbus.md) 的 Query 端章节

@@ -11,6 +11,7 @@
 | Repository | Domain | Infra | `{Entity}Repository` | `{Entity}RepositoryAdapter` | 聚合根持久化 |
 | Driven Port | Domain | Infra | `{Function}Port` | `{Function}Adapter` | 被驱动端口（外部调用） |
 | LookupPort | Domain | Infra | `{Entity}LookupPort` | `Default{Entity}LookupAdapter` + `Caching{Entity}LookupDecorator` + `Batch{Entity}LookupAdapter` | 查找端口（带缓存装饰器） |
+| ReadPort | Domain | Infra | `{Entity}ReadPort` | `{Entity}ReadAdapter` | CQRS 读端口 |
 | Driving Port | Domain | App | `{Entity}Gateway` | `{Entity}GatewayImpl` | 驱动端口（调用应用层） |
 | QueryService | - | App | 无接口 | `{Domain}QueryService` | CQRS 查询服务 |
 
@@ -111,6 +112,34 @@ public PubmedArticleItemProcessor processor(
 }
 ```
 
+### ReadPort（CQRS 读端口）
+
+**职责**：CQRS 读端驱动端口，提供面向查询场景的分页/检索能力
+
+**依赖方向**：Domain → (interface) → Infra
+
+```
+Domain 层                          Infra 层
+┌─────────────────────┐           ┌─────────────────────────┐
+│ VenueReadPort       │ ←─────── │ VenueReadAdapter        │
+│     (interface)     │           │    (implementation)      │
+└─────────────────────┘           └─────────────────────────┘
+```
+
+**命名示例**：
+- `VenueReadPort` → `VenueReadAdapter`
+- `PublicationReadPort` → `PublicationReadAdapter`
+- `AuthorReadPort` → `AuthorReadAdapter`
+
+**位置**：
+- 接口：`{service}-domain/src/main/java/.../domain/port/read/{Entity}ReadPort.java`
+- 实现：`{service}-infra/src/main/java/.../infra/adapter/read/{Entity}ReadAdapter.java`
+
+**与 Repository 的区别**：
+- Repository 负责聚合根的持久化与检索（写端 + 聚合维度查询）
+- ReadPort 不持久化聚合根，仅提供查询投影（返回 Read Model，非聚合根）
+- ReadPort 的返回值是 `PageResult<{Entity}SummaryReadModel>` 等只读投影
+
 ### Driving Port / Gateway（驱动端口）
 
 **职责**：领域层/基础设施层需要调用应用层服务的场景
@@ -169,6 +198,8 @@ patra-catalog/
 │       ├── repository/                     # 仓储接口（按类型分组）
 │       │   ├── PublicationRepository.java
 │       │   └── VenueRepository.java
+│       ├── read/                           # CQRS 读端口
+│       │   └── VenueReadPort.java
 │       ├── gateway/                        # 驱动端口接口
 │       │   └── VenueInstanceGateway.java
 │       ├── lookup/                         # 查找端口接口
@@ -207,6 +238,8 @@ patra-catalog/
         │   ├── DefaultFunderLookupAdapter.java
         │   ├── CachingFunderLookupDecorator.java
         │   └── BatchFunderLookupAdapter.java
+        ├── read/                           # CQRS 读适配器
+        │   └── VenueReadAdapter.java
         ├── parser/
         │   └── PubmedXmlParserAdapter.java
         └── batch/
@@ -225,6 +258,9 @@ patra-catalog/
 │
 ├── 实体 ID 查找（需要缓存优化）
 │   └─────────────────────→ {Entity}LookupPort（Domain → Infra，装饰器模式）
+│
+├── CQRS 读端查询（分页/检索投影）
+│   └─────────────────────→ {Entity}ReadPort（Domain → Infra）
 │
 ├── 应用层服务供其他层调用
 │   └─────────────────────→ {Entity}Gateway（Domain → App）
