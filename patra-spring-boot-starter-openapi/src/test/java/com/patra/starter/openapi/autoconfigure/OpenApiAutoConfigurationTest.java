@@ -27,7 +27,7 @@ import org.springframework.context.annotation.Configuration;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@Timeout(value = 10, unit = TimeUnit.SECONDS)
+@Timeout(value = 5, unit = TimeUnit.SECONDS)
 @DisplayName("OpenApiAutoConfiguration 自动配置测试")
 class OpenApiAutoConfigurationTest {
 
