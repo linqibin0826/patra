@@ -218,6 +218,14 @@ patra:
   - `VenueRelation`：载体关联关系（期刊演变关系：前刊/后刊/合并/分拆）
   - `VenueIndexingHistory`：载体索引历史（MEDLINE/PMC 索引收录变迁）
 
+- **读模型**（CQRS 读端查询投影）
+  - `VenueSummaryReadModel`：期刊列表摘要读模型
+  - `VenueDetailReadModel`：期刊详情读模型（`@Builder`，17 字段）
+  - `VenueFilter`：期刊筛选条件（`@Builder`，支持 keyword/provenanceCode/countryCode/issnL/nlmId 独立筛选）
+
+- **领域异常**
+  - `VenueNotFoundException`：期刊不存在异常（携带 `StandardErrorTrait.NOT_FOUND`，自动映射为 HTTP 404）
+
 - **嵌入式值对象**（JSON 存储，随聚合根一起保存）
   - `PublicationProfile`：出版概况（缩写标题、备选标题、主页 URL、宿主机构、国家代码）
   - `CitationMetrics`：引用指标（作品数、被引数、H 指数、i10 指数、两年平均被引）
@@ -335,6 +343,10 @@ patra:
 - `StreamingDownloadAdapter`：流式下载适配器（HTTP 响应体直接返回 InputStream，供小文件 App 层使用）
 - `VenueSourceFileAdapter`：OpenAlex Venue 源文件适配器（封装 manifest 解析）
 - `DictionaryResolverAdapter`：字典解析适配器（调用 patra-registry 字典服务，支持国家、语言等多种字典类型的批量解析）
+
+- **ReadPort 实现**（CQRS 读端适配器）
+  - `VenueReadAdapter`：期刊读适配器（实现 `VenueReadPort`，支持多条件独立筛选分页查询和详情查询）
+  - `VenueReadModelMapper`：读模型映射器（MapStruct，Entity → ReadModel 转换）
 
 - **LookupPort 实现**（装饰器模式，支持批处理缓存优化）
   - `DefaultVenueLookupAdapter` / `CachingVenueLookupDecorator` / `BatchVenueLookupAdapter`：Venue 查找（NLM ID + ISSN 双索引）

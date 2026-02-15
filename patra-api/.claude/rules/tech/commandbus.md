@@ -212,8 +212,15 @@ public class VenueQueryService {
     public PageResult<VenueSummaryReadModel> listVenues(VenueListQuery query) {
         Objects.requireNonNull(query, "query must not be null");
         PagingParams paging = PagingParams.normalize(query.page(), query.pageSize());
-        String keyword = normalizeKeyword(query.q());
-        return venueReadPort.findVenuePage(paging, keyword);
+        VenueFilter filter =
+            VenueFilter.builder()
+                .keyword(trimToNull(query.q()))
+                .provenanceCode(trimToNull(query.provenanceCode()))
+                .countryCode(trimToNull(query.countryCode()))
+                .issnL(trimToNull(query.issnL()))
+                .nlmId(trimToNull(query.nlmId()))
+                .build();
+        return venueReadPort.findVenuePage(paging, filter);
     }
 }
 ```
