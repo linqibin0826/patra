@@ -20,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 /// VenueInstanceGatewayImpl 单元测试。
 ///
@@ -149,7 +150,9 @@ class VenueInstanceGatewayImplTest {
           .thenReturn(Optional.of(existingInstance));
 
       // 模拟保存时并发冲突（void 方法用 doThrow）
-      doThrow(new RuntimeException("Duplicate entry")).when(venueInstanceRepository).save(any());
+      doThrow(new DataIntegrityViolationException("Duplicate entry"))
+          .when(venueInstanceRepository)
+          .save(any());
 
       JournalInstanceParams params =
           JournalInstanceParams.builder()
