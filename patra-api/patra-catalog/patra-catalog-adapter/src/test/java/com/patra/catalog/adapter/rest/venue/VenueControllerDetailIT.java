@@ -8,9 +8,8 @@ import static org.mockito.Mockito.when;
 import com.patra.catalog.adapter.config.TestConfiguration;
 import com.patra.catalog.app.usecase.venue.query.VenueQueryService;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueDetailQuery;
+import com.patra.catalog.domain.exception.VenueNotFoundException;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
-import com.patra.common.error.ApplicationException;
-import com.patra.common.error.codes.HttpStdErrors;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -31,7 +30,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 /// **测试目标**：
 ///
 /// - 200 OK：返回完整详情
-/// - 404 Not Found：ID 不存在
+/// - 404 Not Found：ID 不存在时 VenueNotFoundException 被 ErrorResolutionEngine 自动映射
 /// - 路径参数绑定正确
 /// - MapStruct 转换器字段映射正确（使用真实 VenueApiConverter）
 @WebMvcTest(controllers = VenueController.class)
@@ -111,15 +110,16 @@ class VenueControllerDetailIT {
   }
 
   /// 查询不存在的 ID 应返回 404 Not Found。
+  ///
+  /// VenueNotFoundException 携带 StandardErrorTrait.NOT_FOUND，
+  /// 由 DefaultErrorResolutionEngine 内置映射自动转换为 HTTP 404。
   @Test
   @DisplayName("GET /venues/{id} 不存在的 ID 应返回 404 Not Found")
   void shouldReturn404WhenIdNotExists() {
     // Given
     Long invalidId = 999999L;
     when(venueQueryService.getVenueDetail(any(VenueDetailQuery.class)))
-        .thenThrow(
-            new ApplicationException(
-                HttpStdErrors.of("CAT").NOT_FOUND(), "Venue not found with id: " + invalidId));
+        .thenThrow(new VenueNotFoundException(invalidId));
 
     // When & Then
     restClient.get().uri("/venues/{id}", invalidId).exchange().expectStatus().isNotFound();

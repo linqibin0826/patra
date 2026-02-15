@@ -1,6 +1,7 @@
 package com.patra.catalog.infra.adapter.read;
 
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
+import com.patra.catalog.domain.model.read.venue.VenueFilter;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.port.read.VenueReadPort;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
@@ -27,14 +28,21 @@ public class VenueReadAdapter implements VenueReadPort {
   /// 查询 Venue 分页列表。
   ///
   /// @param paging 已验证的分页参数
-  /// @param keyword 关键词（可空）
+  /// @param filter 筛选条件
   /// @return Venue 分页结果
   @Override
-  public PageResult<VenueSummaryReadModel> findVenuePage(PagingParams paging, String keyword) {
+  public PageResult<VenueSummaryReadModel> findVenuePage(PagingParams paging, VenueFilter filter) {
     Pageable pageable =
         PageRequest.of(paging.page() - 1, paging.pageSize(), BaseJpaEntity.DEFAULT_SORT);
 
-    var entityPage = venueDao.findJournalPage(keyword, pageable);
+    var entityPage =
+        venueDao.findJournalPage(
+            filter.keyword(),
+            filter.provenanceCode(),
+            filter.countryCode(),
+            filter.issnL(),
+            filter.nlmId(),
+            pageable);
     List<VenueSummaryReadModel> items =
         entityPage.getContent().stream().map(venueReadModelMapper::toReadModel).toList();
 

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
+import com.patra.catalog.domain.model.read.venue.VenueFilter;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.port.read.VenueReadPort;
 import com.patra.common.query.PageResult;
@@ -34,9 +35,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @Timeout(value = 2, unit = TimeUnit.SECONDS)
 class VenueQueryServiceTest {
 
+  private static final VenueFilter EMPTY_FILTER = VenueFilter.builder().build();
+
   @Mock private VenueReadPort venueReadPort;
 
-  /// 默认参数场景应使用 page=1、pageSize=20，且 q 为空时传 null。
+  /// 默认参数场景应使用 page=1、pageSize=20，且空白字段归一化为 null。
   @Test
   @DisplayName("默认参数应归一化为 page=1, pageSize=20")
   void shouldNormalizeDefaults() {
@@ -56,15 +59,16 @@ class VenueQueryServiceTest {
             1,
             20,
             1);
-    when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 20)), eq(null))).thenReturn(expected);
+    when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 20)), eq(EMPTY_FILTER)))
+        .thenReturn(expected);
 
     // When
     PageResult<VenueSummaryReadModel> actual =
-        service.listVenues(new VenueListQuery(null, null, "   "));
+        service.listVenues(new VenueListQuery(null, null, "   ", null, null, null, null));
 
     // Then
     assertThat(actual).isEqualTo(expected);
-    verify(venueReadPort).findVenuePage(PagingParams.of(1, 20), null);
+    verify(venueReadPort).findVenuePage(PagingParams.of(1, 20), EMPTY_FILTER);
   }
 
   /// query 为 null 时应抛出 NullPointerException。
@@ -90,17 +94,18 @@ class VenueQueryServiceTest {
     void shouldNormalizeInvalidPageAndPageSize() {
       // Given
       VenueQueryService service = new VenueQueryService(venueReadPort);
+      VenueFilter filter = VenueFilter.builder().keyword("Nature").build();
       PageResult<VenueSummaryReadModel> expected = PageResult.empty(1, 100);
-      when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 100)), eq("Nature")))
+      when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 100)), eq(filter)))
           .thenReturn(expected);
 
       // When
       PageResult<VenueSummaryReadModel> actual =
-          service.listVenues(new VenueListQuery(0, 1000, "  Nature  "));
+          service.listVenues(new VenueListQuery(0, 1000, "  Nature  ", null, null, null, null));
 
       // Then
       assertThat(actual).isEqualTo(expected);
-      verify(venueReadPort).findVenuePage(PagingParams.of(1, 100), "Nature");
+      verify(venueReadPort).findVenuePage(PagingParams.of(1, 100), filter);
     }
 
     /// 正常分页参数应保持原值传递。
@@ -109,17 +114,235 @@ class VenueQueryServiceTest {
     void shouldKeepValidPageAndPageSize() {
       // Given
       VenueQueryService service = new VenueQueryService(venueReadPort);
+      VenueFilter filter = VenueFilter.builder().keyword("NLM001").build();
       PageResult<VenueSummaryReadModel> expected = PageResult.empty(3, 50);
-      when(venueReadPort.findVenuePage(eq(PagingParams.of(3, 50)), eq("NLM001")))
+      when(venueReadPort.findVenuePage(eq(PagingParams.of(3, 50)), eq(filter)))
           .thenReturn(expected);
 
       // When
       PageResult<VenueSummaryReadModel> actual =
-          service.listVenues(new VenueListQuery(3, 50, "NLM001"));
+          service.listVenues(new VenueListQuery(3, 50, "NLM001", null, null, null, null));
 
       // Then
       assertThat(actual).isEqualTo(expected);
-      verify(venueReadPort).findVenuePage(PagingParams.of(3, 50), "NLM001");
+      verify(venueReadPort).findVenuePage(PagingParams.of(3, 50), filter);
+    }
+  }
+
+  @Nested
+  @DisplayName("单个筛选条件生效")
+  class SingleFilterTests {
+
+    /// 只传 provenanceCode 时，仅该字段参与筛选，其余为 null。
+    @Test
+    @DisplayName("只传 provenanceCode 应正确构造 filter")
+    void shouldFilterByProvenanceCodeOnly() {
+      // Given
+      VenueQueryService service = new VenueQueryService(venueReadPort);
+      VenueFilter filter = VenueFilter.builder().provenanceCode("PUBMED").build();
+      PageResult<VenueSummaryReadModel> expected = PageResult.empty(1, 20);
+      when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 20)), eq(filter)))
+          .thenReturn(expected);
+
+      // When
+      PageResult<VenueSummaryReadModel> actual =
+          service.listVenues(new VenueListQuery(null, null, null, "PUBMED", null, null, null));
+
+      // Then
+      assertThat(actual).isEqualTo(expected);
+      verify(venueReadPort).findVenuePage(PagingParams.of(1, 20), filter);
+    }
+
+    /// 只传 countryCode 时，仅该字段参与筛选，其余为 null。
+    @Test
+    @DisplayName("只传 countryCode 应正确构造 filter")
+    void shouldFilterByCountryCodeOnly() {
+      // Given
+      VenueQueryService service = new VenueQueryService(venueReadPort);
+      VenueFilter filter = VenueFilter.builder().countryCode("US").build();
+      PageResult<VenueSummaryReadModel> expected = PageResult.empty(1, 20);
+      when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 20)), eq(filter)))
+          .thenReturn(expected);
+
+      // When
+      PageResult<VenueSummaryReadModel> actual =
+          service.listVenues(new VenueListQuery(null, null, null, null, "US", null, null));
+
+      // Then
+      assertThat(actual).isEqualTo(expected);
+      verify(venueReadPort).findVenuePage(PagingParams.of(1, 20), filter);
+    }
+
+    /// 只传 issnL 时，仅该字段参与筛选，其余为 null。
+    @Test
+    @DisplayName("只传 issnL 应正确构造 filter")
+    void shouldFilterByIssnLOnly() {
+      // Given
+      VenueQueryService service = new VenueQueryService(venueReadPort);
+      VenueFilter filter = VenueFilter.builder().issnL("0028-0836").build();
+      PageResult<VenueSummaryReadModel> expected = PageResult.empty(1, 20);
+      when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 20)), eq(filter)))
+          .thenReturn(expected);
+
+      // When
+      PageResult<VenueSummaryReadModel> actual =
+          service.listVenues(new VenueListQuery(null, null, null, null, null, "0028-0836", null));
+
+      // Then
+      assertThat(actual).isEqualTo(expected);
+      verify(venueReadPort).findVenuePage(PagingParams.of(1, 20), filter);
+    }
+
+    /// 只传 nlmId 时，仅该字段参与筛选，其余为 null。
+    @Test
+    @DisplayName("只传 nlmId 应正确构造 filter")
+    void shouldFilterByNlmIdOnly() {
+      // Given
+      VenueQueryService service = new VenueQueryService(venueReadPort);
+      VenueFilter filter = VenueFilter.builder().nlmId("0410462").build();
+      PageResult<VenueSummaryReadModel> expected = PageResult.empty(1, 20);
+      when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 20)), eq(filter)))
+          .thenReturn(expected);
+
+      // When
+      PageResult<VenueSummaryReadModel> actual =
+          service.listVenues(new VenueListQuery(null, null, null, null, null, null, "0410462"));
+
+      // Then
+      assertThat(actual).isEqualTo(expected);
+      verify(venueReadPort).findVenuePage(PagingParams.of(1, 20), filter);
+    }
+  }
+
+  @Nested
+  @DisplayName("多个筛选条件组合")
+  class CombinedFilterTests {
+
+    /// q + provenanceCode + countryCode 同时传入时，三者均参与筛选。
+    @Test
+    @DisplayName("q + provenanceCode + countryCode 组合筛选")
+    void shouldCombineKeywordAndProvenanceCodeAndCountryCode() {
+      // Given
+      VenueQueryService service = new VenueQueryService(venueReadPort);
+      VenueFilter filter =
+          VenueFilter.builder()
+              .keyword("Nature")
+              .provenanceCode("OPENALEX")
+              .countryCode("GB")
+              .build();
+      PageResult<VenueSummaryReadModel> expected = PageResult.empty(1, 20);
+      when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 20)), eq(filter)))
+          .thenReturn(expected);
+
+      // When
+      PageResult<VenueSummaryReadModel> actual =
+          service.listVenues(
+              new VenueListQuery(null, null, "Nature", "OPENALEX", "GB", null, null));
+
+      // Then
+      assertThat(actual).isEqualTo(expected);
+      verify(venueReadPort).findVenuePage(PagingParams.of(1, 20), filter);
+    }
+  }
+
+  @Nested
+  @DisplayName("筛选字段空白归一化")
+  class FilterFieldNormalizationTests {
+
+    /// provenanceCode 为空白时应归一化为 null。
+    @Test
+    @DisplayName("provenanceCode 空白应归一化为 null")
+    void shouldNormalizeBlankProvenanceCodeToNull() {
+      // Given
+      VenueQueryService service = new VenueQueryService(venueReadPort);
+      PageResult<VenueSummaryReadModel> expected = PageResult.empty(1, 20);
+      when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 20)), eq(EMPTY_FILTER)))
+          .thenReturn(expected);
+
+      // When
+      PageResult<VenueSummaryReadModel> actual =
+          service.listVenues(new VenueListQuery(null, null, null, "   ", null, null, null));
+
+      // Then
+      assertThat(actual).isEqualTo(expected);
+      verify(venueReadPort).findVenuePage(PagingParams.of(1, 20), EMPTY_FILTER);
+    }
+
+    /// countryCode 为空白时应归一化为 null。
+    @Test
+    @DisplayName("countryCode 空白应归一化为 null")
+    void shouldNormalizeBlankCountryCodeToNull() {
+      // Given
+      VenueQueryService service = new VenueQueryService(venueReadPort);
+      PageResult<VenueSummaryReadModel> expected = PageResult.empty(1, 20);
+      when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 20)), eq(EMPTY_FILTER)))
+          .thenReturn(expected);
+
+      // When
+      PageResult<VenueSummaryReadModel> actual =
+          service.listVenues(new VenueListQuery(null, null, null, null, "  ", null, null));
+
+      // Then
+      assertThat(actual).isEqualTo(expected);
+      verify(venueReadPort).findVenuePage(PagingParams.of(1, 20), EMPTY_FILTER);
+    }
+
+    /// issnL 为空白时应归一化为 null。
+    @Test
+    @DisplayName("issnL 空白应归一化为 null")
+    void shouldNormalizeBlankIssnLToNull() {
+      // Given
+      VenueQueryService service = new VenueQueryService(venueReadPort);
+      PageResult<VenueSummaryReadModel> expected = PageResult.empty(1, 20);
+      when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 20)), eq(EMPTY_FILTER)))
+          .thenReturn(expected);
+
+      // When
+      PageResult<VenueSummaryReadModel> actual =
+          service.listVenues(new VenueListQuery(null, null, null, null, null, "  \t ", null));
+
+      // Then
+      assertThat(actual).isEqualTo(expected);
+      verify(venueReadPort).findVenuePage(PagingParams.of(1, 20), EMPTY_FILTER);
+    }
+
+    /// nlmId 为空白时应归一化为 null。
+    @Test
+    @DisplayName("nlmId 空白应归一化为 null")
+    void shouldNormalizeBlankNlmIdToNull() {
+      // Given
+      VenueQueryService service = new VenueQueryService(venueReadPort);
+      PageResult<VenueSummaryReadModel> expected = PageResult.empty(1, 20);
+      when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 20)), eq(EMPTY_FILTER)))
+          .thenReturn(expected);
+
+      // When
+      PageResult<VenueSummaryReadModel> actual =
+          service.listVenues(new VenueListQuery(null, null, null, null, null, null, "   "));
+
+      // Then
+      assertThat(actual).isEqualTo(expected);
+      verify(venueReadPort).findVenuePage(PagingParams.of(1, 20), EMPTY_FILTER);
+    }
+
+    /// provenanceCode 带前后空白时应 trim 后保留有效值。
+    @Test
+    @DisplayName("provenanceCode 前后空白应被 trim")
+    void shouldTrimProvenanceCode() {
+      // Given
+      VenueQueryService service = new VenueQueryService(venueReadPort);
+      VenueFilter filter = VenueFilter.builder().provenanceCode("PUBMED").build();
+      PageResult<VenueSummaryReadModel> expected = PageResult.empty(1, 20);
+      when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 20)), eq(filter)))
+          .thenReturn(expected);
+
+      // When
+      PageResult<VenueSummaryReadModel> actual =
+          service.listVenues(new VenueListQuery(null, null, null, "  PUBMED  ", null, null, null));
+
+      // Then
+      assertThat(actual).isEqualTo(expected);
+      verify(venueReadPort).findVenuePage(PagingParams.of(1, 20), filter);
     }
   }
 }

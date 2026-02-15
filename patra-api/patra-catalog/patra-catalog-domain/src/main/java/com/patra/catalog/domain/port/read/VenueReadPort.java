@@ -1,6 +1,7 @@
 package com.patra.catalog.domain.port.read;
 
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
+import com.patra.catalog.domain.model.read.venue.VenueFilter;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
@@ -14,9 +15,9 @@ public interface VenueReadPort {
   /// 查询 Venue 分页列表。
   ///
   /// @param paging 已验证的分页参数
-  /// @param keyword 关键词（可空）
+  /// @param filter 筛选条件
   /// @return Venue 分页结果
-  PageResult<VenueSummaryReadModel> findVenuePage(PagingParams paging, String keyword);
+  PageResult<VenueSummaryReadModel> findVenuePage(PagingParams paging, VenueFilter filter);
 
   /// 查询 Venue 详情。
   ///

@@ -72,25 +72,37 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
 
   /// 分页查询期刊列表。
   ///
-  /// 查询条件：
+  /// 查询条件（AND 关系，空值忽略）：
   ///
   /// - 固定 `venueType=JOURNAL`
-  /// - 关键词为空时返回全部期刊
-  /// - 关键词非空时按 `displayName` 前缀匹配，或 `issnL` / `nlmId` 精确匹配
+  /// - `keyword`：displayName 前缀模糊匹配
+  /// - `provenanceCode`：数据来源精确匹配
+  /// - `countryCode`：国家编码精确匹配
+  /// - `issnL`：ISSN-L 精确匹配
+  /// - `nlmId`：NLM ID 精确匹配
   ///
-  /// @param keyword 关键词（可空），同时用于名称前缀匹配和 ISSN-L/NLM ID 精确匹配
+  /// @param keyword displayName 前缀搜索关键词（可空）
+  /// @param provenanceCode 数据来源编码（可空）
+  /// @param countryCode 国家编码（可空）
+  /// @param issnL ISSN-L（可空）
+  /// @param nlmId NLM ID（可空）
   /// @param pageable 分页参数
   /// @return 期刊分页结果
   @Query(
       """
       SELECT v FROM VenueEntity v
       WHERE v.venueType = 'JOURNAL'
-        AND (
-          :keyword IS NULL
-          OR LOWER(v.displayName) LIKE LOWER(CONCAT(:keyword, '%'))
-          OR v.issnL = :keyword
-          OR v.nlmId = :keyword
-        )
+        AND (:keyword IS NULL OR LOWER(v.displayName) LIKE LOWER(CONCAT(:keyword, '%')))
+        AND (:provenanceCode IS NULL OR v.provenanceCode = :provenanceCode)
+        AND (:countryCode IS NULL OR v.countryCode = :countryCode)
+        AND (:issnL IS NULL OR v.issnL = :issnL)
+        AND (:nlmId IS NULL OR v.nlmId = :nlmId)
       """)
-  Page<VenueEntity> findJournalPage(@Param("keyword") String keyword, Pageable pageable);
+  Page<VenueEntity> findJournalPage(
+      @Param("keyword") String keyword,
+      @Param("provenanceCode") String provenanceCode,
+      @Param("countryCode") String countryCode,
+      @Param("issnL") String issnL,
+      @Param("nlmId") String nlmId,
+      Pageable pageable);
 }
