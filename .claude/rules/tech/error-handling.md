@@ -9,7 +9,7 @@
 ## 各层异常处理规范
 
 1. 领域层（Domain）：继承 `DomainException`，携带 `StandardErrorTrait` 语义特征，禁止依赖框架异常
-2. 应用层（Application）：使用 `ApplicationException` 包装领域异常，携带明确的 `ErrorCodeLike`
+2. 应用层（Application）：领域异常（`DomainException`）携带语义特征应**直接传播**，由 `DefaultErrorResolutionEngine` 自动映射为 HTTP 状态码；仅对**意外异常**（`RuntimeException`、`Exception`）使用 `ApplicationException` 包装，携带明确的 `ErrorCodeLike` 业务错误码
 3. Boot 层（Composition Root）：通过 `ErrorMappingContributor` SPI 映射服务级异常（领域异常 → HTTP 错误码）；通用数据层异常由 `JpaErrorMappingContributor`（starter-jpa）统一处理
 4. 适配器层（Adapter）：捕获 `RemoteCallException`，基于 `ErrorTrait` 语义特征转换为领域异常
 

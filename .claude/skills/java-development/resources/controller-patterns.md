@@ -416,7 +416,11 @@ public TaskResponse startTask(@Valid @RequestBody StartTaskRequest request) {
 IllegalStateException         → 409 Conflict
 IllegalArgumentException      → 400 Bad Request / 404 Not Found
 ConstraintViolationException  → 400 Bad Request
-DomainException               → 422 Unprocessable Entity
+DomainException               → 由 StandardErrorTrait 自动映射
+                                 NOT_FOUND → 404
+                                 CONFLICT → 409
+                                 RULE_VIOLATION → 422
+ApplicationException          → 由 ErrorCodeLike.httpStatus() 映射
 ```
 
 ---
