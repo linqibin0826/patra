@@ -10,7 +10,6 @@ import com.patra.catalog.domain.port.batch.RorOrganizationBatchPort;
 import com.patra.catalog.domain.port.repository.OrganizationRepository;
 import com.patra.common.cqrs.CommandHandler;
 import com.patra.common.error.ApplicationException;
-import com.patra.common.error.codes.HttpStdErrors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -75,9 +74,7 @@ public class RorOrganizationImportHandler
 
     // 1. 检查数据是否已存在
     if (organizationRepository.hasAnyData()) {
-      DataAlreadyExistsException exception = new DataAlreadyExistsException("Organization");
-      throw new ApplicationException(
-          HttpStdErrors.of("CAT").CONFLICT(), exception.getMessage(), exception);
+      throw new DataAlreadyExistsException("Organization");
     }
 
     // 2. 启动批处理导入（传递 downloadUrl，由 ItemReader 负责下载到临时文件）
@@ -88,9 +85,7 @@ public class RorOrganizationImportHandler
       log.info("ROR 机构导入任务已启动，executionId：{}", executionId);
       return RorOrganizationImportResult.success(executionId, command.url(), command.rorVersion());
 
-    } catch (InvalidRorImportParamsException e) {
-      throw new ApplicationException(HttpStdErrors.of("CAT").UNPROCESSABLE(), e.getMessage(), e);
-    } catch (ApplicationException e) {
+    } catch (InvalidRorImportParamsException | ApplicationException e) {
       throw e;
     } catch (RuntimeException e) {
       throw new ApplicationException(CatalogErrorCode.CAT_1401, "ROR 机构导入失败: " + e.getMessage(), e);

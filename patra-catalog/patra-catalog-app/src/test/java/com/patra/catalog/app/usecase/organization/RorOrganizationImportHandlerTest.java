@@ -66,7 +66,7 @@ class RorOrganizationImportHandlerTest {
   class DataExistenceCheckTest {
 
     @Test
-    @DisplayName("表中已有数据时 - 应该抛出 ApplicationException 包装的 DataAlreadyExistsException")
+    @DisplayName("表中已有数据时 - 应该抛出 DataAlreadyExistsException")
     void shouldThrowException_whenDataAlreadyExists() {
       // Given
       RorOrganizationImportCommand command =
@@ -75,9 +75,8 @@ class RorOrganizationImportHandlerTest {
 
       // When & Then
       assertThatThrownBy(() -> handler.handle(command))
-          .isInstanceOf(ApplicationException.class)
-          .hasMessageContaining("Organization")
-          .hasCauseInstanceOf(DataAlreadyExistsException.class);
+          .isInstanceOf(DataAlreadyExistsException.class)
+          .hasMessageContaining("Organization");
 
       // 验证没有进行后续操作
       verify(rorOrganizationBatchPort, never()).launchImport(any());
@@ -156,8 +155,8 @@ class RorOrganizationImportHandlerTest {
   class ExceptionHandlingTest {
 
     @Test
-    @DisplayName("InvalidRorImportParamsException 应该包装为 ApplicationException (UNPROCESSABLE)")
-    void shouldWrapInvalidParamsException() {
+    @DisplayName("InvalidRorImportParamsException 应该直接抛出（携带 RULE_VIOLATION 语义特征）")
+    void shouldRethrowInvalidParamsException() {
       // Given
       RorOrganizationImportCommand command =
           new RorOrganizationImportCommand(TEST_URL, TEST_VERSION);
@@ -168,9 +167,8 @@ class RorOrganizationImportHandlerTest {
 
       // When & Then
       assertThatThrownBy(() -> handler.handle(command))
-          .isInstanceOf(ApplicationException.class)
-          .hasMessageContaining("参数无效")
-          .hasCauseInstanceOf(InvalidRorImportParamsException.class);
+          .isInstanceOf(InvalidRorImportParamsException.class)
+          .hasMessageContaining("参数无效");
     }
 
     @Test
