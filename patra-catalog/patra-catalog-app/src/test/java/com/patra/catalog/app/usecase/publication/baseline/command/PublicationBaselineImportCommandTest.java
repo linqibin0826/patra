@@ -65,9 +65,9 @@ class PublicationBaselineImportCommandTest {
     }
 
     @Test
-    @DisplayName("fileIndex 大于 1274 时应该抛出异常")
-    void should_throw_when_file_index_greater_than_1274() {
-      assertThatThrownBy(() -> new PublicationBaselineImportCommand(BASE_URL, 1275))
+    @DisplayName("fileIndex 大于 1334 时应该抛出异常")
+    void should_throw_when_file_index_greater_than_1334() {
+      assertThatThrownBy(() -> new PublicationBaselineImportCommand(BASE_URL, 1335))
           .isInstanceOf(CatalogScheduleParameterException.class)
           .hasMessageContaining("fileIndex");
     }
@@ -83,13 +83,13 @@ class PublicationBaselineImportCommandTest {
     }
 
     @Test
-    @DisplayName("fileIndex 边界值 1274 应该有效")
-    void should_accept_file_index_1274() {
+    @DisplayName("fileIndex 边界值 1334 应该有效")
+    void should_accept_file_index_1334() {
       // when
-      var command = new PublicationBaselineImportCommand(BASE_URL, 1274);
+      var command = new PublicationBaselineImportCommand(BASE_URL, 1334);
 
       // then
-      assertThat(command.fileIndex()).isEqualTo(1274);
+      assertThat(command.fileIndex()).isEqualTo(1334);
     }
   }
 
