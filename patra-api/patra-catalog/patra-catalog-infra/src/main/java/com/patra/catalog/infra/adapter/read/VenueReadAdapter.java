@@ -1,5 +1,6 @@
 package com.patra.catalog.infra.adapter.read;
 
+import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.port.read.VenueReadPort;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
@@ -7,6 +8,7 @@ import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
 import com.patra.starter.jpa.entity.BaseJpaEntity;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -37,5 +39,14 @@ public class VenueReadAdapter implements VenueReadPort {
         entityPage.getContent().stream().map(venueReadModelMapper::toReadModel).toList();
 
     return PageResult.of(items, paging.page(), paging.pageSize(), entityPage.getTotalElements());
+  }
+
+  /// 查询 Venue 详情。
+  ///
+  /// @param id 期刊主键 ID
+  /// @return Venue 详情读模型，不存在时返回 Optional.empty()
+  @Override
+  public Optional<VenueDetailReadModel> findVenueDetail(Long id) {
+    return venueDao.findById(id).map(venueReadModelMapper::toDetailReadModel);
   }
 }
