@@ -1,8 +1,10 @@
 package com.patra.catalog.domain.port.read;
 
+import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
+import java.util.Optional;
 
 /// Venue 读端口。
 ///
@@ -15,4 +17,10 @@ public interface VenueReadPort {
   /// @param keyword 关键词（可空）
   /// @return Venue 分页结果
   PageResult<VenueSummaryReadModel> findVenuePage(PagingParams paging, String keyword);
+
+  /// 查询 Venue 详情。
+  ///
+  /// @param id 期刊主键 ID
+  /// @return Venue 详情读模型，不存在时返回 Optional.empty()
+  Optional<VenueDetailReadModel> findVenueDetail(Long id);
 }

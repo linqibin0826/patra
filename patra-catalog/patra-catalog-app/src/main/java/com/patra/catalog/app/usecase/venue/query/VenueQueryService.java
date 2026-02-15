@@ -1,8 +1,12 @@
 package com.patra.catalog.app.usecase.venue.query;
 
+import com.patra.catalog.app.usecase.venue.query.dto.VenueDetailQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
+import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.port.read.VenueReadPort;
+import com.patra.common.error.ApplicationException;
+import com.patra.common.error.codes.HttpStdErrors;
 import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
 import java.util.Objects;
@@ -27,6 +31,21 @@ public class VenueQueryService {
     PagingParams paging = PagingParams.normalize(query.page(), query.pageSize());
     String keyword = normalizeKeyword(query.q());
     return venueReadPort.findVenuePage(paging, keyword);
+  }
+
+  /// 查询 Venue 详情。
+  ///
+  /// @param query 详情查询参数
+  /// @return Venue 详情读模型
+  /// @throws ApplicationException 当 Venue 不存在时抛出 CAT-0404 异常
+  public VenueDetailReadModel getVenueDetail(VenueDetailQuery query) {
+    Objects.requireNonNull(query, "query must not be null");
+    return venueReadPort
+        .findVenueDetail(query.id())
+        .orElseThrow(
+            () ->
+                new ApplicationException(
+                    HttpStdErrors.of("CAT").NOT_FOUND(), "Venue not found with id: " + query.id()));
   }
 
   /// 归一化关键词。

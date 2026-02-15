@@ -1,5 +1,6 @@
 package com.patra.catalog.infra.adapter.read;
 
+import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
 import org.mapstruct.Mapper;
@@ -19,4 +20,10 @@ public interface VenueReadModelMapper {
   /// @param entity Venue JPA 实体
   /// @return Venue 摘要读模型
   VenueSummaryReadModel toReadModel(VenueEntity entity);
+
+  /// 将 VenueEntity 转换为详情读模型。
+  ///
+  /// @param entity Venue JPA 实体
+  /// @return Venue 详情读模型
+  VenueDetailReadModel toDetailReadModel(VenueEntity entity);
 }

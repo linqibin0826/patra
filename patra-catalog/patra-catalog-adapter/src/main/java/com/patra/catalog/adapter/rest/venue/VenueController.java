@@ -2,13 +2,17 @@ package com.patra.catalog.adapter.rest.venue;
 
 import com.patra.catalog.adapter.rest.venue.mapper.VenueApiConverter;
 import com.patra.catalog.adapter.rest.venue.request.VenueListRequest;
+import com.patra.catalog.adapter.rest.venue.response.VenueDetailResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueItemResponse;
 import com.patra.catalog.app.usecase.venue.query.VenueQueryService;
+import com.patra.catalog.app.usecase.venue.query.dto.VenueDetailQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
+import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.common.query.PageResult;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -32,5 +36,16 @@ public class VenueController {
   public PageResult<VenueItemResponse> listVenues(VenueListRequest request) {
     VenueListQuery query = venueApiConverter.toQuery(request);
     return venueQueryService.listVenues(query).map(venueApiConverter::toItemResponse);
+  }
+
+  /// 查询 Venue 详情。
+  ///
+  /// @param id 期刊主键 ID
+  /// @return Venue 详情响应
+  @GetMapping("/{id}")
+  public VenueDetailResponse getVenueDetail(@PathVariable Long id) {
+    VenueDetailQuery query = VenueDetailQuery.of(id);
+    VenueDetailReadModel readModel = venueQueryService.getVenueDetail(query);
+    return venueApiConverter.toDetailResponse(readModel);
   }
 }
