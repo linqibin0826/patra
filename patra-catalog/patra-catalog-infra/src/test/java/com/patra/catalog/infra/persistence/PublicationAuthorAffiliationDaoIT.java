@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.catalog.domain.model.enums.DisambiguationMethod;
 import com.patra.catalog.domain.model.enums.DisambiguationStatus;
+import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.catalog.infra.persistence.dao.PublicationAuthorAffiliationDao;
 import com.patra.catalog.infra.persistence.entity.PublicationAuthorAffiliationEntity;
-import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.math.BigDecimal;

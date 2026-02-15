@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.catalog.domain.model.aggregate.AuthorAggregate;
 import com.patra.catalog.infra.adapter.persistence.AuthorRepositoryAdapter;
+import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.catalog.infra.persistence.dao.AuthorDao;
 import com.patra.catalog.infra.persistence.entity.AuthorEntity;
-import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
