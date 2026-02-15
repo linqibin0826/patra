@@ -7,6 +7,7 @@ import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import com.patra.catalog.domain.model.vo.venue.Society;
 import java.time.Instant;
 import java.util.List;
+import lombok.Builder;
 
 /// 期刊详情读模型。
 ///
@@ -27,6 +28,7 @@ import java.util.List;
 /// @param lastSyncedAt 最后同步时间（可空）
 /// @param createdAt 创建时间
 /// @param updatedAt 更新时间
+@Builder
 public record VenueDetailReadModel(
     Long id,
     String venueType,

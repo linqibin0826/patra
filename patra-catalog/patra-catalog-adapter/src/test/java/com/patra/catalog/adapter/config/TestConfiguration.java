@@ -17,11 +17,6 @@ import org.springframework.context.annotation.ComponentScan;
 /// - 限制组件扫描范围，避免加载不必要的依赖（如 Job、Listener 等）
 /// - 显式导入错误处理自动配置（@WebMvcTest 默认不加载）
 ///
-/// 异常处理说明：
-///
-/// ApplicationException 携带 HttpStdErrors.NOT_FOUND() 错误码，
-/// 由 DefaultErrorResolutionEngine 内置映射自动转换为 HTTP 404。
-///
 /// @author linqibin
 /// @since 0.1.0
 @SpringBootConfiguration

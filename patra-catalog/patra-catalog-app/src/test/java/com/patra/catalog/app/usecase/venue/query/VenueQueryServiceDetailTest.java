@@ -8,9 +8,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.patra.catalog.app.usecase.venue.query.dto.VenueDetailQuery;
+import com.patra.catalog.domain.exception.VenueNotFoundException;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.port.read.VenueReadPort;
-import com.patra.common.error.ApplicationException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -27,7 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// **测试目标**：
 ///
 /// - 正常查询：传入有效 ID，返回 VenueDetailReadModel
-/// - 不存在：传入无效 ID，抛出异常
+/// - 不存在：传入无效 ID，抛出 VenueNotFoundException
 /// - 空查询：query 为 null 时抛出 NullPointerException
 @ExtendWith(MockitoExtension.class)
 @DisplayName("VenueQueryService 详情查询单元测试")
@@ -72,10 +72,10 @@ class VenueQueryServiceDetailTest {
     verify(venueReadPort).findVenueDetail(validId);
   }
 
-  /// 传入不存在的 ID 应抛出异常。
+  /// 传入不存在的 ID 应抛出 VenueNotFoundException。
   @Test
-  @DisplayName("传入不存在的 ID 应抛出异常")
-  void shouldThrowExceptionWhenIdNotExists() {
+  @DisplayName("传入不存在的 ID 应抛出 VenueNotFoundException")
+  void shouldThrowVenueNotFoundExceptionWhenIdNotExists() {
     // Given
     VenueQueryService service = new VenueQueryService(venueReadPort);
     Long invalidId = 999L;
@@ -83,7 +83,7 @@ class VenueQueryServiceDetailTest {
 
     // When & Then
     assertThatThrownBy(() -> service.getVenueDetail(VenueDetailQuery.of(invalidId)))
-        .isInstanceOf(ApplicationException.class)
+        .isInstanceOf(VenueNotFoundException.class)
         .hasMessageContaining("Venue not found with id: 999");
     verify(venueReadPort).findVenueDetail(invalidId);
   }

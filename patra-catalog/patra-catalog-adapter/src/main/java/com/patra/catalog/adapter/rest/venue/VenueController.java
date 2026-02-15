@@ -7,7 +7,6 @@ import com.patra.catalog.adapter.rest.venue.response.VenueItemResponse;
 import com.patra.catalog.app.usecase.venue.query.VenueQueryService;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueDetailQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
-import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.common.query.PageResult;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -45,7 +44,6 @@ public class VenueController {
   @GetMapping("/{id}")
   public VenueDetailResponse getVenueDetail(@PathVariable Long id) {
     VenueDetailQuery query = VenueDetailQuery.of(id);
-    VenueDetailReadModel readModel = venueQueryService.getVenueDetail(query);
-    return venueApiConverter.toDetailResponse(readModel);
+    return venueApiConverter.toDetailResponse(venueQueryService.getVenueDetail(query));
   }
 }
