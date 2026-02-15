@@ -8,7 +8,6 @@ import com.patra.common.error.codes.ErrorCodeLike;
 ///
 /// 代码范围:
 ///
-/// - 0xxx: HTTP 标准错误(使用 `HttpStdErrors.of("CAT").*` 工厂方法)
 /// - 10xx: MeSH 导入错误
 /// - 11xx: 文件下载错误
 /// - 12xx: 数据解析错误
