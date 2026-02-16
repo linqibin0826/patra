@@ -4,12 +4,12 @@ import com.patra.catalog.api.error.CatalogErrorCode;
 import com.patra.catalog.app.usecase.organization.command.RorOrganizationImportCommand;
 import com.patra.catalog.app.usecase.organization.command.RorOrganizationImportResult;
 import com.patra.catalog.domain.exception.DataAlreadyExistsException;
-import com.patra.catalog.domain.exception.InvalidRorImportParamsException;
 import com.patra.catalog.domain.model.vo.organization.RorImportParams;
 import com.patra.catalog.domain.port.batch.RorOrganizationBatchPort;
 import com.patra.catalog.domain.port.repository.OrganizationRepository;
 import com.patra.common.cqrs.CommandHandler;
 import com.patra.common.error.ApplicationException;
+import com.patra.common.error.DomainException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -85,7 +85,7 @@ public class RorOrganizationImportHandler
       log.info("ROR 机构导入任务已启动，executionId：{}", executionId);
       return RorOrganizationImportResult.success(executionId, command.url(), command.rorVersion());
 
-    } catch (InvalidRorImportParamsException | ApplicationException e) {
+    } catch (DomainException | ApplicationException e) {
       throw e;
     } catch (RuntimeException e) {
       throw new ApplicationException(CatalogErrorCode.CAT_1401, "ROR 机构导入失败: " + e.getMessage(), e);
