@@ -176,6 +176,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_alternative_abstract`
     `publication_id`      BIGINT UNSIGNED NOT NULL COMMENT '出版物ID(外键:cat_publication.id)',
     `abstract_id`         BIGINT UNSIGNED NULL     DEFAULT NULL COMMENT '主摘要ID(外键:cat_publication_abstract.id,关联原摘要)',
     `language_code`       VARCHAR(10)     NOT NULL COMMENT '语言代码(ISO 639-1,如"zh-CN","ja")',
+    `source_type`         VARCHAR(64)     NOT NULL DEFAULT 'unknown' COMMENT '摘要来源类型（如 publisher、plain-language-summary）',
     `language_name`       VARCHAR(50)     NULL     DEFAULT NULL COMMENT '语言名称(如"Chinese","Japanese")',
     `plain_text`          TEXT            NULL     DEFAULT NULL COMMENT '纯文本摘要(最大65535字符)',
     `structured_sections` JSON            NULL     DEFAULT NULL COMMENT '结构化摘要段落(JSON对象)',
@@ -206,7 +207,7 @@ CREATE TABLE IF NOT EXISTS `cat_publication_alternative_abstract`
     PRIMARY KEY (`id`) COMMENT '主键聚簇索引',
 
     -- 复合唯一索引
-    UNIQUE INDEX `uk_abstract_lang` (`publication_id`, `language_code`) COMMENT '出版物+语言唯一索引,保证每种语言只有一个翻译',
+    UNIQUE INDEX `uk_abstract_lang_source` (`publication_id`, `language_code`, `source_type`) COMMENT '出版物+语言+来源类型唯一索引,支持同一语言多种来源类型',
 
     -- 普通索引
     INDEX `idx_publication` (`publication_id`) COMMENT '出版物索引,支持查询某文献的所有翻译(中频)',
