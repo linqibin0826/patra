@@ -45,6 +45,7 @@ import java.util.Objects;
 /// // 创建历史索引记录（已停止索引）
 /// VenueIndexingHistory historicalRecord = VenueIndexingHistory.createHistoricalIndexing(
 ///     "MEDLINE",
+///     IndexingTreatment.SELECTIVE, CitationSubset.IM,
 ///     1950, "1", "1",
 ///     1965, "15", "12"
 /// );
@@ -117,6 +118,8 @@ public record VenueIndexingHistory(
   /// 创建历史索引记录（已停止索引）。
   ///
   /// @param indexingSource 索引来源
+  /// @param indexingTreatment 索引处理方式（可选）
+  /// @param citationSubset 引用子集（可选）
   /// @param startYear 索引开始年份
   /// @param startVolume 索引开始卷号
   /// @param startIssue 索引开始期号
@@ -126,6 +129,8 @@ public record VenueIndexingHistory(
   /// @return 索引历史值对象
   public static VenueIndexingHistory createHistoricalIndexing(
       String indexingSource,
+      IndexingTreatment indexingTreatment,
+      CitationSubset citationSubset,
       Integer startYear,
       String startVolume,
       String startIssue,
@@ -135,8 +140,8 @@ public record VenueIndexingHistory(
     return new VenueIndexingHistory(
         indexingSource,
         false,
-        null,
-        null,
+        indexingTreatment,
+        citationSubset,
         startYear,
         startVolume,
         startIssue,

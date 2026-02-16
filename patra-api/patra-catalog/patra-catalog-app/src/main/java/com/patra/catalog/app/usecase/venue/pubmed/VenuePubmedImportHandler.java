@@ -727,12 +727,12 @@ public class VenuePubmedImportHandler
     }
 
     // 添加 ISSN Print 标识符
-    if (record.issnPrint() != null && !record.issnPrint().isBlank()) {
+    if (record.hasIssnPrint()) {
       venue.addIdentifier(VenueIdentifierType.ISSN, record.issnPrint());
     }
 
     // 添加 ISSN Electronic 标识符
-    if (record.issnElectronic() != null && !record.issnElectronic().isBlank()) {
+    if (record.hasIssnElectronic()) {
       venue.addIdentifier(VenueIdentifierType.ISSN, record.issnElectronic());
     }
   }
@@ -794,12 +794,12 @@ public class VenuePubmedImportHandler
     }
 
     // 添加 ISSN Print 标识符
-    if (record.issnPrint() != null && !record.issnPrint().isBlank()) {
+    if (record.hasIssnPrint()) {
       venue.addIdentifier(VenueIdentifierType.ISSN, record.issnPrint());
     }
 
     // 添加 ISSN Electronic 标识符
-    if (record.issnElectronic() != null && !record.issnElectronic().isBlank()) {
+    if (record.hasIssnElectronic()) {
       venue.addIdentifier(VenueIdentifierType.ISSN, record.issnElectronic());
     }
 
@@ -870,7 +870,7 @@ public class VenuePubmedImportHandler
                 type = VenueRelationType.PRECEDING;
                 log.debug("无法识别的 TitleType：{}，默认使用 PRECEDING", r.titleType());
               }
-              return VenueRelation.create(r.relatedTitle(), type);
+              return VenueRelation.create(r.relatedTitle(), type, r.getNlmRecordId());
             })
         .toList();
   }
@@ -892,7 +892,7 @@ public class VenuePubmedImportHandler
                     "MEDLINE", treatment, citationSubset, null, null, null);
               } else {
                 return VenueIndexingHistory.createHistoricalIndexing(
-                    "MEDLINE", null, null, null, null, null, null);
+                    "MEDLINE", treatment, citationSubset, null, null, null, null, null, null);
               }
             })
         .toList();
