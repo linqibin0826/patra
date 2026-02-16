@@ -32,13 +32,15 @@ import com.patra.catalog.domain.port.registry.DictionaryResolverPort;
 import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
 import com.patra.catalog.domain.port.repository.MeshQualifierRepository;
 import com.patra.catalog.domain.port.repository.VenueRepository;
-import com.patra.catalog.domain.port.source.StreamingDownloadPort;
-import com.patra.catalog.domain.port.source.StreamingDownloadResult;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadResult;
 import com.patra.common.cqrs.CommandHandler;
 import com.patra.common.error.ApplicationException;
 import com.patra.common.error.DomainException;
 import com.patra.common.error.trait.StandardErrorTrait;
+import java.io.InputStream;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -89,7 +91,7 @@ public class VenuePubmedImportHandler
   private static final String LSIOU_PATH_PREFIX = "/online/journals/";
   private static final String LSIOU_ARCHIVE_PREFIX = "/online/journals/archive/";
 
-  private final StreamingDownloadPort streamingDownloadPort;
+  private final FileDownloadPort fileDownloadPort;
   private final LsiouParserPort parserPort;
   private final VenueRepository venueRepository;
   private final TransactionTemplate transactionTemplate;
@@ -116,10 +118,10 @@ public class VenuePubmedImportHandler
   /// **事务策略**：批次级别事务，每 500 条记录独立提交。
   /// 失败时仅回滚当前批次，已完成批次不受影响。
   ///
-  /// **流式处理特性**：
+  /// **下载策略**：
   ///
-  /// - 无磁盘落盘，HTTP 响应体直接传递给 Parser
-  /// - 使用 try-with-resources 自动管理 HTTP 连接
+  /// - 下载到临时文件，解耦 HTTP 连接与数据处理
+  /// - 使用 try-with-resources 自动清理临时文件
   ///
   /// @param command 导入命令（包含 URL 和版本号）
   /// @return 导入结果摘要
@@ -129,22 +131,25 @@ public class VenuePubmedImportHandler
     log.info("启动 PubMed Venue 导入，URL：{}，版本：{}", command.url(), command.lsiouVersion());
 
     // ────────────────────────────────────────────────────────────────────────────
-    // 阶段 1：流式下载
-    // - 使用 try-with-resources 管理 HTTP 连接生命周期
-    // - 无磁盘落盘，HTTP 响应体直接传递给 Parser
+    // 阶段 1：下载到临时文件
+    // - 使用 try-with-resources 管理临时文件生命周期
+    // - 下载到本地临时文件，解耦 HTTP 连接与解析处理
     // ────────────────────────────────────────────────────────────────────────────
     try (DownloadContext context = openDownloadContext(command.url())) {
-      StreamingDownloadResult downloadResult = context.result();
+      FileDownloadResult downloadResult = context.result();
       String sourceUrl = context.sourceUrl();
 
-      log.info("HTTP 连接建立成功，开始流式解析，实际来源：{}", sourceUrl);
+      log.info("文件下载完成（{} 字节），开始解析，实际来源：{}", downloadResult.fileSize(), sourceUrl);
 
       // ────────────────────────────────────────────────────────────────────────────
       // 阶段 2：XML 解析
       // - 将 NLM LSIOU XML 解析为 PubmedSerialData 领域对象
       // - 一次性加载所有记录到内存（LSIOU 约 1.5 万条，可承受）
       // ────────────────────────────────────────────────────────────────────────────
-      List<PubmedSerialData> allRecords = parserPort.parse(downloadResult.inputStream()).toList();
+      List<PubmedSerialData> allRecords;
+      try (InputStream fileStream = Files.newInputStream(downloadResult.filePath())) {
+        allRecords = parserPort.parse(fileStream).toList();
+      }
       log.info("解析完成，记录数：{}", allRecords.size());
 
       if (allRecords.isEmpty()) {
@@ -210,23 +215,22 @@ public class VenuePubmedImportHandler
       throw new ApplicationException(
           CatalogErrorCode.CAT_1301, "PubMed Venue 导入时发生意外错误: " + e.getMessage(), e);
     }
-    // 无需 finally 清理临时文件，try-with-resources 自动关闭 HTTP 连接
+    // try-with-resources 自动调用 DownloadContext.close() 清理临时文件
   }
 
-  /// 获取流式下载结果，若主目录不存在则回退到 archive 目录。
+  /// 下载文件到临时目录，若主目录不存在则回退到 archive 目录。
   ///
   /// @param urlString 下载 URL
-  /// @return 下载上下文（包含实际来源 URL）
+  /// @return 下载上下文（包含临时文件和实际来源 URL）
   private DownloadContext openDownloadContext(String urlString) {
     URI primaryUrl = URI.create(urlString);
     try {
-      return new DownloadContext(streamingDownloadPort.download(primaryUrl), primaryUrl.toString());
+      return new DownloadContext(fileDownloadPort.download(primaryUrl), primaryUrl.toString());
     } catch (FileDownloadException ex) {
       if (shouldTryArchive(primaryUrl, ex)) {
         URI archiveUrl = toArchiveUrl(primaryUrl);
         log.warn("LSIOU 主目录文件不存在，尝试 archive 目录：{}", archiveUrl);
-        return new DownloadContext(
-            streamingDownloadPort.download(archiveUrl), archiveUrl.toString());
+        return new DownloadContext(fileDownloadPort.download(archiveUrl), archiveUrl.toString());
       }
       throw ex;
     }
@@ -300,16 +304,16 @@ public class VenuePubmedImportHandler
     return path != null && path.startsWith(LSIOU_ARCHIVE_PREFIX);
   }
 
-  /// 下载上下文（携带实际来源 URL）。
+  /// 下载上下文（携带临时文件和实际来源 URL）。
   ///
-  /// @param result 下载结果
+  /// @param result 文件下载结果（包含临时文件路径）
   /// @param sourceUrl 实际来源 URL
-  private record DownloadContext(StreamingDownloadResult result, String sourceUrl)
+  private record DownloadContext(FileDownloadResult result, String sourceUrl)
       implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-      result.close();
+      Files.deleteIfExists(result.filePath());
     }
   }
 

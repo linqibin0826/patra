@@ -35,10 +35,13 @@ public interface MeshScrParserPort {
   /// **使用示例**：
   ///
   /// ```java
-  /// try (StreamingDownloadResult result = downloadPort.download(uri)) {
-  ///     port.parse(result.inputStream())
+  /// FileDownloadResult result = downloadPort.download(uri);
+  /// try (InputStream in = Files.newInputStream(result.filePath())) {
+  ///     port.parse(in)
   ///         .map(scr -> scr.withMeshVersion("2025"))
   ///         .forEach(scr -> processScr(scr));
+  /// } finally {
+  ///     Files.deleteIfExists(result.filePath());
   /// }
   /// ```
   ///

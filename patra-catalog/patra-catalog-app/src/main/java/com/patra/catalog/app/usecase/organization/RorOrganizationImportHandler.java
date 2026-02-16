@@ -93,6 +93,6 @@ public class RorOrganizationImportHandler
       throw new ApplicationException(
           CatalogErrorCode.CAT_1401, "ROR 机构导入时发生意外错误: " + e.getMessage(), e);
     }
-    // 无需清理临时文件，ItemReader 在 close() 时自动关闭 HTTP 连接
+    // 无需清理临时文件，ItemReader 在 close() 时自动删除临时文件
   }
 }

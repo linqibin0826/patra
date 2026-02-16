@@ -44,9 +44,12 @@ public interface PubmedXmlParserPort {
   /// **使用示例**：
   ///
   /// ```java
-  /// try (StreamingDownloadResult result = downloadPort.download(uri)) {
-  ///     port.parse(result.inputStream())
+  /// FileDownloadResult result = downloadPort.download(uri);
+  /// try (InputStream in = Files.newInputStream(result.filePath())) {
+  ///     port.parse(in)
   ///         .forEach(publication -> processPublication(publication));
+  /// } finally {
+  ///     Files.deleteIfExists(result.filePath());
   /// }
   /// ```
   ///

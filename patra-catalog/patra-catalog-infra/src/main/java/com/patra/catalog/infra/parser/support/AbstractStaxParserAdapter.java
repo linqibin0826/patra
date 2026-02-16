@@ -93,14 +93,15 @@ public abstract class AbstractStaxParserAdapter<T> {
   /// **与 `doParse(Path, ...)` 的区别**：
   ///
   /// - 此方法**不关闭**传入的 InputStream，由调用方负责管理
-  /// - 适用于流式解析场景，与 `StreamingDownloadResult` 或 `FileInputStream` 配合使用
+  /// - 适用于流式解析场景，与 `FileDownloadResult` 或 `FileInputStream` 配合使用
   ///
   /// **使用示例**：
   ///
   /// ```java
-  /// // 方式 1：流式下载（小文件，App 层 Handler 使用）
-  /// try (StreamingDownloadResult result = downloadPort.download(uri)) {
-  ///     return doParse(result.inputStream(), strategy, "解析中", MyException::new);
+  /// // 方式 1：临时文件（小文件，App 层 Handler 使用）
+  /// FileDownloadResult result = downloadPort.download(uri);
+  /// try (var is = Files.newInputStream(result.filePath())) {
+  ///     return doParse(is, strategy, "解析中", MyException::new);
   /// }
   /// // 方式 2：临时文件（大文件，Batch ItemReader 使用）
   /// var is = new FileInputStream(tempFilePath);
@@ -125,7 +126,7 @@ public abstract class AbstractStaxParserAdapter<T> {
           SecureXmlInputFactory.getInstance().createXMLStreamReader(inputStream);
       var spliterator = new RecordSpliterator<>(reader, strategy, XmlParsingContext.empty());
 
-      // 注意：不关闭 inputStream，由调用方管理（StreamingDownloadResult.close() 或 ItemReader.close()）
+      // 注意：不关闭 inputStream，由调用方管理（Handler 的 try-with-resources 或 ItemReader.close()）
       return StreamSupport.stream(spliterator, false).onClose(() -> closeReader(reader));
     } catch (XMLStreamException e) {
       log.error("创建 XML 读取器失败", e);

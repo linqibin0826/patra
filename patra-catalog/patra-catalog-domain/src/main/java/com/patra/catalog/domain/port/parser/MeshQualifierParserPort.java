@@ -35,10 +35,13 @@ public interface MeshQualifierParserPort {
   /// **使用示例**：
   ///
   /// ```java
-  /// try (StreamingDownloadResult result = downloadPort.download(uri)) {
-  ///     List<MeshQualifierAggregate> qualifiers = port.parse(result.inputStream())
+  /// FileDownloadResult result = downloadPort.download(uri);
+  /// try (InputStream in = Files.newInputStream(result.filePath())) {
+  ///     List<MeshQualifierAggregate> qualifiers = port.parse(in)
   ///         .map(q -> q.withMeshVersion("2025"))
   ///         .toList();
+  /// } finally {
+  ///     Files.deleteIfExists(result.filePath());
   /// }
   /// ```
   ///
