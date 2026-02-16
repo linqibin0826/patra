@@ -7,11 +7,15 @@ import com.patra.catalog.domain.exception.DataAlreadyExistsException;
 import com.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import com.patra.catalog.domain.port.parser.MeshQualifierParserPort;
 import com.patra.catalog.domain.port.repository.MeshQualifierRepository;
-import com.patra.catalog.domain.port.source.StreamingDownloadPort;
-import com.patra.catalog.domain.port.source.StreamingDownloadResult;
+import com.patra.catalog.domain.port.source.FileDownloadPort;
+import com.patra.catalog.domain.port.source.FileDownloadResult;
 import com.patra.common.cqrs.CommandHandler;
 import com.patra.common.error.ApplicationException;
+import com.patra.common.error.DomainException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,10 +30,10 @@ import org.springframework.transaction.annotation.Transactional;
 /// - 管理事务边界
 /// - 委派具体任务给领域端口
 ///
-/// **流式处理特性**：
+/// **下载策略**：
 ///
-/// - 无磁盘落盘，HTTP 响应体直接传递给 Parser
-/// - 使用 try-with-resources 自动管理 HTTP 连接
+/// - 下载到临时文件，解耦 HTTP 连接与数据处理
+/// - 使用 finally 块自动清理临时文件
 ///
 /// **设计说明**：
 ///
@@ -47,13 +51,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class MeshQualifierImportHandler
     implements CommandHandler<MeshQualifierImportCommand, MeshQualifierImportResult> {
 
-  private final StreamingDownloadPort streamingDownloadPort;
+  private final FileDownloadPort fileDownloadPort;
   private final MeshQualifierParserPort qualifierParserPort;
   private final MeshQualifierRepository qualifierRepository;
 
   /// 导入 MeSH 限定词。
   ///
-  /// 从远程 URL 流式下载并解析 XML，批量保存到数据库。
+  /// 从远程 URL 下载到临时文件并解析 XML，批量保存到数据库。
   ///
   /// **事务策略**：整个操作在一个事务内完成（数据量小，约 80 条）。
   ///
@@ -78,18 +82,20 @@ public class MeshQualifierImportHandler
       throw new DataAlreadyExistsException("MeSH Qualifier");
     }
 
-    // 2. 流式下载并解析（无磁盘落盘）
-    try (StreamingDownloadResult downloadResult =
-        streamingDownloadPort.download(URI.create(command.url()))) {
-
-      log.info("HTTP 连接建立成功，开始流式解析");
+    // 2. 下载到临时文件
+    FileDownloadResult downloadResult = fileDownloadPort.download(URI.create(command.url()));
+    try {
+      log.info("文件下载完成（{} 字节），开始解析", downloadResult.fileSize());
 
       // 3. 解析 XML 并设置版本号
-      List<MeshQualifierAggregate> qualifiers =
-          qualifierParserPort
-              .parse(downloadResult.inputStream())
-              .map(q -> q.withMeshVersion(command.meshVersion()))
-              .toList();
+      List<MeshQualifierAggregate> qualifiers;
+      try (InputStream fileStream = Files.newInputStream(downloadResult.filePath())) {
+        qualifiers =
+            qualifierParserPort
+                .parse(fileStream)
+                .map(q -> q.withMeshVersion(command.meshVersion()))
+                .toList();
+      }
 
       // 4. 批量保存
       qualifierRepository.saveBatch(qualifiers);
@@ -98,18 +104,20 @@ public class MeshQualifierImportHandler
       return MeshQualifierImportResult.success(
           command.url(), command.meshVersion(), qualifiers.size());
 
-    } catch (ApplicationException e) {
-      // 已经是 ApplicationException，直接重新抛出
+    } catch (DomainException | ApplicationException e) {
       throw e;
     } catch (RuntimeException e) {
-      // 包装其他运行时异常
       throw new ApplicationException(
           CatalogErrorCode.CAT_1001, "MeSH 限定词导入失败: " + e.getMessage(), e);
     } catch (Exception e) {
-      // 包装检查异常
       throw new ApplicationException(
           CatalogErrorCode.CAT_1001, "MeSH 限定词导入时发生意外错误: " + e.getMessage(), e);
+    } finally {
+      try {
+        Files.deleteIfExists(downloadResult.filePath());
+      } catch (IOException e) {
+        log.warn("清理临时文件失败：{}", downloadResult.filePath(), e);
+      }
     }
-    // 无需 finally 清理临时文件，try-with-resources 自动关闭 HTTP 连接
   }
 }

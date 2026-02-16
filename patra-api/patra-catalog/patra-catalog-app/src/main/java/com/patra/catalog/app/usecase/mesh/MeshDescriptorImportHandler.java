@@ -86,6 +86,6 @@ public class MeshDescriptorImportHandler
       throw new ApplicationException(
           CatalogErrorCode.CAT_1002, "MeSH 主题词导入时发生意外错误: " + e.getMessage(), e);
     }
-    // 无需清理临时文件，ItemReader 在 close() 时自动关闭 HTTP 连接
+    // 无需清理临时文件，ItemReader 在 close() 时自动删除临时文件
   }
 }

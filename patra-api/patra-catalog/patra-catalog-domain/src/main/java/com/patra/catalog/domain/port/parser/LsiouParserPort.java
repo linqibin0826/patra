@@ -31,8 +31,11 @@ public interface LsiouParserPort {
   /// **使用示例**：
   ///
   /// ```java
-  /// try (StreamingDownloadResult result = downloadPort.download(uri)) {
-  ///     result.inputStream().forEach(data -> processData(data));
+  /// FileDownloadResult result = downloadPort.download(uri);
+  /// try (InputStream in = Files.newInputStream(result.filePath())) {
+  ///     parse(in).forEach(data -> processData(data));
+  /// } finally {
+  ///     Files.deleteIfExists(result.filePath());
   /// }
   /// ```
   ///

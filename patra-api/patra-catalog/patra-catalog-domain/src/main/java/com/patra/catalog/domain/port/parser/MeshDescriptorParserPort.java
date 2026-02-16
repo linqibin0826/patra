@@ -35,10 +35,13 @@ public interface MeshDescriptorParserPort {
   /// **使用示例**：
   ///
   /// ```java
-  /// try (StreamingDownloadResult result = downloadPort.download(uri)) {
-  ///     port.parse(result.inputStream())
+  /// FileDownloadResult result = downloadPort.download(uri);
+  /// try (InputStream in = Files.newInputStream(result.filePath())) {
+  ///     port.parse(in)
   ///         .map(d -> d.withMeshVersion("2025"))
   ///         .forEach(descriptor -> processDescriptor(descriptor));
+  /// } finally {
+  ///     Files.deleteIfExists(result.filePath());
   /// }
   /// ```
   ///

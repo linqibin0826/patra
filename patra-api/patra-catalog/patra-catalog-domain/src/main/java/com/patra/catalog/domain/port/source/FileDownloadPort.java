@@ -3,7 +3,7 @@ package com.patra.catalog.domain.port.source;
 import com.patra.catalog.domain.exception.FileDownloadException;
 import java.net.URI;
 
-/// 文件下载端口（批处理专用）。
+/// 文件下载端口（统一下载方式）。
 ///
 /// 下载远程文件到本地临时目录，解耦 HTTP 连接生命周期与数据处理速度。
 ///
@@ -11,10 +11,11 @@ import java.net.URI;
 ///
 /// - Domain 层定义接口，隐藏下载客户端实现细节
 /// - Infrastructure 层使用 DownloadClient.downloadToTemp() 实现
-/// - 调用方负责删除临时文件（通常在 ItemReader.close() 中）
+/// - 调用方负责删除临时文件（Handler 的 finally 块或 ItemReader.close()）
 ///
 /// **使用场景**：
 ///
+/// - App 层 Handler 导入（下载后从本地文件读取解析）
 /// - Spring Batch ItemReader 需要本地文件解析（避免 PrematureCloseException）
 /// - 慢速 Writer 场景（DB 插入阻塞导致 HTTP 超时）
 ///
@@ -32,7 +33,6 @@ import java.net.URI;
 /// @author linqibin
 /// @since 0.1.0
 /// @see FileDownloadResult
-/// @see StreamingDownloadPort
 public interface FileDownloadPort {
 
   /// 下载远程文件到临时目录。
