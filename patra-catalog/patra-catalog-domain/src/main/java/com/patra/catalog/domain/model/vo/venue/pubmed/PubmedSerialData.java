@@ -157,8 +157,17 @@ public record PubmedSerialData(
 
   /// 判断是否有任何 ISSN（Print 或 Electronic）。
   public boolean hasAnyIssn() {
-    return (issnPrint != null && !issnPrint.isBlank())
-        || (issnElectronic != null && !issnElectronic.isBlank());
+    return hasIssnPrint() || hasIssnElectronic();
+  }
+
+  /// 判断是否有 ISSN Print。
+  public boolean hasIssnPrint() {
+    return issnPrint != null && !issnPrint.isBlank();
+  }
+
+  /// 判断是否有 ISSN Electronic。
+  public boolean hasIssnElectronic() {
+    return issnElectronic != null && !issnElectronic.isBlank();
   }
 
   /// 判断是否有 NLM ID。
