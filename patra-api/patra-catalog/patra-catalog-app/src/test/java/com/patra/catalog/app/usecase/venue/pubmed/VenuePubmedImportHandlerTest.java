@@ -10,8 +10,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.catalog.app.usecase.venue.pubmed.command.VenuePubmedEnrichCommand;
-import com.patra.catalog.app.usecase.venue.pubmed.dto.VenuePubmedEnrichResult;
+import com.patra.catalog.app.usecase.venue.pubmed.command.VenuePubmedImportCommand;
+import com.patra.catalog.app.usecase.venue.pubmed.dto.VenuePubmedImportResult;
 import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
@@ -32,6 +32,7 @@ import com.patra.common.error.trait.StandardErrorTrait;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URI;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -50,7 +51,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/// PubMed Venue 数据富化命令处理器单元测试。
+/// PubMed Venue 数据导入命令处理器单元测试。
 ///
 /// **测试策略**：
 ///
@@ -59,16 +60,16 @@ import org.springframework.transaction.support.TransactionTemplate;
 ///
 /// **重点测试场景**：
 ///
-/// - 正常富化流程：流式下载 → 解析 → 匹配 → 更新/创建
+/// - 正常导入流程：流式下载 → 解析 → 匹配 → 更新/创建
 /// - 匹配优先级：ISSN-L → NLM ID → ISSN
 /// - 异常处理
 ///
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
-@DisplayName("VenuePubmedEnrichHandler 单元测试")
+@DisplayName("VenuePubmedImportHandler 单元测试")
 @Timeout(value = 2, unit = TimeUnit.SECONDS)
-class VenuePubmedEnrichHandlerTest {
+class VenuePubmedImportHandlerTest {
 
   private static final String TEST_URL = "ftp://ftp.nlm.nih.gov/online/journals/lsi2024.xml";
   private static final String TEST_VERSION = "2024";
@@ -86,13 +87,13 @@ class VenuePubmedEnrichHandlerTest {
   @Captor private ArgumentCaptor<List<VenueAggregate>> updateBatchCaptor;
   @Captor private ArgumentCaptor<List<VenueAggregate>> insertAllCaptor;
 
-  private VenuePubmedEnrichHandler handler;
+  private VenuePubmedImportHandler handler;
 
   @BeforeEach
   @SuppressWarnings("unchecked")
   void setUp() {
     handler =
-        new VenuePubmedEnrichHandler(
+        new VenuePubmedImportHandler(
             streamingDownloadPort,
             parserPort,
             venueRepository,
@@ -119,20 +120,20 @@ class VenuePubmedEnrichHandlerTest {
     // 配置 dictionaryResolverPort 默认返回空 Map（测试不关心国家编码解析）
     lenient().when(dictionaryResolverPort.resolve(any(), any(), any())).thenReturn(Map.of());
 
-    // 配置 MeSH Repository 默认返回空 Map（测试不关心 MeSH UI 富化）
+    // 配置 MeSH Repository 默认返回空 Map（测试不关心 MeSH UI 导入）
     lenient().when(meshDescriptorRepository.findAllByNameIn(any())).thenReturn(Map.of());
     lenient().when(meshQualifierRepository.findAllByNameIn(any())).thenReturn(Map.of());
   }
 
   @Nested
-  @DisplayName("正常富化流程测试")
-  class NormalEnrichFlowTest {
+  @DisplayName("正常导入流程测试")
+  class NormalImportFlowTest {
 
     @Test
-    @DisplayName("应该正确执行完整富化流程：流式下载 → 解析 → 匹配 → 更新/创建")
-    void shouldExecuteCompleteEnrichFlow() {
+    @DisplayName("应该正确执行完整导入流程：流式下载 → 解析 → 匹配 → 更新/创建")
+    void shouldExecuteCompleteImportFlow() {
       // Given
-      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
       PubmedSerialData record1 =
           createSerialData("0000001", "Journal One", "1111-1111", null, null);
       PubmedSerialData record2 =
@@ -147,7 +148,7 @@ class VenuePubmedEnrichHandlerTest {
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
 
       // When
-      VenuePubmedEnrichResult result = handler.handle(command);
+      VenuePubmedImportResult result = handler.handle(command);
 
       // Then - 验证调用顺序
       verify(streamingDownloadPort).download(URI.create(TEST_URL));
@@ -169,13 +170,13 @@ class VenuePubmedEnrichHandlerTest {
     @DisplayName("空 XML 应该返回零计数结果")
     void shouldReturnZeroCountsForEmptyXml() {
       // Given
-      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
 
       when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
       when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.empty());
 
       // When
-      VenuePubmedEnrichResult result = handler.handle(command);
+      VenuePubmedImportResult result = handler.handle(command);
 
       // Then
       assertThat(result.totalParsed()).isZero();
@@ -197,7 +198,7 @@ class VenuePubmedEnrichHandlerTest {
     @DisplayName("优先级 1：应该优先使用 ISSN-L 匹配")
     void shouldPrioritizeIssnLMatching() {
       // Given
-      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
       // 记录同时有 ISSN-L, NLM ID 和 ISSN，应该使用 ISSN-L 匹配
       PubmedSerialData record =
           createSerialData("0000001", "Test Journal", "1111-1111", "2222-2222", "3333-3333");
@@ -226,7 +227,7 @@ class VenuePubmedEnrichHandlerTest {
     @DisplayName("优先级 2：ISSN-L 无匹配时应该使用 NLM ID 匹配")
     void shouldFallbackToNlmIdMatching() {
       // Given
-      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
       PubmedSerialData record =
           createSerialData("0000001", "Test Journal", null, "2222-2222", null);
 
@@ -252,7 +253,7 @@ class VenuePubmedEnrichHandlerTest {
     @DisplayName("优先级 3：ISSN-L 和 NLM ID 都无匹配时应该使用 ISSN 匹配")
     void shouldFallbackToIssnMatching() {
       // Given
-      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
       PubmedSerialData record =
           createSerialData("0000001", "Test Journal", null, "2222-2222", null);
 
@@ -277,7 +278,7 @@ class VenuePubmedEnrichHandlerTest {
     @DisplayName("所有匹配都失败时应该创建新记录")
     void shouldCreateNewVenueWhenNoMatch() {
       // Given
-      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
       PubmedSerialData record = createSerialData("0000001", "New Journal", "1111-1111", null, null);
 
       when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
@@ -287,7 +288,7 @@ class VenuePubmedEnrichHandlerTest {
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
 
       // When
-      VenuePubmedEnrichResult result = handler.handle(command);
+      VenuePubmedImportResult result = handler.handle(command);
 
       // Then
       verify(venueRepository).insertAll(insertAllCaptor.capture());
@@ -308,7 +309,7 @@ class VenuePubmedEnrichHandlerTest {
     @DisplayName("应该正确统计更新和创建数量")
     void shouldCountUpdatedAndCreatedCorrectly() {
       // Given
-      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
 
       // 3 条记录：1 条匹配更新，2 条新建
       PubmedSerialData matched = createSerialData("0000001", "Matched", "1111-1111", null, null);
@@ -324,7 +325,7 @@ class VenuePubmedEnrichHandlerTest {
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
 
       // When
-      VenuePubmedEnrichResult result = handler.handle(command);
+      VenuePubmedImportResult result = handler.handle(command);
 
       // Then
       assertThat(result.totalParsed()).isEqualTo(3);
@@ -338,13 +339,13 @@ class VenuePubmedEnrichHandlerTest {
     @DisplayName("耗时应该被正确记录")
     void shouldRecordDuration() {
       // Given
-      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
 
       when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
       when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.empty());
 
       // When
-      VenuePubmedEnrichResult result = handler.handle(command);
+      VenuePubmedImportResult result = handler.handle(command);
 
       // Then - 耗时应该大于等于 0
       assertThat(result.durationMillis()).isGreaterThanOrEqualTo(0);
@@ -361,7 +362,7 @@ class VenuePubmedEnrichHandlerTest {
       // Given
       String primaryUrl = "ftp://ftp.nlm.nih.gov/online/journals/lsi2023.xml";
       String archiveUrl = "ftp://ftp.nlm.nih.gov/online/journals/archive/lsi2023.xml";
-      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(primaryUrl, TEST_VERSION);
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(primaryUrl, TEST_VERSION);
 
       when(streamingDownloadPort.download(URI.create(primaryUrl)))
           .thenThrow(new FileDownloadException("not found", StandardErrorTrait.NOT_FOUND));
@@ -369,7 +370,7 @@ class VenuePubmedEnrichHandlerTest {
       when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.empty());
 
       // When
-      VenuePubmedEnrichResult result = handler.handle(command);
+      VenuePubmedImportResult result = handler.handle(command);
 
       // Then
       verify(streamingDownloadPort).download(URI.create(primaryUrl));
@@ -386,7 +387,7 @@ class VenuePubmedEnrichHandlerTest {
     @DisplayName("下载失败时应该包装为 ApplicationException")
     void shouldWrapDownloadException() {
       // Given
-      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
 
       when(streamingDownloadPort.download(any(URI.class)))
           .thenThrow(new RuntimeException("Network error"));
@@ -394,7 +395,7 @@ class VenuePubmedEnrichHandlerTest {
       // When & Then
       assertThatThrownBy(() -> handler.handle(command))
           .isInstanceOf(ApplicationException.class)
-          .hasMessageContaining("PubMed Venue 富化失败");
+          .hasMessageContaining("PubMed Venue 导入失败");
 
       // 不应该调用后续操作
       verify(parserPort, never()).parse(any());
@@ -404,7 +405,7 @@ class VenuePubmedEnrichHandlerTest {
     @DisplayName("解析失败时应该包装为 ApplicationException")
     void shouldWrapParsingException() {
       // Given
-      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
 
       when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
       when(parserPort.parse(any(InputStream.class)))
@@ -413,14 +414,14 @@ class VenuePubmedEnrichHandlerTest {
       // When & Then
       assertThatThrownBy(() -> handler.handle(command))
           .isInstanceOf(ApplicationException.class)
-          .hasMessageContaining("PubMed Venue 富化失败");
+          .hasMessageContaining("PubMed Venue 导入失败");
     }
 
     @Test
     @DisplayName("Repository 操作失败时应该包装为 ApplicationException")
     void shouldWrapRepositoryException() {
       // Given
-      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
       PubmedSerialData record = createSerialData("0000001", "Journal", "1111-1111", null, null);
 
       when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
@@ -433,19 +434,19 @@ class VenuePubmedEnrichHandlerTest {
       // When & Then
       assertThatThrownBy(() -> handler.handle(command))
           .isInstanceOf(ApplicationException.class)
-          .hasMessageContaining("PubMed Venue 富化失败");
+          .hasMessageContaining("PubMed Venue 导入失败");
     }
   }
 
   @Nested
-  @DisplayName("MeSH UI 富化测试")
-  class MeshUiEnrichmentTest {
+  @DisplayName("MeSH UI 导入测试")
+  class MeshUiImportTest {
 
     @Test
-    @DisplayName("应该正确富化 MeSH Descriptor UI")
-    void shouldEnrichMeshDescriptorUi() {
+    @DisplayName("应该正确导入 MeSH Descriptor UI")
+    void shouldImportMeshDescriptorUi() {
       // Given: 带 MeSH 主题词的记录
-      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
       PubmedSerialData record =
           PubmedSerialData.builder()
               .nlmUniqueId("0000001")
@@ -478,10 +479,10 @@ class VenuePubmedEnrichHandlerTest {
     }
 
     @Test
-    @DisplayName("应该正确富化 MeSH Qualifier UI")
-    void shouldEnrichMeshQualifierUi() {
+    @DisplayName("应该正确导入 MeSH Qualifier UI")
+    void shouldImportMeshQualifierUi() {
       // Given: 带限定词的 MeSH 主题词记录
-      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
       PubmedSerialData record =
           PubmedSerialData.builder()
               .nlmUniqueId("0000001")
@@ -523,7 +524,7 @@ class VenuePubmedEnrichHandlerTest {
     @DisplayName("MeSH UI 查找失败时应该保持 null")
     void shouldKeepNullWhenMeshUiNotFound() {
       // Given: 带 MeSH 主题词的记录，但 Repository 返回空
-      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
       PubmedSerialData record =
           PubmedSerialData.builder()
               .nlmUniqueId("0000001")
@@ -542,7 +543,7 @@ class VenuePubmedEnrichHandlerTest {
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
 
       // When
-      VenuePubmedEnrichResult result = handler.handle(command);
+      VenuePubmedImportResult result = handler.handle(command);
 
       // Then: 不应该抛出异常，处理应该继续
       assertThat(result.isSuccess()).isTrue();
@@ -553,7 +554,7 @@ class VenuePubmedEnrichHandlerTest {
     @DisplayName("没有 MeSH 主题词时不应调用 MeSH Repository")
     void shouldNotCallMeshRepositoryWhenNoMeshHeadings() {
       // Given: 没有 MeSH 主题词的记录
-      VenuePubmedEnrichCommand command = VenuePubmedEnrichCommand.of(TEST_URL, TEST_VERSION);
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
       PubmedSerialData record =
           PubmedSerialData.builder()
               .nlmUniqueId("0000001")
@@ -573,6 +574,189 @@ class VenuePubmedEnrichHandlerTest {
       // Then: MeSH Repository 应该被调用（收集到空集合，但方法仍被调用）
       // 由于批次处理，即使没有 MeSH 也会调用 findAllByNameIn(emptySet)
       verify(meshDescriptorRepository).findAllByNameIn(any());
+    }
+  }
+
+  @Nested
+  @DisplayName("ISSN 标识符存储测试")
+  class IssnIdentifierStorageTest {
+
+    @Test
+    @DisplayName("创建新期刊时应该存储 ISSN Print 和 Electronic 标识符")
+    void shouldStoreIssnIdentifiersOnCreate() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record =
+          createSerialData("0000001", "New Journal", "1111-1111", "2222-2222", "3333-3333");
+
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+
+      // When
+      handler.handle(command);
+
+      // Then — 新建的聚合根应包含所有 5 种标识符
+      verify(venueRepository).insertAll(insertAllCaptor.capture());
+      VenueAggregate created = insertAllCaptor.getValue().getFirst();
+
+      assertThat(created.getIdentifier(VenueIdentifierType.NLM)).hasValue("0000001");
+      assertThat(created.getIdentifier(VenueIdentifierType.ISSN_L)).hasValue("1111-1111");
+      assertThat(created.getIdentifiers(VenueIdentifierType.ISSN))
+          .containsExactlyInAnyOrder("2222-2222", "3333-3333");
+    }
+
+    @Test
+    @DisplayName("更新已有期刊时应该补充 ISSN Print 和 Electronic 标识符")
+    void shouldAddIssnIdentifiersOnUpdate() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record =
+          createSerialData("0000001", "Existing Journal", "1111-1111", "2222-2222", "3333-3333");
+
+      // 已有期刊只有 ISSN-L，没有 ISSN
+      VenueAggregate existingVenue = createExistingVenue("Existing", null, "1111-1111");
+
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("1111-1111", existingVenue));
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+
+      // When
+      handler.handle(command);
+
+      // Then — 更新后应补充 NLM ID 和 ISSN
+      verify(venueRepository).updateBatch(updateBatchCaptor.capture());
+      VenueAggregate updated = updateBatchCaptor.getValue().getFirst();
+
+      assertThat(updated.getIdentifier(VenueIdentifierType.NLM)).hasValue("0000001");
+      assertThat(updated.getIdentifiers(VenueIdentifierType.ISSN))
+          .containsExactlyInAnyOrder("2222-2222", "3333-3333");
+    }
+  }
+
+  @Nested
+  @DisplayName("批内去重测试")
+  class BatchInternalDeduplicationTest {
+
+    @Test
+    @DisplayName("同批次内相同 NLM ID 的记录应该被去重")
+    void shouldDeduplicateByNlmIdWithinBatch() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record1 = createSerialData("0000001", "Journal A", "1111-1111", null, null);
+      PubmedSerialData record2 = createSerialData("0000001", "Journal A Variant", null, null, null);
+
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record1, record2));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+
+      // When
+      VenuePubmedImportResult result = handler.handle(command);
+
+      // Then — 只创建 1 条，跳过 1 条
+      verify(venueRepository).insertAll(insertAllCaptor.capture());
+      assertThat(insertAllCaptor.getValue()).hasSize(1);
+      assertThat(result.createdCount()).isEqualTo(1);
+      assertThat(result.skippedCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("同批次内相同 ISSN-L 的记录应该被去重")
+    void shouldDeduplicateByIssnLWithinBatch() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record1 = createSerialData("0000001", "Journal A", "1111-1111", null, null);
+      PubmedSerialData record2 =
+          createSerialData("0000002", "Journal A (New Title)", "1111-1111", null, null);
+
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record1, record2));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+
+      // When
+      VenuePubmedImportResult result = handler.handle(command);
+
+      // Then — 只创建 1 条，跳过 1 条
+      verify(venueRepository).insertAll(insertAllCaptor.capture());
+      assertThat(insertAllCaptor.getValue()).hasSize(1);
+      assertThat(insertAllCaptor.getValue().getFirst().getDisplayName()).isEqualTo("Journal A");
+      assertThat(result.skippedCount()).isEqualTo(1);
+    }
+  }
+
+  @Nested
+  @DisplayName("已删除 Serial 过滤测试")
+  class DeletedSerialFilterTest {
+
+    @Test
+    @DisplayName("应该跳过已删除的 Serial 记录")
+    void shouldSkipDeletedSerials() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData activeRecord =
+          createSerialData("0000001", "Active Journal", "1111-1111", null, null);
+      PubmedSerialData deletedRecord =
+          PubmedSerialData.builder()
+              .nlmUniqueId("0000002")
+              .title("Deleted Journal")
+              .issnL("2222-2222")
+              .deletedTimestamp(LocalDateTime.of(2020, 1, 1, 0, 0))
+              .build();
+
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class)))
+          .thenReturn(Stream.of(activeRecord, deletedRecord));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+
+      // When
+      VenuePubmedImportResult result = handler.handle(command);
+
+      // Then — 只创建活跃记录，删除的被跳过
+      verify(venueRepository).insertAll(insertAllCaptor.capture());
+      assertThat(insertAllCaptor.getValue()).hasSize(1);
+      assertThat(insertAllCaptor.getValue().getFirst().getDisplayName())
+          .isEqualTo("Active Journal");
+      assertThat(result.totalParsed()).isEqualTo(2);
+      assertThat(result.createdCount()).isEqualTo(1);
+      assertThat(result.skippedCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("所有记录都已删除时应该返回零计数")
+    void shouldReturnZeroWhenAllDeleted() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData deletedRecord =
+          PubmedSerialData.builder()
+              .nlmUniqueId("0000001")
+              .title("Deleted Journal")
+              .issnL("1111-1111")
+              .deletedTimestamp(LocalDateTime.of(2020, 6, 15, 12, 0))
+              .build();
+
+      when(streamingDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(deletedRecord));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+
+      // When
+      VenuePubmedImportResult result = handler.handle(command);
+
+      // Then
+      assertThat(result.createdCount()).isZero();
+      assertThat(result.updatedCount()).isZero();
+      assertThat(result.skippedCount()).isEqualTo(1);
     }
   }
 

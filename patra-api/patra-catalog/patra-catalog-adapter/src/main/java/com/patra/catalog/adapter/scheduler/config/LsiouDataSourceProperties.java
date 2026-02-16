@@ -24,7 +24,7 @@ import org.springframework.validation.annotation.Validated;
 ///
 /// LSIOU 是 NLM 官方提供的 MEDLINE 索引期刊列表，包含约 15,000+ 条期刊记录。
 /// 相比 SerfileBase（~35,000 条 NLM Catalog 记录），LSIOU 专注于被 MEDLINE 索引的期刊，
-/// 包含 MedlineTA（期刊缩写）、索引信息等，更适合用于 PubMed Venue 富化场景。
+/// 包含 MedlineTA（期刊缩写）、索引信息等，更适合用于 PubMed Venue 导入场景。
 ///
 /// - 数据格式：NLM Serials DTD (`SerialsSet` / `Serial`)
 /// - 更新频率：每年更新，文件名包含年份信息

@@ -49,16 +49,21 @@ public enum CatalogErrorCode implements ErrorCodeLike {
   /// **适用场景**：
   ///
   /// - 从 NLM 服务器下载 MeSH XML 文件
-  /// - 从 OpenAlex S3 下载 Sources 数据文件
+  /// - 从 NLM FTP 下载 LSIOU / PubMed Baseline 文件
+  /// - 从 Zenodo 下载 ROR Data Dump
   CAT_1101("CAT-1101", 502),
 
-  // ===== Venue 导入错误 (13xx) =====
+  // ===== Venue（期刊）导入错误 (13xx) =====
 
-  /// 表示 OpenAlex Venue（期刊）导入失败。
+  /// 表示 PubMed Venue 导入失败。
   ///
-  /// 在导入 OpenAlex Sources 数据时发生。可能由于 JSON 解析失败、
-  /// 批处理作业失败、数据库写入错误或系统资源不足导致。
-  /// 请检查 Spring Batch 作业状态和系统资源。
+  /// 在导入 NLM LSIOU 期刊数据时发生。可能由于：
+  ///
+  /// - FTP 下载失败（网络不可达或文件不存在）
+  /// - XML 解析失败（LSIOU 格式异常）
+  /// - 批处理写入失败（数据库事务或约束冲突）
+  ///
+  /// 请检查网络连接、LSIOU 文件完整性和数据库状态。
   CAT_1301("CAT-1301", 500),
 
   // ===== ROR 机构导入错误 (14xx) =====

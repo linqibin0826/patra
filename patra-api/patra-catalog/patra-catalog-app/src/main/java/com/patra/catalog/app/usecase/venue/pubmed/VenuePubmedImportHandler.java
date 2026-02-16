@@ -4,8 +4,8 @@ import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.date.TimeInterval;
 import com.patra.catalog.api.error.CatalogErrorCode;
-import com.patra.catalog.app.usecase.venue.pubmed.command.VenuePubmedEnrichCommand;
-import com.patra.catalog.app.usecase.venue.pubmed.dto.VenuePubmedEnrichResult;
+import com.patra.catalog.app.usecase.venue.pubmed.command.VenuePubmedImportCommand;
+import com.patra.catalog.app.usecase.venue.pubmed.dto.VenuePubmedImportResult;
 import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.CitationSubset;
@@ -36,6 +36,7 @@ import com.patra.catalog.domain.port.source.StreamingDownloadPort;
 import com.patra.catalog.domain.port.source.StreamingDownloadResult;
 import com.patra.common.cqrs.CommandHandler;
 import com.patra.common.error.ApplicationException;
+import com.patra.common.error.DomainException;
 import com.patra.common.error.trait.StandardErrorTrait;
 import java.net.URI;
 import java.util.ArrayList;
@@ -52,19 +53,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/// PubMed Venue 数据富化编排器。
+/// PubMed Venue 数据导入编排器。
 ///
 /// **职责**：
 ///
-/// - 编排 PubMed 数据富化流程（基于 NLM LSIOU）
+/// - 编排 PubMed 数据导入流程（基于 NLM LSIOU）
 /// - 管理事务边界（批量操作）
 /// - 委派具体任务给领域端口
 ///
-/// **富化策略**：
+/// **导入策略**：
 ///
 /// 增量覆盖模式：
 ///
-/// 1. 匹配已有期刊记录时，PubMed 数据完全覆盖 OpenAlex 数据
+/// 1. 匹配已有期刊记录时，PubMed 数据覆盖旧数据
 /// 2. 匹配策略：ISSN-L → NLM ID → ISSN（降级策略）
 /// 3. PubMed 独有期刊将创建新的 VenueAggregate 记录
 ///
@@ -79,8 +80,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class VenuePubmedEnrichHandler
-    implements CommandHandler<VenuePubmedEnrichCommand, VenuePubmedEnrichResult> {
+public class VenuePubmedImportHandler
+    implements CommandHandler<VenuePubmedImportCommand, VenuePubmedImportResult> {
 
   /// 批处理大小
   private static final int BATCH_SIZE = 500;
@@ -96,7 +97,7 @@ public class VenuePubmedEnrichHandler
   private final MeshDescriptorRepository meshDescriptorRepository;
   private final MeshQualifierRepository meshQualifierRepository;
 
-  /// 富化上下文：封装批次级别的查询映射结果。
+  /// 导入上下文：封装批次级别的查询映射结果。
   ///
   /// 用于减少方法签名中的参数数量，提升代码可读性。
   ///
@@ -104,13 +105,13 @@ public class VenuePubmedEnrichHandler
   /// @param languageCodeMap 语言代码映射（ISO 639-3 → BCP 47）
   /// @param descriptorUiMap MeSH 描述符名称 → UI 映射
   /// @param qualifierUiMap MeSH 限定词名称 → UI 映射
-  private record EnrichmentContext(
+  private record ImportContext(
       Map<String, String> countryCodeMap,
       Map<String, String> languageCodeMap,
       Map<String, String> descriptorUiMap,
       Map<String, String> qualifierUiMap) {}
 
-  /// 执行 PubMed Venue 数据富化。
+  /// 执行 PubMed Venue 数据导入。
   ///
   /// **事务策略**：批次级别事务，每 500 条记录独立提交。
   /// 失败时仅回滚当前批次，已完成批次不受影响。
@@ -120,12 +121,12 @@ public class VenuePubmedEnrichHandler
   /// - 无磁盘落盘，HTTP 响应体直接传递给 Parser
   /// - 使用 try-with-resources 自动管理 HTTP 连接
   ///
-  /// @param command 富化命令（包含 URL 和版本号）
-  /// @return 富化结果摘要
+  /// @param command 导入命令（包含 URL 和版本号）
+  /// @return 导入结果摘要
   @Override
-  public VenuePubmedEnrichResult handle(VenuePubmedEnrichCommand command) {
+  public VenuePubmedImportResult handle(VenuePubmedImportCommand command) {
     TimeInterval timer = DateUtil.timer();
-    log.info("启动 PubMed Venue 富化，URL：{}，版本：{}", command.url(), command.lsiouVersion());
+    log.info("启动 PubMed Venue 导入，URL：{}，版本：{}", command.url(), command.lsiouVersion());
 
     // ────────────────────────────────────────────────────────────────────────────
     // 阶段 1：流式下载
@@ -147,7 +148,7 @@ public class VenuePubmedEnrichHandler
       log.info("解析完成，记录数：{}", allRecords.size());
 
       if (allRecords.isEmpty()) {
-        return VenuePubmedEnrichResult.success(
+        return VenuePubmedImportResult.success(
             0, 0, 0, 0, command.lsiouVersion(), sourceUrl, timer.interval());
       }
 
@@ -179,14 +180,14 @@ public class VenuePubmedEnrichHandler
       // ────────────────────────────────────────────────────────────────────────────
       long duration = timer.interval();
       log.info(
-          "PubMed Venue 富化完成：解析 {} 条，更新 {} 条，新建 {} 条，跳过 {} 条，耗时 {} ms",
+          "PubMed Venue 导入完成：解析 {} 条，更新 {} 条，新建 {} 条，跳过 {} 条，耗时 {} ms",
           allRecords.size(),
           updatedCount.get(),
           createdCount.get(),
           skippedCount.get(),
           duration);
 
-      return VenuePubmedEnrichResult.success(
+      return VenuePubmedImportResult.success(
           allRecords.size(),
           updatedCount.get(),
           createdCount.get(),
@@ -195,19 +196,19 @@ public class VenuePubmedEnrichHandler
           sourceUrl,
           duration);
 
-    } catch (ApplicationException e) {
-      // 应用层异常直接抛出，保留原始错误码
+    } catch (DomainException | ApplicationException e) {
+      // 领域异常直接传播（保留语义特征），应用层异常保留原始错误码
       throw e;
     } catch (RuntimeException e) {
       // 运行时异常（如网络超时、解析错误）包装为统一错误码
-      log.error("PubMed Venue 富化失败：{}", command.url(), e);
+      log.error("PubMed Venue 导入失败：{}", command.url(), e);
       throw new ApplicationException(
-          CatalogErrorCode.CAT_1003, "PubMed Venue 富化失败: " + e.getMessage(), e);
+          CatalogErrorCode.CAT_1301, "PubMed Venue 导入失败: " + e.getMessage(), e);
     } catch (Exception e) {
       // 受检异常（如 IOException）包装为统一错误码
-      log.error("PubMed Venue 富化时发生意外错误：{}", command.url(), e);
+      log.error("PubMed Venue 导入时发生意外错误：{}", command.url(), e);
       throw new ApplicationException(
-          CatalogErrorCode.CAT_1003, "PubMed Venue 富化时发生意外错误: " + e.getMessage(), e);
+          CatalogErrorCode.CAT_1301, "PubMed Venue 导入时发生意外错误: " + e.getMessage(), e);
     }
     // 无需 finally 清理临时文件，try-with-resources 自动关闭 HTTP 连接
   }
@@ -366,9 +367,9 @@ public class VenuePubmedEnrichHandler
         meshQualifierNames.size(),
         qualifierUiMap.size());
 
-    // 4. 封装富化上下文并匹配分类
-    EnrichmentContext context =
-        new EnrichmentContext(countryCodeMap, languageCodeMap, descriptorUiMap, qualifierUiMap);
+    // 4. 封装导入上下文并匹配分类
+    ImportContext context =
+        new ImportContext(countryCodeMap, languageCodeMap, descriptorUiMap, qualifierUiMap);
     BatchProcessingResult result = matchAndClassifyRecords(batch, existingVenues, context);
 
     // 5. 批量持久化聚合根
@@ -399,10 +400,10 @@ public class VenuePubmedEnrichHandler
       if (record.hasNlmId()) {
         nlmIds.add(record.nlmUniqueId());
       }
-      if (record.issnPrint() != null && !record.issnPrint().isBlank()) {
+      if (record.hasIssnPrint()) {
         issns.add(record.issnPrint());
       }
-      if (record.issnElectronic() != null && !record.issnElectronic().isBlank()) {
+      if (record.hasIssnElectronic()) {
         issns.add(record.issnElectronic());
       }
     }
@@ -487,28 +488,39 @@ public class VenuePubmedEnrichHandler
   ///
   /// @param batch 待处理的记录批次
   /// @param existingVenues 现有期刊的查询结果
-  /// @param context 富化上下文（包含国家/语言/MeSH 映射）
+  /// @param context 导入上下文（包含国家/语言/MeSH 映射）
   /// @return 批次处理结果（包含分类和子实体数据）
   private BatchProcessingResult matchAndClassifyRecords(
-      List<PubmedSerialData> batch,
-      ExistingVenuesLookup existingVenues,
-      EnrichmentContext context) {
+      List<PubmedSerialData> batch, ExistingVenuesLookup existingVenues, ImportContext context) {
 
     BatchProcessingResult result = new BatchProcessingResult();
-    // 防重集合：避免同一期刊被多条 PubMed 记录更新（例如同一期刊有多个 ISSN 条目）
+    // 防重集合（UPDATE 路径）：避免同一期刊被多条 PubMed 记录更新
     Set<Long> processedVenueIds = new HashSet<>();
+    // 防重集合（CREATE 路径）：避免同批次内创建重复期刊
+    Set<String> createdNlmIds = new HashSet<>();
+    Set<String> createdIssnLs = new HashSet<>();
 
     for (PubmedSerialData record : batch) {
+      // ═══════════════════════════════════════════════════════════════════════
+      // 前置检查：跳过已从 NLM 目录删除的 Serial
+      // ═══════════════════════════════════════════════════════════════════════
+      if (record.deletedTimestamp() != null) {
+        result.markSkipped();
+        log.debug(
+            "跳过已删除的 Serial：NLM ID [{}]，删除时间 [{}]", record.nlmUniqueId(), record.deletedTimestamp());
+        continue;
+      }
+
       // 按优先级匹配：ISSN-L → NLM ID → ISSN（详见 findMatch 方法）
       Optional<VenueAggregate> matched = findMatch(record, existingVenues);
 
       if (matched.isPresent()) {
         // ═══════════════════════════════════════════════════════════════════════
-        // 情况 A：匹配到已有期刊 → 富化更新
+        // 情况 A：匹配到已有期刊 → 覆盖更新
         // ═══════════════════════════════════════════════════════════════════════
         VenueAggregate venue = matched.get();
         if (!processedVenueIds.contains(venue.getId().value())) {
-          // 首次处理该期刊：更新标识符（CQRS 最小聚合）
+          // 首次处理该期刊：补全标识符
           updateVenueIdentifiers(venue, record);
           // 构建并附加 PublicationProfile（嵌入式值对象）
           PublicationProfile profile =
@@ -531,8 +543,16 @@ public class VenuePubmedEnrichHandler
         }
       } else {
         // ═══════════════════════════════════════════════════════════════════════
-        // 情况 B：无匹配 → 创建新期刊（PubMed 独有数据）
+        // 情况 B：无匹配 → 创建新期刊
         // ═══════════════════════════════════════════════════════════════════════
+
+        // 批内去重：检查当前批次是否已创建了相同 NLM ID 或 ISSN-L 的期刊
+        if (isDuplicateInCurrentBatch(record, createdNlmIds, createdIssnLs)) {
+          result.markSkipped();
+          log.debug("跳过批内重复 Serial：NLM ID [{}]，ISSN-L [{}]", record.nlmUniqueId(), record.issnL());
+          continue;
+        }
+
         VenueAggregate newVenue = createVenueFromRecord(record);
         // 构建并附加 PublicationProfile（嵌入式值对象）
         PublicationProfile profile =
@@ -541,6 +561,15 @@ public class VenuePubmedEnrichHandler
         // 标准化语言代码：ISO 639-3 → BCP 47
         newVenue.normalizeLanguages(context.languageCodeMap());
         result.addCreate(newVenue);
+
+        // 记录已创建的标识符，供批内去重使用
+        if (record.hasNlmId()) {
+          createdNlmIds.add(record.nlmUniqueId());
+        }
+        if (record.hasIssnL()) {
+          createdIssnLs.add(record.issnL());
+        }
+
         // 收集 PubMed 子实体（MeSH、关系、索引历史），稍后批量持久化
         result.collectPubmedEntities(
             newVenue,
@@ -645,11 +674,11 @@ public class VenuePubmedEnrichHandler
     }
 
     // 优先级 3: ISSN（降级匹配，Print 优先于 Electronic）
-    if (record.issnPrint() != null && lookup.byIssn().containsKey(record.issnPrint())) {
+    if (record.hasIssnPrint() && lookup.byIssn().containsKey(record.issnPrint())) {
       return Optional.of(lookup.byIssn().get(record.issnPrint()));
     }
 
-    if (record.issnElectronic() != null && lookup.byIssn().containsKey(record.issnElectronic())) {
+    if (record.hasIssnElectronic() && lookup.byIssn().containsKey(record.issnElectronic())) {
       return Optional.of(lookup.byIssn().get(record.issnElectronic()));
     }
 
@@ -657,28 +686,54 @@ public class VenuePubmedEnrichHandler
     return Optional.empty();
   }
 
-  /// 从 PubmedSerialData 更新 VenueAggregate 的标识符。
+  /// 判断记录是否与当前批次中已创建的期刊重复。
   ///
-  /// **嵌入式值对象设计**：聚合根包含嵌入式值对象（PublicationProfile），一起持久化。
+  /// 基于 NLM ID 和 ISSN-L 判断，两者都是全局唯一标识符。
+  ///
+  /// @param record 待检查的 PubMed 记录
+  /// @param createdNlmIds 当前批次已创建的 NLM ID 集合
+  /// @param createdIssnLs 当前批次已创建的 ISSN-L 集合
+  /// @return 如果重复返回 true
+  private boolean isDuplicateInCurrentBatch(
+      PubmedSerialData record, Set<String> createdNlmIds, Set<String> createdIssnLs) {
+    if (record.hasNlmId() && createdNlmIds.contains(record.nlmUniqueId())) {
+      return true;
+    }
+    return record.hasIssnL() && createdIssnLs.contains(record.issnL());
+  }
+
+  /// 从 PubmedSerialData 补全 VenueAggregate 的标识符。
+  ///
+  /// 将 PubMed 记录中的所有标识符同步到聚合根，包括：
+  /// NLM ID、ISSN-L、CODEN、ISSN Print、ISSN Electronic。
+  /// `addIdentifier()` 内部保证幂等，已存在的标识符不会重复添加。
   ///
   /// @param venue 待更新的聚合根
   /// @param record PubMed 数据记录
   private void updateVenueIdentifiers(VenueAggregate venue, PubmedSerialData record) {
-    // 添加 NLM ID 标识符（如果没有）
-    if (record.hasNlmId() && venue.getIdentifier(VenueIdentifierType.NLM).isEmpty()) {
+    // 添加 NLM ID 标识符
+    if (record.hasNlmId()) {
       venue.addIdentifier(VenueIdentifier.forNlm(record.nlmUniqueId()));
     }
 
-    // 添加 ISSN-L 标识符（如果没有）
-    if (record.hasIssnL() && venue.getIdentifier(VenueIdentifierType.ISSN_L).isEmpty()) {
+    // 添加 ISSN-L 标识符
+    if (record.hasIssnL()) {
       venue.addIdentifier(VenueIdentifier.forIssnL(record.issnL()));
     }
 
-    // 添加 CODEN 标识符（如果有）
-    if (record.coden() != null && !record.coden().isBlank()) {
-      if (venue.getIdentifier(VenueIdentifierType.CODEN).isEmpty()) {
-        venue.addIdentifier(VenueIdentifierType.CODEN, record.coden());
-      }
+    // 添加 CODEN 标识符
+    if (record.hasCoden()) {
+      venue.addIdentifier(VenueIdentifierType.CODEN, record.coden());
+    }
+
+    // 添加 ISSN Print 标识符
+    if (record.issnPrint() != null && !record.issnPrint().isBlank()) {
+      venue.addIdentifier(VenueIdentifierType.ISSN, record.issnPrint());
+    }
+
+    // 添加 ISSN Electronic 标识符
+    if (record.issnElectronic() != null && !record.issnElectronic().isBlank()) {
+      venue.addIdentifier(VenueIdentifierType.ISSN, record.issnElectronic());
     }
   }
 
@@ -724,7 +779,8 @@ public class VenuePubmedEnrichHandler
 
   /// 从 PubmedSerialData 创建新 VenueAggregate。
   ///
-  /// **嵌入式值对象设计**：聚合根包含核心字段和嵌入式值对象（PublicationProfile 等）。
+  /// 创建聚合根并附加所有可用的标识符（NLM ID、ISSN-L 由工厂方法添加）。
+  /// 其他字段（frequency、country、languages 等）通过 PublicationProfile 嵌入式值对象保存。
   ///
   /// @param record PubMed 数据记录
   /// @return 新创建的聚合根（只含标识符和来源信息，profile 在调用处附加）
@@ -732,12 +788,21 @@ public class VenuePubmedEnrichHandler
     VenueAggregate venue =
         VenueAggregate.fromPubMed(record.title(), record.nlmUniqueId(), record.issnL());
 
-    // 添加 CODEN 标识符（如果有）
-    if (record.coden() != null && !record.coden().isBlank()) {
+    // 添加 CODEN 标识符
+    if (record.hasCoden()) {
       venue.addIdentifier(VenueIdentifierType.CODEN, record.coden());
     }
 
-    // 其他字段（frequency, country, languages 等）通过 PublicationProfile 嵌入式值对象保存
+    // 添加 ISSN Print 标识符
+    if (record.issnPrint() != null && !record.issnPrint().isBlank()) {
+      venue.addIdentifier(VenueIdentifierType.ISSN, record.issnPrint());
+    }
+
+    // 添加 ISSN Electronic 标识符
+    if (record.issnElectronic() != null && !record.issnElectronic().isBlank()) {
+      venue.addIdentifier(VenueIdentifierType.ISSN, record.issnElectronic());
+    }
+
     return venue;
   }
 
