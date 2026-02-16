@@ -41,64 +41,10 @@ class VenueAggregateTest {
 
   // ========== 测试数据 ==========
 
-  private static final String OPENALEX_ID = "S1234567890";
   private static final String DISPLAY_NAME = "Nature";
   private static final String NLM_ID = "0410462";
   private static final String ISSN_L = "0028-0836";
   private static final String ISSN = "1476-4687";
-
-  @Nested
-  @DisplayName("fromOpenAlex() 工厂方法测试")
-  class FromOpenAlexTests {
-
-    @Test
-    @DisplayName("应该正确创建 OpenAlex 来源的载体")
-    void shouldCreateVenueFromOpenAlex() {
-      // When
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-
-      // Then
-      assertThat(venue.getId()).isNull(); // 新建时无 ID
-      assertThat(venue.getVenueType()).isEqualTo(VenueType.JOURNAL);
-      assertThat(venue.getDisplayName()).isEqualTo(DISPLAY_NAME);
-
-      // 应该自动添加 OpenAlex 标识符
-      assertThat(venue.getIdentifiers()).hasSize(1);
-      assertThat(venue.getIdentifier(VenueIdentifierType.OPENALEX)).contains(OPENALEX_ID);
-
-      // 应该设置来源信息
-      assertThat(venue.getProvenance()).isNotNull();
-      assertThat(venue.isFromOpenAlex()).isTrue();
-    }
-
-    @Test
-    @DisplayName("OpenAlex ID 为空时应该抛出异常")
-    void shouldThrowWhenOpenAlexIdIsBlank() {
-      assertThatThrownBy(() -> VenueAggregate.fromOpenAlex("", VenueType.JOURNAL, DISPLAY_NAME))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("OpenAlex ID 不能为空");
-
-      assertThatThrownBy(() -> VenueAggregate.fromOpenAlex(null, VenueType.JOURNAL, DISPLAY_NAME))
-          .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    @DisplayName("载体类型为 null 时应该抛出异常")
-    void shouldThrowWhenVenueTypeIsNull() {
-      assertThatThrownBy(() -> VenueAggregate.fromOpenAlex(OPENALEX_ID, null, DISPLAY_NAME))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("载体类型不能为空");
-    }
-
-    @Test
-    @DisplayName("显示名称为空时应该抛出异常")
-    void shouldThrowWhenDisplayNameIsBlank() {
-      assertThatThrownBy(() -> VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, ""))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("显示名称不能为空");
-    }
-  }
 
   @Nested
   @DisplayName("fromPubMed() 工厂方法测试")
@@ -179,8 +125,7 @@ class VenueAggregateTest {
     @DisplayName("addIdentifier() 应该添加新标识符")
     void addIdentifierShouldAddNew() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, ISSN_L);
       int initialSize = venue.getIdentifiers().size();
 
       // When
@@ -195,8 +140,7 @@ class VenueAggregateTest {
     @DisplayName("addIdentifier() 应该忽略重复标识符（基于 Record equals）")
     void addIdentifierShouldIgnoreDuplicate() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
       int sizeAfterFirst = venue.getIdentifiers().size();
 
@@ -211,8 +155,7 @@ class VenueAggregateTest {
     @DisplayName("addIdentifier(type, value) 便捷方法应该正常工作")
     void addIdentifierConvenienceMethodShouldWork() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
 
       // When
       venue.addIdentifier(VenueIdentifierType.MAG, "12345");
@@ -225,8 +168,7 @@ class VenueAggregateTest {
     @DisplayName("removeIdentifier() 应该移除标识符")
     void removeIdentifierShouldRemove() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
 
       // When
@@ -241,8 +183,7 @@ class VenueAggregateTest {
     @DisplayName("removeIdentifier() 移除不存在的标识符应该返回 false")
     void removeIdentifierShouldReturnFalseWhenNotExists() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
 
       // When
       boolean removed = venue.removeIdentifier(VenueIdentifierType.ISSN, "9999-9999");
@@ -255,8 +196,7 @@ class VenueAggregateTest {
     @DisplayName("addIdentifier() 应该将聚合根标记为脏")
     void addIdentifierShouldMarkDirty() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
 
       // When
       venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
@@ -268,8 +208,7 @@ class VenueAggregateTest {
     @DisplayName("addIdentifier() 添加重复标识符不应该标记为脏")
     void addIdentifierDuplicateShouldNotMarkDirty() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
 
       // When - 添加相同的标识符
@@ -282,8 +221,7 @@ class VenueAggregateTest {
     @DisplayName("removeIdentifier() 应该将聚合根标记为脏")
     void removeIdentifierShouldMarkDirty() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
 
       // When
@@ -296,8 +234,7 @@ class VenueAggregateTest {
     @DisplayName("getIdentifier(type) 应该返回第一个匹配的标识符")
     void getIdentifierShouldReturnFirst() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       venue.addIdentifier(VenueIdentifier.forIssn("1111-1111"));
       venue.addIdentifier(VenueIdentifier.forIssn("2222-2222"));
 
@@ -312,8 +249,7 @@ class VenueAggregateTest {
     @DisplayName("getIdentifiers(type) 应该返回指定类型的所有标识符")
     void getIdentifiersByTypeShouldReturnAll() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       venue.addIdentifier(VenueIdentifier.forIssn("1111-1111"));
       venue.addIdentifier(VenueIdentifier.forIssn("2222-2222"));
 
@@ -328,8 +264,7 @@ class VenueAggregateTest {
     @DisplayName("getIdentifiers() 应该返回不可变列表")
     void getIdentifiersShouldReturnUnmodifiableList() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
 
       // When
       List<VenueIdentifier> identifiers = venue.getIdentifiers();
@@ -348,27 +283,24 @@ class VenueAggregateTest {
     @DisplayName("withProvenance() 应该正确设置来源信息")
     void withProvenanceShouldWork() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
-      ProvenanceInfo newProvenance = ProvenanceInfo.forPubMed();
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
+      ProvenanceInfo newProvenance = ProvenanceInfo.forManual();
 
       // When
       venue.withProvenance(newProvenance);
 
       // Then
       assertThat(venue.getProvenance()).isEqualTo(newProvenance);
-      assertThat(venue.isFromPubMed()).isTrue();
     }
 
     @Test
     @DisplayName("withProvenance() 应该将聚合根标记为脏")
     void withProvenanceShouldMarkDirty() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
 
       // When
-      venue.withProvenance(ProvenanceInfo.forPubMed());
+      venue.withProvenance(ProvenanceInfo.forManual());
 
       // Then
     }
@@ -381,10 +313,9 @@ class VenueAggregateTest {
     @Test
     @DisplayName("isJournal() 应该正确判断")
     void isJournalShouldWork() {
-      VenueAggregate journal =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate journal = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       VenueAggregate repo =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.REPOSITORY, DISPLAY_NAME);
+          VenueAggregate.restore(VenueId.of(1L), VenueType.REPOSITORY, DISPLAY_NAME, 0L);
 
       assertThat(journal.isJournal()).isTrue();
       assertThat(repo.isJournal()).isFalse();
@@ -394,7 +325,7 @@ class VenueAggregateTest {
     @DisplayName("isRepository() 应该正确判断")
     void isRepositoryShouldWork() {
       VenueAggregate repo =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.REPOSITORY, DISPLAY_NAME);
+          VenueAggregate.restore(VenueId.of(1L), VenueType.REPOSITORY, DISPLAY_NAME, 0L);
 
       assertThat(repo.isRepository()).isTrue();
     }
@@ -403,23 +334,20 @@ class VenueAggregateTest {
     @DisplayName("isConference() 应该正确判断")
     void isConferenceShouldWork() {
       VenueAggregate conf =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.CONFERENCE, DISPLAY_NAME);
+          VenueAggregate.restore(VenueId.of(1L), VenueType.CONFERENCE, DISPLAY_NAME, 0L);
 
       assertThat(conf.isConference()).isTrue();
     }
 
     @Test
-    @DisplayName("isFromOpenAlex() 和 isFromPubMed() 应该正确判断")
-    void provenanceMethodsShouldWork() {
-      VenueAggregate openalexVenue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+    @DisplayName("isFromPubMed() 应该正确判断")
+    void isFromPubMedShouldWork() {
       VenueAggregate pubmedVenue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
-
-      assertThat(openalexVenue.isFromOpenAlex()).isTrue();
-      assertThat(openalexVenue.isFromPubMed()).isFalse();
+      VenueAggregate restoredVenue =
+          VenueAggregate.restore(VenueId.of(1L), VenueType.JOURNAL, DISPLAY_NAME, 0L);
 
       assertThat(pubmedVenue.isFromPubMed()).isTrue();
-      assertThat(pubmedVenue.isFromOpenAlex()).isFalse();
+      assertThat(restoredVenue.isFromPubMed()).isFalse(); // restore 不设置 provenance
     }
   }
 
@@ -431,8 +359,7 @@ class VenueAggregateTest {
     @DisplayName("toString() 应该包含关键信息")
     void toStringShouldContainKeyInfo() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, ISSN_L);
 
       // When
       String result = venue.toString();
@@ -451,8 +378,7 @@ class VenueAggregateTest {
     @DisplayName("有效国家编码应该保持不变")
     void shouldKeepValidCountryCode() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       PublicationProfile profile = PublicationProfile.builder().countryCode("US").build();
       venue.withPublicationProfile(profile);
 
@@ -467,8 +393,7 @@ class VenueAggregateTest {
     @DisplayName("无效国家编码应该被清除为 null")
     void shouldClearInvalidCountryCode() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       PublicationProfile profile = PublicationProfile.builder().countryCode("XX").build();
       venue.withPublicationProfile(profile);
 
@@ -483,8 +408,7 @@ class VenueAggregateTest {
     @DisplayName("publicationProfile 为 null 时不应该抛出异常")
     void shouldNotThrowWhenPublicationProfileIsNull() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       // publicationProfile 默认为 null
 
       // When & Then - 不应该抛出异常
@@ -496,8 +420,7 @@ class VenueAggregateTest {
     @DisplayName("countryCode 本身为 null 时传入 null 不应该更新")
     void shouldNotUpdateWhenBothAreNull() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       PublicationProfile profile = PublicationProfile.builder().countryCode(null).build();
       venue.withPublicationProfile(profile);
 
@@ -511,8 +434,7 @@ class VenueAggregateTest {
     @DisplayName("更新国家编码时应该保留其他字段")
     void shouldPreserveOtherFieldsWhenUpdating() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       PublicationProfile profile =
           PublicationProfile.builder()
               .countryCode("XX")
@@ -555,8 +477,7 @@ class VenueAggregateTest {
     @DisplayName("应该将 ISO 639-3 代码转换为 BCP 47")
     void shouldConvertIso639ToBcp47() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       PublicationProfile profile =
           PublicationProfile.builder()
               .languages(VenueLanguages.of(List.of("eng", "chi"), List.of("fre", "ger")))
@@ -576,8 +497,7 @@ class VenueAggregateTest {
     @DisplayName("应该移除无效的语言代码")
     void shouldRemoveInvalidLanguageCodes() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       PublicationProfile profile =
           PublicationProfile.builder()
               .languages(VenueLanguages.of(List.of("eng", "xxx"), List.of("yyy", "fre")))
@@ -597,8 +517,7 @@ class VenueAggregateTest {
     @DisplayName("应该对多映射代码去重")
     void shouldDeduplicateMultiMappedCodes() {
       // Given - chi 和 zho 都映射到 zh
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       PublicationProfile profile =
           PublicationProfile.builder()
               .languages(VenueLanguages.of(List.of("chi", "zho"), List.of("fre", "fra")))
@@ -618,8 +537,7 @@ class VenueAggregateTest {
     @DisplayName("publicationProfile 为 null 时不应该抛出异常")
     void shouldNotThrowWhenPublicationProfileIsNull() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       // publicationProfile 默认为 null
 
       // When & Then - 不应该抛出异常
@@ -631,8 +549,7 @@ class VenueAggregateTest {
     @DisplayName("languages 为 null 时不应该抛出异常")
     void shouldNotThrowWhenLanguagesIsNull() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       PublicationProfile profile = PublicationProfile.builder().countryCode("US").build();
       venue.withPublicationProfile(profile);
 
@@ -645,8 +562,7 @@ class VenueAggregateTest {
     @DisplayName("空语言列表时不应该更新")
     void shouldNotUpdateWhenLanguagesAreEmpty() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       PublicationProfile profile =
           PublicationProfile.builder().languages(VenueLanguages.empty()).build();
       venue.withPublicationProfile(profile);
@@ -661,8 +577,7 @@ class VenueAggregateTest {
     @DisplayName("语言已经是 BCP 47 格式且无变化时不应该更新")
     void shouldNotUpdateWhenNoChange() {
       // Given - 假设已经标准化过，现在代码已经是 BCP 47 格式
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       // 但我们的映射是 ISO 639-3 → BCP 47，如果输入就是 BCP 47，不在映射中会被过滤
       // 这个测试场景是：输入 ISO 639-3，映射结果与之前相同
       Map<String, String> mappingWithBcp47 = Map.of("en", "en", "zh", "zh"); // 假设已经是 BCP 47
@@ -682,8 +597,7 @@ class VenueAggregateTest {
     @DisplayName("更新语言时应该保留其他字段")
     void shouldPreserveOtherFieldsWhenUpdating() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       PublicationProfile profile =
           PublicationProfile.builder()
               .countryCode("US")
@@ -708,8 +622,7 @@ class VenueAggregateTest {
     @DisplayName("映射表为空时应该清空所有语言代码")
     void shouldClearAllLanguagesWhenMappingIsEmpty() {
       // Given
-      VenueAggregate venue =
-          VenueAggregate.fromOpenAlex(OPENALEX_ID, VenueType.JOURNAL, DISPLAY_NAME);
+      VenueAggregate venue = VenueAggregate.fromPubMed(DISPLAY_NAME, NLM_ID, null);
       PublicationProfile profile =
           PublicationProfile.builder()
               .languages(VenueLanguages.of(List.of("eng"), List.of("fre")))

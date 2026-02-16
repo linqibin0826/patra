@@ -48,7 +48,7 @@ import org.springframework.stereotype.Repository;
 ///
 /// - 管理 VenueAggregate（载体聚合根）的持久化
 /// - 管理 Serfile 相关数据（MeSH、关联关系、索引历史）
-/// - 支持 OpenAlex Sources 和 NLM Serfile 批量数据导入
+/// - 支持 PubMed LSIOU 批量数据导入
 /// - 以聚合根为单位保证数据一致性
 ///
 /// @author linqibin

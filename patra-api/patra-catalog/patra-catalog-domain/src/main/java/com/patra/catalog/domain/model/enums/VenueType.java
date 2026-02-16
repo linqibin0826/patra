@@ -1,7 +1,6 @@
 package com.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
-import java.util.Map;
 import lombok.Getter;
 
 /// 出版载体类型枚举。
@@ -32,10 +31,6 @@ import lombok.Getter;
 /// if (type.isJournal()) {
 ///     // 验证ISSN是否存在
 /// }
-///
-/// // 从 OpenAlex type 转换
-/// VenueType type = VenueType.fromOpenAlexType("repository");
-/// VenueType type2 = VenueType.fromOpenAlexType("igsnCatalog");
 /// ```
 ///
 /// @author linqibin
@@ -70,19 +65,6 @@ public enum VenueType {
   /// 其他类型
   OTHER("OTHER", "Other");
 
-  /// OpenAlex type 到 VenueType 的映射表
-  private static final Map<String, VenueType> OPENALEX_TYPE_MAP =
-      Map.ofEntries(
-          Map.entry("journal", JOURNAL),
-          Map.entry("repository", REPOSITORY),
-          Map.entry("conference", CONFERENCE),
-          Map.entry("ebook platform", EBOOK_PLATFORM),
-          Map.entry("book series", BOOK_SERIES),
-          Map.entry("metadata", METADATA),
-          Map.entry("igsncatalog", IGSN_CATALOG),
-          Map.entry("raidregistry", RAID_REGISTRY),
-          Map.entry("other", OTHER));
-
   /// 数据库存储的代码值（大写）
   private final String code;
 
@@ -108,26 +90,6 @@ public enum VenueType {
       }
     }
     throw new IllegalArgumentException("未知的载体类型：" + value);
-  }
-
-  /// 从 OpenAlex Source type 转换为 VenueType。
-  ///
-  /// OpenAlex 使用小写带空格的类型名（如 "ebook platform"），
-  /// 此方法将其映射为对应的枚举值。
-  ///
-  /// **容错处理**：
-  /// - 空值或空白字符串 → 返回 `OTHER`
-  /// - 未知类型 → 返回 `OTHER`（OpenAlex 可能新增未文档化的类型）
-  ///
-  /// @param openAlexType OpenAlex 的 type 字段值（如 "journal", "ebook platform"），可为 null
-  /// @return 对应的 VenueType 枚举值，无法识别时返回 OTHER
-  public static VenueType fromOpenAlexType(String openAlexType) {
-    if (openAlexType == null || openAlexType.isBlank()) {
-      return OTHER;
-    }
-    String normalized = openAlexType.trim().toLowerCase();
-    VenueType type = OPENALEX_TYPE_MAP.get(normalized);
-    return type != null ? type : OTHER;
   }
 
   /// 判断是否为期刊。

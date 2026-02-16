@@ -15,7 +15,7 @@ import org.springframework.data.repository.query.Param;
 /// **职责**：
 ///
 /// - 提供 VenueEntity 的 CRUD 操作
-/// - 支持各种查询方式（ISSN-L、NLM ID、OpenAlex ID 等）
+/// - 支持各种查询方式（ISSN-L、NLM ID 等）
 ///
 /// @author linqibin
 /// @since 0.1.0

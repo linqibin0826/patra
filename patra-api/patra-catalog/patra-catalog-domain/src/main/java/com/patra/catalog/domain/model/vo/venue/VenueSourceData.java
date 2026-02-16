@@ -145,13 +145,6 @@ public record VenueSourceData(
     return StrUtil.isNotBlank(sourceId);
   }
 
-  /// 判断是否为 OpenAlex 数据源。
-  ///
-  /// @return true 如果为 OpenAlex
-  public boolean isFromOpenAlex() {
-    return sourceCode.isOpenAlex();
-  }
-
   /// 判断是否为 PubMed 数据源。
   ///
   /// @return true 如果为 PubMed

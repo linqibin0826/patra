@@ -67,21 +67,6 @@ class ProvenanceInfoTest {
     }
 
     @Test
-    @DisplayName("forOpenAlex() 应该创建 OpenAlex 来源信息")
-    void forOpenAlex_shouldCreateOpenAlexInfo() {
-      // Given
-      Instant before = Instant.now();
-
-      // When
-      ProvenanceInfo info = ProvenanceInfo.forOpenAlex();
-
-      // Then
-      Instant after = Instant.now();
-      assertThat(info.code()).isEqualTo(ProvenanceCode.OPENALEX);
-      assertThat(info.lastSyncedAt()).isBetween(before, after);
-    }
-
-    @Test
     @DisplayName("forPubMed() 应该创建 PubMed 来源信息")
     void forPubMed_shouldCreatePubMedInfo() {
       // Given
@@ -133,18 +118,6 @@ class ProvenanceInfoTest {
   class PredicateTests {
 
     @Test
-    @DisplayName("isFromOpenAlex() 对 OpenAlex 来源应该返回 true")
-    void isFromOpenAlex_shouldReturnTrueForOpenAlex() {
-      // Given
-      ProvenanceInfo info = ProvenanceInfo.forOpenAlex();
-
-      // When & Then
-      assertThat(info.isFromOpenAlex()).isTrue();
-      assertThat(info.isFromPubMed()).isFalse();
-      assertThat(info.isManual()).isFalse();
-    }
-
-    @Test
     @DisplayName("isFromPubMed() 对 PubMed 来源应该返回 true")
     void isFromPubMed_shouldReturnTrueForPubMed() {
       // Given
@@ -152,7 +125,6 @@ class ProvenanceInfoTest {
 
       // When & Then
       assertThat(info.isFromPubMed()).isTrue();
-      assertThat(info.isFromOpenAlex()).isFalse();
       assertThat(info.isManual()).isFalse();
     }
 
@@ -164,7 +136,6 @@ class ProvenanceInfoTest {
 
       // When & Then
       assertThat(info.isManual()).isTrue();
-      assertThat(info.isFromOpenAlex()).isFalse();
       assertThat(info.isFromPubMed()).isFalse();
     }
 
@@ -175,7 +146,6 @@ class ProvenanceInfoTest {
       ProvenanceInfo info = ProvenanceInfo.ofCode(ProvenanceCode.CROSSREF);
 
       // When & Then
-      assertThat(info.isFromOpenAlex()).isFalse();
       assertThat(info.isFromPubMed()).isFalse();
       assertThat(info.isManual()).isFalse();
     }
@@ -222,7 +192,6 @@ class ProvenanceInfoTest {
     @DisplayName("codeAsString() 应该返回正确的代码字符串")
     void codeAsString_shouldReturnCorrectString() {
       // Given & When & Then
-      assertThat(ProvenanceInfo.forOpenAlex().codeAsString()).isEqualTo("OPENALEX");
       assertThat(ProvenanceInfo.forPubMed().codeAsString()).isEqualTo("PUBMED");
       assertThat(ProvenanceInfo.forManual().codeAsString()).isEqualTo("MANUAL");
       assertThat(ProvenanceInfo.ofCode(ProvenanceCode.CROSSREF).codeAsString())
@@ -276,14 +245,14 @@ class ProvenanceInfoTest {
     @DisplayName("toString() 应该包含关键信息")
     void toString_shouldContainKeyInfo() {
       // Given
-      ProvenanceInfo info = ProvenanceInfo.forOpenAlex();
+      ProvenanceInfo info = ProvenanceInfo.forPubMed();
 
       // When
       String result = info.toString();
 
       // Then
       assertThat(result).contains("ProvenanceInfo");
-      assertThat(result).contains("OPENALEX");
+      assertThat(result).contains("PUBMED");
     }
   }
 }

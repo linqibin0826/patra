@@ -18,14 +18,14 @@ import java.time.Instant;
 /// 使用示例：
 ///
 /// ```java
-/// // 创建 OpenAlex 来源信息
+/// // 创建来源信息
 /// ProvenanceInfo provenance = ProvenanceInfo.of(
-///     ProvenanceCode.OPENALEX,
+///     ProvenanceCode.PUBMED,
 ///     Instant.now()
 /// );
 ///
 /// // 使用工厂方法（自动设置当前时间）
-/// ProvenanceInfo openAlex = ProvenanceInfo.forOpenAlex();
+/// ProvenanceInfo pubmed = ProvenanceInfo.forPubMed();
 ///
 /// // 仅来源代码（无时间信息）
 /// ProvenanceInfo simple = ProvenanceInfo.ofCode(ProvenanceCode.MANUAL);
@@ -63,13 +63,6 @@ public record ProvenanceInfo(ProvenanceCode code, Instant lastSyncedAt) implemen
     return new ProvenanceInfo(code, null);
   }
 
-  /// 创建 OpenAlex 来源信息。
-  ///
-  /// @return 来源信息值对象
-  public static ProvenanceInfo forOpenAlex() {
-    return new ProvenanceInfo(ProvenanceCode.OPENALEX, Instant.now());
-  }
-
   /// 创建 PubMed 来源信息。
   ///
   /// @return 来源信息值对象
@@ -82,13 +75,6 @@ public record ProvenanceInfo(ProvenanceCode code, Instant lastSyncedAt) implemen
   /// @return 来源信息值对象
   public static ProvenanceInfo forManual() {
     return new ProvenanceInfo(ProvenanceCode.MANUAL, Instant.now());
-  }
-
-  /// 判断是否来自 OpenAlex。
-  ///
-  /// @return true 如果来自 OpenAlex
-  public boolean isFromOpenAlex() {
-    return code == ProvenanceCode.OPENALEX;
   }
 
   /// 判断是否来自 PubMed。
