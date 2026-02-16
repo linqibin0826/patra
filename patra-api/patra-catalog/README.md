@@ -335,7 +335,6 @@ patra:
 - `VenueJpaMapper`：载体聚合根 Entity ↔ Aggregate 映射器（含快速访问字段提取）
 - `OrganizationJpaMapper`：机构聚合根 Entity ↔ Aggregate 映射器（支持 5 张子表双向转换）
 - `FileDownloadAdapter`：文件下载适配器（下载到临时目录，供 Batch ItemReader 使用）
-- `StreamingDownloadAdapter`：流式下载适配器（HTTP 响应体直接返回 InputStream，供小文件 App 层使用）
 - `DictionaryResolverAdapter`：字典解析适配器（调用 patra-registry 字典服务，支持国家、语言等多种字典类型的批量解析）
 
 - **ReadPort 实现**（CQRS 读端适配器）

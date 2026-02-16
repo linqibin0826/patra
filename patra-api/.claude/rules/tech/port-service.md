@@ -56,7 +56,7 @@ Domain 层                          Infra 层
 
 **命名示例**：
 - `PubmedXmlParserPort` → `PubmedXmlParserAdapter`
-- `StreamingDownloadPort` → `StreamingDownloadAdapter`
+- `FileDownloadPort` → `FileDownloadAdapter`
 - `PublicationBatchPort` → `PublicationBatchAdapter`
 
 **位置**：
@@ -211,7 +211,7 @@ patra-catalog/
 │       ├── batch/                          # 批处理端口
 │       │   └── PublicationBatchPort.java
 │       ├── source/                         # 数据源端口
-│       │   └── StreamingDownloadPort.java
+│       │   └── FileDownloadPort.java
 │       └── registry/                       # 注册中心端口
 │           └── DictionaryResolverPort.java
 │
@@ -244,7 +244,7 @@ patra-catalog/
         │   ├── integration/                # 外部服务集成
         │   │   └── DictionaryResolverAdapter.java
         │   └── source/                     # 数据源适配器
-        │       └── StreamingDownloadAdapter.java
+        │       └── FileDownloadAdapter.java
         ├── batch/                          # Spring Batch 子系统
         │   └── publication/
         │       └── PublicationBatchAdapter.java
