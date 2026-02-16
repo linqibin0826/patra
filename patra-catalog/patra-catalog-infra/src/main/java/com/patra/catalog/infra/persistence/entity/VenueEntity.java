@@ -97,7 +97,7 @@ public class VenueEntity extends SoftDeletableJpaEntity {
   @Column(name = "abbreviated_title", length = 255)
   private String abbreviatedTitle;
 
-  /// 主要语言代码（ISO 639-3）。
+  /// 主要语言代码（BCP 47）。
   @Column(name = "primary_language", length = 10)
   private String primaryLanguage;
 
