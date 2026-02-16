@@ -25,8 +25,8 @@ paths: patra-*/*-app/**/*.java
 
 ## 异常处理
 
-- 使用 `ApplicationException` 包装领域异常
-- 携带 `ErrorCodeLike` 错误码，格式：`{SERVICE}-{0xxx}`
+- 领域异常（`DomainException`）携带语义特征应**直接传播**，由 `DefaultErrorResolutionEngine` 自动映射为 HTTP 状态码
+- 仅对**意外异常**（`RuntimeException`、`Exception`）使用 `ApplicationException` 包装，携带 `ErrorCodeLike` 错误码
 
 ## Gateway 实现规范
 
