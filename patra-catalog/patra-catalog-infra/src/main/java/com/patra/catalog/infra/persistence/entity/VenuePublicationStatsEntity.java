@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.persistence.entity;
 
-import com.patra.starter.jpa.entity.ChildJpaEntity;
+import com.patra.starter.jpa.entity.ValueObjectJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -30,7 +30,7 @@ import lombok.Setter;
 ///
 /// **数据来源**：
 ///
-/// 主要来自 OpenAlex Source 的 `counts_by_year` 数组，每年一条记录。
+/// 通过数据源 enrichment 方式填充（如 OpenAlex API 按需补充），每年一条记录。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -50,7 +50,7 @@ import lombok.Setter;
       @Index(name = "idx_works_count", columnList = "works_count"),
       @Index(name = "idx_cited_by_count", columnList = "cited_by_count")
     })
-public class VenuePublicationStatsEntity extends ChildJpaEntity {
+public class VenuePublicationStatsEntity extends ValueObjectJpaEntity {
 
   /// 载体 ID（外键：cat_venue.id）
   @Column(name = "venue_id", nullable = false)

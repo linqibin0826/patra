@@ -158,16 +158,6 @@ class VenueSourceDataTest {
   class SourceTypeTests {
 
     @Test
-    @DisplayName("isFromOpenAlex() 应正确判断")
-    void shouldIdentifyOpenAlex() {
-      VenueSourceData openalex = VenueSourceData.create(123L, DataSourceCode.OPENALEX);
-      VenueSourceData pubmed = VenueSourceData.create(123L, DataSourceCode.PUBMED);
-
-      assertThat(openalex.isFromOpenAlex()).isTrue();
-      assertThat(pubmed.isFromOpenAlex()).isFalse();
-    }
-
-    @Test
     @DisplayName("isFromPubMed() 应正确判断")
     void shouldIdentifyPubMed() {
       VenueSourceData pubmed = VenueSourceData.create(123L, DataSourceCode.PUBMED);

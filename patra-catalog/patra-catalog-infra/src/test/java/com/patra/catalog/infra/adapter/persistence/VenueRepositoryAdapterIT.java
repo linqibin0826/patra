@@ -5,14 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
-import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
 import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
 import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
 import com.patra.catalog.domain.model.vo.venue.PublicationHistory;
 import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import com.patra.catalog.domain.model.vo.venue.Society;
-import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
@@ -117,7 +115,7 @@ class VenueRepositoryAdapterIT {
       // Then: 验证主表
       assertThat(venueDao.count()).isEqualTo(2);
 
-      // Then: 验证标识符子表（每个 Venue 有 1 个 OpenAlex + 1 个 ISSN-L + 1 个 ISSN = 3）
+      // Then: 验证标识符子表（每个 Venue 有 1 个 NLM + 1 个 ISSN-L + 1 个 ISSN = 3）
       assertThat(identifierDao.count()).isEqualTo(6);
     }
 
@@ -152,10 +150,10 @@ class VenueRepositoryAdapterIT {
     }
 
     @Test
-    @DisplayName("应该正确处理只有默认标识符的聚合根")
-    void insertAll_aggregateWithDefaultIdentifier_shouldInsertCorrectly() {
-      // Given: 创建只有 OpenAlex ID 标识符的聚合根（fromOpenAlex 会自动添加）
-      VenueAggregate venue = VenueAggregate.fromOpenAlex("S1", VenueType.JOURNAL, "Journal A");
+    @DisplayName("应该正确处理只有 NLM ID 标识符的聚合根")
+    void insertAll_aggregateWithSingleIdentifier_shouldInsertCorrectly() {
+      // Given: 创建只有 NLM ID 标识符的聚合根
+      VenueAggregate venue = VenueAggregate.fromPubMed("Journal A", "NLM001", null);
 
       // When
       repository.insertAll(List.of(venue));
@@ -163,7 +161,7 @@ class VenueRepositoryAdapterIT {
       // Then: 主表有 1 条记录
       assertThat(venueDao.count()).isEqualTo(1);
 
-      // Then: 标识符只有 1 个（OpenAlex ID 由 fromOpenAlex 自动添加）
+      // Then: 标识符只有 1 个（NLM ID）
       assertThat(identifierDao.count()).isEqualTo(1);
     }
 
@@ -315,9 +313,9 @@ class VenueRepositoryAdapterIT {
     @DisplayName("应该正确重建聚合根（含标识符）")
     void findByIssnLs_shouldReconstructAggregateWithIdentifiers() {
       // Given
-      VenueAggregate venue = createVenueAggregateWithIssnL("S1", "Journal A", "1111-1111");
+      VenueAggregate venue = createVenueAggregateWithIssnL("NLM001", "Journal A", "1111-1111");
       venue.addIdentifier(VenueIdentifierType.ISSN, "1234-5678");
-      venue.addIdentifier(VenueIdentifierType.NLM, "NLM123");
+      venue.addIdentifier(VenueIdentifierType.OPENALEX, "S123");
       repository.insertAll(List.of(venue));
 
       // When
@@ -326,9 +324,9 @@ class VenueRepositoryAdapterIT {
       // Then
       assertThat(result).hasSize(1);
       VenueAggregate found = result.get("1111-1111");
-      assertThat(found.getIdentifiers()).hasSize(4); // OpenAlex + ISSN-L + ISSN + NLM
+      assertThat(found.getIdentifiers()).hasSize(4); // NLM + ISSN-L + ISSN + OPENALEX
       assertThat(found.getIdentifier(VenueIdentifierType.ISSN_L)).contains("1111-1111");
-      assertThat(found.getIdentifier(VenueIdentifierType.NLM)).contains("NLM123");
+      assertThat(found.getIdentifier(VenueIdentifierType.NLM)).contains("NLM001");
     }
   }
 
@@ -493,8 +491,8 @@ class VenueRepositoryAdapterIT {
     @DisplayName("删除标识符 - 应该正确持久化")
     void updateBatch_removeIdentifier_shouldPersist() {
       // Given: 插入带多个标识符的聚合根
-      VenueAggregate venue = createVenueAggregateWithIssnL("S1", "Journal A", "1111-1111");
-      venue.addIdentifier(VenueIdentifierType.NLM, "NLM123");
+      VenueAggregate venue = createVenueAggregateWithIssnL("NLM001", "Journal A", "1111-1111");
+      venue.addIdentifier(VenueIdentifierType.OPENALEX, "S123");
       repository.insertAll(List.of(venue));
 
       int initialCount = (int) identifierDao.count();
@@ -503,8 +501,8 @@ class VenueRepositoryAdapterIT {
       Map<String, VenueAggregate> found = repository.findByIssnLs(Set.of("1111-1111"));
       VenueAggregate retrievedVenue = found.get("1111-1111");
 
-      // When: 删除 NLM 标识符
-      retrievedVenue.removeIdentifier(VenueIdentifierType.NLM, "NLM123");
+      // When: 删除 OPENALEX 标识符
+      retrievedVenue.removeIdentifier(VenueIdentifierType.OPENALEX, "S123");
 
       repository.updateBatch(List.of(retrievedVenue));
 
@@ -513,7 +511,7 @@ class VenueRepositoryAdapterIT {
 
       Map<String, VenueAggregate> updatedResult = repository.findByIssnLs(Set.of("1111-1111"));
       VenueAggregate updatedVenue = updatedResult.get("1111-1111");
-      assertThat(updatedVenue.getIdentifier(VenueIdentifierType.NLM)).isEmpty();
+      assertThat(updatedVenue.getIdentifier(VenueIdentifierType.OPENALEX)).isEmpty();
     }
   }
 
@@ -652,28 +650,23 @@ class VenueRepositoryAdapterIT {
 
   /// 创建测试用的 VenueAggregate。
   ///
+  /// @param nlmId NLM 唯一标识符
+  /// @param displayName 显示名称
   /// @param suffix 数字后缀（1-9），用于生成唯一的 ISSN-L（格式：0001-000X）
-  private VenueAggregate createVenueAggregate(String openalexId, String displayName, int suffix) {
-    VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
-    // 生成符合格式的 ISSN-L：0001-000X
+  private VenueAggregate createVenueAggregate(String nlmId, String displayName, int suffix) {
     String issnL = String.format("0001-00%02d", suffix);
-    venue.addIdentifier(VenueIdentifier.forIssnL(issnL));
-    return venue;
+    return VenueAggregate.fromPubMed(displayName, nlmId, issnL);
   }
 
   /// 创建测试用的 VenueAggregate（指定 ISSN-L）。
   private VenueAggregate createVenueAggregateWithIssnL(
-      String openalexId, String displayName, String issnL) {
-    VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
-    venue.addIdentifier(VenueIdentifier.forIssnL(issnL));
-    return venue;
+      String nlmId, String displayName, String issnL) {
+    return VenueAggregate.fromPubMed(displayName, nlmId, issnL);
   }
 
   /// 创建测试用的 VenueAggregate（指定 NLM ID）。
   private VenueAggregate createVenueAggregateWithNlmId(
-      String openalexId, String displayName, String nlmId) {
-    VenueAggregate venue = VenueAggregate.fromOpenAlex(openalexId, VenueType.JOURNAL, displayName);
-    venue.addIdentifier(new VenueIdentifier(VenueIdentifierType.NLM, nlmId));
-    return venue;
+      String ignoredParam, String displayName, String nlmId) {
+    return VenueAggregate.fromPubMed(displayName, nlmId, null);
   }
 }

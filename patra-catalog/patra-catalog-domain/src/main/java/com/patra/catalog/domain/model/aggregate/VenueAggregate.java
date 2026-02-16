@@ -13,7 +13,6 @@ import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
 import com.patra.common.domain.AggregateRoot;
-import com.patra.common.enums.ProvenanceCode;
 import java.io.Serial;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,7 +31,7 @@ import lombok.Getter;
 /// 本聚合根遵循 CQRS 模式，**仅用于写入侧**（数据采集、更新）：
 ///
 /// - 只包含验证不变量所需的最小属性集
-/// - 数据从外部源（OpenAlex/PubMed）流入，经聚合根验证后持久化
+/// - 数据从 PubMed/NLM Catalog 流入，经聚合根验证后持久化
 /// - 读取场景通过 DO 或专门的读模型实现，不经过聚合根重建
 ///
 /// **聚合边界**：
@@ -48,7 +47,7 @@ import lombok.Getter;
 ///
 /// **关联数据**（通过 VenueRepository 独立管理，不属于聚合边界）：
 ///
-/// - VenuePublicationStats：年度指标集合（来自 OpenAlex）
+/// - VenuePublicationStats：年度指标集合
 /// - VenueMesh：MeSH 主题词集合（来自 Serfile）
 /// - VenueRelation：期刊关联关系集合（来自 Serfile）
 /// - VenueIndexingHistory：索引历史记录集合（来自 Serfile）
@@ -56,7 +55,6 @@ import lombok.Getter;
 /// **验证规则**：
 ///
 /// - 所有类型：displayName 和 venueType 必填
-/// - 来自 OpenAlex：必须包含 OPENALEX 类型的标识符
 /// - 来自 PubMed：必须包含 NLM 或 ISSN_L 类型的标识符
 ///
 /// @author linqibin
@@ -113,27 +111,6 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
 
   // ========== 工厂方法 ==========
 
-  /// 从 OpenAlex Source 创建载体。
-  ///
-  /// @param openalexId OpenAlex Source ID（必填）
-  /// @param venueType 载体类型
-  /// @param displayName 显示名称
-  /// @return 载体聚合根
-  public static VenueAggregate fromOpenAlex(
-      String openalexId, VenueType venueType, String displayName) {
-    Assert.notBlank(openalexId, "OpenAlex ID 不能为空");
-
-    VenueAggregate aggregate = new VenueAggregate(null, venueType, displayName);
-
-    // 添加 OpenAlex 标识符
-    aggregate.addIdentifier(VenueIdentifier.forOpenAlex(openalexId));
-
-    // 设置来源信息
-    aggregate.provenance = ProvenanceInfo.ofCode(ProvenanceCode.OPENALEX);
-
-    return aggregate;
-  }
-
   /// 从 PubMed 创建期刊载体。
   ///
   /// @param displayName 期刊名称
@@ -183,14 +160,6 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// @return 当前对象
   public VenueAggregate withProvenance(ProvenanceInfo provenance) {
     this.provenance = provenance;
-    return this;
-  }
-
-  /// 设置 OpenAlex 来源信息。
-  ///
-  /// @return 当前对象
-  public VenueAggregate withOpenAlexProvenance() {
-    this.provenance = ProvenanceInfo.forOpenAlex();
     return this;
   }
 
@@ -410,13 +379,6 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
     return venueType.isConference();
   }
 
-  /// 判断是否来自 OpenAlex。
-  ///
-  /// @return true 如果来自 OpenAlex
-  public boolean isFromOpenAlex() {
-    return provenance != null && provenance.isFromOpenAlex();
-  }
-
   /// 判断是否来自 PubMed。
   ///
   /// @return true 如果来自 PubMed
@@ -483,15 +445,6 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
     // 名称不能为空
     if (StrUtil.isBlank(displayName)) {
       throw new IllegalStateException("显示名称不能为空");
-    }
-
-    // 来自 OpenAlex 的载体必须有 OPENALEX 类型的标识符
-    if (provenance != null && provenance.isFromOpenAlex()) {
-      boolean hasOpenAlexId =
-          identifiers.stream().anyMatch(i -> i.type() == VenueIdentifierType.OPENALEX);
-      if (!hasOpenAlexId) {
-        throw new IllegalStateException("来自 OpenAlex 的载体必须提供 OpenAlex 标识符");
-      }
     }
   }
 

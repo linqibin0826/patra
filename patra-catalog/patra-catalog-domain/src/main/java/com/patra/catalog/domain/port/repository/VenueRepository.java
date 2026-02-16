@@ -27,15 +27,14 @@ import java.util.Set;
 ///
 /// 本接口同时管理与载体关联的补充数据（不属于聚合边界，但通过 Repository 统一访问）：
 ///
-/// - VenuePublicationStats：年度发文统计（来自 OpenAlex Sources）
+/// - VenuePublicationStats：年度发文统计
 /// - VenueMesh：MeSH 主题词（来自 NLM LSIOU）
 /// - VenueRelation：期刊关联关系（来自 NLM LSIOU）
 /// - VenueIndexingHistory：索引历史（来自 NLM LSIOU）
 ///
 /// **主要使用场景**：
 ///
-/// - OpenAlex Sources S3 数据初始化导入（批量写入）
-/// - PubMed LSIOU 数据富化导入（批量更新）
+/// - PubMed LSIOU 数据导入（批量写入/更新）
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -51,11 +50,11 @@ public interface VenueRepository {
 
   /// 批量插入载体聚合根（包含标识符和年度指标）。
   ///
-  /// **适用场景**：OpenAlex Sources 数据初始化导入
+  /// **适用场景**：PubMed LSIOU 导入时新增 Venue 记录
   ///
   /// **设计说明**：
   ///
-  /// - 纯 INSERT 语义，用于「一次性初始化」场景
+  /// - 纯 INSERT 语义
   /// - 自动生成主键 ID 并设置子表外键
   /// - 子表（identifiers、yearlyMetrics）随主表一起插入
   /// - 空的子集合会被安全跳过，不会导致失败
@@ -128,7 +127,6 @@ public interface VenueRepository {
 
   /// 批量替换年度指标（删除旧数据后插入新数据）。
   ///
-  /// 用于 OpenAlex Sources 初始化导入时保存年度发文统计数据。
   /// 年度指标包含每年的发文数量等统计信息。
   ///
   /// @param yearlyMetricsByVenueId Map，key 为 venueId，value 为要设置的年度指标列表
