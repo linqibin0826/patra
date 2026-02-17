@@ -49,7 +49,7 @@ import org.hibernate.type.SqlTypes;
     name = "cat_venue",
     indexes = {
       @Index(name = "idx_venue_type", columnList = "venue_type"),
-      @Index(name = "idx_display_name", columnList = "display_name"),
+      @Index(name = "idx_title", columnList = "title"),
       @Index(name = "idx_provenance", columnList = "provenance_code"),
       @Index(name = "idx_issn_l", columnList = "issn_l"),
       @Index(name = "idx_nlm_id", columnList = "nlm_id"),
@@ -65,9 +65,13 @@ public class VenueEntity extends SoftDeletableJpaEntity {
   @Column(name = "venue_type", nullable = false, length = 20)
   private String venueType;
 
-  /// 载体显示名称（主名称）
-  @Column(name = "display_name", nullable = false, length = 500)
-  private String displayName;
+  /// 载体标题（主名称）
+  @Column(name = "title", nullable = false, length = 500)
+  private String title;
+
+  /// 中文标题（可空，来自 Wikidata）
+  @Column(name = "title_zh", length = 500)
+  private String titleZh;
 
   // ========================================
   // 来源追踪（Provenance）

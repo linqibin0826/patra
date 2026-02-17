@@ -111,7 +111,8 @@ public abstract class VenueJpaMapper {
         VenueAggregate.restore(
             entity.getId() != null ? VenueId.of(entity.getId()) : null,
             stringToVenueType(entity.getVenueType()),
-            entity.getDisplayName(),
+            entity.getTitle(),
+            entity.getTitleZh(),
             entity.getVersion());
 
     // 设置来源信息
@@ -192,7 +193,8 @@ public abstract class VenueJpaMapper {
 
   /// 更新托管实体的可变字段。
   ///
-  /// 注意：venueType 和 displayName 是不可变的，不在此更新。
+  /// 注意：venueType 和 title 是不可变的，不在此更新。
+  /// titleZh 是可富化字段（可从 Wikidata 后续补充），需要同步。
   ///
   /// @param entity 托管实体
   /// @param aggregate 包含更新数据的聚合根
@@ -200,6 +202,9 @@ public abstract class VenueJpaMapper {
     if (entity == null || aggregate == null) {
       return;
     }
+
+    // 更新中文标题（可后续富化）
+    entity.setTitleZh(aggregate.getTitleZh());
 
     // 更新来源信息
     if (aggregate.getProvenance() != null) {

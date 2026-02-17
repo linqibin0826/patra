@@ -11,7 +11,8 @@ import java.util.List;
 ///
 /// @param id 期刊主键 ID
 /// @param venueType 载体类型
-/// @param displayName 期刊显示名称
+/// @param title 期刊标题
+/// @param titleZh 中文标题（可空）
 /// @param issnL ISSN-L（可空）
 /// @param nlmId NLM ID（可空）
 /// @param openalexId OpenAlex Source ID（可空）
@@ -29,7 +30,8 @@ import java.util.List;
 public record VenueDetailResponse(
     Long id,
     String venueType,
-    String displayName,
+    String title,
+    String titleZh,
     String issnL,
     String nlmId,
     String openalexId,

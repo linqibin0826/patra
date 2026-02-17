@@ -13,7 +13,8 @@ import lombok.Builder;
 ///
 /// @param id 期刊主键 ID
 /// @param venueType 载体类型（JOURNAL/REPOSITORY/CONFERENCE/等）
-/// @param displayName 期刊显示名称
+/// @param title 期刊标题
+/// @param titleZh 中文标题（可空，来自 Wikidata）
 /// @param issnL ISSN-L（可空）
 /// @param nlmId NLM ID（可空）
 /// @param openalexId OpenAlex Source ID（可空）
@@ -32,7 +33,8 @@ import lombok.Builder;
 public record VenueDetailReadModel(
     Long id,
     String venueType,
-    String displayName,
+    String title,
+    String titleZh,
     String issnL,
     String nlmId,
     String openalexId,
@@ -52,7 +54,7 @@ public record VenueDetailReadModel(
   public VenueDetailReadModel {
     Assert.notNull(id, "期刊 ID 不能为空");
     Assert.notBlank(venueType, "载体类型不能为空");
-    Assert.notBlank(displayName, "期刊名称不能为空");
+    Assert.notBlank(title, "期刊标题不能为空");
     Assert.notBlank(provenanceCode, "数据来源不能为空");
     Assert.notNull(createdAt, "创建时间不能为空");
     Assert.notNull(updatedAt, "更新时间不能为空");

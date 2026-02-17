@@ -54,7 +54,7 @@ import lombok.Getter;
 ///
 /// **验证规则**：
 ///
-/// - 所有类型：displayName 和 venueType 必填
+/// - 所有类型：title 和 venueType 必填
 /// - 来自 PubMed：必须包含 NLM 或 ISSN_L 类型的标识符
 ///
 /// @author linqibin
@@ -69,8 +69,11 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// 载体类型（必填，不变量）
   private final VenueType venueType;
 
-  /// 显示名称（必填，不变量）
-  private final String displayName;
+  /// 标题（必填，不变量）
+  private final String title;
+
+  /// 中文标题（可空，来自 Wikidata SPARQL 查询，可后续富化）
+  private String titleZh;
 
   /// 标识符集合（聚合边界内值对象）
   private final List<VenueIdentifier> identifiers;
@@ -96,15 +99,17 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   ///
   /// @param id 主键 ID（新建时为 null）
   /// @param venueType 载体类型
-  /// @param displayName 显示名称
-  private VenueAggregate(VenueId id, VenueType venueType, String displayName) {
+  /// @param title 标题
+  /// @param titleZh 中文标题（可空）
+  private VenueAggregate(VenueId id, VenueType venueType, String title, String titleZh) {
     super(id);
 
     Assert.notNull(venueType, "载体类型不能为空");
-    Assert.notBlank(displayName, "显示名称不能为空");
+    Assert.notBlank(title, "标题不能为空");
 
     this.venueType = venueType;
-    this.displayName = displayName;
+    this.title = title;
+    this.titleZh = titleZh;
     this.identifiers = new ArrayList<>();
     this.affiliatedSocieties = new ArrayList<>();
   }
@@ -113,16 +118,18 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
 
   /// 从 PubMed 创建期刊载体。
   ///
-  /// @param displayName 期刊名称
+  /// @param title 期刊名称
+  /// @param titleZh 中文标题（可空，来自 Wikidata）
   /// @param nlmId NLM 唯一标识符（nlmId 或 issnL 至少一个必填）
   /// @param issnL Linking ISSN（nlmId 或 issnL 至少一个必填）
   /// @return 载体聚合根
-  public static VenueAggregate fromPubMed(String displayName, String nlmId, String issnL) {
+  public static VenueAggregate fromPubMed(
+      String title, String titleZh, String nlmId, String issnL) {
     Assert.isTrue(
         StrUtil.isNotBlank(nlmId) || StrUtil.isNotBlank(issnL),
         "来自 PubMed 的载体必须提供 NLM ID 或 ISSN-L");
 
-    VenueAggregate aggregate = new VenueAggregate(null, VenueType.JOURNAL, displayName);
+    VenueAggregate aggregate = new VenueAggregate(null, VenueType.JOURNAL, title, titleZh);
 
     // 添加标识符
     if (StrUtil.isNotBlank(nlmId)) {
@@ -142,12 +149,13 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   ///
   /// @param id 主键 ID（VenueId 值对象）
   /// @param venueType 载体类型
-  /// @param displayName 显示名称
+  /// @param title 标题
+  /// @param titleZh 中文标题（可空）
   /// @param version 乐观锁版本
   /// @return 重建的聚合根
   public static VenueAggregate restore(
-      VenueId id, VenueType venueType, String displayName, Long version) {
-    VenueAggregate aggregate = new VenueAggregate(id, venueType, displayName);
+      VenueId id, VenueType venueType, String title, String titleZh, Long version) {
+    VenueAggregate aggregate = new VenueAggregate(id, venueType, title, titleZh);
     aggregate.assignVersion(version != null ? version : 0L);
     return aggregate;
   }
@@ -161,6 +169,20 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   public VenueAggregate withProvenance(ProvenanceInfo provenance) {
     this.provenance = provenance;
     return this;
+  }
+
+  // ========== 富化方法 ==========
+
+  /// 富化中文标题。
+  ///
+  /// 用于 PubMed 导入时为已存在的 Venue 补充 Wikidata 查询到的中文标题。
+  /// 传入 null 时不做任何操作（表示未查询到数据，不应清除已有值）。
+  ///
+  /// @param titleZh 中文标题（null 表示无数据，不清除已有值）
+  public void enrichTitleZh(String titleZh) {
+    if (titleZh != null) {
+      this.titleZh = titleZh;
+    }
   }
 
   // ========== 嵌入式值对象设置方法 ==========
@@ -325,9 +347,7 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// @return 是否成功移除
   public boolean removeIdentifier(VenueIdentifierType type, String value) {
     VenueIdentifier target = new VenueIdentifier(type, value);
-    boolean removed = identifiers.remove(target);
-    if (removed) {}
-    return removed;
+    return identifiers.remove(target);
   }
 
   /// 获取特定类型的标识符值（返回第一个匹配）。
@@ -442,18 +462,18 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
       throw new IllegalStateException("载体类型不能为空");
     }
 
-    // 名称不能为空
-    if (StrUtil.isBlank(displayName)) {
-      throw new IllegalStateException("显示名称不能为空");
+    // 标题不能为空
+    if (StrUtil.isBlank(title)) {
+      throw new IllegalStateException("标题不能为空");
     }
   }
 
   @Override
   public String toString() {
-    String openalexId = getIdentifier(VenueIdentifierType.OPENALEX).orElse(null);
+    String nlmId = getIdentifier(VenueIdentifierType.NLM).orElse(null);
     String issnL = getIdentifier(VenueIdentifierType.ISSN_L).orElse(null);
     return String.format(
-        "VenueAggregate[id=%s, type=%s, name=%s, openalexId=%s, issnL=%s]",
-        getId(), venueType.getCode(), displayName, openalexId, issnL);
+        "VenueAggregate[id=%s, type=%s, name=%s, nlmId=%s, issnL=%s]",
+        getId(), venueType.getCode(), title, nlmId, issnL);
   }
 }

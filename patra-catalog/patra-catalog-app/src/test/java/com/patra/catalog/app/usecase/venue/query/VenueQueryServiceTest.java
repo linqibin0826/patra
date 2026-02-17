@@ -51,6 +51,7 @@ class VenueQueryServiceTest {
                 new VenueSummaryReadModel(
                     1L,
                     "Nature",
+                    null,
                     "0028-0836",
                     "0410462",
                     "OPENALEX",

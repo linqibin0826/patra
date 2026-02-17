@@ -75,13 +75,13 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
   /// 查询条件（AND 关系，空值忽略）：
   ///
   /// - 固定 `venueType=JOURNAL`
-  /// - `keyword`：displayName 前缀模糊匹配
+  /// - `keyword`：title 或 titleZh 前缀模糊匹配
   /// - `provenanceCode`：数据来源精确匹配
   /// - `countryCode`：国家编码精确匹配
   /// - `issnL`：ISSN-L 精确匹配
   /// - `nlmId`：NLM ID 精确匹配
   ///
-  /// @param keyword displayName 前缀搜索关键词（可空）
+  /// @param keyword title/titleZh 前缀搜索关键词（可空）
   /// @param provenanceCode 数据来源编码（可空）
   /// @param countryCode 国家编码（可空）
   /// @param issnL ISSN-L（可空）
@@ -92,7 +92,9 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
       """
       SELECT v FROM VenueEntity v
       WHERE v.venueType = 'JOURNAL'
-        AND (:keyword IS NULL OR LOWER(v.displayName) LIKE LOWER(CONCAT(:keyword, '%')))
+        AND (:keyword IS NULL
+             OR LOWER(v.title) LIKE LOWER(CONCAT(:keyword, '%'))
+             OR LOWER(v.titleZh) LIKE LOWER(CONCAT(:keyword, '%')))
         AND (:provenanceCode IS NULL OR v.provenanceCode = :provenanceCode)
         AND (:countryCode IS NULL OR v.countryCode = :countryCode)
         AND (:issnL IS NULL OR v.issnL = :issnL)

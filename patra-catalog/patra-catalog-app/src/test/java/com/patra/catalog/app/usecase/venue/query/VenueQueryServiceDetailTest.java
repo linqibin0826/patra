@@ -48,6 +48,7 @@ class VenueQueryServiceDetailTest {
             validId,
             "JOURNAL",
             "Nature",
+            null,
             "0028-0836",
             "0410462",
             "S12345",

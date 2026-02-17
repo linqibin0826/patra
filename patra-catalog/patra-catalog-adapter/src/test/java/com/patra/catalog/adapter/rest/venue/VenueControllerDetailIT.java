@@ -55,6 +55,7 @@ class VenueControllerDetailIT {
             validId,
             "JOURNAL",
             "Nature",
+            "自然",
             "0028-0836",
             "0410462",
             "S12345",
@@ -83,11 +84,13 @@ class VenueControllerDetailIT {
         .contentType(MediaType.APPLICATION_JSON)
         .expectBody()
         .jsonPath("$.id")
-        .isEqualTo(1001)
+        .isEqualTo("1001")
         .jsonPath("$.venueType")
         .isEqualTo("JOURNAL")
-        .jsonPath("$.displayName")
+        .jsonPath("$.title")
         .isEqualTo("Nature")
+        .jsonPath("$.titleZh")
+        .isEqualTo("自然")
         .jsonPath("$.issnL")
         .isEqualTo("0028-0836")
         .jsonPath("$.nlmId")

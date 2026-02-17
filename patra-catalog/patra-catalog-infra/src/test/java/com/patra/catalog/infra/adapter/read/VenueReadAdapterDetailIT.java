@@ -54,7 +54,8 @@ class VenueReadAdapterDetailIT {
     VenueEntity entity = new VenueEntity();
     entity.setId(SnowflakeIdGenerator.getId());
     entity.setVenueType("JOURNAL");
-    entity.setDisplayName("Nature");
+    entity.setTitle("Nature");
+    entity.setTitleZh("自然");
     entity.setIssnL("0028-0836");
     entity.setNlmId("0410462");
     entity.setOpenalexId("S12345");
@@ -80,7 +81,8 @@ class VenueReadAdapterDetailIT {
     VenueDetailReadModel detail = result.get();
     assertThat(detail.id()).isEqualTo(entity.getId());
     assertThat(detail.venueType()).isEqualTo("JOURNAL");
-    assertThat(detail.displayName()).isEqualTo("Nature");
+    assertThat(detail.title()).isEqualTo("Nature");
+    assertThat(detail.titleZh()).isEqualTo("自然");
     assertThat(detail.issnL()).isEqualTo("0028-0836");
     assertThat(detail.nlmId()).isEqualTo("0410462");
     assertThat(detail.openalexId()).isEqualTo("S12345");
@@ -105,7 +107,7 @@ class VenueReadAdapterDetailIT {
     VenueEntity entity = new VenueEntity();
     entity.setId(SnowflakeIdGenerator.getId());
     entity.setVenueType("JOURNAL");
-    entity.setDisplayName("The Lancet");
+    entity.setTitle("The Lancet");
     entity.setIssnL("0140-6736");
     entity.setNlmId("0255562");
     entity.setOpenalexId("S49861241");

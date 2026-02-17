@@ -5,7 +5,8 @@ import java.time.Instant;
 /// Venue 列表项响应。
 ///
 /// @param id Venue ID
-/// @param displayName 名称
+/// @param title 标题
+/// @param titleZh 中文标题（可空）
 /// @param issnL ISSN-L
 /// @param nlmId NLM ID
 /// @param provenanceCode 数据来源
@@ -13,7 +14,8 @@ import java.time.Instant;
 /// @param lastSyncedAt 最后同步时间
 public record VenueItemResponse(
     Long id,
-    String displayName,
+    String title,
+    String titleZh,
     String issnL,
     String nlmId,
     String provenanceCode,

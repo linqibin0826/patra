@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
     -- 核心属性（不变量验证所需）
     -- ========================================
     `venue_type` VARCHAR(32) NOT NULL COMMENT '载体类型:JOURNAL/REPOSITORY/CONFERENCE/EBOOK_PLATFORM/BOOK_SERIES/METADATA/OTHER',
-    `display_name` VARCHAR(500) NOT NULL COMMENT '载体显示名称(主名称)',
+    `title` VARCHAR(500) NOT NULL COMMENT '载体标题(主名称)',
+    `title_zh` VARCHAR(500) NULL DEFAULT NULL COMMENT '中文标题(来自Wikidata SPARQL查询)',
 
     -- ========================================
     -- 来源追踪（Provenance）
@@ -69,7 +70,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
     `issn_l` VARCHAR(10) NULL DEFAULT NULL COMMENT 'Linking ISSN',
     `openalex_id` VARCHAR(50) NULL DEFAULT NULL COMMENT 'OpenAlex Source ID',
     `abbreviated_title` VARCHAR(200) NULL DEFAULT NULL COMMENT '缩写标题',
-    `primary_language` VARCHAR(10) NULL DEFAULT NULL COMMENT '主要语言代码(ISO 639-3)',
+    `primary_language` VARCHAR(10) NULL DEFAULT NULL COMMENT '主要语言代码(BCP 47)',
     `country_code` VARCHAR(2) NULL DEFAULT NULL COMMENT '国家代码(ISO 3166-1 alpha-2)',
 
     -- ========================================
@@ -101,7 +102,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
 
     -- 普通索引
     INDEX `idx_venue_type` (`venue_type`) COMMENT '载体类型索引',
-    INDEX `idx_display_name` (`display_name`(100)) COMMENT '名称前缀索引',
+    INDEX `idx_title` (`title`(100)) COMMENT '标题前缀索引',
     INDEX `idx_provenance` (`provenance_code`) COMMENT '数据来源索引',
 
     CONSTRAINT chk_venue_country_code CHECK (
@@ -111,10 +112,10 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='出版载体表(最小聚合根):仅含核心身份标识和来源追踪,遵循CQRS原则';
 
--- 全文索引
-CREATE FULLTEXT INDEX `ft_display_name` ON `cat_venue` (`display_name`)
+-- 全文索引（覆盖 title + title_zh，支持中英文混合检索）
+CREATE FULLTEXT INDEX `ft_title` ON `cat_venue` (`title`, `title_zh`)
     WITH PARSER ngram
-    COMMENT '名称全文索引,支持中英文检索';
+    COMMENT '标题全文索引,支持中英文检索';
 
 
 -- ============================================================

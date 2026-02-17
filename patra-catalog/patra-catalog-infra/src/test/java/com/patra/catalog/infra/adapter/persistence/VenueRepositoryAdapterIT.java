@@ -153,7 +153,7 @@ class VenueRepositoryAdapterIT {
     @DisplayName("应该正确处理只有 NLM ID 标识符的聚合根")
     void insertAll_aggregateWithSingleIdentifier_shouldInsertCorrectly() {
       // Given: 创建只有 NLM ID 标识符的聚合根
-      VenueAggregate venue = VenueAggregate.fromPubMed("Journal A", "NLM001", null);
+      VenueAggregate venue = VenueAggregate.fromPubMed("Journal A", null, "NLM001", null);
 
       // When
       repository.insertAll(List.of(venue));
@@ -306,7 +306,7 @@ class VenueRepositoryAdapterIT {
 
       // Then
       assertThat(result).hasSize(1);
-      assertThat(result.get("1111-1111").getDisplayName()).isEqualTo("Journal A");
+      assertThat(result.get("1111-1111").getTitle()).isEqualTo("Journal A");
     }
 
     @Test
@@ -359,7 +359,7 @@ class VenueRepositoryAdapterIT {
 
       // Then
       assertThat(result).hasSize(1);
-      assertThat(result.get("NLM001").getDisplayName()).isEqualTo("Journal A");
+      assertThat(result.get("NLM001").getTitle()).isEqualTo("Journal A");
     }
   }
 
@@ -392,14 +392,14 @@ class VenueRepositoryAdapterIT {
 
       // Then
       assertThat(resultByIssn).hasSize(1);
-      assertThat(resultByIssn.get("2222-2222").getDisplayName()).isEqualTo("Journal A");
+      assertThat(resultByIssn.get("2222-2222").getTitle()).isEqualTo("Journal A");
 
       // When: 用 ISSN-L 查找
       Map<String, VenueAggregate> resultByIssnL = repository.findByIssns(Set.of("1111-1111"));
 
       // Then
       assertThat(resultByIssnL).hasSize(1);
-      assertThat(resultByIssnL.get("1111-1111").getDisplayName()).isEqualTo("Journal A");
+      assertThat(resultByIssnL.get("1111-1111").getTitle()).isEqualTo("Journal A");
     }
   }
 
@@ -459,6 +459,29 @@ class VenueRepositoryAdapterIT {
       assertThat(updatedVenue.getCitationMetrics().worksCount()).isEqualTo(1000);
       assertThat(updatedVenue.getOpenAccess()).isNotNull();
       assertThat(updatedVenue.getOpenAccess().isOa()).isTrue();
+    }
+
+    @Test
+    @DisplayName("富化中文标题 - 应该正确持久化")
+    void updateBatch_enrichTitleZh_shouldPersist() {
+      // Given: 插入无中文标题的聚合根
+      VenueAggregate venue = createVenueAggregateWithIssnL("S1", "Journal A", "1111-1111");
+      assertThat(venue.getTitleZh()).isNull();
+      repository.insertAll(List.of(venue));
+
+      // 重新查询
+      Map<String, VenueAggregate> found = repository.findByIssnLs(Set.of("1111-1111"));
+      VenueAggregate retrievedVenue = found.get("1111-1111");
+      assertThat(retrievedVenue.getTitleZh()).isNull();
+
+      // When: 富化中文标题
+      retrievedVenue.enrichTitleZh("期刊甲");
+      repository.updateBatch(List.of(retrievedVenue));
+
+      // Then: 验证中文标题被持久化
+      Map<String, VenueAggregate> updated = repository.findByIssnLs(Set.of("1111-1111"));
+      VenueAggregate updatedVenue = updated.get("1111-1111");
+      assertThat(updatedVenue.getTitleZh()).isEqualTo("期刊甲");
     }
 
     @Test
@@ -651,22 +674,21 @@ class VenueRepositoryAdapterIT {
   /// 创建测试用的 VenueAggregate。
   ///
   /// @param nlmId NLM 唯一标识符
-  /// @param displayName 显示名称
+  /// @param title 期刊标题
   /// @param suffix 数字后缀（1-9），用于生成唯一的 ISSN-L（格式：0001-000X）
-  private VenueAggregate createVenueAggregate(String nlmId, String displayName, int suffix) {
+  private VenueAggregate createVenueAggregate(String nlmId, String title, int suffix) {
     String issnL = String.format("0001-00%02d", suffix);
-    return VenueAggregate.fromPubMed(displayName, nlmId, issnL);
+    return VenueAggregate.fromPubMed(title, null, nlmId, issnL);
   }
 
   /// 创建测试用的 VenueAggregate（指定 ISSN-L）。
-  private VenueAggregate createVenueAggregateWithIssnL(
-      String nlmId, String displayName, String issnL) {
-    return VenueAggregate.fromPubMed(displayName, nlmId, issnL);
+  private VenueAggregate createVenueAggregateWithIssnL(String nlmId, String title, String issnL) {
+    return VenueAggregate.fromPubMed(title, null, nlmId, issnL);
   }
 
   /// 创建测试用的 VenueAggregate（指定 NLM ID）。
   private VenueAggregate createVenueAggregateWithNlmId(
-      String ignoredParam, String displayName, String nlmId) {
-    return VenueAggregate.fromPubMed(displayName, nlmId, null);
+      String ignoredParam, String title, String nlmId) {
+    return VenueAggregate.fromPubMed(title, null, nlmId, null);
   }
 }

@@ -53,6 +53,7 @@ class VenueControllerIT {
         new VenueSummaryReadModel(
             1001L,
             "Nature",
+            "自然",
             "0028-0836",
             "0410462",
             "OPENALEX",
@@ -83,9 +84,11 @@ class VenueControllerIT {
         .jsonPath("$.items.length()")
         .isEqualTo(1)
         .jsonPath("$.items[0].id")
-        .isEqualTo(1001)
-        .jsonPath("$.items[0].displayName")
+        .isEqualTo("1001")
+        .jsonPath("$.items[0].title")
         .isEqualTo("Nature")
+        .jsonPath("$.items[0].titleZh")
+        .isEqualTo("自然")
         .jsonPath("$.items[0].issnL")
         .isEqualTo("0028-0836")
         .jsonPath("$.items[0].nlmId")
