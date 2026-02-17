@@ -210,6 +210,8 @@ patra-catalog/
 │       │   └── PubmedXmlParserPort.java
 │       ├── batch/                          # 批处理端口
 │       │   └── PublicationBatchPort.java
+│       ├── enrichment/                     # 富化端口
+│       │   └── ChineseTitleQueryPort.java
 │       ├── source/                         # 数据源端口
 │       │   └── FileDownloadPort.java
 │       └── registry/                       # 注册中心端口
@@ -242,7 +244,10 @@ patra-catalog/
         │   ├── read/                       # CQRS 读适配器
         │   │   └── VenueReadAdapter.java
         │   ├── integration/                # 外部服务集成
-        │   │   └── DictionaryResolverAdapter.java
+        │   │   ├── DictionaryResolverAdapter.java
+        │   │   └── wikidata/              # Wikidata 集成
+        │   │       ├── WikidataSparqlClient.java
+        │   │       └── WikidataChineseTitleQueryAdapter.java
         │   └── source/                     # 数据源适配器
         │       └── FileDownloadAdapter.java
         ├── batch/                          # Spring Batch 子系统
