@@ -63,10 +63,10 @@ domain/model/read/{entity}/
 - 不包含业务逻辑，仅承载查询数据
 
 ```java
-public record VenueSummaryReadModel(Long id, String displayName, String issnL) {
+public record VenueSummaryReadModel(Long id, String title, String issnL) {
     public VenueSummaryReadModel {
         Assert.notNull(id, "期刊 ID 不能为空");
-        Assert.notBlank(displayName, "期刊名称不能为空");
+        Assert.notBlank(title, "期刊名称不能为空");
     }
 }
 ```
