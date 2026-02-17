@@ -1,6 +1,7 @@
 package com.patra.registry;
 
 import com.patra.starter.core.error.config.CoreErrorAutoConfiguration;
+import com.patra.starter.core.json.autoconfig.JacksonAutoConfiguration;
 import com.patra.starter.web.error.config.WebErrorAutoConfiguration;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -17,6 +18,7 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 /// - 提供 @SpringBootConfiguration，使 @WebMvcTest 能够加载 Spring 上下文
 /// - 通过 @EnableAutoConfiguration 加载通用自动配置
 /// - 显式导入错误处理自动配置（@WebMvcTest 默认不加载）
+/// - 显式导入 Jackson 自动配置，确保 Long → String 序列化模块在切片测试中生效
 ///
 /// 异常处理说明：
 ///
@@ -29,7 +31,11 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 /// @since 0.1.0
 @SpringBootConfiguration
 @EnableAutoConfiguration
-@ImportAutoConfiguration({CoreErrorAutoConfiguration.class, WebErrorAutoConfiguration.class})
+@ImportAutoConfiguration({
+  CoreErrorAutoConfiguration.class,
+  WebErrorAutoConfiguration.class,
+  JacksonAutoConfiguration.class
+})
 public class WebMvcTestConfiguration {
   // 空配置类，仅提供 @SpringBootConfiguration 标记
 }
