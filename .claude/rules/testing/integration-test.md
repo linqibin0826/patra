@@ -37,15 +37,18 @@ paths: patra-*/*-infra/**/src/test/**/*IT.java, patra-*/*-adapter/**/src/test/**
 @EnableAutoConfiguration
 @ImportAutoConfiguration({
     CoreErrorAutoConfiguration.class,
-    WebErrorAutoConfiguration.class
+    WebErrorAutoConfiguration.class,
+    JacksonAutoConfiguration.class
 })
 public class WebMvcTestConfiguration {
     // 空配置类，提供 @SpringBootConfiguration 标记
 }
 ```
 
-> **重要**: 必须使用 `@ImportAutoConfiguration` 显式导入错误处理配置，
-> 因为 `@WebMvcTest` 只加载 MVC 相关的自动配置切片，不会自动加载全局异常处理器。
+> **重要**: 必须使用 `@ImportAutoConfiguration` 显式导入以下配置，
+> 因为 `@WebMvcTest` 只加载 MVC 相关的自动配置切片：
+> - **错误处理配置**：不会自动加载全局异常处理器
+> - **Jackson 自动配置**：确保 Long → String 序列化模块生效（防止前端 JS 精度丢失）
 
 ### 测试类注解
 
