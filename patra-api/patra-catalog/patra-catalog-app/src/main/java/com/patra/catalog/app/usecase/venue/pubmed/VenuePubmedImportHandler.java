@@ -27,6 +27,7 @@ import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedLanguage;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedMeshHeading;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedTitleRelation;
+import com.patra.catalog.domain.port.enrichment.ChineseTitleQueryPort;
 import com.patra.catalog.domain.port.parser.LsiouParserPort;
 import com.patra.catalog.domain.port.registry.DictionaryResolverPort;
 import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
@@ -98,6 +99,7 @@ public class VenuePubmedImportHandler
   private final DictionaryResolverPort dictionaryResolverPort;
   private final MeshDescriptorRepository meshDescriptorRepository;
   private final MeshQualifierRepository meshQualifierRepository;
+  private final ChineseTitleQueryPort chineseTitleQueryPort;
 
   /// 导入上下文：封装批次级别的查询映射结果。
   ///
@@ -107,11 +109,13 @@ public class VenuePubmedImportHandler
   /// @param languageCodeMap 语言代码映射（ISO 639-3 → BCP 47）
   /// @param descriptorUiMap MeSH 描述符名称 → UI 映射
   /// @param qualifierUiMap MeSH 限定词名称 → UI 映射
+  /// @param chineseTitleMap ISSN-L → 中文标题映射（来自 Wikidata）
   private record ImportContext(
       Map<String, String> countryCodeMap,
       Map<String, String> languageCodeMap,
       Map<String, String> descriptorUiMap,
-      Map<String, String> qualifierUiMap) {}
+      Map<String, String> qualifierUiMap,
+      Map<String, String> chineseTitleMap) {}
 
   /// 执行 PubMed Venue 数据导入。
   ///
@@ -371,9 +375,16 @@ public class VenuePubmedImportHandler
         meshQualifierNames.size(),
         qualifierUiMap.size());
 
+    // 3.7. 批量查询中文标题（通过 Wikidata SPARQL，基于 ISSN-L）
+    Map<String, String> chineseTitleMap =
+        chineseTitleQueryPort.findChineseTitles(identifiers.issnLs());
+    log.debug(
+        "中文标题查询完成：ISSN-L 共 {} 个，匹配 {} 个", identifiers.issnLs().size(), chineseTitleMap.size());
+
     // 4. 封装导入上下文并匹配分类
     ImportContext context =
-        new ImportContext(countryCodeMap, languageCodeMap, descriptorUiMap, qualifierUiMap);
+        new ImportContext(
+            countryCodeMap, languageCodeMap, descriptorUiMap, qualifierUiMap, chineseTitleMap);
     BatchProcessingResult result = matchAndClassifyRecords(batch, existingVenues, context);
 
     // 5. 批量持久化聚合根
@@ -526,6 +537,10 @@ public class VenuePubmedImportHandler
         if (!processedVenueIds.contains(venue.getId().value())) {
           // 首次处理该期刊：补全标识符
           updateVenueIdentifiers(venue, record);
+          // 富化中文标题（从 Wikidata 查询结果中按 ISSN-L 查找）
+          if (record.hasIssnL()) {
+            venue.enrichTitleZh(context.chineseTitleMap().get(record.issnL()));
+          }
           // 构建并附加 PublicationProfile（嵌入式值对象）
           PublicationProfile profile =
               buildPublicationProfileFromRecord(record, context.countryCodeMap());
@@ -557,7 +572,7 @@ public class VenuePubmedImportHandler
           continue;
         }
 
-        VenueAggregate newVenue = createVenueFromRecord(record);
+        VenueAggregate newVenue = createVenueFromRecord(record, context);
         // 构建并附加 PublicationProfile（嵌入式值对象）
         PublicationProfile profile =
             buildPublicationProfileFromRecord(record, context.countryCodeMap());
@@ -785,12 +800,15 @@ public class VenuePubmedImportHandler
   ///
   /// 创建聚合根并附加所有可用的标识符（NLM ID、ISSN-L 由工厂方法添加）。
   /// 其他字段（frequency、country、languages 等）通过 PublicationProfile 嵌入式值对象保存。
+  /// 中文标题从 ImportContext 的 chineseTitleMap 中按 ISSN-L 查找。
   ///
   /// @param record PubMed 数据记录
+  /// @param context 导入上下文（包含中文标题映射）
   /// @return 新创建的聚合根（只含标识符和来源信息，profile 在调用处附加）
-  private VenueAggregate createVenueFromRecord(PubmedSerialData record) {
+  private VenueAggregate createVenueFromRecord(PubmedSerialData record, ImportContext context) {
+    String titleZh = record.hasIssnL() ? context.chineseTitleMap().get(record.issnL()) : null;
     VenueAggregate venue =
-        VenueAggregate.fromPubMed(record.title(), record.nlmUniqueId(), record.issnL());
+        VenueAggregate.fromPubMed(record.title(), titleZh, record.nlmUniqueId(), record.issnL());
 
     // 添加 CODEN 标识符
     if (record.hasCoden()) {

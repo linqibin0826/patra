@@ -20,6 +20,7 @@ import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedMeshHeading;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
+import com.patra.catalog.domain.port.enrichment.ChineseTitleQueryPort;
 import com.patra.catalog.domain.port.parser.LsiouParserPort;
 import com.patra.catalog.domain.port.registry.DictionaryResolverPort;
 import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
@@ -84,6 +85,7 @@ class VenuePubmedImportHandlerTest {
   @Mock private DictionaryResolverPort dictionaryResolverPort;
   @Mock private MeshDescriptorRepository meshDescriptorRepository;
   @Mock private MeshQualifierRepository meshQualifierRepository;
+  @Mock private ChineseTitleQueryPort chineseTitleQueryPort;
 
   @Captor private ArgumentCaptor<List<VenueAggregate>> updateBatchCaptor;
   @Captor private ArgumentCaptor<List<VenueAggregate>> insertAllCaptor;
@@ -103,7 +105,8 @@ class VenuePubmedImportHandlerTest {
             transactionTemplate,
             dictionaryResolverPort,
             meshDescriptorRepository,
-            meshQualifierRepository);
+            meshQualifierRepository,
+            chineseTitleQueryPort);
 
     // 创建临时 XML 文件，供 Handler 中 Files.newInputStream() 使用
     Path tempFile = tempDir.resolve("test-lsiou.xml");
@@ -128,6 +131,9 @@ class VenuePubmedImportHandlerTest {
     // 配置 MeSH Repository 默认返回空 Map（测试不关心 MeSH UI 导入）
     lenient().when(meshDescriptorRepository.findAllByNameIn(any())).thenReturn(Map.of());
     lenient().when(meshQualifierRepository.findAllByNameIn(any())).thenReturn(Map.of());
+
+    // 配置中文标题富化端口默认返回空 Map（测试不关心中文标题查询）
+    lenient().when(chineseTitleQueryPort.findChineseTitles(any())).thenReturn(Map.of());
   }
 
   @Nested
@@ -299,7 +305,7 @@ class VenuePubmedImportHandlerTest {
       verify(venueRepository).insertAll(insertAllCaptor.capture());
       List<VenueAggregate> created = insertAllCaptor.getValue();
       assertThat(created).hasSize(1);
-      assertThat(created.getFirst().getDisplayName()).isEqualTo("New Journal");
+      assertThat(created.getFirst().getTitle()).isEqualTo("New Journal");
 
       assertThat(result.createdCount()).isEqualTo(1);
       assertThat(result.updatedCount()).isZero();
@@ -692,7 +698,7 @@ class VenuePubmedImportHandlerTest {
       // Then — 只创建 1 条，跳过 1 条
       verify(venueRepository).insertAll(insertAllCaptor.capture());
       assertThat(insertAllCaptor.getValue()).hasSize(1);
-      assertThat(insertAllCaptor.getValue().getFirst().getDisplayName()).isEqualTo("Journal A");
+      assertThat(insertAllCaptor.getValue().getFirst().getTitle()).isEqualTo("Journal A");
       assertThat(result.skippedCount()).isEqualTo(1);
     }
   }
@@ -729,8 +735,7 @@ class VenuePubmedImportHandlerTest {
       // Then — 只创建活跃记录，删除的被跳过
       verify(venueRepository).insertAll(insertAllCaptor.capture());
       assertThat(insertAllCaptor.getValue()).hasSize(1);
-      assertThat(insertAllCaptor.getValue().getFirst().getDisplayName())
-          .isEqualTo("Active Journal");
+      assertThat(insertAllCaptor.getValue().getFirst().getTitle()).isEqualTo("Active Journal");
       assertThat(result.totalParsed()).isEqualTo(2);
       assertThat(result.createdCount()).isEqualTo(1);
       assertThat(result.skippedCount()).isEqualTo(1);
@@ -765,6 +770,89 @@ class VenuePubmedImportHandlerTest {
     }
   }
 
+  @Nested
+  @DisplayName("中文标题富化测试")
+  class ChineseTitleEnrichmentTest {
+
+    @Test
+    @DisplayName("CREATE 路径：新建期刊应该携带中文标题")
+    void shouldSetTitleZhOnCreate() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record = createSerialData("0000001", "Nature", "0028-0836", null, null);
+
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+      when(chineseTitleQueryPort.findChineseTitles(any())).thenReturn(Map.of("0028-0836", "自然"));
+
+      // When
+      handler.handle(command);
+
+      // Then
+      verify(venueRepository).insertAll(insertAllCaptor.capture());
+      VenueAggregate created = insertAllCaptor.getValue().getFirst();
+      assertThat(created.getTitleZh()).isEqualTo("自然");
+    }
+
+    @Test
+    @DisplayName("UPDATE 路径：已有期刊应该被富化中文标题")
+    void shouldEnrichTitleZhOnUpdate() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record = createSerialData("0000001", "Nature", "0028-0836", null, null);
+
+      VenueAggregate existingVenue = createExistingVenue("Nature", null, "0028-0836");
+      assertThat(existingVenue.getTitleZh()).isNull(); // 确认初始无中文标题
+
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("0028-0836", existingVenue));
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+      when(chineseTitleQueryPort.findChineseTitles(any())).thenReturn(Map.of("0028-0836", "自然"));
+
+      // When
+      handler.handle(command);
+
+      // Then — 更新路径的期刊应该被富化中文标题
+      verify(venueRepository).updateBatch(updateBatchCaptor.capture());
+      VenueAggregate updated = updateBatchCaptor.getValue().getFirst();
+      assertThat(updated.getTitleZh()).isEqualTo("自然");
+    }
+
+    @Test
+    @DisplayName("UPDATE 路径：Wikidata 无数据时不应清除已有中文标题")
+    void shouldNotClearExistingTitleZhWhenWikidataReturnsEmpty() {
+      // Given — 已有期刊本身已有中文标题
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record = createSerialData("0000001", "Nature", "0028-0836", null, null);
+
+      VenueAggregate existingVenue =
+          VenueAggregate.restore(
+              VenueId.of(venueIdCounter++), VenueType.JOURNAL, "Nature", "自然", 0L);
+      existingVenue.addIdentifier(VenueIdentifier.forIssnL("0028-0836"));
+
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("0028-0836", existingVenue));
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+      // Wikidata 返回空 Map（无数据）
+      when(chineseTitleQueryPort.findChineseTitles(any())).thenReturn(Map.of());
+
+      // When
+      handler.handle(command);
+
+      // Then — 已有的中文标题不应被清除
+      verify(venueRepository).updateBatch(updateBatchCaptor.capture());
+      VenueAggregate updated = updateBatchCaptor.getValue().getFirst();
+      assertThat(updated.getTitleZh()).isEqualTo("自然");
+    }
+  }
+
   // ========== 辅助方法 ==========
 
   /// 创建测试用 PubmedSerialData。
@@ -783,13 +871,13 @@ class VenuePubmedImportHandlerTest {
 
   /// 创建模拟已存在的 VenueAggregate（带 ID，模拟从数据库查询返回）。
   ///
-  /// @param displayName 期刊名称
+  /// @param title 期刊标题
   /// @param nlmId NLM 唯一标识符（可为 null）
   /// @param issnL Linking ISSN（可为 null）
   /// @return 带 ID 的 VenueAggregate
-  private VenueAggregate createExistingVenue(String displayName, String nlmId, String issnL) {
+  private VenueAggregate createExistingVenue(String title, String nlmId, String issnL) {
     VenueAggregate venue =
-        VenueAggregate.restore(VenueId.of(venueIdCounter++), VenueType.JOURNAL, displayName, 0L);
+        VenueAggregate.restore(VenueId.of(venueIdCounter++), VenueType.JOURNAL, title, null, 0L);
     if (nlmId != null) {
       venue.addIdentifier(VenueIdentifier.forNlm(nlmId));
     }

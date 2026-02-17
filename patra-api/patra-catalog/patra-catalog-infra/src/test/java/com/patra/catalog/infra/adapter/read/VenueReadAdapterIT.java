@@ -63,14 +63,14 @@ class VenueReadAdapterIT {
     // Then
     assertThat(page.total()).isEqualTo(2);
     assertThat(page.items()).hasSize(2);
-    assertThat(page.items()).extracting("displayName").containsExactly("The Lancet", "Nature");
+    assertThat(page.items()).extracting("title").containsExactly("The Lancet", "Nature");
   }
 
   @Nested
   @DisplayName("关键词检索策略")
   class KeywordSearchTests {
 
-    /// 名称前缀匹配应命中 displayName LIKE q%。
+    /// 名称前缀匹配应命中 title LIKE q%。
     @Test
     @DisplayName("名称前缀匹配")
     void shouldMatchByDisplayNamePrefix() {
@@ -85,7 +85,7 @@ class VenueReadAdapterIT {
 
       // Then
       assertThat(page.total()).isEqualTo(1);
-      assertThat(page.items()).singleElement().extracting("displayName").isEqualTo("Nature");
+      assertThat(page.items()).singleElement().extracting("title").isEqualTo("Nature");
     }
 
     /// ISSN-L 精确匹配应命中对应期刊。
@@ -103,7 +103,7 @@ class VenueReadAdapterIT {
 
       // Then
       assertThat(page.total()).isEqualTo(1);
-      assertThat(page.items()).singleElement().extracting("displayName").isEqualTo("Science");
+      assertThat(page.items()).singleElement().extracting("title").isEqualTo("Science");
     }
 
     /// NLM ID 精确匹配应命中对应期刊。
@@ -121,7 +121,7 @@ class VenueReadAdapterIT {
 
       // Then
       assertThat(page.total()).isEqualTo(1);
-      assertThat(page.items()).singleElement().extracting("displayName").isEqualTo("Nature");
+      assertThat(page.items()).singleElement().extracting("title").isEqualTo("Nature");
     }
 
     /// provenanceCode 精确匹配应命中对应数据来源的期刊。
@@ -139,7 +139,7 @@ class VenueReadAdapterIT {
 
       // Then
       assertThat(page.total()).isEqualTo(1);
-      assertThat(page.items()).singleElement().extracting("displayName").isEqualTo("BMJ");
+      assertThat(page.items()).singleElement().extracting("title").isEqualTo("BMJ");
     }
 
     /// countryCode 精确匹配应命中对应国家的期刊。
@@ -158,7 +158,7 @@ class VenueReadAdapterIT {
 
       // Then
       assertThat(page.total()).isEqualTo(1);
-      assertThat(page.items()).singleElement().extracting("displayName").isEqualTo("The Lancet");
+      assertThat(page.items()).singleElement().extracting("title").isEqualTo("The Lancet");
     }
   }
 
@@ -189,10 +189,62 @@ class VenueReadAdapterIT {
     assertThat(page.items()).singleElement().extracting("id").isEqualTo(expectedSecondPageId);
   }
 
+  /// titleZh 应正确映射到列表读模型。
+  @Test
+  @DisplayName("titleZh 应正确映射到 VenueSummaryReadModel")
+  void shouldMapTitleZhToSummaryReadModel() {
+    // Given: 保存一条带中文标题的期刊
+    VenueEntity entity = new VenueEntity();
+    entity.setId(SnowflakeIdGenerator.getId());
+    entity.setVenueType("JOURNAL");
+    entity.setTitle("Nature");
+    entity.setTitleZh("自然");
+    entity.setIssnL("0028-0836");
+    entity.setNlmId("0410462");
+    entity.setProvenanceCode("OPENALEX");
+    entity.setCountryCode("US");
+    entity.setLastSyncedAt(Instant.parse("2026-02-13T00:00:00Z"));
+    venueDao.save(entity);
+
+    // When
+    PageResult<VenueSummaryReadModel> page =
+        venueReadAdapter.findVenuePage(PagingParams.of(1, 20), EMPTY_FILTER);
+
+    // Then
+    assertThat(page.items())
+        .singleElement()
+        .satisfies(
+            item -> {
+              assertThat(item.title()).isEqualTo("Nature");
+              assertThat(item.titleZh()).isEqualTo("自然");
+            });
+  }
+
+  /// titleZh 为 null 时应在读模型中保持为 null。
+  @Test
+  @DisplayName("titleZh 为 null 时应在读模型中保持为 null")
+  void shouldReturnNullTitleZhWhenNotSet() {
+    // Given: 保存一条没有中文标题的期刊
+    saveVenue("JOURNAL", "Science", "0036-8075", "0404511", "OPENALEX", "US");
+
+    // When
+    PageResult<VenueSummaryReadModel> page =
+        venueReadAdapter.findVenuePage(PagingParams.of(1, 20), EMPTY_FILTER);
+
+    // Then
+    assertThat(page.items())
+        .singleElement()
+        .satisfies(
+            item -> {
+              assertThat(item.title()).isEqualTo("Science");
+              assertThat(item.titleZh()).isNull();
+            });
+  }
+
   /// 保存测试用 Venue 实体。
   ///
   /// @param venueType 载体类型
-  /// @param displayName 展示名称
+  /// @param title 期刊标题
   /// @param issnL ISSN-L
   /// @param nlmId NLM ID
   /// @param provenanceCode 数据来源编码
@@ -200,7 +252,7 @@ class VenueReadAdapterIT {
   /// @return 持久化后的实体
   private VenueEntity saveVenue(
       String venueType,
-      String displayName,
+      String title,
       String issnL,
       String nlmId,
       String provenanceCode,
@@ -208,7 +260,7 @@ class VenueReadAdapterIT {
     VenueEntity entity = new VenueEntity();
     entity.setId(SnowflakeIdGenerator.getId());
     entity.setVenueType(venueType);
-    entity.setDisplayName(displayName);
+    entity.setTitle(title);
     entity.setIssnL(issnL);
     entity.setNlmId(nlmId);
     entity.setProvenanceCode(provenanceCode);
