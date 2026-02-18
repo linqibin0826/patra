@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 ///
 /// 端点:
 ///
-/// - GET /_internal/dictionaries/items?typeCode={typeCode}&labelStandard={labelStandard}
+/// - GET /dictionaries/items?typeCode={typeCode}&labelStandard={labelStandard}
 ///
 /// 设计说明:
 ///
@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 /// @since 0.1.0
 @Slf4j
 @RestController
-@RequestMapping("/_internal/dictionaries")
+@RequestMapping("/dictionaries")
 @RequiredArgsConstructor
 public class DictionaryItemController {
 

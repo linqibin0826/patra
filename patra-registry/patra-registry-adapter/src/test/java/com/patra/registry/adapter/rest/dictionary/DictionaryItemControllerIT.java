@@ -51,7 +51,7 @@ class DictionaryItemControllerIT {
   @MockitoBean private DictionaryItemApiConverter converter;
 
   @Nested
-  @DisplayName("GET /_internal/dictionaries/items")
+  @DisplayName("GET /dictionaries/items")
   class ListItemsTests {
 
     @Test
@@ -80,7 +80,7 @@ class DictionaryItemControllerIT {
       // When & Then
       restClient
           .get()
-          .uri("/_internal/dictionaries/items?typeCode=country")
+          .uri("/dictionaries/items?typeCode=country")
           .exchange()
           .expectStatus()
           .isOk()
@@ -127,7 +127,7 @@ class DictionaryItemControllerIT {
       // When & Then
       restClient
           .get()
-          .uri("/_internal/dictionaries/items?typeCode=country&labelStandard=NAME_ZH")
+          .uri("/dictionaries/items?typeCode=country&labelStandard=NAME_ZH")
           .exchange()
           .expectStatus()
           .isOk()
@@ -154,7 +154,7 @@ class DictionaryItemControllerIT {
       // When & Then
       restClient
           .get()
-          .uri("/_internal/dictionaries/items?typeCode=nonexistent")
+          .uri("/dictionaries/items?typeCode=nonexistent")
           .exchange()
           .expectStatus()
           .isNotFound();
@@ -164,12 +164,7 @@ class DictionaryItemControllerIT {
     @DisplayName("缺少 typeCode 参数时应返回 400 Bad Request")
     void shouldReturn400WhenTypeCodeMissing() {
       // When & Then
-      restClient
-          .get()
-          .uri("/_internal/dictionaries/items")
-          .exchange()
-          .expectStatus()
-          .isBadRequest();
+      restClient.get().uri("/dictionaries/items").exchange().expectStatus().isBadRequest();
     }
   }
 }
