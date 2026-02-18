@@ -42,6 +42,11 @@ public record ValidationResult(boolean isValid, List<String> errors) {
 }
 ```
 
+## README 文档规范
+
+- README 记录模块的**架构概览和核心设计**，不需要列举每个 API 端点
+- API 端点文档由 OpenAPI/Swagger 自动生成
+
 ## 不可变集合规范
 
 1. **空集合**：使用 `List.of()`、`Map.of()`、`Set.of()`，禁止 `Collections.emptyXxx()`
