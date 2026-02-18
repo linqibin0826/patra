@@ -24,8 +24,6 @@ import java.math.RoundingMode;
 /// | i10 指数 | i10Index | 引用次数 ≥10 的论文数 |
 /// | 两年平均被引 | twoYearMeanCitedness | 近两年文章的平均被引次数 |
 ///
-/// **数据来源**：主要来自 OpenAlex Source。
-///
 /// **使用示例**：
 ///
 /// ```java

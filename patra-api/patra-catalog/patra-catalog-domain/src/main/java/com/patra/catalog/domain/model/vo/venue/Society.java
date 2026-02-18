@@ -12,11 +12,6 @@ import java.io.Serializable;
 /// - 简洁性：仅包含 URL 和组织名称
 /// - 可追溯：URL 指向学会官方页面
 ///
-/// 数据来源：
-///
-/// 主要来自 OpenAlex Source 的 `societies` 数组，每个元素包含
-/// `url` 和 `organization` 字段。
-///
 /// 使用示例：
 ///
 /// ```java

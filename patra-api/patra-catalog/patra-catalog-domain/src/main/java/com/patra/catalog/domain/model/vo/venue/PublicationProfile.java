@@ -27,20 +27,19 @@ import lombok.Builder;
 ///
 /// **包含的数据**：
 ///
-/// | 分类 | 字段 | 来源 |
-/// |------|------|------|
-/// | 出版信息 | abbreviatedTitle, alternateTitles, homepageUrl, frequency | OpenAlex |
-/// | 出版历史 | publicationHistory | OpenAlex/PubMed |
-/// | 语言信息 | languages | Serfile |
-/// | 宿主机构 | hostOrganization | OpenAlex |
-/// | 地理信息 | countryCode | OpenAlex |
-/// | 索引信息 | indexingInfo | PubMed Catalog |
-/// | 扩展数据 | extData | 各来源 |
+/// | 分类 | 字段 |
+/// |------|------|
+/// | 出版信息 | abbreviatedTitle, alternateTitles, homepageUrl, frequency |
+/// | 出版历史 | publicationHistory |
+/// | 语言信息 | languages |
+/// | 宿主机构 | hostOrganization |
+/// | 地理信息 | countryCode |
+/// | 索引信息 | indexingInfo |
+/// | 扩展数据 | extData |
 ///
 /// **使用示例**：
 ///
 /// ```java
-/// // 从 OpenAlex 数据构建
 /// PublicationProfile profile = PublicationProfile.builder()
 ///     .abbreviatedTitle("Nat. Med.")
 ///     .alternateTitles(List.of("Nature Medicine"))

@@ -13,12 +13,6 @@ import java.util.List;
 ///
 /// - 不可变性：Record 自动提供
 /// - 完整性：包含机构 ID、名称和所有权链
-/// - 来源追溯：ID 为 OpenAlex Institution ID
-///
-/// 数据来源：
-///
-/// 主要来自 OpenAlex Source 的 `host_organization`、`host_organization_name`
-/// 和 `host_organization_lineage` 字段。
 ///
 /// 使用示例：
 ///
@@ -34,7 +28,7 @@ import java.util.List;
 /// HostOrganization simple = HostOrganization.of("I123456789", "Springer Nature");
 /// ```
 ///
-/// @param id 机构 ID（OpenAlex Institution ID，必填）
+/// @param id 机构 ID（必填）
 /// @param name 机构名称（必填）
 /// @param lineage 所有权链（从当前机构到顶层母公司的 ID 列表，可选）
 /// @author linqibin
