@@ -113,6 +113,7 @@ public abstract class VenueJpaMapper {
             stringToVenueType(entity.getVenueType()),
             entity.getTitle(),
             entity.getTitleZh(),
+            entity.getImageUrl(),
             entity.getVersion());
 
     // 设置来源信息
@@ -203,8 +204,9 @@ public abstract class VenueJpaMapper {
       return;
     }
 
-    // 更新中文标题（可后续富化）
+    // 更新 Wikidata 富化字段（中文标题 + 封面图片，可后续补充）
     entity.setTitleZh(aggregate.getTitleZh());
+    entity.setImageUrl(aggregate.getImageUrl());
 
     // 更新来源信息
     if (aggregate.getProvenance() != null) {

@@ -2,6 +2,7 @@ package com.patra.catalog.infra.adapter.integration.wikidata;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.catalog.domain.model.vo.venue.VenueWikidataEnrichment;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -10,10 +11,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.client.RestClient;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -21,25 +18,27 @@ import tools.jackson.databind.json.JsonMapper;
 ///
 /// **测试策略**：
 ///
-/// - 响应解析逻辑：验证 SPARQL JSON 响应的正确解析
+/// - 响应解析逻辑：验证 SPARQL JSON 响应的正确解析（中文标题 + 封面图片 + 官方网站）
 /// - 中文标签优先级：zh > zh-hans > zh-hant
+/// - 封面图片 URL 解析：P18 字段映射到 imageUrl
+/// - 官方网站 URL 解析：P856 字段映射到 homepageUrl
+/// - 聚合逻辑：同一 ISSN-L 多行（笛卡尔积）正确合并
 /// - 边界条件：空输入、空响应、畸形响应
 ///
 /// @author linqibin
 /// @since 0.1.0
-@ExtendWith(MockitoExtension.class)
 @DisplayName("WikidataSparqlClient 单元测试")
 @Timeout(value = 2, unit = TimeUnit.SECONDS)
 class WikidataSparqlClientTest {
-
-  @Mock private RestClient restClient;
 
   private final ObjectMapper objectMapper = JsonMapper.builder().build();
   private WikidataSparqlClient client;
 
   @BeforeEach
   void setUp() {
-    client = new WikidataSparqlClient(restClient, objectMapper);
+    // RestClient 仅在 queryEnrichmentData() 的 HTTP 调用中使用，
+    // 本测试类聚焦解析和构建逻辑，传入 null 即可
+    client = new WikidataSparqlClient(null, objectMapper);
   }
 
   @Nested
@@ -62,6 +61,8 @@ class WikidataSparqlClientTest {
       assertThat(sparql).contains("wdt:P7363");
       assertThat(sparql).contains("wdt:P236");
       assertThat(sparql).contains("FILTER(LANG(?label)");
+      assertThat(sparql).contains("wdt:P18");
+      assertThat(sparql).contains("wdt:P856");
     }
 
     @Test
@@ -79,8 +80,8 @@ class WikidataSparqlClientTest {
   }
 
   @Nested
-  @DisplayName("SPARQL 响应解析测试")
-  class SparqlResponseParseTest {
+  @DisplayName("SPARQL 响应解析测试 - 中文标题")
+  class SparqlResponseParseChineseTitleTest {
 
     @Test
     @DisplayName("应该正确解析包含 zh 标签的响应")
@@ -101,10 +102,12 @@ class WikidataSparqlClientTest {
           """;
 
       // When
-      Map<String, String> result = client.parseSparqlResponse(json);
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse(json);
 
       // Then
-      assertThat(result).containsExactly(Map.entry("0028-0836", "自然"));
+      assertThat(result).hasSize(1);
+      assertThat(result.get("0028-0836").titleZh()).isEqualTo("自然");
+      assertThat(result.get("0028-0836").imageUrl()).isNull();
     }
 
     @Test
@@ -130,13 +133,12 @@ class WikidataSparqlClientTest {
           """;
 
       // When
-      Map<String, String> result = client.parseSparqlResponse(json);
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse(json);
 
       // Then
-      assertThat(result)
-          .hasSize(2)
-          .containsEntry("0028-0836", "自然")
-          .containsEntry("0140-6736", "柳叶刀");
+      assertThat(result).hasSize(2);
+      assertThat(result.get("0028-0836").titleZh()).isEqualTo("自然");
+      assertThat(result.get("0140-6736").titleZh()).isEqualTo("柳叶刀");
     }
 
     @Test
@@ -162,10 +164,10 @@ class WikidataSparqlClientTest {
           """;
 
       // When
-      Map<String, String> result = client.parseSparqlResponse(json);
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse(json);
 
       // Then - 应选择 zh 标签
-      assertThat(result).containsExactly(Map.entry("0028-0836", "自然"));
+      assertThat(result.get("0028-0836").titleZh()).isEqualTo("自然");
     }
 
     @Test
@@ -191,10 +193,10 @@ class WikidataSparqlClientTest {
           """;
 
       // When
-      Map<String, String> result = client.parseSparqlResponse(json);
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse(json);
 
       // Then - 应选择 zh-hans 标签
-      assertThat(result).containsExactly(Map.entry("0028-0836", "自然（简体）"));
+      assertThat(result.get("0028-0836").titleZh()).isEqualTo("自然（简体）");
     }
 
     @Test
@@ -216,11 +218,244 @@ class WikidataSparqlClientTest {
           """;
 
       // When
-      Map<String, String> result = client.parseSparqlResponse(json);
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse(json);
 
       // Then
-      assertThat(result).containsExactly(Map.entry("0028-0836", "自然（繁體）"));
+      assertThat(result.get("0028-0836").titleZh()).isEqualTo("自然（繁體）");
     }
+  }
+
+  @Nested
+  @DisplayName("SPARQL 响应解析测试 - 封面图片")
+  class SparqlResponseParseImageTest {
+
+    private static final String IMAGE_URL =
+        "http://commons.wikimedia.org/wiki/Special:FilePath/Nature_magazine.jpg";
+
+    @Test
+    @DisplayName("应该正确解析包含封面图片 URL 的响应")
+    void shouldParseResponseWithImageUrl() {
+      // Given
+      String json =
+          """
+          {
+            "results": {
+              "bindings": [
+                {
+                  "issnl": {"type": "literal", "value": "0028-0836"},
+                  "label": {"type": "literal", "value": "自然", "xml:lang": "zh"},
+                  "image": {"type": "uri", "value": "%s"}
+                }
+              ]
+            }
+          }
+          """
+              .formatted(IMAGE_URL);
+
+      // When
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse(json);
+
+      // Then
+      assertThat(result.get("0028-0836").titleZh()).isEqualTo("自然");
+      assertThat(result.get("0028-0836").imageUrl()).isEqualTo(IMAGE_URL);
+    }
+
+    @Test
+    @DisplayName("仅有封面图片无中文标题时应正确返回")
+    void shouldReturnImageUrlWithoutChineseTitle() {
+      // Given - 有 P18 图片但无中文标签（如非中文期刊但有封面）
+      String json =
+          """
+          {
+            "results": {
+              "bindings": [
+                {
+                  "issnl": {"type": "literal", "value": "0028-0836"},
+                  "image": {"type": "uri", "value": "%s"}
+                }
+              ]
+            }
+          }
+          """
+              .formatted(IMAGE_URL);
+
+      // When
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse(json);
+
+      // Then
+      assertThat(result).hasSize(1);
+      assertThat(result.get("0028-0836").titleZh()).isNull();
+      assertThat(result.get("0028-0836").imageUrl()).isEqualTo(IMAGE_URL);
+    }
+
+    @Test
+    @DisplayName("同一 ISSN-L 多行（笛卡尔积）时只取第一张图片")
+    void shouldTakeFirstImageUrlFromMultipleRows() {
+      // Given - 多语言标签 × 图片 URL 产生笛卡尔积，图片应只取第一个
+      String image1 = "http://commons.wikimedia.org/wiki/Special:FilePath/Nature_v1.jpg";
+      String json =
+          """
+          {
+            "results": {
+              "bindings": [
+                {
+                  "issnl": {"type": "literal", "value": "0028-0836"},
+                  "label": {"type": "literal", "value": "自然（简体）", "xml:lang": "zh-hans"},
+                  "image": {"type": "uri", "value": "%s"}
+                },
+                {
+                  "issnl": {"type": "literal", "value": "0028-0836"},
+                  "label": {"type": "literal", "value": "自然", "xml:lang": "zh"},
+                  "image": {"type": "uri", "value": "%s"}
+                }
+              ]
+            }
+          }
+          """
+              .formatted(image1, IMAGE_URL);
+
+      // When
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse(json);
+
+      // Then - zh 标签优先，图片取第一个出现的
+      assertThat(result.get("0028-0836").titleZh()).isEqualTo("自然");
+      assertThat(result.get("0028-0836").imageUrl()).isEqualTo(image1);
+    }
+  }
+
+  @Nested
+  @DisplayName("SPARQL 响应解析测试 - 官方网站")
+  class SparqlResponseParseHomepageTest {
+
+    private static final String HOMEPAGE_URL = "https://www.nature.com/nm";
+
+    @Test
+    @DisplayName("应该正确解析包含官方网站 URL 的响应")
+    void shouldParseResponseWithHomepageUrl() {
+      // Given
+      String json =
+          """
+          {
+            "results": {
+              "bindings": [
+                {
+                  "issnl": {"type": "literal", "value": "0028-0836"},
+                  "label": {"type": "literal", "value": "自然", "xml:lang": "zh"},
+                  "homepage": {"type": "uri", "value": "%s"}
+                }
+              ]
+            }
+          }
+          """
+              .formatted(HOMEPAGE_URL);
+
+      // When
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse(json);
+
+      // Then
+      assertThat(result.get("0028-0836").titleZh()).isEqualTo("自然");
+      assertThat(result.get("0028-0836").homepageUrl()).isEqualTo(HOMEPAGE_URL);
+    }
+
+    @Test
+    @DisplayName("仅有官方网站无其他富化数据时应正确返回")
+    void shouldReturnHomepageUrlOnly() {
+      // Given
+      String json =
+          """
+          {
+            "results": {
+              "bindings": [
+                {
+                  "issnl": {"type": "literal", "value": "0028-0836"},
+                  "homepage": {"type": "uri", "value": "%s"}
+                }
+              ]
+            }
+          }
+          """
+              .formatted(HOMEPAGE_URL);
+
+      // When
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse(json);
+
+      // Then
+      assertThat(result).hasSize(1);
+      assertThat(result.get("0028-0836").titleZh()).isNull();
+      assertThat(result.get("0028-0836").imageUrl()).isNull();
+      assertThat(result.get("0028-0836").homepageUrl()).isEqualTo(HOMEPAGE_URL);
+    }
+
+    @Test
+    @DisplayName("同一 ISSN-L 多行时只取第一个官方网站 URL")
+    void shouldTakeFirstHomepageUrlFromMultipleRows() {
+      // Given
+      String homepage1 = "https://www.nature.com";
+      String homepage2 = "https://www.nature.com/nm";
+      String json =
+          """
+          {
+            "results": {
+              "bindings": [
+                {
+                  "issnl": {"type": "literal", "value": "0028-0836"},
+                  "label": {"type": "literal", "value": "自然", "xml:lang": "zh"},
+                  "homepage": {"type": "uri", "value": "%s"}
+                },
+                {
+                  "issnl": {"type": "literal", "value": "0028-0836"},
+                  "label": {"type": "literal", "value": "自然（简体）", "xml:lang": "zh-hans"},
+                  "homepage": {"type": "uri", "value": "%s"}
+                }
+              ]
+            }
+          }
+          """
+              .formatted(homepage1, homepage2);
+
+      // When
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse(json);
+
+      // Then — 取第一个出现的（putIfAbsent 语义）
+      assertThat(result.get("0028-0836").homepageUrl()).isEqualTo(homepage1);
+    }
+
+    @Test
+    @DisplayName("三种富化数据（中文标题 + 封面图片 + 官方网站）应全部正确解析")
+    void shouldParseAllThreeEnrichmentFields() {
+      // Given
+      String imageUrl = "http://commons.wikimedia.org/wiki/Special:FilePath/Nature_magazine.jpg";
+      String json =
+          """
+          {
+            "results": {
+              "bindings": [
+                {
+                  "issnl": {"type": "literal", "value": "0028-0836"},
+                  "label": {"type": "literal", "value": "自然", "xml:lang": "zh"},
+                  "image": {"type": "uri", "value": "%s"},
+                  "homepage": {"type": "uri", "value": "%s"}
+                }
+              ]
+            }
+          }
+          """
+              .formatted(imageUrl, HOMEPAGE_URL);
+
+      // When
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse(json);
+
+      // Then
+      VenueWikidataEnrichment enrichment = result.get("0028-0836");
+      assertThat(enrichment.titleZh()).isEqualTo("自然");
+      assertThat(enrichment.imageUrl()).isEqualTo(imageUrl);
+      assertThat(enrichment.homepageUrl()).isEqualTo(HOMEPAGE_URL);
+    }
+  }
+
+  @Nested
+  @DisplayName("SPARQL 响应解析测试 - 边界条件")
+  class SparqlResponseParseBoundaryTest {
 
     @Test
     @DisplayName("空 bindings 应返回空 Map")
@@ -232,7 +467,7 @@ class WikidataSparqlClientTest {
           """;
 
       // When
-      Map<String, String> result = client.parseSparqlResponse(json);
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse(json);
 
       // Then
       assertThat(result).isEmpty();
@@ -242,7 +477,7 @@ class WikidataSparqlClientTest {
     @DisplayName("畸形 JSON 应返回空 Map")
     void shouldReturnEmptyMapForMalformedJson() {
       // When
-      Map<String, String> result = client.parseSparqlResponse("not json");
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse("not json");
 
       // Then
       assertThat(result).isEmpty();
@@ -252,7 +487,7 @@ class WikidataSparqlClientTest {
     @DisplayName("null 响应体应返回空 Map")
     void shouldReturnEmptyMapForNullResponseBody() {
       // When
-      Map<String, String> result = client.parseSparqlResponse(null);
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse(null);
 
       // Then
       assertThat(result).isEmpty();
@@ -262,7 +497,7 @@ class WikidataSparqlClientTest {
     @DisplayName("空白响应体应返回空 Map")
     void shouldReturnEmptyMapForBlankResponseBody() {
       // When
-      Map<String, String> result = client.parseSparqlResponse("   ");
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse("   ");
 
       // Then
       assertThat(result).isEmpty();
@@ -274,20 +509,20 @@ class WikidataSparqlClientTest {
       // Given
       String json =
           """
-          {"head": {"vars": ["issnl", "label"]}}
+          {"head": {"vars": ["issnl", "label", "image"]}}
           """;
 
       // When
-      Map<String, String> result = client.parseSparqlResponse(json);
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse(json);
 
       // Then
       assertThat(result).isEmpty();
     }
 
     @Test
-    @DisplayName("binding 缺少字段应被忽略")
-    void shouldIgnoreIncompleteBindings() {
-      // Given - 一个完整 binding 和一个缺少 label 的 binding
+    @DisplayName("binding 既无 label/image/homepage 时被 FILTER 过滤，不应出现在结果中")
+    void shouldIgnoreBindingsWithoutLabelOrImage() {
+      // Given - 一个有富化数据，一个没有（由 SPARQL FILTER 过滤，测试解析器健壮性）
       String json =
           """
           {
@@ -306,10 +541,12 @@ class WikidataSparqlClientTest {
           """;
 
       // When
-      Map<String, String> result = client.parseSparqlResponse(json);
+      Map<String, VenueWikidataEnrichment> result = client.parseSparqlResponse(json);
 
-      // Then - 只有完整的 binding 被解析
-      assertThat(result).containsExactly(Map.entry("0028-0836", "自然"));
+      // Then - 无富化字段的行不进入结果
+      assertThat(result).hasSize(1);
+      assertThat(result.get("0028-0836").titleZh()).isEqualTo("自然");
+      assertThat(result).doesNotContainKey("0140-6736");
     }
   }
 
@@ -321,7 +558,7 @@ class WikidataSparqlClientTest {
     @DisplayName("null 输入应返回空 Map")
     void shouldReturnEmptyMapForNullInput() {
       // When
-      Map<String, String> result = client.queryChineseTitles(null);
+      Map<String, VenueWikidataEnrichment> result = client.queryEnrichmentData(null);
 
       // Then
       assertThat(result).isEmpty();
@@ -331,7 +568,7 @@ class WikidataSparqlClientTest {
     @DisplayName("空集合应返回空 Map")
     void shouldReturnEmptyMapForEmptySet() {
       // When
-      Map<String, String> result = client.queryChineseTitles(Set.of());
+      Map<String, VenueWikidataEnrichment> result = client.queryEnrichmentData(Set.of());
 
       // Then
       assertThat(result).isEmpty();
@@ -344,7 +581,7 @@ class WikidataSparqlClientTest {
       Set<String> issnLs = Set.of("invalid", "\" . } #", "12345");
 
       // When
-      Map<String, String> result = client.queryChineseTitles(issnLs);
+      Map<String, VenueWikidataEnrichment> result = client.queryEnrichmentData(issnLs);
 
       // Then - 过滤后无有效 ISSN-L，直接返回空 Map（不发送请求）
       assertThat(result).isEmpty();
