@@ -2,6 +2,7 @@ package com.patra.registry.app.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -11,6 +12,8 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import com.patra.registry.domain.exception.dictionary.DictionaryStandardDisabledException;
 import com.patra.registry.domain.exception.dictionary.DictionaryStandardNotFoundException;
 import com.patra.registry.domain.exception.dictionary.DictionaryTypeNotFoundException;
+import com.patra.registry.domain.model.read.dictionary.DictionaryItemListResult;
+import com.patra.registry.domain.model.read.dictionary.DictionaryItemSummary;
 import com.patra.registry.domain.model.read.dictionary.DictionaryResolveQuery;
 import com.patra.registry.domain.model.read.dictionary.DictionaryResolveStatus;
 import com.patra.registry.domain.model.vo.dictionary.DictionaryItem;
@@ -37,12 +40,21 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///
 /// 测试覆盖:
 ///
+/// **resolveBatch()**:
 /// - ✅ 规范标准场景 - 通过 item_code 直接解析
 /// - ✅ 非规范标准场景 - 通过外部别名解析
 /// - ✅ 边界场景 - 空白值返回 UNKNOWN
+/// - ✅ 边界场景 - 空列表直接返回空结果
 /// - ✅ 异常场景 - 字典类型不存在抛出异常
 /// - ✅ 异常场景 - sourceStandard 为空时抛出异常
 /// - ✅ 状态场景 - 字典项被禁用返回 DISABLED
+///
+/// **listItems()**:
+/// - ✅ 有效类型 - 返回所有启用项
+/// - ✅ 带 labelStandard - 返回含本地化标签的结果
+/// - ✅ 类型不存在 - 抛出异常
+/// - ✅ 标准不存在 - 抛出异常
+/// - ✅ 标准被禁用 - 抛出异常
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -270,6 +282,112 @@ class DictionaryQueryServiceTest {
 
       assertThatThrownBy(
               () -> queryService.resolveBatch("country", "iso_3166_1_alpha2", List.of("US")))
+          .isInstanceOf(DictionaryStandardDisabledException.class);
+    }
+
+    @Test
+    @DisplayName("空 rawValues 列表应直接返回空结果，跳过数据查询")
+    void shouldReturnEmptyResultForEmptyRawValues() {
+      DictionaryType type = new DictionaryType(1L, "country");
+      ReferenceStandard standard =
+          new ReferenceStandard(
+              20L, "country", "ISO_3166_1_ALPHA2", "ISO 3166-1 alpha-2", true, true);
+
+      when(repository.findTypeByCode("country")).thenReturn(Optional.of(type));
+      when(standardRepository.findByDictTypeCodeAndStandardCode("country", "ISO_3166_1_ALPHA2"))
+          .thenReturn(Optional.of(standard));
+
+      DictionaryResolveQuery result =
+          queryService.resolveBatch("country", "iso_3166_1_alpha2", List.of());
+
+      assertThat(result.typeCode()).isEqualTo("country");
+      assertThat(result.items()).isEmpty();
+      verify(repository, never()).findItemsByTypeAndCodes(any(), any());
+      verify(repository, never()).findItemsByAliases(any(), any(), any());
+    }
+  }
+
+  @Nested
+  @DisplayName("listItems() 方法测试")
+  class ListItemsTests {
+
+    private static final DictionaryType COUNTRY_TYPE = new DictionaryType(1L, "country");
+
+    @Test
+    @DisplayName("有效类型应返回所有启用字典项")
+    void shouldReturnAllEnabledItems() {
+      var items =
+          List.of(
+              new DictionaryItemSummary("CN", "China", null, 156),
+              new DictionaryItemSummary("US", "United States of America", null, 840));
+
+      when(repository.findTypeByCode("country")).thenReturn(Optional.of(COUNTRY_TYPE));
+      when(repository.findAllEnabledItems(1L, null)).thenReturn(items);
+
+      DictionaryItemListResult result = queryService.listItems("country", null);
+
+      assertThat(result.typeCode()).isEqualTo("country");
+      assertThat(result.labelStandard()).isNull();
+      assertThat(result.items()).hasSize(2);
+      assertThat(result.items().getFirst().code()).isEqualTo("CN");
+      assertThat(result.items().getFirst().label()).isNull();
+    }
+
+    @Test
+    @DisplayName("指定 labelStandard 应返回含本地化标签的结果")
+    void shouldReturnLabelsWhenLabelStandardSpecified() {
+      ReferenceStandard nameZh =
+          new ReferenceStandard(4L, "country", "NAME_ZH", "中文名称", false, true);
+      var items =
+          List.of(
+              new DictionaryItemSummary("CN", "China", "中国", 156),
+              new DictionaryItemSummary("US", "United States of America", "美国", 840));
+
+      when(repository.findTypeByCode("country")).thenReturn(Optional.of(COUNTRY_TYPE));
+      when(standardRepository.findByDictTypeCodeAndStandardCode("country", "NAME_ZH"))
+          .thenReturn(Optional.of(nameZh));
+      when(repository.findAllEnabledItems(1L, "name_zh")).thenReturn(items);
+
+      DictionaryItemListResult result = queryService.listItems("COUNTRY", "NAME_ZH");
+
+      assertThat(result.typeCode()).isEqualTo("country");
+      assertThat(result.labelStandard()).isEqualTo("NAME_ZH");
+      assertThat(result.items()).hasSize(2);
+      assertThat(result.items().getFirst().label()).isEqualTo("中国");
+      assertThat(result.items().get(1).label()).isEqualTo("美国");
+    }
+
+    @Test
+    @DisplayName("字典类型不存在应抛出 DictionaryTypeNotFoundException")
+    void shouldThrowWhenTypeCodeNotFound() {
+      when(repository.findTypeByCode("invalid")).thenReturn(Optional.empty());
+
+      assertThatThrownBy(() -> queryService.listItems("invalid", null))
+          .isInstanceOf(DictionaryTypeNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("labelStandard 不存在应抛出 DictionaryStandardNotFoundException")
+    void shouldThrowWhenStandardNotFound() {
+      when(repository.findTypeByCode("country")).thenReturn(Optional.of(COUNTRY_TYPE));
+      when(standardRepository.findByDictTypeCodeAndStandardCode("country", "NAME_XX"))
+          .thenReturn(Optional.empty());
+
+      assertThatThrownBy(() -> queryService.listItems("country", "NAME_XX"))
+          .isInstanceOf(DictionaryStandardNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("labelStandard 被禁用应抛出 DictionaryStandardDisabledException")
+    void shouldThrowWhenStandardDisabled() {
+      ReferenceStandard disabled =
+          new ReferenceStandard(4L, "country", "NAME_ZH", "中文名称", false, false);
+
+      when(repository.findTypeByCode("country")).thenReturn(Optional.of(COUNTRY_TYPE));
+      when(standardRepository.findByDictTypeCodeAndStandardCode("country", "NAME_ZH"))
+          .thenReturn(Optional.of(disabled));
+
+      assertThatThrownBy(() -> queryService.listItems("country", "NAME_ZH"))
           .isInstanceOf(DictionaryStandardDisabledException.class);
     }
   }
