@@ -4,6 +4,8 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import com.patra.registry.domain.exception.dictionary.DictionaryStandardDisabledException;
 import com.patra.registry.domain.exception.dictionary.DictionaryStandardNotFoundException;
 import com.patra.registry.domain.exception.dictionary.DictionaryTypeNotFoundException;
+import com.patra.registry.domain.model.read.dictionary.DictionaryItemListResult;
+import com.patra.registry.domain.model.read.dictionary.DictionaryItemSummary;
 import com.patra.registry.domain.model.read.dictionary.DictionaryResolveItemQuery;
 import com.patra.registry.domain.model.read.dictionary.DictionaryResolveQuery;
 import com.patra.registry.domain.model.read.dictionary.DictionaryResolveStatus;
@@ -22,13 +24,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/// 字典解析查询服务。
+/// 字典查询服务。
 ///
 /// 职责：
 ///
 /// - 批量解析外部值到规范字典项
 /// - 根据来源标准是否为规范标准，选择不同的解析路径
 /// - 返回解析状态，为后续 AI 或人工治理预留扩展空间
+/// - 查询指定字典类型下所有启用的字典项列表（可含本地化标签）
 ///
 /// **解析策略**：
 ///
@@ -99,6 +102,58 @@ public class DictionaryQueryService {
             .count());
 
     return new DictionaryResolveQuery(normalizedTypeCode, normalizedStandard, resultItems);
+  }
+
+  /// 查询指定字典类型下所有启用的字典项。
+  ///
+  /// @param typeCode 字典类型代码
+  /// @param labelStandard 本地化标签标准代码（可选），为 null 时不查询标签
+  /// @return 字典项列表查询结果
+  /// @throws DictionaryTypeNotFoundException 当字典类型不存在时
+  /// @throws DictionaryStandardNotFoundException 当 labelStandard 不存在时
+  /// @throws DictionaryStandardDisabledException 当 labelStandard 已禁用时
+  public DictionaryItemListResult listItems(String typeCode, String labelStandard) {
+    String normalizedTypeCode = normalizeTypeCode(typeCode);
+
+    DictionaryType type =
+        repository
+            .findTypeByCode(normalizedTypeCode)
+            .orElseThrow(() -> new DictionaryTypeNotFoundException(normalizedTypeCode));
+
+    String validatedStandard = validateLabelStandard(normalizedTypeCode, labelStandard);
+    String standardKeyForQuery =
+        validatedStandard != null ? validatedStandard.toLowerCase(Locale.ROOT) : null;
+
+    List<DictionaryItemSummary> items =
+        repository.findAllEnabledItems(type.id(), standardKeyForQuery);
+
+    log.info(
+        "字典列表查询完成 - typeCode: [{}], labelStandard: [{}], itemCount: [{}]",
+        normalizedTypeCode,
+        validatedStandard,
+        items.size());
+
+    return new DictionaryItemListResult(normalizedTypeCode, validatedStandard, items);
+  }
+
+  /// 验证并归一化 labelStandard 参数。
+  ///
+  /// @param normalizedTypeCode 已归一化的字典类型代码
+  /// @param labelStandard 原始标签标准代码，可为 null
+  /// @return 归一化后的标准代码，或 null（当 labelStandard 为空时）
+  private String validateLabelStandard(String normalizedTypeCode, String labelStandard) {
+    if (!isNotBlank(labelStandard)) {
+      return null;
+    }
+    String normalizedStandard = normalizeStandardCode(labelStandard);
+    ReferenceStandard standard =
+        standardRepository
+            .findByDictTypeCodeAndStandardCode(normalizedTypeCode, normalizedStandard)
+            .orElseThrow(() -> new DictionaryStandardNotFoundException(normalizedStandard));
+    if (!standard.enabled()) {
+      throw new DictionaryStandardDisabledException(normalizedStandard);
+    }
+    return normalizedStandard;
   }
 
   /// 通过 item_code 直接解析（规范标准路径）。
