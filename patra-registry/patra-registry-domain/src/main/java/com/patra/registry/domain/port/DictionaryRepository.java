@@ -1,7 +1,9 @@
 package com.patra.registry.domain.port;
 
+import com.patra.registry.domain.model.read.dictionary.DictionaryItemSummary;
 import com.patra.registry.domain.model.vo.dictionary.DictionaryItem;
 import com.patra.registry.domain.model.vo.dictionary.DictionaryType;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -38,4 +40,13 @@ public interface DictionaryRepository {
   /// @return externalCode → DictionaryItem 的映射
   Map<String, DictionaryItem> findItemsByAliases(
       Long typeId, String sourceStandard, Set<String> externalCodes);
+
+  /// 查询指定类型下所有启用的字典项，附带可选的本地化标签。
+  ///
+  /// 当 `labelStandard` 不为 null 时，会关联查询对应标准的别名作为 label。
+  ///
+  /// @param typeId 字典类型 ID
+  /// @param labelStandard 本地化标签标准代码（小写，如 `name_zh`），为 null 时不查询标签
+  /// @return 按 displayOrder 和 itemCode 排序的字典项摘要列表
+  List<DictionaryItemSummary> findAllEnabledItems(Long typeId, String labelStandard);
 }

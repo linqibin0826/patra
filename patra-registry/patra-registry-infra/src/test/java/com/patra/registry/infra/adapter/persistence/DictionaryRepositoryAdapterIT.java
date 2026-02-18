@@ -2,6 +2,7 @@ package com.patra.registry.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.registry.domain.model.read.dictionary.DictionaryItemSummary;
 import com.patra.registry.domain.model.vo.dictionary.DictionaryItem;
 import com.patra.registry.domain.model.vo.dictionary.DictionaryType;
 import com.patra.registry.infra.adapter.persistence.dao.dictionary.SysDictItemAliasDao;
@@ -15,6 +16,7 @@ import com.patra.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -252,6 +254,81 @@ class DictionaryRepositoryAdapterIT {
 
       assertThat(result).isEmpty();
     }
+  }
+
+  @Nested
+  @DisplayName("findAllEnabledItems")
+  class FindAllEnabledItemsTests {
+
+    @Test
+    @DisplayName("无 labelStandard 时应返回仅含 code 和 name 的字典项列表")
+    void findAllEnabledItems_withoutLabel_shouldReturnItemsOnly() {
+      createItem("CN", "China", 156);
+      createItem("US", "United States of America", 840);
+      createDisabledItem("XX", "Disabled Country", 999);
+
+      List<DictionaryItemSummary> result = repository.findAllEnabledItems(testTypeId, null);
+
+      assertThat(result).hasSize(2);
+      assertThat(result.getFirst().code()).isEqualTo("CN");
+      assertThat(result.getFirst().name()).isEqualTo("China");
+      assertThat(result.getFirst().label()).isNull();
+      assertThat(result.getFirst().displayOrder()).isEqualTo(156);
+      assertThat(result.get(1).code()).isEqualTo("US");
+    }
+
+    @Test
+    @DisplayName("有 labelStandard 时应关联查询别名作为 label")
+    void findAllEnabledItems_withLabel_shouldJoinAliases() {
+      Long cnId = createItem("CN", "China", 156);
+      Long usId = createItem("US", "United States of America", 840);
+      createAlias(cnId, "name_zh", "中国");
+      createAlias(usId, "name_zh", "美国");
+
+      List<DictionaryItemSummary> result = repository.findAllEnabledItems(testTypeId, "name_zh");
+
+      assertThat(result).hasSize(2);
+      assertThat(result.getFirst().code()).isEqualTo("CN");
+      assertThat(result.getFirst().label()).isEqualTo("中国");
+      assertThat(result.get(1).code()).isEqualTo("US");
+      assertThat(result.get(1).label()).isEqualTo("美国");
+    }
+
+    @Test
+    @DisplayName("labelStandard 不存在别名时 label 应为 null")
+    void findAllEnabledItems_withNoMatchingAliases_shouldHaveNullLabel() {
+      createItem("CN", "China", 156);
+
+      List<DictionaryItemSummary> result =
+          repository.findAllEnabledItems(testTypeId, "name_nonexistent");
+
+      assertThat(result).hasSize(1);
+      assertThat(result.getFirst().code()).isEqualTo("CN");
+      assertThat(result.getFirst().label()).isNull();
+    }
+
+    @Test
+    @DisplayName("无启用项时应返回空列表")
+    void findAllEnabledItems_noEnabledItems_shouldReturnEmpty() {
+      createDisabledItem("XX", "Disabled", 999);
+
+      List<DictionaryItemSummary> result = repository.findAllEnabledItems(testTypeId, null);
+
+      assertThat(result).isEmpty();
+    }
+  }
+
+  /// 创建已禁用的测试字典项。
+  private void createDisabledItem(String code, String name, int order) {
+    SysDictItemEntity item = new SysDictItemEntity();
+    item.setId(SnowflakeIdGenerator.getId());
+    item.setTypeId(testTypeId);
+    item.setItemCode(code);
+    item.setItemName(name);
+    item.setDisplayOrder(order);
+    item.setEnabled(false);
+    item.setIsDefault(false);
+    itemDao.save(item);
   }
 
   /// 创建测试字典项。

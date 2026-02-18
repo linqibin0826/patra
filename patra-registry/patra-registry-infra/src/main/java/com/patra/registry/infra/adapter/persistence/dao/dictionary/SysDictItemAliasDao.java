@@ -1,6 +1,7 @@
 package com.patra.registry.infra.adapter.persistence.dao.dictionary;
 
 import com.patra.registry.infra.adapter.persistence.entity.dictionary.SysDictItemAliasEntity;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -58,4 +59,17 @@ public interface SysDictItemAliasDao extends JpaRepository<SysDictItemAliasEntit
       ORDER BY a.sourceStandard, a.externalCode
       """)
   List<SysDictItemAliasEntity> findByItemId(@Param("itemId") Long itemId);
+
+  /// 按来源标准和字典项 ID 集合批量查询别名（反向查询：已知 item → 获取标签）。
+  ///
+  /// @param sourceStandard 来源标准标识符
+  /// @param itemIds 字典项 ID 集合
+  /// @return 别名实体列表
+  @Query(
+      """
+      SELECT a FROM SysDictItemAliasEntity a
+      WHERE a.sourceStandard = :sourceStandard AND a.itemId IN :itemIds
+      """)
+  List<SysDictItemAliasEntity> findBySourceStandardAndItemIdIn(
+      @Param("sourceStandard") String sourceStandard, @Param("itemIds") Collection<Long> itemIds);
 }
