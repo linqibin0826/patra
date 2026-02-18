@@ -51,4 +51,10 @@ public interface SysDictItemDao extends JpaRepository<SysDictItemEntity, Long> {
   /// @param typeId 类型 ID
   /// @return 可选的默认字典项
   Optional<SysDictItemEntity> findByTypeIdAndIsDefaultTrue(Long typeId);
+
+  /// 查询指定类型下所有启用的字典项，按显示顺序和项目代码排序。
+  ///
+  /// @param typeId 类型 ID
+  /// @return 已启用的字典项列表
+  List<SysDictItemEntity> findByTypeIdAndEnabledTrueOrderByDisplayOrderAscItemCodeAsc(Long typeId);
 }

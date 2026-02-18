@@ -1,5 +1,6 @@
 package com.patra.registry.infra.adapter.persistence;
 
+import com.patra.registry.domain.model.read.dictionary.DictionaryItemSummary;
 import com.patra.registry.domain.model.vo.dictionary.DictionaryItem;
 import com.patra.registry.domain.model.vo.dictionary.DictionaryType;
 import com.patra.registry.domain.port.DictionaryRepository;
@@ -109,6 +110,50 @@ public class DictionaryRepositoryAdapter implements DictionaryRepository {
       result.put(alias.getExternalCode(), item);
     }
     return result;
+  }
+
+  /// 查询指定类型下所有启用的字典项，附带可选的本地化标签。
+  ///
+  /// @param typeId 字典类型 ID
+  /// @param labelStandard 标签标准代码（小写），为 null 时不查询标签
+  /// @return 按 displayOrder 和 itemCode 排序的字典项摘要列表
+  @Override
+  public List<DictionaryItemSummary> findAllEnabledItems(Long typeId, String labelStandard) {
+    if (typeId == null) {
+      return List.of();
+    }
+
+    List<SysDictItemEntity> items =
+        itemDao.findByTypeIdAndEnabledTrueOrderByDisplayOrderAscItemCodeAsc(typeId);
+    if (items.isEmpty()) {
+      return List.of();
+    }
+
+    // 构建 itemId → label 映射（当 labelStandard 非空时）
+    Map<Long, String> labelByItemId = Map.of();
+    if (labelStandard != null && !labelStandard.isBlank()) {
+      Set<Long> itemIds = items.stream().map(SysDictItemEntity::getId).collect(Collectors.toSet());
+      List<SysDictItemAliasEntity> aliases =
+          aliasDao.findBySourceStandardAndItemIdIn(labelStandard, itemIds);
+      labelByItemId =
+          aliases.stream()
+              .collect(
+                  Collectors.toMap(
+                      SysDictItemAliasEntity::getItemId,
+                      SysDictItemAliasEntity::getExternalCode,
+                      (a, b) -> a));
+    }
+
+    Map<Long, String> finalLabelByItemId = labelByItemId;
+    return items.stream()
+        .map(
+            entity ->
+                new DictionaryItemSummary(
+                    entity.getItemCode(),
+                    entity.getItemName(),
+                    finalLabelByItemId.get(entity.getId()),
+                    entity.getDisplayOrder() != null ? entity.getDisplayOrder() : 0))
+        .toList();
   }
 
   /// 批量加载字典项并构建 ID → DictionaryItem 的映射。
