@@ -211,7 +211,7 @@ patra-catalog/
 │       ├── batch/                          # 批处理端口
 │       │   └── PublicationBatchPort.java
 │       ├── enrichment/                     # 富化端口
-│       │   └── ChineseTitleQueryPort.java
+│       │   └── WikidataEnrichmentQueryPort.java
 │       ├── source/                         # 数据源端口
 │       │   └── FileDownloadPort.java
 │       └── registry/                       # 注册中心端口
@@ -247,7 +247,7 @@ patra-catalog/
         │   │   ├── DictionaryResolverAdapter.java
         │   │   └── wikidata/              # Wikidata 集成
         │   │       ├── WikidataSparqlClient.java
-        │   │       └── WikidataChineseTitleQueryAdapter.java
+        │   │       └── WikidataEnrichmentQueryAdapter.java
         │   └── source/                     # 数据源适配器
         │       └── FileDownloadAdapter.java
         ├── batch/                          # Spring Batch 子系统
