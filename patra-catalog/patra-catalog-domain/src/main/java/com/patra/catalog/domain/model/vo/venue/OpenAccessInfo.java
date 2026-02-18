@@ -18,11 +18,11 @@ import java.util.List;
 ///
 /// **包含的数据**：
 ///
-/// | 分类 | 字段 | 来源 |
-/// |------|------|------|
-/// | OA 状态 | isOa, isInDoaj | OpenAlex |
-/// | OA 类型 | oaType (gold/green/hybrid/bronze/diamond) | OpenAlex |
-/// | APC 价格 | apcUsd, apcPrices | OpenAlex/DOAJ |
+/// | 分类 | 字段 |
+/// |------|------|
+/// | OA 状态 | isOa, isInDoaj |
+/// | OA 类型 | oaType (gold/green/hybrid/bronze/diamond) |
+/// | APC 价格 | apcUsd, apcPrices |
 ///
 /// **使用示例**：
 ///

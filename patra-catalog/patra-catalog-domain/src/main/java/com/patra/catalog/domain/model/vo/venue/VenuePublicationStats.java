@@ -22,10 +22,6 @@ import java.math.RoundingMode;
 /// - 年份范围：1900-2100
 /// - worksCount 和 citedByCount 不能为负数
 ///
-/// **数据来源**：
-///
-/// 主要来自 OpenAlex Source 的 `counts_by_year` 数组。
-///
 /// **示例**：
 ///
 /// ```java
