@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 /// Wikidata 富化查询适配器。
 ///
-/// 通过 Wikidata SPARQL API 单次查询获取期刊的中文标题和封面图片，
+/// 通过 Wikidata SPARQL API 单次查询获取期刊的中文标题、封面图片和官方网站，
 /// 实现 {@link WikidataEnrichmentQueryPort} 领域端口。
 ///
 /// **错误处理策略**：

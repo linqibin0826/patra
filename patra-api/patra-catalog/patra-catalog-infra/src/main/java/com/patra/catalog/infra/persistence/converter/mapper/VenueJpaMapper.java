@@ -204,7 +204,7 @@ public abstract class VenueJpaMapper {
       return;
     }
 
-    // 更新 Wikidata 富化字段（中文标题 + 封面图片，可后续补充）
+    // 更新 Wikidata 富化字段（中文标题 + 封面图片；官方网站嵌入在 PublicationProfile 中）
     entity.setTitleZh(aggregate.getTitleZh());
     entity.setImageUrl(aggregate.getImageUrl());
 
