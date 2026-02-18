@@ -75,6 +75,9 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// 中文标题（可空，来自 Wikidata SPARQL 查询，可后续富化）
   private String titleZh;
 
+  /// 封面图片 URL（可空，来自 Wikidata P18，Wikimedia Commons 地址，可后续富化）
+  private String imageUrl;
+
   /// 标识符集合（聚合边界内值对象）
   private final List<VenueIdentifier> identifiers;
 
@@ -101,7 +104,9 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// @param venueType 载体类型
   /// @param title 标题
   /// @param titleZh 中文标题（可空）
-  private VenueAggregate(VenueId id, VenueType venueType, String title, String titleZh) {
+  /// @param imageUrl 封面图片 URL（可空）
+  private VenueAggregate(
+      VenueId id, VenueType venueType, String title, String titleZh, String imageUrl) {
     super(id);
 
     Assert.notNull(venueType, "载体类型不能为空");
@@ -110,6 +115,7 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
     this.venueType = venueType;
     this.title = title;
     this.titleZh = titleZh;
+    this.imageUrl = imageUrl;
     this.identifiers = new ArrayList<>();
     this.affiliatedSocieties = new ArrayList<>();
   }
@@ -129,7 +135,7 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
         StrUtil.isNotBlank(nlmId) || StrUtil.isNotBlank(issnL),
         "来自 PubMed 的载体必须提供 NLM ID 或 ISSN-L");
 
-    VenueAggregate aggregate = new VenueAggregate(null, VenueType.JOURNAL, title, titleZh);
+    VenueAggregate aggregate = new VenueAggregate(null, VenueType.JOURNAL, title, titleZh, null);
 
     // 添加标识符
     if (StrUtil.isNotBlank(nlmId)) {
@@ -151,11 +157,17 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// @param venueType 载体类型
   /// @param title 标题
   /// @param titleZh 中文标题（可空）
+  /// @param imageUrl 封面图片 URL（可空）
   /// @param version 乐观锁版本
   /// @return 重建的聚合根
   public static VenueAggregate restore(
-      VenueId id, VenueType venueType, String title, String titleZh, Long version) {
-    VenueAggregate aggregate = new VenueAggregate(id, venueType, title, titleZh);
+      VenueId id,
+      VenueType venueType,
+      String title,
+      String titleZh,
+      String imageUrl,
+      Long version) {
+    VenueAggregate aggregate = new VenueAggregate(id, venueType, title, titleZh, imageUrl);
     aggregate.assignVersion(version != null ? version : 0L);
     return aggregate;
   }
@@ -182,6 +194,31 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   public void enrichTitleZh(String titleZh) {
     if (titleZh != null) {
       this.titleZh = titleZh;
+    }
+  }
+
+  /// 富化封面图片 URL。
+  ///
+  /// 用于 PubMed 导入时为 Venue 补充 Wikidata P18 查询到的封面图片地址（Wikimedia Commons URL）。
+  /// 传入 null 时不做任何操作（表示未查询到数据，不应清除已有值）。
+  ///
+  /// @param imageUrl 封面图片 URL（null 表示无数据，不清除已有值）
+  public void enrichImageUrl(String imageUrl) {
+    if (imageUrl != null) {
+      this.imageUrl = imageUrl;
+    }
+  }
+
+  /// 富化官方网站 URL。
+  ///
+  /// 用于 PubMed 导入时为 Venue 补充 Wikidata P856 查询到的期刊官方网站地址。
+  /// 传入 null 时不做任何操作（表示未查询到数据，不应清除已有值）。
+  /// 需在 `withPublicationProfile()` 之后调用，因为 homepageUrl 嵌套在 PublicationProfile 中。
+  ///
+  /// @param homepageUrl 官方网站 URL（null 表示无数据，不清除已有值）
+  public void enrichHomepageUrl(String homepageUrl) {
+    if (homepageUrl != null && publicationProfile != null) {
+      this.publicationProfile = publicationProfile.toBuilder().homepageUrl(homepageUrl).build();
     }
   }
 

@@ -73,6 +73,10 @@ public class VenueEntity extends SoftDeletableJpaEntity {
   @Column(name = "title_zh", length = 500)
   private String titleZh;
 
+  /// 封面图片 URL（可空，来自 Wikidata P18，Wikimedia Commons 地址）
+  @Column(name = "image_url", length = 2048)
+  private String imageUrl;
+
   // ========================================
   // 来源追踪（Provenance）
   // ========================================
