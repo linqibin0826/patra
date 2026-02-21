@@ -21,6 +21,8 @@ import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenueIndexingHistory;
 import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
 import com.patra.catalog.domain.model.vo.venue.VenueMesh;
+import com.patra.catalog.domain.model.vo.venue.VenueOpenAlexEnrichment;
+import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
 import com.patra.catalog.domain.model.vo.venue.VenueRelation;
 import com.patra.catalog.domain.model.vo.venue.VenueWikidataEnrichment;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedIndexingHistory;
@@ -28,6 +30,7 @@ import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedLanguage;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedMeshHeading;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedTitleRelation;
+import com.patra.catalog.domain.port.enrichment.OpenAlexEnrichmentQueryPort;
 import com.patra.catalog.domain.port.enrichment.WikidataEnrichmentQueryPort;
 import com.patra.catalog.domain.port.parser.LsiouParserPort;
 import com.patra.catalog.domain.port.registry.DictionaryResolverPort;
@@ -101,6 +104,7 @@ public class VenuePubmedImportHandler
   private final MeshDescriptorRepository meshDescriptorRepository;
   private final MeshQualifierRepository meshQualifierRepository;
   private final WikidataEnrichmentQueryPort wikidataEnrichmentQueryPort;
+  private final OpenAlexEnrichmentQueryPort openAlexEnrichmentQueryPort;
 
   /// 导入上下文：封装批次级别的查询映射结果。
   ///
@@ -111,12 +115,14 @@ public class VenuePubmedImportHandler
   /// @param descriptorUiMap MeSH 描述符名称 → UI 映射
   /// @param qualifierUiMap MeSH 限定词名称 → UI 映射
   /// @param wikidataEnrichmentMap ISSN-L → Wikidata 富化数据映射（中文标题 + 封面图片 + 官方网站）
+  /// @param openAlexEnrichmentMap ISSN-L → OpenAlex 富化数据映射（引用指标 + 年度统计）
   private record ImportContext(
       Map<String, String> countryCodeMap,
       Map<String, String> languageCodeMap,
       Map<String, String> descriptorUiMap,
       Map<String, String> qualifierUiMap,
-      Map<String, VenueWikidataEnrichment> wikidataEnrichmentMap) {}
+      Map<String, VenueWikidataEnrichment> wikidataEnrichmentMap,
+      Map<String, VenueOpenAlexEnrichment> openAlexEnrichmentMap) {}
 
   /// 执行 PubMed Venue 数据导入。
   ///
@@ -384,6 +390,14 @@ public class VenuePubmedImportHandler
         identifiers.issnLs().size(),
         wikidataEnrichmentMap.size());
 
+    // 3.8. 批量查询 OpenAlex 富化数据（引用指标 + 年度统计，通过 REST API，基于 ISSN-L）
+    Map<String, VenueOpenAlexEnrichment> openAlexEnrichmentMap =
+        openAlexEnrichmentQueryPort.findEnrichmentData(identifiers.issnLs());
+    log.debug(
+        "OpenAlex 富化查询完成：ISSN-L 共 {} 个，匹配 {} 个",
+        identifiers.issnLs().size(),
+        openAlexEnrichmentMap.size());
+
     // 4. 封装导入上下文并匹配分类
     ImportContext context =
         new ImportContext(
@@ -391,7 +405,8 @@ public class VenuePubmedImportHandler
             languageCodeMap,
             descriptorUiMap,
             qualifierUiMap,
-            wikidataEnrichmentMap);
+            wikidataEnrichmentMap,
+            openAlexEnrichmentMap);
     BatchProcessingResult result = matchAndClassifyRecords(batch, existingVenues, context);
 
     // 5. 批量持久化聚合根
@@ -550,6 +565,10 @@ public class VenuePubmedImportHandler
           venue.withPublicationProfile(profile);
           // Wikidata 富化（中文标题 + 封面图片 + 官方网站，需在 withPublicationProfile 之后）
           applyWikidataEnrichment(venue, resolveEnrichment(record, context));
+          // OpenAlex 富化（引用指标 + OpenAlex ID + 年度统计收集）
+          VenueOpenAlexEnrichment openAlexEnrichment = resolveOpenAlexEnrichment(record, context);
+          applyOpenAlexEnrichment(venue, openAlexEnrichment);
+          result.collectYearlyStats(venue, openAlexEnrichment);
           // 标准化语言代码：ISO 639-3 → BCP 47
           venue.normalizeLanguages(context.languageCodeMap());
           result.addUpdate(venue);
@@ -584,6 +603,10 @@ public class VenuePubmedImportHandler
         newVenue.withPublicationProfile(profile);
         // Wikidata 富化（中文标题 + 封面图片 + 官方网站，需在 withPublicationProfile 之后）
         applyWikidataEnrichment(newVenue, resolveEnrichment(record, context));
+        // OpenAlex 富化（引用指标 + OpenAlex ID + 年度统计收集）
+        VenueOpenAlexEnrichment openAlexEnrichment = resolveOpenAlexEnrichment(record, context);
+        applyOpenAlexEnrichment(newVenue, openAlexEnrichment);
+        result.collectYearlyStats(newVenue, openAlexEnrichment);
         // 标准化语言代码：ISO 639-3 → BCP 47
         newVenue.normalizeLanguages(context.languageCodeMap());
         result.addCreate(newVenue);
@@ -653,6 +676,14 @@ public class VenuePubmedImportHandler
         meshByVenueId.size(),
         relationsByVenueId.size(),
         historiesByVenueId.size());
+
+    // 保存 OpenAlex 年度统计
+    Map<Long, List<VenuePublicationStats>> yearlyStatsByVenueId =
+        toVenueIdMap(result.getYearlyStatsByAggregate());
+    if (!yearlyStatsByVenueId.isEmpty()) {
+      venueRepository.replaceYearlyMetricsBatch(yearlyStatsByVenueId);
+      log.debug("批量保存 OpenAlex 年度统计：{} 组", yearlyStatsByVenueId.size());
+    }
   }
 
   /// 将聚合根映射转换为 venueId 映射（列表值版本）。
@@ -827,6 +858,34 @@ public class VenuePubmedImportHandler
     venue.enrichTitleZh(enrichment.titleZh());
     venue.enrichImageUrl(enrichment.imageUrl());
     venue.enrichHomepageUrl(enrichment.homepageUrl());
+  }
+
+  /// 从 ImportContext 中按 ISSN-L 解析 OpenAlex 富化数据。
+  ///
+  /// @param record PubMed 数据记录
+  /// @param context 导入上下文
+  /// @return 富化数据，如果无 ISSN-L 或无匹配则返回 null
+  private VenueOpenAlexEnrichment resolveOpenAlexEnrichment(
+      PubmedSerialData record, ImportContext context) {
+    return record.hasIssnL() ? context.openAlexEnrichmentMap().get(record.issnL()) : null;
+  }
+
+  /// 将 OpenAlex 富化数据应用到聚合根。
+  ///
+  /// 设置引用指标快照并添加 OpenAlex ID 标识符。
+  ///
+  /// @param venue 待富化的聚合根
+  /// @param enrichment OpenAlex 富化数据（可为 null）
+  private void applyOpenAlexEnrichment(VenueAggregate venue, VenueOpenAlexEnrichment enrichment) {
+    if (enrichment == null) {
+      return;
+    }
+    if (enrichment.hasCitationMetrics()) {
+      venue.withCitationMetrics(enrichment.citationMetrics());
+    }
+    if (enrichment.openAlexId() != null && !enrichment.openAlexId().isBlank()) {
+      venue.addIdentifier(VenueIdentifierType.OPENALEX, enrichment.openAlexId());
+    }
   }
 
   /// 从 PubmedSerialData 创建新 VenueAggregate。
@@ -1008,6 +1067,8 @@ public class VenuePubmedImportHandler
     private final Map<VenueAggregate, List<VenueRelation>> relationsByAggregate = new HashMap<>();
     private final Map<VenueAggregate, List<VenueIndexingHistory>> historiesByAggregate =
         new HashMap<>();
+    private final Map<VenueAggregate, List<VenuePublicationStats>> yearlyStatsByAggregate =
+        new HashMap<>();
     private int skippedCount = 0;
 
     void markSkipped() {
@@ -1038,6 +1099,16 @@ public class VenuePubmedImportHandler
       meshByAggregate.put(venue, meshList);
       relationsByAggregate.put(venue, relationList);
       historiesByAggregate.put(venue, historyList);
+    }
+
+    /// 收集 OpenAlex 年度统计数据。
+    ///
+    /// @param venue 聚合根
+    /// @param enrichment OpenAlex 富化数据（可为 null）
+    void collectYearlyStats(VenueAggregate venue, VenueOpenAlexEnrichment enrichment) {
+      if (enrichment != null && enrichment.hasYearlyStats()) {
+        yearlyStatsByAggregate.put(venue, enrichment.yearlyStats());
+      }
     }
   }
 }

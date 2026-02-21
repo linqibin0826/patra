@@ -16,11 +16,15 @@ import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
+import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
+import com.patra.catalog.domain.model.vo.venue.VenueOpenAlexEnrichment;
+import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
 import com.patra.catalog.domain.model.vo.venue.VenueWikidataEnrichment;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedMeshHeading;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
+import com.patra.catalog.domain.port.enrichment.OpenAlexEnrichmentQueryPort;
 import com.patra.catalog.domain.port.enrichment.WikidataEnrichmentQueryPort;
 import com.patra.catalog.domain.port.parser.LsiouParserPort;
 import com.patra.catalog.domain.port.registry.DictionaryResolverPort;
@@ -32,6 +36,7 @@ import com.patra.catalog.domain.port.source.FileDownloadResult;
 import com.patra.common.error.ApplicationException;
 import com.patra.common.error.trait.StandardErrorTrait;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -87,9 +92,14 @@ class VenuePubmedImportHandlerTest {
   @Mock private MeshDescriptorRepository meshDescriptorRepository;
   @Mock private MeshQualifierRepository meshQualifierRepository;
   @Mock private WikidataEnrichmentQueryPort wikidataEnrichmentQueryPort;
+  @Mock private OpenAlexEnrichmentQueryPort openAlexEnrichmentQueryPort;
 
   @Captor private ArgumentCaptor<List<VenueAggregate>> updateBatchCaptor;
   @Captor private ArgumentCaptor<List<VenueAggregate>> insertAllCaptor;
+
+  @SuppressWarnings("unchecked")
+  @Captor
+  private ArgumentCaptor<Map<Long, List<VenuePublicationStats>>> yearlyMetricsCaptor;
 
   @TempDir Path tempDir;
   private FileDownloadResult downloadResult;
@@ -107,7 +117,8 @@ class VenuePubmedImportHandlerTest {
             dictionaryResolverPort,
             meshDescriptorRepository,
             meshQualifierRepository,
-            wikidataEnrichmentQueryPort);
+            wikidataEnrichmentQueryPort,
+            openAlexEnrichmentQueryPort);
 
     // 创建临时 XML 文件，供 Handler 中 Files.newInputStream() 使用
     Path tempFile = tempDir.resolve("test-lsiou.xml");
@@ -137,6 +148,11 @@ class VenuePubmedImportHandlerTest {
     lenient()
         .when(wikidataEnrichmentQueryPort.findEnrichmentData(any()))
         .thenReturn(Map.<String, VenueWikidataEnrichment>of());
+
+    // 配置 OpenAlex 富化端口默认返回空 Map（测试不关心 OpenAlex 富化查询）
+    lenient()
+        .when(openAlexEnrichmentQueryPort.findEnrichmentData(any()))
+        .thenReturn(Map.<String, VenueOpenAlexEnrichment>of());
   }
 
   @Nested
@@ -867,6 +883,134 @@ class VenuePubmedImportHandlerTest {
       VenueAggregate updated = updateBatchCaptor.getValue().getFirst();
       assertThat(updated.getTitleZh()).isEqualTo("自然");
       assertThat(updated.getImageUrl()).isEqualTo(IMAGE_URL);
+    }
+  }
+
+  @Nested
+  @DisplayName("OpenAlex 富化测试（引用指标 + 年度统计 + OpenAlex ID）")
+  class OpenAlexEnrichmentTest {
+
+    private static final CitationMetrics SAMPLE_METRICS =
+        CitationMetrics.of(150000, 2500000, 285, 1200, new BigDecimal("3.45"));
+    private static final List<VenuePublicationStats> SAMPLE_STATS =
+        List.of(
+            VenuePublicationStats.create(2024, 1500, 25000, 800),
+            VenuePublicationStats.create(2023, 1400, 22000, 700));
+
+    @Test
+    @DisplayName("CREATE 路径：新建期刊应该携带引用指标和 OpenAlex ID")
+    void shouldSetCitationMetricsAndOpenAlexIdOnCreate() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record = createSerialData("0000001", "Nature", "0028-0836", null, null);
+
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+      when(openAlexEnrichmentQueryPort.findEnrichmentData(any()))
+          .thenReturn(
+              Map.of(
+                  "0028-0836",
+                  VenueOpenAlexEnrichment.of("S137773608", SAMPLE_METRICS, SAMPLE_STATS)));
+
+      // When
+      handler.handle(command);
+
+      // Then
+      verify(venueRepository).insertAll(insertAllCaptor.capture());
+      VenueAggregate created = insertAllCaptor.getValue().getFirst();
+      assertThat(created.getCitationMetrics()).isEqualTo(SAMPLE_METRICS);
+      assertThat(created.getIdentifier(VenueIdentifierType.OPENALEX)).hasValue("S137773608");
+    }
+
+    @Test
+    @DisplayName("UPDATE 路径：已有期刊应该被富化引用指标和 OpenAlex ID")
+    void shouldEnrichCitationMetricsAndOpenAlexIdOnUpdate() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record = createSerialData("0000001", "Nature", "0028-0836", null, null);
+
+      VenueAggregate existingVenue = createExistingVenue("Nature", null, "0028-0836");
+      assertThat(existingVenue.getCitationMetrics()).isNull();
+
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("0028-0836", existingVenue));
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+      when(openAlexEnrichmentQueryPort.findEnrichmentData(any()))
+          .thenReturn(
+              Map.of(
+                  "0028-0836",
+                  VenueOpenAlexEnrichment.of("S137773608", SAMPLE_METRICS, SAMPLE_STATS)));
+
+      // When
+      handler.handle(command);
+
+      // Then
+      verify(venueRepository).updateBatch(updateBatchCaptor.capture());
+      VenueAggregate updated = updateBatchCaptor.getValue().getFirst();
+      assertThat(updated.getCitationMetrics()).isEqualTo(SAMPLE_METRICS);
+      assertThat(updated.getIdentifier(VenueIdentifierType.OPENALEX)).hasValue("S137773608");
+    }
+
+    @Test
+    @DisplayName("OpenAlex 无数据时不应设置引用指标")
+    void shouldNotSetCitationMetricsWhenOpenAlexReturnsEmpty() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record = createSerialData("0000001", "Nature", "0028-0836", null, null);
+
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+      when(openAlexEnrichmentQueryPort.findEnrichmentData(any()))
+          .thenReturn(Map.<String, VenueOpenAlexEnrichment>of());
+
+      // When
+      handler.handle(command);
+
+      // Then
+      verify(venueRepository).insertAll(insertAllCaptor.capture());
+      VenueAggregate created = insertAllCaptor.getValue().getFirst();
+      assertThat(created.getCitationMetrics()).isNull();
+    }
+
+    @Test
+    @DisplayName("UPDATE 路径：应该将年度统计持久化到 Repository")
+    @SuppressWarnings("unchecked")
+    void shouldPersistYearlyStatsToRepository() {
+      // Given — 使用 UPDATE 路径（已有 ID 的聚合根），
+      // 因为 CREATE 路径的 ID 在 mock 中未回填，toVenueIdMap 会过滤掉
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record = createSerialData("0000001", "Nature", "0028-0836", null, null);
+
+      VenueAggregate existingVenue = createExistingVenue("Nature", null, "0028-0836");
+
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("0028-0836", existingVenue));
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+      when(openAlexEnrichmentQueryPort.findEnrichmentData(any()))
+          .thenReturn(
+              Map.of(
+                  "0028-0836",
+                  VenueOpenAlexEnrichment.of("S137773608", SAMPLE_METRICS, SAMPLE_STATS)));
+
+      // When
+      handler.handle(command);
+
+      // Then — 验证年度统计被持久化
+      verify(venueRepository).replaceYearlyMetricsBatch(yearlyMetricsCaptor.capture());
+      Map<Long, List<VenuePublicationStats>> yearlyMetrics = yearlyMetricsCaptor.getValue();
+      assertThat(yearlyMetrics).isNotEmpty();
+      // 验证年度统计包含 2 条记录（2024 和 2023）
+      assertThat(yearlyMetrics.values().iterator().next()).hasSize(2);
     }
   }
 
