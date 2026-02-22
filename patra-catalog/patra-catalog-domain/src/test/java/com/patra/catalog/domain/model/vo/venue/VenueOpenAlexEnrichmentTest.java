@@ -2,6 +2,7 @@ package com.patra.catalog.domain.model.vo.venue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo.ApcPrice;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,8 @@ class VenueOpenAlexEnrichmentTest {
       List.of(
           VenuePublicationStats.create(2024, 1500, 25000, 800),
           VenuePublicationStats.create(2023, 1400, 22000, 700));
+  private static final OpenAccessInfo SAMPLE_OA_INFO =
+      OpenAccessInfo.of(true, true, null, 3000, List.of(ApcPrice.of(3000, "USD")));
 
   @Nested
   @DisplayName("of() 工厂方法测试")
@@ -41,19 +44,21 @@ class VenueOpenAlexEnrichmentTest {
     @DisplayName("应该创建包含所有字段的富化数据")
     void shouldCreateWithAllFields() {
       // When
-      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, SAMPLE_METRICS, SAMPLE_STATS);
+      var enrichment =
+          VenueOpenAlexEnrichment.of(OPENALEX_ID, SAMPLE_METRICS, SAMPLE_STATS, SAMPLE_OA_INFO);
 
       // Then
       assertThat(enrichment.openAlexId()).isEqualTo(OPENALEX_ID);
       assertThat(enrichment.citationMetrics()).isEqualTo(SAMPLE_METRICS);
       assertThat(enrichment.yearlyStats()).hasSize(2);
+      assertThat(enrichment.openAccessInfo()).isEqualTo(SAMPLE_OA_INFO);
     }
 
     @Test
     @DisplayName("应该允许 citationMetrics 为 null")
     void shouldAllowNullCitationMetrics() {
       // When
-      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, null, SAMPLE_STATS);
+      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, null, SAMPLE_STATS, SAMPLE_OA_INFO);
 
       // Then
       assertThat(enrichment.openAlexId()).isEqualTo(OPENALEX_ID);
@@ -65,7 +70,7 @@ class VenueOpenAlexEnrichmentTest {
     @DisplayName("应该允许 yearlyStats 为 null（转为空列表）")
     void shouldConvertNullYearlyStatsToEmptyList() {
       // When
-      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, SAMPLE_METRICS, null);
+      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, SAMPLE_METRICS, null, null);
 
       // Then
       assertThat(enrichment.yearlyStats()).isEmpty();
@@ -75,10 +80,20 @@ class VenueOpenAlexEnrichmentTest {
     @DisplayName("应该允许 yearlyStats 为空列表")
     void shouldAcceptEmptyYearlyStats() {
       // When
-      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, SAMPLE_METRICS, List.of());
+      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, SAMPLE_METRICS, List.of(), null);
 
       // Then
       assertThat(enrichment.yearlyStats()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("应该允许 openAccessInfo 为 null")
+    void shouldAllowNullOpenAccessInfo() {
+      // When
+      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, SAMPLE_METRICS, SAMPLE_STATS, null);
+
+      // Then
+      assertThat(enrichment.openAccessInfo()).isNull();
     }
   }
 
@@ -91,7 +106,7 @@ class VenueOpenAlexEnrichmentTest {
     void shouldMakeYearlyStatsImmutable() {
       // Given
       var mutableList = new ArrayList<>(SAMPLE_STATS);
-      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, SAMPLE_METRICS, mutableList);
+      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, SAMPLE_METRICS, mutableList, null);
 
       // When — 修改原始列表
       mutableList.add(VenuePublicationStats.create(2022, 1300, 20000, 600));
@@ -108,14 +123,14 @@ class VenueOpenAlexEnrichmentTest {
     @Test
     @DisplayName("有引用指标时返回 true")
     void shouldReturnTrueWhenHasCitationMetrics() {
-      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, SAMPLE_METRICS, List.of());
+      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, SAMPLE_METRICS, List.of(), null);
       assertThat(enrichment.hasCitationMetrics()).isTrue();
     }
 
     @Test
     @DisplayName("null 时返回 false")
     void shouldReturnFalseWhenNull() {
-      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, null, List.of());
+      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, null, List.of(), null);
       assertThat(enrichment.hasCitationMetrics()).isFalse();
     }
   }
@@ -127,22 +142,41 @@ class VenueOpenAlexEnrichmentTest {
     @Test
     @DisplayName("有年度统计时返回 true")
     void shouldReturnTrueWhenHasYearlyStats() {
-      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, null, SAMPLE_STATS);
+      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, null, SAMPLE_STATS, null);
       assertThat(enrichment.hasYearlyStats()).isTrue();
     }
 
     @Test
     @DisplayName("空列表时返回 false")
     void shouldReturnFalseWhenEmpty() {
-      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, null, List.of());
+      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, null, List.of(), null);
       assertThat(enrichment.hasYearlyStats()).isFalse();
     }
 
     @Test
     @DisplayName("null 时返回 false（自动转为空列表）")
     void shouldReturnFalseWhenNull() {
-      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, null, null);
+      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, null, null, null);
       assertThat(enrichment.hasYearlyStats()).isFalse();
+    }
+  }
+
+  @Nested
+  @DisplayName("hasOpenAccessInfo() 测试")
+  class HasOpenAccessInfoTests {
+
+    @Test
+    @DisplayName("有 OA 信息时返回 true")
+    void shouldReturnTrueWhenHasOpenAccessInfo() {
+      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, null, List.of(), SAMPLE_OA_INFO);
+      assertThat(enrichment.hasOpenAccessInfo()).isTrue();
+    }
+
+    @Test
+    @DisplayName("null 时返回 false")
+    void shouldReturnFalseWhenNull() {
+      var enrichment = VenueOpenAlexEnrichment.of(OPENALEX_ID, null, List.of(), null);
+      assertThat(enrichment.hasOpenAccessInfo()).isFalse();
     }
   }
 
@@ -153,16 +187,16 @@ class VenueOpenAlexEnrichmentTest {
     @Test
     @DisplayName("同值对象应相等")
     void shouldBeEqualWhenSameValues() {
-      var a = VenueOpenAlexEnrichment.of(OPENALEX_ID, SAMPLE_METRICS, SAMPLE_STATS);
-      var b = VenueOpenAlexEnrichment.of(OPENALEX_ID, SAMPLE_METRICS, SAMPLE_STATS);
+      var a = VenueOpenAlexEnrichment.of(OPENALEX_ID, SAMPLE_METRICS, SAMPLE_STATS, SAMPLE_OA_INFO);
+      var b = VenueOpenAlexEnrichment.of(OPENALEX_ID, SAMPLE_METRICS, SAMPLE_STATS, SAMPLE_OA_INFO);
       assertThat(a).isEqualTo(b);
     }
 
     @Test
     @DisplayName("不同 openAlexId 时不应相等")
     void shouldNotBeEqualWhenDifferentId() {
-      var a = VenueOpenAlexEnrichment.of("S137773608", SAMPLE_METRICS, SAMPLE_STATS);
-      var b = VenueOpenAlexEnrichment.of("S999999999", SAMPLE_METRICS, SAMPLE_STATS);
+      var a = VenueOpenAlexEnrichment.of("S137773608", SAMPLE_METRICS, SAMPLE_STATS, null);
+      var b = VenueOpenAlexEnrichment.of("S999999999", SAMPLE_METRICS, SAMPLE_STATS, null);
       assertThat(a).isNotEqualTo(b);
     }
   }
