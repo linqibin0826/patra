@@ -1,8 +1,15 @@
 package com.patra.catalog.infra.adapter.integration.wikidata;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import com.patra.catalog.domain.model.vo.venue.VenueWikidataEnrichment;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -11,6 +18,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.springframework.web.client.ResourceAccessException;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -547,6 +555,88 @@ class WikidataSparqlClientTest {
       assertThat(result).hasSize(1);
       assertThat(result.get("0028-0836").titleZh()).isEqualTo("自然");
       assertThat(result).doesNotContainKey("0140-6736");
+    }
+  }
+
+  @Nested
+  @DisplayName("重试机制测试")
+  @Timeout(value = 5, unit = TimeUnit.SECONDS)
+  class RetryTest {
+
+    private static final String VALID_RESPONSE =
+        """
+        {
+          "results": {
+            "bindings": [
+              {
+                "issnl": {"type": "literal", "value": "0028-0836"},
+                "label": {"type": "literal", "value": "自然", "xml:lang": "zh"}
+              }
+            ]
+          }
+        }
+        """;
+
+    @Test
+    @DisplayName("首次失败后重试成功应返回正确数据")
+    void shouldReturnDataAfterRetrySuccess() {
+      // Given — 使用极短延迟的测试构造器
+      WikidataSparqlClient spyClient =
+          spy(new WikidataSparqlClient(null, objectMapper, 2, Duration.ofMillis(10)));
+
+      // 第 1 次抛异常，第 2 次返回成功
+      doThrow(new ResourceAccessException("I/O error: get"))
+          .doReturn(VALID_RESPONSE)
+          .when(spyClient)
+          .executeSparqlQuery(any());
+
+      // When
+      Map<String, VenueWikidataEnrichment> result =
+          spyClient.queryEnrichmentData(Set.of("0028-0836"));
+
+      // Then
+      assertThat(result).hasSize(1);
+      assertThat(result.get("0028-0836").titleZh()).isEqualTo("自然");
+      verify(spyClient, times(2)).executeSparqlQuery(any());
+    }
+
+    @Test
+    @DisplayName("所有重试都失败应返回空 Map")
+    void shouldReturnEmptyMapAfterAllRetriesExhausted() {
+      // Given
+      WikidataSparqlClient spyClient =
+          spy(new WikidataSparqlClient(null, objectMapper, 2, Duration.ofMillis(10)));
+
+      // 3 次全部失败（1 次初始 + 2 次重试）
+      doThrow(new ResourceAccessException("I/O error: get"))
+          .when(spyClient)
+          .executeSparqlQuery(any());
+
+      // When
+      Map<String, VenueWikidataEnrichment> result =
+          spyClient.queryEnrichmentData(Set.of("0028-0836"));
+
+      // Then — 优雅降级，返回空 Map
+      assertThat(result).isEmpty();
+      verify(spyClient, times(3)).executeSparqlQuery(any());
+    }
+
+    @Test
+    @DisplayName("首次成功不应触发重试")
+    void shouldNotRetryOnFirstSuccess() {
+      // Given
+      WikidataSparqlClient spyClient =
+          spy(new WikidataSparqlClient(null, objectMapper, 2, Duration.ofMillis(10)));
+
+      doReturn(VALID_RESPONSE).when(spyClient).executeSparqlQuery(any());
+
+      // When
+      Map<String, VenueWikidataEnrichment> result =
+          spyClient.queryEnrichmentData(Set.of("0028-0836"));
+
+      // Then
+      assertThat(result).hasSize(1);
+      verify(spyClient, times(1)).executeSparqlQuery(any());
     }
   }
 

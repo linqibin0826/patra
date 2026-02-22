@@ -1,6 +1,7 @@
 package com.patra.catalog.infra.adapter.integration.wikidata;
 
 import com.patra.catalog.domain.model.vo.venue.VenueWikidataEnrichment;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -8,7 +9,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
@@ -39,7 +39,6 @@ import tools.jackson.databind.ObjectMapper;
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
-@RequiredArgsConstructor
 public class WikidataSparqlClient {
 
   /// ISSN-L 格式验证正则：4位数字-3位数字+1位校验位（数字或 X）。
@@ -75,8 +74,38 @@ public class WikidataSparqlClient {
       }
       """;
 
+  /// 默认最大重试次数
+  private static final int DEFAULT_MAX_RETRIES = 2;
+
+  /// 默认重试基础延迟（指数退避：2s → 4s）
+  private static final Duration DEFAULT_RETRY_BASE_DELAY = Duration.ofSeconds(2);
+
   private final RestClient restClient;
   private final ObjectMapper objectMapper;
+  private final int maxRetries;
+  private final Duration retryBaseDelay;
+
+  /// 生产构造器：使用默认重试配置（最多 2 次重试，指数退避 2s → 4s）。
+  ///
+  /// @param restClient Wikidata SPARQL 端点专用 RestClient
+  /// @param objectMapper Jackson ObjectMapper
+  public WikidataSparqlClient(RestClient restClient, ObjectMapper objectMapper) {
+    this(restClient, objectMapper, DEFAULT_MAX_RETRIES, DEFAULT_RETRY_BASE_DELAY);
+  }
+
+  /// 可配置重试参数的构造器（包内可见，供测试使用）。
+  ///
+  /// @param restClient Wikidata SPARQL 端点专用 RestClient
+  /// @param objectMapper Jackson ObjectMapper
+  /// @param maxRetries 最大重试次数
+  /// @param retryBaseDelay 重试基础延迟（每次重试翻倍）
+  WikidataSparqlClient(
+      RestClient restClient, ObjectMapper objectMapper, int maxRetries, Duration retryBaseDelay) {
+    this.restClient = restClient;
+    this.objectMapper = objectMapper;
+    this.maxRetries = maxRetries;
+    this.retryBaseDelay = retryBaseDelay;
+  }
 
   /// 批量查询 ISSN-L 对应的 Wikidata 富化数据（中文标题 + 封面图片 + 官方网站）。
   ///
@@ -100,26 +129,57 @@ public class WikidataSparqlClient {
       return Map.of();
     }
 
-    try {
-      String sparql = buildSparqlQuery(validIssnLs);
-      log.debug("Wikidata SPARQL 富化查询 {} 个 ISSN-L", validIssnLs.size());
+    String sparql = buildSparqlQuery(validIssnLs);
+    MultiValueMap<String, String> formData = buildFormData(sparql);
+    log.debug("Wikidata SPARQL 富化查询 {} 个 ISSN-L", validIssnLs.size());
 
-      String responseBody =
-          restClient
-              .post()
-              .uri("/sparql")
-              .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-              .accept(MediaType.APPLICATION_JSON)
-              .body(buildFormData(sparql))
-              .retrieve()
-              .body(String.class);
+    Exception lastException = null;
+    for (int attempt = 0; attempt <= maxRetries; attempt++) {
+      if (attempt > 0) {
+        Duration delay = retryBaseDelay.multipliedBy(1L << (attempt - 1));
+        log.debug("Wikidata SPARQL 查询第 {} 次重试，等待 {}ms", attempt, delay.toMillis());
+        try {
+          Thread.sleep(delay.toMillis());
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          log.warn("Wikidata SPARQL 重试等待被中断");
+          return Map.of();
+        }
+      }
 
-      return parseSparqlResponse(responseBody);
-
-    } catch (Exception ex) {
-      log.warn("Wikidata SPARQL 富化查询失败: {}", ex.getMessage());
-      return Map.of();
+      try {
+        String responseBody = executeSparqlQuery(formData);
+        return parseSparqlResponse(responseBody);
+      } catch (Exception ex) {
+        lastException = ex;
+        if (attempt < maxRetries) {
+          log.debug("Wikidata SPARQL 查询失败（第 {} 次），将重试：{}", attempt + 1, ex.getMessage());
+        }
+      }
     }
+
+    log.warn(
+        "Wikidata SPARQL 富化查询在 {} 次尝试后仍失败: {}",
+        maxRetries + 1,
+        lastException != null ? lastException.getMessage() : "unknown");
+    return Map.of();
+  }
+
+  /// 执行 SPARQL 查询 HTTP 调用。
+  ///
+  /// 包内可见，供测试 spy 覆盖。
+  ///
+  /// @param formData POST 表单数据
+  /// @return 响应 JSON 字符串
+  String executeSparqlQuery(MultiValueMap<String, String> formData) {
+    return restClient
+        .post()
+        .uri("/sparql")
+        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+        .accept(MediaType.APPLICATION_JSON)
+        .body(formData)
+        .retrieve()
+        .body(String.class);
   }
 
   /// 构建 SPARQL 查询字符串。
