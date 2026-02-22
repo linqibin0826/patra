@@ -19,7 +19,6 @@ import java.util.List;
 /// @param abbreviatedTitle 缩写标题（可空）
 /// @param primaryLanguage 主要语言代码（可空）
 /// @param countryCode 国家编码（可空）
-/// @param provenanceCode 数据来源编码
 /// @param publicationProfile 出版概况（可空）
 /// @param citationMetrics 引用指标（可空）
 /// @param openAccess 开放获取信息（可空）
@@ -38,7 +37,6 @@ public record VenueDetailResponse(
     String abbreviatedTitle,
     String primaryLanguage,
     String countryCode,
-    String provenanceCode,
     PublicationProfileDto publicationProfile,
     CitationMetricsDto citationMetrics,
     OpenAccessDto openAccess,

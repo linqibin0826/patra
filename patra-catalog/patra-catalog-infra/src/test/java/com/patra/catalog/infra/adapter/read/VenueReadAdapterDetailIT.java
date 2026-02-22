@@ -89,7 +89,6 @@ class VenueReadAdapterDetailIT {
     assertThat(detail.abbreviatedTitle()).isEqualTo("Nature");
     assertThat(detail.primaryLanguage()).isEqualTo("eng");
     assertThat(detail.countryCode()).isEqualTo("US");
-    assertThat(detail.provenanceCode()).isEqualTo("OPENALEX");
     assertThat(detail.lastSyncedAt()).isEqualTo(Instant.parse("2026-02-13T00:00:00Z"));
     assertThat(detail.publicationProfile()).isNull();
     assertThat(detail.citationMetrics()).isNull();

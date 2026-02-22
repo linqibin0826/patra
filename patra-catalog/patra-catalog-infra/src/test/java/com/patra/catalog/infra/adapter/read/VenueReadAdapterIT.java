@@ -30,7 +30,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// **测试目标**：
 ///
 /// - 仅查询 `venue_type=JOURNAL`
-/// - 各筛选条件独立生效（keyword 前缀匹配、provenanceCode/countryCode/issnL/nlmId 精确匹配）
+/// - 各筛选条件独立生效（keyword 前缀匹配、countryCode/issnL/nlmId 精确匹配）
 /// - 分页元信息与排序规则
 @DataJpaTest
 @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
@@ -122,24 +122,6 @@ class VenueReadAdapterIT {
       // Then
       assertThat(page.total()).isEqualTo(1);
       assertThat(page.items()).singleElement().extracting("title").isEqualTo("Nature");
-    }
-
-    /// provenanceCode 精确匹配应命中对应数据来源的期刊。
-    @Test
-    @DisplayName("provenanceCode 精确匹配")
-    void shouldMatchByExactProvenanceCode() {
-      // Given
-      saveVenue("JOURNAL", "Nature", "0028-0836", "0410462", "OPENALEX", "US");
-      saveVenue("JOURNAL", "BMJ", "0959-8138", "0372351", "PUBMED", "GB");
-
-      // When
-      PageResult<VenueSummaryReadModel> page =
-          venueReadAdapter.findVenuePage(
-              PagingParams.of(1, 20), VenueFilter.builder().provenanceCode("PUBMED").build());
-
-      // Then
-      assertThat(page.total()).isEqualTo(1);
-      assertThat(page.items()).singleElement().extracting("title").isEqualTo("BMJ");
     }
 
     /// countryCode 精确匹配应命中对应国家的期刊。

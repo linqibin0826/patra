@@ -26,9 +26,7 @@ class VenueSummaryReadModelTest {
     @DisplayName("id 为 null 时应抛出异常")
     void shouldRejectNullId() {
       assertThatThrownBy(
-              () ->
-                  new VenueSummaryReadModel(
-                      null, "Nature", null, null, null, "OPENALEX", null, null))
+              () -> new VenueSummaryReadModel(null, "Nature", null, null, null, null, null))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("期刊 ID 不能为空");
     }
@@ -36,8 +34,7 @@ class VenueSummaryReadModelTest {
     @Test
     @DisplayName("title 为空白时应抛出异常")
     void shouldRejectBlankTitle() {
-      assertThatThrownBy(
-              () -> new VenueSummaryReadModel(1L, "   ", null, null, null, "OPENALEX", null, null))
+      assertThatThrownBy(() -> new VenueSummaryReadModel(1L, "   ", null, null, null, null, null))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("期刊标题不能为空");
     }
@@ -45,25 +42,7 @@ class VenueSummaryReadModelTest {
     @Test
     @DisplayName("title 为 null 时应抛出异常")
     void shouldRejectNullTitle() {
-      assertThatThrownBy(
-              () -> new VenueSummaryReadModel(1L, null, null, null, null, "OPENALEX", null, null))
-          .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    @DisplayName("provenanceCode 为空白时应抛出异常")
-    void shouldRejectBlankProvenanceCode() {
-      assertThatThrownBy(
-              () -> new VenueSummaryReadModel(1L, "Nature", null, null, null, "  ", null, null))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("数据来源不能为空");
-    }
-
-    @Test
-    @DisplayName("provenanceCode 为 null 时应抛出异常")
-    void shouldRejectNullProvenanceCode() {
-      assertThatThrownBy(
-              () -> new VenueSummaryReadModel(1L, "Nature", null, null, null, null, null, null))
+      assertThatThrownBy(() -> new VenueSummaryReadModel(1L, null, null, null, null, null, null))
           .isInstanceOf(IllegalArgumentException.class);
     }
   }
@@ -75,14 +54,13 @@ class VenueSummaryReadModelTest {
     @Test
     @DisplayName("可空字段为 null 时应正常构造")
     void shouldAllowNullOptionalFields() {
-      var model = new VenueSummaryReadModel(1L, "Nature", null, null, null, "OPENALEX", null, null);
+      var model = new VenueSummaryReadModel(1L, "Nature", null, null, null, null, null);
 
       assertThat(model.id()).isEqualTo(1L);
       assertThat(model.title()).isEqualTo("Nature");
       assertThat(model.titleZh()).isNull();
       assertThat(model.issnL()).isNull();
       assertThat(model.nlmId()).isNull();
-      assertThat(model.provenanceCode()).isEqualTo("OPENALEX");
       assertThat(model.countryCode()).isNull();
       assertThat(model.lastSyncedAt()).isNull();
     }
@@ -91,16 +69,13 @@ class VenueSummaryReadModelTest {
     @DisplayName("所有字段均有值时应正常构造")
     void shouldConstructWithAllFields() {
       var now = Instant.now();
-      var model =
-          new VenueSummaryReadModel(
-              1L, "Nature", "自然", "0028-0836", "0410462", "OPENALEX", "US", now);
+      var model = new VenueSummaryReadModel(1L, "Nature", "自然", "0028-0836", "0410462", "US", now);
 
       assertThat(model.id()).isEqualTo(1L);
       assertThat(model.title()).isEqualTo("Nature");
       assertThat(model.titleZh()).isEqualTo("自然");
       assertThat(model.issnL()).isEqualTo("0028-0836");
       assertThat(model.nlmId()).isEqualTo("0410462");
-      assertThat(model.provenanceCode()).isEqualTo("OPENALEX");
       assertThat(model.countryCode()).isEqualTo("US");
       assertThat(model.lastSyncedAt()).isEqualTo(now);
     }

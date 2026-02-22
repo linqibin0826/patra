@@ -37,12 +37,7 @@ public class VenueReadAdapter implements VenueReadPort {
 
     var entityPage =
         venueDao.findJournalPage(
-            filter.keyword(),
-            filter.provenanceCode(),
-            filter.countryCode(),
-            filter.issnL(),
-            filter.nlmId(),
-            pageable);
+            filter.keyword(), filter.countryCode(), filter.issnL(), filter.nlmId(), pageable);
     List<VenueSummaryReadModel> items =
         entityPage.getContent().stream().map(venueReadModelMapper::toReadModel).toList();
 

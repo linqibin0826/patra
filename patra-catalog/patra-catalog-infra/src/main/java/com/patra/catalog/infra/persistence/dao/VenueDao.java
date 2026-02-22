@@ -76,13 +76,11 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
   ///
   /// - 固定 `venueType=JOURNAL`
   /// - `keyword`：title 或 titleZh 前缀模糊匹配
-  /// - `provenanceCode`：数据来源精确匹配
   /// - `countryCode`：国家编码精确匹配
   /// - `issnL`：ISSN-L 精确匹配
   /// - `nlmId`：NLM ID 精确匹配
   ///
   /// @param keyword title/titleZh 前缀搜索关键词（可空）
-  /// @param provenanceCode 数据来源编码（可空）
   /// @param countryCode 国家编码（可空）
   /// @param issnL ISSN-L（可空）
   /// @param nlmId NLM ID（可空）
@@ -95,14 +93,12 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
         AND (:keyword IS NULL
              OR LOWER(v.title) LIKE LOWER(CONCAT(:keyword, '%'))
              OR LOWER(v.titleZh) LIKE LOWER(CONCAT(:keyword, '%')))
-        AND (:provenanceCode IS NULL OR v.provenanceCode = :provenanceCode)
         AND (:countryCode IS NULL OR v.countryCode = :countryCode)
         AND (:issnL IS NULL OR v.issnL = :issnL)
         AND (:nlmId IS NULL OR v.nlmId = :nlmId)
       """)
   Page<VenueEntity> findJournalPage(
       @Param("keyword") String keyword,
-      @Param("provenanceCode") String provenanceCode,
       @Param("countryCode") String countryCode,
       @Param("issnL") String issnL,
       @Param("nlmId") String nlmId,
