@@ -9,7 +9,6 @@ import java.time.Instant;
 /// @param titleZh 中文标题（可空）
 /// @param issnL ISSN-L
 /// @param nlmId NLM ID
-/// @param provenanceCode 数据来源
 /// @param countryCode 国家编码
 /// @param lastSyncedAt 最后同步时间
 public record VenueItemResponse(
@@ -18,6 +17,5 @@ public record VenueItemResponse(
     String titleZh,
     String issnL,
     String nlmId,
-    String provenanceCode,
     String countryCode,
     Instant lastSyncedAt) {}

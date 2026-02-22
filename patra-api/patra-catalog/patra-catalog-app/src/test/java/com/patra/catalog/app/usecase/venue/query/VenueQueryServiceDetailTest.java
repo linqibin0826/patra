@@ -55,7 +55,6 @@ class VenueQueryServiceDetailTest {
             "Nature",
             "eng",
             "US",
-            "OPENALEX",
             null,
             null,
             null,

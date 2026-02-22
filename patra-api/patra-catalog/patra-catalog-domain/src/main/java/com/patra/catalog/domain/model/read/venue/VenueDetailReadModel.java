@@ -21,7 +21,6 @@ import lombok.Builder;
 /// @param abbreviatedTitle 缩写标题（可空）
 /// @param primaryLanguage 主要语言代码（可空）
 /// @param countryCode 国家编码（可空）
-/// @param provenanceCode 数据来源编码
 /// @param publicationProfile 出版概况（可空）
 /// @param citationMetrics 引用指标（可空）
 /// @param openAccess 开放获取信息（可空）
@@ -41,7 +40,6 @@ public record VenueDetailReadModel(
     String abbreviatedTitle,
     String primaryLanguage,
     String countryCode,
-    String provenanceCode,
     PublicationProfile publicationProfile,
     CitationMetrics citationMetrics,
     OpenAccessInfo openAccess,
@@ -55,7 +53,6 @@ public record VenueDetailReadModel(
     Assert.notNull(id, "期刊 ID 不能为空");
     Assert.notBlank(venueType, "载体类型不能为空");
     Assert.notBlank(title, "期刊标题不能为空");
-    Assert.notBlank(provenanceCode, "数据来源不能为空");
     Assert.notNull(createdAt, "创建时间不能为空");
     Assert.notNull(updatedAt, "更新时间不能为空");
     // 防御性拷贝：确保集合不可变
