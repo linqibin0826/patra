@@ -1,6 +1,8 @@
 package com.patra.catalog.infra.adapter.integration.openalex;
 
 import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
+import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
+import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo.ApcPrice;
 import com.patra.catalog.domain.model.vo.venue.VenueOpenAlexEnrichment;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
 import java.math.BigDecimal;
@@ -19,14 +21,16 @@ import tools.jackson.databind.ObjectMapper;
 
 /// OpenAlex Sources API 查询客户端。
 ///
-/// 通过 OpenAlex REST API 批量查询期刊的引用指标和年度统计数据。
-/// 使用 ISSN（含 ISSN-L）作为匹配条件，返回 `CitationMetrics` 和 `VenuePublicationStats`。
+/// 通过 OpenAlex REST API 批量查询期刊的引用指标、年度统计和开放获取信息。
+/// 使用 ISSN（含 ISSN-L）作为匹配条件，返回 `CitationMetrics`、`VenuePublicationStats`
+/// 和 `OpenAccessInfo`。
 ///
 /// **API 调用模式**：
 ///
 /// ```
 /// GET /sources?filter=issn:{issn1}|{issn2}|...&per_page=200
-///     &select=id,issn_l,works_count,cited_by_count,summary_stats,counts_by_year
+///     &select=id,issn_l,works_count,cited_by_count,summary_stats,counts_by_year,
+///             is_oa,is_in_doaj,apc_usd,apc_prices
 /// ```
 ///
 /// **子批次策略**：
@@ -52,7 +56,8 @@ public class OpenAlexSourcesClient {
 
   /// select 参数：最小化响应体。
   private static final String SELECT_FIELDS =
-      "id,issn_l,works_count,cited_by_count,summary_stats,counts_by_year";
+      "id,issn_l,works_count,cited_by_count,summary_stats,counts_by_year,"
+          + "is_oa,is_in_doaj,apc_usd,apc_prices";
 
   private final RestClient restClient;
   private final ObjectMapper objectMapper;
@@ -198,8 +203,11 @@ public class OpenAlexSourcesClient {
         String openAlexId = extractShortId(source.path("id").asText(""));
         CitationMetrics citationMetrics = parseCitationMetrics(source);
         List<VenuePublicationStats> yearlyStats = parseCountsByYear(source);
+        OpenAccessInfo openAccessInfo = parseOpenAccessInfo(source);
 
-        resultMap.put(issnL, VenueOpenAlexEnrichment.of(openAlexId, citationMetrics, yearlyStats));
+        resultMap.put(
+            issnL,
+            VenueOpenAlexEnrichment.of(openAlexId, citationMetrics, yearlyStats, openAccessInfo));
       }
 
       return resultMap;
@@ -255,5 +263,55 @@ public class OpenAlexSourcesClient {
       stats.add(VenuePublicationStats.create(year, worksCount, citedByCount, oaWorksCount));
     }
     return stats;
+  }
+
+  /// 从 Source JSON 节点中解析开放获取信息。
+  ///
+  /// 当 `is_oa`、`is_in_doaj`、`apc_usd`、`apc_prices` 全部缺失时返回 null，
+  /// 表示该 Source 无 OA 相关数据。只要有任意一个字段存在就构建 `OpenAccessInfo`。
+  ///
+  /// **注意**：`oaType` 在 OpenAlex Source 级别不提供（OA 类型是 work 级别概念），
+  /// 固定传入 null。
+  ///
+  /// @param source Source JSON 节点
+  /// @return 开放获取信息，全部缺失时返回 null
+  private OpenAccessInfo parseOpenAccessInfo(JsonNode source) {
+    boolean hasIsOa = source.has("is_oa");
+    boolean hasIsInDoaj = source.has("is_in_doaj");
+    boolean hasApcUsd = source.has("apc_usd");
+    boolean hasApcPrices = source.has("apc_prices");
+
+    if (!hasIsOa && !hasIsInDoaj && !hasApcUsd && !hasApcPrices) {
+      return null;
+    }
+
+    boolean isOa = source.path("is_oa").asBoolean(false);
+    boolean isInDoaj = source.path("is_in_doaj").asBoolean(false);
+    Integer apcUsd =
+        hasApcUsd && !source.path("apc_usd").isNull() ? source.path("apc_usd").asInt() : null;
+
+    List<ApcPrice> apcPrices = parseApcPrices(source.path("apc_prices"));
+
+    return OpenAccessInfo.of(isOa, isInDoaj, null, apcUsd, apcPrices);
+  }
+
+  /// 从 JSON 节点中解析 APC 价格列表。
+  ///
+  /// @param apcPricesNode apc_prices JSON 节点
+  /// @return APC 价格列表，缺失或 null 时返回空列表
+  private List<ApcPrice> parseApcPrices(JsonNode apcPricesNode) {
+    if (apcPricesNode.isMissingNode() || apcPricesNode.isNull() || !apcPricesNode.isArray()) {
+      return List.of();
+    }
+
+    List<ApcPrice> prices = new ArrayList<>();
+    for (JsonNode priceNode : apcPricesNode) {
+      int price = priceNode.path("price").asInt(0);
+      String currency = priceNode.path("currency").asText("");
+      if (!currency.isEmpty()) {
+        prices.add(ApcPrice.of(price, currency));
+      }
+    }
+    return prices;
   }
 }
