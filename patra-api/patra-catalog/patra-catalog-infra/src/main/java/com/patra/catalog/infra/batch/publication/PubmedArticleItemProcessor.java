@@ -1,5 +1,7 @@
 package com.patra.catalog.infra.batch.publication;
 
+import static com.patra.common.util.StringUtils.trimToNull;
+
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import com.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;
 import com.patra.catalog.domain.model.enums.IndexingStatus;
@@ -198,15 +200,6 @@ public class PubmedArticleItemProcessor
       return title;
     }
     return trimToNull(publication.getOriginalTitle());
-  }
-
-  /// 将字符串去空白并转换为空值。
-  private String trimToNull(String value) {
-    if (value == null) {
-      return null;
-    }
-    String trimmed = value.trim();
-    return trimmed.isEmpty() ? null : trimmed;
   }
 
   /// 判断字符串是否为空白。

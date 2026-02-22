@@ -1,5 +1,7 @@
 package com.patra.catalog.app.usecase.venue.query;
 
+import static com.patra.common.util.StringUtils.trimToNull;
+
 import com.patra.catalog.app.usecase.venue.query.dto.VenueDetailQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
 import com.patra.catalog.domain.exception.VenueNotFoundException;
@@ -32,7 +34,6 @@ public class VenueQueryService {
     VenueFilter filter =
         VenueFilter.builder()
             .keyword(trimToNull(query.q()))
-            .provenanceCode(trimToNull(query.provenanceCode()))
             .countryCode(trimToNull(query.countryCode()))
             .issnL(trimToNull(query.issnL()))
             .nlmId(trimToNull(query.nlmId()))
@@ -50,17 +51,5 @@ public class VenueQueryService {
     return venueReadPort
         .findVenueDetail(query.id())
         .orElseThrow(() -> new VenueNotFoundException(query.id()));
-  }
-
-  /// 对字符串做 trim 归一化：空白转 null。
-  ///
-  /// @param value 原始字符串
-  /// @return 去空白后的字符串，空白返回 null
-  private String trimToNull(String value) {
-    if (value == null) {
-      return null;
-    }
-    String trimmed = value.trim();
-    return trimmed.isEmpty() ? null : trimmed;
   }
 }

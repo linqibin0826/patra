@@ -1,5 +1,7 @@
 package com.patra.catalog.infra.batch.publication;
 
+import static com.patra.common.util.StringUtils.trimToNull;
+
 import com.patra.catalog.domain.model.vo.publication.ExistingPublicationKeys;
 import com.patra.catalog.domain.model.vo.publication.PublicationCompleteData;
 import com.patra.catalog.domain.port.repository.PublicationRepository;
@@ -162,14 +164,5 @@ public class PublicationItemWriter implements ItemWriter<PublicationImportResult
       return null;
     }
     return value.toLowerCase(Locale.ROOT);
-  }
-
-  /// 去除首尾空白并将空字符串转为 null。
-  private String trimToNull(String value) {
-    if (value == null) {
-      return null;
-    }
-    String trimmed = value.trim();
-    return trimmed.isEmpty() ? null : trimmed;
   }
 }
