@@ -4,6 +4,8 @@ import com.patra.catalog.infra.persistence.entity.PublicationEntity;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -113,6 +115,52 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
   /// @param venueId 载体 ID
   /// @return 文献数量
   long countByVenueId(Long venueId);
+
+  /// 分页查询文献列表，支持多维度筛选。
+  ///
+  /// 所有筛选参数均可为 null（表示不筛选）。关键词使用包含匹配（`%keyword%`）。
+  ///
+  /// @param keyword 标题关键词（包含匹配，大小写不敏感）
+  /// @param yearFrom 起始年份（含）
+  /// @param yearTo 截止年份（含）
+  /// @param languageBase 基础语种代码
+  /// @param isOa 是否有 OA 版本
+  /// @param oaStatus OA 状态
+  /// @param venueId 载体 ID
+  /// @param pmid PubMed ID
+  /// @param doi DOI
+  /// @param provenanceCode 数据来源代码
+  /// @param publicationStatus 出版状态
+  /// @param pageable 分页参数
+  /// @return 分页结果
+  @Query(
+      """
+      SELECT p FROM PublicationEntity p
+      WHERE (:keyword IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        AND (:yearFrom IS NULL OR p.publicationYear >= :yearFrom)
+        AND (:yearTo IS NULL OR p.publicationYear <= :yearTo)
+        AND (:languageBase IS NULL OR p.languageBase = :languageBase)
+        AND (:isOa IS NULL OR p.isOa = :isOa)
+        AND (:oaStatus IS NULL OR p.oaStatus = :oaStatus)
+        AND (:venueId IS NULL OR p.venueId = :venueId)
+        AND (:pmid IS NULL OR p.pmid = :pmid)
+        AND (:doi IS NULL OR p.doi = :doi)
+        AND (:provenanceCode IS NULL OR p.provenanceCode = :provenanceCode)
+        AND (:publicationStatus IS NULL OR p.publicationStatus = :publicationStatus)
+      """)
+  Page<PublicationEntity> findPublicationPage(
+      @Param("keyword") String keyword,
+      @Param("yearFrom") Integer yearFrom,
+      @Param("yearTo") Integer yearTo,
+      @Param("languageBase") String languageBase,
+      @Param("isOa") Boolean isOa,
+      @Param("oaStatus") String oaStatus,
+      @Param("venueId") Long venueId,
+      @Param("pmid") String pmid,
+      @Param("doi") String doi,
+      @Param("provenanceCode") String provenanceCode,
+      @Param("publicationStatus") String publicationStatus,
+      Pageable pageable);
 
   /// 根据载体实例 ID 删除所有关联文献。
   ///

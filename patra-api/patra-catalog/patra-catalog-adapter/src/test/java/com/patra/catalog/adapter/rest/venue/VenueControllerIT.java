@@ -20,6 +20,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -35,6 +36,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 /// - 响应结构与字段序列化正确
 @WebMvcTest(controllers = VenueController.class)
 @ContextConfiguration(classes = TestConfiguration.class)
+@Import(VenueController.class)
 @AutoConfigureRestTestClient
 @DisplayName("VenueController REST 接口切片测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -56,7 +58,6 @@ class VenueControllerIT {
             "自然",
             "0028-0836",
             "0410462",
-            "OPENALEX",
             "US",
             Instant.parse("2026-02-12T10:00:00Z"));
     PageResult<VenueSummaryReadModel> serviceResult = PageResult.of(List.of(readModel), 2, 10, 31);
@@ -93,8 +94,6 @@ class VenueControllerIT {
         .isEqualTo("0028-0836")
         .jsonPath("$.items[0].nlmId")
         .isEqualTo("0410462")
-        .jsonPath("$.items[0].provenanceCode")
-        .isEqualTo("OPENALEX")
         .jsonPath("$.items[0].countryCode")
         .isEqualTo("US");
 
