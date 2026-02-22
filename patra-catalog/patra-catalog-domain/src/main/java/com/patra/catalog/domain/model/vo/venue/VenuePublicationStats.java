@@ -19,7 +19,7 @@ import java.math.RoundingMode;
 /// **业务规则**：
 ///
 /// - 同一载体每年只能有一条记录
-/// - 年份范围：1900-2100
+/// - 年份范围：1665-2100（1665 年为最早学术期刊创刊年）
 /// - worksCount 和 citedByCount 不能为负数
 ///
 /// **示例**：
@@ -35,7 +35,7 @@ import java.math.RoundingMode;
 /// VenuePublicationStats updated = stats.withOaWorksCount(900);
 /// ```
 ///
-/// @param year 统计年份（1900-2100）
+/// @param year 统计年份（1665-2100）
 /// @param worksCount 该年发表作品数量
 /// @param citedByCount 该年被引用次数
 /// @param oaWorksCount 该年 OA 作品数量（可选）
@@ -46,8 +46,8 @@ public record VenuePublicationStats(
 
   @Serial private static final long serialVersionUID = 1L;
 
-  /// 最小年份
-  private static final int MIN_YEAR = 1900;
+  /// 最小年份（1665 年：世界最早的学术期刊 Philosophical Transactions 和 Journal des sçavans 创刊年）
+  private static final int MIN_YEAR = 1665;
 
   /// 最大年份
   private static final int MAX_YEAR = 2100;
