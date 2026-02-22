@@ -81,17 +81,26 @@ class VenuePublicationStatsTest {
     @DisplayName("年份在有效范围内应该通过")
     void shouldAcceptValidYearRange() {
       // 边界值测试
-      assertThat(VenuePublicationStats.create(1900, 100, 500).year()).isEqualTo(1900);
+      assertThat(VenuePublicationStats.create(1665, 100, 500).year()).isEqualTo(1665);
       assertThat(VenuePublicationStats.create(2100, 100, 500).year()).isEqualTo(2100);
       assertThat(VenuePublicationStats.create(2024, 100, 500).year()).isEqualTo(2024);
     }
 
     @Test
-    @DisplayName("年份小于 1900 应该抛出异常")
-    void shouldRejectYearBefore1900() {
-      assertThatThrownBy(() -> VenuePublicationStats.create(1899, 100, 500))
+    @DisplayName("1900 年前的历史期刊数据应该通过")
+    void shouldAcceptHistoricalYears() {
+      // OpenAlex 包含 1800 年代甚至更早的学术期刊发文数据
+      assertThat(VenuePublicationStats.create(1800, 50, 200).year()).isEqualTo(1800);
+      assertThat(VenuePublicationStats.create(1876, 30, 100).year()).isEqualTo(1876);
+      assertThat(VenuePublicationStats.create(1899, 100, 500).year()).isEqualTo(1899);
+    }
+
+    @Test
+    @DisplayName("年份小于 1665 应该抛出异常")
+    void shouldRejectYearBefore1665() {
+      assertThatThrownBy(() -> VenuePublicationStats.create(1664, 100, 500))
           .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("年份必须在 1900-2100 之间");
+          .hasMessageContaining("年份必须在 1665-2100 之间");
     }
 
     @Test
@@ -99,7 +108,7 @@ class VenuePublicationStatsTest {
     void shouldRejectYearAfter2100() {
       assertThatThrownBy(() -> VenuePublicationStats.create(2101, 100, 500))
           .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("年份必须在 1900-2100 之间");
+          .hasMessageContaining("年份必须在 1665-2100 之间");
     }
   }
 
