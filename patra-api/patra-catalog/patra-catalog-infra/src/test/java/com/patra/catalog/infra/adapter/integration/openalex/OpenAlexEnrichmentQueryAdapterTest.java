@@ -69,7 +69,8 @@ class OpenAlexEnrichmentQueryAdapterTest {
         VenueOpenAlexEnrichment.of(
             "S137773608",
             CitationMetrics.of(150000, 2500000, 285, 1200, new BigDecimal("3.45")),
-            List.of());
+            List.of(),
+            null);
     when(openAlexSourcesClient.queryEnrichmentData(issnLs))
         .thenReturn(Map.of("0028-0836", enrichment));
 

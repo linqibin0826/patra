@@ -2,6 +2,7 @@ package com.patra.catalog.infra.adapter.integration.openalex;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
 import com.patra.catalog.domain.model.vo.venue.VenueOpenAlexEnrichment;
 import java.util.Map;
 import java.util.Set;
@@ -287,6 +288,150 @@ class OpenAlexSourcesClientTest {
 
       // Then
       assertThat(result.get("0028-0836").yearlyStats().getFirst().oaWorksCount()).isNull();
+    }
+
+    @Test
+    @DisplayName("应该正确解析完整的 OA 字段")
+    void shouldParseCompleteOpenAccessInfo() {
+      // Given
+      String json =
+          """
+          {
+            "results": [
+              {
+                "id": "https://openalex.org/S137773608",
+                "issn_l": "0028-0836",
+                "works_count": 150000,
+                "cited_by_count": 2500000,
+                "summary_stats": {"h_index": 285, "i10_index": 1200, "2yr_mean_citedness": 3.45},
+                "counts_by_year": [],
+                "is_oa": true,
+                "is_in_doaj": true,
+                "apc_usd": 11390,
+                "apc_prices": [
+                  {"price": 11390, "currency": "USD"},
+                  {"price": 9500, "currency": "EUR"}
+                ]
+              }
+            ]
+          }
+          """;
+
+      // When
+      Map<String, VenueOpenAlexEnrichment> result = client.parseResponse(json);
+
+      // Then
+      OpenAccessInfo oaInfo = result.get("0028-0836").openAccessInfo();
+      assertThat(oaInfo).isNotNull();
+      assertThat(oaInfo.isOa()).isTrue();
+      assertThat(oaInfo.isInDoaj()).isTrue();
+      assertThat(oaInfo.apcUsd()).isEqualTo(11390);
+      assertThat(oaInfo.apcPrices()).hasSize(2);
+      assertThat(oaInfo.apcPrices().getFirst().price()).isEqualTo(11390);
+      assertThat(oaInfo.apcPrices().getFirst().currency()).isEqualTo("USD");
+      assertThat(oaInfo.apcPrices().get(1).price()).isEqualTo(9500);
+      assertThat(oaInfo.apcPrices().get(1).currency()).isEqualTo("EUR");
+      // OA 类型在 source 级别不提供，应为 null
+      assertThat(oaInfo.oaType()).isNull();
+    }
+
+    @Test
+    @DisplayName("apc_prices 为 null 时 apcPrices 应为空列表")
+    void shouldReturnEmptyApcPricesWhenNull() {
+      // Given
+      String json =
+          """
+          {
+            "results": [
+              {
+                "id": "https://openalex.org/S137773608",
+                "issn_l": "0028-0836",
+                "works_count": 150000,
+                "cited_by_count": 2500000,
+                "summary_stats": {"h_index": 285, "i10_index": 1200, "2yr_mean_citedness": 3.45},
+                "counts_by_year": [],
+                "is_oa": true,
+                "is_in_doaj": false,
+                "apc_usd": 3000,
+                "apc_prices": null
+              }
+            ]
+          }
+          """;
+
+      // When
+      Map<String, VenueOpenAlexEnrichment> result = client.parseResponse(json);
+
+      // Then
+      OpenAccessInfo oaInfo = result.get("0028-0836").openAccessInfo();
+      assertThat(oaInfo).isNotNull();
+      assertThat(oaInfo.isOa()).isTrue();
+      assertThat(oaInfo.isInDoaj()).isFalse();
+      assertThat(oaInfo.apcUsd()).isEqualTo(3000);
+      assertThat(oaInfo.apcPrices()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("OA 字段全部缺失时 openAccessInfo 应为 null")
+    void shouldReturnNullOpenAccessInfoWhenAllFieldsMissing() {
+      // Given — 现有 JSON 不包含任何 OA 字段
+      String json =
+          """
+          {
+            "results": [
+              {
+                "id": "https://openalex.org/S137773608",
+                "issn_l": "0028-0836",
+                "works_count": 150000,
+                "cited_by_count": 2500000,
+                "summary_stats": {"h_index": 285, "i10_index": 1200, "2yr_mean_citedness": 3.45},
+                "counts_by_year": []
+              }
+            ]
+          }
+          """;
+
+      // When
+      Map<String, VenueOpenAlexEnrichment> result = client.parseResponse(json);
+
+      // Then
+      assertThat(result.get("0028-0836").openAccessInfo()).isNull();
+    }
+
+    @Test
+    @DisplayName("apc_usd 为 null 时应正确处理")
+    void shouldHandleNullApcUsd() {
+      // Given
+      String json =
+          """
+          {
+            "results": [
+              {
+                "id": "https://openalex.org/S137773608",
+                "issn_l": "0028-0836",
+                "works_count": 150000,
+                "cited_by_count": 2500000,
+                "summary_stats": {"h_index": 285, "i10_index": 1200, "2yr_mean_citedness": 3.45},
+                "counts_by_year": [],
+                "is_oa": false,
+                "is_in_doaj": false,
+                "apc_usd": null,
+                "apc_prices": []
+              }
+            ]
+          }
+          """;
+
+      // When
+      Map<String, VenueOpenAlexEnrichment> result = client.parseResponse(json);
+
+      // Then
+      OpenAccessInfo oaInfo = result.get("0028-0836").openAccessInfo();
+      assertThat(oaInfo).isNotNull();
+      assertThat(oaInfo.isOa()).isFalse();
+      assertThat(oaInfo.isInDoaj()).isFalse();
+      assertThat(oaInfo.apcUsd()).isNull();
+      assertThat(oaInfo.apcPrices()).isEmpty();
     }
   }
 
