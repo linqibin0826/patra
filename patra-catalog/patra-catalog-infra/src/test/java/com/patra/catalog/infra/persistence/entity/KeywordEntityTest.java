@@ -32,6 +32,32 @@ class KeywordEntityTest {
   }
 
   @Test
+  @DisplayName("of 在 term 超长时应截断到 500 码点")
+  void should_cap_term_length_when_input_exceeds_max() {
+    // given
+    String longTerm = "K".repeat(620);
+
+    // when
+    KeywordEntity entity = KeywordEntity.of(longTerm, "MeSH", "eng");
+
+    // then
+    assertThat(entity.getTerm().codePointCount(0, entity.getTerm().length())).isEqualTo(500);
+  }
+
+  @Test
+  @DisplayName("of 在 term 未超长时应保留原始值")
+  void should_keep_original_term_when_within_limit() {
+    // given
+    String normalTerm = "Cardiovascular Diseases";
+
+    // when
+    KeywordEntity entity = KeywordEntity.of(normalTerm, "MeSH", "eng");
+
+    // then
+    assertThat(entity.getTerm()).isEqualTo(normalTerm);
+  }
+
+  @Test
   @DisplayName("normalizedTerm 列长度应声明为 500")
   void should_declare_normalized_term_column_length_as_500() throws NoSuchFieldException {
     // given
