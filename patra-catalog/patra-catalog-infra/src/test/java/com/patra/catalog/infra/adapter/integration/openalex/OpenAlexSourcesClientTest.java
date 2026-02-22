@@ -510,6 +510,120 @@ class OpenAlexSourcesClientTest {
   }
 
   @Nested
+  @DisplayName("JSON 响应解析测试 - 容错")
+  class ParseResponseResilienceTest {
+
+    @Test
+    @DisplayName("包含历史年份（1800 年代）的 counts_by_year 应该正常解析")
+    void shouldParseHistoricalYears() {
+      // Given — 模拟 OpenAlex 返回的老牌期刊数据（如 The Lancet，1823 年创刊）
+      String json =
+          """
+          {
+            "results": [
+              {
+                "id": "https://openalex.org/S49861241",
+                "issn_l": "0140-6736",
+                "works_count": 300000,
+                "cited_by_count": 5000000,
+                "summary_stats": {"h_index": 400, "i10_index": 2000, "2yr_mean_citedness": 5.67},
+                "counts_by_year": [
+                  {"year": 2024, "works_count": 1500, "cited_by_count": 25000},
+                  {"year": 1876, "works_count": 50, "cited_by_count": 200},
+                  {"year": 1823, "works_count": 10, "cited_by_count": 30}
+                ]
+              }
+            ]
+          }
+          """;
+
+      // When
+      Map<String, VenueOpenAlexEnrichment> result = client.parseResponse(json);
+
+      // Then — 全部 3 个年份都应成功解析
+      assertThat(result).hasSize(1);
+      assertThat(result.get("0140-6736").yearlyStats()).hasSize(3);
+      assertThat(result.get("0140-6736").yearlyStats().get(1).year()).isEqualTo(1876);
+      assertThat(result.get("0140-6736").yearlyStats().get(2).year()).isEqualTo(1823);
+    }
+
+    @Test
+    @DisplayName("单个 Source 解析失败不应影响其他 Source")
+    void shouldNotLoseOtherSourcesWhenOneSourceFails() {
+      // Given — 第一个 Source 包含畸形 counts_by_year（负数作品数），第二个正常
+      String json =
+          """
+          {
+            "results": [
+              {
+                "id": "https://openalex.org/S1",
+                "issn_l": "0000-0001",
+                "works_count": 100,
+                "cited_by_count": 500,
+                "summary_stats": {"h_index": 10, "i10_index": 5, "2yr_mean_citedness": 1.0},
+                "counts_by_year": [
+                  {"year": 2024, "works_count": -999, "cited_by_count": 100}
+                ]
+              },
+              {
+                "id": "https://openalex.org/S2",
+                "issn_l": "0000-0002",
+                "works_count": 200,
+                "cited_by_count": 1000,
+                "summary_stats": {"h_index": 20, "i10_index": 10, "2yr_mean_citedness": 2.0},
+                "counts_by_year": [
+                  {"year": 2024, "works_count": 50, "cited_by_count": 200}
+                ]
+              }
+            ]
+          }
+          """;
+
+      // When
+      Map<String, VenueOpenAlexEnrichment> result = client.parseResponse(json);
+
+      // Then — 第二个 Source 不应因第一个失败而丢失
+      assertThat(result).containsKey("0000-0002");
+      assertThat(result.get("0000-0002").citationMetrics().hIndex()).isEqualTo(20);
+    }
+
+    @Test
+    @DisplayName("单条 counts_by_year 无效不应丢弃同一 Source 的其他年份")
+    void shouldSkipInvalidYearEntryWithoutLosingOthers() {
+      // Given — year=2024 正常，year 对应的 works_count 为负数
+      String json =
+          """
+          {
+            "results": [
+              {
+                "id": "https://openalex.org/S137773608",
+                "issn_l": "0028-0836",
+                "works_count": 150000,
+                "cited_by_count": 2500000,
+                "summary_stats": {"h_index": 285, "i10_index": 1200, "2yr_mean_citedness": 3.45},
+                "counts_by_year": [
+                  {"year": 2024, "works_count": 1500, "cited_by_count": 25000},
+                  {"year": 2023, "works_count": -1, "cited_by_count": 22000},
+                  {"year": 2022, "works_count": 1300, "cited_by_count": 20000}
+                ]
+              }
+            ]
+          }
+          """;
+
+      // When
+      Map<String, VenueOpenAlexEnrichment> result = client.parseResponse(json);
+
+      // Then — 应保留 2024 和 2022 的有效数据，跳过 2023 的无效数据
+      assertThat(result).hasSize(1);
+      var stats = result.get("0028-0836").yearlyStats();
+      assertThat(stats).hasSize(2);
+      assertThat(stats.get(0).year()).isEqualTo(2024);
+      assertThat(stats.get(1).year()).isEqualTo(2022);
+    }
+  }
+
+  @Nested
   @DisplayName("空输入测试")
   class EmptyInputTest {
 
