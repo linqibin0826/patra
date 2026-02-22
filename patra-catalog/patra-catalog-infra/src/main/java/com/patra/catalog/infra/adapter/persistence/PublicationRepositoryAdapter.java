@@ -1,5 +1,7 @@
 package com.patra.catalog.infra.adapter.persistence;
 
+import static com.patra.common.util.StringUtils.trimToNull;
+
 import com.ibm.icu.text.Collator;
 import com.ibm.icu.util.ULocale;
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
@@ -56,6 +58,7 @@ import com.patra.catalog.infra.persistence.entity.PublicationOaLocationEntity;
 import com.patra.catalog.infra.persistence.entity.PublicationPersonalNameSubjectEntity;
 import com.patra.catalog.infra.persistence.entity.PublicationSupplMeshEntity;
 import com.patra.catalog.infra.persistence.entity.PublicationTypeEntity;
+import com.patra.common.util.StringUtils;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
@@ -190,7 +193,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
         pmids == null
             ? Set.of()
             : pmids.stream()
-                .map(this::trimToNull)
+                .map(StringUtils::trimToNull)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
     Set<String> normalizedDois =
@@ -1205,15 +1208,6 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
       hex.append(String.format("%02x", b));
     }
     return hex.toString();
-  }
-
-  /// 去除首尾空白并转换为 null。
-  private String trimToNull(String value) {
-    if (value == null) {
-      return null;
-    }
-    String trimmed = value.trim();
-    return trimmed.isEmpty() ? null : trimmed;
   }
 
   /// 标准化 DOI（trim + lower）。
