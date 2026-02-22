@@ -872,7 +872,7 @@ public class VenuePubmedImportHandler
 
   /// 将 OpenAlex 富化数据应用到聚合根。
   ///
-  /// 设置引用指标快照并添加 OpenAlex ID 标识符。
+  /// 设置引用指标快照、开放获取信息并添加 OpenAlex ID 标识符。
   ///
   /// @param venue 待富化的聚合根
   /// @param enrichment OpenAlex 富化数据（可为 null）
@@ -882,6 +882,9 @@ public class VenuePubmedImportHandler
     }
     if (enrichment.hasCitationMetrics()) {
       venue.withCitationMetrics(enrichment.citationMetrics());
+    }
+    if (enrichment.hasOpenAccessInfo()) {
+      venue.withOpenAccess(enrichment.openAccessInfo());
     }
     if (enrichment.openAlexId() != null && !enrichment.openAlexId().isBlank()) {
       venue.addIdentifier(VenueIdentifierType.OPENALEX, enrichment.openAlexId());

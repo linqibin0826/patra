@@ -17,6 +17,8 @@ import com.patra.catalog.domain.model.aggregate.VenueAggregate;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
+import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
+import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo.ApcPrice;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenueOpenAlexEnrichment;
@@ -896,6 +898,9 @@ class VenuePubmedImportHandlerTest {
         List.of(
             VenuePublicationStats.create(2024, 1500, 25000, 800),
             VenuePublicationStats.create(2023, 1400, 22000, 700));
+    private static final OpenAccessInfo SAMPLE_OA_INFO =
+        OpenAccessInfo.of(
+            true, true, null, 11390, List.of(ApcPrice.of(11390, "USD"), ApcPrice.of(9500, "EUR")));
 
     @Test
     @DisplayName("CREATE 路径：新建期刊应该携带引用指标和 OpenAlex ID")
@@ -913,7 +918,7 @@ class VenuePubmedImportHandlerTest {
           .thenReturn(
               Map.of(
                   "0028-0836",
-                  VenueOpenAlexEnrichment.of("S137773608", SAMPLE_METRICS, SAMPLE_STATS)));
+                  VenueOpenAlexEnrichment.of("S137773608", SAMPLE_METRICS, SAMPLE_STATS, null)));
 
       // When
       handler.handle(command);
@@ -944,7 +949,7 @@ class VenuePubmedImportHandlerTest {
           .thenReturn(
               Map.of(
                   "0028-0836",
-                  VenueOpenAlexEnrichment.of("S137773608", SAMPLE_METRICS, SAMPLE_STATS)));
+                  VenueOpenAlexEnrichment.of("S137773608", SAMPLE_METRICS, SAMPLE_STATS, null)));
 
       // When
       handler.handle(command);
@@ -1000,7 +1005,7 @@ class VenuePubmedImportHandlerTest {
           .thenReturn(
               Map.of(
                   "0028-0836",
-                  VenueOpenAlexEnrichment.of("S137773608", SAMPLE_METRICS, SAMPLE_STATS)));
+                  VenueOpenAlexEnrichment.of("S137773608", SAMPLE_METRICS, SAMPLE_STATS, null)));
 
       // When
       handler.handle(command);
@@ -1011,6 +1016,95 @@ class VenuePubmedImportHandlerTest {
       assertThat(yearlyMetrics).isNotEmpty();
       // 验证年度统计包含 2 条记录（2024 和 2023）
       assertThat(yearlyMetrics.values().iterator().next()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("CREATE 路径：新建期刊应该携带 OA 信息")
+    void shouldSetOpenAccessInfoOnCreate() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record = createSerialData("0000001", "Nature", "0028-0836", null, null);
+
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+      when(openAlexEnrichmentQueryPort.findEnrichmentData(any()))
+          .thenReturn(
+              Map.of(
+                  "0028-0836",
+                  VenueOpenAlexEnrichment.of(
+                      "S137773608", SAMPLE_METRICS, SAMPLE_STATS, SAMPLE_OA_INFO)));
+
+      // When
+      handler.handle(command);
+
+      // Then
+      verify(venueRepository).insertAll(insertAllCaptor.capture());
+      VenueAggregate created = insertAllCaptor.getValue().getFirst();
+      assertThat(created.getOpenAccess()).isNotNull();
+      assertThat(created.getOpenAccess().isOa()).isTrue();
+      assertThat(created.getOpenAccess().isInDoaj()).isTrue();
+      assertThat(created.getOpenAccess().apcUsd()).isEqualTo(11390);
+      assertThat(created.getOpenAccess().apcPrices()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("UPDATE 路径：已有期刊应该被富化 OA 信息")
+    void shouldSetOpenAccessInfoOnUpdate() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record = createSerialData("0000001", "Nature", "0028-0836", null, null);
+
+      VenueAggregate existingVenue = createExistingVenue("Nature", null, "0028-0836");
+      assertThat(existingVenue.getOpenAccess()).isNull();
+
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("0028-0836", existingVenue));
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+      when(openAlexEnrichmentQueryPort.findEnrichmentData(any()))
+          .thenReturn(
+              Map.of(
+                  "0028-0836",
+                  VenueOpenAlexEnrichment.of(
+                      "S137773608", SAMPLE_METRICS, SAMPLE_STATS, SAMPLE_OA_INFO)));
+
+      // When
+      handler.handle(command);
+
+      // Then
+      verify(venueRepository).updateBatch(updateBatchCaptor.capture());
+      VenueAggregate updated = updateBatchCaptor.getValue().getFirst();
+      assertThat(updated.getOpenAccess()).isNotNull();
+      assertThat(updated.getOpenAccess().isOa()).isTrue();
+      assertThat(updated.getOpenAccess().apcUsd()).isEqualTo(11390);
+    }
+
+    @Test
+    @DisplayName("OpenAlex 返回空结果时 openAccess 应保持 null")
+    void shouldKeepOpenAccessNullWhenOpenAlexReturnsEmpty() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record = createSerialData("0000001", "Nature", "0028-0836", null, null);
+
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+      when(openAlexEnrichmentQueryPort.findEnrichmentData(any()))
+          .thenReturn(Map.<String, VenueOpenAlexEnrichment>of());
+
+      // When
+      handler.handle(command);
+
+      // Then
+      verify(venueRepository).insertAll(insertAllCaptor.capture());
+      VenueAggregate created = insertAllCaptor.getValue().getFirst();
+      assertThat(created.getOpenAccess()).isNull();
     }
   }
 
