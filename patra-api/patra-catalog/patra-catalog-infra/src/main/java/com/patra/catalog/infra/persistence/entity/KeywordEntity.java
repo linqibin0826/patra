@@ -100,12 +100,25 @@ public class KeywordEntity extends BaseJpaEntity {
   /// @return 新建的实体
   public static KeywordEntity of(String term, String source, String language) {
     return KeywordEntity.builder()
-        .term(term)
+        .term(truncate(term, TERM_MAX_LENGTH))
         .source(source)
         .language(language)
         .normalizedTerm(normalize(term))
         .frequency(0)
         .build();
+  }
+
+  /// 按码点截断字符串。
+  ///
+  /// @param value 原始字符串
+  /// @param maxCodePoints 最大码点数
+  /// @return 截断后的字符串，若未超长则返回原值
+  private static String truncate(String value, int maxCodePoints) {
+    if (value == null || value.codePointCount(0, value.length()) <= maxCodePoints) {
+      return value;
+    }
+    int endIndex = value.offsetByCodePoints(0, maxCodePoints);
+    return value.substring(0, endIndex);
   }
 
   /// 规范化关键词。
@@ -126,10 +139,6 @@ public class KeywordEntity extends BaseJpaEntity {
       return null;
     }
     String normalized = term.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]", "");
-    if (normalized.codePointCount(0, normalized.length()) <= NORMALIZED_TERM_MAX_LENGTH) {
-      return normalized;
-    }
-    int endIndex = normalized.offsetByCodePoints(0, NORMALIZED_TERM_MAX_LENGTH);
-    return normalized.substring(0, endIndex);
+    return truncate(normalized, NORMALIZED_TERM_MAX_LENGTH);
   }
 }
