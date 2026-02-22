@@ -20,6 +20,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -35,6 +36,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 /// - MapStruct 转换器字段映射正确（使用真实 VenueApiConverter）
 @WebMvcTest(controllers = VenueController.class)
 @ContextConfiguration(classes = TestConfiguration.class)
+@Import(VenueController.class)
 @AutoConfigureRestTestClient
 @DisplayName("VenueController 详情查询 REST 接口切片测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -62,7 +64,6 @@ class VenueControllerDetailIT {
             "Nature",
             "eng",
             "US",
-            "OPENALEX",
             null,
             null,
             null,
@@ -102,9 +103,7 @@ class VenueControllerDetailIT {
         .jsonPath("$.primaryLanguage")
         .isEqualTo("eng")
         .jsonPath("$.countryCode")
-        .isEqualTo("US")
-        .jsonPath("$.provenanceCode")
-        .isEqualTo("OPENALEX");
+        .isEqualTo("US");
 
     // 验证 QueryService 接收到正确的查询参数（路径参数正确绑定到 Query 对象）
     ArgumentCaptor<VenueDetailQuery> queryCaptor = ArgumentCaptor.forClass(VenueDetailQuery.class);
