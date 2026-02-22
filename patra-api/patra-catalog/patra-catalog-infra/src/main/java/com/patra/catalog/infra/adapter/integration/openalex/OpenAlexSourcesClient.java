@@ -195,25 +195,32 @@ public class OpenAlexSourcesClient {
       Map<String, VenueOpenAlexEnrichment> resultMap = new HashMap<>();
 
       for (JsonNode source : results) {
-        String issnL = source.path("issn_l").asText("");
-        if (issnL.isEmpty()) {
-          continue;
+        try {
+          String issnL = source.path("issn_l").asText("");
+          if (issnL.isEmpty()) {
+            continue;
+          }
+
+          String openAlexId = extractShortId(source.path("id").asText(""));
+          CitationMetrics citationMetrics = parseCitationMetrics(source);
+          List<VenuePublicationStats> yearlyStats = parseCountsByYear(source);
+          OpenAccessInfo openAccessInfo = parseOpenAccessInfo(source);
+
+          resultMap.put(
+              issnL,
+              VenueOpenAlexEnrichment.of(openAlexId, citationMetrics, yearlyStats, openAccessInfo));
+        } catch (Exception e) {
+          log.warn(
+              "OpenAlex Source 解析失败（ISSN-L: {}）：{}",
+              source.path("issn_l").asText("unknown"),
+              e.getMessage());
         }
-
-        String openAlexId = extractShortId(source.path("id").asText(""));
-        CitationMetrics citationMetrics = parseCitationMetrics(source);
-        List<VenuePublicationStats> yearlyStats = parseCountsByYear(source);
-        OpenAccessInfo openAccessInfo = parseOpenAccessInfo(source);
-
-        resultMap.put(
-            issnL,
-            VenueOpenAlexEnrichment.of(openAlexId, citationMetrics, yearlyStats, openAccessInfo));
       }
 
       return resultMap;
 
     } catch (Exception e) {
-      log.warn("OpenAlex 响应解析失败", e);
+      log.warn("OpenAlex 响应 JSON 解析失败", e);
       return Map.of();
     }
   }
@@ -254,13 +261,17 @@ public class OpenAlexSourcesClient {
 
     List<VenuePublicationStats> stats = new ArrayList<>();
     for (JsonNode yearNode : countsByYear) {
-      int year = yearNode.path("year").asInt(0);
-      int worksCount = yearNode.path("works_count").asInt(0);
-      int citedByCount = yearNode.path("cited_by_count").asInt(0);
-      Integer oaWorksCount =
-          yearNode.has("oa_works_count") ? yearNode.path("oa_works_count").asInt() : null;
+      try {
+        int year = yearNode.path("year").asInt(0);
+        int worksCount = yearNode.path("works_count").asInt(0);
+        int citedByCount = yearNode.path("cited_by_count").asInt(0);
+        Integer oaWorksCount =
+            yearNode.has("oa_works_count") ? yearNode.path("oa_works_count").asInt() : null;
 
-      stats.add(VenuePublicationStats.create(year, worksCount, citedByCount, oaWorksCount));
+        stats.add(VenuePublicationStats.create(year, worksCount, citedByCount, oaWorksCount));
+      } catch (Exception e) {
+        log.debug("跳过无效的年度统计条目：{}", e.getMessage());
+      }
     }
     return stats;
   }
