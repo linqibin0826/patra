@@ -218,10 +218,14 @@ patra:
 - **读模型**（CQRS 读端查询投影）
   - `VenueSummaryReadModel`：期刊列表摘要读模型
   - `VenueDetailReadModel`：期刊详情读模型（`@Builder`，17 字段）
-  - `VenueFilter`：期刊筛选条件（`@Builder`，支持 keyword/provenanceCode/countryCode/issnL/nlmId 独立筛选）
+  - `VenueFilter`：期刊筛选条件（`@Builder`，支持 keyword/countryCode/issnL/nlmId 独立筛选）
+  - `PublicationSummaryReadModel`：文献列表摘要读模型
+  - `PublicationDetailReadModel`：文献详情读模型（`@Builder`，24 字段，含嵌套 record：AbstractInfo、IdentifierInfo、KeywordInfo、MeshHeadingInfo）
+  - `PublicationFilter`：文献筛选条件（`@Builder`，支持 keyword/yearFrom/yearTo/languageBase/isOa/oaStatus/venueId/pmid/doi/provenanceCode/publicationStatus 独立筛选）
 
 - **领域异常**
   - `VenueNotFoundException`：期刊不存在异常（携带 `StandardErrorTrait.NOT_FOUND`，自动映射为 HTTP 404）
+  - `PublicationNotFoundException`：文献不存在异常（携带 `StandardErrorTrait.NOT_FOUND`，自动映射为 HTTP 404）
 
 - **嵌入式值对象**（JSON 存储，随聚合根一起保存）
   - `PublicationProfile`：出版概况（缩写标题、备选标题、主页 URL、宿主机构、国家代码）
@@ -350,6 +354,8 @@ patra:
 - **ReadPort 实现**（CQRS 读端适配器）
   - `VenueReadAdapter`：期刊读适配器（实现 `VenueReadPort`，支持多条件独立筛选分页查询和详情查询）
   - `VenueReadModelMapper`：读模型映射器（MapStruct，Entity → ReadModel 转换）
+  - `PublicationReadAdapter`：文献读适配器（实现 `PublicationReadPort`，支持多条件独立筛选分页查询和详情查询，含摘要/标识符/关键词/MeSH 标引关联数据组装）
+  - `PublicationReadModelMapper`：文献读模型映射器（MapStruct，Entity → ReadModel 转换）
 
 - **LookupPort 实现**（装饰器模式，支持批处理缓存优化）
   - `DefaultVenueLookupAdapter` / `CachingVenueLookupDecorator` / `BatchVenueLookupAdapter`：Venue 查找（NLM ID + ISSN 双索引）
