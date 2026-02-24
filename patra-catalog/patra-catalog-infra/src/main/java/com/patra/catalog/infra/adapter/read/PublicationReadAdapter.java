@@ -119,6 +119,7 @@ public class PublicationReadAdapter implements PublicationReadPort {
         entity.getLanguageCode(),
         entity.getIsOa(),
         entity.getOaStatus(),
+        entity.getVenueId(),
         entity.getVenueId() != null ? venueNameMap.get(entity.getVenueId()) : null,
         entity.getCitationCount(),
         entity.getLastSyncedAt());

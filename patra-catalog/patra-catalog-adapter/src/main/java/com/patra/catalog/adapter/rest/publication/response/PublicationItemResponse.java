@@ -12,6 +12,7 @@ import java.time.Instant;
 /// @param languageCode 语言代码（可空）
 /// @param isOa 是否有 OA 版本（可空）
 /// @param oaStatus OA 状态（可空）
+/// @param venueId 载体 ID（可空）
 /// @param venueName 载体名称（可空）
 /// @param citationCount 被引次数（可空）
 /// @param lastSyncedAt 最后同步时间（可空）
@@ -24,6 +25,7 @@ public record PublicationItemResponse(
     String languageCode,
     Boolean isOa,
     String oaStatus,
+    Long venueId,
     String venueName,
     Integer citationCount,
     Instant lastSyncedAt) {}

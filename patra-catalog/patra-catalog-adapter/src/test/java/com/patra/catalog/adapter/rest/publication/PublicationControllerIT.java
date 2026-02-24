@@ -61,6 +61,7 @@ class PublicationControllerIT {
             "en",
             true,
             "gold",
+            2001L,
             "Nature",
             42,
             Instant.parse("2026-02-12T10:00:00Z"));
@@ -106,6 +107,8 @@ class PublicationControllerIT {
         .isEqualTo(true)
         .jsonPath("$.items[0].oaStatus")
         .isEqualTo("gold")
+        .jsonPath("$.items[0].venueId")
+        .isEqualTo("2001")
         .jsonPath("$.items[0].venueName")
         .isEqualTo("Nature")
         .jsonPath("$.items[0].citationCount")

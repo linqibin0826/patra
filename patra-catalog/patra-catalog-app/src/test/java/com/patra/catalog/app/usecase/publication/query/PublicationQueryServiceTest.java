@@ -60,6 +60,7 @@ class PublicationQueryServiceTest {
                     "en",
                     true,
                     "gold",
+                    100L,
                     "Nature",
                     10,
                     Instant.parse("2026-02-13T00:00:00Z"))),
