@@ -28,7 +28,18 @@ class PublicationSummaryReadModelTest {
       assertThatThrownBy(
               () ->
                   new PublicationSummaryReadModel(
-                      null, "Test Title", null, null, null, null, null, null, null, null, null))
+                      null,
+                      "Test Title",
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("出版物 ID 不能为空");
     }
@@ -39,7 +50,7 @@ class PublicationSummaryReadModelTest {
       assertThatThrownBy(
               () ->
                   new PublicationSummaryReadModel(
-                      1L, "   ", null, null, null, null, null, null, null, null, null))
+                      1L, "   ", null, null, null, null, null, null, null, null, null, null))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("出版物标题不能为空");
     }
@@ -50,7 +61,7 @@ class PublicationSummaryReadModelTest {
       assertThatThrownBy(
               () ->
                   new PublicationSummaryReadModel(
-                      1L, null, null, null, null, null, null, null, null, null, null))
+                      1L, null, null, null, null, null, null, null, null, null, null, null))
           .isInstanceOf(IllegalArgumentException.class);
     }
   }
@@ -64,7 +75,7 @@ class PublicationSummaryReadModelTest {
     void shouldAllowNullOptionalFields() {
       var model =
           new PublicationSummaryReadModel(
-              1L, "Test Publication", null, null, null, null, null, null, null, null, null);
+              1L, "Test Publication", null, null, null, null, null, null, null, null, null, null);
 
       assertThat(model.id()).isEqualTo(1L);
       assertThat(model.title()).isEqualTo("Test Publication");
@@ -74,6 +85,7 @@ class PublicationSummaryReadModelTest {
       assertThat(model.languageCode()).isNull();
       assertThat(model.isOa()).isNull();
       assertThat(model.oaStatus()).isNull();
+      assertThat(model.venueId()).isNull();
       assertThat(model.venueName()).isNull();
       assertThat(model.citationCount()).isNull();
       assertThat(model.lastSyncedAt()).isNull();
@@ -93,6 +105,7 @@ class PublicationSummaryReadModelTest {
               "en",
               true,
               "gold",
+              999L,
               "Nature",
               42,
               now);
@@ -105,6 +118,7 @@ class PublicationSummaryReadModelTest {
       assertThat(model.languageCode()).isEqualTo("en");
       assertThat(model.isOa()).isTrue();
       assertThat(model.oaStatus()).isEqualTo("gold");
+      assertThat(model.venueId()).isEqualTo(999L);
       assertThat(model.venueName()).isEqualTo("Nature");
       assertThat(model.citationCount()).isEqualTo(42);
       assertThat(model.lastSyncedAt()).isEqualTo(now);

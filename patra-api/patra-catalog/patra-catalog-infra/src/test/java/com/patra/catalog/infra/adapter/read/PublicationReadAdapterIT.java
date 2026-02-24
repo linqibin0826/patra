@@ -93,6 +93,7 @@ class PublicationReadAdapterIT {
         .satisfies(
             item -> {
               assertThat(item.title()).isEqualTo("Lancet Article");
+              assertThat(item.venueId()).isEqualTo(venue.getId());
               assertThat(item.venueName()).isEqualTo("The Lancet");
             });
   }
@@ -111,7 +112,11 @@ class PublicationReadAdapterIT {
     // Then
     assertThat(page.items())
         .singleElement()
-        .satisfies(item -> assertThat(item.venueName()).isNull());
+        .satisfies(
+            item -> {
+              assertThat(item.venueId()).isNull();
+              assertThat(item.venueName()).isNull();
+            });
   }
 
   @Nested

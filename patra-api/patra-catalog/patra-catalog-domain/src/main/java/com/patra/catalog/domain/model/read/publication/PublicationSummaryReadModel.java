@@ -6,7 +6,8 @@ import java.time.Instant;
 /// 文献出版物列表项读模型。
 ///
 /// 用于 CQRS 读端列表查询返回的摘要信息，包含文献的核心标识和概要数据。
-/// `venueName` 来自关联的 Venue 表，由 Infra 层 ReadAdapter 组装。
+/// `venueId` 直接来自 Publication 主表，`venueName` 来自关联的 Venue 表，
+/// 由 Infra 层 ReadAdapter 组装。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -19,6 +20,7 @@ public record PublicationSummaryReadModel(
     String languageCode,
     Boolean isOa,
     String oaStatus,
+    Long venueId,
     String venueName,
     Integer citationCount,
     Instant lastSyncedAt) {
