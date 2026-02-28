@@ -18,8 +18,6 @@
 1. 编写/修改 Java 代码前，使用 `$java-development`
 2. 变更完成后执行 `/prompts:post-code`
 3. 需要提交时执行 `/prompts:commit`
-4. 跨会话复杂任务使用 `/prompts:new-task`
-
 ## 维护策略
 
 - 修改规则时优先更新 `AGENTS.md`
