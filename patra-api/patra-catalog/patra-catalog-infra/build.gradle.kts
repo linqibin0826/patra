@@ -41,6 +41,9 @@ dependencies {
     // ICU4J（Unicode 国际化支持）
     api(libs.icu4j)
 
+    // Jsoup（HTML 解析，LetPub 爬虫）
+    implementation(libs.jsoup)
+
     // Spring Boot Starter
     api("org.springframework.boot:spring-boot-starter")
 

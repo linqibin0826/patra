@@ -1,6 +1,7 @@
 package com.patra.catalog.infra.persistence.entity;
 
 import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
+import com.patra.catalog.domain.model.vo.venue.LetPubVenueData;
 import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
 import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import com.patra.catalog.domain.model.vo.venue.Society;
@@ -140,4 +141,9 @@ public class VenueEntity extends SoftDeletableJpaEntity {
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "affiliated_societies", columnDefinition = "JSON")
   private List<Society> affiliatedSocieties;
+
+  /// LetPub 期刊评价数据（JCR/CAS 分区、审稿速度、APC 等）。
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "letpub_data", columnDefinition = "JSON")
+  private LetPubVenueData letPubData;
 }

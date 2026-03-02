@@ -66,6 +66,17 @@ public enum CatalogErrorCode implements ErrorCodeLike {
   /// 请检查网络连接、LSIOU 文件完整性和数据库状态。
   CAT_1301("CAT-1301", 500),
 
+  /// 表示 LetPub 期刊富化失败。
+  ///
+  /// 在执行 LetPub 期刊富化批处理时发生。可能由于：
+  ///
+  /// - Spring Batch Job 启动失败
+  /// - 爬虫连接异常或限流过于频繁
+  /// - 数据库更新失败
+  ///
+  /// 请检查 Spring Batch 作业状态和网络连接。
+  CAT_1302("CAT-1302", 500),
+
   // ===== ROR 机构导入错误 (14xx) =====
 
   /// 表示 ROR 机构导入失败。
