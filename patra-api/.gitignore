@@ -90,6 +90,9 @@ heapdump.hprof
 # Backup directories
 .claude.backup-*/
 
+# Git worktrees
+.worktrees/
+
 # JAR files (except Gradle wrapper)
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
