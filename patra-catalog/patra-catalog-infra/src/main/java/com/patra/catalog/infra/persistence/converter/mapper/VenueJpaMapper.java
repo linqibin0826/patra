@@ -137,6 +137,9 @@ public abstract class VenueJpaMapper {
     if (entity.getAffiliatedSocieties() != null && !entity.getAffiliatedSocieties().isEmpty()) {
       aggregate.withAffiliatedSocieties(entity.getAffiliatedSocieties());
     }
+    if (entity.getLetPubData() != null) {
+      aggregate.withLetPubData(entity.getLetPubData());
+    }
 
     return aggregate;
   }
@@ -219,6 +222,7 @@ public abstract class VenueJpaMapper {
     entity.setCitationMetrics(aggregate.getCitationMetrics());
     entity.setOpenAccess(aggregate.getOpenAccess());
     entity.setAffiliatedSocieties(aggregate.getAffiliatedSocieties());
+    entity.setLetPubData(aggregate.getLetPubData());
 
     // 更新快速访问字段
     populateQuickAccessFields(entity, aggregate);
